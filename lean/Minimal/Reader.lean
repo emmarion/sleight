@@ -404,6 +404,17 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
     else if h == "match" then elabMatch sc want exp args
+    else if h == "open-absurd" && (sc.lookup h).isNone then
+      let [e, _] := args | throw "open-absurd takes an expression and an annotation"
+      let (ss, ts) ← withTail false (elabExpr sc [true] none e)
+      let [t] := ts | throw "open-absurd: one value"
+      let (ss2, i) ← (match t with
+        | .fv i => pure ([], i)
+        | t => do
+          let js ← fresh [true]
+          pure ([.prim (.tm t) true], js.headD 0) : M (List Stmt × Nat))
+      let outs ← fresh want
+      return (ss ++ ss2 ++ [fun _ => .chk (.opn true) (.fv i) .nil .dead], outs.map .fv)
     else if h == "matchable-of" && (sc.lookup h).isNone then
       let [.atom T] := args | throw "matchable-of takes a type constructor"
       let some d := st.adts.lookup T | throw s!"matchable-of: {T} is not a declared type"

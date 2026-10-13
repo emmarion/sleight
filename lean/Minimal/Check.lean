@@ -416,14 +416,25 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .chk (.opn oe) (.fv m) _ rest, rets => match hM : Γ.tys[m]? with
     | some M => match hc : Γ.canon M with
       | .mtbl _ _ _ _ H cs => do
-        let ⟨hn⟩ ← need cs.toList.Nodup "open-adt: a constructor is listed twice, which contradicts what is open"
         let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
-        match hu : unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
-        | .ok σ' => do
-          let ⟨R, hr, eq⟩ ← checkCore b { Γo with σ := σ' } rest rets
-          .ok ⟨R, .chkOpn hM hc hn hu hr, eq⟩
-        | .contra => .error "open-adt: the Matchable contradicts what is open"
-        | .unknown => .error "open-adt: cannot decide whether the Matchable agrees with what is open"
+        let R' := match rets with | .inl r => r | .inr _ => .nil
+        have e1 : ∀ r, rets = .inl r → R' = r := fun r e => by simp [R', e]
+        have e2 : ∀ n, rets = .inr n → R'.static n 0 := fun n e => by simp [R', e, Tm.static]
+        match hd : rest with
+        | .dead =>
+          if hn : cs.toList.Nodup then
+            match hu : unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
+            | .contra => .ok ⟨R', by rw [hd]; exact .chkOpnFail hM hc (.inr hu), e1, e2⟩
+            | _ => .error "open-absurd: the open does not contradict what is open"
+          else .ok ⟨R', by rw [hd]; exact .chkOpnFail hM hc (.inl hn), e1, e2⟩
+        | r => do
+          let ⟨hn⟩ ← need cs.toList.Nodup "open-adt: a constructor is listed twice, which contradicts what is open"
+          match hu : unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
+          | .ok σ' => do
+            let ⟨R, hr, eq⟩ ← checkCore b { Γo with σ := σ' } r rets
+            .ok ⟨R, by rw [hd]; exact .chkOpn hM hc hn hu hr, eq⟩
+          | .contra => .error "open-adt: the Matchable contradicts what is open"
+          | .unknown => .error "open-adt: cannot decide whether the Matchable agrees with what is open"
       | _ => .error "open-adt: not a Matchable"
     | none => .error "open-adt: unbound"
   | .chk (.opn _) .., _ => .error "open-adt: not an entry"

@@ -1382,20 +1382,51 @@ theorem EnvOK.atomSound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P 
       have hh := all _ (headD_mem (d := .nil) hM)
       exact (all M hM).uniq hh |>.symm
 
+theorem EnvOK.openEqs (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (o : List (Nat × Bool)) (xs : List Tm) :
+    ∀ p ∈ Ctx.openEqs P { Γ with opened := o } xs, p.1.subst (Tm.env ρ) = p.2.subst (Tm.env ρ) := by
+  intro p hp
+  simp only [Ctx.openEqs, List.mem_flatMap] at hp
+  obtain ⟨x, -, hx⟩ := hp
+  obtain ⟨more, hmo, hmore⟩ := (hE.congr { Γ with opened := o } rfl rfl rfl rfl rfl).atomSound hP Γ.σ hE.sat x x rfl
+  rw [hmo] at hx; exact hmore p hx
+
 theorem EnvOK.opened (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {o : List (Nat × Bool)}
     {xs : List Tm} {σ' : Nat → Option Tm}
     (hu : unify Γ.n (Ctx.atoms P { Γ with opened := o }) Γ.σ [] (Ctx.openEqs P { Γ with opened := o } xs) = .ok σ') :
     EnvOK P ρ { Γ with opened := o, σ := σ' } := by
-  have hEo := hE.congr { Γ with opened := o } rfl rfl rfl rfl rfl
   have hun := unify_sound (Tm.env ρ) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hE.closed i)) Γ.n
-    (Ctx.atoms P { Γ with opened := o }) (hEo.atomSound hP) Γ.σ [] (Ctx.openEqs P { Γ with opened := o } xs) hE.sat (by
-      intro p hp
-      simp only [Ctx.openEqs, List.mem_flatMap] at hp
-      obtain ⟨x, -, hx⟩ := hp
-      obtain ⟨more, hmo, hmore⟩ := hEo.atomSound hP Γ.σ hE.sat x x rfl
-      rw [hmo] at hx; exact hmore p hx)
+    (Ctx.atoms P { Γ with opened := o }) ((hE.congr { Γ with opened := o } rfl rfl rfl rfl rfl).atomSound hP)
+    Γ.σ [] (Ctx.openEqs P { Γ with opened := o } xs) hE.sat (hE.openEqs hP o xs)
   have hwσ := unify_wf _ _ _ [] _ _ (fun e t he => hE.wf.σ e t he) hu
   exact hE.modify rfl (hun.1 _ hu) hE.chrono ⟨hE.wf.tys, hwσ, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+
+theorem EnvOK.openFail (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {m : Nat} {oe u nt ex : Bool}
+    {ph : List Bool} {M H cs : Tm} (hM : Γ.tys[m]? = some M) (hc : Γ.canon M = .mtbl u nt ex ph H cs)
+    (h : ¬ cs.toList.Nodup ∨ unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
+      (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .contra) : False := by
+  rcases h with hn | hu
+  · have hmem : (Tm.mtbl u nt ex ph H cs, H, cs.toList) ∈ Ctx.lists { Γ with opened := (m, oe) :: Γ.opened } Γ.σ := by
+      simp only [Ctx.lists, List.filterMap_cons, hM, Option.map_some]
+      have : canonBy Γ.σ M = Tm.mtbl u nt ex ph H cs := hc
+      simp [this]
+    obtain ⟨d, -, -, hks⟩ := (hE.congr { Γ with opened := (m, oe) :: Γ.opened } rfl rfl rfl rfl rfl).lists hE.sat hmem
+    apply hn
+    have hmap : cs.toList.map (·.subst (Tm.env ρ)) = (List.range cs.toList.length).map (Tm.vc d) := by
+      apply List.ext_getElem?; intro i
+      simp only [List.getElem?_map]
+      cases hi : cs.toList[i]? with
+      | none =>
+        have : cs.toList.length ≤ i := List.getElem?_eq_none_iff.mp hi
+        simp [this]
+      | some x =>
+        have hl : i < cs.toList.length := (List.getElem?_eq_some_iff.mp hi).1
+        simp [List.getElem?_range hl, (hks i x hi).1]
+    have : (cs.toList.map (·.subst (Tm.env ρ))).Nodup := by
+      rw [hmap]; exact List.Pairwise.map (Tm.vc d) (fun a b hab h => hab (by cases h; rfl)) List.nodup_range
+    exact List.Pairwise.of_map (fun x => x.subst (Tm.env ρ)) (fun a b hab h => hab (by rw [h])) this
+  · exact (unify_sound (Tm.env ρ) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hE.closed i)) Γ.n _
+      ((hE.congr { Γ with opened := (m, oe) :: Γ.opened } rfl rfl rfl rfl rfl).atomSound hP)
+      Γ.σ [] _ hE.sat (hE.openEqs hP _ _)).2 hu
 
 theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {s St H idx R : Tm} {er : Bool} {shp : List Arm} {bnd : Nat}
@@ -1987,6 +2018,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
         EnvOK P ρ { Γ with opened := o, σ := σ' } := by
       cases hc with
       | chkOpn _ _ _ hu h => exact ⟨_, _, h, hE.opened hP hu⟩
+      | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
       | _ => exact ⟨Γ.opened, Γ.σ, by assumption, hE.congr _ rfl rfl rfl rfl rfl⟩
     obtain ⟨o, σ', h', hE'⟩ := this
     have ih' := ih b _ rets h' hE' hb hm hrs

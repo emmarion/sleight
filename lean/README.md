@@ -177,9 +177,9 @@ produces nothing (section 27).
   whose every constructor must be refuted, one match deep; a value of a
   type with no constructors is the case where there are none. And
   `(absurd C)`, which lists a constructor that must be refuted.
-  `open-absurd` is not supported. In the core a refutation is a `case`
-  with no branch that returns (`Core.noRet`), so an absurd body never
-  returns in a checked program.
+  In the core a refutation is a `case` with no branch that returns, or
+  a failing open (`open-absurd`, below) (`Core.noRet`), so an absurd
+  body never returns in a checked program.
 - `let-match` (sections 27 and 52), with or without further branches,
   elaborated to the core's `case`: a match without an annotation or a
   continuation of its own, whose branches each end the enclosing code.
@@ -217,7 +217,10 @@ produces nothing (section 27).
   after canonicalization, and unifies the opened `Matchable` with every
   `Matchable` that names its type constructor or one of its
   constructors, a declared type's included; a contradiction is an error
-  (section 8's invariant).
+  (section 8's invariant). `(open-absurd e ann)` takes `e` at `erased`
+  and requires its open to fail, by a constructor listed twice or a
+  contradiction; it is then of any size, and in the core an open
+  followed by nothing, which the proof shows is never reached.
 - `union` and `newtype` (section 21). A `newtype` must have newtype
   shape. A non-erased match on a union may have one real branch, outside
   erased code; at run time the core keeps the constructor anyway, so the

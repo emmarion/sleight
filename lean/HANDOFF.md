@@ -16,14 +16,13 @@ computes erased values and so is slow on the prelude (about 3 s).
 
 Next, as this session planned it, none of it decided:
 
-1. `Matchable` stages 2 and 3 are in: `open-adt`, matches through an
-   opened `Matchable` (`Shape`), and what an open asserts, through one
-   oracle that `unify` consults on every equation between atoms
-   (`Ctx.atoms`, `AtomSound`): disjointness of one `Matchable`'s
-   constructors, signatures, and section 8's invariant. Next, as
-   planned, none of it decided: stage 4, `open-absurd`.
-   `tests/open_tyctor.sl` now waits only on `nat-add`, a `delegate`
-   function the Lean prelude leaves out, as many tests do.
+1. `Matchable` is in, stages 2 to 4 of the plan: `open-adt`, matches
+   through an opened `Matchable` (`Shape`), what an open asserts,
+   through one oracle that `unify` consults on every equation between
+   atoms (`Ctx.atoms`, `AtomSound`), and `open-absurd`
+   (`CoreTy.chkOpnFail`). `tests/open_tyctor.sl` now waits only on
+   `nat-add`, a `delegate` function the Lean prelude leaves out, as many
+   tests do.
 2. Unification unifies the signatures of two atoms it equates when both
    have `TyCtor` or `ValCtor` types, as the OCaml checker's forcing
    does; `tests/is_for_type_refute.sl` is accepted. It does not equate

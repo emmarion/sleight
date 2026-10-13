@@ -53,6 +53,8 @@ examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 examples/no_annotation_bad.sl: refused: a same-level call whose subterm arguments are all unchanged
 examples/numeral_opaque_bad.sl: refused: a branch that is not refuted is missing
 examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
+examples/open_absurd.sl: 
+examples/open_absurd_bad.sl: refused: open-absurd: the open does not contradict what is open
 examples/open_adt.sl: 3
 examples/open_adt_erased_bad.sl: refused: a match that dispatches at runtime through an erased Matchable
 examples/open_clash_bad.sl: refused: open-adt: the Matchable contradicts what is open
@@ -105,6 +107,7 @@ unchecked examples/missing_branch_bad.sl: 0
 unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
+unchecked examples/open_absurd_bad.sl: _
 unchecked examples/open_adt_erased_bad.sl: 3
 unchecked examples/open_clash_bad.sl: _
 unchecked examples/open_twice_bad.sl: _
@@ -148,6 +151,7 @@ full examples/matchable_value.sl: 0
 full examples/nested_adt.sl: 2
 full examples/newtype.sl: (MkMeters 3)
 full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
+full examples/open_absurd.sl: 
 full examples/open_adt.sl: 3
 full examples/open_merge.sl: (A)
 full examples/open_refute.sl: 1
