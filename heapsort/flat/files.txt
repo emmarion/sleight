@@ -1,0 +1,6 @@
+heapsort/flat/arith.sl
+heapsort/flat/lists.sl
+heapsort/flat/glue.sl
+heapsort/flat/inv.sl
+heapsort/flat/loops.sl
+heapsort/flat/sort.sl
