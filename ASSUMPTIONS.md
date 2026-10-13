@@ -4111,10 +4111,10 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     directory it is read from, since `test/runtest.ml` names a test
     `tests/x.sl` and reads it from `../tests`; `slc` keeps the names and
     derives the directories. `slc`'s macro state is indexed by the slot of
-    the elaborator's world, which it holds `at` a `Slot` field, and
-    `env-expand` asserts `slot-self` on that field after an expansion;
-    that is the only way this session found to have the world come back
-    `at` the one that went in.
+    the elaborator's world, which it holds as a `Placed` field (DESIGN.md
+    section 66), and `env-expand` unplaces that field and uses
+    `placed-slot` after an expansion, so that the world comes back `at` the
+    one that went in.
 
 ## The world (section 42)
 

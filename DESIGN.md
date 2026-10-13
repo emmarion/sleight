@@ -26,7 +26,7 @@ speed of the code they produce, are not aims.
 - Data types and matching: §21 to §25.
 - Expressions, statements and compile time: §26 to §32.
 - Coercion: §33, §34.
-- Slots, `at` and cells: §35 to §41.
+- Slots, `at` and cells: §35 to §41, and §66.
 - The prelude, the FFI and literals: §42 to §45.
 - Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
@@ -438,8 +438,7 @@ Of the three formers, only `Fn` and `UniqueFn` have a return
 telescope; a match's annotation is one too (§26). All three formers
 use the telescope notion of §3. In a `TyCtor` or `ValCtor` telescope,
 `slot-of` may name only a variable that no telescope still being
-written binds (§35); `at` may be written in a `ValCtor` telescope
-under §36's rule for it, and not in a `TyCtor` telescope. The declaration
+written binds (§35), and `at` may not be written. The declaration
 syntax `name : (telescope) -> (telescope)` used in §55 and §56 is sugar
 for these formers plus a name and, for a function, a body. A
 function's level is written on its `def-fns`. `is` (§12) may be used
@@ -780,11 +779,12 @@ the kind of call:
 **`tail` and `notail`.** `(tail (f ...))` asserts that the call
 compiles to a tail call. `(notail (f ...))` asserts the opposite. A
 claim the compiler cannot honour is an error. Tail position is judged
-on the post-erasure code, where erased positions, types and coercions
-are gone and every `let` that only renames has been resolved away
-(§33). The call is in tail position if it is the final expression of
-the body, or if its results are bound by a `let` and returned in order
-by a final `values`, with or without coercions. A match in tail
+on the post-erasure code, where erased positions, types, coercions and
+placings are gone and every `let` that only renames has been resolved
+away (§33, §42). The call is in tail position if it is the final
+expression of the body, or if its results are bound by a `let` and
+returned in order by a final `values`, with or without coercions and
+placings. A match in tail
 position puts its branches in tail position. An `at` return is dropped
 for this purpose, from the call's results and from the function's own
 returns alike (§36). The marks wrap a call and nothing else. They are
@@ -827,8 +827,7 @@ recursion (§17) may go through an erased field.
 A type marked `newtype` must have **newtype shape**: every non-phantom
 constructor holds exactly one non-erased field, and there is at least
 one non-phantom constructor, and exactly one if the type is an enum.
-No field of its constructors may be written `at` (§36). A value of
-such a type is represented as that field (§33).
+A value of such a type is represented as that field (§33).
 
 **A constructor returns its own type.** Every value constructor is
 declared under exactly one type constructor in `def-adts`. Its return
@@ -1436,10 +1435,11 @@ returns the proof (§14). Such a function is checked for termination
 like any other (§17) and never runs.
 
 **Tail and delegate.** A `coerce` erases to a renaming, so the `tail`
-and `delegate` checks of §19 see through it. A call counts as `tail`
-when its returns are bound by a `let` and repackaged in a `values` in
-the same order, with or without coercions, and as `delegate` when its
-arguments likewise pass straight through.
+and `delegate` checks of §19 see through it, as they see through a
+placing (§42). A call counts as `tail` when its returns are bound by a
+`let` and repackaged in a `values` in the same order, with or without
+coercions and placings, and as `delegate` when its arguments likewise
+pass straight through.
 
 ## 34. `Sharing` sides
 
@@ -1539,37 +1539,13 @@ itself a `(Slot)`. An erased entry may be `at` any variable. A `many`
 or `unique` entry may only be `at` a `many` or `unique` variable,
 because its word is its target's word and an erased target has none.
 `at` may not be written on a `let` binder, in the telescope of a type
-constructor, or with a literal as its target. An `at` return
+or value constructor, or with a literal as its target. An `at` return
 may be `many`, and may be combined with `is`.
 
-**In a value constructor.** A field of a `ValCtor` telescope may be
-written `at v` under the rules above: `v` is an earlier field of the
-same telescope or a variable in scope that no telescope still being
-written binds, and the field's slot is `(slot-of v)`, so the slot that
-a `(Slot)` field names is reached as §35 has it, by `slot-self` on the
-binder a destructure gives that field. The `at` of a field belongs to
-the constructor's telescope, not to the terms built with it: two
-applications `(C a1 ... an)` and `(C b1 ... bn)` are equal exactly
-when their arguments are, and forcing them equal says nothing about
-slots. Where a field's word sits is learnt in two places only: where
-a block is built, by the check on the argument, and where it is taken
-apart, by the binder the pattern gives the field. Such a field holds
-no word of its own, its word being the word of `v`. Wherever §21,
-§23, §33, §37, §38, §42 and §43 count, list or lay out a
-constructor's non-erased fields, a field written `at` is left out, as
-an entry written `at` is left out of a runtime signature: it has no
-slot in a `Cell`, no item in `cell-alloc`, `cell-write` or a
-`cell-match` pattern, and an extern type's FFI arity counts the fields
-that remain; a type with such a constructor may not be marked
-`newtype` (§21). It prints by its type, from the word of its target
-(§45). A constructor application or a cell invocation checks its
-argument as a call checks the argument for a parameter written `at`,
-and stores nothing for it; `_` cannot stand for it, and an `(at)`
-before it is an error, there being no store to skip. In a type or
-`is` expression the application is checked the same way (§14). A
-destructure binds it, under the column of §22 for its label, at the
-binder the pattern gives `v`, or at `v` itself when `v` is not a
-field; a `comptime-match` gives it the word of its target.
+**In a value constructor.** To keep a field's word at a slot, declare
+the field with a `Placed` type indexed by that slot (§42). After a
+destructure, `(placed-slot s T v p)` on the field's binder `p` proves
+that its slot is `s`.
 
 **What reaches runtime.** The runtime signature of a function consists
 of its non-erased entries that have no written `at`. An entry written
@@ -1609,9 +1585,8 @@ of a newtype constructor (the value with its non-erased argument, §37);
 a cell invocation (the value with its cell) and a `cell-write` on a
 `unique` cell (the result with its input); `coerce` and `share` (the
 result with the source); a forwarding `let` (§19); a `let` of
-`(slot-of x)` (with `x`); the `at` return and `at` parameter of a call,
-the `at` entry of a match, and the `at` field of a destructure (with
-their targets); the delegate annotation (`g` with `f`, §41);
+`(slot-of x)` (with `x`); the `at` return and `at` parameter of a call
+and the `at` entry of a match (with their targets); the delegate annotation (`g` with `f`, §41);
 `slot-self` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
@@ -1974,6 +1949,9 @@ which `lib/prelude.sl` is the reference:
   `intern-char`, `intern-string`, `resolve` and `read-file`, and the
   function `symbol-eq`. §62 to §65 describe them and the special form
   `settled-of`.
+- **Placement.** The opaque `Placed` and the primitives `place-at`,
+  `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
+  `placed-eq`. §66 describes them.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2396,8 +2374,10 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
   `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
   `settled-of`, `settled-type`, `settled-erase`, `settled-mult` and
-  `settled-value` (§64), and `gensym`, `settled-eq`, `intern-nat`,
-  `intern-char`, `intern-string`, `resolve` and `read-file` (§65).
+  `settled-value` (§64), `gensym`, `settled-eq`, `intern-nat`,
+  `intern-char`, `intern-string`, `resolve` and `read-file` (§65), and
+  `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
+  (§66).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2410,6 +2390,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).
 - `prove-literal-lt` (§45).
+- `placed-slot` and `placed-eq` (§66).
 
 **Fetch forms**, which may also be written inside a type or `is`
 expression (§53):
@@ -2882,3 +2863,52 @@ standard input is not one. `path` is resolved against that file's
 directory and must land, through any symlinks, inside that directory or
 below it. Otherwise, for `NoPos`, and where the read fails, it
 answers `Fail`. `--confine-dir` does not apply to it.
+
+## 66. `Placed`
+
+The prelude declares an opaque type that holds a value at a slot named
+in its type:
+
+```scheme
+(def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
+
+(def-prim $ (many place-at : (erased Type T) (unique T x) ->
+    (unique (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many place-at-many : (erased Type T) (many T x) ->
+    (many (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many unplace-at : (erased (Slot) s) (erased Type T) (erased T v)
+    (unique (Placed s T v) p) -> (unique v is x at p)))
+
+(def-prim $ (many unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v)
+    (many (Placed s T v) p) -> (many v is x at p)))
+
+(def-prim $ (erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v)
+    (erased (Placed s T v) p) -> (erased (Eq (Slot) (slot-of p) s) e)))
+
+(def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
+    (erased (Placed s T v) p) (erased (Placed s T v) q) ->
+    (erased (Eq (Placed s T v) p q) e)))
+```
+
+A `(Placed s T v)` holds `v` and is represented as the word of `v`.
+Like `Settled`, it has no constructors and no `Matchable`, and it is not
+erased by kind. It rests on the prelude's `Eq`, so under `--no-prelude`
+there is none.
+
+A call of `place-at`, `place-at-many`, `unplace-at` or
+`unplace-at-many` is a **placing**. It erases to a renaming of its
+argument, as a `coerce` does (§33).
+
+`placed-slot` and `placed-eq` are axioms. The first says that a
+`Placed` value is at the slot its type names, the second that two
+`Placed` values of one type are equal.
+
+A `Placed` value lets a function pass a value through code whose
+signatures do not mention where it is. A function that promises a
+result `at` its parameter `a` can place `a`, hand the `Placed` value to
+a function whose signature names only an erased `(Slot) s`, take
+back a `(Placed s T w)`, unplace it, and use `placed-slot` to show that
+the result is at `a` (`tests/placed_thread.sl`). A constructor field
+kept at a slot is declared the same way (§36).

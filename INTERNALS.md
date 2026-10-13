@@ -23,12 +23,15 @@ compilers implement as a primitive; `m` is `many` or `erased`.
 `Special` from the start, like `let`, and using it before its
 `def-prim` is an error. A call of a primitive is elaborated as a call
 is, with no level and so no `predates` or `subterm` annotation, and
-runs the compilers' implementation; a primitive whose returns are all
-erased is an axiom and has none. Declaring a primitive the compilers
-do not implement, a second time, or with a non-erased return when the
-compilers have no implementation of it, is an error. Whatever a
+runs the compilers' implementation. A primitive the compilers do not
+implement has none: its returns must each be erased or written `at`,
+and its call compiles to nothing, so its `at` returns are read back
+from their targets (DESIGN.md §36). One whose returns are all erased
+is an axiom. Declaring a primitive the compilers do not know, a second
+time, or with a non-erased return not written `at` when the compilers
+have no implementation of it, is an error. Whatever a
 primitive promises, a callback included, is the prelude's promise.
-The primitives are those of DESIGN.md sections 64 and 65.
+The primitives are those of DESIGN.md sections 64, 65 and 66.
 A `def-prim` entry is written like a `def-fns` header and a
 `def-opaque` entry like a `def-adts` header alone. A primitive's
 parameters may not be marked `subterm`. A primitive declared `erased`
