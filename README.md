@@ -33,8 +33,9 @@ DESIGN.md specifies. The other files:
 - `pal/`: certified longest-palindrome programs (`pal/README.md`).
 - `std/`: source libraries a program names on the command line before its
   own files. `std/macro.sl` holds helpers for writing macros, `std/nat.sl`
-  holds `Le`, the non-strict order on `Nat`, and the `Lt` lemmas `lt-pred`
-  and `lt-succ-left`, `std/list.sl` holds lemmas
+  holds `Le`, the non-strict order on `Nat`, `Ne`, inequality as one of the
+  two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
+  `add-le-right` and `double-le`, `std/list.sl` holds lemmas
   about the prelude's `Length`, `Nth`, `SetNth` and `Repeat`, and
   `std/tactics.sl`, which needs `std/macro.sl` and `std/nat.sl`, holds proof
   tactics written as macros.

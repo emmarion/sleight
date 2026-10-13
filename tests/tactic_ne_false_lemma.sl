@@ -1,0 +1,20 @@
+; needs: ../std/macro ../std/nat ../std/tactics
+; expect: "ok"
+(lt-lemma (erased ne-lt : (erased (Nat) a b) (erased (Lt a b) p) -> (erased (Ne a b) r)))
+(lt-lemma (erased ne-gt : (erased (Nat) a b c) (erased (Le c a) p) (erased (Lt b c) q) -> (erased (Ne a b) r)))
+(lt-lemma (erased ne-succ : (erased (Nat) a) -> (erased (Ne (Succ a) a) r)))
+(lt-lemma (erased irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) r)))
+(lt-lemma (erased lt-le-cycle : (erased (Nat) a b) (erased (Lt a b) p) (erased (Le b a) q) -> (erased (False) r)))
+(lt-lemma (erased long-cycle : (erased (Nat) a b c d)
+    (erased (Le a b) p) (erased (Le b c) q) (erased (Lt (Succ c) (Succ d)) s) (erased (Le d a) t) -> (erased (False) r)))
+(lt-lemma (erased shifted-cycle : (erased (Nat) a b) (erased (Le (Succ a) b) p) (erased (Le b a) q) -> (erased (False) r)))
+(lt-lemma (erased add-left : (erased (Nat) a b c) (erased (Add a b c) p) -> (erased (Le a c) r)))
+(lt-lemma (erased add-right : (erased (Nat) a b c) (erased (Add a b c) p) -> (erased (Le b c) r)))
+(lt-lemma (erased add-chain : (erased (Nat) a b c d) (erased (Add a b c) p) (erased (Lt c d) q) -> (erased (Lt b d) r)))
+(lt-lemma (erased double-chain : (erased (Nat) a b c) (erased (Double a b) p) (erased (Lt b c) q) -> (erased (Ne c a) r)))
+(lt-lemma (erased double-add : (erased (Nat) i e m c) (erased (Double i e) p) (erased (Add (Succ (Succ e)) c m) q)
+    -> (erased (Lt (Succ i) m) r)))
+(lt-lemma (erased add-cycle : (erased (Nat) a b c) (erased (Add a b c) p) (erased (Lt c b) q) -> (erased (False) r)))
+(def-fns _ $ (erased absurd use : (erased (Nat) x y) (erased (Lt x y) u) (erased (Le y x) v) -> (erased (Eq (Nat) x y) r))
+  (lt-le-cycle x y u v))
+"ok"

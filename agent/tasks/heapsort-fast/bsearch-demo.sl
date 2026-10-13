@@ -8,12 +8,6 @@
           (coercible-ctor (Shared) Cons (Nat) (U62) (coercible-wrap (Shared) MkU62 x p) c1)))
 
 (def-adts
-  ((Ne : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many NeLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Ne a b))
-    (many NeGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) p) -> (Ne a b))))
-
-(def-adts
   ((LoOk : ((List (Nat)) xs) ((Nat) lo) ((Nat) k) -> Type)
     enum
     (many LoZero : (erased (List (Nat)) xs) (erased (Nat) k) -> (LoOk xs (Zero) k))

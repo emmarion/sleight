@@ -11,7 +11,7 @@ dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.
 ocamlfind ocamlopt -package zarith,unix -linkpkg flat_perf.ml -o flat_perf && ./flat_perf
 ```
 
-- `arith.sl`: order (`lt-lemma` from `std/tactics.sl`), `Child` (the children of p are 2p+1 and 2p+2), halving
+- `arith.sl`: order (`lt-lemma` from `std/tactics.sl`, and `Ne` from `std/nat.sl`), `Child` (the children of p are 2p+1 and 2p+2), halving
   through `u62-shr`, and the decreasing measure of the sift loop.
 - `lists.sl`: `Swap`, reading an element back through a swap, and a swap as
   a `Permutation`.

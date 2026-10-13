@@ -1,10 +1,4 @@
 (def-adts
-  ((Ne : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many NeLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Ne a b))
-    (many NeGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) p) -> (Ne a b))))
-
-(def-adts
   ((EqNe : ((Nat) a) ((Nat) b) -> Type)
     enum
     (many Same : (erased (Nat) a) -> (EqNe a a))
@@ -15,9 +9,6 @@
     ((CLt _ _ _ _ p) (Diff a b (NeLt a b p)))
     ((CEq _ _ _) (Same a))
     ((CGt _ _ _ _ p) (Diff a b (NeGt a b p)))))
-
-(def-fns _ $ (erased absurd lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f))
-  (lt-asym a a p (lt-weaken a a p)))
 
 (lt-lemma (erased lt-le : (erased (Nat) a b) (erased (Lt a b) p) -> (erased (Le a b) r)))
 (lt-lemma (erased le-lt-lt : (erased (Nat) a b c) (erased (Le a b) p) (erased (Lt b c) q) -> (erased (Lt a c) r)))
@@ -37,15 +28,10 @@
     (many ChL : (erased (Nat) p) (erased (Nat) d) (erased (Double p d) dd) -> (Child p (Succ d)))
     (many ChR : (erased (Nat) p) (erased (Nat) d) (erased (Double p d) dd) -> (Child p (Succ (Succ d))))))
 
-(def-fns _ $ (erased double-le : (erased (Nat) p) (erased (Nat) d) (subterm erased (Double p d) dd) -> (erased (Le p d) r))
-  (let-match erased dd (DS p1 d1 dd1) ((D0) (le-refl (Zero))))
-  (let ((erased r1)) (double-le p1 d1 dd1))
-  (le-up p1 d1 r1))
-
 (def-fns _ $ (erased child-lt : (erased (Nat) p j) (erased (Child p j) c) -> (erased (Lt p j) r))
   (match erased c _
-    ((ChL _ d dd) (le-lt p d (double-le p d dd)))
-    ((ChR _ d dd) (lt-weaken p (Succ d) (le-lt p d (double-le p d dd))))))
+    ((ChL _ d dd) (double-le p d dd))
+    ((ChR _ d dd) (lt-weaken p (Succ d) (double-le p d dd)))))
 
 (def-fns _ $ (erased child-fn : (erased (Nat) p q j) (erased (Child p j) a) (erased (Child q j) b) -> (erased (Eq (Nat) p q) e))
   (match erased a _
@@ -134,8 +120,7 @@
   (let-match erased h (MkHalf2 _ _ d dq lo hi))
   (le-le _ _ _ (MkLe _ _ (LtS _ _ (double-gap i q e d iq de dq))) lo))
 
-(def-fns _ $ (erased absurd lt-not-le : (erased (Nat) a b) (erased (Lt a b) p) (erased (Le b a) q) -> (erased (False) f))
-  (lt-asym a b p (le-lt b a q)))
+(lt-lemma (erased lt-not-le : (erased (Nat) a b) (erased (Lt a b) p) (erased (Le b a) q) -> (erased (False) f)))
 
 (def-fns _ $ (erased ne-top : (erased (Nat) p j m) (erased (Child p j) c) (erased (Lt j m) jm) -> (erased (Ne p m) r))
   (NeLt p m (lt-trans p j m (child-lt p j c) jm)))
@@ -144,9 +129,11 @@
   (let-match erased d (DS a1 b1 d1) ((D0) (AddZero (Zero))))
   (AddSucc a1 (Succ a1) (Succ b1) (add-succ-right a1 a1 b1 (double-add a1 b1 d1))))
 
+(lt-lemma (erased double-le-le : (erased (Nat) q d m) (erased (Double q d) dq) (erased (Le d m) lo) -> (erased (Le q m) r)))
+
 (def-fns _ $ (erased half-le : (erased (Nat) m q) (erased (Half2 m q) h) -> (erased (Le q m) r))
   (let-match erased h (MkHalf2 _ _ d dq lo hi))
-  (le-le q d m (double-le q d dq) lo))
+  (double-le-le q d m dq lo))
 
 (def-fns _ $ (erased add-dec : (erased (Nat) i a c b m) (subterm erased (Add i a m) p) (erased (Add c b m) q) (erased (Lt i c) ic)
     -> (erased (Lt b a) r))
