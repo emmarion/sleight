@@ -25,8 +25,9 @@ lake build minimal              # the command-line runner
 `minimal` checks a program and runs it, or prints why it is refused.
 A value prints as DESIGN.md section 45 has it: a `Nat` of the prelude
 as a numeral, an erased field as `_`, and a last argument that is an
-application after `$`. A final value that is a function with no
-parameters is applied, and its result printed (section 27).
+application after `$`. A final value that is a function must have no
+parameters and one `many` return written with its type; it is applied,
+and its result printed (section 27).
 `--unchecked` skips the checker and runs the program anyway.
 A checked program runs with erased code skipped (the stripped run,
 `runS`), which `eval_sound` proves agrees with the full run on what is
@@ -129,7 +130,8 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
 full language requires is required. These forms are refused as not
 supported: `unique`; `extern` functions (an `extern` type is an
-ordinary type that records the mark); `_` in place of a
+ordinary type that records the mark, and only the prelude, or a program
+run with `--no-prelude`, may write it); `_` in place of a
 type (section 50); `delegate`; and every form
 not named in this file,
 among them `coerce`, character and string literals, `numeral-of`,

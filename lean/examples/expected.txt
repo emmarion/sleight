@@ -107,10 +107,10 @@ unchecked examples/missing_branch_bad.sl: 0
 unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
-unchecked examples/open_absurd_bad.sl: _
+unchecked examples/open_absurd_bad.sl: error: a final function must be `(Fn L -> (many T y))`
 unchecked examples/open_adt_erased_bad.sl: 3
-unchecked examples/open_clash_bad.sl: _
-unchecked examples/open_twice_bad.sl: _
+unchecked examples/open_clash_bad.sl: error: a final function must be `(Fn L -> (many T y))`
+unchecked examples/open_twice_bad.sl: error: a final function must be `(Fn L -> (many T y))`
 unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease

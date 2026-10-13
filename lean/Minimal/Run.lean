@@ -53,37 +53,36 @@ partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
   " ".intercalate (P.name h :: shown)
 end
 
-def Prog.thunk (P : Prog) : Tm → Option (List Tm × Group × FnDef)
-  | .clo env gid j => do
-    let G ← P.groups[gid]?
-    let F ← G.fns[j]?
-    if F.np = 0 then some (env.toList ++ closures env.toList gid G, G, F) else none
-  | _ => none
+def Prog.thunk (P : Prog) : Tm → Except String (Option (List Tm × Group × FnDef))
+  | .clo env gid j => match P.groups[gid]?, (P.groups[gid]?).bind (·.fns[j]?) with
+    | some G, some F =>
+      if F.np = 0 && F.tele matches .bind (.ty _ false) _ .nil then .ok (some (env.toList ++ closures env.toList gid G, G, F))
+      else .error "error: a final function must be `(Fn L -> (many T y))`"
+    | _, _ => .ok none
+  | _ => .ok none
+
+def Prog.final (P : Prog) (go : List Tm → Core → Option (List Tm)) : Option (List Tm) → String
+  | some [v] => match P.thunk v with
+    | .ok (some (ρ, _, F)) => match go ρ F.body with
+      | some vs => " ".intercalate (vs.map (P.show P.nat))
+      | none => "stuck"
+    | .ok none => P.show P.nat v
+    | .error e => e
+  | some vs => " ".intercalate (vs.map (P.show P.nat))
+  | none => "stuck"
 
 def Prog.run (P : Prog) : String :=
   match eval P none [] 0 P.main with
-  | .ok ([v], cnt) => match P.thunk v with
-    | some (ρ, _, F) => match eval P none ρ cnt F.body with
-      | .ok (vs, _) => " ".intercalate (vs.map (P.show P.nat))
-      | .error e => s!"stuck: {e}"
-    | none => P.show P.nat v
-  | .ok (vs, _) => " ".intercalate (vs.map (P.show P.nat))
+  | .ok (vs, cnt) => P.final (fun ρ c => match eval P none ρ cnt c with | .ok (vs, _) => some vs | .error _ => none) (some vs)
   | .error e => s!"stuck: {e}"
 
 def Prog.runStripped (P : Prog) : String :=
-  match runS P 100000000 [] P.main with
-  | some [v] => match P.thunk v with
-    | some (ρ, _, F) => match runS P 100000000 ρ F.body with
-      | some vs => " ".intercalate (vs.map (P.show P.nat))
-      | none => "stuck"
-    | none => P.show P.nat v
-  | some vs => " ".intercalate (vs.map (P.show P.nat))
-  | none => "stuck"
+  P.final (runS P 100000000) (runS P 100000000 [] P.main)
 
 def prelude : String := include_str "../prelude.sl"
 
 def runSource (src : String) (mode : String) (pre : Bool) : String :=
-  match load ((if pre then prelude else "") ++ src) pre with
+  match load ((if pre then prelude ++ "\n(__prelude-end)\n" else "") ++ src) pre with
   | .error e => s!"error: {e}"
   | .ok P => match P.infer with
   | .error e => s!"error: {e}"

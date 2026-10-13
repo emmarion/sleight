@@ -18,6 +18,7 @@ partial def Sx.numerals : Sx → List Nat
 partial def tokenize (cs : List Char) (acc : List String) : List String :=
   match cs with
   | [] => acc.reverse
+  | ';' :: '!' :: _ => (";!" :: acc).reverse
   | ';' :: rest => tokenize (rest.dropWhile (· != '\n')) acc
   | c :: rest =>
     if c.isWhitespace then tokenize rest acc
@@ -28,6 +29,7 @@ partial def tokenize (cs : List Char) (acc : List String) : List String :=
 
 partial def parseItems : List String → Except String (List Sx × List String)
   | [] => .ok ([], [])
+  | ";!" :: _ => .error "pragmas are not supported"
   | ")" :: rest => .ok ([], ")" :: rest)
   | "(" :: rest => do
     let (xs, rest) ← parseItems rest
@@ -58,6 +60,7 @@ structure ESt where
   rhs : Bool := true
   lits : List (Nat × Nat) := []
   pre : Bool := true
+  inPrelude : Bool := true
   tail : Bool := false
   refute : Bool := false
   known : List (Nat × Tm) := []
@@ -287,6 +290,8 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
     .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
+  if !(← get).inPrelude && blocks.any (fun | .list (_ :: kws) => kws.contains (.atom "extern") | _ => false) then
+    throw "only the prelude may mark a definition `extern`"
   let kinds := blocks.map fun
     | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"), kws.contains (.atom "extern"))
     | _ => (false, false, false)
@@ -549,6 +554,9 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     | e => do
       let (ss, [t]) ← elabExpr sc [true] none e | throw "a refutation is one value"
       return (ss ++ [(fun _ => .case t [] none true : Stmt)], [])
+  | .list [.atom "__prelude-end"] :: rest => do
+    modify fun st => { st with inPrelude := !st.pre }
+    elabSeq sc want exp rest
   | .list (.atom "def-adts" :: bs) :: rest => do
     declareAdts sc bs
     elabSeq sc want exp rest
