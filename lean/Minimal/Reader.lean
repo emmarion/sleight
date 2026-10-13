@@ -423,7 +423,9 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       | _, some (d, c) =>
         let sig := ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
         let (ss, ts) ← elabArgs sc args ((fieldErs sig).drop ((st.lifts.lookup d).getD []).length); return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
-      | _, _ => return ([], [← elabTm sc 0 e])
+      | _, _ =>
+        unless h ∈ keywords ++ ["TyCtor", "ValCtor", "Matchable"] do throw s!"unbound name {h}"
+        return ([], [← elabTm sc 0 e])
     else if let some (.ctor i) := sc.lookup h then
       let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
     else do

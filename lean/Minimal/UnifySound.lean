@@ -65,24 +65,15 @@ theorem canonBy_sound {σ : Nat → Option Tm} {f : Nat → Tm} (h : Sat f σ) (
   | none => simp [Tm.subst]
   | some u => simp [h i u e]
 
-def SigSound (f : Nat → Tm) (sig : Nat → Option Tm) : Prop :=
-  ∀ e e' s s', sig e = some s → sig e' = some s' → f e = f e' → s.subst f = s'.subst f
+def AtomSound (f : Nat → Tm) (atoms : Atoms) : Prop :=
+  ∀ σ, Sat f σ → ∀ a b, a.subst f = b.subst f →
+    ∃ more, atoms σ a b = some more ∧ ∀ p ∈ more, p.1.subst f = p.2.subst f
 
-theorem sigEqs_sound {f : Nat → Tm} {sig : Nat → Option Tm} {σ : Nat → Option Tm} (hsig : SigSound f sig) (hs : Sat f σ)
-    {e : Nat} {t : Tm} (het : f e = t.subst f) : ∀ p ∈ sigEqs sig σ e t, p.1.subst f = p.2.subst f := by
-  unfold sigEqs; split
-  · rename_i e'; split
-    · rename_i s s' h1 h2
-      simp only [List.mem_singleton]; rintro p rfl
-      simp only [canonBy_sound hs]; exact hsig e e' s s' h1 h2 (by simpa [Tm.subst] using het)
-    · simp
-  · simp
-
-theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat) (sig : Nat → Option Tm) (hsig : SigSound f sig) :
+theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat) (atoms : Atoms) (ha : AtomSound f atoms) :
     ∀ σ dom eqs, Sat f σ → (∀ p ∈ eqs, p.1.subst f = p.2.subst f) →
-    (∀ σ', unify n sig σ dom eqs = .ok σ' → Sat f σ') ∧ unify n sig σ dom eqs ≠ .contra := by
+    (∀ σ', unify n atoms σ dom eqs = .ok σ' → Sat f σ') ∧ unify n atoms σ dom eqs ≠ .contra := by
   intro σ dom eqs
-  induction σ, dom, eqs using unify.induct n sig with
+  induction σ, dom, eqs using unify.induct n atoms with
   | case1 σ dom => intro hs _; simp [unify]; exact hs
   | case2 σ dom b rest ih => intro hs he; rw [unify]; simp only [ite_true]; exact ih hs fun p hp => he p (by simp [hp])
   | case3 σ dom a b rest hab e t hv hocc =>
@@ -96,34 +87,43 @@ theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat
         rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
       have := Tm.bound_of_subst f t 0 (het ▸ hf e)
       simp_all
-  | case4 σ dom a b rest hab e t hv hocc hok ih =>
-    intro hs he
-    have hab' := he (a, b) (by simp)
+  | case4 σ dom a b rest hab e t hv hocc hnone =>
+    intro hs he; exfalso
     have het : f e = t.subst f := by
+      have hab' := he (a, b) (by simp)
       rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
-    rw [unify]; simp only [hab, ite_false, hv, hocc, hok]
+    obtain ⟨more, hm, _⟩ := ha σ hs (.fv e) t (by simpa [Tm.subst] using het)
+    rw [hm] at hnone; cases hnone
+  | case5 σ dom a b rest hab e t hv hocc more hmore hok ih =>
+    intro hs he
+    have het : f e = t.subst f := by
+      have hab' := he (a, b) (by simp)
+      rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
+    obtain ⟨more', hm, hmo⟩ := ha σ hs (.fv e) t (by simpa [Tm.subst] using het)
+    rw [hm] at hmore; cases hmore
+    rw [unify]; simp only [hab, ite_false, hv, hocc, hm, hok]
     simp only [List.map_attach_eq_pmap, List.pmap_eq_map] at ih ⊢
-    have hs' : Sat f (assign e t σ) := by
-      intro x u hx
+    apply ih
+    · intro x u hx
       simp only [assign] at hx; split at hx
       · subst_vars; simp_all
       · obtain ⟨u', hu', rfl⟩ := Option.map_eq_some_iff.mp hx
         rw [substOne_subst f e t u' het]; exact hs x u' hu'
-    apply ih hs'
-    intro p hp; rcases List.mem_append.mp hp with hp | hp
-    · exact sigEqs_sound hsig hs' het p hp
-    · simp only [List.mem_map] at hp; obtain ⟨q, hq, rfl⟩ := hp
-      simp only [substOne_subst f e t _ het]; exact he q (by simp [hq])
-  | case5 σ dom a b rest hab e t hv hocc hok =>
-    intro _ _; rw [unify]; simp [hab, hv, hocc, hok]
-  | case6 σ dom a b rest hab hv hsh ih =>
+    · intro p hp; simp only [List.mem_map] at hp; obtain ⟨q, hq, rfl⟩ := hp
+      simp only [substOne_subst f e t _ het]
+      rcases List.mem_append.mp hq with hq | hq
+      · exact hmo q hq
+      · exact he q (by simp [hq])
+  | case6 σ dom a b rest hab e t hv hocc more hmore hok =>
+    intro _ _; rw [unify]; simp [hab, hv, hocc, hmore, hok]
+  | case7 σ dom a b rest hab hv hsh ih =>
     intro hs he
     rw [unify]; simp only [hab, ite_false, hv, hsh, ite_true]
     apply ih hs
     intro p hp; rcases List.mem_append.mp hp with hp | hp
     · exact Tm.kids_eq_of_subst f a b (varSide_none hv).1 (varSide_none hv).2 hsh (he (a, b) (by simp)) p hp
     · exact he p (by simp [hp])
-  | case7 σ dom a b rest hab hv hsh =>
+  | case8 σ dom a b rest hab hv hsh =>
     intro _ he; exfalso
     exact Tm.subst_ne_of_head f a b (varSide_none hv).1 (varSide_none hv).2 (by simpa using hsh) (he (a, b) (by simp))
 
@@ -138,15 +138,16 @@ theorem Tm.static_subst {n : Nat} {f : Nat → Tm} : ∀ (u : Tm) d, u.static n 
 
 def RulesWF (n : Nat) (σ : Nat → Option Tm) : Prop := ∀ e t, σ e = some t → e < n ∧ t.static n 0
 
-theorem unify_wf (n : Nat) (sig : Nat → Option Tm) : ∀ σ dom eqs σ', RulesWF n σ → unify n sig σ dom eqs = .ok σ' → RulesWF n σ' := by
+theorem unify_wf (n : Nat) (atoms : Atoms) : ∀ σ dom eqs σ', RulesWF n σ → unify n atoms σ dom eqs = .ok σ' → RulesWF n σ' := by
   intro σ dom eqs
-  induction σ, dom, eqs using unify.induct n sig with
+  induction σ, dom, eqs using unify.induct n atoms with
   | case1 σ dom => intro σ' h e; simp [unify] at e; exact e ▸ h
   | case2 σ dom b rest ih => intro σ' h e; rw [unify] at e; simp only [ite_true] at e; exact ih σ' h e
   | case3 σ dom a b rest hab e t hv hocc => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc] at h
-  | case4 σ dom a b rest hab e t hv hocc hok ih =>
+  | case4 σ dom a b rest hab e t hv hocc hnone => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc, hnone] at h
+  | case5 σ dom a b rest hab e t hv hocc more hmore hok ih =>
     intro σ' hw h
-    rw [unify] at h; simp only [hab, ite_false, hv, hocc, hok, and_self] at h
+    rw [unify] at h; simp only [hab, ite_false, hv, hocc, hmore, hok, and_self] at h
     simp only [List.map_attach_eq_pmap, List.pmap_eq_map] at ih h
     refine ih σ' (fun x u hx => ?_) h
     simp only [assign] at hx; split at hx
@@ -156,9 +157,9 @@ theorem unify_wf (n : Nat) (sig : Nat → Option Tm) : ∀ σ dom eqs σ', Rules
       split
       · exact hok.2.2.2
       · simp [Tm.static]; exact Tm.fvs_static u' 0 (hw x u' hu').2 i hi
-  | case5 σ dom a b rest hab e t hv hocc hok => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc, hok] at h
-  | case6 σ dom a b rest hab hv hsh ih =>
+  | case6 σ dom a b rest hab e t hv hocc more hmore hok => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc, hmore, hok] at h
+  | case7 σ dom a b rest hab hv hsh ih =>
     intro σ' hw h; rw [unify] at h; simp only [hab, ite_false, hv, hsh, ite_true] at h; exact ih σ' hw h
-  | case7 σ dom a b rest hab hv hsh => intro σ' _ h; rw [unify] at h; simp [hab, hv, hsh] at h
+  | case8 σ dom a b rest hab hv hsh => intro σ' _ h; rw [unify] at h; simp [hab, hv, hsh] at h
 
 end Minimal

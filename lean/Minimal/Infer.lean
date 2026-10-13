@@ -159,7 +159,14 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
       return { F with body := ← inferCore Γb (some R) F.body }
     modify fun gs => gs.set gid { G with fns }
     return .defFns gid (← inferCore (Γ.pushFns G) rets rest)
-  | .chk (.opn oe) (.fv m) b rest => return .chk (.opn oe) (.fv m) b (← inferCore { Γ with opened := (m, oe) :: Γ.opened } rets rest)
+  | .chk (.opn oe) (.fv m) b rest => do
+    let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
+    let σ' := match (Γ.tys[m]?).map Γ.canon with
+      | some (.mtbl _ _ _ _ H cs) => match unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
+        | .ok σ' => σ'
+        | _ => Γ.σ
+      | _ => Γ.σ
+    return .chk (.opn oe) (.fv m) b (← inferCore { Γo with σ := σ' } rets rest)
   | .chk k a b rest => return .chk k a b (← inferCore Γ rets rest)
   | .absurd body => return .absurd (← inferCore Γ none body)
   | .seq R body rest => return .seq R (← inferCore Γ (some R) body) (← inferCore (Γ.pushTele R) rets rest)
@@ -170,7 +177,7 @@ where
     let brs ← brs.mapM fun (n, c, k', body) => do
       match scrutOf P Γ s with
       | some (H, idx, shp) => match shp[c]? with
-        | some (k, sig, _) => match Γ.branch s k H idx sig with
+        | some (k, sig, _) => match Γ.branch P s k H idx sig with
           | (Γf, .ok σ) => return (n, c, k', ← inferCore { Γf with σ := σ } R body)
           | _ => return (n, c, k', body)
         | none => return (n, c, k', body)

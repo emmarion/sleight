@@ -61,14 +61,6 @@ def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
              subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap Tm.fvIdx },
    rem)
 
-def branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
-  let m := sig.len - 1
-  let (Γf, rem) := Γ.openTele sig m
-  match rem with
-  | .bind (.ty _ _) R .nil =>
-    (Γf, unify Γf.n Γf.sig Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)])
-  | _ => (Γf, .unknown)
-
 end Ctx
 
 def compat : List Bool → Tm → Bool
@@ -76,6 +68,44 @@ def compat : List Bool → Tm → Bool
   | _, _ => true
 
 variable (P : Prog)
+
+def declMtbl : Tm → List Tm
+  | .tyc d | .vc d _ => ((P.adts[d]?).map (·.mtbl d)).toList
+  | _ => []
+
+def sigOf (Γ : Ctx) : Tm → Option Tm
+  | .fv i => Γ.sig i
+  | .tyc d => (P.adts[d]?).map fun D => .tyCtor D.params
+  | .vc d c => (P.ctor d c).map .valCtor
+  | _ => none
+
+def Ctx.lists (Γ : Ctx) (σ : Nat → Option Tm) : List (Tm × Tm × List Tm) :=
+  Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ) with
+    | some (.mtbl u nt ex ph T cs) => some (.mtbl u nt ex ph T cs, T, cs.toList)
+    | _ => none
+
+def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
+  let ls := Γ.lists σ
+  if ls.any (fun (_, _, ks) => match ks.idxOf? a, ks.idxOf? b with
+      | some i, some j => i != j
+      | _, _ => false) then none
+  else
+    let names (x : Tm) := ls.filterMap (fun (M, T, ks) => if T == x || ks.contains x then some M else none) ++ declMtbl P x
+    let ms := names a ++ names b
+    let sigs := match sigOf P Γ a, sigOf P Γ b with
+      | some s, some s' => [(canonBy σ s, canonBy σ s')]
+      | _, _ => []
+    some (sigs ++ ms.map (ms.headD .nil, ·))
+
+def Ctx.openEqs (Γ : Ctx) (xs : List Tm) : List (Tm × Tm) := xs.flatMap fun x => (Γ.atoms P Γ.σ x x).getD []
+
+def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
+  let m := sig.len - 1
+  let (Γf, rem) := Γ.openTele sig m
+  match rem with
+  | .bind (.ty _ _) R .nil =>
+    (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)])
+  | _ => (Γf, .unknown)
 
 mutual
 def rt (Γ : Ctx) : Tm → Bool
@@ -218,19 +248,21 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
-  | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs →
-      CoreTy b { Γ with opened := (m, oe) :: Γ.opened } rest rets → CoreTy b Γ (.chk (.opn oe) (.fv m) x rest) rets
+  | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.toList.Nodup →
+      unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
+        (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' →
+      CoreTy b { Γ with opened := (m, oe) :: Γ.opened, σ := σ' } rest rets → CoreTy b Γ (.chk (.opn oe) (.fv m) x rest) rets
   | absurd : CoreTy b { Γ with ghost := true } body .nil → body.noRet = true → CoreTy b Γ (.absurd body) rets
   | seq : TeleOK P Γ R → R.static Γ.n 0 → R.isTele → CoreTy b Γ body R → CoreTy b (Γ.pushTele R) rest rets →
       CoreTy b Γ (.seq R body rest) rets
 
 inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm → Tm → Option Core → Bool → Prop
-  | live : Γ.branch s k H idx sig = (Γf, .ok σ) →
+  | live : Γ.branch P s k H idx sig = (Γf, .ok σ) →
       CoreTy b (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)) body R →
       BranchOK b fe Γ s k H idx sig R (some body) els
-  | dead : (Γ.branch s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
+  | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
-  | refuted : (Γ.branch s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
+  | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
 
 inductive GroupOK : Nat → Ctx → Group → Prop
   | mk {G : Group} : Γ.tys[G.lvl]? = some K → Γ.canon K = .level →

@@ -55,6 +55,10 @@ examples/numeral_opaque_bad.sl: refused: a branch that is not refuted is missing
 examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 examples/open_adt.sl: 3
 examples/open_adt_erased_bad.sl: refused: a match that dispatches at runtime through an erased Matchable
+examples/open_clash_bad.sl: refused: open-adt: the Matchable contradicts what is open
+examples/open_merge.sl: (A)
+examples/open_refute.sl: 1
+examples/open_twice_bad.sl: refused: open-adt: a constructor is listed twice, which contradicts what is open
 examples/paradox_curry_bad.sl: refused: prove-predates: not introduced before the level
 examples/paradox_knot_bad.sl: refused: prove-predates: not introduced before the level
 examples/paradox_same_level_bad.sl: refused: prove-subterm: not a strict subterm
@@ -102,6 +106,8 @@ unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
 unchecked examples/open_adt_erased_bad.sl: 3
+unchecked examples/open_clash_bad.sl: _
+unchecked examples/open_twice_bad.sl: _
 unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
@@ -143,6 +149,8 @@ full examples/nested_adt.sl: 2
 full examples/newtype.sl: (MkMeters 3)
 full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 full examples/open_adt.sl: 3
+full examples/open_merge.sl: (A)
+full examples/open_refute.sl: 1
 full examples/phantom.sl: 1
 full examples/refute.sl: 1
 full examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)

@@ -345,7 +345,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨he⟩ ← (match els with
         | some eb => do
           let ⟨_⟩ ← need (shp.zipIdx.any fun ((k, sig, _), c) =>
-              (lookupBr brs c).isNone && (Γ.branch s k H idx sig).2 matches .ok _ | .unknown)
+              (lookupBr brs c).isNone && (Γ.branch P s k H idx sig).2 matches .ok _ | .unknown)
             "else: it stands for no constructor"
           let ⟨_, h, e⟩ ← checkCore b Γg eb (.inl R0)
           .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
@@ -370,7 +370,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
           let pick : Option {x : Ctx × Core // sizeOf x.2 < sizeOf brs + sizeOf els} :=
             match hf : brs.find? (·.2.2.2.real) with
             | some (_, c, _, body) => match shp[c]? with
-              | some (k, sig, p) => match ({ Γ with ghost := g p } : Ctx).branch s k H idx sig with
+              | some (k, sig, p) => match ({ Γ with ghost := g p } : Ctx).branch P s k H idx sig with
                 | (Γf, .ok σ) => some ⟨((({ Γ with ghost := g p } : Ctx).setErs { Γf with σ := σ } (fes sig)), body), by
                     have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some hf); simp at this ⊢; omega⟩
                 | _ => none
@@ -389,7 +389,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨he⟩ ← (match els with
         | some eb => do
           let ⟨_⟩ ← need (shp.zipIdx.any fun ((k, sig, _), c) =>
-              (lookupBr brs c).isNone && (Γ.branch s k H idx sig).2 matches .ok _ | .unknown)
+              (lookupBr brs c).isNone && (Γ.branch P s k H idx sig).2 matches .ok _ | .unknown)
             "else: it stands for no constructor"
           let ⟨_, h, e⟩ ← checkCore b Γ eb (.inl R)
           .ok ⟨fun _ h' => by cases h'; exact e.1 R rfl ▸ h⟩
@@ -415,9 +415,15 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     | none => .error "unknown group"
   | .chk (.opn oe) (.fv m) _ rest, rets => match hM : Γ.tys[m]? with
     | some M => match hc : Γ.canon M with
-      | .mtbl .. => do
-        let ⟨R, hr, eq⟩ ← checkCore b { Γ with opened := (m, oe) :: Γ.opened } rest rets
-        .ok ⟨R, .chkOpn hM hc hr, eq⟩
+      | .mtbl _ _ _ _ H cs => do
+        let ⟨hn⟩ ← need cs.toList.Nodup "open-adt: a constructor is listed twice, which contradicts what is open"
+        let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
+        match hu : unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
+        | .ok σ' => do
+          let ⟨R, hr, eq⟩ ← checkCore b { Γo with σ := σ' } rest rets
+          .ok ⟨R, .chkOpn hM hc hn hu hr, eq⟩
+        | .contra => .error "open-adt: the Matchable contradicts what is open"
+        | .unknown => .error "open-adt: cannot decide whether the Matchable agrees with what is open"
       | _ => .error "open-adt: not a Matchable"
     | none => .error "open-adt: unbound"
   | .chk (.opn _) .., _ => .error "open-adt: not an entry"
@@ -447,7 +453,7 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
   | [], _ => .ok ⟨fun _ _ _ _ h => by simp at h⟩
   | (k, sig, p) :: cs, base => do
     let Γc : Ctx := { Γ with ghost := g p }
-    let ⟨hh⟩ ← (match hb : Γc.branch s k H idx sig, hl : lookupBr brs base with
+    let ⟨hh⟩ ← (match hb : Γc.branch P s k H idx sig, hl : lookupBr brs base with
       | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
       | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do

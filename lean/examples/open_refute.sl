@@ -1,0 +1,12 @@
+(def-adts $ (Shape : (Type T) -> Type)
+  enum
+  (many IsNat : -> (Shape (Nat)))
+  (many IsBool : -> (Shape (Bool))))
+(def-lvl X)
+(def-fns X $ (many told : (erased (TyCtor -> Type) T) (erased (ValCtor -> (T)) C) (erased (ValCtor -> (T)) D)
+    (erased (Matchable enum T (many C) (many D)) m) (many (Shape (T)) s) -> (many (Nat) n))
+  (open-adt erased m)
+  (match many s (((Nat) r))
+    (absurd IsNat)
+    ((IsBool) (Succ (Zero)))))
+(told Bool BTrue BFalse (matchable-of Bool) (IsBool))
