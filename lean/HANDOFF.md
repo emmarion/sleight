@@ -9,9 +9,12 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 151 tests were
-accepted with OCaml's value, none mismatched, 325 refusals agreed, and
-143 + 160 were refused as unsupported. No test the OCaml suite
+the test expects and the runner's. At the last run 230 tests were
+accepted with OCaml's value, none mismatched, 419 refusals agreed, and
+57 + 66 were refused as unsupported; 7 tests OCaml accepts are refused
+(`at_match_union`, `at_target_wild`, `cell_append`,
+`coercible_ctor_infer`, `macro_body`, `macro_splice`,
+`slot_of_predates`). No test the OCaml suite
 refuses is accepted. Of the tests it accepts, two time out at ten seconds:
 `comptime_tail.sl` finishes in about a minute, and
 `extern_tail.sl` ran out of memory on this session's machine.
@@ -35,13 +38,16 @@ before checking, and the checker requires it.
    than through `level-of` (section 53). `delegate-of` in a type names the
    proof that `def-fns` mints after its block, so it is refused in the
    block's own signatures.
-2. **`at`, slots and cells** (sections 35 to 41 and 66), now the
-   largest gap: the `unique` tests that remain unsupported stop at them,
-   and so do `Program` (its continuation returns the world `at` the one
-   it took), arrays and macros (`MacroWorld`). Like `unique`, they
-   change nothing in an immutable run, which suggests checking them in
-   the elaborator; but slot facts come from forcing too (section 36's
-   writers), which the elaborator does not do. Not started.
+2. **What `at`, slots and cells still lack** (`lean/README.md` lists
+   what is done): `Placed` (section 66; `placed-slot` needs a slot
+   semantics the core does not have, and the placings are `def-prim`s
+   with non-erased returns), arrays and bytes (cells of extern types
+   inside extern bodies; `inExtern` is never set), `World` and
+   `Program`, a cell binder in `comptime-match`, the full-`at`
+   invocation counted as erased by the `tail` check, a non-erased
+   at-match on a union, and the gaps the README's slot item lists.
+   The user asked that mutation state be left until everything else is
+   done, so the non-mutation items here come first.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
    unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
    leaves out it and everything over `U62`. `prelude.sl` has them, since

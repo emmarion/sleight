@@ -149,10 +149,11 @@ inductive Mode where
   | er
   | many
   | uniq
+  | hid
   deriving BEq, Inhabited, Repr
 
 def Mode.isEr : Mode → Bool
-  | .er => true
+  | .er | .hid => true
   | _ => false
 
 instance : Coe Bool Mode := ⟨fun b => if b then .er else .many⟩
@@ -190,6 +191,14 @@ structure ESt where
   delePf : List (Nat × Nat) := []
   renames : List (Nat × Nat) := []
   prims : List (String × Tm × Nat) := []
+  slots : List (Nat × Tm) := []
+  slotFloor : Nat := 0
+  links : List (Nat × Nat) := []
+  cellDs : List (Tm × Nat) := []
+  inExtern : Bool := false
+  atFns : List Nat := []
+  atPf : List (Nat × Nat) := []
+  atBad : Bool := false
   uq : List Nat := []
   sides : List (Nat × Option Mode × Option Mode) := []
   uses : List (Nat × Bool) := []
@@ -261,6 +270,19 @@ def showName (x : String) : String :=
 
 abbrev Scope := List (String × Ref)
 
+def slotD : Nat := 4
+
+def atFnD : Nat := 5
+
+def ESt.canonIdx (st : ESt) (i : Nat) : Nat :=
+  (List.range st.inl.length).foldl (fun i _ => match st.inl.lookup i with | some (.fv j) => j | _ => i) i
+
+def ESt.skipped (st : ESt) (i : Nat) : Bool := st.atFns.contains (st.canonIdx i)
+
+def ESt.slotRoot (st : ESt) (i : Nat) : Nat :=
+  let m := st.renames ++ st.links
+  (List.range m.length).foldl (fun i _ => (m.lookup i).getD i) i
+
 def ESt.liftTm (st : ESt) (d : Nat) : Tm := .ofList (((st.lifts.lookup d).getD []).map Tm.fv)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
@@ -274,6 +296,7 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
     | some d, _ => pure (.tyc d (st.liftTm d))
     | _, some (d, c) => pure (.vc d c (st.liftTm d))
     | _, _ =>
+      if x == "vacant-slot" && st.decls.length > slotD then return .app (.vc slotD 0 .nil) .nil
       match specialNames.idxOf? x with
       | some c => if st.decls.length > 0 then pure (.app (.vc st.special c .nil) .nil) else throw s!"unbound name {showName x}"
       | none => throw s!"unbound name {showName x}"
@@ -298,7 +321,7 @@ def levelOf (sc : Scope) (f : String) : M Nat := do
   match sc.lookup f with
   | some (.fn _ l _) => pure l
   | some (.fv i) | some (.ctor i) => match (← get).known.lookup i with
-    | some (.fn (.fv l) _ _ _) => pure l
+    | some (.fn (.fv l) _ _ _ _) => pure l
     | _ => throw s!"level-of: the level of {f} is not known"
   | _ => throw s!"level-of: {f} is not a function in scope"
 
@@ -327,9 +350,11 @@ def name : Sx → M String
       pure x
   | _ => throw "malformed name"
 
+def atHere : String := "`at` is allowed only on function telescope and match annotation entries"
+
 def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
   | .list xs => do
-    if xs.contains (.atom "at") then throw "at is not supported"
+    if xs.contains (.atom "at") then throw atHere
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
     let (m, xs) ← splitMd need xs
     match xs with
@@ -338,15 +363,38 @@ def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
     | _ => throw "malformed telescope entry"
   | _ => throw "malformed telescope entry"
 
+def parseEntryAt (need : Bool) : Sx → M (Ent × Sx × List String × Option String)
+  | .list xs => do
+    let (xs, tgt) ← match xs.idxOf? (.atom "at") with
+      | some k => match xs.drop (k + 1) with
+        | [v@(.atom a)] => if (litOf v).isSome then throw "`at` names a variable, not a literal" else pure (xs.take k, some a)
+        | _ => throw "malformed `at` on a telescope entry"
+      | none => pure (xs, none)
+    let (k, T, ns) ← parseEntry need (.list xs)
+    pure (k, T, ns, tgt)
+  | _ => throw "malformed telescope entry"
+
 def entryErs (need : Bool) (es : List Sx) : M (List (String × Bool)) :=
-  es.flatMapM fun e => do let (k, _, xs) ← parseEntry need e; pure (xs.map (·, k.er))
+  es.flatMapM fun e => do let (k, _, xs, _) ← parseEntryAt need e; pure (xs.map (·, k.er))
 
 def entryMds (need : Bool) (es : List Sx) : M (List Mode) :=
-  es.flatMapM fun e => do let (k, _, xs) ← parseEntry need e; pure (xs.map fun _ => k.md)
+  es.flatMapM fun e => do let (k, _, xs, _) ← parseEntryAt need e; pure (xs.map fun _ => k.md)
 
 def teleMds : Tm → List Mode
   | .bind k _ r => k.md :: teleMds r
   | _ => []
+
+def teleEnts : Tm → List Ent
+  | .bind k _ r => k :: teleEnts r
+  | _ => []
+
+def atArgs : List Ent → List Bool → List Bool
+  | k :: _ :: es, true :: _ :: hm => (k matches .is ..) :: atArgs es hm
+  | _ :: es, _ :: hm => false :: atArgs es hm
+  | _, _ => []
+
+def hidMds (tele : Tm) (hm : List Bool) : List Mode :=
+  (teleMds tele).mapIdx fun k m => if hm.getD k false then .hid else m
 
 def Ent.withEr : Ent → Bool → Ent
   | .ty m _ u, e => .ty m e u
@@ -420,7 +468,7 @@ partial def ESt.showTm (st : ESt) (nm : Nat → String) : Tm → String
   | .app h args => "(" ++ " ".intercalate (st.showTm nm h :: args.toList.map (st.showTm nm)) ++ ")"
   | .predates A x L => s!"(Predates {st.showTm nm A} {st.showTm nm x} {st.showTm nm L})"
   | .subterm A a B b => s!"(Subterm {st.showTm nm A} {st.showTm nm a} {st.showTm nm B} {st.showTm nm b})"
-  | .fn l np t u => s!"({if u then "UniqueFn" else "Fn"} {st.showTm nm l} {st.showTele nm np t})"
+  | .fn l np t u _ => s!"({if u then "UniqueFn" else "Fn"} {st.showTm nm l} {st.showTele nm np t})"
   | .tyCtor t => s!"(TyCtor {st.showTele nm t.len t} Type)"
   | .valCtor t => s!"(ValCtor {st.showTele nm (t.len - 1) t})"
   | .mtbl u nt ex ph T cs =>
@@ -464,6 +512,107 @@ def dumpContext (sc : Scope) : M String := do
     else "inside a function body or a match branch: binders here are Hypothetical"
   return "`dump-context` stops elaboration here and reports what the checker knows\n" ++ where_ ++
     String.join (lines.map ("\n" ++ ·))
+
+def ctorFloor : Nat := 1000000
+
+def withFloor {α} (f : Nat) (k : M α) : M α := do
+  let f0 := (← get).slotFloor
+  modify fun st => { st with slotFloor := f }
+  let r ← k
+  modify fun st => { st with slotFloor := f0 }
+  return r
+
+def slotOf (i : Nat) : M Tm := do
+  let st ← get
+  match st.slots.lookup (st.slotRoot i) with
+  | some t => pure t
+  | none => throw "internal: a slot was not minted where its entry is in scope"
+
+partial def Sx.slotRefs : Sx → List String
+  | .list [.atom "slot-of", .atom x] => [x]
+  | .list xs => (xs.zip (xs.drop 1)).filterMap (fun | (.atom "at", .atom x) => some x | _ => none) ++ xs.flatMap Sx.slotRefs
+  | .atom _ => []
+
+def slotM (i : Nat) : M (List (Core → Core) × Tm) := do
+  let st ← get
+  let r := st.slotRoot i
+  if let some t := st.slots.lookup r then return ([], t)
+  let er := st.ers.getD r true
+  let k := st.n
+  modify fun st => { st with n := st.n + 1, ers := st.ers ++ [er] }
+  modify fun st => { st with slots := (r, Tm.fv k) :: st.slots, known := (k, Tm.app (.tyc slotD .nil) .nil) :: st.known }
+  return ([Core.prim (Prim.atom slotD) er], .fv k)
+
+def mintSlots (sc : Scope) (e : Sx) : M (List (Core → Core)) :=
+  e.slotRefs.eraseDups.flatMapM fun x =>
+    match sc.lookup x with
+    | some (.fv i) | some (.ctor i) | some (.fn i _ _) => return (← slotM i).1
+    | _ => pure []
+
+def userExp : List Mode → Tm → Tm
+  | .hid :: ms, .bind _ _ r => userExp ms (r.inst .hole 0)
+  | _ :: ms, .bind k A r => .bind k A (userExp ms r)
+  | _, t => t
+
+def expandHid : List Bool → List Mode → List Mode
+  | true :: hm, ms => .hid :: expandHid hm ms
+  | false :: hm, m :: ms => m :: expandHid hm ms
+  | _, _ => []
+
+def aliasHid : List Mode → List Nat → M Unit
+  | .hid :: m :: ms, h :: i :: is => do
+    modify fun st => { st with slots := (i, .fv h) :: st.slots }
+    aliasHid (m :: ms) (i :: is)
+  | _ :: ms, _ :: is => aliasHid ms is
+  | _, _ => pure ()
+
+def peelTele : Tm → List Tm → Tm
+  | .bind _ _ r, x :: xs => peelTele (r.inst x 0) xs
+  | t, _ => t
+
+structure CtorInfo where
+  k : Tm
+  pos : Nat
+  sig : Tm
+  phantom : Bool
+  union : Bool
+  nt : Bool
+  ex : Bool := false
+
+def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
+  let st ← get
+  let global (d ci : Nat) : M CtorInfo := do
+    let some D := st.decls[d]? | throw s!"unknown constructor {c}"
+    let ls := ((st.lifts.lookup d).getD []).map Tm.fv
+    return ⟨.vc d ci (.ofList ls), ci, peelTele (D.ctors.getD ci .nil) ls, D.phantom.getD ci false, D.union, D.newtype, D.extern⟩
+  match sc.lookup c with
+  | some (.ctor i) | some (.fv i) =>
+    if let some (.vc d ci _) := st.inl.lookup i then return ← global d ci
+    let found := st.opened.findSome? fun m => match st.known.lookup m with
+      | some (.mtbl u nt ex ph _ cs) => (cs.toList.idxOf? (.fv i)).map fun p => (p, u, ph.getD p false, nt, ex)
+      | _ => none
+    match found, st.known.lookup i with
+    | some (p, u, ph, nt, ex), some (.valCtor sig) => return ⟨.fv i, p, sig, ph, u, nt, ex⟩
+    | some _, _ => throw s!"{c} is not a value constructor"
+    | none, _ => throw s!"{c} has no Matchable open"
+  | _ => match st.ctors.lookup c with
+    | some (d, ci) => global d ci
+    | none => throw s!"unknown constructor {c}"
+
+def slotTy : Tm := .app (.tyc slotD .nil) .nil
+
+def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
+  if ci.nt then throw "newtype constructors have no cells"
+  if ci.ex && !(← get).inExtern then throw "extern constructors have no cells"
+  if ci.phantom then throw "phantom constructors have no cells"
+  let st ← get
+  if let some k := st.cellDs.lookup ci.k then return k
+  let n := ((fieldErs ci.sig).filter (!·)).length
+  let k := st.decls.length
+  let ps : Tm := (List.range n).foldr (fun _ r => .bind (.ty false true false) slotTy r) .nil
+  let D : Adt := { params := ps, ctors := [], name := "Cell " ++ c, opq := true }
+  modify fun st => { st with decls := st.decls ++ [D], cellDs := (ci.k, k) :: st.cellDs }
+  return k
 
 mutual
 partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
@@ -514,11 +663,34 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
     | none => throw s!"matchable-of: {T} mentions top-level entries and is not first class"
   | .list (.atom "matchable-of" :: _) => throw "matchable-of takes a type constructor"
   | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
+  | .list [.atom "slot-of", .atom x] => match sc.lookup x with
+    | some (.bnd lv) => do
+      if lv < (← get).slotFloor then
+        throw s!"`slot-of` in a constructor's telescope cannot name `{showName x}`, bound by a telescope still being written"
+      match sc.lookup (" slot " ++ x) with
+      | some (.bnd lv) => pure (.bv (depth - 1 - lv))
+      | _ => throw s!"`slot-of` of `{showName x}`, bound by a telescope, is not supported here"
+    | some (.fv i) | some (.ctor i) | some (.fn i _ _) => slotOf i
+    | none => throw s!"unbound name {showName x}"
+  | .list (.atom "slot-of" :: _) => throw "`slot-of` takes a variable"
+  | .list [.atom "at-fn-of", .atom f] => do
+    let pf := (← get).atPf
+    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
+    | some k => pure (.fv k)
+    | none => throw s!"`{showName f}` has no `AtFn` proof in scope"
   | .list [.atom "delegate-of", .atom f] => do
     let pf := (← get).delePf
     match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
     | some k => pure (.fv k)
     | none => throw s!"delegate-of: {showName f} is not a non-erased function with a `delegate` body defined before this type"
+  | .list (.atom "Cell" :: .atom c :: items) => do
+    if (sc.lookup "Cell").isSome then throw "malformed `Cell`"
+    let ci ← ctorInfo sc c
+    let cd ← cellDecl ci c
+    let n := ((fieldErs ci.sig).filter (!·)).length
+    unless items.length == n do
+      throw s!"the type former `Cell` of `{c}` expects {n} slots, got {items.length}: expected one for each non-erased field of `{c}`"
+    return .app (.tyc cd .nil) (.ofList (← items.mapM (elabTm sc depth)))
   | .list [.atom "Predates", A, x, L] =>
     return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
   | .list [.atom "Subterm", A, a, B, b] =>
@@ -538,10 +710,10 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
       (.ofList (es.map (·.2)))
   | .list (.atom "TyCtor" :: es) => do
     let (ps, [.atom "Type"]) ← splitArrow es | throw "a TyCtor returns Type"
-    return .tyCtor (← elabTele sc depth false ps)
+    return .tyCtor (← withFloor ctorFloor (elabTele sc depth false ps))
   | .list (.atom "ValCtor" :: es) => do
     let (fs, [ret]) ← splitArrow es | throw "a ValCtor has one return"
-    return .valCtor (← elabTele sc depth true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
+    return .valCtor (← withFloor ctorFloor (elabTele sc depth true (fs ++ [.list [.atom "many", ret, .atom "_"]])))
   | .list (.atom h :: args) => do
     let st ← get
     let args ← args.mapM (elabTm sc depth)
@@ -556,8 +728,39 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
 partial def elabFn (sc : Scope) (depth : Nat) (l : Sx) (es : List Sx) (u : Bool) : M Tm := do
   let l ← elabTm sc depth l
   let (ps, rs) ← splitArrow es
-  let t ← elabTele sc depth true (ps ++ rs)
-  return .fn l (← entryErs true ps).length t u
+  let (t, hm, np) ← withFloor (min (← get).slotFloor depth) (elabTeleH sc depth ps rs)
+  return .fn l np t u hm
+
+partial def elabTeleH (sc : Scope) (depth : Nat) (ps rs : List Sx) (md : Bool := true) : M (Tm × List Bool × Nat) := do
+  let es := ps ++ rs
+  let parsed ← es.mapM (parseEntryAt md)
+  let names := parsed.flatMap (·.2.2.1)
+  let refs := es.flatMap Sx.slotRefs
+  let need (x : String) (tgt : Option String) : Bool := tgt.isSome || (names.contains x && refs.contains x)
+  let np := (parsed.take ps.length).foldl (fun n (_, _, xs, tgt) => n + (xs.map fun x => if need x tgt then 2 else 1).sum) 0
+  let (t, hm) ← teleH sc depth need parsed
+  return (t, hm, np)
+
+partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String → Bool) :
+    List (Ent × Sx × List String × Option String) → M (Tm × List Bool)
+  | [] => pure (.nil, [])
+  | (_, _, [], _) :: rest => teleH sc depth need rest
+  | (k, T, x :: xs, tgt) :: rest => do
+    let hid ← if need x tgt then do
+        match tgt with
+        | some v => match sc.lookup (" slot " ++ v), sc.lookup v with
+          | some (.bnd lv), _ => pure (some (Ent.is false true false, Tm.bv (depth - 1 - lv)))
+          | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false, ← slotOf i))
+          | _, some _ => throw s!"`at` naming `{showName v}`, bound by an enclosing telescope, is not supported"
+          | _, none => throw s!"unbound name {showName v}"
+        | none => pure (some (Ent.ty false true false, Tm.app (.tyc slotD .nil) .nil))
+      else pure none
+    let (sc, depth) := if hid.isSome then (((" slot " ++ x), Ref.bnd depth) :: sc, depth + 1) else (sc, depth)
+    let Tt ← elabTm sc depth T
+    let (r, m) ← teleH ((x, .bnd depth) :: sc) (depth + 1) need ((k, T, xs, tgt) :: rest)
+    match hid with
+    | some (k', A) => pure (.bind k' A (.bind k Tt r), true :: false :: m)
+    | none => pure (.bind k Tt r, false :: m)
 
 partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
   | [] => pure .nil
@@ -582,12 +785,40 @@ def reset (base : Nat) : M Unit := modify fun st =>
             inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
             uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
             sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
-            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base) }
+            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base), links := st.links.filter (·.1 < base),
+            atFns := st.atFns.filter (· < base), atPf := st.atPf.filter (·.2 < base),
+            slots := st.slots.filter fun (i, t) => i < base && t.fvs.all (· < base) }
 
 def liftTm (d : Nat) : M Tm := return (← get).liftTm d
 
+
 def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
   if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
+
+partial def ESt.slotSrc (st : ESt) : Tm → Option Nat
+  | .fv i => some i
+  | .app (.vc d c _) args => do
+    let D ← st.decls[d]?
+    guard D.newtype
+    let k ← (fieldErs ((D.ctors[c]?).getD .nil) |>.drop D.lifted).idxOf? false
+    st.slotSrc (← args.toList[k]?)
+  | _ => none
+
+def fillHid (er : Bool) : List Mode → List Tm → M (List (Core → Core) × List Tm)
+  | .hid :: _ :: ms, .hole :: ts => do let (s, r) ← fillHid er ms ts; return (s, .hole :: .hole :: r)
+  | .hid :: m :: ms, t :: ts => do
+    let m := if er then .er else m
+    let (s1, i, t) ← match (← get).slotSrc t with
+      | some i => pure ([], i, t)
+      | none => do
+        let [j] ← freshMd [m] | throw "fresh"
+        note j t true
+        pure ([Core.prim (.tm t) m.isEr], j, .fv j)
+    let (s2, σ) ← slotM i
+    let (s3, r) ← fillHid er ms ts
+    return (s1 ++ s2 ++ s3, σ :: t :: r)
+  | _ :: ms, t :: ts => do let (s, r) ← fillHid er ms ts; return (s, t :: r)
+  | _, ts => pure ([], ts)
 
 def abst (ids : List Nat) : Nat → Tm → Tm
   | D, .fv i => match ids.idxOf? i with
@@ -602,7 +833,7 @@ def abst (ids : List Nat) : Nat → Tm → Tm
   | D, .valCtor p => .valCtor (abst ids D p)
   | D, .predates A x L => .predates (abst ids D A) (abst ids D x) (abst ids D L)
   | D, .subterm A a B b => .subterm (abst ids D A) (abst ids D a) (abst ids D B) (abst ids D b)
-  | D, .fn l np t u => .fn (abst ids D l) np (abst ids D t) u
+  | D, .fn l np t u hm => .fn (abst ids D l) np (abst ids D t) u hm
   | _, t => t
 
 def teleAppend : Tm → Tm → Tm
@@ -635,8 +866,8 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let inline (t : Tm) : Tm := (List.range st.inl.length).foldl
     (fun t _ => t.subst fun i => (st.inl.lookup i).getD (.fv i)) t
   let elabSigs := heads.mapM fun (_, ps, cs) => do
-    let params ← elabTele sc 0 false ps
-    let sigs ← cs.mapM fun (_, _, fs, ret) => elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]])
+    let params ← withFloor ctorFloor (elabTele sc 0 false ps)
+    let sigs ← cs.mapM fun (_, _, fs, ret) => withFloor ctorFloor (elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
     pure (inline params, sigs.map inline)
   let raw ← elabSigs
   let mut ids : List Nat := ((raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).filter (· < holeBase)).eraseDups
@@ -761,7 +992,7 @@ def internLits (e : Sx) : M (List Stmt) := do
     match is with
     | [i] => pure i
     | _ => throw "fresh"
-  let mut out : List Stmt := []
+  let mut out : List (Core → Core) := []
   if nums.isEmpty && strs.all (fun s => (st0.strs.lookup s).isSome) && charsWanted.all (fun c => (st0.chars.lookup c).isSome)
       && numOf.all (fun n => (st0.numPf.lookup n).isSome) && ltOf.all (fun p => (st0.ltPf.lookup p).isSome)
       && eqOf.all (fun p => (st0.eqPf.lookup p).isSome) then return []
@@ -860,48 +1091,49 @@ def internLits (e : Sx) : M (List Stmt) := do
     modify fun st => { st with eqPf := ((a, b), i) :: st.eqPf }
   return out
 
-def peelTele : Tm → List Tm → Tm
-  | .bind _ _ r, x :: xs => peelTele (r.inst x 0) xs
-  | t, _ => t
-
-structure CtorInfo where
-  k : Tm
-  pos : Nat
-  sig : Tm
-  phantom : Bool
-  union : Bool
-  nt : Bool
-
-def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
-  let st ← get
-  let global (d ci : Nat) : M CtorInfo := do
-    let some D := st.decls[d]? | throw s!"unknown constructor {c}"
-    let ls := ((st.lifts.lookup d).getD []).map Tm.fv
-    return ⟨.vc d ci (.ofList ls), ci, peelTele (D.ctors.getD ci .nil) ls, D.phantom.getD ci false, D.union, D.newtype⟩
-  match sc.lookup c with
-  | some (.ctor i) | some (.fv i) =>
-    if let some (.vc d ci _) := st.inl.lookup i then return ← global d ci
-    let found := st.opened.findSome? fun m => match st.known.lookup m with
-      | some (.mtbl u nt _ ph _ cs) => (cs.toList.idxOf? (.fv i)).map fun p => (p, u, ph.getD p false, nt)
-      | _ => none
-    match found, st.known.lookup i with
-    | some (p, u, ph, nt), some (.valCtor sig) => return ⟨.fv i, p, sig, ph, u, nt⟩
-    | some _, _ => throw s!"{c} is not a value constructor"
-    | none, _ => throw s!"{c} has no Matchable open"
-  | _ => match st.ctors.lookup c with
-    | some (d, ci) => global d ci
-    | none => throw s!"unknown constructor {c}"
-
-def openPattern (sc : Scope) (md : Mode) : Sx → M (Nat × CtorInfo × Scope)
+def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (Nat × CtorInfo × Scope × List (Core → Core))
   | .list (.atom c :: xs) => do
     let ci ← ctorInfo sc c
     let names ← xs.mapM name
-    if names.length == (fieldErs ci.sig).length + 1 then throw "a cell binder in a pattern is not supported"
-    unless names.length == (fieldErs ci.sig).length do throw s!"a pattern for {c} binds the wrong number of fields"
-    let fs ← freshMd (if md.isEr || ci.phantom then names.map fun _ => Mode.er
+    let nf := (fieldErs ci.sig).length
+    unless names.length == nf || names.length == nf + 1 do throw s!"a pattern for {c} binds the wrong number of fields"
+    let fs ← freshMd (if md.isEr || ci.phantom then (names.take nf).map fun _ => Mode.er
       else (fieldMds ci.sig).map fun m => if m == .uniq && md != .uniq then .many else m)
-    return (names.length, ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys ci.sig))).reverse ++ sc)
+    if let (true, some (.fv j), some k) := (ci.nt, scr, (fieldErs ci.sig).idxOf? false) then
+      modify fun st => { st with links := (fs[k]!, j) :: st.links }
+    let sc' := ((names.take nf).zip (fs.zipWith (fun i T => entRef i T) (teleTys ci.sig))).reverse ++ sc
+    let some u := names[nf]? | return (nf, ci, sc', [])
+    let cd ← cellDecl ci c
+    let ms ← (fs.zip (fieldErs ci.sig)).filterMapM fun (i, e) => if e then pure none else some <$> slotM i
+    let [j] ← freshMd [md] | throw "fresh"
+    let T := Tm.app (.tyc cd .nil) (.ofList (ms.map (·.2)))
+    note j T
+    if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
+    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [Core.prim (.axm T) md.isEr])
   | _ => throw "malformed pattern"
+
+def ESt.cellSig (st : ESt) : Tm → Tm
+  | .vc d c ls => peelTele (((st.decls[d]?).bind (·.ctors[c]?)).getD .nil) ls.toList
+  | .fv x => match st.known.lookup x with | some (.valCtor sig) => sig | _ => .nil
+  | _ => .nil
+
+def cellOf (t : Tm) : M (Option (Tm × List Tm)) := do
+  let st ← get
+  let .fv i := t | return none
+  match st.known.lookup (st.canonIdx i) <|> st.known.lookup i with
+  | some (.app (.tyc cd _) sl) => return (st.cellDs.find? (·.2 == cd)).map fun (k, _) => (k, sl.toList)
+  | _ => return none
+
+def cellMode : String → M Mode
+  | "many" => pure .many
+  | "unique" => pure .uniq
+  | _ => throw "`cell-match` takes its cell at `many` or `unique`"
+
+def bindTele (ids : List Nat) (t : Tm) : M Tm :=
+  ids.foldlM (fun t i => match t with
+    | .bind (.is ..) e r => do note i e true; pure (r.inst (.fv i) 0)
+    | .bind _ A r => do note i A; pure (r.inst (.fv i) 0)
+    | t => pure t) t
 
 def erasedPos (want : List Mode) : M Bool := return (← get).ghost || (!want.isEmpty && want.all (·.isEr))
 
@@ -1048,7 +1280,7 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
     if let some (ss, e') ← dispatchComputed sc e then
       let (ss2, ts) ← elabExpr sc want exp e'
       return (ss ++ ss2, ts)
-    let hm ← if ← erasedPos want then pure Mode.er else headMode sc hd
+    let hm ← if ← erasedPos want then pure Mode.er else headMode sc (want.headD .many) hd
     let (ss, ts) ← withTail false (elabExpr sc [hm] none hd)
     let [t] := ts | throw "a computed head has one value"
     let (ss2, r) ← bindTemp sc t (← erasedPos want)
@@ -1056,23 +1288,30 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
     return (ss ++ ss2 ++ ss3, ts)
   | e => elabExpr' sc want exp e
 
-partial def headMode (sc : Scope) : Sx → M Mode
-  | .list [.atom "values", x] => headMode sc x
-  | .list (.atom "match" :: _ :: _ :: .list [.list (T :: _)] :: _) =>
-    pure (if T matches .list (.atom "UniqueFn" :: _) then .uniq else .many)
+partial def headMode (sc : Scope) (pos : Mode) : Sx → M Mode
+  | .list [.atom "values", x] => headMode sc pos x
+  | .list (.atom "match" :: _ :: _ :: .list [.list (T :: _)] :: _) | .list (.atom "cell-match" :: _ :: _ :: .list [.list (T :: _)] :: _) =>
+    pure (if T matches .list (.atom "UniqueFn" :: _) then .uniq else if T matches .list (.atom "Cell" :: _) then pos else .many)
+  | .list (.atom f :: _) => do
+    if ["cell-alloc", "cell-write"].contains f && (sc.lookup f).isNone then return pos
+    headModeCall sc pos f
   | .atom x => do
     let st ← get
     match sc.lookup x with
-    | some (.fv i) | some (.fn i _ _) => pure (if st.known.lookup i matches some (.fn _ _ _ true) then .uniq else .many)
+    | some (.fv i) | some (.fn i _ _) => pure (if st.known.lookup i matches some (.fn _ _ _ true _) then .uniq else .many)
     | _ => pure .many
-  | .list (.atom f :: _) => do
-    let st ← get
-    match sc.lookup f with
-    | some (.fv i) | some (.fn i _ _) => match st.known.lookup i with
-      | some (.fn _ np tele _) => match (teleMds tele).drop np, (teleTys tele).drop np with
-        | [m], [T] => pure (if m == .uniq || T matches .fn _ _ _ true then .uniq else .many)
-        | _, _ => pure .many
-      | _ => pure .many
+  | _ => pure .many
+
+partial def headModeCall (sc : Scope) (pos : Mode) (f : String) : M Mode := do
+  let st ← get
+  match sc.lookup f with
+  | some (.fv i) | some (.fn i _ _) => match st.known.lookup i with
+    | some (.fn _ np tele _ hm) => match ((hidMds tele hm).drop np).filter (· != .hid), (teleTys tele).drop np with
+      | [m], _ => pure (if m == .uniq || ((teleTys tele).drop np).getLast? matches some (.fn _ _ _ true _) then .uniq
+          else match ((teleTys tele).drop np).getLast? with
+            | some (.app (.tyc cd _) _) => if st.cellDs.any (·.2 == cd) then pos else .many
+            | _ => .many)
+      | _, _ => pure .many
     | _ => pure .many
   | _ => pure .many
 
@@ -1120,7 +1359,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
   | e@(.list (.atom h :: args)) => do
     let st ← get
     if h ∈ ["prove-subterm", "prove-predates", "predates-trans", "subterm-trans", "predates-subterm"] then
-      let (ss, ts) ← elabArgs sc args
+      let (ss, ts) ← elabArgs sc args (args.map fun _ => .er)
       let p ← match h, ts, args with
         | "prove-subterm", [a, b], _ => pure (.proveSubterm a b)
         | "prove-predates", _, [x, L] => do
@@ -1167,7 +1406,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
             let st ← get
             match sc.lookup c with
             | some (.ctor i) | some (.fv i) => match st.known.lookup i with
-              | some (.valCtor sig) => pure ⟨.fv i, 0, sig, false, false, false⟩
+              | some (.valCtor sig) => pure ⟨.fv i, 0, sig, false, false, false, false⟩
               | _ => throw e
             | _ => throw e
           let ers := fieldErs ci.sig
@@ -1202,6 +1441,104 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       if let .fv j := ta[0]! then modify fun st => { st with renames := (i, j) :: st.renames }
       return (ss1 ++ ss2 ++ [.prim (.coerce ta[0]! .hole tp[0]!) er], [.fv i])
     else if h == "match" then elabMatch sc want exp args
+    else if h == "cell-alloc" && (sc.lookup h).isNone then
+      let [x] := args | throw "malformed `cell-alloc`"
+      let (c, items) ← match x with
+        | .atom c => pure (c, none)
+        | .list (.atom c :: is) => pure (c, some is)
+        | _ => throw "malformed `cell-alloc`"
+      let ci ← ctorInfo sc c
+      let cd ← cellDecl ci c
+      let n := ((fieldErs ci.sig).filter (!·)).length
+      let vac : Tm := .app (.vc slotD 0 .nil) .nil
+      let (ss, sl) ← match items with
+        | none => pure ([], List.replicate n vac)
+        | some is => do
+          unless is.length == n do
+            throw s!"`cell-alloc` of `{c}` expects {n} slot items, got {is.length}: expected one for each non-erased field of `{c}`"
+          slotItems sc is (List.replicate n vac)
+      let er ← erasedPos want
+      if !er && want == [.many] then throw s!"`(cell-alloc {c})`, a fresh cell and so unique, used at many without `share`"
+      let [j] ← freshMd [if er then .er else .uniq] | throw "fresh"
+      let T := Tm.app (.tyc cd .nil) (.ofList sl)
+      note j T
+      unless er do modify fun st => { st with atBad := true }
+      return (ss ++ [.prim (.axm T) er], [.fv j])
+    else if h == "cell-write" && (sc.lookup h).isNone then
+      let [.atom m, u, .list (.atom c :: is)] := args | throw "malformed `cell-write`"
+      let md ← cellMode m
+      if ← erasedPos want then throw "`cell-write` in an erased position"
+      let (ss, ut) ← elabExpr sc [md] none u
+      let some (k, old) ← cellOf (ut.headD .nil) | throw "`cell-write` of a value that is not a cell"
+      let ci ← ctorInfo sc c
+      unless ci.k == k do throw "value mismatch: `cell-write` names a constructor other than the cell's"
+      unless is.length == old.length do
+        throw s!"`cell-write` of `{c}` expects {old.length} slot items, got {is.length}: expected one for each non-erased field of `{c}`"
+      let (ss2, sl) ← slotItems sc is old
+      supply want [.uniq]
+      let [j] ← freshMd [.uniq] | throw "fresh"
+      let T := Tm.app (.tyc (← cellDecl ci c) .nil) (.ofList sl)
+      note j T
+      if let (.uniq, [.fv i]) := (md, ut) then modify fun st => { st with links := (j, i) :: st.links }
+      modify fun st => { st with atBad := true }
+      return (ss ++ ss2 ++ [.prim (.axm T) false], [.fv j])
+    else if h == "cell-match" && (sc.lookup h).isNone then
+      let .atom m :: u :: ann :: pat :: body := args | throw "malformed `cell-match`"
+      let md ← cellMode m
+      if ← erasedPos want then throw "`cell-match` in an erased position"
+      let (ss, ut) ← withTail false (elabExpr sc [md] none u)
+      let [ut@(.fv ui)] := ut | throw "`cell-match` of a value that is not a cell"
+      let some (k, sl) ← cellOf ut | throw "`cell-match` of a value that is not a cell"
+      let .list (.atom c :: bs) := pat | throw "malformed `cell-match` pattern"
+      let ci ← ctorInfo sc c
+      unless ci.k == k do throw "value mismatch: the `cell-match` pattern names a constructor other than the cell's"
+      let nb := sl.length + (if md == .uniq then 1 else 0)
+      unless bs.length == nb do throw s!"`cell-match` on `{c}` under `{m}` expects {nb} binders, got {bs.length}"
+      let names ← bs.mapM name
+      let mut pre : List Stmt := []
+      let mut sc' := sc
+      for (x, t) in names.zip sl do
+        let ers := (← get).ers
+        let er := t.fvs.any fun v => ers.getD v true
+        let [j] ← fresh [er] | throw "fresh"
+        note j t true
+        pre := pre ++ [.prim (.tm t) er]
+        sc' := (x, .fv j) :: sc'
+      if md == .uniq then
+        let [j] ← freshMd [.uniq] | throw "fresh"
+        note j ut true
+        modify fun st => { st with renames := (j, ui) :: st.renames }
+        pre := pre ++ [.prim (.tm ut) false]
+        sc' := (names.getLast!, .fv j) :: sc'
+      let (atm, ann) := match ann with | .list [.atom "at", a] => (true, a) | a => (false, a)
+      let (R0, hm) ← match ann, exp with
+        | .list rets, _ => do let (R, hm, _) ← elabTeleH sc 0 [] rets false; pure (R, hm)
+        | .atom "_", some R => pure (R, [])
+        | _, _ => throw "a `cell-match` annotation `_` where no telescope is expected"
+      let rms := if hm.contains true then expandHid hm want else want
+      let R := setErs R0 (rms.map (·.isEr))
+      let bad0 := (← get).atBad
+      modify fun st => { st with atBad := false }
+      let base := (← get).n
+      let b ← elabBody sc' rms body (some R)
+      reset base
+      if atm && (← get).atBad then
+        throw "the body of an at-`cell-match` must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"
+      modify fun st => { st with atBad := bad0 || st.atBad }
+      let outs ← freshMd rms
+      aliasHid rms outs
+      let _ ← bindTele outs R
+      let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
+      return (ss ++ pre ++ [fun k => .seq R b k], outs.map .fv)
+    else if h == "slot-of" && (sc.lookup h).isNone then
+      let [.atom x] := args | throw "`slot-of` takes a variable"
+      let i ← match sc.lookup x with
+        | some (.fv i) | some (.ctor i) | some (.fn i _ _) => pure i
+        | some _ => throw s!"`slot-of` of `{showName x}`, bound by a telescope, is not supported here"
+        | none => throw s!"unbound name {showName x}"
+      if !(← erasedPos want) && (← get).ers.getD i true then
+        throw s!"`(slot-of {showName x})` is erased, as `{showName x}` is, and stands in a non-erased position"
+      return ([], [← slotOf i])
     else if h == "share" && (sc.lookup h).isNone then
       if ← erasedPos want then throw "`share` in an erased position, where nothing is used"
       let [x] := args | throw "hint: usage: (share <expression>)"
@@ -1219,6 +1556,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       supply want [.many]
       let [j] ← freshMd [.many] | throw "fresh"
       note j t true
+      if let .fv i := t then modify fun st => { st with renames := (j, i) :: st.renames }
       return (ss ++ [.prim (.tm t) false], [.fv j])
     else if h == "open-absurd" && (sc.lookup h).isNone then
       let [e, _] := args | throw "open-absurd takes an expression and an annotation"
@@ -1252,9 +1590,29 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
       if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
       if st.ghost || (!want.isEmpty && want.all (·.isEr)) then throw s!"{h} in an erased position"
+      if let some i := (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => some i | _ => none) then
+        if st.skipped i then throw s!"`{h}` marks a call that compiles to one, and a call of at-function `{showName f}` is skipped"
       if h == "tail" && !st.tail then throw "tail: the call is not in tail position"
       if h == "notail" && st.tail then throw "notail: the call is in tail position"
       elabExpr sc want exp x
+    else if h == "at" && (sc.lookup h).isNone then
+      let [x] := args | throw "malformed `at` form"
+      let .list (.atom f :: _) := x | throw "malformed `at` form"
+      if ← erasedPos want then throw "`at` in an erased position"
+      let i ← match sc.lookup f with
+        | some (.fv i) | some (.fn i _ _) => pure i
+        | some _ => throw "malformed `at` form"
+        | none => throw s!"unbound name {showName f}"
+      if let some (k, sl) ← cellOf (.fv i) then
+        let .list (_ :: xs) := x | throw "malformed `at` form"
+        return ← elabInvoke sc want i k sl xs true exp
+      match st.known.lookup (st.canonIdx i) with
+      | some (.fn ..) | none => pure ()
+      | some T => throw s!"`at` wraps a `Cell` invocation or a call, and `{showName f}` : `{st.showTm (s!"__{·}") T}` is neither"
+      unless st.skipped i do throw s!"`{showName f}` is not an at-function here: no `AtFn` proof for it is open"
+      elabExpr sc want exp x
+    else if h == "at-fn-of" && (sc.lookup h).isNone then
+      return ([], [← elabTm sc 0 e])
     else if let (some (tele, np), none) := (st.prims.lookup h, sc.lookup h) then
       let (ss, ts) ← elabArgs sc args ((teleMds tele).take np)
       unless ts.length == np do throw s!"`{h}` takes {np} arguments"
@@ -1278,18 +1636,25 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d (← liftTm d)) (.ofList ts)])
       | _, some (d, c) =>
         let sig := ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
-        unless ← erasedPos want do warnUse (.vc d c .nil) "application" (showName h)
+        unless ← erasedPos want do
+          warnUse (.vc d c .nil) "application" (showName h)
+          unless (st.decls[d]?).any (·.newtype) do modify fun st => { st with atBad := true }
         let fm := fun (m : Mode) => if m == .uniq && want != [.uniq] then Mode.many else m
-        let (ss, ts) ← elabArgs sc args (((fieldMds sig).drop ((st.lifts.lookup d).getD []).length).map fm)
+        let ls := ((st.lifts.lookup d).getD []).map Tm.fv
+        let (ss, ts) ← elabArgs sc args (((fieldMds sig).drop ls.length).map fm) (peelTele sig ls)
         return (ss, [.app (.vc d c (← liftTm d)) (.ofList ts)])
       | _, _ =>
         unless h ∈ ["Fn", "UniqueFn", "TyCtor", "ValCtor", "Matchable", "Level", "Predates", "Subterm", "level-of", "numeral-of", "prove-literal-lt"] do
           throw (if h ∈ specialNames then s!"{h} is not supported here" else s!"unbound name {showName h}")
         return ([], [← elabTm sc 0 e])
     else if let some (.ctor i) := sc.lookup h then
-      unless ← erasedPos want do if let some t := st.inl.lookup i then warnUse t "application" (showName h)
+      unless ← erasedPos want do
+        if let some t := st.inl.lookup i then warnUse t "application" (showName h)
+        modify fun st => { st with atBad := true }
       let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
     else do
+      if let some (.fv i) := sc.lookup h then
+        if let some (k, sl) ← cellOf (.fv i) then return ← elabInvoke sc want i k sl args false exp
       let f ← look sc 0 h
       let isDec : Sx → Bool | .list [.atom "predates", _] | .list [.atom "subterm", _] => true | _ => false
       if (args.filter isDec).length > 1 then throw "a call carries at most one decrease annotation"
@@ -1311,16 +1676,30 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let kty := match f with
         | .fv i => st.known.lookup i <|> (match st.inl.lookup i with | some (.fv k) => st.known.lookup k | _ => none)
         | _ => none
-      let (ss, ts) ← elabArgs sc args (match sc.lookup h, kty with
+      let full := match kty with | some (.fn _ np tele _ hm) => some (np, hidMds tele hm) | _ => none
+      let (ss, ts) ← elabArgs sc args (match sc.lookup h, full with
         | some (.fn _ _ ms), _ => ms
-        | _, some (.fn _ np tele _) => (teleMds tele).take np
-        | _, _ => [])
+        | _, some (np, ms) => (ms.take np).filter (· != .hid)
+        | _, _ => []) (match kty with | some (.fn _ _ tele _ hm) => if hm.all (!·) then tele else .nil | _ => .nil)
+      if let some (.fn _ np tele _ hm) := kty then
+        for (a, t) in (atArgs ((teleEnts tele).take np) hm).zip ts do
+          if a && t == .hole then throw "`_` cannot stand for an argument written `at`"
+          if a && (← get).slotSrc t == none then
+            throw s!"an argument of `{showName h}` written `at` is not a variable, so it is in a fresh slot and does not satisfy `at`"
+      let (ssH, ts) ← match full with
+        | some (np, ms) => fillHid (← erasedPos want) (ms.take np) ts
+        | none => pure ([], ts)
+      let ss := ss ++ ssH
+      unless (← erasedPos want) || (match f with | .fv i => st.skipped i | _ => false) do
+        modify fun st => { st with atBad := true }
       if let .fv i := f then
-        useVar i (if kty matches some (.fn _ _ _ true) || (kty.isNone && st.uq.contains i) then .uniq else .many)
-      if let some (.fn _ np tele _) := kty then supply want ((teleMds tele).drop np)
+        useVar i (if kty matches some (.fn _ _ _ true _) || (kty.isNone && st.uq.contains i) then .uniq else .many)
+      let want := match full with | some (np, ms) => expandHid ((ms.drop np).map (· == .hid)) want | none => want
+      if let some (np, ms) := full then supply want (ms.drop np)
       let outs ← freshMd want
+      aliasHid want outs
       let known := (← get).known
-      if let some (.fn _ _ tele _) := (match f with | .fv i => known.lookup i | _ => none) then
+      if let some (.fn _ _ tele _ _) := (match f with | .fv i => known.lookup i | _ => none) then
         let _ ← (ts ++ outs.map Tm.fv).zipIdx.foldlM (fun t (a, k) => match t with
           | .bind k' A r => do
             if ts.length ≤ k then
@@ -1328,20 +1707,75 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
             pure (r.inst a 0)
           | t => pure t) tele
       let ve := match (match f with | .fv i => known.lookup i | _ => none) with
-        | some (.fn _ _ tele _) => some tele.ers
+        | some (.fn _ _ tele _ _) => some tele.ers
         | _ => none
-      return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all (·.isEr)) (want.map (·.isEr)) ve], outs.map .fv)
+      return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all (·.isEr)) (want.map (·.isEr)) ve],
+        ((want.zip outs).filter (·.1 != .hid)).map (.fv ·.2))
   | e => do
     let t ← elabTm sc 0 e
     if e matches .atom _ then useTm t want
     return ([], [t])
 
-partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) : M (List Stmt × List Tm) := withTail false do
-  let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i .many] none e
-  return (rs.flatMap (·.1), rs.flatMap (·.2))
+partial def slotItems (sc : Scope) (is : List Sx) (dflt : List Tm) : M (List Stmt × List Tm) := do
+  let rs ← (is.zip dflt).mapM fun (i, d) => match i with
+    | .atom "_" => pure ([], d)
+    | i => do let (ss, ts) ← elabExpr sc [.many] none i; pure (ss, ts.headD .nil)
+  return (rs.flatMap (·.1), rs.map (·.2))
+
+partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : List Tm) (args : List Sx) (all : Bool)
+    (exp : Option Tm := none) : M (List Stmt × List Tm) := do
+  let sig := (← get).cellSig k
+  let rec marks : List Sx → List (Bool × Sx)
+    | .list [.atom "at"] :: a :: r => (true, a) :: marks r
+    | a :: r => (false, a) :: marks r
+    | [] => []
+  let ms := marks args
+  let ers := fieldErs sig
+  unless ms.length == ers.length do throw s!"a `Cell` invocation expects {ers.length} arguments, got {ms.length}"
+  let (ss, ts) ← elabArgs sc (ms.map (·.2)) ((fieldMds sig).map fun m => if m == .uniq && want != [.uniq] then .many else m)
+  let er ← erasedPos want
+  let mut chk : List Stmt := []
+  let mut stores := false
+  let mut p := 0
+  for (((mk, _), t), e) in (ms.zip ts).zip ers do
+    if e then
+      if mk then throw "`(at)` marks an erased argument"
+      continue
+    if mk || all then
+      let some src := (← get).slotSrc t | throw "`(at)` marks an argument that is not a variable"
+      let (s, σ) ← slotM src
+      let target := sl.getD p .nil
+      chk := chk ++ s ++ [fun c => Core.chk .is σ target c]
+    else stores := true
+    p := p + 1
+  let pm := if er then Mode.er else want.headD .many
+  useVar i pm
+  if stores && !er then modify fun st => { st with atBad := true }
+  let t := Tm.app k (.ofList ts)
+  let [j] ← freshMd [pm] | throw "fresh"
+  note j t true
+  if pm != .many || !stores then modify fun st => { st with links := (j, i) :: st.links }
+  let ty : List Stmt := match exp with
+    | some (.bind (.ty ..) A .nil) => [fun c => .chk .ty (.fv j) A c]
+    | _ => []
+  return (ss ++ chk ++ [.prim (.tm t) er] ++ ty, [.fv j])
+
+partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
+  withTail false do
+  let mut t := T
+  let mut ss : List Stmt := []
+  let mut ts : List Tm := []
+  for (e, i) in es.zipIdx do
+    let m := ms.getD i .many
+    let exp := match t with | .bind (.ty ..) A _ => some (Tm.bind (.ty false m.isEr false) A .nil) | _ => none
+    let (s, r) ← elabExpr sc [m] exp e
+    ss := ss ++ s
+    ts := ts ++ r
+    t := match t, r with | .bind _ _ rest, [a] => rest.inst a 0 | _, _ => .nil
+  return (ss, ts)
 
 partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R : Option Tm) (brs : List Sx)
-    (extra : Nat := 0) : M (List Br × Option Core × Bool) := do
+    (extra : Nat := 0) (scr : Option Tm := none) : M (List Br × Option Core × Bool) := do
   let st ← get
   let er := md.isEr
   let base := st.n
@@ -1355,7 +1789,15 @@ partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R 
       if els.isSome then throw "match: two else branches"
       reset base
       modify fun st => { st with uses := u0 }
-      els := some (← ghostly gEr (elabBody sc rms items R))
+      let (sc', pre, items) ← match items, scr with
+        | .atom x :: body@(_ :: _), some t => do
+          let x ← name (.atom x)
+          let [j] ← freshMd [md] | throw "fresh"
+          note j t true
+          if let .fv i := t then modify fun st => { st with renames := (j, i) :: st.renames }
+          pure ((x, Ref.fv j) :: sc, [(.prim (.tm t) er : Stmt)], body)
+        | _, _ => pure (sc, [], items)
+      els := some ((pre.foldr (· ·)) (← ghostly gEr (elabBody sc' rms items R)))
       uses := joinUses uses (← get).uses
       continue
     if let .list [.atom "absurd", .atom c] := br then
@@ -1369,14 +1811,14 @@ partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R 
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
     reset base
     modify fun st => { st with uses := u0 }
-    let (n, ci, fsc) ← openPattern sc md (.list (.atom c :: xs))
-    let body ← ghostly (gEr || ab || (ci.phantom && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R) ab)
+    let (n, ci, fsc, pre) ← openPattern sc md scr (.list (.atom c :: xs))
+    let body := pre.foldr (· ·) (← ghostly (gEr || ab || (ci.phantom && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R) ab))
     uses := joinUses uses (← get).uses
     if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
     out := out ++ [(n, ci.pos, ci.k, if ab then .absurd body else body)]
     infos := infos ++ [ci]
   reset base
-  modify fun st => { st with uses := uses.filter (·.1 < base) }
+  modify fun st => { st with uses := (if extra > 0 then u0 else uses).filter (·.1 < base) }
   if !er && !(← get).ghost && infos.any (·.union) &&
       extra + ((out.zip infos).filter fun ((_, _, _, b), ci) => b.real && !ci.phantom).length + els.isSome.toNat > 1 then
     throw "a match without a runtime discriminant can have only one real branch"
@@ -1387,18 +1829,32 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
   let er := md.isEr
   if !er && ((← get).ghost || (!want.isEmpty && want.all (·.isEr))) then throw "a match written many in an erased position"
   let s :: ann :: brs := args | throw "malformed match"
-  let R0 ← match ann, exp with
-    | .list rets, _ => elabTele sc 0 false rets
-    | .atom "_", some R => pure R
+  let (atm, ann) := match ann with | .list [.atom "at", a] => (true, a) | a => (false, a)
+  if atm then
+    let .list rets := ann | throw "an at-match's annotation must be written out"
+    unless (← rets.mapM (parseEntryAt false)).all (fun (k, _, _, t) => k.er || t.isSome) do
+      throw "an at-match's annotation entries are erased or `at`"
+  let (R0, hm) ← match ann, exp with
+    | .list rets, _ => do let (R, hm, _) ← elabTeleH sc 0 [] rets false; pure (R, hm)
+    | .atom "_", some R => pure (R, [])
     | _, _ => throw "a match annotation `_` where no telescope is expected"
+  let want := if hm.contains true then expandHid hm want else want
   let (ss, sts) ← withTail false (elabExpr sc [md] none s)
   let [s] := sts | throw "match: one scrutinee"
   let real := er && !(← get).ghost && want.length == R0.len && want.any (!·.isEr)
-  let rms := if er && !real then List.replicate R0.len Mode.er else want
+  let rms := if er && !real then (List.range R0.len).map (fun k => if hm.getD k false then .hid else .er) else want
   let R := setErs R0 (rms.map (·.isEr))
-  let (out, els, nt) ← elabArms sc md (er && !real) rms (some R) brs
+  let bad0 := (← get).atBad
+  modify fun st => { st with atBad := false }
+  let (out, els, nt) ← elabArms sc md (er && !real) rms (some R) brs 0 s
+  if atm && (← get).atBad then
+    throw "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"
+  modify fun st => { st with atBad := bad0 || st.atBad }
   unless er || (← get).ghost do warnMatch (out.map (·.2.2.1))
   let outs ← freshMd rms
+  aliasHid rms outs
+  let _ ← bindTele outs R
+  let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
   return (ss ++ [if real || nt then .seq R (.case s out els er nt) else .mtch s R out els er], outs.map .fv)
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
@@ -1408,6 +1864,12 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     | e :: _ => if (← get).top then internLits e else pure []
     | [] => pure []
   unless ss.isEmpty do recordTop n0 ss
+  let n1 := (← get).n
+  let sp ← match items with
+    | e :: _ => mintSlots sc e
+    | [] => pure []
+  unless sp.isEmpty do recordTop n1 sp
+  let ss := ss ++ sp
   match items with
   | .atom a :: rest =>
     if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
@@ -1428,7 +1890,13 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
 partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
   | [e] => do
-    if !(← get).refute then return ← elabExpr sc want exp e
+    if !(← get).refute then
+      if want.contains .hid && !(e matches .list (.atom "match" :: _ :: _ :: .atom "_" :: _)) then
+        let uw := want.filter (· != .hid)
+        let (ss, ts) ← elabExpr sc uw (exp.map (userExp want)) e
+        let (s2, ts) ← fillHid (← erasedPos uw) want ts
+        return (ss ++ s2, ts)
+      return ← elabExpr sc want exp e
     match e with
     | .list (.atom "match" :: args@(_ :: _ :: .atom "_" :: _)) => do
       let (true, s :: _ :: brs) ← splitMult true args | throw "a refuting match is erased"
@@ -1496,6 +1964,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let bs ← xs.mapM fun
       | .list xs => do
         let (md, xs) ← splitMd true xs
+        if xs.contains (.atom "at") then throw atHere
         if !md.isEr && (← get).ghost then throw "a let binder written many in an erased position"
         match xs with
         | [x] => pure (← name x, md, none)
@@ -1525,6 +1994,10 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           let [j] ← freshMd [md] | throw "fresh"
           ss := ss ++ [.prim (.tm t) er]
           note j t true
+          match t, st.slotSrc t with
+          | .fv i, _ => modify fun st => { st with renames := (j, i) :: st.renames }
+          | _, some i => modify fun st => { st with links := (j, i) :: st.links }
+          | _, _ => pure ()
           pure j
       let mut r := match t with
         | .tyc .. | .vc .. => .ctor i
@@ -1551,20 +2024,21 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let [s] := sts | throw "let-match: one scrutinee"
     if (← get).rhs && brs.any (fun | .list (.atom "absurd" :: _) => false | _ => true) then
       throw "a let-match with more than one real branch outside a body"
-    let (out, els, _) ← elabArms sc md false want exp brs 1
-    let (n, ci, fsc) ← openPattern sc md pat
+    let (out, els, _) ← elabArms sc md false want exp brs 1 s
+    let (n, ci, fsc, pre) ← openPattern sc md s pat
     let nt := !er && ci.nt
     unless er || (← get).ghost do warnMatch (ci.k :: out.map (·.2.2.1))
     if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
     if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
-    recordTop n0 (ss ++ [(fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er nt : Stmt)])
+    let cs : Stmt := fun k => .case s ((n, ci.pos, ci.k, pre.foldr (· ·) k) :: out) els er nt
+    recordTop n0 (ss ++ [cs])
     if (← get).top then
       if let .fv j := s then
         if let some (.app (.tyc d _) idx) := (← get).known.lookup j then
           if (← get).firstAdt "Eq" == some d then
             if let [_, .fv x, y] := idx.toList then modify fun st => { st with facts := (x, y) :: st.facts }
     let (ss2, ts) ← elabSeq fsc want exp rest
-    return (ss ++ [fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er nt] ++ ss2, ts)
+    return (ss ++ [cs] ++ ss2, ts)
   | .list (.atom "comptime-match" :: args) :: rest => do
     let n0 := (← get).n
     let (md, args) ← splitMd true args
@@ -1581,7 +2055,8 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         let [j] ← fresh [false] | throw "fresh"
         note j t true
         pure ([(.prim (.tm t) false : Stmt)], j)
-    let (n, ci, fsc) ← openPattern sc md pat
+    let (n, ci, fsc, pre) ← openPattern sc md none pat
+    unless pre.isEmpty do throw "a cell binder in a `comptime-match` pattern is not supported"
     if ci.union then throw "comptime-match on a union"
     if ci.phantom then throw "comptime-match on a phantom constructor"
     warnMatch [ci.k]
@@ -1621,12 +2096,37 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
   | e@(.list (.atom "compile-error" :: _)) :: _ | e@(.list (.atom "dump-context" :: _)) :: _ => do
     let _ ← elabExpr sc want exp e
     throw "unreachable"
+  | .list [.atom "open-at-fn", e] :: rest => do
+    let (ss, ts) ← elabExpr sc [.er] none e
+    let st ← get
+    let ty := match ts with | [.fv i] => st.known.lookup (st.canonIdx i) <|> st.known.lookup i | _ => none
+    let some (.app (.tyc d _) idx) := ty | throw "the argument of `open-at-fn` is not an `AtFn` proof"
+    unless d == atFnD do throw "the argument of `open-at-fn` is not an `AtFn` proof"
+    let [_, .fv j] := idx.toList | throw "`open-at-fn` of a proof about a function that is not a variable is not supported"
+    modify fun st => { st with atFns := st.canonIdx j :: st.atFns }
+    let (ss2, ts2) ← elabSeq sc want exp rest
+    return (ss ++ ss2, ts2)
+  | .list [.atom "slot-self", .atom x] :: rest => do
+    let i ← match sc.lookup x with
+      | some (.fv i) => pure i
+      | some _ => throw s!"`slot-self` of `{showName x}`, not a variable, is not supported"
+      | none => throw s!"unbound name {showName x}"
+    let st ← get
+    let slotTy : Tm := .app (.tyc slotD .nil) .nil
+    if let some T := st.known.lookup i then
+      unless T == slotTy do throw s!"type mismatch: expected `(Slot)`, got `{st.showTm (s!"__{·}") T}`"
+    let r := st.slotRoot i
+    match st.slots.lookup r with
+    | some t => unless t == .fv i do throw "`slot-self` on a variable whose slot is already in use is not supported"
+    | none => modify fun st => { st with slots := (r, .fv i) :: st.slots }
+    let (ss, ts) ← elabSeq sc want exp rest
+    return ((fun k => .chk .ty (.fv i) slotTy k) :: ss, ts)
   | .list (.atom kw :: .atom "_" :: fns) :: rest =>
     if kw != "def-fns" && kw != "def-unique" then throw s!"({kw} _ ...) is not a statement" else
     elabSeq sc want exp (.list [.atom "def-lvl", .atom " _"] :: .list (.atom kw :: .atom " _" :: fns) :: rest)
   | .list (.atom kw :: .atom L :: fns) :: rest => do
     if kw != "def-fns" && kw != "def-unique" then
-      throw (if ["def-opaque", "def-prim", "slot-self", "open-at-fn"].contains kw then s!"{kw} is not supported"
+      throw (if ["def-opaque", "def-prim"].contains kw then s!"{kw} is not supported"
         else s!"({kw} {L} ...) is not a statement")
     let isU := kw == "def-unique"
     if isU && fns.length != 1 then throw "def-unique defines one function"
@@ -1644,7 +2144,8 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
             else ([], .atom m :: x :: rest)
           | xs => ([], xs)
         let (ms, xs) := marks xs
-        if ms.contains "at" then throw "`at` on a def-fns line is not supported"
+        let atf := ms.contains "at"
+        if atf && er then throw "an `erased` function cannot be an at-function"
         let ab := ms.contains "absurd"
         let (f, tgt, es) ← match xs with
           | f :: .atom "at" :: g :: .atom ":" :: es => pure (f, some g, es)
@@ -1654,7 +2155,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           let st ← get
           unless st.inPrelude do throw "only the prelude may mark a definition `extern`"
           if tgt.isSome then throw "a function marked `extern` cannot have a `delegate` body"
-          if let .atom n := f then
+          if let (.atom n, false) := (f, atf) then
             unless ffiNames.contains n do throw s!"no extern implementation for `{showName n}`"
             if st.claimed.contains n then throw s!"`{showName n}` is already bound to its extern implementation by another declaration"
             let arity := ((← entryErs true (← splitArrow es).1).filter (!·.2)).length
@@ -1662,7 +2163,9 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
               unless k == arity do throw s!"the extern implementation of `{showName n}` takes {k} arguments, its model {arity}"
             modify fun st => { st with claimed := n :: st.claimed }
         let (ps, rs) ← splitArrow es
-        pure (← name f, (er, ab, tgt), ps, rs, items, ← entryMds true ps)
+        if atf && !(← rs.mapM (parseEntryAt true)).all (fun (k, _, _, t) => k.er || t.isSome) then
+          throw "an at-function's returns are erased or `at`"
+        pure (← name f, (er, ab, tgt, atf), ps, rs, items, ← entryMds true ps)
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
@@ -1672,32 +2175,48 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     if !isU then modify fun st => { st with captures := base }
     let (d0, g0) := ((← get).dele, (← get).delegated)
     let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl sigs[j]!.2.2.2.2.2)).reverse ++ sc
-    let tgts ← sigs.zipIdx.mapM fun ((_, (_, _, tgt), _), j) => tgt.mapM (entry (fnsc.drop (sigs.length - j)))
+    let tgts ← sigs.zipIdx.mapM fun ((_, (_, _, tgt, _), _), j) => tgt.mapM (entry (fnsc.drop (sigs.length - j)))
     let g0 := (← get).ghost
+    modify fun st => { st with links := (tgts.zipIdx.filterMap fun (t, j) => t.map (base + j, ·)) ++ st.links }
     modify fun st => { st with deles := st.deles ++ (sigs.zip tgts).zipIdx.filterMap fun (((_, (er, _), _), t), j) =>
       if er || g0 then none else t.map (base + j, ·) }
-    let defs ← sigs.zipIdx.mapM fun ((_, (er, ab, _), ps, rs, items, _), j) => do
-      let tgt := tgts[j]!
-      let ds0 := (← get).deles
+    let withDele {α} (tgt : Option Nat) (k : M α) : M α := do
       let ers0 := (← get).ers
       if let some t := tgt then
         modify fun st => { st with ers := st.ers.zipIdx.map fun (e, i) => e || (i < base + sigs.length && i != t) }
-      let tele ← elabTele (fnsc.drop (sigs.length - j)) 0 true (ps ++ rs)
+      let r ← k
+      modify fun st => { st with ers := ers0 ++ st.ers.drop ers0.length }
+      return r
+    let teles ← sigs.zipIdx.mapM fun ((_, _, ps, rs, _), j) => withDele tgts[j]! do
+      let (tele, hm, np) ← elabTeleH (fnsc.drop (sigs.length - j)) 0 ps rs
       reset (base + sigs.length)
+      note (base + j) (.fn (.fv lvl) np tele isU hm)
+      pure (tele, hm, np)
+    modify fun st => { st with atFns := st.atFns ++ sigs.zipIdx.filterMap fun ((_, (_, _, _, atf), _), j) => if atf then some (base + j) else none }
+    let defs ← sigs.zipIdx.mapM fun ((f, (er, ab, _, atf), ps, _, items, _), j) => withDele tgts[j]! do
+      let tgt := tgts[j]!
+      let (tele, hm, np) := teles[j]!
+      reset (base + sigs.length)
+      let ds0 := (← get).deles
+      let ms := hidMds tele hm
       let pents ← entryErs true ps
-      let pids ← freshMd (← entryMds true ps)
-      let _ ← pids.foldlM (fun t i => match t with
-        | .bind (.is ..) e r => do note i e true; pure (r.inst (.fv i) 0)
-        | .bind _ A r => do note i A; pure (r.inst (.fv i) 0)
-        | t => pure t) tele
-      let rents ← entryMds true rs
-      modify fun st => { st with dele := tgt.map (·, pids.zip (pents.map (·.2))), delegated := false }
-      let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append (if isU then sc else fnsc))
-        (if ab then [Mode.er] else rents.map fun e => if er then .er else e) items
+      let pids ← freshMd (ms.take np)
+      aliasHid (ms.take np) pids
+      let upids := ((ms.zip pids).filter (·.1 != .hid)).map (·.2)
+      let _ ← bindTele pids tele
+      let utys := ((ms.zip (teleTys tele)).filter (·.1 != .hid)).map (·.2)
+      modify fun st => { st with dele := tgt.map (·, upids.zip (pents.map (·.2))), delegated := false }
+      let bad0 := (← get).atBad
+      modify fun st => { st with atBad := false }
+      let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (upids.zipWith entRef utys) |>.reverse |>.append (if isU then sc else fnsc))
+        (if ab then [Mode.er] else (ms.drop np).map fun e => if er && e != .hid then .er else e) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
       if tgt.isSome && !(← get).delegated then throw "a function written `at f` must have a `delegate` body"
-      modify fun st => { st with deles := ds0, ers := ers0 ++ st.ers.drop ers0.length }
-      pure { er, np := pents.length, tele, body := if ab then .absurd body else body, dele := tgt, u := isU : FnDef }
+      if atf && !ab && (← get).atBad then
+        throw s!"the body of at-function `{showName f}` does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"
+      modify fun st => { st with atBad := bad0 }
+      modify fun st => { st with deles := ds0 }
+      pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU : FnDef }
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }
     let gid := (← get).groups.length
     reset (base + sigs.length)
@@ -1709,12 +2228,21 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       recordTop k [s]
       modify fun st => { st with delePf := (i, k) :: st.delePf }
       pure s
+    let apfs ← ((← get).atFns.filter (base ≤ ·)).mapM fun i => do
+      let [k] ← fresh [true] | throw "fresh"
+      let T := Tm.app (.tyc atFnD .nil) (.ofList [((← get).known.lookup i).getD .nil, .fv i])
+      note k T
+      let s : Stmt := .prim (.axm T) true
+      recordTop k [s]
+      modify fun st => { st with atPf := (i, k) :: st.atPf }
+      pure s
+    let pfs := pfs ++ apfs
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: pfs ++ ss, ts)
   | e :: _ => match e with
     | .list (.atom h :: _) =>
       if ["comptime-match", "compile-warn", "compile-error", "dump-context", "def-opaque",
-          "def-prim", "slot-self", "open-at-fn", "unary"].contains h then throw s!"{h} is not supported"
+          "def-prim", "unary"].contains h then throw s!"{h} is not supported"
       else throw s!"{e.show.take 40} is not a statement"
     | _ => throw s!"{e.show.take 40} is not a statement"
 
@@ -1744,8 +2272,9 @@ def delegateAdt : Adt := { coercibleAdt with name := "Delegate" }
 
 def builtins : ESt :=
   { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt,
-      delegateAdt],
-    adts := [("Delegate", 3), ("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
+      delegateAdt, nullary "Slot" slotD [" slot"],
+      { params := .bind (.ty false true false) .univ (.bind (.ty false true false) (.bv 0) .nil), ctors := [], name := "AtFn", opq := true }],
+    adts := [("AtFn", atFnD), ("Slot", slotD), ("Delegate", 3), ("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
     ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)] ++ specialNames.mapIdx fun i n => ("%" ++ n, 0, i),
     special := 0 }
 

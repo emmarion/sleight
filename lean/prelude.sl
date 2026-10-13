@@ -1003,6 +1003,11 @@
 
 ;! warn Array copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 
+(def-adts $ (MaybeUninit : (Type A) -> Type)
+  union newtype
+  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
+  (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
@@ -1015,6 +1020,21 @@
     (many ImmChar : -> (Immediate (Char)))
     (many ImmBool : -> (Immediate (Bool)))
     (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))))
+
+(def-adts
+  ((AllInit : (Type A) ((List (MaybeUninit A)) xs) ((List A) ys) -> Type)
+    enum
+    (many AINil : (erased Type A) -> (AllInit A (Nil (MaybeUninit A)) (Nil A)))
+    (many AICons : (erased Type A) (erased A x) (erased (List (MaybeUninit A)) rest) (erased (List A) rest2)
+                   (erased (AllInit A rest rest2) p)
+                   -> (AllInit A (Cons (MaybeUninit A) (Init A x) rest) (Cons A x rest2)))))
+
+(def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
+    (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
+    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) (ANil _) (RepeatNil _ _))))
+  (let ((erased xs1) (unique tl) (erased q)) (notail $ array-new A n1))
+  (values (Cons (MaybeUninit A) (Uninit A vacant-slot) xs1) (ACons _ _ (Uninit _ vacant-slot) tl) (RepeatCons _ _ _ _ q)))
 
 (def-fns _ $ (many extern array-get-many : (erased Type A) (erased (List A) xs)
     (many (Array A xs) a) (subterm many (Nat) i)
@@ -1167,6 +1187,12 @@
 
 (def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
 
+(def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
+
+(def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
+    (erased (Placed s T v) p) (erased (Placed s T v) q) ->
+    (erased (Eq (Placed s T v) p q) e)))
+
 (def-adts $ (Symbol : -> Type)
   enum
   (many SName : (many (String) s) -> (Symbol))
@@ -1184,3 +1210,10 @@
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
   (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
+
+(def-adts $ (Macro : -> Type)
+  enum newtype
+  (many MkMacro : (erased (Level) L)
+     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+               (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
+     -> (Macro)))

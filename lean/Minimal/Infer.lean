@@ -108,7 +108,7 @@ partial def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := 
   match t with
   | .valCtor sig => return .valCtor (← inferTele Γ sig)
   | .tyCtor ps => return .tyCtor (← inferTele Γ ps)
-  | .fn l np tele u => return .fn l np (← inferTele Γ tele) u
+  | .fn l np tele u hm => return .fn l np (← inferTele Γ tele) u hm
   | t => do
     let m0 : Metas := { Γ, base := Γ.n }
     let (m, A) ← match A with
@@ -165,7 +165,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
   | .call f dec args er ms ve rest => do
     let ty := match checkTm P Γ f with
       | .ok ⟨Ft, _⟩ => match Γ.canon Ft with
-        | .fn _ _ t _ => some t
+        | .fn _ _ t _ _ => some t
         | _ => none
       | .error _ => none
     let some t := ty | return .call f dec args er ms ve rest
@@ -258,7 +258,7 @@ where
 def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
   | .call f dec args er ms ve rest => do
     let ⟨Ft, _⟩ ← (checkTm P Γ f).toOption
-    let .fn _ _ t _ := Γ.canon Ft | none
+    let .fn _ _ t _ _ := Γ.canon Ft | none
     let ⟨outs, _⟩ ← (checkArgs P Γ args t).toOption
     some (Γ.pushTele outs (some (ms.map (er || ·))), rest, fun (r : Core) => .call f dec args er ms ve r)
   | .mtch s R brs els er rest =>

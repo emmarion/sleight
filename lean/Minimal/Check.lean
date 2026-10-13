@@ -91,12 +91,12 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     let ⟨B', hb⟩ ← checkTm' Γ rules b
     let ⟨hB'⟩ ← need (Γ.canon B' = Γ.canon B) "Subterm: term not of the type"
     .ok ⟨.univ, .subterm hA hU ha hA' hB hV hb hB'⟩
-  | .fn l np t uf => do
+  | .fn l np t uf hm => do
     let ⟨K, hl⟩ ← checkTm' Γ rules l
     let ⟨hK⟩ ← need (Γ.canon K = .level) "Fn: not a level"
     let ⟨ht⟩ ← checkTele' Γ rules t
     let ⟨hn⟩ ← need (np ≤ t.len) "Fn: more parameters than entries"
-    let ⟨hs⟩ ← need ((Tm.fn l np t uf).static Γ.n 0) "Fn: not well scoped"
+    let ⟨hs⟩ ← need ((Tm.fn l np t uf hm).static Γ.n 0) "Fn: not well scoped"
     .ok ⟨.univ, .fn hl hK ht hn hs⟩
   | .mtbl u nt ex ph T cs => do
     let ⟨hs⟩ ← need ((Tm.mtbl u nt ex ph T cs).static Γ.n 0) "Matchable: not well scoped"
@@ -424,6 +424,16 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨ho⟩ ← need (D.opq = false) "matchable-of: an opaque type has no Matchable"
       .ok ⟨_, .mtblOf h hl ha hc ho⟩
     | none => .error "matchable-of: unknown type"
+  | .atom d => match h : P.adts[d]? with
+    | some D => match hc : D.ctors with
+      | [.bind (.ty m e u) (.app (.tyc d' .nil) .nil) .nil] => do
+        let ⟨hd⟩ ← need (d' = d) "an atom's type has another constructor"
+        let ⟨hl⟩ ← need (D.lifted = 0) "an atom's type has lifted arguments"
+        let ⟨hn⟩ ← need (D.newtype = false) "an atom's type is a newtype"
+        let ⟨hp⟩ ← need (P.phantom d 0 = false) "an atom's constructor is phantom"
+        .ok ⟨_, .atom h (hd ▸ hc) hl hn hp⟩
+      | _ => .error "an atom's type has one constructor with no fields"
+    | none => .error "an atom of an unknown type"
   | .axm A => do
     let ⟨U, hA⟩ ← checkTm P Γ A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "an axiom's return is not a type"
@@ -584,7 +594,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .call f dec args er ms ve rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
-    | .fn l np t _ => do
+    | .fn l np t _ _ => do
       let ⟨ht⟩ ← need (t.isTele) "not a telescope"
       let ⟨outs, ha⟩ ← checkArgs P Γ args t
       let ⟨hn⟩ ← need (args.len = np) "wrong number of arguments"

@@ -30,7 +30,7 @@ inductive Tm where
   | level
   | predates (A x L : Tm)
   | subterm (A a B b : Tm)
-  | fn (l : Tm) (np : Nat) (tele : Tm) (u : Bool)
+  | fn (l : Tm) (np : Nat) (tele : Tm) (u : Bool) (hm : List Bool)
   | mtbl (u nt ex : Bool) (ph : List Bool) (T cs : Tm)
   | lvl (n : Nat)
   | tok
@@ -50,7 +50,7 @@ def subst (f : Nat → Tm) : Tm → Tm
   | valCtor p => valCtor (p.subst f)
   | predates A x L => predates (A.subst f) (x.subst f) (L.subst f)
   | subterm A a B b => subterm (A.subst f) (a.subst f) (B.subst f) (b.subst f)
-  | fn l np t uf => fn (l.subst f) np (t.subst f) uf
+  | fn l np t uf hm => fn (l.subst f) np (t.subst f) uf hm
   | mtbl u nt ex ph T cs => mtbl u nt ex ph (T.subst f) (cs.subst f)
   | t => t
 
@@ -65,7 +65,7 @@ def inst : Tm → Tm → Nat → Tm
   | valCtor p, u, k => valCtor (p.inst u k)
   | predates A x L, u, k => predates (A.inst u k) (x.inst u k) (L.inst u k)
   | subterm A a B b, u, k => subterm (A.inst u k) (a.inst u k) (B.inst u k) (b.inst u k)
-  | fn l np t uf, u, k => fn (l.inst u k) np (t.inst u k) uf
+  | fn l np t uf hm, u, k => fn (l.inst u k) np (t.inst u k) uf hm
   | mtbl a nt ex ph T cs, u, k => mtbl a nt ex ph (T.inst u k) (cs.inst u k)
   | t, _, _ => t
 
@@ -77,7 +77,7 @@ def size : Tm → Nat
   | tyCtor p | valCtor p => p.size + 1
   | predates A x L => A.size + x.size + L.size + 1
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
-  | fn l _ t _ => l.size + t.size + 1
+  | fn l _ t _ _ => l.size + t.size + 1
   | mtbl _ _ _ _ T cs => T.size + cs.size + 1
   | _ => 1
 
@@ -90,7 +90,7 @@ def levels : Tm → List Nat
   | tyCtor p | valCtor p => p.levels
   | predates A x L => A.levels ++ x.levels ++ L.levels
   | subterm A a B b => A.levels ++ a.levels ++ B.levels ++ b.levels
-  | fn l _ t _ => l.levels ++ t.levels
+  | fn l _ t _ _ => l.levels ++ t.levels
   | mtbl _ _ _ _ T cs => T.levels ++ cs.levels
   | clo e _ _ => e.levels
   | _ => []
@@ -105,7 +105,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, tyCtor p | d, valCtor p => p.static n d
   | d, predates A x L => A.static n d && x.static n d && L.static n d
   | d, subterm A a B b => A.static n d && a.static n d && B.static n d && b.static n d
-  | d, fn l _ t _ => l.static n d && t.static n d
+  | d, fn l _ t _ _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level => true
   | _, lvl _ | _, tok | _, clo .. => false
@@ -119,7 +119,7 @@ def bound : Nat → Tm → Bool
   | d, tyCtor p | d, valCtor p => p.bound d
   | d, predates A x L => A.bound d && x.bound d && L.bound d
   | d, subterm A a B b => A.bound d && a.bound d && B.bound d && b.bound d
-  | d, fn l _ t _ => l.bound d && t.bound d
+  | d, fn l _ t _ _ => l.bound d && t.bound d
   | d, mtbl _ _ _ _ T cs => T.bound d && cs.bound d
   | _, _ => true
 
@@ -133,7 +133,7 @@ def lc : Nat → Tm → Prop
   | d, tyCtor p | d, valCtor p => p.lc d
   | d, predates A x L => A.lc d ∧ x.lc d ∧ L.lc d
   | d, subterm A a B b => A.lc d ∧ a.lc d ∧ B.lc d ∧ b.lc d
-  | d, fn l _ t _ => l.lc d ∧ t.lc d
+  | d, fn l _ t _ _ => l.lc d ∧ t.lc d
   | d, mtbl _ _ _ _ T cs => T.lc d ∧ cs.lc d
   | _, _ => True
 
@@ -146,7 +146,7 @@ def fvs : Tm → List Nat
   | tyCtor p | valCtor p => p.fvs
   | predates A x L => A.fvs ++ x.fvs ++ L.fvs
   | subterm A a B b => A.fvs ++ a.fvs ++ B.fvs ++ b.fvs
-  | fn l _ t _ => l.fvs ++ t.fvs
+  | fn l _ t _ _ => l.fvs ++ t.fvs
   | mtbl _ _ _ _ T cs => T.fvs ++ cs.fvs
   | _ => []
 
@@ -234,7 +234,7 @@ def Tm.close (i : Nat) : Nat → Tm → Tm
   | k, .valCtor p => .valCtor (p.close i k)
   | k, .predates A x L => .predates (A.close i k) (x.close i k) (L.close i k)
   | k, .subterm A a B b => .subterm (A.close i k) (a.close i k) (B.close i k) (b.close i k)
-  | k, .fn l np t u => .fn (l.close i k) np (t.close i k) u
+  | k, .fn l np t u hm => .fn (l.close i k) np (t.close i k) u hm
   | k, .mtbl u nt ex ph T cs => .mtbl u nt ex ph (T.close i k) (cs.close i k)
   | _, t => t
 
@@ -264,6 +264,7 @@ inductive Prim where
   | coerWrap (s C args : Tm)
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
+  | atom (d : Nat)
   deriving Repr, Inhabited
 
 inductive Chk where
@@ -341,6 +342,7 @@ structure FnDef where
   body : Core
   dele : Option Nat := none
   u : Bool := false
+  hm : List Bool := []
   deriving Repr, Inhabited
 
 structure Group where
@@ -373,7 +375,7 @@ def sharedTm : Tm := .app (.vc sharingD 1 .nil) .nil
 def uniqueTm : Tm := .app (.vc sharingD 0 .nil) .nil
 
 def fnSide : Tm → Tm
-  | .fn _ _ _ true => uniqueTm
+  | .fn _ _ _ true _ => uniqueTm
   | _ => sharedTm
 
 def Adt.mtbl (D : Adt) (d : Nat) (ls : Tm) : Tm :=
@@ -435,7 +437,7 @@ theorem sizeOf_realBr {brs : List Br} {els : Option Core} {pre : List Tm} {body 
   · simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
   · cases h
 
-def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele F.u
+def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele F.u F.hm
 
 def closures (env : List Tm) (gid : Nat) (G : Group) : List Tm :=
   (List.range G.fns.length).map (.clo (.ofList env) gid)

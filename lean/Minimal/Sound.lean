@@ -605,9 +605,9 @@ theorem EnvOK.openTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) :
     exact ⟨hE, trivial, hs, ht, by simp, ⟨[], by simp⟩, fun _ _ h => h, rfl, rfl, rfl, rfl⟩
   | _ => intro out ht hs hv hc; cases hv
 
-theorem VTy.fn_inv {v l t : Tm} {np : Nat} {u : Bool} (h : VTy P v (.fn l np t u)) :
+theorem VTy.fn_inv {v l t : Tm} {np : Nat} {u : Bool} {hm : List Bool} (h : VTy P v (.fn l np t u hm)) :
     ∃ env Γ gid G j F, v = .clo (.ofList env) gid j ∧ EnvOK P env Γ ∧ P.groups[gid]? = some G ∧
-      GroupOK P gid Γ G ∧ G.fns[j]? = some F ∧ (F.type G).subst (Tm.env env) = .fn l np t u := by
+      GroupOK P gid Γ G ∧ G.fns[j]? = some F ∧ (F.type G).subst (Tm.env env) = .fn l np t u hm := by
   cases h with
   | clo hE hG hok hF => exact ⟨_, _, _, _, _, _, rfl, hE, hG, hok, hF, rfl⟩
   | con _ _ _ _ he => cases he
@@ -1407,6 +1407,11 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     simp only [Tm.subst]; rw [eC]
     exact ⟨Real.ctor_congr hct (Tm.isList_subst _ _ l2) hlen fun j hjl hj x => (hiff j hjl hj x).mp,
       Real.ctor_congr hct (Tm.isList_subst _ _ l1) hlen.symm fun j hjl hj x => (hiff j (hlen ▸ hjl) hj x).mpr⟩
+  | atom hD hc hl hn hp =>
+    rename_i d D m e u
+    have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
+    refine ⟨.con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simp [Tm.static],
+      by simp [Prim.eval, Tm.lc], by simp [Prim.eval, Tm.levels]⟩
   | axm hA _ hc hD ho =>
     obtain ⟨_, hAs, _⟩ := tm_sound hP hE hA
     refine ⟨?_, hAs, trivial, by simp [Prim.eval, Tm.levels]⟩
@@ -1947,7 +1952,7 @@ theorem compat_get : ∀ (ms : List Bool) (t : Tm) (k : Nat), compat ms t = true
 
 theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {f Ft l t args outsT : Tm} {np : Nat} {dec : Dec}
-    (hf : TmTy P Γ f Ft) {uf : Bool} (hF : Γ.canon Ft = .fn l np t uf) (ht : t.isTele) (ha : ArgsTy P Γ args t outsT)
+    (hf : TmTy P Γ f Ft) {uf : Bool} {hmk : List Bool} (hF : Γ.canon Ft = .fn l np t uf hmk) (ht : t.isTele) (ha : ArgsTy P Γ args t outsT)
     (hn : args.len = np) (hd : DecOK P Γ dec l t args) :
     ∃ env n1 gid G F, callee P (f.subst (Tm.env ρ)) = some (env, n1, gid, G, F) ∧
       muLt P.k (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) μ ∧
@@ -2725,7 +2730,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
   | case2 μ ρ cnt f dec args er ms ve rest env n1 gid G F hcal argv μ' hmu outs cnt1 hev ihb ihr =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
-    | @call _ _ _ _ np t _ _ outsT _ _ _ _ _ _ _ hf hF ht ha hn hd ho hok hve hr =>
+    | @call _ _ _ _ np t _ _ _ outsT _ _ _ _ _ _ _ hf hF ht ha hn hd ho hok hve hr =>
     obtain ⟨env', n1', gid', G', F', hcal', _, ⟨Γb, rb, hcb, hEb, hbb, hmb, hrbs, hrb, hgb, he1, he2, hdl, he3, hrbt⟩,
       hot, hos, hFe, hFnp, hdo⟩ := call_setup hP hE hb hm hf hF ht ha hn hd
     rw [hcal] at hcal'; cases hcal'
@@ -3079,6 +3084,12 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
             rw [eqc ha] at hR; rw [eqc hb']
             exact (v.coer_inv hP hD hc _).mp hR
         | assert => simp [Prim.rt] at hok
+        | atom d =>
+          cases hp with
+          | @atom _ _ D m e u hD hc hl hnt hph =>
+            simp only [Prim.evalS, Prim.eval]
+            have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
+            exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
         | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
     have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
     have ih' := ih b _ rets hr (hE.adv hE' hpf hh) (LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩)

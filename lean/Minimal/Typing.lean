@@ -238,7 +238,7 @@ def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t | .coerce t _ _ => Minimal.rt P Γ t
-  | .mtblOf .. => true
+  | .mtblOf .. | .atom _ | .axm _ => true
   | _ => false
 
 mutual
@@ -260,7 +260,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
       TmTy Γ B V → Γ.canon V = .univ → TmTy Γ b B' → Γ.canon B' = Γ.canon B →
       TmTy Γ (.subterm A a B b) .univ
   | fn : TmTy Γ l K → Γ.canon K = .level → TeleOK Γ t → np ≤ t.len →
-      (Tm.fn l np t u).static Γ.n 0 → TmTy Γ (.fn l np t u) .univ
+      (Tm.fn l np t u hm).static Γ.n 0 → TmTy Γ (.fn l np t u hm) .univ
   | mtbl : (Tm.mtbl u nt ex ph T cs).static Γ.n 0 → TmTy Γ (.mtbl u nt ex ph T cs) .univ
 
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
@@ -317,6 +317,8 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
   | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false → D.opq = false →
       PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
+  | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
+      D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
       PrimTy Γ (.axm A) A
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
@@ -411,7 +413,7 @@ def Group.deleOK (G : Group) (n : Nat) : Bool :=
 mutual
 inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | ret : ArgsTy P Γ ts rets .nil → Γ.ok (rtArgs P Γ ts rets) → CoreTy b Γ (.ret ts) rets
-  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t uf → t.isTele → ArgsTy P Γ args t outs → args.len = np →
+  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t uf hm → t.isTele → ArgsTy P Γ args t outs → args.len = np →
       DecOK P Γ dec l t args → outs.len = ms.length →
       (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) → ve = some t.ers →
       CoreTy b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)) rest rets →

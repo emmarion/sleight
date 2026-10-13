@@ -156,9 +156,8 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
-refused as not supported: an `at` mark on a `def-fns` line;
-and every form not named in this file, among them macros, cells and
-`at`. Only the prelude, or a program
+refused as not supported: every form not named in this file, among
+them macros, arrays, `Placed` and `World`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -391,13 +390,70 @@ it is `Settled`, and its `is` rule.
   every return erased: a call checks each argument against its
   parameter's type and makes each return an axiom (`Prim.axm`), which
   the checker accepts only at an opaque type.
-- `else` branches (DESIGN.md section 21): an `else` stands for every
-  constructor neither listed nor refuted, binds nothing, is checked with
-  no forced facts, and is an error when it stands for no constructor.
+- Slots and `at` (DESIGN.md sections 35, 36 and 41). `Slot` is a
+  built-in type with one constructor and no `Matchable`, and
+  `vacant-slot` is that constructor; a value prints as `_`. In the core
+  a slot is an entry of type `(Slot)`, made by `Prim.atom`, which
+  evaluates to the constructor; the core knows nothing of locations,
+  and two slots are one exactly when they canonicalize to one entry.
+  The elaborator makes an entry's automatic slot the first time it is
+  needed, at the entry's erasure, and puts an entry at its source's
+  slot where section 36 has one: a forwarding `let`, `share`, `coerce`,
+  an `else` binder, a newtype's construction and destructure, the
+  delegate annotation, a cell binder, a cell invocation and
+  `cell-write` at `unique`. A telescope entry written `at v`, or whose
+  slot a `slot-of` or an `at` of the same telescope names, is preceded
+  in the core by a hidden erased entry (`Tm.fn`'s mask): its slot, a
+  `(Slot)` entry, or for `at v` an `is` entry that it is `v`'s slot.
+  A call passes each such argument's slot there, binding an argument
+  that is not a variable first, so an argument written `at` that is not
+  a variable is refused; a body returns its results' slots, so the
+  core checks each promise canonically. `(slot-of x)` is the slot of
+  `x`, erased when `x` is, and of a hidden entry erased always.
+  `(slot-self s)` makes `s` its own slot, and is refused once the slot
+  of `s` is in use. `at` changes no value: the runner computes an
+  `at` result like any other. Not done: the slot a forcing unification
+  gives otherwise than through the core's own rules, `slot-of` naming
+  an entry of an enclosing telescope in an `at`, `_` for an argument
+  whose slot is named (its slot is `_` too), and `prove-predates` on a
+  slot made after the level.
+- At-functions and at-matches (sections 39 and 40), checked by the
+  elaborator: the returns or annotation entries are erased or `at`, and
+  the body or each branch makes no non-erased call that is not skipped,
+  no constructor application that is not a newtype's, and no
+  allocation, write or store of a cell. A call is skipped when its
+  callee is a function of an at-function's own block or one whose
+  `AtFn` proof is opened by `open-at-fn`; `(at (f ...))` requires it,
+  and `tail` and `notail` refuse it. `AtFn` is a built-in opaque type;
+  `def-fns` makes the proof of each at-function after its block, an
+  axiom, and `(at-fn-of f)` names it. A skipped call and an at-match
+  run like any other. A non-erased match on a union with several real
+  branches is refused even as an at-match.
+- Cells (sections 37 and 38). `(Cell C s ...)` is, for each
+  constructor `C`, a declared opaque type of one `(Slot)` parameter per
+  non-erased field, made when first named; a newtype's, an extern
+  type's and a phantom constructor are refused. A cell is an axiom of
+  its type (`Prim.axm`, which the checker accepts at a non-erased
+  position too, since any value inhabits an opaque type), and holds
+  nothing. `cell-alloc`, `cell-write`, a pattern's cell binder and
+  `cell-match` make cells and read their slots from their types; an
+  invocation `(u a ...)` is the application of `C`, and `(at)` before
+  an argument, or `(at (u a ...))` for all of them, asks the core that
+  the argument's slot canonicalizes to the cell's. The elaborator
+  accounts for the uses of the cell as section 37 has it.
+- `else` branches (DESIGN.md sections 21 and 23): an `else` stands for
+  every constructor neither listed nor refuted, is checked with no
+  forced facts, and is an error when it stands for no constructor.
+  `(else x2 body ...)`, with more than one item after `else`, binds
+  `x2` at the scrutinee's multiplicity, with the rule that it is the
+  scrutinee.
 - `_` as a `def-fns` level (DESIGN.md section 46).
 - `_` as a match annotation (section 47) in the final expression of a
   function body, of a branch, and of a `let` whose binders all carry a
-  type or `is` clause. In an argument position it is refused.
+  type or `is` clause, and as an argument of a constructor named
+  directly or of a function whose type the elaborator knows and whose
+  signature has no hidden entry (below), against the parameter's type.
+  Elsewhere it is refused.
 - A call in a body with no decrease annotation, or with `(predates _)`
   or `(subterm _)` written anywhere in it (section 48): the checker
   supplies a `predates` proof when the callee's level does not

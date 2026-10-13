@@ -60,7 +60,7 @@ partial def Prog.show (P : Prog) (nat : Option Nat) (t : Tm) : String :=
   | _, _ => match t with
   | .app h@(.vc d _ _) _ =>
     match P.adts[d]? with
-    | some D => if D.union && (D.phantom.filter (!·)).length + (D.ctors.length - D.phantom.length) > 1 then "_"
+    | some D => if D.name == "Slot" || D.union && (D.phantom.filter (!·)).length + (D.ctors.length - D.phantom.length) > 1 then "_"
       else P.showApp nat h t
     | none => P.showApp nat h t
   | .app h args => "(" ++ P.inner nat h args ++ ")"
@@ -135,7 +135,8 @@ partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → Stri
     | some l, _ => (l, false)
     | none, some D =>
       let live := (List.range D.ctors.length).filter (!P.phantom d ·)
-      if D.newtype then match live with
+      if D.name == "Slot" || D.opq then ("_", false)
+      else if D.newtype then match live with
         | [c] => match P.wrapField d c with
           | some k =>
             let n := (P.ownErs d c).length

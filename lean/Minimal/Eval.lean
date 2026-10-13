@@ -44,6 +44,7 @@ def Prim.eval (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t => t.subst (Tm.env ρ)
   | .assert t _ => t
   | .coerce _ b _ => b.subst (Tm.env ρ)
+  | .atom d => .app (.vc d 0 .nil) .nil
   | _ => .tok
 
 def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)

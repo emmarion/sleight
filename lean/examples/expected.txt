@@ -6,6 +6,8 @@ examples/adt_mentions_call.sl: error: L is not an entry
 examples/annotation.sl: 2
 examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 examples/anon_level.sl: 2
+examples/at_cell.sl: 4
+examples/at_cell_bad.sl: refused: let: the binder is not the term its is clause names
 examples/binder_refute.sl: 0
 examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 examples/coerce_value_bad.sl: refused: coerce: value mismatch: the value is not the source of the proof
@@ -102,6 +104,7 @@ examples/vec_head.sl: 1
 unchecked examples/absurd_bad.sl: stuck: no branch
 unchecked examples/absurd_listed_bad.sl: 0
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
+unchecked examples/at_cell_bad.sl: (P 2 1)
 unchecked examples/coerce_value_bad.sl: (MkMeters 1)
 unchecked examples/coerce_wrap_bad.sl: _
 unchecked examples/coercible_of_side_bad.sl: 0
@@ -155,6 +158,7 @@ full examples/adt_mentions.sl: 3
 full examples/adt_mentions_call.sl: error: L is not an entry
 full examples/annotation.sl: 2
 full examples/anon_level.sl: 2
+full examples/at_cell.sl: 4
 full examples/binder_refute.sl: 0
 full examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/ctor_sig_refute.sl: 7
