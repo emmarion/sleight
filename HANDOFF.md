@@ -39,7 +39,20 @@ Next, as this session planned it, none of it decided:
    `Predates` and `Subterm`), so the proof would need a lemma for the
    types where a value's type is unique, or a narrower `VTy`. The owner
    asked whether it is really unjustified; this session overstated it and
-   has not checked.
+   has not checked. For data values, value constructors (`VTy.vc` fixes
+   the signature), type constructors, levels and closures a value's type
+   looks unique, which may be enough: the narrow route is to prove that
+   two entries with one value have one type outside `Type`, proofs and
+   `.nil`, add the type equation to `unify` for those entries only, and
+   see whether `UnifySound` goes through; the broad one is to narrow
+   `VTy.univ` to type terms and have a proof value carry its statement.
+   The session's one attempt at a counterexample, two proofs of
+   different statements forced equal through `JMEq`, did not go through:
+   the indices refute the branch first. What it would buy:
+   `tests/is_for_type_refute.sl` (the `ctor-type-is` functions, two
+   `ValCtor` variables forced equal) and the `Matchable` invariant of
+   DESIGN.md section 8, as in `tests/open_tyctor.sl`'s `told`, which
+   refutes `IsNat` through a constructor's signature.
 
 ## `read-file`, `symbol-eq` and the elaborator's world (one session, with the owner)
 
