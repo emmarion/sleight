@@ -1452,8 +1452,6 @@
       ((BError _ m) (error-w _ hp ms m _ w))
       (else (error-w _ hp ms "cannot apply a value that is not a function" _ w)))))
 
-(let ((many eval-fuel)) 1000000000)
-
 (let ((many compile-time)) (MkPerformer (Unit) no-world no-prim))
 
 (def-adts $ (ElabWorld : -> Type)
@@ -1506,9 +1504,9 @@
   (let ((erased hl3) (many hp3) (erased sf3) (many v)) $ alloc-ext _ hp2 $ PHandle x (MintedIs) (Many) shown)
   (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) (Cons _ v $ Nil _) $ u sl e2 ew))
 
-(def-fns _ $ (many run-code : (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ Multiplicity) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
+(def-fns _ $ (many run-code : (many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ Multiplicity) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
   (let ((unique (Unit) u)) (MkUnit))
-  (let ((erased h2) (many hp2) (erased le) (many vs) (erased pk) (unique (Unit) u2)) $ eval eval-fuel _ hp _ _ code (MkSt _ _ $ FrNil _) _ compile-time u)
+  (let ((erased h2) (many hp2) (erased le) (many vs) (erased pk) (unique (Unit) u2)) $ eval fuel _ hp _ _ code (MkSt _ _ $ FrNil _) _ compile-time u)
   (values h2 hp2 le vs pk))
 
 ; ---- Run-position statements against the environment (section 29): each reads the store out, runs or
@@ -1516,7 +1514,7 @@
 
 (def-fns _ $ (many env-run-final : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Term) ty) -> (many (Env) r))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let ((erased hs2) (many h2) (erased le) (many vs) (erased pk)) $ run-code _ h _ code)
+  (let ((erased hs2) (many h2) (erased le) (many vs) (erased pk)) $ run-code (env-fuel e) _ h _ code)
   (env-with-heap e _ $ heap-with-finals _ h2 $ Cons _ (MkPair _ _ (vals-one _ vs pk) ty) $ heap-finals _ h2))
 
 (def-fns _ $ (many heap-set-settled : (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) x) (many (Ref Block hs) v) -> (many (Heap hs) r))
@@ -1564,7 +1562,7 @@
 
 (def-fns _ $ (many env-run-let : (many (Env) e) (many (List $ Multiplicity) ms) (many (Code (Nil (List (Nat))) ms) code) (many (List $ Nat) ids) -> (many (Env) r))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let ((erased hs2) (many h2) (erased le) (many vs) (erased pk)) $ run-code _ h _ code)
+  (let ((erased hs2) (many h2) (erased le) (many vs) (erased pk)) $ run-code (env-fuel e) _ h _ code)
   (let ((erased hs3) (many h3)) $ set-field-states _ h2 ids ms (Nil _) vs)
   (env-with-heap e _ h3))
 
@@ -1585,7 +1583,7 @@
 ; A run-position let-match: the scrutinee's code run and its fields bound (section 27).
 (def-fns _ $ (many env-run-fields : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Multiplicity) mults) (many (List $ Maybe $ Nat) targets) -> (many (Env) r))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let ((erased hs1) (many h1) (erased le1) (many vs) (erased pk)) $ run-code _ h _ code)
+  (let ((erased hs1) (many h1) (erased le1) (many vs) (erased pk)) $ run-code (env-fuel e) _ h _ code)
   (let ((erased hs2) (many h2) (erased le2) (many i) (many fs)) $ destruct _ h1 ct $ vals-one _ vs pk)
   (let ((erased hs3) (many h3)) $ set-field-states _ h2 fids mults targets fs)
   (env-with-heap e _ h3))
@@ -1620,7 +1618,7 @@
       (erased (Hist Block) hb) (many (Heap hb) hr) (erased (Suffix Block hb ha) le) (many (List $ Ref Block hb) vs) (unique (MacroState sl) w2 at w))
     (macro-prim sl _ hq prim xs w))
   (let ((unique (MacroState sl) w)) (MkMacroState sl e ew))
-  (let ((erased h3) (many hp3) (erased s3) (many vs) (erased pk) (unique (MacroState sl) w2)) $ apply eval-fuel _ hpt (widen-ref _ _ s12 f) (Cons _ token $ Cons _ (widen-ref _ _ s2t hv) $ Cons _ (widen-ref _ _ st av) $ Nil _) many-one _ (MkPerformer _ requests prims) w)
+  (let ((erased h3) (many hp3) (erased s3) (many vs) (erased pk) (unique (MacroState sl) w2)) $ apply (env-fuel e) _ hpt (widen-ref _ _ s12 f) (Cons _ token $ Cons _ (widen-ref _ _ s2t hv) $ Cons _ (widen-ref _ _ st av) $ Nil _) many-one _ (MkPerformer _ requests prims) w)
   (let-match unique w2 (MkMacroState s4 e2 ew2))
   (slot-self s4)
   (let ((many e3)) $ env-with-heap e2 _ hp3)

@@ -2214,7 +2214,7 @@
 
 (def-adts $ (Macros : -> Type)
   enum
-  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) -> (Macros)))
+  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) (many (Nat) fuel) -> (Macros)))
 
 (def-adts $ (Tracked : -> Type)
   enum
@@ -2539,21 +2539,25 @@
 (def-fns _ $ (many env-set-macros : (many (Env) e) (many (Macros) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn x))))
 (def-fns _ $ (many env-expansions : (many (Env) e) -> (many (Nat) r))
-  (match many (env-macros e) _ ((MkMacros n _ _ _) n)))
+  (match many (env-macros e) _ ((MkMacros n _ _ _ _) n)))
 (def-fns _ $ (many env-set-expansions : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros _ g ps ss) (env-set-macros e $ MkMacros x g ps ss))))
+  (match many (env-macros e) _ ((MkMacros _ g ps ss f) (env-set-macros e $ MkMacros x g ps ss f))))
 (def-fns _ $ (many env-gensyms : (many (Env) e) -> (many (Nat) r))
-  (match many (env-macros e) _ ((MkMacros _ g _ _) g)))
+  (match many (env-macros e) _ ((MkMacros _ g _ _ _) g)))
 (def-fns _ $ (many env-set-gensyms : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n _ ps ss) (env-set-macros e $ MkMacros n x ps ss))))
+  (match many (env-macros e) _ ((MkMacros n _ ps ss f) (env-set-macros e $ MkMacros n x ps ss f))))
 (def-fns _ $ (many env-prims : (many (Env) e) -> (many (List $ PrimSig) r))
-  (match many (env-macros e) _ ((MkMacros _ _ ps _) ps)))
+  (match many (env-macros e) _ ((MkMacros _ _ ps _ _) ps)))
 (def-fns _ $ (many env-add-prim : (many (Env) e) (many (PrimSig) p) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps ss) (env-set-macros e $ MkMacros n g (Cons _ p ps) ss))))
+  (match many (env-macros e) _ ((MkMacros n g ps ss f) (env-set-macros e $ MkMacros n g (Cons _ p ps) ss f))))
 (def-fns _ $ (many env-sources : (many (Env) e) -> (many (List $ String) r))
-  (match many (env-macros e) _ ((MkMacros _ _ _ ss) ss)))
+  (match many (env-macros e) _ ((MkMacros _ _ _ ss _) ss)))
 (def-fns _ $ (many env-set-sources : (many (Env) e) (many (List $ String) ss) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps _) (env-set-macros e $ MkMacros n g ps ss))))
+  (match many (env-macros e) _ ((MkMacros n g ps _ f) (env-set-macros e $ MkMacros n g ps ss f))))
+(def-fns _ $ (many env-fuel : (many (Env) e) -> (many (Nat) r))
+  (match many (env-macros e) _ ((MkMacros _ _ _ _ f) f)))
+(def-fns _ $ (many env-set-fuel : (many (Env) e) (many (Nat) f) -> (many (Env) r))
+  (match many (env-macros e) _ ((MkMacros n g ps ss _) (env-set-macros e $ MkMacros n g ps ss f))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
@@ -3465,7 +3469,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) $ Nil _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

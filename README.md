@@ -109,6 +109,20 @@ it is embedded under `--extract`, and slc takes it too.
 `--extract` it is embedded in the program written out, and slc takes
 the same flag.
 
+`--eval-fuel n` bounds the evaluator. An application spends one unit of
+fuel, a call to a function interpreted from its body one more, and each
+gives its units back when it returns, so `n` bounds how deeply
+applications nest, a tail call nesting inside the call it replaces. A
+run that would go further crashes with `out of fuel` (DESIGN.md section
+31). It bounds every run the evaluator makes, at compile time and, in
+the reference and under `slc --interpret`, the program's own; the OCaml
+that `--extract` or slc writes out has no bound. Without the flag the
+reference has none and slc's is 1000000000. A run-position form whose
+evaluation crashes is refused, the reference naming the file alone, as
+for any runtime error, and slc the form. slc takes the same flag, and
+the two count alike in every run compared so far
+(`tests/comptime_fuel.sl`).
+
 `--extract out.ml` elaborates the files as usual but, instead of
 running their final values, writes the program out as standalone OCaml,
 in the sense of Coq's extraction, to be compiled with ocamlfind against
@@ -176,8 +190,8 @@ bounds the size of the OCaml that extracting it writes, `; prelude: none` runs i
 under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
-atom's id. `; confine-dir: dir`, `; confine-output-bytes: n` and
-`; no-env: yes` run the test under the corresponding flags.
+atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,
+`; no-env: yes` and `; eval-fuel: n` run the test under the corresponding flags.
 
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,

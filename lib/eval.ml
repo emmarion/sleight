@@ -1,6 +1,7 @@
 open Value
 
 exception Runtime of string
+let fuel : int option ref = ref None
 let perform : (value -> value) ref = ref (fun _ -> raise (Runtime "no world"))
 let prim : (Special.t -> value list -> value list) ref = ref (fun p _ -> raise (Runtime ("`" ^ Special.name p ^ "` reached with no macro world")))
 
@@ -61,8 +62,14 @@ let rec eval env code =
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))
 
 and apply f args =
+  let spend k run =
+    match !fuel with
+    | None -> run ()
+    | Some n when n < k -> raise (Runtime "out of fuel")
+    | Some n -> fuel := Some (n - k); Fun.protect ~finally:(fun () -> fuel := Some n) run
+  in
   match f with
-  | VFn { fn = { impl = Some impl; _ }; _ } when !use_externs -> impl args
-  | VFn cl -> eval (bind cl.fn.params args (Lazy.force cl.env)) cl.fn.body
-  | VCtorFn c -> [ construct c args ]
+  | VFn { fn = { impl = Some impl; _ }; _ } when !use_externs -> spend 1 (fun () -> impl args)
+  | VFn cl -> spend 2 (fun () -> eval (bind cl.fn.params args (Lazy.force cl.env)) cl.fn.body)
+  | VCtorFn c -> spend 1 (fun () -> [ construct c args ])
   | v -> raise (Runtime ("cannot apply " ^ show v))

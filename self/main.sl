@@ -49,7 +49,7 @@
   (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit _ exit-fail)))
 
 (def-fns run-lvl $ (many usage : (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml" w))
+  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--eval-fuel n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml" w))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many h)) (env-heap env))
@@ -61,7 +61,10 @@
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
   (let ((many sources)) $ list-drop _ (match many prelude (((Nat) _)) ((BTrue) 1) ((BFalse) 0)) $ src-paths srcs)
-  (let ((many builtins)) (env-set-sources (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help) sources))
+  (let ((many fuel)) $ flag-value flags "--eval-fuel")
+  (let-match many (match many fuel (((Bool) _)) ((Some _ f) (and (not $ str-eq f "") (all-digits f))) ((None _) (BTrue))) (BTrue) ((BFalse) (failed "--eval-fuel takes a number of steps" w)))
+  (let ((many base-env)) (env-set-sources (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help) sources))
+  (let ((many builtins)) $ match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f $ Zero)) ((None _) base-env))
   (let ((unique ew)) (MkElabWorld w))
   (let ((unique ew1) (many env)) $ run-files ew (not $ has-flag flags "--no-shape-note") srcs (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
   (let-match unique ew1 (MkElabWorld w0))

@@ -40,7 +40,7 @@ let repl consume env =
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
-  let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints" ]
+  let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints"; "--eval-fuel" ]
   and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused" ] in
   let rec read flags files = function
     | [] -> (flags, List.rev files)
@@ -57,6 +57,7 @@ let () =
   Option.iter (( := ) Extract.fence) (option "--confine-dir");
   Extract.output_bytes := option "--confine-output-bytes";
   Option.iter (fun p -> Special.help := Program.read_file p) (option "--hints");
+  Option.iter (fun f -> match int_of_string_opt f with Some n when n >= 0 -> Eval.fuel := Some n | _ -> prerr_endline "--eval-fuel takes a number of steps"; exit 1) (option "--eval-fuel");
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");

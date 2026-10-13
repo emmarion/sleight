@@ -8,6 +8,7 @@
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
    "; warn-unused: yes" checks the test's own binders as --warn-unused does;
+   "; eval-fuel: n" bounds the evaluator as --eval-fuel does;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
@@ -81,6 +82,7 @@ and run_mode name externs src =
   List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine-dir");
   let limit = ref max_int in
   Extract.output_bytes := None;
+  Eval.fuel := Option.map int_of_string (List.nth_opt (directive src "eval-fuel") 0);
   List.iter (fun b -> limit := Result.fold ~ok:Fun.id ~error:failwith (Program.output_limit b); Extract.output_bytes := Some b) (directive src "confine-output-bytes");
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;

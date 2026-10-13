@@ -49,12 +49,13 @@ check_test() {
   needs=""
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   files=$(for f in $needs "$t"; do echo "$ROOT/$f"; done)
-  # a "; prelude: none" test runs, on both sides, without the prelude
-  noprelude=""
-  [ "$(directive "$t" prelude)" = none ] && noprelude=--no-prelude
+  # flags both sides take: a "; prelude: none" test runs without the prelude, and "; eval-fuel: n" bounds the evaluator
+  both=""
+  [ "$(directive "$t" prelude)" = none ] && both=--no-prelude
+  for n in $(directive "$t" eval-fuel); do both="$both --eval-fuel $n"; done
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
-    if "$B/slc" $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+    if "$B/slc" $both $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
       echo "FAIL $name: slc accepted a program the checker refuses"; return
     fi
     directive "$t" error | while IFS= read -r want; do has "$B/$name.slc.err" "$want" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
@@ -62,7 +63,7 @@ check_test() {
     # Where each side puts its first message. The directives match on the text alone, so nothing else
     # compares the two positions; slc records one per form it descends into and the reference carries one
     # per form, so the file and line agree far more often than the column (ASSUMPTIONS 194).
-    "$ROOT/$REF" $noprelude $files > /dev/null 2> "$B/$name.ref.err"
+    "$ROOT/$REF" $both $files > /dev/null 2> "$B/$name.ref.err"
     first() { grep -m1 ' error: ' "$1" | sed "s|^$ROOT/||"; }
     refpos=$(first "$B/$name.ref.err"); slcpos=$(first "$B/$name.slc.err")
     if [ "$(echo "$refpos" | cut -d: -f1-3)" = "$(echo "$slcpos" | cut -d: -f1-3)" ]; then echo "pos-same $name"
@@ -81,15 +82,15 @@ check_test() {
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program
-  (cd "$B" && env -i $envs "$ROOT/$REF" $noprelude $confine $files -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  (cd "$B" && env -i $envs "$ROOT/$REF" $both $confine $files -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
   # The reference elaborates and runs in one process, so its stderr is its warnings and the program's own;
   # each slc run is compared with that whole stream, a compiled program's being slc's then the program's.
   if [ "$flags" = --interpret ]; then
-    (cd "$B" && env -i $envs "$B/slc" $noprelude $confine --interpret $files -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
+    (cd "$B" && env -i $envs "$B/slc" $both $confine --interpret $files -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
     cp "$B/$name.slc.err" "$B/$name.err"
   else
-  if ! "$B/slc" $noprelude $confine $flags $files > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+  if ! "$B/slc" $both $confine $flags $files > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
   for n in $(directive "$t" extract-bytes-at-most); do
