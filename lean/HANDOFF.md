@@ -11,12 +11,12 @@ may be mistaken.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's. At the last run 116 tests were
 accepted with OCaml's value, none mismatched, 269 refusals agreed, and
-171 + 216 were refused as unsupported. No test the OCaml suite refuses
-is accepted. Of the tests it accepts, seven are refused (four need cells,
-`comptime_call_ctor.sl`, `thunk_extern_first_class.sl`, and
-`delegate_proof_scope.sl`, whose signature names `(level-of a)` for an
-earlier function of its own block) and two time out at ten seconds
-(`comptime_tail.sl`, `extern_tail.sl`).
+171 + 216 were refused as unsupported; since then `comptime_call_ctor.sl`
+and `delegate_proof_scope.sl` are accepted too. No test the OCaml suite
+refuses is accepted. Of the tests it accepts, five are refused (four
+need cells, and `thunk_extern_first_class.sl`) and two time out at ten
+seconds: `comptime_tail.sl` finishes in about a minute, and
+`extern_tail.sl` ran out of memory on this session's machine.
 
 `lean/prelude.py` regenerates `lean/prelude.sl` from `lib/prelude.sl`,
 keeping the `extern` marks. It takes several minutes, because it runs
@@ -32,9 +32,8 @@ before checking, and the checker requires it.
 
 ## Next, none of it decided
 
-1. **`level-of` of an earlier function of the same block in a
-   signature** (section 53), which `delegate_proof_scope.sl` needs.
-   `delegate-of` in a type is not supported either.
+1. **A signature that mentions an earlier function of its block** other
+   than through `level-of` (section 53), and `delegate-of` in a type.
 2. **`unique`** (sections 13, 15, 16, 32): about 170 tests stop at it.
    Without it, a non-erased `coerce` needs `(Shared)` on both sides,
    which inference enforces.

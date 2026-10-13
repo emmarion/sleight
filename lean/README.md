@@ -375,7 +375,8 @@ it is `Settled`, and its `is` rule.
   for the first of the two, and a written `(subterm _)` for the second,
   for the argument it precedes.
 - `(level-of f)` (section 53), in a term and as an argument of
-  `prove-predates`, for an `f` that a `def-fns` in scope names, directly
+  `prove-predates`, for an `f` that a `def-fns` in scope names, an
+  earlier function of its own block included in a signature, directly
   or through `let` binders forwarding from one, and for a parameter
   written with an `Fn` type whose level is an entry.
 
@@ -397,10 +398,12 @@ it is `Settled`, and its `is` rule.
   body.
 - An application `(x args)` of a variable is a constructor application,
   a term, exactly when `x`'s type is written as a `TyCtor` or `ValCtor`
-  where `x` is bound, or `x` is a `let` binder of a constructor named
-  directly; otherwise it is a call. A constructor value reached any
-  other way, a call's result say, is applied after a `let` binder
-  written with its type. A type or constructor whose `def-adts`
+  where `x` is bound, `x` is a `let` binder of a constructor named
+  directly, or `x` is a `let` binder of a result whose type the
+  elaborator knows to be a `TyCtor` or `ValCtor`, a call's result
+  through the callee's written return entry say; otherwise it is a
+  call. A constructor value reached any other way is applied after a
+  `let` binder written with its type. A type or constructor whose `def-adts`
   mentions top-level entries is not first class. A `ValCtor`'s return
   must be an application of a type constructor that is not one of its
   own fields (ASSUMPTIONS.md 80). In the core every

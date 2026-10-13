@@ -1275,6 +1275,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
         | .tyc _ | .vc .. => .ctor i
         | .fv i0 => if token then (match refOf sc i0 with | .ctor _ => .ctor i | _ => .fv i) else refOf sc i
         | _ => refOf sc i
+      if r matches .fv _ && ((← get).known.lookup i).any isCtorTy then r := .ctor i
       if let some (k, a) := ann then
         let a ← elabTm sc' 0 a
         ss := ss ++ [.chk k (.fv i) a]
@@ -1394,7 +1395,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       let ers0 := (← get).ers
       if let some t := tgt then
         modify fun st => { st with ers := st.ers.zipIdx.map fun (e, i) => e || (i < base + sigs.length && i != t) }
-      let tele ← elabTele sc 0 true (ps ++ rs)
+      let tele ← elabTele (fnsc.drop (sigs.length - j)) 0 true (ps ++ rs)
       reset (base + sigs.length)
       let pents ← entryErs true ps
       let pids ← fresh (pents.map (·.2))
