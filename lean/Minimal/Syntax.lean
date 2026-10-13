@@ -35,6 +35,7 @@ inductive Tm where
   | lvl (n : Nat)
   | tok
   | clo (env : Tm) (gid j : Nat)
+  | nat (n : Nat)
   deriving DecidableEq, Repr, Inhabited
 
 namespace Tm
@@ -108,7 +109,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, fn l _ t _ _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level => true
-  | _, lvl _ | _, tok | _, clo .. => false
+  | _, lvl _ | _, tok | _, clo .. | _, nat _ => false
 
 def bound : Nat → Tm → Bool
   | d, bv i => i < d
@@ -387,6 +388,7 @@ structure Prog where
   groups : List Group
   main : Core
   hidden : Nat := 0
+  natD : Option Nat := none
   deriving Repr, Inhabited
 
 def marks : Tm → Nat → List Bool

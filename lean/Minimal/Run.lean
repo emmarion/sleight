@@ -8,6 +8,7 @@ def Prog.nat (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "Nat")
 def Prog.ownErs (P : Prog) (d c : Nat) : List Bool := ((P.ctor d c).map fun sig => fieldErs (sig.skip (P.lifted d))).getD []
 
 def Prog.natOf (nat : Option Nat) : Tm → Option Nat
+  | .nat n => if nat.isSome then some n else none
   | .app (.vc d 0 _) .nil => if nat = some d then some 0 else none
   | .app (.vc d 1 _) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
   | _ => none
@@ -54,6 +55,7 @@ mutual
 partial def Prog.show (P : Prog) (nat : Option Nat) (t : Tm) : String :=
   match Prog.natOf nat t, t with
   | some n, _ => toString n
+  | none, .nat n => if P.view (.nat n) == .nat n then "_" else P.show nat (P.unnat (.nat n))
   | none, _ => match P.charOf nat t, P.strOf nat t with
   | some c, _ => showChar c
   | _, some cs => showStr cs
@@ -83,7 +85,7 @@ partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
     if er then "_"
     else
       let sv := P.show nat v
-      if k + 1 == vs.length && v matches .app (.vc ..) _ && sv.startsWith "(" then
+      if k + 1 == vs.length && (v matches .app (.vc ..) _ || v matches .nat _) && sv.startsWith "(" then
         "$ " ++ (sv.drop 1).dropRight 1
       else sv
   " ".intercalate (P.name h :: shown)
@@ -148,7 +150,7 @@ partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → Stri
         | .app (.vc d' c _) args => if d' == d then P.showCon nat (.app (.tyc d ls) idx) d c args.toList else (P.show nat v, false)
         | _ => (P.show nat v, false)
     | none, none => (P.show nat v, false)
-  | _, v => (P.show nat v, v matches .app (.vc ..) _)
+  | _, v => (P.show nat v, v matches .app (.vc ..) _ || v matches .nat _)
 
 partial def Prog.showCon (P : Prog) (nat : Option Nat) (T : Tm) (d c : Nat) (args : List Tm) : String × Bool :=
   let ers := P.ownErs d c

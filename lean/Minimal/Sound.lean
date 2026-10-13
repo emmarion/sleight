@@ -767,6 +767,18 @@ theorem EnvOK.pushFns (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       rw [tl, tl] at this
       subst this; exact hR
     | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+    | nat he h' =>
+      obtain ⟨c, args, hv⟩ := Prog.view_nat (n := by assumption) he
+      rw [hv] at h'
+      refine .nat he ?_; rw [hv]
+      cases h' with
+      | dele hG' _ hF' _ hdt hR =>
+        rw [hG] at hG'; cases hG'; rw [hF] at hF'; cases hF'; rw [ht'] at hdt; cases hdt
+        have tl : ∀ l : List Tm, (Tm.ofList l).toList = l := fun l => by induction l <;> simp [Tm.ofList, Tm.toList, *]
+        have := congrArg Tm.toList hx
+        rw [tl, tl] at this
+        subst this; exact hR
+      | other _ _ h3 => exact absurd rfl (h3 _ _ _)
   · exact fun h => .dele hG hne.2 hF hne.1 ht' h
 
 namespace Tm
@@ -994,11 +1006,11 @@ theorem fieldsSimple_bind {S : List Nat} {k : Ent} {A r : Tm} (h : fieldsSimple 
   · cases h
 
 theorem fields_simple {n : Nat}
-    (ih : ∀ (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d .nil) .nil) → Real P vS v → vS = v)
+    (ih : ∀ (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d .nil) .nil) → Real P vS v → P.unnat vS = v)
     {mk me mu : Bool} {T : Tm} :
     ∀ (vs sig sigR vsS : Tm), fieldsSimple P.simple sig = true → fieldsSimple P.simple sigR = true →
       VTys P vs sig (.bind (.ty mk me mu) T .nil) →
-      Reals P vsS vs sigR → (∀ w ∈ vs.toList, w.size < n) → vsS = vs := by
+      Reals P vsS vs sigR → (∀ w ∈ vs.toList, w.size < n) → P.unnat vsS = vs := by
   intro vs; induction vs with
   | cons a vs' _ ihv =>
     intro sig sigR vsS hfs hfr hvs hrs hsz
@@ -1015,13 +1027,14 @@ theorem fields_simple {n : Nat}
       subst e1
       rcases hr' with rfl | ⟨_, _, _, hfr'⟩
       · cases hrs'; rfl
+      simp only [Prog.unnat]
       rw [ihv _ _ _ (fieldsSimple_inst _ _ _ hfs') hfr' hvs' hrs' (fun w hw => hsz w (by simp [Tm.toList, hw]))]
     | isCons _ _ => simp [fieldsSimple] at hfs
   | nil => intro sig sigR vsS _ _ _ hrs _; cases hrs; rfl
   | _ => intro sig sigR vsS _ _ hvs; cases hvs
 
 theorem real_simple (hS : P.simpleStep P.simple = P.simple) :
-    ∀ n (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d .nil) .nil) → Real P vS v → vS = v := by
+    ∀ n (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d .nil) .nil) → Real P vS v → P.unnat vS = v := by
   intro n; induction n with
   | zero => intro v h; omega
   | succ n ih =>
@@ -1039,10 +1052,29 @@ theorem real_simple (hS : P.simpleStep P.simple = P.simple) :
       simp only [Bool.and_eq_true, List.all_eq_true] at hD
       have hsig : D.ctors[c]? = some sig := by simpa [Prog.ctor, hDd] using hc
       have hfs := hD.2 sig (List.mem_of_getElem? hsig)
+      have hnw : P.wrapField d c = none := by
+        cases hw : P.wrapField d c with
+        | none => rfl
+        | some k =>
+          have := (Prog.wrapField_spec hw).1
+          simp [Prog.isNt, hDd] at this; simp [this] at hD
+      obtain ⟨w, hwe, hR, hwn⟩ : ∃ w, P.unnat w = P.unnat vS ∧ Real P w (.app (.vc d c .nil) vs) ∧ ∀ k, w ≠ .nat k := by
+        cases vS with
+        | nat k =>
+          cases hR with
+          | nat he h' =>
+            obtain ⟨c', a', hv'⟩ := Prog.view_nat (n := k) he
+            exact ⟨_, by rw [← hv', Prog.unnat_view he], hv' ▸ h', by simp⟩
+          | wrap hw _ => rw [hnw] at hw; cases hw
+          | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
+        | _ => exact ⟨_, rfl, hR, by simp⟩
+      rw [← hwe]
       cases hR with
+      | nat => exact absurd rfl (hwn _)
       | con hc' _ _ hrs =>
         rw [hc] at hc'; cases hc'
         rw [← hl0] at hrs; simp only [Tm.len, Tm.skip] at hrs
+        simp only [Prog.unnat]
         congr 1
         exact fields_simple ih _ _ _ _ hfs hfs hvs hrs fun w hw => by
           have := Tm.size_mem_toList vs w hw; simp [Tm.size] at hn; omega
@@ -1091,7 +1123,10 @@ theorem Tm.toList_getD_subst (f : Nat → Tm) {t : Tm} (h : t.isList) (k : Nat) 
 theorem Real.wrap_iff {vS vs ls : Tm} {d c k : Nat} (hw : P.wrapField d c = some k) :
     Real P vS (.app (.vc d c ls) vs) ↔ Real P vS (vs.toList.getD k .nil) := by
   constructor
-  · intro h; cases h with
+  · intro h
+    refine Real.natInd (fun vS hn h => ?_) _ h
+    cases h with
+    | nat he _ => exact .nat he (hn _ _ rfl he)
     | con _ _ hw' _ => rw [hw] at hw'; cases hw'
     | wrap hw' hr => rw [hw] at hw'; cases hw'; exact hr
     | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
@@ -1121,7 +1156,9 @@ theorem Real.ctor_congr {d c : Nat} {sig vs ws vS ls : Tm} (hc : P.ctor d c = so
     (hf : ∀ j < vs.toList.length, (sig.skip (P.lifted d)).ers.getD j true = false → ∀ x, Real P x (vs.toList.getD j .nil) →
       Real P x (ws.toList.getD j .nil))
     (h : Real P vS (.app (.vc d c ls) vs)) : Real P vS (.app (.vc d c ls) ws) := by
+  refine Real.natInd (fun vS hn h => ?_) _ h
   cases h with
+  | nat he _ => exact .nat he (hn _ _ rfl he)
   | con hc' hp hw' hr => rw [hc] at hc'; cases hc'; exact .con hc hp hw' (Reals.congr _ hr hw hl hf)
   | wrap hw' hr =>
     obtain ⟨-, -, sig', hc', hk⟩ := Prog.wrapField_spec hw'
@@ -1255,7 +1292,7 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
   | @assert _ t T' _ ht hts hS hk he hA =>
     obtain ⟨hv, hs, _⟩ := tm_sound hP hE ht
     have hl := hE.len
-    have hAe : T.subst (Tm.env ρ) = T.subst Γ.fixedEnv := Tm.subst_ext T fun i hi => by
+    have hAe : T.subst (Tm.env ρ) = T.subst (Γ.fixedEnv P) := Tm.subst_ext T fun i hi => by
       obtain ⟨d, vS, hti, hd, hfx⟩ := hk i hi
       have hi' : i < ρ.length := hl ▸ (List.getElem?_eq_some_iff.mp hti).1
       have hR := hE.fix.2 i vS hfx
@@ -1562,15 +1599,19 @@ theorem rtArgs_subst {Γ : Ctx} (f : Nat → Tm) : ∀ (args sig : Tm), rtArgs P
   | .cons .., .nil, h | .cons .., .fv _, h | .cons .., .bv _, h | .cons .., .cons .., h | .cons .., .app .., h
   | .cons .., .tyc .., h | .cons .., .vc .., h | .cons .., .tyCtor _, h | .cons .., .valCtor _, h
   | .cons .., .univ, h | .cons .., .level, h | .cons .., .predates .., h | .cons .., .subterm .., h
-  | .cons .., .fn .., h | .cons .., .lvl _, h | .cons .., .tok, h | .cons .., .clo .., h => by simp [rtArgs] at h
+  | .cons .., .fn .., h | .cons .., .lvl _, h | .cons .., .tok, h | .cons .., .clo .., h | .cons .., .nat _, h => by
+    simp [rtArgs] at h
   | .fv _, _, h | .bv _, _, h | .bind .., _, h | .app .., _, h | .tyc .., _, h | .vc .., _, h | .tyCtor _, _, h
   | .valCtor _, _, h | .univ, _, h | .level, _, h | .predates .., _, h | .subterm .., _, h | .fn .., _, h
-  | .lvl _, _, h | .tok, _, h | .clo .., _, h => by simp [rtArgs] at h
+  | .lvl _, _, h | .tok, _, h | .clo .., _, h | .nat _, _, h => by simp [rtArgs] at h
 
 theorem Real.vc_inv {vS ls : Tm} {d c : Nat} (h : Real P vS (.vc d c ls)) : vS = .vc d c .nil ∧ P.phantom d c = false := by
   cases h with
   | vc h => exact ⟨rfl, h⟩
   | other _ h2 _ => exact absurd rfl (h2 _ _ _)
+  | nat he h' =>
+    obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
+    cases h' with | other _ h2 _ => exact absurd rfl (h2 _ _ _)
 
 theorem Reals.retele : ∀ {a b t t' : Tm}, Reals P a b t → t.ers = t'.ers → Reals P a b t'
   | _, _, _, _, .nil, _ => .nil
@@ -1595,9 +1636,9 @@ theorem Real.ofArgs {d c : Nat} {sig argsS args ls : Tm} (hc : P.ctor d c = some
     (hr : Reals P argsS args (sig.skip (P.lifted d))) :
     Real P (match P.wrapField d c with
       | some k => argsS.toList.getD k .nil
-      | none => .app (.vc d c .nil) argsS) (.app (.vc d c ls) args) := by
+      | none => P.norm (.app (.vc d c .nil) argsS)) (.app (.vc d c ls) args) := by
   cases hw : P.wrapField d c with
-  | none => exact .con hc hp hw hr
+  | none => exact Real.norm (.con hc hp hw hr)
   | some k =>
     obtain ⟨_, _, sig', hc', hk⟩ := Prog.wrapField_spec hw
     rw [hc] at hc'; cases hc'
@@ -1638,7 +1679,8 @@ theorem rt_real (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ �
     | _ => simp [rt] at h
   | .vc _ _ _, h => by simp only [Prog.sub, Prog.subU, Tm.subst]; exact .vc (by simpa [rt] using h)
   | .tyc .., h | .tyCtor _, h | .valCtor _, h | .univ, h | .level, h | .predates .., h | .subterm .., h
-  | .fn .., h | .nil, h | .bv _, h | .cons .., h | .bind .., h | .lvl _, h | .tok, h | .clo .., h => by simp [rt] at h
+  | .fn .., h | .nil, h | .bv _, h | .cons .., h | .bind .., h | .lvl _, h | .tok, h | .clo .., h | .nat _, h => by
+    simp [rt] at h
 
 theorem rtArgs_reals (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) :
     ∀ (args tele : Tm), rtArgs P Γ args tele = true →
@@ -1744,14 +1786,22 @@ theorem Real.clo_inv {vS e : Tm} {gid j : Nat} (h : Real P vS (.clo e gid j)) :
   | clo hG hg hF hf hd hl hr => exact .inl ⟨_, _, _, _, rfl, rfl, hG, hg, hF, hf, hd, hl, hr⟩
   | dele hG hg hF hf hd hr => exact .inr ⟨_, _, _, _, rfl, hG, hg, hF, hf, hd, hr⟩
   | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+  | nat he h' =>
+    obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
+    cases h' with
+    | dele hG hg hF hf hd hr => exact .inr ⟨_, _, _, _, rfl, hG, hg, hF, hf, hd, .nat he (by rw [hv]; exact hr)⟩
+    | other _ _ h3 => exact absurd rfl (h3 _ _ _)
 
 theorem Real.con_inv {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d c ls) vs)) (hn : P.isNt d = false) :
-    ∃ vsS sig, vS = .app (.vc d c .nil) vsS ∧ P.ctor d c = some sig ∧ P.phantom d c = false ∧
+    ∃ vsS sig, P.view vS = .app (.vc d c .nil) vsS ∧ P.ctor d c = some sig ∧ P.phantom d c = false ∧
       Reals P vsS vs (sig.skip (P.lifted d)) := by
-  cases h with
+  have h2 := Real.view h
+  generalize hw : P.view vS = w at h2
+  cases h2 with
   | con hc hp _ hr => exact ⟨_, _, rfl, hc, hp, hr⟩
   | wrap hw _ => rw [(Prog.wrapField_spec hw).1] at hn; cases hn
   | other h1 _ => exact absurd rfl (h1 _ _ _ _)
+  | nat he _ => cases vS <;> simp [Prog.view, he] at hw <;> (split at hw <;> simp_all)
 
 theorem Real.wrap_inv (hP : ProgOK P) {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d c ls) vs))
     (hn : P.isNt d = true) : ∃ k, P.wrapField d c = some k ∧ Real P vS (vs.toList.getD k .nil) := by
@@ -1761,6 +1811,14 @@ theorem Real.wrap_inv (hP : ProgOK P) {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Re
     simp [Prog.wrapField, hn, hp, hc] at hw; rw [hw] at this; cases this
   | wrap hw hr => exact ⟨_, hw, hr⟩
   | other h1 _ => exact absurd rfl (h1 _ _ _ _)
+  | nat he h' =>
+    obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
+    cases h' with
+    | con hc hp hw _ =>
+      have := hP.newtype _ _ _ hn hp hc
+      simp [Prog.wrapField, hn, hp, hc] at hw; rw [hw] at this; cases this
+    | wrap hw hr => exact ⟨_, hw, .nat he (by rw [hv]; exact hr)⟩
+    | other h1 _ => exact absurd rfl (h1 _ _ _ _)
 
 section
 variable {Γ Γ' : Ctx}
@@ -1912,9 +1970,11 @@ theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n 
           split
           · rename_i hdc
             obtain ⟨rfl, rfl⟩ := hdc
+            obtain ⟨w, hx, hwv⟩ := Option.map_eq_some_iff.mp hx
             have hR := hE.fix.2 x _ hx
             simp only [Tm.subst] at hs; rw [hs] at hR
             obtain ⟨vsS', sig', e1, hsig', _, hrv⟩ := hR.con_inv (by simpa using hnt)
+            rw [hwv] at e1
             cases e1; rw [hsig] at hsig'; cases hsig'
             subst hpre
             exact hE.record hE' hf hr hrv.len fun j a b ha hb he => by
@@ -2474,9 +2534,11 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   | fixedOut _ hx hkk hne hnt =>
     have := (hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).known hkk hk
     obtain ⟨rfl, rfl⟩ := this
+    obtain ⟨w, hx, hwv⟩ := Option.map_eq_some_iff.mp hx
     have hR := hE.fix.2 _ _ hx
     simp only [Tm.subst] at hsv; rw [hsv] at hR
     obtain ⟨_, _, e1, _⟩ := hR.con_inv hnt
+    rw [hwv] at e1
     simp only [Tm.app.injEq, Tm.vc.injEq] at e1
     obtain ⟨⟨-, hc0, -⟩, -⟩ := e1
     have := (hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).known hkk hk

@@ -308,7 +308,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
         | some (.app (.tyc d .nil) .nil) => P.simple.contains d && (Γ.fixed[i]?.join).isSome
         | _ => false) = true)
       "a literal's fact mentions an entry whose value is not known"
-    let ⟨he⟩ ← need (A.subst Γ.fixedEnv = T) "a literal's proof is not of the fact it states"
+    let ⟨he⟩ ← need (A.subst (Γ.fixedEnv P) = T) "a literal's proof is not of the fact it states"
     let ⟨hA⟩ ← need (A.static Γ.n 0) "a literal's fact is not well scoped"
     .ok ⟨A, .assert h hs hS (fun i hi => by
       have := List.all_eq_true.mp hk i hi
@@ -759,7 +759,7 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
           else match s, hk : Γc.known k with
-            | .fv x, some (d', c) => match hs : Γc.fixed[x]?.join with
+            | .fv x, some (d', c) => match hs : (Γc.fixed[x]?.join).map P.view with
               | some (.app (.vc d c0 _) vs) =>
                 if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 ∧ P.isNt d = false then
                   .ok ⟨by obtain ⟨hm, rfl, hc, hn⟩ := hd; exact BranchOK.fixedOut hm hs hk hc hn⟩

@@ -222,8 +222,11 @@ structure ESt where
 
 abbrev M := StateT ESt (Except String)
 
+def ESt.prog (st : ESt) (main : Core) : Prog :=
+  { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern }
+
 def ESt.settledVal (st : ESt) (i : Nat) : Option Tm :=
-  if i < st.vals.length && !(st.ers.getD i true) then st.vals[i]? else none
+  if i < st.vals.length && !(st.ers.getD i true) then st.vals[i]?.map (st.prog .dead).view else none
 
 def ESt.firstAdt (st : ESt) (name : String) : Option Nat := st.decls.findIdx? (·.name == name)
 
@@ -431,6 +434,7 @@ def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
   | e => return e
 
 partial def natOfVal : Tm → Option Nat
+  | .nat n => some n
   | .app (.vc _ 0 _) .nil => some 0
   | .app (.vc _ 1 _) (.cons x .nil) => (natOfVal x).map (· + 1)
   | _ => none
@@ -933,7 +937,7 @@ def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofL
 def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
   let st ← get
   if !st.top || st.vals.length < n0 then return
-  let P : Prog := { adts := st.decls, groups := st.groups, main := .dead }
+  let P : Prog := (st.prog .dead)
   let c := close ss ((List.range (st.n - n0)).map (Tm.fv <| n0 + ·))
   let topCtx := st.topCtx.bind fun Γ => if Γ.n == n0 then
       ((mapRet P (fun Γ ts => (ts, Γ)) Γ c).map (·.2)).filter (·.n == st.n)
@@ -1323,7 +1327,7 @@ partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
       | return none
     let [t] := ts | throw "a computed head has one value"
     let st ← get
-    let P : Prog := { adts := st.decls, groups := st.groups, main := .dead }
+    let P : Prog := (st.prog .dead)
     match runS P 10000000 st0.vals (close ss [t]) with
     | some [.app (.vc d c _) _] =>
       if d == st.special && st.decls.length > 0 then
@@ -1346,7 +1350,7 @@ partial def compileMsgE (sc : Scope) (m : Sx) : M (List Stmt × String) := do
   let v := match t with
     | .fv i => st.settledVal i
     | t => if st.top && st.vals.length == st.n then
-        (runS { adts := st.decls, groups := st.groups, main := .dead } 10000000 st.vals (close [] [t])).bind (·.head?)
+        (runS (st.prog .dead) 10000000 st.vals (close [] [t])).bind (·.head?)
       else none
   match v.bind st.strOfVal with
   | some cs => return (ss, String.ofList cs)
@@ -2286,7 +2290,7 @@ def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List Str
     (if stmt then items ++ [.list [.atom "values"]] else items)).run { builtins with pre }
   unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
   let ws := st.warns ++ (st.supp.filter (·.2.2 == 0)).map fun (x, _, _) => s!"`;! suppress warn` for `{x}` silenced nothing"
-  return ({ adts := st.decls, groups := st.groups, main := close ss ts }, ws)
+  return (st.prog (close ss ts), ws)
 
 def load (src : String) (pre : Bool := true) : Except String (Prog × List String) := do elabProgram (← parse src) pre
 

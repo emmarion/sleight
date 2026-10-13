@@ -92,7 +92,7 @@ def stepS (P : Prog) (ρ : List Tm) : Core → Option (List Tm)
       some (F.spreadOut ve args.toList.length outs)
     | _ => none
   | .mtch _ R _ _ true _ => some (List.replicate R.len .tok)
-  | .mtch s _ brs els false _ => match P.sub ρ s with
+  | .mtch s _ brs els false _ => match P.view (P.sub ρ s) with
     | .app (.vc _ c _) vs => do
       let (pre, body) ← selectBr brs els c vs.toList
       runS P fixFuel (ρ ++ pre) body
@@ -120,13 +120,13 @@ def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :
   if Γ.ready then
     if fe then Γ.record Γ' (List.replicate n .tok)
     else match s, Γ.known k with
-      | .fv x, some (d, c) => if P.isNt d then Γ' else match Γ.fixed[x]?.join with
+      | .fv x, some (d, c) => if P.isNt d then Γ' else match (Γ.fixed[x]?.join).map P.view with
         | some (.app (.vc d' c' _) vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
         | _ => Γ'
       | _, _ => Γ'
   else Γ'
 
-def Ctx.fixedEnv (Γ : Ctx) (i : Nat) : Tm := (Γ.fixed[i]?.join).getD .nil
+def Ctx.fixedEnv (P : Prog) (Γ : Ctx) (i : Nat) : Tm := P.unnat ((Γ.fixed[i]?.join).getD .nil)
 
 def fieldsSimple (S : List Nat) : Tm → Bool
   | .bind (.ty _ false _) (.app (.tyc d .nil) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
@@ -325,7 +325,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
   | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
       (∀ i ∈ A.fvs, ∃ d vS, Γ.tys[i]? = some (.app (.tyc d .nil) .nil) ∧ d ∈ P.simple ∧ Γ.fixed[i]?.join = some vS) →
-      A.subst Γ.fixedEnv = T → A.static Γ.n 0 → PrimTy Γ (.assert t A) A
+      A.subst (Γ.fixedEnv P) = T → A.static Γ.n 0 → PrimTy Γ (.assert t A) A
   | coerce : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a' sb B b' → P.adts[dC]? = some D → D.coercible = true →
       Γ.canon a = Γ.canon a' → TmTy P Γ b Tb → Γ.canon b = Γ.canon b' → Γ.canon Tb = Γ.canon B →
       PrimTy Γ (.coerce a b p) B
@@ -462,7 +462,7 @@ inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm →
       BranchOK b fe Γ s k H idx sig R (some body) els
   | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
-  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0 ls) vs) → Γ.known k = some (d, c) → c ≠ c0 →
+  | fixedOut : Γ.cmode = true → (Γ.fixed[x]?.join).map P.view = some (.app (.vc d c0 ls) vs) → Γ.known k = some (d, c) → c ≠ c0 →
       P.isNt d = false →
       BranchOK b fe Γ (.fv x) k H idx sig R none els
   | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els

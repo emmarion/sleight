@@ -120,7 +120,13 @@ each one rests on, which are Lean's own three (`propext`,
   built by a `newtype`'s wrapping constructor as its one non-erased
   field, as DESIGN.md section 33 has it (`Prog.unwrap`), and a stripped
   value stands for such a value when it stands for that field
-  (`Real.wrap`). A call of a delegate's closure is matched in the
+  (`Real.wrap`). The stripped run holds a value of the declared type
+  named `Nat` and marked `extern`, the prelude's, as a number
+  (`Tm.nat`, `Prog.natD`): applying its constructors makes one
+  (`Prog.norm`), and a match reads one as `Zero` or `Succ` of a number
+  (`Prog.view`). A number stands for whatever its `Zero` or `Succ` form
+  stands for (`Real.nat`). The extern functions still run their models,
+  so this changes the representation, not the arithmetic. A call of a delegate's closure is matched in the
   stripped run by the call its body makes, which `Group.deleOK` checks
   passes the delegate's own non-erased arguments through to its target,
   in order, and the target's non-erased results back

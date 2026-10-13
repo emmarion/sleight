@@ -2,6 +2,35 @@ import Minimal.Eval
 
 namespace Minimal
 
+def Prog.view (P : Prog) : Tm → Tm
+  | .nat n => match P.natD with
+    | some d => match n with
+      | 0 => .app (.vc d 0 .nil) .nil
+      | k + 1 => .app (.vc d 1 .nil) (.cons (.nat k) .nil)
+    | none => .nat n
+  | t => t
+
+def natTm' (d : Nat) : Nat → Tm
+  | 0 => .app (.vc d 0 .nil) .nil
+  | k + 1 => .app (.vc d 1 .nil) (.cons (natTm' d k) .nil)
+
+def Prog.unnat (P : Prog) : Tm → Tm
+  | .nat n => match P.natD with
+    | some d => natTm' d n
+    | none => .nat n
+  | .app h a => .app (P.unnat h) (P.unnat a)
+  | .cons h t => .cons (P.unnat h) (P.unnat t)
+  | t => t
+
+def Prog.norm (P : Prog) : Tm → Tm
+  | t@(.app (.vc d c .nil) args) =>
+    if P.natD = some d then match c, args with
+      | 0, .nil => .nat 0
+      | 1, .cons (.nat k) .nil => .nat (k + 1)
+      | _, _ => t
+    else t
+  | t => t
+
 mutual
 def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
   | .fv i => f i
@@ -11,7 +40,7 @@ def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
     match P.subU f h with
     | .vc d c _ => match P.wrapField d c with
       | some k => args'.toList.getD k .nil
-      | none => .app (.vc d c .nil) args'
+      | none => P.norm (.app (.vc d c .nil) args')
     | h' => .app h' args'
   | t => t.subst f
 
@@ -57,12 +86,12 @@ inductive RunS : List Tm → Core → List Tm → Prop
       RunS (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body outs →
       RunS (ρ ++ F.spreadOut ve args.toList.length outs) rest out → RunS ρ (.call f dec args false ms ve rest) out
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
-  | mtch : P.sub ρ s = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
+  | mtch : P.view (P.sub ρ s) = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
   | caseE : realBr brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true nt) out
   | caseN : realBr brs els = some (pre, body) → RunS (ρ ++ pre.map fun _ => P.sub ρ s) body out →
       RunS ρ (.case s brs els false true) out
-  | case : P.sub ρ s = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
+  | case : P.view (P.sub ρ s) = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false false) out
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
   | prim : RunS (ρ ++ [if er then .tok else p.evalS P ρ]) rest out → RunS ρ (.prim p er rest) out
@@ -83,7 +112,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
         runS fuel (ρ ++ F.spreadOut ve args.toList.length outs) rest
       | _ => none
     | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
-    | .mtch s _ brs els false rest => match P.sub ρ s with
+    | .mtch s _ brs els false rest => match P.view (P.sub ρ s) with
       | .app (.vc _ c _) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         let outs ← runS fuel (ρ ++ pre) body
@@ -95,7 +124,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
     | .case s brs els false true => do
       let (pre, body) ← realBr brs els
       runS fuel (ρ ++ pre.map fun _ => P.sub ρ s) body
-    | .case s brs els false false => match P.sub ρ s with
+    | .case s brs els false false => match P.view (P.sub ρ s) with
       | .app (.vc _ c _) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         runS fuel (ρ ++ pre) body
@@ -191,6 +220,7 @@ inductive Real : Tm → Tm → Prop
       Real (.clo (.ofList envS) gid j) (.clo (.ofList env) gid j)
   | dele : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = some t →
       Real vS (Tm.env (env ++ closures env gid G) t) → Real vS (.clo (.ofList env) gid j)
+  | nat : P.natD = some e → Real (P.view (.nat n)) v → Real (.nat n) v
   | other : (∀ d c ls vs, v ≠ .app (.vc d c ls) vs) → (∀ d c ls, v ≠ .vc d c ls) → (∀ e g j, v ≠ .clo e g j) → Real vS v
 
 inductive Reals : Tm → Tm → Tm → Prop
@@ -201,4 +231,49 @@ end
 def SimEnv (er : Nat → Bool) (ρS ρ : List Tm) : Prop :=
   ρS.length = ρ.length ∧ ∀ i, er i = false → Real P (Tm.env ρS i) (Tm.env ρ i)
 
+
+
+theorem Real.nat_view' {P : Prog} : ∀ {vS v : Tm}, Real P vS v → ∀ n, vS = .nat n → Real P (P.view (.nat n)) v
+  | _, _, .nat _ h, _, rfl => h
+  | _, _, .wrap hw h, n, e => .wrap hw (Real.nat_view' h n e)
+  | _, _, .dele hG hg hF he hd h, n, e => .dele hG hg hF he hd (Real.nat_view' h n e)
+  | _, _, .other h1 h2 h3, _, _ => .other h1 h2 h3
+  | _, _, .con .., _, e => by cases e
+  | _, _, .vc .., _, e => by cases e
+  | _, _, .clo .., _, e => by cases e
+
+theorem Real.nat_view {P : Prog} {n : Nat} {v : Tm} (h : Real P (.nat n) v) : Real P (P.view (.nat n)) v :=
+  Real.nat_view' h n rfl
+
+theorem Prog.view_nat {P : Prog} {e n : Nat} (he : P.natD = some e) :
+    ∃ c args, P.view (.nat n) = .app (.vc e c .nil) args := by
+  cases n <;> simp [Prog.view, he]
+
+theorem Real.view {P : Prog} {vS v : Tm} (h : Real P vS v) : Real P (P.view vS) v := by
+  cases vS <;> first | exact h | exact Real.nat_view h
+
+theorem Real.natInd {P : Prog} {v w : Tm}
+    (main : ∀ vS, (∀ k e, vS = .nat k → P.natD = some e → Real P (P.view vS) w) → Real P vS v → Real P vS w) :
+    ∀ vS, Real P vS v → Real P vS w := by
+  intro vS h
+  refine main vS (fun k e hk he => ?_) h
+  subst hk
+  obtain ⟨c', a', hv⟩ := Prog.view_nat (n := k) he
+  rw [hv]
+  exact main _ (fun k' _ hk' _ => by simp at hk') (by rw [← hv]; exact Real.nat_view h)
+
+theorem Real.norm {P : Prog} {x v : Tm} (h : Real P x v) : Real P (P.norm x) v := by
+  unfold Prog.norm
+  split
+  · split
+    · rename_i d _ _ hd
+      split
+      · exact .nat hd (by simpa [Prog.view, hd] using h)
+      · exact .nat hd (by simpa [Prog.view, hd] using h)
+      · exact h
+    · exact h
+  · exact h
+
+theorem Prog.unnat_view {P : Prog} {e n : Nat} (he : P.natD = some e) : P.unnat (P.view (.nat n)) = P.unnat (.nat n) := by
+  cases n <;> simp [Prog.view, Prog.unnat, he, natTm']
 end Minimal
