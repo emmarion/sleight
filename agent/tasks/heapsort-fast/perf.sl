@@ -41,8 +41,8 @@
   (let-match many (array-get-many _ _ r k1 _ nth) (MkCopy _ v))
   (tail $ perf-checksum _ r _ len k1 (lt-weaken _ _ lt1) (nat-add acc (nat-mul k v))))
 
-(def-fns _ $ (many perf-line : (many (String) name) (many (Nat) v) (many (String) rest) -> (many (String) s))
-  (str-append name (str-append " " (str-append (nat-str v) (str-append "\n" rest)))))
+(def-fns _ $ (many perf-line : (many (String) label) (many (Nat) v) (many (String) rest) -> (many (String) s))
+  (str-append label (str-append " " (str-append (nat-str v) (str-append "\n" rest)))))
 
 ;! suppress warn Succ
 ;! suppress warn lt-dec
