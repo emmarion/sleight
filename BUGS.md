@@ -126,7 +126,8 @@ is a design decision. Remove an entry when it is fixed.
     gets `None` from `dispatch` and returns the index of the
     constructor it was asked about, so `comptime-match` confirms `Bad`
     whatever the value is. This is item 18's failed-step shape meeting
-    OPEN.md 4. A Claude session reproduced it at 402dbd7 as well; whether
-    the reference refuses the fuel-exhausting version was not checked.
+    OPEN.md 4. A Claude session reproduced it at 402dbd7 as well. The
+    reference, which has no fuel, refuses the file as written with the
+    same message after running the loop (about 3m47s on the same Mac).
     Found by a Claude session following up a lead left by the
     mimo-v2.6-pro `false` agent run; no fix is decided.
