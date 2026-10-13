@@ -228,8 +228,8 @@ produces nothing (section 27).
   argument.
 - `(level-of f)` (section 53), in a term and as an argument of
   `prove-predates`, for an `f` that a `def-fns` in scope names, directly
-  or through `let` binders forwarding from one. The elaborator does not
-  know types, so `level-of` of a parameter is refused.
+  or through `let` binders forwarding from one, and for a parameter
+  written with an `Fn` type whose level is an entry.
 
 ## Shapes chosen here, for the owner to confirm or change
 

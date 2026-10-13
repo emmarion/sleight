@@ -110,7 +110,10 @@ def teleTys : Tm → List Tm
 def levelOf (sc : Scope) (f : String) : M Nat := do
   match sc.lookup f with
   | some (.fn _ l _) => pure l
-  | _ => throw s!"level-of: {f} is not named by a def-fns in scope"
+  | some (.fv i) | some (.ctor i) => match (← get).known.lookup i with
+    | some (.fn (.fv l) _ _) => pure l
+    | _ => throw s!"level-of: the level of {f} is not known"
+  | _ => throw s!"level-of: {f} is not a function in scope"
 
 def splitMult (need : Bool := true) : List Sx → M (Bool × List Sx)
   | .atom "erased" :: xs => pure (true, xs)
