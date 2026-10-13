@@ -9,9 +9,9 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 149 tests were
-accepted with OCaml's value, none mismatched, 316 refusals agreed, and
-145 + 169 were refused as unsupported. No test the OCaml suite
+the test expects and the runner's. At the last run 151 tests were
+accepted with OCaml's value, none mismatched, 325 refusals agreed, and
+143 + 160 were refused as unsupported. No test the OCaml suite
 refuses is accepted. Of the tests it accepts, two time out at ten seconds:
 `comptime_tail.sl` finishes in about a minute, and
 `extern_tail.sl` ran out of memory on this session's machine.

@@ -22,6 +22,7 @@ structure ProgOK (P : Prog) : Prop where
     TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx)
   newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → (sig.skip (P.lifted d)).ntField.isSome
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
+  opq : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.opq = true → D.ctors = [] ∧ D.coercible = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
   ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
@@ -420,8 +421,19 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨hl⟩ ← need (ls.len = D.lifted) "matchable-of: the wrong number of lifted arguments"
       let ⟨_, ha⟩ ← checkArgs P Γ ls D.params
       let ⟨hc⟩ ← need (D.coercible = false) "matchable-of: Coercible has no Matchable"
-      .ok ⟨_, .mtblOf h hl ha hc⟩
+      let ⟨ho⟩ ← need (D.opq = false) "matchable-of: an opaque type has no Matchable"
+      .ok ⟨_, .mtblOf h hl ha hc ho⟩
     | none => .error "matchable-of: unknown type"
+  | .axm A => do
+    let ⟨U, hA⟩ ← checkTm P Γ A
+    let ⟨hU⟩ ← need (Γ.canon U = .univ) "an axiom's return is not a type"
+    match hc : Γ.canon A with
+    | .app (.tyc d ls) idx => match hD : P.adts[d]? with
+      | some D => do
+        let ⟨ho⟩ ← need (D.opq = true) "an axiom returns only a value of an opaque type"
+        .ok ⟨_, .axm hA hU hc hD ho⟩
+      | none => .error "an axiom returns only a value of an opaque type"
+    | _ => .error "an axiom returns only a value of an opaque type"
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     let ⟨B, hb⟩ ← checkTm P Γ b
@@ -480,10 +492,11 @@ def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res ((shp : List Arm) × {nt /
   | .tyc d ls => match h : P.adts[d]? with
     | some D => do
       let ⟨hc⟩ ← need (D.coercible = false) "a match on Coercible, which has no constructors to match"
+      let ⟨ho⟩ ← need (D.opq = false) s!"`{D.name}` has no `Matchable` open"
       let ⟨hl⟩ ← need (ls.len = D.lifted) "a type constructor with the wrong number of lifted arguments"
       let ⟨hi⟩ ← need ls.isList "a type constructor's lifted arguments are not a list"
       let ⟨hs⟩ ← need (ls.static Γ.n 0) "a type constructor's lifted arguments are not well scoped"
-      .ok ⟨_, _, .decl h hc hl hi hs⟩
+      .ok ⟨_, _, .decl h hc ho hl hi hs⟩
     | none => .error "unknown type"
   | H =>
     let names (e : Nat × Bool) : Bool := match (Γ.tys[e.1]?).map Γ.canon with
@@ -814,6 +827,9 @@ def checkProg : Res {R // Checked P R} := do
     "a newtype does not have newtype shape"
   let ⟨hco⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.coercible = true → D.ctors = [])
     "unreachable: Coercible has constructors"
+  let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.opq = true →
+      D.ctors = [] ∧ D.coercible = false)
+    "unreachable: an opaque type has constructors"
   let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := []} P.main (.inr 0)
   have hs := hs 0 rfl
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
@@ -824,6 +840,7 @@ def checkProg : Res {R // Checked P R} := do
       have hcl : c < D.ctors.length := (List.getElem?_eq_some_iff.mp hc).1
       have := hn d (List.mem_range.mpr hd) c (List.mem_range.mpr (by simpa [hD] using hcl)) h1 h2
       simpa [h3] using this,
-    fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2⟩, h, hs⟩
+    fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
+    fun d D h1 h2 => hop d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2⟩, h, hs⟩
 
 end Minimal

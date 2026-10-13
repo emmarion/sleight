@@ -91,7 +91,8 @@ def specialNames : List String :=
    "open-at-fn", "unary", "dump-context", "compile-error", "compile-warn", "Fn", "UniqueFn", "TyCtor", "ValCtor",
    "Matchable", "Cell", "match", "values", "coerce", "share", "cell-alloc", "cell-write", "cell-match",
    "open-absurd", "world-do", "settled-of", "settled-type", "settled-erase", "settled-mult", "settled-value",
-   "gensym", "settled-eq", "intern-nat", "intern-char", "intern-string", "resolve", "read-file", "at",
+   "gensym", "settled-eq", "intern-nat", "intern-char", "intern-string", "resolve", "read-file", "place-at",
+   "place-at-many", "unplace-at", "unplace-at-many", "placed-slot", "placed-eq", "at",
    "prove-subterm", "prove-predates", "predates-trans", "subterm-trans", "predates-subterm", "gensym-unique",
    "coercible-refl", "coercible-sym", "coercible-trans", "coercible-share", "coercible-wrap", "coercible-ctor",
    "coercible-of", "prove-literal-lt", "level-of", "matchable-of", "delegate-of", "numeral-of", "slot-of",
@@ -188,6 +189,7 @@ structure ESt where
   deles : List (Nat × Nat) := []
   delePf : List (Nat × Nat) := []
   renames : List (Nat × Nat) := []
+  prims : List (String × Tm × Nat) := []
   uq : List Nat := []
   sides : List (Nat × Option Mode × Option Mode) := []
   uses : List (Nat × Bool) := []
@@ -240,6 +242,11 @@ def warnUse (t : Tm) (kind shown : String) : M Unit := do
   match st.supp.findIdx? (·.2.1 == some t) with
   | some k => set { st with supp := st.supp.modify k fun (x, y, n) => (x, y, n + 1) }
   | none => warn (if kind == "match" then s!"match on `{shown}`: {msg}" else s!"{kind} of `{shown}`: {msg}")
+
+def primNames : List String :=
+  ["gensym", "gensym-unique", "settled-type", "settled-erase", "settled-mult", "settled-value", "settled-eq", "intern-nat",
+   "intern-char", "intern-string", "resolve", "read-file", "place-at", "place-at-many", "unplace-at", "unplace-at-many",
+   "placed-slot", "placed-eq"]
 
 def keywords : List String := specialNames ++ ["Type", "Level", "Predates", "Subterm"]
 
@@ -1248,6 +1255,24 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       if h == "tail" && !st.tail then throw "tail: the call is not in tail position"
       if h == "notail" && st.tail then throw "notail: the call is in tail position"
       elabExpr sc want exp x
+    else if let (some (tele, np), none) := (st.prims.lookup h, sc.lookup h) then
+      let (ss, ts) ← elabArgs sc args ((teleMds tele).take np)
+      unless ts.length == np do throw s!"`{h}` takes {np} arguments"
+      let mut t := tele
+      let mut out : List Stmt := []
+      for a in ts do
+        let .bind k A r := t | throw s!"`{h}` takes {np} arguments"
+        if k matches .ty .. then out := out ++ [(fun c => .chk .ty a A c : Stmt)]
+        t := r.inst a 0
+      let mut rs : List Tm := []
+      while true do
+        let .bind _ R r := t | break
+        let [i] ← fresh [true] | throw "fresh"
+        note i R
+        out := out ++ [.prim (.axm R) true]
+        rs := rs ++ [.fv i]
+        t := r.inst (.fv i) 0
+      return (ss ++ out, rs)
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d (← liftTm d)) (.ofList ts)])
@@ -1419,6 +1444,29 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       | some (.fv i) => some i
       | _ => none
     modify fun st => { st with inPrelude := !st.pre, u8mod := u8 }
+    elabSeq sc want exp rest
+  | .list (.atom "def-opaque" :: bs) :: rest => do
+    unless (← get).inPrelude do throw "only the prelude may write `def-opaque`"
+    let base := (← get).decls.length
+    declareAdts sc (bs.map fun | .list (h :: _) => .list [h, .atom "enum"] | b => b)
+    modify fun st => { st with decls := st.decls.mapIdx fun d D => if base ≤ d then { D with opq := true } else D }
+    elabSeq sc want exp rest
+  | .list (.atom "def-prim" :: bs) :: rest => do
+    unless (← get).inPrelude do throw "only the prelude may write `def-prim`"
+    for b in bs do
+      let .list [.list xs] := b | throw "malformed def-prim"
+      let (md, xs) ← splitMd true xs
+      let .atom p :: .atom ":" :: es := xs | throw "malformed def-prim"
+      unless primNames.contains p do throw s!"`{p}` names no primitive the compilers implement"
+      if ((← get).prims.lookup p).isSome then throw s!"a second `def-prim` for `{p}`"
+      let (ps, rs) ← splitArrow es
+      if ps.any (· matches .list (.atom "subterm" :: _)) then throw "`subterm` is not allowed here"
+      unless md.isEr || (← entryMds true rs).all (·.isEr) do
+        throw s!"the compilers have no implementation of `{p}`, so its returns must be erased"
+      let tele ← elabTele sc 0 true (ps ++ rs)
+      let tele := if md.isEr then setErs tele (tele.ers.map fun _ => true) else tele
+      let np := (← entryMds true ps).length
+      modify fun st => { st with prims := (p, tele, np) :: st.prims }
     elabSeq sc want exp rest
   | .list (.atom "def-adts" :: bs) :: rest => do
     let base := (← get).decls.length
@@ -1681,7 +1729,7 @@ partial def elabBody (sc : Scope) (want : List Mode) (items : List Sx) (exp : Op
 end
 
 def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt", "def-unique",
-  "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn"]
+  "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn", "def-opaque", "def-prim"]
 
 def nullary (name : String) (d : Nat) (cs : List String) : Adt :=
   { params := .nil, ctors := cs.map fun _ => .bind (.ty false false false) (.app (.tyc d .nil) .nil) .nil, name, ctorNames := cs }

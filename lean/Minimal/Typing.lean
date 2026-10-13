@@ -135,7 +135,7 @@ def fieldsSimple (S : List Nat) : Tm → Bool
 
 def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
   S.filter fun d => match P.adts[d]? with
-    | some D => D.params == .nil && !D.newtype && !D.coercible && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
+    | some D => D.params == .nil && !D.newtype && !D.coercible && !D.opq && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
     | none => false
 
 def Prog.simple (P : Prog) : List Nat :=
@@ -315,8 +315,10 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .predates C l1 l2 → PrimTy Γ (.predatesTrans p q) (.predates A a l2)
   | subtermTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .subterm A a B b →
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
-  | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false →
+  | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false → D.opq = false →
       PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
+  | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
+      PrimTy Γ (.axm A) A
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
   | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
@@ -352,7 +354,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
 abbrev Arm := Tm × Tm × Bool
 
 inductive Shape : Ctx → Bool → Tm → List Arm → Bool → Prop
-  | decl : P.adts[d]? = some D → D.coercible = false → ls.len = D.lifted → ls.isList → ls.static Γ.n 0 →
+  | decl : P.adts[d]? = some D → D.coercible = false → D.opq = false → ls.len = D.lifted → ls.isList → ls.static Γ.n 0 →
       Shape Γ er (.tyc d ls) (D.ctors.zipIdx.map fun (sig, c) => (.vc d c ls, sig.peel ls, P.phantom d c)) D.newtype
   | opened : (m, oe) ∈ Γ.opened → Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.isList →
       shp.map (·.1) = cs.toList →

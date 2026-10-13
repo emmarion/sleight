@@ -263,6 +263,7 @@ inductive Prim where
   | coerShare (p : Tm)
   | coerWrap (s C args : Tm)
   | coerCtor (s C srcs tgts ps : Tm)
+  | axm (A : Tm)
   deriving Repr, Inhabited
 
 inductive Chk where
@@ -360,6 +361,7 @@ structure Adt where
   newtype : Bool := false
   extern : Bool := false
   coercible : Bool := false
+  opq : Bool := false
   deriving Repr, Inhabited
 
 def Tm.coer (d : Nat) (sa A a sb B b : Tm) : Tm := .app (.tyc d .nil) (.ofList [sa, A, a, sb, B, b])

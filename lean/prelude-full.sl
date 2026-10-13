@@ -1009,8 +1009,36 @@
   enum
   (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
 
+(def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
+
+(def-opaque $ (MacroWorld : -> Type))
+
+(def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
+    (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
+
 (def-adts $ (Mult : -> Type)
   enum
   (many MErased : -> (Mult))
   (many MMany : -> (Mult))
   (many MUnique : -> (Mult)))
+
+(def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
+
+(def-adts $ (Symbol : -> Type)
+  enum
+  (many SName : (many (String) s) -> (Symbol))
+  (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
+(def-adts $ (Resolution : -> Type)
+  enum
+  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
+  (many RHypothetical : -> (Resolution))
+  (many RUnbound : -> (Resolution)))
+
+(def-adts $ (Raw : -> Type)
+  enum extern
+  (many RawSymbol : (many (Pos) pos) (many (Symbol) s) -> (Raw))
+  (many RawWild : (many (Pos) pos) -> (Raw))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
+  (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))

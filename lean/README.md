@@ -128,7 +128,7 @@ each one rests on, which are Lean's own three (`propext`,
   has one outcome, and `runS_sound` that the executable `runS`, which
   the runner uses, finds only stripped runs.
 - **`no_false`.** No checked program has as its result type a data type
-  with no constructors, `Coercible` aside, which is opaque.
+  with no constructors that is neither `Coercible` nor opaque.
 
 The proof is a syntactic, environment-based one. `VTy` says what it is
 for a value to have a type. It is defined by recursion on values, not on
@@ -383,6 +383,14 @@ it is `Settled`, and its `is` rule.
   rest of the body returns its binders in order, or a `coerce` of its
   one binder, after `let`s whose binders are all erased. Neither is
   accepted in an erased position.
+- `def-opaque` and `def-prim` (INTERNALS.md sections 1 and 2), in the
+  prelude or under `--no-prelude`. An opaque type is a declared type
+  with no constructors and no `Matchable`, which no match goes through;
+  `VTy` lets any value inhabit it (`VTy.opq`), so `no_false` leaves it
+  out. The runner implements no primitive, so a `def-prim` must have
+  every return erased: a call checks each argument against its
+  parameter's type and makes each return an axiom (`Prim.axm`), which
+  the checker accepts only at an opaque type.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
