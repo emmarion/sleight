@@ -4,6 +4,7 @@ type t =
   | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
   | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf | DelegateOf | CoercibleShare | DumpContext | CompileError | CompileWarn | WorldDo | Gensym | GensymUnique | SettledOf | SettledType | SettledErase | SettledEq | Resolve | ReadFile | SettledMult | SettledValue | InternNat | InternChar | InternString | DefOpaque | DefPrim
+  | PlaceAt | PlaceAtMany | UnplaceAt | UnplaceAtMany | PlacedSlot | PlacedEq
   | Erased | Many | Unique | Colon | Is | Arrow | Subterm | Enum | Union | Tail | NoTail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
@@ -16,6 +17,7 @@ let all =
     (Coerce, "coerce"); (CoercibleRefl, "coercible-refl"); (CoercibleSym, "coercible-sym");
     (CoercibleTrans, "coercible-trans"); (CoercibleWrap, "coercible-wrap"); (CoercibleCtor, "coercible-ctor");
     (CoercibleOf, "coercible-of"); (DelegateOf, "delegate-of"); (CoercibleShare, "coercible-share"); (DumpContext, "dump-context"); (CompileError, "compile-error"); (CompileWarn, "compile-warn"); (WorldDo, "world-do"); (Gensym, "gensym"); (GensymUnique, "gensym-unique"); (SettledOf, "settled-of"); (SettledType, "settled-type"); (SettledErase, "settled-erase"); (SettledEq, "settled-eq"); (Resolve, "resolve"); (ReadFile, "read-file"); (SettledMult, "settled-mult"); (SettledValue, "settled-value"); (InternNat, "intern-nat"); (InternChar, "intern-char"); (InternString, "intern-string"); (DefOpaque, "def-opaque"); (DefPrim, "def-prim");
+    (PlaceAt, "place-at"); (PlaceAtMany, "place-at-many"); (UnplaceAt, "unplace-at"); (UnplaceAtMany, "unplace-at-many"); (PlacedSlot, "placed-slot"); (PlacedEq, "placed-eq");
     (Erased, "erased"); (Many, "many"); (Unique, "unique"); (Colon, ":"); (Is, "is"); (Arrow, "->"); (Subterm, "subterm");
     (Enum, "enum"); (Union, "union"); (Tail, "tail"); (NoTail, "notail"); (Delegate, "delegate"); (Predates, "predates");
     (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]

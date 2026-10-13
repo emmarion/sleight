@@ -63,7 +63,7 @@
   (let ((many sources)) $ list-drop _ (match many prelude (((Nat) _)) ((BTrue) 1) ((BFalse) 0)) $ src-paths srcs)
   (let ((many fuel)) $ flag-value flags "--eval-fuel")
   (let-match many (match many fuel (((Bool) _)) ((Some _ f) (and (not $ str-eq f "") (all-digits f))) ((None _) (BTrue))) (BTrue) ((BFalse) (failed "--eval-fuel takes a number of steps" w)))
-  (let ((many base-env)) (env-set-sources (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help) sources))
+  (let ((many base-env)) (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources))
   (let ((many builtins)) $ match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f $ Zero)) ((None _) base-env))
   (let ((unique ew)) (MkElabWorld w))
   (let ((unique ew1) (many env)) $ run-files ew (not $ has-flag flags "--no-shape-note") srcs (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
