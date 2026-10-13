@@ -30,3 +30,30 @@ dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.
   agent/tasks/heapsort-fast/perf.sl --extract heapsort/mimo_perf.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg heapsort/mimo_perf.ml -o heapsort/mimo_perf && heapsort/mimo_perf
 ```
+
+`ats/` holds an in-place heap sort in ATS2 (ATS/Postiats 0.4.2,
+`apt-get install ats2-lang`) whose type states that the output is a
+permutation of the input and sorted, as checked by `patsopt`:
+
+- `heapsort_cert.dats`: the sort. The array is the dataview `arr_v(l, xs)`,
+  indexed by the static list `xs` of its contents. `PERM` (a sequence of
+  `SWAP`s of two positions, via `ilist_prf.sats`' `NTH` and `UPDATE`) and
+  `SORTED` (adjacent pairs) are its own dataprops; every lemma it uses is a
+  `prfun`/`prfn` with its body in the file.
+- `cert_entry.dats`: the C-callable wrapper: copies the input into
+  `arr_v` memory, times the sort, and copies the result out. Its `extern`
+  declarations (allocation, raw reads and writes, the clock) are the FFI
+  boundary of the benchmark, not of the sort.
+- `heapsort_plain.dats`: an unverified ATS heap sort over `@[lint][n]`
+  with statically checked bounds; `heapsort_c.c`: the same in C.
+- `driver.c`: the benchmark input (2^20 values, reversed LCG order) and
+  checksum, and a differential test against `qsort` for n = 1..2999 with
+  value ranges 2, 3 and ~1e9.
+
+```
+heapsort/ats/build.sh && heapsort/ats/driver test
+heapsort/ats/bench.sh     # 20 pinned runs of each sort, min and median
+heapsort/ats/audit.sh     # greps for axioms, lists proof functions, and
+                          # type-checks against a copy of only the ilist_prf
+                          # definitions the sort uses
+```
