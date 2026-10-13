@@ -154,8 +154,10 @@ produces nothing (section 27).
   throughout. A constructor declared `erased` is phantom (DESIGN.md
   section 21): only an erased position may build or hold it, and its
   branch under a non-erased match is erased throughout. What this omits
-  from the full language: `unique`, and an `erased` match's results are
-  erased. A type, a type constructor, a level and a proof are erased by
+  from the full language: `unique`. An `erased` match whose results
+  are not all erased is elaborated to `seq R (case ...) rest`, a match
+  with one real branch that the stripped run takes without looking at
+  the scrutinee; one whose results are all erased is erased throughout. A type, a type constructor, a level and a proof are erased by
   their kind (section 14): `def-lvl`, the proof forms and every type
   former make erased entries, and a type is not a non-erased value. A call nested in an argument
   is erased when the parameter or field it stands for is, which the

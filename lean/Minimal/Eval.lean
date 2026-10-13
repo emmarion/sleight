@@ -94,6 +94,10 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
       | some (pre, body) => eval P μ (ρ ++ pre) cnt body
       | none => .error "no branch"
     | _ => .error "scrutinee is not data"
+  | .seq _ body rest =>
+    match eval P μ ρ cnt body with
+    | .ok (outs, cnt) => eval P μ (ρ ++ outs) cnt rest
+    | .error e => .error e
 termination_by c => ((⟨μ⟩ : Mu P.k), sizeOf c)
 decreasing_by
   all_goals first

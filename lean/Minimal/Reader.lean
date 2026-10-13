@@ -463,11 +463,12 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
     | _, _ => throw "a match annotation `_` where no telescope is expected"
   let (ss, sts) ← withTail false (elabExpr sc [false] none s)
   let [s] := sts | throw "match: one scrutinee"
-  let rms := if er then List.replicate R0.len true else want
+  let real := er && !(← get).ghost && want.length == R0.len && want.any (!·)
+  let rms := if er && !real then List.replicate R0.len true else want
   let R := setErs R0 rms
-  let (out, els) ← elabArms sc er er rms (some R) brs
+  let (out, els) ← elabArms sc er (er && !real) rms (some R) brs
   let outs ← fresh rms
-  return (ss ++ [.mtch s R out els er], outs.map .fv)
+  return (ss ++ [if real then .seq R (.case s out els true) else .mtch s R out els er], outs.map .fv)
 
 partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do

@@ -1,0 +1,6 @@
+; an erased match with a non-erased result has one real branch, which the stripped run takes (DESIGN.md section 21)
+(def-fns _ $ (many pick : (erased (Nat) n) (erased (Lt (Zero) n) p) -> (many (Nat) m))
+  (match erased n (((Nat) r))
+    (absurd (Zero) p)
+    ((Succ k) 7)))
+(pick (Succ (Zero)) (LtZ (Zero)))

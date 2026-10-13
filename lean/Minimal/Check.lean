@@ -264,6 +264,13 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let R' := match rets with | .inl r => r | .inr _ => .nil
     .ok ⟨R', .absurd (e.1 _ rfl ▸ hb) hn, fun r e => by simp [R', e], fun n e => by simp [R', e, Tm.static]⟩
   | .dead, _ => .error "a refuted branch outside a match"
+  | .seq R0 body rest, rets => do
+    let ⟨hR⟩ ← checkTele P Γ R0
+    let ⟨hRs⟩ ← need (R0.static Γ.n 0) "results not well scoped"
+    let ⟨hRt⟩ ← need (R0.isTele) "results: not a telescope"
+    let ⟨_, hb, e⟩ ← checkCore b Γ body (.inl R0)
+    let ⟨R, hr, e2⟩ ← checkCore b (Γ.pushTele R0) rest rets
+    .ok ⟨R, .seq hR hRs hRt (e.1 R0 rfl ▸ hb) hr, e2⟩
   | .call f dec args er ms rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with

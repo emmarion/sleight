@@ -15,6 +15,8 @@ examples/erased.sl: 2
 examples/erased_fn_bad.sl: refused: a non-erased call mentions something erased, or binds an erased result at many
 examples/erased_let_bad.sl: refused: a non-erased let binder of an erased entry
 examples/erased_match_bad.sl: refused: a non-erased match on an erased scrutinee
+examples/erased_match_real.sl: 7
+examples/erased_match_real_bad.sl: refused: a match with an erased discriminant has more than one real branch
 examples/erased_nested.sl: (MkPair 2 _)
 examples/erased_result_bad.sl: refused: a non-erased result mentions something erased
 examples/ex_falso.sl: 0
@@ -73,6 +75,7 @@ unchecked examples/else_empty_bad.sl: 0
 unchecked examples/erased_fn_bad.sl: 0
 unchecked examples/erased_let_bad.sl: 0
 unchecked examples/erased_match_bad.sl: 0
+unchecked examples/erased_match_real_bad.sl: 7
 unchecked examples/erased_result_bad.sl: 0
 unchecked examples/first_class_bad.sl: (Nil _ 0 $ Nil _)
 unchecked examples/first_class_match_bad.sl: 0
@@ -110,6 +113,7 @@ stripped examples/double.sl: 4
 stripped examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
 stripped examples/eq_sym.sl: (Refl _ 0)
 stripped examples/erased.sl: 2
+stripped examples/erased_match_real.sl: 7
 stripped examples/erased_nested.sl: (MkPair 2 _)
 stripped examples/ex_falso.sl: 0
 stripped examples/first_class.sl: (Cons _ (Cons _ 0 $ Cons _ 0 $ Nil _) $ Cons _ (Cons _ 1 $ Nil _) $ Nil _)

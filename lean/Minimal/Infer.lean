@@ -159,6 +159,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
     return .defFns gid (← inferCore (Γ.pushFns G) rets rest)
   | .chk k a b rest => return .chk k a b (← inferCore Γ rets rest)
   | .absurd body => return .absurd (← inferCore Γ none body)
+  | .seq R body rest => return .seq R (← inferCore Γ (some R) body) (← inferCore (Γ.pushTele R) rets rest)
   | .dead => return .dead
 where
   inferArms (Γ : Ctx) (s : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (R : Option Tm) :

@@ -1355,6 +1355,15 @@ theorem noRet_eval : ∀ μ ρ cnt c, c.noRet = true → ∀ r, eval P μ ρ cnt
     split at e
     · rename_i hb'; rw [hb] at hb'; cases hb'
     · cases e
+  | case21 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
+    intro h r e
+    simp only [Core.noRet, Bool.or_eq_true] at h
+    rcases h with h | h
+    · exact ihb h _ hev
+    · rw [eval] at e; simp only [hev] at e; exact ihr h r e
+  | case22 μ ρ cnt R body rest e0 hev ihb =>
+    intro h r e
+    rw [eval] at e; simp only [hev] at e; cases e
   | case10 μ ρ cnt p er rest ih =>
     intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
   | case11 μ ρ cnt rest ih =>
@@ -1647,6 +1656,34 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     | mtch hst hS hD _ _ hRs hRt _ hbr hel hr =>
     obtain ⟨c', vs', hsv, _⟩ := match_setup hP hE hlb hm hst hS hD hbr hel hRs
     exact (hs _ _ _ hsv).elim
+  | case21 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
+    intro bnd Γ rets hc hE hlb hm hrs
+    cases hc with
+    | seq _ hRs hRt hb hr =>
+    obtain ⟨⟨outs', c', e, hvs, hbv, hle, hlc⟩, hsb⟩ := ihb bnd Γ R hb hE hlb hm hRs
+    rw [hev] at e; cases e
+    have hl := hE.len
+    have hol : outs.length = R.len := by
+      have := hvs.len (Tm.isTele_subst _ _ hRt)
+      rw [Tm.len_subst _ _ (.inl hRt), ← Tm.len_toList _ hvs.isList, Tm.toList_ofList] at this; simpa [Tm.len] using this
+    obtain ⟨hE'', hcur, hsubs, hnle⟩ := hE.pushTele none hRt hRs hvs hlc
+    rw [eval]; simp only [hev]
+    have ihr' := ihr bnd _ rets hr hE'' (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
+      (hm.append hE.wf hl hcur hsubs) (Tm.static_mono hnle _ (Nat.le_refl 0) hrs)
+    refine ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, fun hg ρS hS vs'' cnt' hr' => ?_⟩
+    have hg'' : (Γ.pushTele R none).ghost = false := by rw [(Ctx.pushTele_er Γ R _ hRt).1, hg]
+    obtain ⟨outsS, hrunb, hreb⟩ := hsb hg ρS hS outs cnt1 hev
+    obtain ⟨vsS', hrun, hre⟩ := ihr'.2 hg'' _ (hS.pushTele (outsS := outsS) hl hRt none hol (by
+        simpa [Tm.toList_ofList] using hreb.len)
+      (fun k a b ha hb he => hreb.get k a b (by simpa [Tm.toList_ofList] using ha)
+        (by simpa [Tm.toList_ofList] using hb) (by simpa using he))) vs'' cnt' hr'
+    exact ⟨vsS', .seq hrunb hrun, hre⟩
+  | case22 μ ρ cnt R body rest e0 hev ihb =>
+    intro bnd Γ rets hc hE hlb hm hrs
+    cases hc with
+    | seq _ hRs hRt hb hr =>
+    obtain ⟨⟨_, _, e1, _⟩, _⟩ := ihb bnd Γ R hb hE hlb hm hRs
+    rw [hev] at e1; cases e1
   | case10 μ ρ cnt p er rest ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with

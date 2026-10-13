@@ -206,6 +206,7 @@ inductive Core where
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
   | case (s : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (er : Bool)
+  | seq (R : Tm) (body rest : Core)
   | absurd (body : Core)
   | dead
   deriving Repr, Inhabited
@@ -215,6 +216,7 @@ def Core.noRet : Core → Bool
   | .ret _ => false
   | .call _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
   | .case _ brs els _ => Core.armsNoRet brs && Core.optNoRet els
+  | .seq _ body rest => body.noRet || rest.noRet
   | .absurd _ | .dead => true
 
 def Core.armsNoRet : List (Nat × Nat × Core) → Bool

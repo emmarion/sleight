@@ -195,6 +195,8 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
   | absurd : CoreTy b { Γ with ghost := true } body .nil → body.noRet = true → CoreTy b Γ (.absurd body) rets
+  | seq : TeleOK P Γ R → R.static Γ.n 0 → R.isTele → CoreTy b Γ body R → CoreTy b (Γ.pushTele R) rest rets →
+      CoreTy b Γ (.seq R body rest) rets
 
 inductive BranchOK : Nat → Bool → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) →
