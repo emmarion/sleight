@@ -1,4 +1,3 @@
-import Minimal.Check
 import Minimal.Eval
 
 namespace Minimal

@@ -321,7 +321,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨hRs⟩ ← need (R0.static Γ.n 0) "results not well scoped"
     let ⟨hRt⟩ ← need (R0.isTele) "results: not a telescope"
     let ⟨_, hb, e⟩ ← checkCore b Γ body (.inl R0)
-    let ⟨R, hr, e2⟩ ← checkCore b (Γ.pushTele R0) rest rets
+    let ⟨R, hr, e2⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele R0) (.seq R0 body rest)) rest rets
     .ok ⟨R, .seq hR hRs hRt (e.1 R0 rfl ▸ hb) hr, e2⟩
   | .call f dec args er ms rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
@@ -334,7 +334,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))
         "a non-erased call mentions something erased, or binds an erased result at many"
-      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets
+      let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms rest)) rest rets
       .ok ⟨R, .call hf hF ht ha hn hd ho hm hr, e⟩
     | _ => .error "not a function"
   | .mtch s R0 brs els er rest, rets => do
@@ -357,7 +357,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
           let ⟨_, h, e⟩ ← checkCore b Γg eb (.inl R0)
           .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
         | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
-      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) rest rets
+      let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) (.mtch s R0 brs els er rest)) rest rets
       .ok ⟨R, .mtch hs hS hsh hl hR hRs hRt hm (fun c k sig p h1 => by simpa using hb c k sig p h1) he hr, e⟩
     | _ => .error "scrutinee not of a data type"
   | .case s brs els er, rets => do
@@ -407,17 +407,17 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
     let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning something erased"
-    let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T er p) rest rets
+    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets
     .ok ⟨R, .prim hp hm hr, e⟩
   | .defLvl rest, rets => do
-    let ⟨R, hr, e⟩ ← checkCore b Γ.pushMint rest rets
+    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets
     .ok ⟨R, .defLvl hr, e⟩
   | .defFns gid rest, rets => do
     let ⟨hg⟩ ← need (gid < b) "group out of order"
     match hG : P.groups[gid]? with
     | some G => do
       let ⟨hok⟩ ← checkGroup gid Γ G
-      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushFns G) rest rets
+      let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushFns G) (.defFns gid rest)) rest rets
       .ok ⟨R, .defFns hg hG hok hr, e⟩
     | none => .error "unknown group"
   | .chk (.opn oe) (.fv m) _ rest, rets => match hM : Γ.tys[m]? with
@@ -445,6 +445,9 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       | _ => .error "open-adt: not a Matchable"
     | none => .error "open-adt: unbound"
   | .chk (.opn _) .., _ => .error "open-adt: not an entry"
+  | .chk .cm _ _ rest, rets => do
+    let ⟨R, hr, eq⟩ ← checkCore b { Γ with cmode := true } rest rets
+    .ok ⟨R, .chkCm hr, eq⟩
   | .chk .rt a _ rest, rets => do
     let ⟨h⟩ ← need (Γ.ok (rt P Γ a)) "a non-erased let binder of an erased entry"
     let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
@@ -475,14 +478,22 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
       | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
       | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do
-        let ⟨_, hr, e⟩ ← checkCore b (Γc.setErs { Γf with σ := σ }
-          (if fe then some (List.replicate (sig.len - 1) true) else none)) body (.inl R0)
+        let ⟨_, hr, e⟩ ← checkCore b { Γc.advBr (Γc.setErs { Γf with σ := σ }
+          (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1) with cmode := false }
+          body (.inl R0)
         .ok ⟨BranchOK.live hb (e.1 R0 rfl ▸ hr)⟩
       | (_, .contra), none => .ok ⟨BranchOK.dead (by rw [hb])⟩
       | (_, .contra), some _ => .error "a listed branch is refuted"
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
-          else .error "a branch that is not refuted is missing" :
+          else match s, k with
+            | .fv x, .vc d' c => match hs : Γc.fixed[x]?.join with
+              | some (.app (.vc d c0) vs) =>
+                if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 then
+                  .ok ⟨by obtain ⟨hm, rfl, hc⟩ := hd; exact BranchOK.fixedOut hm hs rfl hc⟩
+                else .error "a branch that is not refuted is missing"
+              | _ => .error "a branch that is not refuted is missing"
+            | _, _ => .error "a branch that is not refuted is missing" :
       Res (PLift (BranchOK P b fe Γc s k H idx sig R0 (lookupBr brs base) els)))
     let ⟨ht⟩ ← checkBranches b Γ fe g s H idx R0 brs els cs (base + 1)
     .ok ⟨fun

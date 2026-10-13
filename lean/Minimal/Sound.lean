@@ -1,3 +1,4 @@
+import Minimal.Check
 import Minimal.UnifySound
 import Minimal.Strip
 import Minimal.Eval
@@ -14,6 +15,9 @@ structure Ctx.WF (Γ : Ctx) : Prop where
   subs : ∀ s ∈ Γ.subs, s < Γ.n
 
 variable (P : Prog)
+
+def FixOK (F : List (Option Tm)) (ρ : List Tm) : Prop :=
+  F.length ≤ ρ.length ∧ ∀ i v, F[i]?.join = some v → Real P v (Tm.env ρ i)
 
 mutual
 inductive VTy : Tm → Tm → Prop
@@ -40,7 +44,7 @@ inductive EnvOK : List Tm → Ctx → Prop
       (∀ (i : Nat) (v T : Tm), ρ[i]? = some v → Γ.tys[i]? = some T → VTy v (T.subst (Tm.env ρ))) →
       (∀ v ∈ ρ, v.lc 0) → Sat (Tm.env ρ) Γ.σ →
       (∀ L ∈ Γ.mints, ∃ m, ρ[L]? = some (.lvl m) ∧ ∀ i < L, ∀ (v : Tm), ρ[i]? = some v → ∀ n ∈ v.levels, n < m) →
-      Γ.WF → EnvOK ρ Γ
+      Γ.WF → FixOK P Γ.fixed ρ → EnvOK ρ Γ
 end
 
 variable {P}
@@ -65,12 +69,21 @@ end Tm
 theorem canon_sound {Γ : Ctx} {f : Nat → Tm} (h : Sat f Γ.σ) (t : Tm) : (Γ.canon t).subst f = t.subst f :=
   canonBy_sound h t
 
-theorem EnvOK.sat {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Sat (Tm.env ρ) Γ.σ | .mk _ _ _ h _ _ => h
-theorem EnvOK.wf {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Γ.WF | .mk _ _ _ _ _ h => h
-theorem EnvOK.len {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ρ.length = Γ.n | .mk h _ _ _ _ _ => h
-theorem EnvOK.closed {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ∀ v ∈ ρ, v.lc 0 | .mk _ _ h _ _ _ => h
+theorem EnvOK.sat {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Sat (Tm.env ρ) Γ.σ | .mk _ _ _ h _ _ _ => h
+theorem EnvOK.wf {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Γ.WF | .mk _ _ _ _ _ h _ => h
+theorem EnvOK.len {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ρ.length = Γ.n | .mk h _ _ _ _ _ _ => h
+theorem EnvOK.closed {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ∀ v ∈ ρ, v.lc 0 | .mk _ _ h _ _ _ _ => h
+theorem EnvOK.fix {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → FixOK P Γ.fixed ρ | .mk _ _ _ _ _ _ h => h
 theorem EnvOK.vals {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ →
-    ∀ (i : Nat) (v T : Tm), ρ[i]? = some v → Γ.tys[i]? = some T → VTy P v (T.subst (Tm.env ρ)) | .mk _ h _ _ _ _ => h
+    ∀ (i : Nat) (v T : Tm), ρ[i]? = some v → Γ.tys[i]? = some T → VTy P v (T.subst (Tm.env ρ)) | .mk _ h _ _ _ _ _ => h
+
+theorem FixOK.append {F : List (Option Tm)} {ρ more : List Tm} (h : FixOK P F ρ) : FixOK P F (ρ ++ more) := by
+  refine ⟨by simp; have := h.1; omega, fun i v hv => ?_⟩
+  have hi : i < F.length := by
+    rcases Nat.lt_or_ge i F.length with hi | hi
+    · exact hi
+    · simp [List.getElem?_eq_none hi] at hv
+  rw [Tm.env_append (by have := h.1; omega)]; exact h.2 i v hv
 
 theorem EnvOK.canon {ρ : List Tm} {Γ : Ctx} (h : EnvOK P ρ Γ) (t : Tm) :
     (Γ.canon t).subst (Tm.env ρ) = t.subst (Tm.env ρ) := canon_sound h.sat t
@@ -226,7 +239,7 @@ theorem EnvOK.pushMany {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (vs Ts : L
     obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hT
     exact (hv j vs[j] _ (List.getElem?_eq_getElem (by omega)) (by simp)).2.1
   refine .mk (by simp [Ctx.n] at *; omega) (fun i v T hi hTi => ?_) (fun v hv' => ?_) (fun e t he => ?_)
-    (fun L hL => ?_) (hwf.mono Ts hT)
+    (fun L hL => ?_) (hwf.mono Ts hT) hE.fix.append
   · have hn : ρ.length = Γ.tys.length := hlen
     rcases getElem?_append_cases hTi with ⟨hi', hT'⟩ | ⟨hi', hT'⟩
     · rw [List.getElem?_append_left (by omega)] at hi
@@ -244,7 +257,7 @@ theorem EnvOK.pushMany {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (vs Ts : L
     show Tm.env (ρ ++ vs) e = t.subst (Tm.env (ρ ++ vs))
     rw [Tm.env_append (by omega), Tm.subst_append (hlen ▸ ht)]
     exact hE.sat e t he
-  · obtain ⟨m, hm, hlt⟩ := (match hE with | .mk _ _ _ _ h _ => h) L hL
+  · obtain ⟨m, hm, hlt⟩ := (match hE with | .mk _ _ _ _ h _ _ => h) L hL
     have hL' : L < ρ.length := hlen ▸ hwf.mints L hL
     refine ⟨m, by rw [List.getElem?_append_left hL']; exact hm, fun i hi v hv => ?_⟩
     rw [List.getElem?_append_left (by omega)] at hv
@@ -254,11 +267,18 @@ def Chrono (ρ : List Tm) (L : Nat) : Prop :=
   ∃ m, ρ[L]? = some (.lvl m) ∧ ∀ i < L, ∀ (v : Tm), ρ[i]? = some v → ∀ n ∈ v.levels, n < m
 
 theorem EnvOK.chrono {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ∀ L ∈ Γ.mints, Chrono ρ L
-  | .mk _ _ _ _ h _ => h
+  | .mk _ _ _ _ h _ _ => h
 
 theorem EnvOK.modify {ρ : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) (ht : Γ'.tys = Γ.tys)
-    (hσ : Sat (Tm.env ρ) Γ'.σ) (hm : ∀ L ∈ Γ'.mints, Chrono ρ L) (hw : Γ'.WF) : EnvOK P ρ Γ' :=
+    (hσ : Sat (Tm.env ρ) Γ'.σ) (hm : ∀ L ∈ Γ'.mints, Chrono ρ L) (hw : Γ'.WF) (hf : Γ'.fixed = Γ.fixed := by rfl) :
+    EnvOK P ρ Γ' :=
   .mk (by rw [hE.len]; simp [Ctx.n, ht]) (fun i v T h1 h2 => hE.vals i v T h1 (ht ▸ h2)) hE.closed hσ hm hw
+    (hf ▸ hE.fix)
+
+theorem EnvOK.refix {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (F : List (Option Tm)) (hF : FixOK P F ρ) :
+    EnvOK P ρ { Γ with fixed := F } :=
+  .mk hE.len hE.vals hE.closed hE.sat (fun L hL => hE.chrono L hL)
+    ⟨hE.wf.tys, hE.wf.σ, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hF
 
 theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} {t : Tm} (he : e < Γ.n)
     (ht : t.static Γ.n 0) (hv : Tm.env ρ e = t.subst (Tm.env ρ)) : EnvOK P ρ (Γ.withRule e t) := by
@@ -270,15 +290,19 @@ theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} 
   · exact hE.wf.σ i u hi
 
 theorem EnvOK.congr {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (Γ' : Ctx) (ht : Γ'.tys = Γ.tys)
-    (hσ : Γ'.σ = Γ.σ) (hm : Γ'.mints = Γ.mints) (hc : Γ'.cur = Γ.cur) (hs : Γ'.subs = Γ.subs) : EnvOK P ρ Γ' := by
+    (hσ : Γ'.σ = Γ.σ) (hm : Γ'.mints = Γ.mints) (hc : Γ'.cur = Γ.cur) (hs : Γ'.subs = Γ.subs)
+    (hf : Γ'.fixed = Γ.fixed := by rfl) : EnvOK P ρ Γ' := by
   have hn : Γ'.n = Γ.n := by simp [Ctx.n, ht]
   have w := hE.wf
-  refine hE.modify ht (by rw [hσ]; exact hE.sat) (by rw [hm]; exact hE.chrono) ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine hE.modify ht (by rw [hσ]; exact hE.sat) (by rw [hm]; exact hE.chrono) ⟨?_, ?_, ?_, ?_, ?_⟩ hf
   · intro i T h; rw [hn]; exact w.tys i T (ht ▸ h)
   · intro e t h; rw [hn]; exact w.σ e t (hσ ▸ h)
   · intro L h; rw [hn]; exact w.mints L (hm ▸ h)
   · intro c h; rw [hn]; exact w.cur c (hc ▸ h)
   · intro s h; rw [hn]; exact w.subs s (hs ▸ h)
+
+theorem EnvOK.cm {ρ : List Tm} {Γ : Ctx} (b : Bool) (hE : EnvOK P ρ Γ) : EnvOK P ρ { Γ with cmode := b } :=
+  hE.congr _ rfl rfl rfl rfl rfl
 
 theorem EnvOK.push {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {v A : Tm} (hv : VTy P v (A.subst (Tm.env ρ)))
     (hA : A.static Γ.n 0) (hc : v.lc 0) {e : Bool} : EnvOK P (ρ ++ [v]) (Γ.push A e) :=
@@ -322,18 +346,19 @@ structure Ctx.Ext (Γ Γ' : Ctx) : Prop where
   mints : Γ'.mints = Γ.mints
   cur : Γ'.cur = Γ.cur
   subs : Γ'.subs = Γ.subs
+  fixed : Γ'.fixed = Γ.fixed
 
 theorem Ctx.Ext.trans {Γ Γ' Γ'' : Ctx} (h1 : Γ.Ext Γ') (h2 : Γ'.Ext Γ'') : Γ.Ext Γ'' := by
   obtain ⟨Ts, e1⟩ := h1.tys; obtain ⟨Us, e2⟩ := h2.tys
   exact ⟨⟨Ts ++ Us, by rw [e2, e1, List.append_assoc]⟩, fun e t h => h2.σ e t (h1.σ e t h),
-    h2.mints.trans h1.mints, h2.cur.trans h1.cur, h2.subs.trans h1.subs⟩
+    h2.mints.trans h1.mints, h2.cur.trans h1.cur, h2.subs.trans h1.subs, h2.fixed.trans h1.fixed⟩
 
 theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {A r v vs out : Tm}
     (hv : VTys P (.cons v vs) (.bind k (A.subst (Tm.env ρ)) (r.subst (Tm.env ρ))) out) (hA : A.static Γ.n 0)
     (hc : v.lc 0) :
     EnvOK P (ρ ++ [v]) (Γ.pushEnt k A) ∧ VTys P vs ((r.subst (Tm.env ρ)).inst v 0) out ∧
       Γ.Ext (Γ.pushEnt k A) ∧ (Γ.pushEnt k A).n = Γ.n + 1 := by
-  have ext : ∀ T e, Γ.Ext (Γ.push T e) := fun T _ => ⟨⟨[T], rfl⟩, fun _ _ h => h, rfl, rfl, rfl⟩
+  have ext : ∀ T e, Γ.Ext (Γ.push T e) := fun T _ => ⟨⟨[T], rfl⟩, fun _ _ h => h, rfl, rfl, rfl, rfl⟩
   cases hv with
   | cons hvA hvs => exact ⟨hE.push hvA hA hc, hvs, ext A _, by simp [Ctx.pushEnt, Ctx.push, Ctx.n]⟩
   | isCons he hvs =>
@@ -341,7 +366,7 @@ theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {
     have hs := canon_static hE.wf hA
     refine ⟨(hE.push .top rfl hc).withRule (by simp [Ctx.push, Ctx.n])
       (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs) ?_, hvs,
-      ⟨⟨[.nil], rfl⟩, fun e t h => ?_, rfl, rfl, rfl⟩, by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push, Ctx.n]⟩
+      ⟨⟨[.nil], rfl⟩, fun e t h => ?_, rfl, rfl, rfl, rfl⟩, by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push, Ctx.n]⟩
     · rw [Tm.subst_append (hl ▸ hs), hE.canon, ← he]
       simp [Tm.env, hl]
     · have := (hE.wf.σ e t h).1
@@ -383,7 +408,7 @@ theorem EnvOK.openTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) :
     cases hv
     have h0 : Γ.openTele tele 0 = (Γ, tele) := by cases tele <;> simp [Ctx.openTele]
     simp only [Tm.len, h0, Tm.toList, List.append_nil]
-    exact ⟨hE, trivial, hs, ht, by simp, ⟨[], by simp⟩, fun _ _ h => h, rfl, rfl, rfl⟩
+    exact ⟨hE, trivial, hs, ht, by simp, ⟨[], by simp⟩, fun _ _ h => h, rfl, rfl, rfl, rfl⟩
   | _ => intro out ht hs hv hc; cases hv
 
 theorem VTy.fn_inv {v l t : Tm} {np : Nat} (h : VTy P v (.fn l np t)) :
@@ -663,10 +688,11 @@ theorem EnvOK.pushTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {tele : Tm
   rw [Tm.toList_ofList, hl] at this
   obtain ⟨h1, _, _, _, h5, h6⟩ := this
   have hf : ∀ Γ' : Ctx, (Γ.setErs Γ' ov).tys = Γ'.tys ∧ (Γ.setErs Γ' ov).σ = Γ'.σ ∧
-      (Γ.setErs Γ' ov).mints = Γ'.mints ∧ (Γ.setErs Γ' ov).cur = Γ'.cur ∧ (Γ.setErs Γ' ov).subs = Γ'.subs := by
+      (Γ.setErs Γ' ov).mints = Γ'.mints ∧ (Γ.setErs Γ' ov).cur = Γ'.cur ∧ (Γ.setErs Γ' ov).subs = Γ'.subs ∧
+      (Γ.setErs Γ' ov).fixed = Γ'.fixed := by
     intro Γ'; cases ov <;> simp [Ctx.setErs]
-  obtain ⟨f1, f2, f3, f4, f5⟩ := hf (Γ.openTele tele tele.len).1
-  refine ⟨h1.congr _ f1 f2 f3 f4 f5, f4.trans h6.cur, f5.trans h6.subs, ?_⟩
+  obtain ⟨f1, f2, f3, f4, f5, f6⟩ := hf (Γ.openTele tele tele.len).1
+  refine ⟨h1.congr _ f1 f2 f3 f4 f5 f6, f4.trans h6.cur, f5.trans h6.subs, ?_⟩
   show Γ.tys.length ≤ (Γ.setErs (Γ.openTele tele tele.len).1 ov).tys.length
   rw [f1]; simp only [Ctx.n] at h5; omega
 
@@ -1005,6 +1031,15 @@ theorem Ctx.pushTele_er (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) (hR : R.is
     · simp only [Ctx.pushTele, Ctx.setErs]; rw [if_neg (by omega)]; exact h1 i hi
     · simp [Ctx.pushTele, Ctx.setErs]
 
+@[simp] theorem Ctx.pushTele_fixed (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) :
+    (Γ.pushTele R ov).fixed = Γ.fixed := by
+  have : ∀ m (Γ : Ctx) t, (Γ.openTele t m).1.fixed = Γ.fixed := by
+    intro m; induction m with
+    | zero => intro Γ t; cases t <;> rfl
+    | succ m ih => intro Γ t; cases t <;> try rfl
+                   rename_i k A r; simp only [Ctx.openTele]; rw [ih]; cases k <;> rfl
+  cases ov <;> simp [Ctx.pushTele, Ctx.setErs, this]
+
 theorem callee_some {v : Tm} {env : List Tm} {n gid : Nat} {G : Group} {F : FnDef}
     (h : callee P v = some (env, n, gid, G, F)) :
     ∃ e j, v = .clo e gid j ∧ env = e.toList ∧ P.groups[gid]? = some G ∧ G.fns[j]? = some F := by
@@ -1032,6 +1067,158 @@ theorem Real.con_inv {vS : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d
   cases h with
   | con hc hp hr => exact ⟨_, _, rfl, hc, hp, hr⟩
   | other h1 _ => exact absurd rfl (h1 _ _ _)
+
+section
+variable {Γ Γ' : Ctx}
+theorem Ctx.advBr_cases {s k : Tm} {fe : Bool} {n : Nat} :
+    Γ.advBr Γ' s k fe n = Γ' ∨ ∃ vs, Γ.advBr Γ' s k fe n = Γ.record Γ' vs := by
+  unfold Ctx.advBr; split
+  · split
+    · exact .inr ⟨_, rfl⟩
+    · split
+      · split
+        · split
+          · exact .inr ⟨_, rfl⟩
+          · exact .inl rfl
+        · exact .inl rfl
+      · exact .inl rfl
+  · exact .inl rfl
+
+theorem Ctx.adv_cases {c : Core} : Ctx.adv P Γ Γ' c = Γ' ∨ ∃ vs, Ctx.adv P Γ Γ' c = Γ.record Γ' vs := by
+  unfold Ctx.adv; split
+  · split
+    · exact .inr ⟨_, rfl⟩
+    · exact .inl rfl
+  · exact .inl rfl
+
+theorem Ctx.advBr_same {s k : Tm} {fe : Bool} {n : Nat} : ∃ F, Γ.advBr Γ' s k fe n = { Γ' with fixed := F } := by
+  rcases Ctx.advBr_cases (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n) with h | ⟨vs, h⟩ <;> rw [h]
+  · exact ⟨Γ'.fixed, rfl⟩
+  · exact ⟨_, rfl⟩
+
+theorem Ctx.adv_same {c : Core} : ∃ F, Ctx.adv P Γ Γ' c = { Γ' with fixed := F } := by
+  rcases Ctx.adv_cases (P := P) (Γ := Γ) (Γ' := Γ') (c := c) with h | ⟨vs, h⟩ <;> rw [h]
+  · exact ⟨Γ'.fixed, rfl⟩
+  · exact ⟨_, rfl⟩
+@[simp] theorem Ctx.advBr_tys {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).tys = Γ'.tys := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_tys {c : Core} : (Ctx.adv P Γ Γ' c).tys = Γ'.tys := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_σ {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).σ = Γ'.σ := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_σ {c : Core} : (Ctx.adv P Γ Γ' c).σ = Γ'.σ := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_mints {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).mints = Γ'.mints := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_mints {c : Core} : (Ctx.adv P Γ Γ' c).mints = Γ'.mints := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_cur {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).cur = Γ'.cur := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_cur {c : Core} : (Ctx.adv P Γ Γ' c).cur = Γ'.cur := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_subs {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).subs = Γ'.subs := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_subs {c : Core} : (Ctx.adv P Γ Γ' c).subs = Γ'.subs := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_er {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).er = Γ'.er := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_er {c : Core} : (Ctx.adv P Γ Γ' c).er = Γ'.er := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_ghost {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).ghost = Γ'.ghost := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_ghost {c : Core} : (Ctx.adv P Γ Γ' c).ghost = Γ'.ghost := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_opened {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).opened = Γ'.opened := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
+@[simp] theorem Ctx.adv_opened {c : Core} : (Ctx.adv P Γ Γ' c).opened = Γ'.opened := by
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+@[simp] theorem Ctx.advBr_n {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr Γ' s k fe n).n = Γ'.n := by simp [Ctx.n]
+@[simp] theorem Ctx.adv_n {c : Core} : (Ctx.adv P Γ Γ' c).n = Γ'.n := by simp [Ctx.n]
+end
+
+theorem EnvOK.record {ρ outs vs : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ outs) Γ')
+    (hf : Γ'.fixed = Γ.fixed) (hr : Γ.ready = true) (hl : vs.length = outs.length)
+    (hv : ∀ k a b, vs[k]? = some a → outs[k]? = some b → Γ'.er (Γ.n + k) = false → Real P a b) :
+    EnvOK P (ρ ++ outs) (Γ.record Γ' vs) := by
+  have hn : Γ.fixed.length = Γ.n := by simp only [Ctx.ready, Bool.and_eq_true, beq_iff_eq] at hr; exact hr.1.1.1
+  have hρ := hE.len
+  refine (hE'.refix _ ⟨by simp; omega, fun i v h => ?_⟩)
+  rw [List.getElem?_append] at h
+  split at h
+  · rename_i hi
+    rw [Tm.env_append (by omega)]
+    rw [hf] at *
+    exact hE.fix.2 i v h
+  · rename_i hi
+    obtain ⟨m, rfl⟩ : ∃ m, i = Γ.fixed.length + m := ⟨i - Γ.fixed.length, by omega⟩
+    simp only [Nat.add_sub_cancel_left, List.getElem?_map, List.getElem?_zipIdx] at h
+    cases ha : vs[m]? with
+    | none => simp [ha] at h
+    | some a =>
+      simp only [ha, Option.map_some, Option.join_some] at h
+      split at h
+      · simp at h
+      · rename_i her
+        cases h
+        have hk : m < outs.length := by have := (List.getElem?_eq_some_iff.mp ha).1; omega
+        have hb : outs[m]? = some outs[m] := List.getElem?_eq_getElem hk
+        have := hv _ _ _ ha hb (by rw [← hn]; simpa [hn] using her)
+        simp only [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_append_right (show ρ.length ≤ Γ.fixed.length + m by omega)]
+        rw [show Γ.fixed.length + m - ρ.length = m by omega, hb]; exact this
+
+theorem EnvOK.ready_sim {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (hr : Γ.ready = true) :
+    SimEnv P Γ.er Γ.strip ρ ∧ Γ.ghost = false ∧ Γ.cur = none := by
+  simp only [Ctx.ready, Bool.and_eq_true, beq_iff_eq, Option.isNone_iff_eq_none, Bool.not_eq_true',
+    List.all_eq_true, List.mem_range, Bool.or_eq_true, Option.isSome_iff_exists] at hr
+  obtain ⟨⟨⟨hn, hc⟩, hg⟩, ha⟩ := hr
+  have hl := hE.len
+  refine ⟨⟨by simp [Ctx.strip]; omega, fun i he => ?_⟩, hg, hc⟩
+  rcases Nat.lt_or_ge i Γ.n with hi | hi
+  · rcases ha i hi with ⟨v, hv⟩ | h
+    · have := hE.fix.2 i v hv
+      have hs : Tm.env Γ.strip i = v := by
+        simp only [Tm.env, Ctx.strip, List.getD_eq_getElem?_getD, List.getElem?_map]
+        cases h : Γ.fixed[i]? with
+        | none => simp [h] at hv
+        | some o => simp [h] at hv; simp [hv]
+      rw [hs]; exact this
+    · rw [h] at he; cases he
+  · have : Tm.env ρ i = .nil := by simp [Tm.env, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
+    rw [this]; exact Real.nil' _
+
+theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n d c : Nat} {vs sig : Tm}
+    (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ pre) Γ') (hf : Γ'.fixed = Γ.fixed)
+    (hs : s.subst (Tm.env ρ) = .app (.vc d c) vs) (hpre : pre = vs.toList) (hn : n = pre.length)
+    (hsig : P.ctor d c = some sig) (her : ∀ j < pre.length, Γ'.er (Γ.n + j) = (fe || sig.ers.getD j true)) :
+    EnvOK P (ρ ++ pre) (Γ.advBr Γ' s k fe n) := by
+  unfold Ctx.advBr
+  split
+  · rename_i hr
+    split
+    · rename_i hfe
+      exact hE.record hE' hf hr (by simp [hn]) fun j a b ha hb he => by
+        rw [her j (List.getElem?_eq_some_iff.mp hb).1, hfe] at he; cases he
+    · rename_i hfe
+      split
+      · rename_i x d0 c0
+        split
+        · rename_i d' c' vsS hx
+          split
+          · rename_i hdc
+            obtain ⟨rfl, rfl⟩ := hdc
+            have hR := hE.fix.2 x _ hx
+            simp only [Tm.subst] at hs; rw [hs] at hR
+            obtain ⟨vsS', sig', e1, hsig', _, hrv⟩ := hR.con_inv
+            cases e1; rw [hsig] at hsig'; cases hsig'
+            subst hpre
+            exact hE.record hE' hf hr hrv.len fun j a b ha hb he => by
+              rw [her j (List.getElem?_eq_some_iff.mp hb).1] at he
+              simp only [hfe, Bool.false_or] at he
+              exact hrv.get j a b ha hb he
+          · exact hE'
+        · exact hE'
+      · exact hE'
+  · exact hE'
 
 theorem selectBr_same {brs : List Br} {els : Option Core} {c : Nat} {vs vs' pre : List Tm}
     {body : Core} (h : selectBr brs els c vs = some (pre, body)) :
@@ -1524,23 +1711,41 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
     refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),
-      fun i hi => by rw [Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
+      fun i hi => by dsimp only; rw [Ctx.advBr_er, Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
       fun sig' hsig' k hk => ?_, fun _ => ⟨_, hctor, by rw [hvl, Tm.len_subst _ _ (.inl hst)]⟩⟩
     rotate_left 4
     · rw [hctor] at hsig'; cases hsig'
-      rw [Tm.ers_subst _ _ hst]
+      dsimp only; rw [Ctx.advBr_er, Tm.ers_subst _ _ hst]
       cases fe
       · exact o2 k (by omega) (by rw [Tm.len_ers _ hst]; omega)
       · simp only [Bool.true_or, Ctx.setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
           List.getD_eq_getElem?_getD, List.getElem?_replicate]
         split <;> rfl
-    · exact (hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
-        ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _ (by simp) (by simp) (by simp) (by simp) (by simp)
+    · refine EnvOK.cm false ?_
+      refine ((hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).advBr
+        ((hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
+          ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _
+            (by simp) (by simp) (by simp) (by simp) (by simp) (by cases fe <;> simp [Ctx.setErs]))
+        (by cases fe <;> simp [Ctx.setErs, h6.fixed]) hsv rfl (by rw [hvl]) hctor fun j hj => ?_)
+      rw [Tm.ers_subst _ _ hst]
+      cases fe
+      · exact o2 j (by omega) (by rw [Tm.len_ers _ hst]; omega)
+      · simp only [Bool.true_or, Ctx.setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
+          List.getD_eq_getElem?_getD, List.getElem?_replicate]
+        split <;> rfl
     · refine LvlBound.append.mpr ⟨hb, fun v hv' x hx => ?_⟩
       have := hb.subst hss x; rw [hsv] at this
       exact this (by simp only [Tm.levels]; exact Tm.levels_toList vs v hv' x hx)
     · exact hm.append hw hl (by simp [h6.cur]) (by simp [h6.subs])
-    · exact Tm.static_mono (by simp only [Ctx.setErs_n]; simp only [Ctx.n] at h5 ⊢; omega) _ (Nat.le_refl 0) hRs
+    · exact Tm.static_mono (by simp only [Ctx.n] at h5 ⊢; simp only [Ctx.advBr_tys, Ctx.setErs]; split <;> simp <;> omega) _ (Nat.le_refl 0) hRs
+  | fixedOut _ hx hkk hne =>
+    have hR := hE.fix.2 _ _ hx
+    simp only [Tm.subst] at hsv; rw [hsv] at hR
+    obtain ⟨_, _, e1, _⟩ := hR.con_inv
+    simp only [Tm.app.injEq, Tm.vc.injEq] at e1
+    subst hkk
+    simp only [Tm.subst, Tm.vc.injEq] at hk
+    exact absurd (hk.2.trans e1.1.2.symm) hne
 
 theorem noRet_select {brs : List Br} {els : Option Core} {c : Nat} {vs pre : List Tm}
     {body : Core} (h : selectBr brs els c vs = some (pre, body)) (hb : Core.armsNoRet brs = true)
@@ -1726,6 +1931,40 @@ theorem Reals.ofList_subst {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (h
 theorem Reals.list {a b t : Tm} (h : Reals P a b t) : ∀ k x y, a.toList[k]? = some x → b.toList[k]? = some y →
     t.ers.getD k true = false → Real P x y := h.get
 
+def HeadSim (P : Prog) (Γ Γ' : Ctx) (ρ outs : List Tm) (c rest : Core) : Prop :=
+  ∀ ρS, Γ.ghost = false → SimEnv P Γ.er ρS ρ → ∃ outsS, (∀ vs', stepS P ρS c = some vs' → vs' = outsS) ∧
+    (∀ out, RunS P (ρS ++ outsS) rest out → RunS P ρS c out) ∧ outsS.length = outs.length ∧
+    ∀ k a b, outsS[k]? = some a → outs[k]? = some b → Γ'.er (Γ.n + k) = false → Real P a b
+
+theorem EnvOK.adv {ρ outs : List Tm} {Γ Γ' : Ctx} {c rest : Core} (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ outs) Γ')
+    (hf : Γ'.fixed = Γ.fixed) (hh : HeadSim P Γ Γ' ρ outs c rest) : EnvOK P (ρ ++ outs) (Ctx.adv P Γ Γ' c) := by
+  unfold Ctx.adv
+  split
+  · rename_i hr
+    obtain ⟨hS, hg, _⟩ := hE.ready_sim hr
+    obtain ⟨outsS, hst, _, hlen, hre⟩ := hh _ hg hS
+    split
+    · rename_i vs hvs
+      cases hst vs hvs
+      exact hE.record hE' hf hr hlen hre
+    · exact hE'
+  · exact hE'
+
+theorem HeadSim.finish {ρ outs : List Tm} {Γ Γ' : Ctx} {c rest : Core} {rets : Tm} {r : Except String (List Tm × Nat)}
+    (hE : EnvOK P ρ Γ) (hlo : ∀ i < Γ.n, Γ'.er i = Γ.er i) (hg' : Γ.ghost = false → Γ'.ghost = false)
+    (hh : HeadSim P Γ Γ' ρ outs c rest) (hsim : Sim P (Ctx.adv P Γ Γ' c) (ρ ++ outs) rest rets r) :
+    Sim P Γ ρ c rets r := by
+  intro hg ρS hS vs cnt' hr
+  obtain ⟨outsS, _, comp, hlen, hre⟩ := hh ρS hg hS
+  have hl := hE.len
+  obtain ⟨vsS, hrun, hres⟩ := hsim (by simpa using hg' hg) _
+    (by simpa using hS.extend hlen (fun i hi => hlo i (hl ▸ hi)) fun k a b ha hb he => hre k a b ha hb (hl ▸ he))
+    vs cnt' hr
+  exact ⟨vsS, comp _ hrun, hres⟩
+
+theorem runS_det {ρ : List Tm} {c : Core} {n : Nat} {out out' : List Tm} (h : runS P n ρ c = some out)
+    (h' : RunS P ρ c out') : out = out' := (runS_sound _ _ _ _ h).det h'
+
 theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
     LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
     Result P ρ cnt rets (eval P μ ρ cnt c) ∧ Sim P Γ ρ c rets (eval P μ ρ cnt c) := by
@@ -1765,61 +2004,66 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     obtain ⟨hE', hcur, hsubs, hnle⟩ := hE.pushTele (some (ms.map (er || ·))) hot hos hvs hlc
     have hl := hE.len
     rw [eval]; simp only [hcal]; rw [dif_pos hmu]; simp only [argv, μ'] at hev; simp only [hev]
-    have ihr' := ihr b _ rets hr hE' (LvlBound.append.mpr ⟨hb.mono hle, hbv⟩)
-      (hm.append hE.wf hl hcur hsubs) (Tm.static_mono hnle _ (Nat.le_refl 0) hrs)
-    refine ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, fun hg ρS hS vs' cnt' hr' => ?_⟩
-    have hg' : (Γ.pushTele outsT (some (ms.map (er || ·)))).ghost = false := by
-      rw [(Ctx.pushTele_er Γ outsT _ hot).1, hg]
-    cases er with
-    | true =>
-      obtain ⟨vsS, hrun, hre⟩ := ihr'.2 hg' _ (hS.pushTele (outsS := List.replicate ms.length .tok) hl hot _ hol
-        (by simp [← ho, hol]) (fun k a b _ hb he => by
-          simp only [Option.getD_some, List.getD_eq_getElem?_getD, List.getElem?_map] at he
-          cases h : ms[k]? <;> simp [h] at he)) vs' cnt' hr'
-      exact ⟨vsS, .callE hrun, hre⟩
-    | false =>
-      simp only [Ctx.ok, hg, Bool.false_or, Bool.and_eq_true] at hok
-      obtain ⟨⟨hrf, hra⟩, hcm⟩ := hok
-      obtain ⟨e₀, j, hfv, rfl, hG, hFj⟩ := callee_some hcal
-      have hR := rt_real hE hS f hrf; rw [hfv] at hR
-      obtain ⟨envS, env₀, G', F', hfS, rfl, hG', hgG, hF', hfe, hSc⟩ := hR.clo_inv
-      rw [hG] at hG'; cases hG'; rw [hFj] at hF'; cases hF'
-      rw [Tm.toList_ofList] at *
-      have hlc := hSc.1
-      have hclo : ∀ k a b, (closures envS gid G)[k]? = some a → (closures env₀ gid G)[k]? = some b →
-          Γb.er (env₀.length + k) = false → Real P a b := by
-        intro k a b ha hb he
-        obtain ⟨hk, rfl⟩ := closures_get ha
-        obtain ⟨-, rfl⟩ := closures_get hb
-        obtain ⟨Fk, hFk⟩ : ∃ Fk, G.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
-        rw [he2 k Fk hFk] at he
-        exact .clo hG hgG hFk he hlc hSc.2
-      have hS1 := hSc.extend (er' := Γb.er) (by simp [closures]) (fun i hi => he1 i hi) hclo
-      have hS2 := hS1.extend (er' := Γb.er) (vsS := args.toList.map (·.subst (Tm.env ρS)))
-        (vs := args.toList.map (·.subst (Tm.env ρ))) (by simp) (fun _ _ => rfl) fun k a b ha' hb he => by
-          have hk : k < np := by
-            have := (List.getElem?_eq_some_iff.mp hb).1
-            rw [List.length_map, Tm.len_toList _ ha.isList] at this; omega
-          simp only [List.length_append, closures, List.length_map, List.length_range] at he
-          rw [he3 k hk] at he
-          rw [← Tm.toList_subst _ _ ha.isList] at ha' hb
-          exact (rtArgs_reals hE hS args t hra).get k a b ha' hb he
-      have hgb' : Γb.ghost = false := by rw [hgb, hgG, hfe]; rfl
-      obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb' _ hS2 outs cnt1 hev
-      have hrbe : rb.ers = outsT.ers := by
-        rw [← Tm.ers_subst _ _ hrbt, hrb, Tm.ers_subst _ _ hot]
-      obtain ⟨vsS, hrun, hre⟩ := ihr'.2 hg' _ (hS.pushTele (outsS := outsS) hl hot _ hol (by
-          simpa [Tm.toList_ofList] using hreb.len)
-        (fun k a b ha hb he => by
-          simp only [Option.getD_some, List.getD_eq_getElem?_getD, List.getElem?_map] at he
+    obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ outsT (some (ms.map (er || ·))) hot
+    have hh : HeadSim P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) ρ outs (.call f dec args er ms rest) rest := by
+      intro ρS hg hS
+      have her : ∀ k, k < outs.length →
+          (Γ.pushTele outsT (some (ms.map (er || ·)))).er (Γ.n + k) = (ms.map (er || ·)).getD k true :=
+        fun k hk => hpn k (hol ▸ hk)
+      cases er with
+      | true =>
+        refine ⟨List.replicate ms.length .tok, fun vs' h => by simp [stepS] at h; exact h.symm,
+          fun out h => .callE h, by simp [← ho, hol], fun k a b _ hb he => ?_⟩
+        rw [her k (List.getElem?_eq_some_iff.mp hb).1] at he
+        simp only [List.getD_eq_getElem?_getD, List.getElem?_map] at he
+        cases h : ms[k]? <;> simp [h] at he
+      | false =>
+        simp only [Ctx.ok, hg, Bool.false_or, Bool.and_eq_true] at hok
+        obtain ⟨⟨hrf, hra⟩, hcm⟩ := hok
+        obtain ⟨e₀, j, hfv, rfl, hG, hFj⟩ := callee_some hcal
+        have hR := rt_real hE hS f hrf; rw [hfv] at hR
+        obtain ⟨envS, env₀, G', F', hfS, rfl, hG', hgG, hF', hfe, hSc⟩ := hR.clo_inv
+        rw [hG] at hG'; cases hG'; rw [hFj] at hF'; cases hF'
+        rw [Tm.toList_ofList] at *
+        have hlc := hSc.1
+        have hclo : ∀ k a b, (closures envS gid G)[k]? = some a → (closures env₀ gid G)[k]? = some b →
+            Γb.er (env₀.length + k) = false → Real P a b := by
+          intro k a b ha hb he
+          obtain ⟨hk, rfl⟩ := closures_get ha
+          obtain ⟨-, rfl⟩ := closures_get hb
+          obtain ⟨Fk, hFk⟩ : ∃ Fk, G.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
+          rw [he2 k Fk hFk] at he
+          exact .clo hG hgG hFk he hlc hSc.2
+        have hS1 := hSc.extend (er' := Γb.er) (by simp [closures]) (fun i hi => he1 i hi) hclo
+        have hS2 := hS1.extend (er' := Γb.er) (vsS := args.toList.map (·.subst (Tm.env ρS)))
+          (vs := args.toList.map (·.subst (Tm.env ρ))) (by simp) (fun _ _ => rfl) fun k a b ha' hb he => by
+            have hk : k < np := by
+              have := (List.getElem?_eq_some_iff.mp hb).1
+              rw [List.length_map, Tm.len_toList _ ha.isList] at this; omega
+            simp only [List.length_append, closures, List.length_map, List.length_range] at he
+            rw [he3 k hk] at he
+            rw [← Tm.toList_subst _ _ ha.isList] at ha' hb
+            exact (rtArgs_reals hE hS args t hra).get k a b ha' hb he
+        have hgb' : Γb.ghost = false := by rw [hgb, hgG, hfe]; rfl
+        obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb' _ hS2 outs cnt1 hev
+        have hrbe : rb.ers = outsT.ers := by
+          rw [← Tm.ers_subst _ _ hrbt, hrb, Tm.ers_subst _ _ hot]
+        try rw [Tm.toList_ofList] at hrunb
+        refine ⟨outsS, fun vs' h => ?_, fun out h => .call hfS hG hFj (by simpa [Tm.toList_ofList] using hrunb) h,
+          by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
+        · simp only [stepS, hfS, hG, hFj, Tm.toList_ofList, Option.bind_eq_bind, Option.bind_some] at h
+          exact runS_det h hrunb
+        · rw [her k (List.getElem?_eq_some_iff.mp hb).1] at he
+          simp only [List.getD_eq_getElem?_getD, List.getElem?_map] at he
           have hk : k < outsT.len := hol ▸ (List.getElem?_eq_some_iff.mp hb).1
           have hmk : ms.getD k true = false := by
             simp only [List.getD_eq_getElem?_getD]; cases h : ms[k]? <;> simp_all
           have := compat_get ms outsT k hcm (by rw [Tm.len_ers _ hot]; exact hk) hmk
           rw [← hrbe] at this
-          exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) this))
-        vs' cnt' hr'
-      exact ⟨vsS, .call hfS hG hFj (by simpa [Tm.toList_ofList] using hrunb) hrun, hre⟩
+          exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) this
+    have ihr' := ihr b _ rets hr (hE.adv hE' (by simp [Ctx.pushTele_fixed]) hh) (LvlBound.append.mpr ⟨hb.mono hle, hbv⟩)
+      (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs)
+    exact ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
   | case3 μ ρ cnt f dec args er ms rest env n1 gid G F hcal argv μ' hmu e hev ihb =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
@@ -1864,38 +2108,41 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     · rename_i pre'' body'' hb''
       rw [hb] at hb''; cases hb''
       simp only [hev]
-      have ihr' := ihr bnd _ rets hr hE'' (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
-        (hm.append hE.wf hl hcur hsubs) (Tm.static_mono hnle _ (Nat.le_refl 0) hrs)
-      refine ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, fun hg ρS hS vs'' cnt' hr' => ?_⟩
-      have hg'' : (Γ.pushTele R (if er then some (List.replicate R.len true) else none)).ghost = false := by
-        rw [(Ctx.pushTele_er Γ R _ hRt).1, hg]
-      cases er with
-      | true =>
-        obtain ⟨vsS, hrun, hre⟩ := ihr'.2 hg'' _ (hS.pushTele (outsS := List.replicate R.len .tok) hl hRt _ hol
-          (by simp [hol])
-          (fun k a b ha _ he => by
-            simp only [if_true, Option.getD_some, List.getD_eq_getElem?_getD, List.getElem?_replicate] at he
-            split at he <;> simp at he)) vs'' cnt' hr'
-        exact ⟨vsS, .mtchE hrun, hre⟩
-      | false =>
-        simp only [Ctx.ok, hg, Bool.false_or] at hok
-        have hR := rt_real hE hS s hok; rw [hs] at hR
-        obtain ⟨vsS, sig, hsS, hsig, hph, hrv⟩ := hR.con_inv
-        have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h, hg] <;> simp [hph]
-        have hSb : ∃ preS, selectBr brs els c vsS.toList = some (preS, body) ∧
-            SimEnv P Γ'.er (ρS ++ preS) (ρ ++ pre) := by
-          rcases selectBr_same (vs' := vsS.toList) hb with ⟨rfl, hsel⟩ | ⟨rfl, hsel⟩
-          · refine ⟨_, hsel, hS.extend hrv.len (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => ?_⟩
-            rw [hl, he2.1 sig hsig k (List.getElem?_eq_some_iff.mp hb).1, Bool.false_or] at he
-            exact hrv.get k a b ha hb he
-          · exact ⟨_, hsel, hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h⟩
-        obtain ⟨preS, hsel, hSb⟩ := hSb
-        obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb _ hSb outs cnt1 hev
-        obtain ⟨vsS', hrun, hre⟩ := ihr'.2 hg'' _ (hS.pushTele (outsS := outsS) hl hRt _ hol (by
-            simpa [Tm.toList_ofList] using hreb.len)
-          (fun k a b ha hb he => hreb.get k a b (by simpa [Tm.toList_ofList] using ha)
-            (by simpa [Tm.toList_ofList] using hb) (by simpa using he))) vs'' cnt' hr'
-        exact ⟨vsS', .mtch hsS hsel hrunb hrun, hre⟩
+      obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ R (if er then some (List.replicate R.len true) else none) hRt
+      have hh : HeadSim P Γ (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) ρ outs
+          (.mtch s R brs els er rest) rest := by
+        intro ρS hg hS
+        cases er with
+        | true =>
+          refine ⟨List.replicate R.len .tok, fun vs' h => by simp [stepS] at h; exact h.symm,
+            fun out h => .mtchE h, by simp [hol], fun k a b _ hb he => ?_⟩
+          rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
+          simp only [if_true, Option.getD_some, List.getD_eq_getElem?_getD, List.getElem?_replicate] at he
+          split at he <;> simp at he
+        | false =>
+          simp only [Ctx.ok, hg, Bool.false_or] at hok
+          have hR := rt_real hE hS s hok; rw [hs] at hR
+          obtain ⟨vsS, sig, hsS, hsig, hph, hrv⟩ := hR.con_inv
+          have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h, hg] <;> simp [hph]
+          have hSb : ∃ preS, selectBr brs els c vsS.toList = some (preS, body) ∧
+              SimEnv P Γ'.er (ρS ++ preS) (ρ ++ pre) := by
+            rcases selectBr_same (vs' := vsS.toList) hb with ⟨rfl, hsel⟩ | ⟨rfl, hsel⟩
+            · refine ⟨_, hsel, hS.extend hrv.len (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => ?_⟩
+              rw [hl, he2.1 sig hsig k (List.getElem?_eq_some_iff.mp hb).1, Bool.false_or] at he
+              exact hrv.get k a b ha hb he
+            · exact ⟨_, hsel, hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h⟩
+          obtain ⟨preS, hsel, hSb⟩ := hSb
+          obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb _ hSb outs cnt1 hev
+          refine ⟨outsS, fun vs' h => ?_, fun out h => .mtch hsS hsel hrunb h,
+            by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
+          · simp only [stepS, hsS, hsel, Option.bind_eq_bind, Option.bind_some] at h
+            exact runS_det h hrunb
+          · rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
+            exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha)
+              (by simpa [Tm.toList_ofList] using hb) (by simpa using he)
+      have ihr' := ihr bnd _ rets hr (hE.adv hE'' (by simp) hh) (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
+        (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs)
+      exact ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
     · rename_i hno; rw [hb] at hno; cases hno
   | case7 μ ρ cnt s R brs els er rest d c vs hs pre body hb e hev ihb =>
     intro bnd Γ rets hc hE hlb hm hrs
@@ -1932,16 +2179,17 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       rw [Tm.len_subst _ _ (.inl hRt), ← Tm.len_toList _ hvs.isList, Tm.toList_ofList] at this; simpa [Tm.len] using this
     obtain ⟨hE'', hcur, hsubs, hnle⟩ := hE.pushTele none hRt hRs hvs hlc
     rw [eval]; simp only [hev]
-    have ihr' := ihr bnd _ rets hr hE'' (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
-      (hm.append hE.wf hl hcur hsubs) (Tm.static_mono hnle _ (Nat.le_refl 0) hrs)
-    refine ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, fun hg ρS hS vs'' cnt' hr' => ?_⟩
-    have hg'' : (Γ.pushTele R none).ghost = false := by rw [(Ctx.pushTele_er Γ R _ hRt).1, hg]
-    obtain ⟨outsS, hrunb, hreb⟩ := hsb hg ρS hS outs cnt1 hev
-    obtain ⟨vsS', hrun, hre⟩ := ihr'.2 hg'' _ (hS.pushTele (outsS := outsS) hl hRt none hol (by
-        simpa [Tm.toList_ofList] using hreb.len)
-      (fun k a b ha hb he => hreb.get k a b (by simpa [Tm.toList_ofList] using ha)
-        (by simpa [Tm.toList_ofList] using hb) (by simpa using he))) vs'' cnt' hr'
-    exact ⟨vsS', .seq hrunb hrun, hre⟩
+    obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ R none hRt
+    have hh : HeadSim P Γ (Γ.pushTele R none) ρ outs (.seq R body rest) rest := by
+      intro ρS hg hS
+      obtain ⟨outsS, hrunb, hreb⟩ := hsb hg ρS hS outs cnt1 hev
+      refine ⟨outsS, fun vs' h => runS_det (by simpa [stepS] using h) hrunb, fun out h => .seq hrunb h,
+        by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
+      rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
+      exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) (by simpa using he)
+    have ihr' := ihr bnd _ rets hr (hE.adv hE'' (by simp) hh) (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
+      (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs)
+    exact ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
   | case22 μ ρ cnt R body rest e0 hev ihb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
@@ -1956,39 +2204,43 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
     rw [eval]
     have hl := hE.len
-    have ih' := ih b _ rets hr hE' (LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩)
-      (hm.append hE.wf hl hcur hsubs) (Tm.static_mono (by omega) _ (Nat.le_refl 0) hrs)
-    refine ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), fun hg ρS hS vs cnt' hr' => ?_⟩
     have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by intro i; cases p <;> rfl
-    have hg' : (Γ.pushPrim T er p).ghost = false := by rw [← hg]; cases p <;> rfl
-    obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg' _ (hS.extend (vsS := [if er then .tok else p.eval ρS]) rfl
-      (fun i hi => by rw [her, if_neg (by omega)]) fun k a b ha hb he => by
-        cases k with
-        | succ => simp at ha
-        | zero =>
-          simp at ha hb; subst ha hb
-          rw [her, if_pos (by omega)] at he; subst he
-          simp only [Ctx.ok, hg, Bool.false_or] at hok
-          cases p with
-          | tm t | lit t => exact rt_real hE hS t hok
-          | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])) vs cnt' hr'
-    exact ⟨vsS, .prim hrun, hre⟩
+    have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest := by
+      intro ρS hg hS
+      refine ⟨[if er then .tok else p.eval ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
+        fun out h => .prim h, rfl, fun k a b ha hb he => ?_⟩
+      cases k with
+      | succ => simp at ha
+      | zero =>
+        simp at ha hb; subst ha hb
+        rw [her, if_pos (by omega)] at he; subst he
+        simp only [Ctx.ok, hg, Bool.false_or] at hok
+        cases p with
+        | tm t | lit t => exact rt_real hE hS t hok
+        | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
+    have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
+    have ih' := ih b _ rets hr (hE.adv hE' hpf hh) (LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩)
+      (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs)
+    exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish hE (fun i hi => by rw [her, if_neg (by omega)])
+      (fun hg => by rw [← hg]; cases p <;> rfl) ih'.2⟩
   | case11 μ ρ cnt rest ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | defLvl hr =>
     rw [eval]
     have hl := hE.len
-    have ih' := ih b _ rets hr (hE.pushMint hb) (LvlBound.append.mpr ⟨hb.mono (Nat.le_succ _), by simp [LvlBound, Tm.levels]⟩)
-      (hm.append hE.wf hl rfl rfl) (Tm.static_mono (by simp [Ctx.pushMint, Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)
-    refine ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_succ _), fun hg ρS hS vs cnt' hr' => ?_⟩
-    obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg _ (hS.extend (vsS := [.tok]) rfl
-      (fun i hi => by simp [Ctx.pushMint, Ctx.push]; omega)
-      fun k a b ha hb _ => by
-        cases k with
-        | succ => simp at ha
-        | zero => simp at ha hb; subst ha hb; exact .other (by simp) (by simp) (by simp)) vs cnt' hr'
-    exact ⟨vsS, .defLvl hrun, hre⟩
+    have hh : HeadSim P Γ Γ.pushMint ρ [.lvl cnt] (.defLvl rest) rest := by
+      intro ρS hg hS
+      refine ⟨[.tok], fun vs' h => by simp [stepS] at h; exact h.symm, fun out h => .defLvl h, rfl,
+        fun k a b ha hb _ => ?_⟩
+      cases k with
+      | succ => simp at ha
+      | zero => simp at ha hb; subst ha hb; exact .other (by simp) (by simp) (by simp)
+    have ih' := ih b _ rets hr (hE.adv (hE.pushMint hb) rfl hh) (LvlBound.append.mpr ⟨hb.mono (Nat.le_succ _), by simp [LvlBound, Tm.levels]⟩)
+      (hm.append hE.wf hl (by simp [Ctx.pushMint, Ctx.push]) (by simp [Ctx.pushMint, Ctx.push]))
+      (Tm.static_mono (by simp [Ctx.pushMint, Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)
+    exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_succ _), hh.finish (Γ' := Γ.pushMint) hE
+      (fun i hi => by simp [Ctx.pushMint, Ctx.push, show i ≠ Γ.n by omega]) (fun hg => hg) ih'.2⟩
   | case12 μ ρ cnt gid rest G hG ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
@@ -1996,30 +2248,32 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     rw [hG] at hG'; cases hG'
     rw [eval, hG]
     have hl := hE.len
-    have ih' := ih b _ rets hr (hE.pushFns hP hG hok) (LvlBound.append.mpr ⟨hb, fun v hv x hx => by
+    have hh : HeadSim P Γ (Γ.pushFns G) ρ (closures ρ gid G) (.defFns gid rest) rest := by
+      intro ρS hg hS
+      cases hok with
+      | mk _ _ _ _ _ hGe hGg =>
+      refine ⟨closures ρS gid G, fun vs' h => by simp [stepS, hG] at h; exact h.symm, fun out h => .defFns hG h,
+        by simp [closures], fun k a b ha hb he => ?_⟩
+      obtain ⟨hk, rfl⟩ := closures_get ha
+      obtain ⟨-, rfl⟩ := closures_get hb
+      obtain ⟨Fk, hFk⟩ : ∃ Fk, G.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
+      simp only [Ctx.pushFns] at he
+      rw [if_pos (by omega), show Γ.n + k - Γ.n = k by omega, hFk] at he
+      refine .clo hG (by rw [← hGg, hg]) hFk (by simpa using he) hS.1 fun i hi => ?_
+      by_cases hin : i < Γ.n
+      · rw [← hGe i hin] at hi; exact hS.2 i hi
+      · have : Tm.env ρ i = .nil := by
+          simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
+        rw [this]; exact Real.nil' _
+    have ih' := ih b _ rets hr (hE.adv (hE.pushFns hP hG hok) rfl hh) (LvlBound.append.mpr ⟨hb, fun v hv x hx => by
         simp only [closures, List.mem_map] at hv
         obtain ⟨j, _, rfl⟩ := hv
         obtain ⟨w, hw, hx'⟩ := Tm.levels_ofList ρ x (by simpa [Tm.levels] using hx)
         exact hb w hw x hx'⟩)
-      (hm.append hE.wf hl rfl rfl) (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs)
-    refine ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), fun hg ρS hS vs cnt' hr' => ?_⟩
-    cases hok with
-    | mk _ _ _ _ _ hGe hGg =>
-    obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg _ (hS.extend (vsS := closures ρS gid G) (by simp [closures])
-      (fun i hi => by simp only [Ctx.pushFns]; rw [if_neg (by omega)])
-      fun k a b ha hb he => by
-        obtain ⟨hk, rfl⟩ := closures_get ha
-        obtain ⟨-, rfl⟩ := closures_get hb
-        obtain ⟨Fk, hFk⟩ : ∃ Fk, G.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
-        simp only [Ctx.pushFns] at he
-        rw [if_pos (by omega), show ρ.length + k - Γ.n = k by omega, hFk] at he
-        refine .clo hG (by rw [← hGg, hg]) hFk (by simpa using he) hS.1 fun i hi => ?_
-        by_cases hin : i < Γ.n
-        · rw [← hGe i hin] at hi; exact hS.2 i hi
-        · have : Tm.env ρ i = .nil := by
-            simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
-          rw [this]; exact Real.nil' _) vs cnt' hr'
-    exact ⟨vsS, .defFns hG hrun, hre⟩
+      (hm.append hE.wf hl (by simp [Ctx.pushFns]) (by simp [Ctx.pushFns]))
+      (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs)
+    exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish (Γ' := Γ.pushFns G) hE
+      (fun i hi => by simp only [Ctx.pushFns]; rw [if_neg (by omega)]) (fun hg => hg) ih'.2⟩
   | case13 μ ρ cnt gid rest hG =>
     intro b Γ rets hc
     cases hc with
@@ -2027,13 +2281,14 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
   | case14 μ ρ cnt k a e rest ih =>
     intro b Γ rets hc hE hb hm hrs
     rw [eval]
-    have : ∃ o σ', CoreTy P b { Γ with opened := o, σ := σ' } rest rets ∧
-        EnvOK P ρ { Γ with opened := o, σ := σ' } := by
+    have : ∃ o σ' cm, CoreTy P b { Γ with opened := o, σ := σ', cmode := cm } rest rets ∧
+        EnvOK P ρ { Γ with opened := o, σ := σ', cmode := cm } := by
       cases hc with
-      | chkOpn _ _ _ hu h => exact ⟨_, _, h, hE.opened hP hu⟩
+      | chkOpn _ _ _ hu h => exact ⟨_, _, _, h, hE.opened hP hu⟩
       | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
-      | _ => exact ⟨Γ.opened, Γ.σ, by assumption, hE.congr _ rfl rfl rfl rfl rfl⟩
-    obtain ⟨o, σ', h', hE'⟩ := this
+      | chkCm h => exact ⟨Γ.opened, Γ.σ, true, h, hE.congr _ rfl rfl rfl rfl rfl⟩
+      | _ => exact ⟨Γ.opened, Γ.σ, Γ.cmode, by assumption, hE.congr _ rfl rfl rfl rfl rfl⟩
+    obtain ⟨o, σ', cm, h', hE'⟩ := this
     have ih' := ih b _ rets h' hE' hb hm hrs
     refine ⟨ih'.1, fun hg ρS hS vs cnt' hr' => ?_⟩
     obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg ρS hS vs cnt' hr'
@@ -2123,6 +2378,7 @@ theorem checked_runs {rets : Tm} (h : Checked P rets) :
   have hE : EnvOK P [] {tys := []} :=
     .mk rfl (fun _ _ _ h _ => by simp at h) (by simp) (fun _ _ h => by simp at h) (by simp)
       ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
+      ⟨by simp, fun _ _ h => by simp at h⟩
   obtain ⟨⟨vs, cnt, e, hv, _⟩, hsim⟩ :=
     eval_sound hP none [] 0 P.main _ _ rets hc hE (by simp [LvlBound]) (by simp [MuOK]) (by simpa [Ctx.n] using hs)
   exact ⟨vs, cnt, e, by rwa [Tm.subst_static0 _ _ 0 hs] at hv,

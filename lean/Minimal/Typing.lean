@@ -1,4 +1,5 @@
 import Minimal.Unify
+import Minimal.Strip
 
 namespace Minimal
 
@@ -11,6 +12,8 @@ structure Ctx where
   er : Nat → Bool := fun _ => true
   ghost : Bool := false
   opened : List (Nat × Bool) := []
+  fixed : List (Option Tm) := []
+  cmode : Bool := false
 
 namespace Ctx
 
@@ -61,7 +64,53 @@ def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
              subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap Tm.fvIdx },
    rem)
 
+def ready (Γ : Ctx) : Bool :=
+  Γ.fixed.length == Γ.n && Γ.cur.isNone && !Γ.ghost && (List.range Γ.n).all fun i => (Γ.fixed[i]?.join).isSome || Γ.er i
+
+def strip (Γ : Ctx) : List Tm := Γ.fixed.map (·.getD .tok)
+
+def record (Γ Γ' : Ctx) (vs : List Tm) : Ctx :=
+  { Γ' with fixed := Γ.fixed ++ vs.zipIdx.map fun (v, k) => if Γ'.er (Γ.n + k) then none else some v }
+
 end Ctx
+
+opaque fixFuel : Nat := 1000000000
+
+def stepS (P : Prog) (ρ : List Tm) : Core → Option (List Tm)
+  | .call _ _ _ true ms _ => some (List.replicate ms.length .tok)
+  | .call f _ args false _ _ => match f.subst (Tm.env ρ) with
+    | .clo env gid j => do
+      let G ← P.groups[gid]?
+      let F ← G.fns[j]?
+      runS P fixFuel (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body
+    | _ => none
+  | .mtch _ R _ _ true _ => some (List.replicate R.len .tok)
+  | .mtch s _ brs els false _ => match s.subst (Tm.env ρ) with
+    | .app (.vc _ c) vs => do
+      let (pre, body) ← selectBr brs els c vs.toList
+      runS P fixFuel (ρ ++ pre) body
+    | _ => none
+  | .seq _ body _ => runS P fixFuel ρ body
+  | .prim p er _ => some [if er then .tok else p.eval ρ]
+  | .defLvl _ => some [.tok]
+  | .defFns gid _ => (P.groups[gid]?).map (closures ρ gid)
+  | _ => none
+
+def Ctx.adv (P : Prog) (Γ Γ' : Ctx) (c : Core) : Ctx :=
+  if Γ.ready then match stepS P Γ.strip c with
+    | some vs => Γ.record Γ' vs
+    | none => Γ'
+  else Γ'
+
+def Ctx.advBr (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :=
+  if Γ.ready then
+    if fe then Γ.record Γ' (List.replicate n .tok)
+    else match s, k with
+      | .fv x, .vc d c => match Γ.fixed[x]?.join with
+        | some (.app (.vc d' c') vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
+        | _ => Γ'
+      | _, _ => Γ'
+  else Γ'
 
 def compat : List Bool → Tm → Bool
   | m :: ms, .bind k _ r => (m || !k.er) && compat ms r
@@ -253,7 +302,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t → t.isTele → ArgsTy P Γ args t outs → args.len = np →
       DecOK P Γ dec l t args → outs.len = ms.length →
       (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) →
-      CoreTy b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets →
+      CoreTy b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms rest)) rest rets →
       CoreTy b Γ (.call f dec args er ms rest) rets
   | mtch : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp →
       armsOK Γ shp brs = true → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
@@ -261,7 +310,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (∀ c k sig p, shp[c]? = some (k, sig, p) →
         BranchOK b false { Γ with ghost := Γ.ghost || er || p } s k H idx sig R (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b { Γ with ghost := Γ.ghost || er } e R) →
-      CoreTy b (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) rest rets →
+      CoreTy b (Ctx.adv P Γ (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) (.mtch s R brs els er rest)) rest rets →
       CoreTy b Γ (.mtch s R brs els er rest) rets
   | case : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp →
       armsOK Γ shp brs = true → (er || Γ.ok (rt P Γ s)) → (Γ.ghost = false → er → realCount brs els ≤ 1) →
@@ -269,15 +318,16 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
         BranchOK b er { Γ with ghost := Γ.ghost || (!er && p) } s k H idx sig rets (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b Γ e rets) →
       CoreTy b Γ (.case s brs els er) rets
-  | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Γ.pushPrim T er p) rest rets →
+  | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets →
       CoreTy b Γ (.prim p er rest) rets
-  | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
+  | defLvl : CoreTy b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
-      CoreTy b (Γ.pushFns G) rest rets → CoreTy b Γ (.defFns gid rest) rets
+      CoreTy b (Ctx.adv P Γ (Γ.pushFns G) (.defFns gid rest)) rest rets → CoreTy b Γ (.defFns gid rest) rets
   | chkIs : TmTy P Γ e E → Γ.canon a = Γ.canon e → CoreTy b Γ rest rets → CoreTy b Γ (.chk .is a e rest) rets
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
+  | chkCm : CoreTy b { Γ with cmode := true } rest rets → CoreTy b Γ (.chk .cm a x rest) rets
   | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.toList.Nodup →
       unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' →
@@ -287,15 +337,19 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .contra) →
       CoreTy b Γ (.chk (.opn oe) (.fv m) x .dead) rets
   | absurd : CoreTy b { Γ with ghost := true } body .nil → body.noRet = true → CoreTy b Γ (.absurd body) rets
-  | seq : TeleOK P Γ R → R.static Γ.n 0 → R.isTele → CoreTy b Γ body R → CoreTy b (Γ.pushTele R) rest rets →
+  | seq : TeleOK P Γ R → R.static Γ.n 0 → R.isTele → CoreTy b Γ body R →
+      CoreTy b (Ctx.adv P Γ (Γ.pushTele R) (.seq R body rest)) rest rets →
       CoreTy b Γ (.seq R body rest) rets
 
 inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch P s k H idx sig = (Γf, .ok σ) →
-      CoreTy b (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)) body R →
+      CoreTy b { Γ.advBr (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none))
+        s k fe (sig.len - 1) with cmode := false } body R →
       BranchOK b fe Γ s k H idx sig R (some body) els
   | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
+  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0) vs) → k = .vc d c → c ≠ c0 →
+      BranchOK b fe Γ (.fv x) k H idx sig R none els
   | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
 
 inductive GroupOK : Nat → Ctx → Group → Prop

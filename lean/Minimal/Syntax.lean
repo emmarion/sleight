@@ -206,6 +206,7 @@ inductive Chk where
   | ty
   | rt
   | opn (er : Bool)
+  | cm
   deriving Repr, Inhabited, DecidableEq
 
 inductive Core where
