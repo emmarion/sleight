@@ -28,6 +28,7 @@ inductive VTy : Tm → Tm → Prop
       VTy (.app (.vc d c) vs) T
   | clo : EnvOK env Γ → P.groups[gid]? = some G → GroupOK P gid Γ G → G.fns[j]? = some F →
       VTy (.clo (.ofList env) gid j) ((F.type G).subst (Tm.env env))
+  | mtbl {D : Adt} : P.adts[d]? = some D → D.lifted = 0 → VTy v (D.mtbl d)
 
 inductive VTys : Tm → Tm → Tm → Prop
   | nil : VTys .nil t t
@@ -169,6 +170,7 @@ theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) 
     have := tm_sound hP hE hA; have := tm_sound hP hE ha; have := tm_sound hP hE hB; have := tm_sound hP hE hb
     exact ⟨.univ, by simp_all [Tm.static], rfl⟩
   | _, _, .fn _ _ _ _ hs => ⟨.univ, hs, rfl⟩
+  | _, _, .mtbl hs => ⟨.univ, hs, rfl⟩
 
 theorem args_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) : ∀ {args tele out : Tm},
     ArgsTy P Γ args tele out → tele.static Γ.n 0 →
@@ -674,6 +676,15 @@ theorem lc_of_static {ρ : List Tm} (hc : ∀ v ∈ ρ, v.lc 0) {t : Tm} {n : Na
 theorem static_toList {t : Tm} {n : Nat} (h : t.static n 0) : ∀ v ∈ t.toList, v.static n 0 := by
   induction t <;> simp_all [Tm.toList, Tm.static]
 
+theorem Tm.ofList_vc_subst (f : Nat → Tm) (d : Nat) : ∀ l : List Nat,
+    (Tm.ofList (l.map (Tm.vc d))).subst f = Tm.ofList (l.map (Tm.vc d))
+  | [] => rfl
+  | _ :: l => by simp [Tm.ofList, Tm.subst, Tm.ofList_vc_subst f d l]
+
+theorem Tm.ofList_vc_static (n k d : Nat) : ∀ l : List Nat, (Tm.ofList (l.map (Tm.vc d))).static n k = true
+  | [] => rfl
+  | _ :: l => by simp [Tm.ofList, Tm.static, Tm.ofList_vc_static n k d l]
+
 theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
     VTy P (p.eval ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval ρ).lc 0 ∧ ∀ x ∈ (p.eval ρ).levels, x < cnt := by
@@ -724,6 +735,12 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     simp only [Tm.static, Bool.and_eq_true] at s1 s2
     exact ⟨.subterm (.trans v1.subterm_inv v2.subterm_inv), by simp [Tm.static, s1, s2], trivial,
       by simp [Prim.eval, Tm.levels]⟩
+  | mtblOf hD hl =>
+    rename_i d D
+    have hc : (D.mtbl d).subst (Tm.env ρ) = D.mtbl d := by
+      simp only [Adt.mtbl, Tm.subst, Tm.ofList_vc_subst]
+    refine ⟨by rw [hc]; exact .mtbl hD hl, ?_, trivial, by simp [Prim.eval, Tm.levels]⟩
+    simp [Adt.mtbl, Tm.static, Tm.ofList_vc_static]
   | predatesSubterm hp hq h1 h2 =>
     have v1 := sem hp; have v2 := sem hq
     rw [h1] at v1; rw [h2] at v2

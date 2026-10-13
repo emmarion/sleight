@@ -54,8 +54,8 @@ example. Every program starts in the scope of
 - `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
   and checking.
 - `prelude.sl`: the prelude, which `prelude.py` makes from
-  `lib/prelude.sl`: the forms the runner accepts, in order, with their
-  `extern` markers removed, kept only when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
+  `lib/prelude.sl`: the forms the runner accepts, in order, with the
+  `extern` markers of functions removed, kept only when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
   .lake/build/bin/minimal prelude.sl` regenerates it.
 - `compare.sh`: runs the runner over the OCaml suite's `tests/` and
   prints, per test, the verdict the test expects and the runner's.
@@ -128,7 +128,8 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
 full language requires is required. These forms are refused as not
-supported: `unique`; `extern` types and functions; `_` in place of a
+supported: `unique`; `extern` functions (an `extern` type is an
+ordinary type that records the mark); `_` in place of a
 type (section 50); `delegate`; and every form
 not named in this file,
 among them `coerce`, character and string literals, `numeral-of`,
@@ -201,6 +202,10 @@ produces nothing (section 27).
 - A result of the program whose type mentions the program's own entries
   is checked as a result of any type (`ArgsTy.anyCons`), so
   `checked_runs` says nothing of its type.
+- `Matchable` types and `(matchable-of T)` for a declared type
+  (section 24). A `Matchable`'s type names a declared type, its tag,
+  marks and constructors in order (`VTy.mtbl`); its value is a token.
+  Opening one is not yet supported.
 - `union` and `newtype` (section 21). A `newtype` must have newtype
   shape. A non-erased match on a union may have one real branch, outside
   erased code; at run time the core keeps the constructor anyway, so the

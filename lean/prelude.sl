@@ -2,7 +2,7 @@
 ; with extern markers removed. Regenerate after the runner learns more.
 
 (def-adts $ (Nat : -> Type)
-  enum
+  enum extern
   (many Zero : -> (Nat))
   (many Succ : (many (Nat) pred) -> (Nat)))
 
@@ -119,7 +119,7 @@
 
 (def-adts
   ((Half : ((Nat) n) -> Type)
-    enum
+    enum extern
     (many HZ : -> (Half (Zero)))
     (many H1 : (many (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (Half (Succ d)))
     (many H2 : (many (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (Half (Succ (Succ d))))))
@@ -622,7 +622,7 @@
 (def-lvl char-lvl)
 
 (def-adts $ (String : -> Type)
-  enum
+  enum extern
   (many SNil : -> (String))
   (many SCons : (many (Char) c) (many (String) rest) -> (String)))
 

@@ -14,6 +14,7 @@ def kids : Tm → List Tm
   | predates A x L => [A, x, L]
   | subterm A a B b => [A, a, B, b]
   | fn l _ t => [l, t]
+  | mtbl _ _ _ _ T cs => [T, cs]
   | _ => []
 
 def sameHead : Tm → Tm → Bool
@@ -22,6 +23,7 @@ def sameHead : Tm → Tm → Bool
   | bind m .., bind m' .. => m == m'
   | app .., app .. | tyCtor _, tyCtor _ | valCtor _, valCtor _ => true
   | fn _ np _, fn _ np' _ => np == np'
+  | mtbl u nt ex ph _ _, mtbl u' nt' ex' ph' _ _ => u == u' && nt == nt' && ex == ex' && ph == ph'
   | a, b => a == b
 
 theorem kids_size (t : Tm) : (t.kids.map size).sum < t.size := by

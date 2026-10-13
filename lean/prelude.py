@@ -24,7 +24,6 @@ while i < n:
         if depth == 0: forms.append(src[start:i+1])
     i += 1
 def clean(f):
-    f = re.sub(r'\benum extern\b', 'enum', f)
     f = re.sub(r'\((many|erased) extern ', r'(\1 ', f)
     return f
 kept = []

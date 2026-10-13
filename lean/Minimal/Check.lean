@@ -87,6 +87,9 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     let ⟨hn⟩ ← need (np ≤ t.len) "Fn: more parameters than entries"
     let ⟨hs⟩ ← need ((Tm.fn l np t).static Γ.n 0) "Fn: not well scoped"
     .ok ⟨.univ, .fn hl hK ht hn hs⟩
+  | .mtbl u nt ex ph T cs => do
+    let ⟨hs⟩ ← need ((Tm.mtbl u nt ex ph T cs).static Γ.n 0) "Matchable: not well scoped"
+    .ok ⟨.univ, .mtbl hs⟩
   | _ => .error "not a term of the type grammar"
 termination_by t => (rules.toNat, t.size)
 decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size]; try omega)
@@ -194,6 +197,11 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
 def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .tm t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .tm h⟩
   | .lit t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .lit h⟩
+  | .mtblOf d => match h : P.adts[d]? with
+    | some D => do
+      let ⟨hl⟩ ← need (D.lifted = 0) "matchable-of: a type whose def-adts mentions entries is not first class"
+      .ok ⟨_, .mtblOf h hl⟩
+    | none => .error "matchable-of: unknown type"
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     let ⟨B, hb⟩ ← checkTm P Γ b

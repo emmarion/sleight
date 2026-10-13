@@ -28,6 +28,7 @@ inductive Tm where
   | predates (A x L : Tm)
   | subterm (A a B b : Tm)
   | fn (l : Tm) (np : Nat) (tele : Tm)
+  | mtbl (u nt ex : Bool) (ph : List Bool) (T cs : Tm)
   | lvl (n : Nat)
   | tok
   | clo (env : Tm) (gid j : Nat)
@@ -45,6 +46,7 @@ def subst (f : Nat → Tm) : Tm → Tm
   | predates A x L => predates (A.subst f) (x.subst f) (L.subst f)
   | subterm A a B b => subterm (A.subst f) (a.subst f) (B.subst f) (b.subst f)
   | fn l np t => fn (l.subst f) np (t.subst f)
+  | mtbl u nt ex ph T cs => mtbl u nt ex ph (T.subst f) (cs.subst f)
   | t => t
 
 def inst : Tm → Tm → Nat → Tm
@@ -57,6 +59,7 @@ def inst : Tm → Tm → Nat → Tm
   | predates A x L, u, k => predates (A.inst u k) (x.inst u k) (L.inst u k)
   | subterm A a B b, u, k => subterm (A.inst u k) (a.inst u k) (B.inst u k) (b.inst u k)
   | fn l np t, u, k => fn (l.inst u k) np (t.inst u k)
+  | mtbl a nt ex ph T cs, u, k => mtbl a nt ex ph (T.inst u k) (cs.inst u k)
   | t, _, _ => t
 
 def size : Tm → Nat
@@ -67,6 +70,7 @@ def size : Tm → Nat
   | predates A x L => A.size + x.size + L.size + 1
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
   | fn l _ t => l.size + t.size + 1
+  | mtbl _ _ _ _ T cs => T.size + cs.size + 1
   | _ => 1
 
 def levels : Tm → List Nat
@@ -78,6 +82,7 @@ def levels : Tm → List Nat
   | predates A x L => A.levels ++ x.levels ++ L.levels
   | subterm A a B b => A.levels ++ a.levels ++ B.levels ++ b.levels
   | fn l _ t => l.levels ++ t.levels
+  | mtbl _ _ _ _ T cs => T.levels ++ cs.levels
   | clo e _ _ => e.levels
   | _ => []
 
@@ -91,6 +96,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, predates A x L => A.static n d && x.static n d && L.static n d
   | d, subterm A a B b => A.static n d && a.static n d && B.static n d && b.static n d
   | d, fn l _ t => l.static n d && t.static n d
+  | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level | _, tyc _ | _, vc .. => true
   | _, lvl _ | _, tok | _, clo .. => false
 
@@ -103,6 +109,7 @@ def bound : Nat → Tm → Bool
   | d, predates A x L => A.bound d && x.bound d && L.bound d
   | d, subterm A a B b => A.bound d && a.bound d && B.bound d && b.bound d
   | d, fn l _ t => l.bound d && t.bound d
+  | d, mtbl _ _ _ _ T cs => T.bound d && cs.bound d
   | _, _ => true
 
 def lc : Nat → Tm → Prop
@@ -115,6 +122,7 @@ def lc : Nat → Tm → Prop
   | d, predates A x L => A.lc d ∧ x.lc d ∧ L.lc d
   | d, subterm A a B b => A.lc d ∧ a.lc d ∧ B.lc d ∧ b.lc d
   | d, fn l _ t => l.lc d ∧ t.lc d
+  | d, mtbl _ _ _ _ T cs => T.lc d ∧ cs.lc d
   | _, _ => True
 
 def fvs : Tm → List Nat
@@ -126,6 +134,7 @@ def fvs : Tm → List Nat
   | predates A x L => A.fvs ++ x.fvs ++ L.fvs
   | subterm A a B b => A.fvs ++ a.fvs ++ B.fvs ++ b.fvs
   | fn l _ t => l.fvs ++ t.fvs
+  | mtbl _ _ _ _ T cs => T.fvs ++ cs.fvs
   | _ => []
 
 def ofList : List Tm → Tm
@@ -189,6 +198,7 @@ inductive Prim where
   | predatesTrans (p q : Tm)
   | subtermTrans (p q : Tm)
   | predatesSubterm (p q : Tm)
+  | mtblOf (d : Nat)
   deriving Repr, Inhabited
 
 inductive Chk where
@@ -277,7 +287,13 @@ structure Adt where
   lifted : Nat := 0
   phantom : List Bool := []
   union : Bool := false
+  newtype : Bool := false
+  extern : Bool := false
   deriving Repr, Inhabited
+
+def Adt.mtbl (D : Adt) (d : Nat) : Tm :=
+  .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d)
+    (.ofList ((List.range D.ctors.length).map (.vc d)))
 
 structure Prog where
   adts : List Adt

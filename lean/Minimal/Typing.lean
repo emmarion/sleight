@@ -93,6 +93,7 @@ def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t => Minimal.rt P Γ t
+  | .mtblOf _ => true
   | _ => false
 
 mutual
@@ -115,6 +116,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
       TmTy Γ (.subterm A a B b) .univ
   | fn : TmTy Γ l K → Γ.canon K = .level → TeleOK Γ t → np ≤ t.len →
       (Tm.fn l np t).static Γ.n 0 → TmTy Γ (.fn l np t) .univ
+  | mtbl : (Tm.mtbl u nt ex ph T cs).static Γ.n 0 → TmTy Γ (.mtbl u nt ex ph T cs) .univ
 
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | nil : ArgsTy Γ .nil t t
@@ -160,6 +162,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .predates C l1 l2 → PrimTy Γ (.predatesTrans p q) (.predates A a l2)
   | subtermTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .subterm A a B b →
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
+  | mtblOf : P.adts[d]? = some D → D.lifted = 0 → PrimTy Γ (.mtblOf d) (D.mtbl d)
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
 

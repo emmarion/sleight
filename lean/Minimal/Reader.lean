@@ -178,6 +178,17 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
     let (ps, rs) ← splitArrow es
     let t ← elabTele sc depth true (ps ++ rs)
     return .fn l (← entryErs true ps).length t
+  | .list (.atom "Matchable" :: .atom tag :: rest) => do
+    unless tag == "enum" || tag == "union" do throw "Matchable: the tag is enum or union"
+    let (marks, T :: es) := rest.span (· matches .atom "newtype" | .atom "extern") | throw "Matchable: no type constructor"
+    let es ← es.mapM fun
+      | .list [.atom m, C] => do
+        let (er, _) ← splitMult true [.atom m]
+        pure (er, ← elabTm sc depth C)
+      | _ => throw "Matchable: an entry is (m C)"
+    return .mtbl (tag == "union") (marks.contains (.atom "newtype")) (marks.contains (.atom "extern")) (es.map (·.1))
+      (← elabTm sc depth T)
+      (.ofList (es.map (·.2)))
   | .list (.atom "TyCtor" :: es) => do
     let (ps, [.atom "Type"]) ← splitArrow es | throw "a TyCtor returns Type"
     return .tyCtor (← elabTele sc depth false ps)
@@ -240,8 +251,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     | .list (.list (T :: .atom ":" :: es) :: kws) => do
       let (ps, [.atom "Type"]) ← splitArrow es | throw "a type constructor returns Type"
       let (kw, cs) := kws.span (· matches .atom _)
-      if kw.contains (.atom "extern") then throw "extern types are not supported"
-      unless (kw.filter (· != .atom "newtype")) matches [.atom "enum"] | [.atom "union"] do
+      unless (kw.filter (· matches .atom "enum" | .atom "union")) matches [.atom "enum"] | [.atom "union"] do
         throw "a type is declared enum or union"
       let cs ← cs.mapM fun
         | .list xs => do
@@ -277,9 +287,9 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
   let kinds := blocks.map fun
-    | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"))
-    | _ => (false, false)
-  for (((T, _, cs), (params, sigs)), (union, newtype)) in (heads.zip (← elabSigs)).zip kinds do
+    | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"), kws.contains (.atom "extern"))
+    | _ => (false, false, false)
+  for (((T, _, cs), (params, sigs)), (union, newtype, extern)) in (heads.zip (← elabSigs)).zip kinds do
     let real := (cs.zip sigs).filter (!·.1.1)
     if newtype && (real.isEmpty || (!union && real.length != 1) ||
         real.any fun (_, sig) => (fieldErs sig).count false != 1) then
@@ -287,7 +297,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     let ctorNames := cs.map (·.2.1)
     let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
                        ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
-                       lifted := ids.length, phantom := cs.map (·.1), union }
+                       lifted := ids.length, phantom := cs.map (·.1), union, newtype, extern }
     modify fun st => { st with decls := st.decls ++ [adt] }
 
 def withTail {α : Type} (b : Bool) (x : M α) : M α := do
@@ -369,6 +379,11 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
     else if h == "match" then elabMatch sc want exp args
+    else if h == "matchable-of" && (sc.lookup h).isNone then
+      let [.atom T] := args | throw "matchable-of takes a type constructor"
+      let some d := st.adts.lookup T | throw s!"matchable-of: {T} is not a declared type"
+      let [i] ← fresh [false] | throw "fresh"
+      return ([.prim (.mtblOf d) false], [.fv i])
     else if (h == "tail" || h == "notail") && (sc.lookup h).isNone then
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
       if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
