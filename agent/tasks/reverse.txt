@@ -1,1 +1,2 @@
+#!pi -k SPEC.md:180000
 Learn the programming language SL and its standard library by writing programs and compiling and running them with the `sl` tool. Record what you learn in SPEC.md; it may already exist, and it is the only file kept after this session. Call `done` when you have learned as much as you can.
