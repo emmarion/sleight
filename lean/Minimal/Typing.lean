@@ -1,5 +1,5 @@
 import Minimal.Unify
-import Minimal.Strip
+import Minimal.Native
 
 namespace Minimal
 

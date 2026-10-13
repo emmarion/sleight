@@ -76,34 +76,6 @@ theorem range_getD_eq : ∀ (S : List Tm), (List.range S.length).map (S.getD · 
   intro S; apply List.ext_getElem <;> simp
   intro i h1 _; simp [List.getElem?_eq_getElem h1]
 
-theorem foldl_snoc (g : List Tm → FnDef → Tm) : ∀ (Fs : List FnDef) (acc : List Tm),
-    (Fs.foldl (fun acc F => acc ++ [g acc F]) acc).length = acc.length + Fs.length ∧
-    (Fs.foldl (fun acc F => acc ++ [g acc F]) acc).take acc.length = acc ∧
-    ∀ i (h : i < Fs.length), (Fs.foldl (fun acc F => acc ++ [g acc F]) acc)[acc.length + i]? =
-      some (g ((Fs.foldl (fun acc F => acc ++ [g acc F]) acc).take (acc.length + i)) Fs[i])
-  | [], acc => by simp
-  | F :: Fs, acc => by
-    obtain ⟨h1, h2, h3⟩ := foldl_snoc g Fs (acc ++ [g acc F])
-    show (Fs.foldl _ (acc ++ [g acc F])).length = _ ∧ (Fs.foldl _ (acc ++ [g acc F])).take _ = _ ∧
-      ∀ i (h : i < (F :: Fs).length), (Fs.foldl _ (acc ++ [g acc F]))[acc.length + i]? =
-        some (g ((Fs.foldl _ (acc ++ [g acc F])).take (acc.length + i)) (F :: Fs)[i])
-    generalize Fs.foldl (fun acc F => acc ++ [g acc F]) (acc ++ [g acc F]) = R at h1 h2 h3 ⊢
-    simp only [List.length_append, List.length_singleton] at h1 h2 h3
-    have ht : R.take acc.length = acc := by
-      have := congrArg (List.take acc.length) h2
-      rwa [List.take_take, Nat.min_eq_left (by omega), List.take_left' rfl] at this
-    refine ⟨by simp; omega, ht, fun i hi => ?_⟩
-    cases i with
-    | zero =>
-      have : R[acc.length]? = (R.take (acc.length + 1))[acc.length]? := by rw [List.getElem?_take]; simp
-      rw [Nat.add_zero, this, h2, ht]; simp
-    | succ i =>
-      have := h3 i (by simpa using hi)
-      rw [show acc.length + (i + 1) = acc.length + 1 + i by omega, this]; simp
-
-theorem closuresS_length (env : List Tm) (gid : Nat) (G : Group) : (closuresS env gid G).length = G.fns.length := by
-  simpa [closuresS] using (foldl_snoc (cval env gid) G.fns []).1
-
 def WInv (n0 : Nat) (ρ : List Tm) (al : List (Option (Bool × Nat))) (S so : List Tm) : Prop :=
   ρ.length = n0 + al.length ∧
     ∀ idx b r, al[idx]? = some (some (b, r)) → Tm.env ρ (n0 + idx) = (if b then so else S).getD r .nil

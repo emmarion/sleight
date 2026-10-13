@@ -2222,6 +2222,12 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       modify fun st => { st with deles := ds0 }
       pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU : FnDef }
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }
+    for (F, j) in defs.zipIdx do
+      let f := sigs[j]!.1
+      if f == "add" && (← get).claimed.contains f then
+        let P := (← get).prog .dead
+        unless (P.natD.map fun d => decide (P.wrapField d 1 = none) && F.isAdd (base + j) (base + sigs.length) d) == some true do
+          warn s!"the extern `{showName f}` is not the model the runner's native `{showName f}` is proved against, so it runs its model"
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })

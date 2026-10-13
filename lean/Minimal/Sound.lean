@@ -236,9 +236,6 @@ namespace Tm
 theorem lc_toList : ∀ (t : Tm) d, t.lc d → ∀ v ∈ t.toList, v.lc d := by
   intro t; induction t <;> intro d h v hv <;> simp_all [toList, lc] <;> grind
 
-theorem toList_ofList : ∀ (l : List Tm), (ofList l).toList = l := by
-  intro l; induction l <;> simp_all [ofList, toList]
-
 theorem ofList_toList : ∀ (t : Tm), t.isList → ofList t.toList = t := by
   intro t; induction t <;> simp_all [ofList, toList, isList]
 

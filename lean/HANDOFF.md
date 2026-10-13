@@ -36,16 +36,15 @@ before checking, and the checker requires it.
 
 0. **Native arithmetic, one proved extern at a time.** The owner's
    plan, from chat: no extern's native code is ever trusted as an
-   axiom. The stripped run already holds the prelude's `Nat` as a
-   number (`lean/README.md`); next, an extern function gets native code
-   only once a Lean proof shows it agrees with its model, starting with
-   `add`. A session's proposal, not yet built: keep in Lean a fixed
-   copy of the extern's elaborated body, prove the native code against
-   that copy, and use the native code only when the program's body is
-   that copy, warning when it is not (the owner asked for a warning,
-   not a silent fallback). Whether the warning belongs in WARNINGS.md
-   is an open question for the owner.
-
+   axiom; each extern gets native code only with a Lean proof that it
+   agrees with its model, and a model that is not the proved one runs
+   with a warning (WARNINGS.md 1). `add` is done (`Minimal/Native.lean`):
+   a fixed copy of its elaborated body (`addBody`), a recognizer, and
+   `add_run`. Next candidates, by what they unlock: `mul` (then
+   `u62-modulus` and the `U62` forms could rejoin `prelude-full.sl`'s
+   counterpart runs), `nat-cmp`, `sub`, `divmod`. Each needs its own
+   copy and proof; a generalization over models of a common shape may
+   pay off once there are several.
 1. **A signature that mentions an earlier function of its block** other
    than through `level-of` (section 53). `delegate-of` in a type names the
    proof that `def-fns` mints after its block, so it is refused in the

@@ -23,12 +23,9 @@ def Prog.unnat (P : Prog) : Tm → Tm
   | t => t
 
 def Prog.norm (P : Prog) : Tm → Tm
-  | t@(.app (.vc d c .nil) args) =>
-    if P.natD = some d then match c, args with
-      | 0, .nil => .nat 0
-      | 1, .cons (.nat k) .nil => .nat (k + 1)
-      | _, _ => t
-    else t
+  | .app (.vc d 0 .nil) .nil => if P.natD = some d then .nat 0 else .app (.vc d 0 .nil) .nil
+  | .app (.vc d 1 .nil) (.cons (.nat k) .nil) =>
+    if P.natD = some d then .nat (k + 1) else .app (.vc d 1 .nil) (.cons (.nat k) .nil)
   | t => t
 
 mutual
@@ -98,89 +95,6 @@ inductive RunS : List Tm → Core → List Tm → Prop
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
   | defFns : P.groups[gid]? = some G → RunS (ρ ++ closuresS ρ gid G) rest out → RunS ρ (.defFns gid rest) out
   | chk : RunS ρ rest out → RunS ρ (.chk k a b rest) out
-
-def runS : Nat → List Tm → Core → Option (List Tm)
-  | 0, _, _ => none
-  | fuel + 1, ρ, c => match c with
-    | .ret ts => some (ts.toList.map (P.sub ρ))
-    | .call _ _ _ true ms _ rest => runS fuel (ρ ++ List.replicate ms.length .tok) rest
-    | .call f _ args false _ ve rest => match P.sub ρ f with
-      | .clo env gid j => do
-        let G ← P.groups[gid]?
-        let F ← G.fns[j]?
-        let outs ← runS fuel (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body
-        runS fuel (ρ ++ F.spreadOut ve args.toList.length outs) rest
-      | _ => none
-    | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
-    | .mtch s _ brs els false rest => match P.view (P.sub ρ s) with
-      | .app (.vc _ c _) vs => do
-        let (pre, body) ← selectBr brs els c vs.toList
-        let outs ← runS fuel (ρ ++ pre) body
-        runS fuel (ρ ++ outs) rest
-      | _ => none
-    | .case _ brs els true _ => do
-      let (pre, body) ← realBr brs els
-      runS fuel (ρ ++ pre) body
-    | .case s brs els false true => do
-      let (pre, body) ← realBr brs els
-      runS fuel (ρ ++ pre.map fun _ => P.sub ρ s) body
-    | .case s brs els false false => match P.view (P.sub ρ s) with
-      | .app (.vc _ c _) vs => do
-        let (pre, body) ← selectBr brs els c vs.toList
-        runS fuel (ρ ++ pre) body
-      | _ => none
-    | .seq _ body rest => do
-      let outs ← runS fuel ρ body
-      runS fuel (ρ ++ outs) rest
-    | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.evalS P ρ]) rest
-    | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
-    | .defFns gid rest => do runS fuel (ρ ++ closuresS ρ gid (← P.groups[gid]?)) rest
-    | .chk _ _ _ rest => runS fuel ρ rest
-    | .absurd _ | .dead => none
-
-variable {P} in
-theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P ρ c out := by
-  intro fuel; induction fuel with
-  | zero => intro _ _ _ h; simp [runS] at h
-  | succ fuel ih =>
-    intro ρ c out h
-    unfold runS at h
-    split at h
-    · cases h; exact .ret
-    · exact .callE (ih _ _ _ h)
-    · split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-        obtain ⟨G, hG, F, hF, outs, hb, hr⟩ := h
-        exact .call ‹_› hG hF (ih _ _ _ hb) (ih _ _ _ hr)
-      · simp at h
-    · exact .mtchE (ih _ _ _ h)
-    · split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-        obtain ⟨⟨pre, body⟩, hsel, outs, hb, hr⟩ := h
-        exact .mtch ‹_› hsel (ih _ _ _ hb) (ih _ _ _ hr)
-      · simp at h
-    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
-      exact .caseE hsel (ih _ _ _ hb)
-    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
-      exact .caseN hsel (ih _ _ _ hb)
-    · split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-        obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
-        exact .case ‹_› hsel (ih _ _ _ hb)
-      · simp at h
-    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨outs, hb, hr⟩ := h
-      exact .seq (ih _ _ _ hb) (ih _ _ _ hr)
-    · exact .prim (ih _ _ _ h)
-    · exact .defLvl (ih _ _ _ h)
-    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨G, hG, hr⟩ := h
-      exact .defFns hG (ih _ _ _ hr)
-    · exact .chk (ih _ _ _ h)
-    · simp at h
-    · simp at h
 
 variable {P} in
 theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) (h2 : RunS P ρ c b) : a = b := by
@@ -266,11 +180,10 @@ theorem Real.norm {P : Prog} {x v : Tm} (h : Real P x v) : Real P (P.norm x) v :
   unfold Prog.norm
   split
   · split
-    · rename_i d _ _ hd
-      split
-      · exact .nat hd (by simpa [Prog.view, hd] using h)
-      · exact .nat hd (by simpa [Prog.view, hd] using h)
-      · exact h
+    · rename_i d hd; exact .nat hd (by simpa [Prog.view, hd] using h)
+    · exact h
+  · split
+    · rename_i d _ hd; exact .nat hd (by simpa [Prog.view, hd] using h)
     · exact h
   · exact h
 

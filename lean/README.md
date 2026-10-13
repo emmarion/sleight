@@ -50,6 +50,9 @@ unless `--no-prelude` is given.
 - `Minimal/Strip.lean`: the stripped run, which skips erased code, as a
   relation, and `Real`, what it is for a stripped value to stand for a
   value of the full run.
+- `Minimal/Native.lean`: the executable stripped run, the native
+  externs it uses and their proofs.
+- `WARNINGS.md`: the warnings only this runner emits.
 - `Minimal/Unify.lean`: forced unification.
 - `Minimal/Typing.lean`: the typing relations.
 - `Minimal/Check.lean`: the checker. Each of its functions returns a
@@ -125,8 +128,16 @@ each one rests on, which are Lean's own three (`propext`,
   (`Tm.nat`, `Prog.natD`): applying its constructors makes one
   (`Prog.norm`), and a match reads one as `Zero` or `Succ` of a number
   (`Prog.view`). A number stands for whatever its `Zero` or `Succ` form
-  stands for (`Real.nat`). The extern functions still run their models,
-  so this changes the representation, not the arithmetic. A call of a delegate's closure is matched in the
+  stands for (`Real.nat`). An extern function runs natively only once
+  a Lean proof shows its native code agrees with its model; none is
+  trusted unproved. So far that is `add`: the executable stripped run
+  (`runS`) computes a call of `add` on two numbers as their sum when the
+  callee's body is exactly the elaborated model the proof is about
+  (`addBody`, `Prog.native`), and `add_run` proves that the stripped
+  run of that model gives the same result, so `runS_sound` still holds
+  (`Minimal/Native.lean`). Any other `extern` `add` runs its model, with
+  a warning (WARNINGS.md 1). Every other extern function runs its
+  model, and the full run (`eval`, `--full`) runs every model. A call of a delegate's closure is matched in the
   stripped run by the call its body makes, which `Group.deleOK` checks
   passes the delegate's own non-erased arguments through to its target,
   in order, and the target's non-erased results back
