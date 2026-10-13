@@ -110,7 +110,7 @@ def Prog.fieldTys (P : Prog) (d c : Nat) (T : Tm) : List (Option Tm) :=
   let sol := matchTy [] R T
   fs.map fun F => F.bind fun F =>
     let F := F.subst fun i => (sol.lookup i).getD (.fv i)
-    if F.fvs.any (printHole ≤ ·) || F.levels.length > 0 then none else some F
+    if (F.fvs.any (printHole ≤ ·) && !(F matches .app (.tyc _) _)) || F.levels.length > 0 then none else some F
 
 def Prog.adtIs (P : Prog) (d : Nat) (name : String) : Bool := P.adts.findIdx? (·.name == name) == some d
 
