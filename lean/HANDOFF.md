@@ -9,9 +9,9 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 143 tests were
-accepted with OCaml's value, none mismatched, 313 refusals agreed, and
-150 + 172 were refused as unsupported. No test the OCaml suite
+the test expects and the runner's. At the last run 147 tests were
+accepted with OCaml's value, none mismatched, 316 refusals agreed, and
+146 + 169 were refused as unsupported. No test the OCaml suite
 refuses is accepted. Of the tests it accepts, one is refused
 (`thunk_extern_first_class.sl`) and two time out at ten seconds:
 `comptime_tail.sl` finishes in about a minute, and
@@ -33,7 +33,9 @@ before checking, and the checker requires it.
 ## Next, none of it decided
 
 1. **A signature that mentions an earlier function of its block** other
-   than through `level-of` (section 53), and `delegate-of` in a type.
+   than through `level-of` (section 53). `delegate-of` in a type names the
+   proof that `def-fns` mints after its block, so it is refused in the
+   block's own signatures.
 2. **`at`, slots and cells** (sections 35 to 41 and 66), now the
    largest gap: the `unique` tests that remain unsupported stop at them,
    and so do `Program` (its continuation returns the world `at` the one

@@ -209,7 +209,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       let (Γb, R) := Γ.body G F
       return { F with body := ← inferCore Γb (some R) false F.body }
     modify fun (gs, h) => (gs.set gid { G with fns }, h)
-    return .defFns gid (← inferCore (Γ.pushFns G) rets top rest)
+    return .defFns gid (← inferCore (Γ.pushFns { G with fns }) rets top rest)
   | .chk (.opn oe) (.fv m) b rest => do
     let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
     let σ' := match (Γ.tys[m]?).map Γ.canon with

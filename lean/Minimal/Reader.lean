@@ -186,6 +186,7 @@ structure ESt where
   dele : Option (Nat × List (Nat × Bool)) := none
   delegated : Bool := false
   deles : List (Nat × Nat) := []
+  delePf : List (Nat × Nat) := []
   uq : List Nat := []
   sides : List (Nat × Option Mode × Option Mode) := []
   uses : List (Nat × Bool) := []
@@ -354,7 +355,7 @@ def fieldErs : Tm → List Bool
   | .bind k _ r@(.bind ..) => k.er :: fieldErs r
   | _ => []
 
-def resolveHead (sc : Scope) : Sx → M Sx
+def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
   | e@(.list (.atom h :: args)) => do
     let st ← get
     match sc.lookup h with
@@ -365,6 +366,7 @@ def resolveHead (sc : Scope) : Sx → M Sx
         if d == st.special && st.decls.length > 0 && (i.map st.mintedSpecial).getD false then
           let s := specialNames.getD c ""
           if (sc.lookup s).isSome then throw s!"the special form {s} is shadowed where {showName h} dispatches to it"
+          if let some i := i then use i
           return .list (.atom s :: args)
         else if h ∈ keywords then return .list (.list [.atom "\x03var", .atom h] :: args) else return e
       | _ => if h ∈ keywords then return .list (.list [.atom "\x03var", .atom h] :: args) else return e
@@ -460,7 +462,7 @@ def dumpContext (sc : Scope) : M String := do
 
 mutual
 partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
-  match ← resolveHead sc e with
+  match ← resolveHead sc (fun _ => pure ()) e with
   | .list [.atom "\x03var", .atom x] => look sc depth x
   | .list (.list [.atom "\x03var", .atom x] :: args) =>
     return .app (← look sc depth x) (.ofList (← args.mapM (elabTm sc depth)))
@@ -507,6 +509,11 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
     | none => throw s!"matchable-of: {T} mentions top-level entries and is not first class"
   | .list (.atom "matchable-of" :: _) => throw "matchable-of takes a type constructor"
   | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
+  | .list [.atom "delegate-of", .atom f] => do
+    let pf := (← get).delePf
+    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
+    | some k => pure (.fv k)
+    | none => throw s!"delegate-of: {showName f} is not a non-erased function with a `delegate` body defined before this type"
   | .list [.atom "Predates", A, x, L] =>
     return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
   | .list [.atom "Subterm", A, a, B, b] =>
@@ -569,7 +576,8 @@ def reset (base : Nat) : M Unit := modify fun st =>
   { st with n := base, ers := st.ers.take base, known := st.known.filter (·.1 < base),
             inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
             uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
-            sides := st.sides.filter (·.1 < base) }
+            sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
+            delePf := st.delePf.filter (·.2 < base) }
 
 def liftOf (d : Nat) : M (List Tm) := return (((← get).lifts.lookup d).getD []).map Tm.fv
 
@@ -900,6 +908,16 @@ def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
   | none => pure ()
   modify fun st => { st with uses := (i, m == .uniq) :: st.uses.filter (·.1 != i) }
 
+def mintDele (i t : Nat) : M (Stmt × Nat) := do
+  let [k] ← fresh [true] | throw "fresh"
+  let uq := (← get).uq
+  let side (j : Nat) : Mode := if uq.contains j then .uniq else .many
+  modify fun st => { st with sides := (k, some (side i), some (side t)) :: st.sides }
+  return (.prim (.deleOf i t) true, k)
+
+def headUse (want : List Mode) (i : Nat) : M Unit := do
+  unless ← erasedPos want do useVar i .many
+
 def useTm (t : Tm) (want : List Mode) : M Unit := do
   if let (.fv i, [m]) := (t, want) then useVar i m
 
@@ -1013,7 +1031,7 @@ def pragma (sc : Scope) (p : String) : M Unit := do
 
 mutual
 partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) : M (List Stmt × List Tm) := do
-  match ← resolveHead sc e with
+  match ← resolveHead sc (headUse want) e with
   | .list [.atom "\x03var", .atom x] => do let t ← look sc 0 x; useTm t want; return ([], [t])
   | e@(.list (hd@(.list _) :: args)) => do
     if let some (ss, e') ← dispatchComputed sc e then
@@ -1061,6 +1079,7 @@ partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
       if d == st.special && st.decls.length > 0 then
         let f := specialNames.getD c ""
         if (sc.lookup f).isSome then throw s!"the special form {f} is shadowed where a computed head dispatches to it"
+        recordTop st0.n ss
         return some (ss, .list (.atom f :: args))
       else set st0; return none
     | _ => set st0; return none
@@ -1105,12 +1124,10 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let [.atom g] := args | throw "hint: usage: (delegate-of <function>)"
       if (sc.lookup g).isNone then throw s!"unbound name {showName g}"
       let i ← entry sc (.atom g)
+      if let some k := (← get).delePf.lookup i then return ([], [.fv k])
       let some t := (← get).deles.lookup i | throw s!"delegate-of: {showName g} is not a non-erased function with a `delegate` body"
-      let [k] ← fresh [true] | throw "fresh"
-      let uq := (← get).uq
-      let side (j : Nat) : Mode := if uq.contains j then .uniq else .many
-      modify fun st => { st with sides := (k, some (side i), some (side t)) :: st.sides }
-      return ([.prim (.deleOf i t) true], [.fv k])
+      let (s, k) ← mintDele i t
+      return ([s], [.fv k])
     else if h == "coercible-of" && (sc.lookup h).isNone then
       let [d] := args | throw "hint: usage: (coercible-of <Delegate proof>)"
       let (ss, ts) ← elabArgs sc [d] [true]
@@ -1365,7 +1382,7 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
     else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
   | e :: rest =>
-    let e ← resolveHead sc e
+    let e ← resolveHead sc (headUse want) e
     if let some (ss1, e') ← dispatchComputed sc e then
       let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
       return (ss ++ ss1 ++ ss2, ts)
@@ -1633,8 +1650,13 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     recordTop base [Core.defFns gid]
+    let pfs ← ((← get).deles.filter (·.1 ≥ base)).mapM fun (i, t) => do
+      let (s, k) ← mintDele i t
+      recordTop k [s]
+      modify fun st => { st with delePf := (i, k) :: st.delePf }
+      pure s
     let (ss, ts) ← elabSeq fnsc want exp rest
-    return (.defFns gid :: ss, ts)
+    return (.defFns gid :: pfs ++ ss, ts)
   | e :: _ => match e with
     | .list (.atom h :: _) =>
       if ["comptime-match", "compile-warn", "compile-error", "dump-context", "def-opaque",
@@ -1670,7 +1692,8 @@ def builtins : ESt :=
   { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt,
       delegateAdt],
     adts := [("Delegate", 3), ("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
-    ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)], special := 0 }
+    ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)] ++ specialNames.mapIdx fun i n => ("%" ++ n, 0, i),
+    special := 0 }
 
 def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List String) := do
   let stmt := match (items.filter (!isPragmaSx ·)).getLast? with
