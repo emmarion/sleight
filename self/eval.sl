@@ -996,7 +996,7 @@
 
 (def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
   (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)
-  (env-push-lit env2 x proof spelling facts node))
+  (env-push-lit env2 x proof (Some _ $ MkPair _ _ spelling node) facts))
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
   (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
@@ -1018,7 +1018,7 @@
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
-  (let-match many p (MkLitEntry y proof _ _ _ _))
+  (let-match many p (MkLitEntry y proof _ _ _))
   (match many (nat-cmp x y) _ ((CEq _ _ _) proof) (else (tail $ lit-proof rest x))))
 
 (def-fns _ $ (many intern-numeral-once : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
@@ -1120,6 +1120,28 @@
   (let-match many r4 (Cons _ some _) ((Nil _) (None _)))
   (let ((many snap)) $ trusted-snapshot e)
   (Some _ $ match many (terms-canon-eq snap (heap-denoted snap _ hp p) $ heap-denoted snap _ hp q) _ ((BTrue) some) ((BFalse) none)))
+
+(def-fns _ $ (many mint-refused : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) ->
+    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (let ((erased hl) (many hp2) (erased sf) (many v)) $ halloc _ hp $ BError _ "`mint-settled` with no type handle")
+  (values e hl hp2 sf v))
+
+; mint-settled and mint-settled-erased: a fresh Settled entry outside every scope, of the type the handle
+; denotes, holding the value or, given none, the token, and a handle to it.
+(def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) ->
+    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (let-match many args (Cons _ _ r1) ((Nil _) (mint-refused e _ hp)))
+  (let-match many r1 (Cons _ th r2) ((Nil _) (mint-refused e _ hp)))
+  (let-match many (heap-denoted e _ hp th) (Cons _ ty _) ((Nil _) (mint-refused e _ hp)))
+  (let ((many (Multiplicity) mult)) $ match many r2 _ ((Cons _ _ _) (Many)) ((Nil _) (Erased)))
+  (let ((many e2) (many en2) (many x)) $ bind-entry e _ (heap-entries _ hp) (BFalse) (BFalse) (BTrue) (None _) (None _) (BFalse) mult ty (None _) delegate-id)
+  (let ((many hp1)) $ heap-with-entries _ hp en2)
+  (let ((erased hs1) (many hp2) (erased s1) (many a)) $ match many r2 (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Ref Block h1) b))
+    ((Cons _ v _) (values hs hp1 (le-refl hs) v))
+    ((Nil _) (halloc _ hp1 $ BToken _)))
+  (let ((many hp3)) $ heap-with-entries _ hp2 $ entries-set-state _ (heap-entries _ hp2) x $ SSettled _ a x)
+  (let ((erased hs4) (many hp4) (erased s4) (many hv)) $ alloc-ext _ hp3 $ PHandle x (MintedIs) mult "_")
+  (values (env-push-lit e2 x (None _) (None _) $ Cons _ (MkLitFact x ty $ None _) $ Nil _) hs4 hp4 (hist-le-trans _ _ _ s1 s4) hv))
 
 (def-fns _ $ (many path-dir : (many (String) path) -> (many (String) dir))
   (let-match many (list-rev _ $ split-on path 47) (Cons _ _ above) ((Nil _) "."))
@@ -1496,6 +1518,10 @@
           (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BError _ "`settled-eq` with no handles")
           (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e wv ew)))
       (values hs hp (le-refl hs) (Cons _ v $ Nil _) $ u sl e wv ew)))
+  (let-match many (or (sp-eq prim $ SpExpr $ ExMintSettled) $ sp-eq prim $ SpExpr $ ExMintSettledErased) (BFalse)
+    ((BTrue)
+      (let ((many e2) (erased hl2) (many hp2) (erased sf2) (many v)) $ mint-answer e _ hp args)
+      (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e2 wv ew)))
   (let-match many (intern-syn _ hp prim args) (Some _ lit)
     ((None _)
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BError _ $ str-cat3 "`" (sp-name prim) "` has no implementation")

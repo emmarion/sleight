@@ -266,7 +266,7 @@
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
     (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
-    (many ExSettledType : -> (ExprK)) (many ExSettledErase : -> (ExprK)) (many ExResolve : -> (ExprK)) (many ExReadFile : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK))
+    (many ExSettledType : -> (ExprK)) (many ExSettledErase : -> (ExprK)) (many ExResolve : -> (ExprK)) (many ExReadFile : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)) (many ExMintSettled : -> (ExprK)) (many ExMintSettledErased : -> (ExprK))
     (many ExPlaceAt : -> (ExprK)) (many ExPlaceAtMany : -> (ExprK)) (many ExUnplaceAt : -> (ExprK)) (many ExUnplaceAtMany : -> (ExprK)) (many ExPlacedSlot : -> (ExprK)) (many ExPlacedEq : -> (ExprK)))
   ((MarkK : -> Type)
     enum
@@ -288,7 +288,7 @@
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
     ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
     ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35) ((ExSettledType) 36) ((ExSettledEq) 37) ((ExSettledErase) 38) ((ExResolve) 39) ((ExReadFile) 40)
-    ((ExPlaceAt) 41) ((ExPlaceAtMany) 42) ((ExUnplaceAt) 43) ((ExUnplaceAtMany) 44) ((ExPlacedSlot) 45) ((ExPlacedEq) 46)))
+    ((ExPlaceAt) 41) ((ExPlaceAtMany) 42) ((ExUnplaceAt) 43) ((ExUnplaceAtMany) 44) ((ExPlacedSlot) 45) ((ExPlacedEq) 46) ((ExMintSettled) 47) ((ExMintSettledErased) 48)))
 
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
@@ -335,7 +335,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
   sp-cons "place-at" (SpExpr $ ExPlaceAt) $ sp-cons "place-at-many" (SpExpr $ ExPlaceAtMany) $ sp-cons "unplace-at" (SpExpr $ ExUnplaceAt) $ sp-cons "unplace-at-many" (SpExpr $ ExUnplaceAtMany) $ sp-cons "placed-slot" (SpExpr $ ExPlacedSlot) $ sp-cons "placed-eq" (SpExpr $ ExPlacedEq) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
@@ -2244,15 +2244,16 @@
     (many MkUniqueState : (many (List $ Nat) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
       (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) (many (IdMap $ Nat) aliases) (many (Bool) extern-ok) -> (UniqueState))))
-; An interned literal: its entry, its Numeral proof where it has one, the spelling it reads back as, and the
-; declaration facts of its entries, entered again into the table of a scope that dropped them (env-discard).
+; An entry outside every scope: an interned literal, with its Numeral proof where it has one and the spelling
+; and node it reads back as, or a constant a macro minted, with neither; and the declaration facts of its
+; entries, entered again into the table of a scope that dropped them (env-discard).
 (def-adts
   ((LitFact : -> Type)
     enum
     (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) -> (LitFact)))
   ((LitEntry : -> Type)
     enum
-    (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) (many (Nat) ordinal) (many (Syn) node) -> (LitEntry))))
+    (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (Maybe $ Pair (String) (Syn)) lit) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
 
 (let ((many unique-empty)) (MkUniqueState (Nil _) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _) (BFalse)) (MEmpty _) (BFalse)))
 
@@ -2512,14 +2513,14 @@
     ((Cons _ x rest) (tail $ env-warn-all (env-warn e x) rest))))
 (def-fns _ $ (many lit-ordinal : (many (List $ LitEntry) lits) -> (many (Nat) r))
   (let-match many lits (Cons _ l _) ((Nil _) 0))
-  (match many l _ ((MkLitEntry _ _ _ _ o _) o)))
+  (match many l _ ((MkLitEntry _ _ _ _ o) o)))
 
 (def-fns _ $ (many lits-since : (subterm many (List $ LitEntry) lits) (many (Nat) bound) (many (List $ LitEntry) acc) -> (many (List $ LitEntry) r))
   (let-match many lits (Cons _ l rest) ((Nil _) acc))
   (match many (nat-lt bound $ lit-ordinal lits) _ ((BTrue) (tail $ lits-since rest bound $ Cons _ l acc)) ((BFalse) acc)))
 
-(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) (many (Syn) node) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk (Cons _ (MkLitEntry x proof spelling facts (Succ $ lit-ordinal lt) node) lt) lo pr us hn ex))))
+(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (Maybe $ Pair (String) (Syn)) lit) (many (List $ LitFact) facts) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk (Cons _ (MkLitEntry x proof lit facts (Succ $ lit-ordinal lt)) lt) lo pr us hn ex))))
 (def-fns _ $ (many env-set-scope : (many (Env) e) (many (Scope) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp _ en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp x en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) x) -> (many (Env) r))
@@ -2769,7 +2770,7 @@
 
 (def-fns _ $ (many reenter-lits : (subterm many (List $ LitEntry) lits) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many lits (Cons _ l rest) ((Nil _) (values n f tb)))
-  (let-match many l (MkLitEntry _ _ _ facts _ _))
+  (let-match many l (MkLitEntry _ _ _ facts _))
   (let ((erased n1) (erased f1) (many tb1)) $ reenter-facts facts _ _ bnd tb)
   (tail $ reenter-lits rest _ _ bnd tb1))
 
@@ -3088,11 +3089,20 @@
     ((Many) (match many demand _ ((Once) (Some _ "used at unique")) (else (None _))))
     ((Once) (match many demand _ ((Many) (Some _ "used at many without `share`")) (else (None _))))))
 
-(def-fns _ $ (many lit-spelling : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ String) r))
-  (let-match many ls (Cons _ l rest)
-    ((Nil _) (None _)))
-  (let-match many l (MkLitEntry y _ s _ _ _))
-  (match many (nat-eq x y) _ ((BTrue) (Some _ s)) ((BFalse) (tail $ lit-spelling rest x))))
+(def-fns _ $ (many lit-of : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Pair (String) (Syn)) r))
+  (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
+  (let-match many l (MkLitEntry y _ lit _ _))
+  (match many (nat-eq x y) _ ((BTrue) lit) ((BFalse) (tail $ lit-of rest x))))
+
+(def-fns _ $ (many spelling-of : (many (Maybe $ Pair (String) (Syn)) lit) -> (many (Maybe $ String) r))
+  (let-match many lit (Some _ p) ((None _) (None _)))
+  (match many p _ ((MkPair _ _ s _) (Some _ s))))
+
+(def-fns _ $ (many lit-entry-spelling : (many (LitEntry) l) -> (many (Maybe $ String) r))
+  (match many l _ ((MkLitEntry _ _ lit _ _) (spelling-of lit))))
+
+(def-fns _ $ (many lit-spelling : (many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ String) r))
+  (spelling-of $ lit-of ls x))
 
 (def-fns _ $ (many set-entry-mult : (many (Env) env) (many (Nat) x) (many (Multiplicity) mult) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))

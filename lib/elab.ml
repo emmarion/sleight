@@ -481,15 +481,14 @@ let rec intern env loc lit =
       record_literal { lit; lit_id = x; lit_proof; minted = List.concat_map (fun x -> List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]) own };
       env
 
-let literal_row y = match Hashtbl.find_opt literal_of y with Some r -> Some r | None -> Seq.find (fun r -> List.exists (fun (i, _, _) -> i = y) r.minted) (Hashtbl.to_seq_values literal_rows)
+let minted_row y = match Hashtbl.find_opt minted_rows y with Some r -> Some r | None -> Seq.find (List.exists (fun (i, _, _) -> i = y)) (Hashtbl.to_seq_values minted_rows)
 
 let rec enter_mentioned env t =
   fold_vars (fun _ env t -> match t with
     | Var y when y < 0 && not (IntMap.mem y env.facts) -> (
-        match literal_row y with
+        match minted_row y with
         | Some row ->
-            let env = List.fold_left (fun env (x, e, f) -> set_state { env with entries = IntMap.add x e env.entries; facts = IntMap.add x f env.facts } x e.state) env row.minted in
-            List.fold_left (fun env (_, _, (f : fact)) -> List.fold_left enter_mentioned env (f.ty :: Option.to_list f.rule)) env row.minted
+            List.fold_left (fun env (_, _, (f : fact)) -> List.fold_left enter_mentioned env (f.ty :: Option.to_list f.rule)) (admit env row) row
         | None -> env)
     | _ -> env) 0 env t
 
@@ -501,13 +500,15 @@ let lit_of = function
 let expansions = ref 0
 let sources : (string * string) list ref = ref []
 let gensyms = ref 0
-let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq ]
+let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
-let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased ]
 let literal_handle env lit =
   ignore (intern env Reader.nowhere lit);
   let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
   V.VHandle (x, MintedIs, Many, Hashtbl.find V.literal_values x)
+
+let denoted env x r = let f = minted_fact env x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ]
 
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
@@ -515,10 +516,16 @@ let implement env p args = match p, args with
       [ literal_handle env (match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v)) ]
   | Sp.SettledEq, [ _; V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
       let snap = List.fold_left enter_mentioned { env with facts = trusted env } [ Var x; Var y ] in
-      let denoted x r = let f = minted_fact snap x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ] in
-      let a = denoted x rx and b = denoted y ry in
+      let a = denoted snap x rx and b = denoted snap y ry in
       let snap = List.fold_left enter_mentioned snap (a @ b) in
       [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
+  | (Sp.MintSettled | Sp.MintSettledErased), _ :: V.VHandle (y, r, _, _) :: v ->
+      let env = enter_mentioned env (Var y) in
+      let ty = List.hd (denoted env y r) in
+      let mult, v = match v with [ v ] -> (Many, v) | _ -> (Erased, V.VToken) in
+      let x, env = bind (enter_mentioned env ty) ~literal:true None mult (Settled v) ty in
+      record_minted x (List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]);
+      [ V.VHandle (x, MintedIs, mult, v) ]
   | Sp.Resolve, [ _; s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
       [ (match Option.map (entry env) (lookup env name) with
@@ -558,7 +565,7 @@ let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
   | Atom (_, n), _ -> (env, var env l n)
-  | Handle (_, x, MintedIs, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> intern env l row.lit | None -> env), x)
+  | Handle (_, x, MintedIs, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> intern env l row.lit | None -> enter_mentioned env (Var x)), x)
   | Handle (_, x, MintedType, _, _), _ -> let t = (minted_fact env x).ty in let y, env = bind (enter_mentioned env t) None Erased (settled env V.VToken) ~rule:t type_term in (env, y)
   | _, Some lit -> let env = intern env l lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
@@ -1145,7 +1152,7 @@ let provable_predates env x lvl = (entry env lvl).minted_level && introduced env
 let prove_predates env l x lvl =
   let who y = if (entry env y).name = None then qshow env (Var y) else qname env y in
   if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (who lvl);
-  if introduced env x < 0 then error l "%s is a literal, which has no introduction order" (qname env x);
+  if introduced env x < 0 then error l "%s is %s, which has no introduction order" (qname env x) (if Hashtbl.mem literal_of x then "a literal" else "a constant a macro minted");
   if introduced env x >= introduced env lvl then error l "%s was not in scope when level %s was minted" (who x) (who lvl);
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 

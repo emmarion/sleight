@@ -1461,6 +1461,12 @@
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
+(def-prim $ (many mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)))
+
+(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)))
+
 (def-adts $ (Symbol : -> Type)
   enum
   (many SName : (many (String) s) -> (Symbol))

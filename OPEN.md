@@ -154,3 +154,21 @@ references are to DESIGN.md.
     expansion (DESIGN.md section 19) produced? Today one that the
     expansion gives a position is checked, and its warning points at
     that position, often the macro's call.
+
+## Minted constants
+
+33. Should an entry minted by `mint-settled` or `mint-settled-erased`
+    (`lib/prelude.sl`) have an introduction order (§5, §18), as the
+    result of a run-position `let` does, so that `prove-predates` could
+    relate it to a level created after it? For now it has none, as a
+    literal's entry has none.
+34. Should there be a `mint-settled-unique`, minting a `unique` value
+    into a constant reached through an `MUnique` handle? The owner's
+    tentative view is that this one-way direction is safe: minting
+    consumes the value, and no `settled-value` reads an `MUnique` handle
+    (§64). It would need use accounting for an entry that no scope
+    holds. Deferred.
+35. Should there be a `settled-apply`, applying a handle to a type
+    constructor to handles to its arguments and minting the application
+    as a type entry? A macro could then mint at a type such as `(List X)`
+    for a user's `X` that no `Settled` entry names yet. Deferred.

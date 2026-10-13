@@ -148,9 +148,10 @@ type literal = { lit : Literal.t; lit_id : id; lit_proof : id option; minted : (
 
 let literal_rows : (string, literal) Hashtbl.t = Hashtbl.create 64
 let literal_of : (id, literal) Hashtbl.t = Hashtbl.create 64
+let minted_rows : (id, (id * entry * fact) list) Hashtbl.t = Hashtbl.create 16
 let ladder : Value.value array ref = ref [||]
 let () = Reader.handle_name := fun x -> match Hashtbl.find_opt literal_of x, Hashtbl.find_opt names x with Some r, _ -> Literal.spell r.lit | None, Some n -> Literal.name n | None, None -> "_"
-let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset Value.literal_values; ladder := [||]
+let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset minted_rows; Hashtbl.reset Value.literal_values; ladder := [||]
 
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
 
@@ -175,17 +176,24 @@ let rec set_state ?minted env x state =
   | Settled v when e.slot <> x && IntMap.mem e.slot env.entries && (entry env e.slot).state = Hypothetical -> set_state env e.slot (Settled (if e.mult = Erased then Value.VToken else v))
   | _ -> env
 
+let record_minted x minted =
+  Hashtbl.replace minted_rows x minted;
+  List.iter (fun (x, e, _) -> match e.state with Settled v -> Hashtbl.replace Value.literal_values x v | Hypothetical -> ()) minted
+
 let record_literal row =
   Hashtbl.replace literal_rows (Literal.key row.lit) row;
   Hashtbl.replace literal_of row.lit_id row;
-  List.iter (fun (x, e, _) -> match e.state with Settled v -> Hashtbl.replace Value.literal_values x v | Hypothetical -> ()) row.minted
+  record_minted row.lit_id row.minted
 
-let enter env row =
-  if IntMap.mem row.lit_id env.entries then env
-  else List.fold_left (fun env (x, e, f) -> set_state { env with entries = IntMap.add x e env.entries; facts = IntMap.add x f env.facts } x e.state) env row.minted
+let admit env minted = List.fold_left (fun env (x, e, f) -> set_state { env with entries = IntMap.add x e env.entries; facts = IntMap.add x f env.facts } x e.state) env minted
 
-let present_literals env = List.of_seq (Seq.filter_map (fun (x, _) -> Hashtbl.find_opt literal_of x) (Seq.take_while (fun (x, _) -> x < 0) (IntMap.to_seq env.entries)))
-let carry outer inner = List.fold_left enter outer (present_literals inner)
+let enter_row env x = match Hashtbl.find_opt minted_rows x with Some minted when not (IntMap.mem x env.entries) -> admit env minted | _ -> env
+
+let enter env row = enter_row env row.lit_id
+
+let outside env = Seq.take_while (fun (x, _) -> x < 0) (IntMap.to_seq env.entries)
+let present_literals env = List.of_seq (Seq.filter_map (fun (x, _) -> Hashtbl.find_opt literal_of x) (outside env))
+let carry outer inner = Seq.fold_left (fun env (x, _) -> enter_row env x) outer (outside inner)
 
 let trusted env = if env.run_pos then env.facts else env.trusted
 let leave_run env = { env with run_pos = false; trusted = trusted env }
