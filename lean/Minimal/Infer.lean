@@ -51,7 +51,7 @@ partial def Metas.openTm (m : Metas) (t : Tm) (A : Option Tm) : Except String (M
   | t => .ok (m.expect P t A, t)
 
 partial def Metas.openArgs (m : Metas) : List Tm → Tm → Except String (Metas × List Tm × Tm)
-  | a :: as, .bind (.is _ _) e r => do
+  | a :: as, .bind (.is ..) e r => do
     let a := if a.isHole then e else a
     let (m, as, out) ← m.openArgs as (r.inst a 0)
     .ok ({ m with eqs := (a, e) :: m.eqs }, a :: as, out)
@@ -108,7 +108,7 @@ partial def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := 
   match t with
   | .valCtor sig => return .valCtor (← inferTele Γ sig)
   | .tyCtor ps => return .tyCtor (← inferTele Γ ps)
-  | .fn l np tele => return .fn l np (← inferTele Γ tele)
+  | .fn l np tele u => return .fn l np (← inferTele Γ tele) u
   | t =>
     let (m, t) ← ({ Γ, base := Γ.n } : Metas).openTm P t A
     let [t] ← m.fill P [t] | .error "cannot infer `_`"
@@ -154,7 +154,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
   | .call f dec args er ms ve rest => do
     let ty := match checkTm P Γ f with
       | .ok ⟨Ft, _⟩ => match Γ.canon Ft with
-        | .fn _ _ t => some t
+        | .fn _ _ t _ => some t
         | _ => none
       | .error _ => none
     let some t := ty | return .call f dec args er ms ve rest
@@ -182,8 +182,6 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       | .coerce a b q =>
         match coerOf q with
         | some (sa, _, _, sb, _, b') =>
-          if !er && (Γ.canon sa != sharedTm || Γ.canon sb != sharedTm) then
-            throw "coerce: a `(Unique)` side uses its value at unique, which is not supported"
           pure (.coerce a (if b.isHole then b' else b) q)
         | none => pure p
       | .coerRefl s e => pure (.coerRefl (expSide s) e)
@@ -249,7 +247,7 @@ where
 def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
   | .call f dec args er ms ve rest => do
     let ⟨Ft, _⟩ ← (checkTm P Γ f).toOption
-    let .fn _ _ t := Γ.canon Ft | none
+    let .fn _ _ t _ := Γ.canon Ft | none
     let ⟨outs, _⟩ ← (checkArgs P Γ args t).toOption
     some (Γ.pushTele outs (some (ms.map (er || ·))), rest, fun (r : Core) => .call f dec args er ms ve r)
   | .mtch s R brs els er rest =>

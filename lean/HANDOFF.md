@@ -9,18 +9,19 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 119 tests were
-accepted with OCaml's value, none mismatched, 272 refusals agreed, and
-170 + 213 were refused as unsupported. No test the OCaml suite
-refuses is accepted. Of the tests it accepts, five are refused (four
-need cells, and `thunk_extern_first_class.sl`) and two time out at ten
-seconds: `comptime_tail.sl` finishes in about a minute, and
+the test expects and the runner's. At the last run 138 tests were
+accepted with OCaml's value, none mismatched, 312 refusals agreed, and
+155 + 173 were refused as unsupported. No test the OCaml suite
+refuses is accepted. Of the tests it accepts, one is refused
+(`thunk_extern_first_class.sl`) and two time out at ten seconds:
+`comptime_tail.sl` finishes in about a minute, and
 `extern_tail.sl` ran out of memory on this session's machine.
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
 `--full` on every prefix.
 
+`unique` is done, checked by the elaborator (`lean/README.md`).
 `delegate-of`, `coercible-of` and the `Delegate` type are done, with the
 stripped run passing only non-erased arguments and results and binding a
 delegate to its target (`lean/README.md`). One consequence for the
@@ -33,9 +34,13 @@ before checking, and the checker requires it.
 
 1. **A signature that mentions an earlier function of its block** other
    than through `level-of` (section 53), and `delegate-of` in a type.
-2. **`unique`** (sections 13, 15, 16, 32): about 170 tests stop at it.
-   Without it, a non-erased `coerce` needs `(Shared)` on both sides,
-   which inference enforces.
+2. **`at`, slots and cells** (sections 35 to 41 and 66), now the
+   largest gap: the `unique` tests that remain unsupported stop at them,
+   and so do `Program` (its continuation returns the world `at` the one
+   it took), arrays and macros (`MacroWorld`). Like `unique`, they
+   change nothing in an immutable run, which suggests checking them in
+   the elaborator; but slot facts come from forcing too (section 36's
+   writers), which the elaborator does not do. Not started.
 3. **A type whose `def-adts` mentions top-level entries is not first
    class** (`String` passed as a value, `StrLt` as `Cmp`'s order). Its
    mentions are lifted into leading parameters, and the core has no
@@ -57,4 +62,4 @@ before checking, and the checker requires it.
    without looking, and `BranchOK.fixedOut` is refused.
 8. `dump-context` shows a type only where the elaborator knows it, which
    is not the case for a `let` binder written without one.
-9. Macros, `def-unique`, slots, `at` and cells, as before.
+9. Macros and handles (sections 62 to 65), which need `at` for `MacroWorld`.

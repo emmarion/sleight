@@ -90,6 +90,10 @@ examples/top_statement.sl:
 examples/type_in_type.sl: (MkBox _ _)
 examples/union.sl: 4
 examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
+examples/unique.sl: 3
+examples/unique_fn_shared_bad.sl: error: a value not declared `unique` is used at unique
+examples/unique_many_bad.sl: error: a unique value is used at many without `share`
+examples/unique_twice_bad.sl: error: a unique value has conflicting non-erased uses: it is already used at unique
 examples/unopened_bad.sl: error: C has no Matchable open
 examples/valctor_return.sl: (MkBox _ 1)
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
@@ -140,6 +144,9 @@ unchecked examples/phantom_ctor_bad.sl: (Hidden _)
 unchecked examples/refuted_branch_bad.sl: 0
 unchecked examples/tail_bad.sl: error: tail: the call is not in tail position
 unchecked examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
+unchecked examples/unique_fn_shared_bad.sl: error: a value not declared `unique` is used at unique
+unchecked examples/unique_many_bad.sl: error: a unique value is used at many without `share`
+unchecked examples/unique_twice_bad.sl: error: a unique value has conflicting non-erased uses: it is already used at unique
 unchecked examples/unopened_bad.sl: error: C has no Matchable open
 unchecked examples/valctor_return_bad.sl: 0
 full examples/absurd.sl: 1
@@ -188,5 +195,6 @@ full examples/tail.sl: 4
 full examples/top_statement.sl: 
 full examples/type_in_type.sl: (MkBox _ _)
 full examples/union.sl: 4
+full examples/unique.sl: 3
 full examples/valctor_return.sl: (MkBox _ 1)
 full examples/vec_head.sl: 1

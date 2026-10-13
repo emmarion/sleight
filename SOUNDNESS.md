@@ -314,6 +314,8 @@ on Lean's three standard axioms:
 - (C) only in part: `checkProg` is total, but the reader, the elaborator
   and `Infer.lean` are outside the proof.
 
-Outside the fragment, so argued above at most: `unique`, cells, `at`,
-slots, at-functions and at-matches, macros, and the FFI's
-implementations of extern functions (`lean/` runs their models).
+Outside the fragment, so argued above at most: what `unique` promises
+(`lean/` reads a `unique` entry as a non-erased one, as part 3 does, and
+checks its uses in the elaborator alone), cells, `at`, slots,
+at-functions and at-matches, macros, and the FFI's implementations of
+extern functions (`lean/` runs their models).

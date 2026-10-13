@@ -13,7 +13,7 @@ def kids : Tm → List Tm
   | tyCtor p | valCtor p => [p]
   | predates A x L => [A, x, L]
   | subterm A a B b => [A, a, B, b]
-  | fn l _ t => [l, t]
+  | fn l _ t _ => [l, t]
   | mtbl _ _ _ _ T cs => [T, cs]
   | _ => []
 
@@ -26,7 +26,7 @@ def sameHead : Tm → Tm → Bool
   | cons .., cons .. | predates .., predates .. | subterm .., subterm .. => true
   | bind m .., bind m' .. => m == m'
   | app .., app .. | tyCtor _, tyCtor _ | valCtor _, valCtor _ => true
-  | fn _ np _, fn _ np' _ => np == np'
+  | fn _ np _ u, fn _ np' _ u' => np == np' && u == u'
   | mtbl u nt ex ph _ _, mtbl u' nt' ex' ph' _ _ => u == u' && nt == nt' && ex == ex' && ph == ph'
   | a, b => a == b
 

@@ -10,7 +10,7 @@ def need (b : Prop) [Decidable b] (msg : String) : Res (PLift b) :=
   if h : b then .ok ⟨h⟩ else .error msg
 
 def retOf : Tm → Option Tm
-  | .bind (.ty _ _) R .nil => some R
+  | .bind (.ty ..) R .nil => some R
   | .bind _ _ r => retOf r
   | _ => none
 
@@ -52,7 +52,7 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     | .valCtor sig => do
       let ⟨out, ha⟩ ← checkArgs' Γ rules args sig
       match out, ha with
-      | .bind (.ty _ _) T .nil, ha => .ok ⟨T, .vcApp hh hH ha⟩
+      | .bind (.ty ..) T .nil, ha => .ok ⟨T, .vcApp hh hH ha⟩
       | _, _ => .error "constructor applied to the wrong number of arguments"
     | _ => .error "applied a head that is not a constructor"
   | .tyCtor ps => do
@@ -82,12 +82,12 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     let ⟨B', hb⟩ ← checkTm' Γ rules b
     let ⟨hB'⟩ ← need (Γ.canon B' = Γ.canon B) "Subterm: term not of the type"
     .ok ⟨.univ, .subterm hA hU ha hA' hB hV hb hB'⟩
-  | .fn l np t => do
+  | .fn l np t uf => do
     let ⟨K, hl⟩ ← checkTm' Γ rules l
     let ⟨hK⟩ ← need (Γ.canon K = .level) "Fn: not a level"
     let ⟨ht⟩ ← checkTele' Γ rules t
     let ⟨hn⟩ ← need (np ≤ t.len) "Fn: more parameters than entries"
-    let ⟨hs⟩ ← need ((Tm.fn l np t).static Γ.n 0) "Fn: not well scoped"
+    let ⟨hs⟩ ← need ((Tm.fn l np t uf).static Γ.n 0) "Fn: not well scoped"
     .ok ⟨.univ, .fn hl hK ht hn hs⟩
   | .mtbl u nt ex ph T cs => do
     let ⟨hs⟩ ← need ((Tm.mtbl u nt ex ph T cs).static Γ.n 0) "Matchable: not well scoped"
@@ -98,16 +98,16 @@ decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size
 
 def checkArgs' (Γ : Ctx) (rules : Bool) : (args tele : Tm) → Res {out // ArgsTy P Γ args tele out}
   | .nil, t => .ok ⟨t, .nil⟩
-  | .cons a as, .bind (.ty _ _) .nil r => do
+  | .cons a as, .bind (.ty ..) .nil r => do
     let ⟨_, ha⟩ ← checkTm' Γ rules a
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
     .ok ⟨out, .anyCons ha hr⟩
-  | .cons a as, .bind (.ty _ _) A r => do
+  | .cons a as, .bind (.ty ..) A r => do
     let ⟨T, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon T = Γ.canon A) "argument of the wrong type"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
     .ok ⟨out, .cons ha h hr⟩
-  | .cons a as, .bind (.is _ _) e r => do
+  | .cons a as, .bind (.is ..) e r => do
     let ⟨_, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "argument not the term its is entry names"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
@@ -118,14 +118,14 @@ decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size
 
 def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ t))
   | .nil => .ok ⟨.nil⟩
-  | .bind (.ty _ _) A r => do
+  | .bind (.ty ..) A r => do
     let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "telescope entry not a type"
     let ⟨hr⟩ ← checkTele' (Γ.push A) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.cons hA hU hr⟩
-  | .bind (.is _ _) e r => do
+  | .bind (.is ..) e r => do
     let ⟨_, he⟩ ← checkTm' Γ rules e
-    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false) e) rules (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false false) e) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
 termination_by t => (rules.toNat, t.size)
@@ -366,7 +366,12 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨T0, ha⟩ ← checkTm P Γ (.app C args)
     let ⟨k, hwk⟩ ← wrapOf P Γ C
     let ⟨_, hf⟩ ← checkTm P Γ (args.toList.getD k .nil)
-    .ok ⟨_, .coerWrap hs ha hwk hf hD hc⟩
+    let fu : Bool := match Γ.canon C with
+      | .vc d c => ((P.ctor d c).map (·.uAt k)).getD false
+      | C' => match (checkTm P Γ C').toOption with
+        | some ⟨K, _⟩ => match Γ.canon K with | .valCtor sig => sig.uAt k | _ => false
+        | none => false
+    if fu then .ok ⟨_, .coerWrap hs ha hwk hf hD hc (.inr rfl)⟩ else .ok ⟨_, .coerWrap hs ha hwk hf hD hc (.inl rfl)⟩
   | .coerCtor s C srcs tgts ps => do
     let ⟨(dC, D), hD, hc⟩ ← coerAdt P
     let ⟨_, hs⟩ ← checkTm P Γ s
@@ -388,8 +393,9 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
             | some ⟨(sa, A, x, sb, B, y), e⟩ => do
               let ⟨hx⟩ ← need (Γ.canon x = Γ.canon (srcs.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its source"
               let ⟨hy⟩ ← need (Γ.canon y = Γ.canon (tgts.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its target"
-              let ⟨_⟩ ← need (Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)
-                "coercible-ctor: the proof for a many field is `(Shared)` on both sides"
+              let ⟨_⟩ ← need (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
+                  else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)
+                "coercible-ctor: the proof for a field has its sides: `(Shared)` for a many field, the form's own for a unique one"
               .ok ⟨fun _ _ => ⟨p, Pt, sa, A, x, sb, B, y, rfl, hpt, e, hx, hy⟩⟩
             | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased field"
           | none => .error "coercible-ctor: a non-erased field has no proof"
@@ -498,11 +504,11 @@ def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .n
     have hR1 := Tm.static_mono (Nat.le_refl n) R (Nat.zero_le 1) hR
     if hs : (Γ.canon T).static 0 0 then
       have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
-      .ok ⟨.bind (.ty false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr),
+      .ok ⟨.bind (.ty false false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr),
         by simp [Tm.static, Tm.static_mono (Nat.zero_le n) _ (Nat.le_refl 0) hs, hR1]⟩
     else if hs : T.static n 0 then
-      .ok ⟨.bind (.ty false false) T R, .cons ha rfl (by rw [hi]; exact hr), by simp [Tm.static, hs, hR1]⟩
-    else .ok ⟨.bind (.ty false false) .nil R, .anyCons ha (by rw [hi]; exact hr), by simp [Tm.static, hR1]⟩
+      .ok ⟨.bind (.ty false false false) T R, .cons ha rfl (by rw [hi]; exact hr), by simp [Tm.static, hs, hR1]⟩
+    else .ok ⟨.bind (.ty false false false) .nil R, .anyCons ha (by rw [hi]; exact hr), by simp [Tm.static, hR1]⟩
   | _ => .error "not a list of results"
 
 def retTele (Γ : Ctx) (ts : List Tm) (hid : Nat) : Option Tm := do
@@ -513,7 +519,7 @@ def retTele (Γ : Ctx) (ts : List Tm) (hid : Nat) : Option Tm := do
     ((List.range j).foldl (fun (T : Tm) i => match ts[i]? with
       | some (Tm.fv x) => T.close x (j - 1 - i)
       | _ => T) T, decide (j < hid))
-  some (ents.foldr (fun (T, e) r => .bind (.ty false e) T r) .nil)
+  some (ents.foldr (fun (T, e) r => .bind (.ty false e false) T r) .nil)
 
 mutual
 def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
@@ -553,7 +559,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .call f dec args er ms ve rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
-    | .fn l np t => do
+    | .fn l np t _ => do
       let ⟨ht⟩ ← need (t.isTele) "not a telescope"
       let ⟨outs, ha⟩ ← checkArgs P Γ args t
       let ⟨hn⟩ ← need (args.len = np) "wrong number of arguments"

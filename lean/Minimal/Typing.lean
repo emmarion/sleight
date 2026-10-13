@@ -38,8 +38,8 @@ def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | _ => Γ.push T er
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
-  | .ty _ e, A => Γ.push A e
-  | .is _ e, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
+  | .ty _ e _, A => Γ.push A e
+  | .is _ e _, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
 
 def openTele : Ctx → Tm → Nat → Ctx × Tm
   | Γ, .bind k A r, m + 1 => (Γ.pushEnt k A).openTele (r.inst (.fv Γ.n) 0) m
@@ -129,8 +129,8 @@ def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :
 def Ctx.fixedEnv (Γ : Ctx) (i : Nat) : Tm := (Γ.fixed[i]?.join).getD .nil
 
 def fieldsSimple (S : List Nat) : Tm → Bool
-  | .bind (.ty _ false) (.app (.tyc d) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
-  | .bind (.ty _ false) _ .nil => true
+  | .bind (.ty _ false _) (.app (.tyc d) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
+  | .bind (.ty _ false _) _ .nil => true
   | _ => false
 
 def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
@@ -211,7 +211,7 @@ def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
   match rem with
-  | .bind (.ty _ _) R .nil =>
+  | .bind (.ty ..) R .nil =>
     (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)])
   | _ => (Γf, .unknown)
 
@@ -249,7 +249,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | tyc : P.adts[d]? = some D → TmTy Γ (.tyc d) (.tyCtor D.params)
   | vc : P.ctor d c = some sig → TmTy Γ (.vc d c) (.valCtor sig)
   | tyApp : TmTy Γ h H → Γ.canon H = .tyCtor ps → ArgsTy Γ args ps .nil → TmTy Γ (.app h args) .univ
-  | vcApp : TmTy Γ h H → Γ.canon H = .valCtor sig → ArgsTy Γ args sig (.bind (.ty m e) T .nil) →
+  | vcApp : TmTy Γ h H → Γ.canon H = .valCtor sig → ArgsTy Γ args sig (.bind (.ty m e u) T .nil) →
       TmTy Γ (.app h args) T
   | tyCtor : TeleOK Γ ps → (Tm.tyCtor ps).static Γ.n 0 → TmTy Γ (.tyCtor ps) .univ
   | valCtor : TeleOK Γ sig → (Tm.valCtor sig).static Γ.n 0 → sig.valRet 0 → TmTy Γ (.valCtor sig) .univ
@@ -259,22 +259,22 @@ inductive TmTy : Ctx → Tm → Tm → Prop
       TmTy Γ B V → Γ.canon V = .univ → TmTy Γ b B' → Γ.canon B' = Γ.canon B →
       TmTy Γ (.subterm A a B b) .univ
   | fn : TmTy Γ l K → Γ.canon K = .level → TeleOK Γ t → np ≤ t.len →
-      (Tm.fn l np t).static Γ.n 0 → TmTy Γ (.fn l np t) .univ
+      (Tm.fn l np t u).static Γ.n 0 → TmTy Γ (.fn l np t u) .univ
   | mtbl : (Tm.mtbl u nt ex ph T cs).static Γ.n 0 → TmTy Γ (.mtbl u nt ex ph T cs) .univ
 
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | nil : ArgsTy Γ .nil t t
   | cons : TmTy Γ a T → Γ.canon T = Γ.canon A → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind (.ty m e) A r) out
+      ArgsTy Γ (.cons a as) (.bind (.ty m e u) A r) out
   | isCons : TmTy Γ a T → Γ.canon a = Γ.canon e → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind (.is _ _) e r) out
-  | anyCons : TmTy Γ a T → ArgsTy Γ as (r.inst a 0) out → ArgsTy Γ (.cons a as) (.bind (.ty m e) .nil r) out
+      ArgsTy Γ (.cons a as) (.bind (.is ..) e r) out
+  | anyCons : TmTy Γ a T → ArgsTy Γ as (r.inst a 0) out → ArgsTy Γ (.cons a as) (.bind (.ty m e u) .nil r) out
 
 inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
-      TeleOK Γ (.bind (.ty m e) A r)
-  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is _ _) e r)
+      TeleOK Γ (.bind (.ty m e u) A r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is ..) e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
@@ -326,7 +326,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | coerRefl : TmTy P Γ s S → TmTy P Γ e E → P.adts[dC]? = some D → D.coercible = true →
       PrimTy Γ (.coerRefl s e) (Tm.coer dC s E e s E e)
   | deleOf : (g, t) ∈ Γ.deles → Γ.tys[g]? = some Tg → Γ.tys[t]? = some Tt → P.adts[dD]? = some D →
-      D.coercible = true → PrimTy Γ (.deleOf g t) (Tm.coer dD sharedTm Tg (.fv g) sharedTm Tt (.fv t))
+      D.coercible = true → PrimTy Γ (.deleOf g t) (Tm.coer dD (fnSide (Γ.canon Tg)) Tg (.fv g) (fnSide (Γ.canon Tt)) Tt (.fv t))
   | coerOf : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dD sa A a sb B b → P.adts[dD]? = some D → D.coercible = true →
       P.adts[dC]? = some C → C.coercible = true → PrimTy Γ (.coerOf p) (Tm.coer dC sa A a sb B b)
   | coerSym : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
@@ -337,8 +337,8 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | coerShare : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
       PrimTy Γ (.coerShare p) (Tm.coer dC sharedTm A a sharedTm B b)
   | coerWrap : TmTy P Γ s S → TmTy P Γ (.app C args) T0 → WrapOK P Γ C k →
-      TmTy P Γ (args.toList.getD k .nil) F → P.adts[dC]? = some D → D.coercible = true →
-      PrimTy Γ (.coerWrap s C args) (Tm.coer dC sharedTm F (args.toList.getD k .nil) s T0 (.app C args))
+      TmTy P Γ (args.toList.getD k .nil) F → P.adts[dC]? = some D → D.coercible = true → (src = sharedTm ∨ src = s) →
+      PrimTy Γ (.coerWrap s C args) (Tm.coer dC src F (args.toList.getD k .nil) s T0 (.app C args))
   | coerCtor : TmTy P Γ s S → TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → TmTy P Γ (.app C srcs) Ts →
       TmTy P Γ (.app C tgts) Tt → srcs.len = tgts.len →
       (∀ j < srcs.len, sig.ers.getD j true = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
@@ -400,7 +400,7 @@ def Group.deleOK (G : Group) (n : Nat) : Bool :=
 mutual
 inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | ret : ArgsTy P Γ ts rets .nil → Γ.ok (rtArgs P Γ ts rets) → CoreTy b Γ (.ret ts) rets
-  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t → t.isTele → ArgsTy P Γ args t outs → args.len = np →
+  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t uf → t.isTele → ArgsTy P Γ args t outs → args.len = np →
       DecOK P Γ dec l t args → outs.len = ms.length →
       (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) → ve = some t.ers →
       CoreTy b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)) rest rets →

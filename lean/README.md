@@ -156,7 +156,7 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
-refused as not supported: `unique`; an `at` mark on a `def-fns` line;
+refused as not supported: an `at` mark on a `def-fns` line;
 and every form not named in this file, among them macros, cells and
 `at`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
@@ -197,9 +197,9 @@ it is `Settled`, and its `is` rule.
 
 ## Beyond MINIMAL.md
 
-- Multiplicities (DESIGN.md sections 13 and 14), `erased` and `many`,
-  on telescope entries, `let` binders, a `match`'s mode, a `def-fns`
-  function and a `def-adts` constructor. A non-erased position may not mention an erased entry: the callee and
+- Multiplicities (DESIGN.md sections 13 and 14), `erased`, `many` and
+  `unique`, on telescope entries, `let` binders, a `match`'s mode, a
+  `def-fns` or `def-unique` function and a `def-adts` constructor. A non-erased position may not mention an erased entry: the callee and
   the arguments for non-erased parameters of a non-erased call, the
   scrutinee of a non-erased match, a non-erased result, a non-erased
   `let` binder; a field of a constructor is a non-erased position
@@ -207,8 +207,7 @@ it is `Settled`, and its `is` rule.
   `erased` match and the body of an `erased` function are erased
   throughout. A constructor declared `erased` is phantom (DESIGN.md
   section 21): only an erased position may build or hold it, and its
-  branch under a non-erased match is erased throughout. What this omits
-  from the full language: `unique`. An `erased` match whose results
+  branch under a non-erased match is erased throughout. An `erased` match whose results
   are not all erased is elaborated to `seq R (case ...) rest`, a match
   with one real branch that the stripped run takes without looking at
   the scrutinee; one whose results are all erased is erased throughout. A type, a type constructor, a level and a proof are erased by
@@ -283,12 +282,32 @@ it is `Settled`, and its `is` rule.
   when it stands for `b`. Each proof form is a primitive whose typing
   rule establishes that (`prim_sound`). `(coerce a p)` is, in the full
   run, `b`, read from the type of `p` by inference, and in the stripped
-  run the value of `a`; it has the rule that it is `b`. Without `unique`,
-  a non-erased `coerce` needs `(Shared)` on both sides, which inference,
-  not the checker, enforces. `coercible-wrap` takes a constructor named
+  run the value of `a`; it has the rule that it is `b`. It uses `a` at
+  the multiplicity of its source side and yields its result at that of
+  its target side (section 34). `coercible-wrap` takes a constructor named
   by its declaration or listed by an opened `newtype` `Matchable`, and
   `coercible-ctor` any constructor whose signature is written out, a
   first-class one included.
+- `unique` (sections 13 to 16, 22, 23 and 32). In the core a `unique`
+  entry is a non-erased one that carries the mark in its telescope
+  entry, so a type tells `unique` from `many`, and a stripped value
+  stands for a full one as for `many`: `lean/` has no cells and no
+  in-place update, so a run never relies on a value having one
+  reference. The elaborator checks the uses: on each path a `unique`
+  entry has one non-erased use at unique or any number of uses through
+  `share`, never both, a match joining its branches; a `unique` value
+  in a `many` position needs `(share e)`; a value made `many` is not
+  used at unique; a destructure gives its fields by the table of
+  section 22; a `def-fns` body uses a `unique` entry of its scope only
+  erased or through `share`. `(def-unique L $ (unique f : ...) body)`
+  defines one function of the former `(UniqueFn L ... -> ...)`, which
+  the core marks on its `Fn` type, born `unique`; its body may use a
+  `unique` entry of its scope at unique, and its own name is not in
+  scope in its body; a call through a head of `UniqueFn` type uses the
+  head at unique, so a shared one is callable only erased.
+  `coercible-wrap` and `coercible-ctor` give a `unique` field its
+  proof's own side, and `delegate-of` gives a `UniqueFn` side
+  `(Unique)`.
 - A non-erased match on a `newtype` is elaborated to a `case` marked
   `nt`, which the stripped run takes without looking at the scrutinee,
   with the scrutinee's value as the one non-erased field; the checker
@@ -470,3 +489,11 @@ it is `Settled`, and its `is` rule.
   the delegate's body when the only stripped value at hand stood for
   its target; without the second, `Real.dele` could not relate a
   stripped value to the delegate in both directions.
+- `unique` is checked by the elaborator alone, which the proofs do not
+  cover: with no cells and no in-place update in `lean/`, the soundness
+  theorems need nothing from it. A `let` binder of a `unique` entry, or
+  a `unique` binder, is an entry of its own that is the right-hand side,
+  so that its uses are counted apart from those the right-hand side
+  made. Where the elaborator cannot read a `coerce`'s side off the type
+  of its proof, it takes the source side to be the source's own
+  multiplicity and the target side to be what the position asks for.

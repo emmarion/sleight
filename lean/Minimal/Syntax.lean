@@ -1,16 +1,19 @@
 namespace Minimal
 
 inductive Ent where
-  | ty (mark er : Bool)
-  | is (mark er : Bool)
+  | ty (mark er u : Bool)
+  | is (mark er u : Bool)
   deriving DecidableEq, Repr, Inhabited
 
 def Ent.marked : Ent → Bool
-  | ty m _ => m
-  | is m _ => m
+  | ty m _ _ => m
+  | is m _ _ => m
 
 def Ent.er : Ent → Bool
-  | ty _ e | is _ e => e
+  | ty _ e _ | is _ e _ => e
+
+def Ent.u : Ent → Bool
+  | ty _ _ u | is _ _ u => u
 
 inductive Tm where
   | fv (i : Nat)
@@ -27,7 +30,7 @@ inductive Tm where
   | level
   | predates (A x L : Tm)
   | subterm (A a B b : Tm)
-  | fn (l : Tm) (np : Nat) (tele : Tm)
+  | fn (l : Tm) (np : Nat) (tele : Tm) (u : Bool)
   | mtbl (u nt ex : Bool) (ph : List Bool) (T cs : Tm)
   | lvl (n : Nat)
   | tok
@@ -45,7 +48,7 @@ def subst (f : Nat → Tm) : Tm → Tm
   | valCtor p => valCtor (p.subst f)
   | predates A x L => predates (A.subst f) (x.subst f) (L.subst f)
   | subterm A a B b => subterm (A.subst f) (a.subst f) (B.subst f) (b.subst f)
-  | fn l np t => fn (l.subst f) np (t.subst f)
+  | fn l np t uf => fn (l.subst f) np (t.subst f) uf
   | mtbl u nt ex ph T cs => mtbl u nt ex ph (T.subst f) (cs.subst f)
   | t => t
 
@@ -58,7 +61,7 @@ def inst : Tm → Tm → Nat → Tm
   | valCtor p, u, k => valCtor (p.inst u k)
   | predates A x L, u, k => predates (A.inst u k) (x.inst u k) (L.inst u k)
   | subterm A a B b, u, k => subterm (A.inst u k) (a.inst u k) (B.inst u k) (b.inst u k)
-  | fn l np t, u, k => fn (l.inst u k) np (t.inst u k)
+  | fn l np t uf, u, k => fn (l.inst u k) np (t.inst u k) uf
   | mtbl a nt ex ph T cs, u, k => mtbl a nt ex ph (T.inst u k) (cs.inst u k)
   | t, _, _ => t
 
@@ -69,7 +72,7 @@ def size : Tm → Nat
   | tyCtor p | valCtor p => p.size + 1
   | predates A x L => A.size + x.size + L.size + 1
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
-  | fn l _ t => l.size + t.size + 1
+  | fn l _ t _ => l.size + t.size + 1
   | mtbl _ _ _ _ T cs => T.size + cs.size + 1
   | _ => 1
 
@@ -81,7 +84,7 @@ def levels : Tm → List Nat
   | tyCtor p | valCtor p => p.levels
   | predates A x L => A.levels ++ x.levels ++ L.levels
   | subterm A a B b => A.levels ++ a.levels ++ B.levels ++ b.levels
-  | fn l _ t => l.levels ++ t.levels
+  | fn l _ t _ => l.levels ++ t.levels
   | mtbl _ _ _ _ T cs => T.levels ++ cs.levels
   | clo e _ _ => e.levels
   | _ => []
@@ -95,7 +98,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, tyCtor p | d, valCtor p => p.static n d
   | d, predates A x L => A.static n d && x.static n d && L.static n d
   | d, subterm A a B b => A.static n d && a.static n d && B.static n d && b.static n d
-  | d, fn l _ t => l.static n d && t.static n d
+  | d, fn l _ t _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level | _, tyc _ | _, vc .. => true
   | _, lvl _ | _, tok | _, clo .. => false
@@ -108,7 +111,7 @@ def bound : Nat → Tm → Bool
   | d, tyCtor p | d, valCtor p => p.bound d
   | d, predates A x L => A.bound d && x.bound d && L.bound d
   | d, subterm A a B b => A.bound d && a.bound d && B.bound d && b.bound d
-  | d, fn l _ t => l.bound d && t.bound d
+  | d, fn l _ t _ => l.bound d && t.bound d
   | d, mtbl _ _ _ _ T cs => T.bound d && cs.bound d
   | _, _ => true
 
@@ -121,7 +124,7 @@ def lc : Nat → Tm → Prop
   | d, tyCtor p | d, valCtor p => p.lc d
   | d, predates A x L => A.lc d ∧ x.lc d ∧ L.lc d
   | d, subterm A a B b => A.lc d ∧ a.lc d ∧ B.lc d ∧ b.lc d
-  | d, fn l _ t => l.lc d ∧ t.lc d
+  | d, fn l _ t _ => l.lc d ∧ t.lc d
   | d, mtbl _ _ _ _ T cs => T.lc d ∧ cs.lc d
   | _, _ => True
 
@@ -133,7 +136,7 @@ def fvs : Tm → List Nat
   | tyCtor p | valCtor p => p.fvs
   | predates A x L => A.fvs ++ x.fvs ++ L.fvs
   | subterm A a B b => A.fvs ++ a.fvs ++ B.fvs ++ b.fvs
-  | fn l _ t => l.fvs ++ t.fvs
+  | fn l _ t _ => l.fvs ++ t.fvs
   | mtbl _ _ _ _ T cs => T.fvs ++ cs.fvs
   | _ => []
 
@@ -163,6 +166,11 @@ def len : Tm → Nat
   | cons _ t | bind _ _ t => t.len + 1
   | _ => 0
 
+def uAt : Tm → Nat → Bool
+  | bind k _ _, 0 => k.u
+  | bind _ _ r, n + 1 => r.uAt n
+  | _, _ => false
+
 def ers : Tm → List Bool
   | bind k _ r => k.er :: r.ers
   | _ => []
@@ -187,8 +195,8 @@ def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i nil
 
 def valRet : Tm → Nat → Bool
   | bind _ _ r@(bind ..), n => r.valRet (n + 1)
-  | bind (.ty _ _) (app (tyc _) _) nil, _ | bind (.ty _ _) (app (fv _) _) nil, _ => true
-  | bind (.ty _ _) (app (bv k) _) nil, n => n ≤ k
+  | bind (.ty ..) (app (tyc _) _) nil, _ | bind (.ty ..) (app (fv _) _) nil, _ => true
+  | bind (.ty ..) (app (bv k) _) nil, n => n ≤ k
   | _, _ => false
 
 end Tm
@@ -206,7 +214,7 @@ def Tm.close (i : Nat) : Nat → Tm → Tm
   | k, .valCtor p => .valCtor (p.close i k)
   | k, .predates A x L => .predates (A.close i k) (x.close i k) (L.close i k)
   | k, .subterm A a B b => .subterm (A.close i k) (a.close i k) (B.close i k) (b.close i k)
-  | k, .fn l np t => .fn (l.close i k) np (t.close i k)
+  | k, .fn l np t u => .fn (l.close i k) np (t.close i k) u
   | k, .mtbl u nt ex ph T cs => .mtbl u nt ex ph (T.close i k) (cs.close i k)
   | _, t => t
 
@@ -311,6 +319,7 @@ structure FnDef where
   tele : Tm
   body : Core
   dele : Option Nat := none
+  u : Bool := false
   deriving Repr, Inhabited
 
 structure Group where
@@ -338,6 +347,12 @@ def Tm.coer (d : Nat) (sa A a sb B b : Tm) : Tm := .app (.tyc d) (.ofList [sa, A
 def sharingD : Nat := 1
 
 def sharedTm : Tm := .app (.vc sharingD 1) .nil
+
+def uniqueTm : Tm := .app (.vc sharingD 0) .nil
+
+def fnSide : Tm → Tm
+  | .fn _ _ _ true => uniqueTm
+  | _ => sharedTm
 
 def Adt.mtbl (D : Adt) (d : Nat) : Tm :=
   .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d)
@@ -384,7 +399,7 @@ def realBr (brs : List Br) (els : Option Core) : Option (List Tm × Core) :=
   | [], some e => some ([], e)
   | _, _ => none
 
-def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele
+def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele F.u
 
 def closures (env : List Tm) (gid : Nat) (G : Group) : List Tm :=
   (List.range G.fns.length).map (.clo (.ofList env) gid)

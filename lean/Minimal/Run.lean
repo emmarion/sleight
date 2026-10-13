@@ -190,8 +190,8 @@ def Prog.thunk (P : Prog) (pre : Bool) : Tm → Except String (Option (List Tm �
   | .clo env gid j => match P.groups[gid]?, (P.groups[gid]?).bind (·.fns[j]?) with
     | some G, some F =>
       let ok := match F.np, F.tele with
-        | 0, .bind (.ty _ false) _ .nil => true
-        | 1, .bind (.ty _ false) A (.bind (.ty _ false) B .nil) => pre && P.isStr A && P.isStr B
+        | 0, .bind (.ty _ false _) _ .nil => true
+        | 1, .bind (.ty _ false _) A (.bind (.ty _ false _) B .nil) => pre && P.isStr A && P.isStr B
         | _, _ => false
       if ok then .ok (some (env.toList ++ closures env.toList gid G, G, F))
       else .error "error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`"
@@ -243,7 +243,7 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
       | .error e => .text s!"refused: {e}"
       | .ok ⟨R, _⟩ =>
         let rec anyTy : Tm → Bool
-          | .bind (.ty _ _) .nil _ => true
+          | .bind (.ty ..) .nil _ => true
           | .bind _ _ r => anyTy r
           | _ => false
         let tys (vs : List Tm) := if anyTy R then
