@@ -2,10 +2,6 @@ import Minimal.Check
 
 namespace Minimal
 
-def holeBase : Nat := 2 ^ 40
-
-def Tm.hole : Tm := .fv holeBase
-
 def Tm.isHole : Tm → Bool
   | .fv i => holeBase ≤ i
   | _ => false
@@ -18,6 +14,10 @@ structure Metas where
   Γ : Ctx
   base : Nat
   eqs : List (Tm × Tm) := []
+
+def coerOf' (T : Tm) : Option (Tm × Tm × Tm × Tm × Tm × Tm) := match T with
+  | .app (.tyc _) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) => some (sa, A, a, sb, B, b)
+  | _ => none
 
 def Metas.typeOf (m : Metas) (t : Tm) : Option Tm :=
   match checkTm P m.Γ t with
@@ -103,19 +103,6 @@ def inferArgs (Γ : Ctx) (args : List Tm) (tele : Tm) : Except String (List Tm) 
   m.fill P args
 
 
-def Tm.close (i : Nat) : Nat → Tm → Tm
-  | k, .fv j => if j = i then .bv k else .fv j
-  | k, .cons h t => .cons (h.close i k) (t.close i k)
-  | k, .bind m a r => .bind m (a.close i k) (r.close i (k + 1))
-  | k, .app h a => .app (h.close i k) (a.close i k)
-  | k, .tyCtor p => .tyCtor (p.close i k)
-  | k, .valCtor p => .valCtor (p.close i k)
-  | k, .predates A x L => .predates (A.close i k) (x.close i k) (L.close i k)
-  | k, .subterm A a B b => .subterm (A.close i k) (a.close i k) (B.close i k) (b.close i k)
-  | k, .fn l np t => .fn (l.close i k) np (t.close i k)
-  | k, .mtbl u nt ex ph T cs => .mtbl u nt ex ph (T.close i k) (cs.close i k)
-  | _, t => t
-
 mutual
 partial def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := do
   match t with
@@ -136,23 +123,34 @@ partial def inferTele (Γ : Ctx) : Tm → Except String Tm
 
 end
 
-abbrev IM := StateT (List Group) (Except String)
+def addMentions (Γ : Ctx) (ts : Tm) : Tm × Nat :=
+  match ts.toList.mapM fun t => (checkTm P Γ t).toOption.map fun ⟨T, _⟩ => Γ.canon T with
+  | none => (ts, 0)
+  | some Ts =>
+    let tyFvs (i : Nat) : List Nat := ((Γ.tys[i]?).map fun T => (Γ.canon T).fvs).getD []
+    let ms := ((List.range (Γ.n + 1)).foldl (fun xs _ => (xs ++ xs.flatMap tyFvs).eraseDups) (Ts.flatMap Tm.fvs)).mergeSort
+    (.ofList (ms.map Tm.fv ++ ts.toList), ms.length)
+
+abbrev IM := StateT (List Group × Nat) (Except String)
 
 def scrutOf (Γ : Ctx) (s : Tm) : Option (Tm × Tm × List Arm) :=
   match checkTm P Γ s with
   | .ok ⟨St, _⟩ => match Γ.canon St with
     | .app H idx => match shapeOf P Γ true H with
-      | .ok ⟨shp, _⟩ => some (H, idx, shp)
+      | .ok ⟨shp, _, _⟩ => some (H, idx, shp)
       | .error _ => none
     | _ => none
   | .error _ => none
 
-partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
+partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM Core
   | .ret ts => do
-    if !ts.hasHole then return .ret ts
-    match rets with
-    | some R => return .ret (.ofList (← inferArgs P Γ ts.toList R))
-    | none => return .ret (.ofList (← ts.toList.mapM (inferTerm P Γ · none)))
+    let ts ← if !ts.hasHole then pure ts else match rets with
+      | some R => pure (.ofList (← inferArgs P Γ ts.toList R))
+      | none => pure (.ofList (← ts.toList.mapM (inferTerm P Γ · none)))
+    if !top then return .ret ts
+    let (ts, k) := addMentions P Γ ts
+    modify fun (gs, _) => (gs, k)
+    return .ret ts
   | .call f dec args er ms rest => do
     let ty := match checkTm P Γ f with
       | .ok ⟨Ft, _⟩ => match Γ.canon Ft with
@@ -162,17 +160,38 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
     let some t := ty | return .call f dec args er ms rest
     let args ← if args.hasHole then Tm.ofList <$> inferArgs P Γ args.toList t else pure args
     match checkArgs P Γ args t with
-    | .ok ⟨outs, _⟩ => return .call f dec args er ms (← inferCore (Γ.pushTele outs) rets rest)
+    | .ok ⟨outs, _⟩ => return .call f dec args er ms (← inferCore (Γ.pushTele outs) rets top rest)
     | .error _ => return .call f dec args er ms rest
   | .mtch s R brs els er rest => do
     let R ← inferTele P Γ R
-    let (brs, els) ← inferArms Γ s brs els (some R)
-    return .mtch s R brs els er (← inferCore (Γ.pushTele R) rets rest)
-  | .case s brs els er => do
-    let (brs, els) ← inferArms Γ s brs els rets
-    return .case s brs els er
+    let (brs, els) ← inferArms Γ s brs els (some R) false
+    return .mtch s R brs els er (← inferCore (Γ.pushTele R) rets top rest)
+  | .case s brs els er nt => do
+    let (brs, els) ← inferArms Γ s brs els rets top
+    return .case s brs els er nt
   | .prim p er rest => do
+    let coerOf (q : Tm) : Option (Tm × Tm × Tm × Tm × Tm × Tm) := do
+      let ⟨T, _⟩ ← (checkTm P Γ q).toOption
+      let ⟨(dC, _), _⟩ ← (coerAdt P).toOption
+      let ⟨x, _⟩ ← coerParts dC (Γ.canon T)
+      some x
+    let expSide : Tm → Tm := fun s => if !s.isHole then s else match rest with
+      | .chk .ty (.fv i) T _ => if i = Γ.n then ((coerOf' T).map (·.1)).getD s else s
+      | _ => s
     let p ← match p with
+      | .coerce a b q =>
+        match coerOf q with
+        | some (sa, _, _, sb, _, b') =>
+          if !er && (Γ.canon sa != sharedTm || Γ.canon sb != sharedTm) then
+            throw "coerce: a `(Unique)` side uses its value at unique, which is not supported"
+          pure (.coerce a (if b.isHole then b' else b) q)
+        | none => pure p
+      | .coerRefl s e => pure (.coerRefl (expSide s) e)
+      | .coerWrap s C args => pure (.coerWrap (expSide s) C args)
+      | .coerCtor s C srcs tgts ps =>
+        let fill (l : List Tm) (pick : Tm × Tm × Tm × Tm × Tm × Tm → Tm) : Tm := .ofList (l.zipIdx.map fun (t, j) =>
+          if t.isHole then (((ps.toList[j]?).bind coerOf).map pick).getD t else t)
+        pure (.coerCtor (expSide s) C (fill srcs.toList (·.2.2.1)) (fill tgts.toList (·.2.2.2.2.2)) ps)
       | .tm t =>
         if !t.hasHole then pure p else
         let A := match rest with
@@ -181,18 +200,18 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
         pure (.tm (← inferTerm P Γ t A))
       | p => pure p
     match p, checkPrim P Γ p with
-    | .assert _ A, _ => return .prim p er (← inferCore (Γ.pushPrim A er p) rets rest)
-    | _, .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim T er p) rets rest)
+    | .assert _ A, _ => return .prim p er (← inferCore (Γ.pushPrim A er p) rets top rest)
+    | _, .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim T er p) rets top rest)
     | _, .error _ => return .prim p er rest
-  | .defLvl rest => return .defLvl (← inferCore Γ.pushMint rets rest)
+  | .defLvl rest => return .defLvl (← inferCore Γ.pushMint rets top rest)
   | .defFns gid rest => do
-    let some G := (← get)[gid]? | return .defFns gid rest
+    let some G := (← get).1[gid]? | return .defFns gid rest
     let fns ← G.fns.mapM fun F => do
       let F := { F with tele := ← inferTele P Γ F.tele }
       let (Γb, R) := Γ.body G F
-      return { F with body := ← inferCore Γb (some R) F.body }
-    modify fun gs => gs.set gid { G with fns }
-    return .defFns gid (← inferCore (Γ.pushFns G) rets rest)
+      return { F with body := ← inferCore Γb (some R) false F.body }
+    modify fun (gs, h) => (gs.set gid { G with fns }, h)
+    return .defFns gid (← inferCore (Γ.pushFns G) rets top rest)
   | .chk (.opn oe) (.fv m) b rest => do
     let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
     let σ' := match (Γ.tys[m]?).map Γ.canon with
@@ -200,38 +219,84 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
         | .ok σ' => σ'
         | _ => Γ.σ
       | _ => Γ.σ
-    return .chk (.opn oe) (.fv m) b (← inferCore { Γo with σ := σ' } rets rest)
+    return .chk (.opn oe) (.fv m) b (← inferCore { Γo with σ := σ' } rets top rest)
   | .chk .ty a T rest => do
-    if !T.hasHole then return .chk .ty a T (← inferCore Γ rets rest)
+    if !T.hasHole then return .chk .ty a T (← inferCore Γ rets top rest)
     let (m, T') ← ({ Γ, base := Γ.n } : Metas).openTm P T (some .univ)
     let m := match checkTm P Γ a with
       | .ok ⟨A, _⟩ => { m with eqs := (A, T') :: m.eqs }
       | .error _ => m
     let [T] ← m.fill P [T'] | throw "cannot infer `_`"
-    return .chk .ty a T (← inferCore Γ rets rest)
-  | .chk k a b rest => return .chk k a b (← inferCore Γ rets rest)
-  | .absurd body => return .absurd (← inferCore Γ none body)
-  | .seq R body rest => return .seq R (← inferCore Γ (some R) body) (← inferCore (Γ.pushTele R) rets rest)
+    return .chk .ty a T (← inferCore Γ rets top rest)
+  | .chk k a b rest => return .chk k a b (← inferCore Γ rets top rest)
+  | .absurd body => return .absurd (← inferCore Γ none false body)
+  | .seq R body rest => return .seq R (← inferCore Γ (some R) false body) (← inferCore (Γ.pushTele R) rets top rest)
   | .dead => return .dead
 where
-  inferArms (Γ : Ctx) (s : Tm) (brs : List Br) (els : Option Core) (R : Option Tm) :
+  inferArms (Γ : Ctx) (s : Tm) (brs : List Br) (els : Option Core) (R : Option Tm) (top : Bool) :
       IM (List Br × Option Core) := do
     let brs ← brs.mapM fun (n, c, k', body) => do
       match scrutOf P Γ s with
       | some (H, idx, shp) => match shp[c]? with
         | some (k, sig, _) => match Γ.branch P s k H idx sig with
-          | (Γf, .ok σ) => return (n, c, k', ← inferCore { Γf with σ := σ } R body)
+          | (Γf, .ok σ) => return (n, c, k', ← inferCore { Γf with σ := σ } R top body)
           | _ => return (n, c, k', body)
         | none => return (n, c, k', body)
       | none => return (n, c, k', body)
-    let els ← els.mapM (inferCore Γ R)
+    let els ← els.mapM (inferCore Γ R top)
     return (brs, els)
+
+def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
+  | .call f dec args er ms rest => do
+    let ⟨Ft, _⟩ ← (checkTm P Γ f).toOption
+    let .fn _ _ t := Γ.canon Ft | none
+    let ⟨outs, _⟩ ← (checkArgs P Γ args t).toOption
+    some (Γ.pushTele outs (some (ms.map (er || ·))), rest, fun (r : Core) => .call f dec args er ms r)
+  | .mtch s R brs els er rest =>
+    some (Γ.pushTele R (if er then some (List.replicate R.len true) else none), rest, fun (r : Core) => .mtch s R brs els er r)
+  | .prim p er rest => do
+    let T ← match p with
+      | .assert _ A => some A
+      | p => (checkPrim P Γ p).toOption.map (·.1)
+    some (Γ.pushPrim T er p, rest, fun (r : Core) => .prim p er r)
+  | .defLvl rest => some (Γ.pushMint, rest, fun (r : Core) => .defLvl r)
+  | .defFns gid rest => do let G ← P.groups[gid]?; some (Γ.pushFns G, rest, fun (r : Core) => .defFns gid r)
+  | .chk (.opn oe) (.fv m) b rest =>
+    let Γo : Ctx := { Γ with opened := (m, oe) :: Γ.opened }
+    let σ' := match (Γ.tys[m]?).map Γ.canon with
+      | some (.mtbl _ _ _ _ H cs) => match unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
+        | .ok σ' => σ'
+        | _ => Γ.σ
+      | _ => Γ.σ
+    some ({ Γo with σ := σ' }, rest, fun (r : Core) => .chk (.opn oe) (.fv m) b r)
+  | .chk k a b rest => some (Γ, rest, fun (r : Core) => .chk k a b r)
+  | .seq R body rest => some (Γ.pushTele R, rest, fun (r : Core) => .seq R body r)
+  | .case s brs els er nt =>
+    let live : Option (Ctx × Core × (Core → Core)) := brs.zipIdx.findSome? fun ((n, c, k', body), j) => do
+      if !body.real then none
+      let (H, idx, shp) ← scrutOf P Γ s
+      let (k, sig, _) ← shp[c]?
+      match Γ.branch P s k H idx sig with
+      | (Γf, .ok σ) => some ({ Γf with σ := σ }, body, fun (b : Core) => .case s (brs.set j (n, c, k', b)) els er nt)
+      | _ => none
+    live <|> els.map fun e => (Γ, e, fun (b : Core) => .case s brs (some b) er nt)
+  | _ => none
+
+partial def mapRet {β : Type} (f : Ctx → Tm → Tm × β) (Γ : Ctx) : Core → Option (Core × β)
+  | .ret ts => let (ts', b) := f Γ ts; some (.ret ts', b)
+  | c => do
+    let (Γ', rest, rebuild) ← stepCtx P Γ c
+    let (r, b) ← mapRet f Γ' rest
+    some (rebuild r, b)
+
+def retTypes (Γ : Ctx) (c : Core) : Option (List Tm) :=
+  (mapRet P (fun Γ ts => (ts, ts.toList.mapM fun t => (checkTm P Γ t).toOption.map fun ⟨T, _⟩ => Γ.canon T)) Γ c).bind (·.2)
 
 def Prog.infer (P : Prog) : Except String Prog := do
   let adts ← P.adts.mapM fun D => do
     return { D with params := ← inferTele P {tys := []} D.params, ctors := ← D.ctors.mapM (inferTele P {tys := []}) }
   let P := { P with adts }
-  let (main, groups) ← (inferCore P {tys := []} none P.main).run P.groups
-  return { P with main, groups }
+  let (main, groups, hidden) ← (inferCore P {tys := []} none true P.main).run (P.groups, 0)
+  return { P with main, groups, hidden }
 
 end Minimal

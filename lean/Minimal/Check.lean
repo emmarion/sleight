@@ -18,6 +18,8 @@ structure ProgOK (P : Prog) : Prop where
   params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params ∧ D.params.static 0 0
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
     TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx)
+  newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → sig.ntField.isSome
+  coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
   ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
@@ -155,15 +157,24 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
             let ⟨hpre⟩ ← need (∀ j < i, ∀ a' s', ms[j]? = some a' → Γ.subs[j]? = some s' →
                 Γ.canon a' = Γ.canon (.fv s')) "unreachable"
             let ⟨hst⟩ ← need ((Γ.canon a).strictSub (Γ.canon (.fv s))) "subterm: not a strict subterm"
-            .ok ⟨.autoSub h hl ha hs hpre hst⟩
+            .ok ⟨.autoSub h hl ha hs hpre hst (.inl rfl)⟩
           | _, _ => .error "subterm: no such subterm argument"
       else match hx : Γ.canon l with
         | .fv x => do
           let ⟨h1⟩ ← need (x < c) "predates: the callee's level was not made before the current one"
           let ⟨h2⟩ ← need (c ∈ Γ.mints) "predates: the current level is not made by def-lvl"
-          .ok ⟨.autoPred h hx h1 h2⟩
+          .ok ⟨.autoPred h hx h1 h2 (.inl rfl)⟩
         | _ => .error "predates: the callee's level is not an entry"
-  | .predates p => match h : Γ.cur with
+  | .predates p => if hh : p = Tm.hole then
+      match h : Γ.cur with
+      | some c => match hx : Γ.canon l with
+        | .fv x => do
+          let ⟨h1⟩ ← need (x < c) "predates: the callee's level was not made before the current one"
+          let ⟨h2⟩ ← need (c ∈ Γ.mints) "predates: the current level is not made by def-lvl"
+          .ok ⟨.autoPred h hx h1 h2 (.inr (by rw [hh]))⟩
+        | _ => .error "predates: the callee's level is not an entry"
+      | none => .error "a decrease annotation at the top level"
+    else match h : Γ.cur with
     | some c => do
       let ⟨Pt, hp⟩ ← checkTm P Γ p
       match hP : Γ.canon Pt with
@@ -174,7 +185,22 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
         .ok ⟨.lower h hp hP hx hL hs⟩
       | _ => .error "predates: not a Predates proof"
     | none => .error "a decrease annotation at the top level"
-  | .subterm pos p => match h : Γ.cur with
+  | .subterm pos p => if hh : p = Tm.hole then
+      match h : Γ.cur with
+      | some c => do
+        let ⟨hl⟩ ← need (Γ.canon l = Γ.canon (.fv c)) "subterm: callee not at the current level"
+        match hi : markedIndex t pos 0 with
+        | none => .error "subterm: the argument is not for a subterm parameter"
+        | some i =>
+        match ha : (markedArgs t args)[i]?, hs : Γ.subs[i]? with
+        | some a, some s => do
+          let ⟨hpre⟩ ← need (∀ j < i, ∀ a' s', (markedArgs t args)[j]? = some a' → Γ.subs[j]? = some s' →
+              Γ.canon a' = Γ.canon (.fv s')) "subterm: an earlier subterm argument differs"
+          let ⟨hst⟩ ← need ((Γ.canon a).strictSub (Γ.canon (.fv s))) "subterm: not a strict subterm"
+          .ok ⟨.autoSub h hl ha hs hpre hst (.inr ⟨pos, by rw [hh], hi⟩)⟩
+        | _, _ => .error "subterm: no such subterm argument"
+      | none => .error "a decrease annotation at the top level"
+    else match h : Γ.cur with
     | some c => do
       let ⟨hl⟩ ← need (Γ.canon l = Γ.canon (.fv c)) "subterm: callee not at the current level"
       match hi : markedIndex t pos 0 with
@@ -193,6 +219,67 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
         | _ => .error "subterm: not a Subterm proof"
       | _, _ => .error "subterm: no such subterm argument"
     | none => .error "a decrease annotation at the top level"
+
+def allIdx {α : Type} {Q : Nat → α → Prop} (f : (i : Nat) → (x : α) → Res (PLift (Q i x))) :
+    (l : List α) → (base : Nat) → Res (PLift (∀ i x, l[i]? = some x → Q (base + i) x))
+  | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
+  | x :: xs, base => do
+    let ⟨h⟩ ← f base x
+    let ⟨hs⟩ ← allIdx f xs (base + 1)
+    .ok ⟨fun
+      | 0, _, e => by simp at e; subst e; simpa using h
+      | i + 1, y, e => by
+        have := hs i y (by simpa using e)
+        rwa [show base + 1 + i = base + (i + 1) by omega] at this⟩
+
+def coerAdt : Res {x : Nat × Adt // P.adts[x.1]? = some x.2 ∧ x.2.coercible = true} :=
+  match h : P.adts.findIdx? (·.coercible) with
+  | some d => match h2 : P.adts[d]? with
+    | some D => if hc : D.coercible = true then .ok ⟨(d, D), h2, hc⟩ else .error "unreachable"
+    | none => .error "unreachable"
+  | none => .error "Coercible is not declared"
+
+def coerParts (dC : Nat) : (t : Tm) →
+    Option {x : Tm × Tm × Tm × Tm × Tm × Tm // t = Tm.coer dC x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2}
+  | .app (.tyc d) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) =>
+    if h : d = dC then some ⟨(sa, A, a, sb, B, b), by subst h; rfl⟩ else none
+  | _ => none
+
+def wrapAt (Γ : Ctx) (C : Tm) (m : Nat) (oe : Bool) (hm : (m, oe) ∈ Γ.opened) : Res {k // WrapOK P Γ C k} :=
+  match hM : Γ.tys[m]? with
+  | some M => match hc : Γ.canon M with
+    | .mtbl _ true _ ph _ cs => do
+      let ⟨hl⟩ ← need cs.isList "unreachable"
+      match hi : cs.toList.findIdx? (fun C' => Γ.canon C' == Γ.canon C) with
+      | some i => match hC' : cs.toList[i]? with
+        | some C' => do
+          let ⟨he⟩ ← need (Γ.canon C = Γ.canon C') "unreachable"
+          let ⟨hp⟩ ← need (ph.getD i false = false) "coercible-wrap: a phantom constructor wraps nothing"
+          let ⟨K, hK⟩ ← checkTm P Γ C
+          match hk : Γ.canon K with
+          | .valCtor sig => do
+            let ⟨ht⟩ ← need sig.isTele "unreachable"
+            match hn : sig.ntField with
+            | some k => .ok ⟨k, .opened hm hM hc hl hC' he hp hK hk ht hn⟩
+            | none => .error "coercible-wrap: not a wrapping constructor"
+          | _ => .error "coercible-wrap: not a value constructor"
+        | none => .error "unreachable"
+      | none => .error "not listed"
+    | _ => .error "not a newtype Matchable"
+  | none => .error "unbound"
+
+def wrapOf (Γ : Ctx) (C : Tm) : Res {k // WrapOK P Γ C k} :=
+  match hC : Γ.canon C with
+  | .vc d c => match hw : P.wrapField d c with
+    | some k => .ok ⟨k, .decl hC hw⟩
+    | none => .error "coercible-wrap: the constructor has no opened newtype `Matchable`"
+  | _ =>
+    let rec go : (l : List (Nat × Bool)) → (∀ e ∈ l, e ∈ Γ.opened) → Res {k // WrapOK P Γ C k}
+      | [], _ => .error "coercible-wrap: the constructor has no opened newtype `Matchable`"
+      | (m, oe) :: l, h => match wrapAt P Γ C m oe (h _ (by simp)) with
+        | .ok r => .ok r
+        | .error _ => go l fun e he => h e (by simp [he])
+    go Γ.opened fun _ h => h
 
 def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .tm t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .tm h⟩
@@ -215,10 +302,90 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
         obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp this.2
         exact ⟨d, v, e, this.1, hv⟩
       · cases this) he hA⟩
+  | .coerce a b p => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨Pt, hp⟩ ← checkTm P Γ p
+    match coerParts dC (Γ.canon Pt) with
+    | some ⟨(_, _, a', _, B, b'), e⟩ => do
+      let ⟨ha⟩ ← need (Γ.canon a = Γ.canon a') "coerce: value mismatch: the value is not the source of the proof"
+      let ⟨Tb, hb⟩ ← checkTm P Γ b
+      let ⟨hb'⟩ ← need (Γ.canon b = Γ.canon b') "unreachable: coerce's target"
+      let ⟨hT⟩ ← need (Γ.canon Tb = Γ.canon B) "coerce: the target is not of the type the proof names"
+      .ok ⟨B, .coerce hp e hD hc ha hb hb' hT⟩
+    | none => .error "coerce: the proof is not a `Coercible` proof"
+  | .coerRefl s e => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨_, hs⟩ ← checkTm P Γ s
+    let ⟨_, he⟩ ← checkTm P Γ e
+    .ok ⟨_, .coerRefl (dC := dC) hs he hD hc⟩
+  | .coerSym p => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨Pt, hp⟩ ← checkTm P Γ p
+    match coerParts dC (Γ.canon Pt) with
+    | some ⟨_, e⟩ => .ok ⟨_, .coerSym hp e hD hc⟩
+    | none => .error "coercible-sym: not a `Coercible` proof"
+  | .coerShare p => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨Pt, hp⟩ ← checkTm P Γ p
+    match coerParts dC (Γ.canon Pt) with
+    | some ⟨_, e⟩ => .ok ⟨_, .coerShare hp e hD hc⟩
+    | none => .error "coercible-share: not a `Coercible` proof"
+  | .coerTrans p q => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨Pt, hp⟩ ← checkTm P Γ p
+    let ⟨Qt, hq⟩ ← checkTm P Γ q
+    match coerParts dC (Γ.canon Pt), coerParts dC (Γ.canon Qt) with
+    | some ⟨(sa, A, a, sb, B, b), e1⟩, some ⟨(sb', B', b', sc, C, c), e2⟩ => do
+      if h : sb' = sb ∧ B' = B ∧ b' = b then
+        .ok ⟨_, .coerTrans (sc := sc) (C := C) (c := c) hp hq e1 (by obtain ⟨rfl, rfl, rfl⟩ := h; exact e2) hD hc⟩
+      else .error "coercible-trans: the middle sides differ"
+    | _, _ => .error "coercible-trans: not `Coercible` proofs"
+  | .coerWrap s C args => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨_, hs⟩ ← checkTm P Γ s
+    let ⟨T0, ha⟩ ← checkTm P Γ (.app C args)
+    let ⟨k, hwk⟩ ← wrapOf P Γ C
+    let ⟨_, hf⟩ ← checkTm P Γ (args.toList.getD k .nil)
+    .ok ⟨_, .coerWrap hs ha hwk hf hD hc⟩
+  | .coerCtor s C srcs tgts ps => do
+    let ⟨(dC, D), hD, hc⟩ ← coerAdt P
+    let ⟨_, hs⟩ ← checkTm P Γ s
+    let ⟨K, hK⟩ ← checkTm P Γ C
+    match hk : Γ.canon K with
+    | .valCtor sig => do
+      let ⟨ht⟩ ← need sig.isTele "coercible-ctor: the constructor's signature is not written out"
+      let ⟨_, h1⟩ ← checkTm P Γ (.app C srcs)
+      let ⟨_, h2⟩ ← checkTm P Γ (.app C tgts)
+      let ⟨hl⟩ ← need (srcs.len = tgts.len) "coercible-ctor: the sources and targets differ in number"
+      let ⟨hf⟩ ← allIdx (Q := fun j (e : Bool) => j < srcs.len → e = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧
+          TmTy P Γ p Pt ∧ Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
+          Γ.canon y = Γ.canon (tgts.toList.getD j .nil))
+        (fun j e => if he : j < srcs.len ∧ e = false then
+          match hp : ps.toList[j]? with
+          | some p => do
+            let ⟨Pt, hpt⟩ ← checkTm P Γ p
+            match coerParts dC (Γ.canon Pt) with
+            | some ⟨(sa, A, x, sb, B, y), e⟩ => do
+              let ⟨hx⟩ ← need (Γ.canon x = Γ.canon (srcs.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its source"
+              let ⟨hy⟩ ← need (Γ.canon y = Γ.canon (tgts.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its target"
+              let ⟨_⟩ ← need (Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)
+                "coercible-ctor: the proof for a many field is `(Shared)` on both sides"
+              .ok ⟨fun _ _ => ⟨p, Pt, sa, A, x, sb, B, y, rfl, hpt, e, hx, hy⟩⟩
+            | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased field"
+          | none => .error "coercible-ctor: a non-erased field has no proof"
+        else .ok ⟨fun h1 h2 => absurd ⟨h1, h2⟩ he⟩) sig.ers 0
+      .ok ⟨_, .coerCtor hs hK hk ht h1 h2 hl (fun j hjl hj => by
+        cases h : sig.ers[j]? with
+        | none => simp [List.getD_eq_getElem?_getD, h] at hj
+        | some e =>
+          have : e = false := by simpa [List.getD_eq_getElem?_getD, h] using hj
+          simpa using hf j e h (by simpa using hjl) this) hD hc⟩
+    | _ => .error "coercible-ctor: not a value constructor"
   | .mtblOf d => match h : P.adts[d]? with
     | some D => do
       let ⟨hl⟩ ← need (D.lifted = 0) "matchable-of: a type whose def-adts mentions entries is not first class"
-      .ok ⟨_, .mtblOf h hl⟩
+      let ⟨hc⟩ ← need (D.coercible = false) "matchable-of: Coercible has no Matchable"
+      .ok ⟨_, .mtblOf h hl hc⟩
     | none => .error "matchable-of: unknown type"
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
@@ -274,9 +441,11 @@ def armsOf (Γ : Ctx) (ph : List Bool) : (ks : List Tm) → (base : Nat) →
           rwa [show base + 1 + i = base + (i + 1) by omega] at this⟩
     | _ => .error "Matchable: an entry is not a value constructor"
 
-def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res {shp // Shape P Γ er H shp}
+def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res ((shp : List Arm) × {nt // Shape P Γ er H shp nt})
   | .tyc d => match h : P.adts[d]? with
-    | some _ => .ok ⟨_, .decl h⟩
+    | some D => do
+      let ⟨hc⟩ ← need (D.coercible = false) "a match on Coercible, which has no constructors to match"
+      .ok ⟨_, _, .decl h hc⟩
     | none => .error "unknown type"
   | H =>
     let names (e : Nat × Bool) : Bool := match (Γ.tys[e.1]?).map Γ.canon with
@@ -290,12 +459,12 @@ def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res {shp // Shape P Γ er H sh
     match pick with
     | some ⟨(m, oe), hmem⟩ => match hM : Γ.tys[m]? with
       | some M => match hc : Γ.canon M with
-        | .mtbl _ _ _ ph H' cs => do
+        | .mtbl _ nt _ ph H' cs => do
           let ⟨hH⟩ ← need (H' = H) "unreachable"
           let ⟨hl⟩ ← need cs.isList "Matchable: the constructors are not a list"
           let ⟨hr⟩ ← need (er || Γ.ok (!oe && !Γ.er m)) "a match that dispatches at runtime through an erased Matchable"
           let ⟨shp, h1, h2⟩ ← armsOf P Γ ph cs.toList 0
-          .ok ⟨shp, .opened hmem hM (hH ▸ hc) hl h1 (fun i k sig p h => by simpa using h2 i k sig p h) hr⟩
+          .ok ⟨shp, nt, .opened hmem hM (hH ▸ hc) hl h1 (fun i k sig p h => by simpa using h2 i k sig p h) hr⟩
         | _ => .error "unreachable"
       | none => .error "unreachable"
     | none => .error "scrutinee: no Matchable is open for its type"
@@ -316,6 +485,16 @@ def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .n
     else .ok ⟨.bind (.ty false false) .nil R, .anyCons ha (by rw [hi]; exact hr), by simp [Tm.static, hR1]⟩
   | _ => .error "not a list of results"
 
+def retTele (Γ : Ctx) (ts : List Tm) (hid : Nat) : Option Tm := do
+  let Ts ← ts.mapM fun t => match checkTm P Γ t with
+    | .ok ⟨T, _⟩ => some (Γ.canon T)
+    | .error _ => none
+  let ents := Ts.zipIdx.map fun (T, j) =>
+    ((List.range j).foldl (fun (T : Tm) i => match ts[i]? with
+      | some (Tm.fv x) => T.close x (j - 1 - i)
+      | _ => T) T, decide (j < hid))
+  some (ents.foldr (fun (T, e) r => .bind (.ty false e) T r) .nil)
+
 mutual
 def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     Res {R // CoreTy P b Γ c R ∧ (∀ r, rets = .inl r → R = r) ∧ ∀ n, rets = .inr n → R.static n 0}
@@ -324,10 +503,20 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
     let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions something erased"
     .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Sum.inl.inj e, fun _ e => (by cases e)⟩
-  | .ret ts, .inr n => do
-    let ⟨R, h, hs⟩ ← synthRets P Γ n ts
-    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions something erased"
-    .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
+  | .ret ts, .inr n =>
+    let fallback : Res {R // CoreTy P b Γ (.ret ts) R ∧ (∀ r, Sum.inr n = Sum.inl r → R = r) ∧
+        ∀ m, Sum.inr n = Sum.inr m → R.static m 0} := do
+      let ⟨R, h, hs⟩ ← synthRets P Γ n ts
+      let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions something erased"
+      .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
+    match retTele P Γ ts.toList P.hidden with
+    | some R => match checkArgs P Γ ts R with
+      | .ok ⟨out, h⟩ =>
+        if ho : out = .nil ∧ R.static n 0 ∧ Γ.ok (rtArgs P Γ ts R) = true then
+          .ok ⟨R, .ret (ho.1 ▸ h) ho.2.2, fun _ e => (by cases e), fun _ e => by cases e; exact ho.2.1⟩
+        else fallback
+      | .error _ => fallback
+    | none => fallback
   | .absurd body, rets => do
     let ⟨_, hb, e⟩ ← checkCore b { Γ with ghost := true } body (.inl .nil)
     let ⟨hn⟩ ← need (body.noRet = true) "absurd: the body does not refute the facts in force"
@@ -359,7 +548,8 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
     | .app H idx => do
-      let ⟨shp, hsh⟩ ← shapeOf P Γ er H
+      let ⟨shp, ntf, hsh⟩ ← shapeOf P Γ er H
+      let ⟨hnt⟩ ← need (er || !ntf) "unreachable: a non-erased match on a newtype elaborates to a case"
       let ⟨hl⟩ ← need (armsOK Γ shp brs) "a branch names a constructor of another type"
       let ⟨hR⟩ ← checkTele P Γ R0
       let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
@@ -376,16 +566,17 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
           .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
         | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
       let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) (.mtch s R0 brs els er rest)) rest rets
-      .ok ⟨R, .mtch hs hS hsh hl hR hRs hRt hm (fun c k sig p h1 => by simpa using hb c k sig p h1) he hr, e⟩
+      .ok ⟨R, .mtch hs hS hsh hnt hl hR hRs hRt hm (fun c k sig p h1 => by simpa using hb c k sig p h1) he hr, e⟩
     | _ => .error "scrutinee not of a data type"
-  | .case s brs els er, rets => do
+  | .case s brs els er nt, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
     | .app H idx => do
-      let ⟨shp, hsh⟩ ← shapeOf P Γ er H
+      let ⟨shp, ntf, hsh⟩ ← shapeOf P Γ er H
+      let ⟨hnt⟩ ← need (nt = (ntf && !er)) "unreachable: a case on a newtype is marked as one"
       let ⟨hl⟩ ← need (armsOK Γ shp brs) "a branch names a constructor of another type"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
-      let ⟨h1⟩ ← need (Γ.ghost = false → er → realCount brs els ≤ 1)
+      let ⟨h1⟩ ← need (Γ.ghost = false → (er || nt) → realCount brs els ≤ 1)
         "a match with an erased discriminant has more than one real branch"
       let g := fun p => Γ.ghost || (!er && p)
       let fes (sig : Tm) := if er then some (List.replicate (sig.len - 1) true) else none
@@ -396,7 +587,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
             match hf : brs.find? (·.2.2.2.real) with
             | some (_, c, _, body) => match shp[c]? with
               | some (k, sig, p) => match ({ Γ with ghost := g p } : Ctx).branch P s k H idx sig with
-                | (Γf, .ok σ) => some ⟨({ ({ Γ with ghost := g p } : Ctx).advBr (({ Γ with ghost := g p } : Ctx).setErs
+                | (Γf, .ok σ) => some ⟨({ ({ Γ with ghost := g p } : Ctx).advBr P (({ Γ with ghost := g p } : Ctx).setErs
                     { Γf with σ := σ } (fes sig)) s k er (sig.len - 1) with cmode := false }, body), by
                     have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some hf); simp at this ⊢; omega⟩
                 | _ => none
@@ -420,7 +611,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
           let ⟨_, h, e⟩ ← checkCore b Γ eb (.inl R)
           .ok ⟨fun _ h' => by cases h'; exact e.1 R rfl ▸ h⟩
         | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γ e R)))
-      .ok ⟨R, .case hs hS hsh hl hm h1 (fun c k sig p h => by simpa [g] using hb c k sig p h) he,
+      .ok ⟨R, .case hs hS hsh hnt hl hm h1 (fun c k sig p h => by simpa [g] using hb c k sig p h) he,
         hR1, hR2⟩
     | _ => .error "scrutinee not of a data type"
   | .prim p er rest, rets => do
@@ -497,7 +688,7 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
       | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
       | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do
-        let ⟨_, hr, e⟩ ← checkCore b { Γc.advBr (Γc.setErs { Γf with σ := σ }
+        let ⟨_, hr, e⟩ ← checkCore b { Γc.advBr P (Γc.setErs { Γf with σ := σ }
           (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1) with cmode := false }
           body (.inl R0)
         .ok ⟨BranchOK.live hb (e.1 R0 rfl ▸ hr)⟩
@@ -508,8 +699,8 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
           else match s, hk : Γc.known k with
             | .fv x, some (d', c) => match hs : Γc.fixed[x]?.join with
               | some (.app (.vc d c0) vs) =>
-                if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 then
-                  .ok ⟨by obtain ⟨hm, rfl, hc⟩ := hd; exact BranchOK.fixedOut hm hs hk hc⟩
+                if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 ∧ P.isNt d = false then
+                  .ok ⟨by obtain ⟨hm, rfl, hc, hn⟩ := hd; exact BranchOK.fixedOut hm hs hk hc hn⟩
                 else .error "a branch that is not refuted is missing"
               | _ => .error "a branch that is not refuted is missing"
             | _, _ => .error "a branch that is not refuted is missing" :
@@ -557,18 +748,6 @@ termination_by fns => (gid + 1, 0, sizeOf fns, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 end
 
-def allIdx {α : Type} {Q : Nat → α → Prop} (f : (i : Nat) → (x : α) → Res (PLift (Q i x))) :
-    (l : List α) → (base : Nat) → Res (PLift (∀ i x, l[i]? = some x → Q (base + i) x))
-  | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
-  | x :: xs, base => do
-    let ⟨h⟩ ← f base x
-    let ⟨hs⟩ ← allIdx f xs (base + 1)
-    .ok ⟨fun
-      | 0, _, e => by simp at e; subst e; simpa using h
-      | i + 1, y, e => by
-        have := hs i y (by simpa using e)
-        rwa [show base + 1 + i = base + (i + 1) by omega] at this⟩
-
 def checkCtor (d : Nat) (_ : Nat) (sig : Tm) :
     Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx))) := do
   let ⟨ht⟩ ← checkTele P {tys := []} sig
@@ -587,9 +766,21 @@ def checkProg : Res {R // Checked P R} := do
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
       let ⟨hc⟩ ← allIdx (checkCtor P d) D.ctors 0
       .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
+  let ⟨hn⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ c ∈ List.range (((P.adts[d]?).map fun (D : Adt) => D.ctors.length).getD 0),
+      P.isNt d = true → P.phantom d c = false → ((P.ctor d c).bind Tm.ntField).isSome)
+    "a newtype does not have newtype shape"
+  let ⟨hco⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.coercible = true → D.ctors = [])
+    "unreachable: Coercible has constructors"
   let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := []} P.main (.inr 0)
   have hs := hs 0 rfl
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
-    fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2⟩, h, hs⟩
+    fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2,
+    fun d c sig h1 h2 h3 => by
+      obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h3
+      have hd : d < P.adts.length := (List.getElem?_eq_some_iff.mp hD).1
+      have hcl : c < D.ctors.length := (List.getElem?_eq_some_iff.mp hc).1
+      have := hn d (List.mem_range.mpr hd) c (List.mem_range.mpr (by simpa [hD] using hcl)) h1 h2
+      simpa [h3] using this,
+    fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2⟩, h, hs⟩
 
 end Minimal

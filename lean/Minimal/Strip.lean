@@ -2,22 +2,47 @@ import Minimal.Eval
 
 namespace Minimal
 
+mutual
+def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
+  | .fv i => f i
+  | .app h args =>
+    let args' := P.subUArgs f args
+    match P.subU f h with
+    | .vc d c => match P.wrapField d c with
+      | some k => args'.toList.getD k .nil
+      | none => .app (.vc d c) args'
+    | h' => .app h' args'
+  | t => t.subst f
+
+def Prog.subUArgs (P : Prog) (f : Nat → Tm) : Tm → Tm
+  | .cons a as => .cons (P.subU f a) (P.subUArgs f as)
+  | t => t.subst f
+end
+
+def Prog.sub (P : Prog) (ρ : List Tm) (t : Tm) : Tm := P.subU (Tm.env ρ) t
+
+def Prim.evalS (P : Prog) (ρ : List Tm) : Prim → Tm
+  | .tm t | .lit t | .coerce t _ _ => P.sub ρ t
+  | p => p.eval ρ
+
 variable (P : Prog)
 
 inductive RunS : List Tm → Core → List Tm → Prop
-  | ret : RunS ρ (.ret ts) (ts.toList.map (·.subst (Tm.env ρ)))
+  | ret : RunS ρ (.ret ts) (ts.toList.map (P.sub ρ))
   | callE : RunS (ρ ++ List.replicate ms.length .tok) rest out → RunS ρ (.call f dec args true ms rest) out
-  | call : f.subst (Tm.env ρ) = .clo env gid j → P.groups[gid]? = some G → G.fns[j]? = some F →
-      RunS (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body outs →
+  | call : P.sub ρ f = .clo env gid j → P.groups[gid]? = some G → G.fns[j]? = some F →
+      RunS (env.toList ++ closures env.toList gid G ++ args.toList.map (P.sub ρ)) F.body outs →
       RunS (ρ ++ outs) rest out → RunS ρ (.call f dec args false ms rest) out
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
-  | mtch : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
+  | mtch : P.sub ρ s = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
-  | caseE : realBr brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true) out
-  | case : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
-      RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false) out
+  | caseE : realBr brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true nt) out
+  | caseN : realBr brs els = some (pre, body) → RunS (ρ ++ pre.map fun _ => P.sub ρ s) body out →
+      RunS ρ (.case s brs els false true) out
+  | case : P.sub ρ s = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
+      RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false false) out
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
-  | prim : RunS (ρ ++ [if er then .tok else p.eval ρ]) rest out → RunS ρ (.prim p er rest) out
+  | prim : RunS (ρ ++ [if er then .tok else p.evalS P ρ]) rest out → RunS ρ (.prim p er rest) out
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
   | defFns : P.groups[gid]? = some G → RunS (ρ ++ closures ρ gid G) rest out → RunS ρ (.defFns gid rest) out
   | chk : RunS ρ rest out → RunS ρ (.chk k a b rest) out
@@ -25,26 +50,29 @@ inductive RunS : List Tm → Core → List Tm → Prop
 def runS : Nat → List Tm → Core → Option (List Tm)
   | 0, _, _ => none
   | fuel + 1, ρ, c => match c with
-    | .ret ts => some (ts.toList.map (·.subst (Tm.env ρ)))
+    | .ret ts => some (ts.toList.map (P.sub ρ))
     | .call _ _ _ true ms rest => runS fuel (ρ ++ List.replicate ms.length .tok) rest
-    | .call f _ args false _ rest => match f.subst (Tm.env ρ) with
+    | .call f _ args false _ rest => match P.sub ρ f with
       | .clo env gid j => do
         let G ← P.groups[gid]?
         let F ← G.fns[j]?
-        let outs ← runS fuel (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body
+        let outs ← runS fuel (env.toList ++ closures env.toList gid G ++ args.toList.map (P.sub ρ)) F.body
         runS fuel (ρ ++ outs) rest
       | _ => none
     | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
-    | .mtch s _ brs els false rest => match s.subst (Tm.env ρ) with
+    | .mtch s _ brs els false rest => match P.sub ρ s with
       | .app (.vc _ c) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         let outs ← runS fuel (ρ ++ pre) body
         runS fuel (ρ ++ outs) rest
       | _ => none
-    | .case _ brs els true => do
+    | .case _ brs els true _ => do
       let (pre, body) ← realBr brs els
       runS fuel (ρ ++ pre) body
-    | .case s brs els false => match s.subst (Tm.env ρ) with
+    | .case s brs els false true => do
+      let (pre, body) ← realBr brs els
+      runS fuel (ρ ++ pre.map fun _ => P.sub ρ s) body
+    | .case s brs els false false => match P.sub ρ s with
       | .app (.vc _ c) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         runS fuel (ρ ++ pre) body
@@ -52,7 +80,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
     | .seq _ body rest => do
       let outs ← runS fuel ρ body
       runS fuel (ρ ++ outs) rest
-    | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.eval ρ]) rest
+    | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.evalS P ρ]) rest
     | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
     | .defFns gid rest => do runS fuel (ρ ++ closures ρ gid (← P.groups[gid]?)) rest
     | .chk _ _ _ rest => runS fuel ρ rest
@@ -82,6 +110,9 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
     · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
       obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
       exact .caseE hsel (ih _ _ _ hb)
+    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+      obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
+      exact .caseN hsel (ih _ _ _ hb)
     · split at h
       · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
         obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
@@ -116,6 +147,7 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
       rw [hs] at hs'; cases hs'; rw [hsel] at hsel'; cases hsel'
       cases ihb hb; exact ihr hr
   | caseE hsel _ ih => cases h2 with | caseE hsel' h => rw [hsel] at hsel'; cases hsel'; exact ih h
+  | caseN hsel _ ih => cases h2 with | caseN hsel' h => rw [hsel] at hsel'; cases hsel'; exact ih h
   | case hs hsel _ ih =>
     cases h2 with
     | case hs' hsel' h => rw [hs] at hs'; cases hs'; rw [hsel] at hsel'; cases hsel'; exact ih h
@@ -127,8 +159,9 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
 
 mutual
 inductive Real : Tm → Tm → Prop
-  | con : P.ctor d c = some sig → P.phantom d c = false → Reals vsS vs sig →
+  | con : P.ctor d c = some sig → P.phantom d c = false → P.wrapField d c = none → Reals vsS vs sig →
       Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
+  | wrap : P.wrapField d c = some k → Real vS (vs.toList.getD k .nil) → Real vS (.app (.vc d c) vs)
   | vc : P.phantom d c = false → Real (.vc d c) (.vc d c)
   | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false →
       envS.length = env.length → (∀ i, G.ers.getD i true = false → Real (Tm.env envS i) (Tm.env env i)) →

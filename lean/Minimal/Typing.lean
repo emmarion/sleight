@@ -27,12 +27,13 @@ def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
   | _ => none
 
 def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
-  { Γ with tys := Γ.tys ++ [T], er := fun i => if i = Γ.n then e else Γ.er i }
+  let k := Γ.n
+  { Γ with tys := Γ.tys ++ [T], er := fun i => if i = k then e else Γ.er i }
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
 def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
-  | .tm t => (Γ.push T er).withRule Γ.n (Γ.canon t)
+  | .tm t | .coerce _ t _ => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
@@ -45,15 +46,16 @@ def openTele : Ctx → Tm → Nat → Ctx × Tm
 
 def setErs (Γ Γ' : Ctx) : Option (List Bool) → Ctx
   | none => Γ'
-  | some ms => { Γ' with er := fun i => if Γ.n ≤ i then ms.getD (i - Γ.n) true else Γ'.er i }
+  | some ms => let k := Γ.n; { Γ' with er := fun i => if k ≤ i then ms.getD (i - k) true else Γ'.er i }
 
 def pushTele (Γ : Ctx) (R : Tm) (ov : Option (List Bool) := none) : Ctx := Γ.setErs (Γ.openTele R R.len).1 ov
 
 def pushMint (Γ : Ctx) : Ctx := { Γ.push .level true with mints := Γ.mints ++ [Γ.n] }
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
+  let k := Γ.n
   { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
-           er := fun i => if Γ.n ≤ i then (G.fns[i - Γ.n]?.map (·.er)).getD true else Γ.er i }
+           er := fun i => if k ≤ i then (G.fns[i - k]?.map (·.er)).getD true else Γ.er i }
 
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
@@ -78,20 +80,20 @@ opaque fixFuel : Nat := 1000000000
 
 def stepS (P : Prog) (ρ : List Tm) : Core → Option (List Tm)
   | .call _ _ _ true ms _ => some (List.replicate ms.length .tok)
-  | .call f _ args false _ _ => match f.subst (Tm.env ρ) with
+  | .call f _ args false _ _ => match P.sub ρ f with
     | .clo env gid j => do
       let G ← P.groups[gid]?
       let F ← G.fns[j]?
-      runS P fixFuel (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body
+      runS P fixFuel (env.toList ++ closures env.toList gid G ++ args.toList.map (P.sub ρ)) F.body
     | _ => none
   | .mtch _ R _ _ true _ => some (List.replicate R.len .tok)
-  | .mtch s _ brs els false _ => match s.subst (Tm.env ρ) with
+  | .mtch s _ brs els false _ => match P.sub ρ s with
     | .app (.vc _ c) vs => do
       let (pre, body) ← selectBr brs els c vs.toList
       runS P fixFuel (ρ ++ pre) body
     | _ => none
   | .seq _ body _ => runS P fixFuel ρ body
-  | .prim p er _ => some [if er then .tok else p.eval ρ]
+  | .prim p er _ => some [if er then .tok else p.evalS P ρ]
   | .defLvl _ => some [.tok]
   | .defFns gid _ => (P.groups[gid]?).map (closures ρ gid)
   | _ => none
@@ -109,11 +111,11 @@ def Ctx.known (Γ : Ctx) : Tm → Option (Nat × Nat)
     | _ => none
   | _ => none
 
-def Ctx.advBr (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :=
+def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :=
   if Γ.ready then
     if fe then Γ.record Γ' (List.replicate n .tok)
     else match s, Γ.known k with
-      | .fv x, some (d, c) => match Γ.fixed[x]?.join with
+      | .fv x, some (d, c) => if P.isNt d then Γ' else match Γ.fixed[x]?.join with
         | some (.app (.vc d' c') vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
         | _ => Γ'
       | _, _ => Γ'
@@ -128,7 +130,7 @@ def fieldsSimple (S : List Nat) : Tm → Bool
 
 def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
   S.filter fun d => match P.adts[d]? with
-    | some D => D.params == .nil && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
+    | some D => D.params == .nil && !D.newtype && !D.coercible && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
     | none => false
 
 def Prog.simple (P : Prog) : List Nat :=
@@ -229,7 +231,7 @@ end
 def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
-  | .tm t | .lit t => Minimal.rt P Γ t
+  | .tm t | .lit t | .coerce t _ _ => Minimal.rt P Γ t
   | .mtblOf _ => true
   | _ => false
 
@@ -281,12 +283,20 @@ inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
         Γ.canon a' = Γ.canon (.fv s')) →
       TmTy P Γ p Pt → Γ.canon Pt = .subterm A a0 B b0 →
       Γ.canon a0 = Γ.canon a → Γ.canon b0 = Γ.canon (.fv s) → DecOK Γ (.subterm pos p) l t args
-  | autoPred : Γ.cur = some c → Γ.canon l = .fv x → x < c → c ∈ Γ.mints → DecOK Γ .none l t args
+  | autoPred : Γ.cur = some c → Γ.canon l = .fv x → x < c → c ∈ Γ.mints → (dec = .none ∨ dec = .predates Tm.hole) →
+      DecOK Γ dec l t args
   | autoSub {i : Nat} : Γ.cur = some c → Γ.canon l = Γ.canon (.fv c) →
       (markedArgs t args)[i]? = some a → Γ.subs[i]? = some s →
       (∀ j < i, ∀ a' s', (markedArgs t args)[j]? = some a' → Γ.subs[j]? = some s' →
         Γ.canon a' = Γ.canon (.fv s')) →
-      (Γ.canon a).strictSub (Γ.canon (.fv s)) → DecOK Γ .none l t args
+      (Γ.canon a).strictSub (Γ.canon (.fv s)) → (dec = .none ∨ ∃ pos, dec = .subterm pos Tm.hole ∧ markedIndex t pos 0 = some i) →
+      DecOK Γ dec l t args
+
+inductive WrapOK : Ctx → Tm → Nat → Prop
+  | decl : Γ.canon C = .vc d c → P.wrapField d c = some k → WrapOK Γ C k
+  | opened : (m, oe) ∈ Γ.opened → Γ.tys[m]? = some M → Γ.canon M = .mtbl u true ex ph H cs → cs.isList →
+      cs.toList[i]? = some C' → Γ.canon C = Γ.canon C' → ph.getD i false = false →
+      TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → sig.ntField = some k → WrapOK Γ C k
 
 inductive PrimTy : Ctx → Prim → Tm → Prop
   | tm : TmTy P Γ t T → PrimTy Γ (.tm t) T
@@ -299,22 +309,45 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .predates C l1 l2 → PrimTy Γ (.predatesTrans p q) (.predates A a l2)
   | subtermTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .subterm A a B b →
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
-  | mtblOf : P.adts[d]? = some D → D.lifted = 0 → PrimTy Γ (.mtblOf d) (D.mtbl d)
+  | mtblOf : P.adts[d]? = some D → D.lifted = 0 → D.coercible = false → PrimTy Γ (.mtblOf d) (D.mtbl d)
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
   | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
       (∀ i ∈ A.fvs, ∃ d vS, Γ.tys[i]? = some (.app (.tyc d) .nil) ∧ d ∈ P.simple ∧ Γ.fixed[i]?.join = some vS) →
       A.subst Γ.fixedEnv = T → A.static Γ.n 0 → PrimTy Γ (.assert t A) A
+  | coerce : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a' sb B b' → P.adts[dC]? = some D → D.coercible = true →
+      Γ.canon a = Γ.canon a' → TmTy P Γ b Tb → Γ.canon b = Γ.canon b' → Γ.canon Tb = Γ.canon B →
+      PrimTy Γ (.coerce a b p) B
+  | coerRefl : TmTy P Γ s S → TmTy P Γ e E → P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerRefl s e) (Tm.coer dC s E e s E e)
+  | coerSym : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerSym p) (Tm.coer dC sb B b sa A a)
+  | coerTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = Tm.coer dC sa A a sb B b →
+      Γ.canon Qt = Tm.coer dC sb B b sc C c → P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerTrans p q) (Tm.coer dC sa A a sc C c)
+  | coerShare : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerShare p) (Tm.coer dC sharedTm A a sharedTm B b)
+  | coerWrap : TmTy P Γ s S → TmTy P Γ (.app C args) T0 → WrapOK P Γ C k →
+      TmTy P Γ (args.toList.getD k .nil) F → P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerWrap s C args) (Tm.coer dC sharedTm F (args.toList.getD k .nil) s T0 (.app C args))
+  | coerCtor : TmTy P Γ s S → TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → TmTy P Γ (.app C srcs) Ts →
+      TmTy P Γ (.app C tgts) Tt → srcs.len = tgts.len →
+      (∀ j < srcs.len, sig.ers.getD j true = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
+        Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
+        Γ.canon y = Γ.canon (tgts.toList.getD j .nil)) →
+      P.adts[dC]? = some D → D.coercible = true →
+      PrimTy Γ (.coerCtor s C srcs tgts ps) (Tm.coer dC s Ts (.app C srcs) s Tt (.app C tgts))
 
 abbrev Arm := Tm × Tm × Bool
 
-inductive Shape : Ctx → Bool → Tm → List Arm → Prop
-  | decl : P.adts[d]? = some D → Shape Γ er (.tyc d) (D.ctors.zipIdx.map fun (sig, c) => (.vc d c, sig, P.phantom d c))
+inductive Shape : Ctx → Bool → Tm → List Arm → Bool → Prop
+  | decl : P.adts[d]? = some D → D.coercible = false →
+      Shape Γ er (.tyc d) (D.ctors.zipIdx.map fun (sig, c) => (.vc d c, sig, P.phantom d c)) D.newtype
   | opened : (m, oe) ∈ Γ.opened → Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.isList →
       shp.map (·.1) = cs.toList →
       (∀ i k sig p, shp[i]? = some (k, sig, p) → p = ph.getD i false ∧ sig.isTele ∧ sig.static Γ.n 0 ∧
         ∃ K, TmTy P Γ k K ∧ Γ.canon K = .valCtor sig) →
-      (er || Γ.ok (!oe && !Γ.er m)) → Shape Γ er H shp
+      (er || Γ.ok (!oe && !Γ.er m)) → Shape Γ er H shp nt
 
 def armsOK (Γ : Ctx) (shp : List Arm) (brs : List Br) : Bool :=
   brs.all fun (n, c, k, _) => match shp[c]? with
@@ -329,7 +362,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) →
       CoreTy b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms rest)) rest rets →
       CoreTy b Γ (.call f dec args er ms rest) rets
-  | mtch : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp →
+  | mtch : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp ntf → (er || !ntf) →
       armsOK Γ shp brs = true → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (er || Γ.ok (rt P Γ s)) →
       (∀ c k sig p, shp[c]? = some (k, sig, p) →
@@ -337,12 +370,12 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (∀ e, els = some e → CoreTy b { Γ with ghost := Γ.ghost || er } e R) →
       CoreTy b (Ctx.adv P Γ (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) (.mtch s R brs els er rest)) rest rets →
       CoreTy b Γ (.mtch s R brs els er rest) rets
-  | case : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp →
-      armsOK Γ shp brs = true → (er || Γ.ok (rt P Γ s)) → (Γ.ghost = false → er → realCount brs els ≤ 1) →
+  | case : TmTy P Γ s St → Γ.canon St = .app H idx → Shape P Γ er H shp ntf → nt = (ntf && !er) →
+      armsOK Γ shp brs = true → (er || Γ.ok (rt P Γ s)) → (Γ.ghost = false → (er || nt) → realCount brs els ≤ 1) →
       (∀ c k sig p, shp[c]? = some (k, sig, p) →
         BranchOK b er { Γ with ghost := Γ.ghost || (!er && p) } s k H idx sig rets (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b Γ e rets) →
-      CoreTy b Γ (.case s brs els er) rets
+      CoreTy b Γ (.case s brs els er nt) rets
   | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets →
       CoreTy b Γ (.prim p er rest) rets
   | defLvl : CoreTy b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets → CoreTy b Γ (.defLvl rest) rets
@@ -368,12 +401,13 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
 
 inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch P s k H idx sig = (Γf, .ok σ) →
-      CoreTy b { Γ.advBr (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none))
+      CoreTy b { Γ.advBr P (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none))
         s k fe (sig.len - 1) with cmode := false } body R →
       BranchOK b fe Γ s k H idx sig R (some body) els
   | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
   | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0) vs) → Γ.known k = some (d, c) → c ≠ c0 →
+      P.isNt d = false →
       BranchOK b fe Γ (.fv x) k H idx sig R none els
   | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
 

@@ -43,6 +43,7 @@ instance (k : Nat) : WellFoundedRelation (Mu k) := ⟨fun a b => MuLt k a.μ b.�
 def Prim.eval (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t => t.subst (Tm.env ρ)
   | .assert t _ => t
+  | .coerce _ b _ => b.subst (Tm.env ρ)
   | _ => .tok
 
 def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)
@@ -88,7 +89,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
     | .ok _ => .error "an absurd body returned"
     | .error e => .error e
   | .dead => .error "a refuted branch was reached"
-  | .case s brs els _ =>
+  | .case s brs els _ _ =>
     match s.subst (Tm.env ρ) with
     | .app (.vc _ c) vs =>
       match hb : selectBr brs els c vs.toList with

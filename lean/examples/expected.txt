@@ -7,6 +7,9 @@ examples/annotation.sl: 2
 examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 examples/anon_level.sl: 2
 examples/binder_refute.sl: 0
+examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
+examples/coerce_value_bad.sl: refused: coerce: value mismatch: the value is not the source of the proof
+examples/coerce_wrap_bad.sl: refused: coercible-wrap: the constructor has no opened newtype `Matchable`
 examples/ctor_sig_refute.sl: 7
 examples/double.sl: 4
 examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
@@ -44,6 +47,8 @@ examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch
 examples/let_type_bad.sl: refused: let: the binder is not of the type written
 examples/level_of_param.sl: 3
 examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
+examples/matchable_in_type.sl: 0
+examples/matchable_in_type_bad.sl: refused: argument of the wrong type
 examples/matchable_order_bad.sl: refused: argument of the wrong type
 examples/matchable_value.sl: 0
 examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
@@ -52,6 +57,7 @@ examples/name_iso_bad.sl: refused: an absurd branch names a constructor that is 
 examples/nested_adt.sl: 2
 examples/newtype.sl: (MkMeters 3)
 examples/newtype_bad.sl: error: Pair2 does not have newtype shape
+examples/newtype_match.sl: (MkMeters 5)
 examples/no_annotation_bad.sl: refused: a same-level call whose subterm arguments are all unchanged
 examples/numeral_opaque_bad.sl: refused: a branch that is not refuted is missing
 examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
@@ -86,6 +92,8 @@ examples/vec_head.sl: 1
 unchecked examples/absurd_bad.sl: stuck: no branch
 unchecked examples/absurd_listed_bad.sl: 0
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
+unchecked examples/coerce_value_bad.sl: (MkMeters 1)
+unchecked examples/coerce_wrap_bad.sl: _
 unchecked examples/else_empty_bad.sl: 0
 unchecked examples/erased_fn_bad.sl: 0
 unchecked examples/erased_let_bad.sl: 0
@@ -104,16 +112,17 @@ unchecked examples/let_is_bad.sl: 0
 unchecked examples/let_match_refuted_bad.sl: stuck: no branch
 unchecked examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch outside a body
 unchecked examples/let_type_bad.sl: 0
+unchecked examples/matchable_in_type_bad.sl: 0
 unchecked examples/matchable_order_bad.sl: 0
 unchecked examples/missing_branch_bad.sl: 0
 unchecked examples/name_iso_bad.sl: 0
 unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
-unchecked examples/open_absurd_bad.sl: error: a final function must be `(Fn L -> (many T y))`
+unchecked examples/open_absurd_bad.sl: error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`
 unchecked examples/open_adt_erased_bad.sl: 3
-unchecked examples/open_clash_bad.sl: error: a final function must be `(Fn L -> (many T y))`
-unchecked examples/open_twice_bad.sl: error: a final function must be `(Fn L -> (many T y))`
+unchecked examples/open_clash_bad.sl: error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`
+unchecked examples/open_twice_bad.sl: error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`
 unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
@@ -131,6 +140,7 @@ full examples/adt_mentions_call.sl: error: L is not an entry
 full examples/annotation.sl: 2
 full examples/anon_level.sl: 2
 full examples/binder_refute.sl: 0
+full examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/ctor_sig_refute.sl: 7
 full examples/double.sl: 4
 full examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
@@ -150,10 +160,12 @@ full examples/let_forward.sl: (VCons _ 0 2 $ VNil _)
 full examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/level_of_param.sl: 3
 full examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
+full examples/matchable_in_type.sl: 0
 full examples/matchable_value.sl: 0
 full examples/name_alias.sl: 3
 full examples/nested_adt.sl: 2
 full examples/newtype.sl: (MkMeters 3)
+full examples/newtype_match.sl: (MkMeters 5)
 full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 full examples/open_absurd.sl: 
 full examples/open_adt.sl: 3

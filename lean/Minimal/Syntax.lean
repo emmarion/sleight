@@ -163,6 +163,15 @@ def len : Tm → Nat
   | cons _ t | bind _ _ t => t.len + 1
   | _ => 0
 
+def ers : Tm → List Bool
+  | bind k _ r => k.er :: r.ers
+  | _ => []
+
+def ntField (sig : Tm) : Option Nat :=
+  match (List.range (sig.len - 1)).filter (fun j => !sig.ers.getD j true) with
+  | [k] => some k
+  | _ => none
+
 inductive PSub : Tm → Tm → Prop
   | head : PSub h (cons h t)
   | tail : PSub t (cons h t)
@@ -184,6 +193,23 @@ def valRet : Tm → Nat → Bool
 
 end Tm
 
+def holeBase : Nat := 2 ^ 40
+
+def Tm.hole : Tm := .fv holeBase
+
+def Tm.close (i : Nat) : Nat → Tm → Tm
+  | k, .fv j => if j = i then .bv k else .fv j
+  | k, .cons h t => .cons (h.close i k) (t.close i k)
+  | k, .bind m a r => .bind m (a.close i k) (r.close i (k + 1))
+  | k, .app h a => .app (h.close i k) (a.close i k)
+  | k, .tyCtor p => .tyCtor (p.close i k)
+  | k, .valCtor p => .valCtor (p.close i k)
+  | k, .predates A x L => .predates (A.close i k) (x.close i k) (L.close i k)
+  | k, .subterm A a B b => .subterm (A.close i k) (a.close i k) (B.close i k) (b.close i k)
+  | k, .fn l np t => .fn (l.close i k) np (t.close i k)
+  | k, .mtbl u nt ex ph T cs => .mtbl u nt ex ph (T.close i k) (cs.close i k)
+  | _, t => t
+
 inductive Dec where
   | none
   | predates (p : Tm)
@@ -200,6 +226,13 @@ inductive Prim where
   | predatesSubterm (p q : Tm)
   | mtblOf (d : Nat)
   | assert (t A : Tm)
+  | coerce (a b p : Tm)
+  | coerRefl (s e : Tm)
+  | coerSym (p : Tm)
+  | coerTrans (p q : Tm)
+  | coerShare (p : Tm)
+  | coerWrap (s C args : Tm)
+  | coerCtor (s C srcs tgts ps : Tm)
   deriving Repr, Inhabited
 
 inductive Chk where
@@ -218,7 +251,7 @@ inductive Core where
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
-  | case (s : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er : Bool)
+  | case (s : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er nt : Bool)
   | seq (R : Tm) (body rest : Core)
   | absurd (body : Core)
   | dead
@@ -228,7 +261,7 @@ mutual
 def Core.noRet : Core → Bool
   | .ret _ => false
   | .call _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
-  | .case _ brs els _ => Core.armsNoRet brs && Core.optNoRet els
+  | .case _ brs els _ _ => Core.armsNoRet brs && Core.optNoRet els
   | .seq _ body rest => body.noRet || rest.noRet
   | .absurd _ | .dead => true
 
@@ -294,7 +327,14 @@ structure Adt where
   union : Bool := false
   newtype : Bool := false
   extern : Bool := false
+  coercible : Bool := false
   deriving Repr, Inhabited
+
+def Tm.coer (d : Nat) (sa A a sb B b : Tm) : Tm := .app (.tyc d) (.ofList [sa, A, a, sb, B, b])
+
+def sharingD : Nat := 1
+
+def sharedTm : Tm := .app (.vc sharingD 1) .nil
 
 def Adt.mtbl (D : Adt) (d : Nat) : Tm :=
   .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d)
@@ -304,6 +344,7 @@ structure Prog where
   adts : List Adt
   groups : List Group
   main : Core
+  hidden : Nat := 0
   deriving Repr, Inhabited
 
 def marks : Tm → Nat → List Bool
@@ -316,6 +357,23 @@ def Prog.k (P : Prog) : Nat :=
 def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[c]?)
 
 def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom[c]?)).getD false
+
+def Prog.isNt (P : Prog) (d : Nat) : Bool := ((P.adts[d]?).map (·.newtype)).getD false
+
+def Prog.wrapField (P : Prog) (d c : Nat) : Option Nat :=
+  if P.isNt d && !P.phantom d c then (P.ctor d c).bind Tm.ntField else none
+
+mutual
+def Prog.unwrapArgs (P : Prog) : Tm → Tm
+  | .cons a as => .cons (P.unwrap a) (P.unwrapArgs as)
+  | t => t
+
+def Prog.unwrap (P : Prog) : Tm → Tm
+  | .app (.vc d c) args => match P.wrapField d c with
+    | some k => (P.unwrapArgs args).toList.getD k .nil
+    | none => .app (.vc d c) (P.unwrapArgs args)
+  | t => t
+end
 
 def realBr (brs : List Br) (els : Option Core) : Option (List Tm × Core) :=
   match brs.filter (·.2.2.2.real), els with

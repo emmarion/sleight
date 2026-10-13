@@ -25,9 +25,14 @@ lake build minimal              # the command-line runner
 `minimal` checks a program and runs it, or prints why it is refused.
 A value prints as DESIGN.md section 45 has it: a `Nat` of the prelude
 as a numeral, an erased field as `_`, and a last argument that is an
-application after `$`. A final value that is a function must have no
-parameters and one `many` return written with its type; it is applied,
-and its result printed (section 27).
+application after `$`. A checked program's results print by their
+types, since the stripped run holds a newtype's value as its field;
+`--unchecked` prints by value. A final value that is a function must have one
+of the two forms of section 27: from no parameters to one `many` return
+written with its type, when it is applied and its result printed, or,
+with the prelude, from one `many` `(String)` to one `many` `(String)`,
+when it is applied to all of standard input and its result written to
+standard output.
 `--unchecked` skips the checker and runs the program anyway.
 A checked program runs with erased code skipped (the stripped run,
 `runS`), which `eval_sound` proves agrees with the full run on what is
@@ -55,8 +60,8 @@ example. Every program starts in the scope of
 - `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
   and checking.
 - `prelude.sl`: the prelude, which `prelude.py` makes from
-  `lib/prelude.sl`: the forms the runner accepts, in order, with the
-  `extern` markers of functions removed, kept only when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
+  `lib/prelude.sl`: the forms the runner accepts, in order, kept only
+  when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
   .lake/build/bin/minimal prelude.sl` regenerates it.
 - `compare.sh`: runs the runner over the OCaml suite's `tests/` and
   prints, per test, the verdict the test expects and the runner's.
@@ -97,11 +102,15 @@ each one rests on, which are Lean's own three (`propext`,
   environment whose non-erased entries stand for the full one's exists
   and ends in values standing for the full results. So the stripped run
   never reaches a match or a call on something it skipped, which is the
-  sense in which erasure is safe here. `RunS.det` says a stripped run
+  sense in which erasure is safe here. The stripped run holds a value
+  built by a `newtype`'s wrapping constructor as its one non-erased
+  field, as DESIGN.md section 33 has it (`Prog.unwrap`), and a stripped
+  value stands for such a value when it stands for that field
+  (`Real.wrap`). `RunS.det` says a stripped run
   has one outcome, and `runS_sound` that the executable `runS`, which
   the runner uses, finds only stripped runs.
 - **`no_false`.** No checked program has as its result type a data type
-  with no constructors.
+  with no constructors, `Coercible` aside, which is opaque.
 
 The proof is a syntactic, environment-based one. `VTy` says what it is
 for a value to have a type. It is defined by recursion on values, not on
@@ -129,11 +138,13 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
-refused as not supported: `unique`; `extern` functions (an `extern` type
-is an ordinary type that records the mark, and only the prelude, or a
-program run with `--no-prelude`, may write it); `at` and `extern` marks
-on a `def-fns` line; and every form not named in this file, among them
-`coerce`, macros, cells and `at`. A file's top level
+refused as not supported: `unique`; an `at` mark on a `def-fns` line;
+and every form not named in this file, among them `coercible-of`,
+`delegate-of`, macros, cells and `at`. Only the prelude, or a program
+run with `--no-prelude`, may mark a type or a function `extern`, and
+only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
+The mark is recorded and changes nothing else: the runner has no FFI,
+and runs every `extern` function's model. A file's top level
 has size one, or ends in a statement and produces nothing (section 27).
 
 Every name may be bound, special forms included (section 19); a binder
@@ -148,17 +159,23 @@ constructor; a head bound to an entry the elaborator knows is a
 Pragmas (section 4): `;! warn`, `;! suppress warn` and `;! restore warn`,
 written where a statement may stand. Warnings are printed to standard
 error, without a position, and do not change the verdict.
-`(compile-warn m)` and `(compile-error m)` take a string literal as `m`;
-`(dump-context)` stops elaboration with an error that names what is in
-scope.
+`(compile-warn m)` and `(compile-error m)` take a string literal, or an
+expression whose result is a `Settled`, non-erased `String` (section 4);
+in run position the expression is run as it is elaborated, and inside a
+body it must be a name that forwards such an entry. `(dump-context)`
+stops elaboration with an error that names what is in scope, with each
+entry's type where the elaborator knows it, its multiplicity, whether
+it is `Settled`, and its `is` rule.
 
 ## Differences from MINIMAL.md
 
 1. A `def-adts` signature may mention an entry only when the elaborator
-   knows its type from the text: a level, a function a `def-fns`
-   defines, a function's parameter, a result of a call to such a
-   function, or a `let` binder written with a type; or when the entry is a `let` of a term or an `is` parameter,
-   which is put in its place. Any other entry is refused.
+   knows its type: an entry the top level has made by an earlier form,
+   whose type the checker's context gives, a level, a function a
+   `def-fns` defines, a function's parameter, a result of a call to such
+   a function, or a `let` binder written with a type; or when the entry
+   is a `let` of a term or an `is` parameter, which is put in its place.
+   Any other entry is refused.
 
 ## Beyond MINIMAL.md
 
@@ -234,8 +251,32 @@ scope.
   values in place is the type of `t`. A literal's value prints as the
   literal it reads back from.
 - A result of the program whose type mentions the program's own entries
-  is checked as a result of any type (`ArgsTy.anyCons`), so
+  is returned after those entries, which inference adds to the final
+  results as erased ones (`Prog.hidden`), so that the result telescope
+  is closed and `checked_runs` speaks of the result's type; the runner
+  does not print them. Where the checker cannot build that telescope,
+  the result is checked as a result of any type (`ArgsTy.anyCons`), and
   `checked_runs` says nothing of its type.
+- `coerce` and the proof forms `coercible-refl`, `coercible-sym`,
+  `coercible-trans`, `coercible-share`, `coercible-wrap` and
+  `coercible-ctor` (sections 33 and 34). `Coercible` is a built-in type
+  with no constructors and no `Matchable`. `VTy` reads a proof of
+  `(Coercible sa A a sb B b)` as: a stripped value stands for `a` exactly
+  when it stands for `b`. Each proof form is a primitive whose typing
+  rule establishes that (`prim_sound`). `(coerce a p)` is, in the full
+  run, `b`, read from the type of `p` by inference, and in the stripped
+  run the value of `a`; it has the rule that it is `b`. Without `unique`,
+  a non-erased `coerce` needs `(Shared)` on both sides, which inference,
+  not the checker, enforces. `coercible-wrap` takes a constructor named
+  by its declaration or listed by an opened `newtype` `Matchable`, and
+  `coercible-ctor` any constructor whose signature is written out, a
+  first-class one included.
+- A non-erased match on a `newtype` is elaborated to a `case` marked
+  `nt`, which the stripped run takes without looking at the scrutinee,
+  with the scrutinee's value as the one non-erased field; the checker
+  allows it at most one real branch, as for an erased scrutinee.
+  `comptime-match` and the checker's known values look through no
+  newtype.
 - `Matchable` types and `(matchable-of T)` for a declared type
   (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
@@ -244,10 +285,8 @@ scope.
   elaborated, and keeps the values; an entry so known and non-erased is
   `Settled`. A head bound to a `Settled` entry whose value is a `Special`
   constructor, and whose type when it was made is `(Special)` by the
-  facts of top-level `let-match`es on `Eq` proofs, dispatches as that
-  form; so does a head that is itself a form in run position whose value
-  is one. `compile-warn` and `compile-error` take a name of a `Settled`
-  `String` of the prelude. The checker keeps, beside its context, the
+  facts in force at the top level, dispatches as that form; so does a head that is itself a form in run position whose value
+  is one. The checker keeps, beside its context, the
   stripped values of the entries the top level has made so far
   (`Ctx.fixed`), computing each by the stripped run (`stepS`), and
   `EnvOK` carries that each stands for the full run's value (`FixOK`).
@@ -303,9 +342,9 @@ scope.
   a `subterm` proof for the first `subterm` argument that differs from
   its counterpart, which needs it to be a strict subtree of the
   counterpart after canonicalization. A same-level call whose `subterm`
-  arguments are all unchanged is refused. Where a `_` is written does
-  not matter here, where section 48 reads `(subterm _)` before its
-  argument.
+  arguments are all unchanged is refused. A written `(predates _)` asks
+  for the first of the two, and a written `(subterm _)` for the second,
+  for the argument it precedes.
 - `(level-of f)` (section 53), in a term and as an argument of
   `prove-predates`, for an `f` that a `def-fns` in scope names, directly
   or through `let` binders forwarding from one, and for a parameter
@@ -347,7 +386,9 @@ scope.
 - A `let` binder forwards from its right-hand side, as DESIGN.md
   section 19 has it: a binder of a variable is that variable's entry,
   and a binder of any other term of the type grammar is a new entry
-  with the `is` rule that it is the term.
+  with the `is` rule that it is the term. An `erased` binder of a
+  `Settled`, non-erased entry is a new erased entry with the rule that
+  it is that entry, so that it holds no value (section 19).
 - A branch forces two equations: the scrutinee equals the constructor
   applied to the branch's field entries, and the scrutinee's type equals
   the constructor's return type.

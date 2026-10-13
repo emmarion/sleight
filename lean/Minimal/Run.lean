@@ -90,46 +90,170 @@ partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
   " ".intercalate (P.name h :: shown)
 end
 
-def Prog.thunk (P : Prog) : Tm → Except String (Option (List Tm × Group × FnDef))
+def printHole : Nat := 2 ^ 41
+
+partial def matchTy (sol : List (Nat × Tm)) : Tm → Tm → List (Nat × Tm)
+  | .fv i, t => if printHole ≤ i && (sol.lookup i).isNone then (i, t) :: sol else sol
+  | .app h a, .app h' a' => matchTy (matchTy sol h h') a a'
+  | .cons h t, .cons h' t' => matchTy (matchTy sol h h') t t'
+  | _, _ => sol
+
+partial def openSig : Nat → Tm → List (Option Tm) × Tm
+  | j, .bind k A r@(.bind ..) =>
+    let (fs, R) := openSig (j + 1) (r.inst (.fv (printHole + j)) 0)
+    ((if k matches .ty .. then some A else none) :: fs, R)
+  | _, .bind _ A _ => ([], A)
+  | _, t => ([], t)
+
+def Prog.fieldTys (P : Prog) (d c : Nat) (T : Tm) : List (Option Tm) :=
+  let (fs, R) := openSig 0 ((P.ctor d c).getD .nil)
+  let sol := matchTy [] R T
+  fs.map fun F => F.bind fun F =>
+    let F := F.subst fun i => (sol.lookup i).getD (.fv i)
+    if F.fvs.any (printHole ≤ ·) || F.levels.length > 0 then none else some F
+
+def Prog.adtIs (P : Prog) (d : Nat) (name : String) : Bool := P.adts.findIdx? (·.name == name) == some d
+
+partial def Prog.strT (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
+  | .app (.vc _ 0) _ => some []
+  | .app (.vc _ 1) args => do
+    let as := args.toList
+    let c ← Prog.natOf nat (as.getD (as.length - 2) .nil)
+    let rest ← P.strT nat (as.getD (as.length - 1) .nil)
+    some (c :: rest)
+  | _ => none
+
+mutual
+partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → String × Bool
+  | some (.app (.tyc d) idx), v =>
+    let lit : Option String :=
+      if nat == some d then (Prog.natOf nat v).map toString
+      else if nat.isSome && P.adtIs d "Char" then (Prog.natOf nat v).map showChar
+      else if nat.isSome && P.adtIs d "String" then (P.strT nat v).map showStr
+      else none
+    match lit, P.adts[d]? with
+    | some l, _ => (l, false)
+    | none, some D =>
+      let live := (List.range D.ctors.length).filter (!P.phantom d ·)
+      if D.newtype then match live with
+        | [c] => match P.wrapField d c with
+          | some k =>
+            let n := ((P.ctor d c).map fieldErs).getD [] |>.length
+            P.showCon nat (.app (.tyc d) idx) d c ((List.range n).map fun j => if j == k then v else .tok)
+          | none => ("_", false)
+        | _ => ("_", false)
+      else if D.union && live.length > 1 then ("_", false)
+      else match v with
+        | .app (.vc d' c) args => if d' == d then P.showCon nat (.app (.tyc d) idx) d c args.toList else (P.show nat v, false)
+        | _ => (P.show nat v, false)
+    | none, none => (P.show nat v, false)
+  | _, v => (P.show nat v, v matches .app (.vc ..) _)
+
+partial def Prog.showCon (P : Prog) (nat : Option Nat) (T : Tm) (d c : Nat) (args : List Tm) : String × Bool :=
+  let ers := ((P.ctor d c).map fieldErs).getD []
+  let tys := P.fieldTys d c T
+  let vs := (args.zipIdx.map fun (v, k) => (v, ers.getD k false, (tys.getD k none))).drop (P.lifted d)
+  let shown := vs.zipIdx.map fun ((v, er, ty), k) =>
+    if er then "_"
+    else
+      let (sv, ap) := P.showT nat ty v
+      if k + 1 == vs.length && ap && sv.startsWith "(" then "$ " ++ (sv.drop 1).dropRight 1 else sv
+  ("(" ++ " ".intercalate (P.name (.vc d c) :: shown) ++ ")", true)
+end
+
+def Prog.typesOf : Tm → List Tm → List (Option Tm)
+  | .bind k A r, v :: vs => (if k matches .ty .. && A != .nil then some A else none) :: Prog.typesOf (r.inst v 0) vs
+  | _, vs => vs.map fun _ => none
+
+def Prog.strD (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "String")
+
+def Prog.isStr (P : Prog) : Tm → Bool
+  | .app (.tyc d) _ => P.strD == some d
+  | _ => false
+
+def Prog.mkStr (P : Prog) (wrapped : Bool) (bytes : List Nat) : Tm := Id.run do
+  let some sd := P.strD | return .nil
+  let nat := P.nat.getD 0
+  let lift (d : Nat) : List Tm := List.replicate (P.lifted d) .tok
+  let natT (n : Nat) : Tm := (List.range n).foldl (fun t _ => Tm.app (.vc nat 1) (.cons t .nil)) (.app (.vc nat 0) .nil)
+  let ch (n : Nat) : Tm := match wrapped, P.adts.findIdx? (·.name == "Char"), P.adts.findIdx? (·.name == "U8") with
+    | true, some chr, some u8 =>
+      .app (.vc chr 0) (.ofList (lift chr ++ [.app (.vc u8 0) (.ofList (lift u8 ++ [natT n, .tok]))]))
+    | _, _, _ => natT n
+  return bytes.foldr (fun b acc => .app (.vc sd 1) (.ofList (lift sd ++ [ch b, acc]))) (.app (.vc sd 0) (.ofList (lift sd)))
+
+inductive Out where
+  | text (s : String)
+  | io (k : List Nat → Except String (List Nat))
+
+def Prog.thunk (P : Prog) (pre : Bool) : Tm → Except String (Option (List Tm × Group × FnDef))
   | .clo env gid j => match P.groups[gid]?, (P.groups[gid]?).bind (·.fns[j]?) with
     | some G, some F =>
-      if F.np = 0 && F.tele matches .bind (.ty _ false) _ .nil then .ok (some (env.toList ++ closures env.toList gid G, G, F))
-      else .error "error: a final function must be `(Fn L -> (many T y))`"
+      let ok := match F.np, F.tele with
+        | 0, .bind (.ty _ false) _ .nil => true
+        | 1, .bind (.ty _ false) A (.bind (.ty _ false) B .nil) => pre && P.isStr A && P.isStr B
+        | _, _ => false
+      if ok then .ok (some (env.toList ++ closures env.toList gid G, G, F))
+      else .error "error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`"
     | _, _ => .ok none
   | _ => .ok none
 
-def Prog.final (P : Prog) (go : List Tm → Core → Option (List Tm)) : Option (List Tm) → String
-  | some [v] => match P.thunk v with
-    | .ok (some (ρ, _, F)) => match go ρ F.body with
-      | some vs => " ".intercalate (vs.map (P.show P.nat))
-      | none => "stuck"
-    | .ok none => P.show P.nat v
-    | .error e => e
-  | some vs => " ".intercalate (vs.map (P.show P.nat))
-  | none => "stuck"
+def Prog.showAll (P : Prog) (pre typed : Bool) (Ts : List (Option Tm)) (vs : List Tm) : String :=
+  let nat := if pre then P.nat else none
+  if typed then " ".intercalate ((vs.zip (Ts ++ vs.map fun _ => none)).map fun (v, T) => (P.showT nat T (P.unwrap v)).1)
+  else " ".intercalate (vs.map (P.show nat))
 
-def Prog.run (P : Prog) : String :=
+def Prog.final (P : Prog) (pre typed wrapped : Bool) (R : List Tm → List (Option Tm)) (go : List Tm → Core → Option (List Tm))
+    (res : Option (List Tm)) : Out :=
+  let R := fun vs => (R (List.replicate P.hidden .tok ++ vs)).drop P.hidden
+  match res.map (·.drop P.hidden) with
+  | some [v] => match P.thunk pre v with
+    | .ok (some (ρ, _, F)) =>
+      if F.np = 1 then .io fun bytes => match go (ρ ++ [P.mkStr wrapped bytes]) F.body with
+        | some [r] => match P.strT P.nat (P.unwrap r) with
+          | some bs => .ok bs
+          | none => .error "stuck: the result is not a String"
+        | _ => .error "stuck"
+      else match go ρ F.body with
+        | some vs => .text (P.showAll pre typed (Prog.typesOf (F.tele.subst (Tm.env ρ)) vs) vs)
+        | none => .text "stuck"
+    | .ok none => .text (P.showAll pre typed (R [v]) [v])
+    | .error e => .text e
+  | some vs => .text (P.showAll pre typed (R vs) vs)
+  | none => .text "stuck"
+
+def Prog.run (P : Prog) (pre typed : Bool) (R : List Tm → List (Option Tm)) : Out :=
   match eval P none [] 0 P.main with
-  | .ok (vs, cnt) => P.final (fun ρ c => match eval P none ρ cnt c with | .ok (vs, _) => some vs | .error _ => none) (some vs)
-  | .error e => s!"stuck: {e}"
+  | .ok (vs, cnt) => P.final pre typed true R (fun ρ c => match eval P none ρ cnt c with | .ok (vs, _) => some vs | .error _ => none) (some vs)
+  | .error e => .text s!"stuck: {e}"
 
-def Prog.runStripped (P : Prog) : String :=
-  P.final (runS P 100000000) (runS P 100000000 [] P.main)
+def Prog.runStripped (P : Prog) (pre : Bool) (R : List Tm → List (Option Tm)) : Out :=
+  P.final pre true false R (runS P 100000000) (runS P 100000000 [] P.main)
 
 def prelude : String := include_str "../prelude.sl"
 
-def runProg (P : Prog) (mode : String) : String :=
+def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
   match P.infer with
-  | .error e => s!"error: {e}"
+  | .error e => .text s!"error: {e}"
   | .ok P =>
-    if mode == "--unchecked" then P.run
+    if mode == "--unchecked" then P.run pre false fun _ => []
     else match checkProg P with
-      | .error e => s!"refused: {e}"
-      | .ok _ => if mode == "--full" then P.run else P.runStripped
+      | .error e => .text s!"refused: {e}"
+      | .ok ⟨R, _⟩ =>
+        let rec anyTy : Tm → Bool
+          | .bind (.ty _ _) .nil _ => true
+          | .bind _ _ r => anyTy r
+          | _ => false
+        let tys (vs : List Tm) := if anyTy R then
+            match retTypes P {tys := []} P.main with
+            | some Ts => Ts.map some
+            | none => Prog.typesOf R vs
+          else Prog.typesOf R vs
+        if mode == "--full" then P.run pre true tys else P.runStripped pre tys
 
-def runSource (src : String) (mode : String) (pre : Bool) : List String × String :=
+def runSource (src : String) (mode : String) (pre : Bool) : List String × Out :=
   match load ((if pre then prelude ++ "\n(__prelude-end)\n" else "") ++ src) pre with
-  | .error e => ([], s!"error: {e}")
-  | .ok (P, ws) => (ws, runProg P mode)
+  | .error e => ([], .text s!"error: {e}")
+  | .ok (P, ws) => (ws, runProg P mode pre)
 
 end Minimal
