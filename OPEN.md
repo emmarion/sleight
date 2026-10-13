@@ -4,13 +4,15 @@ These are questions about the language that DESIGN.md does not answer.
 Each is stated as a question. Nothing here is a decision. Section
 references are to DESIGN.md.
 
-## Soundness and invariants, unverified
+## Soundness and invariants
 
 1. Consistency. Is the language sound with `Type : Type` and no
    positivity restriction (§10)? Termination is carried by the level
    and subterm order (§17), and types never compute (§9). The owner
-   holds that it is sound. SOUNDNESS.md sketches an argument, unchecked,
-   that reduces the question to the lemmas it names.
+   holds that it is sound. `lean/` proves a form of it for a fragment;
+   SOUNDNESS.md part 10 says which. For the rest, SOUNDNESS.md sketches
+   an argument, unchecked, that reduces the question to the lemmas it
+   names.
 2. Erasure conservativity. Take any program that compiles and collapse
    `unique` to `many`: a `UniqueFn` becomes an `Fn`, every cell
    operation becomes an allocation, `share` and `slot-of` become the
@@ -36,7 +38,7 @@ references are to DESIGN.md.
    `(False)` token through an erased field?
 5. Should the irreflexivity of `Subterm` and the strict creation order
    of `Predates` be stated as invariants? Both appear to be necessary
-   for consistency.
+   for consistency, and `lean/`'s proof appears to rely on both.
 6. Are the `is`-declared fields of a `comptime-match` or `let-match`
    and forced index unification one mechanism?
 

@@ -2,8 +2,10 @@
 
 A reader who knows Girard's and Curry's paradoxes will expect §10 of
 DESIGN.md, `Type : Type` with no positivity requirement, to make this
-language unsound. This note argues that it does not. It is a sketch by a
-Claude session, not a checked proof, and section numbers are DESIGN.md's.
+language unsound. This note argues that it does not. Claude sessions
+wrote it. `lean/` checks the argument by machine for a fragment of the
+language (part 10); for the rest it is a sketch. Section numbers are
+DESIGN.md's.
 
 ## In short
 
@@ -29,13 +31,13 @@ types. None of these appears to reopen the paradoxes, for four reasons:
    text.** Telescopes are syntax, never built at run time, so the
    lexicographic order has a fixed length and is well-founded.
 
-Parts 1 to 7 turn this into an argument. It rests on lemmas about the
-rest of the language that are not proved here: that the facts the
-checker records hold of the values, that uniqueness and cells implement
-immutable values, that the FFI matches its models, and so on. A
-stratified, strictly positive version of the language would need every
-one of those too. A bug in any of them is a bug, but it is not a cost of
-§10.
+Parts 1 to 7 turn this into an argument. Outside `lean/`'s fragment it
+rests on lemmas about the rest of the language that are not proved: that
+the facts the checker records hold of the values, that uniqueness and
+cells implement immutable values, that the FFI matches its models, and
+so on. A stratified, strictly positive version of the language would
+need every one of those too. A bug in any of them is a bug, but it is
+not a cost of §10.
 
 ## 1. What is claimed
 
@@ -53,7 +55,8 @@ The claim has four parts, about any program the checker accepts:
   carries over to it.
 
 From these, consistency in the sense §10 needs would follow: no reachable
-state, erased or not, holds a value of a type with no constructors, so
+state, erased or not, holds a value of a type whose opened `Matchable`
+lists no constructors (§25), so
 no `(False)` token can justify a refutation that the run then relies on.
 
 The argument claims nothing about logical consistency in the
@@ -77,18 +80,10 @@ type that does not terminate. That does damage in two ways:
    a well-typed term that the termination argument wrongly covers, and
    its type is then trusted.
 
-As far as this session can tell, neither mechanism exists here:
-
-1. Types contain no calls (§9) and the checker never evaluates (§29).
-   Type equality is canonicalization by `is` rules followed by identity
-   (§7, §9), so there is no evaluation in checking for a paradox to
-   drive.
-2. Termination is not derived from types at all. It rests on §17's
-   order: the level of the callee, then the `subterm`-marked arguments.
-   Levels are ordered by when they are minted (§18), and `Subterm` is
-   strict subtree on the finite syntax of values (§18). Neither
-   mentions a type, so neither depends on whether `Type` contains
-   itself or on where a datatype occurs in its own signature.
+As far as this session can tell, neither mechanism exists here, for
+reasons 1 and 2 of the summary above: type equality is canonicalization
+by `is` rules followed by identity (§7, §9), and termination rests on
+§17's order, which mentions no type.
 
 A further difference from systems such as Coq: there, for a constructor
 like `Lim : (nat -> Ord) -> Ord`, the result `f n` of a stored function
@@ -96,8 +91,6 @@ counts as a structural subterm of `Lim f`, and that infinitary subterm
 relation is what strict positivity protects. Here `prove-subterm` treats
 a type former as opaque (§18) and an `is` term cannot contain a call
 (§9), so the result of a stored function is never a subterm of anything.
-A function stored in data is a leaf for `Subterm`, and calling it needs
-the same `Predates` or `Subterm` evidence as any other call (§19).
 
 ## 3. The full semantics
 
@@ -149,26 +142,25 @@ the body runs; a nested function's body runs after its definition, so
 its own entries come after every `def-lvl` of the enclosing body that
 precedes the definition and cannot see any that follow it; and the top
 level runs in order. A value bound at that step contains only levels
-already minted, so (I3) holds of the new token. `x` may be anything
-introduced early enough, a level that came in as a parameter included,
-as `M` in §57's `(prove-predates M L)`: a parameter is bound before the
-body that mints `L` runs. The lemma does use that `L` is a mint: §18
-refuses `prove-predates x L` for a parameter `L`, since a parameter's
-level may have been minted after anything at all.
+already minted, so (I3) holds of the new token. The lemma does use that
+`L` is a mint: §18 refuses `prove-predates x L` for a parameter `L`,
+since a parameter's level may have been minted after anything at all.
 `tests/paradox_curry_bad.sl` and `tests/predates_*` exercise this check.
 
 **Preservation of (I1)** is the load-bearing lemma that this note does
-*not* prove. It needs the forcing rules of §7 to be valid for equality
-of value trees: constructor and type-constructor application
-injective, the disjointness of §8 true of distinct constructors, and
-the occurs check true of finite trees. With values as syntax trees
-these seem plausible and seem not to depend on §10, because none of them
-asks what a type means, only how it is spelled. The parts most in need
-of checking are the `Matchable` invariant of §8, the unification of
-unopened first-class type constructors (§8), and slots (OPEN.md 3).
-Also assumed: the FFI agrees with its models (§42), `comptime-match`
-reads correct values (§29, OPEN.md 4), and the axioms the prelude and
-§45 assert (`prove-literal-lt`, `gensym-unique`, literal bounds) are true.
+*not* prove; `lean/` proves it for its fragment (part 10). It needs the
+forcing rules of §7 to be valid for equality of value trees: constructor
+and type-constructor application injective, the disjointness of §8 true
+of distinct constructors, and the occurs check true of finite trees.
+With values as syntax trees these seem plausible and seem not to depend
+on §10, because none of them asks what a type means, only how it is
+spelled. The parts most in need of checking are the `Matchable`
+invariant of §8, the unification of unopened first-class type
+constructors (§8), and slots (OPEN.md 3). Also assumed: the FFI agrees
+with its models (§42); `comptime-match` reads correct values (§29,
+OPEN.md 4), as do `settled-eq`, `resolve` and `settled-value` (§64,
+§65); and the axioms `gensym-unique`, `placed-slot` and `placed-eq`
+(§65, §66) and the literal facts of §45 are true.
 
 ## 5. Totality (T)
 
@@ -236,11 +228,9 @@ None of this looks at whether `Type` contains itself.
 
 ## 7. Safety and erasure (S, E)
 
-(S) would be a progress-and-preservation argument for the full
-semantics. Such arguments are syntactic and, as far as this session
-knows, do not care about predicativity: Cardelli's `Type : Type`
-calculus is, as the session recalls it, type-safe though not
-normalizing. The dependent part is that a refuted branch and the
+(S) is a syntactic progress-and-preservation argument, which `lean/`
+carries out for its fragment with no stratification (part 10). The
+dependent part is that a refuted branch and the
 one-real-branch rule (§21) are only as good as the facts in force,
 which is (I1), and that no value has an empty type, which holds of
 trees built by constructors.
@@ -279,7 +269,10 @@ checker's.
   its own strict subterm, so `Type : Type` gives the subterm order no
   cycle.
 
-These cover the obvious shapes, not every possible one.
+The Lean runner refuses the same four (`lean/examples/`). Run with
+`--unchecked`, its evaluator stops the three knots at the decrease
+check rather than looping. These cover the obvious shapes, not every
+possible one.
 
 ## 9. What the argument leans on
 
@@ -301,8 +294,26 @@ revisiting:
   (part 5);
 - a construct that runs at the top level without being total.
 
-ASSUMPTIONS.md 75's question is consistent with this: under either
-reading of the current level there, the branch that forces two distinct
-mints equal states a false fact, so by (I1) it is unreachable in the
-full semantics, and the argument appears to predict what that session
-found, that the accepted call could not be run.
+## 10. What `lean/` checks
+
+`lean/` defines a full semantics like part 3's for MINIMAL.md's
+fragment and the additions `lean/README.md` lists, and proves in Lean 4,
+on Lean's three standard axioms:
+
+- (T): `eval` is defined by well-founded recursion on part 5's measure,
+  with levels as counter values and value sizes in place of strict
+  subtree, and `checked_runs` shows a checked program never fails the
+  decrease check.
+- (S): `checked_runs`, through `VTy`, which types values by recursion on
+  the value, not the type. `no_false` is part 1's consistency.
+- (E): `eval_sound`, through the stripped run `RunS` and `Real`.
+- (I1) is `Sat`, in `EnvOK`; (I2) and (I3) are how `VTy` reads
+  `Subterm` and `Predates`; the lexical-order lemma is `Chrono`. Part
+  5's bound k rests on `Tm.isTele`: a telescope is written out, never a
+  variable.
+- (C) only in part: `checkProg` is total, but the reader, the elaborator
+  and `Infer.lean` are outside the proof.
+
+Outside the fragment, so argued above at most: `unique`, cells, `at`,
+slots, at-functions and at-matches, `coerce`, macros, extern functions
+and `delegate-of`.
