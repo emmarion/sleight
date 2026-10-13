@@ -125,11 +125,30 @@ structure ESt where
   warns : List String := []
   pwarn : List (Tm × String) := []
   supp : List (String × Option Tm × Nat) := []
-  settled : List (Nat × Tm) := []
+  vals : List Tm := []
+  facts : List (Nat × Tm) := []
   special : Nat := 0
   depthTop : Bool := true
 
 abbrev M := StateT ESt (Except String)
+
+def ESt.settledVal (st : ESt) (i : Nat) : Option Tm :=
+  if i < st.vals.length && !(st.ers.getD i true) then st.vals[i]? else none
+
+def ESt.firstAdt (st : ESt) (name : String) : Option Nat := st.decls.findIdx? (·.name == name)
+
+partial def ESt.factCanon (st : ESt) : Nat → Tm → Tm
+  | 0, t => t
+  | k + 1, .fv j => match st.facts.lookup j with
+    | some t => st.factCanon k t
+    | none => .fv j
+  | _, t => t
+
+def ESt.mintedSpecial (st : ESt) (i : Nat) : Bool :=
+  match st.inl.lookup i, ((st.known.filter (·.1 == i)).getLast?).map (·.2) with
+  | some (.app (.vc d _) .nil), _ => d == st.special
+  | _, some T => st.factCanon 100 T == .app (.tyc st.special) .nil
+  | _, _ => false
 
 def warn (msg : String) : M Unit := modify fun st => { st with warns := st.warns ++ [msg] }
 
@@ -168,7 +187,7 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
     | _, some (d, c) => first d; pure (.vc d c)
     | _, _ =>
       match specialNames.idxOf? x with
-      | some c => if st.decls.length > 0 then pure (.vc st.special c) else throw s!"unbound name {showName x}"
+      | some c => if st.decls.length > 0 then pure (.app (.vc st.special c) .nil) else throw s!"unbound name {showName x}"
       | none => throw s!"unbound name {showName x}"
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
@@ -248,9 +267,9 @@ def resolveHead (sc : Scope) : Sx → M Sx
     match sc.lookup h with
     | some r =>
       let i := match r with | .fv i | .fn i _ _ | .ctor i => some i | _ => none
-      match i.bind (st.settled.lookup ·) with
-      | some (.vc d c) =>
-        if d == st.special && st.decls.length > 0 then
+      match i.bind st.settledVal with
+      | some (.app (.vc d c) _) =>
+        if d == st.special && st.decls.length > 0 && (i.map st.mintedSpecial).getD false then
           let s := specialNames.getD c ""
           if (sc.lookup s).isSome then throw s!"the special form {s} is shadowed where {showName h} dispatches to it"
           return .list (.atom s :: args)
@@ -259,10 +278,35 @@ def resolveHead (sc : Scope) : Sx → M Sx
     | none => return e
   | e => return e
 
-def compileMsg (_ : Scope) : Sx → M String
-  | .atom a => if a.startsWith "\"" then pure (String.ofList (a.toList.drop 1)) else
-      throw "the message of compile-error or compile-warn is not a Settled String"
-  | _ => throw "the message of compile-error or compile-warn is not a Settled String"
+partial def natOfVal : Tm → Option Nat
+  | .app (.vc _ 0) .nil => some 0
+  | .app (.vc _ 1) (.cons x .nil) => (natOfVal x).map (· + 1)
+  | _ => none
+
+def ESt.adtName (st : ESt) (d : Nat) : String := ((st.decls[d]?).map (·.name)).getD ""
+
+partial def ESt.strOfVal (st : ESt) : Tm → Option (List Char)
+  | .app (.vc d 0) _ => if st.firstAdt "String" == some d then some [] else none
+  | .app (.vc d 1) args => do
+    if st.firstAdt "String" != some d then none
+    let as := args.toList
+    let .app (.vc _ 0) cargs := as[as.length - 2]! | none
+    let .app (.vc _ 0) uargs := cargs.toList.getLast! | none
+    let us := uargs.toList
+    let n ← natOfVal us[us.length - 2]!
+    let rest ← st.strOfVal as.getLast!
+    some (Char.ofNat n :: rest)
+  | _ => none
+
+def compileMsg (sc : Scope) : Sx → M String
+  | .atom a => do
+    if a.startsWith "\"" then return String.ofList (a.toList.drop 1)
+    let st ← get
+    let i := match sc.lookup a with | some (.fv i) | some (.fn i _ _) | some (.ctor i) => some i | _ => none
+    match (i.bind st.settledVal).bind st.strOfVal with
+    | some cs => return String.ofList cs
+    | none => throw s!"the message of compile-error or compile-warn must be a Settled, non-erased String; `{showName a}` is not one"
+  | _ => throw "the message of compile-error or compile-warn must be a Settled, non-erased String"
 
 def dumpContext (sc : Scope) : String :=
   "`dump-context` stops elaboration here and reports what the checker knows; in scope: " ++
@@ -445,6 +489,15 @@ abbrev Stmt := Core → Core
 
 def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofList ts))
 
+def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
+  let st ← get
+  if !st.top || st.vals.length < n0 then return
+  let P : Prog := { adts := st.decls, groups := st.groups, main := .dead }
+  let c := close ss ((List.range (st.n - n0)).map (Tm.fv <| n0 + ·))
+  match runS P 10000000 (st.vals.take n0) c with
+  | some vs => if vs.length == st.n - n0 then set { st with vals := st.vals.take n0 ++ vs }
+  | none => pure ()
+
 def entry (sc : Scope) : Sx → M Nat
   | .atom x => match sc.lookup x with
     | some (.fv i) | some (.fn i _ _) => pure i
@@ -577,13 +630,34 @@ mutual
 partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) (e : Sx) : M (List Stmt × List Tm) := do
   match ← resolveHead sc e with
   | .list [.atom "\x03var", .atom x] => return ([], [← look sc 0 x])
-  | .list (hd@(.list _) :: args) => do
+  | e@(.list (hd@(.list _) :: args)) => do
+    if let some (ss, e') ← dispatchComputed sc e then
+      let (ss2, ts) ← elabExpr sc want exp e'
+      return (ss ++ ss2, ts)
     let (ss, ts) ← withTail false (elabExpr sc [(← erasedPos want)] none hd)
     let [t] := ts | throw "a computed head has one value"
     let (ss2, r) ← bindTemp sc t (← erasedPos want)
     let (ss3, ts) ← elabExpr ((" head", r) :: sc) want exp (.list (.atom " head" :: args))
     return (ss ++ ss2 ++ ss3, ts)
   | e => elabExpr' sc want exp e
+
+partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
+  | .list (hd@(.list _) :: args) => do
+    let st0 ← get
+    if !st0.top || st0.vals.length != st0.n then return none
+    let (ss, ts) ← withTail false (elabExpr sc [false] none hd)
+    let [t] := ts | throw "a computed head has one value"
+    let st ← get
+    let P : Prog := { adts := st.decls, groups := st.groups, main := .dead }
+    match runS P 10000000 st0.vals (close ss [t]) with
+    | some [.app (.vc d c) _] =>
+      if d == st.special && st.decls.length > 0 then
+        let f := specialNames.getD c ""
+        if (sc.lookup f).isSome then throw s!"the special form {f} is shadowed where a computed head dispatches to it"
+        return some (ss, .list (.atom f :: args))
+      else set st0; return none
+    | _ => set st0; return none
+  | _ => return none
 
 partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
   | .list (.atom "values" :: es) => elabArgs sc es want
@@ -747,15 +821,20 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
 
 partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
+  let n0 := (← get).n
   let ss ← match items with
     | e :: _ => if (← get).top then internLits e else pure []
     | [] => pure []
+  unless ss.isEmpty do recordTop n0 ss
   match items with
   | .atom a :: rest =>
     if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
     else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
   | e :: rest =>
     let e ← resolveHead sc e
+    if let some (ss1, e') ← dispatchComputed sc e then
+      let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
+      return (ss ++ ss1 ++ ss2, ts)
     if !rest.isEmpty && rest.all isPragmaSx then
       let (ss2, ts) ← elabSeq' sc want exp [e]
       for p in rest do if let .atom a := p then pragma sc a
@@ -788,9 +867,11 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     if L != " _" then discard <| name (.atom L)
     let [i] ← fresh [true] | throw "fresh"
     note i .level
+    recordTop i [Core.defLvl]
     let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want exp rest
     return (.defLvl :: ss, ts)
   | .list (.atom "let" :: .list xs :: items) :: rest => do
+    let n0 := (← get).n
     let bs ← xs.mapM fun
       | .list xs => do
         let (er, xs) ← splitMult true xs
@@ -827,9 +908,11 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
           note i a
           r := if isCtorTy a then .ctor i else r
       sc' := (x, r) :: sc'
+    recordTop n0 ss
     let (ss2, ts2) ← elabSeq sc' want exp rest
     return (ss ++ ss2, ts2)
   | .list (.atom "let-match" :: args) :: rest => do
+    let n0 := (← get).n
     let (er, args) ← splitMult true args
     if !er && (← get).ghost then throw "a let-match written many in an erased position"
     let s :: pat :: brs := args | throw "malformed let-match"
@@ -842,9 +925,16 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     unless er || (← get).ghost do warnMatch (ci.k :: out.map (·.2.2.1))
     if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
     if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
+    recordTop n0 (ss ++ [(fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er : Stmt)])
+    if (← get).top then
+      if let .fv j := s then
+        if let some (.app (.tyc d) idx) := (← get).known.lookup j then
+          if (← get).firstAdt "Eq" == some d then
+            if let [_, .fv x, y] := idx.toList then modify fun st => { st with facts := (x, y) :: st.facts }
     let (ss2, ts) ← elabSeq fsc want exp rest
     return (ss ++ [fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er] ++ ss2, ts)
   | .list (.atom "comptime-match" :: args) :: rest => do
+    let n0 := (← get).n
     let (er, args) ← splitMult true args
     let st ← get
     unless st.top do throw "comptime-match is confined to run position"
@@ -862,6 +952,11 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     if ci.union then throw "comptime-match on a union"
     if ci.phantom then throw "comptime-match on a phantom constructor"
     warnMatch [ci.k]
+    let cm : Stmt := fun k => Core.chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false)
+    recordTop n0 (ss ++ ss1 ++ [cm])
+    if let some v := (← get).settledVal x then
+      if let .app (.vc _ c) _ := v then
+        if c != ci.pos then throw s!"comptime-match: expected `{showName pat.show}`, got a value headed by another constructor"
     let (ss2, ts) ← elabSeq fsc want exp rest
     return (ss ++ ss1 ++ [fun k => .chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false)] ++ ss2, ts)
   | .list [.atom "open-adt", m, e] :: rest =>
@@ -920,6 +1015,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
+    recordTop base [Core.defFns gid]
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
   | .list [.atom "compile-warn", m] :: rest => do

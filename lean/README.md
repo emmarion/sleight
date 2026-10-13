@@ -224,6 +224,23 @@ scope.
 - `Matchable` types and `(matchable-of T)` for a declared type
   (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
+- Run position (sections 27 to 29). The elaborator runs each
+  run-position statement, by the stripped run, as soon as it is
+  elaborated, and keeps the values; an entry so known and non-erased is
+  `Settled`. A head bound to a `Settled` entry whose value is a `Special`
+  constructor, and whose type when it was made is `(Special)` by the
+  facts of top-level `let-match`es on `Eq` proofs, dispatches as that
+  form; so does a head that is itself a form in run position whose value
+  is one. `compile-warn` and `compile-error` take a name of a `Settled`
+  `String` of the prelude. The checker keeps, beside its context, the
+  stripped values of the entries the top level has made so far
+  (`Ctx.fixed`), computing each by the stripped run (`stepS`), and
+  `EnvOK` carries that each stands for the full run's value (`FixOK`).
+- `comptime-match` (section 28), in run position, `many`, on an enum and
+  a constructor that is not phantom. In the core it is a `case` with one
+  branch inside `chk .cm`, under which a constructor with no branch is
+  accepted when the checker's known value of the scrutinee is headed by
+  another (`BranchOK.fixedOut`). The branch's fields are known values too.
 - `(open-adt m e)` (section 8): an anonymous `let` of `e` at `m`, then
   the open of that binder, which lasts as the binder's scope does. A
   match whose scrutinee's type is headed by a type constructor that an
