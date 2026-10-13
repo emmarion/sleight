@@ -238,6 +238,43 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       .ok ⟨_, .predatesSubterm hp hq h1 (e.1 ▸ e.2 ▸ h2)⟩
     | _, _ => .error "predates-subterm: not the right proofs"
 
+def armsOf (Γ : Ctx) (ph : List Bool) : (ks : List Tm) → (base : Nat) →
+    Res {shp : List Arm // shp.map (·.1) = ks ∧ ∀ i k sig p, shp[i]? = some (k, sig, p) →
+      p = ph.getD (base + i) false ∧ sig.isTele ∧ sig.static Γ.n 0 ∧ ∃ K, TmTy P Γ k K ∧ Γ.canon K = .valCtor sig}
+  | [], _ => .ok ⟨[], rfl, fun _ _ _ _ h => by simp at h⟩
+  | k :: ks, base => do
+    let ⟨K, hk⟩ ← checkTm P Γ k
+    match hK : Γ.canon K with
+    | .valCtor sig => do
+      let ⟨ht⟩ ← need sig.isTele "Matchable: a constructor's signature is not a telescope"
+      let ⟨hs⟩ ← need (sig.static Γ.n 0) "Matchable: a constructor's signature is not well scoped"
+      let ⟨shp, h1, h2⟩ ← armsOf Γ ph ks (base + 1)
+      .ok ⟨(k, sig, ph.getD base false) :: shp, by simp [h1], fun
+        | 0, _, _, _, h => by simp at h; obtain ⟨rfl, rfl, rfl⟩ := h; exact ⟨by simp, ht, hs, K, hk, hK⟩
+        | i + 1, k', sig', p', h => by
+          have := h2 i k' sig' p' (by simpa using h)
+          rwa [show base + 1 + i = base + (i + 1) by omega] at this⟩
+    | _ => .error "Matchable: an entry is not a value constructor"
+
+def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res {shp // Shape P Γ er H shp}
+  | .tyc d => match h : P.adts[d]? with
+    | some _ => .ok ⟨_, .decl h⟩
+    | none => .error "unknown type"
+  | H => match hf : Γ.opened.find? (fun (m, _) => match (Γ.tys[m]?).map Γ.canon with
+      | some (.mtbl _ _ _ _ H' _) => H' == H
+      | _ => false) with
+    | some (m, oe) => match hM : Γ.tys[m]? with
+      | some M => match hc : Γ.canon M with
+        | .mtbl _ _ _ ph H' cs => do
+          let ⟨hH⟩ ← need (H' = H) "unreachable"
+          let ⟨hl⟩ ← need cs.isList "Matchable: the constructors are not a list"
+          let ⟨hr⟩ ← need (er || Γ.ok (!oe && !Γ.er m)) "a match that dispatches at runtime through an erased Matchable"
+          let ⟨shp, h1, h2⟩ ← armsOf P Γ ph cs.toList 0
+          .ok ⟨shp, .opened (List.mem_of_find?_eq_some hf) hM (hH ▸ hc) hl h1 (fun i k sig p h => by simpa using h2 i k sig p h) hr⟩
+        | _ => .error "unreachable"
+      | none => .error "unreachable"
+    | none => .error "scrutinee: no Matchable is open for its type"
+
 def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .nil ∧ R.static n 0}
   | .nil => .ok ⟨.nil, .nil, rfl⟩
   | .cons a as => do
@@ -296,71 +333,69 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .mtch s R0 brs els er rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
-    | .app (.tyc d) idx => match hD : P.adts[d]? with
-      | some D => do
-        let ⟨hl⟩ ← need (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) "a branch names a constructor of another type"
-        let ⟨hR⟩ ← checkTele P Γ R0
-        let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
-        let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
-        let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
-        let Γg := { Γ with ghost := Γ.ghost || er }
-        let ⟨hb⟩ ← checkBranches b Γ false (fun c => Γ.ghost || er || P.phantom d c) s d idx R0 brs els.isSome D.ctors 0
-        let ⟨he⟩ ← (match els with
-          | some eb => do
-            let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
-                (lookupBr brs c).isNone && (Γ.branch s d c idx sig).2 matches .ok _ | .unknown)
-              "else: it stands for no constructor"
-            let ⟨_, h, e⟩ ← checkCore b Γg eb (.inl R0)
-            .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
-          | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
-        let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) rest rets
-        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt hm (fun c sig h1 => by simpa using hb c sig h1) he hr, e⟩
-      | none => .error "unknown type"
+    | .app H idx => do
+      let ⟨shp, hsh⟩ ← shapeOf P Γ er H
+      let ⟨hl⟩ ← need (armsOK Γ shp brs) "a branch names a constructor of another type"
+      let ⟨hR⟩ ← checkTele P Γ R0
+      let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
+      let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
+      let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
+      let Γg := { Γ with ghost := Γ.ghost || er }
+      let ⟨hb⟩ ← checkBranches b Γ false (fun p => Γ.ghost || er || p) s H idx R0 brs els.isSome shp 0
+      let ⟨he⟩ ← (match els with
+        | some eb => do
+          let ⟨_⟩ ← need (shp.zipIdx.any fun ((k, sig, _), c) =>
+              (lookupBr brs c).isNone && (Γ.branch s k H idx sig).2 matches .ok _ | .unknown)
+            "else: it stands for no constructor"
+          let ⟨_, h, e⟩ ← checkCore b Γg eb (.inl R0)
+          .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
+        | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
+      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) rest rets
+      .ok ⟨R, .mtch hs hS hsh hl hR hRs hRt hm (fun c k sig p h1 => by simpa using hb c k sig p h1) he hr, e⟩
     | _ => .error "scrutinee not of a data type"
   | .case s brs els er, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
-    | .app (.tyc d) idx => match hD : P.adts[d]? with
-      | some D => do
-        let ⟨hl⟩ ← need (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) "a branch names a constructor of another type"
-        let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
-        let ⟨h1⟩ ← need (Γ.ghost = false → er → realCount brs els ≤ 1)
-          "a match with an erased discriminant has more than one real branch"
-        let g := fun c => Γ.ghost || (!er && P.phantom d c)
-        let fes (sig : Tm) := if er then some (List.replicate (sig.len - 1) true) else none
-        let ⟨R, hR1, hR2⟩ ← (match hr : rets with
-          | .inl r => .ok ⟨r, fun _ e => Sum.inl.inj e, fun _ e => by cases e⟩
-          | .inr n => do
-            let pick : Option {x : Ctx × Core // sizeOf x.2 < sizeOf brs + sizeOf els} :=
-              match hf : brs.find? (·.2.2.real) with
-              | some (_, c, body) => match D.ctors[c]? with
-                | some sig => match ({ Γ with ghost := g c } : Ctx).branch s d c idx sig with
-                  | (Γf, .ok σ) => some ⟨((({ Γ with ghost := g c } : Ctx).setErs { Γf with σ := σ } (fes sig)), body), by
-                      have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some hf); simp at this ⊢; omega⟩
-                  | _ => none
-                | none => none
-              | none => match he : els with
-                | some e => some ⟨(Γ, e), by simp; omega⟩
-                | none => none
-            match pick with
-            | some ⟨(Γb, body), hlt⟩ => do
-              have : sizeOf body < sizeOf brs + sizeOf els := hlt
-              let ⟨R, _, _, h⟩ ← checkCore b Γb body (.inr n)
-              .ok ⟨R, (fun _ e => nomatch e), h⟩
-            | none => .ok ⟨.nil, (fun _ e => nomatch e), fun _ _ => rfl⟩ :
-          Res {R : Tm // (∀ r, rets = .inl r → R = r) ∧ ∀ m, rets = .inr m → R.static m 0})
-        let ⟨hb⟩ ← checkBranches b Γ er g s d idx R brs els.isSome D.ctors 0
-        let ⟨he⟩ ← (match els with
-          | some eb => do
-            let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
-                (lookupBr brs c).isNone && (Γ.branch s d c idx sig).2 matches .ok _ | .unknown)
-              "else: it stands for no constructor"
-            let ⟨_, h, e⟩ ← checkCore b Γ eb (.inl R)
-            .ok ⟨fun _ h' => by cases h'; exact e.1 R rfl ▸ h⟩
-          | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γ e R)))
-        .ok ⟨R, .case hs hS hD hl hm h1 (fun c sig h => by simpa [g] using hb c sig h) he,
-          hR1, hR2⟩
-      | none => .error "unknown type"
+    | .app H idx => do
+      let ⟨shp, hsh⟩ ← shapeOf P Γ er H
+      let ⟨hl⟩ ← need (armsOK Γ shp brs) "a branch names a constructor of another type"
+      let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
+      let ⟨h1⟩ ← need (Γ.ghost = false → er → realCount brs els ≤ 1)
+        "a match with an erased discriminant has more than one real branch"
+      let g := fun p => Γ.ghost || (!er && p)
+      let fes (sig : Tm) := if er then some (List.replicate (sig.len - 1) true) else none
+      let ⟨R, hR1, hR2⟩ ← (match hr : rets with
+        | .inl r => .ok ⟨r, fun _ e => Sum.inl.inj e, fun _ e => by cases e⟩
+        | .inr n => do
+          let pick : Option {x : Ctx × Core // sizeOf x.2 < sizeOf brs + sizeOf els} :=
+            match hf : brs.find? (·.2.2.2.real) with
+            | some (_, c, _, body) => match shp[c]? with
+              | some (k, sig, p) => match ({ Γ with ghost := g p } : Ctx).branch s k H idx sig with
+                | (Γf, .ok σ) => some ⟨((({ Γ with ghost := g p } : Ctx).setErs { Γf with σ := σ } (fes sig)), body), by
+                    have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some hf); simp at this ⊢; omega⟩
+                | _ => none
+              | none => none
+            | none => match he : els with
+              | some e => some ⟨(Γ, e), by simp; omega⟩
+              | none => none
+          match pick with
+          | some ⟨(Γb, body), hlt⟩ => do
+            have : sizeOf body < sizeOf brs + sizeOf els := hlt
+            let ⟨R, _, _, h⟩ ← checkCore b Γb body (.inr n)
+            .ok ⟨R, (fun _ e => nomatch e), h⟩
+          | none => .ok ⟨.nil, (fun _ e => nomatch e), fun _ _ => rfl⟩ :
+        Res {R : Tm // (∀ r, rets = .inl r → R = r) ∧ ∀ m, rets = .inr m → R.static m 0})
+      let ⟨hb⟩ ← checkBranches b Γ er g s H idx R brs els.isSome shp 0
+      let ⟨he⟩ ← (match els with
+        | some eb => do
+          let ⟨_⟩ ← need (shp.zipIdx.any fun ((k, sig, _), c) =>
+              (lookupBr brs c).isNone && (Γ.branch s k H idx sig).2 matches .ok _ | .unknown)
+            "else: it stands for no constructor"
+          let ⟨_, h, e⟩ ← checkCore b Γ eb (.inl R)
+          .ok ⟨fun _ h' => by cases h'; exact e.1 R rfl ▸ h⟩
+        | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γ e R)))
+      .ok ⟨R, .case hs hS hsh hl hm h1 (fun c k sig p h => by simpa [g] using hb c k sig p h) he,
+        hR1, hR2⟩
     | _ => .error "scrutinee not of a data type"
   | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
@@ -378,6 +413,14 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushFns G) rest rets
       .ok ⟨R, .defFns hg hG hok hr, e⟩
     | none => .error "unknown group"
+  | .chk (.opn oe) (.fv m) _ rest, rets => match hM : Γ.tys[m]? with
+    | some M => match hc : Γ.canon M with
+      | .mtbl .. => do
+        let ⟨R, hr, eq⟩ ← checkCore b { Γ with opened := (m, oe) :: Γ.opened } rest rets
+        .ok ⟨R, .chkOpn hM hc hr, eq⟩
+      | _ => .error "open-adt: not a Matchable"
+    | none => .error "open-adt: unbound"
+  | .chk (.opn _) .., _ => .error "open-adt: not an entry"
   | .chk .rt a _ rest, rets => do
     let ⟨h⟩ ← need (Γ.ok (rt P Γ a)) "a non-erased let binder of an erased entry"
     let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
@@ -397,14 +440,14 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
 termination_by c => (b, 1, sizeOf c, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 
-def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Nat → Bool) (s : Tm) (d : Nat) (idx R0 : Tm)
-    (brs : List (Nat × Nat × Core)) (els : Bool) : (ctors : List Tm) → (base : Nat) →
-    Res (PLift (∀ (c : Nat) sig, ctors[c]? = some sig →
-      BranchOK P b fe { Γ with ghost := g (base + c) } s d idx (base + c) sig R0 (lookupBr brs (base + c)) els))
-  | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
-  | sig :: cs, base => do
-    let Γc : Ctx := { Γ with ghost := g base }
-    let ⟨hh⟩ ← (match hb : Γc.branch s d base idx sig, hl : lookupBr brs base with
+def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx R0 : Tm)
+    (brs : List Br) (els : Bool) : (arms : List Arm) → (base : Nat) →
+    Res (PLift (∀ c k sig p, arms[c]? = some (k, sig, p) →
+      BranchOK P b fe { Γ with ghost := g p } s k H idx sig R0 (lookupBr brs (base + c)) els))
+  | [], _ => .ok ⟨fun _ _ _ _ h => by simp at h⟩
+  | (k, sig, p) :: cs, base => do
+    let Γc : Ctx := { Γ with ghost := g p }
+    let ⟨hh⟩ ← (match hb : Γc.branch s k H idx sig, hl : lookupBr brs base with
       | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
       | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do
@@ -416,14 +459,14 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Nat → Bool) (s : Tm) (
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
           else .error "a branch that is not refuted is missing" :
-      Res (PLift (BranchOK P b fe Γc s d idx base sig R0 (lookupBr brs base) els)))
-    let ⟨ht⟩ ← checkBranches b Γ fe g s d idx R0 brs els cs (base + 1)
+      Res (PLift (BranchOK P b fe Γc s k H idx sig R0 (lookupBr brs base) els)))
+    let ⟨ht⟩ ← checkBranches b Γ fe g s H idx R0 brs els cs (base + 1)
     .ok ⟨fun
-      | 0, _, h1 => by simp at h1; subst h1; simpa using hh
-      | c + 1, sig, h1 => by
-        have := ht c sig (by simpa using h1)
+      | 0, _, _, _, h1 => by simp at h1; obtain ⟨rfl, rfl, rfl⟩ := h1; simpa using hh
+      | c + 1, k', sig', p', h1 => by
+        have := ht c k' sig' p' (by simpa using h1)
         rwa [show base + 1 + c = base + (c + 1) by omega] at this⟩
-termination_by ctors => (b, 1, sizeOf brs, ctors.length)
+termination_by arms => (b, 1, sizeOf brs, arms.length)
 decreasing_by
   all_goals simp only [Prod.lex_def]
   · have := sizeOf_lookupBr hl; simp; omega

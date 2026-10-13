@@ -205,17 +205,18 @@ inductive Chk where
   | is
   | ty
   | rt
+  | opn (er : Bool)
   deriving Repr, Inhabited, DecidableEq
 
 inductive Core where
   | ret (ts : Tm)
   | call (f : Tm) (dec : Dec) (args : Tm) (er : Bool) (ms : List Bool) (rest : Core)
-  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (er : Bool) (rest : Core)
+  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er : Bool) (rest : Core)
   | prim (p : Prim) (er : Bool) (rest : Core)
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
-  | case (s : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (er : Bool)
+  | case (s : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er : Bool)
   | seq (R : Tm) (body rest : Core)
   | absurd (body : Core)
   | dead
@@ -229,9 +230,9 @@ def Core.noRet : Core → Bool
   | .seq _ body rest => body.noRet || rest.noRet
   | .absurd _ | .dead => true
 
-def Core.armsNoRet : List (Nat × Nat × Core) → Bool
+def Core.armsNoRet : List (Nat × Nat × Tm × Core) → Bool
   | [] => true
-  | (_, _, b) :: t => b.noRet && Core.armsNoRet t
+  | (_, _, _, b) :: t => b.noRet && Core.armsNoRet t
 
 def Core.optNoRet : Option Core → Bool
   | none => true
@@ -240,30 +241,32 @@ end
 
 def Core.real (c : Core) : Bool := !c.noRet
 
-def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)
+abbrev Br := Nat × Nat × Tm × Core
 
-theorem sizeOf_lookupBr {brs : List (Nat × Nat × Core)} {c : Nat} {body : Core}
+def lookupBr (brs : List Br) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2.2)
+
+theorem sizeOf_lookupBr {brs : List Br} {c : Nat} {body : Core}
     (h : lookupBr brs c = some body) : sizeOf body < sizeOf brs := by
   simp only [lookupBr, Option.map_eq_some_iff] at h
-  obtain ⟨⟨x, y, z⟩, he, rfl⟩ := h
+  obtain ⟨⟨x, y, w, z⟩, he, rfl⟩ := h
   have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some he)
   simp at this ⊢; omega
 
-def selectBr (brs : List (Nat × Nat × Core)) (els : Option Core) (c : Nat) (vs : List Tm) :
+def selectBr (brs : List Br) (els : Option Core) (c : Nat) (vs : List Tm) :
     Option (List Tm × Core) :=
   match lookupBr brs c with
   | some body => some (vs, body)
   | none => els.map (([], ·))
 
-theorem sizeOf_selectBr {brs : List (Nat × Nat × Core)} {els : Option Core} {c : Nat} {vs pre : List Tm}
+theorem sizeOf_selectBr {brs : List Br} {els : Option Core} {c : Nat} {vs pre : List Tm}
     {body : Core} (h : selectBr brs els c vs = some (pre, body)) : sizeOf body < sizeOf brs + sizeOf els := by
   unfold selectBr at h
   split at h
   · rename_i hb; simp at h; obtain ⟨-, rfl⟩ := h; have := sizeOf_lookupBr hb; omega
   · cases els <;> simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
 
-def realCount (brs : List (Nat × Nat × Core)) (els : Option Core) : Nat :=
-  (brs.filter (·.2.2.real)).length + (els.filter Core.real).isSome.toNat
+def realCount (brs : List Br) (els : Option Core) : Nat :=
+  (brs.filter (·.2.2.2.real)).length + (els.filter Core.real).isSome.toNat
 
 structure FnDef where
   er : Bool := false
@@ -312,9 +315,9 @@ def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[
 
 def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom[c]?)).getD false
 
-def realBr (P : Prog) (brs : List (Nat × Nat × Core)) (els : Option Core) : Option (List Tm × Core) :=
-  match brs.filter (·.2.2.real), els with
-  | [(d, c, body)], _ => some (List.replicate ((((P.ctor d c).map Tm.len).getD 0) - 1) .tok, body)
+def realBr (brs : List Br) (els : Option Core) : Option (List Tm × Core) :=
+  match brs.filter (·.2.2.2.real), els with
+  | [(n, _, _, body)], _ => some (List.replicate n .tok, body)
   | [], some e => some ([], e)
   | _, _ => none
 

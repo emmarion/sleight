@@ -107,10 +107,12 @@ def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := do
 
 abbrev IM := StateT (List Group) (Except String)
 
-def scrutOf (Γ : Ctx) (s : Tm) : Option (Nat × Tm) :=
+def scrutOf (Γ : Ctx) (s : Tm) : Option (Tm × Tm × List Arm) :=
   match checkTm P Γ s with
   | .ok ⟨St, _⟩ => match Γ.canon St with
-    | .app (.tyc d) idx => some (d, idx)
+    | .app H idx => match shapeOf P Γ true H with
+      | .ok ⟨shp, _⟩ => some (H, idx, shp)
+      | .error _ => none
     | _ => none
   | .error _ => none
 
@@ -157,19 +159,22 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
       return { F with body := ← inferCore Γb (some R) F.body }
     modify fun gs => gs.set gid { G with fns }
     return .defFns gid (← inferCore (Γ.pushFns G) rets rest)
+  | .chk (.opn oe) (.fv m) b rest => return .chk (.opn oe) (.fv m) b (← inferCore { Γ with opened := (m, oe) :: Γ.opened } rets rest)
   | .chk k a b rest => return .chk k a b (← inferCore Γ rets rest)
   | .absurd body => return .absurd (← inferCore Γ none body)
   | .seq R body rest => return .seq R (← inferCore Γ (some R) body) (← inferCore (Γ.pushTele R) rets rest)
   | .dead => return .dead
 where
-  inferArms (Γ : Ctx) (s : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (R : Option Tm) :
-      IM (List (Nat × Nat × Core) × Option Core) := do
-    let brs ← brs.mapM fun (d, c, body) => do
-      match scrutOf P Γ s, P.ctor d c with
-      | some (_, idx), some sig => match Γ.branch s d c idx sig with
-        | (Γf, .ok σ) => return (d, c, ← inferCore { Γf with σ := σ } R body)
-        | _ => return (d, c, body)
-      | _, _ => return (d, c, body)
+  inferArms (Γ : Ctx) (s : Tm) (brs : List Br) (els : Option Core) (R : Option Tm) :
+      IM (List Br × Option Core) := do
+    let brs ← brs.mapM fun (n, c, k', body) => do
+      match scrutOf P Γ s with
+      | some (H, idx, shp) => match shp[c]? with
+        | some (k, sig, _) => match Γ.branch s k H idx sig with
+          | (Γf, .ok σ) => return (n, c, k', ← inferCore { Γf with σ := σ } R body)
+          | _ => return (n, c, k', body)
+        | none => return (n, c, k', body)
+      | none => return (n, c, k', body)
     let els ← els.mapM (inferCore Γ R)
     return (brs, els)
 

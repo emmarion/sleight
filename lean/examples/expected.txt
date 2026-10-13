@@ -23,7 +23,7 @@ examples/erased_result_bad.sl: refused: a non-erased result mentions something e
 examples/ex_falso.sl: 0
 examples/first_class.sl: (Cons _ (Cons _ 0 $ Cons _ 0 $ Nil _) $ Cons _ (Cons _ 1 $ Nil _) $ Nil _)
 examples/first_class_bad.sl: refused: argument of the wrong type
-examples/first_class_match_bad.sl: refused: scrutinee not of a data type
+examples/first_class_match_bad.sl: refused: scrutinee: no Matchable is open for its type
 examples/inferred.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil _)
 examples/inferred_args.sl: 2
 examples/inferred_args_bad.sl: error: cannot infer `_`
@@ -53,6 +53,8 @@ examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 examples/no_annotation_bad.sl: refused: a same-level call whose subterm arguments are all unchanged
 examples/numeral_opaque_bad.sl: refused: a branch that is not refuted is missing
 examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
+examples/open_adt.sl: 3
+examples/open_adt_erased_bad.sl: refused: a match that dispatches at runtime through an erased Matchable
 examples/paradox_curry_bad.sl: refused: prove-predates: not introduced before the level
 examples/paradox_knot_bad.sl: refused: prove-predates: not introduced before the level
 examples/paradox_same_level_bad.sl: refused: prove-subterm: not a strict subterm
@@ -69,6 +71,7 @@ examples/top_statement.sl:
 examples/type_in_type.sl: (MkBox _ _)
 examples/union.sl: 4
 examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
+examples/unopened_bad.sl: error: C has no Matchable open
 examples/valctor_return.sl: (MkBox _ 1)
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
 examples/vec_head.sl: 1
@@ -98,6 +101,7 @@ unchecked examples/missing_branch_bad.sl: 0
 unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
+unchecked examples/open_adt_erased_bad.sl: 3
 unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
@@ -107,6 +111,7 @@ unchecked examples/phantom_ctor_bad.sl: (Hidden _)
 unchecked examples/refuted_branch_bad.sl: 0
 unchecked examples/tail_bad.sl: error: tail: the call is not in tail position
 unchecked examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
+unchecked examples/unopened_bad.sl: error: C has no Matchable open
 unchecked examples/valctor_return_bad.sl: 0
 full examples/absurd.sl: 1
 full examples/adt_mentions.sl: 3
@@ -137,6 +142,7 @@ full examples/matchable_value.sl: 0
 full examples/nested_adt.sl: 2
 full examples/newtype.sl: (MkMeters 3)
 full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
+full examples/open_adt.sl: 3
 full examples/phantom.sl: 1
 full examples/refute.sl: 1
 full examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)

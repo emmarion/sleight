@@ -1,0 +1,10 @@
+(def-adts $ (Box : -> Type)
+  enum
+  (many MkBox : (many (Nat) n) -> (Box)))
+(def-fns _ $ (many open : (erased (TyCtor -> Type) T)
+    (many (ValCtor (many (Nat) n) -> (T)) C)
+    (many (Matchable enum T (many C)) m)
+    (many (T) x) -> (many (Nat) n))
+  (match many x (((Nat) r))
+    ((C n) n)))
+(open Box MkBox (matchable-of Box) (MkBox 3))

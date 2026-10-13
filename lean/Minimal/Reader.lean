@@ -67,6 +67,7 @@ structure ESt where
   ctors : List (String × Nat × Nat) := []
   decls : List Adt := []
   groups : List Group := []
+  opened : List Nat := []
 
 abbrev M := StateT ESt (Except String)
 
@@ -221,7 +222,7 @@ def fresh (ms : List Bool) : M (List Nat) :=
 
 def reset (base : Nat) : M Unit := modify fun st =>
   { st with n := base, ers := st.ers.take base, known := st.known.filter (·.1 < base),
-            inl := st.inl.filter (·.1 < base) }
+            inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base) }
 
 def liftOf (d : Nat) : M (List Tm) := return (((← get).lifts.lookup d).getD []).map Tm.fv
 
@@ -348,17 +349,41 @@ def internLits (e : Sx) : M (List Stmt) := do
     let t := (List.range n).foldl (fun t _ => Tm.app (.vc d sc) (.cons t .nil)) (.app (.vc d z) .nil)
     return (.prim (.lit t) false : Stmt)
 
-def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × Nat × Scope)
+structure CtorInfo where
+  k : Tm
+  pos : Nat
+  sig : Tm
+  phantom : Bool
+  union : Bool
+  lifted : Nat
+
+def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
+  let st ← get
+  let global (d ci : Nat) : M CtorInfo := do
+    let some D := st.decls[d]? | throw s!"unknown constructor {c}"
+    return ⟨.vc d ci, ci, D.ctors.getD ci .nil, D.phantom.getD ci false, D.union, D.lifted⟩
+  match sc.lookup c with
+  | some (.ctor i) | some (.fv i) =>
+    if let some (.vc d ci) := st.inl.lookup i then return ← global d ci
+    let found := st.opened.findSome? fun m => match st.known.lookup m with
+      | some (.mtbl u _ _ ph _ cs) => (cs.toList.idxOf? (.fv i)).map fun p => (p, u, ph.getD p false)
+      | _ => none
+    match found, st.known.lookup i with
+    | some (p, u, ph), some (.valCtor sig) => return ⟨.fv i, p, sig, ph, u, 0⟩
+    | some _, _ => throw s!"{c} is not a value constructor"
+    | none, _ => throw s!"{c} has no Matchable open"
+  | _ => match st.ctors.lookup c with
+    | some (d, ci) => global d ci
+    | none => throw s!"unknown constructor {c}"
+
+def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × CtorInfo × Scope)
   | .list (.atom c :: xs) => do
-    let st ← get
-    let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
+    let ci ← ctorInfo sc c
     let names ← xs.mapM name
-    let names := ((← liftOf d').map fun _ => " lift") ++ names
-    let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
-    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
-    unless names.length == (fieldErs sig).length do throw s!"a pattern for {c} binds the wrong number of fields"
-    let fs ← fresh (if er || ph then names.map fun _ => true else fieldErs sig)
-    return (d', ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
+    let names := (List.replicate ci.lifted " lift") ++ names
+    unless names.length == (fieldErs ci.sig).length do throw s!"a pattern for {c} binds the wrong number of fields"
+    let fs ← fresh (if er || ci.phantom then names.map fun _ => true else fieldErs ci.sig)
+    return (names.length, ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys ci.sig))).reverse ++ sc)
   | _ => throw "malformed pattern"
 
 mutual
@@ -383,6 +408,7 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [.atom T] := args | throw "matchable-of takes a type constructor"
       let some d := st.adts.lookup T | throw s!"matchable-of: {T} is not a declared type"
       let [i] ← fresh [false] | throw "fresh"
+      if let some D := st.decls[d]? then note i (D.mtbl d)
       return ([.prim (.mtblOf d) false], [.fv i])
     else if (h == "tail" || h == "notail") && (sc.lookup h).isNone then
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
@@ -438,10 +464,11 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (Lis
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
 partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option Tm) (brs : List Sx) (extra : Nat := 0) :
-    M (List (Nat × Nat × Core) × Option Core) := do
+    M (List Br × Option Core) := do
   let st ← get
   let base := st.n
-  let mut out : List (Nat × Nat × Core) := []
+  let mut out : List Br := []
+  let mut infos : List CtorInfo := []
   let mut els : Option Core := none
   for br in brs do
     if let .list (.atom "else" :: items) := br then
@@ -450,24 +477,23 @@ partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option 
       els := some (← ghostly gEr (elabBody sc rms items R))
       continue
     if let .list [.atom "absurd", .atom c] := br then
-      let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
-      out := out ++ [(d', ci, .dead)]
+      let ci ← ctorInfo sc c
+      out := out ++ [((fieldErs ci.sig).length, ci.pos, ci.k, .dead)]
+      infos := infos ++ [ci]
       continue
     let (ab, br) := match br with
       | .list (.atom "absurd" :: rest) => (true, Sx.list rest)
       | br => (false, br)
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
     reset base
-    let (d', ci, fsc) ← openPattern sc er (.list (.atom c :: xs))
-    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
-    let body ← ghostly (gEr || ab || (ph && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R) ab)
-    if out.any (·.2.1 == ci) then throw "two branches for one constructor"
-    out := out ++ [(d', ci, if ab then .absurd body else body)]
+    let (n, ci, fsc) ← openPattern sc er (.list (.atom c :: xs))
+    let body ← ghostly (gEr || ab || (ci.phantom && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R) ab)
+    if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
+    out := out ++ [(n, ci.pos, ci.k, if ab then .absurd body else body)]
+    infos := infos ++ [ci]
   reset base
-  let st ← get
-  let ph (d c : Nat) := ((st.decls[d]?).bind (·.phantom[c]?)).getD false
-  if !er && !st.ghost && out.any (fun (d, _) => ((st.decls[d]?).map (·.union)).getD false) &&
-      extra + (out.filter fun (d, c, b) => b.real && !ph d c).length + els.isSome.toNat > 1 then
+  if !er && !(← get).ghost && infos.any (·.union) &&
+      extra + ((out.zip infos).filter fun ((_, _, _, b), ci) => b.real && !ci.phantom).length + els.isSome.toNat > 1 then
     throw "a match without a runtime discriminant can have only one real branch"
   return (out, els)
 
@@ -567,12 +593,21 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     if (← get).rhs && brs.any (fun | .list (.atom "absurd" :: _) => false | _ => true) then
       throw "a let-match with more than one real branch outside a body"
     let (out, els) ← elabArms sc er false want exp brs 1
-    let (d', ci, fsc) ← openPattern sc er pat
-    if out.any (·.2.1 == ci) then throw "two branches for one constructor"
-    if !er && (((← get).decls[d']?).bind (·.phantom[ci]?)).getD false then
-      throw "a let-match on a phantom constructor at many"
+    let (n, ci, fsc) ← openPattern sc er pat
+    if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
+    if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
     let (ss2, ts) ← elabSeq fsc want exp rest
-    return (ss ++ [fun k => .case s ((d', ci, k) :: out) els er] ++ ss2, ts)
+    return (ss ++ [fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er] ++ ss2, ts)
+  | .list [.atom "open-adt", m, e] :: rest =>
+    elabSeq sc want exp (.list [.atom "let", .list [.list [m, .atom " open"]], e] :: .list [.atom " opened", m] :: rest)
+  | .list [.atom " opened", m] :: rest => do
+    let (oe, _) ← splitMult true [m]
+    let i ← match sc.lookup " open" with
+      | some (.fv i) | some (.ctor i) | some (.fn i _ _) => pure i
+      | _ => throw "open-adt: no entry"
+    modify fun st => { st with opened := i :: st.opened }
+    let (ss, ts) ← elabSeq sc want exp rest
+    return ((fun k => .chk (.opn oe) (.fv i) .nil k) :: ss, ts)
   | .list (.atom "def-fns" :: .atom "_" :: fns) :: rest =>
     elabSeq sc want exp (.list [.atom "def-lvl", .atom " _"] :: .list (.atom "def-fns" :: .atom " _" :: fns) :: rest)
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
@@ -612,21 +647,21 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     return (.defFns gid :: ss, ts)
   | e :: _ => match e with
     | .list (.atom h :: _) =>
-      if ["comptime-match", "def-unique", "open-adt", "compile-warn", "compile-error", "dump-context", "def-opaque",
+      if ["comptime-match", "def-unique", "compile-warn", "compile-error", "dump-context", "def-opaque",
           "def-prim", "slot-self", "open-at-fn", "unary"].contains h then throw s!"{h} is not supported"
       else throw s!"{e.show.take 40} is not a statement"
     | _ => throw s!"{e.show.take 40} is not a statement"
 
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none)
     (refute : Bool := false) : M Core := do
-  let (r0, f0, a0, c0) := ((← get).rhs, (← get).refute, (← get).adts, (← get).ctors)
+  let (r0, f0, a0, c0, o0) := ((← get).rhs, (← get).refute, (← get).adts, (← get).ctors, (← get).opened)
   modify fun st => { st with rhs := false, refute }
   let (ss, ts) ← elabSeq sc want exp items
-  modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0 }
+  modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0, opened := o0 }
   return close ss ts
 end
 
-def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match"]
+def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt"]
 
 def elabProgram (items : List Sx) (pre : Bool) : Except String Prog := do
   let stmt := match items.getLast? with

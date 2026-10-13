@@ -14,7 +14,7 @@ inductive RunS : List Tm → Core → List Tm → Prop
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
   | mtch : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
-  | caseE : realBr P brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true) out
+  | caseE : realBr brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true) out
   | case : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false) out
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
@@ -43,7 +43,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
         runS fuel (ρ ++ outs) rest
       | _ => none
     | .case _ brs els true => do
-      let (pre, body) ← realBr P brs els
+      let (pre, body) ← realBr brs els
       runS fuel (ρ ++ pre) body
     | .case s brs els false => match s.subst (Tm.env ρ) with
       | .app (.vc _ c) vs => do

@@ -205,7 +205,17 @@ produces nothing (section 27).
 - `Matchable` types and `(matchable-of T)` for a declared type
   (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
-  Opening one is not yet supported.
+- `(open-adt m e)` (section 8): an anonymous `let` of `e` at `m`, then
+  the open of that binder, which lasts as the binder's scope does. A
+  match whose scrutinee's type is headed by a type constructor that an
+  opened `Matchable` names takes its constructors, their order and their
+  phantom marks from that `Matchable`, and each constructor's signature
+  from its `ValCtor` type (`Shape`); a pattern names a constructor of an
+  opened `Matchable` or a declared one. A match that dispatches at run
+  time needs the `Matchable` opened at `many` and its entry non-erased.
+  What an open asserts is not checked: that the listed constructors are
+  pairwise distinct, and the invariant that two opened `Matchable`s
+  naming one thing are unified, so neither refutes a branch.
 - `union` and `newtype` (section 21). A `newtype` must have newtype
   shape. A non-erased match on a union may have one real branch, outside
   erased code; at run time the core keeps the constructor anyway, so the
@@ -292,7 +302,11 @@ produces nothing (section 27).
   out entry by entry, not reached through a variable (`Tm.isTele`).
   Without this check the proof did not go through: a telescope held in a
   variable can have more entries at run time than the checker counted.
-- A match's branches are keyed by constructor. A listed branch whose
+- A match's branches are keyed by constructor: in the core, by its
+  position among its type's constructors, with the constructor as
+  written, which must canonicalize to the one at that position, and its
+  field count, which the stripped run needs when it takes the one real
+  branch of an erased match without looking. A listed branch whose
   unification contradicts is an error (SPEC-REVIEW 7, as MINIMAL.md
   records). An unlisted constructor must be refuted or covered by an
   `else`.

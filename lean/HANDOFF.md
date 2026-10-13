@@ -16,23 +16,17 @@ computes erased values and so is slow on the prelude (about 3 s).
 
 Next, as this session planned it, none of it decided:
 
-1. `Matchable` stage 2 (stage 1, the former `Tm.mtbl`, `VTy.mtbl` and
-   `matchable-of`, is in). The plan: `Ctx.branch` takes the constructor
-   term and the scrutinee type's head in place of `d` and `c`; a `Shape`
-   relation lists (constructor term, signature, phantom mark) for a
-   declared type (`vc d c`, `D.ctors[c]`) or for an opened `Matchable`
-   (its listed constructors, signatures read from their `ValCtor`
-   types); `mtch`, `case` and `BranchOK` are stated over a shape; a
-   branch tuple's first component becomes the pattern's field count,
-   which `realBr` needs, since `d` is unknown for an opened `Matchable`;
-   `open-adt` is a new `Chk` kind that adds the entry to an `opened` list
-   in `Ctx`, which only the checker consults. In `match_setup`, an opened
-   `Matchable` gives, through `VTy.mtbl`, the declared type, and each
-   listed constructor's value is `vc d c`, so its signature substitutes
-   to `P.ctor d c`. Branch keys stay constructor positions, so `eval`
-   and `RunS` do not change. Then stage 3, disjointness of the
-   constructors of one opened `Matchable` in `unify`, and stage 4,
-   `open-absurd`.
+1. `Matchable` stage 2 is in: `open-adt` (`Chk.opn`, `Ctx.opened`), and
+   matches through an opened `Matchable` (`Shape`, `Shape.sound`). Next,
+   as planned, none of it decided: stage 3, what an open asserts, which
+   `tests/open_adt_unify.sl` and `tests/matchable_former_unchecked.sl`
+   need and `tests/open_adt_bad.sl`, `tests/open_adt_clash_bad.sl` and
+   `tests/open_newtype_phantom.sl` need refused: distinct listed
+   constructors, disjointness of the constructors of one opened
+   `Matchable` in `unify`, and the invariant of DESIGN.md section 8 that
+   two opened `Matchable`s naming one thing are unified, which
+   `tests/open_tyctor.sl`'s `told` also needs, besides `matchable-of` in
+   a type. Then stage 4, `open-absurd`.
 2. Unification now unifies the signatures of two variables it equates
    when both have `TyCtor` or `ValCtor` types (`Ctx.sig`, `sigEqs`), as
    the OCaml checker's forcing does; `tests/is_for_type_refute.sl` is
