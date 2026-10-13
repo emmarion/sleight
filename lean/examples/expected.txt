@@ -10,7 +10,12 @@ examples/binder_refute.sl: 0
 examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 examples/coerce_value_bad.sl: refused: coerce: value mismatch: the value is not the source of the proof
 examples/coerce_wrap_bad.sl: refused: coercible-wrap: the constructor has no opened newtype `Matchable`
+examples/coercible_of_side_bad.sl: refused: coerce: value mismatch: the value is not the source of the proof
 examples/ctor_sig_refute.sl: 7
+examples/delegate_chain.sl: 6
+examples/delegate_coerce.sl: 7
+examples/delegate_not_coercible_bad.sl: refused: coerce: the proof is not a `Coercible` proof
+examples/delegate_of_plain_bad.sl: error: delegate-of: inc is not a non-erased function with a `delegate` body
 examples/double.sl: 4
 examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
 examples/else_empty_bad.sl: refused: else: it stands for no constructor
@@ -94,6 +99,9 @@ unchecked examples/absurd_listed_bad.sl: 0
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 unchecked examples/coerce_value_bad.sl: (MkMeters 1)
 unchecked examples/coerce_wrap_bad.sl: _
+unchecked examples/coercible_of_side_bad.sl: 0
+unchecked examples/delegate_not_coercible_bad.sl: stuck: callee is not a function
+unchecked examples/delegate_of_plain_bad.sl: error: delegate-of: inc is not a non-erased function with a `delegate` body
 unchecked examples/else_empty_bad.sl: 0
 unchecked examples/erased_fn_bad.sl: 0
 unchecked examples/erased_let_bad.sl: 0
@@ -142,6 +150,8 @@ full examples/anon_level.sl: 2
 full examples/binder_refute.sl: 0
 full examples/coerce.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/ctor_sig_refute.sl: 7
+full examples/delegate_chain.sl: 6
+full examples/delegate_coerce.sl: 7
 full examples/double.sl: 4
 full examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
 full examples/eq_sym.sl: (Refl _ 0)

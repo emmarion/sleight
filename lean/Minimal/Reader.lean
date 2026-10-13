@@ -171,6 +171,7 @@ structure ESt where
   opened : List Nat := []
   dele : Option (Nat × List (Nat × Bool)) := none
   delegated : Bool := false
+  deles : List (Nat × Nat) := []
   warns : List String := []
   pwarn : List (Tm × String) := []
   supp : List (String × Option Tm × Nat) := []
@@ -974,6 +975,18 @@ partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx →
         | _, _, _ => throw s!"malformed {h}"
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
+    else if h == "delegate-of" && (sc.lookup h).isNone then
+      let [.atom g] := args | throw "hint: usage: (delegate-of <function>)"
+      if (sc.lookup g).isNone then throw s!"unbound name {showName g}"
+      let i ← entry sc (.atom g)
+      let some t := (← get).deles.lookup i | throw s!"delegate-of: {showName g} is not a non-erased function with a `delegate` body"
+      let [k] ← fresh [true] | throw "fresh"
+      return ([.prim (.deleOf i t) true], [.fv k])
+    else if h == "coercible-of" && (sc.lookup h).isNone then
+      let [d] := args | throw "hint: usage: (coercible-of <Delegate proof>)"
+      let (ss, ts) ← elabArgs sc [d] [true]
+      let [k] ← fresh [true] | throw "fresh"
+      return (ss ++ [.prim (.coerOf ts[0]!) true], [.fv k])
     else if h.startsWith "coercible-" && (sc.lookup h).isNone && h != "coercible-of" then
       let p ← match h, args with
         | "coercible-refl", [s, e] => do
@@ -1095,7 +1108,10 @@ partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx →
               note (outs.getD (k - ts.length) 0) A (k' matches .is _ _)
             pure (r.inst a 0)
           | t => pure t) tele
-      return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want], outs.map .fv)
+      let ve := match (match f with | .fv i => known.lookup i | _ => none) with
+        | some (.fn _ _ tele) => some tele.ers
+        | _ => none
+      return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want ve], outs.map .fv)
   | e => return ([], [← elabTm sc 0 e])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (List Stmt × List Tm) := withTail false do
@@ -1368,8 +1384,16 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     let _ ← fresh (sigs.map (·.2.1.1))
     let (d0, g0) := ((← get).dele, (← get).delegated)
     let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl sigs[j]!.2.2.2.2.2)).reverse ++ sc
-    let defs ← sigs.zipIdx.mapM fun ((_, (er, ab, tgt), ps, rs, items, _), j) => do
-      let tgt ← tgt.mapM (entry (fnsc.drop (sigs.length - j)))
+    let tgts ← sigs.zipIdx.mapM fun ((_, (_, _, tgt), _), j) => tgt.mapM (entry (fnsc.drop (sigs.length - j)))
+    let g0 := (← get).ghost
+    modify fun st => { st with deles := st.deles ++ (sigs.zip tgts).zipIdx.filterMap fun (((_, (er, _), _), t), j) =>
+      if er || g0 then none else t.map (base + j, ·) }
+    let defs ← sigs.zipIdx.mapM fun ((_, (er, ab, _), ps, rs, items, _), j) => do
+      let tgt := tgts[j]!
+      let ds0 := (← get).deles
+      let ers0 := (← get).ers
+      if let some t := tgt then
+        modify fun st => { st with ers := st.ers.zipIdx.map fun (e, i) => e || (i < base + sigs.length && i != t) }
       let tele ← elabTele sc 0 true (ps ++ rs)
       reset (base + sigs.length)
       let pents ← entryErs true ps
@@ -1384,7 +1408,8 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
         (if ab then [true] else rents.map fun e => er || e.2) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
       if tgt.isSome && !(← get).delegated then throw "a function written `at f` must have a `delegate` body"
-      pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }
+      modify fun st => { st with deles := ds0, ers := ers0 ++ st.ers.drop ers0.length }
+      pure { er, np := pents.length, tele, body := if ab then .absurd body else body, dele := tgt : FnDef }
     modify fun st => { st with dele := d0, delegated := g0 }
     let gid := (← get).groups.length
     reset (base + sigs.length)
@@ -1441,9 +1466,12 @@ def coercibleAdt : Adt :=
   { params := e sh (e .univ (e (.bv 0) (e sh (e .univ (e (.bv 0) .nil))))), ctors := [], name := "Coercible",
     coercible := true }
 
+def delegateAdt : Adt := { coercibleAdt with name := "Delegate" }
+
 def builtins : ESt :=
-  { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt],
-    adts := [("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
+  { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt,
+      delegateAdt],
+    adts := [("Delegate", 3), ("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
     ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)], special := 0 }
 
 def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List String) := do

@@ -57,7 +57,7 @@ def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)
 
 def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core → Except String (List Tm × Nat)
   | .ret ts => .ok (ts.toList.map (·.subst (Tm.env ρ)), cnt)
-  | .call f _ args _ _ rest =>
+  | .call f _ args _ _ _ rest =>
     match callee P (f.subst (Tm.env ρ)) with
     | some (env, n, gid, G, F) =>
       let argv := args.toList.map (·.subst (Tm.env ρ))

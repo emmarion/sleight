@@ -239,6 +239,13 @@ def coerAdt : Res {x : Nat × Adt // P.adts[x.1]? = some x.2 ∧ x.2.coercible =
     | none => .error "unreachable"
   | none => .error "Coercible is not declared"
 
+def deleAdt : Res {x : Nat × Adt // P.adts[x.1]? = some x.2 ∧ x.2.coercible = true} :=
+  match h : P.adts.findIdx? (·.name == "Delegate") with
+  | some d => match h2 : P.adts[d]? with
+    | some D => if hc : D.coercible = true then .ok ⟨(d, D), h2, hc⟩ else .error "Delegate is not a proof type"
+    | none => .error "unreachable"
+  | none => .error "Delegate is not declared"
+
 def coerParts (dC : Nat) : (t : Tm) →
     Option {x : Tm × Tm × Tm × Tm × Tm × Tm // t = Tm.coer dC x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2}
   | .app (.tyc d) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) =>
@@ -318,6 +325,19 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨_, hs⟩ ← checkTm P Γ s
     let ⟨_, he⟩ ← checkTm P Γ e
     .ok ⟨_, .coerRefl (dC := dC) hs he hD hc⟩
+  | .deleOf g t => do
+    let ⟨(dD, D), hD, hc⟩ ← deleAdt P
+    let ⟨hm⟩ ← need ((g, t) ∈ Γ.deles) "delegate-of: not a function with a `delegate` body"
+    match hg : Γ.tys[g]?, ht : Γ.tys[t]? with
+    | some _, some _ => .ok ⟨_, .deleOf hm hg ht hD hc⟩
+    | _, _ => .error "delegate-of: unbound entry"
+  | .coerOf p => do
+    let ⟨(dD, D), hD, hc⟩ ← deleAdt P
+    let ⟨(dC, C), hC, hcc⟩ ← coerAdt P
+    let ⟨Pt, hp⟩ ← checkTm P Γ p
+    match coerParts dD (Γ.canon Pt) with
+    | some ⟨_, e⟩ => .ok ⟨_, .coerOf hp e hD hc hC hcc⟩
+    | none => .error "coercible-of: not a `Delegate` proof"
   | .coerSym p => do
     let ⟨(dC, D), hD, hc⟩ ← coerAdt P
     let ⟨Pt, hp⟩ ← checkTm P Γ p
@@ -530,7 +550,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨_, hb, e⟩ ← checkCore b Γ body (.inl R0)
     let ⟨R, hr, e2⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele R0) (.seq R0 body rest)) rest rets
     .ok ⟨R, .seq hR hRs hRt (e.1 R0 rfl ▸ hb) hr, e2⟩
-  | .call f dec args er ms rest, rets => do
+  | .call f dec args er ms ve rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
     | .fn l np t => do
@@ -541,8 +561,9 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))
         "a non-erased call mentions something erased, or binds an erased result at many"
-      let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms rest)) rest rets
-      .ok ⟨R, .call hf hF ht ha hn hd ho hm hr, e⟩
+      let ⟨hv⟩ ← need (ve = some t.ers) "the call's view of its callee's erasures is not its type's"
+      let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)) rest rets
+      .ok ⟨R, .call hf hF ht ha hn hd ho hm hv hr, e⟩
     | _ => .error "not a function"
   | .mtch s R0 brs els er rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
@@ -724,8 +745,10 @@ def checkGroup (gid : Nat) (Γ : Ctx) (G : Group) : Res (PLift (GroupOK P gid Γ
     let ⟨hf⟩ ← checkFns gid Γ G G.fns 0
     let ⟨he⟩ ← need (∀ i < Γ.n, Γ.er i = G.ers.getD i true) "def-fns: the elaborator's erasure disagrees"
     let ⟨hg⟩ ← need (Γ.ghost = G.ghost) "def-fns: the elaborator's erasure disagrees"
+    let ⟨hd⟩ ← need (G.deleOK P Γ.n = true)
+      "def-fns: a delegate body does more than pass its arguments to its target and its target's results back"
     .ok ⟨.mk hK hl (fun j F h => (hf j F (by simpa using h)).1)
-      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg⟩
+      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg hd⟩
   | none => .error "def-fns: unbound level"
 termination_by (gid + 1, 0, sizeOf G.fns + 1, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)

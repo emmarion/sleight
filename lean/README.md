@@ -93,10 +93,20 @@ each one rests on, which are Lean's own three (`propext`,
 - **The stripped run (SOUNDNESS.md's (E)).** `RunS` runs a program with
   every erased call and erased match skipped, its results replaced by a
   token, erased `let`s of terms and levels held as tokens, and no
-  decrease check. A stripped value stands for a full one (`Real`) when
-  it is built by the same constructor, which is not phantom, with its non-erased fields
-  standing for theirs, or is the same function closed over an
-  environment whose non-erased entries stand for theirs; any value
+  decrease check. A stripped call passes its callee only the arguments
+  that the caller's view of the callee's type leaves non-erased, in
+  order, and the callee spreads them over its own non-erased
+  parameters, a token at each erased one; its results come back the
+  same way (`FnDef.spreadIn`, `FnDef.spreadOut`). A stripped `def-fns`
+  binds a function with a `delegate` body to the stripped value of its
+  target, as DESIGN.md section 33 has a delegate's pointer be its
+  callee's (`closuresS`). A stripped value stands for a full one
+  (`Real`) when it is built by the same constructor, which is not
+  phantom, with its non-erased fields standing for theirs, or is the
+  same function, one with no `delegate` body, closed over an
+  environment whose non-erased entries stand for theirs, or, for the
+  closure of a function with a `delegate` body, when it stands for the
+  target that closure's environment holds (`Real.dele`); any value
   stands for a type, a level or a proof. `eval_sound` carries, beside
   the full run's typing, that outside erased code a stripped run from an
   environment whose non-erased entries stand for the full one's exists
@@ -106,7 +116,11 @@ each one rests on, which are Lean's own three (`propext`,
   built by a `newtype`'s wrapping constructor as its one non-erased
   field, as DESIGN.md section 33 has it (`Prog.unwrap`), and a stripped
   value stands for such a value when it stands for that field
-  (`Real.wrap`). `RunS.det` says a stripped run
+  (`Real.wrap`). A call of a delegate's closure is matched in the
+  stripped run by the call its body makes, which `Group.deleOK` checks
+  passes the delegate's own non-erased arguments through to its target,
+  in order, and the target's non-erased results back
+  (`Minimal/Deleg.lean`). `RunS.det` says a stripped run
   has one outcome, and `runS_sound` that the executable `runS`, which
   the runner uses, finds only stripped runs.
 - **`no_false`.** No checked program has as its result type a data type
@@ -139,8 +153,8 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
 refused as not supported: `unique`; an `at` mark on a `def-fns` line;
-and every form not named in this file, among them `coercible-of`,
-`delegate-of`, macros, cells and `at`. Only the prelude, or a program
+and every form not named in this file, among them macros, cells and
+`at`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -320,8 +334,23 @@ it is `Settled`, and its `is` rule.
   carries, which names a function in scope at the header, an earlier
   one of the block included: the call must be to `f`, in tail position,
   passing the function's non-erased parameters straight through in
-  order. In the core it is an ordinary call. `delegate-of` and the
-  `Delegate` proof are not supported.
+  order. In the core it is an ordinary call, and the function records
+  its target (`FnDef.dele`). The body is checked with every entry made
+  before the function's parameters erased, its target aside, and the
+  checker requires its post-erasure code to be the one call, as above
+  (`Group.deleOK`): renames, erased code and other run-free statements
+  before and after it, and a final result that returns the call's
+  non-erased results in order.
+- `Delegate`, `(delegate-of g)` and `(coercible-of d)` (sections 19, 33
+  and 34). `Delegate` is a built-in type with no constructors and no
+  `Matchable`, read by `VTy` as `Coercible` is. `def-fns` records, for
+  each non-erased function with a `delegate` body in a non-erased
+  block, its pair with its target (`Ctx.deles`); `(delegate-of g)`
+  names that pair's proof, `(Delegate (Shared) G g (Shared) F f)`, in
+  the bodies of the block and after it, and `(coercible-of d)` turns it
+  into the `Coercible` proof between the same sides. `EnvOK` carries
+  that a stripped value stands for each such `g` exactly when it stands
+  for its `f` (`DeleOK`). `delegate-of` is not supported in a type.
 - `tail` and `notail` (section 19): the call must, or must not, be in
   tail position: the final expression of a function body, of a branch of
   a match in tail position, or of a `let`'s right-hand side when the
@@ -427,3 +456,10 @@ it is `Settled`, and its `is` rule.
 - The runtime check compares sizes of values where SOUNDNESS.md uses the
   strict-subtree order. The proof uses only that a strict subtree is
   smaller.
+- The body of a function with a `delegate` body is checked with every
+  entry made before the function's parameters erased except its target,
+  and `delegate-of` names only a non-erased function of a non-erased
+  block. Without the first, the proof had no stripped environment for
+  the delegate's body when the only stripped value at hand stood for
+  its target; without the second, `Real.dele` could not relate a
+  stripped value to the delegate in both directions.

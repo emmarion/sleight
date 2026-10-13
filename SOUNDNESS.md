@@ -315,6 +315,5 @@ on Lean's three standard axioms:
   and `Infer.lean` are outside the proof.
 
 Outside the fragment, so argued above at most: `unique`, cells, `at`,
-slots, at-functions and at-matches, macros, the FFI's implementations of
-extern functions (`lean/` runs their models), and `delegate-of` with the
-`coercible-of` that turns its proof into a `coerce`.
+slots, at-functions and at-matches, macros, and the FFI's
+implementations of extern functions (`lean/` runs their models).

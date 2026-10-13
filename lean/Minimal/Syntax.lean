@@ -228,6 +228,8 @@ inductive Prim where
   | assert (t A : Tm)
   | coerce (a b p : Tm)
   | coerRefl (s e : Tm)
+  | deleOf (g t : Nat)
+  | coerOf (p : Tm)
   | coerSym (p : Tm)
   | coerTrans (p q : Tm)
   | coerShare (p : Tm)
@@ -245,7 +247,7 @@ inductive Chk where
 
 inductive Core where
   | ret (ts : Tm)
-  | call (f : Tm) (dec : Dec) (args : Tm) (er : Bool) (ms : List Bool) (rest : Core)
+  | call (f : Tm) (dec : Dec) (args : Tm) (er : Bool) (ms : List Bool) (ve : Option (List Bool)) (rest : Core)
   | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er : Bool) (rest : Core)
   | prim (p : Prim) (er : Bool) (rest : Core)
   | defLvl (rest : Core)
@@ -260,7 +262,7 @@ inductive Core where
 mutual
 def Core.noRet : Core → Bool
   | .ret _ => false
-  | .call _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
+  | .call _ _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
   | .case _ brs els _ _ => Core.armsNoRet brs && Core.optNoRet els
   | .seq _ body rest => body.noRet || rest.noRet
   | .absurd _ | .dead => true
@@ -308,6 +310,7 @@ structure FnDef where
   np : Nat
   tele : Tm
   body : Core
+  dele : Option Nat := none
   deriving Repr, Inhabited
 
 structure Group where

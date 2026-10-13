@@ -151,17 +151,17 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
     let (ts, k) := addMentions P Γ ts
     modify fun (gs, _) => (gs, k)
     return .ret ts
-  | .call f dec args er ms rest => do
+  | .call f dec args er ms ve rest => do
     let ty := match checkTm P Γ f with
       | .ok ⟨Ft, _⟩ => match Γ.canon Ft with
         | .fn _ _ t => some t
         | _ => none
       | .error _ => none
-    let some t := ty | return .call f dec args er ms rest
+    let some t := ty | return .call f dec args er ms ve rest
     let args ← if args.hasHole then Tm.ofList <$> inferArgs P Γ args.toList t else pure args
     match checkArgs P Γ args t with
-    | .ok ⟨outs, _⟩ => return .call f dec args er ms (← inferCore (Γ.pushTele outs) rets top rest)
-    | .error _ => return .call f dec args er ms rest
+    | .ok ⟨outs, _⟩ => return .call f dec args er ms (some t.ers) (← inferCore (Γ.pushTele outs) rets top rest)
+    | .error _ => return .call f dec args er ms ve rest
   | .mtch s R brs els er rest => do
     let R ← inferTele P Γ R
     let (brs, els) ← inferArms Γ s brs els (some R) false
@@ -247,11 +247,11 @@ where
     return (brs, els)
 
 def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
-  | .call f dec args er ms rest => do
+  | .call f dec args er ms ve rest => do
     let ⟨Ft, _⟩ ← (checkTm P Γ f).toOption
     let .fn _ _ t := Γ.canon Ft | none
     let ⟨outs, _⟩ ← (checkArgs P Γ args t).toOption
-    some (Γ.pushTele outs (some (ms.map (er || ·))), rest, fun (r : Core) => .call f dec args er ms r)
+    some (Γ.pushTele outs (some (ms.map (er || ·))), rest, fun (r : Core) => .call f dec args er ms ve r)
   | .mtch s R brs els er rest =>
     some (Γ.pushTele R (if er then some (List.replicate R.len true) else none), rest, fun (r : Core) => .mtch s R brs els er r)
   | .prim p er rest => do

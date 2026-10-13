@@ -9,42 +9,32 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 113 tests were
-accepted with OCaml's value, none mismatched, 267 refusals agreed, and
-175 + 218 were refused as unsupported. No test the OCaml suite refuses
-is accepted. Of the tests it accepts, six are refused (four need cells,
-`comptime_call_ctor.sl` and `thunk_extern_first_class.sl`) and two time
-out at ten seconds (`comptime_tail.sl`, `extern_tail.sl`).
+the test expects and the runner's. At the last run 116 tests were
+accepted with OCaml's value, none mismatched, 269 refusals agreed, and
+171 + 216 were refused as unsupported. No test the OCaml suite refuses
+is accepted. Of the tests it accepts, seven are refused (four need cells,
+`comptime_call_ctor.sl`, `thunk_extern_first_class.sl`, and
+`delegate_proof_scope.sl`, whose signature names `(level-of a)` for an
+earlier function of its own block) and two time out at ten seconds
+(`comptime_tail.sl`, `extern_tail.sl`).
 
 `lean/prelude.py` regenerates `lean/prelude.sl` from `lib/prelude.sl`,
 keeping the `extern` marks. It takes several minutes, because it runs
 `--full` on every prefix.
 
+`delegate-of`, `coercible-of` and the `Delegate` type are done, with the
+stripped run passing only non-erased arguments and results and binding a
+delegate to its target (`lean/README.md`). One consequence for the
+elaborator: a run-position call whose callee's type it does not know
+records no view of the callee's erasures (`Core.call`'s `ve` is `none`),
+and the stripped run then uses the callee's own; inference fills it in
+before checking, and the checker requires it.
+
 ## Next, none of it decided
 
-1. **`delegate-of`, the `Delegate` proof and `coercible-of`** (sections
-   19, 33, 41). `coerce` and the other `coercible-*` forms are done:
-   `VTy` reads `(Coercible sa A a sb B b)` as "a stripped value stands
-   for `a` exactly when it stands for `b`". A `Delegate` proof turned
-   into a `Coercible` would need the stripped value of a
-   `delegate`-bodied `g` to stand for the full value of its target `f`,
-   and `Real` relates closures only of one function. A plan, unproved:
-   - The stripped run's call passes the callee its non-erased
-     arguments as a stream, in the order of the caller's view of the
-     callee's type, and the callee spreads them over its own non-erased
-     parameters, with a token at each erased one. `Core.call` then needs
-     the caller's erasure of each argument. For an ordinary call this is
-     the same environment up to erased entries; for a call that reaches
-     `f` where the full run calls `g`, it is what the `delegate`
-     pass-through rule guarantees.
-   - The stripped run's `defFns` binds a `delegate`-bodied function to
-     its target's value, and `Real` gets a rule: a stripped value stands
-     for the closure of a `delegate`-bodied function when it stands for
-     the target that closure's environment holds. `Real.clo` then
-     requires a function that does not delegate.
-   - The call case of `eval_sound` then needs the shape of a delegate
-     body, which a typing rule for it would provide.
-   `char-cmp`, `str-cmp` and about ten tests need it.
+1. **`level-of` of an earlier function of the same block in a
+   signature** (section 53), which `delegate_proof_scope.sl` needs.
+   `delegate-of` in a type is not supported either.
 2. **`unique`** (sections 13, 15, 16, 32): about 170 tests stop at it.
    Without it, a non-erased `coerce` needs `(Shared)` on both sides,
    which inference enforces.

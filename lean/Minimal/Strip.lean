@@ -21,18 +21,40 @@ end
 
 def Prog.sub (P : Prog) (ρ : List Tm) (t : Tm) : Tm := P.subU (Tm.env ρ) t
 
+def filt : List Bool → List Tm → List Tm
+  | b :: bs, x :: xs => if b then filt bs xs else x :: filt bs xs
+  | _, _ => []
+
+def spread : List Bool → List Tm → List Tm
+  | [], _ => []
+  | true :: bs, xs => .tok :: spread bs xs
+  | false :: bs, xs => xs.headD .nil :: spread bs xs.tail
+
+def FnDef.spreadIn (F : FnDef) (ve : Option (List Bool)) (args : List Tm) : List Tm :=
+  spread (F.tele.ers.take F.np) (filt ((ve.getD F.tele.ers).take args.length) args)
+
+def FnDef.spreadOut (F : FnDef) (ve : Option (List Bool)) (np : Nat) (outs : List Tm) : List Tm :=
+  spread ((ve.getD F.tele.ers).drop np) (filt (F.tele.ers.drop F.np) outs)
+
 def Prim.evalS (P : Prog) (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t | .coerce t _ _ => P.sub ρ t
   | p => p.eval ρ
+
+def cval (env : List Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with
+  | some t => (env ++ acc).getD t .nil
+  | none => .clo (.ofList env) gid acc.length
+
+def closuresS (env : List Tm) (gid : Nat) (G : Group) : List Tm :=
+  G.fns.foldl (fun acc F => acc ++ [cval env gid acc F]) []
 
 variable (P : Prog)
 
 inductive RunS : List Tm → Core → List Tm → Prop
   | ret : RunS ρ (.ret ts) (ts.toList.map (P.sub ρ))
-  | callE : RunS (ρ ++ List.replicate ms.length .tok) rest out → RunS ρ (.call f dec args true ms rest) out
+  | callE : RunS (ρ ++ List.replicate ms.length .tok) rest out → RunS ρ (.call f dec args true ms ve rest) out
   | call : P.sub ρ f = .clo env gid j → P.groups[gid]? = some G → G.fns[j]? = some F →
-      RunS (env.toList ++ closures env.toList gid G ++ args.toList.map (P.sub ρ)) F.body outs →
-      RunS (ρ ++ outs) rest out → RunS ρ (.call f dec args false ms rest) out
+      RunS (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body outs →
+      RunS (ρ ++ F.spreadOut ve args.toList.length outs) rest out → RunS ρ (.call f dec args false ms ve rest) out
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
   | mtch : P.sub ρ s = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
@@ -44,20 +66,20 @@ inductive RunS : List Tm → Core → List Tm → Prop
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
   | prim : RunS (ρ ++ [if er then .tok else p.evalS P ρ]) rest out → RunS ρ (.prim p er rest) out
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
-  | defFns : P.groups[gid]? = some G → RunS (ρ ++ closures ρ gid G) rest out → RunS ρ (.defFns gid rest) out
+  | defFns : P.groups[gid]? = some G → RunS (ρ ++ closuresS ρ gid G) rest out → RunS ρ (.defFns gid rest) out
   | chk : RunS ρ rest out → RunS ρ (.chk k a b rest) out
 
 def runS : Nat → List Tm → Core → Option (List Tm)
   | 0, _, _ => none
   | fuel + 1, ρ, c => match c with
     | .ret ts => some (ts.toList.map (P.sub ρ))
-    | .call _ _ _ true ms rest => runS fuel (ρ ++ List.replicate ms.length .tok) rest
-    | .call f _ args false _ rest => match P.sub ρ f with
+    | .call _ _ _ true ms _ rest => runS fuel (ρ ++ List.replicate ms.length .tok) rest
+    | .call f _ args false _ ve rest => match P.sub ρ f with
       | .clo env gid j => do
         let G ← P.groups[gid]?
         let F ← G.fns[j]?
-        let outs ← runS fuel (env.toList ++ closures env.toList gid G ++ args.toList.map (P.sub ρ)) F.body
-        runS fuel (ρ ++ outs) rest
+        let outs ← runS fuel (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body
+        runS fuel (ρ ++ F.spreadOut ve args.toList.length outs) rest
       | _ => none
     | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
     | .mtch s _ brs els false rest => match P.sub ρ s with
@@ -82,7 +104,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
       runS fuel (ρ ++ outs) rest
     | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.evalS P ρ]) rest
     | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
-    | .defFns gid rest => do runS fuel (ρ ++ closures ρ gid (← P.groups[gid]?)) rest
+    | .defFns gid rest => do runS fuel (ρ ++ closuresS ρ gid (← P.groups[gid]?)) rest
     | .chk _ _ _ rest => runS fuel ρ rest
     | .absurd _ | .dead => none
 
@@ -163,9 +185,11 @@ inductive Real : Tm → Tm → Prop
       Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
   | wrap : P.wrapField d c = some k → Real vS (vs.toList.getD k .nil) → Real vS (.app (.vc d c) vs)
   | vc : P.phantom d c = false → Real (.vc d c) (.vc d c)
-  | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false →
+  | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = none →
       envS.length = env.length → (∀ i, G.ers.getD i true = false → Real (Tm.env envS i) (Tm.env env i)) →
       Real (.clo (.ofList envS) gid j) (.clo (.ofList env) gid j)
+  | dele : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = some t →
+      Real vS (Tm.env (env ++ closures env gid G) t) → Real vS (.clo (.ofList env) gid j)
   | other : (∀ d c vs, v ≠ .app (.vc d c) vs) → (∀ d c, v ≠ .vc d c) → (∀ e g j, v ≠ .clo e g j) → Real vS v
 
 inductive Reals : Tm → Tm → Tm → Prop
