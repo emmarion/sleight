@@ -464,7 +464,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
     | .list rets, _ => elabTele sc 0 false rets
     | .atom "_", some R => pure R
     | _, _ => throw "a match annotation `_` where no telescope is expected"
-  let (ss, sts) ← withTail false (elabExpr sc [false] none s)
+  let (ss, sts) ← withTail false (elabExpr sc [er] none s)
   let [s] := sts | throw "match: one scrutinee"
   let real := er && !(← get).ghost && want.length == R0.len && want.any (!·)
   let rms := if er && !real then List.replicate R0.len true else want
@@ -547,7 +547,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     let (er, args) ← splitMult true args
     if !er && (← get).ghost then throw "a let-match written many in an erased position"
     let s :: pat :: brs := args | throw "malformed let-match"
-    let (ss, sts) ← withTail false (elabExpr sc [false] none s)
+    let (ss, sts) ← withTail false (elabExpr sc [er] none s)
     let [s] := sts | throw "let-match: one scrutinee"
     if (← get).rhs && brs.any (fun | .list (.atom "absurd" :: _) => false | _ => true) then
       throw "a let-match with more than one real branch outside a body"

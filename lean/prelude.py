@@ -33,7 +33,7 @@ for f in forms:
     f = clean(f)
     open(tmp, 'w').write('\n\n'.join(kept + [f]) + '\n')
     try:
-        r = subprocess.run([binary, '--no-prelude', tmp], capture_output=True, text=True, timeout=10,
+        r = subprocess.run([binary, '--no-prelude', '--full', tmp], capture_output=True, text=True, timeout=10,
             preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_AS, (8 << 30, 8 << 30))).stdout
     except subprocess.TimeoutExpired:
         r = 'x: stuck: timeout'

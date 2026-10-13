@@ -71,9 +71,9 @@ def Prog.run (P : Prog) : String :=
   | .error e => s!"stuck: {e}"
 
 def Prog.runStripped (P : Prog) : String :=
-  match runS P 1000000 [] P.main with
+  match runS P 100000000 [] P.main with
   | some [v] => match P.thunk v with
-    | some (ρ, _, F) => match runS P 1000000 ρ F.body with
+    | some (ρ, _, F) => match runS P 100000000 ρ F.body with
       | some vs => " ".intercalate (vs.map (P.show P.nat))
       | none => "stuck"
     | none => P.show P.nat v
@@ -91,6 +91,6 @@ def runSource (src : String) (mode : String) (pre : Bool) : String :=
     if mode == "--unchecked" then P.run
     else match checkProg P with
       | .error e => s!"refused: {e}"
-      | .ok _ => if mode == "--stripped" then P.runStripped else P.run
+      | .ok _ => if mode == "--full" then P.run else P.runStripped
 
 end Minimal

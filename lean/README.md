@@ -28,8 +28,11 @@ as a numeral, an erased field as `_`, and a last argument that is an
 application after `$`. A final value that is a function with no
 parameters is applied, and its result printed (section 27).
 `--unchecked` skips the checker and runs the program anyway.
-`--stripped` checks it and runs it with erased code skipped (`runS`),
-printing what was skipped as `_`. Every program starts in the scope of
+A checked program runs with erased code skipped (the stripped run,
+`runS`), which `eval_sound` proves agrees with the full run on what is
+not erased; `--full` runs the full evaluator `eval` instead, which also
+computes the erased values. `test.sh` compares the two on every
+example. Every program starts in the scope of
 `prelude.sl`, unless `--no-prelude` is given.
 
 ## Files
@@ -52,7 +55,7 @@ printing what was skipped as `_`. Every program starts in the scope of
   and checking.
 - `prelude.sl`: the prelude, which `prelude.py` makes from
   `lib/prelude.sl`: the forms the runner accepts, in order, with their
-  `extern` markers removed. `python3 prelude.py ../lib/prelude.sl
+  `extern` markers removed, kept only when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
   .lake/build/bin/minimal prelude.sl` regenerates it.
 - `compare.sh`: runs the runner over the OCaml suite's `tests/` and
   prints, per test, the verdict the test expects and the runner's.
@@ -95,7 +98,7 @@ each one rests on, which are Lean's own three (`propext`,
   never reaches a match or a call on something it skipped, which is the
   sense in which erasure is safe here. `RunS.det` says a stripped run
   has one outcome, and `runS_sound` that the executable `runS`, which
-  `--stripped` uses, finds only stripped runs.
+  the runner uses, finds only stripped runs.
 - **`no_false`.** No checked program has as its result type a data type
   with no constructors.
 

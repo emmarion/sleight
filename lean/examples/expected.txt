@@ -104,39 +104,39 @@ unchecked examples/refuted_branch_bad.sl: 0
 unchecked examples/tail_bad.sl: error: tail: the call is not in tail position
 unchecked examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
 unchecked examples/valctor_return_bad.sl: 0
-stripped examples/absurd.sl: 1
-stripped examples/adt_mentions.sl: 3
-stripped examples/adt_mentions_call.sl: error: L is not an entry
-stripped examples/annotation.sl: 2
-stripped examples/anon_level.sl: 2
-stripped examples/binder_refute.sl: 0
-stripped examples/double.sl: 4
-stripped examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
-stripped examples/eq_sym.sl: (Refl _ 0)
-stripped examples/erased.sl: 2
-stripped examples/erased_match_real.sl: 7
-stripped examples/erased_nested.sl: (MkPair 2 _)
-stripped examples/ex_falso.sl: 0
-stripped examples/first_class.sl: (Cons _ (Cons _ 0 $ Cons _ 0 $ Nil _) $ Cons _ (Cons _ 1 $ Nil _) $ Nil _)
-stripped examples/inferred.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil _)
-stripped examples/inferred_args.sl: 2
-stripped examples/is_entries.sl: (Cons _ 1 $ Cons _ 1 $ Nil _)
-stripped examples/is_fn.sl: (Cons _ 2 $ Cons _ 2 $ Nil _)
-stripped examples/length.sl: 3
-stripped examples/let_binders.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Nil _)
-stripped examples/let_forward.sl: (VCons _ 0 2 $ VNil _)
-stripped examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
-stripped examples/level_of_param.sl: 3
-stripped examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
-stripped examples/nested_adt.sl: 2
-stripped examples/newtype.sl: (MkMeters 3)
-stripped examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
-stripped examples/phantom.sl: 1
-stripped examples/refute.sl: 1
-stripped examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
-stripped examples/tail.sl: 4
-stripped examples/top_statement.sl: 
-stripped examples/type_in_type.sl: (MkBox _ _)
-stripped examples/union.sl: 4
-stripped examples/valctor_return.sl: (MkBox _ 1)
-stripped examples/vec_head.sl: 1
+full examples/absurd.sl: 1
+full examples/adt_mentions.sl: 3
+full examples/adt_mentions_call.sl: error: L is not an entry
+full examples/annotation.sl: 2
+full examples/anon_level.sl: 2
+full examples/binder_refute.sl: 0
+full examples/double.sl: 4
+full examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
+full examples/eq_sym.sl: (Refl _ 0)
+full examples/erased.sl: 2
+full examples/erased_match_real.sl: 7
+full examples/erased_nested.sl: (MkPair 2 _)
+full examples/ex_falso.sl: 0
+full examples/first_class.sl: (Cons _ (Cons _ 0 $ Cons _ 0 $ Nil _) $ Cons _ (Cons _ 1 $ Nil _) $ Nil _)
+full examples/inferred.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil _)
+full examples/inferred_args.sl: 2
+full examples/is_entries.sl: (Cons _ 1 $ Cons _ 1 $ Nil _)
+full examples/is_fn.sl: (Cons _ 2 $ Cons _ 2 $ Nil _)
+full examples/length.sl: 3
+full examples/let_binders.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Nil _)
+full examples/let_forward.sl: (VCons _ 0 2 $ VNil _)
+full examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
+full examples/level_of_param.sl: 3
+full examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
+full examples/nested_adt.sl: 2
+full examples/newtype.sl: (MkMeters 3)
+full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
+full examples/phantom.sl: 1
+full examples/refute.sl: 1
+full examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
+full examples/tail.sl: 4
+full examples/top_statement.sl: 
+full examples/type_in_type.sl: (MkBox _ _)
+full examples/union.sl: 4
+full examples/valctor_return.sl: (MkBox _ 1)
+full examples/vec_head.sl: 1
