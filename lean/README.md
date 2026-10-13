@@ -280,6 +280,10 @@ produces nothing (section 27).
   applied to the branch's field entries, and the scrutinee's type equals
   the constructor's return type.
 - Unification decomposes every node of the same shape, binders included.
+  When it makes one variable stand for another and the types of both
+  canonicalize to `TyCtor` or `ValCtor` types, it unifies those types
+  too, as DESIGN.md section 7 has it for two atoms' signatures. The
+  proof rests on a value having at most one such type (`VTy.sig_det`).
   A variable equated with a term that mentions a binder contradicts, as
   DESIGN.md section 7's third case has it; the proof rests on no value
   mentioning a binder it is not under. When it can neither assign nor

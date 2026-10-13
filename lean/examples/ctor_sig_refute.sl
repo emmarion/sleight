@@ -1,0 +1,16 @@
+(def-adts $ (Q : (Type T) (T a) (T b) -> Type)
+  enum
+  (many Same : (erased Type T) (erased T a) -> (Q T a a))
+  (many Other : (erased Type T) (erased T a) (erased T b) -> (Q T a b)))
+(def-adts $ (Tt : -> Type)
+  enum
+  (many C1 : (erased Type A) (erased A x) -> (Tt))
+  (many D1 : (erased Type S) (erased S is s) -> (Tt)))
+(def-fns _ $ (many pick : (erased (TyCtor -> Type) T)
+    (erased (ValCtor (erased Type A) (erased A x) -> (T)) C)
+    (erased (ValCtor (erased Type S) (erased S is s) -> (T)) D)
+    (erased Type B) (erased B b)
+    (many (Q (T) (C B b) (D B B)) q) -> (many (Nat) n))
+  (match many q (((Nat) n))
+    ((Other t x y) 7)))
+(pick Tt C1 D1 Type (Nat) (Other (Tt) (C1 Type (Nat)) (D1 Type Type)))

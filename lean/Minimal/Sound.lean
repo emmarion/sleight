@@ -22,7 +22,7 @@ inductive VTy : Tm → Tm → Prop
   | lvl : VTy (.lvl n) .level
   | predates : (∀ n ∈ x.levels, n < m) → VTy .tok (.predates A x (.lvl m))
   | subterm : Tm.PSub a b → VTy .tok (.subterm A a B b)
-  | tyCtor : VTy (.tyc d) (.tyCtor ps)
+  | tyCtor {D : Adt} : P.adts[d]? = some D → VTy (.tyc d) (.tyCtor D.params)
   | vc : P.ctor d c = some sig → VTy (.vc d c) (.valCtor sig)
   | con : P.ctor d c = some sig → VTys vs sig (.bind (.ty mk me) T .nil) → T = .app (.tyc d) idx →
       VTy (.app (.vc d c) vs) T
@@ -62,12 +62,8 @@ theorem subst_append {ρ more : List Tm} {t : Tm} {d : Nat} (h : t.static ρ.len
 
 end Tm
 
-theorem canon_sound {Γ : Ctx} {f : Nat → Tm} (h : Sat f Γ.σ) (t : Tm) : (Γ.canon t).subst f = t.subst f := by
-  simp only [Ctx.canon, Tm.subst_subst]
-  congr 1; funext i
-  cases e : Γ.σ i with
-  | none => simp [Tm.subst]
-  | some u => simp [h i u e]
+theorem canon_sound {Γ : Ctx} {f : Nat → Tm} (h : Sat f Γ.σ) (t : Tm) : (Γ.canon t).subst f = t.subst f :=
+  canonBy_sound h t
 
 theorem EnvOK.sat {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Sat (Tm.env ρ) Γ.σ | .mk _ _ _ h _ _ => h
 theorem EnvOK.wf {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Γ.WF | .mk _ _ _ _ _ h => h
@@ -124,6 +120,32 @@ theorem VTy.vc_inv {v s : Tm} (h : VTy P v (.valCtor s)) : ∃ d c, v = .vc d c 
   | vc hc => exact ⟨_, _, rfl, hc⟩
   | con _ _ he => cases he
 
+theorem VTy.sig_det {v A B : Tm} (hA : VTy P v A) (hB : VTy P v B)
+    (ha : ∃ x, A = .tyCtor x ∨ A = .valCtor x) (hb : ∃ x, B = .tyCtor x ∨ B = .valCtor x) : A = B := by
+  obtain ⟨x, rfl | rfl⟩ := ha <;> obtain ⟨y, rfl | rfl⟩ := hb <;> cases hA <;> cases hB <;> simp_all
+
+theorem EnvOK.sigSound {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) : SigSound (Tm.env ρ) Γ.sig := by
+  have key : ∀ e s, Γ.sig e = some s → (∃ x, s = .tyCtor x ∨ s = .valCtor x) ∧ VTy P (Tm.env ρ e) (s.subst (Tm.env ρ)) := by
+    intro e s h
+    unfold Ctx.sig at h
+    cases hT : Γ.tys[e]? with
+    | none => simp [hT] at h
+    | some T =>
+      obtain ⟨v, _, hv, hvT⟩ := hE.get hT
+      rw [← hE.canon T, ← hv] at hvT
+      simp only [hT, Option.map_some] at h
+      split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h <;> subst h <;> rename_i h' <;> rw [Option.some.inj h'] at hvT
+      · exact ⟨⟨_, .inl rfl⟩, hvT⟩
+      · exact ⟨⟨_, .inr rfl⟩, hvT⟩
+  intro e e' s s' h1 h2 hee
+  obtain ⟨hs, hv⟩ := key e s h1
+  obtain ⟨hs', hv'⟩ := key e' s' h2
+  rw [hee] at hv
+  have shape : ∀ s : Tm, (∃ x, s = .tyCtor x ∨ s = .valCtor x) →
+      ∃ x, s.subst (Tm.env ρ) = .tyCtor x ∨ s.subst (Tm.env ρ) = .valCtor x := by
+    rintro s ⟨x, rfl | rfl⟩ <;> simp [Tm.subst]
+  exact VTy.sig_det hv hv' (shape s hs) (shape s' hs')
+
 mutual
 theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) : ∀ {t T : Tm}, TmTy P Γ t T →
     VTy P (t.subst (Tm.env ρ)) (T.subst (Tm.env ρ)) ∧ t.static Γ.n 0 ∧ T.static Γ.n 0
@@ -136,7 +158,7 @@ theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) 
     refine ⟨by simp only [Tm.subst]; rw [hE.sat i _ hs]; exact hv, decide_eq_true (hE.wf.σ i _ hs).1, hT⟩
   | _, _, .univ => ⟨.univ, rfl, rfl⟩
   | _, _, .level => ⟨.univ, rfl, rfl⟩
-  | _, _, .tyc hD => ⟨.tyCtor, rfl, by
+  | _, _, .tyc hD => ⟨by simp only [Tm.subst]; rw [Tm.subst_static0 _ _ 0 (hP.params _ _ hD).2]; exact .tyCtor hD, rfl, by
       simpa [Tm.static] using Tm.static_mono (Nat.zero_le _) _ (Nat.le_refl 0) (hP.params _ _ hD).2⟩
   | _, _, .vc (d := d) hc => by
     obtain ⟨D, hD, hsig⟩ : ∃ D, P.adts[d]? = some D ∧ _ := Option.bind_eq_some_iff.mp hc
@@ -1247,7 +1269,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   simp only at h1 h2 h3 h4 h5 h6
   obtain ⟨Rc, rfl, hRc⟩ := Tm.tele_one h4 h2
   have hbranch : Γ.branch s d c idx sig =
-      (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.app (.vc d c) (Γ.fields (sig.len - 1)))), (Γ.canon (.app (.tyc d) idx), Γf.canon Rc)]) := by
+      (Γf, unify Γf.n Γf.sig Γf.σ [] [(Γ.canon s, Γf.canon (.app (.vc d c) (Γ.fields (sig.len - 1)))), (Γ.canon (.app (.tyc d) idx), Γf.canon Rc)]) := by
     simp [Ctx.branch, hpr]
   have hEf := h1
   have hvl : vs.toList.length = sig.len - 1 := by rw [Tm.len_toList _ hvs.isList, hm']
@@ -1264,7 +1286,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
       rw [canon_sound (Γ := Γ) hsat, canon_sound hEf.sat, hRc,
         Tm.subst_append (t := Tm.app (.tyc d) idx) (by simpa [Tm.static, hl] using hSs')]
       simp [Tm.subst]
-  have hun := unify_sound (Tm.env (ρ ++ vs.toList)) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hEf.closed i)) Γf.n Γf.σ [] _ hEf.sat heqs
+  have hun := unify_sound (Tm.env (ρ ++ vs.toList)) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hEf.closed i)) Γf.n Γf.sig hEf.sigSound Γf.σ [] _ hEf.sat heqs
   refine ⟨c, vs, hsv, ?_⟩
   have hbr' := hbr c sig hsig
   generalize hbody : lookupBr brs c = br at hbr'
@@ -1282,7 +1304,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     rw [Ctx.branch_ghost, hbranch] at hlive; simp only [Prod.mk.injEq] at hlive
     obtain ⟨rfl, hu⟩ := hlive
     have hsσ := hun.1 σ' hu
-    have hwσ := unify_wf Γf.n Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
+    have hwσ := unify_wf Γf.n Γf.sig Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
     refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),

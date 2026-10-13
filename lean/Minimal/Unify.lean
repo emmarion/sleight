@@ -56,18 +56,27 @@ def substOne (e : Nat) (t : Tm) : Tm → Tm := Tm.subst fun i => if i = e then t
 def assign (e : Nat) (t : Tm) (σ : Nat → Option Tm) (x : Nat) : Option Tm :=
   if x = e then some t else (σ x).map (substOne e t)
 
-def unify (n : Nat) (σ : Nat → Option Tm) (dom : List Nat) : List (Tm × Tm) → UResult
+def canonBy (σ : Nat → Option Tm) (t : Tm) : Tm := t.subst fun i => (σ i).getD (.fv i)
+
+def sigEqs (sig : Nat → Option Tm) (σ : Nat → Option Tm) (e : Nat) : Tm → List (Tm × Tm)
+  | .fv e' => match sig e, sig e' with
+    | some s, some s' => [(canonBy σ s, canonBy σ s')]
+    | _, _ => []
+  | _ => []
+
+def unify (n : Nat) (sig : Nat → Option Tm) (σ : Nat → Option Tm) (dom : List Nat) : List (Tm × Tm) → UResult
   | [] => .ok σ
   | (a, b) :: rest =>
-    if a = b then unify n σ dom rest
+    if a = b then unify n sig σ dom rest
     else match varSide a b with
       | some (e, t) =>
         if e ∈ t.fvs ∨ t.bound 0 = false then .contra
         else if h : dom.length < n ∧ e ∉ dom ∧ e < n ∧ t.static n 0 then
-          unify n (assign e t σ) (e :: dom) (rest.map fun p => (substOne e t p.1, substOne e t p.2))
+          unify n sig (assign e t σ) (e :: dom)
+            (sigEqs sig (assign e t σ) e t ++ rest.map fun p => (substOne e t p.1, substOne e t p.2))
         else .unknown
       | none =>
-        if a.sameHead b then unify n σ dom (a.kids.zip b.kids ++ rest) else .contra
+        if a.sameHead b then unify n sig σ dom (a.kids.zip b.kids ++ rest) else .contra
 termination_by eqs => (n + 1 - dom.length, eqsSize eqs)
 decreasing_by
   · apply Prod.Lex.right; have := a.size_pos; simp [eqsSize]; omega

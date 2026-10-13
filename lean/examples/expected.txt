@@ -7,6 +7,7 @@ examples/annotation.sl: 2
 examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 examples/anon_level.sl: 2
 examples/binder_refute.sl: 0
+examples/ctor_sig_refute.sl: 7
 examples/double.sl: 4
 examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
 examples/else_empty_bad.sl: refused: else: it stands for no constructor
@@ -113,6 +114,7 @@ full examples/adt_mentions_call.sl: error: L is not an entry
 full examples/annotation.sl: 2
 full examples/anon_level.sl: 2
 full examples/binder_refute.sl: 0
+full examples/ctor_sig_refute.sl: 7
 full examples/double.sl: 4
 full examples/else.sl: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Nil _)
 full examples/eq_sym.sl: (Refl _ 0)

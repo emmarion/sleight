@@ -58,10 +58,31 @@ theorem substOne_subst (f : Nat → Tm) (e : Nat) (t u : Tm) (h : f e = t.subst 
   simp only [substOne, Tm.subst_subst]
   congr 1; funext i; split <;> simp_all [Tm.subst]
 
-theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat) : ∀ σ dom eqs, Sat f σ → (∀ p ∈ eqs, p.1.subst f = p.2.subst f) →
-    (∀ σ', unify n σ dom eqs = .ok σ' → Sat f σ') ∧ unify n σ dom eqs ≠ .contra := by
+theorem canonBy_sound {σ : Nat → Option Tm} {f : Nat → Tm} (h : Sat f σ) (t : Tm) : (canonBy σ t).subst f = t.subst f := by
+  simp only [canonBy, Tm.subst_subst]
+  congr 1; funext i
+  cases e : σ i with
+  | none => simp [Tm.subst]
+  | some u => simp [h i u e]
+
+def SigSound (f : Nat → Tm) (sig : Nat → Option Tm) : Prop :=
+  ∀ e e' s s', sig e = some s → sig e' = some s' → f e = f e' → s.subst f = s'.subst f
+
+theorem sigEqs_sound {f : Nat → Tm} {sig : Nat → Option Tm} {σ : Nat → Option Tm} (hsig : SigSound f sig) (hs : Sat f σ)
+    {e : Nat} {t : Tm} (het : f e = t.subst f) : ∀ p ∈ sigEqs sig σ e t, p.1.subst f = p.2.subst f := by
+  unfold sigEqs; split
+  · rename_i e'; split
+    · rename_i s s' h1 h2
+      simp only [List.mem_singleton]; rintro p rfl
+      simp only [canonBy_sound hs]; exact hsig e e' s s' h1 h2 (by simpa [Tm.subst] using het)
+    · simp
+  · simp
+
+theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat) (sig : Nat → Option Tm) (hsig : SigSound f sig) :
+    ∀ σ dom eqs, Sat f σ → (∀ p ∈ eqs, p.1.subst f = p.2.subst f) →
+    (∀ σ', unify n sig σ dom eqs = .ok σ' → Sat f σ') ∧ unify n sig σ dom eqs ≠ .contra := by
   intro σ dom eqs
-  induction σ, dom, eqs using unify.induct n with
+  induction σ, dom, eqs using unify.induct n sig with
   | case1 σ dom => intro hs _; simp [unify]; exact hs
   | case2 σ dom b rest ih => intro hs he; rw [unify]; simp only [ite_true]; exact ih hs fun p hp => he p (by simp [hp])
   | case3 σ dom a b rest hab e t hv hocc =>
@@ -82,13 +103,16 @@ theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat
       rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
     rw [unify]; simp only [hab, ite_false, hv, hocc, hok]
     simp only [List.map_attach_eq_pmap, List.pmap_eq_map] at ih ⊢
-    apply ih
-    · intro x u hx
+    have hs' : Sat f (assign e t σ) := by
+      intro x u hx
       simp only [assign] at hx; split at hx
       · subst_vars; simp_all
       · obtain ⟨u', hu', rfl⟩ := Option.map_eq_some_iff.mp hx
         rw [substOne_subst f e t u' het]; exact hs x u' hu'
-    · intro p hp; simp only [List.mem_map] at hp; obtain ⟨q, hq, rfl⟩ := hp
+    apply ih hs'
+    intro p hp; rcases List.mem_append.mp hp with hp | hp
+    · exact sigEqs_sound hsig hs' het p hp
+    · simp only [List.mem_map] at hp; obtain ⟨q, hq, rfl⟩ := hp
       simp only [substOne_subst f e t _ het]; exact he q (by simp [hq])
   | case5 σ dom a b rest hab e t hv hocc hok =>
     intro _ _; rw [unify]; simp [hab, hv, hocc, hok]
@@ -114,9 +138,9 @@ theorem Tm.static_subst {n : Nat} {f : Nat → Tm} : ∀ (u : Tm) d, u.static n 
 
 def RulesWF (n : Nat) (σ : Nat → Option Tm) : Prop := ∀ e t, σ e = some t → e < n ∧ t.static n 0
 
-theorem unify_wf (n : Nat) : ∀ σ dom eqs σ', RulesWF n σ → unify n σ dom eqs = .ok σ' → RulesWF n σ' := by
+theorem unify_wf (n : Nat) (sig : Nat → Option Tm) : ∀ σ dom eqs σ', RulesWF n σ → unify n sig σ dom eqs = .ok σ' → RulesWF n σ' := by
   intro σ dom eqs
-  induction σ, dom, eqs using unify.induct n with
+  induction σ, dom, eqs using unify.induct n sig with
   | case1 σ dom => intro σ' h e; simp [unify] at e; exact e ▸ h
   | case2 σ dom b rest ih => intro σ' h e; rw [unify] at e; simp only [ite_true] at e; exact ih σ' h e
   | case3 σ dom a b rest hab e t hv hocc => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc] at h

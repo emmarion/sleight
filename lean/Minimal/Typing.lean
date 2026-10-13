@@ -15,7 +15,12 @@ namespace Ctx
 
 def n (Γ : Ctx) : Nat := Γ.tys.length
 
-def canon (Γ : Ctx) (t : Tm) : Tm := t.subst fun i => (Γ.σ i).getD (.fv i)
+def canon (Γ : Ctx) (t : Tm) : Tm := canonBy Γ.σ t
+
+def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
+  | some (.tyCtor ps) => some (.tyCtor ps)
+  | some (.valCtor s) => some (.valCtor s)
+  | _ => none
 
 def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
   { Γ with tys := Γ.tys ++ [T], er := fun i => if i = Γ.n then e else Γ.er i }
@@ -60,7 +65,7 @@ def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=
   let (Γf, rem) := Γ.openTele sig m
   match rem with
   | .bind (.ty _ _) R .nil =>
-    (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.app (.vc d c) (Γ.fields m))), (Γ.canon (.app (.tyc d) idx), Γf.canon R)])
+    (Γf, unify Γf.n Γf.sig Γf.σ [] [(Γ.canon s, Γf.canon (.app (.vc d c) (Γ.fields m))), (Γ.canon (.app (.tyc d) idx), Γf.canon R)])
   | _ => (Γf, .unknown)
 
 end Ctx
