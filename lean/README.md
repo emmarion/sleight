@@ -133,8 +133,7 @@ refused as not supported: `unique`; `extern` functions (an `extern` type
 is an ordinary type that records the mark, and only the prelude, or a
 program run with `--no-prelude`, may write it); `at` and `extern` marks
 on a `def-fns` line; and every form not named in this file, among them
-`coerce`, character and string literals, `numeral-of`,
-`prove-literal-lt`, `unary`, macros, cells and `at`. A file's top level
+`coerce`, macros, cells and `at`. A file's top level
 has size one, or ends in a statement and produces nothing (section 27).
 
 Every name may be bound, special forms included (section 19); a binder
