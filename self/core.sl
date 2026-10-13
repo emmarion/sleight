@@ -2337,43 +2337,44 @@
 ; The store with the entries and finals that hold its addresses, threaded as one.
 (def-adts $ (Heap : ((Hist Block) hl) -> Type)
   enum
-  (many MkHeap : (erased (Hist Block) hl) (many (Store Block hl) st) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (Heap hl)))
+  (many MkHeap : (erased (Hist Block) hl) (many (Store Block hl) st) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi) (many (Maybe $ String) crash) -> (Heap hl)))
 
 (def-fns _ $ (many env-heap : (many (Env) e) -> (erased (Hist Block) hl) (many (Heap hl) h))
   (let ((erased hl) (many hp) (many en) (many fi)) $ env-store e)
-  (values hl $ MkHeap _ hp en fi))
+  (values hl $ MkHeap _ hp en fi $ None _))
 
-(def-fns _ $ (many env-with-heap : (many (Env) e) (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Env) r))
-  (match many h _ ((MkHeap _ hp en fi) (env-with-store e _ hp en fi))))
+(def-fns _ $ (many env-put-heap : (many (Env) e) (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Env) r))
+  (match many h _ ((MkHeap _ hp en fi _) (env-with-store e _ hp en fi))))
 
 (def-fns _ $ (many heap-store : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Store Block hl) st))
-  (match many h _ ((MkHeap _ st _ _) st)))
+  (match many h _ ((MkHeap _ st _ _ _) st)))
 
 (def-fns _ $ (many heap-entries : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (IdMap $ EInfo hl) en))
-  (match many h _ ((MkHeap _ _ en _) en)))
+  (match many h _ ((MkHeap _ _ en _ _) en)))
 
 (def-fns _ $ (many heap-finals : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (List $ Pair (Ref Block hl) $ Term) fi))
-  (match many h _ ((MkHeap _ _ _ fi) fi)))
+  (match many h _ ((MkHeap _ _ _ fi _) fi)))
 
 (def-fns _ $ (many heap-with-entries : (erased (Hist Block) hl) (many (Heap hl) h) (many (IdMap $ EInfo hl) en) -> (many (Heap hl) r))
-  (match many h _ ((MkHeap _ st _ fi) (MkHeap _ st en fi))))
+  (match many h _ ((MkHeap _ st _ fi c) (MkHeap _ st en fi c))))
 
 (def-fns _ $ (many heap-with-finals : (erased (Hist Block) hl) (many (Heap hl) h) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (many (Heap hl) r))
-  (match many h _ ((MkHeap _ st en _) (MkHeap _ st en fi))))
+  (match many h _ ((MkHeap _ st en _ c) (MkHeap _ st en fi c))))
 
 (def-fns _ $ (many halloc : (erased (Hist Block) hl) (many (Heap hl) h) (many (Block (Ref Block hl)) b) ->
     (erased (Hist Block) hl2) (many (Heap hl2) h2) (erased (Suffix Block hl2 hl) sf) (many (Ref Block hl2) a))
-  (let-match many h (MkHeap _ st en fi))
+  (let-match many h (MkHeap _ st en fi c))
+  (let ((many c2)) $ match many c (((Maybe $ String) r)) ((Some _ _) c) ((None _) (match many b (((Maybe $ String) r)) ((BError _ m) (Some _ m)) (else (None _)))))
   (let ((erased hl2) (many st2) (erased sf) (many a)) $ alloc Block _ st b)
   (let ((many en2) (many fi2)) $ store-grow _ _ sf en fi)
-  (values hl2 (MkHeap _ st2 en2 fi2) sf a))
+  (values hl2 (MkHeap _ st2 en2 fi2 c2) sf a))
 
 (def-fns _ $ (many hread : (erased (Hist Block) hl) (many (Heap hl) h) (many (Ref Block hl) r) ->
     (erased (Hist Block) s) (many (Block (Ref Block s)) body) (erased (Suffix Block hl s) sf))
   (store-read Block _ (heap-store _ h) r))
 
 (def-fns _ $ (many hwrite : (erased (Hist Block) hl) (many (Heap hl) h) (many (Ref Block hl) r) (many (Block (Ref Block hl)) b) -> (many (Heap hl) h2))
-  (match many h _ ((MkHeap _ st en fi) (MkHeap _ (store-write Block _ st r b) en fi))))
+  (match many h _ ((MkHeap _ st en fi c) (MkHeap _ (store-write Block _ st r b) en fi c))))
 
 (def-fns _ $ (many hsize : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Nat) n))
   (store-size Block _ $ heap-store _ h))
@@ -2393,7 +2394,7 @@
 (def-fns _ $ (many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r))
   (let ((erased hl) (many h)) $ env-heap e)
   (let ((erased hl2) (many h2) (erased sf)) $ heap-set-closed _ h x b)
-  (env-with-heap e _ h2))
+  (env-put-heap e _ h2))
 
 (def-fns _ $ (many env-scope : (many (Env) e) -> (many (Scope) r))
   (match many e _ ((MkEnv _ _ sc _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) sc)))
@@ -2709,6 +2710,11 @@
   (env-fail e $ str-cat (diagnostic e ": error: " notes x) hint))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
   (env-error-with e (Nil _) x))
+(def-fns _ $ (many env-with-heap : (many (Env) e) (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Env) r))
+  (let ((many e2)) $ env-put-heap e _ h)
+  (let-match many h (MkHeap _ _ _ _ crash))
+  (let-match many crash (Some _ m) ((None _) e2))
+  (match many (env-failed e2) _ ((BTrue) e2) ((BFalse) (env-error e2 $ str-cat "compile-time evaluation failed: " m))))
 ; An error about two places names both: the note is a second location, written under the message as a
 ; warning's note is, rather than described in the message's prose (ASSUMPTIONS 194).
 (def-fns _ $ (many env-warn-with : (many (Env) e) (many (Loc) l) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (Env) r))
