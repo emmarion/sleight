@@ -199,6 +199,7 @@ inductive Prim where
   | subtermTrans (p q : Tm)
   | predatesSubterm (p q : Tm)
   | mtblOf (d : Nat)
+  | assert (t A : Tm)
   deriving Repr, Inhabited
 
 inductive Chk where

@@ -8,7 +8,7 @@ for f in ../tests/*.sl; do
   flag=; grep -q '^; prelude: none' "$f" && flag=--no-prelude
   out=$(timeout 10 $m $flag "$f")
   [ $? = 124 ] && out="x: stuck: timeout"
-  out=$(echo "$out" | cut -d' ' -f2-)
+  out=$(printf '%s\n' "$out" | head -1 | cut -d' ' -f2-)
   case "$out" in
     *"not supported"*|*"malformed"*|*"unbound name"*|*"is not a type or constructor"*) got=unsupported ;;
     "error:"*) got=refuse ;;
@@ -18,5 +18,5 @@ for f in ../tests/*.sl; do
        exp=$(grep -m1 '^; expect: ' "$f" | cut -d' ' -f3-)
        [ -n "$exp" ] && [ "$exp" != "$out" ] && got=mismatch ;;
   esac
-  echo "$want $got $(basename "$f") $out"
+  printf "%s %s %s %s\n" "$want" "$got" "$(basename "$f")" "$out"
 done

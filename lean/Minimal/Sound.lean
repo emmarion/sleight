@@ -711,6 +711,95 @@ theorem Tm.ofList_vc_static (n k d : Nat) : ∀ l : List Nat, (Tm.ofList (l.map 
   | [] => rfl
   | _ :: l => by simp [Tm.ofList, Tm.static, Tm.ofList_vc_static n k d l]
 
+theorem fieldsSimple_inst {S : List Nat} (u : Tm) : ∀ (t : Tm) k, fieldsSimple S t = true → fieldsSimple S (t.inst u k) = true := by
+  intro t; induction t with
+  | bind m A r _ ihr =>
+    intro k h
+    unfold fieldsSimple at h
+    split at h
+    · rename_i d r' hr
+      cases hr
+      simp only [Bool.and_eq_true] at h
+      have := ihr (k + 1) h.2
+      cases r' <;> simp_all [Tm.inst, fieldsSimple]
+    · rename_i hr
+      cases hr; simp [Tm.inst, fieldsSimple]
+    · cases h
+  | _ => intro k h; simp [fieldsSimple] at h
+
+theorem Tm.size_mem_toList : ∀ (t w : Tm), w ∈ t.toList → w.size < t.size := by
+  intro t; induction t with
+  | cons h r _ ihr =>
+    intro w hw
+    simp only [Tm.toList, List.mem_cons] at hw
+    rcases hw with rfl | hw
+    · simp [Tm.size]; omega
+    · have := ihr w hw; simp [Tm.size]; omega
+  | _ => intro w hw; simp [Tm.toList] at hw
+
+theorem fieldsSimple_bind {S : List Nat} {k : Ent} {A r : Tm} (h : fieldsSimple S (.bind k A r) = true) :
+    ∃ m, k = .ty m false ∧ (r = .nil ∨ ∃ d, A = .app (.tyc d) .nil ∧ d ∈ S ∧ fieldsSimple S r = true) := by
+  unfold fieldsSimple at h
+  split at h
+  · rename_i hr
+    simp only [Tm.bind.injEq] at hr
+    obtain ⟨rfl, rfl, rfl⟩ := hr
+    simp only [Bool.and_eq_true, List.contains_iff_mem] at h
+    exact ⟨_, rfl, .inr ⟨_, rfl, h.1, h.2⟩⟩
+  · rename_i hr; simp only [Tm.bind.injEq] at hr; obtain ⟨rfl, _, rfl⟩ := hr; exact ⟨_, rfl, .inl rfl⟩
+  · cases h
+
+theorem fields_simple {n : Nat}
+    (ih : ∀ (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d) .nil) → Real P vS v → vS = v)
+    {mk me : Bool} {T : Tm} :
+    ∀ (vs sig sigR vsS : Tm), fieldsSimple P.simple sig = true → fieldsSimple P.simple sigR = true →
+      VTys P vs sig (.bind (.ty mk me) T .nil) →
+      Reals P vsS vs sigR → (∀ w ∈ vs.toList, w.size < n) → vsS = vs := by
+  intro vs; induction vs with
+  | cons a vs' _ ihv =>
+    intro sig sigR vsS hfs hfr hvs hrs hsz
+    cases hvs with
+    | cons hva hvs' =>
+      cases hrs with
+      | cons hra hrs' =>
+      obtain ⟨m, hk, hr⟩ := fieldsSimple_bind hfs
+      rcases hr with rfl | ⟨d', rfl, hd', hfs'⟩
+      · simp only [Tm.inst] at hvs'; cases hvs'
+      obtain ⟨m', hk', hr'⟩ := fieldsSimple_bind hfr
+      subst hk'
+      have e1 := ih a (hsz a (by simp [Tm.toList])) d' _ hd' hva (hra rfl)
+      subst e1
+      rcases hr' with rfl | ⟨_, _, _, hfr'⟩
+      · cases hrs'; rfl
+      rw [ihv _ _ _ (fieldsSimple_inst _ _ _ hfs') hfr' hvs' hrs' (fun w hw => hsz w (by simp [Tm.toList, hw]))]
+    | isCons _ _ => simp [fieldsSimple] at hfs
+  | nil => intro sig sigR vsS _ _ _ hrs _; cases hrs; rfl
+  | _ => intro sig sigR vsS _ _ hvs; cases hvs
+
+theorem real_simple (hS : P.simpleStep P.simple = P.simple) :
+    ∀ n (v : Tm), v.size < n → ∀ d vS, d ∈ P.simple → VTy P v (.app (.tyc d) .nil) → Real P vS v → vS = v := by
+  intro n; induction n with
+  | zero => intro v h; omega
+  | succ n ih =>
+    intro v hn d vS hd hv hR
+    obtain ⟨c, vs, sig, mk, me, rfl, hc, hvs⟩ := hv.ty_inv
+    have hd' : d ∈ P.simpleStep P.simple := by rw [hS]; exact hd
+    simp only [Prog.simpleStep, List.mem_filter] at hd'
+    obtain ⟨_, hD⟩ := hd'
+    split at hD
+    · rename_i D hDd
+      simp only [Bool.and_eq_true, List.all_eq_true] at hD
+      have hsig : D.ctors[c]? = some sig := by simpa [Prog.ctor, hDd] using hc
+      have hfs := hD.2 sig (List.mem_of_getElem? hsig)
+      cases hR with
+      | con hc' _ hrs =>
+        rw [hc] at hc'; cases hc'
+        congr 1
+        exact fields_simple ih _ _ _ _ hfs hfs hvs hrs fun w hw => by
+          have := Tm.size_mem_toList vs w hw; simp [Tm.size] at hn; omega
+      | other h1 _ _ => exact absurd rfl (h1 _ _ _)
+    · cases hD
+
 theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
     VTy P (p.eval ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval ρ).lc 0 ∧ ∀ x ∈ (p.eval ρ).levels, x < cnt := by
@@ -723,6 +812,24 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
   | tm ht | lit ht =>
     obtain ⟨hv, hs, hT⟩ := tm_sound hP hE ht
     exact ⟨hv, hT, lc_of_static hE.closed hs, hb.subst hs⟩
+  | @assert _ t T' _ ht hts hS hk he hA =>
+    obtain ⟨hv, hs, _⟩ := tm_sound hP hE ht
+    have hl := hE.len
+    have hAe : T.subst (Tm.env ρ) = T.subst Γ.fixedEnv := Tm.subst_ext T fun i hi => by
+      obtain ⟨d, vS, hti, hd, hfx⟩ := hk i hi
+      have hi' : i < ρ.length := hl ▸ (List.getElem?_eq_some_iff.mp hti).1
+      have hR := hE.fix.2 i vS hfx
+      have hvi := hE.vals i _ _ (List.getElem?_eq_getElem hi') hti
+      simp only [Tm.subst] at hvi
+      have e1 := real_simple hS _ _ (Nat.lt_succ_self _) d vS hd hvi
+        (by simpa [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi'] using hR)
+      simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi', Ctx.fixedEnv, hfx, e1]
+    have hlcA : (T.subst (Tm.env ρ)).lc 0 := Tm.lc_subst (Tm.env_lc hE.closed) T 0 Γ.n hA
+    rw [Tm.subst_static0 _ t 0 hts, ← he, ← hAe, Tm.subst_lc _ _ 0 hlcA] at hv
+    refine ⟨by simpa [Prim.eval] using hv, hA, ?_, ?_⟩
+    · have := lc_of_static (ρ := []) (by simp) (n := 0) hts
+      rw [Tm.subst_static0 _ t 0 hts] at this; simpa [Prim.eval] using this
+    · simp only [Prim.eval]; rw [Tm.levels_static t 0 hts]; simp
   | proveSubterm ha hb' hst =>
     obtain ⟨_, has, hA⟩ := tm_sound hP hE ha
     obtain ⟨_, hbs, hB⟩ := tm_sound hP hE hb'
@@ -2230,6 +2337,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
         simp only [Ctx.ok, hg, Bool.false_or] at hok
         cases p with
         | tm t | lit t => exact rt_real hE hS t hok
+        | assert => simp [Prim.rt] at hok
         | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
     have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
     have ih' := ih b _ rets hr (hE.adv hE' hpf hh) (LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩)

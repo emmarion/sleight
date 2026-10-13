@@ -12,6 +12,39 @@ def Prog.natOf (nat : Option Nat) : Tm → Option Nat
   | .app (.vc d 1) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
   | _ => none
 
+def Prog.charOf (P : Prog) (nat : Option Nat) : Tm → Option Nat
+  | .app (.vc d 0) args =>
+    if P.adts.findIdx? (·.name == "Char") != some d then none else
+    match args.toList.getLast? with
+    | some (.app (.vc _ 0) uargs) => let us := uargs.toList; Prog.natOf nat (us.getD (us.length - 2) .nil)
+    | _ => none
+  | _ => none
+
+partial def Prog.strOf (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
+  | .app (.vc d c) args =>
+    if P.adts.findIdx? (·.name == "String") != some d then none
+    else if c == 0 then some []
+    else
+      let as := args.toList
+      match P.charOf nat (as.getD (as.length - 2) .nil), P.strOf nat (as.getD (as.length - 1) .nil) with
+      | some ch, some rest => some (ch :: rest)
+      | _, _ => none
+  | _ => none
+
+def hex2 (n : Nat) : String :=
+  let d (k : Nat) : Char := if k < 10 then Char.ofNat (48 + k) else Char.ofNat (87 + k)
+  String.ofList [d (n / 16), d (n % 16)]
+
+def showChar (c : Nat) : String :=
+  if c == 32 then "#\\space" else if c == 10 then "#\\newline" else if c == 9 then "#\\tab"
+  else if 33 ≤ c && c ≤ 126 && c != 40 && c != 41 && c != 59 then "#\\" ++ (Char.ofNat c).toString
+  else "#\\x" ++ hex2 c
+
+def showStr (cs : List Nat) : String :=
+  "\"" ++ String.join (cs.map fun c =>
+    if c == 34 then "\\\"" else if c == 92 then "\\\\" else if c == 10 then "\\n" else if c == 9 then "\\t"
+    else if 32 ≤ c && c ≤ 126 then (Char.ofNat c).toString else "\\x" ++ hex2 c) ++ "\""
+
 def Prog.name (P : Prog) : Tm → String
   | .vc d c => showName (((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
   | .tyc d => showName (((P.adts[d]?).map (·.name)).getD s!"T{d}")
@@ -21,16 +54,20 @@ mutual
 partial def Prog.show (P : Prog) (nat : Option Nat) (t : Tm) : String :=
   match Prog.natOf nat t, t with
   | some n, _ => toString n
-  | none, .app h@(.vc d _) _ =>
+  | none, _ => match P.charOf nat t, P.strOf nat t with
+  | some c, _ => showChar c
+  | _, some cs => showStr cs
+  | _, _ => match t with
+  | .app h@(.vc d _) _ =>
     match P.adts[d]? with
     | some D => if D.union && (D.phantom.filter (!·)).length + (D.ctors.length - D.phantom.length) > 1 then "_"
       else P.showApp nat h t
     | none => P.showApp nat h t
-  | none, .app h args => "(" ++ P.inner nat h args ++ ")"
-  | none, .vc .. | none, .tyc .. => P.name t
-  | none, .univ => "Type"
-  | none, .level => "(Level)"
-  | none, _ => "_"
+  | .app h args => "(" ++ P.inner nat h args ++ ")"
+  | .vc .. | .tyc .. => P.name t
+  | .univ => "Type"
+  | .level => "(Level)"
+  | _ => "_"
 
 partial def Prog.showApp (P : Prog) (nat : Option Nat) (h t : Tm) : String :=
   match t with

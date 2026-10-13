@@ -214,10 +214,26 @@ scope.
   entry, from the entry's own type application. An unsolved `_` is an
   error. The checker then checks the program as filled in, so the
   inference is not trusted.
-- Numerals (section 45), up to 100000. Each numeral of a program is one entry, made
-  at the top level before the first form that mentions it: a `Nat` of
-  the prelude, the numeral's `Succ`s at run time, with no rule, so the
-  checker sees it as opaque. Its `Numeral` proof is not made.
+- Literals (section 45). Numerals go up to 100000. Each literal of a
+  program is one entry, made at the top level before the first form that
+  mentions it, and so are the proofs the form asks for. A numeral is a
+  `Nat` of the prelude, its `Succ`s at run time, with no rule, so the
+  checker sees it as opaque. A character literal is an entry with the
+  rule that it is `(MkChar (MkU8 n p))`, `n` its code's numeral and `p`
+  the proof that `n` is below `u8-modulus`. A string literal is a
+  `String` with no rule, its characters' entries consed up at run time.
+  `(numeral-of l)` names the `Numeral` proof of a numeral or of a
+  character's code, `(prove-literal-lt a b)` a proof of `(Lt a b)` for
+  numerals `a` below `b`, and `(unary a b)` and `(unary a)` are a
+  `let-match` on a proof of `(Eq (Nat) a (Succ ... b))`. Each such proof
+  is a `prim (.assert t A)`: `t` is a closed derivation the elaborator
+  builds from the prelude's constructors, and `A` the fact it states
+  about the literals' entries. The checker accepts it when every entry
+  `A` mentions has a known value (`Ctx.fixed`) of a type whose values
+  are their own stripped values (`Prog.simple`: no erased field, no
+  phantom constructor, every field of such a type), and `A` with those
+  values in place is the type of `t`. A literal's value prints as the
+  literal it reads back from.
 - A result of the program whose type mentions the program's own entries
   is checked as a result of any type (`ArgsTy.anyCons`), so
   `checked_runs` says nothing of its type.

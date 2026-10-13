@@ -119,6 +119,21 @@ def Ctx.advBr (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :=
       | _, _ => Γ'
   else Γ'
 
+def Ctx.fixedEnv (Γ : Ctx) (i : Nat) : Tm := (Γ.fixed[i]?.join).getD .nil
+
+def fieldsSimple (S : List Nat) : Tm → Bool
+  | .bind (.ty _ false) (.app (.tyc d) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
+  | .bind (.ty _ false) _ .nil => true
+  | _ => false
+
+def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
+  S.filter fun d => match P.adts[d]? with
+    | some D => D.params == .nil && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
+    | none => false
+
+def Prog.simple (P : Prog) : List Nat :=
+  (List.range (P.adts.length + 1)).foldl (fun S _ => P.simpleStep S) (List.range P.adts.length)
+
 def compat : List Bool → Tm → Bool
   | m :: ms, .bind k _ r => (m || !k.er) && compat ms r
   | _, _ => true
@@ -287,6 +302,9 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | mtblOf : P.adts[d]? = some D → D.lifted = 0 → PrimTy Γ (.mtblOf d) (D.mtbl d)
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
+  | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
+      (∀ i ∈ A.fvs, ∃ d vS, Γ.tys[i]? = some (.app (.tyc d) .nil) ∧ d ∈ P.simple ∧ Γ.fixed[i]?.join = some vS) →
+      A.subst Γ.fixedEnv = T → A.static Γ.n 0 → PrimTy Γ (.assert t A) A
 
 abbrev Arm := Tm × Tm × Bool
 

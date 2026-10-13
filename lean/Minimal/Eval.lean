@@ -42,6 +42,7 @@ instance (k : Nat) : WellFoundedRelation (Mu k) := ⟨fun a b => MuLt k a.μ b.�
 
 def Prim.eval (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t => t.subst (Tm.env ρ)
+  | .assert t _ => t
   | _ => .tok
 
 def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)

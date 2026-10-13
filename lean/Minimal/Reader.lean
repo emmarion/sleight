@@ -37,6 +37,29 @@ partial def readStr : List Char → List Char → Except String (List Char × Li
     | c => .error s!"unknown escape \\{c}"
   | c :: rest, acc => readStr rest (c :: acc)
 
+def charCode (a : String) : Option Nat :=
+  if !a.startsWith "#\\" then none else
+  match a.toList.drop 2 with
+  | [c] => some c.toNat
+  | ['x', h1, h2] => do let x ← hexVal h1; let y ← hexVal h2; some (16 * x + y)
+  | cs => match String.ofList cs with
+    | "space" => some 32
+    | "newline" => some 10
+    | "tab" => some 9
+    | _ => none
+
+def numeralOf : Sx → Option Nat
+  | e@(.atom _) => match e.numerals with
+    | [n] => some n
+    | _ => none
+  | _ => none
+
+def litOf : Sx → Option Nat
+  | .atom a => match (Sx.atom a).numerals with
+    | [n] => some n
+    | _ => charCode a
+  | _ => none
+
 def specialNames : List String :=
   ["let", "def-lvl", "def-fns", "def-unique", "def-adts", "comptime-match", "let-match", "open-adt", "slot-self",
    "open-at-fn", "unary", "dump-context", "compile-error", "compile-warn", "Fn", "UniqueFn", "TyCtor", "ValCtor",
@@ -127,6 +150,12 @@ structure ESt where
   supp : List (String × Option Tm × Nat) := []
   vals : List Tm := []
   facts : List (Nat × Tm) := []
+  chars : List (Nat × Nat) := []
+  strs : List (List Nat × Nat) := []
+  numPf : List (Nat × Nat) := []
+  ltPf : List ((Nat × Nat) × Nat) := []
+  eqPf : List ((Nat × Option Nat) × Nat) := []
+  u8mod : Option Nat := none
   special : Nat := 0
   depthTop : Bool := true
 
@@ -328,7 +357,30 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
     | [n] => do match (← get).lits.lookup n with
       | some i => pure (.fv i)
       | none => throw s!"the numeral {x} is not interned"
-    | _ => look sc depth x
+    | _ =>
+      if x.startsWith "\"" then do
+        match (← get).strs.lookup ((x.toList.drop 1).map Char.toNat) with
+        | some i => pure (.fv i)
+        | none => throw s!"the string literal {x} is not interned"
+      else match charCode x with
+        | some c => do match (← get).chars.lookup c with
+          | some i => pure (.fv i)
+          | none => throw s!"the character literal {x} is not interned"
+        | none => if x.startsWith "#\\" then throw s!"malformed character literal {x}" else look sc depth x
+  | .list [.atom "numeral-of", x] => do
+    match litOf x with
+    | some n => match (← get).numPf.lookup n with
+      | some i => pure (.fv i)
+      | none => throw "numeral-of: not interned"
+    | none => throw "`numeral-of` takes a numeral or a character literal"
+  | .list (.atom "numeral-of" :: _) => throw "malformed `numeral-of` form"
+  | .list [.atom "prove-literal-lt", a, b] => do
+    match numeralOf a, numeralOf b with
+    | some x, some y => match (← get).ltPf.lookup (x, y) with
+      | some i => pure (.fv i)
+      | none => throw s!"prove-literal-lt: {x} is not below {y}"
+    | _, _ => throw "`prove-literal-lt` takes two numerals"
+  | .list (.atom "prove-literal-lt" :: _) => throw "`prove-literal-lt` takes two numerals"
   | .list [.atom "Level"] => pure .level
   | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
   | .list [.atom "Predates", A, x, L] =>
@@ -505,21 +557,146 @@ def entry (sc : Scope) : Sx → M Nat
   | .list [.atom "level-of", .atom f] => levelOf sc f
   | _ => throw "not an entry"
 
-def internLits (e : Sx) : M (List Stmt) := do
+partial def Sx.litForms : Sx → List Sx
+  | e@(.atom _) => [e]
+  | .list xs => .list xs :: xs.flatMap Sx.litForms
+
+def natTm (d z sc : Nat) (n : Nat) : Tm :=
+  (List.range n).foldl (fun t _ => Tm.app (.vc d sc) (.cons t .nil)) (.app (.vc d z) .nil)
+
+def ctorIx (d : Nat) (c : String) : M Nat := do
+  match ((← get).decls[d]?).bind (·.ctorNames.idxOf? c) with
+  | some i => pure i
+  | none => throw s!"literals need the prelude's {c}"
+
+def preAdt (name : String) : M Nat := do
   let st ← get
-  let ns := (e.numerals.filter fun n => (st.lits.lookup n).isNone).eraseDups
-  if ns.isEmpty then return []
-  unless st.pre do throw "a numeral needs the prelude's Nat, which --no-prelude leaves out"
-  if ns.any (· > 100000) then throw "a numeral above 100000 is not supported: the runner holds a Nat in unary"
-  let some d := (st.adts.filter (·.1 == "Nat")).getLast?.map (·.2) | throw "a numeral needs the prelude's Nat"
-  let ctor (c : String) := (st.ctors.find? fun (x, d', _) => x == c && d' == d).map (·.2.2)
-  let (some z, some sc) := (ctor "Zero", ctor "Succ") | throw "a numeral needs the prelude's Nat"
-  ns.mapM fun n => do
-    let [i] ← fresh [false] | throw "fresh"
-    note i (.app (.tyc d) .nil)
+  let some d := st.firstAdt name | throw s!"literals need the prelude's {name}"
+  unless ((st.lifts.lookup d).getD []).isEmpty || name == "Char" || name == "U8" || name == "String" do
+    throw s!"the prelude's {name} mentions top-level entries"
+  pure d
+
+def app (h : Tm) (args : List Tm) : Tm := .app h (.ofList args)
+
+def internLits (e : Sx) : M (List Stmt) := do
+  let st0 ← get
+  let forms := e.litForms
+  let atoms := forms.filterMap fun | .atom a => some a | _ => none
+  let strs := (atoms.filter (·.startsWith "\"")).map fun a => (a.toList.drop 1).map Char.toNat
+  let charsWanted := (atoms.filterMap charCode ++ strs.flatten).eraseDups
+  let numOf := forms.filterMap fun | .list [.atom "numeral-of", x] => litOf x | _ => none
+  let ltOf := forms.filterMap fun
+    | .list [.atom "prove-literal-lt", a, b] => do let x ← numeralOf a; let y ← numeralOf b; if x < y then some (x, y) else none
+    | _ => none
+  let eqOf := forms.filterMap fun
+    | .list [.atom "unary", a] => (litOf a).map (·, none)
+    | .list [.atom "unary", a, b] => do let x ← litOf a; let y ← litOf b; if y < x then some (x, some y) else none
+    | _ => none
+  let nums := ((e.numerals ++ charsWanted ++ numOf ++ ltOf.flatMap (fun (a, b) => [a, b]) ++
+    eqOf.flatMap (fun (a, b) => a :: b.toList)).filter fun n => (st0.lits.lookup n).isNone).eraseDups
+  let fresh1 (er : Bool) : M Nat := do
+    let is ← fresh [er]
+    match is with
+    | [i] => pure i
+    | _ => throw "fresh"
+  let mut out : List Stmt := []
+  if nums.isEmpty && strs.all (fun s => (st0.strs.lookup s).isSome) && charsWanted.all (fun c => (st0.chars.lookup c).isSome)
+      && numOf.all (fun n => (st0.numPf.lookup n).isSome) && ltOf.all (fun p => (st0.ltPf.lookup p).isSome)
+      && eqOf.all (fun p => (st0.eqPf.lookup p).isSome) then return []
+  unless st0.pre do throw "a literal needs the prelude, which --no-prelude leaves out"
+  if nums.any (· > 100000) then throw "a numeral above 100000 is not supported: the runner holds a Nat in unary"
+  let nat ← preAdt "Nat"
+  let z ← ctorIx nat "Zero"
+  let sc ← ctorIx nat "Succ"
+  let nt := natTm nat z sc
+  let natTy := Tm.app (.tyc nat) .nil
+  for n in nums do
+    let i ← fresh1 false
+    note i natTy
     modify fun st => { st with lits := (n, i) :: st.lits }
-    let t := (List.range n).foldl (fun t _ => Tm.app (.vc d sc) (.cons t .nil)) (.app (.vc d z) .nil)
-    return (.prim (.lit t) false : Stmt)
+    out := out ++ [.prim (.lit (nt n)) false]
+  let lit (n : Nat) : M Tm := do
+    match (← get).lits.lookup n with
+    | some i => pure (.fv i)
+    | none => throw "unreachable"
+  let assertPf (t A : Tm) : M (Nat × Stmt) := do
+    let i ← fresh1 true
+    note i A
+    pure (i, .prim (.assert t A) true)
+  let ltD ← preAdt "Lt"
+  let ltTm : Nat → Nat → M Tm := fun a b => do
+    let lz ← ctorIx ltD "LtZ"
+    let ls ← ctorIx ltD "LtS"
+    pure <| (List.range a).foldr (fun k t => app (.vc ltD ls) [nt (a - 1 - k), nt (b - 1 - k), t])
+      (app (.vc ltD lz) [nt (b - a - 1)])
+  let stc ← get
+  let newChars := charsWanted.filter fun c => (stc.chars.lookup c).isNone
+  if !newChars.isEmpty then
+    let chr ← preAdt "Char"
+    let u8 ← preAdt "U8"
+    let some m := (← get).u8mod | throw "character literals need the prelude's u8-modulus"
+    for c in newChars do
+      if c > 255 then throw "a character literal is one byte"
+      let (p, sp) ← assertPf (← ltTm c 256) (app (.tyc ltD) [← lit c, .fv m])
+      out := out ++ [sp]
+      let i ← fresh1 false
+      let t := app (.vc chr 0) ((← liftOf chr) ++ [app (.vc u8 0) ((← liftOf u8) ++ [← lit c, .fv p])])
+      note i (app (.tyc chr) (← liftOf chr))
+      note i t true
+      modify fun st => { st with chars := (c, i) :: st.chars }
+      out := out ++ [.prim (.tm t) false]
+  for str in strs.eraseDups do
+    if ((← get).strs.lookup str).isSome then continue
+    let sd ← preAdt "String"
+    let nilC ← ctorIx sd "SNil"
+    let consC ← ctorIx sd "SCons"
+    let ls ← liftOf sd
+    let mut t := app (.vc sd nilC) ls
+    for c in str.reverse do
+      let some ci := (← get).chars.lookup c | throw "unreachable"
+      t := app (.vc sd consC) (ls ++ [.fv ci, t])
+    let i ← fresh1 false
+    note i (app (.tyc sd) ls)
+    modify fun st => { st with strs := (str, i) :: st.strs }
+    out := out ++ [.prim (.lit t) false]
+  if !numOf.isEmpty then
+    let bin ← preAdt "Bin"
+    let numD ← preAdt "Numeral"
+    let dbl ← preAdt "Double"
+    let (bz, b1, b2) := (← ctorIx bin "BZ", ← ctorIx bin "B1", ← ctorIx bin "B2")
+    let (nz, n1, n2) := (← ctorIx numD "NZ", ← ctorIx numD "N1", ← ctorIx numD "N2")
+    let (d0, ds) := (← ctorIx dbl "D0", ← ctorIx dbl "DS")
+    let dblTm (m : Nat) : Tm := (List.range m).foldl (fun t k => app (.vc dbl ds) [nt k, nt (2 * k), t]) (app (.vc dbl d0) [])
+    let rec spell : Nat → Nat → Tm × Tm
+      | 0, _ => (app (.vc bin bz) [], app (.vc numD nz) [])
+      | _, 0 => (app (.vc bin bz) [], app (.vc numD nz) [])
+      | fuel + 1, n + 1 =>
+        let m := n / 2
+        let (b, v) := spell fuel m
+        if n % 2 == 0 then (app (.vc bin b1) [b], app (.vc numD n1) [b, nt m, nt (2 * m), v, dblTm m])
+        else (app (.vc bin b2) [b], app (.vc numD n2) [b, nt m, nt (2 * m), v, dblTm m])
+    for n in numOf.eraseDups do
+      if ((← get).numPf.lookup n).isSome then continue
+      let (b, v) := spell (n + 1) n
+      let (i, sp) ← assertPf v (app (.tyc numD) [b, ← lit n])
+      out := out ++ [sp]
+      modify fun st => { st with numPf := (n, i) :: st.numPf }
+  for (a, b) in ltOf.eraseDups do
+    if ((← get).ltPf.lookup (a, b)).isSome then continue
+    let (i, sp) ← assertPf (← ltTm a b) (app (.tyc ltD) [← lit a, ← lit b])
+    out := out ++ [sp]
+    modify fun st => { st with ltPf := ((a, b), i) :: st.ltPf }
+  for (a, b) in eqOf.eraseDups do
+    if ((← get).eqPf.lookup (a, b)).isSome then continue
+    let eqD ← preAdt "Eq"
+    let refl ← ctorIx eqD "Refl"
+    let floor ← match b with | some b => lit b | none => pure (nt 0)
+    let k := a - b.getD 0
+    let rhs := (List.range k).foldl (fun t _ => app (.vc nat sc) [t]) floor
+    let (i, sp) ← assertPf (app (.vc eqD refl) [natTy, nt a]) (app (.tyc eqD) [natTy, ← lit a, rhs])
+    out := out ++ [sp]
+    modify fun st => { st with eqPf := ((a, b), i) :: st.eqPf }
+  return out
 
 structure CtorInfo where
   k : Tm
@@ -723,7 +900,7 @@ partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx →
         unless ← erasedPos want do warnUse (.vc d c) "application" (showName h)
         let (ss, ts) ← elabArgs sc args ((fieldErs sig).drop ((st.lifts.lookup d).getD []).length); return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
       | _, _ =>
-        unless h ∈ ["Fn", "TyCtor", "ValCtor", "Matchable", "Level", "Predates", "Subterm", "level-of"] do
+        unless h ∈ ["Fn", "TyCtor", "ValCtor", "Matchable", "Level", "Predates", "Subterm", "level-of", "numeral-of", "prove-literal-lt"] do
           throw (if h ∈ specialNames then s!"{h} is not supported here" else s!"unbound name {showName h}")
         return ([], [← elabTm sc 0 e])
     else if let some (.ctor i) := sc.lookup h then
@@ -858,7 +1035,10 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       let (ss, [t]) ← elabExpr sc [true] none e | throw "a refutation is one value"
       return (ss ++ [(fun _ => .case t [] none true : Stmt)], [])
   | .list [.atom "__prelude-end"] :: rest => do
-    modify fun st => { st with inPrelude := !st.pre }
+    let u8 : Option Nat := match sc.lookup "u8-modulus" with
+      | some (.fv i) => some i
+      | _ => none
+    modify fun st => { st with inPrelude := !st.pre, u8mod := u8 }
     elabSeq sc want exp rest
   | .list (.atom "def-adts" :: bs) :: rest => do
     declareAdts sc bs
@@ -1018,6 +1198,17 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     recordTop base [Core.defFns gid]
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
+  | .list (.atom "unary" :: args) :: rest => do
+    let lits ← args.mapM fun a => match litOf a with
+      | some n => pure n
+      | none => throw "`unary` takes a numeral or a character literal"
+    let key ← match lits with
+      | [a] => pure (a, none)
+      | [a, b] => if b < a then pure (a, some b) else throw "unary: the floor is not below the literal"
+      | _ => throw "malformed `unary` form"
+    let some i := (← get).eqPf.lookup key | throw "unary: not interned"
+    elabSeq ((" unary", .fv i) :: sc) want exp
+      (.list [.atom "let-match", .atom "erased", .atom " unary", .list [.atom "Refl", .atom "_", .atom "_"]] :: rest)
   | .list [.atom "compile-warn", m] :: rest => do
     warn (← compileMsg sc m)
     elabSeq sc want exp rest

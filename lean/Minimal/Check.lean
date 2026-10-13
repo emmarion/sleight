@@ -197,6 +197,24 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
 def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .tm t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .tm h⟩
   | .lit t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .lit h⟩
+  | .assert t A => do
+    let ⟨T, h⟩ ← checkTm P Γ t
+    let ⟨hs⟩ ← need (t.static 0 0) "a literal's proof is not closed"
+    let ⟨hS⟩ ← need (P.simpleStep P.simple = P.simple) "unreachable"
+    let ⟨hk⟩ ← need ((A.fvs.all fun i => match Γ.tys[i]? with
+        | some (.app (.tyc d) .nil) => P.simple.contains d && (Γ.fixed[i]?.join).isSome
+        | _ => false) = true)
+      "a literal's fact mentions an entry whose value is not known"
+    let ⟨he⟩ ← need (A.subst Γ.fixedEnv = T) "a literal's proof is not of the fact it states"
+    let ⟨hA⟩ ← need (A.static Γ.n 0) "a literal's fact is not well scoped"
+    .ok ⟨A, .assert h hs hS (fun i hi => by
+      have := List.all_eq_true.mp hk i hi
+      split at this
+      · rename_i d e
+        simp only [Bool.and_eq_true, List.contains_iff_mem] at this
+        obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp this.2
+        exact ⟨d, v, e, this.1, hv⟩
+      · cases this) he hA⟩
   | .mtblOf d => match h : P.adts[d]? with
     | some D => do
       let ⟨hl⟩ ← need (D.lifted = 0) "matchable-of: a type whose def-adts mentions entries is not first class"

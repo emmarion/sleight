@@ -180,9 +180,10 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
           | _ => none
         pure (.tm (← inferTerm P Γ t A))
       | p => pure p
-    match checkPrim P Γ p with
-    | .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim T er p) rets rest)
-    | .error _ => return .prim p er rest
+    match p, checkPrim P Γ p with
+    | .assert _ A, _ => return .prim p er (← inferCore (Γ.pushPrim A er p) rets rest)
+    | _, .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim T er p) rets rest)
+    | _, .error _ => return .prim p er rest
   | .defLvl rest => return .defLvl (← inferCore Γ.pushMint rets rest)
   | .defFns gid rest => do
     let some G := (← get)[gid]? | return .defFns gid rest
