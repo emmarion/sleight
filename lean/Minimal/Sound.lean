@@ -1186,6 +1186,20 @@ theorem EnvOK.ready_sim {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (hr : Γ.
   · have : Tm.env ρ i = .nil := by simp [Tm.env, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
     rw [this]; exact Real.nil' _
 
+theorem EnvOK.known {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Tm} {d c d' c' : Nat}
+    (hk : Γ.known k = some (d, c)) (hv : k.subst (Tm.env ρ) = .vc d' c') : d' = d ∧ c' = c := by
+  cases k with
+  | vc => simp [Ctx.known, Tm.subst] at hk hv; obtain ⟨rfl, rfl⟩ := hk; obtain ⟨rfl, rfl⟩ := hv; exact ⟨rfl, rfl⟩
+  | fv y =>
+    simp only [Ctx.known] at hk
+    split at hk
+    · rename_i d0 c0 hy
+      cases hk
+      have := (hE.fix.2 y _ hy); simp only [Tm.subst] at hv; rw [hv] at this
+      have := this.vc_inv.1; cases this; exact ⟨rfl, rfl⟩
+    · cases hk
+  | _ => simp [Ctx.known] at hk
+
 theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n d c : Nat} {vs sig : Tm}
     (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ pre) Γ') (hf : Γ'.fixed = Γ.fixed)
     (hs : s.subst (Tm.env ρ) = .app (.vc d c) vs) (hpre : pre = vs.toList) (hn : n = pre.length)
@@ -1200,7 +1214,7 @@ theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n 
         rw [her j (List.getElem?_eq_some_iff.mp hb).1, hfe] at he; cases he
     · rename_i hfe
       split
-      · rename_i x d0 c0
+      · rename_i x d0 c0 _
         split
         · rename_i d' c' vsS hx
           split
@@ -1743,9 +1757,8 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     simp only [Tm.subst] at hsv; rw [hsv] at hR
     obtain ⟨_, _, e1, _⟩ := hR.con_inv
     simp only [Tm.app.injEq, Tm.vc.injEq] at e1
-    subst hkk
-    simp only [Tm.subst, Tm.vc.injEq] at hk
-    exact absurd (hk.2.trans e1.1.2.symm) hne
+    have := (hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).known hkk hk
+    exact absurd (this.2.symm.trans e1.1.2.symm) hne
 
 theorem noRet_select {brs : List Br} {els : Option Core} {c : Nat} {vs pre : List Tm}
     {body : Core} (h : selectBr brs els c vs = some (pre, body)) (hb : Core.armsNoRet brs = true)

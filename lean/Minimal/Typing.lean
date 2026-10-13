@@ -102,11 +102,18 @@ def Ctx.adv (P : Prog) (Γ Γ' : Ctx) (c : Core) : Ctx :=
     | none => Γ'
   else Γ'
 
+def Ctx.known (Γ : Ctx) : Tm → Option (Nat × Nat)
+  | .vc d c => some (d, c)
+  | .fv y => match Γ.fixed[y]?.join with
+    | some (.vc d c) => some (d, c)
+    | _ => none
+  | _ => none
+
 def Ctx.advBr (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :=
   if Γ.ready then
     if fe then Γ.record Γ' (List.replicate n .tok)
-    else match s, k with
-      | .fv x, .vc d c => match Γ.fixed[x]?.join with
+    else match s, Γ.known k with
+      | .fv x, some (d, c) => match Γ.fixed[x]?.join with
         | some (.app (.vc d' c') vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
         | _ => Γ'
       | _, _ => Γ'
@@ -348,7 +355,7 @@ inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm →
       BranchOK b fe Γ s k H idx sig R (some body) els
   | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
-  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0) vs) → k = .vc d c → c ≠ c0 →
+  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0) vs) → Γ.known k = some (d, c) → c ≠ c0 →
       BranchOK b fe Γ (.fv x) k H idx sig R none els
   | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
 

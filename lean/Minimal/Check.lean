@@ -378,7 +378,8 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
             match hf : brs.find? (·.2.2.2.real) with
             | some (_, c, _, body) => match shp[c]? with
               | some (k, sig, p) => match ({ Γ with ghost := g p } : Ctx).branch P s k H idx sig with
-                | (Γf, .ok σ) => some ⟨((({ Γ with ghost := g p } : Ctx).setErs { Γf with σ := σ } (fes sig)), body), by
+                | (Γf, .ok σ) => some ⟨({ ({ Γ with ghost := g p } : Ctx).advBr (({ Γ with ghost := g p } : Ctx).setErs
+                    { Γf with σ := σ } (fes sig)) s k er (sig.len - 1) with cmode := false }, body), by
                     have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some hf); simp at this ⊢; omega⟩
                 | _ => none
               | none => none
@@ -486,11 +487,11 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
       | (_, .contra), some _ => .error "a listed branch is refuted"
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
-          else match s, k with
-            | .fv x, .vc d' c => match hs : Γc.fixed[x]?.join with
+          else match s, hk : Γc.known k with
+            | .fv x, some (d', c) => match hs : Γc.fixed[x]?.join with
               | some (.app (.vc d c0) vs) =>
                 if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 then
-                  .ok ⟨by obtain ⟨hm, rfl, hc⟩ := hd; exact BranchOK.fixedOut hm hs rfl hc⟩
+                  .ok ⟨by obtain ⟨hm, rfl, hc⟩ := hd; exact BranchOK.fixedOut hm hs hk hc⟩
                 else .error "a branch that is not refuted is missing"
               | _ => .error "a branch that is not refuted is missing"
             | _, _ => .error "a branch that is not refuted is missing" :

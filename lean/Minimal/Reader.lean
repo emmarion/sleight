@@ -139,7 +139,7 @@ def warnUse (t : Tm) (kind shown : String) : M Unit := do
   let some (_, msg) := st.pwarn.find? (·.1 == t) | return
   match st.supp.findIdx? (·.2.1 == some t) with
   | some k => set { st with supp := st.supp.modify k fun (x, y, n) => (x, y, n + 1) }
-  | none => warn s!"{kind} of `{shown}`: {msg}"
+  | none => warn (if kind == "match" then s!"match on `{shown}`: {msg}" else s!"{kind} of `{shown}`: {msg}")
 
 def keywords : List String := specialNames ++ ["Type", "Level", "Predates", "Subterm"]
 
@@ -518,7 +518,7 @@ def bindTemp (sc : Scope) (t : Tm) (er : Bool) : M (List Stmt × Ref) := do
 def warnMatch (ks : List Tm) : M Unit := do
   let st ← get
   if let some d := ks.findSome? (fun | .vc d _ => some d | _ => none) then
-    warnUse (.tyc d) "match on" (showName ((st.decls[d]?).map (·.name)).get!)
+    warnUse (.tyc d) "match" (showName ((st.decls[d]?).map (·.name)).get!)
 
 def warnTarget (sc : Scope) (x : String) : M Tm := do
   let st ← get
@@ -844,6 +844,26 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
     let (ss2, ts) ← elabSeq fsc want exp rest
     return (ss ++ [fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er] ++ ss2, ts)
+  | .list (.atom "comptime-match" :: args) :: rest => do
+    let (er, args) ← splitMult true args
+    let st ← get
+    unless st.top do throw "comptime-match is confined to run position"
+    if er then throw "comptime-match is written many or unique"
+    let [s, pat] := args | throw "malformed comptime-match"
+    let (ss, sts) ← withTail false (elabExpr sc [false] none s)
+    let [t] := sts | throw "comptime-match: one scrutinee"
+    let (ss1, x) ← match t with
+      | .fv x => pure ([], x)
+      | t => do
+        let [j] ← fresh [false] | throw "fresh"
+        note j t true
+        pure ([(.prim (.tm t) false : Stmt)], j)
+    let (n, ci, fsc) ← openPattern sc false pat
+    if ci.union then throw "comptime-match on a union"
+    if ci.phantom then throw "comptime-match on a phantom constructor"
+    warnMatch [ci.k]
+    let (ss2, ts) ← elabSeq fsc want exp rest
+    return (ss ++ ss1 ++ [fun k => .chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false)] ++ ss2, ts)
   | .list [.atom "open-adt", m, e] :: rest =>
     elabSeq sc want exp (.list [.atom "let", .list [.list [m, .atom " open"]], e] :: .list [.atom " opened", m] :: rest)
   | .list [.atom " opened", m] :: rest => do
