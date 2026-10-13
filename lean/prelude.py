@@ -8,7 +8,9 @@ forms = []; i = 0; depth = 0; start = None; n = len(src)
 while i < n:
     c = src[i]
     if c == ';':
-        j = src.find('\n', i); i = n if j < 0 else j; continue
+        j = src.find('\n', i); j = n if j < 0 else j
+        if depth == 0 and src[i:i+2] == ';!': forms.append(src[i:j])
+        i = j; continue
     if c == '"':
         j = i + 1
         while src[j] != '"':

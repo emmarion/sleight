@@ -642,6 +642,8 @@
   (many SNil : -> (String))
   (many SCons : (many (Char) c) (many (String) rest) -> (String)))
 
+;! warn SCons copies the whole string, O(n); build a `Rope` and `flatten` it once
+
 (def-adts
   ((Append : ((String) a) ((String) b) ((String) c) -> Type)
     enum
@@ -720,7 +722,11 @@
 
 (let ((many ten-dec)) (lt-dec (Zero) ten))
 
+(comptime-match many ten-dec (Yes tda tdb ten-positive))
+
 (let ((many ten-dec2)) (lt-dec (Succ (Zero)) ten))
+
+(comptime-match many ten-dec2 (Yes tea teb ten-above-one))
 
 (let ((many forty-eight)) (nat-add (nat-mul (Succ (Succ (Succ (Succ (Zero))))) ten) eight))
 
@@ -729,6 +735,17 @@
   (match many (lt-dec code u8-modulus) _
     ((Yes _ _ p) (MkChar $ MkU8 code p))
     ((No _ _ _) (MkChar $ MkU8 (Zero) u8-modulus-pos))))
+
+(def-fns _ $ (many nat-digits : (subterm many (Nat) n) (many (Rope) acc) -> (many (Rope) r))
+  (let-match many n (Succ n1) ((Zero) acc))
+  (let ((many q) (many d) (erased m) (erased mm) (erased a) (erased _)) (divmod n ten ten-positive))
+  (let ((erased lt)) (divmod-lt n1 ten q d m mm a ten-above-one))
+  (tail $ nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))
+
+(def-fns _ $ (many nat-str : (subterm many (Nat) n) -> (many (String) s))
+  (let-match many n (Succ _) ((Zero) (SCons (digit-char (Zero)) (SNil))))
+  (let ((many s) (erased _)) (flatten $ nat-digits n $ REmpty))
+  s)
 
 (def-adts $ (Unit : -> Type)
   enum
@@ -857,6 +874,22 @@
        (erased (Splice A xs (Zero) n ys zs) p) -> (Splice A (Cons A x xs) (Zero) (Succ n) (Cons A y ys) (Cons A y zs)))
     (many SpliceThere : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) i) (erased (Nat) n) (erased (List A) ys) (erased (List A) zs)
        (erased (Splice A xs i n ys zs) p) -> (Splice A (Cons A x xs) (Succ i) n ys (Cons A x zs)))))
+
+(def-fns _ $ (erased splice-range : (erased Type A) (erased (List A) xs) (erased (Nat) len) (subterm erased (Length A xs len) l)
+    (erased (Nat) i) (erased (Nat) n) (erased (Nat) e) (erased (Add i n e) a) (erased (Lt e (Succ len)) le) ->
+    (erased (List A) ys) (erased (Splice A xs i n ys xs) p))
+  (match erased a _
+    ((AddZero _)
+      (let-match erased n (Succ n1) ((Zero) (values (Nil A) (SpliceNil _ _))))
+      (let-match erased l (LengthCons _ x _ _ l1) (absurd (LengthNil _) (let-match erased le (LtS _ _ z)) z))
+      (let-match erased le (LtS _ _ le1))
+      (let ((erased ys1) (erased p1)) (splice-range _ _ _ l1 (Zero) n1 n1 (AddZero n1) le1))
+      (values (Cons A x ys1) (SpliceHere _ _ _ _ _ _ _ p1)))
+    ((AddSucc i1 _ e1 a1)
+      (let-match erased l (LengthCons _ _ _ _ l1) (absurd (LengthNil _) (let-match erased le (LtS _ _ z)) z))
+      (let-match erased le (LtS _ _ le1))
+      (let ((erased ys1) (erased p1)) (splice-range _ _ _ l1 i1 n e1 a1 le1))
+      (values ys1 (SpliceThere _ _ _ _ _ _ _ p1)))))
 
 (def-adts $ (Pos : -> Type)
   enum

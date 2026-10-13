@@ -918,11 +918,11 @@ partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx →
         | .list [.atom "predates", p] :: rest => pure (some p, rest)
         | _ => pure (none, args) : M (Option Sx × List Sx))
       let (dec, ss0, args) ← match pd with
-        | some p => do let (ss, ps) ← elabArgs sc [p]; pure (Dec.predates ps.head!, ss, args)
+        | some p => do let (ss, ps) ← elabArgs sc [p] [true]; pure (Dec.predates ps.head!, ss, args)
         | none => match args.findIdx? (fun (x : Sx) => match x with | .list [.atom "subterm", _] => true | _ => false) with
           | some pos => match args[pos]! with
             | .list [_, p] => do
-              let (ss, ps) ← elabArgs sc [p]
+              let (ss, ps) ← elabArgs sc [p] [true]
               pure (Dec.subterm pos ps.head!, ss, args.eraseIdx pos)
             | _ => throw "unreachable"
           | none => pure (Dec.none, [], args)
