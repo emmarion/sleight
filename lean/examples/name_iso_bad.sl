@@ -1,0 +1,10 @@
+(def-adts $ (Shape : (Type T) -> Type)
+  enum
+  (many IsBit : -> (Shape (Bit)))
+  (many IsBool : -> (Shape (Bool))))
+(def-lvl X)
+(def-fns X $ (many f : (many (Shape (Bit)) s) -> (many (Nat) n))
+  (match many s (((Nat) r))
+    ((IsBit) (Zero))
+    (absurd IsBool)))
+(f (IsBit))

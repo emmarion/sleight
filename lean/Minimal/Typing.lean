@@ -79,6 +79,35 @@ def sigOf (Γ : Ctx) : Tm → Option Tm
   | .vc d c => (P.ctor d c).map .valCtor
   | _ => none
 
+def declShape : Tm → Option (Tm × Option Tm)
+  | .tyc d => (P.adts[d]?).map fun D => (.tyCtor D.params, some (D.mtbl d))
+  | .vc d c => (P.adts[d]?).bind fun D => (D.ctors[c]?).map fun sig => (.valCtor sig, some (D.mtbl d))
+  | .univ | .level => some (.tyCtor .nil, none)
+  | _ => none
+
+def clash : Tm → Tm → Bool
+  | .vc d c, .vc d' c' => d == d' && c != c'
+  | _, _ => false
+
+def declIso : Nat → List (List Tm) → List (Tm × Tm) → Bool
+  | _, _, [] => true
+  | 0, _, _ => false
+  | fuel + 1, cls, (a, b) :: work =>
+    let ca := (cls.find? (·.contains a)).getD [a]
+    let cb := (cls.find? (·.contains b)).getD [b]
+    if ca.contains b then declIso fuel cls work
+    else if ca.any fun x => cb.any (clash x) then false
+    else match declShape P a, declShape P b with
+      | some (s, m), some (s', m') =>
+        match pairsOf ((s, s') :: (match m, m' with | some x, some y => [(x, y)] | _, _ => [])) with
+        | some ps => declIso fuel ((ca ++ cb) :: cls.filter fun c => !c.contains a && !c.contains b) (ps ++ work)
+        | none => false
+      | _, _ => false
+
+def Prog.isoFuel : Nat :=
+  let n := P.adts.length + (P.adts.map (·.ctors.length)).sum + 2
+  n * ((P.adts.zipIdx.map fun (D, d) => D.params.size + (D.mtbl d).size + (D.ctors.map Tm.size).sum).sum + n) + 1
+
 def Ctx.lists (Γ : Ctx) (σ : Nat → Option Tm) : List (Tm × Tm × List Tm) :=
   Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ) with
     | some (.mtbl u nt ex ph T cs) => some (.mtbl u nt ex ph T cs, T, cs.toList)
@@ -89,6 +118,7 @@ def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
   if ls.any (fun (_, _, ks) => match ks.idxOf? a, ks.idxOf? b with
       | some i, some j => i != j
       | _, _ => false) then none
+  else if a.isAtom && b.isAtom then if declIso P P.isoFuel [] [(a, b)] then some [] else none
   else
     let names (x : Tm) := ls.filterMap (fun (M, T, ks) => if T == x || ks.contains x then some M else none) ++ declMtbl P x
     let ms := names a ++ names b

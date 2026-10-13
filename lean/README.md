@@ -297,15 +297,21 @@ produces nothing (section 27).
   applied to the branch's field entries, and the scrutinee's type equals
   the constructor's return type.
 - Unification decomposes every node of the same shape, binders included.
-  When it equates a variable with a variable, a declared type
-  constructor or a declared value constructor (`Ctx.atoms`), it
-  contradicts if one opened `Matchable` lists the two at different
-  positions; otherwise it unifies their signatures when both have one,
-  as DESIGN.md section 7 has it for two atoms, and every `Matchable`
-  that names either of them, as section 8's invariant has it. The proof
-  rests on a value having at most one such signature (`VTy.sig_det`)
-  and on every `Matchable` naming a value being its declared type's
-  (`Names.uniq`).
+  Its atoms are the variables, the declared type and value constructors,
+  `Type` and `Level`. When it equates a variable with an atom
+  (`Ctx.atoms`), it contradicts if one opened `Matchable` lists the two
+  at different positions; otherwise it unifies their signatures when
+  both have one, as DESIGN.md section 7 has it for two atoms, and every
+  `Matchable` that names either of them, as section 8's invariant has
+  it. Two distinct declared atoms are not told apart by name: they
+  contradict only when their declarations cannot be identified, by
+  signatures and `Matchable`s and the atoms those mention in turn
+  (`declIso`), and otherwise the equation adds no rule, the core having
+  no rule for a declared name. `Type` and `Level` have no `Matchable`.
+  The proof rests on a value having at most one such signature
+  (`VTy.sig_det`) and on every `Matchable` naming a value being its
+  declared type's (`Names.uniq`); two distinct declared atoms are never
+  one value, so what is decided for them needs no proof.
   A variable equated with a term that mentions a binder contradicts, as
   DESIGN.md section 7's third case has it; the proof rests on no value
   mentioning a binder it is not under. When it can neither assign nor

@@ -47,6 +47,8 @@ examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 examples/matchable_order_bad.sl: refused: argument of the wrong type
 examples/matchable_value.sl: 0
 examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
+examples/name_alias.sl: 3
+examples/name_iso_bad.sl: refused: an absurd branch names a constructor that is not refuted
 examples/nested_adt.sl: 2
 examples/newtype.sl: (MkMeters 3)
 examples/newtype_bad.sl: error: Pair2 does not have newtype shape
@@ -104,6 +106,7 @@ unchecked examples/let_match_rhs_bad.sl: error: a let-match with more than one r
 unchecked examples/let_type_bad.sl: 0
 unchecked examples/matchable_order_bad.sl: 0
 unchecked examples/missing_branch_bad.sl: 0
+unchecked examples/name_iso_bad.sl: 0
 unchecked examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/numeral_opaque_bad.sl: 2
@@ -148,6 +151,7 @@ full examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/level_of_param.sl: 3
 full examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 full examples/matchable_value.sl: 0
+full examples/name_alias.sl: 3
 full examples/nested_adt.sl: 2
 full examples/newtype.sl: (MkMeters 3)
 full examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)

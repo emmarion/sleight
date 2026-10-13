@@ -17,6 +17,10 @@ def kids : Tm → List Tm
   | mtbl _ _ _ _ T cs => [T, cs]
   | _ => []
 
+def isAtom : Tm → Bool
+  | tyc _ | vc .. | univ | level => true
+  | _ => false
+
 def sameHead : Tm → Tm → Bool
   | fv _, _ | _, fv _ => false
   | cons .., cons .. | predates .., predates .. | subterm .., subterm .. => true
@@ -41,6 +45,18 @@ theorem eqsSize_zip : ∀ (xs ys : List Tm),
   | x :: xs, y :: ys => by
     have := eqsSize_zip xs ys
     simp [eqsSize] at *; omega
+
+def pairsOf : List (Tm × Tm) → Option (List (Tm × Tm))
+  | [] => some []
+  | (a, b) :: rest =>
+    if a = b then pairsOf rest
+    else if a.isAtom && b.isAtom then ((a, b) :: ·) <$> pairsOf rest
+    else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest) else none
+termination_by eqs => eqsSize eqs
+decreasing_by
+  all_goals first
+    | (have := a.size_pos; simp [eqsSize]; omega)
+    | (have := eqsSize_zip a.kids b.kids; have := a.kids_size; have := b.kids_size; simp [eqsSize] at *; omega)
 
 inductive UResult where
   | ok (σ : Nat → Option Tm)
@@ -75,7 +91,9 @@ def unify (n : Nat) (atoms : Atoms) (σ : Nat → Option Tm) (dom : List Nat) : 
                 ((more ++ rest).map fun p => (substOne e t p.1, substOne e t p.2))
             else .unknown
       | none =>
-        if a.sameHead b then unify n atoms σ dom (a.kids.zip b.kids ++ rest) else .contra
+        if a.sameHead b then unify n atoms σ dom (a.kids.zip b.kids ++ rest)
+        else if a.isAtom && b.isAtom && (atoms σ a b).isSome then unify n atoms σ dom rest
+        else .contra
 termination_by eqs => (n + 1 - dom.length, eqsSize eqs)
 decreasing_by
   · apply Prod.Lex.right; have := a.size_pos; simp [eqsSize]; omega
@@ -84,5 +102,6 @@ decreasing_by
     have := eqsSize_zip a.kids b.kids
     have := a.kids_size; have := b.kids_size
     simp [eqsSize] at *; omega
+  · apply Prod.Lex.right; have := a.size_pos; simp [eqsSize]; omega
 
 end Minimal

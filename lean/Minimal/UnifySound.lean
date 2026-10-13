@@ -123,7 +123,11 @@ theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat
     intro p hp; rcases List.mem_append.mp hp with hp | hp
     · exact Tm.kids_eq_of_subst f a b (varSide_none hv).1 (varSide_none hv).2 hsh (he (a, b) (by simp)) p hp
     · exact he p (by simp [hp])
-  | case8 σ dom a b rest hab hv hsh =>
+  | case8 σ dom a b rest hab hv hsh hat ih =>
+    intro hs he
+    rw [unify]; simp only [hab, ite_false, hv, hsh, hat]
+    exact ih hs fun p hp => he p (by simp [hp])
+  | case9 σ dom a b rest hab hv hsh hat =>
     intro _ he; exfalso
     exact Tm.subst_ne_of_head f a b (varSide_none hv).1 (varSide_none hv).2 (by simpa using hsh) (he (a, b) (by simp))
 
@@ -160,6 +164,8 @@ theorem unify_wf (n : Nat) (atoms : Atoms) : ∀ σ dom eqs σ', RulesWF n σ �
   | case6 σ dom a b rest hab e t hv hocc more hmore hok => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc, hmore, hok] at h
   | case7 σ dom a b rest hab hv hsh ih =>
     intro σ' hw h; rw [unify] at h; simp only [hab, ite_false, hv, hsh, ite_true] at h; exact ih σ' hw h
-  | case8 σ dom a b rest hab hv hsh => intro σ' _ h; rw [unify] at h; simp [hab, hv, hsh] at h
+  | case8 σ dom a b rest hab hv hsh hat ih =>
+    intro σ' hw h; rw [unify] at h; simp only [hab, ite_false, hv, hsh, hat] at h; exact ih σ' hw h
+  | case9 σ dom a b rest hab hv hsh hat => intro σ' _ h; rw [unify] at h; simp [hab, hv, hsh, hat] at h
 
 end Minimal

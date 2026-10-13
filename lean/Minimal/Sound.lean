@@ -1263,6 +1263,9 @@ theorem Tm.toList_subst_get (f : Nat → Tm) : ∀ (t : Tm) (i : Nat) (x : Tm), 
 theorem Tm.mtbl_subst (f : Nat → Tm) (D : Adt) (d : Nat) : (D.mtbl d).subst f = D.mtbl d := by
   simp [Adt.mtbl, Tm.subst, Tm.ofList_vc_subst]
 
+theorem Tm.subst_atom {f : Nat → Tm} {a : Tm} (h : a.isAtom = true) : a.subst f = a := by
+  cases a <;> simp_all [Tm.isAtom, Tm.subst]
+
 theorem headD_mem {α : Type} {l : List α} {x d : α} (h : x ∈ l) : l.headD d ∈ l := by cases l <;> simp_all
 
 def Names (P : Prog) (v : Tm) (M : Tm) : Prop :=
@@ -1359,8 +1362,18 @@ theorem EnvOK.atomSound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P 
       have e2 := (hks j b (by simp [← hjb])).1
       rw [hab, e2] at e1; cases e1; simp at hij
     · cases hij
-  · refine ⟨_, rfl, fun p hp => ?_⟩
-    rcases List.mem_append.mp hp with hp | hp
+  split
+  · rename_i hat
+    simp only [Bool.and_eq_true] at hat
+    have e : a = b := by rw [Tm.subst_atom hat.1, Tm.subst_atom hat.2] at hab; exact hab
+    subst e
+    have : declIso P P.isoFuel [] [(a, a)] = true := by
+      have : 0 < P.isoFuel := by simp [Prog.isoFuel]
+      obtain ⟨k, hk⟩ : ∃ k, P.isoFuel = k + 1 := ⟨P.isoFuel - 1, by omega⟩
+      rw [hk]; simp [declIso]
+    simp only [this, ite_true]; exact ⟨[], rfl, by simp⟩
+  refine ⟨_, rfl, fun p hp => ?_⟩
+  · rcases List.mem_append.mp hp with hp | hp
     · split at hp
       · rename_i s s' h1 h2
         simp only [List.mem_singleton] at hp; subst hp
