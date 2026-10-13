@@ -243,7 +243,7 @@ inductive Dec where
   | none
   | predates (p : Tm)
   | subterm (pos : Nat) (p : Tm)
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
 inductive Prim where
   | tm (t : Tm)
@@ -266,7 +266,7 @@ inductive Prim where
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
   | atom (d : Nat)
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
 inductive Chk where
   | is

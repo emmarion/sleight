@@ -8,12 +8,14 @@ Numbered items are never renumbered.
 
 ## 1. An extern with a native implementation whose model is not the proved one
 
-`the extern `add` is not the model the runner's native `add` is proved
-against, so it runs its model`. The runner's stripped run computes
-`add` natively only when the function marked `extern` and named `add`
-has, after elaboration, exactly the body the native code is proved
-against (`addBody` in `Minimal/Native.lean`), over the extern `Nat`.
-When an `extern` `add` does not, it runs its model, and this warning
-says so. `Minimal/Reader.lean` (`def-fns`).
+`the extern `NAME` is not the model the runner's native `NAME` is
+proved against, so it runs its model`, for `NAME` one of `add`,
+`nat-cmp`, `mul`, `sub`, `divmod` and `nat-mod`. The runner's stripped
+run computes such a function natively only when, after elaboration, its
+body, its signature's erasures and its place in the program are exactly
+those its native code is proved against (`Minimal/Native.lean`), and so
+are those of the proved models it calls. When a function marked
+`extern` under one of these names does not match, it runs its model,
+and this warning says so. `Minimal/Reader.lean` (`def-fns`).
 Example: `tests/extern_no_prelude.sl` under `--no-prelude`, whose
 `add` returns no proof.

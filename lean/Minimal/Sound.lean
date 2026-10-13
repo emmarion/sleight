@@ -1633,9 +1633,11 @@ theorem Real.ofArgs {d c : Nat} {sig argsS args ls : Tm} (hc : P.ctor d c = some
     (hr : Reals P argsS args (sig.skip (P.lifted d))) :
     Real P (match P.wrapField d c with
       | some k => argsS.toList.getD k .nil
-      | none => P.norm (.app (.vc d c .nil) argsS)) (.app (.vc d c ls) args) := by
+      | none => P.norm (.app (.vc d c .nil) (maskArgs (P.ctorErs d c) argsS))) (.app (.vc d c ls) args) := by
   cases hw : P.wrapField d c with
-  | none => exact Real.norm (.con hc hp hw hr)
+  | none =>
+    have : P.ctorErs d c = (sig.skip (P.lifted d)).ers := by simp [Prog.ctorErs, hc]
+    rw [this]; exact Real.norm (.con hc hp hw hr.mask)
   | some k =>
     obtain ⟨_, _, sig', hc', hk⟩ := Prog.wrapField_spec hw
     rw [hc] at hc'; cases hc'

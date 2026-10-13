@@ -130,14 +130,25 @@ each one rests on, which are Lean's own three (`propext`,
   (`Prog.view`). A number stands for whatever its `Zero` or `Succ` form
   stands for (`Real.nat`). An extern function runs natively only once
   a Lean proof shows its native code agrees with its model; none is
-  trusted unproved. So far that is `add`: the executable stripped run
-  (`runS`) computes a call of `add` on two numbers as their sum when the
-  callee's body is exactly the elaborated model the proof is about
-  (`addBody`, `Prog.native`), and `add_run` proves that the stripped
-  run of that model gives the same result, so `runS_sound` still holds
-  (`Minimal/Native.lean`). Any other `extern` `add` runs its model, with
-  a warning (WARNINGS.md 1). Every other extern function runs its
-  model, and the full run (`eval`, `--full`) runs every model. A call of a delegate's closure is matched in the
+  trusted unproved. So far that is `add`, `nat-cmp`, `mul`, `sub`,
+  `divmod` and `nat-mod` (`Minimal/Native.lean`). The executable
+  stripped run (`runS`) computes a call of one of them on numbers
+  natively when the callee's elaborated body is exactly the model the
+  proof is about (`addBody`, `cmpModel` and the like, kept in Lean),
+  over the prelude's declarations, and, for a model that calls another
+  (`mul` calls `add`; `divmod` and `nat-mod` call `succ-div` and
+  `succ-mod`, which call `nat-cmp`), when the closure it calls is that
+  one's proved model too (`Prog.native`). For each, a lemma (`add_run`,
+  `cmp_run`, `mul_run`, `sub_run`, `divmod_run`, `natmod_run`) proves
+  that the stripped run of the model gives the same non-erased results,
+  so `runS_sound` still holds. The stripped run keeps a constructor's
+  erased fields as tokens (`maskArgs`), which is what lets a result
+  such as `nat-cmp`'s `Cmp` value be computed without its proof. A
+  model the elaborator does not find to be the proved one runs as a
+  model, with a warning (WARNINGS.md 1). Every other extern function
+  runs its model, and the full run (`eval`, `--full`) runs every model.
+  Literals are still elaborated in unary, so a numeral is limited to
+  100000. A call of a delegate's closure is matched in the
   stripped run by the call its body makes, which `Group.deleOK` checks
   passes the delegate's own non-erased arguments through to its target,
   in order, and the target's non-erased results back

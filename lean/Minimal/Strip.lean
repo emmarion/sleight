@@ -28,6 +28,12 @@ def Prog.norm (P : Prog) : Tm → Tm
     if P.natD = some d then .nat (k + 1) else .app (.vc d 1 .nil) (.cons (.nat k) .nil)
   | t => t
 
+def Prog.ctorErs (P : Prog) (d c : Nat) : List Bool := ((P.ctor d c).map fun sig => (sig.skip (P.lifted d)).ers).getD []
+
+def maskArgs : List Bool → Tm → Tm
+  | e :: es, .cons a as => .cons (if e then .tok else a) (maskArgs es as)
+  | _, t => t
+
 mutual
 def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
   | .fv i => f i
@@ -37,7 +43,7 @@ def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
     match P.subU f h with
     | .vc d c _ => match P.wrapField d c with
       | some k => args'.toList.getD k .nil
-      | none => P.norm (.app (.vc d c .nil) args')
+      | none => P.norm (.app (.vc d c .nil) (maskArgs (P.ctorErs d c) args'))
     | h' => .app h' args'
   | t => t.subst f
 
@@ -165,6 +171,12 @@ theorem Prog.view_nat {P : Prog} {e n : Nat} (he : P.natD = some e) :
 
 theorem Real.view {P : Prog} {vS v : Tm} (h : Real P vS v) : Real P (P.view vS) v := by
   cases vS <;> first | exact h | exact Real.nat_view h
+
+theorem Reals.mask {P : Prog} : ∀ {a b t : Tm}, Reals P a b t → Reals P (maskArgs t.ers a) b t
+  | _, _, _, .nil => by cases ‹Tm› <;> exact .nil
+  | _, _, _, .cons (k := k) hr hs => by
+    simp only [Tm.ers, maskArgs]
+    exact .cons (fun hk => by simpa [hk] using hr hk) hs.mask
 
 theorem Real.natInd {P : Prog} {v w : Tm}
     (main : ∀ vS, (∀ k e, vS = .nat k → P.natD = some e → Real P (P.view vS) w) → Real P vS v → Real P vS w) :

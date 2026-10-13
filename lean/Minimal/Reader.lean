@@ -194,6 +194,7 @@ structure ESt where
   slots : List (Nat × Tm) := []
   slotFloor : Nat := 0
   links : List (Nat × Nat) := []
+  fnAt : List (Nat × FnDef × Nat) := []
   cellDs : List (Tm × Nat) := []
   inExtern : Bool := false
   atFns : List Nat := []
@@ -789,7 +790,7 @@ def reset (base : Nat) : M Unit := modify fun st =>
             inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
             uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
             sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
-            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base), links := st.links.filter (·.1 < base),
+            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base), links := st.links.filter (·.1 < base), fnAt := st.fnAt.filter (·.1 < base),
             atFns := st.atFns.filter (· < base), atPf := st.atPf.filter (·.2 < base),
             slots := st.slots.filter fun (i, t) => i < base && t.fvs.all (· < base) }
 
@@ -2224,14 +2225,35 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }
     for (F, j) in defs.zipIdx do
       let f := sigs[j]!.1
-      if f == "add" && (← get).claimed.contains f then
-        let P := (← get).prog .dead
-        unless (P.natD.map fun d => decide (P.wrapField d 1 = none) && F.isAdd (base + j) (base + sigs.length) d) == some true do
+      if (← get).claimed.contains f then
+        let st ← get
+        let P := st.prog .dead
+        let model (i n np : Nat) (ers : List Bool) (M : Core) (F : FnDef) (k : Nat) : Bool :=
+          i == n && k == 1 && F.np == np && F.tele.ers == ers && F.dele.isNone && F.body.beq M
+        let at_ (i n np : Nat) (ers : List Bool) (M : Core) : Bool := match st.fnAt.lookup i with
+          | some (G, k) => model i n np ers M G k
+          | none => false
+        let facts := decide (NatFacts P)
+        let me := model (base + j) 
+        let ok : Option Bool := match f with
+          | "add" => some ((P.natD.map fun d => decide (P.wrapField d 1 = none ∧ P.ctorErs d 1 = [false, false]) &&
+              F.isAdd (base + j) (base + sigs.length) d) == some true)
+          | "nat-cmp" => some (facts && me 40 2 [false, false, false] cmpModel F sigs.length)
+          | "mul" => some (facts && me 45 2 [false, false, false, true] mulModel F sigs.length &&
+              (match st.fnAt.lookup 34 with | some (G, 1) => G.isAdd 34 35 6 | _ => false))
+          | "sub" => some (facts && me 47 3 [false, false, true, false, true] subModel F sigs.length)
+          | "divmod" => some (facts && me 51 3 divmodErs divmodModel F sigs.length && at_ 49 49 8 succDivErs succDivModel &&
+              at_ 40 40 2 [false, false, false] cmpModel)
+          | "nat-mod" => some (facts && me 80 3 natModErs natModModel F sigs.length && at_ 78 78 5 succModErs succModModel &&
+              at_ 40 40 2 [false, false, false] cmpModel)
+          | _ => none
+        if ok == some false then
           warn s!"the extern `{showName f}` is not the model the runner's native `{showName f}` is proved against, so it runs its model"
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
+    modify fun st => { st with fnAt := st.fnAt ++ defs.zipIdx.map fun (F, j) => (base + j, F, defs.length) }
     recordTop base [Core.defFns gid]
     let pfs ← ((← get).deles.filter (·.1 ≥ base)).mapM fun (i, t) => do
       let (s, k) ← mintDele i t

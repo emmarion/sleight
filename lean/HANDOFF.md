@@ -38,13 +38,15 @@ before checking, and the checker requires it.
    plan, from chat: no extern's native code is ever trusted as an
    axiom; each extern gets native code only with a Lean proof that it
    agrees with its model, and a model that is not the proved one runs
-   with a warning (WARNINGS.md 1). `add` is done (`Minimal/Native.lean`):
-   a fixed copy of its elaborated body (`addBody`), a recognizer, and
-   `add_run`. Next candidates, by what they unlock: `mul` (then
-   `u62-modulus` and the `U62` forms could rejoin `prelude-full.sl`'s
-   counterpart runs), `nat-cmp`, `sub`, `divmod`. Each needs its own
-   copy and proof; a generalization over models of a common shape may
-   pay off once there are several.
+   with a warning (WARNINGS.md 1). Done: `add`, `nat-cmp`, `mul`, `sub`,
+   `divmod`, `nat-mod` (`Minimal/Native.lean`). The templates are the
+   prelude's elaborated bodies at their fixed places; a change to those
+   prelude forms means regenerating them (a session dumped the groups
+   with a small Lean script and pasted them in). Next, by a session's
+   ranking: `nat-halve`, then `shl`/`shr`, the bitwise ones, and last
+   the `u62-*` ones. Also wanted: literals that are numbers from the
+   start, so the 100000 cap can go; the full run and the checker's
+   literal proofs would then have to read native numbers.
 1. **A signature that mentions an earlier function of its block** other
    than through `level-of` (section 53). `delegate-of` in a type names the
    proof that `def-fns` mints after its block, so it is refused in the
