@@ -132,7 +132,7 @@ full language requires is required. These forms are refused as not
 supported: `unique`; `extern` functions (an `extern` type is an
 ordinary type that records the mark, and only the prelude, or a program
 run with `--no-prelude`, may write it); `_` in place of a
-type (section 50); `delegate`; and every form
+type (section 50); `at` and `extern` marks on a `def-fns` line; and every form
 not named in this file,
 among them `coerce`, character and string literals, `numeral-of`,
 `prove-literal-lt`, `unary`, macros, pragmas, cells and
@@ -228,6 +228,12 @@ produces nothing (section 27).
   erased code; at run time the core keeps the constructor anyway, so the
   rule is the elaborator's alone. A union value with more than one
   non-phantom constructor prints as `_`.
+- `delegate` (sections 19 and 41), with the `at f` its function's header
+  carries, which names a function in scope at the header, an earlier
+  one of the block included: the call must be to `f`, in tail position,
+  passing the function's non-erased parameters straight through in
+  order. In the core it is an ordinary call. `delegate-of` and the
+  `Delegate` proof are not supported.
 - `tail` and `notail` (section 19): the call must, or must not, be in
   tail position: the final expression of a function body, of a branch of
   a match in tail position, or of a `let`'s right-hand side when the

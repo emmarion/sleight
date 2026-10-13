@@ -251,6 +251,14 @@
 
 (def-lvl nat-lvl)
 
+(def-fns nat-lvl $ (many nat-add at add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+  (let ((many c) (erased _)) (delegate (add a b)))
+  c)
+
+(def-fns nat-lvl $ (many nat-mul at mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+  (let ((many c) (erased _)) (delegate (mul a b)))
+  c)
+
 (def-fns nat-lvl $ (many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d))
   (let ((many b) (erased p)) (add a a))
   (values b (add-diag-double a b p)))
@@ -416,6 +424,14 @@
   (let ((many v) (erased pk) (erased pos)) (pow2 k))
   (let ((many q) (erased m) (erased r) (erased mm) (erased a) (erased p)) (div n v pos))
   (values q v pk m r mm a p))
+
+(def-fns _ $ (many nat-shl at shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
+  (let ((many r) (erased _) (erased _) (erased _)) (delegate (shl n k)))
+  r)
+
+(def-fns _ $ (many nat-shr at shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
+  (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _)) (delegate (shr n k)))
+  q)
 
 (def-adts $ (Bit : -> Type)
   enum
@@ -643,6 +659,10 @@
 (def-fns str-lvl $ (many trim : (many (String) s) -> (many s is t))
   s)
 
+(def-fns str-lvl $ (many str-append at append : (many (String) a) (many (String) b) -> (many (String) c))
+  (let ((many c) (erased _)) (delegate (append a b)))
+  c)
+
 (def-adts
   ((StrLt : ((String) a) ((String) b) -> Type)
     enum
@@ -701,6 +721,14 @@
 (let ((many ten-dec)) (lt-dec (Zero) ten))
 
 (let ((many ten-dec2)) (lt-dec (Succ (Zero)) ten))
+
+(let ((many forty-eight)) (nat-add (nat-mul (Succ (Succ (Succ (Succ (Zero))))) ten) eight))
+
+(def-fns _ $ (many digit-char : (many (Nat) d) -> (many (Char) c))
+  (let ((many code)) (nat-add forty-eight d))
+  (match many (lt-dec code u8-modulus) _
+    ((Yes _ _ p) (MkChar $ MkU8 code p))
+    ((No _ _ _) (MkChar $ MkU8 (Zero) u8-modulus-pos))))
 
 (def-adts $ (Unit : -> Type)
   enum

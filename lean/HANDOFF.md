@@ -8,9 +8,9 @@ by a Claude session; nothing here is a design decision.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's (`unsupported`, `refuse`, `accept`,
-`mismatch`, `stuck`); at the last run about 45 tests were accepted with
+`mismatch`, `stuck`); at the last run 79 tests were accepted with
 OCaml's value and none mismatched. `lean/prelude.py` regenerates
-`lean/prelude.sl` from `lib/prelude.sl` (128 of 215 forms). A checked
+`lean/prelude.sl` from `lib/prelude.sl` (135 of 215 forms). A checked
 program prints from the stripped run; `--full` runs `eval`, which
 computes erased values and so is slow on the prelude (about 3 s).
 
@@ -20,9 +20,7 @@ Next, as this session planned it, none of it decided:
    through an opened `Matchable` (`Shape`), what an open asserts,
    through one oracle that `unify` consults on every equation between
    atoms (`Ctx.atoms`, `AtomSound`), and `open-absurd`
-   (`CoreTy.chkOpnFail`). `tests/open_tyctor.sl` now waits only on
-   `nat-add`, a `delegate` function the Lean prelude leaves out, as many
-   tests do.
+   (`CoreTy.chkOpnFail`).
 2. Unification unifies the signatures of two atoms it equates when both
    have `TyCtor` or `ValCtor` types, as the OCaml checker's forcing
    does; `tests/is_for_type_refute.sl` is accepted. It does not equate

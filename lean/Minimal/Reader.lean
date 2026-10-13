@@ -71,6 +71,8 @@ structure ESt where
   decls : List Adt := []
   groups : List Group := []
   opened : List Nat := []
+  dele : Option (Nat × List (Nat × Bool)) := none
+  delegated : Bool := false
 
 abbrev M := StateT ESt (Except String)
 
@@ -143,7 +145,7 @@ def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
     let (er, xs) ← splitMult need xs
     match xs with
-    | [e, .atom "is", x] => if sub then throw "an is entry cannot be subterm" else pure (.is er, e, [← name x])
+    | [e, .atom "is", x] => if sub then throw "a subterm is entry is not supported" else pure (.is er, e, [← name x])
     | T :: x :: xs => pure (.ty sub er, T, ← (x :: xs).mapM name)
     | _ => throw "malformed telescope entry"
   | _ => throw "malformed telescope entry"
@@ -426,6 +428,19 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [i] ← fresh [false] | throw "fresh"
       if let some D := st.decls[d]? then note i (D.mtbl d)
       return ([.prim (.mtblOf d) false], [.fv i])
+    else if h == "delegate" && (sc.lookup h).isNone then
+      let [x@(.list (.atom f :: cargs))] := args | throw "delegate wraps a call"
+      if st.ghost || (!want.isEmpty && want.all id) then throw "delegate in an erased position"
+      if !st.tail then throw "delegate: the call is not in tail position"
+      let some (tgt, params) := st.dele | throw "a delegate body needs `at f` on its function's header"
+      unless (← look sc 0 f) == .fv tgt do throw "delegate: the call is not to the function its header names"
+      let ms := match sc.lookup f with | some (.fn _ _ ms) => ms | _ => []
+      let plain := cargs.filter fun | .list [.atom "predates", _] | .list [.atom "subterm", _] => false | _ => true
+      let passed ← ((plain.zip ms).filter (!·.2)).mapM fun (a, _) => entry sc a
+      unless passed == params.filterMap (fun (i, e) => if e then none else some i) do
+        throw "delegate: the non-erased parameters are not passed straight through, in order"
+      modify fun st => { st with delegated := true }
+      elabExpr sc want exp x
     else if (h == "tail" || h == "notail") && (sc.lookup h).isNone then
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
       if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
@@ -637,16 +652,24 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       | .list (.list xs :: items) => do
         let (er, xs) ← splitMult true xs
         let (ab, xs) := match xs with | .atom "absurd" :: xs => (true, xs) | xs => (false, xs)
-        let f :: .atom ":" :: es := xs | throw "malformed def-fns"
+        let (f, tgt, es) ← match xs with
+          | .atom m :: _ :: _ => if m == "at" || m == "extern" then throw s!"`{m}` on a def-fns line is not supported" else
+            match xs with
+            | f :: .atom "at" :: g :: .atom ":" :: es => pure (f, some g, es)
+            | f :: .atom ":" :: es => pure (f, none, es)
+            | _ => throw "malformed def-fns"
+          | _ => throw "malformed def-fns"
         let (ps, rs) ← splitArrow es
-        pure (← name f, (er, ab), ps, rs, items, (← entryErs true ps).map (·.2))
+        pure (← name f, (er, ab, tgt), ps, rs, items, (← entryErs true ps).map (·.2))
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
     let ers := st.ers
     let _ ← fresh (sigs.map (·.2.1.1))
+    let (d0, g0) := ((← get).dele, (← get).delegated)
     let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl sigs[j]!.2.2.2.2.2)).reverse ++ sc
-    let defs ← sigs.mapM fun (_, (er, ab), ps, rs, items, _) => do
+    let defs ← sigs.zipIdx.mapM fun ((_, (er, ab, tgt), ps, rs, items, _), j) => do
+      let tgt ← tgt.mapM (entry (fnsc.drop (sigs.length - j)))
       let tele ← elabTele sc 0 true (ps ++ rs)
       reset (base + sigs.length)
       let pents ← entryErs true ps
@@ -656,10 +679,13 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
         | .bind _ A r => do note i A; pure (r.inst (.fv i) 0)
         | t => pure t) tele
       let rents ← entryErs true rs
+      modify fun st => { st with dele := tgt.map (·, pids.zip (pents.map (·.2))), delegated := false }
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
         (if ab then [true] else rents.map fun e => er || e.2) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
+      if tgt.isSome && !(← get).delegated then throw "a function written `at f` must have a `delegate` body"
       pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }
+    modify fun st => { st with dele := d0, delegated := g0 }
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })

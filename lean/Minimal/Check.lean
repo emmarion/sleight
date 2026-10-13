@@ -260,17 +260,24 @@ def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res {shp // Shape P Γ er H sh
   | .tyc d => match h : P.adts[d]? with
     | some _ => .ok ⟨_, .decl h⟩
     | none => .error "unknown type"
-  | H => match hf : Γ.opened.find? (fun (m, _) => match (Γ.tys[m]?).map Γ.canon with
+  | H =>
+    let names (e : Nat × Bool) : Bool := match (Γ.tys[e.1]?).map Γ.canon with
       | some (.mtbl _ _ _ _ H' _) => H' == H
-      | _ => false) with
-    | some (m, oe) => match hM : Γ.tys[m]? with
+      | _ => false
+    let pick : Option {e // e ∈ Γ.opened} := match hf : Γ.opened.find? (fun e => names e && !e.2 && !Γ.er e.1) with
+      | some e => some ⟨e, List.mem_of_find?_eq_some hf⟩
+      | none => match hf : Γ.opened.find? names with
+        | some e => some ⟨e, List.mem_of_find?_eq_some hf⟩
+        | none => none
+    match pick with
+    | some ⟨(m, oe), hmem⟩ => match hM : Γ.tys[m]? with
       | some M => match hc : Γ.canon M with
         | .mtbl _ _ _ ph H' cs => do
           let ⟨hH⟩ ← need (H' = H) "unreachable"
           let ⟨hl⟩ ← need cs.isList "Matchable: the constructors are not a list"
           let ⟨hr⟩ ← need (er || Γ.ok (!oe && !Γ.er m)) "a match that dispatches at runtime through an erased Matchable"
           let ⟨shp, h1, h2⟩ ← armsOf P Γ ph cs.toList 0
-          .ok ⟨shp, .opened (List.mem_of_find?_eq_some hf) hM (hH ▸ hc) hl h1 (fun i k sig p h => by simpa using h2 i k sig p h) hr⟩
+          .ok ⟨shp, .opened hmem hM (hH ▸ hc) hl h1 (fun i k sig p h => by simpa using h2 i k sig p h) hr⟩
         | _ => .error "unreachable"
       | none => .error "unreachable"
     | none => .error "scrutinee: no Matchable is open for its type"
