@@ -102,32 +102,3 @@ is a design decision. Remove an entry when it is fixed.
     `self/bootstrap.sh` compares each side's whole stderr, warnings
     included, so one that did would fail there. Which order is wanted
     is not decided here.
-
-20. **`slc` accepts a proof of `False` when compile-time evaluation runs
-    out of fuel.** With `accept.sl` from `agent/tasks/false/` after it,
-    this file is accepted by `slc --interpret` at a290667 (exit code 0,
-    about 26 s on an M-series Mac), so `bottom` is defined:
-
-    ```scheme
-    (def-adts $ (T : -> Type) enum (many Good : -> (T)) (many Bad : (erased (False) p) -> (T)))
-    (def-fns _ $ (many loop : (subterm many (Nat) n) -> (many (T) r))
-      (match many n _ ((Zero) (Good)) ((Succ k) (tail (loop k)))))
-    (let ((many x)) (loop 1000000005))
-    (comptime-match many x (Bad p))
-    (def-fns _ $ (erased bottom : -> (erased (False) f)) p)
-    ```
-
-    With `(loop 5)` in place of `(loop 1000000005)`, both `slc` and the
-    reference refuse it: "`comptime-match`: expected `Bad`, got
-    `(Good)`". The reading of the cause, from the code and not traced
-    step by step: the loop exhausts `eval-fuel` (1000000000,
-    `self/eval.sl`), the run-position `let` stores the resulting
-    `BError` as `x`'s value, and `destruct`, given that block,
-    gets `None` from `dispatch` and returns the index of the
-    constructor it was asked about, so `comptime-match` confirms `Bad`
-    whatever the value is. This is item 18's failed-step shape meeting
-    OPEN.md 4. A Claude session reproduced it at 402dbd7 as well. The
-    reference, which has no fuel, refuses the file as written with the
-    same message after running the loop (about 3m47s on the same Mac).
-    Found by a Claude session following up a lead left by the
-    mimo-v2.6-pro `false` agent run; no fix is decided.
