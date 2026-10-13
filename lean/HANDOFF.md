@@ -14,15 +14,15 @@ OCaml's value and none mismatched. `lean/prelude.py` regenerates
 program prints from the stripped run; `--full` runs `eval`, which
 computes erased values and so is slow on the prelude (about 3 s).
 
-Next, as this session planned it, none of it decided:
+Next, none of it decided:
 
-1. `Matchable` is in, stages 2 to 4 of the plan: `open-adt`, matches
-   through an opened `Matchable` (`Shape`), what an open asserts,
-   through one oracle that `unify` consults on every equation between
-   atoms (`Ctx.atoms`, `AtomSound`), and `open-absurd`
-   (`CoreTy.chkOpnFail`).
-2. Unification unifies the signatures of two atoms it equates when both
-   have `TyCtor` or `ValCtor` types, as the OCaml checker's forcing
-   does; `tests/is_for_type_refute.sl` is accepted. It does not equate
-   types when a variable is assigned a term that is not an atom, which
-   the OCaml checker's forcing does not do either.
+1. `unique` (DESIGN.md sections 13, 15, 16 and 32) is what most
+   unsupported tests need: about 170 name it, though only about 30 need
+   nothing else. Open: whether the core models it, and with what
+   theorem (a session's guess: on every path of the stripped run, a
+   value bound `unique` is used at unique at most once), or the
+   elaborator alone checks its uses and the core reads it as `many`.
+2. Slots, `at` and cells (sections 35 to 41), and at-functions; most of
+   the tests that name `at` also need `unique`.
+3. `comptime-match` and `Settled` (sections 28 and 29).
+4. `tests/extern_tail.sl` times out: the runner holds a `Nat` in unary.
