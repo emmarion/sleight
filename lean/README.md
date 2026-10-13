@@ -39,7 +39,8 @@ A checked program runs with erased code skipped (the stripped run,
 not erased; `--full` runs the full evaluator `eval` instead, which also
 computes the erased values. `test.sh` compares the two on every
 example. Every program starts in the scope of
-`prelude.sl`, unless `--no-prelude` is given.
+`prelude.sl`, or of `prelude-full.sl` under `--full` and `--unchecked`,
+unless `--no-prelude` is given.
 
 ## Files
 
@@ -60,9 +61,12 @@ example. Every program starts in the scope of
 - `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
   and checking.
 - `prelude.sl`: the prelude, which `prelude.py` makes from
-  `lib/prelude.sl`: the forms the runner accepts, in order, kept only
-  when the full evaluator still finishes on them. `python3 prelude.py ../lib/prelude.sl
-  .lake/build/bin/minimal prelude.sl` regenerates it.
+  `lib/prelude.sl`: the forms the runner accepts, in order.
+  `prelude-full.sl`: those of them on which the full evaluator still
+  finishes, for the runs that use it; `u62-modulus` is `2^62` in unary,
+  which only the stripped run leaves uncomputed, so it and everything
+  over `U62` are not there. `python3 prelude.py ../lib/prelude.sl
+  .lake/build/bin/minimal prelude.sl prelude-full.sl` regenerates both.
 - `compare.sh`: runs the runner over the OCaml suite's `tests/` and
   prints, per test, the verdict the test expects and the runner's.
 - `examples/`: programs, with their expected output in

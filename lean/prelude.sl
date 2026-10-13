@@ -300,6 +300,12 @@
 
 (let ((erased sixty-two) (erased sixty-two-add)) (add sixty (Succ (Succ (Zero)))))
 
+(let ((erased u62-modulus) (erased u62-modulus-pow2) (erased u62-modulus-pos)) (pow2 sixty-two))
+
+(def-adts $ (U62 : -> Type)
+  enum newtype
+  (many MkU62 : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (U62)))
+
 (def-fns _ $ (erased pow2-pos : (erased (Nat) k) (erased (Nat) v) (subterm erased (Pow2 k v) p) -> (erased (Lt (Zero) v) q))
   (match erased p _
     ((P0) (LtZ (Zero)))
@@ -337,6 +343,8 @@
   (let ((erased eight-ten)) (lt-trans eight (Succ eight) (Succ (Succ eight)) (lt-succ eight) (lt-succ (Succ eight))))
   (lt-le-trans eight sixty sixty-two (lt-le-trans _ _ _ eight-ten ten-le) (add-le-left _ _ _ sixty-two-add)))
 
+(let ((erased u8-below-u62)) (pow2-lt _ _ _ _ (eight-lt-sixty-two) u8-modulus-pow2 u62-modulus-pow2))
+
 (def-fns _ $ (erased add-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
     (subterm erased (Add a b c1) p) (erased (Add a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
   (let-match erased p (AddSucc a1 _ d1 p1) ((AddZero _) (match erased q _ ((AddZero _) (Refl (Nat) c1)) (absurd AddSucc))))
@@ -361,6 +369,57 @@
     ((MulZero _) (LtZ k))
     ((MulSucc q1 _ k1 _ mm1 p1)
       (LtS q1 k (lt-le-trans q1 (Succ k1) k (mul-le q1 c k1 mm1 pos) (LtS k1 k (add-pos-lt k1 c k p1 pos)))))))
+
+(def-fns _ $ (many extern u62-add : (many (Nat) n) (many (Nat) m)
+    (erased (Nat) s) (erased (Add n m s) sum) (erased (Lt s u62-modulus) _ps) ->
+    (many s is r))
+  (let ((many s1) (erased sum1)) (add n m))
+  (match erased (add-fn n m s1 s sum1 sum) _ ((Refl _ _) s1)))
+
+(def-fns _ $ (many extern u62-sub : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m (Succ n)) le) ->
+    (many (Nat) d) (erased (Add m d n) diff) (erased (Lt d u62-modulus) pd))
+  (let ((many d) (erased diff)) (sub n m le))
+  (values d diff (lt-le-trans d (Succ n) u62-modulus (add-le-left d m n (add-comm m d n diff)) (LtS n u62-modulus pn))))
+
+(def-fns _ $ (many extern u62-mul : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm)
+    (erased (Nat) r) (erased (Mul n m r) prod) (erased (Lt r u62-modulus) _pr) ->
+    (many r is c))
+  (let ((many r1) (erased prod1)) (mul n m))
+  (match erased (mul-fn n m r1 r prod1 prod) _ ((Refl _ _) r1)))
+
+(def-fns _ $ (many extern u62-divmod : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) q) (many (Nat) r) (erased (Nat) k) (erased (Mul q m k) mm) (erased (Add k r n) ad) (erased (Lt r m) rlt)
+    (erased (Lt q u62-modulus) pq) (erased (Lt r u62-modulus) pr))
+  (let ((many q) (many r) (erased k) (erased mm) (erased ad) (erased rlt)) (divmod n m pos))
+  (let ((erased qle)) (lt-le-trans q (Succ k) (Succ n) (mul-le q m k mm pos) (LtS k (Succ n) (add-le-left k r n ad))))
+  (values q r k mm ad rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn)) (lt-trans r m u62-modulus rlt pm)))
+
+(def-fns _ $ (many extern u62-div : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) _pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) q) (erased (Nat) k) (erased (Nat) r) (erased (Mul q m k) mm) (erased (Add k r n) ad) (erased (Lt r m) rlt)
+    (erased (Lt q u62-modulus) pq))
+  (let ((many q) (erased k) (erased r) (erased mm) (erased ad) (erased rlt)) (div n m pos))
+  (let ((erased qle)) (lt-le-trans q (Succ k) (Succ n) (mul-le q m k mm pos) (LtS k (Succ n) (add-le-left k r n ad))))
+  (values q k r mm ad rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn))))
+
+(def-fns _ $ (many extern u62-mod : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) r) (erased (Lt r m) rlt) (erased (Mod n m r) md) (erased (Lt r u62-modulus) pr))
+  (let ((many r) (erased rlt) (erased md)) (nat-mod n m pos))
+  (values r rlt md (lt-trans r m u62-modulus rlt pm)))
+
+(def-fns _ $ (many extern u62-cmp : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (Cmp (Nat) Lt n m) c))
+  (tail (nat-cmp n m)))
+
+(def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (Dec n m) d))
+  (tail (lt-dec n m)))
 
 (def-adts $ (Bin : -> Type)
   enum
@@ -432,6 +491,22 @@
 (def-fns _ $ (many nat-shr at shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
   (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _)) (delegate (shr n k)))
   q)
+
+(def-fns _ $ (many extern u62-shl : (many (Nat) n) (many (Nat) k) (erased (Lt k (Succ sixty-two)) _pk)
+    (erased (Nat) v) (erased (Pow2 k v) pv) (erased (Nat) r) (erased (Mul n v r) prod) (erased (Lt r u62-modulus) _pr) ->
+    (many r is c))
+  (let ((many r1) (erased v1) (erased pv1) (erased prod1)) (shl n k))
+  (let-match erased (pow2-fn k v1 v pv1 pv) (Refl _ _))
+  (match erased (mul-fn n v r1 r prod1 prod) _ ((Refl _ _) r1)))
+
+(def-fns _ $ (many extern u62-shr : (many (Nat) n) (many (Nat) k)
+    (erased (Lt n u62-modulus) pn) (erased (Lt k (Succ sixty-two)) _pk) ->
+    (many (Nat) q) (erased (Nat) v) (erased (Pow2 k v) pv)
+    (erased (Nat) m) (erased (Nat) r) (erased (Mul q v m) mm) (erased (Add m r n) a) (erased (Lt r v) rlt)
+    (erased (Lt q u62-modulus) pq))
+  (let ((many q) (erased v) (erased pv) (erased m) (erased r) (erased mm) (erased a) (erased rlt)) (shr n k))
+  (let ((erased qle)) (lt-le-trans q (Succ m) (Succ n) (mul-le q v m mm (pow2-pos k v pv)) (LtS m (Succ n) (add-le-left m r n a))))
+  (values q v pv m r mm a rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn))))
 
 (def-adts $ (Bit : -> Type)
   enum
@@ -530,6 +605,27 @@
 
 (def-fns _ $ (many extern nat-xor : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise xor-op a b c) p))
   (tail (bitwise xor-op a b)))
+
+(def-fns _ $ (many extern u62-and : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (Nat) r) (erased (Bitwise and-op n m r) p))
+  (tail (nat-and n m)))
+
+(def-fns _ $ (many extern u62-or : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (Nat) r) (erased (Bitwise or-op n m r) p))
+  (tail (nat-or n m)))
+
+(def-fns _ $ (many extern u62-xor : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (Nat) r) (erased (Bitwise xor-op n m r) p))
+  (tail (nat-xor n m)))
+
+(def-fns _ $ (many extern u62-inc : (many (Nat) n) (erased (Lt (Succ n) u62-modulus) _p) ->
+    (many (Succ n) is r))
+  (Succ n))
+
+(def-fns _ $ (many extern u62-dec : (erased (Nat) m) (many (Succ m) is n) (erased (Lt n u62-modulus) _pn) ->
+    (many m is r))
+  (let-match many n (Succ m1))
+  m1)
 
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)
@@ -858,6 +954,15 @@
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
+
+(def-adts
+  ((Immediate : (Type A) -> Type)
+    enum
+    (many ImmU62 : -> (Immediate (U62)))
+    (many ImmU8 : -> (Immediate (U8)))
+    (many ImmChar : -> (Immediate (Char)))
+    (many ImmBool : -> (Immediate (Bool)))
+    (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))))
 
 (def-adts
   ((StrBytes : ((String) s) ((List (U8)) xs) -> Type)

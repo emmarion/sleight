@@ -9,17 +9,16 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 116 tests were
-accepted with OCaml's value, none mismatched, 269 refusals agreed, and
-171 + 216 were refused as unsupported; since then `comptime_call_ctor.sl`
-and `delegate_proof_scope.sl` are accepted too. No test the OCaml suite
+the test expects and the runner's. At the last run 119 tests were
+accepted with OCaml's value, none mismatched, 272 refusals agreed, and
+170 + 213 were refused as unsupported. No test the OCaml suite
 refuses is accepted. Of the tests it accepts, five are refused (four
 need cells, and `thunk_extern_first_class.sl`) and two time out at ten
 seconds: `comptime_tail.sl` finishes in about a minute, and
 `extern_tail.sl` ran out of memory on this session's machine.
 
-`lean/prelude.py` regenerates `lean/prelude.sl` from `lib/prelude.sl`,
-keeping the `extern` marks. It takes several minutes, because it runs
+`lean/prelude.py` regenerates `lean/prelude.sl` and
+`lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
 `--full` on every prefix.
 
 `delegate-of`, `coercible-of` and the `Delegate` type are done, with the
@@ -42,8 +41,9 @@ before checking, and the checker requires it.
    mentions are lifted into leading parameters, and the core has no
    partial application of a type constructor.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
-   unary, so `prelude.py`, which checks each form with `--full`, drops it
-   and everything over `U62`. The stripped run never computes it.
+   unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
+   leaves out it and everything over `U62`. `prelude.sl` has them, since
+   the stripped run never computes it.
 5. **A result typed with the program's own entries** is checked as a
    result of any type (`ArgsTy.anyCons`), so `checked_runs` says nothing
    of its type. The printer finds such types separately (`retTypes`,

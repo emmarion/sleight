@@ -232,6 +232,8 @@ def Prog.runStripped (P : Prog) (pre : Bool) (R : List Tm → List (Option Tm)) 
 
 def prelude : String := include_str "../prelude.sl"
 
+def preludeFull : String := include_str "../prelude-full.sl"
+
 def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
   match P.infer with
   | .error e => .text s!"error: {e}"
@@ -252,7 +254,7 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
         if mode == "--full" then P.run pre true tys else P.runStripped pre tys
 
 def runSource (src : String) (mode : String) (pre : Bool) : List String × Out :=
-  match load ((if pre then prelude ++ "\n(__prelude-end)\n" else "") ++ src) pre with
+  match load ((if pre then (if mode == "--full" || mode == "--unchecked" then preludeFull else prelude) ++ "\n(__prelude-end)\n" else "") ++ src) pre with
   | .error e => ([], .text s!"error: {e}")
   | .ok (P, ws) => (ws, runProg P mode pre)
 
