@@ -41,15 +41,17 @@ partial def Metas.openTm (m : Metas) (t : Tm) (A : Option Tm) : Except String (M
     else match m.typeOf P h with
       | some H => match m.Γ.canon H with
         | .tyCtor ps | .valCtor ps => do
-          let (m, args, _) ← m.openArgs args.toList ps
+          let (m, args, out) ← m.openArgs args.toList ps
           let t := .app h (.ofList args)
-          .ok (m.expect P t A, t)
+          match out, A with
+          | .bind _ R .nil, some A => .ok ({ m with eqs := (R, A) :: m.eqs }, t)
+          | _, _ => .ok (m.expect P t A, t)
         | _ => .ok (m, t)
       | none => .ok (m, t)
   | t => .ok (m.expect P t A, t)
 
 partial def Metas.openArgs (m : Metas) : List Tm → Tm → Except String (Metas × List Tm × Tm)
-  | a :: as, .bind (.is _) e r => do
+  | a :: as, .bind (.is _ _) e r => do
     let a := if a.isHole then e else a
     let (m, as, out) ← m.openArgs as (r.inst a 0)
     .ok ({ m with eqs := (a, e) :: m.eqs }, a :: as, out)
@@ -100,10 +102,39 @@ def inferArgs (Γ : Ctx) (args : List Tm) (tele : Tm) : Except String (List Tm) 
   let (m, args, _) ← ({ Γ, base := Γ.n } : Metas).openArgs P args tele
   m.fill P args
 
-def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := do
-  let (m, t) ← ({ Γ, base := Γ.n } : Metas).openTm P t A
-  let [t] ← m.fill P [t] | .error "cannot infer `_`"
-  .ok t
+
+def Tm.close (i : Nat) : Nat → Tm → Tm
+  | k, .fv j => if j = i then .bv k else .fv j
+  | k, .cons h t => .cons (h.close i k) (t.close i k)
+  | k, .bind m a r => .bind m (a.close i k) (r.close i (k + 1))
+  | k, .app h a => .app (h.close i k) (a.close i k)
+  | k, .tyCtor p => .tyCtor (p.close i k)
+  | k, .valCtor p => .valCtor (p.close i k)
+  | k, .predates A x L => .predates (A.close i k) (x.close i k) (L.close i k)
+  | k, .subterm A a B b => .subterm (A.close i k) (a.close i k) (B.close i k) (b.close i k)
+  | k, .fn l np t => .fn (l.close i k) np (t.close i k)
+  | k, .mtbl u nt ex ph T cs => .mtbl u nt ex ph (T.close i k) (cs.close i k)
+  | _, t => t
+
+mutual
+partial def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := do
+  match t with
+  | .valCtor sig => return .valCtor (← inferTele Γ sig)
+  | .tyCtor ps => return .tyCtor (← inferTele Γ ps)
+  | .fn l np tele => return .fn l np (← inferTele Γ tele)
+  | t =>
+    let (m, t) ← ({ Γ, base := Γ.n } : Metas).openTm P t A
+    let [t] ← m.fill P [t] | .error "cannot infer `_`"
+    .ok t
+
+partial def inferTele (Γ : Ctx) : Tm → Except String Tm
+  | .bind k A r => do
+    let A ← if A.hasHole then inferTerm Γ A (if k matches .ty .. then some .univ else none) else pure A
+    let r ← if r.hasHole then (inferTele (Γ.pushEnt k A) (r.inst (.fv Γ.n) 0)).map (·.close Γ.n 0) else pure r
+    return .bind k A r
+  | t => return t
+
+end
 
 abbrev IM := StateT (List Group) (Except String)
 
@@ -134,6 +165,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
     | .ok ⟨outs, _⟩ => return .call f dec args er ms (← inferCore (Γ.pushTele outs) rets rest)
     | .error _ => return .call f dec args er ms rest
   | .mtch s R brs els er rest => do
+    let R ← inferTele P Γ R
     let (brs, els) ← inferArms Γ s brs els (some R)
     return .mtch s R brs els er (← inferCore (Γ.pushTele R) rets rest)
   | .case s brs els er => do
@@ -155,6 +187,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
   | .defFns gid rest => do
     let some G := (← get)[gid]? | return .defFns gid rest
     let fns ← G.fns.mapM fun F => do
+      let F := { F with tele := ← inferTele P Γ F.tele }
       let (Γb, R) := Γ.body G F
       return { F with body := ← inferCore Γb (some R) F.body }
     modify fun gs => gs.set gid { G with fns }
@@ -167,6 +200,14 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) : Core → IM Core
         | _ => Γ.σ
       | _ => Γ.σ
     return .chk (.opn oe) (.fv m) b (← inferCore { Γo with σ := σ' } rets rest)
+  | .chk .ty a T rest => do
+    if !T.hasHole then return .chk .ty a T (← inferCore Γ rets rest)
+    let (m, T') ← ({ Γ, base := Γ.n } : Metas).openTm P T (some .univ)
+    let m := match checkTm P Γ a with
+      | .ok ⟨A, _⟩ => { m with eqs := (A, T') :: m.eqs }
+      | .error _ => m
+    let [T] ← m.fill P [T'] | throw "cannot infer `_`"
+    return .chk .ty a T (← inferCore Γ rets rest)
   | .chk k a b rest => return .chk k a b (← inferCore Γ rets rest)
   | .absurd body => return .absurd (← inferCore Γ none body)
   | .seq R body rest => return .seq R (← inferCore Γ (some R) body) (← inferCore (Γ.pushTele R) rets rest)
@@ -186,6 +227,9 @@ where
     return (brs, els)
 
 def Prog.infer (P : Prog) : Except String Prog := do
+  let adts ← P.adts.mapM fun D => do
+    return { D with params := ← inferTele P {tys := []} D.params, ctors := ← D.ctors.mapM (inferTele P {tys := []}) }
+  let P := { P with adts }
   let (main, groups) ← (inferCore P {tys := []} none P.main).run P.groups
   return { P with main, groups }
 

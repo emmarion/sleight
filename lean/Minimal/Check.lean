@@ -105,7 +105,7 @@ def checkArgs' (Γ : Ctx) (rules : Bool) : (args tele : Tm) → Res {out // Args
     let ⟨h⟩ ← need (Γ.canon T = Γ.canon A) "argument of the wrong type"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
     .ok ⟨out, .cons ha h hr⟩
-  | .cons a as, .bind (.is _) e r => do
+  | .cons a as, .bind (.is _ _) e r => do
     let ⟨_, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "argument not the term its is entry names"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
@@ -121,9 +121,9 @@ def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ 
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "telescope entry not a type"
     let ⟨hr⟩ ← checkTele' (Γ.push A) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.cons hA hU hr⟩
-  | .bind (.is _) e r => do
+  | .bind (.is _ _) e r => do
     let ⟨_, he⟩ ← checkTm' Γ rules e
-    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false) e) rules (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false) e) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
 termination_by t => (rules.toNat, t.size)

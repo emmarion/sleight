@@ -127,17 +127,31 @@ state. SOUNDNESS.md's invariants appear as:
 ## Syntax
 
 Programs are written in the full language's syntax (DESIGN.md sections
-1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
-full language requires is required. These forms are refused as not
-supported: `unique`; `extern` functions (an `extern` type is an
-ordinary type that records the mark, and only the prelude, or a program
-run with `--no-prelude`, may write it); `_` in place of a
-type (section 50); `at` and `extern` marks on a `def-fns` line; and every form
-not named in this file,
-among them `coerce`, character and string literals, `numeral-of`,
-`prove-literal-lt`, `unary`, macros, pragmas, cells and
-`at`. A file's top level has size one, or ends in a statement and
-produces nothing (section 27).
+1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
+multiplicity the full language requires is required. These forms are
+refused as not supported: `unique`; `extern` functions (an `extern` type
+is an ordinary type that records the mark, and only the prelude, or a
+program run with `--no-prelude`, may write it); `at` and `extern` marks
+on a `def-fns` line; and every form not named in this file, among them
+`coerce`, character and string literals, `numeral-of`,
+`prove-literal-lt`, `unary`, macros, cells and `at`. A file's top level
+has size one, or ends in a statement and produces nothing (section 27).
+
+Every name may be bound, special forms included (section 19); a binder
+of a built-in name warns. A list whose head names a binder in scope is
+an application of it, and a list whose head is itself a list is an
+application of the head's value. `Special` and `Sharing` are built-in
+enums, and a special form's name not bound in scope is its `Special`
+constructor; a head bound to an entry the elaborator knows is a
+`Special` constructor at run position dispatches as that form. A
+`Special` value prints as `%` and the form's name.
+
+Pragmas (section 4): `;! warn`, `;! suppress warn` and `;! restore warn`,
+written where a statement may stand. Warnings are printed to standard
+error, without a position, and do not change the verdict.
+`(compile-warn m)` and `(compile-error m)` take a string literal as `m`;
+`(dump-context)` stops elaboration with an error that names what is in
+scope.
 
 ## Differences from MINIMAL.md
 
@@ -195,8 +209,11 @@ produces nothing (section 27).
   term, nested constructor applications included, become fresh
   entries, solved by first-order unification of the arguments' types
   with the parameters' and of the term's type with what the position
-  expects. An unsolved `_` is an error. The checker then checks the
-  program as filled in, so the inference is not trusted.
+  expects. `_` in place of a type is filled the same way: in a `let`
+  binder's type, against the type of what it binds, and in a telescope
+  entry, from the entry's own type application. An unsolved `_` is an
+  error. The checker then checks the program as filled in, so the
+  inference is not trusted.
 - Numerals (section 45), up to 100000. Each numeral of a program is one entry, made
   at the top level before the first form that mentions it: a `Nat` of
   the prelude, the numeral's `Succ`s at run time, with no rule, so the
@@ -264,7 +281,7 @@ produces nothing (section 27).
 
 ## Shapes chosen here, for the owner to confirm or change
 
-- An `is` entry of a telescope, `(m e is x)`, opens to an entry with the
+- An `is` entry of a telescope, `(m e is x)` or `(subterm m e is x)`, opens to an entry with the
   rule that it is `e`, and is typed through that rule, so its type is
   `e`'s (DESIGN.md section 12). An argument or a result supplied for it
   must canonicalize to `e`. In the core such an entry has no type of its

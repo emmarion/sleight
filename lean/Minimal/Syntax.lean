@@ -2,15 +2,15 @@ namespace Minimal
 
 inductive Ent where
   | ty (mark er : Bool)
-  | is (er : Bool)
+  | is (mark er : Bool)
   deriving DecidableEq, Repr, Inhabited
 
 def Ent.marked : Ent → Bool
   | ty m _ => m
-  | is _ => false
+  | is m _ => m
 
 def Ent.er : Ent → Bool
-  | ty _ e | is e => e
+  | ty _ e | is _ e => e
 
 inductive Tm where
   | fv (i : Nat)

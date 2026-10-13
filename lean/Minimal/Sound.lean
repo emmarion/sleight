@@ -33,7 +33,7 @@ inductive VTy : Tm → Tm → Prop
 inductive VTys : Tm → Tm → Tm → Prop
   | nil : VTys .nil t t
   | cons : VTy v A → VTys vs (r.inst v 0) out → VTys (.cons v vs) (.bind (.ty m e) A r) out
-  | isCons : v = e → VTys vs (r.inst v 0) out → VTys (.cons v vs) (.bind (.is _) e r) out
+  | isCons : v = e → VTys vs (r.inst v 0) out → VTys (.cons v vs) (.bind (.is _ _) e r) out
 
 inductive EnvOK : List Tm → Ctx → Prop
   | mk : ρ.length = Γ.n →
@@ -562,7 +562,7 @@ theorem markedArgs_length : ∀ (t args : Tm), args.isList → (markedArgs t arg
     | cons a as =>
       simp only [markedArgs, marks, Tm.len, Tm.isList] at h ⊢
       have := ihr as h
-      rcases m with ⟨⟨⟩⟩ | _ <;> simp [Ent.marked] <;> omega
+      rcases m with ⟨⟨⟩⟩ | ⟨⟨⟩⟩ <;> simp [Ent.marked] <;> omega
     | _ => simp [markedArgs]
   | _ => intro args _; cases args <;> simp [markedArgs]
 

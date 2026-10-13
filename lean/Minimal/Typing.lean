@@ -34,7 +34,7 @@ def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
   | .ty _ e, A => Γ.push A e
-  | .is e, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
+  | .is _ e, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
 
 def openTele : Ctx → Tm → Nat → Ctx × Tm
   | Γ, .bind k A r, m + 1 => (Γ.pushEnt k A).openTele (r.inst (.fv Γ.n) 0) m
@@ -189,14 +189,14 @@ inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | cons : TmTy Γ a T → Γ.canon T = Γ.canon A → ArgsTy Γ as (r.inst a 0) out →
       ArgsTy Γ (.cons a as) (.bind (.ty m e) A r) out
   | isCons : TmTy Γ a T → Γ.canon a = Γ.canon e → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind (.is _) e r) out
+      ArgsTy Γ (.cons a as) (.bind (.is _ _) e r) out
   | anyCons : TmTy Γ a T → ArgsTy Γ as (r.inst a 0) out → ArgsTy Γ (.cons a as) (.bind (.ty m e) .nil r) out
 
 inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
       TeleOK Γ (.bind (.ty m e) A r)
-  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is _) e r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is _ _) e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop

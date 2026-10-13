@@ -13,8 +13,8 @@ def Prog.natOf (nat : Option Nat) : Tm → Option Nat
   | _ => none
 
 def Prog.name (P : Prog) : Tm → String
-  | .vc d c => ((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}"
-  | .tyc d => ((P.adts[d]?).map (·.name)).getD s!"T{d}"
+  | .vc d c => showName (((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
+  | .tyc d => showName (((P.adts[d]?).map (·.name)).getD s!"T{d}")
   | _ => "_"
 
 mutual
@@ -81,15 +81,18 @@ def Prog.runStripped (P : Prog) : String :=
 
 def prelude : String := include_str "../prelude.sl"
 
-def runSource (src : String) (mode : String) (pre : Bool) : String :=
-  match load ((if pre then prelude ++ "\n(__prelude-end)\n" else "") ++ src) pre with
-  | .error e => s!"error: {e}"
-  | .ok P => match P.infer with
+def runProg (P : Prog) (mode : String) : String :=
+  match P.infer with
   | .error e => s!"error: {e}"
   | .ok P =>
     if mode == "--unchecked" then P.run
     else match checkProg P with
       | .error e => s!"refused: {e}"
       | .ok _ => if mode == "--full" then P.run else P.runStripped
+
+def runSource (src : String) (mode : String) (pre : Bool) : List String × String :=
+  match load ((if pre then prelude ++ "\n(__prelude-end)\n" else "") ++ src) pre with
+  | .error e => ([], s!"error: {e}")
+  | .ok (P, ws) => (ws, runProg P mode)
 
 end Minimal

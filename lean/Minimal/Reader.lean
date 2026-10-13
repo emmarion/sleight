@@ -15,11 +15,53 @@ partial def Sx.numerals : Sx → List Nat
   | .atom a => if !a.isEmpty && a.all Char.isDigit && (a == "0" || !a.startsWith "0") then [a.toNat!] else []
   | .list xs => xs.flatMap Sx.numerals
 
-partial def tokenize (cs : List Char) (acc : List String) : List String :=
+def hexVal (c : Char) : Option Nat :=
+  if c.isDigit then some (c.toNat - '0'.toNat)
+  else if 'a' ≤ c && c ≤ 'f' then some (c.toNat - 'a'.toNat + 10)
+  else if 'A' ≤ c && c ≤ 'F' then some (c.toNat - 'A'.toNat + 10)
+  else none
+
+partial def readStr : List Char → List Char → Except String (List Char × List Char)
+  | [], _ => .error "unterminated string literal"
+  | '"' :: rest, acc => .ok (acc.reverse, rest)
+  | '\\' :: c :: rest, acc => match c with
+    | 'n' => readStr rest ('\n' :: acc)
+    | 't' => readStr rest ('\t' :: acc)
+    | '"' => readStr rest ('"' :: acc)
+    | '\\' => readStr rest ('\\' :: acc)
+    | 'x' => match rest with
+      | a :: b :: rest => match hexVal a, hexVal b with
+        | some x, some y => readStr rest (Char.ofNat (16 * x + y) :: acc)
+        | _, _ => .error "malformed \\x escape"
+      | _ => .error "malformed \\x escape"
+    | c => .error s!"unknown escape \\{c}"
+  | c :: rest, acc => readStr rest (c :: acc)
+
+def specialNames : List String :=
+  ["let", "def-lvl", "def-fns", "def-unique", "def-adts", "comptime-match", "let-match", "open-adt", "slot-self",
+   "open-at-fn", "unary", "dump-context", "compile-error", "compile-warn", "Fn", "UniqueFn", "TyCtor", "ValCtor",
+   "Matchable", "Cell", "match", "values", "coerce", "share", "cell-alloc", "cell-write", "cell-match",
+   "open-absurd", "world-do", "settled-of", "settled-type", "settled-erase", "settled-mult", "settled-value",
+   "gensym", "settled-eq", "intern-nat", "intern-char", "intern-string", "resolve", "read-file", "at",
+   "prove-subterm", "prove-predates", "predates-trans", "subterm-trans", "predates-subterm", "gensym-unique",
+   "coercible-refl", "coercible-sym", "coercible-trans", "coercible-share", "coercible-wrap", "coercible-ctor",
+   "coercible-of", "prove-literal-lt", "level-of", "matchable-of", "delegate-of", "numeral-of", "slot-of",
+   "at-fn-of", "erased", "many", "unique", ":", "is", "->", "subterm", "predates", "enum", "union", "newtype",
+   "extern", "absurd", "tail", "notail", "delegate", "else"]
+
+def plainName (s : String) : Bool :=
+  !s.isEmpty && s != "_" && s != "$" && !s.all Char.isDigit && !s.startsWith "#" && !s.startsWith "\"" &&
+    !s.startsWith "__" && s.all fun c => !c.isWhitespace && c != '(' && c != ')' && c != ';' && 32 < c.toNat && c.toNat < 127
+
+def rawName (s : String) : String := if plainName s then s else "\x01" ++ s
+
+partial def tokenize (cs : List Char) (acc : List String) : Except String (List String) :=
   match cs with
-  | [] => acc.reverse
-  | ';' :: '!' :: _ => (";!" :: acc).reverse
+  | [] => .ok acc.reverse
+  | ';' :: '!' :: rest => let l := rest.takeWhile (· != '\n'); tokenize (rest.drop l.length) ((";!" ++ String.ofList l) :: acc)
   | ';' :: rest => tokenize (rest.dropWhile (· != '\n')) acc
+  | '"' :: rest => do let (s, rest) ← readStr rest []; tokenize rest (("\"" ++ String.ofList s) :: acc)
+  | '#' :: '"' :: rest => do let (s, rest) ← readStr rest []; tokenize rest (rawName (String.ofList s) :: acc)
   | c :: rest =>
     if c.isWhitespace then tokenize rest acc
     else if c == '(' || c == ')' then tokenize rest (c.toString :: acc)
@@ -27,9 +69,10 @@ partial def tokenize (cs : List Char) (acc : List String) : List String :=
       let w := cs.takeWhile fun c => !c.isWhitespace && c != '(' && c != ')' && c != ';'
       tokenize (cs.drop w.length) (String.ofList w :: acc)
 
+def isPragma (s : String) : Bool := s.startsWith ";!"
+
 partial def parseItems : List String → Except String (List Sx × List String)
   | [] => .ok ([], [])
-  | ";!" :: _ => .error "pragmas are not supported"
   | ")" :: rest => .ok ([], ")" :: rest)
   | "(" :: rest => do
     let (xs, rest) ← parseItems rest
@@ -41,8 +84,14 @@ partial def parseItems : List String → Except String (List Sx × List String)
     .ok ([.list xs], rest)
   | a :: rest => do let (ys, rest) ← parseItems rest; .ok (.atom a :: ys, rest)
 
+def isPragmaSx : Sx → Bool
+  | .atom a => isPragma a
+  | _ => false
+
+def bytes (s : String) : List Char := s.toUTF8.toList.map (Char.ofNat ·.toNat)
+
 def parse (src : String) : Except String (List Sx) := do
-  match ← parseItems (tokenize src.toList []) with
+  match ← parseItems (← tokenize (bytes src) []) with
   | (xs, []) => .ok xs
   | _ => .error "unbalanced )"
 
@@ -73,13 +122,35 @@ structure ESt where
   opened : List Nat := []
   dele : Option (Nat × List (Nat × Bool)) := none
   delegated : Bool := false
+  warns : List String := []
+  pwarn : List (Tm × String) := []
+  supp : List (String × Option Tm × Nat) := []
+  settled : List (Nat × Tm) := []
+  special : Nat := 0
+  depthTop : Bool := true
 
 abbrev M := StateT ESt (Except String)
 
-def keywords : List String :=
-  ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
-   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "else",
-   "erased", "many", "unique", "absurd", "Fn", "Type", "Level", "Predates", "Subterm"]
+def warn (msg : String) : M Unit := modify fun st => { st with warns := st.warns ++ [msg] }
+
+def warnUse (t : Tm) (kind shown : String) : M Unit := do
+  let st ← get
+  if st.inPrelude then return
+  let some (_, msg) := st.pwarn.find? (·.1 == t) | return
+  match st.supp.findIdx? (·.2.1 == some t) with
+  | some k => set { st with supp := st.supp.modify k fun (x, y, n) => (x, y, n + 1) }
+  | none => warn s!"{kind} of `{shown}`: {msg}"
+
+def keywords : List String := specialNames ++ ["Type", "Level", "Predates", "Subterm"]
+
+def showName (x : String) : String :=
+  if x.startsWith "\x01" then
+    "#\"" ++ String.join ((x.toList.drop 1).map fun c =>
+      if c == '"' || c == '\\' then "\\" ++ c.toString
+      else if 32 ≤ c.toNat && c.toNat < 127 then c.toString
+      else "\\x" ++ String.ofList (Nat.toDigits 16 c.toNat |>.reverse |>.take 2 |>.reverse |> fun ds =>
+        if ds.length < 2 then '0' :: ds else ds)) ++ "\""
+  else x
 
 abbrev Scope := List (String × Ref)
 
@@ -95,7 +166,10 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
     match st.adts.lookup x, st.ctors.lookup x with
     | some d, _ => first d; pure (.tyc d)
     | _, some (d, c) => first d; pure (.vc d c)
-    | _, _ => throw s!"unbound name {x}"
+    | _, _ =>
+      match specialNames.idxOf? x with
+      | some c => if st.decls.length > 0 then pure (.vc st.special c) else throw s!"unbound name {showName x}"
+      | none => throw s!"unbound name {showName x}"
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
   (sc.findSome? fun
@@ -134,9 +208,12 @@ def splitArrow (xs : List Sx) : M (List Sx × List Sx) :=
 
 def name : Sx → M String
   | .atom x =>
-    if x ∈ keywords || x.all Char.isDigit || x.startsWith "\"" || x.startsWith "#\\" then throw s!"{x} is not a name"
+    if x ∈ ["erased", "many", "unique", "is", ":", "->", "$"] || x.all Char.isDigit || x.startsWith "\"" ||
+        x.startsWith "#\\" || isPragma x then throw s!"{x} is not a name"
     else if x.startsWith "__" then throw s!"{x} begins with __, which is reserved"
-    else pure x
+    else do
+      if x ∈ keywords then warn s!"declaration of `{x}` shadows a built-in"
+      pure x
   | _ => throw "malformed name"
 
 def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
@@ -145,7 +222,7 @@ def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
     let (er, xs) ← splitMult need xs
     match xs with
-    | [e, .atom "is", x] => if sub then throw "a subterm is entry is not supported" else pure (.is er, e, [← name x])
+    | [e, .atom "is", x] => pure (.is sub er, e, [← name x])
     | T :: x :: xs => pure (.ty sub er, T, ← (x :: xs).mapM name)
     | _ => throw "malformed telescope entry"
   | _ => throw "malformed telescope entry"
@@ -155,7 +232,7 @@ def entryErs (need : Bool) (es : List Sx) : M (List (String × Bool)) :=
 
 def Ent.withEr : Ent → Bool → Ent
   | .ty m _, e => .ty m e
-  | .is _, e => .is e
+  | .is m _, e => .is m e
 
 def setErs : Tm → List Bool → Tm
   | .bind k A r, e :: es => .bind (k.withEr e) A (setErs r es)
@@ -165,9 +242,44 @@ def fieldErs : Tm → List Bool
   | .bind k _ r@(.bind ..) => k.er :: fieldErs r
   | _ => []
 
+def resolveHead (sc : Scope) : Sx → M Sx
+  | e@(.list (.atom h :: args)) => do
+    let st ← get
+    match sc.lookup h with
+    | some r =>
+      let i := match r with | .fv i | .fn i _ _ | .ctor i => some i | _ => none
+      match i.bind (st.settled.lookup ·) with
+      | some (.vc d c) =>
+        if d == st.special && st.decls.length > 0 then
+          let s := specialNames.getD c ""
+          if (sc.lookup s).isSome then throw s!"the special form {s} is shadowed where {showName h} dispatches to it"
+          return .list (.atom s :: args)
+        else if h ∈ keywords then return .list (.list [.atom "\x03var", .atom h] :: args) else return e
+      | _ => if h ∈ keywords then return .list (.list [.atom "\x03var", .atom h] :: args) else return e
+    | none => return e
+  | e => return e
+
+def compileMsg (_ : Scope) : Sx → M String
+  | .atom a => if a.startsWith "\"" then pure (String.ofList (a.toList.drop 1)) else
+      throw "the message of compile-error or compile-warn is not a Settled String"
+  | _ => throw "the message of compile-error or compile-warn is not a Settled String"
+
+def dumpContext (sc : Scope) : String :=
+  "`dump-context` stops elaboration here and reports what the checker knows; in scope: " ++
+    ", ".intercalate ((sc.map (showName ·.1)).filter (!·.startsWith " ")).eraseDups
+
 mutual
-partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
+partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
+  match ← resolveHead sc e with
+  | .list [.atom "\x03var", .atom x] => look sc depth x
+  | .list (.list [.atom "\x03var", .atom x] :: args) =>
+    return .app (← look sc depth x) (.ofList (← args.mapM (elabTm sc depth)))
+  | e => elabTm' sc depth e
+
+partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
   | .atom "Type" => pure .univ
+  | .list [.atom "compile-error", m] => do throw (← compileMsg sc m)
+  | .list [.atom "dump-context"] => throw (dumpContext sc)
   | e@(.atom x) => match e.numerals with
     | [n] => do match (← get).lits.lookup n with
       | some i => pure (.fv i)
@@ -282,7 +394,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     let sigs ← cs.mapM fun (_, _, fs, ret) => elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]])
     pure (inline params, sigs.map inline)
   let raw ← elabSigs
-  let mut ids : List Nat := (raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).eraseDups
+  let mut ids : List Nat := ((raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).filter (· < holeBase)).eraseDups
   for _ in List.range (st.n + 1) do
     let more ← ids.flatMapM fun i => match st.known.lookup i with
       | some T => pure (inline T).fvs
@@ -393,9 +505,90 @@ def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × CtorInfo × Scope)
     return (names.length, ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys ci.sig))).reverse ++ sc)
   | _ => throw "malformed pattern"
 
+def erasedPos (want : List Bool) : M Bool := return (← get).ghost || (!want.isEmpty && want.all id)
+
+def bindTemp (sc : Scope) (t : Tm) (er : Bool) : M (List Stmt × Ref) := do
+  match t with
+  | .fv i => return ([], match (← get).inl.lookup i with | some (.vc ..) | some (.tyc _) => .ctor i | _ => refOf sc i)
+  | _ => do
+    let [j] ← fresh [er] | throw "fresh"
+    note j t true
+    return ([.prim (.tm t) er], match t with | .vc .. | .tyc _ => .ctor j | _ => .fv j)
+
+def warnMatch (ks : List Tm) : M Unit := do
+  let st ← get
+  if let some d := ks.findSome? (fun | .vc d _ => some d | _ => none) then
+    warnUse (.tyc d) "match on" (showName ((st.decls[d]?).map (·.name)).get!)
+
+def warnTarget (sc : Scope) (x : String) : M Tm := do
+  let st ← get
+  let fnTy (i : Nat) := match st.known.lookup i with | some (.fn ..) => true | _ => false
+  match sc.lookup x with
+  | some (.fn i _ _) => return .fv i
+  | some (.fv i) | some (.ctor i) => match st.inl.lookup i with
+    | some (.vc d c) => return .vc d c
+    | some (.tyc d) => return .tyc d
+    | _ => if fnTy i then return .fv i else throw s!"`;! warn` names `{showName x}`, which is neither a constructor nor a function"
+  | some _ => throw s!"`;! warn` names `{showName x}`, which is neither a constructor nor a function"
+  | none => match st.adts.lookup x, st.ctors.lookup x with
+    | some d, _ => return .tyc d
+    | _, some (d, c) => return .vc d c
+    | _, _ => throw s!"`;! warn` names `{showName x}`, which {if x ∈ specialNames then "is neither a constructor nor a function" else "is not in scope"}"
+
+def pragmaWords (p : String) : Except String (List String × String) := do
+  let cs := (p.toList.drop 2).dropWhile (· == ' ')
+  let w1 := cs.takeWhile (· != ' ')
+  let cs := (cs.drop w1.length).dropWhile (· == ' ')
+  if String.ofList w1 != "warn" && !["suppress", "restore"].contains (String.ofList w1) then
+    return ([String.ofList w1], "")
+  let w := if String.ofList w1 == "warn" then [] else cs.takeWhile (· != ' ')
+  let (w2, cs) := (w, (cs.drop w.length).dropWhile (· == ' '))
+  let (nm, rest) ← match cs with
+    | '#' :: '"' :: r => do let (s, r) ← readStr r []; pure (rawName (String.ofList s), r)
+    | _ => let w := cs.takeWhile (· != ' '); pure (String.ofList w, cs.drop w.length)
+  let words := [String.ofList w1] ++ (if w2.isEmpty then [] else [String.ofList w2]) ++ (if nm.isEmpty then [] else [nm])
+  return (words, (String.ofList rest).trimAscii.toString)
+
+def pragma (sc : Scope) (p : String) : M Unit := do
+  let (ws, msg) ← match pragmaWords p with | .ok r => pure r | .error e => throw e
+  let st ← get
+  match ws with
+  | ["warn", x] =>
+    unless st.depthTop do throw "`;! warn` must be written between top-level forms"
+    if msg.isEmpty then throw s!"`;! warn` for `{showName x}` has no message"
+    let t ← warnTarget sc x
+    if st.pwarn.any (·.1 == t) then throw s!"a second `;! warn` for `{showName x}`"
+    modify fun st => { st with pwarn := (t, msg) :: st.pwarn }
+  | ["warn"] => throw "`;! warn` names nothing"
+  | ["suppress", "warn", x] =>
+    if st.supp.any (·.1 == x) then throw s!"a second `;! suppress warn` for `{showName x}` is already open"
+    let t ← try some <$> warnTarget sc x catch _ => pure none
+    modify fun st => { st with supp := (x, t, 0) :: st.supp }
+  | ["restore", "warn", x] =>
+    match st.supp.find? (·.1 == x) with
+    | none => throw s!"`;! restore warn` for `{showName x}` has no open `;! suppress warn`"
+    | some (_, _, n) =>
+      if n == 0 then warn s!"`;! suppress warn` for `{showName x}` silenced nothing"
+      modify fun st => { st with supp := st.supp.filter (·.1 != x) }
+  | w :: _ => throw s!"unknown pragma `{w}`"
+  | [] => throw "unknown pragma ``"
+
 mutual
-partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
+partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) (e : Sx) : M (List Stmt × List Tm) := do
+  match ← resolveHead sc e with
+  | .list [.atom "\x03var", .atom x] => return ([], [← look sc 0 x])
+  | .list (hd@(.list _) :: args) => do
+    let (ss, ts) ← withTail false (elabExpr sc [(← erasedPos want)] none hd)
+    let [t] := ts | throw "a computed head has one value"
+    let (ss2, r) ← bindTemp sc t (← erasedPos want)
+    let (ss3, ts) ← elabExpr ((" head", r) :: sc) want exp (.list (.atom " head" :: args))
+    return (ss ++ ss2 ++ ss3, ts)
+  | e => elabExpr' sc want exp e
+
+partial def elabExpr' (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
   | .list (.atom "values" :: es) => elabArgs sc es want
+  | .list [.atom "compile-error", m] => do throw (← compileMsg sc m)
+  | .list [.atom "dump-context"] => throw (dumpContext sc)
   | e@(.list (.atom h :: args)) => do
     let st ← get
     if h ∈ ["prove-subterm", "prove-predates", "predates-trans", "subterm-trans", "predates-subterm"] then
@@ -453,11 +646,14 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
       | _, some (d, c) =>
         let sig := ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
+        unless ← erasedPos want do warnUse (.vc d c) "application" (showName h)
         let (ss, ts) ← elabArgs sc args ((fieldErs sig).drop ((st.lifts.lookup d).getD []).length); return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
       | _, _ =>
-        unless h ∈ keywords ++ ["TyCtor", "ValCtor", "Matchable"] do throw s!"unbound name {h}"
+        unless h ∈ ["Fn", "TyCtor", "ValCtor", "Matchable", "Level", "Predates", "Subterm", "level-of"] do
+          throw (if h ∈ specialNames then s!"{h} is not supported here" else s!"unbound name {showName h}")
         return ([], [← elabTm sc 0 e])
     else if let some (.ctor i) := sc.lookup h then
+      unless ← erasedPos want do if let some t := st.inl.lookup i then warnUse t "application" (showName h)
       let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
     else do
       let f ← look sc 0 h
@@ -479,6 +675,7 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
               pure (Dec.subterm pos ps.head!, ss, args.eraseIdx pos)
             | _ => throw "unreachable"
           | none => pure (Dec.none, [], args)
+      unless ← erasedPos want do warnUse f "call" (showName h)
       let (ss, ts) ← elabArgs sc args (match sc.lookup h with | some (.fn _ _ ms) => ms | _ => [])
       let outs ← fresh want
       let known := (← get).known
@@ -486,7 +683,7 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
         let _ ← (ts ++ outs.map Tm.fv).zipIdx.foldlM (fun t (a, k) => match t with
           | .bind k' A r => do
             if ts.length ≤ k then
-              note (outs.getD (k - ts.length) 0) A (k' matches .is _)
+              note (outs.getD (k - ts.length) 0) A (k' matches .is _ _)
             pure (r.inst a 0)
           | t => pure t) tele
       return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want], outs.map .fv)
@@ -544,6 +741,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
   let rms := if er && !real then List.replicate R0.len true else want
   let R := setErs R0 rms
   let (out, els) ← elabArms sc er (er && !real) rms (some R) brs
+  unless er || (← get).ghost do warnMatch (out.map (·.2.2.1))
   let outs ← fresh rms
   return (ss ++ [if real then .seq R (.case s out els true) else .mtch s R out els er], outs.map .fv)
 
@@ -552,8 +750,19 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) (i
   let ss ← match items with
     | e :: _ => if (← get).top then internLits e else pure []
     | [] => pure []
-  let (ss2, ts) ← elabSeq' sc want exp items
-  return (ss ++ ss2, ts)
+  match items with
+  | .atom a :: rest =>
+    if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
+    else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
+  | e :: rest =>
+    let e ← resolveHead sc e
+    if !rest.isEmpty && rest.all isPragmaSx then
+      let (ss2, ts) ← elabSeq' sc want exp [e]
+      for p in rest do if let .atom a := p then pragma sc a
+      return (ss ++ ss2, ts)
+    let (ss2, ts) ← elabSeq' sc want exp (e :: rest)
+    return (ss ++ ss2, ts)
+  | [] => let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
 
 partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
@@ -593,10 +802,10 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
         | _ => throw "malformed let binder"
       | _ => throw "malformed let binder"
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
-    let (r0, f0) := ((← get).rhs, (← get).refute)
-    modify fun st => { st with rhs := true, refute := false }
+    let (r0, f0, d0) := ((← get).rhs, (← get).refute, (← get).depthTop)
+    modify fun st => { st with rhs := true, refute := false, depthTop := false }
     let (ss, ts) ← withTail ((← get).tail && returnsBinders ((bs.filter (!·.2.1)).map (·.1)) want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
-    modify fun st => { st with rhs := r0, refute := f0 }
+    modify fun st => { st with rhs := r0, refute := f0, depthTop := d0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
     let mut sc' := sc
@@ -630,6 +839,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       throw "a let-match with more than one real branch outside a body"
     let (out, els) ← elabArms sc er false want exp brs 1
     let (n, ci, fsc) ← openPattern sc er pat
+    unless er || (← get).ghost do warnMatch (ci.k :: out.map (·.2.2.1))
     if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
     if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
     let (ss2, ts) ← elabSeq fsc want exp rest
@@ -675,7 +885,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       let pents ← entryErs true ps
       let pids ← fresh (pents.map (·.2))
       let _ ← pids.foldlM (fun t i => match t with
-        | .bind (.is _) e r => do note i e true; pure (r.inst (.fv i) 0)
+        | .bind (.is _ _) e r => do note i e true; pure (r.inst (.fv i) 0)
         | .bind _ A r => do note i A; pure (r.inst (.fv i) 0)
         | t => pure t) tele
       let rents ← entryErs true rs
@@ -692,6 +902,12 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
+  | .list [.atom "compile-warn", m] :: rest => do
+    warn (← compileMsg sc m)
+    elabSeq sc want exp rest
+  | e@(.list (.atom "compile-error" :: _)) :: _ | e@(.list (.atom "dump-context" :: _)) :: _ => do
+    let _ ← elabExpr sc want exp e
+    throw "unreachable"
   | e :: _ => match e with
     | .list (.atom h :: _) =>
       if ["comptime-match", "def-unique", "compile-warn", "compile-error", "dump-context", "def-opaque",
@@ -702,23 +918,33 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none)
     (refute : Bool := false) : M Core := do
   let (r0, f0, a0, c0, o0) := ((← get).rhs, (← get).refute, (← get).adts, (← get).ctors, (← get).opened)
-  modify fun st => { st with rhs := false, refute }
+  let d0 := (← get).depthTop
+  modify fun st => { st with rhs := false, refute, depthTop := false }
   let (ss, ts) ← elabSeq sc want exp items
-  modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0, opened := o0 }
+  modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0, opened := o0, depthTop := d0 }
   return close ss ts
 end
 
-def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt"]
+def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt", "def-unique",
+  "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn"]
 
-def elabProgram (items : List Sx) (pre : Bool) : Except String Prog := do
-  let stmt := match items.getLast? with
+def nullary (name : String) (d : Nat) (cs : List String) : Adt :=
+  { params := .nil, ctors := cs.map fun _ => .bind (.ty false false) (.app (.tyc d) .nil) .nil, name, ctorNames := cs }
+
+def builtins : ESt :=
+  { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" 1 ["Unique", "Shared"]],
+    adts := [("Sharing", 1), ("Special", 0)], ctors := [("Shared", 1, 1), ("Unique", 1, 0)], special := 0 }
+
+def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List String) := do
+  let stmt := match (items.filter (!isPragmaSx ·)).getLast? with
     | some (.list (.atom h :: _)) => statements.contains h
     | _ => false
   let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none
-    (if stmt then items ++ [.list [.atom "values"]] else items)).run { pre }
+    (if stmt then items ++ [.list [.atom "values"]] else items)).run { builtins with pre }
   unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
-  return { adts := st.decls, groups := st.groups, main := close ss ts }
+  let ws := st.warns ++ (st.supp.filter (·.2.2 == 0)).map fun (x, _, _) => s!"`;! suppress warn` for `{x}` silenced nothing"
+  return ({ adts := st.decls, groups := st.groups, main := close ss ts }, ws)
 
-def load (src : String) (pre : Bool := true) : Except String Prog := do elabProgram (← parse src) pre
+def load (src : String) (pre : Bool := true) : Except String (Prog × List String) := do elabProgram (← parse src) pre
 
 end Minimal
