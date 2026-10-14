@@ -186,6 +186,7 @@ structure ESt where
   groups : List Group := []
   opened : List Nat := []
   dele : Option (Nat × List (Nat × Bool)) := none
+  deleBase : Nat := 0
   delegated : Bool := false
   deles : List (Nat × Nat) := []
   delePf : List (Nat × Nat) := []
@@ -919,12 +920,34 @@ def withTail {α : Type} (b : Bool) (x : M α) : M α := do
   modify fun st => { st with tail := t0 }
   return r
 
+def uncoerce : Sx → Sx
+  | .list [.atom "coerce", e, _] => uncoerce e
+  | e => e
+
+def renamesOf (bs : List Sx) : List Sx → Option (List (String × String))
+  | [v] =>
+    let srcs := match uncoerce v with
+      | .list (.atom "values" :: es) => es.map uncoerce
+      | e => [e]
+    if srcs.length != bs.length then none else
+    (bs.zip srcs).foldlM (fun acc (b, e) => match b, e with
+      | .list (.atom "erased" :: _), _ => some acc
+      | .list xs, .atom y => match xs.getLast? with
+        | some (.atom x) => some ((y, x) :: acc)
+        | _ => none
+      | _, _ => none) []
+  | _ => none
+
 def returnsBinders (xs : List String) (want : List Mode) : List Sx → Bool
-  | [.list (.atom "values" :: es)] => (es.zip want).filterMap (fun (e, w) => if w.isEr then none else some e) == xs.map .atom
+  | [.list (.atom "values" :: es)] =>
+    (es.zip want).filterMap (fun (e, w) => if w.isEr then none else some (uncoerce e)) == xs.map .atom
   | [.list [.atom "coerce", e, _]] => returnsBinders xs want [e]
   | [e] => !(want.head?.getD .er).isEr && xs == [e.show]
-  | .list (.atom "let" :: .list bs :: _) :: rest =>
-    bs.all (· matches .list (.atom "erased" :: _)) && returnsBinders xs want rest
+  | .list (.atom "let" :: .list bs :: items) :: rest =>
+    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders xs want rest
+    else match renamesOf bs items with
+      | some rn => returnsBinders (xs.map fun x => (rn.lookup x).getD x) want rest
+      | none => false
   | _ => false
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
@@ -1999,7 +2022,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         | _ => false
       let i ← match t, token with
         | .fv i, false => do
-          if !er then ss := ss ++ [.chk .rt (.fv i) .nil]
+          if !er && !(st.dele.any fun (tg, _) => i < st.deleBase && i != tg) then ss := ss ++ [.chk .rt (.fv i) .nil]
           pure i
         | _, _ => do
           let [j] ← freshMd [md] | throw "fresh"
@@ -2217,6 +2240,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       let _ ← bindTele pids tele
       let utys := ((ms.zip (teleTys tele)).filter (·.1 != .hid)).map (·.2)
       modify fun st => { st with dele := tgt.map (·, upids.zip (pents.map (·.2))), delegated := false }
+      modify fun st => { st with deleBase := base + sigs.length }
       let bad0 := (← get).atBad
       modify fun st => { st with atBad := false }
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (upids.zipWith entRef utys) |>.reverse |>.append (if isU then sc else fnsc))
@@ -2290,6 +2314,11 @@ partial def elabBody (sc : Scope) (want : List Mode) (items : List Sx) (exp : Op
   let d0 := (← get).depthTop
   modify fun st => { st with rhs := false, refute, depthTop := false }
   let (ss, ts) ← elabSeq sc want exp items
+  let (ss, ts) ← if (← get).dele.isNone then pure (ss, ts) else
+    (ts.zip (want ++ List.replicate ts.length .many)).foldlM (fun (ss, ts) (t, w) => do
+      if !w.isEr || t matches .fv _ then return (ss, ts ++ [t])
+      let [i] ← fresh [true] | throw "fresh"
+      return (ss ++ [.prim (.tm t) true], ts ++ [.fv i])) (ss, [])
   modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0, opened := o0, depthTop := d0 }
   return close ss ts
 end
