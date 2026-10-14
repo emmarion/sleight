@@ -1,0 +1,10 @@
+name = "bench"
+defaultTargets = ["bench"]
+
+[[require]]
+name = "heapsort"
+path = "../.."
+
+[[lean_exe]]
+name = "bench"
+root = "Main"

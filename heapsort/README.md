@@ -52,6 +52,9 @@ round running every passing session's build once, in turn, with nothing
 else running. `fastest_passing_session` is the run's passing session with
 the lowest median. Differences of a few milliseconds are within the noise.
 
+`bench/` times all of these, and C, Lean and Idris 2 heap sorts, on
+`perf.sl`'s input; its README has the results.
+
 `ats/` holds an in-place heap sort in ATS2 (ATS/Postiats 0.4.2,
 `apt-get install ats2-lang`) whose type states that the output is a
 permutation of the input and sorted, as checked by `patsopt`:
