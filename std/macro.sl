@@ -9,15 +9,24 @@
   (let ((unique mw1) (many h)) (intern-string mw s))
   (values mw1 (RawSettled p _ _ _ h)))
 
-(let ((erased nat-type)) (Nat))
-
-(def-fns _ $ (many arg-nat : (unique (MacroWorld) mw) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (Nat)) n))
-  (let-match many r (RawSettled p m T t c) (else (values mw (None _))))
+(def-fns _ $ (many arg-value : (unique (MacroWorld) mw) (many (Raw) r) (erased Type T) (many (Settled (MErased) Type T) th) ->
+    (unique (MacroWorld) mw2 at mw) (many (Maybe T) v))
+  (let-match many r (RawSettled p m A a c) (else (values mw (None _))))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw (None _))))
-  (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased nat-type)))
+  (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) th))
   (let-match many e (Some _ j) ((None _) (values mw1 (None _))))
   (let-match erased j (JMRefl _ _))
   (values mw1 (Some _ $ settled-value _ _ c)))
+
+(let ((erased nat-type)) (Nat))
+
+(def-fns _ $ (many arg-nat : (unique (MacroWorld) mw) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (Nat)) n))
+  (arg-value mw r _ (settled-of erased nat-type)))
+
+(let ((erased arg-string-type)) (String))
+
+(def-fns _ $ (many arg-string : (unique (MacroWorld) mw) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (String)) s))
+  (arg-value mw r _ (settled-of erased arg-string-type)))
 
 (def-fns _ $ (many form : (many (Pos) p) (many (List $ Raw) items) -> (many (Raw) r))
   (RawList p items))
@@ -54,7 +63,7 @@
         (let-match many (notail $ same-raw x y) (BTrue) ((BFalse) (BFalse)))
         (tail $ same-raws xr yr)))))
 
-(def-fns _ $ (many ref : (many (Pos) p) (erased Type T) (erased T t) (many (Settled (MErased) T t) h) -> (many (Raw) r))
+(def-fns _ $ (many ref : (many (Pos) p) (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (many (Raw) r))
   (RawSettled p _ _ _ h))
 
 (def-fns _ $ (many app : (many (Pos) p) (many (Raw) f) (many (List $ Raw) args) -> (many (Raw) r))

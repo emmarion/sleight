@@ -3473,7 +3473,7 @@
   (type-in _ _ bnd tb x))
 
 (def-fns _ $ (many minted-type : (many (Env) env) (many (Nat) m) -> (many (Term) t))
-  (match many (is-literal env m) _ ((BTrue) (type-of env m)) ((BFalse) (trusted-type env m))))
+  (match many (is-literal env m) _ ((BTrue) (type-of (trusted-snapshot env) m)) ((BFalse) (trusted-type env m))))
 (def-fns _ $ (many minted-is : (many (Nat) m) -> (many (Term) t))
   (TVar m))
 

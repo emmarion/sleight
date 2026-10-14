@@ -58,7 +58,7 @@
 
 (def-fns _ $ (many lemma-app : (many (Pos) p) (erased Type T) (erased T t) (many (Settled (MErased) T t) h)
     (many (Nat) k) (many (List $ Raw) args) -> (many (Raw) r))
-  (app p (ref p _ _ h) $ wilds k p args))
+  (app p (ref p _ _ _ h) $ wilds k p args))
 
 (def-fns _ $ (many steps : (subterm many (Nat) k) (erased Type T) (erased T t) (many (Settled (MErased) T t) h)
     (many (Raw) proof) (many (Pos) p) -> (many (Raw) r))
@@ -155,7 +155,7 @@
 
 (def-fns _ $ (many prove-lt : (many (List (Edge)) edges) (many (Raw) x) (many (Nat) a) (many (Raw) z) (many (Nat) b) (many (Pos) p) ->
     (many (Maybe (Raw)) proof))
-  (reach (edge-count edges) edges edges (MkEdge x 0 1 (app p (ref p _ _ (settled-of erased lt-succ)) $ one x) x) (one x) z a b p))
+  (reach (edge-count edges) edges edges (MkEdge x 0 1 (app p (ref p _ _ _ (settled-of erased lt-succ)) $ one x) x) (one x) z a b p))
 
 (def-fns _ $ (many cycle : (many (List (Edge)) edges) (subterm many (List (Edge)) todo) (many (Pos) p) -> (many (Maybe (Raw)) proof))
   (let-match many todo (Cons _ e rest) ((Nil _) (None _)))

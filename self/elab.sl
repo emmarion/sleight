@@ -2438,7 +2438,7 @@
   (let ((erased hb) (many blk)) $ env-block env x)
   (let-match many blk (Some _ b) ((None _) (None _)))
   (let-match many b (BFn _ _ _ _) (else (None _)))
-  (let-match many (trusted-former env m) (BFalse) ((BTrue) (None _)))
+  (let-match many (and (not $ is-literal env m) $ trusted-former env m) (BFalse) ((BTrue) (None _)))
   (let-match many (lookup (env-set-scope env $ env-prelude env) $ NSrc "Macro") (Some _ mt) ((None _) (None _)))
   (match many (term-eq (minted-type env m) $ TApp (TVar mt) $ Nil _) _
     ((BTrue) (Some _ x))
@@ -5424,7 +5424,8 @@
           (let-match many hh (MkHoisted _ _ c p hc))
           (values ew3 env2 (first-res _ _ rs lock) c p (coercible-code _ (Cons _ pos (Nil _)) (Many) hc)))))
     (let ((many env3) (many hr2) (many hid)) (prepare-argument env2 (res-erasure hr) hr $ BTrue))
-    (values ew1 (settled-from _ _ env3 hc hid) hr2 ctxh hpre hc))
+    (let ((many env4)) $ match many (res-term hr) (((Env) _)) ((TVar y) (match many (env-run-pos env3) (((Env) _)) ((BTrue) env3) ((BFalse) (forward-binder env3 hid y $ res-erasure hr)))) (else env3))
+    (values ew1 (settled-from _ _ env4 hc hid) hr2 ctxh hpre hc))
 
   ((many settle-item : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (Syn) item) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Multiplicity) pos) -> (unique (ElabWorld) ewr at ew)
       (many (Env) r) (many (Maybe $ Syn) item2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) pre))
