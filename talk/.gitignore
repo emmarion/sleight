@@ -1,0 +1,11 @@
+build/node_modules/
+build/package-lock.json
+build/slides.marp.md
+build/slides.html
+build/print.html
+build/measure.html
+build/dom.html
+slides.pdf
+__pycache__/
+chart/*.svg
+chart/*.png
