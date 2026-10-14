@@ -2,50 +2,50 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23361871.svg)](https://doi.org/10.5281/zenodo.23361871)
 
-Sleight is the programming language that DESIGN.md specifies. This
+Sleight is the programming language that [DESIGN.md](DESIGN.md) specifies. This
 repository holds a prototype OCaml interpreter and compiler for it.
 The other files:
 
-- OPEN.md: the open questions about the language.
-- SPEC-REVIEW.md: open points found in the spec by a review.
-- SOUNDNESS.md: why `Type : Type` with no positivity requirement
-  (DESIGN.md section 10) appears sound, machine-checked in `lean/` for a
+- [OPEN.md](OPEN.md): the open questions about the language.
+- [SPEC-REVIEW.md](SPEC-REVIEW.md): open points found in the spec by a review.
+- [SOUNDNESS.md](SOUNDNESS.md): why `Type : Type` with no positivity requirement
+  (DESIGN.md section 10) appears sound, machine-checked in [`lean/`](lean/) for a
   fragment and sketched for the rest, and what it assumes.
-- ASSUMPTIONS.md: the assumptions the implementations make where the
+- [ASSUMPTIONS.md](ASSUMPTIONS.md): the assumptions the implementations make where the
   spec is silent. Every entry is a choice a session had to make on its
   own, because the code had to do something. A decision the owner made
   goes in DESIGN.md, never here, and an entry that stood in for one is
   removed when the owner decides it.
-- INTERNALS.md: the forms that declare what the compilers supply,
+- [INTERNALS.md](INTERNALS.md): the forms that declare what the compilers supply,
   `def-opaque` and `def-prim`, which only the prelude may write.
-- HANDOFF.md: work in progress handed from one session to the next.
-- BUGS.md: defects found in the implementation.
-- WARNINGS.md: the warnings the compilers emit, one item each.
-- TOOLING-WISHLIST.md: friction met while writing programs in the
+- [HANDOFF.md](HANDOFF.md): work in progress handed from one session to the next.
+- [BUGS.md](BUGS.md): defects found in the implementation.
+- [WARNINGS.md](WARNINGS.md): the warnings the compilers emit, one item each.
+- [TOOLING-WISHLIST.md](TOOLING-WISHLIST.md): friction met while writing programs in the
   language.
-- EXAMPLES.md: an index of the tests that show the features working
-  together. DEMOS.md: programs proposed but not yet written.
-- `self/`: a compiler from the language to OCaml, written in the
+- [EXAMPLES.md](EXAMPLES.md): an index of the tests that show the features working
+  together. [DEMOS.md](DEMOS.md): programs proposed but not yet written.
+- [`self/`](self/): a compiler from the language to OCaml, written in the
   language itself and bootstrapped through this interpreter's extractor
-  (`self/README.md`, `self/bootstrap.sh`).
-- MINIMAL.md: a minimal fragment of the language. `mini/`: its
+  ([`self/README.md`](self/README.md), [`self/bootstrap.sh`](self/bootstrap.sh)).
+- [MINIMAL.md](MINIMAL.md): a minimal fragment of the language. [`mini/`](mini/): its
   semantics, written as relations in the language itself
-  (`mini/README.md`). `lean/`: a Lean 4 interpreter, in the full
+  ([`mini/README.md`](mini/README.md)). [`lean/`](lean/): a Lean 4 interpreter, in the full
   language's syntax, for that fragment and some of the language beyond
   it, that needs no fuel, with a machine-checked proof that checked
-  programs run to a value of their type (`lean/README.md`).
-- `pal/`: certified longest-palindrome programs (`pal/README.md`).
-- `talk/`: the source of the slides for the October 14, 2026 talk on
-  the language and on models writing it (`talk/slides.md`, built by
-  `talk/build.sh`). The published PDF is
+  programs run to a value of their type ([`lean/README.md`](lean/README.md)).
+- [`pal/`](pal/): certified longest-palindrome programs ([`pal/README.md`](pal/README.md)).
+- [`talk/`](talk/): the source of the slides for the October 14, 2026 talk on
+  the language and on models writing it ([`talk/slides.md`](talk/slides.md), built by
+  [`talk/build.sh`](talk/build.sh)). The published PDF is
   https://doi.org/10.5281/zenodo.23367392.
-- `std/`: source libraries a program names on the command line before its
-  own files. `std/macro.sl` holds helpers for writing macros, `std/nat.sl`
+- [`std/`](std/): source libraries a program names on the command line before its
+  own files. [`std/macro.sl`](std/macro.sl) holds helpers for writing macros, [`std/nat.sl`](std/nat.sl)
   holds `Le`, the non-strict order on `Nat`, `Ne`, inequality as one of the
   two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
-  `add-le-right` and `double-le`, `std/list.sl` holds lemmas
+  `add-le-right` and `double-le`, [`std/list.sl`](std/list.sl) holds lemmas
   about the prelude's `Length`, `Nth`, `SetNth` and `Repeat`, and
-  `std/tactics.sl`, which needs `std/macro.sl` and `std/nat.sl`, holds proof
+  [`std/tactics.sl`](std/tactics.sl), which needs `std/macro.sl` and `std/nat.sl`, holds proof
   tactics written as macros.
 
 ## Build and run
