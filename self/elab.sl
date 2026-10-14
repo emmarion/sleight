@@ -494,7 +494,7 @@
             ((None _) (values (declared env "" x) $ str-cat3 (qshown env x) ", declared " $ tick $ spell env $ mult-name m)))))
         (env-error-with env notes $ str-cat3 what ", " $ say env how))))
   (let-match many m (Once) (else env1))
-  (let ((many env2)) (match many (and (mult-is-once pos) $ list-mem-bin (env-captures env) x) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 (say env "`def-fns` cannot capture ") (qshown env x) " at unique"))))
+  (let ((many env2)) (match many (match many (mult-is-once pos) (((Bool) _)) ((BTrue) (list-mem-bin (env-captures env) x)) ((BFalse) (BFalse))) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 (say env "`def-fns` cannot capture ") (qshown env x) " at unique"))))
   (let ((many (Maybe $ Pair (Loc) $ String) conflict))
     (match many (idmap-get _ x $ uses-map $ env-uses env2) (((Maybe $ Pair (Loc) $ String) _))
       ((Miss _ _ _ _) (None _))
@@ -1424,21 +1424,26 @@
     ((BTrue) (Nil _))
     ((BFalse) (wrappers ss))))
 
+(def-fns _ $ (many wraps-newtype : (many (Env) env) (many (Nat) c) (many (Nat) x) -> (many (Bool) r))
+  (let-match many (type-of env x) (TMatchable d nt _ _ cs) (else (BFalse)))
+  (match many nt _
+    ((BFalse) (BFalse))
+    ((BTrue) (list-mem-bin (newtype-wrappers d $ shapes cs env) c))))
+
 (def-fns _ $ (many find-newtype-in : (subterm many (List $ Opened) opens) (many (Env) env) (many (Nat) c) (many (List $ Nat) cands) -> (many (Maybe $ Nat) r))
   (let-match many opens (Cons _ o rest) ((Nil _) (None _)))
   (let ((many x)) $ opened-x o)
-  (let ((many found))
-    (match many (list-mem-bin cands x) (((Bool) _))
-      ((BFalse) (BFalse))
-      ((BTrue)
-        (let-match many (type-of env x) (TMatchable d nt _ _ cs) (else (BFalse)))
-        (match many nt (((Bool) _))
-          ((BFalse) (BFalse))
-          ((BTrue) (list-mem-bin (newtype-wrappers d $ shapes cs env) c))))))
+  (let ((many found)) $ match many (list-mem-bin cands x) (((Bool) _)) ((BTrue) (wraps-newtype env c x)) ((BFalse) (BFalse)))
   (match many found _ ((BTrue) (Some _ x)) ((BFalse) (tail $ find-newtype-in rest env c cands))))
 
+(def-fns _ $ (many newtype-cands : (many (Env) env) (many (Nat) c) (subterm many (List $ Nat) cands) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many cands (Cons _ x rest) ((Nil _) acc))
+  (tail $ newtype-cands env c rest $ match many (and (not $ list-mem-bin acc x) $ wraps-newtype env c x) (((List $ Nat) _)) ((BTrue) (Cons _ x acc)) ((BFalse) acc)))
+
 (def-fns _ $ (many find-newtype : (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r))
-  (find-newtype-in (env-opens env) env c $ index-of c $ env-index env))
+  (let ((many cands)) $ index-of c $ env-index env)
+  (let-match many (newtype-cands env c cands $ Nil _) (Cons _ x more) ((Nil _) (None _)))
+  (match many more _ ((Nil _) (Some _ x)) ((Cons _ _ _) (find-newtype-in (env-opens env) env c cands))))
 
 (def-fns _
   ((many term-place : (many (Env) env) (subterm many (Term) t) -> (many (Maybe $ Term) p))
