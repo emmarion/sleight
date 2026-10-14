@@ -368,7 +368,7 @@ Stages, each committed once it builds and `test.sh` passes:
    semantics the core does not have, and the placings are `def-prim`s
    with non-erased returns), arrays and bytes (cells of extern types
    inside extern bodies; `inExtern` is never set), `World` and
-   `Program`, a cell binder in `comptime-match`, the full-`at`
+   `Program`, the full-`at`
    invocation counted as erased by the `tail` check, a non-erased
    at-match on a union, and the gaps the README's slot item lists.
    The user asked that mutation state be left until everything else is

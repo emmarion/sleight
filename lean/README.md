@@ -204,7 +204,8 @@ an application of it, and a list whose head is itself a list is an
 application of the head's value. `Special` and `Sharing` are built-in
 enums, and a special form's name not bound in scope is its `Special`
 constructor; a head bound to an entry the elaborator knows is a
-`Special` constructor at run position dispatches as that form. A
+`Special` constructor, by its value at run position or by the term a
+`let` in a body binds it to, dispatches as that form. A
 `Special` value prints as `%` and the form's name.
 
 Pragmas (section 4): `;! warn`, `;! suppress warn` and `;! restore warn`,
@@ -349,8 +350,8 @@ it is `Settled`, and its `is` rule.
   allows it at most one real branch, as for an erased scrutinee.
   `comptime-match` and the checker's known values look through no
   newtype.
-- `Matchable` types and `(matchable-of T)` for a declared type
-  (section 24). A `Matchable`'s type names a declared type, its tag,
+- `Matchable` types and `(matchable-of T)` for a declared type or a
+  `let` alias of one (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
 - Run position (sections 27 to 29). The elaborator runs each
   run-position statement, by the stripped run, as soon as it is
@@ -362,8 +363,8 @@ it is `Settled`, and its `is` rule.
   stripped values of the entries the top level has made so far
   (`Ctx.fixed`), computing each by the stripped run (`stepS`), and
   `EnvOK` carries that each stands for the full run's value (`FixOK`).
-- `comptime-match` (section 28), in run position, `many`, on an enum and
-  a constructor that is not phantom. In the core it is a `case` with one
+- `comptime-match` (section 28), in run position, `many` or `unique`, on an enum and
+  a constructor that is not phantom; its pattern may bind a cell. In the core it is a `case` with one
   branch inside `chk .cm`, under which a constructor with no branch is
   accepted when the checker's known value of the scrutinee is headed by
   another (`BranchOK.fixedOut`). The branch's fields are known values too.
@@ -437,7 +438,8 @@ it is `Settled`, and its `is` rule.
   evaluates to the constructor; the core knows nothing of locations,
   and two slots are one exactly when they canonicalize to one entry.
   The elaborator makes an entry's automatic slot the first time it is
-  needed, at the entry's erasure, and puts an entry at its source's
+  needed, or just before a `def-lvl` for an entry that a later
+  `slot-of` of the same sequence names, at the entry's erasure, and puts an entry at its source's
   slot where section 36 has one: a forwarding `let`, `share`, `coerce`,
   an `else` binder, a newtype's construction and destructure, the
   delegate annotation, a cell binder, a cell invocation and
@@ -449,14 +451,17 @@ it is `Settled`, and its `is` rule.
   that is not a variable first, so an argument written `at` that is not
   a variable is refused; a body returns its results' slots, so the
   core checks each promise canonically. `(slot-of x)` is the slot of
-  `x`, erased when `x` is, and of a hidden entry erased always.
+  `x`, erased when `x` is, and of a hidden entry erased always;
+  `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
+  `vacant-slot` puts its binder there.
   `(slot-self s)` makes `s` its own slot, and is refused once the slot
   of `s` is in use. `at` changes no value: the runner computes an
   `at` result like any other. Not done: the slot a forcing unification
   gives otherwise than through the core's own rules, `slot-of` naming
   an entry of an enclosing telescope in an `at`, `_` for an argument
   whose slot is named (its slot is `_` too), and `prove-predates` on a
-  slot made after the level.
+  slot first needed after the level other than through such a
+  `slot-of`.
 - At-functions and at-matches (sections 39 and 40), checked by the
   elaborator: the returns or annotation entries are erased or `at`, and
   the body or each branch makes no non-erased call that is not skipped,
@@ -479,7 +484,8 @@ it is `Settled`, and its `is` rule.
   `cell-match` make cells and read their slots from their types; an
   invocation `(u a ...)` is the application of `C`, and `(at)` before
   an argument, or `(at (u a ...))` for all of them, asks the core that
-  the argument's slot canonicalizes to the cell's. The elaborator
+  the argument's slot canonicalizes to the cell's; in the latter `u`
+  may be an expression whose value is a cell, such as a `cell-match`. The elaborator
   accounts for the uses of the cell as section 37 has it. The core marks
   an invocation, a pattern's cell binder, `cell-alloc`, `cell-write` and
   an at-match (`Chk.mark`), and an at-function (`FnDef.atf`), which every
@@ -488,6 +494,9 @@ it is `Settled`, and its `is` rule.
 - `else` branches (DESIGN.md sections 21 and 23): an `else` stands for
   every constructor neither listed nor refuted, is checked with no
   forced facts, and is an error when it stands for no constructor.
+  Under a non-erased scrutinee, an `else` that stands only for phantom
+  constructors is elaborated as one erased branch for each, so it adds
+  no real branch.
   `(else x2 body ...)`, with more than one item after `else`, binds
   `x2` at the scrutinee's multiplicity, with the rule that it is the
   scrutinee.

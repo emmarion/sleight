@@ -314,7 +314,8 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       | .coerWrap s C args => pure (.coerWrap (expSide s) C args)
       | .coerCtor s C srcs tgts ps =>
         let fill (l : List Tm) (pick : Tm × Tm × Tm × Tm × Tm × Tm → Tm) : Tm := .ofList (l.zipIdx.map fun (t, j) =>
-          if t.isHole then (((ps.toList[j]?).bind coerOf).map pick).getD t else t)
+          if t.isHole then (((ps.toList[j]?).bind coerOf).map pick).getD t
+          else if t.hasHole then (inferTerm P Γ t none).toOption.getD t else t)
         pure (.coerCtor (expSide s) C (fill srcs.toList (·.2.2.1)) (fill tgts.toList (·.2.2.2.2.2)) ps)
       | .tm t =>
         if !t.hasHole then pure p else
