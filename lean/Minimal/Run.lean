@@ -256,9 +256,21 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
           else Prog.typesOf R vs
         if mode == "--full" then P.run pre true tys else P.runStripped pre tys
 
-def runSource (src : String) (mode : String) (pre : Bool) : List String × Out :=
-  match load ((if pre then (if mode == "--full" || mode == "--unchecked" then preludeFull else prelude) ++ "\n(__prelude-end)\n" else "") ++ src) pre with
+def dropFinal (items : List Sx) : List Sx := match items.reverse with
+  | e@(.list (.atom h :: _)) :: rest => if statements.contains h then items else (rest.reverse ++ [.list [.atom "let", .list [.list [.atom "erased", .atom "_"]], e]])
+  | e :: rest => if isPragmaSx e then items else rest.reverse ++ [.list [.atom "let", .list [.list [.atom "erased", .atom "_"]], e]]
+  | [] => []
+
+def runSources (srcs : List String) (mode : String) (pre : Bool) : List String × Out :=
+  let pl := if pre then (if mode == "--full" || mode == "--unchecked" then preludeFull else prelude) ++ "\n(__prelude-end)\n" else ""
+  let loaded : Except String (Prog × List String) := do
+    let files ← srcs.mapM parse
+    let items := (files.dropLast.map dropFinal).flatten ++ files.getLastD []
+    elabProgram ((← parse pl) ++ items) pre
+  match loaded with
   | .error e => ([], .text s!"error: {e}")
   | .ok (P, ws) => (ws, runProg P mode pre)
+
+def runSource (src : String) (mode : String) (pre : Bool) : List String × Out := runSources [src] mode pre
 
 end Minimal

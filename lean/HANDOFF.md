@@ -9,15 +9,14 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 230 tests were
-accepted with OCaml's value, none mismatched, 419 refusals agreed, and
-57 + 66 were refused as unsupported; 7 tests OCaml accepts are refused
-(`at_match_union`, `at_target_wild`, `cell_append`,
-`coercible_ctor_infer`, `macro_body`, `macro_splice`,
-`slot_of_predates`). No test the OCaml suite
-refuses is accepted. Of the tests it accepts, two time out at ten seconds:
-`comptime_tail.sl` finishes in about a minute, and
-`extern_tail.sl` ran out of memory on this session's machine.
+the test expects and the runner's; a test's `; needs:` files are read
+with it under `--shared`. At the last run 322 tests were accepted with
+OCaml's value, none mismatched, 474 refusals agreed, and 80 + 89 were
+refused as unsupported; 23 tests OCaml accepts are refused, 11 of them
+for a `_` the inference does not solve. No test the OCaml suite
+refuses is accepted. Four tests it accepts time out at ten seconds,
+among them `comptime_tail.sl`, which finishes in about a minute, and
+`extern_tail.sl`, which ran out of memory on one session's machine.
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs

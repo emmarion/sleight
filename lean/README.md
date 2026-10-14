@@ -34,6 +34,9 @@ with the prelude, from one `many` `(String)` to one `many` `(String)`,
 when it is applied to all of standard input and its result written to
 standard output.
 `--unchecked` skips the checker and runs the program anyway.
+`--shared` reads the files named as one program, in order, the final
+value of the last being the program's and that of any other being
+discarded.
 A checked program runs with erased code skipped (the stripped run,
 `runS`), which `eval_sound` proves agrees with the full run on what is
 not erased; `--full` runs the full evaluator `eval` instead, which also

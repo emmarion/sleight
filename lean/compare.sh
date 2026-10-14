@@ -3,10 +3,11 @@
 cd "$(dirname "$0")"
 m=./.lake/build/bin/minimal
 for f in ../tests/*.sl; do
-  grep -q '^; \(needs\|stdin\|args\|env\|externs\|confine\)' "$f" && continue
+  grep -q '^; \(stdin\|args\|env\|externs\|confine\)' "$f" && continue
+  needs=$(grep -m1 '^; needs: ' "$f" | cut -d' ' -f3- | sed 's|\([^ ]*\)|../tests/\1.sl|g')
   if grep -q '^; error:' "$f"; then want=refuse; else want=accept; fi
   flag=; grep -q '^; prelude: none' "$f" && flag=--no-prelude
-  out=$(timeout 10 $m $flag "$f")
+  out=$(timeout 10 $m --shared $flag $needs "$f")
   [ $? = 124 ] && out="x: stuck: timeout"
   out=$(printf '%s\n' "$out" | head -1 | cut -d' ' -f2-)
   case "$out" in

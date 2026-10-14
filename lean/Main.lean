@@ -2,9 +2,11 @@ import Minimal.Run
 
 def main (args : List String) : IO UInt32 := do
   let (flags, files) := args.partition (·.startsWith "--")
-  let mode := (flags.filter (· != "--no-prelude")).headD ""
-  for f in files do
-    let (ws, out) := Minimal.runSource (← IO.FS.readFile f) mode (!flags.contains "--no-prelude")
+  let mode := (flags.filter fun f => f != "--no-prelude" && f != "--shared").headD ""
+  let groups := if flags.contains "--shared" then [files] else files.map ([·])
+  for fs in groups do
+    let f := fs.getLastD ""
+    let (ws, out) := Minimal.runSources (← fs.mapM fun (f : String) => IO.FS.readFile f) mode (!flags.contains "--no-prelude")
     for w in ws do IO.eprintln s!"{f}: warning: {w}"
     match out with
     | .text s => IO.println s!"{f}: {s}"
