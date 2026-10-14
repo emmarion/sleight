@@ -65,6 +65,37 @@ list per character (about 3%), the reader allocates a slice per
 character (the parse is about 7%), and `emit` looks shapes up by a
 linear search (about 1%).
 
+Asymptotics, at the owner's further request. `bench/scale.py slc
+[shape ...]` times `slc` on generated programs of doubling size, one
+shape each, and prints the ratio to the previous size: near 2 is linear,
+near 4 quadratic. On the machine this session ran on, seconds at 400 and
+1600 of each shape's unit, `origin/main`'s `slc` against this branch's:
+nested matches 4.3 and 229 against 0.49 and 2.1; a 400- and 1600-function
+mutual block 2.2 and 20.3 against 0.96 and 5.9; one type error per
+top-level `let` 2.3 and 18.7 against 0.91 and 5.4; many `def-adts` 0.37
+and 1.35 against 0.24 and 0.75; a wide enum 0.25 and 1.24 against 0.13
+and 0.34. What was quadratic and is no longer, as far as the session
+could tell: `held-key` canonicalized both sides with `equal-env` for
+every scope entry where a head comparison usually decides; a
+`def-adts` constructor list was spliced once per constructor; opening
+a pair and finding a sharing constructor walked every opened object
+rather than the index's candidates; the scope walks behind a message
+spelled every name, kept or not; and the diagnostics list was walked
+for "has an error been reported" and for pending shadow warnings on
+every body, now counted in a `Saids` record beside it.
+
+Still superlinear, by the session's reading, and left because the fix
+looked like a change of representation rather than of an algorithm:
+every message walks the whole scope to respell keywords (`kws-except`,
+so one warning per function in a big block is O(scope) each; the
+reference does the same); code contexts are unary `Mem`/`At` paths, so
+a long `let` chain pays its depth per lookup; `abstract-slots` is
+O(i) per telescope entry, so many parameters are quadratic; canonical
+forms expand nested data fully, so a 1600-element compile-time list
+literal is about 2.5s; and `check-marks` normalizes a body including
+its nested definitions, so definitions nested 1600 deep are about
+1.4s.
+
 ## `read-file`, `symbol-eq` and the elaborator's world (one session, with the owner)
 
 Done in both compilers, to the owner's design given in chat, with DESIGN.md

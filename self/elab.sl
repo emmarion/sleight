@@ -902,7 +902,7 @@
   (let-match many l (MkLoc cf p))
   (let ((many (Bool) local)) $ match many p _ ((MkSpot _ _) (BTrue)) ((PosSpot q) (match many q _ ((NoPos) (BFalse)) ((MkPos f _ _) (str-eq f cf)))))
   (let ((many hits)) $ suppressing env x p $ match many local _ ((BTrue) (env-regions env)) ((BFalse) (Nil _)))
-  (let-match many hits (Nil _) ((Cons _ _ _) (env-set-said env $ list-rev-onto _ hits $ env-said env)))
+  (let-match many hits (Nil _) ((Cons _ _ _) (env-push-saids env hits)))
   (let-match many w (MkWarned _ pl msg))
   (env-back env $ env-warn-with env l (Cons _ (MkPair _ _ pl $ str-cat3 "`;! warn` for " (qshow env t) " is here") $ Nil _) $ str-cat3 what " " $ str-cat3 (qshow env t) ": " msg))
 
@@ -7332,7 +7332,7 @@
   (let ((many swept)) $ match many (env-failed env) (((Env) _))
     ((BFalse) (sweep-regions env (env-regions env) $ env-silenced env))
     ((BTrue) env))
-  (env-set-regions (env-set-said swept $ said-without-silenced $ env-said swept) $ Nil _))
+  (env-set-regions (match many (env-saids swept) _ ((MkSaids ss f n) (env-set-saids swept $ MkSaids (said-without-silenced ss) f n))) $ Nil _))
 
 ; ---- Finals (lib/elab.ml's final_form): what the driver does with a file's final value
 
