@@ -15,31 +15,24 @@ accepted with OCaml's value, none mismatched, 481 refusals agreed, and
 80 + 95 were refused as unsupported; 11 tests OCaml accepts are
 refused, and 2 time out. No test the OCaml
 suite refuses is accepted. `compare.sh` allows twenty seconds a test;
-`comptime_tail.sl` finishes in about a minute, and `extern_tail.sl` ran
-out of memory on one session's machine.
+`comptime_tail.sl` and the six `mini_*.sl` tests that need
+`mini/elabfn.sl` finish in about a minute with OCaml's value, and
+`extern_tail.sl` ran out of memory on one session's machine. Most of
+the `mini_*` time is the checker (`Ctx` lookups, `unify`) and the
+stripped run, not inference.
 
 The tests OCaml accepts and this runner refuses, with a session's
 reading of why:
 
-- `mini_*.sl` (six): `cannot infer _` on `(sct-nil ctx0 _)`, a call
-  whose result is an argument of `TLOk` in `mini/elabfn.sl` line 986.
-  The call's `_` is fixed only by `TLOk`'s field type, which mentions
-  `TLOk`'s own `_` for `mout`, fixed only by the call's result type.
-  `Minimal/Infer.lean` solves a call's holes before the code after it
-  (or from a hole-free type at a use, `typeAtUse`), so solving the two
-  together needs metavariables shared across the call and its rest.
 - `at_match_union.sl`: a non-erased at-match on a union with several
   real branches. The reference emits no code for it; here the core has
   a runtime `mtch`, which needs a discriminant.
 - `at_target_wild.sl`: `_` for an argument whose slot a later parameter
   names; the link from an entry to its slot lives in the reader's state,
   which inference does not see.
-- `cell_append.sl`: a `tail` call whose result is returned `at` a cell.
-  The reference does not count `at` results as runtime values in its
-  tail check (`normalize`); the reader's syntactic check does.
 - `macro_body.sl`, `macro_splice.sl`: macros.
 
-`lean/prelude.py` regenerates `lean/prelude.py` regenerates `lean/prelude.sl` and
+`lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
 `--full` on every prefix.
 

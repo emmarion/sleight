@@ -8,6 +8,10 @@ def Tm.isHole : Tm → Bool
 
 def Tm.hasHole (t : Tm) : Bool := t.fvs.any (holeBase ≤ ·)
 
+def outerBase : Nat := 2 ^ 39
+
+def isOuter (i : Nat) : Bool := outerBase ≤ i && i < outerBase + 2 ^ 20
+
 variable (P : Prog)
 
 structure Metas where
@@ -71,7 +75,7 @@ partial def Metas.match1 (m : Metas) (sol : List (Nat × Tm)) : Tm × Tm → Lis
     let b := m.Γ.canon (m.resolve sol b)
     if a == b then (sol, []) else
     let isMeta : Tm → Bool
-      | .fv i => m.base ≤ i ∧ i < m.Γ.n
+      | .fv i => (m.base ≤ i ∧ i < m.Γ.n) ∨ isOuter i
       | _ => false
     let bind (i : Nat) (t : Tm) : List (Nat × Tm) × List (Tm × Tm) :=
       if i ∈ t.fvs then (sol, []) else
@@ -93,8 +97,11 @@ partial def Metas.solve (m : Metas) (sol : List (Nat × Tm)) (eqs : List (Tm × 
     let (sol', more) := eqs.foldl (fun (sol, more) p => let (sol, e) := m.match1 P sol p; (sol, more ++ e)) (sol, [])
     if sol'.length == sol.length then sol' else m.solve sol' (eqs ++ more) fuel
 
+def Metas.sol (m : Metas) : List (Nat × Tm) :=
+  m.solve P [] m.eqs (m.Γ.n - m.base + 1 + ((m.eqs.flatMap fun (a, b) => a.fvs ++ b.fvs).filter isOuter).eraseDups.length)
+
 def Metas.fill (m : Metas) (ts : List Tm) : Except String (List Tm) := do
-  let sol := m.solve P [] m.eqs (m.Γ.n - m.base + 1)
+  let sol := m.sol P
   let ts := ts.map (m.resolve sol)
   if ts.any (·.fvs.any (m.base ≤ ·)) then .error "cannot infer `_`" else .ok ts
 
@@ -240,6 +247,23 @@ where
       | _ => none
     | _ => none
 
+partial def outerAt (Γ : Ctx) (rets : Option Tm) : Core → List (Nat × Tm)
+  | c =>
+    let solveAt (ts : List Tm) (T : Tm) : List (Nat × Tm) := match ({ Γ, base := Γ.n } : Metas).openArgs P ts T with
+      | .ok (m, _, _) => let sol := m.sol P; (sol.filter (isOuter ·.1)).map fun (i, t) => (i, m.resolve sol t)
+      | .error _ => []
+    let here := match c, rets with
+      | .ret ts, some R => solveAt ts.toList R
+      | .call f _ args _ _ _ _, _ => match checkTm P Γ f with
+        | .ok ⟨Ft, _⟩ => match Γ.canon Ft with
+          | .fn _ _ t _ _ => solveAt args.toList t
+          | _ => []
+        | .error _ => []
+      | _, _ => []
+    if !here.isEmpty then here else match stepCtx P Γ c with
+      | some (Γ', rest, _) => outerAt Γ' rets rest
+      | none => []
+
 partial def sideAt (Γ : Ctx) (tgt : Bool) (i : Nat) : Core → Option Tm
   | .chk .ty (.fv k) T _ => if k = i then (coerOf' T).map fun (sa, _, _, sb, _) => if tgt then sb else sa else none
   | c => useSide c (i + 1)
@@ -276,11 +300,20 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       match inferArgs P Γ args.toList t exp with
       | .ok as => pure (Tm.ofList as)
       | .error e => do
+        let args' := args.toList.zipIdx.map fun (a, k) => if a.isHole then .fv (outerBase + k) else a
+        let Γo := Γ.pushTele (t.peel (.ofList args'))
         let st ← get
-        let used ← tryCatch (some <$> inferCore (Γ.pushTele (t.peel args)) rets top rest) fun _ => pure none
+        let used ← tryCatch (some <$> inferCore Γo rets top rest) fun _ => pure none
         set st
+        let sol := (used.map (outerAt P Γo rets)).getD []
+        let solved := args'.map fun a => match a with
+          | .fv i => if isOuter i then ((sol.lookup i).filter (·.fvs.all (· < Γ.n))).getD .hole else a
+          | a => a
+        match inferArgs P Γ solved t exp with
+        | .ok as => pure (Tm.ofList as)
+        | .error _ =>
         let A := (used.bind fun r => (List.range ms.length).findSome? fun k =>
-          (typeAtUse P (Γ.n + k) rets (Γ.pushTele (t.peel args)) r).map (k, ·)).filter fun (_, A) => A.fvs.all (· < Γ.n)
+          (typeAtUse P (Γ.n + k) rets Γo r).map (k, ·)).filter fun (_, A) => A.fvs.all (· < Γ.n)
         match A with
         | some (k, A) => Tm.ofList <$> inferArgs P Γ args.toList t (some (useTele k A))
         | none => throw e

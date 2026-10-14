@@ -176,6 +176,7 @@ structure ESt where
   pre : Bool := true
   inPrelude : Bool := true
   tail : Bool := false
+  noRt : Bool := false
   refute : Bool := false
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
@@ -952,17 +953,25 @@ def renamesOf (bs : List Sx) : List Sx → Option (List (String × String))
       | _, _ => none) []
   | _ => none
 
-def returnsBinders (xs : List String) (want : List Mode) : List Sx → Bool
+def returnsBinders (noRt : Bool) (xs : List String) (want : List Mode) : List Sx → Bool
   | [.list (.atom "values" :: es)] =>
     (es.zip want).filterMap (fun (e, w) => if w.isEr then none else some (uncoerce e)) == xs.map .atom
-  | [.list [.atom "coerce", e, _]] => returnsBinders xs want [e]
-  | [e] => !(want.head?.getD .er).isEr && xs == [e.show]
+  | [.list [.atom "coerce", e, _]] => returnsBinders noRt xs want [e]
+  | [e] => (!(want.head?.getD .er).isEr && xs == [e.show]) ||
+    (noRt && xs.isEmpty && e matches .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]])
   | .list (.atom "let" :: .list bs :: items) :: rest =>
-    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders xs want rest
+    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders noRt xs want rest
     else match renamesOf bs items with
-      | some rn => returnsBinders (xs.map fun x => (rn.lookup x).getD x) want rest
+      | some rn => returnsBinders noRt (xs.map fun x => (rn.lookup x).getD x) want rest
       | none => false
   | _ => false
+
+def atFlags (tele : Tm) (hm : List Bool) : List Bool :=
+  let es := teleEnts tele
+  (List.range es.length).map fun k => k > 0 && hm.getD (k - 1) false && (es[k - 1]? matches some (.is ..))
+
+def resultAts (np : Nat) (tele : Tm) (hm : List Bool) : List Bool :=
+  (((hm.zip (atFlags tele hm)).drop np).filter (!·.1)).map (·.2)
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
   let st0 ← get
@@ -2047,7 +2056,17 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
     let (r0, f0, d0) := ((← get).rhs, (← get).refute, (← get).depthTop)
     modify fun st => { st with rhs := true, refute := false, depthTop := false }
-    let (ss, ts) ← withTail ((← get).tail && returnsBinders ((bs.filter (!·.2.1.isEr)).map (·.1)) want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
+    let callee := match items with
+      | [.list [.atom "tail", .list (.atom f :: _)]] | [.list [.atom "notail", .list (.atom f :: _)]] | [.list (.atom f :: _)] => some f
+      | _ => none
+    let known := (← get).known
+    let ats := match callee.bind (sc.lookup ·) with
+      | some (.fn i _ _) | some (.fv i) => match known.lookup i with
+        | some (.fn _ np tele _ hm) => resultAts np tele hm
+        | _ => []
+      | _ => []
+    let xs := ((bs.zip (List.range bs.length)).filter fun (b, k) => !b.2.1.isEr && !ats.getD k false).map (·.1.1)
+    let (ss, ts) ← withTail ((← get).tail && returnsBinders (← get).noRt xs want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
     modify fun st => { st with rhs := r0, refute := f0, depthTop := d0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
@@ -2280,14 +2299,16 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       modify fun st => { st with dele := tgt.map (·, upids.zip (pents.map (·.2))), delegated := false }
       modify fun st => { st with deleBase := base + sigs.length }
       let bad0 := (← get).atBad
-      modify fun st => { st with atBad := false }
+      let noRt0 := (← get).noRt
+      let noRt := (((ms.drop np).filter (· != .hid)).zip (resultAts np tele hm)).all fun (m, a) => m.isEr || a
+      modify fun st => { st with atBad := false, noRt }
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (upids.zipWith entRef utys) |>.reverse |>.append (if isU then sc else fnsc))
         (if ab then [Mode.er] else (ms.drop np).map fun e => if er && e != .hid then .er else e) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
       if tgt.isSome && !(← get).delegated then throw "a function written `at f` must have a `delegate` body"
       if atf && !ab && (← get).atBad then
         throw s!"the body of at-function `{showName f}` does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"
-      modify fun st => { st with atBad := bad0 }
+      modify fun st => { st with atBad := bad0, noRt := noRt0 }
       modify fun st => { st with deles := ds0 }
       pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU, atf : FnDef }
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }
