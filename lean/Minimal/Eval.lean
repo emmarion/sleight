@@ -45,6 +45,7 @@ def Prim.eval (ρ : List Tm) : Prim → Tm
   | .assert t _ => t
   | .coerce _ b _ => b.subst (Tm.env ρ)
   | .atom d => .app (.vc d 0 .nil) .nil
+  | .atomEq d q a _ => .app (.vc q 0 .nil) (.cons (.app (.tyc d .nil) .nil) (.cons (a.subst (Tm.env ρ)) .nil))
   | .num d n => natTm' d n
   | _ => .tok
 

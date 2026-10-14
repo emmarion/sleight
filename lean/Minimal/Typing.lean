@@ -337,6 +337,10 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
   | num : P.natOK d = true → PrimTy Γ (.num d n) (natTy d)
+  | atomEq : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
+      D.opq = false → P.adts[q]? = some E → E.ctors = [eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] → E.lifted = 0 →
+      TmTy P Γ a A → Γ.canon A = .app (.tyc d .nil) .nil → TmTy P Γ b B → Γ.canon B = .app (.tyc d .nil) .nil →
+      PrimTy Γ (.atomEq d q a b) (.app (.tyc q .nil) (.cons (.app (.tyc d .nil) .nil) (.cons a (.cons b .nil))))
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
       PrimTy Γ (.axm A) A
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →

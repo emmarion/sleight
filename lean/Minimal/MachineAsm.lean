@@ -403,6 +403,7 @@ theorem PrimTy.cloOK {Γ : Ctx} {ρ : List Tm} {p : Prim} {T : Tm} (hp : PrimTy 
   | coerce _ _ _ _ _ hb => exact hs _ hb.noClo
   | assert _ h0 => rw [Prim.eval, ← Tm.subst_static0 (Tm.env ρ) _ 0 h0]; exact hs _ (Tm.noClo_static _ 0 0 h0)
   | num => exact natTm'_cloOK _ _
+  | atomEq _ _ _ _ _ _ _ ha => simp only [Prim.eval, CloOK, true_and, and_true]; exact hs _ ha.noClo
   | _ => simp [Prim.eval, CloOK]
 
 theorem UCtx.primTy_check {G : UCtx} {p : Prim} {T : Tm} {hp : PrimTy P G.Γ p T}

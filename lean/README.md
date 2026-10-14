@@ -372,8 +372,7 @@ it is `Settled`, and its `is` rule.
 - Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
   them are `extern` functions whose models run, and inside an `extern`
   function's body a cell of an `extern` constructor is allowed (section
-  43). `array-unpluck` is not supported: its `slot-self` names a
-  variable whose slot is already in use.
+  43).
 - `Matchable` types and `(matchable-of T)` for a declared type or a
   `let` alias of one (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
@@ -485,8 +484,12 @@ it is `Settled`, and its `is` rule.
   which owns nothing), so `(slot-of x)` may stand at a unique position;
   a use of it at many needs no `share`. The uses pass accepts the
   primitive that makes it, `Prim.atom`, at unique.
-  `(slot-self s)` makes `s` its own slot, and is refused once the slot
-  of `s` is in use. `at` changes no value: the runner computes an
+  `(slot-self s)` makes `s` its own slot. Once the slot of `s` is in
+  use, it instead forces `s` and that slot to be equal, as an erased
+  `let-match` on `Refl` of a proof of `Eq (Slot) s σ` (`Prim.atomEq`,
+  which the checker accepts between two entries of a type with one
+  constructor and no fields, all of whose values are that constructor);
+  a contradiction is refused. `at` changes no value: the runner computes an
   `at` result like any other. Not done: the slot a forcing unification
   gives otherwise than through the core's own rules, `slot-of` naming
   an entry of an enclosing telescope in an `at`, `_` for an argument

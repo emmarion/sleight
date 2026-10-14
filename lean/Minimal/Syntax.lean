@@ -277,6 +277,7 @@ inductive Prim where
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
   | atom (d : Nat)
+  | atomEq (d q : Nat) (a b : Tm)
   | num (d n : Nat)
   deriving Repr, Inhabited, DecidableEq
 
@@ -421,6 +422,9 @@ def marks : Tm → Nat → List Bool
 
 def Prog.k (P : Prog) : Nat :=
   P.groups.foldr (fun G acc => G.fns.foldr (fun F acc => max ((marks F.tele F.np).count true) acc) acc) 0
+
+def eqSig (q : Nat) (k1 k2 k3 : Ent) : Tm :=
+  .bind k1 .univ (.bind k2 (.bv 0) (.bind k3 (.app (.tyc q .nil) (.cons (.bv 1) (.cons (.bv 0) (.cons (.bv 0) .nil)))) .nil))
 
 def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[c]?)
 

@@ -1474,6 +1474,23 @@ theorem natTm_lc (d : Nat) : ∀ n, (natTm' d n).lc 0 ∧ (natTm' d n).levels = 
   | 0 => by simp [natTm', Tm.lc, Tm.levels]
   | k + 1 => by have := natTm_lc d k; simp [natTm', Tm.lc, Tm.levels, this]
 
+theorem VTy.atom_inv {d : Nat} {D : Adt} {m e u : Bool} (hD : P.adts[d]? = some D)
+    (hc : D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil]) (hl : D.lifted = 0) (ho : D.opq = false)
+    {v : Tm} (h : VTy P v (.app (.tyc d .nil) .nil)) : v = .app (.vc d 0 .nil) .nil := by
+  cases h with
+  | @con d' c sig ls mid vs mk me mu T idx hct hls hv1 hv2 hT =>
+    cases hT
+    simp only [Prog.ctor, hD, hc, Option.bind_some] at hct
+    cases c with
+    | succ c => simp at hct
+    | zero =>
+      simp at hct; subst hct
+      cases hv1
+      cases hv2 with
+      | nil => rfl
+      | cons _ h2 => cases h2
+  | opq hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
+
 theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
     VTy P (p.eval ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval ρ).lc 0 ∧ ∀ x ∈ (p.eval ρ).levels, x < cnt := by
@@ -1671,6 +1688,19 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
     refine ⟨.con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simp [Tm.static],
       by simp [Prim.eval, Tm.lc], by simp [Prim.eval, Tm.levels]⟩
+  | @atomEq d D q E m1 e1 u1 m2 e2 u2 m3 e3 u3 _ a A' b B' m e u hD hc hl ho hE' hc' hl' ha hA hb hB =>
+    have va := sem ha; rw [hA] at va; simp only [Tm.subst] at va
+    have vb := sem hb; rw [hB] at vb; simp only [Tm.subst] at vb
+    have ea := VTy.atom_inv hD hc hl ho va
+    have eb := VTy.atom_inv hD hc hl ho vb
+    obtain ⟨-, has, -⟩ := tm_sound hP hE ha
+    obtain ⟨-, hbs, -⟩ := tm_sound hP hE hb
+    have hct : P.ctor q 0 = some (eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)) := by simp [Prog.ctor, hE', hc']
+    refine ⟨?_, by simp [Tm.static, has, hbs], by simp [Prim.eval, Tm.lc, ea], by simp [Prim.eval, Tm.levels, ea]⟩
+    rw [ea] at va
+    simp only [Prim.eval, Tm.subst, ea, eb]
+    refine .con (mk := m3) (me := e3) (mu := u3) hct (by simp [Tm.len, Prog.lifted, hE', hl']) .nil ?_ rfl
+    exact .cons .univ (.cons (by simpa [Tm.inst] using va) (by simp [Tm.inst]; exact .nil))
   | num h =>
     rename_i d n
     exact ⟨by simpa [Prim.eval, natTy, Tm.subst] using natTm_vty h n, by simp [natTy, Tm.static], (natTm_lc d n).1,
@@ -3104,6 +3134,7 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       simp only [Prim.evalS, Prim.eval]
       have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
       exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
+  | atomEq => simp [Prim.rt] at hrt
   | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
 
 theorem prim_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}

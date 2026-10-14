@@ -925,6 +925,24 @@
       (let ((unique v) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
       (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
+(def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
+    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
+  (match many i (at (((List (MaybeUninit A)) ys) ((Array (MaybeUninit A) ys) r at a)
+                     ((SetNth (MaybeUninit A) xs i (Init A x) ys) p)))
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (let-match unique hd (Uninit _ s))
+      (slot-self s)
+      (values (Cons (MaybeUninit A) (Init A x) xs1) (at (u _ _ (Init _ x) tl)) (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((erased ys1) (unique tl3) (erased p1)) (at (array-unpluck _ _ tl i1 x q)))
+      (values (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
     (unique (Array A xs) a) (many (Nat) i) (unique A x)
     (erased A m) (erased (Nth A xs i m) nth) ->

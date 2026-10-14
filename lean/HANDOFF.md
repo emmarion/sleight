@@ -353,9 +353,7 @@ computes.
 2. **What `at`, slots and cells still lack** (`lean/README.md` lists
    what is done): `Placed` (section 66; `placed-slot` needs a slot
    semantics the core does not have, and the placings are `def-prim`s
-   with non-erased returns), `array-unpluck` (its `slot-self` names a
-   pattern field whose slot is already its scrutinee's; the reference
-   equates the two by forcing), a slot used both at unique and at many
+   with non-erased returns), a slot used both at unique and at many
    (a non-erased slot entry is born `unique`, and the uses pass allows
    one or the other), `World` and `Program`, a non-erased at-match on a union, and
    the gaps the README's slot item lists.
@@ -385,7 +383,6 @@ computes.
    function as it elaborates and read its `Raw` result back as syntax.
 10. A computed head inside a type (`((share u) lv ...)`): types are
    elaborated by `elabTm`, which runs no statements.
-11. `slot-self` on a `(Slot)` parameter that an `at` of the same
-   telescope names (`tests/slot_self.sl`, `tests/at_field_fn_sibling.sl`):
-   the `at` asks for the parameter's own automatic slot, which the
-   reader has made before `slot-self` is read.
+11. An `at` naming an entry of an enclosing telescope, such as a
+   constructor field's function type written `at` a sibling field
+   (`tests/at_field_fn_sibling.sl`).

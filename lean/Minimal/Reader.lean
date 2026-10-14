@@ -1600,6 +1600,14 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let _ ← bindTele outs R
       let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
       return (ss ++ pre ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ uqMark rms ++ [fun k => .seq R b k], outs.map .fv)
+    else if h == " slot-eq" then
+      let [.atom x] := args | throw "unreachable"
+      let some (.fv i) := sc.lookup x | throw "unreachable"
+      let (ss, t) ← slotM i
+      let some q := st.firstAdt "Eq" | throw "`slot-self` on a variable whose slot is in use needs the prelude's `Eq`"
+      let [j] ← fresh [true] | throw "fresh"
+      note j (.app (.tyc q .nil) (.ofList [.app (.tyc slotD .nil) .nil, .fv i, t]))
+      return (ss ++ [.prim (.atomEq slotD q (.fv i) t) true], [.fv j])
     else if h == "slot-of" && (sc.lookup h).isNone then
       let [.atom x] := args | throw "`slot-of` takes a variable"
       let i ← match sc.lookup x with
@@ -2221,9 +2229,10 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     if let some T := st.known.lookup i then
       unless T == slotTy do throw s!"type mismatch: expected `(Slot)`, got `{st.showTm (s!"__{·}") T}`"
     let r := st.slotRoot i
-    match st.slots.lookup r with
-    | some t => unless t == .fv i do throw "`slot-self` on a variable whose slot is already in use is not supported"
-    | none => modify fun st => { st with slots := (r, .fv i) :: st.slots }
+    let rest ← match st.slots.lookup r with
+      | some t => if t == .fv i then pure rest else
+        pure (.list [.atom "let-match", .atom "erased", .list [.atom " slot-eq", .atom x], .list [.atom "Refl", .atom "_", .atom "_"]] :: rest)
+      | none => do modify fun st => { st with slots := (r, .fv i) :: st.slots }; pure rest
     let (ss, ts) ← elabSeq sc want exp rest
     return ((fun k => .chk .ty (.fv i) slotTy k) :: ss, ts)
   | .list (.atom kw :: .atom "_" :: fns) :: rest =>
