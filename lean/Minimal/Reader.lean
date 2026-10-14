@@ -1118,7 +1118,8 @@ def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (N
     let T := Tm.app (.tyc cd .nil) (.ofList (ms.map (·.2)))
     note j T
     if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
-    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ uqMark [md] ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c, Core.prim (.axm T) md.isEr])
+    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ uqMark [md] ++ (if md == .uniq then [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c] else []) ++
+      [Core.prim (.axm T) md.isEr])
   | _ => throw "malformed pattern"
 
 def ESt.cellSig (st : ESt) : Tm → Tm

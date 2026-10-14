@@ -148,7 +148,7 @@ inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
   | clo {eM eS eF : Tm} : P.rdU gid i = true →
       Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i) b →
       Spine H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j) b
-  | cell : Spine H (.ptr a) .tok .tok a
+  | cell : Spine H (.ptr a) u .tok a
 
 def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
 
@@ -169,7 +169,7 @@ inductive WO (H : Heap) : Tm → Tm → Tm → Prop
         Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i))
           (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
       WO H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)
-  | cell : WO H (.ptr a) .tok .tok
+  | cell : WO H (.ptr a) u .tok
   | free : (∀ b, ¬ Spine P H w u v b) → WO H w u v
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none

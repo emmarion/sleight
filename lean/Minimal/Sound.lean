@@ -38,7 +38,7 @@ inductive VTy : Tm → Tm → Prop
       VTy (.clo (.ofList env) gid j) ((F.type G).subst (Tm.env env))
   | mtbl {D : Adt} : P.adts[d]? = some D → ls.len = D.lifted → VTys ls D.params out → D.coercible = false →
       D.opq = false → VTy v (D.mtbl d ls)
-  | opq {D : Adt} : P.adts[d]? = some D → D.opq = true → VTy v (.app (.tyc d ls) idx)
+  | opq {D : Adt} : P.adts[d]? = some D → D.opq = true → VTy .tok (.app (.tyc d ls) idx)
   | coer {D : Adt} : P.adts[d]? = some D → D.coercible = true → (∀ vS, Real P vS a ↔ Real P vS b) →
       VTy .tok (Tm.coer d sa A a sb B b)
 

@@ -17,7 +17,8 @@ for a `_` the inference does not solve. No test the OCaml suite
 refuses is accepted. Three tests it accepts time out at ten seconds:
 `comptime_tail.sl`, which finishes in about a minute, `extern_tail.sl`,
 which ran out of memory on one session's machine, and
-`mini_preserve.sl`. One refusal reads as an internal error rather than
+`mini_preserve.sl`; `mini_unify.sl` takes about nine and a half
+seconds on one session's machine and so passes or times out by load. One refusal reads as an internal error rather than
 a verdict, `palindrome_manacher.sl`'s "unbound entry 1099511627776";
 no session has looked into it.
 
@@ -108,8 +109,14 @@ filling, no ghost. Proved so far, without `sorry`: `machine_seq`,
 change nothing the machine reads (`machine_chkPlain`, `machine_cm`,
 `machine_uq`, `machine_uqScr`, `machine_skip`), a non-erased primitive
 that no pending mark changes (`machine_prim_inert`, with `prim_val`
-for every non-erased primitive but `coerce`), and a non-erased `mtch`
-that takes a constructor's branch (`machine_mtch_fld`). Each takes the
+for every non-erased primitive but `coerce`), a non-erased `mtch`
+that takes a constructor's branch or its `else` (`machine_mtch_fld`,
+`machine_mtch_els`), `case` in its three forms (`machine_caseE`,
+`machine_case_fld`, `machine_case_els`, `machine_caseN`), the many
+cell marks (`machine_markMany`), and, toward a cell invocation
+written in place, the value it builds (`reuse_core`, with
+`MOut.compose` and `MFrame.splitC`/`bindC` for a step that consumes
+reserved blocks). Each takes the
 steps after it as hypotheses (`MRun` of the rest and of the branch, and
 the body's `Sim`), so the final theorem is an induction like
 `eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
@@ -124,13 +131,15 @@ under a unique match the scrutinee's top block, which no field reaches,
 is left reserved for the branch (`Res`), which is what `GOK.uscr` asks
 for a cell binder to take later.
 
-Left, on this session's reading: the `else` branch of a non-erased
-`mtch`, `case` in its three forms, `coerce` (the result is owned
+Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
 non-erased call (the callee's frame, the closure's captures and
 `Group.caps`), the pending marks (`reuse`, `alloc`, `cellOf`, `write`,
-where the in-place writes come in), the rebinding of an `else`
+where the in-place writes come in: `prim_val_reuse` from `reuse_core`
+for `Prog.reuse`'s two heads, `GOK.pend` strengthened so the block it
+names is not the unique scrutinee's, then the primitive step through
+`splitC`/`bindC`), the rebinding of an `else`
 scrutinee, `defFns`, `open-adt` (`machine_same` covers its success; on
 failure the core continues with `.dead`, which no stripped run
 reaches), and the assembly.
@@ -146,7 +155,12 @@ captures must each pass `use` where the group is defined; and an `else`
 branch's binder is taken over from the scrutinee without a use only
 under a unique match, and is otherwise an ordinary use of the
 scrutinee (before, a `many` match's `else` could bind its scrutinee at
-unique).
+unique); a newtype branch and an erased `case`'s `else` have no cell
+to take; a cell binder is taken only under a unique match (`cellOf`
+needs the unique scrutinee, and the reader emits the mark only
+there); and an in-place write or invocation at unique needs a cell
+type (`cellTy`), whose entries' full values are `tok` (`VTy.opq`) so
+that their blocks are owned through `Spine.cell`/`WO.cell`.
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

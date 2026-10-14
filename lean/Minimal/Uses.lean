@@ -128,6 +128,10 @@ def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []
 
+def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
+  | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false
+  | _ => false
+
 def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do
   let ⟨St, _⟩ ← (checkTm P G.Γ s).toOption
   match G.Γ.canon St with
@@ -206,11 +210,13 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
           usesCore b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) ru rets rest'
         else usesCore b G ru rets rest
       | _ => none
-    | .reuse u, .fv i | .write u, .fv i => do
+    | .reuse u, .fv i | .write u, .fv i =>
+      if u && !G.Γ.ghost && !G.cellTy P i then none else do
       let C ← usesCore b { G with cellOk := true } ru rets rest
       if G.Γ.ghost then some C else UR.seq (← G.use i u, []) C
     | .alloc, _ => usesCore b { G with cellOk := true } ru rets rest
-    | .cellOf, x => usesCore b { G with cellOk := G.uscr == some x, uscr := none } ru rets rest
+    | .cellOf, x => if G.Γ.ghost || G.uscr == some x then usesCore b { G with cellOk := true, uscr := none } ru rets rest
+      else none
     | _, _ => usesCore b G ru rets rest
   | .chk (.opn oe) (.fv m) _ rest =>
     let Γo : Ctx := { G.Γ with opened := (m, oe) :: G.Γ.opened }
