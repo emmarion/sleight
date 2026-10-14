@@ -168,7 +168,8 @@
 (def-fns _ $ (many find-template : (subterm many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ List $ Piece) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (None _)))
   (let-match many t (MkTemplate b ty i ps))
-  (match many (and (str-eq b kind) $ and (str-eq ty type) $ nat-eq i index) _
+  (let ((many hit)) $ match many (nat-eq i index) (((Bool) _)) ((BFalse) (BFalse)) ((BTrue) (and (str-eq b kind) $ str-eq ty type)))
+  (match many hit _
     ((BTrue) (Some _ ps))
     ((BFalse) (tail $ find-template rest kind type index))))
 
