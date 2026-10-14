@@ -111,6 +111,21 @@ references are to DESIGN.md.
     already at `v`, checked after the binding as a return's promise
     is, in the way `(at (f ...))` asserts a skipped call (§39). Today
     it is refused.
+36. Should `_` be accepted as an at-match's annotation (§40, §47)?
+    Today the annotation inside `at` must be written out, and a match
+    annotated `_` is not an at-match, even in the body of an
+    at-function or the branch of an at-match. As the implementations
+    stand, such a match keeps its code and the enclosing body check
+    covers it (ASSUMPTIONS 207). So, for example, it cannot have the
+    several real branches on a union that §40 allows an at-match.
+    Two forms have been considered. One is `(at _)`, which would reuse
+    the expected telescope as `_` does and make an at-match wherever
+    `_` may be written. The other is a bare `_` that makes an at-match
+    when the telescope it reuses is that of an at-match's branch or
+    body, or of an at-function's body. For the second form, it is also
+    open how far that reaches: whether it passes into a nested match,
+    and whether it stops where a fresh telescope is supplied, as at an
+    argument, a typed `let` binder or a proof.
 
 ## Argument temporaries
 
