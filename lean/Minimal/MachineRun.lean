@@ -3524,7 +3524,13 @@ theorem callee_frame {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : L
       erb (envS.length + Gr.fns.length + k) = false → (t.kinds.map (·.u)).getD k false = true) :
     MFrame P Ub (envS.length + Gr.fns.length + argsF.length) erb H1
       (envM ++ closuresS envM gid Gr ++ pM) (envS ++ closuresS envS gid Gr ++ pS) (envF ++ closures envF gid Gr ++ argsF)
-      (fun _ => False) Out' Shr := by
+      (fun _ => False) Out' Shr ∧
+    (∀ b, Own P Ub (envS.length + Gr.fns.length + argsF.length) erb H1 (envM ++ closuresS envM gid Gr ++ pM)
+      (envS ++ closuresS envS gid Gr ++ pS) (envF ++ closures envF gid Gr ++ argsF) b →
+      H.next ≤ b ∨ Own P AB n er H ρM ρS ρ b) ∧
+    (∀ b, Live P Ub (envS.length + Gr.fns.length + argsF.length) erb H1 (envM ++ closuresS envM gid Gr ++ pM)
+      (envS ++ closuresS envS gid Gr ++ pS) b →
+      H.next ≤ b ∨ Own P AB n er H ρM ρS ρ b ∨ Live P AB n er H ρM ρS b ∨ Shr b) := by
   have hfdec := hM.dec fi hfi hfU hfe
   rw [hfM, hfS] at hfdec
   obtain ⟨hlen, hrdM⟩ := MDec.clo_inv hfdec
@@ -3623,10 +3629,10 @@ theorem callee_frame {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : L
     · exact .inl h
     · exact .inr h
     · exact h.elim
-  refine ⟨by simp [hlen, hcM, hlp]; omega, by simp [hcS, hlpS]; omega, by simp [hlF, hcF]; omega, hOa.wf, ?_, ?_, ?_, ?_,
+  refine ⟨⟨by simp [hlen, hcM, hlp]; omega, by simp [hcS, hlpS]; omega, by simp [hlF, hcF]; omega, hOa.wf, ?_, ?_, ?_, ?_,
     ⟨fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim⟩,
     fun a ha => Nat.lt_of_lt_of_le (hM.outb a ha) hOa.next,
-    ⟨fun _ h => h.elim, ?_, fun a ha => Nat.lt_of_lt_of_le (hM.shr.2.2 a ha) hOa.next⟩⟩
+    ⟨fun _ h => h.elim, ?_, fun a ha => Nat.lt_of_lt_of_le (hM.shr.2.2 a ha) hOa.next⟩⟩, ?_, ?_⟩
   · intro i hi hU he
     rcases cls i hi with hi' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
     · rw [eE _ _ _ hlen i hi', eE _ _ _ rfl i hi']
@@ -3713,5 +3719,81 @@ theorem callee_frame {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : L
     · rcases parS k hk hU he b h1 with h | ⟨y, hy, hBy, hey, hsy⟩
       · have := hM.shr.2.2 b h2; omega
       · exact hM.shr.2.1 y hy (sB.2 y hBy) hey b hsy h2
+  · intro b ⟨x, hx, hU, he, hs⟩
+    rcases cls x hx with hx' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · obtain ⟨hABf, hsf⟩ := envW x hx' hU he
+      exact .inr ⟨fi, hfi, hABf, hfe, hsf b hs⟩
+    · exact absurd hU (hsib k hk (by simp [hU]) he).2
+    · rcases parS k hk hU he b hs with h | ⟨y, hy, hBy, hey, hsy⟩
+      · exact .inl h
+      · exact .inr ⟨y, hy, sB.2 y hBy, hey, hsy⟩
+  · intro b ⟨z, hz, hU, he, hf⟩
+    rcases cls z hz with hz' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · exact .inr (.inr (.inl ⟨fi, hfi, hfU, hfe, toF z (by omega) hU he b hf⟩))
+    · exact .inr (.inr (.inl ⟨fi, hfi, hfU, hfe, toF _ (by omega) hU he b hf⟩))
+    · obtain ⟨hte, h1', h2', -⟩ := parV k hk he
+      rcases hOa.foot k _ _ h1' h2' hte b hf with h | ⟨y, hy, hBy, hey, hsy⟩ | h | ⟨z', hz'', hBz', hez', hfz'⟩ | h
+      · exact .inl h
+      · exact .inr (.inl ⟨y, hy, sB.2 y hBy, hey, hsy⟩)
+      · exact h.elim
+      · exact .inr (.inr (.inl ⟨z', hz'', sB.1 z' hBz', hez', hfz'⟩))
+      · exact .inr (.inr (.inr h))
+
+theorem callee_out {n nb m : Nat} {er erb : Nat → Bool} {H H1 H2 : Heap} {ρM ρS ρ ρMb ρSb ρFb : List Tm}
+    {AB B Ub : Uses} {Shr : Nat → Prop} {t Rb : Tm} {ru rub ruC : List Bool} {as argsS argsF outsMb outsSb outsFb oM oS : List Tm}
+    (hOa : MOut P B n er H ρM ρS ρ (fun _ => False) Shr t ru H1 as argsS argsF) (sB : B.Sub AB)
+    (hOb : MOut P Ub nb erb H1 ρMb ρSb ρFb (fun _ => False) Shr Rb rub H2 outsMb outsSb outsFb)
+    (hown : ∀ b, Own P Ub nb erb H1 ρMb ρSb ρFb b → H.next ≤ b ∨ Own P AB n er H ρM ρS ρ b)
+    (hlive : ∀ b, Live P Ub nb erb H1 ρMb ρSb b →
+      H.next ≤ b ∨ Own P AB n er H ρM ρS ρ b ∨ Live P AB n er H ρM ρS b ∨ Shr b)
+    (hlen : oM.length = oS.length)
+    (hsp : ∀ k w u, oM[k]? = some w → oS[k]? = some u →
+      (w = .tok ∧ u = .tok) ∨ (Rb.ers.getD k true = false ∧ outsMb[k]? = some w ∧ outsSb[k]? = some u))
+    (hru : ∀ k, ruC.getD k false = true → Rb.ers.getD k true = false → rub.getD k false = true) :
+    MOut P AB n er H ρM ρS ρ (fun _ => False) Shr (plainTele m) ruC H2 oM oS outsFb := by
+  have tokS : ∀ v b, ¬ Spine P H2 .tok .tok v b := fun v b h => h.imm (by simp) (by simp)
+  have tokF : ∀ b, ¬ Foot P H2 .tok .tok b := fun b h => by cases h
+  refine ⟨hOb.wf, Nat.le_trans hOa.next hOb.next, fun a ha => hOb.blk a (hOa.blk a ha),
+    fun a ha ho _ => ?_, hlen, fun k w u hw hu _ => ?_, fun k w u hw hu _ b hf => ?_,
+    fun k w u v hw hu hv _ hr b hs => ?_, fun k w u v hw hu hv _ hr => ?_,
+    fun k j w u v w' u' hkj hw hu hv hw' hu' _ _ hr b h1 h2 => ?_⟩
+  · rw [hOb.keep a (Nat.lt_of_lt_of_le ha hOa.next) (fun h => by
+        rcases hown a h with h | h
+        · omega
+        · exact ho h) id,
+      hOa.keep a ha (fun h => ho (h.mono sB)) id]
+  · rcases hsp k w u hw hu with ⟨rfl, rfl⟩ | ⟨he, h1, h2⟩
+    · exact .tok (.inl rfl)
+    · exact hOb.dec k w u h1 h2 he
+  · rcases hsp k w u hw hu with ⟨rfl, rfl⟩ | ⟨he, h1, h2⟩
+    · exact (tokF b hf).elim
+    · rcases hOb.foot k w u h1 h2 he b hf with h | h | h | h | h
+      · exact .inl (Nat.le_trans hOa.next h)
+      · rcases hown b h with h | h
+        · exact .inl h
+        · exact .inr (.inl h)
+      · exact h.elim
+      · rcases hlive b h with h | h | h | h
+        · exact .inl h
+        · exact .inr (.inl h)
+        · exact .inr (.inr (.inr (.inl h)))
+        · exact .inr (.inr (.inr (.inr h)))
+      · exact .inr (.inr (.inr (.inr h)))
+  · rcases hsp k w u hw hu with ⟨rfl, rfl⟩ | ⟨he, h1, h2⟩
+    · exact (tokS v b hs).elim
+    · rcases hOb.uspine k w u v h1 h2 hv he (hru k hr he) b hs with h | h | h
+      · exact .inl (Nat.le_trans hOa.next h)
+      · rcases hown b h with h | h
+        · exact .inl h
+        · exact .inr (.inl h)
+      · exact h.elim
+  · rcases hsp k w u hw hu with ⟨rfl, rfl⟩ | ⟨he, h1, h2⟩
+    · exact .free fun b h => tokS v b h
+    · exact hOb.uwo k w u v h1 h2 hv he (hru k hr he)
+  · rcases hsp k w u hw hu with ⟨rfl, rfl⟩ | ⟨he, e1, e2⟩
+    · exact tokS v b h1
+    · rcases hsp j w' u' hw' hu' with ⟨rfl, rfl⟩ | ⟨he', e1', e2'⟩
+      · exact tokF b h2
+      · exact hOb.usep k j w u v w' u' hkj e1 e2 hv e1' e2' he he' (hru k hr he) b h1 h2
 
 end Minimal

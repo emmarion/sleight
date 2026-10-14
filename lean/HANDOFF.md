@@ -131,7 +131,10 @@ callee's side, `args_val`, `MDec.clo_inv`, `WO.clo_inv`,
 recorded at many and owns nothing) and `callee_frame` (the frame a
 callee's body starts in, built from the caller's frame for the call's
 own uses, the closure's captures, the sibling closures and the built
-arguments, given which captured entries the body reads and owns). `GOK.pend` says the block a pending mark names is
+arguments, given which captured entries the body reads and owns,
+together with how that frame's owned and live blocks sit in the
+caller's) and `callee_out` (the body's results' ownership in the
+caller's terms, through the spreading of the outputs). `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
