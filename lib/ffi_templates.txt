@@ -3,9 +3,9 @@
 ; {bI} the body of constructor I's arm, {fI.J} the binder of its field J, {aI} a build argument and {tK}
 ; a temporary. Every hole but a body is filled with a variable name, and a body sits in tail position.
 ; "fn F: text" is extern function F, {aI} its I-th non-erased argument, text its non-erased results.
-match Nat: if (Obj.obj {s} : Z.t) == Z.zero then {b0} else let {f1.0} = Obj.repr (Z.pred (Obj.obj {s} : Z.t)) in {b1}
+match Nat: if (Obj.obj {s} : Z.t) == Z.zero then {b0} else let {f1.0} = (if Obj.is_int {s} then Obj.repr ((Obj.obj {s} : int) - 1) else Obj.repr (Z.pred (Obj.obj {s} : Z.t))) in {b1}
 build Nat 0: Obj.repr Z.zero
-build Nat 1: Obj.repr (Z.succ (Obj.obj {a0} : Z.t))
+build Nat 1: (if Obj.is_int {a0} && (Obj.obj {a0} : int) < max_int then Obj.repr ((Obj.obj {a0} : int) + 1) else Obj.repr (Z.succ (Obj.obj {a0} : Z.t)))
 match Half: let {t0} = (Obj.obj {s} : Z.t) in if {t0} == Z.zero then {b0} else let {t1} = (if Obj.is_int {s} then Obj.repr (((Obj.obj {s} : int) - 1) asr 1) else Obj.repr (Z.shift_right (Z.pred {t0}) 1)) in if (if Obj.is_int {s} then (Obj.obj {s} : int) land 1 = 1 else Z.is_odd {t0}) then let {f1.0} = {t1} in {b1} else let {f2.0} = {t1} in {b2}
 build Half 0: Obj.repr Z.zero
 build Half 1: Obj.repr (Z.succ (Z.shift_left (Obj.obj {a0} : Z.t) 1))

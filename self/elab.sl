@@ -494,7 +494,7 @@
             ((None _) (values (declared env "" x) $ str-cat3 (qshown env x) ", declared " $ tick $ spell env $ mult-name m)))))
         (env-error-with env notes $ str-cat3 what ", " $ say env how))))
   (let-match many m (Once) (else env1))
-  (let ((many env2)) (match many (match many (mult-is-once pos) (((Bool) _)) ((BTrue) (list-mem-bin (env-captures env) x)) ((BFalse) (BFalse))) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 (say env "`def-fns` cannot capture ") (qshown env x) " at unique"))))
+  (let ((many env2)) (match many (match many (mult-is-once pos) (((Bool) _)) ((BTrue) (desc-mem (env-captures env) x)) ((BFalse) (BFalse))) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 (say env "`def-fns` cannot capture ") (qshown env x) " at unique"))))
   (let ((many (Maybe $ Pair (Loc) $ String) conflict))
     (match many (idmap-get _ x $ uses-map $ env-uses env2) (((Maybe $ Pair (Loc) $ String) _))
       ((Miss _ _ _ _) (None _))

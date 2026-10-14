@@ -91,9 +91,9 @@
 
 (def-fns _ $ (many is-delim : (many (Char) c) -> (many (Bool) r))
   (let ((many n)) $ char-code c)
-  (or (nat-lt n 33)
-    (or (nat-eq n 40)
-      $ or (nat-eq n 41) $ nat-eq n 59)))
+  (let-match many (nat-lt n 33) (BFalse) ((BTrue) (BTrue)))
+  (let-match many (nat-lt 59 n) (BFalse) ((BTrue) (BFalse)))
+  (or (nat-eq n 40) $ or (nat-eq n 41) $ nat-eq n 59))
 
 (def-fns _ $ (many word-item : (many (Spot) pos) (many (String) w) -> (many (Tok) t))
   (let-match many (str-eq w "_") (BFalse) ((BTrue) (TItem $ RWild pos)))

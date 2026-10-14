@@ -3,6 +3,68 @@
 Work in progress handed from one session to the next. Written by a
 Claude session; nothing here is a design decision.
 
+## Making `slc` faster (one session, autonomous, at the owner's request)
+
+The owner asked for an overnight experiment in making the self-hosted
+compiler faster, soundness kept. Branch `slc-perf`. `bench/bench.sh -n 5
+beefe55`, both binaries extracted by the reference from their own
+sources and timed on the same pinned `origin/main` sources, on the
+machine this session ran on: `origin/main`'s `slc` 9.27s median (8.95s
+min, 138MB), this branch's 4.37s median (4.19s min, 219MB), so a little
+over twice as fast; the `bench/` samples go from 5.24s to 3.91s on
+`uses_join` and stay within about 0.05s on the small ones. Every step
+was checked with `self/bootstrap.sh` (968 matched, 1181 refused, 0 failed,
+the same 1101/78/2 split of refusal positions as before, fixpoint
+reached) and, where `lib/` changed, `dune test` (1042 tests, 0 failures).
+
+What the time went to, by callgrind, and what was done, in the order of
+what it bought as this session measured it:
+
+1. Diagnostic text built on the success path, about a quarter of the run
+   (CLAUDE.md rule 17). The subject a multiplicity refusal names was
+   spelled for every special form, `coerce` and call return; it is now a
+   `What`, spelled by `what-say` only when the refusal is reported. Two
+   at-match checks normalized every branch's code, at-match or not, the
+   `and` that guarded them evaluating both operands; `find-template`,
+   `narrow-index` and the unique-capture check had the same shape.
+2. The collector. `lib/driver_core.ml` sets a 2M-word minor heap and a
+   space overhead of 400 for every program the reference runs or either
+   compiler writes out. A session's choice, not the owner's: it trades
+   memory for time (`slc` on itself 138MB to about 210MB), and 1000
+   measured a further tenth faster at more memory still.
+3. `lib/ffi_core.ml`'s `flatten`, which built a one-byte string per
+   character leaf, now writes into one `Buffer`; `append` copies once.
+   The `nat-cmp` and `lt-dec` templates compare two immediate integers
+   in line instead of calling zarith's C compare.
+4. Smaller ones: `find-newtype` tests the few objects the index names
+   for the constructor instead of walking every opened object; the slot
+   map keeps one key per entry, not two; the table counts its rule-free
+   metas, so `has-meta-env` answers no without canonicalizing when there
+   are none, about four calls in five; the special forms are found by
+   index in an `IdMap`; the hint lines are indexed by their prefix; an
+   emitted entry is named as `lib/extract.ml`'s `var` names it, `v1234`
+   for an anonymous one, where the name used to carry a source position
+   built for every reference (the OCaml written is about a sixth
+   smaller).
+
+What remains, on this session's reading of the last profile: the
+persistent binary tries keyed by id are the largest single cost,
+`facts-lookup` about 16% of instructions and `idmap-get` and
+`idmap-set` about 13% between them, plus much of the collector's
+marking; a microbenchmark of the emitted shape put a four-way trie about
+30% faster per lookup, the gap being memory latency more than
+instructions. Making the fact table four-way would mean redoing its
+proofs (`In`, `RuledIn`, `Ins`, `Out`, `C1`, `Above`, roughly 700
+lines), and the session judged that against rule 5 and left it. Unique
+mutable arrays, which the owner suggested, did not find a place in the
+hot paths: the environment is persistent and shared, branches and
+scopes go back to older versions of it, so the tables cannot be
+mutated in place without threading the whole elaborator uniquely.
+Other costs seen and not pursued: name lookups walk a `NameMap` kid
+list per character (about 3%), the reader allocates a slice per
+character (the parse is about 7%), and `emit` looks shapes up by a
+linear search (about 1%).
+
 ## `read-file`, `symbol-eq` and the elaborator's world (one session, with the owner)
 
 Done in both compilers, to the owner's design given in chat, with DESIGN.md

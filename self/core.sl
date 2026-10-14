@@ -3093,8 +3093,15 @@
     ((BFalse) env)
     ((BTrue) (env-set-tracking env $ MkTracking on bs $ idmap-set _ x (RefLevel want) rf))))
 
+(def-fns _ $ (many desc-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
+  (let-match many xs (Cons _ y rest) ((Nil _) (BFalse)))
+  (match many (nat-cmp y x) _
+    ((CLt _ _ _ _ _) (BFalse))
+    ((CEq _ _ _) (BTrue))
+    ((CGt _ _ _ _ _) (tail $ desc-mem rest x))))
+
 (def-fns _ $ (many entry-word : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
-  (list-mem-bin (env-words env) x))
+  (desc-mem (env-words env) x))
 (def-fns _ $ (many insert-desc : (many (Nat) x) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ y rest)
     ((Nil _) (Cons _ x xs)))
