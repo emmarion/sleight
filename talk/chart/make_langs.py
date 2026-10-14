@@ -15,8 +15,8 @@ rows = [  # label, lines, Xeon 8358 ms, M4 Pro ms, certified; from heapsort/benc
   ('Sleight, glm-5.3-flash, flambda', 2099, 157.2, 90.7, True),
 ]
 panels = [('Lines of code, comments removed', 0, 2500, [0, 500, 1000, 1500, 2000, 2500], lambda v: f'{int(v):,}'),
-          ('Sort time, Xeon Platinum 8358 (ms)', 0, 450, [0, 100, 200, 300, 400], lambda v: f'{int(v)}'),
-          ('Sort time, Apple M4 Pro (ms)', 0, 250, [0, 50, 100, 150, 200, 250], lambda v: f'{int(v)}')]
+          ('Sort time, Xeon Platinum 8358 (ms)', 0, 450, [0, 100, 200, 300, 400], lambda v: f'{v:.0f}'),
+          ('Sort time, Apple M4 Pro (ms)', 0, 250, [0, 50, 100, 150, 200, 250], lambda v: f'{v:.0f}')]
 W, H = 1800, 800
 out = frame(W, H, 'Heap sorts of the same 2^20 integers, certified and not',
             'Median of 11 rounds, sort only; OCaml-based sorts with flambda -O3 except where noted. Sleight counts exclude the 53-line spec the task supplies; Lean, ATS and Idris counts include theirs.')

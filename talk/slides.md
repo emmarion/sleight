@@ -1,4 +1,4 @@
-# Sleight: a language for LLMs
+# Sleight: A Language for LLMs
 
 Sixty minutes over Zoom, for an audience of mostly PL experts. An opening, the agent runner, the language in order of importance, what is proved, and a close; an appendix follows for questions.
 
@@ -6,12 +6,13 @@ Sixty minutes over Zoom, for an audience of mostly PL experts. An opening, the a
 
 ## 1. Title
 
-**Sleight: a language for LLMs**
+**Sleight: A Language for LLMs**
 
 Eric Marion
 October 14, 2026
 github.com/emmarion/sleight, Apache-2.0
-doi.org/10.5281/zenodo.23361871
+Code: doi.org/10.5281/zenodo.23361871
+Slides: doi.org/10.5281/zenodo.23367392
 
 - **Sleight**: a dependently typed language whose proofs erase, built for LLMs to write
 - **An agent runner**: tests whether models can write Sleight, and where they get stuck
@@ -496,8 +497,8 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
 
 ## 40. Thanks
 
-- github.com/emmarion/sleight
-- doi.org/10.5281/zenodo.23361871
+- Code: github.com/emmarion/sleight, doi.org/10.5281/zenodo.23361871
+- Slides: doi.org/10.5281/zenodo.23367392
 - Questions
 
 ---
@@ -752,7 +753,8 @@ let rec zip_add xs ys = match xs with
 |---|---|---|
 | ATS, certified, clang | 50 ms | 105 ms |
 | C, clang | 50 ms | 128 ms |
-| **Sleight, certified, by agents** | **88–91 ms** | **136–157 ms** |
+| **Sleight, certified, three agent runs** | **88–91 ms** | **136–157 ms** |
+| Sleight, certified, Claude outside the runner | 91 ms | 145 ms |
 | C, gcc | | 140 ms |
 | ATS, certified, gcc | | 140 ms |
 | OCaml, -unsafe | 92 ms | 164 ms |
