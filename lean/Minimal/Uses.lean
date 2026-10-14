@@ -117,17 +117,17 @@ def primTy (G : UCtx) (p : Prim) : Option Tm := match p with
     | .ok ⟨T, _⟩ => some T
     | .error _ => none
 
-def coerSrc (G : UCtx) (q : Tm) : Option Bool := do
+def coerSides (G : UCtx) (q : Tm) : Option (Bool × Bool) := do
   let ⟨T, _⟩ ← (checkTm P G.Γ q).toOption
   match G.Γ.canon T with
-  | .app (.tyc _ .nil) (.cons sa _) => some (sa == uniqueTm)
+  | .app (.tyc _ .nil) (.cons sa (.cons _ (.cons _ (.cons sb _)))) => some (sa == uniqueTm, sb == uniqueTm)
   | _ => none
 
 def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .tm t => G.termUses P u t
   | .coerce a _ q => do
-    let su ← G.coerSrc P q
-    if u && !su then none else G.termUses P su a
+    let (su, tu) ← G.coerSides P q
+    if u && !(su && tu) then none else G.termUses P su a
   | .axm _ => if u && !G.cellOk then none else some []
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []
@@ -137,11 +137,15 @@ def fnCtx (G : UCtx) (Gr : Group) (F : FnDef) : UCtx :=
     if u then some (G.Γ.n + Gr.fns.length + k) else none)
   { G with Γ := (G.Γ.body Gr F).1, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
 
+def fnU (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
+  | some (.fn _ _ _ u _) => u
+  | _ => false
+
 def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
   Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
   (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
   Gr.fns.all (fun F => F.dele.all fun t =>
-    if t < G.Γ.n then (if F.u then (Gr.caps.lookup t).isSome else Gr.caps.lookup t == some false)
+    if t < G.Γ.n then Gr.caps.lookup t == some (F.u && G.fnU t)
     else (Gr.fns[t - G.Γ.n]?.map (·.u)) == some false)
 
 def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with

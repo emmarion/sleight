@@ -208,7 +208,8 @@ theorem primUses_uq {G : UCtx} {u : Bool} {p : Prim} {A : Uses} (h : G.primUses 
   unfold UCtx.primUses at h
   split at h
   · exact termUses_uq h
-  · obtain ⟨su, -, h2⟩ := Option.bind_eq_some_iff.mp h
+  · obtain ⟨⟨su, tu⟩, -, h2⟩ := Option.bind_eq_some_iff.mp h
+    simp only at h2
     split at h2
     · cases h2
     · exact termUses_uq h2
@@ -3324,11 +3325,8 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
       rw [hd] at this
       simp only [Option.all_some] at this
       refine ⟨hdk k F t hF hd, fun h => ?_, fun h => by simpa [show ¬ t < G.Γ.n by omega] using this⟩
-      simp only [h, ite_true] at this
-      cases hu : F.u
-      · simp only [hu] at this; exact ⟨false, by simpa using this, by simp⟩
-      · simp only [hu, ite_true, Option.isSome_iff_exists] at this
-        obtain ⟨u, hl⟩ := this; exact ⟨u, hl, fun _ => rfl⟩
+      simp only [h, ite_true, beq_iff_eq] at this
+      exact ⟨_, this, fun hu => (Bool.and_eq_true _ _ ▸ hu).1⟩
   have hcv := clo_vals hGr hM.lenM hM.lenS hM.lenF
     (fun i u h => hM'.dec i (hcap i u h).1 (by simp [h]) (hcap i u h).2)
     (fun i h => hM'.wo i (hcap i true h).1 h (hcap i true h).2)

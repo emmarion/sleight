@@ -108,7 +108,7 @@ filling, no ghost. Proved so far, without `sorry`: `machine_seq`,
 change nothing the machine reads (`machine_chkPlain`, `machine_cm`,
 `machine_uq`, `machine_uqScr`, `machine_skip`), a non-erased primitive
 that no pending mark changes (`machine_prim_inert`, with `prim_val`
-for every non-erased primitive but `coerce`), a non-erased `mtch`
+for every non-erased primitive but `coerce` and `coerce_val` for it), a non-erased `mtch`
 that takes a constructor's branch or its `else` (`machine_mtch_fld`,
 `machine_mtch_els`), `case` in its three forms (`machine_caseE`,
 `machine_case_fld`, `machine_case_els`, `machine_caseN`), the many
@@ -164,17 +164,16 @@ under a unique match the scrutinee's top block, which no field reaches,
 is left reserved for the branch (`Res`), which is what `GOK.uscr` asks
 for a cell binder to take later.
 
-`coerce` (`CoerceVal`) is the next piece, on this plan. A session read
-how the compilers make coercion sound, and the owner agreed with that
-account in chat. A `coerce` emits no code: the result is the source's
-word, in the interpreter, the extractor and `slc` alike. Uniqueness has
-one runtime effect, in-place mutation: a cell write or invocation at
-`unique` writes the block itself, where at `many` it copies first, and
-the `Array`/`Bytes` externs that take their array at `unique` write
-the OCaml array in place. So soundness is that memory reachable from a
-`unique` holder through unique-labelled fields has no other live
-reference (§15, §22), and a coercion keeps that because of its sides
-(§33, §34):
+`coerce` rests on how the compilers make coercion sound, an account a
+session read and the owner agreed with in chat. A `coerce` emits no
+code: the result is the source's word, in the interpreter, the
+extractor and `slc` alike. Uniqueness has one runtime effect, in-place
+mutation: a cell write or invocation at `unique` writes the block
+itself, where at `many` it copies first, and the `Array`/`Bytes`
+externs that take their array at `unique` write the OCaml array in
+place. So soundness is that memory reachable from a `unique` holder
+through unique-labelled fields has no other live reference (§15, §22),
+and a coercion keeps that because of its sides (§33, §34):
 - `(Unique)` to `(Unique)` consumes the source, and the two ends reach
   the same memory through unique-labelled fields;
 - a `(Shared)` target cannot mutate;
@@ -185,28 +184,34 @@ reference (§15, §22), and a coercion keeps that because of its sides
   carried into a unique-labelled field.
 
 In the Lean model, "reach through unique-labelled fields" is `Spine`.
-The plan:
-- strengthen `VTy.coer` so that a proof with both sides `(Unique)` has
-  the two ends' `Spine`s equal and their `WO`s equivalent, and a proof
-  with exactly one side `(Unique)` has no `Spine` on that side (needed
-  because `coercible-trans` may pass through a `(Shared)` middle);
-- prove that for each proof former, then `CoerceVal`.
+`Twin P a b` says two full values have the same `Spine` and equivalent
+`WO` over every heap, machine word and stripped value, and `NoSpine P
+a` that `a` has no `Spine` at all. `VTy.coer` carries, when the program
+has no delegate (`NoDele`), `CoerOwn` of the proof's sides and ends: a
+`Twin` when both sides are `(Unique)`, and `NoSpine` of the
+`(Unique)` end when only one side is (`coercible-trans` may pass
+through a `(Shared)` middle). `tm_sound` proves it for each proof
+former (`CoerOwn.refl`, `.symm`, `.trans`, `.shared`, `.wrap`, and
+`Twin.ctor` for `coercible-ctor`); `delegate-of` is vacuous because a
+context's delegate pairs come only from delegates of the program
+(`DeleOK` records `¬ NoDele P`). `coerce_val` is `prim_val`'s
+conclusion for `coerce`: the machine builds the source, and when the
+result is unique the pass has both sides `(Unique)`, so `MOut.twin`
+moves the source's ownership to the target.
 
-Two fixes to the Lean uses pass come first, each to be checked by a
-full `compare.sh` run.
-- The pass checks only a `coerce`'s source side. §33's refusal of a
-  `(Shared)` target side in a `unique` position, which the elaborator
-  enforces, is missing.
-- `UCtx.defOK` lets a unique delegate's group capture its target at
-  either multiplicity. The intended condition is the target's own:
-  `unique` when the target is a `UniqueFn`, `many` when it is an `Fn`.
-  The looser condition admits a unique delegate to a `UniqueFn`
-  captured at `many`, which would be unsound for `delegate-of`'s
-  `(Unique)` to `(Unique)` proof. The pass's own capture computation
-  never produces that combination. The three tests a capture at
-  `unique` would refuse (`unique_delegate.sl`, `delegate_first_class.sl`,
-  `coercible_of_shadowed.sl`) are each a `def-unique` delegating to an
-  `Fn`, which the intended condition admits.
+Two checks in the Lean checker serve this proof. `coercible-wrap`
+needs the constructor's signature written out, as `coercible-ctor`
+already did, so that its unique-labelled fields are the machine's.
+`coercible-ctor` asks for a proof at every field that is non-erased or
+unique-labelled, since `Spine` follows a unique-labelled field whether
+or not it is erased; on this session's reading the reader never makes
+a constructor field both erased and unique, so the second check adds
+nothing in practice.
+
+The uses pass refuses a `coerce` in a `unique` position unless both
+sides are `(Unique)` (§33), and a unique delegate's group captures its
+target at the target's own multiplicity: `unique` for a `UniqueFn`,
+`many` for an `Fn` (`UCtx.fnU`).
 
 The assembly takes the checker's success on a core (`checkCore … = .ok
 …`) as its hypothesis rather than an arbitrary `CoreTy` derivation.
@@ -227,10 +232,9 @@ environment, an `eval` of `c` that succeeds gives `MRun` for `c`, and
 `Classical.choice` and `Quot.sound`). `machine_main` states it for the
 program: when the checker and the uses pass accept `P.main`, the
 machine's run of it from the empty heap ends where the stripped run
-does, with the results' ownership and values in an `MOut`. Its hypotheses besides `ProgOK`:
-`CoerceVal P` (`prim_val`'s conclusion for `coerce`, which no lemma
-proves yet) and that no function of the program is a delegate. On this
-session's reading these are the two parts of the theorem left open. A
+does, with the results' ownership and values in an `MOut`. Its hypothesis besides `ProgOK`
+is `NoDele P`, that no function of the program is a delegate. On this
+session's reading delegates are the part of the theorem left open. A
 call through a delegate runs the target's body in the stripped run and
 the delegate's in the full one, and `walk1` has no machine counterpart
 yet. The induction carries, for a non-erased primitive, `MSound` of the

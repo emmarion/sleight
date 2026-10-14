@@ -3,6 +3,7 @@ import Minimal.UnifySound
 import Minimal.Strip
 import Minimal.Eval
 import Minimal.Deleg
+import Minimal.Machine
 
 set_option linter.deprecated false
 
@@ -20,8 +21,15 @@ variable (P : Prog)
 def FixOK (F : List (Option Tm)) (ρ : List Tm) : Prop :=
   F.length ≤ ρ.length ∧ ∀ i v, F[i]?.join = some v → Real P v (Tm.env ρ i)
 
+def NoDele : Prop := ∀ (gid : Nat) (G : Group) (j : Nat) (F : FnDef), P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = none
+
 def DeleOK (ds : List (Nat × Nat)) (ρ : List Tm) : Prop :=
-  ∀ g t, (g, t) ∈ ds → g < ρ.length ∧ t < ρ.length ∧ ∀ vS, Real P vS (Tm.env ρ g) ↔ Real P vS (Tm.env ρ t)
+  ∀ g t, (g, t) ∈ ds → g < ρ.length ∧ t < ρ.length ∧ (∀ vS, Real P vS (Tm.env ρ g) ↔ Real P vS (Tm.env ρ t)) ∧
+    ¬ NoDele P
+
+def CoerOwn (sa a sb b : Tm) : Prop :=
+  (sa = uniqueTm → sb = uniqueTm → Twin P a b) ∧ (sa = uniqueTm → sb ≠ uniqueTm → NoSpine P a) ∧
+    (sb = uniqueTm → sa ≠ uniqueTm → NoSpine P b)
 
 mutual
 inductive VTy : Tm → Tm → Prop
@@ -40,7 +48,7 @@ inductive VTy : Tm → Tm → Prop
       D.opq = false → VTy v (D.mtbl d ls)
   | opq {D : Adt} : P.adts[d]? = some D → D.opq = true → VTy .tok (.app (.tyc d ls) idx)
   | coer {D : Adt} : P.adts[d]? = some D → D.coercible = true → (∀ vS, Real P vS a ↔ Real P vS b) →
-      VTy .tok (Tm.coer d sa A a sb B b)
+      (NoDele P → CoerOwn P sa a sb b) → VTy .tok (Tm.coer d sa A a sb B b)
 
 inductive VTys : Tm → Tm → Tm → Prop
   | nil : VTys .nil t t
@@ -56,6 +64,40 @@ inductive EnvOK : List Tm → Ctx → Prop
 end
 
 variable {P}
+
+theorem NoSpine.twin {a b : Tm} (h : NoSpine P b) (t : Twin P a b) : NoSpine P a :=
+  fun H w u k hs => h H w u k (((t H w u).1 k).mp hs)
+
+theorem NoSpine.nil : NoSpine P .nil := fun _ _ _ _ h => by cases h
+
+theorem CoerOwn.refl (s a : Tm) : CoerOwn P s a s a := ⟨fun _ _ => .refl a, fun h h' => (h' h).elim, fun h h' => (h' h).elim⟩
+
+theorem CoerOwn.symm {sa a sb b : Tm} (h : CoerOwn P sa a sb b) : CoerOwn P sb b sa a :=
+  ⟨fun h1 h2 => (h.1 h2 h1).symm, h.2.2, h.2.1⟩
+
+theorem CoerOwn.shared (a b : Tm) : CoerOwn P sharedTm a sharedTm b :=
+  have hn : sharedTm ≠ uniqueTm := by simp [sharedTm, uniqueTm]
+  ⟨fun h => (hn h).elim, fun h => (hn h).elim, fun h => (hn h).elim⟩
+
+theorem CoerOwn.trans {sa a sb b sc c : Tm} (h1 : CoerOwn P sa a sb b) (h2 : CoerOwn P sb b sc c) : CoerOwn P sa a sc c := by
+  refine ⟨fun ha hc => ?_, fun ha hc => ?_, fun hc ha => ?_⟩ <;> by_cases hb : sb = uniqueTm
+  · exact (h1.1 ha hb).trans (h2.1 hb hc)
+  · exact .none (h1.2.1 ha hb) (h2.2.2 hc hb)
+  · exact (h2.2.1 hb hc).twin (h1.1 ha hb)
+  · exact h1.2.1 ha hb
+  · exact (h1.2.2 hb ha).twin (h2.1 hb hc).symm
+  · exact h2.2.2 hc hb
+
+theorem CoerOwn.wrap {d c k : Nat} {sig ls vs : Tm} (hw : P.wrapField d c = some k) (hs : P.ctor d c = some sig)
+    (s : Tm) : CoerOwn P (if (sig.skip (P.lifted d)).uAt k then s else sharedTm) (vs.toList.getD k .nil) s
+      (.app (.vc d c ls) vs) := by
+  cases hu : (sig.skip (P.lifted d)).uAt k
+  · have hn : sharedTm ≠ uniqueTm := by simp [sharedTm, uniqueTm]
+    exact ⟨fun h => (hn h).elim, fun h => (hn h).elim, fun _ _ => NoSpine.wrap hw hs (.inl hu)⟩
+  · refine ⟨fun _ _ => ?_, fun h h' => (h' h).elim, fun h h' => (h' h).elim⟩
+    cases hv : vs.toList[k]? with
+    | none => simp only [List.getD_eq_getElem?_getD, hv, Option.getD_none]; exact .none .nil (NoSpine.wrap hw hs (.inr hv))
+    | some v => simp only [List.getD_eq_getElem?_getD, hv, Option.getD_some]; exact Twin.wrap hw hs hu hv
 
 theorem Prog.wrapField_spec {d c k : Nat} (h : P.wrapField d c = some k) :
     P.isNt d = true ∧ P.phantom d c = false ∧ ∃ sig, P.ctor d c = some sig ∧ (sig.skip (P.lifted d)).ntField = some k := by
@@ -113,8 +155,8 @@ theorem EnvOK.dele {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → DeleOK P Γ.del
 
 theorem DeleOK.append {ds : List (Nat × Nat)} {ρ more : List Tm} (h : DeleOK P ds ρ) : DeleOK P ds (ρ ++ more) :=
   fun g t hm => by
-    obtain ⟨h1, h2, h3⟩ := h g t hm
-    refine ⟨by simp; omega, by simp; omega, fun vS => ?_⟩
+    obtain ⟨h1, h2, h3, h4⟩ := h g t hm
+    refine ⟨by simp; omega, by simp; omega, fun vS => ?_, h4⟩
     rw [Tm.env_append h1, Tm.env_append h2]; exact h3 vS
 
 theorem EnvOK.vals {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ →
@@ -619,11 +661,12 @@ theorem VTy.ty_inv {v idx ls : Tm} {d : Nat} (h : VTy P v (.app (.tyc d ls) idx)
   | opq hD' ho => rw [(hD _ hD').2] at ho; cases ho
 
 theorem VTy.coer_inv (hP : ProgOK P) {v : Tm} {d : Nat} {D : Adt} {sa A a sb B b : Tm} (hD : P.adts[d]? = some D)
-    (hc : D.coercible = true) (h : VTy P v (Tm.coer d sa A a sb B b)) : ∀ vS, Real P vS a ↔ Real P vS b := by
+    (hc : D.coercible = true) (h : VTy P v (Tm.coer d sa A a sb B b)) :
+    (∀ vS, Real P vS a ↔ Real P vS b) ∧ (NoDele P → CoerOwn P sa a sb b) := by
   generalize hX : Tm.coer d sa A a sb B b = X at h
   cases h with
-  | coer _ _ hr => simp only [Tm.coer, Tm.ofList, Tm.app.injEq, Tm.tyc.injEq, Tm.cons.injEq] at hX
-                   obtain ⟨-, -, -, rfl, -, -, rfl, -⟩ := hX; exact hr
+  | coer _ _ hr ho => simp only [Tm.coer, Tm.ofList, Tm.app.injEq, Tm.tyc.injEq, Tm.cons.injEq] at hX
+                      obtain ⟨-, rfl, -, rfl, rfl, -, rfl, -⟩ := hX; exact ⟨hr, ho⟩
   | con hk _ _ _ he =>
     subst he; simp only [Tm.coer, Tm.app.injEq, Tm.tyc.injEq] at hX; obtain ⟨⟨rfl, -⟩, -⟩ := hX
     simp [Prog.ctor, hD, hP.coer _ _ hD hc] at hk
@@ -750,7 +793,7 @@ theorem EnvOK.pushFns (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
   obtain ⟨hlt, -⟩ := Group.deleOK_spec hd hF ht'
   have hcl : Tm.env (ρ ++ closures ρ gid G) (Γ.n + j) = .clo (.ofList ρ) gid j := by
     simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_append_right, hlen, closures, hjl]
-  refine ⟨by simp [closures]; omega, by simp [closures]; omega, fun vS => ?_⟩
+  refine ⟨by simp [closures]; omega, by simp [closures]; omega, fun vS => ?_, fun hn => by rw [hn _ _ _ _ hG hF] at ht'; cases ht'⟩
   rw [hcl]
   constructor
   · intro h
@@ -1248,6 +1291,12 @@ theorem VTys.skip : ∀ {vs tele out : Tm}, VTys P vs tele out → tele.isTele �
     obtain ⟨h3, h4, h6⟩ := Tm.skip_inst _ r 0 _ h
     simp only [Tm.len, Tm.skip]; exact ⟨h3 ▸ h1, h4 ▸ h2, fun j => (h6 j).symm.trans (h5 j)⟩
 
+theorem uAt_skip (hP : ProgOK P) {d c : Nat} {ls sig0 sig : Tm} {f : Nat → Tm} (hct : P.ctor d c = some sig0)
+    (hlf : ls.len = P.lifted d) (hvs0 : VTys P ls sig0 (sig.subst f)) (hst : sig.isTele) :
+    ∀ j, (sig0.skip (P.lifted d)).uAt j = sig.uAt j := fun j => by
+  obtain ⟨D', hD', hs'⟩ := Option.bind_eq_some_iff.mp hct
+  rw [← hlf, (hvs0.skip (hP.ctors _ _ _ _ hD' hs').1.isTele).2.2 j, Tm.uAt_subst _ _ _ hst]
+
 theorem WrapOK.sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {C : Tm} {k : Nat}
     (h : WrapOK P Γ C k) : ∃ d c ls, C.subst (Tm.env ρ) = .vc d c ls ∧ P.wrapField d c = some k := by
   have eqc : ∀ {a b : Tm}, Γ.canon a = Γ.canon b → a.subst (Tm.env ρ) = b.subst (Tm.env ρ) :=
@@ -1414,13 +1463,13 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
   | coerRefl hs he hD hc =>
     obtain ⟨_, hss, hSs⟩ := tm_sound hP hE hs
     obtain ⟨_, hes, hEs⟩ := tm_sound hP hE he
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc fun _ => Iff.rfl,
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc (fun _ => Iff.rfl) fun _ => .refl _ _,
       Tm.coer_static.mpr ⟨hss, hEs, hes, hss, hEs, hes⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
   | deleOf hm hg ht hD hc =>
-    obtain ⟨h1, h2, h3⟩ := hE.dele _ _ hm
+    obtain ⟨h1, h2, h3, h4⟩ := hE.dele _ _ hm
     have hl := hE.len
     have hw := hE.wf
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc h3,
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc h3 fun hn => (h4 hn).elim,
       Tm.coer_static.mpr ⟨by unfold fnSide; split <;> simp [sharedTm, uniqueTm, Tm.static], hw.tys _ _ hg,
         by simp [Tm.static]; omega, by unfold fnSide; split <;> simp [sharedTm, uniqueTm, Tm.static], hw.tys _ _ ht,
         by simp [Tm.static]; omega⟩, trivial,
@@ -1429,19 +1478,19 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     have v := sem hp; rw [e, Tm.coer_subst] at v
     have s1 := stat hp; rw [e] at s1
     obtain ⟨h1, h2, h3, h4, h5, h6⟩ := Tm.coer_static.mp s1
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hC hcc fun vS => v.coer_inv hP hD hc vS,
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hC hcc (v.coer_inv hP hD hc).1 (v.coer_inv hP hD hc).2,
       Tm.coer_static.mpr ⟨h1, h2, h3, h4, h5, h6⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
   | coerSym hp e hD hc =>
     have v := sem hp; rw [e, Tm.coer_subst] at v
     have s1 := stat hp; rw [e] at s1
     obtain ⟨h1, h2, h3, h4, h5, h6⟩ := Tm.coer_static.mp s1
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc fun vS => (v.coer_inv hP hD hc vS).symm,
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc (fun vS => ((v.coer_inv hP hD hc).1 vS).symm) fun hn => ((v.coer_inv hP hD hc).2 hn).symm,
       Tm.coer_static.mpr ⟨h4, h5, h6, h1, h2, h3⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
   | coerShare hp e hD hc =>
     have v := sem hp; rw [e, Tm.coer_subst] at v
     have s1 := stat hp; rw [e] at s1
     obtain ⟨_, h2, h3, _, h5, h6⟩ := Tm.coer_static.mp s1
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc (v.coer_inv hP hD hc),
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc (v.coer_inv hP hD hc).1 fun _ => .shared _ _,
       Tm.coer_static.mpr ⟨rfl, h2, h3, rfl, h5, h6⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
   | coerTrans hp hq e1 e2 hD hc =>
     have v1 := sem hp; rw [e1, Tm.coer_subst] at v1
@@ -1450,19 +1499,28 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     have s2 := stat hq; rw [e2] at s2
     obtain ⟨h1, h2, h3, _, _, _⟩ := Tm.coer_static.mp s1
     obtain ⟨_, _, _, h4, h5, h6⟩ := Tm.coer_static.mp s2
-    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc fun vS => (v1.coer_inv hP hD hc vS).trans (v2.coer_inv hP hD hc vS),
+    have c1 := v1.coer_inv hP hD hc; have c2 := v2.coer_inv hP hD hc
+    exact ⟨by rw [Tm.coer_subst]; exact .coer hD hc (fun vS => (c1.1 vS).trans (c2.1 vS)) fun hn => (c1.2 hn).trans (c2.2 hn),
       Tm.coer_static.mpr ⟨h1, h2, h3, h4, h5, h6⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
-  | coerWrap hs ha hwk hf hD hc hsrc =>
-    obtain ⟨_, _, _, eC, hw⟩ := hwk.sound hP hE
+  | @coerWrap _ s S C args T0 k F dC D K sig src hs ha hwk hf hD hc hCK hCk hst hsrc =>
+    obtain ⟨d, c, ls, eC, hw⟩ := hwk.sound hP hE
     obtain ⟨_, hss, _⟩ := tm_sound hP hE hs
     obtain ⟨_, has, hTs⟩ := tm_sound hP hE ha
     obtain ⟨_, hfs, hFs⟩ := tm_sound hP hE hf
     have hl := ha.app_isList
-    refine ⟨?_, Tm.coer_static.mpr ⟨by rcases hsrc with rfl | rfl; rfl; exact hss, hFs, hfs, hss, hTs, has⟩, trivial,
+    refine ⟨?_, Tm.coer_static.mpr ⟨by subst hsrc; split; exact hss; rfl, hFs, hfs, hss, hTs, has⟩, trivial,
       by simp [Prim.eval, Tm.levels]⟩
+    have vC := sem hCK; rw [hCk] at vC; simp only [Tm.subst] at vC
+    obtain ⟨_, _, _, sig0, eC', hct, hlf, hvs0⟩ := vC.vc_inv
+    rw [eC] at eC'; cases eC'
+    have huAt := uAt_skip hP hct hlf hvs0 hst
     rw [Tm.coer_subst]
-    refine .coer hD hc fun vS => ?_
-    simp only [Tm.subst]; rw [eC, Real.wrap_iff hw, Tm.toList_getD_subst _ hl]
+    refine .coer hD hc (fun vS => ?_) fun _ => ?_
+    · simp only [Tm.subst]; rw [eC, Real.wrap_iff hw, Tm.toList_getD_subst _ hl]
+    · have := CoerOwn.wrap (vs := args.subst (Tm.env ρ)) (ls := ls) hw hct (s.subst (Tm.env ρ))
+      rw [huAt] at this
+      subst hsrc; simp only [Tm.subst]; rw [eC, ← Tm.toList_getD_subst _ hl]
+      split <;> rename_i h <;> simp only [h] at this <;> first | exact this | simpa [sharedTm, Tm.subst] using this
   | coerCtor hs hK hk ht h1 h2 hl hf hD hc =>
     rename_i s S C K sig srcs Ts tgts Tt dC D ps
     obtain ⟨_, hss, _⟩ := tm_sound hP hE hs
@@ -1485,16 +1543,30 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
       intro j hjl hj x
       rw [hers] at hj
       rw [Tm.toList_subst _ _ l1, List.length_map, Tm.len_toList _ l1] at hjl
-      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy⟩ := hf j hjl hj
+      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, -⟩ := hf j hjl (.inl hj)
       have v := sem hpt; rw [ept, Tm.coer_subst] at v
       rw [Tm.toList_getD_subst _ l1, Tm.toList_getD_subst _ l2, ← eqc hx, ← eqc hy]
-      exact v.coer_inv hP hD hc x
+      exact (v.coer_inv hP hD hc).1 x
     refine ⟨?_, Tm.coer_static.mpr ⟨hss, hT1, h1s, hss, hT2, h2s⟩, trivial, by simp [Prim.eval, Tm.levels]⟩
+    have huAt := uAt_skip hP hct hlf hvs0 ht
     rw [Tm.coer_subst]
-    refine .coer hD hc fun vS => ?_
-    simp only [Tm.subst]; rw [eC]
-    exact ⟨Real.ctor_congr hct (Tm.isList_subst _ _ l2) hlen fun j hjl hj x => (hiff j hjl hj x).mp,
-      Real.ctor_congr hct (Tm.isList_subst _ _ l1) hlen.symm fun j hjl hj x => (hiff j (hlen ▸ hjl) hj x).mpr⟩
+    refine .coer hD hc (fun vS => ?_) fun hn => ⟨fun hsU _ => ?_, fun h h' => (h' h).elim, fun h h' => (h' h).elim⟩
+    · simp only [Tm.subst]; rw [eC]
+      exact ⟨Real.ctor_congr hct (Tm.isList_subst _ _ l2) hlen fun j hjl hj x => (hiff j hjl hj x).mp,
+        Real.ctor_congr hct (Tm.isList_subst _ _ l1) hlen.symm fun j hjl hj x => (hiff j (hlen ▸ hjl) hj x).mpr⟩
+    · simp only [Tm.subst]; rw [eC]
+      refine Twin.ctor hct hlen fun j v1 v2 hu e1 e2 => ?_
+      rw [huAt] at hu
+      have hjl : j < srcs.len := by
+        have := (List.getElem?_eq_some_iff.mp e1).1
+        rwa [Tm.toList_subst _ _ l1, List.length_map, Tm.len_toList _ l1] at this
+      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, hsd⟩ := hf j hjl (.inr hu)
+      rw [if_pos hu] at hsd
+      have v := sem hpt; rw [ept, Tm.coer_subst] at v
+      have := (v.coer_inv hP hD hc).2 hn
+      rw [eqc hsd.1, eqc hsd.2, eqc hx, eqc hy, ← Tm.toList_getD_subst _ l1, ← Tm.toList_getD_subst _ l2,
+        List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD, e1, e2] at this
+      exact this.1 hsU hsU
   | atom hD hc hl hn hp =>
     rename_i d D m e u
     have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
@@ -2901,7 +2973,7 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
         fun h => by rw [← hE.canon, h, hE.canon]
       simp only [Prim.evalS, Prim.eval]
       rw [eqc ha] at hR; rw [eqc hb']
-      exact (v.coer_inv hP hD hc _).mp hR
+      exact ((v.coer_inv hP hD hc).1 _).mp hR
   | assert => simp [Prim.rt] at hrt
   | num d n => cases hp with | num h => exact natTm_real h n
   | atom d =>

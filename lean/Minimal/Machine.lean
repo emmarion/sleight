@@ -255,4 +255,105 @@ theorem MDecs.frame {H H' : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs →
       (MDecs.frame hs fun k w v hw hv => hA (k + 1) w v (by simpa using hw) (by simpa using hv))
 end
 
+
+variable (P)
+
+def Twin (v1 v2 : Tm) : Prop :=
+  ∀ H w u, (∀ b, Spine P H w u v1 b ↔ Spine P H w u v2 b) ∧ (WO P H w u v1 ↔ WO P H w u v2)
+
+def NoSpine (v : Tm) : Prop := ∀ H w u b, ¬ Spine P H w u v b
+
+variable {P}
+
+theorem Twin.refl (v : Tm) : Twin P v v := fun _ _ _ => ⟨fun _ => Iff.rfl, Iff.rfl⟩
+
+theorem Twin.symm {v1 v2 : Tm} (h : Twin P v1 v2) : Twin P v2 v1 :=
+  fun H w u => ⟨fun b => ((h H w u).1 b).symm, (h H w u).2.symm⟩
+
+theorem Twin.trans {v1 v2 v3 : Tm} (h : Twin P v1 v2) (h' : Twin P v2 v3) : Twin P v1 v3 :=
+  fun H w u => ⟨fun b => ((h H w u).1 b).trans ((h' H w u).1 b), (h H w u).2.trans (h' H w u).2⟩
+
+theorem Twin.none {v1 v2 : Tm} (h1 : NoSpine P v1) (h2 : NoSpine P v2) : Twin P v1 v2 :=
+  fun H w u => ⟨fun b => ⟨fun h => (h1 H w u b h).elim, fun h => (h2 H w u b h).elim⟩,
+    ⟨fun _ => .free (h2 H w u), fun _ => .free (h1 H w u)⟩⟩
+
+theorem NoSpine.wrap {d c k : Nat} {sig ls vs : Tm} (hw : P.wrapField d c = some k) (hs : P.ctor d c = some sig)
+    (hu : (sig.skip (P.lifted d)).uAt k = false ∨ vs.toList[k]? = none) : NoSpine P (.app (.vc d c ls) vs) := by
+  intro H w u b h
+  cases h with
+  | top h => rw [hw] at h; cases h
+  | field _ h => rw [hw] at h; cases h
+  | wrap h hs' hu' hv =>
+    rw [hw] at h; cases h; rw [hs] at hs'; cases hs'
+    rcases hu with hu | hu
+    · rw [hu] at hu'; cases hu'
+    · rw [hu] at hv; cases hv
+
+theorem Twin.wrap {d c k : Nat} {sig ls vs v : Tm} (hw : P.wrapField d c = some k) (hs : P.ctor d c = some sig)
+    (hu : (sig.skip (P.lifted d)).uAt k = true) (hv : vs.toList[k]? = some v) : Twin P v (.app (.vc d c ls) vs) := by
+  intro H w u
+  have hsp : ∀ b, Spine P H w u (.app (.vc d c ls) vs) b ↔ Spine P H w u v b := fun b =>
+    ⟨fun h => by
+      cases h with
+      | top h => rw [hw] at h; cases h
+      | field _ h => rw [hw] at h; cases h
+      | wrap h _ _ hv' h' => rw [hw] at h; cases h; rw [hv] at hv'; cases hv'; exact h',
+     fun h => .wrap hw hs hu hv h⟩
+  refine ⟨fun b => (hsp b).symm, ⟨fun h => .wrap hw hs hu hv h, fun h => ?_⟩⟩
+  cases h with
+  | ptr _ h => rw [hw] at h; cases h
+  | wrap h _ _ hv' h' => rw [hw] at h; cases h; rw [hv] at hv'; cases hv'; exact h'
+  | free h => exact .free fun b h' => h b ((hsp b).mpr h')
+
+theorem List.getElem?_of_length {α β : Type} {l1 : List α} {l2 : List β} {k : Nat} {v : α}
+    (hl : l1.length = l2.length) (h : l1[k]? = some v) : ∃ v', l2[k]? = some v' :=
+  ⟨_, List.getElem?_eq_getElem (hl ▸ (List.getElem?_eq_some_iff.mp h).1)⟩
+
+theorem Spine.ctor_mp {d c : Nat} {sig ls1 ls2 vs1 vs2 : Tm} (hs : P.ctor d c = some sig)
+    (hl : vs1.toList.length = vs2.toList.length)
+    (h : ∀ k v1 v2, (sig.skip (P.lifted d)).uAt k = true → vs1.toList[k]? = some v1 → vs2.toList[k]? = some v2 →
+      Twin P v1 v2) {H : Heap} {w u : Tm} {b : Nat} (hsp : Spine P H w u (.app (.vc d c ls1) vs1) b) :
+    Spine P H w u (.app (.vc d c ls2) vs2) b := by
+  cases hsp with
+  | top hw => exact .top hw
+  | field ha hw hs' hu hwk hu' hv h' =>
+    rw [hs] at hs'; cases hs'
+    obtain ⟨v2, hv2⟩ := List.getElem?_of_length hl hv
+    exact .field ha hw hs hu hwk hu' hv2 (((h _ _ _ hu hv hv2) _ _ _).1 _ |>.mp h')
+  | wrap hw hs' hu hv h' =>
+    rw [hs] at hs'; cases hs'
+    obtain ⟨v2, hv2⟩ := List.getElem?_of_length hl hv
+    exact .wrap hw hs hu hv2 (((h _ _ _ hu hv hv2) _ _ _).1 _ |>.mp h')
+
+theorem WO.ctor_mp {d c : Nat} {sig ls1 ls2 vs1 vs2 : Tm} (hs : P.ctor d c = some sig)
+    (hl : vs1.toList.length = vs2.toList.length)
+    (h : ∀ k v1 v2, (sig.skip (P.lifted d)).uAt k = true → vs1.toList[k]? = some v1 → vs2.toList[k]? = some v2 →
+      Twin P v1 v2) {H : Heap} {w u : Tm}
+    (hsp : ∀ b, Spine P H w u (.app (.vc d c ls2) vs2) b → Spine P H w u (.app (.vc d c ls1) vs1) b)
+    (hwo : WO P H w u (.app (.vc d c ls1) vs1)) : WO P H w u (.app (.vc d c ls2) vs2) := by
+  have get := fun {k v2} (hv : vs2.toList[k]? = some v2) => List.getElem?_of_length hl.symm hv
+  cases hwo with
+  | ptr ha hw hs' hf hw1 hd =>
+    rw [hs] at hs'; cases hs'
+    refine .ptr ha hw hs hf (fun k w u v hu hwk hu' hv => ?_) (fun k w u v hu hwk hu' hv j w' u' hj hw' hu2 b h1 h2 => ?_)
+    · obtain ⟨v1, hv1⟩ := get hv
+      exact ((h _ _ _ hu hv1 hv) _ _ _).2.mp (hw1 k w u v1 hu hwk hu' hv1)
+    · obtain ⟨v1, hv1⟩ := get hv
+      exact hd k w u v1 hu hwk hu' hv1 j w' u' hj hw' hu2 b ((((h _ _ _ hu hv1 hv) _ _ _).1 b).mpr h1) h2
+  | wrap hw hs' hu hv h' =>
+    rw [hs] at hs'; cases hs'
+    obtain ⟨v2, hv2⟩ := List.getElem?_of_length hl hv
+    exact .wrap hw hs hu hv2 (((h _ _ _ hu hv hv2) _ _ _).2.mp h')
+  | free hn => exact .free fun b h' => hn b (hsp b h')
+
+theorem Twin.ctor {d c : Nat} {sig ls1 ls2 vs1 vs2 : Tm} (hs : P.ctor d c = some sig)
+    (hl : vs1.toList.length = vs2.toList.length)
+    (h : ∀ k v1 v2, (sig.skip (P.lifted d)).uAt k = true → vs1.toList[k]? = some v1 → vs2.toList[k]? = some v2 →
+      Twin P v1 v2) : Twin P (.app (.vc d c ls1) vs1) (.app (.vc d c ls2) vs2) := by
+  have h' : ∀ k v1 v2, (sig.skip (P.lifted d)).uAt k = true → vs2.toList[k]? = some v1 → vs1.toList[k]? = some v2 →
+      Twin P v1 v2 := fun k v1 v2 hu h1 h2 => (h k v2 v1 hu h2 h1).symm
+  intro H w u
+  exact ⟨fun b => ⟨Spine.ctor_mp hs hl h, Spine.ctor_mp hs hl.symm h'⟩,
+    ⟨WO.ctor_mp hs hl h fun _ => Spine.ctor_mp hs hl.symm h', WO.ctor_mp hs hl.symm h' fun _ => Spine.ctor_mp hs hl h⟩⟩
+
 end Minimal

@@ -376,12 +376,12 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨T0, ha⟩ ← checkTm P Γ (.app C args)
     let ⟨k, hwk⟩ ← wrapOf P Γ C
     let ⟨_, hf⟩ ← checkTm P Γ (args.toList.getD k .nil)
-    let fu : Bool := match Γ.canon C with
-      | .vc d c ls => ((P.ctor d c).map (·.uAt (ls.len + k))).getD false
-      | C' => match (checkTm P Γ C').toOption with
-        | some ⟨K, _⟩ => match Γ.canon K with | .valCtor sig => sig.uAt k | _ => false
-        | none => false
-    if fu then .ok ⟨_, .coerWrap hs ha hwk hf hD hc (.inr rfl)⟩ else .ok ⟨_, .coerWrap hs ha hwk hf hD hc (.inl rfl)⟩
+    let ⟨K, hK⟩ ← checkTm P Γ C
+    match hk : Γ.canon K with
+    | .valCtor sig => do
+      let ⟨ht⟩ ← need sig.isTele "coercible-wrap: the constructor's signature is not written out"
+      .ok ⟨_, .coerWrap hs ha hwk hf hD hc hK hk ht rfl⟩
+    | _ => .error "coercible-wrap: not a value constructor"
   | .coerCtor s C srcs tgts ps => do
     let ⟨(dC, D), hD, hc⟩ ← coerAdt P
     let ⟨_, hs⟩ ← checkTm P Γ s
@@ -392,10 +392,12 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨_, h1⟩ ← checkTm P Γ (.app C srcs)
       let ⟨_, h2⟩ ← checkTm P Γ (.app C tgts)
       let ⟨hl⟩ ← need (srcs.len = tgts.len) "coercible-ctor: the sources and targets differ in number"
-      let ⟨hf⟩ ← allIdx (Q := fun j (e : Bool) => j < srcs.len → e = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧
+      let ⟨hf⟩ ← allIdx (Q := fun j (e : Bool) => j < srcs.len → (e = false ∨ sig.uAt j = true) → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧
           TmTy P Γ p Pt ∧ Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
-          Γ.canon y = Γ.canon (tgts.toList.getD j .nil))
-        (fun j e => if he : j < srcs.len ∧ e = false then
+          Γ.canon y = Γ.canon (tgts.toList.getD j .nil) ∧
+          (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
+            else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm))
+        (fun j e => if he : j < srcs.len ∧ (e = false ∨ sig.uAt j = true) then
           match hp : ps.toList[j]? with
           | some p => do
             let ⟨Pt, hpt⟩ ← checkTm P Γ p
@@ -403,19 +405,22 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
             | some ⟨(sa, A, x, sb, B, y), e⟩ => do
               let ⟨hx⟩ ← need (Γ.canon x = Γ.canon (srcs.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its source"
               let ⟨hy⟩ ← need (Γ.canon y = Γ.canon (tgts.toList.getD j .nil)) "coercible-ctor: a field's proof is not about its target"
-              let ⟨_⟩ ← need (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
+              let ⟨hsd⟩ ← need (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
                   else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)
                 "coercible-ctor: the proof for a field has its sides: `(Shared)` for a many field, the form's own for a unique one"
-              .ok ⟨fun _ _ => ⟨p, Pt, sa, A, x, sb, B, y, rfl, hpt, e, hx, hy⟩⟩
-            | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased field"
-          | none => .error "coercible-ctor: a non-erased field has no proof"
+              .ok ⟨fun _ _ => ⟨p, Pt, sa, A, x, sb, B, y, rfl, hpt, e, hx, hy, hsd⟩⟩
+            | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased or unique field"
+          | none => .error "coercible-ctor: a non-erased or unique field has no proof"
         else .ok ⟨fun h1 h2 => absurd ⟨h1, h2⟩ he⟩) sig.ers 0
       .ok ⟨_, .coerCtor hs hK hk ht h1 h2 hl (fun j hjl hj => by
         cases h : sig.ers[j]? with
-        | none => simp [List.getD_eq_getElem?_getD, h] at hj
+        | none =>
+          rcases hj with hj | hj
+          · simp [List.getD_eq_getElem?_getD, h] at hj
+          · exact absurd (Tm.uAt_lt _ _ hj) (by simpa using h)
         | some e =>
-          have : e = false := by simpa [List.getD_eq_getElem?_getD, h] using hj
-          simpa using hf j e h (by simpa using hjl) this) hD hc⟩
+          have : e = false ∨ sig.uAt j = true := by simpa [List.getD_eq_getElem?_getD, h] using hj
+          simpa using hf j e h (by simpa using hjl) (by simpa using this)) hD hc⟩
     | _ => .error "coercible-ctor: not a value constructor"
   | .mtblOf d ls => match h : P.adts[d]? with
     | some D => do

@@ -351,13 +351,16 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | coerShare : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
       PrimTy Γ (.coerShare p) (Tm.coer dC sharedTm A a sharedTm B b)
   | coerWrap : TmTy P Γ s S → TmTy P Γ (.app C args) T0 → WrapOK P Γ C k →
-      TmTy P Γ (args.toList.getD k .nil) F → P.adts[dC]? = some D → D.coercible = true → (src = sharedTm ∨ src = s) →
+      TmTy P Γ (args.toList.getD k .nil) F → P.adts[dC]? = some D → D.coercible = true → TmTy P Γ C K →
+      Γ.canon K = .valCtor sig → sig.isTele → src = (if sig.uAt k then s else sharedTm) →
       PrimTy Γ (.coerWrap s C args) (Tm.coer dC src F (args.toList.getD k .nil) s T0 (.app C args))
   | coerCtor : TmTy P Γ s S → TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → TmTy P Γ (.app C srcs) Ts →
       TmTy P Γ (.app C tgts) Tt → srcs.len = tgts.len →
-      (∀ j < srcs.len, sig.ers.getD j true = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
+      (∀ j < srcs.len, (sig.ers.getD j true = false ∨ sig.uAt j = true) → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
         Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
-        Γ.canon y = Γ.canon (tgts.toList.getD j .nil)) →
+        Γ.canon y = Γ.canon (tgts.toList.getD j .nil) ∧
+        (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
+          else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)) →
       P.adts[dC]? = some D → D.coercible = true →
       PrimTy Γ (.coerCtor s C srcs tgts ps) (Tm.coer dC s Ts (.app C srcs) s Tt (.app C tgts))
 

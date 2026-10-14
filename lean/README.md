@@ -318,7 +318,8 @@ it is `Settled`, and its `is` rule.
   run, `b`, read from the type of `p` by inference, and in the stripped
   run the value of `a`; it has the rule that it is `b`. It uses `a` at
   the multiplicity of its source side and yields its result at that of
-  its target side (section 34). `coercible-wrap` takes a constructor named
+  its target side (section 34); in a `unique` position both sides are
+  `(Unique)` (section 33). `coercible-wrap` takes a constructor named
   by its declaration or listed by an opened `newtype` `Matchable`, and
   `coercible-ctor` any constructor whose signature is written out, a
   first-class one included.

@@ -2,6 +2,9 @@ import Minimal.Typing
 
 namespace Minimal.Tm
 
+theorem uAt_lt : ∀ (t : Tm) j, t.uAt j = true → j < t.ers.length := by
+  intro t; induction t <;> intro j h <;> cases j <;> simp_all [uAt, ers]
+
 theorem size_inst_fv (t : Tm) (i k : Nat) : (t.inst (.fv i) k).size = t.size := by
   induction t generalizing k <;> simp [inst, size, *] <;> split <;> (try split) <;> simp [size]
 
