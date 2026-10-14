@@ -202,7 +202,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let (O, K) ← usesFns gid G Gr Gr.fns
       let K := (gid, O) :: K
       if G.fill then UR.seq (O, K) C
-      else if Uses.sub O Gr.caps && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
+      else if Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
         (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
         Gr.fns.all (fun F => F.dele.all fun t =>
           if t < G.Γ.n then (if F.u then (Gr.caps.lookup t).isSome else Gr.caps.lookup t == some false)
@@ -264,7 +264,7 @@ def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR
     let Ub := { G with Γ := Γb, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
     let U ← usesCore gid Ub ((teleUs F.tele).drop F.np) R F.body
     let O := UR.below U G.Γ.n
-    if !F.u && O.1.any (·.2) || F.u && (U.1.lookup (G.Γ.n + (Gr.fns.length - Fs.length - 1))).isSome then none
+    if !F.u && O.1.any (·.2) || Gr.fns.zipIdx.any (fun (F', k) => F'.u && (U.1.lookup (G.Γ.n + k)).isSome) then none
     else UR.seq O (← usesFns gid G Gr Fs)
 termination_by l => (gid, sizeOf l)
 decreasing_by all_goals (cases F; simp_wf; omega)

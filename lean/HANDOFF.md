@@ -125,7 +125,10 @@ scrutinee by an `else` binder (`machine_rebind`, and
 `EnvOK.openFail`), `defFns` (`machine_defFns`, with `clo_vals` for
 the closures' values), and the caller's side of a non-erased call
 (`machine_call`, which takes the callee's run and its results'
-ownership over the call's own uses as a hypothesis). `GOK.pend` says the block a pending mark names is
+ownership over the call's own uses as a hypothesis); toward the
+callee's side, `args_val`, `MDec.clo_inv`, `WO.clo_inv` and
+`clo_vals_many` (a non-unique sibling closure reads only captures
+recorded at many and owns nothing). `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
@@ -185,9 +188,11 @@ a delegate's target, when it is an entry before the group, is among
 the group's captures, at many when the delegate is not unique, and
 when it is a sibling, that sibling is not unique; a function body
 starts with no pending marks, unique scrutinee, rebinding or cell to
-take, whatever the context the group is defined in; and a unique
-function's body does not use its own closure (the reader leaves the
-name unbound there, and OCaml treats it as erased).
+take, whatever the context the group is defined in; a function body
+uses no unique function of its own group, its own closure included
+(the reader leaves a unique function's name unbound in its body, and
+OCaml treats it as erased); and a group's recorded captures name the
+same entries at the same uniqueness as its bodies' uses.
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

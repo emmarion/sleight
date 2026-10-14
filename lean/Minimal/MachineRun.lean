@@ -3391,4 +3391,112 @@ theorem machine_call {b : Nat} {G : UCtx} {ru : List Bool} {rets f args : Tm} {d
     (hG.next (by omega) hM.lenM (by rw [hΓ', UCtx.adv_ghost' hf, hpg]; exact hg))
   exact ⟨H', vsM, .call hfM hG' hF' hbl hrb hrr, lift (by simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr)⟩
 
+theorem args_val (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {args t : Tm} {B : Uses}
+    (hE : EnvOK P ρ G.Γ) (hS : SimEnv P G.Γ.er ρS ρ) (hrta : rtArgs P G.Γ args t = true)
+    (hB : G.argsUses P (·.u) args t = some B) {H : Heap} {Res Out Shr : Nat → Prop}
+    (hM : MFrame P B G.Γ.n G.Γ.er H ρM ρS ρ Res Out Shr) :
+    ∃ H1 as, P.buildList H (Tm.env ρM) args.toList = (H1, as) ∧
+      MOut P B G.Γ.n G.Γ.er H ρM ρS ρ Res Shr t (t.kinds.map (·.u)) H1 as (args.toList.map (P.sub ρS))
+        (args.toList.map (·.subst (Tm.env ρ))) := by
+  obtain ⟨H1, vsM, hr, hO⟩ := machine_ret hP hrta hE hS rfl (ru := t.kinds.map fun k => true && k.u) (U := B)
+    (by rw [← argsUses_ret]; simpa using hB) hM none
+  cases hr with
+  | ret hb => exact ⟨_, _, hb, by simpa using hO⟩
+
+theorem MDec.clo_inv {H : Heap} {eM eS : List Tm} {gid j : Nat} (h : MDec P H (.clo (.ofList eM) gid j) (.clo (.ofList eS) gid j)) :
+    eM.length = eS.length ∧ ∀ i, P.rd gid j i = true → MDec P H (Tm.env eM i) (Tm.env eS i) := by
+  generalize hw : Tm.clo (.ofList eM) gid j = w at h
+  generalize hu : Tm.clo (.ofList eS) gid j = u at h
+  cases h with
+  | clo hl hd =>
+    simp only [Tm.clo.injEq] at hw hu
+    obtain ⟨e1, rfl, rfl⟩ := hw; obtain ⟨e2, -, -⟩ := hu
+    have := congrArg Tm.toList e1; have := congrArg Tm.toList e2
+    simp only [Tm.toList_ofList] at *; subst_vars; exact ⟨hl, hd⟩
+  | tok h => cases hu
+  | _ => cases hu
+
+theorem WO.clo_inv {H : Heap} {eM eS eF : Tm} {gid j : Nat} {Gr : Group} {F : FnDef} (hGr : P.groups[gid]? = some Gr)
+    (hF : Gr.fns[j]? = some F) (hdn : F.dele = none) (h : WO P H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)) :
+    (∀ i, P.rdU gid j i = true → WO P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i)) ∧
+    (∀ i, P.rdU gid j i = true → ∀ i', i' ≠ i → P.rd gid j i' = true →
+      Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i))
+        (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) := by
+  generalize hw : Tm.clo eM gid j = w at h
+  generalize hu : Tm.clo eS gid j = u at h
+  generalize hv : Tm.clo eF gid j = v at h
+  cases h with
+  | clo _ h1 h2 =>
+    simp only [Tm.clo.injEq] at hw hu hv
+    obtain ⟨rfl, -, -⟩ := hw; obtain ⟨rfl, -, -⟩ := hu; obtain ⟨rfl, rfl, rfl⟩ := hv; exact ⟨h1, h2⟩
+  | dele hG' hF' hd' =>
+    simp only [Tm.clo.injEq] at hv; obtain ⟨-, rfl, rfl⟩ := hv
+    rw [hGr] at hG'; cases hG'; rw [hF] at hF'; cases hF'; rw [hdn] at hd'; cases hd'
+  | free hn =>
+    subst hw hu hv
+    exact ⟨fun i hi => .free fun b hs => hn b (.clo hi hs), fun i hi i' _ _ b hs _ => hn b (.clo hi hs)⟩
+  | _ => first | (cases hv; done) | (cases hw; done) | (cases hu; done)
+
+theorem clo_vals_many {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr) {H : Heap} {ρM ρS ρ : List Tm}
+    (hlM : ρM.length = n) (hlS : ρS.length = n) (hlF : ρ.length = n)
+    (hdec : ∀ i, Gr.caps.lookup i = some false → MDec P H (Tm.env ρM i) (Tm.env ρS i))
+    (hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.u = false → F.dele = some t → t < n + k ∧
+      (t < n → Gr.caps.lookup t = some false) ∧ (n ≤ t → (Gr.fns[t - n]?.map (·.u)) = some false)) :
+    ∀ (k : Nat) (wM wS wF : Tm), (closuresS ρM gid Gr)[k]? = some wM → (closuresS ρS gid Gr)[k]? = some wS →
+      (closures ρ gid Gr)[k]? = some wF → ∀ F : FnDef, Gr.fns[k]? = some F → F.u = false → MDec P H wM wS ∧
+      (∀ b, Foot P H wM wS b → ∃ i, Gr.caps.lookup i = some false ∧ Foot P H (Tm.env ρM i) (Tm.env ρS i) b) ∧
+      ∀ b, ¬ Spine P H wM wS wF b := by
+  intro k
+  induction k using Nat.strongRecOn with
+  | _ k ih =>
+  intro wM wS wF hM hS hF F hFk hu
+  obtain ⟨F', hF', rfl⟩ := closuresS_get hM
+  obtain ⟨F'', hF'', rfl⟩ := closuresS_get hS
+  rw [hFk] at hF' hF''; cases hF'; cases hF''
+  obtain ⟨hk, rfl⟩ := closures_get hF
+  have htk : ∀ env : List Tm, ((closuresS env gid Gr).take k).length = k := fun env => by
+    simp [closuresS_length]; omega
+  have hrd : ∀ i, P.rd gid k i = true → Gr.caps.lookup i = some false := fun i h => by
+    simp only [Prog.rd, Prog.fnU, hGr, Option.map_some, Option.getD_some, Option.bind_some, hFk, hu,
+      Bool.false_and, Bool.or_false] at h
+    cases hl : Gr.caps.lookup i with
+    | none => simp [hl] at h
+    | some u => cases u <;> simp_all
+  have nosp : ∀ b w u, ¬ Spine P H w u (.clo (.ofList ρ) gid k) b := fun b w u hs => by
+    rcases hs.clo_inv with ⟨_, _, i, _, _, hi, _⟩ | ⟨G', F', t', hG', hF', _, hu', _⟩
+    · simp [Prog.rdU, Prog.fnU, hGr, hFk, hu] at hi
+    · rw [hGr] at hG'; cases hG'; rw [hFk] at hF'; cases hF'; rw [hu] at hu'; cases hu'
+  unfold cval
+  cases hd : F.dele with
+  | none =>
+    simp only [htk]
+    refine ⟨.clo (by simp [hlM, hlS]) fun i hi => hdec i (hrd i hi), fun b hf => ?_, fun b => nosp b _ _⟩
+    cases hf with
+    | clo hi hf => exact ⟨_, hrd _ hi, by simpa [Tm.toList_ofList] using hf⟩
+  | some t =>
+    simp only
+    obtain ⟨htn, hout, hsib⟩ := hdl k F t hFk hu hd
+    by_cases htn' : t < n
+    · have e : ∀ (env : List Tm), env.length = n → (env ++ (closuresS env gid Gr).take k).getD t .nil = Tm.env env t :=
+        fun env hl => by simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_append_left (show t < env.length by omega)]
+      rw [e ρM hlM, e ρS hlS]
+      exact ⟨hdec t (hout htn'), fun b hf => ⟨t, hout htn', hf⟩, fun b => nosp b _ _⟩
+    · have hk' : t - n < k := by omega
+      have hcl : ∀ env : List Tm, t - n < (closuresS env gid Gr).length := fun env => by rw [closuresS_length]; omega
+      have e : ∀ (env : List Tm), env.length = n →
+          (env ++ (closuresS env gid Gr).take k).getD t .nil = (closuresS env gid Gr)[t - n]'(hcl env) :=
+        fun env hl => by
+          simp [List.getD_eq_getElem?_getD, List.getElem?_append_right (show env.length ≤ t by omega), hl,
+            hk', List.getElem?_eq_getElem (hcl env)]
+      have hcl' : t - n < (closures ρ gid Gr).length := by simp [closures]; omega
+      rw [e ρM hlM, e ρS hlS]
+      obtain ⟨F', hF', hu'⟩ : ∃ F', Gr.fns[t - n]? = some F' ∧ F'.u = false := by
+        have := hsib (by omega)
+        cases h : Gr.fns[t - n]? with
+        | none => simp [h] at this
+        | some F' => exact ⟨F', rfl, by simpa [h] using this⟩
+      obtain ⟨hd1, hft, -⟩ := ih _ hk' _ _ _ (List.getElem?_eq_getElem (hcl ρM)) (List.getElem?_eq_getElem (hcl ρS))
+        (List.getElem?_eq_getElem hcl') F' hF' hu'
+      exact ⟨hd1, hft, fun b => nosp b _ _⟩
+
 end Minimal
