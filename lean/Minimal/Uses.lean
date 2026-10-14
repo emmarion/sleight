@@ -202,7 +202,12 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let (O, K) ← usesFns gid G Gr Gr.fns
       let K := (gid, O) :: K
       if G.fill then UR.seq (O, K) C
-      else if Uses.sub O Gr.caps && Gr.caps.all (fun (i, u) => (G.use i u).isSome) then UR.seq (Gr.caps, K) C else none
+      else if Uses.sub O Gr.caps && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
+        (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
+        Gr.fns.all (fun F => F.dele.all fun t =>
+          if t < G.Γ.n then (if F.u then (Gr.caps.lookup t).isSome else Gr.caps.lookup t == some false)
+          else (Gr.fns[t - G.Γ.n]?.map (·.u)) == some false)
+      then UR.seq (Gr.caps, K) C else none
     else none
   | .chk (.mark m) a _ rest => match m, a with
     | .uq ms, _ => usesCore b { G with ents := ms } ru rets rest

@@ -10,16 +10,14 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last run 327 tests were accepted with
+with it under `--shared`. At the last run 328 tests were accepted with
 OCaml's value, none mismatched, 474 refusals agreed, and 85 + 97 were
 refused as unsupported; 19 tests OCaml accepts are refused, 7 of them
 for a `_` the inference does not solve. No test the OCaml suite
-refuses is accepted. `compare.sh` allows twenty seconds a test; that
-run allowed ten, and three tests it accepts timed out:
-`comptime_tail.sl`, which finishes in about a minute, `extern_tail.sl`,
-which ran out of memory on one session's machine, and
-`mini_preserve.sl`; `mini_unify.sl` took about nine and a half
-seconds on one session's machine. One refusal reads as an internal error rather than
+refuses is accepted. `compare.sh` allows twenty seconds a test, and
+two tests it accepts time out: `comptime_tail.sl`, which finishes in
+about a minute, and `extern_tail.sl`, which ran out of memory on one
+session's machine. One refusal reads as an internal error rather than
 a verdict, `palindrome_manacher.sl`'s "unbound entry 1099511627776";
 no session has looked into it.
 
@@ -124,13 +122,19 @@ and a primitive under a pending mark (`machine_prim_pend`, with
 scrutinee by an `else` binder (`machine_rebind`, and
 `machine_rebindSkip` when the mark does not apply), and a successful
 `open-adt` (`machine_opn`; a failed one is ruled out by
-`EnvOK.openFail`). `GOK.pend` says the block a pending mark names is
+`EnvOK.openFail`), and `defFns` (`machine_defFns`, with `clo_vals` for
+the closures' values). `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
 which a result may reach: an `else` branch puts there the part of its
 scrutinee's foot outside its spine, which the binder that takes the
-scrutinee over shares, and `GOK.rebind` asks for it. Each takes the
+scrutinee over shares, and `GOK.rebind` asks for it. A closure reads
+the entries its group captures (`Prog.rd`) and owns those captured at
+unique (`Prog.rdU`), both per function: a non-unique function reads
+only the non-unique captures and owns nothing, and a delegate owns
+what its target owns when its group captures the target at unique
+(`Spine.dele`, `WO.dele`), and nothing otherwise. Each takes the
 steps after it as hypotheses (`MRun` of the rest and of the branch, and
 the body's `Sim`), so the final theorem is an induction like
 `eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
@@ -149,10 +153,11 @@ Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
 non-erased call (the callee's frame, the closure's captures and
-`Group.caps`), `defFns`, and the assembly.
+`Group.caps`; a call through a delegate runs its target's body in the
+stripped run and the delegate's in the full one), and the assembly.
 
 The pass was tightened on the way, each change checked by a full
-`compare.sh` run that changed no verdict (327 accepted with OCaml's
+`compare.sh` run that changed no verdict (328 accepted with OCaml's
 value, none mismatched, 474 refusals agreed): `use` refuses an index
 out of range or erased; a `seq` body starts with no cell to take and
 no pending rebinding, and an `else` branch with no cell to take; the
@@ -166,7 +171,11 @@ to take; a cell binder is taken only under a unique match (`cellOf`
 needs the unique scrutinee, and the reader emits the mark only
 there); and an in-place write or invocation at unique needs a cell
 type (`cellTy`), whose entries' full values are `tok` (`VTy.opq`) so
-that their blocks are owned through `Spine.cell`/`WO.cell`.
+that their blocks are owned through `Spine.cell`/`WO.cell`; a group
+that captures an entry at unique has at most one unique function; and
+a delegate's target, when it is an entry before the group, is among
+the group's captures, at many when the delegate is not unique, and
+when it is a sibling, that sibling is not unique.
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

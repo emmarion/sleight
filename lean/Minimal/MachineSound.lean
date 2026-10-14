@@ -641,14 +641,13 @@ theorem Uses.seq_spec : ∀ {B A U : Uses}, Uses.seq A B = some U →
         have e := hl j; rw [if_neg hj] at e
         rw [hm j, e]; simp only [List.lookup, hb]
 
-theorem Prog.rdU_rd {gid i : Nat} (h : P.rdU gid i = true) : P.rd gid i = true := by
+theorem Prog.rdU_rd {gid j i : Nat} (h : P.rdU gid j i = true) : P.rd gid j i = true := by
   unfold Prog.rdU at h; unfold Prog.rd
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨hu, h⟩ := h
   cases hg : P.groups[gid]? with
   | none => simp [hg] at h
-  | some G =>
-    simp only [hg, Option.map_some, Option.getD_some, List.any_eq_true, Bool.and_eq_true, beq_iff_eq] at h ⊢
-    obtain ⟨⟨j, u⟩, hm, rfl, -⟩ := h
-    exact ⟨_, hm, by simp⟩
+  | some G => simp_all
 
 theorem Foot.blk {H : Heap} : ∀ {w v : Tm}, MDec P H w v → ∀ {b}, Foot P H w v b → (H.blk b).isSome := by
   intro w v hm b hf
@@ -693,6 +692,7 @@ theorem Spine.foot {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) : 
   | wrap _ _ _ _ _ ih => exact ih
   | clo hi _ ih => exact .clo (Prog.rdU_rd hi) ih
   | cell => exact .here
+  | dele _ _ _ _ _ _ ih => exact ih
 
 theorem Spine.fwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v)) {b : Nat} (hs : Spine P H w u v b) :
     Spine P H' w u v b := by
@@ -703,6 +703,7 @@ theorem Spine.fwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v))
   | wrap hn hc hk hv _ ih => exact .wrap hn hc hk hv (ih fun a ha => hA a (.wrap hn hc hk hv ha))
   | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
   | cell => exact .cell
+  | dele hG hF hd hu hc _ ih => exact .dele hG hF hd hu hc (ih fun a ha => hA a (.dele hG hF hd hu hc ha))
 
 theorem Spine.bwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v)) {b : Nat} (hs : Spine P H' w u v b) :
     Spine P H w u v b := by
@@ -714,6 +715,7 @@ theorem Spine.bwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v))
   | wrap hn hc hk hv _ ih => exact .wrap hn hc hk hv (ih fun a ha => hA a (.wrap hn hc hk hv ha))
   | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
   | cell => exact .cell
+  | dele hG hF hd hu hc _ ih => exact .dele hG hF hd hu hc (ih fun a ha => hA a (.dele hG hF hd hu hc ha))
 
 theorem Agree.spine {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Foot P H w u)) : Agree H H' (Spine P H w u v) :=
   fun a ha => hA a ha.foot
@@ -730,14 +732,15 @@ theorem WO.fwd {H H' : Heap} {w u v : Tm} (hw : WO P H w u v) (hA : Agree H H' (
       (fun k w u v hk hw hu hv j w' u' hj hw' hu' a h1 h2 =>
         hd k w u v hk hw hu hv j w' u' hj hw' hu' a (Spine.bwd (sub k w u hw hu).spine h1) (Foot.bwd (sub j w' u' hw' hu') h2))
   | wrap hn hc hk hv _ ih => exact .wrap hn hc hk hv (ih hA)
-  | clo hu hd ihu =>
+  | clo hnd hu hd ihu =>
     rename_i gid j eM eS eF
-    have sub : ∀ i, P.rd gid i = true → Agree H H' (Foot P H (Tm.env eM.toList i) (Tm.env eS.toList i)) :=
+    have sub : ∀ i, P.rd gid j i = true → Agree H H' (Foot P H (Tm.env eM.toList i) (Tm.env eS.toList i)) :=
       fun i hi a ha => hA a (.clo hi ha)
-    exact .clo (fun i hi => ihu i hi (sub i (Prog.rdU_rd hi)))
+    exact .clo hnd (fun i hi => ihu i hi (sub i (Prog.rdU_rd hi)))
       (fun i hi i' hne hi' a h1 h2 =>
         hd i hi i' hne hi' a (Spine.bwd (sub i (Prog.rdU_rd hi)).spine h1) (Foot.bwd (sub i' hi') h2))
   | cell => exact .cell
+  | dele hG hF hd hu hc _ ih => exact .dele hG hF hd hu hc (ih hA)
   | free hn => exact .free fun b h => hn b (Spine.bwd hA.spine h)
 
 theorem Spine.word {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) :
@@ -748,6 +751,7 @@ theorem Spine.word {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) :
   | wrap _ _ _ _ _ ih => exact ih
   | clo => exact .inr ⟨_, _, _, rfl⟩
   | cell => exact .inl ⟨_, rfl⟩
+  | dele _ _ _ _ _ _ ih => exact ih
 
 theorem Spine.imm {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) (h1 : ∀ a, w ≠ .ptr a)
     (h2 : ∀ e g j, w ≠ .clo e g j) : False := by

@@ -111,12 +111,15 @@ inductive RunM : Heap → List Tm → Pend → Core → Heap → List Tm → Pro
   | mark : m.pend = true → RunM H ρ (some (m, a)) rest H' out → RunM H ρ pd (.chk (.mark m) a b rest) H' out
   | chk : (∀ m, k = .mark m → m.pend = false) → RunM H ρ pd rest H' out → RunM H ρ pd (.chk k a b rest) H' out
 
-def Prog.rd (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any (·.1 == i)).getD false
+def Prog.fnU (gid j : Nat) : Bool := (((P.groups[gid]?).bind (·.fns[j]?)).map fun F => F.u && F.dele.isNone).getD false
+
+def Prog.rd (gid j i : Nat) : Bool :=
+  ((P.groups[gid]?).map fun G => (G.caps.lookup i).any fun u => !u || P.fnU gid j).getD false
 
 mutual
 inductive MDec (H : Heap) : Tm → Tm → Prop
   | ptr : H.blk a = some (d, c, ws) → MDecs H ws vs → MDec H (.ptr a) (.app (.vc d c .nil) (.ofList vs))
-  | clo : envM.length = envS.length → (∀ i, P.rd gid i = true → MDec H (Tm.env envM i) (Tm.env envS i)) →
+  | clo : envM.length = envS.length → (∀ i, P.rd gid j i = true → MDec H (Tm.env envM i) (Tm.env envS i)) →
       MDec H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j)
   | tok : (w = .tok ∨ ∃ a, w = .ptr a ∧ (H.blk a).isSome) → MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
@@ -133,10 +136,11 @@ inductive Foot (H : Heap) : Tm → Tm → Nat → Prop
   | here : Foot H (.ptr a) v a
   | field {k : Nat} {vs : Tm} : H.blk a = some (d, c, ws) → ws[k]? = some w → vs.toList[k]? = some v → Foot H w v b →
       Foot H (.ptr a) (.app (.vc d c .nil) vs) b
-  | clo {eM eS : Tm} : P.rd gid i = true → Foot H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
+  | clo {eM eS : Tm} : P.rd gid j i = true → Foot H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
       Foot H (.clo eM gid j) (.clo eS gid j) b
 
-def Prog.rdU (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any fun (j, u) => j == i && u).getD false
+def Prog.rdU (gid j i : Nat) : Bool :=
+  P.fnU gid j && ((P.groups[gid]?).map fun G => G.caps.lookup i == some true).getD false
 
 inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
   | top {vs : Tm} : P.wrapField d c = none → Spine H (.ptr a) u (.app (.vc d c ls) vs) a
@@ -145,10 +149,13 @@ inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
       Spine H w u v b → Spine H (.ptr a) (.app (.vc d c .nil) vsS) (.app (.vc d c ls) vs) b
   | wrap {k : Nat} {vs : Tm} : P.wrapField d c = some k → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
       vs.toList[k]? = some v → Spine H w u v b → Spine H w u (.app (.vc d c ls) vs) b
-  | clo {eM eS eF : Tm} : P.rdU gid i = true →
+  | clo {eM eS eF : Tm} : P.rdU gid j i = true →
       Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i) b →
       Spine H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j) b
   | cell : Spine H (.ptr a) u .tok a
+  | dele {eF : Tm} {G : Group} {F : FnDef} : P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = some t → F.u = true →
+      (t < eF.toList.length → G.caps.lookup t = some true) →
+      Spine H w u (Tm.env (eF.toList ++ closures eF.toList gid G) t) b → Spine H w u (.clo eF gid j) b
 
 def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
 
@@ -163,13 +170,16 @@ inductive WO (H : Heap) : Tm → Tm → Tm → Prop
       WO H (.ptr a) (.app (.vc d c .nil) vsS) (.app (.vc d c ls) vs)
   | wrap {vs : Tm} : P.wrapField d c = some k → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
       vs.toList[k]? = some v → WO H w u v → WO H w u (.app (.vc d c ls) vs)
-  | clo {eM eS eF : Tm} :
-      (∀ i, P.rdU gid i = true → WO H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i)) →
-      (∀ i, P.rdU gid i = true → ∀ i', i' ≠ i → P.rd gid i' = true →
+  | clo {eM eS eF : Tm} : (∀ G F, P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = none) →
+      (∀ i, P.rdU gid j i = true → WO H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i)) →
+      (∀ i, P.rdU gid j i = true → ∀ i', i' ≠ i → P.rd gid j i' = true →
         Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i))
           (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
       WO H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)
   | cell : WO H (.ptr a) u .tok
+  | dele {eF : Tm} {G : Group} {F : FnDef} : P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = some t → F.u = true →
+      (t < eF.toList.length → G.caps.lookup t = some true) →
+      WO H w u (Tm.env (eF.toList ++ closures eF.toList gid G) t) → WO H w u (.clo eF gid j)
   | free : (∀ b, ¬ Spine P H w u v b) → WO H w u v
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
