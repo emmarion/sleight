@@ -98,11 +98,13 @@ def Metas.fill (m : Metas) (ts : List Tm) : Except String (List Tm) := do
   let ts := ts.map (m.resolve sol)
   if ts.any (·.fvs.any (m.base ≤ ·)) then .error "cannot infer `_`" else .ok ts
 
-partial def teleEqs : Nat → Tm → Tm → List (Tm × Tm)
-  | k, .bind (.ty ..) A r, .bind (.ty ..) A' r' =>
-    (A, A') :: teleEqs (k + 1) (r.inst (.fv (holeBase - 1 - k)) 0) (r'.inst (.fv (holeBase - 1 - k)) 0)
-  | k, .bind _ _ r, .bind _ _ r' => teleEqs (k + 1) (r.inst (.fv (holeBase - 1 - k)) 0) (r'.inst (.fv (holeBase - 1 - k)) 0)
-  | _, _, _ => []
+def teleEqs (k : Nat) : Tm → Tm → List (Tm × Tm)
+  | .bind e A r, .bind e' A' r' =>
+    let x := Tm.fv (holeBase - 1 - k)
+    (match e, e' with | .ty .., .ty .. => [(A, A')] | _, _ => []) ++ teleEqs (k + 1) (r.inst x 0) (r'.inst x 0)
+  | _, _ => []
+termination_by t => t.size
+decreasing_by rw [Tm.size_inst_fv]; simp only [Tm.size]; omega
 
 def inferArgs (Γ : Ctx) (args : List Tm) (tele : Tm) (exp : Option Tm := none) : Except String (List Tm) := do
   let (m, args, out) ← ({ Γ, base := Γ.n } : Metas).openArgs P args tele
