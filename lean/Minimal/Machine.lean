@@ -122,10 +122,10 @@ end
 
 inductive Foot (H : Heap) : Tm → Tm → Nat → Prop
   | here : Foot H (.ptr a) v a
-  | field {k : Nat} {vs : List Tm} : H.blk a = some (d, c, ws) → ws[k]? = some w → vs[k]? = some v → Foot H w v b →
-      Foot H (.ptr a) (.app (.vc d c .nil) (.ofList vs)) b
-  | clo : P.rd gid i = true → Foot H (Tm.env envM i) (Tm.env envS i) b →
-      Foot H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j) b
+  | field {k : Nat} {vs : Tm} : H.blk a = some (d, c, ws) → ws[k]? = some w → vs.toList[k]? = some v → Foot H w v b →
+      Foot H (.ptr a) (.app (.vc d c .nil) vs) b
+  | clo {eM eS : Tm} : P.rd gid i = true → Foot H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
+      Foot H (.clo eM gid j) (.clo eS gid j) b
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
 
@@ -173,8 +173,9 @@ theorem MDecs.get {H : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs → ∀ (k
 mutual
 theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (Foot P H w v) → MDec P H' w v
   | _, _, .ptr hb hs, hA => .ptr (by rw [hA _ .here]; exact hb)
-      (MDecs.frame hs fun k w v hw hv a ha => hA a (.field hb hw hv ha))
-  | _, _, .clo hl hs, hA => .clo hl fun i hi => (hs i hi).frame fun a ha => hA a (.clo hi ha)
+      (MDecs.frame hs fun k w v hw hv a ha => hA a (.field hb hw (by rw [Tm.toList_ofList]; exact hv) ha))
+  | _, _, .clo hl hs, hA => .clo hl fun i hi => (hs i hi).frame fun a ha =>
+      hA a (.clo hi (by rw [Tm.toList_ofList, Tm.toList_ofList]; exact ha))
   | _, _, .tok h, _ => .tok h
   | _, _, .nat, _ => .nat
   | _, _, .vc, _ => .vc

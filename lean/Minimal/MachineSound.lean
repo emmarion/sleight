@@ -320,4 +320,217 @@ theorem rt_buildArgs {Γ : Ctx} {f fS : Nat → Tm} : ∀ {H : Heap}, H.WF → �
   | _, _, .clo .., _, h, _, _ | _, _, .nat _, _, h, _, _ | _, _, .ptr _, _, h, _, _ => by simp [rtArgs] at h
 end
 
+theorem MDecs.get' {H : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs → ∀ (k : Nat) w v, ws[k]? = some w → vs[k]? = some v →
+    MDec P H w v := fun h => h.get
+
+theorem Foot.back {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v → ∀ {b}, Foot P H' w v b → Foot P H w v b := by
+  intro w v hm b hf
+  induction hf generalizing H with
+  | here => exact .here
+  | field hb hw hv _ ih =>
+    cases hm with
+    | ptr hb0 hs =>
+      have := he.2 _ _ hb0; rw [hb] at this; cases this
+      rw [Tm.toList_ofList] at hv
+      exact .field hb0 hw (by rw [Tm.toList_ofList]; exact hv) (ih he (hs.get _ _ _ hw hv))
+  | clo hi _ ih =>
+    cases hm with
+    | clo hl hs =>
+      rename_i envM envS _
+      refine .clo hi (ih he ?_)
+      rw [Tm.toList_ofList, Tm.toList_ofList]; exact hs _ hi
+
+theorem Foot.tok_inv {H : Heap} {v : Tm} {b : Nat} (h : Foot P H .tok v b) : False := by cases h
+theorem Foot.nat_inv {H : Heap} {n : Nat} {v : Tm} {b : Nat} (h : Foot P H (.nat n) v b) : False := by cases h
+theorem Foot.nil_inv {H : Heap} {v : Tm} {b : Nat} (h : Foot P H .nil v b) : False := by cases h
+
+theorem mask_get : ∀ (ers : List Bool) (a : Tm) (k : Nat) (w : Tm), (maskArgs ers a).toList[k]? = some w →
+    w = .tok ∨ (k < ers.length → ers.getD k true = false) ∧ a.toList[k]? = some w
+  | [], a, k, w, h => .inr ⟨fun h' => by simp at h', by simpa [maskArgs] using h⟩
+  | e :: es, .cons x xs, 0, w, h => by
+    simp only [maskArgs, Tm.toList, List.getElem?_cons_zero, Option.some.injEq] at h
+    cases e
+    · exact .inr ⟨fun _ => rfl, by simp [Tm.toList, ← h]⟩
+    · exact .inl h.symm
+  | e :: es, .cons x xs, k + 1, w, h => by
+    simp only [maskArgs, Tm.toList, List.getElem?_cons_succ] at h
+    rcases mask_get es xs k w h with h1 | ⟨h1, h2⟩
+    · exact .inl h1
+    · exact .inr ⟨fun hk => by simpa using h1 (by simpa using hk), by simpa [Tm.toList] using h2⟩
+  | _ :: _, .nil, _, _, h | _ :: _, .fv _, _, _, h | _ :: _, .bv _, _, _, h | _ :: _, .app .., _, _, h
+  | _ :: _, .bind .., _, _, h | _ :: _, .tyc .., _, _, h | _ :: _, .vc .., _, _, h | _ :: _, .tyCtor _, _, _, h
+  | _ :: _, .valCtor _, _, _, h | _ :: _, .univ, _, _, h | _ :: _, .level, _, _, h | _ :: _, .predates .., _, _, h
+  | _ :: _, .subterm .., _, _, h | _ :: _, .fn .., _, _, h | _ :: _, .mtbl .., _, _, h | _ :: _, .lvl _, _, _, h
+  | _ :: _, .tok, _, _, h | _ :: _, .clo .., _, _, h | _ :: _, .nat _, _, _, h | _ :: _, .ptr _, _, _, h => by
+    simp [maskArgs, Tm.toList] at h
+
+theorem mask_get' : ∀ (ers : List Bool) (a : Tm) (k : Nat), ers.getD k true = false →
+    (maskArgs ers a).toList[k]? = a.toList[k]?
+  | [], a, k, _ => by simp [maskArgs]
+  | e :: es, .cons x xs, 0, h => by simp at h; simp [maskArgs, Tm.toList, h]
+  | e :: es, .cons x xs, k + 1, h => by
+    simp only [maskArgs, Tm.toList, List.getElem?_cons_succ]; exact mask_get' es xs k (by simpa using h)
+  | _ :: _, .nil, _, _ | _ :: _, .fv _, _, _ | _ :: _, .bv _, _, _ | _ :: _, .app .., _, _
+  | _ :: _, .bind .., _, _ | _ :: _, .tyc .., _, _ | _ :: _, .vc .., _, _ | _ :: _, .tyCtor _, _, _
+  | _ :: _, .valCtor _, _, _ | _ :: _, .univ, _, _ | _ :: _, .level, _, _ | _ :: _, .predates .., _, _
+  | _ :: _, .subterm .., _, _ | _ :: _, .fn .., _, _ | _ :: _, .mtbl .., _, _ | _ :: _, .lvl _, _, _
+  | _ :: _, .tok, _, _ | _ :: _, .clo .., _, _ | _ :: _, .nat _, _, _ | _ :: _, .ptr _, _, _ => by
+    simp [maskArgs]
+
+theorem build_ctor_foot {H : Heap} (hW : H.WF) {d c : Nat} {sig : Tm} (hc : P.ctor d c = some sig) {args' argsS : Tm}
+    (hl : args'.isList) (hs : argsS.isList) (hlen : args'.toList.length = argsS.toList.length)
+    (hle : args'.toList.length ≤ (sig.skip (P.lifted d)).ers.length)
+    (hm : ∀ k, k < args'.toList.length → (sig.skip (P.lifted d)).ers.getD k true = false →
+      MDec P H (args'.toList.getD k .nil) (argsS.toList.getD k .nil)) {b : Nat} :
+    let r : Heap × Tm := match P.wrapField d c with
+      | some k => (H, args'.toList.getD k .nil)
+      | none => P.place H (P.norm (.app (.vc d c .nil) (maskArgs (P.ctorErs d c) args')))
+    Foot P r.1 r.2 (match P.wrapField d c with
+      | some k => argsS.toList.getD k .nil
+      | none => P.norm (.app (.vc d c .nil) (maskArgs (P.ctorErs d c) argsS))) b →
+    H.next ≤ b ∨ ∃ k, k < args'.toList.length ∧ (sig.skip (P.lifted d)).ers.getD k true = false ∧
+      Foot P H (args'.toList.getD k .nil) (argsS.toList.getD k .nil) b := by
+  intro r hf
+  have he : P.ctorErs d c = (sig.skip (P.lifted d)).ers := by simp [Prog.ctorErs, hc]
+  cases hw : P.wrapField d c with
+  | some k =>
+    simp only [r, hw] at hf
+    obtain ⟨_, _, sig', hc', hk⟩ := Prog.wrapField_spec hw
+    rw [hc] at hc'; cases hc'
+    by_cases hkl : k < args'.toList.length
+    · exact .inr ⟨k, hkl, (Tm.ntField_spec hk).2.1, hf⟩
+    · simp only [List.getD_eq_getElem?_getD, List.getElem?_eq_none (show args'.toList.length ≤ k by omega)] at hf
+      exact hf.nil_inv.elim
+  | none =>
+    simp only [r, hw] at hf
+    rw [he] at hf
+    rcases norm_cases (P := P) d c (maskArgs (sig.skip (P.lifted d)).ers args') with h | ⟨_, ⟨_, _, h⟩ | ⟨_, _, _, h⟩⟩
+    · rw [h] at hf
+      simp only [Prog.place, Heap.alloc] at hf
+      rcases norm_cases (P := P) d c (maskArgs (sig.skip (P.lifted d)).ers argsS) with h' | ⟨_, ⟨_, _, h'⟩ | ⟨_, _, _, h'⟩⟩
+      · rw [h'] at hf
+        cases hf with
+        | here => exact .inl (Nat.le_refl _)
+        | @field _ _ _ _ w v _ k _ hb hw' hv hf' =>
+          simp only [if_pos rfl, Option.some.injEq, Prod.mk.injEq] at hb
+          obtain ⟨-, -, rfl⟩ := hb
+          rcases mask_get _ _ _ _ hw' with rfl | ⟨hk, hw2⟩
+          · exact hf'.tok_inv.elim
+          · have hkl : k < args'.toList.length := (List.getElem?_eq_some_iff.mp hw2).1
+            have hke := hk (by omega)
+            rw [mask_get' _ _ _ hke] at hv
+            have e1 : args'.toList.getD k .nil = w := by simp [List.getD_eq_getElem?_getD, hw2]
+            have e2 : argsS.toList.getD k .nil = v := by simp [List.getD_eq_getElem?_getD, hv]
+            have hmk := hm k hkl hke
+            rw [e1, e2] at hmk
+            obtain ⟨hex, _⟩ := Heap.alloc_ext hW (d, c, (maskArgs (sig.skip (P.lifted d)).ers args').toList)
+            exact .inr ⟨k, hkl, hke, by rw [e1, e2]; exact Foot.back hex hmk hf'⟩
+      all_goals (rw [h'] at hf; cases hf; exact .inl (Nat.le_refl _))
+    · rw [h] at hf; simp [Prog.place] at hf; exact hf.nat_inv.elim
+    · rw [h] at hf; simp [Prog.place] at hf; exact hf.nat_inv.elim
+
+mutual
+theorem rt_build_foot {Γ : Ctx} {f fS : Nat → Tm} : ∀ {H : Heap}, H.WF → ∀ t, rt P Γ t = true →
+    (∀ i ∈ rtReads P Γ t, MDec P H (f i) (fS i)) → HeadsOK P Γ fS (rtHeads P Γ t) → ∀ b,
+    Foot P (P.build H f t).1 (P.build H f t).2 (P.subU fS t) b →
+    H.next ≤ b ∨ ∃ i ∈ rtReads P Γ t, Foot P H (f i) (fS i) b
+  | H, hW, .fv i, _, hr, _, b, hf => by
+    simp only [Prog.build, Prog.subU] at hf; exact .inr ⟨i, by simp [rtReads], hf⟩
+  | H, hW, .vc d c ls, _, _, _, b, hf => by simp only [Prog.build, Prog.subU] at hf; cases hf
+  | H, hW, .app (.vc d c ls) args, h, hr, hh, b, hf => by
+    simp only [rt] at h
+    split at h
+    · rename_i sig hc
+      simp only [Bool.and_eq_true] at h
+      have hr' : ∀ i ∈ rtReadsArgs P Γ args (sig.skip (P.lifted d)), MDec P H (f i) (fS i) :=
+        fun i hi => hr i (by simp [rtReads, hc, hi])
+      have hh' : HeadsOK P Γ fS (rtHeadsArgs P Γ args (sig.skip (P.lifted d))) :=
+        fun i sg hi => hh i sg (by simp [rtHeads, hc, hi])
+      obtain ⟨e1, w1, l1, l2, len, hle, hm⟩ := rt_buildArgs hW args _ h.2 hr' hh'
+      simp only [Prog.build, Prog.subU] at hf
+      rcases build_ctor_foot (P := P) w1 hc l1 l2 len hle hm hf with hb | ⟨k, hk, hke, hfk⟩
+      · exact .inl (Nat.le_trans e1.1 hb)
+      · rcases rt_buildArgs_foot hW args _ h.2 hr' hh' k hk hke b hfk with hb | ⟨i, hi, hfi⟩
+        · exact .inl hb
+        · exact .inr ⟨i, by simp [rtReads, hc, hi], hfi⟩
+    · simp at h
+  | H, hW, .app (.fv i) args, h, hr, hh, b, hf => by
+    simp only [rt] at h
+    split at h
+    · rename_i sig hsig
+      simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at h
+      obtain ⟨d, c, sig0, hfi, hc, hers⟩ := hh i sig (by simp [rtHeads]) hsig
+      have hri : MDec P H (f i) (fS i) := hr i (by simp [rtReads])
+      rw [hfi] at hri
+      have hfm := hri.vc_inv'
+      have hr' : ∀ j ∈ rtReadsArgs P Γ args sig, MDec P H (f j) (fS j) :=
+        fun j hj => hr j (by simp [rtReads, hsig, hj])
+      have hh' : HeadsOK P Γ fS (rtHeadsArgs P Γ args sig) :=
+        fun j sg hj => hh j sg (by simp [rtHeads, hsig, hj])
+      obtain ⟨e1, w1, l1, l2, len, hle, hm⟩ := rt_buildArgs hW args _ h.2 hr' hh'
+      rw [← hers] at hle hm
+      simp only [Prog.build, Prog.subU, hfi, hfm] at hf
+      rcases build_ctor_foot (P := P) w1 hc l1 l2 len hle hm hf with hb | ⟨k, hk, hke, hfk⟩
+      · exact .inl (Nat.le_trans e1.1 hb)
+      · rw [hers] at hke
+        rcases rt_buildArgs_foot hW args _ h.2 hr' hh' k hk hke b hfk with hb | ⟨j, hj, hfj⟩
+        · exact .inl hb
+        · exact .inr ⟨j, by simp [rtReads, hsig, hj], hfj⟩
+    · simp at h
+  | _, _, .app (.bv _) _, h, _, _, _, _ | _, _, .app .nil _, h, _, _, _, _ | _, _, .app (.cons ..) _, h, _, _, _, _
+  | _, _, .app (.bind ..) _, h, _, _, _, _ | _, _, .app (.app ..) _, h, _, _, _, _ | _, _, .app (.tyc ..) _, h, _, _, _, _
+  | _, _, .app (.tyCtor _) _, h, _, _, _, _ | _, _, .app (.valCtor _) _, h, _, _, _, _ | _, _, .app .univ _, h, _, _, _, _
+  | _, _, .app .level _, h, _, _, _, _ | _, _, .app (.predates ..) _, h, _, _, _, _ | _, _, .app (.subterm ..) _, h, _, _, _, _
+  | _, _, .app (.fn ..) _, h, _, _, _, _ | _, _, .app (.mtbl ..) _, h, _, _, _, _ | _, _, .app (.lvl _) _, h, _, _, _, _
+  | _, _, .app .tok _, h, _, _, _, _ | _, _, .app (.clo ..) _, h, _, _, _, _ | _, _, .app (.nat _) _, h, _, _, _, _
+  | _, _, .app (.ptr _) _, h, _, _, _, _
+  | _, _, .bv _, h, _, _, _, _ | _, _, .nil, h, _, _, _, _ | _, _, .cons .., h, _, _, _, _ | _, _, .bind .., h, _, _, _, _
+  | _, _, .tyc .., h, _, _, _, _ | _, _, .tyCtor _, h, _, _, _, _ | _, _, .valCtor _, h, _, _, _, _ | _, _, .univ, h, _, _, _, _
+  | _, _, .level, h, _, _, _, _ | _, _, .predates .., h, _, _, _, _ | _, _, .subterm .., h, _, _, _, _ | _, _, .fn .., h, _, _, _, _
+  | _, _, .mtbl .., h, _, _, _, _ | _, _, .lvl _, h, _, _, _, _ | _, _, .tok, h, _, _, _, _ | _, _, .clo .., h, _, _, _, _
+  | _, _, .nat _, h, _, _, _, _ | _, _, .ptr _, h, _, _, _, _ => by simp [rt] at h
+
+theorem rt_buildArgs_foot {Γ : Ctx} {f fS : Nat → Tm} : ∀ {H : Heap}, H.WF → ∀ args sig, rtArgs P Γ args sig = true →
+    (∀ i ∈ rtReadsArgs P Γ args sig, MDec P H (f i) (fS i)) → HeadsOK P Γ fS (rtHeadsArgs P Γ args sig) →
+    ∀ k, k < (P.buildArgs H f args).2.toList.length → sig.ers.getD k true = false → ∀ b,
+    Foot P (P.buildArgs H f args).1 ((P.buildArgs H f args).2.toList.getD k .nil) ((P.subUArgs fS args).toList.getD k .nil) b →
+    H.next ≤ b ∨ ∃ i ∈ rtReadsArgs P Γ args sig, Foot P H (f i) (fS i) b
+  | H, hW, .nil, _, _, _, _, k, hk, _, _, _ => by simp [Prog.buildArgs, Tm.subst, Tm.toList] at hk
+  | H, hW, .cons a as, .bind e A r, h, hr, hh, k, hk, hke, b, hf => by
+    simp only [rtArgs, Bool.and_eq_true, Bool.or_eq_true] at h
+    obtain ⟨e1, w1⟩ := build_ext (P := P) hW f a
+    have hr2 : ∀ i ∈ rtReadsArgs P Γ as r, MDec P (P.build H f a).1 (f i) (fS i) :=
+      fun i hi => (hr i (by simp [rtReadsArgs, hi])).mono e1
+    have hh2 : HeadsOK P Γ fS (rtHeadsArgs P Γ as r) := fun i sg hi => hh i sg (by simp [rtHeadsArgs, hi])
+    obtain ⟨e2, w2, -⟩ := rt_buildArgs w1 as r h.2 hr2 hh2
+    simp only [Prog.buildArgs, Prog.subUArgs, Tm.toList, Tm.ers] at hf hk hke
+    cases k with
+    | zero =>
+      simp only [List.getD_cons_zero] at hf hke
+      have hrt : rt P Γ a = true := by simpa [hke] using h.1
+      have hra : ∀ i ∈ rtReads P Γ a, MDec P H (f i) (fS i) := fun i hi => hr i (by simp [rtReadsArgs, hke, hi])
+      have hha : HeadsOK P Γ fS (rtHeads P Γ a) := fun i sg hi => hh i sg (by simp [rtHeadsArgs, hke, hi])
+      have hma := (rt_build hW a hrt hra hha).2.2
+      rcases rt_build_foot hW a hrt hra hha b (Foot.back e2 hma hf) with hb | ⟨i, hi, hfi⟩
+      · exact .inl hb
+      · exact .inr ⟨i, by simp [rtReadsArgs, hke, hi], hfi⟩
+    | succ k =>
+      simp only [List.getD_cons_succ, List.length_cons] at hf hke hk
+      rcases rt_buildArgs_foot w1 as r h.2 hr2 hh2 k (by omega) hke b hf with hb | ⟨i, hi, hfi⟩
+      · exact .inl (Nat.le_trans e1.1 hb)
+      · exact .inr ⟨i, by simp [rtReadsArgs, hi], Foot.back e1 (hr i (by simp [rtReadsArgs, hi])) hfi⟩
+  | _, _, .cons .., .nil, h, _, _, _, _, _, _, _ | _, _, .cons .., .fv _, h, _, _, _, _, _, _, _ | _, _, .cons .., .bv _, h, _, _, _, _, _, _, _
+  | _, _, .cons .., .cons .., h, _, _, _, _, _, _, _ | _, _, .cons .., .app .., h, _, _, _, _, _, _, _ | _, _, .cons .., .tyc .., h, _, _, _, _, _, _, _
+  | _, _, .cons .., .vc .., h, _, _, _, _, _, _, _ | _, _, .cons .., .tyCtor _, h, _, _, _, _, _, _, _ | _, _, .cons .., .valCtor _, h, _, _, _, _, _, _, _
+  | _, _, .cons .., .univ, h, _, _, _, _, _, _, _ | _, _, .cons .., .level, h, _, _, _, _, _, _, _ | _, _, .cons .., .predates .., h, _, _, _, _, _, _, _
+  | _, _, .cons .., .subterm .., h, _, _, _, _, _, _, _ | _, _, .cons .., .fn .., h, _, _, _, _, _, _, _ | _, _, .cons .., .mtbl .., h, _, _, _, _, _, _, _
+  | _, _, .cons .., .lvl _, h, _, _, _, _, _, _, _ | _, _, .cons .., .tok, h, _, _, _, _, _, _, _ | _, _, .cons .., .clo .., h, _, _, _, _, _, _, _
+  | _, _, .cons .., .nat _, h, _, _, _, _, _, _, _ | _, _, .cons .., .ptr _, h, _, _, _, _, _, _, _
+  | _, _, .fv _, _, h, _, _, _, _, _, _, _ | _, _, .bv _, _, h, _, _, _, _, _, _, _ | _, _, .bind .., _, h, _, _, _, _, _, _, _ | _, _, .app .., _, h, _, _, _, _, _, _, _
+  | _, _, .tyc .., _, h, _, _, _, _, _, _, _ | _, _, .vc .., _, h, _, _, _, _, _, _, _ | _, _, .tyCtor _, _, h, _, _, _, _, _, _, _ | _, _, .valCtor _, _, h, _, _, _, _, _, _, _
+  | _, _, .univ, _, h, _, _, _, _, _, _, _ | _, _, .level, _, h, _, _, _, _, _, _, _ | _, _, .predates .., _, h, _, _, _, _, _, _, _ | _, _, .subterm .., _, h, _, _, _, _, _, _, _
+  | _, _, .fn .., _, h, _, _, _, _, _, _, _ | _, _, .mtbl .., _, h, _, _, _, _, _, _, _ | _, _, .lvl _, _, h, _, _, _, _, _, _, _ | _, _, .tok, _, h, _, _, _, _, _, _, _
+  | _, _, .clo .., _, h, _, _, _, _, _, _, _ | _, _, .nat _, _, h, _, _, _, _, _, _, _ | _, _, .ptr _, _, h, _, _, _, _, _, _, _ => by simp [rtArgs] at h
+end
+
 end Minimal

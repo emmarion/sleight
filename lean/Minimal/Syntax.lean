@@ -227,6 +227,10 @@ def natTm' (d : Nat) : Nat → Tm
   | 0 => .app (.vc d 0 .nil) .nil
   | k + 1 => .app (.vc d 1 .nil) (.cons (natTm' d k) .nil)
 
+theorem Tm.toList_ofList : ∀ l : List Tm, (Tm.ofList l).toList = l
+  | [] => rfl
+  | _ :: l => by simp [Tm.ofList, Tm.toList, Tm.toList_ofList l]
+
 def holeBase : Nat := 2 ^ 40
 
 def Tm.hole : Tm := .fv holeBase

@@ -951,10 +951,6 @@ theorem foldl_snoc (g : List Tm → FnDef → Tm) : ∀ (Fs : List FnDef) (acc :
 theorem closuresS_length (env : List Tm) (gid : Nat) (G : Group) : (closuresS env gid G).length = G.fns.length := by
   simpa [closuresS] using (foldl_snoc (cval env gid) G.fns []).1
 
-theorem Tm.toList_ofList : ∀ l : List Tm, (Tm.ofList l).toList = l
-  | [] => rfl
-  | _ :: l => by simp [Tm.ofList, Tm.toList, Tm.toList_ofList l]
-
 theorem Tm.ofList_toList' : ∀ (t : Tm), t.isList = true → Tm.ofList t.toList = t := by
   intro t; induction t <;> simp_all [Tm.ofList, Tm.toList, Tm.isList]
 
