@@ -72,6 +72,30 @@ What the theorem needs, on this session's reading:
 4. An at-function's body and an at-match's branches erasing to nothing,
    checked in the core rather than the elaborator alone.
 
+Progress: stage 1 is done (`Chk.mark`, `FnDef.atf`, and the `Mark.uq`,
+`Mark.uqScr` and `Mark.rebind` modes); stage 2's use discipline is
+`usesCore` (`Minimal/Uses.lean`), which the runner requires, though no
+theorem uses it yet and `Checked` does not include it; "erases to
+nothing" is not yet in the core. `Minimal/Machine.lean` holds a first
+machine run (`RunM`): a heap, cell invocations at unique written in
+place (`Prog.reuse`), `cell-alloc` allocating, and `at` entries,
+skipped calls and slots not yet treated specially; and `MDec`, a
+machine value standing for a stripped one.
+
+On this session's reading, the agreement theorem cannot be proved by
+induction on `RunS` alone: at a call, the caller counts an argument's use
+by the callee's type as the caller sees it, while the callee's body is
+checked against its own telescope, and only typing (`VTy`) ties the two.
+So the plan is a theorem by the same induction as `eval_sound` (on
+`eval`, under `CoreTy` and `EnvOK`), relating machine words to the full
+run's values directly, with an ownership invariant: in each frame, the
+blocks a `unique` entry that may still be used at unique owns (its top
+block, and those of its unique-labelled fields) are reached by no other
+entry the rest of the frame reads, nor by a caller's; and a closure is
+read only through the entries its bodies use non-erasedly, which
+`usesCore` computes. The closure value's stand-for relation will need
+those reads rather than `G.ers`, which `MDec.clo` uses for now.
+
 Stages, each committed once it builds and `test.sh` passes:
 
 1. Core forms for what the new run treats specially: a cell invocation
