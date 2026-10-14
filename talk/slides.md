@@ -187,6 +187,7 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
 - Performance claims checked at compile time: tail calls, zero-cost coercions
 - `Type : Type`, no positivity check, yet sound (Lean proof)
 - Everything is first class; nothing is global
+- Self-hosted: a second compiler, written in Sleight, compiles itself
 
 ## 13. Sleight, Lean 4, Idris 2, ATS2
 
@@ -460,7 +461,7 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
 
 | | Written in | Role |
 |---|---|---|
-| Reference interpreter | OCaml | defines correct behavior |
+| Reference interpreter and compiler | OCaml | defines correct behavior |
 | slc, the compiler | Sleight | compiles itself to identical output |
 | Lean model | Lean 4 | machine-checked soundness (a fragment: no macros, arrays or I/O yet) |
 
