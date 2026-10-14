@@ -236,7 +236,7 @@ partial def typeAtUse (j : Nat) (rets : Option Tm) (Γ : Ctx) : Core → Option 
     typeAtUse j rets Γ' rest
 where
   argsUse (Γ : Ctx) : List Tm → Tm → Option Tm
-    | a :: as, .bind k A r => if a == .fv j then (if k matches .ty .. then some A else none)
+    | a :: as, .bind k A r => if a == .fv j then (if k matches .ty .. then some A else (checkTm P Γ A).toOption.map (·.1))
       else termUse Γ a <|> argsUse Γ as (r.inst a 0)
     | _, _ => none
   termUse (Γ : Ctx) : Tm → Option Tm
@@ -264,19 +264,22 @@ partial def outerAt (Γ : Ctx) (rets : Option Tm) : Core → List (Nat × Tm)
       | some (Γ', rest, _) => outerAt Γ' rets rest
       | none => []
 
-partial def sideAt (Γ : Ctx) (tgt : Bool) (i : Nat) : Core → Option Tm
-  | .chk .ty (.fv k) T _ => if k = i then (coerOf' T).map fun (sa, _, _, sb, _) => if tgt then sb else sa else none
-  | c => useSide c (i + 1)
+partial def sideAt (Γ : Ctx) (rets : Option Tm) (tgt : Bool) (i : Nat) : Core → Option Tm
+  | .chk .ty (.fv k) T _ => if k = i then side T else none
+  | c => useSide (Γ.push .hole) c (i + 1) <|> (typeAtUse P i rets (Γ.push .hole) c).bind side
 where
-  useSide : Core → Nat → Option Tm
+  side (T : Tm) : Option Tm := (coerOf' T).map fun (sa, _, _, sb, _) => if tgt then sb else sa
+  useSide (Γk : Ctx) : Core → Nat → Option Tm
     | .prim (.coerCtor s C _ _ ps) _ rest, k => match ps.toList.idxOf? (.fv i) with
       | some j => do
-        let s ← if s.isHole then sideAt Γ false k rest else some s
-        let ⟨K, _⟩ ← (checkTm P Γ C).toOption
-        let .valCtor sig := Γ.canon K | none
+        let s ← if s.isHole then sideAt Γk rets false k rest else some s
+        let ⟨K, _⟩ ← (checkTm P Γk C).toOption
+        let .valCtor sig := Γk.canon K | none
         some (if sig.uAt j then s else sharedTm)
-      | none => useSide rest (k + 1)
-    | .prim _ _ rest, k => useSide rest (k + 1)
+      | none => useSide (Γk.push .hole) rest (k + 1)
+    | .prim (.coerSym (.fv x)) _ rest, k =>
+      if x = i then sideAt Γk rets (!tgt) k rest else useSide (Γk.push .hole) rest (k + 1)
+    | .prim _ _ rest, k => useSide (Γk.push .hole) rest (k + 1)
     | _, _ => none
 
 partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM Core
@@ -336,7 +339,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       let ⟨x, _⟩ ← coerParts dC (Γ.canon T)
       some x
     let tgt := match p with | .coerWrap .. => true | _ => false
-    let expSide : Tm → Tm := fun s => if !s.isHole then s else (sideAt P Γ tgt Γ.n rest).getD s
+    let expSide : Tm → Tm := fun s => if !s.isHole then s else (sideAt P Γ rets tgt Γ.n rest).getD s
     let p ← match p with
       | .coerce a b q =>
         match coerOf q with
@@ -344,7 +347,13 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
           pure (.coerce a (if b.isHole then b' else b) q)
         | none => pure p
       | .coerRefl s e => pure (.coerRefl (expSide s) e)
-      | .coerWrap s C args => pure (.coerWrap (expSide s) C args)
+      | .coerWrap s C args =>
+        let args := if !args.hasHole then args else match checkTm P Γ C with
+          | .ok ⟨K, _⟩ => match Γ.canon K with
+            | .valCtor sig => ((inferArgs P Γ args.toList sig).toOption.map Tm.ofList).getD args
+            | _ => args
+          | .error _ => args
+        pure (.coerWrap (expSide s) C args)
       | .coerCtor s C srcs tgts ps =>
         let fill (l : List Tm) (pick : Tm × Tm × Tm × Tm × Tm × Tm → Tm) : Tm := .ofList (l.zipIdx.map fun (t, j) =>
           if t.isHole then (((ps.toList[j]?).bind coerOf).map pick).getD t
@@ -355,6 +364,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
         let A := match rest with
           | .chk .ty (.fv i) T _ => if i = Γ.n then some T else none
           | _ => none
+        let A := A <|> (typeAtUse P Γ.n rets (Γ.push .hole) rest).filter (·.fvs.all (· < Γ.n))
         pure (.tm (← inferTerm P Γ t A))
       | p => pure p
     match p, checkPrim P Γ p with

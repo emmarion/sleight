@@ -208,7 +208,7 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
 refused as not supported: every form not named in this file, among
-them macros, arrays, `Placed` and `World`. Only the prelude, or a program
+them macros, `Placed` and `World`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -366,8 +366,14 @@ it is `Settled`, and its `is` rule.
   `nt`, which the stripped run takes without looking at the scrutinee,
   with the scrutinee's value as the one non-erased field; the checker
   allows it at most one real branch, as for an erased scrutinee.
-  `comptime-match` and the checker's known values look through no
+  After such a `case` at the top level, the checker knows its field's
+  value to be the scrutinee's; `comptime-match` does not look through a
   newtype.
+- Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
+  them are `extern` functions whose models run, and inside an `extern`
+  function's body a cell of an `extern` constructor is allowed (section
+  43). `array-unpluck` is not supported: its `slot-self` names a
+  variable whose slot is already in use.
 - `Matchable` types and `(matchable-of T)` for a declared type or a
   `let` alias of one (section 24). A `Matchable`'s type names a declared type, its tag,
   marks and constructors in order (`VTy.mtbl`); its value is a token.
@@ -439,8 +445,11 @@ it is `Settled`, and its `is` rule.
   tail position: the final expression of a function body, of a branch of
   a match in tail position, or of a `let`'s right-hand side when the
   rest of the body returns its binders in order, or a `coerce` of its
-  one binder, after `let`s whose binders are all erased. Neither is
-  accepted in an erased position.
+  one binder, after `let`s whose binders are all erased or rename. A
+  binder bound to a callee's result written `at`, and a result of the
+  body written `at` whose expression is a variable or a full `(at ...)`
+  invocation, return nothing at run time and are not counted. Neither
+  is accepted in an erased position.
 - `def-opaque` and `def-prim` (INTERNALS.md sections 1 and 2), in the
   prelude or under `--no-prelude`. An opaque type is a declared type
   with no constructors and no `Matchable`, which no match goes through;
@@ -471,7 +480,7 @@ it is `Settled`, and its `is` rule.
   core checks each promise canonically. `(slot-of x)` is the slot of
   `x`, erased when `x` is, and of a hidden entry erased always;
   `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
-  `vacant-slot` puts its binder there.
+  `vacant-slot` puts its binder there. A slot entry is its own slot.
   `(slot-self s)` makes `s` its own slot, and is refused once the slot
   of `s` is in use. `at` changes no value: the runner computes an
   `at` result like any other. Not done: the slot a forcing unification

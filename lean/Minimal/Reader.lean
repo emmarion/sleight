@@ -176,7 +176,7 @@ structure ESt where
   pre : Bool := true
   inPrelude : Bool := true
   tail : Bool := false
-  noRt : Bool := false
+  retAts : List Bool := []
   refute : Bool := false
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
@@ -549,6 +549,7 @@ def slotM (i : Nat) : M (List (Core → Core) × Tm) := do
   let k := st.n
   modify fun st => { st with n := st.n + 1, ers := st.ers ++ [er] }
   modify fun st => { st with slots := (r, Tm.fv k) :: st.slots, known := (k, Tm.app (.tyc slotD .nil) .nil) :: st.known }
+  modify fun st => { st with links := (k, r) :: st.links }
   return ([Core.prim (Prim.atom slotD) er], .fv k)
 
 def mintSlots (sc : Scope) (e : Sx) (ats : Bool := true) : M (List (Core → Core)) :=
@@ -953,16 +954,20 @@ def renamesOf (bs : List Sx) : List Sx → Option (List (String × String))
       | _, _ => none) []
   | _ => none
 
-def returnsBinders (noRt : Bool) (xs : List String) (want : List Mode) : List Sx → Bool
+def returnsBinders (ats : List Bool) (xs : List String) (want : List Mode) : List Sx → Bool
   | [.list (.atom "values" :: es)] =>
-    (es.zip want).filterMap (fun (e, w) => if w.isEr then none else some (uncoerce e)) == xs.map .atom
-  | [.list [.atom "coerce", e, _]] => returnsBinders noRt xs want [e]
+    let parts := es.zip ((want.filter (· != .hid)).zip ats)
+    parts.all (fun (e, w, a) => w.isEr || !a ||
+      e matches .atom _ | .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]]) &&
+    (parts.filterMap fun (e, w, a) => if w.isEr || a then none else some (uncoerce e)) == xs.map .atom
+  | [.list [.atom "coerce", e, _]] => returnsBinders ats xs want [e]
   | [e] => (!(want.head?.getD .er).isEr && xs == [e.show]) ||
-    (noRt && xs.isEmpty && e matches .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]])
+    (((want.filter (· != .hid)).zip ats).all (fun (w, a) => w.isEr || a) && xs.isEmpty &&
+      e matches .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]])
   | .list (.atom "let" :: .list bs :: items) :: rest =>
-    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders noRt xs want rest
+    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders ats xs want rest
     else match renamesOf bs items with
-      | some rn => returnsBinders noRt (xs.map fun x => (rn.lookup x).getD x) want rest
+      | some rn => returnsBinders ats (xs.map fun x => (rn.lookup x).getD x) want rest
       | none => false
   | _ => false
 
@@ -1860,6 +1865,7 @@ partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R 
       infos := infos ++ [ci]
       continue
     let (ab, br) := match br with
+      | .list (.atom "absurd" :: .atom c :: rest) => (true, Sx.list (.list [.atom c] :: rest))
       | .list (.atom "absurd" :: rest) => (true, Sx.list rest)
       | br => (false, br)
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
@@ -1911,7 +1917,11 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
   let (atm, ann) := match ann with | .list [.atom "at", a] => (true, a) | a => (false, a)
   if atm then
     let .list rets := ann | throw "an at-match's annotation must be written out"
-    unless (← rets.mapM (parseEntryAt false)).all (fun (k, _, _, t) => k.er || t.isSome) do
+    let written : Sx → Bool
+      | .list (.atom "subterm" :: .atom m :: _) | .list (.atom m :: _) => ["erased", "many", "unique"].contains m
+      | _ => false
+    unless ((← rets.mapM (parseEntryAt false)).zip (rets.zip ((want.filter (· != .hid)).map some ++ List.replicate rets.length none))).all
+        (fun ((k, _, _, t), e, w) => k.er || t.isSome || (!written e && w.any (·.isEr))) do
       throw "an at-match's annotation entries are erased or `at`"
   let (R0, hm) ← match ann, exp with
     | .list rets, _ => do let (R, hm, _) ← elabTeleH sc 0 [] rets false; pure (R, hm)
@@ -2066,7 +2076,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         | _ => []
       | _ => []
     let xs := ((bs.zip (List.range bs.length)).filter fun (b, k) => !b.2.1.isEr && !ats.getD k false).map (·.1.1)
-    let (ss, ts) ← withTail ((← get).tail && returnsBinders (← get).noRt xs want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
+    let (ss, ts) ← withTail ((← get).tail && returnsBinders (← get).retAts xs want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
     modify fun st => { st with rhs := r0, refute := f0, depthTop := d0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
@@ -2256,7 +2266,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         let (ps, rs) ← splitArrow es
         if atf && !(← rs.mapM (parseEntryAt true)).all (fun (k, _, _, t) => k.er || t.isSome) then
           throw "an at-function's returns are erased or `at`"
-        pure (← name f, (er, ab, tgt, atf), ps, rs, items, ← entryMds true ps)
+        pure (← name f, (er, ab, tgt, atf, ms.contains "extern"), ps, rs, items, ← entryMds true ps)
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
@@ -2283,8 +2293,8 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       reset (base + sigs.length)
       note (base + j) (.fn (.fv lvl) np tele isU hm)
       pure (tele, hm, np)
-    modify fun st => { st with atFns := st.atFns ++ sigs.zipIdx.filterMap fun ((_, (_, _, _, atf), _), j) => if atf then some (base + j) else none }
-    let defs ← sigs.zipIdx.mapM fun ((f, (er, ab, _, atf), ps, _, items, _), j) => withDele tgts[j]! do
+    modify fun st => { st with atFns := st.atFns ++ sigs.zipIdx.filterMap fun ((_, (_, _, _, atf, _), _), j) => if atf then some (base + j) else none }
+    let defs ← sigs.zipIdx.mapM fun ((f, (er, ab, _, atf, ex), ps, _, items, _), j) => withDele tgts[j]! do
       let tgt := tgts[j]!
       let (tele, hm, np) := teles[j]!
       reset (base + sigs.length)
@@ -2299,16 +2309,17 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       modify fun st => { st with dele := tgt.map (·, upids.zip (pents.map (·.2))), delegated := false }
       modify fun st => { st with deleBase := base + sigs.length }
       let bad0 := (← get).atBad
-      let noRt0 := (← get).noRt
-      let noRt := (((ms.drop np).filter (· != .hid)).zip (resultAts np tele hm)).all fun (m, a) => m.isEr || a
-      modify fun st => { st with atBad := false, noRt }
+      let retAts0 := (← get).retAts
+      let ext0 := (← get).inExtern
+      modify fun st => { st with inExtern := st.inExtern || ex }
+      modify fun st => { st with atBad := false, retAts := resultAts np tele hm }
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (upids.zipWith entRef utys) |>.reverse |>.append (if isU then sc else fnsc))
         (if ab then [Mode.er] else (ms.drop np).map fun e => if er && e != .hid then .er else e) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
       if tgt.isSome && !(← get).delegated then throw "a function written `at f` must have a `delegate` body"
       if atf && !ab && (← get).atBad then
         throw s!"the body of at-function `{showName f}` does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"
-      modify fun st => { st with atBad := bad0, noRt := noRt0 }
+      modify fun st => { st with atBad := bad0, retAts := retAts0, inExtern := ext0 }
       modify fun st => { st with deles := ds0 }
       pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU, atf : FnDef }
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }

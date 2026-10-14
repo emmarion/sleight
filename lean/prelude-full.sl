@@ -894,6 +894,59 @@
   (let ((erased xs1) (unique tl) (erased q)) (notail $ array-new A n1))
   (values (Cons (MaybeUninit A) (Uninit A vacant-slot) xs1) (ACons _ _ (Uninit _ vacant-slot) tl) (RepeatCons _ _ _ _ q)))
 
+(def-fns _ $ (many extern array-swap : (erased Type A) (erased (List A) xs)
+    (unique (Array A xs) a) (subterm many (Nat) i) (unique A x)
+    (erased A m) (erased (Nth A xs i m) nth) ->
+    (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
+    (erased (SetNth A xs i x ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (Cons A x xs1) (u _ _ x (at) tl) (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
+      (values old (Cons A hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
+(def-fns _ $ (many extern array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
+    (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
+    (unique m is v) (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (Cons (MaybeUninit A) (Uninit A (slot-of hd)) xs1) (at (u _ _ (Uninit _ (slot-of hd)) tl))
+              (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((unique v) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
+(def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
+    (unique (Array A xs) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (Nth A xs i m) nth) ->
+    (erased (List A) ys) (unique (Array A ys) r at a) (erased (SetNth A xs i x ys) p))
+  (let ((unique _) (erased ys) (unique r) (erased p)) (array-swap _ _ a i x _ nth))
+  (values ys r p))
+
+(def-fns _ $ (many extern array-get : (erased Type A) (erased (List (Copy A)) xs)
+    (unique (Array (Copy A) xs) a) (subterm many (Nat) i)
+    (erased A x) (erased (Nth (Copy A) xs i (MkCopy A x)) nth) ->
+    (many x is v) (unique a is r at a))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (let-match unique hd (MkCopy _ v))
+      (values v (at (u _ _ (MkCopy _ v) tl))))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3))))))
+
 (def-fns _ $ (many extern array-get-many : (erased Type A) (erased (List A) xs)
     (many (Array A xs) a) (subterm many (Nat) i)
     (erased A x) (erased (Nth A xs i x) nth) -> (many x is v))
@@ -905,6 +958,12 @@
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (tail (array-get-many _ _ tl i1 _ q)))))
+
+(def-fns _ $ (many extern array-length : (erased Type A) (erased (List A) xs)
+    (subterm unique (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p) (unique a is r at a))
+  (let-match unique a (ACons _ _ hd tl u) ((ANil _ u) (values (Zero) (LengthNil _) (at (u _)))))
+  (let ((many l1) (erased p1) (unique tl2)) (notail $ array-length _ _ tl))
+  (values (Succ l1) (LengthCons _ _ _ _ p1) (at (u _ _ hd tl2))))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -924,6 +983,21 @@
   (let-match many n (Succ n1) ((Zero) (values (Nil _) (ANil _) (RepeatNil _ _))))
   (let ((erased xs1) (unique a1) (erased p1)) (notail $ array-make A n1 x))
   (values (Cons (Copy A) (MkCopy A x) xs1) (ACons _ _ (MkCopy _ x) a1) (RepeatCons _ _ _ _ p1)))
+
+(def-fns _ $ (erased init-witness : (erased Type A) (erased (List (MaybeUninit A)) xs) (erased (List A) ys)
+    (erased (Array (MaybeUninit A) xs) a) (subterm erased (AllInit A xs ys) all) ->
+    (erased (Array A ys) b)
+    (erased (Coercible (Unique) (Array (MaybeUninit A) xs) a (Unique) (Array A ys) b) c))
+  (let-match erased all (AICons _ x tl ys1 q)
+    ((AINil _)
+      (let-match erased a (ANil _))
+      (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A))))
+  (let-match erased a (ACons _ _ _ rest))
+  (let ((erased b1) (erased c1)) (init-witness _ _ _ rest q))
+  (values (ACons _ _ x b1)
+          (coercible-ctor _ ACons (MaybeUninit A) A tl ys1
+             (coercible-sym (coercible-wrap _ Init _ x))
+             c1)))
 
 (def-adts $ (Bytes : ((List (U8)) xs) -> Type)
   enum extern
@@ -947,6 +1021,46 @@
   (let ((erased xs1) (unique b1) (erased p1)) (notail $ bytes-make n1 x))
   (values (Cons (U8) x xs1) (BCons _ x b1) (RepeatCons _ _ _ _ p1)))
 
+(def-fns _ $ (many extern bytes-get : (erased (List (U8)) xs) (unique (Bytes xs) b) (subterm many (Nat) i)
+    (erased (U8) x) (erased (Nth (U8) xs i x) nth) -> (many x is v) (unique b is r at b))
+  (let-match unique b (BCons _ hd tl u) (absurd (BNil) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (at (u _ hd tl))))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((many v) (unique tl3)) (tail (bytes-get _ tl i1 _ q)))
+      (values v (at (u _ hd tl3))))))
+
+(def-fns _ $ (many extern bytes-get-many : (erased (List (U8)) xs) (many (Bytes xs) b) (subterm many (Nat) i)
+    (erased (U8) x) (erased (Nth (U8) xs i x) nth) -> (many x is v))
+  (let-match many b (BCons _ hd tl) (absurd BNil nth))
+  (match many i _
+    ((Zero) (let-match erased nth (NthHere _ _ _) (absurd NthThere)) hd)
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (tail (bytes-get-many _ tl i1 _ q)))))
+
+(def-fns _ $ (many extern bytes-set : (erased (List (U8)) xs) (unique (Bytes xs) b) (subterm many (Nat) i) (many (U8) x)
+    (erased (U8) m) (erased (Nth (U8) xs i m) nth) ->
+    (erased (List (U8)) ys) (unique (Bytes ys) r at b) (erased (SetNth (U8) xs i x ys) p))
+  (let-match unique b (BCons xs1 hd tl u) (absurd (BNil) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values (Cons (U8) x xs1) (u _ x (at) tl) (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((erased ys1) (unique tl3) (erased p1)) (tail (bytes-set _ tl i1 x _ q)))
+      (values (Cons (U8) hd ys1) (at (u _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
+(def-fns _ $ (many extern bytes-length : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
+    (many (Nat) len) (erased (Length (U8) xs len) p) (unique b is r at b))
+  (let-match unique b (BCons _ hd tl u) ((BNil u) (values (Zero) (LengthNil _) (at (u)))))
+  (let ((many l1) (erased p1) (unique tl2)) (notail $ bytes-length _ tl))
+  (values (Succ l1) (LengthCons _ _ _ _ p1) (at (u _ hd tl2))))
+
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
   (let-match many b (BCons _ _ tl) ((BNil) (values (Zero) (LengthNil _))))
@@ -965,6 +1079,16 @@
   (let-match many b (BCons xs1 hd tl) ((BNil) (values (SNil) (SBNil))))
   (let ((many s1) (erased p1)) (notail $ bytes-str _ tl))
   (values (SCons (MkChar hd) s1) (SBCons hd s1 xs1 p1)))
+
+(def-fns _ $ (many extern bytes-copy : (erased (List (U8)) xs) (subterm many (Bytes xs) b) -> (unique b is c))
+  (let-match many b (BCons _ hd tl) ((BNil) (BNil)))
+  (BCons _ hd (notail $ bytes-copy _ tl)))
+
+(def-fns _ $ (many extern array-copy : (erased Type A) (erased (List (Copy A)) xs) (subterm many (Array (Copy A) xs) a) ->
+    (unique a is c))
+  (let-match many a (ACons _ _ hd tl) ((ANil _) (ANil _)))
+  (let-match many hd (MkCopy _ v))
+  (ACons _ _ (MkCopy _ v) (notail $ array-copy _ _ tl)))
 
 (def-adts
   ((Splice : (Type A) ((List A) xs) ((Nat) i) ((Nat) n) ((List A) ys) ((List A) zs) -> Type)

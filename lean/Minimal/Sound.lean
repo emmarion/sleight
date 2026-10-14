@@ -2172,8 +2172,8 @@ theorem EnvOK.known {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k ls : Tm} {
     · cases hk
   | _ => simp [Ctx.known] at hk
 
-theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n d c : Nat} {vs sig sig0 ls ls' : Tm}
-    (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ pre) Γ') (hf : Γ'.fixed = Γ.fixed)
+theorem EnvOK.advBr (hP : ProgOK P) {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n d c : Nat} {vs sig sig0 ls ls' : Tm}
+    (hlen : n = (sig0.skip (P.lifted d)).len - 1) (hE : EnvOK P ρ Γ) (hE' : EnvOK P (ρ ++ pre) Γ') (hf : Γ'.fixed = Γ.fixed)
     (hs : s.subst (Tm.env ρ) = .app (.vc d c ls) vs) (hpre : pre = vs.toList) (hn : n = pre.length)
     (hsig : P.ctor d c = some sig0) (hers : (sig0.skip (P.lifted d)).ers = sig.ers)
     (her : ∀ j < pre.length, Γ'.er (Γ.n + j) = (fe || sig.ers.getD j true))
@@ -2190,7 +2190,30 @@ theorem EnvOK.advBr {ρ pre : List Tm} {Γ Γ' : Ctx} {s k : Tm} {fe : Bool} {n 
       split
       · rename_i x d0 c0 hkn
         split
-        · exact hE'
+        · rename_i hnt
+          obtain ⟨rfl, rfl⟩ := hE.known hkn hk
+          split
+          · rename_i w hx
+            have hR := hE.fix.2 x _ hx
+            simp only [Tm.subst] at hs; rw [hs] at hR
+            obtain ⟨k0, hw, hrk⟩ := Real.wrap_inv hP hR hnt
+            obtain ⟨-, -, sig1, hc1, hnf⟩ := Prog.wrapField_spec hw
+            rw [hsig] at hc1; cases hc1
+            obtain ⟨-, -, honly⟩ := Tm.ntField_spec hnf
+            subst hpre
+            exact hE.record hE' hf hr (by simp [hn]) fun j a b ha hb he => by
+              have hj := (List.getElem?_eq_some_iff.mp hb).1
+              rw [her j hj] at he
+              simp only [hfe, Bool.false_or] at he
+              rw [← hers] at he
+              have := honly j (by omega) he
+              subst this
+              rw [List.getElem?_replicate] at ha
+              split at ha
+              · cases ha
+                rw [List.getD_eq_getElem?_getD, hb] at hrk; exact hrk
+              · cases ha
+          · exact hE'
         rename_i hnt
         obtain ⟨rfl, rfl⟩ := hE.known hkn hk
         split
@@ -2777,7 +2800,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
           List.getD_eq_getElem?_getD, List.getElem?_replicate]
         split <;> rfl
     · refine EnvOK.cm false ?_
-      refine ((hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).advBr
+      refine ((hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).advBr hP (by rw [hsk2, Tm.len_subst _ _ (.inl hst)])
         ((hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
           ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _
             (by simp) (by simp) (by simp) (by simp) (by simp) (by cases fe <;> simp [Ctx.setErs])

@@ -128,7 +128,9 @@ def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :
   if Γ.ready then
     if fe then Γ.record Γ' (List.replicate n .tok)
     else match s, Γ.known k with
-      | .fv x, some (d, c) => if P.isNt d then Γ' else match (Γ.fixed[x]?.join).map P.view with
+      | .fv x, some (d, c) => if P.isNt d then (match Γ.fixed[x]?.join with
+          | some w => Γ.record Γ' (List.replicate n w)
+          | none => Γ') else match (Γ.fixed[x]?.join).map P.view with
         | some (.app (.vc d' c' _) vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
         | _ => Γ'
       | _, _ => Γ'

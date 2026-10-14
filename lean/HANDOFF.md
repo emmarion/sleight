@@ -352,11 +352,14 @@ computes.
 2. **What `at`, slots and cells still lack** (`lean/README.md` lists
    what is done): `Placed` (section 66; `placed-slot` needs a slot
    semantics the core does not have, and the placings are `def-prim`s
-   with non-erased returns), arrays and bytes (cells of extern types
-   inside extern bodies; `inExtern` is never set), `World` and
-   `Program`, the full-`at`
-   invocation counted as erased by the `tail` check, a non-erased
-   at-match on a union, and the gaps the README's slot item lists.
+   with non-erased returns), `array-unpluck` (its `slot-self` names a
+   pattern field whose slot is already its scrutinee's; the reference
+   equates the two by forcing), `(slot-of x)` at a unique position
+   (`tests/array_cycle.sl`, `tests/array_closure_cycle.sl`; the uses
+   pass refuses a unique use of a slot entry, which is not born unique,
+   and accepting it would need a lemma that a `(Slot)` value owns no
+   block), `World` and `Program`, a non-erased at-match on a union, and
+   the gaps the README's slot item lists.
    The user asked that mutation state be left until everything else is
    done, so the non-mutation items here come first.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
