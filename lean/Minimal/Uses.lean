@@ -19,6 +19,10 @@ def Uses.join (A B : Uses) : Uses := B.foldl (fun U (i, u) => match U.lookup i w
 
 def Uses.below (U : Uses) (n : Nat) : Uses := U.filter (·.1 < n)
 
+def Tm.isFv : Tm → Bool
+  | .fv _ => true
+  | _ => false
+
 abbrev Caps := List (Nat × Uses)
 
 abbrev UR := Option (Uses × Caps)
@@ -243,7 +247,7 @@ termination_by l => (b, sizeOf l)
 
 def usesEls (b : Nat) (G : UCtx) (ru : List Bool) (R s : Tm) : Option Core → UR
   | none => some ([], [])
-  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := if G.scr then some s else none, uscr := none, cellOk := false } ru R e) G.Γ.n)
+  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := if G.scr && s.isFv then some s else none, uscr := none, cellOk := false } ru R e) G.Γ.n)
 termination_by o => (b, sizeOf o)
 
 def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR

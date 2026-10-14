@@ -119,9 +119,17 @@ top block into the reserved set, `machine_cellOf`, `machine_alloc`),
 and a primitive under a pending mark (`machine_prim_pend`, with
 `machine_prim_reuse` for a cell invocation written in place,
 `machine_prim_cell` for `cell-of`/`cell-write`, `machine_prim_alloc`;
-`machine_prim_inert` is its corollary). `GOK.pend` says the block a
-pending mark names is reserved and is not the unique scrutinee's;
-`cellTy_tok` says an entry of cell type has full value `tok`. Each takes the
+`machine_prim_inert` is its corollary), the takeover of a unique
+scrutinee by an `else` binder (`machine_rebind`, and
+`machine_rebindSkip` when the mark does not apply), and a successful
+`open-adt` (`machine_opn`; a failed one is ruled out by
+`EnvOK.openFail`). `GOK.pend` says the block a pending mark names is
+reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
+of cell type has full value `tok`. Frames and results carry a set
+`Shr` of blocks no unique spine reaches and no reserved block is in,
+which a result may reach: an `else` branch puts there the part of its
+scrutinee's foot outside its spine, which the binder that takes the
+scrutinee over shares, and `GOK.rebind` asks for it. Each takes the
 steps after it as hypotheses (`MRun` of the rest and of the branch, and
 the body's `Sim`), so the final theorem is an induction like
 `eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
@@ -140,10 +148,7 @@ Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
 non-erased call (the callee's frame, the closure's captures and
-`Group.caps`), the rebinding of an `else`
-scrutinee, `defFns`, `open-adt` (`machine_same` covers its success; on
-failure the core continues with `.dead`, which no stripped run
-reaches), and the assembly.
+`Group.caps`), `defFns`, and the assembly.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (327 accepted with OCaml's
@@ -154,9 +159,8 @@ code after a `cell-of` mark has no cell to take; `UCtx.next` marks as
 unique only entries the statement itself made; a group's recorded
 captures must each pass `use` where the group is defined; and an `else`
 branch's binder is taken over from the scrutinee without a use only
-under a unique match, and is otherwise an ordinary use of the
-scrutinee (before, a `many` match's `else` could bind its scrutinee at
-unique); a newtype branch and an erased `case`'s `else` have no cell
+under a unique match of an entry, and is otherwise an ordinary use of
+the scrutinee; a newtype branch and an erased `case`'s `else` have no cell
 to take; a cell binder is taken only under a unique match (`cellOf`
 needs the unique scrutinee, and the reader emits the mark only
 there); and an in-place write or invocation at unique needs a cell
