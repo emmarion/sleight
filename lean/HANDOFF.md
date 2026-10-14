@@ -162,10 +162,7 @@ result for the body where its group was defined, so some invariant on
 closure values recording that the group passed `usesFns` in a context
 with the closure's `Γ`; and, for a call through a delegate, which runs
 the target's body in the stripped run and the delegate's in the full
-one, a machine counterpart of `walk1`. Open question, not yet checked
-against the pass: a unique function's body that uses its own closure
-at many would make that frame's separation fail, since the closure's
-foot includes the entries the function captures at unique.
+one, a machine counterpart of `walk1`.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's
@@ -186,7 +183,11 @@ that their blocks are owned through `Spine.cell`/`WO.cell`; a group
 that captures an entry at unique has at most one unique function; and
 a delegate's target, when it is an entry before the group, is among
 the group's captures, at many when the delegate is not unique, and
-when it is a sibling, that sibling is not unique.
+when it is a sibling, that sibling is not unique; a function body
+starts with no pending marks, unique scrutinee, rebinding or cell to
+take, whatever the context the group is defined in; and a unique
+function's body does not use its own closure (the reader leaves the
+name unbound there, and OCaml treats it as erased).
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

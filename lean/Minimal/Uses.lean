@@ -260,10 +260,11 @@ def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR
   | F :: Fs => do
     let (Γb, R) := G.Γ.body Gr F
     let ps := (teleUs F.tele).take F.np
-    let Ub := { G with Γ := Γb, uscr := none, uq := G.uq ++ (ps.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + Gr.fns.length + k) else none) }
+    let uq := G.uq ++ (ps.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + Gr.fns.length + k) else none)
+    let Ub := { G with Γ := Γb, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
     let U ← usesCore gid Ub ((teleUs F.tele).drop F.np) R F.body
     let O := UR.below U G.Γ.n
-    if !F.u && O.1.any (·.2) then none
+    if !F.u && O.1.any (·.2) || F.u && (U.1.lookup (G.Γ.n + (Gr.fns.length - Fs.length - 1))).isSome then none
     else UR.seq O (← usesFns gid G Gr Fs)
 termination_by l => (gid, sizeOf l)
 decreasing_by all_goals (cases F; simp_wf; omega)
