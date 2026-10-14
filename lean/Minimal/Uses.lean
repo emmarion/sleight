@@ -57,6 +57,8 @@ def next (G : UCtx) (Γ' : Ctx) (us : List Bool) : UCtx :=
   { Γ := Γ', uq := G.uq ++ (us.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + k) else none), uscr := G.uscr,
     fill := G.fill }
 
+def adv (G : UCtx) (Γ' : Ctx) (c : Core) : Ctx := if G.fill then Γ' else Ctx.adv P G.Γ Γ' c
+
 def sigOf (G : UCtx) (h : Tm) : Option Tm := match checkTm P G.Γ h with
   | .ok ⟨H, _⟩ => match G.Γ.canon H with
     | .valCtor sig | .tyCtor sig => some sig
@@ -128,11 +130,13 @@ def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do
   | _ => none
 
 def branchCtx (G : UCtx) (s k H idx sig : Tm) (fe ph uscr : Bool) : Option UCtx :=
-  match G.Γ.branch P s k H idx sig with
+  let Γg := { G.Γ with ghost := G.Γ.ghost || ph }
+  match Γg.branch P s k H idx sig with
   | (Γf, .ok σ) =>
-    let Γb := G.Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)
+    let Γs := Γg.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)
+    let Γb := { (if G.fill then Γs else Γg.advBr P Γs s k fe (sig.len - 1)) with cmode := false }
     let us := uscr && !fe
-    some { G.next { Γb with ghost := G.Γ.ghost || ph } (if us then (teleUs sig).dropLast else []) with uscr := if us then some s else none }
+    some { G.next Γb (if us then (teleUs sig).dropLast else []) with uscr := if us then some s else none }
   | _ => none
 
 end UCtx
@@ -144,17 +148,17 @@ def Core.marked : Core → Bool
 mutual
 def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
   | .ret ts => if G.Γ.ghost then some ([], []) else UR.lift (G.retUses P ru ts rets)
-  | .call f _ args er ms _ rest => do
+  | .call f dec args er ms ve rest => do
     let (t, outs, uf) ← G.callee P f args
-    let Γ' := G.Γ.pushTele outs (some (ms.map (er || ·)))
+    let Γ' := G.adv P (G.Γ.pushTele outs (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)
     let C ← usesCore b (G.next Γ' (if er || G.Γ.ghost then [] else teleUs outs)) ru rets rest
     if er || G.Γ.ghost then some C else do
       let A ← G.termUses P uf f
       let B ← G.argsUses P (·.u) args t
       UR.seq (← Uses.seq A B, []) C
   | .mtch s R brs els er rest => do
-    let C ← usesCore b (G.next (G.Γ.pushTele R (if er then some (List.replicate R.len true) else none))
-      (if er || G.Γ.ghost then [] else G.ents)) ru rets rest
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushTele R (if er then some (List.replicate R.len true) else none))
+      (.mtch s R brs els er rest)) (if er || G.Γ.ghost then [] else G.ents)) ru rets rest
     if er || G.Γ.ghost then some C else do
       let (H, idx, shp) ← G.arms P s er
       let S ← G.termUses P G.scr s
@@ -170,17 +174,17 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       UR.seq (S, []) (UR.join B E)
   | .seq R body rest => do
     let A := UR.below (← usesCore b { G with ents := [] } G.ents R body) G.Γ.n
-    let C ← usesCore b (G.next (G.Γ.pushTele R) (if G.Γ.ghost then [] else G.ents)) ru rets rest
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents)) ru rets rest
     UR.seq A C
   | .prim p er rest => do
     let T ← G.primTy P p
     let u := G.ents.headD false
-    let C ← usesCore b (G.next (G.Γ.pushPrim T er p) (if er || G.Γ.ghost then [] else [u])) ru rets rest
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) (if er || G.Γ.ghost then [] else [u])) ru rets rest
     if er || G.Γ.ghost then some C else UR.seq (← G.primUses P u p, []) C
-  | .defLvl rest => usesCore b (G.next G.Γ.pushMint []) ru rets rest
+  | .defLvl rest => usesCore b (G.next (G.adv P G.Γ.pushMint (.defLvl rest)) []) ru rets rest
   | .defFns gid rest => do
     let Gr ← P.groups[gid]?
-    let C ← usesCore b (G.next (G.Γ.pushFns Gr) (if G.Γ.ghost then [] else Gr.fns.map (·.u))) ru rets rest
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) (if G.Γ.ghost then [] else Gr.fns.map (·.u))) ru rets rest
     if h : gid < b then do
       let (O, K) ← usesFns gid G Gr Gr.fns
       let K := (gid, O) :: K
@@ -194,7 +198,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       | .prim _ true _ => usesCore b G ru rets rest
       | .prim (.tm t) false rest' => if G.rebind == some t then do
           let T ← G.primTy P (.tm t)
-          usesCore b (G.next (G.Γ.pushPrim T false (.tm t)) (G.ents.take 1)) ru rets rest'
+          usesCore b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) ru rets rest'
         else none
       | _ => none
     | .reuse u, .fv i | .write u, .fv i => do
@@ -210,6 +214,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       | .ok σ' => usesCore b { G with Γ := { Γo with σ := σ' } } ru rets rest
       | _ => some ([], [])
     | _ => none
+  | .chk .cm _ _ rest => usesCore b { G with Γ := { G.Γ with cmode := true } } ru rets rest
   | .chk _ _ _ rest => usesCore b G ru rets rest
   | .absurd _ | .dead => some ([], [])
 termination_by c => (b, sizeOf c)
