@@ -10,10 +10,11 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 350 tests were
-accepted with OCaml's value, none mismatched, 481 refusals agreed, and
-80 + 95 were refused as unsupported; 11 tests OCaml accepts are
-refused, and 2 time out. No test the OCaml
+with it under `--shared`. At the last full run 369 tests were
+accepted with OCaml's value, none mismatched, 485 refusals agreed, and
+60 + 91 were refused as unsupported; 6 tests OCaml accepts are refused,
+and 8 time out. Since then the prelude has `array-blit` and
+`bytes-blit`, and the four tests that need them agree with OCaml. No test the OCaml
 suite refuses is accepted. `compare.sh` allows twenty seconds a test;
 `comptime_tail.sl` and the six `mini_*.sl` tests that need
 `mini/elabfn.sl` finish in about a minute with OCaml's value, and
@@ -31,6 +32,8 @@ reading of why:
   names; the link from an entry to its slot lives in the reader's state,
   which inference does not see.
 - `macro_body.sl`, `macro_splice.sl`: macros.
+- `array_cycle.sl`, `array_closure_cycle.sl`: `(slot-of x)` at a unique
+  position (item 2 below).
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
