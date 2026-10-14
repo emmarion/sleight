@@ -1884,29 +1884,40 @@
   (many MetaSlot : -> (SlotEntry))
   (many SlotAtom : -> (SlotEntry)))
 
+(def-adts $ (Slots : -> Type)
+  enum
+  (many MkSlots : (many (IdMap $ SlotEntry) kinds) (many (Nat) free-metas) -> (Slots)))
+
 (def-adts
   ((Table : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type)
     enum
-    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) (many (IdMap $ SlotEntry) slots) -> (Table n f c)))
+    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) (many (Slots) slots) -> (Table n f c)))
   ((Added : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type)
     enum
     (many MkAdded : (erased (Nat) k) (erased (Facts $ Succ k) f) (erased (Facts k) f2) (erased (Nat) c) (many (Table k f2 c) tb) -> (Added (Succ k) f c))))
 
-(let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MEmpty _)
+(let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MkSlots (MEmpty _) 0)
 
 ; The automatic slot of [x], the next id (section 35), both entries already in the table; a slot is its own slot.
 (def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Bool) meta) -> (many (Table n f c) r))
   (let ((many e)) $ match many meta (((SlotEntry) e)) ((BTrue) (MetaSlot)) ((BFalse) (EntrySlot)))
-  (match many tb _
-    ((MkTable _ f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x e $ idmap-set _ (Succ x) (SlotAtom) sl))))
+  (let-match many tb (MkTable _ f0 _ ru _ ord keys ar c1 ab op sl))
+  (let-match many sl (MkSlots kinds fm))
+  (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ MkSlots (idmap-set _ x e kinds) $ match many meta (((Nat) _)) ((BTrue) (Succ fm)) ((BFalse) fm)))
 
 (def-fns _ $ (many table-slot-entry : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ SlotEntry) r))
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
-  (match many (idmap-get _ x sl) _ ((Hit _ _ _ e _) (Some _ e)) ((Miss _ _ _ _) (None _))))
+  (let-match many sl (MkSlots kinds _))
+  (let-match many (idmap-get _ x kinds) (Miss _ _ _ _) ((Hit _ _ _ e _) (Some _ e)))
+  (let-match many x (Succ p) ((Zero) (None _)))
+  (match many (idmap-get _ p kinds) _ ((Hit _ _ _ _ _) (Some _ $ SlotAtom)) ((Miss _ _ _ _) (None _))))
+
+(def-fns _ $ (many table-free-metas : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) -> (many (Nat) r))
+  (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
+  (match many sl _ ((MkSlots _ fm) fm)))
 
 (def-fns _ $ (many table-slot-of : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ Nat) r))
-  (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
-  (let-match many (idmap-get _ x sl) (Hit _ _ _ e _) ((Miss _ _ _ _) (None _)))
+  (let-match many (table-slot-entry _ _ c tb x) (Some _ e) ((None _) (None _)))
   (match many e _ ((EntrySlot) (Some _ $ Succ x)) ((SlotAtom) (Some _ x)) ((MetaSlot) (None _))))
 
 ; The chase alone, from the top: what the rules say, with `(slot-of x)` left as written.
@@ -2109,11 +2120,16 @@
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ op _))
   (match many op _ ((MkOpens _ _ os ix tc) (values os ix tc))))
 
+(def-fns _ $ (many slots-ruled : (many (Slots) sl) (many (Nat) x) -> (many (Slots) r))
+  (let-match many sl (MkSlots kinds fm))
+  (let-match many (idmap-get _ x kinds) (Hit _ _ _ e _) ((Miss _ _ _ _) sl))
+  (match many e _ ((MetaSlot) (MkSlots kinds $ nat-pred fm)) (else sl)))
+
 ; The table after a variable is ruled out with a term fresh in the result: the rule is appended, the
 ; keys and the order extended, both agreements carried across, and the opened objects naming the variable
 ; refreshed.
 (def-fns _ $ (many rule-into : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Above (Nil $ Digit) c n f) ab) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1)
-    (many (Opens n f) op) (many (IdMap $ SlotEntry) sl) (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb))
+    (many (Opens n f) op) (many (Slots) sl) (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb))
   (let ((erased ru2) (erased ap)) $ append-rule ru $ MkRule x t)
   (let ((erased ar2)) $ ARCons _ _ _ _ (ruledin-out-new x t n f k f2 o) $ allruled-out ks x t n f k f2 o ar)
   (table-refresh _ _ c
@@ -2123,7 +2139,7 @@
       ar2
       (c1-out (Nil $ Digit) x x (WNil x) t n f k f2 o ru c1 ru2 ap)
       (above-out (Nil $ Digit) c x t n f k f2 ab o)
-      (opens-out _ _ _ _ _ _ o op) sl)
+      (opens-out _ _ _ _ _ _ o op) (slots-ruled sl x))
     x))
 
 ; Unification's binding: rule the variable out, and the occurs check is the term still being fresh.
@@ -3196,6 +3212,8 @@
   (any-meta env $ term-vars t $ Nil _))
 
 (def-fns _ $ (many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r))
+  (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
+  (let-match many (table-free-metas _ _ bnd tb) (Succ _) ((Zero) (BFalse)))
   (has-meta (canon-env env t) env))
 
 
