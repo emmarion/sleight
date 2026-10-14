@@ -122,8 +122,10 @@ and a primitive under a pending mark (`machine_prim_pend`, with
 scrutinee by an `else` binder (`machine_rebind`, and
 `machine_rebindSkip` when the mark does not apply), and a successful
 `open-adt` (`machine_opn`; a failed one is ruled out by
-`EnvOK.openFail`), and `defFns` (`machine_defFns`, with `clo_vals` for
-the closures' values). `GOK.pend` says the block a pending mark names is
+`EnvOK.openFail`), `defFns` (`machine_defFns`, with `clo_vals` for
+the closures' values), and the caller's side of a non-erased call
+(`machine_call`, which takes the callee's run and its results'
+ownership over the call's own uses as a hypothesis). `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
@@ -152,9 +154,18 @@ for a cell binder to take later.
 Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
-non-erased call (the callee's frame, the closure's captures and
-`Group.caps`; a call through a delegate runs its target's body in the
-stripped run and the delegate's in the full one), and the assembly.
+callee's side of a non-erased call, and the assembly. On this
+session's reading the callee's side needs: a frame for the body built
+from the closure's captured entries (`rd`, `rdU`), the sibling
+closures and the arguments; the body's `MRun`, which needs the pass's
+result for the body where its group was defined, so some invariant on
+closure values recording that the group passed `usesFns` in a context
+with the closure's `Γ`; and, for a call through a delegate, which runs
+the target's body in the stripped run and the delegate's in the full
+one, a machine counterpart of `walk1`. Open question, not yet checked
+against the pass: a unique function's body that uses its own closure
+at many would make that frame's separation fail, since the closure's
+foot includes the entries the function captures at unique.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's

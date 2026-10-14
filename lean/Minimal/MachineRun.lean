@@ -3333,4 +3333,62 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
     (hG.next (by omega) hM.lenM (by rw [hΓ', UCtx.adv_ghost' hf]; simpa [Ctx.pushFns] using hg))
   exact ⟨H', vsM, .defFns hGr hrr, lift (by simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr)⟩
 
+theorem machine_call {b : Nat} {G : UCtx} {ru : List Bool} {rets f args : Tm} {dec : Dec} {ms : List Bool}
+    {ve : Option (List Bool)} {rest : Core} {ρ vs outsF : List Tm} {t outs : Tm} {uf : Bool}
+    (hce : G.callee P f args = some (t, outs, uf)) (hR : outs.isTele) (hol : outsF.length = outs.len)
+    (hcall : ∀ A B AB, G.termUses P uf f = some A → G.argsUses P (·.u) args t = some B → Uses.seq A B = some AB →
+      ∀ ρS envS gid j Gr F outsSb, SimEnv P G.Γ.er ρS ρ → P.sub ρS f = .clo envS gid j → P.groups[gid]? = some Gr →
+      Gr.fns[j]? = some F →
+      RunS P (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS))) F.body outsSb →
+      ∀ H ρM Out' Shr, MFrame P AB G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr →
+      ∃ envM H1 as H2 outsMb, P.subU (Tm.env ρM) f = .clo envM gid j ∧ P.buildList H (Tm.env ρM) args.toList = (H1, as) ∧
+        RunM P H1 (envM.toList ++ closuresS envM.toList gid Gr ++ F.spreadIn ve as) none F.body H2 outsMb ∧
+        MOut P AB G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (plainTele outs.len) (teleUs outs) H2
+          (F.spreadOut ve args.toList.length outsMb) (F.spreadOut ve args.toList.length outsSb) outsF)
+    (hsim : ∀ ρS envS gid j Gr F outsSb, SimEnv P G.Γ.er ρS ρ → P.sub ρS f = .clo envS gid j →
+      P.groups[gid]? = some Gr → Gr.fns[j]? = some F →
+      RunS P (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS))) F.body outsSb →
+      SimEnv P (G.adv P (G.Γ.pushTele outs (some (ms.map (false || ·)))) (.call f dec args false ms ve rest)).er
+        (ρS ++ F.spreadOut ve args.toList.length outsSb) (ρ ++ outsF))
+    (ih : MRun P b (G.next (G.adv P (G.Γ.pushTele outs (some (ms.map (false || ·)))) (.call f dec args false ms ve rest))
+      (teleUs outs)) ru rets rest (ρ ++ outsF) vs) :
+    MRun P b G ru rets (.call f dec args false ms ve rest) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  have hf := hG.fill
+  have hg := hG.ghost
+  rw [usesCore] at hU
+  simp only [hce, Option.bind_eq_bind, Option.bind_some, Bool.or_false, hg, Bool.false_eq_true, ite_false] at hU
+  obtain ⟨⟨CU, CK⟩, hC, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨A, hA, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨B, hB, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨AB, hAB, hU⟩ := Option.bind_eq_some_iff.mp hU
+  have hseq := UR.seq_fst hU
+  simp only at hseq
+  cases hrun with
+  | call hf' hG' hF' hb hr =>
+  rename_i envS gid j Gr F outsSb
+  obtain ⟨envM, H1, as, H2, outsMb, hfM, hbl, hrb, hO⟩ :=
+    hcall A B AB hA hB hAB ρS _ _ _ _ _ _ hS hf' hG' hF' hb H ρM _ Shr (hM.split hseq)
+  have hS' := hsim ρS _ _ _ _ _ _ hS hf' hG' hF' hb
+  obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er G.Γ outs (some (ms.map (false || ·))) hR
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushTele outs (some (ms.map (false || ·)))) (.call f dec args false ms ve rest) :=
+    ⟨_, rfl⟩
+  rw [← hΓ'] at ih hC hS'
+  have her' : Γ'.er = (G.Γ.pushTele outs (some (ms.map (false || ·)))).er := by rw [hΓ']; exact UCtx.adv_er' hf
+  have hn' : Γ'.n = G.Γ.n + outs.len := by rw [hΓ', UCtx.adv_n' hf, Ctx.pushTele_n _ hR]
+  have hlS : (F.spreadOut ve args.toList.length outsSb).length = outs.len := by
+    have := hS'.1; simp only [List.length_append, hM.lenF, hol, hM.lenS] at this; omega
+  have huq := usesCore_uq b (G.next Γ' (teleUs outs)) ru rets rest hf CU CK hC
+  obtain ⟨hMr, lift⟩ := hM.bind hseq hO hlS hol (er' := Γ'.er)
+    (fun i hi => by rw [her']; exact hpo i hi)
+    (fun k hk _ _ => plainTele_ers _ k hk)
+    (fun k hk hc _ => by
+      rcases huq _ (lookup_mem hc) with h1 | h1
+      · exact UCtx.next_uq_new h1 hG.uqlt
+      · simp only [UCtx.next] at h1; omega)
+  obtain ⟨H', vsM, hrr, hOr⟩ := ih CU CK hC _ vsS hS' hr H2 _ Res Out Shr none
+    (by simp only [UCtx.next]; rw [hn']; exact hMr)
+    (hG.next (by omega) hM.lenM (by rw [hΓ', UCtx.adv_ghost' hf, hpg]; exact hg))
+  exact ⟨H', vsM, .call hfM hG' hF' hbl hrb hrr, lift (by simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr)⟩
+
 end Minimal
