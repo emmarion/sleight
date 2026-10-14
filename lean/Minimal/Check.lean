@@ -750,18 +750,21 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
   | [], _ => .ok ⟨fun _ _ _ _ h => by simp at h⟩
   | (k, sig, p) :: cs, base => do
     let Γc : Ctx := { Γ with ghost := g p }
-    let ⟨hh⟩ ← (match hb : Γc.branch P s k H idx sig, hl : lookupBr brs base with
-      | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
-      | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
-      | (Γf, .ok σ), some body => do
-        let ⟨_, hr, e⟩ ← checkCore b { Γc.advBr P (Γc.setErs { Γf with σ := σ }
-          (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1) with cmode := false }
-          body (.inl R0)
-        .ok ⟨BranchOK.live hb (e.1 R0 rfl ▸ hr)⟩
-      | (_, .contra), none => .ok ⟨BranchOK.dead (by rw [hb])⟩
-      | (_, .contra), some _ => .error "a listed branch is refuted"
-      | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
-      | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
+    let ⟨hh⟩ ← (match hl : lookupBr brs base with
+      | some .dead => match hb : Γc.branch P s k H idx sig with
+        | (_, .contra) => .ok ⟨BranchOK.refuted (by rw [hb])⟩
+        | _ => .error "an absurd branch names a constructor that is not refuted"
+      | some body => match hb : Γc.branch P s k H idx sig with
+        | (Γf, .ok σ) => do
+          let ⟨_, hr, e⟩ ← checkCore b { Γc.advBr P (Γc.setErs { Γf with σ := σ }
+            (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1) with cmode := false }
+            body (.inl R0)
+          .ok ⟨BranchOK.live hb (e.1 R0 rfl ▸ hr)⟩
+        | (_, .contra) => .error "a listed branch is refuted"
+        | (_, .unknown) => .error "cannot decide whether the branch is refuted"
+      | none => match hb : Γc.branch P s k H idx sig with
+        | (_, .contra) => .ok ⟨BranchOK.dead (by rw [hb])⟩
+        | _ => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
           else match s, hk : Γc.known k with
             | .fv x, some (d', c) => match hs : (Γc.fixed[x]?.join).map P.view with
               | some (.app (.vc d c0 _) vs) =>

@@ -3068,10 +3068,10 @@ theorem machine_rebind {b : Nat} {G : UCtx} {ru : List Bool} {rets t a0 b0 : Tm}
     lift ?_⟩
   simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr
 
-theorem machine_rebindSkip {b : Nat} {G : UCtx} {ru : List Bool} {rets a0 b0 : Tm} {rest : Core} {ρ vs : List Tm}
-    (hne : ∀ t rest', rest = .prim (.tm t) false rest' → G.rebind ≠ some t) (ih : MRun P b G ru rets rest ρ vs) :
-    MRun P b G ru rets (.chk (.mark .rebind) a0 b0 rest) ρ vs :=
-  machine_chkSame (fun m e => by cases e; rfl) (fun U K h => by
+theorem usesCore_rebindSkip {b : Nat} {G : UCtx} {ru : List Bool} {rets a0 b0 : Tm} {rest : Core}
+    (hne : ∀ t rest', rest = .prim (.tm t) false rest' → G.rebind ≠ some t) :
+    ∀ U K, usesCore P b G ru rets (.chk (.mark .rebind) a0 b0 rest) = some (U, K) → usesCore P b G ru rets rest = some (U, K) :=
+  fun U K h => by
     cases rest with
     | prim p er rest' =>
       cases er with
@@ -3083,7 +3083,30 @@ theorem machine_rebindSkip {b : Nat} {G : UCtx} {ru : List Bool} {rets a0 b0 : T
           simp only [beq_iff_eq, hne t rest' rfl, ite_false] at h
           exact h
         | _ => rw [usesCore] at h <;> first | cases h | (intro _ _ e; cases e)
-    | _ => rw [usesCore] at h <;> first | cases h | (intro _ _ e; cases e) | (intro _ _ _ e; cases e)) ih
+    | _ => rw [usesCore] at h <;> first | cases h | (intro _ _ e; cases e) | (intro _ _ _ e; cases e)
+
+theorem machine_rebindSkip {b : Nat} {G : UCtx} {ru : List Bool} {rets a0 b0 : Tm} {rest : Core} {ρ vs : List Tm}
+    (hne : ∀ t rest', rest = .prim (.tm t) false rest' → G.rebind ≠ some t) (ih : MRun P b G ru rets rest ρ vs) :
+    MRun P b G ru rets (.chk (.mark .rebind) a0 b0 rest) ρ vs :=
+  machine_chkSame (fun m e => by cases e; rfl) (usesCore_rebindSkip hne) ih
+
+theorem usesCore_markNF {b : Nat} {G : UCtx} {ru : List Bool} {rets a x : Tm} {m : Mark} {u : Bool} {rest : Core}
+    (hm : m = .reuse u ∨ m = .write u) (ha : ∀ i, a ≠ .fv i) :
+    usesCore P b G ru rets (.chk (.mark m) a x rest) = usesCore P b G ru rets rest := by
+  rcases hm with rfl | rfl <;> cases a <;>
+    first | exact (ha _ rfl).elim | (rw [usesCore] <;> first | rfl | (intros; contradiction))
+
+theorem machine_markNF {b : Nat} {G : UCtx} {ru : List Bool} {rets a x : Tm} {m : Mark} {rest : Core} {ρ vs : List Tm}
+    (hm : m = .reuse true ∨ m = .write true) (ha : ∀ i, a ≠ .fv i) (ih : MRun P b G ru rets rest ρ vs) :
+    MRun P b G ru rets (.chk (.mark m) a x rest) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  have hU' : usesCore P b G ru rets rest = some (U, K) := usesCore_markNF hm ha ▸ hU
+  cases hrun with
+  | chk hr =>
+  obtain ⟨H', vsM, hrr, hO⟩ := ih U K hU' ρS vsS hS hr H ρM Res Out Shr _ hM
+    ⟨.inr (.inr ⟨m, a, rfl, by rcases hm with rfl | rfl <;> simp, fun x _ hx => (ha x hx).elim⟩),
+     hG.uscr, hG.rebind, hG.uqlt, hG.fill, hG.ghost⟩
+  exact ⟨H', vsM, .mark (by rcases hm with rfl | rfl <;> rfl) hrr, hO⟩
 
 theorem machine_opn {b : Nat} {G : UCtx} {ru : List Bool} {rets x : Tm} {oe u nt ex : Bool} {ph : List Bool}
     {H cs : Tm} {m : Nat} {σ' : Nat → Option Tm} {rest : Core} {ρ vs : List Tm}
