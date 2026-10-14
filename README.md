@@ -23,6 +23,7 @@ The other files:
 - [WARNINGS.md](WARNINGS.md): the warnings the compilers emit, one item each.
 - [TOOLING-WISHLIST.md](TOOLING-WISHLIST.md): friction met while writing programs in the
   language.
+- [TUTORIAL.md](TUTORIAL.md): a short tour of the language, each program in it a test.
 - [EXAMPLES.md](EXAMPLES.md): an index of the tests that show the features working
   together. [DEMOS.md](DEMOS.md): programs proposed but not yet written.
 - [`self/`](self/): a compiler from the language to OCaml, written in the

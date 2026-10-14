@@ -1,0 +1,5 @@
+; expect: 7
+(let ((many d)) (lt-dec 10 3))
+(comptime-match many d (No _ _ q))
+(let ((many c) (erased p)) (sub 10 3 q))
+c
