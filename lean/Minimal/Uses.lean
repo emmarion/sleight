@@ -132,6 +132,11 @@ def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []
 
+def fnCtx (G : UCtx) (Gr : Group) (F : FnDef) : UCtx :=
+  let uq := G.uq ++ (((teleUs F.tele).take F.np).zipIdx.filterMap fun (u, k) =>
+    if u then some (G.Γ.n + Gr.fns.length + k) else none)
+  { G with Γ := (G.Γ.body Gr F).1, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
+
 def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
   Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
   (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
@@ -260,11 +265,7 @@ termination_by o => (b, sizeOf o)
 def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR
   | [] => some ([], [])
   | F :: Fs => do
-    let (Γb, R) := G.Γ.body Gr F
-    let ps := (teleUs F.tele).take F.np
-    let uq := G.uq ++ (ps.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + Gr.fns.length + k) else none)
-    let Ub := { G with Γ := Γb, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
-    let U ← usesCore gid Ub ((teleUs F.tele).drop F.np) R F.body
+    let U ← usesCore gid (G.fnCtx Gr F) ((teleUs F.tele).drop F.np) (G.Γ.body Gr F).2 F.body
     let O := UR.below U G.Γ.n
     if !F.u && O.1.any (·.2) || Gr.fns.zipIdx.any (fun (F', k) => F'.u && (U.1.lookup (G.Γ.n + k)).isSome) then none
     else UR.seq O (← usesFns gid G Gr Fs)

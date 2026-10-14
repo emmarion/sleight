@@ -83,4 +83,64 @@ theorem ArgsTy.noClo {Γ : Ctx} {args t out : Tm} : ArgsTy P Γ args t out → a
     simp only [Tm.noClo, Bool.and_eq_true]; exact ⟨TmTy.noClo h, ArgsTy.noClo ha⟩
 end
 
+theorem usesFns_spec {gid : Nat} {G : UCtx} {Gr : Group} : ∀ (Fs : List FnDef) (O : Uses) (K : Caps),
+    usesFns P gid G Gr Fs = some (O, K) → ∀ (k : Nat) (F : FnDef), Fs[k]? = some F →
+    ∃ U K', usesCore P gid (G.fnCtx Gr F) ((teleUs F.tele).drop F.np) (G.Γ.body Gr F).2 F.body = some (U, K') ∧
+      (U.below G.Γ.n).Sub O ∧ (F.u = false → ∀ i, (U.below G.Γ.n).lookup i ≠ some true) ∧
+      (∀ (k' : Nat) (F' : FnDef), Gr.fns[k']? = some F' → F'.u = true → U.lookup (G.Γ.n + k') = none) ∧
+      (∀ i, O.lookup i = some true → ((U.below G.Γ.n).lookup i).isSome → (U.below G.Γ.n).lookup i = some true)
+  | [], _, _, _, k, F, h => by simp at h
+  | F :: Fs, O, K, h, k, F', hk => by
+    rw [usesFns] at h
+    obtain ⟨⟨U, K0⟩, hU, h⟩ := Option.bind_eq_some_iff.mp h
+    simp only at h
+    split at h
+    · cases h
+    rename_i hc
+    simp only [Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, List.any_eq_true,
+      not_or, not_exists, not_and] at hc
+    obtain ⟨⟨R, KR⟩, hR, h⟩ := Option.bind_eq_some_iff.mp h
+    have hseq := UR.seq_fst h
+    simp only [UR.below] at hseq
+    obtain ⟨sA, sR⟩ := Uses.seq_sub hseq
+    have hfree := (Uses.seq_spec hseq).1
+    have hlk := (Uses.seq_spec hseq).2
+    cases k with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hk; subst hk
+      refine ⟨U, K0, hU, sA, fun hu i hi => ?_, fun k' F'' hF'' hu => ?_, fun i hO hi => ?_⟩
+      · have := hc.1 hu; simp only [UR.below] at this
+        exact this _ (lookup_mem hi) rfl
+      · have := hc.2 (F'', k') (List.mem_zipIdx_iff_getElem?.mpr (by simpa using hF''))
+        simp only [hu] at this
+        cases hl : U.lookup (G.Γ.n + k') with
+        | none => rfl
+        | some _ => simp [hl] at this
+      · obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp hi
+        cases u
+        · rw [hlk i, hu] at hO
+          cases hr : R.lookup i with
+          | none => simp [Uses.merge, hr] at hO
+          | some v =>
+            cases v
+            · simp [Uses.merge, hr] at hO
+            · have := (hfree i).2 hr; rw [hu] at this; cases this
+        · exact hu
+    | succ k =>
+      simp only [List.getElem?_cons_succ] at hk
+      obtain ⟨U', K', hU', hsub, hmany, hsib, htrue⟩ := usesFns_spec Fs R KR hR k F' hk
+      refine ⟨U', K', hU', ⟨fun i h => sR.1 i (hsub.1 i h), fun i h => sR.2 i (hsub.2 i h)⟩, hmany, hsib,
+        fun i hO hi => htrue i ?_ hi⟩
+      have hRi := hsub.1 i hi
+      rw [hlk i] at hO
+      cases ha : (UR.below (U, K0) G.Γ.n).1.lookup i with
+      | none => simp only [UR.below] at ha; simpa [Uses.merge, ha] using hO
+      | some a =>
+        cases a
+        · obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hRi
+          simp only [UR.below] at ha
+          rw [ha, hv] at hO; simp [Uses.merge] at hO; subst hO; exact hv
+        · simp only [UR.below] at ha
+          have := (hfree i).1 ha; rw [this] at hRi; cases hRi
+
 end Minimal
