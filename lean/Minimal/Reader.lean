@@ -637,6 +637,9 @@ def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
 
 mutual
 partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
+  let e := match e with
+    | .list (.list [.atom "share", x@(.atom _)] :: args) => .list (x :: args)
+    | e => e
   match ← resolveHead sc (fun _ => pure ()) e with
   | .list [.atom "\x03var", .atom x] => look sc depth x
   | .list (.list [.atom "\x03var", .atom x] :: args) =>

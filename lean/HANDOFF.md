@@ -380,8 +380,9 @@ computes.
    rest) return non-erased values, while the core types a `def-prim`
    only as an erased axiom; and the elaborator would run a macro's
    function as it elaborates and read its `Raw` result back as syntax.
-10. A computed head inside a type (`((share u) lv ...)`): types are
-   elaborated by `elabTm`, which runs no statements.
+10. A computed head inside a type other than a variable or `(share x)`
+   whose settled value is a `Special` constructor: types are elaborated
+   by `elabTm`, which runs no statements.
 11. An `at` naming an entry of an enclosing telescope, such as a
    constructor field's function type written `at` a sibling field
    (`tests/at_field_fn_sibling.sl`).
