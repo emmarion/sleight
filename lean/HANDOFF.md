@@ -113,10 +113,15 @@ for every non-erased primitive but `coerce`), a non-erased `mtch`
 that takes a constructor's branch or its `else` (`machine_mtch_fld`,
 `machine_mtch_els`), `case` in its three forms (`machine_caseE`,
 `machine_case_fld`, `machine_case_els`, `machine_caseN`), the many
-cell marks (`machine_markMany`), and, toward a cell invocation
-written in place, the value it builds (`reuse_core`, with
-`MOut.compose` and `MFrame.splitC`/`bindC` for a step that consumes
-reserved blocks). Each takes the
+cell marks (`machine_markMany`), the pending marks at unique
+(`machine_markU` for `reuse` and `write`, which moves the target's
+top block into the reserved set, `machine_cellOf`, `machine_alloc`),
+and a primitive under a pending mark (`machine_prim_pend`, with
+`machine_prim_reuse` for a cell invocation written in place,
+`machine_prim_cell` for `cell-of`/`cell-write`, `machine_prim_alloc`;
+`machine_prim_inert` is its corollary). `GOK.pend` says the block a
+pending mark names is reserved and is not the unique scrutinee's;
+`cellTy_tok` says an entry of cell type has full value `tok`. Each takes the
 steps after it as hypotheses (`MRun` of the rest and of the branch, and
 the body's `Sim`), so the final theorem is an induction like
 `eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
@@ -135,11 +140,7 @@ Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
 non-erased call (the callee's frame, the closure's captures and
-`Group.caps`), the pending marks (`reuse`, `alloc`, `cellOf`, `write`,
-where the in-place writes come in: `prim_val_reuse` from `reuse_core`
-for `Prog.reuse`'s two heads, `GOK.pend` strengthened so the block it
-names is not the unique scrutinee's, then the primitive step through
-`splitC`/`bindC`), the rebinding of an `else`
+`Group.caps`), the rebinding of an `else`
 scrutinee, `defFns`, `open-adt` (`machine_same` covers its success; on
 failure the core continues with `.dead`, which no stripped run
 reaches), and the assembly.

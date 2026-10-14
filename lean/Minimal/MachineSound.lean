@@ -2317,8 +2317,8 @@ theorem MFrame.bind {U A C : Uses} {n m : Nat} {er er' : Nat → Bool} {H H' : H
 
 structure GOK (P : Prog) (G : UCtx) (pd : Pend) (H : Heap) (ρM ρS ρ : List Tm) (Res : Nat → Prop) : Prop where
   pend : pd = none ∨ (∃ y, pd = some (.alloc, y)) ∨
-    ∃ m x, pd = some (m, .fv x) ∧ (m = .cellOf ∨ m = .write true ∨ m = .reuse true) ∧
-    ∀ a, Tm.env ρM x = .ptr a → Res a ∧ ∀ y, G.uscr = some (.fv y) → Tm.env ρM y ≠ .ptr a
+    ∃ m t, pd = some (m, t) ∧ (m = .cellOf ∨ m = .write true ∨ m = .reuse true) ∧
+    ∀ x a, t = .fv x → Tm.env ρM x = .ptr a → Res a ∧ ∀ y, G.uscr = some (.fv y) → Tm.env ρM y ≠ .ptr a
   uscr : ∀ x, G.uscr = some (.fv x) → x < G.Γ.n ∧ ∀ a, Tm.env ρM x = .ptr a → Res a
   rebind : ∀ x, G.rebind = some (.fv x) → (∀ b, Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) b → Res b) ∧
     WO P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) ∧ MDec P H (Tm.env ρM x) (Tm.env ρS x)
