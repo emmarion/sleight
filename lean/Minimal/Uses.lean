@@ -54,7 +54,8 @@ variable (P : Prog)
 namespace UCtx
 
 def next (G : UCtx) (Γ' : Ctx) (us : List Bool) : UCtx :=
-  { Γ := Γ', uq := G.uq ++ (us.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + k) else none), uscr := G.uscr,
+  { Γ := Γ', uq := G.uq ++ ((us.take (Γ'.n - G.Γ.n)).zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + k) else none),
+    uscr := G.uscr,
     fill := G.fill }
 
 def adv (G : UCtx) (Γ' : Ctx) (c : Core) : Ctx := if G.fill then Γ' else Ctx.adv P G.Γ Γ' c
@@ -177,7 +178,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let E ← usesEls b G ru rets s els
       UR.seq (S, []) (UR.join B E)
   | .seq R body rest => do
-    let A := UR.below (← usesCore b { G with ents := [], uscr := none, cellOk := false } G.ents R body) G.Γ.n
+    let A := UR.below (← usesCore b { G with ents := [], uscr := none, cellOk := false, rebind := none } G.ents R body) G.Γ.n
     let C ← usesCore b (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents)) ru rets rest
     UR.seq A C
   | .prim p er rest => do
@@ -193,7 +194,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let (O, K) ← usesFns gid G Gr Gr.fns
       let K := (gid, O) :: K
       if G.fill then UR.seq (O, K) C
-      else if Uses.sub O Gr.caps then UR.seq (Gr.caps, K) C else none
+      else if Uses.sub O Gr.caps && Gr.caps.all (fun (i, u) => (G.use i u).isSome) then UR.seq (Gr.caps, K) C else none
     else none
   | .chk (.mark m) a _ rest => match m, a with
     | .uq ms, _ => usesCore b { G with ents := ms } ru rets rest

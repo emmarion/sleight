@@ -10,3 +10,4 @@ import Minimal.Run
 import Minimal.Machine
 import Minimal.Uses
 import Minimal.MachineSound
+import Minimal.MachineRun

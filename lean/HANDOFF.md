@@ -10,13 +10,16 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last run 322 tests were accepted with
-OCaml's value, none mismatched, 474 refusals agreed, and 80 + 89 were
-refused as unsupported; 23 tests OCaml accepts are refused, 11 of them
+with it under `--shared`. At the last run 327 tests were accepted with
+OCaml's value, none mismatched, 474 refusals agreed, and 85 + 97 were
+refused as unsupported; 19 tests OCaml accepts are refused, 7 of them
 for a `_` the inference does not solve. No test the OCaml suite
-refuses is accepted. Four tests it accepts time out at ten seconds,
-among them `comptime_tail.sl`, which finishes in about a minute, and
-`extern_tail.sl`, which ran out of memory on one session's machine.
+refuses is accepted. Three tests it accepts time out at ten seconds:
+`comptime_tail.sl`, which finishes in about a minute, `extern_tail.sl`,
+which ran out of memory on one session's machine, and
+`mini_preserve.sl`. One refusal reads as an internal error rather than
+a verdict, `palindrome_manacher.sl`'s "unbound entry 1099511627776";
+no session has looked into it.
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
@@ -89,16 +92,45 @@ value reaches and owns (`rt_build_ok`, `list_ok`), the `ret` case
 sub-computation and binds its results (`MFrame.split`, `MFrame.bind`).
 Ownership (`Spine`, `WO`) is keyed on the full run's value as well as
 the stripped one, so that a unique newtype wrapper around a shared
-field (16's `coercible-sym`) owns nothing. The next step, on this
-session's plan: give `Live`, `Own`, `MFrame` and `MOut` the context's
-erasure map and guard them by it, so that a use the pass records for an
-erased entry asks for no machine value; then the `seq` step, using
-`seq_setup` (`Minimal/Sound.lean`). The pass itself was tightened along
-the way: `use` refuses an index out of range or erased, and a `seq` body
-and an `else` branch start with no cell to take (`uscr`, `cellOk`
-cleared), as does the code after a `cell-of` mark. On this session's
-reading these refuse nothing the reader emits, but no full `compare.sh`
-run had finished on them when this was written.
+field (16's `coercible-sym`) owns nothing. `Live`, `Own`, `MFrame` and
+`MOut` take the context's erasure map and ask nothing of an erased
+entry.
+
+`Minimal/MachineRun.lean` states the theorem one core form at a time:
+`MRun P b G ru rets c ρ vs` says that wherever the uses pass accepts `c`
+in `G` and the stripped run of `c` ends, the machine run from a frame
+standing for the stripped environment ends too, in an `MOut`. `GOK` is
+what the machine state owes the pass's context: the pending mark, the
+unique scrutinee, the rebinding, `uq` below the context's length, no
+filling, no ghost. Proved so far, without `sorry`: `machine_seq`,
+`machine_defLvl`, the erased call, match and primitive
+(`machine_callE`, `machine_mtchE`, `machine_primE`), and the checks
+that change nothing the machine reads (`machine_chkPlain`, `machine_cm`,
+`machine_uq`, `machine_uqScr`, `machine_skip`). Each takes the steps
+after it as hypotheses (`MRun` of the rest, and for `seq` the body's
+`Sim`), so the final theorem is an induction like `eval_sound`'s that
+discharges them from `CoreTy`, `EnvOK` and `eval_sound` itself. A
+static lemma, `usesCore_uq`, says that every use at unique the pass
+records names an entry of `uq` or one made after the context; the
+`seq` step needs it to tie a use of a new binder to `ents`.
+
+Left, on this session's reading: the non-erased call (the callee's
+frame, the closure's captures and `Group.caps`), the non-erased match
+and `case` (the scrutinee's view, branch contexts, the cell binder),
+the non-erased primitive including the pending marks (`reuse`, `alloc`,
+`cellOf`, `write`, where the in-place writes and `Res` come in), the
+rebinding of an `else` scrutinee, `defFns`, `open-adt` (`machine_same`
+covers its success; on failure the core continues with `.dead`, which
+no stripped run reaches), and the assembly.
+
+The pass was tightened on the way, each change checked by a full
+`compare.sh` run that changed no verdict (327 accepted with OCaml's
+value, none mismatched, 474 refusals agreed): `use` refuses an index
+out of range or erased; a `seq` body and an `else` branch start with no
+cell to take and no pending rebinding; the code after a `cell-of` mark
+has no cell to take; `UCtx.next` marks as unique only entries the
+statement itself made; and a group's recorded captures must each pass
+`use` where the group is defined.
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

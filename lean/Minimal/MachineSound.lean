@@ -914,37 +914,40 @@ theorem build_ctor_wo {H : Heap} (hW : H.WF) {d c : Nat} {sig : Tm} (hc : P.ctor
               (Spine.bwd (hex.agree (hm k hkl hke)).spine h1) (Foot.back hex (hm j hjl hje) h2)
     · rw [h, h']; exact .free fun b h => h.imm (by simp [Prog.place]) (by simp [Prog.place])
 
-def Live (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS : List Tm) (a : Nat) : Prop :=
-  ∃ z < n, (U.lookup z).isSome ∧ Foot P H (Tm.env ρM z) (Tm.env ρS z) a
+def Live (P : Prog) (U : Uses) (n : Nat) (er : Nat → Bool) (H : Heap) (ρM ρS : List Tm) (a : Nat) : Prop :=
+  ∃ z < n, (U.lookup z).isSome ∧ er z = false ∧ Foot P H (Tm.env ρM z) (Tm.env ρS z) a
 
-def Own (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS ρ : List Tm) (a : Nat) : Prop :=
-  ∃ x < n, U.lookup x = some true ∧ Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) a
+def Own (P : Prog) (U : Uses) (n : Nat) (er : Nat → Bool) (H : Heap) (ρM ρS ρ : List Tm) (a : Nat) : Prop :=
+  ∃ x < n, U.lookup x = some true ∧ er x = false ∧ Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) a
 
-structure MFrame (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS ρ : List Tm) (Res Out : Nat → Prop) : Prop where
+structure MFrame (P : Prog) (U : Uses) (n : Nat) (er : Nat → Bool) (H : Heap) (ρM ρS ρ : List Tm) (Res Out : Nat → Prop) :
+    Prop where
   lenM : ρM.length = n
   lenS : ρS.length = n
   lenF : ρ.length = n
   wf : H.WF
-  dec : ∀ i < n, (U.lookup i).isSome → MDec P H (Tm.env ρM i) (Tm.env ρS i)
-  wo : ∀ x < n, U.lookup x = some true → WO P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x)
-  sep : ∀ x < n, ∀ z < n, x ≠ z → U.lookup x = some true → (U.lookup z).isSome →
+  dec : ∀ i < n, (U.lookup i).isSome → er i = false → MDec P H (Tm.env ρM i) (Tm.env ρS i)
+  wo : ∀ x < n, U.lookup x = some true → er x = false → WO P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x)
+  sep : ∀ x < n, ∀ z < n, x ≠ z → U.lookup x = some true → (U.lookup z).isSome → er x = false → er z = false →
     Disj (Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x)) (Foot P H (Tm.env ρM z) (Tm.env ρS z))
-  out : ∀ x < n, U.lookup x = some true → Disj (Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x)) Out
-  res : Disj Res (Live P U n H ρM ρS) ∧ Disj Res Out ∧ Disj Res (Own P U n H ρM ρS ρ) ∧ ∀ a, Res a → (H.blk a).isSome
+  out : ∀ x < n, U.lookup x = some true → er x = false →
+    Disj (Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x)) Out
+  res : Disj Res (Live P U n er H ρM ρS) ∧ Disj Res Out ∧ Disj Res (Own P U n er H ρM ρS ρ) ∧
+    ∀ a, Res a → (H.blk a).isSome
   outb : ∀ a, Out a → a < H.next
 
-structure MOut (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS ρ : List Tm) (Res : Nat → Prop) (rets : Tm)
-    (ru : List Bool) (H' : Heap) (vsM vsS vs : List Tm) : Prop where
+structure MOut (P : Prog) (U : Uses) (n : Nat) (er : Nat → Bool) (H : Heap) (ρM ρS ρ : List Tm) (Res : Nat → Prop)
+    (rets : Tm) (ru : List Bool) (H' : Heap) (vsM vsS vs : List Tm) : Prop where
   wf : H'.WF
   next : H.next ≤ H'.next
   blk : ∀ a, (H.blk a).isSome → (H'.blk a).isSome
-  keep : ∀ a, a < H.next → ¬ Own P U n H ρM ρS ρ a → ¬ Res a → H'.blk a = H.blk a
+  keep : ∀ a, a < H.next → ¬ Own P U n er H ρM ρS ρ a → ¬ Res a → H'.blk a = H.blk a
   len : vsM.length = vsS.length
   dec : ∀ k w u, vsM[k]? = some w → vsS[k]? = some u → rets.ers.getD k true = false → MDec P H' w u
   foot : ∀ k w u, vsM[k]? = some w → vsS[k]? = some u → rets.ers.getD k true = false → ∀ b, Foot P H' w u b →
-    H.next ≤ b ∨ Own P U n H ρM ρS ρ b ∨ Res b ∨ Live P U n H ρM ρS b
+    H.next ≤ b ∨ Own P U n er H ρM ρS ρ b ∨ Res b ∨ Live P U n er H ρM ρS b
   uspine : ∀ k w u v, vsM[k]? = some w → vsS[k]? = some u → vs[k]? = some v → rets.ers.getD k true = false →
-    ru.getD k false = true → ∀ b, Spine P H' w u v b → H.next ≤ b ∨ Own P U n H ρM ρS ρ b ∨ Res b
+    ru.getD k false = true → ∀ b, Spine P H' w u v b → H.next ≤ b ∨ Own P U n er H ρM ρS ρ b ∨ Res b
   uwo : ∀ k w u v, vsM[k]? = some w → vsS[k]? = some u → vs[k]? = some v → rets.ers.getD k true = false →
     ru.getD k false = true → WO P H' w u v
   usep : ∀ k j w u v w' u', k ≠ j → vsM[k]? = some w → vsS[k]? = some u → vs[k]? = some v → vsM[j]? = some w' →
@@ -1996,11 +1999,13 @@ theorem SeqUses.lt {G : UCtx} {ms es : Nat → Bool} {ts : List Tm} {A : Uses} (
       · rw [h2 he] at hi; exact absurd hi Bool.false_ne_true
     · exact ih i hi
 
-theorem MFrame.frm {U : Uses} {n : Nat} {H : Heap} {ρM ρS ρ : List Tm} {Res Out : Nat → Prop}
-    (hM : MFrame P U n H ρM ρS ρ Res Out) {A : Uses} (hA : A.Sub U) (hlt : ∀ i, (A.lookup i).isSome → i < n) :
-    Frm P H (Tm.env ρM) (Tm.env ρS) (Tm.env ρ) A :=
-  ⟨fun i hi => hM.dec i (hlt i hi) (hA.1 i hi), fun x hx => hM.wo x (hlt x (by simp [hx])) (hA.2 x hx),
-   fun x z hne hx hz => hM.sep x (hlt x (by simp [hx])) z (hlt z hz) hne (hA.2 x hx) (hA.1 z hz)⟩
+theorem MFrame.frm {U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res Out : Nat → Prop}
+    (hM : MFrame P U n er H ρM ρS ρ Res Out) {A : Uses} (hA : A.Sub U)
+    (hlt : ∀ i, (A.lookup i).isSome → i < n ∧ er i = false) : Frm P H (Tm.env ρM) (Tm.env ρS) (Tm.env ρ) A :=
+  ⟨fun i hi => hM.dec i (hlt i hi).1 (hA.1 i hi) (hlt i hi).2,
+   fun x hx => hM.wo x (hlt x (by simp [hx])).1 (hA.2 x hx) (hlt x (by simp [hx])).2,
+   fun x z hne hx hz => hM.sep x (hlt x (by simp [hx])).1 z (hlt z hz).1 hne (hA.2 x hx) (hA.1 z hz)
+     (hlt x (by simp [hx])).2 (hlt z hz).2⟩
 
 theorem rtArgs_get {Γ : Ctx} : ∀ (ts rets : Tm), rtArgs P Γ ts rets = true → ∀ k t, ts.toList[k]? = some t →
     rets.ers.getD k true = false → rt P Γ t = true
@@ -2055,12 +2060,12 @@ theorem rtArgs_get {Γ : Ctx} : ∀ (ts rets : Tm), rtArgs P Γ ts rets = true �
 
 theorem machine_ret (hP : ProgOK P) {Γ : Ctx} {ρ ρS ρM : List Tm} {ts rets : Tm} (hok : rtArgs P Γ ts rets = true)
     (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) {G : UCtx} {ru : List Bool} {U : Uses} (hG : G.Γ = Γ)
-    (hu : G.retUses P ru ts rets = some U) {H : Heap} {Res Out : Nat → Prop} (hM : MFrame P U Γ.n H ρM ρS ρ Res Out)
-    (pd : Pend) : ∃ H' vsM, RunM P H ρM pd (.ret ts) H' vsM ∧
-      MOut P U Γ.n H ρM ρS ρ Res rets ru H' vsM (ts.toList.map (P.sub ρS)) (ts.toList.map (·.subst (Tm.env ρ))) := by
+    (hu : G.retUses P ru ts rets = some U) {H : Heap} {Res Out : Nat → Prop}
+    (hM : MFrame P U Γ.n Γ.er H ρM ρS ρ Res Out) (pd : Pend) : ∃ H' vsM, RunM P H ρM pd (.ret ts) H' vsM ∧
+      MOut P U Γ.n Γ.er H ρM ρS ρ Res rets ru H' vsM (ts.toList.map (P.sub ρS)) (ts.toList.map (·.subst (Tm.env ρ))) := by
   subst hG
   have hsq := retUses_seq ru ts rets U hok hu
-  have hlt := fun i hi => (hsq.lt i hi).1
+  have hlt := fun i hi => hsq.lt i hi
   have hF := hM.frm (Uses.Sub.refl _) hlt
   obtain ⟨hl1, hl2⟩ := list_ok hP hsq hM.wf (fun k t ht he => by
     have hrt := rtArgs_get ts rets hok k t ht he
@@ -2081,7 +2086,7 @@ theorem machine_ret (hP : ProgOK P) {Γ : Ctx} {ρ ρS ρM : List Tm} {ts rets :
     rw [getD_of_get hw] at hb
     rcases hb.foot b hf with ⟨h1, _⟩ | ⟨z, hz, hfz⟩
     · exact .inl (Nat.le_trans hlo h1)
-    · exact .inr (.inr (.inr ⟨z, hlt z hz, hz, hfz⟩))
+    · exact .inr (.inr (.inr ⟨z, (hlt z hz).1, hz, (hlt z hz).2, hfz⟩))
   · intro k w u v hw hu' hv hke hru b hs
     simp only [List.getElem?_map, Option.map_eq_some_iff] at hu' hv
     obtain ⟨t, ht, rfl⟩ := hu'
@@ -2091,7 +2096,7 @@ theorem machine_ret (hP : ProgOK P) {Γ : Ctx} {ρ ρS ρM : List Tm} {ts rets :
     rw [getD_of_get hw] at hb
     rcases hb.spine hru b hs with ⟨h1, _⟩ | ⟨x, hx, hsx⟩
     · exact .inl (Nat.le_trans hlo h1)
-    · exact .inr (.inl ⟨x, hlt x (by simp [hx]), hx, hsx⟩)
+    · exact .inr (.inl ⟨x, (hlt x (by simp [hx])).1, hx, (hlt x (by simp [hx])).2, hsx⟩)
   · intro k w u v hw hu' hv hke hru
     simp only [List.getElem?_map, Option.map_eq_some_iff] at hu' hv
     obtain ⟨t, ht, rfl⟩ := hu'
@@ -2125,96 +2130,106 @@ theorem env_cls {n m : Nat} {ρM ρS ρ oM oS oF : List Tm} (h1 : ρM.length = n
   · obtain ⟨k, rfl⟩ : ∃ k, i = n + k := ⟨i - n, by omega⟩
     refine .inr ⟨k, by omega, rfl, ?_, ?_, ?_⟩ <;> rw [env_hi (by assumption)] <;> exact get_getD (by omega)
 
-theorem Live.mono {A U : Uses} (h : A.Sub U) {n : Nat} {H : Heap} {ρM ρS : List Tm} {a : Nat}
-    (hl : Live P A n H ρM ρS a) : Live P U n H ρM ρS a := by
-  obtain ⟨z, hz, hA, hf⟩ := hl; exact ⟨z, hz, h.1 z hA, hf⟩
+theorem Live.mono {A U : Uses} (h : A.Sub U) {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS : List Tm} {a : Nat}
+    (hl : Live P A n er H ρM ρS a) : Live P U n er H ρM ρS a := by
+  obtain ⟨z, hz, hA, he, hf⟩ := hl; exact ⟨z, hz, h.1 z hA, he, hf⟩
 
-theorem Own.mono {A U : Uses} (h : A.Sub U) {n : Nat} {H : Heap} {ρM ρS ρ : List Tm} {a : Nat}
-    (hl : Own P A n H ρM ρS ρ a) : Own P U n H ρM ρS ρ a := by
-  obtain ⟨z, hz, hA, hf⟩ := hl; exact ⟨z, hz, h.2 z hA, hf⟩
+theorem Own.mono {A U : Uses} (h : A.Sub U) {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {a : Nat}
+    (hl : Own P A n er H ρM ρS ρ a) : Own P U n er H ρM ρS ρ a := by
+  obtain ⟨z, hz, hA, he, hf⟩ := hl; exact ⟨z, hz, h.2 z hA, he, hf⟩
 
-theorem MFrame.split {U A C : Uses} {n : Nat} {H : Heap} {ρM ρS ρ : List Tm} {Res Out : Nat → Prop}
-    (hM : MFrame P U n H ρM ρS ρ Res Out) (h : Uses.seq A C = some U) :
-    MFrame P A n H ρM ρS ρ (fun _ => False) (fun a => Out a ∨ Live P C n H ρM ρS a ∨ Res a) := by
+theorem MFrame.split {U A C : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res Out : Nat → Prop}
+    (hM : MFrame P U n er H ρM ρS ρ Res Out) (h : Uses.seq A C = some U) :
+    MFrame P A n er H ρM ρS ρ (fun _ => False) (fun a => Out a ∨ Live P C n er H ρM ρS a ∨ Res a) := by
   obtain ⟨sA, sC⟩ := Uses.seq_sub h
   have hfree := (Uses.seq_spec h).1
-  refine ⟨hM.lenM, hM.lenS, hM.lenF, hM.wf, fun i hi ha => hM.dec i hi (sA.1 i ha),
-    fun x hx ha => hM.wo x hx (sA.2 x ha), fun x hx z hz hne ha hz' => hM.sep x hx z hz hne (sA.2 x ha) (sA.1 z hz'),
-    fun x hx ha a h1 h2 => ?_, ⟨fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim⟩,
+  refine ⟨hM.lenM, hM.lenS, hM.lenF, hM.wf, fun i hi ha he => hM.dec i hi (sA.1 i ha) he,
+    fun x hx ha he => hM.wo x hx (sA.2 x ha) he,
+    fun x hx z hz hne ha hz' hex hez => hM.sep x hx z hz hne (sA.2 x ha) (sA.1 z hz') hex hez,
+    fun x hx ha he a h1 h2 => ?_, ⟨fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim⟩,
     fun a h2 => ?_⟩
-  · rcases h2 with h2 | ⟨z, hz, hCz, hf⟩ | h2
-    · exact hM.out x hx (sA.2 x ha) a h1 h2
+  · rcases h2 with h2 | ⟨z, hz, hCz, hez, hf⟩ | h2
+    · exact hM.out x hx (sA.2 x ha) he a h1 h2
     · have hne : x ≠ z := fun e => by subst e; rw [(hfree x).1 ha] at hCz; cases hCz
-      exact hM.sep x hx z hz hne (sA.2 x ha) (sC.1 z hCz) a h1 hf
-    · exact hM.res.2.2.1 a h2 ⟨x, hx, sA.2 x ha, h1⟩
-  · rcases h2 with h2 | ⟨z, hz, hCz, hf⟩ | h2
+      exact hM.sep x hx z hz hne (sA.2 x ha) (sC.1 z hCz) he hez a h1 hf
+    · exact hM.res.2.2.1 a h2 ⟨x, hx, sA.2 x ha, he, h1⟩
+  · rcases h2 with h2 | ⟨z, hz, hCz, hez, hf⟩ | h2
     · exact hM.outb a h2
-    · exact Foot.lt hM.wf (hM.dec z hz (sC.1 z hCz)) hf
+    · exact Foot.lt hM.wf (hM.dec z hz (sC.1 z hCz) hez) hf
     · have := hM.res.2.2.2 a h2
       exact Nat.lt_of_not_le fun hc => by rw [hM.wf a hc] at this; cases this
 
-theorem MFrame.bind {U A C : Uses} {n m : Nat} {H H' : Heap} {ρM ρS ρ oM oS oF : List Tm} {Res Out : Nat → Prop}
-    {rets : Tm} {ru : List Bool}
-    (hM : MFrame P U n H ρM ρS ρ Res Out) (h : Uses.seq A C = some U)
-    (hO : MOut P A n H ρM ρS ρ (fun _ => False) rets ru H' oM oS oF) (hlS : oS.length = m) (hlF : oF.length = m)
-    (hers : ∀ k, (C.lookup (n + k)).isSome → rets.ers.getD k true = false)
-    (hu : ∀ k, C.lookup (n + k) = some true → ru.getD k false = true) :
-    MFrame P C (n + m) H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) Res Out ∧
+theorem MFrame.bind {U A C : Uses} {n m : Nat} {er er' : Nat → Bool} {H H' : Heap} {ρM ρS ρ oM oS oF : List Tm}
+    {Res Out : Nat → Prop} {rets : Tm} {ru : List Bool}
+    (hM : MFrame P U n er H ρM ρS ρ Res Out) (h : Uses.seq A C = some U)
+    (hO : MOut P A n er H ρM ρS ρ (fun _ => False) rets ru H' oM oS oF) (hlS : oS.length = m) (hlF : oF.length = m)
+    (her : ∀ i < n, er' i = er i)
+    (hers : ∀ k < m, (C.lookup (n + k)).isSome → er' (n + k) = false → rets.ers.getD k true = false)
+    (hu : ∀ k < m, C.lookup (n + k) = some true → er' (n + k) = false → ru.getD k false = true) :
+    MFrame P C (n + m) er' H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) Res Out ∧
     ∀ {H'' : Heap} {vsM vsS vs : List Tm} {rets2 : Tm} {ru2 : List Bool},
-      MOut P C (n + m) H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) Res rets2 ru2 H'' vsM vsS vs →
-      MOut P U n H ρM ρS ρ Res rets2 ru2 H'' vsM vsS vs := by
+      MOut P C (n + m) er' H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) Res rets2 ru2 H'' vsM vsS vs →
+      MOut P U n er H ρM ρS ρ Res rets2 ru2 H'' vsM vsS vs := by
   obtain ⟨sA, sC⟩ := Uses.seq_sub h
   have hfree := (Uses.seq_spec h).1
   have hlM : oM.length = m := by rw [hO.len, hlS]
   have cls := fun {i} (hi : i < n + m) => env_cls hM.lenM hM.lenS hM.lenF hlM hlS hlF hi
-  have hOwn : ∀ i < n, (C.lookup i).isSome → ∀ b, Foot P H (Tm.env ρM i) (Tm.env ρS i) b →
-      ¬ Own P A n H ρM ρS ρ b := fun i hi hC b hf ⟨x, hx, hA, hs⟩ => by
+  have er_old : ∀ {i}, i < n → er' i = false → er i = false := fun hi he => by rw [← her _ hi]; exact he
+  have hOwn : ∀ i < n, (C.lookup i).isSome → er i = false → ∀ b, Foot P H (Tm.env ρM i) (Tm.env ρS i) b →
+      ¬ Own P A n er H ρM ρS ρ b := fun i hi hC hei b hf ⟨x, hx, hA, hex, hs⟩ => by
     have hne : x ≠ i := fun e => by subst e; rw [(hfree x).1 hA] at hC; cases hC
-    exact hM.sep x hx i hi hne (sA.2 x hA) (sC.1 i hC) b hs hf
-  have hAg : ∀ i < n, (C.lookup i).isSome → Agree H H' (Foot P H (Tm.env ρM i) (Tm.env ρS i)) :=
-    fun i hi hC b hf => hO.keep b (Foot.lt hM.wf (hM.dec i hi (sC.1 i hC)) hf) (hOwn i hi hC b hf) id
-  have hRes : ∀ a, Res a → ¬ Own P A n H ρM ρS ρ a := fun a ha ho => hM.res.2.2.1 a ha (ho.mono sA)
+    exact hM.sep x hx i hi hne (sA.2 x hA) (sC.1 i hC) hex hei b hs hf
+  have hAg : ∀ i < n, (C.lookup i).isSome → er i = false → Agree H H' (Foot P H (Tm.env ρM i) (Tm.env ρS i)) :=
+    fun i hi hC he b hf => hO.keep b (Foot.lt hM.wf (hM.dec i hi (sC.1 i hC) he) hf) (hOwn i hi hC he b hf) id
+  have hRes : ∀ a, Res a → ¬ Own P A n er H ρM ρS ρ a := fun a ha ho => hM.res.2.2.1 a ha (ho.mono sA)
   have hResLt : ∀ a, Res a → a < H.next := fun a ha => by
     have := hM.res.2.2.2 a ha
     exact Nat.lt_of_not_le fun hc => by rw [hM.wf a hc] at this; cases this
   have newSp : ∀ k w u v, k < m → oM[k]? = some w → oS[k]? = some u → oF[k]? = some v →
-      C.lookup (n + k) = some true → ∀ b, Spine P H' w u v b → H.next ≤ b ∨ Own P A n H ρM ρS ρ b :=
-    fun k w u v _ hw hu' hv hC b hs => by
-      rcases hO.uspine k w u v hw hu' hv (hers k (by simp [hC])) (hu k hC) b hs with h | h | h
+      C.lookup (n + k) = some true → er' (n + k) = false → ∀ b, Spine P H' w u v b →
+      H.next ≤ b ∨ Own P A n er H ρM ρS ρ b :=
+    fun k w u v hk hw hu' hv hC he b hs => by
+      rcases hO.uspine k w u v hw hu' hv (hers k hk (by simp [hC]) he) (hu k hk hC he) b hs with h | h | h
       · exact .inl h
       · exact .inr h
       · exact h.elim
   have newFt : ∀ k w u, k < m → oM[k]? = some w → oS[k]? = some u → (C.lookup (n + k)).isSome →
-      ∀ b, Foot P H' w u b → H.next ≤ b ∨ Own P A n H ρM ρS ρ b ∨ Live P A n H ρM ρS b :=
-    fun k w u _ hw hu' hC b hf => by
-      rcases hO.foot k w u hw hu' (hers k hC) b hf with h | h | h | h
+      er' (n + k) = false → ∀ b, Foot P H' w u b →
+      H.next ≤ b ∨ Own P A n er H ρM ρS ρ b ∨ Live P A n er H ρM ρS b :=
+    fun k w u hk hw hu' hC he b hf => by
+      rcases hO.foot k w u hw hu' (hers k hk hC he) b hf with h | h | h | h
       · exact .inl h
       · exact .inr (.inl h)
       · exact h.elim
       · exact .inr (.inr h)
-  have oldSp : ∀ x < n, C.lookup x = some true → ∀ b, Spine P H' (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) b →
+  have oldSp : ∀ x < n, C.lookup x = some true → er x = false →
+      ∀ b, Spine P H' (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) b →
       Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) b :=
-    fun x hx hC b hs => Spine.bwd (hAg x hx (by simp [hC])).spine hs
-  have oldFt : ∀ z < n, (C.lookup z).isSome → ∀ b, Foot P H' (Tm.env ρM z) (Tm.env ρS z) b →
-      Foot P H (Tm.env ρM z) (Tm.env ρS z) b := fun z hz hC b hf => Foot.bwd (hAg z hz hC) hf
-  have hLive : ∀ a, Live P C (n + m) H' (ρM ++ oM) (ρS ++ oS) a → H.next ≤ a ∨ Own P A n H ρM ρS ρ a ∨
-      Live P U n H ρM ρS a := fun a ⟨z, hz, hC, hf⟩ => by
+    fun x hx hC he b hs => Spine.bwd (hAg x hx (by simp [hC]) he).spine hs
+  have oldFt : ∀ z < n, (C.lookup z).isSome → er z = false → ∀ b, Foot P H' (Tm.env ρM z) (Tm.env ρS z) b →
+      Foot P H (Tm.env ρM z) (Tm.env ρS z) b := fun z hz hC he b hf => Foot.bwd (hAg z hz hC he) hf
+  have hLive : ∀ a, Live P C (n + m) er' H' (ρM ++ oM) (ρS ++ oS) a → H.next ≤ a ∨ Own P A n er H ρM ρS ρ a ∨
+      Live P U n er H ρM ρS a := fun a ⟨z, hz, hC, hez, hf⟩ => by
     rcases cls hz with ⟨hzn, f1, f2, -⟩ | ⟨j, hj, rfl, f1, f2, -⟩
-    · rw [f1, f2] at hf; exact .inr (.inr ⟨z, hzn, sC.1 z hC, oldFt z hzn hC a hf⟩)
-    · rcases newFt j _ _ hj f1 f2 hC a hf with h | h | h
+    · rw [f1, f2] at hf
+      have he := er_old hzn hez
+      exact .inr (.inr ⟨z, hzn, sC.1 z hC, he, oldFt z hzn hC he a hf⟩)
+    · rcases newFt j _ _ hj f1 f2 hC hez a hf with h | h | h
       · exact .inl h
       · exact .inr (.inl h)
       · exact .inr (.inr (h.mono sA))
-  have hOwnC : ∀ a, Own P C (n + m) H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) a → H.next ≤ a ∨ Own P U n H ρM ρS ρ a :=
-    fun a ⟨x, hx, hC, hs⟩ => by
-      rcases cls hx with ⟨hxn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
-      · rw [e1, e2, e3] at hs; exact .inr ⟨x, hxn, sC.2 x hC, oldSp x hxn hC a hs⟩
-      · rcases newSp k _ _ _ hk e1 e2 e3 hC a hs with h | h
-        · exact .inl h
-        · exact .inr (h.mono sA)
+  have hOwnC : ∀ a, Own P C (n + m) er' H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) a →
+      H.next ≤ a ∨ Own P U n er H ρM ρS ρ a := fun a ⟨x, hx, hC, hex, hs⟩ => by
+    rcases cls hx with ⟨hxn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
+    · rw [e1, e2, e3] at hs
+      have he := er_old hxn hex
+      exact .inr ⟨x, hxn, sC.2 x hC, he, oldSp x hxn hC he a hs⟩
+    · rcases newSp k _ _ _ hk e1 e2 e3 hC hex a hs with h | h
+      · exact .inl h
+      · exact .inr (h.mono sA)
   refine ⟨?_, fun {H'' vsM vsS vs rets2 ru2} hR => ?mo⟩
   case mo =>
-    have hext : ∀ a, a < H.next → ¬ Own P U n H ρM ρS ρ a → ¬ Res a → H'.blk a = H.blk a :=
+    have hext : ∀ a, a < H.next → ¬ Own P U n er H ρM ρS ρ a → ¬ Res a → H'.blk a = H.blk a :=
       fun a ha ho hr => hO.keep a ha (fun h => ho (h.mono sA)) id
     refine ⟨hR.wf, Nat.le_trans hO.next hR.next, fun a ha => hR.blk a (hO.blk a ha), fun a ha ho hr => ?_, hR.len,
       hR.dec, fun k w u hw hu' he b hf => ?_, fun k w u v hw hu' hv he hr b hs => ?_, hR.uwo, hR.usep⟩
@@ -2239,47 +2254,56 @@ theorem MFrame.bind {U A C : Uses} {n m : Nat} {H H' : Heap} {ρM ρS ρ oM oS o
         · exact .inr (.inl h)
       · exact .inr (.inr h)
   refine ⟨by simp [hM.lenM, hlM], by simp [hM.lenS, hlS], by simp [hM.lenF, hlF], hO.wf, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro i hi hC
+  · intro i hi hC he
     rcases cls hi with ⟨hn, e1, e2, -⟩ | ⟨k, hk, rfl, e1, e2, -⟩
-    · rw [e1, e2]; exact (hM.dec i hn (sC.1 i hC)).frame (hAg i hn hC)
-    · exact hO.dec k _ _ e1 e2 (hers k hC)
-  · intro x hx hC
+    · have he' := er_old hn he
+      rw [e1, e2]; exact (hM.dec i hn (sC.1 i hC) he').frame (hAg i hn hC he')
+    · exact hO.dec k _ _ e1 e2 (hers k hk hC he)
+  · intro x hx hC he
     rcases cls hx with ⟨hn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
-    · rw [e1, e2, e3]; exact (hM.wo x hn (sC.2 x hC)).fwd (hAg x hn (by simp [hC]))
-    · exact hO.uwo k _ _ _ e1 e2 e3 (hers k (by simp [hC])) (hu k hC)
-  · intro x hx z hz hne hCx hCz b h1 h2
+    · have he' := er_old hn he
+      rw [e1, e2, e3]; exact (hM.wo x hn (sC.2 x hC) he').fwd (hAg x hn (by simp [hC]) he')
+    · exact hO.uwo k _ _ _ e1 e2 e3 (hers k hk (by simp [hC]) he) (hu k hk hC he)
+  · intro x hx z hz hne hCx hCz hex hez b h1 h2
     rcases cls hx with ⟨hxn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩ <;>
       rcases cls hz with ⟨hzn, f1, f2, f3⟩ | ⟨j, hj, rfl, f1, f2, f3⟩
     · rw [e1, e2, e3] at h1; rw [f1, f2] at h2
-      exact hM.sep x hxn z hzn hne (sC.2 x hCx) (sC.1 z hCz) b (oldSp x hxn hCx b h1) (oldFt z hzn hCz b h2)
+      have hex' := er_old hxn hex
+      have hez' := er_old hzn hez
+      exact hM.sep x hxn z hzn hne (sC.2 x hCx) (sC.1 z hCz) hex' hez' b (oldSp x hxn hCx hex' b h1)
+        (oldFt z hzn hCz hez' b h2)
     · rw [e1, e2, e3] at h1
-      have hs := oldSp x hxn hCx b h1
-      have hlt := Foot.lt hM.wf (hM.dec x hxn (sC.1 x (by simp [hCx]))) hs.foot
+      have hex' := er_old hxn hex
+      have hs := oldSp x hxn hCx hex' b h1
+      have hlt := Foot.lt hM.wf (hM.dec x hxn (sC.1 x (by simp [hCx])) hex') hs.foot
       have hAx : A.lookup x = none := (hfree x).2 (sC.2 x hCx ▸ hCx)
-      rcases newFt j _ _ hj f1 f2 hCz b h2 with h | ⟨y, hy, hAy, hsy⟩ | ⟨w, hw, hAw, hfw⟩
+      rcases newFt j _ _ hj f1 f2 hCz hez b h2 with h | ⟨y, hy, hAy, hey, hsy⟩ | ⟨w, hw, hAw, hew, hfw⟩
       · omega
       · have hne' : y ≠ x := fun e => by subst e; rw [hAx] at hAy; cases hAy
-        exact hM.sep y hy x hxn hne' (sA.2 y hAy) (sC.1 x (by simp [hCx])) b hsy hs.foot
+        exact hM.sep y hy x hxn hne' (sA.2 y hAy) (sC.1 x (by simp [hCx])) hey hex' b hsy hs.foot
       · have hne' : x ≠ w := fun e => by subst e; rw [hAx] at hAw; cases hAw
-        exact hM.sep x hxn w hw hne' (sC.2 x hCx) (sA.1 w hAw) b hs hfw
+        exact hM.sep x hxn w hw hne' (sC.2 x hCx) (sA.1 w hAw) hex' hew b hs hfw
     · rw [f1, f2] at h2
-      have hf := oldFt z hzn hCz b h2
-      rcases newSp k _ _ _ hk e1 e2 e3 hCx b h1 with h | ho
-      · have := Foot.lt hM.wf (hM.dec z hzn (sC.1 z hCz)) hf; omega
-      · exact hOwn z hzn hCz b hf ho
-    · exact hO.usep k j _ _ _ _ _ (fun e => hne (by rw [e])) e1 e2 e3 f1 f2 (hers k (by simp [hCx])) (hers j hCz) (hu k hCx) b h1 h2
-  · intro x hx hC b h1 h2
+      have hez' := er_old hzn hez
+      have hf := oldFt z hzn hCz hez' b h2
+      rcases newSp k _ _ _ hk e1 e2 e3 hCx hex b h1 with h | ho
+      · have := Foot.lt hM.wf (hM.dec z hzn (sC.1 z hCz) hez') hf; omega
+      · exact hOwn z hzn hCz hez' b hf ho
+    · exact hO.usep k j _ _ _ _ _ (fun e => hne (by rw [e])) e1 e2 e3 f1 f2 (hers k hk (by simp [hCx]) hex)
+        (hers j hj hCz hez) (hu k hk hCx hex) b h1 h2
+  · intro x hx hC he b h1 h2
     rcases cls hx with ⟨hn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
-    · rw [e1, e2, e3] at h1; exact hM.out x hn (sC.2 x hC) b (oldSp x hn hC b h1) h2
-    · rcases newSp k _ _ _ hk e1 e2 e3 hC b h1 with h | ⟨y, hy, hAy, hsy⟩
+    · have he' := er_old hn he
+      rw [e1, e2, e3] at h1; exact hM.out x hn (sC.2 x hC) he' b (oldSp x hn hC he' b h1) h2
+    · rcases newSp k _ _ _ hk e1 e2 e3 hC he b h1 with h | ⟨y, hy, hAy, hey, hsy⟩
       · have := hM.outb b h2; omega
-      · exact hM.out y hy (sA.2 y hAy) b hsy h2
-  · refine ⟨fun a ha hl => ?_, hM.res.2.1, fun a ha ⟨x, hx, hC, hs⟩ => ?_, fun a ha => ?_⟩
+      · exact hM.out y hy (sA.2 y hAy) hey b hsy h2
+  · refine ⟨fun a ha hl => ?_, hM.res.2.1, fun a ha ⟨x, hx, hC, hex, hs⟩ => ?_, fun a ha => ?_⟩
     · rcases hLive a hl with h | h | h
       · have := hResLt a ha; omega
       · exact hRes a ha h
       · exact hM.res.1 a ha h
-    · rcases hLive a ⟨x, hx, by simp [hC], hs.foot⟩ with h | h | h
+    · rcases hLive a ⟨x, hx, by simp [hC], hex, hs.foot⟩ with h | h | h
       · have := hResLt a ha; omega
       · exact hRes a ha h
       · exact hM.res.1 a ha h
@@ -2287,10 +2311,13 @@ theorem MFrame.bind {U A C : Uses} {n m : Nat} {H H' : Heap} {ρM ρS ρ oM oS o
   · intro a ha; exact Nat.lt_of_lt_of_le (hM.outb a ha) hO.next
 
 structure GOK (P : Prog) (G : UCtx) (pd : Pend) (H : Heap) (ρM ρS ρ : List Tm) (Res : Nat → Prop) : Prop where
-  cell : G.cellOk = true → (∃ y, pd = some (.alloc, y)) ∨
+  pend : pd = none ∨ (∃ y, pd = some (.alloc, y)) ∨
     ∃ m x, pd = some (m, .fv x) ∧ (m = .cellOf ∨ m = .write true ∨ m = .reuse true) ∧ ∀ a, Tm.env ρM x = .ptr a → Res a
-  uscr : ∀ x, G.uscr = some (.fv x) → ∀ a, Tm.env ρM x = .ptr a → Res a
+  uscr : ∀ x, G.uscr = some (.fv x) → x < G.Γ.n ∧ ∀ a, Tm.env ρM x = .ptr a → Res a
   rebind : ∀ x, G.rebind = some (.fv x) → (∀ b, Spine P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) b → Res b) ∧
     WO P H (Tm.env ρM x) (Tm.env ρS x) (Tm.env ρ x) ∧ MDec P H (Tm.env ρM x) (Tm.env ρS x)
+  uqlt : ∀ j, G.uq.contains j = true → j < G.Γ.n
+  fill : G.fill = false
+  ghost : G.Γ.ghost = false
 
 end Minimal
