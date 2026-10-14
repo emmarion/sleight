@@ -9,6 +9,7 @@ E = {
        for name, arg in (("C", "c"), ("ATS plain", "plain"), ("ATS certified", "cert"))},
     "Lean verified": [H / "lean/.lake/build/bin/bench"],
     "Idris 2 (plain port)": [B / "idris/exec/hs"],
+    "Idris 2 certified": [B / "idris_cert/exec/hs_cert"],
     **{f"{name}{label}": [B / f"{b}{s}"]
        for s, label in [("", "")] + [("_fl", " [flambda -O3]")] * (B / "ml_safe_fl").exists()
        for name, b in [("OCaml handwritten", "ml_safe"), ("OCaml handwritten -unsafe", "ml_unsafe"),

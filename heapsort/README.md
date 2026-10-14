@@ -88,3 +88,53 @@ heapsort/ats/audit.sh     # greps for axioms, lists proof functions, and
                           # type-checks against a copy of only the ilist_prf
                           # definitions the sort uses
 ```
+
+`idris/` holds an in-place heap sort in Idris 2 (0.8.0, Chez backend) whose
+type states that the output is a permutation of the input and sorted, as
+checked by `idris2` with `%default total`:
+
+- `HeapSort.idr`: the sort,
+  `heapSort : (n : Nat) -> {0 xs : Vect n Int} -> (1 _ : Arr xs) -> Ex (\ys => (Perm xs ys, Sorted ys))`.
+  `Arr xs` is a linear handle to the array, indexed by the vector `xs` of
+  its contents. `Perm` (a sequence of `Swap`s of two positions) and `Sorted`
+  (adjacent pairs, by `Int`'s `<=`) are its own types, and its heap
+  invariants follow `ats/heapsort_cert.dats`. Every lemma is declared with
+  quantity 0 and has its body in the file, which contains no escape hatch. It finds
+  `n/2` by `Integer` division, checking the bounds it needs at run time.
+- `Arr.idr`: the trusted base, whose definitions `HeapSort.idr` uses only
+  through their types:
+  - `leTrans` and `leFlip`, assumed with `believe_me`: `Int`'s `<=` is
+    transitive, and `not (x <= y)` implies `y <= x`. `<=` on `Int` is a
+    primitive that Idris does not unfold, so these may not be provable.
+  - `Arr`, whose index is a phantom: that `xs` is the array's contents is
+    assumed, and kept by exporting `Arr` without its constructor.
+  - `get`, whose `Nth i x xs` (the value read is the one at position `i` of
+    `xs`) is assumed with `believe_me`, and `set`, whose new contents a
+    proved lemma computes and which are assumed to match memory. Both call
+    Scheme's `vector-ref` or `vector-set!` through `%foreign`, as `PrimIO`
+    applied to `%MkWorld` (as `unsafePerformIO` does), with indices whose
+    bounds the types prove.
+  - `withArr`, which assumes the array it is given has length `n`; it gives
+    its continuation `replicate n 0` as the ghost contents, which the
+    continuation cannot rely on since it is polymorphic in them. `done`
+    ends the handle.
+
+  The trust may also extend to Idris 2's linearity checking, which keeps a
+  handle from being used twice, and to its compiler keeping the order of
+  the `PrimIO` calls, as it does for `IO`.
+- `Main.idr`: the benchmark input and checksum, as `bench/Hs.idr`, and a
+  differential test against `Data.List.sort` for n = 1..2999 with value
+  ranges 2, 3 and ~1e9.
+
+```
+cd heapsort/idris && idris2 Main.idr -o hs_cert && build/exec/hs_cert test
+heapsort/idris/audit.sh   # greps for escape hatches and directives,
+                          # type-checks, and checks the compiled Scheme for
+                          # erased definitions and for closures or erased
+                          # placeholders in the sort's own functions
+```
+
+With `IDRIS2_SRC` naming the `libs/` directory of an Idris 2 0.8.0 source
+checkout, `audit.sh` also greps the sources of the library modules the two
+files import. There, the only `believe_me`s are in `Decidable.Equality`'s
+named `FromEq` instance, which `decEq` at `Nat` does not use.

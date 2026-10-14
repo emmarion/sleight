@@ -26,3 +26,4 @@ builds ""
 if [ -n "${FL_SWITCH:-}" ]; then OC="opam exec --switch=$FL_SWITCH -- $OC"; builds _fl -O3; fi
 (cd lean && lake build)
 idris2 Hs.idr --build-dir "$B/idris" -o hs
+(cd ../idris && idris2 Main.idr --build-dir "$B/idris_cert" -o hs_cert)
