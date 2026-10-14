@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: Sleight
+abstract: "A prototype OCaml interpreter and compiler for the Sleight programming language."
+authors:
+  - family-names: Marion
+    given-names: Eric
+repository-code: "https://github.com/emmarion/sleight"
+license: Apache-2.0
