@@ -475,7 +475,11 @@ it is `Settled`, and its `is` rule.
   invocation `(u a ...)` is the application of `C`, and `(at)` before
   an argument, or `(at (u a ...))` for all of them, asks the core that
   the argument's slot canonicalizes to the cell's. The elaborator
-  accounts for the uses of the cell as section 37 has it.
+  accounts for the uses of the cell as section 37 has it. The core marks
+  an invocation, a pattern's cell binder, `cell-alloc`, `cell-write` and
+  an at-match (`Chk.mark`), and an at-function (`FnDef.atf`), which every
+  run proved about ignores; they are for a run that writes in place and
+  skips what costs nothing (HANDOFF.md), and nothing checks them yet.
 - `else` branches (DESIGN.md sections 21 and 23): an `else` stands for
   every constructor neither listed nor refuted, is checked with no
   forced facts, and is an error when it stands for no constructor.

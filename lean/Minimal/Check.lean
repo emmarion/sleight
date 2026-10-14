@@ -721,6 +721,9 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .chk .cm _ _ rest, rets => do
     let ⟨R, hr, eq⟩ ← checkCore b { Γ with cmode := true } rest rets
     .ok ⟨R, .chkCm hr, eq⟩
+  | .chk (.mark _) _ _ rest, rets => do
+    let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
+    .ok ⟨R, .chkMark hr, eq⟩
   | .chk .rt a _ rest, rets => do
     let ⟨h⟩ ← need (Γ.ok (rt P Γ a)) "a non-erased let binder of an erased entry"
     let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets

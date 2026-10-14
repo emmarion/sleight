@@ -275,7 +275,16 @@ inductive Prim where
   | num (d n : Nat)
   deriving Repr, Inhabited, DecidableEq
 
+inductive Mark where
+  | reuse (uniq : Bool)
+  | cellOf
+  | alloc
+  | write (uniq : Bool)
+  | skip
+  deriving Repr, Inhabited, DecidableEq
+
 inductive Chk where
+  | mark (m : Mark)
   | is
   | ty
   | rt
@@ -351,6 +360,7 @@ structure FnDef where
   dele : Option Nat := none
   u : Bool := false
   hm : List Bool := []
+  atf : Bool := false
   deriving Repr, Inhabited
 
 structure Group where

@@ -1115,7 +1115,7 @@ def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (N
     let T := Tm.app (.tyc cd .nil) (.ofList (ms.map (·.2)))
     note j T
     if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
-    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [Core.prim (.axm T) md.isEr])
+    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c, Core.prim (.axm T) md.isEr])
   | _ => throw "malformed pattern"
 
 def ESt.cellSig (st : ESt) : Tm → Tm
@@ -1469,7 +1469,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let T := Tm.app (.tyc cd .nil) (.ofList sl)
       note j T
       unless er do modify fun st => { st with atBad := true }
-      return (ss ++ [.prim (.axm T) er], [.fv j])
+      return (ss ++ [.chk (.mark .alloc) .nil .nil, .prim (.axm T) er], [.fv j])
     else if h == "cell-write" && (sc.lookup h).isNone then
       let [.atom m, u, .list (.atom c :: is)] := args | throw "malformed `cell-write`"
       let md ← cellMode m
@@ -1487,7 +1487,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       note j T
       if let (.uniq, [.fv i]) := (md, ut) then modify fun st => { st with links := (j, i) :: st.links }
       modify fun st => { st with atBad := true }
-      return (ss ++ ss2 ++ [.prim (.axm T) false], [.fv j])
+      return (ss ++ ss2 ++ [.chk (.mark (.write (md == .uniq))) (ut.headD .nil) .nil, .prim (.axm T) false], [.fv j])
     else if h == "cell-match" && (sc.lookup h).isNone then
       let .atom m :: u :: ann :: pat :: body := args | throw "malformed `cell-match`"
       let md ← cellMode m
@@ -1535,7 +1535,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       aliasHid rms outs
       let _ ← bindTele outs R
       let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
-      return (ss ++ pre ++ [fun k => .seq R b k], outs.map .fv)
+      return (ss ++ pre ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ [fun k => .seq R b k], outs.map .fv)
     else if h == "slot-of" && (sc.lookup h).isNone then
       let [.atom x] := args | throw "`slot-of` takes a variable"
       let i ← match sc.lookup x with
@@ -1764,7 +1764,7 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
   let ty : List Stmt := match exp with
     | some (.bind (.ty ..) A .nil) => [fun c => .chk .ty (.fv j) A c]
     | _ => []
-  return (ss ++ chk ++ [.prim (.tm t) er] ++ ty, [.fv j])
+  return (ss ++ chk ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil, .prim (.tm t) er] ++ ty, [.fv j])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
@@ -1861,7 +1861,7 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
   aliasHid rms outs
   let _ ← bindTele outs R
   let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
-  return (ss ++ [if real || nt then .seq R (.case s out els er nt) else .mtch s R out els er], outs.map .fv)
+  return (ss ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ [if real || nt then .seq R (.case s out els er nt) else .mtch s R out els er], outs.map .fv)
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
@@ -2222,7 +2222,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         throw s!"the body of at-function `{showName f}` does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"
       modify fun st => { st with atBad := bad0 }
       modify fun st => { st with deles := ds0 }
-      pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU : FnDef }
+      pure { er, np, tele, hm, body := if ab then .absurd body else body, dele := tgt, u := isU, atf : FnDef }
     modify fun st => { st with dele := d0, delegated := g0, captures := cap0 }
     for (F, j) in defs.zipIdx do
       let f := sigs[j]!.1
