@@ -10,11 +10,10 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 369 tests were
-accepted with OCaml's value, none mismatched, 485 refusals agreed, and
-60 + 91 were refused as unsupported; 6 tests OCaml accepts are refused,
-and 8 time out. Since then the prelude has `array-blit` and
-`bytes-blit`, and the four tests that need them agree with OCaml. No test the OCaml
+with it under `--shared`. At the last full run 376 tests were
+accepted with OCaml's value, none mismatched, 486 refusals agreed, and
+55 + 90 were refused as unsupported; 4 tests OCaml accepts are refused,
+and 8 time out. No test the OCaml
 suite refuses is accepted. `compare.sh` allows twenty seconds a test;
 `comptime_tail.sl` and the six `mini_*.sl` tests that need
 `mini/elabfn.sl` finish in about a minute with OCaml's value, and
