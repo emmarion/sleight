@@ -225,4 +225,88 @@ theorem cert_body {gid j : Nat} {Gd : UCtx} {Gr : Group} {F : FnDef} {O : Uses} 
       subst this; exact hu
     · omega
 
+theorem CloOK.ofList : ∀ {l : List Tm}, (∀ v ∈ l, CloOK P v) → CloOK P (Tm.ofList l)
+  | [], _ => trivial
+  | v :: l, h => ⟨h v (by simp), CloOK.ofList fun w hw => h w (by simp [hw])⟩
+
+theorem CloOK.toList : ∀ {t : Tm}, CloOK P t → ∀ v ∈ t.toList, CloOK P v
+  | .cons a b, h, v, hv => by
+    simp only [Tm.toList, List.mem_cons] at hv
+    rcases hv with rfl | hv
+    · exact h.1
+    · exact CloOK.toList h.2 v hv
+  | .nil, _, v, hv | .fv _, _, v, hv | .bv _, _, v, hv | .bind .., _, v, hv | .app .., _, v, hv | .tyc .., _, v, hv
+  | .vc .., _, v, hv | .tyCtor _, _, v, hv | .valCtor _, _, v, hv | .univ, _, v, hv | .level, _, v, hv
+  | .predates .., _, v, hv | .subterm .., _, v, hv | .fn .., _, v, hv | .mtbl .., _, v, hv | .lvl _, _, v, hv
+  | .tok, _, v, hv | .clo .., _, v, hv | .nat _, _, v, hv | .ptr _, _, v, hv => by simp [Tm.toList] at hv
+
+theorem CloOK.env {ρ : List Tm} (h : ∀ v ∈ ρ, CloOK P v) (i : Nat) : CloOK P (Tm.env ρ i) := by
+  unfold Tm.env
+  rw [List.getD_eq_getElem?_getD]
+  cases hi : ρ[i]? with
+  | none => trivial
+  | some v => exact h v (List.mem_of_getElem? hi)
+
+theorem CloOK.defFns {G : UCtx} {ρ : List Tm} {gid : Nat} {Gr : Group} {O : Uses} {K : Caps}
+    (hE : EnvOK P ρ G.Γ) (hGr : P.groups[gid]? = some Gr) (hok : GroupOK P gid G.Γ Gr) (hf : G.fill = false)
+    (hg : G.Γ.ghost = false) (huq : ∀ j, G.uq.contains j = true → j < G.Γ.n)
+    (hus : usesFns P gid G Gr Gr.fns = some (O, K)) (hd : G.defOK Gr O = true) (hC : ∀ v ∈ ρ, CloOK P v) :
+    ∀ v ∈ closures ρ gid Gr, CloOK P v := by
+  intro v hv
+  simp only [closures, List.mem_map] at hv
+  obtain ⟨k, -, rfl⟩ := hv
+  exact ⟨by rw [Tm.toList_ofList]; exact ⟨G, Gr, O, K, hGr, hE, hok, hf, hg, huq, hus, hd⟩, CloOK.ofList hC⟩
+
+theorem Tm.noClo_toList : ∀ {t : Tm}, t.noClo = true → ∀ x ∈ t.toList, x.noClo = true
+  | .cons a b, h, x, hx => by
+    simp only [Tm.noClo, Bool.and_eq_true] at h
+    simp only [Tm.toList, List.mem_cons] at hx
+    rcases hx with rfl | hx
+    · exact h.1
+    · exact Tm.noClo_toList h.2 x hx
+  | .nil, _, x, hx | .fv _, _, x, hx | .bv _, _, x, hx | .bind .., _, x, hx | .app .., _, x, hx | .tyc .., _, x, hx
+  | .vc .., _, x, hx | .tyCtor _, _, x, hx | .valCtor _, _, x, hx | .univ, _, x, hx | .level, _, x, hx
+  | .predates .., _, x, hx | .subterm .., _, x, hx | .fn .., _, x, hx | .mtbl .., _, x, hx | .lvl _, _, x, hx
+  | .tok, _, x, hx | .clo .., _, x, hx | .nat _, _, x, hx | .ptr _, _, x, hx => by simp [Tm.toList] at hx
+
+theorem CloOK.subst_list {ρ : List Tm} (hC : ∀ v ∈ ρ, CloOK P v) {ts : Tm} (h : ts.noClo = true) :
+    ∀ v ∈ ts.toList.map (·.subst (Tm.env ρ)), CloOK P v := by
+  intro v hv
+  obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hv
+  exact CloOK.subst (CloOK.env hC) t (Tm.noClo_toList h t ht)
+
+theorem MRun.of_ghost {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {c : Core} {ρ vs : List Tm}
+    (hg : G.Γ.ghost = true) : MRun P b G ru rets c ρ vs :=
+  fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ hG => absurd hG.ghost (by simp [hg])
+
+theorem UCtx.next_uqlt {G : UCtx} {Γ' : Ctx} {us : List Bool} (huq : ∀ j, G.uq.contains j = true → j < G.Γ.n)
+    (hn : G.Γ.n ≤ Γ'.n) : ∀ j, (G.next Γ' us).uq.contains j = true → j < (G.next Γ' us).Γ.n := by
+  intro j hj
+  simp only [UCtx.next, List.contains_append, Bool.or_eq_true] at hj
+  simp only [UCtx.next]
+  rcases hj with hj | hj
+  · have := huq j hj; omega
+  · simp at hj
+    obtain ⟨k, hk, e⟩ := hj
+    have := (List.mem_zipIdx' hk).1
+    simp only [List.length_take] at this
+    omega
+
+theorem usesCore_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : Nat} {rest : Core} {Gr : Group}
+    (hGr : P.groups[gid]? = some Gr) (hf : G.fill = false) {U : Uses} {K : Caps}
+    (h : usesCore P b G ru rets (.defFns gid rest) = some (U, K)) :
+    ∃ O K', usesFns P gid G Gr Gr.fns = some (O, K') ∧ G.defOK Gr O = true ∧
+      (usesCore P b (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) (if G.Γ.ghost then [] else Gr.fns.map (·.u)))
+        ru rets rest).isSome := by
+  rw [usesCore] at h
+  simp only [hGr, Option.bind_eq_bind, Option.bind_some, hf, Bool.false_eq_true, ite_false] at h
+  obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  case isFalse => cases h
+  obtain ⟨⟨O, K'⟩, hO, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  case isFalse => cases h
+  rename_i _ hd
+  exact ⟨O, K', hO, hd, by rw [hC]; rfl⟩
+
 end Minimal
