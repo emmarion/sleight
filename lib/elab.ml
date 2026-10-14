@@ -37,11 +37,22 @@ let atom_or loc raw what = match atom raw with Some n -> n | None -> not_name lo
 let binder = function Atom (_, n) -> Some (Some n) | Wild _ -> Some None | _ -> None
 let binder_or loc raw what = match binder raw with Some b -> b | None -> not_name loc what raw
 
+let minted_row y = match Hashtbl.find_opt minted_rows y with Some r -> Some r | None -> Seq.find (List.exists (fun (i, _, _) -> i = y)) (Hashtbl.to_seq_values minted_rows)
+
+let rec enter_mentioned env t =
+  fold_vars (fun _ env t -> match t with
+    | Var y when y < 0 && not (IntMap.mem y env.facts) -> (
+        match minted_row y with
+        | Some row ->
+            List.fold_left (fun env (_, _, (f : fact)) -> List.fold_left enter_mentioned env (f.ty :: Option.to_list f.rule)) (admit env row) row
+        | None -> env)
+    | _ -> env) 0 env t
+
 (* A special form's head: a Settled, non-erased entry of type (Special) holding one of its variants (section 6). *)
 let minted_fact env m = Option.value (IntMap.find_opt m (trusted env)) ~default:(fact env m)
 let minted_type env x = canon { env with facts = trusted env } (minted_fact env (entry env x).minted).ty
 let minted_is env x = Var (entry env x).minted
-let settled_value env x ty = match entry env x with
+let settled_value env x ty = let env = enter_mentioned env (Var x) in match entry env x with
   | { state = Settled v; mult = (Many | Unique); _ } when equal (minted_type env x) ty -> Some v
   | _ -> None
 let special_value env x = match settled_value env x Prelude.special_term with Some (V.VCtor (c, [||])) -> List.assoc_opt c.cid Prelude.specials | _ -> None
@@ -480,17 +491,6 @@ let rec intern env loc lit =
       in
       record_literal { lit; lit_id = x; lit_proof; minted = List.concat_map (fun x -> List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]) own };
       env
-
-let minted_row y = match Hashtbl.find_opt minted_rows y with Some r -> Some r | None -> Seq.find (List.exists (fun (i, _, _) -> i = y)) (Hashtbl.to_seq_values minted_rows)
-
-let rec enter_mentioned env t =
-  fold_vars (fun _ env t -> match t with
-    | Var y when y < 0 && not (IntMap.mem y env.facts) -> (
-        match minted_row y with
-        | Some row ->
-            List.fold_left (fun env (_, _, (f : fact)) -> List.fold_left enter_mentioned env (f.ty :: Option.to_list f.rule)) (admit env row) row
-        | None -> env)
-    | _ -> env) 0 env t
 
 let lit_of = function
   | Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s)

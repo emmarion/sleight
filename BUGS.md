@@ -23,7 +23,11 @@ is a design decision. Remove an entry when it is fixed.
     reference differ in wording on some refusals, as audit M3 already
     records; one seen since is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body
-    needs a final expression" and `slc` with "malformed branch".
+    needs a final expression" and `slc` with "malformed branch". Another
+    is a literal in head position, `("hello")`, which the reference
+    refuses with `"hello" is a literal, not a name` and `slc` with
+    ``"hello" : `(String)` is not applicable``
+    (`tests/literal_head_bad.sl` checks only the shared part).
 
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
@@ -102,16 +106,3 @@ is a design decision. Remove an entry when it is fixed.
     `self/bootstrap.sh` compares each side's whole stderr, warnings
     included, so one that did would fail there. Which order is wanted
     is not decided here.
-
-22. **The reference crashes on a literal in head position.** `("hello")`,
-    `(1)`, `(#\A)` and `("a" "b")` each end `bin/main.exe` with `Fatal
-    error: exception Not_found`, where `slc`, compiled or under
-    `--interpret`, refuses them as not applicable (`"hello" : (String)
-    is not applicable`). Reproduced at `160f1d1`. `((Zero))` gets that
-    refusal from both, and `tests/msg_apply_non_fn_bad.sl` covers it;
-    no test has a literal head. The backtrace runs from `expand`'s macro
-    lookup (`lib/elab.ml:613`) into `settled_value` (`lib/elab.ml:44`),
-    whose `entry` lookup of the head raises; that a literal reaches it
-    as if it were a name is a reading of the trace, not a traced cause.
-    Found by a Claude session checking a mimo-v2.6-pro `spec` agent
-    run's claims against the reference.
