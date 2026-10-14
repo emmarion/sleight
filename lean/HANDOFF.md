@@ -134,7 +134,11 @@ own uses, the closure's captures, the sibling closures and the built
 arguments, given which captured entries the body reads and owns,
 together with how that frame's owned and live blocks sit in the
 caller's) and `callee_out` (the body's results' ownership in the
-caller's terms, through the spreading of the outputs). `GOK.pend` says the block a pending mark names is
+caller's terms, through the spreading of the outputs), and
+`call_body`, which puts these together into what `machine_call` asks
+of the callee for a closure that is not a delegate, given the body's
+`MRun` and uses in its own context, which captured entries the body
+reads and owns, and how arguments and outputs are spread. `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
@@ -163,13 +167,14 @@ for a cell binder to take later.
 Left, on this session's reading: `coerce` (the result is owned
 through the target's full value, the argument through the source's,
 and no lemma yet carries a `WO` across a `Coercible` proof), the
-callee's side of a non-erased call, and the assembly. On this
-session's reading the callee's side needs: a frame for the body built
-from the closure's captured entries (`rd`, `rdU`), the sibling
-closures and the arguments; the body's `MRun`, which needs the pass's
-result for the body where its group was defined, so some invariant on
-closure values recording that the group passed `usesFns` in a context
-with the closure's `Γ`; and, for a call through a delegate, which runs
+rest of the callee's side of a non-erased call, and the assembly. On
+this session's reading what `call_body` takes as hypotheses needs: the
+pass's result for the body where its group was defined, so some
+invariant on closure values recording that the group passed `usesFns`
+in a context with the same `Γ` as `VTy.clo`'s `GroupOK` (closures are
+made only at `defFns`, where both hold for the same context); the
+typing facts tying the caller's view of the callee's type to the
+callee's telescope; and, for a call through a delegate, which runs
 the target's body in the stripped run and the delegate's in the full
 one, a machine counterpart of `walk1`.
 

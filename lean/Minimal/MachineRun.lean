@@ -3796,4 +3796,107 @@ theorem callee_out {n nb m : Nat} {er erb : Nat → Bool} {H H1 H2 : Heap} {ρM 
       · exact tokF b h2
       · exact hOb.usep k j w u v w' u' hkj e1 e2 hv e1' e2' he he' (hru k hr he) b h1 h2
 
+theorem MDec.clo_inv' {H : Heap} {w e : Tm} {gid j : Nat} (h : MDec P H w (.clo e gid j)) :
+    ∃ lM lS, w = .clo (.ofList lM) gid j ∧ e = .ofList lS ∧ lM.length = lS.length ∧
+      ∀ i, P.rd gid j i = true → MDec P H (Tm.env lM i) (Tm.env lS i) := by
+  generalize hu : Tm.clo e gid j = u at h
+  cases h with
+  | clo hl hd =>
+    simp only [Tm.clo.injEq] at hu; obtain ⟨rfl, rfl, rfl⟩ := hu
+    exact ⟨_, _, rfl, rfl, hl, hd⟩
+  | _ => cases hu
+
+theorem call_body (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {fi : Nat} {args t : Tm} {uf : Bool}
+    {A B AB : Uses} (hE : EnvOK P ρ G.Γ) (hS : SimEnv P G.Γ.er ρS ρ) (hrta : rtArgs P G.Γ args t = true)
+    (hA : G.termUses P uf (.fv fi) = some A) (hB : G.argsUses P (·.u) args t = some B) (hAB : Uses.seq A B = some AB)
+    {envS : Tm} {gid j : Nat} {Gr : Group} {F : FnDef} (hfS : P.sub ρS (.fv fi) = .clo envS gid j)
+    (hGr : P.groups[gid]? = some Gr) (hF : Gr.fns[j]? = some F) (hdn : F.dele = none)
+    (hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.u = false → F.dele = some t →
+      t < envS.toList.length + k ∧ (t < envS.toList.length → Gr.caps.lookup t = some false) ∧
+      (envS.toList.length ≤ t → (Gr.fns[t - envS.toList.length]?.map (·.u)) = some false))
+    {envF : List Tm} (hfF : Tm.env ρ fi = .clo (.ofList envF) gid j) (hlF : envF.length = envS.toList.length)
+    {ve : Option (List Bool)} {Gb : UCtx} {rub : List Bool} {Rb : Tm} {Ub : Uses} {Kb : Caps}
+    (hUb : usesCore P gid Gb rub Rb F.body = some (Ub, Kb))
+    (hGn : Gb.Γ.n = envS.toList.length + Gr.fns.length + args.toList.length)
+    (hGok : ∀ H ρM ρS ρ Shr, GOK P Gb none H ρM ρS ρ (fun _ => False) Shr)
+    (hrd : ∀ i < envS.toList.length, (Ub.lookup i).isSome → Gb.Γ.er i = false → P.rd gid j i = true)
+    (hrdU : ∀ i < envS.toList.length, Ub.lookup i = some true → Gb.Γ.er i = false → P.rdU gid j i = true ∧ uf = true)
+    (hsib : ∀ k < Gr.fns.length, (Ub.lookup (envS.toList.length + k)).isSome → Gb.Γ.er (envS.toList.length + k) = false →
+      (Gr.fns[k]?.map (·.u)) = some false ∧ Ub.lookup (envS.toList.length + k) ≠ some true)
+    (hpU : ∀ k < args.toList.length, Ub.lookup (envS.toList.length + Gr.fns.length + k) = some true →
+      Gb.Γ.er (envS.toList.length + Gr.fns.length + k) = false → (t.kinds.map (·.u)).getD k false = true)
+    (hsprI : ∀ xs : List Tm, xs.length = args.toList.length → (F.spreadIn ve xs).length = args.toList.length ∧
+      ∀ k, k < args.toList.length → Gb.Γ.er (envS.toList.length + Gr.fns.length + k) = false →
+        t.ers.getD k true = false ∧ (F.spreadIn ve xs)[k]? = xs[k]?)
+    {ruC : List Bool} {m : Nat}
+    (hsprO : ∀ xs ys : List Tm, xs.length = ys.length →
+      (F.spreadOut ve args.toList.length xs).length = (F.spreadOut ve args.toList.length ys).length ∧
+      ∀ k w u, (F.spreadOut ve args.toList.length xs)[k]? = some w → (F.spreadOut ve args.toList.length ys)[k]? = some u →
+        (w = .tok ∧ u = .tok) ∨ (Rb.ers.getD k true = false ∧ xs[k]? = some w ∧ ys[k]? = some u))
+    (hru : ∀ k, ruC.getD k false = true → Rb.ers.getD k true = false → rub.getD k false = true)
+    {outsFb outsSb : List Tm}
+    (hbody : MRun P gid Gb rub Rb F.body (envF ++ closures envF gid Gr ++ args.toList.map (·.subst (Tm.env ρ))) outsFb)
+    (hsimb : SimEnv P Gb.Γ.er (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS)))
+      (envF ++ closures envF gid Gr ++ args.toList.map (·.subst (Tm.env ρ))))
+    (hrunS : RunS P (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS))) F.body outsSb)
+    {H : Heap} {Out' Shr : Nat → Prop} (hM : MFrame P AB G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr) :
+    ∃ envM H1 as H2 outsMb, P.subU (Tm.env ρM) (.fv fi) = .clo envM gid j ∧
+      P.buildList H (Tm.env ρM) args.toList = (H1, as) ∧
+      RunM P H1 (envM.toList ++ closuresS envM.toList gid Gr ++ F.spreadIn ve as) none F.body H2 outsMb ∧
+      MOut P AB G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (plainTele m) ruC H2
+        (F.spreadOut ve args.toList.length outsMb) (F.spreadOut ve args.toList.length outsSb) outsFb := by
+  simp only [UCtx.termUses, UCtx.use] at hA
+  split at hA
+  · cases hA
+  rename_i hc
+  simp only [Option.some.injEq] at hA; subst hA
+  simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
+  have hfi : fi < G.Γ.n := by omega
+  have hfe : G.Γ.er fi = false := by simpa using hc.1.2
+  obtain ⟨sA, sB⟩ := Uses.seq_sub hAB
+  have hfree := (Uses.seq_spec hAB).1
+  have hAfi : [(fi, uf)].lookup fi = some uf := by simp [List.lookup]
+  have hfU : (AB.lookup fi).isSome := sA.1 fi (by simp [hAfi])
+  have hfB : B.lookup fi ≠ some true := fun h => by have := (hfree fi).2 h; rw [hAfi] at this; cases this
+  have hfB' : AB.lookup fi = some true → B.lookup fi = none := fun h => by
+    cases uf
+    · cases hb : B.lookup fi with
+      | none => rfl
+      | some v =>
+        cases v
+        · rw [(Uses.seq_spec hAB).2 fi, hAfi, hb] at h; simp [Uses.merge] at h
+        · exact absurd hb hfB
+    · exact (hfree fi).1 hAfi
+  have hfd := hM.dec fi hfi hfU hfe
+  simp only [Prog.sub, Prog.subU] at hfS
+  rw [hfS] at hfd
+  obtain ⟨lM, lS, hfM, rfl, -, -⟩ := MDec.clo_inv' hfd
+  simp only [Tm.toList_ofList] at *
+  obtain ⟨H1, as, hbl, hOa⟩ := args_val hP hE hS hrta hB (hM.subB (sB.subB _))
+  have hlas : as.length = args.toList.length := by
+    have := (buildList_ext (P := P) hM.wf (Tm.env ρM) args.toList).2.2; rw [hbl] at this; exact this
+  obtain ⟨hlI, hkI⟩ := hsprI as hlas
+  obtain ⟨hlIS, hkIS⟩ := hsprI (args.toList.map (P.sub ρS)) (by simp)
+  obtain ⟨hMb, hown, hlive⟩ := callee_frame hM sB hfi hfe hfU hfB hfB' hfM hfS hfF hlF hGr hF hdn hdl hOa
+    (pM := F.spreadIn ve as) (pS := F.spreadIn ve (args.toList.map (P.sub ρS))) (Ub := Ub) (erb := Gb.Γ.er)
+    (by simp [hlI]) (by simp [hlIS])
+    (fun k hk he => by
+      have hk' : k < args.toList.length := by simpa using hk
+      have h1 := hkI k hk' he
+      have h2 := hkIS k hk' he
+      refine ⟨h1.1, h1.2, h2.2, ?_, ?_⟩
+      · rw [get_getD (by omega)]; rfl
+      · rw [get_getD (by simpa using hk')]; rfl)
+    hrd (fun i hi hU he => by
+      obtain ⟨h1, rfl⟩ := hrdU i hi hU he
+      exact ⟨h1, by rw [(Uses.seq_spec hAB).2 fi, hAfi]; cases B.lookup fi <;> simp [Uses.merge]⟩)
+    hsib (fun k hk hU he => hpU k (by simpa using hk) hU he)
+  have hn : lS.length + Gr.fns.length + (args.toList.map (·.subst (Tm.env ρ))).length = Gb.Γ.n := by
+    simp [hGn]
+  rw [hn] at hMb hown hlive
+  obtain ⟨H2, outsMb, hrb, hOb⟩ := hbody Ub Kb hUb _ outsSb hsimb hrunS H1 _ _ Out' Shr none hMb (hGok _ _ _ _ _)
+  obtain ⟨hlo, hspo⟩ := hsprO outsMb outsSb hOb.len
+  exact ⟨.ofList lM, H1, as, H2, outsMb, by simp only [Prog.subU]; exact hfM, hbl, by simpa [Tm.toList_ofList] using hrb,
+    callee_out hOa sB hOb hown hlive hlo hspo hru⟩
+
 end Minimal
