@@ -9,3 +9,4 @@ import Minimal.Reader
 import Minimal.Run
 import Minimal.Machine
 import Minimal.Uses
+import Minimal.MachineSound

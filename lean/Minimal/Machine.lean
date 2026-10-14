@@ -110,34 +110,81 @@ inductive MDec (H : Heap) : Tm → Tm → Prop
   | ptr : H.blk a = some (d, c, ws) → MDecs H ws vs → MDec H (.ptr a) (.app (.vc d c .nil) (.ofList vs))
   | clo : envM.length = envS.length → (∀ i, P.rd gid i = true → MDec H (Tm.env envM i) (Tm.env envS i)) →
       MDec H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j)
-  | tok : MDec H w .tok
+  | tok : (w = .tok ∨ ∃ a, w = .ptr a) → MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
   | vc : MDec H (.vc d c .nil) (.vc d c .nil)
+  | nil : MDec H .nil .nil
 
 inductive MDecs (H : Heap) : List Tm → List Tm → Prop
   | nil : MDecs H [] []
   | cons : MDec H w v → MDecs H ws vs → MDecs H (w :: ws) (v :: vs)
 end
 
-inductive Reach (H : Heap) : Tm → Nat → Prop
-  | here : Reach H (.ptr a) a
-  | field : H.blk a = some (d, c, ws) → w ∈ ws → Reach H w b → Reach H (.ptr a) b
-  | clo : P.rd gid i = true → Reach H (Tm.env envM i) b → Reach H (.clo (.ofList envM) gid j) b
+inductive Foot (H : Heap) : Tm → Tm → Nat → Prop
+  | here : Foot H (.ptr a) v a
+  | field {k : Nat} {vs : List Tm} : H.blk a = some (d, c, ws) → ws[k]? = some w → vs[k]? = some v → Foot H w v b →
+      Foot H (.ptr a) (.app (.vc d c .nil) (.ofList vs)) b
+  | clo : P.rd gid i = true → Foot H (Tm.env envM i) (Tm.env envS i) b →
+      Foot H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j) b
+
+def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
+
+def Heap.Ext (H H' : Heap) : Prop := H.next ≤ H'.next ∧ ∀ a b, H.blk a = some b → H'.blk a = some b
 
 def Agree (H H' : Heap) (S : Nat → Prop) : Prop := ∀ a, S a → H'.blk a = H.blk a
 
 variable {P}
 
-theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (Reach P H w) → MDec P H' w v
+theorem Heap.Ext.refl (H : Heap) : H.Ext H := ⟨Nat.le_refl _, fun _ _ h => h⟩
+
+theorem Heap.Ext.trans {H1 H2 H3 : Heap} (a : H1.Ext H2) (b : H2.Ext H3) : H1.Ext H3 :=
+  ⟨Nat.le_trans a.1 b.1, fun x y h => b.2 x y (a.2 x y h)⟩
+
+theorem Heap.alloc_ext {H : Heap} (hW : H.WF) (b : Blk) : H.Ext (H.alloc b).1 ∧ (H.alloc b).1.WF := by
+  refine ⟨⟨by simp [Heap.alloc], fun a b' h => ?_⟩, fun a ha => ?_⟩
+  · simp only [Heap.alloc]
+    have : a ≠ H.next := fun e => by rw [e, hW _ (Nat.le_refl _)] at h; cases h
+    simp [this, h]
+  · simp only [Heap.alloc] at ha ⊢
+    rw [ite_eq_right_iff.mpr (by omega)]; exact hW a (by omega)
+
+theorem Heap.alloc_new (H : Heap) (b : Blk) : (H.alloc b).1.blk (H.alloc b).2 = some b := by simp [Heap.alloc]
+
+mutual
+theorem MDec.mono {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v → MDec P H' w v
+  | _, _, .ptr hb hs => .ptr (he.2 _ _ hb) (MDecs.mono he hs)
+  | _, _, .clo hl hs => .clo hl fun i hi => (hs i hi).mono he
+  | _, _, .tok h => .tok h
+  | _, _, .nat => .nat
+  | _, _, .vc => .vc
+  | _, _, .nil => .nil
+
+theorem MDecs.mono {H H' : Heap} (he : H.Ext H') : ∀ {ws vs : List Tm}, MDecs P H ws vs → MDecs P H' ws vs
+  | _, _, .nil => .nil
+  | _, _, .cons h hs => .cons (h.mono he) (MDecs.mono he hs)
+end
+
+theorem MDecs.get {H : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs → ∀ (k : Nat) w v, ws[k]? = some w → vs[k]? = some v →
+    MDec P H w v
+  | _, _, .cons h _, 0, _, _, h1, h2 => by simp at h1 h2; subst h1 h2; exact h
+  | _, _, .cons _ hs, k + 1, _, _, h1, h2 => hs.get k _ _ (by simpa using h1) (by simpa using h2)
+  | _, _, .nil, _, _, _, h1, _ => by simp at h1
+
+mutual
+theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (Foot P H w v) → MDec P H' w v
   | _, _, .ptr hb hs, hA => .ptr (by rw [hA _ .here]; exact hb)
-      (MDecs.frame hs fun w hw a ha => hA a (.field hb hw ha))
+      (MDecs.frame hs fun k w v hw hv a ha => hA a (.field hb hw hv ha))
   | _, _, .clo hl hs, hA => .clo hl fun i hi => (hs i hi).frame fun a ha => hA a (.clo hi ha)
-  | _, _, .tok, _ => .tok
+  | _, _, .tok h, _ => .tok h
   | _, _, .nat, _ => .nat
   | _, _, .vc, _ => .vc
-where
-  MDecs.frame : ∀ {ws vs : List Tm}, MDecs P H ws vs → (∀ w ∈ ws, Agree H H' (Reach P H w)) → MDecs P H' ws vs
-    | _, _, .nil, _ => .nil
-    | _, _, .cons h hs, hA => .cons (h.frame (hA _ (by simp))) (MDecs.frame hs fun w hw => hA w (by simp [hw]))
+  | _, _, .nil, _ => .nil
+
+theorem MDecs.frame {H H' : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs →
+    (∀ (k : Nat) w v, ws[k]? = some w → vs[k]? = some v → Agree H H' (Foot P H w v)) → MDecs P H' ws vs
+  | _, _, .nil, _ => .nil
+  | _, _, .cons h hs, hA => .cons (h.frame (hA 0 _ _ (by simp) (by simp)))
+      (MDecs.frame hs fun k w v hw hv => hA (k + 1) w v (by simpa using hw) (by simpa using hv))
+end
 
 end Minimal
