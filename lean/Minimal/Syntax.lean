@@ -281,6 +281,8 @@ inductive Mark where
   | alloc
   | write (uniq : Bool)
   | skip
+  | uq (ms : List Bool)
+  | uqScr
   deriving Repr, Inhabited, DecidableEq
 
 inductive Chk where

@@ -809,6 +809,9 @@ partial def ESt.slotSrc (st : ESt) : Tm → Option Nat
     st.slotSrc (← args.toList[k]?)
   | _ => none
 
+def uqMark (ms : List Mode) : List (Core → Core) :=
+  if ms.contains .uniq then [.chk (.mark (.uq (ms.map (· == .uniq)))) .nil .nil] else []
+
 def fillHid (er : Bool) : List Mode → List Tm → M (List (Core → Core) × List Tm)
   | .hid :: _ :: ms, .hole :: ts => do let (s, r) ← fillHid er ms ts; return (s, .hole :: .hole :: r)
   | .hid :: m :: ms, t :: ts => do
@@ -818,7 +821,7 @@ def fillHid (er : Bool) : List Mode → List Tm → M (List (Core → Core) × L
       | none => do
         let [j] ← freshMd [m] | throw "fresh"
         note j t true
-        pure ([Core.prim (.tm t) m.isEr], j, .fv j)
+        pure (uqMark [m] ++ [Core.prim (.tm t) m.isEr], j, .fv j)
     let (s2, σ) ← slotM i
     let (s3, r) ← fillHid er ms ts
     return (s1 ++ s2 ++ s3, σ :: t :: r)
@@ -1115,7 +1118,7 @@ def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (N
     let T := Tm.app (.tyc cd .nil) (.ofList (ms.map (·.2)))
     note j T
     if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
-    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c, Core.prim (.axm T) md.isEr])
+    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c] ++ uqMark [md] ++ [Core.prim (.axm T) md.isEr])
   | _ => throw "malformed pattern"
 
 def ESt.cellSig (st : ESt) : Tm → Tm
@@ -1445,7 +1448,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       supply want [bm]
       let [i] ← freshMd [bm] | throw "fresh"
       if let .fv j := ta[0]! then modify fun st => { st with renames := (i, j) :: st.renames }
-      return (ss1 ++ ss2 ++ [.prim (.coerce ta[0]! .hole tp[0]!) er], [.fv i])
+      return (ss1 ++ ss2 ++ uqMark [bm] ++ [.prim (.coerce ta[0]! .hole tp[0]!) er], [.fv i])
     else if h == "match" then elabMatch sc want exp args
     else if h == "cell-alloc" && (sc.lookup h).isNone then
       let [x] := args | throw "malformed `cell-alloc`"
@@ -1469,7 +1472,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let T := Tm.app (.tyc cd .nil) (.ofList sl)
       note j T
       unless er do modify fun st => { st with atBad := true }
-      return (ss ++ [.chk (.mark .alloc) .nil .nil, .prim (.axm T) er], [.fv j])
+      return (ss ++ [.chk (.mark .alloc) .nil .nil] ++ uqMark [if er then .er else .uniq] ++ [.prim (.axm T) er], [.fv j])
     else if h == "cell-write" && (sc.lookup h).isNone then
       let [.atom m, u, .list (.atom c :: is)] := args | throw "malformed `cell-write`"
       let md ← cellMode m
@@ -1487,7 +1490,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       note j T
       if let (.uniq, [.fv i]) := (md, ut) then modify fun st => { st with links := (j, i) :: st.links }
       modify fun st => { st with atBad := true }
-      return (ss ++ ss2 ++ [.chk (.mark (.write (md == .uniq))) (ut.headD .nil) .nil, .prim (.axm T) false], [.fv j])
+      return (ss ++ ss2 ++ [.chk (.mark (.write (md == .uniq))) (ut.headD .nil) .nil] ++ uqMark [.uniq] ++ [.prim (.axm T) false], [.fv j])
     else if h == "cell-match" && (sc.lookup h).isNone then
       let .atom m :: u :: ann :: pat :: body := args | throw "malformed `cell-match`"
       let md ← cellMode m
@@ -1514,7 +1517,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         let [j] ← freshMd [.uniq] | throw "fresh"
         note j ut true
         modify fun st => { st with renames := (j, ui) :: st.renames }
-        pre := pre ++ [.prim (.tm ut) false]
+        pre := pre ++ uqMark [.uniq] ++ [.prim (.tm ut) false]
         sc' := (names.getLast!, .fv j) :: sc'
       let (atm, ann) := match ann with | .list [.atom "at", a] => (true, a) | a => (false, a)
       let (R0, hm) ← match ann, exp with
@@ -1535,7 +1538,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       aliasHid rms outs
       let _ ← bindTele outs R
       let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
-      return (ss ++ pre ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ [fun k => .seq R b k], outs.map .fv)
+      return (ss ++ pre ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ uqMark rms ++ [fun k => .seq R b k], outs.map .fv)
     else if h == "slot-of" && (sc.lookup h).isNone then
       let [.atom x] := args | throw "`slot-of` takes a variable"
       let i ← match sc.lookup x with
@@ -1764,7 +1767,7 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
   let ty : List Stmt := match exp with
     | some (.bind (.ty ..) A .nil) => [fun c => .chk .ty (.fv j) A c]
     | _ => []
-  return (ss ++ chk ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil, .prim (.tm t) er] ++ ty, [.fv j])
+  return (ss ++ chk ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil] ++ uqMark [pm] ++ [.prim (.tm t) er] ++ ty, [.fv j])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
@@ -1801,7 +1804,7 @@ partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R 
           let [j] ← freshMd [md] | throw "fresh"
           note j t true
           if let .fv i := t then modify fun st => { st with renames := (j, i) :: st.renames }
-          pure ((x, Ref.fv j) :: sc, [(.prim (.tm t) er : Stmt)], body)
+          pure ((x, Ref.fv j) :: sc, uqMark [md] ++ [(.prim (.tm t) er : Stmt)], body)
         | _, _ => pure (sc, [], items)
       els := some ((pre.foldr (· ·)) (← ghostly gEr (elabBody sc' rms items R)))
       uses := joinUses uses (← get).uses
@@ -1861,7 +1864,8 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
   aliasHid rms outs
   let _ ← bindTele outs R
   let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
-  return (ss ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ [if real || nt then .seq R (.case s out els er nt) else .mtch s R out els er], outs.map .fv)
+  return (ss ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ (if md == .uniq then [.chk (.mark .uqScr) .nil .nil] else []) ++
+    uqMark rms ++ [if real || nt then .seq R (.case s out els er nt) else .mtch s R out els er], outs.map .fv)
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
@@ -1998,7 +2002,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           pure i
         | _, _ => do
           let [j] ← freshMd [md] | throw "fresh"
-          ss := ss ++ [.prim (.tm t) er]
+          ss := ss ++ uqMark [md] ++ [.prim (.tm t) er]
           note j t true
           match t, st.slotSrc t with
           | .fv i, _ => modify fun st => { st with renames := (j, i) :: st.renames }
@@ -2036,7 +2040,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     unless er || (← get).ghost do warnMatch (ci.k :: out.map (·.2.2.1))
     if out.any (·.2.1 == ci.pos) then throw "two branches for one constructor"
     if !er && ci.phantom then throw "a let-match on a phantom constructor at many"
-    let cs : Stmt := fun k => .case s ((n, ci.pos, ci.k, pre.foldr (· ·) k) :: out) els er nt
+    let cs : Stmt := fun k => (if md == .uniq then .chk (.mark .uqScr) .nil .nil else id) (.case s ((n, ci.pos, ci.k, pre.foldr (· ·) k) :: out) els er nt)
     recordTop n0 (ss ++ [cs])
     if (← get).top then
       if let .fv j := s then
@@ -2066,13 +2070,13 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     if ci.union then throw "comptime-match on a union"
     if ci.phantom then throw "comptime-match on a phantom constructor"
     warnMatch [ci.k]
-    let cm : Stmt := fun k => Core.chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt)
+    let cm : Stmt := fun k => Core.chk .cm (.fv x) .nil ((if md == .uniq then .chk (.mark .uqScr) .nil .nil else id) (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt))
     recordTop n0 (ss ++ ss1 ++ [cm])
     if let some v := (← get).settledVal x then
       if let .app (.vc _ c _) _ := v then
         if c != ci.pos && !ci.nt then throw s!"comptime-match: expected `{showName pat.show}`, got a value headed by another constructor"
     let (ss2, ts) ← elabSeq fsc want exp rest
-    return (ss ++ ss1 ++ [fun k => .chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt)] ++ ss2, ts)
+    return (ss ++ ss1 ++ [fun k => .chk .cm (.fv x) .nil ((if md == .uniq then .chk (.mark .uqScr) .nil .nil else id) (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt))] ++ ss2, ts)
   | .list [.atom "open-adt", m, e] :: rest =>
     elabSeq sc want exp (.list [.atom "let", .list [.list [m, .atom " open"]], e] :: .list [.atom " opened", m] :: rest)
   | .list [.atom " opened", m] :: rest => do
