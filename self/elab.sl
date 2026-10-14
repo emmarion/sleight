@@ -1425,6 +1425,8 @@
     ((BFalse) (wrappers ss))))
 
 (def-fns _ $ (many wraps-newtype : (many (Env) env) (many (Nat) c) (many (Nat) x) -> (many (Bool) r))
+  (let ((many ty0) (many _)) $ fact-at env x)
+  (let-match many (match many ty0 (((Bool) _)) ((TMatchable _ nt0 _ _ _) nt0) (else (BTrue))) (BTrue) ((BFalse) (BFalse)))
   (let-match many (type-of env x) (TMatchable d nt _ _ cs) (else (BFalse)))
   (match many nt _
     ((BFalse) (BFalse))
