@@ -31,6 +31,17 @@ dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.
 ocamlfind ocamlopt -package zarith,unix -linkpkg heapsort/mimo_perf.ml -o heapsort/mimo_perf && heapsort/mimo_perf
 ```
 
+`agent-runs-e194350.csv` lists the heapsort-fast agent runs made on commit
+e194350, one row per run: the first session whose `work/` passed (it
+compiles in the prescribed order with no warnings and no `;! suppress`, and
+`perf.sl` reaches the expected checksum allocating nothing), and the
+context used and dollars spent at that session's first such `perf.sl` run.
+A Claude session derived it by re-checking each session with slc built at
+that commit and reading the erased OCaml of each first pass to judge that it
+is a heap sort; that judgment and the `notes` column are its reading and may
+be wrong. Dollars are the provider's reported cost for Neuralwatt models and
+`agent/pi.py`'s list-price estimate otherwise.
+
 `ats/` holds an in-place heap sort in ATS2 (ATS/Postiats 0.4.2,
 `apt-get install ats2-lang`) whose type states that the output is a
 permutation of the input and sorted, as checked by `patsopt`:
