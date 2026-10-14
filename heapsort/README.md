@@ -31,6 +31,11 @@ dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.
 ocamlfind ocamlopt -package zarith,unix -linkpkg heapsort/mimo_perf.ml -o heapsort/mimo_perf && heapsort/mimo_perf
 ```
 
+`opus/` holds another, written by the claude-opus-5-5 agent in the first
+session of run `20261012-1220-claude-opus-5-5-heapsort-fast`; of the runs in
+`agent-runs-e194350.csv`, it is the smallest solution by non-whitespace
+characters outside comments. It runs as `mimo/` does, with `opus` for `mimo`.
+
 `agent-runs-e194350.csv` lists the heapsort-fast agent runs made on commit
 e194350, one row per run: the first session whose `work/` passed (it
 compiles in the prescribed order with no warnings and no `;! suppress`, and

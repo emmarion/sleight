@@ -1,0 +1,6 @@
+heapsort/opus/hs-base.sl
+heapsort/opus/hs-heap.sl
+heapsort/opus/hs-sift.sl
+heapsort/opus/hs-phase.sl
+heapsort/opus/hs-bounds.sl
+heapsort/opus/hs-hole.sl
