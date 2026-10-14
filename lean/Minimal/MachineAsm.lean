@@ -3,12 +3,13 @@ import Minimal.MachineRun
 namespace Minimal
 
 def Cert (P : Prog) (env : List Tm) (gid : Nat) : Prop :=
-  ∃ (Gd : UCtx) (Gr : Group) (O : Uses) (K : Caps), P.groups[gid]? = some Gr ∧ EnvOK P env Gd.Γ ∧
-    GroupOK P gid Gd.Γ Gr ∧ (∃ r, checkGroup P gid Gd.Γ Gr = .ok r) ∧ Gd.fill = false ∧ Gd.Γ.ghost = false ∧ (∀ j, Gd.uq.contains j = true → j < Gd.Γ.n) ∧
-    usesFns P gid Gd Gr Gr.fns = some (O, K) ∧ Gd.defOK Gr O = true
+  ∃ (Gd : UCtx) (Gr : Group), P.groups[gid]? = some Gr ∧ EnvOK P env Gd.Γ ∧ GroupOK P gid Gd.Γ Gr ∧
+    (∃ r, checkGroup P gid Gd.Γ Gr = .ok r) ∧ Gd.fill = false ∧
+    (Gr.ghost = false → Gd.Γ.ghost = false ∧ (∀ j, Gd.uq.contains j = true → j < Gd.Γ.n) ∧
+      ∃ O K, usesFns P gid Gd Gr Gr.fns = some (O, K) ∧ Gd.defOK Gr O = true)
 
 def CloOK (P : Prog) : Tm → Prop
-  | .clo env gid _ => (∀ Gr, P.groups[gid]? = some Gr → Gr.ghost = false → Cert P env.toList gid) ∧ CloOK P env
+  | .clo env gid _ => Cert P env.toList gid ∧ CloOK P env
   | .cons a b | .app a b | .bind _ a b => CloOK P a ∧ CloOK P b
   | .tyc _ a | .vc _ _ a | .tyCtor a | .valCtor a => CloOK P a
   | .predates a b c => CloOK P a ∧ CloOK P b ∧ CloOK P c
@@ -291,11 +292,11 @@ theorem CloOK.defFns {G : UCtx} {ρ : List Tm} {gid : Nat} {Gr : Group}
   intro v hv
   simp only [closures, List.mem_map] at hv
   obtain ⟨k, -, rfl⟩ := hv
-  refine ⟨fun Gr' hGr' hgr => ?_, CloOK.ofList hC⟩
-  rw [hGr] at hGr'; cases hGr'
+  refine ⟨?_, CloOK.ofList hC⟩
+  rw [Tm.toList_ofList]
+  refine ⟨G, Gr, hGr, hE, hok, hcg, hf, fun hgr => ?_⟩
   have hg : G.Γ.ghost = false := by cases hok with | mk _ _ _ _ _ _ hgg _ => rw [hgg]; exact hgr
-  obtain ⟨huq, O, K, hus, hd⟩ := hus hg
-  rw [Tm.toList_ofList]; exact ⟨G, Gr, O, K, hGr, hE, hok, hcg, hf, hg, huq, hus, hd⟩
+  exact ⟨hg, hus hg⟩
 
 theorem Tm.noClo_toList : ∀ {t : Tm}, t.noClo = true → ∀ x ∈ t.toList, x.noClo = true
   | .cons a b, h, x, hx => by
