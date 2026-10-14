@@ -143,4 +143,86 @@ theorem usesFns_spec {gid : Nat} {G : UCtx} {Gr : Group} : ∀ (Fs : List FnDef)
         · simp only [UR.below] at ha
           have := (hfree i).1 ha; rw [this] at hRi; cases hRi
 
+theorem Uses.sub_spec {A B : Uses} (h : Uses.sub A B = true) {i : Nat} {u : Bool} (hA : A.lookup i = some u) :
+    ∃ v, B.lookup i = some v ∧ (u = true → v = true) := by
+  have := List.all_eq_true.mp h _ (lookup_mem hA)
+  simp only at this
+  cases hB : B.lookup i with
+  | none => simp [hB] at this
+  | some v => refine ⟨v, rfl, fun hu => ?_⟩; subst hu; simpa [hB] using this
+
+theorem cert_body {gid j : Nat} {Gd : UCtx} {Gr : Group} {F : FnDef} {O : Uses} {K : Caps}
+    (hGr : P.groups[gid]? = some Gr) (hF : Gr.fns[j]? = some F) (hdn : F.dele = none)
+    (hfill : Gd.fill = false) (huq : ∀ j, Gd.uq.contains j = true → j < Gd.Γ.n)
+    (hbn : (Gd.Γ.body Gr F).1.n = Gd.Γ.n + Gr.fns.length + F.np)
+    (hus : usesFns P gid Gd Gr Gr.fns = some (O, K)) (hok : Gd.defOK Gr O = true) :
+    ∃ Ub Kb, usesCore P gid (Gd.fnCtx Gr F) ((teleUs F.tele).drop F.np) (Gd.Γ.body Gr F).2 F.body = some (Ub, Kb) ∧
+      (∀ i < Gd.Γ.n, (Ub.lookup i).isSome → P.rd gid j i = true) ∧
+      (∀ i < Gd.Γ.n, Ub.lookup i = some true → P.rdU gid j i = true) ∧
+      (∀ k < Gr.fns.length, (Ub.lookup (Gd.Γ.n + k)).isSome →
+        (Gr.fns[k]?.map (·.u)) = some false ∧ Ub.lookup (Gd.Γ.n + k) ≠ some true) ∧
+      (∀ k < F.np, Ub.lookup (Gd.Γ.n + Gr.fns.length + k) = some true → (teleUs F.tele).getD k false = true) := by
+  obtain ⟨Ub, Kb, hUb, hsub, hmany, hsib, htrue⟩ := usesFns_spec Gr.fns O K hus j F hF
+  simp only [UCtx.defOK, Bool.and_eq_true] at hok
+  obtain ⟨⟨⟨⟨hOC, hCO⟩, -⟩, -⟩, -⟩ := hok
+  have huqOK := usesCore_uq gid (Gd.fnCtx Gr F) _ _ F.body (by simp [UCtx.fnCtx, hfill]) Ub Kb hUb
+  have hbl : ∀ i, i < Gd.Γ.n → (Ub.below Gd.Γ.n).lookup i = Ub.lookup i := fun i hi => Uses.below_lookup hi
+  have hFu : (∃ i, (Ub.below Gd.Γ.n).lookup i = some true) → F.u = true := fun ⟨i, hi⟩ => by
+    cases hu : F.u
+    · exact absurd hi (hmany hu i)
+    · rfl
+  have hfnU : F.u = true → P.fnU gid j = true := fun hu => by simp [Prog.fnU, hGr, hF, hu, hdn]
+  have huqc : ∀ i, (i, true) ∈ Ub → (Gd.uq.contains i = true ∨
+      ∃ k, k < F.np ∧ (teleUs F.tele).getD k false = true ∧ i = Gd.Γ.n + Gr.fns.length + k) ∨
+      Gd.Γ.n + Gr.fns.length + F.np ≤ i := fun i hi => by
+    rcases huqOK i hi with h | h
+    · simp only [UCtx.fnCtx, List.contains_append, Bool.or_eq_true] at h
+      rcases h with h | h
+      · exact .inl (.inl h)
+      · simp only [List.contains_iff_mem, List.mem_filterMap, Prod.exists] at h
+        obtain ⟨u, k, hm, he⟩ := h
+        split at he
+        · rename_i hu
+          simp only [Option.some.injEq] at he; subst he
+          have hk := (List.mem_zipIdx' hm)
+          have hlt : k < F.np := by simp at hk; omega
+          refine .inl (.inr ⟨k, hlt, ?_, rfl⟩)
+          have := List.getElem?_eq_some_iff.mpr ⟨hk.1, hk.2.symm⟩
+          simp only [List.getElem?_take, hlt, ite_true] at this
+          simp [List.getD_eq_getElem?_getD, this, hu]
+        · cases he
+    · simp only [UCtx.fnCtx, hbn] at h; exact .inr h
+  refine ⟨Ub, Kb, hUb, fun i hi h => ?_, fun i hi h => ?_, fun k hk h => ?_, fun k hk h => ?_⟩
+  · obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp h
+    obtain ⟨uO, hO⟩ := Option.isSome_iff_exists.mp (hsub.1 i (by rw [hbl i hi, hu]; rfl))
+    obtain ⟨v, hv, -⟩ := Uses.sub_spec hOC hO
+    simp only [Prog.rd, hGr, Option.map_some, Option.getD_some, hv, Option.any_some, Bool.or_eq_true,
+      Bool.not_eq_eq_eq_not, Bool.not_true]
+    cases v
+    · exact .inl rfl
+    · obtain ⟨v', hv', hvv⟩ := Uses.sub_spec hCO hv
+      rw [hO] at hv'; cases hv'
+      have := htrue i (by rw [hO, hvv rfl]) (by rw [hbl i hi, hu]; rfl)
+      exact .inr (hfnU (hFu ⟨i, this⟩))
+  · have hb : (Ub.below Gd.Γ.n).lookup i = some true := by rw [hbl i hi, h]
+    obtain ⟨v, hv, hvv⟩ := Uses.sub_spec hOC (hsub.2 i hb)
+    simp [Prog.rdU, hGr, hfnU (hFu ⟨i, hb⟩), hv, hvv rfl]
+  · constructor
+    · cases hFk : Gr.fns[k]? with
+      | none => simp at hFk; omega
+      | some F' =>
+        cases hu : F'.u
+        · simp [hu]
+        · rw [hsib k F' hFk hu] at h; cases h
+    · intro ht
+      rcases huqc _ (lookup_mem ht) with (h1 | ⟨k', hk', -, he⟩) | h1
+      · have := huq _ h1; omega
+      · omega
+      · omega
+  · rcases huqc _ (lookup_mem h) with (h1 | ⟨k', hk', hu, he⟩) | h1
+    · have := huq _ h1; omega
+    · have : k' = k := by omega
+      subst this; exact hu
+    · omega
+
 end Minimal
