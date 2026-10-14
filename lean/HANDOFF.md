@@ -190,6 +190,16 @@ for which `GroupOK` holds. `defFns` establishes it, substitution and
 the steps preserve it, and at a call it gives the body's uses and the
 facts `call_body` takes.
 
+On this session's reading the assembly cannot take an arbitrary
+`CoreTy` derivation as its hypothesis: typing is relational (a
+primitive's type, a callee's or a scrutinee's type are not unique), so
+the context `CoreTy` gives the rest of a core need not be the one the
+pass used (the pass computes those types with the checker's own
+functions: `checkPrim`, `checkTm`, `checkArgs`, `shapeOf`). The plan
+is to take the checker's success on the core (`checkCore … = .ok …`)
+as the hypothesis instead, whose derivation makes the same choices as
+the pass, and to unfold it case by case as the pass's result is.
+
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's
 value, none mismatched, 474 refusals agreed): `use` refuses an index
