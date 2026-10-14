@@ -132,6 +132,13 @@ def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []
 
+def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
+  Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
+  (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
+  Gr.fns.all (fun F => F.dele.all fun t =>
+    if t < G.Γ.n then (if F.u then (Gr.caps.lookup t).isSome else Gr.caps.lookup t == some false)
+    else (Gr.fns[t - G.Γ.n]?.map (·.u)) == some false)
+
 def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
   | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false
   | _ => false
@@ -202,12 +209,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let (O, K) ← usesFns gid G Gr Gr.fns
       let K := (gid, O) :: K
       if G.fill then UR.seq (O, K) C
-      else if Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
-        (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
-        Gr.fns.all (fun F => F.dele.all fun t =>
-          if t < G.Γ.n then (if F.u then (Gr.caps.lookup t).isSome else Gr.caps.lookup t == some false)
-          else (Gr.fns[t - G.Γ.n]?.map (·.u)) == some false)
-      then UR.seq (Gr.caps, K) C else none
+      else if G.defOK Gr O then UR.seq (Gr.caps, K) C else none
     else none
   | .chk (.mark m) a _ rest => match m, a with
     | .uq ms, _ => usesCore b { G with ents := ms } ru rets rest

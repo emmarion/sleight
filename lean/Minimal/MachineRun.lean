@@ -305,7 +305,7 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
       simp only [hf, Bool.false_eq_true, ite_false] at h
       split at h
       · rename_i hc
-        simp only [Bool.and_eq_true, List.all_eq_true] at hc
+        simp only [UCtx.defOK, Bool.and_eq_true, List.all_eq_true] at hc
         refine UqOK.ur_seq h (fun i hi => ?_) hC'
         obtain ⟨A, hA⟩ := Option.isSome_iff_exists.mp (hc.1.1.2 _ hi)
         exact UqOK.use hA i (by simp only [UCtx.use] at hA; split at hA <;> cases hA; simp)
@@ -3249,7 +3249,7 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
   split at hU
   case isFalse => cases hU
   rename_i _ hc
-  simp only [Bool.and_eq_true, List.all_eq_true] at hc
+  simp only [UCtx.defOK, Bool.and_eq_true, List.all_eq_true] at hc
   obtain ⟨⟨⟨-, hall⟩, hone⟩, hdel⟩ := hc
   have hseq := UR.seq_fst hU
   simp only at hseq
