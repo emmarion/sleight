@@ -119,6 +119,7 @@ inductive MDec (H : Heap) : Tm → Tm → Prop
   | tok : (w = .tok ∨ ∃ a, w = .ptr a ∧ (H.blk a).isSome) → MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
   | vc : MDec H (.vc d c .nil) (.vc d c .nil)
+  | imm : MDec H (.app (.vc d c .nil) .nil) (.app (.vc d c .nil) .nil)
   | nil : MDec H .nil .nil
 
 inductive MDecs (H : Heap) : List Tm → List Tm → Prop
@@ -204,6 +205,7 @@ theorem MDec.mono {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v �
         exact .inr ⟨a, rfl, by rw [he.2.1 _ _ hb]; rfl⟩)
   | _, _, .nat => .nat
   | _, _, .vc => .vc
+  | _, _, .imm => .imm
   | _, _, .nil => .nil
 
 theorem MDecs.mono {H H' : Heap} (he : H.Ext H') : ∀ {ws vs : List Tm}, MDecs P H ws vs → MDecs P H' ws vs
@@ -229,6 +231,7 @@ theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (
       · exact .inr ⟨a, rfl, by rw [hA a .here]; exact hb⟩)
   | _, _, .nat, _ => .nat
   | _, _, .vc, _ => .vc
+  | _, _, .imm, _ => .imm
   | _, _, .nil, _ => .nil
 
 theorem MDecs.frame {H H' : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs →
