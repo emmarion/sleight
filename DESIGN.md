@@ -1,6 +1,6 @@
-# The language
+# Sleight
 
-This file is the specification of the language. OPEN.md lists the open
+This file is the specification of Sleight, the language. OPEN.md lists the open
 questions. README.md describes the implementations and their command
 lines. EXAMPLES.md indexes the tests. The code and the other files cite
 sections of this file by number.
