@@ -23,6 +23,7 @@ structure ProgOK (P : Prog) : Prop where
   newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → (sig.skip (P.lifted d)).ntField.isSome
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
   opq : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.opq = true → D.ctors = [] ∧ D.coercible = false
+  uer : ∀ (d c : Nat) sig, P.ctor d c = some sig → ∀ j, sig.uAt j = true → sig.ers.getD j true = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
   ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
@@ -392,12 +393,12 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨_, h1⟩ ← checkTm P Γ (.app C srcs)
       let ⟨_, h2⟩ ← checkTm P Γ (.app C tgts)
       let ⟨hl⟩ ← need (srcs.len = tgts.len) "coercible-ctor: the sources and targets differ in number"
-      let ⟨hf⟩ ← allIdx (Q := fun j (e : Bool) => j < srcs.len → (e = false ∨ sig.uAt j = true) → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧
+      let ⟨hf⟩ ← allIdx (Q := fun j (e : Bool) => j < srcs.len → e = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧
           TmTy P Γ p Pt ∧ Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
           Γ.canon y = Γ.canon (tgts.toList.getD j .nil) ∧
           (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s
             else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm))
-        (fun j e => if he : j < srcs.len ∧ (e = false ∨ sig.uAt j = true) then
+        (fun j e => if he : j < srcs.len ∧ e = false then
           match hp : ps.toList[j]? with
           | some p => do
             let ⟨Pt, hpt⟩ ← checkTm P Γ p
@@ -409,18 +410,15 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
                   else Γ.canon sa = sharedTm ∧ Γ.canon sb = sharedTm)
                 "coercible-ctor: the proof for a field has its sides: `(Shared)` for a many field, the form's own for a unique one"
               .ok ⟨fun _ _ => ⟨p, Pt, sa, A, x, sb, B, y, rfl, hpt, e, hx, hy, hsd⟩⟩
-            | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased or unique field"
-          | none => .error "coercible-ctor: a non-erased or unique field has no proof"
+            | none => .error "coercible-ctor: expected a `Coercible` proof for a non-erased field"
+          | none => .error "coercible-ctor: a non-erased field has no proof"
         else .ok ⟨fun h1 h2 => absurd ⟨h1, h2⟩ he⟩) sig.ers 0
       .ok ⟨_, .coerCtor hs hK hk ht h1 h2 hl (fun j hjl hj => by
         cases h : sig.ers[j]? with
-        | none =>
-          rcases hj with hj | hj
-          · simp [List.getD_eq_getElem?_getD, h] at hj
-          · exact absurd (Tm.uAt_lt _ _ hj) (by simpa using h)
+        | none => simp [List.getD_eq_getElem?_getD, h] at hj
         | some e =>
-          have : e = false ∨ sig.uAt j = true := by simpa [List.getD_eq_getElem?_getD, h] using hj
-          simpa using hf j e h (by simpa using hjl) (by simpa using this)) hD hc⟩
+          have : e = false := by simpa [List.getD_eq_getElem?_getD, h] using hj
+          simpa using hf j e h (by simpa using hjl) this) hD hc⟩
     | _ => .error "coercible-ctor: not a value constructor"
   | .mtblOf d ls => match h : P.adts[d]? with
     | some D => do
@@ -852,6 +850,9 @@ def checkProg : Res {R // Checked P R} := do
   let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.opq = true →
       D.ctors = [] ∧ D.coercible = false)
     "unreachable: an opaque type has constructors"
+  let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
+      ∀ j < sig.ers.length, sig.uAt j = true → sig.ers.getD j true = false)
+    "unreachable: a constructor field is both erased and unique"
   let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := []} P.main (.inr 0)
   have hs := hs 0 rfl
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
@@ -863,6 +864,10 @@ def checkProg : Res {R // Checked P R} := do
       have := hn d (List.mem_range.mpr hd) c (List.mem_range.mpr (by simpa [hD] using hcl)) h1 h2
       simpa [h3] using this,
     fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
-    fun d D h1 h2 => hop d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2⟩, h, hs⟩
+    fun d D h1 h2 => hop d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
+    fun d c sig h j hu => by
+      obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h
+      exact hue d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j
+        (Tm.uAt_lt _ _ hu) hu⟩, h, hs⟩
 
 end Minimal

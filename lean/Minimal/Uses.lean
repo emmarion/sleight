@@ -117,17 +117,19 @@ def primTy (G : UCtx) (p : Prim) : Option Tm := match p with
     | .ok ⟨T, _⟩ => some T
     | .error _ => none
 
+def sideU (t : Tm) : Option Bool := if t == uniqueTm then some true else if t == sharedTm then some false else none
+
 def coerSides (G : UCtx) (q : Tm) : Option (Bool × Bool) := do
   let ⟨T, _⟩ ← (checkTm P G.Γ q).toOption
   match G.Γ.canon T with
-  | .app (.tyc _ .nil) (.cons sa (.cons _ (.cons _ (.cons sb _)))) => some (sa == uniqueTm, sb == uniqueTm)
+  | .app (.tyc _ .nil) (.cons sa (.cons _ (.cons _ (.cons sb _)))) => some (← sideU sa, ← sideU sb)
   | _ => none
 
 def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .tm t => G.termUses P u t
   | .coerce a _ q => do
     let (su, tu) ← G.coerSides P q
-    if u && !(su && tu) then none else G.termUses P su a
+    if u && !tu then none else G.termUses P su a
   | .axm _ => if u && !G.cellOk then none else some []
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []

@@ -356,7 +356,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       PrimTy Γ (.coerWrap s C args) (Tm.coer dC src F (args.toList.getD k .nil) s T0 (.app C args))
   | coerCtor : TmTy P Γ s S → TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → TmTy P Γ (.app C srcs) Ts →
       TmTy P Γ (.app C tgts) Tt → srcs.len = tgts.len →
-      (∀ j < srcs.len, (sig.ers.getD j true = false ∨ sig.uAt j = true) → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
+      (∀ j < srcs.len, sig.ers.getD j true = false → ∃ p Pt sa A x sb B y, ps.toList[j]? = some p ∧ TmTy P Γ p Pt ∧
         Γ.canon Pt = Tm.coer dC sa A x sb B y ∧ Γ.canon x = Γ.canon (srcs.toList.getD j .nil) ∧
         Γ.canon y = Γ.canon (tgts.toList.getD j .nil) ∧
         (if sig.uAt j then Γ.canon sa = Γ.canon s ∧ Γ.canon sb = Γ.canon s

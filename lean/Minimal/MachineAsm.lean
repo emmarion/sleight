@@ -392,23 +392,29 @@ theorem UCtx.primTy_check {G : UCtx} {p : Prim} {T : Tm} {hp : PrimTy P G.Γ p T
   · cases hp; rfl
   · rw [h]
 
+theorem UCtx.sideU_some {t : Tm} {u : Bool} (h : UCtx.sideU t = some u) :
+    (u = true ∧ t = uniqueTm) ∨ (u = false ∧ t = sharedTm) := by
+  unfold UCtx.sideU at h; split at h <;> (try split at h) <;> simp_all
+
 theorem MOut.twin {U : Uses} {n : Nat} {er : Nat → Bool} {H H' : Heap} {ρM ρS ρ : List Tm} {Res Shr : Nat → Prop}
     {rets w uS v v' : Tm} {su u : Bool} (hO : MOut P U n er H ρM ρS ρ Res Shr rets [su] H' [w] [uS] [v])
-    (h : u = true → su = true ∧ Twin P v v') : MOut P U n er H ρM ρS ρ Res Shr rets [u] H' [w] [uS] [v'] := by
+    (h : u = true → (su = true ∧ Twin P v v') ∨ NoSpine P v') : MOut P U n er H ρM ρS ρ Res Shr rets [u] H' [w] [uS] [v'] := by
   refine ⟨hO.wf, hO.next, hO.blk, hO.keep, hO.len, hO.dec, hO.foot, fun k w0 u0 v0 hw hu hv he hr b hs => ?_,
     fun k w0 u0 v0 hw hu hv he hr => ?_, fun k j w0 u0 v0 w1 u1 hne hw _ _ hw' => ?_⟩
   · cases k with
     | succ => simp at hv
     | zero =>
       simp at hv hr; subst hv
-      obtain ⟨h1, ht⟩ := h hr
-      exact hO.uspine 0 w0 u0 v hw hu rfl he (by simp [h1]) b (((ht H' w0 u0).1 b).mpr hs)
+      rcases h hr with ⟨h1, ht⟩ | hn
+      · exact hO.uspine 0 w0 u0 v hw hu rfl he (by simp [h1]) b (((ht H' w0 u0).1 b).mpr hs)
+      · exact (hn H' w0 u0 b hs).elim
   · cases k with
     | succ => simp at hv
     | zero =>
       simp at hv hr; subst hv
-      obtain ⟨h1, ht⟩ := h hr
-      exact ((ht H' w0 u0).2).mp (hO.uwo 0 w0 u0 v hw hu rfl he (by simp [h1]))
+      rcases h hr with ⟨h1, ht⟩ | hn
+      · exact ((ht H' w0 u0).2).mp (hO.uwo 0 w0 u0 v hw hu rfl he (by simp [h1]))
+      · exact .free (hn H' w0 u0)
   · cases k <;> cases j <;> simp_all
 
 theorem coerce_val (hP : ProgOK P) (hnd : NoDele P) {G : UCtx} {ρ : List Tm} {a b q T : Tm} {hp}
@@ -436,15 +442,19 @@ theorem coerce_val (hP : ProgOK P) (hnd : NoDele P) {G : UCtx} {ρ : List Tm} {a
     simp [Except.toOption, e, Tm.coer, Tm.ofList] at hcs
     obtain ⟨H1, w, hbd, hO⟩ := prim_val_tm hP hE hS (by simpa [Prim.rt] using hrt) hU hM
     refine ⟨H1, w, hbd, hO.twin fun hu' => ?_⟩
-    obtain ⟨rfl, rfl⟩ := hcs
-    simp only [hu', Bool.true_and, Bool.not_eq_true'] at hu
-    simp only [Bool.not_eq_false, Bool.and_eq_true, beq_iff_eq] at hu
+    obtain ⟨xa, hsa, xb, hsb, hx⟩ : ∃ xa, UCtx.sideU sa = some xa ∧ ∃ xb, UCtx.sideU sb = some xb ∧ (xa, xb) = (su, tu) := by
+      simpa [Option.bind_eq_some_iff] using hcs
+    simp only [Prod.mk.injEq] at hx; obtain ⟨rfl, rfl⟩ := hx
+    simp only [hu', Bool.true_and, Bool.not_eq_true', Bool.not_eq_false] at hu; subst hu
     have eqc : ∀ {x y : Tm}, G.Γ.canon x = G.Γ.canon y → x.subst (Tm.env ρ) = y.subst (Tm.env ρ) :=
       fun h => by rw [← hE.canon, h, hE.canon]
     have v := (tm_sound hP hE hpt).1; rw [← hE.canon Pt, e, Tm.coer_subst] at v
-    have hco := ((v.coer_inv hP hD hc).2 hnd).1 (by rw [hu.1]; rfl) (by rw [hu.2]; rfl)
+    have hco := (v.coer_inv hP hD hc).2 hnd
     rw [← eqc ha, ← eqc hb'] at hco
-    exact ⟨by simp [hu.1], hco⟩
+    obtain ⟨-, rfl⟩ : true = true ∧ sb = uniqueTm := by simpa using UCtx.sideU_some hsb
+    rcases UCtx.sideU_some hsa with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · exact .inl ⟨rfl, hco.1 rfl rfl⟩
+    · exact .inr (hco.2.2 rfl (by simp [sharedTm, uniqueTm, Tm.subst]))
   · cases hpe
 
 theorem checkCore_opn {b : Nat} {Γ : Ctx} {oe : Bool} {m : Nat} {x : Tm} {rest : Core} {rs : Tm ⊕ Nat} {rets : Tm} {h}

@@ -1291,6 +1291,13 @@ theorem VTys.skip : ∀ {vs tele out : Tm}, VTys P vs tele out → tele.isTele �
     obtain ⟨h3, h4, h6⟩ := Tm.skip_inst _ r 0 _ h
     simp only [Tm.len, Tm.skip]; exact ⟨h3 ▸ h1, h4 ▸ h2, fun j => (h6 j).symm.trans (h5 j)⟩
 
+theorem Tm.uer_skip : ∀ (t : Tm) (n : Nat), (∀ i, t.uAt i = true → t.ers.getD i true = false) →
+    ∀ j, (t.skip n).uAt j = true → (t.skip n).ers.getD j true = false := by
+  intro t; induction t <;> intro n h j hu <;> cases n <;> try exact h j hu
+  all_goals first
+    | (rename_i ih _; exact ih _ (fun i hi => by simpa [Tm.ers] using h (i + 1) (by simpa [Tm.uAt] using hi)) j hu)
+    | exact h j hu
+
 theorem uAt_skip (hP : ProgOK P) {d c : Nat} {ls sig0 sig : Tm} {f : Nat → Tm} (hct : P.ctor d c = some sig0)
     (hlf : ls.len = P.lifted d) (hvs0 : VTys P ls sig0 (sig.subst f)) (hst : sig.isTele) :
     ∀ j, (sig0.skip (P.lifted d)).uAt j = sig.uAt j := fun j => by
@@ -1543,7 +1550,7 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
       intro j hjl hj x
       rw [hers] at hj
       rw [Tm.toList_subst _ _ l1, List.length_map, Tm.len_toList _ l1] at hjl
-      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, -⟩ := hf j hjl (.inl hj)
+      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, -⟩ := hf j hjl hj
       have v := sem hpt; rw [ept, Tm.coer_subst] at v
       rw [Tm.toList_getD_subst _ l1, Tm.toList_getD_subst _ l2, ← eqc hx, ← eqc hy]
       exact (v.coer_inv hP hD hc).1 x
@@ -1556,11 +1563,12 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
         Real.ctor_congr hct (Tm.isList_subst _ _ l1) hlen.symm fun j hjl hj x => (hiff j (hlen ▸ hjl) hj x).mpr⟩
     · simp only [Tm.subst]; rw [eC]
       refine Twin.ctor hct hlen fun j v1 v2 hu e1 e2 => ?_
-      rw [huAt] at hu
+      have hj := Tm.uer_skip _ _ (hP.uer _ _ _ hct) j hu
+      rw [hers] at hj; rw [huAt] at hu
       have hjl : j < srcs.len := by
         have := (List.getElem?_eq_some_iff.mp e1).1
         rwa [Tm.toList_subst _ _ l1, List.length_map, Tm.len_toList _ l1] at this
-      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, hsd⟩ := hf j hjl (.inr hu)
+      obtain ⟨p, Pt, sa, A, x', sb, B, y', -, hpt, ept, hx, hy, hsd⟩ := hf j hjl hj
       rw [if_pos hu] at hsd
       have v := sem hpt; rw [ept, Tm.coer_subst] at v
       have := (v.coer_inv hP hD hc).2 hn
