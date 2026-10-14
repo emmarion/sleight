@@ -14,11 +14,12 @@ with it under `--shared`. At the last run 327 tests were accepted with
 OCaml's value, none mismatched, 474 refusals agreed, and 85 + 97 were
 refused as unsupported; 19 tests OCaml accepts are refused, 7 of them
 for a `_` the inference does not solve. No test the OCaml suite
-refuses is accepted. Three tests it accepts time out at ten seconds:
+refuses is accepted. `compare.sh` allows twenty seconds a test; that
+run allowed ten, and three tests it accepts timed out:
 `comptime_tail.sl`, which finishes in about a minute, `extern_tail.sl`,
 which ran out of memory on one session's machine, and
-`mini_preserve.sl`; `mini_unify.sl` takes about nine and a half
-seconds on one session's machine and so passes or times out by load. One refusal reads as an internal error rather than
+`mini_preserve.sl`; `mini_unify.sl` took about nine and a half
+seconds on one session's machine. One refusal reads as an internal error rather than
 a verdict, `palindrome_manacher.sl`'s "unbound entry 1099511627776";
 no session has looked into it.
 
