@@ -134,14 +134,14 @@ def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do
   | .app H idx => do let ⟨shp, _⟩ ← (shapeOf P G.Γ er H).toOption; some (H, idx, shp)
   | _ => none
 
-def branchCtx (G : UCtx) (s k H idx sig : Tm) (fe ph uscr : Bool) : Option UCtx :=
+def branchCtx (G : UCtx) (s k H idx sig : Tm) (fe ph uscr cell : Bool) : Option UCtx :=
   let Γg := { G.Γ with ghost := G.Γ.ghost || ph }
   match Γg.branch P s k H idx sig with
   | (Γf, .ok σ) =>
     let Γs := Γg.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)
     let Γb := { (if G.fill then Γs else Γg.advBr P Γs s k fe (sig.len - 1)) with cmode := false }
     let us := uscr && !fe
-    some { G.next Γb (if us then (teleUs sig).dropLast else []) with uscr := if us then some s else none }
+    some { G.next Γb (if us then (teleUs sig).dropLast else []) with uscr := if us && cell then some s else none }
   | _ => none
 
 end UCtx
@@ -167,14 +167,14 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
     if er || G.Γ.ghost then some C else do
       let (H, idx, shp) ← G.arms P s er
       let S ← G.termUses P G.scr s
-      let B ← usesArms b G G.ents R s H idx shp false brs
+      let B ← usesArms b G G.ents R s H idx shp false true brs
       let E ← usesEls b G G.ents R s els
       UR.seq (← UR.seq (S, []) (UR.join B E)) C
-  | .case s brs els er _ =>
+  | .case s brs els er nt =>
     if G.Γ.ghost then some ([], []) else do
       let (H, idx, shp) ← G.arms P s er
       let S ← if er then some [] else G.termUses P G.scr s
-      let B ← usesArms b G ru rets s H idx shp er brs
+      let B ← usesArms b G ru rets s H idx shp er (!nt) brs
       let E ← usesEls b G ru rets s els
       UR.seq (S, []) (UR.join B E)
   | .seq R body rest => do
@@ -224,15 +224,15 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
   | .absurd _ | .dead => some ([], [])
 termination_by c => (b, sizeOf c)
 
-def usesArms (b : Nat) (G : UCtx) (ru : List Bool) (R s H idx : Tm) (shp : List Arm) (fe : Bool) : List Br → UR
+def usesArms (b : Nat) (G : UCtx) (ru : List Bool) (R s H idx : Tm) (shp : List Arm) (fe cell : Bool) : List Br → UR
   | [] => some ([], [])
   | (_, c, _, body) :: brs => do
     let U ← match shp[c]? with
       | some (k, sig, ph) => do
-        let some Gb := G.branchCtx P s k H idx sig fe (!fe && ph) G.scr | some ([], [])
+        let some Gb := G.branchCtx P s k H idx sig fe (!fe && ph) G.scr cell | some ([], [])
         some (UR.below (← usesCore b Gb ru R body) G.Γ.n)
       | none => none
-    some (UR.join U (← usesArms b G ru R s H idx shp fe brs))
+    some (UR.join U (← usesArms b G ru R s H idx shp fe cell brs))
 termination_by l => (b, sizeOf l)
 
 def usesEls (b : Nat) (G : UCtx) (ru : List Bool) (R s : Tm) : Option Core → UR
