@@ -2057,10 +2057,14 @@ theorem compat_get : ∀ (ms : List Bool) (t : Tm) (k : Nat), compat ms t = true
   | _ :: _, .subterm .., _, _, hk, _ | _ :: _, .fn .., _, _, hk, _ | _ :: _, .lvl _, _, _, hk, _
   | _ :: _, .tok, _, _, hk, _ | _ :: _, .clo .., _, _, hk, _ => by simp [Tm.ers] at hk
 
-theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
+theorem call_setup_ctx (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {f Ft l t args outsT : Tm} {np : Nat} {dec : Dec}
     (hf : TmTy P Γ f Ft) {uf : Bool} {hmk : List Bool} (hF : Γ.canon Ft = .fn l np t uf hmk) (ht : t.isTele) (ha : ArgsTy P Γ args t outsT)
-    (hn : args.len = np) (hd : DecOK P Γ dec l t args) :
+    (hn : args.len = np) (hd : DecOK P Γ dec l t args) {env : List Tm} {Γc : Ctx} {gid j : Nat} {G : Group}
+    {F : FnDef} (hfv : f.subst (Tm.env ρ) = .clo (.ofList env) gid j) (hEc : EnvOK P env Γc) (hG : P.groups[gid]? = some G)
+    (hok : GroupOK P gid Γc G) (hFj : G.fns[j]? = some F)
+    (hty : (F.type G).subst (Tm.env env) = .fn (l.subst (Tm.env ρ)) np (t.subst (Tm.env ρ)) uf hmk)
+    (hfs : f.static Γ.n 0 = true) (hFs' : l.static Γ.n 0 = true ∧ t.static Γ.n 0 = true) :
     ∃ env n1 gid G F, callee P (f.subst (Tm.env ρ)) = some (env, n1, gid, G, F) ∧
       muLt P.k (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) μ ∧
       (∃ Γb rb, CoreTy P gid Γb F.body rb ∧
@@ -2076,11 +2080,6 @@ theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
         (∀ k < np, Γb.er (env.length + G.fns.length + k) = t.ers.getD k true) ∧ rb.isTele) ∧
       outsT.isTele ∧ outsT.static Γ.n 0 ∧ F.tele.ers = t.ers ∧ F.np = np ∧ G.deleOK P env.length = true := by
   have hw := hE.wf
-  obtain ⟨hv, hfs, hFs⟩ := tm_sound hP hE hf
-  have hFs' := canon_static hw hFs
-  rw [hF] at hFs'; simp only [Tm.static, Bool.and_eq_true] at hFs'
-  rw [← hE.canon Ft, hF] at hv; simp only [Tm.subst] at hv
-  obtain ⟨env, Γc, gid, G, j, F, hfv, hEc, hG, hok, hFj, hty⟩ := hv.fn_inv
   simp only [FnDef.type, Tm.subst, Tm.fn.injEq] at hty
   obtain ⟨hlv, hnp, htele, -⟩ := hty
   have hok' := hok
@@ -2182,6 +2181,32 @@ theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
           ← markedArgs_subst_args _ _ _ (fields_isList _ _), ← hlenl, fields_subst _ hl1]
     · simp only [Ctx.body]; simpa [Ctx.n] using h3
     · simp only [Ctx.body]; simpa using h2
+
+theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
+    {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {f Ft l t args outsT : Tm} {np : Nat} {dec : Dec}
+    (hf : TmTy P Γ f Ft) {uf : Bool} {hmk : List Bool} (hF : Γ.canon Ft = .fn l np t uf hmk) (ht : t.isTele) (ha : ArgsTy P Γ args t outsT)
+    (hn : args.len = np) (hd : DecOK P Γ dec l t args) :
+    ∃ env n1 gid G F, callee P (f.subst (Tm.env ρ)) = some (env, n1, gid, G, F) ∧
+      muLt P.k (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) μ ∧
+      (∃ Γb rb, CoreTy P gid Γb F.body rb ∧
+        EnvOK P (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) Γb ∧
+        LvlBound (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) cnt ∧
+        MuOK (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) Γb
+          (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) ∧
+        rb.static Γb.n 0 ∧
+        rb.subst (Tm.env (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ)))) = outsT.subst (Tm.env ρ) ∧
+        Γb.ghost = (G.ghost || F.er) ∧ (∀ i < env.length, F.dele = none → Γb.er i = G.ers.getD i true) ∧
+        (∀ j' F', G.fns[j']? = some F' → F.dele = none → Γb.er (env.length + j') = F'.er) ∧
+        (∀ i t, F.dele = some t → i < env.length + G.fns.length → i ≠ t → Γb.er i = true) ∧
+        (∀ k < np, Γb.er (env.length + G.fns.length + k) = t.ers.getD k true) ∧ rb.isTele) ∧
+      outsT.isTele ∧ outsT.static Γ.n 0 ∧ F.tele.ers = t.ers ∧ F.np = np ∧ G.deleOK P env.length = true := by
+  have hw := hE.wf
+  obtain ⟨hv, hfs, hFs⟩ := tm_sound hP hE hf
+  have hFs' := canon_static hw hFs
+  rw [hF] at hFs'; simp only [Tm.static, Bool.and_eq_true] at hFs'
+  rw [← hE.canon Ft, hF] at hv; simp only [Tm.subst] at hv
+  obtain ⟨env, Γc, gid, G, j, F, hfv, hEc, hG, hok, hFj, hty⟩ := hv.fn_inv
+  exact call_setup_ctx hP hE hb hm hf hF ht ha hn hd hfv hEc hG hok hFj hty hfs hFs'
 
 theorem Ctx.openTele_ghost (g : Bool) : ∀ m (Γ : Ctx) t,
     ({ Γ with ghost := g } : Ctx).openTele t m = ({ (Γ.openTele t m).1 with ghost := g }, (Γ.openTele t m).2) := by
