@@ -29,13 +29,15 @@ structure UCtx where
   scr : Bool := false
   ents : List Bool := []
   rebind : Option Tm := none
+  uscr : Option Tm := none
+  cellOk : Bool := false
 
 variable (P : Prog)
 
 namespace UCtx
 
 def next (G : UCtx) (Γ' : Ctx) (us : List Bool) : UCtx :=
-  { Γ := Γ', uq := G.uq ++ (us.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + k) else none) }
+  { Γ := Γ', uq := G.uq ++ (us.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + k) else none), uscr := G.uscr }
 
 def sigOf (G : UCtx) (h : Tm) : Option Tm := match checkTm P G.Γ h with
   | .ok ⟨H, _⟩ => match G.Γ.canon H with
@@ -94,8 +96,11 @@ def coerSrc (G : UCtx) (q : Tm) : Option Bool := do
 
 def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
   | .tm t => G.termUses P u t
-  | .coerce a _ q => do G.termUses P (← G.coerSrc P q) a
-  | _ => some []
+  | .coerce a _ q => do
+    let su ← G.coerSrc P q
+    if u && !su then none else G.termUses P su a
+  | .axm _ => if u && !G.cellOk then none else some []
+  | _ => if u then none else some []
 
 def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do
   let ⟨St, _⟩ ← (checkTm P G.Γ s).toOption
@@ -107,7 +112,8 @@ def branchCtx (G : UCtx) (s k H idx sig : Tm) (fe ph uscr : Bool) : Option UCtx 
   match G.Γ.branch P s k H idx sig with
   | (Γf, .ok σ) =>
     let Γb := G.Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)
-    some (G.next { Γb with ghost := G.Γ.ghost || ph } (if uscr && !fe then (teleUs sig).dropLast else []))
+    let us := uscr && !fe
+    some { G.next { Γb with ghost := G.Γ.ghost || ph } (if us then (teleUs sig).dropLast else []) with uscr := if us then some s else none }
   | _ => none
 
 end UCtx
@@ -168,8 +174,10 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → Option
         else none
       | _ => none
     | .reuse u, .fv i | .write u, .fv i => do
-      let C ← usesCore b G ru rets rest
+      let C ← usesCore b { G with cellOk := true } ru rets rest
       if G.Γ.ghost then some C else Uses.seq (← G.use i u) C
+    | .alloc, _ => usesCore b { G with cellOk := true } ru rets rest
+    | .cellOf, x => usesCore b { G with cellOk := G.uscr == some x } ru rets rest
     | _, _ => usesCore b G ru rets rest
   | .chk (.opn oe) (.fv m) _ rest =>
     let Γo : Ctx := { G.Γ with opened := (m, oe) :: G.Γ.opened }
@@ -203,7 +211,7 @@ def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → Option Uses
   | F :: Fs => do
     let (Γb, R) := G.Γ.body Gr F
     let ps := (teleUs F.tele).take F.np
-    let Ub := { G with Γ := Γb, uq := G.uq ++ (ps.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + Gr.fns.length + k) else none) }
+    let Ub := { G with Γ := Γb, uscr := none, uq := G.uq ++ (ps.zipIdx.filterMap fun (u, k) => if u then some (G.Γ.n + Gr.fns.length + k) else none) }
     let U ← usesCore gid Ub ((teleUs F.tele).drop F.np) R F.body
     let O := Uses.below U G.Γ.n
     if !F.u && O.any (·.2) then none
