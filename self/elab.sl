@@ -5800,7 +5800,7 @@
     (let ((unique ew3) (many env9) (many ress) (many bcode) (erased lock))
       (notail $ elab-body ew2 fuel sugar body body (WHere _) (env-set-unwarned (env-set-run-pos env8 (BFalse)) $ or (env-unwarned env8) atmatch) bctx expect2 (Some _ anntele) $ Some _ $ MkSink "the enclosing `cell-match`" "return value" (tele-with-mults anntele expect2) (Nil _) (Cons _ (MkPair _ _ (loc-in env8 $ raw-pos ann) "the return annotation of the enclosing `cell-match` is here") $ Nil _) (env-scope env6) $ None _))
     (let ((many env10a)) (check-results-count env9 body anntele ress (Nil _)))
-    (let ((many env10)) (refuse-when (env-back env env10a) (and atmatch $ not $ erases-to-nothing _ _ $ normalize bctx expect2 bcode)
+    (let ((many env10)) (refuse-when (env-back env env10a) (match many atmatch (((Bool) _)) ((BTrue) (not $ erases-to-nothing _ _ $ normalize bctx expect2 bcode)) ((BFalse) (BFalse)))
       "the body of an at-`cell-match` must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))
     (let ((many env11) (many resultids) (erased rl))
       (open-tele anntele (env-discard env6 env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
@@ -6973,7 +6973,7 @@
           (let ((unique ew3) (many env2) (many ress) (many code) (erased lock)) (notail $ elab-body ew fuel sugar (subterm p) body body (WHere _) envs (Cons _ (Cons _ x (Nil _)) bctx) ex (Some _ ann-tele) sink))
           (values ew3 (check-results-count env2 body ann-tele ress (Nil _)) (CLet _ many-one ex (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env bctx saved) code)))))
     (let ((many env3)) $ env-set-unwarned env3s $ env-unwarned env)
-    (let ((many bad)) $ and atmatch $ and (mult-is-many $ pos-in env ex) $ not $ erases-to-nothing _ _ $ normalize bctx ex code)
+    (let ((many bad)) $ match many (and atmatch $ mult-is-many $ pos-in env ex) (((Bool) _)) ((BTrue) (not $ erases-to-nothing _ _ $ normalize bctx ex code)) ((BFalse) (BFalse)))
     (values ew1 (match many bad (((Env) _)) ((BFalse) env3) ((BTrue) (error-at env3 bpos $ say env3 "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))) code))
 
   ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 21).
