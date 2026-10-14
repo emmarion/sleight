@@ -23,11 +23,7 @@ is a design decision. Remove an entry when it is fixed.
     reference differ in wording on some refusals, as audit M3 already
     records; one seen since is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body
-    needs a final expression" and `slc` with "malformed branch". Another
-    is a literal in head position, `("hello")`, which the reference
-    refuses with `"hello" is a literal, not a name` and `slc` with
-    ``"hello" : `(String)` is not applicable``
-    (`tests/literal_head_bad.sl` checks only the shared part).
+    needs a final expression" and `slc` with "malformed branch".
 
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**

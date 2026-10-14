@@ -1296,7 +1296,6 @@ and elab_head env pos l raw =
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
   | Handle (_, x, _, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
   | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
-  | _ when lit_of raw <> None -> error l "%s is a literal, not a name" (Reader.show raw)
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
