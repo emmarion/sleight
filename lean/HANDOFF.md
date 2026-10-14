@@ -126,9 +126,12 @@ scrutinee by an `else` binder (`machine_rebind`, and
 the closures' values), and the caller's side of a non-erased call
 (`machine_call`, which takes the callee's run and its results'
 ownership over the call's own uses as a hypothesis); toward the
-callee's side, `args_val`, `MDec.clo_inv`, `WO.clo_inv` and
+callee's side, `args_val`, `MDec.clo_inv`, `WO.clo_inv`,
 `clo_vals_many` (a non-unique sibling closure reads only captures
-recorded at many and owns nothing). `GOK.pend` says the block a pending mark names is
+recorded at many and owns nothing) and `callee_frame` (the frame a
+callee's body starts in, built from the caller's frame for the call's
+own uses, the closure's captures, the sibling closures and the built
+arguments, given which captured entries the body reads and owns). `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,

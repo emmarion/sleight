@@ -3499,4 +3499,219 @@ theorem clo_vals_many {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr
         (List.getElem?_eq_getElem hcl') F' hF' hu'
       exact ⟨hd1, hft, fun b => nosp b _ _⟩
 
+theorem callee_frame {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : List Tm} {AB B : Uses}
+    {Out' Shr : Nat → Prop} (hM : MFrame P AB n er H ρM ρS ρ (fun _ => False) Out' Shr) (sB : B.Sub AB)
+    {fi : Nat} (hfi : fi < n) (hfe : er fi = false) (hfU : (AB.lookup fi).isSome)
+    (hfB : B.lookup fi ≠ some true) (hfB' : AB.lookup fi = some true → B.lookup fi = none)
+    {envM envS envF : List Tm} {gid j : Nat} {Gr : Group} {F : FnDef}
+    (hfM : Tm.env ρM fi = .clo (.ofList envM) gid j) (hfS : Tm.env ρS fi = .clo (.ofList envS) gid j)
+    (hfF : Tm.env ρ fi = .clo (.ofList envF) gid j) (hlF : envF.length = envS.length)
+    (hGr : P.groups[gid]? = some Gr) (hF : Gr.fns[j]? = some F) (hdn : F.dele = none)
+    (hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.u = false → F.dele = some t →
+      t < envS.length + k ∧ (t < envS.length → Gr.caps.lookup t = some false) ∧
+      (envS.length ≤ t → (Gr.fns[t - envS.length]?.map (·.u)) = some false))
+    {t : Tm} {as argsS argsF : List Tm}
+    (hOa : MOut P B n er H ρM ρS ρ (fun _ => False) Shr t (t.kinds.map (·.u)) H1 as argsS argsF)
+    {pM pS : List Tm} {Ub : Uses} {erb : Nat → Bool}
+    (hlp : pM.length = argsF.length) (hlpS : pS.length = argsF.length)
+    (hpar : ∀ k, k < argsF.length → erb (envS.length + Gr.fns.length + k) = false →
+      t.ers.getD k true = false ∧ pM[k]? = as[k]? ∧ pS[k]? = argsS[k]? ∧ (as[k]?).isSome ∧ (argsS[k]?).isSome)
+    (hrd : ∀ i < envS.length, (Ub.lookup i).isSome → erb i = false → P.rd gid j i = true)
+    (hrdU : ∀ i < envS.length, Ub.lookup i = some true → erb i = false → P.rdU gid j i = true ∧ AB.lookup fi = some true)
+    (hsib : ∀ k < Gr.fns.length, (Ub.lookup (envS.length + k)).isSome → erb (envS.length + k) = false →
+      (Gr.fns[k]?.map (·.u)) = some false ∧ Ub.lookup (envS.length + k) ≠ some true)
+    (hpU : ∀ k < argsF.length, Ub.lookup (envS.length + Gr.fns.length + k) = some true →
+      erb (envS.length + Gr.fns.length + k) = false → (t.kinds.map (·.u)).getD k false = true) :
+    MFrame P Ub (envS.length + Gr.fns.length + argsF.length) erb H1
+      (envM ++ closuresS envM gid Gr ++ pM) (envS ++ closuresS envS gid Gr ++ pS) (envF ++ closures envF gid Gr ++ argsF)
+      (fun _ => False) Out' Shr := by
+  have hfdec := hM.dec fi hfi hfU hfe
+  rw [hfM, hfS] at hfdec
+  obtain ⟨hlen, hrdM⟩ := MDec.clo_inv hfdec
+  have hfoot : ∀ i, P.rd gid j i = true → ∀ b, Foot P H (Tm.env envM i) (Tm.env envS i) b →
+      Foot P H (Tm.env ρM fi) (Tm.env ρS fi) b := fun i hi b hb => by
+    rw [hfM, hfS]; exact .clo hi (by simpa [Tm.toList_ofList] using hb)
+  have hspine : ∀ i, P.rdU gid j i = true → ∀ b, Spine P H (Tm.env envM i) (Tm.env envS i) (Tm.env envF i) b →
+      Spine P H (Tm.env ρM fi) (Tm.env ρS fi) (Tm.env ρ fi) b := fun i hi b hb => by
+    rw [hfM, hfS, hfF]; exact .clo hi (by simpa [Tm.toList_ofList] using hb)
+  have hnOwn : ∀ b, Foot P H (Tm.env ρM fi) (Tm.env ρS fi) b → ¬ Own P B n er H ρM ρS ρ b :=
+    fun b hb ⟨y, hy, hBy, hey, hsy⟩ => by
+      have hne : y ≠ fi := fun e => hfB (e ▸ hBy)
+      exact hM.sep y hy fi hfi hne (sB.2 y hBy) hfU hey hfe b hsy hb
+  have hag : Agree H H1 (Foot P H (Tm.env ρM fi) (Tm.env ρS fi)) := fun b hb =>
+    hOa.keep b (Foot.lt hM.wf (hM.dec fi hfi hfU hfe) hb) (hnOwn b hb) id
+  have hagE : ∀ i, P.rd gid j i = true → Agree H H1 (Foot P H (Tm.env envM i) (Tm.env envS i)) :=
+    fun i hi b hb => hag b (hfoot i hi b hb)
+  have hrdF : ∀ i, Gr.caps.lookup i = some false → P.rd gid j i = true := fun i h => by
+    simp [Prog.rd, hGr, h]
+  have hcv := clo_vals_many hGr hlen rfl (by rw [hlF]) (fun i h => hrdM i (hrdF i h)) hdl
+  have eE : ∀ (a b c : List Tm), a.length = envS.length → ∀ i, i < envS.length → Tm.env (a ++ b ++ c) i = Tm.env a i :=
+    fun a b c hl i hi => by rw [env_app_left (by simp; omega), env_app_left (by omega)]
+  have eSib : ∀ (a b c : List Tm), a.length = envS.length → ∀ k, k < b.length →
+      Tm.env (a ++ b ++ c) (envS.length + k) = b.getD k .nil := fun a b c hl k hk => by
+    rw [env_app_left (by simp; omega), ← hl, env_app_right]
+  have ePar : ∀ (a b c : List Tm), a.length = envS.length → b.length = Gr.fns.length → ∀ k,
+      Tm.env (a ++ b ++ c) (envS.length + Gr.fns.length + k) = c.getD k .nil := fun a b c hl hb k => by
+    rw [show envS.length + Gr.fns.length + k = (a ++ b).length + k by simp; omega, env_app_right]
+  have hcM : (closuresS envM gid Gr).length = Gr.fns.length := closuresS_length _ _ _
+  have hcS : (closuresS envS gid Gr).length = Gr.fns.length := closuresS_length _ _ _
+  have hcF : (closures envF gid Gr).length = Gr.fns.length := by simp [closures]
+  have gD : ∀ (l : List Tm) k, k < l.length → l[k]? = some (l.getD k .nil) := fun l k hk => get_getD hk
+  have cls : ∀ i, i < envS.length + Gr.fns.length + argsF.length → i < envS.length ∨
+      (∃ k, k < Gr.fns.length ∧ i = envS.length + k) ∨ (∃ k, k < argsF.length ∧ i = envS.length + Gr.fns.length + k) :=
+    fun i hi => by
+      by_cases h1 : i < envS.length
+      · exact .inl h1
+      · by_cases h2 : i < envS.length + Gr.fns.length
+        · exact .inr (.inl ⟨i - envS.length, by omega, by omega⟩)
+        · exact .inr (.inr ⟨i - envS.length - Gr.fns.length, by omega, by omega⟩)
+  have sibF : ∀ k, k < Gr.fns.length → (Gr.fns[k]?.map (·.u)) = some false →
+      MDec P H ((closuresS envM gid Gr).getD k .nil) ((closuresS envS gid Gr).getD k .nil) ∧
+      (∀ b, Foot P H ((closuresS envM gid Gr).getD k .nil) ((closuresS envS gid Gr).getD k .nil) b →
+        ∃ i, Gr.caps.lookup i = some false ∧ Foot P H (Tm.env envM i) (Tm.env envS i) b) := fun k hk hu => by
+    obtain ⟨F', hF', hu'⟩ : ∃ F', Gr.fns[k]? = some F' ∧ F'.u = false := by
+      cases h : Gr.fns[k]? with
+      | none => simp [h] at hu
+      | some F' => exact ⟨F', rfl, by simpa [h] using hu⟩
+    obtain ⟨h1, h2, -⟩ := hcv k _ _ _ (gD _ k (by omega)) (gD _ k (by omega)) (gD _ k (by omega)) F' hF' hu'
+    exact ⟨h1, h2⟩
+  have hagS : ∀ k, k < Gr.fns.length → (Gr.fns[k]?.map (·.u)) = some false →
+      Agree H H1 (Foot P H ((closuresS envM gid Gr).getD k .nil) ((closuresS envS gid Gr).getD k .nil)) :=
+    fun k hk hu b hb => by
+      obtain ⟨i, hl, hf⟩ := (sibF k hk hu).2 b hb
+      exact hagE i (hrdF i hl) b hf
+  have hspU : ∀ i, P.rdU gid j i = true → Gr.caps.lookup i = some true := fun i h => by
+    simp only [Prog.rdU, hGr, Option.map_some, Option.getD_some, Bool.and_eq_true, beq_iff_eq] at h; exact h.2
+  have hfd := hM.dec fi hfi hfU hfe
+  have toF : ∀ z, z < envS.length + Gr.fns.length → (Ub.lookup z).isSome → erb z = false → ∀ b,
+      Foot P H1 (Tm.env (envM ++ closuresS envM gid Gr ++ pM) z) (Tm.env (envS ++ closuresS envS gid Gr ++ pS) z) b →
+      Foot P H (Tm.env ρM fi) (Tm.env ρS fi) b := fun z hz hU he b h2 => by
+    by_cases hz' : z < envS.length
+    · rw [eE _ _ _ hlen z hz', eE _ _ _ rfl z hz'] at h2
+      exact hfoot z (hrd z hz' hU he) b (Foot.bwd (hagE z (hrd z hz' hU he)) h2)
+    · obtain ⟨k, rfl⟩ : ∃ k, z = envS.length + k := ⟨z - envS.length, by omega⟩
+      rw [eSib _ _ _ hlen k (by omega), eSib _ _ _ rfl k (by omega)] at h2
+      have hu := (hsib k (by omega) hU he).1
+      obtain ⟨i, hl, hf⟩ := (sibF k (by omega) hu).2 b (Foot.bwd (hagS k (by omega) hu) h2)
+      exact hfoot i (hrdF i hl) b hf
+  have parV : ∀ k, k < argsF.length → erb (envS.length + Gr.fns.length + k) = false →
+      t.ers.getD k true = false ∧ as[k]? = some (Tm.env (envM ++ closuresS envM gid Gr ++ pM) (envS.length + Gr.fns.length + k)) ∧
+      argsS[k]? = some (Tm.env (envS ++ closuresS envS gid Gr ++ pS) (envS.length + Gr.fns.length + k)) ∧
+      argsF[k]? = some (Tm.env (envF ++ closures envF gid Gr ++ argsF) (envS.length + Gr.fns.length + k)) := by
+    intro k hk he
+    obtain ⟨hte, hpm, hps, has, hass⟩ := hpar k hk he
+    rw [ePar _ _ _ hlen hcM, ePar _ _ _ rfl hcS, ePar _ _ _ hlF hcF]
+    refine ⟨hte, ?_, ?_, gD _ k hk⟩
+    · rw [← hpm]; exact gD _ k (by omega)
+    · rw [← hps]; exact gD _ k (by omega)
+  have envW : ∀ x, x < envS.length → Ub.lookup x = some true → erb x = false →
+      AB.lookup fi = some true ∧ ∀ b, Spine P H1 (Tm.env (envM ++ closuresS envM gid Gr ++ pM) x)
+        (Tm.env (envS ++ closuresS envS gid Gr ++ pS) x) (Tm.env (envF ++ closures envF gid Gr ++ argsF) x) b →
+        Spine P H (Tm.env ρM fi) (Tm.env ρS fi) (Tm.env ρ fi) b := fun x hx hU he => by
+    obtain ⟨hrU, hABf⟩ := hrdU x hx hU he
+    refine ⟨hABf, fun b h1 => ?_⟩
+    rw [eE _ _ _ hlen x hx, eE _ _ _ rfl x hx, eE _ _ _ hlF x hx] at h1
+    exact hspine x hrU b (Spine.bwd (hagE x (Prog.rdU_rd hrU)).spine h1)
+  have parS : ∀ k, k < argsF.length → Ub.lookup (envS.length + Gr.fns.length + k) = some true →
+      erb (envS.length + Gr.fns.length + k) = false → ∀ b,
+      Spine P H1 (Tm.env (envM ++ closuresS envM gid Gr ++ pM) (envS.length + Gr.fns.length + k))
+        (Tm.env (envS ++ closuresS envS gid Gr ++ pS) (envS.length + Gr.fns.length + k))
+        (Tm.env (envF ++ closures envF gid Gr ++ argsF) (envS.length + Gr.fns.length + k)) b →
+      H.next ≤ b ∨ Own P B n er H ρM ρS ρ b := fun k hk hU he b h1 => by
+    obtain ⟨hte, h1', h2', h3'⟩ := parV k hk he
+    rcases hOa.uspine k _ _ _ h1' h2' h3' hte (hpU k hk hU he) b h1 with h | h | h
+    · exact .inl h
+    · exact .inr h
+    · exact h.elim
+  refine ⟨by simp [hlen, hcM, hlp]; omega, by simp [hcS, hlpS]; omega, by simp [hlF, hcF]; omega, hOa.wf, ?_, ?_, ?_, ?_,
+    ⟨fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim, fun _ h => h.elim⟩,
+    fun a ha => Nat.lt_of_lt_of_le (hM.outb a ha) hOa.next,
+    ⟨fun _ h => h.elim, ?_, fun a ha => Nat.lt_of_lt_of_le (hM.shr.2.2 a ha) hOa.next⟩⟩
+  · intro i hi hU he
+    rcases cls i hi with hi' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · rw [eE _ _ _ hlen i hi', eE _ _ _ rfl i hi']
+      exact (hrdM i (hrd i hi' hU he)).frame (hagE i (hrd i hi' hU he))
+    · rw [eSib _ _ _ hlen k (by omega), eSib _ _ _ rfl k (by omega)]
+      have hu := (hsib k hk hU he).1
+      exact (sibF k hk hu).1.frame (hagS k hk hu)
+    · obtain ⟨hte, h1, h2, -⟩ := parV k hk he
+      exact hOa.dec k _ _ h1 h2 hte
+  · intro x hx hU he
+    rcases cls x hx with hx' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · obtain ⟨hrU, hABf⟩ := hrdU x hx' hU he
+      have hwoF := hM.wo fi hfi hABf hfe
+      rw [hfM, hfS, hfF] at hwoF
+      have hwx := (WO.clo_inv hGr hF hdn hwoF).1 x hrU
+      simp only [Tm.toList_ofList] at hwx
+      rw [eE _ _ _ hlen x hx', eE _ _ _ rfl x hx', eE _ _ _ hlF x hx']
+      exact hwx.fwd (hagE x (Prog.rdU_rd hrU))
+    · exact absurd hU (hsib k hk (by simp [hU]) he).2
+    · obtain ⟨hte, h1, h2, h3⟩ := parV k hk he
+      exact hOa.uwo k _ _ _ h1 h2 h3 hte (hpU k hk hU he)
+  · intro x hx z hz hne hUx hUz hex hez b h1 h2
+    rcases cls x hx with hx' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · obtain ⟨hABf, hsf⟩ := envW x hx' hUx hex
+      have hsf' := hsf b h1
+      obtain ⟨hrU, -⟩ := hrdU x hx' hUx hex
+      rcases cls z hz with hz' | ⟨k', hk', rfl⟩ | ⟨k', hk', rfl⟩
+      · have hwoF := hM.wo fi hfi hABf hfe
+        rw [hfM, hfS, hfF] at hwoF
+        have hd := (WO.clo_inv hGr hF hdn hwoF).2 x hrU z (Ne.symm hne) (hrd z hz' hUz hez)
+        simp only [Tm.toList_ofList] at hd
+        rw [eE _ _ _ hlen x hx', eE _ _ _ rfl x hx', eE _ _ _ hlF x hx'] at h1
+        rw [eE _ _ _ hlen z hz', eE _ _ _ rfl z hz'] at h2
+        exact hd b (Spine.bwd (hagE x (Prog.rdU_rd hrU)).spine h1) (Foot.bwd (hagE z (hrd z hz' hUz hez)) h2)
+      · have hwoF := hM.wo fi hfi hABf hfe
+        rw [hfM, hfS, hfF] at hwoF
+        rw [eE _ _ _ hlen x hx', eE _ _ _ rfl x hx', eE _ _ _ hlF x hx'] at h1
+        rw [eSib _ _ _ hlen k' (by omega), eSib _ _ _ rfl k' (by omega)] at h2
+        have hu := (hsib k' hk' hUz hez).1
+        obtain ⟨i', hl', hf'⟩ := (sibF k' hk' hu).2 b (Foot.bwd (hagS k' hk' hu) h2)
+        have hne' : i' ≠ x := fun e => by subst e; rw [hspU _ hrU] at hl'; cases hl'
+        have hd := (WO.clo_inv hGr hF hdn hwoF).2 x hrU i' hne' (hrdF i' hl')
+        simp only [Tm.toList_ofList] at hd
+        exact hd b (Spine.bwd (hagE x (Prog.rdU_rd hrU)).spine h1) hf'
+      · obtain ⟨hte, h1', h2', -⟩ := parV k' hk' hez
+        rcases hOa.foot k' _ _ h1' h2' hte b h2 with h | ⟨y, hy, hBy, hey, hsy⟩ | h | ⟨z', hz'', hBz', hez', hfz'⟩ | h
+        · have := Foot.lt hM.wf hfd hsf'.foot; omega
+        · have hne' : fi ≠ y := fun e => hfB (e ▸ hBy)
+          exact hM.sep fi hfi y hy hne' hABf (sB.1 y (by simp [hBy])) hfe hey b hsf' hsy.foot
+        · exact h
+        · have hne' : fi ≠ z' := fun e => by subst e; rw [hfB' hABf] at hBz'; cases hBz'
+          exact hM.sep fi hfi z' hz'' hne' hABf (sB.1 z' hBz') hfe hez' b hsf' hfz'
+        · exact hM.shr.2.1 fi hfi hABf hfe b hsf' h
+    · exact absurd hUx (hsib k hk (by simp [hUx]) hex).2
+    · have hsp := parS k hk hUx hex b h1
+      rcases cls z hz with hz' | ⟨k', hk', rfl⟩ | ⟨k', hk', rfl⟩
+      · have hfz := toF z (by omega) hUz hez b h2
+        rcases hsp with h | ⟨y, hy, hBy, hey, hsy⟩
+        · have := Foot.lt hM.wf hfd hfz; omega
+        · have hne' : y ≠ fi := fun e => hfB (e ▸ hBy)
+          exact hM.sep y hy fi hfi hne' (sB.2 y hBy) hfU hey hfe b hsy hfz
+      · have hfz := toF _ (by omega) hUz hez b h2
+        rcases hsp with h | ⟨y, hy, hBy, hey, hsy⟩
+        · have := Foot.lt hM.wf hfd hfz; omega
+        · have hne' : y ≠ fi := fun e => hfB (e ▸ hBy)
+          exact hM.sep y hy fi hfi hne' (sB.2 y hBy) hfU hey hfe b hsy hfz
+      · obtain ⟨hte, h1', h2', h3'⟩ := parV k hk hex
+        obtain ⟨hte', h1'', h2'', -⟩ := parV k' hk' hez
+        exact hOa.usep k k' _ _ _ _ _ (fun e => hne (by rw [e])) h1' h2' h3' h1'' h2'' hte hte'
+          (hpU k hk hUx hex) b h1 h2
+  · intro x hx hU he b h1 h2
+    rcases cls x hx with hx' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · obtain ⟨hABf, hsf⟩ := envW x hx' hU he
+      exact hM.out fi hfi hABf hfe b (hsf b h1) h2
+    · exact absurd hU (hsib k hk (by simp [hU]) he).2
+    · rcases parS k hk hU he b h1 with h | ⟨y, hy, hBy, hey, hsy⟩
+      · have := hM.outb b h2; omega
+      · exact hM.out y hy (sB.2 y hBy) hey b hsy h2
+  · intro x hx hU he b h1 h2
+    rcases cls x hx with hx' | ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩
+    · obtain ⟨hABf, hsf⟩ := envW x hx' hU he
+      exact hM.shr.2.1 fi hfi hABf hfe b (hsf b h1) h2
+    · exact absurd hU (hsib k hk (by simp [hU]) he).2
+    · rcases parS k hk hU he b h1 with h | ⟨y, hy, hBy, hey, hsy⟩
+      · have := hM.shr.2.2 b h2; omega
+      · exact hM.shr.2.1 y hy (sB.2 y hBy) hey b hsy h2
+
 end Minimal
