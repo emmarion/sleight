@@ -1946,8 +1946,8 @@ which `lib/prelude.sl` is the reference:
   the opaque `Gensym`, `MacroWorld` and `Settled`, and the primitives
   `gensym`, `gensym-unique`, `settled-type`, `settled-erase`,
   `settled-mult`, `settled-value`, `settled-eq`, `intern-nat`,
-  `intern-char`, `intern-string`, `resolve` and `read-file`, and the
-  function `symbol-eq`. §62 to §65 describe them and the special form
+  `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
+  `resolve` and `read-file`, and the function `symbol-eq`. §62 to §65 describe them and the special form
   `settled-of`.
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
@@ -2375,7 +2375,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
   `settled-of`, `settled-type`, `settled-erase`, `settled-mult` and
   `settled-value` (§64), `gensym`, `settled-eq`, `intern-nat`,
-  `intern-char`, `intern-string`, `resolve` and `read-file` (§65), and
+  `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
+  `resolve` and `read-file` (§65), and
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
   (§66).
 - the `at` wrapper around a cell invocation or an at-function call
@@ -2822,6 +2823,12 @@ its parameter. The forms are primitives, checked as calls:
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
+(def-prim $ (many mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)))
+
+(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)))
+
 (def-adts $ (Resolution : -> Type)
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
@@ -2850,6 +2857,16 @@ enters the declaration facts of the literals it needs into those facts.
 
 `intern-nat`, `intern-char` and `intern-string` intern the literal (§45)
 where they run, and give an `MMany` handle to its entry.
+
+`mint-settled` and `mint-settled-erased` mint a fresh anonymous `Settled`
+entry where they run, holding `v` at `many`, or the token of §5 at
+`erased`, and give a handle at the matching `Mult` that reads its minted
+`is`. Its minted type is the term `th` denotes. Like a string literal's
+entry (§45), it is opaque: it has no `is` rule, and the checker learns
+nothing of `v` through it. Each call mints a new entry, even for a value
+equal to one minted before, and no fact relates two such entries. Like a
+literal's entry, it is outside every scope and has no introduction order
+(§18).
 
 `resolve` looks a name up in the scope at the macro call: a `Settled`
 entry answers `RSettled` with a handle that reads its minted `is`, at

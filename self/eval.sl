@@ -1126,19 +1126,25 @@
   (let ((erased hl) (many hp2) (erased sf) (many v)) $ halloc _ hp $ BError _ "`mint-settled` with no type handle")
   (values e hl hp2 sf v))
 
+(def-fns _ $ (many mint-mult : (many (Sp) prim) -> (many (Maybe $ Multiplicity) m))
+  (let-match many (sp-eq prim $ SpExpr $ ExMintSettled) (BFalse) ((BTrue) (Some _ $ Many)))
+  (let-match many (sp-eq prim $ SpExpr $ ExMintSettledErased) (BFalse) ((BTrue) (Some _ $ Erased)))
+  (None _))
+
 ; mint-settled and mint-settled-erased: a fresh Settled entry outside every scope, of the type the handle
-; denotes, holding the value or, given none, the token, and a handle to it.
-(def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) ->
+; denotes, holding the value or, when erased, the token, and a handle to it.
+(def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Multiplicity) mult) (many (List $ Ref Block hs) args) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (let-match many args (Cons _ _ r1) ((Nil _) (mint-refused e _ hp)))
   (let-match many r1 (Cons _ th r2) ((Nil _) (mint-refused e _ hp)))
   (let-match many (heap-denoted e _ hp th) (Cons _ ty _) ((Nil _) (mint-refused e _ hp)))
-  (let ((many (Multiplicity) mult)) $ match many r2 _ ((Cons _ _ _) (Many)) ((Nil _) (Erased)))
   (let ((many e2) (many en2) (many x)) $ bind-entry e _ (heap-entries _ hp) (BFalse) (BFalse) (BTrue) (None _) (None _) (BFalse) mult ty (None _) delegate-id)
   (let ((many hp1)) $ heap-with-entries _ hp en2)
-  (let ((erased hs1) (many hp2) (erased s1) (many a)) $ match many r2 (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Ref Block h1) b))
-    ((Cons _ v _) (values hs hp1 (le-refl hs) v))
-    ((Nil _) (halloc _ hp1 $ BToken _)))
+  (let ((erased hs1) (many hp2) (erased s1) (many a)) $ match many mult (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Ref Block h1) b))
+    ((Erased) (halloc _ hp1 $ BToken _))
+    (else (match many r2 (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Ref Block h1) b))
+      ((Cons _ v _) (values hs hp1 (le-refl hs) v))
+      ((Nil _) (halloc _ hp1 $ BError _ "`mint-settled` with no value")))))
   (let ((many hp3)) $ heap-with-entries _ hp2 $ entries-set-state _ (heap-entries _ hp2) x $ SSettled _ a x)
   (let ((erased hs4) (many hp4) (erased s4) (many hv)) $ alloc-ext _ hp3 $ PHandle x (MintedIs) mult "_")
   (values (env-push-lit e2 x (None _) (None _) $ Cons _ (MkLitFact x ty $ None _) $ Nil _) hs4 hp4 (hist-le-trans _ _ _ s1 s4) hv))
@@ -1518,9 +1524,9 @@
           (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BError _ "`settled-eq` with no handles")
           (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e wv ew)))
       (values hs hp (le-refl hs) (Cons _ v $ Nil _) $ u sl e wv ew)))
-  (let-match many (or (sp-eq prim $ SpExpr $ ExMintSettled) $ sp-eq prim $ SpExpr $ ExMintSettledErased) (BFalse)
-    ((BTrue)
-      (let ((many e2) (erased hl2) (many hp2) (erased sf2) (many v)) $ mint-answer e _ hp args)
+  (let-match many (mint-mult prim) (None _)
+    ((Some _ mult)
+      (let ((many e2) (erased hl2) (many hp2) (erased sf2) (many v)) $ mint-answer e _ hp mult args)
       (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e2 wv ew)))
   (let-match many (intern-syn _ hp prim args) (Some _ lit)
     ((None _)

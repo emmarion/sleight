@@ -1954,7 +1954,7 @@
 
 (def-fns _ $ (many hit-spelling : (many (Pair (Term) (LitEntry)) h) -> (many (String) s))
   (let-match many h (MkPair _ _ _ l))
-  (match many (lit-entry-spelling l) _ ((Some _ s) s) ((None _) "")))
+  (match many (lit-entry-spelling l) _ ((Some _ s) s) ((None _) "internal: a minted constant read as a literal")))
 
 (def-fns _ $ (many hit-insert : (many (Pair (Term) (LitEntry)) h) (subterm many (List $ Pair (Term) (LitEntry)) hs) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many hs (Cons _ x rest) ((Nil _) (Cons _ h $ Nil _)))

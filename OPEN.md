@@ -158,7 +158,7 @@ references are to DESIGN.md.
 ## Minted constants
 
 33. Should an entry minted by `mint-settled` or `mint-settled-erased`
-    (`lib/prelude.sl`) have an introduction order (§5, §18), as the
+    (§65) have an introduction order (§5, §18), as the
     result of a run-position `let` does, so that `prove-predates` could
     relate it to a level created after it? For now it has none, as a
     literal's entry has none.

@@ -510,6 +510,13 @@ let literal_handle env lit =
 
 let denoted env x r = let f = minted_fact env x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ]
 
+let mint env y r mult v =
+  let env = enter_mentioned env (Var y) in
+  let ty = List.hd (denoted env y r) in
+  let x, env = bind (enter_mentioned env ty) ~literal:true None mult (Settled v) ty in
+  record_minted x (List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]);
+  V.VHandle (x, MintedIs, mult, v)
+
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
   | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
@@ -519,13 +526,8 @@ let implement env p args = match p, args with
       let a = denoted snap x rx and b = denoted snap y ry in
       let snap = List.fold_left enter_mentioned snap (a @ b) in
       [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
-  | (Sp.MintSettled | Sp.MintSettledErased), _ :: V.VHandle (y, r, _, _) :: v ->
-      let env = enter_mentioned env (Var y) in
-      let ty = List.hd (denoted env y r) in
-      let mult, v = match v with [ v ] -> (Many, v) | _ -> (Erased, V.VToken) in
-      let x, env = bind (enter_mentioned env ty) ~literal:true None mult (Settled v) ty in
-      record_minted x (List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]);
-      [ V.VHandle (x, MintedIs, mult, v) ]
+  | Sp.MintSettled, [ _; V.VHandle (y, r, _, _); v ] -> [ mint env y r Many v ]
+  | Sp.MintSettledErased, [ _; V.VHandle (y, r, _, _) ] -> [ mint env y r Erased V.VToken ]
   | Sp.Resolve, [ _; s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
       [ (match Option.map (entry env) (lookup env name) with
