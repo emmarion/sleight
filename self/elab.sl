@@ -168,41 +168,34 @@
   (let-match many (univ-like env 1000 $ TVar x) (BTrue) ((BFalse) (None _)))
   (match many (equal-env env (TVar x) type-term) _ ((BTrue) (Some _ universe-key)) ((BFalse) (None _))))
 
-(def-fns _ $ (many kw-new : (many (Env) env) (many (Maybe $ Nat) except) (many (Nat) x) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (Maybe $ String) r))
+(def-fns _ $ (many kw-new : (many (Env) env) (many (Maybe $ Nat) except) (many (Nat) x) (many (NameMap $ Pair (String) $ Pair (Nat) (String)) m) -> (many (Maybe $ String) r))
   (let-match many (held-key env except x) (Some _ b) ((None _) (None _)))
-  (let-match many (kw-find acc b) (Some _ q) ((None _) (Some _ b)))
-  (let-match many q (MkPair _ _ y _))
+  (let-match many (nm-get _ b m) (NHit _ _ _ q _) ((NMiss _ _ _ _) (Some _ b)))
+  (let-match many q (MkPair _ _ _ yq))
+  (let-match many yq (MkPair _ _ y _))
   (match many (nat-lt y x) _ ((BTrue) (Some _ b)) ((BFalse) (None _))))
 
-(def-fns _ $ (many kw-held : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (Name) (Nat)) ns) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-  (let-match many ns (Cons _ p rest) ((Nil _) acc))
+(def-fns _ $ (many kw-held : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (ScopeName) (Nat)) ns) (many (NameMap $ Pair (String) $ Pair (Nat) (String)) m) -> (many (NameMap $ Pair (String) $ Pair (Nat) (String)) r))
+  (let-match many ns (Cons _ p rest) ((Nil _) m))
   (let-match many p (MkPair _ _ n x))
-  (tail $ kw-held env except rest $ match many (kw-new env except x acc) _ ((Some _ b) (Cons _ (MkPair _ _ b $ MkPair _ _ x $ spell-name n) acc)) ((None _) acc)))
-
-(def-fns _
-  ((many kw-held-src : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (NameMap $ Nat) m) (many (Rope) path) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-    (let-match many m (NMNode _ here kids))
-    (let ((many acc2)) $ match many here (((List $ Pair (String) $ Pair (Nat) (String)) _))
-      ((None _) acc)
-      ((Some _ x) (match many (kw-new env except x acc) _ ((Some _ b) (Cons _ (MkPair _ _ b $ MkPair _ _ x $ spell-name $ NSrc $ rope-str path) acc)) ((None _) acc))))
-    (tail $ kw-held-kids env except kids path acc2))
-  ((many kw-held-kids : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ NMKid $ Nat) kids) (many (Rope) path) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-    (let-match many kids (Cons _ k rest) ((Nil _) acc))
-    (match many k _
-      ((MkKid _ c submap) (tail $ kw-held-kids env except rest path $ notail $ kw-held-src env except submap (rcat path $ RChar c) acc)))))
+  (tail $ kw-held env except rest $ match many (kw-new env except x m) _ ((Some _ b) (nm-set _ b (MkPair _ _ b $ MkPair _ _ x $ spell-name $ sn-name n) m)) ((None _) m)))
 
 ; A built-in no name holds is spelled `_` and its name, marked with the binder that shadows it.
-(def-fns _ $ (many kw-fallbacks : (many (Env) env) (subterm many (List $ SpEntry) es) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-  (let-match many es (Cons _ e rest) ((Nil _) acc))
+(def-fns _ $ (many kw-fallbacks : (many (Env) env) (subterm many (List $ SpEntry) es) (many (NameMap $ Pair (String) $ Pair (Nat) (String)) m) -> (many (NameMap $ Pair (String) $ Pair (Nat) (String)) r))
+  (let-match many es (Cons _ e rest) ((Nil _) m))
   (let-match many e (MkSpEntry b _))
+  (let-match many (nm-get _ b m) (NMiss _ _ _ _) ((NHit _ _ _ _ _) (tail $ kw-fallbacks env rest m)))
   (let ((many (Maybe $ Loc) site)) $ match many (lookup env $ NSrc b) _ ((None _) (None _)) ((Some _ x) (env-entry-at env x)))
-  (tail $ kw-fallbacks env rest $ match many (kw-find acc b) (((List $ Pair (String) $ Pair (Nat) (String)) _))
-    ((Some _ _) acc)
-    ((None _) (Cons _ (MkPair _ _ b $ MkPair _ _ 0 $ rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat3 (RChar #\x01) (RStr $ loc-str site) (RChar #\x02)) acc))))
+  (tail $ kw-fallbacks env rest $ nm-set _ b (MkPair _ _ b $ MkPair _ _ 0 $ rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat3 (RChar #\x01) (RStr $ loc-str site) (RChar #\x02)) m))
+
+(def-fns _ $ (many pair-values : (erased Type A) (erased Type B) (subterm many (List $ Pair A B) ps) (many (List B) acc) -> (many (List B) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ _ v))
+  (tail $ pair-values _ _ rest $ Cons _ v acc))
 
 (def-fns _ $ (many kws-except : (many (Env) env) (many (Maybe $ Nat) except) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-  (let-match many (scope-names $ env-scope env) (MkNameIndex _ src gen))
-  (kw-fallbacks env sp-table $ kw-held env except gen $ kw-held-src env except src (REmpty) $ Nil _))
+  (let ((many m)) $ kw-fallbacks env sp-table $ kw-held env except (name-index-entries _ $ scope-names $ env-scope env) $ nm-empty _)
+  (pair-values _ _ (nm-entries _ m (REmpty) $ Nil _) $ Nil _))
 
 (def-fns _ $ (many kws-of : (many (Env) env) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
   (kws-except env $ None _))
@@ -315,17 +308,27 @@
 ; numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
 ; canonicalization picks to represent a class is an accident of minting order, so it does not decide the name
 ; (lib/env.ml's show). A candidate is the atom it would name, its entry, and the name.
-(def-fns _ $ (many cand-of : (many (Env) env) (many (List $ Nat) atoms) (many (Nat) x) (many (String) n) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
-  (let ((many (Maybe $ Nat) canonical)) $ match many (canon-env env $ TVar x) _ ((TVar a) (match many (list-mem-bin atoms a) _ ((BTrue) (Some _ a)) ((BFalse) (None _)))) (else (None _)))
-  (let-match many canonical (None _)
-    ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x n) acc)))
-  (match many (list-mem-bin atoms x) _ ((BTrue) (Cons _ (MkPair _ _ x $ MkPair _ _ x n) acc)) ((BFalse) acc)))
+(def-fns _ $ (many var-chase : (many (Env) env) (subterm many (Nat) fuel) (many (Nat) x) -> (many (Maybe $ Maybe $ Nat) r))
+  (let-match many fuel (Succ k) ((Zero) (None _)))
+  (let ((many ty) (many rule)) $ fact-at env x)
+  (match many rule _
+    ((None _) (match many ty (((Maybe $ Maybe $ Nat) _)) ((TErr _) (None _)) (else (Some _ $ Some _ x))))
+    ((Some _ t) (match many t (((Maybe $ Maybe $ Nat) _)) ((TVar y) (tail $ var-chase env k y)) (else (Some _ $ None _))))))
 
-(def-fns _ $ (many name-cands : (many (Env) env) (many (List $ Nat) atoms) (many (Maybe $ Nat) except) (subterm many (List $ Pair (Name) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many canon-id : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r))
+  (let-match many (var-chase env 64 x) (None _) ((Some _ r) r))
+  (match many (canon-env env $ TVar x) _ ((TVar a) (Some _ a)) (else (None _))))
+
+(def-fns _ $ (many cand-atom : (many (Env) env) (many (List $ Nat) atoms) (many (Nat) x) -> (many (Maybe $ Nat) r))
+  (let ((many (Maybe $ Nat) canonical)) $ match many (canon-id env x) _ ((Some _ a) (match many (list-mem-bin atoms a) _ ((BTrue) (Some _ a)) ((BFalse) (None _)))) ((None _) (None _)))
+  (let-match many canonical (None _) ((Some _ a) (Some _ a)))
+  (match many (list-mem-bin atoms x) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
+
+(def-fns _ $ (many name-cands : (many (Env) env) (many (List $ Nat) atoms) (many (Maybe $ Nat) except) (subterm many (List $ Pair (ScopeName) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ns (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ n x))
   (let ((many (Bool) skip)) $ match many except _ ((None _) (BFalse)) ((Some _ e) (nat-eq e x)))
-  (tail $ name-cands env atoms except rest $ match many skip (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) acc) ((BFalse) (cand-of env atoms x (spell-name n) acc))))
+  (tail $ name-cands env atoms except rest $ match many skip (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) acc) ((BFalse) (match many (cand-atom env atoms x) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ spell-name $ sn-name n) acc)) ((None _) acc)))))
 
 (def-fns _ $ (many names-lit : (many (String) s) -> (many (Bool) r))
   (or (all-digits s) $ match many s _ ((SCons c _) (char-is c 34)) ((SNil) (BFalse))))
@@ -334,7 +337,7 @@
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
   (let-match many l (MkLitEntry x _ _ _ _))
   (let-match many (lit-entry-spelling l) (Some _ s) ((None _) (tail $ lit-cands env atoms rest acc)))
-  (tail $ lit-cands env atoms rest $ match many (names-lit s) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) (cand-of env atoms x s acc)) ((BFalse) acc)))
+  (tail $ lit-cands env atoms rest $ match many (names-lit s) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) (match many (cand-atom env atoms x) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x s) acc)) ((None _) acc))) ((BFalse) acc)))
 
 (def-fns _ $ (many best-cand : (many (Nat) a) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) cs) (many (Maybe $ Pair (Nat) (String)) best) -> (many (Maybe $ Pair (Nat) (String)) r))
   (let-match many cs (Cons _ c rest) ((Nil _) best))
@@ -355,21 +358,18 @@
   (let-match many (or (is-some _ $ best-cand a names $ None _) (is-some _ $ best-cand a lits $ None _)) (BTrue) ((BFalse) (BFalse)))
   (tail $ all-named rest lits names))
 
-(def-fns _ $ (many canon-id : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r))
-  (match many (canon-env env $ TVar x) _ ((TVar a) (Some _ a)) (else (None _))))
-
 (def-fns _ $ (many fetch-form : (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) head) (many (String) arg) -> (many (String) r))
   (str-cat3 "(" (kw-spell kws head) $ str-cat3 " " arg ")"))
 
 ; An atom no name reaches may still be what a fetch form yields here, written with a name as its argument
 ; (lib/env.ml's fetches): each candidate keyed by the canonical atom the form yields.
-(def-fns _ $ (many named-cands : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (Name) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many named-cands : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (ScopeName) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ns (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ n x))
   (let ((many (Bool) skip)) $ match many except _ ((None _) (BFalse)) ((Some _ e) (nat-eq e x)))
   (let-match many skip (BFalse) ((BTrue) (tail $ named-cands env except rest acc)))
   (tail $ named-cands env except rest $ match many (canon-id env x) (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
-    ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ spell-name n) acc))
+    ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ spell-name $ sn-name n) acc))
     ((None _) acc)))
 
 (def-fns _ $ (many level-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
@@ -415,13 +415,13 @@
 
 ; `(slot-of n)` for a named entry whose slot canonicalizes to an atom; the newest entry of that slot wins,
 ; as the reference's `fetches` has it.
-(def-fns _ $ (many slot-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (Maybe $ Nat) except) (subterm many (List $ Pair (Name) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many slot-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (Maybe $ Nat) except) (subterm many (List $ Pair (ScopeName) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ns (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ n x))
   (let ((many (Bool) skip)) $ match many except (((Bool) _)) ((None _) (BFalse)) ((Some _ e) (nat-eq e x)))
   (let-match many skip (BFalse) ((BTrue) (tail $ slot-cands env kws except rest acc)))
   (tail $ slot-cands env kws except rest $ match many (canon-env env $ slot-atom x) (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
-    ((TVar a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ fetch-form kws "slot-of" $ spell-name n) acc))
+    ((TVar a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ fetch-form kws "slot-of" $ spell-name $ sn-name n) acc))
     (else acc)))
 
 (def-fns _ $ (many numeral-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))

@@ -722,11 +722,11 @@
 
 ; Every name a NameMap holds, with its value.
 (def-fns _
-  ((many nm-entries : (erased Type V) (subterm many (NameMap V) m) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
+  ((many nm-entries : (erased Type V) (subterm many (NameMap V) m) (many (Rope) path) (many (List $ Pair (Rope) V) acc) -> (many (List $ Pair (Rope) V) r))
     (let-match many m (NMNode _ here kids))
-    (let ((many acc2)) $ match many here (((List $ Pair (String) V) _)) ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ (rope-str path) v) acc)))
+    (let ((many acc2)) $ match many here (((List $ Pair (Rope) V) _)) ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ path v) acc)))
     (tail $ nm-kids-entries _ kids path acc2))
-  ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
+  ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (Rope) V) acc) -> (many (List $ Pair (Rope) V) r))
     (let-match many kids (Cons _ k rest) ((Nil _) acc))
     (match many k _
       ((MkKid _ c submap) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))
@@ -764,14 +764,27 @@
     ((NSrc s) (MkNameIndex _ (nm-set _ s v src) gen))
     (else (MkNameIndex _ src $ gen-set _ n v gen))))
 
-(def-fns _ $ (many src-pairs : (erased Type V) (subterm many (List $ Pair (String) V) ps) (many (List $ Pair (Name) V) acc) -> (many (List $ Pair (Name) V) r))
-  (let-match many ps (Cons _ p rest) ((Nil _) acc))
-  (let-match many p (MkPair _ _ s v))
-  (Cons _ (MkPair _ _ (NSrc s) v) $ notail $ src-pairs _ rest acc))
+(def-adts $ (ScopeName : -> Type)
+  enum
+  (many SnPath : (many (Rope) path) -> (ScopeName))
+  (many SnName : (many (Name) n) -> (ScopeName)))
 
-(def-fns _ $ (many name-index-entries : (erased Type V) (many (NameIndex V) m) -> (many (List $ Pair (Name) V) r))
+(def-fns _ $ (many sn-name : (many (ScopeName) n) -> (many (Name) r))
+  (match many n _ ((SnPath p) (NSrc $ rope-str p)) ((SnName m) m)))
+
+(def-fns _ $ (many src-pairs : (erased Type V) (subterm many (List $ Pair (Rope) V) ps) (many (List $ Pair (ScopeName) V) acc) -> (many (List $ Pair (ScopeName) V) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ path v))
+  (Cons _ (MkPair _ _ (SnPath path) v) $ notail $ src-pairs _ rest acc))
+
+(def-fns _ $ (many gen-pairs : (erased Type V) (subterm many (List $ Pair (Name) V) ps) (many (List $ Pair (ScopeName) V) acc) -> (many (List $ Pair (ScopeName) V) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ n v))
+  (tail $ gen-pairs _ rest $ Cons _ (MkPair _ _ (SnName n) v) acc))
+
+(def-fns _ $ (many name-index-entries : (erased Type V) (many (NameIndex V) m) -> (many (List $ Pair (ScopeName) V) r))
   (let-match many m (MkNameIndex _ src gen))
-  (src-pairs _ (nm-entries _ src (REmpty) $ Nil _) $ list-rev _ gen))
+  (src-pairs _ (nm-entries _ src (REmpty) $ Nil _) $ gen-pairs _ gen $ Nil _))
 
 ; ---- lemmas over the prelude's Lt and Double, shared with heap.sl and core.sl's fact table
 
