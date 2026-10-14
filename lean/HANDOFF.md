@@ -203,8 +203,13 @@ the pass, and to unfold it case by case as the pass's result is.
 `Minimal/MachineAsm.lean` holds the assembly's pieces. `MSound P μ ρ cnt
 c` is the statement for one core: from the checker's success on `c` in
 `G.Γ`, `EnvOK`, the level and measure facts, and `CloOK` of the
-environment, an `eval` that succeeds gives `MRun` for `c` and, where the
-pass accepts `c`, `CloOK` of the results. Proved without `sorry`, one
+environment, an `eval` that succeeds gives `MRun` for `c` and `CloOK` of
+the results when the context is ghost or the pass accepts `c`. `CloOK`
+asks a certificate only of a closure whose group is not ghost: a
+group's ghost flag is its defining context's (`GroupOK`), so ghost code
+makes only closures of ghost groups, which the uses pass never sees and
+the machine never calls (`Real.clo` asks `G.ghost = false`); asking a
+certificate of every closure would fail for an erased entry holding one. Proved without `sorry`, one
 lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`, `.defFns` and
 `.chk` (every check and mark, `open-adt` through `checkCore_opn`, and a
 `rebind` mark together with the primitive after it). The induction
@@ -216,9 +221,10 @@ build. Its `prim` case takes `CoerceVal P` (`prim_val`'s conclusion
 for `coerce`) as a hypothesis until `coerce` is done.
 `checkBranches_live` inverts the checker's success on a listed branch
 (either `dead`, or the checker's success on its body in the branch's
-context) for the `mtch` and `case` steps. On this session's reading
-those steps also need `match_setup` to say which context it picks for
-the branch, which it does not yet say.
+context) for the `mtch` and `case` steps, and `match_setup` says which
+context it picks for the branch (the listed branch's or the `else`'s),
+so the two can be matched; `mtch_setup` is the part of `eval_sound`'s
+`mtch` step that sets up the code after the match.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's
