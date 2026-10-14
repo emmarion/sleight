@@ -149,17 +149,47 @@
   (let-match many n (NHandle _ _ m _) (else (special-of-entry env x)))
   (match many (mult-is-many m) _ ((BTrue) (special-of-entry env x)) ((BFalse) (None _))))
 
+(def-fns _
+  ((many univ-like : (many (Env) env) (subterm many (Nat) fuel) (many (Term) t) -> (many (Bool) r))
+    (let-match many fuel (Succ k) ((Zero) (BTrue)))
+    (match many t _
+      ((TVar y) (let ((many _) (many rule)) $ fact-at env y) (match many rule _ ((None _) (BFalse)) ((Some _ u) (tail $ univ-like env k u))))
+      ((TApp h args) (match many args _ ((Nil _) (tail $ univ-head env k h)) ((Cons _ _ _) (BFalse))))
+      (else (BFalse))))
+  ((many univ-head : (many (Env) env) (subterm many (Nat) fuel) (many (Term) t) -> (many (Bool) r))
+    (let-match many fuel (Succ k) ((Zero) (BTrue)))
+    (let-match many t (TVar y) (else (BFalse)))
+    (let ((many _) (many rule)) $ fact-at env y)
+    (match many rule _ ((None _) (nat-eq y univ-id)) ((Some _ u) (tail $ univ-head env k u)))))
+
 (def-fns _ $ (many held-key : (many (Env) env) (many (Maybe $ Nat) except) (many (Nat) x) -> (many (Maybe $ String) r))
   (let-match many (special-of-entry env x) (None _) ((Some _ sp) (Some _ $ sp-name sp)))
   (let-match many (match many except (((Bool) _)) ((None _) (BTrue)) ((Some _ e) (not $ nat-eq e x))) (BTrue) ((BFalse) (None _)))
+  (let-match many (univ-like env 1000 $ TVar x) (BTrue) ((BFalse) (None _)))
   (match many (equal-env env (TVar x) type-term) _ ((BTrue) (Some _ universe-key)) ((BFalse) (None _))))
+
+(def-fns _ $ (many kw-new : (many (Env) env) (many (Maybe $ Nat) except) (many (Nat) x) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (Maybe $ String) r))
+  (let-match many (held-key env except x) (Some _ b) ((None _) (None _)))
+  (let-match many (kw-find acc b) (Some _ q) ((None _) (Some _ b)))
+  (let-match many q (MkPair _ _ y _))
+  (match many (nat-lt y x) _ ((BTrue) (Some _ b)) ((BFalse) (None _))))
 
 (def-fns _ $ (many kw-held : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (Name) (Nat)) ns) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
   (let-match many ns (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ n x))
-  (let-match many (held-key env except x) (Some _ b) ((None _) (tail $ kw-held env except rest acc)))
-  (let ((many (Bool) newer)) $ match many (kw-find acc b) _ ((None _) (BTrue)) ((Some _ q) (match many q _ ((MkPair _ _ y _) (nat-lt y x)))))
-  (tail $ kw-held env except rest $ match many newer (((List $ Pair (String) $ Pair (Nat) (String)) _)) ((BTrue) (Cons _ (MkPair _ _ b $ MkPair _ _ x $ spell-name n) acc)) ((BFalse) acc)))
+  (tail $ kw-held env except rest $ match many (kw-new env except x acc) _ ((Some _ b) (Cons _ (MkPair _ _ b $ MkPair _ _ x $ spell-name n) acc)) ((None _) acc)))
+
+(def-fns _
+  ((many kw-held-src : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (NameMap $ Nat) m) (many (Rope) path) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+    (let-match many m (NMNode _ here kids))
+    (let ((many acc2)) $ match many here (((List $ Pair (String) $ Pair (Nat) (String)) _))
+      ((None _) acc)
+      ((Some _ x) (match many (kw-new env except x acc) _ ((Some _ b) (Cons _ (MkPair _ _ b $ MkPair _ _ x $ spell-name $ NSrc $ rope-str path) acc)) ((None _) acc))))
+    (tail $ kw-held-kids env except kids path acc2))
+  ((many kw-held-kids : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ NMKid $ Nat) kids) (many (Rope) path) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+    (let-match many kids (Cons _ k rest) ((Nil _) acc))
+    (match many k _
+      ((MkKid _ c submap) (tail $ kw-held-kids env except rest path $ notail $ kw-held-src env except submap (rcat path $ RChar c) acc)))))
 
 ; A built-in no name holds is spelled `_` and its name, marked with the binder that shadows it.
 (def-fns _ $ (many kw-fallbacks : (many (Env) env) (subterm many (List $ SpEntry) es) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
@@ -171,7 +201,8 @@
     ((None _) (Cons _ (MkPair _ _ b $ MkPair _ _ 0 $ rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat3 (RChar #\x01) (RStr $ loc-str site) (RChar #\x02)) acc))))
 
 (def-fns _ $ (many kws-except : (many (Env) env) (many (Maybe $ Nat) except) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-  (kw-fallbacks env sp-table $ kw-held env except (name-index-entries _ $ scope-names $ env-scope env) $ Nil _))
+  (let-match many (scope-names $ env-scope env) (MkNameIndex _ src gen))
+  (kw-fallbacks env sp-table $ kw-held env except gen $ kw-held-src env except src (REmpty) $ Nil _))
 
 (def-fns _ $ (many kws-of : (many (Env) env) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
   (kws-except env $ None _))
@@ -1795,25 +1826,33 @@
 
 ; The first of [ys] sharing a name with x; only one older than x, of a smaller id (an object is opened after
 ; the entries it may share with were bound), when [older-only].
-(def-fns _ $ (many first-sharing : (subterm many (List $ Opened) ys) (many (Opened) x) (many (Bool) older-only) -> (many (Maybe $ Nat) r))
+(def-fns _ $ (many first-sharing : (subterm many (List $ Opened) ys) (many (Opened) x) (many (Bool) older-only) (many (List $ Nat) cands) -> (many (Maybe $ Nat) r))
   (let-match many ys (Cons _ y rest) ((Nil _) (None _)))
-  (match many (and (or (not older-only) $ nat-lt (opened-x y) $ opened-x x) $ opened-share x y) _
+  (let ((many (Bool) hit)) $ match many (list-mem-bin cands $ opened-x y) _
+    ((BFalse) (BFalse))
+    ((BTrue) (and (or (not older-only) $ nat-lt (opened-x y) $ opened-x x) $ opened-share x y)))
+  (match many hit _
     ((BTrue) (Some _ $ opened-x y))
-    ((BFalse) (tail $ first-sharing rest x older-only))))
+    ((BFalse) (tail $ first-sharing rest x older-only cands))))
 
-; A newer opened object and an older one naming one thing, if any: the newest such object, and the newest
-; older one it shares with; the list holds the newer first. Only a pair with a [touched] object, one whose
-; names changed since the invariant last held, can share, the others having been disjoint then, so an
-; untouched object is compared with the touched ones [tos] alone.
-(def-fns _ $ (many open-pair : (subterm many (List $ Opened) opens) (many (List $ Nat) touched) (many (List $ Opened) tos) -> (many (Maybe $ Pair (Nat) (Nat)) r))
+(def-fns _ $ (many naming-any : (subterm many (List $ Nat) names) (many (IdMap $ List $ Nat) ix) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many names (Cons _ n rest) ((Nil _) acc))
+  (let ((many (List $ Nat) more) (erased _)) $ list-append _ (index-of n ix) acc)
+  (tail $ naming-any rest ix more))
+
+(def-fns _ $ (many sharing-any : (subterm many (List $ Opened) os) (many (IdMap $ List $ Nat) ix) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many os (Cons _ o rest) ((Nil _) acc))
+  (tail $ sharing-any rest ix $ naming-any (opened-names o) ix acc))
+
+(def-fns _ $ (many open-pair : (subterm many (List $ Opened) opens) (many (List $ Nat) touched) (many (List $ Opened) tos) (many (IdMap $ List $ Nat) ix) (many (List $ Nat) near) -> (many (Maybe $ Pair (Nat) (Nat)) r))
   (let-match many opens (Cons _ x rest) ((Nil _) (None _)))
   (let ((many (Maybe $ Nat) y))
     (match many (list-mem-bin touched $ opened-x x) _
-      ((BTrue) (first-sharing rest x $ BFalse))
-      ((BFalse) (first-sharing tos x $ BTrue))))
+      ((BTrue) (first-sharing rest x (BFalse) $ naming-any (opened-names x) ix $ Nil _))
+      ((BFalse) (match many (list-mem-bin near $ opened-x x) (((Maybe $ Nat) _)) ((BTrue) (first-sharing tos x (BTrue) touched)) ((BFalse) (None _))))))
   (match many y _
     ((Some _ yy) (Some _ $ MkPair _ _ (opened-x x) yy))
-    ((None _) (tail $ open-pair rest touched tos))))
+    ((None _) (tail $ open-pair rest touched tos ix near))))
 
 ; At most one opened Matchable names a given type constructor or value constructor, and at most one opened
 ; Newtype a given constructor (section 8): two that would are unified, forcing, and the better-ranked entry
@@ -1823,7 +1862,8 @@
 (def-fns _ $ (many merge-opens : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) touched) -> (many (UnifyRes) r))
   (let-match many fuel (Succ f) ((Zero) (UOk env)))
   (let ((many opens)) $ env-opens env)
-  (let-match many (open-pair opens touched $ opened-among opens touched) (Some _ pr) ((None _) (UOk env)))
+  (let ((many tos)) $ opened-among opens touched)
+  (let-match many (open-pair opens touched tos (env-index env) $ sharing-any tos (env-index env) $ Nil _) (Some _ pr) ((None _) (UOk env)))
   (let-match many pr (MkPair _ _ newer older))
   (let-match many (unify-force (Forcing env) (type-of env newer) (type-of env older)) (Forcing env2)
     ((Refuted m) (UContra m)))
@@ -6643,7 +6683,7 @@
     (let-match many tids (TCons g3 r3 h3 hs3 tid trest))
     (let-match many h (MkAdtHeader _ name disc nt ext ctors pc))
     (let ((many envh)) $ env-at env $ raw-head-pos adt)
-    (let ((unique ew1) (many env2) (many mcpairs)) $ notail $ elab-ctors ew fuel sugar (subterm (subterm-trans pc $ prove-subterm adt adts)) ctors envh tid nt)
+    (let ((unique ew1) (many env2) (many mcpairs)) $ notail $ elab-ctors ew fuel sugar (subterm (subterm-trans pc $ prove-subterm adt adts)) ctors envh tid nt (BFalse))
     (let ((many mctors)) $ mctors-of mcpairs)
     (let ((many ss)) $ shapes mctors env2)
     (let ((many tagged)) $ tagged-of disc ss)
@@ -6674,14 +6714,16 @@
     (let ((many all) (erased cat)) $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ BMat _ adt2) more)
     (values ew2 env5 all))
 
-  ((many elab-ctors : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) ctors) (many (Env) env) (many (Nat) tid) (many (Bool) nt) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Pair (Multiplicity) $ Nat) cs))
-    (let ((unique ew1) (many envs0) (many sx)) $ splice-tail ew (env-set-usage-erased env $ BTrue) 0 ctors)
+  ((many elab-ctors : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) ctors) (many (Env) env) (many (Nat) tid) (many (Bool) nt) (many (Bool) spliced) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Pair (Multiplicity) $ Nat) cs))
+    (let ((unique ew1) (many envs0) (many sx)) $ match many spliced (((ElabWorld) _ at ew) ((Env) _) ((Maybe $ Result $ List $ Syn) _))
+      ((BTrue) (values ew env $ None _))
+      ((BFalse) (splice-tail ew (env-set-usage-erased env $ BTrue) 0 ctors)))
     (let ((many envs)) $ env-set-usage-erased envs0 $ env-usage-erased env)
     (let-match many sx (None _)
       ((Some _ rr)
         (let-match many rr (Ok _ c2) ((Fail _ m) (values ew1 (env-error envs m) $ Nil _)))
         (let-match many fuel (Succ f2) ((Zero) (values ew1 (env-error envs "more than 10000 macro expansions") $ Nil _)))
-        (tail $ elab-ctors ew1 f2 (raws-size c2) c2 envs tid nt)))
+        (tail $ elab-ctors ew1 f2 (raws-size c2) c2 envs tid nt $ BTrue)))
     (let-match many ctors (Cons _ craw rest) ((Nil _) (values ew1 env $ Nil _)))
     (let ((many envl)) $ env-at env $ raw-pos craw)
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error envl $ str-cat "malformed constructor" $ sp-hints envl "constructor"))
@@ -6696,7 +6738,7 @@
           (let ((many env1)) $ match many (is-mark env0 colon $ MkColon) (((Env) _)) ((BTrue) env0) ((BFalse) (bad0)))
           (let ((many env1n) (many name)) $ name-checked env1 nraw "a constructor name")
           (values env1n $ Some _ $ MkCtorParts _ mult name sg $ prove-subterm sg craw)) (else (values (bad) $ None $ CtorParts craw))))
-    (let-match many parsed (Some _ cp) ((None _) (tail $ elab-ctors ew1 fuel sugar rest (env-back env env0) tid nt)))
+    (let-match many parsed (Some _ cp) ((None _) (tail $ elab-ctors ew1 fuel sugar rest (env-back env env0) tid nt $ BTrue)))
     (let-match many cp (MkCtorParts _ mult name sg psg))
     (let ((many env0a) (many ps) (many after) (erased wa)) $ split-arrow sg _ (WHere sg) env0)
     (let ((unique ew2) (many env2) (many tele) (many ret) (many ty)) $ notail $ elab-valctor ew1 fuel sugar (subterm (subterm-trans psg $ prove-subterm craw ctors)) sg one-step (MkPair _ _ ps $ subs-of after _ wa) env0a)
@@ -6710,7 +6752,7 @@
         ((BFalse) env2b)))
     (let ((many env3)) $ env-discard env0 env2c)
     (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 name (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)) (else (bind env3 name (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)))
-    (let ((unique ew3) (many env5) (many cs)) $ notail $ elab-ctors ew2 fuel sugar rest (env-back env env4) tid nt)
+    (let ((unique ew3) (many env5) (many cs)) $ notail $ elab-ctors ew2 fuel sugar rest (env-back env env4) tid nt $ BTrue)
     (values ew3 env5 $ Cons _ (MkPair _ _ mult c) cs))
   ; tail and delegate wrap a call (section 19, ASSUMPTIONS 9); the compiled code must be that call.
   ((many elab-marked : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (Sp) sp) (many (ExprDemand expect) demand) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
@@ -7090,7 +7132,7 @@
       ((BFalse) (let ((many errs)) $ count-errs tele) (values ew (count-mismatch env2 callee tele pos $ list-length _ args) errs errs ctx (SNone _) (Nil _))))
     (let ((many slotted)) $ match many result (((List $ Nat) _)) ((ARCall rets) (slot-named-params tele rets)) ((ARApp _ _) (Nil _)))
     (let ((unique ew1) (many env3) (many acc) (many tys) (many ctx2) (many pre) (many codes) (many ats)) $ notail $ check-args-go ew fuel sugar root args k env2 callee ctx ctx (SNone _) tele metas lock pos as-term prepare fields slotted (Nil _) (Nil _) (Nil _) (Nil _))
-    (let ((many (Env) env4)) $ match many (and boundary $ terms-have-meta acc env3) _ ((BTrue) (solve-against env3 expect result mvars wilds $ BTrue)) ((BFalse) env3))
+    (let ((many (Env) env4)) $ match many (match many boundary (((Bool) _)) ((BTrue) (terms-have-meta acc env3)) ((BFalse) (BFalse))) _ ((BTrue) (solve-against env3 expect result mvars wilds $ BTrue)) ((BFalse) env3))
     (let ((many (Env) env5)) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) (sub-raws _ args) tele callee env4 1)) ((BFalse) env4))
     (let ((many (Env) env6)) $ report-ats (list-rev _ ats) callee env5)
     (values ew1 env6 (metaless-list acc env6) (metaless-list tys env6) ctx2 pre codes))

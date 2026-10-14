@@ -1840,7 +1840,8 @@
   (many MkOpens : (erased (Nat) n) (erased (Facts n) f) (many (List $ Opened) list) (many (IdMap $ List $ Nat) index) (many (List $ Nat) touched) -> (Opens n f)))
 
 (def-fns _ $ (many nats-share : (subterm many (List $ Nat) xs) (many (List $ Nat) ys) -> (many (Bool) r))
-  (match many xs _ ((Nil _) (BFalse)) ((Cons _ x rest) (or (list-mem-bin ys x) $ notail $ nats-share rest ys))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (BFalse)))
+  (match many (list-mem-bin ys x) _ ((BTrue) (BTrue)) ((BFalse) (tail $ nats-share rest ys))))
 
 (def-fns _ $ (many nats-remove : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ y rest)

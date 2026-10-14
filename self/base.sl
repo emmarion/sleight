@@ -551,7 +551,8 @@
     ((BFalse) (tail $ index-of-bin rest x $ Succ i))))
 
 (def-fns _ $ (many list-mem-bin : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
-  (is-some _ $ index-of-bin xs x 0))
+  (let-match many xs (Cons _ y rest) ((Nil _) (BFalse)))
+  (match many (nat-eq x y) _ ((BTrue) (BTrue)) ((BFalse) (tail $ list-mem-bin rest x))))
 
 (def-fns _ $ (many join-strs : (subterm many (List $ String) xs) (many (String) sep) -> (many (String) r))
   (let-match many xs (Cons _ x rest)
