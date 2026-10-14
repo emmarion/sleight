@@ -3058,7 +3058,12 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
       Result P (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) cnt rb (eval P (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) cnt F.body) ∧ Sim P Γb (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body rb (eval P (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) cnt F.body)) :
     EnvOK P (ρ ++ outs) (Ctx.adv P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)) ∧ LvlBound (ρ ++ outs) cnt1 ∧ MuOK μ (Ctx.adv P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)) (ρ ++ outs) ∧ rets.static (Ctx.adv P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)).n 0 ∧
     HeadSim P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) ρ outs (.call f dec args er ms ve rest) rest ∧
-    cnt ≤ cnt1 ∧ outs.length = outsT.len := by
+    cnt ≤ cnt1 ∧ outs.length = outsT.len ∧
+    ∀ ρS, Γ.ghost = false → SimEnv P Γ.er ρS ρ → er = false → ∀ envS gid' j' Gr' F' outsSb,
+      P.sub ρS f = .clo envS gid' j' → P.groups[gid']? = some Gr' → Gr'.fns[j']? = some F' →
+      RunS P (envS.toList ++ closuresS envS.toList gid' Gr' ++ F'.spreadIn ve (args.toList.map (P.sub ρS))) F'.body outsSb →
+      SimEnv P (Ctx.adv P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)).er
+        (ρS ++ F'.spreadOut ve args.toList.length outsSb) (ρ ++ outs) := by
   obtain ⟨env', n1', gid', G', F', hcal', _, ⟨Γb, rb, hcb, hEb, hbb, hmb, hrbs, hrb, hgb, he1, he2, hdl, he3, hrbt⟩,
     hot, hos, hFe, hFnp, hdo⟩ := call_setup hP hE hb hm hf hF ht ha hn hd
   rw [hcal] at hcal'; cases hcal'
@@ -3071,14 +3076,21 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
   obtain ⟨hE', hcur, hsubs, hnle⟩ := hE.pushTele (some (ms.map (er || ·))) hot hos hvs hlc
   have hl := hE.len
   obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ outsT (some (ms.map (er || ·))) hot
-  have hh : HeadSim P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) ρ outs (.call f dec args er ms ve rest) rest := by
+  have hh0 : ∀ ρS, Γ.ghost = false → SimEnv P Γ.er ρS ρ → ∃ o, (er = false → ∀ envS gid' j' Gr' F' outsSb,
+      P.sub ρS f = .clo envS gid' j' → P.groups[gid']? = some Gr' → Gr'.fns[j']? = some F' →
+      RunS P (envS.toList ++ closuresS envS.toList gid' Gr' ++ F'.spreadIn ve (args.toList.map (P.sub ρS))) F'.body outsSb →
+      o = F'.spreadOut ve args.toList.length outsSb) ∧
+      (∀ vs', stepS P ρS (.call f dec args er ms ve rest) = some vs' → vs' = o) ∧
+      (∀ out, RunS P (ρS ++ o) rest out → RunS P ρS (.call f dec args er ms ve rest) out) ∧ o.length = outs.length ∧
+      ∀ k a b, o[k]? = some a → outs[k]? = some b → (Γ.pushTele outsT (some (ms.map (er || ·)))).er (Γ.n + k) = false →
+        Real P a b := by
     intro ρS hg hS
     have her : ∀ k, k < outs.length →
         (Γ.pushTele outsT (some (ms.map (er || ·)))).er (Γ.n + k) = (ms.map (er || ·)).getD k true :=
       fun k hk => hpn k (hol ▸ hk)
     cases er with
     | true =>
-      refine ⟨List.replicate ms.length .tok, fun vs' h => by simp [stepS] at h; exact h.symm,
+      refine ⟨List.replicate ms.length .tok, (fun h => by cases h), fun vs' h => by simp [stepS] at h; exact h.symm,
         fun out h => .callE h, by simp [← ho, hol], fun k a b _ hb he => ?_⟩
       rw [her k (List.getElem?_eq_some_iff.mp hb).1] at he
       simp only [List.getD_eq_getElem?_getD, List.getElem?_map] at he
@@ -3163,8 +3175,12 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
         have hlS : outsS.length = outs.length := by have := hreb.len; simpa [Tm.toList_ofList] using this
         have hb3 : RunS P (env'.toList ++ closuresS env'.toList gid' G' ++ F'.spreadIn (some t.ers) (args.toList.map (P.sub ρS)))
             F'.body outs' := by simpa [FnDef.spreadIn] using hb2
-        refine ⟨F'.spreadOut (some t.ers) args.toList.length outs', fun vs' h => ?_, fun out h => .call hcl hG2 hF2 hb3 h,
+        refine ⟨F'.spreadOut (some t.ers) args.toList.length outs', fun _ envS' g'' j'' G'' F'' oS hcl' hG' hF' hrun' => ?_,
+          fun vs' h => ?_, fun out h => .call hcl hG2 hF2 hb3 h,
           by simp [FnDef.spreadOut, length_spread, hvd, hlo, Option.getD_some], fun k a b ha hb he => ?_⟩
+        · rw [hcl] at hcl'; simp only [Tm.clo.injEq] at hcl'; obtain ⟨rfl, rfl, rfl⟩ := hcl'
+          rw [hG2] at hG'; cases hG'; rw [hF2] at hF'; cases hF'
+          rw [RunS.det hb3 hrun']
         · simp only [stepS, hcl, hG2, hF2, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
             Option.some.injEq] at h
           obtain ⟨o, h1, rfl⟩ := h
@@ -3201,9 +3217,13 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
         have := hreb.len; simp only [Tm.toList_ofList] at this
         rw [Tm.len_ers _ hot, ← hol, this]
       try rw [Tm.toList_ofList] at hrunb
-      refine ⟨F.spreadOut ve args.toList.length outsS, fun vs' h => ?_,
+      refine ⟨F.spreadOut ve args.toList.length outsS, fun _ envS' g'' j'' G'' F'' oS hcl' hG' hF' hrun' => ?_, fun vs' h => ?_,
         fun out h => .call hfS hG hFj (by simpa [Tm.toList_ofList] using hrunb) h,
         by rw [hout, length_spread, hlo]; simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
+      · rw [hfS] at hcl'; simp only [Tm.clo.injEq] at hcl'; obtain ⟨rfl, rfl, rfl⟩ := hcl'
+        rw [hG] at hG'; cases hG'; rw [hFj] at hF'; cases hF'
+        simp only [Tm.toList_ofList] at hrun'
+        rw [RunS.det hrunb hrun']
       · simp only [stepS, hfS, hG, hFj, Tm.toList_ofList, Option.bind_eq_bind, Option.bind_some,
           Option.bind_eq_some_iff, Option.some.injEq] at h
         obtain ⟨o, h1, rfl⟩ := h
@@ -3217,9 +3237,15 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
         rw [hout, spread_filt _ _ hlo k this] at ha
         rw [← hrbe] at this
         exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) this
-  exact ⟨hE.adv hE' (by simp [Ctx.pushTele_fixed]) hh, LvlBound.append.mpr ⟨hb.mono hle, hbv⟩,
+  have hh : HeadSim P Γ (Γ.pushTele outsT (some (ms.map (er || ·)))) ρ outs (.call f dec args er ms ve rest) rest :=
+    fun ρS hg hS => let ⟨o, _, h⟩ := hh0 ρS hg hS; ⟨o, h⟩
+  refine ⟨hE.adv hE' (by simp [Ctx.pushTele_fixed]) hh, LvlBound.append.mpr ⟨hb.mono hle, hbv⟩,
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs,
-    hh, hle, hol⟩
+    hh, hle, hol, fun ρS hg hS her envS gid' j' Gr' F' outsSb hfS hGr hFj hrun => ?_⟩
+  obtain ⟨o, hO, -, -, hlo, hre⟩ := hh0 ρS hg hS
+  rw [hO her envS gid' j' Gr' F' outsSb hfS hGr hFj hrun] at hlo hre
+  rw [Ctx.adv_er]
+  exact hS.extend hlo (fun i hi => hpo i (hl ▸ hi)) fun k a b ha hb he => hre k a b ha hb (by rw [← hl]; exact he)
 
 theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
     LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
@@ -3248,7 +3274,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | @call _ _ _ _ np t _ _ _ outsT _ _ _ _ _ _ _ hf hF ht ha hn hd ho hok hve hr =>
-    obtain ⟨hE', hb', hm', hrs', hh, hle, -⟩ := call_step hP hE hb hm hrs hf hF ht ha hn hd ho hok hve hcal hev (ihb gid)
+    obtain ⟨hE', hb', hm', hrs', hh, hle, -, -⟩ := call_step hP hE hb hm hrs hf hF ht ha hn hd ho hok hve hcal hev (ihb gid)
     have hl := hE.len
     rw [eval]; simp only [hcal]; rw [dif_pos hmu]; simp only [argv, μ'] at hev; simp only [hev]
     obtain ⟨hpg, hpo, -⟩ := Ctx.pushTele_er Γ outsT (some (ms.map (er || ·))) (ha.isTele ht)
