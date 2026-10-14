@@ -68,46 +68,46 @@ def Prog.reuse (P : Prog) (H : Heap) (ρ : List Tm) (u : Nat) : Tm → Option (H
     | _, _ => none
   | _ => none
 
-def Chk.plain : Chk → Bool
-  | .mark (.reuse true) | .mark .alloc | .mark .cellOf | .mark (.write true) => false
-  | _ => true
+def Mark.pend : Mark → Bool
+  | .reuse true | .alloc | .cellOf | .write true => true
+  | _ => false
 
-inductive RunM : Heap → List Tm → Core → Heap → List Tm → Prop
-  | ret : P.buildList H (Tm.env ρ) ts.toList = (H', vs) → RunM H ρ (.ret ts) H' vs
-  | callE : RunM H (ρ ++ List.replicate ms.length .tok) rest H' out → RunM H ρ (.call f dec args true ms ve rest) H' out
+abbrev Pend := Option (Mark × Tm)
+
+def Prog.evalP (P : Prog) (H : Heap) (ρ : List Tm) : Pend → Prim → Heap × Tm
+  | some (.reuse true, .fv u), .tm t => ((P.reuse H ρ u t).getD (P.build H (Tm.env ρ) t))
+  | some (.alloc, _), .axm _ => let (H, a) := H.alloc (0, 0, []); (H, .ptr a)
+  | some (.cellOf, .fv x), .axm _ | some (.write true, .fv x), .axm _ => (H, Tm.env ρ x)
+  | _, p => P.evalM H ρ p
+
+inductive RunM : Heap → List Tm → Pend → Core → Heap → List Tm → Prop
+  | ret : P.buildList H (Tm.env ρ) ts.toList = (H', vs) → RunM H ρ pd (.ret ts) H' vs
+  | callE : RunM H (ρ ++ List.replicate ms.length .tok) none rest H' out → RunM H ρ pd (.call f dec args true ms ve rest) H' out
   | call : P.subU (Tm.env ρ) f = .clo env gid j → P.groups[gid]? = some G → G.fns[j]? = some F →
       P.buildList H (Tm.env ρ) args.toList = (H1, as) →
-      RunM H1 (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve as) F.body H2 outs →
-      RunM H2 (ρ ++ F.spreadOut ve args.toList.length outs) rest H' out → RunM H ρ (.call f dec args false ms ve rest) H' out
-  | mtchE : RunM H (ρ ++ List.replicate R.len .tok) rest H' out → RunM H ρ (.mtch s R brs els true rest) H' out
+      RunM H1 (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve as) none F.body H2 outs →
+      RunM H2 (ρ ++ F.spreadOut ve args.toList.length outs) none rest H' out →
+      RunM H ρ pd (.call f dec args false ms ve rest) H' out
+  | mtchE : RunM H (ρ ++ List.replicate R.len .tok) none rest H' out → RunM H ρ pd (.mtch s R brs els true rest) H' out
   | mtch : P.build H (Tm.env ρ) s = (H1, w) → P.viewM H1 w = .app (.vc d c ls) vs →
       selectBr brs els c vs.toList = some (pre, body) →
-      RunM H1 (ρ ++ pre) body H2 outs → RunM H2 (ρ ++ outs) rest H' out → RunM H ρ (.mtch s R brs els false rest) H' out
-  | caseE : realBr brs els = some (pre, body) → RunM H (ρ ++ pre) body H' out → RunM H ρ (.case s brs els true nt) H' out
+      RunM H1 (ρ ++ pre) none body H2 outs → RunM H2 (ρ ++ outs) none rest H' out →
+      RunM H ρ pd (.mtch s R brs els false rest) H' out
+  | caseE : realBr brs els = some (pre, body) → RunM H (ρ ++ pre) none body H' out →
+      RunM H ρ pd (.case s brs els true nt) H' out
   | caseN : realBr brs els = some (pre, body) → P.build H (Tm.env ρ) s = (H1, w) →
-      RunM H1 (ρ ++ pre.map fun _ => w) body H' out → RunM H ρ (.case s brs els false true) H' out
+      RunM H1 (ρ ++ pre.map fun _ => w) none body H' out → RunM H ρ pd (.case s brs els false true) H' out
   | case : P.build H (Tm.env ρ) s = (H1, w) → P.viewM H1 w = .app (.vc d c ls) vs →
       selectBr brs els c vs.toList = some (pre, body) →
-      RunM H1 (ρ ++ pre) body H' out → RunM H ρ (.case s brs els false false) H' out
-  | seq : RunM H ρ body H1 outs → RunM H1 (ρ ++ outs) rest H' out → RunM H ρ (.seq R body rest) H' out
-  | prim : (if er then (H, Tm.tok) else P.evalM H ρ p) = (H1, v) → RunM H1 (ρ ++ [v]) rest H' out →
-      RunM H ρ (.prim p er rest) H' out
-  | defLvl : RunM H (ρ ++ [.tok]) rest H' out → RunM H ρ (.defLvl rest) H' out
-  | defFns : P.groups[gid]? = some G → RunM H (ρ ++ closuresS ρ gid G) rest H' out → RunM H ρ (.defFns gid rest) H' out
-  | chk : k.plain = true → RunM H ρ rest H' out → RunM H ρ (.chk k a b rest) H' out
-  | reuse : P.reuse H ρ u t = some (H1, v) → RunM H1 (ρ ++ [v]) rest H' out →
-      RunM H ρ (.chk (.mark (.reuse true)) (.fv u) x (.prim (.tm t) false rest)) H' out
-  | reuseNo : (∀ u' t' rest', a = .fv u' → c = .prim (.tm t') false rest' → P.reuse H ρ u' t' = none) →
-      RunM H ρ c H' out → RunM H ρ (.chk (.mark (.reuse true)) a x c) H' out
-  | alloc : H.alloc (0, 0, []) = (H1, a) → RunM H1 (ρ ++ [.ptr a]) rest H' out →
-      RunM H ρ (.chk (.mark .alloc) x y (.prim (.axm T) false rest)) H' out
-  | allocNo : (∀ T rest', c ≠ .prim (.axm T) false rest') → RunM H ρ c H' out → RunM H ρ (.chk (.mark .alloc) x y c) H' out
-  | cellOf : RunM H (ρ ++ [Tm.env ρ x]) rest H' out →
-      RunM H ρ (.chk (.mark .cellOf) (.fv x) y (.prim (.axm T) false rest)) H' out
-  | write : RunM H (ρ ++ [Tm.env ρ x]) rest H' out →
-      RunM H ρ (.chk (.mark (.write true)) (.fv x) y (.prim (.axm T) false rest)) H' out
-  | cellNo : m = .cellOf ∨ m = .write true → (∀ x T rest', a = .fv x → c ≠ .prim (.axm T) false rest') →
-      RunM H ρ c H' out → RunM H ρ (.chk (.mark m) a y c) H' out
+      RunM H1 (ρ ++ pre) none body H' out → RunM H ρ pd (.case s brs els false false) H' out
+  | seq : RunM H ρ none body H1 outs → RunM H1 (ρ ++ outs) none rest H' out → RunM H ρ pd (.seq R body rest) H' out
+  | prim : (if er then (H, Tm.tok) else P.evalP H ρ pd p) = (H1, v) → RunM H1 (ρ ++ [v]) none rest H' out →
+      RunM H ρ pd (.prim p er rest) H' out
+  | defLvl : RunM H (ρ ++ [.tok]) none rest H' out → RunM H ρ pd (.defLvl rest) H' out
+  | defFns : P.groups[gid]? = some G → RunM H (ρ ++ closuresS ρ gid G) none rest H' out →
+      RunM H ρ pd (.defFns gid rest) H' out
+  | mark : m.pend = true → RunM H ρ (some (m, a)) rest H' out → RunM H ρ pd (.chk (.mark m) a b rest) H' out
+  | chk : (∀ m, k = .mark m → m.pend = false) → RunM H ρ pd rest H' out → RunM H ρ pd (.chk k a b rest) H' out
 
 def Prog.rd (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any (·.1 == i)).getD false
 

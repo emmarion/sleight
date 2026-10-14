@@ -701,4 +701,102 @@ theorem WO.fwd {H H' : Heap} : ∀ {w v : Tm}, WO P H w v → Agree H H' (Foot P
   | tok => exact .tok
   | imm h1 h2 => exact .imm h1 h2
 
+def Live (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS : List Tm) (a : Nat) : Prop :=
+  ∃ z < n, (U.lookup z).isSome ∧ Foot P H (Tm.env ρM z) (Tm.env ρS z) a
+
+def Own (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS : List Tm) (a : Nat) : Prop :=
+  ∃ x < n, U.lookup x = some true ∧ Spine P H (Tm.env ρM x) (Tm.env ρS x) a
+
+structure MFrame (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS : List Tm) (Res Out : Nat → Prop) : Prop where
+  lenM : ρM.length = n
+  lenS : ρS.length = n
+  wf : H.WF
+  dec : ∀ i < n, (U.lookup i).isSome → MDec P H (Tm.env ρM i) (Tm.env ρS i)
+  wo : ∀ x < n, U.lookup x = some true → WO P H (Tm.env ρM x) (Tm.env ρS x)
+  sep : ∀ x < n, ∀ z < n, x ≠ z → U.lookup x = some true → (U.lookup z).isSome →
+    Disj (Spine P H (Tm.env ρM x) (Tm.env ρS x)) (Foot P H (Tm.env ρM z) (Tm.env ρS z))
+  out : ∀ x < n, U.lookup x = some true → Disj (Spine P H (Tm.env ρM x) (Tm.env ρS x)) Out
+  res : Disj Res (Live P U n H ρM ρS) ∧ Disj Res Out ∧ Disj Res (Own P U n H ρM ρS) ∧ ∀ a, Res a → (H.blk a).isSome
+
+structure MOut (P : Prog) (U : Uses) (n : Nat) (H : Heap) (ρM ρS : List Tm) (Res : Nat → Prop) (rets : Tm) (ru : List Bool)
+    (H' : Heap) (vsM vsS : List Tm) : Prop where
+  wf : H'.WF
+  next : H.next ≤ H'.next
+  keep : ∀ a, a < H.next → ¬ Own P U n H ρM ρS a → ¬ Res a → H'.blk a = H.blk a
+  len : vsM.length = vsS.length
+  dec : ∀ k w v, vsM[k]? = some w → vsS[k]? = some v → rets.ers.getD k true = false → MDec P H' w v
+  foot : ∀ k w v, vsM[k]? = some w → vsS[k]? = some v → rets.ers.getD k true = false → ∀ b, Foot P H' w v b →
+    H.next ≤ b ∨ Own P U n H ρM ρS b ∨ Res b ∨ Live P U n H ρM ρS b
+  uspine : ∀ k w v, vsM[k]? = some w → vsS[k]? = some v → rets.ers.getD k true = false → ru.getD k false = true →
+    ∀ b, Spine P H' w v b → H.next ≤ b ∨ Own P U n H ρM ρS b ∨ Res b
+  uwo : ∀ k w v, vsM[k]? = some w → vsS[k]? = some v → rets.ers.getD k true = false → ru.getD k false = true → WO P H' w v
+  usep : ∀ k j w v w' v', k ≠ j → vsM[k]? = some w → vsS[k]? = some v → vsM[j]? = some w' → vsS[j]? = some v' →
+    rets.ers.getD k true = false → rets.ers.getD j true = false → ru.getD k false = true →
+    Disj (Spine P H' w v) (Foot P H' w' v')
+
+theorem UCtx.sigOf_spec {G : UCtx} {h s : Tm} (e : G.sigOf P h = some s) :
+    ∃ T, TmTy P G.Γ h T ∧ (G.Γ.canon T = .valCtor s ∨ G.Γ.canon T = .tyCtor s) := by
+  unfold UCtx.sigOf at e
+  split at e
+  · rename_i T ht _
+    split at e <;> simp at e
+    · subst e; exact ⟨T, ht, .inl ‹_›⟩
+    · subst e; exact ⟨T, ht, .inr ‹_›⟩
+  · simp at e
+
+def Tm.kinds : Tm → List Ent
+  | .bind k _ r => k :: r.kinds
+  | _ => []
+
+theorem Tm.kinds_inst (u : Tm) : ∀ (t : Tm) k, t.isTele → (t.inst u k).kinds = t.kinds := by
+  intro t; induction t <;> intro k h <;> simp_all [Tm.inst, Tm.kinds, Tm.isTele]
+
+theorem Tm.kinds_subst (f : Nat → Tm) : ∀ (t : Tm), t.isTele → (t.subst f).kinds = t.kinds := by
+  intro t; induction t <;> intro h <;> simp_all [Tm.subst, Tm.kinds, Tm.isTele]
+
+theorem Tm.kinds_skip : ∀ (t : Tm) (n : Nat), (t.skip n).kinds = t.kinds.drop n
+  | .bind _ _ r, n + 1 => by simp [Tm.skip, Tm.kinds, Tm.kinds_skip r n]
+  | .bind _ _ _, 0 => by simp [Tm.skip]
+  | .fv _, n | .bv _, n | .nil, n | .cons .., n | .app .., n | .tyc .., n | .vc .., n | .tyCtor _, n
+  | .valCtor _, n | .univ, n | .level, n | .predates .., n | .subterm .., n | .fn .., n | .mtbl .., n
+  | .lvl _, n | .tok, n | .clo .., n | .nat _, n | .ptr _, n => by cases n <;> simp [Tm.skip, Tm.kinds]
+
+theorem Tm.ers_kinds : ∀ (t : Tm), t.ers = t.kinds.map Ent.er
+  | .bind _ _ r => by simp [Tm.ers, Tm.kinds, Tm.ers_kinds r]
+  | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _ | .univ | .level
+  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ => rfl
+
+theorem Tm.uAt_kinds : ∀ (t : Tm) (k : Nat), t.uAt k = ((t.kinds[k]?).map Ent.u).getD false
+  | .bind _ _ r, 0 => rfl
+  | .bind _ _ r, k + 1 => by simp [Tm.uAt, Tm.kinds, Tm.uAt_kinds r k]
+  | .fv _, _ | .bv _, _ | .nil, _ | .cons .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
+  | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
+  | .clo .., _ | .nat _, _ | .ptr _, _ => by cases ‹Nat› <;> rfl
+
+theorem ArgsTy.kinds {Γ : Ctx} {args tele out : Tm} : ArgsTy P Γ args tele out → tele.isTele →
+    out.kinds = tele.kinds.drop args.len
+  | .nil, _ => by simp [Tm.len]
+  | .cons (r := r) _ _ hr, h | .isCons (r := r) _ _ hr, h | .anyCons (r := r) _ hr, h => by
+    simp only [Tm.isTele] at h
+    rw [hr.kinds (Tm.isTele_inst _ _ 0 h), Tm.kinds_inst _ _ _ h]; simp [Tm.kinds, Tm.len]
+
+theorem sigOf_vc {G : UCtx} {d c : Nat} {ls s sig : Tm} (e : G.sigOf P (.vc d c ls) = some s) (hc : P.ctor d c = some sig)
+    (hP : ProgOK P) : s.kinds = (sig.skip (P.lifted d)).kinds := by
+  obtain ⟨T, ht, hT⟩ := UCtx.sigOf_spec e
+  cases ht with
+  | vc hc' hl ha =>
+    rw [hc] at hc'; cases hc'
+    have hst : sig.isTele := by
+      obtain ⟨D, hD, hs'⟩ := Option.bind_eq_some_iff.mp hc
+      exact (hP.ctors _ _ _ _ hD hs').1.isTele
+    rcases hT with hT | hT <;> simp only [Ctx.canon, canonBy, Tm.subst] at hT <;> cases hT
+    rw [Tm.kinds_subst _ _ (ha.isTele hst), ha.kinds hst, Tm.kinds_skip, hl]
+
+structure GOK (P : Prog) (G : UCtx) (pd : Pend) (H : Heap) (ρM ρS : List Tm) (Res : Nat → Prop) : Prop where
+  cell : G.cellOk = true → (∃ y, pd = some (.alloc, y)) ∨
+    ∃ m x, pd = some (m, .fv x) ∧ (m = .cellOf ∨ m = .write true ∨ m = .reuse true) ∧ ∀ a, Tm.env ρM x = .ptr a → Res a
+  uscr : ∀ x, G.uscr = some (.fv x) → ∀ a, Tm.env ρM x = .ptr a → Res a
+  rebind : ∀ x, G.rebind = some (.fv x) → (∀ b, Spine P H (Tm.env ρM x) (Tm.env ρS x) b → Res b) ∧
+    WO P H (Tm.env ρM x) (Tm.env ρS x) ∧ MDec P H (Tm.env ρM x) (Tm.env ρS x)
+
 end Minimal
