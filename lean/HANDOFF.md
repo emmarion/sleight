@@ -178,6 +178,18 @@ callee's telescope; and, for a call through a delegate, which runs
 the target's body in the stripped run and the delegate's in the full
 one, a machine counterpart of `walk1`.
 
+The plan for the assembly, on this session's reading: a theorem by
+`eval.induct`, under `CoreTy`, `EnvOK` and the `UCtx` facts `GOK`
+needs, concluding `MRun` for the core's full result, with each case
+one of the step lemmas and the hypotheses those take discharged from
+`eval_sound` and the induction hypotheses. It needs one new invariant
+on values: every closure occurring in a value carries a certificate
+that its group passed `usesFns` (and `defFns`'s checks) in some
+`UCtx` whose `Γ` the closure's environment satisfies (`EnvOK`) and
+for which `GroupOK` holds. `defFns` establishes it, substitution and
+the steps preserve it, and at a call it gives the body's uses and the
+facts `call_body` takes.
+
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's
 value, none mismatched, 474 refusals agreed): `use` refuses an index
