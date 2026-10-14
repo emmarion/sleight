@@ -1,6 +1,6 @@
 # F5. A size-zero position treated as erased
 
-Status: fixed in `fa5747a` (`lib/elab.ml` `pos_of`; `self/core.sl`
+Status: fixed in `66d05b6` (`lib/elab.ml` `pos_of`; `self/core.sl`
 `PosOf`, `pos-of`, `pos-mult`; `self/elab.sl` `single`); tests
 `tests/zero_size_tail.sl`, `tests/zero_size_use_bad.sl`. Severity:
 rejects a valid program, and a use-counting gap. This fix rests on a

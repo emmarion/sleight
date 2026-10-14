@@ -195,7 +195,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
 Items 26 onward are from a session writing `tests/longest_palindrome.sl`,
 `tests/palindrome_bridge.sl` and `tests/manacher.sl` (a linear-time search
 with its correctness proof, about 1100 lines), in the order met. Those three
-files are not in this tree; they are at commit `4912ada`
+files are not in this tree; they are at commit `cb1d7c5`
 (`origin/palindrome-archive/fable` at the time of writing).
 
 26. **Item 1, closed.** `shape.ml` came over from the pre-restart history

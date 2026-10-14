@@ -1,6 +1,6 @@
 # F8. The extractor asserts false printing a union or newtype value
 
-Status: fixed in `fa5747a` (`lib/extract.ml` `show`); test
+Status: fixed in `66d05b6` (`lib/extract.ml` `show`); test
 `tests/show_union_newtype.sl`. Severity: crash of extraction, and a
 divergence between the reference and the self-hosted compiler.
 

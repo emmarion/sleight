@@ -1,6 +1,6 @@
 # F2. Self `let-match many` hands a unique-labelled field out at unique
 
-Status: fixed in `fa5747a` (`self/elab.sl`, one line); tests
+Status: fixed in `66d05b6` (`self/elab.sl`, one line); tests
 `tests/let_match_many_unique_field_bad.sl`,
 `tests/let_match_many_alias_bad.sl`. Severity: soundness, in the
 self-hosted compiler only.

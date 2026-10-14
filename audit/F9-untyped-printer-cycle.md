@@ -1,6 +1,6 @@
 # F9. The untyped printer overflows the stack on a cycle through a slot word
 
-Status: fixed in `fa5747a` (`lib/value.ml` `show`). Severity: crash.
+Status: fixed in `66d05b6` (`lib/value.ml` `show`). Severity: crash.
 
 ## The rule
 

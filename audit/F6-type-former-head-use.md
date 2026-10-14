@@ -1,6 +1,6 @@
 # F6. A type former's head recorded as a use, inconsistently across positions
 
-Status: fixed in `fa5747a` (`lib/elab.ml` `elab_term`, `self/elab.sl` the
+Status: fixed in `66d05b6` (`lib/elab.ml` `elab_term`, `self/elab.sl` the
 type-form branch of the term elaborator); tests
 `tests/type_head_unique_const.sl`,
 `tests/type_head_unique_const_degrade.sl`. Severity: rejects a valid

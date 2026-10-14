@@ -28,9 +28,9 @@ is a design decision. Remove an entry when it is fixed.
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
     Audit 2026-10-07 A2 and A3 (`audit/2026-10-07-audit.md` and its
-    reproducers under `audit/2026-10-07/`, as of `89c37b6`) are two
+    reproducers under `audit/2026-10-07/`, as of `aa84d4e`) are two
     instances. A survey of
-    `self/eval.sl` and `self/heap.sl` at `04a736f` (read from the code;
+    `self/eval.sl` and `self/heap.sl` at `f9d57e1` (read from the code;
     beyond A2/A3, none of the cases below was reproduced) found the
     same shape in several places, in three groups:
 

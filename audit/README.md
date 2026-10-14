@@ -1,7 +1,7 @@
 # Audit of the uniqueness implementation
 
 One file per item found when the implementation of UNIQUE.md, commits
-`8091d86..73dae6b` by Codex/Astra, was checked against DESIGN.md and
+`7d1300a..36a2e8f` by Codex/Astra, was checked against DESIGN.md and
 UNIQUE.md section by section with adversarial programs, in the
 interpreter, the extracted OCaml and the self-hosted compiler. Written by
 a Claude session; each file says what the spec says, what was observed,
@@ -10,7 +10,7 @@ decision; where a fix rests on a reading, the file says so and names the
 alternative. ASSUMPTIONS 182 and 183 and BUGS.md carry the same items in
 summary.
 
-Fixed in `fa5747a`, each with a test under `tests/`:
+Fixed in `66d05b6`, each with a test under `tests/`:
 
 - F1. An `at` return reconstructed from an erased binder's word
 - F2. Self `let-match many` hands a unique-labelled field out at unique

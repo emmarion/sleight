@@ -1,6 +1,6 @@
 # F3. A newtype application in an erased position refused as a non-variable location
 
-Status: fixed in `fa5747a` (`lib/elab.ml` `elab_form`'s `ValCtor` case,
+Status: fixed in `66d05b6` (`lib/elab.ml` `elab_form`'s `ValCtor` case,
 `self/elab.sl` the matching `place` line); test
 `tests/at_erased_newtype.sl`. Severity: rejects a valid program, with an
 error carrying no source location.

@@ -1,6 +1,6 @@
 # F1. An `at` return reconstructed from an erased binder's word
 
-Status: fixed in `fa5747a` (`lib/elab.ml` `location_var`, `self/elab.sl`
+Status: fixed in `66d05b6` (`lib/elab.ml` `location_var`, `self/elab.sl`
 `location-var`/`at-constant`); test `tests/at_erased_word.sl`.
 Severity: soundness (wrong runtime value) and crash.
 

@@ -161,7 +161,7 @@ passes `rest` through untouched and pops. In the compiled compiler
 tail calls, and `bounded-le`, `add-mono`, `add-room`, `split-bound`,
 `absent-one` and `absent-two` emit no code at all.
 
-Measured against the binary from before the change (50097cf), best of
+Measured against the binary from before the change (d617b77), best of
 three runs each on this machine, wall and maxrss: `mini_axioms`
 2.98s/139MB against 1.05s/36MB, `mini_dependent` 1.38/58 against
 0.92/37, `mini_recursion` 1.26/61 against 1.03/35,
@@ -196,7 +196,7 @@ call half of it; see the last section.
 Open, none of it decided:
 
 1. `bench/bench.sh`'s pinned sources no longer compile. `PINNED` is
-   4fda15f, which predates 52d869a and 193f2fd changing the prelude's IO
+   680c3cf, which predates 356896b and 13807d8 changing the prelude's IO
    shape, so `self/main.sl` at that commit is refused against today's
    prelude, by the old binary as much as the new one. Re-pinning would
    change what the benchmark measures, so the session left it. Since resolved
@@ -537,7 +537,7 @@ BUGS.md 3, which names the line to revert.)
 
 Done after that, in the same session: sections 35, 36 and 39
 as the owner approved them, in `lib/` and in `self/` (the port by a
-subagent), with `origin/at-redesign`'s `0af18f3` (a `(Slot)`-typed
+subagent), with `origin/at-redesign`'s `0933458` (a `(Slot)`-typed
 binder is its own slot; the at-parameter rename fix) merged in at the
 owner's request, the slot-self rule reaching erased binders too and
 metas not (ASSUMPTIONS 201). Every entry now carries a slot at its own
@@ -555,7 +555,7 @@ failing branch now (rule 17), found with callgrind on
 
 Timing (rule 17) after the merge, slc on its own sources, five
 alternating runs, minimum and median wall time, noise about 0.4s: the
-branch's tip before this change (`fd851d4`) on the new sources 4.08s and
+branch's tip before this change (`601e4d1`) on the new sources 4.08s and
 4.29s, 100 MB; the merged slc 4.17s and 4.56s, 113 MB; origin/main's on
 its own sources 3.11s and 3.35s, 103 MB. This session reads the
 difference from the tip as one entry per erased binder, inside the run
@@ -570,7 +570,7 @@ after the `(Slot)` default landed, three runs). The reference compiling
 the same sources: origin/main's 4.7s, this branch's 3.8s, faster
 because a polymorphic comparison of terms over every opened object on
 every rule added, more than half of the reference's run before, is an
-integer comparison now (5ed34ef); `slc` indexes its opens and had no
+integer comparison now (89eb329); `slc` indexes its opens and had no
 such cost to recover. A differential profile of `slc` (callgrind, old
 against new) puts the whole increase in proportional work: 72 percent
 more fact-table inserts (one slot entry per non-erased binder, section 35), a
@@ -578,7 +578,7 @@ rule-out per placement (nearly every binder is placed, section 36's writers), a
 larger live table for every lookup and for the GC, with no single hot
 function and the `slots-in` pass at about one percent of the run. The
 placement of a fresh slot is a direct rule rather than a forcing in
-both compilers (25629a9, 81c8d64), which recovered a few tenths; what
+both compilers (36b766c, 2dc7ca2), which recovered a few tenths; what
 remains is this session's reading of the cost of representing automatic
 slots as fact-table entries at all. Closing it would mean another
 representation, a slot class keyed by its entry and materialized only

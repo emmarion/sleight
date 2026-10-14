@@ -1,6 +1,6 @@
 # F7. A zero-binder `let` inside a body drops its right-hand side's code
 
-Status: fixed in `fa5747a` (`lib/elab.ml` `elab_let`, `self/elab.sl`
+Status: fixed in `66d05b6` (`lib/elab.ml` `elab_let`, `self/elab.sl`
 `elab-let`); covered by `tests/zero_size_tail.sl`. Severity: runtime
 omission, companion to F5.
 
