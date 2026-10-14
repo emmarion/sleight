@@ -50,10 +50,10 @@ be wrong. Dollars are the provider's reported cost for Neuralwatt models and
 the median and minimum of 9 rounds on an Apple M4 Pro (OCaml 5.4.1), each
 round running every passing session's build once, in turn, with nothing
 else running. `fastest_passing_session` is the run's passing session with
-the lowest median. The `x86_` columns are the same measurement of the same
-OCaml on `bench/`'s Xeon, compiled there both without flambda and with
-flambda `-O3` (`x86_flambda_`). Differences of a few milliseconds are within
-the noise.
+the lowest median. The `flambda_` columns are the same OCaml compiled with
+flambda `-O3`, timed in the same rounds, and the `x86_` columns are both
+measurements on `bench/`'s Xeon. Differences of a few milliseconds are
+within the noise.
 The `code_` columns measure the first passing session's own files, those
 its `work/files.txt` lists: how many, their non-blank lines and
 non-whitespace characters with `;` comments removed, and their bytes as

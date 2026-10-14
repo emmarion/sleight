@@ -5,6 +5,7 @@ C,no,1,17,307,466
 OCaml handwritten,no,1,23,302,525
 Lean verified,yes,2,263,8123,11657
 Idris 2 (plain port),no,1,28,516,827
+Idris 2 certified,yes,2,338,12362,17331
 Sleight opus/,yes,6,834,43622,59754
 Sleight mimo/,yes,10,2047,100137,157136
 Sleight flat/,yes,6,611,34160,45621
