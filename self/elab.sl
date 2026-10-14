@@ -2369,18 +2369,8 @@
   (mint env4 $ proof-type ctor $ Cons _ (nth-term pa 0) $ Cons _ (nth-term pa 1) $ list-drop _ 2 qa))
 
 
-(def-fns _ $ (many drop-prefix : (subterm many (String) p) (many (String) s) -> (many (Maybe $ String) r))
-  (let-match many p (SCons c prest) ((SNil) (Some _ s)))
-  (let-match many s (SCons d srest) ((SNil) (None _)))
-  (match many (char-is d $ char-code c) _ ((BTrue) (tail $ drop-prefix prest srest)) ((BFalse) (None _))))
-
-(def-fns _ $ (many help-lines-in : (subterm many (List $ String) ls) (many (String) prefix) -> (many (List $ String) r))
-  (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
-  (let ((many more)) (notail $ help-lines-in rest prefix))
-  (match many (drop-prefix prefix l) _ ((Some _ t) (Cons _ t more)) ((None _) more)))
-
 (def-fns _ $ (many help-lines : (many (Env) env) (many (String) kind) (many (String) key) -> (many (List $ String) r))
-  (help-lines-in (env-help env) (str-cat3 kind " " $ str-cat key ": ")))
+  (match many (nm-get _ (str-cat3 kind " " $ str-cat key ": ") $ env-help env) _ ((NHit _ _ _ v _) v) ((NMiss _ _ _ _) (Nil _))))
 
 (def-fns _ $ (many hint-lines : (many (String) prefix) (subterm many (List $ String) ts) -> (many (String) r))
   (let-match many ts (Cons _ t rest) ((Nil _) ""))

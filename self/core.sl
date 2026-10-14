@@ -2307,7 +2307,7 @@
        (many (Trusted) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
        (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics) (many (Tracking) tracking)
-       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) (many (Macros) expansions) -> (Env)))
+       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (NameMap $ List $ String) help) (many (Macros) expansions) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ Name) name) (many (Multiplicity) mult) (many (State l) state) (many (Bool) minted) (many (Maybe $ Nat) introduced) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
@@ -2553,10 +2553,24 @@
 ; The scope the prelude left, which generated forms elaborate in (lib/elab.ml's in_prelude).
 (def-fns _ $ (many env-set-prelude : (many (Env) e) (many (Scope) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo _ us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo x us hn ex))))
-(def-fns _ $ (many env-help : (many (Env) e) -> (many (List $ String) r))
+(def-fns _ $ (many help-split : (subterm many (String) s) (many (Rope) acc) -> (many (Maybe $ Pair (String) (String)) r))
+  (let-match many s (SCons c rest) ((SNil) (None _)))
+  (let-match many rest (SCons d rest2) ((SNil) (None _)))
+  (match many (and (char-is c 58) $ char-is d 32) _
+    ((BTrue) (Some _ $ MkPair _ _ (rope-str $ rcat acc $ RStr ": ") rest2))
+    ((BFalse) (tail $ help-split rest $ RCat acc $ RChar c))))
+
+(def-fns _ $ (many help-index : (subterm many (List $ String) ls) (many (NameMap $ List $ String) m) -> (many (NameMap $ List $ String) r))
+  (let-match many ls (Cons _ l rest) ((Nil _) m))
+  (let-match many (help-split l $ REmpty) (Some _ p) ((None _) (tail $ help-index rest m)))
+  (let-match many p (MkPair _ _ key text))
+  (let ((many (List $ String) old)) $ match many (nm-get _ key m) _ ((NHit _ _ _ v _) v) ((NMiss _ _ _ _) (Nil _)))
+  (tail $ help-index rest $ nm-set _ key (Cons _ text old) m))
+
+(def-fns _ $ (many env-help : (many (Env) e) -> (many (NameMap $ List $ String) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn ex) hn)))
 (def-fns _ $ (many env-set-help : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us _ ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us (split-on x 10) ex))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us _ ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us (help-index (list-rev _ $ split-on x 10) $ nm-empty _) ex))))
 (def-fns _ $ (many env-macros : (many (Env) e) -> (many (Macros) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ex) ex)))
 (def-fns _ $ (many env-set-macros : (many (Env) e) (many (Macros) x) -> (many (Env) r))
@@ -3503,7 +3517,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (nm-empty _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)
