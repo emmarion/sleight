@@ -185,7 +185,10 @@ environment, an `eval` of `c` that succeeds gives `MRun` for `c`, and
 `CloOK` of the results when the context is ghost or the pass accepts
 `c`. `machine_sound` proves `MSound` for every core by induction over
 `eval`, without `sorry` (`#print axioms` lists only `propext`,
-`Classical.choice` and `Quot.sound`). Its hypotheses besides `ProgOK`:
+`Classical.choice` and `Quot.sound`). `machine_main` states it for the
+program: when the checker and the uses pass accept `P.main`, the
+machine's run of it from the empty heap ends where the stripped run
+does, with the results' ownership and values in an `MOut`. Its hypotheses besides `ProgOK`:
 `CoerceVal P` (`prim_val`'s conclusion for `coerce`, which no lemma
 proves yet) and that no function of the program is a delegate. On this
 session's reading these are the two parts of the theorem left open. A
