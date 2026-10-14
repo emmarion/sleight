@@ -204,7 +204,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       | .prim (.tm t) false rest' => if G.rebind == some t then do
           let T ← G.primTy P (.tm t)
           usesCore b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) ru rets rest'
-        else none
+        else usesCore b G ru rets rest
       | _ => none
     | .reuse u, .fv i | .write u, .fv i => do
       let C ← usesCore b { G with cellOk := true } ru rets rest
@@ -237,7 +237,7 @@ termination_by l => (b, sizeOf l)
 
 def usesEls (b : Nat) (G : UCtx) (ru : List Bool) (R s : Tm) : Option Core → UR
   | none => some ([], [])
-  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := some s, uscr := none, cellOk := false } ru R e) G.Γ.n)
+  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := if G.scr then some s else none, uscr := none, cellOk := false } ru R e) G.Γ.n)
 termination_by o => (b, sizeOf o)
 
 def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR

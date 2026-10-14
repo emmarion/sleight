@@ -104,33 +104,49 @@ what the machine state owes the pass's context: the pending mark, the
 unique scrutinee, the rebinding, `uq` below the context's length, no
 filling, no ghost. Proved so far, without `sorry`: `machine_seq`,
 `machine_defLvl`, the erased call, match and primitive
-(`machine_callE`, `machine_mtchE`, `machine_primE`), and the checks
-that change nothing the machine reads (`machine_chkPlain`, `machine_cm`,
-`machine_uq`, `machine_uqScr`, `machine_skip`). Each takes the steps
-after it as hypotheses (`MRun` of the rest, and for `seq` the body's
-`Sim`), so the final theorem is an induction like `eval_sound`'s that
-discharges them from `CoreTy`, `EnvOK` and `eval_sound` itself. A
-static lemma, `usesCore_uq`, says that every use at unique the pass
-records names an entry of `uq` or one made after the context; the
-`seq` step needs it to tie a use of a new binder to `ents`.
+(`machine_callE`, `machine_mtchE`, `machine_primE`), the checks that
+change nothing the machine reads (`machine_chkPlain`, `machine_cm`,
+`machine_uq`, `machine_uqScr`, `machine_skip`), a non-erased primitive
+that no pending mark changes (`machine_prim_inert`, with `prim_val`
+for every non-erased primitive but `coerce`), and a non-erased `mtch`
+that takes a constructor's branch (`machine_mtch_fld`). Each takes the
+steps after it as hypotheses (`MRun` of the rest and of the branch, and
+the body's `Sim`), so the final theorem is an induction like
+`eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
+`eval_sound` itself. A static lemma, `usesCore_uq`, says that every use
+at unique the pass records names an entry of `uq` or one made after the
+context; the `seq` step needs it to tie a use of a new binder to
+`ents`.
 
-Left, on this session's reading: the non-erased call (the callee's
-frame, the closure's captures and `Group.caps`), the non-erased match
-and `case` (the scrutinee's view, branch contexts, the cell binder),
-the non-erased primitive including the pending marks (`reuse`, `alloc`,
-`cellOf`, `write`, where the in-place writes and `Res` come in), the
-rebinding of an `else` scrutinee, `defFns`, `open-adt` (`machine_same`
-covers its success; on failure the core continues with `.dead`, which
-no stripped run reaches), and the assembly.
+In `machine_mtch_fld` the scrutinee's value is built, its fields are
+bound as the branch's entries (`MOut.fields`, then `MFrame.bindR`), and
+under a unique match the scrutinee's top block, which no field reaches,
+is left reserved for the branch (`Res`), which is what `GOK.uscr` asks
+for a cell binder to take later.
+
+Left, on this session's reading: the `else` branch of a non-erased
+`mtch`, `case` in its three forms, `coerce` (the result is owned
+through the target's full value, the argument through the source's,
+and no lemma yet carries a `WO` across a `Coercible` proof), the
+non-erased call (the callee's frame, the closure's captures and
+`Group.caps`), the pending marks (`reuse`, `alloc`, `cellOf`, `write`,
+where the in-place writes come in), the rebinding of an `else`
+scrutinee, `defFns`, `open-adt` (`machine_same` covers its success; on
+failure the core continues with `.dead`, which no stripped run
+reaches), and the assembly.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (327 accepted with OCaml's
 value, none mismatched, 474 refusals agreed): `use` refuses an index
-out of range or erased; a `seq` body and an `else` branch start with no
-cell to take and no pending rebinding; the code after a `cell-of` mark
-has no cell to take; `UCtx.next` marks as unique only entries the
-statement itself made; and a group's recorded captures must each pass
-`use` where the group is defined.
+out of range or erased; a `seq` body starts with no cell to take and
+no pending rebinding, and an `else` branch with no cell to take; the
+code after a `cell-of` mark has no cell to take; `UCtx.next` marks as
+unique only entries the statement itself made; a group's recorded
+captures must each pass `use` where the group is defined; and an `else`
+branch's binder is taken over from the scrutinee without a use only
+under a unique match, and is otherwise an ordinary use of the
+scrutinee (before, a `many` match's `else` could bind its scrutinee at
+unique).
 
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use

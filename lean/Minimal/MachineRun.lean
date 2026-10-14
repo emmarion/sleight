@@ -318,7 +318,9 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     rw [if_pos hr] at h
     obtain ⟨T, -, h⟩ := Option.bind_eq_some_iff.mp h
     exact UqOK.next (by rw [UCtx.adv_n' hf]; exact Ctx.pushPrim_n_le ..) (ih T hf U K h)
-  case case15 b G ru rets a b1 t rest' hr => rw [if_neg hr] at h; cases h
+  case case15 =>
+    rename_i h1 h2
+    first | (rw [if_neg h1] at h; exact h2 hf U K h) | (rw [if_neg h2] at h; exact h1 hf U K h)
   case case16 => cases h
   case case17 b G ru rets b1 rest u i ih =>
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
@@ -921,7 +923,9 @@ theorem prim_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {p : Prim} (hE : EnvO
 
 theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Nat → Bool} {H H' : Heap} {ρM ρS ρ oM oS oF : List Tm}
     {Res Out : Nat → Prop} {rets : Tm} {ru : List Bool}
-    (hM : MFrame P U n er H ρM ρS ρ Res Out) (h : Uses.seq A C = some U)
+    (hM : MFrame P U n er H ρM ρS ρ Res Out) (sA : A.Sub U)
+    (sC : ∀ i < n, ((C.lookup i).isSome → (U.lookup i).isSome) ∧ (C.lookup i = some true → U.lookup i = some true))
+    (hfree : ∀ j < n, (A.lookup j = some true → C.lookup j = none) ∧ (C.lookup j = some true → A.lookup j = none))
     (hO : MOut P A n er H ρM ρS ρ (fun _ => False) rets ru H' oM oS oF) (hlS : oS.length = m) (hlF : oF.length = m)
     (her : ∀ i < n, er' i = er i)
     (hers : ∀ k < m, (C.lookup (n + k)).isSome → er' (n + k) = false → rets.ers.getD k true = false)
@@ -933,17 +937,15 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
     ∀ {H'' : Heap} {vsM vsS vs : List Tm} {rets2 : Tm} {ru2 : List Bool},
       MOut P C (n + m) er' H' (ρM ++ oM) (ρS ++ oS) (ρ ++ oF) (fun a => Res a ∨ R0 a) rets2 ru2 H'' vsM vsS vs →
       MOut P U n er H ρM ρS ρ Res rets2 ru2 H'' vsM vsS vs := by
-  obtain ⟨sA, sC⟩ := Uses.seq_sub h
-  have hfree := (Uses.seq_spec h).1
   have hlM : oM.length = m := by rw [hO.len, hlS]
   have cls := fun {i} (hi : i < n + m) => env_cls hM.lenM hM.lenS hM.lenF hlM hlS hlF hi
   have er_old : ∀ {i}, i < n → er' i = false → er i = false := fun hi he => by rw [← her _ hi]; exact he
   have hOwn : ∀ i < n, (C.lookup i).isSome → er i = false → ∀ b, Foot P H (Tm.env ρM i) (Tm.env ρS i) b →
       ¬ Own P A n er H ρM ρS ρ b := fun i hi hC hei b hf ⟨x, hx, hA, hex, hs⟩ => by
-    have hne : x ≠ i := fun e => by subst e; rw [(hfree x).1 hA] at hC; cases hC
-    exact hM.sep x hx i hi hne (sA.2 x hA) (sC.1 i hC) hex hei b hs hf
+    have hne : x ≠ i := fun e => by subst e; rw [(hfree x hx).1 hA] at hC; cases hC
+    exact hM.sep x hx i hi hne (sA.2 x hA) ((sC i hi).1 hC) hex hei b hs hf
   have hAg : ∀ i < n, (C.lookup i).isSome → er i = false → Agree H H' (Foot P H (Tm.env ρM i) (Tm.env ρS i)) :=
-    fun i hi hC he b hf => hO.keep b (Foot.lt hM.wf (hM.dec i hi (sC.1 i hC) he) hf) (hOwn i hi hC he b hf) id
+    fun i hi hC he b hf => hO.keep b (Foot.lt hM.wf (hM.dec i hi ((sC i hi).1 hC) he) hf) (hOwn i hi hC he b hf) id
   have hRes : ∀ a, Res a → ¬ Own P A n er H ρM ρS ρ a := fun a ha ho => hM.res.2.2.1 a ha (ho.mono sA)
   have hResLt : ∀ a, Res a → a < H.next := fun a ha => by
     have := hM.res.2.2.2 a ha
@@ -976,7 +978,7 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
     rcases cls hz with ⟨hzn, f1, f2, -⟩ | ⟨j, hj, rfl, f1, f2, -⟩
     · rw [f1, f2] at hf
       have he := er_old hzn hez
-      exact .inr (.inr ⟨z, hzn, sC.1 z hC, he, oldFt z hzn hC he a hf⟩)
+      exact .inr (.inr ⟨z, hzn, (sC z hzn).1 hC, he, oldFt z hzn hC he a hf⟩)
     · rcases newFt j _ _ hj f1 f2 hC hez a hf with h | h | h
       · exact .inl h
       · exact .inr (.inl h)
@@ -986,7 +988,7 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
     rcases cls hx with ⟨hxn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
     · rw [e1, e2, e3] at hs
       have he := er_old hxn hex
-      exact .inr ⟨x, hxn, sC.2 x hC, he, oldSp x hxn hC he a hs⟩
+      exact .inr ⟨x, hxn, (sC x hxn).2 hC, he, oldSp x hxn hC he a hs⟩
     · rcases newSp k _ _ _ hk e1 e2 e3 hC hex a hs with h | h
       · exact .inl h
       · exact .inr (h.mono sA)
@@ -1032,12 +1034,12 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
   · intro i hi hC he
     rcases cls hi with ⟨hn, e1, e2, -⟩ | ⟨k, hk, rfl, e1, e2, -⟩
     · have he' := er_old hn he
-      rw [e1, e2]; exact (hM.dec i hn (sC.1 i hC) he').frame (hAg i hn hC he')
+      rw [e1, e2]; exact (hM.dec i hn ((sC i hn).1 hC) he').frame (hAg i hn hC he')
     · exact hO.dec k _ _ e1 e2 (hers k hk hC he)
   · intro x hx hC he
     rcases cls hx with ⟨hn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
     · have he' := er_old hn he
-      rw [e1, e2, e3]; exact (hM.wo x hn (sC.2 x hC) he').fwd (hAg x hn (by simp [hC]) he')
+      rw [e1, e2, e3]; exact (hM.wo x hn ((sC x hn).2 hC) he').fwd (hAg x hn (by simp [hC]) he')
     · exact hO.uwo k _ _ _ e1 e2 e3 (hers k hk (by simp [hC]) he) (hu k hk hC he)
   · intro x hx z hz hne hCx hCz hex hez b h1 h2
     rcases cls hx with ⟨hxn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩ <;>
@@ -1045,31 +1047,31 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
     · rw [e1, e2, e3] at h1; rw [f1, f2] at h2
       have hex' := er_old hxn hex
       have hez' := er_old hzn hez
-      exact hM.sep x hxn z hzn hne (sC.2 x hCx) (sC.1 z hCz) hex' hez' b (oldSp x hxn hCx hex' b h1)
+      exact hM.sep x hxn z hzn hne ((sC x hxn).2 hCx) ((sC z hzn).1 hCz) hex' hez' b (oldSp x hxn hCx hex' b h1)
         (oldFt z hzn hCz hez' b h2)
     · rw [e1, e2, e3] at h1
       have hex' := er_old hxn hex
       have hs := oldSp x hxn hCx hex' b h1
-      have hlt := Foot.lt hM.wf (hM.dec x hxn (sC.1 x (by simp [hCx])) hex') hs.foot
-      have hAx : A.lookup x = none := (hfree x).2 (sC.2 x hCx ▸ hCx)
+      have hlt := Foot.lt hM.wf (hM.dec x hxn ((sC x hxn).1 (by simp [hCx])) hex') hs.foot
+      have hAx : A.lookup x = none := (hfree x hxn).2 hCx
       rcases newFt j _ _ hj f1 f2 hCz hez b h2 with h | ⟨y, hy, hAy, hey, hsy⟩ | ⟨w, hw, hAw, hew, hfw⟩
       · omega
       · have hne' : y ≠ x := fun e => by subst e; rw [hAx] at hAy; cases hAy
-        exact hM.sep y hy x hxn hne' (sA.2 y hAy) (sC.1 x (by simp [hCx])) hey hex' b hsy hs.foot
+        exact hM.sep y hy x hxn hne' (sA.2 y hAy) ((sC x hxn).1 (by simp [hCx])) hey hex' b hsy hs.foot
       · have hne' : x ≠ w := fun e => by subst e; rw [hAx] at hAw; cases hAw
-        exact hM.sep x hxn w hw hne' (sC.2 x hCx) (sA.1 w hAw) hex' hew b hs hfw
+        exact hM.sep x hxn w hw hne' ((sC x hxn).2 hCx) (sA.1 w hAw) hex' hew b hs hfw
     · rw [f1, f2] at h2
       have hez' := er_old hzn hez
       have hf := oldFt z hzn hCz hez' b h2
       rcases newSp k _ _ _ hk e1 e2 e3 hCx hex b h1 with h | ho
-      · have := Foot.lt hM.wf (hM.dec z hzn (sC.1 z hCz) hez') hf; omega
+      · have := Foot.lt hM.wf (hM.dec z hzn ((sC z hzn).1 hCz) hez') hf; omega
       · exact hOwn z hzn hCz hez' b hf ho
     · exact hO.usep k j _ _ _ _ _ (fun e => hne (by rw [e])) e1 e2 e3 f1 f2 (hers k hk (by simp [hCx]) hex)
         (hers j hj hCz hez) (hu k hk hCx hex) b h1 h2
   · intro x hx hC he b h1 h2
     rcases cls hx with ⟨hn, e1, e2, e3⟩ | ⟨k, hk, rfl, e1, e2, e3⟩
     · have he' := er_old hn he
-      rw [e1, e2, e3] at h1; exact hM.out x hn (sC.2 x hC) he' b (oldSp x hn hC he' b h1) h2
+      rw [e1, e2, e3] at h1; exact hM.out x hn ((sC x hn).2 hC) he' b (oldSp x hn hC he' b h1) h2
     · rcases newSp k _ _ _ hk e1 e2 e3 hC he b h1 with h | ⟨y, hy, hAy, hey, hsy⟩
       · have := hM.outb b h2; omega
       · exact hM.out y hy (sA.2 y hAy) hey b hsy h2
@@ -1079,7 +1081,7 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
         have he := er_old hzn hez
         have hf' := oldFt z hzn hC he a hf
         rcases hR0 a h0 with h1 | h1
-        · have := Foot.lt hM.wf (hM.dec z hzn (sC.1 z hC) he) hf'; omega
+        · have := Foot.lt hM.wf (hM.dec z hzn ((sC z hzn).1 hC) he) hf'; omega
         · exact hOwn z hzn hC he a hf' h1
       · exact hR0n j _ _ hj f1 f2 hC hez a hf h0
     refine ⟨fun a ha hl => ?_, fun a ha ho => ?_, fun a ha ⟨x, hx, hC, hex, hs⟩ => ?_, fun a ha => ?_⟩
@@ -1104,5 +1106,466 @@ theorem MFrame.bindR {R0 : Nat → Prop} {U A C : Uses} {n m : Nat} {er er' : Na
       · rw [hO.keep a (hResLt a ha) (hRes a ha) id]; exact hM.res.2.2.2 a ha
       · exact hR0b a ha
   · intro a ha; exact Nat.lt_of_lt_of_le (hM.outb a ha) hO.next
+
+theorem MDecs.length {H : Heap} : ∀ {ws vs : List Tm}, MDecs P H ws vs → ws.length = vs.length
+  | _, _, .nil => rfl
+  | _, _, .cons _ h => by simp [h.length]
+
+theorem MOut.fields {S : Uses} {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : List Tm} {T : Tm} {scr : Bool}
+    {w uS v : Tm} (hO : MOut P S n er H ρM ρS ρ (fun _ => False) (ret1 T) [scr] H1 [w] [uS] [v])
+    {d c : Nat} {lsM vsM lsS vsS lsF vsF sig : Tm} {ruF : List Bool}
+    (hvM : P.viewM H1 w = .app (.vc d c lsM) vsM) (hvS : P.view uS = .app (.vc d c lsS) vsS)
+    (hv : v = .app (.vc d c lsF) vsF) (hc : P.ctor d c = some sig) (hwf : P.wrapField d c = none)
+    (hruF : ∀ k, ruF.getD k false = true → scr = true ∧ (sig.skip (P.lifted d)).uAt k = true) :
+    MOut P S n er H ρM ρS ρ (fun _ => False) (sig.skip (P.lifted d)) ruF H1 vsM.toList vsS.toList vsF.toList ∧
+    (∀ a, scr = true → w = .ptr a → (H.next ≤ a ∨ Own P S n er H ρM ρS ρ a) ∧ (H1.blk a).isSome ∧
+      ∀ (k : Nat) wk uk, vsM.toList[k]? = some wk → vsS.toList[k]? = some uk → ∀ b, Foot P H1 wk uk b → b ≠ a) := by
+  have hd := hO.dec 0 w uS rfl rfl (by simp [Tm.ers, Ent.er])
+  have hft := hO.foot 0 w uS rfl rfl (by simp [Tm.ers, Ent.er])
+  have hsp := fun (h : scr = true) => hO.uspine 0 w uS v rfl rfl rfl (by simp [Tm.ers, Ent.er]) (by simp [h])
+  have hwo := fun (h : scr = true) => hO.uwo 0 w uS v rfl rfl rfl (by simp [Tm.ers, Ent.er]) (by simp [h])
+  have triv : (∀ (j : Nat) w u, vsM.toList[j]? = some w → vsS.toList[j]? = some u →
+      (∃ m, w = .nat m ∧ u = .nat m)) → vsM.toList.length = vsS.toList.length →
+      MOut P S n er H ρM ρS ρ (fun _ => False) (sig.skip (P.lifted d)) ruF H1 vsM.toList vsS.toList vsF.toList := by
+    intro nofoot hlen
+    have nf : ∀ (j : Nat) w u, vsM.toList[j]? = some w → vsS.toList[j]? = some u → ∀ b, ¬ Foot P H1 w u b :=
+      fun j w u hw hu b hf => by obtain ⟨m, rfl, rfl⟩ := nofoot j w u hw hu; cases hf
+    refine ⟨hO.wf, hO.next, hO.blk, hO.keep, hlen, fun j w u hw hu _ => ?_, fun j w u hw hu _ b hf => (nf j w u hw hu b hf).elim,
+      fun j w u v hw hu hv _ _ b hs => (nf j w u hw hu b hs.foot).elim, fun j w u v hw hu hv _ _ => .free fun b hs =>
+        nf j w u hw hu b hs.foot, fun j i w u v w' u' _ hw hu _ _ _ _ _ _ b h1 _ => nf j w u hw hu b h1.foot⟩
+    obtain ⟨m, rfl, rfl⟩ := nofoot j w u hw hu; exact .nat
+  cases hd with
+  | @ptr a d' c' ws vs' hb hms =>
+    simp only [Prog.viewM, hb, Tm.app.injEq, Tm.vc.injEq] at hvM
+    obtain ⟨⟨h1, h2, -⟩, rfl⟩ := hvM
+    subst d' c'
+    simp only [Prog.view, Tm.app.injEq, Tm.vc.injEq] at hvS
+    obtain ⟨⟨-, -, -⟩, rfl⟩ := hvS
+    subst hv
+    simp only [Tm.toList_ofList]
+    have hwoP : scr = true → WO P H1 (.ptr a) (.app (.vc d c .nil) (.ofList vs')) (.app (.vc d c lsF) vsF) →
+        ∃ sig', P.ctor d c = some sig' ∧
+        (∀ (k : Nat) w u, ws[k]? = some w → vs'[k]? = some u → ¬ Foot P H1 w u a) ∧
+        (∀ (k : Nat) w u v, (sig'.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs'[k]? = some u →
+          vsF.toList[k]? = some v → WO P H1 w u v) ∧
+        (∀ (k : Nat) w u v, (sig'.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs'[k]? = some u →
+          vsF.toList[k]? = some v → ∀ (j : Nat) w' u', j ≠ k → ws[j]? = some w' → vs'[j]? = some u' →
+          Disj (Spine P H1 w u v) (Foot P H1 w' u')) := fun _ h => by
+      cases h with
+      | ptr hb' _ hc' h1 h2 h3 =>
+        rw [hb] at hb'; cases hb'
+        exact ⟨_, hc', fun k w u hw hu => h1 k w u hw (by simpa [Tm.toList_ofList] using hu),
+          fun k w u v hk hw hu hv => h2 k w u v hk hw (by simpa [Tm.toList_ofList] using hu) hv,
+          fun k w u v hk hw hu hv j w' u' hj hw' hu' => h3 k w u v hk hw (by simpa [Tm.toList_ofList] using hu) hv j w' u'
+            hj hw' (by simpa [Tm.toList_ofList] using hu')⟩
+      | wrap hw' => rw [hwf] at hw'; cases hw'
+      | free hn => exact (hn a (.top hwf)).elim
+    refine ⟨⟨hO.wf, hO.next, hO.blk, hO.keep, hms.length, fun k w u hw hu _ => hms.get k w u hw hu,
+      fun k w u hw hu _ b hf => hft b (.field hb hw (by rwa [Tm.toList_ofList]) hf), fun k w u v hw hu hv _ hr b hs => ?_,
+      fun k w u v hw hu hv _ hr => ?_, fun k j w u v w' u' hkj hw hu hv hw' hu' _ _ hr => ?_⟩, fun a' hs e => ?_⟩
+    · obtain ⟨h1, h2⟩ := hruF k hr
+      exact hsp h1 b (.field hb hwf hc h2 hw (by rwa [Tm.toList_ofList]) hv hs)
+    · obtain ⟨h1, h2⟩ := hruF k hr
+      obtain ⟨sig', hc', -, h3, -⟩ := hwoP h1 (hwo h1)
+      rw [hc] at hc'; cases hc'
+      exact h3 k w u v h2 hw hu hv
+    · obtain ⟨h1, h2⟩ := hruF k hr
+      obtain ⟨sig', hc', -, -, h4⟩ := hwoP h1 (hwo h1)
+      rw [hc] at hc'; cases hc'
+      exact h4 k w u v h2 hw hu hv j w' u' (Ne.symm hkj) hw' hu'
+    · cases e
+      obtain ⟨-, -, h1, -⟩ := hwoP hs (hwo hs)
+      refine ⟨?_, by rw [hb]; rfl, fun k wk uk hk hk' b hf e => h1 k wk uk hk hk' (e ▸ hf)⟩
+      rcases hsp hs a (.top hwf) with h | h | h
+      · exact .inl h
+      · exact .inr h
+      · exact h.elim
+  | @nat k =>
+    simp only [Prog.viewM] at hvM
+    have e := hvM.symm.trans hvS
+    simp only [Tm.app.injEq, Tm.vc.injEq] at e
+    obtain ⟨-, rfl⟩ := e
+    refine ⟨triv (fun j w u hw hu => ?_) rfl, fun a _ e => by cases e⟩
+    rw [hw] at hu; cases hu
+    simp only [Prog.view] at hvS
+    split at hvS
+    · split at hvS <;> simp only [Tm.app.injEq, Tm.vc.injEq] at hvS <;> obtain ⟨-, rfl⟩ := hvS
+      · simp [Tm.toList] at hw
+      · cases j with
+        | zero => simp [Tm.toList] at hw; subst hw; exact ⟨_, rfl, rfl⟩
+        | succ j => simp [Tm.toList] at hw
+    · cases hvS
+  | imm =>
+    simp only [Prog.viewM, Prog.view, Tm.app.injEq, Tm.vc.injEq] at hvM hvS
+    obtain ⟨-, rfl⟩ := hvM
+    obtain ⟨-, rfl⟩ := hvS
+    exact ⟨triv (fun j w u hw => by simp [Tm.toList] at hw) rfl, fun a _ e => by cases e⟩
+  | _ => simp [Prog.view] at hvS
+
+theorem lookup_filter_ne {A : Uses} {i j : Nat} (h : i ≠ j) : (A.filter (·.1 != j)).lookup i = A.lookup i := by
+  induction A with
+  | nil => rfl
+  | cons p A ih =>
+    obtain ⟨k, u⟩ := p
+    by_cases hk : k = j
+    · subst hk
+      have : (i == k) = false := by simpa using h
+      simp [List.filter_cons, List.lookup, this, ih]
+    · have hk' : (k != j) = true := by simpa using hk
+      simp only [List.filter_cons, hk', ite_true, List.lookup]
+      split <;> simp_all
+
+theorem Uses.join_spec : ∀ (B A : Uses) (i : Nat),
+    (((A.lookup i).isSome → ((Uses.join A B).lookup i).isSome) ∧
+     (A.lookup i = some true → (Uses.join A B).lookup i = some true)) ∧
+    (∀ u, (i, u) ∈ B → ((Uses.join A B).lookup i).isSome) ∧ ((i, true) ∈ B → (Uses.join A B).lookup i = some true)
+  | [], A, i => ⟨⟨id, id⟩, fun _ h => by simp at h, fun h => by simp at h⟩
+  | (j, u) :: B, A, i => by
+    simp only [Uses.join, List.foldl_cons]
+    have step : ∀ A1 : Uses, ((A.lookup i).isSome → (A1.lookup i).isSome) → (A.lookup i = some true → A1.lookup i = some true) →
+        (i = j → (A1.lookup i).isSome) → (i = j → u = true → A1.lookup i = some true) →
+        (((A.lookup i).isSome → ((Uses.join A1 B).lookup i).isSome) ∧
+         (A.lookup i = some true → (Uses.join A1 B).lookup i = some true)) ∧
+        (∀ u', (i, u') ∈ (j, u) :: B → ((Uses.join A1 B).lookup i).isSome) ∧
+        ((i, true) ∈ (j, u) :: B → (Uses.join A1 B).lookup i = some true) := by
+      intro A1 h1 h2 h3 h4
+      obtain ⟨⟨g1, g2⟩, g3, g4⟩ := Uses.join_spec B A1 i
+      refine ⟨⟨fun h => g1 (h1 h), fun h => g2 (h2 h)⟩, fun u' hm => ?_, fun hm => ?_⟩
+      · rcases List.mem_cons.mp hm with e | e
+        · cases e; exact g1 (h3 rfl)
+        · exact g3 u' e
+      · rcases List.mem_cons.mp hm with e | e
+        · cases e; exact g2 (h4 rfl rfl)
+        · exact g4 e
+    apply step <;> intros
+    all_goals
+      by_cases hij : i = j
+      · subst hij
+        cases hl : A.lookup i with
+        | none => cases u <;> simp_all [List.lookup]
+        | some x => cases x <;> cases u <;> simp_all [List.lookup]
+      · have hb : (i == j) = false := by simpa using hij
+        cases hl : A.lookup j with
+        | none => simp only [hl, List.lookup, hb] at * <;> simp_all
+        | some x => cases x <;> cases u <;> simp only [hl, List.lookup, hb, lookup_filter_ne hij, ite_true, ite_false,
+            Bool.false_eq_true] at * <;> simp_all
+
+def Uses.SubB (A B : Uses) (n : Nat) : Prop :=
+  ∀ i < n, ((A.lookup i).isSome → (B.lookup i).isSome) ∧ (A.lookup i = some true → B.lookup i = some true)
+
+theorem Uses.join_sub_left (A B : Uses) : A.Sub (Uses.join A B) :=
+  ⟨fun i h => (Uses.join_spec B A i).1.1 h, fun i h => (Uses.join_spec B A i).1.2 h⟩
+
+theorem Uses.join_sub_right (A B : Uses) : B.Sub (Uses.join A B) :=
+  ⟨fun i h => by obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp h; exact (Uses.join_spec B A i).2.1 u (lookup_mem hu),
+   fun i h => (Uses.join_spec B A i).2.2 (lookup_mem h)⟩
+
+theorem Uses.below_lookup_ge {U : Uses} {n i : Nat} (h : n ≤ i) : (U.below n).lookup i = none := by
+  induction U with
+  | nil => rfl
+  | cons p U ih =>
+    obtain ⟨j, u⟩ := p
+    simp only [Uses.below, List.filter_cons] at ih ⊢
+    split
+    · have : (i == j) = false := by simp_all; omega
+      simp [List.lookup, this, ih]
+    · exact ih
+
+theorem Uses.below_sub (U : Uses) (n : Nat) : (U.below n).Sub U := by
+  refine ⟨fun i h => ?_, fun i h => ?_⟩ <;> by_cases hi : i < n
+  · rwa [Uses.below_lookup hi] at h
+  · rw [Uses.below_lookup_ge (by omega)] at h; cases h
+  · rwa [Uses.below_lookup hi] at h
+  · rw [Uses.below_lookup_ge (by omega)] at h; cases h
+
+theorem Uses.Sub.subB {A B : Uses} (h : A.Sub B) (n : Nat) : Uses.SubB A B n := fun i _ => ⟨h.1 i, h.2 i⟩
+
+theorem Uses.SubB.trans {A B C : Uses} {n : Nat} (h1 : Uses.SubB A B n) (h2 : Uses.SubB B C n) : Uses.SubB A C n :=
+  fun i hi => ⟨fun h => (h2 i hi).1 ((h1 i hi).1 h), fun h => (h2 i hi).2 ((h1 i hi).2 h)⟩
+
+theorem Uses.below_subB (U : Uses) (n : Nat) : Uses.SubB U (U.below n) n := fun i hi => by
+  rw [Uses.below_lookup hi]; exact ⟨id, id⟩
+
+theorem usesArms_sel {b : Nat} {G : UCtx} {ru : List Bool} {R s H idx : Tm} {shp : List Arm} {fe : Bool} :
+    ∀ (brs : List Br) (B : Uses) (K : Caps), usesArms P b G ru R s H idx shp fe brs = some (B, K) →
+    ∀ c body, lookupBr brs c = some body → ∀ k sig ph, shp[c]? = some (k, sig, ph) →
+    ∀ Gb, G.branchCtx P s k H idx sig fe (!fe && ph) G.scr = some Gb →
+    ∃ BU BK, usesCore P b Gb ru R body = some (BU, BK) ∧ (BU.below G.Γ.n).Sub B
+  | [], _, _, _, c, body, hl, _, _, _, _, _, _ => by simp [lookupBr] at hl
+  | (x, c', y, body') :: brs, B, K, h, c, body, hl, k, sig, ph, hshp, Gb, hb => by
+    rw [usesArms] at h
+    rcases hR : usesArms P b G ru R s H idx shp fe brs with _ | ⟨U2, K2⟩
+    · exfalso
+      split at h
+      · split at h <;> simp [hR] at h
+      · simp at h
+    have hU2 : U2.Sub B := by
+      split at h
+      · split at h <;> simp only [hR, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+          Option.some.injEq] at h
+        · obtain ⟨_, _, e⟩ := h
+          have e' := congrArg Prod.fst e; simp only at e'; rw [← e']; exact Uses.join_sub_right _ _
+        · have e' := congrArg Prod.fst h; simp only at e'; rw [← e']; exact Uses.join_sub_right _ _
+      · simp at h
+    by_cases hc : c' = c
+    · subst hc
+      simp [lookupBr, List.find?] at hl; subst hl
+      rw [hshp] at h; simp only [hb] at h
+      simp only [hR, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨⟨BU, BK⟩, hBU, _, rfl, _, rfl, e⟩ := h
+      refine ⟨BU, BK, hBU, ?_⟩
+      have e' := congrArg Prod.fst e; simp only at e'; rw [← e']; exact Uses.join_sub_left _ _
+    · have hc' : (c' == c) = false := by simpa using hc
+      have hl' : lookupBr brs c = some body := by
+        simpa [lookupBr, List.find?, hc'] using hl
+      obtain ⟨BU, BK, h1, h2⟩ := usesArms_sel brs U2 K2 hR c body hl' k sig ph hshp Gb hb
+      exact ⟨BU, BK, h1, h2.trans hU2⟩
+
+theorem MFrame.subB {A U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res Out : Nat → Prop}
+    (hM : MFrame P U n er H ρM ρS ρ Res Out) (h : Uses.SubB A U n) : MFrame P A n er H ρM ρS ρ Res Out :=
+  ⟨hM.lenM, hM.lenS, hM.lenF, hM.wf, fun i hi hb he => hM.dec i hi ((h i hi).1 hb) he,
+   fun x hx hb he => hM.wo x hx ((h x hx).2 hb) he,
+   fun x hx z hz hne hbx hbz hex hez => hM.sep x hx z hz hne ((h x hx).2 hbx) ((h z hz).1 hbz) hex hez,
+   fun x hx hb he => hM.out x hx ((h x hx).2 hb) he,
+   ⟨fun a ha ⟨z, hz, hA, he, hf⟩ => hM.res.1 a ha ⟨z, hz, (h z hz).1 hA, he, hf⟩, hM.res.2.1,
+    fun a ha ⟨z, hz, hA, he, hf⟩ => hM.res.2.2.1 a ha ⟨z, hz, (h z hz).2 hA, he, hf⟩, hM.res.2.2.2⟩, hM.outb⟩
+
+theorem MOut.supB {A U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res : Nat → Prop}
+    {rets : Tm} {ru : List Bool} {H' : Heap} {vsM vsS vs : List Tm} (h : Uses.SubB A U n)
+    (hO : MOut P A n er H ρM ρS ρ Res rets ru H' vsM vsS vs) : MOut P U n er H ρM ρS ρ Res rets ru H' vsM vsS vs := by
+  have own : ∀ a, Own P A n er H ρM ρS ρ a → Own P U n er H ρM ρS ρ a :=
+    fun a ⟨z, hz, hA, he, hf⟩ => ⟨z, hz, (h z hz).2 hA, he, hf⟩
+  have live : ∀ a, Live P A n er H ρM ρS a → Live P U n er H ρM ρS a :=
+    fun a ⟨z, hz, hA, he, hf⟩ => ⟨z, hz, (h z hz).1 hA, he, hf⟩
+  refine ⟨hO.wf, hO.next, hO.blk, fun a ha ho hr => hO.keep a ha (fun h' => ho (own a h')) hr, hO.len, hO.dec,
+    fun k w u hw hu he b hf => ?_, fun k w u v hw hu hv he hr b hs => ?_, hO.uwo, hO.usep⟩
+  · rcases hO.foot k w u hw hu he b hf with h1 | h1 | h1 | h1
+    · exact .inl h1
+    · exact .inr (.inl (own b h1))
+    · exact .inr (.inr (.inl h1))
+    · exact .inr (.inr (.inr (live b h1)))
+  · rcases hO.uspine k w u v hw hu hv he hr b hs with h1 | h1 | h1
+    · exact .inl h1
+    · exact .inr (.inl (own b h1))
+    · exact .inr (.inr h1)
+
+theorem teleUs_getD : ∀ (t : Tm) (k : Nat), (teleUs t).getD k false = t.uAt k
+  | .bind _ _ r, 0 => rfl
+  | .bind _ _ r, k + 1 => by have := teleUs_getD r k; simp only [List.getD_eq_getElem?_getD] at this; simp [teleUs, Tm.uAt, this]
+  | .fv _, _ | .bv _, _ | .nil, _ | .cons .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
+  | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
+  | .clo .., _ | .nat _, _ | .ptr _, _ => by cases ‹Nat› <;> rfl
+
+theorem getD_dropLast {l : List Bool} {k : Nat} (h : l.dropLast.getD k false = true) : l.getD k false = true := by
+  simp only [List.getD_eq_getElem?_getD] at h ⊢
+  rw [List.getElem?_dropLast] at h
+  split at h
+  · exact h
+  · simp at h
+
+theorem viewM_of_view {H : Heap} {w uS : Tm} (hd : MDec P H w uS) {d c : Nat} {ls vs : Tm}
+    (hv : P.view uS = .app (.vc d c ls) vs) : ∃ lsM vsM, P.viewM H w = .app (.vc d c lsM) vsM := by
+  cases hd with
+  | ptr hb _ =>
+    simp only [Prog.view, Tm.app.injEq, Tm.vc.injEq] at hv
+    obtain ⟨⟨rfl, rfl, -⟩, -⟩ := hv
+    exact ⟨_, _, by simp only [Prog.viewM, hb]; rfl⟩
+  | nat => exact ⟨_, _, by simpa [Prog.viewM] using hv⟩
+  | imm => exact ⟨_, _, by simpa [Prog.viewM, Prog.view] using hv⟩
+  | _ => simp [Prog.view] at hv
+
+theorem selectBr_lookup {brs : List Br} {els : Option Core} {c : Nat} {body : Core} (h : lookupBr brs c = some body)
+    (vs : List Tm) : selectBr brs els c vs = some (vs, body) := by
+  simp [selectBr, h]
+
+theorem branchCtx_fld {G Gb : UCtx} {s k H idx sig : Tm} (hf : G.fill = false) (hT : sig.isTele)
+    (h : G.branchCtx P s k H idx sig false false G.scr = some Gb) :
+    Gb.Γ.n = G.Γ.n + (sig.len - 1) ∧ (∀ i < G.Γ.n, Gb.Γ.er i = G.Γ.er i) ∧
+    (∀ j < sig.len - 1, Gb.Γ.er (G.Γ.n + j) = sig.ers.getD j true) ∧ Gb.Γ.ghost = G.Γ.ghost ∧ Gb.fill = G.fill ∧
+    Gb.rebind = none ∧ Gb.uscr = (if G.scr then some s else none) ∧
+    (∀ j, Gb.uq.contains j = true → G.uq.contains j = true ∨
+      ∃ i, j = G.Γ.n + i ∧ i < Gb.Γ.n - G.Γ.n ∧ (if G.scr then (teleUs sig).dropLast else []).getD i false = true) := by
+  unfold UCtx.branchCtx at h
+  simp only at h
+  rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig with ⟨Γf, r⟩
+  have hfe : Γf = ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 := by
+    rw [← Ctx.branch_fst, hb]
+  rw [hb] at h
+  cases r with
+  | ok σ =>
+    simp only [Option.some.injEq] at h; subst h
+    obtain ⟨g, h1, h2⟩ := Ctx.openTele_er (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || false } sig hT
+    have hn := Ctx.openTele_n_eq (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || false } sig hT (by omega)
+    rw [← hfe] at g h1 h2 hn
+    have hl := Tm.len_ers _ hT
+    simp only [UCtx.next, hf, Bool.false_eq_true, ite_false, Bool.not_false, Bool.and_true, Ctx.advBr_n,
+      Ctx.advBr_er, Ctx.advBr_ghost, Ctx.setErs]
+    refine ⟨by simpa [Ctx.n] using hn, fun i hi => h1 i hi, fun j hj => h2 j hj (by omega), by simpa using g,
+      trivial, trivial, trivial, fun j hj => ?_⟩
+    simp only [List.contains_append, Bool.or_eq_true] at hj
+    rcases hj with hj | hj
+    · exact .inl hj
+    · right
+      simp at hj
+      obtain ⟨i, hi, e⟩ := hj
+      have hv := List.mem_zipIdx_iff_getElem?.mp hi
+      rw [List.getElem?_take] at hv
+      split at hv
+      · refine ⟨i, e.symm, by simpa [Ctx.n] using ‹_›, ?_⟩
+        simp [List.getD_eq_getElem?_getD, hv]
+      · cases hv
+  | _ => cases h
+
+theorem teleUs_length : ∀ (t : Tm), (teleUs t).length = t.ers.length
+  | .bind _ _ r => by simp [teleUs, Tm.ers, teleUs_length r]
+  | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _
+  | .univ | .level | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok
+  | .clo .. | .nat _ | .ptr _ => rfl
+
+theorem machine_mtch_fld (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s R : Tm} {brs : List Br}
+    {els : Option Core} {rest : Core} {ρ vs : List Tm} {d c : Nat} {lsF vsF sig0 : Tm} {body : Core}
+    {outsF : List Tm}
+    (hE : EnvOK P ρ G.Γ) (hrt : rt P G.Γ s = true) (hslt : ∀ x, s = .fv x → x < G.Γ.n) (hR : R.isTele)
+    (hsF : s.subst (Tm.env ρ) = .app (.vc d c lsF) vsF) (hlk : lookupBr brs c = some body)
+    (hc : P.ctor d c = some sig0) (hwf : P.wrapField d c = none)
+    (hview : ∀ ρS, SimEnv P G.Γ.er ρS ρ → ∀ d' c' ls' vs', P.view (P.sub ρS s) = .app (.vc d' c' ls') vs' →
+      d' = d ∧ c' = c)
+    (hol : outsF.length = R.len)
+    (hbr : ∀ H idx shp, G.arms P s false = some (H, idx, shp) → ∃ k sig, shp[c]? = some (k, sig, false) ∧
+      sig.isTele ∧ vsF.toList.length = sig.len - 1 ∧
+      (∀ j, j < sig.len - 1 → sig.ers.getD j true = (sig0.skip (P.lifted d)).ers.getD j true ∧
+        sig.uAt j = (sig0.skip (P.lifted d)).uAt j) ∧
+      ∃ Gb, G.branchCtx P s k H idx sig false false G.scr = some Gb ∧
+        MRun P b Gb G.ents R body (ρ ++ vsF.toList) outsF ∧
+        (∀ ρS lsS vsS, SimEnv P G.Γ.er ρS ρ → P.view (P.sub ρS s) = .app (.vc d c lsS) vsS →
+          SimEnv P Gb.Γ.er (ρS ++ vsS.toList) (ρ ++ vsF.toList)) ∧
+        (∀ ρS', SimEnv P Gb.Γ.er ρS' (ρ ++ vsF.toList) →
+          ∃ outsS, RunS P ρS' body outsS ∧ Reals P (.ofList outsS) (.ofList outsF) R))
+    (ihr : MRun P b (G.next (G.adv P (G.Γ.pushTele R none) (.mtch s R brs els false rest)) G.ents)
+      ru rets rest (ρ ++ outsF) vs) :
+    MRun P b G ru rets (.mtch s R brs els false rest) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out pd hM hG
+  have hf := hG.fill
+  have hg := hG.ghost
+  rw [usesCore] at hU
+  obtain ⟨⟨CU, CK⟩, hC, hU⟩ := Option.bind_eq_some_iff.mp hU
+  simp only [Bool.false_or, hg, Bool.false_eq_true, ite_false] at hU hC
+  obtain ⟨⟨Hh, idx, shp⟩, harms, hU⟩ := Option.bind_eq_some_iff.mp hU
+  simp only at hU
+  obtain ⟨S, hSu, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨⟨BU0, BK0⟩, hB, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨⟨EU, EK⟩, hEl, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨SBE, hSBE, hU⟩ := Option.bind_eq_some_iff.mp hU
+  have hseqU := UR.seq_fst hU
+  have hseqS := UR.seq_fst hSBE
+  simp only [UR.join] at hseqS
+  obtain ⟨k, sig, hshp, hsigT, hlenF, hsig, Gb, hGb, ihb, hSb, hsb⟩ := hbr Hh idx shp harms
+  obtain ⟨BU, BK, hBU, hBsub⟩ := usesArms_sel brs BU0 BK0 hB c body hlk k sig false hshp Gb (by simpa using hGb)
+  obtain ⟨hGn, hGer, hGer', hGg, hGf, hGrb, hGus, hGuq⟩ := branchCtx_fld hf hsigT hGb
+  cases hrun with
+  | mtch hv hsel hbody hrest =>
+  rename_i d' c' ls' vs' pre body' outsS
+  obtain ⟨hd', hc'⟩ := hview ρS hS _ _ _ _ hv
+  subst d' c'
+  rw [selectBr_lookup hlk] at hsel
+  simp only [Option.some.injEq, Prod.mk.injEq] at hsel
+  obtain ⟨rfl, rfl⟩ := hsel
+  have hl := hM.lenF
+  have hM1 := hM.split hseqU
+  have hM2 := hM1.split hseqS
+  obtain ⟨H1, w, hbuild, hOs⟩ := prim_val_tm (T := .nil) hP hE hS hrt hSu hM2
+  have hdw := hOs.dec 0 w (P.sub ρS s) rfl rfl (by simp [Tm.ers, Ent.er])
+  obtain ⟨lsM, vsM, hvM⟩ := viewM_of_view hdw hv
+  obtain ⟨ruF, hruF0⟩ : ∃ ruF : List Bool, ruF = if G.scr then (teleUs sig).dropLast else [] := ⟨_, rfl⟩
+  have hruF : ∀ j, ruF.getD j false = true → G.scr = true ∧ (sig0.skip (P.lifted d)).uAt j = true := by
+    intro j hj
+    cases hscr : G.scr
+    · simp [hruF0, hscr] at hj
+    · simp only [hruF0, hscr, ite_true] at hj
+      have hj' : j < sig.len - 1 := by
+        have := (List.getElem?_eq_some_iff.mp (Option.isSome_iff_exists.mp (by
+          simp only [List.getD_eq_getElem?_getD] at hj
+          cases e : (teleUs sig).dropLast[j]? <;> simp_all)).choose_spec).1
+        rw [List.length_dropLast, teleUs_length, Tm.len_ers _ hsigT] at this; omega
+      refine ⟨rfl, ?_⟩
+      rw [← (hsig j hj').2, ← teleUs_getD]; exact getD_dropLast hj
+  obtain ⟨hOf, hR0⟩ := MOut.fields hOs hvM hv hsF hc hwf hruF
+  have hSbS := hSb ρS ls' vs' hS hv
+  have hlS : vs'.toList.length = sig.len - 1 := by
+    have h1 := hSbS.1; have h2 := hS.1; simp only [List.length_append] at h1; omega
+  have hF := (Uses.seq_spec hseqS).1
+  have hjs := Uses.join_sub_left BU0 EU
+  have hss := (Uses.seq_sub hseqS).2
+  obtain ⟨hMb, liftb⟩ := hM1.bindR (A := S) (C := BU) (R0 := fun a => G.scr = true ∧ w = .ptr a) (m := sig.len - 1)
+    (er' := Gb.Γ.er) (Uses.seq_sub hseqS).1
+    (fun i hi => ⟨fun h => hss.1 i (hjs.1 i (hBsub.1 i (by rwa [Uses.below_lookup hi]))),
+      fun h => hss.2 i (hjs.2 i (hBsub.2 i (by rwa [Uses.below_lookup hi])))⟩)
+    (fun j hj => ⟨fun h => (by
+        have h1 := (hF j).1 h
+        cases e : BU.lookup j with
+        | none => rfl
+        | some x =>
+          have := hjs.1 j (hBsub.1 j (by rw [Uses.below_lookup hj, e]; rfl))
+          rw [h1] at this; cases this),
+      fun h => (hF j).2 (hjs.2 j (hBsub.2 j (by rw [Uses.below_lookup hj]; exact h)))⟩)
+    hOf hlS hlenF hGer
+    (fun k' hk _ he => by rw [hGer' k' hk, (hsig k' hk).1] at he; exact he)
+    (fun k' hk hc' _ => by
+      rcases usesCore_uq b Gb G.ents R body (hGf.trans hf) BU BK hBU _ (lookup_mem hc') with h1 | h1
+      · rcases hGuq _ h1 with h2 | ⟨i, e, hi, h3⟩
+        · have := hG.uqlt _ h2; omega
+        · have : i = k' := by omega
+          subst this; rw [hruF0]; exact h3
+      · rw [hGn] at h1; omega)
+    (fun a ⟨h1, h2⟩ => (hR0 a h1 h2).1) (fun a ⟨h1, h2⟩ => (hR0 a h1 h2).2.1)
+    (fun k' w' u' _ hw hu _ _ b' hft ⟨h1, h2⟩ => (hR0 b' h1 h2).2.2 k' w' u' hw hu b' hft rfl)
+  have hGOK : GOK P Gb none H1 (ρM ++ vsM.toList) (ρS ++ vs'.toList) (ρ ++ vsF.toList)
+      (fun a => False ∨ (G.scr = true ∧ w = .ptr a)) := by
+    refine ⟨.inl rfl, fun x hx => ?_, fun x hx => (by rw [hGrb] at hx; cases hx), fun j hj => ?_, hGf.trans hf,
+      hGg.trans hg⟩
+    · rw [hGus] at hx
+      cases hscr : G.scr
+      · simp [hscr] at hx
+      · simp only [hscr, ite_true, Option.some.injEq] at hx
+        have hxn := hslt x hx
+        refine ⟨by rw [hGn]; omega, fun a ha => .inr ⟨rfl, ?_⟩⟩
+        rw [Tm.env_append (by rw [hM.lenM]; exact hxn)] at ha
+        subst hx
+        simp only [Prog.build, Prod.mk.injEq] at hbuild
+        rw [← hbuild.2, ha]
+    · rcases hGuq j hj with h2 | ⟨i, e, hi, -⟩
+      · have := hG.uqlt _ h2; rw [hGn]; omega
+      · omega
+  obtain ⟨H2, outsM, hrb, hOb⟩ := ihb BU BK hBU (ρS ++ vs'.toList) outsS hSbS hbody H1 (ρM ++ vsM.toList) _ _ none
+    (by rw [hGn]; exact hMb) hGOK
+  rw [hGn] at hOb
+  have hOb' := liftb hOb
+  obtain ⟨outsS2, hb2, hre⟩ := hsb _ hSbS
+  cases RunS.det hbody hb2
+  have hlS' : outsS.length = R.len := by rw [← hol]; simpa [Tm.toList_ofList] using hre.len
+  obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er G.Γ R none hR
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushTele R none) (.mtch s R brs els false rest) := ⟨_, rfl⟩
+  rw [← hΓ'] at ihr hC
+  have her' : Γ'.er = (G.Γ.pushTele R).er := by rw [hΓ']; exact UCtx.adv_er' hf
+  have hn' : Γ'.n = G.Γ.n + R.len := by rw [hΓ', UCtx.adv_n' hf, Ctx.pushTele_n _ hR]
+  have huq := usesCore_uq b (G.next Γ' G.ents) ru rets rest hf CU CK hC
+  obtain ⟨hMr, lift⟩ := hM.bind hseqU hOb' hlS' hol (er' := Γ'.er)
+    (fun i hi => by rw [her']; exact hpo i hi)
+    (fun k hk _ he => by rw [her', hpn k hk] at he; simpa using he)
+    (fun k hk hc _ => by
+      rcases huq _ (lookup_mem hc) with h1 | h1
+      · exact UCtx.next_uq_new h1 hG.uqlt
+      · simp only [UCtx.next] at h1; omega)
+  have hS' : SimEnv P Γ'.er (ρS ++ outsS) (ρ ++ outsF) := by
+    rw [her']
+    exact hS.pushTele (by rw [hl]) hR none hol (by rw [hlS', hol])
+      (fun k a b ha hb he => hre.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb)
+        (by simpa using he))
+  have hGr := hG.next (Γ' := Γ') (us := G.ents) (H' := H2) (oM := outsM) (oS := outsS) (oF := outsF) (by omega)
+    hM.lenM (by rw [hΓ', UCtx.adv_ghost' hf, hpg]; exact hg)
+  obtain ⟨H', vsM', hrr, hOr⟩ := ihr CU CK hC (ρS ++ outsS) vsS hS' hrest H2 (ρM ++ outsM) Res Out none
+    (by simp only [UCtx.next]; rw [hn']; exact hMr) hGr
+  refine ⟨H', vsM', .mtch hbuild hvM (selectBr_lookup hlk _) hrb hrr, lift ?_⟩
+  simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr
 
 end Minimal
