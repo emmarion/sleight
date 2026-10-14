@@ -45,7 +45,12 @@ A Claude session derived it by re-checking each session with slc built at
 that commit and reading the erased OCaml of each first pass to judge that it
 is a heap sort; that judgment and the `notes` column are its reading and may
 be wrong. Dollars are the provider's reported cost for Neuralwatt models and
-`agent/pi.py`'s list-price estimate otherwise.
+`agent/pi.py`'s list-price estimate otherwise. The `sort_ms` columns are
+`perf.sl`'s own `wall-ns` reading, which brackets only the call to `accept`:
+the median and minimum of 9 rounds on an Apple M4 Pro (OCaml 5.4.1), each
+round running every passing session's build once, in turn, with nothing
+else running. `fastest_passing_session` is the run's passing session with
+the lowest median. Differences of a few milliseconds are within the noise.
 
 `ats/` holds an in-place heap sort in ATS2 (ATS/Postiats 0.4.2,
 `apt-get install ats2-lang`) whose type states that the output is a
