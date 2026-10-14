@@ -7,3 +7,5 @@ import Minimal.Sound
 import Minimal.Check
 import Minimal.Reader
 import Minimal.Run
+import Minimal.Machine
+import Minimal.Uses

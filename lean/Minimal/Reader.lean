@@ -1804,7 +1804,7 @@ partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R 
           let [j] ← freshMd [md] | throw "fresh"
           note j t true
           if let .fv i := t then modify fun st => { st with renames := (j, i) :: st.renames }
-          pure ((x, Ref.fv j) :: sc, uqMark [md] ++ [(.prim (.tm t) er : Stmt)], body)
+          pure ((x, Ref.fv j) :: sc, uqMark [md] ++ [.chk (.mark .rebind) .nil .nil, (.prim (.tm t) er : Stmt)], body)
         | _, _ => pure (sc, [], items)
       els := some ((pre.foldr (· ·)) (← ghostly gEr (elabBody sc' rms items R)))
       uses := joinUses uses (← get).uses

@@ -1,4 +1,5 @@
 import Minimal.Reader
+import Minimal.Uses
 import Minimal.Strip
 
 namespace Minimal
@@ -245,6 +246,7 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
     else match checkProg P with
       | .error e => .text s!"refused: {e}"
       | .ok ⟨R, _⟩ =>
+        if (usesCore P P.groups.length {Γ := {tys := []}} [] R P.main).isNone then .text "refused: the uses of a unique value do not check" else
         let rec anyTy : Tm → Bool
           | .bind (.ty ..) .nil _ => true
           | .bind _ _ r => anyTy r

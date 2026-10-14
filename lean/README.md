@@ -602,8 +602,15 @@ it is `Settled`, and its `is` rule.
   the delegate's body when the only stripped value at hand stood for
   its target; without the second, `Real.dele` could not relate a
   stripped value to the delegate in both directions.
-- `unique` is checked by the elaborator alone, which the proofs do not
-  cover: with no cells and no in-place update in `lean/`, the soundness
+- `unique` is checked by the elaborator, and again in the core by
+  `usesCore` (`Minimal/Uses.lean`), which the runner requires of a
+  checked program and which reads the marks the elaborator leaves
+  (`Mark.uq`, `Mark.uqScr`, `Mark.rebind`, `Mark.reuse`, `Mark.write`):
+  on each path a `unique` entry has one non-erased use at unique or only
+  uses at many, a match joining its branches, a use at unique is of an
+  entry born `unique`, and a `def-fns` body uses an entry of its scope
+  at unique nowhere. No theorem rests on it yet; the proofs do not
+  cover `unique`: with no cells and no in-place update in `lean/`, the soundness
   theorems need nothing from it. A `let` binder of a `unique` entry, or
   a `unique` binder, is an entry of its own that is the right-hand side,
   so that its uses are counted apart from those the right-hand side
