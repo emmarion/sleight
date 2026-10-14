@@ -35,6 +35,10 @@ The other files:
   it, that needs no fuel, with a machine-checked proof that checked
   programs run to a value of their type (`lean/README.md`).
 - `pal/`: certified longest-palindrome programs (`pal/README.md`).
+- `talk/`: the source of the slides for the October 14, 2026 talk on
+  the language and on models writing it (`talk/slides.md`, built by
+  `talk/build.sh`). The published PDF is
+  https://doi.org/10.5281/zenodo.23367392.
 - `std/`: source libraries a program names on the command line before its
   own files. `std/macro.sl` holds helpers for writing macros, `std/nat.sl`
   holds `Le`, the non-strict order on `Nat`, `Ne`, inequality as one of the
