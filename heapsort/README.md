@@ -50,7 +50,10 @@ be wrong. Dollars are the provider's reported cost for Neuralwatt models and
 the median and minimum of 9 rounds on an Apple M4 Pro (OCaml 5.4.1), each
 round running every passing session's build once, in turn, with nothing
 else running. `fastest_passing_session` is the run's passing session with
-the lowest median. Differences of a few milliseconds are within the noise.
+the lowest median. The `x86_` columns are the same measurement of the same
+OCaml on `bench/`'s Xeon, compiled there both without flambda and with
+flambda `-O3` (`x86_flambda_`). Differences of a few milliseconds are within
+the noise.
 
 `bench/` times all of these, and C, Lean and Idris 2 heap sorts, on
 `perf.sl`'s input; its README has the results.

@@ -5,9 +5,8 @@ H = Path(__file__).resolve().parent
 B = H / "_build"
 CK = "393660565753209066784"
 E = {
-    "C (clang -O2)": [H.parent / "ats/driver", "bench", "c"],
-    "ATS plain": [H.parent / "ats/driver", "bench", "plain"],
-    "ATS certified": [H.parent / "ats/driver", "bench", "cert"],
+    **{f"{name} ({d.name[7:]} -O2)": [d, "bench", arg] for d in sorted(B.glob("driver_*"))
+       for name, arg in (("C", "c"), ("ATS plain", "plain"), ("ATS certified", "cert"))},
     "Lean verified": [H / "lean/.lake/build/bin/bench"],
     "Idris 2 (plain port)": [B / "idris/exec/hs"],
     **{f"{name}{label}": [B / f"{b}{s}"]
