@@ -77,7 +77,9 @@ abbrev Pend := Option (Mark × Tm)
 def Prog.evalP (P : Prog) (H : Heap) (ρ : List Tm) : Pend → Prim → Heap × Tm
   | some (.reuse true, .fv u), .tm t => ((P.reuse H ρ u t).getD (P.build H (Tm.env ρ) t))
   | some (.alloc, _), .axm _ => let (H, a) := H.alloc (0, 0, []); (H, .ptr a)
-  | some (.cellOf, .fv x), .axm _ | some (.write true, .fv x), .axm _ => (H, Tm.env ρ x)
+  | some (.cellOf, .fv x), .axm _ | some (.write true, .fv x), .axm _ => (H, match Tm.env ρ x with
+    | .ptr a => .ptr a
+    | _ => .tok)
   | _, p => P.evalM H ρ p
 
 inductive RunM : Heap → List Tm → Pend → Core → Heap → List Tm → Prop
@@ -146,6 +148,7 @@ inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
   | clo {eM eS eF : Tm} : P.rdU gid i = true →
       Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i) b →
       Spine H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j) b
+  | cell : Spine H (.ptr a) .tok .tok a
 
 def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
 
@@ -166,6 +169,7 @@ inductive WO (H : Heap) : Tm → Tm → Tm → Prop
         Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i))
           (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
       WO H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)
+  | cell : WO H (.ptr a) .tok .tok
   | free : (∀ b, ¬ Spine P H w u v b) → WO H w u v
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none

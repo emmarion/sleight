@@ -175,7 +175,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let (H, idx, shp) ← G.arms P s er
       let S ← if er then some [] else G.termUses P G.scr s
       let B ← usesArms b G ru rets s H idx shp er (!nt) brs
-      let E ← usesEls b G ru rets s els
+      let E ← usesEls b { G with scr := G.scr && !er } ru rets s els
       UR.seq (S, []) (UR.join B E)
   | .seq R body rest => do
     let A := UR.below (← usesCore b { G with ents := [], uscr := none, cellOk := false, rebind := none } G.ents R body) G.Γ.n

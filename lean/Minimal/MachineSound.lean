@@ -692,6 +692,7 @@ theorem Spine.foot {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) : 
   | field hb _ _ _ hw hu _ _ ih => exact .field hb hw hu ih
   | wrap _ _ _ _ _ ih => exact ih
   | clo hi _ ih => exact .clo (Prog.rdU_rd hi) ih
+  | cell => exact .here
 
 theorem Spine.fwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v)) {b : Nat} (hs : Spine P H w u v b) :
     Spine P H' w u v b := by
@@ -701,6 +702,7 @@ theorem Spine.fwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v))
     exact .field (by rw [hA _ (.top hn)]; exact hb) hn hc hk hw hu hv (ih fun a ha => hA a (.field hb hn hc hk hw hu hv ha))
   | wrap hn hc hk hv _ ih => exact .wrap hn hc hk hv (ih fun a ha => hA a (.wrap hn hc hk hv ha))
   | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
+  | cell => exact .cell
 
 theorem Spine.bwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v)) {b : Nat} (hs : Spine P H' w u v b) :
     Spine P H w u v b := by
@@ -711,6 +713,7 @@ theorem Spine.bwd {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Spine P H w u v))
     exact .field hb'.symm hn hc hk hw hu hv (ih fun a ha => hA a (.field hb'.symm hn hc hk hw hu hv ha))
   | wrap hn hc hk hv _ ih => exact .wrap hn hc hk hv (ih fun a ha => hA a (.wrap hn hc hk hv ha))
   | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
+  | cell => exact .cell
 
 theorem Agree.spine {H H' : Heap} {w u v : Tm} (hA : Agree H H' (Foot P H w u)) : Agree H H' (Spine P H w u v) :=
   fun a ha => hA a ha.foot
@@ -734,6 +737,7 @@ theorem WO.fwd {H H' : Heap} {w u v : Tm} (hw : WO P H w u v) (hA : Agree H H' (
     exact .clo (fun i hi => ihu i hi (sub i (Prog.rdU_rd hi)))
       (fun i hi i' hne hi' a h1 h2 =>
         hd i hi i' hne hi' a (Spine.bwd (sub i (Prog.rdU_rd hi)).spine h1) (Foot.bwd (sub i' hi') h2))
+  | cell => exact .cell
   | free hn => exact .free fun b h => hn b (Spine.bwd hA.spine h)
 
 theorem Spine.word {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) :
@@ -743,6 +747,7 @@ theorem Spine.word {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) :
   | field => exact .inl ⟨_, rfl⟩
   | wrap _ _ _ _ _ ih => exact ih
   | clo => exact .inr ⟨_, _, _, rfl⟩
+  | cell => exact .inl ⟨_, rfl⟩
 
 theorem Spine.imm {H : Heap} {w u v : Tm} {b : Nat} (hs : Spine P H w u v b) (h1 : ∀ a, w ≠ .ptr a)
     (h2 : ∀ e g j, w ≠ .clo e g j) : False := by
