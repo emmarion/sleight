@@ -1,5 +1,7 @@
 # Sleight
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23361871.svg)](https://doi.org/10.5281/zenodo.23361871)
+
 Sleight is the programming language that DESIGN.md specifies. This
 repository holds a prototype OCaml interpreter and compiler for it.
 The other files:

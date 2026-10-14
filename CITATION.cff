@@ -9,6 +9,7 @@ authors:
     orcid: "https://orcid.org/0009-0004-8519-6942"
 repository-code: "https://github.com/emmarion/sleight"
 license: Apache-2.0
+doi: 10.5281/zenodo.23361871
 keywords:
   - programming languages
   - dependent types
