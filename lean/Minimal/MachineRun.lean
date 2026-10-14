@@ -1624,7 +1624,7 @@ theorem MOut.dropShr {U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρ
   · exact .inr (.inr (.inr (.inl (hX b h))))
 
 theorem branch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm}
-    {ρ : List Tm} {d c : Nat} {body : Core} {outsF : List Tm}
+    {ρ : List Tm} {body : Core} {outsF : List Tm}
     (hE : EnvOK P ρ G.Γ) (hrt : rt P G.Γ s = true)
     (hf : G.fill = false) (hg : G.Γ.ghost = false) (huqlt : ∀ j, G.uq.contains j = true → j < G.Γ.n)
     (ihb : MRun P b { G with scr := false, ents := [], rebind := (if G.scr && s.isFv then some s else none), uscr := none, cellOk := false } ru rets body ρ outsF)
@@ -1632,10 +1632,10 @@ theorem branch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s
     (hEU : usesCore P b { G with scr := false, ents := [], rebind := (if G.scr && s.isFv then some s else none), uscr := none, cellOk := false } ru rets body = some (EU, EK))
     (hseqS : Uses.seq S (Uses.join BU0 (EU.below G.Γ.n)) = some U0)
     {ρS ρM : List Tm} {H : Heap} {Res0 Out0 Shr : Nat → Prop} (hS : SimEnv P G.Γ.er ρS ρ)
-    (hM1 : MFrame P U0 G.Γ.n G.Γ.er H ρM ρS ρ Res0 Out0 Shr)
-    {ls' vs' : Tm} (hv : P.view (P.sub ρS s) = .app (.vc d c ls') vs') {outsS : List Tm}
+    (hM1 : MFrame P U0 G.Γ.n G.Γ.er H ρM ρS ρ Res0 Out0 Shr) {outsS : List Tm}
     (hbody : RunS P ρS body outsS) :
-    ∃ H1 w lsM vsM H2 outsM, P.build H (Tm.env ρM) s = (H1, w) ∧ P.viewM H1 w = .app (.vc d c lsM) vsM ∧
+    ∃ H1 w H2 outsM, P.build H (Tm.env ρM) s = (H1, w) ∧
+      (∀ d c ls' vs', P.view (P.sub ρS s) = .app (.vc d c ls') vs' → ∃ lsM vsM, P.viewM H1 w = .app (.vc d c lsM) vsM) ∧
       RunM P H1 ρM none body H2 outsM ∧
       MOut P U0 G.Γ.n G.Γ.er H ρM ρS ρ Res0 Shr rets ru H2 outsM outsS outsF := by
   obtain ⟨H1, w, hbuild⟩ : ∃ H1 w, P.build H (Tm.env ρM) s = (H1, w) := ⟨_, _, rfl⟩
@@ -1667,7 +1667,6 @@ theorem branch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s
   obtain ⟨H1', w', hb', hOs⟩ := prim_val_tm (T := .nil) hP hE hS hrt hSu hM2
   rw [hbuild, Prod.mk.injEq] at hb'; obtain ⟨rfl, rfl⟩ := hb'
   have hdw := hOs.dec 0 w (P.sub ρS s) rfl rfl (by simp [Tm.ers, Ent.er])
-  obtain ⟨lsM, vsM, hvM⟩ := viewM_of_view hdw hv
   have hF := (Uses.seq_spec hseqS).1
   have hjs := Uses.join_sub_right BU0 (EU.below G.Γ.n)
   have hss := (Uses.seq_sub hseqS).2
@@ -1710,7 +1709,7 @@ theorem branch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s
     · exact .inr (.inr ⟨by simp [hscr], by simp [hfv], hf', hsp'⟩)
   obtain ⟨H2, outsM, hrb, hOb⟩ := ihb EU EK hEU ρS outsS (by simpa using hS) (by simpa using hbody) H1 ρM _ _ _ none
     (by simpa using hMb) (by simpa using hGOK)
-  exact ⟨H1, w, lsM, vsM, H2, outsM, hbuild, hvM, by simpa using hrb, (liftb (by simpa using hOb)).dropShr
+  exact ⟨H1, w, H2, outsM, hbuild, fun _ _ _ _ hv => viewM_of_view hdw hv, by simpa using hrb, (liftb (by simpa using hOb)).dropShr
     fun a hxa => let ⟨x, hxn, hex, hU, hf, _⟩ := hX a hxa; ⟨x, hxn, by simp [hU], hex, hf⟩⟩
 
 theorem machine_mtch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s R : Tm} {brs : List Br}
@@ -1752,8 +1751,9 @@ theorem machine_mtch_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {
   subst d' c'
   simp only [selectBr, hlk, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hsel
   obtain ⟨rfl, rfl⟩ := hsel
-  obtain ⟨H1, w, lsM, vsM, H2, outsM, hbuild, hvM, hrb, hOb⟩ := branch_els hP hE hrt hf hg hG.uqlt ihb
-    hSu hEU hseqS hS (hM.split hseqU) hv (by simpa using hbody)
+  obtain ⟨H1, w, H2, outsM, hbuild, hvw, hrb, hOb⟩ := branch_els hP hE hrt hf hg hG.uqlt ihb
+    hSu hEU hseqS hS (hM.split hseqU) (by simpa using hbody)
+  obtain ⟨lsM, vsM, hvM⟩ := hvw _ _ _ _ hv
   obtain ⟨outsS2, hb2, hre⟩ := hsb _ hS
   cases RunS.det (by simpa using hbody) hb2
   obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er G.Γ R none hR
@@ -1839,10 +1839,41 @@ theorem machine_case_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {
   subst d' c'
   simp only [selectBr, hlk, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hsel
   obtain ⟨rfl, rfl⟩ := hsel
-  obtain ⟨H1, w, lsM, vsM, H2, outsM, hbuild, hvM, hrb, hOb⟩ := branch_els hP hE hrt hf hg hG.uqlt ihb
-    hSu hEU hseqS hS hM hv (by simpa using hbody)
+  obtain ⟨H1, w, H2, outsM, hbuild, hvw, hrb, hOb⟩ := branch_els hP hE hrt hf hg hG.uqlt ihb
+    hSu hEU hseqS hS hM (by simpa using hbody)
+  obtain ⟨lsM, vsM, hvM⟩ := hvw _ _ _ _ hv
   exact ⟨H2, outsM, .case hbuild hvM (show selectBr brs (some body) c vsM.toList = some ([], body) by simp [selectBr, hlk])
     (by simpa using hrb), hOb⟩
+
+theorem machine_caseN_els (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm} {brs : List Br}
+    {ρ vs : List Tm} {body : Core} (hE : EnvOK P ρ G.Γ) (hrt : rt P G.Γ s = true)
+    (hreal : realBr brs (some body) = some ([], body))
+    (ihb : MRun P b { G with scr := false, ents := [], rebind := (if G.scr && s.isFv then some s else none), uscr := none, cellOk := false } ru rets body ρ vs) :
+    MRun P b G ru rets (.case s brs (some body) false true) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  have hf := hG.fill
+  have hg := hG.ghost
+  rw [usesCore] at hU
+  simp only [hg, Bool.false_eq_true, ite_false] at hU
+  obtain ⟨⟨Hh, idx, shp⟩, harms, hU⟩ := Option.bind_eq_some_iff.mp hU
+  simp only [ite_false, Bool.false_eq_true] at hU
+  obtain ⟨S, hSu, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨⟨BU0, BK0⟩, hB, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨⟨EU0, EK0⟩, hEl, hU⟩ := Option.bind_eq_some_iff.mp hU
+  have hseqS := UR.seq_fst hU
+  simp only [UR.join] at hseqS
+  rw [UCtx.scr_and_true, usesEls] at hEl
+  obtain ⟨⟨EU, EK⟩, hEU, hEl⟩ := Option.bind_eq_some_iff.mp hEl
+  simp only [Option.some.injEq, UR.below, Prod.mk.injEq] at hEl
+  obtain ⟨rfl, -⟩ := hEl
+  cases hrun with
+  | caseN hreal' hbody =>
+  rw [hreal] at hreal'
+  simp only [Option.some.injEq, Prod.mk.injEq] at hreal'
+  obtain ⟨rfl, rfl⟩ := hreal'
+  obtain ⟨H1, w, H2, outsM, hbuild, -, hrb, hOb⟩ := branch_els hP hE hrt hf hg hG.uqlt ihb
+    hSu hEU hseqS hS hM (by simpa using hbody)
+  exact ⟨H2, outsM, .caseN hreal hbuild (by simpa using hrb), hOb⟩
 
 theorem branchCtx_erf {G Gb : UCtx} {s k H idx sig : Tm} {ph cell : Bool} (hf : G.fill = false) (hT : sig.isTele)
     (h : G.branchCtx P s k H idx sig true ph G.scr cell = some Gb) :
@@ -1877,7 +1908,7 @@ theorem machine_caseE {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm} {brs :
     {nt : Bool} {ρ vs : List Tm} {c : Nat} {pre preF : List Tm} {body : Core}
     (hreal : realBr brs els = some (pre, body)) (hpl : preF.length = pre.length)
     (hbr : ∀ H idx shp, G.arms P s true = some (H, idx, shp) →
-      (∃ k sig, lookupBr brs c = some body ∧ shp[c]? = some (k, sig, false) ∧ sig.isTele ∧ pre.length = sig.len - 1 ∧
+      (∃ k sig ph, lookupBr brs c = some body ∧ shp[c]? = some (k, sig, ph) ∧ sig.isTele ∧ pre.length = sig.len - 1 ∧
         ∃ Gb, G.branchCtx P s k H idx sig true false G.scr (!nt) = some Gb ∧
           MRun P b Gb ru rets body (ρ ++ preF) vs) ∨
       (lookupBr brs c = none ∧ els = some body ∧ pre = [] ∧
@@ -1900,8 +1931,8 @@ theorem machine_caseE {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm} {brs :
   rw [hreal] at hreal'
   simp only [Option.some.injEq, Prod.mk.injEq] at hreal'
   obtain ⟨rfl, rfl⟩ := hreal'
-  rcases hbr Hh idx shp harms with ⟨k, sig, hlk, hshp, hsigT, hlen, Gb, hGb, ihb⟩ | ⟨hlk, hel, hpre, ihb⟩
-  · obtain ⟨BU, BK, hBU, hBsub⟩ := usesArms_sel brs BU0 BK0 hB c body hlk k sig false hshp Gb (by simpa using hGb)
+  rcases hbr Hh idx shp harms with ⟨k, sig, ph, hlk, hshp, hsigT, hlen, Gb, hGb, ihb⟩ | ⟨hlk, hel, hpre, ihb⟩
+  · obtain ⟨BU, BK, hBU, hBsub⟩ := usesArms_sel brs BU0 BK0 hB c body hlk k sig ph hshp Gb (by simpa using hGb)
     obtain ⟨hGn, hGer, hGer', hGg, hGf, hGrb, hGus, hGuq⟩ := branchCtx_erf hf hsigT hGb
     have hsubB : Uses.SubB BU U G.Γ.n := (Uses.below_subB BU G.Γ.n).trans
       (((hBsub.trans (Uses.join_sub_left BU0 EU0)).trans hss).subB _)

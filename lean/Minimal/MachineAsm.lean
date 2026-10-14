@@ -812,6 +812,37 @@ theorem UCtx.arms_check {G : UCtx} {s St H idx : Tm} {er ntf : Bool} {shp : List
     (hsh' : shapeOf P G.Γ er H = .ok ⟨shp, ntf, hsh⟩) : G.arms P s er = some (H, idx, shp) := by
   simp [UCtx.arms, hst, hS, hsh', Except.toOption]
 
+theorem branch_uses {G : UCtx} {b : Nat} {ru : List Bool} {R s H idx k sig : Tm} {shp : List Arm} {fe cell ph : Bool}
+    {brs : List Br} {BU : Uses} {BK : Caps} {c : Nat} {body : Core} {Γf : Ctx} {σ : Nat → Option Tm}
+    (hf : G.fill = false) (huq : ∀ j, G.uq.contains j = true → j < G.Γ.n) (hsigT : sig.isTele)
+    (hB : usesArms P b G ru R s H idx shp fe cell brs = some (BU, BK)) (hlk : lookupBr brs c = some body)
+    (hshp : shp[c]? = some (k, sig, ph))
+    (hbr : ({ G.Γ with ghost := G.Γ.ghost || (!fe && ph) } : Ctx).branch P s k H idx sig = (Γf, .ok σ)) :
+    ∃ Gb, G.branchCtx P s k H idx sig fe (!fe && ph) G.scr cell = some Gb ∧ Gb.fill = false ∧
+      Gb.Γ = { ({ G.Γ with ghost := G.Γ.ghost || (!fe && ph) } : Ctx).advBr P (({ G.Γ with ghost := G.Γ.ghost || (!fe && ph) } : Ctx).setErs
+        { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1)
+        with cmode := false } ∧
+      (Gb.Γ.ghost = false → ∀ j, Gb.uq.contains j = true → j < Gb.Γ.n) ∧ (usesCore P b Gb ru R body).isSome = true := by
+  obtain ⟨Gb, hGbs⟩ : ∃ Gb, G.branchCtx P s k H idx sig fe (!fe && ph) G.scr cell = some Gb := by
+    unfold UCtx.branchCtx; simp only [hbr]; exact ⟨_, rfl⟩
+  obtain ⟨BU', BK', hBU, -⟩ := usesArms_sel brs BU BK hB c body hlk k sig ph hshp Gb hGbs
+  obtain ⟨Γf2, σ2, hb2, hGbf, hGbΓ⟩ := UCtx.branchCtx_Γ hf hGbs
+  rw [hbr] at hb2; simp only [Prod.mk.injEq, UResult.ok.injEq] at hb2; obtain ⟨rfl, rfl⟩ := hb2
+  refine ⟨Gb, hGbs, hGbf, hGbΓ, fun hgb j hj => ?_, by rw [hBU]; rfl⟩
+  cases fe
+  · have hfg : Γf.ghost = (G.Γ.ghost || (!false && ph)) := by
+      have := hbr; rw [Ctx.branch_ghost] at this
+      simp only [Prod.mk.injEq] at this; rw [← this.1]
+    have hph : ph = false := by rw [hGbΓ] at hgb; simp at hgb; simp [hfg] at hgb; exact hgb.2
+    subst hph
+    simp only [Bool.and_false] at hGbs
+    obtain ⟨hGn, -, -, -, -, -, -, hGuq⟩ := branchCtx_fld hf hsigT hGbs
+    rcases hGuq j hj with h | ⟨i, rfl, hi, -⟩
+    · have := huq j h; omega
+    · omega
+  · obtain ⟨hGn, -, -, -, -, -, -, hGuq⟩ := branchCtx_erf hf hsigT hGbs
+    rw [hGuq] at hj; have := huq j hj; omega
+
 theorem MSound.mtch (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {s R : Tm} {brs : List Br}
     {els : Option Core} {er : Bool} {rest : Core} {d c : Nat} {ls vs : Tm} {pre : List Tm} {body : Core}
     {outs : List Tm} {cnt1 : Nat}
@@ -934,22 +965,8 @@ theorem MSound.mtch (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt
       · rw [hshc0] at hshc; cases hshc
         have hbrc' : ({ G.Γ with ghost := G.Γ.ghost || (!false && P.phantom d c) } : Ctx).branch P s k0 H idx sig =
             (Γf, .ok σ) := by simpa using hbrc
-        obtain ⟨Gb, hGbs⟩ : ∃ Gb, G.branchCtx P s k0 H idx sig false (!false && P.phantom d c) G.scr true = some Gb := by
-          unfold UCtx.branchCtx; simp only [hbrc']; exact ⟨_, rfl⟩
-        obtain ⟨BU', BK', hBU, -⟩ := usesArms_sel brs BU BK hB c body hlk k0 sig _ hshc0 Gb hGbs
-        obtain ⟨Γf2, σ2, hb2, hGbf, hGbΓ⟩ := UCtx.branchCtx_Γ hf hGbs
-        rw [hbrc'] at hb2; simp only [Prod.mk.injEq, UResult.ok.injEq] at hb2; obtain ⟨rfl, rfl⟩ := hb2
-        refine ⟨Gb, by rw [hGbΓ]; simp, hGbf, fun hgb => ?_, by rw [hBU]; rfl⟩
-        have hfg : Γf.ghost = (G.Γ.ghost || (!false && P.phantom d c)) := by
-          have := hbrc'; rw [Ctx.branch_ghost] at this
-          simp only [Prod.mk.injEq] at this; rw [← this.1]
-        have hph : P.phantom d c = false := by rw [hGbΓ] at hgb; simp at hgb; simp [hfg] at hgb; exact hgb.2
-        simp only [hph, Bool.and_false] at hGbs
-        obtain ⟨hGn, -, -, -, -, -, -, hGuq⟩ := branchCtx_fld hf hsigT hGbs
-        intro j hj
-        rcases hGuq j hj with h | ⟨i, rfl, hi, -⟩
-        · have := huq j h; omega
-        · omega
+        obtain ⟨Gb, -, hGbf, hGbΓ, hGbuq, hGbU⟩ := branch_uses hf huq hsigT hB hlk hshc0 hbrc'
+        exact ⟨Gb, by rw [hGbΓ]; simp, hGbf, hGbuq, hGbU⟩
     have houts : (G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) ∧
         (usesCore P b G ru rets (.mtch s R brs els false rest)).isSome = true) → ∀ v ∈ ρ ++ outs, CloOK P v := by
       intro hpre
