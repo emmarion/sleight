@@ -61,8 +61,15 @@ unless `--no-prelude` is given.
 - `Minimal/Check.lean`: the checker. Each of its functions returns a
   typing derivation, so the checker needs no correctness proof of its
   own.
-- `Minimal/Lemmas.lean`, `Minimal/UnifySound.lean`, `Minimal/Sound.lean`:
-  the proofs.
+- `Minimal/Lemmas.lean`, `Minimal/UnifySound.lean`, `Minimal/Sound.lean`,
+  `Minimal/Deleg.lean`: the proofs about the full and stripped runs.
+- `Minimal/Uses.lean`: the uses pass (section 15's discipline on
+  `unique`), which the runner requires of a checked program.
+- `Minimal/Machine.lean`, `Minimal/MachineSound.lean`,
+  `Minimal/MachineRun.lean`, `Minimal/MachineDeleg.lean`,
+  `Minimal/MachineAsm.lean`: the machine run, which writes cells in
+  place, and its agreement with the stripped run.
+- `Minimal/Run.lean`: the runner's driver and printer.
 - `Minimal/Reader.lean`: the reader and the elaborator to `Core`.
 - `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
   and checking.
@@ -161,6 +168,16 @@ each one rests on, which are Lean's own three (`propext`,
   (`Minimal/Deleg.lean`). `RunS.det` says a stripped run
   has one outcome, and `runS_sound` that the executable `runS`, which
   the runner uses, finds only stripped runs.
+- **`machine_main`.** When the checker and the uses pass accept a
+  program, the machine run of it (`RunM`, `Minimal/Machine.lean`) from
+  the empty heap ends where the stripped run does: a heap of blocks, a
+  cell invocation or `cell-write` at `unique` written into its block in
+  place, `cell-alloc` allocating, and a call building only its
+  non-erased arguments. Its results stand for the stripped run's, and
+  the blocks a `unique` result owns are reached by nothing else live
+  (`MOut`; `Spine` and `WO` are the ownership relations). `coerce` and
+  calls through delegates are covered; the runner does not yet use the
+  machine run.
 - **`no_false`.** No checked program has as its result type a data type
   with no constructors that is neither `Coercible` nor opaque.
 
@@ -195,7 +212,8 @@ them macros, arrays, `Placed` and `World`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
-and runs every `extern` function's model. A file's top level
+and runs each `extern` function's model, or native code proved to agree
+with it (above). A file's top level
 has size one, or ends in a statement and produces nothing (section 27).
 
 Every name may be bound, special forms included (section 19); a binder
