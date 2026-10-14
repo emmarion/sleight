@@ -82,6 +82,24 @@ place (`Prog.reuse`), `cell-alloc` allocating, and `at` entries,
 skipped calls and slots not yet treated specially; and `MDec`, a
 machine value standing for a stripped one.
 
+`Minimal/MachineSound.lean` holds the pieces of the agreement theorem
+proved so far, all without `sorry`: what a built runtime term's machine
+value reaches and owns (`rt_build_ok`, `list_ok`), the `ret` case
+(`machine_ret`), and the frame lemmas for a step that runs a
+sub-computation and binds its results (`MFrame.split`, `MFrame.bind`).
+Ownership (`Spine`, `WO`) is keyed on the full run's value as well as
+the stripped one, so that a unique newtype wrapper around a shared
+field (16's `coercible-sym`) owns nothing. The next step, on this
+session's plan: give `Live`, `Own`, `MFrame` and `MOut` the context's
+erasure map and guard them by it, so that a use the pass records for an
+erased entry asks for no machine value; then the `seq` step, using
+`seq_setup` (`Minimal/Sound.lean`). The pass itself was tightened along
+the way: `use` refuses an index out of range or erased, and a `seq` body
+and an `else` branch start with no cell to take (`uscr`, `cellOk`
+cleared), as does the code after a `cell-of` mark. On this session's
+reading these refuse nothing the reader emits, but no full `compare.sh`
+run had finished on them when this was written.
+
 On this session's reading, the agreement theorem cannot be proved by
 induction on `RunS` alone: at a call, the caller counts an argument's use
 by the callee's type as the caller sees it, while the callee's body is

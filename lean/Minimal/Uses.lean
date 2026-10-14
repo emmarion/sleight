@@ -66,7 +66,7 @@ def sigOf (G : UCtx) (h : Tm) : Option Tm := match checkTm P G.Γ h with
   | .error _ => none
 
 def use (G : UCtx) (i : Nat) (u : Bool) : Option Uses :=
-  if u && !G.uq.contains i then none else some [(i, u)]
+  if G.Γ.n ≤ i || G.Γ.er i || u && !G.uq.contains i then none else some [(i, u)]
 
 mutual
 def termUses (G : UCtx) (u : Bool) : Tm → Option Uses
@@ -75,7 +75,7 @@ def termUses (G : UCtx) (u : Bool) : Tm → Option Uses
     | some sig => do
       let A ← G.argsUses (fun k => u && k.u) args sig
       match h with
-      | .fv i => Uses.seq [(i, false)] A
+      | .fv i => Uses.seq (← G.use i false) A
       | _ => some A
     | none => none
   | .vc .. | .tyc .. | .nil => some []
@@ -177,7 +177,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let E ← usesEls b G ru rets s els
       UR.seq (S, []) (UR.join B E)
   | .seq R body rest => do
-    let A := UR.below (← usesCore b { G with ents := [] } G.ents R body) G.Γ.n
+    let A := UR.below (← usesCore b { G with ents := [], uscr := none, cellOk := false } G.ents R body) G.Γ.n
     let C ← usesCore b (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents)) ru rets rest
     UR.seq A C
   | .prim p er rest => do
@@ -209,7 +209,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       let C ← usesCore b { G with cellOk := true } ru rets rest
       if G.Γ.ghost then some C else UR.seq (← G.use i u, []) C
     | .alloc, _ => usesCore b { G with cellOk := true } ru rets rest
-    | .cellOf, x => usesCore b { G with cellOk := G.uscr == some x } ru rets rest
+    | .cellOf, x => usesCore b { G with cellOk := G.uscr == some x, uscr := none } ru rets rest
     | _, _ => usesCore b G ru rets rest
   | .chk (.opn oe) (.fv m) _ rest =>
     let Γo : Ctx := { G.Γ with opened := (m, oe) :: G.Γ.opened }
@@ -236,7 +236,7 @@ termination_by l => (b, sizeOf l)
 
 def usesEls (b : Nat) (G : UCtx) (ru : List Bool) (R s : Tm) : Option Core → UR
   | none => some ([], [])
-  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := some s } ru R e) G.Γ.n)
+  | some e => do some (UR.below (← usesCore b { G with scr := false, ents := [], rebind := some s, uscr := none, cellOk := false } ru R e) G.Γ.n)
 termination_by o => (b, sizeOf o)
 
 def usesFns (gid : Nat) (G : UCtx) (Gr : Group) : List FnDef → UR

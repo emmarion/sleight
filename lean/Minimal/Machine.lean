@@ -169,22 +169,25 @@ inductive WO (H : Heap) : Tm → Tm → Tm → Prop
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
 
-def Heap.Ext (H H' : Heap) : Prop := H.next ≤ H'.next ∧ ∀ a b, H.blk a = some b → H'.blk a = some b
+def Heap.Ext (H H' : Heap) : Prop :=
+  H.next ≤ H'.next ∧ (∀ a b, H.blk a = some b → H'.blk a = some b) ∧ ∀ a, a < H.next → H'.blk a = H.blk a
 
 def Agree (H H' : Heap) (S : Nat → Prop) : Prop := ∀ a, S a → H'.blk a = H.blk a
 
 variable {P}
 
-theorem Heap.Ext.refl (H : Heap) : H.Ext H := ⟨Nat.le_refl _, fun _ _ h => h⟩
+theorem Heap.Ext.refl (H : Heap) : H.Ext H := ⟨Nat.le_refl _, fun _ _ h => h, fun _ _ => rfl⟩
 
 theorem Heap.Ext.trans {H1 H2 H3 : Heap} (a : H1.Ext H2) (b : H2.Ext H3) : H1.Ext H3 :=
-  ⟨Nat.le_trans a.1 b.1, fun x y h => b.2 x y (a.2 x y h)⟩
+  ⟨Nat.le_trans a.1 b.1, fun x y h => b.2.1 x y (a.2.1 x y h),
+   fun x hx => by rw [b.2.2 x (Nat.lt_of_lt_of_le hx a.1), a.2.2 x hx]⟩
 
 theorem Heap.alloc_ext {H : Heap} (hW : H.WF) (b : Blk) : H.Ext (H.alloc b).1 ∧ (H.alloc b).1.WF := by
-  refine ⟨⟨by simp [Heap.alloc], fun a b' h => ?_⟩, fun a ha => ?_⟩
+  refine ⟨⟨by simp [Heap.alloc], fun a b' h => ?_, fun a ha => ?_⟩, fun a ha => ?_⟩
   · simp only [Heap.alloc]
     have : a ≠ H.next := fun e => by rw [e, hW _ (Nat.le_refl _)] at h; cases h
     simp [this, h]
+  · simp only [Heap.alloc]; rw [if_neg (by omega)]
   · simp only [Heap.alloc] at ha ⊢
     rw [ite_eq_right_iff.mpr (by omega)]; exact hW a (by omega)
 
@@ -192,13 +195,13 @@ theorem Heap.alloc_new (H : Heap) (b : Blk) : (H.alloc b).1.blk (H.alloc b).2 = 
 
 mutual
 theorem MDec.mono {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v → MDec P H' w v
-  | _, _, .ptr hb hs => .ptr (he.2 _ _ hb) (MDecs.mono he hs)
+  | _, _, .ptr hb hs => .ptr (he.2.1 _ _ hb) (MDecs.mono he hs)
   | _, _, .clo hl hs => .clo hl fun i hi => (hs i hi).mono he
   | _, _, .tok h => .tok (by
       rcases h with h | ⟨a, rfl, hb⟩
       · exact .inl h
       · obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp hb
-        exact .inr ⟨a, rfl, by rw [he.2 _ _ hb]; rfl⟩)
+        exact .inr ⟨a, rfl, by rw [he.2.1 _ _ hb]; rfl⟩)
   | _, _, .nat => .nat
   | _, _, .vc => .vc
   | _, _, .nil => .nil

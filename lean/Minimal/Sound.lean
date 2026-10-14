@@ -2813,6 +2813,34 @@ theorem HeadSim.finish {ρ outs : List Tm} {Γ Γ' : Ctx} {c rest : Core} {rets 
 theorem runS_det {ρ : List Tm} {c : Core} {n : Nat} {out out' : List Tm} (h : runS P n ρ c = some out)
     (h' : RunS P ρ c out') : out = out' := (runS_sound _ _ _ _ h).det h'
 
+theorem seq_setup {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {R rets : Tm} {body rest : Core} {outs : List Tm}
+    {cnt1 : Nat} (hE : EnvOK P ρ Γ) (hlb : LvlBound ρ cnt) (hm : MuOK μ Γ ρ) (hrs : rets.static Γ.n 0)
+    (hRs : R.static Γ.n 0) (hRt : R.isTele)
+    (hres : Result P ρ cnt R (eval P μ ρ cnt body) ∧ Sim P Γ ρ body R (eval P μ ρ cnt body))
+    (hev : eval P μ ρ cnt body = .ok (outs, cnt1)) :
+    EnvOK P (ρ ++ outs) (Ctx.adv P Γ (Γ.pushTele R) (.seq R body rest)) ∧ LvlBound (ρ ++ outs) cnt1 ∧
+    MuOK μ (Ctx.adv P Γ (Γ.pushTele R) (.seq R body rest)) (ρ ++ outs) ∧
+    rets.static (Ctx.adv P Γ (Γ.pushTele R) (.seq R body rest)).n 0 ∧
+    HeadSim P Γ (Γ.pushTele R none) ρ outs (.seq R body rest) rest ∧ cnt ≤ cnt1 ∧ outs.length = R.len := by
+  obtain ⟨⟨outs', c', e, hvs, hbv, hle, hlc⟩, hsb⟩ := hres
+  rw [hev] at e; cases e
+  have hl := hE.len
+  have hol : outs.length = R.len := by
+    have := hvs.len (Tm.isTele_subst _ _ hRt)
+    rw [Tm.len_subst _ _ (.inl hRt), ← Tm.len_toList _ hvs.isList, Tm.toList_ofList] at this; simpa [Tm.len] using this
+  obtain ⟨hE'', hcur, hsubs, hnle⟩ := hE.pushTele none hRt hRs hvs hlc
+  obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ R none hRt
+  have hh : HeadSim P Γ (Γ.pushTele R none) ρ outs (.seq R body rest) rest := by
+    intro ρS hg hS
+    obtain ⟨outsS, hrunb, hreb⟩ := hsb hg ρS hS outs cnt1 hev
+    refine ⟨outsS, fun vs' h => runS_det (by simpa [stepS] using h) hrunb, fun out h => .seq hrunb h,
+      by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
+    rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
+    exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) (by simpa using he)
+  exact ⟨hE.adv hE'' (by simp) hh, LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩,
+    hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs,
+    hh, hle, hol⟩
+
 theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
     LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
     Result P ρ cnt rets (eval P μ ρ cnt c) ∧ Sim P Γ ρ c rets (eval P μ ρ cnt c) := by
@@ -3134,25 +3162,11 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | seq _ hRs hRt hb hr =>
-    obtain ⟨⟨outs', c', e, hvs, hbv, hle, hlc⟩, hsb⟩ := ihb bnd Γ R hb hE hlb hm hRs
-    rw [hev] at e; cases e
-    have hl := hE.len
-    have hol : outs.length = R.len := by
-      have := hvs.len (Tm.isTele_subst _ _ hRt)
-      rw [Tm.len_subst _ _ (.inl hRt), ← Tm.len_toList _ hvs.isList, Tm.toList_ofList] at this; simpa [Tm.len] using this
-    obtain ⟨hE'', hcur, hsubs, hnle⟩ := hE.pushTele none hRt hRs hvs hlc
+    obtain ⟨hE', hlb', hm', hrs', hh, hle, -⟩ := seq_setup hE hlb hm hrs hRs hRt (rest := rest) (ihb bnd Γ R hb hE hlb hm hRs) hev
+    have ihr' := ihr bnd _ rets hr hE' hlb' hm' hrs'
+    obtain ⟨hpg, hpo, -⟩ := Ctx.pushTele_er Γ R none hRt
     rw [eval]; simp only [hev]
-    obtain ⟨hpg, hpo, hpn⟩ := Ctx.pushTele_er Γ R none hRt
-    have hh : HeadSim P Γ (Γ.pushTele R none) ρ outs (.seq R body rest) rest := by
-      intro ρS hg hS
-      obtain ⟨outsS, hrunb, hreb⟩ := hsb hg ρS hS outs cnt1 hev
-      refine ⟨outsS, fun vs' h => runS_det (by simpa [stepS] using h) hrunb, fun out h => .seq hrunb h,
-        by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
-      rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
-      exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha) (by simpa [Tm.toList_ofList] using hb) (by simpa using he)
-    have ihr' := ihr bnd _ rets hr (hE.adv hE'' (by simp) hh) (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
-      (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs)
-    exact ⟨Result.weaken ihr'.1 (hl ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
+    exact ⟨Result.weaken ihr'.1 (hE.len ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
   | case22 μ ρ cnt R body rest e0 hev ihb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
