@@ -164,10 +164,49 @@ under a unique match the scrutinee's top block, which no field reaches,
 is left reserved for the branch (`Res`), which is what `GOK.uscr` asks
 for a cell binder to take later.
 
-On this session's reading, what `coerce` needs and no lemma gives yet:
-the result is owned through the target's full value and the argument
-through the source's, and no lemma carries a `WO` across a `Coercible`
-proof.
+`coerce` (`CoerceVal`) is the next piece, on this plan. A session read
+how the compilers make coercion sound, and the owner agreed with that
+account in chat. A `coerce` emits no code: the result is the source's
+word, in the interpreter, the extractor and `slc` alike. Uniqueness has
+one runtime effect, in-place mutation: a cell write or invocation at
+`unique` writes the block itself, where at `many` it copies first, and
+the `Array`/`Bytes` externs that take their array at `unique` write
+the OCaml array in place. So soundness is that memory reachable from a
+`unique` holder through unique-labelled fields has no other live
+reference (§15, §22), and a coercion keeps that because of its sides
+(§33, §34):
+- `(Unique)` to `(Unique)` consumes the source, and the two ends reach
+  the same memory through unique-labelled fields;
+- a `(Shared)` target cannot mutate;
+- `(Shared)` to `(Unique)` arises only from `coercible-wrap` of a
+  many-labelled field, whose unique wrapper hands the field out at
+  `many`;
+- `coercible-trans`'s equal middle sides keep a shared value from being
+  carried into a unique-labelled field.
+
+In the Lean model, "reach through unique-labelled fields" is `Spine`.
+The plan:
+- strengthen `VTy.coer` so that a proof with both sides `(Unique)` has
+  the two ends' `Spine`s equal and their `WO`s equivalent, and a proof
+  with exactly one side `(Unique)` has no `Spine` on that side (needed
+  because `coercible-trans` may pass through a `(Shared)` middle);
+- prove that for each proof former, then `CoerceVal`.
+
+Two fixes to the Lean uses pass come first, each to be checked by a
+full `compare.sh` run.
+- The pass checks only a `coerce`'s source side. §33's refusal of a
+  `(Shared)` target side in a `unique` position, which the elaborator
+  enforces, is missing.
+- `UCtx.defOK` lets a unique delegate's group capture its target at
+  either multiplicity. The intended condition is the target's own:
+  `unique` when the target is a `UniqueFn`, `many` when it is an `Fn`.
+  The looser condition admits a unique delegate to a `UniqueFn`
+  captured at `many`, which would be unsound for `delegate-of`'s
+  `(Unique)` to `(Unique)` proof. The pass's own capture computation
+  never produces that combination. The three tests a capture at
+  `unique` would refuse (`unique_delegate.sl`, `delegate_first_class.sl`,
+  `coercible_of_shadowed.sl`) are each a `def-unique` delegating to an
+  `Fn`, which the intended condition admits.
 
 The assembly takes the checker's success on a core (`checkCore … = .ok
 …`) as its hypothesis rather than an arbitrary `CoreTy` derivation.
