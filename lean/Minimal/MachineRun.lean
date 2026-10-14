@@ -3157,12 +3157,11 @@ theorem Spine.clo_inv {H : Heap} {w u eF : Tm} {gid j b : Nat} (hs : Spine P H w
     (∃ eM eS i, w = .clo eM gid j ∧ u = .clo eS gid j ∧ P.rdU gid j i = true ∧
       Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i) b) ∨
     ∃ G F t, P.groups[gid]? = some G ∧ G.fns[j]? = some F ∧ F.dele = some t ∧ F.u = true ∧
-      (t < eF.toList.length → G.caps.lookup t = some true) ∧
       Spine P H w u (Tm.env (eF.toList ++ closures eF.toList gid G) t) b := by
   generalize hv : Tm.clo eF gid j = v at hs
   cases hs with
   | clo hi hs => simp only [Tm.clo.injEq] at hv; obtain ⟨rfl, rfl, rfl⟩ := hv; exact .inl ⟨_, _, _, rfl, rfl, hi, hs⟩
-  | dele hG hF hd hu hc hs => simp only [Tm.clo.injEq] at hv; obtain ⟨rfl, rfl, rfl⟩ := hv; exact .inr ⟨_, _, _, hG, hF, hd, hu, hc, hs⟩
+  | dele hG hF hd hu hs => simp only [Tm.clo.injEq] at hv; obtain ⟨rfl, rfl, rfl⟩ := hv; exact .inr ⟨_, _, _, hG, hF, hd, hu, hs⟩
   | _ => cases hv
 
 theorem clo_vals {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr) {H : Heap} {ρM ρS ρ : List Tm}
@@ -3172,7 +3171,8 @@ theorem clo_vals {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr) {H 
     (hsep : ∀ i i', i ≠ i' → Gr.caps.lookup i = some true → (Gr.caps.lookup i').isSome →
       Disj (Spine P H (Tm.env ρM i) (Tm.env ρS i) (Tm.env ρ i)) (Foot P H (Tm.env ρM i') (Tm.env ρS i')))
     (hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < n + k ∧
-      (t < n → ∃ u, Gr.caps.lookup t = some u ∧ (u = true → F.u = true)) ∧
+      (t < n → ∃ u, Gr.caps.lookup t = some u ∧ (u = true → F.u = true) ∧
+        (u = false → F.u = true → NoSpine P (Tm.env ρ t))) ∧
       (n ≤ t → (Gr.fns[t - n]?.map (·.u)) = some false)) :
     ∀ (k : Nat) (wM wS wF : Tm), (closuresS ρM gid Gr)[k]? = some wM → (closuresS ρS gid Gr)[k]? = some wS →
       (closures ρ gid Gr)[k]? = some wF → ∃ F : FnDef, Gr.fns[k]? = some F ∧ MDec P H wM wS ∧
@@ -3225,24 +3225,29 @@ theorem clo_vals {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr) {H 
     simp only
     obtain ⟨htn, hout, hsib⟩ := hdl k F t hFk hd
     have hdele : ∀ b w u, Spine P H w u (.clo (.ofList ρ) gid k) b →
-        F.u = true ∧ (t < n → Gr.caps.lookup t = some true) ∧ Spine P H w u (Tm.env (ρ ++ closures ρ gid Gr) t) b :=
+        F.u = true ∧ Spine P H w u (Tm.env (ρ ++ closures ρ gid Gr) t) b :=
       fun b w u hs => by
-      rcases hs.clo_inv with ⟨_, _, i, _, _, hi, _⟩ | ⟨G', F', t', hG', hF', hd', hu, hc, hs⟩
+      rcases hs.clo_inv with ⟨_, _, i, _, _, hi, _⟩ | ⟨G', F', t', hG', hF', hd', hu, hs⟩
       · exact absurd (hrdU i hi).2.1 (by rw [hd]; simp)
       · rw [hGr] at hG'; cases hG'; rw [hFk] at hF'; cases hF'; rw [hd] at hd'; cases hd'
-        exact ⟨hu, fun h => hc (by simp [Tm.toList_ofList, hlF, h]), by simpa [Tm.toList_ofList] using hs⟩
+        exact ⟨hu, by simpa [Tm.toList_ofList] using hs⟩
     by_cases htn' : t < n
     · have e : ∀ (env : List Tm), env.length = n → (env ++ (closuresS env gid Gr).take k).getD t .nil = Tm.env env t :=
         fun env hl => by simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_append_left (show t < env.length by omega)]
       have eF : Tm.env (ρ ++ closures ρ gid Gr) t = Tm.env ρ t := by
         simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_append_left (show t < ρ.length by omega)]
       rw [e ρM hlM, e ρS hlS]
-      obtain ⟨ut, hl, hut⟩ := hout htn'
+      obtain ⟨ut, hl, hut, hns⟩ := hout htn'
       refine ⟨F, hFk, hdec t _ hl, fun b hf => ⟨t, ut, hl, hut, hf⟩, fun b hs => ?_, fun hu => ?_⟩
-      · obtain ⟨hu, hc, hs⟩ := hdele b _ _ hs; rw [eF] at hs; exact ⟨hu, t, hc htn', hs⟩
+      · obtain ⟨hu, hs⟩ := hdele b _ _ hs; rw [eF] at hs
+        cases ut with
+        | true => exact ⟨hu, t, hl, hs⟩
+        | false => exact (hns rfl hu _ _ _ _ hs).elim
       · cases ut with
-        | true => exact .dele hGr hFk hd hu (fun _ => hl) (by rw [Tm.toList_ofList, eF]; exact hwo t hl)
-        | false => exact .free fun b hs => by have := (hdele b _ _ hs).2.1 htn'; rw [hl] at this; cases this
+        | true => exact .dele hGr hFk hd hu (by rw [Tm.toList_ofList, eF]; exact hwo t hl)
+        | false =>
+          refine .free fun b hs => ?_
+          obtain ⟨hu', hs⟩ := hdele b _ _ hs; rw [eF] at hs; exact hns rfl hu' _ _ _ _ hs
     · have hk' : t - n < k := by omega
       have hcl : ∀ env : List Tm, t - n < (closuresS env gid Gr).length := fun env => by rw [closuresS_length]; omega
       have e : ∀ (env : List Tm), env.length = n →
@@ -3261,8 +3266,8 @@ theorem clo_vals {gid n : Nat} {Gr : Group} (hGr : P.groups[gid]? = some Gr) {H 
       refine ⟨F, hFk, hd1, fun b hf => ?_, fun b hs => ?_, fun hu => ?_⟩
       · obtain ⟨i, u, hl, hu1, hf'⟩ := hfoot b hf
         exact ⟨i, u, hl, fun h => absurd (hu1 h) (by simp [hu']), hf'⟩
-      · obtain ⟨-, -, hs⟩ := hdele b _ _ hs; rw [eF] at hs; exact absurd (hsp b hs).1 (by simp [hu'])
-      · exact .dele hGr hFk hd hu (fun h => by simp [Tm.toList_ofList, hlF] at h; omega) (by
+      · obtain ⟨-, hs⟩ := hdele b _ _ hs; rw [eF] at hs; exact absurd (hsp b hs).1 (by simp [hu'])
+      · exact .dele hGr hFk hd hu (by
           rw [Tm.toList_ofList, eF]; exact .free fun b hs => by have := (hsp b hs).1; simp_all)
 
 def plainTele : Nat → Tm
@@ -3286,7 +3291,10 @@ theorem two_le_filter {α : Type} (p : α → Bool) : ∀ (l : List α) (k j : N
 
 theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : Nat} {rest : Core} {ρ vs : List Tm}
     {Gr : Group} (hGr : P.groups[gid]? = some Gr)
-    (hdk : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k)
+    (hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k ∧
+      (t < G.Γ.n → ∃ u, Gr.caps.lookup t = some u ∧ (u = true → F.u = true) ∧
+        (u = false → F.u = true → NoSpine P (Tm.env ρ t))) ∧
+      (G.Γ.n ≤ t → (Gr.fns[t - G.Γ.n]?.map (·.u)) = some false))
     (hsim : ∀ ρS, SimEnv P G.Γ.er ρS ρ → SimEnv P (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)).er
       (ρS ++ closuresS ρS gid Gr) (ρ ++ closures ρ gid Gr))
     (ih : MRun P b (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) (Gr.fns.map (·.u))) ru rets rest
@@ -3306,7 +3314,7 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
   case isFalse => cases hU
   rename_i _ hc
   simp only [UCtx.defOK, Bool.and_eq_true, List.all_eq_true] at hc
-  obtain ⟨⟨⟨-, hall⟩, hone⟩, hdel⟩ := hc
+  obtain ⟨⟨⟨-, hall⟩, hone⟩, -⟩ := hc
   have hseq := UR.seq_fst hU
   simp only at hseq
   have hcap : ∀ i u, Gr.caps.lookup i = some u → i < G.Γ.n ∧ G.Γ.er i = false := fun i u h => by
@@ -3317,16 +3325,6 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
     · rename_i hc; simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
       exact ⟨by omega, by simpa using hc.1.2⟩
   have hM' := hM.split hseq
-  have hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k ∧
-      (t < G.Γ.n → ∃ u, Gr.caps.lookup t = some u ∧ (u = true → F.u = true)) ∧
-      (G.Γ.n ≤ t → (Gr.fns[t - G.Γ.n]?.map (·.u)) = some false) :=
-    fun k F t hF hd => by
-      have := hdel F (List.mem_of_getElem? hF)
-      rw [hd] at this
-      simp only [Option.all_some] at this
-      refine ⟨hdk k F t hF hd, fun h => ?_, fun h => by simpa [show ¬ t < G.Γ.n by omega] using this⟩
-      simp only [h, ite_true, beq_iff_eq] at this
-      exact ⟨_, this, fun hu => (Bool.and_eq_true _ _ ▸ hu).1⟩
   have hcv := clo_vals hGr hM.lenM hM.lenS hM.lenF
     (fun i u h => hM'.dec i (hcap i u h).1 (by simp [h]) (hcap i u h).2)
     (fun i h => hM'.wo i (hcap i true h).1 h (hcap i true h).2)

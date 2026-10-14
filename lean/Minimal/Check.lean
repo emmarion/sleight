@@ -338,10 +338,15 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     .ok ⟨_, .coerRefl (dC := dC) hs he hD hc⟩
   | .deleOf g t => do
     let ⟨(dD, D), hD, hc⟩ ← deleAdt P
-    let ⟨hm⟩ ← need ((g, t) ∈ Γ.deles) "delegate-of: not a function with a `delegate` body"
-    match hg : Γ.tys[g]?, ht : Γ.tys[t]? with
-    | some _, some _ => .ok ⟨_, .deleOf hm hg ht hD hc⟩
-    | _, _ => .error "delegate-of: unbound entry"
+    match hm : Γ.deles.find? (fun e => e.1 == g && e.2.1 == t) with
+    | some (g', t', sg, st) =>
+      have hm' : (g, t, sg, st) ∈ Γ.deles := by
+        have := List.find?_some hm; simp only [Bool.and_eq_true, beq_iff_eq] at this
+        obtain ⟨rfl, rfl⟩ := this; exact List.mem_of_find?_eq_some hm
+      match hg : Γ.tys[g]?, ht : Γ.tys[t]? with
+      | some _, some _ => .ok ⟨_, .deleOf hm' hg ht hD hc⟩
+      | _, _ => .error "delegate-of: unbound entry"
+    | none => .error "delegate-of: not a function with a `delegate` body"
   | .coerOf p => do
     let ⟨(dD, D), hD, hc⟩ ← deleAdt P
     let ⟨(dC, C), hC, hcc⟩ ← coerAdt P
@@ -798,8 +803,10 @@ def checkGroup (gid : Nat) (Γ : Ctx) (G : Group) : Res (PLift (GroupOK P gid Γ
     let ⟨hg⟩ ← need (Γ.ghost = G.ghost) "def-fns: the elaborator's erasure disagrees"
     let ⟨hd⟩ ← need (G.deleOK P Γ.n = true)
       "def-fns: a delegate body does more than pass its arguments to its target and its target's results back"
+    let ⟨hds⟩ ← need (G.sidesOK Γ = true)
+      "def-fns: a delegate's sides disagree with the functions' types"
     .ok ⟨.mk hK hl (fun j F h => (hf j F (by simpa using h)).1)
-      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg hd⟩
+      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg hd hds⟩
   | none => .error "def-fns: unbound level"
 termination_by (gid + 1, 0, sizeOf G.fns + 1, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)

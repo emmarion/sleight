@@ -401,9 +401,7 @@ def sharedTm : Tm := .app (.vc sharingD 1 .nil) .nil
 
 def uniqueTm : Tm := .app (.vc sharingD 0 .nil) .nil
 
-def fnSide : Tm → Tm
-  | .fn _ _ _ true _ => uniqueTm
-  | _ => sharedTm
+def sideTm (u : Bool) : Tm := if u then uniqueTm else sharedTm
 
 def Adt.mtbl (D : Adt) (d : Nat) (ls : Tm) : Tm :=
   .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d ls)

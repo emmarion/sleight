@@ -295,7 +295,7 @@ theorem CloOK.defFns {G : UCtx} {ρ : List Tm} {gid : Nat} {Gr : Group}
   refine ⟨?_, CloOK.ofList hC⟩
   rw [Tm.toList_ofList]
   refine ⟨G, Gr, hGr, hE, hok, hcg, hf, fun hgr => ?_⟩
-  have hg : G.Γ.ghost = false := by cases hok with | mk _ _ _ _ _ _ hgg _ => rw [hgg]; exact hgr
+  have hg : G.Γ.ghost = false := by cases hok with | mk _ _ _ _ _ _ hgg _ _ => rw [hgg]; exact hgr
   exact ⟨hg, hus hg⟩
 
 theorem Tm.noClo_toList : ∀ {t : Tm}, t.noClo = true → ∀ x ∈ t.toList, x.noClo = true
@@ -332,6 +332,11 @@ theorem UCtx.next_uqlt {G : UCtx} {Γ' : Ctx} {us : List Bool} (huq : ∀ j, G.u
     have := (List.mem_zipIdx' hk).1
     simp only [List.length_take] at this
     omega
+
+theorem defOK_dele {G : UCtx} {Gr : Group} {O : Uses} (h : G.defOK Gr O = true) {k t : Nat} {F : FnDef}
+    (hF : Gr.fns[k]? = some F) (hd : F.dele = some t) (hl : t < G.Γ.n) : Gr.caps.lookup t = some (F.u && G.Γ.fnU t) := by
+  simp only [UCtx.defOK, Bool.and_eq_true, List.all_eq_true] at h
+  simpa [hd, hl] using h.2 F (List.mem_of_getElem? hF)
 
 theorem usesCore_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : Nat} {rest : Core} {Gr : Group}
     (hGr : P.groups[gid]? = some Gr) (hf : G.fill = false) {U : Uses} {K : Caps}
@@ -417,7 +422,7 @@ theorem MOut.twin {U : Uses} {n : Nat} {er : Nat → Bool} {H H' : Heap} {ρM ρ
       · exact .free (hn H' w0 u0)
   · cases k <;> cases j <;> simp_all
 
-theorem coerce_val (hP : ProgOK P) (hnd : NoDele P) {G : UCtx} {ρ : List Tm} {a b q T : Tm} {hp}
+theorem coerce_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {a b q T : Tm} {hp}
     (hE : EnvOK P ρ G.Γ) (hpe : checkPrim P G.Γ (.coerce a b q) = .ok ⟨T, hp⟩)
     (hrt : (Prim.coerce a b q).rt P G.Γ = true) : PrimVal P G ρ (.coerce a b q) := by
   rw [checkPrim] at hpe
@@ -449,7 +454,7 @@ theorem coerce_val (hP : ProgOK P) (hnd : NoDele P) {G : UCtx} {ρ : List Tm} {a
     have eqc : ∀ {x y : Tm}, G.Γ.canon x = G.Γ.canon y → x.subst (Tm.env ρ) = y.subst (Tm.env ρ) :=
       fun h => by rw [← hE.canon, h, hE.canon]
     have v := (tm_sound hP hE hpt).1; rw [← hE.canon Pt, e, Tm.coer_subst] at v
-    have hco := (v.coer_inv hP hD hc).2 hnd
+    have hco := (v.coer_inv hP hD hc).2
     rw [← eqc ha, ← eqc hb'] at hco
     obtain ⟨-, rfl⟩ : true = true ∧ sb = uniqueTm := by simpa using UCtx.sideU_some hsb
     rcases UCtx.sideU_some hsa with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
@@ -596,7 +601,7 @@ theorem MSound.seq (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt 
     obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
     exact ⟨UCtx.next_uqlt huq hn, (hsplit U K hU).2⟩
 
-theorem MSound.prim (hP : ProgOK P) (hnd : NoDele P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {p : Prim} {er : Bool} {rest : Core}
+theorem MSound.prim (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {p : Prim} {er : Bool} {rest : Core}
     (ih : MSound P μ (ρ ++ [p.eval ρ]) cnt rest) :
     MSound P μ ρ cnt (.prim p er rest) := by
   intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
@@ -624,7 +629,7 @@ theorem MSound.prim (hP : ProgOK P) (hnd : NoDele P) {μ : Option (List Nat)} {�
       have hrt : p.rt P G.Γ = true := by simpa [Ctx.ok, hG0.ghost] using hok
       have hval : PrimVal P G ρ p := by
         by_cases hc : ∃ a b q, p = .coerce a b q
-        · obtain ⟨a, b, q, rfl⟩ := hc; exact coerce_val hP hnd hE hpe hrt
+        · obtain ⟨a, b, q, rfl⟩ := hc; exact coerce_val hP hE hpe hrt
         · exact prim_val hP hE hrt fun a b q e => hc ⟨a, b, q, e⟩
       exact machine_primF hP hE hrt (fun ρS hS => prim_real hP hE hS hp hrt) hval
         (fun T' hT' => by rw [hT] at hT'; cases hT'; exact (ih' _).1) U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
@@ -691,7 +696,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
   have hh : HeadSim P G.Γ (G.Γ.pushFns Gr) ρ (closures ρ gid Gr) (.defFns gid rest) rest := by
     intro ρS hg hS
     cases hok with
-    | mk _ _ _ _ _ hGe hGg hd =>
+    | mk _ _ _ _ _ hGe hGg hd _ =>
     refine ⟨closuresS ρS gid Gr, fun vs' h => by simp [stepS, hG] at h; exact h.symm, fun out h => .defFns hG h,
       by simp [closures, closuresS_length], fun k a b ha hb he => ?_⟩
     obtain ⟨hk, -⟩ := closures_get hb
@@ -726,10 +731,6 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
         obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
         obtain ⟨O, K', hO, hd, -⟩ := usesCore_defFns hG hf hU
         exact ⟨huq, O, K', hO, hd⟩
-  have hdk : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k :=
-    fun k F t hF hd => by
-      cases hok with
-      | mk _ _ _ _ _ _ _ hdo => have := (Group.deleOK_spec hdo hF hd).1; omega
   have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)).n := by
     rw [UCtx.adv_n' hf]; simp [Ctx.pushFns, Ctx.n]
   refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0 => ?_, fun hpre => ?_⟩
@@ -737,7 +738,20 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
     have hCo' := hCo fun _ => ⟨hG0.uqlt, by rw [hU]; rfl⟩
     have ih'' := ih' (if G.Γ.ghost then [] else Gr.fns.map (·.u)) hCo'
     simp only [hg, Bool.false_eq_true, ite_false] at ih''
-    refine machine_defFns hG hdk (fun ρS hS => ?_) ih''.1 U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
+    have hdl : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k ∧
+        (t < G.Γ.n → ∃ u, Gr.caps.lookup t = some u ∧ (u = true → F.u = true) ∧
+          (u = false → F.u = true → NoSpine P (Tm.env ρ t))) ∧
+        (G.Γ.n ≤ t → (Gr.fns[t - G.Γ.n]?.map (·.u)) = some false) := fun k F t hF hd => by
+      obtain ⟨O, K', -, hdOK, -⟩ := usesCore_defFns hG hf hU
+      cases hok with
+      | mk _ _ _ _ _ _ hGg hdo hds =>
+        obtain ⟨-, h2, h3⟩ := Group.sidesOK_spec hds (by rw [← hGg]; exact hg) hF hd
+        refine ⟨by have := (Group.deleOK_spec hdo hF hd).1; omega,
+          fun hl => ⟨_, defOK_dele hdOK hF hd hl, fun hu => (Bool.and_eq_true _ _ ▸ hu).1, fun hu0 hFu => ?_⟩, fun hl => ?_⟩
+        · obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp (h2 hl)
+          rw [hFu] at hu0; simp [Ctx.fnU, hu] at hu0; subst hu0; exact .side hE hu
+        · obtain ⟨F', h, hu⟩ := h3 hl; simp [h, hu]
+    refine machine_defFns hG hdl (fun ρS hS => ?_) ih''.1 U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
     obtain ⟨outsS, hst, -, hlen, hre⟩ := hh ρS hg hS
     have : outsS = closuresS ρS gid Gr := (hst _ (by simp [stepS, hG])).symm
     subst this
@@ -1513,7 +1527,7 @@ theorem MSound.call (hP : ProgOK P)
         have hlS : envS0.length = Gd.Γ.n := by rw [hSc.1, hEd.len]
         have hgb0 : (Gd.Γ.body Gr F).1.ghost = false := by rw [hgb, hgG, hfe]; rfl
         have hFtele : F.tele.isTele := by
-          cases hokd with | mk _ _ htyF _ _ _ _ _ => cases htyF j F hFj0 with | fn _ _ h _ _ => exact h.isTele
+          cases hokd with | mk _ _ htyF _ _ _ _ _ _ => cases htyF j F hFj0 with | fn _ _ h _ _ => exact h.isTele
         have hty' := hty
         simp only [FnDef.type, Tm.subst, Tm.fn.injEq] at hty'
         obtain ⟨-, -, htele, hFu, -⟩ := hty'
@@ -1531,15 +1545,11 @@ theorem MSound.call (hP : ProgOK P)
         · intro k Fk tk hFk hu hdt
           simp only [Tm.toList_ofList, hlS]
           have hd1 := (Group.deleOK_spec hdo hFk hdt).1
-          unfold UCtx.defOK at hdOK
-          simp only [Bool.and_eq_true, List.all_eq_true] at hdOK
-          have h5 := hdOK.2 Fk (List.mem_of_getElem? hFk)
-          rw [hdt] at h5
-          simp only [Option.all_some, hu, Bool.false_eq_true, ite_false] at h5
+          cases hokd with | mk _ _ _ _ _ _ _ _ hds =>
+          obtain ⟨-, -, h3⟩ := Group.sidesOK_spec hds hgG hFk hdt
           rw [hEd.len] at hd1
-          refine ⟨hd1, fun hlt => ?_, fun hge => ?_⟩
-          · simpa [hlt] using h5
-          · simpa [show ¬ tk < Gd.Γ.n by omega] using h5
+          refine ⟨hd1, fun hlt => by rw [defOK_dele hdOK hFk hdt hlt, hu]; rfl, fun hge => ?_⟩
+          obtain ⟨F', h, hu'⟩ := h3 hge; simp [h, hu']
         · show (Gd.Γ.body Gr F).1.n = _
           rw [hbn, Tm.toList_ofList, hlS, hnp]
         · exact fun _ _ _ _ _ => ⟨.inl rfl, fun x hx => by simp [UCtx.fnCtx] at hx, fun t ht => by simp [UCtx.fnCtx] at ht,
@@ -1648,7 +1658,7 @@ theorem machine_sound (hP : ProgOK P)
     refine ⟨?_, fun _ _ e => by cases e⟩
     intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp [hev] at h
   | case10 μ ρ cnt p er rest ih =>
-    exact ⟨MSound.prim hP hnd ih.1, fun p' r' e => by cases e; exact ih.1⟩
+    exact ⟨MSound.prim hP ih.1, fun p' r' e => by cases e; exact ih.1⟩
   | case11 μ ρ cnt rest ih =>
     exact ⟨MSound.defLvl ih.1, fun _ _ e => by cases e⟩
   | case12 μ ρ cnt gid rest Gr hG ih =>
@@ -1694,7 +1704,7 @@ theorem machine_main (hP : ProgOK P)
   have hE : EnvOK P [] {tys := []} :=
     .mk rfl (fun _ _ _ h _ => by simp at h) (by simp) (fun _ _ h => by simp at h) (by simp)
       ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
-      ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ h => by simp at h)
+      ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ _ _ h => by simp at h)
   have hm := ((machine_sound hP hnd none [] 0 P.main).1 P.groups.length {Γ := {tys := []}} _ [] _ rets h rfl rfl hck
     hE (by simp [LvlBound]) rfl (h.2.2 0 rfl) (by simp) vs cnt hev).1
   obtain ⟨H', vsM, hr, hO⟩ := hm U K hU [] vsS ⟨rfl, fun _ _ => by simp [Tm.env, Real.nil']⟩ hrun {} [] (fun _ => False)

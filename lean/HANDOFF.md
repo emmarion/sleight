@@ -147,9 +147,8 @@ scrutinee's foot outside its spine, which the binder that takes the
 scrutinee over shares, and `GOK.rebind` asks for it. A closure reads
 the entries its group captures (`Prog.rd`) and owns those captured at
 unique (`Prog.rdU`), both per function: a non-unique function reads
-only the non-unique captures and owns nothing, and a delegate owns
-what its target owns when its group captures the target at unique
-(`Spine.dele`, `WO.dele`), and nothing otherwise. Each takes the
+only the non-unique captures and owns nothing, and a unique delegate
+owns what its target owns (`Spine.dele`, `WO.dele`). Each takes the
 steps after it as hypotheses (`MRun` of the rest and of the branch, and
 the body's `Sim`), so the final theorem is an induction like
 `eval_sound`'s that discharges them from `CoreTy`, `EnvOK` and
@@ -186,32 +185,44 @@ and a coercion keeps that because of its sides (§33, §34):
 In the Lean model, "reach through unique-labelled fields" is `Spine`.
 `Twin P a b` says two full values have the same `Spine` and equivalent
 `WO` over every heap, machine word and stripped value, and `NoSpine P
-a` that `a` has no `Spine` at all. `VTy.coer` carries, when the program
-has no delegate (`NoDele`), `CoerOwn` of the proof's sides and ends: a
-`Twin` when both sides are `(Unique)`, and `NoSpine` of the
-`(Unique)` end when only one side is (`coercible-trans` may pass
-through a `(Shared)` middle). `tm_sound` proves it for each proof
-former (`CoerOwn.refl`, `.symm`, `.trans`, `.shared`, `.wrap`, and
-`Twin.ctor` for `coercible-ctor`); `delegate-of` is vacuous because a
-context's delegate pairs come only from delegates of the program
-(`DeleOK` records `¬ NoDele P`). `coerce_val` is `prim_val`'s
-conclusion for `coerce`: the machine builds the source, and when the
-result is unique the pass has both sides `(Unique)`, so `MOut.twin`
-moves the source's ownership to the target.
+a` that `a` has no `Spine` at all. `VTy.coer` carries `CoerOwn` of the
+proof's sides and ends: a `Twin` when both sides are `(Unique)`, and
+`NoSpine` of the `(Unique)` end when only one side is
+(`coercible-trans` may pass through a `(Shared)` middle). `tm_sound`
+proves it for each proof former (`CoerOwn.refl`, `.symm`, `.trans`,
+`.shared`, `.wrap`, and `Twin.ctor` for `coercible-ctor`), and for
+`delegate-of` from `DeleOK`, which records it for each delegate pair of
+the context (`dele_own`). `coerce_val` is `prim_val`'s conclusion for
+`coerce`: the machine builds the source, and when the result is unique
+the target side is `(Unique)`, so `MOut.twin` moves the source's
+ownership to the target, or the target owns nothing.
 
-Two checks in the Lean checker serve this proof. `coercible-wrap`
-needs the constructor's signature written out, as `coercible-ctor`
-already did, so that its unique-labelled fields are the machine's.
-`coercible-ctor` asks for a proof at every field that is non-erased or
-unique-labelled, since `Spine` follows a unique-labelled field whether
-or not it is erased; on this session's reading the reader never makes
-a constructor field both erased and unique, so the second check adds
-nothing in practice.
+A delegate pair in a context (`Ctx.deles`) carries its two sides,
+fixed when `def-fns` makes it, as on this session's reading the
+reference does (`sharing_of_fn`), so a later refinement of the target's
+type does not change them. `Group.sidesOK`, in the checker's `GroupOK`,
+says of each delegate of a non-ghost group: a non-erased delegate to a
+`UniqueFn` is itself unique, an earlier target has a function type, and
+a target in its own block is not unique. On this session's reading the
+reference refuses the same programs (a `many` function cannot use a
+captured `UniqueFn` at unique, and `sharing_of_fn` asserts a function
+type). A unique delegate closure owns what its target owns (`Spine.dele`,
+`WO.dele`); the uses pass's `UCtx.defOK` has its group capture an
+earlier target at the target's own multiplicity when the delegate is
+unique and at `many` otherwise, which `clo_vals` uses to put that
+ownership among the group's owned captures.
 
-The uses pass refuses a `coerce` in a `unique` position unless both
-sides are `(Unique)` (§33), and a unique delegate's group captures its
-target at the target's own multiplicity: `unique` for a `UniqueFn`,
-`many` for an `Fn` (`UCtx.fnU`).
+`coercible-wrap` needs the constructor's signature written out, as
+`coercible-ctor` does; in the reference, on this session's reading,
+`ctor_type` reads a `ValCtor`'s telescope, which is always a list of
+entries. `ProgOK` records that no
+constructor field is both erased and unique, which the reference cannot
+express (an entry has one multiplicity), and `checkProg` checks it.
+
+The uses pass refuses a non-erased `coerce` whose sides are not
+canonically `Unique` or `Shared`, and one whose result is used at
+unique when its target side is `(Shared)`, which on this session's
+reading is what the reference does (`sharing_mult`).
 
 The assembly takes the checker's success on a core (`checkCore … = .ok
 …`) as its hypothesis rather than an arbitrary `CoreTy` derivation.

@@ -154,7 +154,6 @@ inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
       Spine H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j) b
   | cell : Spine H (.ptr a) u .tok a
   | dele {eF : Tm} {G : Group} {F : FnDef} : P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = some t → F.u = true →
-      (t < eF.toList.length → G.caps.lookup t = some true) →
       Spine H w u (Tm.env (eF.toList ++ closures eF.toList gid G) t) b → Spine H w u (.clo eF gid j) b
 
 def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
@@ -178,7 +177,6 @@ inductive WO (H : Heap) : Tm → Tm → Tm → Prop
       WO H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)
   | cell : WO H (.ptr a) u .tok
   | dele {eF : Tm} {G : Group} {F : FnDef} : P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = some t → F.u = true →
-      (t < eF.toList.length → G.caps.lookup t = some true) →
       WO H w u (Tm.env (eF.toList ++ closures eF.toList gid G) t) → WO H w u (.clo eF gid j)
   | free : (∀ b, ¬ Spine P H w u v b) → WO H w u v
 

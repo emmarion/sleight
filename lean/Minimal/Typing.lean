@@ -14,7 +14,7 @@ structure Ctx where
   opened : List (Nat × Bool) := []
   fixed : List (Option Tm) := []
   cmode : Bool := false
-  deles : List (Nat × Nat) := []
+  deles : List (Nat × Nat × Bool × Bool) := []
 
 namespace Ctx
 
@@ -53,12 +53,20 @@ def pushTele (Γ : Ctx) (R : Tm) (ov : Option (List Bool) := none) : Ctx := Γ.s
 
 def pushMint (Γ : Ctx) : Ctx := { Γ.push .level true with mints := Γ.mints ++ [Γ.n] }
 
+def fnSide (Γ : Ctx) (i : Nat) : Option Bool := match (Γ.tys[i]?).map Γ.canon with
+  | some (.fn _ _ _ u _) => some u
+  | _ => none
+
+def fnU (Γ : Ctx) (i : Nat) : Bool := (Γ.fnSide i).getD false
+
+def deleSide (Γ : Ctx) (G : Group) (t : Nat) : Bool := fnU { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G) } t
+
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   let k := Γ.n
   { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
            er := fun i => if k ≤ i then (G.fns[i - k]?.map (·.er)).getD true else Γ.er i,
            deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
-             if F.er || G.ghost then none else F.dele.map (k + j, ·) }
+             if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }
 
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
@@ -339,8 +347,8 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       PrimTy Γ (.coerce a b p) B
   | coerRefl : TmTy P Γ s S → TmTy P Γ e E → P.adts[dC]? = some D → D.coercible = true →
       PrimTy Γ (.coerRefl s e) (Tm.coer dC s E e s E e)
-  | deleOf : (g, t) ∈ Γ.deles → Γ.tys[g]? = some Tg → Γ.tys[t]? = some Tt → P.adts[dD]? = some D →
-      D.coercible = true → PrimTy Γ (.deleOf g t) (Tm.coer dD (fnSide (Γ.canon Tg)) Tg (.fv g) (fnSide (Γ.canon Tt)) Tt (.fv t))
+  | deleOf : (g, t, sg, st) ∈ Γ.deles → Γ.tys[g]? = some Tg → Γ.tys[t]? = some Tt → P.adts[dD]? = some D →
+      D.coercible = true → PrimTy Γ (.deleOf g t) (Tm.coer dD (sideTm sg) Tg (.fv g) (sideTm st) Tt (.fv t))
   | coerOf : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dD sa A a sb B b → P.adts[dD]? = some D → D.coercible = true →
       P.adts[dC]? = some C → C.coercible = true → PrimTy Γ (.coerOf p) (Tm.coer dC sa A a sb B b)
   | coerSym : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a sb B b → P.adts[dC]? = some D → D.coercible = true →
@@ -421,6 +429,11 @@ def Group.deleOK (G : Group) (n : Nat) : Bool :=
       delegWalk P t (n + G.fns.length) ((F.tele.ers.take F.np).count false) (F.tele.ers.drop F.np) false
         (symSpread false (F.tele.ers.take F.np)) F.body
 
+def Group.sidesOK (G : Group) (Γ : Ctx) : Bool :=
+  G.ghost || G.fns.all fun F => F.dele.all fun t =>
+    (F.er || !Γ.deleSide G t || F.u) &&
+    if t < Γ.n then (Γ.fnSide t).isSome else (G.fns[t - Γ.n]?.map (·.u)) == some false
+
 mutual
 inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | ret : ArgsTy P Γ ts rets .nil → Γ.ok (rtArgs P Γ ts rets) → CoreTy b Γ (.ret ts) rets
@@ -484,7 +497,7 @@ inductive GroupOK : Nat → Ctx → Group → Prop
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → TmTy P Γ (F.type G) .univ) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → (marks F.tele F.np).count true ≤ P.k) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → CoreTy gid (Γ.body G F).1 F.body (Γ.body G F).2) →
-      (∀ i < Γ.n, Γ.er i = G.ers.getD i true) → Γ.ghost = G.ghost → G.deleOK P Γ.n = true →
+      (∀ i < Γ.n, Γ.er i = G.ers.getD i true) → Γ.ghost = G.ghost → G.deleOK P Γ.n = true → G.sidesOK Γ = true →
       GroupOK gid Γ G
 end
 

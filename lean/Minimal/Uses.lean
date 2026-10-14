@@ -139,16 +139,10 @@ def fnCtx (G : UCtx) (Gr : Group) (F : FnDef) : UCtx :=
     if u then some (G.Γ.n + Gr.fns.length + k) else none)
   { G with Γ := (G.Γ.body Gr F).1, ents := [], scr := false, rebind := none, uscr := none, cellOk := false, uq := uq }
 
-def fnU (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
-  | some (.fn _ _ _ u _) => u
-  | _ => false
-
 def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
   Uses.sub O Gr.caps && Uses.sub Gr.caps O && Gr.caps.all (fun (i, u) => (G.use i u).isSome) &&
   (!Gr.caps.any (·.2) || (Gr.fns.filter (·.u)).length ≤ 1) &&
-  Gr.fns.all (fun F => F.dele.all fun t =>
-    if t < G.Γ.n then Gr.caps.lookup t == some (F.u && G.fnU t)
-    else (Gr.fns[t - G.Γ.n]?.map (·.u)) == some false)
+  Gr.fns.all (fun F => F.dele.all fun t => if t < G.Γ.n then Gr.caps.lookup t == some (F.u && G.Γ.fnU t) else true)
 
 def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
   | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false
