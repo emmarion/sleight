@@ -8,11 +8,12 @@ E = {
     "C (clang -O2)": [H.parent / "ats/driver", "bench", "c"],
     "ATS plain": [H.parent / "ats/driver", "bench", "plain"],
     "ATS certified": [H.parent / "ats/driver", "bench", "cert"],
-    "OCaml handwritten": [B / "ml_safe"],
-    "OCaml handwritten -unsafe": [B / "ml_unsafe"],
     "Lean verified": [H / "lean/.lake/build/bin/bench"],
     "Idris 2 (plain port)": [B / "idris/exec/hs"],
-    **{f"SL {d}/": [B / f"sl_{d}"] for d in ("opus", "mimo", "flat")},
+    **{f"{name}{label}": [B / f"{b}{s}"]
+       for s, label in [("", "")] + [("_fl", " [flambda -O3]")] * (B / "ml_safe_fl").exists()
+       for name, b in [("OCaml handwritten", "ml_safe"), ("OCaml handwritten -unsafe", "ml_unsafe"),
+                       *((f"SL {d}/", f"sl_{d}") for d in ("opus", "mimo", "flat"))]},
     **{f"SL {p}": [p] for p in sys.argv[2:]},
 }
 
@@ -29,4 +30,4 @@ for _ in range(int(sys.argv[1]) if len(sys.argv) > 1 else 11):
         assert CK in out, (k, out)
         T[k].append(ms(out))
 for k, t in sorted(T.items(), key=lambda kv: statistics.median(kv[1])):
-    print(f"{k:28} median {statistics.median(t):7.1f} ms   min {min(t):7.1f} ms")
+    print(f"{k:42} median {statistics.median(t):7.1f} ms   min {min(t):7.1f} ms")
