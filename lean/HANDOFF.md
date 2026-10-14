@@ -44,9 +44,13 @@ before checking, and the checker requires it.
    prelude forms means regenerating them (a session dumped the groups
    with a small Lean script and pasted them in). Next, by a session's
    ranking: `nat-halve`, then `shl`/`shr`, the bitwise ones, and last
-   the `u62-*` ones. Also wanted: literals that are numbers from the
-   start, so the 100000 cap can go; the full run and the checker's
-   literal proofs would then have to read native numbers.
+   the `u62-*` ones. Numerals are numbers from the start (`Prim.num`),
+   but the proofs that `numeral-of`, `prove-literal-lt` and `unary`
+   ask for are still unary derivations the checker types, so a numeral
+   one of them names is capped at 100000; lifting that would mean
+   proving, for each relation, that a generated derivation has its type,
+   once the prelude's declaration is found to have the expected shape,
+   as `Prog.natOK` does for `Nat`.
 1. **A signature that mentions an earlier function of its block** other
    than through `level-of` (section 53). `delegate-of` in a type names the
    proof that `def-fns` mints after its block, so it is refused in the

@@ -147,8 +147,11 @@ each one rests on, which are Lean's own three (`propext`,
   model the elaborator does not find to be the proved one runs as a
   model, with a warning (WARNINGS.md 1). Every other extern function
   runs its model, and the full run (`eval`, `--full`) runs every model.
-  Literals are still elaborated in unary, so a numeral is limited to
-  100000. A call of a delegate's closure is matched in the
+  A numeral is elaborated to a primitive (`Prim.num`) whose stripped
+  value is the number and whose full-run value is its `Zero` and `Succ`
+  form (`natTm'`), which the number stands for (`natTm_real`); the
+  checker types it `(Nat)` once the prelude's `Nat` has the shape the
+  primitive assumes (`Prog.natOK`). A call of a delegate's closure is matched in the
   stripped run by the call its body makes, which `Group.deleOK` checks
   passes the delegate's own non-erased arguments through to its target,
   in order, and the target's non-erased results back
@@ -274,11 +277,12 @@ it is `Settled`, and its `is` rule.
   entry, from the entry's own type application. An unsolved `_` is an
   error. The checker then checks the program as filled in, so the
   inference is not trusted.
-- Literals (section 45). Numerals go up to 100000. Each literal of a
-  program is one entry, made at the top level before the first form that
-  mentions it, and so are the proofs the form asks for. A numeral is a
-  `Nat` of the prelude, its `Succ`s at run time, with no rule, so the
-  checker sees it as opaque. A character literal is an entry with the
+- Literals (section 45). Each literal of a program is one entry, made at
+  the top level before the first form that mentions it, and so are the
+  proofs the form asks for. A numeral is a `Nat` of the prelude, a
+  number in the stripped run and its `Succ`s in the full run, with no
+  rule, so the checker sees it as opaque. A numeral that a proof form
+  below names goes up to 100000, since its proof is built in unary. A character literal is an entry with the
   rule that it is `(MkChar (MkU8 n p))`, `n` its code's numeral and `p`
   the proof that `n` is below `u8-modulus`. A string literal is a
   `String` with no rule, its characters' entries consed up at run time.

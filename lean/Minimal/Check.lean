@@ -300,6 +300,7 @@ def wrapOf (Γ : Ctx) (C : Tm) : Res {k // WrapOK P Γ C k} :=
 def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .tm t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .tm h⟩
   | .lit t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .lit h⟩
+  | .num d n => do let ⟨h⟩ ← need (P.natOK d = true) "a numeral needs the prelude's Nat"; .ok ⟨natTy d, .num h⟩
   | .assert t A => do
     let ⟨T, h⟩ ← checkTm P Γ t
     let ⟨hs⟩ ← need (t.static 0 0) "a literal's proof is not closed"

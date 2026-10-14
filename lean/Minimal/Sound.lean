@@ -1272,6 +1272,50 @@ theorem WrapOK.sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ 
       simp only [Tm.ntField, ← hl, hk1, hk2, Tm.ers_subst _ _ ht, Tm.len_subst _ _ (.inl ht)]
     simp [Prog.wrapField, hnt', hph', hct, hnf, hn]
 
+theorem Prog.natOK_spec {d : Nat} (h : P.natOK d = true) :
+    P.natD = some d ∧ P.lifted d = 0 ∧ P.isNt d = false ∧ P.phantom d 0 = false ∧ P.phantom d 1 = false ∧
+    (∃ m e u, P.ctor d 0 = some (.bind (.ty m e u) (natTy d) .nil)) ∧
+    ∃ m1 u1 m2 e2 u2, P.ctor d 1 = some (.bind (.ty m1 false u1) (natTy d) (.bind (.ty m2 e2 u2) (natTy d) .nil)) := by
+  unfold Prog.natOK at h
+  split at h
+  · rename_i D hD
+    simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true'] at h
+    obtain ⟨⟨⟨⟨⟨hn, hl⟩, hnt⟩, h0⟩, h1⟩, hc⟩ := h
+    split at hc
+    · rename_i m e u z m1 u1 a m2 e2 u2 s hcs
+      simp only [Bool.and_eq_true, beq_iff_eq] at hc
+      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := hc
+      refine ⟨hn, by simp [Prog.lifted, hD, hl], by simp [Prog.isNt, hD, hnt], ?_, ?_, ⟨m, e, u, ?_⟩, ⟨m1, u1, m2, e2, u2, ?_⟩⟩
+      · simpa [Prog.phantom, hD, List.getD_eq_getElem?_getD] using h0
+      · simpa [Prog.phantom, hD, List.getD_eq_getElem?_getD] using h1
+      · simp [Prog.ctor, hD, hcs]
+      · simp [Prog.ctor, hD, hcs]
+    · cases hc
+  · cases h
+
+theorem natTm_vty {d : Nat} (h : P.natOK d = true) : ∀ n, VTy P (natTm' d n) (natTy d) := by
+  obtain ⟨-, hl, -, -, -, ⟨m, e, u, h0⟩, ⟨m1, u1, m2, e2, u2, h1⟩⟩ := Prog.natOK_spec h
+  intro n
+  induction n with
+  | zero => exact .con h0 (by simp [Tm.len, hl]) .nil .nil rfl
+  | succ k ih =>
+    refine .con (mk := m2) (me := e2) (mu := u2) h1 (by simp [Tm.len, hl]) .nil (.cons ih ?_) rfl
+    simpa [natTy, Tm.inst] using (VTys.nil : VTys P .nil (.bind (.ty m2 e2 u2) (natTy d) .nil) _)
+
+theorem natTm_real {d : Nat} (h : P.natOK d = true) : ∀ n, Real P (.nat n) (natTm' d n) := by
+  obtain ⟨hn, hl, hnt, hp0, hp1, ⟨m, e, u, h0⟩, ⟨m1, u1, m2, e2, u2, h1⟩⟩ := Prog.natOK_spec h
+  intro n
+  induction n with
+  | zero => exact .nat hn (by simpa [Prog.view, hn, natTm'] using .con h0 hp0 (Prog.wrapField_none hnt) .nil)
+  | succ k ih =>
+    refine .nat hn ?_
+    simp only [Prog.view, hn, natTm']
+    exact .con h1 hp1 (Prog.wrapField_none hnt) (by rw [hl]; exact .cons (fun _ => ih) .nil)
+
+theorem natTm_lc (d : Nat) : ∀ n, (natTm' d n).lc 0 ∧ (natTm' d n).levels = []
+  | 0 => by simp [natTm', Tm.lc, Tm.levels]
+  | k + 1 => by have := natTm_lc d k; simp [natTm', Tm.lc, Tm.levels, this]
+
 theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
     VTy P (p.eval ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval ρ).lc 0 ∧ ∀ x ∈ (p.eval ρ).levels, x < cnt := by
@@ -1446,6 +1490,10 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
     refine ⟨.con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simp [Tm.static],
       by simp [Prim.eval, Tm.lc], by simp [Prim.eval, Tm.levels]⟩
+  | num h =>
+    rename_i d n
+    exact ⟨by simpa [Prim.eval, natTy, Tm.subst] using natTm_vty h n, by simp [natTy, Tm.static], (natTm_lc d n).1,
+      by simp [Prim.eval, (natTm_lc d n).2]⟩
   | axm hA _ hc hD ho =>
     obtain ⟨_, hAs, _⟩ := tm_sound hP hE hA
     refine ⟨?_, hAs, trivial, by simp [Prim.eval, Tm.levels]⟩
@@ -3145,6 +3193,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
             rw [eqc ha] at hR; rw [eqc hb']
             exact (v.coer_inv hP hD hc _).mp hR
         | assert => simp [Prim.rt] at hok
+        | num d n => cases hp with | num h => exact natTm_real h n
         | atom d =>
           cases hp with
           | @atom _ _ D m e u hD hc hl hnt hph =>

@@ -220,6 +220,12 @@ def valRet : Tm → Nat → Bool
 
 end Tm
 
+def natTy (d : Nat) : Tm := .app (.tyc d .nil) .nil
+
+def natTm' (d : Nat) : Nat → Tm
+  | 0 => .app (.vc d 0 .nil) .nil
+  | k + 1 => .app (.vc d 1 .nil) (.cons (natTm' d k) .nil)
+
 def holeBase : Nat := 2 ^ 40
 
 def Tm.hole : Tm := .fv holeBase
@@ -266,6 +272,7 @@ inductive Prim where
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
   | atom (d : Nat)
+  | num (d n : Nat)
   deriving Repr, Inhabited, DecidableEq
 
 inductive Chk where

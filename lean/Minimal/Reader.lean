@@ -1002,7 +1002,8 @@ def internLits (e : Sx) : M (List Stmt) := do
       && numOf.all (fun n => (st0.numPf.lookup n).isSome) && ltOf.all (fun p => (st0.ltPf.lookup p).isSome)
       && eqOf.all (fun p => (st0.eqPf.lookup p).isSome) then return []
   unless st0.pre do throw "a literal needs the prelude, which --no-prelude leaves out"
-  if nums.any (· > 100000) then throw "a numeral above 100000 is not supported: the runner holds a Nat in unary"
+  if (numOf ++ ltOf.flatMap (fun (a, b) => [a, b]) ++ eqOf.flatMap (fun (a, b) => a :: b.toList)).any (· > 100000) then
+    throw "a numeral above 100000 in a proof form is not supported: its proof is built in unary"
   let nat ← preAdt "Nat"
   let z ← ctorIx nat "Zero"
   let sc ← ctorIx nat "Succ"
@@ -1012,7 +1013,7 @@ def internLits (e : Sx) : M (List Stmt) := do
     let i ← fresh1 false
     note i natTy
     modify fun st => { st with lits := (n, i) :: st.lits }
-    out := out ++ [.prim (.lit (nt n)) false]
+    out := out ++ [.prim (.num nat n) false]
   let lit (n : Nat) : M Tm := do
     match (← get).lits.lookup n with
     | some i => pure (.fv i)

@@ -67,6 +67,7 @@ examples/newtype.sl: (MkMeters 3)
 examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 examples/newtype_match.sl: (MkMeters 5)
 examples/no_annotation_bad.sl: refused: a same-level call whose subterm arguments are all unchanged
+examples/numeral_big.sl: 121932631137021795226185032733622923332237463801111263526900
 examples/numeral_opaque_bad.sl: refused: a branch that is not refuted is missing
 examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 examples/open_absurd.sl: 

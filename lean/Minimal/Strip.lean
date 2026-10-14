@@ -10,10 +10,6 @@ def Prog.view (P : Prog) : Tm → Tm
     | none => .nat n
   | t => t
 
-def natTm' (d : Nat) : Nat → Tm
-  | 0 => .app (.vc d 0 .nil) .nil
-  | k + 1 => .app (.vc d 1 .nil) (.cons (natTm' d k) .nil)
-
 def Prog.unnat (P : Prog) : Tm → Tm
   | .nat n => match P.natD with
     | some d => natTm' d n
@@ -71,6 +67,7 @@ def FnDef.spreadOut (F : FnDef) (ve : Option (List Bool)) (np : Nat) (outs : Lis
 
 def Prim.evalS (P : Prog) (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t | .coerce t _ _ => P.sub ρ t
+  | .num _ n => .nat n
   | p => p.eval ρ
 
 def cval (env : List Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with

@@ -141,6 +141,13 @@ def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
 def Prog.simple (P : Prog) : List Nat :=
   (List.range (P.adts.length + 1)).foldl (fun S _ => P.simpleStep S) (List.range P.adts.length)
 
+def Prog.natOK (P : Prog) (d : Nat) : Bool := match P.adts[d]? with
+  | some D => P.natD == some d && D.lifted == 0 && !D.newtype && !(D.phantom.getD 0 false) && !(D.phantom.getD 1 false) &&
+    match D.ctors with
+    | [.bind (.ty ..) z .nil, .bind (.ty _ false _) a (.bind (.ty ..) s .nil)] => z == natTy d && a == natTy d && s == natTy d
+    | _ => false
+  | none => false
+
 def compat : List Bool → Tm → Bool
   | m :: ms, .bind k _ r => (m || !k.er) && compat ms r
   | _, _ => true
@@ -238,7 +245,7 @@ def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t | .coerce t _ _ => Minimal.rt P Γ t
-  | .mtblOf .. | .atom _ | .axm _ => true
+  | .mtblOf .. | .atom _ | .axm _ | .num .. => true
   | _ => false
 
 mutual
@@ -319,6 +326,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
   | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
+  | num : P.natOK d = true → PrimTy Γ (.num d n) (natTy d)
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
       PrimTy Γ (.axm A) A
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
