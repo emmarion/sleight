@@ -1,5 +1,5 @@
 (library
- (name speciallang)
+ (name sleight)
  (libraries zarith unix))
 
 (rule

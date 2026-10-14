@@ -110,9 +110,9 @@ run the naive solver to certify its answer.
   `fp-centers-spec` builds the original `LongestPalindrome` certificate,
   including the chain excluding every longer length.
 
-These are constructive SL proofs checked by both compilers, using the
+These are constructive Sleight proofs checked by both compilers, using the
 prelude and original specification without new axioms or extern declarations.
 Erased prefix and center histories preserve the certificates when expansion
 and scanning advance their accumulators in tail position. Functional
 correctness and the explicit tail-call markers are machine checked. The complexity argument above is
-an algorithmic argument, not an SL cost proof.
+an algorithmic argument, not an Sleight cost proof.

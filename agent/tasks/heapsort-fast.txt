@@ -1,5 +1,5 @@
 #!pi -f ../../std -f ../../README.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1
-Your task is to write a fast, in-place heapsort in SL, certified correct against
+Your task is to write a fast, in-place heapsort in Sleight, certified correct against
 heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
 This task will likely take many sessions, so leaving solid, well-recorded
 progress matters more than finishing in this one.
@@ -18,7 +18,7 @@ WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
 prelude.sl (the standard library), std/ (source libraries, among them
 std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
 `SetNth` and `Repeat`), tests/ (example programs), pal/ (a
-certified program), and self/ (the compiler, itself written in SL).
+certified program), and self/ (the compiler, itself written in Sleight).
 
 Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
 work/, keep files.txt, listing in order the files that go between
@@ -29,7 +29,7 @@ can go in work/. Keep work/ tidy, pruning files that have served their purpose.
 Your session has two phases: first experimenting, then writing HANDOFF.md and
 FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to
 try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
-SL's maintainers what slowed you down because of SL, its library, or its tools,
+Sleight's maintainers what slowed you down because of Sleight, its library, or its tools,
 rather than because of the problem itself; add to it each session instead of
 rewriting it. Each phase has its own budget of tokens. In the second phase,
 those two are the only files you can edit; there's no need to edit them, or to

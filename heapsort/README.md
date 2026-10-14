@@ -17,7 +17,7 @@ ocamlopt -unsafe -inline 200 -o heapsort_ml_unsafe heapsort.ml && ./heapsort_ml_
 lake build && .lake/build/bin/bench
 ```
 
-`mimo/` holds an SL heap sort certified against
+`mimo/` holds an Sleight heap sort certified against
 `agent/tasks/heapsort-fast/spec.sl`, written by the mimo-v2.6-pro agent
 on the heapsort-fast task. `mimo/files.txt` lists its files in order. It
 sorts a different input, `perf.sl`'s 2^20 pseudo-random integers below

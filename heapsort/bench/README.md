@@ -7,13 +7,13 @@ checks. From the repository root:
 
 ```
 heapsort/bench/build.sh
-python3 heapsort/bench/run.py [ROUNDS] [EXTRA-SL-BINARY...]
+python3 heapsort/bench/run.py [ROUNDS] [EXTRA-SLC-BINARY...]
 ```
 
 `build.sh` needs `patscc` (`brew install ats2-postiats`, or `apt-get install
 ats2-lang` with `PATSHOME` set), `lake` and `idris2`. For each C compiler in
 `CCS` (default `cc`) it builds `_build/driver_CC` from `ats/` (C, ATS plain
-and ATS certified, each timed inside its entry point). It also builds the SL
+and ATS certified, each timed inside its entry point). It also builds the Sleight
 sorts in `opus/`, `mimo/` and `flat/` with `self/release.sh`'s slc,
 `heapsort.ml`'s sort with `ml_main.ml` (with and without `-unsafe`),
 `HeapSort.lean`'s sort through `lean/`, and `Hs.idr`, an unverified Idris 2
@@ -24,7 +24,7 @@ agent's solution extracted with slc.
 
 With `FL_SWITCH` naming an opam switch whose compiler has flambda (here
 `fl-5.4`, OCaml 5.4.1 with `ocaml-option-flambda`), `build.sh` also compiles
-the same OCaml, the SL sorts' and `heapsort.ml`'s, there with `-O3`, and
+the same OCaml, the Sleight sorts' and `heapsort.ml`'s, there with `-O3`, and
 `run.py` times those builds too.
 
 Medians of 11 rounds on two machines: an Apple M4 Pro (macOS, Apple clang 21)
@@ -40,22 +40,22 @@ Gold 6548N at 2.0 GHz (Ubuntu 24.04, gcc 13.3, clang 18.1). Both have OCaml
 | C, gcc -O2 | | | 134.6 ms | |
 | ATS plain, clang -O2 | 50.7 ms | | 121.2 ms | |
 | ATS plain, gcc -O2 | | | 133.0 ms | |
-| SL `mimo/` | 106.7 ms | 85.4 ms | 168.3 ms | 127.1 ms |
-| SL `opus/` | 105.0 ms | 88.3 ms | 162.6 ms | 135.0 ms |
-| SL, glm-5.3-flash-flex's (run 2, session 10 of `agent-runs-e194350.csv`) | 102.0 ms | 90.9 ms | 175.2 ms | 142.2 ms |
-| SL `flat/` | 113.2 ms | 91.7 ms | 166.6 ms | 136.3 ms |
+| Sleight `mimo/` | 106.7 ms | 85.4 ms | 168.3 ms | 127.1 ms |
+| Sleight `opus/` | 105.0 ms | 88.3 ms | 162.6 ms | 135.0 ms |
+| Sleight, glm-5.3-flash-flex's (run 2, session 10 of `agent-runs-e194350.csv`) | 102.0 ms | 90.9 ms | 175.2 ms | 142.2 ms |
+| Sleight `flat/` | 113.2 ms | 91.7 ms | 166.6 ms | 136.3 ms |
 | OCaml handwritten -unsafe | 92.1 ms | 93.1 ms | 145.7 ms | 158.9 ms |
 | OCaml handwritten | 102.3 ms | 105.3 ms | 162.1 ms | 178.1 ms |
 | Lean verified | 115.9 ms | | 214.3 ms | |
 | Idris 2 (plain port) | 814.5 ms | | 1617.1 ms | |
 
-On the Xeon the SL sorts with flambda come within about 4-16% of C with
+On the Xeon the Sleight sorts with flambda come within about 4-16% of C with
 clang, and the fastest beats C with gcc, where on the M4 Pro they take about
 1.7-1.8 times C's time; this may reflect OCaml's code generation being more
 mature on x86-64 than on arm64. `agent-runs-e194350.csv` has the agent
 solutions' Xeon times too.
 
-The SL sorts and the C and ATS sorts allocate nothing; `heapsort.ml`'s sort
+The Sleight sorts and the C and ATS sorts allocate nothing; `heapsort.ml`'s sort
 allocates about 7.9M minor words without flambda and 6.3M with it, perhaps
 the closure its `sift` builds on each call. The Idris 2 port is a direct
 transcription, not tuned for the Chez backend, and its time may say more

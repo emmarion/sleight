@@ -14,7 +14,7 @@
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
    "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;
    "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself. *)
-open Speciallang
+open Sleight
 
 let dir = "../tests"
 let read = Program.read_file and write = Program.write_file

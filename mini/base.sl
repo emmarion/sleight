@@ -1,5 +1,5 @@
 ; mini/base.sl -- decided equality on Nat and Bool, and list indexing with evidence, for the
-; relations of mini/. Plain SL over the prelude; nothing here is settled design.
+; relations of mini/. Plain Sleight over the prelude; nothing here is settled design.
 
 (def-adts
   ((Neq : ((Nat) a) ((Nat) b) -> Type)

@@ -9,6 +9,6 @@
 
 (test
  (name runtest)
- (libraries speciallang unix)
+ (libraries sleight unix)
  (deps
   (alias sources)))

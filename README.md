@@ -1,7 +1,8 @@
-# special-lang
+# Sleight
 
-A prototype OCaml interpreter and compiler for the language that
-DESIGN.md specifies. The other files:
+Sleight is the programming language that DESIGN.md specifies. This
+repository holds a prototype OCaml interpreter and compiler for it.
+The other files:
 
 - OPEN.md: the open questions about the language.
 - SPEC-REVIEW.md: open points found in the spec by a review.

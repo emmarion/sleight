@@ -1,6 +1,6 @@
 #!pi -k SPEC.md:180000
-Learn the programming language SL and its standard library by writing programs and compiling and running them with the `sl` tool. Record what you learn in SPEC.md; it may already exist, and it is the only file kept after this session. Write SPEC.md for a programmer who will read it in full before writing SL: organized by topic, including how to investigate SL, every statement current, and no history of sessions or rounds.
+Learn the programming language Sleight and its standard library by writing programs and compiling and running them with the `sl` tool. Record what you learn in SPEC.md; it may already exist, and it is the only file kept after this session. Write SPEC.md for a programmer who will read it in full before writing Sleight: organized by topic, including how to investigate Sleight, every statement current, and no history of sessions or rounds.
 
-State as fact only what a program you ran showed. Write a failure as what you tried, not as a rule about what is impossible. Present any account of why SL behaves as it does, and anything assumed from other languages, as a guess. Shortening SPEC.md must never make a claim more certain.
+State as fact only what a program you ran showed. Write a failure as what you tried, not as a rule about what is impossible. Present any account of why Sleight behaves as it does, and anything assumed from other languages, as a guess. Shortening SPEC.md must never make a claim more certain.
 
 Call `done` when you have learned as much as you can.

@@ -1,6 +1,6 @@
 ; self/base.sl -- foundations for the self-hosted compiler (self/README.md): booleans, orders and
 ; their decisions, Nat/Char/String helpers over the prelude's externs, Nat identifiers and a trie map over them, a
-; trie map keyed by names, list helpers and a rope of output chunks. Everything here is plain SL checked
+; trie map keyed by names, list helpers and a rope of output chunks. Everything here is plain Sleight checked
 ; by the reference interpreter; nothing is settled design.
 
 (def-fns _ $ (many not : (many (Bool) b) -> (many (Bool) r))
@@ -234,7 +234,7 @@
 (def-fns _ $ (many ocaml-escape : (many (String) s) -> (many (Rope) r))
   (ocaml-escape-onto (REmpty) s))
 
-; An SL name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
+; An Sleight name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
 (def-fns _ $ (many sanitize-char : (many (Char) c) -> (many (Char) r))
   (let ((many ok)) (or (char-between c 48 57)
                     $ or (char-between c 65 90) $ char-between c 97 122))

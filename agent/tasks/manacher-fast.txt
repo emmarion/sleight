@@ -1,5 +1,5 @@
 #!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f manacher-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
-Your task is to write a fast, certified implementation of Manacher's algorithm in SL.
+Your task is to write a fast, certified implementation of Manacher's algorithm in Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
 well-recorded progress matters more than finishing in this one.
 
@@ -15,7 +15,7 @@ time target. A solution is not finished while any array write could be an `-imm`
 To check your work, compile in order: self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, your files (and
 any pal/ files they use), then one accept file. This must compile with no warning that a declaration shadows another.
 
-For reference: prelude.sl (the standard library), self/ (the compiler, written in SL), tests/ (example programs),
+For reference: prelude.sl (the standard library), self/ (the compiler, written in Sleight), tests/ (example programs),
 and DESIGN.md.
 
 Only work/ and HANDOFF.md carry over to the next session. In work/, keep files.txt, listing in order the files that go

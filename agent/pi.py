@@ -503,7 +503,7 @@ TOOLS = {
                "a trailing `/` marks a directory, `@` a symlink", {"path": STR}, []),
     "grep": (grep, "Regex search file contents", {"pattern": STR, "path": STR}, ["pattern"]),
     "find": (find, "Find files by glob", {"glob": STR, "path": STR}, ["glob"]),
-    "sl": (sl, "Compile the SL source files at `paths` (read in order, sharing one scope) and, if they compile, "
+    "sl": (sl, "Compile the Sleight source files at `paths` (read in order, sharing one scope) and, if they compile, "
                "run the program with the sandbox as its working directory, feeding it `stdin` and passing it `args`. "
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "

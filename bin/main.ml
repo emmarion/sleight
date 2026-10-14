@@ -1,4 +1,4 @@
-open Speciallang
+open Sleight
 
 let report path f = try Some (f ()) with e -> (match Program.explain path e with Some m -> prerr_endline m; None | None -> raise e)
 
@@ -10,7 +10,7 @@ let world args =
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
-  let warned = Speciallang.Indent.warn path src in
+  let warned = Sleight.Indent.warn path src in
   match report path (fun () -> Elab.run_toplevel ~consume ~path env (Reader.parse ~shape:(not warned) path src)) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
@@ -18,7 +18,7 @@ let repl consume env =
   let unfinished src =
     match Reader.scan_upto "repl" src with
     | _, Some (_, m) -> m = Reader.unterminated
-    | toks, None -> (match Speciallang.Indent.balance toks with _ :: _, None -> true | _ -> false)
+    | toks, None -> (match Sleight.Indent.balance toks with _ :: _, None -> true | _ -> false)
   in
   let rec form buf =
     print_string (if Buffer.length buf = 0 then "> " else "  ");

@@ -1,14 +1,13 @@
-# slc: a compiler from SL to OCaml, written in SL
+# slc: a compiler from Sleight to OCaml, written in Sleight
 
-`self/` holds a compiler for the language of DESIGN.md
-(excluding OPEN.md 16 and 17; tentatively
-"SL"), written in that language and compiling it to OCaml. It was
-written by a Claude session working autonomously at the owner's request
-("let's self host"); everything here is that session's reading of the
-design and of the reference implementation in `lib/`, and nothing here
-is a design decision. Where this file makes a claim about the language,
-the tests under `self/bootstrap.sh` are the evidence, and a claim the
-tests do not make is a mistake in this file.
+`self/` holds a compiler for Sleight, the language of DESIGN.md
+(excluding OPEN.md 16 and 17), written in that language and compiling it
+to OCaml. It was written by a Claude session working autonomously at the
+owner's request ("let's self host"); everything here is that session's
+reading of the design and of the reference implementation in `lib/`, and
+nothing here is a design decision. Where this file makes a claim about
+the language, the tests under `self/bootstrap.sh` are the evidence, and
+a claim the tests do not make is a mistake in this file.
 
 ## What it is
 
@@ -318,7 +317,7 @@ the entry says otherwise, and recorded so it can be revisited.
   this measured the compiler compiling itself going from about 66
   seconds to under 3; `bench/bench.sh` repeats the measurement.
 - **Sharing is the store's.** `lib/extract.ml` names a block met twice
-  by physical identity, which SL lacks; here every value the compile-time
+  by physical identity, which Sleight lacks; here every value the compile-time
   interpreter makes is a block in `heap.sl`'s store, and the emitter
   writes each block a Settled or a final reaches once, in address order,
   each block's addresses being below its own (ASSUMPTIONS 131). A group

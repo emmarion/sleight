@@ -1,12 +1,12 @@
 #!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -c tools -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
-Your task is to build a toolkit of self-contained SL programs that make writing SL programs easier, for you and for
-future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing SL.
+Your task is to build a toolkit of self-contained Sleight programs that make writing Sleight programs easier, for you and for
+future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
 well-recorded progress matters more than finishing in this one.
 
-A good way to find what to build: write a small but real SL program, note what was hard or tedious about it, then build
+A good way to find what to build: write a small but real Sleight program, note what was hard or tedious about it, then build
 a tool that would have made that easier, and check that it does by using it. Many of these programs should be certified,
-proved correct against a specification stated as a type, as pal/ is, since writing proofs is much of what makes SL hard;
+proved correct against a specification stated as a type, as pal/ is, since writing proofs is much of what makes Sleight hard;
 tools that help with proofs count as much as any. Treat the compiler as the arbiter of whether code is right, and build
 tools for what it can't tell you. Improving or replacing an existing tool counts as much as adding one. Documentation
 counts too: a guide, cheat sheet or worked example in tools/ is a tool if it would have saved you time.
@@ -16,7 +16,7 @@ takes its input on stdin, as args, or as paths to files in the sandbox. tools/TO
 why it exists, how to use it (for a program, the exact `sl` call that runs it), and its status. Keep it succinct and
 pruned, and periodically rewrite it to be shorter.
 
-For reference: prelude.sl (the standard library), self/ (the compiler, written in SL), tests/ and pal/ (example
+For reference: prelude.sl (the standard library), self/ (the compiler, written in Sleight), tests/ and pal/ (example
 programs) and DESIGN.md.
 
 Only tools/ and HANDOFF.md carry over to the next session.

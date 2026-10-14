@@ -19,7 +19,7 @@
              (default)  every form spanning more than one line
              --closers  what each run of ) actually closes *)
 
-open Speciallang
+open Sleight
 open Reader
 
 let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Item r -> Reader.show r | Invalid _ -> "?" | Pragma _ -> ";!"

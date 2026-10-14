@@ -12,8 +12,8 @@ E = {
     **{f"{name}{label}": [B / f"{b}{s}"]
        for s, label in [("", "")] + [("_fl", " [flambda -O3]")] * (B / "ml_safe_fl").exists()
        for name, b in [("OCaml handwritten", "ml_safe"), ("OCaml handwritten -unsafe", "ml_unsafe"),
-                       *((f"SL {d}/", f"sl_{d}") for d in ("opus", "mimo", "flat"))]},
-    **{f"SL {p}": [p] for p in sys.argv[2:]},
+                       *((f"Sleight {d}/", f"sl_{d}") for d in ("opus", "mimo", "flat"))]},
+    **{f"Sleight {p}": [p] for p in sys.argv[2:]},
 }
 
 
