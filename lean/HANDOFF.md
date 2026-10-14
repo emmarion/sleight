@@ -210,14 +210,14 @@ group's ghost flag is its defining context's (`GroupOK`), so ghost code
 makes only closures of ghost groups, which the uses pass never sees and
 the machine never calls (`Real.clo` asks `G.ghost = false`); asking a
 certificate of every closure would fail for an erased entry holding one. Proved without `sorry`, one
-lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`, `.defFns` and
+lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`, `.defFns`,
 `.chk` (every check and mark, `open-adt` through `checkCore_opn`, and a
-`rebind` mark together with the primitive after it). The induction
+`rebind` mark together with the primitive after it) and `.mtch` (erased,
+a listed branch, and `else`). The induction
 over `eval` is meant to carry `MSound` for a core and, when the core
 is a non-erased primitive, for the code after it, which is what the
 `rebind` case needs. On this session's reading the induction itself
-still has `call`, `mtch` and `case` open, and so stays out of the
-build. Its `prim` case takes `CoerceVal P` (`prim_val`'s conclusion
+still has `call` and `case` open, and so stays out of the build. Its `prim` case takes `CoerceVal P` (`prim_val`'s conclusion
 for `coerce`) as a hypothesis until `coerce` is done.
 `checkBranches_live` inverts the checker's success on a listed branch
 (either `dead`, or the checker's success on its body in the branch's

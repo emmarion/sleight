@@ -1089,6 +1089,12 @@ theorem ers_inst (u : Tm) : ∀ (t : Tm) k, t.isTele → (t.inst u k).ers = t.er
 theorem ers_subst (f : Nat → Tm) : ∀ (t : Tm), t.isTele → (t.subst f).ers = t.ers := by
   intro t; induction t <;> intro h <;> simp_all [subst, ers, isTele]
 
+theorem uAt_inst (u : Tm) : ∀ (t : Tm) k n, t.isTele → (t.inst u k).uAt n = t.uAt n := by
+  intro t; induction t <;> intro k n h <;> cases n <;> simp_all [inst, uAt, isTele]
+
+theorem uAt_subst (f : Nat → Tm) : ∀ (t : Tm) n, t.isTele → (t.subst f).uAt n = t.uAt n := by
+  intro t; induction t <;> intro n h <;> cases n <;> simp_all [subst, uAt, isTele]
+
 end Tm
 
 theorem ArgsTy.ers {Γ : Ctx} {args tele out : Tm} : ArgsTy P Γ args tele out → tele.isTele →
@@ -1219,24 +1225,28 @@ theorem Tm.peel_subst (f : Nat → Tm) (hf : ∀ i, (f i).lc 0) : ∀ (ls : Tm),
   | _ => intro hl; simp [Tm.isList] at hl
 
 theorem Tm.skip_inst (u : Tm) : ∀ (t : Tm) k n, t.isTele →
-    ((t.inst u k).skip n).ers = (t.skip n).ers ∧ ((t.inst u k).skip n).len = (t.skip n).len := by
+    ((t.inst u k).skip n).ers = (t.skip n).ers ∧ ((t.inst u k).skip n).len = (t.skip n).len ∧
+    ∀ j, ((t.inst u k).skip n).uAt j = (t.skip n).uAt j := by
   intro t; induction t with
   | bind m A r _ ihr =>
     intro k n h; simp only [Tm.isTele] at h
     cases n with
-    | zero => simp [Tm.skip, Tm.inst, Tm.ers, Tm.len, ers_inst _ _ _ h, Tm.len_inst _ _ _ h]
+    | zero =>
+      refine ⟨by simp [Tm.skip, Tm.inst, Tm.ers, ers_inst _ _ _ h], by simp [Tm.skip, Tm.inst, Tm.len, Tm.len_inst _ _ _ h],
+        fun j => ?_⟩
+      cases j <;> simp [Tm.skip, Tm.inst, Tm.uAt, Tm.uAt_inst _ _ _ _ h]
     | succ n => simpa [Tm.skip, Tm.inst] using ihr (k + 1) n h
   | nil => intro k n _; cases n <;> simp [Tm.inst, Tm.skip]
   | _ => intro k n h; simp [Tm.isTele] at h
 
 theorem VTys.skip : ∀ {vs tele out : Tm}, VTys P vs tele out → tele.isTele →
-    (tele.skip vs.len).ers = out.ers ∧ (tele.skip vs.len).len = out.len
+    (tele.skip vs.len).ers = out.ers ∧ (tele.skip vs.len).len = out.len ∧ ∀ j, (tele.skip vs.len).uAt j = out.uAt j
   | _, _, _, .nil, _ => by simp [Tm.skip, Tm.len]
   | _, _, _, .cons (r := r) _ hr, h | _, _, _, .isCons (r := r) _ hr, h => by
     simp only [Tm.isTele] at h
-    obtain ⟨h1, h2⟩ := hr.skip (Tm.isTele_inst _ _ 0 h)
-    obtain ⟨h3, h4⟩ := Tm.skip_inst _ r 0 _ h
-    simp only [Tm.len, Tm.skip]; exact ⟨h3 ▸ h1, h4 ▸ h2⟩
+    obtain ⟨h1, h2, h5⟩ := hr.skip (Tm.isTele_inst _ _ 0 h)
+    obtain ⟨h3, h4, h6⟩ := Tm.skip_inst _ r 0 _ h
+    simp only [Tm.len, Tm.skip]; exact ⟨h3 ▸ h1, h4 ▸ h2, fun j => (h6 j).symm.trans (h5 j)⟩
 
 theorem WrapOK.sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {C : Tm} {k : Nat}
     (h : WrapOK P Γ C k) : ∃ d c ls, C.subst (Tm.env ρ) = .vc d c ls ∧ P.wrapField d c = some k := by
@@ -2525,7 +2535,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   have e := hmid.peel; rw [← hpe] at e; subst e
   have hvs0 := hmid
   have hsigT : sig'.isTele := (hP.ctors _ _ _ _ hD hsig').1.isTele
-  obtain ⟨hsk1, hsk2⟩ := hvs0.skip hsigT
+  obtain ⟨hsk1, hsk2, -⟩ := hvs0.skip hsigT
   rw [hl'] at hsk1 hsk2
   have hlen := hvs.len (Tm.isTele_subst _ _ hst)
   rw [Tm.len_subst _ _ (.inl hst)] at hlen
@@ -3416,7 +3426,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
               obtain ⟨_, sig1, sigc, hsh1, hct, hlf, hvs1, hst1⟩ := harm
               rw [hsh1] at hsh0; cases hsh0
               rw [hsigw] at hct; cases hct
-              have hsk := (hvs1.skip (ctor_tele hP hsigw)).2
+              have hsk := (hvs1.skip (ctor_tele hP hsigw)).2.1
               rw [hlf] at hsk
               simp only at hn0; rw [hn0, hpl, hsk, Tm.len_subst _ _ (.inl hst1)]
             have hSb : SimEnv P Γ'.er (ρS ++ (List.replicate n Tm.tok).map fun _ => P.sub ρS s) (ρ ++ pre) :=
@@ -3455,7 +3465,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
           obtain ⟨_, sig1, sigc, hsh1, hct, hlf, hvs1, hst1⟩ := harm
           rw [hsh1] at hsh0; cases hsh0
           rw [hsig] at hct; cases hct
-          have hsk := (hvs1.skip (ctor_tele hP hsig)).2
+          have hsk := (hvs1.skip (ctor_tele hP hsig)).2.1
           rw [hlf] at hsk
           have hSb : SimEnv P Γ'.er (ρS ++ List.replicate n .tok) (ρ ++ pre) :=
             hS.extend (by simp only at hn; simp [hn, hpl, hsk, Tm.len_subst _ _ (.inl hst1)]) (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => by
