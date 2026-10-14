@@ -297,3 +297,12 @@ is, which `(slot-of x)` names, and a slot prints by that form.
 - `bin/indent.ml` — `lib/indent.ml`'s check run on its own over the files named
 - `test/runtest.ml` — the test runner, interpreting and extracting each test
 - `tests/` — DESIGN.md's worked examples and further tests
+
+## Agent harness
+
+`agent/` runs LLM agents on Sleight programming tasks, over many sessions.
+
+- `agent/pi.py` — the harness: runs one task for a configured provider and model (`PI_*` environment variables), with `slc` as the agent's compiler, carrying a handoff file from one session to the next
+- `agent/run.sh` — starts, resumes, lists and follows `pi.py` runs on DigitalOcean droplets; `agent/deploy.sh` and `agent/ssh.sh` set up a box and deploy `HEAD` to it
+- `agent/tasks/*.txt` — task prompts; each one's `#!pi` first line gives the files the agent sees, its work directory and run settings
+- `agent/tasks/<task>/` — a task's spec and acceptance files, such as `heapsort-fast/spec.sl`, which `heapsort/` is certified against
