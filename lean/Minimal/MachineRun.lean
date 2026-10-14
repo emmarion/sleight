@@ -1966,7 +1966,8 @@ theorem MOut.ntFields {S : Uses} {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρ
     {w uS v : Tm} (hO : MOut P S n er H ρM ρS ρ (fun _ => False) Shr (ret1 T) [scr] H1 [w] [uS] [v])
     {d c k0 : Nat} {lsF vsF sig0 : Tm} {ruF : List Bool} {pre : List Tm}
     (hv : v = .app (.vc d c lsF) vsF) (hc : P.ctor d c = some sig0) (hwf : P.wrapField d c = some k0)
-    (hone : ∀ j, (sig0.skip (P.lifted d)).ers.getD j true = false → j = k0) (hpl : pre.length = vsF.toList.length)
+    (hone : ∀ j, j < pre.length → (sig0.skip (P.lifted d)).ers.getD j true = false → j = k0)
+    (hpl : pre.length = vsF.toList.length)
     (hruF : ∀ k, ruF.getD k false = true → scr = true ∧ (sig0.skip (P.lifted d)).uAt k = true) :
     MOut P S n er H ρM ρS ρ (fun _ => False) Shr (sig0.skip (P.lifted d)) ruF H1 (pre.map fun _ => w)
       (pre.map fun _ => uS) vsF.toList := by
@@ -1983,18 +1984,19 @@ theorem MOut.ntFields {S : Uses} {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρ
   · rw [gw j x hx, gu j y hy] at hf; exact hO.foot 0 w uS rfl rfl e0 b hf
   · rw [gw j x hx, gu j y hy] at hs
     obtain ⟨h1, h2⟩ := hruF j hr
-    have := hone j he; subst this
+    have := hone j (by simpa using (List.getElem?_eq_some_iff.mp hx).1) he; subst this
     exact hO.uspine 0 w uS _ rfl rfl rfl e0 (by simp [h1]) b (.wrap hwf hc h2 hz hs)
   · rw [gw j x hx, gu j y hy]
     obtain ⟨h1, h2⟩ := hruF j hr
-    have := hone j he; subst this
+    have := hone j (by simpa using (List.getElem?_eq_some_iff.mp hx).1) he; subst this
     have hwo := hO.uwo 0 w uS _ rfl rfl rfl e0 (by simp [h1])
     cases hwo with
     | wrap hw' hc' _ hz' hwo' =>
       rw [hwf] at hw'; cases hw'; rw [hz] at hz'; cases hz'; exact hwo'
     | free hn => exact .free fun b hs => hn b (.wrap hwf hc h2 hz hs)
     | ptr _ hw' => rw [hwf] at hw'; cases hw'
-  · exact absurd ((hone j he).trans (hone j' he').symm) hjj
+  · exact absurd ((hone j (by simpa using (List.getElem?_eq_some_iff.mp hx).1) he).trans
+      (hone j' (by simpa using (List.getElem?_eq_some_iff.mp hx').1) he').symm) hjj
 
 theorem machine_caseN (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm} {brs : List Br}
     {els : Option Core} {ρ vs : List Tm} {d c k0 : Nat} {lsF vsF sig0 : Tm} {body : Core} {pre : List Tm}
@@ -2002,7 +2004,7 @@ theorem machine_caseN (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     (hsF : s.subst (Tm.env ρ) = .app (.vc d c lsF) vsF) (hreal : realBr brs els = some (pre, body))
     (hlk : lookupBr brs c = some body) (hpl : pre.length = vsF.toList.length)
     (hc : P.ctor d c = some sig0) (hwf : P.wrapField d c = some k0)
-    (hone : ∀ j, (sig0.skip (P.lifted d)).ers.getD j true = false → j = k0)
+    (hone : ∀ j, j < pre.length → (sig0.skip (P.lifted d)).ers.getD j true = false → j = k0)
     (hbr : ∀ H idx shp, G.arms P s false = some (H, idx, shp) → ∃ k sig, shp[c]? = some (k, sig, false) ∧
       sig.isTele ∧ vsF.toList.length = sig.len - 1 ∧
       (∀ j, j < sig.len - 1 → sig.ers.getD j true = (sig0.skip (P.lifted d)).ers.getD j true ∧
