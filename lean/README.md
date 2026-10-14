@@ -345,9 +345,9 @@ it is `Settled`, and its `is` rule.
 - `unique` (sections 13 to 16, 22, 23 and 32). In the core a `unique`
   entry is a non-erased one that carries the mark in its telescope
   entry, so a type tells `unique` from `many`, and a stripped value
-  stands for a full one as for `many`: `lean/` has no cells and no
-  in-place update, so a run never relies on a value having one
-  reference. The elaborator checks the uses: on each path a `unique`
+  stands for a full one as for `many`; only the machine run
+  (`machine_main`) relies on a value having one reference, when it
+  writes a cell in place. The elaborator checks the uses: on each path a `unique`
   entry has one non-erased use at unique or any number of uses through
   `share`, never both, a match joining its branches; a `unique` value
   in a `many` position needs `(share e)`; a value made `many` is not
@@ -506,9 +506,12 @@ it is `Settled`, and its `is` rule.
   may be an expression whose value is a cell, such as a `cell-match`. The elaborator
   accounts for the uses of the cell as section 37 has it. The core marks
   an invocation, a pattern's cell binder, `cell-alloc`, `cell-write` and
-  an at-match (`Chk.mark`), and an at-function (`FnDef.atf`), which every
-  run proved about ignores; they are for a run that writes in place and
-  skips what costs nothing (HANDOFF.md), and nothing checks them yet.
+  an at-match (`Chk.mark`), and an at-function (`FnDef.atf`). The full
+  and stripped runs ignore them; the uses pass reads the marks, and the
+  machine run writes a cell invocation or `cell-write` at `unique` into
+  its block in place and allocates at `cell-alloc`. Skipping what costs
+  nothing (at-function calls, at-matches, `at` entries) is not done
+  (HANDOFF.md).
 - `else` branches (DESIGN.md sections 21 and 23): an `else` stands for
   every constructor neither listed nor refuted, is checked with no
   forced facts, and is an error when it stands for no constructor.
@@ -641,9 +644,9 @@ it is `Settled`, and its `is` rule.
   on each path a `unique` entry has one non-erased use at unique or only
   uses at many, a match joining its branches, a use at unique is of an
   entry born `unique`, and a `def-fns` body uses an entry of its scope
-  at unique nowhere. No theorem rests on it yet; the proofs do not
-  cover `unique`: with no cells and no in-place update in `lean/`, the soundness
-  theorems need nothing from it. A `let` binder of a `unique` entry, or
+  at unique nowhere. `eval_sound` and `checked_runs` need nothing from
+  it; `machine_main` takes the pass's success as a hypothesis, since a
+  cell written in place must be reached by nothing else live. A `let` binder of a `unique` entry, or
   a `unique` binder, is an entry of its own that is the right-hand side,
   so that its uses are counted apart from those the right-hand side
   made. Where the elaborator cannot read a `coerce`'s side off the type
