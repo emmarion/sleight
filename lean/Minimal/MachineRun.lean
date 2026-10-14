@@ -857,12 +857,14 @@ theorem MOut.imm {A : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ
     | succ k => simp at hw
   · cases k <;> cases j <;> simp_all
 
+def PrimVal (P : Prog) (G : UCtx) (ρ : List Tm) (p : Prim) : Prop :=
+  ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
+    ∀ ρS H ρM Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr →
+    ∃ H1 w, P.evalM H ρM p = (H1, w) ∧ MOut P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (ret1 T)
+      [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval ρ]
+
 theorem prim_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {p : Prim} (hE : EnvOK P ρ G.Γ)
-    (hrt : p.rt P G.Γ = true) (hnc : ∀ a b q, p ≠ .coerce a b q) :
-    ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
-      ∀ ρS H ρM Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr →
-      ∃ H1 w, P.evalM H ρM p = (H1, w) ∧ MOut P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (ret1 T)
-        [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval ρ] := by
+    (hrt : p.rt P G.Γ = true) (hnc : ∀ a b q, p ≠ .coerce a b q) : PrimVal P G ρ p := by
   intro T A _ hA ρS H ρM Out' Shr hS hM
   cases p with
   | tm t =>
@@ -2731,10 +2733,7 @@ theorem machine_prim_inert {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p 
     (ih : ∀ T, G.primTy P p = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
         (ρ ++ [p.eval ρ]) vs)
-    (hval : ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
-      ∀ ρS H ρM Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr →
-      ∃ H1 w, P.evalM H ρM p = (H1, w) ∧ MOut P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (ret1 T)
-        [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval ρ]) :
+    (hval : PrimVal P G ρ p) :
     ∀ U K, usesCore P b G ru rets (.prim p false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim p false rest) vsS →
     ∀ H ρM Res Out Shr pd, Pend.Inert P pd p → MFrame P U G.Γ.n G.Γ.er H ρM ρS ρ Res Out Shr → GOK P G pd H ρM ρS ρ Res Shr →

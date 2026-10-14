@@ -2866,6 +2866,60 @@ theorem seq_setup {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx}
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs,
     hh, hle, hol⟩
 
+theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) {p : Prim} {T : Tm}
+    (hp : PrimTy P Γ p T) (hrt : p.rt P Γ = true) : Real P (p.evalS P ρS) (p.eval ρ) := by
+  cases p with
+  | tm t | lit t => exact rt_real hP hE hS t hrt
+  | coerce a b p =>
+    cases hp with
+    | coerce hpp e hD hc ha _ hb' _ =>
+      rename_i Pt _ _ _ _ _ _ _ _ _ _
+      have hR := rt_real hP hE hS a hrt
+      have v := (tm_sound hP hE hpp).1
+      rw [← hE.canon Pt, e, Tm.coer_subst] at v
+      have eqc : ∀ {x y : Tm}, Γ.canon x = Γ.canon y → x.subst (Tm.env ρ) = y.subst (Tm.env ρ) :=
+        fun h => by rw [← hE.canon, h, hE.canon]
+      simp only [Prim.evalS, Prim.eval]
+      rw [eqc ha] at hR; rw [eqc hb']
+      exact (v.coer_inv hP hD hc _).mp hR
+  | assert => simp [Prim.rt] at hrt
+  | num d n => cases hp with | num h => exact natTm_real h n
+  | atom d =>
+    cases hp with
+    | @atom _ _ D m e u hD hc hl hnt hph =>
+      simp only [Prim.evalS, Prim.eval]
+      have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
+      exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
+  | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
+
+theorem prim_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}
+    {T rets : Tm} {rest : Core} (hE : EnvOK P ρ Γ) (hb : LvlBound ρ cnt) (hm : MuOK μ Γ ρ) (hrs : rets.static Γ.n 0)
+    (hp : PrimTy P Γ p T) (hok : (er || Γ.ok (p.rt P Γ)) = true) :
+    EnvOK P (ρ ++ [p.eval ρ]) (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) ∧ LvlBound (ρ ++ [p.eval ρ]) cnt ∧
+    MuOK μ (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) (ρ ++ [p.eval ρ]) ∧
+    rets.static (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)).n 0 ∧
+    HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest ∧
+    ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
+  obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hE hb hp
+  obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
+  have hl := hE.len
+  have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by intro i; cases p <;> rfl
+  have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest := by
+    intro ρS hg hS
+    refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
+      fun out h => .prim h, rfl, fun k a b ha hb he => ?_⟩
+    cases k with
+    | succ => simp at ha
+    | zero =>
+      simp at ha hb; subst ha hb
+      rw [her, if_pos (by omega)] at he; subst he
+      simp only [Ctx.ok, hg, Bool.false_or] at hok
+      exact prim_real hP hE hS hp hok
+  have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
+  exact ⟨hE.adv hE' hpf hh, LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩,
+    hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs,
+    hh, her⟩
+
 theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
     LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
     Result P ρ cnt rets (eval P μ ρ cnt c) ∧ Sim P Γ ρ c rets (eval P μ ρ cnt c) := by
@@ -3202,47 +3256,10 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | @prim _ _ T _ _ _ _ hp hok hr =>
-    obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hE hb hp
-    obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
+    obtain ⟨hE'', hlb', hm', hrs', hh, her⟩ := prim_setup (rest := rest) hP hE hb hm hrs hp hok
     rw [eval]
     have hl := hE.len
-    have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by intro i; cases p <;> rfl
-    have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest := by
-      intro ρS hg hS
-      refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
-        fun out h => .prim h, rfl, fun k a b ha hb he => ?_⟩
-      cases k with
-      | succ => simp at ha
-      | zero =>
-        simp at ha hb; subst ha hb
-        rw [her, if_pos (by omega)] at he; subst he
-        simp only [Ctx.ok, hg, Bool.false_or] at hok
-        cases p with
-        | tm t | lit t => exact rt_real hP hE hS t hok
-        | coerce a b p =>
-          cases hp with
-          | coerce hpp e hD hc ha _ hb' _ =>
-            rename_i Pt _ _ _ _ _ _ _ _ _ _
-            have hR := rt_real hP hE hS a hok
-            have v := (tm_sound hP hE hpp).1
-            rw [← hE.canon Pt, e, Tm.coer_subst] at v
-            have eqc : ∀ {x y : Tm}, Γ.canon x = Γ.canon y → x.subst (Tm.env ρ) = y.subst (Tm.env ρ) :=
-              fun h => by rw [← hE.canon, h, hE.canon]
-            simp only [Prim.evalS, Prim.eval]
-            rw [eqc ha] at hR; rw [eqc hb']
-            exact (v.coer_inv hP hD hc _).mp hR
-        | assert => simp [Prim.rt] at hok
-        | num d n => cases hp with | num h => exact natTm_real h n
-        | atom d =>
-          cases hp with
-          | @atom _ _ D m e u hD hc hl hnt hph =>
-            simp only [Prim.evalS, Prim.eval]
-            have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
-            exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
-        | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
-    have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
-    have ih' := ih b _ rets hr (hE.adv hE' hpf hh) (LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩)
-      (hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs)) (Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs)
+    have ih' := ih b _ rets hr hE'' hlb' hm' hrs'
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish hE (fun i hi => by rw [her, if_neg (by omega)])
       (fun hg => by rw [← hg]; cases p <;> rfl) ih'.2⟩
   | case11 μ ρ cnt rest ih =>
