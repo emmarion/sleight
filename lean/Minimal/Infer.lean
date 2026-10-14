@@ -153,6 +153,21 @@ def scrutOf (Γ : Ctx) (s : Tm) : Option (Tm × Tm × List Arm) :=
     | _ => none
   | .error _ => none
 
+partial def sideAt (Γ : Ctx) (tgt : Bool) (i : Nat) : Core → Option Tm
+  | .chk .ty (.fv k) T _ => if k = i then (coerOf' T).map fun (sa, _, _, sb, _) => if tgt then sb else sa else none
+  | c => useSide c (i + 1)
+where
+  useSide : Core → Nat → Option Tm
+    | .prim (.coerCtor s C _ _ ps) _ rest, k => match ps.toList.idxOf? (.fv i) with
+      | some j => do
+        let s ← if s.isHole then sideAt Γ false k rest else some s
+        let ⟨K, _⟩ ← (checkTm P Γ C).toOption
+        let .valCtor sig := Γ.canon K | none
+        some (if sig.uAt j then s else sharedTm)
+      | none => useSide rest (k + 1)
+    | .prim _ _ rest, k => useSide rest (k + 1)
+    | _, _ => none
+
 partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM Core
   | .ret ts => do
     let ts ← if !ts.hasHole then pure ts else match rets with
@@ -186,9 +201,8 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       let ⟨(dC, _), _⟩ ← (coerAdt P).toOption
       let ⟨x, _⟩ ← coerParts dC (Γ.canon T)
       some x
-    let expSide : Tm → Tm := fun s => if !s.isHole then s else match rest with
-      | .chk .ty (.fv i) T _ => if i = Γ.n then ((coerOf' T).map (·.1)).getD s else s
-      | _ => s
+    let tgt := match p with | .coerWrap .. => true | _ => false
+    let expSide : Tm → Tm := fun s => if !s.isHole then s else (sideAt P Γ tgt Γ.n rest).getD s
     let p ← match p with
       | .coerce a b q =>
         match coerOf q with
