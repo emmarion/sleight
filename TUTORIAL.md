@@ -1,12 +1,15 @@
 # A short tour of Sleight
 
+The language is specified in [DESIGN.md](DESIGN.md); [README.md](README.md)
+describes the implementations and their command lines.
+
 This tutorial was written by a Claude session, not by the owner.
 DESIGN.md is the specification. Where the two disagree, DESIGN.md is right
-and this file is wrong. Each program below is a test in `tests/`, named
-under its listing, so `dune test` and `self/bootstrap.sh` check it. The prose
-around the programs is a session's reading of DESIGN.md, and any part of it
-could be wrong. The section numbers (§) point to the DESIGN.md text it is
-based on.
+and this file is wrong. Each program below is a test in [`tests/`](tests/),
+named under its listing, so `dune test` and
+[`self/bootstrap.sh`](self/bootstrap.sh) check it. The prose around the
+programs is a session's reading of DESIGN.md, and any part of it could be
+wrong. The section numbers (§) point to the DESIGN.md text it is based on.
 
 ## 0. Running a program
 
@@ -49,7 +52,7 @@ is `(Cons _ 1 (Cons _ 2 (Nil (Nat))))`. `;` starts a comment.
 (next $ next (Red))
 ```
 
-`tests/tutorial_color.sl` prints `(Blue)`.
+[`tests/tutorial_color.sl`](tests/tutorial_color.sl) prints `(Blue)`.
 
 Some things to notice:
 
@@ -72,7 +75,7 @@ Some things to notice:
 - Constructors are applied like functions, so a nullary one is written
   `(Red)`.
 
-The prelude (`lib/prelude.sl`) already has `Nat`, `Bool`, `Maybe`,
+The prelude ([`lib/prelude.sl`](lib/prelude.sl)) already has `Nat`, `Bool`, `Maybe`,
 `List`, `Pair`, `String` and more (§42). Numerals such as `42` are `Nat`s
 (§45).
 
@@ -96,7 +99,7 @@ Together these make every call decrease, so every function terminates.
 (sum $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Nil (Nat))
 ```
 
-`tests/tutorial_sum.sl` prints `6`.
+[`tests/tutorial_sum.sl`](tests/tutorial_sum.sl) prints `6`.
 
 - `xs` is marked `subterm`. In the `Cons` branch, `tl` is a strict
   subterm of `xs`, so `sum tl` is allowed.
@@ -126,7 +129,7 @@ Leave the decrease out and the call is refused:
 error: same-level call to `loop` decreases no subterm argument
 ```
 
-(`tests/tutorial_loop_bad.sl`)
+([`tests/tutorial_loop_bad.sl`](tests/tutorial_loop_bad.sl))
 
 ### Higher-order functions
 
@@ -144,7 +147,7 @@ A function value's type records its level: `(Fn L params -> returns)`
 (twice inc 5)
 ```
 
-`tests/tutorial_twice.sl` prints `7`. The type of `f` names a level that
+[`tests/tutorial_twice.sl`](tests/tutorial_twice.sl) prints `7`. The type of `f` names a level that
 existed before `twice`'s was made. If you try to abstract over the level
 as a parameter, it fails, because the parameter did not exist when
 `twice`'s level was made (§18, §57):
@@ -159,10 +162,10 @@ as a parameter, it fails, because the parameter did not exist when
 error: `L` was not in scope when level `(level-of twice)` was minted
 ```
 
-(`tests/tutorial_level_bad.sl`) The way to get a level-polymorphic `map`
+([`tests/tutorial_level_bad.sl`](tests/tutorial_level_bad.sl)) The way to get a level-polymorphic `map`
 is a *factory* function. It takes the level, makes a new level above it
 inside its own body, and returns the `map` defined there. §57 and §58
-show this, and `tests/map.sl` runs it.
+show this, and [`tests/map.sl`](tests/map.sl) runs it.
 
 ## 4. Multiplicities: `erased`, `many`, `unique`
 
@@ -186,7 +189,7 @@ enforces it locally (§14):
 error: `n`, declared `erased`, used in a non-erased position
 ```
 
-(`tests/tutorial_erased_bad.sl`) This is why `List`'s constructors take an
+([`tests/tutorial_erased_bad.sl`](tests/tutorial_erased_bad.sl)) This is why `List`'s constructors take an
 `(erased Type A)` first: the element type is an argument, but it costs
 nothing at runtime. In a call, an erased argument that the other
 arguments determine can be written `_` (§50). That is why
@@ -211,7 +214,7 @@ Types can be indexed by values. A vector indexed by its length:
 (vhead _ _ $ VCons _ _ 10 $ VCons _ _ 20 $ VNil (Nat))
 ```
 
-`tests/tutorial_vec.sl` prints `10`.
+[`tests/tutorial_vec.sl`](tests/tutorial_vec.sl) prints `10`.
 
 - The index `n` is erased, so the length costs nothing at runtime.
 - `let-match` takes a value apart and binds its fields for the rest of
@@ -250,7 +253,7 @@ subtraction, which gets its proof by deciding the comparison:
 (MkPair _ _ (monus 3 10) (monus 10 3))
 ```
 
-`tests/tutorial_monus.sl` prints `(MkPair _ _ 0 7)`. (Erased fields print
+[`tests/tutorial_monus.sl`](tests/tutorial_monus.sl) prints `(MkPair _ _ 0 7)`. (Erased fields print
 as `_`.)
 
 - `lt-dec` returns `(Dec a b)`: either `Yes` with an `(Lt a b)`, or `No`
@@ -274,7 +277,7 @@ inferred from nothing:
 error: argument 3, `le`, of `sub` is `_` and cannot be inferred
 ```
 
-(`tests/tutorial_sub_bad.sl`)
+([`tests/tutorial_sub_bad.sl`](tests/tutorial_sub_bad.sl))
 
 ### Proof by running code
 
@@ -289,7 +292,7 @@ can be proved by computing it there and asserting the outcome with
 c
 ```
 
-`tests/tutorial_reflect.sl` prints `7`. `comptime-match` fails to compile
+[`tests/tutorial_reflect.sl`](tests/tutorial_reflect.sl) prints `7`. `comptime-match` fails to compile
 unless `d` really is a `No`, and it binds that `No`'s proof `q` for the
 code after it. A hand-built `U8` gets its bound proof this way (§42).
 
@@ -316,7 +319,7 @@ the new value in that same memory (§23, §37):
 (share c2)
 ```
 
-`tests/tutorial_counter.sl` prints `(MkCounter 2)`.
+[`tests/tutorial_counter.sl`](tests/tutorial_counter.sl) prints `(MkCounter 2)`.
 
 - `(unique (Counter) d at c)` promises that the result is at the same
   address as the argument (§36). The checker checks that promise.
@@ -339,9 +342,9 @@ The checker counts uses on each path through the code (§15):
 error: unique value `c` has conflicting non-erased uses
 ```
 
-(`tests/tutorial_unique_bad.sl`) The prelude's arrays and byte buffers
+([`tests/tutorial_unique_bad.sl`](tests/tutorial_unique_bad.sl)) The prelude's arrays and byte buffers
 use the same machinery, and so does the destination-passing `append` of
-§61 (`tests/cell_append.sl`).
+§61 ([`tests/cell_append.sl`](tests/cell_append.sl)).
 
 ## 8. Newtypes and free coercions
 
@@ -359,12 +362,12 @@ safe:
 (coerce m (coercible-sym (coercible-wrap (Shared) MkMeters n)))
 ```
 
-`tests/tutorial_newtype.sl` prints `42`. `coercible-wrap` proves that `n`
+[`tests/tutorial_newtype.sl`](tests/tutorial_newtype.sl) prints `42`. `coercible-wrap` proves that `n`
 can be wrapped as `(MkMeters n)`, and `coercible-sym` reverses that proof
 into unwrapping. `coerce` applies the proof at no runtime cost (§33).
 The point is that this works through containers: §60 turns a
 `(List (Meters))` into a `(List (Nat))` with an erased recursive proof
-and one `coerce` that compiles to nothing (`tests/coerce.sl`).
+and one `coerce` that compiles to nothing ([`tests/coerce.sl`](tests/coerce.sl)).
 
 ## 9. Talking to the world
 
@@ -383,7 +386,7 @@ printf world | dune exec bin/main.exe -- tests/tutorial_hello.sl
 Hello, world!
 ```
 
-(`tests/tutorial_hello.sl`) For real interaction, the final value is a
+([`tests/tutorial_hello.sl`](tests/tutorial_hello.sl)) For real interaction, the final value is a
 `(Program L)`. A step is a unique continuation that takes the unique
 `World`, performs requests with `world-do`, and returns the next step
 or `Exit` (§42):
@@ -402,17 +405,17 @@ or `Exit` (§42):
 (Continue P start)
 ```
 
-(`tests/tutorial_program.sl`) The first four lines build the exit code.
+([`tests/tutorial_program.sl`](tests/tutorial_program.sl)) The first four lines build the exit code.
 A `U8` carries a proof that it is below 256, which is obtained here by
 reflection as in section 6. `def-unique` defines a function that may be
 called only once (§32), and that is what lets the driver hand each step
-the one `World`. `tests/io_echo.sl` loops over input lines.
+the one `World`. [`tests/io_echo.sl`](tests/io_echo.sl) loops over input lines.
 
 ## Where next
 
-- EXAMPLES.md lists the tests that show the features working together.
-- DESIGN.md §55 to §61 are worked examples. §62 to §65 cover macros,
+- [EXAMPLES.md](EXAMPLES.md) lists the tests that show the features working together.
+- [DESIGN.md](DESIGN.md) §55 to §61 are worked examples. §62 to §65 cover macros,
   which are ordinary functions over syntax, run during elaboration.
-- `std/` holds more lemmas and proof tactics.
+- [`std/`](std/) holds more lemmas and proof tactics.
 - `(dump-context)` stops the checker and shows everything it knows at
-  that point (README.md). It helps when a proof won't go through.
+  that point ([README.md](README.md)). It helps when a proof won't go through.
