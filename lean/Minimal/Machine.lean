@@ -103,11 +103,12 @@ inductive RunM : Heap → List Tm → Core → Heap → List Tm → Prop
       RunM H ρ (.chk (.mark .alloc) x y (.prim (.axm T) false rest)) H' out
   | allocNo : (∀ T rest', c ≠ .prim (.axm T) false rest') → RunM H ρ c H' out → RunM H ρ (.chk (.mark .alloc) x y c) H' out
 
+def Prog.rd (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any (·.1 == i)).getD false
+
 mutual
 inductive MDec (H : Heap) : Tm → Tm → Prop
   | ptr : H.blk a = some (d, c, ws) → MDecs H ws vs → MDec H (.ptr a) (.app (.vc d c .nil) (.ofList vs))
-  | clo : P.groups[gid]? = some G → envM.length = envS.length →
-      (∀ i, G.ers.getD i true = false → MDec H (Tm.env envM i) (Tm.env envS i)) →
+  | clo : envM.length = envS.length → (∀ i, P.rd gid i = true → MDec H (Tm.env envM i) (Tm.env envS i)) →
       MDec H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j)
   | tok : MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
@@ -117,5 +118,26 @@ inductive MDecs (H : Heap) : List Tm → List Tm → Prop
   | nil : MDecs H [] []
   | cons : MDec H w v → MDecs H ws vs → MDecs H (w :: ws) (v :: vs)
 end
+
+inductive Reach (H : Heap) : Tm → Nat → Prop
+  | here : Reach H (.ptr a) a
+  | field : H.blk a = some (d, c, ws) → w ∈ ws → Reach H w b → Reach H (.ptr a) b
+  | clo : P.rd gid i = true → Reach H (Tm.env envM i) b → Reach H (.clo (.ofList envM) gid j) b
+
+def Agree (H H' : Heap) (S : Nat → Prop) : Prop := ∀ a, S a → H'.blk a = H.blk a
+
+variable {P}
+
+theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (Reach P H w) → MDec P H' w v
+  | _, _, .ptr hb hs, hA => .ptr (by rw [hA _ .here]; exact hb)
+      (MDecs.frame hs fun w hw a ha => hA a (.field hb hw ha))
+  | _, _, .clo hl hs, hA => .clo hl fun i hi => (hs i hi).frame fun a ha => hA a (.clo hi ha)
+  | _, _, .tok, _ => .tok
+  | _, _, .nat, _ => .nat
+  | _, _, .vc, _ => .vc
+where
+  MDecs.frame : ∀ {ws vs : List Tm}, MDecs P H ws vs → (∀ w ∈ ws, Agree H H' (Reach P H w)) → MDecs P H' ws vs
+    | _, _, .nil, _ => .nil
+    | _, _, .cons h hs, hA => .cons (h.frame (hA _ (by simp))) (MDecs.frame hs fun w hw => hA w (by simp [hw]))
 
 end Minimal

@@ -242,11 +242,12 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
   match P.infer with
   | .error e => .text s!"error: {e}"
   | .ok P =>
+    let P := P.fillCaps .nil
     if mode == "--unchecked" then P.run pre false fun _ => []
     else match checkProg P with
       | .error e => .text s!"refused: {e}"
       | .ok ⟨R, _⟩ =>
-        if (usesCore P P.groups.length {Γ := {tys := []}} [] R P.main).isNone then .text "refused: the uses of a unique value do not check" else
+        if !P.usesOK R then .text "refused: the uses of a unique value do not check" else
         let rec anyTy : Tm → Bool
           | .bind (.ty ..) .nil _ => true
           | .bind _ _ r => anyTy r

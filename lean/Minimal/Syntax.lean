@@ -372,6 +372,7 @@ structure Group where
   ghost : Bool := false
   lvl : Nat
   fns : List FnDef
+  caps : List (Nat × Bool) := []
   deriving Repr, Inhabited
 
 structure Adt where
