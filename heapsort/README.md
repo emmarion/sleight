@@ -54,6 +54,10 @@ the lowest median. The `x86_` columns are the same measurement of the same
 OCaml on `bench/`'s Xeon, compiled there both without flambda and with
 flambda `-O3` (`x86_flambda_`). Differences of a few milliseconds are within
 the noise.
+The `code_` columns measure the first passing session's own files, those
+its `work/files.txt` lists: how many, their non-blank lines and
+non-whitespace characters with `;` comments removed, and their bytes as
+written.
 
 `bench/` times all of these, and C, Lean and Idris 2 heap sorts, on
 `perf.sl`'s input; its README has the results.
