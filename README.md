@@ -183,6 +183,11 @@ no `--extract` output or OCaml is written. A warning silenced by `;! suppress`
 does not count. slc takes the same flag, and `self/bootstrap.sh` builds slc
 under it.
 
+Every program the reference runs or either compiler writes out starts by
+setting the OCaml collector's minor heap to 2M words and its space
+overhead to 400 (`lib/driver_core.ml`); a session measured this taking
+about a quarter off `slc` compiling itself.
+
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;

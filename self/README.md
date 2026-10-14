@@ -224,7 +224,9 @@ the entry says otherwise, and recorded so it can be revisited.
   under the FFI), with `Double` in the evidence where the digits used
   to be; the bijective spelling (`Bin`, a plain type now) appears only
   where a numeral literal is spelled into its `Numeral` proof. OCaml
-  names carry the id in decimal: `v1234_length`.
+  names carry the id in decimal and, as `lib/extract.ml`'s `var` writes
+  them, a named entry's sanitized name: `v1234_length`, and `v1235` for
+  an anonymous entry.
 - **Termination is structural except in the interpreter and the
   generated printer.** Those two take a `Nat` that decreases along the
   call stack (not a step count), so a fuel of 1000000 or 100000 bounds
