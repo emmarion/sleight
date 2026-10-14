@@ -1,5 +1,12 @@
 (def-fns _ $ (many top-name : (many (Env) env) (many (Nat) x) -> (many (String) s))
-  (str-cat "v" $ str-cat (nat-str x) $ str-cat "_" $ sanitize $ name-of env x))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ n _ _ _ _ _ _))
+  (str-cat "v" $ str-cat (nat-str x) $ match many n (((String) _))
+    ((None _) "")
+    ((Some _ nm) (match many nm (((String) _))
+      ((NSrc s) (str-cat "_" $ sanitize s))
+      ((NGen k s) (str-cat3 "_g" (nat-str k) $ str-cat "_" $ sanitize s))
+      ((NHandle _ _ _ s) (str-cat "_" $ sanitize s))))))
 
 (let ((many show-fuel)) 100000)
 
@@ -206,7 +213,8 @@
 (def-fns _ $ (many narrow-index : (subterm many (List $ Narrow) ns) (many (List $ Nat) s) (many (List $ Nat) live) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (let-match many ns (Cons _ n rest) ((Nil _) (None _)))
   (let-match many n (MkNarrow s2 live2))
-  (match many (and (nat-list-eq s2 s) $ nat-list-eq live2 live) _ ((BTrue) (Some _ i)) ((BFalse) (tail $ narrow-index rest s live $ Succ i))))
+  (let ((many hit)) $ match many (nat-list-eq s2 s) (((Bool) _)) ((BTrue) (nat-list-eq live2 live)) ((BFalse) (BFalse)))
+  (match many hit _ ((BTrue) (Some _ i)) ((BFalse) (tail $ narrow-index rest s live $ Succ i))))
 
 (def-fns _ $ (many index-str : (many (Maybe $ Nat) i) -> (many (String) s))
   (match many i _ ((Some _ n) (nat-str n)) ((None _) "missing")))

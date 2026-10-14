@@ -352,9 +352,11 @@
 (def-fns _ $ (many sp-name : (many (Sp) sp) -> (many (String) name))
   (sp-name-in sp-table sp))
 
+(let ((many sp-index)) $ idmap-of-list _ sp-table 0 $ MEmpty _)
+
 (def-fns _ $ (many sp-of-index : (many (Nat) i) -> (many (Maybe $ Sp) r))
-  (let-match many (list-nth _ sp-table i) (NthHit _ _ _ e _)
-    ((NthMiss _ _ _ _) (None _)))
+  (let-match many (idmap-get _ i sp-index) (Hit _ _ _ e _)
+    ((Miss _ _ _ _) (None _)))
   (match many e _ ((MkSpEntry _ sp) (Some _ sp))))
 
 ; ---- Scopes of the post-erasure code: a context is the frames of non-erased ids the code binds, innermost
@@ -2122,6 +2124,7 @@
 
 (def-fns _ $ (many slots-ruled : (many (Slots) sl) (many (Nat) x) -> (many (Slots) r))
   (let-match many sl (MkSlots kinds fm))
+  (let-match many fm (Succ _) ((Zero) sl))
   (let-match many (idmap-get _ x kinds) (Hit _ _ _ e _) ((Miss _ _ _ _) sl))
   (match many e _ ((MetaSlot) (MkSlots kinds $ nat-pred fm)) (else sl)))
 
