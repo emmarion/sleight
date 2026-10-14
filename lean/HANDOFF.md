@@ -32,8 +32,6 @@ reading of why:
   names; the link from an entry to its slot lives in the reader's state,
   which inference does not see.
 - `macro_body.sl`, `macro_splice.sl`: macros.
-- `array_cycle.sl`, `array_closure_cycle.sl`: `(slot-of x)` at a unique
-  position (item 2 below).
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
@@ -357,11 +355,9 @@ computes.
    semantics the core does not have, and the placings are `def-prim`s
    with non-erased returns), `array-unpluck` (its `slot-self` names a
    pattern field whose slot is already its scrutinee's; the reference
-   equates the two by forcing), `(slot-of x)` at a unique position
-   (`tests/array_cycle.sl`, `tests/array_closure_cycle.sl`; the uses
-   pass refuses a unique use of a slot entry, which is not born unique,
-   and accepting it would need a lemma that a `(Slot)` value owns no
-   block), `World` and `Program`, a non-erased at-match on a union, and
+   equates the two by forcing), a slot used both at unique and at many
+   (a non-erased slot entry is born `unique`, and the uses pass allows
+   one or the other), `World` and `Program`, a non-erased at-match on a union, and
    the gaps the README's slot item lists.
    The user asked that mutation state be left until everything else is
    done, so the non-mutation items here come first.

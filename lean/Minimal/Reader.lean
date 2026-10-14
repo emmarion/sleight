@@ -289,6 +289,8 @@ def ESt.slotRoot (st : ESt) (i : Nat) : Nat :=
   let m := st.renames ++ st.links
   (List.range m.length).foldl (fun i _ => (m.lookup i).getD i) i
 
+def ESt.isSlot (st : ESt) (i : Nat) : Bool := st.slots.any (·.2 == .fv i)
+
 def ESt.liftTm (st : ESt) (d : Nat) : Tm := .ofList (((st.lifts.lookup d).getD []).map Tm.fv)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
@@ -550,7 +552,9 @@ def slotM (i : Nat) : M (List (Core → Core) × Tm) := do
   modify fun st => { st with n := st.n + 1, ers := st.ers ++ [er] }
   modify fun st => { st with slots := (r, Tm.fv k) :: st.slots, known := (k, Tm.app (.tyc slotD .nil) .nil) :: st.known }
   modify fun st => { st with links := (k, r) :: st.links }
-  return ([Core.prim (Prim.atom slotD) er], .fv k)
+  let u := !er
+  if u then modify fun st => { st with uq := k :: st.uq }
+  return ((if u then [fun c => Core.chk (.mark (.uq [true])) .nil .nil c] else []) ++ [Core.prim (Prim.atom slotD) er], .fv k)
 
 def mintSlots (sc : Scope) (e : Sx) (ats : Bool := true) : M (List (Core → Core)) :=
   (e.slotRefs ats).eraseDups.flatMapM fun x =>
@@ -1208,7 +1212,7 @@ def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
   if m.isEr || st.ghost then return
   let u := st.uq.contains i
   if m == .uniq && !u then throw "a value not declared `unique` is used at unique"
-  if m == .many && u && !sharing then throw "a unique value is used at many without `share`"
+  if m == .many && u && !sharing && !st.isSlot i then throw "a unique value is used at many without `share`"
   if !u then return
   if m == .uniq && i < st.captures then throw "`def-fns` cannot capture a unique value at unique"
   match st.uses.lookup i with
@@ -2085,7 +2089,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       let st ← get
       let er := md.isEr
       let token : Bool := match t with
-        | .fv i => (er && (st.settledVal i).isSome) || (!er && (md == .uniq || st.uq.contains i))
+        | .fv i => (er && (st.settledVal i).isSome) || (!er && (md == .uniq || (st.uq.contains i && !st.isSlot i)))
         | _ => false
       let i ← match t, token with
         | .fv i, false => do

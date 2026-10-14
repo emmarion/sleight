@@ -480,7 +480,11 @@ it is `Settled`, and its `is` rule.
   core checks each promise canonically. `(slot-of x)` is the slot of
   `x`, erased when `x` is, and of a hidden entry erased always;
   `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
-  `vacant-slot` puts its binder there. A slot entry is its own slot.
+  `vacant-slot` puts its binder there. A slot entry is its own slot. A
+  non-erased slot entry is made `unique` (its value is an immediate,
+  which owns nothing), so `(slot-of x)` may stand at a unique position;
+  a use of it at many needs no `share`. The uses pass accepts the
+  primitive that makes it, `Prim.atom`, at unique.
   `(slot-self s)` makes `s` its own slot, and is refused once the slot
   of `s` is in use. `at` changes no value: the runner computes an
   `at` result like any other. Not done: the slot a forcing unification

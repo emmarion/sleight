@@ -214,6 +214,7 @@ theorem primUses_uq {G : UCtx} {u : Bool} {p : Prim} {A : Uses} (h : G.primUses 
     · cases h2
     · exact termUses_uq h2
   · split at h <;> cases h; exact UqOK.nil
+  · cases h; exact UqOK.nil
   · split at h
     · cases h
     · exact termUses_uq h
