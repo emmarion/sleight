@@ -72,7 +72,11 @@ mutual
 def termUses (G : UCtx) (u : Bool) : Tm → Option Uses
   | .fv i => G.use i u
   | .app h args => match G.sigOf P h with
-    | some sig => G.argsUses (fun k => u && k.u) args sig
+    | some sig => do
+      let A ← G.argsUses (fun k => u && k.u) args sig
+      match h with
+      | .fv i => Uses.seq [(i, false)] A
+      | _ => some A
     | none => none
   | .vc .. | .tyc .. | .nil => some []
   | _ => none

@@ -135,28 +135,37 @@ inductive Foot (H : Heap) : Tm → Tm → Nat → Prop
 
 def Prog.rdU (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any fun (j, u) => j == i && u).getD false
 
-inductive Spine (H : Heap) : Tm → Tm → Nat → Prop
-  | top : Spine H (.ptr a) v a
-  | field {k : Nat} {vs : Tm} : H.blk a = some (d, c, ws) → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
-      ws[k]? = some w → vs.toList[k]? = some v → Spine H w v b → Spine H (.ptr a) (.app (.vc d c .nil) vs) b
-  | clo {eM eS : Tm} : P.rdU gid i = true → Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
-      Spine H (.clo eM gid j) (.clo eS gid j) b
+inductive Spine (H : Heap) : Tm → Tm → Tm → Nat → Prop
+  | top {vs : Tm} : P.wrapField d c = none → Spine H (.ptr a) u (.app (.vc d c ls) vs) a
+  | field {k : Nat} {vsS vs : Tm} : H.blk a = some (d, c, ws) → P.wrapField d c = none → P.ctor d c = some sig →
+      (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vsS.toList[k]? = some u → vs.toList[k]? = some v →
+      Spine H w u v b → Spine H (.ptr a) (.app (.vc d c .nil) vsS) (.app (.vc d c ls) vs) b
+  | wrap {k : Nat} {vs : Tm} : P.wrapField d c = some k → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
+      vs.toList[k]? = some v → Spine H w u v b → Spine H w u (.app (.vc d c ls) vs) b
+  | clo {eM eS eF : Tm} : P.rdU gid i = true →
+      Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i) b →
+      Spine H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j) b
 
 def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
 
-inductive WO (H : Heap) : Tm → Tm → Prop
-  | ptr {vs : Tm} : H.blk a = some (d, c, ws) → P.ctor d c = some sig →
-      (∀ (k : Nat) w v, ws[k]? = some w → vs.toList[k]? = some v → ¬ Foot P H w v a) →
-      (∀ (k : Nat) w v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs.toList[k]? = some v → WO H w v) →
-      (∀ (k : Nat) w v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs.toList[k]? = some v →
-        ∀ (j : Nat) w' v', j ≠ k → ws[j]? = some w' → vs.toList[j]? = some v' → Disj (Spine P H w v) (Foot P H w' v')) →
-      WO H (.ptr a) (.app (.vc d c .nil) vs)
-  | clo {eM eS : Tm} : (∀ i, P.rdU gid i = true → WO H (Tm.env eM.toList i) (Tm.env eS.toList i)) →
+inductive WO (H : Heap) : Tm → Tm → Tm → Prop
+  | ptr {vsS vs : Tm} : H.blk a = some (d, c, ws) → P.wrapField d c = none → P.ctor d c = some sig →
+      (∀ (k : Nat) w u, ws[k]? = some w → vsS.toList[k]? = some u → ¬ Foot P H w u a) →
+      (∀ (k : Nat) w u v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vsS.toList[k]? = some u →
+        vs.toList[k]? = some v → WO H w u v) →
+      (∀ (k : Nat) w u v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vsS.toList[k]? = some u →
+        vs.toList[k]? = some v → ∀ (j : Nat) w' u', j ≠ k → ws[j]? = some w' → vsS.toList[j]? = some u' →
+        Disj (Spine P H w u v) (Foot P H w' u')) →
+      WO H (.ptr a) (.app (.vc d c .nil) vsS) (.app (.vc d c ls) vs)
+  | wrap {vs : Tm} : P.wrapField d c = some k → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
+      vs.toList[k]? = some v → WO H w u v → WO H w u (.app (.vc d c ls) vs)
+  | clo {eM eS eF : Tm} :
+      (∀ i, P.rdU gid i = true → WO H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i)) →
       (∀ i, P.rdU gid i = true → ∀ i', i' ≠ i → P.rd gid i' = true →
-        Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i)) (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
-      WO H (.clo eM gid j) (.clo eS gid j)
-  | tok : WO H w .tok
-  | imm : (∀ a, w ≠ .ptr a) → (∀ e g j, w ≠ .clo e g j) → WO H w v
+        Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i) (Tm.env eF.toList i))
+          (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
+      WO H (.clo eM gid j) (.clo eS gid j) (.clo eF gid j)
+  | free : (∀ b, ¬ Spine P H w u v b) → WO H w u v
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
 
