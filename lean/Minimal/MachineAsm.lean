@@ -1308,4 +1308,315 @@ theorem MSound.case (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt
         obtain ⟨_, _, rfl⟩ := ha
         simpa [List.getD_eq_getElem?_getD, hb] using hRk
 
+theorem spread_tok : ∀ (bs : List Bool) (xs : List Tm) (k : Nat), k < bs.length → bs.getD k true = true →
+    (spread bs xs)[k]? = some .tok
+  | [], _, k, h, _ => by simp at h
+  | true :: bs, xs, 0, _, _ => by simp [spread]
+  | false :: bs, xs, 0, _, h => by simp at h
+  | true :: bs, xs, k + 1, h, h' => by simpa [spread] using spread_tok bs xs k (by simpa using h) (by simpa using h')
+  | false :: bs, xs, k + 1, h, h' => by simpa [spread] using spread_tok bs xs.tail k (by simpa using h) (by simpa using h')
+
+theorem teleUs_kinds (t : Tm) : teleUs t = t.kinds.map (·.u) := by
+  induction t <;> simp_all [teleUs, Tm.kinds]
+
+theorem UCtx.fnCtx_uqlt {G : UCtx} {Gr : Group} {F : FnDef} (huq : ∀ j, G.uq.contains j = true → j < G.Γ.n)
+    (hbn : (G.Γ.body Gr F).1.n = G.Γ.n + Gr.fns.length + F.np) :
+    ∀ j, (G.fnCtx Gr F).uq.contains j = true → j < (G.fnCtx Gr F).Γ.n := by
+  intro i h
+  have hΓ : (G.fnCtx Gr F).Γ = (G.Γ.body Gr F).1 := rfl
+  rw [hΓ, hbn]
+  simp only [UCtx.fnCtx, List.contains_append, Bool.or_eq_true] at h
+  rcases h with h | h
+  · have := huq i h; omega
+  · simp only [List.contains_iff_mem, List.mem_filterMap, Prod.exists] at h
+    obtain ⟨u, k, hm, he⟩ := h
+    split at he
+    · simp only [Option.some.injEq] at he; subst he
+      have hk := List.mem_zipIdx' hm
+      simp at hk; omega
+    · cases he
+
+theorem MSound.call (hP : ProgOK P)
+    (hnd : ∀ (gid : Nat) (G : Group) (j : Nat) (F : FnDef), P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = none) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {f args : Tm} {dec : Dec}
+    {er : Bool} {ms : List Bool} {ve : Option (List Bool)} {rest : Core} {env : List Tm} {n1 gid : Nat} {Gr : Group}
+    {F : FnDef} {outs : List Tm} {cnt1 : Nat}
+    (hcal : callee P (f.subst (Tm.env ρ)) = some (env, n1, gid, Gr, F))
+    (hmu : muLt P.k (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) μ)
+    (hev : eval P (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size))
+      (env ++ closures env gid Gr ++ args.toList.map (·.subst (Tm.env ρ))) cnt F.body = .ok (outs, cnt1))
+    (ihb : MSound P (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size))
+      (env ++ closures env gid Gr ++ args.toList.map (·.subst (Tm.env ρ))) cnt F.body)
+    (ihr : MSound P μ (ρ ++ outs) cnt1 rest) :
+    MSound P μ ρ cnt (.call f dec args er ms ve rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs' cnt' h
+  subst hGΓ
+  rw [eval] at h; simp only [hcal] at h; rw [dif_pos hmu] at h; simp only [hev] at h
+  rw [checkCore] at hck
+  obtain ⟨⟨Ft, hft⟩, hft', hck⟩ := Except.bind_ok hck
+  split at hck
+  rename_i T0 ht0 heqT
+  cases heqT
+  split at hck
+  rotate_left; · cases hck
+  rename_i l np t uf hmk hF
+  obtain ⟨⟨ht⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨outsT, ha⟩, hat, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hn⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hd⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨ho⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hve⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
+  cases hck
+  obtain ⟨hE', hb', hm', hrs', hh', hle, hol, hsimc⟩ := call_step (rest := rest) hP hE hlb hm hrs hft hF ht ha hn hd ho hok hve hcal hev
+    fun Γb rb hcb hEb hbb hmb hrbs => eval_sound hP _ _ cnt F.body gid Γb rb hcb hEb hbb hmb hrbs
+  have hw := hE.wf
+  obtain ⟨hv, hfs, hFs⟩ := tm_sound hP hE hft
+  have hFs' := canon_static hw hFs
+  rw [hF] at hFs'; simp only [Tm.static, Bool.and_eq_true] at hFs'
+  rw [← hE.canon Ft, hF] at hv; simp only [Tm.subst] at hv
+  obtain ⟨env0, Γc, gid0, Gr0, j, F0, hfv, -, hG0, -, hFj0, hty⟩ := hv.fn_inv
+  have hcl : CloOK P (f.subst (Tm.env ρ)) := CloOK.subst (CloOK.env hC) f hft.noClo
+  rw [hfv] at hcl
+  obtain ⟨⟨Gd, Gr', hGr', hEd, hokd, ⟨rcg, hcg⟩, hfd, huse⟩, hcle⟩ := hcl
+  rw [Tm.toList_ofList] at hEd
+  obtain ⟨e2, j2, he2', henv, hG2, hFj2⟩ := callee_some hcal
+  rw [hfv] at he2'; simp only [Tm.clo.injEq] at he2'; obtain ⟨rfl, rfl, rfl⟩ := he2'
+  rw [hG0] at hG2 hGr'; cases hG2; cases hGr'
+  rw [hFj0] at hFj2; cases hFj2
+  rw [Tm.toList_ofList] at henv; subst henv
+  obtain ⟨e', n1', g', G', F', h1, -, ⟨Γb, rb, rfl, rfl, hcb, hEb, hbb, hmb, hrbs, hrb, hgb, he1, he2, hdl, he3, hrbt⟩,
+    hot, hos, hFe, hFnp, hdo⟩ := call_setup_ctx hP hE hlb hm hft hF ht ha hn hd hfv hEd hG0 hokd hFj0 hty hfs hFs'
+  rw [hcal] at h1
+  simp only [Option.some.injEq, Prod.mk.injEq] at h1
+  obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h1
+  obtain ⟨hcB, hckB⟩ := checkGroup_body hcg j F hFj0
+  have hCb : ∀ v ∈ env ++ closures env gid0 Gr ++ args.toList.map (·.subst (Tm.env ρ)), CloOK P v := by
+    intro v hv
+    simp only [List.mem_append] at hv
+    rcases hv with (hv | hv) | hv
+    · exact CloOK.toList hcle v (by rwa [Tm.toList_ofList])
+    · simp only [closures, List.mem_map] at hv; obtain ⟨k, -, rfl⟩ := hv
+      exact ⟨by rw [Tm.toList_ofList]; exact ⟨Gd, Gr, hG0, hEd, hokd, ⟨_, hcg⟩, hfd, huse⟩, hcle⟩
+    · exact CloOK.subst_list hC (ArgsTy.noClo ha) v hv
+  have ihb' := fun (Gb : UCtx) (hGb : Gb.Γ = (Gd.Γ.body Gr F).1) (hfb : Gb.fill = false) (rub : List Bool) =>
+    ihb gid0 Gb _ rub (.inl (Gd.Γ.body Gr F).2) _ hcB hfb hGb hckB hEb hbb hmb hrbs hCb outs cnt1 hev
+  have hbn : (Gd.Γ.body Gr F).1.n = Gd.Γ.n + Gr.fns.length + F.np := by
+    have := hEb.len
+    simp only [List.length_append, closures, List.length_map, List.length_range, Tm.len_toList _ ha.isList] at this
+    rw [hEd.len, hn, ← hFnp] at this; omega
+  have houts : ∀ v ∈ outs, CloOK P v := by
+    by_cases hgΓ : (Gd.Γ.body Gr F).1.ghost = false
+    · rw [hgb] at hgΓ; simp only [Bool.or_eq_false_iff] at hgΓ
+      obtain ⟨hgd, huqd, O, K, hO, -⟩ := huse hgΓ.1
+      obtain ⟨U, K', hU, -⟩ := usesFns_spec Gr.fns O K hO j F hFj0
+      exact (ihb' (Gd.fnCtx Gr F) rfl hfd ((teleUs F.tele).drop F.np)).2 fun _ =>
+        ⟨UCtx.fnCtx_uqlt huqd hbn, by rw [hU]; rfl⟩
+    · exact (ihb' { G with Γ := (Gd.Γ.body Gr F).1 } rfl hf []).2 fun h' => absurd h' hgΓ
+  have hcalleeU : G.callee P f args = some (t, outsT, uf) := by simp [UCtx.callee, hft', hF, hat]
+  have hΓr : ∀ us, (G.next (G.adv P (G.Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest))
+      us).Γ = Ctx.adv P G.Γ (G.Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest) :=
+    fun us => by simp [UCtx.next, UCtx.adv, hf]
+  have hCo : ∀ v ∈ ρ ++ outs, CloOK P v := fun v hv => by
+    rcases List.mem_append.mp hv with hv | hv
+    · exact hC v hv
+    · exact houts v hv
+  have ihr' := fun us => ihr b (G.next (G.adv P (G.Γ.pushTele outsT (some (ms.map (er || ·))))
+    (.call f dec args er ms ve rest)) us) _ ru rs rets _ hf (hΓr us) hr' hE' hb' hm' hrs' hCo vs' cnt' h
+  have hn' : G.Γ.n ≤ (G.adv P (G.Γ.pushTele outsT (some (ms.map (er || ·)))) (.call f dec args er ms ve rest)).n := by
+    rw [UCtx.adv_n' hf, Ctx.pushTele_n _ hot]; omega
+  refine ⟨?_, fun hpre => (ihr' (if er || G.Γ.ghost then [] else teleUs outsT)).2 fun hg' => ?_⟩
+  · cases er
+    · intro U K hU ρS vsS hS hrun Hh ρM Res Out Shr pd hM hGk
+      have hg := hGk.ghost
+      refine machine_call hcalleeU hot hol
+        (fun A B AB hA hB hAB ρS envS gid' j' Gr' F' outsSb hS' hfS hGr hFj hrunS H ρM Out' Shr hM' => ?_)
+        (fun ρS envS gid' j' Gr' F' outsSb hS' hfS hGr hFj hrunS => by
+          simpa [UCtx.adv, hf] using hsimc ρS hg hS' rfl envS gid' j' Gr' F' outsSb hfS hGr hFj hrunS)
+        (by simpa [hg] using (ihr' (teleUs outsT)).1) U K hU ρS vsS hS hrun Hh ρM Res Out Shr pd hM hGk
+      simp only [Ctx.ok, hg, Bool.false_or, Bool.and_eq_true] at hok
+      obtain ⟨⟨hrf, hra⟩, hcm⟩ := hok
+      obtain ⟨fi, rfl⟩ : ∃ fi, f = .fv fi := by
+        have hnc := hft.noClo
+        cases f <;> first | exact ⟨_, rfl⟩ | (simp [Tm.noClo] at hnc; done) | (simp [Tm.subst] at hfv; done)
+      have hR := rt_real hP hE hS' (.fv fi) hrf; rw [hfv] at hR
+      rcases hR.clo_inv with ⟨envS0, env1, Gr1, F1, hfS0, he1', hG1, hgG, hF1, hfe, hdn, hSc⟩ |
+        ⟨env1, Gr1, F1, tg, he1', hG1, hgG, hF1, hfe, hdt, hRt⟩
+      · rw [hfS0] at hfS; simp only [Tm.clo.injEq] at hfS; obtain ⟨rfl, rfl, rfl⟩ := hfS
+        have he1'' := congrArg Tm.toList he1'; simp only [Tm.toList_ofList] at he1''; subst he1''
+        rw [hG0] at hG1 hGr; cases hG1; cases hGr; rw [hFj0] at hF1 hFj; cases hF1; cases hFj
+        obtain ⟨hgd, huqd, O, K, hO, hdOK⟩ := huse hgG
+        obtain ⟨Ub, Kb, hUb, hrd0, hrdU0, hsib0, hpU0⟩ := cert_body hG0 hFj0 hdn hfd huqd hbn hO hdOK
+        have hlS : envS0.length = Gd.Γ.n := by rw [hSc.1, hEd.len]
+        have hgb0 : (Gd.Γ.body Gr F).1.ghost = false := by rw [hgb, hgG, hfe]; rfl
+        have hFtele : F.tele.isTele := by
+          cases hokd with | mk _ _ htyF _ _ _ _ _ => cases htyF j F hFj0 with | fn _ _ h _ _ => exact h.isTele
+        have hty' := hty
+        simp only [FnDef.type, Tm.subst, Tm.fn.injEq] at hty'
+        obtain ⟨-, -, htele, hFu, -⟩ := hty'
+        have hkinds : F.tele.kinds = t.kinds := by
+          rw [← Tm.kinds_subst (Tm.env env) _ hFtele, htele, Tm.kinds_subst _ _ ht]
+        have hal := ha.isList
+        have hnp : args.toList.length = F.np := by rw [Tm.len_toList _ hal, hn, hFnp]
+        have hoe : outsT.ers = t.ers.drop np := by rw [ha.ers ht, hn]
+        have hrbe : (Gd.Γ.body Gr F).2.ers = outsT.ers := by
+          rw [← Tm.ers_subst _ _ hrbt, hrb, Tm.ers_subst _ _ hot]
+        have htl : np ≤ t.ers.length := by have := ha.len ht; rw [Tm.len_ers _ ht]; omega
+        refine call_body (m := outsT.len) (Gb := Gd.fnCtx Gr F) hP hE hS' hra hA hB hAB hfS0 hG0 hFj0 hdn ?_
+          (by simpa [Tm.subst] using hfv) (by simp [Tm.toList_ofList, hSc.1]) hUb ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+          (ihb' (Gd.fnCtx Gr F) rfl hfd _).1 ?_ hrunS ?_ hM'
+        · intro k Fk tk hFk hu hdt
+          simp only [Tm.toList_ofList, hlS]
+          have hd1 := (Group.deleOK_spec hdo hFk hdt).1
+          unfold UCtx.defOK at hdOK
+          simp only [Bool.and_eq_true, List.all_eq_true] at hdOK
+          have h5 := hdOK.2 Fk (List.mem_of_getElem? hFk)
+          rw [hdt] at h5
+          simp only [Option.all_some, hu, Bool.false_eq_true, ite_false] at h5
+          rw [hEd.len] at hd1
+          refine ⟨hd1, fun hlt => ?_, fun hge => ?_⟩
+          · simpa [hlt] using h5
+          · simpa [show ¬ tk < Gd.Γ.n by omega] using h5
+        · show (Gd.Γ.body Gr F).1.n = _
+          rw [hbn, Tm.toList_ofList, hlS, hnp]
+        · exact fun _ _ _ _ _ => ⟨.inl rfl, fun x hx => by simp [UCtx.fnCtx] at hx, fun t ht => by simp [UCtx.fnCtx] at ht,
+            UCtx.fnCtx_uqlt huqd hbn, hfd, hgb0⟩
+        · intro i hi h _; simp only [Tm.toList_ofList, hlS] at hi; exact hrd0 i hi h
+        · intro i hi h _
+          simp only [Tm.toList_ofList, hlS] at hi
+          have hr := hrdU0 i hi h
+          refine ⟨hr, ?_⟩
+          simp [Prog.rdU, Prog.fnU, hG0, hFj0] at hr
+          rw [← hFu]; exact hr.1.1
+        · intro k hk h _; simp only [Tm.toList_ofList, hlS] at h ⊢; exact hsib0 k hk h
+        · intro k hk h _
+          simp only [Tm.toList_ofList, hlS] at h
+          rw [← hkinds, ← teleUs_kinds]
+          exact hpU0 k (by omega) h
+        · intro xs hxs
+          have hin : F.spreadIn ve xs = spread (t.ers.take np) (filt (t.ers.take np) xs) := by
+            simp only [FnDef.spreadIn, hFe, hFnp, hve, Option.getD_some, hxs, Tm.len_toList _ hal, hn]
+          refine ⟨by rw [hin, length_spread]; simp [Tm.len_toList _ hal, hn]; omega, fun k hk he => ?_⟩
+          simp only [Tm.toList_ofList, hSc.1] at he
+          rw [Tm.len_toList _ hal, hn] at hk
+          change (Gd.Γ.body Gr F).1.er _ = false at he
+          rw [he3 k hk] at he
+          refine ⟨he, ?_⟩
+          rw [hin, spread_filt _ _ (by simp [hxs, Tm.len_toList _ hal, hn]; omega) k (by rw [getD_take hk]; exact he)]
+        · intro xs ys hl1 hl2
+          have hout : ∀ zs, F.spreadOut ve args.toList.length zs = spread outsT.ers (filt outsT.ers zs) := fun zs => by
+            simp only [FnDef.spreadOut, hFe, hFnp, hve, Option.getD_some, Tm.len_toList _ hal, hn, hoe]
+          rw [hout, hout]; rw [hrbe] at hl2 ⊢
+          refine ⟨by simp [length_spread], fun k w u hw hu => ?_⟩
+          have hkl : k < outsT.ers.length := by
+            have := (List.getElem?_eq_some_iff.mp hw).1; rwa [length_spread] at this
+          cases hk : outsT.ers.getD k true
+          · rw [spread_filt _ _ (by omega) k hk] at hw hu
+            exact .inr ⟨rfl, hw, hu⟩
+          · rw [spread_tok _ _ k hkl hk] at hw hu
+            cases hw; cases hu; exact .inl ⟨rfl, rfl⟩
+        · have hus : teleUs outsT = (teleUs F.tele).drop F.np := by
+            rw [teleUs_kinds, teleUs_kinds, ha.kinds ht, hn, ← hFnp, hkinds, List.map_drop]
+          exact fun k h _ => hus ▸ h
+        · rw [Tm.toList_ofList]
+          exact call_simb hP hE hS' ha ht hn hra hG0 hgG hdn hdo hSc hve hFe hFnp he1 he2 he3
+        · have hsimb := call_simb hP hE hS' ha ht hn hra hG0 hgG hdn hdo hSc hve hFe hFnp he1 he2 he3
+          obtain ⟨outsS', hrun', hreb⟩ := (eval_sound hP _ _ cnt F.body gid0 _ _ hcb hEb hbb hmb hrbs).2 hgb0 _ hsimb
+            outs cnt1 hev
+          rw [Tm.toList_ofList] at hrunS
+          rw [RunS.det hrunS hrun', hrbe, Tm.len_ers _ hot, ← hol]
+          have := hreb.len; simpa [Tm.toList_ofList] using this
+      · exact absurd hdt (by rw [hnd _ _ _ _ hG1 hF1]; simp)
+    · exact machine_callE (fun t' o' u' hc => by rw [hcalleeU] at hc; cases hc; exact ⟨hot, ho⟩) (by rw [hol, ho])
+        (fun t' o' u' hc => by rw [hcalleeU] at hc; cases hc; exact (ihr' []).1)
+  · have hg : G.Γ.ghost = false := by
+      simpa [UCtx.next, UCtx.adv_ghost' hf, (Ctx.pushTele_er G.Γ outsT _ hot).1] using hg'
+    obtain ⟨huq, hus⟩ := hpre hg
+    obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+    rw [usesCore] at hU
+    obtain ⟨⟨t', o', u'⟩, hc, hU⟩ := Option.bind_eq_some_iff.mp hU
+    rw [hcalleeU] at hc; cases hc
+    simp only at hU
+    obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
+    exact ⟨UCtx.next_uqlt huq hn', by rw [hC']; rfl⟩
+
+theorem machine_sound (hP : ProgOK P) (hco : CoerceVal P)
+    (hnd : ∀ (gid : Nat) (G : Group) (j : Nat) (F : FnDef), P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = none) : ∀ μ ρ cnt c, MSound P μ ρ cnt c ∧
+    ∀ p rest, c = .prim p false rest → MSound P μ (ρ ++ [p.eval ρ]) cnt rest := by
+  intro μ ρ cnt c
+  induction μ, ρ, cnt, c using eval.induct P with
+  | case1 μ ρ cnt ts =>
+    exact ⟨MSound.ret hP, fun _ _ e => by cases e⟩
+  | case2 μ ρ cnt f dec args er ms ve rest env n1 gid G F hcal argv μ' hmu outs cnt1 hev ihb ihr =>
+    exact ⟨MSound.call hP hnd hcal hmu hev ihb.1 ihr.1, fun _ _ e => by cases e⟩
+  | case3 μ ρ cnt f dec args er ms ve rest env n1 gid G F hcal argv μ' hmu e hev ihb =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs cnt' h; rw [eval] at h; simp only [hcal] at h; rw [dif_pos hmu] at h
+    simp only [argv, μ'] at hev; simp only [hev] at h; cases h
+  | case4 μ ρ cnt f dec args er ms ve rest env n1 gid G F hcal argv μ' hmu =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs cnt' h; rw [eval] at h; simp only [hcal] at h; rw [dif_neg hmu] at h; cases h
+  | case5 μ ρ cnt f dec args er ms ve rest hcal =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs cnt' h; rw [eval] at h; simp [hcal] at h
+  | case6 μ ρ cnt s R brs els er rest d c ls vs hs pre body hb outs cnt1 hev ihb ihr =>
+    exact ⟨MSound.mtch hP hs hb hev ihb.1 ihr.1, fun _ _ e => by cases e⟩
+  | case7 μ ρ cnt s R brs els er rest d c ls vs hs pre body hb e hev ihb =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp only [hs] at h
+    split at h
+    · rename_i hb'; rw [hb] at hb'; cases hb'; simp [hev] at h
+    · cases h
+  | case8 μ ρ cnt s R brs els er rest d c ls vs hs hb =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp only [hs] at h
+    split at h
+    · rename_i hb'; rw [hb] at hb'; cases hb'
+    · cases h
+  | case9 μ ρ cnt s R brs els er rest hs =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h
+    split at h
+    · exact (hs _ _ _ _ ‹_›).elim
+    · cases h
+  | case21 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
+    exact ⟨MSound.seq hP hev ihb.1 ihr.1, fun _ _ e => by cases e⟩
+  | case22 μ ρ cnt R body rest e0 hev ihb =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp [hev] at h
+  | case10 μ ρ cnt p er rest ih =>
+    exact ⟨MSound.prim hP hco ih.1, fun p' r' e => by cases e; exact ih.1⟩
+  | case11 μ ρ cnt rest ih =>
+    exact ⟨MSound.defLvl ih.1, fun _ _ e => by cases e⟩
+  | case12 μ ρ cnt gid rest Gr hG ih =>
+    exact ⟨MSound.defFns hP hG ih.1, fun _ _ e => by cases e⟩
+  | case13 μ ρ cnt gid rest hG =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp [hG] at h
+  | case14 μ ρ cnt k a e rest ih =>
+    exact ⟨MSound.chk hP ih, fun _ _ e => by cases e⟩
+  | case15 μ ρ cnt body a hev ih =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp [hev] at h
+  | case16 μ ρ cnt body e hev ih =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp [hev] at h
+  | case17 μ ρ cnt =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; cases h
+  | case18 μ ρ cnt s brs els er nt d c ls vs hs pre body hb ih =>
+    exact ⟨MSound.case hP hs hb ih.1, fun _ _ e => by cases e⟩
+  | case19 μ ρ cnt s brs els er nt d c ls vs hs hb =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h; simp only [hs] at h
+    split at h
+    · rename_i hb'; rw [hb] at hb'; cases hb'
+    · cases h
+  | case20 μ ρ cnt s brs els er nt hs =>
+    refine ⟨?_, fun _ _ e => by cases e⟩
+    intro b G Γ ru rs rets _ _ _ _ _ _ _ _ _ vs' cnt' h; rw [eval] at h
+    split at h
+    · exact (hs _ _ _ _ ‹_›).elim
+    · cases h
+
 end Minimal

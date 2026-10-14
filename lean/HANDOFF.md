@@ -164,68 +164,56 @@ under a unique match the scrutinee's top block, which no field reaches,
 is left reserved for the branch (`Res`), which is what `GOK.uscr` asks
 for a cell binder to take later.
 
-Left, on this session's reading: `coerce` (the result is owned
-through the target's full value, the argument through the source's,
-and no lemma yet carries a `WO` across a `Coercible` proof), the
-rest of the callee's side of a non-erased call, and the assembly. On
-this session's reading what `call_body` takes as hypotheses needs: the
-pass's result for the body where its group was defined, so some
-invariant on closure values recording that the group passed `usesFns`
-in a context with the same `Γ` as `VTy.clo`'s `GroupOK` (closures are
-made only at `defFns`, where both hold for the same context); the
-typing facts tying the caller's view of the callee's type to the
-callee's telescope; and, for a call through a delegate, which runs
-the target's body in the stripped run and the delegate's in the full
-one, a machine counterpart of `walk1`.
+On this session's reading, what `coerce` needs and no lemma gives yet:
+the result is owned through the target's full value and the argument
+through the source's, and no lemma carries a `WO` across a `Coercible`
+proof.
 
-The plan for the assembly, on this session's reading: a theorem by
-`eval.induct`, under `CoreTy`, `EnvOK` and the `UCtx` facts `GOK`
-needs, concluding `MRun` for the core's full result, with each case
-one of the step lemmas and the hypotheses those take discharged from
-`eval_sound` and the induction hypotheses. It needs one new invariant
-on values: every closure occurring in a value carries a certificate
-that its group passed `usesFns` (and `defFns`'s checks) in some
-`UCtx` whose `Γ` the closure's environment satisfies (`EnvOK`) and
-for which `GroupOK` holds. `defFns` establishes it, substitution and
-the steps preserve it, and at a call it gives the body's uses and the
-facts `call_body` takes.
+The assembly takes the checker's success on a core (`checkCore … = .ok
+…`) as its hypothesis rather than an arbitrary `CoreTy` derivation.
+On this session's reading typing is relational (a primitive's, a
+callee's or a scrutinee's type is not unique), so the context a
+`CoreTy` derivation gives the rest of a core need not be the one the
+pass used, while the checker computes those types with the same
+functions as the pass (`checkPrim`, `checkTm`, `checkArgs`,
+`shapeOf`).
 
-On this session's reading the assembly cannot take an arbitrary
-`CoreTy` derivation as its hypothesis: typing is relational (a
-primitive's type, a callee's or a scrutinee's type are not unique), so
-the context `CoreTy` gives the rest of a core need not be the one the
-pass used (the pass computes those types with the checker's own
-functions: `checkPrim`, `checkTm`, `checkArgs`, `shapeOf`). The plan
-is to take the checker's success on the core (`checkCore … = .ok …`)
-as the hypothesis instead, whose derivation makes the same choices as
-the pass, and to unfold it case by case as the pass's result is.
-
-`Minimal/MachineAsm.lean` holds the assembly's pieces. `MSound P μ ρ cnt
-c` is the statement for one core: from the checker's success on `c` in
+`Minimal/MachineAsm.lean` holds the assembly. `MSound P μ ρ cnt c` is
+the statement for one core: from the checker's success on `c` in
 `G.Γ`, `EnvOK`, the level and measure facts, and `CloOK` of the
-environment, an `eval` that succeeds gives `MRun` for `c` and `CloOK` of
-the results when the context is ghost or the pass accepts `c`. `CloOK`
-asks a certificate only of a closure whose group is not ghost: a
-group's ghost flag is its defining context's (`GroupOK`), so ghost code
-makes only closures of ghost groups, which the uses pass never sees and
-the machine never calls (`Real.clo` asks `G.ghost = false`); asking a
-certificate of every closure would fail for an erased entry holding one. Proved without `sorry`, one
-lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`, `.defFns`,
-`.chk` (every check and mark, `open-adt` through `checkCore_opn`, and a
-`rebind` mark together with the primitive after it), `.mtch` (erased,
-a listed branch, and `else`) and `.case` (erased, newtype, a listed
-branch, and `else`, the newtype's through `machine_caseN_els`). The induction
-over `eval` is meant to carry `MSound` for a core and, when the core
-is a non-erased primitive, for the code after it, which is what the
-`rebind` case needs. On this session's reading the induction itself
-still has `call` open, and so stays out of the build. Its `prim` case takes `CoerceVal P` (`prim_val`'s conclusion
-for `coerce`) as a hypothesis until `coerce` is done.
-`checkBranches_live` inverts the checker's success on a listed branch
-(either `dead`, or the checker's success on its body in the branch's
-context) for the `mtch` and `case` steps, and `match_setup` says which
-context it picks for the branch (the listed branch's or the `else`'s),
-so the two can be matched; `mtch_setup` is the part of `eval_sound`'s
-`mtch` step that sets up the code after the match.
+environment, an `eval` of `c` that succeeds gives `MRun` for `c`, and
+`CloOK` of the results when the context is ghost or the pass accepts
+`c`. `machine_sound` proves `MSound` for every core by induction over
+`eval`, without `sorry` (`#print axioms` lists only `propext`,
+`Classical.choice` and `Quot.sound`). Its hypotheses besides `ProgOK`:
+`CoerceVal P` (`prim_val`'s conclusion for `coerce`, which no lemma
+proves yet) and that no function of the program is a delegate. On this
+session's reading these are the two parts of the theorem left open. A
+call through a delegate runs the target's body in the stripped run and
+the delegate's in the full one, and `walk1` has no machine counterpart
+yet. The induction carries, for a non-erased primitive, `MSound` of the
+code after it, which a `rebind` mark needs.
+
+One lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`,
+`.defFns`, `.chk` (every check and mark; `open-adt` through
+`checkCore_opn`; and a `rebind` mark with the primitive after it),
+`.mtch` (erased, a listed branch, `else`), `.case` (erased, newtype, a
+listed branch, `else`, the newtype's `else` through
+`machine_caseN_els`) and `.call` (erased, and through `call_body` for a
+closure). `CloOK` asks every closure for a certificate (`Cert`): the
+group's typing and the checker's success where the group was defined,
+always; and, when the group is not ghost, the uses pass's result there.
+A group's ghost flag is its defining context's (`GroupOK`), so the
+uses pass runs at every `def-fns` of a non-ghost group. `Cert` is what
+the `call` step applies the induction to: `checkGroup_body` gives the
+checker's success on the callee's body, and `call_setup_ctx`, run in
+the certificate's context, gives its environment. `checkBranches_live`
+inverts the checker's success on a listed branch, and `match_setup`
+says which context it picks for the branch, so the two can be matched.
+`mtch_setup`, `call_simb` and `call_step` are the parts of `eval_sound`
+the machine steps share; `call_step` also gives the stripped
+environment after a non-erased call for whichever run of the callee's
+body is given.
 
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's

@@ -3884,7 +3884,7 @@ theorem call_body (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {fi : Nat} {
       ∀ k, k < args.toList.length → Gb.Γ.er (envS.toList.length + Gr.fns.length + k) = false →
         t.ers.getD k true = false ∧ (F.spreadIn ve xs)[k]? = xs[k]?)
     {ruC : List Bool} {m : Nat}
-    (hsprO : ∀ xs ys : List Tm, xs.length = ys.length →
+    (hsprO : ∀ xs ys : List Tm, xs.length = ys.length → ys.length = Rb.ers.length →
       (F.spreadOut ve args.toList.length xs).length = (F.spreadOut ve args.toList.length ys).length ∧
       ∀ k w u, (F.spreadOut ve args.toList.length xs)[k]? = some w → (F.spreadOut ve args.toList.length ys)[k]? = some u →
         (w = .tok ∧ u = .tok) ∨ (Rb.ers.getD k true = false ∧ xs[k]? = some w ∧ ys[k]? = some u))
@@ -3894,6 +3894,7 @@ theorem call_body (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {fi : Nat} {
     (hsimb : SimEnv P Gb.Γ.er (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS)))
       (envF ++ closures envF gid Gr ++ args.toList.map (·.subst (Tm.env ρ))))
     (hrunS : RunS P (envS.toList ++ closuresS envS.toList gid Gr ++ F.spreadIn ve (args.toList.map (P.sub ρS))) F.body outsSb)
+    (hlS : outsSb.length = Rb.ers.length)
     {H : Heap} {Out' Shr : Nat → Prop} (hM : MFrame P AB G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr) :
     ∃ envM H1 as H2 outsMb, P.subU (Tm.env ρM) (.fv fi) = .clo envM gid j ∧
       P.buildList H (Tm.env ρM) args.toList = (H1, as) ∧
@@ -3950,7 +3951,7 @@ theorem call_body (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {fi : Nat} {
     simp [hGn]
   rw [hn] at hMb hown hlive
   obtain ⟨H2, outsMb, hrb, hOb⟩ := hbody Ub Kb hUb _ outsSb hsimb hrunS H1 _ _ Out' Shr none hMb (hGok _ _ _ _ _)
-  obtain ⟨hlo, hspo⟩ := hsprO outsMb outsSb hOb.len
+  obtain ⟨hlo, hspo⟩ := hsprO outsMb outsSb hOb.len hlS
   exact ⟨.ofList lM, H1, as, H2, outsMb, by simp only [Prog.subU]; exact hfM, hbl, by simpa [Tm.toList_ofList] using hrb,
     callee_out hOa sB hOb hown hlive hlo hspo hru⟩
 
