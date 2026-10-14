@@ -107,25 +107,29 @@ let str_cmp (s1, o1, l1) (s2, o2, l2) =
 let str_length (_, _, l) = Z.of_int l
 let str_split (s, o, l) k = let k = Z.to_int k in ((s, o, k), (s, o + k, l - k))
 let nat_str n = let s = Z.to_string n in (s, 0, String.length s)
-let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
+let append ((s1, o1, l1) as a) ((s2, o2, l2) as b) =
+  if l1 = 0 then b else if l2 = 0 then a
+  else let buf = Bytes.create (l1 + l2) in Bytes.blit_string s1 o1 buf 0 l1; Bytes.blit_string s2 o2 buf l1 l2; (Bytes.unsafe_to_string buf, 0, l1 + l2)
 
-(* A rope flattened in two passes: its leaves in order, then one buffer of their total length. [rope] views a
-   node, [slice] and [z] read the two kinds of leaf, [str] makes the result. *)
+(* A rope flattened into one buffer, its leaves in order, or a lone string leaf as it is. [rope] views a node,
+   [slice] and [z] read the two kinds of leaf, [str] makes the result. *)
 let flatten ~rope ~slice ~z ~str root =
-  let rec leaves acc = function
-    | [] -> acc
-    | v :: rest -> (
-        match rope v with
-        | REmpty -> leaves acc rest
-        | RStr s -> leaves (slice s :: acc) rest
-        | RCat (a, b) -> leaves acc (a :: b :: rest)
-        | RChar c -> leaves ((String.make 1 (Char.chr (Z.to_int (z c))), 0, 1) :: acc) rest)
-  in
-  let ls = List.rev (leaves [] [ root ]) in
-  let total = List.fold_left (fun n (_, _, l) -> n + l) 0 ls in
-  let buf = Bytes.create total in
-  ignore (List.fold_left (fun pos (s, o, l) -> Bytes.blit_string s o buf pos l; pos + l) 0 ls);
-  str (Bytes.unsafe_to_string buf, 0, total)
+  match rope root with
+  | RStr s -> str (slice s)
+  | _ ->
+      let buf = Buffer.create 64 in
+      let rec go = function
+        | [] -> ()
+        | v :: rest -> (
+            match rope v with
+            | REmpty -> go rest
+            | RStr s -> let s, o, l = slice s in Buffer.add_substring buf s o l; go rest
+            | RCat (a, b) -> go (a :: b :: rest)
+            | RChar c -> Buffer.add_char buf (Char.chr (Z.to_int (z c))); go rest)
+      in
+      go [ root ];
+      let s = Buffer.contents buf in
+      str (s, 0, String.length s)
 
 type 'a array_model = ANil | ACons of 'a * 'a
 type 'v list_model = Nil | Cons of 'v * 'v
