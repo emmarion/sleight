@@ -309,4 +309,474 @@ theorem usesCore_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid :
   rename_i _ hd
   exact ⟨O, K', hO, hd, by rw [hC]; rfl⟩
 
+theorem Except.bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β} (h : (x >>= f) = .ok b) :
+    ∃ a, x = .ok a ∧ f a = .ok b := by
+  cases x with
+  | error e => cases h
+  | ok a => exact ⟨a, rfl, h⟩
+
+theorem Pend.split (pd : Pend) (p : Prim) : Pend.Inert P pd p ∨ (∃ y A', pd = some (.alloc, y) ∧ p = .axm A') ∨
+    (∃ m t A', (m = .cellOf ∨ m = .write true) ∧ pd = some (m, t) ∧ p = .axm A') ∨
+    ∃ x t, pd = some (.reuse true, .fv x) ∧ p = .tm t := by
+  rcases pd with _ | ⟨m, t⟩
+  · exact .inl fun _ _ => rfl
+  · cases m <;> (try rename_i bb; cases bb) <;> cases p <;> (try cases t) <;>
+      first | exact .inl fun _ _ => rfl | simp
+
+theorem machine_primF (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p : Prim} {rest : Core}
+    {ρ vs : List Tm} (hE : EnvOK P ρ G.Γ) (hrt : p.rt P G.Γ = true)
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval ρ)) (hval : PrimVal P G ρ p)
+    (ih : ∀ T, G.primTy P p = some T →
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
+        (ρ ++ [p.eval ρ]) vs) :
+    MRun P b G ru rets (.prim p false rest) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  rcases Pend.split (P := P) pd p with hin | ⟨y, A', rfl, rfl⟩ | ⟨m, t, A', hm, rfl, rfl⟩ | ⟨x, t, rfl, rfl⟩
+  · exact machine_prim_inert hreal ih hval U K hU ρS vsS hS hrun H ρM Res Out Shr pd hin hM hG
+  · exact machine_prim_alloc hreal ih U K hU ρS vsS hS hrun H ρM Res Out Shr hM hG
+  · exact machine_prim_cell hm hreal ih U K hU ρS vsS hS hrun H ρM Res Out Shr hM hG
+  · exact machine_prim_reuse hP hE (by simpa [Prim.rt] using hrt) hreal ih U K hU ρS vsS hS hrun H ρM Res Out Shr hM hG
+
+theorem natTm'_cloOK (d : Nat) : ∀ n, CloOK P (natTm' d n)
+  | 0 => by simp [natTm', CloOK]
+  | k + 1 => by simp [natTm', CloOK, natTm'_cloOK d k]
+
+theorem PrimTy.cloOK {Γ : Ctx} {ρ : List Tm} {p : Prim} {T : Tm} (hp : PrimTy P Γ p T) (hC : ∀ v ∈ ρ, CloOK P v) :
+    CloOK P (p.eval ρ) := by
+  have hs := CloOK.subst (P := P) (CloOK.env hC)
+  cases hp with
+  | tm ht | lit ht => exact hs _ ht.noClo
+  | coerce _ _ _ _ _ hb => exact hs _ hb.noClo
+  | assert _ h0 => rw [Prim.eval, ← Tm.subst_static0 (Tm.env ρ) _ 0 h0]; exact hs _ (Tm.noClo_static _ 0 0 h0)
+  | num => exact natTm'_cloOK _ _
+  | _ => simp [Prim.eval, CloOK]
+
+theorem UCtx.primTy_check {G : UCtx} {p : Prim} {T : Tm} {hp : PrimTy P G.Γ p T}
+    (h : checkPrim P G.Γ p = .ok ⟨T, hp⟩) : G.primTy P p = some T := by
+  unfold UCtx.primTy; split
+  · cases hp; rfl
+  · rw [h]
+
+def CoerceVal (P : Prog) : Prop := ∀ (G : UCtx) ρ a b q T, EnvOK P ρ G.Γ → PrimTy P G.Γ (.coerce a b q) T →
+  (Prim.coerce a b q).rt P G.Γ = true → PrimVal P G ρ (.coerce a b q)
+theorem checkCore_opn {b : Nat} {Γ : Ctx} {oe : Bool} {m : Nat} {x : Tm} {rest : Core} {rs : Tm ⊕ Nat} {rets : Tm} {h}
+    (hck : checkCore P b Γ (.chk (.opn oe) (.fv m) x rest) rs = .ok ⟨rets, h⟩) :
+    (∃ M u nt ex ph H cs, Γ.tys[m]? = some M ∧ Γ.canon M = .mtbl u nt ex ph H cs ∧ (¬ cs.toList.Nodup ∨
+      unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
+        (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .contra)) ∨
+    ∃ u nt ex ph H cs σ' h', (Γ.tys[m]?).map Γ.canon = some (.mtbl u nt ex ph H cs) ∧
+      unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
+        (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' ∧
+      checkCore P b { Γ with opened := (m, oe) :: Γ.opened, σ := σ' } rest rs = .ok ⟨rets, h'⟩ := by
+  cases rs <;> (first | rw [checkCore.eq_13] at hck | rw [checkCore.eq_14] at hck)
+  all_goals split at hck <;> try cases hck
+  all_goals split at hck <;> try cases hck
+  all_goals rename_i M hM u nt ex ph H cs hc
+  all_goals cases rest
+  all_goals try dsimp only at hck
+  all_goals first
+    | (obtain ⟨⟨hn⟩, -, hck⟩ := Except.bind_ok hck
+       try dsimp only at hck
+       split at hck
+       · obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+         cases hck
+         exact .inr ⟨u, nt, ex, ph, H, cs, _, _, by simp [hM, hc], ‹_›, hr'⟩
+       all_goals cases hck)
+    | (split at hck
+       · split at hck
+         · exact .inl ⟨M, u, nt, ex, ph, H, cs, hM, hc, .inr ‹_›⟩
+         · cases hck
+       · exact .inl ⟨M, u, nt, ex, ph, H, cs, hM, hc, .inl ‹_›⟩)
+
+theorem checkBranches_live {b : Nat} {Γ : Ctx} {fe : Bool} {g : Bool → Bool} {s H idx R0 : Tm} {brs : List Br}
+    {els : Bool} : ∀ arms base r, checkBranches P b Γ fe g s H idx R0 brs els arms base = .ok r →
+    ∀ c k sig p body, arms[c]? = some (k, sig, p) → lookupBr brs (base + c) = some body → body = .dead ∨
+    ∃ Γf σ h', ({ Γ with ghost := g p } : Ctx).branch P s k H idx sig = (Γf, .ok σ) ∧
+      checkCore P b { ({ Γ with ghost := g p } : Ctx).advBr P (({ Γ with ghost := g p } : Ctx).setErs { Γf with σ := σ }
+        (if fe then some (List.replicate (sig.len - 1) true) else none)) s k fe (sig.len - 1) with cmode := false }
+        body (.inl R0) = .ok ⟨R0, h'⟩
+  | [], _, _, _, c, k, sig, p, body, ha, _ => by simp at ha
+  | (k0, sig0, p0) :: cs, base, r, h, c, k, sig, p, body, ha, hl => by
+    rw [checkBranches] at h
+    obtain ⟨⟨hh⟩, hm, h⟩ := Except.bind_ok h
+    obtain ⟨⟨ht⟩, hr, -⟩ := Except.bind_ok h
+    cases c with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq, Prod.mk.injEq] at ha
+      obtain ⟨rfl, rfl, rfl⟩ := ha
+      simp only [Nat.add_zero] at hl
+      clear h ht hr
+      revert hh hm hl
+      generalize lookupBr brs base = o
+      intro hh hm hl
+      split at hm
+      · exact .inl (Option.some.inj hl).symm
+      · cases hl
+        split at hm
+        · obtain ⟨⟨R, hr2, e⟩, hc, -⟩ := Except.bind_ok hm
+          have := e.1 R0 rfl; subst this
+          exact .inr ⟨_, _, _, ‹_›, hc⟩
+        all_goals cases hm
+      · cases hl
+    | succ c =>
+      exact checkBranches_live cs (base + 1) _ hr c k sig p body (by simpa using ha)
+        (by rwa [show base + 1 + c = base + (c + 1) by omega])
+
+def MSound (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) (c : Core) : Prop :=
+  ∀ b (G : UCtx) (Γ : Ctx) ru rs rets h, G.fill = false →
+    G.Γ = Γ → checkCore P b Γ c rs = .ok ⟨rets, h⟩ → EnvOK P ρ Γ → LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
+    (∀ v ∈ ρ, CloOK P v) →
+    ∀ vs cnt', eval P μ ρ cnt c = .ok (vs, cnt') →
+    MRun P b G ru rets c ρ vs ∧ (G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) →
+      (usesCore P b G ru rets c).isSome = true → ∀ v ∈ vs, CloOK P v)
+
+theorem MSound.ret (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {ts : Tm}
+     :
+    MSound P μ ρ cnt (.ret ts) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [eval] at h; cases h
+  cases hh.1 with
+  | ret ha hok =>
+  refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG => ?_, fun _ _ _ => CloOK.subst_list hC (ArgsTy.noClo ha)⟩
+  rw [usesCore] at hU
+  simp only [hG.ghost, Bool.false_eq_true, ite_false, UR.lift, Option.map_eq_some_iff, Prod.mk.injEq] at hU
+  obtain ⟨U', hU', rfl, -⟩ := hU
+  simp only [Ctx.ok, hG.ghost, Bool.false_or] at hok
+  cases hrun with
+  | ret => exact machine_ret hP hok hE hS rfl hU' hM pd
+
+theorem MSound.seq (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {R : Tm} {body rest : Core} {outs : List Tm} {cnt1 : Nat}
+    (hev : eval P μ ρ cnt body = .ok (outs, cnt1)) (ihb : MSound P μ ρ cnt body) (ihr : MSound P μ (ρ ++ outs) cnt1 rest) :
+    MSound P μ ρ cnt (.seq R body rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [checkCore] at hck
+  obtain ⟨⟨_⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hRs⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hRt⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨R1, hb, e⟩, hb', hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
+  cases hck
+  have eR : R1 = R := e.1 R rfl
+  subst R1
+  rw [eval] at h; simp only [hev] at h
+  have hres := eval_sound hP μ ρ cnt body b G.Γ R hb hE hlb hm hRs
+  obtain ⟨hE', hlb', hm', hrs', -, -, hol⟩ := seq_setup hE hlb hm hrs hRs hRt hres hev
+  have ihb' := ihb b { G with ents := [], uscr := none, cellOk := false, rebind := none } G.Γ G.ents (.inl R) R _ hf rfl hb' hE
+    hlb hm hRs hC outs cnt1 hev
+  have hΓ : (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents)).Γ =
+      Ctx.adv P G.Γ (G.Γ.pushTele R) (.seq R body rest) := by simp [UCtx.next, UCtx.adv, hf]
+  have ihr' := fun hCo => ihr b (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents))
+    _ ru rs rets _ hf hΓ hr' hE' hlb' hm' hrs' hCo vs cnt' h
+  have hsplit : ∀ U K, usesCore P b G ru rets (.seq R body rest) = some (U, K) →
+      (usesCore P b { G with ents := [], uscr := none, cellOk := false, rebind := none } G.ents R body).isSome ∧
+      (usesCore P b (G.next (G.adv P (G.Γ.pushTele R) (.seq R body rest)) (if G.Γ.ghost then [] else G.ents))
+        ru rets rest).isSome := fun U K hU => by
+    rw [usesCore] at hU
+    obtain ⟨⟨BU, BK⟩, hB, hU⟩ := Option.bind_eq_some_iff.mp hU
+    obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
+    exact ⟨by rw [hB]; rfl, by rw [hC']; rfl⟩
+  have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushTele R) (.seq R body rest)).n := by
+    rw [UCtx.adv_n' hf, Ctx.pushTele_n _ hRt]; omega
+  have hCo : G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) →
+      (usesCore P b G ru rets (.seq R body rest)).isSome = true → ∀ v ∈ ρ ++ outs, CloOK P v := fun hg huq hus v hv => by
+    obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+    rcases List.mem_append.mp hv with hv | hv
+    · exact hC v hv
+    · exact ihb'.2 hg huq (hsplit U K hU).1 v hv
+  refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG => ?_, fun hg huq hus => ?_⟩
+  · have hCo' := hCo hG.ghost hG.uqlt (by rw [hU]; rfl)
+    exact machine_seq hRt hol (fun ρS hS => hres.2 hG.ghost ρS hS outs cnt1 hev) ihb'.1 (ihr' hCo').1
+      U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  · obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+    exact (ihr' (hCo hg huq hus)).2
+      (by simp only [UCtx.next]; rw [UCtx.adv_ghost' hf, (Ctx.pushTele_er G.Γ R none hRt).1]; exact hg)
+      (UCtx.next_uqlt huq hn)
+      (hsplit U K hU).2
+
+theorem MSound.prim (hP : ProgOK P) (hco : CoerceVal P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {p : Prim} {er : Bool} {rest : Core}
+    (ih : MSound P μ (ρ ++ [p.eval ρ]) cnt rest) :
+    MSound P μ ρ cnt (.prim p er rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [checkCore] at hck
+  obtain ⟨⟨T, hp⟩, hpe, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
+  cases hck
+  rw [eval] at h
+  obtain ⟨hE', hlb', hm', hrs', -, -⟩ := prim_setup (rest := rest) hP hE hlb hm hrs hp hok
+  have hT := UCtx.primTy_check hpe
+  have hΓ : ∀ us, (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) us).Γ =
+      Ctx.adv P G.Γ (G.Γ.pushPrim T er p) (.prim p er rest) := fun us => by simp [UCtx.next, UCtx.adv, hf]
+  have hCo : ∀ v ∈ ρ ++ [p.eval ρ], CloOK P v := fun v hv => by
+    rcases List.mem_append.mp hv with hv | hv
+    · exact hC v hv
+    · simp at hv; subst hv; exact hp.cloOK hC
+  have ih' := fun us => ih b (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) us) _ ru rs rets _ hf (hΓ us) hr'
+    hE' hlb' hm' hrs' hCo vs cnt' h
+  have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)).n := by rw [UCtx.adv_n' hf, Ctx.pushPrim_n]; omega
+  refine ⟨?_, fun hg huq hus => ?_⟩
+  · cases er
+    · intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
+      have hrt : p.rt P G.Γ = true := by simpa [Ctx.ok, hG0.ghost] using hok
+      have hval : PrimVal P G ρ p := by
+        by_cases hc : ∃ a b q, p = .coerce a b q
+        · obtain ⟨a, b, q, rfl⟩ := hc; exact hco G ρ a b q T hE hp hrt
+        · exact prim_val hP hE hrt fun a b q e => hc ⟨a, b, q, e⟩
+      exact machine_primF hP hE hrt (fun ρS hS => prim_real hP hE hS hp hrt) hval
+        (fun T' hT' => by rw [hT] at hT'; cases hT'; exact (ih' _).1) U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
+    · exact machine_primE (v := p.eval ρ) fun T' hT' => by rw [hT] at hT'; cases hT'; exact (ih' []).1
+  · obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+    rw [usesCore] at hU
+    obtain ⟨T', hT', hU⟩ := Option.bind_eq_some_iff.mp hU
+    rw [hT] at hT'; cases hT'
+    simp only at hU
+    obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
+    exact (ih' _).2 (by simp only [UCtx.next]; rw [UCtx.adv_ghost' hf, Ctx.pushPrim_ghost]; exact hg)
+      (UCtx.next_uqlt huq hn) (by rw [hC']; rfl)
+
+theorem MSound.defLvl {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {rest : Core}
+    (ih : MSound P μ (ρ ++ [.lvl cnt]) (cnt + 1) rest) :
+    MSound P μ ρ cnt (.defLvl rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [checkCore] at hck
+  obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
+  cases hck
+  rw [eval] at h
+  have hl := hE.len
+  have hh : HeadSim P G.Γ G.Γ.pushMint ρ [.lvl cnt] (.defLvl rest) rest := by
+    intro ρS hg hS
+    refine ⟨[.tok], fun vs' h => by simp [stepS] at h; exact h.symm, fun out h => .defLvl h, rfl,
+      fun k a b ha hb _ => ?_⟩
+    cases k with
+    | succ => simp at ha
+    | zero => simp at ha hb; subst ha hb; exact .other (by simp) (by simp) (by simp)
+  have hΓ : (G.next (G.adv P G.Γ.pushMint (.defLvl rest)) []).Γ = Ctx.adv P G.Γ G.Γ.pushMint (.defLvl rest) := by
+    simp [UCtx.next, UCtx.adv, hf]
+  have ih' := ih b (G.next (G.adv P G.Γ.pushMint (.defLvl rest)) []) _ ru rs rets _ hf hΓ hr'
+    (hE.adv (hE.pushMint hlb) rfl hh) (LvlBound.append.mpr ⟨hlb.mono (Nat.le_succ _), by simp [LvlBound, Tm.levels]⟩)
+    (hm.append hE.wf hl (by simp [Ctx.pushMint, Ctx.push]) (by simp [Ctx.pushMint, Ctx.push]))
+    (Tm.static_mono (by simp [Ctx.pushMint, Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)
+    (fun v hv => by rcases List.mem_append.mp hv with hv | hv
+                    · exact hC v hv
+                    · simp at hv; subst hv; trivial) vs cnt' h
+  refine ⟨machine_defLvl ih'.1, fun hg huq hus => ih'.2 ?_ (UCtx.next_uqlt huq ?_) (by rw [usesCore] at hus; exact hus)⟩
+  · simp only [UCtx.next]; rw [UCtx.adv_ghost' hf]; simpa [Ctx.pushMint, Ctx.push] using hg
+  · rw [UCtx.adv_n' hf]; simp [Ctx.pushMint, Ctx.push, Ctx.n]
+
+theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt gid : Nat} {rest : Core} {Gr : Group}
+    (hG : P.groups[gid]? = some Gr) (ih : MSound P μ (ρ ++ closures ρ gid Gr) cnt rest) :
+    MSound P μ ρ cnt (.defFns gid rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [checkCore] at hck
+  obtain ⟨⟨_⟩, -, hck⟩ := Except.bind_ok hck
+  split at hck
+  split at hck
+  rotate_left; · cases hck
+  rename_i Gr' hG'
+  rw [hG] at hG'; cases hG'
+  obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
+  cases hck
+  rw [eval, hG] at h
+  have hl := hE.len
+  have hh : HeadSim P G.Γ (G.Γ.pushFns Gr) ρ (closures ρ gid Gr) (.defFns gid rest) rest := by
+    intro ρS hg hS
+    cases hok with
+    | mk _ _ _ _ _ hGe hGg hd =>
+    refine ⟨closuresS ρS gid Gr, fun vs' h => by simp [stepS, hG] at h; exact h.symm, fun out h => .defFns hG h,
+      by simp [closures, closuresS_length], fun k a b ha hb he => ?_⟩
+    obtain ⟨hk, -⟩ := closures_get hb
+    obtain ⟨Fk, hFk⟩ : ∃ Fk, Gr.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
+    simp only [Ctx.pushFns] at he
+    rw [if_pos (by omega), show G.Γ.n + k - G.Γ.n = k by omega, hFk] at he
+    refine closuresS_real hG (by rw [← hGg, hg]) (by rw [hl]; exact hd) (by rw [hS.1]) (fun i hi => ?_) k a b Fk hFk
+      (by simpa using he) ha hb
+    by_cases hin : i < G.Γ.n
+    · rw [← hGe i hin] at hi; exact hS.2 i hi
+    · have : Tm.env ρ i = .nil := by
+        simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
+      rw [this]; exact Real.nil' _
+  have hΓ : ∀ us, (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) us).Γ =
+      Ctx.adv P G.Γ (G.Γ.pushFns Gr) (.defFns gid rest) := fun us => by simp [UCtx.next, UCtx.adv, hf]
+  have ih' := fun us hCo => ih b (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) us) _ ru rs rets _ hf
+    (hΓ us) hr' (hE.adv (hE.pushFns hP hG hok) rfl hh)
+    (LvlBound.append.mpr ⟨hlb, fun v hv x hx => by
+      simp only [closures, List.mem_map] at hv
+      obtain ⟨j, _, rfl⟩ := hv
+      obtain ⟨w, hw, hx'⟩ := Tm.levels_ofList ρ x (by simpa [Tm.levels] using hx)
+      exact hlb w hw x hx'⟩)
+    (hm.append hE.wf hl (by simp [Ctx.pushFns]) (by simp [Ctx.pushFns]))
+    (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs) hCo vs cnt' h
+  have hCo : G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) →
+      (usesCore P b G ru rets (.defFns gid rest)).isSome = true → ∀ v ∈ ρ ++ closures ρ gid Gr, CloOK P v :=
+    fun hg huq hus v hv => by
+      obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+      obtain ⟨O, K', hO, hd, -⟩ := usesCore_defFns hG hf hU
+      rcases List.mem_append.mp hv with hv | hv
+      · exact hC v hv
+      · exact CloOK.defFns hE hG hok hf hg huq hO hd hC v hv
+  have hdk : ∀ (k : Nat) (F : FnDef) (t : Nat), Gr.fns[k]? = some F → F.dele = some t → t < G.Γ.n + k :=
+    fun k F t hF hd => by
+      cases hok with
+      | mk _ _ _ _ _ _ _ hdo => have := (Group.deleOK_spec hdo hF hd).1; omega
+  have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)).n := by
+    rw [UCtx.adv_n' hf]; simp [Ctx.pushFns, Ctx.n]
+  refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0 => ?_, fun hg huq hus => ?_⟩
+  · have hg := hG0.ghost
+    have hCo' := hCo hg hG0.uqlt (by rw [hU]; rfl)
+    have ih'' := ih' (if G.Γ.ghost then [] else Gr.fns.map (·.u)) hCo'
+    simp only [hg, Bool.false_eq_true, ite_false] at ih''
+    refine machine_defFns hG hdk (fun ρS hS => ?_) ih''.1 U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
+    obtain ⟨outsS, hst, -, hlen, hre⟩ := hh ρS hg hS
+    have : outsS = closuresS ρS gid Gr := (hst _ (by simp [stepS, hG])).symm
+    subst this
+    refine hS.extend (by rw [hlen]) (fun i hi => ?_) fun k a b ha hb he => hre k a b ha hb ?_
+    · rw [UCtx.adv_er' hf]; simp only [Ctx.pushFns]; rw [if_neg (by omega)]
+    · rw [UCtx.adv_er' hf, hl] at he; exact he
+  · obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+    obtain ⟨O, K', hO, hd, hrest⟩ := usesCore_defFns hG hf hU
+    exact (ih' _ (hCo hg huq hus)).2
+      (by simp only [UCtx.next]; rw [UCtx.adv_ghost' hf]; simpa [Ctx.pushFns] using hg)
+      (UCtx.next_uqlt huq hn) hrest
+
+theorem MSound.chk (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {k : Chk} {a e : Tm} {rest : Core}
+    (ih : MSound P μ ρ cnt rest ∧ ∀ p r, rest = .prim p false r → MSound P μ (ρ ++ [p.eval ρ]) cnt r) :
+    MSound P μ ρ cnt (.chk k a e rest) := by
+  intro b G Γ ru rs rets hh hf hGΓ hck hE hlb hm hrs hC vs cnt' h
+  subst hGΓ
+  rw [eval] at h
+  have step : ∀ (G' : UCtx) h', G'.fill = false → checkCore P b G'.Γ rest rs = .ok ⟨rets, h'⟩ → EnvOK P ρ G'.Γ →
+      G'.Γ.cur = G.Γ.cur → G'.Γ.subs = G.Γ.subs → G'.Γ.n = G.Γ.n → G'.Γ.ghost = G.Γ.ghost → G'.uq = G.uq →
+      (MRun P b G' ru rets rest ρ vs → MRun P b G ru rets (.chk k a e rest) ρ vs) →
+      (∀ U K, usesCore P b G ru rets (.chk k a e rest) = some (U, K) → (usesCore P b G' ru rets rest).isSome = true) →
+      MRun P b G ru rets (.chk k a e rest) ρ vs ∧ (G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) →
+        (usesCore P b G ru rets (.chk k a e rest)).isSome = true → ∀ v ∈ vs, CloOK P v) :=
+    fun G' h' hf' hck' hE' hc hs hn hg hu hrun hus => by
+      have ih' := ih.1 b G' G'.Γ ru rs rets h' hf' rfl hck' hE' hlb (by unfold MuOK at hm ⊢; rw [hc, hs]; exact hm)
+        (hn ▸ hrs) hC vs cnt' h
+      refine ⟨hrun ih'.1, fun hg0 huq hus0 => ih'.2 (hg.trans hg0) (by rw [hn, hu]; exact huq) ?_⟩
+      obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus0
+      exact hus U K hU
+  have same : ∀ (G' : UCtx), G'.fill = false → G'.Γ = G.Γ → G'.uq = G.uq → ∀ h', checkCore P b G.Γ rest rs = .ok ⟨rets, h'⟩ →
+      (MRun P b G' ru rets rest ρ vs → MRun P b G ru rets (.chk k a e rest) ρ vs) →
+      (∀ U K, usesCore P b G ru rets (.chk k a e rest) = some (U, K) → (usesCore P b G' ru rets rest).isSome = true) →
+      MRun P b G ru rets (.chk k a e rest) ρ vs ∧ (G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) →
+        (usesCore P b G ru rets (.chk k a e rest)).isSome = true → ∀ v ∈ vs, CloOK P v) :=
+    fun G' hf' hΓ hu h' hck' => by
+      cases G'; simp only at hΓ; subst hΓ; exact step _ h' hf' hck' hE rfl rfl rfl rfl hu
+  have isS : ∀ {o : Option (Uses × Caps)} {U K}, o = some (U, K) → o.isSome = true := fun h => by rw [h]; rfl
+  cases k with
+  | mark m =>
+    rw [checkCore] at hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    cases m with
+    | uq ms => exact same { G with ents := ms } hf rfl rfl _ hr' machine_uq (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+    | uqScr => exact same { G with scr := true } hf rfl rfl _ hr' machine_uqScr (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+    | skip => exact same G hf rfl rfl _ hr' machine_skip (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+    | alloc =>
+      exact same { G with cellOk := true } hf rfl rfl _ hr' machine_alloc
+        (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+    | cellOf =>
+      exact same { G with cellOk := true, uscr := none } hf rfl rfl _ hr' machine_cellOf
+        (fun U K hU => by rw [usesCore] at hU; split at hU; exact isS hU; cases hU)
+    | reuse u | write u =>
+      by_cases ha : ∃ i, a = .fv i
+      · obtain ⟨i, rfl⟩ := ha
+        refine same { G with cellOk := true } hf rfl rfl _ hr' (fun ihr => ?_) (fun U K hU => ?_)
+        · cases u
+          · exact machine_markMany (by simp) ihr
+          · exact machine_markU hP (by simp) hE ihr
+        · rw [usesCore] at hU
+          split at hU
+          · cases hU
+          · obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
+            exact isS hC'
+      · have ha' : ∀ i, a ≠ .fv i := fun i e => ha ⟨i, e⟩
+        refine same G hf rfl rfl _ hr' (fun ihr => ?_)
+          (fun U K hU => by rw [usesCore_markNF (by first | exact .inl rfl | exact .inr rfl) ha'] at hU; exact isS hU)
+        cases u
+        · exact machine_chkSame (fun m e => by cases e; rfl)
+            (fun U K hU => by rw [usesCore_markNF (by first | exact .inl rfl | exact .inr rfl) ha'] at hU; exact hU) ihr
+        · exact machine_markNF (by simp) ha' ihr
+    | rebind =>
+      by_cases hx : ∃ t rest', rest = .prim (.tm t) false rest' ∧ G.rebind = some t
+      · obtain ⟨t, rest', rfl, hrb⟩ := hx
+        rw [checkCore] at hr'
+        obtain ⟨⟨T, hp⟩, hpe, hr'⟩ := Except.bind_ok hr'
+        obtain ⟨⟨hok⟩, -, hr'⟩ := Except.bind_ok hr'
+        obtain ⟨⟨R2, hr2, e2⟩, hr'', hr'⟩ := Except.bind_ok hr'
+        cases hr'
+        rw [eval] at h
+        obtain ⟨hE', hlb', hm', hrs', -, -⟩ := prim_setup (rest := rest') hP hE hlb hm hrs hp hok
+        have hT := UCtx.primTy_check hpe
+        have hΓ : (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)).Γ =
+            Ctx.adv P G.Γ (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest') := by simp [UCtx.next, UCtx.adv, hf]
+        have hCo : ∀ v ∈ ρ ++ [(Prim.tm t).eval ρ], CloOK P v := fun v hv => by
+          rcases List.mem_append.mp hv with hv | hv
+          · exact hC v hv
+          · simp at hv; subst hv; exact hp.cloOK hC
+        have ih' := (ih.2 (.tm t) rest' rfl) b
+          (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) _ ru rs rets _ hf hΓ hr'' hE' hlb' hm' hrs' hCo vs cnt' h
+        have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')).n := by
+          rw [UCtx.adv_n' hf, Ctx.pushPrim_n]; omega
+        refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0 => ?_, fun hg huq hus => ?_⟩
+        · have hrt : (Prim.tm t).rt P G.Γ = true := by simpa [Ctx.ok, hG0.ghost] using hok
+          exact machine_rebind hrb (fun ρS hS => prim_real hP hE hS hp hrt)
+            (fun T' hT' => by rw [hT] at hT'; cases hT'; exact ih'.1) U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
+        · obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
+          rw [usesCore] at hU
+          simp only [hrb, beq_self_eq_true, ite_true] at hU
+          obtain ⟨T', hT', hU⟩ := Option.bind_eq_some_iff.mp hU
+          rw [hT] at hT'; cases hT'
+          exact ih'.2 (by simp only [UCtx.next]; rw [UCtx.adv_ghost' hf, Ctx.pushPrim_ghost]; exact hg)
+            (UCtx.next_uqlt huq hn) (isS hU)
+      · have hne : ∀ t r', rest = .prim (.tm t) false r' → G.rebind ≠ some t := fun t r' e hrb => hx ⟨t, r', e, hrb⟩
+        exact same G hf rfl rfl _ hr' (machine_rebindSkip hne) (fun U K hU => isS (usesCore_rebindSkip hne U K hU))
+  | opn oe =>
+    by_cases ha : ∃ i, a = .fv i
+    · obtain ⟨x, rfl⟩ := ha
+      rcases checkCore_opn hck with ⟨M, u, nt, ex, ph, H, cs, hM, hc, hfl⟩ | ⟨u, nt, ex, ph, H, cs, σ', h', hm', hu, hr'⟩
+      · exact (hE.openFail hP hM hc hfl).elim
+      · exact step { G with Γ := { G.Γ with opened := (x, oe) :: G.Γ.opened, σ := σ' } } h' hf hr' (hE.opened hP hu)
+          rfl rfl rfl rfl rfl (machine_opn hm' hu)
+          (fun U K hU => by rw [usesCore] at hU; simp only [hm', hu] at hU; exact isS hU)
+    · rw [checkCore.eq_15 _ _ _ _ _ _ _ _ (fun m e => ha ⟨m, e⟩)] at hck; cases hck
+  | cm =>
+    rw [checkCore] at hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    exact step { G with Γ := { G.Γ with cmode := true } } _ hf hr' (hE.congr _ rfl rfl rfl rfl rfl) rfl rfl rfl rfl rfl
+      machine_cm (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+  | is =>
+    rw [checkCore] at hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    exact same G hf rfl rfl _ hr' (machine_chkPlain (by simp))
+      (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+  | ty =>
+    rw [checkCore] at hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    exact same G hf rfl rfl _ hr' (machine_chkPlain (by simp))
+      (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+  | rt =>
+    rw [checkCore] at hck
+    obtain ⟨_, -, hck⟩ := Except.bind_ok hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    exact same G hf rfl rfl _ hr' (machine_chkPlain (by simp))
+      (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
+
 end Minimal

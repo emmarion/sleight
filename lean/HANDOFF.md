@@ -200,6 +200,26 @@ is to take the checker's success on the core (`checkCore … = .ok …`)
 as the hypothesis instead, whose derivation makes the same choices as
 the pass, and to unfold it case by case as the pass's result is.
 
+`Minimal/MachineAsm.lean` holds the assembly's pieces. `MSound P μ ρ cnt
+c` is the statement for one core: from the checker's success on `c` in
+`G.Γ`, `EnvOK`, the level and measure facts, and `CloOK` of the
+environment, an `eval` that succeeds gives `MRun` for `c` and, where the
+pass accepts `c`, `CloOK` of the results. Proved without `sorry`, one
+lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`, `.defFns` and
+`.chk` (every check and mark, `open-adt` through `checkCore_opn`, and a
+`rebind` mark together with the primitive after it). The induction
+over `eval` is meant to carry `MSound` for a core and, when the core
+is a non-erased primitive, for the code after it, which is what the
+`rebind` case needs. On this session's reading the induction itself
+still has `call`, `mtch` and `case` open, and so stays out of the
+build. Its `prim` case takes `CoerceVal P` (`prim_val`'s conclusion
+for `coerce`) as a hypothesis until `coerce` is done.
+`checkBranches_live` inverts the checker's success on a listed branch
+(either `dead`, or the checker's success on its body in the branch's
+context) for the `mtch` and `case` steps. On this session's reading
+those steps also need `match_setup` to say which context it picks for
+the branch, which it does not yet say.
+
 The pass was tightened on the way, each change checked by a full
 `compare.sh` run that changed no verdict (328 accepted with OCaml's
 value, none mismatched, 474 refusals agreed): `use` refuses an index
