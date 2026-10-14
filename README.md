@@ -35,8 +35,10 @@ The other files:
   semantics, written as relations in the language itself
   ([`mini/README.md`](mini/README.md)). [`lean/`](lean/): a Lean 4 interpreter, in the full
   language's syntax, for that fragment and some of the language beyond
-  it, that needs no fuel, with a machine-checked proof that checked
-  programs run to a value of their type ([`lean/README.md`](lean/README.md)).
+  it, that needs no fuel, with machine-checked proofs that checked
+  programs run to a value of their type, and that a run writing cells
+  in place agrees with the run that skips erased code
+  ([`lean/README.md`](lean/README.md)).
 - [`pal/`](pal/): certified longest-palindrome programs ([`pal/README.md`](pal/README.md)).
 - [`talk/`](talk/): the source of the slides for the October 14, 2026 talk on
   the language and on models writing it ([`talk/slides.md`](talk/slides.md), built by
