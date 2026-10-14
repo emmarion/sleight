@@ -69,7 +69,7 @@ def Prog.reuse (P : Prog) (H : Heap) (ρ : List Tm) (u : Nat) : Tm → Option (H
   | _ => none
 
 def Chk.plain : Chk → Bool
-  | .mark (.reuse true) | .mark .alloc => false
+  | .mark (.reuse true) | .mark .alloc | .mark .cellOf | .mark (.write true) => false
   | _ => true
 
 inductive RunM : Heap → List Tm → Core → Heap → List Tm → Prop
@@ -102,6 +102,12 @@ inductive RunM : Heap → List Tm → Core → Heap → List Tm → Prop
   | alloc : H.alloc (0, 0, []) = (H1, a) → RunM H1 (ρ ++ [.ptr a]) rest H' out →
       RunM H ρ (.chk (.mark .alloc) x y (.prim (.axm T) false rest)) H' out
   | allocNo : (∀ T rest', c ≠ .prim (.axm T) false rest') → RunM H ρ c H' out → RunM H ρ (.chk (.mark .alloc) x y c) H' out
+  | cellOf : RunM H (ρ ++ [Tm.env ρ x]) rest H' out →
+      RunM H ρ (.chk (.mark .cellOf) (.fv x) y (.prim (.axm T) false rest)) H' out
+  | write : RunM H (ρ ++ [Tm.env ρ x]) rest H' out →
+      RunM H ρ (.chk (.mark (.write true)) (.fv x) y (.prim (.axm T) false rest)) H' out
+  | cellNo : m = .cellOf ∨ m = .write true → (∀ x T rest', a = .fv x → c ≠ .prim (.axm T) false rest') →
+      RunM H ρ c H' out → RunM H ρ (.chk (.mark m) a y c) H' out
 
 def Prog.rd (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any (·.1 == i)).getD false
 
@@ -110,7 +116,7 @@ inductive MDec (H : Heap) : Tm → Tm → Prop
   | ptr : H.blk a = some (d, c, ws) → MDecs H ws vs → MDec H (.ptr a) (.app (.vc d c .nil) (.ofList vs))
   | clo : envM.length = envS.length → (∀ i, P.rd gid i = true → MDec H (Tm.env envM i) (Tm.env envS i)) →
       MDec H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j)
-  | tok : (w = .tok ∨ ∃ a, w = .ptr a) → MDec H w .tok
+  | tok : (w = .tok ∨ ∃ a, w = .ptr a ∧ (H.blk a).isSome) → MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
   | vc : MDec H (.vc d c .nil) (.vc d c .nil)
   | nil : MDec H .nil .nil
@@ -126,6 +132,31 @@ inductive Foot (H : Heap) : Tm → Tm → Nat → Prop
       Foot H (.ptr a) (.app (.vc d c .nil) vs) b
   | clo {eM eS : Tm} : P.rd gid i = true → Foot H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
       Foot H (.clo eM gid j) (.clo eS gid j) b
+
+def Prog.rdU (gid i : Nat) : Bool := ((P.groups[gid]?).map fun G => G.caps.any fun (j, u) => j == i && u).getD false
+
+inductive Spine (H : Heap) : Tm → Tm → Nat → Prop
+  | top : Spine H (.ptr a) v a
+  | field {k : Nat} {vs : Tm} : H.blk a = some (d, c, ws) → P.ctor d c = some sig → (sig.skip (P.lifted d)).uAt k = true →
+      ws[k]? = some w → vs.toList[k]? = some v → Spine H w v b → Spine H (.ptr a) (.app (.vc d c .nil) vs) b
+  | clo {eM eS : Tm} : P.rdU gid i = true → Spine H (Tm.env eM.toList i) (Tm.env eS.toList i) b →
+      Spine H (.clo eM gid j) (.clo eS gid j) b
+
+def Disj (A B : Nat → Prop) : Prop := ∀ a, A a → B a → False
+
+inductive WO (H : Heap) : Tm → Tm → Prop
+  | ptr {vs : Tm} : H.blk a = some (d, c, ws) → P.ctor d c = some sig →
+      (∀ (k : Nat) w v, ws[k]? = some w → vs.toList[k]? = some v → ¬ Foot P H w v a) →
+      (∀ (k : Nat) w v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs.toList[k]? = some v → WO H w v) →
+      (∀ (k : Nat) w v, (sig.skip (P.lifted d)).uAt k = true → ws[k]? = some w → vs.toList[k]? = some v →
+        ∀ (j : Nat) w' v', j ≠ k → ws[j]? = some w' → vs.toList[j]? = some v' → Disj (Spine P H w v) (Foot P H w' v')) →
+      WO H (.ptr a) (.app (.vc d c .nil) vs)
+  | clo {eM eS : Tm} : (∀ i, P.rdU gid i = true → WO H (Tm.env eM.toList i) (Tm.env eS.toList i)) →
+      (∀ i, P.rdU gid i = true → ∀ i', i' ≠ i → P.rd gid i' = true →
+        Disj (Spine P H (Tm.env eM.toList i) (Tm.env eS.toList i)) (Foot P H (Tm.env eM.toList i') (Tm.env eS.toList i'))) →
+      WO H (.clo eM gid j) (.clo eS gid j)
+  | tok : WO H w .tok
+  | imm : (∀ a, w ≠ .ptr a) → (∀ e g j, w ≠ .clo e g j) → WO H w v
 
 def Heap.WF (H : Heap) : Prop := ∀ a, H.next ≤ a → H.blk a = none
 
@@ -154,7 +185,11 @@ mutual
 theorem MDec.mono {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v → MDec P H' w v
   | _, _, .ptr hb hs => .ptr (he.2 _ _ hb) (MDecs.mono he hs)
   | _, _, .clo hl hs => .clo hl fun i hi => (hs i hi).mono he
-  | _, _, .tok h => .tok h
+  | _, _, .tok h => .tok (by
+      rcases h with h | ⟨a, rfl, hb⟩
+      · exact .inl h
+      · obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp hb
+        exact .inr ⟨a, rfl, by rw [he.2 _ _ hb]; rfl⟩)
   | _, _, .nat => .nat
   | _, _, .vc => .vc
   | _, _, .nil => .nil
@@ -176,7 +211,10 @@ theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (
       (MDecs.frame hs fun k w v hw hv a ha => hA a (.field hb hw (by rw [Tm.toList_ofList]; exact hv) ha))
   | _, _, .clo hl hs, hA => .clo hl fun i hi => (hs i hi).frame fun a ha =>
       hA a (.clo hi (by rw [Tm.toList_ofList, Tm.toList_ofList]; exact ha))
-  | _, _, .tok h, _ => .tok h
+  | _, _, .tok h, hA => .tok (by
+      rcases h with h | ⟨a, rfl, hb⟩
+      · exact .inl h
+      · exact .inr ⟨a, rfl, by rw [hA a .here]; exact hb⟩)
   | _, _, .nat, _ => .nat
   | _, _, .vc, _ => .vc
   | _, _, .nil, _ => .nil

@@ -42,7 +42,7 @@ variable {P}
 theorem MDec.nat_inv {H : Heap} {n : Nat} {v : Tm} (h : MDec P H (.nat n) v) : v = .nat n := by
   cases h with
   | nat => rfl
-  | tok h => rcases h with h | ⟨_, h⟩ <;> cases h
+  | tok h => rcases h with h | ⟨_, h, _⟩ <;> cases h
 
 theorem MDec.nat_inv' {H : Heap} {n : Nat} {w : Tm} (h : MDec P H w (.nat n)) : w = .nat n := by
   cases h with
@@ -604,5 +604,101 @@ theorem Uses.seq_spec : ∀ {B A U : Uses}, Uses.seq A B = some U →
       · have hb : (j == i) = false := by simpa [beq_iff_eq] using hj
         have e := hl j; rw [if_neg hj] at e
         rw [hm j, e]; simp only [List.lookup, hb]
+
+theorem Prog.rdU_rd {gid i : Nat} (h : P.rdU gid i = true) : P.rd gid i = true := by
+  unfold Prog.rdU at h; unfold Prog.rd
+  cases hg : P.groups[gid]? with
+  | none => simp [hg] at h
+  | some G =>
+    simp only [hg, Option.map_some, Option.getD_some, List.any_eq_true, Bool.and_eq_true, beq_iff_eq] at h ⊢
+    obtain ⟨⟨j, u⟩, hm, rfl, -⟩ := h
+    exact ⟨_, hm, by simp⟩
+
+theorem Foot.blk {H : Heap} : ∀ {w v : Tm}, MDec P H w v → ∀ {b}, Foot P H w v b → (H.blk b).isSome := by
+  intro w v hm b hf
+  induction hf with
+  | here =>
+    cases hm with
+    | ptr hb _ => simp [hb]
+    | tok h => rcases h with h | ⟨_, h, hb⟩ <;> cases h; exact hb
+  | field hb hw hv _ ih =>
+    cases hm with
+    | ptr hb0 hs => rw [hb] at hb0; cases hb0; rw [Tm.toList_ofList] at hv; exact ih (hs.get _ _ _ hw hv)
+  | clo hi _ ih =>
+    cases hm with
+    | clo hl hs => exact ih (by rw [Tm.toList_ofList, Tm.toList_ofList]; exact hs _ hi)
+
+theorem Heap.Ext.agree {H H' : Heap} (he : H.Ext H') {w v : Tm} (hm : MDec P H w v) : Agree H H' (Foot P H w v) := by
+  intro a ha
+  obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp (Foot.blk hm ha)
+  rw [hb, he.2 _ _ hb]
+
+theorem Foot.fwd {H H' : Heap} : ∀ {w v : Tm}, Agree H H' (Foot P H w v) → ∀ {b}, Foot P H w v b → Foot P H' w v b := by
+  intro w v hA b hf
+  induction hf with
+  | here => exact .here
+  | field hb hw hv hf ih =>
+    exact .field (by rw [hA _ .here]; exact hb) hw hv (ih fun a ha => hA a (.field hb hw hv ha))
+  | clo hi hf ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
+
+theorem Foot.bwd {H H' : Heap} : ∀ {w v : Tm}, Agree H H' (Foot P H w v) → ∀ {b}, Foot P H' w v b → Foot P H w v b := by
+  intro w v hA b hf
+  induction hf with
+  | here => exact .here
+  | field hb hw hv hf ih =>
+    have hb' : _ := hA _ .here; rw [hb] at hb'
+    exact .field hb'.symm hw hv (ih fun a ha => hA a (.field hb'.symm hw hv ha))
+  | clo hi hf ih => exact .clo hi (ih fun a ha => hA a (.clo hi ha))
+
+theorem Spine.foot {H : Heap} : ∀ {w v : Tm}, MDec P H w v → ∀ {b}, Spine P H w v b → Foot P H w v b := by
+  intro w v hm b hs
+  induction hs with
+  | top => exact .here
+  | field hb _ _ hw hv _ ih =>
+    cases hm with
+    | ptr hb0 hs0 =>
+      rw [hb] at hb0; cases hb0; rw [Tm.toList_ofList] at hv
+      exact .field hb hw (by rw [Tm.toList_ofList]; exact hv) (ih (hs0.get _ _ _ hw hv))
+  | clo hi _ ih =>
+    cases hm with
+    | clo hl hs0 =>
+      exact .clo (Prog.rdU_rd hi) (ih (by rw [Tm.toList_ofList, Tm.toList_ofList]; exact hs0 _ (Prog.rdU_rd hi)))
+
+theorem Spine.fwd {H H' : Heap} : ∀ {w v : Tm}, Agree H H' (Foot P H w v) → ∀ {b}, Spine P H w v b → Spine P H' w v b := by
+  intro w v hA b hs
+  induction hs with
+  | top => exact .top
+  | field hb hc hu hw hv _ ih =>
+    exact .field (by rw [hA _ .here]; exact hb) hc hu hw hv (ih fun a ha => hA a (.field hb hw hv ha))
+  | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo (Prog.rdU_rd hi) ha))
+
+theorem Spine.bwd {H H' : Heap} : ∀ {w v : Tm}, Agree H H' (Foot P H w v) → ∀ {b}, Spine P H' w v b → Spine P H w v b := by
+  intro w v hA b hs
+  induction hs with
+  | top => exact .top
+  | field hb hc hu hw hv _ ih =>
+    have hb' : _ := hA _ .here; rw [hb] at hb'
+    exact .field hb'.symm hc hu hw hv (ih fun a ha => hA a (.field hb'.symm hw hv ha))
+  | clo hi _ ih => exact .clo hi (ih fun a ha => hA a (.clo (Prog.rdU_rd hi) ha))
+
+theorem WO.fwd {H H' : Heap} : ∀ {w v : Tm}, WO P H w v → Agree H H' (Foot P H w v) → WO P H' w v := by
+  intro w v hw hA
+  induction hw with
+  | ptr hb hc hcy hu hd ihu =>
+    rename_i a d c ws sig vs
+    have sub : ∀ (k : Nat) w v, ws[k]? = some w → vs.toList[k]? = some v → Agree H H' (Foot P H w v) :=
+      fun k w v hw hv a ha => hA a (.field hb hw hv ha)
+    refine .ptr (by rw [hA _ .here]; exact hb) hc (fun k w v hw hv hf => hcy k w v hw hv (Foot.bwd (sub k w v hw hv) hf))
+      (fun k w v hu' hw hv => ihu k w v hu' hw hv (sub k w v hw hv))
+      (fun k w v hu' hw hv j w' v' hj hw' hv' a h1 h2 =>
+        hd k w v hu' hw hv j w' v' hj hw' hv' a (Spine.bwd (sub k w v hw hv) h1) (Foot.bwd (sub j w' v' hw' hv') h2))
+  | clo hu hd ihu =>
+    rename_i gid j eM eS
+    have sub : ∀ i, P.rd gid i = true → Agree H H' (Foot P H (Tm.env eM.toList i) (Tm.env eS.toList i)) :=
+      fun i hi a ha => hA a (.clo hi ha)
+    exact .clo (fun i hi => ihu i hi (sub i (Prog.rdU_rd hi)))
+      (fun i hi i' hne hi' a h1 h2 => hd i hi i' hne hi' a (Spine.bwd (sub i (Prog.rdU_rd hi)) h1) (Foot.bwd (sub i' hi') h2))
+  | tok => exact .tok
+  | imm h1 h2 => exact .imm h1 h2
 
 end Minimal

@@ -1118,7 +1118,7 @@ def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (N
     let T := Tm.app (.tyc cd .nil) (.ofList (ms.map (·.2)))
     note j T
     if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
-    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c] ++ uqMark [md] ++ [Core.prim (.axm T) md.isEr])
+    return (nf, ci, (u, .fv j) :: sc', ms.flatMap (·.1) ++ uqMark [md] ++ [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c, Core.prim (.axm T) md.isEr])
   | _ => throw "malformed pattern"
 
 def ESt.cellSig (st : ESt) : Tm → Tm
@@ -1472,7 +1472,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let T := Tm.app (.tyc cd .nil) (.ofList sl)
       note j T
       unless er do modify fun st => { st with atBad := true }
-      return (ss ++ [.chk (.mark .alloc) .nil .nil] ++ uqMark [if er then .er else .uniq] ++ [.prim (.axm T) er], [.fv j])
+      return (ss ++ uqMark [if er then .er else .uniq] ++ [.chk (.mark .alloc) .nil .nil, .prim (.axm T) er], [.fv j])
     else if h == "cell-write" && (sc.lookup h).isNone then
       let [.atom m, u, .list (.atom c :: is)] := args | throw "malformed `cell-write`"
       let md ← cellMode m
@@ -1490,7 +1490,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       note j T
       if let (.uniq, [.fv i]) := (md, ut) then modify fun st => { st with links := (j, i) :: st.links }
       modify fun st => { st with atBad := true }
-      return (ss ++ ss2 ++ [.chk (.mark (.write (md == .uniq))) (ut.headD .nil) .nil] ++ uqMark [.uniq] ++ [.prim (.axm T) false], [.fv j])
+      return (ss ++ ss2 ++ uqMark [.uniq] ++ [.chk (.mark (.write (md == .uniq))) (ut.headD .nil) .nil, .prim (.axm T) false], [.fv j])
     else if h == "cell-match" && (sc.lookup h).isNone then
       let .atom m :: u :: ann :: pat :: body := args | throw "malformed `cell-match`"
       let md ← cellMode m
@@ -1767,7 +1767,7 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
   let ty : List Stmt := match exp with
     | some (.bind (.ty ..) A .nil) => [fun c => .chk .ty (.fv j) A c]
     | _ => []
-  return (ss ++ chk ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil] ++ uqMark [pm] ++ [.prim (.tm t) er] ++ ty, [.fv j])
+  return (ss ++ chk ++ uqMark [pm] ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil, .prim (.tm t) er] ++ ty, [.fv j])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
