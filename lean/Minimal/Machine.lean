@@ -86,7 +86,7 @@ inductive RunM : Heap → List Tm → Pend → Core → Heap → List Tm → Pro
   | ret : P.buildList H (Tm.env ρ) ts.toList = (H', vs) → RunM H ρ pd (.ret ts) H' vs
   | callE : RunM H (ρ ++ List.replicate ms.length .tok) none rest H' out → RunM H ρ pd (.call f dec args true ms ve rest) H' out
   | call : P.subU (Tm.env ρ) f = .clo env gid j → P.groups[gid]? = some G → G.fns[j]? = some F →
-      P.buildList H (Tm.env ρ) args.toList = (H1, as) →
+      P.buildList H (Tm.env ρ) (maskArgs (ve.getD []) args).toList = (H1, as) →
       RunM H1 (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve as) none F.body H2 outs →
       RunM H2 (ρ ++ F.spreadOut ve args.toList.length outs) none rest H' out →
       RunM H ρ pd (.call f dec args false ms ve rest) H' out

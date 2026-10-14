@@ -397,16 +397,20 @@ it is `Settled`, and its `is` rule.
   The body is checked with every entry made before the function's
   parameters erased, its target aside, and the checker requires its
   post-erasure code to be the one call, as above (`Group.deleOK`):
-  renames, erased code, erased `let-match`es and other run-free
-  statements before and after it, and a final result that returns the
-  call's non-erased results in order.
+  renames, constants that allocate nothing, erased code, erased
+  `let-match`es and other run-free statements before and after it, and
+  a final result of variables that returns the call's non-erased
+  results in order. A non-erased delegate to a `UniqueFn` is itself
+  unique, and a target in the delegate's own block is not
+  (`Group.sidesOK`).
 - `Delegate`, `(delegate-of g)` and `(coercible-of d)` (sections 19, 33
   and 34). `Delegate` is a built-in type with no constructors and no
   `Matchable`, read by `VTy` as `Coercible` is. `def-fns` records, for
   each non-erased function with a `delegate` body in a non-erased
-  block, its pair with its target (`Ctx.deles`); `(delegate-of g)`
-  names that pair's proof, `(Delegate (Shared) G g (Shared) F f)`, in
-  the bodies of the block and after it, and `(coercible-of d)` turns it
+  block, its pair with its target and their sides, `(Unique)` for a
+  `UniqueFn` and `(Shared)` for an `Fn`, fixed from the two functions'
+  types there (`Ctx.deles`); `(delegate-of g)` names that pair's proof,
+  `(Delegate sg G g sf F f)`, in the bodies of the block and after it, and `(coercible-of d)` turns it
   into the `Coercible` proof between the same sides. `EnvOK` carries
   that a stripped value stands for each such `g` exactly when it stands
   for its `f` (`DeleOK`). `def-fns` makes the proof once, after its

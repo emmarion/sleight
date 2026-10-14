@@ -21,8 +21,6 @@ variable (P : Prog)
 def FixOK (F : List (Option Tm)) (ρ : List Tm) : Prop :=
   F.length ≤ ρ.length ∧ ∀ i v, F[i]?.join = some v → Real P v (Tm.env ρ i)
 
-def NoDele : Prop := ∀ (gid : Nat) (G : Group) (j : Nat) (F : FnDef), P.groups[gid]? = some G → G.fns[j]? = some F → F.dele = none
-
 def CoerOwn (sa a sb b : Tm) : Prop :=
   (sa = uniqueTm → sb = uniqueTm → Twin P a b) ∧ (sa = uniqueTm → sb ≠ uniqueTm → NoSpine P a) ∧
     (sb = uniqueTm → sa ≠ uniqueTm → NoSpine P b)
@@ -3217,6 +3215,39 @@ theorem call_simb (hP : ProgOK P) {ρ ρS : List Tm} {Γ Γb : Ctx} (hE : EnvOK 
       exact hra'.get k a b (by simpa [Tm.toList_ofList, Prog.sub] using ha') hb he
   exact hS2
 
+theorem dele_sim {Γb : Ctx} {env0 argsS argsF : List Tm} {gid tg np : Nat} {G : Group} {pe : List Bool} {vS : Tm}
+    (hRt : Real P vS (Tm.env (env0 ++ closures env0 gid G) tg)) (htg : tg < env0.length + G.fns.length)
+    (hdl : ∀ i, i < env0.length + G.fns.length → i ≠ tg → Γb.er i = true)
+    (he3 : ∀ k < np, Γb.er (env0.length + G.fns.length + k) = pe.getD k true)
+    (hpl : pe.length = np) (hlS : argsS.length = np) (hlF : argsF.length = np)
+    (hra : ∀ k x y, argsS[k]? = some x → argsF[k]? = some y → pe.getD k true = false → Real P x y) :
+    SimEnv P Γb.er ((List.replicate (env0.length + G.fns.length) .tok).set tg vS ++ spread pe (filt pe argsS))
+      (env0 ++ closures env0 gid G ++ argsF) := by
+  have hEl : ((List.replicate (env0.length + G.fns.length) Tm.tok).set tg vS).length = env0.length + G.fns.length := by
+    simp
+  have hEt : Tm.env ((List.replicate (env0.length + G.fns.length) Tm.tok).set tg vS) tg = vS := by
+    simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_set, htg]
+  have hcl : (env0 ++ closures env0 gid G).length = env0.length + G.fns.length := by simp [closures]
+  refine ⟨by simp [length_spread, closures, hpl, hlF]; omega, fun i hi => ?_⟩
+  rcases Nat.lt_or_ge i (env0.length + G.fns.length) with hin | hin
+  · by_cases hit : i = tg
+    · subst hit
+      rw [env_app_left (by rw [hEl]; exact hin), hEt, env_app_left (by rw [hcl]; exact hin)]; exact hRt
+    · rw [hdl i hin hit] at hi; cases hi
+  · obtain ⟨k, rfl⟩ : ∃ k, i = env0.length + G.fns.length + k := ⟨i - (env0.length + G.fns.length), by omega⟩
+    have e1 := env_app_right (ρ := (List.replicate (env0.length + G.fns.length) Tm.tok).set tg vS)
+      (vs := spread pe (filt pe argsS)) k
+    have e2 := env_app_right (ρ := env0 ++ closures env0 gid G) (vs := argsF) k
+    rw [hEl] at e1; rw [hcl] at e2
+    rw [e1, e2]
+    rcases Nat.lt_or_ge k np with hk | hk
+    · rw [he3 k hk] at hi
+      obtain ⟨x, hx⟩ : ∃ x, argsS[k]? = some x := ⟨_, List.getElem?_eq_getElem (by omega)⟩
+      obtain ⟨y, hy⟩ : ∃ y, argsF[k]? = some y := ⟨_, List.getElem?_eq_getElem (by omega)⟩
+      rw [List.getD_eq_getElem?_getD, spread_filt pe argsS (by omega) k hi, hx, List.getD_eq_getElem?_getD, hy]
+      exact hra k x y hx hy hi
+    · rw [List.getD_eq_getElem?_getD (l := argsF), List.getElem?_eq_none (show argsF.length ≤ k by omega)]; exact Real.nil' _
+
 theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {f Ft l t args outsT rets : Tm}
     {np : Nat} {uf : Bool} {hmk : List Bool} {dec : Dec} {er : Bool} {ms : List Bool} {ve : Option (List Bool)}
     {rest : Core} {env : List Tm} {n1 gid : Nat} {G : Group} {F : FnDef} {outs : List Tm} {cnt1 : Nat}
@@ -3301,38 +3332,16 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
               spread (F.tele.ers.take F.np)
                 (filt (t.ers.take (args.toList.map (P.sub ρS)).length) (args.toList.map (P.sub ρS))))
             (env₀ ++ closures env₀ gid G ++ args.toList.map (·.subst (Tm.env ρ))) := by
-          refine ⟨by simp [length_spread, closures, hpe, hpl, Tm.len_toList _ hal, hn]; omega, fun i hi => ?_⟩
-          rcases Nat.lt_or_ge i (env₀.length + G.fns.length) with hin | hin
-          · by_cases hit : i = tg
-            · subst hit
-              rw [env_app_left (by rw [hEl]; exact hin), hEt, List.append_assoc,
-                ← List.append_assoc env₀, env_app_left (by simp [closures]; exact hin)]
-              exact hRt
-            · rw [hdl i tg hdt hin hit] at hi; cases hi
-          · obtain ⟨k, rfl⟩ : ∃ k, i = env₀.length + G.fns.length + k := ⟨i - (env₀.length + G.fns.length), by omega⟩
-            rcases Nat.lt_or_ge k np with hk | hk
-            · rw [he3 k hk] at hi
-              obtain ⟨x, hx⟩ : ∃ x, args.toList[k]? = some x :=
-                ⟨_, List.getElem?_eq_getElem (by rw [Tm.len_toList _ hal, hn]; exact hk)⟩
-              have e2 := env_app_right (ρ := env₀ ++ closures env₀ gid G) (vs := args.toList.map (·.subst (Tm.env ρ))) k
-              rw [show (env₀ ++ closures env₀ gid G).length + k = env₀.length + G.fns.length + k by
-                simp [closures]] at e2
-              have e1 := env_app_right (ρ := (List.replicate (env₀.length + G.fns.length) Tm.tok).set tg (P.sub ρS f))
-                (vs := spread (F.tele.ers.take F.np)
-                  (filt (t.ers.take (args.toList.map (P.sub ρS)).length) (args.toList.map (P.sub ρS)))) k
-              rw [hEl] at e1
-              rw [e1, e2, List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD, hpe, hSdef,
-                spread_filt _ _ (by rw [hpl, hlenS]) k (by rw [getD_take hk]; exact hi)]
-              simp only [List.getElem?_map, hx, Option.map_some, Option.getD_some]
-              exact hra'.get k _ _ (by simp [Tm.toList_ofList, hx, Prog.sub])
-                (by rw [Tm.toList_subst _ _ hal]; simp [hx]) hi
-            · have e2 := env_app_right (ρ := env₀ ++ closures env₀ gid G) (vs := args.toList.map (·.subst (Tm.env ρ))) k
-              rw [show (env₀ ++ closures env₀ gid G).length + k = env₀.length + G.fns.length + k by
-                simp [closures]] at e2
-              have this : Tm.env (env₀ ++ closures env₀ gid G ++ args.toList.map (·.subst (Tm.env ρ)))
-                  (env₀.length + G.fns.length + k) = .nil := by
-                rw [e2, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp [Tm.len_toList _ hal, hn]; omega)]; rfl
-              rw [this]; exact Real.nil' _
+          rw [hpe, hSdef]
+          refine dele_sim hRt (by omega) (fun i hin hit => hdl i tg hdt hin hit)
+            (fun k hk => by rw [he3 k hk, getD_take hk]) hpl hlenS (by simp [Tm.len_toList _ hal, hn])
+            (fun k x y hx hy hi => ?_)
+          have hk : k < np := by have := (List.getElem?_eq_some_iff.mp hx).1; simpa [hlenS] using this
+          simp only [List.getElem?_map, Option.map_eq_some_iff] at hx hy
+          obtain ⟨a, ha1, rfl⟩ := hx; obtain ⟨a', ha2, rfl⟩ := hy
+          rw [ha1] at ha2; cases ha2
+          exact hra'.get k _ _ (by simp [ha1, Prog.sub, Tm.toList_ofList]) (by rw [Tm.toList_subst _ _ hal]; simp [ha1])
+            (by rwa [getD_take hk] at hi)
         have hgb' : Γb.ghost = false := by rw [hgb, hgG, hfe]; rfl
         obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb' _ hS2 outs cnt1 hev
         try rw [Tm.toList_ofList] at hrunb

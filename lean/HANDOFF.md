@@ -138,7 +138,27 @@ caller's terms, through the spreading of the outputs), and
 `call_body`, which puts these together into what `machine_call` asks
 of the callee for a closure that is not a delegate, given the body's
 `MRun` and uses in its own context, which captured entries the body
-reads and owns, and how arguments and outputs are spread. `GOK.pend` says the block a pending mark names is
+reads and owns, and how arguments and outputs are spread.
+`callee_frame` is `body_frame`, a frame for any body whose entries
+before its parameters are described by facts about their words
+(`MDec`, feet and spines inside the callee's, `WO`, disjointness), with
+those facts supplied from a closure's captures and siblings.
+
+A call through a delegate (`Minimal/MachineDeleg.lean`) is a call of
+its target on the machine and in the stripped run, and of the
+delegate's own body in the full run. `dele_body` gives `machine_call`
+the target's run: the delegate's body runs, by its `MRun`, from a frame
+whose entries before its parameters are erased but the target's, which
+holds the callee's word (`body_frame`), and `walkM1`, the machine
+counterpart of `walk1`, finds in that run the target's run from the
+same heap to the same heap, its results those of the delegate's body.
+The heaps match because the machine builds only a call's non-erased
+arguments (`RunM.call` masks the rest by the call's erasures, as the
+compilers evaluate no erased argument), and because `delegWalk` admits
+in a delegate's body only primitives that allocate nothing
+(`Prim.inert`: renamings and constants) and a return of variables.
+`dele_sim` is the stripped frame for the same body, shared with
+`eval_sound`. `GOK.pend` says the block a pending mark names is
 reserved and is not the unique scrutinee's; `cellTy_tok` says an entry
 of cell type has full value `tok`. Frames and results carry a set
 `Shr` of blocks no unique spine reaches and no reserved block is in,
@@ -243,21 +263,18 @@ environment, an `eval` of `c` that succeeds gives `MRun` for `c`, and
 `Classical.choice` and `Quot.sound`). `machine_main` states it for the
 program: when the checker and the uses pass accept `P.main`, the
 machine's run of it from the empty heap ends where the stripped run
-does, with the results' ownership and values in an `MOut`. Its hypothesis besides `ProgOK`
-is `NoDele P`, that no function of the program is a delegate. On this
-session's reading delegates are the part of the theorem left open. A
-call through a delegate runs the target's body in the stripped run and
-the delegate's in the full one, and `walk1` has no machine counterpart
-yet. The induction carries, for a non-erased primitive, `MSound` of the
-code after it, which a `rebind` mark needs.
+does, with the results' ownership and values in an `MOut`. Its only
+hypothesis about the program besides the checker's and the pass's
+success is `ProgOK`. The induction carries, for a non-erased primitive,
+`MSound` of the code after it, which a `rebind` mark needs.
 
 One lemma per form: `MSound.ret`, `.seq`, `.prim`, `.defLvl`,
 `.defFns`, `.chk` (every check and mark; `open-adt` through
 `checkCore_opn`; and a `rebind` mark with the primitive after it),
 `.mtch` (erased, a listed branch, `else`), `.case` (erased, newtype, a
 listed branch, `else`, the newtype's `else` through
-`machine_caseN_els`) and `.call` (erased, and through `call_body` for a
-closure). `CloOK` asks every closure for a certificate (`Cert`): the
+`machine_caseN_els`) and `.call` (erased, through `call_body` for a
+closure, and through `dele_body` for a delegate). `CloOK` asks every closure for a certificate (`Cert`): the
 group's typing and the checker's success where the group was defined,
 always; and, when the group is not ghost, the uses pass's result there.
 A group's ghost flag is its defining context's (`GroupOK`), so the

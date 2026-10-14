@@ -397,9 +397,14 @@ def resolve (n0 : Nat) (al : List (Option (Bool × Nat))) : Tm → Option (Bool 
   | .fv i => if n0 ≤ i then (al[i - n0]?).join else none
   | _ => none
 
+def Prim.inert : Prim → Bool
+  | .tm (.fv _) | .coerce (.fv _) _ _ => true
+  | .tm _ | .coerce .. | .lit _ | .axm _ => false
+  | _ => true
+
 def delegWalk (t n0 cnt : Nat) (re : List Bool) : Bool → List (Option (Bool × Nat)) → Core → Bool
   | ph, al, .chk _ _ _ r => delegWalk t n0 cnt re ph al r
-  | ph, al, .prim p er r => delegWalk t n0 cnt re ph (al ++ [if er then none else match p with
+  | ph, al, .prim p er r => (er || p.inert) && delegWalk t n0 cnt re ph (al ++ [if er then none else match p with
       | .tm x | .coerce x _ _ => resolve n0 al x
       | _ => none]) r
   | ph, al, .call _ _ _ true ms _ r => delegWalk t n0 cnt re ph (al ++ List.replicate ms.length none) r
@@ -409,9 +414,10 @@ def delegWalk (t n0 cnt : Nat) (re : List Bool) : Bool → List (Option (Bool ×
     | some G => delegWalk t n0 cnt re ph (al ++ List.replicate G.fns.length none) r
     | none => false
   | false, al, .call f _ args false _ (some ve) r =>
-    f == .fv t && (filt (ve.take args.toList.length) args.toList).map (resolve n0 al) == (List.range cnt).map (fun r => some (false, r)) &&
+    f == .fv t && args.toList.length ≤ ve.length &&
+      (filt (ve.take args.toList.length) args.toList).map (resolve n0 al) == (List.range cnt).map (fun r => some (false, r)) &&
       delegWalk t n0 cnt re true (al ++ symSpread true (ve.drop args.toList.length)) r
-  | true, al, .ret ts => ts.toList.length == re.length &&
+  | true, al, .ret ts => ts.toList.length == re.length && ts.toList.all (· matches .fv _) &&
     (filt re ts.toList).map (resolve n0 al) == (List.range (re.count false)).map (fun r => some (true, r))
   | ph, al, .case _ brs els true _ => match h : realBr brs els with
     | some (pre, body) =>

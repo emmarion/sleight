@@ -158,7 +158,7 @@ theorem walk2 {t n0 cnt : Nat} {re : List Bool} {S so : List Tm} :
   | @ret ρ ts =>
     intro al hw hI k hk
     simp only [delegWalk, Bool.and_eq_true, beq_iff_eq] at hw
-    obtain ⟨hlen, heq⟩ := hw
+    obtain ⟨⟨hlen, -⟩, heq⟩ := hw
     have hkl : k < re.length := by
       rcases Nat.lt_or_ge k re.length with h | h
       · exact h
@@ -173,7 +173,7 @@ theorem walk2 {t n0 cnt : Nat} {re : List Bool} {S so : List Tm} :
     simpa using resolve_spec P hI (Option.some.inj this)
   | callE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact ih _ hw (hI.toks _)
   | mtchE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact ih _ hw (hI.toks _)
-  | prim _ ih => intro al hw hI; unfold delegWalk at hw; exact ih _ hw (prim_resolve hI _ _)
+  | prim _ ih => intro al hw hI; unfold delegWalk at hw; exact ih _ (Bool.and_eq_true _ _ ▸ hw).2 (prim_resolve hI _ _)
   | defLvl _ ih =>
     intro al hw hI; simp only [delegWalk] at hw
     exact ih _ hw (hI.push (by simp) fun i b r he => by cases i <;> simp at he)
@@ -219,7 +219,7 @@ theorem walk1 {t n0 cnt : Nat} {re : List Bool} {S : List Tm} (hS : S.length = c
     | none => simp [delegWalk] at hw
     | some ve =>
     simp only [delegWalk, Bool.and_eq_true, beq_iff_eq] at hw
-    obtain ⟨⟨rfl, hargs⟩, hw⟩ := hw
+    obtain ⟨⟨⟨rfl, -⟩, hargs⟩, hw⟩ := hw
     refine ⟨env, gid, j, G, F, outs, by simpa [Prog.sub, Prog.subU] using hf, hG, hF, ?_, ?_⟩
     · have hl := congrArg List.length hargs
       simp only [List.length_map, List.length_range] at hl
@@ -235,7 +235,9 @@ theorem walk1 {t n0 cnt : Nat} {re : List Bool} {S : List Tm} (hS : S.length = c
     · exact walk2 (by simpa [FnDef.spreadOut] using hr) _ hw ((hI _).spreadOut _)
   | callE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact walk1_tr ht hI (ih _ hw fun so => (hI so).toks _)
   | mtchE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact walk1_tr ht hI (ih _ hw fun so => (hI so).toks _)
-  | prim _ ih => intro al hw hI; unfold delegWalk at hw; exact walk1_tr ht hI (ih _ hw fun so => prim_resolve (hI so) _ _)
+  | prim _ ih =>
+    intro al hw hI; unfold delegWalk at hw
+    exact walk1_tr ht hI (ih _ (Bool.and_eq_true _ _ ▸ hw).2 fun so => prim_resolve (hI so) _ _)
   | defLvl _ ih =>
     intro al hw hI; simp only [delegWalk] at hw
     exact walk1_tr ht hI (ih _ hw fun so => (hI so).push (by simp) fun i b r he => by cases i <;> simp at he)

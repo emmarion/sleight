@@ -11,4 +11,5 @@ import Minimal.Machine
 import Minimal.Uses
 import Minimal.MachineSound
 import Minimal.MachineRun
+import Minimal.MachineDeleg
 import Minimal.MachineAsm
