@@ -1,5 +1,6 @@
 import Minimal.Machine
 import Minimal.Sound
+import Minimal.Uses
 
 namespace Minimal
 
@@ -532,5 +533,76 @@ theorem rt_buildArgs_foot {Γ : Ctx} {f fS : Nat → Tm} : ∀ {H : Heap}, H.WF 
   | _, _, .fn .., _, h, _, _, _, _, _, _, _ | _, _, .mtbl .., _, h, _, _, _, _, _, _, _ | _, _, .lvl _, _, h, _, _, _, _, _, _, _ | _, _, .tok, _, h, _, _, _, _, _, _, _
   | _, _, .clo .., _, h, _, _, _, _, _, _, _ | _, _, .nat _, _, h, _, _, _, _, _, _, _ | _, _, .ptr _, _, h, _, _, _, _, _, _, _ => by simp [rtArgs] at h
 end
+
+theorem Uses.add_spec {U U' : Uses} {i : Nat} {u : Bool} (h : Uses.add U i u = some U') :
+    U.lookup i ≠ some true ∧ (u = true → U.lookup i = none) ∧
+    ∀ j, U'.lookup j = if j = i then some (u || (U.lookup i).getD false) else U.lookup j := by
+  unfold Uses.add at h
+  split at h
+  · cases h
+  · rename_i hl
+    cases u
+    · simp at h; subst h
+      refine ⟨by simp [hl], by simp, fun j => ?_⟩
+      split <;> simp_all
+    · simp at h
+  · rename_i hl
+    simp at h; subst h
+    refine ⟨by simp [hl], fun _ => hl, fun j => ?_⟩
+    by_cases hj : j = i
+    · subst hj; simp [List.lookup, hl]
+    · have : (j == i) = false := by simpa [beq_iff_eq] using hj
+      simp [List.lookup, hj, this]
+
+def Uses.merge : Option Bool → Option Bool → Option Bool
+  | none, x => x
+  | x, none => x
+  | some a, some b => some (a || b)
+
+def Uses.Free (A B : Uses) : Prop :=
+  ∀ j, (A.lookup j = some true → B.lookup j = none) ∧ (B.lookup j = some true → A.lookup j = none)
+
+theorem Uses.seq_spec : ∀ {B A U : Uses}, Uses.seq A B = some U →
+    Uses.Free A B ∧ ∀ j, U.lookup j = Uses.merge (A.lookup j) (B.lookup j)
+  | [], A, U, h => by
+    simp [Uses.seq] at h; subst h
+    exact ⟨fun j => by simp, fun j => by cases A.lookup j <;> rfl⟩
+  | (i, u) :: B, A, U, h => by
+    simp only [Uses.seq, List.foldlM_cons] at h
+    obtain ⟨A1, h1, h2⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨hn, hu, hl⟩ := Uses.add_spec h1
+    obtain ⟨hf, hm⟩ := Uses.seq_spec (A := A1) (B := B) h2
+    refine ⟨fun j => ?_, fun j => ?_⟩
+    · by_cases hj : j = i
+      · subst hj
+        simp only [List.lookup, beq_self_eq_true]
+        refine ⟨fun h' => absurd h' hn, fun h' => ?_⟩
+        cases u <;> simp at h'; exact hu rfl
+      · have hb : (j == i) = false := by simpa [beq_iff_eq] using hj
+        simp only [List.lookup, hb]
+        have := hl j; rw [if_neg hj] at this
+        rw [← this]; exact hf j
+    · by_cases hj : j = i
+      · subst hj
+        have e := hl j; rw [if_pos rfl] at e
+        have hf' := hf j
+        rw [hm j, e]
+        simp only [List.lookup, beq_self_eq_true]
+        cases hb : B.lookup j with
+        | none => cases ha : A.lookup j <;> simp [Uses.merge, Bool.or_comm]
+        | some q =>
+          rw [e, hb] at hf'
+          have hq : q = false := by cases q; rfl; exact absurd (hf'.2 rfl) (by simp)
+          have hux : (u || (A.lookup j).getD false) = false := by
+            cases hx : (u || (A.lookup j).getD false); rfl; rw [hx] at hf'; simp [hb] at hf'
+          subst hq
+          simp only [Bool.or_eq_false_iff] at hux
+          obtain ⟨rfl, ha⟩ := hux
+          cases ha' : A.lookup j with
+          | none => simp [Uses.merge]
+          | some x => rw [ha'] at ha; simp at ha; subst ha; simp [Uses.merge]
+      · have hb : (j == i) = false := by simpa [beq_iff_eq] using hj
+        have e := hl j; rw [if_neg hj] at e
+        rw [hm j, e]; simp only [List.lookup, hb]
 
 end Minimal
