@@ -2077,7 +2077,7 @@ theorem call_setup_ctx (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
     (hfs : f.static Γ.n 0 = true) (hFs' : l.static Γ.n 0 = true ∧ t.static Γ.n 0 = true) :
     ∃ env n1 gid G F, callee P (f.subst (Tm.env ρ)) = some (env, n1, gid, G, F) ∧
       muLt P.k (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) μ ∧
-      (∃ Γb rb, CoreTy P gid Γb F.body rb ∧
+      (∃ Γb rb, Γb = (Γc.body G F).1 ∧ rb = (Γc.body G F).2 ∧ CoreTy P gid Γb F.body rb ∧
         EnvOK P (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) Γb ∧
         LvlBound (env ++ closures env gid G ++ args.toList.map (·.subst (Tm.env ρ))) cnt ∧
         MuOK (some (n1 :: (markedArgs F.tele (.ofList (args.toList.map (·.subst (Tm.env ρ))))).map Tm.size)) Γb
@@ -2145,7 +2145,7 @@ theorem call_setup_ctx (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
       exact ⟨_, rfl, by omega, by simp at hk; omega⟩
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er F.np (Γc.pushFns G) F.tele hFtele
     have hpn : (Γc.pushFns G).n = env.length + G.fns.length := by simp [Ctx.pushFns, Ctx.n, hle]
-    refine ⟨(Γc.body G F).1, (Γc.body G F).2, hbody j F hFj, ?_, ?_, ?_, ?_, ?_,
+    refine ⟨(Γc.body G F).1, (Γc.body G F).2, rfl, rfl, hbody j F hFj, ?_, ?_, ?_, ?_, ?_,
       by simp [Ctx.body, hg], fun i hi hdn => ?_, fun j' F' hF' hdn => ?_, fun i t hdt hi hne => ?_, fun k hk => ?_, ?_⟩
     rotate_left 5
     · show (_ || ((Γc.pushFns G).openTele F.tele F.np).1.er i) = _
@@ -2216,7 +2216,9 @@ theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
   rw [hF] at hFs'; simp only [Tm.static, Bool.and_eq_true] at hFs'
   rw [← hE.canon Ft, hF] at hv; simp only [Tm.subst] at hv
   obtain ⟨env, Γc, gid, G, j, F, hfv, hEc, hG, hok, hFj, hty⟩ := hv.fn_inv
-  exact call_setup_ctx hP hE hb hm hf hF ht ha hn hd hfv hEc hG hok hFj hty hfs hFs'
+  obtain ⟨e', n1, g', G', F', h1, h2, ⟨Γb, rb, -, -, hX⟩, h4⟩ :=
+    call_setup_ctx hP hE hb hm hf hF ht ha hn hd hfv hEc hG hok hFj hty hfs hFs'
+  exact ⟨e', n1, g', G', F', h1, h2, ⟨Γb, rb, hX⟩, h4⟩
 
 theorem Ctx.openTele_ghost (g : Bool) : ∀ m (Γ : Ctx) t,
     ({ Γ with ghost := g } : Ctx).openTele t m = ({ (Γ.openTele t m).1 with ghost := g }, (Γ.openTele t m).2) := by

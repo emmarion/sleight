@@ -4,7 +4,7 @@ namespace Minimal
 
 def Cert (P : Prog) (env : List Tm) (gid : Nat) : Prop :=
   ∃ (Gd : UCtx) (Gr : Group) (O : Uses) (K : Caps), P.groups[gid]? = some Gr ∧ EnvOK P env Gd.Γ ∧
-    GroupOK P gid Gd.Γ Gr ∧ Gd.fill = false ∧ Gd.Γ.ghost = false ∧ (∀ j, Gd.uq.contains j = true → j < Gd.Γ.n) ∧
+    GroupOK P gid Gd.Γ Gr ∧ (∃ r, checkGroup P gid Gd.Γ Gr = .ok r) ∧ Gd.fill = false ∧ Gd.Γ.ghost = false ∧ (∀ j, Gd.uq.contains j = true → j < Gd.Γ.n) ∧
     usesFns P gid Gd Gr Gr.fns = some (O, K) ∧ Gd.defOK Gr O = true
 
 def CloOK (P : Prog) : Tm → Prop
@@ -26,6 +26,13 @@ def Tm.noClo : Tm → Bool
   | _ => true
 
 variable {P : Prog}
+
+theorem Except.bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β} (h : (x >>= f) = .ok b) :
+    ∃ a, x = .ok a ∧ f a = .ok b := by
+  cases x with
+  | error e => cases h
+  | ok a => exact ⟨a, rfl, h⟩
+
 
 theorem CloOK.subst {f : Nat → Tm} (hf : ∀ i, CloOK P (f i)) : ∀ t : Tm, t.noClo = true → CloOK P (t.subst f)
   | .fv i, _ => hf i
@@ -247,8 +254,37 @@ theorem CloOK.env {ρ : List Tm} (h : ∀ v ∈ ρ, CloOK P v) (i : Nat) : CloOK
   | none => trivial
   | some v => exact h v (List.mem_of_getElem? hi)
 
+theorem checkFns_body {gid : Nat} {Γ : Ctx} {G : Group} : ∀ (fns : List FnDef) base r,
+    checkFns P gid Γ G fns base = .ok r → ∀ (j : Nat) F, fns[j]? = some F →
+    ∃ h, checkCore P gid (Γ.body G F).1 F.body (.inl (Γ.body G F).2) = .ok ⟨(Γ.body G F).2, h⟩
+  | [], _, _, _, j, F, hj => by simp at hj
+  | F0 :: fs, base, r, h, j, F, hj => by
+    rw [checkFns] at h
+    obtain ⟨_, -, h⟩ := Except.bind_ok h
+    obtain ⟨_, -, h⟩ := Except.bind_ok h
+    obtain ⟨_, -, h⟩ := Except.bind_ok h
+    obtain ⟨⟨R, hb, e⟩, hc, h⟩ := Except.bind_ok h
+    obtain ⟨_, hr, -⟩ := Except.bind_ok h
+    cases j with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hj; subst hj
+      have := e.1 _ rfl; subst this
+      exact ⟨_, hc⟩
+    | succ j => exact checkFns_body fs (base + 1) _ hr j F (by simpa using hj)
+
+theorem checkGroup_body {gid : Nat} {Γ : Ctx} {G : Group} {r} (h : checkGroup P gid Γ G = .ok r) :
+    ∀ (j : Nat) F, G.fns[j]? = some F →
+    ∃ h, checkCore P gid (Γ.body G F).1 F.body (.inl (Γ.body G F).2) = .ok ⟨(Γ.body G F).2, h⟩ := by
+  rw [checkGroup] at h
+  split at h
+  · obtain ⟨_, -, h⟩ := Except.bind_ok h
+    obtain ⟨_, hf, -⟩ := Except.bind_ok h
+    exact checkFns_body _ _ _ hf
+  · cases h
+
 theorem CloOK.defFns {G : UCtx} {ρ : List Tm} {gid : Nat} {Gr : Group}
-    (hE : EnvOK P ρ G.Γ) (hGr : P.groups[gid]? = some Gr) (hok : GroupOK P gid G.Γ Gr) (hf : G.fill = false)
+    (hE : EnvOK P ρ G.Γ) (hGr : P.groups[gid]? = some Gr) (hok : GroupOK P gid G.Γ Gr)
+    (hcg : ∃ r, checkGroup P gid G.Γ Gr = .ok r) (hf : G.fill = false)
     (hus : G.Γ.ghost = false → (∀ j, G.uq.contains j = true → j < G.Γ.n) ∧ ∃ O K, usesFns P gid G Gr Gr.fns = some (O, K) ∧
       G.defOK Gr O = true) (hC : ∀ v ∈ ρ, CloOK P v) :
     ∀ v ∈ closures ρ gid Gr, CloOK P v := by
@@ -259,7 +295,7 @@ theorem CloOK.defFns {G : UCtx} {ρ : List Tm} {gid : Nat} {Gr : Group}
   rw [hGr] at hGr'; cases hGr'
   have hg : G.Γ.ghost = false := by cases hok with | mk _ _ _ _ _ _ hgg _ => rw [hgg]; exact hgr
   obtain ⟨huq, O, K, hus, hd⟩ := hus hg
-  rw [Tm.toList_ofList]; exact ⟨G, Gr, O, K, hGr, hE, hok, hf, hg, huq, hus, hd⟩
+  rw [Tm.toList_ofList]; exact ⟨G, Gr, O, K, hGr, hE, hok, hcg, hf, hg, huq, hus, hd⟩
 
 theorem Tm.noClo_toList : ∀ {t : Tm}, t.noClo = true → ∀ x ∈ t.toList, x.noClo = true
   | .cons a b, h, x, hx => by
@@ -312,12 +348,6 @@ theorem usesCore_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid :
   case isFalse => cases h
   rename_i _ hd
   exact ⟨O, K', hO, hd, by rw [hC]; rfl⟩
-
-theorem Except.bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β} (h : (x >>= f) = .ok b) :
-    ∃ a, x = .ok a ∧ f a = .ok b := by
-  cases x with
-  | error e => cases h
-  | ok a => exact ⟨a, rfl, h⟩
 
 theorem Pend.split (pd : Pend) (p : Prim) : Pend.Inert P pd p ∨ (∃ y A', pd = some (.alloc, y) ∧ p = .axm A') ∨
     (∃ m t A', (m = .cellOf ∨ m = .write true) ∧ pd = some (m, t) ∧ p = .axm A') ∨
@@ -589,7 +619,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
   rotate_left; · cases hck
   rename_i Gr' hG'
   rw [hG] at hG'; cases hG'
-  obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨hok⟩, hcg, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨R2, hr, e2⟩, hr', hck⟩ := Except.bind_ok hck
   cases hck
   rw [eval, hG] at h
@@ -627,7 +657,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
     fun hpre v hv => by
       rcases List.mem_append.mp hv with hv | hv
       · exact hC v hv
-      · refine CloOK.defFns hE hG hok hf (fun hg => ?_) hC v hv
+      · refine CloOK.defFns hE hG hok ⟨_, hcg⟩ hf (fun hg => ?_) hC v hv
         obtain ⟨huq, hus⟩ := hpre hg
         obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
         obtain ⟨O, K', hO, hd, -⟩ := usesCore_defFns hG hf hU
