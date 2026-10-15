@@ -13,9 +13,10 @@ machine this session ran on: `origin/main`'s `slc` 9.27s median (8.95s
 min, 138MB), this branch's 4.37s median (4.19s min, 219MB), so a little
 over twice as fast; the `bench/` samples go from 5.24s to 3.91s on
 `uses_join` and stay within about 0.05s on the small ones. Every step
-was checked with `self/bootstrap.sh` (968 matched, 1181 refused, 0 failed,
-the same 1101/78/2 split of refusal positions as before, fixpoint
-reached) and, where `lib/` changed, `dune test` (1042 tests, 0 failures).
+was checked with `self/bootstrap.sh` and, where `lib/` changed, `dune
+test`. On `origin/main` at `ec14b37` the branch gives what `origin/main`
+gives: 972 matched, 1187 refused, 0 failed, a 1103/82/2 split of refusal
+positions, fixpoint reached; `dune test` 1047 tests, 0 failures.
 
 What the time went to, by callgrind, and what was done, in the order of
 what it bought as this session measured it:
