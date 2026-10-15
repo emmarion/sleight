@@ -1953,7 +1953,36 @@ which `lib/prelude.sl` is the reference:
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
   `placed-eq`. §66 describes them. §67 describes `slot-eq`.
 - **`ErasedOr`**, with `EONonErased` and the phantom `EOErased`. §68
-  describes it and `cell-same`.
+  describes it and `cell-same`. On it the prelude builds these
+  `extern at` and at-functions (§39):
+
+  ```scheme
+  nat-same : (subterm many (Nat) a) (many (Nat) b at a) ->
+      (many (ErasedOr (Eq (Nat) a b)) r at vacant-slot)
+  u8-same : (subterm many (U8) a) (many (U8) b at a) ->
+      (many (ErasedOr (Eq (U8) a b)) r at vacant-slot)
+  char-same : (subterm many (Char) a) (many (Char) b at a) ->
+      (many (ErasedOr (Eq (Char) a b)) r at vacant-slot)
+  string-same : (subterm many (String) a) (many (String) b at a) ->
+      (many (ErasedOr (Eq (String) a b)) r at vacant-slot)
+  bytes-same : (erased (List (U8)) xs) (erased (List (U8)) ys)
+      (subterm many (Bytes xs) a) (many (Bytes ys) b at a) ->
+      (many (ErasedOr (JMEq (Bytes xs) a (Bytes ys) b)) r at vacant-slot)
+  half-same : (erased (Nat) n) (erased (Nat) k)
+      (subterm many (Half n) a) (many (Half k) b at a) ->
+      (many (ErasedOr (JMEq (Half n) a (Half k) b)) r at vacant-slot)
+  array-same-factory : (erased (Level) M) ->
+      (erased (Level) L)
+      (many (Fn L (erased Type A)
+                (many (Fn M (subterm many A x) (many A y at x) ->
+                          (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq)
+                (erased (AtFn … eq) eq-at)
+                (erased (List A) xs) (erased (List A) ys)
+                (subterm many (Array A xs) a) (many (Array A ys) b at a) ->
+                (many (ErasedOr (JMEq (Array A xs) a (Array A ys) b)) r at vacant-slot))
+            same)
+      (erased (AtFn … same) same-at)
+  ```
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions

@@ -2571,12 +2571,13 @@ let rec interned env = function
   | List (l, rs) -> List (l, List.map (interned env) rs)
   | r -> (match lit_of r with Some lit -> (match at (loc r) (fun () -> literal_handle env lit) with V.VHandle (x, rd, m, v) -> Handle (loc r, x, rd, m, Obj.repr v) | _ -> r) | None -> r)
 
-let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
+let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") ?(loading_prelude = false) env items =
   let rec go env = function
     | [] -> env
     | (List (_, Atom (_, Src ";!") :: _) as p) :: rest -> step env [ p ] rest
     | item :: rest -> step env [ interned env item ] rest
   and step env pending source =
+    let env = if loading_prelude then { env with prelude = env.scope } else env in
     let env, pending = expand_seq Many env pending in
     match pending with
     | [] -> go env source
