@@ -102,6 +102,8 @@ examples/unopened_bad.sl: error: C has no Matchable open
 examples/valctor_return.sl: (MkBox _ 1)
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
 examples/vec_head.sl: 1
+Hello, world!
+examples/world_twice_bad.sl: error: a unique value has conflicting non-erased uses: it is already used at unique
 unchecked examples/absurd_bad.sl: stuck: no branch
 unchecked examples/absurd_listed_bad.sl: 0
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
@@ -154,6 +156,7 @@ unchecked examples/unique_many_bad.sl: error: a unique value is used at many wit
 unchecked examples/unique_twice_bad.sl: error: a unique value has conflicting non-erased uses: it is already used at unique
 unchecked examples/unopened_bad.sl: error: C has no Matchable open
 unchecked examples/valctor_return_bad.sl: 0
+unchecked examples/world_twice_bad.sl: error: a unique value has conflicting non-erased uses: it is already used at unique
 full examples/absurd.sl: 1
 full examples/adt_mentions.sl: 3
 full examples/adt_mentions_call.sl: error: L is not an entry
@@ -205,3 +208,4 @@ full examples/union.sl: 4
 full examples/unique.sl: 3
 full examples/valctor_return.sl: (MkBox _ 1)
 full examples/vec_head.sl: 1
+full examples/world.sl: error: a unique value is used at many without `share`

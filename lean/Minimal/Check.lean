@@ -26,7 +26,7 @@ structure ProgOK (P : Prog) : Prop where
   placed : ∀ q, P.placedD = some q → ∃ D, P.adts[q]? = some D ∧ D.opq = true
   world : ∀ w, P.worldD = some w → (∃ D, P.adts[w]? = some D ∧ D.opq = true) ∧ P.placedD ≠ some w
   request : ∀ r, P.requestD = some r → (∃ D, P.adts[r]? = some D ∧ D.opq = false ∧ D.coercible = false ∧
-    D.newtype = false ∧ D.lifted = 0) ∧ P.placedD ≠ some r ∧ P.natD ≠ some r
+    D.newtype = false) ∧ P.placedD ≠ some r ∧ P.natD ≠ some r
   uer : ∀ (d c : Nat) sig, P.ctor d c = some sig → ∀ j, sig.uAt j = true → sig.ers.getD j true = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
@@ -494,7 +494,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨hW⟩ ← need (Γ.canon W = .app (.tyc wd .nil) .nil) "world-do: not a `World`"
       let ⟨R, hr⟩ ← checkTm P Γ req
       match hR : Γ.canon R with
-      | .app (.tyc rd' .nil) (.cons A .nil) => do
+      | .app (.tyc rd' _) (.cons A .nil) => do
         let ⟨e⟩ ← need (rd' = rd) "world-do: not a `Request`"
         .ok ⟨A, .wAsk hwd hrd hw hW hr (e ▸ hR)⟩
       | _ => .error "world-do: not a `Request`"
@@ -945,8 +945,7 @@ def checkProg : Res {R // Checked P R} := do
     "unreachable: an opaque type has constructors"
   let ⟨hwd⟩ ← need ((P.worldD.all fun w => (P.adts[w]?.map (·.opq)) == some true && P.placedD != some w) = true)
     "unreachable: World is not opaque"
-  let ⟨hrd⟩ ← need ((P.requestD.all fun r => (P.adts[r]?.map fun D => !D.opq && !D.coercible && !D.newtype &&
-      D.lifted == 0) == some true && P.placedD != some r && P.natD != some r) = true)
+  let ⟨hrd⟩ ← need ((P.requestD.all fun r => (P.adts[r]?.map fun D => !D.opq && !D.coercible && !D.newtype) == some true && P.placedD != some r && P.natD != some r) = true)
     "unreachable: Request is not a plain enum"
   let ⟨hpl⟩ ← need ((P.placedD.all fun q => (P.adts[q]?.map (·.opq)) == some true) = true)
     "unreachable: Placed is not opaque"
@@ -975,8 +974,8 @@ def checkProg : Res {R // Checked P R} := do
     fun r hr => by
       rw [hr] at hrd; simp only [Option.all_some, Bool.and_eq_true, beq_iff_eq, Option.map_eq_some_iff, bne_iff_ne,
         ne_eq, Bool.not_eq_true'] at hrd
-      obtain ⟨⟨⟨D, hD, ⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hrd
-      exact ⟨⟨D, hD, h1, h2, h3, h4⟩, h5, h6⟩,
+      obtain ⟨⟨⟨D, hD, ⟨h1, h2⟩, h3⟩, h5⟩, h6⟩ := hrd
+      exact ⟨⟨D, hD, h1, h2, h3⟩, h5, h6⟩,
     fun d c sig h j hu => by
       obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h
       exact hue d (List.mem_range.mpr (getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j

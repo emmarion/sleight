@@ -1520,7 +1520,7 @@ theorem VTy.atom_inv {d : Nat} {D : Adt} {m e u : Bool} (hD : P.adts[d]? = some 
   | world _ hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
 
 structure Prog.OracleOK (P : Prog) : Prop where
-  typed : ∀ k c rd ls vs A, P.requestD = some rd → VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons A .nil)) →
+  typed : ∀ k c rd ls vs ls' A, P.requestD = some rd → VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd ls') (.cons A .nil)) →
     VTy P (P.ask k c).2 A ∧ Real P (P.ask k c).1 (P.ask k c).2
   lc : ∀ k c, (P.ask k c).2.lc 0
   levels : ∀ k c, (P.ask k c).2.levels = []
@@ -1764,11 +1764,11 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     have vw := sem hw; rw [hW] at vw; simp only [Tm.subst] at vw
     obtain ⟨k, hk⟩ := vw.world_inv hP hwd
     have vr := sem hr; rw [hR] at vr; simp only [Tm.subst] at vr
-    obtain ⟨⟨D, hD, hop, hco, -, -⟩, hpl, -⟩ := hP.request _ hrd
+    obtain ⟨⟨D, hD, hop, hco, -⟩, hpl, -⟩ := hP.request _ hrd
     have vr' := vr
     obtain ⟨c, vs, -, -, -, -, -, he, -⟩ := vr.ty_inv (fun D' h => by rw [hD] at h; cases h; exact ⟨hco, hop⟩) hpl
     rw [he] at vr'
-    obtain ⟨h1, -⟩ := hO.typed k c _ _ _ _ hrd vr'
+    obtain ⟨h1, -⟩ := hO.typed k c _ _ _ _ _ hrd vr'
     have h3 := hO.lc k c
     have h4 := hO.levels k c
     have hs := stat hr; rw [hR] at hs; simp only [Tm.static, Bool.and_eq_true] at hs
@@ -3250,41 +3250,41 @@ theorem EnvOK.sem (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
 
 theorem world_args (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {w req T : Tm}
     (hp : PrimTy P Γ (.wAsk w req) T) :
-    ∃ k rd c ls vs, w.subst (Tm.env ρ) = .wld k ∧ P.requestD = some rd ∧ req.subst (Tm.env ρ) = .app (.vc rd c ls) vs ∧
-      VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons (T.subst (Tm.env ρ)) .nil)) := by
+    ∃ k rd c ls vs ls', w.subst (Tm.env ρ) = .wld k ∧ P.requestD = some rd ∧ req.subst (Tm.env ρ) = .app (.vc rd c ls) vs ∧
+      VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd ls') (.cons (T.subst (Tm.env ρ)) .nil)) := by
   cases hp with
   | wAsk hwd hrd hw hW hr hR =>
     have vw := hE.sem hP hw; rw [hW] at vw; simp only [Tm.subst] at vw
     obtain ⟨k, hk⟩ := vw.world_inv hP hwd
     have vr := hE.sem hP hr; rw [hR] at vr; simp only [Tm.subst] at vr
-    obtain ⟨⟨D, hD, hop, hco, -, -⟩, hpl, -⟩ := hP.request _ hrd
+    obtain ⟨⟨D, hD, hop, hco, -⟩, hpl, -⟩ := hP.request _ hrd
     obtain ⟨c, vs, -, -, -, -, -, he, -⟩ := vr.ty_inv (fun D' h => by rw [hD] at h; cases h; exact ⟨hco, hop⟩) hpl
-    exact ⟨k, _, c, _, vs, hk, hrd, he, he ▸ vr⟩
+    exact ⟨k, _, c, _, vs, _, hk, hrd, he, he ▸ vr⟩
 
 theorem world_strip (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
     (hS : SimEnv P Γ.er ρS ρ) {w req A : Tm} (hpa : PrimTy P Γ (.wAsk w req) A)
     (hrt : (rt P Γ w && rt P Γ req) = true) :
     ∃ k rd c ls vs vsS, w.subst (Tm.env ρ) = .wld k ∧ P.sub ρS w = .wld k ∧ P.requestD = some rd ∧
       req.subst (Tm.env ρ) = .app (.vc rd c ls) vs ∧ P.sub ρS req = .app (.vc rd c .nil) vsS ∧
-      VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons (A.subst (Tm.env ρ)) .nil)) := by
+      ∃ ls', VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd ls') (.cons (A.subst (Tm.env ρ)) .nil)) := by
   simp only [Bool.and_eq_true] at hrt
-  obtain ⟨k, rd, c, ls, vs, hk, hrd, he, hv⟩ := world_args hP hE hpa
+  obtain ⟨k, rd, c, ls, vs, ls', hk, hrd, he, hv⟩ := world_args hP hE hpa
   have hRw := rt_real hP hE hS w hrt.1; rw [hk] at hRw
   have hRr := rt_real hP hE hS req hrt.2; rw [he] at hRr
-  obtain ⟨⟨D, hD, -, -, hnt, -⟩, -, hn⟩ := hP.request _ hrd
+  obtain ⟨⟨D, hD, -, -, hnt⟩, -, hn⟩ := hP.request _ hrd
   obtain ⟨vsS, hx⟩ := hRr.ctor_inv (by simp [Prog.isNt, hD, hnt]) hn
-  exact ⟨k, rd, c, ls, vs, vsS, hk, hRw.wld_inv, hrd, he, hx, hv⟩
+  exact ⟨k, rd, c, ls, vs, vsS, hk, hRw.wld_inv, hrd, he, hx, ls', hv⟩
 
 theorem world_real (hP : ProgOK P) (hO : P.OracleOK) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
     (hS : SimEnv P Γ.er ρS ρ) {w req A : Tm} (hpa : PrimTy P Γ (.wAsk w req) A)
     (hrt : (rt P Γ w && rt P Γ req) = true) :
     Real P ((Prim.wNext w).evalS P ρS) ((Prim.wNext w).eval P ρ) ∧
       Real P ((Prim.wAsk w req).evalS P ρS) ((Prim.wAsk w req).eval P ρ) := by
-  obtain ⟨k, rd, c, ls, vs, vsS, hk, hkS, hrd, he, hx, hv⟩ := world_strip hP hE hS hpa hrt
+  obtain ⟨k, rd, c, ls, vs, vsS, hk, hkS, hrd, he, hx, ls', hv⟩ := world_strip hP hE hS hpa hrt
   refine ⟨?_, ?_⟩
   · simp only [Prim.evalS, Prim.eval, hk, hkS, Tm.wnext]; exact .world
   · simp only [Prim.evalS, Prim.eval, hk, he, hkS, hx, Prog.answer]
-    exact (hO.typed k c _ _ _ _ hrd hv).2
+    exact (hO.typed k c _ _ _ _ _ hrd hv).2
 
 theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
     (hS : SimEnv P Γ.er ρS ρ) {p : Prim} {T : Tm}

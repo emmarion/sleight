@@ -32,7 +32,11 @@ of the two forms of section 27: from no parameters to one `many` return
 written with its type, when it is applied and its result printed, or,
 with the prelude, from one `many` `(String)` to one `many` `(String)`,
 when it is applied to all of standard input and its result written to
-standard output.
+standard output. A final value of the prelude's `Program` is driven as
+section 27 has it: `Continue`'s function is applied to a world, the
+requests its `world-do`s make are performed as the stripped run reaches
+them, and the `Program` it returns is the next step, until `Exit`, whose
+code is the runner's exit status (below).
 `--unchecked` skips the checker and runs the program anyway.
 `--shared` reads the files named as one program, in order, the final
 value of the last being the program's and that of any other being
@@ -178,6 +182,15 @@ each one rests on, which are Lean's own three (`propext`,
   (`MOut`; `Spine` and `WO` are the ownership relations). `coerce` and
   calls through delegates are covered; the runner does not yet use the
   machine run.
+- **The world's answers.** `eval_sound`, `checked_runs` and
+  `machine_main` take as a hypothesis an oracle (`Prog.ask`) that
+  answers a `world-do` from the world's step number and the request's
+  constructor, with a value of the type that constructor's `Request`
+  index names and a stripped value standing for it (`Prog.OracleOK`).
+  A world is a step number (`Tm.wld`), and `world-do` binds the next
+  world and the answer in one core form (`Core.wdo`). The theorems say
+  nothing about any particular oracle; the runner's is the untrusted
+  driver below.
 - **`no_false`.** No checked program has as its result type a data type
   with no constructors that is neither `Coercible` nor opaque.
 
@@ -198,6 +211,16 @@ state. SOUNDNESS.md's invariants appear as:
 
 - The reader and the elaborator, from surface syntax to `Core`. The
   theorems are about `Core` programs.
+- The driver of a `Program` (`Prog.drive`, `Prog.perform`). It runs the
+  same stripped runner, `runAM`, as the proved `runA` does, in `IO`
+  rather than `Option`, with an oracle that performs each request as it
+  is reached. That this is the run the theorems describe, for the
+  oracle made of the answers it gave, is a session's reading, not a
+  proof. It performs `WriteOut`, `WriteErr`, `ReadLine`,
+  `ReadRemaining`, `GetEnv` and `GetCwd`; any other request stops the
+  program with a runtime error saying it is not supported, and the
+  runner has none of the reference's command-line flags for confining
+  a program. Output is flushed after every write.
 - That `Core`, `TmTy`, `CoreTy` and `eval` match MINIMAL.md. That
   agreement rests on reading alone, and the differences below are the
   ones known.
@@ -208,7 +231,7 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
 refused as not supported: every form not named in this file, among
-them macros and `World`. Only the prelude, or a program
+them macros. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -380,6 +403,16 @@ it is `Settled`, and its `is` rule.
   `Prim.placedEq`, an `Eq` of two boxes of one type, both of which are
   its index. `_` arguments come from the box's known type or from
   inference. A pattern field of a `Placed` type records it.
+- `World`, `Request`, `Program` and `world-do` (DESIGN.md section 42).
+  `World` is a built-in opaque type, declared when a top-level form
+  first names it. `(world-do A w req)` elaborates to `Core.wdo` on
+  variables, binding the request to one first when it is not one; in an
+  erased position it elaborates to two erased primitives,
+  `Prim.wNext` and `Prim.wAsk`, and performs nothing. An `A` of `_` is
+  inferred. The world and the request are used at `unique` and the
+  next world is `unique`, linked to the world's slot; the answer is
+  `many`. The machine run places a stripped answer in the heap block
+  by block (`Heap.placeDeep`).
 - Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
   them are `extern` functions whose models run, and inside an `extern`
   function's body a cell of an `extern` constructor is allowed (section
@@ -573,6 +606,19 @@ it is `Settled`, and its `is` rule.
   written with an `Fn` type whose level is an entry.
 
 ## Shapes chosen here, for the owner to confirm or change
+
+- The oracle that answers a `world-do` is keyed by the world's step
+  number and the request's constructor alone, not the request's fields,
+  so that the full run, the stripped run and the machine run, which hold
+  a request differently, ask it the same question. An answer that
+  depends on a request's fields is the driver's to give: for the
+  theorems, the oracle is whatever answers the run received.
+- A top-level final form is elaborated at `many`, and again at
+  `unique` when that is refused or its run gives a `Program`; the
+  `unique` elaboration is the program when its run gives a `Program`,
+  or when the `many` one's did, and otherwise the `many` one is.
+- `Core.wdo` takes variables; the uses pass refuses it on any other
+  term.
 
 - An `is` entry of a telescope, `(m e is x)` or `(subterm m e is x)`, opens to an entry with the
   rule that it is `e`, and is typed through that rule, so its type is

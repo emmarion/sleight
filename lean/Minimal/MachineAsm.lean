@@ -692,7 +692,7 @@ theorem MSound.wdo (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
     have hrt : (rt P G.Γ w && rt P G.Γ req) = true := by
       have := hok; simp only [Ctx.ok, hG0.ghost, Bool.false_or] at this; exact this
     exact machine_wdo hO (fun ρS hS => by
-        obtain ⟨k, rd, c, _, _, vsS, _, hkS, hrd, _, hx, _⟩ := world_strip hP hE hS hpa hrt
+        obtain ⟨k, rd, c, _, _, vsS, _, hkS, hrd, _, hx, -⟩ := world_strip hP hE hS hpa hrt
         exact ⟨k, rd, c, vsS, hkS, hrd, hx⟩)
       (fun ρS hS => world_real hP hO hE hS hpa hrt)
       (fun Tw' A' h1 h2 => by rw [hTw] at h1; rw [hA] at h2; cases h1; cases h2; exact (ih' _).1)

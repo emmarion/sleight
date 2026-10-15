@@ -412,7 +412,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false → D.opq = false →
       PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
   | wAsk : P.worldD = some wd → P.requestD = some rd → TmTy P Γ w W → Γ.canon W = .app (.tyc wd .nil) .nil →
-      TmTy P Γ req R → Γ.canon R = .app (.tyc rd .nil) (.cons A .nil) → PrimTy Γ (.wAsk w req) A
+      TmTy P Γ req R → Γ.canon R = .app (.tyc rd ls) (.cons A .nil) → PrimTy Γ (.wAsk w req) A
   | wNext : P.worldD = some wd → TmTy P Γ w W → Γ.canon W = .app (.tyc wd .nil) .nil →
       PrimTy Γ (.wNext w) (.app (.tyc wd .nil) .nil)
   | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →

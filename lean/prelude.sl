@@ -964,6 +964,13 @@
      (many (Nat) minor-words) (many (Nat) promoted-words) (many (Nat) major-words)
      (many (Nat) minor-gcs) (many (Nat) major-gcs) -> (Usage)))
 
+(def-adts $ (Program : ((Level) L) -> Type)
+  enum
+  (many Exit : (erased (Level) L) (many (U8) code) -> (Program L))
+  (many Continue : (erased (Level) L)
+     (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
+     -> (Program L)))
+
 (def-adts $ (Stopwatch : -> Type)
   enum
   (many Start : -> (Stopwatch))  ; allocates the answer, compacts the heap, then reads

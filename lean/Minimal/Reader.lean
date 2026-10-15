@@ -232,10 +232,13 @@ def ESt.pushDecl (st : ESt) (D : Adt) : ESt :=
   { st with decls := st.decls.push D, isoCtors := st.isoCtors + D.ctors.length,
             isoSize := st.isoSize + D.isoSize st.decls.size }
 
+def ESt.worldD (st : ESt) : Option Nat := st.decls.findIdx? fun D => D.name == "World" && D.opq
+
 def ESt.prog (st : ESt) (main : Core) : Prog :=
   { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern,
     isoFuel := isoFuelOf st.decls.size st.isoCtors st.isoSize,
-    placedD := st.decls.findIdx? fun D => D.name == "Placed" && D.opq }
+    placedD := st.decls.findIdx? fun D => D.name == "Placed" && D.opq,
+    worldD := st.worldD, requestD := if st.pre then st.decls.findIdx? (·.name == "Request") else none }
 
 def placingNames : List String := ["place-at", "place-at-many", "unplace-at", "unplace-at-many", "placed-slot", "placed-eq"]
 
@@ -1063,6 +1066,12 @@ def preAdt (name : String) : M Nat := do
 
 def app (h : Tm) (args : List Tm) : Tm := .app h (.ofList args)
 
+def declareWorld (e : Sx) : M Unit := do
+  let st ← get
+  if (st.adts.lookup "World").isNone && e.litForms.contains (.atom "World") then
+    set { st.pushDecl { params := .nil, ctors := [], name := "World", opq := true } with
+      adts := ("World", st.decls.size) :: st.adts }
+
 def internLits (e : Sx) : M (List Stmt) := do
   let st0 ← get
   let forms := e.litForms
@@ -1650,6 +1659,33 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       if !(← erasedPos want) && (← get).ers.getD i true then
         throw s!"`(slot-of {showName x})` is erased, as `{showName x}` is, and stands in a non-erased position"
       return ([], [← slotOf i])
+    else if h == "world-do" && (sc.lookup h).isNone then
+      let [A, w, r] := args | throw "hint: usage: (world-do <type> <world> <request>)"
+      unless (← get).pre && ((← get).firstAdt "Request").isSome do throw "`world-do` needs the prelude's `Request`"
+      let er ← erasedPos want
+      let At ← if A == .atom "_" then pure Tm.hole else elabTm sc 0 A
+      let m := if er then Mode.er else .uniq
+      let (ss, ts) ← elabArgs sc [w, r] [m, m]
+      let [wt, rt] := ts | throw "`world-do` takes a world and a request"
+      let ans (k : Nat) : M Unit := unless At.hasHole do note k At
+      let some wd := (← get).worldD | throw "unreachable: no `World`"
+      let worldTy : Tm := .app (.tyc wd .nil) .nil
+      if er then
+        let [j, k] ← fresh [true, true] | throw "fresh"
+        note j worldTy; ans k
+        return (ss ++ [.prim (.wNext wt) true, .prim (.wAsk wt rt) true], [.fv j, .fv k])
+      let bindVar (t : Tm) : M (List Stmt × Nat) := match t with
+        | .fv i => pure ([], i)
+        | _ => do
+          let [j] ← freshMd [.uniq] | throw "fresh"
+          note j t true
+          pure (uqMark [.uniq] ++ [(.prim (.tm t) false : Stmt)], j)
+      let (s1, wi) ← bindVar wt
+      let (s2, ri) ← bindVar rt
+      let [j, k] ← freshMd [.uniq, .many] | throw "fresh"
+      note j worldTy; ans k
+      modify fun st => { st with links := (j, wi) :: st.links }
+      return (ss ++ s1 ++ s2 ++ [.wdo (.fv wi) (.fv ri)], [.fv j, .fv k])
     else if h == "share" && (sc.lookup h).isNone then
       if ← erasedPos want then throw "`share` in an erased position, where nothing is used"
       let [x] := args | throw "hint: usage: (share <expression>)"
@@ -2068,7 +2104,7 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     M (List Stmt × List Tm) := do
   let n0 := (← get).n
   let ss ← match items with
-    | e :: _ => if (← get).top then internLits e else pure []
+    | e :: _ => if (← get).top then do declareWorld e; internLits e else pure []
     | [] => pure []
   unless ss.isEmpty do recordTop n0 ss
   let n1 := (← get).n
@@ -2539,12 +2575,12 @@ def builtins : ESt :=
     ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)] ++ specialNames.mapIdx fun i n => ("%" ++ n, 0, i),
     special := 0 }
 
-def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List String) := do
+def elabProgram (items : List Sx) (pre : Bool) (fin : Mode := .many) : Except String (Prog × List String) := do
   let stmt := match (items.filter (!isPragmaSx ·)).getLast? with
     | some (.list (.atom h :: _)) => statements.contains h
     | _ => false
   let items := if stmt then items ++ [.list [.atom "values"]] else items
-  let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none items).run
+  let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [fin]) none items).run
     { builtins with pre, topRefs := suffixRefs items }
   unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
   let ws := st.warns ++ (st.supp.filter (·.2.2 == 0)).map fun (x, _, _) => s!"`;! suppress warn` for `{x}` silenced nothing"

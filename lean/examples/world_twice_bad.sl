@@ -1,0 +1,10 @@
+(def-lvl P)
+(let ((many d)) (lt-dec 0 u8-modulus))
+(comptime-match many d (Yes _ _ p))
+(let ((many ok)) (MkU8 0 p))
+(def-unique P $ (unique start : (unique (World) w) ->
+    (unique (World) w2 at w) (unique (Program P) next))
+  (let ((unique w1) (many _)) (world-do _ w (WriteOut "a\n")))
+  (let ((unique w3) (many _)) (world-do _ w (WriteOut "b\n")))
+  (values w3 (Exit P ok)))
+(Continue P start)

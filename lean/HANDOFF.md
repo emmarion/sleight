@@ -351,7 +351,7 @@ computes.
 2. **What `at`, slots and cells still lack** (`lean/README.md` lists
    what is done): a slot used both at unique and at many
    (a non-erased slot entry is born `unique`, and the uses pass allows
-   one or the other), `World` and `Program`, a non-erased at-match on a union, and
+   one or the other), a non-erased at-match on a union, and
    the gaps the README's slot item lists.
    The user asked that mutation state be left until everything else is
    done, so the non-mutation items here come first.
@@ -383,3 +383,11 @@ computes.
 11. An `at` naming an entry of an enclosing telescope, such as a
    constructor field's function type written `at` a sibling field
    (`tests/at_field_fn_sibling.sl`).
+12. **The `Program` driver's requests.** `Prog.perform` does
+   `WriteOut`, `WriteErr`, `ReadLine`, `ReadRemaining`, `GetEnv` and
+   `GetCwd`; the others, the confinement of file requests and output,
+   and the reference's command-line flags for them are not done, and
+   `--full` does not drive a `Program`. The theorems take the oracle as
+   a hypothesis (`Prog.OracleOK`); a session's reading is that the
+   driver, running `runAM` in `IO`, is the run they describe for the
+   answers it gave, which is not proved.
