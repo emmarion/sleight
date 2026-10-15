@@ -228,7 +228,7 @@ def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
     | none => false
 
 def Prog.simple (P : Prog) : List Nat :=
-  (List.range (P.adts.length + 1)).foldl (fun S _ => P.simpleStep S) (List.range P.adts.length)
+  iterFix P.simpleStep (P.adts.size + 1) (List.range P.adts.size)
 
 def Prog.natOK (P : Prog) (d : Nat) : Bool := match P.adts[d]? with
   | some D => P.natD == some d && D.lifted == 0 && !D.newtype && !(D.phantom.getD 0 false) && !(D.phantom.getD 1 false) &&

@@ -306,9 +306,10 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .assert t A => do
     let ⟨T, h⟩ ← checkTm P Γ t
     let ⟨hs⟩ ← need (t.static 0 0) "a literal's proof is not closed"
-    let ⟨hS⟩ ← need (P.simpleStep P.simple = P.simple) "unreachable"
+    let S := P.simple
+    let ⟨hS⟩ ← need (P.simpleStep S = S) "unreachable"
     let ⟨hk⟩ ← need ((A.fvs.all fun i => match Γ.tys[i]? with
-        | some (.app (.tyc d .nil) .nil) => P.simple.contains d && (Γ.fixed[i]?.join).isSome
+        | some (.app (.tyc d .nil) .nil) => S.contains d && (Γ.fixed[i]?.join).isSome
         | _ => false) = true)
       "a literal's fact mentions an entry whose value is not known"
     let ⟨he⟩ ← need (A.subst (Γ.fixedEnv P) = T) "a literal's proof is not of the fact it states"
@@ -906,38 +907,38 @@ def checkProg : Res {R // Checked P R} := do
       let ⟨hp⟩ ← checkTele P {tys := #[]} D.params
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
       let ⟨hc⟩ ← allIdx (checkCtor P d D.lifted) D.ctors 0
-      .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
-  let ⟨hn⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ c ∈ List.range (((P.adts[d]?).map fun (D : Adt) => D.ctors.length).getD 0),
+      .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts.toList 0
+  let ⟨hn⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ c ∈ List.range (((P.adts[d]?).map fun (D : Adt) => D.ctors.length).getD 0),
       P.isNt d = true → P.phantom d c = false → ((P.ctor d c).bind fun sig => (sig.skip (P.lifted d)).ntField).isSome)
     "a newtype does not have newtype shape"
-  let ⟨hco⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.coercible = true → D.ctors = [])
+  let ⟨hco⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ D, P.adts[d]? = some D → D.coercible = true → D.ctors = [])
     "unreachable: Coercible has constructors"
-  let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.opq = true →
+  let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ D, P.adts[d]? = some D → D.opq = true →
       D.ctors = [] ∧ D.coercible = false)
     "unreachable: an opaque type has constructors"
   let ⟨hpl⟩ ← need ((P.placedD.all fun q => (P.adts[q]?.map (·.opq)) == some true) = true)
     "unreachable: Placed is not opaque"
-  let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
+  let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
       ∀ j < sig.ers.length, sig.uAt j = true → sig.ers.getD j true = false)
     "unreachable: a constructor field is both erased and unique"
   let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := #[]} P.main (.inr 0)
   have hs := hs 0 rfl
-  .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
-    fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2,
+  .ok ⟨R, ⟨fun d D e => by have := ha d D (by simpa using e); simp only [Nat.zero_add] at this; exact this.1,
+    fun d D c sig e1 e2 => by have := ha d D (by simpa using e1); simp only [Nat.zero_add] at this; exact this.2 c sig e2,
     fun d c sig h1 h2 h3 => by
       obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h3
-      have hd : d < P.adts.length := (List.getElem?_eq_some_iff.mp hD).1
+      have hd : d < P.adts.size := (getElem?_eq_some_iff.mp hD).1
       have hcl : c < D.ctors.length := (List.getElem?_eq_some_iff.mp hc).1
       have := hn d (List.mem_range.mpr hd) c (List.mem_range.mpr (by simpa [hD] using hcl)) h1 h2
       simpa [h3] using this,
-    fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
-    fun d D h1 h2 => hop d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
+    fun d D h1 h2 => hco d (List.mem_range.mpr (getElem?_eq_some_iff.mp h1).1) D h1 h2,
+    fun d D h1 h2 => hop d (List.mem_range.mpr (getElem?_eq_some_iff.mp h1).1) D h1 h2,
     fun q hq => by
       rw [hq] at hpl; simp only [Option.all_some, beq_iff_eq, Option.map_eq_some_iff] at hpl
       obtain ⟨D, hD, ho⟩ := hpl; exact ⟨D, hD, ho⟩,
     fun d c sig h j hu => by
       obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h
-      exact hue d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j
+      exact hue d (List.mem_range.mpr (getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j
         (Tm.uAt_lt _ _ hu) hu⟩, h, hs⟩
 
 end Minimal

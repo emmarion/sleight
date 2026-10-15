@@ -183,7 +183,7 @@ structure ESt where
   lifts : List (Nat × List Nat) := []
   adts : List (String × Nat) := []
   ctors : List (String × Nat × Nat) := []
-  decls : List Adt := []
+  decls : Array Adt := #[]
   isoCtors : Nat := 0
   isoSize : Nat := 0
   groups : List Group := []
@@ -229,12 +229,12 @@ structure ESt where
 abbrev M := StateT ESt (Except String)
 
 def ESt.pushDecl (st : ESt) (D : Adt) : ESt :=
-  { st with decls := st.decls ++ [D], isoCtors := st.isoCtors + D.ctors.length,
-            isoSize := st.isoSize + D.isoSize st.decls.length }
+  { st with decls := st.decls.push D, isoCtors := st.isoCtors + D.ctors.length,
+            isoSize := st.isoSize + D.isoSize st.decls.size }
 
 def ESt.prog (st : ESt) (main : Core) : Prog :=
   { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern,
-    isoFuel := isoFuelOf st.decls.length st.isoCtors st.isoSize,
+    isoFuel := isoFuelOf st.decls.size st.isoCtors st.isoSize,
     placedD := st.decls.findIdx? fun D => D.name == "Placed" && D.opq }
 
 def placingNames : List String := ["place-at", "place-at-many", "unplace-at", "unplace-at-many", "placed-slot", "placed-eq"]
@@ -291,10 +291,6 @@ def slotD : Nat := 4
 
 def atFnD : Nat := 5
 
-def iterFix {α : Type} [BEq α] (f : α → α) : Nat → α → α
-  | 0, x => x
-  | n + 1, x => let y := f x; if y == x then x else iterFix f n y
-
 def ESt.canonIdx (st : ESt) (i : Nat) : Nat :=
   iterFix (fun i => match st.inl.lookup i with | some (.fv j) => j | _ => i) st.inl.length i
 
@@ -319,9 +315,9 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
     | some d, _ => pure (.tyc d (st.liftTm d))
     | _, some (d, c) => pure (.vc d c (st.liftTm d))
     | _, _ =>
-      if x == "vacant-slot" && st.decls.length > slotD then return .app (.vc slotD 0 .nil) .nil
+      if x == "vacant-slot" && st.decls.size > slotD then return .app (.vc slotD 0 .nil) .nil
       match specialNames.idxOf? x with
-      | some c => if st.decls.length > 0 then pure (.app (.vc st.special c .nil) .nil) else throw s!"unbound name {showName x}"
+      | some c => if st.decls.size > 0 then pure (.app (.vc st.special c .nil) .nil) else throw s!"unbound name {showName x}"
       | none => throw s!"unbound name {showName x}"
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
@@ -443,7 +439,7 @@ def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
       let i := match r with | .fv i | .fn i _ _ | .ctor i => some i | _ => none
       match (i.bind st.settledVal).orElse fun _ => i.bind (st.inl.lookup ·) with
       | some (.app (.vc d c _) _) =>
-        if d == st.special && st.decls.length > 0 && (i.map st.mintedSpecial).getD false then
+        if d == st.special && st.decls.size > 0 && (i.map st.mintedSpecial).getD false then
           let s := specialNames.getD c ""
           if (sc.lookup s).isSome then throw s!"the special form {s} is shadowed where {showName h} dispatches to it"
           if let some i := i then use i
@@ -655,7 +651,7 @@ def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
   let st ← get
   if let some k := st.cellDs.lookup ci.k then return k
   let n := ((fieldErs ci.sig).filter (!·)).length
-  let k := st.decls.length
+  let k := st.decls.size
   let ps : Tm := (List.range n).foldr (fun _ r => .bind (.ty false true false) slotTy r) .nil
   let D : Adt := { params := ps, ctors := [], name := "Cell " ++ c, opq := true }
   modify fun st => { st.pushDecl D with cellDs := (ci.k, k) :: st.cellDs }
@@ -915,7 +911,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
       pure (← name T, ps, cs)
     | _ => throw "malformed def-adts"
   let st ← get
-  let base := st.decls.length
+  let base := st.decls.size
   let mut ctors := st.ctors
   for ((_, _, cs), j) in heads.zipIdx do
     for (c, ci) in cs.zipIdx do
@@ -1433,7 +1429,7 @@ partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
     let P : Prog := (st.prog .dead)
     match runS P 10000000 st0.vals (close ss [t]) with
     | some [.app (.vc d c _) _] =>
-      if d == st.special && st.decls.length > 0 then
+      if d == st.special && st.decls.size > 0 then
         let f := specialNames.getD c ""
         if (sc.lookup f).isSome then throw s!"the special form {f} is shadowed where a computed head dispatches to it"
         recordTop st0.n ss
@@ -2129,7 +2125,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     elabSeq sc want exp rest
   | .list (.atom "def-opaque" :: bs) :: rest => do
     unless (← get).inPrelude do throw "only the prelude may write `def-opaque`"
-    let base := (← get).decls.length
+    let base := (← get).decls.size
     declareAdts sc (bs.map fun | .list (h :: _) => .list [h, .atom "enum"] | b => b)
     modify fun st => { st with decls := st.decls.mapIdx fun d D => if base ≤ d then { D with opq := true } else D }
     elabSeq sc want exp rest
@@ -2154,12 +2150,12 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       modify fun st => { st with prims := (p, tele, np) :: st.prims }
     elabSeq sc want exp rest
   | .list (.atom "def-adts" :: bs) :: rest => do
-    let base := (← get).decls.length
+    let base := (← get).decls.size
     declareAdts sc bs
     let st ← get
     let n0 := st.n
     let mut ss : List Stmt := []
-    for d in List.range' base (st.decls.length - base) do
+    for d in List.range' base (st.decls.size - base) do
       if let some D := st.decls[d]? then
         let ls := st.liftTm d
         let [i] ← fresh [false] | throw "fresh"
