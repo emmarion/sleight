@@ -68,6 +68,9 @@
 (def-fns util-lvl $ (many runtime-error : (many (String) m) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (values (say-to (BTrue) (str-cat3 "slc: runtime error: " m "\n") w) (Exit _ exit-fail)))
 
+(def-fns util-lvl $ (many heap-crash : (erased (Hist Block) hs) (many (Heap hs) hp) -> (many (Maybe $ String) m))
+  (match many hp _ ((MkHeap _ _ _ _ c) c)))
+
 (def-fns util-lvl $ (many answer-ctors : (many (Env) env) (subterm many (List $ String) names) -> (many (List $ Ctor) cs))
   (let-match many names (Cons _ n rest) ((Nil _) (Nil _)))
   (let ((many more)) (notail $ answer-ctors env rest))
@@ -79,7 +82,7 @@
 ; continuation with self/eval.sl's apply to slc's own world, which a world-do it meets performs.
 
 (def-fns interp-lvl $ (many interp-program : (many (Nat) fuel) (many (List $ Ctor) pcs) (many (Performer $ World) pf) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (let-match many (error-of _ hp v) (None _) ((Some _ m) (runtime-error m w)))
+  (let-match many (heap-crash _ hp) (None _) ((Some _ m) (runtime-error m w)))
   (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
   (let ((many f0)) (field-at _ fields 0 (widen-ref _ _ le1 v)))
   (let-match many (nat-eq i $ ctor-index $ pctor pcs "Continue") (BTrue)
@@ -109,6 +112,9 @@
       (let ((many rq)) $ match many (prelude-adt env "Request") (((List $ Ctor) _)) ((Some _ a) (adt-ctors a)) ((None _) (Nil _)))
       (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Heap h) hq) (many (Ref Block h) req) (unique (World) wo) ->
           (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
+        (let-match many hq (MkHeap _ _ _ _ crash))
+        (let-match many crash (None _)
+          ((Some _ m) (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ m) (values hl2 hq2 sf2 e wo)))
         (perform-request pcs rq pargs with-env base _ hq req wo))
       (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) args) (unique (World) wo) ->
           (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
@@ -119,7 +125,7 @@
     ((FThunk t)
       (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) u1)) (apply (env-fuel env) _ hp v (Nil _) many-one _ compile-time u))
       (let ((many r)) (vals-one _ vs pk))
-      (let-match many (error-of _ hp1 r) (None _) ((Some _ m) (runtime-error m w)))
+      (let-match many (heap-crash _ hp1) (None _) ((Some _ m) (runtime-error m w)))
       (tail $ interp-finals env pargs with-env _ rest _ hp1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
     ((FMain)
       (let ((unique w1) (many input)) (world-do _ w (ReadRemaining)))
@@ -127,5 +133,5 @@
       (let ((erased h2) (many hp2) (erased le2) (many vs) (erased pk) (unique (Unit) u1)) (apply (env-fuel env) _ hp1 (widen-ref _ _ le1 v) (Cons _ s (Nil _)) many-one _ compile-time u))
       (let ((erased le12)) (hist-le-trans _ _ _ le1 le2))
       (let ((many r)) (vals-one _ vs pk))
-      (let-match many (error-of _ hp2 r) (None _) ((Some _ m) (runtime-error m w1)))
+      (let-match many (heap-crash _ hp2) (None _) ((Some _ m) (runtime-error m w1)))
       (tail $ interp-finals env pargs with-env _ rest _ hp2 (hist-le-trans _ _ _ le le12) $ say-to (BFalse) (heap-str _ hp2 r) w1))))
