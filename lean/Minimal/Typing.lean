@@ -67,6 +67,9 @@ def er (Γ : Ctx) (i : Nat) : Bool := Γ.erA.getD i true
 
 def canon (Γ : Ctx) (t : Tm) : Tm := canonBy Γ.σ t
 
+instance (priority := high) decCanonEq (Γ : Ctx) (a b : Tm) : Decidable (Γ.canon a = Γ.canon b) :=
+  if h : a = b then isTrue (h ▸ rfl) else inferInstanceAs (Decidable (canonBy Γ.σ a = canonBy Γ.σ b))
+
 def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
   | some (.tyCtor ps) => some (.tyCtor ps)
   | some (.valCtor s) => some (.valCtor s)
