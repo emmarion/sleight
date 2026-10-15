@@ -186,7 +186,9 @@ under it.
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
-`bench/gen.py` writes the samples. `dune test` runs every `tests/*.sl`, once with the FFI and once
+`bench/gen.py` writes the samples; `bench/scale.py slc [shape ...]` times
+slc on generated programs of doubling size, one shape each, with each
+time's ratio to the previous size's. `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both
 ways, against the same directives. A test's comment lines say what it needs, read wherever in the file
 they sit; one that names a line of the test itself is written at the end, so
