@@ -350,9 +350,7 @@ computes.
    proof that `def-fns` mints after its block, so it is refused in the
    block's own signatures.
 2. **What `at`, slots and cells still lack** (`lean/README.md` lists
-   what is done): `Placed` (section 66; `placed-slot` needs a slot
-   semantics the core does not have, and the placings are `def-prim`s
-   with non-erased returns), a slot used both at unique and at many
+   what is done): a slot used both at unique and at many
    (a non-erased slot entry is born `unique`, and the uses pass allows
    one or the other), `World` and `Program`, a non-erased at-match on a union, and
    the gaps the README's slot item lists.

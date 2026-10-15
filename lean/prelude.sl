@@ -1399,6 +1399,19 @@
 
 (def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
 
+(def-prim $ (many place-at : (erased Type T) (unique T x) -> (unique (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many place-at-many : (erased Type T) (many T x) -> (many (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many unplace-at : (erased (Slot) s) (erased Type T) (erased T v) (unique (Placed s T v) p) ->
+    (unique v is x at p)))
+
+(def-prim $ (many unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v) (many (Placed s T v) p) ->
+    (many v is x at p)))
+
+(def-prim $ (erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v) (erased (Placed s T v) p) ->
+    (erased (Eq (Slot) (slot-of p) s) e)))
+
 (def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
     (erased (Placed s T v) p) (erased (Placed s T v) q) ->
     (erased (Eq (Placed s T v) p q) e)))

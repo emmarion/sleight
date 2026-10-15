@@ -968,7 +968,8 @@ def returnsBinders (ats : List Bool) (xs : List String) (want : List Mode) : Lis
   | [.list (.atom "values" :: es)] =>
     let parts := es.zip ((want.filter (· != .hid)).zip ats)
     parts.all (fun (e, w, a) => w.isEr || !a ||
-      e matches .atom _ | .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]]) &&
+      (e matches .atom _ | .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]]) ||
+      (match e with | .list (.atom h :: _) => placingNames.contains h | _ => false)) &&
     (parts.filterMap fun (e, w, a) => if w.isEr || a then none else some (uncoerce e)) == xs.map .atom
   | [.list [.atom "coerce", e, _]] => returnsBinders ats xs want [e]
   | [e] => (!(want.head?.getD .er).isEr && xs == [e.show]) ||
@@ -1174,6 +1175,13 @@ def openCtor (sc : Scope) (md : Mode) (scr : Option Tm) (ci : CtorInfo) (c : Str
     if let (true, some (.fv j), some k) := (ci.nt, scr, (fieldErs ci.sig).idxOf? false) then
       modify fun st => { st with links := (fs[k]!, j) :: st.links }
     let sc' := ((names.take nf).zip (fs.zipWith (fun i T => entRef i T) (teleTys ci.sig))).reverse ++ sc
+    let pl := ((← get).prog .dead).placedD
+    let _ ← fs.foldlM (fun t i => match t with
+      | .bind (.ty ..) A r => do
+        if let .app (.tyc q _) _ := A then if pl == some q then note i A
+        pure (r.inst (.fv i) 0)
+      | .bind _ _ r => pure (r.inst (.fv i) 0)
+      | t => pure t) ci.sig
     let some u := names[nf]? | return (nf, ci, sc', [])
     let cd ← cellDecl ci c
     let ms ← (fs.zip (fieldErs ci.sig)).filterMapM fun (i, e) => if e then pure none else some <$> slotM i
@@ -1665,6 +1673,10 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let plain := cargs.filter fun | .list [.atom "predates", _] | .list [.atom "subterm", _] => false | _ => true
       let rn := (← get).renames
       let passed ← ((plain.zip ms).filter (!·.2.isEr)).mapM fun (a, _) => do
+        let a := match a with
+          | .list [.atom h, _, x] | .list [.atom h, _, _, _, x] =>
+            if placingNames.contains h && (sc.lookup h).isNone then x else a
+          | a => a
         return (List.range rn.length).foldl (fun i _ => (rn.lookup i).getD i) (← entry sc a)
       unless passed == params.filterMap (fun (i, e) => if e then none else some i) do
         throw "delegate: the non-erased parameters are not passed straight through, in order"
@@ -1703,24 +1715,6 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       elabExpr sc want exp x
     else if h == "at-fn-of" && (sc.lookup h).isNone then
       return ([], [← elabTm sc 0 e])
-    else if let (some (tele, np), none) := (st.prims.lookup h, sc.lookup h) then
-      let (ss, ts) ← elabArgs sc args ((teleMds tele).take np)
-      unless ts.length == np do throw s!"`{h}` takes {np} arguments"
-      let mut t := tele
-      let mut out : List Stmt := []
-      for a in ts do
-        let .bind k A r := t | throw s!"`{h}` takes {np} arguments"
-        if k matches .ty .. then out := out ++ [(fun c => .chk .ty a A c : Stmt)]
-        t := r.inst a 0
-      let mut rs : List Tm := []
-      while true do
-        let .bind _ R r := t | break
-        let [i] ← fresh [true] | throw "fresh"
-        note i R
-        out := out ++ [.prim (.axm R) true]
-        rs := rs ++ [.fv i]
-        t := r.inst (.fv i) 0
-      return (ss ++ out, rs)
     else if placingNames.contains h && (sc.lookup h).isNone && (st.prims.lookup h).isSome then
       let some q := (st.prog .dead).placedD | throw "unreachable: no `Placed`"
       let er ← erasedPos want
@@ -1754,7 +1748,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         let ty := Tm.app (.tyc q .nil) (.ofList [σ, ← pick T .hole, .fv xi])
         let [j] ← freshMd [m] | throw "fresh"
         note j ty
-        modify fun st => { st with links := (j, xi) :: st.links }
+        modify fun st => { st with renames := (j, xi) :: st.renames }
         return (ss ++ ss1 ++ ss2 ++ uqMark [m] ++ [.prim (.place (.fv xi) ty) m.isEr], [.fv j])
       | "unplace-at", [s, T, v, b] | "unplace-at-many", [s, T, v, b] => do
         let m := if er then Mode.er else if h == "unplace-at" then .uniq else .many
@@ -1764,7 +1758,9 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         let vt := match C with | .app _ (.cons _ (.cons _ (.cons v .nil))) => v | _ => .hole
         let [j] ← freshMd [m] | throw "fresh"
         note j vt true
-        if let some r := (← get).slotSrc bt then modify fun st => { st with links := (j, r) :: st.links }
+        match bt with
+        | .fv r => modify fun st => { st with renames := (j, r) :: st.renames }
+        | _ => if let some r := (← get).slotSrc bt then modify fun st => { st with links := (j, r) :: st.links }
         return (ss ++ chk ++ uqMark [m] ++ [.prim (.unplace bt vt) m.isEr], [.fv j])
       | "placed-slot", [s, T, v, b] => do
         let (ss, bts) ← elabArgs sc [b] [.er]
@@ -1786,6 +1782,24 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         note j (.app (.tyc e .nil) (.ofList [C, bt, ct]))
         return (ss ++ chk ++ [.prim (.placedEq e C bt ct) true], [.fv j])
       | _, _ => throw s!"`{h}` takes the wrong number of arguments"
+    else if let (some (tele, np), none) := (st.prims.lookup h, sc.lookup h) then
+      let (ss, ts) ← elabArgs sc args ((teleMds tele).take np)
+      unless ts.length == np do throw s!"`{h}` takes {np} arguments"
+      let mut t := tele
+      let mut out : List Stmt := []
+      for a in ts do
+        let .bind k A r := t | throw s!"`{h}` takes {np} arguments"
+        if k matches .ty .. then out := out ++ [(fun c => .chk .ty a A c : Stmt)]
+        t := r.inst a 0
+      let mut rs : List Tm := []
+      while true do
+        let .bind _ R r := t | break
+        let [i] ← fresh [true] | throw "fresh"
+        note i R
+        out := out ++ [.prim (.axm R) true]
+        rs := rs ++ [.fv i]
+        t := r.inst (.fv i) 0
+      return (ss ++ out, rs)
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d (← liftTm d)) (.ofList ts)])

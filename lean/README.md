@@ -208,7 +208,7 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
 refused as not supported: every form not named in this file, among
-them macros, `Placed` and `World`. Only the prelude, or a program
+them macros and `World`. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -369,6 +369,17 @@ it is `Settled`, and its `is` rule.
   After such a `case` at the top level, the checker knows its field's
   value to be the scrutinee's; `comptime-match` does not look through a
   newtype.
+- `Placed` (DESIGN.md section 66). A value of `(Placed s T v)` is `v`
+  itself (`VTy.placed`, through `Prog.placedD`, the prelude's opaque
+  `Placed`); the rule for opaque types and the axiom rule exclude it.
+  `place-at` and `unplace-at` (and their `-many` forms) elaborate to
+  `Prim.place` and `Prim.unplace`, which are renamings of their argument
+  in every run and are typed into and out of `Placed`; `unplace-at`'s
+  result is the box's index. `placed-slot` elaborates to `Prim.atomEq`
+  on the box's slot and the slot its type names, and `placed-eq` to
+  `Prim.placedEq`, an `Eq` of two boxes of one type, both of which are
+  its index. `_` arguments come from the box's known type or from
+  inference. A pattern field of a `Placed` type records it.
 - Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
   them are `extern` functions whose models run, and inside an `extern`
   function's body a cell of an `extern` constructor is allowed (section
