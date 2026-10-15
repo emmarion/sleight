@@ -7332,7 +7332,7 @@
   (let ((many swept)) $ match many (env-failed env) (((Env) _))
     ((BFalse) (sweep-regions env (env-regions env) $ env-silenced env))
     ((BTrue) env))
-  (env-set-regions (match many (env-saids swept) _ ((MkSaids ss f n) (env-set-saids swept $ MkSaids (said-without-silenced ss) f n))) $ Nil _))
+  (env-set-regions (match many (env-saids swept) _ ((MkSaids ce ch _ _ ss pe ph) (env-set-saids swept $ MkSaids ce ch _ _ (said-without-silenced _ _ ss) pe ph))) $ Nil _))
 
 ; ---- Finals (lib/elab.ml's final_form): what the driver does with a file's final value
 
