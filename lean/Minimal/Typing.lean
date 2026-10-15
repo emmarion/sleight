@@ -254,9 +254,10 @@ def sigOf (Γ : Ctx) : Tm → Option Tm
   | _ => none
 
 def declShape : Tm → Option (Tm × Option Tm)
-  | .tyc d .nil => if P.lifted d = 0 then (P.adts[d]?).map fun D => (.tyCtor D.params, some (D.mtbl d .nil)) else none
-  | .vc d c .nil => if P.lifted d = 0 then
-      (P.adts[d]?).bind fun D => (D.ctors[c]?).map fun sig => (.valCtor sig, some (D.mtbl d .nil)) else none
+  | .tyc d ls => if P.lifted d = ls.len then
+      (P.adts[d]?).map fun D => (.tyCtor (D.params.peel ls), some (D.mtbl d ls)) else none
+  | .vc d c ls => if P.lifted d = ls.len then
+      (P.adts[d]?).bind fun D => (D.ctors[c]?).map fun sig => (.valCtor (sig.peel ls), some (D.mtbl d ls)) else none
   | .univ | .level => some (.tyCtor .nil, none)
   | _ => none
 
@@ -293,7 +294,7 @@ def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
   if ls.any (fun (_, _, ks) => match ks.idxOf? a, ks.idxOf? b with
       | some i, some j => i != j
       | _, _ => false) then none
-  else if a.isAtom && b.isAtom then if declIso P P.isoFuel [] [(a, b)] then some [] else none
+  else if a.isHead && b.isHead then if a.sameHead b || declIso P P.isoFuel [] [(a, b)] then some [] else none
   else
     let names (x : Tm) := ls.filterMap (fun (M, T, ks) => if T == x || ks.contains x then some M else none) ++ declMtbl P x
     let ms := names a ++ names b

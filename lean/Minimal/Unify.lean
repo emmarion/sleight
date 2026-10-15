@@ -18,8 +18,8 @@ def kids : Tm → List Tm
   | mtbl _ _ _ _ T cs => [T, cs]
   | _ => []
 
-def isAtom : Tm → Bool
-  | tyc _ .nil | vc _ _ .nil | univ | level => true
+def isHead : Tm → Bool
+  | tyc .. | vc .. | univ | level => true
   | _ => false
 
 def sameHead : Tm → Tm → Bool
@@ -53,8 +53,9 @@ def pairsOf : List (Tm × Tm) → Option (List (Tm × Tm))
   | [] => some []
   | (a, b) :: rest =>
     if a = b then pairsOf rest
-    else if a.isAtom && b.isAtom then ((a, b) :: ·) <$> pairsOf rest
-    else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest) else none
+    else if a.isHead && b.isHead && !a.sameHead b then ((a, b) :: ·) <$> pairsOf rest
+    else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest)
+    else if a matches .fv _ || b matches .fv _ then pairsOf rest else none
 termination_by eqs => eqsSize eqs
 decreasing_by
   all_goals first
@@ -95,7 +96,7 @@ def unify (n : Nat) (atoms : Atoms) (σ : Nat → Option Tm) (dom : List Nat) : 
             else .unknown
       | none =>
         if a.sameHead b then unify n atoms σ dom (a.kids.zip b.kids ++ rest)
-        else if a.isAtom && b.isAtom && (atoms σ a b).isSome then unify n atoms σ dom rest
+        else if a.isHead && b.isHead && (atoms σ a b).isSome then unify n atoms σ dom rest
         else .contra
 termination_by eqs => (n + 1 - dom.length, eqsSize eqs)
 decreasing_by
