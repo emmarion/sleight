@@ -1887,9 +1887,116 @@
   (many MetaSlot : -> (SlotEntry))
   (many SlotAtom : -> (SlotEntry)))
 
+; Each entry's kind, keyed by id. A meta not yet ruled out weighs 1 and every other kind 0; a map's index is its
+; total weight, and a rebuilt part says how its weight moved.
+(def-adts
+  ((SlotKind : ((Nat) h) -> Type)
+    enum
+    (many KNone : -> (SlotKind $ Zero))
+    (many KEntry : -> (SlotKind $ Zero))
+    (many KRuledMeta : -> (SlotKind $ Zero))
+    (many KMeta : -> (SlotKind $ Succ $ Zero)))
+  ((Kinds : ((Nat) k) -> Type)
+    enum
+    (many KEmpty : -> (Kinds $ Zero))
+    (many KNode : (erased (Nat) h) (erased (Nat) k1) (erased (Nat) k2) (erased (Nat) k) (many (SlotKind h) here) (many (Kinds k1) one) (many (Kinds k2) two) (erased (Plus3 h k1 k2 k) p) -> (Kinds k)))
+  ((Weight : ((Nat) h) -> Type)
+    enum
+    (many WZero : -> (Weight $ Zero))
+    (many WOne : -> (Weight $ Succ $ Zero)))
+  ((KDelta : ((Nat) a) ((Nat) b) -> Type)
+    enum
+    (many KSame : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) e) -> (KDelta a b))
+    (many KUp : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) (Succ a) b) e) -> (KDelta a b))
+    (many KDown : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a (Succ b)) e) -> (KDelta a b))))
+
+(def-fns _ $ (erased plus3-rw : (erased (Nat) h) (erased (Nat) h2) (erased (Nat) a) (erased (Nat) a2) (erased (Nat) b) (erased (Nat) b2) (erased (Nat) c)
+    (erased (Eq (Nat) h h2) eh) (erased (Eq (Nat) a a2) ea) (erased (Eq (Nat) b b2) eb) (erased (Plus3 h a b c) p) -> (erased (Plus3 h2 a2 b2 c) q))
+  (let-match erased eh (Refl _ _))
+  (let-match erased ea (Refl _ _))
+  (let-match erased eb (Refl _ _))
+  p)
+
+(def-fns _ $ (erased plus3-here-pred : (erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 (Succ h) a b c) p) -> (erased (Pred3 h a b c) r))
+  (match erased p _ ((P3S _ _ _ c2 q) (MkPred3 _ _ _ _ q))))
+
+(def-fns _ $ (erased pred3-split : (erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Pred3 h a b c) p) ->
+    (erased (Nat) c2) (erased (Eq (Nat) c (Succ c2)) e) (erased (Plus3 h a b c2) q))
+  (match erased p _ ((MkPred3 _ _ _ c2 q) (values c2 (Refl (Nat) $ Succ c2) q))))
+
+(def-fns _ $ (erased succ-inj : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) (Succ a) (Succ b)) e) -> (erased (Eq (Nat) a b) f))
+  (let-match erased e (Refl _ _))
+  (Refl (Nat) a))
+
+(def-fns _ $ (erased absurd zero-succ : (erased (Nat) b) (erased (Eq (Nat) (Zero) (Succ b)) e) -> (erased (False) f))
+  (match erased e _ (absurd Refl)))
+
+(def-fns _ $ (many kind-weight : (erased (Nat) h) (many (SlotKind h) x) -> (many (Weight h) w))
+  (match many x _ ((KMeta) (WOne)) ((KNone) (WZero)) ((KEntry) (WZero)) ((KRuledMeta) (WZero))))
+
+(def-fns _ $ (many kind-delta : (erased (Nat) a) (many (SlotKind a) x) (erased (Nat) b) (many (SlotKind b) y) -> (many (KDelta a b) r))
+  (match many (kind-weight _ x) _
+    ((WZero) (match many (kind-weight _ y) _ ((WZero) (KSame _ _ $ Refl (Nat) $ Zero)) ((WOne) (KUp _ _ $ Refl (Nat) $ Succ $ Zero))))
+    ((WOne) (match many (kind-weight _ y) _ ((WZero) (KDown _ _ $ Refl (Nat) $ Succ $ Zero)) ((WOne) (KSame _ _ $ Refl (Nat) $ Succ $ Zero))))))
+
+(def-fns _ $ (many kinds-at-here : (erased (Nat) h) (erased (Nat) k1) (erased (Nat) kt) (erased (Nat) k) (erased (Plus3 h k1 kt k) p)
+    (erased (Nat) hx) (many (SlotKind hx) e) (many (Kinds k1) one) (many (Kinds kt) two) (many (KDelta h hx) d) -> (erased (Nat) k2) (many (Kinds k2) r) (many (KDelta k k2) d2))
+  (let-match many d (KDown _ _ eq)
+    ((KSame _ _ eq) (values k (KNode _ _ _ _ e one two $ plus3-rw h hx k1 k1 kt kt k eq (Refl (Nat) k1) (Refl (Nat) kt) p) (KSame _ _ $ Refl (Nat) k)))
+    ((KUp _ _ eq) (values (Succ k) (KNode _ _ _ _ e one two $ plus3-rw (Succ h) hx k1 k1 kt kt (Succ k) eq (Refl (Nat) k1) (Refl (Nat) kt) $ P3S h k1 kt k p) (KUp _ _ $ Refl (Nat) $ Succ k))))
+  (let ((erased c2) (erased ec) (erased q)) $ pred3-split hx k1 kt k $ plus3-here-pred hx k1 kt k $ plus3-rw h (Succ hx) k1 k1 kt kt k eq (Refl (Nat) k1) (Refl (Nat) kt) p)
+  (values c2 (KNode _ _ _ _ e one two q) (KDown _ _ ec)))
+
+(def-fns _ $ (many kinds-at-one : (erased (Nat) h) (erased (Nat) k1) (erased (Nat) kt) (erased (Nat) k) (erased (Plus3 h k1 kt k) p)
+    (many (SlotKind h) here) (erased (Nat) j1) (many (Kinds j1) one) (many (Kinds kt) two) (many (KDelta k1 j1) d) -> (erased (Nat) k2) (many (Kinds k2) r) (many (KDelta k k2) d2))
+  (let-match many d (KDown _ _ eq)
+    ((KSame _ _ eq) (values k (KNode _ _ _ _ here one two $ plus3-rw h h k1 j1 kt kt k (Refl (Nat) h) eq (Refl (Nat) kt) p) (KSame _ _ $ Refl (Nat) k)))
+    ((KUp _ _ eq) (values (Succ k) (KNode _ _ _ _ here one two $ plus3-rw h h (Succ k1) j1 kt kt (Succ k) (Refl (Nat) h) eq (Refl (Nat) kt) $ plus3-mid-succ h k1 kt k p) (KUp _ _ $ Refl (Nat) $ Succ k))))
+  (let ((erased c2) (erased ec) (erased q)) $ pred3-split h j1 kt k $ plus3-mid h j1 kt k $ plus3-rw h h k1 (Succ j1) kt kt k (Refl (Nat) h) eq (Refl (Nat) kt) p)
+  (values c2 (KNode _ _ _ _ here one two q) (KDown _ _ ec)))
+
+(def-fns _ $ (many kinds-at-two : (erased (Nat) h) (erased (Nat) k1) (erased (Nat) kt) (erased (Nat) k) (erased (Plus3 h k1 kt k) p)
+    (many (SlotKind h) here) (many (Kinds k1) one) (erased (Nat) jt) (many (Kinds jt) two) (many (KDelta kt jt) d) -> (erased (Nat) k2) (many (Kinds k2) r) (many (KDelta k k2) d2))
+  (let-match many d (KDown _ _ eq)
+    ((KSame _ _ eq) (values k (KNode _ _ _ _ here one two $ plus3-rw h h k1 k1 kt jt k (Refl (Nat) h) (Refl (Nat) k1) eq p) (KSame _ _ $ Refl (Nat) k)))
+    ((KUp _ _ eq) (values (Succ k) (KNode _ _ _ _ here one two $ plus3-rw h h k1 k1 (Succ kt) jt (Succ k) (Refl (Nat) h) (Refl (Nat) k1) eq $ plus3-right-succ h k1 kt k p) (KUp _ _ $ Refl (Nat) $ Succ k))))
+  (let ((erased c2) (erased ec) (erased q)) $ pred3-split h k1 jt k $ plus3-right h k1 jt k $ plus3-rw h h k1 k1 kt (Succ jt) k (Refl (Nat) h) (Refl (Nat) k1) eq p)
+  (values c2 (KNode _ _ _ _ here one two q) (KDown _ _ ec)))
+
+(def-fns _ $ (many kinds-here : (erased (Nat) k) (many (Nat) x) (subterm many (Kinds k) m) -> (erased (Nat) h) (many (SlotKind h) e))
+  (let-match many m (KNode hh _ _ _ here one two _) ((KEmpty) (values (Zero) (KNone))))
+  (match many (nat-halve x) (((Nat) h) ((SlotKind h) e))
+    ((HZ) (values hh here))
+    ((H1 x1 _ _) (tail $ kinds-here _ x1 one))
+    ((H2 x1 _ _) (tail $ kinds-here _ x1 two))))
+
+(def-fns _ $ (many kinds-set : (erased (Nat) k) (subterm many (Nat) x) (erased (Nat) hx) (many (SlotKind hx) e) (many (Kinds k) m) -> (erased (Nat) k2) (many (Kinds k2) r) (many (KDelta k k2) d))
+  (let ((erased h) (many (SlotKind h) here) (erased k1) (many (Kinds k1) one) (erased kt) (many (Kinds kt) two) (erased (Plus3 h k1 kt k) p))
+    (match many m (((Nat) h) ((SlotKind h) here) ((Nat) k1) ((Kinds k1) one) ((Nat) kt) ((Kinds kt) two) ((Plus3 h k1 kt k) p))
+      ((KEmpty) (values (Zero) (KNone) (Zero) (KEmpty) (Zero) (KEmpty) (P3Z (Zero) (Zero) (Zero) $ AddZero $ Zero)))
+      ((KNode hh kk1 kk2 _ he o t pp) (values hh he kk1 o kk2 t pp))))
+  (match many (nat-halve x) (((Nat) k2) ((Kinds k2) r) ((KDelta k k2) d))
+    ((HZ) (kinds-at-here h k1 kt k p _ e one two $ kind-delta _ here _ e))
+    ((H1 x1 d dd)
+      (let ((erased j) (many o2) (many d1)) $ notail $ kinds-set _ (subterm (lt-subterm x1 x $ double-lt x1 d dd)) x1 _ e one)
+      (kinds-at-one h k1 kt k p here _ o2 two d1))
+    ((H2 x1 d dd)
+      (let ((erased j) (many t2) (many d2)) $ notail $ kinds-set _ (subterm (lt-subterm x1 x $ lt-weaken x1 (Succ d) $ double-lt x1 d dd)) x1 _ e two)
+      (kinds-at-two h k1 kt k p here one _ t2 d2))))
+
 (def-adts $ (Slots : -> Type)
   enum
-  (many MkSlots : (many (IdMap $ SlotEntry) kinds) (many (Nat) free-metas) -> (Slots)))
+  (many MkSlots : (many (Nat) c) (erased (Nat) k) (many (Kinds k) kinds) (erased (Eq (Nat) c k) e) -> (Slots)))
+
+(def-fns _ $ (many slots-set : (many (Slots) sl) (many (Nat) x) (erased (Nat) hx) (many (SlotKind hx) e) -> (many (Slots) r))
+  (let-match many sl (MkSlots c _ kinds ec))
+  (let ((erased k2) (many kinds2) (many d)) $ kinds-set _ x _ e kinds)
+  (let-match many d (KDown _ _ eq)
+    ((KSame _ _ eq) (MkSlots c _ kinds2 $ eq-trans _ _ _ _ ec eq))
+    ((KUp _ _ eq) (MkSlots (Succ c) _ kinds2 $ eq-trans _ _ _ _ (eq-cong-succ _ _ ec) eq)))
+  (let ((erased e2)) $ eq-trans _ _ _ _ ec eq)
+  (let-match many c (Succ c1) (absurd (Zero) (zero-succ _ e2)))
+  (MkSlots c1 _ kinds2 $ succ-inj _ _ e2))
 
 (def-adts
   ((Table : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type)
@@ -1899,25 +2006,31 @@
     enum
     (many MkAdded : (erased (Nat) k) (erased (Facts $ Succ k) f) (erased (Facts k) f2) (erased (Nat) c) (many (Table k f2 c) tb) -> (Added (Succ k) f c))))
 
-(let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MkSlots (MEmpty _) 0)
+(let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MkSlots (Zero) _ (KEmpty) $ Refl (Nat) $ Zero)
 
 ; The automatic slot of [x], the next id (section 35), both entries already in the table; a slot is its own slot.
-(def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Bool) meta) -> (many (Table n f c) r))
-  (let ((many e)) $ match many meta (((SlotEntry) e)) ((BTrue) (MetaSlot)) ((BFalse) (EntrySlot)))
+(def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (erased (Nat) h) (many (SlotKind h) e) -> (many (Table n f c) r))
   (let-match many tb (MkTable _ f0 _ ru _ ord keys ar c1 ab op sl))
-  (let-match many sl (MkSlots kinds fm))
-  (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ MkSlots (idmap-set _ x e kinds) $ match many meta (((Nat) _)) ((BTrue) (Succ fm)) ((BFalse) fm)))
+  (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ slots-set sl x _ e))
 
 (def-fns _ $ (many table-slot-entry : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ SlotEntry) r))
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
-  (let-match many sl (MkSlots kinds _))
-  (let-match many (idmap-get _ x kinds) (Miss _ _ _ _) ((Hit _ _ _ e _) (Some _ e)))
+  (let-match many sl (MkSlots _ _ kinds _))
+  (let ((erased h) (many e)) $ kinds-here _ x kinds)
+  (let-match many e (KNone) ((KEntry) (Some _ $ EntrySlot)) ((KMeta) (Some _ $ MetaSlot)) ((KRuledMeta) (Some _ $ MetaSlot)))
   (let-match many x (Succ p) ((Zero) (None _)))
-  (match many (idmap-get _ p kinds) _ ((Hit _ _ _ _ _) (Some _ $ SlotAtom)) ((Miss _ _ _ _) (None _))))
+  (let ((erased hp) (many ep)) $ kinds-here _ p kinds)
+  (match many ep _ ((KNone) (None _)) (else (Some _ $ SlotAtom))))
+
+(def-fns _ $ (many table-free-meta : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Bool) r))
+  (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
+  (let-match many sl (MkSlots _ _ kinds _))
+  (let ((erased h) (many e)) $ kinds-here _ x kinds)
+  (match many e _ ((KMeta) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ (many table-free-metas : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) -> (many (Nat) r))
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
-  (match many sl _ ((MkSlots _ fm) fm)))
+  (match many sl _ ((MkSlots fm _ _ _) fm)))
 
 (def-fns _ $ (many table-slot-of : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many (table-slot-entry _ _ c tb x) (Some _ e) ((None _) (None _)))
@@ -2124,10 +2237,10 @@
   (match many op _ ((MkOpens _ _ os ix tc) (values os ix tc))))
 
 (def-fns _ $ (many slots-ruled : (many (Slots) sl) (many (Nat) x) -> (many (Slots) r))
-  (let-match many sl (MkSlots kinds fm))
-  (let-match many fm (Succ _) ((Zero) sl))
-  (let-match many (idmap-get _ x kinds) (Hit _ _ _ e _) ((Miss _ _ _ _) sl))
-  (match many e _ ((MetaSlot) (MkSlots kinds $ nat-pred fm)) (else sl)))
+  (let-match many sl (MkSlots _ _ kinds _))
+  (let ((erased h) (many e)) $ kinds-here _ x kinds)
+  (let-match many e (KMeta) (else sl))
+  (slots-set sl x _ $ KRuledMeta))
 
 ; The table after a variable is ruled out with a term fresh in the result: the rule is appended, the
 ; keys and the order extended, both agreements carried across, and the opened objects naming the variable
@@ -2812,7 +2925,7 @@
   (let-match many (nat-cmp x bnd) (CLt _ _ _ _ p) (else (tail $ reenter-facts rest _ _ bnd tb)))
   (let ((erased n1) (erased f1) (many tb1)) $ table-reenter _ _ _ tb x (lt-weaken x bnd p) ty rule)
   (let ((erased n2) (erased f2) (many tb2)) $ table-reenter _ _ _ tb1 (Succ x) (LtS x bnd p) slot-term (None _))
-  (tail $ reenter-facts rest _ _ bnd $ table-add-slot _ _ _ tb2 x (BFalse)))
+  (tail $ reenter-facts rest _ _ bnd $ table-add-slot _ _ _ tb2 x _ $ KEntry))
 
 (def-fns _ $ (many reenter-lits : (subterm many (List $ LitEntry) lits) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many lits (Cons _ l rest) ((Nil _) (values n f tb)))
@@ -3248,10 +3361,14 @@
 (def-fns _ $ (many has-meta : (many (Term) t) (many (Env) env) -> (many (Bool) r))
   (any-meta env $ term-vars t $ Nil _))
 
+(def-fns _ $ (many any-free-meta : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (subterm many (List $ Nat) xs) -> (many (Bool) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (BFalse)))
+  (match many (table-free-meta _ _ c tb x) _ ((BTrue) (BTrue)) ((BFalse) (tail $ any-free-meta _ _ c tb rest))))
+
 (def-fns _ $ (many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (let-match many (table-free-metas _ _ bnd tb) (Succ _) ((Zero) (BFalse)))
-  (has-meta (canon-env env t) env))
+  (any-free-meta _ _ bnd tb $ term-vars (canon-env env t) $ Nil _))
 
 
 
@@ -3387,7 +3504,10 @@
   ; every entry, erased or a meta included, is minted with its automatic slot, the next id (section 35)
   (let ((erased (Nat) nf3) (erased (Facts nf3) ff3) (many (Table nf3 ff3 (Succ x)) tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-  (values (MkEnv _ hp sc2 en0 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa tk lt lo pr us hn ex) en2 x))
+  (let ((erased hk) (many (SlotKind hk) kind)) $ match many meta (((Nat) hk) ((SlotKind hk) kind))
+    ((BFalse) (values (Zero) (KEntry)))
+    ((BTrue) (match many rule (((Nat) hk) ((SlotKind hk) kind)) ((None _) (values (Succ $ Zero) (KMeta))) ((Some _ _) (values (Zero) (KRuledMeta))))))
+  (values (MkEnv _ hp sc2 en0 _ _ (Succ x) (table-add-slot _ _ _ tb3 x _ kind) rp ob2 li fi lv sts cl wa tk lt lo pr us hn ex) en2 x))
 
 (def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
