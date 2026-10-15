@@ -274,3 +274,14 @@ that the test does not make is a mistake in this file.
   goal whose head is none of the four; [`tests/tactic_lt_lemma_gensym.sl`](tests/tactic_lt_lemma_gensym.sl) has another
   macro write the call with every variable a gensym, which the search
   matches through the prelude's `symbol-eq`.
+- [`tests/dag_sum.sl`](tests/dag_sum.sl) — summing a tree of Peano naturals as a DAG, certified
+  against a `TreeSum` relation. `same-tree` and `same-n` are at-functions
+  that turn two trees, or two numbers, at one slot into an
+  `(ErasedOr (Eq T a b))`: each pair of cells goes through `cell-same`, which
+  refutes a mismatched pair of constructors and equates the fields' slots for
+  the recursive calls. The calls are skipped, so as far as this test shows the
+  proof adds no runtime work. `dag-sum` memoizes by `slot-eq` over a list and,
+  on a hit, moves the remembered sum's proof to the new tree along that
+  equality. A tower of 200 levels of `Node s s`, 2^200 leaves read as a tree
+  but 201 distinct nodes, is summed this way, while `naive-sum`, checked
+  against the same relation, agrees with it at 12 levels.

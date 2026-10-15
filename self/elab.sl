@@ -6948,7 +6948,7 @@
       ((BFalse) env6c))
     (let ((many live) (erased lp)) $ list-append _ (discs-of (real-ctors _ _ real) ss) $ discs-of covered ss)
     (let ((many (Env) env7w))
-      (match many (and (mult-is-many pos) $ and (not $ env-usage-erased env) $ and (nat-is-zero $ list-length _ real) $ not $ is-some _ dflt) _
+      (match many (and (mult-is-many pos) $ and (not atmatch) $ and (not $ env-usage-erased env) $ and (nat-is-zero $ list-length _ real) $ not $ is-some _ dflt) _
         ((BTrue) (env-warn-at env7 mloc (say env7 "a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead")))
         ((BFalse) env7)))
     (let ((many (Code ctx4 expect2) code))
