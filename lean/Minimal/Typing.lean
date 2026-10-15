@@ -281,10 +281,6 @@ def declIso : Nat → List (List Tm) → List (Tm × Tm) → Option (List (Tm ×
         | none => none
       | _, _ => none
 
-def Prog.isoFuel : Nat :=
-  let n := P.adts.length + (P.adts.map (·.ctors.length)).sum + 2
-  n * ((P.adts.zipIdx.map fun (D, d) => D.params.size + (D.mtbl d .nil).size + (D.ctors.map Tm.size).sum).sum + n) + 1
-
 def Ctx.lists (Γ : Ctx) (σ : Nat → Option Tm) : List (Tm × Tm × List Tm) :=
   Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ) with
     | some (.mtbl u nt ex ph T cs) => some (.mtbl u nt ex ph T cs, T, cs.toList)

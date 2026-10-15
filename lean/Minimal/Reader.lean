@@ -184,6 +184,8 @@ structure ESt where
   adts : List (String × Nat) := []
   ctors : List (String × Nat × Nat) := []
   decls : List Adt := []
+  isoCtors : Nat := 0
+  isoSize : Nat := 0
   groups : List Group := []
   opened : List Nat := []
   dele : Option (Nat × List (Nat × Bool)) := none
@@ -225,8 +227,13 @@ structure ESt where
 
 abbrev M := StateT ESt (Except String)
 
+def ESt.pushDecl (st : ESt) (D : Adt) : ESt :=
+  { st with decls := st.decls ++ [D], isoCtors := st.isoCtors + D.ctors.length,
+            isoSize := st.isoSize + D.isoSize st.decls.length }
+
 def ESt.prog (st : ESt) (main : Core) : Prog :=
   { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern,
+    isoFuel := isoFuelOf st.decls.length st.isoCtors st.isoSize,
     placedD := st.decls.findIdx? fun D => D.name == "Placed" && D.opq }
 
 def placingNames : List String := ["place-at", "place-at-many", "unplace-at", "unplace-at-many", "placed-slot", "placed-eq"]
@@ -635,7 +642,7 @@ def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
   let k := st.decls.length
   let ps : Tm := (List.range n).foldr (fun _ r => .bind (.ty false true false) slotTy r) .nil
   let D : Adt := { params := ps, ctors := [], name := "Cell " ++ c, opq := true }
-  modify fun st => { st with decls := st.decls ++ [D], cellDs := (ci.k, k) :: st.cellDs }
+  modify fun st => { st.pushDecl D with cellDs := (ci.k, k) :: st.cellDs }
   return k
 
 mutual
@@ -937,7 +944,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
                        ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
                        lifted := ids.length, phantom := cs.map (·.1), union, newtype, extern }
-    modify fun st => { st with decls := st.decls ++ [adt] }
+    modify (·.pushDecl adt)
 
 def withTail {α : Type} (b : Bool) (x : M α) : M α := do
   let t0 := (← get).tail
@@ -2510,9 +2517,10 @@ def coercibleAdt : Adt :=
 def delegateAdt : Adt := { coercibleAdt with name := "Delegate" }
 
 def builtins : ESt :=
-  { decls := [nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt,
+  { ([nullary "Special" 0 (specialNames.map ("%" ++ ·)), nullary "Sharing" sharingD ["Unique", "Shared"], coercibleAdt,
       delegateAdt, nullary "Slot" slotD [" slot"],
-      { params := .bind (.ty false true false) .univ (.bind (.ty false true false) (.bv 0) .nil), ctors := [], name := "AtFn", opq := true }],
+      { params := .bind (.ty false true false) .univ (.bind (.ty false true false) (.bv 0) .nil), ctors := [], name := "AtFn",
+        opq := true }].foldl ESt.pushDecl {}) with
     adts := [("AtFn", atFnD), ("Slot", slotD), ("Delegate", 3), ("Coercible", 2), ("Sharing", sharingD), ("Special", 0)],
     ctors := [("Shared", sharingD, 1), ("Unique", sharingD, 0)] ++ specialNames.mapIdx fun i n => ("%" ++ n, 0, i),
     special := 0 }

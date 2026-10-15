@@ -411,12 +411,20 @@ def Adt.mtbl (D : Adt) (d : Nat) (ls : Tm) : Tm :=
   .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d ls)
     (.ofList ((List.range D.ctors.length).map (.vc d · ls)))
 
+def Adt.isoSize (D : Adt) (d : Nat) : Nat := D.params.size + (D.mtbl d .nil).size + (D.ctors.map Tm.size).sum
+
+def isoFuelOf (decls ctors size : Nat) : Nat := let n := decls + ctors + 2; n * (size + n) + 1
+
+def isoFuelOfAdts (adts : List Adt) : Nat :=
+  isoFuelOf adts.length (adts.map (·.ctors.length)).sum (adts.zipIdx.map fun (D, d) => D.isoSize d).sum
+
 structure Prog where
   adts : List Adt
   groups : List Group
   main : Core
   hidden : Nat := 0
   natD : Option Nat := none
+  isoFuel : Nat := 0
   placedD : Option Nat := none
   deriving Repr, Inhabited
 
