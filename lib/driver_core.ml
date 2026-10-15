@@ -1,4 +1,3 @@
-let () = Gc.set { (Gc.get ()) with Gc.minor_heap_size = 2 * 1024 * 1024; space_overhead = 400 }
 
 type world = {
   read_rest : unit -> string;

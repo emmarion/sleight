@@ -7,12 +7,12 @@ Claude session; nothing here is a design decision.
 
 The owner asked for an overnight experiment in making the self-hosted
 compiler faster, soundness kept. Branch `slc-perf`. `bench/bench.sh -n 5
-beefe55`, both binaries extracted by the reference from their own
+ec14b37`, both binaries built by `self/bootstrap.sh` from their own
 sources and timed on the same pinned `origin/main` sources, on the
-machine this session ran on: `origin/main`'s `slc` 9.27s median (8.95s
-min, 138MB), this branch's 4.37s median (4.19s min, 219MB), so a little
-over twice as fast; the `bench/` samples go from 5.24s to 3.91s on
-`uses_join` and stay within about 0.05s on the small ones. Every step
+machine this session ran on: `origin/main`'s `slc` 6.27s median (6.02s
+min, 134MB), this branch's 3.78s median (3.61s min, 141MB), so about
+1.7 times as fast; the `bench/` samples go from 4.17s to 2.79s on
+`uses_join` and by a few hundredths of a second on the small ones. Every step
 was checked with `self/bootstrap.sh` and, where `lib/` changed, `dune
 test`. On `origin/main` at `ec14b37` the branch gives what `origin/main`
 gives: 972 matched, 1187 refused, 0 failed, a 1103/82/2 split of refusal
@@ -28,16 +28,11 @@ what it bought as this session measured it:
    at-match checks normalized every branch's code, at-match or not, the
    `and` that guarded them evaluating both operands; `find-template`,
    `narrow-index` and the unique-capture check had the same shape.
-2. The collector. `lib/driver_core.ml` sets a 2M-word minor heap and a
-   space overhead of 400 for every program the reference runs or either
-   compiler writes out. A session's choice, not the owner's: it trades
-   memory for time (`slc` on itself 138MB to about 210MB), and 1000
-   measured a further tenth faster at more memory still.
-3. `lib/ffi_core.ml`'s `flatten`, which built a one-byte string per
+2. `lib/ffi_core.ml`'s `flatten`, which built a one-byte string per
    character leaf, now writes into one `Buffer`; `append` copies once.
    The `nat-cmp` and `lt-dec` templates compare two immediate integers
    in line instead of calling zarith's C compare.
-4. Smaller ones: `find-newtype` tests the few objects the index names
+3. Smaller ones: `find-newtype` tests the few objects the index names
    for the constructor instead of walking every opened object; the slot
    map keeps one key per entry, not two; the table counts its rule-free
    metas, so `has-meta-env` answers no without canonicalizing when there
@@ -71,11 +66,11 @@ Asymptotics, at the owner's further request. `bench/scale.py slc
 shape each, and prints the ratio to the previous size: near 2 is linear,
 near 4 quadratic. On the machine this session ran on, seconds at 400 and
 1600 of each shape's unit, `origin/main`'s `slc` against this branch's:
-nested matches 4.3 and 229 against 0.49 and 2.1; a 400- and 1600-function
-mutual block 2.2 and 20.3 against 0.96 and 5.9; one type error per
-top-level `let` 2.3 and 18.7 against 0.91 and 5.4; many `def-adts` 0.37
-and 1.35 against 0.24 and 0.75; a wide enum 0.25 and 1.24 against 0.13
-and 0.34. What was quadratic and is no longer, as far as the session
+nested matches 4.3 and 229 against 0.47 and 2.1; a 400- and 1600-function
+mutual block 2.2 and 20.3 against 0.95 and 6.5; one type error per
+top-level `let` 2.3 and 18.7 against 0.88 and 5.9; many `def-adts` 0.37
+and 1.35 against 0.19 and 0.51; a wide enum 0.25 and 1.24 against 0.13
+and 0.32. What was quadratic and is no longer, as far as the session
 could tell: `held-key` canonicalized both sides with `equal-env` for
 every scope entry where a head comparison usually decides; a
 `def-adts` constructor list was spliced once per constructor; opening
@@ -93,9 +88,9 @@ reference does the same); code contexts are unary `Mem`/`At` paths, so
 a long `let` chain pays its depth per lookup; `abstract-slots` is
 O(i) per telescope entry, so many parameters are quadratic; canonical
 forms expand nested data fully, so a 1600-element compile-time list
-literal is about 2.5s; and `check-marks` normalizes a body including
+literal is about 3s; and `check-marks` normalizes a body including
 its nested definitions, so definitions nested 1600 deep are about
-1.4s.
+1.5s.
 
 ## `read-file`, `symbol-eq` and the elaborator's world (one session, with the owner)
 
