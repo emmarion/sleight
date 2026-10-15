@@ -265,20 +265,21 @@ def clash : Tm → Tm → Bool
   | .vc d c _, .vc d' c' _ => d == d' && c != c'
   | _, _ => false
 
-def declIso : Nat → List (List Tm) → List (Tm × Tm) → Bool
-  | _, _, [] => true
-  | 0, _, _ => false
+def declIso : Nat → List (List Tm) → List (Tm × Tm) → Option (List (Tm × Tm))
+  | _, _, [] => some []
+  | 0, _, _ => none
   | fuel + 1, cls, (a, b) :: work =>
     let ca := (cls.find? (·.contains a)).getD [a]
     let cb := (cls.find? (·.contains b)).getD [b]
-    if ca.contains b then declIso fuel cls work
-    else if ca.any fun x => cb.any (clash x) then false
+    if a matches .fv _ || b matches .fv _ then ((a, b) :: ·) <$> declIso fuel cls work
+    else if ca.contains b then declIso fuel cls work
+    else if ca.any fun x => cb.any (clash x) then none
     else match declShape P a, declShape P b with
       | some (s, m), some (s', m') =>
         match pairsOf ((s, s') :: (match m, m' with | some x, some y => [(x, y)] | _, _ => [])) with
         | some ps => declIso fuel ((ca ++ cb) :: cls.filter fun c => !c.contains a && !c.contains b) (ps ++ work)
-        | none => false
-      | _, _ => false
+        | none => none
+      | _, _ => none
 
 def Prog.isoFuel : Nat :=
   let n := P.adts.length + (P.adts.map (·.ctors.length)).sum + 2
@@ -294,7 +295,7 @@ def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
   if ls.any (fun (_, _, ks) => match ks.idxOf? a, ks.idxOf? b with
       | some i, some j => i != j
       | _, _ => false) then none
-  else if a.isHead && b.isHead then if a.sameHead b || declIso P P.isoFuel [] [(a, b)] then some [] else none
+  else if a.isHead && b.isHead then if a.sameHead b then some [] else declIso P P.isoFuel [] [(a, b)]
   else
     let names (x : Tm) := ls.filterMap (fun (M, T, ks) => if T == x || ks.contains x then some M else none) ++ declMtbl P x
     let ms := names a ++ names b

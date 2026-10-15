@@ -2591,9 +2591,6 @@ theorem Shape.sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
 theorem Tm.mtbl_subst (f : Nat → Tm) (D : Adt) (d : Nat) (ls : Tm) : (D.mtbl d ls).subst f = D.mtbl d (ls.subst f) := by
   simp [Adt.mtbl, Tm.subst, Tm.ofList_vc_subst]
 
-theorem Tm.sameHead_of_subst {f : Nat → Tm} {a b : Tm} (ha : a.isHead = true) (hb : b.isHead = true)
-    (h : a.subst f = b.subst f) : a.sameHead b = true := by
-  cases a <;> cases b <;> simp_all [Tm.isHead, Tm.subst, Tm.sameHead]
 
 theorem headD_mem {α : Type} {l : List α} {x d : α} (h : x ∈ l) : l.headD d ∈ l := by cases l <;> simp_all
 
@@ -2710,7 +2707,7 @@ theorem EnvOK.atomSound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P 
   split
   · rename_i hat
     simp only [Bool.and_eq_true] at hat
-    simp only [Tm.sameHead_of_subst hat.1 hat.2 hab, Bool.true_or, ite_true]; exact ⟨[], rfl, by simp⟩
+    simp only [Tm.sameHead_of_subst hat.1 hat.2 hab, ite_true]; exact ⟨[], rfl, by simp⟩
   refine ⟨_, rfl, fun p hp => ?_⟩
   · rcases List.mem_append.mp hp with hp | hp
     · split at hp

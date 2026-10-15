@@ -53,9 +53,9 @@ def pairsOf : List (Tm × Tm) → Option (List (Tm × Tm))
   | [] => some []
   | (a, b) :: rest =>
     if a = b then pairsOf rest
-    else if a.isHead && b.isHead && !a.sameHead b then ((a, b) :: ·) <$> pairsOf rest
-    else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest)
-    else if a matches .fv _ || b matches .fv _ then pairsOf rest else none
+    else if a.isHead && b.isHead && !a.sameHead b || a matches .fv _ || b matches .fv _ then
+      ((a, b) :: ·) <$> pairsOf rest
+    else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest) else none
 termination_by eqs => eqsSize eqs
 decreasing_by
   all_goals first
@@ -80,24 +80,42 @@ def canonBy (σ : Nat → Option Tm) (t : Tm) : Tm := t.subst fun i => (σ i).ge
 
 abbrev Atoms := (Nat → Option Tm) → Tm → Tm → Option (List (Tm × Tm))
 
+inductive Step where
+  | assign (e : Nat) (t : Tm) (keep : List (Tm × Tm))
+  | split
+  | drop
+  | stop
+
+def step (atoms : Atoms) (σ : Nat → Option Tm) (a b : Tm) : Step :=
+  match varSide a b with
+  | some (e, t) => .assign e t []
+  | none =>
+    if a.sameHead b then .split
+    else if a.isHead && b.isHead then match atoms σ a b with
+      | some ((x, y) :: _) => match varSide x y with
+        | some (e, t) => .assign e t [(a, b)]
+        | none => .drop
+      | some [] => .drop
+      | none => .stop
+    else .stop
+
 def unify (n : Nat) (atoms : Atoms) (σ : Nat → Option Tm) (dom : List Nat) : List (Tm × Tm) → UResult
   | [] => .ok σ
   | (a, b) :: rest =>
     if a = b then unify n atoms σ dom rest
-    else match varSide a b with
-      | some (e, t) =>
+    else match step atoms σ a b with
+      | .assign e t keep =>
         if e ∈ t.fvs ∨ t.bound 0 = false then .contra
         else match atoms σ (.fv e) t with
           | none => .contra
           | some more =>
             if h : dom.length < n ∧ e ∉ dom ∧ e < n ∧ t.static n 0 then
               unify n atoms (assign e t σ) (e :: dom)
-                ((more ++ rest).map fun p => (substOne e t p.1, substOne e t p.2))
+                ((more ++ keep ++ rest).map fun p => (substOne e t p.1, substOne e t p.2))
             else .unknown
-      | none =>
-        if a.sameHead b then unify n atoms σ dom (a.kids.zip b.kids ++ rest)
-        else if a.isHead && b.isHead && (atoms σ a b).isSome then unify n atoms σ dom rest
-        else .contra
+      | .split => unify n atoms σ dom (a.kids.zip b.kids ++ rest)
+      | .drop => unify n atoms σ dom rest
+      | .stop => .contra
 termination_by eqs => (n + 1 - dom.length, eqsSize eqs)
 decreasing_by
   · apply Prod.Lex.right; have := a.size_pos; simp [eqsSize]; omega

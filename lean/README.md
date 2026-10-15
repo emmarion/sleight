@@ -634,11 +634,11 @@ it is `Settled`, and its `is` rule.
   only when their declarations, instantiated with those entries, cannot
   be identified, by signatures and `Matchable`s and the heads those
   mention in turn (`declIso`), and otherwise the equation adds no rule,
-  the core having no rule for a declared name. Where two declarations
-  differ only in a captured entry, the comparison takes the two as
-  possibly equal and records nothing, where DESIGN.md section 7 would
-  force them equal; this is believed to refute nothing the reference
-  refutes, but it can leave the core without a fact the reference has. `Type` and `Level` have no `Matchable`.
+  the core having no rule for a declared name. Where the two
+  declarations differ in a captured entry, the comparison identifies
+  them and forces the entries equal, as DESIGN.md section 7 does for
+  their signatures: unification assigns the first such pair it finds
+  and then compares the heads again. `Type` and `Level` have no `Matchable`.
   The proof rests on a value having at most one such signature
   (`VTy.sig_det`) and on every `Matchable` naming a value being its
   declared type's (`Names.uniq`); two distinct declared atoms are never
