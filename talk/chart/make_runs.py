@@ -21,7 +21,7 @@ def value(out, p, i, x0, y, sx, fmt):
         if p == 0: out.append(text(x0, y + 6, 'never passed: nothing compiled in 3 runs of 30 sessions', 15, gray, extra="font-style='italic'"))
         return
     for v in vals:
-        if v is not None: out.append(dot(sx(v), y, hue))
+        if v is not None: out.append(dot(sx(v), y, hues[p]))
     if p == 3 and max(v for v in vals if v) > 280:
         out.append(text(f"{sx(350)-12:.1f}", y - 12, f"{int(round(max(v for v in vals if v)))} ms, preorder layout", 13, ink2, 'end'))
 dotplot(out, labels, panels, 300, 110, 46, 330, 46, value)

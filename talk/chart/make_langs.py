@@ -20,13 +20,13 @@ panels = [('Lines of code, comments removed', 0, 2500, [0, 500, 1000, 1500, 2000
 W, H = 1800, 800
 out = frame(W, H, 'Heap sorts of the same 2^20 integers, certified and not',
             'Median of 11 rounds, sort only; OCaml-based sorts with flambda -O3 except where noted. Sleight counts exclude the 53-line spec the task supplies; Lean, ATS and Idris counts include theirs.')
-out += [f"<circle cx='{W-330}' cy='48' r='7' fill='{hue}'/>", text(W - 316, 53, 'certified', 15, ink2),
-        f"<circle cx='{W-210}' cy='48' r='7' fill='{gray}'/>", text(W - 196, 53, 'uncertified', 15, ink2)]
+out += [dot(W - x + 20 * k, 48, h, hollow) for x, hollow in ((440, False), (250, True)) for k, h in enumerate(hues[:3])]
+out += [text(W - 388, 53, 'certified', 15, ink2), text(W - 198, 53, 'uncertified', 15, ink2)]
 def value(out, p, i, x0, y, sx, fmt):
     r = rows[i]; v = r[1 + p]
     if v is None:
         out.append(text(x0, y + 6, 'no gcc on macOS', 15, gray, extra="font-style='italic'")); return
-    out.append(dot(sx(v), y, hue if r[4] else gray))
+    out.append(dot(sx(v), y, hues[p], not r[4]))
     out.append(text(f"{sx(v)+14:.1f}", y + 5, fmt(v), 14, ink2))
 dotplot(out, [r[0] for r in rows], panels, 470, 120, 48, 370, 50, value)
 out.append(text(40, H - 24, 'Sources: heapsort/bench/README.md and sizes.csv.', 14, ink2))
