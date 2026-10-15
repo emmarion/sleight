@@ -10,7 +10,7 @@ Sixty minutes over Zoom, for an audience of mostly PL experts. An opening, the a
 
 Eric Marion
 October 14, 2026
-github.com/emmarion/sleight, Apache-2.0
+[github.com/emmarion/sleight](https://github.com/emmarion/sleight), Apache-2.0
 Code: doi.org/10.5281/zenodo.23361871
 Slides: doi.org/10.5281/zenodo.23367392
 
@@ -498,8 +498,8 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
 
 ## 40. Thanks
 
-- Code: github.com/emmarion/sleight, doi.org/10.5281/zenodo.23361871
-- Slides: doi.org/10.5281/zenodo.23367392
+- Code: [github.com/emmarion/sleight](https://github.com/emmarion/sleight), [doi.org/10.5281/zenodo.23361871](https://doi.org/10.5281/zenodo.23361871)
+- Slides: [doi.org/10.5281/zenodo.23367392](https://doi.org/10.5281/zenodo.23367392)
 - Questions
 
 ---
@@ -732,7 +732,7 @@ let rec zip_add xs ys = match xs with
 
 - seL4 20:1, CertiKOS 15:1, CompCert 7:1, SeKVM 7:1
 - IronFleet 5:1 safety, 8:1 liveness; Verus 7.5–10:1
-- OpenAI, github.com/openai/math
+- OpenAI, [github.com/openai/math](https://github.com/openai/math)
 - Tsoukalas et al., arXiv 2605.22763
 - Xu & Odersky; Kan, Kan & Ertel; Verina; Qin et al.
 

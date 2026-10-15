@@ -35,9 +35,9 @@ style: |
 # Sleight: A Language for LLMs
 
 Eric Marion · October 14, 2026
-github.com/emmarion/sleight · Apache-2.0
-Code: doi.org/10.5281/zenodo.23361871
-Slides: doi.org/10.5281/zenodo.23367392
+[github.com/emmarion/sleight](https://github.com/emmarion/sleight) · Apache-2.0
+Code: [doi.org/10.5281/zenodo.23361871](https://doi.org/10.5281/zenodo.23361871)
+Slides: [doi.org/10.5281/zenodo.23367392](https://doi.org/10.5281/zenodo.23367392)
 
 - **Sleight**: a dependently typed language whose proofs erase, built for LLMs to write
 - **An agent runner**: tests whether models can write Sleight, and where they get stuck
