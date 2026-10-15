@@ -2041,7 +2041,8 @@ theorem Ctx.openTele_er : ∀ m (Γ : Ctx) (t : Tm), t.isTele →
     | bind k A r =>
       simp only [Tm.isTele] at ht
       have hn := Γ.pushEnt_n k A
-      have her : ∀ i, (Γ.pushEnt k A).er i = if i = Γ.n then k.er else Γ.er i := by intro i; cases k <;> rfl
+      have her : ∀ i, (Γ.pushEnt k A).er i = if i = Γ.n then k.er else Γ.er i := by
+        intro i; cases k <;> simp [Ctx.pushEnt, Ent.er]
       obtain ⟨g, h1, h2⟩ := ih (Γ.pushEnt k A) (r.inst (.fv Γ.n) 0) (Tm.isTele_inst _ r 0 ht)
       simp only [Ctx.openTele]
       refine ⟨by rw [g]; cases k <;> rfl, fun i hi => by rw [h1 i (by omega), her, if_neg (by omega)], ?_⟩
@@ -2065,8 +2066,8 @@ theorem Ctx.pushTele_er (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) (hR : R.is
   | none => exact ⟨g, h1, fun k hk => h2 k hk (by rw [Tm.len_ers _ hR]; exact hk)⟩
   | some ms =>
     refine ⟨g, fun i hi => ?_, fun k _ => ?_⟩
-    · simp only [Ctx.pushTele, Ctx.setErs]; rw [if_neg (by omega)]; exact h1 i hi
-    · simp [Ctx.pushTele, Ctx.setErs]
+    · rw [Ctx.pushTele, Ctx.er_setErs, if_neg (by omega)]; exact h1 i hi
+    · simp [Ctx.pushTele]
 
 @[simp] theorem Ctx.pushTele_fixed (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) :
     (Γ.pushTele R ov).fixed = Γ.fixed := by
@@ -2181,9 +2182,11 @@ theorem Ctx.adv_same {c : Core} : ∃ F, Ctx.adv P Γ Γ' c = { Γ' with fixed :
 @[simp] theorem Ctx.adv_subs {c : Core} : (Ctx.adv P Γ Γ' c).subs = Γ'.subs := by
   obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
 @[simp] theorem Ctx.advBr_er {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr P Γ' s k fe n).er = Γ'.er := by
+  obtain ⟨F, h⟩ := Ctx.advBr_same (P := P) (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]; rfl
+theorem Ctx.advBr_erA {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr P Γ' s k fe n).erA = Γ'.erA := by
   obtain ⟨F, h⟩ := Ctx.advBr_same (P := P) (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
 @[simp] theorem Ctx.adv_er {c : Core} : (Ctx.adv P Γ Γ' c).er = Γ'.er := by
-  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]
+  obtain ⟨F, h⟩ := Ctx.adv_same (P := P) (Γ := Γ) (Γ' := Γ') (c := c); rw [h]; rfl
 @[simp] theorem Ctx.advBr_ghost {s k : Tm} {fe : Bool} {n : Nat} : (Γ.advBr P Γ' s k fe n).ghost = Γ'.ghost := by
   obtain ⟨F, h⟩ := Ctx.advBr_same (P := P) (Γ := Γ) (Γ' := Γ') (s := s) (k := k) (fe := fe) (n := n); rw [h]
 @[simp] theorem Ctx.adv_ghost {c : Core} : (Ctx.adv P Γ Γ' c).ghost = Γ'.ghost := by
@@ -2229,8 +2232,12 @@ theorem EnvOK.record {ρ outs vs : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) 
 theorem EnvOK.ready_sim {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (hr : Γ.ready = true) :
     SimEnv P Γ.er Γ.strip ρ ∧ Γ.ghost = false ∧ Γ.cur = none := by
   simp only [Ctx.ready, Bool.and_eq_true, beq_iff_eq, Option.isNone_iff_eq_none, Bool.not_eq_true',
-    List.all_eq_true, List.mem_range, Bool.or_eq_true, Option.isSome_iff_exists] at hr
+    List.all_eq_true, Bool.or_eq_true] at hr
   obtain ⟨⟨⟨hn, hc⟩, hg⟩, ha⟩ := hr
+  replace ha : ∀ i < Γ.n, (Γ.fixed[i]?.join).isSome = true ∨ Γ.er i = true := fun i hi => by
+    obtain ⟨o, ho⟩ : ∃ o, Γ.fixed[i]? = some o := ⟨_, List.getElem?_eq_getElem (by omega)⟩
+    simpa [ho] using ha (o, i) (List.mk_mem_zipIdx_iff_getElem?.mpr ho)
+  simp only [Option.isSome_iff_exists] at ha
   have hl := hE.len
   refine ⟨⟨by simp [Ctx.strip]; omega, fun i he => ?_⟩, hg, hc⟩
   rcases Nat.lt_or_ge i Γ.n with hi | hi
@@ -2430,17 +2437,17 @@ theorem call_setup_ctx (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
     refine ⟨(Γc.body G F).1, (Γc.body G F).2, rfl, rfl, hbody j F hFj, ?_, ?_, ?_, ?_, ?_,
       by simp [Ctx.body, hg], fun i hi hdn => ?_, fun j' F' hF' hdn => ?_, fun i t hdt hi hne => ?_, fun k hk => ?_, ?_⟩
     rotate_left 5
-    · show (_ || ((Γc.pushFns G).openTele F.tele F.np).1.er i) = _
+    · rw [Ctx.er_body]
       simp only [hdn, Option.isSome_none, Bool.false_and, Bool.false_or]
-      rw [o1 i (by omega)]; simp only [Ctx.pushFns]; rw [if_neg (by omega)]; exact hGe i (by omega)
-    · show (_ || ((Γc.pushFns G).openTele F.tele F.np).1.er _) = _
+      rw [o1 i (by omega)]; rw [Ctx.er_pushFns, if_neg (by omega)]; exact hGe i (by omega)
+    · rw [Ctx.er_body]
       simp only [hdn, Option.isSome_none, Bool.false_and, Bool.false_or]
       have hj' := (List.getElem?_eq_some_iff.mp hF').1
-      rw [o1 _ (by omega)]; simp only [Ctx.pushFns]; rw [if_pos (by omega)]; simp [← hle, hF']
-    · show (_ || _) = true
+      rw [o1 _ (by omega)]; rw [Ctx.er_pushFns, if_pos (by omega)]; simp [← hle, hF']
+    · rw [Ctx.er_body]
       have : i < (Γc.pushFns G).n := by rw [hpn]; exact hi
       simp [hdt, this, Ne.symm hne]
-    · show (_ || ((Γc.pushFns G).openTele F.tele F.np).1.er _) = _
+    · rw [Ctx.er_body]
       have hlt : ¬ (env.length + G.fns.length + k < (Γc.pushFns G).n) := by rw [hpn]; omega
       simp only [hlt, decide_false, Bool.and_false, Bool.false_and, Bool.false_or]
       rw [← hpn, o2 k (by omega) (by rw [Tm.len_ers _ hFtele]; omega), ← Tm.ers_subst (Tm.env env) _ hFtele, htele,
@@ -2532,9 +2539,11 @@ variable (Γ Γ' : Ctx) (ov : Option (List Bool))
 @[simp] theorem Ctx.setErs_ghost : (Γ.setErs Γ' ov).ghost = Γ'.ghost := by cases ov <;> rfl
 @[simp] theorem Ctx.setErs_n : (Γ.setErs Γ' ov).n = Γ'.n := by simp [Ctx.n]
 theorem Ctx.setErs_er_lt {i : Nat} (h : i < Γ.n) : (Γ.setErs Γ' ov).er i = Γ'.er i := by
-  cases ov <;> simp [Ctx.setErs]; omega
+  cases ov with
+  | none => rfl
+  | some ms => rw [Ctx.er_setErs, if_neg (by omega)]
 theorem Ctx.setErs_er_ge (ms : List Bool) (k : Nat) : (Γ.setErs Γ' (some ms)).er (Γ.n + k) = ms.getD k true := by
-  simp [Ctx.setErs]
+  rw [Ctx.er_setErs, if_pos (by omega)]; simp
 end
 
 theorem Shape.sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {er : Bool} {H : Tm} {shp : List Arm}
@@ -2876,15 +2885,15 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
     refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),
-      fun i hi => by dsimp only; rw [Ctx.advBr_er, Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
+      fun i hi => by show (Ctx.advBr _ _ _ _ _ _ _).er _ = _; rw [Ctx.advBr_er, Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
       fun sig'' hsig'' k hk => ?_, fun _ => ⟨_, hctor, by rw [hvl, hsk2, Tm.len_subst _ _ (.inl hst)]⟩,
       .inr ⟨k, sig, _, σ', hshc, rfl, hlive0, rfl⟩⟩
     rotate_left 4
     · rw [hctor] at hsig''; cases hsig''
-      dsimp only; rw [Ctx.advBr_er, hsk1, Tm.ers_subst _ _ hst]
+      show (Ctx.advBr _ _ _ _ _ _ _).er _ = _; rw [Ctx.advBr_er, hsk1, Tm.ers_subst _ _ hst]
       cases fe
       · exact o2 k (by omega) (by rw [Tm.len_ers _ hst]; omega)
-      · simp only [Bool.true_or, Ctx.setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
+      · simp only [Bool.true_or, Ctx.er_setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
           List.getD_eq_getElem?_getD, List.getElem?_replicate]
         split <;> rfl
     · refine EnvOK.cm false ?_
@@ -2897,7 +2906,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
       rw [Tm.ers_subst _ _ hst]
       cases fe
       · exact o2 j (by omega) (by rw [Tm.len_ers _ hst]; omega)
-      · simp only [Bool.true_or, Ctx.setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
+      · simp only [Bool.true_or, Ctx.er_setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
           List.getD_eq_getElem?_getD, List.getElem?_replicate]
         split <;> rfl
     · refine LvlBound.append.mpr ⟨hb, fun v hv' x hx => ?_⟩
@@ -3207,7 +3216,8 @@ theorem prim_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt 
   obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hE hb hp
   obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
   have hl := hE.len
-  have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by intro i; cases p <;> rfl
+  have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
+    intro i; cases p <;> simp [Ctx.pushPrim]
   have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest := by
     intro ρS hg hS
     refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
@@ -3682,7 +3692,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       (hm.append hE.wf hl (by simp [Ctx.pushMint, Ctx.push]) (by simp [Ctx.pushMint, Ctx.push]))
       (Tm.static_mono (by simp [Ctx.pushMint, Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_succ _), hh.finish (Γ' := Γ.pushMint) hE
-      (fun i hi => by simp [Ctx.pushMint, Ctx.push, show i ≠ Γ.n by omega]) (fun hg => hg) ih'.2⟩
+      (fun i hi => by simp [show i ≠ Γ.n by omega]) (fun hg => hg) ih'.2⟩
   | case12 μ ρ cnt gid rest G hG ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
@@ -3698,8 +3708,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
         by simp [closures, closuresS_length], fun k a b ha hb he => ?_⟩
       obtain ⟨hk, -⟩ := closures_get hb
       obtain ⟨Fk, hFk⟩ : ∃ Fk, G.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
-      simp only [Ctx.pushFns] at he
-      rw [if_pos (by omega), show Γ.n + k - Γ.n = k by omega, hFk] at he
+      rw [Ctx.er_pushFns, if_pos (by omega), show Γ.n + k - Γ.n = k by omega, hFk] at he
       refine closuresS_real hG (by rw [← hGg, hg]) (by rw [hl]; exact hd) (by rw [hS.1]) (fun i hi => ?_) k a b Fk hFk
         (by simpa using he) ha hb
       by_cases hin : i < Γ.n
@@ -3715,7 +3724,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       (hm.append hE.wf hl (by simp [Ctx.pushFns]) (by simp [Ctx.pushFns]))
       (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs)
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish (Γ' := Γ.pushFns G) hE
-      (fun i hi => by simp only [Ctx.pushFns]; rw [if_neg (by omega)]) (fun hg => hg) ih'.2⟩
+      (fun i hi => by rw [Ctx.er_pushFns, if_neg (by omega)]) (fun hg => hg) ih'.2⟩
   | case13 μ ρ cnt gid rest hG =>
     intro b Γ rets hc
     cases hc with

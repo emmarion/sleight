@@ -719,8 +719,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
       by simp [closures, closuresS_length], fun k a b ha hb he => ?_⟩
     obtain ⟨hk, -⟩ := closures_get hb
     obtain ⟨Fk, hFk⟩ : ∃ Fk, Gr.fns[k]? = some Fk := ⟨_, List.getElem?_eq_getElem hk⟩
-    simp only [Ctx.pushFns] at he
-    rw [if_pos (by omega), show G.Γ.n + k - G.Γ.n = k by omega, hFk] at he
+    rw [Ctx.er_pushFns, if_pos (by omega), show G.Γ.n + k - G.Γ.n = k by omega, hFk] at he
     refine closuresS_real hG (by rw [← hGg, hg]) (by rw [hl]; exact hd) (by rw [hS.1]) (fun i hi => ?_) k a b Fk hFk
       (by simpa using he) ha hb
     by_cases hin : i < G.Γ.n
@@ -774,7 +773,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
     have : outsS = closuresS ρS gid Gr := (hst _ (by simp [stepS, hG])).symm
     subst this
     refine hS.extend (by rw [hlen]) (fun i hi => ?_) fun k a b ha hb he => hre k a b ha hb ?_
-    · rw [UCtx.adv_er' hf]; simp only [Ctx.pushFns]; rw [if_neg (by omega)]
+    · rw [UCtx.adv_er' hf, Ctx.er_pushFns, if_neg (by omega)]
     · rw [UCtx.adv_er' hf, hl] at he; exact he
   · refine (ih' (if G.Γ.ghost then [] else Gr.fns.map (·.u)) (hCo hpre)).2 fun hg' => ?_
     obtain ⟨huq, hus⟩ := hpre (by simpa [UCtx.next, UCtx.adv_ghost' hf, Ctx.pushFns] using hg')

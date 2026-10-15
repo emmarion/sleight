@@ -856,14 +856,15 @@ def checkGroup (gid : Nat) (Γ : Ctx) (G : Group) : Res (PLift (GroupOK P gid Γ
   | some K => do
     let ⟨hl⟩ ← need (Γ.canon K = .level) "def-fns: not a level"
     let ⟨hf⟩ ← checkFns gid Γ G G.fns 0
-    let ⟨he⟩ ← need (∀ i < Γ.n, Γ.er i = G.ers.getD i true) "def-fns: the elaborator's erasure disagrees"
+    let ers := G.ers.toArray
+    let ⟨he⟩ ← need (∀ i < Γ.n, Γ.er i = ers.getD i true) "def-fns: the elaborator's erasure disagrees"
     let ⟨hg⟩ ← need (Γ.ghost = G.ghost) "def-fns: the elaborator's erasure disagrees"
     let ⟨hd⟩ ← need (G.deleOK P Γ.n = true)
       "def-fns: a delegate body does more than pass its arguments to its target and its target's results back"
     let ⟨hds⟩ ← need (G.sidesOK Γ = true)
       "def-fns: a delegate's sides disagree with the functions' types"
     .ok ⟨.mk hK hl (fun j F h => (hf j F (by simpa using h)).1)
-      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg hd hds⟩
+      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) (by simpa [ers] using he) hg hd hds⟩
   | none => .error "def-fns: unbound level"
 termination_by (gid + 1, 0, sizeOf G.fns + 1, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)

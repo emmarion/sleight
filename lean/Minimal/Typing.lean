@@ -3,13 +3,56 @@ import Minimal.Native
 
 namespace Minimal
 
+def arrSet (a : Array Bool) (k : Nat) (v : Bool) : Array Bool :=
+  if k = a.size then a.push v else Array.ofFn (n := max a.size (k + 1)) fun j => if j.1 = k then v else a.getD j.1 true
+
+theorem arrSet_getD (a : Array Bool) (k : Nat) (v : Bool) (i : Nat) :
+    (arrSet a k v).getD i true = if i = k then v else a.getD i true := by
+  unfold arrSet
+  split
+  · rename_i h; subst h
+    simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push]
+    split <;> rename_i h1
+    · subst h1; simp
+    · rcases Nat.lt_or_ge i a.size with h2 | h2
+      · simp [h1]
+      · simp [Array.getElem?_eq_none (show a.size ≤ i by omega), h1]
+  · simp only [Array.getD_eq_getD_getElem?, Array.getElem?_ofFn]
+    split <;> rename_i h1
+    · simp
+    · have : a.size ≤ i := by omega
+      simp [Array.getElem?_eq_none this, show i ≠ k by omega]
+
+def arrFrom (a : Array Bool) (k : Nat) (ms : List Bool) : Array Bool :=
+  Array.ofFn (n := k) (fun j => a.getD j.1 true) ++ ms.toArray
+
+theorem arrFrom_getD (a : Array Bool) (k : Nat) (ms : List Bool) (i : Nat) :
+    (arrFrom a k ms).getD i true = if k ≤ i then ms.getD (i - k) true else a.getD i true := by
+  unfold arrFrom
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_append, Array.size_ofFn, List.getD_eq_getElem?_getD]
+  split <;> rename_i h1
+  · simp [show ¬ k ≤ i by omega, h1, Array.getD_eq_getD_getElem?]
+  · simp [show k ≤ i by omega]
+
+def arrOr (a : Array Bool) (n : Nat) (c : Nat → Bool) : Array Bool :=
+  Array.ofFn (n := max a.size n) fun j => (c j.1 && decide (j.1 < n)) || a.getD j.1 true
+
+theorem arrOr_getD (a : Array Bool) (n : Nat) (c : Nat → Bool) (i : Nat) :
+    (arrOr a n c).getD i true = ((c i && decide (i < n)) || a.getD i true) := by
+  unfold arrOr
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_ofFn]
+  split <;> rename_i h
+  · simp
+  · have : a.size ≤ i := by omega
+    simp [Array.getElem?_eq_none this]
+
 structure Ctx where
   tys : List Tm
   σ : Nat → Option Tm := fun _ => none
   mints : List Nat := []
   cur : Option Nat := none
   subs : List Nat := []
-  er : Nat → Bool := fun _ => true
+  erA : Array Bool := #[]
   ghost : Bool := false
   opened : List (Nat × Bool) := []
   fixed : List (Option Tm) := []
@@ -20,6 +63,8 @@ namespace Ctx
 
 def n (Γ : Ctx) : Nat := Γ.tys.length
 
+def er (Γ : Ctx) (i : Nat) : Bool := Γ.erA.getD i true
+
 def canon (Γ : Ctx) (t : Tm) : Tm := canonBy Γ.σ t
 
 def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
@@ -29,7 +74,7 @@ def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
 
 def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
   let k := Γ.n
-  { Γ with tys := Γ.tys ++ [T], er := fun i => if i = k then e else Γ.er i }
+  { Γ with tys := Γ.tys ++ [T], erA := arrSet Γ.erA k e }
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
@@ -47,7 +92,7 @@ def openTele : Ctx → Tm → Nat → Ctx × Tm
 
 def setErs (Γ Γ' : Ctx) : Option (List Bool) → Ctx
   | none => Γ'
-  | some ms => let k := Γ.n; { Γ' with er := fun i => if k ≤ i then ms.getD (i - k) true else Γ'.er i }
+  | some ms => { Γ' with erA := arrFrom Γ'.erA Γ.n ms }
 
 def pushTele (Γ : Ctx) (R : Tm) (ov : Option (List Bool) := none) : Ctx := Γ.setErs (Γ.openTele R R.len).1 ov
 
@@ -64,7 +109,7 @@ def deleSide (Γ : Ctx) (G : Group) (t : Nat) : Bool := fnU { Γ with tys := Γ.
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   let k := Γ.n
   { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
-           er := fun i => if k ≤ i then (G.fns[i - k]?.map (·.er)).getD true else Γ.er i,
+           erA := arrFrom Γ.erA k (G.fns.map (·.er)),
            deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
              if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }
 
@@ -75,16 +120,46 @@ def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
   let (Γ2, rem) := Γ1.openTele F.tele F.np
   ({ Γ2 with cur := some G.lvl, ghost := Γ.ghost || F.er,
              subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap Tm.fvIdx,
-             er := fun i => (F.dele.isSome && i < Γ1.n && F.dele != some i) || Γ2.er i },
+             erA := arrOr Γ2.erA Γ1.n fun i => F.dele.isSome && F.dele != some i },
    rem)
 
 def ready (Γ : Ctx) : Bool :=
-  Γ.fixed.length == Γ.n && Γ.cur.isNone && !Γ.ghost && (List.range Γ.n).all fun i => (Γ.fixed[i]?.join).isSome || Γ.er i
+  Γ.fixed.length == Γ.n && Γ.cur.isNone && !Γ.ghost && Γ.fixed.zipIdx.all fun (o, i) => o.isSome || Γ.er i
 
 def strip (Γ : Ctx) : List Tm := Γ.fixed.map (·.getD .tok)
 
 def record (Γ Γ' : Ctx) (vs : List Tm) : Ctx :=
   { Γ' with fixed := Γ.fixed ++ vs.zipIdx.map fun (v, k) => if Γ'.er (Γ.n + k) then none else some v }
+
+@[simp] theorem er_withRule (Γ : Ctx) (e : Nat) (t : Tm) : (Γ.withRule e t).er = Γ.er := rfl
+@[simp] theorem er_upd_cmode (Γ : Ctx) (b : Bool) : ({ Γ with cmode := b } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_ghost (Γ : Ctx) (b : Bool) : ({ Γ with ghost := b } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_σ (Γ : Ctx) (s : Nat → Option Tm) : ({ Γ with σ := s } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_fixed (Γ : Ctx) (f : List (Option Tm)) : ({ Γ with fixed := f } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_cur (Γ : Ctx) (c : Option Nat) : ({ Γ with cur := c } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_opened (Γ : Ctx) (o : List (Nat × Bool)) : ({ Γ with opened := o } : Ctx).er = Γ.er := rfl
+@[simp] theorem er_upd_mints (Γ : Ctx) (m : List Nat) : ({ Γ with mints := m } : Ctx).er = Γ.er := rfl
+
+@[simp] theorem er_push (Γ : Ctx) (T : Tm) (e : Bool) (i : Nat) :
+    (Γ.push T e).er i = if i = Γ.n then e else Γ.er i := by
+  simp only [push, er, arrSet_getD]
+
+@[simp] theorem er_pushMint (Γ : Ctx) (i : Nat) : Γ.pushMint.er i = if i = Γ.n then true else Γ.er i := by
+  simp only [pushMint, er, push, arrSet_getD]
+
+@[simp] theorem er_setErs (Γ Γ' : Ctx) (ms : List Bool) (i : Nat) :
+    (Γ.setErs Γ' (some ms)).er i = if Γ.n ≤ i then ms.getD (i - Γ.n) true else Γ'.er i := by
+  simp only [setErs, er, arrFrom_getD]
+
+@[simp] theorem er_pushFns (Γ : Ctx) (G : Group) (i : Nat) :
+    (Γ.pushFns G).er i = if Γ.n ≤ i then (G.fns[i - Γ.n]?.map (·.er)).getD true else Γ.er i := by
+  simp only [pushFns, er, arrFrom_getD, List.getD_eq_getElem?_getD, List.getElem?_map]
+
+@[simp] theorem er_body (Γ : Ctx) (G : Group) (F : FnDef) (i : Nat) :
+    (Γ.body G F).1.er i = ((F.dele.isSome && decide (i < (Γ.pushFns G).n) && F.dele != some i) ||
+      ((Γ.pushFns G).openTele F.tele F.np).1.er i) := by
+  simp only [body, er, arrOr_getD]
+  cases F.dele.isSome <;> cases decide (i < (Γ.pushFns G).n) <;> simp
 
 end Ctx
 

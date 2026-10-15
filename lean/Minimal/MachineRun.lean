@@ -671,15 +671,15 @@ theorem machine_defLvl {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {rest :
   rw [usesCore] at hU
   refine machine_pushE (Γ' := G.adv P G.Γ.pushMint (.defLvl rest)) (m := 1) (oF := [v]) rfl
     (by rw [UCtx.adv_n' hf]; simp [Ctx.pushMint, Ctx.push, Ctx.n])
-    (fun i hi => by rw [UCtx.adv_er' hf]; simp [Ctx.pushMint, Ctx.push]; omega)
-    (fun k hk => by rw [UCtx.adv_er' hf]; simp [Ctx.pushMint, Ctx.push]; omega)
+    (fun i hi => by rw [UCtx.adv_er' hf]; simp; omega)
+    (fun k hk => by rw [UCtx.adv_er' hf]; simp; omega)
     (by rw [UCtx.adv_ghost' hf]; simpa [Ctx.pushMint, Ctx.push] using hG.ghost) ih hU
     (fun ρS vsS h => by cases h with | defLvl h => exact h)
     (fun H ρM pd H' out h => .defLvl h) ρS vsS hS hrun H ρM Res Out Shr pd hM hG
 
 theorem Ctx.pushPrim_er' (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) (i : Nat) :
     (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
-  cases p <;> simp [Ctx.pushPrim, Ctx.push, Ctx.withRule]
+  cases p <;> simp [Ctx.pushPrim]
 
 theorem Ctx.pushPrim_n (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim T er p).n = Γ.n + 1 := by
   cases p <;> simp [Ctx.pushPrim, Ctx.push, Ctx.withRule, Ctx.n]
@@ -1384,9 +1384,13 @@ theorem branchCtx_fld {G Gb : UCtx} {s k H idx sig : Tm} {cell : Bool} (hf : G.f
     rw [← hfe] at g h1 h2 hn
     have hl := Tm.len_ers _ hT
     simp only [UCtx.next, hf, Bool.false_eq_true, ite_false, Bool.not_false, Bool.and_true, Ctx.advBr_n,
-      Ctx.advBr_er, Ctx.advBr_ghost, Ctx.setErs]
-    refine ⟨by simpa [Ctx.n] using hn, fun i hi => h1 i hi, fun j hj => h2 j hj (by omega), by simpa using g,
+      Ctx.advBr_er, Ctx.advBr_ghost, Ctx.setErs_n, Ctx.setErs_ghost, Ctx.er_upd_cmode, Ctx.er_upd_ghost]
+    refine ⟨by simpa [Ctx.n] using hn, fun i hi => ?_, fun j hj => ?_, by simpa using g,
       trivial, trivial, trivial, fun j hj => ?_⟩
+    rotate_left 6
+    · have h := h1 i hi; simp only [Ctx.er] at h ⊢; rw [Ctx.advBr_erA]; simpa [Ctx.setErs] using h
+    · have h := h2 j hj (by omega); simp only [Ctx.er, Ctx.n] at h ⊢; rw [Ctx.advBr_erA]
+      simpa [Ctx.setErs, Ctx.n] using h
     simp only [List.contains_append, Bool.or_eq_true] at hj
     rcases hj with hj | hj
     · exact .inl hj
@@ -1893,15 +1897,14 @@ theorem branchCtx_erf {G Gb : UCtx} {s k H idx sig : Tm} {ph cell : Bool} (hf : 
     have hn := Ctx.openTele_n_eq (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || ph } sig hT (by omega)
     rw [← hfe] at g h1 hn
     simp only [UCtx.next, hf, Bool.false_eq_true, ite_false, Bool.not_true, Bool.and_false, Ctx.advBr_er,
-      Ctx.advBr_ghost, Ctx.setErs, ite_true, List.take_nil, List.zipIdx_nil, List.filterMap_nil, List.append_nil]
+      Ctx.advBr_ghost, Ctx.setErs_n, Ctx.setErs_ghost, Ctx.er_setErs, Ctx.er_upd_cmode, Ctx.er_upd_ghost, ite_true, List.take_nil, List.zipIdx_nil,
+      List.filterMap_nil, List.append_nil]
     refine ⟨by simpa [Ctx.n] using hn, fun i hi => ?_, fun j => ?_, by simpa using g, trivial, trivial, by simp, trivial⟩
-    · simp only [Ctx.n] at hi ⊢
-      have hc : ¬ G.Γ.tys.length ≤ i := by omega
-      simp only [hc]
-      exact h1 i hi
-    · simp only [Ctx.n, Nat.le_add_right, ite_true, Nat.add_sub_cancel_left, List.getD_eq_getElem?_getD,
-        List.getElem?_replicate]
-      split <;> rfl
+    · have h := h1 i hi; simp only [Ctx.er, Ctx.n] at hi h ⊢; rw [Ctx.advBr_erA]
+      simp only [Ctx.setErs]; rw [arrFrom_getD, if_neg (by simp [Ctx.n]; omega)]; exact h
+    · simp only [Ctx.er, Ctx.n]; rw [Ctx.advBr_erA]
+      simp only [Ctx.setErs]; rw [arrFrom_getD, if_pos (by simp [Ctx.n])]
+      simp [Ctx.n, List.getD_eq_getElem?_getD, List.getElem?_replicate]; split <;> rfl
   | _ => cases h
 
 theorem machine_caseE {b : Nat} {G : UCtx} {ru : List Bool} {rets s : Tm} {brs : List Br} {els : Option Core}
@@ -3372,7 +3375,7 @@ theorem machine_defFns {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {gid : 
   have hn' : Γ'.n = G.Γ.n + Gr.fns.length := by rw [hΓ', UCtx.adv_n' hf]; simp [Ctx.pushFns, Ctx.n]
   have huq := usesCore_uq b (G.next Γ' (Gr.fns.map (·.u))) ru rets rest hf CU CK hC
   obtain ⟨hMr, lift⟩ := hM.bind hseq hO (m := Gr.fns.length) (by simp [closuresS_length]) hlF (er' := Γ'.er)
-    (fun i hi => by rw [hΓ', UCtx.adv_er' hf]; simp [Ctx.pushFns]; omega)
+    (fun i hi => by rw [hΓ', UCtx.adv_er' hf]; simp; omega)
     (fun k hk _ _ => plainTele_ers _ k hk)
     (fun k hk hc _ => by
       rcases huq _ (lookup_mem hc) with h1 | h1
