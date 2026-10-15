@@ -1,7 +1,8 @@
 ; externs: only
-; expect: (Cons _ 1267650600228229401496703205376 $ Cons _ 4 $ Cons _ 0 $ Cons _ 0 $ Cons _ 3 $ Cons _ 0 $ Cons _ 1267650600228229401496703205376 $ Cons _ 1901475900342344102245054808064 $ Cons _ 0 $ Cons _ 4611686018427387903 $ Nil _)
-; Shifts and bitwise operations past what the source models can compute: a Nat shl past 2^62, a Nat shr by more
-; than fits a host int, the U62 shifts at their largest count, 62, Nat bitwise past 2^62 and U62's at its top.
+; expect: (Cons _ 1267650600228229401496703205376 $ Cons _ 4 $ Cons _ 0 $ Cons _ 0 $ Cons _ 3 $ Cons _ 0 $ Cons _ 1267650600228229401496703205376 $ Cons _ 1901475900342344102245054808064 $ Cons _ 0 $ Cons _ 4611686018427387903 $ Cons _ 0 $ Nil _)
+; Shifts and bitwise operations past what the source models can compute: a Nat shl past 2^62, a Nat shr, and a
+; Nat shl of zero, by more than fits a host int, the U62 shifts at their largest count, 62, Nat bitwise past 2^62
+; and U62's at its top.
 
 (let ((many s60) (erased s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
 (let-match erased (mul-fn _ _ _ _ s60m sixty-mul) (Refl _ _))
@@ -27,4 +28,4 @@
 (let ((many bx) (erased pbx)) (nat-xor big big))
 (let ((many tx) (erased ptx)) (u62-xor top (Zero) top-lt u62-modulus-pos))
 (Cons _ big $ Cons _ (nat-shr big 98) $ Cons _ (nat-shr 5 1180591620717411303424) $ Cons _ z $ Cons _ t60 $ Cons _ t62 $
-  Cons _ ba $ Cons _ bo $ Cons _ bx $ Cons _ tx $ Nil _)
+  Cons _ ba $ Cons _ bo $ Cons _ bx $ Cons _ tx $ Cons _ (nat-shl 0 1180591620717411303424) $ Nil _)

@@ -72,7 +72,7 @@ let decide b = if b then Yes else No
 let lt_dec a b = decide (Z.lt a b)
 let nat_mod = Z.rem
 let nat_halve n = n
-let shl n k = Z.shift_left n (Z.to_int k)
+let shl n k = if n == Z.zero then Z.zero else Z.shift_left n (Z.to_int k)
 let nat_and = Z.logand
 let nat_or = Z.logor
 let nat_xor = Z.logxor
