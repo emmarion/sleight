@@ -168,7 +168,8 @@
 (def-fns _ $ (many find-template : (subterm many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ List $ Piece) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (None _)))
   (let-match many t (MkTemplate b ty i ps))
-  (match many (and (str-eq b kind) $ and (str-eq ty type) $ nat-eq i index) _
+  (let ((many hit)) $ match many (nat-eq i index) (((Bool) _)) ((BFalse) (BFalse)) ((BTrue) (and (str-eq b kind) $ str-eq ty type)))
+  (match many hit _
     ((BTrue) (Some _ ps))
     ((BFalse) (tail $ find-template rest kind type index))))
 
@@ -205,7 +206,8 @@
 (def-fns _ $ (many narrow-index : (subterm many (List $ Narrow) ns) (many (List $ Nat) s) (many (List $ Nat) live) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (let-match many ns (Cons _ n rest) ((Nil _) (None _)))
   (let-match many n (MkNarrow s2 live2))
-  (match many (and (nat-list-eq s2 s) $ nat-list-eq live2 live) _ ((BTrue) (Some _ i)) ((BFalse) (tail $ narrow-index rest s live $ Succ i))))
+  (let ((many hit)) $ match many (nat-list-eq s2 s) (((Bool) _)) ((BTrue) (nat-list-eq live2 live)) ((BFalse) (BFalse)))
+  (match many hit _ ((BTrue) (Some _ i)) ((BFalse) (tail $ narrow-index rest s live $ Succ i))))
 
 (def-fns _ $ (many index-str : (many (Maybe $ Nat) i) -> (many (String) s))
   (match many i _ ((Some _ n) (nat-str n)) ((None _) "missing")))
