@@ -278,6 +278,9 @@ inductive Prim where
   | axm (A : Tm)
   | atom (d : Nat)
   | atomEq (d q : Nat) (a b : Tm)
+  | place (a T : Tm)
+  | unplace (a v : Tm)
+  | placedEq (q : Nat) (A a b : Tm)
   | num (d n : Nat)
   deriving Repr, Inhabited, DecidableEq
 
@@ -414,6 +417,7 @@ structure Prog where
   main : Core
   hidden : Nat := 0
   natD : Option Nat := none
+  placedD : Option Nat := none
   deriving Repr, Inhabited
 
 def marks : Tm → Nat → List Bool

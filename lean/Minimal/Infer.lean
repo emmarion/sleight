@@ -359,6 +359,16 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
           if t.isHole then (((ps.toList[j]?).bind coerOf).map pick).getD t
           else if t.hasHole then (inferTerm P Γ t none).toOption.getD t else t)
         pure (.coerCtor (expSide s) C (fill srcs.toList (·.2.2.1)) (fill tgts.toList (·.2.2.2.2.2)) ps)
+      | .place a (.app h (.cons s (.cons B (.cons a' .nil)))) =>
+        if !B.hasHole then pure p else match checkTm P Γ a with
+          | .ok ⟨A, _⟩ => pure (.place a (.app h (.cons s (.cons (Γ.canon A) (.cons a' .nil)))))
+          | .error _ => pure p
+      | .unplace a v =>
+        if !v.hasHole then pure p else match checkTm P Γ a with
+          | .ok ⟨A, _⟩ => match Γ.canon A with
+            | .app _ (.cons _ (.cons _ (.cons w .nil))) => pure (.unplace a w)
+            | _ => pure p
+          | .error _ => pure p
       | .tm t =>
         if !t.hasHole then pure p else
         let A := match rest with

@@ -55,7 +55,7 @@ def Prog.viewM (P : Prog) (H : Heap) : Tm → Tm
   | v => P.view v
 
 def Prog.evalM (P : Prog) (H : Heap) (ρ : List Tm) : Prim → Heap × Tm
-  | .tm t | .lit t | .coerce t _ _ => P.build H (Tm.env ρ) t
+  | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.build H (Tm.env ρ) t
   | p => (H, p.evalS P ρ)
 
 def Prog.reuse (P : Prog) (H : Heap) (ρ : List Tm) (u : Nat) : Tm → Option (Heap × Tm)

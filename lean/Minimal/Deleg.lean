@@ -132,7 +132,7 @@ variable {P : Prog}
 theorem prim_resolve {n0 : Nat} {ρ : List Tm} {al : List (Option (Bool × Nat))} {S so : List Tm}
     (h : WInv n0 ρ al S so) (p : Prim) (er : Bool) :
     WInv n0 (ρ ++ [if er then .tok else p.evalS P ρ]) (al ++ [if er then none else match p with
-      | .tm x | .coerce x _ _ => resolve n0 al x
+      | .tm x | .coerce x _ _ | .place x _ | .unplace x _ => resolve n0 al x
       | _ => none]) S so := by
   refine h.push (by simp) fun i b r he => ?_
   cases i with

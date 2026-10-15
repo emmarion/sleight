@@ -207,18 +207,16 @@ theorem retUses_uq {G : UCtx} (ru : List Bool) (ts rets : Tm) {A : Uses} (h : G.
 theorem primUses_uq {G : UCtx} {u : Bool} {p : Prim} {A : Uses} (h : G.primUses P u p = some A) : UqOK G A := by
   unfold UCtx.primUses at h
   split at h
-  · exact termUses_uq h
-  · obtain ⟨⟨su, tu⟩, -, h2⟩ := Option.bind_eq_some_iff.mp h
-    simp only at h2
-    split at h2
-    · cases h2
-    · exact termUses_uq h2
-  · split at h <;> cases h; exact UqOK.nil
-  · cases h; exact UqOK.nil
-  · split at h
-    · cases h
-    · exact termUses_uq h
-  · split at h <;> cases h; exact UqOK.nil
+  all_goals first
+    | exact termUses_uq h
+    | (cases h; exact UqOK.nil)
+    | (obtain ⟨⟨su, tu⟩, -, h2⟩ := Option.bind_eq_some_iff.mp h
+       simp only at h2; split at h2
+       · cases h2
+       · exact termUses_uq h2)
+    | (split at h
+       · cases h
+       · first | exact termUses_uq h | (cases h; exact UqOK.nil))
 
 theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core) :
     G.fill = false → ∀ U K, usesCore P b G ru rets c = some (U, K) → UqOK G U := by
@@ -869,7 +867,7 @@ theorem prim_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {p : Prim} (hE : EnvO
     (hrt : p.rt P G.Γ = true) (hnc : ∀ a b q, p ≠ .coerce a b q) : PrimVal P G ρ p := by
   intro T A _ hA ρS H ρM Out' Shr hS hM
   cases p with
-  | tm t =>
+  | tm t | place t _ | unplace t _ =>
     obtain ⟨H1, w, hb, hO⟩ := prim_val_tm hP hE hS (by simpa [Prim.rt] using hrt) hA hM
     exact ⟨H1, w, hb, hO⟩
   | lit t =>
@@ -2799,7 +2797,7 @@ theorem machine_prim_reuse (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool}
       exact ⟨H1, w, fun a => Tm.env ρM x = .ptr a, hev, hO, hft, fun y a hy hya hq => (hx x a rfl hq).2 y hy hya⟩
 
 theorem VTy.opq_inv (hP : ProgOK P) {v idx ls : Tm} {d : Nat} {D : Adt} (hD : P.adts[d]? = some D) (ho : D.opq = true)
-    (h : VTy P v (.app (.tyc d ls) idx)) : v = .tok := by
+    (hpl : P.placedD ≠ some d) (h : VTy P v (.app (.tyc d ls) idx)) : v = .tok := by
   generalize hX : Tm.app (.tyc d ls) idx = X at h
   cases h with
   | opq => rfl
@@ -2811,6 +2809,8 @@ theorem VTy.opq_inv (hP : ProgOK P) {v idx ls : Tm} {d : Nat} {D : Adt} (hD : P.
     rw [hD] at hD'
   | clo => simp [FnDef.type, Tm.subst] at hX
   | mtbl => simp [Adt.mtbl] at hX
+  | placed hq =>
+    simp only [Tm.app.injEq, Tm.tyc.injEq] at hX; obtain ⟨⟨rfl, -⟩, -⟩ := hX; exact (hpl hq).elim
   | _ => simp at hX
 
 theorem cellTy_tok (hP : ProgOK P) {G : UCtx} {ρ : List Tm} (hE : EnvOK P ρ G.Γ) {i : Nat} (hc : G.cellTy P i = true) :
@@ -2822,8 +2822,9 @@ theorem cellTy_tok (hP : ProgOK P) {G : UCtx} {ρ : List Tm} (hE : EnvOK P ρ G.
     obtain ⟨v, -, hv, hvt⟩ := hE.get hT
     obtain ⟨D, hD, ho⟩ : ∃ D, P.adts[d]? = some D ∧ D.opq = true := by
       cases hD : P.adts[d]? <;> simp_all
+    have hpl : P.placedD ≠ some d := by intro hq; simp [hq] at hc
     rw [← hE.canon, hcT] at hvt
-    rw [hv]; exact VTy.opq_inv hP hD ho hvt
+    rw [hv]; exact VTy.opq_inv hP hD ho hpl hvt
   · cases hc
 
 theorem MOut.resOwn {U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res R Shr : Nat → Prop}

@@ -39,6 +39,8 @@ theorem evalP_inert {H : Heap} {ρ : List Tm} {pd : Pend} {p : Prim} {er : Bool}
       cases p with
       | tm t => cases t <;> simp [Prim.inert] at hi; simp [Prog.evalM, Prog.build, Prim.evalS, Prog.sub, Prog.subU]
       | coerce t b q => cases t <;> simp [Prim.inert] at hi; simp [Prog.evalM, Prog.build, Prim.evalS, Prog.sub, Prog.subU]
+      | place t T => cases t <;> simp [Prim.inert] at hi; simp [Prog.evalM, Prog.build, Prim.evalS, Prog.sub, Prog.subU]
+      | unplace t v => cases t <;> simp [Prim.inert] at hi; simp [Prog.evalM, Prog.build, Prim.evalS, Prog.sub, Prog.subU]
       | lit t => simp [Prim.inert] at hi
       | axm A => simp [Prim.inert] at hi
       | _ => rfl

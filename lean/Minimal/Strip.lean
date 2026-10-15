@@ -66,7 +66,7 @@ def FnDef.spreadOut (F : FnDef) (ve : Option (List Bool)) (np : Nat) (outs : Lis
   spread ((ve.getD F.tele.ers).drop np) (filt (F.tele.ers.drop F.np) outs)
 
 def Prim.evalS (P : Prog) (ρ : List Tm) : Prim → Tm
-  | .tm t | .lit t | .coerce t _ _ => P.sub ρ t
+  | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.sub ρ t
   | .num _ n => .nat n
   | p => p.eval ρ
 

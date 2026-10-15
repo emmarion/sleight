@@ -226,7 +226,10 @@ structure ESt where
 abbrev M := StateT ESt (Except String)
 
 def ESt.prog (st : ESt) (main : Core) : Prog :=
-  { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern }
+  { adts := st.decls, groups := st.groups, main, natD := st.decls.findIdx? fun D => D.name == "Nat" && D.extern,
+    placedD := st.decls.findIdx? fun D => D.name == "Placed" && D.opq }
+
+def placingNames : List String := ["place-at", "place-at-many", "unplace-at", "unplace-at-many", "placed-slot", "placed-eq"]
 
 def ESt.settledVal (st : ESt) (i : Nat) : Option Tm :=
   if i < st.vals.length && !(st.ers.getD i true) then st.vals[i]?.map (st.prog .dead).view else none
@@ -1670,6 +1673,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
     else if (h == "tail" || h == "notail") && (sc.lookup h).isNone then
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
       if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
+      if placingNames.contains f && (sc.lookup f).isNone then throw s!"`{h}` marks a function call, and a placing is a renaming"
       if st.ghost || (!want.isEmpty && want.all (·.isEr)) then throw s!"{h} in an erased position"
       if let some i := (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => some i | _ => none) then
         if st.skipped i then throw s!"`{h}` marks a call that compiles to one, and a call of at-function `{showName f}` is skipped"
@@ -1717,6 +1721,71 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         rs := rs ++ [.fv i]
         t := r.inst (.fv i) 0
       return (ss ++ out, rs)
+    else if placingNames.contains h && (sc.lookup h).isNone && (st.prims.lookup h).isSome then
+      let some q := (st.prog .dead).placedD | throw "unreachable: no `Placed`"
+      let er ← erasedPos want
+      let pick (a : Sx) (d : Tm) : M Tm := if a == .atom "_" then pure d else elabTm sc 0 a
+      let placedIdx (t : Tm) : M (Option (Tm × Tm × Tm)) := do
+        let st ← get
+        let .fv i := t | return none
+        match st.known.lookup (st.canonIdx i) <|> st.known.lookup i with
+        | some (.app (.tyc q' .nil) (.cons s (.cons B (.cons v .nil)))) => return if q' == q then some (s, B, v) else none
+        | _ => return none
+      let boxTy (pt : Tm) (s T v : Sx) : M (Tm × List Stmt) := do
+        let idx ← placedIdx pt
+        let C := Tm.app (.tyc q .nil) (.ofList [← pick s ((idx.map (·.1)).getD .hole),
+          ← pick T ((idx.map (·.2.1)).getD .hole), ← pick v ((idx.map (·.2.2)).getD .hole)])
+        pure (C, [fun c => .chk .ty pt C c])
+      let eqOf : M Nat := do
+        let some e := (← get).firstAdt "Eq" | throw s!"`{h}` needs the prelude's `Eq`"
+        pure e
+      match h, args with
+      | "place-at", [T, x] | "place-at-many", [T, x] => do
+        let m := if er then Mode.er else if h == "place-at" then .uniq else .many
+        let (ss, xts) ← elabArgs sc [x] [m]
+        let [xt] := xts | throw "place-at takes one value"
+        let (ss1, xi) ← match xt with
+          | .fv i => pure ([], i)
+          | _ => do
+            let [j] ← freshMd [m] | throw "fresh"
+            note j xt true
+            pure (uqMark [m] ++ [(.prim (.tm xt) m.isEr : Stmt)], j)
+        let (ss2, σ) ← slotM xi
+        let ty := Tm.app (.tyc q .nil) (.ofList [σ, ← pick T .hole, .fv xi])
+        let [j] ← freshMd [m] | throw "fresh"
+        note j ty
+        modify fun st => { st with links := (j, xi) :: st.links }
+        return (ss ++ ss1 ++ ss2 ++ uqMark [m] ++ [.prim (.place (.fv xi) ty) m.isEr], [.fv j])
+      | "unplace-at", [s, T, v, b] | "unplace-at-many", [s, T, v, b] => do
+        let m := if er then Mode.er else if h == "unplace-at" then .uniq else .many
+        let (ss, bts) ← elabArgs sc [b] [m]
+        let [bt] := bts | throw "unplace-at takes one box"
+        let (C, chk) ← boxTy bt s T v
+        let vt := match C with | .app _ (.cons _ (.cons _ (.cons v .nil))) => v | _ => .hole
+        let [j] ← freshMd [m] | throw "fresh"
+        note j vt true
+        if let some r := (← get).slotSrc bt then modify fun st => { st with links := (j, r) :: st.links }
+        return (ss ++ chk ++ uqMark [m] ++ [.prim (.unplace bt vt) m.isEr], [.fv j])
+      | "placed-slot", [s, T, v, b] => do
+        let (ss, bts) ← elabArgs sc [b] [.er]
+        let [.fv bi] := bts | throw "placed-slot takes a variable"
+        let (C, chk) ← boxTy (.fv bi) s T v
+        let st' := match C with | .app _ (.cons s _) => s | _ => .hole
+        if st'.hasHole then throw "placed-slot: the slot of the box's type is not known"
+        let (ss2, σ) ← slotM bi
+        let e ← eqOf
+        let [j] ← fresh [true] | throw "fresh"
+        note j (.app (.tyc e .nil) (.ofList [.app (.tyc slotD .nil) .nil, σ, st']))
+        return (ss ++ chk ++ ss2 ++ [.prim (.atomEq slotD e σ st') true], [.fv j])
+      | "placed-eq", [s, T, v, b, c] => do
+        let (ss, ts) ← elabArgs sc [b, c] [.er, .er]
+        let [bt, ct] := ts | throw "placed-eq takes two boxes"
+        let (C, chk) ← boxTy bt s T v
+        let e ← eqOf
+        let [j] ← fresh [true] | throw "fresh"
+        note j (.app (.tyc e .nil) (.ofList [C, bt, ct]))
+        return (ss ++ chk ++ [.prim (.placedEq e C bt ct) true], [.fv j])
+      | _, _ => throw s!"`{h}` takes the wrong number of arguments"
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d (← liftTm d)) (.ofList ts)])
@@ -2033,6 +2102,9 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       let .atom p :: .atom ":" :: es := xs | throw "malformed def-prim"
       unless primNames.contains p do throw s!"`{p}` names no primitive the compilers implement"
       if ((← get).prims.lookup p).isSome then throw s!"a second `def-prim` for `{p}`"
+      if placingNames.contains p then
+        modify fun st => { st with prims := (p, .nil, 0) :: st.prims }
+        continue
       let (ps, rs) ← splitArrow es
       if ps.any (· matches .list (.atom "subterm" :: _)) then throw "`subterm` is not allowed here"
       unless md.isEr || (← entryMds true rs).all (·.isEr) do

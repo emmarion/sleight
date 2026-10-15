@@ -23,6 +23,7 @@ structure ProgOK (P : Prog) : Prop where
   newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → (sig.skip (P.lifted d)).ntField.isSome
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
   opq : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.opq = true → D.ctors = [] ∧ D.coercible = false
+  placed : ∀ q, P.placedD = some q → ∃ D, P.adts[q]? = some D ∧ D.opq = true
   uer : ∀ (d c : Nat) sig, P.ctor d c = some sig → ∀ j, sig.uAt j = true → sig.ers.getD j true = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
@@ -468,9 +469,47 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     | .app (.tyc d ls) idx => match hD : P.adts[d]? with
       | some D => do
         let ⟨ho⟩ ← need (D.opq = true) "an axiom returns only a value of an opaque type"
-        .ok ⟨_, .axm hA hU hc hD ho⟩
+        let ⟨hpl⟩ ← need (P.placedD ≠ some d) "an axiom returns no `Placed` value"
+        .ok ⟨_, .axm hA hU hc hD ho hpl⟩
       | none => .error "an axiom returns only a value of an opaque type"
     | _ => .error "an axiom returns only a value of an opaque type"
+  | .place a T => match T with
+    | .app (.tyc q .nil) (.cons s (.cons B (.cons a' .nil))) => do
+      let ⟨hq⟩ ← need (P.placedD = some q) "place-at: not a `Placed` type"
+      let ⟨A, ha⟩ ← checkTm P Γ a
+      let ⟨hAB⟩ ← need (Γ.canon A = Γ.canon B) "place-at: the value is not of the type its box names"
+      let ⟨hB⟩ ← need (B.static Γ.n 0) "place-at: the type is not well scoped"
+      let ⟨hs⟩ ← need (s.static Γ.n 0) "place-at: the slot is not well scoped"
+      if h : a' = a then by subst h; exact .ok ⟨_, PrimTy.place hq ha hAB hB hs⟩
+      else .error "place-at: the box names another value"
+    | _ => .error "place-at: not a `Placed` type"
+  | .unplace a v => do
+    let ⟨A, ha⟩ ← checkTm P Γ a
+    match hA : Γ.canon A with
+    | .app (.tyc q .nil) (.cons s (.cons B (.cons w .nil))) => do
+      let ⟨hq⟩ ← need (P.placedD = some q) "unplace-at: not a `Placed` value"
+      let ⟨hv⟩ ← need (Γ.canon v = w) "unplace-at: the result is not the box's index"
+      .ok ⟨_, .unplace hq ha hA hv⟩
+    | _ => .error "unplace-at: not a `Placed` value"
+  | .placedEq e C a b => match hE : P.adts[e]? with
+    | some E => match hc : E.ctors with
+      | [.bind (.ty m1 e1 u1) .univ (.bind (.ty m2 e2 u2) (.bv 0) (.bind (.ty m3 e3 u3)
+          (.app (.tyc e' .nil) (.cons (.bv 1) (.cons (.bv 0) (.cons (.bv 0) .nil)))) .nil))] => do
+        let ⟨he⟩ ← need (e' = e) "Eq's constructor builds another type"
+        let ⟨hl⟩ ← need (E.lifted = 0) "Eq has lifted arguments"
+        have hc2 : E.ctors = [eqSig e (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] := by rw [hc, he]; rfl
+        let ⟨U, hC⟩ ← checkTm P Γ C
+        match hCc : Γ.canon C with
+        | .app (.tyc q .nil) (.cons s (.cons B (.cons w .nil))) => do
+          let ⟨hq⟩ ← need (P.placedD = some q) "placed-eq: not a `Placed` type"
+          let ⟨A, ha⟩ ← checkTm P Γ a
+          let ⟨B', hb⟩ ← checkTm P Γ b
+          let ⟨hA⟩ ← need (Γ.canon A = Γ.canon C) "placed-eq: the first box is of another type"
+          let ⟨hB⟩ ← need (Γ.canon B' = Γ.canon C) "placed-eq: the second box is of another type"
+          .ok ⟨_, .placedEq hq hE hc2 hl hC hCc ha hA hb hB⟩
+        | _ => .error "placed-eq: not a `Placed` type"
+      | _ => .error "placed-eq: Eq has an unexpected shape"
+    | none => .error "placed-eq: Eq is unknown"
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     let ⟨B, hb⟩ ← checkTm P Γ b
@@ -875,6 +914,8 @@ def checkProg : Res {R // Checked P R} := do
   let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.opq = true →
       D.ctors = [] ∧ D.coercible = false)
     "unreachable: an opaque type has constructors"
+  let ⟨hpl⟩ ← need ((P.placedD.all fun q => (P.adts[q]?.map (·.opq)) == some true) = true)
+    "unreachable: Placed is not opaque"
   let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
       ∀ j < sig.ers.length, sig.uAt j = true → sig.ers.getD j true = false)
     "unreachable: a constructor field is both erased and unique"
@@ -890,6 +931,9 @@ def checkProg : Res {R // Checked P R} := do
       simpa [h3] using this,
     fun d D h1 h2 => hco d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
     fun d D h1 h2 => hop d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp h1).1) D h1 h2,
+    fun q hq => by
+      rw [hq] at hpl; simp only [Option.all_some, beq_iff_eq, Option.map_eq_some_iff] at hpl
+      obtain ⟨D, hD, ho⟩ := hpl; exact ⟨D, hD, ho⟩,
     fun d c sig h j hu => by
       obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h
       exact hue d (List.mem_range.mpr (List.getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j

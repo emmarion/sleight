@@ -126,7 +126,7 @@ def coerSides (G : UCtx) (q : Tm) : Option (Bool × Bool) := do
   | _ => none
 
 def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
-  | .tm t => G.termUses P u t
+  | .tm t | .place t _ | .unplace t _ => G.termUses P u t
   | .coerce a _ q => do
     let (su, tu) ← G.coerSides P q
     if u && !tu then none else G.termUses P su a
@@ -146,7 +146,7 @@ def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
   Gr.fns.all (fun F => F.dele.all fun t => if t < G.Γ.n then Gr.caps.lookup t == some (F.u && G.Γ.fnU t) else true)
 
 def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
-  | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false
+  | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false && P.placedD != some d
   | _ => false
 
 def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do

@@ -34,7 +34,7 @@ def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
 def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
-  | .tm t | .coerce _ t _ => (Γ.push T er).withRule Γ.n (Γ.canon t)
+  | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
@@ -145,7 +145,8 @@ def fieldsSimple (S : List Nat) : Tm → Bool
 
 def Prog.simpleStep (P : Prog) (S : List Nat) : List Nat :=
   S.filter fun d => match P.adts[d]? with
-    | some D => D.params == .nil && !D.newtype && !D.coercible && !D.opq && D.phantom.all (!·) && D.ctors.all (fieldsSimple S)
+    | some D => D.params == .nil && !D.newtype && !D.coercible && !D.opq && P.placedD != some d && D.phantom.all (!·) &&
+      D.ctors.all (fieldsSimple S)
     | none => false
 
 def Prog.simple (P : Prog) : List Nat :=
@@ -254,7 +255,7 @@ end
 def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
-  | .tm t | .lit t | .coerce t _ _ => Minimal.rt P Γ t
+  | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => Minimal.rt P Γ t
   | .mtblOf .. | .atom _ | .axm _ | .num .. => true
   | _ => false
 
@@ -342,7 +343,16 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       TmTy P Γ a A → Γ.canon A = .app (.tyc d .nil) .nil → TmTy P Γ b B → Γ.canon B = .app (.tyc d .nil) .nil →
       PrimTy Γ (.atomEq d q a b) (.app (.tyc q .nil) (.cons (.app (.tyc d .nil) .nil) (.cons a (.cons b .nil))))
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
-      PrimTy Γ (.axm A) A
+      P.placedD ≠ some d → PrimTy Γ (.axm A) A
+  | place : P.placedD = some q → TmTy P Γ a A → Γ.canon A = Γ.canon B → B.static Γ.n 0 → s.static Γ.n 0 →
+      PrimTy Γ (.place a (.app (.tyc q .nil) (.cons s (.cons B (.cons a .nil)))))
+        (.app (.tyc q .nil) (.cons s (.cons B (.cons a .nil))))
+  | unplace : P.placedD = some q → TmTy P Γ a A → Γ.canon A = .app (.tyc q .nil) (.cons s (.cons B (.cons w .nil))) →
+      Γ.canon v = w → PrimTy Γ (.unplace a v) B
+  | placedEq : P.placedD = some q → P.adts[e]? = some E → E.ctors = [eqSig e (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] →
+      E.lifted = 0 → TmTy P Γ C U → Γ.canon C = .app (.tyc q .nil) (.cons s (.cons B (.cons w .nil))) →
+      TmTy P Γ a A → Γ.canon A = Γ.canon C → TmTy P Γ b B' → Γ.canon B' = Γ.canon C →
+      PrimTy Γ (.placedEq e C a b) (.app (.tyc e .nil) (.cons C (.cons a (.cons b .nil))))
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
   | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
@@ -404,14 +414,14 @@ def resolve (n0 : Nat) (al : List (Option (Bool × Nat))) : Tm → Option (Bool 
   | _ => none
 
 def Prim.inert : Prim → Bool
-  | .tm (.fv _) | .coerce (.fv _) _ _ => true
-  | .tm _ | .coerce .. | .lit _ | .axm _ => false
+  | .tm (.fv _) | .coerce (.fv _) _ _ | .place (.fv _) _ | .unplace (.fv _) _ => true
+  | .tm _ | .coerce .. | .place .. | .unplace .. | .lit _ | .axm _ => false
   | _ => true
 
 def delegWalk (t n0 cnt : Nat) (re : List Bool) : Bool → List (Option (Bool × Nat)) → Core → Bool
   | ph, al, .chk _ _ _ r => delegWalk t n0 cnt re ph al r
   | ph, al, .prim p er r => (er || p.inert) && delegWalk t n0 cnt re ph (al ++ [if er then none else match p with
-      | .tm x | .coerce x _ _ => resolve n0 al x
+      | .tm x | .coerce x _ _ | .place x _ | .unplace x _ => resolve n0 al x
       | _ => none]) r
   | ph, al, .call _ _ _ true ms _ r => delegWalk t n0 cnt re ph (al ++ List.replicate ms.length none) r
   | ph, al, .mtch _ R _ _ true r => delegWalk t n0 cnt re ph (al ++ List.replicate R.len none) r
