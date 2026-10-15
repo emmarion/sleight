@@ -106,12 +106,12 @@ theorem argsUses_uq {G : UCtx} : ∀ {md : Ent → Bool} {args s : Tm} {A : Uses
   | md, .cons _ _, .univ, A, h | md, .cons _ _, .level, A, h | md, .cons _ _, .predates .., A, h
   | md, .cons _ _, .subterm .., A, h | md, .cons _ _, .fn .., A, h | md, .cons _ _, .mtbl .., A, h
   | md, .cons _ _, .lvl _, A, h | md, .cons _ _, .tok, A, h | md, .cons _ _, .clo .., A, h
-  | md, .cons _ _, .nat _, A, h | md, .cons _ _, .ptr _, A, h
+  | md, .cons _ _, .nat _, A, h | md, .cons _ _, .ptr _, A, h | md, .cons _ _, .wld _, A, h
   | md, .nil, _, A, h | md, .fv _, _, A, h | md, .bv _, _, A, h | md, .bind .., _, A, h | md, .app .., _, A, h
   | md, .tyc .., _, A, h | md, .vc .., _, A, h | md, .tyCtor _, _, A, h | md, .valCtor _, _, A, h
   | md, .univ, _, A, h | md, .level, _, A, h | md, .predates .., _, A, h | md, .subterm .., _, A, h
   | md, .fn .., _, A, h | md, .mtbl .., _, A, h | md, .lvl _, _, A, h | md, .tok, _, A, h
-  | md, .clo .., _, A, h | md, .nat _, _, A, h | md, .ptr _, _, A, h => by
+  | md, .clo .., _, A, h | md, .nat _, _, A, h | md, .ptr _, _, A, h | md, .wld _, _, A, h => by
     simp only [UCtx.argsUses] at h; cases h; exact UqOK.nil
 end
 
@@ -292,9 +292,24 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
       exact UqOK.ur_seq h (primUses_uq hA) hC'
-  case case9 b G ru rets rest ih =>
+  case case9 b G ru rets w req rest ih =>
+    obtain ⟨Tw, -, h⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨A, -, h⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
+    have hC0 := ih Tw A
+    simp only [dite_eq_ite] at hC0
+    have hC' : UqOK G CU := UqOK.next (by rw [UCtx.adv_n' hf]; simp [Ctx.push, Ctx.n]; omega) (hC0 hf CU CK hC)
+    split at h
+    · cases h; exact hC'
+    · split at h
+      · obtain ⟨X, hX, h⟩ := Option.bind_eq_some_iff.mp h
+        obtain ⟨Y, hY, h⟩ := Option.bind_eq_some_iff.mp h
+        obtain ⟨S, hS, h⟩ := Option.bind_eq_some_iff.mp h
+        exact UqOK.ur_seq h (UqOK.seq hS (termUses_uq hX) (termUses_uq hY)) hC'
+      · cases h
+  case case10 b G ru rets rest ih =>
     exact UqOK.next (by rw [UCtx.adv_n' hf]; simp [Ctx.pushMint, Ctx.push, Ctx.n]) (ih hf U K h)
-  case case10 b G ru rets gid rest ihr ihf =>
+  case case11 b G ru rets gid rest ihr ihf =>
     obtain ⟨Gr, -, h⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
     have hC0 := ihr Gr
@@ -311,72 +326,72 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
         exact UqOK.use hA i (by simp only [UCtx.use] at hA; split at hA <;> cases hA; simp)
       · cases h
     · cases h
-  case case11 b G ru rets a b1 rest ms ih => exact ih hf U K h
-  case case12 b G ru rets a b1 rest ih => exact ih hf U K h
-  case case13 b G ru rets a b1 p rest ih => exact ih hf U K h
-  case case14 b G ru rets a b1 t rest' hr ih =>
+  case case12 b G ru rets a b1 rest ms ih => exact ih hf U K h
+  case case13 b G ru rets a b1 rest ih => exact ih hf U K h
+  case case14 b G ru rets a b1 p rest ih => exact ih hf U K h
+  case case15 b G ru rets a b1 t rest' hr ih =>
     rw [if_pos hr] at h
     obtain ⟨T, -, h⟩ := Option.bind_eq_some_iff.mp h
     exact UqOK.next (by rw [UCtx.adv_n' hf]; exact Ctx.pushPrim_n_le ..) (ih T hf U K h)
-  case case15 =>
+  case case16 =>
     rename_i h1 h2
     first | (rw [if_neg h1] at h; exact h2 hf U K h) | (rw [if_neg h2] at h; exact h1 hf U K h)
-  case case16 => cases h
-  case case18 b G ru rets b1 rest u i hc ih =>
+  case case17 => cases h
+  case case19 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
     split at h
     · cases h; exact ih hf _ _ hC
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
       exact UqOK.ur_seq h (UqOK.use hA) (ih hf _ _ hC)
-  case case20 b G ru rets b1 rest u i hc ih =>
+  case case21 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
     split at h
     · cases h; exact ih hf _ _ hC
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
       exact UqOK.ur_seq h (UqOK.use hA) (ih hf _ _ hC)
-  case case21 b G ru rets a b1 rest ih => exact ih hf U K h
-  case case22 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact ih hf U K h
-  case case23 b G ru rets b1 rest x hc => rw [if_neg hc] at h; cases h
-  case case17 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
-  case case19 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
-  case case24 => rename_i ih; exact ih hf U K h
-  case case25 =>
+  case case22 b G ru rets a b1 rest ih => exact ih hf U K h
+  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact ih hf U K h
+  case case24 b G ru rets b1 rest x hc => rw [if_neg hc] at h; cases h
+  case case18 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
+  case case20 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
+  case case25 => rename_i ih; exact ih hf U K h
+  case case26 =>
     rename_i Γo u nt ex ph H cs hm σ' hu ih
     simp only [hm] at h
     simp only [Γo] at hu
     simp only [hu] at h
     exact ih hf U K h
-  case case26 =>
+  case case27 =>
     rename_i Γo u nt ex ph H cs hm hu
     simp only [hm] at h
     simp only [Γo] at hu
     split at h
     · exact (hu _ ‹_›).elim
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case27 =>
+  case case28 =>
     rename_i hm
     split at h
     · exact (hm _ _ _ _ _ _ ‹_›).elim
     · cases h
-  case case28 => rename_i ih; exact ih hf U K h
   case case29 => rename_i ih; exact ih hf U K h
-  case case30 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case30 => rename_i ih; exact ih hf U K h
   case case31 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case34 =>
+  case case32 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case35 =>
     rename_i hf U K h
     rw [usesEls] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case35 =>
+  case case36 =>
     rename_i ih hf U K h
     rw [usesEls] at h
     obtain ⟨⟨EU, EK⟩, hE, h⟩ := Option.bind_eq_some_iff.mp h
     cases h
     exact UqOK.below (Nat.le_refl _) (fun _ _ h => h) (ih hf EU EK hE)
-  case case36 =>
+  case case37 =>
     rename_i hf U K h
     rw [usesArms] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case37 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
+  case case38 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
     rw [usesArms] at h
     simp only [hshp, hbr] at h
     obtain ⟨⟨BU, BK⟩, hB, h⟩ := Option.bind_eq_some_iff.mp h
@@ -386,14 +401,14 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     obtain ⟨hn, huq, hfb⟩ := branchCtx_spec hbr
     exact UqOK.join (UqOK.below hn huq (ihb (hfb.trans hf) BU BK hB)) (ihr hf RU RK hR)
-  case case38 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
+  case case39 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
     rw [usesArms] at h
     simp only [hshp] at h
     rcases hR : usesArms P b G ru R s H idx shp fe cell brs with _ | ⟨RU, RK⟩ <;> rw [hR] at h
     · cases h
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     exact UqOK.join UqOK.nil (ihr hf RU RK hR)
-  case case39 =>
+  case case40 =>
     rename_i hshp ihr hf U K h
     rw [usesArms] at h
     simp [hshp] at h
@@ -861,7 +876,7 @@ def PrimVal (P : Prog) (G : UCtx) (ρ : List Tm) (p : Prim) : Prop :=
   ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
     ∀ ρS H ρM Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Out' Shr →
     ∃ H1 w, P.evalM H ρM p = (H1, w) ∧ MOut P A G.Γ.n G.Γ.er H ρM ρS ρ (fun _ => False) Shr (ret1 T)
-      [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval ρ]
+      [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval P ρ]
 
 theorem prim_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {p : Prim} (hE : EnvOK P ρ G.Γ)
     (hrt : p.rt P G.Γ = true) (hnc : ∀ a b q, p ≠ .coerce a b q) : PrimVal P G ρ p := by
@@ -1339,7 +1354,7 @@ theorem teleUs_getD : ∀ (t : Tm) (k : Nat), (teleUs t).getD k false = t.uAt k
   | .bind _ _ r, k + 1 => by have := teleUs_getD r k; simp only [List.getD_eq_getElem?_getD] at this; simp [teleUs, Tm.uAt, this]
   | .fv _, _ | .bv _, _ | .nil, _ | .cons .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
   | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
-  | .clo .., _ | .nat _, _ | .ptr _, _ => by cases ‹Nat› <;> rfl
+  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ => by cases ‹Nat› <;> rfl
 
 theorem getD_dropLast {l : List Bool} {k : Nat} (h : l.dropLast.getD k false = true) : l.getD k false = true := by
   simp only [List.getD_eq_getElem?_getD] at h ⊢
@@ -1409,7 +1424,7 @@ theorem teleUs_length : ∀ (t : Tm), (teleUs t).length = t.ers.length
   | .bind _ _ r => by simp [teleUs, Tm.ers, teleUs_length r]
   | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _
   | .univ | .level | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok
-  | .clo .. | .nat _ | .ptr _ => rfl
+  | .clo .. | .nat _ | .ptr _ | .wld _ => rfl
 
 theorem machine_tail {b : Nat} {G : UCtx} {ru : List Bool} {rets R : Tm} {rest : Core} {ρ vs outsF : List Tm}
     {Γ' : Ctx} (hR : R.isTele) (hol : outsF.length = R.len) (hn' : Γ'.n = G.Γ.n + R.len)
@@ -2699,15 +2714,15 @@ theorem prim_val_reuse (hP : ProgOK P) {G : UCtx} {ρ ρS ρM : List Tm} {t T : 
 
 theorem machine_prim_pend {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p : Prim} {rest : Core}
     {ρ vs : List Tm} {pd : Pend}
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval P ρ))
     (ih : ∀ T, G.primTy P p = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
-        (ρ ++ [p.eval ρ]) vs)
+        (ρ ++ [p.eval P ρ]) vs)
     (hval : ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
       ∀ ρS H ρM Res Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ Res Out' Shr →
       GOK P G pd H ρM ρS ρ Res Shr →
       ∃ H1 w, ∃ Q : Nat → Prop, P.evalP H ρM pd p = (H1, w) ∧ MOut P A G.Γ.n G.Γ.er H ρM ρS ρ Res Shr (ret1 T)
-        [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval ρ] ∧
+        [G.ents.headD false] H1 [w] [p.evalS P ρS] [p.eval P ρ] ∧
         (∀ a, Foot P H1 w (p.evalS P ρS) a → Res a → Q a) ∧
         ∀ y a, G.uscr = some (.fv y) → Tm.env ρM y = .ptr a → ¬ Q a) :
     ∀ U K, usesCore P b G ru rets (.prim p false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
@@ -2749,7 +2764,7 @@ theorem machine_prim_pend {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p :
       obtain rfl : k = 0 := by omega
       simp at hw hu'; subst hw hu'
       exact hq (hQ a hft hr))
-  have hS' : SimEnv P Γ'.er (ρS ++ [p.evalS P ρS]) (ρ ++ [p.eval ρ]) :=
+  have hS' : SimEnv P Γ'.er (ρS ++ [p.evalS P ρS]) (ρ ++ [p.eval P ρ]) :=
     hS.extend rfl (fun i hi => by rw [her', if_neg (by rw [← hM.lenF]; omega)]) fun k a b ha hb _ => by
       cases k with
       | zero => simp at ha hb; subst ha hb; exact hreal ρS hS
@@ -2765,10 +2780,10 @@ theorem machine_prim_pend {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p :
 
 theorem machine_prim_inert {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p : Prim} {rest : Core}
     {ρ vs : List Tm}
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval P ρ))
     (ih : ∀ T, G.primTy P p = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
-        (ρ ++ [p.eval ρ]) vs)
+        (ρ ++ [p.eval P ρ]) vs)
     (hval : PrimVal P G ρ p) :
     ∀ U K, usesCore P b G ru rets (.prim p false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim p false rest) vsS →
@@ -2782,10 +2797,10 @@ theorem machine_prim_inert {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p 
 
 theorem machine_prim_reuse (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets t : Tm} {rest : Core}
     {ρ vs : List Tm} {x : Nat} (hE : EnvOK P ρ G.Γ) (hrt : rt P G.Γ t = true)
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval P ρ))
     (ih : ∀ T, G.primTy P (.tm t) = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest)) [G.ents.headD false]) ru rets
-        rest (ρ ++ [(Prim.tm t).eval ρ]) vs) :
+        rest (ρ ++ [(Prim.tm t).eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.tm t) false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.tm t) false rest) vsS →
     ∀ H ρM Res Out Shr, MFrame P U G.Γ.n G.Γ.er H ρM ρS ρ Res Out Shr → GOK P G (some (.reuse true, .fv x)) H ρM ρS ρ Res Shr →
@@ -2799,11 +2814,213 @@ theorem machine_prim_reuse (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool}
       obtain ⟨H1, w, hev, hO, hft⟩ := prim_val_reuse hP hE hS hrt hA hM fun a h => (hx x a rfl h).1
       exact ⟨H1, w, fun a => Tm.env ρM x = .ptr a, hev, hO, hft, fun y a hy hya hq => (hx x a rfl hq).2 y hy hya⟩
 
+theorem Tm.sdata_app {h fs : Tm} (hs : (Tm.app h fs).sdata = true) : ∃ d c, h = .vc d c .nil ∧ Tm.sdataL fs = true := by
+  unfold Tm.sdata at hs
+  split at hs
+  · rename_i d c fs' e; cases e; exact ⟨d, c, rfl, hs⟩
+  all_goals simp_all
+
+theorem Tm.sdata_vc {d c : Nat} {ls : Tm} (hs : (Tm.vc d c ls).sdata = true) : ls = .nil := by
+  unfold Tm.sdata at hs
+  split at hs <;> simp_all
+
+def PlaceOK (P : Prog) (H H1 : Heap) (w t : Tm) : Prop :=
+  H.Ext H1 ∧ H1.WF ∧ MDec P H1 w t ∧ ∀ b, Foot P H1 w t b → H.next ≤ b
+
+theorem Heap.placeDeep_spec (t : Tm) : ∀ {H : Heap}, H.WF →
+    (t.sdata = true → PlaceOK P H (H.placeDeep t).1 (H.placeDeep t).2 t) ∧
+    (Tm.sdataL t = true → H.Ext (H.placeDeepL t).1 ∧ (H.placeDeepL t).1.WF ∧ MDecs P (H.placeDeepL t).1 (H.placeDeepL t).2 t.toList ∧
+      (∀ (k : Nat) w v b, (H.placeDeepL t).2[k]? = some w → t.toList[k]? = some v → Foot P (H.placeDeepL t).1 w v b → H.next ≤ b) ∧
+      Tm.ofList t.toList = t) := by
+  induction t with
+  | app h fs _ ihf =>
+    intro H hW
+    refine ⟨fun hs => ?_, fun hs => by simp [Tm.sdataL] at hs⟩
+    obtain ⟨d, c, rfl, hs⟩ := Tm.sdata_app hs
+    obtain ⟨he, hW1, hd, hf, hl⟩ := (ihf hW).2 hs
+    obtain ⟨he2, hW2⟩ := Heap.alloc_ext hW1 (d, c, (H.placeDeepL fs).2)
+    simp only [Heap.placeDeep]
+    refine ⟨he.trans he2, hW2, ?_, fun b hb => ?_⟩
+    · have := MDec.ptr (P := P) (Heap.alloc_new _ _) (hd.mono he2); rwa [hl] at this
+    · cases hb with
+      | here => exact he.1
+      | field hb hw hv hf' =>
+        rw [Heap.alloc_new] at hb; cases hb
+        exact hf _ _ _ _ hw hv (Foot.back he2 (hd.get _ _ _ hw hv) hf')
+  | cons a as iha ihas =>
+    intro H hW
+    refine ⟨fun hs => by simp [Tm.sdata] at hs, fun hs => ?_⟩
+    simp only [Tm.sdataL, Bool.and_eq_true] at hs
+    obtain ⟨he1, hW1, hd1, hf1⟩ := (iha hW).1 hs.1
+    obtain ⟨he2, hW2, hd2, hf2, hl2⟩ := (ihas hW1).2 hs.2
+    simp only [Heap.placeDeepL, Tm.toList]
+    refine ⟨he1.trans he2, hW2, .cons (hd1.mono he2) hd2, fun k w v b hw hv hb => ?_, by simp [Tm.ofList, hl2]⟩
+    cases k with
+    | zero => simp at hw hv; subst hw hv; exact hf1 b (Foot.back he2 hd1 hb)
+    | succ k => simp at hw hv; exact Nat.le_trans he1.1 (hf2 k w v b hw hv hb)
+  | nil => intro H hW; exact ⟨fun _ => ⟨.refl _, hW, .nil, fun b h => by cases h⟩,
+      fun _ => ⟨.refl _, hW, .nil, fun _ _ _ _ h => by simp [Heap.placeDeepL] at h, rfl⟩⟩
+  | vc d c ls =>
+    intro H hW
+    refine ⟨fun hs => ?_, fun hs => by simp [Tm.sdataL] at hs⟩
+    cases Tm.sdata_vc hs
+    exact ⟨.refl _, hW, .vc, fun b h => by cases h⟩
+  | nat => intro H hW; exact ⟨fun _ => ⟨.refl _, hW, .nat, fun b h => by cases h⟩, fun hs => by simp [Tm.sdataL] at hs⟩
+  | wld => intro H hW; exact ⟨fun _ => ⟨.refl _, hW, .wld, fun b h => by cases h⟩, fun hs => by simp [Tm.sdataL] at hs⟩
+  | tok => intro H hW; exact ⟨fun _ => ⟨.refl _, hW, .tok (.inl rfl), fun b h => by cases h⟩, fun hs => by simp [Tm.sdataL] at hs⟩
+  | _ => intro H hW; exact ⟨fun hs => by simp [Tm.sdata] at hs, fun hs => by simp [Tm.sdataL] at hs⟩
+
+
+theorem Spine.wld_inv {H : Heap} {k : Nat} {u v : Tm} {b : Nat} (h : Spine P H (.wld k) u v b) : False := by
+  generalize hw : Tm.wld k = w at h
+  induction h <;> cases hw <;> rename_i ih <;> exact ih rfl
+
+theorem MDec.wld_inv {H : Heap} {w : Tm} {k : Nat} (h : MDec P H w (.wld k)) : w = .wld k := by
+  cases h; rfl
+
+theorem MDec.view_ctor {H : Heap} {w vs : Tm} {d c : Nat} (h : MDec P H w (.app (.vc d c .nil) vs)) :
+    ∃ ws, P.viewM H w = .app (.vc d c .nil) ws := by
+  cases h with
+  | ptr hb _ => exact ⟨_, by simp [Prog.viewM, hb]; rfl⟩
+  | imm => exact ⟨.nil, by simp [Prog.viewM, Prog.view]⟩
+
+theorem machine_wdo (hO : P.OracleOK) {b : Nat} {G : UCtx} {ru : List Bool} {rets w req : Tm} {rest : Core}
+    {ρ vs : List Tm}
+    (hst : ∀ ρS, SimEnv P G.Γ.er ρS ρ → ∃ k rd c vsS, P.sub ρS w = .wld k ∧ P.requestD = some rd ∧
+      P.sub ρS req = .app (.vc rd c .nil) vsS)
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.wNext w).evalS P ρS) ((Prim.wNext w).eval P ρ) ∧
+      Real P ((Prim.wAsk w req).evalS P ρS) ((Prim.wAsk w req).eval P ρ))
+    (ih : ∀ Tw A, G.primTy P (.wNext w) = some Tw → G.primTy P (.wAsk w req) = some A →
+      MRun P b (G.next (G.adv P ((G.Γ.push Tw false).push A false) (.wdo w req rest)) [true, false]) ru rets rest
+        (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) vs) :
+    MRun P b G ru rets (.wdo w req rest) ρ vs := by
+  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+  have hf := hG.fill
+  have hg := hG.ghost
+  rw [usesCore] at hU
+  obtain ⟨Tw, hTw, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨A, hA, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨⟨CU, CK⟩, hC, hU⟩ := Option.bind_eq_some_iff.mp hU
+  simp only [hg, Bool.false_eq_true, ite_false] at hU hC
+  split at hU
+  case isFalse => cases hU
+  rename_i hfv
+  obtain ⟨x, rfl⟩ : ∃ x, w = .fv x := by cases w <;> simp [Tm.isFv] at hfv; exact ⟨_, rfl⟩
+  obtain ⟨y, rfl⟩ : ∃ y, req = .fv y := by cases req <;> simp [Tm.isFv] at hfv; exact ⟨_, rfl⟩
+  obtain ⟨X, hX, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨Y, hY, hU⟩ := Option.bind_eq_some_iff.mp hU
+  obtain ⟨S, hSs, hU⟩ := Option.bind_eq_some_iff.mp hU
+  have hseq := UR.seq_fst hU
+  simp only at hseq
+  simp only [UCtx.termUses, UCtx.use] at hX hY
+  split at hX
+  · cases hX
+  rename_i hx
+  split at hY
+  · cases hY
+  rename_i hy
+  simp only [Option.some.injEq] at hX hY; subst hX hY
+  simp only [Bool.or_eq_true, not_or, Bool.not_eq_true, decide_eq_false_iff_not, Nat.not_le] at hx hy
+  obtain ⟨⟨hxn, hxe⟩, -⟩ := hx
+  obtain ⟨⟨hyn, hye⟩, -⟩ := hy
+  obtain ⟨sS, sC⟩ := Uses.seq_sub hseq
+  have hSx : (S.lookup x).isSome := Uses.seq_isSome hSs (.inl (by simp))
+  have hSy : (S.lookup y).isSome := Uses.seq_isSome hSs (.inr (by simp))
+  cases hrun with
+  | wdo hr =>
+  obtain ⟨k, rd, c, vsS0, hwS, hrd, hrS⟩ := hst ρS hS
+  have hdx := hM.dec x hxn (sS.1 x hSx) hxe
+  have hdy := hM.dec y hyn (sS.1 y hSy) hye
+  simp only [Prog.sub, Prog.subU] at hwS hrS
+  rw [hwS] at hdx; rw [hrS] at hdy
+  have hmx := hdx.wld_inv
+  obtain ⟨ws, hvw⟩ := hdy.view_ctor
+  obtain ⟨H1, v, hpd⟩ : ∃ H1 v, H.placeDeep (P.ask k c).1 = (H1, v) := ⟨_, _, rfl⟩
+  have hask : P.askM H (Tm.env ρM x) (Tm.env ρM y) = (H1, v) := by
+    rw [Prog.askM, hmx, hvw]; simpa [Prog.answer] using hpd
+  have hansS : (Prim.wAsk (.fv x) (.fv y)).evalS P ρS = (P.ask k c).1 := by
+    simp [Prim.evalS, Prog.sub, Prog.subU, hwS, hrS, Prog.answer]
+  have hnextS : (Prim.wNext (.fv x)).evalS P ρS = .wld (k + 1) := by
+    simp [Prim.evalS, Prog.sub, Prog.subU, hwS, Tm.wnext]
+  rw [hansS, hnextS] at hr
+  obtain ⟨he, hW1, hd1, hf1⟩ := ((Heap.placeDeep_spec (P := P) (P.ask k c).1 hM.wf).1 (hO.sdata k c))
+  rw [hpd] at he hW1 hd1 hf1
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P ((G.Γ.push Tw false).push A false) (.wdo (.fv x) (.fv y) rest) := ⟨_, rfl⟩
+  rw [← hΓ'] at hC
+  have hl := hM.lenF
+  have her' : ∀ i, Γ'.er i = if i = G.Γ.n + 1 then false else if i = G.Γ.n then false else G.Γ.er i := fun i => by
+    rw [hΓ', UCtx.adv_er' hf, Ctx.er_push, Ctx.er_push]; simp only [Ctx.push, Ctx.n, Array.size_push]
+    by_cases h1 : i = G.Γ.tys.size + 1 <;> simp [h1]
+  have hn' : Γ'.n = G.Γ.n + 2 := by rw [hΓ', UCtx.adv_n' hf]; simp [Ctx.push, Ctx.n]
+  have huq := usesCore_uq b (G.next Γ' [true, false]) ru rets rest hf CU CK hC
+  have hResLt : ∀ a, Res a → a < H.next := fun a ha => Nat.lt_of_not_le fun hc => by
+    have := hM.res.2.2.2 a ha; rw [hM.wf a hc] at this; cases this
+  have hO1 : MOut P S G.Γ.n G.Γ.er H ρM ρS ρ Res Shr
+      (.bind (.ty false false false) Tw (.bind (.ty false false false) A .nil)) [true, false] H1 [.wld (k + 1), v]
+      [.wld (k + 1), (P.ask k c).1] [(Prim.wNext (.fv x)).eval P ρ, (Prim.wAsk (.fv x) (.fv y)).eval P ρ] := by
+    refine ⟨hW1, he.1, fun a ha => ?_, fun a ha _ _ => he.2.2 a ha, rfl, fun k' w' u' hw hu _ => ?_,
+      fun k' w' u' hw hu _ b hb => ?_, fun k' w' u' v' hw hu hv _ hr b hs => ?_, fun k' w' u' v' hw hu hv _ hr => ?_,
+      fun k' j w' u' v' w2 u2 hne hw hu hv _ _ _ _ hr => ?_⟩
+    · obtain ⟨bk, hb⟩ := Option.isSome_iff_exists.mp ha; rw [he.2.1 _ _ hb]; rfl
+    · match k', hw, hu with
+      | 0, hw, hu => simp at hw hu; subst hw hu; exact .wld
+      | 1, hw, hu => simp at hw hu; subst hw hu; exact hd1
+      | _ + 2, hw, _ => simp at hw
+    · match k', hw, hu with
+      | 0, hw, hu => simp at hw hu; subst hw hu; cases hb
+      | 1, hw, hu => simp at hw hu; subst hw hu; exact .inl (hf1 b hb)
+      | _ + 2, hw, _ => simp at hw
+    · match k', hw, hr with
+      | 0, hw, _ => simp at hw; subst hw; exact hs.wld_inv.elim
+      | 1, _, hr => simp at hr
+      | _ + 2, hw, _ => simp at hw
+    · match k', hw, hr with
+      | 0, hw, _ => simp at hw; subst hw; exact .free fun b h => h.wld_inv
+      | 1, _, hr => simp at hr
+      | _ + 2, hw, _ => simp at hw
+    · match k', hw, hr with
+      | 0, hw, _ => simp at hw; subst hw; exact fun b h _ => h.wld_inv
+      | 1, _, hr => simp at hr
+      | _ + 2, hw, _ => simp at hw
+  obtain ⟨hMr, lift⟩ := hM.bindC (Res2 := Res) sS sC (Uses.seq_spec hseq).1 hO1 (m := 2) rfl rfl (er' := Γ'.er)
+    (fun i hi => by rw [her', if_neg (by omega), if_neg (by omega)])
+    (fun k' hk _ _ => by match k', hk with | 0, _ => rfl | 1, _ => rfl)
+    (fun k' hk hc _ => by
+      rcases huq _ (lookup_mem hc) with h1 | h1
+      · exact UCtx.next_uq_new h1 hG.uqlt
+      · simp only [UCtx.next] at h1; omega)
+    (fun _ h => h)
+    (fun k' w' u' hk hw hu _ _ a hft hr => by
+      have := hResLt a hr
+      match k', hw, hu with
+      | 0, hw, hu => simp at hw hu; subst hw hu; cases hft
+      | 1, hw, hu => simp at hw hu; subst hw hu; have := hf1 a hft; omega
+      | _ + 2, hw, _ => simp at hw)
+  have hS' : SimEnv P Γ'.er (ρS ++ [.wld (k + 1), (P.ask k c).1])
+      (ρ ++ [(Prim.wNext (.fv x)).eval P ρ, (Prim.wAsk (.fv x) (.fv y)).eval P ρ]) := by
+    have hR := hreal ρS hS; rw [hnextS, hansS] at hR
+    refine hS.extend rfl (fun i hi => by rw [her', if_neg (by omega), if_neg (by omega)]) fun k' a b' ha hb _ => ?_
+    match k', ha, hb with
+    | 0, ha, hb => simp at ha hb; subst ha hb; exact hR.1
+    | 1, ha, hb => simp at ha hb; subst ha hb; exact hR.2
+    | _ + 2, ha, _ => simp at ha
+  have ihT := ih Tw A hTw hA
+  rw [← hΓ'] at ihT
+  obtain ⟨H', vsM, hrr, hOr⟩ := ihT CU CK hC _ vsS hS' hr H1 (ρM ++ [.wld (k + 1), v]) Res Out Shr none
+    (by simp only [UCtx.next]; rw [hn']; exact hMr)
+    (hG.nextR (R2 := Res) (fun x a hx ha => (hG.uscr x hx).2 a ha) (by omega) hM.lenM (by
+      rw [hΓ', UCtx.adv_ghost' hf]; simpa [Ctx.push] using hg))
+  refine ⟨H', vsM, .wdo (by simp only [Prog.sub, Prog.subU]; exact hask) ?_, lift ?_⟩
+  · simp only [Prog.sub, Prog.subU, hmx, Tm.wnext]; exact hrr
+  · simp only [UCtx.next] at hOr; rw [hn'] at hOr; exact hOr
+
 theorem VTy.opq_inv (hP : ProgOK P) {v idx ls : Tm} {d : Nat} {D : Adt} (hD : P.adts[d]? = some D) (ho : D.opq = true)
-    (hpl : P.placedD ≠ some d) (h : VTy P v (.app (.tyc d ls) idx)) : v = .tok := by
+    (hpl : P.placedD ≠ some d) (hwo : P.worldD ≠ some d) (h : VTy P v (.app (.tyc d ls) idx)) : v = .tok := by
   generalize hX : Tm.app (.tyc d ls) idx = X at h
   cases h with
   | opq => rfl
+  | world hw =>
+    simp only [Tm.app.injEq, Tm.tyc.injEq] at hX; obtain ⟨⟨rfl, -⟩, -⟩ := hX; exact (hwo hw).elim
   | con hk _ _ _ he =>
     subst he; simp only [Tm.app.injEq, Tm.tyc.injEq] at hX; obtain ⟨⟨rfl, -⟩, -⟩ := hX
     simp [Prog.ctor, hD, (hP.opq _ _ hD ho).1] at hk
@@ -2826,8 +3043,9 @@ theorem cellTy_tok (hP : ProgOK P) {G : UCtx} {ρ : List Tm} (hE : EnvOK P ρ G.
     obtain ⟨D, hD, ho⟩ : ∃ D, P.adts[d]? = some D ∧ D.opq = true := by
       cases hD : P.adts[d]? <;> simp_all
     have hpl : P.placedD ≠ some d := by intro hq; simp [hq] at hc
+    have hwo : P.worldD ≠ some d := by intro hq; simp [hq] at hc
     rw [← hE.canon, hcT] at hvt
-    rw [hv]; exact VTy.opq_inv hP hD ho hpl hvt
+    rw [hv]; exact VTy.opq_inv hP hD ho hpl hwo hvt
   · cases hc
 
 theorem MOut.resOwn {U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS ρ : List Tm} {Res R Shr : Nat → Prop}
@@ -2961,10 +3179,10 @@ theorem prim_val_cell {m : Mark} (hm : m = .cellOf ∨ m = .write true) {G : UCt
 
 theorem machine_prim_cell {m : Mark} (hm : m = .cellOf ∨ m = .write true) {b : Nat} {G : UCtx} {ru : List Bool}
     {rets t A' : Tm} {rest : Core} {ρ vs : List Tm}
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval P ρ))
     (ih : ∀ T, G.primTy P (.axm A') = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
-        rets rest (ρ ++ [(Prim.axm A').eval ρ]) vs) :
+        rets rest (ρ ++ [(Prim.axm A').eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.axm A') false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.axm A') false rest) vsS →
     ∀ H ρM Res Out Shr, MFrame P U G.Γ.n G.Γ.er H ρM ρS ρ Res Out Shr → GOK P G (some (m, t)) H ρM ρS ρ Res Shr →
@@ -2980,10 +3198,10 @@ theorem machine_prim_cell {m : Mark} (hm : m = .cellOf ∨ m = .write true) {b :
       exact ⟨H1, w, _, hev, hO, hft, fun y a hy hya ⟨x, hx', hxa⟩ => (hx x a hx' hxa).2 y hy hya⟩
 
 theorem machine_prim_alloc {b : Nat} {G : UCtx} {ru : List Bool} {rets y A' : Tm} {rest : Core} {ρ vs : List Tm}
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval P ρ))
     (ih : ∀ T, G.primTy P (.axm A') = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
-        rets rest (ρ ++ [(Prim.axm A').eval ρ]) vs) :
+        rets rest (ρ ++ [(Prim.axm A').eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.axm A') false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.axm A') false rest) vsS →
     ∀ H ρM Res Out Shr, MFrame P U G.Γ.n G.Γ.er H ρM ρS ρ Res Out Shr → GOK P G (some (.alloc, y)) H ρM ρS ρ Res Shr →
@@ -3033,10 +3251,10 @@ theorem evalP_fv (H : Heap) (ρ : List Tm) (pd : Pend) (x : Nat) : P.evalP H ρ 
 
 theorem machine_rebind {b : Nat} {G : UCtx} {ru : List Bool} {rets t a0 b0 : Tm} {rest : Core} {ρ vs : List Tm}
     (hrb : G.rebind = some t)
-    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval ρ))
+    (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval P ρ))
     (ih : ∀ T, G.primTy P (.tm t) = some T →
       MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest)) (G.ents.take 1)) ru rets rest
-        (ρ ++ [(Prim.tm t).eval ρ]) vs) :
+        (ρ ++ [(Prim.tm t).eval P ρ]) vs) :
     MRun P b G ru rets (.chk (.mark .rebind) a0 b0 (.prim (.tm t) false rest)) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
   have hf := hG.fill
@@ -3086,7 +3304,7 @@ theorem machine_rebind {b : Nat} {G : UCtx} {ru : List Bool} {rets t a0 b0 : Tm}
       rcases hft a hft' with h | h
       · exact hns h
       · exact hM.shr.1 a hr h)
-  have hS' : SimEnv P Γ'.er (ρS ++ [(Prim.tm (.fv x)).evalS P ρS]) (ρ ++ [(Prim.tm (.fv x)).eval ρ]) :=
+  have hS' : SimEnv P Γ'.er (ρS ++ [(Prim.tm (.fv x)).evalS P ρS]) (ρ ++ [(Prim.tm (.fv x)).eval P ρ]) :=
     hS.extend rfl (fun i hi => by rw [her', if_neg (by rw [← hM.lenF]; omega)]) fun k a b ha hb _ => by
       cases k with
       | zero => simp at ha hb; subst ha hb; exact hreal ρS hS
@@ -3471,7 +3689,7 @@ theorem mask_length : ∀ (es : List Bool) (args : Tm), (maskArgs es args).toLis
   | _ :: _, .nil | _ :: _, .fv _ | _ :: _, .bv _ | _ :: _, .univ | _ :: _, .level | _ :: _, .tyc .. | _ :: _, .vc ..
   | _ :: _, .app .. | _ :: _, .bind .. | _ :: _, .tyCtor _ | _ :: _, .valCtor _ | _ :: _, .predates ..
   | _ :: _, .subterm .. | _ :: _, .fn .. | _ :: _, .mtbl .. | _ :: _, .lvl _ | _ :: _, .tok | _ :: _, .clo ..
-  | _ :: _, .nat _ | _ :: _, .ptr _ => by simp [maskArgs]
+  | _ :: _, .nat _ | _ :: _, .ptr _ | _ :: _, .wld _ => by simp [maskArgs]
 
 theorem MOut.congrE {U : Uses} {n : Nat} {er : Nat → Bool} {H H' : Heap} {ρM ρS ρ : List Tm} {Res Shr : Nat → Prop}
     {rets : Tm} {ru : List Bool} {vsM vsS vs vsS' vs' : List Tm}

@@ -24,6 +24,9 @@ structure ProgOK (P : Prog) : Prop where
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
   opq : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.opq = true → D.ctors = [] ∧ D.coercible = false
   placed : ∀ q, P.placedD = some q → ∃ D, P.adts[q]? = some D ∧ D.opq = true
+  world : ∀ w, P.worldD = some w → (∃ D, P.adts[w]? = some D ∧ D.opq = true) ∧ P.placedD ≠ some w
+  request : ∀ r, P.requestD = some r → (∃ D, P.adts[r]? = some D ∧ D.opq = false ∧ D.coercible = false ∧
+    D.newtype = false ∧ D.lifted = 0) ∧ P.placedD ≠ some r ∧ P.natD ≠ some r
   uer : ∀ (d c : Nat) sig, P.ctor d c = some sig → ∀ j, sig.uAt j = true → sig.ers.getD j true = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
@@ -471,7 +474,8 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       | some D => do
         let ⟨ho⟩ ← need (D.opq = true) "an axiom returns only a value of an opaque type"
         let ⟨hpl⟩ ← need (P.placedD ≠ some d) "an axiom returns no `Placed` value"
-        .ok ⟨_, .axm hA hU hc hD ho hpl⟩
+        let ⟨hwo⟩ ← need (P.worldD ≠ some d) "an axiom returns no `World` value"
+        .ok ⟨_, .axm hA hU hc hD ho hpl hwo⟩
       | none => .error "an axiom returns only a value of an opaque type"
     | _ => .error "an axiom returns only a value of an opaque type"
   | .place a T => match T with
@@ -484,6 +488,23 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       if h : a' = a then by subst h; exact .ok ⟨_, PrimTy.place hq ha hAB hB hs⟩
       else .error "place-at: the box names another value"
     | _ => .error "place-at: not a `Placed` type"
+  | .wAsk w req => match hwd : P.worldD, hrd : P.requestD with
+    | some wd, some rd => do
+      let ⟨W, hw⟩ ← checkTm P Γ w
+      let ⟨hW⟩ ← need (Γ.canon W = .app (.tyc wd .nil) .nil) "world-do: not a `World`"
+      let ⟨R, hr⟩ ← checkTm P Γ req
+      match hR : Γ.canon R with
+      | .app (.tyc rd' .nil) (.cons A .nil) => do
+        let ⟨e⟩ ← need (rd' = rd) "world-do: not a `Request`"
+        .ok ⟨A, .wAsk hwd hrd hw hW hr (e ▸ hR)⟩
+      | _ => .error "world-do: not a `Request`"
+    | _, _ => .error "world-do needs the prelude's `World` and `Request`"
+  | .wNext w => match hwd : P.worldD with
+    | some wd => do
+      let ⟨W, hw⟩ ← checkTm P Γ w
+      let ⟨hW⟩ ← need (Γ.canon W = .app (.tyc wd .nil) .nil) "world-do: not a `World`"
+      .ok ⟨_, .wNext hwd hw hW⟩
+    | none => .error "world-do needs the prelude's `World`"
   | .unplace a v => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     match hA : Γ.canon A with
@@ -748,6 +769,12 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning something erased"
     let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets
     .ok ⟨R, .prim hp hm hr, e⟩
+  | .wdo w req rest, rets => do
+    let ⟨Tw, hw⟩ ← checkPrim P Γ (.wNext w)
+    let ⟨A, ha⟩ ← checkPrim P Γ (.wAsk w req)
+    let ⟨hm⟩ ← need (Γ.ok (rt P Γ w && rt P Γ req)) "world-do mentions something erased"
+    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) rest rets
+    .ok ⟨R, .wdo hw ha hm hr, e⟩
   | .defLvl rest, rets => do
     let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets
     .ok ⟨R, .defLvl hr, e⟩
@@ -916,6 +943,11 @@ def checkProg : Res {R // Checked P R} := do
   let ⟨hop⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ D, P.adts[d]? = some D → D.opq = true →
       D.ctors = [] ∧ D.coercible = false)
     "unreachable: an opaque type has constructors"
+  let ⟨hwd⟩ ← need ((P.worldD.all fun w => (P.adts[w]?.map (·.opq)) == some true && P.placedD != some w) = true)
+    "unreachable: World is not opaque"
+  let ⟨hrd⟩ ← need ((P.requestD.all fun r => (P.adts[r]?.map fun D => !D.opq && !D.coercible && !D.newtype &&
+      D.lifted == 0) == some true && P.placedD != some r && P.natD != some r) = true)
+    "unreachable: Request is not a plain enum"
   let ⟨hpl⟩ ← need ((P.placedD.all fun q => (P.adts[q]?.map (·.opq)) == some true) = true)
     "unreachable: Placed is not opaque"
   let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.size, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
@@ -936,6 +968,15 @@ def checkProg : Res {R // Checked P R} := do
     fun q hq => by
       rw [hq] at hpl; simp only [Option.all_some, beq_iff_eq, Option.map_eq_some_iff] at hpl
       obtain ⟨D, hD, ho⟩ := hpl; exact ⟨D, hD, ho⟩,
+    fun w hw => by
+      rw [hw] at hwd; simp only [Option.all_some, Bool.and_eq_true, beq_iff_eq, Option.map_eq_some_iff, bne_iff_ne,
+        ne_eq] at hwd
+      obtain ⟨⟨D, hD, ho⟩, hne⟩ := hwd; exact ⟨⟨D, hD, ho⟩, hne⟩,
+    fun r hr => by
+      rw [hr] at hrd; simp only [Option.all_some, Bool.and_eq_true, beq_iff_eq, Option.map_eq_some_iff, bne_iff_ne,
+        ne_eq, Bool.not_eq_true'] at hrd
+      obtain ⟨⟨⟨D, hD, ⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hrd
+      exact ⟨⟨D, hD, h1, h2, h3, h4⟩, h5, h6⟩,
     fun d c sig h j hu => by
       obtain ⟨D, hD, hc⟩ := Option.bind_eq_some_iff.mp h
       exact hue d (List.mem_range.mpr (getElem?_eq_some_iff.mp hD).1) D hD sig (List.mem_of_getElem? hc) j

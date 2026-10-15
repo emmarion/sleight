@@ -411,6 +411,10 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
   | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false → D.opq = false →
       PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
+  | wAsk : P.worldD = some wd → P.requestD = some rd → TmTy P Γ w W → Γ.canon W = .app (.tyc wd .nil) .nil →
+      TmTy P Γ req R → Γ.canon R = .app (.tyc rd .nil) (.cons A .nil) → PrimTy Γ (.wAsk w req) A
+  | wNext : P.worldD = some wd → TmTy P Γ w W → Γ.canon W = .app (.tyc wd .nil) .nil →
+      PrimTy Γ (.wNext w) (.app (.tyc wd .nil) .nil)
   | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
   | num : P.natOK d = true → PrimTy Γ (.num d n) (natTy d)
@@ -419,7 +423,7 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       TmTy P Γ a A → Γ.canon A = .app (.tyc d .nil) .nil → TmTy P Γ b B → Γ.canon B = .app (.tyc d .nil) .nil →
       PrimTy Γ (.atomEq d q a b) (.app (.tyc q .nil) (.cons (.app (.tyc d .nil) .nil) (.cons a (.cons b .nil))))
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
-      P.placedD ≠ some d → PrimTy Γ (.axm A) A
+      P.placedD ≠ some d → P.worldD ≠ some d → PrimTy Γ (.axm A) A
   | place : P.placedD = some q → TmTy P Γ a A → Γ.canon A = Γ.canon B → B.static Γ.n 0 → s.static Γ.n 0 →
       PrimTy Γ (.place a (.app (.tyc q .nil) (.cons s (.cons B (.cons a .nil)))))
         (.app (.tyc q .nil) (.cons s (.cons B (.cons a .nil))))
@@ -556,6 +560,8 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       CoreTy b Γ (.case s brs els er nt) rets
   | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets →
       CoreTy b Γ (.prim p er rest) rets
+  | wdo : PrimTy P Γ (.wNext w) Tw → PrimTy P Γ (.wAsk w req) A → Γ.ok (rt P Γ w && rt P Γ req) →
+      CoreTy b (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) rest rets → CoreTy b Γ (.wdo w req rest) rets
   | defLvl : CoreTy b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
       CoreTy b (Ctx.adv P Γ (Γ.pushFns G) (.defFns gid rest)) rest rets → CoreTy b Γ (.defFns gid rest) rets

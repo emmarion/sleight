@@ -40,7 +40,7 @@ structure Mu (k : Nat) where
 
 instance (k : Nat) : WellFoundedRelation (Mu k) := ⟨fun a b => MuLt k a.μ b.μ, InvImage.wf _ (MuLt_wf k)⟩
 
-def Prim.eval (ρ : List Tm) : Prim → Tm
+def Prim.eval (P : Prog) (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t | .place t _ | .unplace t _ => t.subst (Tm.env ρ)
   | .assert t _ => t
   | .coerce _ b _ => b.subst (Tm.env ρ)
@@ -48,6 +48,8 @@ def Prim.eval (ρ : List Tm) : Prim → Tm
   | .atomEq d q a _ => .app (.vc q 0 .nil) (.cons (.app (.tyc d .nil) .nil) (.cons (a.subst (Tm.env ρ)) .nil))
   | .placedEq q A a _ => .app (.vc q 0 .nil) (.cons (A.subst (Tm.env ρ)) (.cons (a.subst (Tm.env ρ)) .nil))
   | .num d n => natTm' d n
+  | .wAsk w req => (P.answer (w.subst (Tm.env ρ)) (req.subst (Tm.env ρ))).2
+  | .wNext w => (w.subst (Tm.env ρ)).wnext
   | _ => .tok
 
 def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)
@@ -82,7 +84,8 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
         | .error e => .error e
       | none => .error "no branch"
     | _ => .error "scrutinee is not data"
-  | .prim p _ rest => eval P μ (ρ ++ [p.eval ρ]) cnt rest
+  | .prim p _ rest => eval P μ (ρ ++ [p.eval P ρ]) cnt rest
+  | .wdo w req rest => eval P μ (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) cnt rest
   | .defLvl rest => eval P μ (ρ ++ [.lvl cnt]) (cnt + 1) rest
   | .defFns gid rest =>
     match P.groups[gid]? with

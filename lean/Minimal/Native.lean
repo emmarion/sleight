@@ -1813,6 +1813,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
       let outs ← runS fuel ρ body
       runS fuel (ρ ++ outs) rest
     | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.evalS P ρ]) rest
+    | .wdo w req rest => runS fuel (ρ ++ [(Prim.wNext w).evalS P ρ, (Prim.wAsk w req).evalS P ρ]) rest
     | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
     | .defFns gid rest => do runS fuel (ρ ++ closuresS ρ gid (← P.groups[gid]?)) rest
     | .chk _ _ _ rest => runS fuel ρ rest
@@ -1861,6 +1862,7 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
       obtain ⟨outs, hb, hr⟩ := h
       exact .seq (ih _ _ _ hb) (ih _ _ _ hr)
     · exact .prim (ih _ _ _ h)
+    · exact .wdo (ih _ _ _ h)
     · exact .defLvl (ih _ _ _ h)
     · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
       obtain ⟨G, hG, hr⟩ := h
@@ -1878,7 +1880,7 @@ theorem Tm.toArrAux_toList : ∀ (t : Tm) (acc : Array Tm), (t.toArrAux acc).toL
   | .cons h t, acc => by simp [Tm.toArrAux, Tm.toArrAux_toList t, Tm.toList]
   | .fv _, _ | .bv _, _ | .nil, _ | .bind .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
   | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
-  | .clo .., _ | .nat _, _ | .ptr _, _ => by simp [Tm.toArrAux, Tm.toList]
+  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ => by simp [Tm.toArrAux, Tm.toList]
 
 def cvalT (env : Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with
   | some t => (env.toList ++ acc).getD t .nil
@@ -1922,7 +1924,9 @@ def Prim.evalA (ρ : Array Tm) : Prim → Tm
   | .num _ n => .nat n
   | .atom d => .app (.vc d 0 .nil) .nil
   | .assert t _ => t
-  | p => p.eval ρ.toList
+  | .wAsk w req => (P.answer (P.subA ρ w) (P.subA ρ req)).1
+  | .wNext w => (P.subA ρ w).wnext
+  | p => p.eval P ρ.toList
 
 theorem Prim.evalA_eq (ρ : Array Tm) (p : Prim) : p.evalA P ρ = p.evalS P ρ.toList := by
   cases p <;> simp [Prim.evalA, Prim.evalS, Prim.eval, Prog.subA_eq]
@@ -1963,6 +1967,7 @@ def runA : Nat → Array Tm → Core → Option (List Tm)
       let outs ← runA fuel ρ body
       runA fuel (ρ ++ outs) rest
     | .prim p er rest => runA fuel (ρ.push (if er then .tok else p.evalA P ρ)) rest
+    | .wdo w req rest => runA fuel ((ρ.push ((Prim.wNext w).evalA P ρ)).push ((Prim.wAsk w req).evalA P ρ)) rest
     | .defLvl rest => runA fuel (ρ.push .tok) rest
     | .defFns gid rest => do runA fuel (ρ ++ closuresS ρ.toList gid (← P.groups[gid]?)) rest
     | .chk _ _ _ rest => runA fuel ρ rest
@@ -1979,6 +1984,7 @@ theorem runA_eq : ∀ fuel (ρ : Array Tm) c, runA P fuel ρ c = runS P fuel ρ.
     | mtch s R brs els er rest => cases er <;> simp [runA, runS, ih, e]
     | case s brs els er nt => cases er <;> cases nt <;> simp [runA, runS, ih, e]
     | prim p er rest => simp [runA, runS, ih, Prim.evalA_eq]
+    | wdo w req rest => simp [runA, runS, ih, Prim.evalA_eq]
     | _ => simp [runA, runS, ih, e]
 
 @[simp] theorem runA_toArray (fuel : Nat) (l : List Tm) (c : Core) : runA P fuel l.toArray c = runS P fuel l c := by

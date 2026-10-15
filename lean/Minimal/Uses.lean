@@ -146,7 +146,7 @@ def defOK (G : UCtx) (Gr : Group) (O : Uses) : Bool :=
   Gr.fns.all (fun F => F.dele.all fun t => if t < G.Γ.n then Gr.caps.lookup t == some (F.u && G.Γ.fnU t) else true)
 
 def cellTy (G : UCtx) (i : Nat) : Bool := match (G.Γ.tys[i]?).map G.Γ.canon with
-  | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false && P.placedD != some d
+  | some (.app (.tyc d _) _) => ((P.adts[d]?).map (·.opq)).getD false && P.placedD != some d && P.worldD != some d
   | _ => false
 
 def arms (G : UCtx) (s : Tm) (er : Bool) : Option (Tm × Tm × List Arm) := do
@@ -207,6 +207,14 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
     let u := G.ents.headD false
     let C ← usesCore b (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) (if er || G.Γ.ghost then [] else [u])) ru rets rest
     if er || G.Γ.ghost then some C else UR.seq (← G.primUses P u p, []) C
+  | .wdo w req rest => do
+    let Tw ← G.primTy P (.wNext w)
+    let A ← G.primTy P (.wAsk w req)
+    let C ← usesCore b (G.next (G.adv P ((G.Γ.push Tw false).push A false) (.wdo w req rest))
+      (if G.Γ.ghost then [] else [true, false])) ru rets rest
+    if G.Γ.ghost then some C
+    else if w.isFv && req.isFv then UR.seq (← Uses.seq (← G.termUses P true w) (← G.termUses P true req), []) C
+    else none
   | .defLvl rest => usesCore b (G.next (G.adv P G.Γ.pushMint (.defLvl rest)) []) ru rets rest
   | .defFns gid rest => do
     let Gr ← P.groups[gid]?

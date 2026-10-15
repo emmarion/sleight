@@ -37,6 +37,7 @@ inductive Tm where
   | clo (env : Tm) (gid j : Nat)
   | nat (n : Nat)
   | ptr (a : Nat)
+  | wld (k : Nat)
   deriving DecidableEq, Repr, Inhabited
 
 namespace Tm
@@ -110,7 +111,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, fn l _ t _ _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level => true
-  | _, lvl _ | _, tok | _, clo .. | _, nat _ | _, ptr _ => false
+  | _, lvl _ | _, tok | _, clo .. | _, nat _ | _, ptr _ | _, wld _ => false
 
 def bound : Nat → Tm → Bool
   | d, bv i => i < d
@@ -277,6 +278,8 @@ inductive Prim where
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
   | atom (d : Nat)
+  | wAsk (w req : Tm)
+  | wNext (w : Tm)
   | atomEq (d q : Nat) (a b : Tm)
   | place (a T : Tm)
   | unplace (a v : Tm)
@@ -309,6 +312,7 @@ inductive Core where
   | call (f : Tm) (dec : Dec) (args : Tm) (er : Bool) (ms : List Bool) (ve : Option (List Bool)) (rest : Core)
   | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Tm × Core)) (els : Option Core) (er : Bool) (rest : Core)
   | prim (p : Prim) (er : Bool) (rest : Core)
+  | wdo (w req : Tm) (rest : Core)
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
@@ -321,7 +325,7 @@ inductive Core where
 mutual
 def Core.noRet : Core → Bool
   | .ret _ => false
-  | .call _ _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
+  | .call _ _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .wdo _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
   | .case _ brs els _ _ => Core.armsNoRet brs && Core.optNoRet els
   | .seq _ body rest => body.noRet || rest.noRet
   | .absurd _ | .dead => true
@@ -429,8 +433,40 @@ structure Prog where
   hidden : Nat := 0
   natD : Option Nat := none
   isoFuel : Nat := 0
+  worldD : Option Nat := none
+  requestD : Option Nat := none
+  ask : Nat → Nat → Tm × Tm := fun _ _ => (.tok, .tok)
   placedD : Option Nat := none
-  deriving Repr, Inhabited
+  deriving Inhabited
+
+def Tm.noClo : Tm → Bool
+  | .clo .. => false
+  | .cons a b | .app a b | .bind _ a b => a.noClo && b.noClo
+  | .tyc _ a | .vc _ _ a | .tyCtor a | .valCtor a => a.noClo
+  | .predates a b c => a.noClo && b.noClo && c.noClo
+  | .subterm a b c d => a.noClo && b.noClo && c.noClo && d.noClo
+  | .fn a _ b _ _ | .mtbl _ _ _ _ a b => a.noClo && b.noClo
+  | _ => true
+
+mutual
+def Tm.sdata : Tm → Bool
+  | .app (.vc _ _ .nil) fs => Tm.sdataL fs
+  | .nat _ | .tok | .wld _ | .nil | .vc _ _ .nil => true
+  | _ => false
+
+def Tm.sdataL : Tm → Bool
+  | .cons a as => a.sdata && Tm.sdataL as
+  | .nil => true
+  | _ => false
+end
+
+def Tm.wnext : Tm → Tm
+  | .wld k => .wld (k + 1)
+  | _ => .tok
+
+def Prog.answer (P : Prog) : Tm → Tm → Tm × Tm
+  | .wld k, .app (.vc _ c _) _ => P.ask k c
+  | _, _ => (.tok, .tok)
 
 def marks : Tm → Nat → List Bool
   | .bind k _ r, n + 1 => k.marked :: marks r n

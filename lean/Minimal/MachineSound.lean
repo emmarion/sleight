@@ -131,7 +131,7 @@ theorem build_ext {H : Heap} (hW : H.WF) (f : Nat → Tm) : ∀ t, H.Ext (P.buil
       · exact ⟨e1.trans (place_ext w1 _).1, (place_ext w1 _).2⟩
     · exact ⟨e1, w1⟩
   | .fv _ | .vc .. | .bv _ | .nil | .cons .. | .bind .. | .tyc .. | .tyCtor _ | .valCtor _ | .univ | .level
-  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ => by
+  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ | .wld _ => by
     simp only [Prog.build]; exact ⟨Heap.Ext.refl _, hW⟩
 
 theorem buildArgs_ext {H : Heap} (hW : H.WF) (f : Nat → Tm) : ∀ t, H.Ext (P.buildArgs H f t).1 ∧ (P.buildArgs H f t).1.WF
@@ -140,7 +140,7 @@ theorem buildArgs_ext {H : Heap} (hW : H.WF) (f : Nat → Tm) : ∀ t, H.Ext (P.
     obtain ⟨e2, w2⟩ := buildArgs_ext w1 f as
     simp only [Prog.buildArgs]; exact ⟨e1.trans e2, w2⟩
   | .fv _ | .vc .. | .bv _ | .nil | .app .. | .bind .. | .tyc .. | .tyCtor _ | .valCtor _ | .univ | .level
-  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ => by
+  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ | .wld _ => by
     simp only [Prog.buildArgs]; exact ⟨Heap.Ext.refl _, hW⟩
 end
 
@@ -208,19 +208,19 @@ theorem Tm.kinds_skip : ∀ (t : Tm) (n : Nat), (t.skip n).kinds = t.kinds.drop 
   | .bind _ _ _, 0 => by simp [Tm.skip]
   | .fv _, n | .bv _, n | .nil, n | .cons .., n | .app .., n | .tyc .., n | .vc .., n | .tyCtor _, n
   | .valCtor _, n | .univ, n | .level, n | .predates .., n | .subterm .., n | .fn .., n | .mtbl .., n
-  | .lvl _, n | .tok, n | .clo .., n | .nat _, n | .ptr _, n => by cases n <;> simp [Tm.skip, Tm.kinds]
+  | .lvl _, n | .tok, n | .clo .., n | .nat _, n | .ptr _, n | .wld _, n => by cases n <;> simp [Tm.skip, Tm.kinds]
 
 theorem Tm.ers_kinds : ∀ (t : Tm), t.ers = t.kinds.map Ent.er
   | .bind _ _ r => by simp [Tm.ers, Tm.kinds, Tm.ers_kinds r]
   | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _ | .univ | .level
-  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ => rfl
+  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ | .wld _ => rfl
 
 theorem Tm.uAt_kinds : ∀ (t : Tm) (k : Nat), t.uAt k = ((t.kinds[k]?).map Ent.u).getD false
   | .bind _ _ r, 0 => rfl
   | .bind _ _ r, k + 1 => by simp [Tm.uAt, Tm.kinds, Tm.uAt_kinds r k]
   | .fv _, _ | .bv _, _ | .nil, _ | .cons .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
   | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
-  | .clo .., _ | .nat _, _ | .ptr _, _ => by cases ‹Nat› <;> rfl
+  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ => by cases ‹Nat› <;> rfl
 
 def HeadsOK (P : Prog) (Γ : Ctx) (fS fF : Nat → Tm) (L : List Nat) : Prop :=
   ∀ i sig, i ∈ L → (Γ.tys[i]?).map Γ.canon = some (.valCtor sig) →
@@ -397,7 +397,7 @@ theorem mask_get : ∀ (ers : List Bool) (a : Tm) (k : Nat) (w : Tm), (maskArgs 
   | _ :: _, .bind .., _, _, h | _ :: _, .tyc .., _, _, h | _ :: _, .vc .., _, _, h | _ :: _, .tyCtor _, _, _, h
   | _ :: _, .valCtor _, _, _, h | _ :: _, .univ, _, _, h | _ :: _, .level, _, _, h | _ :: _, .predates .., _, _, h
   | _ :: _, .subterm .., _, _, h | _ :: _, .fn .., _, _, h | _ :: _, .mtbl .., _, _, h | _ :: _, .lvl _, _, _, h
-  | _ :: _, .tok, _, _, h | _ :: _, .clo .., _, _, h | _ :: _, .nat _, _, _, h | _ :: _, .ptr _, _, _, h => by
+  | _ :: _, .tok, _, _, h | _ :: _, .clo .., _, _, h | _ :: _, .nat _, _, _, h | _ :: _, .ptr _, _, _, h | _ :: _, .wld _, _, _, h => by
     simp [maskArgs, Tm.toList] at h
 
 theorem mask_get' : ∀ (ers : List Bool) (a : Tm) (k : Nat), ers.getD k true = false →
@@ -410,7 +410,7 @@ theorem mask_get' : ∀ (ers : List Bool) (a : Tm) (k : Nat), ers.getD k true = 
   | _ :: _, .bind .., _, _ | _ :: _, .tyc .., _, _ | _ :: _, .vc .., _, _ | _ :: _, .tyCtor _, _, _
   | _ :: _, .valCtor _, _, _ | _ :: _, .univ, _, _ | _ :: _, .level, _, _ | _ :: _, .predates .., _, _
   | _ :: _, .subterm .., _, _ | _ :: _, .fn .., _, _ | _ :: _, .mtbl .., _, _ | _ :: _, .lvl _, _, _
-  | _ :: _, .tok, _, _ | _ :: _, .clo .., _, _ | _ :: _, .nat _, _, _ | _ :: _, .ptr _, _, _ => by
+  | _ :: _, .tok, _, _ | _ :: _, .clo .., _, _ | _ :: _, .nat _, _, _ | _ :: _, .ptr _, _, _ | _ :: _, .wld _, _, _ => by
     simp [maskArgs]
 
 theorem build_ctor_foot {H : Heap} (hW : H.WF) {d c : Nat} {sig : Tm} (hc : P.ctor d c = some sig) {args' argsS : Tm}
@@ -1095,13 +1095,13 @@ theorem argsUses_reads (hP : ProgOK P) {G : UCtx} : ∀ {md : Ent → Bool} {arg
   | _, .univ, _, _, _, _, _, _, hi | _, .level, _, _, _, _, _, _, hi | _, .predates .., _, _, _, _, _, _, hi
   | _, .subterm .., _, _, _, _, _, _, hi | _, .fn .., _, _, _, _, _, _, hi | _, .mtbl .., _, _, _, _, _, _, hi
   | _, .lvl _, _, _, _, _, _, _, hi | _, .tok, _, _, _, _, _, _, hi | _, .clo .., _, _, _, _, _, _, hi
-  | _, .nat _, _, _, _, _, _, _, hi | _, .ptr _, _, _, _, _, _, _, hi => by simp [rtReadsArgs] at hi
+  | _, .nat _, _, _, _, _, _, _, hi | _, .ptr _, _, _, _, _, _, _, hi | _, .wld _, _, _, _, _, _, _, hi => by simp [rtReadsArgs] at hi
 end
 
 theorem Tm.kinds_subst_prefix (f : Nat → Tm) : ∀ (t : Tm), t.kinds <+: (t.subst f).kinds
   | .bind _ _ r => by simpa [Tm.subst, Tm.kinds] using Tm.kinds_subst_prefix f r
   | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _ | .univ | .level
-  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ => List.nil_prefix
+  | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok | .clo .. | .nat _ | .ptr _ | .wld _ => List.nil_prefix
 
 theorem VTys.kinds : ∀ {vs tele out : Tm}, VTys P vs tele out → tele.isTele → out.kinds = tele.kinds.drop vs.len
   | _, _, _, .nil, _ => by simp [Tm.len]

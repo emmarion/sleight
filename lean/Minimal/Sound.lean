@@ -44,7 +44,10 @@ inductive VTy : Tm → Tm → Prop
       VTy (.clo (.ofList env) gid j) ((F.type G).subst (Tm.env env))
   | mtbl {D : Adt} : P.adts[d]? = some D → ls.len = D.lifted → VTys ls D.params out → D.coercible = false →
       D.opq = false → VTy v (D.mtbl d ls)
-  | opq {D : Adt} : P.adts[d]? = some D → D.opq = true → P.placedD ≠ some d → VTy .tok (.app (.tyc d ls) idx)
+  | opq {D : Adt} : P.adts[d]? = some D → D.opq = true → P.placedD ≠ some d → P.worldD ≠ some d →
+      VTy .tok (.app (.tyc d ls) idx)
+  | world {D : Adt} : P.worldD = some w → P.adts[w]? = some D → D.opq = true → P.placedD ≠ some w →
+      VTy (.wld k) (.app (.tyc w .nil) .nil)
   | placed : P.placedD = some q → VTy v T → VTy v (.app (.tyc q .nil) (.cons s (.cons T (.cons v .nil))))
   | coer {D : Adt} : P.adts[d]? = some D → D.coercible = true → (∀ vS, Real P vS a ↔ Real P vS b) →
       CoerOwn P sa a sb b → VTy .tok (Tm.coer d sa A a sb B b)
@@ -669,6 +672,7 @@ theorem VTy.ty_inv {v idx ls : Tm} {d : Nat} (h : VTy P v (.app (.tyc d ls) idx)
   | coer hD' hc => rw [(hD _ hD').1] at hc; cases hc
   | opq hD' ho => rw [(hD _ hD').2] at ho; cases ho
   | placed hq _ => exact (hpl hq).elim
+  | world _ hD' ho => rw [(hD _ hD').2] at ho; cases ho
 
 theorem VTy.placed_inv (hP : ProgOK P) {x s T w : Tm} {q : Nat} (hq : P.placedD = some q)
     (h : VTy P x (.app (.tyc q .nil) (.cons s (.cons T (.cons w .nil))))) : x = w ∧ VTy P x T := by
@@ -695,6 +699,7 @@ theorem VTy.coer_inv (hP : ProgOK P) {v : Tm} {d : Nat} {D : Adt} {sa A a sb B b
   | clo => simp [Tm.coer, FnDef.type, Tm.subst] at hX
   | mtbl => simp [Tm.coer, Adt.mtbl] at hX
   | placed => simp [Tm.coer, Tm.ofList] at hX
+  | world => simp [Tm.coer, Tm.ofList] at hX
   | opq hD' ho =>
     simp only [Tm.coer, Tm.app.injEq, Tm.tyc.injEq] at hX; obtain ⟨⟨rfl, -⟩, -⟩ := hX
     rw [hD] at hD'; cases hD'; rw [(hP.opq _ _ hD ho).2] at hc; cases hc
@@ -920,7 +925,7 @@ theorem EnvOK.pushFns (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       have := congrArg Tm.toList hx
       rw [tl, tl] at this
       subst this; exact hR
-    | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+    | other _ _ h3 _ => exact absurd rfl (h3 _ _ _)
     | nat he h' =>
       obtain ⟨c, args, hv⟩ := Prog.view_nat (n := by assumption) he
       rw [hv] at h'
@@ -932,7 +937,7 @@ theorem EnvOK.pushFns (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
         have := congrArg Tm.toList hx
         rw [tl, tl] at this
         subst this; exact hR
-      | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+      | other _ _ h3 _ => exact absurd rfl (h3 _ _ _)
   · exact fun h => .dele hG hne.2 hF hne.1 ht' h
 
 namespace Tm
@@ -1220,7 +1225,7 @@ theorem real_simple (hS : P.simpleStep P.simple = P.simple) :
             obtain ⟨c', a', hv'⟩ := Prog.view_nat (n := k) he
             exact ⟨_, by rw [← hv', Prog.unnat_view he], hv' ▸ h', by simp⟩
           | wrap hw _ => rw [hnw] at hw; cases hw
-          | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
+          | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
         | _ => exact ⟨_, rfl, hR, by simp⟩
       rw [← hwe]
       cases hR with
@@ -1235,7 +1240,7 @@ theorem real_simple (hS : P.simpleStep P.simple = P.simple) :
       | wrap hw _ =>
         have := (Prog.wrapField_spec hw).1
         simp [Prog.isNt, hDd] at this; simp [this] at hD
-      | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
+      | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
     · cases hD
 
 namespace Tm
@@ -1289,7 +1294,7 @@ theorem Real.wrap_iff {vS vs ls : Tm} {d c k : Nat} (hw : P.wrapField d c = some
     | nat he _ => exact .nat he (hn _ _ rfl he)
     | con _ _ hw' _ => rw [hw] at hw'; cases hw'
     | wrap hw' hr => rw [hw] at hw'; cases hw'; exact hr
-    | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
+    | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
   · exact .wrap hw
 
 theorem Reals.congr (ws : Tm) : ∀ {a vs t : Tm}, Reals P a vs t → ws.isList → vs.toList.length = ws.toList.length →
@@ -1328,8 +1333,8 @@ theorem Real.ctor_congr {d c : Nat} {sig vs ws vS ls : Tm} (hc : P.ctor d c = so
     · exact .wrap hw' (hf _ hkl (Tm.ntField_spec hk).2.1 _ hr)
     · refine .wrap hw' ?_
       rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega)]
-      exact .other (by simp) (by simp) (by simp)
-  | other h1 _ _ => exact absurd rfl (h1 _ _ _ _)
+      exact .other (by simp) (by simp) (by simp) (by simp)
+  | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
 
 theorem Tm.toList_subst_get (f : Nat → Tm) : ∀ (t : Tm) (i : Nat) (x : Tm), t.toList[i]? = some x →
     (t.subst f).toList[i]? = some (x.subst f) := by
@@ -1512,10 +1517,33 @@ theorem VTy.atom_inv {d : Nat} {D : Adt} {m e u : Bool} (hD : P.adts[d]? = some 
       | nil => rfl
       | cons _ h2 => cases h2
   | opq hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
+  | world _ hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
 
-theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
-    {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
-    VTy P (p.eval ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval ρ).lc 0 ∧ ∀ x ∈ (p.eval ρ).levels, x < cnt := by
+structure Prog.OracleOK (P : Prog) : Prop where
+  typed : ∀ k c rd ls vs A, P.requestD = some rd → VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons A .nil)) →
+    VTy P (P.ask k c).2 A ∧ Real P (P.ask k c).1 (P.ask k c).2
+  lc : ∀ k c, (P.ask k c).2.lc 0
+  levels : ∀ k c, (P.ask k c).2.levels = []
+  noClo : ∀ k c, (P.ask k c).2.noClo = true
+  sdata : ∀ k c, (P.ask k c).1.sdata = true
+
+theorem VTy.world_inv (hP : ProgOK P) {v : Tm} {w : Nat} (hw : P.worldD = some w)
+    (h : VTy P v (.app (.tyc w .nil) .nil)) : ∃ k, v = .wld k := by
+  obtain ⟨⟨D, hD, ho⟩, hpl⟩ := hP.world _ hw
+  cases h with
+  | world => exact ⟨_, rfl⟩
+  | con hc _ _ _ he => cases he; simp [Prog.ctor, hD, (hP.opq _ _ hD ho).1] at hc
+  | opq _ _ _ hne => exact (hne hw).elim
+  | _ => simp_all [FnDef.type, Tm.subst, Adt.mtbl, Tm.coer]
+
+theorem VTy.world_mk (hP : ProgOK P) {w : Nat} (hw : P.worldD = some w) (k : Nat) :
+    VTy P (.wld k) (.app (.tyc w .nil) .nil) := by
+  obtain ⟨⟨D, hD, ho⟩, hpl⟩ := hP.world _ hw
+  exact .world hw hD ho hpl
+
+theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat}
+    (hb : LvlBound ρ cnt) {p : Prim} {T : Tm} (h : PrimTy P Γ p T) :
+    VTy P (p.eval P ρ) (T.subst (Tm.env ρ)) ∧ T.static Γ.n 0 ∧ (p.eval P ρ).lc 0 ∧ ∀ x ∈ (p.eval P ρ).levels, x < cnt := by
   have hw := hE.wf
   have stat : ∀ {t T : Tm}, TmTy P Γ t T → (Γ.canon T).static Γ.n 0 := fun ht =>
     canon_static hw (tm_sound hP hE ht).2.2
@@ -1727,10 +1755,31 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     rename_i d n
     exact ⟨by simpa [Prim.eval, natTy, Tm.subst] using natTm_vty h n, by simp [natTy, Tm.static], (natTm_lc d n).1,
       by simp [Prim.eval, (natTm_lc d n).2]⟩
-  | axm hA _ hc hD ho hpl =>
+  | wNext hwd hw hW =>
+    have vw := sem hw; rw [hW] at vw; simp only [Tm.subst] at vw
+    obtain ⟨k, hk⟩ := vw.world_inv hP hwd
+    refine ⟨?_, by simp [Tm.static], by simp [Prim.eval, hk, Tm.lc, Tm.wnext], by simp [Prim.eval, hk, Tm.levels, Tm.wnext]⟩
+    simp only [Prim.eval, hk, Tm.subst, Tm.wnext]; exact VTy.world_mk hP hwd _
+  | wAsk hwd hrd hw hW hr hR =>
+    have vw := sem hw; rw [hW] at vw; simp only [Tm.subst] at vw
+    obtain ⟨k, hk⟩ := vw.world_inv hP hwd
+    have vr := sem hr; rw [hR] at vr; simp only [Tm.subst] at vr
+    obtain ⟨⟨D, hD, hop, hco, -, -⟩, hpl, -⟩ := hP.request _ hrd
+    have vr' := vr
+    obtain ⟨c, vs, -, -, -, -, -, he, -⟩ := vr.ty_inv (fun D' h => by rw [hD] at h; cases h; exact ⟨hco, hop⟩) hpl
+    rw [he] at vr'
+    obtain ⟨h1, -⟩ := hO.typed k c _ _ _ _ hrd vr'
+    have h3 := hO.lc k c
+    have h4 := hO.levels k c
+    have hs := stat hr; rw [hR] at hs; simp only [Tm.static, Bool.and_eq_true] at hs
+    refine ⟨?_, hs.2.1, ?_, ?_⟩ <;> simp only [Prim.eval, hk, he, Prog.answer]
+    · exact h1
+    · exact h3
+    · simp [h4]
+  | axm hA _ hc hD ho hpl hwo =>
     obtain ⟨_, hAs, _⟩ := tm_sound hP hE hA
     refine ⟨?_, hAs, trivial, by simp [Prim.eval, Tm.levels]⟩
-    rw [← hE.canon, hc]; exact .opq hD ho hpl
+    rw [← hE.canon, hc]; exact .opq hD ho hpl hwo
   | place hq ha hAB hB hs =>
     obtain ⟨-, has, -⟩ := tm_sound hP hE ha
     have v := sem ha; rw [hAB, hE.canon] at v
@@ -1779,7 +1828,7 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
 
 theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
     {er : Bool} (hp : PrimTy P Γ p T) (hv : VTy P v (T.subst (Tm.env ρ))) (hT : T.static Γ.n 0) (hc : v.lc 0)
-    (he : v = p.eval ρ) :
+    (he : v = p.eval P ρ) :
     EnvOK P (ρ ++ [v]) (Γ.pushPrim T er p) ∧ (Γ.pushPrim T er p).cur = Γ.cur ∧
       (Γ.pushPrim T er p).subs = Γ.subs ∧ (Γ.pushPrim T er p).n = Γ.n + 1 := by
   have h1 := hE.push hv hT hc (e := er)
@@ -1892,7 +1941,7 @@ theorem fv_filterMap_env (ρ : List Tm) (g : Tm → Nat) : ∀ (L : List Tm), (�
     simp [Tm.subst, Tm.fvIdx, fv_filterMap_env ρ g L fun y hy => h y (by simp [hy])]
 
 
-theorem Real.nil' (vS : Tm) : Real P vS .nil := .other (by simp) (by simp) (by simp)
+theorem Real.nil' (vS : Tm) : Real P vS .nil := .other (by simp) (by simp) (by simp) (by simp)
 
 theorem SimEnv.extend {er er' : Nat → Bool} {ρS ρ vsS vs : List Tm} (h : SimEnv P er ρS ρ)
     (hl : vsS.length = vs.length) (hlo : ∀ i < ρ.length, er' i = er i)
@@ -1929,10 +1978,10 @@ theorem rtArgs_subst {Γ : Ctx} (f : Nat → Tm) : ∀ (args sig : Tm), rtArgs P
 theorem Real.vc_inv {vS ls : Tm} {d c : Nat} (h : Real P vS (.vc d c ls)) : vS = .vc d c .nil ∧ P.phantom d c = false := by
   cases h with
   | vc h => exact ⟨rfl, h⟩
-  | other _ h2 _ => exact absurd rfl (h2 _ _ _)
+  | other _ h2 _ _ => exact absurd rfl (h2 _ _ _)
   | nat he h' =>
     obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
-    cases h' with | other _ h2 _ => exact absurd rfl (h2 _ _ _)
+    cases h' with | other _ h2 _ _ => exact absurd rfl (h2 _ _ _)
 
 theorem Reals.retele : ∀ {a b t t' : Tm}, Reals P a b t → t.ers = t'.ers → Reals P a b t'
   | _, _, _, _, .nil, _ => .nil
@@ -2109,12 +2158,12 @@ theorem Real.clo_inv {vS e : Tm} {gid j : Nat} (h : Real P vS (.clo e gid j)) :
   cases h with
   | clo hG hg hF hf hd hl hr => exact .inl ⟨_, _, _, _, rfl, rfl, hG, hg, hF, hf, hd, hl, hr⟩
   | dele hG hg hF hf hd hr => exact .inr ⟨_, _, _, _, rfl, hG, hg, hF, hf, hd, hr⟩
-  | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+  | other _ _ h3 _ => exact absurd rfl (h3 _ _ _)
   | nat he h' =>
     obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
     cases h' with
     | dele hG hg hF hf hd hr => exact .inr ⟨_, _, _, _, rfl, hG, hg, hF, hf, hd, .nat he (by rw [hv]; exact hr)⟩
-    | other _ _ h3 => exact absurd rfl (h3 _ _ _)
+    | other _ _ h3 _ => exact absurd rfl (h3 _ _ _)
 
 theorem Real.con_inv {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d c ls) vs)) (hn : P.isNt d = false) :
     ∃ vsS sig, P.view vS = .app (.vc d c .nil) vsS ∧ P.ctor d c = some sig ∧ P.phantom d c = false ∧
@@ -2124,7 +2173,7 @@ theorem Real.con_inv {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.v
   cases h2 with
   | con hc hp _ hr => exact ⟨_, _, rfl, hc, hp, hr⟩
   | wrap hw _ => rw [(Prog.wrapField_spec hw).1] at hn; cases hn
-  | other h1 _ => exact absurd rfl (h1 _ _ _ _)
+  | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
   | nat he _ => cases vS <;> simp [Prog.view, he] at hw <;> (split at hw <;> simp_all)
 
 theorem Real.wrap_inv (hP : ProgOK P) {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d c ls) vs))
@@ -2134,7 +2183,7 @@ theorem Real.wrap_inv (hP : ProgOK P) {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Re
     have := hP.newtype _ _ _ hn hp hc
     simp [Prog.wrapField, hn, hp, hc] at hw; rw [hw] at this; cases this
   | wrap hw hr => exact ⟨_, hw, hr⟩
-  | other h1 _ => exact absurd rfl (h1 _ _ _ _)
+  | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
   | nat he h' =>
     obtain ⟨_, _, hv⟩ := Prog.view_nat (n := _) he; rw [hv] at h'
     cases h' with
@@ -2142,7 +2191,7 @@ theorem Real.wrap_inv (hP : ProgOK P) {vS ls : Tm} {d c : Nat} {vs : Tm} (h : Re
       have := hP.newtype _ _ _ hn hp hc
       simp [Prog.wrapField, hn, hp, hc] at hw; rw [hw] at this; cases this
     | wrap hw hr => exact ⟨_, hw, .nat he (by rw [hv]; exact hr)⟩
-    | other h1 _ => exact absurd rfl (h1 _ _ _ _)
+    | other h1 _ _ _ => exact absurd rfl (h1 _ _ _ _)
 
 section
 variable {Γ Γ' : Ctx}
@@ -2986,30 +3035,32 @@ theorem noRet_eval : ∀ μ ρ cnt c, c.noRet = true → ∀ r, eval P μ ρ cnt
     split at e
     · rename_i hb'; rw [hb] at hb'; cases hb'
     · cases e
-  | case19 μ ρ cnt s brs els er nt d c ls vs hs hb =>
+  | case20 μ ρ cnt s brs els er nt d c ls vs hs hb =>
     intro h r e
     rw [eval] at e; simp only [hs] at e
     split at e
     · rename_i hb'; rw [hb] at hb'; cases hb'
     · cases e
-  | case21 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
+  | case22 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
     intro h r e
     simp only [Core.noRet, Bool.or_eq_true] at h
     rcases h with h | h
     · exact ihb h _ hev
     · rw [eval] at e; simp only [hev] at e; exact ihr h r e
-  | case22 μ ρ cnt R body rest e0 hev ihb =>
+  | case23 μ ρ cnt R body rest e0 hev ihb =>
     intro h r e
     rw [eval] at e; simp only [hev] at e; cases e
   | case10 μ ρ cnt p er rest ih =>
     intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
-  | case11 μ ρ cnt rest ih =>
+  | case11 μ ρ cnt w req rest ih =>
     intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
-  | case12 μ ρ cnt gid rest G hG ih =>
+  | case12 μ ρ cnt rest ih =>
+    intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
+  | case13 μ ρ cnt gid rest G hG ih =>
     intro h r e; rw [eval, hG] at e; exact ih (by simpa [Core.noRet] using h) r e
-  | case14 μ ρ cnt k a b rest ih =>
+  | case15 μ ρ cnt k a b rest ih =>
     intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
-  | case18 μ ρ cnt s brs els er nt d c ls vs hs pre body hb ih =>
+  | case19 μ ρ cnt s brs els er nt d c ls vs hs pre body hb ih =>
     intro h r e
     simp only [Core.noRet, Bool.and_eq_true] at h
     rw [eval] at e; simp only [hs] at e
@@ -3174,8 +3225,70 @@ theorem seq_setup {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx}
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simpa using hnle) _ (Nat.le_refl 0) hrs,
     hh, hle, hol⟩
 
-theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) {p : Prim} {T : Tm}
-    (hp : PrimTy P Γ p T) (hrt : p.rt P Γ = true) : Real P (p.evalS P ρS) (p.eval ρ) := by
+theorem Real.wld_inv {x : Tm} {k : Nat} (h : Real P x (.wld k)) : x = .wld k := by
+  cases h with
+  | world => rfl
+  | other _ _ _ h4 => exact absurd rfl (h4 k)
+  | nat he h =>
+    rename_i n
+    cases n <;> simp only [Prog.view, he] at h <;> cases h <;> simp_all
+
+theorem Real.ctor_inv {x ls vs : Tm} {d c : Nat} (h : Real P x (.app (.vc d c ls) vs)) (hnt : P.isNt d = false)
+    (hn : P.natD ≠ some d) : ∃ vsS, x = .app (.vc d c .nil) vsS := by
+  cases h with
+  | con => exact ⟨_, rfl⟩
+  | wrap hw => rw [Prog.wrapField_none hnt] at hw; cases hw
+  | other h1 => exact absurd rfl (h1 _ _ _ _)
+  | nat he h =>
+    rename_i n
+    cases n <;> simp only [Prog.view, he] at h <;> cases h <;> (try simp_all) <;>
+      first | (rename_i h; exact h _ _ _ _ rfl rfl rfl rfl) | (rename_i hw _; rw [Prog.wrapField_none hnt] at hw; cases hw)
+
+theorem EnvOK.sem (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {t T : Tm} (ht : TmTy P Γ t T) :
+    VTy P (t.subst (Tm.env ρ)) ((Γ.canon T).subst (Tm.env ρ)) := by
+  rw [hE.canon]; exact (tm_sound hP hE ht).1
+
+theorem world_args (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {w req T : Tm}
+    (hp : PrimTy P Γ (.wAsk w req) T) :
+    ∃ k rd c ls vs, w.subst (Tm.env ρ) = .wld k ∧ P.requestD = some rd ∧ req.subst (Tm.env ρ) = .app (.vc rd c ls) vs ∧
+      VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons (T.subst (Tm.env ρ)) .nil)) := by
+  cases hp with
+  | wAsk hwd hrd hw hW hr hR =>
+    have vw := hE.sem hP hw; rw [hW] at vw; simp only [Tm.subst] at vw
+    obtain ⟨k, hk⟩ := vw.world_inv hP hwd
+    have vr := hE.sem hP hr; rw [hR] at vr; simp only [Tm.subst] at vr
+    obtain ⟨⟨D, hD, hop, hco, -, -⟩, hpl, -⟩ := hP.request _ hrd
+    obtain ⟨c, vs, -, -, -, -, -, he, -⟩ := vr.ty_inv (fun D' h => by rw [hD] at h; cases h; exact ⟨hco, hop⟩) hpl
+    exact ⟨k, _, c, _, vs, hk, hrd, he, he ▸ vr⟩
+
+theorem world_strip (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
+    (hS : SimEnv P Γ.er ρS ρ) {w req A : Tm} (hpa : PrimTy P Γ (.wAsk w req) A)
+    (hrt : (rt P Γ w && rt P Γ req) = true) :
+    ∃ k rd c ls vs vsS, w.subst (Tm.env ρ) = .wld k ∧ P.sub ρS w = .wld k ∧ P.requestD = some rd ∧
+      req.subst (Tm.env ρ) = .app (.vc rd c ls) vs ∧ P.sub ρS req = .app (.vc rd c .nil) vsS ∧
+      VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd .nil) (.cons (A.subst (Tm.env ρ)) .nil)) := by
+  simp only [Bool.and_eq_true] at hrt
+  obtain ⟨k, rd, c, ls, vs, hk, hrd, he, hv⟩ := world_args hP hE hpa
+  have hRw := rt_real hP hE hS w hrt.1; rw [hk] at hRw
+  have hRr := rt_real hP hE hS req hrt.2; rw [he] at hRr
+  obtain ⟨⟨D, hD, -, -, hnt, -⟩, -, hn⟩ := hP.request _ hrd
+  obtain ⟨vsS, hx⟩ := hRr.ctor_inv (by simp [Prog.isNt, hD, hnt]) hn
+  exact ⟨k, rd, c, ls, vs, vsS, hk, hRw.wld_inv, hrd, he, hx, hv⟩
+
+theorem world_real (hP : ProgOK P) (hO : P.OracleOK) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
+    (hS : SimEnv P Γ.er ρS ρ) {w req A : Tm} (hpa : PrimTy P Γ (.wAsk w req) A)
+    (hrt : (rt P Γ w && rt P Γ req) = true) :
+    Real P ((Prim.wNext w).evalS P ρS) ((Prim.wNext w).eval P ρ) ∧
+      Real P ((Prim.wAsk w req).evalS P ρS) ((Prim.wAsk w req).eval P ρ) := by
+  obtain ⟨k, rd, c, ls, vs, vsS, hk, hkS, hrd, he, hx, hv⟩ := world_strip hP hE hS hpa hrt
+  refine ⟨?_, ?_⟩
+  · simp only [Prim.evalS, Prim.eval, hk, hkS, Tm.wnext]; exact .world
+  · simp only [Prim.evalS, Prim.eval, hk, he, hkS, hx, Prog.answer]
+    exact (hO.typed k c _ _ _ _ hrd hv).2
+
+theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
+    (hS : SimEnv P Γ.er ρS ρ) {p : Prim} {T : Tm}
+    (hp : PrimTy P Γ p T) (hrt : p.rt P Γ = true) : Real P (p.evalS P ρS) (p.eval P ρ) := by
   cases p with
   | tm t | lit t | place t _ | unplace t _ => exact rt_real hP hE hS t hrt
   | coerce a b p =>
@@ -3198,23 +3311,23 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       simp only [Prim.evalS, Prim.eval]
       have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
       exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
-  | atomEq | placedEq => simp [Prim.rt] at hrt
-  | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
+  | atomEq | placedEq | wAsk | wNext => simp [Prim.rt] at hrt
+  | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
 
-theorem prim_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}
+theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}
     {T rets : Tm} {rest : Core} (hE : EnvOK P ρ Γ) (hb : LvlBound ρ cnt) (hm : MuOK μ Γ ρ) (hrs : rets.static Γ.n 0)
     (hp : PrimTy P Γ p T) (hok : (er || Γ.ok (p.rt P Γ)) = true) :
-    EnvOK P (ρ ++ [p.eval ρ]) (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) ∧ LvlBound (ρ ++ [p.eval ρ]) cnt ∧
-    MuOK μ (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) (ρ ++ [p.eval ρ]) ∧
+    EnvOK P (ρ ++ [p.eval P ρ]) (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) ∧ LvlBound (ρ ++ [p.eval P ρ]) cnt ∧
+    MuOK μ (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) (ρ ++ [p.eval P ρ]) ∧
     rets.static (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)).n 0 ∧
-    HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest ∧
+    HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval P ρ] (.prim p er rest) rest ∧
     ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
-  obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hE hb hp
+  obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hO hE hb hp
   obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
   have hl := hE.len
   have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
     intro i; cases p <;> simp [Ctx.pushPrim]
-  have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval ρ] (.prim p er rest) rest := by
+  have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval P ρ] (.prim p er rest) rest := by
     intro ρS hg hS
     refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
       fun out h => .prim h, rfl, fun k a b ha hb he => ?_⟩
@@ -3229,6 +3342,50 @@ theorem prim_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt 
   exact ⟨hE.adv hE' hpf hh, LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩,
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs,
     hh, her⟩
+
+theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx}
+    {w req Tw A rets : Tm} {rest : Core} (hE : EnvOK P ρ Γ) (hb : LvlBound ρ cnt) (hm : MuOK μ Γ ρ)
+    (hrs : rets.static Γ.n 0) (hw : PrimTy P Γ (.wNext w) Tw) (ha : PrimTy P Γ (.wAsk w req) A)
+    (hok : Γ.ok (rt P Γ w && rt P Γ req) = true) :
+    EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ])
+        (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) ∧
+      LvlBound (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) cnt ∧
+      MuOK μ (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest))
+        (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) ∧
+      rets.static (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)).n 0 ∧
+      HeadSim P Γ ((Γ.push Tw false).push A false) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
+        (.wdo w req rest) rest ∧
+      ∀ i, ((Γ.push Tw false).push A false).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
+  obtain ⟨v1, s1, c1, l1⟩ := prim_sound hP hO hE hb hw
+  obtain ⟨v2, s2, c2, l2⟩ := prim_sound hP hO hE hb ha
+  have hl := hE.len
+  have hE1 := hE.push v1 s1 c1 (e := false)
+  have hE2 := hE1.push (v := (Prim.wAsk w req).eval P ρ) (A := A)
+    (by rw [Tm.subst_append (hl ▸ s2)]; exact v2)
+    (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) s2) c2 (e := false)
+  have her : ∀ i, ((Γ.push Tw false).push A false).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
+    intro i; rw [Ctx.er_push, Ctx.er_push]; simp only [Ctx.push, Ctx.n, Array.size_push]
+    by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
+  have hh : HeadSim P Γ ((Γ.push Tw false).push A false) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
+      (.wdo w req rest) rest := by
+    intro ρS hg hS
+    simp only [Ctx.ok, hg, Bool.false_or] at hok
+    refine ⟨[(Prim.wNext w).evalS P ρS, (Prim.wAsk w req).evalS P ρS], fun vs' h => by simp [stepS] at h,
+      fun out h => .wdo (by simpa using h), rfl, fun k a b ha' hb' _ => ?_⟩
+    have hR := world_real hP hO hE hS ha hok
+    match k, ha', hb' with
+    | 0, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.1
+    | 1, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.2
+    | _ + 2, ha', _ => simp at ha'
+  have hn : ((Γ.push Tw false).push A false).n = Γ.n + 2 := by simp [Ctx.push, Ctx.n]
+  have hE2' : EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) ((Γ.push Tw false).push A false) := by
+    simpa using hE2
+  refine ⟨hE.adv hE2' rfl hh, LvlBound.append.mpr ⟨hb, ?_⟩, hm.append hE.wf hl (by simp [Ctx.push]) (by simp [Ctx.push]),
+    Tm.static_mono (by simp [hn]) _ (Nat.le_refl 0) hrs, hh, her⟩
+  intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+  rcases hx with rfl | rfl
+  · exact l1
+  · exact l2
 
 theorem mtch_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ Γ' : Ctx} {s R rets : Tm}
     {brs : List Br} {els : Option Core} {er ntf : Bool} {rest body : Core} {d c : Nat} {ls vs : Tm} {pre outs : List Tm}
@@ -3548,7 +3705,7 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
   rw [Ctx.adv_er]
   exact hS.extend hlo (fun i hi => hpo i (hl ▸ hi)) fun k a b ha hb he => hre k a b ha hb (by rw [← hl]; exact he)
 
-theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
+theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b Γ c rets → EnvOK P ρ Γ →
     LvlBound ρ cnt → MuOK μ Γ ρ → rets.static Γ.n 0 →
     Result P ρ cnt rets (eval P μ ρ cnt c) ∧ Sim P Γ ρ c rets (eval P μ ρ cnt c) := by
   intro μ ρ cnt c
@@ -3646,7 +3803,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     | mtch hst hS hD hnt _ _ hRs hRt _ hbr hel hr =>
     obtain ⟨d', c', ls', vs', hsv, hntd, _⟩ := match_setup hP hE hlb hm hst hS hD hbr hel hRs
     exact (hs _ _ _ _ hsv).elim
-  | case21 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
+  | case22 μ ρ cnt R body rest outs cnt1 hev ihb ihr =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | seq _ hRs hRt hb hr =>
@@ -3655,7 +3812,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     obtain ⟨hpg, hpo, -⟩ := Ctx.pushTele_er Γ R none hRt
     rw [eval]; simp only [hev]
     exact ⟨Result.weaken ihr'.1 (hE.len ▸ hrs) hle, hh.finish hE hpo (fun hg => hpg.trans hg) ihr'.2⟩
-  | case22 μ ρ cnt R body rest e0 hev ihb =>
+  | case23 μ ρ cnt R body rest e0 hev ihb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | seq _ hRs hRt hb hr =>
@@ -3665,13 +3822,23 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | @prim _ _ T _ _ _ _ hp hok hr =>
-    obtain ⟨hE'', hlb', hm', hrs', hh, her⟩ := prim_setup (rest := rest) hP hE hb hm hrs hp hok
+    obtain ⟨hE'', hlb', hm', hrs', hh, her⟩ := prim_setup (rest := rest) hP hO hE hb hm hrs hp hok
     rw [eval]
     have hl := hE.len
     have ih' := ih b _ rets hr hE'' hlb' hm' hrs'
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish hE (fun i hi => by rw [her, if_neg (by omega)])
       (fun hg => by rw [← hg]; cases p <;> rfl) ih'.2⟩
-  | case11 μ ρ cnt rest ih =>
+  | case11 μ ρ cnt w req rest ih =>
+    intro b Γ rets hc hE hb hm hrs
+    cases hc with
+    | wdo hw ha hok hr =>
+    obtain ⟨hE'', hlb', hm', hrs', hh, her⟩ := wdo_setup (rest := rest) hP hO hE hb hm hrs hw ha hok
+    rw [eval]
+    have hl := hE.len
+    have ih' := ih b _ rets hr hE'' hlb' hm' hrs'
+    exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _),
+      hh.finish hE (fun i hi => by rw [her, if_neg (by omega), if_neg (by omega)]) (fun hg => by rw [← hg]; rfl) ih'.2⟩
+  | case12 μ ρ cnt rest ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | defLvl hr =>
@@ -3683,13 +3850,13 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
         fun k a b ha hb _ => ?_⟩
       cases k with
       | succ => simp at ha
-      | zero => simp at ha hb; subst ha hb; exact .other (by simp) (by simp) (by simp)
+      | zero => simp at ha hb; subst ha hb; exact .other (by simp) (by simp) (by simp) (by simp)
     have ih' := ih b _ rets hr (hE.adv (hE.pushMint hb) rfl hh) (LvlBound.append.mpr ⟨hb.mono (Nat.le_succ _), by simp [LvlBound, Tm.levels]⟩)
       (hm.append hE.wf hl (by simp [Ctx.pushMint, Ctx.push]) (by simp [Ctx.pushMint, Ctx.push]))
       (Tm.static_mono (by simp [Ctx.pushMint, Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_succ _), hh.finish (Γ' := Γ.pushMint) hE
       (fun i hi => by simp [show i ≠ Γ.n by omega]) (fun hg => hg) ih'.2⟩
-  | case12 μ ρ cnt gid rest G hG ih =>
+  | case13 μ ρ cnt gid rest G hG ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | defFns _ hG' hok hr =>
@@ -3721,11 +3888,11 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs)
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish (Γ' := Γ.pushFns G) hE
       (fun i hi => by rw [Ctx.er_pushFns, if_neg (by omega)]) (fun hg => hg) ih'.2⟩
-  | case13 μ ρ cnt gid rest hG =>
+  | case14 μ ρ cnt gid rest hG =>
     intro b Γ rets hc
     cases hc with
     | defFns _ hG' => rw [hG] at hG'; cases hG'
-  | case14 μ ρ cnt k a e rest ih =>
+  | case15 μ ρ cnt k a e rest ih =>
     intro b Γ rets hc hE hb hm hrs
     rw [eval]
     have : ∃ o σ' cm, CoreTy P b { Γ with opened := o, σ := σ', cmode := cm } rest rets ∧
@@ -3740,20 +3907,20 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     refine ⟨ih'.1, fun hg ρS hS vs cnt' hr' => ?_⟩
     obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg ρS hS vs cnt' hr'
     exact ⟨vsS, .chk hrun, hre⟩
-  | case15 μ ρ cnt body a hev ih =>
+  | case16 μ ρ cnt body a hev ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | absurd hcb hn => exact absurd hev (noRet_eval _ _ _ _ hn a)
-  | case16 μ ρ cnt body e hev ih =>
+  | case17 μ ρ cnt body e hev ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
     | absurd hcb hn =>
     obtain ⟨⟨vs, c', e', -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm rfl
     rw [hev] at e'; cases e'
-  | case17 μ ρ cnt =>
+  | case18 μ ρ cnt =>
     intro b Γ rets hc
     cases hc
-  | case18 μ ρ cnt s brs els er nt d c ls vs hs pre body hb ih =>
+  | case19 μ ρ cnt s brs els er nt d c ls vs hs pre body hb ih =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | case hst hS hD hntc hd hok hreal hbr hel =>
@@ -3841,7 +4008,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
             (hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h) vs'' cnt' hr'
           exact ⟨outsS, .caseE hrb hrunb, hreb⟩
     · rename_i hno; rw [hb] at hno; cases hno
-  | case19 μ ρ cnt s brs els er nt d c ls vs hs hb =>
+  | case20 μ ρ cnt s brs els er nt d c ls vs hs hb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | case hst hS hD hntc hd hok hreal hbr hel =>
@@ -3849,7 +4016,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       match_setup (ge := Γ.ghost) hP hE hlb hm hst hS hD hbr (fun e h => by simpa using hel e h) hrs
     rw [hs] at hsv; cases hsv
     rw [hb] at hb'; cases hb'
-  | case20 μ ρ cnt s brs els er nt hs =>
+  | case21 μ ρ cnt s brs els er nt hs =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
     | case hst hS hD hntc hd hok hreal hbr hel =>
@@ -3857,7 +4024,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       match_setup (ge := Γ.ghost) hP hE hlb hm hst hS hD hbr (fun e h => by simpa using hel e h) hrs
     exact (hs _ _ _ _ hsv).elim
 
-theorem checked_runs {rets : Tm} (h : Checked P rets) :
+theorem checked_runs (hO : P.OracleOK) {rets : Tm} (h : Checked P rets) :
     ∃ vs cnt, eval P none [] 0 P.main = .ok (vs, cnt) ∧ VTys P (.ofList vs) rets .nil ∧
       ∃ vsS, RunS P [] P.main vsS ∧ Reals P (.ofList vsS) (.ofList vs) rets := by
   obtain ⟨hP, hc, hs⟩ := h
@@ -3866,22 +4033,22 @@ theorem checked_runs {rets : Tm} (h : Checked P rets) :
       ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
       ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ _ _ h => by simp at h)
   obtain ⟨⟨vs, cnt, e, hv, _⟩, hsim⟩ :=
-    eval_sound hP none [] 0 P.main _ _ rets hc hE (by simp [LvlBound]) (by simp [MuOK]) (by simpa [Ctx.n] using hs)
+    eval_sound hP hO none [] 0 P.main _ _ rets hc hE (by simp [LvlBound]) (by simp [MuOK]) (by simpa [Ctx.n] using hs)
   exact ⟨vs, cnt, e, by rwa [Tm.subst_static0 _ _ 0 hs] at hv,
     hsim rfl [] ⟨rfl, fun _ _ => by simpa [Tm.env] using Real.nil' (P := P) .nil⟩ vs cnt e⟩
 
-theorem no_false {d : Nat} {D : Adt} {args ls : Tm} {m e : Bool} (hD : P.adts[d]? = some D) (hempty : D.ctors = [])
+theorem no_false (hO : P.OracleOK) {d : Nat} {D : Adt} {args ls : Tm} {m e : Bool} (hD : P.adts[d]? = some D) (hempty : D.ctors = [])
     (hco : D.coercible = false) (hop : D.opq = false) :
     ¬ Checked P (.bind (.ty m e u) (.app (.tyc d ls) args) .nil) := by
   intro h
-  obtain ⟨vs, _, _, hv, _⟩ := checked_runs h
+  obtain ⟨vs, _, _, hv, _⟩ := checked_runs hO h
   generalize Tm.ofList vs = w at hv
   cases hv with
   | cons hv _ => exact no_value_of_empty hD hempty hco hop (h.1.placed_ne hD hop) hv
 
-theorem check_sound {R : Tm} {h : Checked P R} (_ : checkProg P = .ok ⟨R, h⟩) :
+theorem check_sound (hO : P.OracleOK) {R : Tm} {h : Checked P R} (_ : checkProg P = .ok ⟨R, h⟩) :
     ∃ vs cnt, eval P none [] 0 P.main = .ok (vs, cnt) ∧ VTys P (.ofList vs) R .nil ∧
       ∃ vsS, RunS P [] P.main vsS ∧ Reals P (.ofList vsS) (.ofList vs) R :=
-  checked_runs h
+  checked_runs hO h
 
 end Minimal

@@ -48,6 +48,16 @@ def Prog.buildList (P : Prog) (H : Heap) (f : Nat → Tm) : List Tm → Heap × 
     let (H, vs) := P.buildList H f ts
     (H, v :: vs)
 
+mutual
+def Heap.placeDeep (H : Heap) : Tm → Heap × Tm
+  | .app (.vc d c _) fs => let (H, ws) := H.placeDeepL fs; let (H, a) := H.alloc (d, c, ws); (H, .ptr a)
+  | v => (H, v)
+
+def Heap.placeDeepL (H : Heap) : Tm → Heap × List Tm
+  | .cons a as => let (H, w) := H.placeDeep a; let (H, ws) := H.placeDeepL as; (H, w :: ws)
+  | _ => (H, [])
+end
+
 def Prog.viewM (P : Prog) (H : Heap) : Tm → Tm
   | .ptr a => match H.blk a with
     | some (d, c, ws) => .app (.vc d c .nil) (.ofList ws)
@@ -57,6 +67,8 @@ def Prog.viewM (P : Prog) (H : Heap) : Tm → Tm
 def Prog.evalM (P : Prog) (H : Heap) (ρ : List Tm) : Prim → Heap × Tm
   | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.build H (Tm.env ρ) t
   | p => (H, p.evalS P ρ)
+
+def Prog.askM (P : Prog) (H : Heap) (w req : Tm) : Heap × Tm := H.placeDeep (P.answer w (P.viewM H req)).1
 
 def Prog.reuse (P : Prog) (H : Heap) (ρ : List Tm) (u : Nat) : Tm → Option (Heap × Tm)
   | .app h args => match Tm.env ρ u, P.subU (Tm.env ρ) h with
@@ -105,6 +117,8 @@ inductive RunM : Heap → List Tm → Pend → Core → Heap → List Tm → Pro
   | seq : RunM H ρ none body H1 outs → RunM H1 (ρ ++ outs) none rest H' out → RunM H ρ pd (.seq R body rest) H' out
   | prim : (if er then (H, Tm.tok) else P.evalP H ρ pd p) = (H1, v) → RunM H1 (ρ ++ [v]) none rest H' out →
       RunM H ρ pd (.prim p er rest) H' out
+  | wdo : P.askM H (P.sub ρ w) (P.sub ρ req) = (H1, v) → RunM H1 (ρ ++ [(P.sub ρ w).wnext, v]) none rest H' out →
+      RunM H ρ pd (.wdo w req rest) H' out
   | defLvl : RunM H (ρ ++ [.tok]) none rest H' out → RunM H ρ pd (.defLvl rest) H' out
   | defFns : P.groups[gid]? = some G → RunM H (ρ ++ closuresS ρ gid G) none rest H' out →
       RunM H ρ pd (.defFns gid rest) H' out
@@ -123,6 +137,7 @@ inductive MDec (H : Heap) : Tm → Tm → Prop
       MDec H (.clo (.ofList envM) gid j) (.clo (.ofList envS) gid j)
   | tok : (w = .tok ∨ ∃ a, w = .ptr a ∧ (H.blk a).isSome) → MDec H w .tok
   | nat : MDec H (.nat n) (.nat n)
+  | wld : MDec H (.wld k) (.wld k)
   | vc : MDec H (.vc d c .nil) (.vc d c .nil)
   | imm : MDec H (.app (.vc d c .nil) .nil) (.app (.vc d c .nil) .nil)
   | nil : MDec H .nil .nil
@@ -216,6 +231,7 @@ theorem MDec.mono {H H' : Heap} (he : H.Ext H') : ∀ {w v : Tm}, MDec P H w v �
       · obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp hb
         exact .inr ⟨a, rfl, by rw [he.2.1 _ _ hb]; rfl⟩)
   | _, _, .nat => .nat
+  | _, _, .wld => .wld
   | _, _, .vc => .vc
   | _, _, .imm => .imm
   | _, _, .nil => .nil
@@ -242,6 +258,7 @@ theorem MDec.frame {H H' : Heap} : ∀ {w v : Tm}, MDec P H w v → Agree H H' (
       · exact .inl h
       · exact .inr ⟨a, rfl, by rw [hA a .here]; exact hb⟩)
   | _, _, .nat, _ => .nat
+  | _, _, .wld, _ => .wld
   | _, _, .vc, _ => .vc
   | _, _, .imm, _ => .imm
   | _, _, .nil, _ => .nil

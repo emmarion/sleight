@@ -68,7 +68,9 @@ def FnDef.spreadOut (F : FnDef) (ve : Option (List Bool)) (np : Nat) (outs : Lis
 def Prim.evalS (P : Prog) (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.sub ρ t
   | .num _ n => .nat n
-  | p => p.eval ρ
+  | .wAsk w req => (P.answer (P.sub ρ w) (P.sub ρ req)).1
+  | .wNext w => (P.sub ρ w).wnext
+  | p => p.eval P ρ
 
 def cval (env : List Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with
   | some t => (env ++ acc).getD t .nil
@@ -95,6 +97,7 @@ inductive RunS : List Tm → Core → List Tm → Prop
       RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false false) out
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
   | prim : RunS (ρ ++ [if er then .tok else p.evalS P ρ]) rest out → RunS ρ (.prim p er rest) out
+  | wdo : RunS (ρ ++ [(Prim.wNext w).evalS P ρ, (Prim.wAsk w req).evalS P ρ]) rest out → RunS ρ (.wdo w req rest) out
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
   | defFns : P.groups[gid]? = some G → RunS (ρ ++ closuresS ρ gid G) rest out → RunS ρ (.defFns gid rest) out
   | chk : RunS ρ rest out → RunS ρ (.chk k a b rest) out
@@ -122,6 +125,7 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
     | case hs' hsel' h => rw [hs] at hs'; cases hs'; rw [hsel] at hsel'; cases hsel'; exact ih h
   | seq _ _ ihb ihr => cases h2 with | seq hb hr => cases ihb hb; exact ihr hr
   | prim _ ih => cases h2 with | prim h => exact ih h
+  | wdo _ ih => cases h2 with | wdo h => exact ih h
   | defLvl _ ih => cases h2 with | defLvl h => exact ih h
   | defFns hG _ ih => cases h2 with | defFns hG' h => rw [hG] at hG'; cases hG'; exact ih h
   | chk _ ih => cases h2 with | chk h => exact ih h
@@ -138,7 +142,9 @@ inductive Real : Tm → Tm → Prop
   | dele : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = some t →
       Real vS (Tm.env (env ++ closures env gid G) t) → Real vS (.clo (.ofList env) gid j)
   | nat : P.natD = some e → Real (P.view (.nat n)) v → Real (.nat n) v
-  | other : (∀ d c ls vs, v ≠ .app (.vc d c ls) vs) → (∀ d c ls, v ≠ .vc d c ls) → (∀ e g j, v ≠ .clo e g j) → Real vS v
+  | world : Real (.wld k) (.wld k)
+  | other : (∀ d c ls vs, v ≠ .app (.vc d c ls) vs) → (∀ d c ls, v ≠ .vc d c ls) → (∀ e g j, v ≠ .clo e g j) →
+      (∀ k, v ≠ .wld k) → Real vS v
 
 inductive Reals : Tm → Tm → Tm → Prop
   | nil : Reals .nil .nil t
@@ -154,7 +160,8 @@ theorem Real.nat_view' {P : Prog} : ∀ {vS v : Tm}, Real P vS v → ∀ n, vS =
   | _, _, .nat _ h, _, rfl => h
   | _, _, .wrap hw h, n, e => .wrap hw (Real.nat_view' h n e)
   | _, _, .dele hG hg hF he hd h, n, e => .dele hG hg hF he hd (Real.nat_view' h n e)
-  | _, _, .other h1 h2 h3, _, _ => .other h1 h2 h3
+  | _, _, .other h1 h2 h3 h4, _, _ => .other h1 h2 h3 h4
+  | _, _, .world, _, e => by cases e
   | _, _, .con .., _, e => by cases e
   | _, _, .vc .., _, e => by cases e
   | _, _, .clo .., _, e => by cases e
