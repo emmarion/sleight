@@ -31,7 +31,7 @@ is an axiom. Declaring a primitive the compilers do not know, a second
 time, or with a non-erased return not written `at` when the compilers
 have no implementation of it, is an error. Whatever a
 primitive promises, a callback included, is the prelude's promise.
-The primitives are those of DESIGN.md sections 64, 65 and 66.
+The primitives are those of DESIGN.md sections 64, 65, 66 and 67.
 A `def-prim` entry is written like a `def-fns` header and a
 `def-opaque` entry like a `def-adts` header alone. A primitive's
 parameters may not be marked `subterm`. A primitive declared `erased`

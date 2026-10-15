@@ -85,11 +85,6 @@ references are to DESIGN.md.
     consumed: a consumed variable's contents may have changed while its
     slot has not. As proposed it is potentially unsound, and it is not
     implemented.
-17. Should there be a runtime comparison of two slots that answers with
-    evidence when they are equal (`slot-eq`), with a compiler free to
-    always answer that they differ? The owner's tentative view is that
-    the unequal answer should carry no evidence: a refutation would be
-    false wherever a compiler answered that two equal slots differ.
 19. Should the function in an `(at (f ...))` call be allowed to be
     erased, as a `Coercible` proof is?
 20. What becomes of `coerce`, `Coercible`, the `coercible-*` forms and

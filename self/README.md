@@ -1,7 +1,7 @@
 # slc: a compiler from Sleight to OCaml, written in Sleight
 
 `self/` holds a compiler for Sleight, the language of DESIGN.md
-(excluding OPEN.md 16 and 17), written in that language and compiling it
+(excluding OPEN.md 16), written in that language and compiling it
 to OCaml. It was written by a Claude session working autonomously at the
 owner's request ("let's self host"); everything here is that session's
 reading of the design and of the reference implementation in `lib/`, and

@@ -500,9 +500,9 @@ let lit_of = function
 let expansions = ref 0
 let sources : (string * string) list ref = ref []
 let gensyms = ref 0
-let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq ]
+let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
-let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased ]
+let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.SlotEq ]
 let literal_handle env lit =
   ignore (intern env Reader.nowhere lit);
   let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
@@ -1573,7 +1573,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
           let rets = if m = Erased then List.map (fun (e : entry) -> { e with mult = Erased }) rets else rets in
           let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
           let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
-          let codes = if sp = Sp.SettledMult then codes @ List.map (fun c -> V.CConst (pbuild env c [])) [ "MErased"; "MMany"; "MUnique" ] else codes in
+          let codes = if sp = Sp.SettledMult then codes @ List.map (fun c -> V.CConst (pbuild env c [])) [ "MErased"; "MMany"; "MUnique" ]
+            else if sp = Sp.SlotEq then codes @ [ V.CConst (pbuild env "None" []); V.CConst (pbuild env "Some" [ pbuild env "Refl" [] ]) ] else codes in
           call_returns ?sink ~demand env expect l shown acc rets (fun _ -> if List.mem sp implemented then V.CPrim (sp, codes) else V.CValues []))
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name sp)));

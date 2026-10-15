@@ -1483,6 +1483,8 @@
       (let-match erased (gensym-unique n s t g h) (JMRefl _ _))
       (Some _ $ Refl _ _))))
 
+(def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) -> (many (Maybe (Eq (Slot) a b)) r)))
+
 (def-adts $ (Resolution : -> Type)
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))

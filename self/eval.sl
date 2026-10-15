@@ -651,6 +651,13 @@
     ((Some _ v) (values hs hp (le-refl hs) v))
     ((None _) (halloc _ hp $ BError _ "unbound constant"))))
 
+(def-fns _ $ (many slot-eq-answer : (erased (Hist Block) hs) (many (List $ Ref Block hs) args) -> (many (Maybe $ Ref Block hs) r))
+  (let-match many args (Cons _ a r1) ((Nil _) (None _)))
+  (let-match many r1 (Cons _ b r2) ((Nil _) (None _)))
+  (let-match many r2 (Cons _ none r3) ((Nil _) (None _)))
+  (let-match many r3 (Cons _ some _) ((Nil _) (None _)))
+  (Some _ $ match many (nat-eq (ref-pos _ _ a) (ref-pos _ _ b)) _ ((BTrue) some) ((BFalse) none)))
+
 (def-fns _ $ (many settled-prim : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) p) (many (List $ Ref Block hs) args) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (let-match many args (Cons _ h hidden) ((Nil _) (halloc _ hp $ BError _ "a handle form with no handle")))
@@ -1366,7 +1373,13 @@
             ((BTrue)
               (let ((erased hc) (many hpc) (erased lec) (many v)) $ settled-prim _ hp1 p avs)
               (values hc hpc lec (Cons _ v $ Nil _) w1))
-            ((BFalse) (prim _ hp1 p avs w1))))
+            ((BFalse)
+              (let-match many (sp-eq p $ SpExpr $ ExSlotEq) (BTrue) ((BFalse) (prim _ hp1 p avs w1)))
+              (let-match many (slot-eq-answer _ avs) (Some _ v)
+                ((None _)
+                  (let ((erased hc) (many hpc) (erased lec) (many e)) $ halloc _ hp1 $ BError _ "`slot-eq` with no constructors")
+                  (values hc hpc lec (Cons _ e $ Nil _) w1)))
+              (values h1 hp1 (le-refl h1) (Cons _ v $ Nil _) w1))))
         (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ vals-fit _ hp2 ms2 vs)
         (values h3 hp3 (hist-le-trans _ _ _ le1 $ hist-le-trans _ _ _ le2 le3) r rpk w2))
       ((CAbsurd _ ms2) (error-w _ hp ms2 "absurd code reached" _ w))

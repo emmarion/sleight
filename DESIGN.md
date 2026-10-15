@@ -26,7 +26,7 @@ speed of the code they produce, are not aims.
 - Data types and matching: §21 to §25.
 - Expressions, statements and compile time: §26 to §32.
 - Coercion: §33, §34.
-- Slots, `at` and cells: §35 to §41, and §66.
+- Slots, `at` and cells: §35 to §41, §66 and §67.
 - The prelude, the FFI and literals: §42 to §45.
 - Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
@@ -1951,7 +1951,7 @@ which `lib/prelude.sl` is the reference:
   `settled-of`.
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
-  `placed-eq`. §66 describes them.
+  `placed-eq`. §66 describes them. §67 describes `slot-eq`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2376,9 +2376,9 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `settled-of`, `settled-type`, `settled-erase`, `settled-mult` and
   `settled-value` (§64), `gensym`, `settled-eq`, `intern-nat`,
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
-  `resolve` and `read-file` (§65), and
+  `resolve` and `read-file` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
-  (§66).
+  (§66), and `slot-eq` (§67).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2929,3 +2929,14 @@ a function whose signature names only an erased `(Slot) s`, take
 back a `(Placed s T w)`, unplace it, and use `placed-slot` to show that
 the result is at `a` (`tests/placed_thread.sl`). A constructor field
 kept at a slot is declared the same way (§36).
+
+## 67. `slot-eq`
+
+```scheme
+(def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) ->
+    (many (Maybe (Eq (Slot) a b)) r)))
+```
+
+`Some` proves that `a` and `b` hold one word (§38). `None` proves
+nothing, so an implementation may always answer it. `slot-eq` requires
+the prelude.

@@ -371,6 +371,7 @@ and expr cx scope code = match code with
   | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, _, v) = (Obj.obj %s : %s) in v)" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledMult, [ h; e; m; u ]) ->
       Printf.sprintf "(match (Obj.obj %s : %s) with (_, _, Ffi_core.Erased, _) -> %s | (_, _, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) handle_ty (expr cx scope e) (expr cx scope m) (expr cx scope u)
+  | V.CPrim (Special.SlotEq, [ a; b; none; some ]) -> Printf.sprintf "(if %s == %s then %s else %s)" (expr cx scope a) (expr cx scope b) (expr cx scope some) (expr cx scope none)
   | V.CPrim (Special.SettledErase, [ h ]) ->
       Printf.sprintf "(Obj.repr (let (x, r, _, _) = (Obj.obj %s : %s) in (x, r, Ffi_core.Erased, Obj.repr ())))" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledType, [ h ]) ->
