@@ -223,7 +223,7 @@ structure ESt where
   depthTop : Bool := true
   topRefs : Array (Sx × List String) := #[]
   mtbls : List (Nat × Nat) := []
-  topCtx : Option Ctx := some {tys := []}
+  topCtx : Option Ctx := some {tys := #[]}
   claimed : List String := []
 
 abbrev M := StateT ESt (Except String)

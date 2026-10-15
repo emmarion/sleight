@@ -274,10 +274,10 @@ termination_by l => (gid, sizeOf l)
 decreasing_by all_goals (cases F; simp_wf; omega)
 end
 
-def Prog.usesOK (P : Prog) (rets : Tm) : Bool := (usesCore P P.groups.length {Γ := {tys := []}} [] rets P.main).isSome
+def Prog.usesOK (P : Prog) (rets : Tm) : Bool := (usesCore P P.groups.length {Γ := {tys := #[]}} [] rets P.main).isSome
 
 def Prog.fillCaps (P : Prog) (rets : Tm) : Prog :=
-  match usesCore P P.groups.length {Γ := {tys := []}, fill := true} [] rets P.main with
+  match usesCore P P.groups.length {Γ := {tys := #[]}, fill := true} [] rets P.main with
   | some (_, K) => { P with groups := P.groups.zipIdx.map fun (G, gid) => { G with caps := (K.lookup gid).getD [] } }
   | none => P
 

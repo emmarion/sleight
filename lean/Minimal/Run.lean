@@ -253,7 +253,7 @@ def runProg (P : Prog) (mode : String) (pre : Bool) : Out :=
           | .bind _ _ r => anyTy r
           | _ => false
         let tys (vs : List Tm) := if anyTy R then
-            match retTypes P {tys := []} P.main with
+            match retTypes P {tys := #[]} P.main with
             | some Ts => Ts.map some
             | none => Prog.typesOf R vs
           else Prog.typesOf R vs

@@ -1775,18 +1775,18 @@ theorem machine_sound (hP : ProgOK P) : ∀ μ ρ cnt c, MSound P μ ρ cnt c �
     · cases h
 
 theorem machine_main (hP : ProgOK P)
-    {rets : Tm} {h} (hck : checkCore P P.groups.length {tys := []} P.main (.inr 0) = .ok ⟨rets, h⟩)
+    {rets : Tm} {h} (hck : checkCore P P.groups.length {tys := #[]} P.main (.inr 0) = .ok ⟨rets, h⟩)
     (hus : P.usesOK rets = true) {vs : List Tm} {cnt : Nat} (hev : eval P none [] 0 P.main = .ok (vs, cnt))
     {vsS : List Tm} (hrun : RunS P [] P.main vsS) :
-    ∃ U K H' vsM, usesCore P P.groups.length {Γ := {tys := []}} [] rets P.main = some (U, K) ∧
+    ∃ U K H' vsM, usesCore P P.groups.length {Γ := {tys := #[]}} [] rets P.main = some (U, K) ∧
       RunM P {} [] none P.main H' vsM ∧
-      MOut P U 0 ({tys := []} : Ctx).er {} [] [] [] (fun _ => False) (fun _ => False) rets [] H' vsM vsS vs := by
+      MOut P U 0 ({tys := #[]} : Ctx).er {} [] [] [] (fun _ => False) (fun _ => False) rets [] H' vsM vsS vs := by
   obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
-  have hE : EnvOK P [] {tys := []} :=
+  have hE : EnvOK P [] {tys := #[]} :=
     .mk rfl (fun _ _ _ h _ => by simp at h) (by simp) (fun _ _ h => by simp at h) (by simp)
       ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
       ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ _ _ h => by simp at h)
-  have hm := ((machine_sound hP none [] 0 P.main).1 P.groups.length {Γ := {tys := []}} _ [] _ rets h rfl rfl hck
+  have hm := ((machine_sound hP none [] 0 P.main).1 P.groups.length {Γ := {tys := #[]}} _ [] _ rets h rfl rfl hck
     hE (by simp [LvlBound]) rfl (h.2.2 0 rfl) (by simp) vs cnt hev).1
   obtain ⟨H', vsM, hr, hO⟩ := hm U K hU [] vsS ⟨rfl, fun _ _ => by simp [Tm.env, Real.nil']⟩ hrun {} [] (fun _ => False)
     (fun _ => False) (fun _ => False) none

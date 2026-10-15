@@ -436,9 +436,9 @@ def retTypes (Γ : Ctx) (c : Core) : Option (List Tm) :=
 
 def Prog.infer (P : Prog) : Except String Prog := do
   let adts ← P.adts.mapM fun D => do
-    return { D with params := ← inferTele P {tys := []} D.params, ctors := ← D.ctors.mapM (inferTele P {tys := []}) }
+    return { D with params := ← inferTele P {tys := #[]} D.params, ctors := ← D.ctors.mapM (inferTele P {tys := #[]}) }
   let P := { P with adts, isoFuel := isoFuelOfAdts adts }
-  let (main, groups, hidden) ← (inferCore P {tys := []} none true P.main).run (P.groups, 0)
+  let (main, groups, hidden) ← (inferCore P {tys := #[]} none true P.main).run (P.groups, 0)
   return { P with main, groups, hidden }
 
 end Minimal

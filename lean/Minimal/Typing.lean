@@ -47,7 +47,7 @@ theorem arrOr_getD (a : Array Bool) (n : Nat) (c : Nat → Bool) (i : Nat) :
     simp [Array.getElem?_eq_none this]
 
 structure Ctx where
-  tys : List Tm
+  tys : Array Tm
   σ : Nat → Option Tm := fun _ => none
   mints : List Nat := []
   cur : Option Nat := none
@@ -61,7 +61,7 @@ structure Ctx where
 
 namespace Ctx
 
-def n (Γ : Ctx) : Nat := Γ.tys.length
+def n (Γ : Ctx) : Nat := Γ.tys.size
 
 def er (Γ : Ctx) (i : Nat) : Bool := Γ.erA.getD i true
 
@@ -77,7 +77,7 @@ def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
 
 def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
   let k := Γ.n
-  { Γ with tys := Γ.tys ++ [T], erA := arrSet Γ.erA k e }
+  { Γ with tys := Γ.tys.push T, erA := arrSet Γ.erA k e }
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
@@ -107,11 +107,11 @@ def fnSide (Γ : Ctx) (i : Nat) : Option Bool := match (Γ.tys[i]?).map Γ.canon
 
 def fnU (Γ : Ctx) (i : Nat) : Bool := (Γ.fnSide i).getD false
 
-def deleSide (Γ : Ctx) (G : Group) (t : Nat) : Bool := fnU { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G) } t
+def deleSide (Γ : Ctx) (G : Group) (t : Nat) : Bool := fnU { Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray } t
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   let k := Γ.n
-  { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
+  { Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray,
            erA := arrFrom Γ.erA k (G.fns.map (·.er)),
            deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
              if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }

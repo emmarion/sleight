@@ -17,9 +17,9 @@ def retOf : Tm → Option Tm
 def liftBvs (m k : Nat) : Tm := .ofList ((List.range k).map fun j => .bv (m - 1 - j))
 
 structure ProgOK (P : Prog) : Prop where
-  params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params ∧ D.params.static 0 0
+  params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := #[]} D.params ∧ D.params.static 0 0
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
-    TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx)
+    TeleOK P {tys := #[]} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx)
   newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → (sig.skip (P.lifted d)).ntField.isSome
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
   opq : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.opq = true → D.ctors = [] ∧ D.coercible = false
@@ -27,7 +27,7 @@ structure ProgOK (P : Prog) : Prop where
   uer : ∀ (d c : Nat) sig, P.ctor d c = some sig → ∀ j, sig.uAt j = true → sig.ers.getD j true = false
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
-  ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
+  ProgOK P ∧ CoreTy P P.groups.length {tys := #[]} P.main rets ∧ rets.static 0 0
 
 variable (P : Prog)
 
@@ -888,8 +888,8 @@ decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 end
 
 def checkCtor (d k : Nat) (_ : Nat) (sig : Tm) :
-    Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) k)) idx))) := do
-  let ⟨ht⟩ ← checkTele P {tys := []} sig
+    Res (PLift (TeleOK P {tys := #[]} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) k)) idx))) := do
+  let ⟨ht⟩ ← checkTele P {tys := #[]} sig
   let ⟨hs⟩ ← need (sig.static 0 0) "def-adts: a constructor's signature is not closed"
   match h : retOf sig with
   | some (.app (.tyc d' ls) idx) => do
@@ -899,11 +899,11 @@ def checkCtor (d k : Nat) (_ : Nat) (sig : Tm) :
   | _ => .error "def-adts: a constructor does not return its type"
 
 def checkProg : Res {R // Checked P R} := do
-  let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => (TeleOK P {tys := []} D.params ∧ D.params.static 0 0) ∧ ∀ (c : Nat) sig,
-      D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧
+  let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => (TeleOK P {tys := #[]} D.params ∧ D.params.static 0 0) ∧ ∀ (c : Nat) sig,
+      D.ctors[c]? = some sig → TeleOK P {tys := #[]} sig ∧ sig.static 0 0 ∧
         ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx))
     (fun d D => do
-      let ⟨hp⟩ ← checkTele P {tys := []} D.params
+      let ⟨hp⟩ ← checkTele P {tys := #[]} D.params
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
       let ⟨hc⟩ ← allIdx (checkCtor P d D.lifted) D.ctors 0
       .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
@@ -920,7 +920,7 @@ def checkProg : Res {R // Checked P R} := do
   let ⟨hue⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → ∀ sig ∈ D.ctors,
       ∀ j < sig.ers.length, sig.uAt j = true → sig.ers.getD j true = false)
     "unreachable: a constructor field is both erased and unique"
-  let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := []} P.main (.inr 0)
+  let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := #[]} P.main (.inr 0)
   have hs := hs 0 rfl
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
     fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2,
