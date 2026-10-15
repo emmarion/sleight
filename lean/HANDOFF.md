@@ -10,16 +10,15 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 376 tests were
-accepted with OCaml's value, none mismatched, 486 refusals agreed, and
-55 + 90 were refused as unsupported; 4 tests OCaml accepts are refused,
-and 8 time out. No test the OCaml
-suite refuses is accepted. `compare.sh` allows twenty seconds a test;
-`comptime_tail.sl` and the six `mini_*.sl` tests that need
-`mini/elabfn.sl` finish in about a minute with OCaml's value, and
-`extern_tail.sl` ran out of memory on one session's machine. Most of
-the `mini_*` time is the checker (`Ctx` lookups, `unify`) and the
-stripped run, not inference.
+with it under `--shared`. At the last full run 391 tests were
+accepted with OCaml's value, 491 refusals agreed, and 48 + 88 were
+refused as unsupported; 4 tests OCaml accepts are refused. No test the
+OCaml suite refuses is accepted. `compare.sh` allows twenty seconds a
+test; `comptime_tail.sl` takes about fifteen seconds on one session's
+machine and can time out under load, and `extern_tail.sl` needs several
+gigabytes: the stripped run gives each call its own Lean frame and
+environment array, so its million-deep tail loop does not run in
+constant space.
 
 The tests OCaml accepts and this runner refuses, with a session's
 reading of why:
