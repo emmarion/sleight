@@ -1870,6 +1870,47 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
     · simp at h
 
 
+def Tm.toArrAux : Tm → Array Tm → Array Tm
+  | .cons h t, acc => Tm.toArrAux t (acc.push h)
+  | _, acc => acc
+
+theorem Tm.toArrAux_toList : ∀ (t : Tm) (acc : Array Tm), (t.toArrAux acc).toList = acc.toList ++ t.toList
+  | .cons h t, acc => by simp [Tm.toArrAux, Tm.toArrAux_toList t, Tm.toList]
+  | .fv _, _ | .bv _, _ | .nil, _ | .bind .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
+  | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
+  | .clo .., _ | .nat _, _ | .ptr _, _ => by simp [Tm.toArrAux, Tm.toList]
+
+def cvalT (env : Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with
+  | some t => (env.toList ++ acc).getD t .nil
+  | none => .clo env gid acc.length
+
+def closuresA (env : Tm) (gid : Nat) (G : Group) : List Tm :=
+  if env.isList then G.fns.foldl (fun acc F => acc ++ [cvalT env gid acc F]) [] else closuresS env.toList gid G
+
+theorem closuresA_eq (env : Tm) (gid : Nat) (G : Group) : closuresA env gid G = closuresS env.toList gid G := by
+  unfold closuresA; split
+  · rename_i h
+    have : ∀ acc F, cvalT env gid acc F = cval env.toList gid acc F := by
+      intro acc F; unfold cvalT cval; cases F.dele <;> simp [Tm.ofList_toList' env h]
+    simp only [closuresS, this]
+  · rfl
+
+def natArgs : List Tm → Bool
+  | .nat _ :: .nat _ :: _ => true
+  | _ => false
+
+theorem native_guard (env : List Tm) (G : Group) (j : Nat) (F : FnDef) (xs : List Tm) :
+    (if natArgs xs then P.native env G j F xs else none) = P.native env G j F xs := by
+  split
+  · rfl
+  · rename_i h
+    match xs, h with
+    | [], _ | [_], _ => simp [Prog.native, List.findSome?_cons, Prog.nativeAdd, Prog.nativeCmp, Prog.nativeMul,
+        Prog.nativeSub, Prog.nativeDivmod, Prog.nativeMod]
+    | a :: b :: r, h =>
+      cases a <;> (try cases b) <;> simp_all [natArgs, Prog.native, List.findSome?_cons, Prog.nativeAdd,
+        Prog.nativeCmp, Prog.nativeMul, Prog.nativeSub, Prog.nativeDivmod, Prog.nativeMod]
+
 def Prog.subA (ρ : Array Tm) (t : Tm) : Tm := P.subU (fun i => ρ.getD i .nil) t
 
 theorem Prog.subA_eq (ρ : Array Tm) : P.subA ρ = P.sub ρ.toList := by
@@ -1896,8 +1937,8 @@ def runA : Nat → Array Tm → Core → Option (List Tm)
         let G ← P.groups[gid]?
         let F ← G.fns[j]?
         let xs := F.spreadIn ve (args.toList.map (P.subA ρ))
-        let outs ← (P.native env.toList G j F xs).orElse fun _ =>
-          runA fuel (env.toList ++ closuresS env.toList gid G ++ xs).toArray F.body
+        let outs ← (if natArgs xs then P.native env.toList G j F xs else none).orElse fun _ =>
+          runA fuel (env.toArrAux #[] ++ closuresA env gid G ++ xs) F.body
         runA fuel (ρ ++ F.spreadOut ve args.toList.length outs) rest
       | _ => none
     | .mtch _ R _ _ true rest => runA fuel (ρ ++ List.replicate R.len Tm.tok) rest
@@ -1934,7 +1975,7 @@ theorem runA_eq : ∀ fuel (ρ : Array Tm) c, runA P fuel ρ c = runS P fuel ρ.
     intro ρ c
     have e := Prog.subA_eq P ρ
     cases c with
-    | call f d args er ms ve rest => cases er <;> simp [runA, runS, ih, e]
+    | call f d args er ms ve rest => cases er <;> simp [runA, runS, ih, e, native_guard, closuresA_eq, Tm.toArrAux_toList]
     | mtch s R brs els er rest => cases er <;> simp [runA, runS, ih, e]
     | case s brs els er nt => cases er <;> cases nt <;> simp [runA, runS, ih, e]
     | prim p er rest => simp [runA, runS, ih, Prim.evalA_eq]
