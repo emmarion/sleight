@@ -1869,4 +1869,78 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
     · simp at h
     · simp at h
 
+
+def Prog.subA (ρ : Array Tm) (t : Tm) : Tm := P.subU (fun i => ρ.getD i .nil) t
+
+theorem Prog.subA_eq (ρ : Array Tm) : P.subA ρ = P.sub ρ.toList := by
+  funext t; simp only [Prog.subA, Prog.sub]; congr 1; funext i
+  simp [Tm.env, Array.getD_eq_getD_getElem?, List.getD_eq_getElem?_getD]
+
+def Prim.evalA (ρ : Array Tm) : Prim → Tm
+  | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.subA ρ t
+  | .num _ n => .nat n
+  | .atom d => .app (.vc d 0 .nil) .nil
+  | .assert t _ => t
+  | p => p.eval ρ.toList
+
+theorem Prim.evalA_eq (ρ : Array Tm) (p : Prim) : p.evalA P ρ = p.evalS P ρ.toList := by
+  cases p <;> simp [Prim.evalA, Prim.evalS, Prim.eval, Prog.subA_eq]
+
+def runA : Nat → Array Tm → Core → Option (List Tm)
+  | 0, _, _ => none
+  | fuel + 1, ρ, c => match c with
+    | .ret ts => some (ts.toList.map (P.subA ρ))
+    | .call _ _ _ true ms _ rest => runA fuel (ρ ++ List.replicate ms.length Tm.tok) rest
+    | .call f _ args false _ ve rest => match P.subA ρ f with
+      | .clo env gid j => do
+        let G ← P.groups[gid]?
+        let F ← G.fns[j]?
+        let xs := F.spreadIn ve (args.toList.map (P.subA ρ))
+        let outs ← (P.native env.toList G j F xs).orElse fun _ =>
+          runA fuel (env.toList ++ closuresS env.toList gid G ++ xs).toArray F.body
+        runA fuel (ρ ++ F.spreadOut ve args.toList.length outs) rest
+      | _ => none
+    | .mtch _ R _ _ true rest => runA fuel (ρ ++ List.replicate R.len Tm.tok) rest
+    | .mtch s _ brs els false rest => match P.view (P.subA ρ s) with
+      | .app (.vc _ c _) vs => do
+        let (pre, body) ← selectBr brs els c vs.toList
+        let outs ← runA fuel (ρ ++ pre) body
+        runA fuel (ρ ++ outs) rest
+      | _ => none
+    | .case _ brs els true _ => do
+      let (pre, body) ← realBr brs els
+      runA fuel (ρ ++ pre) body
+    | .case s brs els false true => do
+      let (pre, body) ← realBr brs els
+      runA fuel (ρ ++ pre.map fun _ => P.subA ρ s) body
+    | .case s brs els false false => match P.view (P.subA ρ s) with
+      | .app (.vc _ c _) vs => do
+        let (pre, body) ← selectBr brs els c vs.toList
+        runA fuel (ρ ++ pre) body
+      | _ => none
+    | .seq _ body rest => do
+      let outs ← runA fuel ρ body
+      runA fuel (ρ ++ outs) rest
+    | .prim p er rest => runA fuel (ρ.push (if er then .tok else p.evalA P ρ)) rest
+    | .defLvl rest => runA fuel (ρ.push .tok) rest
+    | .defFns gid rest => do runA fuel (ρ ++ closuresS ρ.toList gid (← P.groups[gid]?)) rest
+    | .chk _ _ _ rest => runA fuel ρ rest
+    | .absurd _ | .dead => none
+
+theorem runA_eq : ∀ fuel (ρ : Array Tm) c, runA P fuel ρ c = runS P fuel ρ.toList c := by
+  intro fuel; induction fuel with
+  | zero => intro ρ c; simp [runA, runS]
+  | succ fuel ih =>
+    intro ρ c
+    have e := Prog.subA_eq P ρ
+    cases c with
+    | call f d args er ms ve rest => cases er <;> simp [runA, runS, ih, e]
+    | mtch s R brs els er rest => cases er <;> simp [runA, runS, ih, e]
+    | case s brs els er nt => cases er <;> cases nt <;> simp [runA, runS, ih, e]
+    | prim p er rest => simp [runA, runS, ih, Prim.evalA_eq]
+    | _ => simp [runA, runS, ih, e]
+
+@[simp] theorem runA_toArray (fuel : Nat) (l : List Tm) (c : Core) : runA P fuel l.toArray c = runS P fuel l c := by
+  rw [runA_eq]
+
 end Minimal

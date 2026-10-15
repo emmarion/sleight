@@ -174,16 +174,16 @@ def stepS (P : Prog) (ρ : List Tm) : Core → Option (List Tm)
     | .clo env gid j => do
       let G ← P.groups[gid]?
       let F ← G.fns[j]?
-      let outs ← runS P fixFuel (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body
+      let outs ← runA P fixFuel (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))).toArray F.body
       some (F.spreadOut ve args.toList.length outs)
     | _ => none
   | .mtch _ R _ _ true _ => some (List.replicate R.len .tok)
   | .mtch s _ brs els false _ => match P.view (P.sub ρ s) with
     | .app (.vc _ c _) vs => do
       let (pre, body) ← selectBr brs els c vs.toList
-      runS P fixFuel (ρ ++ pre) body
+      runA P fixFuel (ρ ++ pre).toArray body
     | _ => none
-  | .seq _ body _ => runS P fixFuel ρ body
+  | .seq _ body _ => runA P fixFuel ρ.toArray body
   | .prim p er _ => some [if er then .tok else p.evalS P ρ]
   | .defLvl _ => some [.tok]
   | .defFns gid _ => (P.groups[gid]?).map (closuresS ρ gid)

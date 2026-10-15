@@ -232,7 +232,7 @@ def Prog.run (P : Prog) (pre typed : Bool) (R : List Tm → List (Option Tm)) : 
   | .error e => .text s!"stuck: {e}"
 
 def Prog.runStripped (P : Prog) (pre : Bool) (R : List Tm → List (Option Tm)) : Out :=
-  P.final pre true false R (runS P 100000000) (runS P 100000000 [] P.main)
+  P.final pre true false R (fun ρ c => runA P 100000000 ρ.toArray c) (runA P 100000000 #[] P.main)
 
 def prelude : String := include_str "../prelude.sl"
 

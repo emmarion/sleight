@@ -3285,7 +3285,7 @@ theorem mtch_setup (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt 
       refine ⟨outsS, fun vs' h => ?_, fun out h => .mtch hsS hsel hrunb h,
         by simpa [Tm.toList_ofList] using hreb.len, fun k a b ha hb he => ?_⟩
       · simp only [stepS, hsS, hsel, Option.bind_eq_bind, Option.bind_some] at h
-        exact runS_det h hrunb
+        exact runS_det (by rwa [runA_toArray] at h) hrunb
       · rw [hpn k (hol ▸ (List.getElem?_eq_some_iff.mp hb).1)] at he
         exact hreb.get k a b (by simpa [Tm.toList_ofList] using ha)
           (by simpa [Tm.toList_ofList] using hb) (by simpa using he)
@@ -3485,7 +3485,7 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
         · simp only [stepS, hcl, hG2, hF2, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
             Option.some.injEq] at h
           obtain ⟨o, h1, rfl⟩ := h
-          rw [runS_det h1 hb3]
+          rw [runA_toArray] at h1; rw [runS_det h1 hb3]
         · rw [her k (List.getElem?_eq_some_iff.mp hb).1] at he
           simp only [List.getD_eq_getElem?_getD, List.getElem?_map] at he
           have hk : k < outsT.len := hol ▸ (List.getElem?_eq_some_iff.mp hb).1
@@ -3528,7 +3528,7 @@ theorem call_step (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {cnt :
       · simp only [stepS, hfS, hG, hFj, Tm.toList_ofList, Option.bind_eq_bind, Option.bind_some,
           Option.bind_eq_some_iff, Option.some.injEq] at h
         obtain ⟨o, h1, rfl⟩ := h
-        rw [runS_det h1 hrunb]
+        rw [runA_toArray] at h1; rw [runS_det h1 hrunb]
       · rw [her k (List.getElem?_eq_some_iff.mp hb).1] at he
         simp only [List.getD_eq_getElem?_getD, List.getElem?_map] at he
         have hk : k < outsT.len := hol ▸ (List.getElem?_eq_some_iff.mp hb).1

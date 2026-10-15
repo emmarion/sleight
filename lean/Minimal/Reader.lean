@@ -1028,7 +1028,7 @@ def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
       ((mapRet P (fun Γ ts => (ts, Γ)) Γ c).map (·.2)).filter (·.n == st.n)
     else none
   set { st with topCtx }
-  match runS P 10000000 (st.vals.take n0) c with
+  match runA P 10000000 (st.vals.take n0).toArray c with
   | some vs => if vs.length == st.n - n0 then set { st with vals := st.vals.take n0 ++ vs, topCtx }
   | none => pure ()
 
@@ -1427,7 +1427,7 @@ partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
     let [t] := ts | throw "a computed head has one value"
     let st ← get
     let P : Prog := (st.prog .dead)
-    match runS P 10000000 st0.vals (close ss [t]) with
+    match runA P 10000000 st0.vals.toArray (close ss [t]) with
     | some [.app (.vc d c _) _] =>
       if d == st.special && st.decls.size > 0 then
         let f := specialNames.getD c ""
@@ -1449,7 +1449,7 @@ partial def compileMsgE (sc : Scope) (m : Sx) : M (List Stmt × String) := do
   let v := match t with
     | .fv i => st.settledVal i
     | t => if st.top && st.vals.length == st.n then
-        (runS (st.prog .dead) 10000000 st.vals (close [] [t])).bind (·.head?)
+        (runA (st.prog .dead) 10000000 st.vals.toArray (close [] [t])).bind (·.head?)
       else none
   match v.bind st.strOfVal with
   | some cs => return (ss, String.ofList cs)
