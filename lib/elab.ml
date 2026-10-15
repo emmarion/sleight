@@ -1490,7 +1490,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let ct, params, _ = cell_shape env l c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
         (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
-      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.VToken)) in
+      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst Prelude.vacant)) in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
       (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
@@ -1533,6 +1533,32 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       in
       produced env [] "shared and so many" r.ty Many;
       (env, [ { r with erasure = Many } ], code)
+  | Sp.CellSame, [ a; b ] ->
+      if pos = Erased then error_in env l "`cell-same` in an erased position";
+      let id s = match prelude_id env s with Some i -> Var i | None -> error l "`cell-same` needs the prelude's `%s`, which `--no-prelude` leaves out" s in
+      let cell env raw =
+        let env, r, code = elab_expr1 env Many raw in
+        (match canon env r.ty with Cell _ -> () | t -> error_in env (loc raw) "`cell-same` takes cells, and %s : %s is not one" (qshow env r.term) (qshow env t));
+        let env = match r.term, code with
+          | Var _, V.CVar _ -> env
+          | _ -> let x, env = bind env ~holes:true ~word:true ~temporary:true None r.erasure (ran_state env r.erasure code) r.ty ~rule:r.term in
+                 if env.run_pos then env else { env with pending = (x, code) :: env.pending } in
+        (env, (r, Option.fold ~none:(term_place env r.term) ~some:Option.some r.place)) in
+      let env, (ra, pa) = cell env a in
+      let env, (rb, pb) = cell env b in
+      let listed r = match canon env r.ty with
+        | Cell (Var c, _) -> (match matchables env (tid_of env l c) with (m, d, cs) :: _ when List.exists (fun (_, c') -> c' = Var c) cs -> Some (m, d, tid_of env l c) | _ -> None)
+        | _ -> None in
+      (match listed ra, listed rb with
+       | Some (m, Enum, _), Some (m', _, _) when m = m' -> ()
+       | Some (m, Union, t), Some (m', _, _) when m = m' -> error_in env l "`cell-same` takes cells of an `enum`, and %s is a `union`" (qname env t)
+       | _ -> error_in env l "`cell-same` takes cells of constructors one opened `Matchable` lists, and %s and %s are not" (qshow env ra.term) (qshow env rb.term));
+      (match pa, pb with Some p, Some q when same_slot env p q -> () | _ -> error_in env l "%s and %s are not at one slot" (qshow env ra.term) (qshow env rb.term));
+      let erased_or = id "ErasedOr" in
+      let x, env = bind env None Many Hypothetical (App (erased_or, [ App (id "JMEq", [ ra.ty; ra.term; rb.ty; rb.term ]) ])) in
+      produced env [] "many" (type_of env x) Many;
+      let env = place env x (slot_of Prelude.null) in
+      (env, [ { (res_of env x) with place = Some (slot_of Prelude.null) } ], V.CVar Prelude.null)
   | Sp.Values, _ ->
       let env, args = spliced env args in
       count_check ?sink l expect args;

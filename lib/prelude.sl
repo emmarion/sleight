@@ -1399,6 +1399,11 @@
   enum
   (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
 
+(def-adts $ (ErasedOr : (Type P) -> Type)
+  enum
+  (many EONonErased : (erased Type P) (erased P p) -> (ErasedOr P))
+  (erased EOErased : (erased Type P) -> (ErasedOr P)))
+
 (def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
 (def-opaque $ (MacroWorld : -> Type))
 

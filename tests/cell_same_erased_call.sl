@@ -1,0 +1,16 @@
+; expect: (EONonErased _ _)
+(def-fns _ $ (many wr : (many (Nat) h) (unique (Cell Cons vacant-slot vacant-slot) u) ->
+    (unique (Cell Cons (slot-of h) vacant-slot) r at u))
+  (cell-write unique u (Cons (slot-of h) _)))
+(def-fns _ $ (many two : (erased (Slot) s1) (erased (Slot) s2)
+    (many (Cell Cons s1 vacant-slot) u1) (many (Cell Cons s2 vacant-slot) u2 at u1) ->
+    (many (ErasedOr (Eq (Slot) s1 s2)) r))
+  (let-match many (cell-same u1 u2) (EONonErased _ e) ((EOErased _) (EOErased _)))
+  (let-match erased e (JMRefl _ _))
+  (EONonErased _ (Refl (Slot) s1)))
+(def-fns _ $ (many run : (many (Nat) h) -> (many (ErasedOr (Eq (Slot) vacant-slot vacant-slot)) r))
+  (let ((unique c)) (cell-alloc Cons))
+  (let ((erased r)) (wr h c))
+  (let ((erased k)) (two vacant-slot (slot-of h) c r))
+  (two vacant-slot vacant-slot (share c) (share c)))
+(run 1)

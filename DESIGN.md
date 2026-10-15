@@ -26,7 +26,7 @@ speed of the code they produce, are not aims.
 - Data types and matching: §21 to §25.
 - Expressions, statements and compile time: §26 to §32.
 - Coercion: §33, §34.
-- Slots, `at` and cells: §35 to §41, §66 and §67.
+- Slots, `at` and cells: §35 to §41, and §66 to §68.
 - The prelude, the FFI and literals: §42 to §45.
 - Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
@@ -570,8 +570,8 @@ invocation (§37), whose value is then at its cell. A form whose only
 claim or effect is about the
 run is refused in an erased position: `tail`, `notail` and `delegate`
 (§19), the `at` wrapper around a call (§39), `share` (§16),
-`cell-write` (§37) and `cell-match` (§38); and an `erased` function may
-not be marked `at` (§39).
+`cell-write` (§37), `cell-match` (§38) and `cell-same` (§68); and an
+`erased` function may not be marked `at` (§39).
 
 ## 15. Uses of unique binders
 
@@ -1952,6 +1952,8 @@ which `lib/prelude.sl` is the reference:
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
   `placed-eq`. §66 describes them. §67 describes `slot-eq`.
+- **`ErasedOr`**, with `EONonErased` and the phantom `EOErased`. §68
+  describes it and `cell-same`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2378,7 +2380,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
   `resolve` and `read-file` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
-  (§66), and `slot-eq` (§67).
+  (§66), `slot-eq` (§67), and `cell-same` (§68).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2940,3 +2942,19 @@ kept at a slot is declared the same way (§36).
 `Some` proves that `a` and `b` hold one word (§38). `None` proves
 nothing, so an implementation may always answer it. `slot-eq` requires
 the prelude.
+
+## 68. `cell-same`
+
+```scheme
+(def-adts $ (ErasedOr : (Type P) -> Type)
+  enum
+  (many EONonErased : (erased Type P) (erased P p) -> (ErasedOr P))
+  (erased EOErased : (erased Type P) -> (ErasedOr P)))
+```
+
+`(cell-same u1 u2)` takes two cells at `many` whose constructors one
+opened `enum` `Matchable` lists and whose slots are already equal
+(§36). It yields an `(ErasedOr (JMEq T1 u1 T2 u2))` at `vacant-slot`
+(§36), `Ti` the type of `ui`: `EONonErased` wherever it runs, and
+`EOErased` where it is reached only erased (§14). It compiles to nothing, is refused in an
+erased position, and requires the prelude.

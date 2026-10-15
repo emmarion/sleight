@@ -102,3 +102,17 @@ is a design decision. Remove an entry when it is fixed.
     `self/bootstrap.sh` compares each side's whole stderr, warnings
     included, so one that did would fail there. Which order is wanted
     is not decided here.
+
+20. **The two compilers disagree on a `let` of a constant before a
+    `delegate` call.** In a function `f at g` whose body is
+    `(let ((many s)) (settled-of many g)) (delegate (g ...))`, the
+    reference refuses the `delegate` as not in tail position, and `slc`,
+    compiled or under `--interpret`, accepts it. `(cell-same u u)` in
+    place of the `settled-of` splits the same way. The reference's
+    normalizer folds away a `let` of constants only when its right-hand
+    side is a `values` of constants, and both forms compile to a bare
+    constant; `slc`'s folding appears to cover that case. DESIGN.md §19
+    says a `delegate`-bodied function is nothing but the call once lets
+    that only rename are resolved away, which seems not to settle a let of
+    a constant. Which answer is wanted is not decided here. No test has
+    this shape.

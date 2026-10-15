@@ -1,0 +1,15 @@
+; error: `cell-same` takes cells of constructors one opened `Matchable` lists, and `ua` and `ub` are not
+(def-adts $ (E1 : -> Type) enum (many A1 : -> (E1)))
+(def-adts $ (E2 : -> Type) enum (many A2 : -> (E2)))
+(def-fns _ $ (many run : -> (many (Nat) out))
+  (let ((unique ca)) (cell-alloc A1))
+  (let ((unique cb)) (cell-alloc A2))
+  (let ((many va)) (share (ca)))
+  (let ((many vb)) (share (cb)))
+  (let-match many va (A1 ua))
+  (let-match many vb (A2 ub))
+  (let-match many (slot-eq (slot-of ua) (slot-of ub)) (Some _ e) ((None _) 0))
+  (let-match erased e (Refl _ _))
+  (let-match many (cell-same ua ub) (EONonErased _ j) ((EOErased _) 0))
+  1)
+run

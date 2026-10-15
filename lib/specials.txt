@@ -84,6 +84,7 @@ usage unplace-at: (unplace-at <slot> <type> <term> <Placed value>)
 usage unplace-at-many: (unplace-at-many <slot> <type> <term> <Placed value>)
 usage placed-slot: (placed-slot <slot> <type> <term> <Placed value>)
 usage placed-eq: (placed-eq <slot> <type> <term> <Placed value> <Placed value>)
+usage cell-same: (cell-same <cell> <cell>)
 usage def-opaque: (def-opaque (<name> : <parameter> ... -> Type) ...)
 usage def-prim: (def-prim (<many or erased> <primitive> : <parameter> ... -> <return> ...) ...)
 role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
