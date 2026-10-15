@@ -221,6 +221,7 @@ structure ESt where
   u8mod : Option Nat := none
   special : Nat := 0
   depthTop : Bool := true
+  topRefs : Array (Sx × List String) := #[]
   mtbls : List (Nat × Nat) := []
   topCtx : Option Ctx := some {tys := []}
   claimed : List String := []
@@ -290,8 +291,12 @@ def slotD : Nat := 4
 
 def atFnD : Nat := 5
 
+def iterFix {α : Type} [BEq α] (f : α → α) : Nat → α → α
+  | 0, x => x
+  | n + 1, x => let y := f x; if y == x then x else iterFix f n y
+
 def ESt.canonIdx (st : ESt) (i : Nat) : Nat :=
-  (List.range st.inl.length).foldl (fun i _ => match st.inl.lookup i with | some (.fv j) => j | _ => i) i
+  iterFix (fun i => match st.inl.lookup i with | some (.fv j) => j | _ => i) st.inl.length i
 
 def ESt.skipped (st : ESt) (i : Nat) : Bool := st.atFns.contains (st.canonIdx i)
 
@@ -566,11 +571,22 @@ def slotM (i : Nat) : M (List (Core → Core) × Tm) := do
   if u then modify fun st => { st with uq := k :: st.uq }
   return ((if u then [fun c => Core.chk (.mark (.uq [true])) .nil .nil c] else []) ++ [Core.prim (Prim.atom slotD) er], .fv k)
 
-def mintSlots (sc : Scope) (e : Sx) (ats : Bool := true) : M (List (Core → Core)) :=
-  (e.slotRefs ats).eraseDups.flatMapM fun x =>
+def mintRefs (sc : Scope) (xs : List String) : M (List (Core → Core)) :=
+  xs.eraseDups.flatMapM fun x =>
     match sc.lookup x with
     | some (.fv i) | some (.ctor i) | some (.fn i _ _) => return (← slotM i).1
     | _ => pure []
+
+def mintSlots (sc : Scope) (e : Sx) (ats : Bool := true) : M (List (Core → Core)) := mintRefs sc (e.slotRefs ats)
+
+def suffixRefs (items : List Sx) : Array (Sx × List String) :=
+  (items.foldr (fun e (acc : List (Sx × List String)) => (e, e.slotRefs false ++ ((acc.head?.map (·.2)).getD [])) :: acc) []).reverse.toArray
+
+def restRefs (top : Array (Sx × List String)) : List Sx → List String
+  | [] => []
+  | e :: rest => match top[rest.length]? with
+    | some (h, rs) => if h == e then rs else e.slotRefs false ++ restRefs top rest
+    | none => e.slotRefs false ++ restRefs top rest
 
 def userExp : List Mode → Tm → Tm
   | .hid :: ms, .bind _ _ r => userExp ms (r.inst .hole 0)
@@ -905,8 +921,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     for (c, ci) in cs.zipIdx do
       ctors := (c.2.1, base + j, ci) :: ctors
   set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × String × List Sx × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
-  let inline (t : Tm) : Tm := (List.range st.inl.length).foldl
-    (fun t _ => t.subst fun i => (st.inl.lookup i).getD (.fv i)) t
+  let inline (t : Tm) : Tm := iterFix (Tm.subst fun i => (st.inl.lookup i).getD (.fv i)) st.inl.length t
   let elabSigs := heads.mapM fun (_, ps, cs) => do
     let params ← withFloor ctorFloor (elabTele sc 0 false ps)
     let sigs ← cs.mapM fun (_, _, fs, ret) => withFloor ctorFloor (elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
@@ -919,6 +934,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     let more ← ids.flatMapM fun i => match tyOf i with
       | some T => pure (inline T).fvs
       | none => throw "a def-adts signature may mention only an entry whose type the elaborator knows: a top-level entry, a level, a def-fns function, a parameter, or a let binder written with a type or a term"
+    if more.all ids.contains then break
     ids := (ids ++ more).eraseDups
   ids := ids.mergeSort
   let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
@@ -2061,7 +2077,9 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
   unless ss.isEmpty do recordTop n0 ss
   let n1 := (← get).n
   let sp ← match items with
-    | e@(.list (.atom "def-lvl" :: _)) :: rest => mintSlots sc (.list (e :: rest)) false
+    | e@(.list (.atom "def-lvl" :: _)) :: rest => do
+      let st ← get
+      mintRefs sc (e.slotRefs false ++ (if st.depthTop then restRefs st.topRefs rest else (Sx.list rest).slotRefs false))
     | e :: _ => mintSlots sc e
     | [] => pure []
   unless sp.isEmpty do recordTop n1 sp
@@ -2529,8 +2547,9 @@ def elabProgram (items : List Sx) (pre : Bool) : Except String (Prog × List Str
   let stmt := match (items.filter (!isPragmaSx ·)).getLast? with
     | some (.list (.atom h :: _)) => statements.contains h
     | _ => false
-  let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none
-    (if stmt then items ++ [.list [.atom "values"]] else items)).run { builtins with pre }
+  let items := if stmt then items ++ [.list [.atom "values"]] else items
+  let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none items).run
+    { builtins with pre, topRefs := suffixRefs items }
   unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
   let ws := st.warns ++ (st.supp.filter (·.2.2 == 0)).map fun (x, _, _) => s!"`;! suppress warn` for `{x}` silenced nothing"
   return (st.prog (close ss ts), ws)
