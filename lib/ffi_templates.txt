@@ -37,10 +37,10 @@ fn array-place: Array.unsafe_set (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {
 fn array-swap: let {t0} = (Obj.obj {a0} : Ffi_core.word array) and {t1} = (Obj.obj {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (Obj.obj {a2} : Ffi_core.word); Obj.repr {t2}
 fn array-place-imm: Array.unsafe_set (Obj.obj {a0} : int array) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
 fn array-swap-imm: let {t0} = (Obj.obj {a0} : int array) and {t1} = (Obj.obj {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (Obj.obj {a2} : int); Obj.repr {t2}
-fn array-make: Obj.repr (Array.make (Obj.obj {a0} : int) {a1})
+fn array-make: Obj.repr (Array.make (Z.to_int (Obj.obj {a0} : Z.t)) {a1})
 fn array-length: Obj.repr (Array.length (Obj.obj {a0} : Ffi_core.word array))
 fn array-length-many: Obj.repr (Array.length (Obj.obj {a0} : Ffi_core.word array))
-fn bytes-make: Obj.repr (Bytes.make (Obj.obj {a0} : int) (Char.unsafe_chr (Obj.obj {a1} : int)))
+fn bytes-make: Obj.repr (Bytes.make (Z.to_int (Obj.obj {a0} : Z.t)) (Char.unsafe_chr (Obj.obj {a1} : int)))
 fn bytes-get: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
 fn bytes-get-many: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
 fn bytes-set: Bytes.unsafe_set (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Char.unsafe_chr (Obj.obj {a2} : int)); Obj.repr ()
