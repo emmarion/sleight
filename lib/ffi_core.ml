@@ -96,7 +96,7 @@ let u62_cmp a b = order (compare (small a) (small b))
 let u62_lt_dec a b = decide (small a < small b)
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
-  let n = min l1 l2 in
+  let n = if l1 < l2 then l1 else l2 in
   let rec go i =
     if i = n then if l1 < l2 then CLt else if l1 = l2 then CEq else CGt
     else if String.unsafe_get s1 (o1 + i) < String.unsafe_get s2 (o2 + i) then CLt
