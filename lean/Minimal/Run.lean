@@ -4,16 +4,6 @@ import Minimal.Strip
 
 namespace Minimal
 
-def Prog.nat (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "Nat")
-
-def Prog.ownErs (P : Prog) (d c : Nat) : List Bool := ((P.ctor d c).map fun sig => fieldErs (sig.skip (P.lifted d))).getD []
-
-def Prog.natOf (nat : Option Nat) : Tm → Option Nat
-  | .nat n => if nat.isSome then some n else none
-  | .app (.vc d 0 _) .nil => if nat = some d then some 0 else none
-  | .app (.vc d 1 _) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
-  | _ => none
-
 def Prog.charOf (P : Prog) (nat : Option Nat) : Tm → Option Nat
   | .app (.vc d 0 _) args =>
     if P.adts.findIdx? (·.name == "Char") != some d then none else
@@ -32,10 +22,6 @@ partial def Prog.strOf (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
       | some ch, some rest => some (ch :: rest)
       | _, _ => none
   | _ => none
-
-def hex2 (n : Nat) : String :=
-  let d (k : Nat) : Char := if k < 10 then Char.ofNat (48 + k) else Char.ofNat (87 + k)
-  String.ofList [d (n / 16), d (n % 16)]
 
 def showChar (c : Nat) : String :=
   if c == 32 then "#\\space" else if c == 10 then "#\\newline" else if c == 9 then "#\\tab"
@@ -117,15 +103,6 @@ def Prog.fieldTys (P : Prog) (d c : Nat) (T : Tm) : List (Option Tm) :=
 
 def Prog.adtIs (P : Prog) (d : Nat) (name : String) : Bool := P.adts.findIdx? (·.name == name) == some d
 
-partial def Prog.strT (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
-  | .app (.vc _ 0 _) _ => some []
-  | .app (.vc _ 1 _) args => do
-    let as := args.toList
-    let c ← Prog.natOf nat (as.getD (as.length - 2) .nil)
-    let rest ← P.strT nat (as.getD (as.length - 1) .nil)
-    some (c :: rest)
-  | _ => none
-
 mutual
 partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → String × Bool
   | some (.app (.tyc d ls) idx), v =>
@@ -169,47 +146,10 @@ def Prog.typesOf : Tm → List Tm → List (Option Tm)
   | .bind k A r, v :: vs => (if k matches .ty .. && A != .nil then some A else none) :: Prog.typesOf (r.inst v 0) vs
   | _, vs => vs.map fun _ => none
 
-def Prog.strD (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "String")
-
-def Prog.isStr (P : Prog) : Tm → Bool
-  | .app (.tyc d _) _ => P.strD == some d
-  | _ => false
-
-def Prog.mkStr (P : Prog) (wrapped : Bool) (bytes : List Nat) : Tm := Id.run do
-  let some sd := P.strD | return .nil
-  let nat := P.nat.getD 0
-  let lift (d : Nat) : Tm := .ofList (List.replicate (P.lifted d) .tok)
-  let natT (n : Nat) : Tm := (List.range n).foldl (fun t _ => Tm.app (.vc nat 1 .nil) (.cons t .nil)) (.app (.vc nat 0 .nil) .nil)
-  let ch (n : Nat) : Tm := match wrapped, P.adts.findIdx? (·.name == "Char"), P.adts.findIdx? (·.name == "U8") with
-    | true, some chr, some u8 =>
-      .app (.vc chr 0 (lift chr)) (.ofList [.app (.vc u8 0 (lift u8)) (.ofList [natT n, .tok])])
-    | _, _, _ => natT n
-  return bytes.foldr (fun b acc => .app (.vc sd 1 (lift sd)) (.ofList [ch b, acc])) (.app (.vc sd 0 (lift sd)) .nil)
-
 inductive Out where
   | text (s : String)
   | io (k : List Nat → Except String (List Nat))
   | world (run : IO UInt32)
-
-def Prog.adtNamed (P : Prog) (name : String) : Option Nat := P.adts.findIdx? (·.name == name)
-
-def Prog.conS (P : Prog) (name ctor : String) (vals : List Tm) : Tm := Id.run do
-  let some d := P.adtNamed name | return .tok
-  let some c := ((P.adts[d]?).map (·.ctorNames.idxOf ctor)) | return .tok
-  let rec fill : List Bool → List Tm → List Tm
-    | true :: bs, vs => .tok :: fill bs vs
-    | false :: bs, v :: vs => v :: fill bs vs
-    | _, _ => []
-  let fs := fill (P.ownErs d c) vals
-  return match P.wrapField d c with
-    | some k => fs.getD k .tok
-    | none => .app (.vc d c .nil) (.ofList fs)
-
-def Prog.fieldsS (P : Prog) : Tm → Option (String × List Tm)
-  | .app (.vc d c _) args => do
-    let n ← (P.adts[d]?).bind (·.ctorNames[c]?)
-    some (n, (args.toList.zip (P.ownErs d c)).filterMap fun (a, e) => if e then none else some a)
-  | _ => none
 
 def Prog.perform (P : Prog) (req : Tm) : ExceptT String IO Tm := do
   let nat := P.nat
@@ -243,7 +183,8 @@ partial def Prog.drive (P : Prog) (fuel : Nat) (k : Nat) (v : Tm) : ExceptT Stri
   | some ("Continue", [.clo env gid j]) =>
     let some G := P.groups[gid]? | throw "stuck"
     let some F := G.fns[j]? | throw "stuck"
-    let outs ← runAM P (m := ExceptT String IO) (fun _ => throw "stuck") (fun _ r => P.perform r) fuel
+    let outs ← runAM P (m := ExceptT String IO) (fun _ => throw "stuck") (fun _ r => P.perform r)
+      (fun env gid j G F xs => pure ((P.nativeExt env gid j G F xs).join)) fuel
       (env.toList ++ closures env.toList gid G ++ spread (F.tele.ers.take F.np) [Tm.wld k]).toArray F.body
     match outs.getLast? with
     | some next => P.drive fuel (k + 1) next

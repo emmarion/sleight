@@ -1931,11 +1931,11 @@ def Prim.evalA (ρ : Array Tm) : Prim → Tm
 theorem Prim.evalA_eq (ρ : Array Tm) (p : Prim) : p.evalA P ρ = p.evalS P ρ.toList := by
   cases p <;> simp [Prim.evalA, Prim.evalS, Prim.eval, Prog.subA_eq]
 
-def runAM {m : Type → Type} [Monad m] (fail : (α : Type) → m α) (ask : Tm → Tm → m Tm) :
-    Nat → Array Tm → Core → m (List Tm)
+def runAM {m : Type → Type} [Monad m] (fail : (α : Type) → m α) (ask : Tm → Tm → m Tm)
+    (ext : Tm → Nat → Nat → Group → FnDef → List Tm → m (Option (List Tm))) : Nat → Array Tm → Core → m (List Tm)
   | 0, _, _ => fail _
   | fuel + 1, ρ, c =>
-    let go := runAM fail ask fuel
+    let go := runAM fail ask ext fuel
     let lift {α : Type} : Option α → m α := fun | some a => pure a | none => fail _
     match c with
     | .ret ts => pure (ts.toList.map (P.subA ρ))
@@ -1945,7 +1945,7 @@ def runAM {m : Type → Type} [Monad m] (fail : (α : Type) → m α) (ask : Tm 
         let G ← lift P.groups[gid]?
         let F ← lift G.fns[j]?
         let xs := F.spreadIn ve (args.toList.map (P.subA ρ))
-        let outs ← match (if natArgs xs then P.native env.toList G j F xs else none) with
+        let outs ← match ← ext env gid j G F xs with
           | some outs => pure outs
           | none => go (env.toArrAux #[] ++ closuresA env gid G ++ xs) F.body
         go (ρ ++ F.spreadOut ve args.toList.length outs) rest
@@ -1980,8 +1980,11 @@ def runAM {m : Type → Type} [Monad m] (fail : (α : Type) → m α) (ask : Tm 
     | .chk _ _ _ rest => go ρ rest
     | .absurd _ | .dead => fail _
 
+def Prog.nativeExt (env : Tm) (_ j : Nat) (G : Group) (F : FnDef) (xs : List Tm) : Option (Option (List Tm)) :=
+  some (if natArgs xs then P.native env.toList G j F xs else none)
+
 def runA (fuel : Nat) (ρ : Array Tm) (c : Core) : Option (List Tm) :=
-  runAM P (fun _ => none) (fun w r => some (P.answer w r).1) fuel ρ c
+  runAM P (fun _ => none) (fun w r => some (P.answer w r).1) P.nativeExt fuel ρ c
 
 @[simp] theorem optLift {α : Type} (o : Option α) : (match o with | some a => some a | none => none : Option α) = o := by
   cases o <;> rfl
@@ -1995,7 +1998,7 @@ theorem runA_eq : ∀ fuel (ρ : Array Tm) c, runA P fuel ρ c = runS P fuel ρ.
     have e := Prog.subA_eq P ρ
     cases c with
     | call f d args er ms ve rest =>
-      cases er <;> simp [runAM, runS, ih, e, optLift, native_guard, closuresA_eq, Tm.toArrAux_toList]
+      cases er <;> simp [runAM, runS, ih, e, optLift, Prog.nativeExt, native_guard, closuresA_eq, Tm.toArrAux_toList]
       split <;> try rfl
       congr 1; funext G; congr 1; funext F; split <;> simp_all [Option.or]
     | mtch s R brs els er rest => cases er <;> simp [runAM, runS, ih, e, optLift]

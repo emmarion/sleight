@@ -230,8 +230,7 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$`, comments and raw names `#"..."`. Each
 multiplicity the full language requires is required. These forms are
-refused as not supported: every form not named in this file, among
-them macros. Only the prelude, or a program
+refused as not supported: every form not named in this file. Only the prelude, or a program
 run with `--no-prelude`, may mark a type or a function `extern`, and
 only one that the OCaml FFI's table in `lib/ffi.ml` names (section 42).
 The mark is recorded and changes nothing else: the runner has no FFI,
@@ -413,6 +412,34 @@ it is `Settled`, and its `is` rule.
   next world is `unique`, linked to the world's slot; the answer is
   `many`. The machine run places a stripped answer in the heap block
   by block (`Heap.placeDeep`).
+- Macros, `Raw` and handles (DESIGN.md sections 62 to 65). A list whose
+  head names a top-level entry holding a `Macro` is expanded by running
+  the macro's function in the stripped runner (`runAM`, in the reader's
+  own monad) and reading the `Raw` it returns back as syntax. Each
+  top-level form is expanded before it is elaborated, at every depth,
+  splicing a call's forms where it stood, except that a call is not
+  expanded where the form binds the head's name itself (`binderNames`,
+  a syntactic reading: the last name of an entry or binder); such a
+  call, and a statement that is itself a macro call, expands when the
+  elaborator reaches it, a statement's forms one at a time. Literals
+  reach a macro as `RawSettled` handles. Positions are `NoPos`
+  throughout. At most 10000 expansions run.
+  The macro-world primitives are functions in the core: `MacroWorld`
+  and `Gensym` are data types without constructors here, so a body that
+  matches on its macro world with no branches is well typed and never
+  runs, and the expander answers a call of one of them itself
+  (`macroExt`). `settled-type`, `settled-erase` and `settled-of` are
+  functions whose body is an axiom of the opaque `Settled`; at run time
+  a handle is a token, and in an expansion it is a number the expander
+  keeps a record for (`HInfo`). `settled-mult` and `settled-value` take
+  a hidden erased macro world, so they are available only inside a
+  function that has one. `mint-settled` of a number or a string gives
+  the handle of that literal; of any other value, a handle usable only
+  as the head of a macro call. `resolve` sees the call's top-level scope
+  and the names the enclosing form binds, as `Hypothetical`.
+  Not supported: `read-file`, `mint-settled-erased`, `settled-mult` and
+  `settled-value` outside a macro's function, positions, and the
+  refusal of a handle used against its multiplicity.
 - Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
   them are `extern` functions whose models run, and inside an `extern`
   function's body a cell of an `extern` constructor is allowed (section
@@ -606,6 +633,12 @@ it is `Settled`, and its `is` rule.
   written with an `Fn` type whose level is an entry.
 
 ## Shapes chosen here, for the owner to confirm or change
+
+- `MacroWorld` and `Gensym`, which DESIGN.md section 65 declares
+  opaque, are data types with no constructors in the core, which lets
+  the macro-world primitives be functions whose bodies are refuted.
+  A program can therefore match on one with no branches, which the
+  opaque type would refuse.
 
 - The oracle that answers a `world-do` is keyed by the world's step
   number and the request's constructor alone, not the request's fields,

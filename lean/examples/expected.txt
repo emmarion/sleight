@@ -54,6 +54,7 @@ examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch
 examples/let_type_bad.sl: refused: let: the binder is not of the type written
 examples/level_of_param.sl: 3
 examples/lifted_first_class.sl: 3
+examples/macro.sl: 4
 examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 examples/matchable_in_type.sl: 0
 examples/matchable_in_type_bad.sl: refused: argument of the wrong type
@@ -186,6 +187,7 @@ full examples/let_forward.sl: (VCons _ 0 2 $ VNil _)
 full examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 full examples/level_of_param.sl: 3
 full examples/lifted_first_class.sl: 3
+full examples/macro.sl: 4
 full examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 full examples/matchable_in_type.sl: 0
 full examples/matchable_value.sl: 0

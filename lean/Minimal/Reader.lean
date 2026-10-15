@@ -166,6 +166,13 @@ inductive Ref where
   | fn (i lvl : Nat) (ers : List Mode)
   | ctor (i : Nat)
 
+structure HInfo where
+  mult : Nat
+  syn : Sx
+  den : Tm
+  ty : Tm
+  val : Option Tm
+
 structure ESt where
   n : Nat := 0
   ers : List Bool := []
@@ -198,6 +205,15 @@ structure ESt where
   slots : List (Nat × Tm) := []
   slotFloor : Nat := 0
   links : List (Nat × Nat) := []
+  primPending : List String := []
+  handles : Array HInfo := #[]
+  hnames : List (String × Ref) := []
+  minted : List (String × Tm) := []
+  expanded : List Sx := []
+  hasMacros : Bool := false
+  gensyms : Nat := 0
+  expansions : Nat := 0
+  primFns : List ((Nat × Nat) × String) := []
   fnAt : List (Nat × FnDef × Nat) := []
   cellDs : List (Tm × Nat) := []
   inExtern : Bool := false
@@ -272,15 +288,31 @@ def warnUse (t : Tm) (kind shown : String) : M Unit := do
   | some k => set { st with supp := st.supp.modify k fun (x, y, n) => (x, y, n + 1) }
   | none => warn (if kind == "match" then s!"match on `{shown}`: {msg}" else s!"{kind} of `{shown}`: {msg}")
 
+def settledOfFn : Sx :=
+  let e (m : String) (T x : Sx) : Sx := .list [.atom m, T, x]
+  let H : Sx := .list [.atom "Settled", .atom "m", .atom "T", .atom "t"]
+  .list [.atom "def-fns", .atom "_", .list [.list [.atom "many", .atom " settled-of", .atom ":",
+      e "many" (.list [.atom "Nat"]) (.atom "k"),
+      e "erased" (.list [.atom "Mult"]) (.atom "m"), e "erased" (.atom "Type") (.atom "T"), e "erased" (.atom "T") (.atom "t"),
+      .atom "->", e "many" H (.atom "h")], .list [.atom " axiom", H]]]
+
+def emptyNames : List String := ["MacroWorld", "Gensym"]
+
+def mwPrims : List String := ["settled-mult", "settled-value"]
+
 def primNames : List String :=
   ["gensym", "gensym-unique", "settled-type", "settled-erase", "settled-mult", "settled-value", "settled-eq", "intern-nat",
-   "intern-char", "intern-string", "resolve", "read-file", "place-at", "place-at-many", "unplace-at", "unplace-at-many",
+   "intern-char", "intern-string", "mint-settled", "mint-settled-erased", "resolve", "read-file", "place-at", "place-at-many", "unplace-at", "unplace-at-many",
    "placed-slot", "placed-eq"]
 
 def keywords : List String := specialNames ++ ["Type", "Level", "Predates", "Subterm"]
 
-def showName (x : String) : String :=
-  if x.startsWith "\x01" then
+partial def showName (x : String) : String :=
+  if x.startsWith "\x02" then
+    match (x.drop 1).toString.splitOn "\x02" with
+    | [n, s] => "__g" ++ n ++ "_" ++ showName (rawName s)
+    | _ => x
+  else if x.startsWith "\x01" then
     "#\"" ++ String.join ((x.toList.drop 1).map fun c =>
       if c == '"' || c == '\\' then "\\" ++ c.toString
       else if 32 ≤ c.toNat && c.toNat < 127 then c.toString
@@ -368,7 +400,7 @@ def name : Sx → M String
         x.startsWith "#\\" || isPragma x then throw s!"{x} is not a name"
     else if x.startsWith "__" then throw s!"{x} begins with __, which is reserved"
     else do
-      if x ∈ keywords then warn s!"declaration of `{x}` shadows a built-in"
+      if x ∈ keywords && !(← get).primPending.contains x then warn s!"declaration of `{x}` shadows a built-in"
       pure x
   | _ => throw "malformed name"
 
@@ -433,6 +465,62 @@ def fieldMds : Tm → List Mode
 def fieldErs : Tm → List Bool
   | .bind k _ r@(.bind ..) => k.er :: fieldErs r
   | _ => []
+
+def Prog.nat (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "Nat")
+
+def Prog.ownErs (P : Prog) (d c : Nat) : List Bool := ((P.ctor d c).map fun sig => fieldErs (sig.skip (P.lifted d))).getD []
+
+def Prog.natOf (nat : Option Nat) : Tm → Option Nat
+  | .nat n => if nat.isSome then some n else none
+  | .app (.vc d 0 _) .nil => if nat = some d then some 0 else none
+  | .app (.vc d 1 _) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
+  | _ => none
+
+partial def Prog.strT (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
+  | .app (.vc _ 0 _) _ => some []
+  | .app (.vc _ 1 _) args => do
+    let as := args.toList
+    let c ← Prog.natOf nat (as.getD (as.length - 2) .nil)
+    let rest ← P.strT nat (as.getD (as.length - 1) .nil)
+    some (c :: rest)
+  | _ => none
+
+def Prog.strD (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "String")
+
+def Prog.isStr (P : Prog) : Tm → Bool
+  | .app (.tyc d _) _ => P.strD == some d
+  | _ => false
+
+def Prog.mkStr (P : Prog) (wrapped : Bool) (bytes : List Nat) : Tm := Id.run do
+  let some sd := P.strD | return .nil
+  let nat := P.nat.getD 0
+  let lift (d : Nat) : Tm := .ofList (List.replicate (P.lifted d) .tok)
+  let natT (n : Nat) : Tm := (List.range n).foldl (fun t _ => Tm.app (.vc nat 1 .nil) (.cons t .nil)) (.app (.vc nat 0 .nil) .nil)
+  let ch (n : Nat) : Tm := match wrapped, P.adts.findIdx? (·.name == "Char"), P.adts.findIdx? (·.name == "U8") with
+    | true, some chr, some u8 =>
+      .app (.vc chr 0 (lift chr)) (.ofList [.app (.vc u8 0 (lift u8)) (.ofList [natT n, .tok])])
+    | _, _, _ => natT n
+  return bytes.foldr (fun b acc => .app (.vc sd 1 (lift sd)) (.ofList [ch b, acc])) (.app (.vc sd 0 (lift sd)) .nil)
+
+def Prog.adtNamed (P : Prog) (name : String) : Option Nat := P.adts.findIdx? (·.name == name)
+
+def Prog.conS (P : Prog) (name ctor : String) (vals : List Tm) : Tm := Id.run do
+  let some d := P.adtNamed name | return .tok
+  let some c := ((P.adts[d]?).map (·.ctorNames.idxOf ctor)) | return .tok
+  let rec fill : List Bool → List Tm → List Tm
+    | true :: bs, vs => .tok :: fill bs vs
+    | false :: bs, v :: vs => v :: fill bs vs
+    | _, _ => []
+  let fs := fill (P.ownErs d c) vals
+  return match P.wrapField d c with
+    | some k => fs.getD k .tok
+    | none => .app (.vc d c .nil) (.ofList fs)
+
+def Prog.fieldsS (P : Prog) : Tm → Option (String × List Tm)
+  | .app (.vc d c _) args => do
+    let n ← (P.adts[d]?).bind (·.ctorNames[c]?)
+    some (n, (args.toList.zip (P.ownErs d c)).filterMap fun (a, e) => if e then none else some a)
+  | _ => none
 
 def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
   | e@(.list (.atom h :: args)) => do
@@ -673,6 +761,9 @@ partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
 
 partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
   | .atom "Type" => pure .univ
+  | .list [.atom " hty", .atom k] => do
+    let some h := (← get).handles[k.toNat!]? | throw "unreachable: no handle"
+    if h.ty == .nil then pure .hole else pure h.ty
   | .list [.atom "compile-error", m] => do throw (← compileMsg sc m)
   | .list [.atom "dump-context"] => do throw (← dumpContext sc)
   | e@(.atom x) => match e.numerals with
@@ -1066,6 +1157,233 @@ def preAdt (name : String) : M Nat := do
 
 def app (h : Tm) (args : List Tm) : Tm := .app h (.ofList args)
 
+def hex2 (n : Nat) : String :=
+  let d (k : Nat) : Char := if k < 10 then Char.ofNat (48 + k) else Char.ofNat (87 + k)
+  String.ofList [d (n / 16), d (n % 16)]
+
+def ESt.inlineT (st : ESt) (t : Tm) : Tm := iterFix (Tm.subst fun i => (st.inl.lookup i).getD (.fv i)) st.inl.length t
+
+def ESt.isSettled (st : ESt) (i : Nat) : Bool :=
+  i < st.vals.length || (st.settledVal i).isSome || (st.inl.lookup i).isSome
+
+def ESt.canonH (st : ESt) (t : Tm) : Tm :=
+  let t := st.factCanon 100 (st.inlineT t)
+  match st.topCtx with
+  | some Γ => if t.fvs.all (· < Γ.n) then Γ.canon t else t
+  | none => t
+
+def newHandle (h : HInfo) : M Tm := modifyGet fun st => (.nat st.handles.size, { st with handles := st.handles.push h })
+
+def litHandle (st : ESt) (a : String) : Option HInfo :=
+  let P := st.prog .dead
+  let nat := P.nat
+  let natTy := fun d => Tm.app (.tyc d (st.liftTm d)) .nil
+  if a.startsWith "\"" then P.strD.map fun d =>
+    let v := P.mkStr false ((String.ofList (a.toList.drop 1)).toUTF8.toList.map (·.toNat))
+    { mult := 1, syn := .atom a, den := v, ty := natTy d, val := some v }
+  else if let some c := charCode a then (P.adtNamed "Char").map fun d =>
+    { mult := 1, syn := .atom a, den := .nat c, ty := natTy d, val := some (.nat c) }
+  else if a.length > 0 && a.all Char.isDigit then nat.map fun d =>
+    { mult := 1, syn := .atom a, den := .nat a.toNat!, ty := natTy d, val := some (.nat a.toNat!) }
+  else none
+
+def globalHandle (x : String) (mult : Nat) : M (Option Tm) := do
+  let st ← get
+  let global : Option (Tm × Tm) := if x == "Type" then some (.univ, .univ) else
+    (st.adts.lookup x).map (fun d => (Tm.tyc d (st.liftTm d), .nil)) <|>
+    (st.ctors.lookup x).map (fun (d, c) => (Tm.vc d c (st.liftTm d), .nil)) <|>
+    (specialNames.idxOf? x).map fun c =>
+      (.app (.vc st.special c .nil) .nil, .app (.tyc st.special .nil) .nil)
+  let alias := s!" t{st.handles.size}"
+  let syn : String := if (st.adts.lookup x).isSome then alias else if (st.ctors.lookup x).isSome then alias
+    else if x == "Type" then x else "\x04" ++ x
+  modify fun st => { st with adts := ((st.adts.lookup x).map (alias, ·)).toList ++ st.adts }
+  modify fun st => { st with ctors := ((st.ctors.lookup x).map (alias, ·)).toList ++ st.ctors }
+  global.mapM fun (t, T) => newHandle ⟨mult, .atom syn, t, T, if mult == 1 then some t else none⟩
+
+def entryHandle (i mult : Nat) : M Tm := do
+  let st ← get
+  let i := st.canonIdx i
+  let litOf : Option String := ((st.lits.find? (·.2 == i)).map fun (n, _) => toString n) <|>
+    ((st.chars.find? (·.2 == i)).map fun (c, _) => s!"#\\x{hex2 c}") <|>
+    ((st.strs.find? (·.2 == i)).map fun (cs, _) => "\"" ++ String.ofList (cs.map Char.ofNat))
+  if let some h := litOf.bind (litHandle st) then return ← newHandle { h with mult := mult }
+  let x := s!" h{st.handles.size}"
+  modify fun st => { st with hnames := (x, .fv i) :: st.hnames }
+  let ty := st.inlineT ((st.known.lookup i).getD Tm.nil)
+  newHandle ⟨mult, .atom x, st.inlineT (.fv i), ty, st.settledVal i⟩
+
+def strS (P : Prog) (s : String) : Tm := P.mkStr false (s.toUTF8.toList.map (·.toNat))
+
+def listS (P : Prog) (xs : List Tm) : Tm := xs.foldr (fun x r => P.conS "List" "Cons" [x, r]) (P.conS "List" "Nil" [])
+
+partial def rawOf (P : Prog) : Sx → M Tm
+  | .atom "_" => pure (P.conS "Raw" "RawWild" [P.conS "Pos" "NoPos" []])
+  | .atom a => do
+    let pos := P.conS "Pos" "NoPos" []
+    match litHandle (← get) a with
+    | some h => pure (P.conS "Raw" "RawSettled" [pos, ← newHandle h])
+    | none =>
+      let sym := if a.startsWith "\x02" then match (a.drop 1).toString.splitOn "\x02" with
+          | [n, x] => P.conS "Symbol" "SGen" [.nat n.toNat!, strS P x]
+          | _ => P.conS "Symbol" "SName" [strS P a]
+        else if a.startsWith "\x01" then P.conS "Symbol" "SName" [strS P (a.drop 1).toString]
+        else P.conS "Symbol" "SName" [strS P a]
+      pure (P.conS "Raw" "RawSymbol" [pos, sym])
+  | .list xs => do pure (P.conS "Raw" "RawList" [P.conS "Pos" "NoPos" [], listS P (← xs.mapM (rawOf P))])
+
+def strOfS (P : Prog) (t : Tm) : M String := match P.strT P.nat t with
+  | some bs => pure (String.fromUTF8! (ByteArray.mk (bs.map (·.toUInt8)).toArray))
+  | none => throw "a macro returned a name that is not a String"
+
+partial def listOfS (P : Prog) (t : Tm) : M (List Tm) := match P.fieldsS t with
+  | some ("Cons", [x, r]) => do pure (x :: (← listOfS P r))
+  | some ("Nil", []) => pure []
+  | _ => throw "a macro returned a list that is not a List"
+
+partial def sxOf (P : Prog) (t : Tm) : M Sx := do
+  match P.fieldsS t with
+  | some ("RawSymbol", [_, s]) => match P.fieldsS s with
+    | some ("SName", [x]) => pure (.atom (rawName (← strOfS P x)))
+    | some ("SGen", [n, x]) => pure (.atom s!"\x02{(Prog.natOf P.nat n).getD 0}\x02{← strOfS P x}")
+    | _ => throw "a macro returned a symbol that is not a Symbol"
+  | some ("RawWild", [_]) => pure (.atom "_")
+  | some ("RawList", [_, items]) => do pure (.list (← (← listOfS P items).mapM (sxOf P)))
+  | some ("RawSettled", [_, h]) => match Prog.natOf P.nat h >>= ((← get).handles[·]?) with
+    | some hi => do
+      if let .atom x := hi.syn then
+        if x.startsWith " t" then match hi.den with
+          | .tyc d _ => modify fun st => { st with adts := (x, d) :: st.adts }
+          | .vc d c _ => modify fun st => { st with ctors := (x, d, c) :: st.ctors }
+          | _ => pure ()
+      pure hi.syn
+    | none => throw "a macro returned a handle the expander did not make"
+  | _ => throw "a macro returned a form that is not a Raw"
+
+def ESt.macroD (st : ESt) : Option Nat := st.decls.findIdx? (·.name == "Macro")
+
+def macroOf (sc : Scope) (h : String) : M (Option (Option Nat × Tm)) := do
+  let st ← get
+  if !st.hasMacros then return none
+  if let some v := st.minted.lookup h then return some (none, v)
+  let some (.fv i0) := sc.lookup h | return none
+  let some md := st.macroD | return none
+  let i := st.canonIdx i0
+  let isMacro := match (st.known.lookup i).map st.inlineT, st.inl.lookup i with
+    | some (.app (.tyc d _) _), _ | _, some (.app (.vc d _ _) _) => d == md
+    | _, _ => false
+  if !isMacro then return none
+  if st.ers.getD i0 true then throw s!"`{showName h}` is an erased macro, and only a non-erased one is expanded"
+  return (st.settledVal i).map (some i0, ·)
+
+def macroExt (sc : Scope) (P : Prog) (env : Tm) (gid j : Nat) (G : Group) (F : FnDef) (xs : List Tm) :
+    M (Option (List Tm)) := do
+  let st ← get
+  let some name := st.primFns.lookup (gid, j) | return (P.nativeExt env gid j G F xs).join
+  let tk := Tm.tok
+  let xs := (xs.zip (F.tele.ers.take F.np)).filterMap fun (x, e) => if e then none else some x
+  let outs (vs : List Tm) : M (Option (List Tm)) := pure (some (spread (F.tele.ers.drop F.np) vs))
+  let handle (t : Tm) : M HInfo := do
+    let hs := (← get).handles
+    match Prog.natOf P.nat t >>= (hs[·]?) with
+      | some h => pure h
+      | none => throw s!"`{name}` was given a handle the expander did not make"
+  let natArg (t : Tm) : M Nat := match Prog.natOf P.nat t with
+    | some n => pure n
+    | none => throw s!"`{name}` was given a number it cannot read"
+  let lit (a : String) : M Tm := do match litHandle (← get) a with
+    | some h => newHandle h
+    | none => throw s!"`{name}`: unreachable"
+  match name, xs with
+  | " settled-of", [k] => outs [k]
+  | "gensym", [_, _] =>
+    modify fun st => { st with gensyms := st.gensyms + 1 }
+    outs [tk, .nat (← get).gensyms]
+  | "intern-nat", [_, n] => outs [tk, ← lit (toString (← natArg n))]
+  | "intern-char", [_, c] => outs [tk, ← lit s!"#\\x{hex2 (← natArg c)}"]
+  | "intern-string", [_, s] => outs [tk, ← lit ("\"" ++ (← strOfS P s))]
+  | "mint-settled", [_, _, v] => do
+    let lit : Option String := (Prog.natOf P.nat v).map toString <|>
+      (P.strT P.nat v).map fun bs => "\"" ++ String.fromUTF8! (ByteArray.mk (bs.map (·.toUInt8)).toArray)
+    let spD := (← get).special
+    let special : Option String := match P.view v with
+      | .app (.vc d c _) _ => if d == spD then specialNames[c]? else none
+      | _ => none
+    if let some x := special then
+      if let some h ← globalHandle x 1 then return ← outs [tk, h]
+    match lit.bind (litHandle (← get)) with
+    | some h => outs [tk, ← newHandle h]
+    | none => do
+      let x := s!" m{(← get).handles.size}"
+      modify fun st => { st with minted := (x, v) :: st.minted }
+      outs [tk, ← newHandle ⟨1, .atom x, .lvl (← get).handles.size, .nil, some v⟩]
+  | "settled-erase", [c] => do outs [← newHandle { ← handle c with mult := 0 }]
+  | "settled-type", [c] => do
+    let h ← handle c
+    outs [← newHandle { mult := 0, syn := .atom "_", den := h.ty, ty := .univ, val := none }]
+  | "settled-mult", [c] => do outs [P.conS "Mult" (["MErased", "MMany", "MUnique"].getD (← handle c).mult "MErased") []]
+  | "settled-value", [c] => match (← handle c).val with
+    | some v => outs [v]
+    | none => throw "`settled-value` of a handle whose value the expander does not know is not supported"
+  | "settled-eq", [_, p, q] => do
+    let (a, b) := (← handle p, ← handle q)
+    let st ← get
+    let tyEq := a.ty == .nil || b.ty == .nil || st.canonH a.ty == st.canonH b.ty
+    outs [tk, if st.canonH a.den == st.canonH b.den && tyEq then P.conS "Maybe" "Some" [P.conS "JMEq" "JMRefl" []]
+      else P.conS "Maybe" "None" []]
+  | "resolve", [_, s] => do
+    let r ← match P.fieldsS s with
+      | some ("SName", [x]) => match sc.lookup (← strOfS P x) with
+        | some (.fv i) | some (.fn i _ _) | some (.ctor i) =>
+          if st.isSettled (st.canonIdx i) then do
+            let m := if st.ers.getD i true then 0 else if st.uq.contains i then 2 else 1
+            pure (P.conS "Resolution" "RSettled" [← entryHandle i m])
+          else pure (P.conS "Resolution" "RHypothetical" [])
+        | some _ => pure (P.conS "Resolution" "RHypothetical" [])
+        | none => match ← globalHandle (← strOfS P x) 0 with
+          | some h => pure (P.conS "Resolution" "RSettled" [h])
+          | none => pure (P.conS "Resolution" "RUnbound" [])
+      | _ => pure (P.conS "Resolution" "RUnbound" [])
+    outs [tk, r]
+  | _, _ => throw s!"`{name}` is not supported by the Lean runner"
+
+def expandMacro (sc : Scope) (f : Tm) (args : List Sx) : M (List Sx) := do
+  let st ← get
+  if st.expansions ≥ 10000 then throw "more than 10000 macro expansions"
+  set { st with expansions := st.expansions + 1 }
+  let P := st.prog .dead
+  let .clo env gid j := f | throw "a macro's function is not known here"
+  let some G := P.groups[gid]? | throw "a macro's function is not known here"
+  let some F := G.fns[j]? | throw "a macro's function is not known here"
+  let argv := listS P (← args.mapM (rawOf P))
+  let ρ := env.toList ++ closures env.toList gid G ++ spread (F.tele.ers.take F.np) [.tok, P.conS "Pos" "NoPos" [], argv]
+  let outs ← runAM P (m := M) (fun _ => throw "stuck: a macro's function")
+    (fun _ _ => throw "a macro's function performs a `world-do`") (macroExt sc P) 10000000 ρ.toArray F.body
+  let some out := outs.getLast? | throw "stuck: a macro's function"
+  (← listOfS P out).mapM (sxOf P)
+
+def mwInScope (sc : Scope) : M (Option (String × Ref)) := do
+  let st ← get
+  let some md := st.decls.findIdx? (·.name == "MacroWorld") | return none
+  return sc.find? fun
+    | (_, .fv j) => match (st.known.lookup j).map st.inlineT with
+      | some (.app (.tyc d _) _) => d == md
+      | _ => false
+    | _ => false
+
+def unhide (sc : Scope) : Sx → Scope × Sx
+  | .list (.atom a :: args) => if a.startsWith "\x04" then
+      let x := (a.drop 1).toString
+      (sc.filter (·.1 != x), .list (.atom x :: args))
+    else (sc, .list (.atom a :: args))
+  | e => (sc, e)
+
+def litsScoped {α β : Type} (pre : M α) (k : α → M β) : M β := do
+  let st0 ← get
+  let r ← k (← pre)
+  unless st0.top do modify fun st => { st with lits := st0.lits, strs := st0.strs, chars := st0.chars }
+  return r
+
 def declareWorld (e : Sx) : M Unit := do
   let st ← get
   if (st.adts.lookup "World").isNone && e.litForms.contains (.atom "World") then
@@ -1263,6 +1581,33 @@ def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
   | none => pure ()
   modify fun st => { st with uses := (i, m == .uniq) :: st.uses.filter (·.1 != i) }
 
+partial def binderNames : Sx → List String
+  | .atom _ => []
+  | .list xs =>
+    let here := match xs with
+      | [.atom m, .atom x] | [.atom m, _, .atom x] | [.atom m, _, _, .atom x] =>
+        if ["many", "erased", "unique", "subterm"].contains m then [x] else []
+      | _ => []
+    here ++ xs.flatMap binderNames
+
+partial def preExpand (sc : Scope) (shadow : List String) : Sx → M (List Sx)
+  | .atom a => pure [.atom a]
+  | .list xs => do
+    let call (ys : List Sx) : M (Option (List Sx)) := do
+      let (shared, ys) := match ys with
+        | .list [.atom "share", .atom h] :: args => (true, Sx.atom h :: args)
+        | ys => (false, ys)
+      let .atom h :: args := ys | return none
+      if shadow.contains h then return none
+      let some (i, f) ← macroOf sc h | return none
+      if let some i := i then useVar i .many shared
+      let forms ← expandMacro (shadow.map (·, Ref.bnd 0) ++ sc) f args
+      return some (← forms.flatMapM (preExpand ((← get).hnames ++ sc) shadow))
+    if let some out ← call xs then return out
+    let ys ← xs.flatMapM (preExpand sc shadow)
+    if ys.head? != xs.head? then if let some out ← call ys then return out
+    return [.list ys]
+
 def mintDele (i t : Nat) : M (Stmt × Nat) := do
   let [k] ← fresh [true] | throw "fresh"
   let uq := (← get).uq
@@ -1386,6 +1731,25 @@ def pragma (sc : Scope) (p : String) : M Unit := do
 
 mutual
 partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) : M (List Stmt × List Tm) := do
+  let (sc, e) := unhide sc e
+  if let .list (.list (.atom h :: hargs) :: args) := e then
+    if let some (i, f) ← macroOf sc h then
+      if let some i := i then useVar i .many
+      let [form] ← expandMacro sc f hargs | throw "a macro call here returns exactly one form"
+      return ← litsScoped (internLits form) fun ss => do
+        let (ss2, ts) ← elabExpr ((← get).hnames ++ sc) want exp (.list (form :: args))
+        return (ss ++ ss2, ts)
+  if let .list (.atom h :: args) := e then
+    if mwPrims.contains h && (match sc.lookup h with | some (.fn ..) => true | _ => false) &&
+        args.head? != some (.atom " mw") then
+      let some (_, r) ← mwInScope sc | throw s!"`{h}` outside a macro's function is not supported"
+      return ← elabExpr ((" mw", r) :: sc) want exp (.list (.atom h :: .atom " mw" :: args))
+    if let some (i, f) ← macroOf sc h then
+      if let some i := i then useVar i .many
+      let [form] ← expandMacro sc f args | throw "a macro call here returns exactly one form"
+      return ← litsScoped (internLits form) fun ss => do
+        let (ss2, ts) ← elabExpr ((← get).hnames ++ sc) want exp form
+        return (ss ++ ss2, ts)
   match ← resolveHead sc (headUse want) e with
   | .list [.atom "\x03var", .atom x] => do let t ← look sc 0 x; useTm t want; return ([], [t])
   | e@(.list (hd@(.list _) :: args)) => do
@@ -1659,6 +2023,35 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       if !(← erasedPos want) && (← get).ers.getD i true then
         throw s!"`(slot-of {showName x})` is erased, as `{showName x}` is, and stands in a non-erased position"
       return ([], [← slotOf i])
+    else if h == " hty" then
+      return ([], [← elabTm sc 0 e])
+    else if h == " axiom" then
+      let [T] := args | throw "unreachable"
+      let A ← elabTm sc 0 T
+      let er ← erasedPos want
+      let [j] ← fresh [er] | throw "fresh"
+      note j A
+      return ([.prim (.axm A) er], [.fv j])
+    else if h == "settled-of" && (sc.lookup h).isNone then
+      let [.atom m, .atom x] := args | throw "hint: usage: (settled-of <multiplicity> <name>)"
+      let some mult := ["erased", "many", "unique"].idxOf? m | throw s!"settled-of: {m} is not a multiplicity"
+      let callOf (k : Nat) : Sx := .list [.atom " settled-of", .atom (toString k),
+        .list [.atom (["MErased", "MMany", "MUnique"].getD mult "MErased")], .list [.atom " hty", .atom (toString k)], .atom x]
+      let run (k : Nat) : M (List Stmt × List Tm) := litsScoped (internLits (callOf k)) fun ss => do
+        let (ss2, ts) ← elabExpr sc want exp (callOf k)
+        return (ss ++ ss2, ts)
+      if (sc.lookup x).isNone then
+        if let some (.nat k) ← globalHandle x mult then return ← run k
+      let i0 ← match sc.lookup x with
+        | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure i
+        | _ => throw s!"unbound name {showName x}"
+      let i := st.canonIdx i0
+      unless st.isSettled i || (match sc.lookup x with | some (.fn ..) => true | _ => false) do
+        throw s!"`{showName x}` is `Hypothetical`, and a handle names a `Settled` entry"
+      let declared := if st.ers.getD i0 true then 0 else if st.uq.contains i0 then 2 else 1
+      if mult != 0 && mult != declared then throw s!"`{showName x}` is not declared `{m}`"
+      let .nat k ← entryHandle i mult | throw "unreachable"
+      run k
     else if h == "world-do" && (sc.lookup h).isNone then
       let [A, w, r] := args | throw "hint: usage: (world-do <type> <world> <request>)"
       unless (← get).pre && ((← get).firstAdt "Request").isSome do throw "`world-do` needs the prelude's `Request`"
@@ -1866,6 +2259,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         let er ← erasedPos want
         let fm := fun (m : Mode) => if er then .er else if m == .uniq && want != [.uniq] then Mode.many else m
         let ls := ((st.lifts.lookup d).getD []).map Tm.fv
+        if st.macroD == some d then modify fun st => { st with hasMacros := true }
         let (ss, ts) ← elabArgs sc args (((fieldMds sig).drop ls.length).map fm) (peelTele sig ls)
         return (ss, [.app (.vc d c (← liftTm d)) (.ofList ts)])
       | _, _ =>
@@ -2102,6 +2496,15 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
+  if let e :: rest := items then
+    let direct ← match e with
+      | .list (.atom h :: _) | .list (.list [.atom "share", .atom h] :: _) =>
+        pure (!(binderNames e).contains h && (← macroOf sc h).isSome)
+      | _ => pure false
+    if (← get).top && (← get).hasMacros && !(← get).inPrelude && !direct && !(← get).expanded.contains e then
+      let es ← preExpand sc (binderNames e) e
+      modify fun st => { st with expanded := es }
+      return ← elabSeq ((← get).hnames ++ sc) want exp (es ++ rest)
   let n0 := (← get).n
   let ss ← match items with
     | e :: _ => if (← get).top then do declareWorld e; internLits e else pure []
@@ -2121,6 +2524,27 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
     else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
   | e :: rest =>
+    let (sc, e) := unhide sc e
+    let shared := match e with
+      | .list (.list [.atom "share", .atom h] :: _) => (sc.lookup h).isSome && (h ∉ binderNames e)
+      | _ => false
+    let e := match e, shared with
+      | .list (.list [.atom "share", .atom h] :: args), true => .list (.atom h :: args)
+      | e, _ => e
+    if let .list (.list (.atom h :: hargs) :: args) := e then
+      if let some (i, f) ← macroOf sc h then
+        if let some i := i then useVar i .many
+        let [form] ← expandMacro sc f hargs | throw "a macro call here returns exactly one form"
+        return ← litsScoped (if (← get).top then pure [] else internLits form) fun ssL => do
+          let (ss2, ts) ← elabSeq ((← get).hnames ++ sc) want exp (.list (form :: args) :: rest)
+          return (ss ++ ssL ++ ss2, ts)
+    if let .list (.atom h :: args) := e then
+      if let some (i, f) ← macroOf sc h then
+        if let some i := i then useVar i .many shared
+        let forms ← expandMacro sc f args
+        return ← litsScoped (if (← get).top then pure [] else internLits (.list forms)) fun ssL => do
+          let (ss2, ts) ← elabSeq ((← get).hnames ++ sc) want exp (forms ++ rest)
+          return (ss ++ ssL ++ ss2, ts)
     let e ← resolveHead sc (headUse want) e
     if let some (ss1, e') ← dispatchComputed sc e then
       let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
@@ -2163,13 +2587,17 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     unless (← get).inPrelude do throw "only the prelude may write `def-opaque`"
     let base := (← get).decls.size
     declareAdts sc (bs.map fun | .list (h :: _) => .list [h, .atom "enum"] | b => b)
-    modify fun st => { st with decls := st.decls.mapIdx fun d D => if base ≤ d then { D with opq := true } else D }
-    elabSeq sc want exp rest
+    modify fun st => { st with decls := st.decls.mapIdx fun d D =>
+      if base ≤ d && !emptyNames.contains D.name then { D with opq := true } else D }
+    let decl := bs.any fun | .list (.list (.atom "Settled" :: _) :: _) => true | _ => false
+    if decl then modify fun st => { st with primPending := " settled-of" :: st.primPending }
+    elabSeq sc want exp ((if decl then [settledOfFn] else []) ++ rest)
   | .list (.atom "def-prim" :: bs) :: rest => do
     unless (← get).inPrelude do throw "only the prelude may write `def-prim`"
+    let mut synth : List Sx := []
     for b in bs do
-      let .list [.list xs] := b | throw "malformed def-prim"
-      let (md, xs) ← splitMd true xs
+      let .list [.list xs0] := b | throw "malformed def-prim"
+      let (md, xs) ← splitMd true xs0
       let .atom p :: .atom ":" :: es := xs | throw "malformed def-prim"
       unless primNames.contains p do throw s!"`{p}` names no primitive the compilers implement"
       if ((← get).prims.lookup p).isSome then throw s!"a second `def-prim` for `{p}`"
@@ -2178,13 +2606,30 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         continue
       let (ps, rs) ← splitArrow es
       if ps.any (· matches .list (.atom "subterm" :: _)) then throw "`subterm` is not allowed here"
+      let empty := ps.findSome? fun
+        | .list [_, .list (.atom T :: _), .atom x] => if emptyNames.contains T then some x else none
+        | _ => none
+      let opqRet : Option Sx := match rs with
+        | [.list [_, T@(.list (.atom "Settled" :: _)), _]] => some T
+        | _ => none
+      let fn : Option (List Sx × Sx) :=
+        if let some x := empty then some (xs0, .list [.atom "match", .atom "erased", .atom x, .atom "_"])
+        else if mwPrims.contains p then
+          let (m0, rest0) := xs0.splitAt (xs0.length - es.length)
+          some (m0 ++ [.list [.atom "erased", .list [.atom "MacroWorld"], .atom "hidden-mw"]] ++ rest0,
+            .list [.atom "match", .atom "erased", .atom "hidden-mw", .atom "_"])
+        else opqRet.map fun T => (xs0, .list [.atom " axiom", T])
+      if let some (sig, body) := fn then
+        synth := synth ++ [.list [.atom "def-fns", .atom "_", .list [.list sig, body]]]
+        modify fun st => { st with primPending := p :: st.primPending, prims := (p, .nil, 0) :: st.prims }
+        continue
       unless md.isEr || (← entryMds true rs).all (·.isEr) do
         throw s!"the compilers have no implementation of `{p}`, so its returns must be erased"
       let tele ← elabTele sc 0 true (ps ++ rs)
       let tele := if md.isEr then setErs tele (tele.ers.map fun _ => true) else tele
       let np := (← entryMds true ps).length
       modify fun st => { st with prims := (p, tele, np) :: st.prims }
-    elabSeq sc want exp rest
+    elabSeq sc want exp (synth ++ rest)
   | .list (.atom "def-adts" :: bs) :: rest => do
     let base := (← get).decls.size
     declareAdts sc bs
@@ -2509,6 +2954,9 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
         if ok == some false then
           warn s!"the extern `{showName f}` is not the model the runner's native `{showName f}` is proved against, so it runs its model"
     let gid := (← get).groups.length
+    let st0 ← get
+    let prs := sigs.zipIdx.filterMap fun ((f, _), j) => if st0.primPending.contains f then some ((gid, j), f) else none
+    set { st0 with primFns := st0.primFns ++ prs, primPending := st0.primPending.filter fun p => !prs.any (·.2 == p) }
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }

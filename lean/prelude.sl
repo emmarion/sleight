@@ -1392,6 +1392,9 @@
 
 (def-opaque $ (MacroWorld : -> Type))
 
+(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
+
 (def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
@@ -1403,6 +1406,22 @@
   (many MUnique : -> (Mult)))
 
 (def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
+
+(def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) Type T) h)))
+
+(def-prim $ (many settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) T t) h)))
+
+(def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
+    (erased (Mult) mb) (erased Type B) (erased B b)
+    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+
+(def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many m is r)))
+
+(def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
 
 (def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
 
@@ -1423,16 +1442,48 @@
     (erased (Placed s T v) p) (erased (Placed s T v) q) ->
     (erased (Eq (Placed s T v) p q) e)))
 
+(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
+
+(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
+
+(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
+
+(def-prim $ (many mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)))
+
+(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)))
+
 (def-adts $ (Symbol : -> Type)
   enum
   (many SName : (many (String) s) -> (Symbol))
   (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
+(def-fns _ $ (many symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r))
+  (match many x _
+    ((SName s)
+      (let-match many y (SName t) (else (None _)))
+      (match many (str-cmp s t) _ ((CEq _ _ _) (Some _ $ Refl _ _)) (else (None _))))
+    ((SGen n s g)
+      (let-match many y (SGen m t h) (else (None _)))
+      (let-match many (nat-cmp n m) (CEq _ _ _) (else (None _)))
+      (let-match erased (gensym-unique n s t g h) (JMRefl _ _))
+      (Some _ $ Refl _ _))))
 
 (def-adts $ (Resolution : -> Type)
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
   (many RHypothetical : -> (Resolution))
   (many RUnbound : -> (Resolution)))
+
+(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+    (unique mw is mw2 at mw) (many (Resolution) r)))
+
+(def-prim $ (many read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+    (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)))
 
 (def-adts $ (Raw : -> Type)
   enum extern

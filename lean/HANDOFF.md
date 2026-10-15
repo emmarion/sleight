@@ -372,11 +372,13 @@ computes.
    without looking, and `BranchOK.fixedOut` is refused.
 8. `dump-context` shows a type only where the elaborator knows it, which
    is not the case for a `let` binder written without one.
-9. Macros and handles (sections 62 to 65), which about fifty tests
-   need. The prelude's `MacroWorld` primitives (`intern-nat` and the
-   rest) return non-erased values, while the core types a `def-prim`
-   only as an erased axiom; and the elaborator would run a macro's
-   function as it elaborates and read its `Raw` result back as syntax.
+9. Macros and handles (sections 62 to 65), which `lean/README.md`
+   describes. What is left: positions (a macro sees `NoPos`), `read-file`,
+   `mint-settled-erased`, `settled-mult` and `settled-value` outside a
+   macro's function (handles are tokens at run time), the refusal of a
+   handle used against its multiplicity, `resolve` of a name a pattern
+   binds, a minted macro bound by a `let`, and `settled-eq` on terms the
+   reader's canonicalization does not make identical.
 10. A computed head inside a type other than a variable or `(share x)`
    whose settled value is a `Special` constructor: types are elaborated
    by `elabTm`, which runs no statements.
