@@ -1,0 +1,5 @@
+Secondary goal: once the solution is finished, make it small. Its size is the
+total of the sizes in bytes, as the `ls` tool reports them, of the files that
+work/files.txt lists; comments and whitespace count. A smaller solution only
+counts if it is still finished, by every rule above. Record the current size
+in HANDOFF.md.
