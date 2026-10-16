@@ -511,6 +511,11 @@ def Ctx.slotEq (Γ : Ctx) : Tm × Tm → Ctx
 def Ctx.forceSlots (Γ : Ctx) (eqs : List (Tm × Tm)) : Ctx :=
   (((pairsOf (eqs.map fun e => (Γ.canon e.1, Γ.canon e.2))).getD []).filter fun e => e.1.isSlot || e.2.isSlot).foldl Ctx.slotEq Γ
 
+def Ctx.opnCtx (Γ : Ctx) (m : Nat) (oe : Bool) (σ' : Nat → Option Tm) (H cs : Tm) : Ctx :=
+  let F := ({ Γ with opened := (m, oe) :: Γ.opened, σ := σ' } : Ctx).forceSlots
+    (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList))
+  { Γ with opened := (m, oe) :: Γ.opened, σ := F.σ, ς := F.ς }
+
 def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
@@ -797,7 +802,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.toList.Nodup →
       unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' →
-      CoreTy b { Γ with opened := (m, oe) :: Γ.opened, σ := σ' } rest rets → CoreTy b Γ (.chk (.opn oe) (.fv m) x rest) rets
+      CoreTy b (Γ.opnCtx P m oe σ' H cs) rest rets → CoreTy b Γ (.chk (.opn oe) (.fv m) x rest) rets
   | chkOpnFail : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs →
       (¬ cs.toList.Nodup ∨ unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .contra) →

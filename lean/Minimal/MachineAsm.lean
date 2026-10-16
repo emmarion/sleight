@@ -485,7 +485,7 @@ theorem checkCore_opn {b : Nat} {Γ : Ctx} {oe : Bool} {m : Nat} {x : Tm} {rest 
     ∃ u nt ex ph H cs σ' h', (Γ.tys[m]?).map Γ.canon = some (.mtbl u nt ex ph H cs) ∧
       unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' ∧
-      checkCore P b { Γ with opened := (m, oe) :: Γ.opened, σ := σ' } rest rs = .ok ⟨rets, h'⟩ := by
+      checkCore P b (Γ.opnCtx P m oe σ' H cs) rest rs = .ok ⟨rets, h'⟩ := by
   cases rs <;> (first | rw [checkCore.eq_14] at hck | rw [checkCore.eq_15] at hck)
   all_goals split at hck <;> try cases hck
   all_goals split at hck <;> try cases hck
@@ -934,7 +934,7 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
     · obtain ⟨x, rfl⟩ := ha
       rcases checkCore_opn hck with ⟨M, u, nt, ex, ph, H, cs, hM, hc, hfl⟩ | ⟨u, nt, ex, ph, H, cs, σ', h', hm', hu, hr'⟩
       · exact (hE.openFail hP hM hc hfl).elim
-      · exact step { G with Γ := { G.Γ with opened := (x, oe) :: G.Γ.opened, σ := σ' } } h' hf hr' (hE.opened hP hu)
+      · exact step { G with Γ := G.Γ.opnCtx P x oe σ' H cs } h' hf hr' (EnvOK.opnCtx (hE.opened hP hu))
           rfl rfl rfl rfl rfl (machine_opn hm' hu)
           (fun U K hU => by rw [usesCore] at hU; simp only [hm', hu] at hU; exact isS hU)
     · rw [checkCore.eq_16 _ _ _ _ _ _ _ _ (fun m e => ha ⟨m, e⟩)] at hck; cases hck

@@ -801,7 +801,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
           let ⟨hn⟩ ← need cs.toList.Nodup "open-adt: a constructor is listed twice, which contradicts what is open"
           match hu : unify Γ.n (Γo.atoms P) Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
           | .ok σ' => do
-            let ⟨R, hr, eq⟩ ← checkCore b { Γo with σ := σ' } r rets
+            let ⟨R, hr, eq⟩ ← checkCore b (Γ.opnCtx P m oe σ' H cs) r rets
             .ok ⟨R, by rw [hd]; exact .chkOpn hM hc hn hu hr, eq⟩
           | .contra => .error "open-adt: the Matchable contradicts what is open"
           | .unknown => .error "open-adt: cannot decide whether the Matchable agrees with what is open"
