@@ -1,7 +1,7 @@
 ; expect: 1
 ; coercible-ctor reads no Matchable, so it needs none opened and refuses no phantom constructor: a coerce
-; cashes its proof only for a non-erased source, which no phantom constructor heads (sections 14, 33; the
-; owner's decision in chat, ASSUMPTIONS 141). The first proof is built through a first-class C with no
+; cashes its proof only for a non-erased source, which no phantom constructor heads (sections 14, 33).
+; The first proof is built through a first-class C with no
 ; Matchable in sight; the second relates two Ghost-headed values, and no coerce could use it.
 
 (def-adts $ (T : -> Type)

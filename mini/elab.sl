@@ -297,7 +297,7 @@
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (CanonAt ctx1 ret c) cr) (erased (BadFormerRet ctx1 pids c) br)
        -> (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr (RBadReturn)))))
   ; A TValCtor former's return is an application of a type constructor in scope, not of one of the former's own
-  ; binders (ASSUMPTIONS 80); the four ways it is not.
+  ; binders (DESIGN.md section 11); the four ways it is not.
   ((BadFormerRet : ((Ctx) ctx) ((List (Nat)) pids) ((Term) c) -> Type)
     enum
     (many BFNotApp : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) c) (erased (NotTyApp c) p) -> (BadFormerRet ctx pids c))
@@ -341,7 +341,7 @@
        -> (SnocId (Cons (Maybe (Nat)) y ys) x (Cons (Maybe (Nat)) y out))))
   ; Arguments of the grammar against a telescope: a type entry wants the argument's type the same as the
   ; entry's, instantiated; an is entry wants the argument itself the same as the entry's expression
-  ; (ASSUMPTIONS 20).
+  ; (DESIGN.md section 12).
   ((ElabTermArgs : ((Ctx) ctx) ((List (Maybe (Term))) acc) ((List (Entry)) tele) ((List (Raw)) args) ((ArgsOut) out) -> Type)
     enum
     (many ETANil : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) -> (ElabTermArgs ctx acc (Nil (Entry)) (Nil (Raw)) (ArgsOk (Nil (Term)))))

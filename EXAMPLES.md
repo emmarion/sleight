@@ -123,7 +123,7 @@ that the test does not make is a mistake in this file.
   does when the decreasing argument is a field.
 - [`tests/vec_map.sl`](tests/vec_map.sl) and [`tests/binder_clash.sl`](tests/binder_clash.sl) — dependent motives checked
   under each branch's forced facts, and a branch refuted because a
-  constructor's index mentions its own `Fn` binder ([ASSUMPTIONS 73](ASSUMPTIONS.md)).
+  constructor's index mentions its own `Fn` binder ([DESIGN.md section 7](DESIGN.md)).
 - [`tests/absurd.sl`](tests/absurd.sl), [`tests/absurd_proof.sl`](tests/absurd_proof.sl), [`tests/transparent_union.sl`](tests/transparent_union.sl) —
   absurd functions and branches, and a union whose other constructor is
   refuted by proof so the type is represented as its one field.

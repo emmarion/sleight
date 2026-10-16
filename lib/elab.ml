@@ -394,7 +394,7 @@ let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta te
   in
   (env, List.rev fresh)
 
-(* Printing a value against its type (section 27's printed final; ASSUMPTIONS 184). The three literal types print
+(* Printing a value against its type (section 27's printed final; section 45). The three literal types print
    as the literals they read back from (Literal.spell); a value whose type names a readable Matchable prints as
    its constructor -- read from the tag where there is one, and the sole non-phantom constructor where there is
    no choice -- over its fields, each erased one printing as `_`. Everything else prints `_`, so the walk is total
@@ -660,7 +660,7 @@ let listed_ctors env loc tid =
   List.filter_map (fun (_, c) -> match c with Var c -> (try Some (c, ctor_of env loc c) with Contradiction _ | Error _ | Not_found -> None) | _ -> None) cs
 let listed_entry named ct = Option.map fst (List.find_opt (fun (_, ct') -> ct'.V.cid = ct.V.cid) named)
 
-(* The constructor a value prints as (ASSUMPTIONS 184), chosen off the type's opened Matchable and never by
+(* The constructor a value prints as (section 45), chosen off the type's opened Matchable and never by
    refuting candidates: the tag where the type is tagged, else the one non-phantom constructor where the type has
    exactly one. `adt.ctors` is already the non-phantom list, indexed by discriminant. *)
 let shown_ctor env loc ty v =

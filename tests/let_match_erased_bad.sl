@@ -1,6 +1,6 @@
 ; error: `Matchable` for `T` is erased
 ; let-match is a match: outside run position, at many, it dispatches at runtime through its Matchable, so an
-; erased opened one is refused as it is for match (ASSUMPTIONS 142). Accepted, this compiled to code reading
+; erased opened one is refused as it is for match (sections 8, 27). Accepted, this compiled to code reading
 ; the erased m and failed when run.
 
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))

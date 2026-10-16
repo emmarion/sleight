@@ -776,7 +776,7 @@
   (let-match erased c (MkCovRev n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 acc2 ids2 le cv))
   (MkCovRev _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ le (CvRCons n0 e0 acc x ids e1 cv)))
 
-; A TValCtor former's return (ASSUMPTIONS 80): the four ways the canonical return is not an application of a
+; A TValCtor former's return (DESIGN.md section 11): the four ways the canonical return is not an application of a
 ; type constructor other than the former's own binders.
 (def-adts
   ((TyAppDec : ((Term) c) -> Type)

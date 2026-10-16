@@ -1235,7 +1235,7 @@
           (let-match many (type-adt env ty) (Some _ adt)
             ((None _) (values memo1 $ RStr "\"_\"")))
           ; the tag where there is one, else the sole non-phantom constructor; a union with
-          ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
+          ; several has no way to choose and prints `_` (section 45)
           (let ((many usable))
             (match many (adt-tagged adt) (((List $ Ctor) _))
               ((BTrue) (adt-ctors adt))
@@ -1268,7 +1268,7 @@
         ((BTrue) (notail $ show-block-fields k envb2 ctele fids memo 0 $ Nil _))
         ((BFalse) (values memo $ Nil _))))
     ; Ffi_core.show_app is the one definition the interpreter, an extracted program and this
-    ; output share, so `$` is not decided again here (ASSUMPTIONS 184)
+    ; output share, so `$` is not decided again here (section 45)
     (let ((many (Rope) text))
       (rcat4 (RStr "(Ffi_core.show_app ") (quoted cname) (rwrap " [ " (rjoin shown "; ") " ])") $ REmpty))
     (let ((many memo3) (many more)) $ notail $ show-arms k env ty rest memo2 tagged)
@@ -1294,7 +1294,7 @@
     ((Nil _) (REmpty))
     ((Cons _ _ _) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))
 
-; A final that is a constructor prints `_`, as the reference does (ASSUMPTIONS 184).
+; A final that is a constructor prints `_`, as the reference does (section 45).
 (def-fns _ $ (many named-final : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Env) env) -> (many (Maybe $ String) r))
   (let ((erased ns) (many b) (erased sf)) $ store-read Block hs hp v)
   (let-match many b (BCtorFn _ _) (else (None $ String)))

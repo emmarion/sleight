@@ -1,4 +1,4 @@
-; ASSUMPTIONS 73: a constructor's index mentions its own Fn binder where the scrutinee's has a closed variable, so the branch is refuted.
+; Section 7: a constructor's index mentions its own Fn binder where the scrutinee's has a closed variable, so the branch is refuted.
 
 (def-lvl L)
 (def-adts

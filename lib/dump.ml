@@ -47,7 +47,7 @@ let unique_status env x =
      | None -> [ "unique: live, neither consumed nor shared on this path" ])
     @ if List.mem x env.captures then [ respell env "unique: closed over by the enclosing `def-fns`, so usable here only erased or through `share`" ] else []
 
-(* A value the final's printer can spell (ASSUMPTIONS 184); a function or a Matchable adds nothing to its kind. *)
+(* A value the final's printer can spell (section 45); a function or a Matchable adds nothing to its kind. *)
 let value ~show_value env l x =
   match (entry env x).state, (entry env x).mult with
   | Settled v, (Many | Unique) -> (match show_value env l (type_of env x) v with "_" -> [] | s -> [ "= " ^ s ])

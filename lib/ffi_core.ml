@@ -35,7 +35,7 @@ let str_of ~z ~slice ~str = function
 (* The source spelling a printed literal reads back from (lib/literal.ml), shared with extracted programs: a
    character bare where the reader's word syntax admits it, hexadecimal otherwise, and a string escaped the way
    the reader unescapes. A Nat spells as Z.to_string. *)
-(* An application's rendering (ASSUMPTIONS 184): a last argument that is itself an application keeps its own parens
+(* An application's rendering (section 45): a last argument that is itself an application keeps its own parens
    off and is written with `$` (DESIGN 2), so a right spine ends in no pile of them. Nothing else a value prints as
    opens with `(` -- a numeral, a character, a string, `_` and a constructor name all do not -- so the test names an
    application. One definition serves the interpreter, an extracted program and slc's output, as lit_char does. *)

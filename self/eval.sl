@@ -1044,7 +1044,7 @@
       ((B2 b1) (let ((many env3) (many t)) $ notail $ bin-term b1 env2) (values env3 $ Cons _ t $ Nil _))))
   (values env3 $ TApp (TVar c) args))
 
-; The bijective base-2 spelling of a number as a term over the prelude's Bin (ASSUMPTIONS 50).
+; The bijective base-2 spelling of a number as a term over the prelude's Bin (section 45).
 (def-fns _ $ (many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t))
   (bin-term (bin-of-nat n) env))
 
@@ -1092,7 +1092,7 @@
 (def-fns _ $ (many char-key : (many (Nat) code) -> (many (String) k))
   (rope-str $ lit-char-rope code))
 
-; Interns a character literal (ASSUMPTIONS 52): (MkChar (MkU8 n p)) over its code's numeral, transparent down
+; Interns a character literal (section 45): (MkChar (MkU8 n p)) over its code's numeral, transparent down
 ; to the opaque n.
 (def-fns _ $ (many intern-char-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) code) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))

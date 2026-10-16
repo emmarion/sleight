@@ -97,7 +97,7 @@ claim in this file that the tests do not make is a mistake in this file.
   stuck while `ETValCtor` accepted any type as a `ValCtor` former's
   return and `UAssign` related a variable to a term with no check on
   their types (`tests/mini_untyped_rule.sl`). The owner then restored
-  ASSUMPTIONS 80 (the return canonicalizes to an application of a type
+  DESIGN.md section 11's rule (the return canonicalizes to an application of a type
   constructor not among the former's own binders), which refuses that
   program, and had `UAssign` equate the variable's type with the term's
   next, as `UAlias` already did, so that every rule unification mints
@@ -131,7 +131,7 @@ claim in this file that the tests do not make is a mistake in this file.
   than the full language, which brackets a signature or a binder list
   whole rather than its halves: `(Fn L (params) (rets))`, `(TyCtor (params))`,
   `(ValCtor (params) ret)` (the return an application of a type
-  constructor other than the former's own binders, ASSUMPTIONS 80), `(def-fns L (f (params) (rets) items...)...)`,
+  constructor other than the former's own binders, DESIGN.md section 11), `(def-fns L (f (params) (rets) items...)...)`,
   `(def-adts (T (params) (C (fields) ret)...)...)`,
   `(let (binders) items...)`, `(match s (rets) ((C fields...) items...)...)`;
   an entry is `(T x)`, `(subterm T x)` or `(e is x)`; a binder `x`, `(T x)`

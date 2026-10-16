@@ -694,7 +694,7 @@ it is `Settled`, and its `is` rule.
   call. A constructor value reached any other way is applied after a
   `let` binder written with its type. A `ValCtor`'s return
   must be an application of a type constructor that is not one of its
-  own fields (ASSUMPTIONS.md 80). In the core every
+  own fields (DESIGN.md section 11). In the core every
   application is one former, `Tm.app`, whose head is a declared type
   constructor, a declared value constructor or a variable, and is typed
   through its head's type; a value of a `ValCtor` type is a declared

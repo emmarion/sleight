@@ -1113,7 +1113,7 @@
   (let ((many env4) (many mid)) $ prelude-id env3 $ match many mode _ ((Erased) "MErased") ((Many) "MMany") ((Once) "MUnique"))
   (values env4 y $ TApp (TVar cid) $ Cons _ (TApp (TVar mid) $ Nil _) $ Cons _ (minted-type env4 y) $ Cons _ (minted-is y) $ Nil _))
 
-; A name read through its alias (ASSUMPTIONS 78), which must resolve to a variable.
+; A name read through its alias (section 8), which must resolve to a variable.
 (def-fns _ $ (many named : (many (Env) env) (many (Syn) raw) (many (String) what) -> (many (Env) r) (many (Nat) x))
   (let ((many env2) (many x)) $ var-of-raw env raw what)
   (match many (canon-env env2 $ TVar x) _
@@ -1574,7 +1574,7 @@
     ((Once) (values (Cons _ missing codes) (PkOnce _ rest missing codes pk)))
     ((Erased) (values codes (PkErased _ rest codes pk)))))
 
-; Binds fresh ids for the many returns and keeps those the position takes many (ASSUMPTIONS 39): the ids
+; Binds fresh ids for the many returns and keeps those the position takes many (sections 14, 19): the ids
 ; first, then each one's place in the frame they form, then the code referring to them there.
 (def-fns _ $ (many fresh-bound : (subterm many (List $ Multiplicity) rets) (many (Env) env) -> (many (Env) r) (many (List $ Nat) bound) (erased (Picked (Nat) rets bound) bpk))
   (let-match many rets (Cons _ m rest) ((Nil _) (values env (Nil _) (PkNil _))))
@@ -3028,7 +3028,7 @@
   enum
   (many MkElseBody : (erased (Syn) raw) (many (Maybe $ Syn) name) (many (List $ Syn) body) (erased (Subterm (List $ Syn) body (Syn) raw) p) -> (ElseBody raw)))
 ; An `else` binds the scrutinee back when its first item is an atom followed by a body; otherwise the body
-; starts at once (ASSUMPTIONS 206).
+; starts at once (section 23).
 (def-fns _ $ (many else-parts : (many (Syn) raw) (many (Bool) extra) -> (many (Maybe $ ElseBody raw) r))
   (let-match many raw (RList _ items) (else (None _)))
   (let-match many items (Cons _ _ body) ((Nil _) (None _)))
@@ -3172,7 +3172,7 @@
     ((BTrue) (Some _ $ MkPair _ _ x $ MkPair _ _ craw fields))
     ((BFalse) (None _))))
 
-; numeral-of (ASSUMPTIONS 53): a numeral or character literal by its own spelling, never an expression.
+; numeral-of (section 45): a numeral or character literal by its own spelling, never an expression.
 (def-fns _ $ (many numeral-of-term : (many (Env) env) (many (Syn) arg0) -> (many (Env) r) (many (Maybe $ Term) t))
   (let ((many arg)) $ syn-literal env arg0)
   (let-match many (raw-is-literal arg) (BTrue)
@@ -3314,7 +3314,7 @@
     ((Nil _) 0))
   (match many (nat-cmp x y) _ ((CEq _ _ _) (Succ $ notail $ count-bins rest x)) (else (tail $ count-bins rest x))))
 
-; Every constructor of the Matchable appears exactly once (ASSUMPTIONS 21).
+; Every constructor of the Matchable appears exactly once (section 21).
 (def-fns _ $ (many is-else-branch : (many (Env) env) (many (Syn) braw) -> (many (Bool) r))
   (let-match many braw (RList _ items) (else (BFalse)))
   (match many items _ ((Nil _) (BFalse)) ((Cons _ first _) (is-mark env first $ MkElse))))
@@ -3998,7 +3998,7 @@
     (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ erases-to-nothing _ _ body) $ notail $ erases-branches _ _ rest)))))
 
 
-; ---- tail and delegate (section 19, ASSUMPTIONS 17): judged on the normalized post-erasure code, per
+; ---- tail and delegate (section 19): judged on the normalized post-erasure code, per
 ; function, so a nested def-fns's marks are its own.
 
 (def-fns _ $ (many cc-marked : (many (CC) cc) (many (Bool) only-delegate) -> (many (Bool) r))
@@ -4498,7 +4498,7 @@
 
 ; The many fields' types of a constructor at an instance of its type, as entering its branch reads them.
 ; One entry per field in declaration order, None where the field is erased: it has no word, so it takes none
-; from the destructure and prints `_` (ASSUMPTIONS 184).
+; from the destructure and prints `_` (section 45).
 (def-fns _ $ (many field-slots : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Maybe $ Term) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (Cons _ (match many (entry-mult-of env x) (((Maybe $ Term) _))
@@ -4542,7 +4542,7 @@
 (def-fns _ $ (many ctor-body : (many (Ctor) ct) (many (List $ Rope) fields) -> (many (Rope) r))
   (rjoin (Cons _ (RStr $ ctor-name ct) fields) " "))
 
-; The sole non-phantom constructor, where a type has exactly one and so needs no tag (ASSUMPTIONS 184).
+; The sole non-phantom constructor, where a type has exactly one and so needs no tag (section 45).
 (def-fns _ $ (many lone-ctor : (many (Adt) adt) -> (many (Maybe $ Ctor) c))
   (let-match many (adt-ctors adt) (Cons _ c more)
     ((Nil _) (None _)))
@@ -4550,7 +4550,7 @@
 
 (def-fns _
   ; The rope is the rendering, and the Bool says it is an application body still missing its parens, which is
-  ; what lets a caller write `$` before a last one instead (ASSUMPTIONS 184).
+  ; what lets a caller write `$` before a last one instead (section 45).
   ((many show-at : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) r) (subterm many (Nat) depth)
       (many (Env) env) (many (Term) ty0) -> (many (Rope) rope) (many (Bool) app))
     (let-match many depth (Succ dd) ((Zero) (values (RStr "_") (BFalse))))
@@ -4578,7 +4578,7 @@
                       (ctor-fields _ hp (adt-newtype adt) (ctor-arity ct) r) e2) (BTrue)))))))
 
   ; Walks the declared fields, an erased one taking no word from the destructure; a field that is an application
-  ; takes its own parens, or `$` where it is the last (DESIGN 2, ASSUMPTIONS 184).
+  ; takes its own parens, or `$` where it is the last (DESIGN 2, 45).
   ((many show-fields : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (Nat) depth)
       (subterm many (List $ Maybe $ Term) tys) (many (List $ Ref Block hs) fs) (many (Env) env) -> (many (List $ Rope) rs))
     (let-match many tys (Cons _ mt rest) ((Nil _) (Nil _)))
@@ -5975,7 +5975,7 @@
     (values ew2 (env-discard env env3) $ TTyCtor tele))
 
   ; Returns the environment with the fields in scope, the telescope, the return type over them, and the
-  ; closed ValCtor type; the return is an application of a type constructor in scope (ASSUMPTIONS 70, 80).
+  ; closed ValCtor type; the return is an application of a type constructor in scope (section 11).
   ((many elab-valctor : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Entry) tele) (many (Term) ret) (many (Term) t))
     (let-match many piece (MkPair _ _ ps rets))
     (let ((unique ew1) (many env2) (many ids) (many tele)) $ notail $ elab-tele ew fuel sugar root st ps (env-set-ctor-tele env $ env-signature env) (MMDeclared) (Nil _) (BFalse) (BFalse) (BFalse) $ BTrue)
@@ -6804,7 +6804,7 @@
     (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 name (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)) (else (bind env3 name (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)))
     (let ((unique ew3) (many env5) (many cs)) $ notail $ elab-ctors ew2 fuel sugar rest (env-back env env4) tid nt)
     (values ew3 env5 $ Cons _ (MkPair _ _ mult c) cs))
-  ; tail and delegate wrap a call (section 19, ASSUMPTIONS 9); the compiled code must be that call.
+  ; tail and delegate wrap a call (section 19); the compiled code must be that call.
   ((many elab-marked : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (Sp) sp) (many (ExprDemand expect) demand) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
     (let ((many env1)) $ refuse-unless env (mult-is-many $ pos-in env expect) $ str-cat (tick $ sp-name sp) " in an erased position")
     (let-match many args (Cons _ call _)
@@ -6849,7 +6849,7 @@
     (let ((unique ew2) (many env3) (many b) (many bty)) $ notail $ elab-term ew1 fuel sugar braw env2 (BFalse) no-tele)
     (values ew2 (settle (settle env3 a) b) a aty b bty))
 
-  ; Two proofs of the given kinds, elaborated erased (ASSUMPTIONS 23).
+  ; Two proofs of the given kinds, elaborated erased (section 14).
   ((many two-proofs : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Res) p) (many (Res) q))
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error env "two proofs expected"))
     (let-match many args (Cons _ araw rest) ((Nil _) (values ew (bad) no-res no-res)))
@@ -7337,7 +7337,7 @@
   (elab-expr-demand ew fuel sugar raw env ctx expect tele cc (Fixed _)))
 
 ; ---- The top level (section 27): statements run as they are elaborated, the final expression consumed;
-; every form but the last must be a statement (ASSUMPTIONS 12).
+; every form but the last must be a statement.
 
 (def-fns _ $ (many pragma-of : (many (Syn) raw) -> (many (Maybe $ List $ Syn) r))
   (let-match many raw (RList _ items) (else (None _)))

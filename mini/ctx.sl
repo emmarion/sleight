@@ -3,7 +3,7 @@
 ; record with the ambient level and subterm arguments. Lookups come with evidence. One session's proposal.
 
 ; An entry's kind: [KDecl] is a type or value constructor declared by def-adts or built in, rigid for
-; unification (ASSUMPTIONS 40); [KLevel] an entry def-lvl minted (section 18's marker).
+; unification; [KLevel] an entry def-lvl minted (section 18's marker).
 (def-adts
   ((Kind : -> Type)
     enum

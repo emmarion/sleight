@@ -411,7 +411,7 @@ the entry says otherwise, and recorded so it can be revisited.
   50, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
   unification where a later argument or the expected telescope fixes it,
   and a last argument on one line opens with `$`.
-- **`nat-cmp` is extern** (ASSUMPTIONS 90, 120, 123), so that the
+- **`nat-cmp` is extern** (ASSUMPTIONS 120, 123), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; `Cmp` itself is plain source, built by the FFI
   through its constructor, which since ASSUMPTIONS 151 the compile-time
