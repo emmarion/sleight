@@ -552,8 +552,13 @@ it is `Settled`, and its `is` rule.
   a variable is refused; a body returns its results' slots, so the
   core checks each promise canonically. `(slot-of x)` is the slot of
   `x`, erased when `x` is, and of a hidden entry erased always;
-  `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
-  `vacant-slot` puts its binder there. A slot entry is its own slot. A
+  where `x` is not erased but its slot is a hidden entry, `(slot-of x)`
+  in a non-erased position is a fresh non-erased slot entry, made
+  before the statement and forced equal to that slot as `slot-self`
+  forces (below). `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
+  `vacant-slot` puts its binder there. A slot entry is its own slot,
+  including one a telescope binds, which an `at` in a nested telescope
+  may name. A
   non-erased slot entry is made `unique` (its value is an immediate,
   which owns nothing), so `(slot-of x)` may stand at a unique position;
   a use of it at many needs no `share`. The uses pass accepts the
@@ -565,8 +570,8 @@ it is `Settled`, and its `is` rule.
   constructor and no fields, all of whose values are that constructor);
   a contradiction is refused. `at` changes no value: the runner computes an
   `at` result like any other. Not done: the slot a forcing unification
-  gives otherwise than through the core's own rules, `slot-of` naming
-  an entry of an enclosing telescope in an `at`, `_` for an argument
+  gives otherwise than through the core's own rules, an `at` naming an
+  entry of an enclosing telescope that is not a slot, `_` for an argument
   whose slot is named (its slot is `_` too), and `prove-predates` on a
   slot first needed after the level other than through such a
   `slot-of`.

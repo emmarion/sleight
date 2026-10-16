@@ -418,9 +418,10 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
 10. A computed head inside a type other than a variable or `(share x)`
    whose settled value is a `Special` constructor: types are elaborated
    by `elabTm`, which runs no statements.
-11. An `at` naming an entry of an enclosing telescope, such as a
-   constructor field's function type written `at` a sibling field
-   (`tests/at_field_fn_sibling.sl`).
+11. An `at` naming an entry of an enclosing telescope that is not a
+   `(Slot)`. One naming a `(Slot)` entry, as a constructor field's
+   function type written `at` a sibling slot field does
+   (`tests/at_field_fn_sibling.sl`), is supported.
 12. **The `Program` driver's requests.** `Prog.perform` does
    `WriteOut`, `WriteErr`, `ReadLine`, `ReadRemaining`, `GetEnv` and
    `GetCwd`; the others, the confinement of file requests and output,

@@ -760,6 +760,13 @@ def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
 
 def slotTy : Tm := .app (.tyc slotD .nil) .nil
 
+def runSlot : Sx → List Sx
+  | .atom x => [.list [.atom "let", .list [.list [.atom "unique", .atom (" rs " ++ x)]], .list [.atom " fresh-slot"]],
+      .list [.atom "let-match", .atom "erased", .list [.atom " slot-eq", .atom (" rs " ++ x), .atom x], .list [.atom "Refl", .atom "_", .atom "_"]]]
+  | _ => []
+
+def ownSlot (x : String) (d : Nat) (T : Tm) : List (String × Ref) := if T == slotTy then [(" slot " ++ x, .bnd d)] else []
+
 def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
   if ci.nt then throw "newtype constructors have no cells"
   if ci.ex && !(← get).inExtern then throw "extern constructors have no cells"
@@ -1241,7 +1248,8 @@ partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String �
       else pure none
     let (sc, depth) := if hid.isSome then (((" slot " ++ x), Ref.bnd depth) :: sc, depth + 1) else (sc, depth)
     let Tt ← elabTm sc depth T
-    let (r, m) ← teleH ((x, .bnd depth) :: sc) (depth + 1) need ((k, T, xs, tgt) :: rest)
+    let own := if hid.isNone then ownSlot x depth Tt else []
+    let (r, m) ← teleH (own ++ (x, .bnd depth) :: sc) (depth + 1) need ((k, T, xs, tgt) :: rest)
     match hid with
     | some (k', A) => pure (.bind k' A (.bind k Tt r), true :: false :: m)
     | none => pure (.bind k Tt r, false :: m)
@@ -1251,7 +1259,7 @@ partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
   | e :: es => do
     let (k, T, xs) ← parseEntry need e
     let Ts ← (List.range xs.length).mapM fun j => elabTm sc (depth + j) T
-    let sc := xs.zipIdx.foldl (fun sc (x, j) => (x, .bnd (depth + j)) :: sc) sc
+    let sc := (xs.zip Ts).zipIdx.foldl (fun sc ((x, T), j) => ownSlot x (depth + j) T ++ (x, .bnd (depth + j)) :: sc) sc
     let r ← elabTele sc (depth + xs.length) need es
     return Ts.foldr (.bind k) r
 end
@@ -1653,7 +1661,10 @@ def openCtor (sc : Scope) (md : Mode) (scr : Option Tm) (ci : CtorInfo) (c : Str
     let pl := ((← get).prog .dead).placedD
     let _ ← fs.foldlM (fun t i => match t with
       | .bind (.ty ..) A r => do
-        if let .app (.tyc q _) _ := A then if pl == some q then note i A
+        match A with
+        | .app (.tyc q _) _ => if pl == some q then note i A
+        | .fn .. => note i A
+        | _ => pure ()
         pure (r.inst (.fv i) 0)
       | .bind _ _ r => pure (r.inst (.fv i) 0)
       | t => pure t) ci.sig
@@ -1831,6 +1842,16 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
         args.head? != some (.atom " mw") then
       let some (_, r) ← mwInScope sc | throw s!"`{h}` outside a macro's function is not supported"
       return ← elabExpr ((" mw", r) :: sc) want exp (.list (.atom h :: .atom " mw" :: args))
+  if let (.list [.atom "slot-of", .atom x], none) := (e, sc.lookup "slot-of") then
+    if !(← erasedPos want) then
+      let t ← elabTm sc 0 e
+      let ers := (← get).ers
+      if t.fvs.any (ers.getD · true) then
+        let xEr := match sc.lookup x with | some (.fv i) => ers.getD i true | _ => true
+        if xEr then throw s!"`(slot-of {showName x})` is erased, as `{showName x}` is, and stands in a non-erased position"
+        match sc.lookup (" rs " ++ x) with
+        | some (.fv k) => return ([], [.fv k])
+        | _ => throwNeed "\x07" (.atom x) s!"the slot of `{showName x}` is erased here"
   if let .list [.atom " ers", .atom k, x] := e then
     if ← erasedPos want then return ← elabExpr sc want exp x
     let st ← get
@@ -2094,10 +2115,19 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let _ ← bindTele outs R
       let outs := if hm.contains true then ((rms.zip outs).filter (·.1 != .hid)).map (·.2) else outs
       return (ss ++ pre ++ (if atm then [.chk (.mark .skip) .nil .nil] else []) ++ uqMark rms ++ [fun k => .seq R b k], outs.map .fv)
+    else if h == " fresh-slot" then
+      let [k] ← freshMd [.uniq] | throw "fresh"
+      modify fun st => { st with slots := (k, .fv k) :: st.slots, known := (k, slotTy) :: st.known }
+      return (uqMark [.uniq] ++ [.prim (.atom slotD) false], [.fv k])
     else if h == " slot-eq" then
-      let [.atom x] := args | throw "unreachable"
-      let some (.fv i) := sc.lookup x | throw "unreachable"
-      let (ss, t) ← slotM i
+      let x :: ys := args | throw "unreachable"
+      let var (a : Sx) : M Nat := match a with
+        | .atom y => match sc.lookup y with
+          | some (.fv i) => pure i
+          | _ => throw "unreachable"
+        | _ => throw "unreachable"
+      let i ← var x
+      let (ss, t) ← slotM (← var (ys.headD x))
       let some q := st.firstAdt "Eq" | throw "`slot-self` on a variable whose slot is in use needs the prelude's `Eq`"
       let [j] ← fresh [true] | throw "fresh"
       note j (.app (.tyc q .nil) (.ofList [.app (.tyc slotD .nil) .nil, .fv i, t]))
@@ -2591,6 +2621,8 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
+  retrying "\x07" (fun | .atom x => (sc.lookup x matches some (.fv _)) | _ => false) fun extra => do
+  let items := extra.flatMap runSlot ++ items
   let n0 := (← get).n
   match items with
   | e :: _ => if (← get).top then do declareWorld e; interning e (elabSeqLits sc want exp items n0) else elabSeqLits sc want exp items n0 []
