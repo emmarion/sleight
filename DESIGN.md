@@ -26,7 +26,7 @@ speed of the code they produce, are not aims.
 - Data types and matching: §21 to §25.
 - Expressions, statements and compile time: §26 to §32.
 - Coercion: §33, §34.
-- Slots, `at` and cells: §35 to §41, and §66 to §69.
+- Slots, `at` and cells: §35 to §41, and §66 to §70.
 - The prelude, the FFI and literals: §42 to §45.
 - Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
@@ -570,8 +570,8 @@ invocation (§37), whose value is then at its cell. A form whose only
 claim or effect is about the
 run is refused in an erased position: `tail`, `notail` and `delegate`
 (§19), the `at` wrapper around a call (§39), `share` (§16),
-`cell-write` (§37), `cell-match` (§38) and `cell-same` (§68); and an
-`erased` function may not be marked `at` (§39).
+`cell-write` (§37), `cell-match` (§38), `cell-same` (§68) and
+`fn-same` (§70); and an `erased` function may not be marked `at` (§39).
 
 ## 15. Uses of unique binders
 
@@ -1957,8 +1957,8 @@ which `lib/prelude.sl` is the reference:
   and `SlotIntern`, and the extern functions `slots-new`, `slots-find`,
   `slots-intern` and `slots-length`. §69 describes them.
 - **`ErasedOr`**, with `EONonErased` and the phantom `EOErased`. §68
-  describes it and `cell-same`. On it the prelude builds these
-  `extern at` and at-functions (§39):
+  describes it and `cell-same`, and §70 describes `fn-same`. On it the
+  prelude builds these `extern at` and at-functions (§39):
 
   ```scheme
   nat-same : (subterm many (Nat) a) (many (Nat) b at a) ->
@@ -2413,7 +2413,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
   `resolve` and `read-file` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
-  (§66), `slot-eq` (§67), and `cell-same` (§68).
+  (§66), `slot-eq` (§67), `cell-same` (§68) and `fn-same` (§70).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -3039,3 +3039,12 @@ covers what the implementations answer. How an implementation finds a
 slot is left to it. Taking a `Slots` apart through `MkSlots`, or building
 one with it, goes through the model and costs time linear in the table;
 the prelude warns at each.
+
+## 70. `fn-same`
+
+`(fn-same f g)` takes two values at `many` whose types canonicalize to
+one `Fn` or `UniqueFn` type (§11, §32), the same for both, and whose
+slots are already equal (§36). It yields an `(ErasedOr (Eq F f g))` at
+`vacant-slot` (§36), `F` the type of `f`: `EONonErased` wherever it
+runs, and `EOErased` where it is reached only erased (§14). It compiles
+to nothing, is refused in an erased position, and requires the prelude.
