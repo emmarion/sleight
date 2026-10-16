@@ -391,7 +391,7 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     · exact (hm _ _ _ _ _ _ ‹_›).elim
     · cases h
   case case29 => rename_i ih; exact ih hf U K h
-  case case30 => rename_i ih; exact UqOK.of_n (G := G) (ih hf U K h) rfl rfl
+  case case30 => rename_i ih; exact UqOK.of_n (ih hf U K h) rfl rfl
   case case31 =>
     rename_i hΓ ih; simp only [hΓ] at h
     have e := Ctx.slotSelf_eq hΓ; have := ih hf U K h; rw [e] at this; exact this
