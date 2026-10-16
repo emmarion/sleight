@@ -284,6 +284,15 @@ def pushFns (Γ : Ctx) (G : Group) : Ctx :=
                if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }
   deleSlots k G.fns Γ1
 
+@[simp] theorem pushFns_mints (Γ : Ctx) (G : Group) : (Γ.pushFns G).mints = Γ.mints := by simp [pushFns]
+@[simp] theorem pushFns_cur (Γ : Ctx) (G : Group) : (Γ.pushFns G).cur = Γ.cur := by simp [pushFns]
+@[simp] theorem pushFns_subs (Γ : Ctx) (G : Group) : (Γ.pushFns G).subs = Γ.subs := by simp [pushFns]
+@[simp] theorem pushFns_ghost (Γ : Ctx) (G : Group) : (Γ.pushFns G).ghost = Γ.ghost := by simp [pushFns]
+@[simp] theorem pushFns_opened (Γ : Ctx) (G : Group) : (Γ.pushFns G).opened = Γ.opened := by simp [pushFns]
+@[simp] theorem pushFns_fixed (Γ : Ctx) (G : Group) : (Γ.pushFns G).fixed = Γ.fixed := by simp [pushFns]
+@[simp] theorem pushFns_cmode (Γ : Ctx) (G : Group) : (Γ.pushFns G).cmode = Γ.cmode := by simp [pushFns]
+@[simp] theorem pushFns_pd (Γ : Ctx) (G : Group) : (Γ.pushFns G).pd = Γ.pd := by simp [pushFns]
+
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
 def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
