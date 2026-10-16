@@ -5,8 +5,9 @@ SIZE=${SIZE:-s-2vcpu-8gb-amd}
 usage() {
     cat >&2 <<EOF
 usage: $0 --slc FILE
-           create a $TAG droplet in nyc3 (size $SIZE) with Java 21, binutils, OCaml, Node 24, Claude Code and
-           Ghidra, and a user slc with passwordless sudo whose ~/slc/slc is a copy of FILE, which is never run
+           create a $TAG droplet in nyc3 (size $SIZE) with Java 21, binutils, OCaml, Node 24, Claude Code, Ghidra
+           and REA (github.com/morluto/rea, registered with Claude Code), and a user slc with passwordless sudo
+           whose ~/slc/slc is a copy of FILE, which is never run
        $0 build [REV [OUT]]
            build slc at REV [HEAD] on a temporary droplet tagged $TAG-build, copy the x86-64 Linux binary to OUT
            [./slc-x86_64-linux-SHORTHASH], and destroy the droplet
@@ -53,7 +54,12 @@ mkdir -p ~/tools && cd ~/tools
 curl -fsSLO "$(curl -fsSL https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest | grep -o 'https://[^"]*PUBLIC[^"]*\.zip' | head -1)"
 unzip -q ghidra_*.zip && rm ghidra_*.zip
 ln -s ~/tools/ghidra_*_PUBLIC ~/tools/ghidra
-echo "java: $(java -version 2>&1 | head -1); node: $(node --version); claude: $(~/.local/bin/claude --version); ghidra: $(basename "$(readlink ~/tools/ghidra)")"
+sudo npm install --global --silent rea-agents >/dev/null
+export GHIDRA_INSTALL_DIR=$(readlink -f ~/tools/ghidra)
+echo "export GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR" >> ~/.profile
+rea setup --yes --client claude_code --json | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(d["status"] != "ready" or not d["doctor"]["healthy"])'
+echo "java: $(java -version 2>&1 | head -1); node: $(node --version); claude: $(~/.local/bin/claude --version); ghidra: $(basename "$GHIDRA_INSTALL_DIR"); rea: $(rea --version)"
+~/.local/bin/claude mcp list 2>/dev/null | grep '^rea:'
 echo "slc: $(sha256sum ~/slc/slc)"
 EOF
     echo "ready: ssh slc@$ip"
