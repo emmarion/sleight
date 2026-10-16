@@ -649,7 +649,7 @@ theorem Ctx.bindSlot_sat {Γ : Ctx} {r : Nat} {s : Tm} {f : Nat → Tm} (hs : s.
     intro e u h; dsimp only at h; split at h
     · cases h; exact slotVal_subst hc (Tm.isSlotVal_spec hs) e
     · cases h
-  rw [h i _ (by simp [Ctx.bindSlot, hi])]; exact canonBy_sound (fun _ _ h => by cases h) hS t
+  rw [h i (Ctx.slotSub r s t) (by simp [Ctx.bindSlot, hi])]; exact canonBy_sound (fun _ _ h => by cases h) hS t
 
 theorem Ctx.withSlot_sat {Γ : Ctx} {e : Nat} {s : Tm} {f : Nat → Tm} (hc : ∀ i, (f i).lc 0)
     (h : Sat f (Γ.withSlot e s).σ) : Sat f Γ.σ := by
@@ -2805,7 +2805,13 @@ theorem Ctx.openTele_ghost (g : Bool) : ∀ m (Γ : Ctx) t,
 theorem Ctx.ntSlot_ghost (g : Bool) (Γ Γf : Ctx) (s k : Tm) :
     ({ Γ with ghost := g } : Ctx).ntSlot P { Γf with ghost := g } s k = { Γ.ntSlot P Γf s k with ghost := g } := by
   unfold Ctx.ntSlot
-  split <;> (try split) <;> first | rfl | exact Ctx.withSlot_upd_ghost Γf _ _ g
+  rw [show ({ Γ with ghost := g } : Ctx).known k = Γ.known k from rfl]
+  generalize Γ.known k = kn; generalize s.varSlot = vs
+  rcases kn with _ | ⟨d, c⟩ <;> rcases vs with _ | σ <;> try rfl
+  generalize P.wrapField d c = wf
+  rcases wf with _ | j
+  · rfl
+  · exact Ctx.withSlot_upd_ghost Γf _ _ g
 
 theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
     ({ Γ with ghost := g } : Ctx).branch P s k H idx sig =
@@ -3558,7 +3564,7 @@ theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
     HeadSim P Γ (Γ.pushPrim P T er p) ρ [p.eval P ρ] (.prim p er rest) rest ∧
     ∀ i, (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
   obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hO hE hb hp
-  obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim P hP hp hv hT hlc rfl
+  obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
   have hl := hE.len
   have her : ∀ i, (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
     intro i; cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
@@ -3594,12 +3600,12 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
   obtain ⟨v1, s1, c1, l1⟩ := prim_sound hP hO hE hb hw
   obtain ⟨v2, s2, c2, l2⟩ := prim_sound hP hO hE hb ha
   have hl := hE.len
-  have hE1 := hE.push v1 s1 c1 (e := false)
+  have hE1 := (hE.push v1 s1 c1 (e := false)).slotIf w.varSlot.isSome (e := Γ.n) (Γ.canon (w.varSlot.getD .nil))
   have hE2 := hE1.push (v := (Prim.wAsk w req).eval P ρ) (A := A)
     (by rw [Tm.subst_append (hl ▸ s2)]; exact v2)
     (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) s2) c2 (e := false)
   have her : ∀ i, (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
-    intro i; rw [Ctx.er_push, Ctx.er_push]; simp only [Ctx.push, Ctx.n, Array.size_push]
+    intro i; unfold Ctx.pushWdo; rw [Ctx.er_push, Ctx.slotIf_er, Ctx.er_push]; simp only [Ctx.slotIf_n, Ctx.push, Ctx.n, Array.size_push]
     by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
   have hh : HeadSim P Γ (Γ.pushWdo Tw A w) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
       (.wdo w req rest) rest := by
@@ -3612,10 +3618,10 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
     | 0, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.1
     | 1, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.2
     | _ + 2, ha', _ => simp at ha'
-  have hn : (Γ.pushWdo Tw A w).n = Γ.n + 2 := by simp [Ctx.push, Ctx.n]
+  have hn : (Γ.pushWdo Tw A w).n = Γ.n + 2 := by simp [Ctx.pushWdo, Ctx.push, Ctx.n]
   have hE2' : EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) (Γ.pushWdo Tw A w) := by
-    simpa using hE2
-  refine ⟨hE.adv hE2' rfl hh, LvlBound.append.mpr ⟨hb, ?_⟩, hm.append hE.wf hl (by simp [Ctx.push]) (by simp [Ctx.push]),
+    simpa [Ctx.pushWdo] using hE2
+  refine ⟨hE.adv hE2' rfl hh, LvlBound.append.mpr ⟨hb, ?_⟩, hm.append hE.wf hl (by simp [Ctx.pushWdo, Ctx.push]) (by simp [Ctx.pushWdo, Ctx.push]),
     Tm.static_mono (by simp [hn]) _ (Nat.le_refl 0) hrs, hh, her⟩
   intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
   rcases hx with rfl | rfl
