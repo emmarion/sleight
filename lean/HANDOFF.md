@@ -329,7 +329,8 @@ computes.
 ## Next, none of it decided
 
 The owner's tentative order, from chat: (a) the two soundness gaps,
-a handle used against its multiplicity (item 9, step 5) and item 5;
+a handle used against its multiplicity (item 9, step 5, done) and item 5
+(since deferred);
 (b) item 13; (c) items 2 and 11 without mutation, and the two `at`
 tests listed above; (d) the rest of item 9, step 5; (e) item 12;
 (f) item 9, step 4.
@@ -366,7 +367,7 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
    unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
    leaves out it and everything over `U62`. `prelude.sl` has them, since
    the stripped run never computes it.
-5. **A result typed with the program's own entries** is checked as a
+5. Deferred by the owner. **A result typed with the program's own entries** is checked as a
    result of any type (`ArgsTy.anyCons`), so `checked_runs` says nothing
    of its type. The printer finds such types separately (`retTypes`,
    untrusted), since the stripped run holds a newtype's value as its
