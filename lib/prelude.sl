@@ -1644,19 +1644,14 @@
     (erased (Level) L)
     (many (Fn L (erased Type A)
               (many (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq)
-              (erased (AtFn (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq) eq-at)
+              (erased (AtFn _ eq) eq-at)
               (erased (List A) xs) (erased (List A) ys) (subterm many (Array A xs) a) (many (Array A ys) b at a) ->
               (many (ErasedOr (JMEq (Array A xs) a (Array A ys) b)) r at vacant-slot))
           same)
-    (erased (AtFn (Fn L (erased Type A)
-              (many (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq)
-              (erased (AtFn (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq) eq-at)
-              (erased (List A) xs) (erased (List A) ys) (subterm many (Array A xs) a) (many (Array A ys) b at a) ->
-              (many (ErasedOr (JMEq (Array A xs) a (Array A ys) b)) r at vacant-slot))
-          same) same-at))
+    (erased (AtFn _ same) same-at))
   (def-fns _ $ (many extern at array-same : (erased Type A)
       (many (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq)
-      (erased (AtFn (Fn M (subterm many A x) (many A y at x) -> (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq) eq-at)
+      (erased (AtFn _ eq) eq-at)
       (erased (List A) xs) (erased (List A) ys) (subterm many (Array A xs) a) (many (Array A ys) b at a) ->
       (many (ErasedOr (JMEq (Array A xs) a (Array A ys) b)) r at vacant-slot))
     (open-at-fn eq-at)
