@@ -1702,6 +1702,9 @@ theorem VTy.atom_inv {d : Nat} {D : Adt} {m e u : Bool} (hD : P.adts[d]? = some 
 theorem Ctx.markPd_eq (Γ : Ctx) (m : Mark) (a : Tm) : Γ.markPd m a = { Γ with pd := (Γ.markPd m a).pd } := by
   unfold Ctx.markPd; split <;> rfl
 
+theorem EnvOK.markPd {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (m : Mark) (a : Tm) : EnvOK P ρ (Γ.markPd m a) :=
+  hE.congr _ (by simp) (by simp) (by simp) (by simp) (by simp) (by simp) (by simp) (hς := by simp)
+
 theorem Ctx.slotSelf_eq {Γ Γ' : Ctx} {s : Nat} (h : Γ.slotSelf s = some Γ') :
     Γ' = { Γ with σ := Γ'.σ, ς := Γ'.ς } := by
   unfold Ctx.slotSelf at h; simp only [] at h

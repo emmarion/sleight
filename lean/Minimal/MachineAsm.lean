@@ -687,7 +687,7 @@ theorem MSound.wdo (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
   have ih' := fun us => ih b (G.next (G.adv P (G.Γ.pushWdo Tw A w) (.wdo w req rest)) us) _ ru rs rets _
     hf (hΓ us) hr' hE' hlb' hm' hrs' hCo vs cnt' h
   have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushWdo Tw A w) (.wdo w req rest)).n := by
-    rw [UCtx.adv_n' hf]; simp [Ctx.push, Ctx.n]; omega
+    rw [UCtx.adv_n' hf]; simp
   refine ⟨?_, fun hpre => ?_⟩
   · intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
     have hrt : (rt P G.Γ w && rt P G.Γ req) = true := by
@@ -867,12 +867,14 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
       exact same { G with cellOk := true } hf rfl rfl _ hr' machine_alloc
         (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
     | cellOf =>
-      exact same { G with cellOk := true, uscr := none } hf rfl rfl _ hr' machine_cellOf
+      exact step { G with Γ := G.Γ.markPd .cellOf a, cellOk := true, uscr := none } _ hf hr' (hE.markPd _ _)
+        (by simp) (by simp) (by simp) (by simp) rfl machine_cellOf
         (fun U K hU => by rw [usesCore] at hU; split at hU; exact isS hU; cases hU)
     | reuse u | write u =>
       by_cases ha : ∃ i, a = .fv i
       · obtain ⟨i, rfl⟩ := ha
-        refine same { G with cellOk := true } hf rfl rfl _ hr' (fun ihr => ?_) (fun U K hU => ?_)
+        refine step { G with Γ := G.Γ.markPd _ (.fv i), cellOk := true } _ hf hr' (hE.markPd _ _)
+          (by simp) (by simp) (by simp) (by simp) rfl (fun ihr => ?_) (fun U K hU => ?_)
         · cases u
           · exact machine_markMany (by simp) ihr
           · exact machine_markU hP (by simp) hE ihr
@@ -882,6 +884,7 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
           · obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
             exact isS hC'
       · have ha' : ∀ i, a ≠ .fv i := fun i e => ha ⟨i, e⟩
+        rw [Ctx.markPd_nf _ (by simp) ha'] at hr'
         refine same G hf rfl rfl _ hr' (fun ihr => ?_)
           (fun U K hU => by rw [usesCore_markNF (by first | exact .inl rfl | exact .inr rfl) ha'] at hU; exact isS hU)
         cases u
