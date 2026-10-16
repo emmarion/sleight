@@ -3107,8 +3107,7 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
       simp only [Option.some.injEq] at hA; subst hA
       simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
       exact ⟨CU, CK, hC, by simpa using hct, UR.seq_fst h, by omega, by simpa using hc.1.2⟩
-    rw [usesCore] at hU
-    rcases hm with rfl | rfl <;> simp only [Bool.true_and, hg, Bool.not_false,
+    rcases hm with rfl | rfl <;> rw [usesCore] at hU <;> simp only [Bool.true_and, hg, Bool.not_false,
       Bool.false_eq_true, ite_false] at hU <;> exact key _ hU
   obtain ⟨sA, sC⟩ := Uses.seq_sub hseq
   have hUi : U.lookup i = some true := sA.2 i (by simp [List.lookup])
