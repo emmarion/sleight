@@ -112,6 +112,21 @@ def slotBind (Γ : Ctx) (e : Nat) (s : Tm) : Option (Nat × Tm) :=
     | _, _ => none
   else none
 
+@[simp] theorem markPd_tys (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).tys = Γ.tys := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_σ (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).σ = Γ.σ := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_ς (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).ς = Γ.ς := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_erA (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).erA = Γ.erA := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_mints (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).mints = Γ.mints := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_cur (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).cur = Γ.cur := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_subs (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).subs = Γ.subs := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_ghost (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).ghost = Γ.ghost := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_opened (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).opened = Γ.opened := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_fixed (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).fixed = Γ.fixed := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_cmode (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).cmode = Γ.cmode := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_deles (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).deles = Γ.deles := by unfold markPd; split <;> rfl
+@[simp] theorem markPd_n (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).n = Γ.n := by simp [n]
+@[simp] theorem markPd_er (Γ : Ctx) (m : Mark) (a : Tm) : (Γ.markPd m a).er = Γ.er := by funext i; simp [er]
+
 def withSlot (Γ : Ctx) (e : Nat) (s : Tm) : Ctx := match Γ.slotBind e s with
   | some (r, s) => Γ.bindSlot r s
   | none => Γ
@@ -239,6 +254,13 @@ def record (Γ Γ' : Ctx) (vs : List Tm) : Ctx :=
 @[simp] theorem er_push (Γ : Ctx) (T : Tm) (e : Bool) (i : Nat) :
     (Γ.push T e).er i = if i = Γ.n then e else Γ.er i := by
   simp only [push, er, arrSet_getD]
+
+@[simp] theorem pushWdo_ghost (Γ : Ctx) (Tw A w : Tm) : (Γ.pushWdo Tw A w).ghost = Γ.ghost := by simp [pushWdo, push]
+
+theorem er_pushWdo (Γ : Ctx) (Tw A w : Tm) (i : Nat) :
+    (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
+  unfold pushWdo; rw [er_push, slotIf_er, er_push]; simp only [slotIf_n, push, n, Array.size_push]
+  by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
 
 @[simp] theorem er_pushMint (Γ : Ctx) (i : Nat) : Γ.pushMint.er i = if i = Γ.n then true else Γ.er i := by
   simp only [pushMint, er, push, arrSet_getD]
