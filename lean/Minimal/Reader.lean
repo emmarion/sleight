@@ -1590,7 +1590,12 @@ partial def binderNames : Sx → List String
       | _ => []
     here ++ xs.flatMap binderNames
 
-partial def preExpand (sc : Scope) (shadow : List String) : Sx → M (List Sx)
+partial def nonHeadAtoms : Sx → List String
+  | .atom a => [a]
+  | .list [] => []
+  | .list (h :: xs) => (match h with | .atom _ => [] | h => nonHeadAtoms h) ++ xs.flatMap nonHeadAtoms
+
+partial def preExpand (sc : Scope) (shadow hyp : List String) : Sx → M (List Sx)
   | .atom a => pure [.atom a]
   | .list xs => do
     let call (ys : List Sx) : M (Option (List Sx)) := do
@@ -1601,10 +1606,12 @@ partial def preExpand (sc : Scope) (shadow : List String) : Sx → M (List Sx)
       if shadow.contains h then return none
       let some (i, f) ← macroOf sc h | return none
       if let some i := i then useVar i .many shared
-      let forms ← expandMacro (shadow.map (·, Ref.bnd 0) ++ sc) f args
-      return some (← forms.flatMapM (preExpand ((← get).hnames ++ sc) shadow))
+      let forms ← expandMacro (hyp.map (·, Ref.bnd 0) ++ sc) f args
+      let shadow := shadow ++ forms.flatMap nonHeadAtoms
+      let hyp := hyp ++ forms.flatMap binderNames
+      return some (← forms.flatMapM (preExpand ((← get).hnames ++ sc) shadow hyp))
     if let some out ← call xs then return out
-    let ys ← xs.flatMapM (preExpand sc shadow)
+    let ys ← xs.flatMapM (preExpand sc shadow hyp)
     if ys.head? != xs.head? then if let some out ← call ys then return out
     return [.list ys]
 
@@ -2396,6 +2403,10 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm 
 partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R : Option Tm) (brs : List Sx)
     (extra : Nat := 0) (scr : Option Tm := none) : M (List Br × Option Core × Bool) := do
   let st ← get
+  if let (some (.fv i), false) := (scr, st.inPrelude) then
+    if let some (.app (.tyc d _) _) := (st.known.lookup (st.canonIdx i)).map st.inlineT then
+      if let some D := st.decls[d]? then
+        if emptyNames.contains D.name then throw s!"`{D.name}` has no `Matchable` open"
   let er := md.isEr
   let base := st.n
   let u0 := st.uses
@@ -2499,10 +2510,10 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
   if let e :: rest := items then
     let direct ← match e with
       | .list (.atom h :: _) | .list (.list [.atom "share", .atom h] :: _) =>
-        pure (!(binderNames e).contains h && (← macroOf sc h).isSome)
+        pure (← macroOf sc h).isSome
       | _ => pure false
     if (← get).top && (← get).hasMacros && !(← get).inPrelude && !direct && !(← get).expanded.contains e then
-      let es ← preExpand sc (binderNames e) e
+      let es ← preExpand sc (nonHeadAtoms e) (binderNames e) e
       modify fun st => { st with expanded := es }
       return ← elabSeq ((← get).hnames ++ sc) want exp (es ++ rest)
   let n0 := (← get).n
@@ -2526,7 +2537,7 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
   | e :: rest =>
     let (sc, e) := unhide sc e
     let shared := match e with
-      | .list (.list [.atom "share", .atom h] :: _) => (sc.lookup h).isSome && (h ∉ binderNames e)
+      | .list (.list [.atom "share", .atom h] :: _) => (sc.lookup h).isSome
       | _ => false
     let e := match e, shared with
       | .list (.list [.atom "share", .atom h] :: args), true => .list (.atom h :: args)
