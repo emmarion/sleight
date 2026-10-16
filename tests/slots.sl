@@ -20,25 +20,6 @@
   (let-match erased p (SuffixOfCons _ y _ zs p1) ((SuffixOfRefl _ _) q))
   (NthLastThere _ y zs i x (nth-last-suffix _ xs zs i x q p1)))
 
-(def-fns _ $ (erased nth-last-lt : (erased Type A) (erased (List A) xs) (erased (Nat) i n) (erased A x)
-    (subterm erased (NthLast A xs i x) q) (erased (Length A xs n) p) -> (erased (Lt i n) r))
-  (let-match erased p (LengthCons _ y rest k p1) (absurd (LengthNil _) q))
-  (let-match erased q (NthLastThere _ _ _ _ _ q1)
-    ((NthLastHere _ _ _ _ p2) (let-match erased (length-fn _ rest i k p2 p1) (Refl _ _)) (lt-succ i)))
-  (lt-weaken i k (nth-last-lt _ rest i k x q1 p1)))
-
-(def-fns _ $ (erased nth-last-fn : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A x y)
-    (subterm erased (NthLast A xs i x) p) (erased (NthLast A xs i y) q) -> (erased (Eq A x y) e))
-  (match erased p _
-    ((NthLastHere _ _ rest n l1)
-      (match erased q _
-        ((NthLastHere _ _ _ _ _) (Refl _ x))
-        (absurd (NthLastThere _ _ _ _ _ q1) (let ((erased l)) (nth-last-lt _ rest n n y q1 l1)) (lt-asym n n l (lt-weaken n n l)))))
-    ((NthLastThere _ z rest k _ p1)
-      (match erased q _
-        (absurd (NthLastHere _ _ _ _ l2) (let ((erased l)) (nth-last-lt _ rest k k x p1 l2)) (lt-asym k k l (lt-weaken k k l)))
-        ((NthLastThere _ _ _ _ _ q1) (nth-last-fn _ rest k x y p1 q1))))))
-
 (def-fns _ $ (many recover : (many (Box) a) (many (Box) c) (many (Box) b) -> (many (Box) r at a) (many (Nat) hit))
   (let ((unique t0)) (slots-new))
   (let ((erased ys1) (many r1) (unique t1)) (slots-intern _ t0 (slot-of a)))
