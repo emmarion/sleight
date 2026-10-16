@@ -1870,10 +1870,19 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     obtain ⟨m, hm, hlt⟩ := hE.chrono L hL
     have hLn := hw.mints L hL
     have hl := hE.len
+    have hxn : x < Γ.n := by
+      have := hw.tys x X hX
+      simpa [Ctx.n] using (Array.getElem?_eq_some_iff.mp hX).1
     have hxl : x < ρ.length := by omega
     have hxv : ρ[x]? = some ρ[x] := List.getElem?_eq_getElem hxl
     refine ⟨?_, ?_, trivial, by simp [Prim.eval, Tm.levels]⟩
     · have e : Tm.env ρ L = .lvl m := by simp [Tm.env, hm]
+      rcases hx with hx | ⟨rfl, y, hy, hc⟩
+      rotate_left
+      · have hv := hE.canon (.fv x)
+        rw [hc] at hv; simp only [Tm.subst, Tm.slotOf_lc0 (Tm.env_lc hE.closed y)] at hv
+        simp only [Tm.subst, e, Bool.false_eq_true, ite_false, ← hv]
+        exact .predates fun n hn => by simp [Tm.vacant, Tm.levels] at hn
       cases sl
       · simp only [Tm.subst, e, Bool.false_eq_true, ite_false]
         exact .predates fun n hn => hlt x hx _ hxv n (by simpa [Tm.env, hxv] using hn)
