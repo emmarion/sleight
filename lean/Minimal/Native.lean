@@ -724,7 +724,7 @@ def divmodModel : Core :=
               false
               false
 
--- succMod: group 32, env 78, np 5, fns 1
+-- succMod: group 32, env 76, np 5, fns 1
 def succModModel : Core :=
   Core.call
               (Tm.fv 40)
@@ -732,13 +732,13 @@ def succModModel : Core :=
               (Tm.cons
                 (Tm.app
                   (Tm.vc 6 1 (Tm.nil))
-                  (Tm.cons (Tm.fv 79) (Tm.nil)))
-                (Tm.cons (Tm.fv 80) (Tm.nil)))
+                  (Tm.cons (Tm.fv 77) (Tm.nil)))
+                (Tm.cons (Tm.fv 78) (Tm.nil)))
               false
               [false]
               (some [false, false, false])
               (Core.mtch
-                (Tm.fv 84)
+                (Tm.fv 82)
                 (Tm.bind
                   (Ent.ty false false false)
                   (Tm.app (Tm.tyc 6 (Tm.nil)) (Tm.nil))
@@ -746,7 +746,7 @@ def succModModel : Core :=
                     (Ent.ty false true false)
                     (Tm.app
                       (Tm.tyc 10 (Tm.nil))
-                      (Tm.cons (Tm.bv 0) (Tm.cons (Tm.fv 80) (Tm.nil))))
+                      (Tm.cons (Tm.bv 0) (Tm.cons (Tm.fv 78) (Tm.nil))))
                     (Tm.bind
                       (Ent.ty false true false)
                       (Tm.app
@@ -754,8 +754,8 @@ def succModModel : Core :=
                         (Tm.cons
                           (Tm.app
                             (Tm.vc 6 1 (Tm.nil))
-                            (Tm.cons (Tm.fv 81) (Tm.nil)))
-                          (Tm.cons (Tm.fv 80) (Tm.cons (Tm.bv 1) (Tm.nil)))))
+                            (Tm.cons (Tm.fv 79) (Tm.nil)))
+                          (Tm.cons (Tm.fv 78) (Tm.cons (Tm.bv 1) (Tm.nil)))))
                       (Tm.nil))))
                 [(5,
                   0,
@@ -764,12 +764,12 @@ def succModModel : Core :=
                     (Tm.fv 27)
                     (Dec.none)
                     (Tm.cons
-                      (Tm.fv 81)
+                      (Tm.fv 79)
                       (Tm.cons
-                        (Tm.fv 80)
+                        (Tm.fv 78)
                         (Tm.cons
-                          (Tm.fv 79)
-                          (Tm.cons (Tm.fv 83) (Tm.cons (Tm.fv 89) (Tm.nil))))))
+                          (Tm.fv 77)
+                          (Tm.cons (Tm.fv 81) (Tm.cons (Tm.fv 87) (Tm.nil))))))
                     true
                     [true]
                     (some [true, true, true, true, true, true])
@@ -777,8 +777,8 @@ def succModModel : Core :=
                       (Tm.cons
                         (Tm.app
                           (Tm.vc 6 1 (Tm.nil))
-                          (Tm.cons (Tm.fv 79) (Tm.nil)))
-                        (Tm.cons (Tm.fv 89) (Tm.cons (Tm.fv 90) (Tm.nil)))))),
+                          (Tm.cons (Tm.fv 77) (Tm.nil)))
+                        (Tm.cons (Tm.fv 87) (Tm.cons (Tm.fv 88) (Tm.nil)))))),
                  (3,
                   1,
                   Tm.vc 15 1 (Tm.nil),
@@ -786,8 +786,8 @@ def succModModel : Core :=
                     (Tm.fv 29)
                     (Dec.none)
                     (Tm.cons
-                      (Tm.fv 81)
-                      (Tm.cons (Tm.fv 79) (Tm.cons (Tm.fv 83) (Tm.nil))))
+                      (Tm.fv 79)
+                      (Tm.cons (Tm.fv 77) (Tm.cons (Tm.fv 81) (Tm.nil))))
                     true
                     [true]
                     (some [true, true, true, true])
@@ -797,8 +797,8 @@ def succModModel : Core :=
                         (Tm.cons
                           (Tm.app
                             (Tm.vc 10 0 (Tm.nil))
-                            (Tm.cons (Tm.fv 79) (Tm.nil)))
-                          (Tm.cons (Tm.fv 88) (Tm.nil)))))),
+                            (Tm.cons (Tm.fv 77) (Tm.nil)))
+                          (Tm.cons (Tm.fv 86) (Tm.nil)))))),
                  (5,
                   2,
                   Tm.vc 15 2 (Tm.nil),
@@ -807,58 +807,58 @@ def succModModel : Core :=
                       (Tm.fv 25)
                       (Dec.none)
                       (Tm.cons
-                        (Tm.fv 79)
+                        (Tm.fv 77)
                         (Tm.cons
-                          (Tm.fv 80)
-                          (Tm.cons (Tm.fv 82) (Tm.cons (Tm.fv 89) (Tm.nil)))))
+                          (Tm.fv 78)
+                          (Tm.cons (Tm.fv 80) (Tm.cons (Tm.fv 87) (Tm.nil)))))
                       true
                       [true]
                       (some [true, true, true, true, true])
-                      (Core.case (Tm.fv 90) [] none true false)))]
+                      (Core.case (Tm.fv 88) [] none true false)))]
                 none
                 false
                 (Core.ret
                   (Tm.cons
-                    (Tm.fv 85)
-                    (Tm.cons (Tm.fv 86) (Tm.cons (Tm.fv 87) (Tm.nil))))))
+                    (Tm.fv 83)
+                    (Tm.cons (Tm.fv 84) (Tm.cons (Tm.fv 85) (Tm.nil))))))
 
--- natMod: group 33, env 80, np 3, fns 1
+-- natMod: group 33, env 78, np 3, fns 1
 def natModModel : Core :=
   Core.case
-              (Tm.fv 81)
+              (Tm.fv 79)
               [(1,
                 1,
                 Tm.vc 6 1 (Tm.nil),
                 Core.call
-                  (Tm.fv 80)
+                  (Tm.fv 78)
                   (Dec.none)
                   (Tm.cons
-                    (Tm.fv 84)
-                    (Tm.cons (Tm.fv 82) (Tm.cons (Tm.fv 83) (Tm.nil))))
+                    (Tm.fv 82)
+                    (Tm.cons (Tm.fv 80) (Tm.cons (Tm.fv 81) (Tm.nil))))
                   false
                   [false, true, true]
                   (some [false, false, true, false, true, true])
                   (Core.chk
                     (Chk.rt)
-                    (Tm.fv 85)
+                    (Tm.fv 83)
                     (Tm.nil)
                     (Core.call
-                      (Tm.fv 78)
+                      (Tm.fv 76)
                       (Dec.none)
                       (Tm.cons
-                        (Tm.fv 85)
+                        (Tm.fv 83)
                         (Tm.cons
-                          (Tm.fv 82)
+                          (Tm.fv 80)
                           (Tm.cons
-                            (Tm.fv 84)
-                            (Tm.cons (Tm.fv 86) (Tm.cons (Tm.fv 87) (Tm.nil))))))
+                            (Tm.fv 82)
+                            (Tm.cons (Tm.fv 84) (Tm.cons (Tm.fv 85) (Tm.nil))))))
                       false
                       [false, true, true]
                       (some [false, false, true, true, true, false, true, true])
                       (Core.ret
                         (Tm.cons
-                          (Tm.fv 88)
-                          (Tm.cons (Tm.fv 89) (Tm.cons (Tm.fv 90) (Tm.nil)))))))),
+                          (Tm.fv 86)
+                          (Tm.cons (Tm.fv 87) (Tm.cons (Tm.fv 88) (Tm.nil)))))))),
                (0,
                 0,
                 Tm.vc 6 0 (Tm.nil),
@@ -866,13 +866,13 @@ def natModModel : Core :=
                   (Tm.cons
                     (Tm.app (Tm.vc 6 0 (Tm.nil)) (Tm.nil))
                     (Tm.cons
-                      (Tm.fv 83)
+                      (Tm.fv 81)
                       (Tm.cons
                         (Tm.app
                           (Tm.vc 13 0 (Tm.nil))
                           (Tm.cons
                             (Tm.app (Tm.vc 6 0 (Tm.nil)) (Tm.nil))
-                            (Tm.cons (Tm.fv 82) (Tm.cons (Tm.fv 83) (Tm.nil)))))
+                            (Tm.cons (Tm.fv 80) (Tm.cons (Tm.fv 81) (Tm.nil)))))
                         (Tm.nil)))))]
               none
               false
@@ -1517,7 +1517,7 @@ theorem spread3 {o : List Tm} (hl : o.length = 3) {x : Tm} (ht : o.take 1 = [x])
   match o, hl with
   | [_, _, _], _ => simp at ht; subst ht; rfl
 
-theorem succmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G : Group} {F : FnDef} (hlen : env.length = 78)
+theorem succmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G : Group} {F : FnDef} (hlen : env.length = 76)
     (hG : P.groups[gid]? = some G) (hGf : G.fns = [F]) (hb : F.body = succModModel)
     {envC : List Tm} {gidC : Nat} {GC : Group} {FC : FnDef}
     (hcmp : P.cloModel (env.getD 40 .nil) 40 2 [false, false, false] cmpModel = some (envC, gidC, GC, FC)) :
@@ -1531,14 +1531,14 @@ theorem succmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G 
   rw [← closuresS_one (env := envC) hGCf hdlC] at hcr
   have hsp : (Tm.ofList envC).toList ++ closuresS (Tm.ofList envC).toList gidC GC ++
       FC.spreadIn (some [false, false, false])
-        ((Tm.cons (.app (.vc 6 1 .nil) (.cons (.fv 79) .nil)) (.cons (.fv 80) .nil)).toList.map
+        ((Tm.cons (.app (.vc 6 1 .nil) (.cons (.fv 77) .nil)) (.cons (.fv 78) .nil)).toList.map
           (P.sub (env ++ [.clo (.ofList env) gid 0] ++ [.nat r, .nat c, .tok, .tok, .tok]))) =
       envC ++ closuresS envC gidC GC ++ [.nat (r + 1), .nat c] := by
     simp [Tm.toList_ofList, FnDef.spreadIn, hersC, hnpC, filt, spread, Tm.toList, Prog.sub, Prog.subU, Prog.subUArgs,
       env_right hlen, hN.w61, hN.e61, maskArgs, Prog.norm, hN1, Tm.subst]
   rw [← hsp] at hcr
   have hso : ∀ v, FC.spreadOut (some [false, false, false])
-      (Tm.cons (.app (.vc 6 1 .nil) (.cons (.fv 79) .nil)) (.cons (.fv 80) .nil)).toList.length [v] = [v] := by
+      (Tm.cons (.app (.vc 6 1 .nil) (.cons (.fv 77) .nil)) (.cons (.fv 78) .nil)).toList.length [v] = [v] := by
     intro v; simp [FnDef.spreadOut, hersC, hnpC, filt, spread, Tm.toList]
   rw [hb]; unfold succModModel
   rcases Nat.lt_or_ge (r + 1) c with h | h
@@ -1571,11 +1571,11 @@ theorem succmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G 
     all_goals simp [Tm.toList, Prog.sub, Prog.subU, Prog.subUArgs, env_right hlen, hN.w60, hN.e60, maskArgs, Prog.norm,
       hN1, Tm.subst]
 
-theorem natmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G : Group} {F : FnDef} (hlen : env.length = 80)
+theorem natmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G : Group} {F : FnDef} (hlen : env.length = 78)
     (hG : P.groups[gid]? = some G) (hGf : G.fns = [F]) (hb : F.body = natModModel)
     (hers : F.tele.ers = [false, false, true, false, true, true]) (hnp : F.np = 3) (hdl : F.dele = none)
     {envS : List Tm} {gidS : Nat} {GS : Group} {FS : FnDef}
-    (hsm : P.cloModel (env.getD 78 .nil) 78 5 [false, false, true, true, true, false, true, true] succModModel =
+    (hsm : P.cloModel (env.getD 76 .nil) 76 5 [false, false, true, true, true, false, true, true] succModModel =
       some (envS, gidS, GS, FS))
     {envC : List Tm} {gidC : Nat} {GC : Group} {FC : FnDef}
     (hcmp : P.cloModel (envS.getD 40 .nil) 40 2 [false, false, false] cmpModel = some (envC, gidC, GC, FC))
@@ -1599,7 +1599,7 @@ theorem natmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G :
     obtain ⟨o1, h1, hl1, ht1⟩ := ih
     have hsc : (Tm.ofList env).toList ++ closuresS (Tm.ofList env).toList gid G ++
         F.spreadIn (some [false, false, true, false, true, true])
-          ((Tm.cons (.fv 84) (.cons (.fv 82) (.cons (.fv 83) .nil))).toList.map
+          ((Tm.cons (.fv 82) (.cons (.fv 80) (.cons (.fv 81) .nil))).toList.map
             (P.sub (env ++ [.clo (.ofList env) gid 0] ++ [.nat (k + 1), .nat c, .tok] ++ (Tm.cons (.nat k) .nil).toList))) =
         env ++ [.clo (.ofList env) gid 0] ++ [.nat k, .nat c, .tok] := by
       simp [Tm.toList_ofList, closuresS_one hGf hdl, FnDef.spreadIn, hers, hnp, filt, spread, Tm.toList, Prog.sub,
@@ -1618,23 +1618,23 @@ theorem natmod_run {P : Prog} (hN : NatFacts P) {env : List Tm} {gid : Nat} {G :
       case hf => simp [Prog.sub, Prog.subU, env_right hlen]
       case rest =>
       have hso : F.spreadOut (some [false, false, true, false, true, true])
-          ((Tm.cons (.fv 84) (.cons (.fv 82) (.cons (.fv 83) .nil)))).toList.length o1 = [.nat (k % c), .tok, .tok] := by
+          ((Tm.cons (.fv 82) (.cons (.fv 80) (.cons (.fv 81) .nil)))).toList.length o1 = [.nat (k % c), .tok, .tok] := by
         simp only [FnDef.spreadOut, hers, hnp, Option.getD_some, Tm.toList, List.length]
         exact spread3 hl1 ht1
       rw [hso]
       apply RunS.chk
       have hsp : (Tm.ofList envS).toList ++ closuresS (Tm.ofList envS).toList gidS GS ++
           FS.spreadIn (some [false, false, true, true, true, false, true, true])
-            ((Tm.cons (.fv 85) (.cons (.fv 82) (.cons (.fv 84) (.cons (.fv 86) (.cons (.fv 87) .nil))))).toList.map
+            ((Tm.cons (.fv 83) (.cons (.fv 80) (.cons (.fv 82) (.cons (.fv 84) (.cons (.fv 85) .nil))))).toList.map
               (P.sub (env ++ [.clo (.ofList env) gid 0] ++ [.nat (k + 1), .nat c, .tok] ++ (Tm.cons (.nat k) .nil).toList ++
                 [.nat (k % c), .tok, .tok]))) =
           envS ++ closuresS envS gidS GS ++ [.nat (k % c), .nat c, .tok, .tok, .tok] := by
         simp [Tm.toList_ofList, FnDef.spreadIn, hersS, hnpS, filt, spread, Tm.toList, Prog.sub, Prog.subU, env_right hlen]
       apply RunS.call (env := .ofList envS) (G := GS) (F := FS) (outs := o2) ?hf2 hGS hFS (by rw [hsp]; exact h2) ?rest2
-      case hf2 => simp [Prog.sub, Prog.subU, env_left (show 78 < env.length by omega), ← hvS]
+      case hf2 => simp [Prog.sub, Prog.subU, env_left (show 76 < env.length by omega), ← hvS]
       case rest2 =>
       have hso2 : FS.spreadOut (some [false, false, true, true, true, false, true, true])
-          ((Tm.cons (.fv 85) (.cons (.fv 82) (.cons (.fv 84) (.cons (.fv 86) (.cons (.fv 87) .nil)))))).toList.length o2 =
+          ((Tm.cons (.fv 83) (.cons (.fv 80) (.cons (.fv 82) (.cons (.fv 84) (.cons (.fv 85) .nil)))))).toList.length o2 =
           [.nat ((k + 1) % c), .tok, .tok] := by
         simp only [FnDef.spreadOut, hersS, hnpS, Option.getD_some, Tm.toList, List.length]
         exact spread3 hl2 ht2
@@ -1683,8 +1683,8 @@ def Prog.nativeDivmod (P : Prog) (env : List Tm) (G : Group) (j : Nat) (F : FnDe
 
 def Prog.nativeMod (P : Prog) (env : List Tm) (G : Group) (j : Nat) (F : FnDef) : List Tm → Option (List Tm)
   | [.nat s, .nat c, .tok] =>
-    if 0 < c ∧ P.isModel env G j F 80 3 natModErs natModModel = true then
-      match P.cloModel (env.getD 78 .nil) 78 5 succModErs succModModel with
+    if 0 < c ∧ P.isModel env G j F 78 3 natModErs natModModel = true then
+      match P.cloModel (env.getD 76 .nil) 76 5 succModErs succModModel with
       | some (envS, _, _, _) =>
         if (P.cloModel (envS.getD 40 .nil) 40 2 [false, false, false] cmpModel).isSome then
           some [.nat (s % c), .tok, .tok] else none
