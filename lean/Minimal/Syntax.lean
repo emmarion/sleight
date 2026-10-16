@@ -352,6 +352,7 @@ inductive Chk where
   | opn (er : Bool)
   | cm
   | slf
+  | slotAt
   deriving Repr, Inhabited, DecidableEq
 
 inductive Core where

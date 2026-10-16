@@ -755,6 +755,70 @@ theorem Ctx.withSlot_eq (Γ : Ctx) (e : Nat) (s : Tm) :
   · exact ⟨_, _, rfl⟩
   · exact ⟨Γ.σ, Γ.ς, rfl⟩
 
+theorem Ctx.slotEq_eq (Γ : Ctx) (p : Tm × Tm) : ∃ σ ς, Γ.slotEq p = { Γ with σ := σ, ς := ς } := by
+  unfold Ctx.slotEq; split
+  · exact Γ.withSlot_eq _ _
+  · exact Γ.withSlot_eq _ _
+  · exact ⟨Γ.σ, Γ.ς, rfl⟩
+
+theorem Ctx.foldl_slotEq_eq : ∀ (L : List (Tm × Tm)) (Γ : Ctx), ∃ σ ς, L.foldl Ctx.slotEq Γ = { Γ with σ := σ, ς := ς }
+  | [], Γ => ⟨Γ.σ, Γ.ς, rfl⟩
+  | p :: L, Γ => by
+    obtain ⟨σ1, ς1, h1⟩ := Γ.slotEq_eq p
+    obtain ⟨σ2, ς2, h2⟩ := Ctx.foldl_slotEq_eq L (Γ.slotEq p)
+    exact ⟨σ2, ς2, by simp only [List.foldl_cons]; rw [h2, h1]⟩
+
+theorem Ctx.forceSlots_eq (Γ : Ctx) (eqs : List (Tm × Tm)) : ∃ σ ς, Γ.forceSlots eqs = { Γ with σ := σ, ς := ς } :=
+  Ctx.foldl_slotEq_eq _ _
+
+@[simp] theorem Ctx.forceSlots_tys (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).tys = Γ.tys := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_erA (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).erA = Γ.erA := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_mints (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).mints = Γ.mints := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_cur (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).cur = Γ.cur := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_subs (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).subs = Γ.subs := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_ghost (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).ghost = Γ.ghost := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_opened (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).opened = Γ.opened := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_fixed (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).fixed = Γ.fixed := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_cmode (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).cmode = Γ.cmode := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_deles (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).deles = Γ.deles := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_pd (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).pd = Γ.pd := by
+  obtain ⟨σ, ς, h⟩ := Γ.forceSlots_eq eqs; rw [h]
+@[simp] theorem Ctx.forceSlots_n (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).n = Γ.n := by simp [Ctx.n]
+@[simp] theorem Ctx.forceSlots_er (Γ : Ctx) (eqs : List (Tm × Tm)) : (Γ.forceSlots eqs).er = Γ.er := by funext i; simp [Ctx.er]
+
+theorem EnvOK.forceSlots {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (eqs : List (Tm × Tm)) : EnvOK P ρ (Γ.forceSlots eqs) := by
+  unfold Ctx.forceSlots
+  generalize List.filter _ _ = L
+  induction L generalizing Γ with
+  | nil => exact hE
+  | cons p L ih =>
+    refine ih ?_
+    unfold Ctx.slotEq; split <;> first | exact hE.withSlot _ | exact hE
+
+theorem Ctx.slotEq_ghost (g : Bool) (Γ : Ctx) (p : Tm × Tm) :
+    ({ Γ with ghost := g } : Ctx).slotEq p = { Γ.slotEq p with ghost := g } := by
+  unfold Ctx.slotEq; split <;> first | rfl | exact Ctx.withSlot_upd_ghost Γ _ _ g
+
+theorem Ctx.forceSlots_upd_ghost (g : Bool) (Γ : Ctx) (eqs : List (Tm × Tm)) :
+    ({ Γ with ghost := g } : Ctx).forceSlots eqs = { Γ.forceSlots eqs with ghost := g } := by
+  unfold Ctx.forceSlots
+  rw [show (fun e : Tm × Tm => (({ Γ with ghost := g } : Ctx).canon e.1, ({ Γ with ghost := g } : Ctx).canon e.2)) =
+    fun e => (Γ.canon e.1, Γ.canon e.2) from rfl]
+  generalize List.filter _ _ = L
+  induction L generalizing Γ with
+  | nil => rfl
+  | cons p L ih => simp only [List.foldl_cons]; rw [Ctx.slotEq_ghost]; exact ih _
+
 theorem EnvOK.ntSlot {ρ : List Tm} {Γf : Ctx} (h : EnvOK P ρ Γf) (Γ : Ctx) (s k : Tm) :
     EnvOK P ρ (Γ.ntSlot P Γf s k) ∧ Γf.Ext (Γ.ntSlot P Γf s k) ∧
       ∃ σ ς, Γ.ntSlot P Γf s k = { Γf with σ := σ, ς := ς } := by
@@ -2823,7 +2887,21 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
     ({ Γ with ghost := g } : Ctx).branch P s k H idx sig =
       ({ (Γ.branch P s k H idx sig).1 with ghost := g }, (Γ.branch P s k H idx sig).2) := by
   simp only [Ctx.branch, Ctx.openTele_ghost, Ctx.ntSlot_ghost]
-  split <;> rfl
+  generalize Γ.ntSlot P (Γ.openTele sig (sig.len - 1)).1 s k = Γn
+  have e1 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).n = Γ'.n := fun _ => rfl
+  have e2 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).σ = Γ'.σ := fun _ => rfl
+  have e3 : ∀ Γ' : Ctx, Ctx.atoms P ({ Γ' with ghost := g } : Ctx) = Ctx.atoms P Γ' := fun _ => rfl
+  have e4 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).canon = Γ'.canon := fun _ => rfl
+  have e5 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).fields = Γ'.fields := fun _ => rfl
+  simp only [e1, e2, e3, e4, e5]
+  split
+  · split
+    · rename_i σ _
+      have h1 := Ctx.forceSlots_upd_ghost g ({ Γn with σ := σ } : Ctx)
+        [(Γ.canon s, Γn.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γn.canon _)]
+      exact Prod.ext h1 (congrArg (fun x : Ctx => UResult.ok x.σ) h1)
+    · rfl
+  · rfl
 
 section
 variable (Γ Γ' : Ctx) (ov : Option (List Bool))
@@ -3134,8 +3212,11 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   have h5 : Γf.n = Γ.n + (sig.len - 1) := by rw [hnt]; exact h5
   have h6 := h6.trans hx
   have hbranch : Γ.branch P s k H idx sig =
-      (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)]) := by
-    simp [Ctx.branch, hpr, hΓf]
+      (match unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)] with
+        | .ok σ => (({ Γf with σ := σ } : Ctx).forceSlots [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)],
+            UResult.ok (({ Γf with σ := σ } : Ctx).forceSlots [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)]).σ)
+        | r => (Γf, r)) := by
+    simp only [Ctx.branch, hpr, hΓf] <;> rfl
   have hEf := h1
   have hvl : vs.toList.length = sig.len - 1 := by rw [Tm.len_toList _ hvs.isList, hm']
   have hsat : Sat (Tm.env (ρ ++ vs.toList)) Γ.σ := h6.σ _ (Tm.env_lc hEf.closed) hEf.sat
@@ -3158,7 +3239,11 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   generalize hbody : lookupBr brs c = br at hbr'
   generalize hei : els.isSome = eb at hbr'
   cases hbr' with
-  | dead hd | refuted hd => rw [Ctx.branch_ghost, hbranch] at hd; exact absurd hd hun.2
+  | dead hd | refuted hd =>
+    rw [Ctx.branch_ghost, hbranch] at hd
+    split at hd
+    · simp at hd
+    · exact absurd hd hun.2
   | covered =>
     obtain ⟨e, rfl⟩ := Option.isSome_iff_exists.mp hei
     refine ⟨[], e, by simp [selectBr, hbody], _, hel e rfl, ?_, by simpa using hb, ?_, hRs, .inr rfl,
@@ -3168,10 +3253,20 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   | live hlive hcb =>
     rename_i Γf' body σ'
     have hlive0 := hlive
-    rw [Ctx.branch_ghost, hbranch] at hlive; simp only [Prod.mk.injEq] at hlive
-    obtain ⟨rfl, hu⟩ := hlive
-    have hsσ := hun.1 σ' hu
-    have hwσ := unify_wf Γf.n (Γf.atoms P) Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
+    rw [Ctx.branch_ghost, hbranch] at hlive
+    split at hlive
+    rotate_left
+    · rename_i hne; simp only [Prod.mk.injEq] at hlive; exact (hne σ' hlive.2).elim
+    rename_i σ0 hu
+    simp only [Prod.mk.injEq, UResult.ok.injEq] at hlive
+    obtain ⟨hΓf', hσ'⟩ := hlive
+    have hsσ := hun.1 σ0 hu
+    have hwσ := unify_wf Γf.n (Γf.atoms P) Γf.σ [] _ σ0 (fun e t he => hEf.wf.σ e t he) hu
+    have hEu := (hEf.modify (Γ' := { Γf with σ := σ0 }) rfl hsσ hEf.chrono
+      ⟨hEf.wf.tys, hwσ, hEf.wf.ς, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).forceSlots [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)]
+    obtain ⟨σu, ςu, hΓu⟩ := Ctx.forceSlots_eq ({ Γf with σ := σ0 } : Ctx) [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)]
+    rw [hΓu] at hΓf' hσ' hEu
+    subst hΓf' hσ'
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
     replace o1 : ∀ i < Γ.n, Γf.er i = Γ.er i := by rw [hnt]; exact o1
@@ -3179,7 +3274,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),
       fun i hi => by show (Ctx.advBr _ _ _ _ _ _ _).er _ = _; rw [Ctx.advBr_er, Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
       fun sig'' hsig'' k hk => ?_, fun _ => ⟨_, hctor, by rw [hvl, hsk2, Tm.len_subst _ _ (.inl hst)]⟩,
-      .inr ⟨k, sig, _, σ', hshc, rfl, hlive0, rfl⟩⟩
+      .inr ⟨k, sig, _, _, hshc, rfl, hlive0, rfl⟩⟩
     rotate_left 4
     · rw [hctor] at hsig''; cases hsig''
       show (Ctx.advBr _ _ _ _ _ _ _).er _ = _; rw [Ctx.advBr_er, hsk1, Tm.ers_subst _ _ hst]
@@ -3190,8 +3285,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
         split <;> rfl
     · refine EnvOK.cm false ?_
       refine ((hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).advBr hP (by rw [hsk2, Tm.len_subst _ _ (.inl hst)])
-        ((hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
-          ⟨hEf.wf.tys, hwσ, hEf.wf.ς, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _
+        (hEu.congr _
             (by simp) (by simp) (by simp) (by simp) (by simp) (by cases fe <;> simp [Ctx.setErs])
             (by cases fe <;> simp [Ctx.setErs]) (hς := by cases fe <;> simp [Ctx.setErs]))
         (by cases fe <;> simp [Ctx.setErs, h6.fixed]) hsv rfl (by rw [hvl]) hctor hsk1 (fun j hj => ?_) hk)
@@ -4149,6 +4243,7 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
       | chkOpn _ _ _ hu h => exact ⟨_, _, Γ.ς, _, Γ.pd, h, hE.opened hP hu⟩
       | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
       | chkCm h => exact ⟨Γ.opened, Γ.σ, Γ.ς, true, Γ.pd, h, hE.congr _ rfl rfl rfl rfl rfl⟩
+      | chkSlotAt h => exact ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, _, h, hE.congr _ rfl rfl rfl rfl rfl⟩
       | chkMark h =>
         rw [Ctx.markPd_eq] at h
         exact ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, _, h, hE.congr _ rfl rfl rfl rfl rfl⟩

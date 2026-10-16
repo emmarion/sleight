@@ -150,10 +150,18 @@ theorem UqOK.next {G : UCtx} {Γ' : Ctx} {us : List Bool} {U : Uses} (hn : G.Γ.
   · exact UCtx.next_uq h
   · exact .inr (Nat.le_trans hn h)
 
-theorem Ctx.branch_fst (Γ : Ctx) (s k H idx sig : Tm) :
-    (Γ.branch P s k H idx sig).1 = Γ.ntSlot P (Γ.openTele sig (sig.len - 1)).1 s k := by
+theorem Ctx.branch_fields (Γ : Ctx) (s k H idx sig : Tm) :
+    (Γ.branch P s k H idx sig).1.ghost = (Γ.openTele sig (sig.len - 1)).1.ghost ∧
+    (Γ.branch P s k H idx sig).1.er = (Γ.openTele sig (sig.len - 1)).1.er ∧
+    (Γ.branch P s k H idx sig).1.n = (Γ.openTele sig (sig.len - 1)).1.n := by
   rcases h : Γ.openTele sig (sig.len - 1) with ⟨Γf, rem⟩
-  simp only [Ctx.branch, h]; split <;> rfl
+  obtain ⟨g1, e1, n1⟩ := Ctx.ntSlot_fields P Γ Γf s k
+  simp only [Ctx.branch, h]
+  split
+  · split
+    · simp only [Ctx.forceSlots_ghost, Ctx.forceSlots_er, Ctx.forceSlots_n]; exact ⟨g1, e1, n1⟩
+    · exact ⟨g1, e1, n1⟩
+  · exact ⟨g1, e1, n1⟩
 
 theorem branchCtx_spec {G Gb : UCtx} {s k H idx sig : Tm} {fe ph uscr cell : Bool}
     (h : G.branchCtx P s k H idx sig fe ph uscr cell = some Gb) :
@@ -161,13 +169,13 @@ theorem branchCtx_spec {G Gb : UCtx} {s k H idx sig : Tm} {fe ph uscr cell : Boo
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  have hf : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k := by
-    rw [← Ctx.branch_fst, hb]
+  have hf := (Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig).2.2
+  rw [hb] at hf; dsimp only at hf
   rw [hb] at h
   cases r with
   | ok σ =>
     simp only [Option.some.injEq] at h; subst h
-    have hn : G.Γ.n ≤ Γf.n := by rw [hf, (Ctx.ntSlot_fields P _ _ s k).2.2]; exact Ctx.openTele_n_le _ { G.Γ with ghost := G.Γ.ghost || ph } _
+    have hn : G.Γ.n ≤ Γf.n := by rw [hf]; exact Ctx.openTele_n_le _ { G.Γ with ghost := G.Γ.ghost || ph } _
     refine ⟨?_, fun i hi hc => ?_, rfl⟩
     · simp only [UCtx.next]; split <;> simpa [Ctx.n] using hn
     · rcases UCtx.next_uq hc with h | h
@@ -813,6 +821,14 @@ theorem machine_chkPlain {b : Nat} {G : UCtx} {ru : List Bool} {rets a x : Tm} {
   machine_chkSame (fun m e => by rcases hk with rfl | rfl | rfl <;> cases e)
     (fun U K h => by rcases hk with rfl | rfl | rfl <;> (rw [usesCore] at h <;> first | exact h | (intros; contradiction))) ih
 
+theorem machine_slotAt {b : Nat} {G : UCtx} {ru : List Bool} {rets a x : Tm} {rest : Core} {ρ vs : List Tm}
+    (ih : MRun P b { G with Γ := { G.Γ with pd := a.varSlot } } ru rets rest ρ vs) :
+    MRun P b G ru rets (.chk .slotAt a x rest) ρ vs :=
+  machine_same (G' := { G with Γ := { G.Γ with pd := a.varSlot } }) rfl rfl rfl rfl rfl rfl rfl ih
+    (fun U K h => ⟨U, K, by rw [usesCore] at h <;> first | exact h | (intros; contradiction), Uses.Eqb.refl _ _⟩)
+    (fun ρS vsS h => by cases h with | chk h => exact h)
+    (fun H ρM pd H' out h => .chk (fun m e => by cases e) h)
+
 theorem machine_cm {b : Nat} {G : UCtx} {ru : List Bool} {rets a x : Tm} {rest : Core} {ρ vs : List Tm}
     (ih : MRun P b { G with Γ := { G.Γ with cmode := true } } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk .cm a x rest) ρ vs :=
@@ -1399,10 +1415,8 @@ theorem branchCtx_fld {G Gb : UCtx} {s k H idx sig : Tm} {cell : Bool} (hf : G.f
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig with ⟨Γf, r⟩
-  have hfe : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || false } ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 s k := by
-    rw [← Ctx.branch_fst, hb]
-  obtain ⟨eg, eer, en⟩ := Ctx.ntSlot_fields P { G.Γ with ghost := G.Γ.ghost || false } ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 s k
-  rw [← hfe] at eg eer en
+  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig
+  rw [hb] at eg eer en; dsimp only at eg eer en
   rw [hb] at h
   cases r with
   | ok σ =>
@@ -1915,10 +1929,8 @@ theorem branchCtx_erf {G Gb : UCtx} {s k H idx sig : Tm} {ph cell : Bool} (hf : 
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  have hfe : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k := by
-    rw [← Ctx.branch_fst, hb]
-  obtain ⟨eg, eer, en⟩ := Ctx.ntSlot_fields P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k
-  rw [← hfe] at eg eer en
+  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig
+  rw [hb] at eg eer en; dsimp only at eg eer en
   rw [hb] at h
   cases r with
   | ok σ =>

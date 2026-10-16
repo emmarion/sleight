@@ -1249,6 +1249,9 @@ def abst (ids : List Nat) : Nat → Tm → Tm
   | D, .fv i => match ids.idxOf? i with
     | some k => .bv (D - 1 - k)
     | none => .fv i
+  | D, .sfv i => match ids.idxOf? i with
+    | some k => .sbv (D - 1 - k)
+    | none => .sfv i
   | D, .tyc d ls => .tyc d (abst ids D ls)
   | D, .vc d c ls => .vc d c (abst ids D ls)
   | D, .cons h t => .cons (abst ids D h) (abst ids D t)
@@ -1603,7 +1606,7 @@ def openCtor (sc : Scope) (md : Mode) (scr : Option Tm) (ci : CtorInfo) (c : Str
     let T := Tm.app (.tyc cd .nil) (.ofList ms)
     note j T
     if let some (.fv s) := scr then modify fun st => { st with links := (j, s) :: st.links }
-    return (nf, ci, (u, .fv j) :: sc', uqMark [md] ++ (if md == .uniq then [fun c => Core.chk (.mark .cellOf) (scr.getD .nil) .nil c] else []) ++
+    return (nf, ci, (u, .fv j) :: sc', uqMark [md] ++ [fun c => Core.chk (if md == .uniq then .mark .cellOf else .slotAt) (scr.getD .nil) .nil c] ++
       [Core.prim (.axm T) md.isEr])
 
 def openPattern (sc : Scope) (md : Mode) (scr : Option Tm := none) : Sx → M (Nat × CtorInfo × Scope × List (Core → Core))
@@ -2391,7 +2394,8 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
   let ty : List Stmt := match exp with
     | some (.bind (.ty ..) A .nil) => [fun c => .chk .ty (.fv j) A c]
     | _ => []
-  return (ss ++ chk ++ uqMark [pm] ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil, .prim (.tm t) er] ++ ty, [.fv j])
+  return (ss ++ chk ++ uqMark [pm] ++ [.chk (.mark (.reuse (pm == .uniq))) (.fv i) .nil] ++
+    (if pm != .uniq && !(pm == .many && stores) then [.chk .slotAt (.fv i) .nil] else []) ++ [.prim (.tm t) er] ++ ty, [.fv j])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
