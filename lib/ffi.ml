@@ -26,6 +26,7 @@ let text sl = VExt (Hashtbl.find registered "String", Slice sl)
 let bytes = function VExt (_, Bytes b) -> b | v -> raise (Eval.Runtime ("not an extern byte buffer: " ^ show v))
 let arr a = VExt (Hashtbl.find registered "Array", Array a)
 let buf b = VExt (Hashtbl.find registered "Bytes", Bytes b)
+let slots = function VExt (_, Slots t) -> t | v -> raise (Eval.Runtime ("not an extern slot table: " ^ show v))
 
 let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
@@ -49,6 +50,10 @@ let types : (string * ty_spec) list =
   let in_array adt a = VExt (adt, Array a) and in_bytes adt b = VExt (adt, Bytes b) in
   [ ("Array", cons_view (fun adt -> Ffi_core.array_of ~array ~wrap:(in_array adt)) (fun adt -> Ffi_core.array_view ~array ~wrap:(in_array adt)));
     ("Bytes", cons_view (fun adt -> Ffi_core.bytes_of ~z ~bytes ~wrap:(in_bytes adt)) (fun adt -> Ffi_core.bytes_view ~bytes ~u8:(int "Nat") ~wrap:(in_bytes adt)));
+    ( "Slots",
+      view [ 1 ] (fun adt ->
+          { construct = (fun _ args -> match args with [ l ] -> Ffi_core.slots_of ~list:unlist ~wrap:(fun t -> VExt (adt, Slots t)) (MkSlots l) | _ -> raise arity);
+            destruct = (fun v -> let (MkSlots l) = Ffi_core.slots_view ~slots ~list v in (0, [ l ])) }) );
     ( "Nat",
       view [ 0; 1 ] (fun adt ->
           { construct = (fun i args -> Ffi_core.nat_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> Zero | 1, [ p ] -> Succ p | _ -> raise arity));
@@ -108,6 +113,10 @@ let fns : (string * fn_spec) list =
     ("bytes-length-many", bytes_length);
     ("str-bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun s -> buf (Ffi_core.str_bytes_copy (slice s)))));
     ("bytes-str", spec 1 (unary (fun b -> text (Ffi_core.bytes_str (bytes b)))));
+    ("slots-new", spec 0 (fun _ -> [ VExt (Hashtbl.find registered "Slots", Slots (Ffi_core.slots_new ())) ]));
+    ("slots-find", spec ~needs:[ "SlotFind" ] 2 (binary (fun t s -> match Ffi_core.slots_find (slots t) s with SlotFound i -> plain "SlotFind" 0 [ int "Nat" (Z.of_int i) ] | SlotMissing -> plain "SlotFind" 1 [])));
+    ("slots-intern", spec ~needs:[ "SlotIntern" ] 2 (binary (fun t s -> match Ffi_core.slots_intern (slots t) s with SlotExisting i -> plain "SlotIntern" 0 [ int "Nat" (Z.of_int i) ] | SlotAdded i -> plain "SlotIntern" 1 [ int "Nat" (Z.of_int i) ])));
+    ("slots-length", spec 1 (unary (fun t -> int "Nat" (Z.of_int (Ffi_core.slots_length (slots t))))));
     ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
@@ -148,7 +157,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]) ]
+let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
   let ns = List.map (fun (c : ctor) -> c.arity) adt.ctors in
@@ -157,7 +166,7 @@ let check_shape loc name adt =
     | Some t -> t.shape
     | None -> ( match List.assoc_opt name plain_shapes with Some s -> s | None -> Env.error loc "the FFI records no shape for %s" (Env.tick name))
   in
-  if (not adt.tagged) || ns <> want then
+  if (List.length ns > 1 && not adt.tagged) || ns <> want then
     Env.error loc "the extern implementation of %s has the tagged shape (%s), its declaration %s(%s)" (Env.tick name) (spell want) (if adt.tagged then "" else "the untagged ") (spell ns);
   try Ffi_templates.check name ns with Failure m -> Env.error loc "%s" m
 

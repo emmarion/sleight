@@ -1317,6 +1317,11 @@
   (let-match many (ctor-named env "SGen") (Some _ sg) ((None _) (None _)))
   (Some _ $ ExtRaw np mp nl cs sn sg))
 
+(def-fns _ $ (many slots-ext : (many (Env) env) -> (many (Maybe $ ExtType) r))
+  (let-match many (ctor-named env "Nil") (Some _ nl) ((None _) (None _)))
+  (let-match many (ctor-named env "Cons") (Some _ cs) ((None _) (None _)))
+  (Some _ $ ExtSlots nl cs))
+
 (def-fns _ $ (many ctor-type : (many (Env) env) (many (Nat) c) -> (many (List $ Entry) tele) (many (Term) ret))
   (match many (type-of env c) _
     ((TValCtor tele ret) (values tele ret)) ((TErr m) (values (Nil _) $ TErr m)) (else (values (Nil $ Entry) $ TErr "not a constructor"))))
@@ -2612,13 +2617,17 @@
 (def-fns _ $ (many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info))
   (values env $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env))
 
+(def-fns _ $ (many first-stored : (subterm many (List $ Entry) tele) -> (many (Maybe $ Entry) r))
+  (let-match many tele (Cons _ e rest) ((Nil _) (None _)))
+  (match many (entry-stored e) _ ((BTrue) (Some _ e)) ((BFalse) (tail $ first-stored rest))))
+
 ; The constructors an extern function builds its result with, read off its model's return type (section 42):
 ; the implementation's view and the declaration must agree on the shape, as they must for an extern type.
 (def-fns _ $ (many extern-ctors : (many (Env) env) (many (String) name) (many (List $ Entry) rets) (many (List $ Nat) want) -> (many (Env) r) (many (List $ Ctor) cs))
   (let ((many (Maybe $ Nat) head))
-    (match many rets _
-      ((Nil _) (None _))
-      ((Cons _ e _)
+    (match many (first-stored rets) _
+      ((None _) (None _))
+      ((Some _ e)
         (let ((many ty) (many rule)) $ fact-of env $ entry-sg e)
         (type-head env ty))))
   (let-match many head (Some _ tid)
@@ -4472,7 +4481,7 @@
 ; a second extern declaration of an already bound name is refused (ASSUMPTIONS 42), so ExtNat and ExtString
 ; tag the prelude's own types alone, which lit-rope spells before this is reached.
 (def-fns _ $ (many show-ext-typed : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (ExtType) e) -> (many (Rope) r))
-  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)) ((ExtBytes) (show-plain _ b)) ((ExtRaw _ _ _ _ _ _) (show-plain _ b)))
+  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)) ((ExtBytes) (show-plain _ b)) ((ExtRaw _ _ _ _ _ _) (show-plain _ b)) ((ExtSlots _ _) (show-plain _ b)))
   (let-match many b (BExt _ p)
     (else (show-plain _ b)))
   (match many p (((Rope) _)) ((PHalf n) (show-half-typed n)) (else (show-plain _ b))))
@@ -6726,7 +6735,7 @@
     (let ((many mctors)) $ mctors-of mcpairs)
     (let ((many ss)) $ shapes mctors env2)
     (let ((many tagged)) $ tagged-of disc ss)
-    (let ((many found)) $ match many (str-eq name "Raw") (((Maybe $ ExtType) _)) ((BTrue) (raw-ext env2)) ((BFalse) (ext-type-of name)))
+    (let ((many found)) $ match many (str-eq name "Raw") (((Maybe $ ExtType) _)) ((BTrue) (raw-ext env2)) ((BFalse) (match many (str-eq name "Slots") _ ((BTrue) (slots-ext env2)) ((BFalse) (ext-type-of name)))))
     (let ((many (Env) env2b)) $ match many ext _ ((BTrue) (claim-extern env2 name $ is-some _ found)) ((BFalse) env2))
     (let ((many (Maybe $ ExtType) extname)) $ match many ext _ ((BTrue) found) ((BFalse) (None _)))
     (let ((many (Env) env2c))
@@ -6736,7 +6745,7 @@
           (let ((many ns)) $ cshape-arities $ non-phantom ss)
           (let ((many want)) $ ext-type-shape et)
           (let ((many (String) how)) $ match many tagged _ ((BTrue) "(") ((BFalse) "the untagged ("))
-          (error-unless env2b (and tagged $ nat-list-eq ns want) $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))))
+          (error-unless env2b (and (or tagged $ nat-lt (list-length _ ns) 2) $ nat-list-eq ns want) $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))))
     (let ((many adt2)) $ mint-adt env2c tid disc ss extname nt)
     (let ((many records)) $ adt-ctors adt2)
     (let ((many cvals)) $ ctor-values records)

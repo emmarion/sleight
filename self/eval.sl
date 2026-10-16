@@ -223,6 +223,23 @@
   (let ((many f) (many xs)) $ heap-syns _ hp (None _) refs)
   (PRaw f $ RList p xs))
 
+(def-fns _ $ (many slots-block : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) ks) (many (Nat) n) (many (IdMap $ Ref Block hs) keys) (many (IdMap $ Nat) ids) -> (many (Block $ Ref Block hs) b))
+  (let-match many ks (Cons _ k rest) ((Nil _) (BSlots _ n keys ids)))
+  (tail $ slots-block _ rest (Succ n) (idmap-set _ n k keys) (idmap-set _ (ref-pos _ _ k) n ids)))
+
+(def-fns _ $ (many slots-construct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
+  (let-match many fields (Cons _ l _) ((Nil _) (halloc _ hp (BError _ "slots constructor arity"))))
+  (match many (list-refs (hsize _ hp) _ hp l) _
+    ((None _) (halloc _ hp (BError _ "slots constructor: out of fuel")))
+    ((Some _ ks) (halloc _ hp (slots-block _ (list-rev _ ks) 0 (MEmpty _) (MEmpty _))))))
+
+(def-fns _ $ (many list-block : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) nil) (many (Ctor) cons) (subterm many (List $ Ref Block hs) xs) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) a))
+  (let-match many xs (Cons _ x rest) ((Nil _) (halloc _ hp $ BTag _ nil $ Nil _)))
+  (let ((erased h1) (many hp1) (erased s1) (many tl)) $ notail $ list-block _ hp nil cons rest)
+  (let ((erased w) (erased pw)) (ref-widen _ _ _ s1 x))
+  (let ((erased h2) (many hp2) (erased s2) (many c)) $ halloc _ hp1 $ BTag _ cons $ Cons _ (coerce x pw) $ Cons _ tl $ Nil _)
+  (values h2 hp2 (hist-le-trans _ _ _ s1 s2) c))
+
 (def-fns _ $ (many ext-construct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (ExtType) ext) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
   (let-match many ext (ExtHalf)
     ((ExtArray) (array-construct _ hp index fields))
@@ -231,7 +248,8 @@
         ((Zero) (Zero)) ((Succ _) (Succ (field-nat _ hp fields 0)))))))
     ((ExtString) (alloc-ext _ hp $ PStr $ cons-string _ hp index fields))
     ((ExtBytes) (alloc-ext _ hp $ PBytes $ cons-string _ hp index fields))
-    ((ExtRaw _ _ _ _ _ _) (alloc-ext _ hp $ raw-construct _ hp index fields)))
+    ((ExtRaw _ _ _ _ _ _) (alloc-ext _ hp $ raw-construct _ hp index fields))
+    ((ExtSlots _ _) (slots-construct _ hp fields)))
   (let ((many d) (erased dd)) (double (field-nat _ hp fields 0)))
   (alloc-ext _ hp (PHalf (match many index (((Nat) _))
     ((Zero) 0) ((Succ k) (match many k (((Nat) _)) ((Zero) (Succ d)) ((Succ _) (Succ (Succ d)))))))))
@@ -341,6 +359,12 @@
       (let-match many e (ExtArray) (else (values hs hp (le-refl hs) (None _))))
       (let ((erased h2) (many hp2) (erased le2) (many i) (many fields)) (array-destruct _ hp v))
       (values h2 hp2 le2 (Some _ (MkPair _ _ i fields))))
+    ((BSlots _ n ks _)
+      (let-match many ext (Some _ e) ((None _) (values hs hp (le-refl hs) (None _))))
+      (let-match many e (ExtSlots nl cs) (else (values hs hp (le-refl hs) (None _))))
+      (let ((erased w) (erased pw)) (idmap-widen _ _ _ lt ks))
+      (let ((erased h2) (many hp2) (erased le2) (many l)) (list-block _ hp nl cs (list-rev _ $ idmap-prefix _ (coerce ks pw) n $ Nil _)))
+      (values h2 hp2 le2 (Some _ (MkPair _ _ 0 (Cons _ l (Nil _))))))
     ((BTag _ ct fs)
       (let-match many tagged (BTrue) ((BFalse) (values hs hp (le-refl hs) $ None _)))
       (let ((erased w3) (erased p3)) (refs-widen _ _ _ lt fs))
@@ -404,7 +428,9 @@
   (many ErWrite : (many (Nat) arg) (many (Payload) p) -> (ExtResult))
   (many ErArrayCopy : -> (ExtResult))
   (many ErArraySub : (many (Nat) i) (many (Nat) n) -> (ExtResult))
-  (many ErArrayBlit : (many (Nat) i) (many (Nat) j) (many (Nat) n) -> (ExtResult)))
+  (many ErArrayBlit : (many (Nat) i) (many (Nat) j) (many (Nat) n) -> (ExtResult))
+  (many ErSlotsNew : -> (ExtResult))
+  (many ErSlotsLookup : (many (Bool) adding) -> (ExtResult)))
 
 ; An extern function over its arguments (section 42). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
@@ -427,6 +453,26 @@
       (values hs hp1 (le-refl hs) (match many return-old (((List $ Ref Block hs) _)) ((BTrue) (Cons _ v (Nil _))) ((BFalse) (Nil _))))))
   (let ((erased h2) (many hp2) (erased le2) (many err)) (halloc _ hp1 (BError _ "invalid array access")))
   (values h2 hp2 le2 (Cons _ err (Nil _))))
+
+(def-fns _ $ (many result-ctor : (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ctor) cs) (many (Nat) i) (many (List $ Payload) ps) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r))
+  (let-match many (list-nth _ cs i) (NthHit _ _ _ c _)
+    ((NthMiss _ _ _ _) (alloc-one _ hp $ BError _ "the extern implementation has no constructor to build its result with")))
+  (let ((erased h1) (many hp1) (erased s1) (many rs)) $ alloc-payloads _ hp ps)
+  (let ((erased h2) (many hp2) (erased s2) (many v)) $ construct _ hp1 c rs)
+  (values h2 hp2 (hist-le-trans _ _ _ s1 s2) $ Cons _ v $ Nil _))
+
+(def-fns _ $ (many slots-count : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) t) -> (many (Nat) n))
+  (let ((erased x) (many body) (erased lt)) (hread _ hp t))
+  (match many body _ ((BSlots _ n _ _) n) (else 0)))
+
+(def-fns _ $ (many slots-lookup : (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ctor) cs) (many (Ref Block hs) t) (many (Ref Block hs) k) (many (Bool) adding) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r))
+  (let ((erased x) (many body) (erased lt)) (hread _ hp t))
+  (let-match many body (BSlots _ n ks ids) (else (alloc-one _ hp $ BError _ "not a slot table")))
+  (let-match many (idmap-get _ (ref-pos _ _ k) ids) (Miss _ _ _ _) ((Hit _ _ _ i _) (result-ctor _ hp cs 0 $ Cons _ (PNat i) $ Nil _)))
+  (let-match many adding (BTrue) ((BFalse) (result-ctor _ hp cs 1 $ Nil _)))
+  (let ((erased w) (erased pw)) (idmap-widen _ _ _ lt ks))
+  (let ((many hp1)) (hwrite _ hp t $ BSlots _ (Succ n) (idmap-set _ n k $ coerce ks pw) (idmap-set _ (ref-pos _ _ k) n ids)))
+  (result-ctor _ hp1 cs 1 $ Cons _ (PNat n) $ Nil _))
 
 (def-fns _ $ (many apply-extern : (erased (Nat) n) (many (Extern n) e) (many (List $ Ctor) cs) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r))
   (let ((many (Maybe $ Ref Block hs) a)) $ match many (list-nth _ args 0) _ ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _)))
@@ -461,6 +507,10 @@
       ((ExArrayCopy) (ErArrayCopy))
       ((ExBytesStr) (ErPayload $ PStr sa))
       ((ExArrayMake) (ErArrayMake na))
+      ((ExSlotsNew) (ErSlotsNew))
+      ((ExSlotsFind) (ErSlotsLookup $ BFalse))
+      ((ExSlotsIntern) (ErSlotsLookup $ BTrue))
+      ((ExSlotsLength) (ErPayload $ PNat $ match many a (((Nat) _)) ((Some _ x) (slots-count _ hp x)) ((None _) 0)))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
       ((ExSub)
         (let-match many (lt-dec nb (Succ na)) (Yes _ _ le)
@@ -541,11 +591,12 @@
       (let ((erased hl3) (many hp3) (erased sf3) (many v2)) $ alloc-ext _ hp2 q)
       (let ((erased w1) (erased pw1)) (ref-widen _ _ _ sf3 v1))
       (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) $ Cons _ (coerce v1 pw1) $ Cons _ v2 $ Nil _))
-    ((ErCtor i)
-      (let-match many (list-nth _ cs i) (NthHit _ _ _ c _)
-        ((NthMiss _ _ _ _) (alloc-one _ hp $ BError _ "the extern implementation has no constructor to build its result with")))
-      (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ construct _ hp c $ Nil _)
-      (values hl2 hp2 sf2 $ Cons _ v $ Nil _))))
+    ((ErCtor i) (result-ctor _ hp cs i $ Nil _))
+    ((ErSlotsNew) (alloc-one _ hp $ BSlots _ 0 (MEmpty _) (MEmpty _)))
+    ((ErSlotsLookup adding)
+      (let-match many a (Some _ t) ((None _) (alloc-one _ hp $ BError _ "slots: no table")))
+      (let-match many b (Some _ k) ((None _) (alloc-one _ hp $ BError _ "slots: no slot")))
+      (slots-lookup _ hp cs t k adding))))
 
 ; ---- Values at every position of a code's index (ASSUMPTIONS 125): a code's values are the list of its
 ; many results, with a Picked reading them back against the index. Nothing converts between the two

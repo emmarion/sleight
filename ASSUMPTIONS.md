@@ -4158,3 +4158,30 @@ silent.
      passes the constructor through to its own driver and copies the
      answer into its compile-time store after the reading in both
      modes.
+
+220. **Which number a table answers for a slot it holds twice, where
+     DESIGN.md section 69 is silent.** A `Slots` can hold one slot more
+     than once, built so through `MkSlots` or interned twice after a
+     miss. Both compilers answer the number given most recently: the
+     reference's table keeps every number in its hash buckets and finds
+     the newest first, and slc's `BSlots` keeps one number per heap
+     position, overwritten when the position is added again. Either
+     answer satisfies the `NthLast` proof the result carries, on the
+     session's reading.
+
+221. **An extern type with one constructor, where DESIGN.md section 42
+     says nothing of its tag.** `Slots` is the first extern type with a
+     single constructor, so it is untagged (section 33), and the FFI's
+     shape check in both compilers, which had required every extern
+     type's shape to be tagged, now accepts an untagged one of one
+     constructor. Extraction and slc's output still lay its view out as
+     a one-constructor variant, which the session reads as representing
+     it the same way.
+
+222. **The result type of an extern function, read in slc from its first
+     stored return.** slc finds the plain type an extern implementation
+     builds, whose shape it checks, by reading one return of the model.
+     It read the first return, which for `slots-intern` is the erased
+     list; it now reads the first return that is neither erased nor
+     written `at`, which for every earlier extern is the same return.
+     The reference checks such types by name and reads no return.

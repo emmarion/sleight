@@ -701,7 +701,7 @@
 (def-fns _ $ (many ffi-call : (many (String) name) (many (List $ Rope) params) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
   (match many (find-template (decl-templates d) "fn" name 0) _
     ((Some _ ps) (templated-build ps 0 params))
-    ((None _) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ ffi-extra name env d) (rjoin (objs params) " ") $ RStr "))"))))
+    ((None _) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ ffi-extra name env d) (match many params _ ((Nil _) (RStr "()")) (else (rjoin (objs params) " "))) $ RStr "))"))))
 
 
 
@@ -876,6 +876,7 @@
       ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
       ((BExt _ p) (payload-rope env p))
       ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
+      ((BSlots _ n ks _) (rcat3 (RStr "(Obj.repr (let t = Ffi_core.slots_new () in List.iter (fun k -> ignore (Ffi_core.slots_add t k)) [ ") (rjoin (addr-ropes _ $ idmap-prefix _ ks n $ Nil _) "; ") $ RStr " ]; t))"))
       ((BCtorFn _ c) (ctor-fn-rope d c))
       ((BMat _ adt) (matchable-rope adt d))
       ((BGroup _ _ _ _ _) (RStr "(failwith \"a group as a closed value\")"))
@@ -1032,6 +1033,7 @@
   (match many b _
     ((BTag _ _ fields) fields)
     ((BArray _ n es) (idmap-prefix _ es n $ Nil _))
+    ((BSlots _ n ks _) (idmap-prefix _ ks n $ Nil _))
     ((BTup _ fields) fields)
     ((BFn _ g _ _) (Cons _ g $ Nil _))
     ((BGroup _ _ _ _ fr) (frames-refs _ _ fr (Nil _)))
@@ -1099,6 +1101,11 @@
     ((Cons _ f rest)
       (rcat5 (RStr "let () = Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Ffi_core.word array) ") (nat-rope index) $ RStr " (Obj.obj ") (addr-rope _ f) $ rcat (RStr " : Ffi_core.word)\n") $ notail $ array-stores _ rest dest $ Succ index))))
 
+(def-fns _ $ (many slots-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) keys) (many (Rope) dest) -> (many (Rope) r))
+  (match many keys _
+    ((Nil _) (REmpty))
+    ((Cons _ k rest) (rcat5 (RStr "let () = ignore (Ffi_core.slots_add (Obj.obj ") dest (RStr ") ") (addr-rope _ k) $ rcat (RStr ")\n") $ notail $ slots-stores _ rest dest))))
+
 (def-fns _ $ (many emit-blocks : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) order)
     (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (Rope) fills))
   (let-match many order (Cons _ at2 rest) ((Nil _) (values (REmpty) (REmpty) $ REmpty)))
@@ -1111,6 +1118,9 @@
     ((BArray _ n es)
       (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope n) $ RStr " (Obj.repr ()))\n")
       (values (rcat skeleton before) middle $ rcat (array-stores _ (idmap-prefix _ es n $ Nil _) (addr-rope _ at2) 0) after))
+    ((BSlots _ n ks _)
+      (let ((many skeleton)) $ rcat3 (RStr "let ") (addr-rope _ at2) $ RStr " : Obj.t = Obj.repr (Ffi_core.slots_new ())\n")
+      (values (rcat skeleton before) middle $ rcat (slots-stores _ (idmap-prefix _ ks n $ Nil _) (addr-rope _ at2)) after))
     (else (values before (rcat (block-let _ at2 _ blk env d) middle) after))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match

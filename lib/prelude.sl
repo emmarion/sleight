@@ -1490,6 +1490,67 @@
 
 (def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) -> (many (Maybe (Eq (Slot) a b)) r)))
 
+(def-adts $ (NthLast : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
+  enum
+  (many NthLastHere : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n) (erased (Length A xs n) p)
+     -> (NthLast A (Cons A x xs) n x))
+  (many NthLastThere : (erased Type A) (erased A y) (erased (List A) xs) (erased (Nat) i) (erased A x)
+     (erased (NthLast A xs i x) p) -> (NthLast A (Cons A y xs) i x)))
+
+(def-adts $ (SlotFind : ((List (Slot)) xs) ((Slot) s) -> Type)
+  enum
+  (many SlotFound : (erased (List (Slot)) xs) (erased (Slot) s)
+     (many (Nat) i) (erased (NthLast (Slot) xs i s) p) -> (SlotFind xs s))
+  (many SlotMissing : (erased (List (Slot)) xs) (erased (Slot) s) -> (SlotFind xs s)))
+
+(def-adts $ (SlotIntern : ((List (Slot)) xs) ((Slot) s) ((List (Slot)) ys) -> Type)
+  enum
+  (many SlotExisting : (erased (List (Slot)) xs) (erased (Slot) s)
+     (many (Nat) i) (erased (NthLast (Slot) xs i s) p) -> (SlotIntern xs s xs))
+  (many SlotAdded : (erased (List (Slot)) xs) (erased (Slot) s)
+     (many (Nat) i) (erased (Length (Slot) xs i) n) -> (SlotIntern xs s (Cons (Slot) s xs))))
+
+(def-fns _ $ (many list-count : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (LengthNil _))))
+  (let ((many k) (erased q)) (notail $ list-count _ rest))
+  (values (Succ k) (LengthCons _ x rest k q)))
+
+(def-fns _ $ (many slot-search : (subterm many (List (Slot)) xs) (many (Slot) s) -> (many (SlotFind xs s) r))
+  (let-match many xs (Cons _ t rest) ((Nil _) (SlotMissing _ s)))
+  (let-match many (notail $ slot-search rest s) (SlotMissing _ _) ((SlotFound _ _ i p) (SlotFound _ s i (NthLastThere _ t _ i s p))))
+  (let-match many (slot-eq t s) (Some _ e) ((None _) (SlotMissing _ s)))
+  (let-match erased e (Refl _ _))
+  (let ((many n) (erased q)) (list-count _ rest))
+  (SlotFound _ s n (NthLastHere _ s _ n q)))
+
+(def-adts $ (Slots : ((List (Slot)) xs) -> Type)
+  enum extern
+  (many MkSlots : (many (List (Slot)) xs) -> (Slots xs)))
+
+;! warn MkSlots builds a `Slots` through its model, O(n); start one with `slots-new`
+;! warn Slots copies the whole table out, O(n); use `slots-find`, `slots-intern` or `slots-length`
+
+(def-fns _ $ (many extern slots-new : -> (unique (Slots (Nil (Slot))) l))
+  (MkSlots (Nil _)))
+
+(def-fns _ $ (many extern slots-find : (erased (List (Slot)) xs) (unique (Slots xs) l) (many (Slot) s) ->
+    (many (SlotFind xs s) r) (unique l is l2 at l))
+  (let-match unique l (MkSlots ls u))
+  (values (slot-search ls s) (at (u ls))))
+
+(def-fns _ $ (many extern slots-intern : (erased (List (Slot)) xs) (unique (Slots xs) l) (many (Slot) s) ->
+    (erased (List (Slot)) ys) (many (SlotIntern xs s ys) r) (unique (Slots ys) l2 at l))
+  (let-match unique l (MkSlots ls u))
+  (let-match many (slot-search ls s) (SlotMissing _ _) ((SlotFound _ _ i p) (values ls (SlotExisting _ s i p) (at (u ls)))))
+  (let ((many n) (erased q)) (list-count _ ls))
+  (values (Cons (Slot) s ls) (SlotAdded _ s n q) (u (Cons (Slot) s ls))))
+
+(def-fns _ $ (many extern slots-length : (erased (List (Slot)) xs) (unique (Slots xs) l) ->
+    (many (Nat) n) (erased (Length (Slot) xs n) p) (unique l is l2 at l))
+  (let-match unique l (MkSlots ls u))
+  (let ((many n) (erased p)) (list-count _ ls))
+  (values n p (at (u ls))))
+
 (def-adts $ (Resolution : -> Type)
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))

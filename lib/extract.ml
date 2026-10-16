@@ -39,6 +39,7 @@ let rec raw value r =
 let externs =
   let view name lower args args' = Printf.sprintf "let des_%s v = Obj.repr (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (Obj.obj v)" name lower args name lower args' in
   [ ("Array", view "Array" "array" "~array:Obj.obj ~wrap:Obj.repr" "~array:Obj.obj ~wrap:Obj.repr");
+    ("Slots", view "Slots" "slots" "~slots:Obj.obj ~list:Obj.repr" "~list:Obj.obj ~wrap:Obj.repr");
     ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
@@ -205,6 +206,11 @@ let rec value cx v =
   match v with
   | V.VExt (_, Bytes b) ->
       named_buffer cx (Obj.repr b) (Printf.sprintf "Obj.repr (Bytes.of_string %s)" (quote (Bytes.to_string b))) ignore
+  | V.VExt (_, Slots t) ->
+      named_buffer cx (Obj.repr t) "Obj.repr (Ffi_core.slots_new ())" (fun name ->
+        Array.iter (fun k ->
+          let rhs = value cx (Obj.magic k) in
+          Buffer.add_string cx.fills (Printf.sprintf "let () = ignore (Ffi_core.slots_add (Obj.obj %s) %s)\n" name rhs)) (Ffi_core.slots_keys t))
   | V.VExt (_, Array a) ->
       named_buffer cx (Obj.repr a) (Printf.sprintf "Obj.repr (Array.make %d (Obj.repr ()))" (Array.length a)) (fun name ->
         Array.iteri (fun i v ->
@@ -250,7 +256,7 @@ and plain cx = function
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
-  | V.VExt (_, (Array _ | Bytes _)) as v -> value cx v
+  | V.VExt (_, (Array _ | Bytes _ | Slots _)) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw (value cx) r ^ ")"
   | V.VCtorFn c -> var c.cid
@@ -305,7 +311,7 @@ and fn cx scope name f =
               | "list-to-array" -> view "list" "Nil"
               | "array-new" -> "~blank:(Obj.repr ()) "
               | _ -> "" in
-            let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
+            let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (args (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
             "(Obj.repr (" ^ call ^ "))")
     | _ -> expr cx scope f.body
   in
@@ -392,6 +398,7 @@ let collect env items =
     | V.VCtor (c, vs) -> adt c.adt; Array.iter value vs
     | V.VTuple vs -> List.iter value vs
     | V.VExt (adt_, Array a) -> adt adt_; Array.iter value a
+    | V.VExt (adt_, Slots t) -> adt adt_; Array.iter (fun k -> value (Obj.magic k)) (Ffi_core.slots_keys t)
     | V.VExt (a, Raw r) -> adt a; handles r
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt

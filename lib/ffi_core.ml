@@ -221,3 +221,76 @@ let bytes_sub b i n = let r = Bytes.create (small n) in Bytes.unsafe_blit b (sma
 let bytes_blit src i dst j n = Bytes.unsafe_blit src (small i) dst (small j) (small n)
 let array_sub a i n = array_unsafe_sub a (small i) (small n)
 let array_blit src i dst j n = array_unsafe_blit src (small i) dst (small j) (small n)
+
+type slot_find = SlotFound of int | SlotMissing
+type slot_intern = SlotExisting of int | SlotAdded of int
+
+type slots = {
+  mutable keys : word array;  (* the slot of each id, the oldest at 0 *)
+  mutable count : int;  (* the ids in use, so the next one to give out; at most the length of [keys] *)
+  old : (int, int) Hashtbl.t;  (* address to id for the ids below [young_from], whose blocks a minor collection has promoted *)
+  young : (int, int) Hashtbl.t;  (* address to id for the ids from [young_from], valid until the next minor collection *)
+  mutable young_from : int;  (* the first id given out since [sentinel] was allocated *)
+  mutable sentinel : int ref;  (* a block allocated young, which the next minor collection moves *)
+  mutable sentinel_at : int;  (* [sentinel]'s address when it was allocated *)
+  mutable compactions_seen : int }  (* [compactions] when [old] was last built; -1 forces a rebuild *)
+
+let address (x : word) : int = 2 * (Obj.magic x : int)
+let compactions = ref 0
+let watch_compactions =
+  lazy
+    (let seen = ref (Gc.quick_stat ()).compactions in
+     ignore (Gc.create_alarm (fun () -> let c = (Gc.quick_stat ()).compactions in if c <> !seen then (seen := c; incr compactions))))
+
+let renew_sentinel t = let s = ref 0 in t.sentinel <- s; t.sentinel_at <- address (Obj.magic s)
+let moved t = address (Obj.magic t.sentinel) <> t.sentinel_at
+
+let rec sync t =
+  if t.compactions_seen <> !compactions then begin
+    t.compactions_seen <- !compactions;
+    Hashtbl.reset t.old;
+    for i = 0 to t.count - 1 do Hashtbl.add t.old (address t.keys.(i)) i done;
+    Hashtbl.reset t.young; t.young_from <- t.count; renew_sentinel t; sync t
+  end
+  else if moved t then begin
+    for i = t.young_from to t.count - 1 do Hashtbl.add t.old (address t.keys.(i)) i done;
+    Hashtbl.reset t.young; t.young_from <- t.count; renew_sentinel t; sync t
+  end
+
+let slots_new () =
+  Lazy.force watch_compactions;
+  { keys = [||]; count = 0; old = Hashtbl.create 16; young = Hashtbl.create 16; young_from = 0;
+    sentinel = ref 0; sentinel_at = 0; compactions_seen = -1 }
+
+let rec slots_lookup t (s : word) =
+  sync t;
+  let compacted = t.compactions_seen and a = address s in
+  let hit = List.find_opt (fun i -> t.keys.(i) == s) in
+  let r = match hit (Hashtbl.find_all t.young a) with Some i -> Some i | None -> hit (Hashtbl.find_all t.old a) in
+  if moved t || compacted <> !compactions then slots_lookup t s else r
+
+let slots_find t s = match slots_lookup t (Obj.magic s) with Some i -> SlotFound i | None -> SlotMissing
+
+let slots_add t s =
+  let s = (Obj.magic s : word) and i = t.count in
+  sync t;
+  if i = Array.length t.keys then begin
+    let keys = Array.make (max 8 (2 * i)) s in
+    Array.blit t.keys 0 keys 0 i; t.keys <- keys
+  end;
+  t.keys.(i) <- s; t.count <- i + 1;
+  Hashtbl.add t.young (address s) i; sync t;
+  i
+
+let slots_intern t s = match slots_lookup t (Obj.magic s) with Some i -> SlotExisting i | None -> SlotAdded (slots_add t s)
+
+let slots_length t = t.count
+let slots_keys t = Array.sub t.keys 0 t.count
+
+type 'v slots_model = MkSlots of 'v
+let slots_view ~slots ~list v = MkSlots (Array.fold_left (fun rest k -> list (Cons (Obj.magic k, rest))) (list Nil) (slots_keys (slots v)))
+let slots_of ~list ~wrap (MkSlots l) =
+  let rec oldest_first acc v = match list v with Nil -> acc | Cons (k, rest) -> oldest_first (k :: acc) rest in
+  let t = slots_new () in
+  List.iter (fun k -> ignore (slots_add t k)) (oldest_first [] l);
+  wrap t

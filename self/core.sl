@@ -419,7 +419,8 @@
     (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
     (many ExBytesLength : -> (Extern 1)) (many ExBytesLengthMany : -> (Extern 1)) (many ExStrBytesCopy : -> (Extern 1)) (many ExBytesStr : -> (Extern 1))
     (many ExBytesCopy : -> (Extern 1)) (many ExArrayCopy : -> (Extern 1))
-    (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5)))
+    (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5))
+    (many ExSlotsNew : -> (Extern 0)) (many ExSlotsFind : -> (Extern 2)) (many ExSlotsIntern : -> (Extern 2)) (many ExSlotsLength : -> (Extern 1)))
   ((SomeExtern : -> Type)
     enum
     (many MkSomeExtern : (erased (Nat) n) (many (Extern n) e) -> (SomeExtern))))
@@ -442,7 +443,8 @@
     ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _))
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
-    ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))))
+    ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))
+    ((ExSlotsNew) (None _)) ((ExSlotsFind) (Some _ $ Cons _ 1 $ Cons _ 0 $ Nil _)) ((ExSlotsIntern) (Some _ $ Cons _ 1 $ Cons _ 1 $ Nil _)) ((ExSlotsLength) (None _))))
 
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
   (match many e _
@@ -452,7 +454,8 @@
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)
-    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)))
+    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
+    ((ExSlotsNew) 0) ((ExSlotsFind) 2) ((ExSlotsIntern) 2) ((ExSlotsLength) 1)))
 
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
   (match many e _
@@ -476,7 +479,8 @@
     ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many")
     ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
     ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str") ((ExBytesCopy) "bytes-copy") ((ExArrayCopy) "array-copy")
-    ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit")))
+    ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit")
+    ((ExSlotsNew) "slots-new") ((ExSlotsFind) "slots-find") ((ExSlotsIntern) "slots-intern") ((ExSlotsLength) "slots-length")))
 
 (let ((many externs))
   $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExArraySwapImm) $ Cons _ (MkSomeExtern _ $ ExArrayPlaceImm) $
@@ -491,7 +495,8 @@
   Cons _ (MkSomeExtern _ $ ExBytesMake) $ Cons _ (MkSomeExtern _ $ ExBytesGet) $ Cons _ (MkSomeExtern _ $ ExBytesGetMany) $ Cons _ (MkSomeExtern _ $ ExBytesSet) $
   Cons _ (MkSomeExtern _ $ ExBytesLength) $ Cons _ (MkSomeExtern _ $ ExBytesLengthMany) $ Cons _ (MkSomeExtern _ $ ExStrBytesCopy) $ Cons _ (MkSomeExtern _ $ ExBytesStr) $
   Cons _ (MkSomeExtern _ $ ExBytesCopy) $ Cons _ (MkSomeExtern _ $ ExArrayCopy) $
-  Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) (Nil _))
+  Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) $
+  Cons _ (MkSomeExtern _ $ ExSlotsNew) $ Cons _ (MkSomeExtern _ $ ExSlotsFind) $ Cons _ (MkSomeExtern _ $ ExSlotsIntern) $ Cons _ (MkSomeExtern _ $ ExSlotsLength) (Nil _))
 
 (def-fns _ $ (many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r))
   (let-match many es (Cons _ e rest) ((Nil _) (None _)))
@@ -517,7 +522,8 @@
   ((ExtType : -> Type)
     enum
     (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType))
-    (many ExtRaw : (many (Ctor) nopos) (many (Ctor) mkpos) (many (Ctor) nil) (many (Ctor) cons) (many (Ctor) sname) (many (Ctor) sgen) -> (ExtType)))
+    (many ExtRaw : (many (Ctor) nopos) (many (Ctor) mkpos) (many (Ctor) nil) (many (Ctor) cons) (many (Ctor) sname) (many (Ctor) sgen) -> (ExtType))
+    (many ExtSlots : (many (Ctor) nil) (many (Ctor) cons) -> (ExtType)))
   ; [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom
   ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 42); a
   ; constructor's [shape] is its type's many-field arities in order, which fixes the representation.
@@ -530,6 +536,7 @@
   ((Block : (Type R) -> Type)
     enum
     (many BArray : (erased Type R) (many (Nat) len) (many (IdMap R) elems) -> (Block R))
+    (many BSlots : (erased Type R) (many (Nat) count) (many (IdMap R) keys) (many (IdMap $ Nat) ids) -> (Block R))
     (many BTag : (erased Type R) (many (Ctor) c) (many (List R) fields) -> (Block R))
     (many BTup : (erased Type R) (many (List R) fields) -> (Block R))
     (many BExt : (erased Type R) (many (Payload) p) -> (Block R))
@@ -598,7 +605,7 @@
     (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
 
 (def-fns _ $ (many ext-type-name : (many (ExtType) t) -> (many (String) s))
-  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes") ((ExtRaw _ _ _ _ _ _) "Raw")))
+  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes") ((ExtRaw _ _ _ _ _ _) "Raw") ((ExtSlots _ _) "Slots")))
 
 (def-fns _ $ (many ext-type-shape : (many (ExtType) t) -> (many (List $ Nat) s))
   (match many t _
@@ -607,7 +614,8 @@
     ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
     ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))
     ((ExtBytes) (Cons _ 0 $ Cons _ 2 $ Nil _))
-    ((ExtRaw _ _ _ _ _ _) (Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Nil _))))
+    ((ExtRaw _ _ _ _ _ _) (Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Nil _))
+    ((ExtSlots _ _) (Cons _ 1 $ Nil _))))
 
 (def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
   (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
@@ -638,6 +646,9 @@
     ((BArray _ n es)
       (let ((erased es2) (erased pe)) (idmap-widen Block b c le es))
       (values (BArray _ n es2) (coercible-ctor (Shared) BArray (Ref Block b) (Ref Block c) (coercible-refl (Shared) n) pe)))
+    ((BSlots _ n ks ids)
+      (let ((erased ks2) (erased pk)) (idmap-widen Block b c le ks))
+      (values (BSlots _ n ks2 ids) (coercible-ctor (Shared) BSlots (Ref Block b) (Ref Block c) (coercible-refl (Shared) n) pk (coercible-refl (Shared) ids))))
     ((BTag _ ct fields)
       (let ((erased fs2) (erased pf)) (refs-widen _ b c le fields))
       (values (BTag _ ct fs2) (coercible-ctor (Shared) BTag (Ref Block b) (Ref Block c) (coercible-refl (Shared) ct) pf)))

@@ -21,7 +21,7 @@ and value =
   | VToken
   | VHandle of id * Ffi_core.reading * mult * value
 
-and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw
+and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw | Slots of Ffi_core.slots
 
 and fn = { fname : string; params : id list; body : code; impl : (value list -> value list) option }
 and closure = { fn : fn; env : venv Lazy.t }
