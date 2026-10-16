@@ -389,6 +389,87 @@ theorem prim_spec {H : FHeap} (hH : H.OK) {ρ : List Tm} (hρ : ∀ w ∈ ρ, w.
     simp [Prim.eval, Tm.ptrBelow, h1, h3, decode, dec, h2, h4]
   all_goals exact noP _ rfl
 
+theorem answer_ptrFree {P : Prog} (hask : ∀ k c, (P.ask k c).2.ptrBelow 0) (y z : Tm) : (P.answer y z).2.ptrBelow 0 := by
+  unfold Prog.answer; split
+  · exact hask _ _
+  · rfl
+
+theorem primH_spec {H : FHeap} (hH : H.OK) (hask : ∀ k c, (P.ask k c).2.ptrBelow 0) {ρ : List Tm}
+    (hρ : ∀ w ∈ ρ, w.ptrBelow H.next) {p : Prim} (hp : p.tms.all (·.ptrBelow 0)) :
+    (p.evalH P H ρ).1.OK ∧ H.Ext (p.evalH P H ρ).1 ∧ (p.evalH P H ρ).2.ptrBelow (p.evalH P H ρ).1.next ∧
+      (p.evalH P H ρ).1.decode (p.evalH P H ρ).2 = p.eval P (ρ.map H.decode) := by
+  by_cases hw : ∃ w r, p = .wAsk w r
+  · obtain ⟨w, r, rfl⟩ := hw
+    simp only [Prim.tms, List.all_cons, List.all_nil, Bool.and_true, Bool.and_eq_true] at hp
+    have ha := answer_ptrFree hask (w.subst (Tm.env ρ)) (H.view (r.subst (Tm.env ρ)))
+    obtain ⟨o, e, pb, d⟩ := box_spec hH _ (Tm.ptrBelow_mono (Nat.zero_le _) _ ha)
+    refine ⟨o, e, pb, ?_⟩
+    simp only [Prim.evalH, Prim.eval] at d ⊢
+    rw [d, decode, dec_noPtr H _ _ ha]
+    obtain ⟨-, h2⟩ := subst_spec hH hρ hp.1
+    obtain ⟨h3, h4⟩ := subst_spec hH hρ hp.2
+    obtain ⟨-, h5⟩ := view_spec hH h3
+    rw [← h2, ← h4, ← h5]
+    exact (congrArg Prod.snd (answer_dec P hH _ _ _ fun a e => view_noBlk hH e)).symm
+  · have hw' : ∀ w r, p ≠ .wAsk w r := fun w r e => hw ⟨w, r, e⟩
+    obtain ⟨h1, h2⟩ := prim_spec (P := P) hH hρ hp hw'
+    have he : p.evalH P H ρ = H.box (p.eval P ρ) := by
+      cases p <;> first | rfl | exact absurd rfl (hw' _ _)
+    rw [he]
+    obtain ⟨o, e, pb, d⟩ := box_spec hH _ h1
+    exact ⟨o, e, pb, d.trans h2⟩
+
+theorem map_decode_ext {H H' : FHeap} (hH : H.OK) (he : H.Ext H') {ρ : List Tm} (hρ : ∀ w ∈ ρ, w.ptrBelow H.next) :
+    ρ.map H'.decode = ρ.map H.decode :=
+  List.map_congr_left fun w hw => decode_ext hH he (hρ w hw)
+
+theorem ofList_ptrBelow {n : Nat} : ∀ {l : List Tm}, (∀ w ∈ l, w.ptrBelow n) → (Tm.ofList l).ptrBelow n
+  | [], _ => rfl
+  | _ :: _, h => by simp only [Tm.ofList, Tm.ptrBelow, Bool.and_eq_true]; exact ⟨h _ (by simp), ofList_ptrBelow fun w hw => h w (by simp [hw])⟩
+
+theorem closures_ptrBelow {n : Nat} {env : List Tm} (h : ∀ w ∈ env, w.ptrBelow n) (gid : Nat) (G : Group) :
+    ∀ w ∈ closures env gid G, w.ptrBelow n := by
+  simp only [closures, List.mem_map]; rintro _ ⟨j, -, rfl⟩; exact ofList_ptrBelow h
+
+theorem decode_data {H : FHeap} (hH : H.OK) {w : Tm} (hw : w.ptrBelow H.next) {d c : Nat} {ls vs : Tm}
+    (h : H.view w = .app (.vc d c ls) vs) :
+    vs.ptrBelow H.next ∧ H.decode w = .app (.vc d c (H.decode ls)) (H.decode vs) := by
+  obtain ⟨h1, h2⟩ := view_spec hH hw
+  rw [h] at h1 h2; simp only [Tm.ptrBelow, Bool.and_eq_true] at h1
+  refine ⟨h1.2, ?_⟩
+  rw [← h2]; simp only [decode]; cases H.next <;> simp [dec]
+
+theorem decode_notData {H : FHeap} (hH : H.OK) {w : Tm} (hw : w.ptrBelow H.next)
+    (h : ∀ d c ls vs, H.view w = .app (.vc d c ls) vs → False) : ∀ d c ls vs, H.decode w = .app (.vc d c ls) vs → False := by
+  intro d c ls vs e
+  obtain ⟨-, h2⟩ := view_spec hH hw
+  rw [← h2] at e
+  have hz : ∀ a, H.view w = .ptr a → H.blk a = none := fun a e => view_noBlk hH e
+  revert h e hz
+  generalize H.view w = v
+  intro h e hz
+  cases v <;> simp only [decode] at e <;> cases hn : H.next <;> rw [hn] at e <;> simp [dec] at e
+  all_goals first
+    | (obtain ⟨ls', rfl⟩ := dec_vc hH e.1; exact h _ _ _ _ rfl)
+    | (rename_i a _; rw [hz a rfl] at e; simp at e)
+
+theorem selectBr_map (f : Tm → Tm) (brs : List Br) (els : Option Core) (c : Nat) (l : List Tm) :
+    selectBr brs els c (l.map f) = (selectBr brs els c l).map fun (pre, b) => (pre.map f, b) := by
+  unfold selectBr; split <;> cases els <;> simp
+
+theorem callee_spec {P : Prog} {w : Tm} {env : List Tm} {n gid : Nat} {G : Group} {F : FnDef} {m : Nat}
+    (h : callee P w = some (env, n, gid, G, F)) (hw : w.ptrBelow m) :
+    G ∈ P.groups ∧ F ∈ G.fns ∧ ∀ x ∈ env, x.ptrBelow m := by
+  cases w <;> simp [callee] at h
+  rename_i e gid' j
+  simp only [Tm.ptrBelow] at hw
+  cases hg : P.groups[gid']? <;> simp [hg] at h
+  rename_i G'
+  cases hf : G'.fns[j]? <;> simp [hf] at h
+  split at h <;> simp at h
+  obtain ⟨rfl, -, rfl, rfl, rfl⟩ := h
+  exact ⟨List.mem_of_getElem? hg, List.mem_of_getElem? hf, ptrBelow_toList hw⟩
+
 end FHeap
 
 end Minimal
