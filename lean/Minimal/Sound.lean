@@ -163,12 +163,15 @@ theorem Ctx.WF.ς_mono {Γ : Ctx} (hw : Γ.WF) {n : Nat} (hn : Γ.n ≤ n) :
   · exact .inl hs
   · exact .inr ⟨j, by omega, hs⟩
 
-theorem satS_of_closed {Γ : Ctx} (hw : Γ.WF) {f : Nat → Tm} (hc : ∀ i, (f i).lc 0) : SatS f Γ.ς := by
-  intro e s h
+theorem slotVal_subst {f : Nat → Tm} (hc : ∀ i, (f i).lc 0) {s : Tm} {n : Nat}
+    (hs : s = Tm.vacant ∨ ∃ j < n, s = .sfv j) (e : Nat) : s.subst f = Tm.slotOf (f e) := by
   rw [Tm.slotOf_lc0 (hc e)]
-  rcases (hw.ς e s h).2 with rfl | ⟨j, -, rfl⟩
+  rcases hs with rfl | ⟨j, -, rfl⟩
   · rfl
   · simp only [Tm.subst]; exact Tm.slotOf_lc0 (hc j)
+
+theorem satS_of_closed {Γ : Ctx} (hw : Γ.WF) {f : Nat → Tm} (hc : ∀ i, (f i).lc 0) : SatS f Γ.ς :=
+  fun e s h => slotVal_subst hc (hw.ς e s h).2 e
 
 theorem EnvOK.sat {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Sat (Tm.env ρ) Γ.σ | .mk _ _ _ h _ _ _ _ => h
 theorem EnvOK.satS {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → SatS (Tm.env ρ) Γ.ς
@@ -559,14 +562,76 @@ theorem EnvOK.refix {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (F : List (Op
   .mk hE.len hE.vals hE.closed hE.sat (fun L hL => hE.chrono L hL)
     ⟨hE.wf.tys, hE.wf.σ, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hF hE.dele
 
+theorem slotSub_static {n d r : Nat} {s : Tm} (hs : s = Tm.vacant ∨ ∃ j < n, s = .sfv j) {t : Tm}
+    (h : t.static n d) : (Ctx.slotSub r s t).static n d :=
+  Tm.static_subst2 t d h fun i hi => ⟨by simp [Tm.static]; exact Tm.fvs_static t d h i hi, by
+    by_cases e : i = r
+    · subst e; rcases hs with rfl | ⟨j, hj, rfl⟩ <;> simp_all [Tm.static, Tm.vacant]
+    · simp [e, Tm.static]; exact Tm.fvs_static t d h i hi⟩
+
+theorem Ctx.sfv_canon_lt {Γ : Ctx} (hw : Γ.WF) {e r : Nat} (he : e < Γ.n) (h : Γ.canon (.sfv e) = .sfv r) : r < Γ.n := by
+  simp only [Ctx.canon, canonBy, Tm.subst2] at h
+  cases hς : Γ.ς e with
+  | none => rw [hς] at h; cases h; exact he
+  | some u =>
+    rw [hς] at h; simp only [Option.getD_some] at h; subst h
+    rcases (hw.ς e _ hς).2 with h | ⟨j, hj, h⟩
+    · simp [Tm.vacant] at h
+    · cases h; exact hj
+
+theorem Ctx.slotBind_spec {Γ : Ctx} (hw : Γ.WF) {e r : Nat} {s t : Tm} (he : e < Γ.n) (h : Γ.slotBind e s = some (r, t)) :
+    r < Γ.n ∧ (t = Tm.vacant ∨ ∃ j < Γ.n, t = .sfv j) := by
+  unfold Ctx.slotBind at h
+  split at h
+  · rename_i hs
+    split at h
+    · rename_i r0 _ hc
+      split at h
+      · cases h
+      · cases h; exact ⟨Ctx.sfv_canon_lt hw he hc, Tm.isSlotVal_spec hs⟩
+    · split at h
+      · rename_i ha; cases h
+        exact ⟨by simpa [Tm.isSlotVal] using hs, Tm.isSlotVal_spec ha⟩
+      · cases h
+    · cases h
+  · cases h
+
+theorem EnvOK.bindSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {r : Nat} {s : Tm} (hr : r < Γ.n)
+    (hs : s = Tm.vacant ∨ ∃ j < Γ.n, s = .sfv j) : EnvOK P ρ (Γ.bindSlot r s) := by
+  have hc := Tm.env_lc hE.closed
+  have hS : SatS (Tm.env ρ) (fun j => if j = r then some s else none) := by
+    intro e u h; split at h
+    · cases h; exact slotVal_subst hc hs e
+    · cases h
+  have hsub : ∀ t, (Ctx.slotSub r s t).subst (Tm.env ρ) = t.subst (Tm.env ρ) :=
+    canonBy_sound (fun _ _ h => by cases h) hS
+  refine hE.modify rfl (fun i u hi => ?_) hE.chrono
+    ⟨hE.wf.tys, fun i u hi => ?_, fun i u hi => ?_, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+  · simp only [Ctx.bindSlot, Option.map_eq_some_iff] at hi
+    obtain ⟨u0, h0, rfl⟩ := hi
+    rw [hsub]; exact hE.sat i u0 h0
+  · simp only [Ctx.bindSlot, Option.map_eq_some_iff] at hi
+    obtain ⟨u0, h0, rfl⟩ := hi
+    obtain ⟨h1, h2⟩ := hE.wf.σ i u0 h0
+    exact ⟨h1, slotSub_static hs h2⟩
+  · simp only [Ctx.bindSlot] at hi; split at hi
+    · cases hi; subst_vars; exact ⟨hr, hs⟩
+    · simp only [Option.map_eq_some_iff] at hi
+      obtain ⟨u0, h0, rfl⟩ := hi
+      obtain ⟨h1, h2⟩ := hE.wf.ς i u0 h0
+      refine ⟨h1, ?_⟩
+      rcases h2 with rfl | ⟨j, hj, rfl⟩
+      · left; rfl
+      · by_cases e : j = r
+        · subst e; simpa [Ctx.slotSub, canonBy, Tm.subst2] using hs
+        · right; exact ⟨j, hj, by simp [Ctx.slotSub, canonBy, Tm.subst2, e]⟩
+
 theorem EnvOK.withSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} (s : Tm) (he : e < Γ.n) :
     EnvOK P ρ (Γ.withSlot e s) := by
   unfold Ctx.withSlot; split
-  · rename_i hs
-    refine hE.modify rfl hE.sat hE.chrono ⟨hE.wf.tys, hE.wf.σ, fun i t h => ?_, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
-    simp only at h; split at h
-    · cases h; subst_vars; exact ⟨he, Tm.isSlotVal_spec hs⟩
-    · exact hE.wf.ς i t h
+  · rename_i h
+    obtain ⟨hr, ht⟩ := Ctx.slotBind_spec hE.wf he h
+    exact hE.bindSlot hr ht
   · exact hE
 
 theorem EnvOK.slotIf {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (b : Bool) {e : Nat} (s : Tm) (he : e < Γ.n) :
@@ -1908,11 +1973,11 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     simp only [Tm.subst, e]
     exact .predates fun n hn => hl n (Tm.psub_levels hs n hn)
 
-theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
+theorem EnvOK.pushPrim P (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
     {er : Bool} (hp : PrimTy P Γ p T) (hv : VTy P v (T.subst (Tm.env ρ))) (hT : T.static Γ.n 0) (hc : v.lc 0)
     (he : v = p.eval P ρ) :
-    EnvOK P (ρ ++ [v]) (Γ.pushPrim T er p) ∧ (Γ.pushPrim T er p).cur = Γ.cur ∧
-      (Γ.pushPrim T er p).subs = Γ.subs ∧ (Γ.pushPrim T er p).n = Γ.n + 1 := by
+    EnvOK P (ρ ++ [v]) (Γ.pushPrim P T er p) ∧ (Γ.pushPrim P T er p).cur = Γ.cur ∧
+      (Γ.pushPrim P T er p).subs = Γ.subs ∧ (Γ.pushPrim P T er p).n = Γ.n + 1 := by
   have hn0 : (Γ.pushPrim0 T er p).n = Γ.n + 1 := by cases p <;> simp [Ctx.pushPrim0, Ctx.withRule, Ctx.push, Ctx.n]
   suffices h0 : EnvOK P (ρ ++ [v]) (Γ.pushPrim0 T er p) by
     refine ⟨h0.slotIf _ _ (by omega), ?_, ?_, by rw [Ctx.pushPrim, Ctx.slotIf_n, hn0]⟩ <;>
@@ -3413,17 +3478,17 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
 theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}
     {T rets : Tm} {rest : Core} (hE : EnvOK P ρ Γ) (hb : LvlBound ρ cnt) (hm : MuOK μ Γ ρ) (hrs : rets.static Γ.n 0)
     (hp : PrimTy P Γ p T) (hok : (er || Γ.ok (p.rt P Γ)) = true) :
-    EnvOK P (ρ ++ [p.eval P ρ]) (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) ∧ LvlBound (ρ ++ [p.eval P ρ]) cnt ∧
-    MuOK μ (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) (ρ ++ [p.eval P ρ]) ∧
-    rets.static (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)).n 0 ∧
-    HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval P ρ] (.prim p er rest) rest ∧
-    ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
+    EnvOK P (ρ ++ [p.eval P ρ]) (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)) ∧ LvlBound (ρ ++ [p.eval P ρ]) cnt ∧
+    MuOK μ (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)) (ρ ++ [p.eval P ρ]) ∧
+    rets.static (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)).n 0 ∧
+    HeadSim P Γ (Γ.pushPrim P T er p) ρ [p.eval P ρ] (.prim p er rest) rest ∧
+    ∀ i, (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
   obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hO hE hb hp
-  obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
+  obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim P hP hp hv hT hlc rfl
   have hl := hE.len
-  have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
+  have her : ∀ i, (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
     intro i; cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
-  have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval P ρ] (.prim p er rest) rest := by
+  have hh : HeadSim P Γ (Γ.pushPrim P T er p) ρ [p.eval P ρ] (.prim p er rest) rest := by
     intro ρS hg hS
     refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
       fun out h => .prim h, rfl, fun k a b ha hb he => ?_⟩
@@ -3434,7 +3499,7 @@ theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
       rw [her, if_pos (by omega)] at he; subst he
       simp only [Ctx.ok, hg, Bool.false_or] at hok
       exact prim_real hP hE hS hp hok
-  have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
+  have hpf : (Γ.pushPrim P T er p).fixed = Γ.fixed := by cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
   exact ⟨hE.adv hE' hpf hh, LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩,
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs,
     hh, her⟩

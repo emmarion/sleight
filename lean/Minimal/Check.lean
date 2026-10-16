@@ -773,7 +773,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
     let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning something erased"
-    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets
+    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)) rest rets
     .ok ⟨R, .prim hp hm hr, e⟩
   | .wdo w req rest, rets => do
     let ⟨Tw, hw⟩ ← checkPrim P Γ (.wNext w)
@@ -829,8 +829,8 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .chk .cm _ _ rest, rets => do
     let ⟨R, hr, eq⟩ ← checkCore b { Γ with cmode := true } rest rets
     .ok ⟨R, .chkCm hr, eq⟩
-  | .chk (.mark _) _ _ rest, rets => do
-    let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
+  | .chk (.mark m) a _ rest, rets => do
+    let ⟨R, hr, eq⟩ ← checkCore b (Γ.markPd m a) rest rets
     .ok ⟨R, .chkMark hr, eq⟩
   | .chk .rt a _ rest, rets => do
     let ⟨h⟩ ← need (Γ.ok (rt P Γ a)) "a non-erased let binder of an erased entry"
