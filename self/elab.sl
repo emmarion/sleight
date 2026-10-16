@@ -2621,6 +2621,14 @@
   (let-match many tele (Cons _ e rest) ((Nil _) (None _)))
   (match many (entry-stored e) _ ((BTrue) (Some _ e)) ((BFalse) (tail $ first-stored rest))))
 
+(def-fns _ $ (many check-ext-shape : (many (Env) env) (many (String) name) (many (Bool) tagged) (many (List $ Nat) ns) (many (List $ Nat) want) -> (many (Env) r))
+  (let ((many tagged-want)) $ nat-lt 1 $ list-length _ want)
+  (def-fns msg-lvl $ (many msg-shape : -> (many (String) s))
+    (let ((many (String) shape)) $ match many tagged-want _ ((BTrue) " has the tagged shape (") ((BFalse) " has the shape ("))
+    (let ((many (String) how)) $ match many (and tagged-want $ not tagged) _ ((BTrue) "the untagged (") ((BFalse) "("))
+    (str-cat3 "the extern implementation of " (tick name) $ str-cat3 shape (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))
+  (error-unless-msg env (and (or tagged $ nat-lt (list-length _ ns) 2) $ nat-list-eq ns want) msg-shape))
+
 ; The constructors an extern function builds its result with, read off its model's return type (section 42):
 ; the implementation's view and the declaration must agree on the shape, as they must for an extern type.
 (def-fns _ $ (many extern-ctors : (many (Env) env) (many (String) name) (many (List $ Entry) rets) (many (List $ Nat) want) -> (many (Env) r) (many (List $ Ctor) cs))
@@ -2641,10 +2649,7 @@
     ((None _) (values (env-error env2 $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " needs " (qshown env2 tid) " declared before it") (Nil _))))
   (let ((many records)) $ adt-ctors adt)
   (let ((many ns)) $ ctor-arities records)
-  (let ((many (String) how)) $ match many (adt-tagged adt) _ ((BTrue) "(") ((BFalse) "the untagged ("))
-  (let ((many (String) msg))
-    (str-cat3 "the extern implementation of " (tick name) $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))
-  (values (error-unless env2 (and (adt-tagged adt) $ nat-list-eq ns want) msg) records))
+  (values (check-ext-shape env2 name (adt-tagged adt) ns want) records))
 
 ; ---- Opening a Matchable or Newtype (section 8, ASSUMPTIONS 139)
 
@@ -6744,8 +6749,7 @@
         ((Some _ et)
           (let ((many ns)) $ cshape-arities $ non-phantom ss)
           (let ((many want)) $ ext-type-shape et)
-          (let ((many (String) how)) $ match many tagged _ ((BTrue) "(") ((BFalse) "the untagged ("))
-          (error-unless env2b (and (or tagged $ nat-lt (list-length _ ns) 2) $ nat-list-eq ns want) $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))))
+          (check-ext-shape env2b name tagged ns want))))
     (let ((many adt2)) $ mint-adt env2c tid disc ss extname nt)
     (let ((many records)) $ adt-ctors adt2)
     (let ((many cvals)) $ ctor-values records)

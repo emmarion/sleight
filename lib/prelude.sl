@@ -1517,11 +1517,13 @@
 
 (def-fns _ $ (many slot-search : (subterm many (List (Slot)) xs) (many (Slot) s) -> (many (SlotFind xs s) r))
   (let-match many xs (Cons _ t rest) ((Nil _) (SlotMissing _ s)))
-  (let-match many (notail $ slot-search rest s) (SlotMissing _ _) ((SlotFound _ _ i p) (SlotFound _ s i (NthLastThere _ t _ i s p))))
-  (let-match many (slot-eq t s) (Some _ e) ((None _) (SlotMissing _ s)))
-  (let-match erased e (Refl _ _))
-  (let ((many n) (erased q)) (list-count _ rest))
-  (SlotFound _ s n (NthLastHere _ s _ n q)))
+  (let-match many (slot-eq t s) (None _)
+    ((Some _ e)
+      (let-match erased e (Refl _ _))
+      (let ((many n) (erased q)) (list-count _ rest))
+      (SlotFound _ s n (NthLastHere _ s _ n q))))
+  (let-match many (notail $ slot-search rest s) (SlotFound _ _ i p) ((SlotMissing _ _) (SlotMissing _ s)))
+  (SlotFound _ s i (NthLastThere _ t _ i s p)))
 
 (def-adts $ (Slots : ((List (Slot)) xs) -> Type)
   enum extern
