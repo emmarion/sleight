@@ -49,6 +49,7 @@ theorem arrOr_getD (a : Array Bool) (n : Nat) (c : Nat → Bool) (i : Nat) :
 structure Ctx where
   tys : Array Tm
   σ : Nat → Option Tm := fun _ => none
+  ς : Nat → Option Tm := fun _ => none
   mints : List Nat := []
   cur : Option Nat := none
   subs : List Nat := []
@@ -65,10 +66,10 @@ def n (Γ : Ctx) : Nat := Γ.tys.size
 
 def er (Γ : Ctx) (i : Nat) : Bool := Γ.erA.getD i true
 
-def canon (Γ : Ctx) (t : Tm) : Tm := canonBy Γ.σ t
+def canon (Γ : Ctx) (t : Tm) : Tm := canonBy Γ.σ Γ.ς t
 
 instance (priority := high) decCanonEq (Γ : Ctx) (a b : Tm) : Decidable (Γ.canon a = Γ.canon b) :=
-  if h : a = b then isTrue (h ▸ rfl) else inferInstanceAs (Decidable (canonBy Γ.σ a = canonBy Γ.σ b))
+  if h : a = b then isTrue (h ▸ rfl) else inferInstanceAs (Decidable (canonBy Γ.σ Γ.ς a = canonBy Γ.σ Γ.ς b))
 
 def sig (Γ : Ctx) (i : Nat) : Option Tm := match (Γ.tys[i]?).map Γ.canon with
   | some (.tyCtor ps) => some (.tyCtor ps)
@@ -282,7 +283,7 @@ def declIso : Nat → List (List Tm) → List (Tm × Tm) → Option (List (Tm ×
       | _, _ => none
 
 def Ctx.lists (Γ : Ctx) (σ : Nat → Option Tm) : List (Tm × Tm × List Tm) :=
-  Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ) with
+  Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ Γ.ς) with
     | some (.mtbl u nt ex ph T cs) => some (.mtbl u nt ex ph T cs, T, cs.toList)
     | _ => none
 
@@ -296,7 +297,7 @@ def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
     let names (x : Tm) := ls.filterMap (fun (M, T, ks) => if T == x || ks.contains x then some M else none) ++ declMtbl P x
     let ms := names a ++ names b
     let sigs := match sigOf P Γ a, sigOf P Γ b with
-      | some s, some s' => [(canonBy σ s, canonBy σ s')]
+      | some s, some s' => [(canonBy σ Γ.ς s, canonBy σ Γ.ς s')]
       | _, _ => []
     some (sigs ++ ms.map (ms.headD .nil, ·))
 

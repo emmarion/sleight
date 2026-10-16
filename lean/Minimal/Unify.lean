@@ -80,7 +80,7 @@ def substOne (e : Nat) (t : Tm) : Tm → Tm := Tm.subst fun i => if i = e then t
 def assign (e : Nat) (t : Tm) (σ : Nat → Option Tm) (x : Nat) : Option Tm :=
   if x = e then some t else (σ x).map (substOne e t)
 
-def canonBy (σ : Nat → Option Tm) (t : Tm) : Tm := t.subst2 (fun i => (σ i).getD (.fv i)) .sfv
+def canonBy (σ ς : Nat → Option Tm) (t : Tm) : Tm := t.subst2 (fun i => (σ i).getD (.fv i)) (fun i => (ς i).getD (.sfv i))
 
 abbrev Atoms := (Nat → Option Tm) → Tm → Tm → Option (List (Tm × Tm))
 

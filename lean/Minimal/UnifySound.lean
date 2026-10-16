@@ -4,6 +4,8 @@ namespace Minimal
 
 def Sat (f : Nat → Tm) (σ : Nat → Option Tm) : Prop := ∀ e t, σ e = some t → f e = t.subst f
 
+def SatS (f : Nat → Tm) (ς : Nat → Option Tm) : Prop := ∀ e s, ς e = some s → s.subst f = Tm.slotOf (f e)
+
 namespace Tm
 
 theorem size_le_occurs (f : Nat → Tm) (e : Nat) : ∀ t : Tm, e ∈ t.occ → (f e).size ≤ (t.subst f).size := by
@@ -61,12 +63,16 @@ theorem substOne_subst (f : Nat → Tm) (e : Nat) (t u : Tm) (h : f e = t.subst 
   simp only [substOne, Tm.subst_subst]
   congr 1; funext i; split <;> simp_all [Tm.subst]
 
-theorem canonBy_sound {σ : Nat → Option Tm} {f : Nat → Tm} (h : Sat f σ) (t : Tm) : (canonBy σ t).subst f = t.subst f := by
+theorem canonBy_sound {σ ς : Nat → Option Tm} {f : Nat → Tm} (h : Sat f σ) (hs : SatS f ς) (t : Tm) :
+    (canonBy σ ς t).subst f = t.subst f := by
   simp only [canonBy]
   induction t with
   | fv i => cases e : σ i with
     | none => simp [Tm.subst2, Tm.subst, e]
     | some u => simp [Tm.subst2, Tm.subst, e, h i u e]
+  | sfv i => cases e : ς i with
+    | none => simp [Tm.subst2, Tm.subst, e]
+    | some u => simp [Tm.subst2, Tm.subst, e, hs i u e]
   | _ => simp_all [Tm.subst2, Tm.subst]
 
 theorem Tm.sameHead_of_subst {f : Nat → Tm} {a b : Tm} (ha : a.isHead = true) (hb : b.isHead = true)

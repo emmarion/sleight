@@ -1832,7 +1832,7 @@ theorem machine_main (hP : ProgOK P) (hO : P.OracleOK)
   obtain ⟨⟨U, K⟩, hU⟩ := Option.isSome_iff_exists.mp hus
   have hE : EnvOK P [] {tys := #[]} :=
     .mk rfl (fun _ _ _ h _ => by simp at h) (by simp) (fun _ _ h => by simp at h) (by simp)
-      ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
+      ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
       ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ _ _ h => by simp at h)
   have hm := ((machine_sound hP hO none [] 0 P.main).1 P.groups.length {Γ := {tys := #[]}} _ [] _ rets h rfl rfl hck
     hE (by simp [LvlBound]) rfl (h.2.2 0 rfl) (by simp) vs cnt hev).1
