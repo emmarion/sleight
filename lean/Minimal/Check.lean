@@ -541,7 +541,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨B, hb⟩ ← checkTm P Γ b
     let ⟨h⟩ ← need ((Γ.canon a).strictSub (Γ.canon b)) "prove-subterm: not a strict subterm"
     .ok ⟨_, .proveSubterm ha hb h⟩
-  | .provePredates x L => do
+  | .provePredates x L _ => do
     let ⟨h1⟩ ← need (x < L) "prove-predates: not introduced before the level"
     let ⟨h2⟩ ← need (L ∈ Γ.mints) "prove-predates: not a level made by def-lvl"
     match h : Γ.tys[x]? with

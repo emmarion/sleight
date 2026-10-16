@@ -1869,7 +1869,9 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let p ← match h, ts, args with
         | "prove-subterm", [a, b], _ => pure (.proveSubterm a b)
         | "prove-predates", _, [x, L] => do
-          pure (Prim.provePredates (← entry sc x) (← entry sc L))
+          match x with
+          | .list [.atom "slot-of", y] => pure (Prim.provePredates (← entry sc y) (← entry sc L) true)
+          | _ => pure (Prim.provePredates (← entry sc x) (← entry sc L) false)
         | "predates-trans", [p, q], _ => pure (.predatesTrans p q)
         | "subterm-trans", [p, q], _ => pure (.subtermTrans p q)
         | "predates-subterm", [p, q], _ => pure (.predatesSubterm p q)

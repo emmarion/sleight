@@ -307,7 +307,7 @@ inductive Prim where
   | tm (t : Tm)
   | lit (t : Tm)
   | proveSubterm (a b : Tm)
-  | provePredates (x L : Nat)
+  | provePredates (x L : Nat) (sl : Bool)
   | predatesTrans (p q : Tm)
   | subtermTrans (p q : Tm)
   | predatesSubterm (p q : Tm)
