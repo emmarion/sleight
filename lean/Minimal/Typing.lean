@@ -552,7 +552,7 @@ def Ctx.atArgs (Γ : Ctx) : Tm → Tm → Option Tm → Bool
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => Minimal.rt P Γ t
-  | .mtblOf .. | .atom _ | .axm _ | .num .. => true
+  | .mtblOf .. | .axm _ | .num .. => true
   | _ => false
 
 mutual
