@@ -58,7 +58,7 @@ theorem Uses.below_mem {U : Uses} {n j : Nat} (h : (j, true) ∈ U.below n) : (j
 
 def UqOK (G : UCtx) (U : Uses) : Prop := ∀ i, (i, true) ∈ U → G.uq.contains i = true ∨ G.Γ.n ≤ i
 
-theorem UqOK.of_n {G G' : UCtx} {U : Uses} (hu : G'.uq = G.uq) (hn : G'.Γ.n = G.Γ.n) (h : UqOK G' U) : UqOK G U :=
+theorem UqOK.of_n {G G' : UCtx} {U : Uses} (h : UqOK G' U) (hu : G'.uq = G.uq) (hn : G'.Γ.n = G.Γ.n) : UqOK G U :=
   fun i hi => by rw [← hu, ← hn]; exact h i hi
 
 theorem UqOK.seq {G : UCtx} {A B U : Uses} (h : Uses.seq A B = some U) (ha : UqOK G A) (hb : UqOK G B) : UqOK G U :=
@@ -345,7 +345,7 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
   case case19 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
-    have hC' : UqOK G _ := UqOK.of_n (G := G) rfl (by simp) (ih hf _ _ hC)
+    have hC' : UqOK G _ := UqOK.of_n (G := G) (ih hf _ _ hC) rfl (by simp)
     split at h
     · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
@@ -353,13 +353,13 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
   case case21 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
-    have hC' : UqOK G _ := UqOK.of_n (G := G) rfl (by simp) (ih hf _ _ hC)
+    have hC' : UqOK G _ := UqOK.of_n (G := G) (ih hf _ _ hC) rfl (by simp)
     split at h
     · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
       exact UqOK.ur_seq h (UqOK.use hA) hC'
   case case22 b G ru rets a b1 rest ih => exact ih hf U K h
-  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact UqOK.of_n (G := G) rfl (by simp) (ih hf U K h)
+  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact UqOK.of_n (G := G) (ih hf U K h) rfl (by simp)
   case case24 b G ru rets b1 rest x hc => rw [if_neg hc] at h; cases h
   case case18 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
   case case20 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
@@ -3107,7 +3107,7 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
       simp only [Option.some.injEq] at hA; subst hA
       simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
       exact ⟨CU, CK, hC, by simpa using hct, UR.seq_fst h, by omega, by simpa using hc.1.2⟩
-    rw [usesCore] at hU; simp only [hred] at hU
+    rw [usesCore] at hU
     rcases hm with rfl | rfl <;> simp only [Bool.true_and, hg, Bool.not_false,
       Bool.false_eq_true, ite_false] at hU <;> exact key _ hU
   obtain ⟨sA, sC⟩ := Uses.seq_sub hseq
