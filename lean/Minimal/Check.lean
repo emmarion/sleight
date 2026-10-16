@@ -442,16 +442,6 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       let ⟨ho⟩ ← need (D.opq = false) "matchable-of: an opaque type has no Matchable"
       .ok ⟨_, .mtblOf h hl ha hc ho⟩
     | none => .error "matchable-of: unknown type"
-  | .atom d => match h : P.adts[d]? with
-    | some D => match hc : D.ctors with
-      | [.bind (.ty m e u) (.app (.tyc d' .nil) .nil) .nil] => do
-        let ⟨hd⟩ ← need (d' = d) "an atom's type has another constructor"
-        let ⟨hl⟩ ← need (D.lifted = 0) "an atom's type has lifted arguments"
-        let ⟨hn⟩ ← need (D.newtype = false) "an atom's type is a newtype"
-        let ⟨hp⟩ ← need (P.phantom d 0 = false) "an atom's constructor is phantom"
-        .ok ⟨_, .atom h (hd ▸ hc) hl hn hp⟩
-      | _ => .error "an atom's type has one constructor with no fields"
-    | none => .error "an atom of an unknown type"
   | .placedSlot d q a b => match h : P.adts[d]?, h' : P.adts[q]? with
     | some D, some E => match hc : D.ctors, hc' : E.ctors with
       | [.bind (.ty m e u) (.app (.tyc d' .nil) .nil) .nil],
@@ -464,13 +454,13 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
         let ⟨hl'⟩ ← need (E.lifted = 0) "Eq has lifted arguments"
         let ⟨A, ha⟩ ← checkTm P Γ a
         let ⟨B, hb⟩ ← checkTm P Γ b
-        let ⟨hA⟩ ← need (Γ.canon A = .app (.tyc d .nil) .nil) "slot-self: not a slot"
-        let ⟨hB⟩ ← need (Γ.canon B = .app (.tyc d .nil) .nil) "slot-self: not a slot"
+        let ⟨hA⟩ ← need (Γ.canon A = .app (.tyc d .nil) .nil) "placed-slot: not a slot"
+        let ⟨hB⟩ ← need (Γ.canon B = .app (.tyc d .nil) .nil) "placed-slot: not a slot"
         let ⟨hpl⟩ ← need (Γ.placedAt P a b = true) "placed-slot: not the slot of a box and the slot its type names"
         have hc2 : E.ctors = [eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] := by rw [hc', hq]; rfl
         .ok ⟨_, .placedSlot h (hd ▸ hc) hl ho h' hc2 hl' ha hA hb hB hpl⟩
-      | _, _ => .error "slot-self: Slot or Eq has an unexpected shape"
-    | _, _ => .error "slot-self: Slot or Eq is unknown"
+      | _, _ => .error "placed-slot: Slot or Eq has an unexpected shape"
+    | _, _ => .error "placed-slot: Slot or Eq is unknown"
   | .axm A => do
     let ⟨U, hA⟩ ← checkTm P Γ A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "an axiom's return is not a type"

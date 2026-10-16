@@ -923,7 +923,6 @@ theorem prim_val (hP : ProgOK P) {G : UCtx} {ρ : List Tm} {p : Prim} (hE : EnvO
       exact ⟨H1, w, hb, by rw [hu]; exact hO⟩
   | coerce a b q => exact (hnc a b q rfl).elim
   | num d k => exact ⟨H, _, rfl, MOut.imm hM .nat fun b h => by cases h⟩
-  | atom d => exact ⟨H, _, rfl, MOut.imm hM .imm fun b h => by cases h⟩
   | axm A' => exact ⟨H, _, rfl, MOut.imm hM (.tok (.inl rfl)) fun b h => by cases h⟩
   | mtblOf d ls => exact ⟨H, _, rfl, MOut.imm hM (.tok (.inl rfl)) fun b h => by cases h⟩
   | _ => simp [Prim.rt] at hrt
