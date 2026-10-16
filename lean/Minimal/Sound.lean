@@ -421,6 +421,14 @@ theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) 
     exact ⟨.univ, by simp_all [Tm.static], rfl⟩
   | _, _, .fn _ _ _ _ hs => ⟨.univ, hs, rfl⟩
   | _, _, .mtbl hs => ⟨.univ, hs, rfl⟩
+  | _, _, .sfv (i := i) hi hs => by
+    obtain ⟨D, m, e, u, hD, hc, hl, -, -⟩ := Tm.slotOK_spec hs
+    have hct : P.ctor slotD 0 = some (.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil) := by
+      simp [Prog.ctor, hD, hc]
+    have hv : (Tm.sfv i).subst (Tm.env ρ) = Tm.vacant := by
+      simp only [Tm.subst]; exact Tm.slotOf_lc0 (Tm.env_lc hE.closed i)
+    refine ⟨hv ▸ .con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simpa [Tm.static] using hi,
+      by simp [Tm.static]⟩
 
 theorem args_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) : ∀ {args tele out : Tm},
     ArgsTy P Γ args tele out → tele.static Γ.n 0 →
@@ -2020,6 +2028,14 @@ mutual
 theorem rt_real (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) :
     ∀ (t : Tm), rt P Γ t = true → Real P (P.sub ρS t) (t.subst (Tm.env ρ))
   | .fv i, h => by simp only [rt, Bool.not_eq_eq_eq_not, Bool.not_true] at h; exact hS.2 i h
+  | .sfv i, h => by
+    simp only [rt, Bool.and_eq_true] at h
+    obtain ⟨D, m, e, u, hD, hc, -, hn, hp⟩ := Tm.slotOK_spec h.2
+    have hct : P.ctor slotD 0 = some (.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil) := by
+      simp [Prog.ctor, hD, hc]
+    have hw : P.wrapField slotD 0 = none := by simp [Prog.wrapField, Prog.isNt, hD, hn]
+    simp only [Prog.sub, Prog.subU, Tm.subst]; rw [Tm.slotOf_lc0 (Tm.env_lc hE.closed i)]
+    exact .con hct hp hw .nil
   | .app hd args, h => by
     cases hd with
     | vc d c ls =>

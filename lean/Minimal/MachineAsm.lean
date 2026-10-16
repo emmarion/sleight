@@ -69,7 +69,7 @@ theorem Tm.noClo_static : ∀ (t : Tm) (n d : Nat), t.static n d = true → t.no
 
 mutual
 theorem TmTy.noClo {Γ : Ctx} {t T : Tm} : TmTy P Γ t T → t.noClo = true
-  | .fv _ | .fvIs .. | .univ | .level => rfl
+  | .fv _ | .fvIs .. | .univ | .level | .sfv .. => rfl
   | .tyc _ _ ha | .vc _ _ ha => by simp only [Tm.noClo]; exact ArgsTy.noClo ha
   | .tyApp hh _ ha | .vcApp hh _ ha => by simp only [Tm.noClo, Bool.and_eq_true]; exact ⟨TmTy.noClo hh, ArgsTy.noClo ha⟩
   | .tyCtor _ hs | .valCtor _ hs _ | .fn _ _ _ _ hs | .mtbl hs => Tm.noClo_static _ _ _ hs

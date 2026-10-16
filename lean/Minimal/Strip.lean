@@ -33,6 +33,7 @@ def maskArgs : List Bool → Tm → Tm
 mutual
 def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
   | .fv i => f i
+  | .sfv _ => Tm.vacant
   | .vc d c _ => .vc d c .nil
   | .app h args =>
     let args' := P.subUArgs f args

@@ -528,6 +528,12 @@ def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom
 
 def Prog.isNt (P : Prog) (d : Nat) : Bool := ((P.adts[d]?).map (·.newtype)).getD false
 
+def Prog.slotOK (P : Prog) : Bool := match P.adts[slotD]? with
+  | some D => (match D.ctors with
+      | [.bind (.ty ..) (.app (.tyc d .nil) .nil) .nil] => d == slotD
+      | _ => false) && D.lifted == 0 && !D.newtype && !P.phantom slotD 0
+  | none => false
+
 def Prog.wrapField (P : Prog) (d c : Nat) : Option Nat :=
   if P.isNt d && !P.phantom d c then (P.ctor d c).bind fun sig => (sig.skip (P.lifted d)).ntField else none
 

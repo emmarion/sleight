@@ -313,6 +313,7 @@ def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
 mutual
 def rt (Γ : Ctx) : Tm → Bool
   | .fv i => !Γ.er i
+  | .sfv i => !Γ.er i && P.slotOK
   | .app (.vc d c ls) args => match P.ctor d c with
     | some sig => !P.phantom d c && ls.len == P.lifted d && rtArgs Γ args (sig.skip (P.lifted d))
     | none => false
@@ -356,6 +357,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | fn : TmTy Γ l K → Γ.canon K = .level → TeleOK Γ t → np ≤ t.len →
       (Tm.fn l np t u hm).static Γ.n 0 → TmTy Γ (.fn l np t u hm) .univ
   | mtbl : (Tm.mtbl u nt ex ph T cs).static Γ.n 0 → TmTy Γ (.mtbl u nt ex ph T cs) .univ
+  | sfv : i < Γ.n → P.slotOK = true → TmTy Γ (.sfv i) (.app (.tyc slotD .nil) .nil)
 
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | nil : ArgsTy Γ .nil t t

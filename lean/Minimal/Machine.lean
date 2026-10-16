@@ -23,6 +23,7 @@ def Prog.place (P : Prog) (H : Heap) : Tm → Heap × Tm
 mutual
 def Prog.build (P : Prog) (H : Heap) (f : Nat → Tm) : Tm → Heap × Tm
   | .fv i => (H, f i)
+  | .sfv _ => (H, Tm.vacant)
   | .vc d c _ => (H, .vc d c .nil)
   | .app h args =>
     let (H, args') := P.buildArgs H f args

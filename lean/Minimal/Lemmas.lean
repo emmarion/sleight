@@ -14,6 +14,21 @@ theorem slotOf_subst (f : Nat → Tm) (t : Tm) : (slotOf t).subst f = slotOf (t.
 
 theorem slotOf_ne_clo (t env : Tm) (g j : Nat) : slotOf t ≠ clo env g j := by cases t <;> simp [slotOf, vacant]
 
+theorem slotOK_spec {P : Prog} (h : P.slotOK = true) : ∃ D m e u, P.adts[slotD]? = some D ∧
+    D.ctors = [.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil] ∧ D.lifted = 0 ∧ D.newtype = false ∧
+    P.phantom slotD 0 = false := by
+  unfold Prog.slotOK at h
+  split at h
+  · rename_i D hD
+    simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_eq_eq_not, Bool.not_true] at h
+    obtain ⟨⟨⟨hc, hl⟩, hn⟩, hp⟩ := h
+    split at hc
+    · rename_i m e u d' hcs; simp at hc; subst hc; exact ⟨D, m, e, u, hD, hcs, hl, hn, hp⟩
+    · cases hc
+  · cases h
+
+theorem slotOf_lc0 {t : Tm} (h : t.lc 0) : slotOf t = vacant := by cases t <;> simp_all [slotOf, lc]
+
 @[simp] theorem slotOf_inst (t u : Tm) (k : Nat) : (slotOf t).inst u k = slotOf t := by cases t <;> rfl
 
 theorem slotOf_static {n : Nat} {u : Tm} (d : Nat) (hu : u.static n 0) : (slotOf u).static n d := by
