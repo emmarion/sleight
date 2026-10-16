@@ -2895,8 +2895,11 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
   simp only [e1, e3, e4, e5]
   split
   · split
-    · refine Prod.ext (Ctx.forceSlots_upd_ghost g _ _) ?_
-      dsimp only; congr 1; exact congrArg Ctx.σ (Ctx.forceSlots_upd_ghost g _ _)
+    · rename_i σ0 _
+      have h1 := Ctx.forceSlots_upd_ghost g ({ Γn with σ := σ0 } : Ctx)
+      dsimp only
+      simp only [Prod.mk.injEq, UResult.ok.injEq]
+      exact ⟨h1 _, congrArg Ctx.σ (h1 _)⟩
     · rfl
   · rfl
 
