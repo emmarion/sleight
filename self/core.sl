@@ -2665,7 +2665,13 @@
   (let-match many (char-is c 63) (BFalse) ((BTrue) "the `_` written here"))
   (let-match many (char-is c 109) (BFalse) ((BTrue) "the slot of the `_` written here"))
   (let-match many (char-is c 115) (BFalse) ((BTrue) "the slot of the entry bound here"))
+  (let-match many (char-is c 99) (BFalse) ((BTrue) "a constant a macro minted"))
   "anonymous, minted here")
+
+(def-fns _ $ (many anon-supplied : (many (String) id) -> (many (String) r))
+  (let-match many id (SCons c _) ((SNil) "anonymous, minted by the elaborator rather than written in the source"))
+  (let-match many (char-is c 99) (BFalse) ((BTrue) "a constant a macro minted, not written in the source"))
+  "anonymous, minted by the elaborator rather than written in the source")
 
 (def-fns _ $ (many meta-notes : (many (String) here) (subterm many (List $ MsgMeta) ms) -> (many (List $ String) r))
   (let-match many ms (Cons _ m rest) ((Nil _) (Nil _)))
@@ -2680,7 +2686,7 @@
                 ((BFalse) (str-cat3 where ": note: " $ str-cat3 shown "`" $ str-cat b "`, shadowed here")))
         $ notail $ meta-notes here rest)))
   (Cons _ (match many (str-is-empty where) (((String) _))
-            ((BTrue) (str-cat3 here ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "a `_` the elaborator supplied, not one written in the source") ((BFalse) "anonymous, minted by the elaborator rather than written in the source")))
+            ((BTrue) (str-cat3 here ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "a `_` the elaborator supplied, not one written in the source") ((BFalse) (anon-supplied id))))
             ((BFalse) (str-cat3 where ": note: " $ str-cat shown $ anon-note id)))
     $ notail $ meta-notes here rest))
 
@@ -2868,7 +2874,7 @@
   (let ((many owned)) $ and (match many (table-slot-of _ _ bnd tb x) (((Bool) _)) ((Some _ s) (nat-eq s x)) ((None _) (BFalse))) $ not $ str-is-empty $ loc-str osite)
   (let ((many kind) (many where)) $ match many owned (((String) _) ((String) _))
     ((BTrue) (values (match many ome (((String) _)) ((BTrue) "m") ((BFalse) "s")) $ loc-str osite))
-    ((BFalse) (values (match many me (((String) _)) ((BTrue) "?") ((BFalse) "_")) $ loc-str site)))
+    ((BFalse) (values (match many me (((String) _)) ((BTrue) "?") ((BFalse) (match many (is-literal env x) _ ((BTrue) "c") ((BFalse) "_")))) $ loc-str site)))
   (rope-str $ rcat4 (RChar #\x01) (RStr $ str-cat kind $ nat-str x) (RChar #\x01) $ rcat (RStr where) (RChar #\x02)))
 
 (def-fns _ $ (many entry-name-or-id : (many (Env) env) (many (Nat) x) -> (many (String) r))

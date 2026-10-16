@@ -41,6 +41,7 @@ let resolve here s =
       | '?' -> ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
       | 'm' -> ("the slot of the `_` written here", "")
       | 's' -> ("the slot of the entry bound here", "")
+      | 'c' -> ("a constant a macro minted", "a constant a macro minted, not written in the source")
       | _ -> ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
     if at = "" then Printf.sprintf "\n%s `%s` is %s" (Reader.label here "note:") shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
   let line s =
@@ -165,7 +166,7 @@ let anonymous env x =
   let owner = if e.slot = x then Some (entry env (x - 1)) else None in
   match owner with
   | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
-  | _ -> marker (if e.meta then '?' else '_') x e.at
+  | _ -> marker (if e.meta then '?' else if x < 0 then 'c' else '_') x e.at
 
 let rec set_state ?minted env x state =
   let values = match state with Settled v -> IntMap.add x v env.values | Hypothetical -> env.values in

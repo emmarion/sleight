@@ -82,7 +82,7 @@ let at loc f = try f () with Error (Reader.Unknown, msg) -> error loc "%s" msg
 let var env loc n = match lookup env n with Some x -> refer x; x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
 let reference env loc raw what = match raw with
   | Atom (_, n) -> var env loc n
-  | Handle (_, x, MintedIs, _, _) when x >= 0 -> refer x; x
+  | Handle (_, x, MintedIs, _, _) when x >= 0 || IntMap.mem x env.entries -> refer x; x
   | _ -> not_name loc what raw
 let handle_made = function Handle (_, _, _, m, _) -> Some m | _ -> None
 let made env raw x = Option.value (handle_made raw) ~default:(entry env x).mult
@@ -573,6 +573,7 @@ let atom_entry ?at env raw =
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))
 let atom_entry_or env l raw what = match raw with List _ -> error l "expected %s, got %s" what (tick (Reader.show raw)) | _ -> atom_entry ~at:l env raw
+let admitted env raw = match raw with Handle (_, _, MintedIs, _, _) -> fst (atom_entry env raw) | _ -> env
 let entry_named env l raw what = match raw with Handle (_, _, MintedType, _, _) -> not_name l what raw | _ -> atom_entry_or env l raw what
 
 let read_special pos env raw =
@@ -580,6 +581,7 @@ let read_special pos env raw =
   | Atom (l, _) | Handle (l, _, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l ?made:(handle_made raw) Many x
   | List (l,[h;(Atom _ | Handle _ as a)]) when special_of env h = Some Sp.Share ->
       if pos = Erased then error_in env l "`share` in an erased position";
+      let env = admitted env a in
       let x = reference env (loc a) a "a name" in
       if made env a x <> Unique then error_in env l "`share` needs a unique value";
       use env l ~sharing:true Many x
@@ -888,6 +890,7 @@ and fetched env l sp args =
   match (sp, args) with
   | Sp.SlotOf, _ -> let env, x = slot_var env l args in (env, Var (entry env x).slot)
   | Sp.AtFnOf, [ g ] -> (
+      let env = admitted env g in
       let g = named env l "a function name" g in
       match List.find_opt (fun x -> (entry env x).name = None && is_atfn_proof env x g) env.scope.ids with
       | Some y -> (env, Var y)
@@ -898,7 +901,7 @@ and fetched env l sp args =
       match canon env (infer env l f) with
       | Fn (lv, _, _) | UniqueFn (lv, _, _) -> (env, lv)
       | ty -> error_in env l "`level-of`: %s : %s is not a function" (qshow env f) (qshow env ty))
-  | Sp.MatchableOf, [ t ] -> let x, _, _ = find_matchable env l (tyname env l t) in (env, Var x)
+  | Sp.MatchableOf, [ t ] -> let env = admitted env t in let x, _, _ = find_matchable env l (tyname env l t) in (env, Var x)
   | Sp.NumeralOf, [ e ] -> (
       match lit_of e with
       | None -> error_in env l "`numeral-of` takes a literal, not %s" (tick (Reader.show e))
@@ -908,6 +911,7 @@ and fetched env l sp args =
           | Some p -> (env, Var p)
           | None -> error l "%s is a string literal, which carries no `Numeral` proof" (Reader.show e)))
   | Sp.DelegateOf, [ g ] -> (
+      let env = admitted env g in
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
       match List.find_opt about env.scope.ids with Some y -> (env, Var y) | None -> error l "%s has no `Delegate` proof in scope" (qname env g))
@@ -917,7 +921,7 @@ and compile_text pos env l sp = function
   | [ raw ] ->
       let env, x, m = match raw with
         | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, x, made env raw x)
-        | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let x = reference env (loc a) a "a name" in (env, x, made env a x)
+        | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let env = admitted env a in let x = reference env (loc a) a "a name" in (env, x, made env a x)
         | _ -> (match !settle_head env Many (List (loc raw, [ raw ])) with env, List (_, [ Handle (_, x, _, m, _) ]) -> (env, x, m) | _ -> assert false) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
       (match (if m = Erased then None else settled_value env x str) with
@@ -988,6 +992,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
         let mult = match mults i e.s_loc e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick (spell_binder e.s_name)) in
         let env, sg = match e.s_sg with Some s -> elab_sg env s | None -> error_in env e.s_loc "entry %s needs a type or an `is` clause" (tick (spell_binder e.s_name)) in
         let ty, rule = fact_of env e.s_loc sg in
+        let env = Option.fold ~none:env ~some:(admitted env) e.s_place in
         let place = Option.map (fun raw ->
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope and match annotation entries";
           if lit_of raw <> None then error_in env (loc raw) "`at` names a variable, not a literal";
@@ -2116,6 +2121,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.CompileError, _ -> compile_error spos env l args
       | Some Sp.CompileWarn, _ -> let env, text = compile_text spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
       | Some Sp.SlotSelf, [ a ] ->
+          let env = admitted env a in
           let x = reference env (loc a) a "a variable" in
           check_type env (loc a) (type_of env x) Prelude.slot_term;
           ((try place env x (Var x) with Contradiction msg -> error_in env l "`slot-self`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
