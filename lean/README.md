@@ -397,8 +397,8 @@ it is `Settled`, and its `is` rule.
   `place-at` and `unplace-at` (and their `-many` forms) elaborate to
   `Prim.place` and `Prim.unplace`, which are renamings of their argument
   in every run and are typed into and out of `Placed`; `unplace-at`'s
-  result is the box's index. `placed-slot` elaborates to `Prim.atomEq`
-  on the box's slot and the slot its type names, and `placed-eq` to
+  result is the box's index. `placed-slot` elaborates to `Prim.placedSlot`,
+  which proves only that the box's slot is the slot its type names, and `placed-eq` to
   `Prim.placedEq`, an `Eq` of two boxes of one type, both of which are
   its index. `_` arguments come from the box's known type or from
   inference. A pattern field of a `Placed` type records it.
@@ -559,8 +559,7 @@ it is `Settled`, and its `is` rule.
   contradiction is refused. `prove-predates` takes `(slot-of x)` for an
   `x` older than the level. `at` changes no value: the runner computes
   an `at` result like any other. Not done: forcing outside a match
-  branch (`open-adt`) adds no slot facts, and `placed-slot` still
-  proves its equation with `Prim.atomEq`.
+  branch (`open-adt`) adds no slot facts.
 - At-functions and at-matches (sections 39 and 40), checked by the
   elaborator: the returns or annotation entries are erased or `at`, and
   the body or each branch makes no non-erased call that is not skipped,
