@@ -129,7 +129,7 @@ theorem Ctx.pushTele_n_le (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) : Γ.n �
   simp only [Ctx.pushTele, Ctx.setErs_n]; exact Ctx.openTele_n_le _ _ _
 
 theorem Ctx.pushPrim_n_le (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Γ.n ≤ (Γ.pushPrim T er p).n := by
-  cases p <;> simp [Ctx.pushPrim, Ctx.push, Ctx.withRule, Ctx.n]
+  cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule, Ctx.n]
 
 theorem UCtx.adv_n' {G : UCtx} (hf : G.fill = false) {Γ' : Ctx} {c : Core} : (G.adv P Γ' c).n = Γ'.n := by
   simp [UCtx.adv, hf]
@@ -695,13 +695,13 @@ theorem machine_defLvl {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {rest :
 
 theorem Ctx.pushPrim_er' (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) (i : Nat) :
     (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
-  cases p <;> simp [Ctx.pushPrim]
+  cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
 
 theorem Ctx.pushPrim_n (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim T er p).n = Γ.n + 1 := by
-  cases p <;> simp [Ctx.pushPrim, Ctx.push, Ctx.withRule, Ctx.n]
+  cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule, Ctx.n]
 
 theorem Ctx.pushPrim_ghost (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim T er p).ghost = Γ.ghost := by
-  cases p <;> simp [Ctx.pushPrim, Ctx.push, Ctx.withRule]
+  cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule]
 
 theorem machine_callE {b : Nat} {G : UCtx} {ru : List Bool} {rets f args : Tm} {dec : Dec} {ms : List Bool}
     {ve : Option (List Bool)} {rest : Core} {ρ vs oF : List Tm}
