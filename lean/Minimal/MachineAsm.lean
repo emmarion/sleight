@@ -867,7 +867,7 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
       exact same { G with cellOk := true } hf rfl rfl _ hr' machine_alloc
         (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
     | cellOf =>
-      exact step { G with Γ := G.Γ.markPd .cellOf a, cellOk := true, uscr := none } _ hf hr' (hE.markPd _ _)
+      exact step { G with Γ := G.Γ.markPd .cellOf a, cellOk := true, uscr := none } _ hf hr' (hE.markPd .cellOf a)
         (by simp) (by simp) (by simp) (by simp) rfl machine_cellOf
         (fun U K hU => by rw [usesCore] at hU; split at hU; exact isS hU; cases hU)
     | reuse u | write u =>
@@ -884,7 +884,8 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
           · obtain ⟨⟨CU, CK⟩, hC', -⟩ := Option.bind_eq_some_iff.mp hU
             exact isS hC'
       · have ha' : ∀ i, a ≠ .fv i := fun i e => ha ⟨i, e⟩
-        rw [Ctx.markPd_nf _ (by simp) ha'] at hr'
+        generalize hg : G.Γ.markPd _ a = Γm at hr'
+        obtain rfl : Γm = G.Γ := hg.symm.trans (Ctx.markPd_nf _ (by simp) ha')
         refine same G hf rfl rfl _ hr' (fun ihr => ?_)
           (fun U K hU => by rw [usesCore_markNF (by first | exact .inl rfl | exact .inr rfl) ha'] at hU; exact isS hU)
         cases u
@@ -892,6 +893,8 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
             (fun U K hU => by rw [usesCore_markNF (by first | exact .inl rfl | exact .inr rfl) ha'] at hU; exact hU) ihr
         · exact machine_markNF (by simp) ha' ihr
     | rebind =>
+      generalize hg : G.Γ.markPd .rebind a = Γm at hr'
+      obtain rfl : Γm = G.Γ := hg.symm
       by_cases hx : ∃ t rest', rest = .prim (.tm t) false rest' ∧ G.rebind = some t
       · obtain ⟨t, rest', rfl, hrb⟩ := hx
         rw [checkCore] at hr'
