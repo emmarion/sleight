@@ -2036,7 +2036,7 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
     refine ⟨.con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simp [Tm.static],
       by simp [Prim.eval, Tm.lc], by simp [Prim.eval, Tm.levels]⟩
-  | @atomEq d D q E m1 e1 u1 m2 e2 u2 m3 e3 u3 _ a A' b B' m e u hD hc hl ho hE' hc' hl' ha hA hb hB =>
+  | @placedSlot d D q E m1 e1 u1 m2 e2 u2 m3 e3 u3 _ a A' b B' m e u hD hc hl ho hE' hc' hl' ha hA hb hB _ =>
     have va := sem ha; rw [hA] at va; simp only [Tm.subst] at va
     have vb := sem hb; rw [hB] at vb; simp only [Tm.subst] at vb
     have ea := VTy.atom_inv hD hc hl ho va
@@ -3673,7 +3673,7 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       simp only [Prim.evalS, Prim.eval]
       have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
       exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
-  | atomEq | placedEq | wAsk | wNext => simp [Prim.rt] at hrt
+  | placedSlot | placedEq | wAsk | wNext => simp [Prim.rt] at hrt
   | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
 
 theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {Γ : Ctx} {p : Prim} {er : Bool}

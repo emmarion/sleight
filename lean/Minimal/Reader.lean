@@ -2242,7 +2242,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
         let e ← eqOf
         let [j] ← fresh [true] | throw "fresh"
         note j (.app (.tyc e .nil) (.ofList [.app (.tyc slotD .nil) .nil, σ, st']))
-        return (ss ++ chk ++ [.prim (.atomEq slotD e σ st') true], [.fv j])
+        return (ss ++ chk ++ [.prim (.placedSlot slotD e σ st') true], [.fv j])
       | "placed-eq", [s, T, v, b, c] => do
         let (ss, ts) ← elabArgs sc [b, c] [.er, .er]
         let [bt, ct] := ts | throw "placed-eq takes two boxes"

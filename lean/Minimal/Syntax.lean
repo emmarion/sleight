@@ -326,7 +326,7 @@ inductive Prim where
   | atom (d : Nat)
   | wAsk (w req : Tm)
   | wNext (w : Tm)
-  | atomEq (d q : Nat) (a b : Tm)
+  | placedSlot (d q : Nat) (a b : Tm)
   | place (a T : Tm)
   | unplace (a v : Tm)
   | placedEq (q : Nat) (A a b : Tm)
