@@ -447,7 +447,20 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
      later `slot-of`s (`topRefs`, `restRefs`), so a slot an alias names
      after a level is minted after it; `dropFinal` under `--shared`; the
      `let` analyses `returnsBinders` and `renamesOf`; and the scan that
-     declares `World`. Not each probed.
+     declares `World`.
+   - Probed against the reference's test runner: a needs file ending in
+     a macro call that expands to a `let`, or in an alias of `values`
+     with no arguments, is refused by both. The scan that declares
+     `World` sees the prelude's own mention of it, so with the prelude
+     it is always declared, and without it there are no macros.
+   - `returnsBinders` diverges: in a body
+     `(let ((many y)) (tail (id x))) (v y)`, with `v` an alias of
+     `values`, the reference accepts the `tail` and this runner refuses
+     it. The reference checks `tail`, `notail` and `delegate` after
+     elaboration, on the erased code with renaming lets and lets that
+     return what they bind folded away (`check_marks` and `normalize` in
+     `lib/elab.ml`); here they are checked while elaborating, against a
+     syntactic reading of the rest of the body.
    A related difference, also older than macros: `values` in a call's
    argument position splices its values into the call's arguments here,
    so `(nat-add (values 1 2))` gives 3, while the reference refuses it
