@@ -2896,7 +2896,7 @@ theorem machine_wdo (hO : P.OracleOK) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.wNext w).evalS P ρS) ((Prim.wNext w).eval P ρ) ∧
       Real P ((Prim.wAsk w req).evalS P ρS) ((Prim.wAsk w req).eval P ρ))
     (ih : ∀ Tw A, G.primTy P (.wNext w) = some Tw → G.primTy P (.wAsk w req) = some A →
-      MRun P b (G.next (G.adv P ((G.Γ.push Tw false).push A false) (.wdo w req rest)) [true, false]) ru rets rest
+      MRun P b (G.next (G.adv P (G.Γ.pushWdo Tw A w) (.wdo w req rest)) [true, false]) ru rets rest
         (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) vs) :
     MRun P b G ru rets (.wdo w req rest) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
@@ -2950,7 +2950,7 @@ theorem machine_wdo (hO : P.OracleOK) {b : Nat} {G : UCtx} {ru : List Bool} {ret
   rw [hansS, hnextS] at hr
   obtain ⟨he, hW1, hd1, hf1⟩ := ((Heap.placeDeep_spec (P := P) (P.ask k c).1 hM.wf).1 (hO.sdata k c))
   rw [hpd] at he hW1 hd1 hf1
-  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P ((G.Γ.push Tw false).push A false) (.wdo (.fv x) (.fv y) rest) := ⟨_, rfl⟩
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushWdo Tw A (.fv x)) (.wdo (.fv x) (.fv y) rest) := ⟨_, rfl⟩
   rw [← hΓ'] at hC
   have hl := hM.lenF
   have her' : ∀ i, Γ'.er i = if i = G.Γ.n + 1 then false else if i = G.Γ.n then false else G.Γ.er i := fun i => by

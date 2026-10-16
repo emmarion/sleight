@@ -203,7 +203,7 @@ def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
   | .wdo w req rest => do
     let ⟨Tw, _⟩ ← (checkPrim P Γ (.wNext w)).toOption
     let ⟨A, _⟩ ← (checkPrim P Γ (.wAsk w req)).toOption
-    some ((Γ.push Tw false).push A false, rest, fun (r : Core) => .wdo w req r)
+    some (Γ.pushWdo Tw A w, rest, fun (r : Core) => .wdo w req r)
   | .defLvl rest => some (Γ.pushMint, rest, fun (r : Core) => .defLvl r)
   | .defFns gid rest => do let G ← P.groups[gid]?; some (Γ.pushFns G, rest, fun (r : Core) => .defFns gid r)
   | .chk (.opn oe) (.fv m) b rest =>
@@ -339,7 +339,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
   | .wdo w req rest => do
     let Tw := ((checkPrim P Γ (.wNext w)).toOption.map (·.1)).getD .hole
     let A := ((checkPrim P Γ (.wAsk w req)).toOption.map (·.1)).getD .hole
-    return .wdo w req (← inferCore ((Γ.push Tw false).push A false) rets top rest)
+    return .wdo w req (← inferCore (Γ.pushWdo Tw A w) rets top rest)
   | .prim p er rest => do
     let coerOf (q : Tm) : Option (Tm × Tm × Tm × Tm × Tm × Tm) := do
       let ⟨T, _⟩ ← (checkTm P Γ q).toOption

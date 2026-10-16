@@ -779,7 +779,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨Tw, hw⟩ ← checkPrim P Γ (.wNext w)
     let ⟨A, ha⟩ ← checkPrim P Γ (.wAsk w req)
     let ⟨hm⟩ ← need (Γ.ok (rt P Γ w && rt P Γ req)) "world-do mentions something erased"
-    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) rest rets
+    let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ (Γ.pushWdo Tw A w) (.wdo w req rest)) rest rets
     .ok ⟨R, .wdo hw ha hm hr, e⟩
   | .defLvl rest, rets => do
     let ⟨R, hr, e⟩ ← checkCore b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets

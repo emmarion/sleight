@@ -106,7 +106,7 @@ def bindSlot (Γ : Ctx) (r : Nat) (s : Tm) : Ctx :=
   { Γ with σ := fun i => (Γ.σ i).map (slotSub r s), ς := fun i => if i = r then some s else (Γ.ς i).map (slotSub r s) }
 
 def slotBind (Γ : Ctx) (e : Nat) (s : Tm) : Option (Nat × Tm) :=
-  if s.isSlotVal Γ.n then match Γ.canon (.sfv e), s with
+  if s.isSlotVal Γ.n ∧ e < Γ.n then match Γ.canon (.sfv e), s with
     | .sfv r, s => if s = .sfv r then none else some (r, s)
     | a, .sfv r => if a.isSlotVal Γ.n then some (r, a) else none
     | _, _ => none
@@ -164,6 +164,9 @@ def chkStep (Γ : Ctx) : Chk → Tm → Ctx
   | .mark m, a => Γ.markPd m a
   | .slf, .fv s => (Γ.slotSelf s).getD Γ
   | _, _ => Γ
+
+def pushWdo (Γ : Ctx) (Tw A w : Tm) : Ctx :=
+  ((Γ.push Tw false).slotIf w.varSlot.isSome Γ.n (Γ.canon (w.varSlot.getD .nil))).push A false
 
 def pushPrim0 (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
@@ -664,7 +667,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)) rest rets →
       CoreTy b Γ (.prim p er rest) rets
   | wdo : PrimTy P Γ (.wNext w) Tw → PrimTy P Γ (.wAsk w req) A → Γ.ok (rt P Γ w && rt P Γ req) →
-      CoreTy b (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) rest rets → CoreTy b Γ (.wdo w req rest) rets
+      CoreTy b (Ctx.adv P Γ (Γ.pushWdo Tw A w) (.wdo w req rest)) rest rets → CoreTy b Γ (.wdo w req rest) rets
   | defLvl : CoreTy b (Ctx.adv P Γ Γ.pushMint (.defLvl rest)) rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
       CoreTy b (Ctx.adv P Γ (Γ.pushFns G) (.defFns gid rest)) rest rets → CoreTy b Γ (.defFns gid rest) rets

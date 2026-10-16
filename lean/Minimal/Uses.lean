@@ -210,7 +210,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
   | .wdo w req rest => do
     let Tw ← G.primTy P (.wNext w)
     let A ← G.primTy P (.wAsk w req)
-    let C ← usesCore b (G.next (G.adv P ((G.Γ.push Tw false).push A false) (.wdo w req rest))
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushWdo Tw A w) (.wdo w req rest))
       (if G.Γ.ghost then [] else [true, false])) ru rets rest
     if G.Γ.ghost then some C
     else if w.isFv && req.isFv then UR.seq (← Uses.seq (← G.termUses P true w) (← G.termUses P true req), []) C
