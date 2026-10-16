@@ -210,6 +210,7 @@ structure ESt where
   hnames : List (String × Ref) := []
   minted : List (String × Tm) := []
   hasMacros : Bool := false
+  endsInStmt : Bool := false
   gensyms : Nat := 0
   expansions : Nat := 0
   primFns : List ((Nat × Nat) × String) := []
@@ -295,6 +296,9 @@ def settledOfFn : Sx :=
       e "erased" (.list [.atom "Mult"]) (.atom "m"), e "erased" (.atom "Type") (.atom "T"), e "erased" (.atom "T") (.atom "t"),
       .atom "->", e "many" H (.atom "h")], .list [.atom " axiom", H]]]
 
+def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt", "def-unique",
+  "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn", "def-opaque", "def-prim"]
+
 def emptyNames : List String := ["MacroWorld", "Gensym"]
 
 def mwPrims : List String := ["settled-mult", "settled-value"]
@@ -336,10 +340,15 @@ def ESt.slotRoot (st : ESt) (i : Nat) : Nat :=
 
 def ESt.isSlot (st : ESt) (i : Nat) : Bool := st.slots.any (·.2 == .fv i)
 
+def ESt.tyOf (st : ESt) (i : Nat) : Option Tm :=
+  st.known.lookup i <|> (st.topCtx.bind fun Γ => (Γ.tys[i]?).filter (· != .nil))
+
 def ESt.liftTm (st : ESt) (d : Nat) : Tm := .ofList (((st.lifts.lookup d).getD []).map Tm.fv)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   if x == "_" then return .hole
+  if x.startsWith " y" then
+    if let some h := (← get).handles[(x.drop 2).toString.toNat!]? then return h.den
   match sc.lookup x with
   | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
@@ -609,7 +618,7 @@ def dumpContext (sc : Scope) : M String := do
   let nm (i : Nat) : String := ((named.find? (·.2 == i)).map (showName ·.1)).getD s!"__{i}"
   let seen := named.foldl (fun (acc : List (String × Nat)) (x, i) => if acc.any (·.1 == x) then acc else acc ++ [(x, i)]) []
   let lines := seen.map fun (x, i) =>
-    let ty := match st.known.lookup i <|> (st.topCtx.bind fun Γ => (Γ.tys[i]?).filter (· != .nil)) with
+    let ty := match st.tyOf i with
       | some T => " : " ++ st.showTm nm T
       | none => ""
     let mult := if st.ers.getD i true then "erased" else "many"
@@ -800,7 +809,7 @@ def entryHandle (i mult : Nat) : M Tm := do
   if let some h := litOf.bind (litHandle st) then return ← newHandle { h with mult := mult }
   let x := s!" h{st.handles.size}"
   modify fun st => { st with hnames := (x, .fv i) :: st.hnames }
-  let ty := st.inlineT ((st.known.lookup i).getD Tm.nil)
+  let ty := st.inlineT ((st.tyOf i).getD Tm.nil)
   newHandle ⟨mult, .atom x, st.inlineT (.fv i), ty, st.settledVal i⟩
 
 def strS (P : Prog) (s : String) : Tm := P.mkStr false (s.toUTF8.toList.map (·.toNat))
@@ -910,7 +919,7 @@ def macroExt (sc : Scope) (P : Prog) (env : Tm) (gid j : Nat) (G : Group) (F : F
   | "settled-erase", [c] => do outs [← newHandle { ← handle c with mult := 0 }]
   | "settled-type", [c] => do
     let h ← handle c
-    outs [← newHandle { mult := 0, syn := .atom "_", den := h.ty, ty := .univ, val := none }]
+    outs [← newHandle { mult := 0, syn := .atom s!" y{(← get).handles.size}", den := h.ty, ty := .univ, val := none }]
   | "settled-mult", [c] => do outs [P.conS "Mult" (["MErased", "MMany", "MUnique"].getD (← handle c).mult "MErased") []]
   | "settled-value", [c] => match (← handle c).val with
     | some v => outs [v]
@@ -1323,17 +1332,15 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     pure (inline params, sigs.map inline)
   let raw ← elabSigs
   let mut ids : List Nat := ((raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).filter (· < holeBase)).eraseDups
-  let tyOf (i : Nat) : Option Tm := st.known.lookup i <|>
-    (st.topCtx.bind fun Γ => (Γ.tys[i]?).filter (· != .nil))
   for _ in List.range (st.n + 1) do
-    let more ← ids.flatMapM fun i => match tyOf i with
+    let more ← ids.flatMapM fun i => match st.tyOf i with
       | some T => pure (inline T).fvs
       | none => throw "a def-adts signature may mention only an entry whose type the elaborator knows: a top-level entry, a level, a def-fns function, a parameter, or a let binder written with a type or a term"
     if more.all ids.contains then break
     ids := (ids ++ more).eraseDups
   ids := ids.mergeSort
   let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
-    .bind (.ty false true false) (abst ids k (inline ((tyOf i).getD .nil))) r) .nil
+    .bind (.ty false true false) (abst ids k (inline ((st.tyOf i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
   if !(← get).inPrelude && blocks.any (fun | .list (_ :: kws) => kws.contains (.atom "extern") | _ => false) then
     throw "only the prelude may mark a definition `extern`"
@@ -2555,6 +2562,13 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     let (sc, e) := unhide sc e
     if let some forms ← expandCall sc e then
       let sc ← withHandles sc forms
+      let last := (← get).depthTop && rest.all isPragmaSx && want.length == 1 &&
+        match (forms.filter (!isPragmaSx ·)).getLast? with
+        | some (.list (.atom h :: _)) => statements.contains h
+        | some _ => false
+        | none => true
+      if last then modify fun st => { st with endsInStmt := true }
+      let (forms, want) := if last then (forms ++ [.list [.atom "values"]], []) else (forms, want)
       return ← litsScoped (if (← get).top then pure [] else internLits (.list forms)) fun ssL => do
         let (ss2, ts) ← elabSeq sc want exp (forms ++ rest)
         return (ss ++ ssL ++ ss2, ts)
@@ -3015,9 +3029,6 @@ partial def elabBody (sc : Scope) (want : List Mode) (items : List Sx) (exp : Op
   return close ss ts
 end
 
-def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match", "open-adt", "def-unique",
-  "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn", "def-opaque", "def-prim"]
-
 def nullary (name : String) (d : Nat) (cs : List String) : Adt :=
   { params := .nil, ctors := cs.map fun _ => .bind (.ty false false false) (.app (.tyc d .nil) .nil) .nil, name, ctorNames := cs }
 
@@ -3045,7 +3056,7 @@ def elabProgram (items : List Sx) (pre : Bool) (fin : Mode := .many) : Except St
   let items := if stmt then items ++ [.list [.atom "values"]] else items
   let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [fin]) none items).run
     { builtins with pre, topRefs := suffixRefs items }
-  unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
+  unless ts.length == (if stmt || st.endsInStmt then 0 else 1) do throw "the top level has size one"
   let ws := st.warns ++ (st.supp.filter (·.2.2 == 0)).map fun (x, _, _) => s!"`;! suppress warn` for `{x}` silenced nothing"
   return (st.prog (close ss ts), ws)
 
