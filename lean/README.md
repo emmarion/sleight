@@ -415,13 +415,16 @@ it is `Settled`, and its `is` rule.
 - Macros, `Raw` and handles (DESIGN.md sections 62 to 65). A list whose
   head names a top-level entry holding a `Macro` is expanded by running
   the macro's function in the stripped runner (`runAM`, in the reader's
-  own monad) and reading the `Raw` it returns back as syntax. Each
-  top-level form is expanded before it is elaborated, at every depth,
-  splicing a call's forms where it stood, except that a call is not
-  expanded where the form binds the head's name itself (`binderNames`,
-  a syntactic reading: the last name of an entry or binder); such a
-  call, and a statement that is itself a macro call, expands when the
-  elaborator reaches it, a statement's forms one at a time. Literals
+  own monad) and reading the `Raw` it returns back as syntax. A call
+  expands where the elaborator meets it, with the scope there: as a
+  statement, where its forms are elaborated one at a time; as an
+  expression, a type or a call's head, where it gives one form (a
+  head may give several, spliced into the list it heads); and among a
+  call's or a `values`' arguments, a telescope's entries and the parts
+  of an entry, a `let`'s binders, a match's branches and a `def-adts`
+  block's constructors, where its forms take its place. The elaborator
+  expands a call before looking at its arguments, so a macro receives
+  them unexpanded, and a call it drops never runs. Literals
   reach a macro as `RawSettled` handles. Positions are `NoPos`
   throughout. At most 10000 expansions run.
   The macro-world primitives are functions in the core: `MacroWorld`
@@ -435,8 +438,7 @@ it is `Settled`, and its `is` rule.
   a hidden erased macro world, so they are available only inside a
   function that has one. `mint-settled` of a number or a string gives
   the handle of that literal; of any other value, a handle usable only
-  as the head of a macro call. `resolve` sees the call's top-level scope
-  and the names the enclosing form binds, as `Hypothetical`.
+  as the head of a macro call. `resolve` sees the scope at the call.
   Not supported: `read-file`, `mint-settled-erased`, `settled-mult` and
   `settled-value` outside a macro's function, positions, and the
   refusal of a handle used against its multiplicity.
@@ -637,8 +639,11 @@ it is `Settled`, and its `is` rule.
 - `MacroWorld` and `Gensym`, which DESIGN.md section 65 declares
   opaque, are data types with no constructors in the core, which lets
   the macro-world primitives be functions whose bodies are refuted.
-  A program can therefore match on one with no branches, which the
-  opaque type would refuse.
+  The reader accepts a match on one with no branches outside the
+  prelude, which the reference refuses for want of a `Matchable`; that
+  is a gap in the reader (`lean/HANDOFF.md`), not a consequence of the
+  encoding. The encoding cannot express a macro world that escapes an
+  expansion erased, which DESIGN.md section 65 allows.
 
 - The oracle that answers a `world-do` is keyed by the world's step
   number and the request's constructor alone, not the request's fields,

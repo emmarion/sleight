@@ -209,7 +209,6 @@ structure ESt where
   handles : Array HInfo := #[]
   hnames : List (String × Ref) := []
   minted : List (String × Tm) := []
-  expanded : List Sx := []
   hasMacros : Bool := false
   gensyms : Nat := 0
   expansions : Nat := 0
@@ -748,415 +747,6 @@ def cellDecl (ci : CtorInfo) (c : String) : M Nat := do
   modify fun st => { st.pushDecl D with cellDs := (ci.k, k) :: st.cellDs }
   return k
 
-mutual
-partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
-  let e := match e with
-    | .list (.list [.atom "share", x@(.atom _)] :: args) => .list (x :: args)
-    | e => e
-  match ← resolveHead sc (fun _ => pure ()) e with
-  | .list [.atom "\x03var", .atom x] => look sc depth x
-  | .list (.list [.atom "\x03var", .atom x] :: args) =>
-    return .app (← look sc depth x) (.ofList (← args.mapM (elabTm sc depth)))
-  | e => elabTm' sc depth e
-
-partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
-  | .atom "Type" => pure .univ
-  | .list [.atom " hty", .atom k] => do
-    let some h := (← get).handles[k.toNat!]? | throw "unreachable: no handle"
-    if h.ty == .nil then pure .hole else pure h.ty
-  | .list [.atom "compile-error", m] => do throw (← compileMsg sc m)
-  | .list [.atom "dump-context"] => do throw (← dumpContext sc)
-  | e@(.atom x) => match e.numerals with
-    | [n] => do match (← get).lits.lookup n with
-      | some i => pure (.fv i)
-      | none => throw s!"the numeral {x} is not interned"
-    | _ =>
-      if x.startsWith "\"" then do
-        match (← get).strs.lookup ((x.toList.drop 1).map Char.toNat) with
-        | some i => pure (.fv i)
-        | none => throw s!"the string literal {x} is not interned"
-      else match charCode x with
-        | some c => do match (← get).chars.lookup c with
-          | some i => pure (.fv i)
-          | none => throw s!"the character literal {x} is not interned"
-        | none => if x.startsWith "#\\" then throw s!"malformed character literal {x}" else look sc depth x
-  | .list [.atom "numeral-of", x] => do
-    match litOf x with
-    | some n => match (← get).numPf.lookup n with
-      | some i => pure (.fv i)
-      | none => throw "numeral-of: not interned"
-    | none => throw "`numeral-of` takes a numeral or a character literal"
-  | .list (.atom "numeral-of" :: _) => throw "malformed `numeral-of` form"
-  | .list [.atom "prove-literal-lt", a, b] => do
-    match numeralOf a, numeralOf b with
-    | some x, some y => match (← get).ltPf.lookup (x, y) with
-      | some i => pure (.fv i)
-      | none => throw s!"prove-literal-lt: {x} is not below {y}"
-    | _, _ => throw "`prove-literal-lt` takes two numerals"
-  | .list (.atom "prove-literal-lt" :: _) => throw "`prove-literal-lt` takes two numerals"
-  | .list [.atom "Level"] => pure .level
-  | .list [.atom "matchable-of", .atom T] => do
-    let st ← get
-    let alias := match sc.lookup T with
-      | some (.fv i) | some (.ctor i) => match st.inl.lookup i with
-        | some (.tyc d _) => some d
-        | _ => none
-      | _ => none
-    let some d := alias.orElse fun _ => st.adts.lookup T | throw s!"matchable-of: {T} is not a declared type"
-    match st.mtbls.lookup d with
-    | some i => pure (.fv i)
-    | none => throw s!"matchable-of: {T} mentions top-level entries and is not first class"
-  | .list (.atom "matchable-of" :: _) => throw "matchable-of takes a type constructor"
-  | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
-  | .list [.atom "slot-of", .atom x] => match sc.lookup x with
-    | some (.bnd lv) => do
-      if lv < (← get).slotFloor then
-        throw s!"`slot-of` in a constructor's telescope cannot name `{showName x}`, bound by a telescope still being written"
-      match sc.lookup (" slot " ++ x) with
-      | some (.bnd lv) => pure (.bv (depth - 1 - lv))
-      | _ => throw s!"`slot-of` of `{showName x}`, bound by a telescope, is not supported here"
-    | some (.fv i) | some (.ctor i) | some (.fn i _ _) => slotOf i
-    | none => look sc depth x
-  | .list (.atom "slot-of" :: _) => throw "`slot-of` takes a variable"
-  | .list [.atom "at-fn-of", .atom f] => do
-    let pf := (← get).atPf
-    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
-    | some k => pure (.fv k)
-    | none => throw s!"`{showName f}` has no `AtFn` proof in scope"
-  | .list [.atom "delegate-of", .atom f] => do
-    let pf := (← get).delePf
-    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
-    | some k => pure (.fv k)
-    | none => throw s!"delegate-of: {showName f} is not a non-erased function with a `delegate` body defined before this type"
-  | .list (.atom "Cell" :: .atom c :: items) => do
-    if (sc.lookup "Cell").isSome then throw "malformed `Cell`"
-    let ci ← ctorInfo sc c
-    let cd ← cellDecl ci c
-    let n := ((fieldErs ci.sig).filter (!·)).length
-    unless items.length == n do
-      throw s!"the type former `Cell` of `{c}` expects {n} slots, got {items.length}: expected one for each non-erased field of `{c}`"
-    return .app (.tyc cd .nil) (.ofList (← items.mapM (elabTm sc depth)))
-  | .list [.atom "Predates", A, x, L] =>
-    return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
-  | .list [.atom "Subterm", A, a, B, b] =>
-    return .subterm (← elabTm sc depth A) (← elabTm sc depth a) (← elabTm sc depth B) (← elabTm sc depth b)
-  | .list (.atom "Fn" :: l :: es) => elabFn sc depth l es false
-  | .list (.atom "UniqueFn" :: l :: es) => elabFn sc depth l es true
-  | .list (.atom "Matchable" :: .atom tag :: rest) => do
-    unless tag == "enum" || tag == "union" do throw "Matchable: the tag is enum or union"
-    let (marks, T :: es) := rest.span (· matches .atom "newtype" | .atom "extern") | throw "Matchable: no type constructor"
-    let es ← es.mapM fun
-      | .list [.atom m, C] => do
-        let (er, _) ← splitMult true [.atom m]
-        pure (er, ← elabTm sc depth C)
-      | _ => throw "Matchable: an entry is (m C)"
-    return .mtbl (tag == "union") (marks.contains (.atom "newtype")) (marks.contains (.atom "extern")) (es.map (·.1))
-      (← elabTm sc depth T)
-      (.ofList (es.map (·.2)))
-  | .list (.atom "TyCtor" :: es) => do
-    let (ps, [.atom "Type"]) ← splitArrow es | throw "a TyCtor returns Type"
-    return .tyCtor (← withFloor ctorFloor (elabTele sc depth false ps))
-  | .list (.atom "ValCtor" :: es) => do
-    let (fs, [ret]) ← splitArrow es | throw "a ValCtor has one return"
-    return .valCtor (← withFloor ctorFloor (elabTele sc depth true (fs ++ [.list [.atom "many", ret, .atom "_"]])))
-  | .list (.atom h :: args) => do
-    let st ← get
-    let args ← args.mapM (elabTm sc depth)
-    let lift d := ((st.lifts.lookup d).getD []).map Tm.fv
-    match sc.lookup h, st.adts.lookup h, st.ctors.lookup h with
-    | none, some d, _ => pure (.app (.tyc d (.ofList (lift d))) (.ofList args))
-    | none, _, some (d, c) => pure (.app (.vc d c (.ofList (lift d))) (.ofList args))
-    | some _, _, _ => pure (.app (← look sc depth h) (.ofList args))
-    | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
-  | e => throw s!"malformed term {e.show.take 40}"
-
-partial def elabFn (sc : Scope) (depth : Nat) (l : Sx) (es : List Sx) (u : Bool) : M Tm := do
-  let l ← elabTm sc depth l
-  let (ps, rs) ← splitArrow es
-  let (t, hm, np) ← withFloor (min (← get).slotFloor depth) (elabTeleH sc depth ps rs)
-  return .fn l np t u hm
-
-partial def elabTeleH (sc : Scope) (depth : Nat) (ps rs : List Sx) (md : Bool := true) : M (Tm × List Bool × Nat) := do
-  let es := ps ++ rs
-  let parsed ← es.mapM (parseEntryAt md)
-  let names := parsed.flatMap (·.2.2.1)
-  let refs := es.flatMap Sx.slotRefs
-  let need (x : String) (tgt : Option String) : Bool := tgt.isSome || (names.contains x && refs.contains x)
-  let np := (parsed.take ps.length).foldl (fun n (_, _, xs, tgt) => n + (xs.map fun x => if need x tgt then 2 else 1).sum) 0
-  let (t, hm) ← teleH sc depth need parsed
-  return (t, hm, np)
-
-partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String → Bool) :
-    List (Ent × Sx × List String × Option String) → M (Tm × List Bool)
-  | [] => pure (.nil, [])
-  | (_, _, [], _) :: rest => teleH sc depth need rest
-  | (k, T, x :: xs, tgt) :: rest => do
-    let hid ← if need x tgt then do
-        match tgt with
-        | some v => match sc.lookup (" slot " ++ v), sc.lookup v with
-          | some (.bnd lv), _ => pure (some (Ent.is false true false, Tm.bv (depth - 1 - lv)))
-          | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false, ← slotOf i))
-          | _, some _ => throw s!"`at` naming `{showName v}`, bound by an enclosing telescope, is not supported"
-          | _, none => throw s!"unbound name {showName v}"
-        | none => pure (some (Ent.ty false true false, Tm.app (.tyc slotD .nil) .nil))
-      else pure none
-    let (sc, depth) := if hid.isSome then (((" slot " ++ x), Ref.bnd depth) :: sc, depth + 1) else (sc, depth)
-    let Tt ← elabTm sc depth T
-    let (r, m) ← teleH ((x, .bnd depth) :: sc) (depth + 1) need ((k, T, xs, tgt) :: rest)
-    match hid with
-    | some (k', A) => pure (.bind k' A (.bind k Tt r), true :: false :: m)
-    | none => pure (.bind k Tt r, false :: m)
-
-partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
-  | [] => pure .nil
-  | e :: es => do
-    let (k, T, xs) ← parseEntry need e
-    let Ts ← (List.range xs.length).mapM fun j => elabTm sc (depth + j) T
-    let sc := xs.zipIdx.foldl (fun sc (x, j) => (x, .bnd (depth + j)) :: sc) sc
-    let r ← elabTele sc (depth + xs.length) need es
-    return Ts.foldr (.bind k) r
-end
-
-def fresh (ms : List Bool) : M (List Nat) :=
-  modifyGet fun st => (List.range' st.n ms.length, { st with n := st.n + ms.length, ers := st.ers ++ ms })
-
-def freshMd (ms : List Mode) : M (List Nat) := do
-  let is ← fresh (ms.map (·.isEr))
-  modify fun st => { st with uq := st.uq ++ (is.zip ms).filterMap fun (i, m) => if m == .uniq then some i else none }
-  return is
-
-def reset (base : Nat) : M Unit := modify fun st =>
-  { st with n := base, ers := st.ers.take base, known := st.known.filter (·.1 < base),
-            inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
-            uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
-            sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
-            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base), links := st.links.filter (·.1 < base), fnAt := st.fnAt.filter (·.1 < base),
-            atFns := st.atFns.filter (· < base), atPf := st.atPf.filter (·.2 < base),
-            slots := st.slots.filter fun (i, t) => i < base && t.fvs.all (· < base) }
-
-def liftTm (d : Nat) : M Tm := return (← get).liftTm d
-
-
-def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
-  if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
-
-partial def ESt.slotSrc (st : ESt) : Tm → Option Nat
-  | .fv i => some i
-  | .app (.vc d c _) args => do
-    let D ← st.decls[d]?
-    guard D.newtype
-    let k ← (fieldErs ((D.ctors[c]?).getD .nil) |>.drop D.lifted).idxOf? false
-    st.slotSrc (← args.toList[k]?)
-  | _ => none
-
-def uqMark (ms : List Mode) : List (Core → Core) :=
-  if ms.contains .uniq then [.chk (.mark (.uq (ms.map (· == .uniq)))) .nil .nil] else []
-
-def fillHid (er : Bool) : List Mode → List Tm → M (List (Core → Core) × List Tm)
-  | .hid :: _ :: ms, .hole :: ts => do let (s, r) ← fillHid er ms ts; return (s, .hole :: .hole :: r)
-  | .hid :: m :: ms, t :: ts => do
-    let m := if er then .er else m
-    let (s1, i, t) ← match (← get).slotSrc t with
-      | some i => pure ([], i, t)
-      | none => do
-        let [j] ← freshMd [m] | throw "fresh"
-        note j t true
-        pure (uqMark [m] ++ [Core.prim (.tm t) m.isEr], j, .fv j)
-    let (s2, σ) ← slotM i
-    let (s3, r) ← fillHid er ms ts
-    return (s1 ++ s2 ++ s3, σ :: t :: r)
-  | _ :: ms, t :: ts => do let (s, r) ← fillHid er ms ts; return (s, t :: r)
-  | _, ts => pure ([], ts)
-
-def abst (ids : List Nat) : Nat → Tm → Tm
-  | D, .fv i => match ids.idxOf? i with
-    | some k => .bv (D - 1 - k)
-    | none => .fv i
-  | D, .tyc d ls => .tyc d (abst ids D ls)
-  | D, .vc d c ls => .vc d c (abst ids D ls)
-  | D, .cons h t => .cons (abst ids D h) (abst ids D t)
-  | D, .bind k a r => .bind k (abst ids D a) (abst ids (D + 1) r)
-  | D, .app h a => .app (abst ids D h) (abst ids D a)
-  | D, .tyCtor p => .tyCtor (abst ids D p)
-  | D, .valCtor p => .valCtor (abst ids D p)
-  | D, .predates A x L => .predates (abst ids D A) (abst ids D x) (abst ids D L)
-  | D, .subterm A a B b => .subterm (abst ids D A) (abst ids D a) (abst ids D B) (abst ids D b)
-  | D, .fn l np t u hm => .fn (abst ids D l) np (abst ids D t) u hm
-  | _, t => t
-
-def teleAppend : Tm → Tm → Tm
-  | .bind k a r, t => .bind k a (teleAppend r t)
-  | _, t => t
-
-def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
-  let heads ← blocks.mapM fun (b : Sx) => match b with
-    | .list (.list (T :: .atom ":" :: es) :: kws) => do
-      let (ps, [.atom "Type"]) ← splitArrow es | throw "a type constructor returns Type"
-      let (kw, cs) := kws.span (· matches .atom _)
-      unless (kw.filter (· matches .atom "enum" | .atom "union")) matches [.atom "enum"] | [.atom "union"] do
-        throw "a type is declared enum or union"
-      let cs ← cs.mapM fun
-        | .list xs => do
-          let (p, xs) ← splitMult true xs
-          let C :: .atom ":" :: es := xs | throw "malformed constructor"
-          let (fs, [ret]) ← splitArrow es | throw "a constructor has one return"
-          pure (p, ← name C, fs, ret)
-        | _ => throw "malformed constructor"
-      pure (← name T, ps, cs)
-    | _ => throw "malformed def-adts"
-  let st ← get
-  let base := st.decls.size
-  let mut ctors := st.ctors
-  for ((_, _, cs), j) in heads.zipIdx do
-    for (c, ci) in cs.zipIdx do
-      ctors := (c.2.1, base + j, ci) :: ctors
-  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × String × List Sx × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
-  let inline (t : Tm) : Tm := iterFix (Tm.subst fun i => (st.inl.lookup i).getD (.fv i)) st.inl.length t
-  let elabSigs := heads.mapM fun (_, ps, cs) => do
-    let params ← withFloor ctorFloor (elabTele sc 0 false ps)
-    let sigs ← cs.mapM fun (_, _, fs, ret) => withFloor ctorFloor (elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
-    pure (inline params, sigs.map inline)
-  let raw ← elabSigs
-  let mut ids : List Nat := ((raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).filter (· < holeBase)).eraseDups
-  let tyOf (i : Nat) : Option Tm := st.known.lookup i <|>
-    (st.topCtx.bind fun Γ => (Γ.tys[i]?).filter (· != .nil))
-  for _ in List.range (st.n + 1) do
-    let more ← ids.flatMapM fun i => match tyOf i with
-      | some T => pure (inline T).fvs
-      | none => throw "a def-adts signature may mention only an entry whose type the elaborator knows: a top-level entry, a level, a def-fns function, a parameter, or a let binder written with a type or a term"
-    if more.all ids.contains then break
-    ids := (ids ++ more).eraseDups
-  ids := ids.mergeSort
-  let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
-    .bind (.ty false true false) (abst ids k (inline ((tyOf i).getD .nil))) r) .nil
-  modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
-  if !(← get).inPrelude && blocks.any (fun | .list (_ :: kws) => kws.contains (.atom "extern") | _ => false) then
-    throw "only the prelude may mark a definition `extern`"
-  for (b, (T, _, _)) in blocks.zip heads do
-    if let .list (_ :: kws) := b then
-      if kws.contains (.atom "extern") then
-        unless ffiNames.contains T do throw s!"no extern implementation for `{showName T}`"
-        if (← get).claimed.contains T then throw s!"`{showName T}` is already bound to its extern implementation by another declaration"
-        modify fun st => { st with claimed := T :: st.claimed }
-  let kinds := blocks.map fun
-    | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"), kws.contains (.atom "extern"))
-    | _ => (false, false, false)
-  for (((T, _, cs), (params, sigs)), (union, newtype, extern)) in (heads.zip (← elabSigs)).zip kinds do
-    let real := (cs.zip sigs).filter (!·.1.1)
-    if newtype && (real.isEmpty || (!union && real.length != 1) ||
-        real.any fun (_, sig) => (fieldErs sig).count false != 1) then
-      throw s!"{T} does not have newtype shape"
-    let ctorNames := cs.map (·.2.1)
-    let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
-                       ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
-                       lifted := ids.length, phantom := cs.map (·.1), union, newtype, extern }
-    modify (·.pushDecl adt)
-
-def withTail {α : Type} (b : Bool) (x : M α) : M α := do
-  let t0 := (← get).tail
-  modify fun st => { st with tail := b }
-  let r ← x
-  modify fun st => { st with tail := t0 }
-  return r
-
-def uncoerce : Sx → Sx
-  | .list [.atom "coerce", e, _] => uncoerce e
-  | e => e
-
-def renamesOf (bs : List Sx) : List Sx → Option (List (String × String))
-  | [v] =>
-    let srcs := match uncoerce v with
-      | .list (.atom "values" :: es) => es.map uncoerce
-      | e => [e]
-    if srcs.length != bs.length then none else
-    (bs.zip srcs).foldlM (fun acc (b, e) => match b, e with
-      | .list (.atom "erased" :: _), _ => some acc
-      | .list xs, .atom y => match xs.getLast? with
-        | some (.atom x) => some ((y, x) :: acc)
-        | _ => none
-      | _, _ => none) []
-  | _ => none
-
-def returnsBinders (ats : List Bool) (xs : List String) (want : List Mode) : List Sx → Bool
-  | [.list (.atom "values" :: es)] =>
-    let parts := es.zip ((want.filter (· != .hid)).zip ats)
-    parts.all (fun (e, w, a) => w.isEr || !a ||
-      (e matches .atom _ | .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]]) ||
-      (match e with | .list (.atom h :: _) => placingNames.contains h | _ => false)) &&
-    (parts.filterMap fun (e, w, a) => if w.isEr || a then none else some (uncoerce e)) == xs.map .atom
-  | [.list [.atom "coerce", e, _]] => returnsBinders ats xs want [e]
-  | [e] => (!(want.head?.getD .er).isEr && xs == [e.show]) ||
-    (((want.filter (· != .hid)).zip ats).all (fun (w, a) => w.isEr || a) && xs.isEmpty &&
-      e matches .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]])
-  | .list (.atom "let" :: .list bs :: items) :: rest =>
-    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders ats xs want rest
-    else match renamesOf bs items with
-      | some rn => returnsBinders ats (xs.map fun x => (rn.lookup x).getD x) want rest
-      | none => false
-  | _ => false
-
-def atFlags (tele : Tm) (hm : List Bool) : List Bool :=
-  let es := teleEnts tele
-  (List.range es.length).map fun k => k > 0 && hm.getD (k - 1) false && (es[k - 1]? matches some (.is ..))
-
-def resultAts (np : Nat) (tele : Tm) (hm : List Bool) : List Bool :=
-  (((hm.zip (atFlags tele hm)).drop np).filter (!·.1)).map (·.2)
-
-def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
-  let st0 ← get
-  modify fun st => { st with ghost := st0.ghost || g, top := false }
-  let r ← x
-  modify fun st => { st with ghost := st0.ghost, top := st0.top }
-  return r
-
-abbrev Stmt := Core → Core
-
-def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofList ts))
-
-def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
-  let st ← get
-  if !st.top || st.vals.length < n0 then return
-  let P : Prog := (st.prog .dead)
-  let c := close ss ((List.range (st.n - n0)).map (Tm.fv <| n0 + ·))
-  let topCtx := st.topCtx.bind fun Γ => if Γ.n == n0 then
-      ((mapRet P (fun Γ ts => (ts, Γ)) Γ c).map (·.2)).filter (·.n == st.n)
-    else none
-  set { st with topCtx }
-  match runA P 10000000 (st.vals.take n0).toArray c with
-  | some vs => if vs.length == st.n - n0 then set { st with vals := st.vals.take n0 ++ vs, topCtx }
-  | none => pure ()
-
-def entry (sc : Scope) : Sx → M Nat
-  | .atom x => match sc.lookup x with
-    | some (.fv i) | some (.fn i _ _) => pure i
-    | _ => throw s!"{x} is not an entry"
-  | .list [.atom "level-of", .atom f] => levelOf sc f
-  | .list [.atom "slot-of", x] => do
-    let .fv k ← slotOf (← entry sc x) | throw "not an entry"
-    pure k
-  | _ => throw "not an entry"
-
-partial def Sx.litForms : Sx → List Sx
-  | e@(.atom _) => [e]
-  | .list xs => .list xs :: xs.flatMap Sx.litForms
-
-def natTm (d z sc : Nat) (n : Nat) : Tm :=
-  (List.range n).foldl (fun t _ => Tm.app (.vc d sc .nil) (.cons t .nil)) (.app (.vc d z .nil) .nil)
-
-def ctorIx (d : Nat) (c : String) : M Nat := do
-  match ((← get).decls[d]?).bind (·.ctorNames.idxOf? c) with
-  | some i => pure i
-  | none => throw s!"literals need the prelude's {c}"
-
-def preAdt (name : String) : M Nat := do
-  let st ← get
-  let some d := st.firstAdt name | throw s!"literals need the prelude's {name}"
-  unless ((st.lifts.lookup d).getD []).isEmpty || name == "Char" || name == "U8" || name == "String" do
-    throw s!"the prelude's {name} mentions top-level entries"
-  pure d
-
-def app (h : Tm) (args : List Tm) : Tm := .app h (.ofList args)
-
 def hex2 (n : Nat) : String :=
   let d (k : Nat) : Char := if k < 10 then Char.ofNat (48 + k) else Char.ofNat (87 + k)
   String.ofList [d (n / 16), d (n % 16)]
@@ -1332,18 +922,22 @@ def macroExt (sc : Scope) (P : Prog) (env : Tm) (gid j : Nat) (G : Group) (F : F
     outs [tk, if st.canonH a.den == st.canonH b.den && tyEq then P.conS "Maybe" "Some" [P.conS "JMEq" "JMRefl" []]
       else P.conS "Maybe" "None" []]
   | "resolve", [_, s] => do
-    let r ← match P.fieldsS s with
-      | some ("SName", [x]) => match sc.lookup (← strOfS P x) with
+    let nameOf : M (Option String) := match P.fieldsS s with
+      | some ("SName", [x]) => do pure (some (← strOfS P x))
+      | some ("SGen", [n, x]) => do pure (some s!"\x02{(Prog.natOf P.nat n).getD 0}\x02{← strOfS P x}")
+      | _ => pure none
+    let r ← match (← nameOf).map (fun x => (x, sc.lookup x)) with
+      | some (x, r) => match r with
         | some (.fv i) | some (.fn i _ _) | some (.ctor i) =>
           if st.isSettled (st.canonIdx i) then do
             let m := if st.ers.getD i true then 0 else if st.uq.contains i then 2 else 1
             pure (P.conS "Resolution" "RSettled" [← entryHandle i m])
           else pure (P.conS "Resolution" "RHypothetical" [])
         | some _ => pure (P.conS "Resolution" "RHypothetical" [])
-        | none => match ← globalHandle (← strOfS P x) 0 with
+        | none => match ← globalHandle x 0 with
           | some h => pure (P.conS "Resolution" "RSettled" [h])
           | none => pure (P.conS "Resolution" "RUnbound" [])
-      | _ => pure (P.conS "Resolution" "RUnbound" [])
+      | none => pure (P.conS "Resolution" "RUnbound" [])
     outs [tk, r]
   | _, _ => throw s!"`{name}` is not supported by the Lean runner"
 
@@ -1383,6 +977,490 @@ def litsScoped {α β : Type} (pre : M α) (k : α → M β) : M β := do
   let r ← k (← pre)
   unless st0.top do modify fun st => { st with lits := st0.lits, strs := st0.strs, chars := st0.chars }
   return r
+
+def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
+  let st ← get
+  if m.isEr || st.ghost then return
+  let u := st.uq.contains i
+  if m == .uniq && !u then throw "a value not declared `unique` is used at unique"
+  if m == .many && u && !sharing && !st.isSlot i then throw "a unique value is used at many without `share`"
+  if !u then return
+  if m == .uniq && i < st.captures then throw "`def-fns` cannot capture a unique value at unique"
+  match st.uses.lookup i with
+  | some true => throw "a unique value has conflicting non-erased uses: it is already used at unique"
+  | some false => if m == .uniq then throw "a unique value has conflicting non-erased uses: it is already shared"
+  | none => pure ()
+  modify fun st => { st with uses := (i, m == .uniq) :: st.uses.filter (·.1 != i) }
+
+
+partial def handleNames : Sx → List String
+  | .atom a => if a.startsWith " h" then [a] else []
+  | .list xs => xs.flatMap handleNames
+
+def withHandles (sc : Scope) (forms : List Sx) : M Scope := do
+  let hs := (← get).hnames
+  return (forms.flatMap handleNames).filterMap (fun x => (hs.lookup x).map (x, ·)) ++ sc
+
+partial def expandCall (sc : Scope) : Sx → M (Option (List Sx))
+  | .list (hd :: args) => do
+    let (shared, h) := match hd with
+      | .list [.atom "share", .atom h] => (true, some h)
+      | .atom h => (false, some h)
+      | _ => (false, none)
+    if let some h := h then
+      let some (i, f) ← macroOf sc h | return none
+      if let some i := i then useVar i .many shared
+      return some (← expandMacro sc f args)
+    let some hs ← expandCall sc hd | return none
+    let e := Sx.list (hs ++ args)
+    return some ((← expandCall (← withHandles sc hs) e).getD [e])
+  | _ => return none
+
+partial def expandList (sc : Scope) (xs : List Sx) : M (List Sx × Scope) := do
+  let mut out : List Sx := []
+  let mut sc := sc
+  for x in xs do
+    match ← expandCall sc x with
+    | some fs =>
+      sc ← withHandles sc fs
+      let (ys, sc') ← expandList sc fs
+      out := out ++ ys
+      sc := sc'
+    | none => out := out ++ [x]
+  return (out, sc)
+
+def expandOne (sc : Scope) (e : Sx) : M (Sx × Scope) := do
+  let ([e], sc) ← expandList sc [e] | throw "a macro call here must expand to one form"
+  return (e, sc)
+
+def expandSig (sc : Scope) (es : List Sx) : M (List Sx × Scope) := do
+  let (es, sc) ← expandList sc es
+  let mut out : List Sx := []
+  let mut sc := sc
+  for e in es do
+    match e with
+    | .list ys => let (ys, sc') ← expandList sc ys; out := out ++ [.list ys]; sc := sc'
+    | e => out := out ++ [e]
+  return (out, sc)
+
+mutual
+partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
+  if let some forms ← expandCall sc e then
+    let [form] := forms | throw s!"a macro call here must expand to one form, and expanded to {forms.length}"
+    return ← elabTm (← withHandles sc forms) depth form
+  let e := match e with
+    | .list (.list [.atom "share", x@(.atom _)] :: args) => .list (x :: args)
+    | e => e
+  match ← resolveHead sc (fun _ => pure ()) e with
+  | .list [.atom "\x03var", .atom x] => look sc depth x
+  | .list (.list [.atom "\x03var", .atom x] :: args) =>
+    return .app (← look sc depth x) (.ofList (← args.mapM (elabTm sc depth)))
+  | e => elabTm' sc depth e
+
+partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
+  | .atom "Type" => pure .univ
+  | .list [.atom " hty", .atom k] => do
+    let some h := (← get).handles[k.toNat!]? | throw "unreachable: no handle"
+    if h.ty == .nil then pure .hole else pure h.ty
+  | .list [.atom "compile-error", m] => do throw (← compileMsg sc m)
+  | .list [.atom "dump-context"] => do throw (← dumpContext sc)
+  | e@(.atom x) => match e.numerals with
+    | [n] => do match (← get).lits.lookup n with
+      | some i => pure (.fv i)
+      | none => throw s!"the numeral {x} is not interned"
+    | _ =>
+      if x.startsWith "\"" then do
+        match (← get).strs.lookup ((x.toList.drop 1).map Char.toNat) with
+        | some i => pure (.fv i)
+        | none => throw s!"the string literal {x} is not interned"
+      else match charCode x with
+        | some c => do match (← get).chars.lookup c with
+          | some i => pure (.fv i)
+          | none => throw s!"the character literal {x} is not interned"
+        | none => if x.startsWith "#\\" then throw s!"malformed character literal {x}" else look sc depth x
+  | .list [.atom "numeral-of", x] => do
+    match litOf x with
+    | some n => match (← get).numPf.lookup n with
+      | some i => pure (.fv i)
+      | none => throw "numeral-of: not interned"
+    | none => throw "`numeral-of` takes a numeral or a character literal"
+  | .list (.atom "numeral-of" :: _) => throw "malformed `numeral-of` form"
+  | .list [.atom "prove-literal-lt", a, b] => do
+    match numeralOf a, numeralOf b with
+    | some x, some y => match (← get).ltPf.lookup (x, y) with
+      | some i => pure (.fv i)
+      | none => throw s!"prove-literal-lt: {x} is not below {y}"
+    | _, _ => throw "`prove-literal-lt` takes two numerals"
+  | .list (.atom "prove-literal-lt" :: _) => throw "`prove-literal-lt` takes two numerals"
+  | .list [.atom "Level"] => pure .level
+  | .list [.atom "matchable-of", .atom T] => do
+    let st ← get
+    let alias := match sc.lookup T with
+      | some (.fv i) | some (.ctor i) => match st.inl.lookup i with
+        | some (.tyc d _) => some d
+        | _ => none
+      | _ => none
+    let some d := alias.orElse fun _ => st.adts.lookup T | throw s!"matchable-of: {T} is not a declared type"
+    match st.mtbls.lookup d with
+    | some i => pure (.fv i)
+    | none => throw s!"matchable-of: {T} mentions top-level entries and is not first class"
+  | .list (.atom "matchable-of" :: _) => throw "matchable-of takes a type constructor"
+  | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
+  | .list [.atom "slot-of", .atom x] => match sc.lookup x with
+    | some (.bnd lv) => do
+      if lv < (← get).slotFloor then
+        throw s!"`slot-of` in a constructor's telescope cannot name `{showName x}`, bound by a telescope still being written"
+      match sc.lookup (" slot " ++ x) with
+      | some (.bnd lv) => pure (.bv (depth - 1 - lv))
+      | _ => throw s!"`slot-of` of `{showName x}`, bound by a telescope, is not supported here"
+    | some (.fv i) | some (.ctor i) | some (.fn i _ _) => slotOf i
+    | none => look sc depth x
+  | .list (.atom "slot-of" :: _) => throw "`slot-of` takes a variable"
+  | .list [.atom "at-fn-of", .atom f] => do
+    let pf := (← get).atPf
+    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
+    | some k => pure (.fv k)
+    | none => throw s!"`{showName f}` has no `AtFn` proof in scope"
+  | .list [.atom "delegate-of", .atom f] => do
+    let pf := (← get).delePf
+    match (match sc.lookup f with | some (.fv i) | some (.fn i _ _) => pf.lookup i | _ => none) with
+    | some k => pure (.fv k)
+    | none => throw s!"delegate-of: {showName f} is not a non-erased function with a `delegate` body defined before this type"
+  | .list (.atom "Cell" :: .atom c :: items) => do
+    if (sc.lookup "Cell").isSome then throw "malformed `Cell`"
+    let ci ← ctorInfo sc c
+    let cd ← cellDecl ci c
+    let n := ((fieldErs ci.sig).filter (!·)).length
+    unless items.length == n do
+      throw s!"the type former `Cell` of `{c}` expects {n} slots, got {items.length}: expected one for each non-erased field of `{c}`"
+    return .app (.tyc cd .nil) (.ofList (← items.mapM (elabTm sc depth)))
+  | .list [.atom "Predates", A, x, L] =>
+    return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
+  | .list [.atom "Subterm", A, a, B, b] =>
+    return .subterm (← elabTm sc depth A) (← elabTm sc depth a) (← elabTm sc depth B) (← elabTm sc depth b)
+  | .list (.atom "Fn" :: l :: es) => elabFn sc depth l es false
+  | .list (.atom "UniqueFn" :: l :: es) => elabFn sc depth l es true
+  | .list (.atom "Matchable" :: .atom tag :: rest) => do
+    unless tag == "enum" || tag == "union" do throw "Matchable: the tag is enum or union"
+    let (marks, T :: es) := rest.span (· matches .atom "newtype" | .atom "extern") | throw "Matchable: no type constructor"
+    let es ← es.mapM fun
+      | .list [.atom m, C] => do
+        let (er, _) ← splitMult true [.atom m]
+        pure (er, ← elabTm sc depth C)
+      | _ => throw "Matchable: an entry is (m C)"
+    return .mtbl (tag == "union") (marks.contains (.atom "newtype")) (marks.contains (.atom "extern")) (es.map (·.1))
+      (← elabTm sc depth T)
+      (.ofList (es.map (·.2)))
+  | .list (.atom "TyCtor" :: es) => do
+    let (es, sc) ← expandSig sc es
+    let (ps, [.atom "Type"]) ← splitArrow es | throw "a TyCtor returns Type"
+    return .tyCtor (← withFloor ctorFloor (elabTele sc depth false ps))
+  | .list (.atom "ValCtor" :: es) => do
+    let (es, sc) ← expandSig sc es
+    let (fs, [ret]) ← splitArrow es | throw "a ValCtor has one return"
+    return .valCtor (← withFloor ctorFloor (elabTele sc depth true (fs ++ [.list [.atom "many", ret, .atom "_"]])))
+  | .list (.atom h :: args) => do
+    let (args, sc) ← expandList sc args
+    let st ← get
+    let args ← args.mapM (elabTm sc depth)
+    let lift d := ((st.lifts.lookup d).getD []).map Tm.fv
+    match sc.lookup h, st.adts.lookup h, st.ctors.lookup h with
+    | none, some d, _ => pure (.app (.tyc d (.ofList (lift d))) (.ofList args))
+    | none, _, some (d, c) => pure (.app (.vc d c (.ofList (lift d))) (.ofList args))
+    | some _, _, _ => pure (.app (← look sc depth h) (.ofList args))
+    | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
+  | e => throw s!"malformed term {e.show.take 40}"
+
+partial def elabFn (sc : Scope) (depth : Nat) (l : Sx) (es : List Sx) (u : Bool) : M Tm := do
+  let l ← elabTm sc depth l
+  let (es, sc) ← expandSig sc es
+  let (ps, rs) ← splitArrow es
+  let (t, hm, np) ← withFloor (min (← get).slotFloor depth) (elabTeleH sc depth ps rs)
+  return .fn l np t u hm
+
+partial def elabTeleH (sc : Scope) (depth : Nat) (ps rs : List Sx) (md : Bool := true) : M (Tm × List Bool × Nat) := do
+  let es := ps ++ rs
+  let parsed ← es.mapM (parseEntryAt md)
+  let names := parsed.flatMap (·.2.2.1)
+  let refs := es.flatMap Sx.slotRefs
+  let need (x : String) (tgt : Option String) : Bool := tgt.isSome || (names.contains x && refs.contains x)
+  let np := (parsed.take ps.length).foldl (fun n (_, _, xs, tgt) => n + (xs.map fun x => if need x tgt then 2 else 1).sum) 0
+  let (t, hm) ← teleH sc depth need parsed
+  return (t, hm, np)
+
+partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String → Bool) :
+    List (Ent × Sx × List String × Option String) → M (Tm × List Bool)
+  | [] => pure (.nil, [])
+  | (_, _, [], _) :: rest => teleH sc depth need rest
+  | (k, T, x :: xs, tgt) :: rest => do
+    let hid ← if need x tgt then do
+        match tgt with
+        | some v => match sc.lookup (" slot " ++ v), sc.lookup v with
+          | some (.bnd lv), _ => pure (some (Ent.is false true false, Tm.bv (depth - 1 - lv)))
+          | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false, ← slotOf i))
+          | _, some _ => throw s!"`at` naming `{showName v}`, bound by an enclosing telescope, is not supported"
+          | _, none => throw s!"unbound name {showName v}"
+        | none => pure (some (Ent.ty false true false, Tm.app (.tyc slotD .nil) .nil))
+      else pure none
+    let (sc, depth) := if hid.isSome then (((" slot " ++ x), Ref.bnd depth) :: sc, depth + 1) else (sc, depth)
+    let Tt ← elabTm sc depth T
+    let (r, m) ← teleH ((x, .bnd depth) :: sc) (depth + 1) need ((k, T, xs, tgt) :: rest)
+    match hid with
+    | some (k', A) => pure (.bind k' A (.bind k Tt r), true :: false :: m)
+    | none => pure (.bind k Tt r, false :: m)
+
+partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
+  | [] => pure .nil
+  | e :: es => do
+    let (k, T, xs) ← parseEntry need e
+    let Ts ← (List.range xs.length).mapM fun j => elabTm sc (depth + j) T
+    let sc := xs.zipIdx.foldl (fun sc (x, j) => (x, .bnd (depth + j)) :: sc) sc
+    let r ← elabTele sc (depth + xs.length) need es
+    return Ts.foldr (.bind k) r
+end
+
+def fresh (ms : List Bool) : M (List Nat) :=
+  modifyGet fun st => (List.range' st.n ms.length, { st with n := st.n + ms.length, ers := st.ers ++ ms })
+
+def freshMd (ms : List Mode) : M (List Nat) := do
+  let is ← fresh (ms.map (·.isEr))
+  modify fun st => { st with uq := st.uq ++ (is.zip ms).filterMap fun (i, m) => if m == .uniq then some i else none }
+  return is
+
+def reset (base : Nat) : M Unit := modify fun st =>
+  { st with n := base, ers := st.ers.take base, known := st.known.filter (·.1 < base),
+            inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
+            uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
+            sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
+            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base), links := st.links.filter (·.1 < base), fnAt := st.fnAt.filter (·.1 < base),
+            atFns := st.atFns.filter (· < base), atPf := st.atPf.filter (·.2 < base),
+            slots := st.slots.filter fun (i, t) => i < base && t.fvs.all (· < base) }
+
+def liftTm (d : Nat) : M Tm := return (← get).liftTm d
+
+
+def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
+  if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
+
+partial def ESt.slotSrc (st : ESt) : Tm → Option Nat
+  | .fv i => some i
+  | .app (.vc d c _) args => do
+    let D ← st.decls[d]?
+    guard D.newtype
+    let k ← (fieldErs ((D.ctors[c]?).getD .nil) |>.drop D.lifted).idxOf? false
+    st.slotSrc (← args.toList[k]?)
+  | _ => none
+
+def uqMark (ms : List Mode) : List (Core → Core) :=
+  if ms.contains .uniq then [.chk (.mark (.uq (ms.map (· == .uniq)))) .nil .nil] else []
+
+def fillHid (er : Bool) : List Mode → List Tm → M (List (Core → Core) × List Tm)
+  | .hid :: _ :: ms, .hole :: ts => do let (s, r) ← fillHid er ms ts; return (s, .hole :: .hole :: r)
+  | .hid :: m :: ms, t :: ts => do
+    let m := if er then .er else m
+    let (s1, i, t) ← match (← get).slotSrc t with
+      | some i => pure ([], i, t)
+      | none => do
+        let [j] ← freshMd [m] | throw "fresh"
+        note j t true
+        pure (uqMark [m] ++ [Core.prim (.tm t) m.isEr], j, .fv j)
+    let (s2, σ) ← slotM i
+    let (s3, r) ← fillHid er ms ts
+    return (s1 ++ s2 ++ s3, σ :: t :: r)
+  | _ :: ms, t :: ts => do let (s, r) ← fillHid er ms ts; return (s, t :: r)
+  | _, ts => pure ([], ts)
+
+def abst (ids : List Nat) : Nat → Tm → Tm
+  | D, .fv i => match ids.idxOf? i with
+    | some k => .bv (D - 1 - k)
+    | none => .fv i
+  | D, .tyc d ls => .tyc d (abst ids D ls)
+  | D, .vc d c ls => .vc d c (abst ids D ls)
+  | D, .cons h t => .cons (abst ids D h) (abst ids D t)
+  | D, .bind k a r => .bind k (abst ids D a) (abst ids (D + 1) r)
+  | D, .app h a => .app (abst ids D h) (abst ids D a)
+  | D, .tyCtor p => .tyCtor (abst ids D p)
+  | D, .valCtor p => .valCtor (abst ids D p)
+  | D, .predates A x L => .predates (abst ids D A) (abst ids D x) (abst ids D L)
+  | D, .subterm A a B b => .subterm (abst ids D A) (abst ids D a) (abst ids D B) (abst ids D b)
+  | D, .fn l np t u hm => .fn (abst ids D l) np (abst ids D t) u hm
+  | _, t => t
+
+def teleAppend : Tm → Tm → Tm
+  | .bind k a r, t => .bind k a (teleAppend r t)
+  | _, t => t
+
+def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
+  let heads ← blocks.mapM fun (b : Sx) => match b with
+    | .list (.list (T :: .atom ":" :: es) :: kws) => do
+      let (es, _) ← expandSig sc es
+      let (ps, [.atom "Type"]) ← splitArrow es | throw "a type constructor returns Type"
+      let (kw, cs) := kws.span (· matches .atom _)
+      let (cs, _) ← expandList sc cs
+      unless (kw.filter (· matches .atom "enum" | .atom "union")) matches [.atom "enum"] | [.atom "union"] do
+        throw "a type is declared enum or union"
+      let cs ← cs.mapM fun
+        | .list xs => do
+          let (p, xs) ← splitMult true xs
+          let C :: .atom ":" :: es := xs | throw "malformed constructor"
+          let (es, _) ← expandSig sc es
+          let (fs, [ret]) ← splitArrow es | throw "a constructor has one return"
+          pure (p, ← name C, fs, ret)
+        | _ => throw "malformed constructor"
+      pure (← name T, ps, cs)
+    | _ => throw "malformed def-adts"
+  let st ← get
+  let base := st.decls.size
+  let mut ctors := st.ctors
+  for ((_, _, cs), j) in heads.zipIdx do
+    for (c, ci) in cs.zipIdx do
+      ctors := (c.2.1, base + j, ci) :: ctors
+  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × String × List Sx × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
+  let inline (t : Tm) : Tm := iterFix (Tm.subst fun i => (st.inl.lookup i).getD (.fv i)) st.inl.length t
+  let elabSigs := heads.mapM fun (_, ps, cs) => do
+    let params ← withFloor ctorFloor (elabTele sc 0 false ps)
+    let sigs ← cs.mapM fun (_, _, fs, ret) => withFloor ctorFloor (elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
+    pure (inline params, sigs.map inline)
+  let raw ← elabSigs
+  let mut ids : List Nat := ((raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).filter (· < holeBase)).eraseDups
+  let tyOf (i : Nat) : Option Tm := st.known.lookup i <|>
+    (st.topCtx.bind fun Γ => (Γ.tys[i]?).filter (· != .nil))
+  for _ in List.range (st.n + 1) do
+    let more ← ids.flatMapM fun i => match tyOf i with
+      | some T => pure (inline T).fvs
+      | none => throw "a def-adts signature may mention only an entry whose type the elaborator knows: a top-level entry, a level, a def-fns function, a parameter, or a let binder written with a type or a term"
+    if more.all ids.contains then break
+    ids := (ids ++ more).eraseDups
+  ids := ids.mergeSort
+  let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
+    .bind (.ty false true false) (abst ids k (inline ((tyOf i).getD .nil))) r) .nil
+  modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
+  if !(← get).inPrelude && blocks.any (fun | .list (_ :: kws) => kws.contains (.atom "extern") | _ => false) then
+    throw "only the prelude may mark a definition `extern`"
+  for (b, (T, _, _)) in blocks.zip heads do
+    if let .list (_ :: kws) := b then
+      if kws.contains (.atom "extern") then
+        unless ffiNames.contains T do throw s!"no extern implementation for `{showName T}`"
+        if (← get).claimed.contains T then throw s!"`{showName T}` is already bound to its extern implementation by another declaration"
+        modify fun st => { st with claimed := T :: st.claimed }
+  let kinds := blocks.map fun
+    | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"), kws.contains (.atom "extern"))
+    | _ => (false, false, false)
+  for (((T, _, cs), (params, sigs)), (union, newtype, extern)) in (heads.zip (← elabSigs)).zip kinds do
+    let real := (cs.zip sigs).filter (!·.1.1)
+    if newtype && (real.isEmpty || (!union && real.length != 1) ||
+        real.any fun (_, sig) => (fieldErs sig).count false != 1) then
+      throw s!"{T} does not have newtype shape"
+    let ctorNames := cs.map (·.2.1)
+    let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
+                       ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
+                       lifted := ids.length, phantom := cs.map (·.1), union, newtype, extern }
+    modify (·.pushDecl adt)
+
+def withTail {α : Type} (b : Bool) (x : M α) : M α := do
+  let t0 := (← get).tail
+  modify fun st => { st with tail := b }
+  let r ← x
+  modify fun st => { st with tail := t0 }
+  return r
+
+def uncoerce : Sx → Sx
+  | .list [.atom "coerce", e, _] => uncoerce e
+  | e => e
+
+def renamesOf (bs : List Sx) : List Sx → Option (List (String × String))
+  | [v] =>
+    let srcs := match uncoerce v with
+      | .list (.atom "values" :: es) => es.map uncoerce
+      | e => [e]
+    if srcs.length != bs.length then none else
+    (bs.zip srcs).foldlM (fun acc (b, e) => match b, e with
+      | .list (.atom "erased" :: _), _ => some acc
+      | .list xs, .atom y => match xs.getLast? with
+        | some (.atom x) => some ((y, x) :: acc)
+        | _ => none
+      | _, _ => none) []
+  | _ => none
+
+def returnsBinders (ats : List Bool) (xs : List String) (want : List Mode) : List Sx → Bool
+  | [.list (.atom "values" :: es)] =>
+    let parts := es.zip ((want.filter (· != .hid)).zip ats)
+    parts.all (fun (e, w, a) => w.isEr || !a ||
+      (e matches .atom _ | .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]]) ||
+      (match e with | .list (.atom h :: _) => placingNames.contains h | _ => false)) &&
+    (parts.filterMap fun (e, w, a) => if w.isEr || a then none else some (uncoerce e)) == xs.map .atom
+  | [.list [.atom "coerce", e, _]] => returnsBinders ats xs want [e]
+  | [e] => (!(want.head?.getD .er).isEr && xs == [e.show]) ||
+    (((want.filter (· != .hid)).zip ats).all (fun (w, a) => w.isEr || a) && xs.isEmpty &&
+      e matches .list [.atom "at", _] | .list [.atom "share", .list [.atom "at", _]])
+  | .list (.atom "let" :: .list bs :: items) :: rest =>
+    if bs.all (· matches .list (.atom "erased" :: _)) then returnsBinders ats xs want rest
+    else match renamesOf bs items with
+      | some rn => returnsBinders ats (xs.map fun x => (rn.lookup x).getD x) want rest
+      | none => false
+  | _ => false
+
+def atFlags (tele : Tm) (hm : List Bool) : List Bool :=
+  let es := teleEnts tele
+  (List.range es.length).map fun k => k > 0 && hm.getD (k - 1) false && (es[k - 1]? matches some (.is ..))
+
+def resultAts (np : Nat) (tele : Tm) (hm : List Bool) : List Bool :=
+  (((hm.zip (atFlags tele hm)).drop np).filter (!·.1)).map (·.2)
+
+def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
+  let st0 ← get
+  modify fun st => { st with ghost := st0.ghost || g, top := false }
+  let r ← x
+  modify fun st => { st with ghost := st0.ghost, top := st0.top }
+  return r
+
+abbrev Stmt := Core → Core
+
+def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofList ts))
+
+def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
+  let st ← get
+  if !st.top || st.vals.length < n0 then return
+  let P : Prog := (st.prog .dead)
+  let c := close ss ((List.range (st.n - n0)).map (Tm.fv <| n0 + ·))
+  let topCtx := st.topCtx.bind fun Γ => if Γ.n == n0 then
+      ((mapRet P (fun Γ ts => (ts, Γ)) Γ c).map (·.2)).filter (·.n == st.n)
+    else none
+  set { st with topCtx }
+  match runA P 10000000 (st.vals.take n0).toArray c with
+  | some vs => if vs.length == st.n - n0 then set { st with vals := st.vals.take n0 ++ vs, topCtx }
+  | none => pure ()
+
+def entry (sc : Scope) : Sx → M Nat
+  | .atom x => match sc.lookup x with
+    | some (.fv i) | some (.fn i _ _) => pure i
+    | _ => throw s!"{x} is not an entry"
+  | .list [.atom "level-of", .atom f] => levelOf sc f
+  | .list [.atom "slot-of", x] => do
+    let .fv k ← slotOf (← entry sc x) | throw "not an entry"
+    pure k
+  | _ => throw "not an entry"
+
+partial def Sx.litForms : Sx → List Sx
+  | e@(.atom _) => [e]
+  | .list xs => .list xs :: xs.flatMap Sx.litForms
+
+def natTm (d z sc : Nat) (n : Nat) : Tm :=
+  (List.range n).foldl (fun t _ => Tm.app (.vc d sc .nil) (.cons t .nil)) (.app (.vc d z .nil) .nil)
+
+def ctorIx (d : Nat) (c : String) : M Nat := do
+  match ((← get).decls[d]?).bind (·.ctorNames.idxOf? c) with
+  | some i => pure i
+  | none => throw s!"literals need the prelude's {c}"
+
+def preAdt (name : String) : M Nat := do
+  let st ← get
+  let some d := st.firstAdt name | throw s!"literals need the prelude's {name}"
+  unless ((st.lifts.lookup d).getD []).isEmpty || name == "Char" || name == "U8" || name == "String" do
+    throw s!"the prelude's {name} mentions top-level entries"
+  pure d
+
+def app (h : Tm) (args : List Tm) : Tm := .app h (.ofList args)
 
 def declareWorld (e : Sx) : M Unit := do
   let st ← get
@@ -1567,54 +1645,6 @@ def bindTele (ids : List Nat) (t : Tm) : M Tm :=
 
 def erasedPos (want : List Mode) : M Bool := return (← get).ghost || (!want.isEmpty && want.all (·.isEr))
 
-def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
-  let st ← get
-  if m.isEr || st.ghost then return
-  let u := st.uq.contains i
-  if m == .uniq && !u then throw "a value not declared `unique` is used at unique"
-  if m == .many && u && !sharing && !st.isSlot i then throw "a unique value is used at many without `share`"
-  if !u then return
-  if m == .uniq && i < st.captures then throw "`def-fns` cannot capture a unique value at unique"
-  match st.uses.lookup i with
-  | some true => throw "a unique value has conflicting non-erased uses: it is already used at unique"
-  | some false => if m == .uniq then throw "a unique value has conflicting non-erased uses: it is already shared"
-  | none => pure ()
-  modify fun st => { st with uses := (i, m == .uniq) :: st.uses.filter (·.1 != i) }
-
-partial def binderNames : Sx → List String
-  | .atom _ => []
-  | .list xs =>
-    let here := match xs with
-      | [.atom m, .atom x] | [.atom m, _, .atom x] | [.atom m, _, _, .atom x] =>
-        if ["many", "erased", "unique", "subterm"].contains m then [x] else []
-      | _ => []
-    here ++ xs.flatMap binderNames
-
-partial def nonHeadAtoms : Sx → List String
-  | .atom a => [a]
-  | .list [] => []
-  | .list (h :: xs) => (match h with | .atom _ => [] | h => nonHeadAtoms h) ++ xs.flatMap nonHeadAtoms
-
-partial def preExpand (sc : Scope) (shadow hyp : List String) : Sx → M (List Sx)
-  | .atom a => pure [.atom a]
-  | .list xs => do
-    let call (ys : List Sx) : M (Option (List Sx)) := do
-      let (shared, ys) := match ys with
-        | .list [.atom "share", .atom h] :: args => (true, Sx.atom h :: args)
-        | ys => (false, ys)
-      let .atom h :: args := ys | return none
-      if shadow.contains h then return none
-      let some (i, f) ← macroOf sc h | return none
-      if let some i := i then useVar i .many shared
-      let forms ← expandMacro (hyp.map (·, Ref.bnd 0) ++ sc) f args
-      let shadow := shadow ++ forms.flatMap nonHeadAtoms
-      let hyp := hyp ++ forms.flatMap binderNames
-      return some (← forms.flatMapM (preExpand ((← get).hnames ++ sc) shadow hyp))
-    if let some out ← call xs then return out
-    let ys ← xs.flatMapM (preExpand sc shadow hyp)
-    if ys.head? != xs.head? then if let some out ← call ys then return out
-    return [.list ys]
-
 def mintDele (i t : Nat) : M (Stmt × Nat) := do
   let [k] ← fresh [true] | throw "fresh"
   let uq := (← get).uq
@@ -1739,24 +1769,17 @@ def pragma (sc : Scope) (p : String) : M Unit := do
 mutual
 partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) : M (List Stmt × List Tm) := do
   let (sc, e) := unhide sc e
-  if let .list (.list (.atom h :: hargs) :: args) := e then
-    if let some (i, f) ← macroOf sc h then
-      if let some i := i then useVar i .many
-      let [form] ← expandMacro sc f hargs | throw "a macro call here returns exactly one form"
-      return ← litsScoped (internLits form) fun ss => do
-        let (ss2, ts) ← elabExpr ((← get).hnames ++ sc) want exp (.list (form :: args))
-        return (ss ++ ss2, ts)
+  if let some forms ← expandCall sc e then
+    let [form] := forms | throw s!"a macro call here must expand to one form, and expanded to {forms.length}"
+    let sc ← withHandles sc forms
+    return ← litsScoped (internLits form) fun ss => do
+      let (ss2, ts) ← elabExpr sc want exp form
+      return (ss ++ ss2, ts)
   if let .list (.atom h :: args) := e then
     if mwPrims.contains h && (match sc.lookup h with | some (.fn ..) => true | _ => false) &&
         args.head? != some (.atom " mw") then
       let some (_, r) ← mwInScope sc | throw s!"`{h}` outside a macro's function is not supported"
       return ← elabExpr ((" mw", r) :: sc) want exp (.list (.atom h :: .atom " mw" :: args))
-    if let some (i, f) ← macroOf sc h then
-      if let some i := i then useVar i .many
-      let [form] ← expandMacro sc f args | throw "a macro call here returns exactly one form"
-      return ← litsScoped (internLits form) fun ss => do
-        let (ss2, ts) ← elabExpr ((← get).hnames ++ sc) want exp form
-        return (ss ++ ss2, ts)
   match ← resolveHead sc (headUse want) e with
   | .list [.atom "\x03var", .atom x] => do let t ← look sc 0 x; useTm t want; return ([], [t])
   | e@(.list (hd@(.list _) :: args)) => do
@@ -2388,10 +2411,12 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
+  let (es1, sc) ← expandList sc es
+  litsScoped (if es1 == es then pure [] else internLits (.list es1)) fun ssL => do
   let mut t := T
-  let mut ss : List Stmt := []
+  let mut ss : List Stmt := ssL
   let mut ts : List Tm := []
-  for (e, i) in es.zipIdx do
+  for (e, i) in es1.zipIdx do
     let m := ms.getD i .many
     let exp := match t with | .bind (.ty ..) A _ => some (Tm.bind (.ty false m.isEr false) A .nil) | _ => none
     let (s, r) ← elabExpr sc [m] exp e
@@ -2402,6 +2427,7 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm 
 
 partial def elabArms (sc : Scope) (md : Mode) (gEr : Bool) (rms : List Mode) (R : Option Tm) (brs : List Sx)
     (extra : Nat := 0) (scr : Option Tm := none) : M (List Br × Option Core × Bool) := do
+  let (brs, sc) ← expandList sc brs
   let st ← get
   if let (some (.fv i), false) := (scr, st.inPrelude) then
     if let some (.app (.tyc d _) _) := (st.known.lookup (st.canonIdx i)).map st.inlineT then
@@ -2507,15 +2533,6 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
-  if let e :: rest := items then
-    let direct ← match e with
-      | .list (.atom h :: _) | .list (.list [.atom "share", .atom h] :: _) =>
-        pure (← macroOf sc h).isSome
-      | _ => pure false
-    if (← get).top && (← get).hasMacros && !(← get).inPrelude && !direct && !(← get).expanded.contains e then
-      let es ← preExpand sc (nonHeadAtoms e) (binderNames e) e
-      modify fun st => { st with expanded := es }
-      return ← elabSeq ((← get).hnames ++ sc) want exp (es ++ rest)
   let n0 := (← get).n
   let ss ← match items with
     | e :: _ => if (← get).top then do declareWorld e; internLits e else pure []
@@ -2536,26 +2553,11 @@ partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (i
     else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
   | e :: rest =>
     let (sc, e) := unhide sc e
-    let shared := match e with
-      | .list (.list [.atom "share", .atom h] :: _) => (sc.lookup h).isSome
-      | _ => false
-    let e := match e, shared with
-      | .list (.list [.atom "share", .atom h] :: args), true => .list (.atom h :: args)
-      | e, _ => e
-    if let .list (.list (.atom h :: hargs) :: args) := e then
-      if let some (i, f) ← macroOf sc h then
-        if let some i := i then useVar i .many
-        let [form] ← expandMacro sc f hargs | throw "a macro call here returns exactly one form"
-        return ← litsScoped (if (← get).top then pure [] else internLits form) fun ssL => do
-          let (ss2, ts) ← elabSeq ((← get).hnames ++ sc) want exp (.list (form :: args) :: rest)
-          return (ss ++ ssL ++ ss2, ts)
-    if let .list (.atom h :: args) := e then
-      if let some (i, f) ← macroOf sc h then
-        if let some i := i then useVar i .many shared
-        let forms ← expandMacro sc f args
-        return ← litsScoped (if (← get).top then pure [] else internLits (.list forms)) fun ssL => do
-          let (ss2, ts) ← elabSeq ((← get).hnames ++ sc) want exp (forms ++ rest)
-          return (ss ++ ssL ++ ss2, ts)
+    if let some forms ← expandCall sc e then
+      let sc ← withHandles sc forms
+      return ← litsScoped (if (← get).top then pure [] else internLits (.list forms)) fun ssL => do
+        let (ss2, ts) ← elabSeq sc want exp (forms ++ rest)
+        return (ss ++ ssL ++ ss2, ts)
     let e ← resolveHead sc (headUse want) e
     if let some (ss1, e') ← dispatchComputed sc e then
       let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
@@ -2665,6 +2667,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want exp rest
     return (.defLvl :: ss, ts)
   | .list (.atom "let" :: .list xs :: items) :: rest => do
+    let (xs, sc) ← expandSig sc xs
     let n0 := (← get).n
     let bs ← xs.mapM fun
       | .list xs => do
@@ -2867,6 +2870,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           | f :: .atom "at" :: g :: .atom ":" :: es => pure (f, some g, es)
           | f :: .atom ":" :: es => pure (f, none, es)
           | _ => throw "malformed def-fns"
+        let (es, _) ← expandSig sc es
         if ms.contains "extern" then
           let st ← get
           unless st.inPrelude do throw "only the prelude may mark a definition `extern`"
