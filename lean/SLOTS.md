@@ -220,6 +220,57 @@ the run semantics stay as they are and the slot facts are sound for
 the same reason `Prim.atomEq` is today; stage 2 gives slots their
 words.
 
+## Stage 2: what it must deliver, and an open question
+
+A session's reading of what stages 3 and 4 need from stage 2:
+
+- `cell-same` (section 68) takes two cells at `many` whose slots are
+  equal and yields `JMEq T1 u1 T2 u2`. Today a cell evaluates to a
+  token (`Prim.axm`), so the two values agree, but the two types need
+  not: `Ti` is `(Cell Ci ...)`, and nothing in the value semantics says
+  that two cells at one slot have one constructor and one field slots.
+  Stage 2 has to make "at one slot" mean "one block", so the types
+  agree.
+- An at-match on a union newtype (section 40) has its `at` entries
+  read back from their targets' words rather than chosen by dispatch.
+
+The difficulty a session sees: "one slot, one block" holds only of
+live entries. A unique `cell-write` puts its result at its input's
+slot, and the input, consumed, held the block's old contents; a
+`many` cell is never written in place, but a cell at `many` and one at
+`unique` at the same slot cannot both be live only because of the uses
+discipline (section 15), not because of typing. In the Lean model the
+uses discipline is checked by the uses pass (`Minimal/Uses.lean`) and
+relied on only by the machine proofs (`MachineRun.lean`,
+`MachineSound.lean`, `MachineAsm.lean`, with their ownership frames);
+`eval`'s soundness (`Sound.lean`) is proved for every typing derivation,
+uses or not.
+
+So a session sees two ways to carry out shape 1, and would like the
+owner to choose before the work starts:
+
+- **2a. `eval` gets a heap, and its soundness takes on uses.** Values
+  in the environment become words, constructed values are blocks, a
+  cell is its block's address, a slot term evaluates to its entry's
+  word, and a unique write updates a block in place. `EnvOK` then
+  holds only for live entries, so `Sound.lean` takes the uses pass's
+  output as a hypothesis and inherits much of the machine proofs'
+  ownership reasoning; the machine proofs would shrink, since `eval`
+  and `RunM` would then both have heaps.
+- **2b. `eval` gets a heap of versions and stays uses-free; `cell-same`
+  is proved where uses are known.** A unique write makes a new version
+  of a block at the same address, so every old entry keeps its value
+  and `EnvOK` keeps holding for all entries; a slot is an address. The
+  facts that need liveness, such as two `many` cells at one slot being
+  one version, are proved alongside the machine proofs, which already
+  carry ownership, and `eval`'s result for `cell-same` is justified
+  there.
+
+In either, `Prog.build` of a slot term gives its entry's word instead
+of `vacant-slot`, and the machine's `many` invocation that skips every
+store returns the cell's block, as the owner confirmed (section 37).
+Both are larger than stage 1; 2a moves the most proof.
+
 ## Cost, as a session estimates it
 
 Larger than anything in `lean/` so far: stage 1 reworks the reader's
