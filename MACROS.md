@@ -84,6 +84,25 @@ by the run that reached the form. An implementation may also re-check
 the application against the run-position facts where it mints, as a
 guard.
 
+**Open problems.** The owner found these in the sketch above; they are
+unresolved.
+
+1. The static check reads the wrong table. It compares terms
+   modulo the facts where the form is written, which include branch
+   facts and the facts a caller relied on to satisfy a parameter's
+   type. The minted rule is entered into the expansion's tables, and
+   needs the entries those terms denote to compare equal modulo the
+   facts of those tables. Equality modulo the first does not give
+   equality modulo the second, so those tables can stop being
+   self-consistent.
+2. The guard is not optional. Under this design, a check
+   against the run-position facts where the form runs is the only
+   thing protecting the expansion's tables, and it can fail where
+   the static check passed, which contradicts "every error is static".
+3. We conjecture that this check could be eliminated by new types
+   like `Settled`, such as `SettledIs` and `SettledTypeOf`, that state
+   facts of the run-position table about what handles denote.
+
 **On adoption.** A paragraph at the end of DESIGN.md section 65, the
 form added to section 54's expressions and to section 42's macro
 bullet, and OPEN.md 35, which asks for this, deleted.
