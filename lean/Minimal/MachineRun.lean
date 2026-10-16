@@ -89,7 +89,7 @@ theorem termUses_uq {G : UCtx} : ∀ {u : Bool} {t : Tm} {A : Uses}, G.termUses 
   | _, .bv _, _, h | _, .nil, _, h | _, .cons .., _, h | _, .bind .., _, h | _, .tyc .., _, h
   | _, .tyCtor _, _, h | _, .valCtor _, _, h | _, .univ, _, h | _, .level, _, h | _, .predates .., _, h
   | _, .subterm .., _, h | _, .fn .., _, h | _, .mtbl .., _, h | _, .lvl _, _, h | _, .tok, _, h
-  | _, .clo .., _, h | _, .nat _, _, h | _, .ptr _, _, h | _, .vc .., _, h => by
+  | _, .clo .., _, h | _, .nat _, _, h | _, .ptr _, _, h | _, .vc .., _, h | _, .sfv _, _, h => by
     simp only [UCtx.termUses] at h; first | (cases h; exact UqOK.nil) | cases h
 
 theorem argsUses_uq {G : UCtx} : ∀ {md : Ent → Bool} {args s : Tm} {A : Uses}, G.argsUses P md args s = some A →

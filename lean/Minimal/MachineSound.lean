@@ -1211,6 +1211,8 @@ theorem rt_build_spine (hP : ProgOK P) {G : UCtx} {f fS fF : Nat → Tm} : ∀ {
     exact .inr ⟨i, by simp [rtReads], by simp, hs⟩
   | H, hW, .vc d c ls, _, _, _, _, _, b, hs => by
     simp only [Prog.build, Prog.subU, Tm.subst] at hs; exact (hs.imm (by simp) (by simp)).elim
+  | H, hW, .sfv i, _, _, _, _, _, b, hs => by
+    simp only [Prog.build, Prog.subU, Tm.vacant] at hs; exact (hs.imm (by simp) (by simp)).elim
   | H, hW, .app (.vc d c ls) args, A, h, hu, hr, hh, b, hs => by
     simp only [rt] at h
     split at h
@@ -1545,6 +1547,8 @@ theorem rt_build_ok (hP : ProgOK P) {G : UCtx} {f fS fF : Nat → Tm} : ∀ {H :
     simp only [Prog.build, Prog.subU, Tm.subst]; exact hF.wo i (by simp)
   | H, hW, .vc d c ls, u, A, h, hu, hF, hh => built_of hP hW h hu hF hh fun _ => by
     simp only [Prog.build, Prog.subU, Tm.subst]; exact .free fun b h => h.imm (by simp) (by simp)
+  | H, hW, .sfv i, u, A, h, hu, hF, hh => built_of hP hW h hu hF hh fun _ => by
+    simp only [Prog.build, Prog.subU, Tm.vacant]; exact .free fun b h => h.imm (by simp) (by simp)
   | H, hW, .app (.vc d c ls) args, u, A, h, hu, hF, hh => built_of hP hW h hu hF hh fun hu1 => by
     subst hu1
     have h0 := h

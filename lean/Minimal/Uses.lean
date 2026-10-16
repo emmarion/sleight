@@ -83,7 +83,7 @@ def termUses (G : UCtx) (u : Bool) : Tm → Option Uses
       | .fv i => Uses.seq (← G.use i false) A
       | _ => some A
     | none => none
-  | .vc .. | .tyc .. | .nil => some []
+  | .vc .. | .tyc .. | .nil | .sfv _ => some []
   | _ => none
 
 def argsUses (G : UCtx) (md : Ent → Bool) : Tm → Tm → Option Uses
