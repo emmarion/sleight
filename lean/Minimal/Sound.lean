@@ -1885,8 +1885,11 @@ theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
     (he : v = p.eval P ρ) :
     EnvOK P (ρ ++ [v]) (Γ.pushPrim T er p) ∧ (Γ.pushPrim T er p).cur = Γ.cur ∧
       (Γ.pushPrim T er p).subs = Γ.subs ∧ (Γ.pushPrim T er p).n = Γ.n + 1 := by
+  have hn0 : (Γ.pushPrim0 T er p).n = Γ.n + 1 := by cases p <;> simp [Ctx.pushPrim0, Ctx.withRule, Ctx.push, Ctx.n]
+  suffices h0 : EnvOK P (ρ ++ [v]) (Γ.pushPrim0 T er p) by
+    refine ⟨h0.slotIf _ _ (by omega), ?_, ?_, by rw [Ctx.pushPrim, Ctx.slotIf_n, hn0]⟩ <;>
+      cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
   have h1 := hE.push hv hT hc (e := er)
-  refine ⟨?_, by cases p <;> rfl, by cases p <;> rfl, by cases p <;> simp [Ctx.pushPrim, Ctx.withRule, Ctx.push, Ctx.n]⟩
   cases hp with
   | tm ht =>
     have hl := hE.len
@@ -3391,7 +3394,7 @@ theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
   obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
   have hl := hE.len
   have her : ∀ i, (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
-    intro i; cases p <;> simp [Ctx.pushPrim]
+    intro i; cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
   have hh : HeadSim P Γ (Γ.pushPrim T er p) ρ [p.eval P ρ] (.prim p er rest) rest := by
     intro ρS hg hS
     refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
@@ -3403,7 +3406,7 @@ theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
       rw [her, if_pos (by omega)] at he; subst he
       simp only [Ctx.ok, hg, Bool.false_or] at hok
       exact prim_real hP hE hS hp hok
-  have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> rfl
+  have hpf : (Γ.pushPrim T er p).fixed = Γ.fixed := by cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
   exact ⟨hE.adv hE' hpf hh, LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩,
     hm.append hE.wf hl (by simpa using hcur) (by simpa using hsubs), Tm.static_mono (by simp; omega) _ (Nat.le_refl 0) hrs,
     hh, her⟩
@@ -3892,7 +3895,7 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
     have hl := hE.len
     have ih' := ih b _ rets hr hE'' hlb' hm' hrs'
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish hE (fun i hi => by rw [her, if_neg (by omega)])
-      (fun hg => by rw [← hg]; cases p <;> rfl) ih'.2⟩
+      (fun hg => by rw [← hg]; cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]) ih'.2⟩
   | case11 μ ρ cnt w req rest ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with

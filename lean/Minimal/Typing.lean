@@ -82,6 +82,14 @@ def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
+def _root_.Minimal.Tm.varSlot : Tm → Option Tm
+  | .fv i | .sfv i => some (.sfv i)
+  | _ => none
+
+def _root_.Minimal.Prim.src : Prim → Option Tm
+  | .tm t | .coerce t _ _ | .place t _ | .unplace t _ => t.varSlot
+  | _ => none
+
 def withSlot (Γ : Ctx) (e : Nat) (s : Tm) : Ctx :=
   if s.isSlotVal Γ.n then { Γ with ς := fun i => if i = e then some s else Γ.ς i } else Γ
 
@@ -125,9 +133,12 @@ theorem slotIf_upd_ghost (g : Bool) : ({ Γ with ghost := g } : Ctx).slotIf b e 
   cases b <;> simp [slotIf, withSlot_upd_ghost]
 end
 
-def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
+def pushPrim0 (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
+
+def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Ctx :=
+  (Γ.pushPrim0 T er p).slotIf p.src.isSome Γ.n (Γ.canon (p.src.getD .nil))
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
   | .ty _ e _, A => Γ.push A e
