@@ -169,7 +169,7 @@ theorem branchCtx_spec {G Gb : UCtx} {s k H idx sig : Tm} {fe ph uscr cell : Boo
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  have hf := (Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig).2.2
+  have hf := (Ctx.branch_fields (P := P) { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig).2.2
   rw [hb] at hf; dsimp only at hf
   rw [hb] at h
   cases r with
@@ -391,26 +391,27 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     · exact (hm _ _ _ _ _ _ ‹_›).elim
     · cases h
   case case29 => rename_i ih; exact ih hf U K h
-  case case30 =>
+  case case30 => rename_i ih; exact UqOK.of_n (G := G) (ih hf U K h) rfl rfl
+  case case31 =>
     rename_i hΓ ih; simp only [hΓ] at h
     have e := Ctx.slotSelf_eq hΓ; have := ih hf U K h; rw [e] at this; exact this
-  case case31 => rename_i hΓ; simp only [hΓ] at h; cases h
-  case case32 => rename_i ih; exact ih hf U K h
-  case case33 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case32 => rename_i hΓ; simp only [hΓ] at h; cases h
+  case case33 => rename_i ih; exact ih hf U K h
   case case34 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case37 =>
+  case case35 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case38 =>
     rename_i hf U K h
     rw [usesEls] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case38 =>
+  case case39 =>
     rename_i ih hf U K h
     rw [usesEls] at h
     obtain ⟨⟨EU, EK⟩, hE, h⟩ := Option.bind_eq_some_iff.mp h
     cases h
     exact UqOK.below (Nat.le_refl _) (fun _ _ h => h) (ih hf EU EK hE)
-  case case39 =>
+  case case40 =>
     rename_i hf U K h
     rw [usesArms] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case40 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
+  case case41 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
     rw [usesArms] at h
     simp only [hshp, hbr] at h
     obtain ⟨⟨BU, BK⟩, hB, h⟩ := Option.bind_eq_some_iff.mp h
@@ -420,14 +421,14 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     obtain ⟨hn, huq, hfb⟩ := branchCtx_spec hbr
     exact UqOK.join (UqOK.below hn huq (ihb (hfb.trans hf) BU BK hB)) (ihr hf RU RK hR)
-  case case41 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
+  case case42 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
     rw [usesArms] at h
     simp only [hshp] at h
     rcases hR : usesArms P b G ru R s H idx shp fe cell brs with _ | ⟨RU, RK⟩ <;> rw [hR] at h
     · cases h
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     exact UqOK.join UqOK.nil (ihr hf RU RK hR)
-  case case42 =>
+  case case43 =>
     rename_i hshp ihr hf U K h
     rw [usesArms] at h
     simp [hshp] at h
@@ -1415,7 +1416,7 @@ theorem branchCtx_fld {G Gb : UCtx} {s k H idx sig : Tm} {cell : Bool} (hf : G.f
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig with ⟨Γf, r⟩
-  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig
+  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields (P := P) { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig
   rw [hb] at eg eer en; dsimp only at eg eer en
   rw [hb] at h
   cases r with
@@ -1929,7 +1930,7 @@ theorem branchCtx_erf {G Gb : UCtx} {s k H idx sig : Tm} {ph cell : Bool} (hf : 
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig
+  obtain ⟨eg, eer, en⟩ := Ctx.branch_fields (P := P) { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig
   rw [hb] at eg eer en; dsimp only at eg eer en
   rw [hb] at h
   cases r with
