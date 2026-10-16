@@ -641,11 +641,28 @@ def withFloor {α} (f : Nat) (k : M α) : M α := do
   modify fun st => { st with slotFloor := f0 }
   return r
 
+partial def Sx.enc : Sx → String
+  | .atom a => s!"a{a.length}:{a}"
+  | .list xs => s!"l{xs.length}:" ++ String.join (xs.map Sx.enc)
+
+partial def Sx.dec (cs : List Char) : Option (Sx × List Char) := do
+  let (k, n, rest) ← match cs with
+    | k :: rest => some (k, (rest.takeWhile Char.isDigit), (rest.dropWhile Char.isDigit).drop 1)
+    | [] => none
+  let n := (String.ofList n).toNat!
+  match k with
+  | 'a' => some (.atom (String.ofList (rest.take n)), rest.drop n)
+  | 'l' => (List.range n).foldlM (fun (xs, cs) _ => do let (x, cs) ← Sx.dec cs; some (xs ++ [x], cs)) ([], rest)
+      |>.map fun (xs, cs) => (.list xs, cs)
+  | _ => none
+
+def throwNeed {α : Type} (tag : String) (key : Sx) (msg : String) : M α := throw (tag ++ key.enc ++ msg)
+
 def slotOf (i : Nat) : M Tm := do
   let st ← get
   match st.slots.lookup (st.slotRoot i) with
   | some t => pure t
-  | none => throw "internal: a slot was not minted where its entry is in scope"
+  | none => throwNeed "\x06" (.atom (toString i)) "internal: a slot was not minted where its entry is in scope"
 
 partial def Sx.slotRefs (ats : Bool := true) : Sx → List String
   | .list [.atom "slot-of", .atom x] => [x]
@@ -991,6 +1008,8 @@ def litsScoped {α β : Type} (pre : M α) (k : α → M β) : M β := do
   unless st0.top do modify fun st => { st with lits := st0.lits, strs := st0.strs, chars := st0.chars }
   return r
 
+def needLit {α : Type} (form : Sx) (msg : String) : M α := throwNeed "\x05" form msg
+
 def useVar (i : Nat) (m : Mode) (sharing : Bool := false) : M Unit := do
   let st ← get
   if m.isEr || st.ghost then return
@@ -1081,29 +1100,31 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
   | e@(.atom x) => match e.numerals with
     | [n] => do match (← get).lits.lookup n with
       | some i => pure (.fv i)
-      | none => throw s!"the numeral {x} is not interned"
+      | none => needLit e s!"the numeral {x} is not interned"
     | _ =>
       if x.startsWith "\"" then do
         match (← get).strs.lookup ((x.toList.drop 1).map Char.toNat) with
         | some i => pure (.fv i)
-        | none => throw s!"the string literal {x} is not interned"
+        | none => needLit e s!"the string literal {x} is not interned"
       else match charCode x with
         | some c => do match (← get).chars.lookup c with
           | some i => pure (.fv i)
-          | none => throw s!"the character literal {x} is not interned"
+          | none => needLit e s!"the character literal {x} is not interned"
         | none => if x.startsWith "#\\" then throw s!"malformed character literal {x}" else look sc depth x
   | .list [.atom "numeral-of", x] => do
     match litOf x with
     | some n => match (← get).numPf.lookup n with
       | some i => pure (.fv i)
-      | none => throw "numeral-of: not interned"
+      | none => needLit (.list [.atom "numeral-of", x]) "numeral-of: not interned"
     | none => throw "`numeral-of` takes a numeral or a character literal"
   | .list (.atom "numeral-of" :: _) => throw "malformed `numeral-of` form"
   | .list [.atom "prove-literal-lt", a, b] => do
     match numeralOf a, numeralOf b with
     | some x, some y => match (← get).ltPf.lookup (x, y) with
       | some i => pure (.fv i)
-      | none => throw s!"prove-literal-lt: {x} is not below {y}"
+      | none =>
+        let msg := s!"prove-literal-lt: {x} is not below {y}"
+        if x < y then needLit (.list [.atom "prove-literal-lt", a, b]) msg else throw msg
     | _, _ => throw "`prove-literal-lt` takes two numerals"
   | .list (.atom "prove-literal-lt" :: _) => throw "`prove-literal-lt` takes two numerals"
   | .list [.atom "Level"] => pure .level
@@ -1606,6 +1627,19 @@ def internLits (e : Sx) : M (List Stmt) := do
     modify fun st => { st with eqPf := ((a, b), i) :: st.eqPf }
   return out
 
+partial def retrying {β : Type} (tag : String) (ok : Sx → Bool) (k : List Sx → M β) (extra : List Sx := []) : M β := do
+  let st0 ← get
+  try k extra
+  catch msg => match if msg.startsWith tag then Sx.dec (msg.drop tag.length).toString.toList else none with
+    | some (f, plain) =>
+      if !ok f then throw msg
+      else if extra.contains f then throw (String.ofList plain)
+      else do set st0; retrying tag ok k (extra ++ [f])
+    | none => throw msg
+
+def interning {β : Type} (e : Sx) (k : List Stmt → M β) : M β :=
+  retrying "\x05" (fun _ => true) fun extra => litsScoped (internLits (.list (e :: extra))) k
+
 def openCtor (sc : Scope) (md : Mode) (scr : Option Tm) (ci : CtorInfo) (c : String) (xs : List Sx) :
     M (Nat × CtorInfo × Scope × List (Core → Core)) := do
     let names ← xs.mapM name
@@ -1789,7 +1823,7 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
   if let some forms ← expandCall sc e then
     let [form] := forms | throw s!"a macro call here must expand to one form, and expanded to {forms.length}"
     let sc ← withHandles sc forms
-    return ← litsScoped (internLits form) fun ss => do
+    return ← interning form fun ss => do
       let (ss2, ts) ← elabExpr sc want exp form
       return (ss ++ ss2, ts)
   if let .list (.atom h :: args) := e then
@@ -2091,7 +2125,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let some mult := ["erased", "many", "unique"].idxOf? m | throw s!"settled-of: {m} is not a multiplicity"
       let callOf (k : Nat) : Sx := .list [.atom " settled-of", .atom (toString k),
         .list [.atom (["MErased", "MMany", "MUnique"].getD mult "MErased")], .list [.atom " hty", .atom (toString k)], .atom x]
-      let run (k : Nat) : M (List Stmt × List Tm) := litsScoped (internLits (callOf k)) fun ss => do
+      let run (k : Nat) : M (List Stmt × List Tm) := interning (callOf k) fun ss => do
         let (ss2, ts) ← elabExpr sc want exp (callOf k)
         return (ss ++ ss2, ts)
       if (sc.lookup x).isNone then
@@ -2436,7 +2470,7 @@ partial def elabInvoke (sc : Scope) (want : List Mode) (i : Nat) (k : Tm) (sl : 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Mode := []) (T : Tm := .nil) : M (List Stmt × List Tm) :=
   withTail false do
   let (es1, sc) ← expandList sc es
-  litsScoped (if es1 == es then pure [] else internLits (.list es1)) fun ssL => do
+  (if es1 == es then (· []) else interning (.list es1)) fun ssL => do
   let mut t := T
   let mut ss : List Stmt := ssL
   let mut ts : List Tm := []
@@ -2558,48 +2592,53 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
   let n0 := (← get).n
-  let ss ← match items with
-    | e :: _ => if (← get).top then do declareWorld e; internLits e else pure []
-    | [] => pure []
+  match items with
+  | e :: _ => if (← get).top then do declareWorld e; interning e (elabSeqLits sc want exp items n0) else elabSeqLits sc want exp items n0 []
+  | [] => elabSeqLits sc want exp items n0 []
+
+partial def elabSeqLits (sc : Scope) (want : List Mode) (exp : Option Tm) (items : List Sx) (n0 : Nat) (ss : List Stmt) :
+    M (List Stmt × List Tm) := do
   unless ss.isEmpty do recordTop n0 ss
   let n1 := (← get).n
-  let sp ← match items with
-    | e@(.list (.atom "def-lvl" :: _)) :: rest => do
-      let st ← get
-      mintRefs sc (e.slotRefs false ++ (if st.depthTop then restRefs st.topRefs rest else (Sx.list rest).slotRefs false))
-    | e :: _ => mintSlots sc e
-    | [] => pure []
-  unless sp.isEmpty do recordTop n1 sp
-  let ss := ss ++ sp
-  match items with
-  | .atom a :: rest =>
-    if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
-    else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
-  | e :: rest =>
-    let (sc, e) := unhide sc e
-    if let some forms ← expandCall sc e then
-      let sc ← withHandles sc forms
-      let last := (← get).depthTop && rest.all isPragmaSx && want.length == 1 &&
-        match (forms.filter (!isPragmaSx ·)).getLast? with
-        | some (.list (.atom h :: _)) => statements.contains h
-        | some _ => false
-        | none => true
-      if last then modify fun st => { st with endsInStmt := true }
-      let (forms, want) := if last then (forms ++ [.list [.atom "values"]], []) else (forms, want)
-      return ← litsScoped (if (← get).top then pure [] else internLits (.list forms)) fun ssL => do
-        let (ss2, ts) ← elabSeq sc want exp (forms ++ rest)
-        return (ss ++ ssL ++ ss2, ts)
-    let e ← resolveHead sc (headUse want) e
-    if let some (ss1, e') ← dispatchComputed sc e then
-      let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
-      return (ss ++ ss1 ++ ss2, ts)
-    if !rest.isEmpty && rest.all isPragmaSx then
-      let (ss2, ts) ← elabSeq' sc want exp [e]
-      for p in rest do if let .atom a := p then pragma sc a
+  retrying "\x06" (fun | .atom f => f.toNat! < n1 | _ => false) fun extra => do
+    let sp ← match items with
+      | e@(.list (.atom "def-lvl" :: _)) :: rest => do
+        let st ← get
+        mintRefs sc (e.slotRefs false ++ (if st.depthTop then restRefs st.topRefs rest else (Sx.list rest).slotRefs false))
+      | e :: _ => mintSlots sc e
+      | [] => pure []
+    let sp := sp ++ (← extra.flatMapM fun f => do pure (← slotM f.show.toNat!).1)
+    unless sp.isEmpty do recordTop n1 sp
+    let ss := ss ++ sp
+    match items with
+    | .atom a :: rest =>
+      if isPragma a then pragma sc a; let (ss2, ts) ← elabSeq sc want exp rest; return (ss ++ ss2, ts)
+      else let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
+    | e :: rest =>
+      let (sc, e) := unhide sc e
+      if let some forms ← expandCall sc e then
+        let sc ← withHandles sc forms
+        let last := (← get).depthTop && rest.all isPragmaSx && want.length == 1 &&
+          match (forms.filter (!isPragmaSx ·)).getLast? with
+          | some (.list (.atom h :: _)) => statements.contains h
+          | some _ => false
+          | none => true
+        if last then modify fun st => { st with endsInStmt := true }
+        let (forms, want) := if last then (forms ++ [.list [.atom "values"]], []) else (forms, want)
+        return ← (if (← get).top then (· []) else interning (.list forms)) fun ssL => do
+          let (ss2, ts) ← elabSeq sc want exp (forms ++ rest)
+          return (ss ++ ssL ++ ss2, ts)
+      let e ← resolveHead sc (headUse want) e
+      if let some (ss1, e') ← dispatchComputed sc e then
+        let (ss2, ts) ← elabSeq sc want exp (e' :: rest)
+        return (ss ++ ss1 ++ ss2, ts)
+      if !rest.isEmpty && rest.all isPragmaSx then
+        let (ss2, ts) ← elabSeq' sc want exp [e]
+        for p in rest do if let .atom a := p then pragma sc a
+        return (ss ++ ss2, ts)
+      let (ss2, ts) ← elabSeq' sc want exp (e :: rest)
       return (ss ++ ss2, ts)
-    let (ss2, ts) ← elabSeq' sc want exp (e :: rest)
-    return (ss ++ ss2, ts)
-  | [] => let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
+    | [] => let (ss2, ts) ← elabSeq' sc want exp items; return (ss ++ ss2, ts)
 
 partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
@@ -2834,7 +2873,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
       | [a] => pure (a, none)
       | [a, b] => if b < a then pure (a, some b) else throw "unary: the floor is not below the literal"
       | _ => throw "malformed `unary` form"
-    let some i := (← get).eqPf.lookup key | throw "unary: not interned"
+    let some i := (← get).eqPf.lookup key | needLit (.list (.atom "unary" :: args)) "unary: not interned"
     elabSeq ((" unary", .fv i) :: sc) want exp
       (.list [.atom "let-match", .atom "erased", .atom " unary", .list [.atom "Refl", .atom "_", .atom "_"]] :: rest)
   | .list [.atom "compile-warn", m] :: rest => do

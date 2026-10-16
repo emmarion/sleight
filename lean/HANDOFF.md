@@ -437,14 +437,17 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
    elaborator handles it, with the scope there. These are still made by
    scanning syntax for names first, and an alias, a shadowing binder or
    a macro's output can mislead them:
-   - Literal interning (`internLits`) finds `numeral-of`,
-     `prove-literal-lt` and `unary` by name in each top-level form. With
-     `(let ((many nof)) numeral-of)`, `(let ((erased p)) (nof 3))` is
-     refused here ("numeral-of: not interned") and accepted by the
-     reference. This predates macros.
-   - `slot-of` references (`mintSlots`, `topRefs`), `dropFinal` under
-     `--shared`, the `let` analyses `returnsBinders` and `renamesOf`, and
-     the scan that declares `World`. Not each probed.
+   - Literals and slots are interned and minted where the elaborator
+     needs them: a lookup that finds one missing throws a marked error
+     carrying what it needs (`throwNeed`), and the nearest interning
+     site, or for a slot the nearest statement with the entry in scope,
+     restores its state and elaborates again with it (`retrying`). The
+     scans (`internLits`, `mintSlots`) remain as the first guess.
+   - Still decided by scanning: the slots minted before a `def-lvl` for
+     later `slot-of`s (`topRefs`, `restRefs`), so a slot an alias names
+     after a level is minted after it; `dropFinal` under `--shared`; the
+     `let` analyses `returnsBinders` and `renamesOf`; and the scan that
+     declares `World`. Not each probed.
    A related difference, also older than macros: `values` in a call's
    argument position splices its values into the call's arguments here,
    so `(nat-add (values 1 2))` gives 3, while the reference refuses it
