@@ -195,8 +195,9 @@ Progress on stage 1, on `claude/slots-1-core`:
   - `world-do`'s world result is at its world argument
     (`Ctx.pushWdo`);
   - `slot-self` (`Chk.slf`);
-  - forcing in a match branch: after unification, the pairs left over
-    that involve a slot are made equal (`Ctx.forceSlots`);
+  - forcing in a match branch and in `open-adt`: after unification,
+    the pairs left over that involve a slot are made equal
+    (`Ctx.forceSlots`, `Ctx.opnCtx`);
   - the delegate annotation, when the block is pushed (`Ctx.deleSlots`).
 - Done, in the reader: slots are core terms (`(slot-of x)` is
   `sfv x`); slot minting, the slot copies, the retry for them and the
@@ -209,8 +210,6 @@ Progress on stage 1, on `claude/slots-1-core`:
   (`Ctx.placedAt`); in stage 1 that is sound because every slot has
   one value, and stage 2 is to justify it from where a placed value is.
 - Not yet:
-  - forcing outside a match branch (`open-adt`'s unification) adds no
-    slot facts;
   - the machine side of the `many` invocation that skips every store:
     the core records it at the cell, the machine builds a fresh block;
     stage 2 is to make the machine reuse the cell's block.
