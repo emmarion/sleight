@@ -460,7 +460,9 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
      elaboration, on the erased code with renaming lets and lets that
      return what they bind folded away (`check_marks` and `normalize` in
      `lib/elab.ml`); here they are checked while elaborating, against a
-     syntactic reading of the rest of the body.
+     syntactic reading of the rest of the body. `lean/TAIL.md` proposes
+     checking them on post-erasure code and proving tail calls as a
+     theorem; not adopted.
    A related difference, also older than macros: `values` in a call's
    argument position splices its values into the call's arguments here,
    so `(nat-add (values 1 2))` gives 3, while the reference refuses it
