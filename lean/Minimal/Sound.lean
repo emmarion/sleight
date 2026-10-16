@@ -559,6 +559,22 @@ theorem EnvOK.refix {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (F : List (Op
   .mk hE.len hE.vals hE.closed hE.sat (fun L hL => hE.chrono L hL)
     ⟨hE.wf.tys, hE.wf.σ, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hF hE.dele
 
+theorem EnvOK.withSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} (s : Tm) (he : e < Γ.n) :
+    EnvOK P ρ (Γ.withSlot e s) := by
+  unfold Ctx.withSlot; split
+  · rename_i hs
+    refine hE.modify rfl hE.sat hE.chrono ⟨hE.wf.tys, hE.wf.σ, fun i t h => ?_, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+    simp only at h; split at h
+    · cases h; subst_vars; exact ⟨he, Tm.isSlotVal_spec hs⟩
+    · exact hE.wf.ς i t h
+  · exact hE
+
+theorem EnvOK.slotIf {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (b : Bool) {e : Nat} (s : Tm) (he : e < Γ.n) :
+    EnvOK P ρ (Γ.slotIf b e s) := by
+  cases b
+  · exact hE
+  · exact hE.withSlot s he
+
 theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} {t : Tm} (he : e < Γ.n)
     (ht : t.static Γ.n 0) (hv : Tm.env ρ e = t.subst (Tm.env ρ)) : EnvOK P ρ (Γ.withRule e t) := by
   refine hE.modify rfl (fun i u hi => ?_) hE.chrono ⟨hE.wf.tys, fun i u hi => ?_, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
@@ -640,16 +656,21 @@ theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {
   cases hv with
   | cons hvA hvs => exact ⟨hE.push hvA hA hc, hvs, ext A _, by simp [Ctx.pushEnt, Ctx.push, Ctx.n]⟩
   | isCons he hvs =>
+    rename_i mk er uu sl
     have hl := hE.len
     have hs := canon_static hE.wf hA
-    refine ⟨(hE.push .top rfl hc).withRule (by simp [Ctx.push, Ctx.n])
-      (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs) ?_, hvs,
-      ⟨⟨[.nil], rfl⟩, fun e t h => ?_, rfl, rfl, rfl, rfl⟩, by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push, Ctx.n]⟩
-    · rw [Tm.subst_append (hl ▸ hs), hE.canon, ← he]
-      simp [Tm.env, hl]
-    · have := (hE.wf.σ e t h).1
-      simp only [Ctx.pushEnt, Ctx.withRule, Ctx.push]
-      rw [if_neg (by omega)]; exact h
+    have hE1 := (hE.push (A := .nil) (e := er) .top rfl hc).withRule (e := Γ.n) (t := Γ.canon A)
+      (by simp [Ctx.push, Ctx.n])
+      (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs)
+      (by rw [Tm.subst_append (hl ▸ hs), hE.canon, ← he]; simp [Tm.env, hl])
+    refine ⟨hE1.slotIf _ (e := Γ.n - 1) (Γ.canon A) (by simp [Ctx.withRule, Ctx.push, Ctx.n]; omega), hvs,
+      ⟨⟨[.nil], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩, fun e t h => ?_,
+        by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push],
+        by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩,
+      by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push, Ctx.n]⟩
+    have := (hE.wf.σ e t h).1
+    simp only [Ctx.pushEnt, Ctx.slotIf_σ, Ctx.withRule, Ctx.push]
+    rw [if_neg (by omega)]; exact h
 
 theorem EnvOK.openTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) :
     ∀ {tele vs out : Tm}, tele.isTele → tele.static Γ.n 0 → VTys P vs (tele.subst (Tm.env ρ)) out →
@@ -2142,7 +2163,7 @@ theorem Ctx.openTele_er : ∀ m (Γ : Ctx) (t : Tm), t.isTele →
         intro i; cases k <;> simp [Ctx.pushEnt, Ent.er]
       obtain ⟨g, h1, h2⟩ := ih (Γ.pushEnt k A) (r.inst (.fv Γ.n) 0) (Tm.isTele_inst _ r 0 ht)
       simp only [Ctx.openTele]
-      refine ⟨by rw [g]; cases k <;> rfl, fun i hi => by rw [h1 i (by omega), her, if_neg (by omega)], ?_⟩
+      refine ⟨by rw [g]; cases k <;> simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], fun i hi => by rw [h1 i (by omega), her, if_neg (by omega)], ?_⟩
       intro j hj hjl
       cases j with
       | zero => rw [h1 _ (by omega), her, if_pos (by omega)]; simp [Tm.ers]
@@ -2172,7 +2193,7 @@ theorem Ctx.pushTele_er (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) (hR : R.is
     intro m; induction m with
     | zero => intro Γ t; cases t <;> rfl
     | succ m ih => intro Γ t; cases t <;> try rfl
-                   rename_i k A r; simp only [Ctx.openTele]; rw [ih]; cases k <;> rfl
+                   rename_i k A r; simp only [Ctx.openTele]; rw [ih]; cases k <;> simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]
   cases ov <;> simp [Ctx.pushTele, Ctx.setErs, this]
 
 theorem callee_some {v : Tm} {env : List Tm} {n gid : Nat} {G : Group} {F : FnDef}
@@ -2616,7 +2637,9 @@ theorem Ctx.openTele_ghost (g : Bool) : ∀ m (Γ : Ctx) t,
     | bind k A r =>
       simp only [Ctx.openTele]
       have : ({ Γ with ghost := g } : Ctx).pushEnt k A = { Γ.pushEnt k A with ghost := g } := by
-        cases k <;> rfl
+        cases k with
+        | ty => rfl
+        | is => exact Ctx.slotIf_upd_ghost ((Γ.push .nil _).withRule Γ.n (Γ.canon A)) _ _ _ g
       rw [this]; exact ih _ _
     | _ => rfl
 

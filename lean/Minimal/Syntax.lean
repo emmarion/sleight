@@ -2,18 +2,18 @@ namespace Minimal
 
 inductive Ent where
   | ty (mark er u : Bool)
-  | is (mark er u : Bool)
+  | is (mark er u sl : Bool)
   deriving DecidableEq, Repr, Inhabited
 
 def Ent.marked : Ent → Bool
   | ty m _ _ => m
-  | is m _ _ => m
+  | is m _ _ _ => m
 
 def Ent.er : Ent → Bool
-  | ty _ e _ | is _ e _ => e
+  | ty _ e _ | is _ e _ _ => e
 
 def Ent.u : Ent → Bool
-  | ty _ _ u | is _ _ u => u
+  | ty _ _ u | is _ _ u _ => u
 
 inductive Tm where
   | fv (i : Nat)
@@ -47,6 +47,10 @@ def slotD : Nat := 4
 namespace Tm
 
 def vacant : Tm := app (vc slotD 0 nil) nil
+
+def isSlotVal (n : Nat) : Tm → Bool
+  | sfv j => j < n
+  | t => t == vacant
 
 def slotOf : Tm → Tm
   | fv j => sfv j

@@ -143,7 +143,7 @@ def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ 
     .ok ⟨.cons hA hU hr⟩
   | .bind (.is ..) e r => do
     let ⟨_, he⟩ ← checkTm' Γ rules e
-    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false false) e) rules (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false false false) e) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
 termination_by t => (rules.toNat, t.size)

@@ -27,6 +27,9 @@ theorem slotOK_spec {P : Prog} (h : P.slotOK = true) : ∃ D m e u, P.adts[slotD
     · cases hc
   · cases h
 
+theorem isSlotVal_spec {s : Tm} {n : Nat} (h : s.isSlotVal n = true) : s = vacant ∨ ∃ j < n, s = .sfv j := by
+  cases s <;> simp_all [isSlotVal]
+
 theorem slotOf_lc0 {t : Tm} (h : t.lc 0) : slotOf t = vacant := by cases t <;> simp_all [slotOf, lc]
 
 @[simp] theorem slotOf_inst (t u : Tm) (k : Nat) : (slotOf t).inst u k = slotOf t := by cases t <;> rfl
