@@ -267,6 +267,7 @@ let rec slots_lookup t (s : word) =
   let compacted = t.compactions_seen and a = address s in
   let hit = List.find_opt (fun i -> t.keys.(i) == s) in
   let r = match hit (Hashtbl.find_all t.young a) with Some i -> Some i | None -> hit (Hashtbl.find_all t.old a) in
+  ignore (Sys.opaque_identity (ref ()));
   if moved t || compacted <> !compactions then slots_lookup t s else r
 
 let slots_find t s = match slots_lookup t (Obj.magic s) with Some i -> SlotFound i | None -> SlotMissing
