@@ -15,8 +15,9 @@ accepted with OCaml's value, 528 refusals agreed, and 17 + 58 were
 refused as unsupported; 7 tests OCaml accepts are refused, and two
 tests OCaml refuses are accepted (`macro_handle_erased_bad.sl` and
 `macro_settled_erase_bad.sl`: a handle used against its multiplicity is
-not refused here). The runner's prelude predates `main`'s `slot-eq`,
-`cell-same` and `ErasedOr`.
+not refused here). The runner does not implement `cell-same`, so the prelude
+leaves out `nat-same` and the other functions DESIGN.md section 42 builds
+on it (item 9).
 
 The tests OCaml accepts and this runner refuses, with a session's
 reading of why:
@@ -383,8 +384,13 @@ computes.
       reader resolves to the handle's type. The reader's checker context
       for top-level entries is stepped after inferring the form's holes,
       so it holds the type of an entry the reader inlines.
-   3. Regenerate the prelude for `main`'s latest, rerun `test.sh` and
-      `compare.sh`, and update the counts above.
+   3. Done: the prelude is regenerated for `main`'s latest.
+   3a. Not started, and an encoding to be proposed to the owner first:
+      `cell-same` (DESIGN.md section 68). Its `EONonErased` carries a
+      `JMEq` of two cells from their slots being equal, and the core
+      here knows nothing of locations (two slots are one only when they
+      canonicalize to one entry), so the checker has no rule giving that
+      equality, and a new one would need its own case in the proofs.
    4. Not started, and to be proposed to the owner first: make
       `MacroWorld` (and `Gensym`) opaque again, as DESIGN.md has them,
       with the macro-world primitives a core form answered by an oracle,

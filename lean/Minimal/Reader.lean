@@ -1208,7 +1208,9 @@ partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String �
           | some (.bnd lv), _ => pure (some (Ent.is false true false, Tm.bv (depth - 1 - lv)))
           | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false, ← slotOf i))
           | _, some _ => throw s!"`at` naming `{showName v}`, bound by an enclosing telescope, is not supported"
-          | _, none => throw s!"unbound name {showName v}"
+          | _, none =>
+            if v == "vacant-slot" then pure (some (Ent.is false true false, .app (.vc slotD 0 .nil) .nil))
+            else throw s!"unbound name {showName v}"
         | none => pure (some (Ent.ty false true false, Tm.app (.tyc slotD .nil) .nil))
       else pure none
     let (sc, depth) := if hid.isSome then (((" slot " ++ x), Ref.bnd depth) :: sc, depth + 1) else (sc, depth)

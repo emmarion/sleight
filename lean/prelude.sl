@@ -1388,6 +1388,11 @@
   enum
   (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
 
+(def-adts $ (ErasedOr : (Type P) -> Type)
+  enum
+  (many EONonErased : (erased Type P) (erased P p) -> (ErasedOr P))
+  (erased EOErased : (erased Type P) -> (ErasedOr P)))
+
 (def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
 
 (def-opaque $ (MacroWorld : -> Type))
@@ -1498,3 +1503,22 @@
      (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
                (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
      -> (Macro)))
+
+(def-fns _ $ (many at erased-or-swap : (erased Type P) (erased Type Q) (erased Q q) (many (ErasedOr P) x) ->
+    (many (ErasedOr Q) y at x))
+  (match many x _
+    ((EONonErased _ p) (coerce x (coercible-ctor (Shared) EONonErased P Q p q)))
+    ((EOErased _) (coerce x (coercible-ctor (Shared) EOErased P Q)))))
+
+(def-fns _ $ (many at erased-or-void : (erased Type P) (erased Type Q) (many (ErasedOr P) x)
+    (erased (Eq (ErasedOr P) x (EOErased P)) e) -> (many (ErasedOr Q) y at x))
+  (let-match erased e (Refl _ _))
+  (coerce x (coercible-ctor (Shared) EOErased P Q)))
+
+(def-fns _ $ (erased double-unique :
+    (erased (Nat) a) (erased (Nat) b) (subterm erased (Double a b) p) (erased (Double a b) q) ->
+    (erased (Eq (Double a b) p q) e))
+  (let-match erased p (DS a1 b1 p1) ((D0) (match erased q _ ((D0) (Refl (Double a b) p)) (absurd DS))))
+  (let-match erased q (DS _ _ q1) (absurd D0))
+  (let ((erased ih)) (double-unique a1 b1 p1 q1))
+  (match erased ih _ ((Refl _ _) (Refl (Double a b) p))))
