@@ -546,7 +546,7 @@ it is `Settled`, and its `is` rule.
   destructure, a cell binder in any mode, a cell invocation (at
   `unique`, or at `many` with every store skipped), `cell-write` at
   `unique`, `world-do`'s world, the delegate annotation, `slot-self`,
-  forcing in a match branch, and an entry written `at v`. Such an entry
+  forcing in a match branch or `open-adt`, and an entry written `at v`. Such an entry
   is followed in its telescope by a hidden erased `is` entry naming
   `v`'s slot (`Tm.fn`'s mask), which records the entry's slot when the
   telescope is opened; a call passes the slot of each such argument
@@ -558,8 +558,7 @@ it is `Settled`, and its `is` rule.
   `(slot-self s)` makes it so, which the core checks (`Chk.slf`); a
   contradiction is refused. `prove-predates` takes `(slot-of x)` for an
   `x` older than the level. `at` changes no value: the runner computes
-  an `at` result like any other. Not done: forcing outside a match
-  branch (`open-adt`) adds no slot facts.
+  an `at` result like any other.
 - At-functions and at-matches (sections 39 and 40), checked by the
   elaborator: the returns or annotation entries are erased or `at`, and
   the body or each branch makes no non-erased call that is not skipped,
