@@ -345,7 +345,7 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
   case case19 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
-    have hC' := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
+    have hC' : UqOK G _ := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
     split at h
     · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
@@ -353,13 +353,13 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
   case case21 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
-    have hC' := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
+    have hC' : UqOK G _ := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
     split at h
     · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
       exact UqOK.ur_seq h (UqOK.use hA) hC'
   case case22 b G ru rets a b1 rest ih => exact ih hf U K h
-  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact UqOK.of_n rfl (by simp) (ih hf U K h)
+  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact UqOK.of_n (G := G) rfl (by simp) (ih hf U K h)
   case case24 b G ru rets b1 rest x hc => rw [if_neg hc] at h; cases h
   case case18 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
   case case20 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
@@ -3084,72 +3084,74 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     {rest : Core} {ρ vs : List Tm} (hm : m = .reuse true ∨ m = .write true) (hE : EnvOK P ρ G.Γ)
     (ih : MRun P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk (.mark m) (.fv i) x rest) ρ vs := by
-  intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
-  have hg := hG.ghost
-  obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest = some (CU, CK) ∧
-      G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := by
-    have key : ∀ C : UR, (if (!G.cellTy P i) = true then none else do
-        let C ← C
-        UR.seq (← G.use i true, []) C) = some (U, K) → ∃ CU CK, C = some (CU, CK) ∧
-      G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := fun C h => by
-      split at h
-      · cases h
-      rename_i hct
-      obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
-      obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
-      simp only [UCtx.use] at hA
-      split at hA
-      · cases hA
-      rename_i hc
-      simp only [Option.some.injEq] at hA; subst hA
-      simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
-      exact ⟨CU, CK, hC, by simpa using hct, UR.seq_fst h, by omega, by simpa using hc.1.2⟩
-    rcases hm with rfl | rfl <;> rw [usesCore] at hU <;> simp only [Bool.true_and, hg, Bool.not_false,
-      Bool.false_eq_true, ite_false] at hU <;> exact key _ hU
-  obtain ⟨sA, sC⟩ := Uses.seq_sub hseq
-  have hUi : U.lookup i = some true := sA.2 i (by simp [List.lookup])
-  have hCi : CU.lookup i = none := ((Uses.seq_spec hseq).1 i).1 (by simp [List.lookup])
-  have hρi := cellTy_tok hP hE hct
-  have hsp : ∀ a, Tm.env ρM i = .ptr a → Spine P H (Tm.env ρM i) (Tm.env ρS i) (Tm.env ρ i) a :=
-    fun a ha => by rw [ha, hρi]; exact .cell
-  have hOwn : ∀ a, Tm.env ρM i = .ptr a → Own P U G.Γ.n G.Γ.er H ρM ρS ρ a := fun a ha => ⟨i, hi, hUi, hei, hsp a ha⟩
-  have hne : ∀ z, (CU.lookup z).isSome → z ≠ i := fun z hz e => by subst e; rw [hCi] at hz; cases hz
-  have hM1 := hM.subB (sC.subB G.Γ.n)
-  have hM' : MFrame P CU G.Γ.n G.Γ.er H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Out Shr := by
-    refine ⟨hM1.lenM, hM1.lenS, hM1.lenF, hM1.wf, hM1.dec, hM1.wo, hM1.sep, hM1.out, ⟨?_, ?_, ?_, ?_⟩, hM1.outb,
-      ⟨?_, hM1.shr.2⟩⟩
-    · rintro a (hr | ha) ⟨z, hz, hCz, hez, hf⟩
-      · exact hM1.res.1 a hr ⟨z, hz, hCz, hez, hf⟩
-      · exact hM.sep i hi z hz (hne z hCz).symm hUi (sC.1 z hCz) hei hez a (hsp a ha) hf
-    · rintro a (hr | ha) ho
-      · exact hM1.res.2.1 a hr ho
-      · exact hM.out i hi hUi hei a (hsp a ha) ho
-    · rintro a (hr | ha) ⟨z, hz, hCz, hez, hs⟩
-      · exact hM1.res.2.2.1 a hr ⟨z, hz, hCz, hez, hs⟩
-      · exact hM.sep z hz i hi (hne z (by rw [hCz]; rfl)) (sC.2 z hCz) (by rw [hUi]; rfl) hez hei a hs (by rw [ha]; exact .here)
-    · rintro a (hr | ha)
-      · exact hM1.res.2.2.2 a hr
-      · have hd := hM.dec i hi (by rw [hUi]; rfl) hei
-        rw [ha] at hd
-        generalize Tm.env ρS i = uS at hd
-        cases hd with
-        | ptr hb => simp [hb]
-        | tok h => rcases h with h | ⟨a', h, hb⟩
-                   · cases h
-                   · cases h; exact hb
-    · rintro a (hr | ha) hs
-      · exact hM1.shr.1 a hr hs
-      · exact hM.shr.2.1 i hi hUi hei a (hsp a ha) hs
-  have hG' : GOK P { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
-    ⟨.inr (.inr ⟨m, .fv i, rfl, by rcases hm with rfl | rfl <;> simp, fun i' a hi' ha => by
-        cases hi'; exact ⟨.inr ha, fun y hy hya => hM.res.2.2.1 a ((hG.uscr y hy).2 a hya) (hOwn a ha)⟩⟩),
-      fun y hy => ⟨(hG.uscr y hy).1, fun a ha => .inl ((hG.uscr y hy).2 a ha)⟩,
-      fun t ht => let ⟨x, h1, h2, h3, h4⟩ := hG.rebind t ht; ⟨x, h1, h2, fun a ha => .inl (h3 a ha), h4⟩,
-      hG.uqlt, hG.fill, hG.ghost⟩
-  cases hrun with
-  | chk hr =>
-  obtain ⟨H', vsM, hrr, hO⟩ := ih CU CK hC ρS vsS hS hr H ρM _ Out Shr _ hM' hG'
-  exact ⟨H', vsM, .mark (by rcases hm with rfl | rfl <;> rfl) hrr, (hO.supB (sC.subB _)).resOwn hOwn⟩
+  obtain rfl | rfl := hm
+  all_goals
+    intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
+    have hg := hG.ghost
+    obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest = some (CU, CK) ∧
+        G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := by
+      have key : ∀ C : UR, (if (!G.cellTy P i) = true then none else do
+          let C ← C
+          UR.seq (← G.use i true, []) C) = some (U, K) → ∃ CU CK, C = some (CU, CK) ∧
+        G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := fun C h => by
+        split at h
+        · cases h
+        rename_i hct
+        obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
+        obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
+        simp only [UCtx.use] at hA
+        split at hA
+        · cases hA
+        rename_i hc
+        simp only [Option.some.injEq] at hA; subst hA
+        simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, not_or] at hc
+        exact ⟨CU, CK, hC, by simpa using hct, UR.seq_fst h, by omega, by simpa using hc.1.2⟩
+      rw [usesCore] at hU <;> simp only [Bool.true_and, hg, Bool.not_false,
+        Bool.false_eq_true, ite_false] at hU <;> exact key _ hU
+    obtain ⟨sA, sC⟩ := Uses.seq_sub hseq
+    have hUi : U.lookup i = some true := sA.2 i (by simp [List.lookup])
+    have hCi : CU.lookup i = none := ((Uses.seq_spec hseq).1 i).1 (by simp [List.lookup])
+    have hρi := cellTy_tok hP hE hct
+    have hsp : ∀ a, Tm.env ρM i = .ptr a → Spine P H (Tm.env ρM i) (Tm.env ρS i) (Tm.env ρ i) a :=
+      fun a ha => by rw [ha, hρi]; exact .cell
+    have hOwn : ∀ a, Tm.env ρM i = .ptr a → Own P U G.Γ.n G.Γ.er H ρM ρS ρ a := fun a ha => ⟨i, hi, hUi, hei, hsp a ha⟩
+    have hne : ∀ z, (CU.lookup z).isSome → z ≠ i := fun z hz e => by subst e; rw [hCi] at hz; cases hz
+    have hM1 := hM.subB (sC.subB G.Γ.n)
+    have hM' : MFrame P CU G.Γ.n G.Γ.er H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Out Shr := by
+      refine ⟨hM1.lenM, hM1.lenS, hM1.lenF, hM1.wf, hM1.dec, hM1.wo, hM1.sep, hM1.out, ⟨?_, ?_, ?_, ?_⟩, hM1.outb,
+        ⟨?_, hM1.shr.2⟩⟩
+      · rintro a (hr | ha) ⟨z, hz, hCz, hez, hf⟩
+        · exact hM1.res.1 a hr ⟨z, hz, hCz, hez, hf⟩
+        · exact hM.sep i hi z hz (hne z hCz).symm hUi (sC.1 z hCz) hei hez a (hsp a ha) hf
+      · rintro a (hr | ha) ho
+        · exact hM1.res.2.1 a hr ho
+        · exact hM.out i hi hUi hei a (hsp a ha) ho
+      · rintro a (hr | ha) ⟨z, hz, hCz, hez, hs⟩
+        · exact hM1.res.2.2.1 a hr ⟨z, hz, hCz, hez, hs⟩
+        · exact hM.sep z hz i hi (hne z (by rw [hCz]; rfl)) (sC.2 z hCz) (by rw [hUi]; rfl) hez hei a hs (by rw [ha]; exact .here)
+      · rintro a (hr | ha)
+        · exact hM1.res.2.2.2 a hr
+        · have hd := hM.dec i hi (by rw [hUi]; rfl) hei
+          rw [ha] at hd
+          generalize Tm.env ρS i = uS at hd
+          cases hd with
+          | ptr hb => simp [hb]
+          | tok h => rcases h with h | ⟨a', h, hb⟩
+                     · cases h
+                     · cases h; exact hb
+      · rintro a (hr | ha) hs
+        · exact hM1.shr.1 a hr hs
+        · exact hM.shr.2.1 i hi hUi hei a (hsp a ha) hs
+    have hG' : GOK P { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
+      ⟨.inr (.inr ⟨m, .fv i, rfl, by simp, fun i' a hi' ha => by
+          cases hi'; exact ⟨.inr ha, fun y hy hya => hM.res.2.2.1 a ((hG.uscr y hy).2 a hya) (hOwn a ha)⟩⟩),
+        fun y hy => ⟨(hG.uscr y hy).1, fun a ha => .inl ((hG.uscr y hy).2 a ha)⟩,
+        fun t ht => let ⟨x, h1, h2, h3, h4⟩ := hG.rebind t ht; ⟨x, h1, h2, fun a ha => .inl (h3 a ha), h4⟩,
+        hG.uqlt, hG.fill, hG.ghost⟩
+    cases hrun with
+    | chk hr =>
+    obtain ⟨H', vsM, hrr, hO⟩ := ih CU CK hC ρS vsS hS hr H ρM _ Out Shr _ hM' hG'
+    exact ⟨H', vsM, .mark rfl hrr, (hO.supB (sC.subB _)).resOwn hOwn⟩
 
 theorem MOut.cell {A : Uses} {n : Nat} {er : Nat → Bool} {H H1 : Heap} {ρM ρS ρ : List Tm} {Res Out' Shr : Nat → Prop}
     (hM : MFrame P A n er H ρM ρS ρ Res Out' Shr) (hE : H.Ext H1) (hW : H1.WF) {a : Nat} (ha : Res a ∨ H.next ≤ a)
