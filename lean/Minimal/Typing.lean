@@ -85,7 +85,7 @@ def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if 
 
 def _root_.Minimal.Tm.varSlot : Tm → Option Tm
   | .fv i | .sfv i => some (.sfv i)
-  | _ => none
+  | t => if t = Tm.vacant then some Tm.vacant else none
 
 def _root_.Minimal.Prim.src : Prim → Option Tm
   | .tm t | .coerce t _ _ | .place t _ | .unplace t _ => t.varSlot
@@ -182,6 +182,7 @@ def slotSelf (Γ : Ctx) (s : Nat) : Option Ctx :=
 def chkStep (Γ : Ctx) : Chk → Tm → Ctx
   | .mark m, a => Γ.markPd m a
   | .slf, .fv s => (Γ.slotSelf s).getD Γ
+  | .slotAt, a => { Γ with pd := a.varSlot }
   | _, _ => Γ
 
 def pushWdo (Γ : Ctx) (Tw A w : Tm) : Ctx :=
@@ -432,13 +433,24 @@ theorem Ctx.ntSlot_fields (Γ Γf : Ctx) (s k : Tm) :
     (Γ.ntSlot P Γf s k).ghost = Γf.ghost ∧ (Γ.ntSlot P Γf s k).er = Γf.er ∧ (Γ.ntSlot P Γf s k).n = Γf.n := by
   unfold Ctx.ntSlot; split <;> (try split) <;> simp
 
+def Ctx.slotEq (Γ : Ctx) : Tm × Tm → Ctx
+  | (.sfv r, b) => Γ.withSlot r (Γ.canon b)
+  | (a, .sfv r) => Γ.withSlot r (Γ.canon a)
+  | _ => Γ
+
+def Ctx.forceSlots (Γ : Ctx) (eqs : List (Tm × Tm)) : Ctx :=
+  (((pairsOf (eqs.map fun e => (Γ.canon e.1, Γ.canon e.2))).getD []).filter fun e => e.1.isSlot || e.2.isSlot).foldl Ctx.slotEq Γ
+
 def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
   let Γf := Γ.ntSlot P Γf s k
   match rem with
   | .bind (.ty ..) R .nil =>
-    (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)])
+    let eqs := [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)]
+    match unify Γf.n (Γf.atoms P) Γf.σ [] eqs with
+    | .ok σ => let Γu := ({ Γf with σ := σ } : Ctx).forceSlots eqs; (Γu, .ok Γu.σ)
+    | r => (Γf, r)
   | _ => (Γf, .unknown)
 
 mutual
@@ -508,7 +520,7 @@ inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
       TeleOK Γ (.bind (.ty m e u) A r)
-  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is ..) e r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is mk er u sl) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is mk er u sl) e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
@@ -710,6 +722,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
   | chkMark : CoreTy b (Γ.markPd m a) rest rets → CoreTy b Γ (.chk (.mark m) a x rest) rets
   | chkCm : CoreTy b { Γ with cmode := true } rest rets → CoreTy b Γ (.chk .cm a x rest) rets
+  | chkSlotAt : CoreTy b { Γ with pd := a.varSlot } rest rets → CoreTy b Γ (.chk .slotAt a x rest) rets
   | chkSlf : P.slotOK = true → TmTy P Γ (.fv s) S → Γ.canon S = .app (.tyc slotD .nil) .nil →
       Γ.slotSelf s = some Γ' → CoreTy b Γ' rest rets → CoreTy b Γ (.chk .slf (.fv s) x rest) rets
   | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.toList.Nodup →

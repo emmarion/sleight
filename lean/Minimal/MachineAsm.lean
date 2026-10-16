@@ -957,6 +957,12 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
           (machine_slf hΓ) (fun U K hU => by rw [usesCore, hΓ] at hU; dsimp only at hU; exact isS hU)
       · rw [dif_neg hsome] at hck; cases hck
     | _ => simp [checkCore] at hck
+  | slotAt =>
+    rw [checkCore] at hck
+    obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+    cases hck
+    exact step { G with Γ := { G.Γ with pd := a.varSlot } } _ hf hr' (hE.congr _ rfl rfl rfl rfl rfl) rfl rfl rfl rfl rfl
+      machine_slotAt (fun U K hU => by rw [usesCore] at hU <;> first | exact isS hU | (intros; contradiction))
   | cm =>
     rw [checkCore] at hck
     obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck

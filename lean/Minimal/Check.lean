@@ -141,9 +141,9 @@ def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ 
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "telescope entry not a type"
     let ⟨hr⟩ ← checkTele' (Γ.push A) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.cons hA hU hr⟩
-  | .bind (.is ..) e r => do
+  | .bind (.is mk er u sl) e r => do
     let ⟨_, he⟩ ← checkTm' Γ rules e
-    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false false false false) e) rules (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is mk er u sl) e) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
 termination_by t => (rules.toNat, t.size)
@@ -829,6 +829,9 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .chk .cm _ _ rest, rets => do
     let ⟨R, hr, eq⟩ ← checkCore b { Γ with cmode := true } rest rets
     .ok ⟨R, .chkCm hr, eq⟩
+  | .chk .slotAt a _ rest, rets => do
+    let ⟨R, hr, eq⟩ ← checkCore b { Γ with pd := a.varSlot } rest rets
+    .ok ⟨R, .chkSlotAt hr, eq⟩
   | .chk (.mark m) a _ rest, rets => do
     let ⟨R, hr, eq⟩ ← checkCore b (Γ.markPd m a) rest rets
     .ok ⟨R, .chkMark hr, eq⟩
