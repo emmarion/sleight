@@ -1866,7 +1866,7 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     rw [hE.canon, hE.canon] at this
     exact ⟨.subterm this, by simp [Tm.static, hA, has, hB, hbs], trivial, by simp [Prim.eval, Tm.levels]⟩
   | provePredates hx hL hX =>
-    rename_i x L sl X
+    rename_i x L X sl
     obtain ⟨m, hm, hlt⟩ := hE.chrono L hL
     have hLn := hw.mints L hL
     have hl := hE.len
