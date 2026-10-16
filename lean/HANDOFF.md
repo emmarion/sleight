@@ -10,10 +10,24 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 391 tests were
-accepted with OCaml's value, 491 refusals agreed, and 48 + 88 were
-refused as unsupported; 4 tests OCaml accepts are refused. No test the
-OCaml suite refuses is accepted. `compare.sh` allows twenty seconds a
+with it under `--shared`. At the last full run 414 tests were
+accepted with OCaml's value, 525 refusals agreed, and 10 + 52 were
+refused as unsupported; 11 tests OCaml accepts are refused, and two
+tests OCaml refuses are accepted (`macro_handle_erased_bad.sl` and
+`macro_settled_erase_bad.sl`: a handle used against its multiplicity is
+not refused here). That run predates the last macro fixes, which were
+checked on the macro tests only, and the runner's prelude predates
+`main`'s `slot-eq`, `cell-same` and `ErasedOr`.
+
+One known wrong answer, which `compare.sh` does not catch: a function
+named like a top-level macro that calls itself has its own calls
+macro-expanded. With `splice` a macro, `(def-fns _ $ (many splice :
+(subterm many (Nat) n) -> (many (Nat) m)) (match many n _ ((Zero) 0)
+((Succ k) (splice k))))` then `(splice 3)` gives 2 here and 0 in the
+reference. The cause is that each top-level form is expanded before it
+is elaborated, skipping only heads the form binds by the syntactic test
+`binderNames`, which does not see a function's, a constructor's or a
+pattern's names (Next, item 9). `compare.sh` allows twenty seconds a
 test; `comptime_tail.sl` takes about fifteen seconds on one session's
 machine and can time out under load, and `extern_tail.sl` needs several
 gigabytes: the stripped run gives each call its own Lean frame and
@@ -29,7 +43,9 @@ reading of why:
 - `at_target_wild.sl`: `_` for an argument whose slot a later parameter
   names; the link from an entry to its slot lives in the reader's state,
   which inference does not see.
-- `macro_body.sl`, `macro_splice.sl`: macros.
+- The macro tests that `lean/README.md`'s macro item lists as not
+  supported, and `macro_gensym_eq.sl` and `macro_mint_settled.sl`,
+  which pass a `match` with a `_` annotation as an argument.
 
 `lean/prelude.py` regenerates `lean/prelude.sl` and
 `lean/prelude-full.sl` from `lib/prelude.sl`, keeping the `extern` marks. It takes several minutes, because it runs
@@ -373,12 +389,37 @@ computes.
 8. `dump-context` shows a type only where the elaborator knows it, which
    is not the case for a `let` binder written without one.
 9. Macros and handles (sections 62 to 65), which `lean/README.md`
-   describes. What is left: positions (a macro sees `NoPos`), `read-file`,
-   `mint-settled-erased`, `settled-mult` and `settled-value` outside a
-   macro's function (handles are tokens at run time), the refusal of a
-   handle used against its multiplicity, `resolve` of a name a pattern
-   binds, a minted macro bound by a `let`, and `settled-eq` on terms the
-   reader's canonicalization does not make identical.
+   describes. The plan a session proposed and the owner agreed to
+   resume, in order:
+   1. Expand where the elaborator meets a form, with its real scope
+      (telescope entries, `let` binders, match branches, `def-adts`
+      constructors, arguments), instead of pre-expanding each
+      top-level form (`preExpand`, `binderNames`). This fixes the wrong
+      answer above, and `resolve` then sees pattern variables.
+   2. Refuse a match on `MacroWorld` or `Gensym` outside the prelude.
+      The reference refuses it because neither has a `Matchable`; the
+      reader here checks a `Matchable` only for a constructor named
+      through a variable, so a match with no branches passes, and a
+      macro's function can derive `False` from its world (which never
+      leaves the function; it cannot be called by checked code).
+   3. Regenerate the prelude for `main`'s latest, rerun `test.sh` and
+      `compare.sh`, and update the counts above.
+   4. Not started, and to be proposed to the owner first: make
+      `MacroWorld` (and `Gensym`) opaque again, as DESIGN.md has them,
+      with the macro-world primitives a core form answered by an oracle,
+      as `world-do` is. Here they are data types without constructors,
+      which types the primitives as functions with refuted bodies.
+      DESIGN.md section 65 lets an erased macro world escape an
+      expansion (`mint-settled-erased`), which the reference accepts;
+      with an empty `MacroWorld` the checker would refuse such a
+      program (or a new core rule for it would not be provable), so
+      the encoding cannot express the design there.
+   5. Then: positions (a macro sees `NoPos`), handles as run-time values
+      (a new term; `settled-mult` and `settled-value` outside a macro's
+      function), refusing a handle used against its multiplicity,
+      `read-file`, `mint-settled-erased`, a minted macro bound by a
+      `let`, and `settled-eq` on terms the reader's canonicalization
+      does not make identical.
 10. A computed head inside a type other than a variable or `(share x)`
    whose settled value is a `Special` constructor: types are elaborated
    by `elabTm`, which runs no statements.
