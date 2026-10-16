@@ -19,20 +19,17 @@ not refused here). That run predates the last macro fixes, which were
 checked on the macro tests only, and the runner's prelude predates
 `main`'s `slot-eq`, `cell-same` and `ErasedOr`.
 
-One known wrong answer, which `compare.sh` does not catch: a function
-named like a top-level macro that calls itself has its own calls
-macro-expanded. With `splice` a macro, `(def-fns _ $ (many splice :
-(subterm many (Nat) n) -> (many (Nat) m)) (match many n _ ((Zero) 0)
-((Succ k) (splice k))))` then `(splice 3)` gives 2 here and 0 in the
-reference. The cause is that each top-level form is expanded before it
-is elaborated, skipping only heads the form binds by the syntactic test
-`binderNames`, which does not see a function's, a constructor's or a
-pattern's names (Next, item 9). `compare.sh` allows twenty seconds a
-test; `comptime_tail.sl` takes about fifteen seconds on one session's
-machine and can time out under load, and `extern_tail.sl` needs several
-gigabytes: the stripped run gives each call its own Lean frame and
-environment array, so its million-deep tail loop does not run in
-constant space.
+A known wrong order of expansion, which `compare.sh` does not catch:
+each top-level form is expanded before it is elaborated (`preExpand`),
+and a macro is expanded there only where the form names it only as a
+list head; any other mention could be a binder that shadows it, so those
+calls are left to the elaborator, which expands with the real scope. But
+the pass still walks into such a skipped call's arguments, and into the
+arguments of a list whose head is itself a list (a computed head such
+as `((fmt "...") a b)`), expanding the macro calls there before the
+outer macro receives them. A macro is to receive its arguments
+unexpanded (DESIGN.md section 62), so an inner call can run that the
+outer one would have dropped (Next, item 9).
 
 The tests OCaml accepts and this runner refuses, with a session's
 reading of why:
@@ -394,8 +391,11 @@ computes.
    1. Expand where the elaborator meets a form, with its real scope
       (telescope entries, `let` binders, match branches, `def-adts`
       constructors, arguments), instead of pre-expanding each
-      top-level form (`preExpand`, `binderNames`). This fixes the wrong
-      answer above, and `resolve` then sees pattern variables.
+      top-level form (`preExpand`, `nonHeadAtoms`, `binderNames`). This
+      fixes the order of expansion above, and `resolve` then sees
+      pattern variables. A smaller repair, discussed with the owner but
+      not chosen: never walk into a list whose head is, or may become, a
+      macro before deciding about that head.
    2. Refuse a match on `MacroWorld` or `Gensym` outside the prelude.
       The reference refuses it because neither has a `Matchable`; the
       reader here checks a `Matchable` only for a constructor named
