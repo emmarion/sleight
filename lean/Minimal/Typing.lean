@@ -168,6 +168,9 @@ def chkStep (Γ : Ctx) : Chk → Tm → Ctx
 def pushWdo (Γ : Ctx) (Tw A w : Tm) : Ctx :=
   ((Γ.push Tw false).slotIf w.varSlot.isSome Γ.n (Γ.canon (w.varSlot.getD .nil))).push A false
 
+@[simp] theorem pushWdo_n (Γ : Ctx) (Tw A w : Tm) : (Γ.pushWdo Tw A w).n = Γ.n + 2 := by
+  simp [pushWdo, push, n]
+
 def pushPrim0 (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
@@ -398,6 +401,10 @@ def Ctx.ntSlot (Γ Γf : Ctx) (s k : Tm) : Ctx :=
     | some j => Γf.withSlot (Γ.n + j) (Γ.canon σ)
     | none => Γf
   | _, _ => Γf
+
+theorem Ctx.ntSlot_fields (Γ Γf : Ctx) (s k : Tm) :
+    (Γ.ntSlot P Γf s k).ghost = Γf.ghost ∧ (Γ.ntSlot P Γf s k).er = Γf.er ∧ (Γ.ntSlot P Γf s k).n = Γf.n := by
+  unfold Ctx.ntSlot; split <;> (try split) <;> simp
 
 def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1

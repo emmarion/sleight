@@ -147,7 +147,8 @@ theorem UqOK.next {G : UCtx} {Γ' : Ctx} {us : List Bool} {U : Uses} (hn : G.Γ.
   · exact UCtx.next_uq h
   · exact .inr (Nat.le_trans hn h)
 
-theorem Ctx.branch_fst (Γ : Ctx) (s k H idx sig : Tm) : (Γ.branch P s k H idx sig).1 = (Γ.openTele sig (sig.len - 1)).1 := by
+theorem Ctx.branch_fst (Γ : Ctx) (s k H idx sig : Tm) :
+    (Γ.branch P s k H idx sig).1 = Γ.ntSlot P (Γ.openTele sig (sig.len - 1)).1 s k := by
   rcases h : Γ.openTele sig (sig.len - 1) with ⟨Γf, rem⟩
   simp only [Ctx.branch, h]; split <;> rfl
 
@@ -157,13 +158,13 @@ theorem branchCtx_spec {G Gb : UCtx} {s k H idx sig : Tm} {fe ph uscr cell : Boo
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  have hf : Γf = ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 := by
+  have hf : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k := by
     rw [← Ctx.branch_fst, hb]
   rw [hb] at h
   cases r with
   | ok σ =>
     simp only [Option.some.injEq] at h; subst h
-    have hn : G.Γ.n ≤ Γf.n := by rw [hf]; exact Ctx.openTele_n_le _ { G.Γ with ghost := G.Γ.ghost || ph } _
+    have hn : G.Γ.n ≤ Γf.n := by rw [hf, (Ctx.ntSlot_fields P _ _ s k).2.2]; exact Ctx.openTele_n_le _ { G.Γ with ghost := G.Γ.ghost || ph } _
     refine ⟨?_, fun i hi hc => ?_, rfl⟩
     · simp only [UCtx.next]; split <;> simpa [Ctx.n] using hn
     · rcases UCtx.next_uq hc with h | h
@@ -699,7 +700,7 @@ theorem machine_defLvl {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {rest :
 
 theorem Ctx.pushPrim_er' (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) (i : Nat) :
     (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
-  cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
+  simp only [Ctx.pushPrim, Ctx.slotIf_er]; show (Γ.pushPrim0 T er p).er i = _; cases p <;> simp [Ctx.pushPrim0]
 
 theorem Ctx.pushPrim_n (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim P T er p).n = Γ.n + 1 := by
   cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule, Ctx.n]
@@ -1393,15 +1394,17 @@ theorem branchCtx_fld {G Gb : UCtx} {s k H idx sig : Tm} {cell : Bool} (hf : G.f
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || false } s k H idx sig with ⟨Γf, r⟩
-  have hfe : Γf = ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 := by
+  have hfe : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || false } ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 s k := by
     rw [← Ctx.branch_fst, hb]
+  obtain ⟨eg, eer, en⟩ := Ctx.ntSlot_fields P { G.Γ with ghost := G.Γ.ghost || false } ({ G.Γ with ghost := G.Γ.ghost || false }.openTele sig (sig.len - 1)).1 s k
+  rw [← hfe] at eg eer en
   rw [hb] at h
   cases r with
   | ok σ =>
     simp only [Option.some.injEq] at h; subst h
     obtain ⟨g, h1, h2⟩ := Ctx.openTele_er (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || false } sig hT
     have hn := Ctx.openTele_n_eq (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || false } sig hT (by omega)
-    rw [← hfe] at g h1 h2 hn
+    rw [← eg] at g; rw [← eer] at h1 h2; rw [← en] at hn
     have hl := Tm.len_ers _ hT
     simp only [UCtx.next, hf, Bool.false_eq_true, ite_false, Bool.not_false, Bool.and_true, Ctx.advBr_n,
       Ctx.advBr_er, Ctx.advBr_ghost, Ctx.setErs_n, Ctx.setErs_ghost, Ctx.er_upd_cmode, Ctx.er_upd_ghost]
@@ -1907,15 +1910,17 @@ theorem branchCtx_erf {G Gb : UCtx} {s k H idx sig : Tm} {ph cell : Bool} (hf : 
   unfold UCtx.branchCtx at h
   simp only at h
   rcases hb : Ctx.branch P { G.Γ with ghost := G.Γ.ghost || ph } s k H idx sig with ⟨Γf, r⟩
-  have hfe : Γf = ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 := by
+  have hfe : Γf = Ctx.ntSlot P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k := by
     rw [← Ctx.branch_fst, hb]
+  obtain ⟨eg, eer, en⟩ := Ctx.ntSlot_fields P { G.Γ with ghost := G.Γ.ghost || ph } ({ G.Γ with ghost := G.Γ.ghost || ph }.openTele sig (sig.len - 1)).1 s k
+  rw [← hfe] at eg eer en
   rw [hb] at h
   cases r with
   | ok σ =>
     simp only [Option.some.injEq] at h; subst h
     obtain ⟨g, h1, -⟩ := Ctx.openTele_er (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || ph } sig hT
     have hn := Ctx.openTele_n_eq (sig.len - 1) { G.Γ with ghost := G.Γ.ghost || ph } sig hT (by omega)
-    rw [← hfe] at g h1 hn
+    rw [← eg] at g; rw [← eer] at h1; rw [← en] at hn
     simp only [UCtx.next, hf, Bool.false_eq_true, ite_false, Bool.not_true, Bool.and_false, Ctx.advBr_er,
       Ctx.advBr_ghost, Ctx.setErs_n, Ctx.setErs_ghost, Ctx.er_setErs, Ctx.er_upd_cmode, Ctx.er_upd_ghost, ite_true, List.take_nil, List.zipIdx_nil,
       List.filterMap_nil, List.append_nil]
