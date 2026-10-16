@@ -82,13 +82,56 @@ def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
+def withSlot (Γ : Ctx) (e : Nat) (s : Tm) : Ctx :=
+  if s.isSlotVal Γ.n then { Γ with ς := fun i => if i = e then some s else Γ.ς i } else Γ
+
+def slotIf (Γ : Ctx) (b : Bool) (e : Nat) (s : Tm) : Ctx := if b then Γ.withSlot e s else Γ
+
+section
+variable (Γ : Ctx) (e : Nat) (s : Tm)
+@[simp] theorem withSlot_tys : (Γ.withSlot e s).tys = Γ.tys := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_σ : (Γ.withSlot e s).σ = Γ.σ := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_erA : (Γ.withSlot e s).erA = Γ.erA := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_mints : (Γ.withSlot e s).mints = Γ.mints := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_cur : (Γ.withSlot e s).cur = Γ.cur := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_subs : (Γ.withSlot e s).subs = Γ.subs := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_ghost : (Γ.withSlot e s).ghost = Γ.ghost := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_opened : (Γ.withSlot e s).opened = Γ.opened := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_fixed : (Γ.withSlot e s).fixed = Γ.fixed := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_cmode : (Γ.withSlot e s).cmode = Γ.cmode := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_deles : (Γ.withSlot e s).deles = Γ.deles := by unfold withSlot; split <;> rfl
+@[simp] theorem withSlot_n : (Γ.withSlot e s).n = Γ.n := by simp [n]
+@[simp] theorem withSlot_er : (Γ.withSlot e s).er = Γ.er := by funext i; simp [er]
+theorem withSlot_upd_ghost (g : Bool) : ({ Γ with ghost := g } : Ctx).withSlot e s = { Γ.withSlot e s with ghost := g } := by
+  unfold withSlot; simp only [n]; split <;> simp_all
+end
+
+section
+variable (Γ : Ctx) (b : Bool) (e : Nat) (s : Tm)
+@[simp] theorem slotIf_tys : (Γ.slotIf b e s).tys = Γ.tys := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_σ : (Γ.slotIf b e s).σ = Γ.σ := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_erA : (Γ.slotIf b e s).erA = Γ.erA := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_mints : (Γ.slotIf b e s).mints = Γ.mints := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_cur : (Γ.slotIf b e s).cur = Γ.cur := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_subs : (Γ.slotIf b e s).subs = Γ.subs := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_ghost : (Γ.slotIf b e s).ghost = Γ.ghost := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_opened : (Γ.slotIf b e s).opened = Γ.opened := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_fixed : (Γ.slotIf b e s).fixed = Γ.fixed := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_cmode : (Γ.slotIf b e s).cmode = Γ.cmode := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_deles : (Γ.slotIf b e s).deles = Γ.deles := by cases b <;> simp [slotIf]
+@[simp] theorem slotIf_n : (Γ.slotIf b e s).n = Γ.n := by simp [n]
+@[simp] theorem slotIf_er : (Γ.slotIf b e s).er = Γ.er := by funext i; simp [er]
+theorem slotIf_upd_ghost (g : Bool) : ({ Γ with ghost := g } : Ctx).slotIf b e s = { Γ.slotIf b e s with ghost := g } := by
+  cases b <;> simp [slotIf, withSlot_upd_ghost]
+end
+
 def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
   | .ty _ e _, A => Γ.push A e
-  | .is _ e _, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
+  | .is _ e _ sl, x => ((Γ.push .nil e).withRule Γ.n (Γ.canon x)).slotIf sl (Γ.n - 1) (Γ.canon x)
 
 def openTele : Ctx → Tm → Nat → Ctx × Tm
   | Γ, .bind k A r, m + 1 => (Γ.pushEnt k A).openTele (r.inst (.fv Γ.n) 0) m
@@ -372,7 +415,7 @@ inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
       TeleOK Γ (.bind (.ty m e u) A r)
-  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is ..) e r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false false false false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is ..) e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop

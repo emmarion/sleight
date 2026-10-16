@@ -119,7 +119,7 @@ def inferArgs (Γ : Ctx) (args : List Tm) (tele : Tm) (exp : Option Tm := none) 
 
 def useTele : Nat → Tm → Tm
   | 0, A => .bind (.ty false false false) A .nil
-  | k + 1, A => .bind (.is false false false) .hole (useTele k A)
+  | k + 1, A => .bind (.is false false false false) .hole (useTele k A)
 
 def Core.returnsNext (Γ : Ctx) (k : Nat) : Core → Bool
   | .ret ts => ts.toList == (List.range k).map (.fv <| Γ.n + ·)

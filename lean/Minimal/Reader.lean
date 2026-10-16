@@ -421,7 +421,7 @@ def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
     let (m, xs) ← splitMd need xs
     match xs with
-    | [e, .atom "is", x] => pure (.is sub m.isEr (m == .uniq), e, [← name x])
+    | [e, .atom "is", x] => pure (.is sub m.isEr (m == .uniq) false, e, [← name x])
     | T :: x :: xs => pure (.ty sub m.isEr (m == .uniq), T, ← (x :: xs).mapM name)
     | _ => throw "malformed telescope entry"
   | _ => throw "malformed telescope entry"
@@ -461,7 +461,7 @@ def hidMds (tele : Tm) (hm : List Bool) : List Mode :=
 
 def Ent.withEr : Ent → Bool → Ent
   | .ty m _ u, e => .ty m e u
-  | .is m _ u, e => .is m e u
+  | .is m _ u sl, e => .is m e u sl
 
 def setErs : Tm → List Bool → Tm
   | .bind k A r, e :: es => .bind (k.withEr e) A (setErs r es)
@@ -1239,11 +1239,11 @@ partial def teleH (sc : Scope) (depth : Nat) (need : String → Option String �
     let hid ← if need x tgt then do
         match tgt with
         | some v => match sc.lookup (" slot " ++ v), sc.lookup v with
-          | some (.bnd lv), _ => pure (some (Ent.is false true false, Tm.bv (depth - 1 - lv)))
-          | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false, ← slotOf i))
+          | some (.bnd lv), _ => pure (some (Ent.is false true false false, Tm.bv (depth - 1 - lv)))
+          | _, some (.fv i) | _, some (.ctor i) | _, some (.fn i _ _) => pure (some (Ent.is false true false false, ← slotOf i))
           | _, some _ => throw s!"`at` naming `{showName v}`, bound by an enclosing telescope, is not supported"
           | _, none =>
-            if v == "vacant-slot" then pure (some (Ent.is false true false, .app (.vc slotD 0 .nil) .nil))
+            if v == "vacant-slot" then pure (some (Ent.is false true false false, .app (.vc slotD 0 .nil) .nil))
             else throw s!"unbound name {showName v}"
         | none => pure (some (Ent.ty false true false, Tm.app (.tyc slotD .nil) .nil))
       else pure none
