@@ -4,26 +4,26 @@ namespace Minimal.Tm
 
 @[simp] theorem vacant_subst (f : Nat → Tm) : vacant.subst f = vacant := rfl
 @[simp] theorem vacant_inst (u : Tm) (k : Nat) : vacant.inst u k = vacant := rfl
-@[simp] theorem slotOf_slotOf (t : Tm) : slotOf (slotOf t) = vacant := by cases t <;> rfl
+@[simp] theorem slotOf_slotOf (t : Tm) : slotOf (slotOf t) = slotOf t := by cases t <;> rfl
 
 theorem slotOf_subst (f : Nat → Tm) (t : Tm) : (slotOf t).subst f = slotOf (t.subst f) := by
   cases t with
   | fv j => rfl
-  | sfv i => show vacant.subst f = slotOf (slotOf (f i)); simp
+  | sfv i => show slotOf (f i) = slotOf (slotOf (f i)); simp
   | _ => rfl
 
 theorem slotOf_ne_clo (t env : Tm) (g j : Nat) : slotOf t ≠ clo env g j := by cases t <;> simp [slotOf, vacant]
 
 theorem slotOK_spec {P : Prog} (h : P.slotOK = true) : ∃ D m e u, P.adts[slotD]? = some D ∧
     D.ctors = [.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil] ∧ D.lifted = 0 ∧ D.newtype = false ∧
-    P.phantom slotD 0 = false := by
+    D.opq = false ∧ P.phantom slotD 0 = false := by
   unfold Prog.slotOK at h
   split at h
   · rename_i D hD
     simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_eq_eq_not, Bool.not_true] at h
-    obtain ⟨⟨⟨hc, hl⟩, hn⟩, hp⟩ := h
+    obtain ⟨⟨⟨⟨hc, hl⟩, hn⟩, ho⟩, hp⟩ := h
     split at hc
-    · rename_i m e u d' hcs; simp at hc; subst hc; exact ⟨D, m, e, u, hD, hcs, hl, hn, hp⟩
+    · rename_i m e u d' hcs; simp at hc; subst hc; exact ⟨D, m, e, u, hD, hcs, hl, hn, ho, hp⟩
     · cases hc
   · cases h
 

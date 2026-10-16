@@ -133,6 +133,12 @@ theorem slotIf_upd_ghost (g : Bool) : ({ Γ with ghost := g } : Ctx).slotIf b e 
   cases b <;> simp [slotIf, withSlot_upd_ghost]
 end
 
+def slotSelf (Γ : Ctx) (s : Nat) : Option Ctx :=
+  let c := Γ.canon (.fv s)
+  if c.isSlotVal Γ.n then some (Γ.withSlot s c)
+  else if c = .fv s then some (Γ.withRule s (Γ.canon (.sfv s)))
+  else none
+
 def pushPrim0 (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
@@ -634,6 +640,8 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
   | chkMark : CoreTy b Γ rest rets → CoreTy b Γ (.chk (.mark m) a x rest) rets
   | chkCm : CoreTy b { Γ with cmode := true } rest rets → CoreTy b Γ (.chk .cm a x rest) rets
+  | chkSlf : P.slotOK = true → TmTy P Γ (.fv s) S → Γ.canon S = .app (.tyc slotD .nil) .nil →
+      Γ.slotSelf s = some Γ' → CoreTy b Γ' rest rets → CoreTy b Γ (.chk .slf (.fv s) x rest) rets
   | chkOpn : Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.toList.Nodup →
       unify Γ.n (Ctx.atoms P { Γ with opened := (m, oe) :: Γ.opened }) Γ.σ []
         (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList)) = .ok σ' →

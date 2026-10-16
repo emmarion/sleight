@@ -377,22 +377,26 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     · exact (hm _ _ _ _ _ _ ‹_›).elim
     · cases h
   case case29 => rename_i ih; exact ih hf U K h
-  case case30 => rename_i ih; exact ih hf U K h
-  case case31 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case32 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case35 =>
+  case case30 =>
+    rename_i hΓ ih; simp only [hΓ] at h
+    have e := Ctx.slotSelf_eq hΓ; have := ih hf U K h; rw [e] at this; exact this
+  case case31 => rename_i hΓ; simp only [hΓ] at h; cases h
+  case case32 => rename_i ih; exact ih hf U K h
+  case case33 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case34 => simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
+  case case37 =>
     rename_i hf U K h
     rw [usesEls] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case36 =>
+  case case38 =>
     rename_i ih hf U K h
     rw [usesEls] at h
     obtain ⟨⟨EU, EK⟩, hE, h⟩ := Option.bind_eq_some_iff.mp h
     cases h
     exact UqOK.below (Nat.le_refl _) (fun _ _ h => h) (ih hf EU EK hE)
-  case case37 =>
+  case case39 =>
     rename_i hf U K h
     rw [usesArms] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; exact UqOK.nil
-  case case38 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
+  case case40 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp Gb hbr ihr ihb hf U K h =>
     rw [usesArms] at h
     simp only [hshp, hbr] at h
     obtain ⟨⟨BU, BK⟩, hB, h⟩ := Option.bind_eq_some_iff.mp h
@@ -402,14 +406,14 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     obtain ⟨hn, huq, hfb⟩ := branchCtx_spec hbr
     exact UqOK.join (UqOK.below hn huq (ihb (hfb.trans hf) BU BK hB)) (ihr hf RU RK hR)
-  case case39 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
+  case case41 b G ru R s H idx shp fe cell f1 c f2 body brs k sig ph hshp hbr ihr hf U K h =>
     rw [usesArms] at h
     simp only [hshp] at h
     rcases hR : usesArms P b G ru R s H idx shp fe cell brs with _ | ⟨RU, RK⟩ <;> rw [hR] at h
     · cases h
     simp only [bind, Option.bind, Option.some.injEq, UR.join, UR.below, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h
     exact UqOK.join UqOK.nil (ihr hf RU RK hR)
-  case case40 =>
+  case case42 =>
     rename_i hshp ihr hf U K h
     rw [usesArms] at h
     simp [hshp] at h
@@ -3375,6 +3379,17 @@ theorem machine_opn {b : Nat} {G : UCtx} {ru : List Bool} {rets x : Tm} {oe u nt
     MRun P b G ru rets (.chk (.opn oe) (.fv m) x rest) ρ vs :=
   machine_same (G' := { G with Γ := { G.Γ with opened := (m, oe) :: G.Γ.opened, σ := σ' } }) rfl rfl rfl rfl rfl rfl rfl ih
     (fun U K h => ⟨U, K, by rw [usesCore] at h; simp only [hm, hu] at h; exact h, Uses.Eqb.refl _ _⟩)
+    (fun ρS vsS h => by cases h with | chk h => exact h) (fun H ρM pd H' out h => .chk (fun m e => by cases e) h)
+
+theorem machine_slf {b : Nat} {G : UCtx} {ru : List Bool} {rets x : Tm} {s : Nat} {Γ' : Ctx} {rest : Core}
+    {ρ vs : List Tm} (hΓ : G.Γ.slotSelf s = some Γ')
+    (ih' : MRun P b { G with Γ := Γ' } ru rets rest ρ vs) :
+    MRun P b G ru rets (.chk .slf (.fv s) x rest) ρ vs :=
+  have ih : MRun P b { G with Γ := { G.Γ with σ := Γ'.σ, ς := Γ'.ς } } ru rets rest ρ vs := by
+    rw [← Ctx.slotSelf_eq hΓ]; exact ih'
+  machine_same (G' := { G with Γ := { G.Γ with σ := Γ'.σ, ς := Γ'.ς } }) rfl rfl rfl rfl rfl rfl rfl ih
+    (fun U K h => ⟨U, K, by rw [usesCore] at h; simp only [hΓ] at h; rw [Ctx.slotSelf_eq hΓ] at h; exact h,
+      Uses.Eqb.refl _ _⟩)
     (fun ρS vsS h => by cases h with | chk h => exact h) (fun H ρM pd H' out h => .chk (fun m e => by cases e) h)
 
 theorem Spine.clo_inv {H : Heap} {w u eF : Tm} {gid j b : Nat} (hs : Spine P H w u (.clo eF gid j) b) :

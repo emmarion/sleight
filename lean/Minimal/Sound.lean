@@ -445,7 +445,7 @@ theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) 
   | _, _, .fn _ _ _ _ hs => ⟨.univ, hs, rfl⟩
   | _, _, .mtbl hs => ⟨.univ, hs, rfl⟩
   | _, _, .sfv (i := i) hi hs => by
-    obtain ⟨D, m, e, u, hD, hc, hl, -, -⟩ := Tm.slotOK_spec hs
+    obtain ⟨D, m, e, u, hD, hc, hl, -, -, -⟩ := Tm.slotOK_spec hs
     have hct : P.ctor slotD 0 = some (.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil) := by
       simp [Prog.ctor, hD, hc]
     have hv : (Tm.sfv i).subst (Tm.env ρ) = Tm.vacant := by
@@ -1573,6 +1573,34 @@ theorem VTy.atom_inv {d : Nat} {D : Adt} {m e u : Bool} (hD : P.adts[d]? = some 
   | opq hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
   | world _ hD' ho' => rw [hD] at hD'; cases hD'; rw [ho] at ho'; cases ho'
 
+theorem Ctx.slotSelf_eq {Γ Γ' : Ctx} {s : Nat} (h : Γ.slotSelf s = some Γ') :
+    Γ' = { Γ with σ := Γ'.σ, ς := Γ'.ς } := by
+  unfold Ctx.slotSelf at h; simp only [] at h
+  split at h
+  · cases h; unfold Ctx.withSlot; split <;> rfl
+  · split at h
+    · cases h; rfl
+    · cases h
+
+theorem EnvOK.slotSelf (hP : ProgOK P) {ρ : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) {s : Nat} {S : Tm}
+    (hok : P.slotOK = true) (hs : TmTy P Γ (.fv s) S) (hS : Γ.canon S = .app (.tyc slotD .nil) .nil)
+    (h : Γ.slotSelf s = some Γ') : EnvOK P ρ Γ' := by
+  obtain ⟨hv, hst, -⟩ := tm_sound hP hE hs
+  have hsn : s < Γ.n := by simpa [Tm.static] using hst
+  unfold Ctx.slotSelf at h; simp only [] at h
+  split at h
+  · cases h; exact hE.withSlot _ hsn
+  · split at h
+    · cases h
+      obtain ⟨D, m, e, u, hD, hc, hl, -, ho, -⟩ := Tm.slotOK_spec hok
+      rw [← hE.canon S, hS] at hv; simp only [Tm.subst] at hv
+      have hvac := VTy.atom_inv hD hc hl ho hv
+      have hss : (Tm.sfv s).static Γ.n 0 := by simpa [Tm.static] using hsn
+      refine hE.withRule hsn (canon_static hE.wf hss) ?_
+      rw [hE.canon]; simp only [Tm.subst] at hvac ⊢
+      rw [hvac]; rfl
+    · cases h
+
 structure Prog.OracleOK (P : Prog) : Prop where
   typed : ∀ k c rd ls vs ls' A, P.requestD = some rd → VTy P (.app (.vc rd c ls) vs) (.app (.tyc rd ls') (.cons A .nil)) →
     VTy P (P.ask k c).2 A ∧ Real P (P.ask k c).1 (P.ask k c).2
@@ -2079,7 +2107,7 @@ theorem rt_real (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ �
   | .fv i, h => by simp only [rt, Bool.not_eq_eq_eq_not, Bool.not_true] at h; exact hS.2 i h
   | .sfv i, h => by
     simp only [rt, Bool.and_eq_true] at h
-    obtain ⟨D, m, e, u, hD, hc, -, hn, hp⟩ := Tm.slotOK_spec h.2
+    obtain ⟨D, m, e, u, hD, hc, -, hn, -, hp⟩ := Tm.slotOK_spec h.2
     have hct : P.ctor slotD 0 = some (.bind (.ty m e u) (.app (.tyc slotD .nil) .nil) .nil) := by
       simp [Prog.ctor, hD, hc]
     have hw : P.wrapField slotD 0 = none := by simp [Prog.wrapField, Prog.isNt, hD, hn]
@@ -3963,14 +3991,20 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
   | case15 μ ρ cnt k a e rest ih =>
     intro b Γ rets hc hE hb hm hrs
     rw [eval]
-    have : ∃ o σ' cm, CoreTy P b { Γ with opened := o, σ := σ', cmode := cm } rest rets ∧
-        EnvOK P ρ { Γ with opened := o, σ := σ', cmode := cm } := by
+    have : ∃ o σ' ς' cm, CoreTy P b { Γ with opened := o, σ := σ', ς := ς', cmode := cm } rest rets ∧
+        EnvOK P ρ { Γ with opened := o, σ := σ', ς := ς', cmode := cm } := by
       cases hc with
-      | chkOpn _ _ _ hu h => exact ⟨_, _, _, h, hE.opened hP hu⟩
+      | chkOpn _ _ _ hu h => exact ⟨_, _, Γ.ς, _, h, hE.opened hP hu⟩
       | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
-      | chkCm h => exact ⟨Γ.opened, Γ.σ, true, h, hE.congr _ rfl rfl rfl rfl rfl⟩
-      | _ => exact ⟨Γ.opened, Γ.σ, Γ.cmode, by assumption, hE.congr _ rfl rfl rfl rfl rfl⟩
-    obtain ⟨o, σ', cm, h', hE'⟩ := this
+      | chkCm h => exact ⟨Γ.opened, Γ.σ, Γ.ς, true, h, hE.congr _ rfl rfl rfl rfl rfl⟩
+      | chkSlf hok hs hS hΓ h =>
+        rename_i Γ'
+        have e := Ctx.slotSelf_eq hΓ
+        refine ⟨Γ.opened, Γ'.σ, Γ'.ς, Γ.cmode, ?_, ?_⟩
+        · rw [e] at h; exact h
+        · have := hE.slotSelf hP hok hs hS hΓ; rw [e] at this; exact this
+      | _ => exact ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, by assumption, hE.congr _ rfl rfl rfl rfl rfl⟩
+    obtain ⟨o, σ', ς', cm, h', hE'⟩ := this
     have ih' := ih b _ rets h' hE' hb hm hrs
     refine ⟨ih'.1, fun hg ρS hS vs cnt' hr' => ?_⟩
     obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg ρS hS vs cnt' hr'

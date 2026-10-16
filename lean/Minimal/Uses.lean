@@ -251,6 +251,9 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       | _ => some ([], [])
     | _ => none
   | .chk .cm _ _ rest => usesCore b { G with Γ := { G.Γ with cmode := true } } ru rets rest
+  | .chk .slf (.fv s) _ rest => match G.Γ.slotSelf s with
+    | some Γ' => usesCore b { G with Γ := Γ' } ru rets rest
+    | none => none
   | .chk _ _ _ rest => usesCore b G ru rets rest
   | .absurd _ | .dead => some ([], [])
 termination_by c => (b, sizeOf c)

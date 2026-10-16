@@ -817,6 +817,15 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       | _ => .error "open-adt: not a Matchable"
     | none => .error "open-adt: unbound"
   | .chk (.opn _) .., _ => .error "open-adt: not an entry"
+  | .chk .slf (.fv s) _ rest, rets => do
+    let ⟨hok⟩ ← need (P.slotOK = true) "`Slot` is not the built-in type of one constructor"
+    let ⟨S, hs⟩ ← checkTm P Γ (.fv s)
+    let ⟨hS⟩ ← need (Γ.canon S = .app (.tyc slotD .nil) .nil) "slot-self: not a `(Slot)`"
+    if h : (Γ.slotSelf s).isSome then do
+      let ⟨R, hr, eq⟩ ← checkCore b ((Γ.slotSelf s).get h) rest rets
+      .ok ⟨R, .chkSlf hok hs hS (Option.some_get h).symm hr, eq⟩
+    else .error "slot-self: the variable is known to be something other than a slot"
+  | .chk .slf .., _ => .error "slot-self: not an entry"
   | .chk .cm _ _ rest, rets => do
     let ⟨R, hr, eq⟩ ← checkCore b { Γ with cmode := true } rest rets
     .ok ⟨R, .chkCm hr, eq⟩
