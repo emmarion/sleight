@@ -439,9 +439,10 @@ it is `Settled`, and its `is` rule.
   function that has one. `mint-settled` of a number or a string gives
   the handle of that literal; of any other value, a handle usable only
   as the head of a macro call. `resolve` sees the scope at the call.
+  A handle at `MErased` to a value splices as a form that the
+  elaborator refuses outside an erased position.
   Not supported: `read-file`, `mint-settled-erased`, `settled-mult` and
-  `settled-value` outside a macro's function, positions, and the
-  refusal of a handle used against its multiplicity.
+  `settled-value` outside a macro's function, and positions.
 - Arrays and `Bytes` (DESIGN.md section 44): the prelude's operations on
   them are `extern` functions whose models run, and inside an `extern`
   function's body a cell of an `extern` constructor is allowed (section

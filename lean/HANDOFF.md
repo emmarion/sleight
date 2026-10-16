@@ -13,9 +13,9 @@ the test expects and the runner's; a test's `; needs:` files are read
 with it under `--shared`. At the last full run 419 tests were
 accepted with OCaml's value, 528 refusals agreed, and 17 + 58 were
 refused as unsupported; 7 tests OCaml accepts are refused, and two
-tests OCaml refuses are accepted (`macro_handle_erased_bad.sl` and
-`macro_settled_erase_bad.sl`: a handle used against its multiplicity is
-not refused here). The runner does not implement `cell-same`, so the prelude
+tests OCaml refuses were accepted (`macro_handle_erased_bad.sl` and
+`macro_settled_erase_bad.sl`), which a later change refuses with the
+reference's message. The runner does not implement `cell-same`, so the prelude
 leaves out `nat-same` and the other functions DESIGN.md section 42 builds
 on it (item 9).
 
@@ -412,7 +412,7 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
       the encoding cannot express the design there.
    5. Then: positions (a macro sees `NoPos`), handles as run-time values
       (a new term; `settled-mult` and `settled-value` outside a macro's
-      function), refusing a handle used against its multiplicity,
+      function),
       `read-file`, `mint-settled-erased`, a minted macro bound by a
       `let`, and `settled-eq` on terms the reader's canonicalization
       does not make identical.

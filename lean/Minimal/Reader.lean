@@ -855,7 +855,11 @@ partial def sxOf (P : Prog) (t : Tm) : M Sx := do
           | .tyc d _ => modify fun st => { st with adts := (x, d) :: st.adts }
           | .vc d c _ => modify fun st => { st with ctors := (x, d, c) :: st.ctors }
           | _ => pure ()
-      pure hi.syn
+      match hi.mult, hi.syn with
+      | 0, .atom x =>
+        if [" t", " y", "\x04"].any (x.startsWith ·) || x == "Type" then pure hi.syn
+        else pure (.list [.atom " ers", .atom (toString (Prog.natOf P.nat h).get!), hi.syn])
+      | _, syn => pure syn
     | none => throw "a macro returned a handle the expander did not make"
   | _ => throw "a macro returned a form that is not a Raw"
 
@@ -1068,6 +1072,7 @@ partial def elabTm (sc : Scope) (depth : Nat) (e : Sx) : M Tm := do
 
 partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
   | .atom "Type" => pure .univ
+  | .list [.atom " ers", _, x] => elabTm sc depth x
   | .list [.atom " hty", .atom k] => do
     let some h := (← get).handles[k.toNat!]? | throw "unreachable: no handle"
     if h.ty == .nil then pure .hole else pure h.ty
@@ -1792,6 +1797,13 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
         args.head? != some (.atom " mw") then
       let some (_, r) ← mwInScope sc | throw s!"`{h}` outside a macro's function is not supported"
       return ← elabExpr ((" mw", r) :: sc) want exp (.list (.atom h :: .atom " mw" :: args))
+  if let .list [.atom " ers", .atom k, x] := e then
+    if ← erasedPos want then return ← elabExpr sc want exp x
+    let st ← get
+    let shown := match x, st.handles[k.toNat!]? with
+      | .atom a, some h => if a.startsWith " " then st.showTm (s!"__{·}") (h.val.getD h.den) else a
+      | _, _ => "?"
+    throw s!"a handle to {shown}, made `erased`, used in a non-erased position"
   match ← resolveHead sc (headUse want) e with
   | .list [.atom "\x03var", .atom x] => do let t ← look sc 0 x; useTm t want; return ([], [t])
   | e@(.list (hd@(.list _) :: args)) => do
