@@ -267,6 +267,8 @@ theorem rt_build {Γ : Ctx} {f fS fF : Nat → Tm} : ∀ {H : Heap}, H.WF → �
     H.Ext (P.build H f t).1 ∧ (P.build H f t).1.WF ∧ MDec P (P.build H f t).1 (P.build H f t).2 (P.subU fS t)
   | H, hW, .fv i, _, hr, _ => by
     simp only [Prog.build, Prog.subU]; exact ⟨Heap.Ext.refl _, hW, hr i (by simp [rtReads])⟩
+  | H, hW, .sfv i, _, _, _ => by
+    simp only [Prog.build, Prog.subU]; exact ⟨Heap.Ext.refl _, hW, .imm⟩
   | H, hW, .vc d c ls, _, _, _ => by
     simp only [Prog.build, Prog.subU]; exact ⟨Heap.Ext.refl _, hW, .vc⟩
   | H, hW, .app (.vc d c ls) args, h, hr, hh => by
@@ -475,6 +477,7 @@ theorem rt_build_foot {Γ : Ctx} {f fS fF : Nat → Tm} : ∀ {H : Heap}, H.WF �
     H.next ≤ b ∨ ∃ i ∈ rtReads P Γ t, Foot P H (f i) (fS i) b
   | H, hW, .fv i, _, hr, _, b, hf => by
     simp only [Prog.build, Prog.subU] at hf; exact .inr ⟨i, by simp [rtReads], hf⟩
+  | H, hW, .sfv i, _, _, _, b, hf => by simp only [Prog.build, Prog.subU, Tm.vacant] at hf; cases hf
   | H, hW, .vc d c ls, _, _, _, b, hf => by simp only [Prog.build, Prog.subU] at hf; cases hf
   | H, hW, .app (.vc d c ls) args, h, hr, hh, b, hf => by
     simp only [rt] at h
@@ -1131,6 +1134,7 @@ theorem head_ok (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ �
 mutual
 theorem heads_ok (hP : ProgOK P) {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) :
     ∀ t, rt P Γ t = true → HeadsOK P Γ (Tm.env ρS) (Tm.env ρ) (rtHeads P Γ t)
+  | .sfv _, _ => by intro i sg hi; simp [rtHeads] at hi
   | .app (.vc d c ls) args, h => by
     intro i sg hi hsg
     simp only [rt] at h; simp only [rtHeads] at hi

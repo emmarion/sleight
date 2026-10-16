@@ -44,6 +44,10 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     | none, _ => .error s!"unbound entry {i}"
   | .univ => .ok ⟨.univ, .univ⟩
   | .level => .ok ⟨.univ, .level⟩
+  | .sfv i => do
+    let ⟨hi⟩ ← need (i < Γ.n) s!"the slot of an unbound entry {i}"
+    let ⟨hs⟩ ← need (P.slotOK = true) "`Slot` is not the built-in type of one constructor"
+    .ok ⟨_, .sfv hi hs⟩
   | .tyc d ls => match h : P.adts[d]? with
     | some D => do
       let ⟨hl⟩ ← need (ls.len = D.lifted) "a type constructor with the wrong number of lifted arguments"
