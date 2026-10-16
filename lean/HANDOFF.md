@@ -10,12 +10,10 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 419 tests were
-accepted with OCaml's value, 528 refusals agreed, and 17 + 58 were
-refused as unsupported; 7 tests OCaml accepts are refused, and two
-tests OCaml refuses were accepted (`macro_handle_erased_bad.sl` and
-`macro_settled_erase_bad.sl`), which a later change refuses with the
-reference's message. The runner does not implement `cell-same`, so the prelude
+with it under `--shared`. At the last full run 421 tests were
+accepted with OCaml's value, 531 refusals agreed, and 19 + 59 were
+refused as unsupported; 7 tests OCaml accepts are refused, and one test
+OCaml refuses is accepted (`macro_mint_numeral_of_bad.sl`, item 9). The runner does not implement `cell-same`, so the prelude
 leaves out `nat-same` and the other functions DESIGN.md section 42 builds
 on it (item 9).
 
@@ -415,6 +413,13 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
       `read-file`, `mint-settled-erased`, a minted macro bound by a
       `let`, and `settled-eq` on terms the reader's canonicalization
       does not make identical.
+      `mint-settled` of a number or a string gives that literal's
+      handle here, where the reference mints a fresh opaque constant:
+      so `macro_mint_nat_distinct.sl` finds two mints of 3 equal, and
+      `macro_mint_numeral_of_bad.sl`, which the reference refuses
+      (`numeral-of` takes a literal), is accepted. A session's reading
+      is that the value is still the literal's, so this accepts more
+      than the reference, not a false result.
 10. A computed head inside a type other than a variable or `(share x)`
    whose settled value is a `Special` constructor: types are elaborated
    by `elabTm`, which runs no statements.
