@@ -14,9 +14,9 @@ with it under `--shared`. At the last full run 422 tests were
 accepted with OCaml's value, 532 refusals agreed, and 19 + 62 were
 refused as unsupported; 7 tests OCaml accepts are refused, and one test
 OCaml refuses is accepted (`macro_mint_numeral_of_bad.sl`, item 9).
-`mini_axioms.sl` took about 20 seconds on this branch, at the edge of
-the walk's 20-second limit; a session suspects the closures that slot
-unions wrap around the rule maps (`Ctx.bindSlot`), not measured. The runner does not implement `cell-same`, so the prelude
+`mini_axioms.sl` takes about 20 seconds, at the edge of the walk's
+20-second limit, on this branch and on `main` alike, so a loaded machine
+can report it stuck. The runner does not implement `cell-same`, so the prelude
 leaves out `nat-same` and the other functions DESIGN.md section 42 builds
 on it (item 9).
 
