@@ -51,8 +51,9 @@ cannot be proved. That is why, as far as a session can tell:
   functions built on it.
 
 The model also has something the design does not. `Prim.atomEq` proves
-`Eq (Slot) a b` for any two slots, which `placed-slot` uses (and, on
-`main`, `slot-self` and the reader's slot copies). It is sound only
+`Eq (Slot) a b` for any two slots on `main`, where `slot-self` and the
+reader's slot copies use it; on this branch it is narrowed to
+`placed-slot`'s equation (`Prim.placedSlot`). It is sound only
 because every slot has one value; with slots as words it would be
 false, since `slot-eq` must be able to answer that two slots differ
 and section 38 has slot facts come from forcing alone.
@@ -195,19 +196,19 @@ Progress on stage 1, on `claude/slots-1-core`:
     (`Ctx.pushWdo`);
   - `slot-self` (`Chk.slf`);
   - forcing in a match branch: after unification, the pairs left over
-    that involve a slot are made equal (`Ctx.forceSlots`).
+    that involve a slot are made equal (`Ctx.forceSlots`);
+  - the delegate annotation, when the block is pushed (`Ctx.deleSlots`).
 - Done, in the reader: slots are core terms (`(slot-of x)` is
   `sfv x`); slot minting, the slot copies, the retry for them and the
   `fresh-slot` and `slot-eq` forms are gone; a lifted constructor
   signature abstracts the slots it mentions with the variables.
+  `prove-predates` takes `(slot-of x)`, or an entry whose value is the
+  slot of an entry older than the level.
+- `Prim.atom` is gone. `Prim.atomEq` is now `Prim.placedSlot`, which
+  proves only that a box's slot is the slot its `Placed` type names
+  (`Ctx.placedAt`); in stage 1 that is sound because every slot has
+  one value, and stage 2 is to justify it from where a placed value is.
 - Not yet:
-  - the delegate annotation (section 41), so
-    `tests/delegate_at_slot.sl` is refused;
-  - `prove-predates` of `(slot-of x)`: `Prim.provePredates` takes an
-    entry, so `tests/slot_of_predates.sl` is refused as unsupported;
-  - `placed-slot` still proves its equation with `Prim.atomEq`, which
-    proves any two slots equal; it is to become a proof of its true
-    equation;
   - forcing outside a match branch (`open-adt`'s unification) adds no
     slot facts;
   - the machine side of the `many` invocation that skips every store:
