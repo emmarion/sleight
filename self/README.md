@@ -51,10 +51,9 @@ the compiler to interpret: `self/eval.sl` is a plain recursive
 interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
-reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `Half`, `String`, and mutable `Array` blocks, and a `Rope` is flattened by the
-host (section 42); a `U8` or a
-`Char`, both newtypes, is its `Nat` (section 33).
+reading of the owner's intent). Extern types and functions run as host
+values (section 42), one per constructor of `ExtType` in `self/core.sl`;
+a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
 
 ## Files
 
