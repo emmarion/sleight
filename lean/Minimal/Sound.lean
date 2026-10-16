@@ -3570,7 +3570,7 @@ theorem prim_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
   obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
   have hl := hE.len
   have her : ∀ i, (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
-    intro i; simp only [Ctx.pushPrim, Ctx.slotIf_er]; cases p <;> simp [Ctx.pushPrim0]
+    intro i; simp only [Ctx.pushPrim, Ctx.slotIf_er]; show (Γ.pushPrim0 T er p).er i = _; cases p <;> simp [Ctx.pushPrim0]
   have hh : HeadSim P Γ (Γ.pushPrim P T er p) ρ [p.eval P ρ] (.prim p er rest) rest := by
     intro ρS hg hS
     refine ⟨[if er then .tok else p.evalS P ρS], fun vs' h => by simp [stepS] at h; exact h.symm,
@@ -4148,9 +4148,8 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
       | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
       | chkCm h => exact ⟨Γ.opened, Γ.σ, Γ.ς, true, Γ.pd, h, hE.congr _ rfl rfl rfl rfl rfl⟩
       | chkMark h =>
-        refine ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, _, ?_, hE.congr _ rfl rfl rfl rfl rfl⟩
-        show CoreTy P b { Γ with pd := (Γ.markPd _ _).pd } rest rets
-        rw [← Ctx.markPd_eq]; exact h
+        rw [Ctx.markPd_eq] at h
+        exact ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, _, h, hE.congr _ rfl rfl rfl rfl rfl⟩
       | chkSlf hok hs hS hΓ h =>
         rename_i Γ'
         have e := Ctx.slotSelf_eq hΓ
