@@ -2899,7 +2899,8 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
       have h1 := Ctx.forceSlots_upd_ghost g ({ Γn with σ := σ0 } : Ctx)
       dsimp only
       simp only [Prod.mk.injEq, UResult.ok.injEq]
-      exact ⟨h1 _, congrArg Ctx.σ (h1 _)⟩
+      refine ⟨h1 _, ?_⟩
+      rw [h1]
     · rfl
   · rfl
 
