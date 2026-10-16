@@ -1822,9 +1822,10 @@ other: its values are non-erased and one word (§33). It may be marked
 representation, and a newtype may wrap a field of an extern type. An
 extern function may not have a `delegate` body. A function marked both
 `extern` and `at` has no FFI implementation (§39). An `extern`
-implementation must agree with its model: running the models instead
-of the implementations must give a program the same values, though not
-the same cost, and either may crash where the other does not (§31).
+implementation must agree with its model: except through `slot-eq`
+(§67), running the models instead of the implementations must give a
+program the same values, though not the same cost, and either may crash
+where the other does not (§31).
 The prototype's FFI is a fixed table keyed by the declared name. An
 `extern` declaration of a name the table lacks, or of a name already
 claimed, is an error. `--no-extern` runs the models instead, and
@@ -2969,8 +2970,8 @@ kept at a slot is declared the same way (§36).
 ```
 
 `Some` proves that `a` and `b` hold one word (§38). `None` proves
-nothing, so an implementation may always answer it. `slot-eq` requires
-the prelude.
+nothing, so an implementation may always answer it, and which one a
+call answers may differ between runs. `slot-eq` requires the prelude.
 
 ## 68. `cell-same`
 
