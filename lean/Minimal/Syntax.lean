@@ -53,7 +53,7 @@ def isSlotVal (n : Nat) : Tm → Bool
   | t => t == vacant
 
 def slotOf : Tm → Tm
-  | fv j => sfv j
+  | fv j | sfv j => sfv j
   | _ => vacant
 
 def subst (f : Nat → Tm) : Tm → Tm
@@ -351,6 +351,7 @@ inductive Chk where
   | rt
   | opn (er : Bool)
   | cm
+  | slf
   deriving Repr, Inhabited, DecidableEq
 
 inductive Core where
@@ -535,7 +536,7 @@ def Prog.isNt (P : Prog) (d : Nat) : Bool := ((P.adts[d]?).map (·.newtype)).get
 def Prog.slotOK (P : Prog) : Bool := match P.adts[slotD]? with
   | some D => (match D.ctors with
       | [.bind (.ty ..) (.app (.tyc d .nil) .nil) .nil] => d == slotD
-      | _ => false) && D.lifted == 0 && !D.newtype && !P.phantom slotD 0
+      | _ => false) && D.lifted == 0 && !D.newtype && !D.opq && !P.phantom slotD 0
   | none => false
 
 def Prog.wrapField (P : Prog) (d c : Nat) : Option Nat :=

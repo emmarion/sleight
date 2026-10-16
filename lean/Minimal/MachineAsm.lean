@@ -932,6 +932,25 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
           rfl rfl rfl rfl rfl (machine_opn hm' hu)
           (fun U K hU => by rw [usesCore] at hU; simp only [hm', hu] at hU; exact isS hU)
     · rw [checkCore.eq_16 _ _ _ _ _ _ _ _ (fun m e => ha ⟨m, e⟩)] at hck; cases hck
+  | slf =>
+    cases a with
+    | fv s =>
+      rw [checkCore] at hck
+      obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
+      obtain ⟨⟨S, hs⟩, -, hck⟩ := Except.bind_ok hck
+      obtain ⟨⟨hS⟩, -, hck⟩ := Except.bind_ok hck
+      dsimp only at hck
+      by_cases hsome : (G.Γ.slotSelf s).isSome = true
+      · rw [dif_pos hsome] at hck
+        obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
+        cases hck
+        have hΓ : G.Γ.slotSelf s = some ((G.Γ.slotSelf s).get hsome) := (Option.some_get hsome).symm
+        have e := Ctx.slotSelf_eq hΓ
+        exact step { G with Γ := (G.Γ.slotSelf s).get hsome } _ hf hr' (hE.slotSelf hP hok hs hS hΓ)
+          (by rw [e]) (by rw [e]) (by rw [e]; rfl) (by rw [e]) rfl
+          (machine_slf hΓ) (fun U K hU => by rw [usesCore, hΓ] at hU; dsimp only at hU; exact isS hU)
+      · rw [dif_neg hsome] at hck; cases hck
+    | _ => simp [checkCore] at hck
   | cm =>
     rw [checkCore] at hck
     obtain ⟨⟨R, hr, eq⟩, hr', hck⟩ := Except.bind_ok hck
