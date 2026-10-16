@@ -573,6 +573,7 @@ let atom_entry ?at env raw =
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))
 let atom_entry_or env l raw what = match raw with List _ -> error l "expected %s, got %s" what (tick (Reader.show raw)) | _ -> atom_entry ~at:l env raw
+let entry_named env l raw what = match raw with Handle (_, _, MintedType, _, _) -> not_name l what raw | _ -> atom_entry_or env l raw what
 
 let read_special pos env raw =
   match raw with
@@ -835,7 +836,8 @@ let rec elab_term ?expect env raw =
       | Some sp -> elab_type_form env l sp args
       | None -> (
           let env, args = erased_reads spliced env args in
-          let h = Var (reference env l head "a constructor") in
+          let env, x = entry_named env l head "a constructor" in
+          let h = Var x in
           match canon env (infer env l h) with
           | (TyCtor tele | ValCtor (tele, _)) as ty -> let env, acc = elab_term_args env l ~callee:(describe env Erased head h ty) ?expect tele h args in (env, App (h, List.rev acc))
           | ty -> error l "%s has type %s and cannot be applied in a type" (qshow env h) (qshow env ty)))
@@ -1583,7 +1585,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.nth codes 1))
   | Sp.SettledOf, [ mraw; a ] ->
       let mode = mult_or env l mraw in
-      let x = reference env (loc a) a "a name" in
+      let env, x = entry_named env (loc a) a "a name" in
       if (match (entry env x).state with Hypothetical -> true | Settled _ -> false) then error_in env (loc a) "%s is `Hypothetical`, and a handle names a `Settled` entry" (qname env x);
       if mode <> Erased && made env a x <> mode then error_in env (loc a) "%s is not declared `%s`" (qname env x) (speller env (mult_name mode));
       let id s = match prelude_id env s with Some i -> Var i | None -> error l "`settled-of` needs the prelude's `%s`, which `--no-prelude` leaves out" s in

@@ -2772,8 +2772,8 @@ one of two ways: as the entry's minted `is`, at its minted type, or as
 its minted type, at `Type`.
 
 `(settled-of m x)` is a handle that reads `x`'s minted `is`, where `x`
-is a `Settled` entry, named or given by a handle, and `m` is a written
-multiplicity: `erased` for any entry, `many` for an entry declared
+is a `Settled` entry, named, given by a handle, or written as a literal
+(§45), and `m` is a written multiplicity: `erased` for any entry, `many` for an entry declared
 `many`, and `unique` for one declared `unique`. Its `Mult` is the
 matching constructor. It is not a use of `x`; each splice of the handle
 is. The other forms on handles are primitives:
