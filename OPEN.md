@@ -121,6 +121,17 @@ references are to DESIGN.md.
     open how far that reaches: whether it passes into a nested match,
     and whether it stops where a fresh telescope is supplied, as at an
     argument, a typed `let` binder or a proof.
+37. Should there be a way to order or hash slots, so that a memo keyed
+    by physical identity can be a map rather than a list? `slot-eq`
+    (§67) gives only equality, so `tests/dag_sum.sl` searches a list,
+    and a DAG with k distinct nodes costs O(k²) comparisons. A hash or
+    ordering read from a word may not survive a garbage collector that
+    moves blocks, as OCaml's does, and the interpreter and extracted
+    code would order words differently even more often than `slot-eq`
+    already answers differently (§67). Both answers would need to be
+    ones an implementation may give arbitrarily, as `None` is. The
+    alternative is a stable id stored in each node, which is outside
+    the slot system.
 
 ## Argument temporaries
 
