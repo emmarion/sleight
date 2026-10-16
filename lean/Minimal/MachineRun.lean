@@ -3084,12 +3084,12 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     {rest : Core} {ρ vs : List Tm} (hm : m = .reuse true ∨ m = .write true) (hE : EnvOK P ρ G.Γ)
     (ih : MRun P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk (.mark m) (.fv i) x rest) ρ vs := by
-  have hred : ∀ (Γ : Ctx) (a : Tm), Γ.markPd m a = { Γ with pd := a.varSlot } := by
-    rcases hm with rfl | rfl <;> intro Γ a <;> rfl
+  have hred : ∀ Γ : Ctx, Γ.markPd m (.fv i) = { Γ with pd := some (.sfv i) } := by
+    rcases hm with rfl | rfl <;> intro Γ <;> rfl
   simp only [hred] at ih
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
   have hg := hG.ghost
-  obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with Γ := { G.Γ with pd := (Tm.fv i).varSlot }, cellOk := true } ru rets rest = some (CU, CK) ∧
+  obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with Γ := { G.Γ with pd := some (.sfv i) }, cellOk := true } ru rets rest = some (CU, CK) ∧
       G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := by
     have key : ∀ C : UR, (if (!G.cellTy P i) = true then none else do
         let C ← C
@@ -3143,7 +3143,7 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     · rintro a (hr | ha) hs
       · exact hM1.shr.1 a hr hs
       · exact hM.shr.2.1 i hi hUi hei a (hsp a ha) hs
-  have hG' : GOK P { G with Γ := { G.Γ with pd := (Tm.fv i).varSlot }, cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
+  have hG' : GOK P { G with Γ := { G.Γ with pd := some (.sfv i) }, cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
     ⟨.inr (.inr ⟨m, .fv i, rfl, by rcases hm with rfl | rfl <;> simp, fun i' a hi' ha => by
         cases hi'; exact ⟨.inr ha, fun y hy hya => hM.res.2.2.1 a ((hG.uscr y hy).2 a hya) (hOwn a ha)⟩⟩),
       fun y hy => ⟨(hG.uscr y hy).1, fun a ha => .inl ((hG.uscr y hy).2 a ha)⟩,

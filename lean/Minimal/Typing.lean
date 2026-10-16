@@ -97,8 +97,12 @@ def _root_.Minimal.Prim.srcAt (P : Prog) (pd : Option Tm) : Prim → Option Tm
   | p => p.src
 
 def markPd (Γ : Ctx) : Mark → Tm → Ctx
-  | .reuse true, a | .write true, a | .cellOf, a => { Γ with pd := a.varSlot }
+  | .reuse true, .fv i | .write true, .fv i => { Γ with pd := some (.sfv i) }
+  | .cellOf, a => { Γ with pd := a.varSlot }
   | _, _ => Γ
+
+theorem markPd_nf (Γ : Ctx) {m : Mark} {a : Tm} (hm : m ≠ .cellOf) (ha : ∀ i, a ≠ .fv i) : Γ.markPd m a = Γ := by
+  unfold markPd; split <;> simp_all
 
 def slotSub (r : Nat) (s : Tm) : Tm → Tm := canonBy (fun _ => none) (fun j => if j = r then some s else none)
 
