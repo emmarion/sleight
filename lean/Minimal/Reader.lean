@@ -2940,7 +2940,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           | "sub" => some (facts && me 47 3 [false, false, true, false, true] subModel F sigs.length)
           | "divmod" => some (facts && me 51 3 divmodErs divmodModel F sigs.length && at_ 49 49 8 succDivErs succDivModel &&
               at_ 40 40 2 [false, false, false] cmpModel)
-          | "nat-mod" => some (facts && me 80 3 natModErs natModModel F sigs.length && at_ 78 78 5 succModErs succModModel &&
+          | "nat-mod" => some (facts && me 78 3 natModErs natModModel F sigs.length && at_ 76 76 5 succModErs succModModel &&
               at_ 40 40 2 [false, false, false] cmpModel)
           | _ => none
         if ok == some false then
