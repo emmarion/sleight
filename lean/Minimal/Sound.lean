@@ -813,6 +813,13 @@ theorem Ctx.forceSlots_upd_ghost (g : Bool) (Γ : Ctx) (eqs : List (Tm × Tm)) :
   | nil => rfl
   | cons p L ih => simp only [List.foldl_cons]; rw [Ctx.slotEq_ghost]; exact ih _
 
+theorem EnvOK.opnCtx {ρ : List Tm} {Γ : Ctx} {m : Nat} {oe : Bool} {σ' : Nat → Option Tm} {H cs : Tm}
+    (h : EnvOK P ρ ({ Γ with opened := (m, oe) :: Γ.opened, σ := σ' } : Ctx)) : EnvOK P ρ (Γ.opnCtx P m oe σ' H cs) := by
+  have hF := h.forceSlots (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList))
+  obtain ⟨σf, ςf, he⟩ := Ctx.forceSlots_eq ({ Γ with opened := (m, oe) :: Γ.opened, σ := σ' } : Ctx)
+    (Ctx.openEqs P { Γ with opened := (m, oe) :: Γ.opened } (H :: cs.toList))
+  unfold Ctx.opnCtx; simp only [he] at hF ⊢; exact hF
+
 theorem EnvOK.ntSlot {ρ : List Tm} {Γf : Ctx} (h : EnvOK P ρ Γf) (Γ : Ctx) (s k : Tm) :
     EnvOK P ρ (Γ.ntSlot P Γf s k) ∧ Γf.Ext (Γ.ntSlot P Γf s k) ∧
       ∃ σ ς, Γ.ntSlot P Γf s k = { Γf with σ := σ, ς := ς } := by
@@ -4250,7 +4257,7 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
     have : ∃ o σ' ς' cm pd, CoreTy P b { Γ with opened := o, σ := σ', ς := ς', cmode := cm, pd := pd } rest rets ∧
         EnvOK P ρ { Γ with opened := o, σ := σ', ς := ς', cmode := cm, pd := pd } := by
       cases hc with
-      | chkOpn _ _ _ hu h => exact ⟨_, _, Γ.ς, _, Γ.pd, h, hE.opened hP hu⟩
+      | chkOpn _ _ _ hu h => exact ⟨_, _, _, _, Γ.pd, h, EnvOK.opnCtx (hE.opened hP hu)⟩
       | chkOpnFail hM hc h => exact (hE.openFail hP hM hc h).elim
       | chkCm h => exact ⟨Γ.opened, Γ.σ, Γ.ς, true, Γ.pd, h, hE.congr _ rfl rfl rfl rfl rfl⟩
       | chkSlotAt h => exact ⟨Γ.opened, Γ.σ, Γ.ς, Γ.cmode, _, h, hE.congr _ rfl rfl rfl rfl rfl⟩

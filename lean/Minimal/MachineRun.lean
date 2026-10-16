@@ -3399,9 +3399,9 @@ theorem machine_opn {b : Nat} {G : UCtx} {ru : List Bool} {rets x : Tm} {oe u nt
     (hm : (G.Γ.tys[m]?).map G.Γ.canon = some (.mtbl u nt ex ph H cs))
     (hu : unify G.Γ.n (Ctx.atoms P { G.Γ with opened := (m, oe) :: G.Γ.opened }) G.Γ.σ []
       (Ctx.openEqs P { G.Γ with opened := (m, oe) :: G.Γ.opened } (H :: cs.toList)) = .ok σ')
-    (ih : MRun P b { G with Γ := { G.Γ with opened := (m, oe) :: G.Γ.opened, σ := σ' } } ru rets rest ρ vs) :
+    (ih : MRun P b { G with Γ := G.Γ.opnCtx P m oe σ' H cs } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk (.opn oe) (.fv m) x rest) ρ vs :=
-  machine_same (G' := { G with Γ := { G.Γ with opened := (m, oe) :: G.Γ.opened, σ := σ' } }) rfl rfl rfl rfl rfl rfl rfl ih
+  machine_same (G' := { G with Γ := G.Γ.opnCtx P m oe σ' H cs }) rfl rfl rfl rfl rfl rfl rfl ih
     (fun U K h => ⟨U, K, by rw [usesCore] at h; simp only [hm, hu] at h; exact h, Uses.Eqb.refl _ _⟩)
     (fun ρS vsS h => by cases h with | chk h => exact h) (fun H ρM pd H' out h => .chk (fun m e => by cases e) h)
 

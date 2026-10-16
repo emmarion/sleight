@@ -246,7 +246,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
     let Γo : Ctx := { G.Γ with opened := (m, oe) :: G.Γ.opened }
     match (G.Γ.tys[m]?).map G.Γ.canon with
     | some (.mtbl _ _ _ _ H cs) => match unify G.Γ.n (Γo.atoms P) G.Γ.σ [] (Γo.openEqs P (H :: cs.toList)) with
-      | .ok σ' => usesCore b { G with Γ := { Γo with σ := σ' } } ru rets rest
+      | .ok σ' => usesCore b { G with Γ := G.Γ.opnCtx P m oe σ' H cs } ru rets rest
       | _ => some ([], [])
     | _ => none
   | .chk .cm _ _ rest => usesCore b { G with Γ := { G.Γ with cmode := true } } ru rets rest
