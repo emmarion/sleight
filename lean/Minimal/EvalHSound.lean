@@ -19,6 +19,39 @@ def Tm.ptrBelow (n : Nat) : Tm → Bool
 theorem Tm.ptrBelow_mono {n m : Nat} (h : n ≤ m) : ∀ t : Tm, t.ptrBelow n → t.ptrBelow m := by
   intro t; induction t <;> simp_all [ptrBelow] <;> omega
 
+def Prim.tms : Prim → List Tm
+  | .tm t | .lit t | .place t _ | .unplace t _ | .assert t _ | .coerce _ t _ | .wNext t | .placedSlot _ _ t _ => [t]
+  | .placedEq _ A a _ | .wAsk A a => [A, a]
+  | _ => []
+
+mutual
+def Core.ptrFree : Core → Bool
+  | .ret ts => ts.ptrBelow 0
+  | .call f _ args _ _ _ r => f.ptrBelow 0 && args.ptrBelow 0 && r.ptrFree
+  | .mtch s _ brs els _ r => s.ptrBelow 0 && Core.brsPtrFree brs && Core.optPtrFree els && r.ptrFree
+  | .prim p _ r => p.tms.all (·.ptrBelow 0) && r.ptrFree
+  | .wdo w req r => w.ptrBelow 0 && req.ptrBelow 0 && r.ptrFree
+  | .defLvl r | .defFns _ r | .chk _ _ _ r | .absurd r => r.ptrFree
+  | .case s brs els _ _ => s.ptrBelow 0 && Core.brsPtrFree brs && Core.optPtrFree els
+  | .seq _ b r => b.ptrFree && r.ptrFree
+  | .dead => true
+
+def Core.brsPtrFree : List Br → Bool
+  | [] => true
+  | (_, _, _, b) :: t => b.ptrFree && Core.brsPtrFree t
+
+def Core.optPtrFree : Option Core → Bool
+  | none => true
+  | some e => e.ptrFree
+end
+
+def Prog.PtrFree (P : Prog) : Prop :=
+  (∀ k c, (P.ask k c).2.ptrBelow 0) ∧ ∀ G ∈ P.groups, ∀ F ∈ G.fns, F.body.ptrFree
+
+theorem natTm'_ptrBelow (d : Nat) : ∀ k, (natTm' d k).ptrBelow 0
+  | 0 => rfl
+  | k + 1 => by simp [natTm', Tm.ptrBelow, natTm'_ptrBelow d k]
+
 namespace FHeap
 
 def OK (H : FHeap) : Prop :=
@@ -168,6 +201,114 @@ theorem boxList_spec {H : FHeap} (hH : H.OK) : ∀ ts : List Tm, (∀ t ∈ ts, 
       · exact p2 w hw
     · simp only [List.map_cons, d2, decode_ext o1 e2 p1, d1, List.cons.injEq, true_and]
       exact List.map_congr_left (fun u hu => decode_ext hH e1 (hp u (by simp [hu])))
+
+theorem dec_toList {H : FHeap} (hH : H.OK) (n : Nat) : ∀ t : Tm, (H.dec n t).toList = t.toList.map (H.dec n) := by
+  intro t; induction t <;> cases n <;> simp_all [dec, Tm.toList]
+  rename_i a n
+  cases hb : H.blk a with
+  | none => simp [Tm.toList]
+  | some t =>
+    obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH a t hb
+    cases n <;> simp [dec, Tm.toList]
+
+theorem dec_ofList (H : FHeap) (n : Nat) : ∀ l : List Tm, H.dec n (Tm.ofList l) = Tm.ofList (l.map (H.dec n))
+  | [] => by cases n <;> simp [dec, Tm.ofList]
+  | t :: l => by cases n <;> simp [dec, Tm.ofList, dec_ofList H _ l]
+
+theorem dec_lvl {H : FHeap} (hH : H.OK) (n m : Nat) (t : Tm) : H.dec n t = .lvl m ↔ t = .lvl m := by
+  cases t <;> cases n <;> simp [dec]
+  rename_i a n
+  cases hb : H.blk a with
+  | none => simp
+  | some t =>
+    obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH a t hb
+    cases n <;> simp [dec]
+
+theorem dec_vc {H : FHeap} (hH : H.OK) {n d c : Nat} {ls : Tm} : ∀ {t : Tm}, H.dec n t = .vc d c ls → ∃ ls', t = .vc d c ls' := by
+  intro t h
+  cases t <;> cases n <;> simp [dec] at h ⊢ <;> try exact h.1
+  all_goals first
+    | (obtain ⟨rfl, rfl, -⟩ := h; simp)
+    | skip
+  rename_i a n
+  revert h
+  cases hb : H.blk a with
+  | none => simp
+  | some t =>
+    obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH a t hb
+    cases n <;> simp [dec]
+
+theorem ptrBelow_toList {n : Nat} : ∀ {t : Tm}, t.ptrBelow n → ∀ x ∈ t.toList, x.ptrBelow n := by
+  intro t; induction t <;> simp_all [Tm.toList, Tm.ptrBelow]
+
+theorem subst_ptrBelow {n : Nat} {f : Nat → Tm} (hf : ∀ i, (f i).ptrBelow n) : ∀ t : Tm, t.ptrBelow 0 → (t.subst f).ptrBelow n := by
+  intro t; induction t <;> intro ht
+  case sfv i => simp only [Tm.subst]; cases f i <;> simp [Tm.slotOf, Tm.vacant, Tm.ptrBelow]
+  case clo => exact Tm.ptrBelow_mono (Nat.zero_le _) _ ht
+  all_goals simp_all [Tm.subst, Tm.ptrBelow]
+
+theorem env_ptrBelow {n : Nat} {ρ : List Tm} (h : ∀ w ∈ ρ, w.ptrBelow n) (i : Nat) : (Tm.env ρ i).ptrBelow n := by
+  simp only [Tm.env, List.getD_eq_getElem?_getD]
+  cases hi : ρ[i]? with
+  | none => simp [Tm.ptrBelow]
+  | some w => exact h w (List.mem_of_getElem? hi)
+
+theorem view_spec {H : FHeap} (hH : H.OK) {w : Tm} (hw : w.ptrBelow H.next) :
+    (H.view w).ptrBelow H.next ∧ H.decode (H.view w) = H.decode w := by
+  cases w <;> try exact ⟨hw, rfl⟩
+  rename_i a
+  simp only [view]
+  cases hb : H.blk a with
+  | none => exact ⟨hw, rfl⟩
+  | some t =>
+    obtain ⟨ha, ht, -⟩ := hH a t hb
+    refine ⟨Tm.ptrBelow_mono (by omega) t ht, ?_⟩
+    simp only [Option.getD_some, decode]
+    obtain ⟨k, hk⟩ : ∃ k, H.next = k + 1 := ⟨H.next - 1, by omega⟩
+    rw [hk]; simp only [dec, hb]
+    rw [dec_fuel hH a k t ht (by omega), dec_fuel hH a (k + 1) t ht (by omega)]
+
+theorem callee_dec {H : FHeap} (hH : H.OK) (n : Nat) (w : Tm) :
+    callee P (H.dec n w) = (callee P w).map fun (env, m, gid, G, F) => (env.map (H.dec n), m, gid, G, F) := by
+  cases w
+  case ptr a =>
+    cases n with
+    | zero => simp [dec, callee]
+    | succ n =>
+      simp only [dec]
+      cases hb : H.blk a with
+      | none => simp [callee]
+      | some t =>
+        obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH a t hb
+        cases n <;> simp [dec, callee]
+  case clo env gid j =>
+    have e : H.dec n (.clo env gid j) = .clo (H.dec n env) gid j := by cases n <;> simp [dec]
+    rw [e]; simp only [callee]
+    cases P.groups[gid]? <;> try simp
+    rename_i G
+    cases G.fns[j]? <;> try simp
+    rw [dec_toList hH]
+    simp only [List.getElem?_map]
+    cases env.toList[G.lvl]? with
+    | none => simp
+    | some x =>
+      by_cases hx : ∃ m, x = .lvl m
+      · obtain ⟨m, rfl⟩ := hx; cases n <;> simp [dec]
+      · have h1 : ∀ m, H.dec n x ≠ .lvl m := fun m h => hx ⟨m, (dec_lvl hH n m x).1 h⟩
+        split
+        · rename_i h; simp at h; exact absurd h (h1 _)
+        · split
+          · rename_i h; simp at h; exact absurd ⟨_, h⟩ hx
+          · rfl
+  all_goals cases n <;> simp [dec, callee]
+
+theorem closures_dec (H : FHeap) (n : Nat) (env : List Tm) (gid : Nat) (G : Group) :
+    closures (env.map (H.dec n)) gid G = (closures env gid G).map (H.dec n) := by
+  simp only [closures, List.map_map]; congr 1; funext j; cases n <;> simp [dec, dec_ofList]
+
+theorem markedArgs_map (f : Tm → Tm) : ∀ (t : Tm) (l : List Tm), markedArgs t (.ofList (l.map f)) = (markedArgs t (.ofList l)).map f := by
+  intro t; induction t <;> intro l <;> cases l <;> simp [markedArgs, Tm.ofList]
+  rename_i ih _ _; split <;> simp [ih]
 
 end FHeap
 
