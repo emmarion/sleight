@@ -90,6 +90,8 @@ examples/phantom_build_bad.sl: refused: a non-erased let binder of a term mentio
 examples/phantom_ctor_bad.sl: refused: a non-erased let binder of a term mentioning something erased
 examples/refute.sl: 1
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
+examples/slot_copies.sl: 0
+examples/slot_erased_bad.sl: error: `(slot-of x)` is erased, as `x` is, and stands in a non-erased position
 examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
 examples/tail.sl: 4
 examples/tail_bad.sl: error: tail: the call is not in tail position
@@ -152,6 +154,7 @@ unchecked examples/paradox_univ_subterm_bad.sl: _
 unchecked examples/phantom_build_bad.sl: (Hidden _)
 unchecked examples/phantom_ctor_bad.sl: (Hidden _)
 unchecked examples/refuted_branch_bad.sl: 0
+unchecked examples/slot_erased_bad.sl: error: `(slot-of x)` is erased, as `x` is, and stands in a non-erased position
 unchecked examples/tail_bad.sl: error: tail: the call is not in tail position
 unchecked examples/union_bad.sl: error: a match without a runtime discriminant can have only one real branch
 unchecked examples/unique_fn_shared_bad.sl: error: a value not declared `unique` is used at unique
@@ -206,6 +209,7 @@ full examples/open_merge.sl: (A)
 full examples/open_refute.sl: 1
 full examples/phantom.sl: 1
 full examples/refute.sl: 1
+full examples/slot_copies.sl: 0
 full examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
 full examples/tail.sl: 4
 full examples/top_statement.sl: 

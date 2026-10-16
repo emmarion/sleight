@@ -211,6 +211,7 @@ structure ESt where
   minted : List (String × Tm) := []
   hasMacros : Bool := false
   endsInStmt : Bool := false
+  slotCopies : Nat := 0
   gensyms : Nat := 0
   expansions : Nat := 0
   primFns : List ((Nat × Nat) × String) := []
@@ -761,8 +762,8 @@ def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
 def slotTy : Tm := .app (.tyc slotD .nil) .nil
 
 def runSlot : Sx → List Sx
-  | .atom x => [.list [.atom "let", .list [.list [.atom "unique", .atom (" rs " ++ x)]], .list [.atom " fresh-slot"]],
-      .list [.atom "let-match", .atom "erased", .list [.atom " slot-eq", .atom (" rs " ++ x), .atom x], .list [.atom "Refl", .atom "_", .atom "_"]]]
+  | .list [.atom x, .atom copy] => [.list [.atom "let", .list [.list [.atom "unique", .atom copy]], .list [.atom " fresh-slot"]],
+      .list [.atom "let-match", .atom "erased", .list [.atom " slot-eq", .atom copy, .atom x], .list [.atom "Refl", .atom "_", .atom "_"]]]
   | _ => []
 
 def ownSlot (x : String) (d : Nat) (T : Tm) : List (String × Ref) := if T == slotTy then [(" slot " ++ x, .bnd d)] else []
@@ -1846,12 +1847,15 @@ partial def elabExpr (sc : Scope) (want : List Mode) (exp : Option Tm) (e : Sx) 
     if !(← erasedPos want) then
       let t ← elabTm sc 0 e
       let ers := (← get).ers
-      if t.fvs.any (ers.getD · true) then
-        let xEr := match sc.lookup x with | some (.fv i) => ers.getD i true | _ => true
+      let hidden := t.fvs.any (ers.getD · true)
+      if hidden || want == [.uniq] then
+        let xEr := match sc.lookup x with | some (.fv i) | some (.fn i _ _) | some (.ctor i) => ers.getD i true | _ => true
         if xEr then throw s!"`(slot-of {showName x})` is erased, as `{showName x}` is, and stands in a non-erased position"
-        match sc.lookup (" rs " ++ x) with
+        let c ← modifyGet fun st => (st.slotCopies, { st with slotCopies := st.slotCopies + 1 })
+        let copy := s!" rs{c} {x}"
+        match sc.lookup copy with
         | some (.fv k) => return ([], [.fv k])
-        | _ => throwNeed "\x07" (.atom x) s!"the slot of `{showName x}` is erased here"
+        | _ => throwNeed "\x07" (.list [.atom x, .atom copy]) s!"the slot of `{showName x}` cannot stand here"
   if let .list [.atom " ers", .atom k, x] := e then
     if ← erasedPos want then return ← elabExpr sc want exp x
     let st ← get
@@ -2123,7 +2127,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let x :: ys := args | throw "unreachable"
       let var (a : Sx) : M Nat := match a with
         | .atom y => match sc.lookup y with
-          | some (.fv i) => pure i
+          | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure i
           | _ => throw "unreachable"
         | _ => throw "unreachable"
       let i ← var x
@@ -2621,7 +2625,7 @@ partial def elabMatch (sc : Scope) (want : List Mode) (exp : Option Tm) (args : 
 
 partial def elabSeq (sc : Scope) (want : List Mode) (exp : Option Tm := none) (items : List Sx) :
     M (List Stmt × List Tm) := do
-  retrying "\x07" (fun | .atom x => (sc.lookup x matches some (.fv _)) | _ => false) fun extra => do
+  retrying "\x07" (fun | .list [.atom x, _] => (sc.lookup x matches some (.fv _) | some (.fn ..) | some (.ctor _)) | _ => false) fun extra => do
   let items := extra.flatMap runSlot ++ items
   let n0 := (← get).n
   match items with

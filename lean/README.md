@@ -561,7 +561,8 @@ it is `Settled`, and its `is` rule.
   may name. A
   non-erased slot entry is made `unique` (its value is an immediate,
   which owns nothing), so `(slot-of x)` may stand at a unique position;
-  a use of it at many needs no `share`. The uses pass accepts the
+  each such use is a fresh copy made as above, so the slot may be used
+  at unique more than once, and a use of it at many needs no `share`. The uses pass accepts the
   primitive that makes it, `Prim.atom`, at unique.
   `(slot-self s)` makes `s` its own slot. Once the slot of `s` is in
   use, it instead forces `s` and that slot to be equal, as an erased

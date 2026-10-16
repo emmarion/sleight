@@ -20,12 +20,22 @@ on it (item 9).
 The tests OCaml accepts and this runner refuses, with a session's
 reading of why:
 
-- `at_match_union.sl`: a non-erased at-match on a union with several
-  real branches. The reference emits no code for it; here the core has
-  a runtime `mtch`, which needs a discriminant.
+- `at_match_union.sl`: a non-erased at-match on a union newtype with
+  several real branches. The reference emits no code for it. Here the
+  reader refuses it, and so does the core checker ("a match with an
+  erased discriminant has more than one real branch"): the stripped run
+  holds a newtype's value as its field, so nothing chooses the branch.
+  A session's reading is that accepting it needs a new core rule (for
+  example, that every real branch strips to the same code) and its
+  proof, which is the owner's to decide.
 - `at_target_wild.sl`: `_` for an argument whose slot a later parameter
   names; the link from an entry to its slot lives in the reader's state,
-  which inference does not see.
+  which inference does not see. The slot must also be minted, as a
+  statement before the call, before inference has said whose slot it
+  is. A session sees two routes, neither tried: give inference the
+  reader's slot map and restart the statement once the `_` is solved
+  (only at the top level, where the reader keeps a checker context), or
+  mint slots earlier, which changes where they enter scope.
 - The macro tests that `lean/README.md`'s macro item lists as not
   supported, and `macro_gensym_eq.sl` and `macro_mint_settled.sl`,
   which pass a `match` with a `_` annotation as an argument.
@@ -355,9 +365,7 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
    proof that `def-fns` mints after its block, so it is refused in the
    block's own signatures.
 2. **What `at`, slots and cells still lack** (`lean/README.md` lists
-   what is done): a slot used both at unique and at many
-   (a non-erased slot entry is born `unique`, and the uses pass allows
-   one or the other), a non-erased at-match on a union, and
+   what is done): a non-erased at-match on a union, and
    the gaps the README's slot item lists.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
    unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
