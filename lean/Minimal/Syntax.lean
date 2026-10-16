@@ -323,7 +323,6 @@ inductive Prim where
   | coerWrap (s C args : Tm)
   | coerCtor (s C srcs tgts ps : Tm)
   | axm (A : Tm)
-  | atom (d : Nat)
   | wAsk (w req : Tm)
   | wNext (w : Tm)
   | placedSlot (d q : Nat) (a b : Tm)

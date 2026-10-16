@@ -2031,11 +2031,6 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
       rw [eqc hsd.1, eqc hsd.2, eqc hx, eqc hy, ← Tm.toList_getD_subst _ l1, ← Tm.toList_getD_subst _ l2,
         List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD, e1, e2] at this
       exact this.1 hsU hsU
-  | atom hD hc hl hn hp =>
-    rename_i d D m e u
-    have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
-    refine ⟨.con hct (by simp [Tm.len, Prog.lifted, hD, hl]) .nil .nil rfl, by simp [Tm.static],
-      by simp [Prim.eval, Tm.lc], by simp [Prim.eval, Tm.levels]⟩
   | @placedSlot d D q E m1 e1 u1 m2 e2 u2 m3 e3 u3 _ a A' b B' m e u hD hc hl ho hE' hc' hl' ha hA hb hB _ =>
     have va := sem ha; rw [hA] at va; simp only [Tm.subst] at va
     have vb := sem hb; rw [hB] at vb; simp only [Tm.subst] at vb
@@ -3667,12 +3662,6 @@ theorem prim_real (hP : ProgOK P) {ρ ρS : List Tm} {Γ : Ctx} (hE : EnvOK P ρ
       exact ((v.coer_inv hP hD hc).1 _).mp hR
   | assert => simp [Prim.rt] at hrt
   | num d n => cases hp with | num h => exact natTm_real h n
-  | atom d =>
-    cases hp with
-    | @atom _ _ D m e u hD hc hl hnt hph =>
-      simp only [Prim.evalS, Prim.eval]
-      have hct : P.ctor d 0 = some (.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil) := by simp [Prog.ctor, hD, hc]
-      exact .con hct hph (Prog.wrapField_none (by simp [Prog.isNt, hD, hnt])) .nil
   | placedSlot | placedEq | wAsk | wNext => simp [Prim.rt] at hrt
   | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])
 

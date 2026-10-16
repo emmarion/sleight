@@ -637,8 +637,6 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       TmTy P Γ req R → Γ.canon R = .app (.tyc rd ls) (.cons A .nil) → PrimTy Γ (.wAsk w req) A
   | wNext : P.worldD = some wd → TmTy P Γ w W → Γ.canon W = .app (.tyc wd .nil) .nil →
       PrimTy Γ (.wNext w) (.app (.tyc wd .nil) .nil)
-  | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
-      D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
   | num : P.natOK d = true → PrimTy Γ (.num d n) (natTy d)
   | placedSlot : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.opq = false → P.adts[q]? = some E → E.ctors = [eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] → E.lifted = 0 →

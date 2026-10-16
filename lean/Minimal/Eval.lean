@@ -44,7 +44,6 @@ def Prim.eval (P : Prog) (ρ : List Tm) : Prim → Tm
   | .tm t | .lit t | .place t _ | .unplace t _ => t.subst (Tm.env ρ)
   | .assert t _ => t
   | .coerce _ b _ => b.subst (Tm.env ρ)
-  | .atom d => .app (.vc d 0 .nil) .nil
   | .placedSlot d q a _ => .app (.vc q 0 .nil) (.cons (.app (.tyc d .nil) .nil) (.cons (a.subst (Tm.env ρ)) .nil))
   | .placedEq q A a _ => .app (.vc q 0 .nil) (.cons (A.subst (Tm.env ρ)) (.cons (a.subst (Tm.env ρ)) .nil))
   | .num d n => natTm' d n

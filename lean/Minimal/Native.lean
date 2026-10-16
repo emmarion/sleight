@@ -1922,7 +1922,6 @@ theorem Prog.subA_eq (ρ : Array Tm) : P.subA ρ = P.sub ρ.toList := by
 def Prim.evalA (ρ : Array Tm) : Prim → Tm
   | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => P.subA ρ t
   | .num _ n => .nat n
-  | .atom d => .app (.vc d 0 .nil) .nil
   | .assert t _ => t
   | .wAsk w req => (P.answer (P.subA ρ w) (P.subA ρ req)).1
   | .wNext w => (P.subA ρ w).wnext

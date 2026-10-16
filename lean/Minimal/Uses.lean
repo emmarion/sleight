@@ -131,7 +131,6 @@ def primUses (G : UCtx) (u : Bool) : Prim → Option Uses
     let (su, tu) ← G.coerSides P q
     if u && !tu then none else G.termUses P su a
   | .axm _ => if u && !G.cellOk then none else some []
-  | .atom _ => some []
   | .lit t => if u then none else G.termUses P false t
   | _ => if u then none else some []
 
