@@ -328,6 +328,12 @@ computes.
 
 ## Next, none of it decided
 
+The owner's tentative order, from chat: (a) the two soundness gaps,
+a handle used against its multiplicity (item 9, step 5) and item 5;
+(b) item 13; (c) items 2 and 11 without mutation, and the two `at`
+tests listed above; (d) the rest of item 9, step 5; (e) item 12;
+(f) item 9, step 4.
+
 0. **Native arithmetic, one proved extern at a time.** The owner's
    plan, from chat: no extern's native code is ever trusted as an
    axiom; each extern gets native code only with a Lean proof that it
