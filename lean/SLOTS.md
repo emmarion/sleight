@@ -270,8 +270,8 @@ of `vacant-slot`, and the machine's `many` invocation that skips every
 store returns the cell's block, as the owner confirmed (section 37).
 Both are larger than stage 1; 2a moves the most proof.
 
-The owner chose 2a. The steps below are a session's proposal for
-carrying it out:
+The owner chose 2a, to be done on its own branch, `claude/slots-2a`.
+The steps below are a session's proposal for carrying it out:
 
 1. A heap run beside `eval`, `evalH`, with words in its environment and
    blocks in its heap, and no write in place yet: every constructed
