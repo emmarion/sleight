@@ -277,10 +277,12 @@ theorem deleSlots_eq (k : Nat) (fns : List FnDef) (Γ : Ctx) : ∃ σ ς, deleSl
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   let k := Γ.n
-  deleSlots k G.fns ({ Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray,
-           erA := arrFrom Γ.erA k (G.fns.map (·.er)),
-           deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
-             if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) } : Ctx)
+  let Γ1 : Ctx :=
+    { Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray,
+             erA := arrFrom Γ.erA k (G.fns.map (·.er)),
+             deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
+               if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }
+  deleSlots k G.fns Γ1
 
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
