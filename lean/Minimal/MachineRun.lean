@@ -58,6 +58,9 @@ theorem Uses.below_mem {U : Uses} {n j : Nat} (h : (j, true) ∈ U.below n) : (j
 
 def UqOK (G : UCtx) (U : Uses) : Prop := ∀ i, (i, true) ∈ U → G.uq.contains i = true ∨ G.Γ.n ≤ i
 
+theorem UqOK.of_n {G G' : UCtx} {U : Uses} (hu : G'.uq = G.uq) (hn : G'.Γ.n = G.Γ.n) (h : UqOK G' U) : UqOK G U :=
+  fun i hi => by rw [← hu, ← hn]; exact h i hi
+
 theorem UqOK.seq {G : UCtx} {A B U : Uses} (h : Uses.seq A B = some U) (ha : UqOK G A) (hb : UqOK G B) : UqOK G U :=
   fun i hi => (Uses.seq_mem h hi).elim (ha i) (hb i)
 
@@ -300,7 +303,7 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
     have hC0 := ih Tw A
     simp only [dite_eq_ite] at hC0
-    have hC' : UqOK G CU := UqOK.next (by rw [UCtx.adv_n' hf]; simp [Ctx.push, Ctx.n]; omega) (hC0 hf CU CK hC)
+    have hC' : UqOK G CU := UqOK.next (by rw [UCtx.adv_n' hf]; simp) (hC0 hf CU CK hC)
     split at h
     · cases h; exact hC'
     · split at h
@@ -342,19 +345,21 @@ theorem usesCore_uq (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) (c : Core)
   case case19 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
+    have hC' := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
     split at h
-    · cases h; exact ih hf _ _ hC
+    · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
-      exact UqOK.ur_seq h (UqOK.use hA) (ih hf _ _ hC)
+      exact UqOK.ur_seq h (UqOK.use hA) hC'
   case case21 b G ru rets b1 rest u i hc ih =>
     rw [if_neg hc] at h
     obtain ⟨⟨CU, CK⟩, hC, h⟩ := Option.bind_eq_some_iff.mp h
+    have hC' := UqOK.of_n rfl (by simp) (ih hf _ _ hC)
     split at h
-    · cases h; exact ih hf _ _ hC
+    · cases h; exact hC'
     · obtain ⟨A, hA, h⟩ := Option.bind_eq_some_iff.mp h
-      exact UqOK.ur_seq h (UqOK.use hA) (ih hf _ _ hC)
+      exact UqOK.ur_seq h (UqOK.use hA) hC'
   case case22 b G ru rets a b1 rest ih => exact ih hf U K h
-  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact ih hf U K h
+  case case23 b G ru rets b1 rest x hc ih => rw [if_pos hc] at h; exact UqOK.of_n rfl (by simp) (ih hf U K h)
   case case24 b G ru rets b1 rest x hc => rw [if_neg hc] at h; cases h
   case case18 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
   case case20 b G ru rets b1 rest u i hc => rw [if_pos hc] at h; cases h
@@ -2959,9 +2964,8 @@ theorem machine_wdo (hO : P.OracleOK) {b : Nat} {G : UCtx} {ru : List Bool} {ret
   rw [← hΓ'] at hC
   have hl := hM.lenF
   have her' : ∀ i, Γ'.er i = if i = G.Γ.n + 1 then false else if i = G.Γ.n then false else G.Γ.er i := fun i => by
-    rw [hΓ', UCtx.adv_er' hf, Ctx.er_push, Ctx.er_push]; simp only [Ctx.push, Ctx.n, Array.size_push]
-    by_cases h1 : i = G.Γ.tys.size + 1 <;> simp [h1]
-  have hn' : Γ'.n = G.Γ.n + 2 := by rw [hΓ', UCtx.adv_n' hf]; simp [Ctx.push, Ctx.n]
+    rw [hΓ', UCtx.adv_er' hf, Ctx.er_pushWdo]
+  have hn' : Γ'.n = G.Γ.n + 2 := by rw [hΓ', UCtx.adv_n' hf]; simp
   have huq := usesCore_uq b (G.next Γ' [true, false]) ru rets rest hf CU CK hC
   have hResLt : ∀ a, Res a → a < H.next := fun a ha => Nat.lt_of_not_le fun hc => by
     have := hM.res.2.2.2 a ha; rw [hM.wf a hc] at this; cases this
@@ -3078,11 +3082,11 @@ theorem MOut.resOwn {U : Uses} {n : Nat} {er : Nat → Bool} {H : Heap} {ρM ρS
 
 theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {rets x : Tm} {m : Mark} {i : Nat}
     {rest : Core} {ρ vs : List Tm} (hm : m = .reuse true ∨ m = .write true) (hE : EnvOK P ρ G.Γ)
-    (ih : MRun P b { G with cellOk := true } ru rets rest ρ vs) :
+    (ih : MRun P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk (.mark m) (.fv i) x rest) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
   have hg := hG.ghost
-  obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with cellOk := true } ru rets rest = some (CU, CK) ∧
+  obtain ⟨CU, CK, hC, hct, hseq, hi, hei⟩ : ∃ CU CK, usesCore P b { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } ru rets rest = some (CU, CK) ∧
       G.cellTy P i = true ∧ Uses.seq [(i, true)] CU = some U ∧ i < G.Γ.n ∧ G.Γ.er i = false := by
     have key : ∀ C : UR, (if (!G.cellTy P i) = true then none else do
         let C ← C
@@ -3136,7 +3140,7 @@ theorem machine_markU (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     · rintro a (hr | ha) hs
       · exact hM1.shr.1 a hr hs
       · exact hM.shr.2.1 i hi hUi hei a (hsp a ha) hs
-  have hG' : GOK P { G with cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
+  have hG' : GOK P { G with Γ := G.Γ.markPd m (.fv i), cellOk := true } (some (m, .fv i)) H ρM ρS ρ (fun a => Res a ∨ Tm.env ρM i = .ptr a) Shr :=
     ⟨.inr (.inr ⟨m, .fv i, rfl, by rcases hm with rfl | rfl <;> simp, fun i' a hi' ha => by
         cases hi'; exact ⟨.inr ha, fun y hy hya => hM.res.2.2.1 a ((hG.uscr y hy).2 a hya) (hOwn a ha)⟩⟩),
       fun y hy => ⟨(hG.uscr y hy).1, fun a ha => .inl ((hG.uscr y hy).2 a ha)⟩,
@@ -3226,7 +3230,7 @@ theorem machine_prim_alloc {b : Nat} {G : UCtx} {ru : List Bool} {rets y A' : Tm
     rw [hf a hft, hM.wf _ (Nat.le_refl _)] at this; cases this
 
 theorem machine_cellOf {b : Nat} {G : UCtx} {ru : List Bool} {rets x y : Tm} {rest : Core} {ρ vs : List Tm}
-    (ih : MRun P b { G with cellOk := true, uscr := none } ru rets rest ρ vs) :
+    (ih : MRun P b { G with Γ := G.Γ.markPd .cellOf x, cellOk := true, uscr := none } ru rets rest ρ vs) :
     MRun P b G ru rets (.chk (.mark .cellOf) x y rest) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
   rw [usesCore] at hU

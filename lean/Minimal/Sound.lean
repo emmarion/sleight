@@ -3609,8 +3609,7 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
     (by rw [Tm.subst_append (hl ▸ s2)]; exact v2)
     (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) s2) c2 (e := false)
   have her : ∀ i, (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
-    intro i; unfold Ctx.pushWdo; rw [Ctx.er_push, Ctx.slotIf_er, Ctx.er_push]; simp only [Ctx.slotIf_n, Ctx.push, Ctx.n, Array.size_push]
-    by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
+    exact Ctx.er_pushWdo Γ Tw A w
   have hh : HeadSim P Γ (Γ.pushWdo Tw A w) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
       (.wdo w req rest) rest := by
     intro ρS hg hS
