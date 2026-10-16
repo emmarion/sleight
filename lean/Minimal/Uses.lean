@@ -205,7 +205,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
   | .prim p er rest => do
     let T ← G.primTy P p
     let u := G.ents.headD false
-    let C ← usesCore b (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) (if er || G.Γ.ghost then [] else [u])) ru rets rest
+    let C ← usesCore b (G.next (G.adv P (G.Γ.pushPrim P T er p) (.prim p er rest)) (if er || G.Γ.ghost then [] else [u])) ru rets rest
     if er || G.Γ.ghost then some C else UR.seq (← G.primUses P u p, []) C
   | .wdo w req rest => do
     let Tw ← G.primTy P (.wNext w)
@@ -225,14 +225,14 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       if G.fill then UR.seq (O, K) C
       else if G.defOK Gr O then UR.seq (Gr.caps, K) C else none
     else none
-  | .chk (.mark m) a _ rest => match m, a with
+  | .chk (.mark m) a _ rest => let G := { G with Γ := G.Γ.markPd m a }; match m, a with
     | .uq ms, _ => usesCore b { G with ents := ms } ru rets rest
     | .uqScr, _ => usesCore b { G with scr := true } ru rets rest
     | .rebind, _ => match hr : rest with
       | .prim _ true _ => usesCore b G ru rets rest
       | .prim (.tm t) false rest' => if G.rebind == some t then do
           let T ← G.primTy P (.tm t)
-          usesCore b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) ru rets rest'
+          usesCore b (G.next (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) ru rets rest'
         else usesCore b G ru rets rest
       | _ => none
     | .reuse u, .fv i | .write u, .fv i =>

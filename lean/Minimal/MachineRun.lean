@@ -128,7 +128,7 @@ theorem Ctx.openTele_n_le : ∀ m (Γ : Ctx) (t : Tm), Γ.n ≤ (Γ.openTele t m
 theorem Ctx.pushTele_n_le (Γ : Ctx) (R : Tm) (ov : Option (List Bool)) : Γ.n ≤ (Γ.pushTele R ov).n := by
   simp only [Ctx.pushTele, Ctx.setErs_n]; exact Ctx.openTele_n_le _ _ _
 
-theorem Ctx.pushPrim_n_le (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Γ.n ≤ (Γ.pushPrim T er p).n := by
+theorem Ctx.pushPrim_n_le (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Γ.n ≤ (Γ.pushPrim P T er p).n := by
   cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule, Ctx.n]
 
 theorem UCtx.adv_n' {G : UCtx} (hf : G.fill = false) {Γ' : Ctx} {c : Core} : (G.adv P Γ' c).n = Γ'.n := by
@@ -698,13 +698,13 @@ theorem machine_defLvl {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {rest :
     (fun H ρM pd H' out h => .defLvl h) ρS vsS hS hrun H ρM Res Out Shr pd hM hG
 
 theorem Ctx.pushPrim_er' (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) (i : Nat) :
-    (Γ.pushPrim T er p).er i = if i = Γ.n then er else Γ.er i := by
+    (Γ.pushPrim P T er p).er i = if i = Γ.n then er else Γ.er i := by
   cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0]
 
-theorem Ctx.pushPrim_n (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim T er p).n = Γ.n + 1 := by
+theorem Ctx.pushPrim_n (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim P T er p).n = Γ.n + 1 := by
   cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule, Ctx.n]
 
-theorem Ctx.pushPrim_ghost (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim T er p).ghost = Γ.ghost := by
+theorem Ctx.pushPrim_ghost (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : (Γ.pushPrim P T er p).ghost = Γ.ghost := by
   cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.push, Ctx.withRule]
 
 theorem machine_callE {b : Nat} {G : UCtx} {ru : List Bool} {rets f args : Tm} {dec : Dec} {ms : List Bool}
@@ -755,7 +755,7 @@ theorem machine_mtchE {b : Nat} {G : UCtx} {ru : List Bool} {rets s R : Tm} {brs
 
 theorem machine_primE {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p : Prim} {rest : Core} {ρ vs : List Tm}
     {v : Tm} (ih : ∀ T, G.primTy P p = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T true p) (.prim p true rest)) []) ru rets rest (ρ ++ [v]) vs) :
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T true p) (.prim p true rest)) []) ru rets rest (ρ ++ [v]) vs) :
     MRun P b G ru rets (.prim p true rest) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
   have hf := hG.fill
@@ -2721,7 +2721,7 @@ theorem machine_prim_pend {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p :
     {ρ vs : List Tm} {pd : Pend}
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval P ρ))
     (ih : ∀ T, G.primTy P p = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
         (ρ ++ [p.eval P ρ]) vs)
     (hval : ∀ T A, G.primTy P p = some T → G.primUses P (G.ents.headD false) p = some A →
       ∀ ρS H ρM Res Out' Shr, SimEnv P G.Γ.er ρS ρ → MFrame P A G.Γ.n G.Γ.er H ρM ρS ρ Res Out' Shr →
@@ -2749,7 +2749,7 @@ theorem machine_prim_pend {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p :
   | prim hr =>
   simp only [Bool.false_eq_true, ite_false] at hr
   obtain ⟨H1, w, Q, hev, hO, hQ, hQu⟩ := hval T A hT hA ρS H ρM Res _ _ hS (hM.splitC hseq) hG
-  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushPrim T false p) (.prim p false rest) := ⟨_, rfl⟩
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushPrim P T false p) (.prim p false rest) := ⟨_, rfl⟩
   rw [← hΓ'] at hC
   have her' : ∀ i, Γ'.er i = if i = G.Γ.n then false else G.Γ.er i := fun i => by
     rw [hΓ', UCtx.adv_er' hf, Ctx.pushPrim_er']
@@ -2787,7 +2787,7 @@ theorem machine_prim_inert {b : Nat} {G : UCtx} {ru : List Bool} {rets : Tm} {p 
     {ρ vs : List Tm}
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval P ρ))
     (ih : ∀ T, G.primTy P p = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
         (ρ ++ [p.eval P ρ]) vs)
     (hval : PrimVal P G ρ p) :
     ∀ U K, usesCore P b G ru rets (.prim p false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
@@ -2804,7 +2804,7 @@ theorem machine_prim_reuse (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool}
     {ρ vs : List Tm} {x : Nat} (hE : EnvOK P ρ G.Γ) (hrt : rt P G.Γ t = true)
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval P ρ))
     (ih : ∀ T, G.primTy P (.tm t) = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest)) [G.ents.headD false]) ru rets
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest)) [G.ents.headD false]) ru rets
         rest (ρ ++ [(Prim.tm t).eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.tm t) false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.tm t) false rest) vsS →
@@ -3186,7 +3186,7 @@ theorem machine_prim_cell {m : Mark} (hm : m = .cellOf ∨ m = .write true) {b :
     {rets t A' : Tm} {rest : Core} {ρ vs : List Tm}
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval P ρ))
     (ih : ∀ T, G.primTy P (.axm A') = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
         rets rest (ρ ++ [(Prim.axm A').eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.axm A') false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.axm A') false rest) vsS →
@@ -3205,7 +3205,7 @@ theorem machine_prim_cell {m : Mark} (hm : m = .cellOf ∨ m = .write true) {b :
 theorem machine_prim_alloc {b : Nat} {G : UCtx} {ru : List Bool} {rets y A' : Tm} {rest : Core} {ρ vs : List Tm}
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.axm A').evalS P ρS) ((Prim.axm A').eval P ρ))
     (ih : ∀ T, G.primTy P (.axm A') = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false (.axm A')) (.prim (.axm A') false rest)) [G.ents.headD false]) ru
         rets rest (ρ ++ [(Prim.axm A').eval P ρ]) vs) :
     ∀ U K, usesCore P b G ru rets (.prim (.axm A') false rest) = some (U, K) → ∀ ρS vsS, SimEnv P G.Γ.er ρS ρ →
     RunS P ρS (.prim (.axm A') false rest) vsS →
@@ -3258,7 +3258,7 @@ theorem machine_rebind {b : Nat} {G : UCtx} {ru : List Bool} {rets t a0 b0 : Tm}
     (hrb : G.rebind = some t)
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P ((Prim.tm t).evalS P ρS) ((Prim.tm t).eval P ρ))
     (ih : ∀ T, G.primTy P (.tm t) = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest)) (G.ents.take 1)) ru rets rest
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest)) (G.ents.take 1)) ru rets rest
         (ρ ++ [(Prim.tm t).eval P ρ]) vs) :
     MRun P b G ru rets (.chk (.mark .rebind) a0 b0 (.prim (.tm t) false rest)) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
@@ -3268,7 +3268,7 @@ theorem machine_rebind {b : Nat} {G : UCtx} {ru : List Bool} {rets t a0 b0 : Tm}
   rw [usesCore] at hU
   simp only [hrb, beq_self_eq_true, ite_true] at hU
   obtain ⟨T, hT, hC⟩ := Option.bind_eq_some_iff.mp hU
-  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushPrim T false (.tm (.fv x))) (.prim (.tm (.fv x)) false rest) := ⟨_, rfl⟩
+  obtain ⟨Γ', hΓ'⟩ : ∃ Γ', Γ' = G.adv P (G.Γ.pushPrim P T false (.tm (.fv x))) (.prim (.tm (.fv x)) false rest) := ⟨_, rfl⟩
   rw [← hΓ'] at hC
   have her' : ∀ i, Γ'.er i = if i = G.Γ.n then false else G.Γ.er i := fun i => by
     rw [hΓ', UCtx.adv_er' hf, Ctx.pushPrim_er']

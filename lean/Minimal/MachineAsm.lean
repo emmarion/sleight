@@ -373,7 +373,7 @@ theorem machine_primF (hP : ProgOK P) {b : Nat} {G : UCtx} {ru : List Bool} {ret
     {ρ vs : List Tm} (hE : EnvOK P ρ G.Γ) (hrt : p.rt P G.Γ = true)
     (hreal : ∀ ρS, SimEnv P G.Γ.er ρS ρ → Real P (p.evalS P ρS) (p.eval P ρ)) (hval : PrimVal P G ρ p)
     (ih : ∀ T, G.primTy P p = some T →
-      MRun P b (G.next (G.adv P (G.Γ.pushPrim T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
+      MRun P b (G.next (G.adv P (G.Γ.pushPrim P T false p) (.prim p false rest)) [G.ents.headD false]) ru rets rest
         (ρ ++ [p.eval P ρ]) vs) :
     MRun P b G ru rets (.prim p false rest) ρ vs := by
   intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG
@@ -629,15 +629,15 @@ theorem MSound.prim (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {
   rw [eval] at h
   obtain ⟨hE', hlb', hm', hrs', -, -⟩ := prim_setup (rest := rest) hP hO hE hlb hm hrs hp hok
   have hT := UCtx.primTy_check hpe
-  have hΓ : ∀ us, (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) us).Γ =
-      Ctx.adv P G.Γ (G.Γ.pushPrim T er p) (.prim p er rest) := fun us => by simp [UCtx.next, UCtx.adv, hf]
+  have hΓ : ∀ us, (G.next (G.adv P (G.Γ.pushPrim P T er p) (.prim p er rest)) us).Γ =
+      Ctx.adv P G.Γ (G.Γ.pushPrim P T er p) (.prim p er rest) := fun us => by simp [UCtx.next, UCtx.adv, hf]
   have hCo : ∀ v ∈ ρ ++ [p.eval P ρ], CloOK P v := fun v hv => by
     rcases List.mem_append.mp hv with hv | hv
     · exact hC v hv
     · simp at hv; subst hv; exact hp.cloOK hO hC
-  have ih' := fun us => ih b (G.next (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)) us) _ ru rs rets _ hf (hΓ us) hr'
+  have ih' := fun us => ih b (G.next (G.adv P (G.Γ.pushPrim P T er p) (.prim p er rest)) us) _ ru rs rets _ hf (hΓ us) hr'
     hE' hlb' hm' hrs' hCo vs cnt' h
-  have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim T er p) (.prim p er rest)).n := by rw [UCtx.adv_n' hf, Ctx.pushPrim_n]; omega
+  have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim P T er p) (.prim p er rest)).n := by rw [UCtx.adv_n' hf, Ctx.pushPrim_n]; omega
   refine ⟨?_, fun hpre => ?_⟩
   · cases er
     · intro U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0
@@ -899,15 +899,15 @@ theorem MSound.chk (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {�
         rw [eval] at h
         obtain ⟨hE', hlb', hm', hrs', -, -⟩ := prim_setup (rest := rest') hP hO hE hlb hm hrs hp hok
         have hT := UCtx.primTy_check hpe
-        have hΓ : (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)).Γ =
-            Ctx.adv P G.Γ (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest') := by simp [UCtx.next, UCtx.adv, hf]
+        have hΓ : (G.next (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)).Γ =
+            Ctx.adv P G.Γ (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest') := by simp [UCtx.next, UCtx.adv, hf]
         have hCo : ∀ v ∈ ρ ++ [(Prim.tm t).eval P ρ], CloOK P v := fun v hv => by
           rcases List.mem_append.mp hv with hv | hv
           · exact hC v hv
           · simp at hv; subst hv; exact hp.cloOK hO hC
         have ih' := (ih.2 (.tm t) rest' rfl) b
-          (G.next (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) _ ru rs rets _ hf hΓ hr'' hE' hlb' hm' hrs' hCo vs cnt' h
-        have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim T false (.tm t)) (.prim (.tm t) false rest')).n := by
+          (G.next (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest')) (G.ents.take 1)) _ ru rs rets _ hf hΓ hr'' hE' hlb' hm' hrs' hCo vs cnt' h
+        have hn : G.Γ.n ≤ (G.adv P (G.Γ.pushPrim P T false (.tm t)) (.prim (.tm t) false rest')).n := by
           rw [UCtx.adv_n' hf, Ctx.pushPrim_n]; omega
         refine ⟨fun U K hU ρS vsS hS hrun H ρM Res Out Shr pd hM hG0 => ?_, fun hpre => ?_⟩
         · have hrt : (Prim.tm t).rt P G.Γ = true := by simpa [Ctx.ok, hG0.ghost] using hok

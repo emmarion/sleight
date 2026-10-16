@@ -59,6 +59,7 @@ structure Ctx where
   fixed : List (Option Tm) := []
   cmode : Bool := false
   deles : List (Nat × Nat × Bool × Bool) := []
+  pd : Option Tm := none
 
 namespace Ctx
 
@@ -90,15 +91,36 @@ def _root_.Minimal.Prim.src : Prim → Option Tm
   | .tm t | .coerce t _ _ | .place t _ | .unplace t _ => t.varSlot
   | _ => none
 
-def withSlot (Γ : Ctx) (e : Nat) (s : Tm) : Ctx :=
-  if s.isSlotVal Γ.n then { Γ with ς := fun i => if i = e then some s else Γ.ς i } else Γ
+def _root_.Minimal.Prim.srcAt (P : Prog) (pd : Option Tm) : Prim → Option Tm
+  | .tm (.app h as) => (P.unwrap (.app h as)).varSlot <|> pd
+  | .axm _ => pd
+  | p => p.src
+
+def markPd (Γ : Ctx) : Mark → Tm → Ctx
+  | .reuse true, a | .write true, a | .cellOf, a => { Γ with pd := a.varSlot }
+  | _, _ => Γ
+
+def slotSub (r : Nat) (s : Tm) : Tm → Tm := canonBy (fun _ => none) (fun j => if j = r then some s else none)
+
+def bindSlot (Γ : Ctx) (r : Nat) (s : Tm) : Ctx :=
+  { Γ with σ := fun i => (Γ.σ i).map (slotSub r s), ς := fun i => if i = r then some s else (Γ.ς i).map (slotSub r s) }
+
+def slotBind (Γ : Ctx) (e : Nat) (s : Tm) : Option (Nat × Tm) :=
+  if s.isSlotVal Γ.n then match Γ.canon (.sfv e), s with
+    | .sfv r, s => if s = .sfv r then none else some (r, s)
+    | a, .sfv r => if a.isSlotVal Γ.n then some (r, a) else none
+    | _, _ => none
+  else none
+
+def withSlot (Γ : Ctx) (e : Nat) (s : Tm) : Ctx := match Γ.slotBind e s with
+  | some (r, s) => Γ.bindSlot r s
+  | none => Γ
 
 def slotIf (Γ : Ctx) (b : Bool) (e : Nat) (s : Tm) : Ctx := if b then Γ.withSlot e s else Γ
 
 section
 variable (Γ : Ctx) (e : Nat) (s : Tm)
 @[simp] theorem withSlot_tys : (Γ.withSlot e s).tys = Γ.tys := by unfold withSlot; split <;> rfl
-@[simp] theorem withSlot_σ : (Γ.withSlot e s).σ = Γ.σ := by unfold withSlot; split <;> rfl
 @[simp] theorem withSlot_erA : (Γ.withSlot e s).erA = Γ.erA := by unfold withSlot; split <;> rfl
 @[simp] theorem withSlot_mints : (Γ.withSlot e s).mints = Γ.mints := by unfold withSlot; split <;> rfl
 @[simp] theorem withSlot_cur : (Γ.withSlot e s).cur = Γ.cur := by unfold withSlot; split <;> rfl
@@ -111,13 +133,12 @@ variable (Γ : Ctx) (e : Nat) (s : Tm)
 @[simp] theorem withSlot_n : (Γ.withSlot e s).n = Γ.n := by simp [n]
 @[simp] theorem withSlot_er : (Γ.withSlot e s).er = Γ.er := by funext i; simp [er]
 theorem withSlot_upd_ghost (g : Bool) : ({ Γ with ghost := g } : Ctx).withSlot e s = { Γ.withSlot e s with ghost := g } := by
-  unfold withSlot; simp only [n]; split <;> simp_all
+  unfold withSlot; rw [show ({ Γ with ghost := g } : Ctx).slotBind e s = Γ.slotBind e s from rfl]; split <;> rfl
 end
 
 section
 variable (Γ : Ctx) (b : Bool) (e : Nat) (s : Tm)
 @[simp] theorem slotIf_tys : (Γ.slotIf b e s).tys = Γ.tys := by cases b <;> simp [slotIf]
-@[simp] theorem slotIf_σ : (Γ.slotIf b e s).σ = Γ.σ := by cases b <;> simp [slotIf]
 @[simp] theorem slotIf_erA : (Γ.slotIf b e s).erA = Γ.erA := by cases b <;> simp [slotIf]
 @[simp] theorem slotIf_mints : (Γ.slotIf b e s).mints = Γ.mints := by cases b <;> simp [slotIf]
 @[simp] theorem slotIf_cur : (Γ.slotIf b e s).cur = Γ.cur := by cases b <;> simp [slotIf]
@@ -139,12 +160,17 @@ def slotSelf (Γ : Ctx) (s : Nat) : Option Ctx :=
   else if c = .fv s then some (Γ.withRule s (Γ.canon (.sfv s)))
   else none
 
+def chkStep (Γ : Ctx) : Chk → Tm → Ctx
+  | .mark m, a => Γ.markPd m a
+  | .slf, .fv s => (Γ.slotSelf s).getD Γ
+  | _, _ => Γ
+
 def pushPrim0 (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
   | .tm t | .coerce _ t _ | .unplace _ t => (Γ.push T er).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T er
 
-def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Ctx :=
-  (Γ.pushPrim0 T er p).slotIf p.src.isSome Γ.n (Γ.canon (p.src.getD .nil))
+def pushPrim (P : Prog) (Γ : Ctx) (T : Tm) (er : Bool) (p : Prim) : Ctx :=
+  ({ Γ.pushPrim0 T er p with pd := none } : Ctx).slotIf (p.srcAt P Γ.pd).isSome Γ.n (Γ.canon ((p.srcAt P Γ.pd).getD .nil))
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
   | .ty _ e _, A => Γ.push A e
@@ -363,9 +389,17 @@ def Ctx.atoms (Γ : Ctx) : Atoms := fun σ a b =>
 
 def Ctx.openEqs (Γ : Ctx) (xs : List Tm) : List (Tm × Tm) := xs.flatMap fun x => (Γ.atoms P Γ.σ x x).getD []
 
+def Ctx.ntSlot (Γ Γf : Ctx) (s k : Tm) : Ctx :=
+  match Γ.known k, s.varSlot with
+  | some (d, c), some σ => match P.wrapField d c with
+    | some j => Γf.withSlot (Γ.n + j) (Γ.canon σ)
+    | none => Γf
+  | _, _ => Γf
+
 def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
+  let Γf := Γ.ntSlot P Γf s k
   match rem with
   | .bind (.ty ..) R .nil =>
     (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields m))), (Γ.canon (.app H idx), Γf.canon R)])
@@ -627,7 +661,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
         BranchOK b er { Γ with ghost := Γ.ghost || (!er && p) } s k H idx sig rets (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b Γ e rets) →
       CoreTy b Γ (.case s brs els er nt) rets
-  | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim T er p) (.prim p er rest)) rest rets →
+  | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Ctx.adv P Γ (Γ.pushPrim P T er p) (.prim p er rest)) rest rets →
       CoreTy b Γ (.prim p er rest) rets
   | wdo : PrimTy P Γ (.wNext w) Tw → PrimTy P Γ (.wAsk w req) A → Γ.ok (rt P Γ w && rt P Γ req) →
       CoreTy b (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) rest rets → CoreTy b Γ (.wdo w req rest) rets
@@ -638,7 +672,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
-  | chkMark : CoreTy b Γ rest rets → CoreTy b Γ (.chk (.mark m) a x rest) rets
+  | chkMark : CoreTy b (Γ.markPd m a) rest rets → CoreTy b Γ (.chk (.mark m) a x rest) rets
   | chkCm : CoreTy b { Γ with cmode := true } rest rets → CoreTy b Γ (.chk .cm a x rest) rets
   | chkSlf : P.slotOK = true → TmTy P Γ (.fv s) S → Γ.canon S = .app (.tyc slotD .nil) .nil →
       Γ.slotSelf s = some Γ' → CoreTy b Γ' rest rets → CoreTy b Γ (.chk .slf (.fv s) x rest) rets

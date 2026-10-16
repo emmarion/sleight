@@ -199,7 +199,7 @@ def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
     let T ← match p with
       | .assert _ A => some A
       | p => (checkPrim P Γ p).toOption.map (·.1)
-    some (Γ.pushPrim T er p, rest, fun (r : Core) => .prim p er r)
+    some (Γ.pushPrim P T er p, rest, fun (r : Core) => .prim p er r)
   | .wdo w req rest => do
     let ⟨Tw, _⟩ ← (checkPrim P Γ (.wNext w)).toOption
     let ⟨A, _⟩ ← (checkPrim P Γ (.wAsk w req)).toOption
@@ -214,7 +214,7 @@ def stepCtx (Γ : Ctx) : Core → Option (Ctx × Core × (Core → Core))
         | _ => Γ.σ
       | _ => Γ.σ
     some ({ Γo with σ := σ' }, rest, fun (r : Core) => .chk (.opn oe) (.fv m) b r)
-  | .chk k a b rest => some (Γ, rest, fun (r : Core) => .chk k a b r)
+  | .chk k a b rest => some (Γ.chkStep k a, rest, fun (r : Core) => .chk k a b r)
   | .seq R body rest => some (Γ.pushTele R, rest, fun (r : Core) => .seq R body r)
   | .case s brs els er nt =>
     let live : Option (Ctx × Core × (Core → Core)) := brs.zipIdx.findSome? fun ((n, c, k', body), j) => do
@@ -386,8 +386,8 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
         pure (.tm (← inferTerm P Γ t A))
       | p => pure p
     match p, checkPrim P Γ p with
-    | .assert _ A, _ => return .prim p er (← inferCore (Γ.pushPrim A er p) rets top rest)
-    | _, .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim T er p) rets top rest)
+    | .assert _ A, _ => return .prim p er (← inferCore (Γ.pushPrim P A er p) rets top rest)
+    | _, .ok ⟨T, _⟩ => return .prim p er (← inferCore (Γ.pushPrim P T er p) rets top rest)
     | _, .error _ => return .prim p er rest
   | .defLvl rest => return .defLvl (← inferCore Γ.pushMint rets top rest)
   | .defFns gid rest => do
@@ -414,7 +414,7 @@ partial def inferCore (Γ : Ctx) (rets : Option Tm) (top : Bool) : Core → IM C
       | .error _ => m
     let [T] ← m.fill P [T'] | throw "cannot infer `_`"
     return .chk .ty a T (← inferCore Γ rets top rest)
-  | .chk k a b rest => return .chk k a b (← inferCore Γ rets top rest)
+  | .chk k a b rest => return .chk k a b (← inferCore (Γ.chkStep k a) rets top rest)
   | .absurd body => return .absurd (← inferCore Γ none false body)
   | .seq R body rest => return .seq R (← inferCore Γ (some R) false body) (← inferCore (Γ.pushTele R) rets top rest)
   | .dead => return .dead
