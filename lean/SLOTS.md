@@ -131,12 +131,20 @@ Two representations a session sees:
   this variable", typed `(Slot)`, erased exactly when the variable is.
   `Ctx` gets a second map, of slot facts, which canonicalization uses
   for slot terms and nothing else; `Ctx.σ` never rewrites inside one.
-  A telescope entry carries its `at` target, which binds the slot fact
-  as the entry is bound, in place of the hidden entries and `Tm.fn`'s
-  mask. Section 36's writers become core rules that add slot facts.
+  Section 36's writers become core rules that add slot facts.
   `Prim.atom`, `Prim.atomEq`, the reader's slot minting and the slot
   copies go; `slot-self` becomes a core statement adding the fact that
-  `x`'s slot is `x`.
+  `x`'s slot is `x`. A telescope entry written `at v` keeps today's
+  encoding, a hidden erased `is` entry before it naming `v`'s slot and
+  flagged in `Tm.fn`'s mask, which the core now reads: opening the
+  telescope records that the entry's slot is the hidden entry, and a
+  call checks each hidden argument against the following argument's
+  slot. The mask also records which entries are written `at`, which
+  section 36 reads from the signature as written. The owner accepted
+  this encoding on the condition that it allows complete consistency
+  with the design; a session found nothing in sections 35 and 36 that
+  it cannot express, and any such case is to be raised rather than
+  worked around.
 - **B. Automatic slot entries, as section 35 words it.** Every binding
   makes two entries, the variable and its slot, with the core keeping
   the pairing. Closer to the design's wording, but it doubles the
