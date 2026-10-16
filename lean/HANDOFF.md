@@ -385,12 +385,15 @@ computes.
       for top-level entries is stepped after inferring the form's holes,
       so it holds the type of an entry the reader inlines.
    3. Done: the prelude is regenerated for `main`'s latest.
-   3a. Not started, and an encoding to be proposed to the owner first:
-      `cell-same` (DESIGN.md section 68). Its `EONonErased` carries a
+   3a. Deferred by the owner: `cell-same` (DESIGN.md section 68). Its `EONonErased` carries a
       `JMEq` of two cells from their slots being equal, and the core
       here knows nothing of locations (two slots are one only when they
       canonicalize to one entry), so the checker has no rule giving that
-      equality, and a new one would need its own case in the proofs.
+      equality. A session's reading is that supporting it would mean the
+      proofs tracking slots as locations (live cells whose slot entries
+      canonicalize to one entry being equal values), not a case beside
+      the existing ones. The call's `at` requirement is already checked
+      by the core, as for any at-function.
    4. Not started, and to be proposed to the owner first: make
       `MacroWorld` (and `Gensym`) opaque again, as DESIGN.md has them,
       with the macro-world primitives a core form answered by an oracle,
