@@ -579,11 +579,12 @@ theorem Ctx.sfv_canon_lt {Γ : Ctx} (hw : Γ.WF) {e r : Nat} (he : e < Γ.n) (h 
     · simp [Tm.vacant] at h
     · cases h; exact hj
 
-theorem Ctx.slotBind_spec {Γ : Ctx} (hw : Γ.WF) {e r : Nat} {s t : Tm} (he : e < Γ.n) (h : Γ.slotBind e s = some (r, t)) :
+theorem Ctx.slotBind_spec {Γ : Ctx} (hw : Γ.WF) {e r : Nat} {s t : Tm} (h : Γ.slotBind e s = some (r, t)) :
     r < Γ.n ∧ (t = Tm.vacant ∨ ∃ j < Γ.n, t = .sfv j) := by
   unfold Ctx.slotBind at h
   split at h
-  · rename_i hs
+  · rename_i hse
+    obtain ⟨hs, he⟩ := hse
     split at h
     · rename_i r0 _ hc
       split at h
@@ -630,10 +631,11 @@ theorem Ctx.slotBind_val {Γ : Ctx} {e r : Nat} {s t : Tm} (h : Γ.slotBind e s 
     t.isSlotVal Γ.n = true := by
   unfold Ctx.slotBind at h
   split at h
-  · split at h
+  · rename_i hse
+    split at h
     · split at h
       · cases h
-      · cases h; assumption
+      · cases h; exact hse.1
     · split at h
       · cases h; assumption
       · cases h
@@ -647,7 +649,7 @@ theorem Ctx.bindSlot_sat {Γ : Ctx} {r : Nat} {s : Tm} {f : Nat → Tm} (hs : s.
     intro e u h; dsimp only at h; split at h
     · cases h; exact slotVal_subst hc (Tm.isSlotVal_spec hs) e
     · cases h
-  rw [h i _ (by simp [Ctx.bindSlot, hi]), Ctx.slotSub, canonBy_sound (fun _ _ h => by cases h) hS]
+  rw [h i _ (by simp [Ctx.bindSlot, hi])]; exact canonBy_sound (fun _ _ h => by cases h) hS t
 
 theorem Ctx.withSlot_sat {Γ : Ctx} {e : Nat} {s : Tm} {f : Nat → Tm} (hc : ∀ i, (f i).lc 0)
     (h : Sat f (Γ.withSlot e s).σ) : Sat f Γ.σ := by
@@ -661,19 +663,19 @@ theorem Ctx.slotIf_sat {Γ : Ctx} {b : Bool} {e : Nat} {s : Tm} {f : Nat → Tm}
   · exact h
   · exact Ctx.withSlot_sat hc h
 
-theorem EnvOK.withSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} (s : Tm) (he : e < Γ.n) :
+theorem EnvOK.withSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} (s : Tm) :
     EnvOK P ρ (Γ.withSlot e s) := by
   unfold Ctx.withSlot; split
   · rename_i h
-    obtain ⟨hr, ht⟩ := Ctx.slotBind_spec hE.wf he h
+    obtain ⟨hr, ht⟩ := Ctx.slotBind_spec hE.wf h
     exact hE.bindSlot hr ht
   · exact hE
 
-theorem EnvOK.slotIf {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (b : Bool) {e : Nat} (s : Tm) (he : e < Γ.n) :
+theorem EnvOK.slotIf {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (b : Bool) {e : Nat} (s : Tm) :
     EnvOK P ρ (Γ.slotIf b e s) := by
   cases b
   · exact hE
-  · exact hE.withSlot s he
+  · exact hE.withSlot s
 
 theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} {t : Tm} (he : e < Γ.n)
     (ht : t.static Γ.n 0) (hv : Tm.env ρ e = t.subst (Tm.env ρ)) : EnvOK P ρ (Γ.withRule e t) := by
@@ -747,6 +749,29 @@ theorem Ctx.Ext.trans {Γ Γ' Γ'' : Ctx} (h1 : Γ.Ext Γ') (h2 : Γ'.Ext Γ'') 
   exact ⟨⟨Ts ++ Us, by rw [e2, e1, Array.append_assoc]; simp⟩, fun f hc h => h1.σ f hc (h2.σ f hc h),
     h2.mints.trans h1.mints, h2.cur.trans h1.cur, h2.subs.trans h1.subs, h2.fixed.trans h1.fixed⟩
 
+theorem Ctx.withSlot_eq (Γ : Ctx) (e : Nat) (s : Tm) :
+    ∃ σ ς, Γ.withSlot e s = { Γ with σ := σ, ς := ς } := by
+  unfold Ctx.withSlot; split
+  · exact ⟨_, _, rfl⟩
+  · exact ⟨Γ.σ, Γ.ς, rfl⟩
+
+theorem EnvOK.ntSlot {ρ : List Tm} {Γf : Ctx} (h : EnvOK P ρ Γf) (Γ : Ctx) (s k : Tm) :
+    EnvOK P ρ (Γ.ntSlot P Γf s k) ∧ Γf.Ext (Γ.ntSlot P Γf s k) ∧
+      ∃ σ ς, Γ.ntSlot P Γf s k = { Γf with σ := σ, ς := ς } := by
+  have hw : ∀ e t, EnvOK P ρ (Γf.withSlot e t) ∧ Γf.Ext (Γf.withSlot e t) ∧
+      ∃ σ ς, Γf.withSlot e t = { Γf with σ := σ, ς := ς } := fun e t => by
+    obtain ⟨σ, ς, he⟩ := Γf.withSlot_eq e t
+    refine ⟨h.withSlot t, ?_, σ, ς, he⟩
+    rw [he]; exact ⟨⟨[], by simp⟩, fun f hc hs => Ctx.withSlot_sat hc (he ▸ hs), rfl, rfl, rfl, rfl⟩
+  have hid : EnvOK P ρ Γf ∧ Γf.Ext Γf ∧ ∃ σ ς, Γf = { Γf with σ := σ, ς := ς } :=
+    ⟨h, ⟨⟨[], by simp⟩, fun _ _ h => h, rfl, rfl, rfl, rfl⟩, Γf.σ, Γf.ς, rfl⟩
+  unfold Ctx.ntSlot
+  split
+  · split
+    · exact hw _ _
+    · exact hid
+  · exact hid
+
 theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {A r v vs out : Tm}
     (hv : VTys P (.cons v vs) (.bind k (A.subst (Tm.env ρ)) (r.subst (Tm.env ρ))) out) (hA : A.static Γ.n 0)
     (hc : v.lc 0) :
@@ -763,7 +788,7 @@ theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {
       (by simp [Ctx.push, Ctx.n])
       (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs)
       (by rw [Tm.subst_append (hl ▸ hs), hE.canon, ← he]; simp [Tm.env, hl])
-    refine ⟨hE1.slotIf _ (e := Γ.n - 1) (Γ.canon A) (by simp [Ctx.withRule, Ctx.push, Ctx.n]; omega), hvs,
+    refine ⟨hE1.slotIf _ (e := Γ.n - 1) (Γ.canon A), hvs,
       ⟨⟨[.nil], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩, fun f hc hs e t h => ?_,
         by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push],
         by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩,
@@ -1690,7 +1715,7 @@ theorem EnvOK.slotSelf (hP : ProgOK P) {ρ : List Tm} {Γ Γ' : Ctx} (hE : EnvOK
   have hsn : s < Γ.n := by simpa [Tm.static] using hst
   unfold Ctx.slotSelf at h; simp only [] at h
   split at h
-  · cases h; exact hE.withSlot _ hsn
+  · cases h; exact hE.withSlot _
   · split at h
     · cases h
       obtain ⟨D, m, e, u, hD, hc, hl, -, ho, -⟩ := Tm.slotOK_spec hok
@@ -2017,7 +2042,7 @@ theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
   have hn0 : (Γ.pushPrim0 T er p).n = Γ.n + 1 := by cases p <;> simp [Ctx.pushPrim0, Ctx.withRule, Ctx.push, Ctx.n]
   suffices h0 : EnvOK P (ρ ++ [v]) (Γ.pushPrim0 T er p) by
     have h0' : EnvOK P (ρ ++ [v]) ({ Γ.pushPrim0 T er p with pd := none } : Ctx) := h0.congr _ rfl rfl rfl rfl rfl
-    refine ⟨h0'.slotIf _ _ (by show Γ.n < (Γ.pushPrim0 T er p).n; omega), ?_, ?_,
+    refine ⟨h0'.slotIf _ _, ?_, ?_,
       by rw [Ctx.pushPrim, Ctx.slotIf_n]; exact hn0⟩ <;>
       cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
   have h1 := hE.push hv hT hc (e := er)
@@ -2777,10 +2802,15 @@ theorem Ctx.openTele_ghost (g : Bool) : ∀ m (Γ : Ctx) t,
       rw [this]; exact ih _ _
     | _ => rfl
 
+theorem Ctx.ntSlot_ghost (g : Bool) (Γ Γf : Ctx) (s k : Tm) :
+    ({ Γ with ghost := g } : Ctx).ntSlot P { Γf with ghost := g } s k = { Γ.ntSlot P Γf s k with ghost := g } := by
+  unfold Ctx.ntSlot
+  split <;> (try split) <;> first | rfl | exact Ctx.withSlot_upd_ghost Γf _ _ g
+
 theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
     ({ Γ with ghost := g } : Ctx).branch P s k H idx sig =
       ({ (Γ.branch P s k H idx sig).1 with ghost := g }, (Γ.branch P s k H idx sig).2) := by
-  simp only [Ctx.branch, Ctx.openTele_ghost]
+  simp only [Ctx.branch, Ctx.openTele_ghost, Ctx.ntSlot_ghost]
   split <;> rfl
 
 section
@@ -3084,12 +3114,16 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   have hm' : vs.len = sig.len - 1 := by omega
   rw [hm'] at h1 h2 h3 h4 h5 h6
   generalize hpr : Γ.openTele sig (sig.len - 1) = pr at h1 h2 h3 h4 h5 h6
-  obtain ⟨Γf, rem⟩ := pr
+  obtain ⟨Γf0, rem⟩ := pr
   simp only at h1 h2 h3 h4 h5 h6
   obtain ⟨Rc, rfl, hRc⟩ := Tm.tele_one h4 h2
+  obtain ⟨h1, hx, σn, ςn, hnt⟩ := h1.ntSlot Γ s k
+  generalize hΓf : Γ.ntSlot P Γf0 s k = Γf at h1 hx hnt
+  have h5 : Γf.n = Γ.n + (sig.len - 1) := by rw [hnt]; exact h5
+  have h6 := h6.trans hx
   have hbranch : Γ.branch P s k H idx sig =
       (Γf, unify Γf.n (Γf.atoms P) Γf.σ [] [(Γ.canon s, Γf.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)]) := by
-    simp [Ctx.branch, hpr]
+    simp [Ctx.branch, hpr, hΓf]
   have hEf := h1
   have hvl : vs.toList.length = sig.len - 1 := by rw [Tm.len_toList _ hvs.isList, hm']
   have hsat : Sat (Tm.env (ρ ++ vs.toList)) Γ.σ := h6.σ _ (Tm.env_lc hEf.closed) hEf.sat
@@ -3128,6 +3162,8 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     have hwσ := unify_wf Γf.n (Γf.atoms P) Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
+    replace o1 : ∀ i < Γ.n, Γf.er i = Γ.er i := by rw [hnt]; exact o1
+    replace o2 : ∀ k < sig.len - 1, k < sig.ers.length → Γf.er (Γ.n + k) = sig.ers.getD k true := by rw [hnt]; exact o2
     refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),
       fun i hi => by show (Ctx.advBr _ _ _ _ _ _ _).er _ = _; rw [Ctx.advBr_er, Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
       fun sig'' hsig'' k hk => ?_, fun _ => ⟨_, hctor, by rw [hvl, hsk2, Tm.len_subst _ _ (.inl hst)]⟩,
@@ -3547,14 +3583,14 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
     (hrs : rets.static Γ.n 0) (hw : PrimTy P Γ (.wNext w) Tw) (ha : PrimTy P Γ (.wAsk w req) A)
     (hok : Γ.ok (rt P Γ w && rt P Γ req) = true) :
     EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ])
-        (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)) ∧
+        (Ctx.adv P Γ (Γ.pushWdo Tw A w) (.wdo w req rest)) ∧
       LvlBound (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) cnt ∧
-      MuOK μ (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest))
+      MuOK μ (Ctx.adv P Γ (Γ.pushWdo Tw A w) (.wdo w req rest))
         (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) ∧
-      rets.static (Ctx.adv P Γ ((Γ.push Tw false).push A false) (.wdo w req rest)).n 0 ∧
-      HeadSim P Γ ((Γ.push Tw false).push A false) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
+      rets.static (Ctx.adv P Γ (Γ.pushWdo Tw A w) (.wdo w req rest)).n 0 ∧
+      HeadSim P Γ (Γ.pushWdo Tw A w) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
         (.wdo w req rest) rest ∧
-      ∀ i, ((Γ.push Tw false).push A false).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
+      ∀ i, (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
   obtain ⟨v1, s1, c1, l1⟩ := prim_sound hP hO hE hb hw
   obtain ⟨v2, s2, c2, l2⟩ := prim_sound hP hO hE hb ha
   have hl := hE.len
@@ -3562,10 +3598,10 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
   have hE2 := hE1.push (v := (Prim.wAsk w req).eval P ρ) (A := A)
     (by rw [Tm.subst_append (hl ▸ s2)]; exact v2)
     (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) s2) c2 (e := false)
-  have her : ∀ i, ((Γ.push Tw false).push A false).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
+  have her : ∀ i, (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
     intro i; rw [Ctx.er_push, Ctx.er_push]; simp only [Ctx.push, Ctx.n, Array.size_push]
     by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
-  have hh : HeadSim P Γ ((Γ.push Tw false).push A false) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
+  have hh : HeadSim P Γ (Γ.pushWdo Tw A w) ρ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]
       (.wdo w req rest) rest := by
     intro ρS hg hS
     simp only [Ctx.ok, hg, Bool.false_or] at hok
@@ -3576,8 +3612,8 @@ theorem wdo_setup (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {ρ
     | 0, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.1
     | 1, ha', hb' => simp at ha' hb'; subst ha' hb'; exact hR.2
     | _ + 2, ha', _ => simp at ha'
-  have hn : ((Γ.push Tw false).push A false).n = Γ.n + 2 := by simp [Ctx.push, Ctx.n]
-  have hE2' : EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) ((Γ.push Tw false).push A false) := by
+  have hn : (Γ.pushWdo Tw A w).n = Γ.n + 2 := by simp [Ctx.push, Ctx.n]
+  have hE2' : EnvOK P (ρ ++ [(Prim.wNext w).eval P ρ, (Prim.wAsk w req).eval P ρ]) (Γ.pushWdo Tw A w) := by
     simpa using hE2
   refine ⟨hE.adv hE2' rfl hh, LvlBound.append.mpr ⟨hb, ?_⟩, hm.append hE.wf hl (by simp [Ctx.push]) (by simp [Ctx.push]),
     Tm.static_mono (by simp [hn]) _ (Nat.le_refl 0) hrs, hh, her⟩
