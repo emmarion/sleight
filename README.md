@@ -317,6 +317,6 @@ is, which `(slot-of x)` names, and a slot prints by that form.
 
 - `agent/pi.py` — the harness: runs one task for a configured provider and model (`PI_*` environment variables), with `slc` as the agent's compiler, carrying a handoff file from one session to the next
 - `agent/run.sh` — starts, resumes, lists and follows `pi.py` runs on DigitalOcean droplets; `agent/deploy.sh` and `agent/ssh.sh` set up a box and deploy `HEAD` to it
-- `agent/rea.sh` — creates, lists and destroys `rea` droplets, for reverse-engineering a built `slc`: each has Java 21, Ghidra, binutils, OCaml, Node 24 and Claude Code, and a copy of the `slc` binary but no Sleight source; `agent/do.sh` holds the DigitalOcean helpers it shares with `run.sh`
+- `agent/rea.sh` — builds an x86-64 Linux `slc` on a temporary droplet, and creates, lists and destroys `rea` droplets for reverse-engineering it: each has Java 21, Ghidra, binutils, OCaml, Node 24 and Claude Code, and a copy of the `slc` binary but no Sleight source; `agent/do.sh` holds the DigitalOcean helpers it shares with `run.sh`
 - `agent/tasks/*.txt` — task prompts; each one's `#!pi` first line gives the files the agent sees, its work directory and run settings
 - `agent/tasks/<task>/` — a task's spec and acceptance files, such as `heapsort-fast/spec.sl`, which `heapsort/` is certified against

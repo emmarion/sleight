@@ -7,6 +7,9 @@ usage() {
 usage: $0 --slc FILE
            create a $TAG droplet in nyc3 (size $SIZE) with Java 21, binutils, OCaml, Node 24, Claude Code and
            Ghidra, and a user slc with passwordless sudo whose ~/slc/slc is a copy of FILE, which is never run
+       $0 build [REV [OUT]]
+           build slc at REV [HEAD] on a temporary droplet tagged $TAG-build, copy the x86-64 Linux binary to OUT
+           [./slc-x86_64-linux-SHORTHASH], and destroy the droplet
        $0 ls
            list the $TAG droplets
        $0 destroy [--yes] IP
@@ -15,19 +18,20 @@ The DigitalOcean token is read from \$PI_DO_ENV [~/.config/pi/do.env] and never 
 EOF
     exit 2
 }
+here=$PWD
 cd "$(dirname "$0")/.."
 . agent/ssh.sh
 . agent/do.sh
+APT='cloud-init status --wait >/dev/null 2>&1 || true
+while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 3; done
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1
+apt-get update -qq'
 
 case "${1:-}" in
 --slc)
     [ $# -eq 2 ] && [ -f "$2" ] || usage
     create "$TAG-$(rows | awk -v t="$TAG-" 'index($3, t) == 1 && substr($3, length(t) + 1) + 0 > m {m = substr($3, length(t) + 1) + 0} END {print m + 1}')"
-    $SSH root@"$ip" sh -eu <<'EOF'
-cloud-init status --wait >/dev/null 2>&1 || true
-while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 3; done
-export DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1
-apt-get update -qq
+    { echo "$APT"; cat <<'EOF'; } | $SSH root@"$ip" sh -eu
 apt-get install -y -qq curl git unzip openjdk-21-jdk binutils ocaml >/dev/null
 curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource.sh
 bash /tmp/nodesource.sh >/dev/null 2>&1
@@ -53,6 +57,22 @@ echo "java: $(java -version 2>&1 | head -1); node: $(node --version); claude: $(
 echo "slc: $(sha256sum ~/slc/slc)"
 EOF
     echo "ready: ssh slc@$ip"
+    ;;
+build)
+    [ $# -le 3 ] || usage
+    rev=$(git rev-parse --verify "${2:-HEAD}^{commit}")
+    out=${3:-slc-x86_64-linux-${rev:0:7}}
+    case $out in /*) ;; *) out=$here/$out ;; esac
+    TAG=$TAG-build
+    create "$TAG-${rev:0:7}"
+    trap 'dctl compute droplet delete --force "$(droplet "$ip" | cut -d" " -f1)" && ssh-keygen -R "$ip" >/dev/null 2>&1; echo "destroyed the build droplet"' EXIT
+    git archive "$rev" | $SSH root@"$ip" 'mkdir sl && tar -x -C sl'
+    { echo "$APT"; cat <<'EOF'; } | $SSH root@"$ip" sh -eu
+apt-get install -y -qq ocaml-nox ocaml-findlib libzarith-ocaml-dev ocaml-dune >/dev/null
+sh sl/self/release.sh >/dev/null
+EOF
+    ${SSH/ssh/scp} -q root@"$ip":sl/_build/release/slc "$out"
+    echo "built $out from ${rev:0:7}: $(shasum -a 256 "$out" | cut -d' ' -f1)"
     ;;
 ls)
     rows
