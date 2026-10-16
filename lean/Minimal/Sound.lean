@@ -1108,9 +1108,23 @@ theorem dele_own {gid j t : Nat} {G : Group} {F : FnDef} {env : List Tm} {st : B
     exact fun H w u b h => hno hs H w u b (hsp h).2
   · simp only [ne_eq, sideTm_eq, Bool.not_eq_true] at hg hs; exact absurd (hsu hs) (by simpa using hg)
 
+theorem EnvOK.deleSlots {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (k : Nat) (fns : List FnDef) :
+    EnvOK P ρ (Ctx.deleSlots k fns Γ) := by
+  unfold Ctx.deleSlots
+  generalize fns.zipIdx = L
+  induction L generalizing Γ with
+  | nil => exact hE
+  | cons p L ih =>
+    simp only [List.foldl_cons]
+    apply ih
+    split
+    · exact hE.withSlot _
+    · exact hE
+
 theorem EnvOK.pushFns (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {gid : Nat} {G : Group}
     (hG : P.groups[gid]? = some G) (hok : GroupOK P gid Γ G) :
     EnvOK P (ρ ++ closures ρ gid G) (Γ.pushFns G) := by
+  refine EnvOK.deleSlots ?_ _ _
   cases hok with
   | mk hK hl hty hm hb he hg hd hds =>
   have h1 := hE.pushMany (closures ρ gid G) (G.fns.map (FnDef.type G)) (by simp [closures]) fun j v T h1 h2 => by
@@ -4216,7 +4230,7 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
       · have : Tm.env ρ i = .nil := by
           simp [Tm.env, List.getD_eq_getElem?_getD, List.getElem?_eq_none (show ρ.length ≤ i by omega)]
         rw [this]; exact Real.nil' _
-    have ih' := ih b _ rets hr (hE.adv (hE.pushFns hP hG hok) rfl hh) (LvlBound.append.mpr ⟨hb, fun v hv x hx => by
+    have ih' := ih b _ rets hr (hE.adv (hE.pushFns hP hG hok) (by simp [Ctx.pushFns]) hh) (LvlBound.append.mpr ⟨hb, fun v hv x hx => by
         simp only [closures, List.mem_map] at hv
         obtain ⟨j, _, rfl⟩ := hv
         obtain ⟨w, hw, hx'⟩ := Tm.levels_ofList ρ x (by simpa [Tm.levels] using hx)
