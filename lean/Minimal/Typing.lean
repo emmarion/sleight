@@ -222,12 +222,65 @@ def fnU (Γ : Ctx) (i : Nat) : Bool := (Γ.fnSide i).getD false
 
 def deleSide (Γ : Ctx) (G : Group) (t : Nat) : Bool := fnU { Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray } t
 
+theorem withSlot_eq (Γ : Ctx) (e : Nat) (s : Tm) : ∃ σ ς, Γ.withSlot e s = { Γ with σ := σ, ς := ς } := by
+  unfold withSlot; split
+  · exact ⟨_, _, rfl⟩
+  · exact ⟨Γ.σ, Γ.ς, rfl⟩
+
+def deleSlots (k : Nat) (fns : List FnDef) (Γ : Ctx) : Ctx :=
+  fns.zipIdx.foldl (fun Γ' (F, j) => match F.dele with
+    | some t => Γ'.withSlot (k + j) (Γ'.canon (.sfv t))
+    | none => Γ') Γ
+
+theorem deleSlots_eq (k : Nat) (fns : List FnDef) (Γ : Ctx) : ∃ σ ς, deleSlots k fns Γ = { Γ with σ := σ, ς := ς } := by
+  unfold deleSlots
+  generalize fns.zipIdx = L
+  induction L generalizing Γ with
+  | nil => exact ⟨Γ.σ, Γ.ς, rfl⟩
+  | cons p L ih =>
+    simp only [List.foldl_cons]
+    obtain ⟨σ1, ς1, h1⟩ : ∃ σ ς, (match p.1.dele with
+        | some t => Γ.withSlot (k + p.2) (Γ.canon (.sfv t))
+        | none => Γ) = { Γ with σ := σ, ς := ς } := by
+      split
+      · exact withSlot_eq _ _ _
+      · exact ⟨Γ.σ, Γ.ς, rfl⟩
+    obtain ⟨σ2, ς2, h2⟩ := ih (match p.1.dele with
+        | some t => Γ.withSlot (k + p.2) (Γ.canon (.sfv t))
+        | none => Γ)
+    exact ⟨σ2, ς2, by rw [h2, h1]⟩
+
+@[simp] theorem deleSlots_tys (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).tys = Γ.tys := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_erA (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).erA = Γ.erA := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_mints (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).mints = Γ.mints := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_cur (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).cur = Γ.cur := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_subs (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).subs = Γ.subs := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_ghost (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).ghost = Γ.ghost := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_opened (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).opened = Γ.opened := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_fixed (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).fixed = Γ.fixed := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_cmode (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).cmode = Γ.cmode := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_deles (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).deles = Γ.deles := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_pd (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).pd = Γ.pd := by
+  obtain ⟨σ, ς, h⟩ := deleSlots_eq k fns Γ; rw [h]
+@[simp] theorem deleSlots_n (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).n = Γ.n := by simp [n]
+@[simp] theorem deleSlots_er (k : Nat) (fns : List FnDef) (Γ : Ctx) : (deleSlots k fns Γ).er = Γ.er := by funext i; simp [er]
+
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   let k := Γ.n
-  { Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray,
+  deleSlots k G.fns ({ Γ with tys := Γ.tys ++ (G.fns.map (FnDef.type G)).toArray,
            erA := arrFrom Γ.erA k (G.fns.map (·.er)),
            deles := Γ.deles ++ G.fns.zipIdx.filterMap fun (F, j) =>
-             if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) }
+             if F.er || G.ghost then none else F.dele.map fun t => (k + j, t, F.u, Γ.deleSide G t) } : Ctx)
 
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
@@ -264,7 +317,7 @@ def record (Γ Γ' : Ctx) (vs : List Tm) : Ctx :=
 
 theorem er_pushWdo (Γ : Ctx) (Tw A w : Tm) (i : Nat) :
     (Γ.pushWdo Tw A w).er i = if i = Γ.n + 1 then false else if i = Γ.n then false else Γ.er i := by
-  unfold pushWdo; rw [er_push, slotIf_er, er_push]; simp only [slotIf_n, push, n, Array.size_push]
+  unfold pushWdo; rw [er_push, slotIf_er, er_push]; simp only [push, n]
   by_cases h1 : i = Γ.tys.size + 1 <;> simp [h1]
 
 @[simp] theorem er_pushMint (Γ : Ctx) (i : Nat) : Γ.pushMint.er i = if i = Γ.n then true else Γ.er i := by
@@ -276,7 +329,7 @@ theorem er_pushWdo (Γ : Ctx) (Tw A w : Tm) (i : Nat) :
 
 @[simp] theorem er_pushFns (Γ : Ctx) (G : Group) (i : Nat) :
     (Γ.pushFns G).er i = if Γ.n ≤ i then (G.fns[i - Γ.n]?.map (·.er)).getD true else Γ.er i := by
-  simp only [pushFns, er, arrFrom_getD, List.getD_eq_getElem?_getD, List.getElem?_map]
+  simp only [pushFns, er, deleSlots_erA, arrFrom_getD, List.getD_eq_getElem?_getD, List.getElem?_map]
 
 @[simp] theorem er_body (Γ : Ctx) (G : Group) (F : FnDef) (i : Nat) :
     (Γ.body G F).1.er i = ((F.dele.isSome && decide (i < (Γ.pushFns G).n) && F.dele != some i) ||

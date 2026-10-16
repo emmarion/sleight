@@ -749,12 +749,6 @@ theorem Ctx.Ext.trans {Γ Γ' Γ'' : Ctx} (h1 : Γ.Ext Γ') (h2 : Γ'.Ext Γ'') 
   exact ⟨⟨Ts ++ Us, by rw [e2, e1, Array.append_assoc]; simp⟩, fun f hc h => h1.σ f hc (h2.σ f hc h),
     h2.mints.trans h1.mints, h2.cur.trans h1.cur, h2.subs.trans h1.subs, h2.fixed.trans h1.fixed⟩
 
-theorem Ctx.withSlot_eq (Γ : Ctx) (e : Nat) (s : Tm) :
-    ∃ σ ς, Γ.withSlot e s = { Γ with σ := σ, ς := ς } := by
-  unfold Ctx.withSlot; split
-  · exact ⟨_, _, rfl⟩
-  · exact ⟨Γ.σ, Γ.ς, rfl⟩
-
 theorem Ctx.slotEq_eq (Γ : Ctx) (p : Tm × Tm) : ∃ σ ς, Γ.slotEq p = { Γ with σ := σ, ς := ς } := by
   unfold Ctx.slotEq; split
   · exact Γ.withSlot_eq _ _
