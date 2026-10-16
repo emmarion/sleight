@@ -4238,7 +4238,7 @@ theorem eval_sound (hP : ProgOK P) (hO : P.OracleOK) : ∀ μ ρ cnt c, ∀ b Γ
       (hm.append hE.wf hl (by simp [Ctx.pushFns]) (by simp [Ctx.pushFns]))
       (Tm.static_mono (by simp [Ctx.pushFns, Ctx.n]) _ (Nat.le_refl 0) hrs)
     exact ⟨Result.weaken ih'.1 (hl ▸ hrs) (Nat.le_refl _), hh.finish (Γ' := Γ.pushFns G) hE
-      (fun i hi => by rw [Ctx.er_pushFns, if_neg (by omega)]) (fun hg => hg) ih'.2⟩
+      (fun i hi => by rw [Ctx.er_pushFns, if_neg (by omega)]) (fun hg => by simpa [Ctx.pushFns] using hg) ih'.2⟩
   | case14 μ ρ cnt gid rest hG =>
     intro b Γ rets hc
     cases hc with
