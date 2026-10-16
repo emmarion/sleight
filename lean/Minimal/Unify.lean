@@ -18,6 +18,10 @@ def kids : Tm → List Tm
   | mtbl _ _ _ _ T cs => [T, cs]
   | _ => []
 
+def isSlot : Tm → Bool
+  | sfv _ | sbv _ => true
+  | _ => false
+
 def isHead : Tm → Bool
   | tyc .. | vc .. | univ | level => true
   | _ => false
@@ -53,7 +57,7 @@ def pairsOf : List (Tm × Tm) → Option (List (Tm × Tm))
   | [] => some []
   | (a, b) :: rest =>
     if a = b then pairsOf rest
-    else if a.isHead && b.isHead && !a.sameHead b || a matches .fv _ || b matches .fv _ then
+    else if a.isHead && b.isHead && !a.sameHead b || a matches .fv _ || b matches .fv _ || a.isSlot || b.isSlot then
       ((a, b) :: ·) <$> pairsOf rest
     else if a.sameHead b then pairsOf (a.kids.zip b.kids ++ rest) else none
 termination_by eqs => eqsSize eqs
@@ -76,7 +80,7 @@ def substOne (e : Nat) (t : Tm) : Tm → Tm := Tm.subst fun i => if i = e then t
 def assign (e : Nat) (t : Tm) (σ : Nat → Option Tm) (x : Nat) : Option Tm :=
   if x = e then some t else (σ x).map (substOne e t)
 
-def canonBy (σ : Nat → Option Tm) (t : Tm) : Tm := t.subst fun i => (σ i).getD (.fv i)
+def canonBy (σ : Nat → Option Tm) (t : Tm) : Tm := t.subst2 (fun i => (σ i).getD (.fv i)) .sfv
 
 abbrev Atoms := (Nat → Option Tm) → Tm → Tm → Option (List (Tm × Tm))
 
@@ -90,7 +94,8 @@ def step (atoms : Atoms) (σ : Nat → Option Tm) (a b : Tm) : Step :=
   match varSide a b with
   | some (e, t) => .assign e t []
   | none =>
-    if a.sameHead b then .split
+    if a.isSlot || b.isSlot then .drop
+    else if a.sameHead b then .split
     else if a.isHead && b.isHead then match atoms σ a b with
       | some ((x, y) :: _) => match varSide x y with
         | some (e, t) => .assign e t [(a, b)]
@@ -105,7 +110,7 @@ def unify (n : Nat) (atoms : Atoms) (σ : Nat → Option Tm) (dom : List Nat) : 
     if a = b then unify n atoms σ dom rest
     else match step atoms σ a b with
       | .assign e t keep =>
-        if e ∈ t.fvs ∨ t.bound 0 = false then .contra
+        if e ∈ t.occ ∨ t.bound 0 = false then .contra
         else match atoms σ (.fv e) t with
           | none => .contra
           | some more =>

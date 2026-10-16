@@ -1880,7 +1880,7 @@ theorem Tm.toArrAux_toList : ∀ (t : Tm) (acc : Array Tm), (t.toArrAux acc).toL
   | .cons h t, acc => by simp [Tm.toArrAux, Tm.toArrAux_toList t, Tm.toList]
   | .fv _, _ | .bv _, _ | .nil, _ | .bind .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
   | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
-  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ => by simp [Tm.toArrAux, Tm.toList]
+  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ | .sfv _, _ | .sbv _, _ => by simp [Tm.toArrAux, Tm.toList]
 
 def cvalT (env : Tm) (gid : Nat) (acc : List Tm) (F : FnDef) : Tm := match F.dele with
   | some t => (env.toList ++ acc).getD t .nil

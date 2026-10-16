@@ -626,7 +626,7 @@ def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .n
     have hi : R.inst a 0 = R := Tm.inst_static n R 0 0 hR (Nat.le_refl 0)
     have hR1 := Tm.static_mono (Nat.le_refl n) R (Nat.zero_le 1) hR
     if hs : (Γ.canon T).static 0 0 then
-      have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
+      have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst2_static0 _ _ _ _ hs
       .ok ⟨.bind (.ty false false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr),
         by simp [Tm.static, Tm.static_mono (Nat.zero_le n) _ (Nat.le_refl 0) hs, hR1]⟩
     else if hs : T.static n 0 then
