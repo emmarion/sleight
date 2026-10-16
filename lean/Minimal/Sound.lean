@@ -2889,17 +2889,13 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s k H idx sig : Tm) :
   simp only [Ctx.branch, Ctx.openTele_ghost, Ctx.ntSlot_ghost]
   generalize Γ.ntSlot P (Γ.openTele sig (sig.len - 1)).1 s k = Γn
   have e1 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).n = Γ'.n := fun _ => rfl
-  have e2 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).σ = Γ'.σ := fun _ => rfl
   have e3 : ∀ Γ' : Ctx, Ctx.atoms P ({ Γ' with ghost := g } : Ctx) = Ctx.atoms P Γ' := fun _ => rfl
   have e4 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).canon = Γ'.canon := fun _ => rfl
   have e5 : ∀ Γ' : Ctx, ({ Γ' with ghost := g } : Ctx).fields = Γ'.fields := fun _ => rfl
-  simp only [e1, e2, e3, e4, e5]
+  simp only [e1, e3, e4, e5]
   split
   · split
-    · rename_i σ _
-      have h1 := Ctx.forceSlots_upd_ghost g ({ Γn with σ := σ } : Ctx)
-        [(Γ.canon s, Γn.canon (.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γn.canon _)]
-      exact Prod.ext h1 (congrArg (fun x : Ctx => UResult.ok x.σ) h1)
+    · exact Prod.ext (Ctx.forceSlots_upd_ghost g _ _) (congrArg (fun x : Ctx => UResult.ok x.σ) (Ctx.forceSlots_upd_ghost g _ _))
     · rfl
   · rfl
 
