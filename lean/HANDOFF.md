@@ -25,9 +25,11 @@ reading of why:
   reader refuses it, and so does the core checker ("a match with an
   erased discriminant has more than one real branch"): the stripped run
   holds a newtype's value as its field, so nothing chooses the branch.
-  A session's reading is that accepting it needs a new core rule (for
-  example, that every real branch strips to the same code) and its
-  proof, which is the owner's to decide.
+  DESIGN.md sections 21 and 40 allow it: an at-match on a union under
+  a `many` or `unique` scrutinee does not dispatch, and its `at` entries
+  are read back from their targets; the reference refuses the same
+  match written without `at`. `lean/SLOTS.md` proposes how the Lean
+  model could support it.
 - `at_target_wild.sl`: `_` for an argument whose slot a later parameter
   names; the link from an entry to its slot lives in the reader's state,
   which inference does not see. The slot must also be minted, as a
@@ -404,7 +406,9 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
       proofs tracking slots as locations (live cells whose slot entries
       canonicalize to one entry being equal values), not a case beside
       the existing ones. The call's `at` requirement is already checked
-      by the core, as for any at-function.
+      by the core, as for any at-function. `lean/SLOTS.md` proposes how
+      to support it, with at-matches on a union newtype and mutation;
+      not adopted.
    4. Not started, and to be proposed to the owner first: make
       `MacroWorld` (and `Gensym`) opaque again, as DESIGN.md has them,
       with the macro-world primitives a core form answered by an oracle,
