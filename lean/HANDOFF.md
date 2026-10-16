@@ -331,7 +331,7 @@ computes.
 The owner's tentative order, from chat: (a) the two soundness gaps,
 a handle used against its multiplicity (item 9, step 5, done) and item 5
 (since deferred);
-(b) item 13; (c) items 2 and 11 without mutation, and the two `at`
+(b) item 13; (c) items 2 and 11, mutation included, and the two `at`
 tests listed above; (d) the rest of item 9, step 5; (e) item 12;
 (f) item 9, step 4.
 
@@ -361,8 +361,6 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
    (a non-erased slot entry is born `unique`, and the uses pass allows
    one or the other), a non-erased at-match on a union, and
    the gaps the README's slot item lists.
-   The user asked that mutation state be left until everything else is
-   done, so the non-mutation items here come first.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
    unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
    leaves out it and everything over `U62`. `prelude.sl` has them, since
