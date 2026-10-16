@@ -776,7 +776,7 @@ theorem MSound.defFns (hP : ProgOK P) {μ : Option (List Nat)} {ρ : List Tm} {c
   have hΓ : ∀ us, (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) us).Γ =
       Ctx.adv P G.Γ (G.Γ.pushFns Gr) (.defFns gid rest) := fun us => by simp [UCtx.next, UCtx.adv, hf]
   have ih' := fun us hCo => ih b (G.next (G.adv P (G.Γ.pushFns Gr) (.defFns gid rest)) us) _ ru rs rets _ hf
-    (hΓ us) hr' (hE.adv (hE.pushFns hP hG hok) rfl hh)
+    (hΓ us) hr' (hE.adv (hE.pushFns hP hG hok) (Ctx.pushFns_fixed _ _) hh)
     (LvlBound.append.mpr ⟨hlb, fun v hv x hx => by
       simp only [closures, List.mem_map] at hv
       obtain ⟨j, _, rfl⟩ := hv
