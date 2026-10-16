@@ -94,7 +94,7 @@ by the owner and apply to every session.
 
 15. **Numbered items are never renumbered.** DESIGN.md's sections and
     the items of ASSUMPTIONS.md, SPEC-REVIEW.md, OPEN.md,
-    TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md, BUGS.md and WARNINGS.md are
+    TOOLING-WISHLIST.md, MINIMAL.md, BUGS.md and WARNINGS.md are
     cited by number from the code and from each other. An item or
     section that goes away is deleted and its number left as a gap;
     nothing after it moves.

@@ -20,8 +20,7 @@ is a design decision. Remove an entry when it is fixed.
    independently.
 
 13. **Diagnostics found wanting by the sweep.** `slc` and the
-    reference differ in wording on some refusals, as audit M3 already
-    records; one seen since is an absurd-by-proof branch written with no
+    reference differ in wording on some refusals; one seen is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body
     needs a final expression" and `slc` with "malformed branch".
 

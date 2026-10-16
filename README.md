@@ -21,13 +21,12 @@ The other files:
   removed when the owner decides it.
 - [INTERNALS.md](INTERNALS.md): the forms that declare what the compilers supply,
   `def-opaque` and `def-prim`, which only the prelude may write.
-- [HANDOFF.md](HANDOFF.md): work in progress handed from one session to the next.
 - [BUGS.md](BUGS.md): defects found in the implementation.
 - [WARNINGS.md](WARNINGS.md): the warnings the compilers emit, one item each.
 - [TOOLING-WISHLIST.md](TOOLING-WISHLIST.md): friction met while writing programs in the
   language.
 - [EXAMPLES.md](EXAMPLES.md): an index of the tests that show the features working
-  together. [DEMOS.md](DEMOS.md): programs proposed but not yet written.
+  together.
 - [`self/`](self/): a compiler from the language to OCaml, written in the
   language itself and bootstrapped through this interpreter's extractor
   ([`self/README.md`](self/README.md), [`self/bootstrap.sh`](self/bootstrap.sh)).

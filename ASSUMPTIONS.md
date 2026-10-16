@@ -78,7 +78,7 @@ ground.
     which only `def-fns` and `def-unique` introduce, so no other form can
     mint one about the function and the fetch has nothing to choose
     between. This entry previously recorded the shadowing an anonymous
-    `Coercible` could cause as open (audit F4).
+    `Coercible` could cause as open.
 18. **Warnings** (a phantom constructor with a non-erased field) go to
     stderr and do not stop elaboration.
 
@@ -3370,14 +3370,13 @@ to look for a guard, are the owner's.
     - A user type indexed by `(Slot)` reaches section 38's merge of two slots'
       classes in an unrefuted branch, so the soundness question OPEN.md 3 states
       is already live in the implemented subset
-      (`tests/at_slots_force.sl` and the audit's `slot_class_merge`).
+      (`tests/at_slots_force.sl`).
     Two clarifications this session read as within the text: an `at`
     return is verified only where section 36 lists, and section 36's writers were checked
     against every merge site of the at-database, none extra found.
 
 184. **What a value prints as** (the owner's decision, in chat, settling
-    the defect `audit/README.md` carries as B1, which was BUGS.md 1 until
-    this fixed it). The printer renders a value from its type
+    the defect that was BUGS.md 1 until this fixed it). The printer renders a value from its type
     by the cases below and has no fall-through:
     - a `Nat`, `Char` or `String` prints as the literal it reads back
       from, unchanged from 154;
