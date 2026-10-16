@@ -12,6 +12,7 @@ namespace Minimal
 structure Ctx.WF (Γ : Ctx) : Prop where
   tys : ∀ (i : Nat) (T : Tm), Γ.tys[i]? = some T → T.static Γ.n 0
   σ : ∀ e t, Γ.σ e = some t → e < Γ.n ∧ t.static Γ.n 0
+  ς : ∀ e s, Γ.ς e = some s → e < Γ.n ∧ (s = Tm.vacant ∨ ∃ j < Γ.n, s = .sfv j)
   mints : ∀ L ∈ Γ.mints, L < Γ.n
   cur : ∀ c, Γ.cur = some c → c < Γ.n
   subs : ∀ s ∈ Γ.subs, s < Γ.n
@@ -149,10 +150,29 @@ theorem subst_append {ρ more : List Tm} {t : Tm} {d : Nat} (h : t.static ρ.len
 
 end Tm
 
-theorem canon_sound {Γ : Ctx} {f : Nat → Tm} (h : Sat f Γ.σ) (t : Tm) : (Γ.canon t).subst f = t.subst f :=
-  canonBy_sound h t
+theorem canon_sound {Γ : Ctx} {f : Nat → Tm} (h : Sat f Γ.σ) (hs : SatS f Γ.ς) (t : Tm) :
+    (Γ.canon t).subst f = t.subst f :=
+  canonBy_sound h hs t
+
+theorem Ctx.WF.ς_mono {Γ : Ctx} (hw : Γ.WF) {n : Nat} (hn : Γ.n ≤ n) :
+    ∀ e s, Γ.ς e = some s → e < n ∧ (s = Tm.vacant ∨ ∃ j < n, s = .sfv j) := by
+  intro e s h
+  obtain ⟨he, hs⟩ := hw.ς e s h
+  refine ⟨by omega, ?_⟩
+  rcases hs with hs | ⟨j, hj, hs⟩
+  · exact .inl hs
+  · exact .inr ⟨j, by omega, hs⟩
+
+theorem satS_of_closed {Γ : Ctx} (hw : Γ.WF) {f : Nat → Tm} (hc : ∀ i, (f i).lc 0) : SatS f Γ.ς := by
+  intro e s h
+  rw [Tm.slotOf_lc0 (hc e)]
+  rcases (hw.ς e s h).2 with rfl | ⟨j, -, rfl⟩
+  · rfl
+  · simp only [Tm.subst]; exact Tm.slotOf_lc0 (hc j)
 
 theorem EnvOK.sat {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Sat (Tm.env ρ) Γ.σ | .mk _ _ _ h _ _ _ _ => h
+theorem EnvOK.satS {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → SatS (Tm.env ρ) Γ.ς
+  | .mk _ _ hc _ _ hw _ _ => satS_of_closed hw (Tm.env_lc hc)
 theorem EnvOK.wf {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → Γ.WF | .mk _ _ _ _ _ h _ _ => h
 theorem EnvOK.len {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ρ.length = Γ.n | .mk h _ _ _ _ _ _ _ => h
 theorem EnvOK.closed {ρ : List Tm} {Γ : Ctx} : EnvOK P ρ Γ → ∀ v ∈ ρ, v.lc 0 | .mk _ _ h _ _ _ _ _ => h
@@ -176,13 +196,16 @@ theorem FixOK.append {F : List (Option Tm)} {ρ more : List Tm} (h : FixOK P F �
   rw [Tm.env_append (by have := h.1; omega)]; exact h.2 i v hv
 
 theorem EnvOK.canon {ρ : List Tm} {Γ : Ctx} (h : EnvOK P ρ Γ) (t : Tm) :
-    (Γ.canon t).subst (Tm.env ρ) = t.subst (Tm.env ρ) := canon_sound h.sat t
+    (Γ.canon t).subst (Tm.env ρ) = t.subst (Tm.env ρ) := canon_sound h.sat h.satS t
 
 theorem canon_static {Γ : Ctx} (hw : Γ.WF) {t : Tm} {d : Nat} (h : t.static Γ.n d) : (Γ.canon t).static Γ.n d :=
   Tm.static_subst2 t d h fun i hi => ⟨by
     cases e : Γ.σ i with
     | none => simp [Tm.static]; exact Tm.fvs_static t d h i hi
-    | some u => simpa using (hw.σ i u e).2, by simp [Tm.static]; exact Tm.fvs_static t d h i hi⟩
+    | some u => simpa using (hw.σ i u e).2, by
+    cases e : Γ.ς i with
+    | none => simp [Tm.static]; exact Tm.fvs_static t d h i hi
+    | some u => rcases (hw.ς i u e).2 with rfl | ⟨j, hj, rfl⟩ <;> simp_all [Tm.static, Tm.vacant]⟩
 
 theorem Tm.isTele_inst (u : Tm) : ∀ (t : Tm) k, t.isTele → (t.inst u k).isTele := by
   intro t; induction t <;> intro k h <;> simp_all [isTele, inst]
@@ -473,7 +496,7 @@ theorem getElem?_append_cases {α : Type} {l1 l2 : List α} {i : Nat} {x : α} (
 theorem Ctx.WF.mono {Γ : Ctx} (h : Γ.WF) (Ts : List Tm) (hT : ∀ T ∈ Ts, T.static Γ.n 0) :
     ({ Γ with tys := Γ.tys ++ Ts.toArray } : Ctx).WF := by
   have hn : Γ.n ≤ ({ Γ with tys := Γ.tys ++ Ts.toArray } : Ctx).n := by simp [Ctx.n]
-  refine ⟨fun i T hi => ?_, fun e t he => ?_, fun L hL => ?_, fun c hc => ?_, fun s hs => ?_⟩
+  refine ⟨fun i T hi => ?_, fun e t he => ?_, h.ς_mono hn, fun L hL => ?_, fun c hc => ?_, fun s hs => ?_⟩
   · rcases arr_getElem?_append_cases hi with ⟨hi, hT'⟩ | ⟨hi, hT'⟩ <;>
       exact Tm.static_mono hn _ (Nat.le_refl 0) (by first | exact h.tys i T hT' | exact hT T (List.mem_of_getElem? hT'))
   · exact ⟨Nat.lt_of_lt_of_le (h.σ e t he).1 hn, Tm.static_mono hn _ (Nat.le_refl 0) (h.σ e t he).2⟩
@@ -529,16 +552,16 @@ theorem EnvOK.modify {ρ : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) (ht : Γ
 
 theorem EnvOK.setDeles {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (ds : List (Nat × Nat × Bool × Bool)) (hd : DeleOK P ds ρ) :
     EnvOK P ρ { Γ with deles := ds } :=
-  .mk hE.len hE.vals hE.closed hE.sat hE.chrono ⟨hE.wf.tys, hE.wf.σ, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hE.fix hd
+  .mk hE.len hE.vals hE.closed hE.sat hE.chrono ⟨hE.wf.tys, hE.wf.σ, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hE.fix hd
 
 theorem EnvOK.refix {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (F : List (Option Tm)) (hF : FixOK P F ρ) :
     EnvOK P ρ { Γ with fixed := F } :=
   .mk hE.len hE.vals hE.closed hE.sat (fun L hL => hE.chrono L hL)
-    ⟨hE.wf.tys, hE.wf.σ, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hF hE.dele
+    ⟨hE.wf.tys, hE.wf.σ, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩ hF hE.dele
 
 theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} {t : Tm} (he : e < Γ.n)
     (ht : t.static Γ.n 0) (hv : Tm.env ρ e = t.subst (Tm.env ρ)) : EnvOK P ρ (Γ.withRule e t) := by
-  refine hE.modify rfl (fun i u hi => ?_) hE.chrono ⟨hE.wf.tys, fun i u hi => ?_, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+  refine hE.modify rfl (fun i u hi => ?_) hE.chrono ⟨hE.wf.tys, fun i u hi => ?_, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
   all_goals simp only [Ctx.withRule] at hi; split at hi
   · cases hi; subst_vars; exact hv
   · exact hE.sat i u hi
@@ -547,12 +570,14 @@ theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} 
 
 theorem EnvOK.congr {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) (Γ' : Ctx) (ht : Γ'.tys = Γ.tys)
     (hσ : Γ'.σ = Γ.σ) (hm : Γ'.mints = Γ.mints) (hc : Γ'.cur = Γ.cur) (hs : Γ'.subs = Γ.subs)
-    (hf : Γ'.fixed = Γ.fixed := by rfl) (hd : Γ'.deles = Γ.deles := by rfl) : EnvOK P ρ Γ' := by
+    (hf : Γ'.fixed = Γ.fixed := by rfl) (hd : Γ'.deles = Γ.deles := by rfl) (hς : Γ'.ς = Γ.ς := by rfl) :
+    EnvOK P ρ Γ' := by
   have hn : Γ'.n = Γ.n := by simp [Ctx.n, ht]
   have w := hE.wf
-  refine hE.modify ht (by rw [hσ]; exact hE.sat) (by rw [hm]; exact hE.chrono) ⟨?_, ?_, ?_, ?_, ?_⟩ hf hd
+  refine hE.modify ht (by rw [hσ]; exact hE.sat) (by rw [hm]; exact hE.chrono) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ hf hd
   · intro i T h; rw [hn]; exact w.tys i T (ht ▸ h)
   · intro e t h; rw [hn]; exact w.σ e t (hσ ▸ h)
+  · intro e s h; rw [hn]; exact w.ς e s (hς ▸ h)
   · intro L h; rw [hn]; exact w.mints L (hm ▸ h)
   · intro c h; rw [hn]; exact w.cur c (hc ▸ h)
   · intro s h; rw [hn]; exact w.subs s (hs ▸ h)
@@ -584,7 +609,7 @@ theorem EnvOK.pushMint {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat
       rw [List.getElem?_append_left (by simp only [Ctx.n] at hi hl; omega)] at hv
       exact hb v (List.mem_of_getElem? hv)
   · have w := h1.wf
-    exact ⟨w.tys, w.σ, fun L hL => by
+    exact ⟨w.tys, w.σ, w.ς, fun L hL => by
       simp only [Ctx.pushMint, List.mem_append, List.mem_singleton] at hL
       rcases hL with hL | rfl
       · exact w.mints L hL
@@ -1120,7 +1145,7 @@ theorem EnvOK.pushTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {tele : Tm
       (Γ.setErs Γ' ov).fixed = Γ'.fixed ∧ (Γ.setErs Γ' ov).deles = Γ'.deles := by
     intro Γ'; cases ov <;> simp [Ctx.setErs]
   obtain ⟨f1, f2, f3, f4, f5, f6, f7⟩ := hf (Γ.openTele tele tele.len).1
-  refine ⟨h1.congr _ f1 f2 f3 f4 f5 f6 f7, f4.trans h6.cur, f5.trans h6.subs, ?_⟩
+  refine ⟨h1.congr _ f1 f2 f3 f4 f5 f6 f7 (by cases ov <;> rfl), f4.trans h6.cur, f5.trans h6.subs, ?_⟩
   show Γ.tys.size ≤ (Γ.setErs (Γ.openTele tele tele.len).1 ov).tys.size
   rw [f1]; simp only [Ctx.n] at h5; omega
 
@@ -2526,7 +2551,7 @@ theorem call_setup_ctx (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
         Tm.ers_subst _ _ ht]
     · simp only [Ctx.body]; exact h4
     · simp only [Ctx.body]
-      refine h1.modify rfl h1.sat h1.chrono ⟨h1.wf.tys, h1.wf.σ, h1.wf.mints, fun c hc => ?_, fun s hs => ?_⟩
+      refine h1.modify rfl h1.sat h1.chrono ⟨h1.wf.tys, h1.wf.σ, h1.wf.ς, h1.wf.mints, fun c hc => ?_, fun s hs => ?_⟩
       · simp at hc; subst hc
         have := (getElem?_eq_some_iff.mp hK).1
         simp only [Ctx.n] at this hn1 h5 ⊢; omega
@@ -2689,7 +2714,7 @@ theorem EnvOK.lists {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {σ : Nat →
     · rename_i u nt ex ph T' cs hc
       simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, rfl, rfl⟩ := hm
       obtain ⟨v, _, _, hv⟩ := hE.get hM
-      rw [← canonBy_sound hs M0, Option.some.inj hc] at hv
+      rw [← canonBy_sound hs hE.satS M0, Option.some.inj hc] at hv
       obtain ⟨d, D, ls, _, hD, -, -, -, -, he⟩ := hv.mtbl_inv
       have he' := he; simp only [Adt.mtbl, Tm.mtbl.injEq] at he'
       obtain ⟨-, -, -, -, hT, hcs⟩ := he'
@@ -2785,7 +2810,7 @@ theorem EnvOK.atomSound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P 
     · split at hp
       · rename_i s s' h1 h2
         simp only [List.mem_singleton] at hp; subst hp
-        simp only [canonBy_sound hs]
+        simp only [canonBy_sound hs hE.satS]
         obtain ⟨hs1, v1⟩ := sigOf_vty hP hE h1
         obtain ⟨hs2, v2⟩ := sigOf_vty hP hE h2
         rw [hab] at v1
@@ -2819,7 +2844,7 @@ theorem EnvOK.opened (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ 
     (Ctx.atoms P { Γ with opened := o }) ((hE.congr { Γ with opened := o } rfl rfl rfl rfl rfl).atomSound hP)
     Γ.σ [] (Ctx.openEqs P { Γ with opened := o } xs) hE.sat (hE.openEqs hP o xs)
   have hwσ := unify_wf _ _ _ [] _ _ (fun e t he => hE.wf.σ e t he) hu
-  exact hE.modify rfl (hun.1 _ hu) hE.chrono ⟨hE.wf.tys, hwσ, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+  exact hE.modify rfl (hun.1 _ hu) hE.chrono ⟨hE.wf.tys, hwσ, hE.wf.ς, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
 
 theorem EnvOK.openFail (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {m : Nat} {oe u nt ex : Bool}
     {ph : List Bool} {M H cs : Tm} (hM : Γ.tys[m]? = some M) (hc : Γ.canon M = .mtbl u nt ex ph H cs)
@@ -2828,7 +2853,7 @@ theorem EnvOK.openFail (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
   rcases h with hn | hu
   · have hmem : (Tm.mtbl u nt ex ph H cs, H, cs.toList) ∈ Ctx.lists { Γ with opened := (m, oe) :: Γ.opened } Γ.σ := by
       simp only [Ctx.lists, List.filterMap_cons, hM, Option.map_some]
-      have : canonBy Γ.σ M = Tm.mtbl u nt ex ph H cs := hc
+      have : canonBy Γ.σ Γ.ς M = Tm.mtbl u nt ex ph H cs := hc
       simp [this]
     obtain ⟨d, ls, -, -, hks⟩ := (hE.congr { Γ with opened := (m, oe) :: Γ.opened } rfl rfl rfl rfl rfl).lists hE.sat hmem
     apply hn
@@ -2917,10 +2942,11 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hp
     rcases hp with rfl | rfl
     · simp only
-      rw [canon_sound (Γ := Γ) hsat, canon_sound hEf.sat, Tm.subst_append (hl ▸ hss), hsv, ← hvl]
+      rw [canon_sound (Γ := Γ) hsat (satS_of_closed hE.wf (Tm.env_lc hEf.closed)), canon_sound hEf.sat hEf.satS,
+        Tm.subst_append (hl ▸ hss), hsv, ← hvl]
       simp only [Tm.subst]; rw [Tm.subst_append (hl ▸ hks), hk, fields_subst _ hl, Tm.ofList_toList _ hvs.isList]
     · simp only
-      rw [canon_sound (Γ := Γ) hsat, canon_sound hEf.sat, hRc,
+      rw [canon_sound (Γ := Γ) hsat (satS_of_closed hE.wf (Tm.env_lc hEf.closed)), canon_sound hEf.sat hEf.satS, hRc,
         Tm.subst_append (t := Tm.app H idx) (by simpa [Tm.static, hl] using hSs')]
       simp [Tm.subst, hH]
   have hun := unify_sound (Tm.env (ρ ++ vs.toList)) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hEf.closed i)) Γf.n (Γf.atoms P) (hEf.atomSound hP) Γf.σ [] _ hEf.sat heqs
@@ -2960,9 +2986,9 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     · refine EnvOK.cm false ?_
       refine ((hE.congr { Γ with ghost := g (P.phantom d c) } rfl rfl rfl rfl rfl).advBr hP (by rw [hsk2, Tm.len_subst _ _ (.inl hst)])
         ((hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
-          ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _
+          ⟨hEf.wf.tys, hwσ, hEf.wf.ς, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _
             (by simp) (by simp) (by simp) (by simp) (by simp) (by cases fe <;> simp [Ctx.setErs])
-            (by cases fe <;> simp [Ctx.setErs]))
+            (by cases fe <;> simp [Ctx.setErs]) (hς := by cases fe <;> simp [Ctx.setErs]))
         (by cases fe <;> simp [Ctx.setErs, h6.fixed]) hsv rfl (by rw [hvl]) hctor hsk1 (fun j hj => ?_) hk)
       rw [Tm.ers_subst _ _ hst]
       cases fe
@@ -4046,7 +4072,7 @@ theorem checked_runs (hO : P.OracleOK) {rets : Tm} (h : Checked P rets) :
   obtain ⟨hP, hc, hs⟩ := h
   have hE : EnvOK P [] {tys := #[]} :=
     .mk rfl (fun _ _ _ h _ => by simp at h) (by simp) (fun _ _ h => by simp at h) (by simp)
-      ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
+      ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, fun _ _ h => by simp at h, by simp, by simp, by simp⟩
       ⟨by simp, fun _ _ h => by simp at h⟩ (fun _ _ _ _ h => by simp at h)
   obtain ⟨⟨vs, cnt, e, hv, _⟩, hsim⟩ :=
     eval_sound hP hO none [] 0 P.main _ _ rets hc hE (by simp [LvlBound]) (by simp [MuOK]) (by simpa [Ctx.n] using hs)
