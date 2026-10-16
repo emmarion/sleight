@@ -600,7 +600,7 @@ theorem EnvOK.bindSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {r : Nat} 
     (hs : s = Tm.vacant ∨ ∃ j < Γ.n, s = .sfv j) : EnvOK P ρ (Γ.bindSlot r s) := by
   have hc := Tm.env_lc hE.closed
   have hS : SatS (Tm.env ρ) (fun j => if j = r then some s else none) := by
-    intro e u h; split at h
+    intro e u h; dsimp only at h; split at h
     · cases h; exact slotVal_subst hc hs e
     · cases h
   have hsub : ∀ t, (Ctx.slotSub r s t).subst (Tm.env ρ) = t.subst (Tm.env ρ) :=
@@ -623,8 +623,43 @@ theorem EnvOK.bindSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {r : Nat} 
       rcases h2 with rfl | ⟨j, hj, rfl⟩
       · left; rfl
       · by_cases e : j = r
-        · subst e; simpa [Ctx.slotSub, canonBy, Tm.subst2] using hs
+        · subst e; simp only [Ctx.slotSub, canonBy, Tm.subst2, if_true, Option.getD_some]; exact hs
         · right; exact ⟨j, hj, by simp [Ctx.slotSub, canonBy, Tm.subst2, e]⟩
+
+theorem Ctx.slotBind_val {Γ : Ctx} {e r : Nat} {s t : Tm} (h : Γ.slotBind e s = some (r, t)) :
+    t.isSlotVal Γ.n = true := by
+  unfold Ctx.slotBind at h
+  split at h
+  · split at h
+    · split at h
+      · cases h
+      · cases h; assumption
+    · split at h
+      · cases h; assumption
+      · cases h
+    · cases h
+  · cases h
+
+theorem Ctx.bindSlot_sat {Γ : Ctx} {r : Nat} {s : Tm} {f : Nat → Tm} (hs : s.isSlotVal Γ.n = true)
+    (hc : ∀ i, (f i).lc 0) (h : Sat f (Γ.bindSlot r s).σ) : Sat f Γ.σ := by
+  intro i t hi
+  have hS : SatS f (fun j => if j = r then some s else none) := by
+    intro e u h; dsimp only at h; split at h
+    · cases h; exact slotVal_subst hc (Tm.isSlotVal_spec hs) e
+    · cases h
+  rw [h i _ (by simp [Ctx.bindSlot, hi]), Ctx.slotSub, canonBy_sound (fun _ _ h => by cases h) hS]
+
+theorem Ctx.withSlot_sat {Γ : Ctx} {e : Nat} {s : Tm} {f : Nat → Tm} (hc : ∀ i, (f i).lc 0)
+    (h : Sat f (Γ.withSlot e s).σ) : Sat f Γ.σ := by
+  unfold Ctx.withSlot at h; split at h
+  · rename_i hb; exact Ctx.bindSlot_sat (Ctx.slotBind_val hb) hc h
+  · exact h
+
+theorem Ctx.slotIf_sat {Γ : Ctx} {b : Bool} {e : Nat} {s : Tm} {f : Nat → Tm} (hc : ∀ i, (f i).lc 0)
+    (h : Sat f (Γ.slotIf b e s).σ) : Sat f Γ.σ := by
+  cases b
+  · exact h
+  · exact Ctx.withSlot_sat hc h
 
 theorem EnvOK.withSlot {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} (s : Tm) (he : e < Γ.n) :
     EnvOK P ρ (Γ.withSlot e s) := by
@@ -701,7 +736,7 @@ theorem Tm.isTele_subst (f : Nat → Tm) : ∀ (t : Tm), t.isTele → (t.subst f
 
 structure Ctx.Ext (Γ Γ' : Ctx) : Prop where
   tys : ∃ Ts : List Tm, Γ'.tys = Γ.tys ++ Ts.toArray
-  σ : ∀ e t, Γ.σ e = some t → Γ'.σ e = some t
+  σ : ∀ f : Nat → Tm, (∀ i, (f i).lc 0) → Sat f Γ'.σ → Sat f Γ.σ
   mints : Γ'.mints = Γ.mints
   cur : Γ'.cur = Γ.cur
   subs : Γ'.subs = Γ.subs
@@ -709,7 +744,7 @@ structure Ctx.Ext (Γ Γ' : Ctx) : Prop where
 
 theorem Ctx.Ext.trans {Γ Γ' Γ'' : Ctx} (h1 : Γ.Ext Γ') (h2 : Γ'.Ext Γ'') : Γ.Ext Γ'' := by
   obtain ⟨Ts, e1⟩ := h1.tys; obtain ⟨Us, e2⟩ := h2.tys
-  exact ⟨⟨Ts ++ Us, by rw [e2, e1, Array.append_assoc]; simp⟩, fun e t h => h2.σ e t (h1.σ e t h),
+  exact ⟨⟨Ts ++ Us, by rw [e2, e1, Array.append_assoc]; simp⟩, fun f hc h => h1.σ f hc (h2.σ f hc h),
     h2.mints.trans h1.mints, h2.cur.trans h1.cur, h2.subs.trans h1.subs, h2.fixed.trans h1.fixed⟩
 
 theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {A r v vs out : Tm}
@@ -729,12 +764,13 @@ theorem EnvOK.pushEnt {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {k : Ent} {
       (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs)
       (by rw [Tm.subst_append (hl ▸ hs), hE.canon, ← he]; simp [Tm.env, hl])
     refine ⟨hE1.slotIf _ (e := Γ.n - 1) (Γ.canon A) (by simp [Ctx.withRule, Ctx.push, Ctx.n]; omega), hvs,
-      ⟨⟨[.nil], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩, fun e t h => ?_,
+      ⟨⟨[.nil], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩, fun f hc hs e t h => ?_,
         by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push],
         by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push], by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push]⟩,
       by simp [Ctx.pushEnt, Ctx.withRule, Ctx.push, Ctx.n]⟩
     have := (hE.wf.σ e t h).1
-    simp only [Ctx.pushEnt, Ctx.slotIf_σ, Ctx.withRule, Ctx.push]
+    refine Ctx.slotIf_sat hc hs e t ?_
+    simp only [Ctx.withRule, Ctx.push]
     rw [if_neg (by omega)]; exact h
 
 theorem EnvOK.openTele {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) :
@@ -1973,14 +2009,16 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     simp only [Tm.subst, e]
     exact .predates fun n hn => hl n (Tm.psub_levels hs n hn)
 
-theorem EnvOK.pushPrim P (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
+theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
     {er : Bool} (hp : PrimTy P Γ p T) (hv : VTy P v (T.subst (Tm.env ρ))) (hT : T.static Γ.n 0) (hc : v.lc 0)
     (he : v = p.eval P ρ) :
     EnvOK P (ρ ++ [v]) (Γ.pushPrim P T er p) ∧ (Γ.pushPrim P T er p).cur = Γ.cur ∧
       (Γ.pushPrim P T er p).subs = Γ.subs ∧ (Γ.pushPrim P T er p).n = Γ.n + 1 := by
   have hn0 : (Γ.pushPrim0 T er p).n = Γ.n + 1 := by cases p <;> simp [Ctx.pushPrim0, Ctx.withRule, Ctx.push, Ctx.n]
   suffices h0 : EnvOK P (ρ ++ [v]) (Γ.pushPrim0 T er p) by
-    refine ⟨h0.slotIf _ _ (by omega), ?_, ?_, by rw [Ctx.pushPrim, Ctx.slotIf_n, hn0]⟩ <;>
+    have h0' : EnvOK P (ρ ++ [v]) ({ Γ.pushPrim0 T er p with pd := none } : Ctx) := h0.congr _ rfl rfl rfl rfl rfl
+    refine ⟨h0'.slotIf _ _ (by show Γ.n < (Γ.pushPrim0 T er p).n; omega), ?_, ?_,
+      by rw [Ctx.pushPrim, Ctx.slotIf_n]; exact hn0⟩ <;>
       cases p <;> simp [Ctx.pushPrim, Ctx.pushPrim0, Ctx.pushPrim0, Ctx.withRule, Ctx.push]
   have h1 := hE.push hv hT hc (e := er)
   cases hp with
@@ -3054,7 +3092,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     simp [Ctx.branch, hpr]
   have hEf := h1
   have hvl : vs.toList.length = sig.len - 1 := by rw [Tm.len_toList _ hvs.isList, hm']
-  have hsat : Sat (Tm.env (ρ ++ vs.toList)) Γ.σ := fun e t he => hEf.sat e t (h6.σ e t he)
+  have hsat : Sat (Tm.env (ρ ++ vs.toList)) Γ.σ := h6.σ _ (Tm.env_lc hEf.closed) hEf.sat
   have heqs : ∀ p ∈ [(Γ.canon s, Γf.canon (Tm.app k (Γ.fields (sig.len - 1)))), (Γ.canon (.app H idx), Γf.canon Rc)],
       p.1.subst (Tm.env (ρ ++ vs.toList)) = p.2.subst (Tm.env (ρ ++ vs.toList)) := by
     intro p hp
