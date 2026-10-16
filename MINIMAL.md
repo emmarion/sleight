@@ -89,7 +89,7 @@ bottom-up inference (section 30).
   everything else.
 - The three transitivity axioms stay special forms.
 
-- SPEC-REVIEW 7: a listed branch whose entry unification contradicts is
+- A listed branch whose entry unification contradicts is
   an error, as the interpreter has it today.
 - A positive `Fails` relation records why a program is refused, beside
   the relation that types it.

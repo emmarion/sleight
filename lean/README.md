@@ -747,7 +747,7 @@ it is `Settled`, and its `is` rule.
   written, which must canonicalize to the one at that position, and its
   field count, which the stripped run needs when it takes the one real
   branch of an erased match without looking. A listed branch whose
-  unification contradicts is an error (SPEC-REVIEW 7, as MINIMAL.md
+  unification contradicts is an error (as MINIMAL.md
   records). An unlisted constructor must be refuted or covered by an
   `else`.
 - The runtime check compares sizes of values where SOUNDNESS.md uses the

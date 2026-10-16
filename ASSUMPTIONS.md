@@ -14,7 +14,7 @@ ground.
 1. **Comments** are `;` to end of line. Atoms are any run of characters
    other than whitespace, parens and `;`. Digit-only atoms and `#\c`
    atoms are numeral and character literals (items 51-52); there are no
-   string literals (SR 10).
+   string literals.
 3. **Annotation tokens go through the namespace.** `many`, `:`, `->`,
    `is`, `subterm`, `enum`, `absurd` and friends are recognized only by
    resolving the atom to a `Settled`, non-erased entry whose value is the
@@ -26,7 +26,7 @@ ground.
 4. **What is built in.** `Univ`/`Type`, `Level`, `Predates`, `Subterm`,
    `Coercible`, the `Special` ADT and one entry per special form. The
    opaque types are type constructors with no `Matchable`, so they can
-   neither be matched on nor count as empty (SR 6). On top of that a
+   neither be matched on nor count as empty. On top of that a
    source prelude (`lib/prelude.sl`, section 42) defines `Nat`, `False`,
    `Eq`, `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `Dec`, `Cmp`, `U8`,
    `U62`, `Bin`, `Numeral`, `Char`, `String`, `Append`, their
@@ -35,24 +35,24 @@ ground.
    anonymous (item 118), all as ordinary, shadowable entries, and since item 58 also `Unit`, `Maybe`,
    `Result`, `List` and `Program`; a user function calling `nat-add` proves
    `(prove-predates nat-lvl L)`. The examples still define their own
-   `List`, shadowing the prelude's (SR 12).
+   `List`, shadowing the prelude's.
 5. **Names of the `Special` variants** are the form name prefixed with
    `%` (`%let`, `%match`, ...), so that the entry `let` — whose value is
    `(%let)` — is distinct from the constructor. Only the prefix is an
    invention; it is not settled by DESIGN.md.
-7. **Names of the transitivity axioms** (SR 11): `predates-trans`,
+7. **Names of the transitivity axioms**: `predates-trans`,
    `subterm-trans`, `predates-subterm`, in the order section 18 lists
    them. Each takes its two premises as arguments.
 
 ## Grammar shapes DESIGN.md leaves open
 
 8. **A body's final item** may be a single form of any size (a call, a
-   match or a `coerce` producing several values), as well as a `values`
-   (SR 1). A non-final item must be a statement.
+   match or a `coerce` producing several values), as well as a `values`.
+   A non-final item must be a statement.
 9. **`tail` and `delegate` wrap the call**: `(tail (f ...))`,
-   `(delegate (f ...))`, following section 60's only example (SR 2).
+   `(delegate (f ...))`, following section 60's only example.
 12. **A file may end in a statement** (section 60 does); then nothing
-    is printed (SR 27). Otherwise the final expression's one value is
+    is printed. Otherwise the final expression's one value is
     printed. Several files on the command line share one scope, in
     order.
 13. **A `def-fns` level** may be any variable whose type is `(Level)`,
@@ -85,30 +85,30 @@ ground.
 ## Type checking
 
 19. **Every non-grammar argument, scrutinee or result gets an
-    anonymous entry** (SR 14, second option): a call's returns, a
+    anonymous entry**: a call's returns, a
     match's returns and a `coerce` are bound to fresh anonymous
     entries carrying their types and any `is` rule, and dependent
     telescopes are instantiated with those. Grammar expressions are
     kept as trees rather than as anonymous entries with an `is` rule
     (section 5's picture); canonicalization should agree either way,
     but this is a representation choice, not the one section 5 draws.
-20. **`is` entries at use sites** (SR 13): an argument landing on an
+20. **`is` entries at use sites**: an argument landing on an
     `is` parameter or field, or a result landing on an `is` return, is
     written like any other and must canonicalize identically to the
     `is` expression; its erasure is that of the position.
 21. **Match branches**: each constructor of the `Matchable` has at most
     one branch, in any order, and one left unlisted must be refuted or
-    stood for by an `else` (SR 17, settled by the owner; §21 now says
+    stood for by an `else` (settled by the owner; §21 now says
     so). A present branch whose forced unification contradicts is an
     error telling the programmer to write `(absurd C)`; an `(absurd C)`
     whose unification succeeds is an error.
 22. **An absurd-by-proof branch body, and an `absurd` function body,
-    are erased positions** (SR 18); they must produce one value of a
+    are erased positions**; they must produce one value of a
     type with an empty `Matchable`.
 23. **Proof arguments** to `predates`, `subterm`, the transitivity
     forms and the `coercible-*` forms are elaborated as erased
-    expressions, so they may be calls to erased functions (SR 18).
-24. **`(predates p)` accepts the level shape only** (SR 15; settled by
+    expressions, so they may be calls to erased functions.
+24. **`(predates p)` accepts the level shape only** (settled by
     the owner, section 19): the proof's subject must canonicalize to the
     callee's level and its level to the current one. A `Predates` about
     the function value, which `predates-subterm` can produce, is
@@ -116,13 +116,13 @@ ground.
 25. **`(subterm p)`** must sit before an argument whose parameter is
     `subterm`-marked; the enclosing function must have a subterm
     parameter at the same subterm index, and the proof's second subject
-    must be that parameter (SR 16). Fewer enclosing subterm parameters
+    must be that parameter. Fewer enclosing subterm parameters
     than the index is an error.
 26. **Top-level calls**: a decrease annotation written at the top level,
     the `_` sugar forms included, is an error (settled by the owner,
     section 20).
 27. **Atom-vs-atom unification** makes the newer entry an alias of the
-    older one (SR 21). Unifying a variable with a term that mentions a
+    older one. Unifying a variable with a term that mentions a
     telescope binder (something inside an `Fn` type, say) is a hard
     error rather than a contradiction, since treating it as a
     contradiction would refute a branch on no evidence; no realistic
@@ -163,7 +163,7 @@ ground.
     position, an erased `comptime-match` field, a `Level`).
 33. **Representation is decided at elaboration**, per section 33: a
     value is the tuple of its `many` fields, one field bare and none the
-    token (SR 23's "unspecified bits"), and it carries a tag only when
+    token, and it carries a tag only when
     its type is an enum with more than one non-phantom constructor. A
     constructor's runtime value carries its tag flag, so applying a
     first-class constructor needs no lookup; a match reads whether to
@@ -290,7 +290,7 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     exemption of a phantom branch from the match's result erasures, and
     its exclusion from the one-real-branch count, rested on the
     invariant that no non-erased value is headed by a phantom
-    constructor (§14 rule 2, SPEC-REVIEW 9). That holds for a `many`
+    constructor (§14 rule 2). That holds for a `many`
     scrutinee only: an erased value may well be phantom-headed. So a
     phantom branch counts as unreachable only under a `many` scrutinee; under
     an `erased` one it is a real branch, subject to the one-real-branch
