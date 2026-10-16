@@ -109,6 +109,48 @@ and the features follow from it:
 `slot-eq` is left out: the reference compilers refuse it too ("names
 no primitive the compilers implement").
 
+## Stage 1 in detail, as a session proposes it
+
+Today (from a read of the code): the core has no notion of which entry
+a slot belongs to. The reader mints a slot entry when one is first
+needed (`slotM`, `Prim.atom`), records owner and slot in its own state
+(`slots`, `links`, `renames`), and passes slots to the core as hidden
+telescope entries (`Tm.fn`'s mask, `is` entries) and as `Chk.is`
+checks; the core compares them by canonical identity. `Prim.atomEq`
+proves any two slots equal, and `VTy.atom_inv` (Sound.lean) is the
+lemma that makes that sound.
+
+What section 35 asks is that `(slot-of x)` be "resolved by the binder
+of `x`, never through the `is` rule of `x`". The core canonicalizes
+with one map of rules over variables (`Ctx.σ`), which would rewrite
+`x` inside a slot term, so a slot cannot simply be a term over `x`.
+
+Two representations a session sees:
+
+- **A. A slot term former.** A new `Tm` constructor for "the slot of
+  this variable", typed `(Slot)`, erased exactly when the variable is.
+  `Ctx` gets a second map, of slot facts, which canonicalization uses
+  for slot terms and nothing else; `Ctx.σ` never rewrites inside one.
+  A telescope entry carries its `at` target, which binds the slot fact
+  as the entry is bound, in place of the hidden entries and `Tm.fn`'s
+  mask. Section 36's writers become core rules that add slot facts.
+  `Prim.atom`, `Prim.atomEq`, the reader's slot minting and the slot
+  copies go; `slot-self` becomes a core statement adding the fact that
+  `x`'s slot is `x`.
+- **B. Automatic slot entries, as section 35 words it.** Every binding
+  makes two entries, the variable and its slot, with the core keeping
+  the pairing. Closer to the design's wording, but it doubles the
+  entries every rule and proof indexes, and the slot entries still
+  need rules kept apart from `is` rules.
+
+A session leans toward A. Its cost is mostly mechanical: a new `Tm`
+constructor reaches every structural function and lemma over terms.
+
+In stage 1 a slot term still evaluates to `vacant-slot`'s value, so
+the run semantics stay as they are and the slot facts are sound for
+the same reason `Prim.atomEq` is today; stage 2 gives slots their
+words.
+
 ## Cost, as a session estimates it
 
 Larger than anything in `lean/` so far: stage 1 reworks the reader's
