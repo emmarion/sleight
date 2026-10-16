@@ -474,11 +474,11 @@ end FHeap
 
 open FHeap
 
-def Res (H : FHeap) : Except String (FHeap × List Tm × Nat) → Except String (List Tm × Nat) → Prop
+def HRes (H : FHeap) : Except String (FHeap × List Tm × Nat) → Except String (List Tm × Nat) → Prop
   | .ok (H', ws, c), r => H'.OK ∧ H.Ext H' ∧ (∀ w ∈ ws, w.ptrBelow H'.next) ∧ r = .ok (ws.map H'.decode, c)
   | .error e, r => r = .error e
 
-theorem Res.ext {H H1 : FHeap} (he : H.Ext H1) {r r'} (h : Res H1 r r') : Res H r r' := by
+theorem HRes.ext {H H1 : FHeap} (he : H.Ext H1) {r r'} (h : HRes H1 r r') : HRes H r r' := by
   match r, h with
   | .ok _, ⟨o, e, p, d⟩ => exact ⟨o, he.trans e, p, d⟩
   | .error _, h => exact h
@@ -549,7 +549,7 @@ theorem mtch_spec {H : FHeap} (hH : H.OK) {ρ : List Tm} (hρ : ∀ w ∈ ρ, w.
   exact ⟨ptrBelow_toList hvs, by rw [← hs2, hd], dec_toList hH _ vs⟩
 
 theorem evalH_sim (hP : P.PtrFree) : ∀ μ H ρ cnt c, c.ptrFree → H.OK → (∀ w ∈ ρ, w.ptrBelow H.next) →
-    Res H (evalH P μ H ρ cnt c) (eval P μ (ρ.map H.decode) cnt c) := by
+    HRes H (evalH P μ H ρ cnt c) (eval P μ (ρ.map H.decode) cnt c) := by
   intro μ H ρ cnt c
   induction μ, H, ρ, cnt, c using evalH.induct P with
   | case1 μ H ρ cnt ts H1 ws hb =>
@@ -617,7 +617,7 @@ theorem evalH_sim (hP : P.PtrFree) : ∀ μ H ρ cnt c, c.ptrFree → H.OK → (
     simp only [Core.ptrFree] at hc
     have := ih hc hH hρ
     rw [hev] at this
-    rw [evalH, eval]; simp only [hev]; simp only [Res] at this; simp only [this]; rfl
+    rw [evalH, eval]; simp only [hev]; simp only [HRes] at this; simp only [this]; rfl
   | case18 μ H ρ cnt =>
     intro hc hH hρ
     rw [evalH, eval]; rfl
@@ -636,7 +636,7 @@ theorem evalH_sim (hP : P.PtrFree) : ∀ μ H ρ cnt c, c.ptrFree → H.OK → (
     simp only [Core.ptrFree, Bool.and_eq_true] at hc
     have := ihb hc.1 hH hρ
     rw [hev] at this
-    rw [evalH, eval]; simp only [hev]; simp only [Res] at this; simp only [this]; rfl
+    rw [evalH, eval]; simp only [hev]; simp only [HRes] at this; simp only [this]; rfl
   | case2 μ H ρ cnt f dec args er ms ve rest env n gid G F hcal H1 ws hbx μ' hmu H2 outs cnt1 hev ihb ihr =>
     intro hc hH hρ
     simp only [Core.ptrFree, Bool.and_eq_true] at hc
@@ -651,6 +651,137 @@ theorem evalH_sim (hP : P.PtrFree) : ∀ μ H ρ cnt c, c.ptrFree → H.OK → (
     rw [dite_eq_left hmu, dite_eq_left hmu]
     simp only [μ'] at hev d2; simp only [hev, d2]
     exact (this.ext e2).ext e
-  | _ => sorry
+  | case3 μ H ρ cnt f dec args er ms ve rest env n gid G F hcal H1 ws hbx μ' hmu e hev ihb =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨o, -, pw, hG, hF, hcal', hargs, hbe⟩ := call_spec hH hρ hc.1.1 hc.1.2 hcal hbx
+    have := ihb (hP.2 G hG F hF) o pw
+    rw [hev, hbe] at this
+    rw [evalH, eval]; simp only [hcal, hbx, hcal', hargs, markedArgs_map, List.map_map]
+    simp only [Function.comp_def]
+    rw [dite_eq_left hmu, dite_eq_left hmu]
+    simp only [μ'] at hev this; simp only [HRes] at this; simp only [hev, this]; rfl
+  | case4 μ H ρ cnt f dec args er ms ve rest env n gid G F hcal H1 ws hbx μ' hmu =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨-, -, -, -, -, hcal', hargs, -⟩ := call_spec hH hρ hc.1.1 hc.1.2 hcal hbx
+    rw [evalH, eval]; simp only [hcal, hbx, hcal', hargs, markedArgs_map, List.map_map]
+    simp only [Function.comp_def]
+    rw [dite_eq_right hmu, dite_eq_right hmu]; rfl
+  | case5 μ H ρ cnt f dec args er ms ve rest hcal =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hf1, hf2⟩ := subst_spec hH hρ hc.1.1
+    rw [evalH, eval, ← hf2, decode, callee_dec P hH, hcal]; rfl
+  | case6 μ H ρ cnt s rets brs els er rest d c ls vs hs pre body hb H1 outs cnt1 hev ihb ihr =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hvs, hs', hl⟩ := mtch_spec hH hρ hc.1.1.1 hs
+    obtain ⟨hpre, hbody⟩ := selectBr_spec hb hc.1.1.2 hc.1.2
+    have hb' : selectBr brs els c (H.decode vs).toList = some (pre.map H.decode, body) := by
+      rw [hl, selectBr_map, hb]; rfl
+    have := ihb hbody hH (ptrs_app hρ (Ext.refl H) fun w hw => hvs w (hpre w hw))
+    rw [hev, List.map_append] at this
+    obtain ⟨o, e, p, d⟩ := this
+    have := ihr hc.2 o (ptrs_app hρ e p)
+    rw [List.map_append, map_decode_ext hH e hρ] at this
+    rw [evalH, eval]; simp only [hs, hs']
+    split
+    next p1 b1 h1 =>
+      rw [hb] at h1; cases h1
+      simp only [hev]
+      split
+      next p2 b2 h2 =>
+        rw [hb'] at h2; cases h2
+        simp only [d]; exact this.ext e
+      next h2 => rw [hb'] at h2; cases h2
+    next h1 => rw [hb] at h1; cases h1
+  | case7 μ H ρ cnt s rets brs els er rest d c ls vs hs pre body hb e hev ihb =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hvs, hs', hl⟩ := mtch_spec hH hρ hc.1.1.1 hs
+    obtain ⟨hpre, hbody⟩ := selectBr_spec hb hc.1.1.2 hc.1.2
+    have hb' : selectBr brs els c (H.decode vs).toList = some (pre.map H.decode, body) := by
+      rw [hl, selectBr_map, hb]; rfl
+    have := ihb hbody hH (ptrs_app hρ (Ext.refl H) fun w hw => hvs w (hpre w hw))
+    rw [hev, List.map_append] at this; simp only [HRes] at this
+    rw [evalH, eval]; simp only [hs, hs']
+    split
+    next p1 b1 h1 =>
+      rw [hb] at h1; cases h1
+      simp only [hev]
+      split
+      next p2 b2 h2 => rw [hb'] at h2; cases h2; simp only [this]; rfl
+      next h2 => rw [hb'] at h2; cases h2
+    next h1 => rw [hb] at h1; cases h1
+  | case8 μ H ρ cnt s rets brs els er rest d c ls vs hs hb =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨-, hs', hl⟩ := mtch_spec hH hρ hc.1.1.1 hs
+    have hb' : selectBr brs els c (H.decode vs).toList = none := by rw [hl, selectBr_map, hb]; rfl
+    rw [evalH, eval]; simp only [hs, hs']
+    split
+    next p1 b1 h1 => rw [hb] at h1; cases h1
+    next h1 =>
+      split
+      next p2 b2 h2 => rw [hb'] at h2; cases h2
+      next h2 => rfl
+  | case9 μ H ρ cnt s rets brs els er rest hs =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hs1, hs2⟩ := subst_spec hH hρ hc.1.1.1
+    have hn := decode_notData hH hs1 hs
+    rw [evalH, eval, ← hs2]
+    split
+    next d c ls vs h1 => exact absurd h1 (hs d c ls vs ·)
+    next =>
+      split
+      next d c ls vs h2 => exact absurd h2 (hn d c ls vs ·)
+      next => rfl
+  | case19 μ H ρ cnt s brs els er nt d c ls vs hs pre body hb ihb =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hvs, hs', hl⟩ := mtch_spec hH hρ hc.1.1 hs
+    obtain ⟨hpre, hbody⟩ := selectBr_spec hb hc.1.2 hc.2
+    have hb' : selectBr brs els c (H.decode vs).toList = some (pre.map H.decode, body) := by
+      rw [hl, selectBr_map, hb]; rfl
+    have := ihb hbody hH (ptrs_app hρ (Ext.refl H) fun w hw => hvs w (hpre w hw))
+    rw [List.map_append] at this
+    rw [evalH, eval]; simp only [hs, hs']
+    split
+    next p1 b1 h1 =>
+      rw [hb] at h1; cases h1
+      split
+      next p2 b2 h2 => rw [hb'] at h2; cases h2; exact this
+      next h2 => rw [hb'] at h2; cases h2
+    next h1 => rw [hb] at h1; cases h1
+  | case20 μ H ρ cnt s brs els er nt d c ls vs hs hb =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨-, hs', hl⟩ := mtch_spec hH hρ hc.1.1 hs
+    have hb' : selectBr brs els c (H.decode vs).toList = none := by rw [hl, selectBr_map, hb]; rfl
+    rw [evalH, eval]; simp only [hs, hs']
+    split
+    next p1 b1 h1 => rw [hb] at h1; cases h1
+    next h1 =>
+      split
+      next p2 b2 h2 => rw [hb'] at h2; cases h2
+      next h2 => rfl
+  | case21 μ H ρ cnt s brs els er nt hs =>
+    intro hc hH hρ
+    simp only [Core.ptrFree, Bool.and_eq_true] at hc
+    obtain ⟨hs1, hs2⟩ := subst_spec hH hρ hc.1.1
+    have hn := decode_notData hH hs1 hs
+    rw [evalH, eval, ← hs2]
+    split
+    next d c ls vs h1 => exact absurd h1 (hs d c ls vs ·)
+    next =>
+      split
+      next d c ls vs h2 => exact absurd h2 (hn d c ls vs ·)
+      next => rfl
+
+theorem evalH_main (hP : P.PtrFree) (hm : P.main.ptrFree) :
+    HRes {} (evalH P none {} [] 0 P.main) (eval P none [] 0 P.main) :=
+  evalH_sim hP none {} [] 0 P.main hm (fun _ _ h => by cases h) (by simp)
 
 end Minimal

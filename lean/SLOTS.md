@@ -294,6 +294,13 @@ The steps below are a session's proposal for carrying it out:
    that skips every store returns the cell's block.
 5. Stages 3 and 4 then build on step 3's invariant.
 
+Step 1 is in place: `Minimal/EvalH.lean` defines `evalH`, and
+`Minimal/EvalHSound.lean` proves `evalH_sim` and `evalH_main` (decoding
+`evalH`'s result gives `eval`'s, error for error, with the heap only
+growing). Both take as hypotheses that the program holds no `ptr` term
+(`Prog.PtrFree`, `Core.ptrFree`); that the reader's output satisfies
+them is believed but not proved.
+
 ## Cost, as a session estimates it
 
 Larger than anything in `lean/` so far: stage 1 reworks the reader's

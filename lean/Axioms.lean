@@ -7,3 +7,4 @@ import Minimal
 #print axioms Minimal.runS_sound
 #print axioms Minimal.machine_sound
 #print axioms Minimal.machine_main
+#print axioms Minimal.evalH_main

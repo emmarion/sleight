@@ -13,3 +13,4 @@ import Minimal.MachineSound
 import Minimal.MachineRun
 import Minimal.MachineDeleg
 import Minimal.MachineAsm
+import Minimal.EvalHSound
