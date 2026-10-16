@@ -38,12 +38,23 @@ inductive Tm where
   | nat (n : Nat)
   | ptr (a : Nat)
   | wld (k : Nat)
+  | sfv (i : Nat)
+  | sbv (i : Nat)
   deriving DecidableEq, Repr, Inhabited
+
+def slotD : Nat := 4
 
 namespace Tm
 
+def vacant : Tm := app (vc slotD 0 nil) nil
+
+def slotOf : Tm → Tm
+  | fv j => sfv j
+  | _ => vacant
+
 def subst (f : Nat → Tm) : Tm → Tm
   | fv i => f i
+  | sfv i => slotOf (f i)
   | tyc d ls => tyc d (ls.subst f)
   | vc d c ls => vc d c (ls.subst f)
   | cons h t => cons (h.subst f) (t.subst f)
@@ -57,8 +68,25 @@ def subst (f : Nat → Tm) : Tm → Tm
   | mtbl u nt ex ph T cs => mtbl u nt ex ph (T.subst f) (cs.subst f)
   | t => t
 
+def subst2 (f g : Nat → Tm) : Tm → Tm
+  | fv i => f i
+  | sfv i => g i
+  | tyc d ls => tyc d (ls.subst2 f g)
+  | vc d c ls => vc d c (ls.subst2 f g)
+  | cons h t => cons (h.subst2 f g) (t.subst2 f g)
+  | bind m a r => bind m (a.subst2 f g) (r.subst2 f g)
+  | app h a => app (h.subst2 f g) (a.subst2 f g)
+  | tyCtor p => tyCtor (p.subst2 f g)
+  | valCtor p => valCtor (p.subst2 f g)
+  | predates A x L => predates (A.subst2 f g) (x.subst2 f g) (L.subst2 f g)
+  | subterm A a B b => subterm (A.subst2 f g) (a.subst2 f g) (B.subst2 f g) (b.subst2 f g)
+  | fn l np t uf hm => fn (l.subst2 f g) np (t.subst2 f g) uf hm
+  | mtbl u nt ex ph T cs => mtbl u nt ex ph (T.subst2 f g) (cs.subst2 f g)
+  | t => t
+
 def inst : Tm → Tm → Nat → Tm
   | bv i, u, k => if i = k then u else if k < i then bv (i - 1) else bv i
+  | sbv i, u, k => if i = k then slotOf u else if k < i then sbv (i - 1) else sbv i
   | tyc d ls, u, k => tyc d (ls.inst u k)
   | vc d c ls, u, k => vc d c (ls.inst u k)
   | cons h t, u, k => cons (h.inst u k) (t.inst u k)
@@ -99,8 +127,8 @@ def levels : Tm → List Nat
   | _ => []
 
 def static (n : Nat) : Nat → Tm → Bool
-  | _, fv i => i < n
-  | d, bv i => i < d
+  | _, fv i | _, sfv i => i < n
+  | d, bv i | d, sbv i => i < d
   | d, tyc _ ls | d, vc _ _ ls => ls.static n d
   | d, cons h t => h.static n d && t.static n d
   | d, bind _ a r => a.static n d && r.static n (d + 1)
@@ -114,7 +142,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | _, lvl _ | _, tok | _, clo .. | _, nat _ | _, ptr _ | _, wld _ => false
 
 def bound : Nat → Tm → Bool
-  | d, bv i => i < d
+  | d, bv i | d, sbv i => i < d
   | d, tyc _ ls | d, vc _ _ ls => ls.bound d
   | d, cons h t => h.bound d && t.bound d
   | d, bind _ a r => a.bound d && r.bound (d + 1)
@@ -127,8 +155,8 @@ def bound : Nat → Tm → Bool
   | _, _ => true
 
 def lc : Nat → Tm → Prop
-  | _, fv _ => False
-  | d, bv i => i < d
+  | _, fv _ | _, sfv _ => False
+  | d, bv i | d, sbv i => i < d
   | d, tyc _ ls | d, vc _ _ ls => ls.lc d
   | d, cons h t => h.lc d ∧ t.lc d
   | d, bind _ a r => a.lc d ∧ r.lc (d + 1)
@@ -141,7 +169,7 @@ def lc : Nat → Tm → Prop
   | _, _ => True
 
 def fvs : Tm → List Nat
-  | fv i => [i]
+  | fv i | sfv i => [i]
   | tyc _ ls | vc _ _ ls => ls.fvs
   | cons h t => h.fvs ++ t.fvs
   | bind _ a r => a.fvs ++ r.fvs
@@ -151,6 +179,19 @@ def fvs : Tm → List Nat
   | subterm A a B b => A.fvs ++ a.fvs ++ B.fvs ++ b.fvs
   | fn l _ t _ _ => l.fvs ++ t.fvs
   | mtbl _ _ _ _ T cs => T.fvs ++ cs.fvs
+  | _ => []
+
+def occ : Tm → List Nat
+  | fv i => [i]
+  | tyc _ ls | vc _ _ ls => ls.occ
+  | cons h t => h.occ ++ t.occ
+  | bind _ a r => a.occ ++ r.occ
+  | app h a => h.occ ++ a.occ
+  | tyCtor p | valCtor p => p.occ
+  | predates A x L => A.occ ++ x.occ ++ L.occ
+  | subterm A a B b => A.occ ++ a.occ ++ B.occ ++ b.occ
+  | fn l _ t _ _ => l.occ ++ t.occ
+  | mtbl _ _ _ _ T cs => T.occ ++ cs.occ
   | _ => []
 
 def ofList : List Tm → Tm
@@ -238,6 +279,7 @@ def Tm.hole : Tm := .fv holeBase
 
 def Tm.close (i : Nat) : Nat → Tm → Tm
   | k, .fv j => if j = i then .bv k else .fv j
+  | k, .sfv j => if j = i then .sbv k else .sfv j
   | k, .tyc d ls => .tyc d (ls.close i k)
   | k, .vc d c ls => .vc d c (ls.close i k)
   | k, .cons h t => .cons (h.close i k) (t.close i k)

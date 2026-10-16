@@ -6,25 +6,28 @@ def Sat (f : Nat → Tm) (σ : Nat → Option Tm) : Prop := ∀ e t, σ e = some
 
 namespace Tm
 
-theorem size_le_occurs (f : Nat → Tm) (e : Nat) : ∀ t : Tm, e ∈ t.fvs → (f e).size ≤ (t.subst f).size := by
-  intro t; induction t <;> simp_all [fvs, subst, size] <;> grind
+theorem size_le_occurs (f : Nat → Tm) (e : Nat) : ∀ t : Tm, e ∈ t.occ → (f e).size ≤ (t.subst f).size := by
+  intro t; induction t <;> simp_all [occ, subst, size] <;> grind
 
-theorem size_lt_occurs (f : Nat → Tm) (e : Nat) (t : Tm) (h : e ∈ t.fvs) (hne : t ≠ fv e) :
+theorem size_lt_occurs (f : Nat → Tm) (e : Nat) (t : Tm) (h : e ∈ t.occ) (hne : t ≠ fv e) :
     (f e).size < (t.subst f).size := by
-  cases t <;> simp_all [fvs, subst, size] <;> grind [size_le_occurs]
+  cases t <;> simp_all [occ, subst, size] <;> grind [size_le_occurs]
 
-theorem kids_subst (f : Nat → Tm) (a : Tm) (h : ∀ i, a ≠ fv i) : (a.subst f).kids = a.kids.map (subst f) := by
-  cases a <;> simp_all [subst, kids]
+theorem kids_subst (f : Nat → Tm) (a : Tm) (h : ∀ i, a ≠ fv i) (hs : a.isSlot = false) :
+    (a.subst f).kids = a.kids.map (subst f) := by
+  cases a <;> simp_all [subst, kids, isSlot]
 
 theorem subst_ne_of_head (f : Nat → Tm) (a b : Tm) (ha : ∀ i, a ≠ fv i) (hb : ∀ i, b ≠ fv i)
+    (has : a.isSlot = false) (hbs : b.isSlot = false)
     (h : a.sameHead b = false) : a.subst f ≠ b.subst f := by
-  cases a <;> cases b <;> simp_all [sameHead, subst]
+  cases a <;> cases b <;> simp_all [sameHead, subst, isSlot]
 
 theorem kids_eq_of_subst (f : Nat → Tm) (a b : Tm) (ha : ∀ i, a ≠ fv i) (hb : ∀ i, b ≠ fv i)
+    (has : a.isSlot = false) (hbs : b.isSlot = false)
     (_ : a.sameHead b = true) (e : a.subst f = b.subst f) :
     ∀ p ∈ a.kids.zip b.kids, p.1.subst f = p.2.subst f := by
   have := congrArg kids e
-  rw [kids_subst f a ha, kids_subst f b hb] at this
+  rw [kids_subst f a ha has, kids_subst f b hb hbs] at this
   generalize a.kids = xs, b.kids = ys at this
   induction xs generalizing ys with
   | nil => simp
@@ -59,11 +62,12 @@ theorem substOne_subst (f : Nat → Tm) (e : Nat) (t u : Tm) (h : f e = t.subst 
   congr 1; funext i; split <;> simp_all [Tm.subst]
 
 theorem canonBy_sound {σ : Nat → Option Tm} {f : Nat → Tm} (h : Sat f σ) (t : Tm) : (canonBy σ t).subst f = t.subst f := by
-  simp only [canonBy, Tm.subst_subst]
-  congr 1; funext i
-  cases e : σ i with
-  | none => simp [Tm.subst]
-  | some u => simp [h i u e]
+  simp only [canonBy]
+  induction t with
+  | fv i => cases e : σ i with
+    | none => simp [Tm.subst2, Tm.subst, e]
+    | some u => simp [Tm.subst2, Tm.subst, e, h i u e]
+  | _ => simp_all [Tm.subst2, Tm.subst]
 
 theorem Tm.sameHead_of_subst {f : Nat → Tm} {a b : Tm} (ha : a.isHead = true) (hb : b.isHead = true)
     (h : a.subst f = b.subst f) : a.sameHead b = true := by
@@ -78,32 +82,42 @@ theorem step_assign {atoms : Atoms} {σ : Nat → Option Tm} {a b t : Tm} {e : N
     exact ⟨hv, by rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst], rfl⟩
   · split at h
     · cases h
-    · rename_i hs
-      split at h
-      · rename_i hh; simp only [Bool.and_eq_true] at hh; exact absurd (Tm.sameHead_of_subst hh.1 hh.2 hab) hs
+    · split at h
       · cases h
+      · rename_i hs
+        split at h
+        · rename_i hh; simp only [Bool.and_eq_true] at hh; exact absurd (Tm.sameHead_of_subst hh.1 hh.2 hab) hs
+        · cases h
 
 theorem step_split {atoms : Atoms} {σ : Nat → Option Tm} {a b : Tm} (h : step atoms σ a b = .split) :
-    varSide a b = none ∧ a.sameHead b = true := by
+    varSide a b = none ∧ a.isSlot = false ∧ b.isSlot = false ∧ a.sameHead b = true := by
   unfold step at h
   split at h
   · cases h
-  · rename_i hv; refine ⟨hv, ?_⟩
+  · rename_i hv
     split at h
-    · assumption
-    · split at h
-      · split at h <;> (try split at h) <;> cases h
-      · cases h
+    · cases h
+    · rename_i hsl; simp only [Bool.or_eq_true, not_or, Bool.not_eq_true] at hsl
+      refine ⟨hv, hsl.1, hsl.2, ?_⟩
+      split at h
+      · assumption
+      · split at h
+        · split at h <;> (try split at h) <;> cases h
+        · cases h
 
-theorem step_other {atoms : Atoms} {σ : Nat → Option Tm} {a b : Tm} (h : step atoms σ a b = .drop ∨ step atoms σ a b = .stop) :
-    varSide a b = none ∧ a.sameHead b = false := by
+theorem step_other {atoms : Atoms} {σ : Nat → Option Tm} {a b : Tm} (h : step atoms σ a b = .stop) :
+    varSide a b = none ∧ a.isSlot = false ∧ b.isSlot = false ∧ a.sameHead b = false := by
   unfold step at h
   split at h
   · simp at h
-  · rename_i hv; refine ⟨hv, ?_⟩
+  · rename_i hv
     split at h
     · simp at h
-    · simp_all
+    · rename_i hsl; simp only [Bool.or_eq_true, not_or, Bool.not_eq_true] at hsl
+      refine ⟨hv, hsl.1, hsl.2, ?_⟩
+      split at h
+      · simp at h
+      · simp_all
 
 def AtomSound (f : Nat → Tm) (atoms : Atoms) : Prop :=
   ∀ σ, Sat f σ → ∀ a b, a.subst f = b.subst f →
@@ -155,11 +169,11 @@ theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat
     intro _ _; rw [unify]; simp [hab, hp, hocc, hmore, hok]
   | case7 σ dom a b rest hab hp ih =>
     intro hs he
-    obtain ⟨hv, hsh⟩ := step_split hp
+    obtain ⟨hv, has, hbs, hsh⟩ := step_split hp
     rw [unify]; simp only [hab, ite_false, hp]
     apply ih hs
     intro p hp; rcases List.mem_append.mp hp with hp | hp
-    · exact Tm.kids_eq_of_subst f a b (varSide_none hv).1 (varSide_none hv).2 hsh (he (a, b) (by simp)) p hp
+    · exact Tm.kids_eq_of_subst f a b (varSide_none hv).1 (varSide_none hv).2 has hbs hsh (he (a, b) (by simp)) p hp
     · exact he p (by simp [hp])
   | case8 σ dom a b rest hab hp ih =>
     intro hs he
@@ -167,8 +181,8 @@ theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat
     exact ih hs fun p hp => he p (by simp [hp])
   | case9 σ dom a b rest hab hp =>
     intro _ he; exfalso
-    obtain ⟨hv, hsh⟩ := step_other (.inr hp)
-    exact Tm.subst_ne_of_head f a b (varSide_none hv).1 (varSide_none hv).2 (by simpa using hsh) (he (a, b) (by simp))
+    obtain ⟨hv, has, hbs, hsh⟩ := step_other hp
+    exact Tm.subst_ne_of_head f a b (varSide_none hv).1 (varSide_none hv).2 has hbs (by simpa using hsh) (he (a, b) (by simp))
 
 theorem Tm.static_subst {n : Nat} {f : Nat → Tm} : ∀ (u : Tm) d, u.static n d → (∀ i ∈ u.fvs, (f i).static n 0) →
     (u.subst f).static n d := by
@@ -177,7 +191,18 @@ theorem Tm.static_subst {n : Nat} {f : Nat → Tm} : ∀ (u : Tm) d, u.static n 
   | bind _ a r iha ihr =>
     intro d h hf; simp only [Tm.static, Bool.and_eq_true, Tm.subst, Tm.fvs, List.mem_append] at *
     exact ⟨iha d h.1 fun i hi => hf i (.inl hi), ihr (d + 1) h.2 fun i hi => hf i (.inr hi)⟩
+  | sfv i => intro d _ h; exact Tm.slotOf_static d (h i (by simp [Tm.fvs]))
   | _ => intro d h hf; simp_all [Tm.static, Tm.subst, Tm.fvs]
+
+theorem Tm.static_subst2 {n : Nat} {f g : Nat → Tm} : ∀ (u : Tm) d, u.static n d →
+    (∀ i ∈ u.fvs, (f i).static n 0 ∧ (g i).static n 0) → (u.subst2 f g).static n d := by
+  intro u; induction u with
+  | fv i => intro d _ h; exact Tm.static_mono (Nat.le_refl _) _ (Nat.zero_le _) (h i (by simp [Tm.fvs])).1
+  | sfv i => intro d _ h; exact Tm.static_mono (Nat.le_refl _) _ (Nat.zero_le _) (h i (by simp [Tm.fvs])).2
+  | bind _ a r iha ihr =>
+    intro d h hf; simp only [Tm.static, Bool.and_eq_true, Tm.subst2, Tm.fvs, List.mem_append] at *
+    exact ⟨iha d h.1 fun i hi => hf i (.inl hi), ihr (d + 1) h.2 fun i hi => hf i (.inr hi)⟩
+  | _ => intro d h hf; simp_all [Tm.static, Tm.subst2, Tm.fvs]
 
 def RulesWF (n : Nat) (σ : Nat → Option Tm) : Prop := ∀ e t, σ e = some t → e < n ∧ t.static n 0
 

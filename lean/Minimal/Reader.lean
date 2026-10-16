@@ -326,7 +326,7 @@ partial def showName (x : String) : String :=
 
 abbrev Scope := List (String × Ref)
 
-def slotD : Nat := 4
+
 
 def atFnD : Nat := 5
 

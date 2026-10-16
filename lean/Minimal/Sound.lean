@@ -179,10 +179,10 @@ theorem EnvOK.canon {ρ : List Tm} {Γ : Ctx} (h : EnvOK P ρ Γ) (t : Tm) :
     (Γ.canon t).subst (Tm.env ρ) = t.subst (Tm.env ρ) := canon_sound h.sat t
 
 theorem canon_static {Γ : Ctx} (hw : Γ.WF) {t : Tm} {d : Nat} (h : t.static Γ.n d) : (Γ.canon t).static Γ.n d :=
-  Tm.static_subst t d h fun i hi => by
+  Tm.static_subst2 t d h fun i hi => ⟨by
     cases e : Γ.σ i with
     | none => simp [Tm.static]; exact Tm.fvs_static t d h i hi
-    | some u => simpa using (hw.σ i u e).2
+    | some u => simpa using (hw.σ i u e).2, by simp [Tm.static]; exact Tm.fvs_static t d h i hi⟩
 
 theorem Tm.isTele_inst (u : Tm) : ∀ (t : Tm) k, t.isTele → (t.inst u k).isTele := by
   intro t; induction t <;> intro k h <;> simp_all [isTele, inst]
@@ -303,7 +303,7 @@ theorem Tm.len_subst (f : Nat → Tm) : ∀ (t : Tm), t.isTele ∨ t.isList → 
 theorem Tm.isTele_of_inst_fv (i : Nat) : ∀ (t : Tm) k, (t.inst (.fv i) k).isTele → t.isTele := by
   intro t; induction t with
   | bind _ _ r _ ihr => intro k h; simp only [inst, isTele] at h ⊢; exact ihr _ h
-  | bv j => intro k h; simp only [inst] at h; split at h <;> (try split at h) <;> simp [isTele] at h
+  | bv j | sbv j => intro k h; simp only [inst] at h; split at h <;> (try split at h) <;> simp [isTele, slotOf] at h
   | _ => intro k h; simp_all [inst, isTele]
 
 theorem TeleOK.isTele {Γ : Ctx} {t : Tm} : TeleOK P Γ t → t.isTele
@@ -946,7 +946,7 @@ theorem levels_static {n : Nat} : ∀ (t : Tm) d, t.static n d → t.levels = []
   intro t; induction t <;> intro d h <;> simp_all [static, levels] <;> grind
 
 theorem levels_subst (f : Nat → Tm) : ∀ (t : Tm), ∀ x ∈ (t.subst f).levels, x ∈ t.levels ∨ ∃ i ∈ t.fvs, x ∈ (f i).levels := by
-  intro t; induction t <;> simp_all [subst, levels, fvs] <;> grind
+  intro t; induction t <;> simp_all [subst, levels, fvs] <;> (try (rename_i i; cases f i <;> simp [slotOf, vacant, levels])) <;> grind
 
 theorem levels_toList : ∀ (t : Tm), ∀ v ∈ t.toList, ∀ x ∈ v.levels, x ∈ t.levels := by
   intro t; induction t <;> simp_all [toList, levels] <;> grind

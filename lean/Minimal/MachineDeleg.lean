@@ -74,7 +74,7 @@ theorem filt_mask : ∀ (es : List Bool) (args : Tm) (n : Nat),
   | _ :: _, .tyc .., _ | _ :: _, .vc .., _ | _ :: _, .app .., _ | _ :: _, .bind .., _
   | _ :: _, .tyCtor _, _ | _ :: _, .valCtor _, _ | _ :: _, .predates .., _ | _ :: _, .subterm .., _
   | _ :: _, .fn .., _ | _ :: _, .mtbl .., _ | _ :: _, .lvl _, _ | _ :: _, .tok, _ | _ :: _, .clo .., _
-  | _ :: _, .nat _, _ | _ :: _, .ptr _, _ | _ :: _, .wld _, _ => by simp [maskArgs]
+  | _ :: _, .nat _, _ | _ :: _, .ptr _, _ | _ :: _, .wld _, _ | _ :: _, .sfv _, _ | _ :: _, .sbv _, _ => by simp [maskArgs]
 
 theorem resolve_fv {n0 : Nat} {al : List (Option (Bool × Nat))} {x : Tm} {b : Bool} {r : Nat}
     (h : resolve n0 al x = some (b, r)) : x.flat = true := by

@@ -143,8 +143,18 @@ Two representations a session sees:
   entries every rule and proof indexes, and the slot entries still
   need rules kept apart from `is` rules.
 
-A session leans toward A. Its cost is mostly mechanical: a new `Tm`
-constructor reaches every structural function and lemma over terms.
+The owner chose A. As a session refines it: a slot is a second sort
+of variable, `Tm.sfv i` (the slot of free variable `i`) and `Tm.sbv k`
+(the slot of bound variable `k`), rather than a former applied to a
+term. `Tm.subst`, and so canonicalization by `is` rules, rewrites only
+`fv`, which keeps slots out of reach of `is` rules; slot facts are a
+second substitution, over `sfv`, that canonicalization also applies.
+Instantiating a telescope maps `sbv k` to the slot of the argument:
+`sfv j` for `fv j`, and at run time the value's slot. So no value is
+ever inside a slot term, and `canonBy_sound` keeps its shape with a
+second hypothesis for slot facts. The cost is mostly mechanical: two
+new `Tm` constructors reach every structural function and lemma over
+terms.
 
 In stage 1 a slot term still evaluates to `vacant-slot`'s value, so
 the run semantics stay as they are and the slot facts are sound for
