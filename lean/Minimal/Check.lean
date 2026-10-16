@@ -654,6 +654,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .ret ts, .inl r => do
     let ⟨out, h⟩ ← checkArgs P Γ ts r
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
+    let ⟨_⟩ ← need (Γ.atArgs r ts none) "a result written `at` is not at its target"
     let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions something erased"
     .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Sum.inl.inj e, fun _ e => (by cases e)⟩
   | .ret ts, .inr n =>
@@ -690,6 +691,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨ht⟩ ← need (t.isTele) "not a telescope"
       let ⟨outs, ha⟩ ← checkArgs P Γ args t
       let ⟨hn⟩ ← need (args.len = np) "wrong number of arguments"
+      let ⟨_⟩ ← need (Γ.atArgs t args none) "an argument written `at` is not at its target"
       let ⟨hd⟩ ← checkDec P Γ l t args dec
       let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))

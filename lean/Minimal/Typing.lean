@@ -375,6 +375,12 @@ end
 
 def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
+def Ctx.atArgs (Γ : Ctx) : Tm → Tm → Option Tm → Bool
+  | .bind (.is _ _ _ true) _ r, .cons a as, some (.fv j) => Γ.canon a == Γ.canon (.sfv j) && Γ.atArgs r as (some a)
+  | .bind (.is _ _ _ true) _ _, .cons _ _, _ => false
+  | .bind _ _ r, .cons a as, _ => Γ.atArgs r as (some a)
+  | _, _, _ => true
+
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t | .coerce t _ _ | .place t _ | .unplace t _ => Minimal.rt P Γ t
   | .mtblOf .. | .atom _ | .axm _ | .num .. => true

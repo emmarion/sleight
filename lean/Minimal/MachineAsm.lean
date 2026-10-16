@@ -1493,6 +1493,7 @@ theorem MSound.call (hP : ProgOK P) (hO : P.OracleOK) {μ : Option (List Nat)} {
   obtain ⟨⟨ht⟩, -, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨outsT, ha⟩, hat, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨hn⟩, -, hck⟩ := Except.bind_ok hck
+  obtain ⟨⟨_⟩, -, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨hd⟩, -, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨ho⟩, -, hck⟩ := Except.bind_ok hck
   obtain ⟨⟨hok⟩, -, hck⟩ := Except.bind_ok hck
