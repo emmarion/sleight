@@ -2828,7 +2828,7 @@ counter and the expansion count. It is threaded sequentially through
 all of elaboration, carried out of every scope where uses are carried,
 and passed along rather than joined. Only the expander supplies a
 `MacroWorld`, to a macro's function. It has no constructor and is no
-entry, so it never escapes an expansion, and the forms below that take
+entry, so a non-erased one never escapes an expansion, and the forms below that take
 one run only there. A function that takes a macro world returns it `at`
 its parameter. The forms are primitives, checked as calls:
 
