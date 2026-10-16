@@ -10,8 +10,8 @@ may be mistaken.
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
 the test expects and the runner's; a test's `; needs:` files are read
-with it under `--shared`. At the last full run 418 tests were
-accepted with OCaml's value, 525 refusals agreed, and 17 + 61 were
+with it under `--shared`. At the last full run 419 tests were
+accepted with OCaml's value, 528 refusals agreed, and 17 + 58 were
 refused as unsupported; 7 tests OCaml accepts are refused, and two
 tests OCaml refuses are accepted (`macro_handle_erased_bad.sl` and
 `macro_settled_erase_bad.sl`: a handle used against its multiplicity is
