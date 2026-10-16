@@ -1085,6 +1085,11 @@
     ((RList _ _) (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ qraw raw) $ Zero))
     (else (let ((many env2) (many x)) $ lit-entry env raw) (values env2 $ match many x _ ((Some _ y) y) ((None _) (Zero))))))
 
+(def-fns _ $ (many type-handle : (many (Syn) raw) -> (many (Maybe $ Nat) x))
+  (let-match many raw (RAtom _ n) (else (None _)))
+  (let-match many n (NHandle hx rd _ _) (else (None _)))
+  (match many rd _ ((MintedType) (Some _ hx)) ((MintedIs) (None _))))
+
 (def-fns _ $ (many atom-var : (many (Env) env) (many (Syn) raw) (many (String) what) -> (many (Env) r) (many (Nat) x))
   (let-match many raw (RAtom _ n) (else (var-of-raw env raw what)))
   (let-match many n (NHandle hx rd _ _) (else (var-of-raw env raw what)))
@@ -5540,7 +5545,10 @@
         (else
           (match many (is-underscore raw) (((ElabWorld) _ at ew2) ((Env) _) ((Term) t0) ((Term) ty0))
             ((BTrue) (let ((many env2) (many x)) $ bind-as envl (BTrue) (BFalse) (None _) (Some _ $ loc-in env $ raw-pos raw) (BFalse) (Erased) type-term (None _) delegate-id) (values ew2 env2 (TVar x) type-term))
-            ((BFalse) (let ((many env2) (many x)) $ atom-var envl raw "a name") (values ew2 env2 (TVar x) $ type-of env2 x))))
+            ((BFalse)
+              (let-match many (type-handle raw) (Some _ hx)
+                ((None _) (let ((many env2) (many x)) $ atom-var envl raw "a name") (values ew2 env2 (TVar x) $ type-of env2 x)))
+              (values ew2 (env-refer envl (BFalse) hx) (minted-type envl hx) type-term))))
         ((RList _ items)
           (let-match many items (Cons _ head args)
             ((Nil _) (values ew2 (env-error envl "empty form") (TErr "empty form") $ TErr "empty form")))

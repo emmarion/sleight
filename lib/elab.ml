@@ -827,6 +827,7 @@ let rec elab_term ?expect env raw =
   let env, raw = erased_reads (expand_one Many) env raw in
   match raw with
   | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Hypothetical type_term in (env, Var x)
+  | Handle (_, x, MintedType, _, _) -> refer x; let t = (minted_fact env x).ty in (enter_mentioned env t, t)
   | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
