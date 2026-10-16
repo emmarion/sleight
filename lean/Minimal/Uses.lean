@@ -225,7 +225,7 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       if G.fill then UR.seq (O, K) C
       else if G.defOK Gr O then UR.seq (Gr.caps, K) C else none
     else none
-  | .chk (.mark m) a _ rest => let G := { G with Γ := G.Γ.markPd m a }; match m, a with
+  | .chk (.mark m) a _ rest => match m, a with
     | .uq ms, _ => usesCore b { G with ents := ms } ru rets rest
     | .uqScr, _ => usesCore b { G with scr := true } ru rets rest
     | .rebind, _ => match hr : rest with
@@ -237,10 +237,10 @@ def usesCore (b : Nat) (G : UCtx) (ru : List Bool) (rets : Tm) : Core → UR
       | _ => none
     | .reuse u, .fv i | .write u, .fv i =>
       if u && !G.Γ.ghost && !G.cellTy P i then none else do
-      let C ← usesCore b { G with cellOk := true } ru rets rest
+      let C ← usesCore b { G with Γ := G.Γ.markPd m a, cellOk := true } ru rets rest
       if G.Γ.ghost then some C else UR.seq (← G.use i u, []) C
     | .alloc, _ => usesCore b { G with cellOk := true } ru rets rest
-    | .cellOf, x => if G.Γ.ghost || G.uscr == some x then usesCore b { G with cellOk := true, uscr := none } ru rets rest
+    | .cellOf, x => if G.Γ.ghost || G.uscr == some x then usesCore b { G with Γ := G.Γ.markPd m a, cellOk := true, uscr := none } ru rets rest
       else none
     | _, _ => usesCore b G ru rets rest
   | .chk (.opn oe) (.fv m) _ rest =>
