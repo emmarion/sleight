@@ -338,6 +338,11 @@ computes.
 
 ## Next, none of it decided
 
+The owner chose to model slots as words, with a heap in the full
+semantics, as `lean/SLOTS.md` lays out; that work is on the long-term
+branch `claude/slots` and its per-stage sub-branches, and takes
+precedence over the order below until it is back to `main`'s parity.
+
 The owner's tentative order, from chat: (a) the two soundness gaps,
 a handle used against its multiplicity (item 9, step 5, done) and item 5
 (since deferred);

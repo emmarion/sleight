@@ -1,12 +1,12 @@
-# Slots as words: a proposal
+# Slots as words
 
-A proposal for the Lean development in `lean/`, not adopted. It covers
-`cell-same`, at-matches on a union newtype, `slot-eq` and mutation,
-which a session found to rest on one fact of the design that the Lean
-model lacks. The reading of the design below is a session's, which the
-owner agreed to in chat as the basis for this proposal; the plan,
-stages and costs are proposals, and the open questions at the end are
-the owner's to answer.
+A plan for the Lean development in `lean/`. It covers `cell-same`,
+at-matches on a union newtype, `slot-eq` and mutation, which a session
+found to rest on one fact of the design that the Lean model lacks. The
+reading of the design below is a session's, which the owner agreed to
+in chat as the basis. The owner chose shape 1 (a heap in the full
+semantics) and stage 1 landing on its own first; the details of each
+stage are a session's proposals.
 
 ## The fact everything rests on
 
@@ -115,10 +115,11 @@ Larger than anything in `lean/` so far: stage 1 reworks the reader's
 and the core's slot handling, and stage 2 threads an invariant through
 the run proofs, in shape 1 after reworking `eval` itself.
 
-## Open questions
+## Where the work happens
 
-- Shape 1 or shape 2.
-- Whether stage 1, slots in the core with today's semantics, should
-  land on its own first.
-- What to do meanwhile with `slot-self`, `Prim.atomEq` and the slot
-  copies, which are sound in today's model but not the design's.
+The work is on the long-term branch `claude/slots`, with a sub-branch
+per stage (`claude/slots-1-core`, and so on), merged into
+`claude/slots` as each stage is done. The branch may fall behind
+`main`'s results meanwhile, for example while stage 1 drops
+`Prim.atomEq` and the slot copies; it returns to `main` once it is
+back to the parity `main` had when the work began.
