@@ -534,48 +534,33 @@ it is `Settled`, and its `is` rule.
 - Slots and `at` (DESIGN.md sections 35, 36 and 41). `Slot` is a
   built-in type with one constructor and no `Matchable`, and
   `vacant-slot` is that constructor; a value prints as `_`. In the core
-  a slot is an entry of type `(Slot)`, made by `Prim.atom`, which
-  evaluates to the constructor; the core knows nothing of locations,
-  and two slots are one exactly when they canonicalize to one entry.
-  The elaborator makes an entry's automatic slot the first time it is
-  needed, or just before a `def-lvl` for an entry that a later
-  `slot-of` of the same sequence names, at the entry's erasure, and puts an entry at its source's
-  slot where section 36 has one: a forwarding `let`, `share`, `coerce`,
-  an `else` binder, a newtype's construction and destructure, the
-  delegate annotation, a cell binder, a cell invocation and
-  `cell-write` at `unique`. A telescope entry written `at v`, or whose
-  slot a `slot-of` or an `at` of the same telescope names, is preceded
-  in the core by a hidden erased entry (`Tm.fn`'s mask): its slot, a
-  `(Slot)` entry, or for `at v` an `is` entry that it is `v`'s slot.
-  A call passes each such argument's slot there, binding an argument
-  that is not a variable first, so an argument written `at` that is not
-  a variable is refused; a body returns its results' slots, so the
-  core checks each promise canonically. `(slot-of x)` is the slot of
-  `x`, erased when `x` is, and of a hidden entry erased always;
-  where `x` is not erased but its slot is a hidden entry, `(slot-of x)`
-  in a non-erased position is a fresh non-erased slot entry, made
-  before the statement and forced equal to that slot as `slot-self`
-  forces (below). `(slot-of vacant-slot)` is `vacant-slot`, and a `let` of
-  `vacant-slot` puts its binder there. A slot entry is its own slot,
-  including one a telescope binds, which an `at` in a nested telescope
-  may name. A
-  non-erased slot entry is made `unique` (its value is an immediate,
-  which owns nothing), so `(slot-of x)` may stand at a unique position;
-  each such use is a fresh copy made as above, so the slot may be used
-  at unique more than once, and a use of it at many needs no `share`. The uses pass accepts the
-  primitive that makes it, `Prim.atom`, at unique.
-  `(slot-self s)` makes `s` its own slot. Once the slot of `s` is in
-  use, it instead forces `s` and that slot to be equal, as an erased
-  `let-match` on `Refl` of a proof of `Eq (Slot) s σ` (`Prim.atomEq`,
-  which the checker accepts between two entries of a type with one
-  constructor and no fields, all of whose values are that constructor);
-  a contradiction is refused. `at` changes no value: the runner computes an
-  `at` result like any other. Not done: the slot a forcing unification
-  gives otherwise than through the core's own rules, an `at` naming an
-  entry of an enclosing telescope that is not a slot, `_` for an argument
-  whose slot is named (its slot is `_` too), and `prove-predates` on a
-  slot first needed after the level other than through such a
-  `slot-of`.
+  the slot of a variable is a term of its own sort (`Tm.sfv`, and
+  `Tm.sbv` under a binder), typed `(Slot)` and erased exactly when the
+  variable is; it evaluates to `vacant-slot`'s value, so the core knows
+  nothing of locations. `is` rules never rewrite a slot; slot facts are
+  a second map (`Ctx.ς`), applied by canonicalization, and two slots
+  are one exactly when they canonicalize to one term. Equating two
+  slots is a union of their classes. The core writes slot facts where
+  section 36 has them, as `lean/SLOTS.md` lists: a forwarding `let`,
+  `share`, `coerce`, the placings, a newtype's construction and
+  destructure, a cell binder in any mode, a cell invocation (at
+  `unique`, or at `many` with every store skipped), `cell-write` at
+  `unique`, `world-do`'s world, the delegate annotation, `slot-self`,
+  forcing in a match branch, and an entry written `at v`. Such an entry
+  is followed in its telescope by a hidden erased `is` entry naming
+  `v`'s slot (`Tm.fn`'s mask), which records the entry's slot when the
+  telescope is opened; a call passes the slot of each such argument
+  there, binding an argument that is not a variable first, and a body
+  returns its results' slots, so the core checks each promise
+  canonically. `(slot-of x)` is `x`'s slot, erased when `x` is; the
+  slot of a slot value is that value, so `(slot-of vacant-slot)` is
+  `vacant-slot`. A `(Slot)` entry is not its own slot until
+  `(slot-self s)` makes it so, which the core checks (`Chk.slf`); a
+  contradiction is refused. `prove-predates` takes `(slot-of x)` for an
+  `x` older than the level. `at` changes no value: the runner computes
+  an `at` result like any other. Not done: forcing outside a match
+  branch (`open-adt`) adds no slot facts, and `placed-slot` still
+  proves its equation with `Prim.atomEq`.
 - At-functions and at-matches (sections 39 and 40), checked by the
   elaborator: the returns or annotation entries are erased or `at`, and
   the body or each branch makes no non-erased call that is not skipped,

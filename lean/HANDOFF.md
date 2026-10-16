@@ -30,14 +30,6 @@ reading of why:
   are read back from their targets; the reference refuses the same
   match written without `at`. `lean/SLOTS.md` proposes how the Lean
   model could support it.
-- `at_target_wild.sl`: `_` for an argument whose slot a later parameter
-  names; the link from an entry to its slot lives in the reader's state,
-  which inference does not see. The slot must also be minted, as a
-  statement before the call, before inference has said whose slot it
-  is. A session sees two routes, neither tried: give inference the
-  reader's slot map and restart the statement once the `_` is solved
-  (only at the top level, where the reader keeps a checker context), or
-  mint slots earlier, which changes where they enter scope.
 - The macro tests that `lean/README.md`'s macro item lists as not
   supported, and `macro_gensym_eq.sl` and `macro_mint_settled.sl`,
   which pass a `match` with a `_` annotation as an argument.
@@ -347,7 +339,7 @@ The owner's tentative order, from chat: (a) the two soundness gaps,
 a handle used against its multiplicity (item 9, step 5, done) and item 5
 (since deferred);
 (b) item 13; (c) items 2 and 11, mutation included, and the two `at`
-tests listed above; (d) the rest of item 9, step 5; (e) item 12;
+tests listed above (on this branch only `at_match_union.sl` is left); (d) the rest of item 9, step 5; (e) item 12;
 (f) item 9, step 4.
 
 0. **Native arithmetic, one proved extern at a time.** The owner's
@@ -458,15 +450,13 @@ tests listed above; (d) the rest of item 9, step 5; (e) item 12;
    elaborator handles it, with the scope there. These are still made by
    scanning syntax for names first, and an alias, a shadowing binder or
    a macro's output can mislead them:
-   - Literals and slots are interned and minted where the elaborator
-     needs them: a lookup that finds one missing throws a marked error
-     carrying what it needs (`throwNeed`), and the nearest interning
-     site, or for a slot the nearest statement with the entry in scope,
-     restores its state and elaborates again with it (`retrying`). The
-     scans (`internLits`, `mintSlots`) remain as the first guess.
-   - Still decided by scanning: the slots minted before a `def-lvl` for
-     later `slot-of`s (`topRefs`, `restRefs`), so a slot an alias names
-     after a level is minted after it; `dropFinal` under `--shared`; the
+   - Literals are interned where the elaborator needs them: a lookup
+     that finds one missing throws a marked error carrying what it needs
+     (`throwNeed`), and the nearest interning site restores its state
+     and elaborates again with it (`retrying`). The scan
+     (`internLits`) remains as the first guess. Slots are core terms
+     and need no minting.
+   - Still decided by scanning: `dropFinal` under `--shared`; the
      `let` analyses `returnsBinders` and `renamesOf`; and the scan that
      declares `World`.
    - Probed against the reference's test runner: a needs file ending in
