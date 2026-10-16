@@ -102,7 +102,9 @@ The argument works in an eager semantics of the unerased program:
 - Values are finite trees, and are immutable: a `unique` binder, a cell
   and an in-place update are read as an implementation of fresh
   immutable values. That reading is OPEN.md 2's first step and OPEN.md
-  3, which this note assumes rather than proves.
+  3. For the cells of `lean/`'s fragment, `machine_main` appears to
+  prove it (part 10); beyond them this note assumes it rather than
+  proves it.
 - An at-function's call and an at-match run (§39, §40); a `coerce` is
   replaced by the value its proof names.
 
@@ -157,10 +159,15 @@ on §10, because none of them asks what a type means, only how it is
 spelled. The parts most in need of checking are the `Matchable`
 invariant of §8, the unification of unopened first-class type
 constructors (§8), and slots (OPEN.md 3). Also assumed: the FFI agrees
-with its models (§42); `comptime-match` reads correct values (§29,
+with its models (§42), the `Slots` functions of §69 included, and
+`slot-eq`, which §42 exempts from that, answers `Some` only for one
+word (§67); `cell-same` yields its `JMEq` only for equal cells (§68),
+which rests on OPEN.md 3; `comptime-match` reads correct values (§29,
 OPEN.md 4), as do `settled-eq`, `resolve` and `settled-value` (§64,
-§65); and the axioms `gensym-unique`, `placed-slot` and `placed-eq`
-(§65, §66) and the literal facts of §45 are true.
+§65); the other primitives of §65 and the driver's answers to
+`world-do` (§42) give values of their declared types; and the axioms
+`gensym-unique`, `placed-slot` and `placed-eq` (§65, §66) and the
+literal facts of §45 are true.
 
 ## 5. Totality (T)
 
@@ -296,26 +303,23 @@ revisiting:
 
 ## 10. What `lean/` checks
 
-`lean/` defines a full semantics like part 3's for MINIMAL.md's
-fragment and the additions `lean/README.md` lists, and proves in Lean 4,
-on Lean's three standard axioms:
+`lean/` defines a full semantics like part 3's for a fragment of the
+language and proves theorems about it in Lean 4. `lean/README.md` is
+the authority on what that fragment is ("Beyond MINIMAL.md"), what is
+proved ("What is proved"), and what is outside the proof
+("Untrusted"); this part only maps this note's claims to its names:
 
-- (T): `eval` is defined by well-founded recursion on part 5's measure,
-  with levels as counter values and value sizes in place of strict
-  subtree, and `checked_runs` shows a checked program never fails the
-  decrease check.
-- (S): `checked_runs`, through `VTy`, which types values by recursion on
-  the value, not the type. `no_false` is part 1's consistency.
-- (E): `eval_sound`, through the stripped run `RunS` and `Real`.
+- (T): `eval` and `checked_runs`, with part 5's measure.
+- (S): `checked_runs`, through `VTy`; part 1's consistency is
+  `no_false`.
+- (E): `eval_sound`, through `RunS` and `Real`; part 3's reading of
+  cells as immutable values, for the fragment, is `machine_main`.
 - (I1) is `Sat`, in `EnvOK`; (I2) and (I3) are how `VTy` reads
-  `Subterm` and `Predates`; the lexical-order lemma is `Chrono`. Part
-  5's bound k rests on `Tm.isTele`: a telescope is written out, never a
-  variable.
+  `Subterm` and `Predates`; the lexical-order lemma is `Chrono`; part
+  5's bound k rests on `Tm.isTele`.
 - (C) only in part: `checkProg` is total, but the reader, the elaborator
   and `Infer.lean` are outside the proof.
 
-Outside the fragment, so argued above at most: what `unique` promises
-(`lean/` reads a `unique` entry as a non-erased one, as part 3 does, and
-checks its uses in the elaborator alone), cells, `at`, slots,
-at-functions and at-matches, macros, and the FFI's implementations of
-extern functions (`lean/` runs their models).
+Whatever `lean/README.md` lists as not supported, and the FFI's
+implementations of extern functions beyond those it proves, are argued
+above at most.
