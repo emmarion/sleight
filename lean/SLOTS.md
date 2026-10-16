@@ -164,6 +164,23 @@ second hypothesis for slot facts. The cost is mostly mechanical: two
 new `Tm` constructors reach every structural function and lemma over
 terms.
 
+Progress on stage 1, on `claude/slots-1-core`:
+
+- Done: `sfv`/`sbv`, typed `(Slot)` and run-time exactly when their
+  entry is; slot facts in `Ctx`, applied by canonicalization and never
+  reached by `is` rules; the unifier never refutes on a slot; the hidden
+  `at` entry, now after the entry it belongs to and flagged `sl`,
+  records that entry's slot; the checker requires each such hidden
+  argument or result to be the slot of the variable before it; a
+  forwarding `Prim.tm`, `coerce`, `place` or `unplace` puts its entry
+  at its source's slot.
+- Not yet: the facts a newtype's construction and destructure write,
+  which belong in `Ctx.adv` and `Ctx.advBr` and would change
+  `Ctx.adv_same`; cells, `delegate`, and forcing between two slots in
+  unification (dropped, so only weaker); `slot-self` and `placed-slot`
+  as primitives proving their true equations in place of
+  `Prim.atomEq`; the reader's switch.
+
 In stage 1 a slot term still evaluates to `vacant-slot`'s value, so
 the run semantics stay as they are and the slot facts are sound for
 the same reason `Prim.atomEq` is today; stage 2 gives slots their
