@@ -379,15 +379,10 @@ computes.
       after its last top-level form is expanded.
    2. Done: a match on `MacroWorld` or `Gensym` outside the prelude is
       refused, as the reference refuses it for want of a `Matchable`.
-   2a. A handle made by `settled-type` reads back as a name the reader
-      resolves to the handle's type, so a spliced type is no longer
-      `_`. For an entry bound by a `let` to a term the reader inlines,
-      the reader records no type (`note … true` keeps the term only), so
-      the handle's type is empty and the checker refuses the splice as
-      "not a term of the type grammar". The reference accepts the
-      positive case (a `let` binder typed with such a handle) and
-      reports the type mismatch for `macro_settled_type_bad.sl`. Next
-      step: give an inlined entry a type the handle can carry.
+   2a. Done: a handle made by `settled-type` splices as a name the
+      reader resolves to the handle's type. The reader's checker context
+      for top-level entries is stepped after inferring the form's holes,
+      so it holds the type of an entry the reader inlines.
    3. Regenerate the prelude for `main`'s latest, rerun `test.sh` and
       `compare.sh`, and update the counts above.
    4. Not started, and to be proposed to the owner first: make

@@ -1431,6 +1431,9 @@ def recordTop (n0 : Nat) (ss : List Stmt) : M Unit := do
   let P : Prog := (st.prog .dead)
   let c := close ss ((List.range (st.n - n0)).map (Tm.fv <| n0 + ·))
   let topCtx := st.topCtx.bind fun Γ => if Γ.n == n0 then
+      let (P, c) := match (inferCore P Γ none true c).run (P.groups, 0) with
+        | .ok (c, groups, _) => ({ P with groups }, c)
+        | .error _ => (P, c)
       ((mapRet P (fun Γ ts => (ts, Γ)) Γ c).map (·.2)).filter (·.n == st.n)
     else none
   set { st with topCtx }
