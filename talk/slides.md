@@ -203,7 +203,7 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
 
 - "Checked" means a claim the compiler confirms or rejects
 
-\* Linear, not unique: a mutable array can escape its linear scope and be written through twice (appendix A25)
+\* Linear, not unique: a mutable array can escape its linear scope and be written through twice (slide 70)
 
 ## 14. Proofs are programs
 
