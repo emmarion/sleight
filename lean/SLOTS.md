@@ -33,9 +33,10 @@ one word. These features use that at run time:
 
 `(Slot)` is a built-in type with one constructor, `vacant-slot`, so
 every slot has the same value and "same slot" carries no information
-at run time. The reader, not the core, decides which entry has which
-slot; the core sees slot entries and checks `at` promises by canonical
-identity. The full and stripped runs (`eval`, `RunS`) are value-only;
+at run time. On this branch the core tracks which entry is at which
+slot (stage 1, below) and checks `at` promises by canonical identity
+of slots; on `main` the reader decides it and the core sees slot
+entries. The full and stripped runs (`eval`, `RunS`) are value-only;
 the machine run (`RunM`) has a heap with addresses and writes a cell
 in place at `unique`, and `machine_sound` relates it to `eval`.
 
@@ -50,8 +51,8 @@ cannot be proved. That is why, as far as a session can tell:
   functions built on it.
 
 The model also has something the design does not. `Prim.atomEq` proves
-`Eq (Slot) a b` for any two slots, which `slot-self` and the reader's
-slot copies (`lean/README.md`, slots item) use. It is sound only
+`Eq (Slot) a b` for any two slots, which `placed-slot` uses (and, on
+`main`, `slot-self` and the reader's slot copies). It is sound only
 because every slot has one value; with slots as words it would be
 false, since `slot-eq` must be able to answer that two slots differ
 and section 38 has slot facts come from forcing alone.
@@ -166,22 +167,52 @@ terms.
 
 Progress on stage 1, on `claude/slots-1-core`:
 
-- Done: `sfv`/`sbv`, typed `(Slot)` and run-time exactly when their
-  entry is; slot facts in `Ctx`, applied by canonicalization and never
-  reached by `is` rules; the unifier never refutes on a slot; the slot
-  of a slot value is that slot (`(slot-of x)` is at `x`); the hidden
-  `at` entry, now after the entry it belongs to and flagged `sl`,
-  records that entry's slot; the checker requires each such hidden
-  argument or result to be the slot of the variable before it; a
-  forwarding `Prim.tm`, `coerce`, `place` or `unplace` puts its entry
-  at its source's slot; `slot-self` is a core check (`Chk.slf`) that
-  records `s`'s slot as `s`.
-- Not yet: the facts a newtype's construction and destructure write,
-  which belong in `Ctx.adv` and `Ctx.advBr` and would change
-  `Ctx.adv_same`; cells, `delegate`, and forcing between two slots in
-  unification (dropped, so only weaker); `placed-slot` as a proof of
-  its true equation in place of `Prim.atomEq`'s any-two-slots; the
-  reader's switch.
+- Done, in the core: `sfv`/`sbv`, typed `(Slot)` and run-time exactly
+  when their entry is; slot facts in `Ctx` (`ς`), applied by
+  canonicalization and never reached by `is` rules. Equating two slots
+  is a union: the old root is pointed at the new slot value and the
+  `ς` and `σ` values that mention it are rewritten (`Ctx.withSlot`,
+  `Ctx.bindSlot`), so canonicalization stays one pass. The writers of
+  section 36 as a session reads them:
+  - the hidden `at` entry, after the entry it belongs to and flagged
+    `sl`, records that entry's slot, in telescopes the checker opens
+    (`TeleOK` included) and in calls; the checker requires each such
+    hidden argument or result to be the slot of the variable before it;
+  - a forwarding `Prim.tm`, `coerce`, `place` or `unplace`, and an
+    application of a newtype constructor (through `Prog.unwrap`), put
+    their entry at their source's slot; `vacant-slot` is its own slot;
+  - a destructure of a newtype puts its non-erased field at the
+    scrutinee (`Ctx.ntSlot`, in `Ctx.branch`);
+  - a pending mark (`reuse` or `write` at `unique` on a variable, or
+    `cellOf`) puts the next constructor or `axm` entry at the mark's
+    target, as the machine's pending mark does (`Ctx.pd`,
+    `Ctx.markPd`); `Chk.slotAt` does the same where the machine has no
+    pending mark: the cell binder of a `many` or erased destructure, and
+    an invocation that is not at `unique` and, at `many`, skips every
+    store (section 37; the owner confirmed that such a `many`
+    invocation is at the cell);
+  - `world-do`'s world result is at its world argument
+    (`Ctx.pushWdo`);
+  - `slot-self` (`Chk.slf`);
+  - forcing in a match branch: after unification, the pairs left over
+    that involve a slot are made equal (`Ctx.forceSlots`).
+- Done, in the reader: slots are core terms (`(slot-of x)` is
+  `sfv x`); slot minting, the slot copies, the retry for them and the
+  `fresh-slot` and `slot-eq` forms are gone; a lifted constructor
+  signature abstracts the slots it mentions with the variables.
+- Not yet:
+  - the delegate annotation (section 41), so
+    `tests/delegate_at_slot.sl` is refused;
+  - `prove-predates` of `(slot-of x)`: `Prim.provePredates` takes an
+    entry, so `tests/slot_of_predates.sl` is refused as unsupported;
+  - `placed-slot` still proves its equation with `Prim.atomEq`, which
+    proves any two slots equal; it is to become a proof of its true
+    equation;
+  - forcing outside a match branch (`open-adt`'s unification) adds no
+    slot facts;
+  - the machine side of the `many` invocation that skips every store:
+    the core records it at the cell, the machine builds a fresh block;
+    stage 2 is to make the machine reuse the cell's block.
 
 In stage 1 a slot term still evaluates to `vacant-slot`'s value, so
 the run semantics stay as they are and the slot facts are sound for
