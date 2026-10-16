@@ -268,7 +268,7 @@ theorem view_spec {H : FHeap} (hH : H.OK) {w : Tm} (hw : w.ptrBelow H.next) :
     rw [hk]; simp only [dec, hb]
     rw [dec_fuel hH a k t ht (by omega), dec_fuel hH a (k + 1) t ht (by omega)]
 
-theorem callee_dec {H : FHeap} (hH : H.OK) (n : Nat) (w : Tm) :
+theorem callee_dec (P : Prog) {H : FHeap} (hH : H.OK) (n : Nat) (w : Tm) :
     callee P (H.dec n w) = (callee P w).map fun (env, m, gid, G, F) => (env.map (H.dec n), m, gid, G, F) := by
   cases w
   case ptr a =>
@@ -309,6 +309,85 @@ theorem closures_dec (H : FHeap) (n : Nat) (env : List Tm) (gid : Nat) (G : Grou
 theorem markedArgs_map (f : Tm → Tm) : ∀ (t : Tm) (l : List Tm), markedArgs t (.ofList (l.map f)) = (markedArgs t (.ofList l)).map f := by
   intro t; induction t <;> intro l <;> cases l <;> simp [markedArgs, Tm.ofList]
   rename_i ih _ _; split <;> simp [ih]
+
+theorem dec_wld {H : FHeap} (hH : H.OK) (n m : Nat) (t : Tm) : H.dec n t = .wld m ↔ t = .wld m := by
+  cases t <;> cases n <;> simp [dec]
+  rename_i a n
+  cases hb : H.blk a with
+  | none => simp
+  | some t =>
+    obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH a t hb
+    cases n <;> simp [dec]
+
+theorem dec_wnext {H : FHeap} (hH : H.OK) (n : Nat) (t : Tm) : H.dec n t.wnext = (H.dec n t).wnext := by
+  by_cases h : ∃ m, t = .wld m
+  · obtain ⟨m, rfl⟩ := h; cases n <;> simp [dec, Tm.wnext]
+  · have h1 : ∀ m, H.dec n t ≠ .wld m := fun m e => h ⟨m, (dec_wld hH n m t).1 e⟩
+    rw [show t.wnext = .tok by unfold Tm.wnext; split <;> simp_all,
+      show (H.dec n t).wnext = .tok by unfold Tm.wnext; split <;> simp_all]
+    cases n <;> simp [dec]
+
+theorem view_noBlk {H : FHeap} (hH : H.OK) {w : Tm} {a : Nat} (h : H.view w = .ptr a) : H.blk a = none := by
+  cases w <;> simp [view] at h
+  rename_i b
+  cases hb : H.blk b with
+  | none => simp [hb] at h; subst h; exact hb
+  | some t => obtain ⟨-, -, d, c, ls, args, rfl⟩ := hH b t hb; simp [hb] at h
+
+theorem answer_tok1 (P : Prog) (y z : Tm) (h : ∀ m, y ≠ .wld m) : P.answer y z = (.tok, .tok) := by
+  unfold Prog.answer; split <;> simp_all
+
+theorem answer_tok2 (P : Prog) (y z : Tm) (h : ∀ d c ls vs, z ≠ .app (.vc d c ls) vs) : P.answer y z = (.tok, .tok) := by
+  unfold Prog.answer; split
+  · exact absurd rfl (h _ _ _ _)
+  · rfl
+
+theorem answer_dec (P : Prog) {H : FHeap} (hH : H.OK) (n : Nat) (y z : Tm) (hz : ∀ a, z = .ptr a → H.blk a = none) :
+    P.answer (H.dec n y) (H.dec n z) = P.answer y z := by
+  by_cases hy : ∃ m, y = .wld m
+  · obtain ⟨m, rfl⟩ := hy
+    rw [show H.dec n (.wld m) = .wld m by cases n <;> simp [dec]]
+    by_cases hd : ∃ d c ls vs, z = .app (.vc d c ls) vs
+    · obtain ⟨d, c, ls, vs, rfl⟩ := hd; cases n <;> simp [dec, Prog.answer]
+    · have : ∀ d c ls vs, H.dec n z ≠ .app (.vc d c ls) vs := by
+        intro d c ls vs e
+        cases z <;> cases n <;> simp [dec] at e
+        all_goals first
+          | (obtain ⟨ls', rfl⟩ := dec_vc hH e.1; exact hd ⟨_, _, _, _, rfl⟩)
+          | (rename_i a _; rw [hz a rfl] at e; simp at e)
+      rw [answer_tok2 P _ _ this, answer_tok2 P _ _ fun d c ls vs e => hd ⟨d, c, ls, vs, e⟩]
+  · rw [answer_tok1 P _ _ fun m e => hy ⟨m, (dec_wld hH n m y).1 e⟩, answer_tok1 P _ _ fun m e => hy ⟨m, e⟩]
+
+theorem subst_spec {H : FHeap} (hH : H.OK) {ρ : List Tm} (hρ : ∀ w ∈ ρ, w.ptrBelow H.next) {t : Tm} (ht : t.ptrBelow 0) :
+    (t.subst (Tm.env ρ)).ptrBelow H.next ∧ H.decode (t.subst (Tm.env ρ)) = t.subst (Tm.env (ρ.map H.decode)) := by
+  refine ⟨subst_ptrBelow (env_ptrBelow hρ) t ht, ?_⟩
+  simp only [decode]; rw [dec_subst hH _ _ t ht, env_map_dec]; rfl
+
+theorem prim_spec {H : FHeap} (hH : H.OK) {ρ : List Tm} (hρ : ∀ w ∈ ρ, w.ptrBelow H.next) {p : Prim}
+    (hp : p.tms.all (·.ptrBelow 0)) (hw : ∀ w r, p ≠ .wAsk w r) :
+    (p.eval P ρ).ptrBelow H.next ∧ H.decode (p.eval P ρ) = p.eval P (ρ.map H.decode) := by
+  have noP : ∀ t : Tm, t.ptrBelow 0 → t.ptrBelow H.next ∧ H.decode t = t :=
+    fun t ht => ⟨Tm.ptrBelow_mono (Nat.zero_le _) t ht, dec_noPtr H _ t ht⟩
+  cases p <;> simp only [Prim.tms, List.all_cons, List.all_nil, Bool.and_true, Bool.and_eq_true] at hp
+  case wAsk => exact absurd rfl (hw _ _)
+  case tm t | lit t | place t _ | unplace t _ | coerce _ t _ => exact subst_spec hH hρ hp
+  case assert t _ => exact noP t hp
+  case num d k => exact noP _ (natTm'_ptrBelow d k)
+  case wNext t =>
+    obtain ⟨h1, h2⟩ := subst_spec hH hρ hp
+    refine ⟨?_, ?_⟩
+    · simp only [Prim.eval]; unfold Tm.wnext; split <;> simp [Tm.ptrBelow]
+    · simp only [Prim.eval, decode] at h2 ⊢; rw [dec_wnext hH, h2]
+  case placedSlot d q a _ =>
+    obtain ⟨h1, h2⟩ := subst_spec hH hρ hp
+    simp only [decode] at h2
+    simp [Prim.eval, Tm.ptrBelow, h1, decode, dec, h2]
+  case placedEq q A a _ =>
+    obtain ⟨h1, h2⟩ := subst_spec hH hρ hp.1
+    obtain ⟨h3, h4⟩ := subst_spec hH hρ hp.2
+    simp only [decode] at h2 h4
+    simp [Prim.eval, Tm.ptrBelow, h1, h3, decode, dec, h2, h4]
+  all_goals exact noP _ rfl
 
 end FHeap
 
