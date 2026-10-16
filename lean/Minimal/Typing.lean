@@ -497,6 +497,12 @@ theorem Ctx.ntSlot_fields (Γ Γf : Ctx) (s k : Tm) :
     (Γ.ntSlot P Γf s k).ghost = Γf.ghost ∧ (Γ.ntSlot P Γf s k).er = Γf.er ∧ (Γ.ntSlot P Γf s k).n = Γf.n := by
   unfold Ctx.ntSlot; split <;> (try split) <;> simp
 
+def Ctx.placedAt (Γ : Ctx) (a b : Tm) : Bool := match a, P.placedD with
+  | .sfv i, some q => match (Γ.tys[i]?).map Γ.canon with
+    | some (.app (.tyc q' .nil) (.cons s _)) => q' == q && Γ.canon s == Γ.canon b
+    | _ => false
+  | _, _ => false
+
 def Ctx.slotEq (Γ : Ctx) : Tm × Tm → Ctx
   | (.sfv r, b) => Γ.withSlot r (Γ.canon b)
   | (a, .sfv r) => Γ.withSlot r (Γ.canon a)
@@ -634,10 +640,10 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | atom : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.newtype = false → P.phantom d 0 = false → PrimTy Γ (.atom d) (.app (.tyc d .nil) .nil)
   | num : P.natOK d = true → PrimTy Γ (.num d n) (natTy d)
-  | atomEq : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
+  | placedSlot : P.adts[d]? = some D → D.ctors = [.bind (.ty m e u) (.app (.tyc d .nil) .nil) .nil] → D.lifted = 0 →
       D.opq = false → P.adts[q]? = some E → E.ctors = [eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] → E.lifted = 0 →
       TmTy P Γ a A → Γ.canon A = .app (.tyc d .nil) .nil → TmTy P Γ b B → Γ.canon B = .app (.tyc d .nil) .nil →
-      PrimTy Γ (.atomEq d q a b) (.app (.tyc q .nil) (.cons (.app (.tyc d .nil) .nil) (.cons a (.cons b .nil))))
+      Γ.placedAt P a b = true → PrimTy Γ (.placedSlot d q a b) (.app (.tyc q .nil) (.cons (.app (.tyc d .nil) .nil) (.cons a (.cons b .nil))))
   | axm : TmTy P Γ A U → Γ.canon U = .univ → Γ.canon A = .app (.tyc d ls) idx → P.adts[d]? = some D → D.opq = true →
       P.placedD ≠ some d → P.worldD ≠ some d → PrimTy Γ (.axm A) A
   | place : P.placedD = some q → TmTy P Γ a A → Γ.canon A = Γ.canon B → B.static Γ.n 0 → s.static Γ.n 0 →

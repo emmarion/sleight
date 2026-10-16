@@ -452,7 +452,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
         .ok ⟨_, .atom h (hd ▸ hc) hl hn hp⟩
       | _ => .error "an atom's type has one constructor with no fields"
     | none => .error "an atom of an unknown type"
-  | .atomEq d q a b => match h : P.adts[d]?, h' : P.adts[q]? with
+  | .placedSlot d q a b => match h : P.adts[d]?, h' : P.adts[q]? with
     | some D, some E => match hc : D.ctors, hc' : E.ctors with
       | [.bind (.ty m e u) (.app (.tyc d' .nil) .nil) .nil],
         [.bind (.ty m1 e1 u1) .univ (.bind (.ty m2 e2 u2) (.bv 0) (.bind (.ty m3 e3 u3)
@@ -466,8 +466,9 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
         let ⟨B, hb⟩ ← checkTm P Γ b
         let ⟨hA⟩ ← need (Γ.canon A = .app (.tyc d .nil) .nil) "slot-self: not a slot"
         let ⟨hB⟩ ← need (Γ.canon B = .app (.tyc d .nil) .nil) "slot-self: not a slot"
+        let ⟨hpl⟩ ← need (Γ.placedAt P a b = true) "placed-slot: not the slot of a box and the slot its type names"
         have hc2 : E.ctors = [eqSig q (.ty m1 e1 u1) (.ty m2 e2 u2) (.ty m3 e3 u3)] := by rw [hc', hq]; rfl
-        .ok ⟨_, .atomEq h (hd ▸ hc) hl ho h' hc2 hl' ha hA hb hB⟩
+        .ok ⟨_, .placedSlot h (hd ▸ hc) hl ho h' hc2 hl' ha hA hb hB hpl⟩
       | _, _ => .error "slot-self: Slot or Eq has an unexpected shape"
     | _, _ => .error "slot-self: Slot or Eq is unknown"
   | .axm A => do
