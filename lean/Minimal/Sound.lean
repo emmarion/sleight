@@ -1866,7 +1866,7 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     rw [hE.canon, hE.canon] at this
     exact ⟨.subterm this, by simp [Tm.static, hA, has, hB, hbs], trivial, by simp [Prim.eval, Tm.levels]⟩
   | provePredates hx hL hX =>
-    rename_i x L X
+    rename_i x L sl X
     obtain ⟨m, hm, hlt⟩ := hE.chrono L hL
     have hLn := hw.mints L hL
     have hl := hE.len
@@ -1874,9 +1874,12 @@ theorem prim_sound (hP : ProgOK P) (hO : P.OracleOK) {ρ : List Tm} {Γ : Ctx} (
     have hxv : ρ[x]? = some ρ[x] := List.getElem?_eq_getElem hxl
     refine ⟨?_, ?_, trivial, by simp [Prim.eval, Tm.levels]⟩
     · have e : Tm.env ρ L = .lvl m := by simp [Tm.env, hm]
-      simp only [Tm.subst, e]
-      exact .predates fun n hn => hlt x hx _ hxv n (by simpa [Tm.env, hxv] using hn)
-    · simp [Tm.static, hw.tys _ _ hX]; omega
+      cases sl
+      · simp only [Tm.subst, e, Bool.false_eq_true, ite_false]
+        exact .predates fun n hn => hlt x hx _ hxv n (by simpa [Tm.env, hxv] using hn)
+      · simp only [Tm.subst, e, ite_true, Tm.slotOf_lc0 (Tm.env_lc hE.closed x)]
+        exact .predates fun n hn => by simp [Tm.vacant, Tm.levels] at hn
+    · cases sl <;> simp [Tm.static, hw.tys _ _ hX] <;> omega
   | predatesTrans hp hq h1 h2 =>
     have v1 := sem hp; have v2 := sem hq
     rw [h1] at v1; rw [h2] at v2

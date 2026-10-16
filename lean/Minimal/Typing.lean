@@ -619,7 +619,8 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
   | proveSubterm : TmTy P Γ a A → TmTy P Γ b B → (Γ.canon a).strictSub (Γ.canon b) →
       PrimTy Γ (.proveSubterm a b) (.subterm A a B b)
   | provePredates : x < L → L ∈ Γ.mints → Γ.tys[x]? = some X →
-      PrimTy Γ (.provePredates x L) (.predates X (.fv x) (.fv L))
+      PrimTy Γ (.provePredates x L sl)
+        (.predates (if sl then .app (.tyc slotD .nil) .nil else X) (if sl then .sfv x else .fv x) (.fv L))
   | predatesTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l1 →
       Γ.canon Qt = .predates C l1 l2 → PrimTy Γ (.predatesTrans p q) (.predates A a l2)
   | subtermTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .subterm A a B b →
