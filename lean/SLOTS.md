@@ -270,6 +270,30 @@ of `vacant-slot`, and the machine's `many` invocation that skips every
 store returns the cell's block, as the owner confirmed (section 37).
 Both are larger than stage 1; 2a moves the most proof.
 
+The owner chose 2a. The steps below are a session's proposal for
+carrying it out:
+
+1. A heap run beside `eval`, `evalH`, with words in its environment and
+   blocks in its heap, and no write in place yet: every constructed
+   value is a fresh block, a match decodes its scrutinee, and a slot
+   term still evaluates to `vacant-slot`. A theorem that decoding
+   `evalH`'s results gives `eval`'s, under the heap's growth only.
+   Nothing else changes, so `main`'s results stay.
+2. Writes in place: a `unique` invocation, `cell-write` and reuse write
+   their cell's block, as `RunM` does. The theorem of step 1 then holds
+   only for live entries, and takes the uses pass's result as a
+   hypothesis, with ownership frames carried over from the machine
+   proofs.
+3. Words for slots: a slot term evaluates to its entry's word, and the
+   invariant (entries whose slots canonicalize to one term have one
+   word) is proved with the writers, for live entries.
+4. Typing soundness moves to `evalH`: `checked_runs` and `no_false`
+   become statements about `evalH`, with the uses pass's result as a
+   hypothesis, and `eval` stays only as far as the stripped run and
+   the machine proofs still need it. The machine's `many` invocation
+   that skips every store returns the cell's block.
+5. Stages 3 and 4 then build on step 3's invariant.
+
 ## Cost, as a session estimates it
 
 Larger than anything in `lean/` so far: stage 1 reworks the reader's
