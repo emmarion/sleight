@@ -375,6 +375,11 @@ computes.
 9. Macros and handles (sections 62 to 65), which `lean/README.md`
    describes. The plan a session proposed and the owner agreed to
    resume, in order:
+   1. Decide whether the program ends in a statement after its last
+      top-level form is expanded. `elabProgram` decides it from that
+      form's head before anything is elaborated, so a program ending in
+      a macro call that expands to a statement is refused here; the
+      reference accepts it and prints nothing.
    2. Refuse a match on `MacroWorld` or `Gensym` outside the prelude.
       The reference refuses it because neither has a `Matchable`; the
       reader here checks a `Matchable` only for a constructor named
@@ -413,3 +418,22 @@ computes.
    a hypothesis (`Prog.OracleOK`); a session's reading is that the
    driver, running `runAM` in `IO`, is the run they describe for the
    answers it gave, which is not proved.
+13. **Decisions the reader makes by name, ahead of elaboration.** A macro
+   can rebind a name or produce a form, and an alias can rename a
+   special form, so a decision about what a form is belongs where the
+   elaborator handles it, with the scope there. These are still made by
+   scanning syntax for names first, and an alias, a shadowing binder or
+   a macro's output can mislead them:
+   - Literal interning (`internLits`) finds `numeral-of`,
+     `prove-literal-lt` and `unary` by name in each top-level form. With
+     `(let ((many nof)) numeral-of)`, `(let ((erased p)) (nof 3))` is
+     refused here ("numeral-of: not interned") and accepted by the
+     reference. This predates macros.
+   - `slot-of` references (`mintSlots`, `topRefs`), `dropFinal` under
+     `--shared`, the `let` analyses `returnsBinders` and `renamesOf`, and
+     the scan that declares `World`. Not each probed.
+   A related difference, also older than macros: `values` in a call's
+   argument position splices its values into the call's arguments here,
+   so `(nat-add (values 1 2))` gives 3, while the reference refuses it
+   (`nat-add` expects 2 arguments, got 1); likewise through an alias of
+   `values`.
