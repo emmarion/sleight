@@ -44,7 +44,7 @@ create)
     name=$TAG-$(rows | awk -v t="$TAG-" 'index($3, t) == 1 && substr($3, length(t) + 1) + 0 > m {m = substr($3, length(t) + 1) + 0} END {print m + 1}')
     create "$name"
     { echo "$APT"; cat <<'EOF'; } | $SSH root@"$ip" sh -eu
-apt-get install -y -qq curl git unzip openjdk-21-jdk binutils ocaml >/dev/null
+apt-get install -y -qq curl git unzip openjdk-21-jdk binutils ocaml ocaml-findlib libzarith-ocaml-dev >/dev/null
 curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource.sh
 bash /tmp/nodesource.sh >/dev/null 2>&1
 rm /tmp/nodesource.sh
