@@ -1614,8 +1614,9 @@ the call, which the check requires to be erased.
 
 ## 37. Placement: `Cell` and the invocation
 
-A value constructor `C` of a type that is neither `newtype` nor
-`extern` has a cell type `(Cell C s1 ... sn)`. This is a type former
+A value constructor `C` of a type that is not `extern`, and that is
+phantom or of a type not marked `newtype`, has a cell type
+`(Cell C s1 ... sn)`. This is a type former
 (§9) with one `(Slot)` (§38) per non-erased field of `C`. A constructor
 with no non-erased field has an empty cell. Inside the body of an
 extern function the `extern` mark does not count, so the constructors
@@ -1629,7 +1630,7 @@ type (§24). An abstract constructor must be listed by an opened
 `Matchable`. The newtype representation (§33) is mandatory for a type
 marked `newtype` and forbidden for a type that is not.
 
-**Newtypes.** A newtype has no cell. Its representation is the word of
+**Newtypes.** A newtype's non-phantom constructors have no cell. Its representation is the word of
 its non-erased field (§33). A destructure of a newtype puts the field
 it binds at the scrutinee, and an application of its constructor is at
 its non-erased argument.
