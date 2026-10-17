@@ -3,10 +3,12 @@
 ; expect: a.txt
 ; expect: b.txt
 ; expect: not empty
-; expect: cleaned
 ; expect: absent
+; expect: cleaned
+; expect: missing directory refused
 ; MkDir reports Changed the first time and Unchanged the second; DeleteDir refuses a directory that still
-; holds entries and reports Unchanged for one that was never there; ListDir sorts and drops "." and "..".
+; holds entries and reports Unchanged for one that was never there; DeleteFile reports Unchanged for an
+; absent file and is refused inside a directory that is gone; ListDir sorts and drops "." and "..".
 ; A failure ends the program through a Result-returning step, its helpers threading the world.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
@@ -51,11 +53,14 @@
   (let-match many full (Fail _ _) ((Ok _ _) (values (say "removed a full directory\n" w10) (Exit P code1))))
   (let ((unique w11)) (say "not empty\n" w10))
   (let ((unique w12) (many _)) (world-do _ w11 (DeleteFile "io-dir-test/a.txt")))
-  (let ((unique w13) (many _)) (world-do _ w12 (DeleteFile "io-dir-test/b.txt")))
-  (let ((unique w14) (many ok14)) (changed "cleaned\n" "never made\n" w13 (DeleteDir "io-dir-test")))
-  (let-match many ok14 (BTrue) ((BFalse) (values w14 (Exit P code1))))
-  (let ((unique w15) (many ok15)) (changed "deleted twice\n" "absent\n" w14 (DeleteFile "io-dir-test/a.txt")))
-  (let-match many ok15 (BFalse) ((BTrue) (values w15 (Exit P code1))))
-  (values w15 (Exit P code0)))
+  (let ((unique w13) (many ok13)) (changed "deleted twice\n" "absent\n" w12 (DeleteFile "io-dir-test/a.txt")))
+  (let-match many ok13 (BFalse) ((BTrue) (values w13 (Exit P code1))))
+  (let ((unique w14) (many _)) (world-do _ w13 (DeleteFile "io-dir-test/b.txt")))
+  (let ((unique w15) (many ok15)) (changed "cleaned\n" "never made\n" w14 (DeleteDir "io-dir-test")))
+  (let-match many ok15 (BTrue) ((BFalse) (values w15 (Exit P code1))))
+  (let ((unique w16) (many gone)) (world-do _ w15 (DeleteFile "io-dir-test/a.txt")))
+  (let-match many gone (Fail _ _) ((Ok _ _) (values (say "deleted in a missing directory\n" w16) (Exit P code1))))
+  (let ((unique w17)) (say "missing directory refused\n" w16))
+  (values w17 (Exit P code0)))
 
 (Continue P start)
