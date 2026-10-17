@@ -3,18 +3,18 @@
   (many Leaf : -> (Tree))
   (many Node : (many (Tree) l) (many (Tree) r) -> (Tree)))
 
-(def-fns _ $ (many visit : (erased (List (Slot)) xs) (subterm many (Tree) t) (unique (Slots xs) seen) ->
-    (erased (List (Slot)) ys) (unique (Slots ys) seen2 at seen))
-  (let ((erased xs1) (many r) (unique s1)) (slots-intern _ seen (slot-of t)))
-  (let-match many r (SlotAdded _ _ _ _) ((SlotExisting _ _ _ _) (values xs1 s1)))
+(def-fns _ $ (many visit : (erased (List (SlotItem (Tree))) xs) (subterm many (Tree) t) (unique (Slots (Tree) xs) seen) ->
+    (erased (List (SlotItem (Tree))) ys) (unique (Slots (Tree) ys) seen2 at seen))
+  (let ((erased xs1) (many r) (unique s1)) (slots-intern _ _ seen _ _ (place-at-many _ t)))
+  (let-match many r (SlotAdded _ _ _ _ _) ((SlotExisting _ _ _ _ _ _ _ _ _) (values xs1 s1)))
   (let-match many t (Node l rt) ((Leaf) (values xs1 s1)))
   (let ((erased xs2) (unique s2)) (notail $ visit _ l s1))
   (tail $ visit _ rt s2))
 
 (def-fns _ $ (many distinct : (many (Tree) t) -> (many (Nat) n))
-  (let ((unique s0)) (slots-new))
+  (let ((unique s0)) (slots-new (Tree)))
   (let ((erased xs) (unique s1)) (visit _ t s0))
-  (let ((many n) (erased _) (unique _)) (slots-length _ s1))
+  (let ((many n) (erased _) (unique _)) (slots-length _ _ s1))
   n)
 
 (def-fns _ $ (many tower : (subterm many (Nat) k) -> (many (Tree) t))

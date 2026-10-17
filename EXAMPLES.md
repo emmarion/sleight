@@ -286,7 +286,9 @@ that the test does not make is a mistake in this file.
   but 201 distinct nodes, is summed this way, while `naive-sum`, checked
   against the same relation, agrees with it at 12 levels.
 - [`tests/dag_sum_slots.sl`](tests/dag_sum_slots.sl) — `tests/dag_sum.sl` memoized through `Slots` and an
-  array, so a memo lookup is O(1) rather than an O(n) search of a list.
+  array, so a memo lookup is O(1) rather than an O(n) search of a list. The
+  table hands back the tree it holds at the looked-up slot, so a memo entry
+  keeps only the sum and its proof, not a copy of the tree.
 - [`tests/slots.sl`](tests/slots.sl) — the prelude's `Slots` (DESIGN.md section 69) turning
   identity into a number and back. `recover` interns one box, interns a
   second, and looks a third up; when the third's number equals the first's,
