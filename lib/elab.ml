@@ -728,11 +728,12 @@ let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Kn
 let cell_shape env l pos c =
   let tid = tid_of env l c in
   let mid, disc, cs = find_matchable env l tid in
+  let phantom = marker env l tid cs c = Erased in
   (match type_of env mid with
-   | Matchable (_, true, _, _, _) -> error l "newtype constructors have no cells"
+   | Matchable (_, true, _, _, _) when not phantom -> error l "newtype constructors have no cells"
    | Matchable (_, _, true, _, _) when not env.in_extern -> error l "extern constructors have no cells outside an extern model"
    | _ -> ());
-  if marker env l tid cs c = Erased && pos <> Erased then error_in env l "%s is phantom, so its cell is used only in an erased position" (qname env c);
+  if phantom && pos <> Erased then error_in env l "%s is phantom, so its cell is used only in an erased position" (qname env c);
   let params, ret = ctor_type env l c in
   let shapes = shapes env l cs in
   let a = mint_adt env (entry_name env tid) disc shapes in
@@ -740,8 +741,8 @@ let cell_shape env l pos c =
     arity = List.length (runtime params); adt = a } in
   (ct, params, ret)
 
-let cells_allowed env mid = match type_of env mid with
-  | Matchable (_, false, ext, _, _) -> not ext || env.in_extern
+let cells_allowed ?(phantom = false) env mid = match type_of env mid with
+  | Matchable (_, nt, ext, _, _) -> (phantom || not nt) && (not ext || env.in_extern)
   | _ -> false
 
 let missing env l form sres cs =
@@ -1882,6 +1883,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         let bl = loc pat in
         let c, fs = match pat with Atom _ | Handle _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern%s" (help env (Sp.hints "branch")) in
         let c = ctor_var env bl c in
+        let extra = extra || (marker env bl tid ctors c = Erased && cells_allowed ~phantom:true env mid) in
         let fs, name = if kind = `Auto then (fs, if extra then Some (None, Reader.nowhere) else None) else pattern env ("a `" ^ form ^ "` branch") smult sres bl c (mults_of bl c) extra fs in
         let tele = fst (ctor_type env bl c) in
         let phantom, fids, envb, forced =
@@ -2266,7 +2268,7 @@ and elab_let_match spos env l args =
       if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Wild l :: branches));
       let tele, ret = ctor_type env pl c in
       let mults = List.map (fun e -> field_under smult e.mult) tele in
-      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (cells_allowed env mid) fields in
+      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (cells_allowed ~phantom:(marker env pl tid ctors c = Erased) env mid) fields in
       let names = field_names fields in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult <> Erased in
