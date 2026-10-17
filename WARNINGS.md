@@ -5,7 +5,7 @@ interpreter in `lib/` and slc in `self/` emit the same set, with the
 same text. The descriptions here are a session's reading of the code.
 The code that emits each warning and its `; warns:` tests are the
 authority. A warning is written as `path:line:col: warning: text`,
-followed by any notes (README.md); one about a form a macro placed at
+followed by any notes (MANUAL.md); one about a form a macro placed at
 `NoPos` carries no location, not even a file: `warning: text`. It goes to standard error and does
 not stop elaboration. `--warnings-as-errors` makes a run that warns
 fail.
@@ -118,7 +118,7 @@ Specified in DESIGN.md section 4.
 ``NAME is referenced only in erased positions; declare it `erased` ``,
 for a parameter with ``, or rename it `_NAME` `` added. Off unless
 `--warn-unused` is given, as it is for slc's build and `dune test`
-(README.md); the prelude is checked too. `(settled-of m x)` references
+(MANUAL.md); the prelude is checked too. `(settled-of m x)` references
 `x`, from an erased position at `erased`. Not checked: top-level
 binders, names starting with `_`, gensyms (DESIGN.md section 63), the
 type and value constructors a `def-adts` defines, and names in types,

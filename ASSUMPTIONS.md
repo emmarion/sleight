@@ -1962,7 +1962,7 @@ session's, made without the owner.
     order, or that this is the top level; whether this is inside an
     extern function's model. Then every entry in scope that the
     program's own files bound, newest first, one line each: its name, a fetch
-    form or `__1`, as README.md says, its canonical type, its multiplicity, `Settled` or `Hypothetical`, a
+    form or `__1`, as MANUAL.md says, its canonical type, its multiplicity, `Settled` or `Hypothetical`, a
     kind read off its type (function, constructor, type constructor,
     level, proof, cell, `Matchable`, type, value), which subterm
     parameter it is, whether it is anonymous, the elaborator's own
@@ -2021,7 +2021,7 @@ session's, made without the owner.
 ## Confining file requests (section 27)
 
 The `ConfineDir` request, the `--confine-dir` flag and the fence model are as
-README.md describes them; the choices below are the session's.
+MANUAL.md describes them; the choices below are the session's.
 
 198. **What the fence admits, and when.** Each file request resolves
      its path the way the session understands the
@@ -2051,7 +2051,7 @@ README.md describes them; the choices below are the session's.
      an unconfined program sees.
 
 199. **Counting output against `--confine-output-bytes`.** The choices
-     below are the session's; README.md has the rest. An entry counts as created
+     below are the session's; MANUAL.md has the rest. An entry counts as created
      when `Sys.file_exists` is false for its path just before the
      request, which follows symlinks, so a write through a dangling
      symlink is charged for the entry it makes; like the fence (198) the

@@ -1,8 +1,8 @@
 # Sleight
 
 This file is the specification of Sleight, the language. OPEN.md lists the open
-questions. README.md describes the implementations and their command
-lines. EXAMPLES.md indexes the tests. The code and the other files cite
+questions. MANUAL.md describes the implementations and their command
+lines; README.md introduces the repository. EXAMPLES.md indexes the tests. The code and the other files cite
 sections of this file by number.
 
 The language has three aims besides its design. It matches the dynamism
@@ -146,7 +146,7 @@ ignored. A region that silences nothing produces a warning. A second
 
 Warnings go to standard error and do not stop elaboration.
 `--warnings-as-errors` makes a run that warns fail; a silenced warning
-does not count (README.md).
+does not count (MANUAL.md).
 
 `(compile-error m)` and `(compile-warn m)` report an error or a warning
 with the text of `m` at the form's position. `m` is read as a head is
@@ -1079,7 +1079,7 @@ expression, and are gone when it ends. A statement produces no values.
 The statements are `let`, `def-lvl`, `def-fns`, `def-unique` (§32),
 `def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`
 and `open-at-fn` (§35, §39), `unary` (§49), `dump-context`
-(README.md), `compile-error` and `compile-warn` (§4). All of them
+(MANUAL.md), `compile-error` and `compile-warn` (§4). All of them
 except `comptime-match` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
 define outward and each definition's parameters inward.
 
@@ -1946,7 +1946,7 @@ which `lib/prelude.sl` is the reference:
 
   The driver flushes after every write. It never recurses, so an
   unbounded interaction is the driver's loop over total functions, and
-  there is no `bind`. README.md describes `ConfineDir`,
+  there is no `bind`. MANUAL.md describes `ConfineDir`,
   `ConfineOutputBytes` and the command-line flags that stand in for
   them.
 - **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a
@@ -2400,7 +2400,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `open-at-fn`: opens an `AtFn` proof (§39).
 - `unary`: rewrites a numeral to successor form (§49).
 - `dump-context`: stops elaboration with a report of the context
-  (README.md). Also usable as an expression and as a type.
+  (MANUAL.md). Also usable as an expression and as a type.
 - `compile-error`, `compile-warn`: report an error or a warning (§4).
   `compile-error` is also usable as an expression and as a type.
 

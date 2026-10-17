@@ -15,7 +15,7 @@ out. The empty input returns zero. `longest-palindrome` in
 
 ## Run
 
-From the repository root, after the dependencies in the main README are installed:
+From the repository root, after the dependencies in MANUAL.md are installed:
 
 ```sh
 dune build

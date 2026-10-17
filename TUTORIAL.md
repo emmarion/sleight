@@ -1,6 +1,6 @@
 # A short tour of Sleight
 
-The language is specified in [DESIGN.md](DESIGN.md); [README.md](README.md)
+The language is specified in [DESIGN.md](DESIGN.md); [MANUAL.md](MANUAL.md)
 describes the implementations and their command lines.
 
 This tutorial was written by a Claude session, not by the owner.
@@ -418,4 +418,4 @@ the one `World`. [`tests/io_echo.sl`](tests/io_echo.sl) loops over input lines.
   which are ordinary functions over syntax, run during elaboration.
 - [`std/`](std/) holds more lemmas and proof tactics.
 - `(dump-context)` stops the checker and shows everything it knows at
-  that point ([README.md](README.md)). It helps when a proof won't go through.
+  that point ([MANUAL.md](MANUAL.md)). It helps when a proof won't go through.

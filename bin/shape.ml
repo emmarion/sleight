@@ -2,18 +2,11 @@
 
    A dev tool, not part of the language. It diagnoses nothing: it states facts
    and leaves the reading to you, so it has no notion of a "correct" file and
-   can never be wrong about one.
-
-   Taken from the pre-restart history: simply-typed-archive/main, whose tip is
-   06b9f3e and whose 56d9a2f last touched it there. That branch's
-   tests/README.md documents the output, why the two kinds of paren mistake
-   look different, and what this deliberately does not do; that file is not in
-   this history. The language it was written for had neither comments nor
-   string literals, so it read parens straight out of the bytes; here it reads
-   Reader.scan_upto's tokens instead, which skips both the way the checker
-   does. A file the lexer cannot finish is reported as far as it got, so the
-   report still states only what it read. Forms are identified by line:col so
-   that two opening on the same line stay distinct.
+   can never be wrong about one. It reads Reader.scan_upto's tokens, so
+   comments and string literals are skipped the way the checker skips them,
+   and a file the lexer cannot finish is reported as far as it got. Forms
+   are identified by line:col so that two opening on the same line stay
+   distinct.
 
    Usage:  shape [--closers] <file.sl>
              (default)  every form spanning more than one line
