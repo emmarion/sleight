@@ -159,7 +159,7 @@ let () =
     | [] -> Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare
     | files -> List.map (fun f -> Filename.remove_extension (Filename.basename f) ^ ".sl") files
   in
-  ignore (Lazy.force preloaded);
+  (try ignore (Lazy.force preloaded) with e -> (match Program.explain "lib/prelude.sl" e with Some m -> prerr_endline m; exit 1 | None -> raise e));
   let jobs = int_of_string (String.trim (In_channel.input_all (Unix.open_process_in "getconf _NPROCESSORS_ONLN"))) in
   let spawn f =
     let name = Filename.chop_suffix f ".sl" in

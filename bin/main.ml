@@ -74,7 +74,7 @@ let () =
     env
   in
   Env.warn_unused := flag "--warn-unused";
-  let env = Builtin.load ~prelude:(not (flag "--no-prelude")) () in
+  let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
   let dir_of f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i in
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, dir_of f)) files;
   let env =
