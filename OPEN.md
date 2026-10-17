@@ -172,6 +172,16 @@ references are to DESIGN.md.
     parameter, not the function. Open: whether such a use should
     count, and how far along a chain of calls the check should follow
     it.
+38. The unused-binder warning does not count a `resolve` that finds a
+    binder (DESIGN.md section 65), nor a `settled-of` naming one
+    (section 64), so such a binder is reported, and the recommendation,
+    if followed, can change or break the program: writing `_` makes the
+    `resolve` answer `RUnbound`, and declaring the binder of a
+    `(settled-of many x)` erased makes that form an error.
+    `tests/macro_resolve.sl`, `tests/macro_handle.sl` and
+    `tests/macro_handle_literal.sl` say `; warn-unused: no` for this
+    reason. Open: whether either should count as a mention for the
+    warning, though neither is a use (section 15).
 
 ## Minted constants
 
