@@ -10,7 +10,7 @@
 ; parameter unmarked the annotation is refused.
 
 ; the branch's body: the let of the proof, then the doubled call
-(def-fns _ $ (many double-prog : (many (Raw) param) (many (List (Raw)) call) -> (many (List (Raw)) program))
+(def-fns _ $ (many double-prog : (many (Sexp) param) (many (List (Sexp)) call) -> (many (List (Sexp)) program))
   (let ((many branch))
     (l3 (l2 (a "Succ") (a "k"))
       (l3 (k (KLet)) (l1 (a "p")) (l3 (k (KProveSubterm)) (a "k") (a "n")))

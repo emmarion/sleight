@@ -11,7 +11,7 @@
 
 (def-fns _ $ (many arg-value : (unique (MacroWorld) mw) (many (Raw) r) (erased Type T) (many (Settled (MErased) Type T) th) ->
     (unique (MacroWorld) mw2 at mw) (many (Maybe T) v))
-  (let-match many r (RawSettled p m A a c) (else (values mw (None _))))
+  (let-match many r (RawSettled _ _ _ _ c) (else (values mw (None _))))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw (None _))))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) th))
   (let-match many e (Some _ j) ((None _) (values mw1 (None _))))
@@ -46,14 +46,14 @@
   (values mw1 $ one $ form p $ two (RawSettled p _ _ _ (settled-of many compile-error)) m))
 
 (def-fns _ $ (many same-sym : (many (Raw) a) (many (Raw) b) -> (many (Bool) r))
-  (let-match many a (RawSymbol p x) (else (BFalse)))
-  (let-match many b (RawSymbol q y) (else (BFalse)))
-  (match many (symbol-eq x y) _ ((Some _ e) (BTrue)) ((None _) (BFalse))))
+  (let-match many a (RawSymbol _ x) (else (BFalse)))
+  (let-match many b (RawSymbol _ y) (else (BFalse)))
+  (match many (symbol-eq x y) _ ((Some _ _) (BTrue)) ((None _) (BFalse))))
 
 (def-fns _
   ((many same-raw : (subterm many (Raw) a) (many (Raw) b) -> (many (Bool) r))
-    (let-match many a (RawList p xs) ((RawSymbol p x) (same-sym a b)) (else (BFalse)))
-    (let-match many b (RawList q ys) (else (BFalse)))
+    (let-match many a (RawList _ xs) ((RawSymbol _ _) (same-sym a b)) (else (BFalse)))
+    (let-match many b (RawList _ ys) (else (BFalse)))
     (tail $ same-raws xs ys))
   ((many same-raws : (subterm many (List $ Raw) xs) (many (List $ Raw) ys) -> (many (Bool) r))
     (match many xs _

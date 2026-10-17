@@ -11,7 +11,7 @@
 ; message of an error block, which the interpreter returns where the reference raises (self/README.md).
 
 (def-fns _ $ (many final-text : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (many (Env) env) (many (Term) ty) -> (many (String) s))
-  (let-match many (named-final _ (heap-store _ hp) v env) (None _) ((Some _ text) text))
+  (let-match many (named-final _ (heap-store _ hp) v) (None _) ((Some _ text) text))
   (let ((many body) (many app)) (show-at _ hp v 100000 env ty))
   (rope-str (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body))))
 
@@ -75,7 +75,7 @@
   (let-match many names (Cons _ n rest) ((Nil _) (Nil _)))
   (let ((many more)) (notail $ answer-ctors env rest))
   (let-match many (prelude-adt env n) (Some _ a) ((None _) more))
-  (let ((many cs) (erased p)) (list-append _ (adt-ctors a) more))
+  (let ((many cs) (erased _)) (list-append _ (adt-ctors a) more))
   cs)
 
 ; ---- The Program walk: each Continue step of the program becomes one of slc's, applying the program's
@@ -83,7 +83,7 @@
 
 (def-fns interp-lvl $ (many interp-program : (many (Nat) fuel) (many (List $ Ctor) pcs) (many (Performer $ World) pf) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many (heap-crash _ hp) (None _) ((Some _ m) (runtime-error m w)))
-  (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
+  (let ((erased _) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
   (let ((many f0)) (field-at _ fields 0 (widen-ref _ _ le1 v)))
   (let-match many (nat-eq i $ ctor-index $ pctor pcs "Continue") (BTrue)
     ((BFalse)
@@ -92,8 +92,8 @@
         ((Yes _ _ p) (values w (Exit _ (MkU8 n p))))
         ((No _ _ _) (values w (Exit _ exit-fail))))))
   (def-unique io-lvl $ (unique step : (unique (World) u) -> (unique (World) u2 at u) (unique (Program io-lvl) next))
-    (let ((erased h2) (many hp2) (erased le2) (many token)) $ halloc _ hp1 $ BToken _)
-    (let ((erased h3) (many hp3) (erased le3) (many vs) (erased pk) (unique (World) u1)) (apply fuel _ hp2 (widen-ref _ _ le2 f0) (Cons _ token $ Nil _) many-one _ pf u))
+    (let ((erased _) (many hp2) (erased le2) (many token)) $ halloc _ hp1 $ BToken _)
+    (let ((erased _) (many hp3) (erased _) (many vs) (erased pk) (unique (World) u1)) (apply fuel _ hp2 (widen-ref _ _ le2 f0) (Cons _ token $ Nil _) many-one _ pf u))
     (tail $ interp-program fuel pcs pf _ hp3 (vals-one _ vs pk) u1))
   (values w (Continue _ step)))
 
@@ -116,21 +116,21 @@
         (let-match many crash (None _)
           ((Some _ m) (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ m) (values hl2 hq2 sf2 e wo)))
         (perform-request pcs rq pargs with-env base _ hq req wo))
-      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) args) (unique (World) wo) ->
+      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) _args) (unique (World) wo) ->
           (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
         (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ $ no-macro-world prim)
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
       (tail $ interp-program (env-fuel env) pcs (MkPerformer (World) perform world-prim) _ hp v w1))
     ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
     ((FThunk t)
-      (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) u1)) (apply (env-fuel env) _ hp v (Nil _) many-one _ compile-time u))
+      (let ((erased _) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) _)) (apply (env-fuel env) _ hp v (Nil _) many-one _ compile-time u))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (heap-crash _ hp1) (None _) ((Some _ m) (runtime-error m w)))
       (tail $ interp-finals env pargs with-env _ rest _ hp1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
     ((FMain)
       (let ((unique w1) (many input)) (world-do _ w (ReadRemaining)))
-      (let ((erased h1) (many hp1) (erased le1) (many s)) (alloc-ext _ hp (PStr input)))
-      (let ((erased h2) (many hp2) (erased le2) (many vs) (erased pk) (unique (Unit) u1)) (apply (env-fuel env) _ hp1 (widen-ref _ _ le1 v) (Cons _ s (Nil _)) many-one _ compile-time u))
+      (let ((erased _) (many hp1) (erased le1) (many s)) (alloc-ext _ hp (PStr input)))
+      (let ((erased _) (many hp2) (erased le2) (many vs) (erased pk) (unique (Unit) _)) (apply (env-fuel env) _ hp1 (widen-ref _ _ le1 v) (Cons _ s (Nil _)) many-one _ compile-time u))
       (let ((erased le12)) (hist-le-trans _ _ _ le1 le2))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (heap-crash _ hp2) (None _) ((Some _ m) (runtime-error m w1)))

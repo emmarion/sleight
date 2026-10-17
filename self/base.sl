@@ -35,7 +35,7 @@
 (def-fns _ $ (many nat-sub : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let-match many (lt-dec b (Succ a)) (Yes _ _ le)
     ((No _ _ _) (Zero)))
-  (let ((many c) (erased p)) (sub a b le))
+  (let ((many c) (erased _)) (sub a b le))
   c)
 
 (def-fns _ $ (many nat-is-zero : (many (Nat) n) -> (many (Bool) r))
@@ -45,7 +45,7 @@
 
 (def-fns _ $ (many char-code : (many (Char) c) -> (many (Nat) n))
   (let-match many c (MkChar u))
-  (let-match many u (MkU8 k p))
+  (let-match many u (MkU8 k _))
   k)
 
 ; A code the modulus does not bound, which no Char holds, becomes NUL.
@@ -66,7 +66,7 @@
   (and (not $ nat-lt n lo) $ not $ nat-lt hi n))
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
-  (let ((many s) (erased p)) (delegate (flatten r)))
+  (let ((many s) (erased _)) (delegate (flatten r)))
   s)
 
 (def-fns _ $ (many str-eq : (many (String) a) (many (String) b) -> (many (Bool) r))
@@ -108,7 +108,7 @@
     ((Succ f) (Cons _ b $ notail $ str-split-fuel f rest code))))
 
 (def-fns _ $ (many split-on : (many (String) s) (many (Nat) code) -> (many (List $ String) r))
-  (let ((many n) (erased p)) (str-length s))
+  (let ((many n) (erased _)) (str-length s))
   (str-split-fuel n s code))
 
 (def-fns _ $ (many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r))
@@ -283,13 +283,13 @@
     ((HZ) (match many here _ ((None _) (Miss _ _ _ $ ABHere _ one two)) ((Some _ v) (Hit _ _ _ v $ MTHere _ v one two))))
     ((H1 k1 d dd)
       (let ((many r)) (tail $ idmap-get _ k1 one))
-      (let ((erased r2) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 one) r (Shared) (Lookup V k m) r2) c))
+      (let ((erased _) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 one) r (Shared) (Lookup V k m) r2) c))
         ((Hit _ _ _ v p) (values (Hit _ _ _ v $ MT1 _ k1 d dd v here one two p) (coercible-ctor (Shared) Hit V V k1 k one m (coercible-refl (Shared) v) p $ MT1 _ k1 d dd v here one two p)))
         ((Miss _ _ _ p) (values (Miss _ _ _ $ AB1 _ k1 d dd here one two p) (coercible-ctor (Shared) Miss V V k1 k one m p $ AB1 _ k1 d dd here one two p))))
       (coerce r c))
     ((H2 k1 d dd)
       (let ((many r)) (tail $ idmap-get _ k1 two))
-      (let ((erased r2) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 two) r (Shared) (Lookup V k m) r2) c))
+      (let ((erased _) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 two) r (Shared) (Lookup V k m) r2) c))
         ((Hit _ _ _ v p) (values (Hit _ _ _ v $ MT2 _ k1 d dd v here one two p) (coercible-ctor (Shared) Hit V V k1 k two m (coercible-refl (Shared) v) p $ MT2 _ k1 d dd v here one two p)))
         ((Miss _ _ _ p) (values (Miss _ _ _ $ AB2 _ k1 d dd here one two p) (coercible-ctor (Shared) Miss V V k1 k two m p $ AB2 _ k1 d dd here one two p))))
       (coerce r c))))
@@ -384,13 +384,13 @@
     ((CEq _ _ _) (KHit _ _ _ sub3 $ KHere _ c sub3 rest))
     ((CLt _ _ _ _ lt)
       (let ((many r)) (tail $ nm-kid _ rest c))
-      (let ((erased r2) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
+      (let ((erased _) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
         ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
         ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKLt _ c c1 sub3 rest lt p))))
       (coerce r cp))
     ((CGt _ _ _ _ gt)
       (let ((many r)) (tail $ nm-kid _ rest c))
-      (let ((erased r2) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
+      (let ((erased _) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
         ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
         ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKGt _ c c1 sub3 rest gt p))))
       (coerce r cp))))
@@ -401,7 +401,7 @@
     ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
   (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
   (let ((many r)) (tail $ nm-get _ rest submap))
-  (let ((erased r2) (erased cp)) $ match erased r (((NLookup V name m) r2) ((Coercible (Shared) (NLookup V rest submap) r (Shared) (NLookup V name m) r2) cp))
+  (let ((erased _) (erased cp)) $ match erased r (((NLookup V name m) r2) ((Coercible (Shared) (NLookup V rest submap) r (Shared) (NLookup V name m) r2) cp))
     ((NHit _ _ _ v p) (values (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p) (coercible-ctor (Shared) NHit V V rest name submap m (coercible-refl (Shared) v) p $ NMStep _ c rest v here kids submap k p)))
     ((NMiss _ _ _ p) (values (NMiss _ _ _ $ NAStep _ c rest here kids submap k p) (coercible-ctor (Shared) NMiss V V rest name submap m p $ NAStep _ c rest here kids submap k p))))
   (coerce r cp))
@@ -454,7 +454,7 @@
   (match many xs _ ((Nil _) (Nil _)) ((Cons _ _ rest) (tail $ list-drop _ k rest))))
 
 (def-fns _ $ (many list-length at length : (erased Type A) (many (List A) xs) -> (many (Nat) n))
-  (let ((many n) (erased p)) (delegate (length _ xs)))
+  (let ((many n) (erased _)) (delegate (length _ xs)))
   n)
 
 ; Two lists of one length, entry by entry.
@@ -469,10 +469,10 @@
     (subterm erased (Lockstep A B xs ys) p) (erased (Lockstep B C ys zs) q) -> (erased (Lockstep A C xs zs) r))
   (match erased p _
     ((LsNil _ _)
-      (let-match erased q (LsNil c d))
+      (let-match erased q (LsNil _ _))
       (LsNil _ _))
     ((LsCons _ _ x _ xs2 _ p2)
-      (let-match erased q (LsCons c d y2 z ys3 zs2 q2))
+      (let-match erased q (LsCons _ _ _ z _ zs2 q2))
       (LsCons _ _ x z xs2 zs2 $ lockstep-trans _ _ _ _ _ _ p2 q2))))
 
 (def-fns _ $ (erased lockstep-sym : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (subterm erased (Lockstep A B xs ys) p) -> (erased (Lockstep B A ys xs) q))
@@ -491,7 +491,7 @@
     ((Nil _) (match many ys _ ((Nil _) (LdYes _ _ _ _ $ LsNil _ _)) ((Cons _ _ _) (LdNo _ _ _ _)))))
   (let-match many ys (Cons _ y yrest) ((Nil _) (LdNo _ _ _ _)))
   (let ((many r)) (tail $ lockstep-dec _ _ xrest yrest))
-  (let ((erased r2) (erased cp)) $ match erased r (((LockstepDec A B xs ys) r2) ((Coercible (Shared) (LockstepDec A B xrest yrest) r (Shared) (LockstepDec A B xs ys) r2) cp))
+  (let ((erased _) (erased cp)) $ match erased r (((LockstepDec A B xs ys) r2) ((Coercible (Shared) (LockstepDec A B xrest yrest) r (Shared) (LockstepDec A B xs ys) r2) cp))
     ((LdYes _ _ _ _ p) (values (LdYes _ _ _ _ $ LsCons _ _ x y xrest yrest p) (coercible-ctor (Shared) LdYes A A B B xrest xs yrest ys p $ LsCons _ _ x y xrest yrest p)))
     ((LdNo _ _ _ _) (values (LdNo _ _ _ _) (coercible-ctor (Shared) LdNo A A B B xrest xs yrest ys))))
   (coerce r cp))
@@ -519,7 +519,7 @@
   (let-match many xs (Cons _ x rest) ((Nil _) (NthMiss _ _ _ $ OONil _ i)))
   (let-match many i (Succ k) ((Zero) (NthHit _ _ _ x $ NthHere _ x rest)))
   (let ((many r)) (tail $ list-nth _ rest k))
-  (let ((erased r2) (erased cp)) $ match erased r (((NthLookup A xs i) r2) ((Coercible (Shared) (NthLookup A rest k) r (Shared) (NthLookup A xs i) r2) cp))
+  (let ((erased _) (erased cp)) $ match erased r (((NthLookup A xs i) r2) ((Coercible (Shared) (NthLookup A rest k) r (Shared) (NthLookup A xs i) r2) cp))
     ((NthHit _ _ _ y p) (values (NthHit _ _ _ y $ NthThere _ x rest k y p) (coercible-ctor (Shared) NthHit A A rest xs k i (coercible-refl (Shared) y) p $ NthThere _ x rest k y p)))
     ((NthMiss _ _ _ p) (values (NthMiss _ _ _ $ OOCons _ x rest k p) (coercible-ctor (Shared) NthMiss A A rest xs k i p $ OOCons _ x rest k p))))
   (coerce r cp))
@@ -628,7 +628,7 @@
   (RChar $ char-of-code $ match many (nat-lt n 10) (((Nat) _)) ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
 
 (def-fns _ $ (many hex-byte-rope : (many (Nat) c) -> (many (Rope) r))
-  (let ((many hi) (many lo) (erased dm) (erased dmm) (erased da) (erased dp)) (divmod c 16 sixteen-positive))
+  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _)) (divmod c 16 sixteen-positive))
   (rcat (hex-rope hi) $ hex-rope lo))
 
 (def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
@@ -789,15 +789,15 @@
         ((DS l1 _ _) (LtZ l1))))
     ((DS m1 d1 p1)
       (let-match erased q (DS l1 s1 q1) (absurd (D0) (lt-zero d lt)))
-      (let-match erased lt (LtS x y lt1))
-      (let-match erased lt1 (LtS x2 y2 lt2))
+      (let-match erased lt (LtS _ _ lt1))
+      (let-match erased lt1 (LtS _ _ lt2))
       (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))
 
 
 ; ---- a trie's size against a bound on its keys, the measure a walk over one recurses on
 
 (def-fns _ $ (erased lt-drop : (erased (Nat) d) (erased (Nat) s) (erased (Lt (Succ d) s) p) -> (erased (Lt d s) q))
-  (let-match erased p (LtS x y q))
+  (let-match erased p (LtS _ y q))
   (lt-weaken d y q))
 
 (def-fns _ $ (erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res))
@@ -810,13 +810,13 @@
 
 (def-fns _ $ (erased half-lt-one : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt d s) lt) -> (erased (Lt m l) res))
   (let-match erased bal (BrOne n) ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) lt)))
-  (let-match erased sum (AddSucc a1 b1 c1 q))
+  (let-match erased sum (AddSucc _ _ c1 q))
   (double-le-inv m d n c1 dd (add-diag-double n c1 q) lt))
 
 (def-fns _ $ (erased half-lt-two : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt (Succ d) s) lt) -> (erased (Lt m r) res))
   (let-match erased bal (BrOne n) ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) (lt-drop d s lt))))
-  (let-match erased sum (AddSucc a1 b1 c1 q))
-  (let-match erased lt (LtS x y lt1))
+  (let-match erased sum (AddSucc _ _ c1 q))
+  (let-match erased lt (LtS _ _ lt1))
   (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))
 
 ; [size] how many entries a trie holds, [max] a bound every key in it is below. The node case splits
@@ -849,7 +849,7 @@
     (absurd (AddZero _)
       (let-match erased la (LtS _ _ la0)) (lt-zero a0 la0))
     ((AddSucc x0 y0 z0 q0)
-      (let-match erased la (LtS u v la0))
+      (let-match erased la (LtS _ _ la0))
       (LtS c0 (Succ z0) (add-mono a0 b0 c0 p0 x0 y0 z0 q0 la0 lb)))))
 
 ; the point: a trie bounded by max holds at most max entries
@@ -894,7 +894,7 @@
 
 (def-fns _ $ (erased lt-succ-inv : (erased (Nat) a) (erased (Nat) b) (erased (Lt (Succ a) (Succ b)) p) ->
     (erased (Lt a b) q))
-  (let-match erased p (LtS x y q))
+  (let-match erased p (LtS _ _ q))
   q)
 
 ; a bound a key sits under is a successor, and splits the way the trie does

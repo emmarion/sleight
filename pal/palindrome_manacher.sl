@@ -24,17 +24,17 @@
     (many (Nat) i) (erased (PalCut xs i left right) p)
     (many (IdMap (ManCut xs)) table) -> (many (IdMap (ManCut xs)) out))
   (let ((many next)) (idmap-set _ i (MkManCut _ i left right p) table))
-  (let-match many right (Cons a x rest) ((Nil a) next))
+  (let-match many right (Cons _ x rest) ((Nil _) next))
   (tail (man-index xs (Cons _ x left) rest (Succ i)
     (fp-cut-step xs left rest i x p) next)))
 
 (def-fns _ $ (many man-cut : (erased (List (Nat)) xs)
     (many (IdMap (ManCut xs)) table) (many (Nat) i) ->
     (many (Maybe (ManCutAt xs i)) out))
-  (let-match many (idmap-get _ i table) (Hit t k m entry p) ((Miss t k m p) (None _)))
-  (let-match many entry (MkManCut source j left right cut))
+  (let-match many (idmap-get _ i table) (Hit _ _ _ entry _) ((Miss _ _ _ _) (None _)))
+  (let-match many entry (MkManCut _ j left right cut))
   (match many (nat-cmp i j) _
-    ((CEq _ r v) (Some _ (MkManCutAt _ _ left right cut)))
+    ((CEq _ _ _) (Some _ (MkManCutAt _ _ left right cut)))
     (else (None _))))
 
 ; Expansion is the only place input elements are compared. Its result is
@@ -43,20 +43,20 @@
     (subterm many (List (Nat)) left) (many (List (Nat)) right) (many (Nat) n)
     (erased (PalLcpPrefix fullleft fullright left right n) prefix) ->
     (many (Nat) k) (erased (PalLcp fullleft fullright k) p))
-  (let-match many left (Cons a x l)
-    ((Nil a) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
+  (let-match many left (Cons _ x l)
+    ((Nil _) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
       prefix (PLLeft right) (add-zero-right n)))))
-  (let-match many right (Cons b y r)
-    ((Nil b) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
+  (let-match many right (Cons _ y r)
+    ((Nil _) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
       prefix (PLRight left) (add-zero-right n)))))
   (match many (nat-cmp x y) _
-    ((CLt t rel v w lt) (values n
+    ((CLt _ _ _ _ lt) (values n
       (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
         (PLApart x y l r (ApartLt _ _ lt)) (add-zero-right n))))
-    ((CGt t rel v w gt) (values n
+    ((CGt _ _ _ _ gt) (values n
       (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
         (PLApart x y l r (ApartGt _ _ gt)) (add-zero-right n))))
-    ((CEq t rel v)
+    ((CEq _ _ _)
       (tail (man-expand-acc fullleft fullright l r (Succ n)
         (PLPStep fullleft fullright l r x n prefix))))))
 
@@ -69,29 +69,27 @@
 (def-fns _ $ (many man-trim : (erased (List (Nat)) xs)
     (many (ManSpan xs) span) (many (Nat) k width) ->
     (many (Maybe (ManSpan xs)) out))
-  (let-match many span (MkManSpan source w lo hi old oldwidth range pal len))
-  (let-match many (lt-dec k (Succ old)) (Yes a b bound) ((No a b p) (None _)))
-  (let ((many cut) (erased diff)) (sub old k bound))
+  (let-match many span (MkManSpan _ w lo hi old oldwidth range pal len))
+  (let-match many (lt-dec k (Succ old)) (Yes _ _ bound) ((No _ _ _) (None _)))
+  (let ((many cut) (erased _)) (sub old k bound))
   (let ((many dc) (erased twice)) (double cut))
   (let ((many whole) (erased sum)) (add dc width))
-  (let-match many (nat-cmp whole oldwidth) (CEq t r v) (else (None _)))
+  (let-match many (nat-cmp whole oldwidth) (CEq _ _ _) (else (None _)))
   (let ((many newlo) (erased al)) (add lo cut))
   (let ((many newhi) (erased size)) (add newlo width))
-  (let ((many checkhi) (erased ah)) (add newhi cut))
-  (let-match many (nat-cmp checkhi hi) (CEq _ _ _) (else (None _)))
   (let ((erased before) (erased middle) (erased after) (erased rest)
-       (erased cb) (erased ca) (erased lb) (erased la) (erased lm) (erased pm))
+       (erased cb) (erased ca) (erased lb) (erased _) (erased lm) (erased pm))
     (fp-pal-trim w cut dc width oldwidth pal len twice sum))
   (Some _ (MkManSpan _ _ newlo newhi k width
     (fp-trim-range xs w before middle after rest lo hi cut newlo newhi width
-      range cb ca lb la lm al ah size) pm lm)))
+      range cb ca lb lm al size) pm lm)))
 
 (def-fns _ $ (many man-reflect : (erased (List (Nat)) xs)
     (many (ManSpan xs) outer inner) -> (many (Maybe (ManSpan xs)) out))
-  (let-match many outer (MkManSpan source big l r old oldwidth outerRange bigpal biglen))
-  (let-match many inner (MkManSpan source2 w a b k width innerRange pal len))
-  (let-match many (lt-dec l (Succ a)) (Yes x y lower) ((No x y p) (None _)))
-  (let-match many (lt-dec b (Succ r)) (Yes _ _ upper) ((No _ _ p) (None _)))
+  (let-match many outer (MkManSpan _ big l r _ _ outerRange bigpal _))
+  (let-match many inner (MkManSpan _ w a b k width innerRange pal len))
+  (let-match many (lt-dec l (Succ a)) (Yes _ _ lower) ((No _ _ _) (None _)))
+  (let-match many (lt-dec b (Succ r)) (Yes _ _ upper) ((No _ _ _) (None _)))
   (let ((many after) (erased ar)) (sub r b upper))
   (let ((many lo) (erased al)) (add l after))
   (let ((many hi) (erased ah)) (add lo width))
@@ -102,61 +100,61 @@
 ; Reify only the two endpoints of the proven mirror seed. Shared cut lists
 ; let expansion skip the entire known prefix with two trie lookups.
 (def-fns _ $ (many man-seed-span : (erased (List (Nat)) xs)
-    (many (List (Nat)) left fullright right) (erased (List (Nat)) mid)
+    (erased (List (Nat)) left fullright right) (erased (List (Nat)) mid)
     (many (Nat) i extra) (erased (PalParity extra) parity)
     (erased (PalSplit xs left fullright) split) (erased (PalLength (Nat) left i) llen)
     (erased (PalLength (Nat) mid extra) mlen) (erased (PalConcat (Nat) mid right fullright) mcat)
     (many (IdMap (ManCut xs)) table) (many (ManSpan xs) span) ->
     (many (Maybe (ManSeed left right)) out))
-  (let-match many span (MkManSpan source w lo hi k width range pal len))
+  (let-match many span (MkManSpan _ w lo hi k width range pal len))
   (let ((many d) (erased twice)) (double k))
   (let ((many checkwidth) (erased count)) (add d extra))
-  (let-match many (nat-cmp checkwidth width) (CEq t rel v) (else (None _)))
+  (let-match many (nat-cmp checkwidth width) (CEq _ _ _) (else (None _)))
   (let ((many checki) (erased offset)) (add lo k))
   (let-match many (nat-cmp checki i) (CEq _ _ _) (else (None _)))
-  (let-match many (man-cut xs table lo) (Some t2 lc) ((None _) (None _)))
-  (let-match many lc (MkManCutAt source3 j ll lr low))
+  (let-match many (man-cut xs table lo) (Some _ lc) ((None _) (None _)))
+  (let-match many lc (MkManCutAt _ _ ll lr low))
   (let-match many (man-cut xs table hi) (Some _ hc) ((None _) (None _)))
-  (let-match many hc (MkManCutAt source3b j2 hl hr high))
-  (let ((erased common) (erased lrest) (erased rrest)
+  (let-match many hc (MkManCutAt _ _ hl hr high))
+  (let ((erased _) (erased lrest) (erased rrest)
        (erased cl) (erased cr) (erased lk)
        (erased loRight) (erased hiLeft) (erased lowcut) (erased highcut))
     (fp-center-seed xs left fullright right mid w i lo hi k d extra width
       split llen mlen mcat range pal len twice count parity offset))
-  (let ((erased el) (erased unusedr))
+  (let ((erased el) (erased _))
     (fp-cut-unique xs lrest loRight ll lr lo lowcut low))
-  (let ((erased unusedl) (erased er))
+  (let ((erased _) (erased er))
     (fp-cut-unique xs hiLeft rrest hl hr hi highcut high))
-  (let-match erased el (Refl a v2))
-  (let-match erased er (Refl b v2b))
+  (let-match erased el (Refl _ _))
+  (let-match erased er (Refl _ _))
   (Some _ (MkManSeed _ _ _ ll hr k cl cr lk)))
 
 (def-fns _ $ (many man-reuse : (erased (List (Nat)) xs)
-    (many (List (Nat)) left fullright right) (erased (List (Nat)) mid)
+    (erased (List (Nat)) left fullright right) (erased (List (Nat)) mid)
     (many (Nat) i extra) (erased (PalParity extra) parity)
     (erased (PalSplit xs left fullright) split) (erased (PalLength (Nat) left i) llen)
     (erased (PalLength (Nat) mid extra) mlen) (erased (PalConcat (Nat) mid right fullright) mcat)
     (many (IdMap (ManCut xs)) table) (many (IdMap (ManSpan xs)) radii)
     (many (Maybe (ManSpan xs)) frame) -> (many (Maybe (ManSeed left right)) out))
-  (let-match many frame (Some t outer) ((None t) (None _)))
-  (let-match many outer (MkManSpan source big l r old oldwidth range pal len))
+  (let-match many frame (Some _ outer) ((None _) (None _)))
+  (let-match many outer (MkManSpan _ _ l r _ _ _ _ _))
   (let ((many edge)) (nat-add i extra))
-  (let-match many (nat-cmp edge r) (CLt t3 rel a b inside) (else (None _)))
+  (let-match many (nat-cmp edge r) (CLt _ _ _ _ _) (else (None _)))
   (let ((many mirror)) (nat-sub (nat-add l r) edge))
-  (let-match many (idmap-get _ mirror radii) (Hit _ key map inner present) ((Miss _ key map absent) (None _)))
-  (let-match many inner (MkManSpan source2 w ml mr mk mw mp pp lp))
+  (let-match many (idmap-get _ mirror radii) (Hit _ _ _ inner _) ((Miss _ _ _ _) (None _)))
+  (let-match many inner (MkManSpan _ _ _ _ mk _ _ _ _))
   (let ((many room)) (nat-sub r edge))
   (let ((many seed))
     (match many (nat-cmp mk room) (((Nat) k))
-      ((CGt _ _ _ _ p) room) (else mk)))
+      ((CGt _ _ _ _ _) room) (else mk)))
   (let ((many width)) (nat-add (nat-add seed seed) extra))
-  (let-match many (man-trim xs inner seed width) (Some t2 trimmed) ((None _) (None _)))
+  (let-match many (man-trim xs inner seed width) (Some _ trimmed) ((None _) (None _)))
   (let-match many (man-reflect xs outer trimmed) (Some _ reflected) ((None _) (None _)))
   (man-seed-span xs left fullright right mid i extra parity split llen
     mlen mcat table reflected))
 
 (def-fns _ $ (many man-center : (erased (List (Nat)) xs)
-    (many (List (Nat)) left fullright right) (erased (List (Nat)) mid)
+    (many (List (Nat)) left) (erased (List (Nat)) fullright) (many (List (Nat)) right) (erased (List (Nat)) mid)
     (many (Nat) i extra) (erased (PalParity extra) parity)
     (erased (PalSplit xs left fullright) split) (erased (PalLength (Nat) left i) llen)
     (erased (Palindrome (Nat) mid) mp) (erased (PalLength (Nat) mid extra) mlen)
@@ -169,9 +167,9 @@
   (let ((many k) (erased exact))
     (match many (man-reuse xs left fullright right mid i extra parity split llen mlen mcat
         table radii frame) (((Nat) k) ((PalLcp left right k) exact))
-      ((None t) (man-expand left right))
-      ((Some t seed)
-        (let-match many seed (MkManSeed l r common lrest rrest start cl cr len))
+      ((None _) (man-expand left right))
+      ((Some _ seed)
+        (let-match many seed (MkManSeed _ _ common lrest rrest start cl cr len))
         (let ((many more) (erased tailproof)) (man-expand lrest rrest))
         (let ((many k) (erased sum)) (add start more))
         (values k (fp-lcp-prepend common lrest rrest left right start more k
@@ -180,7 +178,7 @@
   (let ((many width) (erased count)) (add d extra))
   (let ((many lo) (erased offset)) (sub i k (fp-lcp-bound left right k i exact llen)))
   (let ((many hi) (erased endpoint)) (add lo width))
-  (let ((erased w) (erased range) (erased pal) (erased len))
+  (let ((erased _) (erased range) (erased pal) (erased len))
     (fp-center-range xs left right k d exact twice mid fullright extra width
       split mp mlen mcat count i lo hi llen offset endpoint))
   (values k d width exact twice count (MkManSpan _ _ lo hi k width range pal len)
@@ -190,11 +188,11 @@
 (def-fns _ $ (many man-frame : (erased (List (Nat)) xs)
     (many (Maybe (ManSpan xs)) old) (many (ManSpan xs) current) ->
     (many (Maybe (ManSpan xs)) out))
-  (let-match many current (MkManSpan source w lo hi k width range pal len))
-  (let-match many old (Some t previous) ((None t) (Some _ current)))
-  (let-match many previous (MkManSpan source2 w2 lo2 hi2 k2 width2 range2 pal2 len2))
+  (let-match many current (MkManSpan _ _ _ hi _ _ _ _ _))
+  (let-match many old (Some _ previous) ((None _) (Some _ current)))
+  (let-match many previous (MkManSpan _ _ _ hi2 _ _ _ _ _))
   (match many (nat-cmp hi2 hi) _
-    ((CLt _ rel a b p) (Some _ current))
+    ((CLt _ _ _ _ _) (Some _ current))
     (else old)))
 
 (def-fns _ $ (many man-best : (erased (List (Nat)) xs) (many (Nat) a b)
@@ -202,9 +200,9 @@
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) has)
     (erased (Lt a (Succ n)) ba) (erased (Lt b (Succ n)) bb))
   (match many (nat-cmp a b) _
-    ((CLt t rel x y p) (values b hb (lt-weaken a b p) (lt-succ b)))
-    ((CEq t rel x) (values a ha (lt-succ a) (lt-succ a)))
-    ((CGt t rel x y p) (values a ha (lt-succ a) (lt-weaken b a p)))))
+    ((CLt _ _ _ _ p) (values b hb (lt-weaken a b p) (lt-succ b)))
+    ((CEq _ _ _) (values a ha (lt-succ a) (lt-succ a)))
+    ((CGt _ _ _ _ p) (values a ha (lt-succ a) (lt-weaken b a p)))))
 
 ; Two independent rightmost spans handle even and odd centers. The erased
 ; numeric maximum and erased history advance together, keeping the scan
@@ -219,23 +217,23 @@
     (erased (PalScanned xs left right best) scanned) ->
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) has)
     (erased (PalCenterBounds (Nil (Nat)) xs n) bounds))
-  (let-match many right (Cons a x rest)
-    ((Nil a)
+  (let-match many right (Cons _ x rest)
+    ((Nil _)
       (values best besthas
         (fp-scanned-close xs left right best scanned (PCBEnd left best)))))
-  (let ((many e) (many de) (many ew) (erased ep) (erased ed) (erased ec)
+  (let ((erased e) (many de) (erased ew) (erased ep) (erased ed) (erased ec)
        (many es) (erased eh))
     (man-center xs left right right (Nil _) i (Zero) (PPEven) split llen
       (PalNil _) (PalLNil _) (PalCatNil _ right) table evens evenframe))
-  (let-match erased (fp-add-unique de (Zero) ew de ec (add-zero-right de)) (Refl t v))
-  (let ((many o) (many do) (many ow) (erased op) (erased od) (erased oc)
+  (let-match erased (fp-add-unique de (Zero) ew de ec (add-zero-right de)) (Refl _ _))
+  (let ((erased o) (many do) (erased ow) (erased op) (erased od) (erased oc)
        (many os) (erased oh))
     (man-center xs left right rest _ i (Succ (Zero))
       (PPOdd) split llen (PalOne _ x)
       (PalLCons _ x _ _ (PalLNil _))
       (PalCatCons _ x _ _ _ (PalCatNil _ rest)) table odds oddframe))
   (let-match erased (fp-add-unique do (Succ (Zero)) ow _ oc
-    (add-succ-right do (Zero) do (add-zero-right do))) (Refl t2 v2))
+    (add-succ-right do (Zero) do (add-zero-right do))) (Refl _ _))
   (let ((many here) (erased herehas) (erased be) (erased bo))
     (man-best xs de (Succ do) eh oh))
   (let ((many n) (erased has) (erased bh) (erased bb))

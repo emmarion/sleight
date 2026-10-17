@@ -103,13 +103,13 @@
 
 (def-fns _ $ (erased allto-nth : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased (List A) xs) (erased A m)
     (erased (AllTo A R xs m) all) (erased (Nat) i) (erased A y) (subterm erased (Nth A xs i y) nth) -> (erased (R y m) p))
-  (let-match erased all (AllToCons _ _ x rest _ p rest-all) (absurd (AllToNil _ _ _) nth))
+  (let-match erased all (AllToCons _ _ _ rest _ p rest-all) (absurd (AllToNil _ _ _) nth))
   (let-match erased nth (NthThere _ _ _ i1 _ nth1) ((NthHere _ _ _) p))
   (allto-nth A R rest m rest-all i1 y nth1))
 
 (def-fns _ $ (erased length-fn : (erased (List (Nat)) xs) (erased (Nat) a) (erased (Nat) b)
     (subterm erased (Length (Nat) xs a) la) (erased (Length (Nat) xs b) lb) -> (erased (Eq (Nat) a b) e))
-  (let-match erased la (LengthCons _ x rest a1 la1) ((LengthNil _) (let-match erased lb (LengthNil _)) (Refl (Nat) a)))
+  (let-match erased la (LengthCons _ _ rest a1 la1) ((LengthNil _) (let-match erased lb (LengthNil _)) (Refl (Nat) a)))
   (let-match erased lb (LengthCons _ _ _ b1 lb1))
   (let-match erased (length-fn rest a1 b1 la1 lb1) (Refl _ _))
   (Refl (Nat) a))
@@ -120,7 +120,7 @@
 
 (def-fns _ $ (many split : (many (Nat) w) (erased (Lt w u62-modulus) wm) (erased (Lt (Zero) w) pos)
     -> (many (Nat) m) (erased (Lt m w) lm))
-  (let ((many q) (erased k2) (erased r) (erased mm) (erased ad) (erased rlt) (erased qm))
+  (let ((many q) (erased k2) (erased r) (erased mm) (erased ad) (erased _) (erased _))
     (u62-div w bs-two wm bs-two-fits (LtZ (Succ (Zero)))))
   (let ((erased lm)) (match erased q (((Lt q w) l))
     ((Zero) pos)
@@ -154,7 +154,7 @@
       (tail $ bsearch-loop xs small asc n len fits cs a rel k km lo (subterm (lt-subterm m w ltm)) m mid amid
         (lt-weaken mid n midn) lok (HiAt xs n mid x k nth kx))))
   (let ((many m1)) (u62-inc m (lt-le-trans (Succ m) (Succ w) u62-modulus (LtS m w ltm) (LtS w u62-modulus wm))))
-  (let ((many r) (erased amr) (erased rm)) (u62-sub w m1 wm (LtS m w ltm)))
+  (let ((many r) (erased amr) (erased _)) (u62-sub w m1 wm (LtS m w ltm)))
   (let ((erased ltr)) (add-pos-lt r (Succ m) w (add-comm (Succ m) r w amr) (LtZ m)))
   (let ((erased ahi)) (add-shift lo m mid r w hi amid amr span))
   (let ((many lo1)) (u62-inc i (lt-le-trans (Succ mid) (Succ n) u62-modulus (LtS mid n midn) (LtS n u62-modulus fits))))
@@ -208,14 +208,14 @@
   (let ((erased q1m)) (lt-trans q1 q u62-modulus (lt-succ q1) qm))
   (let ((many q1r)) (u62-dec q1 q qm))
   (match many (bsearch xs small asc n len fits cs a rel q1r q1m) _
-    ((Found _ _ i nth)
+    ((Found _ _ _ _)
       (let ((erased ft1)) (add-comm found (Succ q1) t ft))
       (let-match erased ft1 (AddSucc _ _ t1 ft2))
       (let ((erased ft3)) (add-comm q1 (Succ found) t (add-succ-right q1 found t1 ft2)))
       (let ((erased fm)) (lt-le-trans (Succ found) (Succ t) u62-modulus (LtS found t (add-pos-lt found q t ft (LtZ q1))) (LtS t u62-modulus tm)))
       (let ((many found1)) (u62-inc found fm))
       (tail $ queries xs small asc n len fits cs a rel q1r q1m found1 t ft3 tm))
-    ((Absent _ _ none)
+    ((Absent _ _ _)
       (let ((erased ft1)) (add-comm found (Succ q1) t ft))
       (let-match erased ft1 (AddSucc _ _ t1 ft2))
       (let ((erased ft3)) (add-comm q1 found t1 ft2))
@@ -240,7 +240,7 @@
 ;! suppress warn sub
 (def-fns _ $ (many demo-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
-  (let ((many c) (erased p)) (sub a b le))
+  (let ((many c) (erased _)) (sub a b le))
   c)
 ;! restore warn sub
 ;! restore warn lt-dec
@@ -263,8 +263,8 @@
   (let ((many found))
     (queries xs small asc (Succ demo-top) len demo-n-fits cs a rel demo-q demo-q-fits (Zero) demo-q (AddZero demo-q) demo-q-fits))
   (let ((unique w2) (many u1)) (world-do _ w1 stop))
-  (let-match many u0 (MkUsage wall0 user0 sys0 minor0 promoted0 major0 minor-gcs0 major-gcs0))
-  (let-match many u1 (MkUsage wall1 user1 sys1 minor1 promoted1 major1 minor-gcs1 major-gcs1))
+  (let-match many u0 (MkUsage wall0 _ _ minor0 _ _ _ _))
+  (let-match many u1 (MkUsage wall1 _ _ minor1 _ _ _ _))
   (let ((unique w3) (many _))
     (world-do _ w2 (WriteOut (str-append "found " (str-append (nat-str found) (str-append "\nwall-ns " (str-append (nat-str (demo-minus wall1 wall0))
       (str-append "\nminor-words " (str-append (nat-str (demo-minus minor1 minor0)) "\n")))))))))

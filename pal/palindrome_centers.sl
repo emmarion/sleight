@@ -23,8 +23,8 @@
     (erased (HasPalindromeOfLength right n) has) ->
     (erased (HasPalindromeOfLength xs n) out))
   (match erased split _
-    ((PSStart source) has)
-    ((PSStep source l r x p)
+    ((PSStart _) has)
+    ((PSStep _ l _ x p)
       (fp-split-has xs l _ n p (HasThere x _ _ has)))))
 
 (def-fns _ $ (erased fp-center-base : (erased (List (Nat)) xs left right mid full)
@@ -32,7 +32,7 @@
     (erased (Palindrome (Nat) mid) pal) (erased (PalLength (Nat) mid m) len)
     (erased (PalConcat (Nat) mid right full) cat) (erased (Add (Zero) m n) sum) ->
     (erased (HasPalindromeOfLength xs n) has))
-  (let-match erased sum (AddZero v))
+  (let-match erased sum (AddZero _))
   (fp-split-has xs left full n split
     (HasHere _ n _ (fp-take-concat _ mid right full n cat len) pal)))
 
@@ -45,20 +45,20 @@
     (erased (PalLength (Nat) mid m) len) (erased (PalConcat (Nat) mid right full) cat)
     (erased (Add d m n) sum) -> (erased (HasPalindromeOfLength xs n) has))
   (match erased common _
-    ((PLLeft r)
+    ((PLLeft _)
       (let-match erased twice (D0))
       (fp-center-base xs left right mid full m n split pal len cat sum))
-    ((PLRight l)
+    ((PLRight _)
       (let-match erased twice (D0))
       (fp-center-base xs left right mid full m n split pal len cat sum))
-    ((PLApart x y l r apart)
+    ((PLApart _ _ _ _ _)
       (let-match erased twice (D0))
       (fp-center-base xs left right mid full m n split pal len cat sum))
     ((PLStep x l r k1 p)
-      (let-match erased split (PSStep source l2 full2 y split1))
-      (let-match erased twice (DS k2 d1 twice1))
-      (let-match erased sum (AddSucc a b c sum1))
-      (let-match erased sum1 (AddSucc a2 b2 c2 sum2))
+      (let-match erased split (PSStep _ _ _ _ split1))
+      (let-match erased twice (DS _ d1 twice1))
+      (let-match erased sum (AddSucc _ _ _ sum1))
+      (let-match erased sum1 (AddSucc _ _ c2 sum2))
       (let ((erased withx) (erased snoc) (erased restcat))
         (fp-concat-unassoc _ mid _ r
           right full cat
@@ -79,8 +79,8 @@
 (def-fns _ $ (erased absurd fp-apart-irrefl : (erased (Nat) x)
     (erased (NatApart x x) p) -> (erased (False) f))
   (match erased p _
-    (absurd (ApartLt a b lt) (lt-asym x x lt (lt-succ x)))
-    (absurd (ApartGt a b gt) (lt-asym x x gt (lt-succ x)))))
+    (absurd (ApartLt _ _ lt) (lt-asym x x lt (lt-succ x)))
+    (absurd (ApartGt _ _ gt) (lt-asym x x gt (lt-succ x)))))
 
 (def-fns _ $ (erased fp-lcp-lower : (erased (List (Nat)) left right)
     (erased (Nat) radius k) (subterm erased (List (Nat)) w)
@@ -88,14 +88,14 @@
     (erased (Take (Nat) k left w) tl) (erased (Take (Nat) k right w) tr)
     (erased (PalLength (Nat) w k) len) -> (erased (Lt k (Succ radius)) bound))
   (match erased w _
-    ((Nil a)
-      (let-match erased len (PalLNil b))
+    ((Nil _)
+      (let-match erased len (PalLNil _))
       (LtZ radius))
-    ((Cons a x rest)
-      (let-match erased len (PalLCons b y rest2 k1 len1))
-      (let-match erased tl (TakeSucc c j z ls ws tl1))
-      (let-match erased tr (TakeSucc d j2 z2 rs ws2 tr1))
-      (let-match erased common (PLStep u l r radius1 p) (absurd (PLApart u v l r apart) (fp-apart-irrefl x apart)))
+    ((Cons _ x rest)
+      (let-match erased len (PalLCons _ _ _ k1 len1))
+      (let-match erased tl (TakeSucc _ _ _ ls _ tl1))
+      (let-match erased tr (TakeSucc _ _ _ rs _ tr1))
+      (let-match erased common (PLStep _ _ _ radius1 p) (absurd (PLApart _ _ _ _ apart) (fp-apart-irrefl x apart)))
       (LtS _ _
         (fp-lcp-lower ls rs radius1 k1 rest p tl1 tr1 len1)))))
 
@@ -105,9 +105,9 @@
   (let-match erased pa (DS a1 aa1 pa1) ((D0) (LtZ bb)))
   (match erased pb _
     (absurd (D0)
-      (let-match erased bound (LtS x y p)) p)
+      (let-match erased bound (LtS _ _ p)) p)
     ((DS b1 bb1 pb1)
-      (let-match erased bound (LtS x y p))
+      (let-match erased bound (LtS _ _ p))
       (LtS _ _
         (LtS _ _ (fp-double-mono a1 aa1 b1 bb1 pa1 pb1 p))))))
 
@@ -131,7 +131,7 @@
 (def-fns _ $ (erased fp-bounds-weaken : (erased (List (Nat)) left right)
     (erased (Nat) n m) (subterm erased (PalCenterBounds left right n) bounds)
     (erased (Lt n (Succ m)) le) -> (erased (PalCenterBounds left right m) out))
-  (let-match erased bounds (PCBStep l r x k e o de do even odd twicee twiceo be bo rest) ((PCBEnd l k) (PCBEnd left m)))
+  (let-match erased bounds (PCBStep _ r x _ e o de do even odd twicee twiceo be bo rest) ((PCBEnd _ _) (PCBEnd left m)))
   (PCBStep left r x m e o de do even odd twicee twiceo
     (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
     (fp-bounds-weaken _ r n m rest le)))
@@ -141,16 +141,16 @@
     (erased (Nat) e de) (erased (PalLcp left right e) common)
     (erased (Double e de) twice) (erased (Lt de (Succ n)) bound))
   (match erased bounds _
-    ((PCBEnd l k) (values (Zero) (Zero) (PLRight left) (D0) (LtZ n)))
-    ((PCBStep l r x k e o de do even odd twicee twiceo be bo rest)
+    ((PCBEnd _ _) (values (Zero) (Zero) (PLRight left) (D0) (LtZ n)))
+    ((PCBStep _ _ _ _ e _ de _ even _ twicee _ be _ _)
       (values e de even twicee be))))
 
 (def-fns _ $ (erased fp-add-shift : (erased (Nat) a b c)
     (subterm erased (Add a (Succ b) c) p) ->
     (erased (Add (Succ a) b c) q))
   (match erased p _
-    ((AddZero v) (AddSucc _ _ _ (AddZero b)))
-    ((AddSucc x y z p1) (AddSucc _ _ _ (fp-add-shift x b z p1)))))
+    ((AddZero _) (AddSucc _ _ _ (AddZero b)))
+    ((AddSucc x _ z p1) (AddSucc _ _ _ (fp-add-shift x b z p1)))))
 
 ; Follow a palindrome towards its center. The peeled characters form the
 ; common prefix of the reversed left context and the right context there.
@@ -168,32 +168,32 @@
     (erased (PalCenterBounds left right n) bounds) ->
     (erased (Lt total (Succ n)) out))
   (match erased pal _
-    ((PalNil a)
-      (let-match erased len (PalLNil b))
-      (let-match erased cat (PalCatNil c rest))
-      (let-match erased (fp-add-unique d (Zero) total d sum (add-zero-right d)) (Refl t v))
+    ((PalNil _)
+      (let-match erased len (PalLNil _))
+      (let-match erased cat (PalCatNil _ _))
+      (let-match erased (fp-add-unique d (Zero) total d sum (add-zero-right d)) (Refl _ _))
       (let ((erased e) (erased de) (erased common) (erased two) (erased bound))
         (fp-bounds-even left right n bounds))
       (let ((erased le))
         (fp-lcp-lower left right e k stack common takeleft
           (fp-take-concat _ stack tl2 right k stackcat stacklen) stacklen))
       (fp-le-trans d de n (fp-double-mono k d e de twice two le) bound))
-    ((PalOne a x)
-      (let-match erased len (PalLCons b y rest j lp))
-      (let-match erased lp (PalLNil c))
-      (let-match erased cat (PalCatCons c3 y2 rest3 catrest out cat1))
-      (let-match erased cat1 (PalCatNil e rest2))
-      (let-match erased bounds (PCBStep l r x2 n2 e2 o de do even odd twoe twoo be bo rem))
+    ((PalOne _ _)
+      (let-match erased len (PalLCons _ _ _ _ lp))
+      (let-match erased lp (PalLNil _))
+      (let-match erased cat (PalCatCons _ _ _ _ _ cat1))
+      (let-match erased cat1 (PalCatNil _ _))
+      (let-match erased bounds (PCBStep _ _ _ _ _ o _ do _ odd _ twoo _ bo _))
       (let ((erased eq))
         (fp-add-unique d (Succ (Zero)) total _ sum
           (add-succ-right d (Zero) d (add-zero-right d))))
-      (let-match erased eq (Refl t v))
+      (let-match erased eq (Refl _ _))
       (let ((erased le))
         (fp-lcp-lower left stacktail o k stack odd takeleft
           (fp-take-concat _ stack tl2 stacktail k stackcat stacklen) stacklen))
       (fp-le-trans _ _ n
         (LtS _ _ (fp-double-mono k d o do twice twoo le)) bo))
-    ((PalWrap a x inner withx innerpal snoc)
+    ((PalWrap _ x inner withx innerpal snoc)
       (let ((erased ni) (erased li)) (pal-length inner))
       (let ((erased withlen))
         (fp-concat-length _ inner _ withx
@@ -201,14 +201,14 @@
           (PalLCons _ x _ _ (PalLNil _))
           (add-succ-right ni (Zero) ni (add-zero-right ni))))
       (let-match erased (fp-length-unique _ w width _ len
-                      (PalLCons _ x _ _ withlen)) (Refl t v))
-      (let-match erased cat (PalCatCons b y rest tail1 out cat1))
-      (let ((erased nexttail) (erased tinycat) (erased innercat))
+                      (PalLCons _ x _ _ withlen)) (Refl _ _))
+      (let-match erased cat (PalCatCons _ _ _ _ out cat1))
+      (let ((erased _) (erased tinycat) (erased innercat))
         (fp-concat-assoc _ inner _ withx
           stacktail out snoc cat1))
-      (let-match erased tinycat (PalCatCons c z empty tail2 out2 tailcat))
-      (let-match erased tailcat (PalCatNil e tail3))
-      (let-match erased bounds (PCBStep l r x2 n2 e2 o de do even odd twoe twoo be bo rem))
+      (let-match erased tinycat (PalCatCons _ _ _ _ _ tailcat))
+      (let-match erased tailcat (PalCatNil _ _))
+      (let-match erased bounds (PCBStep _ _ _ _ _ _ _ _ _ _ _ _ _ _ rem))
       (fp-pal-prefix-bound _ out
         _ tl2 _ inner
         _ _ ni total n
@@ -223,7 +223,7 @@
     (erased (Nat) n) (erased (List A) xs w)
     (subterm erased (Take A n xs w) tk) ->
     (erased (List A) rest) (erased (PalConcat A w rest xs) cat))
-  (let-match erased tk (TakeSucc a k x tail4 out tk1) ((TakeZero a source) (values xs (PalCatNil _ xs))))
+  (let-match erased tk (TakeSucc _ k x tail4 out tk1) ((TakeZero _ _) (values xs (PalCatNil _ xs))))
   (let ((erased rest) (erased cat)) (fp-take-rest _ k tail4 out tk1))
   (values rest (PalCatCons _ x _ _ _ cat)))
 
@@ -235,25 +235,25 @@
     (erased (List (List (Nat))) ws)
     (erased (Windows (Nat) (Succ k) right ws) wins)
     (erased (All (List (Nat)) NotPalindrome ws) absent))
-  (let-match erased right (Cons a x rest)
-    ((Nil a)
+  (let-match erased right (Cons _ x rest)
+    ((Nil _)
       (values (Nil _)
         (WinStop _ _ right (Zero) (PalLNil _) (LtZ k))
         (AllNil _ NotPalindrome))))
-  (let-match erased (pal-take (Succ k) right) (PalTaken m source w tk len)
-    ((PalShort m source len p short)
+  (let-match erased (pal-take (Succ k) right) (PalTaken _ _ w tk len)
+    ((PalShort _ _ len p short)
       (values (Nil _) (WinStop _ _ right len p short)
         (AllNil _ NotPalindrome))))
   (match erased (pal-decide _ w len) _
-    (absurd (PalYes v pal)
+    (absurd (PalYes _ pal)
       (let ((erased tail4) (erased cat)) (fp-take-rest _ _ right w tk))
       (lt-asym n _ larger
         (fp-pal-prefix-bound left right (Nil _) tail4 tail4 w
           (Zero) (Zero) _ _ n
           (TakeZero _ left) (PalLNil _) (PalCatNil _ tail4)
           cat pal len (D0) (AddZero _) bounds)))
-    ((PalNo v np)
-      (let-match erased bounds (PCBStep l r y n2 e o de do even odd twoe twoo be bo rem))
+    ((PalNo _ np)
+      (let-match erased bounds (PCBStep _ _ _ _ _ _ _ _ _ _ _ _ _ _ rem))
       (let ((erased tailws) (erased tailwins) (erased tailabsent))
         (fp-bounded-windows _ rest n k rem larger))
       (values (Cons _ w tailws)
@@ -268,9 +268,9 @@
     (erased (Lt answer (Succ candidate)) le)
     (erased (NoLargerPalindrome xs candidate) above) ->
     (erased (NoLargerPalindrome xs answer) out))
-  (let-match erased (nat-cmp answer candidate) (CLt t r a b lt)
-    ((CEq t r a) above)
-    (absurd (CGt t r a b gt) (lt-asym candidate answer gt le)))
+  (let-match erased (nat-cmp answer candidate) (CLt _ _ _ _ lt)
+    ((CEq _ _ _) above)
+    (absurd (CGt _ _ _ _ gt) (lt-asym candidate answer gt le)))
   (let-match erased candidate (Succ k) (absurd (Zero) lt))
   (let ((erased ws) (erased wins) (erased absent))
     (fp-bounded-windows (Nil _) xs answer k bounds lt))
@@ -300,11 +300,11 @@
     (erased (PalLcp left right k) suffix) (erased (Add n k total) sum) ->
     (erased (PalLcp fl fr total) out))
   (match erased prefix _
-    ((PLPStart l r)
-      (let-match erased sum (AddZero v))
+    ((PLPStart _ _)
+      (let-match erased sum (AddZero _))
       suffix)
-    ((PLPStep fl0 fr0 l r x n1 p)
-      (let-match erased sum (AddSucc a b c q))
+    ((PLPStep _ _ _ _ x n1 p)
+      (let-match erased sum (AddSucc _ _ c q))
       (fp-lcp-prefix-close fl fr _ _
         n1 _ total p (PLStep x _ _ _ suffix)
         (add-succ-right n1 k c q)))))
@@ -323,8 +323,8 @@
 (def-fns _ $ (erased fp-scanned-weaken : (erased (List (Nat)) xs left right)
     (erased (Nat) n m) (subterm erased (PalScanned xs left right n) scanned)
     (erased (Lt n (Succ m)) le) -> (erased (PalScanned xs left right m) out))
-  (let-match erased scanned (PSCStep source l r x old e o de do even odd twicee twiceo be bo previous)
-    ((PSCStart source old) (PSCStart xs m)))
+  (let-match erased scanned (PSCStep _ l r x _ e o de do even odd twicee twiceo be bo previous)
+    ((PSCStart _ _) (PSCStart xs m)))
   (PSCStep xs l r x m e o de do even odd twicee twiceo
     (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
     (fp-scanned-weaken xs l _ n m previous le)))
@@ -333,7 +333,7 @@
     (erased (Nat) n) (subterm erased (PalScanned xs left right n) scanned)
     (erased (PalCenterBounds left right n) remaining) ->
     (erased (PalCenterBounds (Nil (Nat)) xs n) all))
-  (let-match erased scanned (PSCStep source l r x bound e o de do even odd twicee twiceo be bo previous)
-    ((PSCStart source bound) remaining))
+  (let-match erased scanned (PSCStep _ l r x _ e o de do even odd twicee twiceo be bo previous)
+    ((PSCStart _ _) remaining))
   (fp-scanned-close xs l _ n previous
     (PCBStep l r x n e o de do even odd twicee twiceo be bo remaining)))

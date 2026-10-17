@@ -74,7 +74,7 @@
   (let-match many (or (env-failed env) by-warnings) (BFalse) ((BTrue) (values w1 (Exit _ exit-fail))))
   (let-match many (has-flag flags "--interpret") (BTrue)
     ((BFalse)
-      (let ((many out) (erased flat)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") fence bytes with-env env)
+      (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") fence bytes with-env env)
       (values (say-to (BFalse) out w1) (Exit _ exit-ok))))
   (let ((unique w2) (many confined)) (world-do _ w1 (ConfineDir fence)))
   (let-match many confined (Ok _ _) ((Fail _ m) (failed m w2)))

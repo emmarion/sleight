@@ -3,7 +3,7 @@
 (def-fns L $ (many step : (erased Type A) (many (List A) xs) (many A x) -> (many (List A) r))
   (Cons _ x xs))
 (def-fns L $ (many len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n))
-  (match many xs _ ((Nil a) 0) ((Cons a x rest) (Succ $ notail $ len _ rest))))
+  (match many xs _ ((Nil _) 0) ((Cons _ _ rest) (Succ $ notail $ len _ rest))))
 (def-lvl M)
 (let ((erased plm)) (prove-predates L M))
 (def-fns M $ (many body : (many (Nat) n) -> (many (Nat) r))

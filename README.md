@@ -181,8 +181,11 @@ error it recorded (`self/README.md`, "Errors are values").
 `--warnings-as-errors` fails a run that warns, exit code 1, once every
 file has been read and every message written: no final value is run and
 no `--extract` output or OCaml is written. A warning silenced by `;! suppress`
-does not count. slc takes the same flag, and `self/bootstrap.sh` builds slc
-under it.
+does not count. slc takes the same flag.
+`--warn-unused` adds the unused-binder warnings of WARNINGS.md 10, for the
+prelude and every file named; slc takes it too. `self/bootstrap.sh` builds slc
+under both flags, and `dune test` checks the prelude, and every file a test
+needs from outside `tests/`, as `--warn-unused` does, failing on any warning.
 
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
@@ -208,7 +211,8 @@ under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,
-`; no-env: yes` and `; eval-fuel: n` run the test under the corresponding flags.
+`; no-env: yes`, `; eval-fuel: n` and `; warn-unused: yes` run the test under the
+corresponding flags, the last checking the test's own binders.
 
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,

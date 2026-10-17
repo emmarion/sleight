@@ -15,7 +15,7 @@
 
 (def-fns _ $ (many pal-length : (subterm many (List (Nat)) xs) ->
     (many (Nat) n) (erased (PalLength (Nat) xs n) p))
-  (let-match many xs (Cons a x rest) ((Nil a) (values (Zero) (PalLNil _))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (PalLNil _))))
   (let ((many n) (erased p)) (notail $ pal-length rest))
   (values (Succ n) (PalLCons _ x _ _ p)))
 
@@ -26,15 +26,15 @@
     (many (List (Nat)) inner) (many (Nat) last)
     (erased (PalLength (Nat) inner n) ilen)
     (erased (PalConcat (Nat) inner (Cons (Nat) last (Nil (Nat))) xs) cat))
-  (let-match many xs (Cons a x rest) (absurd (Nil a) len))
-  (let-match erased len (PalLCons b y tail3 k plen))
+  (let-match many xs (Cons _ x rest) (absurd (Nil _) len))
+  (let-match erased len (PalLCons _ _ _ _ plen))
   (match many rest _
     ((Nil _)
-      (let-match erased plen (PalLNil c))
+      (let-match erased plen (PalLNil _))
       (values (Nil _) x (PalLNil _)
         (PalCatNil _ _)))
     ((Cons _ _ _)
-      (let-match erased plen (PalLCons c z tail2 k2 plen2))
+      (let-match erased plen (PalLCons _ _ _ k2 _))
       (let ((many inner) (many last) (erased ilen) (erased cat))
         (notail $ pal-unsnoc rest k2 plen))
       (values (Cons _ x inner) last
@@ -51,20 +51,20 @@
 (def-fns _ $ (many pal-decide : (subterm erased (Nat) n)
     (many (List (Nat)) xs) (erased (PalLength (Nat) xs n) len) ->
     (many (PalDecision xs) decision))
-  (let-match many xs (Cons a x rest) ((Nil a) (PalYes xs (PalNil _))))
-  (let-match erased len (PalLCons b y tail3 k plen))
+  (let-match many xs (Cons _ x rest) ((Nil _) (PalYes xs (PalNil _))))
+  (let-match erased len (PalLCons _ _ _ _ plen))
   (let-match many rest (Cons _ _ _) ((Nil _) (PalYes xs (PalOne _ x))))
-  (let-match erased plen (PalLCons c z tail2 k2 plen2))
+  (let-match erased plen (PalLCons _ _ _ k2 _))
   (let ((many inner) (many last) (erased ilen) (erased cat))
     (pal-unsnoc rest k2 plen))
-  (let-match many (nat-cmp x last) (CEq t r v)
-    ((CLt t r v w lt)
+  (let-match many (nat-cmp x last) (CEq _ _ _)
+    ((CLt _ _ _ _ lt)
       (PalNo xs (NotPalEnds x last _ _ cat (ApartLt _ _ lt))))
-    ((CGt t r v w gt)
+    ((CGt _ _ _ _ gt)
       (PalNo xs (NotPalEnds x last _ _ cat (ApartGt _ _ gt)))))
   (match many (notail $ pal-decide k2 inner ilen) _
-    ((PalYes w p) (PalYes xs (PalWrap _ x _ _ p cat)))
-    ((PalNo w p) (PalNo xs (NotPalInner x _ _ cat p)))))
+    ((PalYes _ p) (PalYes xs (PalWrap _ x _ _ p cat)))
+    ((PalNo _ p) (PalNo xs (NotPalInner x _ _ cat p)))))
 
 ; Either take a complete window with its length, or certify that the
 ; suffix is too short. No partial window is ever tested as a full one.
@@ -80,12 +80,12 @@
 (def-fns _ $ (many pal-take : (subterm many (Nat) n)
     (many (List (Nat)) xs) -> (many (PalTake n xs) result))
   (let-match many n (Succ k) ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (PalLNil _))))
-  (let-match many xs (Cons a x rest) ((Nil a) (PalShort n xs (Zero) (PalLNil _) (LtZ k))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (PalShort n xs (Zero) (PalLNil _) (LtZ k))))
   (match many (notail $ pal-take k rest) _
-    ((PalTaken m _ w tk len)
+    ((PalTaken _ _ w tk len)
       (PalTaken n xs (Cons _ x w)
         (TakeSucc _ _ x _ _ tk) (PalLCons _ x _ _ len)))
-    ((PalShort m _ len p short)
+    ((PalShort _ _ _ p short)
       (PalShort n xs _ (PalLCons _ x _ _ p)
         (LtS _ _ short)))))
 
@@ -103,13 +103,13 @@
     (erased (List (List (Nat))) xss)
     (erased (Windows (Nat) (Succ k) xs xss) windows)
     (many (PalWindowsDecision xss) decision))
-  (let-match many xs (Cons a x rest)
-    ((Nil a)
+  (let-match many xs (Cons _ x rest)
+    ((Nil _)
       (values (Nil _)
         (WinStop _ _ xs (Zero) (PalLNil _) (LtZ k))
         (PalAbsent (Nil _) (AllNil _ NotPalindrome)))))
-  (let-match many (pal-take (Succ k) xs) (PalTaken m _ w tk len)
-    ((PalShort m _ len p short)
+  (let-match many (pal-take (Succ k) xs) (PalTaken _ _ w tk len)
+    ((PalShort _ _ len p short)
       (values (Nil _) (WinStop _ _ xs len p short)
         (PalAbsent (Nil _) (AllNil _ NotPalindrome)))))
   (let ((erased ws) (erased wins) (many result)) (notail $ pal-windows k rest))
@@ -117,13 +117,13 @@
   (let ((erased windows)) (WinStep _ _ x rest w tk ws wins))
   (values xss windows
     (match many (pal-decide _ w len) (((PalWindowsDecision xss) d))
-      ((PalYes v p)
+      ((PalYes _ p)
         (PalFound xss (ExHere _ NatPalindrome w ws (IsNatPalindrome w p))))
-      ((PalNo v p)
+      ((PalNo _ p)
         (match many result _
-          ((PalFound vs found)
+          ((PalFound _ found)
             (PalFound xss (ExThere _ NatPalindrome w ws found)))
-          ((PalAbsent vs absent)
+          ((PalAbsent _ absent)
             (PalAbsent xss (AllCons _ NotPalindrome w ws p absent))))))))
 
 ; Zero has one empty window at each suffix, including the empty suffix.
@@ -131,13 +131,13 @@
     (erased (List (List (Nat))) xss)
     (erased (Windows (Nat) (Zero) xs xss) windows)
     (erased (Exists (List (Nat)) NatPalindrome xss) found))
-  (let-match erased xs (Cons a x rest)
-    ((Nil a)
+  (let-match erased xs (Cons _ x rest)
+    ((Nil _)
       (values (Cons _ (Nil _) (Nil _))
         (WinEmpty _)
         (ExHere _ NatPalindrome (Nil _) (Nil _)
           (IsNatPalindrome (Nil _) (PalNil _))))))
-  (let ((erased ws) (erased wins) (erased found)) (pal-zero-windows rest))
+  (let ((erased ws) (erased wins) (erased _)) (pal-zero-windows rest))
   (values (Cons _ (Nil _) ws)
     (WinStep _ (Zero) x rest (Nil _) (TakeZero _ xs) ws wins)
     (ExHere _ NatPalindrome (Nil _) ws
@@ -154,8 +154,8 @@
     ((Succ k)
       (let ((erased ws) (erased wins) (many decision)) (pal-windows k xs))
       (match many decision _
-        ((PalFound vs found) (values n (IsLongest xs n ws wins found above)))
-        ((PalAbsent vs absent)
+        ((PalFound _ found) (values n (IsLongest xs n ws wins found above)))
+        ((PalAbsent _ absent)
           (tail $ pal-search xs k (NoLargerStep xs k (NoPal xs n ws wins absent) above)))))))
 
 (def-fns _ $ (many longest-palindrome : (many (List (Nat)) xs) ->

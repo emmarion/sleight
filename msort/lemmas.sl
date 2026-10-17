@@ -56,7 +56,7 @@
     (subterm erased (CatU a b c1) p) (erased (CatU a b c2) q) -> (erased (Eq (ULst) c1 c2) e))
   (match erased p _
     ((CatNil _) (let-match erased q (CatNil _)) (Refl (ULst) c1))
-    ((CatCons x t _ d1 p1)
+    ((CatCons _ t _ d1 p1)
       (let-match erased q (CatCons _ _ _ d2 q1))
       (match erased (cat-fn t b d1 d2 p1 q1) _ ((Refl _ _) (Refl (ULst) c1))))))
 
@@ -85,9 +85,9 @@
       (let-match erased q (CatCons _ _ _ d1 q1))
       (PSkip x c1 d1 (perm-cat-left t t2 b c1 d1 pt p1 q1)))
     ((PSwap x y t)
-      (let-match erased p (CatCons _ _ _ c1 p1))
+      (let-match erased p (CatCons _ _ _ _ p1))
       (let-match erased p1 (CatCons _ _ _ c3 p3))
-      (let-match erased q (CatCons _ _ _ d1 q1))
+      (let-match erased q (CatCons _ _ _ _ q1))
       (let-match erased q1 (CatCons _ _ _ d3 q3))
       (let-match erased (cat-fn t b c3 d3 p3 q3) (Refl _ _))
       (PSwap x y c3))
@@ -102,10 +102,10 @@
     ((MNilR _)
       (let-match erased (cat-fn a (UNil) c a p (cat-nil-right a)) (Refl _ _))
       (perm-refl c))
-    ((MLeft x xt y yt m2 l q)
+    ((MLeft x xt _ _ m2 _ q)
       (let-match erased p (CatCons _ _ _ c1 p1))
       (PSkip x c1 m2 (merge-perm xt b m2 c1 q p1)))
-    ((MRight x xt y yt m2 l q)
+    ((MRight _ _ y yt m2 _ q)
       (let ((erased d) (erased pd)) (cat-exists a yt))
       (PTrans _ _ _ (perm-middle y yt a c d p pd) (PSkip y d m2 (merge-perm a yt m2 d q pd))))))
 
@@ -114,8 +114,8 @@
   (match erased pm _
     ((MNilL _) hb)
     ((MNilR _) ha)
-    ((MLeft x xt y yt m2 l q) (let-match erased ha (LHCons _ _ _ lz)) (LHCons z x m2 lz))
-    ((MRight x xt y yt m2 l q) (let-match erased hb (LHCons _ _ _ lz)) (LHCons z y m2 lz))))
+    ((MLeft x _ _ _ m2 _ _) (let-match erased ha (LHCons _ _ _ lz)) (LHCons z x m2 lz))
+    ((MRight _ _ y _ m2 _ _) (let-match erased hb (LHCons _ _ _ lz)) (LHCons z y m2 lz))))
 
 (def-fns _ $ (erased merge-sorted : (erased (ULst) a) (erased (ULst) b) (erased (ULst) m)
     (erased (SortedU a) sa) (erased (SortedU b) sb) (subterm erased (MergeU a b m) pm) -> (erased (SortedU m) s))

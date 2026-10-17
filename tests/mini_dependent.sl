@@ -10,7 +10,7 @@
 (let ((many box-decl))
   (l2 (k (KDefAdts)) (l3 (a "Box") (l1 (l2 nat (a "n"))) (l3 (a "MkBox") (l1 (l2 nat (a "m"))) (l2 (a "Box") (a "m"))))))
 
-(def-fns _ $ (many prog : (many (List (Raw)) inner-branches) -> (many (List (Raw)) program))
+(def-fns _ $ (many prog : (many (List (Sexp)) inner-branches) -> (many (List (Sexp)) program))
   (let ((many inner)) (RList (Cons _ (k (KMatch)) (Cons _ (a "m") (Cons _ (l1 (l2 nat (a "r2"))) inner-branches)))))
   (let ((many fns))
     (l3 (k (KDefFns)) (a "L")
@@ -20,7 +20,7 @@
 
 (let ((many zero-only)) (Cons _ (l2 (l1 (a "Zero")) zero) (Nil _)))
 (let ((many both)) (Cons _ (l2 (l1 (a "Zero")) zero) (Cons _ (l2 (l2 (a "Succ") (a "q")) (a "q")) (Nil _))))
-(let ((many none)) (Nil (Raw)))
+(let ((many none)) (Nil (Sexp)))
 
 (let ((many refuted-prog)) (outcome (prog both)))
 (comptime-match many refuted-prog (Some t r))

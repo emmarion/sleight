@@ -37,7 +37,7 @@
     (l4 (a "outer") (l3 (l2 x-ty (a "x")) (l2 (l2 (a "T2") (l2 (a "x") (a "A0"))) (a "s")) (l2 (l1 (a "T3")) (a "s2"))) (l1 (l2 nat (a "r")))
       (l4 (k (KMatch)) (a "s") (l1 (l2 nat (a "r"))) (l2 (l3 (a "C2") (a "x3p") (a "zp")) inner)))))
 (let ((many prog)) (Cons _ nat-decl $ Cons _ lvl-decl $ Cons _ t2-decl $ Cons _ mk-defn $ Cons _ let-a0 $ Cons _ t3-decl $ Cons _ outer-defn $ Cons _ zero $ Nil _))
-(def-fns _ $ (many shape : (many (List (Raw)) p) -> (many (Maybe (Maybe (Reason))) r))
+(def-fns _ $ (many shape : (many (List (Sexp)) p) -> (many (Maybe (Maybe (Reason))) r))
   (let-match many (elab-program p) (MkProgramDec x out q) ((ProgramStuck x) (None _)))
   (match many out _
     ((PErr r) (Some _ (Some _ r)))

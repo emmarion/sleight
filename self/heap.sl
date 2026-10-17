@@ -29,13 +29,13 @@
 (def-fns _ $ (erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e))
   (match erased p _
     ((WNil _)
-      (let-match erased q (WNil z2))
+      (let-match erased q (WNil _))
       (Refl (Nat) x))
     ((W1 c1 _ d1 dd1 _ p1)
-      (let-match erased q (W1 c2 a2 d2 dd2 y1 q1))
+      (let-match erased q (W1 _ _ d2 dd2 _ q1))
       (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl _ _) (wrap-fn c1 (Succ d1) x y p1 q1))))
     ((W2 c1 _ d1 dd1 _ p1)
-      (let-match erased q (W2 c2 a2 d2 dd2 y1 q1))
+      (let-match erased q (W2 _ _ d2 dd2 _ q1))
       (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl _ _) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))
 
 ; ---- the ghost history: an erased list of every value allocated so far, newest first
@@ -80,17 +80,17 @@
     (subterm erased (Len B l n) p) (erased (Len B l m) q) -> (erased (Eq (Nat) n m) e))
   (match erased p _
     ((LenNil _)
-      (let-match erased q (LenNil tb2))
+      (let-match erased q (LenNil _))
       (Refl (Nat) (Zero)))
     ((LenAdd _ r1 _ n1 p1)
-      (let-match erased q (LenAdd tb2 r2 v2 m1 q1))
+      (let-match erased q (LenAdd _ _ _ m1 q1))
       (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl _ _) (Refl (Nat) (Succ n1)))))))
 
 (def-fns _ $ (erased suffix-len : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (subterm erased (Suffix B l s) p) (erased (Nat) n) (erased (Len B s n) ls) (erased (Nat) m) (erased (Len B l m) ll) ->
     (erased (Lt n (Succ m)) r))
   (let-match erased p (SfThere _ rest _ s1 p1) ((SfHere _ _) (match erased (len-fn _ l n m ls ll) _ ((Refl _ _) (lt-succ n)))))
-  (let-match erased ll (LenAdd tb2 r2 v2 m1 ll1))
+  (let-match erased ll (LenAdd _ _ _ m1 ll1))
   (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))
 
 (def-fns _ $ (erased suffix-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s1)
@@ -170,7 +170,7 @@
     (erased (Hist B) l2) (many (Store B l2) st2) (erased (Suffix B l2 l) sf) (many (Ref B l2) addr))
   (let-match many st (MkStore _ _ next ln writes))
   (let ((many (Value B l) v)) (MkValue _ _ next ln body))
-  (let ((erased writes2) (erased pw)) (stored-map-widen _ l (HAdd _ l v) (suffix-one _ l v) writes))
+  (let ((erased _) (erased pw)) (stored-map-widen _ l (HAdd _ l v) (suffix-one _ l v) writes))
   (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln) (coerce writes pw)) (suffix-one _ l v)
           (MkRef _ _ l v (SfHere _ (HAdd _ l v)))))
 
@@ -196,14 +196,14 @@
 (def-fns _ $ (many store-read : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
     (many (Store B l) st) (many (Ref B l) r) ->
     (erased (Hist B) s) (many (B (Ref B s)) body) (erased (Suffix B l s) sf))
-  (let-match many st (MkStore _ _ next ln writes))
+  (let-match many st (MkStore _ _ _ _ writes))
   (match many (idmap-get _ (ref-pos _ _ r) writes) _
     ((Hit _ _ _ v _)
       (let-match many v (MkStoredBody _ _ s body sf))
       (values s body sf))
     ((Miss _ _ _ _)
       (let-match many r (MkRef _ _ s v rp))
-      (let-match many v (MkValue _ _ pos lp body))
+      (let-match many v (MkValue _ _ _ _ body))
       (values s body (ref-suffix _ _ s v rp)))))
 
 (def-fns _ $ (many store-write : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
@@ -232,10 +232,10 @@
     (erased (List $ Ref B c) ys) (erased (Coercible (Shared) (List $ Ref B b) xs (Shared) (List $ Ref B c) ys) p) (erased (Lockstep (Nat) (Ref B c) f ys) lk2))
   (match erased xs _
     ((Nil _)
-      (let-match erased lk (LsNil ta tb))
+      (let-match erased lk (LsNil _ _))
       (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c)) (LsNil _ _)))
     ((Cons _ x rest)
-      (let-match erased lk (LsCons ta tb x0 y0 xs0 ys0 lk1))
+      (let-match erased lk (LsCons _ _ x0 _ xs0 _ lk1))
       (let ((erased x2) (erased px)) (ref-widen _ b c le x))
       (let ((erased rest2) (erased pr) (erased lk2)) (refs-widen-lk _ b c le xs0 rest lk1))
       (values (Cons _ x2 rest2) (coercible-ctor (Shared) Cons (Ref B b) (Ref B c) px pr) (LsCons _ _ x0 x2 xs0 rest2 lk2)))))

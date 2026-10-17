@@ -55,10 +55,10 @@
 
 (def-fns _ $ (many env-dec : (subterm many (Env) env) (many (Nat) x) -> (many (EnvDec env x) r))
   (let-match many env (ECons y w rest) ((ENil) (EnvMiss _ _)))
-  (let-match many (nat-dec x y) (NDDiff z u n) ((NDSame z) (EnvHit _ _ w $ EnvHere x w rest)))
+  (let-match many (nat-dec x y) (NDDiff _ _ n) ((NDSame _) (EnvHit _ _ w $ EnvHere x w rest)))
   (match many (notail $ env-dec rest x) _
-    ((EnvHit e z2 v p) (EnvHit _ _ v $ EnvThere x y v w rest n p))
-    ((EnvMiss e z2) (EnvMiss _ _))))
+    ((EnvHit _ _ v p) (EnvHit _ _ v $ EnvThere x y v w rest n p))
+    ((EnvMiss _ _) (EnvMiss _ _))))
 
 ; Binding a list of ids to as many values, the first id outermost.
 (def-adts
@@ -73,12 +73,12 @@
     (many BDStuck : (erased (Env) env) (erased (List (Nat)) ids) (erased (List (Val)) vs) -> (BindDec env ids vs))))
 
 (def-fns _ $ (many bind-all : (many (Env) env) (subterm many (List (Nat)) ids) (many (List (Val)) vs) -> (many (BindDec env ids vs) r))
-  (let-match many ids (Cons a x rest)
-    ((Nil a) (match many vs _ ((Nil b) (BDOk _ _ _ env $ BANil env)) ((Cons b v rest) (BDStuck _ _ _)))))
-  (let-match many vs (Cons b v vrest) ((Nil b) (BDStuck _ _ _)))
+  (let-match many ids (Cons _ x rest)
+    ((Nil _) (match many vs _ ((Nil _) (BDOk _ _ _ env $ BANil env)) ((Cons _ _ _) (BDStuck _ _ _)))))
+  (let-match many vs (Cons _ v vrest) ((Nil _) (BDStuck _ _ _)))
   (match many (notail $ bind-all (ECons x v env) rest vrest) _
-    ((BDStuck c d e) (BDStuck _ _ _))
-    ((BDOk c d e out p) (BDOk _ _ _ out $ BACons env x v rest vrest out p))))
+    ((BDStuck _ _ _) (BDStuck _ _ _))
+    ((BDOk _ _ _ out p) (BDOk _ _ _ out $ BACons env x v rest vrest out p))))
 
 ; Binding a def-fns group: each function becomes a closure over the environment the group was defined in,
 ; [cenv], and applying one rebinds the whole group, which is how the group recurses.
@@ -91,7 +91,7 @@
        -> (BindGroup cenv group (Cons (FnDef) (MkFnDef id ps body) defs) env out))))
 
 (def-fns _ $ (many bind-group : (many (Env) cenv) (many (List (FnDef)) group) (subterm many (List (FnDef)) defs) (many (Env) env) -> (many (Env) out) (erased (BindGroup cenv group defs env out) p))
-  (let-match many defs (Cons a def rest) ((Nil a) (values env (BGNil cenv group env))))
+  (let-match many defs (Cons _ def rest) ((Nil _) (values env (BGNil cenv group env))))
   (let-match many def (MkFnDef id ps body))
   (let ((many out) (erased p)) (tail $ bind-group cenv group rest (ECons id (VClo cenv group (MkFnDef id ps body)) env)))
   (values out (BGCons cenv group id ps body rest env out p)))
@@ -104,7 +104,7 @@
        -> (BindAtoms env (Cons (Nat) x ids) out))))
 
 (def-fns _ $ (many bind-atoms : (many (Env) env) (subterm many (List (Nat)) ids) -> (many (Env) out) (erased (BindAtoms env ids out) p))
-  (let-match many ids (Cons a x rest) ((Nil a) (values env (BTNil env))))
+  (let-match many ids (Cons _ x rest) ((Nil _) (values env (BTNil env))))
   (let ((many out) (erased p)) (tail $ bind-atoms (ECons x (VAtom x) env) rest))
   (values out (BTCons env x rest out p)))
 
@@ -121,11 +121,11 @@
     (many BrMiss : (erased (List (Branch)) bs) (erased (Nat) c) -> (BranchDec bs c))))
 
 (def-fns _ $ (many branch-dec : (subterm many (List (Branch)) bs) (many (Nat) c) -> (many (BranchDec bs c) r))
-  (let-match many bs (Cons a b rest) ((Nil a) (BrMiss _ _)))
+  (let-match many bs (Cons _ b rest) ((Nil _) (BrMiss _ _)))
   (let-match many b (MkBranch d fields2 body2))
-  (let-match many (nat-dec c d) (NDDiff z w n) ((NDSame z) (BrHit _ _ fields2 body2 $ BrHere c fields2 body2 rest)))
+  (let-match many (nat-dec c d) (NDDiff _ _ n) ((NDSame _) (BrHit _ _ fields2 body2 $ BrHere c fields2 body2 rest)))
   (match many (notail $ branch-dec rest c) _
-    ((BrHit l z2 fields body p) (BrHit _ _ fields body $ BrThere c d fields fields2 body body2 rest n p))
-    ((BrMiss l z2) (BrMiss _ _))))
+    ((BrHit _ _ fields body p) (BrHit _ _ fields body $ BrThere c d fields fields2 body body2 rest n p))
+    ((BrMiss _ _) (BrMiss _ _))))
 
 (MkUnit)

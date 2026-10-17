@@ -18,7 +18,7 @@
 
 (def-fns _ $ (many minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
-  (let ((many c) (erased p)) (sub a b le))
+  (let ((many c) (erased _)) (sub a b le))
   c)
 
 (def-fns _ $ (many line : (many (String) name) (many (Nat) v) (many (String) rest) -> (many (String) s))
@@ -30,7 +30,7 @@
   (let ((unique xs) (erased lxs)) (gen size 42 (UNil) 0 (LNil) (add-zero-right size)))
   (let ((unique stop-req)) (Measure (Stop)))
   (let ((unique w1) (many u0)) (world-do _ w (Measure (Start))))
-  (let ((unique r) (erased sorted) (erased perm)) (msort xs size lxs size-fits))
+  (let ((unique r) (erased _) (erased _)) (msort xs size lxs size-fits))
   (let ((unique w2) (many u1)) (world-do _ w1 stop-req))
   (let-match many u0 (MkUsage wall0 _ _ minor0 promoted0 major0 _ _))
   (let-match many u1 (MkUsage wall1 _ _ minor1 _ major1 _ _))

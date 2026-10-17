@@ -16,8 +16,8 @@
     (unique (Cell UCons (slot-of h) t) hole)
     (subterm unique (ULst) xs) (subterm unique (ULst) ys) ->
     (erased (ULst) m) (erased (MergeU xs ys m) pm) (unique (UCons h m) is r at hole))
-  (let-match unique xs (UCons x xt c1) ((UNil c) (values ys (MNilL ys) (hole (at) h ys))))
-  (let-match unique ys (UCons y yt c2) ((UNil d) (values xs (MNilR xs) (hole (at) h (at (c1 x xt))))))
+  (let-match unique xs (UCons x xt c1) ((UNil) (values ys (MNilL ys) (hole (at) h ys))))
+  (let-match unique ys (UCons y yt c2) ((UNil) (values xs (MNilR xs) (hole (at) h (at (c1 x xt))))))
   (match many (le-dec x y) _
     ((OLe _ _ l)
       (let ((unique hole2)) (cell-write unique hole (UCons _ (slot-of c1))))
@@ -29,8 +29,8 @@
       (values r2 (MRight x xt y yt m2 l p2) (at (hole2 h r2))))))
 
 (def-fns _ $ (many merge : (unique (ULst) xs) (unique (ULst) ys) -> (unique (ULst) r) (erased (MergeU xs ys r) pm))
-  (let-match unique xs (UCons x xt c1) ((UNil c) (values ys (MNilL ys))))
-  (let-match unique ys (UCons y yt c2) ((UNil d) (let ((unique r)) (at (c1 x xt))) (values r (MNilR r))))
+  (let-match unique xs (UCons x xt c1) ((UNil) (values ys (MNilL ys))))
+  (let-match unique ys (UCons y yt c2) ((UNil) (let ((unique r)) (at (c1 x xt))) (values r (MNilR r))))
   (match many (le-dec x y) _
     ((OLe _ _ l)
       (let ((erased m2) (erased p2) (unique r2)) (merge-into x _ c1 xt (at (c2 y yt))))
@@ -61,7 +61,7 @@
 
 (def-fns _ $ (many msort-n : (subterm many (Nat) n) (unique (ULst) xs) (erased (LenU xs n) ln) (erased (Lt n u62-modulus) bn) ->
     (unique (ULst) r) (erased (SortedU r) s) (erased (PermU xs r) pr))
-  (let-match unique xs (UCons x xt c1) ((UNil c) (values (UNil) (SortNil) (PNil))))
+  (let-match unique xs (UCons x xt c1) ((UNil) (values (UNil) (SortNil) (PNil))))
   (let-match erased ln (LCons _ _ n1 l1))
   (let-match many (u62-lt-dec n 2 bn two-fits) (No _ _ ge)
     ((Yes _ _ lt2)
@@ -72,8 +72,8 @@
       (values r (SortCons x (UNil) (LHNil x) (SortNil)) (perm-refl r))))
   (let-match erased ge (LtS _ _ ge1))
   (let-match erased ge1 (LtS _ _ ge2))
-  (let-match erased ge2 (LtZ n2))
-  (let ((many q) (erased v) (erased pv) (erased m) (erased rr) (erased mm) (erased am) (erased rlt) (erased bq))
+  (let-match erased ge2 (LtZ _))
+  (let ((many q) (erased _) (erased pv) (erased m) (erased rr) (erased mm) (erased am) (erased rlt) (erased bq))
     (u62-shr n 1 bn (LtS (Zero) sixty-two (lt-trans (Zero) eight sixty-two (LtZ _) (eight-lt-sixty-two)))))
   (let-match erased pv (PS _ _ _ p0 d2))
   (let-match erased p0 (P0))

@@ -5,7 +5,7 @@
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many usage)) (RawList here $ Cons _ (RawSymbol here $ SName "compile-error") $ Nil _))
   (let-match many args (Cons _ a _) ((Nil _) (values mw $ Cons _ usage $ Nil _)))
-  (let-match many a (RawSettled p m T t c) (else (values mw $ Cons _ usage $ Nil _)))
+  (let-match many a (RawSettled _ _ _ _ c) (else (values mw $ Cons _ usage $ Nil _)))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw $ Cons _ usage $ Nil _)))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased string-type)))
   (let-match many e (Some _ j) ((None _) (values mw1 $ Cons _ usage $ Nil _)))

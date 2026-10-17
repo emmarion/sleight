@@ -8,6 +8,8 @@
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
    "; warn-unused: yes" checks the test's own binders as --warn-unused does;
+   a needed file from outside tests/, such as ../std/nat, is checked as --warn-unused does whatever the test
+   says, and fails the test if it warns at all, as the prelude, checked once before any test, fails the run;
    "; eval-fuel: n" bounds the evaluator as --eval-fuel does;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
@@ -68,7 +70,7 @@ let rec run_test name =
 
 and run_mode name externs src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
-  let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and code = ref 0 in
+  let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and library = Buffer.create 64 and code = ref 0 in
   Env.warn := Buffer.add_string warnings;
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
@@ -97,9 +99,15 @@ and run_mode name externs src =
     try
       Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs);
       let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
+      let need env n =
+        let outside = String.starts_with ~prefix:"../" n in
+        Env.warn_unused := outside;
+        Env.warn := Buffer.add_string (if outside then library else warnings);
+        Fun.protect ~finally:(fun () -> Env.warn := Buffer.add_string warnings) (fun () -> one env n)
+      in
       let prelude = directive src "prelude" <> [ "none" ] in
       Env.warn_unused := false;
-      let env = List.fold_left one (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
+      let env = List.fold_left need (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
       Env.warn_unused := directive src "warn-unused" <> [];
       Buffer.clear printed;
       Buffer.clear warnings;
@@ -138,6 +146,7 @@ and run_mode name externs src =
     if List.compare_lengths got want = 0 && List.for_all2 glob want got then None else Some (Printf.sprintf "warned:\n%sexpected:\n%s" warned (lines "warns"))
   in
   match outcome with
+  | _ when Buffer.length library > 0 -> Some ("a file it needs from outside tests/ warns:\n" ^ Buffer.contents library)
   | _ when mismatched_warnings <> None -> mismatched_warnings
   | Ok (sources, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
@@ -159,7 +168,11 @@ let () =
     | [] -> Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare
     | files -> List.map (fun f -> Filename.remove_extension (Filename.basename f) ^ ".sl") files
   in
+  let warned = Buffer.create 64 in
+  Env.warn := Buffer.add_string warned;
+  Env.warn_unused := true;
   (try ignore (Lazy.force preloaded) with e -> (match Program.explain "lib/prelude.sl" e with Some m -> prerr_endline m; exit 1 | None -> raise e));
+  if Buffer.length warned > 0 then (prerr_string ("lib/prelude.sl warns:\n" ^ Buffer.contents warned); exit 1);
   let jobs = int_of_string (String.trim (In_channel.input_all (Unix.open_process_in "getconf _NPROCESSORS_ONLN"))) in
   let spawn f =
     let name = Filename.chop_suffix f ".sl" in

@@ -3,8 +3,8 @@
 (def-fns _ $ (many manacher-reverse : (subterm many (List (Nat)) xs)
     (many (List (Nat)) acc) -> (many (List (Nat)) out))
   (match many xs _
-    ((Nil a) acc)
-    ((Cons a x rest) (tail (manacher-reverse rest (Cons _ x acc))))))
+    ((Nil _) acc)
+    ((Cons _ x rest) (tail (manacher-reverse rest (Cons _ x acc))))))
 
 (def-fns _ $ (many manacher-input-acc : (subterm many (String) s)
     (many (List (Nat)) acc) -> (many (List (Nat)) xs))
@@ -18,7 +18,7 @@
 
 (def-fns _ $ (many manacher-main : (many (String) s) -> (many (String) out))
   (let ((many xs)) (manacher-input s))
-  (let ((many n) (erased (LongestPalindrome xs n) correct))
+  (let ((many n) (erased (LongestPalindrome xs n) _))
     (longest-palindrome-manacher xs))
   (nat-str n))
 

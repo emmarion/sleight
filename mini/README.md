@@ -158,7 +158,7 @@ claim in this file that the tests do not make is a mistake in this file.
 
 ## Open
 
-- A reader from text to `Raw` is not written; tests build `Raw` by hand.
+- A reader from text to `Sexp` is not written; tests build `Sexp` by hand.
 - The metatheory MINIMAL.md anticipates (determinism of elaboration,
   totality of unification, confluence of canonicalization, evaluation of
   every well-typed program) is stated nowhere yet, nor is the agreement

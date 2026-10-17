@@ -106,7 +106,7 @@
     ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Nat) _)) ((Some _ n) n) ((None _) 0)))))
 
 (def-fns _ $ (many word-tok : (many (Spot) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
-  (let ((many w) (many after) (erased p) (erased la)) (str-split start k len l (add-le-left k rl len sum)))
+  (let ((many w) (many _) (erased _) (erased _)) (str-split start k len l (add-le-left k rl len sum)))
   (match many (str-cmp w "$") _
     ((CEq _ _ _) (TDollar pos))
     (else (word-item pos w))))
@@ -185,8 +185,8 @@
           ((BTrue)
             (let-match many rest (SCons _ rest2) ((SNil) (list-rev _ acc)))
             (tail $ string-lit rest2 line (Succ (Succ col)) (MkSpot line $ Succ col) (SKName) (REmpty) acc)))
-        (let ((many len) (erased l)) (str-length s))
-        (let-match erased l (SLenCons c0 s0 rl lr))
+        (let ((erased len) (erased l)) (str-length s))
+        (let-match erased l (SLenCons _ _ rl lr))
         (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkSpot line $ Succ col) acc))))
   ((many comment-start : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
@@ -226,7 +226,7 @@
         (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col $ Cons _ (word-tok pos start k len l rl sum) acc)
         (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
       ((BFalse)
-        (let-match erased lr (SLenCons c0 s0 rl1 lr1))
+        (let-match erased lr (SLenCons _ _ rl1 lr1))
         (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))
   ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Spot) pos) (many (StrKind) kind) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (unterminated (MkSpot line $ Succ col) acc)))
