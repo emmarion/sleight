@@ -10,7 +10,7 @@
 (def-lvl V)
 (def-fns V $ (many cast : (erased (Nat) a) (erased (Nat) b) (erased (NatEq a b) e) (many (Vec (Nat) a) v) -> (many (Vec (Nat) b) w))
   (match erased e _
-    ((NatRefl x) v)))
+    ((NatRefl _) v)))
 
 (let ((many one)) (Succ (Zero)))
 (cast one one (NatRefl one) (VCons (Nat) (Zero) (Zero) (VNil (Nat))))

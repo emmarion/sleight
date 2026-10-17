@@ -14,7 +14,7 @@
 
 (def-fns K $ (many pick : (many (Box) b) (many (Nat) w) -> (many (Nat) r))
   (match many b _
-    ((MkBox v w) w)))
+    ((MkBox _ w) w)))
 
 (def-fns K $ (many pick : (many (Nat) n) -> (many (Nat) r)) n)
 

@@ -14,8 +14,8 @@
       (subterm many (List A) xs) ->
       (many (List B) ys))
     (match many xs _
-      ((Nil a) (Nil B))
-      ((Cons a hd tl)
+      ((Nil _) (Nil B))
+      ((Cons _ hd tl)
         (Cons B (f (predates _) hd) $ notail $ map A B f (subterm _) tl))))
   (values (level-of map) map))
 

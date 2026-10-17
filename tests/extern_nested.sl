@@ -20,7 +20,7 @@
     (else (B1 (B1 b)))))
 
 (def-fns X $ (many bin-all : (many (Bin) b) -> (many (Nat) n))
-  (match many b _ ((BZ) 0) ((B1 r) 1) ((B2 r) 2)))
+  (match many b _ ((BZ) 0) ((B1 _) 1) ((B2 _) 2)))
 
 (def-fns X $ (many str-swap : (many (String) s) -> (many (String) t))
   (match many s _

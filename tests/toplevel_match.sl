@@ -10,6 +10,6 @@
 
 (match many xs (((Nat) r))
   (absurd Nil)
-  ((Cons a hd tl)
+  ((Cons _ hd _)
     (let ((many one)) (inc hd))
     one))

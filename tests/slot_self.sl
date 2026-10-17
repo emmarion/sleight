@@ -5,7 +5,7 @@
 (def-fns _ $ (many fill : (many (Slot) s) (many (Nat) n at s) (unique (Cell P s vacant-slot) u) -> (many (Nat) r))
   (slot-self s)
   (let ((many p)) (share (u (at) n (Succ n))))
-  (let-match many p (P x y _))
+  (let-match many p (P _ y _))
   y)
 (let ((unique c)) (cell-alloc P))
 (let ((many n)) 1)

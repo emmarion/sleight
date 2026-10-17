@@ -10,5 +10,5 @@
       ((Succ j) j)))
   (match many n (((Nat) r))
     ((Zero) k)
-    ((Succ j) (Succ k))))
+    ((Succ _) (Succ k))))
 (f (Succ (Zero)))

@@ -6,10 +6,10 @@
 (def-lvl L)
 (def-fns L $ (many wrap : (many (Nat) n) -> (many (List (Nat)) xs))
   (let ((many (List (Nat)) empty)) (Nil _))
-  (let ((many (Maybe (Nat)) m) (many (List (Nat)) ys))
+  (let ((many (Maybe (Nat)) _) (many (List (Nat)) ys))
     (match many n _
       ((Zero) (values (None _) empty))
-      ((Succ k) (values (Some _ n) (Cons _ n empty)))))
+      ((Succ _) (values (Some _ n) (Cons _ n empty)))))
   ys)
 
 (wrap (Succ (Zero)))

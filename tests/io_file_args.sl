@@ -16,7 +16,7 @@
 (let ((many code2)) (MkU8 2 zp2))
 
 (def-fns _ $ (many list-args : (subterm many (List (String)) args) (unique (World) w) -> (unique (World) w2 at w))
-  (let-match many args (Cons a x rest) ((Nil a) w))
+  (let-match many args (Cons _ x rest) ((Nil _) w))
   (let ((unique w1) (many _)) (world-do _ w (WriteErr (str-append x "\n"))))
   (tail $ list-args rest w1))
 
@@ -24,9 +24,9 @@
 
 (def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many wrote)) (world-do _ w (WriteFile "io-test.txt" "file contents\n")))
-  (let-match many wrote (Ok a u) ((Fail a m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (Exit P code2))))
+  (let-match many wrote (Ok _ _) ((Fail _ m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (Exit P code2))))
   (let ((unique w2) (many read)) (world-do _ w1 (ReadFile "io-test.txt")))
-  (let-match many read (Ok b s) ((Fail b m) (let ((unique w3) (many _)) (world-do _ w2 (WriteErr m))) (values w3 (Exit P code1))))
+  (let-match many read (Ok _ s) ((Fail _ m) (let ((unique w3) (many _)) (world-do _ w2 (WriteErr m))) (values w3 (Exit P code1))))
   (let ((unique w3) (many _)) (world-do _ w2 (WriteOut s)))
   (let ((unique w4) (many args)) (world-do _ w3 (GetArgs)))
   (values (list-args args w4) (Exit P code0)))

@@ -23,8 +23,8 @@
 (def-fns _ $ (many rebuild :
     (unique (Cell P (slot-of a) (slot-of w)) u) -> (unique (Pair2) r at u))
   (at ((cell-match unique u (at (((Cell P (slot-of a) (slot-of w)) v at u)))
-    (P s t back)
-    (let-match many w (MkMeters k))
+    (P _ _ back)
+    (let-match many w (MkMeters _))
     back) a w)))
 (def-fns _ $ (many plain : (many (Meters) m) -> (many (Nat) n))
   (let-match many m (MkMeters n))

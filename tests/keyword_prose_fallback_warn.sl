@@ -2,7 +2,7 @@
 (def-fns _ $ (many count : (subterm many (List (Nat)) xs) -> (many (Nat) n))
   (match many xs _
     ((Nil _) (Zero))
-    ((Cons _ h t) (Succ (count t)))))
+    ((Cons _ _ t) (Succ (count t)))))
 (Zero)
 ; expect: 0
 ; warns: tests/keyword_prose_fallback_warn.sl:1:7: warning: declaration of `notail` shadows a built-in

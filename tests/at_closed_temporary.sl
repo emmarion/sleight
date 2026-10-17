@@ -6,6 +6,6 @@
 (def-fns _ $ (many twice : (many (Box) x) -> (many (Box) r1 at x) (many (Box) r2 at r1)) (values x x))
 (def-fns _ $ (many go : (many (Box) z) -> (many (Box) b))
   (open-adt many (get-m (id-box z)))
-  (let ((many a) (many b)) (twice z))
+  (let ((many _) (many b)) (twice z))
   b)
 (go (MkBox 3))

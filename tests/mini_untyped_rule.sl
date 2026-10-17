@@ -38,10 +38,10 @@
       (l4 (k (KMatch)) (a "s") (l1 (l2 nat (a "r"))) (l2 (l3 (a "C2") (a "x3p") (a "zp")) inner)))))
 (let ((many prog)) (Cons _ nat-decl $ Cons _ lvl-decl $ Cons _ t2-decl $ Cons _ mk-defn $ Cons _ let-a0 $ Cons _ t3-decl $ Cons _ outer-defn $ Cons _ zero $ Nil _))
 (def-fns _ $ (many shape : (many (List (Sexp)) p) -> (many (Maybe (Maybe (Reason))) r))
-  (let-match many (elab-program p) (MkProgramDec x out q) ((ProgramStuck x) (None _)))
+  (let-match many (elab-program p) (MkProgramDec _ out _) ((ProgramStuck _) (None _)))
   (match many out _
     ((PErr r) (Some _ (Some _ r)))
-    ((POk core ty) (Some _ (None _)))))
+    ((POk _ _) (Some _ (None _)))))
 
 ; control 1: the field a type entry instead of an is entry
 (let ((many t3-ty-decl)) (l2 (k (KDefAdts)) (l3 (a "T3") (l0) $ l3 (a "C3") (l1 (l2 (l1 (a "A0")) (a "w"))) (l1 (a "T3")))))

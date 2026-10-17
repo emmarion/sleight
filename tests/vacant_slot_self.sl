@@ -6,6 +6,6 @@
 (def-fns _ $ (many go : (unique (Cell P (slot-of s) vacant-slot) u) -> (many (Nat) r))
   (let ((unique u2)) (cell-write unique u (P _ vacant-slot)))
   (let ((many p)) (share (u2 2 5)))
-  (let-match many p (P x y _))
+  (let-match many p (P _ y _))
   y)
 (go (cell-alloc P))

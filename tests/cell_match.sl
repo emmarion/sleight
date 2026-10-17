@@ -6,7 +6,7 @@
   (let ((unique u)) (cell-alloc (P (slot-of a) (slot-of b))))
   (let ((unique v))
     (cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
-      (P s t back) back))
+      (P _ _ back) back))
   (let ((many p)) (share (at (v a b))))
-  (let-match many p (P x y)) y)
+  (let-match many p (P _ y)) y)
 run

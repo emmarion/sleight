@@ -16,9 +16,9 @@
 (let ((erased pxy)) (prove-predates X Y))
 
 (def-fns Y $ (many run : -> (many (Nat) same))
-  (let ((many total) (many same)) (count (predates pxy) 2000 (Zero) (Succ (Zero))))
+  (let ((many _) (many same)) (count (predates pxy) 2000 (Zero) (Succ (Zero))))
   same)
 
 run
 ; warns: tests/tail_values.sl:12:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/tail_values.sl:19:42: warning: unnecessary `(predates _)`; drop it
+; warns: tests/tail_values.sl:19:38: warning: unnecessary `(predates _)`; drop it

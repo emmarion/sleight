@@ -5,6 +5,6 @@
 (def-fns _ $ (many f : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (match many a (((Nat) r))
     ((Zero) b)
-    ((Succ k) (Succ b))))
+    ((Succ _) (Succ b))))
 
 (f (Succ $ Zero) $ f (Zero) $ Succ $ Succ (Zero))

@@ -6,7 +6,7 @@
 
 (def-fns _
   ((many walk : (subterm many (List (Nat)) xs) (erased (List (Nat)) ghost) -> (many (Nat) n))
-    (let-match many xs (Cons _ h rest) ((Nil _) (Zero)))
+    (let-match many xs (Cons _ _ rest) ((Nil _) (Zero)))
     (let ((erased e1)) (walk rest rest))
     (let ((many r)) (tail $ walk rest (Cons (Nat) (walk rest rest) (Nil (Nat)))))
     (let ((erased e3)) (match erased rest (((Nat) k)) ((Nil _) (Zero)) ((Cons _ _ t2) (walk t2 t2))))

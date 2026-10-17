@@ -20,8 +20,8 @@
   (let ((erased nl)) (prove-predates nat-lvl L))
   (def-fns L $ (many g : (many (Nat) x) -> (many (Nat) y))
     (match many boxed (((Nat) r))
-      ((None a) x)
-      ((Some a f) (f (predates al) (nat-add (predates nl) k x)))))
+      ((None _) x)
+      ((Some _ f) (f (predates al) (nat-add (predates nl) k x)))))
   (values L g))
 
 (let ((erased B) (many g3)) (applier 3 (Some (Fn A (many (Nat) m) -> (many (Nat) r)) add2)))
@@ -34,8 +34,8 @@
 (def-unique P $ (unique k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next))
   (let ((many n)) (g3 (predates bp) 4))
   (match many (lt-dec (predates np) n u8-modulus) (((World) w2 at w) ((Program P) next))
-    ((Yes a b p) (values w (Exit P (MkU8 n p))))
-    ((No a b q) (values w (Exit P code0)))))
+    ((Yes _ _ p) (values w (Exit P (MkU8 n p))))
+    ((No _ _ _) (values w (Exit P code0)))))
 
 (Continue P k)
 ; warns: tests/io_closure_in_data.sl:10:14: warning: unnecessary `(predates _)`; drop it

@@ -11,7 +11,7 @@
 
 (def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w) (many (Result A) r))
   (let ((unique w1) (many r)) (world-do _ w req))
-  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n")))))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   (values w2 r))
 
 (def-lvl P)
@@ -20,7 +20,7 @@
   (let ((unique w1) (many _)) (report _ "huge unlimited" w (ConfineOutputBytes 1180591620717411303424)))
   (let ((unique w2) (many _)) (report _ "lower" w1 (ConfineOutputBytes 50)))
   (let ((unique w3) (many r)) (report _ "huge" w2 (ConfineOutputBytes 1180591620717411303424)))
-  (let ((unique w4) (many _)) (world-do _ w3 (WriteOut (str-append "this line does not fit" $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n")))))
+  (let ((unique w4) (many _)) (world-do _ w3 (WriteOut (str-append "this line does not fit" $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   (values w4 (Exit P code0)))
 
 (Continue P start)

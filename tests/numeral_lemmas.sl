@@ -13,7 +13,7 @@
 (def-fns X $ (many first : (erased Type A) (many (Vec A 5) v) -> (many A x))
   (match many v ((A r))
     (absurd VNil)
-    ((VCons a m x xs) x)))
+    ((VCons _ _ x _) x)))
 
 (def-adts ((Tag : ((Nat) n) -> Type) enum (many TA : -> (Tag 0)) (many TB : -> (Tag 1))))
 

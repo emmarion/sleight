@@ -6,9 +6,9 @@
 (def-fns X $ (many f : (many (Nat) n) -> (many (Nat) m))
   (match many n (((Nat) r))
     ((Zero) (Zero))
-    ((Succ k)
+    ((Succ _)
       (match many n (((Nat) r))
         (absurd Zero)
-        ((Succ j) (Succ (Zero)))))))
+        ((Succ _) (Succ (Zero)))))))
 (f (Succ (Succ (Zero))))
 ; warns: tests/nested_match.sl:7:4: warning: lopsided `match`; flatten it with a `let-match` on `Succ`

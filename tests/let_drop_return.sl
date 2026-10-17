@@ -7,7 +7,7 @@
 (def-lvl M)
 (let ((erased p)) (prove-predates L M))
 (def-fns M $ (many second : (many (Nat) n) -> (many (Nat) r))
-  (let ((erased a) (many b)) (two (predates p) n))
+  (let ((erased _) (many b)) (two (predates p) n))
   b)
 
 (let ((erased a) (many b)) (two (Zero)))

@@ -11,6 +11,6 @@
     (many (Matchable enum T (many C)) m)
     (many (T) x) -> (many (Nat) n))
   (let ((many k)) (open-adt many m) (match many x (((Nat) r)) ((C n) n)))
-  (let ((many j)) (match erased x (((Nat) r)) ((C n) (Succ k))))
-  (match many x (((Nat) r)) ((C n) (Succ j))))
+  (let ((many j)) (match erased x (((Nat) r)) ((C _) (Succ k))))
+  (match many x (((Nat) r)) ((C _) (Succ j))))
 (open Box MkBox (matchable-of Box) (MkBox (Zero)))

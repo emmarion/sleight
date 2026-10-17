@@ -10,12 +10,12 @@
   (let ((unique a)) (ACons _ _ (Succ (Zero))
     (ACons _ _ (Succ (Succ (Zero)))
       (ACons _ _ (Succ (Succ (Succ (Zero)))) (ANil (Nat))))))
-  (let ((unique old) (erased ys) (unique b) (erased p)) (swap-second _ a (NthThere _ _ _ _ _ (NthHere _ _ _))))
+  (let ((unique old) (erased _) (unique b) (erased p)) (swap-second _ a (NthThere _ _ _ _ _ (NthHere _ _ _))))
   (let-match erased p (SetThere _ _ _ _ _ _ p1))
   (let-match erased p1 (SetHere _ _ _ _))
   (let-match unique b (ACons _ _ x tl))
   (let-match unique tl (ACons _ _ y rest))
-  (let-match unique rest (ACons _ _ z end))
+  (let-match unique rest (ACons _ _ z _))
   (nat-add (share old) (nat-add (share x) (nat-add (share y) (share z)))))
 swap-test
 ; warns: tests/array_swap.sl:10:22: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`

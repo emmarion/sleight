@@ -21,7 +21,7 @@
 (let ((many held)) (RawSettled (NoPos) _ _ _ (settled-of many k)))
 (def-fns _ $ (many read-held : (many (Raw) r) -> (many (String) v))
   (match many r _
-    ((RawSettled _ m T t c) (mult-name $ settled-mult _ _ _ c))
+    ((RawSettled _ _ _ _ c) (mult-name $ settled-mult _ _ _ c))
     (else "none")))
 (let ((many names)) (str-append (mult-name $ settled-mult _ _ _ (settled-of erased k)) $ str-append " " $ str-append (mult-name $ settled-mult _ _ _ (settled-of many k)) $ str-append " " (mult-name $ settled-mult _ _ _ (settled-of unique u))))
 (MkPair _ _ (dbl 3) $ MkPair _ _ (MkPair _ _ (settled-value _ _ (settled-of many k)) (read-k)) $ MkPair _ _ names (read-held held))

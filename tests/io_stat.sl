@@ -21,8 +21,8 @@
 
 (def-fns _ $ (many show-kind : (many (String) label) (many (Result (EntryKind)) r) (unique (World) w) -> (unique (World) w2 at w))
   (let ((unique w1) (many _)) (world-do _ w $ match many r (((Request (Unit)) _))
-    ((Ok a k) (WriteOut (str-append label (str-append (kind-name k) "\n"))))
-    ((Fail a m) (WriteErr m))))
+    ((Ok _ k) (WriteOut (str-append label (str-append (kind-name k) "\n"))))
+    ((Fail _ m) (WriteErr m))))
   w1)
 
 (def-lvl P)
@@ -32,7 +32,7 @@
   (let ((unique w2) (many _)) (world-do _ w1 (WriteFile "io-stat-test.txt" "one")))
   (let ((unique w3) (many _)) (world-do _ w2 (AppendFile "io-stat-test.txt" "two")))
   (let ((unique w4) (many read)) (world-do _ w3 (ReadFile "io-stat-test.txt")))
-  (let-match many read (Ok a s) ((Fail a m) (let ((unique w5) (many _)) (world-do _ w4 (WriteErr m))) (values w5 (Exit P code1))))
+  (let-match many read (Ok _ s) ((Fail _ m) (let ((unique w5) (many _)) (world-do _ w4 (WriteErr m))) (values w5 (Exit P code1))))
   (let ((unique w5) (many _)) (world-do _ w4 (WriteOut (str-append s "\n"))))
   (let ((unique w6) (many file)) (world-do _ w5 (Stat "io-stat-test.txt")))
   (let ((unique w7) (many none)) (world-do _ (show-kind "" file w6) (Stat "io-stat-test-none")))

@@ -4,7 +4,7 @@
 ; literal or a parameter.
 (def-adts $ (P : -> Type) enum (many MkP : (many (Nat) a) (many (Nat) b) -> (P)))
 (def-fns _ $ (many k : (many (Nat) x) (unique (Cell MkP (slot-of x) vacant-slot) u) -> (many (Nat) r))
-  (let-match many (share (u (at) x 0)) (MkP a b))
+  (let-match many (share (u (at) x 0)) (MkP _ b))
   b)
 (let ((many p)) (Succ (Zero)))
 (let ((unique u)) (cell-alloc (MkP (slot-of p) _)))

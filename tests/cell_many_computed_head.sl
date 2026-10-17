@@ -6,7 +6,7 @@
   (let ((many b)) ((share c) 6))
   (MkPair _ _ a b))
 (def-fns _ $ (many through : (many (Box) b) (many (Nat) k) -> (many (List (Box)) r))
-  (let-match many b (MkBox n u))
+  (let-match many b (MkBox _ u))
   (let ((unique w)) (cell-write many (id-cell _ u) (MkBox (slot-of k))))
   (Cons _ b $ Cons _ ((id-cell _ u) 9) $ Cons _ (share (w (at) k)) $ Nil _))
 (let ((unique c)) (cell-alloc MkBox))

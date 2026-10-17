@@ -7,7 +7,7 @@
 (def-fns _ $ (many wrap-unwrap : (unique (MyNat) n0) -> (unique (MyNat) r at n0))
   (def-adts $ (W : -> Type) enum (many MkW : (erased (MyNat) v) (unique (Placed (slot-of n0) (MyNat) v) p) -> (W)))
   (let ((unique w)) (MkW _ (place-at _ n0)))
-  (let-match unique w (MkW v p))
+  (let-match unique w (MkW _ p))
   (let-match erased (placed-slot _ _ _ p) (Refl _ _))
   (unplace-at _ _ _ p))
 (let ((unique two)) (MySucc (MySucc (MyZero))))

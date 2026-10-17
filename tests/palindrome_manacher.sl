@@ -9,12 +9,12 @@
     (many (List (Nat)) xs))
   (let-match many s (SCons ch rest) ((SNil) (Nil (Nat))))
   (let-match many ch (MkChar byte))
-  (let-match many byte (MkU8 n bound))
+  (let-match many byte (MkU8 n _))
   (Cons (Nat) n (notail $ man-test-nats rest)))
 
 (def-fns _ $ (many man-test-length : (many (String) s) -> (many (Nat) n))
   (let ((many xs)) (man-test-nats s))
-  (let ((many (Nat) n) (erased (LongestPalindrome xs n) correct))
+  (let ((many (Nat) n) (erased (LongestPalindrome xs n) _))
     (longest-palindrome-manacher xs))
   n)
 

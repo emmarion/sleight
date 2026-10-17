@@ -13,7 +13,7 @@
 (def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many r)) (world-do _ w (ReadFile "no-such-file")))
   (match many r (((World) w2 at w) ((Program P) p))
-    ((Ok a s) (let ((unique w2) (many _)) (world-do _ w1 (WriteOut s))) (values w2 (Exit P code0)))
-    ((Fail a m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr "missing\n"))) (values w2 (Exit P code1)))))
+    ((Ok _ s) (let ((unique w2) (many _)) (world-do _ w1 (WriteOut s))) (values w2 (Exit P code0)))
+    ((Fail _ _) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr "missing\n"))) (values w2 (Exit P code1)))))
 
 (Continue P start)

@@ -25,13 +25,13 @@
 (def-fns _ $ (many changed : (many (String) yes) (many (String) no) (unique (World) w) (unique (Request (Result (Change))) req) ->
     (unique (World) w2 at w) (many (Bool) ok))
   (let ((unique w1) (many o)) (world-do _ w req))
-  (let-match many o (Ok a c) ((Fail a m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (BFalse))))
+  (let-match many o (Ok _ c) ((Fail _ m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (BFalse))))
   (match many c (((World) w2 at w) ((Bool) ok))
     ((Changed) (values (say yes w1) (BTrue)))
     ((Unchanged) (values (say no w1) (BFalse)))))
 
 (def-fns _ $ (many show-entries : (subterm many (List (String)) es) (unique (World) w) -> (unique (World) w2 at w))
-  (let-match many es (Cons a e rest) ((Nil a) w))
+  (let-match many es (Cons _ e rest) ((Nil _) w))
   (tail $ show-entries rest (say (str-append e "\n") w)))
 
 (def-lvl P)
@@ -47,7 +47,7 @@
   (let ((unique w6) (many _)) (world-do _ w5 (WriteFile "io-dir-test/b.txt" "")))
   (let ((unique w7) (many _)) (world-do _ w6 (WriteFile "io-dir-test/a.txt" "")))
   (let ((unique w8) (many listed)) (world-do _ w7 (ListDir "io-dir-test")))
-  (let-match many listed (Ok a es) ((Fail a m) (values (say m w8) (Exit P code1))))
+  (let-match many listed (Ok _ es) ((Fail _ m) (values (say m w8) (Exit P code1))))
   (let ((unique w9)) (show-entries es w8))
   (let ((unique w10) (many full)) (world-do _ w9 (DeleteDir "io-dir-test")))
   (let-match many full (Fail _ _) ((Ok _ _) (values (say "removed a full directory\n" w10) (Exit P code1))))

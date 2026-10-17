@@ -1,7 +1,7 @@
 ; needs: ../std/macro macro_lib
 ; expect: (RawList (NoPos) $ Cons _ (RawSymbol (MkPos "x.sl" 1 2) $ SName "nat-add") $ Cons _ (RawSettled (NoPos) _ _ _ _) $ Cons _ (RawWild $ NoPos) $ Cons _ (RawSettled (NoPos) _ _ _ _) $ Nil _)
 (def-fns _ $ (many first : (many (List $ Raw) rs) -> (many (Raw) r))
-  (let-match many rs (Cons _ r rest) ((Nil _) (RawWild (NoPos))))
+  (let-match many rs (Cons _ r _) ((Nil _) (RawWild (NoPos))))
   r)
 (let ((many s) (many a) (many four)) (values "s" #\a 4))
 (let ((many out)) (swap-out (NoPos) (three (name (MkPos "x.sl" 1 2) "nat-add") (RawSettled (NoPos) _ _ _ (settled-of many s)) $ RawList (NoPos) $ three (RawSettled (NoPos) _ _ _ (settled-of many a)) (RawWild (NoPos)) (RawSettled (NoPos) _ _ _ (settled-of many four)))))
@@ -9,7 +9,7 @@
   (let-match many r (RawList p items) (else r))
   (let-match many items (Cons _ g rest) (else r))
   (let-match many rest (Cons _ inner more) (else r))
-  (let-match many inner (RawList q xs) (else r))
+  (let-match many inner (RawList _ xs) (else r))
   (let-match many xs (Cons _ ch ys) (else r))
   (RawList p $ Cons _ g $ Cons _ ch $ Cons _ (first ys) more))
 (flat $ first out)

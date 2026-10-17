@@ -13,7 +13,7 @@
 
 (def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
-  (let-match many line (Some a s) ((None a) (values w1 (Exit P code0))))
+  (let-match many line (Some _ s) ((None _) (values w1 (Exit P code0))))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append "line: " (str-append s "\n")))))
   (let ((unique w3) (many rest)) (world-do _ w2 (ReadRemaining)))
   (let ((unique w4) (many _)) (world-do _ w3 (WriteOut (str-append "rest: " (str-append rest "\n")))))

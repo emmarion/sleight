@@ -4,5 +4,5 @@
 (def-fns _ $ (many choose : (many (Nat) tag) (unique (UniqueFn answer-level -> (many (Nat) r)) f) -> (many (Nat) r))
   ((match many tag (((UniqueFn answer-level -> (many (Nat) r)) g))
      ((Zero) f)
-     ((Succ n) f))))
+     ((Succ _) f))))
 (choose (Zero) answer)

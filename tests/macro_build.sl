@@ -4,7 +4,7 @@
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (match many here _
     ((NoPos) (let ((unique mw1) (many r)) (nat-raw mw (NoPos) 0)) (values mw1 $ one r))
-    ((MkPos f ln col) (let ((unique mw1) (many r)) (nat-raw mw (NoPos) ln)) (values mw1 $ one r))))
+    ((MkPos _ ln _) (let ((unique mw1) (many r)) (nat-raw mw (NoPos) ln)) (values mw1 $ one r))))
 (def-fns _ $ (many text : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many r)) (str-raw mw here "a\nb"))

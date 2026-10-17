@@ -7,7 +7,7 @@
   (let ((unique mw1) (many k) (erased g)) (gensym mw "tmp"))
   (let ((many t)) (RawSymbol here (SGen k "tmp" g)))
   (let-match many args (Cons _ e1 r1) ((Nil _) (values mw1 (Nil _))))
-  (let-match many r1 (Cons _ e2 r2) ((Nil _) (values mw1 (Nil _))))
+  (let-match many r1 (Cons _ e2 _) ((Nil _) (values mw1 (Nil _))))
   (values mw1 $ two
     (l here $ Cons _ (n here "let") $ two (l here $ Cons _ (l here $ two (n here "many") t) $ Nil _) e1)
     (l here $ Cons _ (n here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two e2 t)))

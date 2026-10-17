@@ -6,7 +6,7 @@
 (let ((many sum)) (nat-add 0 1))
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) s))
-  (match many r _ ((None _) "no") ((Some _ e) "yes")))
+  (match many r _ ((None _) "no") ((Some _ _) "yes")))
 (def-fns _ $ (many eqs-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many tx)) (settled-type _ _ _ (settled-of many xs)))

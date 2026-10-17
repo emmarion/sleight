@@ -7,7 +7,7 @@
 (def-fns _ $ (many swap-out : (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out))
   (let-match many args (Cons _ f r1) ((Nil _) (Nil _)))
   (let-match many r1 (Cons _ a r2) ((Nil _) (Nil _)))
-  (let-match many r2 (Cons _ b r3) ((Nil _) (Nil _)))
+  (let-match many r2 (Cons _ b _) ((Nil _) (Nil _)))
   (one $ form here $ three f b a))
 (def-fns _ $ (many swap-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
@@ -42,7 +42,7 @@
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (match many here _
     ((NoPos) (let ((unique mw1) (many r)) (nat-raw mw here 0)) (values mw1 $ one r))
-    ((MkPos f l c) (let ((unique mw1) (many r)) (nat-raw mw here l)) (values mw1 $ one r))))
+    ((MkPos _ l _) (let ((unique mw1) (many r)) (nat-raw mw here l)) (values mw1 $ one r))))
 (let ((many line)) (MkMacro _ line-fn))
 
 (def-fns _ $ (many loop-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

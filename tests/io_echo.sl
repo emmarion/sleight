@@ -16,7 +16,7 @@
 
 (def-fns PA $ (many echo : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
-  (let-match many line (Some a s) ((None a) (values w1 (Exit P code3))))
+  (let-match many line (Some _ s) ((None _) (values w1 (Exit P code3))))
   (let ((unique w3) (many _)) (world-do _ w1 (WriteOut (str-append "> " (str-append s "\n")))))
   (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) p)) (echo v))
   (values w3 (Continue P again)))

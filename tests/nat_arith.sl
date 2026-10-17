@@ -15,11 +15,11 @@
 
 (def-lvl A)
 (def-fns A $ (many arith : -> (many (List (Nat)) out))
-  (let ((many x) (erased xp)) (mul 3 4))
-  (let ((many y) (erased yp)) (sub 9 4 le))
-  (let ((many z) (erased zm) (erased zr) (erased zmm) (erased za) (erased zp)) (div 17 5 pos))
+  (let ((many x) (erased _)) (mul 3 4))
+  (let ((many y) (erased _)) (sub 9 4 le))
+  (let ((many z) (erased _) (erased _) (erased _) (erased _) (erased _)) (div 17 5 pos))
   (let ((many w)) (nat-mul 5 3))
-  (let ((many dq) (many dr) (erased em) (erased emm) (erased ea) (erased ep)) (divmod 17 5 pos))
+  (let ((many dq) (many dr) (erased _) (erased _) (erased _) (erased _)) (divmod 17 5 pos))
   (Cons (Nat) twelve (Cons (Nat) five (Cons (Nat) three (Cons (Nat) x (Cons (Nat) y (Cons (Nat) z (Cons (Nat) w (Cons (Nat) three2 (Cons (Nat) two (Cons (Nat) dq (Cons (Nat) dr (Nil (Nat))))))))))))))
 
 arith

@@ -8,6 +8,6 @@
 (def-lvl L)
 (def-fns L $ (many main : (many (String) input) -> (many (String) out))
   (let ((many r)) (RCat (RStr greeting) (RCat (REmpty) (RCat (RStr ", ") (RCat (RStr "world") (RChar #\newline))))))
-  (let ((many s) (erased (Flat r s) p)) (flatten r))
+  (let ((many s) (erased (Flat r s) _)) (flatten r))
   s)
 main

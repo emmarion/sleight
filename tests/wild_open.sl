@@ -6,8 +6,8 @@
 (def-lvl A)
 (def-fns A $ (many prepend : (erased Type X) (many (List X) front) (many (List X) xs) -> (many (List X) r))
   (match many front _
-    ((Nil a) xs)
-    ((Cons a hd tl) (Cons _ hd xs))))
+    ((Nil _) xs)
+    ((Cons _ hd _) (Cons _ hd xs))))
 
 (def-lvl B)
 (def-fns B $ (many twice : (many (List (Nat)) xs) -> (many (List (Nat)) r))

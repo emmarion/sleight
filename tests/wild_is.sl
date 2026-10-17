@@ -10,7 +10,7 @@
 (def-lvl L)
 (def-fns L $ (many unpack : (erased (Nat) a) (erased (Nat) b) (many (Two a b) t) -> (many (List (Nat)) l))
   (match many t _
-    ((MkTwo x y lst) lst)))
+    ((MkTwo _ _ lst) lst)))
 
 (let ((many z)) (Zero))
 (let ((many o)) (Succ z))

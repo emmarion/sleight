@@ -11,11 +11,11 @@
 (def-fns C $ (many compose-all : (subterm many (List (Fn M (many (Nat) x) -> (many (Nat) y))) fs) ->
     (erased (Level) N) (many (Fn N (many (Nat) x) -> (many (Nat) y)) g))
   (match many fs _
-    ((Nil a)
+    ((Nil _)
       (def-lvl N)
       (def-fns N $ (many id : (many (Nat) x) -> (many (Nat) y)) x)
       (values N id))
-    ((Cons a f rest)
+    ((Cons _ f rest)
       (let ((erased L1) (many g1)) (notail $ compose-all (subterm (prove-subterm rest fs)) rest))
       (def-lvl N)
       (let ((erased p1)) (prove-predates L1 N))

@@ -6,9 +6,9 @@
   (let ((many frozen)) (share a))
   (let ((unique a2)) (array-copy _ _ frozen))
   (let ((erased e)) (same _ a2 frozen (Refl _ a2)))
-  (let ((erased ys) (unique a3) (erased q)) (array-place _ _ a2 (Zero) (MkCopy _ 9) _ (NthHere _ _ _)))
+  (let ((erased _) (unique a3) (erased q)) (array-place _ _ a2 (Zero) (MkCopy _ 9) _ (NthHere _ _ _)))
   (let-match erased q (SetHere _ _ _ _))
-  (let ((many x) (unique a4)) (array-get _ _ a3 (Zero) _ (NthHere _ _ _)))
+  (let ((many x) (unique _)) (array-get _ _ a3 (Zero) _ (NthHere _ _ _)))
   (let-match many (array-get-many _ _ frozen (Zero) _ (NthHere _ _ _)) (MkCopy _ y))
   (MkPair _ _ y x))
 copy-test

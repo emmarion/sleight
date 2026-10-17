@@ -11,7 +11,7 @@
     ((BFalse) (values (Nat) a (Kept)))))
 
 (def-fns _ $ (many use : (unique (Nat) a) (many (Bool) ok) -> (many (Nat) r))
-  (let ((erased T) (unique v) (many o)) (try-wrap a ok))
+  (let ((erased _) (unique v) (many o)) (try-wrap a ok))
   (let-match many o (Wrapped) ((Kept) (share v)))
   (let-match unique v (MkMeters n))
   (share n))

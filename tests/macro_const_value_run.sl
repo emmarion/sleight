@@ -6,6 +6,6 @@
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
 (def-fns _ $ (many main : -> (many (Pair (String) $ Pair (Nat) (String)) r))
   (let ((many m)) $ match many held (((String) s))
-    ((RawSettled _ m T t c) (mult-name $ settled-mult _ _ _ c)))
+    ((RawSettled _ _ _ _ c) (mult-name $ settled-mult _ _ _ c)))
   (MkPair _ _ m $ MkPair _ _ (settled-value _ _ (settled-of many k)) (settled-value _ _ (settled-of many sx))))
 main

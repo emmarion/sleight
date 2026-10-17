@@ -14,19 +14,19 @@
 (let ((erased lf)) (prove-predates L F))
 (def-fns F $ (many filter-ne : (many (Nat) x) (erased (Nat) n) (subterm many (Vec (Nat) n) v) ->
     (erased (Nat) m) (many (Vec (Nat) m) w) (erased (Lt m (Succ n)) p))
-  (let-match many v (VCons a n1 y ys) ((VNil a) (values (Zero) (VNil (Nat)) (LtZ (Zero)))))
+  (let-match many v (VCons _ n1 y ys) ((VNil _) (values (Zero) (VNil (Nat)) (LtZ (Zero)))))
   (let ((erased m1) (many w1) (erased p1)) (notail $ filter-ne x n1 (subterm (prove-subterm ys v)) ys))
-  (let-match many (lt-dec (predates nf) x y) (No q r ge)
-    ((Yes q r lt) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1))))
+  (let-match many (lt-dec (predates nf) x y) (No _ _ _)
+    ((Yes _ _ _) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1))))
   (match many (lt-dec (predates nf) y x) (((Nat) m) ((Vec (Nat) m) w) ((Lt m (Succ n)) p))
-    ((Yes q2 r2 lt2) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1)))
-    ((No q2 r2 ge2) (values m1 w1 (lt-weak (predates lf) (Succ n1) m1 p1)))))
+    ((Yes _ _ _) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1)))
+    ((No _ _ _) (values m1 w1 (lt-weak (predates lf) (Succ n1) m1 p1)))))
 
 (def-lvl H)
 (let ((erased fh)) (prove-predates F H))
 (let ((erased lh)) (prove-predates L H))
 (def-fns H $ (many nub : (subterm erased (Nat) n) (many (Vec (Nat) n) v) -> (many (List (Nat)) out))
-  (let-match many v (VCons a n1 y ys) ((VNil a) (Nil (Nat))))
+  (let-match many v (VCons _ n1 y ys) ((VNil _) (Nil (Nat))))
   (let ((erased m) (many w) (erased p)) (filter-ne (predates fh) y n1 ys))
   (Cons (Nat) y (notail $ nub (subterm (lt-sub (predates lh) n m p)) m w)))
 
@@ -41,6 +41,6 @@
 ; warns: tests/nub.sl:18:69: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/nub.sl:19:27: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/nub.sl:21:23: warning: unnecessary `(predates _)`; drop it
-; warns: tests/nub.sl:23:44: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nub.sl:23:40: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/nub.sl:30:52: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/nub.sl:31:48: warning: unnecessary `(predates _)`; drop it

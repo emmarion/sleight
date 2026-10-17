@@ -25,6 +25,6 @@
 
 (def-fns _ $ (many run-proved : -> (many (ULst (Nat)) r))
   (let ((unique xs)) (UCons _ 0 (UCons _ 1 (UCons _ 2 (UNil _)))))
-  (let ((unique r) (erased proof)) (urev-proved _ xs))
+  (let ((unique r) (erased _)) (urev-proved _ xs))
   (share r))
 run-proved

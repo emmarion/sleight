@@ -10,8 +10,8 @@
 (def-fns L $ (many g : (many (Packed) q) (subterm many (List (Nat)) xs) -> (many (Nat) n))
   (let-match many q (Pack f))
   (match many xs _
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (notail $ f q (subterm (prove-subterm tl xs)) tl)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ tl) (Succ (notail $ f q (subterm (prove-subterm tl xs)) tl)))))
 
 (g (Pack g) (Cons (Nat) 0 (Cons (Nat) 0 (Cons (Nat) 0 (Nil (Nat))))))
-; warns: tests/recursion_through_pointer.sl:14:41: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/recursion_through_pointer.sl:14:40: warning: unnecessary `(subterm _)`; drop it

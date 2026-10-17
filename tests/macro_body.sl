@@ -4,7 +4,7 @@
   (values mw args))
 (let ((many splice)) (MkMacro _ pass))
 (def-fns _ $ (many sum : (splice (many (Nat) a) (many (Nat) b)) -> (many (Nat) c))
-  (let ((many s) (erased p)) (splice (let ((erased q)) (splice (Refl (Nat) a))) (add a b)))
+  (let ((many s) (erased _)) (splice (let ((erased q)) (splice (Refl (Nat) a))) (add a b)))
   (match many a _
     ((Zero) (splice b))
     ((Succ _) (splice (let ((many t)) s) t))))

@@ -6,8 +6,8 @@
 (def-lvl A)
 (def-fns A $ (many len : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (notail $ len _ tl)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ tl) (Succ (notail $ len _ tl)))))
 
 (def-fns A $ (many split : (erased Type X) (many (List X) xs) -> (many (List X) l) (many (List X) r))
   (values xs (Nil _)))

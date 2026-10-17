@@ -4,7 +4,7 @@
 (let ((many s)) "s")
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) t))
-  (match many r _ ((None _) "no") ((Some _ e) "yes")))
+  (match many r _ ((None _) "no") ((Some _ _) "yes")))
 (def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many lit)) (intern-nat mw (nat-add 9000 1)))
@@ -14,6 +14,6 @@
   (values mw4 $ one o))
 (let ((many cmp)) (MkMacro _ cmp-fn))
 (def-fns _ $ (many f : (many (Nat) n) -> (many (String) t))
-  (match many n _ ((Zero) (cmp)) ((Succ m) (cmp))))
+  (match many n _ ((Zero) (cmp)) ((Succ _) (cmp))))
 (def-fns _ $ (many go : -> (many (String) t)) (f 2))
 go

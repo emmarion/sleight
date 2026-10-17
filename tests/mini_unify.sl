@@ -30,10 +30,10 @@
     (many (UOut) o) (many (OutTable ents o) ot))
   (let ((many n) (erased fc)) (free-count ents rules))
   (match many (unify-eqs m ents se rules tb n fc (Cons _ (MkEqn l r) (Nil _)) (SqCons _ _ _ _ sl sr (SqNil _))) _
-    ((MkEqs y0 y1 y2 y3 o ot p) (values o ot))))
+    ((MkEqs _ _ _ _ o ot _) (values o ot))))
 
 (def-fns _ $ (many ok : (many (UOut) o) -> (many (Bool) b))
-  (match many o _ ((UOk rs) (BTrue)) ((UFail) (BFalse))))
+  (match many o _ ((UOk _) (BTrue)) ((UFail) (BFalse))))
 
 (let ((many succ-m)) (ValApp (Ref 4) succ-ps nat (Cons _ (Ref 6) (Nil _))))
 (let ((many succ-n)) (ValApp (Ref 4) succ-ps nat (Cons _ (Ref 5) (Nil _))))
@@ -54,18 +54,18 @@
   (match many o6 (((Bool) b))
     ((UFail) (BFalse))
     ((UOk rs)
-      (let-match many rs (Cons e rule rest) ((Nil e) (BFalse)))
-      (let-match many rule (MkRule x t))
-      (match many (nat-dec x 6) (((Bool) b)) ((NDSame f) (BTrue)) ((NDDiff f g n) (BFalse))))))
+      (let-match many rs (Cons _ rule _) ((Nil _) (BFalse)))
+      (let-match many rule (MkRule x _))
+      (match many (nat-dec x 6) (((Bool) b)) ((NDSame _) (BTrue)) ((NDDiff _ _ _) (BFalse))))))
 (comptime-match many aliased (BTrue))
 
 ; With 6 ruled to be Succ 5 by the first run, 6 against Succ 5 is read through the rule and accepted in Check mode.
 (let ((many o7) (many t7)) (run (Force) none tb0 (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))
 (let ((many r7))
   (match many t7 (((Bool) b))
-    ((OTFail e) (BFalse))
-    ((OTOk e rules tb)
-      (let ((many o) (many t)) (run (Check) rules tb (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))
+    ((OTFail _) (BFalse))
+    ((OTOk _ rules tb)
+      (let ((many o) (many _)) (run (Check) rules tb (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))
       (ok o))))
 
 (Cons _ (ok o1) $ Cons _ (ok o2) $ Cons _ (ok o3) $ Cons _ (ok o4) $ Cons _ (ok o5) $ Cons _ (ok o6) $ Cons _ r7 $ Nil _)

@@ -13,6 +13,6 @@
     (erased (T) x) -> (many (Nat) n))
   (open-adt erased m)
   (match erased x (((Nat) r))
-    ((C n) (Zero))))
+    ((C _) (Zero))))
 
 (peek Box MkBox (matchable-of Box) (MkBox (Succ (Zero))))

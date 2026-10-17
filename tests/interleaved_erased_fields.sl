@@ -11,5 +11,5 @@
 
 (def-lvl X)
 (def-fns X $ (many third : (many (Tri) t) -> (many (Nat) r))
-  (match many t (((Nat) x)) ((T3 a b c) c)))
+  (match many t (((Nat) x)) ((T3 _ _ c) c)))
 (third v)

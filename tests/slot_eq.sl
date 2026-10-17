@@ -1,7 +1,7 @@
 ; expect: (Cons _ 1 $ Cons _ 0 $ Cons _ 5 $ Nil _)
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) v) -> (Box)))
 (def-fns _ $ (many answer : (many (Slot) a) (many (Slot) b) -> (many (Nat) r))
-  (match many (slot-eq a b) _ ((Some _ e) 1) ((None _) 0)))
+  (match many (slot-eq a b) _ ((Some _ _) 1) ((None _) 0)))
 (def-fns _ $ (many grow : (unique (Box) x) -> (unique (Box) r at x))
   (match unique x _ ((MkBox v u) (u (Succ v)))))
 (def-fns _ $ (many pick : (many (Box) x) (many (Box) y) -> (many (Box) r at x))

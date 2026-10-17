@@ -10,7 +10,7 @@
 (let ((erased p)) (prove-predates X Y))
 
 (def-fns Y $ (many second : (many (Nat) a) (many (Nat) b) -> (many (Nat) d))
-  (let ((many c) (many d)) (swap (predates p) a b))
+  (let ((many _) (many d)) (swap (predates p) a b))
   d)
 
 (second (Succ (Zero)) (Zero))

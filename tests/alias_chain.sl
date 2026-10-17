@@ -11,7 +11,7 @@
       (match many b (((Nat) r))
         ((Zero) (Zero))
         (absurd Succ)))
-    ((Succ k)
+    ((Succ _)
       (match many b (((Nat) r))
         (absurd Zero)
         ((Succ j) j)))))

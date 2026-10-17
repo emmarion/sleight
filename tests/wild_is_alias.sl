@@ -13,7 +13,7 @@
   a)
 (def-fns L $ (many unbox : (erased (Nat) k) (many (Box k) b) -> (many (Nat) r))
   (match many b _
-    ((MkBox n m) (Succ m))))
+    ((MkBox _ m) (Succ m))))
 
 (let ((many Alias x)) (Succ (Zero)))
 (let ((many r)) (same x))

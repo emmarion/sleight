@@ -10,13 +10,13 @@
 (let ((many code0)) (MkU8 0 zp0))
 
 (def-fns _ $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) (unique (World) w) -> (unique (World) w2 at w))
-  (let-match many vars (Cons a v rest) ((Nil a) w))
-  (let-match many v (MkPair b c name value))
+  (let-match many vars (Cons _ v rest) ((Nil _) w))
+  (let-match many v (MkPair _ _ name value))
   (let ((unique w1) (many _)) (world-do _ w (WriteOut (str-append name (str-append "=" (str-append value "\n"))))))
   (tail $ show-vars rest w1))
 
 (def-fns _ $ (many show-value : (many (Maybe (String)) value) (unique (World) w) -> (unique (World) w2 at w))
-  (let ((unique w1) (many _)) (world-do _ w (WriteOut $ match many value (((String) _)) ((None a) "absent\n") ((Some a s) (str-append s "\n")))))
+  (let ((unique w1) (many _)) (world-do _ w (WriteOut $ match many value (((String) _)) ((None _) "absent\n") ((Some _ s) (str-append s "\n")))))
   w1)
 
 (def-lvl P)

@@ -8,10 +8,10 @@
 (unary 5 3)
 (def-lvl X)
 (def-fns X $ (many drop2 : (erased Type A) (many (Vec A 5) v) -> (many (Vec A 3) w))
-  (let-match many v (VCons a m x xs) (absurd VNil))
+  (let-match many v (VCons _ _ _ xs) (absurd VNil))
   (match many xs (((Vec A 3) w))
     (absurd VNil)
-    ((VCons a2 m2 x2 xs2) xs2)))
+    ((VCons _ _ _ xs2) xs2)))
 
 (unary 3)
 (unary 2)

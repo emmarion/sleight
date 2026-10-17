@@ -4,7 +4,7 @@
 ; if the FFI's match keeps a branch body in tail position (ASSUMPTIONS 133).
 
 (def-fns _ $ (many flip : (many (Nat) a) -> (many (Nat) b))
-  (match many a _ ((Zero) (Succ (Zero))) ((Succ k) (Zero))))
+  (match many a _ ((Zero) (Succ (Zero))) ((Succ _) (Zero))))
 
 (def-lvl X)
 (def-fns X $ (many count-down : (subterm many (Nat) n) (many (Nat) parity) -> (many (Nat) r))

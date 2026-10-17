@@ -19,12 +19,12 @@
 (def-fns PA $ (many count : (unique (Counter) c) (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next))
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
   (match many line _
-    ((None a)
+    ((None _)
       (let-match unique c (MkCounter n cell))
       (match many (lt-dec n u8-modulus) _
-        ((Yes x y p) (values w1 (Exit P (MkU8 n p))))
-        ((No x y q) (values w1 (Exit P code0)))))
-    ((Some a s)
+        ((Yes _ _ p) (values w1 (Exit P (MkU8 n p))))
+        ((No _ _ _) (values w1 (Exit P code0)))))
+    ((Some _ _)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
       (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next)) (count c2 v))
       (values w1 (Continue P again)))))

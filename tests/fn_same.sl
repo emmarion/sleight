@@ -13,8 +13,8 @@
   (let-match erased j (Refl _ _))
   (Some _ w))
 (def-fns _ $ (many found : (many (Maybe $ IsInc dec) x) -> (many (Nat) r))
-  (match many x _ ((Some _ w) 1) ((None _) 0)))
+  (match many x _ ((Some _ _) 1) ((None _) 0)))
 (def-fns _ $ (many run : -> (many (List (Nat)) out))
-  (let ((many a)) (match many (transport inc inc (MkIsInc)) (((Nat) k)) ((Some _ w) 1) ((None _) 0)))
+  (let ((many a)) (match many (transport inc inc (MkIsInc)) (((Nat) k)) ((Some _ _) 1) ((None _) 0)))
   (Cons _ a $ Cons _ (found $ transport inc dec (MkIsInc)) $ Cons _ (inc $ inc 0) $ Nil _))
 run

@@ -4,7 +4,7 @@
 (let ((erased string-type)) (String))
 (def-fns _ $ (many arg-str : (unique (MacroWorld) mw) (many (List $ Raw) args) -> (unique (MacroWorld) mw2 at mw) (many (String) s))
   (let-match many args (Cons _ r _) ((Nil _) (values mw "")))
-  (let-match many r (RawSettled p m T t c) (else (values mw "")))
+  (let-match many r (RawSettled _ _ _ _ c) (else (values mw "")))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw "")))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased string-type)))
   (let-match many e (Some _ j) ((None _) (values mw1 "")))

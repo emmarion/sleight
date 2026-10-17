@@ -22,8 +22,8 @@
 (def-unique P $ (unique k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((many n)) (add2 (predates ap) (add5 (predates bp) 1)))
   (match many (lt-dec (predates np) n u8-modulus) (((World) w2 at w) ((Program P) p))
-    ((Yes a b p) (values w (Exit P (MkU8 n p))))
-    ((No a b q) (values w (Exit P code0)))))
+    ((Yes _ _ p) (values w (Exit P (MkU8 n p))))
+    ((No _ _ _) (values w (Exit P code0)))))
 
 (Continue P k)
 ; warns: tests/io_factory_twice.sl:10:14: warning: unnecessary `(predates _)`; drop it

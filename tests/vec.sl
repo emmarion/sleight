@@ -15,7 +15,7 @@
     (many A x))
   (match many v ((A r))
     (absurd VNil)
-    ((VCons a m x xs) x)))
+    ((VCons _ _ x _) x)))
 
 (let ((many vec-v)) (VCons (Nat) (Zero) (Succ (Zero)) (VNil (Nat))))
 

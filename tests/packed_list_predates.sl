@@ -17,7 +17,7 @@
 (def-lvl K)
 (let ((erased pk)) (prove-predates ps K))
 (def-fns K $ (many run-all : (subterm many (List (Packed)) qs) (erased (Predates (List (Packed)) qs K) pq) (many (Nat) x) -> (many (Nat) y))
-  (let-match many qs (Cons a p rest) ((Nil a) x))
+  (let-match many qs (Cons _ p rest) ((Nil _) x))
   (let ((erased sr)) (prove-subterm rest qs))
   (let-match many p (Pack l f))
   (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))

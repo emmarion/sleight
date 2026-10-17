@@ -1,6 +1,6 @@
 ; expect: 0
 (def-fns _ $ (many run : (many (List (Nat)) xs) -> (many (Nat) out))
-  (let-match many xs (Cons _ h t uc) ((Nil _) 2))
+  (let-match many xs (Cons _ _ t uc) ((Nil _) 2))
   (let-match many t (Nil _ un) ((Cons _ _ _) 3))
   (let-match many (slot-eq (slot-of un) (slot-of uc)) (Some _ e) ((None _) 0))
   (let-match erased e (Refl _ _))

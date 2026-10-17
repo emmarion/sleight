@@ -11,6 +11,6 @@
   (let-match many p (TrialTwo x))
   (values x (Refl (Nat) i)))
 (def-fns _ $ (many trials-main : -> (many (Nat) n))
-  (let ((many n) (erased p)) (trials-value (Succ (Succ (Zero))) (TrialTwo 8)))
+  (let ((many n) (erased _)) (trials-value (Succ (Succ (Zero))) (TrialTwo 8)))
   n)
 trials-main

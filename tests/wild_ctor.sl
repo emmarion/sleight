@@ -9,10 +9,10 @@
 
 (def-fns L $ (many head-or : (many (List (Nat)) xs) -> (many (Maybe (Nat)) m))
   (match many xs _
-    ((Nil a) (None _))
-    ((Cons a hd tl) (Some _ hd))))
+    ((Nil _) (None _))
+    ((Cons _ hd _) (Some _ hd))))
 
 (let ((many xs) (many m)) (two (Succ (Zero))))
 (match many (head-or xs) (((List (Nat)) r))
-  ((None a) (Nil _))
-  ((Some a n) xs))
+  ((None _) (Nil _))
+  ((Some _ _) xs))

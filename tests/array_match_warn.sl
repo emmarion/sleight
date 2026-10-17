@@ -1,7 +1,7 @@
 ; expect: 4
 (def-fns _ $ (many first : -> (many (Nat) result))
   (let ((unique a)) (list-to-array _ (Cons _ (MkCopy _ 4) $ Cons _ (MkCopy _ 7) $ Nil _)))
-  (let-match unique a (ACons _ _ hd tl))
+  (let-match unique a (ACons _ _ hd _))
   (let-match unique hd (MkCopy _ v))
   v)
 first

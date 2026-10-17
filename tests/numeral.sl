@@ -5,11 +5,11 @@
 
 (def-lvl X)
 (def-fns X $ (many three-zeros : (erased (Nat) n) (erased (Numeral (B1 (B1 (BZ))) n) v) -> (many (Vec (Nat) n) xs))
-  (let-match erased v (N1 b m d v1 dd) (absurd NZ) (absurd N2))
-  (let-match erased v1 (N1 b0 m0 d0 v0 dd0) (absurd NZ) (absurd N2))
+  (let-match erased v (N1 _ _ d v1 dd) (absurd NZ) (absurd N2))
+  (let-match erased v1 (N1 _ _ _ v0 dd0) (absurd NZ) (absurd N2))
   (let-match erased v0 (NZ) (absurd N1) (absurd N2))
   (let-match erased dd0 (D0) (absurd DS))
-  (let-match erased dd (DS a b1 dd1) (absurd D0))
+  (let-match erased dd (DS _ b1 dd1) (absurd D0))
   (match erased dd1 _
     ((D0) (VCons (Nat) d 0 (VCons (Nat) (Succ b1) 0 (VCons (Nat) b1 0 (VNil (Nat))))))
     (absurd DS)))

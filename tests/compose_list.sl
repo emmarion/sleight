@@ -9,8 +9,8 @@
 (let ((erased mc)) (prove-predates M C))
 (def-fns C $ (many apply-all : (subterm many (List (Fn M (many (Nat) x) -> (many (Nat) y))) fs) (many (Nat) x) -> (many (Nat) y))
   (match many fs _
-    ((Nil a) x)
-    ((Cons a f rest) (f (predates mc) (notail $ apply-all (subterm (prove-subterm rest fs)) rest x)))))
+    ((Nil _) x)
+    ((Cons _ f rest) (f (predates mc) (notail $ apply-all (subterm (prove-subterm rest fs)) rest x)))))
 
 (def-lvl D)
 (let ((erased cd)) (prove-predates C D))

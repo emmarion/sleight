@@ -8,6 +8,6 @@
   (def-adts $ (By : -> Type) enum (many K2 : (many C v) -> (By)))
   (def-fns X $ (many cast : (erased (Eq Type (Bx) (By)) p) (many A x) -> (many C y))
     (match erased p ((C r))
-      ((Refl T z) x)))
+      ((Refl _ _) x)))
   (Zero))
 (outer (Nat) (Nat) (Zero))

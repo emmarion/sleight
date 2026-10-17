@@ -5,10 +5,10 @@
 (def-fns _ $ (many rebuild :
     (unique (Cell P (slot-of a) (slot-of b)) u) -> (unique (Pair2) r at u))
   (at ((cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
-    (P s t back) back) a b)))
+    (P _ _ back) back) a b)))
 (def-fns _ $ (many run : -> (many (Nat) r))
   (let ((unique u)) (cell-alloc (P (slot-of a) (slot-of b))))
   (let ((unique p)) (rebuild u))
-  (let-match unique p (P x y back))
+  (let-match unique p (P _ y back))
   y)
 run

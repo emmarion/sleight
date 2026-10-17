@@ -9,7 +9,7 @@
     (erased (Matchable enum T (many C) (many D)) m)
     (erased (Eq (T) (C) (D)) p) -> (many (Nat) n))
   (match erased p (((Nat) r))
-    ((Refl A x) (open-absurd m _))))
+    ((Refl _ _) (open-absurd m _))))
 
 (def-fns X $ (many refuted : (erased (TyCtor -> Type) T)
     (erased (ValCtor -> (T)) C)

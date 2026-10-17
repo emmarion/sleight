@@ -8,5 +8,5 @@
     (many MkSame : (many (Nat) k) (erased (Eq (Nat) n k) e) -> (Same)))
   (let ((many s)) (MkSame n (Refl (Nat) n)))
   (match many s (((Nat) r))
-    ((MkSame k e) (Succ k))))
+    ((MkSame k _) (Succ k))))
 (same (Succ (Zero)))

@@ -9,7 +9,7 @@
 (def-fns T $ (many main : -> (many (Special) s))
   (match many (get-left (predates uxt) (L (Succ (Zero)))) (((Special) r))
     ((Zero) let)
-    ((Succ k) (pick (predates xt) (BFalse)))))
+    ((Succ _) (pick (predates xt) (BFalse)))))
 
 main
 ; warns: tests/thunk_union.sl:10:25: warning: unnecessary `(predates _)`; drop it

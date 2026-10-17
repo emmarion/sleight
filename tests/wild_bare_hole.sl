@@ -4,6 +4,6 @@
 (def-lvl L)
 (def-fns L $ (many first : (many (List (Nat)) xs) -> (many (Maybe (Nat)) m))
   (match many xs ((_ r))
-    ((Nil a) (None _))
-    ((Cons a hd tl) (Some _ hd))))
+    ((Nil _) (None _))
+    ((Cons _ hd _) (Some _ hd))))
 (first (Cons (Nat) (Zero) (Nil (Nat))))

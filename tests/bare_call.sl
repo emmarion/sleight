@@ -10,17 +10,17 @@
 (def-lvl B)
 (def-fns B $ (many count : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (inc (notail $ count X tl)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ tl) (inc (notail $ count X tl)))))
 
 (def-fns B $ (many count-again : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (inc (predates _) (notail $ count-again X (subterm _) tl)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ tl) (inc (predates _) (notail $ count-again X (subterm _) tl)))))
 
 (let ((many xs)) (Cons (Nat) 1 (Cons (Nat) 2 (Cons (Nat) 3 (Nil (Nat))))))
 (match many (count (Nat) xs) (((Nat) r))
   ((Zero) (Zero))
-  ((Succ k) (count-again (Nat) xs)))
-; warns: tests/bare_call.sl:19:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/bare_call.sl:19:26: warning: unnecessary `(predates _)`; drop it
+  ((Succ _) (count-again (Nat) xs)))
+; warns: tests/bare_call.sl:19:62: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/bare_call.sl:19:25: warning: unnecessary `(predates _)`; drop it

@@ -6,7 +6,7 @@
   (many FmtStr : -> (Fmt)))
 
 (def-fns _ $ (many rope-str : (many (Rope) r) -> (many (String) s))
-  (let ((many s) (erased p)) (flatten r))
+  (let ((many s) (erased _)) (flatten r))
   s)
 
 (def-fns _ $ (many char-is : (many (Char) c) (many (Char) d) -> (many (Bool) b))

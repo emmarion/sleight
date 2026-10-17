@@ -14,15 +14,15 @@
 ; and execs it. Both test harnesses compile extracted programs that way and run them under `env -i` with only the
 ; variables the directives above give, but the launching shell seems to set variables of its own (PWD on one
 ; machine, SHLVL=0 under macOS's /bin/sh), so GetEnvs saw them too. Removing them keeps the expected output the same.
-(def-fns _ $ (many drop-shell-vars : (subterm many (List (Pair (String) (String))) vars) -> (many (List (Pair (String) (String))) r)) (let-match many vars (Cons a v rest) ((Nil a) vars)) (let-match many v (MkPair b c name value)) (match many (str-cmp name "PWD") _ ((CEq x y z) (tail $ drop-shell-vars rest)) (else (match many (str-cmp name "SHLVL") _ ((CEq x y z) (tail $ drop-shell-vars rest)) (else (Cons _ v (notail $ drop-shell-vars rest)))))))
+(def-fns _ $ (many drop-shell-vars : (subterm many (List (Pair (String) (String))) vars) -> (many (List (Pair (String) (String))) r)) (let-match many vars (Cons _ v rest) ((Nil _) vars)) (let-match many v (MkPair _ _ name _)) (match many (str-cmp name "PWD") _ ((CEq _ _ _) (tail $ drop-shell-vars rest)) (else (match many (str-cmp name "SHLVL") _ ((CEq _ _ _) (tail $ drop-shell-vars rest)) (else (Cons _ v (notail $ drop-shell-vars rest)))))))
 (def-fns _ $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) (unique (World) w) -> (unique (World) w2 at w))
-  (let-match many vars (Cons a v rest) ((Nil a) w))
-  (let-match many v (MkPair b c name value))
+  (let-match many vars (Cons _ v rest) ((Nil _) w))
+  (let-match many v (MkPair _ _ name value))
   (let ((unique w1) (many _)) (world-do _ w (WriteOut (str-append name (str-append "=" (str-append value "\n"))))))
   (tail $ show-vars rest w1))
 
 (def-fns _ $ (many show-value : (many (Maybe (String)) value) (unique (World) w) -> (unique (World) w2 at w))
-  (let ((unique w1) (many _)) (world-do _ w (WriteOut $ match many value (((String) _)) ((None a) "absent\n") ((Some a s) (str-append s "\n")))))
+  (let ((unique w1) (many _)) (world-do _ w (WriteOut $ match many value (((String) _)) ((None _) "absent\n") ((Some _ s) (str-append s "\n")))))
   w1)
 
 (def-lvl P)

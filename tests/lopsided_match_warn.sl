@@ -39,7 +39,7 @@
     (let ((unique u)) (cell-alloc (Full (slot-of a))))
     (let ((unique v))
       (cell-match unique u (((Cell Full (slot-of a)) v at u))
-        (Full s back)
+        (Full _ back)
         (match many n _
           ((Zero) back)
           ((Succ k) (let ((many j)) k) back))))
@@ -47,10 +47,10 @@
     (let-match many p (Full x))
     x)
   ((many absurd-shallow : (many (Nat) n) (erased (Lt (Succ n) (Succ (Zero))) p) -> (many (Nat) r))
-    (let-match erased p (LtS a b q))
+    (let-match erased p (LtS _ _ q))
     (match many n _
       ((Zero) (let ((many j)) n) j)
-      (absurd (Succ k) q)))
+      (absurd (Succ _) q)))
   ((many two-deep : (many (Nat) n) -> (many (Nat) r))
     (match many n _
       ((Zero) (let ((many j)) n) j)
@@ -62,7 +62,7 @@
   ((many deep-absurd : (many (Nat) n) (erased (Lt n (Succ (Zero))) p) -> (many (Nat) r))
     (match many n _
       ((Zero) n)
-      (absurd (Succ k) (let-match erased p (LtS a b q)) q)))
+      (absurd (Succ _) (let-match erased p (LtS _ _ q)) q)))
   ((many buried : (many (Nat) n) -> (many (Nat) r))
     (match many n _
       ((Zero) (Zero))
@@ -90,10 +90,10 @@
 (let ((unique u)) (cell-alloc (Full (slot-of a))))
 (let ((unique v))
   (cell-match unique u (((Cell Full (slot-of a)) v at u))
-    (Full s back)
+    (Full _ back)
     (match many top _
       ((Zero) (let ((many j)) top) back)
-      ((Succ k) back))))
+      ((Succ _) back))))
 
 (match many (shadowed (MkBox inc) (statements (in-cell-match (Succ (Succ (Succ top)))))) (((Nat) x))
   ((Zero) (Zero))

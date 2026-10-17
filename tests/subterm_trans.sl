@@ -4,9 +4,9 @@
 
 (def-lvl X)
 (def-fns X $ (many pairs : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n))
-  (let-match many xs (Cons a hd tl) ((Nil a) (Zero)))
+  (let-match many xs (Cons _ _ tl) ((Nil _) (Zero)))
   (let ((erased p)) (prove-subterm tl xs))
-  (let-match many tl (Cons b hd2 tl2) ((Nil b) (Zero)))
+  (let-match many tl (Cons _ _ tl2) ((Nil _) (Zero)))
   (let ((erased q)) (prove-subterm tl2 tl))
   (Succ (notail $ pairs A (subterm (subterm-trans q p)) tl2)))
 

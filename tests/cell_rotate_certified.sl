@@ -37,6 +37,6 @@
     (FNode (Node (Leaf) 0 (Leaf)) 1 (Leaf) (LNil) (LNil) o1
       (FLeaf (LNil))
       (FNode (Leaf) 0 (Leaf) a1 a1 o1 (FLeaf a1) (FLeaf o1))))
-  (let ((unique r) (erased q)) (rot-right-proved t (LNil) o1 fl))
+  (let ((unique r) (erased _)) (rot-right-proved t (LNil) o1 fl))
   (share r))
 run-rot-proved

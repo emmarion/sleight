@@ -13,14 +13,14 @@
 (def-fns T $ (many pick : (many (Nat) n) -> (erased Type B) (many (Shape B) s) (many B v))
   (match many n _
     ((Zero) (values (Nat) (IsNat) n))
-    ((Succ k) (values (List (Nat)) (IsList) (Cons (Nat) n (Nil (Nat)))))))
+    ((Succ _) (values (List (Nat)) (IsList) (Cons (Nat) n (Nil (Nat)))))))
 
 (def-lvl U)
 (def-fns U $ (many count : (erased Type B) (many (Shape B) s) (many B v) -> (many (Nat) r))
   (let-match many s (IsList) ((IsNat) v))
   (match many v _
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (Zero)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ _) (Succ (Zero)))))
 
 (let ((erased B) (many s) (many v)) (pick (Succ (Zero))))
 (count B s v)

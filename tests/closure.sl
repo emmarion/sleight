@@ -9,7 +9,7 @@
   (def-fns L $ (many add-n : (many (Nat) m) -> (many (Nat) r))
     (match many n (((Nat) r))
       ((Zero) m)
-      ((Succ k) (Succ m))))
+      ((Succ _) (Succ m))))
   (values L add-n))
 
 (let ((erased L) (many add-one)) (adder (Succ (Zero))))

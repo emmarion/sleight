@@ -5,7 +5,7 @@
   (def-fns K $ (many f : (many (Nat) y) -> (many (Nat) r at x)) x)
   f)
 (def-fns _ $ (many use : (many (Nat) n) -> (many (Nat) r))
-  (let-match many (Cons (Nat) (Succ n) (Nil (Nat))) (Cons _ hd tl))
+  (let-match many (Cons (Nat) (Succ n) (Nil (Nat))) (Cons _ hd _))
   (let ((many g)) (mk (Succ hd)))
   (let ((many a)) (g 1))
   (let ((many b)) (g 2))

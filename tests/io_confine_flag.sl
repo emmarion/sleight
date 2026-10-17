@@ -12,7 +12,7 @@
 
 (def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
   (let ((unique w1) (many r)) (world-do _ w req))
-  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n")))))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   w2)
 
 (def-lvl P)

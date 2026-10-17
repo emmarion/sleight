@@ -13,9 +13,9 @@
 
 (def-fns X $ (many which : (many (Char) a) (many (Char) b) -> (many (Nat) r))
   (match many (char-cmp (predates cx) a b) (((Nat) r))
-    ((CLt t rr x y p) (Zero))
-    ((CEq t rr x) (Succ (Zero)))
-    ((CGt t rr x y q) (Succ (Succ (Zero))))))
+    ((CLt _ _ _ _ _) (Zero))
+    ((CEq _ _ _) (Succ (Zero)))
+    ((CGt _ _ _ _ _) (Succ (Succ (Zero))))))
 
 (let ((erased one-lt))
   (pow2-lt (Zero) sixty-two (Succ (Zero)) u62-modulus
@@ -24,9 +24,9 @@
 (def-fns X $ (many which-nat : (many (Nat) a) (many (Nat) b)
     (erased (Lt a u62-modulus) pa) (erased (Lt b u62-modulus) pb) -> (many (Nat) r))
   (match many (g a b pa pb) (((Nat) r))
-    ((CLt t rr x y p) (Zero))
-    ((CEq t rr x) (Succ (Zero)))
-    ((CGt t rr x y q) (Succ (Succ (Zero))))))
+    ((CLt _ _ _ _ _) (Zero))
+    ((CEq _ _ _) (Succ (Zero)))
+    ((CGt _ _ _ _ _) (Succ (Succ (Zero))))))
 
 (nat-add (which #\a #\b)
   (nat-add (which-nat (Zero) (Zero) u62-modulus-pos u62-modulus-pos) (which-nat (Succ (Zero)) (Zero) one-lt u62-modulus-pos)))

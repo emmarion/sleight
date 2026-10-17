@@ -10,8 +10,8 @@
 
 (def-fns V $ (many vmap : (erased (Nat) n) (subterm many (Vec (Nat) n) v) -> (many (Vec (Nat) n) r))
   (match many v (((Vec (Nat) n) r))
-    ((VNil a) (VNil (Nat)))
-    ((VCons a m x xs)
+    ((VNil _) (VNil (Nat)))
+    ((VCons _ m x xs)
       (let ((erased q)) (prove-subterm xs v))
       (VCons (Nat) m (inc (predates p) x) (notail $ vmap m (subterm q) xs)))))
 

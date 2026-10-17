@@ -9,8 +9,8 @@
   (let ((many b)) (MkBox 2))
   (let ((unique t0)) (MkSlots _ (Cons _ (MkSlotItem _ _ _ (place-at-many _ b)) $ Cons _ (MkSlotItem _ _ _ (place-at-many _ a)) $ Nil _)))
   (let ((erased _) (many r) (unique t1)) (slots-intern _ _ t0 _ _ (place-at-many _ a)))
-  (let ((many i)) (match many r (((Nat) k)) ((SlotExisting _ _ _ _ _ i _) i) ((SlotAdded _ _ _ _ _ i _) 99)))
-  (let ((erased _) (many r2) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ b)))
+  (let ((many i)) (match many r (((Nat) k)) ((SlotExisting _ _ _ _ _ i _) i) ((SlotAdded _ _ _ _ _ _ _) 99)))
+  (let ((erased _) (many _) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ b)))
   (let-match unique t2 (MkSlots _ ls))
   (Cons _ i $ Cons _ (count _ ls) $ Nil _))
 

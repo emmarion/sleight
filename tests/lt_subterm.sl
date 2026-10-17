@@ -25,22 +25,22 @@
 (def-fns L $ (erased le-split : (subterm erased (Nat) b1) (erased (Nat) a) (erased (Lt a (Succ b1)) p) ->
     (erased (Or (NatEq a b1) (Lt a b1)) r))
   (match erased p _
-    ((LtZ b2)
+    ((LtZ _)
       (match erased b1 _
         ((Zero) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))
         ((Succ b3) (Right (NatEq a b1) (Lt a b1) (LtZ b3)))))
-    ((LtS a1 b2 p1)
+    ((LtS a1 _ p1)
       (let-match erased b1 (Succ b3) (absurd (Zero) p1))
-      (let-match erased (le-split (subterm _) b3 a1 p1) (Left A B e)
-        ((Right A B l) (Right (NatEq a b1) (Lt a b1) (LtS a1 b3 l))))
-      (match erased e _ ((NatRefl z) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))))))
+      (let-match erased (le-split (subterm _) b3 a1 p1) (Left _ _ e)
+        ((Right _ _ l) (Right (NatEq a b1) (Lt a b1) (LtS a1 b3 l))))
+      (match erased e _ ((NatRefl _) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))))))
 
 (def-fns L $ (erased lt-sub : (subterm erased (Nat) b) (erased (Nat) a) (erased (Lt a b) p) ->
     (erased (Subterm (Nat) a (Nat) b) q))
   (let-match erased b (Succ b1) (absurd (Zero) p))
-  (let-match erased (le-split (subterm (prove-subterm b1 b)) b1 a p) (Left A B e)
-    ((Right A B l) (subterm-trans (lt-sub (subterm _) b1 a l) (prove-subterm b1 b))))
-  (match erased e _ ((NatRefl z) (prove-subterm a b))))
+  (let-match erased (le-split (subterm (prove-subterm b1 b)) b1 a p) (Left _ _ e)
+    ((Right _ _ l) (subterm-trans (lt-sub (subterm _) b1 a l) (prove-subterm b1 b))))
+  (match erased e _ ((NatRefl _) (prove-subterm a b))))
 
 (def-lvl M)
 (let ((erased nm)) (prove-predates nat-lvl M))
@@ -48,13 +48,13 @@
 
 (def-fns M $ (erased sub-lt : (erased (Nat) a) (erased (Nat) b) (erased (Subterm (Nat) a (Nat) b) q) ->
     (erased (Lt a b) l))
-  (let-match erased (lt-dec (predates nm) a b) (No x y r) ((Yes x y p) p))
-  (let-match erased (le-split (predates lm) a b r) (Left A B e)
-    ((Right A B l)
+  (let-match erased (lt-dec (predates nm) a b) (No _ _ r) ((Yes _ _ p) p))
+  (let-match erased (le-split (predates lm) a b r) (Left _ _ e)
+    ((Right _ _ l)
       (explode (predates lm) (Lt a b)
         (loop (predates lm) a (subterm-trans q (lt-sub (predates lm) a b l))))))
   (match erased e _
-    ((NatRefl z) (explode (predates lm) (Lt a b) (loop (predates lm) a q)))))
+    ((NatRefl _) (explode (predates lm) (Lt a b) (loop (predates lm) a q)))))
 
 (Zero)
 ; warns: tests/lt_subterm.sl:34:35: warning: unnecessary `(subterm _)`; drop it

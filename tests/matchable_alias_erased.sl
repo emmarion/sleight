@@ -6,7 +6,7 @@
 (def-lvl X)
 (def-fns X $ (many len : (subterm many (List (Nat)) xs) -> (many (Nat) n))
   (match many xs (((Nat) r))
-    ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (notail $ len (subterm (prove-subterm tl xs)) tl)))))
+    ((Nil _) (Zero))
+    ((Cons _ _ tl) (Succ (notail $ len (subterm (prove-subterm tl xs)) tl)))))
 (len (Cons (Nat) 0 (Nil (Nat))))
-; warns: tests/matchable_alias_erased.sl:10:41: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/matchable_alias_erased.sl:10:40: warning: unnecessary `(subterm _)`; drop it

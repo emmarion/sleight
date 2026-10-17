@@ -5,7 +5,7 @@
 (let ((unique u)) (cell-alloc (P (slot-of a) (slot-of b))))
 (let ((unique v))
   (cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
-    (P s t back)
+    (P s _ back)
     (let ((many z)) s)
     (let ((unique w)) back)
     w))
