@@ -8,6 +8,11 @@
   (let-match many es (Cons _ e rest) ((Nil _) w))
   (tail $ write-lines rest $ say-to (BTrue) "\n" $ say-to (BTrue) e w))
 
+(def-fns util-lvl $ (many lines-bytes : (subterm many (List $ String) es) (many (Nat) acc) -> (many (Nat) n))
+  (let-match many es (Cons _ e rest) ((Nil _) acc))
+  (let ((many len) (erased p)) (str-length e))
+  (tail $ lines-bytes rest $ nat-add acc $ Succ len))
+
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; source is the prelude, whose scope the generated forms of unary elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (unique (ElabWorld) ew) (many (Bool) notes) (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (unique (ElabWorld) ewr at ew) (many (Env) r))
@@ -69,8 +74,8 @@
   (let ((unique ew1) (many env)) $ run-files ew (not $ has-flag flags "--no-shape-note") srcs (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
   (let-match unique ew1 (MkElabWorld w0))
   (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env) $ said-failed (BTrue) $ env-said env)
-  (let ((unique w1)) $ write-lines (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))
-    $ write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) w0)
+  (let ((many said)) $ shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _)
+  (let ((unique w1)) $ write-lines (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _))) $ write-lines said w0)
   (let-match many (or (env-failed env) by-warnings) (BFalse) ((BTrue) (values w1 (Exit _ exit-fail))))
   (let-match many (has-flag flags "--interpret") (BTrue)
     ((BFalse)
@@ -80,7 +85,7 @@
   (let-match many confined (Ok _ _) ((Fail _ m) (failed m w2)))
   (let-match many bytes (Some _ b) ((None _) (run-program env pargs with-env w2)))
   (let-match many (and (not $ str-eq b "") (all-digits b)) (BTrue) ((BFalse) (failed (str-cat b ": not a number of bytes") w2)))
-  (let ((unique w3) (many limited)) (world-do _ w2 (ConfineOutputBytes $ parse-nat b $ Zero)))
+  (let ((unique w3) (many limited)) (world-do _ w2 (ConfineOutputBytes $ lines-bytes said $ parse-nat b $ Zero)))
   (let-match many limited (Ok _ _) ((Fail _ m) (failed m w3)))
   (run-program env pargs with-env w3))
 
