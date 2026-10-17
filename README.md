@@ -100,7 +100,9 @@ request whose path lands outside `dir` answers `Fail` without being
 performed, while one inside it behaves exactly as it would unconfined.
 Without the flag the fence is `/`, so the same check admits every path.
 A path whose symlinks cannot be followed to the end, the resolution
-giving up after 1000 links, counts as outside every fence, `/` included.
+giving up after 1000 links, counts as outside every fence, `/` included,
+and so does a path with a component before its last that cannot be
+examined, such as one that does not exist.
 A program narrows its own fence with the `ConfineDir` request, which
 refuses a directory outside the current one (`tests/io_confine.sl`).
 Nothing is resolved at compile time: under `--extract` the directory is
