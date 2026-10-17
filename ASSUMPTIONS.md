@@ -199,7 +199,14 @@ that runs, in each of its modes.
     being the entry's, so shadowed names stay distinct; a literal is
     `l<n>`, a closure `cl<n>_<name>`, and a constructor shape's OCaml
     type and constructors `t<n>` and `K<n>_<i>`. The source names come
-    from a table `Env.bind` fills (`Env.names`).
+    from a table `Env.bind` fills (`Env.names`). OCaml gives at most
+    246 constructors with fields a block tag of their own, so a shape
+    with more of them, a **wide** shape, keeps its nullary constructors
+    as `K<n>_<i>` and puts every other under one constructor `K<n>_w`,
+    whose record holds the constructor's position as an `int` field
+    `d` ahead of its fields, padded with `()` to the widest
+    constructor's. That `d` stands in for the tag section 33 asks for,
+    held in a field rather than in the block's header.
 63. **A constructor application is marked** with the call kind
     `Value.Ctor` in the post-erasure code, so that the extractor can
     tell it from a call (the interpreter ignores the mark, dispatching
@@ -214,7 +221,11 @@ that runs, in each of its modes.
     path that trusts the checker (the owner's reading: interpretation
     is the checked path, extraction is opted into for speed). The copy
     keeps every constructor at its arity, which is what keeps its
-    representation the base type's.
+    representation the base type's. A wide shape (62) has no copy,
+    since its constructors with fields share one OCaml constructor that
+    an index cannot split: its match is against the base type and ends
+    in `| _ -> absurd ()` where it has no `else`, and so does reading or
+    writing a cell's fields.
 64. **The FFI is shared by embedding.** `lib/ffi_core.ml` holds the
     implementations over raw zarith integers and slices, generic in the
     value type through injection/projection arguments; `ffi.ml`

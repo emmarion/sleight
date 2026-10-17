@@ -89,14 +89,25 @@ let shape_index cx ns =
   go 0 !(cx.shapes)
 let type_name cx ns = "t" ^ string_of_int (shape_index cx ns)
 let ctor_at cx ns i = Printf.sprintf "K%d_%d" (shape_index cx ns) i
+let wide ns = List.length (List.filter (( <> ) 0) ns) > 246
+let wide_ctor cx ns = Printf.sprintf "K%d_w" (shape_index cx ns)
+let widest ns = List.fold_left max 0 ns
 
 let field_names n = List.init n (fun i -> Printf.sprintf "f%d" i)
 let fields c = field_names c.V.arity
 let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
 let pattern_at name fs = if fs = [] then name else Printf.sprintf "%s (%s)" name (concat ", " fs)
-let mutable_fields fs = "{ " ^ concat "; " (List.mapi (fun i f -> Printf.sprintf "f%d = %s" i f) fs) ^ " }"
-let mutable_payload n = "{ " ^ concat "; " (List.init n (fun i -> Printf.sprintf "mutable f%d : Obj.t" i)) ^ " }"
-let pattern cx c fs = let k = ctor_at cx (arities c.V.adt) c.index in if fs = [] then k else k ^ " " ^ mutable_fields fs
+let field_binds fs = concat "; " (List.mapi (fun i f -> Printf.sprintf "f%d = %s" i f) fs)
+let mutable_fields fs = "{ " ^ field_binds fs ^ " }"
+let payload_fields n = concat "; " (List.init n (fun i -> Printf.sprintf "mutable f%d : Obj.t" i))
+let mutable_payload n = "{ " ^ payload_fields n ^ " }"
+let pattern ?(fill = "_") cx c fs =
+  let ns = arities c.V.adt in
+  if fs = [] then ctor_at cx ns c.index
+  else if wide ns then
+    let pad = List.init (widest ns - List.length fs) (fun _ -> fill) in
+    Printf.sprintf "%s { d = %d; %s }" (wide_ctor cx ns) c.index (field_binds (fs @ pad))
+  else ctor_at cx ns c.index ^ " " ^ mutable_fields fs
 let narrow cx ns live =
   let key = (ns, live) in
   match List.assoc_opt key !(cx.narrows) with
@@ -125,32 +136,29 @@ let build cx c es =
       match template (Ffi_templates.Build (name, c.index)) with
       | None -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
       | Some ps -> fill_template cx ps es)
-  | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
+  | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern ~fill:"(Obj.repr ())" cx c es)
   | Untagged _ -> tuple es
   | Union -> one_block cx es
 
-let field_match cx c target =
-  let ty, k = match shape c.V.adt with
-    | Tagged ns -> ((if List.length ns > 1 then "yes " ^ narrow cx ns [ c.V.index ] else type_name cx ns), ctor_at cx ns c.V.index)
-    | Union -> let ns = [ c.V.arity ] in (type_name cx ns, ctor_at cx ns 0)
+let field_match cx c target body =
+  let ty, k, rest = match shape c.V.adt with
+    | Tagged ns when wide ns -> (type_name cx ns, wide_ctor cx ns, " | _ -> absurd ()")
+    | Tagged ns -> ((if List.length ns > 1 then "yes " ^ narrow cx ns [ c.V.index ] else type_name cx ns), ctor_at cx ns c.V.index, "")
+    | Union -> let ns = [ c.V.arity ] in (type_name cx ns, ctor_at cx ns 0, "")
     | Untagged _ | Ext _ -> assert false in
   let r = Printf.sprintf "r%d" (stamp cx) in
-  (r, Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> " target ty k r)
+  Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> %s%s)" target ty k r (body r) rest
 
 let field_write cx c target stores =
   if stores = [] then "" else
-  let r, head = field_match cx c target in
-  head ^ concat "; " (List.map (fun (i, s) -> Printf.sprintf "%s.f%d <- %s" r i s) stores) ^ ")"
+  field_match cx c target (fun r -> concat "; " (List.map (fun (i, s) -> Printf.sprintf "%s.f%d <- %s" r i s) stores))
 
-let field_read cx c i target =
-  let r, head = field_match cx c target in
-  Printf.sprintf "%s%s.f%d)" head r i
+let field_read cx c i target = field_match cx c target (fun r -> Printf.sprintf "%s.f%d" r i)
 
 (* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, section 37). *)
 let field_copy cx c target =
   if c.V.arity = 0 then build cx c [] else
-  let r, head = field_match cx c target in
-  head ^ build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)) ^ ")"
+  field_match cx c target (fun r -> build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)))
 
 let cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
@@ -184,7 +192,8 @@ let dispatch cx a live scrut arms default =
   | Ext _ -> assert false
   | Tagged ns ->
       let live = List.sort_uniq compare live in
-      let ty = if List.length live < List.length ns then "yes " ^ narrow cx ns live else type_name cx ns in
+      let ty = if List.length live < List.length ns && not (wide ns) then "yes " ^ narrow cx ns live else type_name cx ns in
+      let default = if wide ns && default = None then Some "(absurd ())" else default in
       let body = cases (pattern cx) ^ match default with Some d -> " | _ -> " ^ d | None -> "" in
       Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
   | Untagged _ -> (match arms with [ (_, vs, body) ] -> untuple vs scrut body | [] -> Option.get default | _ -> assert false)
@@ -441,7 +450,10 @@ let types cx =
     in
     Printf.sprintf "type _ %s = %s" name (concat " | " (List.mapi decl ns))
   in
-  let decl ns = Printf.sprintf "%s = %s" (type_name cx ns) (concat " | " (List.mapi (fun i n -> let k = ctor_at cx ns i in if n = 0 then k else k ^ " of " ^ mutable_payload n) ns)) in
+  let decl ns =
+    let ctor i n = if n = 0 then Some (ctor_at cx ns i) else if wide ns then None else Some (ctor_at cx ns i ^ " of " ^ mutable_payload n) in
+    let shared = if wide ns then [ Printf.sprintf "%s of { d : int; %s }" (wide_ctor cx ns) (payload_fields (widest ns)) ] else [] in
+    Printf.sprintf "%s = %s" (type_name cx ns) (concat " | " (List.filter_map Fun.id (List.mapi ctor ns) @ shared)) in
   concat "\n"
     (List.rev_map narrow !(cx.narrows)
     @ [ (match !(cx.shapes) with [] -> "" | shapes -> "type " ^ concat "\nand " (List.map decl shapes)) ]
