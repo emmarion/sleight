@@ -245,54 +245,67 @@ relied on only by the machine proofs (`MachineRun.lean`,
 `eval`'s soundness (`Sound.lean`) is proved for every typing derivation,
 uses or not.
 
-So a session sees two ways to carry out shape 1, and would like the
-owner to choose before the work starts:
+The owner's decisions on how stage 2 is carried out, from chat:
 
-- **2a. `eval` gets a heap, and its soundness takes on uses.** Values
-  in the environment become words, constructed values are blocks, a
-  cell is its block's address, a slot term evaluates to its entry's
-  word, and a unique write updates a block in place. `EnvOK` then
-  holds only for live entries, so `Sound.lean` takes the uses pass's
-  output as a hypothesis and inherits much of the machine proofs'
-  ownership reasoning; the machine proofs would shrink, since `eval`
-  and `RunM` would then both have heaps.
-- **2b. `eval` gets a heap of versions and stays uses-free; `cell-same`
-  is proved where uses are known.** A unique write makes a new version
-  of a block at the same address, so every old entry keeps its value
-  and `EnvOK` keeps holding for all entries; a slot is an address. The
-  facts that need liveness, such as two `many` cells at one slot being
-  one version, are proved alongside the machine proofs, which already
-  carry ownership, and `eval`'s result for `cell-same` is justified
-  there.
+- One full evaluator, `eval`, runs everything: erased code, the
+  bodies of at-functions and every constructor. It is immutable: a
+  `unique` write makes a new value at the old slot, keeping the
+  identity of the cell it writes. A slot term evaluates to its entry's
+  abstract word, not to `vacant-slot`.
+- One erasing run, the machine, does the full erasure, including
+  skipping at-function calls, and is proved against `eval`. There is
+  no separate stripped run.
+- The identity model and the answers of `slot-eq` are pluggable:
+  `eval` takes an identity model and an oracle. Its soundness holds
+  for every identity model and every oracle valid under it, and
+  concrete instances discharge both.
+- A natural's abstract word is the number itself, whatever its size.
+- A value with no non-erased field, whose type carries no tag, has
+  `vacant-slot`'s word.
 
-In either, `Prog.build` of a slot term gives its entry's word instead
-of `vacant-slot`, and the machine's `many` invocation that skips every
-store returns the cell's block, as the owner confirmed (section 37).
-Both are larger than stage 1; 2a moves the most proof.
+A session's proposal for the details:
 
-The owner chose 2a. The steps below are a session's proposal for
-carrying it out:
+1. Abstract words follow OCaml's representation:
+   - `imm k` for a field-less constructor of a tagged type (its tag),
+     a natural (the number), a character and a boolean;
+   - `imm 0` for `vacant-slot`, a token, and a value with no
+     non-erased field whose type carries no tag; these coincide with
+     tag 0 and natural 0, as they do in OCaml;
+   - the field's word for a newtype;
+   - `blk i` for any other value, `i` its identity.
 
-1. A heap run beside `eval`, `evalH`, with words in its environment and
-   blocks in its heap, and no write in place yet: every constructed
-   value is a fresh block, a match decodes its scrutinee, and a slot
-   term still evaluates to `vacant-slot`. A theorem that decoding
-   `evalH`'s results gives `eval`'s, under the heap's growth only.
-   Nothing else changes, so `main`'s results stay.
-2. Writes in place: a `unique` invocation, `cell-write` and reuse write
-   their cell's block, as `RunM` does. The theorem of step 1 then holds
-   only for live entries, and takes the uses pass's result as a
-   hypothesis, with ownership frames carried over from the machine
-   proofs.
-3. Words for slots: a slot term evaluates to its entry's word, and the
-   invariant (entries whose slots canonicalize to one term have one
-   word) is proved with the writers, for live entries.
-4. Typing soundness moves to `evalH`: `checked_runs` and `no_false`
-   become statements about `evalH`, with the uses pass's result as a
-   hypothesis, and `eval` stays only as far as the stripped run and
-   the machine proofs still need it. The machine's `many` invocation
-   that skips every store returns the cell's block.
-5. Stages 3 and 4 then build on step 3's invariant.
+   The at-writers give their result the target's identity: a
+   forwarding `let`, a newtype's construction and destructure, a
+   `unique` cell write or invocation at `u`, a `many` invocation that
+   skips every store, and `at` returns.
+2. An identity model gives each new construction its identity, from
+   its code site, its contents and a counter. Instances:
+   - `I_fresh`: a new identity per construction;
+   - `I_site`: a constant has one identity per code site, as both the
+     reference's interpreter and its extracted code share constants,
+     and every other construction gets a new one.
+3. A `slot-eq` oracle is valid when it answers `Some` only for two
+   equal abstract words. Instances:
+   - `O_never`: always `None`;
+   - `O_abs`: `Some` exactly for equal abstract words.
+4. `cell-same` in `eval` checks that the two contents agree and is
+   stuck otherwise. `eval`'s soundness then holds for every identity
+   model and every valid oracle, without uses.
+5. The machine uses OCaml's representation:
+   - a slot term evaluates to its entry's word;
+   - at-function calls are skipped;
+   - `Foot` and `Spine` stop at slot positions;
+   - it is executable, so it can drive the runner.
+
+   Its proof against `eval` takes three hypotheses: the uses pass's
+   result, an honest identity model (two live values with one
+   identity are equal), and that the machine's equal words have equal
+   abstract words. `RunS` and `runA` stay until the machine drives
+   the runner.
+6. The check that an at-function's body erases to nothing moves from
+   the reader into the core checker.
+7. A final theorem takes `I_site` and `O_abs` as the model of the
+   reference.
 
 ## Cost, as a session estimates it
 
