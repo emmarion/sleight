@@ -4684,7 +4684,7 @@
     (let ((many env8) (many ordinary) (many cellname)) (pattern-fields env7 ppos "a `comptime-match` pattern" mode (res-of env7 x) c tele mults fields extra))
     (let ((many env10) (many fids) (many u)) $ open-fields env8 tele (raw-names ordinary) (raw-sites ordinary env8) (Some _ mults) (res-of env8 x) c ret)
     (let-match many u (UOk env11)
-      ((UContra msg) (values (env-error env10 $ str-cat3 "internal: the verified value contradicts the facts in force (" (clash-str env10 msg) ")") $ SNone _)))
+      ((UContra msg) (values (match many (env-failed env10) (((Env) _)) ((BTrue) env10) ((BFalse) (env-error env10 $ str-cat3 "internal: the verified value contradicts the facts in force (" (clash-str env10 msg) ")"))) $ SNone _)))
     (let ((many env12)) (match many (ctor-of env11 c) (((Env) _)) ((None _) env11) ((Some _ ct) (env-set-fields env11 x ct fids mults))))
     (let ((many env13) (many _)) (pattern-cell-option env12 mode (res-of env12 x) c fids extra cellname))
     (values env13 $ SNone _))
