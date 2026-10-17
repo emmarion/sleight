@@ -6,6 +6,8 @@
 ; expect: write ok
 ; expect: read ok
 ; expect: stat absent ok
+; expect: stat through absent refused
+; expect: stat past absent refused
 ; expect: stat parent refused
 ; expect: list cwd refused
 ; expect: write outside refused
@@ -37,13 +39,15 @@
   (let ((unique w6)) (report _ "write" w5 (WriteFile "io-confine-test/in/a.txt" "hi")))
   (let ((unique w7)) (report _ "read" w6 (ReadFile "io-confine-test/in/../in/a.txt")))
   (let ((unique w8)) (report _ "stat absent" w7 (Stat "io-confine-test/nope")))
-  (let ((unique w9)) (report _ "stat parent" w8 (Stat "io-confine-test/..")))
-  (let ((unique w10)) (report _ "list cwd" w9 (ListDir ".")))
-  (let ((unique w11)) (report _ "write outside" w10 (WriteFile "io-confine-test/../io-confine-escape.txt" "x")))
-  (let ((unique w12)) (report _ "confine file" w11 (ConfineDir "io-confine-test/in/a.txt")))
-  (let ((unique w13)) (report _ "delete file" w12 (DeleteFile "io-confine-test/in/a.txt")))
-  (let ((unique w14)) (report _ "delete in" w13 (DeleteDir "io-confine-test/in")))
-  (let ((unique w15)) (report _ "delete fence" w14 (DeleteDir "io-confine-test")))
-  (values w15 (Exit P code0)))
+  (let ((unique w9)) (report _ "stat through absent" w8 (Stat "io-confine-test/nope/..")))
+  (let ((unique w10)) (report _ "stat past absent" w9 (Stat "io-confine-test/nope/../in")))
+  (let ((unique w11)) (report _ "stat parent" w10 (Stat "io-confine-test/..")))
+  (let ((unique w12)) (report _ "list cwd" w11 (ListDir ".")))
+  (let ((unique w13)) (report _ "write outside" w12 (WriteFile "io-confine-test/../io-confine-escape.txt" "x")))
+  (let ((unique w14)) (report _ "confine file" w13 (ConfineDir "io-confine-test/in/a.txt")))
+  (let ((unique w15)) (report _ "delete file" w14 (DeleteFile "io-confine-test/in/a.txt")))
+  (let ((unique w16)) (report _ "delete in" w15 (DeleteDir "io-confine-test/in")))
+  (let ((unique w17)) (report _ "delete fence" w16 (DeleteDir "io-confine-test")))
+  (values w17 (Exit P code0)))
 
 (Continue P start)

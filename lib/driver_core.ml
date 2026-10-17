@@ -94,10 +94,9 @@ let resolve ~follow p =
         | Unix.S_LNK when follow || rest <> [] -> (
             match Unix.readlink here with
             | _ when budget = 0 -> raise (Sys_error (p ^ ": too many levels of symbolic links"))
-            | target -> go (budget - 1) (if Filename.is_relative target then up else []) (parts target @ rest)
-            | exception Unix.Unix_error _ -> List.rev (c :: up))
+            | target -> go (budget - 1) (if Filename.is_relative target then up else []) (parts target @ rest))
         | _ -> go budget (c :: up) rest
-        | exception Unix.Unix_error _ -> List.rev (c :: up))
+        | exception Unix.Unix_error _ when rest = [] -> List.rev (c :: up))
   in
   go 1000 [] (parts (if Filename.is_relative p then Sys.getcwd () ^ "/" ^ p else p))
 
@@ -105,14 +104,14 @@ let inside dir ~follow p =
   let rec prefix = function [], _ -> true | f :: fs, c :: cs -> f = c && prefix (fs, cs) | _ :: _, [] -> false in
   match resolve ~follow p with
   | cs -> Ok (if prefix (parts dir, cs) then Some cs else None)
-  | exception (Sys_error _ as e) -> Error (explain e)
+  | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
 
 let admits fence ~follow p =
   Result.bind (inside !fence ~follow p) (function Some cs -> Ok cs | None -> Error (p ^ ": outside the confined directory " ^ !fence))
 
 let within dir p =
   match path (resolve ~follow:true dir) with
-  | exception (Sys_error _ as e) -> Error (explain e)
+  | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
   | d ->
       let full = if Filename.is_relative p then d ^ "/" ^ p else p in
       let named m = p ^ if String.starts_with ~prefix:(full ^ ":") m then String.sub m (String.length full) (String.length m - String.length full) else ": " ^ m in
