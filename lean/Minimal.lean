@@ -4,6 +4,7 @@ import Minimal.Typing
 import Minimal.Lemmas
 import Minimal.UnifySound
 import Minimal.Sound
+import Minimal.Words
 import Minimal.Check
 import Minimal.Reader
 import Minimal.Run

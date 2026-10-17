@@ -142,6 +142,7 @@ def size : Tm → Nat
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
   | fn l _ t _ _ => l.size + t.size + 1
   | mtbl _ _ _ _ T cs => T.size + cs.size + 1
+  | wd _ v => v.size + 1
   | _ => 1
 
 def levels : Tm → List Nat
