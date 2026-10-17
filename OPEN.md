@@ -164,6 +164,14 @@ references are to DESIGN.md.
     expansion (DESIGN.md section 19) produced? Today one that the
     expansion gives a position is checked, and its warning points at
     that position, often the macro's call.
+37. The unused-binder warning counts a parameter as used when its only
+    use is as an argument at the same position of a recursive call,
+    whether to the function itself or to another function of its
+    `def-fns` block, so a parameter that is only passed along and
+    never read is not reported. Unlike 30, this is about the
+    parameter, not the function. Open: whether such a use should
+    count, and how far along a chain of calls the check should follow
+    it.
 
 ## Minted constants
 
