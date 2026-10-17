@@ -3,5 +3,5 @@
 (def-fns _ $ (erased peek : (erased (Box) b) -> (erased (Nat) r))
   (match erased b _
     ((MkBox v) v)))
-(def-fns _ $ (many run : (many (Box) b) -> (many (Nat) r)) (Zero))
+(def-fns _ $ (many run : (many (Box) _b) -> (many (Nat) r)) (Zero))
 (run (MkBox (Zero)))

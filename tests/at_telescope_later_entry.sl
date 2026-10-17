@@ -4,8 +4,8 @@
 (def-adts $ (SameSlot : ((Slot) a) (a is b) -> Type)
   enum
   (many MkSame : (erased (Slot) a) -> (SameSlot a a)))
-(def-fns _ $ (many f : (many (Nat) a) (many (Nat) b at a)
-    (erased (SameSlot (slot-of a) (slot-of b)) eq) -> (many (Nat) r))
+(def-fns _ $ (many f : (many (Nat) a) (many (Nat) _b at a)
+    (erased (SameSlot (slot-of a) (slot-of _b)) _eq) -> (many (Nat) r))
   a)
 (def-fns _ $ (many g : (many (Nat) a) ->
     (many (Nat) r at a) (erased (SameSlot (slot-of a) (slot-of r)) eq))

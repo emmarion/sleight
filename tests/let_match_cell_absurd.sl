@@ -9,7 +9,7 @@
 (def-lvl X)
 
 (def-fns X $ (many get : (unique (Opt) o) -> (many (Nat) n))
-  (let-match unique o (Full v u) (absurd (Empty f u) f))
+  (let-match unique o (Full v _) (absurd (Empty f _) f))
   v)
 
 (get (Full 7))

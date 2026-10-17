@@ -2,5 +2,5 @@
 ; error: <**>: note: `m` is declared here
 
 (def-lvl X)
-(def-fns X $ (many f : (many (Nat) n) -> (erased (Nat) m)) n)
+(def-fns X $ (many f : (many (Nat) _n) -> (erased (Nat) m)) _n)
 (let ((many x)) (f (Zero)))

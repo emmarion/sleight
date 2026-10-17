@@ -12,7 +12,7 @@
 (def-fns _ $ (many rev-onto : (erased Type A) (subterm unique (ULst A) xs) (unique (ULst A) acc) ->
     (unique (ULst A) r))
   (match unique xs _
-    ((UNil _ c) acc)
+    ((UNil _) acc)
     ((UCons _ hd tl cell) (tail (rev-onto _ tl (cell _ (at) hd acc))))))
 
 (def-fns _ $ (many urev : (erased Type A) (unique (ULst A) xs) -> (unique (ULst A) r))

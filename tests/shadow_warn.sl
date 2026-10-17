@@ -26,6 +26,7 @@
 ; warns: tests/shadow_warn.sl:12:10: note: shadowed binder is here
 ; warns: tests/shadow_warn.sl:17:15: warning: declaration of `w` shadows a previous binder
 ; warns: tests/shadow_warn.sl:15:42: note: shadowed binder is here
+; warns: tests/shadow_warn.sl:15:42: warning: unused `w`; rename it `_w`
 ; warns: tests/shadow_warn.sl:19:14: warning: declaration of `pick` shadows a previous binder
 ; warns: tests/shadow_warn.sl:15:14: note: shadowed binder is here
 ; warns: tests/shadow_warn.sl:22:7: warning: declaration of `q` shadows a previous binder

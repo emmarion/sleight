@@ -4,3 +4,4 @@
 (def-fns _ $ (erased use : (erased Type B) (erased (Fn L (erased Type A) -> (erased B r)) f) -> (erased B impossible))
   (f (Nat)))
 (let ((erased contradiction)) (use _ falsity))
+; warns: tests/is_for_type_wild_bad.sl:3:32: warning: unused `A`; rename it `_A`

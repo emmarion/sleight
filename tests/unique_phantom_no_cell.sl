@@ -2,7 +2,7 @@
 (def-adts $ (T : -> Type) enum (many Live : -> (T)) (erased Ghost : -> (T)))
 (def-fns _ $ (many choose : (unique (T) t) -> (many (Nat) r))
   (match unique t _
-    ((Live cell) (Succ (Zero)))
+    ((Live _) (Succ (Zero)))
     ((Ghost) (Zero))))
 (def-fns _ $ (erased inspect : (erased (T) t) -> (erased (Nat) r))
   (match erased t _

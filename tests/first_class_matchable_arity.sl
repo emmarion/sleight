@@ -10,7 +10,7 @@
 
 (def-lvl X)
 (def-fns X $ (many f : (erased (TyCtor -> Type) T)
-    (many (ValCtor (many (Nat) n) -> (T)) C)
+    (erased (ValCtor (many (Nat) n) -> (T)) C)
     (many (Matchable enum T (many C)) m)
     (many (T) x) -> (many (Nat) n))
   (open-adt many m)

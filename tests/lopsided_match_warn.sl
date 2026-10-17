@@ -42,7 +42,7 @@
         (Full _ back)
         (match many n _
           ((Zero) back)
-          ((Succ k) (let ((many j)) k) back))))
+          ((Succ k) (let ((many _)) k) back))))
     (let ((many p)) (share (at (v a))))
     (let-match many p (Full x))
     x)
@@ -92,7 +92,7 @@
   (cell-match unique u (((Cell Full (slot-of a)) v at u))
     (Full _ back)
     (match many top _
-      ((Zero) (let ((many j)) top) back)
+      ((Zero) (let ((many _)) top) back)
       ((Succ _) back))))
 
 (match many (shadowed (MkBox inc) (statements (in-cell-match (Succ (Succ (Succ top)))))) (((Nat) x))

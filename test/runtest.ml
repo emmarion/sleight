@@ -7,7 +7,7 @@
    "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
-   "; warn-unused: yes" checks the test's own binders as --warn-unused does;
+   the test's own binders are checked as --warn-unused does, unless it says "; warn-unused: no";
    a needed file from outside tests/, such as ../std/nat, is checked as --warn-unused does whatever the test
    says, and fails the test if it warns at all, as the prelude, checked once before any test, fails the run;
    "; eval-fuel: n" bounds the evaluator as --eval-fuel does;
@@ -108,7 +108,7 @@ and run_mode name externs src =
       let prelude = directive src "prelude" <> [ "none" ] in
       Env.warn_unused := false;
       let env = List.fold_left need (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
-      Env.warn_unused := directive src "warn-unused" <> [];
+      Env.warn_unused := directive src "warn-unused" <> [ "no" ];
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;

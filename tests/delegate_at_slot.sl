@@ -3,6 +3,6 @@
 (def-fns _ $ (many f : (many (Nat) n) -> (many (Nat) m)) n)
 (def-fns _ $ (many g at f : (many (Nat) n) -> (many (Nat) m)) (delegate (f n)))
 (def-fns _ $ (many same : (many (Fn (level-of f) (many (Nat) n) -> (many (Nat) m)) a)
-    (many (Fn (level-of g) (many (Nat) n) -> (many (Nat) m)) b at a) ->) (values))
+    (many (Fn (level-of g) (many (Nat) n) -> (many (Nat) m)) _b at a) ->) (values))
 (let () (same f g))
 (g 7)

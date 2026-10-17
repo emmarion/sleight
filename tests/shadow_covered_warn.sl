@@ -17,7 +17,7 @@
 (def-fns _ $ (many len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n))
   (match many xs _
     ((Nil A) (Zero))
-    ((Cons A hd tl) (Succ $ notail $ len A tl))))
+    ((Cons A _ tl) (Succ $ notail $ len A tl))))
 
 (def-fns _ $ (many get : (erased (Nat) n) (many (Sing n) s) -> (many n is r))
   (match many s _
@@ -45,12 +45,14 @@
 ; warns: tests/shadow_covered_warn.sl:20:12: warning: declaration of `A` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:17:26: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:20:12: note: using `_` here instead would be equivalent
+; warns: tests/shadow_covered_warn.sl:19:11: warning: unused `A`; write `_` in its place
 ; warns: tests/shadow_covered_warn.sl:24:14: warning: declaration of `n` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:22:26: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:29:11: warning: declaration of `x` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:26:27: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:32:31: warning: declaration of `v` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:31:29: note: shadowed binder is here
+; warns: tests/shadow_covered_warn.sl:31:29: warning: `v` is referenced only in erased positions; declare it `erased`, or rename it `_v`
 ; warns: tests/shadow_covered_warn.sl:36:7: warning: declaration of `q` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:35:7: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:37:7: warning: declaration of `q` shadows a previous binder

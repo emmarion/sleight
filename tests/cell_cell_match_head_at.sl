@@ -9,6 +9,6 @@
 (def-fns _ $ (many run : -> (many (Nat) r))
   (let ((unique u)) (cell-alloc (P (slot-of a) (slot-of b))))
   (let ((unique p)) (rebuild u))
-  (let-match unique p (P _ y back))
+  (let-match unique p (P _ y _))
   y)
 run

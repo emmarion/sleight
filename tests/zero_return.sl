@@ -3,7 +3,7 @@
 ; A function returning no values, and a let binding none (sections 26, 27).
 
 (def-lvl X)
-(def-fns X $ (many nothing : (many (Nat) n) ->) (values))
+(def-fns X $ (many nothing : (many (Nat) _n) ->) (values))
 (let () (nothing (Zero)))
 (def-lvl Y)
 (let ((erased p)) (prove-predates X Y))

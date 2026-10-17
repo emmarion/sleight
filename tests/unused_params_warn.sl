@@ -1,6 +1,6 @@
 ; expect: 5
-; warn-unused: yes
 ; WARNINGS.md 10, on parameters and fields. The ; warns: lines at the end of the file name lines of this file.
+
 
 (def-fns _ $ (many pick : (many (Nat) a b) (erased (Lt b 5) _lt) -> (many (Nat) r)) a)
 

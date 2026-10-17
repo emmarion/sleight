@@ -10,7 +10,7 @@
     ((Cons _ hd _) (Cons _ hd xs))))
 
 (def-lvl B)
-(def-fns B $ (many twice : (many (List (Nat)) xs) -> (many (List (Nat)) r))
+(def-fns B $ (many twice : (many (List (Nat)) _xs) -> (many (List (Nat)) r))
   (let ((many one)) (Cons _ (Zero) (Nil _)))
   (prepend _ (Nil _) (Cons _ (Zero) one)))
 

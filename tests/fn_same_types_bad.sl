@@ -3,3 +3,4 @@
 (def-fns _ $ (many inc-noted at inc : (many (Nat) n) (erased (Nat) note) -> (many (Nat) m))
   (delegate (inc n)))
 (let ((many s)) (fn-same inc inc-noted))
+; warns: tests/fn_same_types_bad.sl:3:54: warning: unused `note`; rename it `_note`

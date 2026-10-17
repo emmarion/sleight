@@ -24,7 +24,7 @@
   (match erased x _ ((MkBox n) (MkBox n))))
 
 (def-fns _ $ (many rebox-erased : (many (Box) x) -> (many (Box) y))
-  (let ((erased z)) (MkBox 5))
+  (let ((erased _)) (MkBox 5))
   x)
 
 (unbox-let $ rebox-erased (MkBox (unbox b)))

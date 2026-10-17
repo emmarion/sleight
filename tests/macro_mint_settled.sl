@@ -4,7 +4,7 @@
 (comptime-match many xs (Cons _ x rest))
 (def-fns _ $ (many in-body : -> (many (List (Nat)) r))
   (mint-list 5))
-(def-fns _ $ (many distinct-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many distinct-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many v)) (Cons _ 1 $ Nil _))
   (let ((unique mw1) (many a)) (mint-settled mw _ nats-h v))
@@ -13,12 +13,12 @@
   (let ((unique mw4) (many s)) (str-raw mw3 here $ match many e _ ((Some _ _) "equal") ((None _) "distinct")))
   (values mw4 $ one s))
 (let ((many distinct)) (MkMacro _ distinct-fn))
-(def-fns _ $ (many mint-eq-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many mint-eq-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ nats-h (Nil _)))
   (let ((many nats-raw)) $ form here $ two (name here "List") (form here $ one $ name here "Nat"))
   (values mw1 $ one $ form here $ Cons _ (name here "Eq") $ Cons _ nats-raw $ two (RawSettled here _ _ _ h) (RawSettled here _ _ _ h)))
 (let ((many mint-eq)) (MkMacro _ mint-eq-fn))
-(def-fns _ $ (many takes-eq : (erased (mint-eq) e) -> (many (Nat) r))
+(def-fns _ $ (many takes-eq : (erased (mint-eq) _e) -> (many (Nat) r))
   1)
 (MkPair _ _ (MkPair _ _ xs x) $ MkPair _ _ (in-body) $ MkPair _ _ (needs-lt (lt-proof)) $ MkPair _ _ (distinct) (takes-eq (Refl _ _)))

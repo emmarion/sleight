@@ -37,3 +37,4 @@
 ; warns: tests/map.sl:24:20: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/map.sl:24:60: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/map.sl:20:6: warning: lopsided `match`; flatten it with a `let-match` on `Cons`
+; warn-unused: no

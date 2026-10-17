@@ -9,8 +9,8 @@
   (many Node : (unique (Tree) l) (many (Nat) v) (unique (Tree) r) -> (Tree)))
 
 (def-fns _ $ (many rot-right : (unique (Tree) t) -> (unique (Tree) r))
-  (let-match unique t (Node l y c outer) ((Leaf c) (Leaf)))
-  (let-match unique l (Node a x b inner) ((Leaf c2) (outer (Leaf) y c)))
+  (let-match unique t (Node l y c outer) ((Leaf) (Leaf)))
+  (let-match unique l (Node a x b inner) ((Leaf) (outer (Leaf) y c)))
   (let ((unique nb)) (inner b y c))
   (outer a x nb))
 

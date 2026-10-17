@@ -9,7 +9,7 @@
   (many IsBool : -> (Shape (Bool))))
 (def-lvl X)
 (def-fns X $ (many opaque : (erased (TyCtor -> Type) T) (erased (ValCtor -> (T)) C) (erased (ValCtor -> (T)) D)
-    (erased (Matchable enum T (many C) (many D)) m) (many (Shape (T)) s) -> (many (Nat) n))
+    (erased (Matchable enum T (many C) (many D)) _m) (many (Shape (T)) s) -> (many (Nat) n))
   (match many s (((Nat) r))
     ((IsNat) (Zero))
     ((IsBool) (Succ (Zero)))))

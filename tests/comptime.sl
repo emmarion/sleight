@@ -8,7 +8,7 @@
 
 (def-lvl X)
 
-(def-fns X $ (many use : (many (Nat) n) -> (many (Nat) m))
+(def-fns X $ (many use : (many (Nat) _n) -> (many (Nat) m))
   (Succ zero))
 
 (let ((many r)) (use one))

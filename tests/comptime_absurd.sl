@@ -8,7 +8,7 @@
 (comptime-match many z (Zero))
 
 (def-lvl X)
-(def-fns X $ (many f : (erased (Nat) n) -> (many (Nat) m))
+(def-fns X $ (many f : (erased (Nat) _n) -> (many (Nat) m))
   (match many z (((Nat) r))
     ((Zero) (Zero))
     (absurd Succ)))

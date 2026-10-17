@@ -12,7 +12,7 @@
 
 (def-lvl M)
 (let ((erased plm)) (prove-predates L M))
-(def-fns M $ (many inc2 at inc1 : (many (Nat) n) (erased (Nat) note) -> (many (Nat) m)) (delegate (inc1 (predates plm) n)))
+(def-fns M $ (many inc2 at inc1 : (many (Nat) n) (erased (Nat) _note) -> (many (Nat) m)) (delegate (inc1 (predates plm) n)))
 
 (def-lvl N)
 (let ((erased pkn)) (prove-predates K N))
@@ -28,7 +28,7 @@
 
 (add3 (inc2 0 0))
 ; warns: tests/delegate_chain.sl:11:83: warning: unnecessary `(predates _)`; drop it
-; warns: tests/delegate_chain.sl:15:105: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:15:106: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/delegate_chain.sl:23:86: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/delegate_chain.sl:24:90: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/delegate_chain.sl:25:36: warning: unnecessary `(predates _)`; drop it

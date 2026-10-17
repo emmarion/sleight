@@ -10,7 +10,7 @@
 (let ((erased p)) (prove-predates L M))
 
 (def-fns M $ (many inc-noted at inc : (many (Nat) n) -> (many (Nat) m))
-  (def-fns L $ (erased same : (erased (Nat) a) -> (erased (Nat) b)) a)
+  (def-fns L $ (erased _same : (erased (Nat) a) -> (erased (Nat) b)) a)
   (def-adts $ (Tally : -> Type)
     enum
     (erased Mark : (erased (Nat) k) -> (Tally)))

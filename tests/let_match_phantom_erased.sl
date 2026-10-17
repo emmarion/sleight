@@ -7,7 +7,7 @@
   (erased SoleGhost : (many (Nat) x) -> (OnlyGhost)))
 (def-fns _ $ (many ghost-value : (erased (GhostIndex (Succ (Zero))) p) -> (many (Nat) n))
   (let-match erased p (GhostIndexOne x))
-  (let ((erased (Eq (Nat) x x) equal)) (Refl (Nat) x))
+  (let ((erased (Eq (Nat) x x) _)) (Refl (Nat) x))
   4)
 (def-fns _ $ (many sole-value : (erased (OnlyGhost) p) -> (many (Nat) n))
   (let-match erased p (SoleGhost _))

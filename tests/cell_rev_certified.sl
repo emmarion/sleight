@@ -15,7 +15,7 @@
 
 (def-fns _ $ (many rev-onto-proved : (erased Type A) (subterm unique (ULst A) xs) (unique (ULst A) acc) ->
     (unique (ULst A) r) (erased (RevOnto A xs acc r) p))
-  (let-match unique xs (UCons _ hd tl cell) ((UNil _ c) (values acc (RONil _ acc))))
+  (let-match unique xs (UCons _ hd tl cell) ((UNil _) (values acc (RONil _ acc))))
   (let ((unique r) (erased p)) (tail (rev-onto-proved _ tl (cell _ (at) hd acc))))
   (values r (ROCons _ hd tl acc r p)))
 

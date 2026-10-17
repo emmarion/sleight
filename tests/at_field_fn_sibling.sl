@@ -8,7 +8,7 @@
 (def-adts $ (Holder : ((Slot) s) -> Type) enum
   (many MkHolder : (many (Slot) s) (many (Fn K (many (Nat) y) -> (many (MyNat) r at s)) f) -> (Holder s)))
 (def-fns _ $ (many go : (many (MyNat) n) -> (many (MyNat) r at n))
-  (def-fns K $ (many get : (many (Nat) y) -> (many (MyNat) r at n)) n)
+  (def-fns K $ (many get : (many (Nat) _y) -> (many (MyNat) r at n)) n)
   (let ((unique h)) (MkHolder (slot-of n) get))
   (let-match unique h (MkHolder s f))
   (slot-self s)

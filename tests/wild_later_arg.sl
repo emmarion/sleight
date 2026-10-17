@@ -6,7 +6,7 @@
   enum
   (many MkWrapped : (erased (Nat) n) -> (Wrapped n)))
 (def-lvl L)
-(def-fns L $ (erased unwrap : (many (Nat) n) (erased (Wrapped n) w) -> (erased (Nat) m)) n)
+(def-fns L $ (erased unwrap : (many (Nat) n) (erased (Wrapped n) _w) -> (erased (Nat) m)) n)
 (let ((many z)) (Zero))
 (let ((erased p)) (unwrap (Succ _) (MkWrapped (Succ z))))
 (Succ z)

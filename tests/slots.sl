@@ -25,7 +25,7 @@
   (let ((unique t0)) (slots-new (Box)))
   (let ((erased _) (many r1) (unique t1)) (slots-intern _ _ t0 _ _ (place-at-many _ a)))
   (let-match many r1 (SlotAdded _ _ _ v1 p1 i n) (absurd (SlotExisting _ _ _ _ _ _ p) p))
-  (let ((erased ys2) (many r2) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ c)))
+  (let ((erased ys2) (erased r2) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ c)))
   (let ((erased pa)) (match erased r2 (((NthLast (SlotItem (Box)) ys2 i (MkSlotItem (Box) (slot-of a) v1 p1)) pa))
     ((SlotExisting _ _ _ _ _ _ _) (NthLastHere _ _ _ i n))
     ((SlotAdded _ _ _ _ _ _ _) (nth-last-suffix _ _ _ i _ (NthLastHere _ _ _ i n) (SuffixOfCons _ _ _ _ (SuffixOfRefl _ _))))))

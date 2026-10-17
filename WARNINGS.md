@@ -117,10 +117,10 @@ Specified in DESIGN.md section 4.
 ``…; write `_` in its place`` or ``…; rename it `_NAME` ``, and
 ``NAME is referenced only in erased positions; declare it `erased` ``,
 for a parameter with ``, or rename it `_NAME` `` added. Off unless
-`--warn-unused` is given; the prelude is checked too, and a test opts
-in with `; warn-unused: yes`. slc is built under it, and `dune test`
-checks the prelude and the files tests need from outside `tests/` under
-it (README.md). Not checked: top-level binders, names
+`--warn-unused` is given; the prelude is checked too. slc is built
+under it, and `dune test` checks the prelude, the files tests need from
+outside `tests/`, and every test that does not opt out with
+`; warn-unused: no` under it (README.md). Not checked: top-level binders, names
 starting with `_`, gensyms (DESIGN.md section 63), the type and value
 constructors a `def-adts` defines, and names in types, returns and
 match annotations. See

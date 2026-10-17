@@ -1,5 +1,5 @@
 ; needs: ../std/macro
-(def-fns _ $ (many splice-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many splice-fn : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw args))
 (let ((many splice)) (MkMacro _ splice-fn))
@@ -18,34 +18,34 @@
   (let ((unique mw1) (many m)) (str-raw mw p s))
   (values mw1 $ one $ form p $ two (name p "compile-warn") m))
 
-(def-fns _ $ (many warn-here-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many warn-here-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (warn-at mw here "here"))
 (let ((many warn-here)) (MkMacro _ warn-here-fn))
 
-(def-fns _ $ (many warn-nowhere-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many warn-nowhere-fn : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (warn-at mw (NoPos) "nowhere"))
 (let ((many warn-nowhere)) (MkMacro _ warn-nowhere-fn))
 
-(def-fns _ $ (many warn-zero-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many warn-zero-fn : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (warn-at mw (MkPos "" 0 0) "zero"))
 (let ((many warn-zero)) (MkMacro _ warn-zero-fn))
 
-(def-fns _ $ (many warn-elsewhere-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many warn-elsewhere-fn : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (warn-at mw (MkPos "elsewhere.sl" 7 9) "elsewhere"))
 (let ((many warn-elsewhere)) (MkMacro _ warn-elsewhere-fn))
 
-(def-fns _ $ (many line-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many line-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (match many here _
     ((NoPos) (let ((unique mw1) (many r)) (nat-raw mw here 0)) (values mw1 $ one r))
     ((MkPos _ l _) (let ((unique mw1) (many r)) (nat-raw mw here l)) (values mw1 $ one r))))
 (let ((many line)) (MkMacro _ line-fn))
 
-(def-fns _ $ (many loop-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many loop-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw $ one $ form here $ one $ name here "loop"))
 (let ((many loop)) (MkMacro _ loop-fn))

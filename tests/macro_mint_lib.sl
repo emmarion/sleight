@@ -11,10 +11,10 @@
 (let ((many mint-list)) (MkMacro _ mint-list-fn))
 (let ((erased lt25)) (Lt 2 5))
 (let ((many lt25-h)) (settled-of erased lt25))
-(def-fns _ $ (many lt-proof-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many lt-proof-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled-erased mw _ lt25-h (prove-literal-lt 2 5)))
   (values mw1 $ one $ RawSettled here _ _ _ h))
 (let ((many lt-proof)) (MkMacro _ lt-proof-fn))
-(def-fns _ $ (many needs-lt : (erased (Lt 2 5) p) -> (many (Nat) r))
+(def-fns _ $ (many needs-lt : (erased (Lt 2 5) _p) -> (many (Nat) r))
   7)

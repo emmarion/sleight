@@ -4,3 +4,4 @@
 ((id _ f) (Zero))
 ; error: tests/msg_arity_computed_call_bad.sl:4:1: error: the computed function expects 2 arguments, got 1: expected `(erased Type A) (many (Nat) x)`
 ; error: tests/msg_arity_computed_call_bad.sl:4:2: note: the function is computed here
+; warns: tests/msg_arity_computed_call_bad.sl:2:24: warning: unused `A`; rename it `_A`

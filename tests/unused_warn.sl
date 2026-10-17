@@ -1,6 +1,6 @@
 ; expect: 3
-; warn-unused: yes
 ; WARNINGS.md 10. The ; warns: lines at the end of the file name lines of this file.
+
 
 (def-adts $ (D : -> Type) enum (many A : -> (D)) (many B : (many (Nat) n) -> (D)))
 (def-adts $ (Pair2 : -> Type) enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))

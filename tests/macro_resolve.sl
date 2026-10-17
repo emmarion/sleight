@@ -57,3 +57,4 @@
 (MkPair _ _ (MkPair _ _ (probe k) $ MkPair _ _ (probe E) (probe nope)) $ MkPair _ _ (MkPair _ _ (inside 1) $ MkPair _ _ before (shadowing 2)) $
   MkPair _ _ (MkPair _ _ (probe u) $ MkPair _ _ (branch (None _)) (branch (Some _ 3))) $ MkPair _ _ before-gen $ MkPair _ _ after-gen gen-text)
 ; warns: <**>:34:32: warning: declaration of `let` shadows a built-in
+; warn-unused: no

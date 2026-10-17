@@ -26,3 +26,4 @@
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `def-fns` shadows a built-in
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `compile-error` shadows a built-in
+; warn-unused: no

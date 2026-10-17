@@ -8,7 +8,7 @@
 (def-lvl X)
 (def-fns X $ (many through : (erased (TyCtor -> Type) T)
     (erased (ValCtor (many (Nat) n) -> (T)) D)
-    (many (ValCtor (erased (Nat) n) -> (T)) C)
+    (erased (ValCtor (erased (Nat) n) -> (T)) C)
     (erased (Matchable union newtype T (many D) (erased C)) m)
     (erased (T) x) -> (erased (Nat) r))
   (open-adt erased m)

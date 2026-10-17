@@ -1,4 +1,4 @@
-(def-fns _ $ (many f : (many (Nat) a) (many (Nat) b) (erased (Lt a b) p) -> (many (Nat) r)) a)
+(def-fns _ $ (many f : (many (Nat) a) (erased (Nat) b) (erased (Lt a b) _p) -> (many (Nat) r)) a)
 (def-fns _ $ (many g : (many (Nat) a) (many (Nat) b) (erased (Lt a b) lt) -> (many (Nat) r))
   (let ((erased also)) lt)
   (f a b _))

@@ -2,7 +2,7 @@
 ; error: `numeral-of` takes a literal
 (let ((erased nat-ty)) (Nat))
 (let ((many nat-h)) (settled-of erased nat-ty))
-(def-fns _ $ (many mint-numeral-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many mint-numeral-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ nat-h 3))
   (values mw1 $ one $ form here $ two (name here "numeral-of") (RawSettled here _ _ _ h)))

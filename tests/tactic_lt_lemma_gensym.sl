@@ -8,7 +8,7 @@
 (def-fns _ $ (many entry : (many (Pos) p) (many (String) m) (many (Raw) ty) (many (Raw) x) -> (many (Raw) r))
   (form p $ three (name p m) ty x))
 
-(def-fns _ $ (many gen-chain-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many gen-chain-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many a)) (gen-name mw here "a"))
   (let ((unique mw2) (many b)) (gen-name mw1 here "b"))

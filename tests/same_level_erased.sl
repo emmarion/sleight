@@ -5,11 +5,11 @@
 ; and a binder's type -- and the file earns no warning at all.
 
 (def-fns _
-  ((many walk : (subterm many (List (Nat)) xs) (erased (List (Nat)) ghost) -> (many (Nat) n))
+  ((many walk : (subterm many (List (Nat)) xs) (erased (List (Nat)) _ghost) -> (many (Nat) n))
     (let-match many xs (Cons _ _ rest) ((Nil _) (Zero)))
-    (let ((erased e1)) (walk rest rest))
+    (let ((erased _)) (walk rest rest))
     (let ((many r)) (tail $ walk rest (Cons (Nat) (walk rest rest) (Nil (Nat)))))
-    (let ((erased e3)) (match erased rest (((Nat) k)) ((Nil _) (Zero)) ((Cons _ _ t2) (walk t2 t2))))
-    (let ((erased (Nat) e4)) (Zero))
+    (let ((erased _)) (match erased rest (((Nat) k)) ((Nil _) (Zero)) ((Cons _ _ t2) (walk t2 t2))))
+    (let ((erased (Nat) _)) (Zero))
     r))
 (walk (Cons (Nat) 1 $ Nil (Nat)) (Nil (Nat)))

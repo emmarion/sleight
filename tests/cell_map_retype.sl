@@ -10,7 +10,7 @@
   (many MkTag : (many (Nat) n) -> (Tag)))
 
 (def-fns _ $ (many map-retype : (subterm unique (ULst (Nat)) xs) -> (unique (ULst (Tag)) r))
-  (let-match unique xs (UCons _ hd tl cell) ((UNil _ c) (UNil _)))
+  (let-match unique xs (UCons _ hd tl cell) ((UNil _) (UNil _)))
   (let ((unique tl2)) (notail $ map-retype tl))
   (cell _ (MkTag hd) tl2))
 

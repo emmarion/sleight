@@ -4,6 +4,6 @@
 (def-fns _ $ (erased f : (many (Nat) p) -> (erased (slot-of p) is s))
   (slot-of p))
 (def-fns _ $ (many g : (erased (Nat) x) -> (many (Nat) r))
-  (let ((erased s)) (f x))
+  (let ((erased _)) (f x))
   0)
 (g 1)

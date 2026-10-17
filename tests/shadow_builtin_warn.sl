@@ -20,4 +20,5 @@
 ; warns: tests/shadow_builtin_warn.sl:9:37: warning: declaration of `tail` shadows a built-in
 ; warns: tests/shadow_builtin_warn.sl:11:10: warning: declaration of `at` shadows a built-in
 ; warns: tests/shadow_builtin_warn.sl:15:20: warning: declaration of `tail` shadows a built-in
+; warns: tests/shadow_builtin_warn.sl:15:20: warning: unused `tail`; write `_` in its place
 ; warns: tests/shadow_builtin_warn.sl:17:7: warning: declaration of `values` shadows a built-in

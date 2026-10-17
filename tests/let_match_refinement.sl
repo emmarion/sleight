@@ -18,7 +18,7 @@
   (let-match many xs (Cons _ _ ys))
   (Succ (notail $ lm-length ys)))
 (def-fns _ $ (many refinement-main : -> (many (Nat) n))
-  (let ((erased p)) (lm-lt (Zero) (Succ (Zero)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))))
+  (let ((erased _)) (lm-lt (Zero) (Succ (Zero)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))))
   (lm-head (Nat) (Zero) (LMCons (Nat) (Zero) 5 (LMNil (Nat)))))
 (def-fns _ $ (many length-main : -> (many (Nat) n))
   (lm-length (Cons _ 1 (Cons _ 2 (Cons _ 3 (Nil _))))))

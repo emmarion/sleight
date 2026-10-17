@@ -12,7 +12,7 @@
   (let ((unique mw1) (many o)) (str-raw mw here $ said x y))
   (values mw1 $ one o))
 (let ((many same-name)) (MkMacro _ same-name-fn))
-(def-fns _ $ (many gensyms-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many gensyms-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many n) (erased g)) (gensym mw "t"))
   (let ((unique mw2) (many m) (erased h)) (gensym mw1 "t"))

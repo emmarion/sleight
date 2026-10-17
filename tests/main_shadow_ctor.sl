@@ -4,5 +4,5 @@
 ; error: a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`
 (def-adts ((String : -> Type) enum (many A : -> (String)) (many B : (many (Nat) n) -> (String))))
 (def-lvl M)
-(def-fns M ((many main : (many (String) in) -> (many (String) out)) (B 7)))
+(def-fns M ((many main : (many (String) _in) -> (many (String) out)) (B 7)))
 main

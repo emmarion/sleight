@@ -28,7 +28,7 @@
 
 (def-fns _ $ (many run : (many (Mode) m) (many (List (Rule)) rules) (many (Table ents rules) tb) (many (Term) l) (many (Term) r) (erased (Scoped ents (Zero) l) sl) (erased (Scoped ents (Zero) r) sr) ->
     (many (UOut) o) (many (OutTable ents o) ot))
-  (let ((many n) (erased fc)) (free-count ents rules))
+  (let ((erased n) (erased fc)) (free-count ents rules))
   (match many (unify-eqs m ents se rules tb n fc (Cons _ (MkEqn l r) (Nil _)) (SqCons _ _ _ _ sl sr (SqNil _))) _
     ((MkEqs _ _ _ _ o ot _) (values o ot))))
 

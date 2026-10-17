@@ -3,7 +3,7 @@
 ; non-erased, and at the scrutinee.
 (def-fns _ $ (erased cell-at : (many (List (Nat)) xs) -> (erased (Nat) n))
   (let-match erased xs (Cons _ h t u) ((Nil _) 0))
-  (let ((erased (Eq (Slot) (slot-of u) (slot-of xs)) p)) (Refl _ _))
-  (let ((erased (Cell Cons (slot-of h) (slot-of t)) v)) u)
+  (let ((erased (Eq (Slot) (slot-of u) (slot-of xs)) _)) (Refl _ _))
+  (let ((erased (Cell Cons (slot-of h) (slot-of t)) _)) u)
   h)
 0

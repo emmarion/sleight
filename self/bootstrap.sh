@@ -50,9 +50,11 @@ check_test() {
   needs=""
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   files=$(for f in $needs "$t"; do echo "$ROOT/$f"; done)
-  # flags both sides take: a "; prelude: none" test runs without the prelude, and "; eval-fuel: n" bounds the evaluator
+  # flags both sides take: a "; prelude: none" test runs without the prelude, "; eval-fuel: n" bounds the evaluator,
+  # and every test but a "; warn-unused: no" one runs under --warn-unused
   both=""
   [ "$(directive "$t" prelude)" = none ] && both=--no-prelude
+  [ "$(directive "$t" warn-unused)" = no ] || both="$both --warn-unused"
   for n in $(directive "$t" eval-fuel); do both="$both --eval-fuel $n"; done
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
@@ -79,7 +81,6 @@ check_test() {
   for d in $(directive "$t" confine-dir); do confine="--confine-dir $d"; done
   for b in $(directive "$t" confine-output-bytes); do confine="$confine --confine-output-bytes $b"; done
   [ -n "$(directive "$t" no-env)" ] && confine="$confine --no-env"
-  [ -n "$(directive "$t" warn-unused)" ] && confine="$confine --warn-unused"
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program

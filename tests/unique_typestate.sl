@@ -24,7 +24,7 @@
 
 (def-fns _ $ (many do-close : (unique (Conn (Opened)) c) -> (many (Nat) total))
   (match unique c _
-    ((MkConn _ fd cell) fd)))
+    ((MkConn _ fd) fd)))
 
 (def-fns _ $ (many session : -> (many (Nat) n))
   (let ((unique (Conn (Closed)) c)) (MkConn (Closed) 0))

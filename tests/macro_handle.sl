@@ -35,3 +35,4 @@
 (def-fns _ $ (many g : (many (PNat) n) -> (many (PNat) r)) (nat-add n 1))
 (seven)
 (MkPair _ _ (f 1 2) $ MkPair _ _ x $ MkPair _ _ k (g k))
+; warn-unused: no

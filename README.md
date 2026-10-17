@@ -211,8 +211,11 @@ under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,
-`; no-env: yes`, `; eval-fuel: n` and `; warn-unused: yes` run the test under the
-corresponding flags, the last checking the test's own binders.
+`; no-env: yes` and `; eval-fuel: n` run the test under the corresponding
+flags. Every test runs under `--warn-unused`, its own binders checked, unless it
+says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep
+the examples' text, and a few macro tests, whose binders a macro reaches in
+ways the warning does not count as uses.
 
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,

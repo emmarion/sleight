@@ -11,7 +11,7 @@
 ;! restore warn MkBox
 
 (def-fns _ $ (many three : -> (many (Box) r))
-  (let ((many x))
+  (let ((many _))
     ;! suppress warn MkBox
     (MkBox 3))
   ;! restore warn MkBox

@@ -20,7 +20,7 @@
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
   (match many line _
     ((None _)
-      (let-match unique c (MkCounter n cell))
+      (let-match unique c (MkCounter n))
       (match many (lt-dec n u8-modulus) _
         ((Yes _ _ p) (values w1 (Exit P (MkU8 n p))))
         ((No _ _ _) (values w1 (Exit P code0)))))

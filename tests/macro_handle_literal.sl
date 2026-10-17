@@ -6,3 +6,4 @@
   (values mw $ one $ form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ three (RawWild here) (RawSettled here _ _ _ (settled-of many f)) (RawSettled here _ _ _ (settled-of many g))))
 (let ((many lits)) (MkMacro _ m-fn))
 (lits)
+; warn-unused: no

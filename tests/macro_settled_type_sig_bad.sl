@@ -7,3 +7,5 @@
 (let ((many ty)) (MkMacro _ ty-fn))
 (def-fns _ $ (many f : (many (ty) a) -> (many (Nat) n)) 0)
 (f 5)
+; warns: tests/macro_settled_type_sig_bad.sl:4:71: warning: unused `args`; rename it `_args`
+; warns: tests/macro_settled_type_sig_bad.sl:8:24: warning: unused `a`; rename it `_a`

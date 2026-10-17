@@ -1,4 +1,4 @@
-(def-fns _ $ (many factory : (erased (Level) M) ->
+(def-fns _ $ (many factory : (erased (Level) _M) ->
     (erased (Level) L)
     (many (Fn L (many (Nat) x) -> (many (Nat) y)) h))
   (def-fns _ $ (many h : (many (Nat) x) -> (many (Nat) y)) x)

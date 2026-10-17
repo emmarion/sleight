@@ -4,3 +4,4 @@
 (def-fns _ $ (many g : (many (Nat) a) (many (Nat) b) -> (many (Nat) r))
   (let ((erased r)) (f a b))
   a)
+; warns: tests/at_param_erased_call_bad.sl:3:39: warning: unused `y`; rename it `_y`

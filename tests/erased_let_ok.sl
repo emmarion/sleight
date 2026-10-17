@@ -4,6 +4,6 @@
 
 (def-lvl X)
 (def-fns X $ (many f : (erased (Nat) n) -> (many (Nat) m))
-  (let ((erased k)) (Succ n))
+  (let ((erased _)) (Succ n))
   (Zero))
 (f (Zero))

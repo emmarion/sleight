@@ -3,3 +3,4 @@
 ; error: tests/msg_hole_nested_deep_bad.sl:2:4: error: argument 1, `xs`, of `k`: cannot infer `__?1` in `(Cons (Nat) (Succ __?1) (Nil (Nat)))`
 ; error: tests/msg_hole_nested_deep_bad.sl:2:18: note: `__?1` is the `_` written here
 ; error: tests/msg_hole_nested_deep_bad.sl:1:14: note: function `k` is declared here
+; warns: tests/msg_hole_nested_deep_bad.sl:1:24: warning: unused `xs`; rename it `_xs`

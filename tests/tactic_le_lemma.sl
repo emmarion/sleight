@@ -30,3 +30,4 @@
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `lt-succ-left` shadows a previous binder
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
+; warn-unused: no

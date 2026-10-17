@@ -49,3 +49,4 @@
 ; warns: tests/coerce.sl:14:4: warning: lopsided `match`; flatten it with a `let-match` on `Cons`
 ; warns: tests/coerce.sl:34:49: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/coerce.sl:41:18: warning: unnecessary `(predates _)`; drop it
+; warn-unused: no

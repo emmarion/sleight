@@ -6,7 +6,7 @@
 
 (def-lvl X)
 (def-fns X $ (many wrap : (erased (TyCtor -> Type) T)
-    (many (ValCtor (many (Nat) n) -> (T)) C)
+    (erased (ValCtor (many (Nat) n) -> (T)) C)
     (erased (Matchable enum newtype T (many C)) nt)
     (many (Nat) n) -> (many (T) t))
   (open-adt erased nt)
