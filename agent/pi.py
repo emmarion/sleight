@@ -21,9 +21,8 @@ CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
-REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
-RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
-OCAML = os.environ.get("PI_OCAML", "0") not in ("0", "false", "")
+_on = lambda name, default="0": os.environ.get(name, default) not in ("0", "false", "")
+REQUESTS_LOG, RUN_STATS, OCAML, WARN_UNUSED = _on("PI_REQUESTS_LOG"), _on("PI_RUN_STATS", "1"), _on("PI_OCAML"), _on("PI_WARN_UNUSED")
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
@@ -383,7 +382,7 @@ def _shown(capture, ext, data):
     return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None, warn_unused=False):
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
@@ -404,7 +403,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
@@ -511,9 +510,12 @@ TOOLS = {
                "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. "
                + ("With `ocaml`, the program is not built or run: if it compiles, the OCaml code the compiler translates it into "
                   "is written to the file `ocaml` names, and only the compiler's messages are returned. Functions that are never called at run time, "
-                  "including those called only at compile time, are left out of it. " if OCAML else "") + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
+                  "including those called only at compile time, are left out of it. " if OCAML else "")
+               + ("With `warn_unused`, the compiler also warns about each binder below the top level that is never used, "
+                  "or is not erased but used only in erased positions, in every file it reads, the libraries included. " if WARN_UNUSED else "")
+               + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
-           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}), ["paths"]),
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}) | ({"warn_unused": BOOL} if WARN_UNUSED else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -1252,6 +1254,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "                    `first_error` decides, defaulting to every error [yes]\n"
          "  PI_OCAML          let the `sl` tool's `ocaml` parameter write the program's OCaml translation to a file instead of\n"
          "                    running it [0]\n"
+         "  PI_WARN_UNUSED    let the `sl` tool's `warn_unused` parameter turn on the compiler's unused-binder warnings [0]\n"
          "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]\n"
          "  PI_GATE_PORT      the localhost port of the organizer that lets one `sl` call run at a time, fairest to the run\n"
          "                    served least recently; the first pi.py to need it starts it [47219]")
