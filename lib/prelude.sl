@@ -1582,13 +1582,13 @@
 (def-fns _ $ (many at erased-or-swap : (erased Type P) (erased Type Q) (erased Q q) (many (ErasedOr P) x) ->
     (many (ErasedOr Q) y at x))
   (match many x _
-    ((EONonErased _ p) (coerce x (coercible-ctor (Shared) EONonErased P Q p q)))
-    ((EOErased _) (coerce x (coercible-ctor (Shared) EOErased P Q)))))
+    ((EONonErased _ p u) (at (u Q q)))
+    ((EOErased _ u) (u Q))))
 
 (def-fns _ $ (many at erased-or-void : (erased Type P) (erased Type Q) (many (ErasedOr P) x)
     (erased (Eq (ErasedOr P) x (EOErased P)) e) -> (many (ErasedOr Q) y at x))
   (let-match erased e (Refl _ _))
-  (coerce x (coercible-ctor (Shared) EOErased P Q)))
+  (match many x (at (((ErasedOr Q) y at x))) ((EOErased _ u) (u Q))))
 
 (def-fns _ $ (many extern at nat-same : (subterm many (Nat) a) (many (Nat) b at a) ->
     (many (ErasedOr (Eq (Nat) a b)) r at vacant-slot))

@@ -21,10 +21,11 @@ usage ValCtor: (ValCtor <parameter> ... -> <type>)
 usage Matchable: (Matchable enum|union [newtype] [extern] <type constructor> (<multiplicity> <constructor>) ...)
 usage cell-alloc: (cell-alloc <constructor>)
 usage cell-alloc: (cell-alloc (<constructor> <slot item> ...))
+usage cell-write: (cell-write erased <cell> (<constructor> <slot item> ...))
 usage cell-write: (cell-write many <cell> (<constructor> <slot item> ...))
 usage cell-write: (cell-write unique <cell> (<constructor> <slot item> ...))
 usage cell-match: (cell-match many <cell> <annotation> (<constructor> <slot binder> ...) <statement> ... <value>)
-usage cell-match: (cell-match unique <cell> <annotation> (<constructor> <slot binder> ... <cell binder>) <statement> ... <value>)
+usage cell-match: (cell-match unique <cell> <annotation> (<constructor> <slot binder> ... [<cell binder>]) <statement> ... <value>)
 usage Cell: (Cell <constructor> <slot> ...)
 usage slot-of: (slot-of <name>)
 usage slot-self: (slot-self <name>)
@@ -88,11 +89,11 @@ usage cell-same: (cell-same <cell> <cell>)
 usage fn-same: (fn-same <function> <function>)
 usage def-opaque: (def-opaque (<name> : <parameter> ... -> Type) ...)
 usage def-prim: (def-prim (<many or erased> <primitive> : <parameter> ... -> <return> ...) ...)
-role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
+role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, cell-write or open-adt
 usage erased: (erased <type> <name>)
-role many: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-match or open-adt
+role many: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-write, cell-match or open-adt
 usage many: (many <type> <name>)
-role unique: is a multiplicity, beginning a telescope entry or a function header, or the mode of a match, let-match, comptime-match or cell-match
+role unique: is a multiplicity, beginning a telescope entry or a function header, or the mode of a match, let-match, comptime-match, cell-write or cell-match
 usage unique: (unique <type> <name>)
 role :: separates a name from its signature
 usage :: (<multiplicity> <name> : <parameter> ... -> <result> ...)

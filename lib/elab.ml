@@ -725,14 +725,14 @@ let mint_adt ?(newtype = false) env name disc shapes =
 (* A match on an ADT the elaborator can see reads no Matchable at runtime (section 24); one on a held Matchable
    reads it as the shape the Matchable's type gives its values. *)
 let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, mint_adt ~newtype:(match type_of env x with Matchable (_, n, _, _, _) -> n | _ -> false) env (entry_name env tid) disc shapes)
-let cell_shape env l c =
+let cell_shape env l pos c =
   let tid = tid_of env l c in
   let mid, disc, cs = find_matchable env l tid in
   (match type_of env mid with
    | Matchable (_, true, _, _, _) -> error l "newtype constructors have no cells"
    | Matchable (_, _, true, _, _) when not env.in_extern -> error l "extern constructors have no cells outside an extern model"
    | _ -> ());
-  if marker env l tid cs c = Erased then error l "phantom constructors have no cells";
+  if marker env l tid cs c = Erased && pos <> Erased then error_in env l "%s is phantom, so its cell is used only in an erased position" (qname env c);
   let params, ret = ctor_type env l c in
   let shapes = shapes env l cs in
   let a = mint_adt env (entry_name env tid) disc shapes in
@@ -791,7 +791,7 @@ let pattern_cell env l mult scrut c fids name =
   match name with
   | None -> (env, None)
   | Some (name, at) ->
-      let _, params, _ = cell_shape env l c in
+      let _, params, _ = cell_shape env l mult c in
       let slots = List.map slot_of (runtime_ids params fids) in
       let state = match scrut.term with Var x -> (entry env x).state | _ -> Hypothetical in
       let x, env = bind env ~word:true ~at name mult state (Cell (Var c, slots)) in
@@ -849,7 +849,7 @@ and elab_type_form env l sp args =
   match (sp, args) with
   | Sp.Cell, c :: slots ->
       let c = ctor_var env l c in
-      let ct, params, _ = cell_shape env l c in
+      let ct, params, _ = cell_shape env l Erased c in
       if List.length slots <> ct.V.arity then slot_count env l "the type former `Cell`" "slot" c params (List.length slots);
       let env, slots = List.fold_left_map (fun env s -> let env, s = elab_term env s in check_type env l (infer env l s) Prelude.slot_term; (env, s)) env slots in
       (env, Cell (Var c, slots))
@@ -1495,7 +1495,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.CellAlloc, [ raw ] ->
       let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ | Handle _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
       let c = ctor_var env l c in
-      let ct, params, _ = cell_shape env l c in
+      let ct, params, _ = cell_shape env l pos c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
         (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
       let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst Prelude.vacant)) in
@@ -1504,9 +1504,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ m; u; List (il, c :: items) ] ->
       (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
-      if pos = Erased then error_in env l "`cell-write` in an erased position";
-      let mode = mult_or env l m in
-      if mode = Erased then error_in env l "`cell-write` takes its cell at `many` or `unique`";
+      let mode = written env pos l "cell-write" (mult_or env l m) in
+      if pos <> Erased && mode = Erased then error_in env l "`cell-write` takes its cell at `many` or `unique` in a non-erased position";
       let env, r, input = elab_expr1 env (under pos mode) u in
       let shared = mode = Many in
       let input_id = fresh () in
@@ -1514,7 +1513,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let c = ctor_var env l c in
       let existing, slots = match canon env r.ty with Cell (Var c, ss) -> c, ss | _ -> error_in env l "`cell-write` needs a `Cell`" in
       check_equal env l (Var c) (Var existing);
-      let ct, params, _ = cell_shape env l c in
+      let ct, params, _ = cell_shape env l pos c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-write`", il, c, params) slots items in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a cell and so unique" (type_of env x) (entry env x).mult;
@@ -1774,7 +1773,7 @@ and cell_items env pos l (what, il, c, params) slots items =
 and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args =
   let pos = pos_of env expect in
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
-  let ct, params, ret = cell_shape env l c in
+  let ct, params, ret = cell_shape env l pos c in
   (* the cell is taken at the position's multiplicity: read and copied at `many` where it stores, consumed at
      `unique` (section 37) *)
   let shared = pos = Many in
@@ -1805,17 +1804,17 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let c = ctor_var env pl c in
       let c', slots = match canon env r.ty with Cell (Var c, ss) -> c, ss | _ -> error_in env l "`cell-match` needs a `Cell`" in
       check_equal env l (Var c) (Var c');
-      let ct, _, _ = cell_shape env l c in
-      let needed = ct.V.arity + if mode = Unique then 1 else 0 in
-      if List.length names <> needed then
-        binder_count env pl "`cell-match`" c mode names (List.map is_entry slots @ if mode = Unique then [ is_entry ~mult:Unique ?place:r.place r.term ] else []);
+      let ct, _, _ = cell_shape env l mode c in
+      let given = List.length names in
+      if given <> ct.V.arity && not (mode = Unique && given = ct.arity + 1) then
+        binder_count env pl "`cell-match`" c mode ~extra:(mode = Unique) names (List.map is_entry slots @ if mode = Unique then [ is_entry ~mult:Unique ?place:r.place r.term ] else []);
       let env, ann_tele, atmatch = result_tele ~demand tele env expect l ann in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None mode (ran_state env mode code) r.ty ~rule:r.term in
       let env = placed env sid r.place in
       let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) ((binder_or pl n "a slot binder")) Many Hypothetical Prelude.slot_term in track env Field x; (env,x)) { (leave_run env) with unwarned = env.unwarned || atmatch } (List.filteri (fun i _ -> i < ct.arity) names) in
       let envb = merge_opens (unify_force (forcing envb) (Cell (Var c,List.map (fun x -> Var x) ids)) (Cell (Var c,slots))) in
-      let envb, back = if mode <> Unique then (envb, None) else
+      let envb, back = if given = ct.arity then (envb, None) else
         let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) ((binder_or pl (List.nth names ct.arity) "a cell binder")) Unique Hypothetical r.ty ~rule:r.term in
         track envb Field x;
         (place envb x (slot_of sid), Some x) in
@@ -1883,7 +1882,6 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         let bl = loc pat in
         let c, fs = match pat with Atom _ | Handle _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern%s" (help env (Sp.hints "branch")) in
         let c = ctor_var env bl c in
-        let extra = extra && marker env bl tid ctors c <> Erased in
         let fs, name = if kind = `Auto then (fs, if extra then Some (None, Reader.nowhere) else None) else pattern env ("a `" ^ form ^ "` branch") smult sres bl c (mults_of bl c) extra fs in
         let tele = fst (ctor_type env bl c) in
         let phantom, fids, envb, forced =
