@@ -236,18 +236,22 @@ type slots = {
   mutable compactions_seen : int }  (* [compactions] when [old] was last built; -1 forces a rebuild *)
 
 let address (x : word) : int = 2 * (Obj.magic x : int)
-let compactions = ref 0
-let watch_compactions =
-  lazy
-    (let seen = ref (Gc.quick_stat ()).compactions in
-     ignore (Gc.create_alarm (fun () -> let c = (Gc.quick_stat ()).compactions in if c <> !seen then (seen := c; incr compactions))))
+(* An earlier version counted compactions with a GC alarm, as below. It appeared to work on OCaml 5.5.1 but not
+   on 4.14.1, where Gc.compact seemed to run the alarm before compacting, so the count lagged a major cycle and
+   lookups after a compaction could miss (tests/slots_compact.sl):
+     let compactions = ref 0
+     let watch_compactions =
+       lazy
+         (let seen = ref (Gc.quick_stat ()).compactions in
+          ignore (Gc.create_alarm (fun () -> let c = (Gc.quick_stat ()).compactions in if c <> !seen then (seen := c; incr compactions)))) *)
+let compactions () = (Gc.quick_stat ()).compactions
 
 let renew_sentinel t = let s = ref 0 in t.sentinel <- s; t.sentinel_at <- address (Obj.magic s)
 let moved t = address (Obj.magic t.sentinel) <> t.sentinel_at
 
 let rec sync t =
-  if t.compactions_seen <> !compactions then begin
-    t.compactions_seen <- !compactions;
+  if t.compactions_seen <> compactions () then begin
+    t.compactions_seen <- compactions ();
     Hashtbl.reset t.old;
     for i = 0 to t.count - 1 do Hashtbl.add t.old (address t.keys.(i)) i done;
     Hashtbl.reset t.young; t.young_from <- t.count; renew_sentinel t; sync t
@@ -258,7 +262,6 @@ let rec sync t =
   end
 
 let slots_new () =
-  Lazy.force watch_compactions;
   { keys = [||]; count = 0; old = Hashtbl.create 16; young = Hashtbl.create 16; young_from = 0;
     sentinel = ref 0; sentinel_at = 0; compactions_seen = -1 }
 
@@ -268,7 +271,7 @@ let rec slots_lookup t (s : word) =
   let hit = List.find_opt (fun i -> t.keys.(i) == s) in
   let r = match hit (Hashtbl.find_all t.young a) with Some i -> Some i | None -> hit (Hashtbl.find_all t.old a) in
   ignore (Sys.opaque_identity (ref ()));
-  if moved t || compacted <> !compactions then slots_lookup t s else r
+  if moved t || compacted <> compactions () then slots_lookup t s else r
 
 let slots_find t s = match slots_lookup t (Obj.magic s) with Some i -> SlotFound i | None -> SlotMissing
 
