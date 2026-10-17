@@ -2,7 +2,8 @@
 
 usage: python3 agent/golfchart.py [--slc SLC] [--out DIR] RESULTS-DIR...
 
-Each RESULTS-DIR is a box-* directory or a run directory; runs of other tasks are skipped. A session is valid when the sl files that its
+Each RESULTS-DIR is a box-* directory or a run directory; runs of other tasks are skipped. Only finished
+sessions are checked: those with an answer.txt or a later session. A session is valid when the sl files that its
 work/files.txt lists compile with SLC with no warnings and no `;! suppress`, and the OCaml that SLC emits,
 built with ocamlfind, prints perf.sl's checksum and `minor-words 0` within a second. Results are cached in
 DIR/sizes.json by session and SLC. Writes DIR/size{,-log,-loglog}.{svg,png}.
@@ -114,9 +115,8 @@ def main():
     data = {}
     for (run, _), name in zip(rs, labels(rs)):
         data[name] = []
-        for s in sorted(p for p in run.iterdir() if p.name.isdigit()):
-            if not re.search(r"^>>> \S+ done", (s / "transcript.log").read_text(errors="replace"), re.M):
-                continue
+        ss = sorted(p for p in run.iterdir() if p.name.isdigit())
+        for s in [s for s, later in zip(ss, ss[1:] + [None]) if later or (s / "answer.txt").exists()]:
             key = f"{slc} {s.resolve()}"
             if key not in cache:
                 cache[key] = dict(zip(("size", "status"), check(s, args.slc, out / "build")))
