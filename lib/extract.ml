@@ -567,7 +567,7 @@ let driver cx =
              ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }
 let world = Driver_core.start %s %s %b world
 let print_final = Driver_core.print world
 let run_program = driver.run_program world

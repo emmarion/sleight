@@ -82,7 +82,7 @@ and run_mode name externs src =
   let visible = if !Extract.with_env then envs else [] in
   let fence = ref "/" in
   List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine-dir");
-  let limit = ref max_int in
+  let limit = ref None in
   Extract.output_bytes := None;
   Eval.fuel := Option.map int_of_string (List.nth_opt (directive src "eval-fuel") 0);
   List.iter (fun b -> limit := Result.fold ~ok:Fun.id ~error:failwith (Program.output_limit b); Extract.output_bytes := Some b) (directive src "confine-output-bytes");

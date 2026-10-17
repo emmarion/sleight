@@ -6,7 +6,7 @@ let world args =
   let flush_to oc s = output_string oc s; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
-    exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
+    exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in

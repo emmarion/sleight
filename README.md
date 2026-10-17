@@ -114,7 +114,8 @@ itself once it has read its sources (ASSUMPTIONS.md 198).
 
 `--confine-output-bytes n` crashes a program, exit code 1, before the
 request that would take its output past `n` bytes: everything it writes,
-plus 4096 per file or directory it creates. It lowers its own limit with
+plus 4096 per file or directory it creates, while it has a limit; what it
+writes with none is not counted. It sets or lowers its own limit with
 `ConfineOutputBytes`; a `Nat` too large for an OCaml `int` means no limit
 (`tests/io_output_limit.sl`, ASSUMPTIONS.md 199). Like `--confine-dir`,
 it is embedded under `--extract`, and slc takes it too.

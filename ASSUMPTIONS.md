@@ -2047,13 +2047,9 @@ README.md describes them; the choices below are the session's.
      check is not atomic with the request. A request that passes the
      check is charged whether or not it then succeeds. The crash exits
      with code 1, the code the driver already exits with when it cannot
-     confine itself at startup. Under `--interpret` slc's own messages
-     pass through its driver ahead of `ConfineOutputBytes`, and slc
-     raises the limit it sets by their bytes, so the program is left
-     the `n` it is given; the crash's message counts them in both of
-     its totals, where the reference's does not. A flag value that is
-     not a number is reported with slc's `slc: ` prefix there, as a
-     fence is in 198.
+     confine itself at startup. Under `--interpret` a flag value that is
+     not a number is reported with slc's `slc: ` prefix, as a fence is
+     in 198.
 
 ## Slots and `at` (DESIGN.md sections 35 to 41), literals and macros
 

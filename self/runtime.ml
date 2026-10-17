@@ -18,4 +18,4 @@ let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v =
 let show_any (v : Obj.t) : string = "?"
 let flush_to oc s = output_string oc s; flush oc
 let print_final = print_endline
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }

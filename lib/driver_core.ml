@@ -10,7 +10,7 @@ type world = {
   exit : int -> unit;
   print : string -> unit;
   fence : string ref;
-  limit : int ref;
+  limit : int option ref;
   used : int ref;
 }
 
@@ -129,7 +129,7 @@ let confine fence dir =
       | exception e -> Error (explain e))
 
 let entry_bytes = 4096
-let clamp z = if Z.fits_int z then Z.to_int z else max_int
+let clamp z = if Z.fits_int z then Some (Z.to_int z) else None
 
 let output_limit b =
   if b <> "" && String.for_all (fun c -> c >= '0' && c <= '9') b then Ok (clamp (Z.of_string b)) else Error (b ^ ": not a number of bytes")
@@ -146,8 +146,11 @@ let host_envs () =
     (Array.to_list (Unix.environment ()))
 
 let spend w cost =
-  cost <= !(w.limit) - !(w.used) && (w.used := !(w.used) + cost; true)
-  || (w.err (Printf.sprintf "runtime error: output limit exceeded: this request would bring the program's approximate output to %d bytes, over its limit of %d\n" (!(w.used) + cost) !(w.limit)); false)
+  match !(w.limit) with
+  | None -> true
+  | Some limit ->
+      cost <= limit - !(w.used) && (w.used := !(w.used) + cost; true)
+      || (w.err (Printf.sprintf "runtime error: output limit exceeded: this request would bring the program's approximate output to %d bytes, over its limit of %d\n" (!(w.used) + cost) limit); false)
 
 let print w s = if spend w (String.length s + 1) then w.print s else w.exit 1
 
@@ -221,10 +224,12 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     | DeleteFile path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
     | DeleteDir path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
     | ConfineDir dir -> (match confine w.fence (to_string dir) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
-    | ConfineOutputBytes bytes ->
+    | ConfineOutputBytes bytes -> (
         let z = to_z bytes in
-        if clamp z <= !(w.limit) then (w.limit := clamp z; o.ok o.unit)
-        else o.fail (of_string (Printf.sprintf "%s bytes: above the current output limit of %d bytes" (Z.to_string z) !(w.limit)))
+        match !(w.limit) with
+        | Some limit when Option.fold ~none:true ~some:(fun n -> n > limit) (clamp z) ->
+            o.fail (of_string (Printf.sprintf "%s bytes: above the current output limit of %d bytes" (Z.to_string z) limit))
+        | _ -> w.limit := clamp z; o.ok o.unit)
     | Measure c ->
         let reading m1 extra =
           let g1 = Gc.quick_stat () in
