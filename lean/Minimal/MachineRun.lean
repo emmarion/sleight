@@ -110,12 +110,12 @@ theorem argsUses_uq {G : UCtx} : ∀ {md : Ent → Bool} {args s : Tm} {A : Uses
   | md, .cons _ _, .subterm .., A, h | md, .cons _ _, .fn .., A, h | md, .cons _ _, .mtbl .., A, h
   | md, .cons _ _, .lvl _, A, h | md, .cons _ _, .tok, A, h | md, .cons _ _, .clo .., A, h
   | md, .cons _ _, .nat _, A, h | md, .cons _ _, .ptr _, A, h | md, .cons _ _, .wld _, A, h
-  | md, .cons _ _, .sfv _, A, h | md, .cons _ _, .sbv _, A, h
+  | md, .cons _ _, .sfv _, A, h | md, .cons _ _, .sbv _, A, h | md, .cons _ _, .wd .., A, h
   | md, .nil, _, A, h | md, .fv _, _, A, h | md, .bv _, _, A, h | md, .bind .., _, A, h | md, .app .., _, A, h
   | md, .tyc .., _, A, h | md, .vc .., _, A, h | md, .tyCtor _, _, A, h | md, .valCtor _, _, A, h
   | md, .univ, _, A, h | md, .level, _, A, h | md, .predates .., _, A, h | md, .subterm .., _, A, h
   | md, .fn .., _, A, h | md, .mtbl .., _, A, h | md, .lvl _, _, A, h | md, .tok, _, A, h
-  | md, .clo .., _, A, h | md, .nat _, _, A, h | md, .ptr _, _, A, h | md, .wld _, _, A, h | md, .sfv _, _, A, h | md, .sbv _, _, A, h => by
+  | md, .clo .., _, A, h | md, .nat _, _, A, h | md, .ptr _, _, A, h | md, .wld _, _, A, h | md, .sfv _, _, A, h | md, .sbv _, _, A, h | md, .wd .., _, A, h => by
     simp only [UCtx.argsUses] at h; cases h; exact UqOK.nil
 end
 
@@ -1381,7 +1381,7 @@ theorem teleUs_getD : ∀ (t : Tm) (k : Nat), (teleUs t).getD k false = t.uAt k
   | .bind _ _ r, k + 1 => by have := teleUs_getD r k; simp only [List.getD_eq_getElem?_getD] at this; simp [teleUs, Tm.uAt, this]
   | .fv _, _ | .bv _, _ | .nil, _ | .cons .., _ | .app .., _ | .tyc .., _ | .vc .., _ | .tyCtor _, _ | .valCtor _, _
   | .univ, _ | .level, _ | .predates .., _ | .subterm .., _ | .fn .., _ | .mtbl .., _ | .lvl _, _ | .tok, _
-  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ | .sfv _, _ | .sbv _, _ => by cases ‹Nat› <;> rfl
+  | .clo .., _ | .nat _, _ | .ptr _, _ | .wld _, _ | .sfv _, _ | .sbv _, _ | .wd .., _ => by cases ‹Nat› <;> rfl
 
 theorem getD_dropLast {l : List Bool} {k : Nat} (h : l.dropLast.getD k false = true) : l.getD k false = true := by
   simp only [List.getD_eq_getElem?_getD] at h ⊢
@@ -1451,7 +1451,7 @@ theorem teleUs_length : ∀ (t : Tm), (teleUs t).length = t.ers.length
   | .bind _ _ r => by simp [teleUs, Tm.ers, teleUs_length r]
   | .fv _ | .bv _ | .nil | .cons .. | .app .. | .tyc .. | .vc .. | .tyCtor _ | .valCtor _
   | .univ | .level | .predates .. | .subterm .. | .fn .. | .mtbl .. | .lvl _ | .tok
-  | .clo .. | .nat _ | .ptr _ | .wld _ | .sfv _ | .sbv _ => rfl
+  | .clo .. | .nat _ | .ptr _ | .wld _ | .sfv _ | .sbv _ | .wd .. => rfl
 
 theorem machine_tail {b : Nat} {G : UCtx} {ru : List Bool} {rets R : Tm} {rest : Core} {ρ vs outsF : List Tm}
     {Γ' : Ctx} (hR : R.isTele) (hol : outsF.length = R.len) (hn' : Γ'.n = G.Γ.n + R.len)
@@ -3729,7 +3729,7 @@ theorem mask_length : ∀ (es : List Bool) (args : Tm), (maskArgs es args).toLis
   | _ :: _, .nil | _ :: _, .fv _ | _ :: _, .bv _ | _ :: _, .univ | _ :: _, .level | _ :: _, .tyc .. | _ :: _, .vc ..
   | _ :: _, .app .. | _ :: _, .bind .. | _ :: _, .tyCtor _ | _ :: _, .valCtor _ | _ :: _, .predates ..
   | _ :: _, .subterm .. | _ :: _, .fn .. | _ :: _, .mtbl .. | _ :: _, .lvl _ | _ :: _, .tok | _ :: _, .clo ..
-  | _ :: _, .nat _ | _ :: _, .ptr _ | _ :: _, .wld _ | _ :: _, .sfv _ | _ :: _, .sbv _ => by simp [maskArgs]
+  | _ :: _, .nat _ | _ :: _, .ptr _ | _ :: _, .wld _ | _ :: _, .sfv _ | _ :: _, .sbv _ | _ :: _, .wd .. => by simp [maskArgs]
 
 theorem MOut.congrE {U : Uses} {n : Nat} {er : Nat → Bool} {H H' : Heap} {ρM ρS ρ : List Tm} {Res Shr : Nat → Prop}
     {rets : Tm} {ru : List Bool} {vsM vsS vs vsS' vs' : List Tm}

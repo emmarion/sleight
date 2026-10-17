@@ -15,6 +15,11 @@ def Ent.er : Ent → Bool
 def Ent.u : Ent → Bool
   | ty _ _ u | is _ _ u _ => u
 
+inductive Word where
+  | imm (k : Nat)
+  | blk (i : Nat)
+  deriving DecidableEq, Repr, Inhabited
+
 inductive Tm where
   | fv (i : Nat)
   | bv (i : Nat)
@@ -40,6 +45,7 @@ inductive Tm where
   | wld (k : Nat)
   | sfv (i : Nat)
   | sbv (i : Nat)
+  | wd (w : Word) (v : Tm)
   deriving DecidableEq, Repr, Inhabited
 
 def slotD : Nat := 4
@@ -55,6 +61,28 @@ def isSlotVal (n : Nat) : Tm → Bool
 def slotOf : Tm → Tm
   | fv j | sfv j => sfv j
   | _ => vacant
+
+def word : Tm → Word
+  | wd w _ => w
+  | _ => .imm 0
+
+def slotW (w : Word) : Tm := if w = .imm 0 then vacant else wd w vacant
+
+def strip : Tm → Tm
+  | wd w v => if v = vacant then slotW w else v.strip
+  | tyc d ls => tyc d ls.strip
+  | vc d c ls => vc d c ls.strip
+  | cons h t => cons h.strip t.strip
+  | bind m a r => bind m a.strip r.strip
+  | app h a => app h.strip a.strip
+  | tyCtor p => tyCtor p.strip
+  | valCtor p => valCtor p.strip
+  | predates A x L => predates A.strip x.strip L.strip
+  | subterm A a B b => subterm A.strip a.strip B.strip b.strip
+  | fn l np t uf hm => fn l.strip np t.strip uf hm
+  | mtbl u nt ex ph T cs => mtbl u nt ex ph T.strip cs.strip
+  | clo env gid j => clo env.strip gid j
+  | t => t
 
 def subst (f : Nat → Tm) : Tm → Tm
   | fv i => f i
@@ -127,7 +155,7 @@ def levels : Tm → List Nat
   | subterm A a B b => A.levels ++ a.levels ++ B.levels ++ b.levels
   | fn l _ t _ _ => l.levels ++ t.levels
   | mtbl _ _ _ _ T cs => T.levels ++ cs.levels
-  | clo e _ _ => e.levels
+  | clo e _ _ | wd _ e => e.levels
   | _ => []
 
 def static (n : Nat) : Nat → Tm → Bool
@@ -143,7 +171,7 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, fn l _ t _ _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
   | _, nil | _, univ | _, level => true
-  | _, lvl _ | _, tok | _, clo .. | _, nat _ | _, ptr _ | _, wld _ => false
+  | _, lvl _ | _, tok | _, clo .. | _, nat _ | _, ptr _ | _, wld _ | _, wd .. => false
 
 def bound : Nat → Tm → Bool
   | d, bv i | d, sbv i => i < d
@@ -493,6 +521,7 @@ def Tm.noClo : Tm → Bool
   | .predates a b c => a.noClo && b.noClo && c.noClo
   | .subterm a b c d => a.noClo && b.noClo && c.noClo && d.noClo
   | .fn a _ b _ _ | .mtbl _ _ _ _ a b => a.noClo && b.noClo
+  | .wd _ a => a.noClo
   | _ => true
 
 mutual

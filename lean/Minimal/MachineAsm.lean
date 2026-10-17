@@ -44,7 +44,7 @@ theorem CloOK.subst {f : Nat → Tm} (hf : ∀ i, CloOK P (f i)) : ∀ t : Tm, t
     simp only [Tm.noClo, Bool.and_eq_true] at h
     exact ⟨CloOK.subst hf a h.1, CloOK.subst hf b h.2⟩
   | .sfv i, _ => by simp only [Tm.subst]; cases f i <;> simp [Tm.slotOf, Tm.vacant, CloOK]
-  | .bv _, _ | .nil, _ | .univ, _ | .level, _ | .lvl _, _ | .tok, _ | .nat _, _ | .ptr _, _ | .wld _, _ | .sbv _, _ => trivial
+  | .bv _, _ | .nil, _ | .univ, _ | .level, _ | .lvl _, _ | .tok, _ | .nat _, _ | .ptr _, _ | .wld _, _ | .sbv _, _ | .wd .., _ => trivial
 
 theorem Tm.noClo_static : ∀ (t : Tm) (n d : Nat), t.static n d = true → t.noClo = true
   | .cons a b, n, d, h | .app a b, n, d, h => by
@@ -63,7 +63,7 @@ theorem Tm.noClo_static : ∀ (t : Tm) (n d : Nat), t.static n d = true → t.no
       Tm.noClo_static e n d h.2]
   | .fn a _ b _ _, n, d, h | .mtbl _ _ _ _ a b, n, d, h => by
     simp only [Tm.static, Bool.and_eq_true] at h; simp [Tm.noClo, Tm.noClo_static a n d h.1, Tm.noClo_static b n d h.2]
-  | .clo .., _, _, h => by simp [Tm.static] at h
+  | .clo .., _, _, h | .wd .., _, _, h => by simp [Tm.static] at h
   | .fv _, _, _, _ | .bv _, _, _, _ | .nil, _, _, _ | .univ, _, _, _ | .level, _, _, _ | .lvl _, _, _, _
   | .tok, _, _, _ | .nat _, _, _, _ | .ptr _, _, _, _ | .sfv _, _, _, _ | .sbv _, _, _, _ => rfl
 
