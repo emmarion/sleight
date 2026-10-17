@@ -1599,6 +1599,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.SettledOf, [ mraw; a ] ->
       let mode = mult_or env l mraw in
       let env, x = entry_named env (loc a) a "a name" in
+      refer ~live:(mode <> Erased && not env.usage_erased) x;
       if (match (entry env x).state with Hypothetical -> true | Settled _ -> false) then error_in env (loc a) "%s is `Hypothetical`, and a handle names a `Settled` entry" (qname env x);
       if mode <> Erased && made env a x <> mode then error_in env (loc a) "%s is not declared `%s`" (qname env x) (speller env (mult_name mode));
       let id s = match prelude_id env s with Some i -> Var i | None -> error l "`settled-of` needs the prelude's `%s`, which `--no-prelude` leaves out" s in

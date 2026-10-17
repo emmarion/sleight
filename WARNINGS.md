@@ -117,13 +117,12 @@ Specified in DESIGN.md section 4.
 ``…; write `_` in its place`` or ``…; rename it `_NAME` ``, and
 ``NAME is referenced only in erased positions; declare it `erased` ``,
 for a parameter with ``, or rename it `_NAME` `` added. Off unless
-`--warn-unused` is given; the prelude is checked too. slc is built
-under it, and `dune test` checks the prelude, the files tests need from
-outside `tests/`, and every test that does not opt out with
-`; warn-unused: no` under it (README.md). Not checked: top-level binders, names
-starting with `_`, gensyms (DESIGN.md section 63), the type and value
-constructors a `def-adts` defines, and names in types, returns and
-match annotations. See
-OPEN.md 30 and 31.
+`--warn-unused` is given, as it is for slc's build and `dune test`
+(README.md); the prelude is checked too. `(settled-of m x)` references
+`x`, from an erased position at `erased`. Not checked: top-level
+binders, names starting with `_`, gensyms (DESIGN.md section 63), the
+type and value constructors a `def-adts` defines, and names in types,
+returns and match annotations. See OPEN.md 30, 31, 37 and 38.
 `lib/elab.ml` (`report_unused`), `self/elab.sl`. Tests:
-`tests/unused_warn.sl`, `tests/unused_params_warn.sl`.
+`tests/unused_warn.sl`, `tests/unused_params_warn.sl`,
+`tests/unused_settled_of_warn.sl`.

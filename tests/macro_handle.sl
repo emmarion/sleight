@@ -1,13 +1,14 @@
 ; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ 102 $ MkPair _ _ 7 $ MkPair _ _ 5 6)
-; warns: <**>:18:24: warning: declaration of `nat-add` shadows a previous binder
+; warns: <**>:19:24: warning: declaration of `nat-add` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
-; warns: <**>:18:45: warning: declaration of `k` shadows a previous binder
-; warns: <**>:12:7: note: shadowed binder is here
-; warns: <**>:20:7: warning: declaration of `k` shadows a previous binder
-; warns: <**>:12:7: note: shadowed binder is here
-; warns: <**>:33:7: warning: declaration of `let` shadows a built-in
-; warns: <**>:34:13: warning: declaration of `Nat` shadows a previous binder
+; warns: <**>:19:45: warning: declaration of `k` shadows a previous binder
+; warns: <**>:13:7: note: shadowed binder is here
+; warns: <**>:19:24: warning: unused `nat-add`; rename it `_nat-add`
+; warns: <**>:21:7: warning: declaration of `k` shadows a previous binder
+; warns: <**>:13:7: note: shadowed binder is here
+; warns: <**>:34:7: warning: declaration of `let` shadows a built-in
+; warns: <**>:35:13: warning: declaration of `Nat` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 (let ((many k)) 100)
 (def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
@@ -19,13 +20,13 @@
   (plus-k k))
 (let ((many k)) 5)
 
-(def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw9) (many lit)) (nat-raw mw here 7))
   (values mw9 $ one $ form here $ three (RawSettled here _ _ _ (settled-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) lit))
 (let ((many seven)) (MkMacro _ seven-fn))
 
-(def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw $ one $ form here $ one $ RawSettled here _ _ _ (settled-of erased Nat)))
 (let ((many PNat)) (MkMacro _ nat-fn))
@@ -35,4 +36,3 @@
 (def-fns _ $ (many g : (many (PNat) n) -> (many (PNat) r)) (nat-add n 1))
 (seven)
 (MkPair _ _ (f 1 2) $ MkPair _ _ x $ MkPair _ _ k (g k))
-; warn-unused: no
