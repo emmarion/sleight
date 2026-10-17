@@ -333,10 +333,35 @@ computes.
 
 ## Next, none of it decided
 
-The owner chose to model slots as words, with a heap in the full
-semantics, as `lean/SLOTS.md` lays out; that work is on the long-term
-branch `claude/slots` and its per-stage sub-branches, and takes
-precedence over the order below until it is back to `main`'s parity.
+The owner chose to model slots as words, as `lean/SLOTS.md` lays out;
+that work is on the long-term branch `claude/slots` and its per-stage
+sub-branches, and takes precedence over the order below until it is
+back to `main`'s parity.
+
+Where the slot work stands: stage 1 is merged into `claude/slots`.
+Stage 2's plan is settled in `lean/SLOTS.md` (its "Stage 2" section) on
+`claude/slots-2-layout`, which has no code of its own yet. The next
+step a session proposed there: a wrapper recording a value's word,
+with `strip` (the value without words, for types) and `word` (for slot
+terms); then `eval` carries words inside its values, the typing
+judgments read values through `strip` and slot terms through `word`
+(the telescope instantiation in `VTys` included), and `EnvOK` gains
+the invariant that entries at one atom have one word. The owner asked
+for a measured cost once `eval` and the new `EnvOK` clause compile,
+before the bulk of `Sound.lean` is carried through, and for every
+commit to build.
+
+Facts a session established for that plan, by running the reference
+(scratch programs, not in `tests/`):
+
+- the reference's `slot-eq` is physical equality on words, and a
+  constant (`slot-eq`'s own `None` and `Some Refl`, for one) is one
+  object per code site in both the interpreter and extracted code, so
+  two calls of one function can return results whose slots are equal;
+  a constructor application in a body is a fresh object per call;
+- in the Lean model today, a call of an at-function runs the
+  function's model (`RunM` and `RunS` included); only the reference
+  skips it (`lib/elab.ml`, `CValues []`).
 
 The owner's tentative order, from chat: (a) the two soundness gaps,
 a handle used against its multiplicity (item 9, step 5, done) and item 5
