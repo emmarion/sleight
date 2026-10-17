@@ -1963,9 +1963,9 @@ which `lib/prelude.sl` is the reference:
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
   `placed-eq`. §66 describes them. §67 describes `slot-eq`.
-- **Slot tables.** `Slots`, marked `extern`, with `NthLast`, `SlotFind`
-  and `SlotIntern`, and the extern functions `slots-new`, `slots-find`,
-  `slots-intern` and `slots-length`. §69 describes them.
+- **Slot tables.** `Slots`, marked `extern`, with `SlotItem`, `NthLast`,
+  `SlotFind` and `SlotIntern`, and the extern functions `slots-new`,
+  `slots-find`, `slots-intern` and `slots-length`. §69 describes them.
 - **`ErasedOr`**, with `EONonErased` and the phantom `EOErased`. §68
   describes it and `cell-same`, and §70 describes `fn-same`. On it the
   prelude builds these `extern at` and at-functions (§39):
@@ -3004,9 +3004,9 @@ erased position, and requires the prelude.
 
 ## 69. `Slots`
 
-A `Slots` is a table of slots, each numbered by when it was added. It
-targets finding a slot in O(1), where a search with `slot-eq` (§67) is
-O(n).
+A `Slots` is a table of placed values (§66), each numbered by when it
+was added and found by its slot. It targets finding a slot in O(1),
+where a search with `slot-eq` (§67) is O(n).
 
 ```scheme
 (def-adts $ (NthLast : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
@@ -3016,32 +3016,37 @@ O(n).
   (many NthLastThere : (erased Type A) (erased A y) (erased (List A) xs) (erased (Nat) i) (erased A x)
      (erased (NthLast A xs i x) p) -> (NthLast A (Cons A y xs) i x)))
 
-(def-adts $ (SlotFind : ((List (Slot)) xs) ((Slot) s) -> Type)
-  enum
-  (many SlotFound : (erased (List (Slot)) xs) (erased (Slot) s)
-     (many (Nat) i) (erased (NthLast (Slot) xs i s) p) -> (SlotFind xs s))
-  (many SlotMissing : (erased (List (Slot)) xs) (erased (Slot) s) -> (SlotFind xs s)))
+(def-adts $ (SlotItem : (Type A) -> Type)
+  enum newtype
+  (many MkSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (many (Placed s A v) p) -> (SlotItem A)))
 
-(def-adts $ (SlotIntern : ((List (Slot)) xs) ((Slot) s) ((List (Slot)) ys) -> Type)
+(def-adts $ (SlotFind : (Type A) ((List (SlotItem A)) xs) ((Slot) s) (Type U) (U u) -> Type)
   enum
-  (many SlotExisting : (erased (List (Slot)) xs) (erased (Slot) s)
-     (many (Nat) i) (erased (NthLast (Slot) xs i s) p) -> (SlotIntern xs s xs))
-  (many SlotAdded : (erased (List (Slot)) xs) (erased (Slot) s)
-     (many (Nat) i) (erased (Length (Slot) xs i) n) -> (SlotIntern xs s (Cons (Slot) s xs))))
+  (many SlotFound : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
+     (many (Nat) i) (erased (NthLast (SlotItem A) xs i (MkSlotItem A s v p)) nl) -> (SlotFind A xs s A v))
+  (many SlotMissing : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) -> (SlotFind A xs s (Slot) s)))
 
-(def-adts $ (Slots : ((List (Slot)) xs) -> Type)
+(def-adts $ (SlotIntern : (Type A) ((List (SlotItem A)) xs) ((Slot) s) ((List (SlotItem A)) ys) -> Type)
+  enum
+  (many SlotExisting : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
+     (many (Nat) i) (erased (NthLast (SlotItem A) xs i (MkSlotItem A s v p)) nl) -> (SlotIntern A xs s xs))
+  (many SlotAdded : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
+     (many (Nat) i) (erased (Length (SlotItem A) xs i) n) -> (SlotIntern A xs s (Cons (SlotItem A) (MkSlotItem A s v p) xs))))
+
+(def-adts $ (Slots : (Type A) ((List (SlotItem A)) xs) -> Type)
   enum extern
-  (many MkSlots : (many (List (Slot)) xs) -> (Slots xs)))
+  (many MkSlots : (erased Type A) (many (List (SlotItem A)) xs) -> (Slots A xs)))
 ```
 
 ```scheme
-slots-new : -> (unique (Slots (Nil (Slot))) l)
-slots-find : (erased (List (Slot)) xs) (unique (Slots xs) l) (many (Slot) s) ->
-    (many (SlotFind xs s) r) (unique l is l2 at l)
-slots-intern : (erased (List (Slot)) xs) (unique (Slots xs) l) (many (Slot) s) ->
-    (erased (List (Slot)) ys) (many (SlotIntern xs s ys) r) (unique (Slots ys) l2 at l)
-slots-length : (erased (List (Slot)) xs) (unique (Slots xs) l) ->
-    (many (Nat) n) (erased (Length (Slot) xs n) p) (unique l is l2 at l)
+slots-new : (erased Type A) -> (unique (Slots A (Nil (SlotItem A))) l)
+slots-find : (erased Type A) (erased (List (SlotItem A)) xs) (unique (Slots A xs) l) (many (Slot) s) ->
+    (erased Type U) (many U x at s) (many (SlotFind A xs s U x) r) (unique l is l2 at l)
+slots-intern : (erased Type A) (erased (List (SlotItem A)) xs) (unique (Slots A xs) l)
+    (erased (Slot) s) (erased A v) (many (Placed s A v) p) ->
+    (erased (List (SlotItem A)) ys) (many (SlotIntern A xs s ys) r) (unique (Slots A ys) l2 at l)
+slots-length : (erased Type A) (erased (List (SlotItem A)) xs) (unique (Slots A xs) l) ->
+    (many (Nat) n) (erased (Length (SlotItem A) xs n) p) (unique l is l2 at l)
 ```
 
 The models search with `slot-eq`, so §42's exception for `slot-eq`
