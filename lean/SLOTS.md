@@ -274,6 +274,11 @@ A session's proposal for the details:
    - the field's word for a newtype;
    - `blk i` for any other value, `i` its identity.
 
+   `eval` carries, beside each entry's value, its layout: the value's
+   word and, when that word points to a block, the layouts of the
+   block's fields. Types read only values; a slot reads the top word
+   of its entry's layout.
+
    In `eval`, the at-writers give their result the target's identity:
    a forwarding `let`, a newtype's construction and destructure, a
    `unique` cell write or invocation at `u`, and a `many` invocation
