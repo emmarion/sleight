@@ -274,10 +274,28 @@ A session's proposal for the details:
    - the field's word for a newtype;
    - `blk i` for any other value, `i` its identity.
 
-   `eval` carries, beside each entry's value, its layout: the value's
-   word and, when that word points to a block, the layouts of the
-   block's fields. Types read only values; a slot reads the top word
-   of its entry's layout.
+   `eval` keeps, beside each entry's value, its word. For an entry of
+   type `(Slot)` the word is its value. `(slot-of x)` evaluates to
+   `x`'s word, whether or not `x` is at another slot. As atoms, slots
+   stay as section 35 has them: an automatic slot is its own slot, a
+   variable of type `(Slot)` is not its own slot until `slot-self`,
+   `vacant-slot` is its own slot, and two slots are equal only through
+   the fact table. Their words coincide regardless, which is why
+   `slot-self` is sound. Types read values for variables and words
+   for slots, and checking values against a telescope reads their
+   words as well. `EnvOK` gains the invariant that entries whose slots
+   canonicalize to one atom have one word.
+
+   A destructure reads its field binders' words from an abstract heap,
+   which records, for each address, the block's value and its fields'
+   words. A construction writes it at the address the identity model
+   gives, and a `unique` write records the new version at the same
+   address. Open question: whether the heap replaces the old version,
+   so that a destructure of a consumed old version is stuck (as
+   `cell-same` is when its contents differ), or keeps every version,
+   so that a destructure picks the version whose value is the
+   scrutinee's (and is stuck where two versions have one value but
+   different field words).
 
    In `eval`, the at-writers give their result the target's identity:
    a forwarding `let`, a newtype's construction and destructure, a
