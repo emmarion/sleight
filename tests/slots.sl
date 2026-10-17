@@ -2,9 +2,9 @@
 ; needs: ../std/list
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) v) -> (Box)))
 
-(def-fns _ $ (many tag : (erased Type A) (erased (List (SlotItem A)) xs) (erased (SlotItem A) it) (erased (List (SlotItem A)) ys)
-    (many (SlotIntern A xs it ys) r) -> (many (Pair (Bool) (Nat)) out))
-  (match many r _ ((SlotExisting _ _ _ _ _ _ _ i _) (MkPair _ _ (BFalse) i)) ((SlotAdded _ _ _ i _) (MkPair _ _ (BTrue) i))))
+(def-fns _ $ (many tag : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) (erased (List (SlotItem A)) ys)
+    (many (SlotIntern A xs s ys) r) -> (many (Pair (Bool) (Nat)) out))
+  (match many r _ ((SlotExisting _ _ _ _ _ i _) (MkPair _ _ (BFalse) i)) ((SlotAdded _ _ _ _ _ i _) (MkPair _ _ (BTrue) i))))
 
 (def-fns _ $ (many found : (erased Type A) (erased (List (SlotItem A)) xs) (erased (Slot) s) (erased Type U) (erased U u)
     (many (SlotFind A xs s U u) r) -> (many (Nat) out))
@@ -23,13 +23,12 @@
 
 (def-fns _ $ (many recover : (many (Box) a) (many (Box) c) (many (Box) b) -> (many (Box) r at a) (many (Nat) hit))
   (let ((unique t0)) (slots-new (Box)))
-  (let ((many pa1)) (place-at-many _ a))
-  (let ((erased ys1) (many r1) (unique t1)) (slots-intern _ _ t0 _ _ pa1))
-  (let-match many r1 (SlotAdded _ _ _ i n) (absurd (SlotExisting _ _ _ _ _ _ _ _ p) p))
+  (let ((erased ys1) (many r1) (unique t1)) (slots-intern _ _ t0 _ _ (place-at-many _ a)))
+  (let-match many r1 (SlotAdded _ _ _ v1 p1 i n) (absurd (SlotExisting _ _ _ _ _ _ p) p))
   (let ((erased ys2) (many r2) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ c)))
-  (let ((erased pa)) (match erased r2 (((NthLast (SlotItem (Box)) ys2 i (MkSlotItem (Box) (slot-of a) a pa1)) pa))
-    ((SlotExisting _ _ _ _ _ _ _ _ _) (NthLastHere _ _ _ i n))
-    ((SlotAdded _ _ _ _ _) (nth-last-suffix _ _ _ i _ (NthLastHere _ _ _ i n) (SuffixOfCons _ _ _ _ (SuffixOfRefl _ _))))))
+  (let ((erased pa)) (match erased r2 (((NthLast (SlotItem (Box)) ys2 i (MkSlotItem (Box) (slot-of a) v1 p1)) pa))
+    ((SlotExisting _ _ _ _ _ _ _) (NthLastHere _ _ _ i n))
+    ((SlotAdded _ _ _ _ _ _ _) (nth-last-suffix _ _ _ i _ (NthLastHere _ _ _ i n) (SuffixOfCons _ _ _ _ (SuffixOfRefl _ _))))))
   (let ((erased _) (many _) (many f) (unique t3)) (slots-find _ _ t2 (slot-of b)))
   (let-match many f (SlotFound _ _ _ _ _ j q) ((SlotMissing _ _ _) (values a 0)))
   (let-match many (nat-cmp i j) (CEq _ _ _) (else (values a 0)))

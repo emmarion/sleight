@@ -151,7 +151,7 @@
 (def-fns _ $ (many visit : (erased (List TI) xs) (subterm many (Tree) t) (unique (Slots (Tree) xs) seen) ->
     (erased (List TI) ys) (unique (Slots (Tree) ys) seen2 at seen))
   (let ((erased xs1) (many r) (unique s1)) (slots-intern _ _ seen _ _ (place-at-many _ t)))
-  (let-match many r (SlotAdded _ _ _ _ _) ((SlotExisting _ _ _ _ _ _ _ _ _) (values xs1 s1)))
+  (let-match many r (SlotAdded _ _ _ _ _ _ _) ((SlotExisting _ _ _ _ _ _ _) (values xs1 s1)))
   (let-match many t (Node l rt) ((Leaf _) (values xs1 s1)))
   (let ((erased xs2) (unique s2)) (notail $ visit _ l s1))
   (tail $ visit _ rt s2))

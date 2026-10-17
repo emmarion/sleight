@@ -15,7 +15,7 @@
   (let ((unique t0)) (MkSlots _ (Cons _ (MkSlotItem _ _ _ (place-at-many _ a)) $ Cons _ (MkSlotItem _ _ _ (place-at-many _ a)) $ Nil _)))
   (let ((erased _) (many _) (many f1) (unique t1)) (slots-find _ _ t0 (slot-of a)))
   (let ((erased _) (many r) (unique t2)) (slots-intern _ _ t1 _ _ (place-at-many _ a)))
-  (let ((many i)) (match many r (((Nat) k)) ((SlotExisting _ _ _ _ _ _ _ i _) i) ((SlotAdded _ _ _ _ _) 99)))
+  (let ((many i)) (match many r (((Nat) k)) ((SlotExisting _ _ _ _ _ i _) i) ((SlotAdded _ _ _ _ _ _ _) 99)))
   (let ((erased _) (many _) (unique t3)) (slots-intern _ _ t2 _ _ (place-at-many _ b)))
   (let ((many n) (erased _) (unique t4)) (slots-length _ _ t3))
   (let-match unique t4 (MkSlots _ ls))
