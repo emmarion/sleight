@@ -274,10 +274,12 @@ A session's proposal for the details:
    - the field's word for a newtype;
    - `blk i` for any other value, `i` its identity.
 
-   The at-writers give their result the target's identity: a
-   forwarding `let`, a newtype's construction and destructure, a
-   `unique` cell write or invocation at `u`, a `many` invocation that
-   skips every store, and `at` returns.
+   In `eval`, the at-writers give their result the target's identity:
+   a forwarding `let`, a newtype's construction and destructure, a
+   `unique` cell write or invocation at `u`, and a `many` invocation
+   that skips every store. Every other entry at a slot, such as an
+   `at` return, holds its target's word as a consequence, which
+   `eval`'s soundness proves.
 2. An identity model gives each new construction its identity, from
    its code site, its contents and a counter. Instances:
    - `I_fresh`: a new identity per construction;
@@ -293,7 +295,8 @@ A session's proposal for the details:
    model and every valid oracle, without uses.
 5. The machine uses OCaml's representation:
    - a slot term evaluates to its entry's word;
-   - at-function calls are skipped;
+   - at-function calls are skipped, and a skipped call's `at` returns
+     take their targets' words;
    - `Foot` and `Spine` stop at slot positions;
    - it is executable, so it can drive the runner.
 
