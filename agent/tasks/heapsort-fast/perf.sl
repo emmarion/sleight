@@ -18,7 +18,7 @@
     (erased (List (Nat)) xs2) (erased (AllTo (Nat) Lt xs2 u62-modulus) small2) (erased (Length (Nat) xs2 perf-size) len2)
     (many (List (Copy (Nat))) cs2) (erased (Copies (Nat) xs2 cs2) rel2))
   (let-match many k (Succ k1) ((Zero) (let-match erased count (AddZero _)) (values xs small len cs rel)))
-  (let-match erased count (AddSucc _ _ total1 count1))
+  (let-match erased count (AddSucc _ _ _ count1))
   (let ((many x) (erased x-below) (erased _)) (nat-mod (nat-add (nat-mul seed 1103515245) 12345) 1073741824 perf-range-pos))
   (tail $ perf-gen k1 x _ (add-succ-right _ _ _ count1)
     _ (AllToCons _ _ x xs _ (lt-trans _ _ _ x-below perf-range-fits) small) (LengthCons _ _ _ _ len)
@@ -26,7 +26,7 @@
 
 (def-fns _ $ (erased perf-nth-exists : (erased Type A) (erased (List A) xs) (erased (Nat) n) (subterm erased (Length A xs n) l)
     (erased (Nat) i) (erased (Lt i n) lt) -> (erased A x) (erased (Nth A xs i x) p))
-  (let-match erased l (LengthCons _ y rest n1 l1) (absurd (LengthNil _) lt))
+  (let-match erased l (LengthCons _ y _ _ l1) (absurd (LengthNil _) lt))
   (let-match erased i (Succ i1) ((Zero) (values y (NthHere _ _ _))))
   (let-match erased lt (LtS _ _ lt1))
   (let ((erased x) (erased p)) (perf-nth-exists _ _ _ l1 i1 lt1))
@@ -37,7 +37,7 @@
     (many (Nat) acc) -> (many (Nat) sum))
   (let-match many k (Succ k1) ((Zero) acc))
   (let-match erased le (LtS _ _ lt1))
-  (let ((erased x) (erased nth)) (perf-nth-exists _ _ _ len k1 lt1))
+  (let ((erased _) (erased nth)) (perf-nth-exists _ _ _ len k1 lt1))
   (let-match many (array-get-many _ _ r k1 _ nth) (MkCopy _ v))
   (tail $ perf-checksum _ r _ len k1 (lt-weaken _ _ lt1) (nat-add acc (nat-mul k v))))
 
@@ -49,7 +49,7 @@
 ;! suppress warn sub
 (def-fns _ $ (many perf-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
-  (let ((many c) (erased p)) (sub a b le))
+  (let ((many c) (erased _)) (sub a b le))
   c)
 ;! restore warn sub
 ;! restore warn lt-dec
@@ -63,7 +63,7 @@
   (let ((unique a)) (list-to-array _ cs))
   (let ((unique stop)) (Measure (Stop)))
   (let ((unique w1) (many u0)) (world-do _ w (Measure (Start))))
-  (let ((erased ys) (erased ds) (unique r) (erased rel2) (erased correct)) (accept xs small _ len perf-size-fits cs a rel))
+  (let ((erased _) (erased _) (unique r) (erased _) (erased _)) (accept xs small _ len perf-size-fits cs a rel))
   (let ((unique w2) (many u1)) (world-do _ w1 stop))
   (let ((many rs)) (share r))
   (let ((many n) (erased len2)) (array-length-many _ _ rs))
