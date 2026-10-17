@@ -349,13 +349,25 @@
   (let ((many x)) $ str-cat3 prefix "_a" $ nat-str i)
   (values (Cons _ (RStr x) names) $ Cons _ (rcat (RStr $ str-cat x " = ") arg) binds))
 
+(def-fns _ $ (many let-binds-rope : (many (List $ Rope) binds) (many (Rope) body) -> (many (Rope) r))
+  (match many binds _
+    ((Nil _) body)
+    ((Cons _ _ _) (rcat5 (RStr "(let ") (rjoin binds " in let ") (RStr " in ") body $ RStr ")"))))
+
+; A tuple of values with each entry that is not a name bound first: ocamlopt (4.14.1 here; the issue
+; reports 5.x too) fails with `Selection.size_expr` when a call it inlines puts an unused one-field block
+; inside a tuple's field, https://github.com/ocaml/ocaml/issues/15154.
+(def-fns _ $ (many values-rope : (many (Nat) depth) (many (List $ Rope) rs) -> (many (Rope) r))
+  (let-match many rs (Cons _ r rest) ((Nil _) (tuple-rope rs)))
+  (let-match many rest (Cons _ _ _) ((Nil _) r))
+  (let ((many names) (many binds)) $ bind-args (str-cat "tup" $ nat-str depth) rs 0)
+  (let-binds-rope binds $ tuple-rope names))
+
 (def-fns _ $ (many templated-build : (many (List $ Piece) ps) (many (Nat) depth) (many (List $ Rope) args) -> (many (Rope) r))
   (let ((many prefix)) $ str-cat "x" $ nat-str depth)
   (let ((many names) (many binds)) (bind-args prefix args 0))
   (let ((many text)) $ fill-pieces ps $ MkFilling "" prefix (Nil _) (Nil _) (REmpty) names)
-  (match many binds _
-    ((Nil _) (rcat3 (RStr "(") text $ RStr ")"))
-    ((Cons _ _ _) (rcat5 (RStr "(let ") (rjoin binds " in let ") (RStr " in ") text $ RStr ")"))))
+  (let-binds-rope binds $ rcat3 (RStr "(") text $ RStr ")"))
 
 ; How many of the constructors from i on the default stands for: those live with no arm of their own.
 (def-fns _ $ (many count-defaulted : (subterm many (Nat) n) (many (Nat) i) (many (List $ Arm) arms) (many (List $ Nat) live) -> (many (Nat) r))
@@ -779,7 +791,7 @@
   (let ((many stores)) $ match many indices (((Rope) _))
     ((Nil _) cr)
     ((Cons _ _ _) (rcat3 (field-store-rope d c cr indices names $ str-cat prefix "_r") (RStr "; ") cr)))
-  (let ((many body)) $ match many binds (((Rope) _)) ((Nil _) stores) ((Cons _ _ _) (rcat5 (RStr "(let ") (rjoin binds " in let ") (RStr " in ") stores $ RStr ")")))
+  (let ((many body)) $ let-binds-rope binds stores)
   (rcat5 (RStr "(let ") cr (rcat3 (RStr " = ") cell $ RStr " in ") body $ RStr ")"))
 
 ; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
@@ -791,7 +803,7 @@
       ((CConst _ x) (const-rope env x))
       ((CValue _ v) (tail $ block-rope _ v env d))
       ((CErased _ _) (RStr "(Obj.repr ())"))
-      ((CValues _ _ cs _) (tuple-rope $ notail $ emit-codes _ cs env ns d))
+      ((CValues _ _ cs _) (values-rope (names-depth _ ns) $ notail $ emit-codes _ cs env ns d))
       ((CApp _ _ f args _)
         (let ((many ars)) $ notail $ emit-codes _ args env ns d)
         (match many (head-of _ f env ns) _

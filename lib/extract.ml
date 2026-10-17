@@ -123,12 +123,15 @@ let one_pattern cx n es =
 
 let one_block cx es = Printf.sprintf "(Obj.repr (%s))" (one_pattern cx (List.length es) es)
 
-let fill_template cx ps es =
+let bind_args cx es k =
   let n = stamp cx in
   let args = List.mapi (fun i e -> if Ffi_templates.is_name e then (e, None) else (Printf.sprintf "x%d_a%d" n i, Some e)) es in
   let binds = List.filter_map (fun (x, e) -> Option.map (fun e -> x ^ " = " ^ e) e) args in
-  let text = Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(fun i -> fst (List.nth args i)) in
-  if binds = [] then "(" ^ text ^ ")" else Printf.sprintf "(let %s in %s)" (concat " and " binds) text
+  let text = k n (List.map fst args) in
+  if binds = [] then text else Printf.sprintf "(let %s in %s)" (concat " and " binds) text
+
+let fill_template cx ps es =
+  bind_args cx es (fun n names -> "(" ^ Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(List.nth names) ^ ")")
 
 let build cx c es =
   match shape c.V.adt with
@@ -337,7 +340,10 @@ and expr cx scope code = match code with
       | Some v -> define cx x v)
   | V.CConst v -> value cx v
   | V.CErased -> "(Obj.repr ())"
-  | V.CValues cs -> tuple (List.map (expr cx scope) cs)
+  (* Each entry that is not a name is bound before the tuple is built: ocamlopt (4.14.1 here; the issue
+     reports 5.x too) fails with `Selection.size_expr` when a call it inlines puts an unused one-field
+     block inside a tuple's field, https://github.com/ocaml/ocaml/issues/15154. *)
+  | V.CValues cs -> (match List.map (expr cx scope) cs with [ e ] -> e | es -> bind_args cx es (fun _ -> tuple))
   | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
       let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
