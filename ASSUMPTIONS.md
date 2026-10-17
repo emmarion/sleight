@@ -1612,9 +1612,8 @@ The shapes and the messages below are the session's.
     The section 61 append helper's emitted recursive branch ends in its recursive call,
     with the cell stores before that call.
 
-165. Unique patterns for non-phantom constructors with cells retain their
-    mandatory extra binder even where their body is erased. Extern-model
-    context is lexical, including nested local function bodies.
+165. Extern-model context is lexical, including nested local function
+    bodies.
 
 166. The fixed FFI boundary converts comparison results to the declared Cmp
     representation and reads Rope values through their constructor view.

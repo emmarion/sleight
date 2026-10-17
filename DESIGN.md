@@ -566,11 +566,13 @@ Erased code obeys the `at` rules of §36 and gets the slot facts of §35
 and §36 that the same code would get at `many` or `unique`. Where the
 two differ, it gets what the `unique` form gets, as a call already
 does through its callee's signature (§36); this matters for a cell
-invocation (§37), whose value is then at its cell. A form whose only
+invocation (§37), whose value is then at its cell, and for a
+`cell-write` (§37), whose result is then at the cell it writes. A form
+whose only
 claim or effect is about the
 run is refused in an erased position: `tail`, `notail` and `delegate`
 (§19), the `at` wrapper around a call (§39), `share` (§16),
-`cell-write` (§37), `cell-match` (§38), `cell-same` (§68) and
+`cell-match` (§38), `cell-same` (§68) and
 `fn-same` (§70); and an `erased` function may not be marked `at` (§39).
 
 ## 15. Uses of unique binders
@@ -853,7 +855,8 @@ A branch on a phantom constructor under a `many` or `unique` scrutinee
 can never run, because no non-erased value is headed by a phantom
 constructor (§14, rule 2). Everything in scope in such a branch is
 erased, including the branch's fields, whatever their declarations say,
-and so is the branch's result. The body is checked with every result
+and so is the branch's result. Its pattern may still bind a cell
+binder (§23), erased like the fields. The body is checked with every result
 erased, and it must still produce the declared values. (If the body
 could be omitted, a `many` function from a type whose only constructor
 is phantom to `False` would need no branch at all, and `(F)` inhabits
@@ -864,8 +867,8 @@ erased value may be headed by a phantom constructor.
 **Four kinds of branch:**
 
 1. **present**: `((C f1 ... fn) body)`, with one binder per field,
-   including the erased fields, and a cell binder where the type has
-   cells (§23).
+   including the erased fields, optionally followed by a cell binder
+   where the type has cells (§23).
 2. **absurd, automatic**: `(absurd C)`, for a constructor that is
    refuted by the facts in force (§7). It has no fields and no body. It
    is optional: an unlisted constructor that is refuted needs no branch.
@@ -936,8 +939,10 @@ each branch according to the `unique` column of §22.
 When the type's constructors have cells (§37), a pattern may add one
 binder after the fields: `((C f1 ... fn u) body)` as well as
 `((C f1 ... fn) body)`. The extra binder names the cell the constructor
-occupied. Its multiplicity is the scrutinee's: `erased`, `many` or
-`unique`. Its type is `(Cell C (slot-of g1) ... (slot-of gk))`, with
+occupied. Its multiplicity is the scrutinee's, `erased`, `many` or
+`unique`, except in the branch of a phantom constructor under a `many`
+or `unique` scrutinee, where it is `erased` like the fields (§21). Its
+type is `(Cell C (slot-of g1) ... (slot-of gk))`, with
 one slot per field whose label is non-erased, in order, `gi` being that
 field's binder, and it is at `x` (§36). A
 branch passes a `unique` cell out of the match by returning it into an
@@ -1170,7 +1175,8 @@ as soon as it is elaborated (§27), and the stored value of its
 `(share x)` (§16) at `many` is the explicit degradation a unique
 `Settled` needs. The type must be an enum, not a union. `C`
 must not be phantom. The pattern binds every field, including the
-erased ones, and a cell binder where the type has cells. This is the
+erased ones, and may bind a cell binder where the type has cells
+(§23). This is the
 one statement confined to run position (§27). The form consults the
 type's `Matchable` (§24) for the discriminant and binds the fields as
 `Settled` at their declared multiplicities under `m` (§22): `many` fields
@@ -1613,9 +1619,11 @@ A value constructor `C` of a type that is neither `newtype` nor
 (§9) with one `(Slot)` (§38) per non-erased field of `C`. A constructor
 with no non-erased field has an empty cell. Inside the body of an
 extern function the `extern` mark does not count, so the constructors
-of an extern type have cells there (§43). A phantom constructor has no
-cell in any context: `Cell` on one, and `cell-alloc` of one, are
-refused. Eligibility is read from the opened `Matchable` that lists the
+of an extern type have cells there (§43). A phantom constructor has a
+cell too, but since no non-erased value is headed by one (§14),
+`cell-alloc` of a phantom constructor, and a `cell-write` on or an
+invocation of its cell, are allowed only in an erased position, and a
+`cell-match` on its cell is refused. Eligibility is read from the opened `Matchable` that lists the
 constructor (§8), whose `newtype` and `extern` marks are part of its
 type (§24). An abstract constructor must be listed by an opened
 `Matchable`. The newtype representation (§33) is mandatory for a type
@@ -1636,9 +1644,9 @@ each slot `(slot-of g)` for the binder `g` of a field whose label is
 non-erased.
 
 **Writing.** `(cell-write m u (C i1 ... in))` is an expression. `m`,
-`many` or `unique`, is the multiplicity the cell is taken at, as a
-`cell-match` writes it (§38); the items are one per non-erased field.
-An erased position is refused (§14), as for `cell-match`. Each item is
+`erased`, `many` or `unique`, is the multiplicity the cell is taken at,
+and must match the form's position (§14); the items are one per
+non-erased field. Each item is
 a `(Slot)` expression at many, or `_` to leave that slot alone. `C`
 must be the cell's own constructor, canonically. The index of the new
 type for each written slot is the value of that item. At `unique` the
@@ -1648,7 +1656,8 @@ invocation re-creates; it does no usage accounting of its own. At
 `many` the form uses `u` at many and copies: the result is a fresh
 block holding the old words with the written slots replaced, at unique
 and at nothing. So a write whose items are all `_` copies a shared
-block into a unique cell.
+block into a unique cell. At `erased` the form uses nothing and yields
+the same cell under the new type, at `u`, as at `unique` (§14).
 
 **Invocation.** A head of `Cell` type can be applied in item 2 of §6.
 `(u a1 ... an)` is a constructor application that creates
@@ -1696,16 +1705,16 @@ slot is not a subterm of the slot, and only `is` speaks about contents.
 
 `cell-match` reads the words of a cell out. It is an expression with
 two modes: `(cell-match many u ann (C s1 ... sn) body)`, with `u` at
-`many`, and `(cell-match unique u ann (C s1 ... sn u2) body)`, with `u`
+`many`, and `(cell-match unique u ann (C s1 ... sn [u2]) body)`, with `u`
 at `unique`. `ann` is a return annotation like a `match`'s (§26). An
 `erased` mode is refused, and so is an erased position (§14). In both
 modes the `si` are fresh `many` binders of type `(Slot)`, one per
 non-erased field, and one forced unification of `(Cell C s1 ... sn)`
 against the type of `u` gives them their rules, in the same way that
 entering a branch unifies the type of a scrutinee (§7). At `unique`,
-`u2` is mandatory: it is the cell given back, a fresh `unique` binder
+`u2` is optional. It is the cell given back, a fresh `unique` binder
 that `is u` and is at `u`, and `body` passes it out by returning it
-into an entry of `ann` marked `at u`. `body` is not in run position
+into an entry of `ann` marked `at u`. Without it the cell is consumed. `body` is not in run position
 (§27), wherever the `cell-match` is written. The form decides nothing
 about a slot: each `si` is whatever the type of `u` said. The words are
 for writing into another cell.
