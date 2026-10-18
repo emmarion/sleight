@@ -39,7 +39,7 @@ def check(session, slc, build):
     d = session / "sandbox"
     fs = [f if f.startswith("work/") else "work/" + f for f in (d / "work/files.txt").read_text().split() if not f.startswith("#")]
     size = sum((d / f).stat().st_size for f in fs if (d / f).exists())
-    if not all((d / f).exists() for f in fs) or any(";! suppress" in (d / f).read_text() for f in fs):
+    if not all((d / f).exists() for f in fs) or any(b";! suppress" in (d / f).read_bytes() for f in fs):
         return size, "missing or suppressed"
     p = subprocess.run([slc, "--no-shape-note", *LIBS, *fs, *TESTS], cwd=d, capture_output=True)
     if p.returncode or p.stderr.strip():
