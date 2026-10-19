@@ -995,6 +995,9 @@ def run(prompt):
     api = ADAPTERS[PROVIDER]()
     messages, empty, prompt_tokens = [{"role": "user", "content": prompt}], 0, 0
     window = CONTEXT or api.window()
+    if hasattr(api, "model"):
+        f = RUN_DIR / "session.json"
+        f.write_text(json.dumps(json.loads(f.read_text()) | {"huggingface_id": (api.model().get("metadata") or {}).get("huggingface_id")}, indent=1) + "\n")
     turns, budget = MAX_TURNS or (1000 if window else 200), lambda stop: int(window * stop / 100) if window else None
     tokens = budget(CONTEXT_STOP)
     phase, turn, start, used = "experiment", 0, 0, 0
