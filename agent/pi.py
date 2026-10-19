@@ -31,6 +31,7 @@ MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = COMPILER = None
 KEEP = {}
 CARRY = []
+WRITE = []
 SPENT = {}
 _LOG_N = 0
 
@@ -95,7 +96,22 @@ def read_bytes(user_path):
         return f.read()
 
 
+def _writable(user_path):
+    name = "/".join(_rel_parts(user_path))
+    if WRITE and not any(w == "." or name == w or name.startswith(w + "/") for w in _writes()):
+        raise ValueError(f"`{name}` is read-only; only {_writes_text()} can be written")
+
+
+def _writes():
+    return [*WRITE, *CARRY, *KEEP]
+
+
+def _writes_text():
+    return ", ".join([*(f"{d}/" for d in WRITE + CARRY), *KEEP])
+
+
 def write_bytes(user_path, data):
+    _writable(user_path)
     if len(data) > MAX_WRITE:
         raise PathEscape(f"write of {len(data)} bytes exceeds cap ({MAX_WRITE})")
     name, old = os.path.normpath(user_path), _size(user_path)
@@ -213,6 +229,7 @@ def delete(path):
         raise PathEscape("the sandbox root cannot be deleted")
     if (rel := os.path.normpath(path)) in KEEP:
         raise ValueError(f"`{rel}` is a kept file and cannot be deleted")
+    _writable(path)
     dfd = _walk_to_dir(dirs, create=False)
     try:
         if stat.S_ISDIR(os.stat(name, dir_fd=dfd, follow_symlinks=False).st_mode):
@@ -403,7 +420,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), "--confine-write", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_fence(), "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
@@ -427,6 +444,10 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+
+
+def _fence():
+    return ["--confine-read", ".", *(a for w in _writes() for a in ("--confine-write", w))] if WRITE else ["--confine-write", "."]
 
 
 def _turn():
@@ -1035,7 +1056,7 @@ def session(run_dir, prompt, seeds):
     shutil.copy(SLC, COMPILER)
     (RUN_DIR / "session.json").write_text(json.dumps(
         {"commit": _commit(), "slc_sha256": hashlib.sha256(COMPILER.read_bytes()).hexdigest(), "seeds": [str(src) for src, _ in seeds],
-         "keep": KEEP, "carry": CARRY, "env": _settings(os.environ)}, indent=1) + "\n")
+         "keep": KEEP, "carry": CARRY, "write": WRITE, "env": _settings(os.environ)}, indent=1) + "\n")
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
@@ -1045,11 +1066,11 @@ def session(run_dir, prompt, seeds):
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                      + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k}" + (f", at most {cap} bytes" if cap else "") + " ---\n" for k, cap in sorted(KEEP.items()))
-                     + "".join(f"--- carry {c} ---\n" for c in CARRY) + f"--- prompt ---\n{prompt}\n")
+                     + "".join(f"--- carry {c} ---\n" for c in CARRY) + "".join(f"--- write {w} ---\n" for w in WRITE) + f"--- prompt ---\n{prompt}\n")
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
-        for c in CARRY:
+        for c in WRITE + CARRY:
             os.close(_walk_to_dir(_rel_parts(c), create=True))
         for src, rel in seeds:
             _copy(src, SANDBOX_ROOT / rel)
@@ -1084,7 +1105,7 @@ def _exec(args, env):
     os.execve(sys.executable, [sys.executable, __file__, *args], {k: v for k, v in os.environ.items() if k not in _settings(os.environ)} | env)
 
 
-HEADER, HEADER_FLAGS = "#!pi", ("-f", "-k", "-c", "-n")
+HEADER, HEADER_FLAGS = "#!pi", ("-f", "-k", "-c", "-w", "-n")
 
 
 def _keep_path(k):
@@ -1116,7 +1137,7 @@ def _config(rec):
                                     + [("-k", k) for k in rec["keep"]] + [("-c", c) for c in rec.get("carry", [])])]))
     for name, value in rec["env"].items():
         env[name] = (value, f"environment, over {env[name][0]} from {env[name][1]}" if name in env else "environment")
-    key = {"-f": lambda v: Path(v).resolve().name, "-k": _keep_path, "-c": os.path.normpath, "-n": lambda v: None}
+    key = {"-f": lambda v: Path(v).resolve().name, "-k": _keep_path, "-c": os.path.normpath, "-w": os.path.normpath, "-n": lambda v: None}
     merged = [(f, v, src) for i, (src, pairs) in enumerate(layers) for f, v in pairs
               if not any(g == f and key[f](w) == key[f](v) for _, later in layers[i + 1:] for g, w in later)]
     return merged, env
@@ -1129,6 +1150,7 @@ def _problem(pairs, env):
         (any(not s.exists() for s in seeds), f"no such file: {next((s for s in seeds if not s.exists()), '')}"),
         (any(s.is_dir() and s.resolve().name in map(_keep_path, keep) for s in seeds), "-k cannot name a directory; carry one with -c"),
         (len({s.resolve().name for s in seeds}) < len(seeds), "two -f paths share a name"),
+        (any(os.path.isabs(v) or ".." in Path(v).parts for f, v in pairs if f == "-w"), "-w must name a directory inside the sandbox"),
         (_first_error(env) not in FIRST_ERROR_NOTES, f"PI_FIRST_ERROR must be one of {', '.join(FIRST_ERROR_NOTES)}"),
         (_provider(env) not in ADAPTERS, f"unknown provider {_provider(env)!r}; try: {', '.join(ADAPTERS)}"),
         (not os.access(_slc(env), os.X_OK), f"no slc at {_slc(env)}; build it with self/release.sh")) if bad), None)
@@ -1197,6 +1219,10 @@ def _session(loop, i, pairs):
     for k in (v for f, v in pairs if f == "-k"):
         KEEP[_keep_path(k)] = int(k.rsplit(":", 1)[1]) if re.fullmatch(r".+:\d+", k) else 0
     CARRY[:] = [os.path.normpath(v) for f, v in pairs if f == "-c"]
+    WRITE[:] = [os.path.normpath(v) for f, v in pairs if f == "-w"]
+    if WRITE:
+        global SYSTEM
+        SYSTEM += f"\n\nOnly {_writes_text()} can be written, by the tools and by the programs you run; everything else is read-only."
     rec = json.loads((loop / "run.json").read_text())
     prompt = "\n\n".join(t for a in rec["prompts"] if (t := _task_lines(a)[1].strip()))
     prev = loop / f"{i - 1:02}" if i > 1 else None
@@ -1229,6 +1255,8 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
          "  -c DIR   carry the directory DIR from each session's sandbox into the next; no tool may use it\n"
          "           once experimenting ends\n"
+         "  -w DIR   let the tools and the programs that `sl` runs write only DIR, the -c directories and the -k files, and\n"
+         "           what is below them; without -w, the whole sandbox; each DIR is created if missing\n"
          "  -n N     run N sessions in a row (default 1); fixed when the run starts, then changed only by -r's -n or run.json\n"
          "  -r DIR   continue the run in DIR from its first session without an answer.txt, setting that session and the\n"
          "           ones after it aside; -n sets a new total\n"
@@ -1281,7 +1309,7 @@ def main(argv):
     if not argv:
         sys.exit(USAGE)
     rec = {"n": 0, "prompts": [str(Path(a).resolve()) for a in argv], "no_header": no_header,
-           "flags": [(f, str(Path(v).resolve()) if f == "-f" else v) for f, v in pairs if f in ("-f", "-k", "-c")],
+           "flags": [(f, str(Path(v).resolve()) if f == "-f" else v) for f, v in pairs if f in ("-f", "-k", "-c", "-w")],
            "env": _settings(os.environ), "commit": _commit()}
     merged, env = _config(rec)
     env = {k: v for k, (v, _) in env.items()}
