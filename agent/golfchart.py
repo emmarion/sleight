@@ -3,8 +3,10 @@
 usage: python3 agent/golfchart.py [--slc SLC] [--out DIR] RESULTS-DIR...
 
 Each RESULTS-DIR is a box-* directory or a run directory; runs of other tasks are skipped. Only finished
-sessions are checked: those with an answer.txt or a later session. A session is valid when the sl files that its
-work/files.txt lists compile with SLC with no warnings and no `;! suppress`, and the OCaml that SLC emits,
+sessions are checked: those with an answer.txt or a later session. A session with checks/ is valid when one of its
+checks has no `;! suppress`, proves the goal with SLC with no warnings, and runs perf.sl as below; its size is the
+smallest such check's. An older session is valid when the sl files that its work/files.txt lists compile with SLC,
+with accept.sl and perf.sl, with no warnings and no `;! suppress`. A run is valid when the OCaml that SLC emits,
 built with ocamlfind, prints perf.sl's checksum and `minor-words 0` within a second. Results are cached in
 DIR/sizes.json by session and SLC. Writes DIR/size{,-log,-loglog}.{svg,png}.
 """
@@ -19,6 +21,7 @@ CHECKSUM = "393660565753209066784"
 CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 LIBS = ["std/nat.sl", "std/list.sl", "std/macro.sl", "std/tactics.sl", "heapsort-fast/spec.sl"]
 TESTS = ["heapsort-fast/accept.sl", "heapsort-fast/perf.sl"]
+PERF = "heapsort-fast/perf.sl"
 
 
 def runs(dirs):
@@ -36,23 +39,42 @@ def labels(rs):
 
 
 def check(session, slc, build):
+    if (session / "checks").is_dir() or not (session / "sandbox/work/files.txt").exists():
+        return best_check(session, slc, build)
     d = session / "sandbox"
     fs = [f if f.startswith("work/") else "work/" + f for f in (d / "work/files.txt").read_text().split() if not f.startswith("#")]
     size = sum((d / f).stat().st_size for f in fs if (d / f).exists())
     if not all((d / f).exists() for f in fs) or any(b";! suppress" in (d / f).read_bytes() for f in fs):
         return size, "missing or suppressed"
-    p = subprocess.run([slc, "--no-shape-note", *LIBS, *fs, *TESTS], cwd=d, capture_output=True)
+    return size, run_perf([slc, "--no-shape-note", *LIBS, *fs, *TESTS], d, build)
+
+
+def best_check(session, slc, build):
+    d, sizes = session / "sandbox", []
+    for j in sorted((session / "checks").glob("*.json"), key=lambda j: json.loads(j.read_text())["size"]):
+        r, b = json.loads(j.read_text()), j.with_suffix(".sl")
+        sizes.append(r["size"])
+        if r["exit"] or b";! suppress" in b.read_bytes():
+            continue
+        p = subprocess.run([slc, "--no-shape-note", "--goal", "proved", *LIBS, b], cwd=d, capture_output=True)
+        if not p.returncode and not re.search(rb"(?m)(^|: )warning: ", p.stderr) and run_perf([slc, "--no-shape-note", *LIBS, b, PERF], d, build) == "valid":
+            return r["size"], "valid"
+    return min(sizes, default=0), "no valid check"
+
+
+def run_perf(cmd, cwd, build):
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True)
     if p.returncode or p.stderr.strip():
-        return size, "compile"
+        return "compile"
     build.mkdir(parents=True, exist_ok=True)
     (build / "p.ml").write_bytes(p.stdout)
     if subprocess.run(["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg", "p.ml", "-o", "p"], cwd=build, capture_output=True).returncode:
-        return size, "ocaml"
+        return "ocaml"
     try:
         out = subprocess.run(["./p"], cwd=build, capture_output=True, text=True, timeout=1).stdout
     except subprocess.TimeoutExpired:
-        return size, "timeout"
-    return size, "valid" if f"checksum {CHECKSUM}" in out and re.search(r"^minor-words 0$", out, re.M) else "wrong output"
+        return "timeout"
+    return "valid" if f"checksum {CHECKSUM}" in out and re.search(r"^minor-words 0$", out, re.M) else "wrong output"
 
 
 def chart(data, out):
@@ -78,7 +100,7 @@ def chart(data, out):
         sx = lambda h: L + fx(h) * (W - L - R)
         sy = lambda v: H - B - fy(v) * (H - T - B)
         o = frame(W, H, "Certified heapsort: solution size by session",
-                  f"Bytes in work/files.txt{scale}, at the end of each session that ends with a valid sort.")
+                  f"Bytes in the solution{scale}: work/files.txt at the end of each session, or the session's smallest valid check.")
         for v in yt:
             o += [f"<line x1='{L}' y1='{sy(v):.1f}' x2='{W - R}' y2='{sy(v):.1f}' stroke='{grid}'/>",
                   text(L - 12, f"{sy(v) + 5:.1f}", f"{v // 1000}k" if v else "0", 14, ink2, "end")]

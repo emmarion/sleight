@@ -1,4 +1,4 @@
-#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -c tools -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -c tools -w scratch -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
 Your task is to build a toolkit of self-contained Sleight programs that make writing Sleight programs easier, for you and for
 future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
@@ -19,7 +19,7 @@ pruned, and periodically rewrite it to be shorter.
 For reference: prelude.sl (the standard library), self/ (the compiler, written in Sleight), tests/ and pal/ (example
 programs) and DESIGN.md.
 
-Only tools/ and HANDOFF.md carry over to the next session.
+Only tools/ and HANDOFF.md carry over to the next session; put experiments in scratch/.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
 stand and what to try next. Keep it succinct and current: rewrite it each session rather than adding to it, so it holds

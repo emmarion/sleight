@@ -63,7 +63,7 @@
   (let ((unique a)) (list-to-array _ cs))
   (let ((unique stop)) (Measure (Stop)))
   (let ((unique w1) (many u0)) (world-do _ w (Measure (Start))))
-  (let ((erased _) (erased _) (unique r) (erased _) (erased _)) (accept xs small _ len perf-size-fits cs a rel))
+  (let ((erased _) (erased _) (unique r) (erased _) (erased _)) (heapsort-fast xs small _ len perf-size-fits cs a rel))
   (let ((unique w2) (many u1)) (world-do _ w1 stop))
   (let ((many rs)) (share r))
   (let ((many n) (erased len2)) (array-length-many _ _ rs))

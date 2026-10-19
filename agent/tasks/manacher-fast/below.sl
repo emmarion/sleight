@@ -11,3 +11,15 @@
     (many CopiesNil : -> (Copies (Nil (Nat)) (Nil (Copy (Nat)))))
     (many CopiesCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Copy (Nat))) cs)
         (erased (Copies xs cs) rest) -> (Copies (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) cs)))))
+
+(def-adts
+  ((Manacher : -> Type)
+    enum
+    (many ManacherList : (erased (Level) L)
+        (many (Fn L (many (List (Nat)) xs) -> (many (Nat) n) (erased (LongestPalindrome xs n) correct)) f) -> (Manacher))
+    (many ManacherArray : (erased (Level) L)
+        (many (Fn L (erased (List (Nat)) xs) (erased (AllBelow xs u62-modulus) small)
+            (erased (Nat) len) (erased (Length (Nat) xs len) lp) (erased (Lt len u62-modulus) fits)
+            (erased (List (Copy (Nat))) cs) (unique (Array (Copy (Nat)) cs) a) (erased (Copies xs cs) rel) ->
+            (many (Nat) n) (erased (LongestPalindrome xs n) correct)) f) -> (Manacher))))
+(goal many (Manacher))

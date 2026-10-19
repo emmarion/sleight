@@ -1,14 +1,15 @@
-#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_WARN_UNUSED=1
-Your task is to write a fast, in-place heapsort in Sleight, certified correct against
-heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
-This task will likely take many sessions, so leaving solid, well-recorded
-progress matters more than finishing in this one.
+#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl heapsort-fast/spec.sl"
+Your task is to write a fast, in-place heapsort in Sleight, certified correct
+against the goal in heapsort-fast/spec.sl. Or: to lay the groundwork for a
+future session to do so. This task will likely take many sessions, so leaving
+solid, well-recorded progress matters more than finishing in this one.
 
-To check your work, compile in order: std/nat.sl, std/list.sl,
-std/macro.sl, std/tactics.sl, heapsort-fast/spec.sl, your files,
-heapsort-fast/accept.sl, then heapsort-fast/perf.sl. The finished solution must
-compile with no warnings, and none of the files in work/files.txt may contain
-a `;! suppress`; intermediate work may have both. A solution is not
+To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
+std/tactics.sl, heapsort-fast/spec.sl, then your files, the last ending in the
+goal's value. To time it, compile the same files followed by
+heapsort-fast/perf.sl with `sl`; perf.sl calls your `heapsort-fast`. The
+finished solution must compile with no warnings, and none of your files may
+contain a `;! suppress`; intermediate work may have both. A solution is not
 finished while the sort allocates, any array write could be an `-imm` one, any
 runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a
 tail call, even if measurements show no gain.
@@ -20,11 +21,10 @@ std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
 `SetNth` and `Repeat`), tests/ (example programs), pal/ (a
 certified program), and self/ (the compiler, itself written in Sleight).
 
-Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
-work/, keep files.txt, listing in order the files that go between
-heapsort-fast/spec.sl and the accept file. Generally put experiments and `sl`
-captures in scratch/, which does not carry over; helper programs worth keeping
-can go in work/. Keep work/ tidy, pruning files that have served their purpose.
+Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session.
+Generally put experiments and `sl` captures in scratch/, which does not carry
+over; helper programs worth keeping can go in work/. Keep work/ tidy, pruning
+files that have served their purpose.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md and
 FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to

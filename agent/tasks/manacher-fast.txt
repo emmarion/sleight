@@ -1,26 +1,25 @@
-#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f manacher-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
+#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f manacher-fast -c work -w scratch -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_CHECK="self/base.sl pal/palindrome_relations.sl manacher-fast/below.sl"
 Your task is to write a fast, certified implementation of Manacher's algorithm in Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
 well-recorded progress matters more than finishing in this one.
 
-pal/ holds a certified but slow one; see pal/README.md. Write `longest-palindrome-fast`, certified against the unchanged
-`LongestPalindrome` of pal/palindrome_relations.sl, with the interface that manacher-fast/accept-list.sl or
-manacher-fast/accept-array.sl expects. You may reuse anything in pal/. Fast here means making good use of arrays via
-`array-place-imm` and `array-swap-imm`, U62 arithmetic (prelude.sl's `u62-*` functions, in place of `nat-*`, and
-`u62-inc` and `u62-dec` in place of a runtime `Succ` and its match), tail calls and minimizing allocations; there is no
-time target. A solution is not finished while any array write could be an `-imm` one, any runtime arithmetic could be a
-`u62-*` call, or any runtime recursion could be a tail call, even if measurements show no gain. The `sl` tool's
-`gc_stats` reports how much a run allocates.
+pal/ holds a certified but slow one; see pal/README.md. Write `longest-palindrome-fast`, certified against the goal in
+manacher-fast/below.sl, with its list interface or its array one. You may reuse anything in pal/. Fast here means making
+good use of arrays via `array-place-imm` and `array-swap-imm`, U62 arithmetic (prelude.sl's `u62-*` functions, in place
+of `nat-*`, and `u62-inc` and `u62-dec` in place of a runtime `Succ` and its match), tail calls and minimizing
+allocations; there is no time target. A solution is not finished while any array write could be an `-imm` one, any
+runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a tail call, even if measurements show no
+gain. The `sl` tool's `gc_stats` reports how much a run allocates.
 
-To check your work, compile in order: self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, your files (and
-any pal/ files they use), then one accept file. This must compile with no warning that a declaration shadows another.
+To check your work, call `check` with self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, then your files
+(and any pal/ files they use), the last ending in the goal's value.
 
 For reference: prelude.sl (the standard library), self/ (the compiler, written in Sleight), tests/ (example programs),
 and DESIGN.md.
 
-Only work/ and HANDOFF.md carry over to the next session. In work/, keep files.txt, listing in order the files that go
-between manacher-fast/below.sl and the accept file, and main.sl, a driver like pal/manacher_main.sl. Small helper
-programs in work/ are fine; keep work/ tidy and periodically prune it, deleting files that have served their purpose.
+Only work/ and HANDOFF.md carry over to the next session; put experiments in scratch/. In work/, keep main.sl, a driver
+like pal/manacher_main.sl. Small helper programs in work/ are fine; keep work/ tidy and periodically prune it, deleting
+files that have served their purpose.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
 stand and what to try next. Each phase has its own budget of tokens, and every tool result says how much is left. In the
