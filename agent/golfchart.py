@@ -54,7 +54,7 @@ def best_check(session, slc, build):
     build.mkdir(parents=True, exist_ok=True)
     qed.write_text("(qed (MkHeapsort (level-of heapsort-fast) heapsort-fast))\n")
     for j in sorted((session / "checks").glob("*.json"), key=lambda j: json.loads(j.read_text())["size"]):
-        r, b = json.loads(j.read_text()), j.with_suffix(".sl")
+        r, b = json.loads(j.read_text()), j.with_suffix(".sl").resolve()
         sizes.append(r["size"])
         if r["exit"] or b";! suppress" in b.read_bytes():
             continue
