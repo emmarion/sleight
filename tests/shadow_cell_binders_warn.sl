@@ -6,7 +6,7 @@
   (let ((unique v))
     (cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
       (P values notail tail) tail))
-  (let ((unique p)) (at (v a b)))
+  (let ((unique p)) (at unique (v a b)))
   (match unique p (((Nat) r))
     ((P _ y delegate) y)))
 run

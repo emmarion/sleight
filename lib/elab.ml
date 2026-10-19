@@ -1338,9 +1338,10 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   if assert_at && not skipped then error_with_in env l (head_notes env callee) "%s is not an at-function here: no `AtFn` proof for it is open" (head_name env callee);
   if skipped && cc <> V.Plain then error_in env l "%s marks a call that compiles to one, and a call of at-function %s is skipped" (tick (speller env (match cc with V.Tail -> "tail" | V.NoTail -> "notail" | _ -> "delegate"))) (head_name env callee);
   if pos <> Erased && not skipped then warn_use env hl "call of" callee.term;
-  if pos <> Erased && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
+  let erased_head = assert_at && not unique in
+  if pos <> Erased && not erased_head && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
   if unique && pos <> Erased && callee.erasure = Many then error_with_in env l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
-  let env = match callee.term with Var x -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
+  let env = match callee.term with Var x when not erased_head -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
   let written, args =
     let rec go i found acc = function
       | List (al, [ k; p ]) :: rest when is_special env k Sp.Predates || is_special env k Sp.Subterm ->
@@ -1532,15 +1533,19 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let place = if shared then None else r.place in
       (placed env x place, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap ((if shared then V.CCellCopy (ct, code, writes) else V.CCellWrite (ct, code, writes)))))
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
-  | Sp.At, [ List (_, head :: args) ] ->
-      let env, h, hcode = elab_head env pos l head in
+  | Sp.At, [ m; List (_, head :: args) ] ->
+      let m = mult_or env l m in
+      let env, h, hcode = elab_head env (if m = Erased then Erased else pos) l head in
       let hty = canon env h.ty in
+      let desc = describe env pos head h.term hty in
+      let taken want = if m <> want then error_in env l "the head %s : %s is taken at %s here; write %s" (qshow env h.term) (qshow env hty) (tick (speller env (mult_name want))) (tick (Printf.sprintf "(%s %s (...))" (speller env (Sp.name Sp.At)) (speller env (mult_name want)))) in
       let env,rs,code = match hty with
-       | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l (describe env pos head h.term hty) h hcode c slots args
-       | UniqueFn (lv, params, rets) -> elab_call ~unique:true ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) (describe env pos head h.term hty) h hcode lv params rets args
-       | Fn (lv, params, rets) -> elab_call ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) (describe env pos head h.term hty) h hcode lv params rets args
+       | Cell (c, slots) -> taken pos; elab_cell_invoke ~full:true env expect l desc h hcode c slots args
+       | UniqueFn (lv, params, rets) -> taken Unique; elab_call ~unique:true ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) desc h hcode lv params rets args
+       | Fn (lv, params, rets) -> taken Erased; elab_call ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) desc h hcode lv params rets args
        | _ -> error_in env l "`at` wraps a `Cell` invocation or a call, and %s : %s is neither" (qshow env h.term) (qshow env h.ty) in
       (env,rs,code)
+  | Sp.At, [ List _ ] -> error_in env l "`at` around a call or a `Cell` invocation names the multiplicity its head is taken at: `(at erased (f ...))` for an `Fn`, `(at unique (k ...))` for a `UniqueFn`, and the position's for a `Cell`"
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let env, r, code = match a with

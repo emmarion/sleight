@@ -5,7 +5,7 @@
 (def-fns _ $ (many at pass : (unique (Box) x) -> (unique (Box) r at x)) x)
 (def-fns _ $ (many via-match : (many (Nat) k) -> (many (Box) b))
   (let ((unique c)) (cell-alloc MkBox))
-  (let ((unique r)) (match unique (fill c k) (at (((Box) r at c))) ((MkBox n u) (at (u n)))))
+  (let ((unique r)) (match unique (fill c k) (at (((Box) r at c))) ((MkBox n u) (at unique (u n)))))
   (share r))
 (def-fns _ $ (many via-call : (many (Nat) k) -> (many (Box) b))
   (let ((unique c)) (cell-alloc MkBox))

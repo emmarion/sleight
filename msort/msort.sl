@@ -17,26 +17,26 @@
     (subterm unique (ULst) xs) (subterm unique (ULst) ys) ->
     (erased (ULst) m) (erased (MergeU xs ys m) pm) (unique (UCons h m) is r at hole))
   (let-match unique xs (UCons x xt c1) ((UNil) (values ys (MNilL ys) (hole (at) h ys))))
-  (let-match unique ys (UCons y yt c2) ((UNil) (values xs (MNilR xs) (hole (at) h (at (c1 x xt))))))
+  (let-match unique ys (UCons y yt c2) ((UNil) (values xs (MNilR xs) (hole (at) h (at unique (c1 x xt))))))
   (match many (le-dec x y) _
     ((OLe _ _ l)
       (let ((unique hole2)) (cell-write unique hole (UCons _ (slot-of c1))))
-      (let ((erased m2) (erased p2) (unique r2)) (tail (merge-into x _ c1 xt (at (c2 y yt)))))
-      (values r2 (MLeft x xt y yt m2 l p2) (at (hole2 h r2))))
+      (let ((erased m2) (erased p2) (unique r2)) (tail (merge-into x _ c1 xt (at unique (c2 y yt)))))
+      (values r2 (MLeft x xt y yt m2 l p2) (at unique (hole2 h r2))))
     ((OGt _ _ l)
       (let ((unique hole2)) (cell-write unique hole (UCons _ (slot-of c2))))
-      (let ((erased m2) (erased p2) (unique r2)) (tail (merge-into y _ c2 (at (c1 x xt)) yt)))
-      (values r2 (MRight x xt y yt m2 l p2) (at (hole2 h r2))))))
+      (let ((erased m2) (erased p2) (unique r2)) (tail (merge-into y _ c2 (at unique (c1 x xt)) yt)))
+      (values r2 (MRight x xt y yt m2 l p2) (at unique (hole2 h r2))))))
 
 (def-fns _ $ (many merge : (unique (ULst) xs) (unique (ULst) ys) -> (unique (ULst) r) (erased (MergeU xs ys r) pm))
   (let-match unique xs (UCons x xt c1) ((UNil) (values ys (MNilL ys))))
-  (let-match unique ys (UCons y yt c2) ((UNil) (let ((unique r)) (at (c1 x xt))) (values r (MNilR r))))
+  (let-match unique ys (UCons y yt c2) ((UNil) (let ((unique r)) (at unique (c1 x xt))) (values r (MNilR r))))
   (match many (le-dec x y) _
     ((OLe _ _ l)
-      (let ((erased m2) (erased p2) (unique r2)) (merge-into x _ c1 xt (at (c2 y yt))))
+      (let ((erased m2) (erased p2) (unique r2)) (merge-into x _ c1 xt (at unique (c2 y yt))))
       (values r2 (MLeft x xt y yt m2 l p2)))
     ((OGt _ _ l)
-      (let ((erased m2) (erased p2) (unique r2)) (merge-into y _ c2 (at (c1 x xt)) yt))
+      (let ((erased m2) (erased p2) (unique r2)) (merge-into y _ c2 (at unique (c1 x xt)) yt))
       (values r2 (MRight x xt y yt m2 l p2)))))
 
 (def-fns _ $ (many split-into : (many (U62) h) (erased (Slot) t)
@@ -57,7 +57,7 @@
   (let ((unique hole2)) (cell-write unique hole (UCons _ (slot-of c1))))
   (let ((erased p2) (unique r2) (unique rest) (erased lp2) (erased lr) (erased cp2))
     (tail (split-into x _ c1 k1r xt j n1 l1 a1 (lt-trans n1 n u62-modulus (lt-succ n1) bn))))
-  (values r2 (at (hole2 h r2)) rest (LCons x p2 k1 lp2) lr (CatCons x p2 rest xt cp2)))
+  (values r2 (at unique (hole2 h r2)) rest (LCons x p2 k1 lp2) lr (CatCons x p2 rest xt cp2)))
 
 (def-fns _ $ (many msort-n : (subterm many (Nat) n) (unique (ULst) xs) (erased (LenU xs n) ln) (erased (Lt n u62-modulus) bn) ->
     (unique (ULst) r) (erased (SortedU r) s) (erased (PermU xs r) pr))
@@ -68,7 +68,7 @@
       (let-match erased lt2 (LtS _ _ lt1))
       (let-match erased lt1 (LtZ _) (absurd (LtS _ _ z) z))
       (let-match erased l1 (LNil))
-      (let ((unique r)) (at (c1 x xt)))
+      (let ((unique r)) (at unique (c1 x xt)))
       (values r (SortCons x (UNil) (LHNil x) (SortNil)) (perm-refl r))))
   (let-match erased ge (LtS _ _ ge1))
   (let-match erased ge1 (LtS _ _ ge2))
@@ -110,14 +110,14 @@
     (erased (Nat) total) (erased (Add len acc total) a) (erased (Lt total u62-modulus) bt) ->
     (many total is n) (unique xs is r at xs))
   (let-match unique xs (UCons x xt c)
-    ((UNil c) (let-match erased l (LNil)) (let-match erased a (AddZero _)) (values acc (at (c)))))
+    ((UNil c) (let-match erased l (LNil)) (let-match erased a (AddZero _)) (values acc (at unique (c)))))
   (let-match erased l (LCons _ _ len1 l1))
   (let-match erased a (AddSucc _ _ t1 a0))
   (let ((erased a1)) (add-succ-right len1 acc t1 a0))
   (let ((erased b1)) (lt-le-trans (Succ acc) (Succ total) u62-modulus
                        (add-le-left (Succ acc) len1 total (add-comm len1 (Succ acc) total a1)) (LtS total u62-modulus bt)))
   (let ((many n) (unique xt2)) (tail (ulen xt (u62-inc acc b1) len1 l1 total a1 bt)))
-  (values n (at (c x xt2))))
+  (values n (at unique (c x xt2))))
 
 (def-fns _ $ (many msort : (unique (ULst) xs) (erased (Nat) len) (erased (LenU xs len) l) (erased (Lt len u62-modulus) b) ->
     (unique (ULst) r) (erased (SortedU r) s) (erased (PermU xs r) p))

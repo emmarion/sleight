@@ -7,7 +7,7 @@
   (let ((unique next)) (cell-alloc Cons))
   (let ((unique cell2)) (cell-write unique cell (Cons (slot-of h) (slot-of next))))
   (let ((many r2)) (tail (append-into _ next hd tl ys)))
-  (share (at (cell2 _ h r2))))
+  (share (at unique (cell2 _ h r2))))
 (def-fns _ $ (many append-list : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r))
   (let-match many xs (Cons _ hd tl) ((Nil _) ys))

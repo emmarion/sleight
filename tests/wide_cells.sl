@@ -22,7 +22,7 @@
   (let ((unique next)) (cell-alloc Item))
   (let ((unique cell2)) (cell-write unique cell (Item (slot-of h) (slot-of next))))
   (let ((many r2)) (tail (fill-into next m m)))
-  (share (at (cell2 h r2))))
+  (share (at unique (cell2 h r2))))
 
 (def-fns _ $ (many wl-sum : (subterm many (WL) l) -> (many (Nat) r))
   (match many l _ ((Item h t) (nat-add h $ notail $ wl-sum t)) (else 0)))
@@ -37,7 +37,7 @@
   (let ((unique v))
     (cell-match unique w (((Cell Ce245 (slot-of a) (slot-of b)) v at w))
       (Ce245 _ _ back) back))
-  (let ((many q)) (share (at (v a b))))
+  (let ((many q)) (share (at unique (v a b))))
   (let-match many q (Ce245 _ two2))
   (let ((many old)) (Ce246 1))
   (let-match many old (Ce246 _ c))

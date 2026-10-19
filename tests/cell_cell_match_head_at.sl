@@ -4,7 +4,7 @@
 (let ((many b)) (Succ (Succ (Zero))))
 (def-fns _ $ (many rebuild :
     (unique (Cell P (slot-of a) (slot-of b)) u) -> (unique (Pair2) r at u))
-  (at ((cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
+  (at unique ((cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
     (P _ _ back) back) a b)))
 (def-fns _ $ (many run : -> (many (Nat) r))
   (let ((unique u)) (cell-alloc (P (slot-of a) (slot-of b))))

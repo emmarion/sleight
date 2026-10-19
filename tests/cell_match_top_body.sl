@@ -9,5 +9,5 @@
     (let ((many _)) s)
     (let ((unique w)) back)
     w))
-(let ((many p)) (share (at (v a b))))
+(let ((many p)) (share (at unique (v a b))))
 (let-match many p (P x y)) y

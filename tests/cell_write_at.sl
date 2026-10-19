@@ -4,6 +4,6 @@
 (let ((many b)) (Succ (Succ (Zero))))
 (let ((unique u)) (cell-alloc P))
 (let ((unique u2)) (cell-write unique u (P (slot-of a) (slot-of b))))
-(let ((many p)) (share (at (u2 a b))))
+(let ((many p)) (share (at unique (u2 a b))))
 (let-match many p (P x y))
 y

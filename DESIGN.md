@@ -523,6 +523,7 @@ These are the **erased positions**:
   `(predates p)` (§18, §19, §33, §45);
 - the body of an absurd-by-proof branch and the body of an `absurd`
   function (§21, §25);
+- the head of a call written `(at erased (f ...))` (§39);
 - every sub-expression of an erased expression.
 
 The branch of a phantom constructor under a non-erased scrutinee is
@@ -539,7 +540,9 @@ the reverse needs a proof: `coerce` (§33) or `is` (§12).
 
 A multiplicity written on a form must match the form's position. A
 `match` in an erased position must be written `erased`; `many` or
-`unique` there is an error. A statement's position is that of the
+`unique` there is an error. The multiplicity written in an `at` around
+a call or a cell invocation instead names how its head is taken (§37,
+§39). A statement's position is that of the
 expression it belongs to (§27), so this rule also covers `let-match`,
 every binder of a `let`, and `open-adt`.
 
@@ -549,7 +552,7 @@ For a call or a constructor application:
    and any argument erasures are allowed.
 2. If the result is non-erased, each argument for a non-erased
    parameter or field must itself be non-erased, and the callee must be
-   non-erased.
+   non-erased, except in `(at erased (f ...))` (§39).
 
 Phantom constructors, `erased` functions and type constructors enter
 scope erased, so by rule 2 none of them can produce a non-erased
@@ -1688,9 +1691,10 @@ An `(at)` written immediately before an argument, in the way
 slot already holds that argument, that is, that the variable's slot is
 the slot in the cell's type, and the store is skipped. If the assertion
 is false, that is a hard error, as for `tail`. The marked argument must
-be non-erased. `(at (u a1 ... an))`, which wraps the invocation as
+be non-erased. `(at m (u a1 ... an))`, which wraps the invocation as
 `tail` wraps a call, asserts the same of every non-erased argument and
-performs nothing. The `tail` and `delegate` checks treat it as erased,
+performs nothing. `m` is the multiplicity the cell is taken at, which
+is that of the invocation's position; any other is an error. The `tail` and `delegate` checks treat it as erased,
 as they treat a `coerce`, so it may follow a tail call. Only the stores
 are skipped. An invocation with every store skipped still uses each
 argument at its field's multiplicity and `u` at its position's,
@@ -1770,9 +1774,18 @@ that reaches it without an opened proof runs without crashing, and the
 caller reconstructs the `at` returns as it would anyway.
 
 A call may be asserted to be a call of an at-function by wrapping it:
-`(at (f ...))`, as the full-at form wraps a cell invocation (§37). The
-assertion is optional. It is a hard error if it fails, and an error in
-an erased position, like the marks of §19.
+`(at m (f ...))`, as the full-at form wraps a cell invocation (§37).
+`m` is the multiplicity the head is taken at: `erased` for an `Fn`,
+and `unique` for a `UniqueFn`, which the call uses at unique as any
+call does (§32). Any other is an error. In `(at erased (f ...))` the
+head is an erased position (§14), so it may be erased: the call is
+skipped, and no word of the head is read. Only the head is erased: the
+call stays in its non-erased position, so each argument for a
+non-erased parameter must be non-erased (§14, rule 2), and its
+arguments are still evaluated, as for any skipped call. A skipped call
+that is not wrapped needs a non-erased head. The assertion is optional.
+It is a hard error if it fails, and an error in an erased position,
+like the marks of §19.
 
 ## 40. At-matches
 
@@ -2435,8 +2448,9 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `resolve` and `read-file` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
   (§66), `slot-eq` (§67), `cell-same` (§68) and `fn-same` (§70).
-- the `at` wrapper around a cell invocation or an at-function call
-  (§37, §39).
+- the `at` wrapper around a cell invocation or an at-function call,
+  `(at m (...))`, `m` the multiplicity its head is taken at (§37,
+  §39).
 
 **Proof forms**, all erased (§14):
 
@@ -2686,7 +2700,7 @@ at the cell:
   (let ((unique next)) (cell-alloc Cons))
   (let ((unique cell2)) (cell-write unique cell (Cons (slot-of h) (slot-of next))))
   (let ((many r2)) (tail (append-into _ next hd tl ys)))
-  (share (at (cell2 _ h r2))))
+  (share (at unique (cell2 _ h r2))))
 
 (def-fns _ $ (many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r))

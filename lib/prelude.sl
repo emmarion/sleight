@@ -1063,7 +1063,7 @@
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
-      (values old (Cons A hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+      (values old (Cons A hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 ; The plucked element's Uninit holds the element's own slot: the old word stays in the array, which may
 ; keep the plucked value alive, a potential memory leak until the element is overwritten or put back.
@@ -1076,12 +1076,12 @@
   (match many i _
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
-      (values hd (Cons (MaybeUninit A) (Uninit A (slot-of hd)) xs1) (at (u _ _ (Uninit _ (slot-of hd)) tl))
+      (values hd (Cons (MaybeUninit A) (Uninit A (slot-of hd)) xs1) (at unique (u _ _ (Uninit _ (slot-of hd)) tl))
               (SetHere _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((unique v) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
-      (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+      (values v (Cons (MaybeUninit A) hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 ; Puts a plucked element back into the slot it came from, which already holds its word, so the call is
 ; skipped (section 39): the marks are a promise and the function has no implementation.
@@ -1097,11 +1097,11 @@
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
       (let-match unique hd (Uninit _ s))
       (slot-self s)
-      (values (Cons (MaybeUninit A) (Init A x) xs1) (at (u _ _ (Init _ x) tl)) (SetHere _ _ _ _)))
+      (values (Cons (MaybeUninit A) (Init A x) xs1) (at unique (u _ _ (Init _ x) tl)) (SetHere _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
-      (let ((erased ys1) (unique tl3) (erased p1)) (at (array-unpluck _ _ tl i1 x q)))
-      (values (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+      (let ((erased ys1) (unique tl3) (erased p1)) (at erased (array-unpluck _ _ tl i1 x q)))
+      (values (Cons (MaybeUninit A) hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
     (unique (Array A xs) a) (many (Nat) i) (unique A x)
@@ -1119,11 +1119,11 @@
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
       (let-match unique hd (MkCopy _ v))
-      (values v (at (u _ _ (MkCopy _ v) tl))))
+      (values v (at unique (u _ _ (MkCopy _ v) tl))))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
-      (values v (at (u _ _ hd tl3))))))
+      (values v (at unique (u _ _ hd tl3))))))
 
 (def-fns _ $ (many extern array-get-many : (erased Type A) (erased (List A) xs)
     (many (Array A xs) a) (subterm many (Nat) i)
@@ -1153,9 +1153,9 @@
 
 (def-fns _ $ (many extern array-length : (erased Type A) (erased (List A) xs)
     (subterm unique (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p) (unique a is r at a))
-  (let-match unique a (ACons _ _ hd tl u) ((ANil _ u) (values (Zero) (LengthNil _) (at (u _)))))
+  (let-match unique a (ACons _ _ hd tl u) ((ANil _ u) (values (Zero) (LengthNil _) (at unique (u _)))))
   (let ((many l1) (erased p1) (unique tl2)) (notail $ array-length _ _ tl))
-  (values (Succ l1) (LengthCons _ _ _ _ p1) (at (u _ _ hd tl2))))
+  (values (Succ l1) (LengthCons _ _ _ _ p1) (at unique (u _ _ hd tl2))))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -1218,11 +1218,11 @@
   (match many i _
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
-      (values hd (at (u _ hd tl))))
+      (values hd (at unique (u _ hd tl))))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((many v) (unique tl3)) (tail (bytes-get _ tl i1 _ q)))
-      (values v (at (u _ hd tl3))))))
+      (values v (at unique (u _ hd tl3))))))
 
 (def-fns _ $ (many extern bytes-get-many : (erased (List (U8)) xs) (many (Bytes xs) b) (subterm many (Nat) i)
     (erased (U8) x) (erased (Nth (U8) xs i x) nth) -> (many x is v))
@@ -1244,13 +1244,13 @@
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((erased ys1) (unique tl3) (erased p1)) (tail (bytes-set _ tl i1 x _ q)))
-      (values (Cons (U8) hd ys1) (at (u _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+      (values (Cons (U8) hd ys1) (at unique (u _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern bytes-length : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p) (unique b is r at b))
-  (let-match unique b (BCons _ hd tl u) ((BNil u) (values (Zero) (LengthNil _) (at (u)))))
+  (let-match unique b (BCons _ hd tl u) ((BNil u) (values (Zero) (LengthNil _) (at unique (u)))))
   (let ((many l1) (erased p1) (unique tl2)) (notail $ bytes-length _ tl))
-  (values (Succ l1) (LengthCons _ _ _ _ p1) (at (u _ hd tl2))))
+  (values (Succ l1) (LengthCons _ _ _ _ p1) (at unique (u _ hd tl2))))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
@@ -1350,7 +1350,7 @@
       (let-match unique dst (BCons _ dh dtl u) (absurd (BNil) to))
       (let-match erased to (SpliceThere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceHere))
       (let ((erased zs1) (unique tl3) (erased p1)) (tail $ bytes-blit _ src (Zero) _ dtl j1 n _ from _ q2))
-      (values (Cons (U8) dh zs1) (at (u _ dh tl3)) (SpliceThere _ _ _ _ _ _ _ p1))))
+      (values (Cons (U8) dh zs1) (at unique (u _ dh tl3)) (SpliceThere _ _ _ _ _ _ _ p1))))
   (let-match many n (Succ n1)
     ((Zero)
       (let-match erased from (SpliceNil _ _) (absurd SpliceHere) (absurd SpliceThere))
@@ -1377,7 +1377,7 @@
       (let-match unique dst (ACons _ _ dh dtl u) (absurd (ANil _) to))
       (let-match erased to (SpliceThere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceHere))
       (let ((erased zs1) (unique tl3) (erased p1)) (tail $ array-blit _ _ src (Zero) _ dtl j1 n _ from _ q2))
-      (values (Cons (Copy A) dh zs1) (at (u _ _ dh tl3)) (SpliceThere _ _ _ _ _ _ _ p1))))
+      (values (Cons (Copy A) dh zs1) (at unique (u _ _ dh tl3)) (SpliceThere _ _ _ _ _ _ _ p1))))
   (let-match many n (Succ n1)
     ((Zero)
       (let-match erased from (SpliceNil _ _) (absurd SpliceHere) (absurd SpliceThere))
@@ -1548,7 +1548,7 @@
     (erased Type U) (many U x at s) (many (SlotFind A xs s U x) r) (unique l is l2 at l))
   (let-match unique l (MkSlots _ ls u))
   (let ((erased U) (many x) (many r)) (slot-search _ ls s))
-  (values U x r (at (u _ ls))))
+  (values U x r (at unique (u _ ls))))
 
 (def-fns _ $ (many extern slots-intern : (erased Type A) (erased (List (SlotItem A)) xs) (unique (Slots A xs) l)
     (erased (Slot) s) (erased A v) (many (Placed s A v) p) ->
@@ -1556,7 +1556,7 @@
   (let-match unique l (MkSlots _ ls u))
   (let-match erased (placed-slot _ _ _ p) (Refl _ _))
   (let ((erased _) (many _) (many f)) (slot-search _ ls (slot-of p)))
-  (let-match many f (SlotMissing _ _ _) ((SlotFound _ _ _ w q i nl) (values ls (SlotExisting _ _ _ w q i nl) (at (u _ ls)))))
+  (let-match many f (SlotMissing _ _ _) ((SlotFound _ _ _ w q i nl) (values ls (SlotExisting _ _ _ w q i nl) (at unique (u _ ls)))))
   (let ((many n) (erased q)) (list-count _ ls))
   (let ((many ys)) (Cons _ (MkSlotItem _ _ _ p) ls))
   (values ys (SlotAdded _ _ _ _ p n q) (u _ ys)))
@@ -1565,7 +1565,7 @@
     (many (Nat) n) (erased (Length (SlotItem A) xs n) p) (unique l is l2 at l))
   (let-match unique l (MkSlots _ ls u))
   (let ((many n) (erased p)) (list-count _ ls))
-  (values n p (at (u _ ls))))
+  (values n p (at unique (u _ ls))))
 
 (def-adts $ (Resolution : -> Type)
   enum

@@ -15,6 +15,6 @@
   (values r (place-at-many _ r)))
 (let ((many one) (many p)) (succ-placed (MyZero)))
 (let ((unique b)) (place-at _ (MySucc (MyZero))))
-(let ((unique b2)) (at (rebox _ _ b)))
+(let ((unique b2)) (at erased (rebox _ _ b)))
 (let ((unique x)) (unplace-at _ _ _ b2))
 (share x)

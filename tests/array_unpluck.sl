@@ -16,7 +16,7 @@
   (let ((unique item) (erased _) (unique b) (erased cleared)) (array-pluck _ _ a (Succ (Zero)) _ (NthThere _ _ _ _ _ (NthHere _ _ _))))
   (let-match unique item (Init _ box))
   (let ((unique box2)) (bump box))
-  (let ((erased _) (unique c) (erased restored)) (at (array-unpluck _ _ b (Succ (Zero)) box2 (set-nth _ _ _ _ _ cleared))))
+  (let ((erased _) (unique c) (erased restored)) (at erased (array-unpluck _ _ b (Succ (Zero)) box2 (set-nth _ _ _ _ _ cleared))))
   (let ((unique item2) (erased _) (unique _) (erased _)) (array-pluck _ _ c (Succ (Zero)) _ (set-nth _ _ _ _ _ restored)))
   (let-match unique item2 (Init _ box3))
   (let-match unique box3 (MkBox m))

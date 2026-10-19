@@ -4,10 +4,10 @@
 (def-adts $ (Meters : -> Type) enum newtype (many MkMeters : (many (Nat) n) -> (Meters)))
 (def-fns _ $ (many at unwrap : (subterm many (List (Meters)) ms) -> (many (List (Nat)) ns at ms))
   (match many ms _
-    ((Nil _ u) (at (u _)))
+    ((Nil _ u) (at many (u _)))
     ((Cons _ m tl u)
       (let-match many m (MkMeters n))
       (let ((many r)) (unwrap tl))
-      (at (u _ n r)))))
+      (at many (u _ n r)))))
 (unwrap (Cons _ (MkMeters 1) (Cons _ (MkMeters 2) (Nil _))))
 ; warns: tests/at_fn_unwrap.sl:6:4: warning: lopsided `match`; flatten it with a `let-match` on `Cons`

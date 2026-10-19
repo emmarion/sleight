@@ -25,7 +25,7 @@
 
 (def-fns _ $ (many keep : (unique (B) x) -> (unique (B) r))
   (match unique x _
-    ((T c) (at (c)))
+    ((T c) (at unique (c)))
     (else x x)))
 
 (def-fns _ $ (many unwrap : (many (Nat) v) (many (MkCopy (Nat) v) is c) -> (many (Nat) r at c))

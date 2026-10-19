@@ -17,11 +17,11 @@
 (def-fns _ $ (many at swap : (erased Type P) (erased Type Q) (erased Q q) (many (ErasedOr P) x) ->
     (many (ErasedOr Q) y at x))
   (match many x _
-    ((EONonErased _ _ u) (at (u Q q)))
+    ((EONonErased _ _ u) (at many (u Q q)))
     ((EOErased _ u) (u Q))))
 (def-fns _ $ (many at relabel : (unique (T) x) -> (unique (T) y at x))
   (match unique x _
-    ((Live n u) (at (u n)))
+    ((Live n u) (at unique (u n)))
     ((Ghost n u) (u n))))
 (def-fns _ $ (erased rebuild : (erased (T) x) -> (erased (T) y at x))
   (let-match erased x (Ghost n u) ((Live _) x))

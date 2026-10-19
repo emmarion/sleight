@@ -17,8 +17,10 @@ references are to DESIGN.md.
    `unique` to `many`: a `UniqueFn` becomes an `Fn`, every cell
    operation becomes an allocation, `share` and `slot-of` become the
    identity, `at` entries become ordinary entries, and at-functions and
-   at-matches become functions and matches whose bodies run. Does the
-   result still compile and run to the same values? Then collapse
+   at-matches become functions and matches whose bodies run, except
+   that a call written `(at erased (f ...))` stays skipped, since its
+   head may be erased (§39). Does the result still compile and run to
+   the same values? Then collapse
    `erased` to `many`, give `Level` and the proof types some non-erased
    representation, and replace each `coerce` by the value its proof
    names. Does the result still compile and run to the same values? In
@@ -85,8 +87,6 @@ references are to DESIGN.md.
     consumed: a consumed variable's contents may have changed while its
     slot has not. As proposed it is potentially unsound, and it is not
     implemented.
-19. Should the function in an `(at (f ...))` call be allowed to be
-    erased, as a `Coercible` proof is?
 20. What becomes of `coerce`, `Coercible`, the `coercible-*` forms and
     `Delegate` once the `at` system can express what they express?
     The owner's tentative direction is for the `at` system to subsume
@@ -104,7 +104,7 @@ references are to DESIGN.md.
     `let` binder takes its place from its value, so an `at v` there
     could declare nothing new; it could only assert that the value is
     already at `v`, checked after the binding as a return's promise
-    is, in the way `(at (f ...))` asserts a skipped call (§39). Today
+    is, in the way `(at m (f ...))` asserts a skipped call (§39). Today
     it is refused.
 36. Should `_` be accepted as an at-match's annotation (§40, §47)?
     Today the annotation inside `at` must be written out, and a match

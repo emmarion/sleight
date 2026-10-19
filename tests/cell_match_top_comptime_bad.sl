@@ -9,5 +9,5 @@
     (P s t back)
     (comptime-match many k (P x y))
     back))
-(let ((many p)) (at (v a b)))
+(let ((many p)) (at many (v a b)))
 (let-match many p (P x y)) y

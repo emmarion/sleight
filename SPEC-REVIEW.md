@@ -71,7 +71,7 @@ the owner, not a decision.
 32. **The cell `at` forms in an erased position.** §14 refuses in an
     erased position the forms "whose only claim or effect is about the
     run", a list that names §39's `at` wrapper around a call but not
-    §37's `(at (u ...))` around a cell invocation or its per-argument
+    §37's `(at m (u ...))` around a cell invocation or its per-argument
     `(at)`, and it says erased code obeys §36's `at` rules. That seems
     to mean the cell forms are checked there, but no sentence says so.
     Also unclear: whether §37's "The marked argument must be

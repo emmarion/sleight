@@ -6,7 +6,7 @@
 (let ((many s)) (slot-of u))
 (let ((unique u2)) (cell-write unique u (Boxed (slot-of zero))))
 (def-fns _ $ (many read-at : (many (Slot) target) (unique (Cell Boxed (slot-of one)) c at target) -> (many (Nat) n))
-  (let ((many box)) (share (at (c one))))
+  (let ((many box)) (share (at unique (c one))))
   (let-match many box (Boxed n))
   n)
 (let-match many #\x00 (MkChar exit-code))

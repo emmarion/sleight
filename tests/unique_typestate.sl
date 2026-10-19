@@ -16,7 +16,7 @@
 
 (def-fns _ $ (many do-open : (unique (Conn (Closed)) c) -> (unique (Conn (Opened)) r at c))
   (match unique c _
-    ((MkConn _ fd cell) (at (cell _ fd)))))
+    ((MkConn _ fd cell) (at unique (cell _ fd)))))
 
 (def-fns _ $ (many do-send : (unique (Conn (Opened)) c) (many (Nat) msg) -> (unique (Conn (Opened)) r at c))
   (match unique c _

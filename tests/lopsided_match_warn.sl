@@ -43,7 +43,7 @@
         (match many n _
           ((Zero) back)
           ((Succ k) (let ((many _)) k) back))))
-    (let ((many p)) (share (at (v a))))
+    (let ((many p)) (share (at unique (v a))))
     (let-match many p (Full x))
     x)
   ((many absurd-shallow : (many (Nat) n) (erased (Lt (Succ n) (Succ (Zero))) p) -> (many (Nat) r))

@@ -338,7 +338,7 @@ Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
   (let ((unique next)) (cell-alloc Cons))
   (let ((unique cell2)) (cell-write unique cell (Cons (slot-of h) (slot-of next))))
   (let ((many r2)) (tail (append-into _ next hd tl ys)))
-  (share (at (cell2 _ h r2))))
+  (share (at unique (cell2 _ h r2))))
 ```
 
 - Builds the result front to back, in place

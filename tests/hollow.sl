@@ -24,6 +24,6 @@
 (def-fns _ $ (many boxed : (erased (Nat) n) -> (many (Box) b))
   (let ((unique c)) (cell-alloc MkBox))
   (let ((many t)) (MkTok n))
-  (share (at (c t))))
+  (share (at unique (c t))))
 
 (Cons _ (boxed 1) $ Cons _ (MkBox $ built 2) $ Cons _ (MkBox $ tok 3) $ Cons _ (MkBox $ retok $ MB 4) $ Nil _)

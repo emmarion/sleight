@@ -36,7 +36,7 @@
       (Full _ back)
       (let-match many n (Succ _) ((Zero) back))
       back))
-  (let ((many p)) (share (at (v a))))
+  (let ((many p)) (share (at unique (v a))))
   (let-match many p (Full x))
   (Succ (Succ (Succ (Succ x)))))
 

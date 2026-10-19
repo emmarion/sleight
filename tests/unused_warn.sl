@@ -17,7 +17,7 @@
     ((Succ j) (values n))))
 
 (def-fns _ $ (many same : (many (D) x) -> (many x is r at x))
-  (match many x _ ((A u) (at (u))) (else y (let ((many z)) 0) x)))
+  (match many x _ ((A u) (at many (u))) (else y (let ((many z)) 0) x)))
 
 (def-fns _ $ (many second : (many (Nat) word) (many (Nat) other at word) -> (many (Nat) r)) other)
 
@@ -28,7 +28,7 @@
   (let ((unique v))
     (cell-match unique u (((Cell P (slot-of a) (slot-of b)) v at u))
       (P s t back) back))
-  (let ((many p)) (share (at (v a b))))
+  (let ((many p)) (share (at unique (v a b))))
   (let-match many p (P x y)) y)
 
 (def-adts $ (Void : -> Type) enum)
@@ -54,8 +54,8 @@
 ; warns: tests/unused_warn.sl:13:12: warning: unused `idle`; delete it
 ; warns: tests/unused_warn.sl:14:16: warning: unused `helper`; delete it
 ; warns: tests/unused_warn.sl:17:12: warning: unused `j`; write `_` in its place
-; warns: tests/unused_warn.sl:20:42: warning: unused `y`; delete it
-; warns: tests/unused_warn.sl:20:50: warning: unused `z`; delete its `let`
+; warns: tests/unused_warn.sl:20:47: warning: unused `y`; delete it
+; warns: tests/unused_warn.sl:20:55: warning: unused `z`; delete its `let`
 ; warns: tests/unused_warn.sl:30:10: warning: unused `s`; write `_` in its place
 ; warns: tests/unused_warn.sl:30:12: warning: unused `t`; write `_` in its place
 ; warns: tests/unused_warn.sl:32:24: warning: unused `x`; write `_` in its place
