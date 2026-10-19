@@ -1,5 +1,4 @@
-Secondary goal: once the solution is finished, make it small. Its size is the
-total of the sizes in bytes, as the `ls` tool reports them, of your files in
-its `check`; comments and whitespace count. A smaller solution only
-counts if it is still finished, by every rule above. Record the current size
-in HANDOFF.md.
+Once the solution is finished, make it as small as you can, and keep going
+until your budget runs out. Size is the total bytes, as `ls` reports them, of
+your files in its `check`, comments and whitespace included. Only a finished
+solution counts. Record the size and your untried ideas in HANDOFF.md.
