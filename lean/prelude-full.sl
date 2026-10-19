@@ -862,7 +862,7 @@
   (many MkDir : (many (String) path) -> (Request (Result (Change))))  ; one level
   (many DeleteFile : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
   (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
-  (many Confine : (many (List (String)) reads) (many (List (String)) writes) -> (Request (Result (Unit))))
+  (many ConfinePaths : (many (List (String)) reads) (many (List (String)) writes) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
   (many Measure : (many (Stopwatch) s) -> (Request (Usage))))
 

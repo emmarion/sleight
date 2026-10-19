@@ -4,7 +4,7 @@
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
-   "; confine-read: dir" and "; confine-write: dir", one directory each, what its file requests start confined to,
+   "; confine-read: path" and "; confine-write: path", one path each, what its file requests start confined to,
    as --confine-read and --confine-write give it;
    "; comptime-unconfine: name" a name `read-file` may read relative to, as --comptime-unconfine gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;

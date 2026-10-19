@@ -35,7 +35,7 @@ let driver env =
     | "MkDir", [ p ] -> MkDir p
     | "DeleteFile", [ p ] -> DeleteFile p
     | "DeleteDir", [ p ] -> DeleteDir p
-    | "Confine", [ r; w ] -> Confine (r, w)
+    | "ConfinePaths", [ r; w ] -> ConfinePaths (r, w)
     | "ConfineOutputBytes", [ n ] -> ConfineOutputBytes n
     | "Measure", [ m ] -> Measure m
     | _ -> assert false

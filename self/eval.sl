@@ -863,7 +863,7 @@
   (many RqGetEnvs : -> (RqKind)) (many RqAppendFile : -> (RqKind)) (many RqReadRemaining : -> (RqKind))
   (many RqListDir : -> (RqKind)) (many RqGetCwd : -> (RqKind)) (many RqStat : -> (RqKind))
   (many RqMkDir : -> (RqKind)) (many RqDeleteFile : -> (RqKind)) (many RqDeleteDir : -> (RqKind))
-  (many RqConfine : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)))
+  (many RqConfinePaths : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)))
 
 (def-adts $ (RqEntry : -> Type)
   enum
@@ -878,7 +878,7 @@
   rq-cons "WriteFile" (RqWriteFile) $ rq-cons "GetArgs" (RqGetArgs) $ rq-cons "GetEnv" (RqGetEnv) $
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
-  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "Confine" (RqConfine) $
+  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "ConfinePaths" (RqConfinePaths) $
   rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ rq-cons "Measure" (RqMeasure) $ Nil _)
 
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (RqKind) r))
@@ -983,8 +983,8 @@
         (let ((unique w1) (many r)) (world-do _ w (DeleteDir s0)))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-result-change env _ hp1 r))
         (values h hpx le a w1))
-      ((RqConfine)
-        (let ((unique w1) (many r)) (world-do _ w $ Confine (heap-strs env heap-strs-fuel _ hp1 f0) (heap-strs env heap-strs-fuel _ hp1 $ field-at _ fields 1 req1)))
+      ((RqConfinePaths)
+        (let ((unique w1) (many r)) (world-do _ w $ ConfinePaths (heap-strs env heap-strs-fuel _ hp1 f0) (heap-strs env heap-strs-fuel _ hp1 $ field-at _ fields 1 req1)))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-result-unit env _ hp1 r))
         (values h hpx le a w1))
       ((RqConfineOutputBytes)

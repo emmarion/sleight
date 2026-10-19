@@ -34,7 +34,7 @@ type 'v request =
   | MkDir of 'v
   | DeleteFile of 'v
   | DeleteDir of 'v
-  | Confine of 'v * 'v
+  | ConfinePaths of 'v * 'v
   | ConfineOutputBytes of 'v
   | Measure of 'v
 
@@ -105,7 +105,6 @@ let resolve ~follow p =
 
 let rec prefix = function [], _ -> true | f :: fs, c :: cs -> f = c && prefix (fs, cs) | _ :: _, [] -> false
 let covers dirs cs = List.exists (fun d -> prefix (parts d, cs)) dirs
-let parent cs = match List.rev cs with [] -> [] | _ :: up -> List.rev up
 
 let resolved ~follow p = match resolve ~follow p with cs -> Ok cs | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
 let inside dir ~follow p = Result.map (fun cs -> if covers [ dir ] cs then Some cs else None) (resolved ~follow p)
@@ -114,13 +113,10 @@ type access = Read | Write
 
 let unconfined = { reads = []; writes = [ "/" ] }
 let reaches f access cs = covers (match access with Read -> f.reads @ f.writes | Write -> f.writes) cs
-let outside access p = Error (p ^ ": outside the " ^ (match access with Read -> "readable" | Write -> "writable") ^ " directories")
+let outside access p = Error (p ^ ": outside the " ^ (match access with Read -> "readable" | Write -> "writable") ^ " paths")
 
 let admits fence access ~follow p =
-  Result.bind (resolved ~follow p) (fun cs ->
-      match access with
-      | Read -> if reaches !fence Read cs then Ok cs else outside Read p
-      | Write -> if reaches !fence Write (parent cs) then Ok cs else Error (p ^ ": not inside a writable directory"))
+  Result.bind (resolved ~follow p) (fun cs -> if reaches !fence access cs then Ok cs else outside access p)
 
 let within dir p =
   match path (resolve ~follow:true dir) with
@@ -137,12 +133,8 @@ let within dir p =
 let read_within dir p = Result.bind (within dir p) (fun (_, read) -> read ())
 
 let confine fence reads writes =
-  let dir access d =
-    Result.bind (resolved ~follow:true d) (fun cs ->
-        if not (reaches !fence access cs) then outside access d
-        else match (Unix.stat (path cs)).st_kind with Unix.S_DIR -> Ok (path cs) | _ -> Error (d ^ ": not a directory") | exception e -> Error (explain e))
-  in
-  let rec all access = function [] -> Ok [] | d :: ds -> Result.bind (dir access d) (fun p -> Result.map (List.cons p) (all access ds)) in
+  let entry access e = Result.bind (resolved ~follow:true e) (fun cs -> if reaches !fence access cs then Ok (path cs) else outside access e) in
+  let rec all access = function [] -> Ok [] | e :: es -> Result.bind (entry access e) (fun p -> Result.map (List.cons p) (all access es)) in
   Result.bind (all Read reads) (fun reads -> Result.map (fun writes -> fence := { reads; writes }) (all Write writes))
 
 let restrict fence reads writes = if reads = [] && writes = [] then Ok () else confine fence reads writes
@@ -242,7 +234,7 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     | MkDir path -> fenced ~access:Write ~follow:false ~cost:created path (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
     | DeleteFile path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
     | DeleteDir path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
-    | Confine (reads, writes) ->
+    | ConfinePaths (reads, writes) ->
         let rec strs v = match o.un_list v with Some (x, rest) -> to_string x :: strs rest | None -> [] in
         (match confine w.fence (strs reads) (strs writes) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
     | ConfineOutputBytes bytes -> (

@@ -67,7 +67,7 @@
   (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit _ exit-fail)))
 
 (def-fns run-lvl $ (many usage : (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-read dir] [--confine-write dir] [--comptime-unconfine name] [--confine-output-bytes n] [--eval-fuel n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--fn-same] [--no-shape-note] [--hints file] [--goal none|open|proved] file.sl ... [-- arg ...] > out.ml" w))
+  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-read path] [--confine-write path] [--comptime-unconfine name] [--confine-output-bytes n] [--eval-fuel n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--fn-same] [--no-shape-note] [--hints file] [--goal none|open|proved] file.sl ... [-- arg ...] > out.ml" w))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many h)) (env-heap env))
@@ -101,7 +101,7 @@
     ((BFalse)
       (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env env)
       (values (say-to (BFalse) out w1) (Exit _ exit-ok))))
-  (let ((unique w2) (many confined)) (world-do _ w1 $ Confine reads $ match many reads _ ((Cons _ _ _) writes) ((Nil _) (match many writes _ ((Nil _) (Cons _ "/" $ Nil _)) (else writes)))))
+  (let ((unique w2) (many confined)) (world-do _ w1 $ ConfinePaths reads $ match many reads _ ((Cons _ _ _) writes) ((Nil _) (match many writes _ ((Nil _) (Cons _ "/" $ Nil _)) (else writes)))))
   (let-match many confined (Ok _ _) ((Fail _ m) (failed m w2)))
   (let-match many bytes (Some _ b) ((None _) (run-program env pargs with-env w2)))
   (let-match many (and (not $ str-eq b "") (all-digits b)) (BTrue) ((BFalse) (failed (str-cat b ": not a number of bytes") w2)))

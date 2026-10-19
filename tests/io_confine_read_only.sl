@@ -26,7 +26,7 @@
   (let ((unique w4)) (report _ "write" w3 (WriteFile "io-confine-read-only.txt" "x")))
   (let ((unique w5)) (report _ "append" w4 (AppendFile "io-confine-read-only.txt" "x")))
   (let ((unique w6)) (report _ "delete" w5 (DeleteFile "io-confine-read-only.txt")))
-  (let ((unique w7)) (report _ "confine write" w6 (Confine (Nil _) (Cons _ "." $ Nil _))))
+  (let ((unique w7)) (report _ "confine write" w6 (ConfinePaths (Nil _) (Cons _ "." $ Nil _))))
   (values w7 (Exit P code0)))
 
 (Continue P start)

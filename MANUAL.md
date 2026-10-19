@@ -61,27 +61,33 @@ the prelude's types, and slc takes the same flag. Only the prelude, or a program
 a definition `extern` (DESIGN.md section 42). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
-`--confine-read dir` and `--confine-write dir` confine a program's file
-requests, its fence, to the directories they name, each flag given any
-number of times: a directory named by either may be read, and one named by
-`--confine-write` written. A path is resolved against the working directory
-and through any symlinks. `ReadFile`, `ReadFileIn`, `ListDir` and `Stat` read,
-and are performed when their path lands in a readable directory or below
-it. `WriteFile`, `AppendFile`, `MkDir`, `DeleteFile` and `DeleteDir` write,
-and are performed when the directory holding their path is a writable
-directory or below one, so a writable directory itself is never created or
-removed. A request the fence does not admit answers `Fail` without being
-performed, while one it admits behaves exactly as it would unconfined.
-Without either flag `/` is writable, so the same check admits every path.
-A path whose symlinks cannot be followed to the end, the resolution
-giving up after 1000 links, is admitted by no fence, and neither is a
-path with a component before its last that cannot be examined, such as
-one that does not exist. A program narrows its own fence with the
-`Confine reads writes` request, which sets the directories it may read
-and those it may write, and refuses a directory to read that the current
-fence does not let it read, a directory to write that it does not let it
-write, and anything that is not a directory (`tests/io_confine.sl`).
-Nothing is resolved at compile time: under `--extract` the directories are
+`--confine-read path` and `--confine-write path` confine a program's file
+requests, its fence, to the paths they name, each flag given any number of
+times: a path named by either may be read, and one named by
+`--confine-write` written, and each covers everything below it, so a
+directory grants its whole tree and a file grants itself alone. A path the
+program names, and one a flag names, is resolved against the working
+directory and through any symlinks, every component but the last of a
+named path having to exist. `ReadFile`, `ReadFileIn`, `ListDir` and `Stat`
+read, and are performed when their path is covered by a readable path.
+`WriteFile`, `AppendFile`, `MkDir`, `DeleteFile` and `DeleteDir` write, and
+are performed when their path is covered by a writable one, so a writable
+path may itself be created, removed and created again. `MkDir`,
+`DeleteFile` and `DeleteDir` do not follow a symlink in last position, so
+a writable path that names a symlink lets a program write through it but
+not remove it. A request the fence does not admit answers `Fail` without
+being performed, while one it admits behaves exactly as it would
+unconfined. Without either flag `/` is writable, so the same check admits
+every path. A path whose symlinks cannot be followed to the end, the
+resolution giving up after 1000 links, is admitted by no fence, and
+neither is a path with a component before its last that cannot be
+examined, such as one that does not exist. A program narrows its own
+fence with the `ConfinePaths reads writes` request, which sets the paths
+it may read and those it may write, and refuses a path to read that the
+current fence does not let it read, and a path to write that it does not
+let it write. With both lists empty it leaves the program no path at all
+(`tests/io_confine.sl`).
+Nothing is resolved at compile time: under `--extract` the paths are
 embedded in the OCaml written out as they were given, and the compiled
 program confines itself to them when it starts, a relative one resolving
 against the directory the program runs in, and exits with the error if
@@ -221,7 +227,7 @@ under further flags, which `test/runtest.ml` requires to be refused and which a
 test naming a flag that only one implementation takes runs under that one alone, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
-atom's id. `; confine-read: dir`, `; confine-write: dir`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
+atom's id. `; confine-read: path`, `; confine-write: path`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
 `; no-env: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
 the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep

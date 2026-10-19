@@ -11,9 +11,9 @@
 ; expect: fenced refused
 ; expect: delete ok
 ; expect: delete in ok
-; expect: delete fence refused
+; expect: delete fence ok
 ; A ReadFileIn reads a path relative to a directory and refuses one that resolves outside it, and it is
-; still subject to the program's own confinement. The directory it is confined to stays, and the next run reuses it.
+; still subject to the program's own confinement.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
@@ -41,7 +41,7 @@
   (let ((unique w7)) (read-in "up" w6 "io-rfi-test/in" "../b.txt"))
   (let ((unique w8)) (read-in "missing" w7 "io-rfi-test/in" "c.txt"))
   (let ((unique w9)) (report _ "delete outer" w8 (DeleteFile "io-rfi-test/b.txt")))
-  (let ((unique w10)) (report _ "confine" w9 (Confine (Nil _) (Cons _ "io-rfi-test" $ Nil _))))
+  (let ((unique w10)) (report _ "confine" w9 (ConfinePaths (Nil _) (Cons _ "io-rfi-test" $ Nil _))))
   (let ((unique w11)) (report _ "fenced" w10 (ReadFileIn "." "io-rfi-elsewhere.txt")))
   (let ((unique w12)) (report _ "delete" w11 (DeleteFile "io-rfi-test/in/a.txt")))
   (let ((unique w13)) (report _ "delete in" w12 (DeleteDir "io-rfi-test/in")))
