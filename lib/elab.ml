@@ -510,7 +510,7 @@ let sources : (string * string) list ref = ref []
 type goal_mode = Unrequired | Open | Proved
 let goal_mode = ref Unrequired
 let goal : (Reader.loc * mult * term * Env.t) option ref = ref None
-let discharged = ref false
+let discharged : Reader.loc option ref = ref None
 let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i
 let gensyms = ref 0
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
@@ -2150,7 +2150,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
       | Some Sp.Unary, _ -> elab_unary spos env l args
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
-      | Some Sp.Goal, _ -> error_in env l "`goal` is allowed only as a top-level form of a file"
+      | Some ((Sp.Goal | Sp.Qed) as f), _ -> error_in env l "`%s` is allowed only as a top-level form of a file" (Sp.name f)
       | Some Sp.CompileError, _ -> compile_error (!settle_head Many) spos env l args
       | Some Sp.CompileWarn, _ -> let env, text = compile_text (!settle_head Many) spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
       | Some Sp.SlotSelf, [ a ] ->
@@ -2626,30 +2626,32 @@ let set_goal env l = function
       env
   | _ -> error l "%s" (help env (Sp.misuse Sp.Goal))
 
-let discharge ~last env item =
-  let l = loc item in
-  match !goal with
-  | _ when !goal_mode = Open -> error_in env l "under %s no file ends in an expression" (goal_flag Open)
-  | _ when not last -> error_in env l "under %s only the last file ends in an expression" (goal_flag Proved)
-  | None -> error_in env l "under %s the final expression discharges a `goal`, and none is set" (goal_flag Proved)
-  | Some (at, mult, ty, _) ->
-      let tele = [ { name = None; subterm = false; mult; sg = Ty ty; place = None; loc = at } ] in
-      let sink = lazy { owner = "the goal"; noun = "value"; shown = show_tele env tele; anchors = [ (at, "the goal is set here") ] } in
-      let env, ress, _ = elab_expr ~tele ~sink ~final:true env [ mult ] item in
-      check_results env l [ item ] tele ress;
-      discharged := true;
-      env
+let qed env l = function
+  | [ item ] -> (
+      Option.iter (fun at -> error_with_in env l [ (at, "the goal is proved here") ] "a unit has at most one `qed`") !discharged;
+      match !goal with
+      | _ when !goal_mode = Open -> error_in env l "under %s no `qed` proves the goal" (goal_flag Open)
+      | None -> error_in env l "a `qed` proves the goal a `goal` sets before it, and none is set"
+      | Some (at, mult, ty, _) ->
+          let tele = [ { name = None; subterm = false; mult; sg = Ty ty; place = None; loc = at } ] in
+          let sink = lazy { owner = "the goal"; noun = "value"; shown = show_tele env tele; anchors = [ (at, "the goal is set here") ] } in
+          let env, ress, _ = elab_expr ~tele ~sink ~final:true env [ mult ] item in
+          check_results env l [ item ] tele ress;
+          discharged := Some l;
+          env)
+  | _ -> error l "%s" (help env (Sp.misuse Sp.Qed))
 
 let close_goal () =
-  match !goal_mode, !goal with
-  | Unrequired, _ | Open, Some _ -> None
-  | m, None -> error Reader.nowhere "under %s a file sets a `goal`, and none does" (goal_flag m)
-  | Proved, Some (at, _, _, env) when not !discharged -> error_in env at "the goal is not discharged: under %s the last file ends in an expression that proves it" (goal_flag Proved)
-  | Proved, Some (at, mult, ty, env) ->
-      let here = Reader.where "-" at in
-      Some (Env.resolve here (Reader.label here "note: " ^ sprintf_in env "proved `(goal %s %s)`" (speller env (mult_name mult)) (show env ty)))
+  match !goal_mode, !goal, !discharged with
+  | Unrequired, _, _ -> None
+  | m, None, _ -> error Reader.nowhere "under %s a file sets a `goal`, and none does" (goal_flag m)
+  | Proved, Some (at, _, _, env), None -> error_in env at "the goal is not discharged: under %s a `qed` proves it" (goal_flag Proved)
+  | m, Some (at, mult, ty, env), by ->
+      let note l text = let here = Reader.where "-" l in Env.resolve here (Reader.label here "note: " ^ text) in
+      let goal = note at (sprintf_in env "%s `(goal %s %s)`" (goal_name m) (speller env (mult_name mult)) (show env ty)) in
+      Some (String.concat "\n" (goal :: Option.to_list (Option.map (fun l -> note l (sprintf_in env "by this `qed`")) by)))
 
-let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") ?(loading_prelude = false) ?(last = true) env items =
+let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") ?(loading_prelude = false) env items =
   let rec go env = function
     | [] -> env
     | (List (_, Atom (_, Src ";!") :: _) as p) :: rest -> step env [ p ] rest
@@ -2665,24 +2667,21 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
         at (loc item) (fun () ->
             if rest = [] && source = [] && not (is_statement env item) then (
               if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
-              if !goal_mode <> Unrequired then (
-                let env = discharge ~last env item in
-                if !warn_unused then report_unused env;
-                env)
-              else
               let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
               let ty = (single (loc item) ress).ty in
-              if final_form env ty = None then
+              let driven = !goal_mode = Unrequired in
+              if driven && final_form env ty = None then
                 error_in env (loc item) "a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`; this one is %s" (qshow env ty);
               let v = List.hd (run_code env code) in
-              trace := Final (v, ty, path) :: !trace;
+              if driven then trace := Final (v, ty, path) :: !trace;
               if !warn_unused then report_unused env;
-              consume env ty v;
+              if driven then consume env ty v;
               env)
             else
               let env = match item with
                 | List (l, h :: args) when special_of env h = Some Sp.Goal -> set_goal (read_special Many env h) l args
+                | List (l, h :: args) when special_of env h = Some Sp.Qed -> qed (read_special Many env h) l args
                 | _ -> fst (elab_stmt ~within:"top-level form" Many env item) in
               if !warn_unused then report_unused env;
               step env rest source))
@@ -2693,6 +2692,6 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
    | [] -> ());
   env
 
-let run_file ?consume ?last env (f : Reader.file) =
+let run_file ?consume env (f : Reader.file) =
   let warned = Indent.warn f in
-  run_toplevel ?consume ~path:f.name ?last env (Reader.parse ~shape:(not warned) f)
+  run_toplevel ?consume ~path:f.name env (Reader.parse ~shape:(not warned) f)

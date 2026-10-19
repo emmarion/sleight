@@ -5,8 +5,8 @@ future session to do so. This task will likely take many sessions, so leaving
 solid, well-recorded progress matters more than finishing in this one.
 
 To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
-std/tactics.sl, heapsort-fast/spec.sl, then your files, the last ending in the
-goal's value. To time it, compile the same files followed by
+std/tactics.sl, heapsort-fast/spec.sl, then your files, one of them proving the
+goal with `(qed e)`. To time it, compile the same files followed by
 heapsort-fast/perf.sl with `sl`; perf.sl calls your `heapsort-fast`. The
 finished solution must compile with no warnings, and none of your files may
 contain a `;! suppress`; intermediate work may have both. A solution is not

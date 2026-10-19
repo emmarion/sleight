@@ -5,7 +5,7 @@ usage: python3 agent/golfchart.py [--slc SLC] [--out DIR] RESULTS-DIR...
 Each RESULTS-DIR is a box-* directory or a run directory; runs of other tasks are skipped. Only finished
 sessions are checked: those with an answer.txt or a later session. A session with checks/ is valid when one of its
 checks has no `;! suppress`, proves the goal with SLC with no warnings, and runs perf.sl as below; its size is the
-smallest such check's. An older session is valid when the sl files that its work/files.txt lists compile with SLC,
+smallest such check's. A check with no `qed` is given one of `heapsort-fast`, which perf.sl calls by that name. An older session is valid when the sl files that its work/files.txt lists compile with SLC,
 with accept.sl and perf.sl, with no warnings and no `;! suppress`. A run is valid when the OCaml that SLC emits,
 built with ocamlfind, prints perf.sl's checksum and `minor-words 0` within a second. Results are cached in
 DIR/sizes.json by session and SLC. Writes DIR/size{,-log,-loglog}.{svg,png}.
@@ -50,13 +50,16 @@ def check(session, slc, build):
 
 
 def best_check(session, slc, build):
-    d, sizes = session / "sandbox", []
+    d, sizes, qed = session / "sandbox", [], build.resolve() / "qed.sl"
+    build.mkdir(parents=True, exist_ok=True)
+    qed.write_text("(qed (MkHeapsort (level-of heapsort-fast) heapsort-fast))\n")
     for j in sorted((session / "checks").glob("*.json"), key=lambda j: json.loads(j.read_text())["size"]):
         r, b = json.loads(j.read_text()), j.with_suffix(".sl")
         sizes.append(r["size"])
         if r["exit"] or b";! suppress" in b.read_bytes():
             continue
-        p = subprocess.run([slc, "--no-shape-note", "--goal", "proved", *LIBS, b], cwd=d, capture_output=True)
+        own = re.search(rb"\(qed\b", b.read_bytes())
+        p = subprocess.run([slc, "--no-shape-note", "--goal", "proved", *LIBS, b, *([] if own else [qed])], cwd=d, capture_output=True)
         if not p.returncode and not re.search(rb"(?m)(^|: )warning: ", p.stderr) and run_perf([slc, "--no-shape-note", *LIBS, b, PERF], d, build) == "valid":
             return r["size"], "valid"
     return min(sizes, default=0), "no valid check"

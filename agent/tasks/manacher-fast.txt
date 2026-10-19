@@ -12,7 +12,7 @@ runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a 
 gain. The `sl` tool's `gc_stats` reports how much a run allocates.
 
 To check your work, call `check` with self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, then your files
-(and any pal/ files they use), the last ending in the goal's value.
+(and any pal/ files they use), one of them proving the goal with `(qed e)`.
 
 For reference: prelude.sl (the standard library), self/ (the compiler, written in Sleight), tests/ (example programs),
 and DESIGN.md.

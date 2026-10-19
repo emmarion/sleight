@@ -89,6 +89,7 @@ usage cell-same: (cell-same <cell> <cell>)
 usage fn-same: (fn-same <function> <function>)
 usage def-opaque: (def-opaque (<name> : <parameter> ... -> Type) ...)
 usage goal: (goal <multiplicity> <type>)
+usage qed: (qed <value>)
 usage def-prim: (def-prim (<many or erased> <primitive> : <parameter> ... -> <return> ...) ...)
 role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, cell-write or open-adt
 usage erased: (erased <type> <name>)

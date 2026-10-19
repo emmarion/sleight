@@ -252,7 +252,7 @@
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK)) (many StDefUnique : -> (StmtK))
     (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK)) (many StUnary : -> (StmtK))
     (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
-    (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)))
+    (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)) (many StQed : -> (StmtK)))
   ((FormerK : -> Type)
     enum
     (many FoFn : -> (FormerK)) (many FoTyCtor : -> (FormerK)) (many FoValCtor : -> (FormerK))
@@ -276,7 +276,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
 
 (def-fns _ $ (many former-code : (many (FormerK) k) -> (many (Nat) n))
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoUniqueFn) 4) ((FoCell) 5)))
@@ -335,7 +335,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "goal" (SpStmt $ StGoal) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "goal" (SpStmt $ StGoal) $ sp-cons "qed" (SpStmt $ StQed) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
   sp-cons "place-at" (SpExpr $ ExPlaceAt) $ sp-cons "place-at-many" (SpExpr $ ExPlaceAtMany) $ sp-cons "unplace-at" (SpExpr $ ExUnplaceAt) $ sp-cons "unplace-at-many" (SpExpr $ ExUnplaceAtMany) $ sp-cons "placed-slot" (SpExpr $ ExPlacedSlot) $ sp-cons "placed-eq" (SpExpr $ ExPlacedEq) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
@@ -2230,10 +2230,11 @@
   (many MkPrimSig : (many (Sp) prim) (many (Multiplicity) mult) (many (List $ Entry) params) (many (List $ Entry) rets) -> (PrimSig)))
 
 (def-adts $ (GoalMode : -> Type) enum (many GoalUnrequired : -> (GoalMode)) (many GoalOpen : -> (GoalMode)) (many GoalProved : -> (GoalMode)))
+(def-fns _ $ (many goal-mode-name : (many (GoalMode) g) -> (many (String) r)) (match many g _ ((GoalUnrequired) "none") ((GoalOpen) "open") ((GoalProved) "proved")))
 
 (def-adts $ (Goals : -> Type)
   enum
-  (many MkGoals : (many (GoalMode) mode) (many (Maybe $ Loc) site) (many (Multiplicity) mult) (many (Term) ty) (many (String) report) (many (Bool) discharged) -> (Goals)))
+  (many MkGoals : (many (GoalMode) mode) (many (Maybe $ Loc) site) (many (Multiplicity) mult) (many (Term) ty) (many (String) report) (many (Maybe $ Pair (Loc) $ String) by) -> (Goals)))
 
 (def-adts $ (Macros : -> Type)
   enum
@@ -3515,7 +3516,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) $ MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ BFalse)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) $ MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

@@ -26,7 +26,7 @@
           ((None _) shape)
           ((Some _ pn) (match many pn _ ((MkPair _ _ np nm) (Cons _ (located (env-at envw np) ": note: " nm) shape)))))
         (values ew (env-fail envw $ join-strs (Cons _ (located (env-at envw pos) ": syntax error: " m) lines) "\n")))
-      ((None _) (let ((unique ew2) (many envt)) $ run-toplevel ew expansion-limit items 0 first (list-is-empty _ rest) $ env-set-regions envw regions) (values ew2 (end-file envt)))))
+      ((None _) (let ((unique ew2) (many envt)) $ run-toplevel ew expansion-limit items 0 first $ env-set-regions envw regions) (values ew2 (end-file envt)))))
   (tail $ run-files ew1 notes rest (match many first (((Env) _)) ((BTrue) (env-set-externs (env-set-prelude env2 $ env-scope env2) $ BFalse)) ((BFalse) env2)) $ BFalse))
 
 (def-fns util-lvl $ (many src-paths : (subterm many (List $ Pair (String) $ String) srcs) -> (many (List $ String) r))
@@ -92,7 +92,7 @@
   (let ((many mode)) $ goal-mode-of goal-arg)
   (let-match many mode (Some _ gm) ((None _) (failed "--goal takes none, open or proved" w)))
   (let-match many (match many gm (((Maybe $ String) _)) ((GoalUnrequired) (None _)) (else (goal-refused flags))) (None _) ((Some _ f) (failed (str-cat3 "--goal " goal-arg $ str-cat " does not take " f) w)))
-  (let ((many base-env)) (env-set-goals (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources) $ MkGoals gm (None _) (Many) (TErr "no goal") "" $ BFalse))
+  (let ((many base-env)) (env-set-goals (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources) $ MkGoals gm (None _) (Many) (TErr "no goal") "" $ None _))
   (let ((many builtins)) $ env-set-fn-same (match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f $ Zero)) ((None _) base-env)) $ has-flag flags "--fn-same")
   (let ((unique ew)) (MkElabWorld w))
   (let ((many files)) $ srcs-files srcs)

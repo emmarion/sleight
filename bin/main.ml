@@ -8,13 +8,12 @@ let world args =
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
     exit; print = print_endline; fence = ref Program.unconfined; limit = ref None; used = ref 0 }
 
-let run consume ~last (env, _) path =
+let run consume (env, _) path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
   let files = Reader.files path src in
-  let final = List.length files - 1 in
   List.fold_left
-    (fun (env, _) (i, (f : Reader.file)) -> match report f.name (fun () -> Elab.run_file ~consume ~last:(last && i = final) env f) with Some env -> (env, f.name) | None -> exit 1)
-    (env, path) (List.mapi (fun i f -> (i, f)) files)
+    (fun (env, _) (f : Reader.file) -> match report f.name (fun () -> Elab.run_file ~consume env f) with Some env -> (env, f.name) | None -> exit 1)
+    (env, path) files
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =
@@ -87,8 +86,7 @@ let () =
   let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.map (fun v -> (v, Elab.source_dir v)) (values "--comptime-unconfine");
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
-  let last = List.length files - 1 in
-  let env, final = List.fold_left (fun acc (i, f) -> run held ~last:(i = last) acc f) (env, "-") (List.mapi (fun i f -> (i, f)) files) in
+  let env, final = List.fold_left (run held) (env, "-") files in
   let env = settle env in
   if flag "--repl" then repl consume env;
   let env = settle env in

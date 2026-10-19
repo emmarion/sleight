@@ -1,5 +1,5 @@
 ; goal: proved
 ; flags: --interpret
 (goal many (Nat))
-3
+(qed 3)
 ; error: --goal proved does not take --interpret

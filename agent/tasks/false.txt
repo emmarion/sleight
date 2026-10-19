@@ -4,8 +4,8 @@ groundwork for a future session to do so. This task will likely take many
 sessions, so leaving solid, well-recorded progress matters more than finishing
 in this one.
 
-To check your work, call `check` with false/spec.sl, then your files, the last
-ending in a proof of its goal, `(False)`. Warnings are allowed. A program that
+To check your work, call `check` with false/spec.sl, then your files, one of
+them proving its goal, `(False)`, with `(qed e)`. Warnings are allowed. A program that
 reaches absurd code at runtime also counts: compiled after your files as
 work/absurd.sl, its run must end with `runtime error: absurd code reached`,
 without printing it itself.

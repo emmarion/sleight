@@ -1095,8 +1095,8 @@ expression, and are gone when it ends. A statement produces no values.
 The statements are `let`, `def-lvl`, `def-fns`, `def-unique` (§32),
 `def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`
 and `open-at-fn` (§35, §39), `unary` (§49), `dump-context`
-(MANUAL.md), `compile-error` and `compile-warn` (§4), and `goal` (§71). All of them
-except `comptime-match` and `goal` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
+(MANUAL.md), `compile-error` and `compile-warn` (§4), and `goal` and `qed` (§71). All of them
+except `comptime-match`, `goal` and `qed` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
 define outward and each definition's parameters inward.
 
 The right-hand side of a `let` is itself an expression, so the
@@ -1137,8 +1137,8 @@ size is fixed elsewhere: a function body, by its return telescope
 right-hand side of a `let`, by its binders.
 
 **The top level.** A file's top level is an expression and so has size
-one. A `goal` (§71) does not change this, but `--goal open` and `--goal
-proved` replace the driver described here. Several files on one command line share one scope, in order. A
+one. `goal` and `qed` (§71) do not change this, but `--goal open` and `--goal
+proved` turn off the driver described here. Several files on one command line share one scope, in order. A
 file that ends in a statement produces nothing. Otherwise the type of
 the final value decides what the driver does with it. A `Program`
 value (§42) is run: the driver consumes it at `unique` and applies each
@@ -2442,6 +2442,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `compile-error`, `compile-warn`: report an error or a warning (§4).
   `compile-error` is also usable as an expression and as a type.
 - `goal`: sets the unit's goal; only a bare top-level form of a file (§71).
+- `qed`: discharges the unit's goal; only a bare top-level form of a file (§71).
 
 **Type formers** (§9, production 4):
 
@@ -3109,8 +3110,8 @@ is an error.
 
 ## 71. Goals
 
-`(goal m T)` sets the **goal** of a unit, the files on one command line. `m` is `erased`, `many` or `unique`. `T` is a type (§9) elaborated in run position where the form stands (§27), so later shadowing does not change it. `goal` is allowed only as a bare top-level form of a file, at most once per unit. The elaborator counts goals itself, so a renamed `goal` or one produced by a macro counts the same.
+`(goal m T)` sets the **goal** of a unit, the files on one command line. `m` is `erased`, `many` or `unique`. `T` is a type (§9) elaborated in run position where the form stands (§27), so later shadowing does not change it. `(qed e)` discharges the goal: `e` is checked against `T` at `m`, as a body's final expression checks against its return telescope (§26), and runs as any form in run position does (§27). A `qed` before the goal is set is an error. `goal` and `qed` are each allowed only as a bare top-level form of a file, at most once per unit. The elaborator counts both itself, so a renamed one or one produced by a macro counts the same.
 
-`--goal` (MANUAL.md) is `none`, `open` or `proved`. Under `none`, the default, a goal requires nothing and the driver is as §27 describes. Under `open` and `proved`, nothing is run, printed, applied or written after elaboration. `open` requires a goal and no file ending in an expression. `proved` requires a goal and a last file whose final expression checks against `T` at `m`, as a body's final expression checks against its return telescope (§26). A final expression in an earlier file is an error. On success, `proved` reports the goal and where it is set (MANUAL.md).
+`--goal` (MANUAL.md) is `none`, `open` or `proved`. Under `none`, the default, a goal requires nothing and the driver is as §27 describes. Under `open` and `proved`, the driver is off: a final expression runs as any form in run position does, and nothing is printed, applied or written after elaboration. `open` requires a goal and no `qed`. `proved` requires a goal and a `qed`. On success, each reports the goal and where it is set, and `proved` also where it is discharged (MANUAL.md).
 
 A goal is one type, not a telescope; an existential, such as a function with its level, is packaged by an ADT (§21).

@@ -107,14 +107,14 @@ and run_mode name externs src flags =
   let prelude = directive src "prelude" <> [ "none" ] in
   Elab.goal_mode := (match directive src "goal" with [ m ] -> List.assoc m Elab.goal_modes | _ -> Elab.Unrequired);
   Elab.goal := None;
-  Elab.discharged := false;
+  Elab.discharged := None;
   let goal = !Elab.goal_mode <> Elab.Unrequired in
   let outcome =
     try
       Option.iter (fun m -> raise (Env.Error (Reader.nowhere, m))) (Program.goal_refusal !Elab.goal_mode ((if prelude then [] else [ "--no-prelude" ]) @ flags));
       if flags <> [] then failwith "the flags of a `; flags:` directive were not refused";
       Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs) @ List.map (fun n -> (n, Elab.source_dir n)) (directive src "comptime-unconfine");
-      let one env n = List.fold_left (Elab.run_file ~consume ~last:false) env (Reader.files (label n) (read (Filename.concat dir (n ^ ".sl")))) in
+      let one env n = List.fold_left (Elab.run_file ~consume) env (Reader.files (label n) (read (Filename.concat dir (n ^ ".sl")))) in
       let need env n =
         let outside = String.starts_with ~prefix:"../" n in
         Env.warn_unused := outside;
@@ -130,7 +130,7 @@ and run_mode name externs src flags =
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
       let files = Reader.files (label name) src in
       let held env ty v = final := Some (env, ty, v) in
-      let env = List.fold_left (fun env (i, f) -> Elab.run_file ~consume:(if i = List.length files - 1 then held else consume) ~last:(i = List.length files - 1) env f) env (List.mapi (fun i f -> (i, f)) files) in
+      let env = List.fold_left (fun env (i, f) -> Elab.run_file ~consume:(if i = List.length files - 1 then held else consume) env f) env (List.mapi (fun i f -> (i, f)) files) in
       let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
       let sources = List.map (fun t -> (t, source t)) (if goal then [] else if externs then [ true; false ] else [ true ]) in
       Option.iter (fun (env, ty, v) -> consume env ty v) !final;
