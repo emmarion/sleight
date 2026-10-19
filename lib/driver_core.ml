@@ -111,7 +111,9 @@ let admits fence ~follow p =
 
 let within dir p =
   match path (resolve ~follow:true dir) with
+  | exception Unix.Unix_error (Unix.ENOENT, _, _) -> Error (p ^ ": no directory " ^ dir)
   | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
+  | d when not (is_dir d) -> Error (p ^ ": no directory " ^ dir)
   | d ->
       let full = if Filename.is_relative p then d ^ "/" ^ p else p in
       let named m = p ^ if String.starts_with ~prefix:(full ^ ":") m then String.sub m (String.length full) (String.length m - String.length full) else ": " ^ m in

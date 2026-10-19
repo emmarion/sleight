@@ -79,6 +79,16 @@ against the directory the program runs in, and exits with the error if
 it cannot. slc takes the same flag, and under `--interpret` confines
 itself once it has read its sources (ASSUMPTIONS.md 198).
 
+`--comptime-unconfine name` adds `name` to the names `read-file` may
+read relative to (DESIGN.md section 65), beside the program's source
+files, without reading anything: a read relative to it resolves against
+the directory its text names, as for a source file (ASSUMPTIONS.md 219),
+and one relative to a directory that does not exist answers `Fail`. A
+name a `;! file` pragma gives a position (DESIGN.md section 4) is
+readable relative to only through this flag. Each occurrence adds one
+name, and the flag may be given any number of times. `--confine-dir`
+does not apply to `read-file`. slc takes the same flag.
+
 `--confine-output-bytes n` crashes a program, exit code 1, before the
 request that would take its output past `n` bytes: everything it writes,
 plus 4096 per file or directory it creates, while it has a limit; what it
@@ -202,7 +212,7 @@ under further flags, which `test/runtest.ml` requires to be refused and which a
 test naming a flag that only one implementation takes runs under that one alone, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
-atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,
+atom's id. `; confine-dir: dir`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
 `; no-env: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
 the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep
@@ -212,7 +222,9 @@ ways the warning does not count as uses.
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,
 `syntax error` or `note` in place of `error` for those. A position is where a
-token's first character sits, both counted from one. A message about two
+token's first character sits, both counted from one. The file is the one a
+`;! file` pragma in force there gives (DESIGN.md section 4), its lines counted
+from the line after the pragma, and otherwise the file the form was read from. A message about two
 places writes the second as a `note` on its own line under it, which may be
 in another file. A
 form a macro places at `NoPos` (DESIGN.md section 62) is about nowhere, and a

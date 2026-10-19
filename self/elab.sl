@@ -869,7 +869,7 @@
   (let-match many (canon-env env t) (TVar x) (else env))
   (let-match many (warned-find (env-warned env) x) (Some _ w) ((None _) env))
   (let-match many l (MkLoc cf p))
-  (let ((many (Bool) local)) $ match many p _ ((MkSpot _ _) (BTrue)) ((PosSpot q) (match many q _ ((NoPos) (BFalse)) ((MkPos f _ _) (str-eq f cf)))))
+  (let ((many (Bool) local)) $ match many p _ ((PosSpot q) (match many q _ ((NoPos) (BFalse)) ((MkPos f _ _) (str-eq f cf)))) (else (BTrue)))
   (let ((many hits)) $ suppressing env x p $ match many local _ ((BTrue) (env-regions env)) ((BFalse) (Nil _)))
   (let-match many hits (Nil _) ((Cons _ _ _) (env-set-said env $ list-rev-onto _ hits $ env-said env)))
   (let-match many w (MkWarned _ pl msg))

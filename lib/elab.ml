@@ -511,6 +511,7 @@ type goal_mode = Unrequired | Open | Proved
 let goal_mode = ref Unrequired
 let goal : (Reader.loc * mult * term * Env.t) option ref = ref None
 let discharged = ref false
+let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i
 let gensyms = ref 0
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
@@ -549,7 +550,7 @@ let implement env p args = match p, args with
   | Sp.ReadFile, [ _; here; path ] ->
       let text = str_host env Reader.nowhere in
       let read = match Ffi.unpos here with
-        | Ffi_core.MkPos (f, _, _) -> (match List.assoc_opt (text f) !sources with Some dir -> Driver_core.read_within dir (text path) | None -> Error (text f ^ ": not a source file"))
+        | Ffi_core.MkPos (f, _, _) -> (match List.assoc_opt (text f) !sources with Some dir -> Driver_core.read_within dir (text path) | None -> Error (text f ^ ": not a source file or a name given to --comptime-unconfine"))
         | NoPos -> Error "no position to read relative to" in
       [ (match read with Ok s -> pbuild env "Ok" [ str_value env s ] | Error m -> pbuild env "Fail" [ str_value env m ]) ]
   | p, _ -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))

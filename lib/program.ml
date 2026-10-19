@@ -67,7 +67,7 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
-let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
+let valued = [ "--extract"; "--confine-dir"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
 let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ]
 
 let goal_refusal mode flags =

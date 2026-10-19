@@ -1857,7 +1857,21 @@ OCaml. The shapes below are the session's, made without the owner.
     asked that they, and so `lib/reader.ml`'s `loc`, which is a file
     and a position, a token's first character with both counted from
     one; the file is stamped in by `Reader.parse`, so a message names
-    the file its form was read from rather than the file being run.
+    the file a `;! file` pragma in force gives (DESIGN.md section 4),
+    its lines counted from the line after the pragma, or else the file
+    its form was read from, rather than the file being run. A location
+    under such a pragma still knows the file it was read from and its
+    line there, which are what `;! suppress` regions, the indentation
+    check's line structure and the order of `--warn-unused` messages
+    go by: the reference's `loc` carries them as `read` and `read_line`
+    beside the `file` and `line` it names, and `slc`'s `NamedSpot`
+    carries both lines of a position in the file being read. A
+    location rebuilt from a `Pos` a macro returns takes the `Pos`'s
+    file and line as both, so it counts as read from the place it
+    names. `slc`'s indentation check, which reads the text rather than
+    the tokens, takes the pragmas' lines and names from the tokens.
+    The note pointing at `bin/shape` names the file read, the one that
+    tool is run on.
     The spelling is `path:line:col: error: text`, `warning` or
     `syntax error` for `error` where those are what is meant; 193's
     warnings and section 12's phantom-constructor warning both read
@@ -2255,7 +2269,9 @@ reading that may be mistaken.
     silent.** A refusal names the path as the macro wrote it and the
     directory as given, not their resolved forms: `../dune: outside the
     directory ../tests`, `missing.txt: No such file or directory`,
-    `elsewhere.sl: not a source file` and, for `NoPos`, `no position to
+    `elsewhere.sl: not a source file or a name given to
+    --comptime-unconfine`, `x.sl: no directory ../no-such-dir` for a
+    directory that does not exist, and, for `NoPos`, `no position to
     read relative to`, so that a test's expected output does not depend
     on where it runs. A source's directory is the text of its name before
     the last `/`, or `/` where that `/` comes first, or `.` where there is
@@ -2263,8 +2279,9 @@ reading that may be mistaken.
     `ReadFileIn dir path`, which `lib/driver_core.ml` performs, checking
     a running program's own fence after the directory. The reference
     keeps each source as its name and the directory it is read from, since `test/runtest.ml` names a test
-    `tests/x.sl` and reads it from `../tests`; `slc` keeps the names and
-    derives the directories. `slc`'s macro state is indexed by the slot of
+    `tests/x.sl` and reads it from `../tests`, and each name
+    `--comptime-unconfine` gives with the directory derived from it;
+    `slc` keeps the names and derives the directories. `slc`'s macro state is indexed by the slot of
     the elaborator's world, which it holds as a `Placed` field (DESIGN.md
     section 66), and `env-expand` unplaces that field and uses
     `placed-slot` after an expansion, so that the world comes back `at` the

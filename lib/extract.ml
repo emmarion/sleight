@@ -23,7 +23,7 @@ let handle_ty = "int * Ffi_core.reading * Ffi_core.mult * Obj.t"
 
 let rec raw value r =
   let l = function
-    | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
+    | Ffi_core.At { file; read; line; read_line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; read = %s; line = %s; read_line = %s; col = %s })" (quote file) (quote read) (z line) (z read_line) (z col)
     | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" in
   match r with
   | Ffi_core.Atom (p, Src s) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Src %s))" (l p) (quote s)

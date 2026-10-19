@@ -143,7 +143,21 @@ matching `;! restore warn NAME`, or to the end of the file if there is
 none. The pair may appear at any nesting depth. Text after the name is
 ignored. A region that silences nothing produces a warning. A second
 `suppress` for a name that is already open, or a `restore` with no open
-`suppress`, is an error. Any other word after `;!` is an error.
+`suppress`, is an error.
+
+`;! file "name"` names every position after it, to the next `;! file`
+or the end of the file, `name`, with lines counted from 1 on the line
+after it: in messages and in every `Pos` a macro receives. Columns are
+unchanged. Its one argument is a string literal; anything else is an
+error. It may appear at any depth and grants nothing to `read-file`
+(§65). `;! suppress` regions belong to the file being read, whatever
+`;! file` says. A position rebuilt from a `Pos` belongs to the place the
+`Pos` names.
+
+Pragmas are read from source text alone. Nothing a macro returns is a
+pragma, and no parser from text to `Raw` may process one.
+
+Any other word after `;!` is an error.
 
 Warnings go to standard error and do not stop elaboration.
 `--warnings-as-errors` makes a run that warns fail; a silenced warning
@@ -2947,10 +2961,11 @@ the entry's declared multiplicity, any other bound entry
 `RHypothetical`, and a name not in scope `RUnbound`. The lookup is not a
 reference to the entry.
 
-`read-file` reads a file relative to a source file. `here` must name one
-of the program's source files, spelled as the command line names it;
-standard input is not one. `path` is resolved against that file's
-directory and must land, through any symlinks, inside that directory or
+`read-file` reads a file relative to a source file or to a name
+`--comptime-unconfine` adds, one per occurrence, without reading or
+checking it. `here` must name one of these, spelled as the command line
+names it; standard input is not one. `path` is resolved against that
+name's directory and must land, through any symlinks, inside that directory or
 below it. Otherwise, for `NoPos`, and where the read fails, it
 answers `Fail`. `--confine-dir` does not apply to it.
 

@@ -5,6 +5,7 @@
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
    "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
+   "; comptime-unconfine: name" a name `read-file` may read relative to, as --comptime-unconfine gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
    the test's own binders are checked as --warn-unused does, unless it says "; warn-unused: no";
@@ -109,7 +110,7 @@ and run_mode name externs src flags =
     try
       Option.iter (fun m -> raise (Env.Error (Reader.nowhere, m))) (Program.goal_refusal !Elab.goal_mode ((if prelude then [] else [ "--no-prelude" ]) @ flags));
       if flags <> [] then failwith "the flags of a `; flags:` directive were not refused";
-      Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs);
+      Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs) @ List.map (fun n -> (n, Elab.source_dir n)) (directive src "comptime-unconfine");
       let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) ~last:false env (Reader.parse ~shape:(not warned) (label n) src) in
       let need env n =
         let outside = String.starts_with ~prefix:"../" n in

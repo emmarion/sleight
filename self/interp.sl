@@ -21,7 +21,7 @@
   (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Nil _))
 
 (def-fns _ $ (many valued : -> (many (List $ String) r))
-  (Cons _ "--confine-dir" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
+  (Cons _ "--confine-dir" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
 
 ; The flags among the arguments, in any order, the last given first and a switch's value "", and the files in order.
 (def-fns _ $ (many read-flags : (subterm many (List $ String) args) (many (List $ Pair (String) $ String) flags) (many (List $ String) files)
@@ -39,6 +39,11 @@
   (let-match many flags (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkPair _ _ g v))
   (match many (str-eq f g) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ flag-value rest f))))
+
+(def-fns _ $ (many flag-values : (subterm many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (List $ String) r))
+  (let-match many flags (Cons _ p rest) ((Nil _) (Nil _)))
+  (let-match many p (MkPair _ _ g v))
+  (match many (str-eq f g) _ ((BTrue) (Cons _ v $ notail $ flag-values rest f)) ((BFalse) (tail $ flag-values rest f))))
 
 (def-fns _ $ (many has-flag : (many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (Bool) r))
   (is-some _ $ flag-value flags f))

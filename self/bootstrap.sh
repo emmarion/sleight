@@ -51,6 +51,7 @@ check_test() {
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   files=$(for f in $needs "$t"; do echo "$ROOT/$f"; done)
   # flags both sides take: a "; prelude: none" test runs without the prelude, "; eval-fuel: n" bounds the evaluator,
+  # "; comptime-unconfine: name" adds a name `read-file` may read relative to,
   # every test but a "; warn-unused: no" one runs under --warn-unused, and a "; fn-same: yes" one under --fn-same
   both=""
   [ "$(directive "$t" prelude)" = none ] && both=--no-prelude
@@ -63,6 +64,7 @@ check_test() {
   extra=$(directive "$t" flags)
   case " $extra " in *" --extract "*|*" --repl "*) echo "skip $name"; return ;; esac
   both="$both $extra"
+  for n in $(directive "$t" comptime-unconfine); do both="$both --comptime-unconfine $n"; done
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
     if "$B/slc" $both $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then

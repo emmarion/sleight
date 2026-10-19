@@ -36,7 +36,8 @@ let repl consume env =
   loop env
 
 (* Arguments after "--" belong to the program (its GetArgs request); the rest are files and flags, in any order, the
-   flags in [valued] each taking the argument after it; a flag given twice takes its last value. *)
+   flags in [valued] each taking the argument after it; a flag given twice takes its last value, but for
+   --comptime-unconfine, which takes each. *)
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
@@ -78,8 +79,7 @@ let () =
   Env.warn_unused := flag "--warn-unused";
   Env.fn_same := flag "--fn-same";
   let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
-  let dir_of f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i in
-  Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, dir_of f)) files;
+  Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.filter_map (fun (f, v) -> if f = "--comptime-unconfine" then Some (v, Elab.source_dir v) else None) flags;
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
   let last = List.length files - 1 in
   let env = settle (List.fold_left (fun env (i, f) -> run held ~last:(i = last) env f) env (List.mapi (fun i f -> (i, f)) files)) in

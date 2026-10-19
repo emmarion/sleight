@@ -6,7 +6,8 @@
    comments and string literals are skipped the way the checker skips them,
    and a file the lexer cannot finish is reported as far as it got. Forms
    are identified by line:col so that two opening on the same line stay
-   distinct.
+   distinct, a position under `;! file` named and numbered as that pragma
+   gives it.
 
    Usage:  shape [--closers] <file.sl>
              (default)  every form spanning more than one line
@@ -17,7 +18,11 @@ open Reader
 
 let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Item r -> Reader.show r | Invalid _ -> "?" | Pragma _ -> ";!"
 
-type form = { line : Z.t; col : Z.t; depth : int; text : string; mutable closes : Z.t }
+type form = { at : loc; depth : int; text : string; mutable closes : loc }
+
+let place ?(mark = "") ?(col = true) = function
+  | At { file; read; line; col = c; _ } -> (if file = read then "" else file ^ ":") ^ mark ^ Z.to_string line ^ if col then ":" ^ Z.to_string c else ""
+  | NoLoc | Unknown -> ""
 
 let () =
   let closers = ref false and path = ref "" in
@@ -49,17 +54,16 @@ let () =
   let forms = ref [] and stack = ref [] and depth = ref 0 in
   Array.iteri
     (fun k ((l : Reader.loc), _, t) ->
-      let line, col = Reader.coords l in
       match t with
       | LParen ->
-          let f = { line; col; depth = !depth; text = label k; closes = Z.zero } in
+          let f = { at = l; depth = !depth; text = label k; closes = nowhere } in
           forms := f :: !forms;
           stack := f :: !stack;
           incr depth
       | RParen ->
           decr depth;
           (match !stack with
-           | f :: rest -> f.closes <- line; stack := rest
+           | f :: rest -> f.closes <- l; stack := rest
            | [] -> ())
       | _ -> ())
     toks;
@@ -72,18 +76,17 @@ let () =
        that discards exactly what a run is: which )s were ADJACENT. That
        adjacency lives only in the byte offsets, so it is read back from them. *)
     let runs = ref [] and pending = ref [] and last = ref (-1) in
-    let run_line = ref Z.one and stack = ref [] in
+    let run_line = ref nowhere and stack = ref [] in
     Array.iteri
       (fun k ((l : Reader.loc), off, t) ->
-        let line, col = Reader.coords l in
         match t with
-        | LParen -> stack := ((line, col), label k) :: !stack
+        | LParen -> stack := (l, label k) :: !stack
         | RParen ->
             (match !stack with
              | o :: rest ->
                  if !last <> off - 1 && !pending <> [] then (
                    runs := (!run_line, List.rev !pending) :: !runs; pending := []);
-                 if !pending = [] then run_line := line;
+                 if !pending = [] then run_line := l;
                  pending := o :: !pending;
                  last := off;
                  stack := rest
@@ -95,18 +98,16 @@ let () =
     List.iter
       (fun (ln, os) ->
         if List.length os > 1 then
-          Printf.printf "  L%-4s %2d closers -> %s\n" (Z.to_string ln) (List.length os)
-            (String.concat "  "
-               (List.map (fun ((l, c), t) -> Printf.sprintf "%s@%s:%s" t (Z.to_string l) (Z.to_string c)) os)))
+          Printf.printf "  %-5s %2d closers -> %s\n" (place ~mark:"L" ~col:false ln) (List.length os)
+            (String.concat "  " (List.map (fun (l, t) -> Printf.sprintf "%s@%s" t (place l)) os)))
       (List.rev !runs))
   else (
     print_endline "depth  opens     form                      closes";
     List.iter
       (fun f ->
-        if not (Z.equal f.closes f.line) || Z.equal f.closes Z.zero then
-          Printf.printf "%5d  %-9s %-25s %s\n" f.depth
-            (Printf.sprintf "%s:%s" (Z.to_string f.line) (Z.to_string f.col)) f.text
-            (if Z.equal f.closes Z.zero then "NEVER" else "L" ^ Z.to_string f.closes))
+        if f.closes = nowhere || fst (coords f.closes) <> fst (coords f.at) then
+          Printf.printf "%5d  %-9s %-25s %s\n" f.depth (place f.at) f.text
+            (if f.closes = nowhere then "NEVER" else place ~mark:"L" ~col:false f.closes))
       forms);
 
   Printf.printf "final depth %d%s\n" !depth
