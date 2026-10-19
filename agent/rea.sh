@@ -1,12 +1,13 @@
 #!/bin/bash
 set -eu
 TAG=rea
-SIZE=${SIZE:-s-2vcpu-8gb-amd}
+SIZE=${SIZE:-s-4vcpu-16gb-amd}
+SWAP=${SWAP:-16G}
 CACHE=~/.cache/sleight
 usage() {
     cat >&2 <<EOF
 usage: $0 create [--slc FILE|REV]
-           create a $TAG droplet in nyc3 (size $SIZE) with Java 21, binutils, OCaml, Node 24, Claude Code, Ghidra
+           create a $TAG droplet in nyc3 (size $SIZE, swap $SWAP) with Java 21, binutils, OCaml, Node 24, Claude Code, Ghidra
            and REA (github.com/morluto/rea, registered with Claude Code), and a user slc with passwordless sudo
            whose ~/slc/slc, never run, is FILE or slc built at REV [HEAD] (cached in ${CACHE/#$HOME/~}); Claude Code
            there trusts ~/slc; from a terminal, the script ends by signing it in to your Claude subscription and
@@ -43,7 +44,12 @@ create)
     fi
     name=$TAG-$(rows | awk -v t="$TAG-" 'index($3, t) == 1 && substr($3, length(t) + 1) + 0 > m {m = substr($3, length(t) + 1) + 0} END {print m + 1}')
     create "$name"
-    { echo "$APT"; cat <<'EOF'; } | $SSH root@"$ip" sh -eu
+    { echo "SWAP=$SWAP"; echo "$APT"; cat <<'EOF'; } | $SSH root@"$ip" sh -eu
+fallocate -l "$SWAP" /swapfile
+chmod 600 /swapfile
+mkswap /swapfile >/dev/null
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
 apt-get install -y -qq curl git unzip openjdk-21-jdk binutils ocaml ocaml-findlib libzarith-ocaml-dev >/dev/null
 curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource.sh
 bash /tmp/nodesource.sh >/dev/null 2>&1
