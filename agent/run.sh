@@ -25,7 +25,8 @@ usage: $0 [IP] [--models M,...] [--copies N] [--per-box K] [--size S] PI-ARGS...
            follow a live run's log, or with -t its current session's transcript; RUN defaults to the
            box's only live run
        $0 fetch IP
-           copy the box's results into agent/results/box-NAME/
+           copy the box's results into agent/results/box-NAME/; each session's sandbox is mirrored, so files the agent
+           has since deleted or moved go, and nothing else local is removed
        $0 destroy [--force] [--yes] IP
            destroy a $TAG droplet; --force even with a live or unfetched run
        $0 reap
@@ -260,6 +261,8 @@ fetch)
     mkdir -p "$dir"
     connect pi@"$1"
     rsync -a --copy-unsafe-links -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
+    rsync -a --copy-unsafe-links --delete --include='/*/' --include='/*/[0-9][0-9]/' --include='/*/[0-9][0-9]/sandbox/***' --exclude='*' \
+        -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
     echo "fetched into $dir ($(du -sh "$dir" | cut -f1))"
     ;;
 destroy)
