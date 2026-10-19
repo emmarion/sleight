@@ -51,10 +51,11 @@ check_test() {
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   files=$(for f in $needs "$t"; do echo "$ROOT/$f"; done)
   # flags both sides take: a "; prelude: none" test runs without the prelude, "; eval-fuel: n" bounds the evaluator,
-  # and every test but a "; warn-unused: no" one runs under --warn-unused
+  # every test but a "; warn-unused: no" one runs under --warn-unused, and a "; fn-same: yes" one under --fn-same
   both=""
   [ "$(directive "$t" prelude)" = none ] && both=--no-prelude
   [ "$(directive "$t" warn-unused)" = no ] || both="$both --warn-unused"
+  [ "$(directive "$t" fn-same)" = yes ] && both="$both --fn-same"
   for n in $(directive "$t" eval-fuel); do both="$both --eval-fuel $n"; done
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text

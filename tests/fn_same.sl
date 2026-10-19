@@ -18,3 +18,4 @@
   (let ((many a)) (match many (transport inc inc (MkIsInc)) (((Nat) k)) ((Some _ _) 1) ((None _) 0)))
   (Cons _ a $ Cons _ (found $ transport inc dec (MkIsInc)) $ Cons _ (inc $ inc 0) $ Nil _))
 run
+; fn-same: yes

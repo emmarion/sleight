@@ -155,6 +155,9 @@ prelude and every file named; slc takes it too. `self/bootstrap.sh` builds slc
 under both flags, and `dune test` checks the prelude, and every file a test
 needs from outside `tests/`, as `--warn-unused` does, failing on any warning.
 
+`--fn-same` accepts `fn-same` (DESIGN.md §70), which is otherwise refused;
+OPEN.md 36 asks whether it should be. slc takes the same flag.
+
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
@@ -179,8 +182,8 @@ under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,
-`; no-env: yes` and `; eval-fuel: n` run the test under the corresponding
-flags. Every test runs under `--warn-unused`, its own binders checked, unless it
+`; no-env: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
+the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep
 the examples' text, and a few macro tests, whose binders a macro reaches in
 ways the warning does not count as uses.

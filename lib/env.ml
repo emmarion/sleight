@@ -612,6 +612,7 @@ type binder_kind = Let of int * bool | Param | Field | Optional | Definition
 type tracked = { binder : Reader.name; at : Reader.loc; kind : binder_kind; mult : mult; erased_scope : bool }
 
 let warn_unused = ref false
+let fn_same = ref false
 type ref_state = Level of int | Target of id
 
 let tracked : (id, tracked) Hashtbl.t = Hashtbl.create 64

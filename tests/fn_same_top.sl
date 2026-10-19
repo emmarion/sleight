@@ -5,3 +5,4 @@
 (comptime-match many s (EONonErased _ e))
 (let ((many t)) (fn-same (share bump) (share bump)))
 t
+; fn-same: yes

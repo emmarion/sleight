@@ -1543,6 +1543,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (env, [ { r with erasure = Many } ], code)
   | (Sp.CellSame | Sp.FnSame), [ a; b ] ->
       let name = Sp.name sp and cells = sp = Sp.CellSame in
+      if not (cells || !fn_same) then error l "`fn-same` needs `--fn-same` (OPEN.md 36)";
       if pos = Erased then error_in env l "`%s` in an erased position" name;
       let id s = match prelude_id env s with Some i -> Var i | None -> error l "`%s` needs the prelude's `%s`, which `--no-prelude` leaves out" name s in
       let arg env raw =

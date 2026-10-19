@@ -109,6 +109,7 @@ and run_mode name externs src =
       Env.warn_unused := false;
       let env = List.fold_left need (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
       Env.warn_unused := directive src "warn-unused" <> [ "no" ];
+      Env.fn_same := directive src "fn-same" = [ "yes" ];
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;

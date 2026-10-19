@@ -197,3 +197,16 @@ references are to DESIGN.md.
     constructor to handles to its arguments and minting the application
     as a type entry? A macro could then mint at a type such as `(List X)`
     for a user's `X` that no `Settled` entry names yet. Deferred.
+36. Should `fn-same` (§70) be available without `--fn-same`, or at all?
+    It appears consistent with what the checker can currently express,
+    since no form seems able to tell apart two `Fn` entries of one type.
+    But its conclusion seems false in SOUNDNESS.md's full semantics:
+    two closures at one word can differ in what they capture or pass
+    erased. Examples are two `delegate`s to one target with different
+    erased arguments, or a closed inner function that extraction
+    allocates once. So (I1) and (I3) would have to read facts at
+    function types up to "stands for the same stripped closure", much
+    as `lean/`'s `Real` does, and every form would need checking against
+    that reading. Any form tying call results to the function called
+    would then make it unsound, as would one proving two functions
+    distinct.

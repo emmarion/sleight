@@ -4,3 +4,4 @@
   (delegate (inc n)))
 (let ((many s)) (fn-same inc inc-noted))
 ; warns: tests/fn_same_types_bad.sl:3:54: warning: unused `note`; rename it `_note`
+; fn-same: yes

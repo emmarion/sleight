@@ -4,3 +4,4 @@
 (def-lvl L)
 (def-fns L $ (many f : (many (Box) x) -> (many (Box) r)) x)
 (let ((many s)) (fn-same f f))
+; fn-same: yes

@@ -3,3 +3,4 @@
 (def-fns _ $ (many f : -> (many (Nat) r))
   (let ((erased s)) (fn-same inc inc))
   0)
+; fn-same: yes

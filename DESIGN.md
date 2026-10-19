@@ -3063,3 +3063,5 @@ slots are already equal (§36). It yields an `(ErasedOr (Eq F f g))` at
 `vacant-slot` (§36), `F` the type of `f`: `EONonErased` wherever it
 runs, and `EOErased` where it is reached only erased (§14). It compiles
 to nothing, is refused in an erased position, and requires the prelude.
+It is available only under `--fn-same` (MANUAL.md); without the flag it
+is an error.

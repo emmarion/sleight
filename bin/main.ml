@@ -41,7 +41,7 @@ let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
   let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints"; "--eval-fuel" ]
-  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused" ] in
+  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ] in
   let rec read flags files = function
     | [] -> (flags, List.rev files)
     | f :: v :: rest when List.mem f valued -> read ((f, v) :: flags) files rest
@@ -74,6 +74,7 @@ let () =
     env
   in
   Env.warn_unused := flag "--warn-unused";
+  Env.fn_same := flag "--fn-same";
   let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
   let dir_of f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i in
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, dir_of f)) files;

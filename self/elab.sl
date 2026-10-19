@@ -5824,6 +5824,8 @@
       (many (Env) env2) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
     (let-match many args (Cons _ araw rest) ((Nil _) (expr-error ew ctx expect env (sp-misuse env $ SpExpr k) (sp-name $ SpExpr k))))
     (let-match many rest (Cons _ braw _) ((Nil _) (expr-error ew ctx expect env (sp-misuse env $ SpExpr k) (sp-name $ SpExpr k))))
+    (let-match many (or (same-cells k) (env-fn-same env)) (BTrue)
+      ((BFalse) (expr-error ew ctx expect env "`fn-same` needs `--fn-same` (OPEN.md 36)" (sp-name $ SpExpr k))))
     (let ((many env0)) $ match many (mult-is-many (pos-in env expect)) (((Env) _))
       ((BTrue) env) ((BFalse) (env-error env $ str-cat3 "`" (sp-name $ SpExpr k) "` in an erased position")))
     (let ((many pscope)) $ env-set-scope env0 $ env-prelude env0)
