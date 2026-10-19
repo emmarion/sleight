@@ -1,9 +1,7 @@
-(* A position is where a token's first character sits, named by the file a `;! file` in force gives, its
-   lines counted from the one after that pragma, or else by the file it was read from: what every message
-   a session writes points at (ASSUMPTIONS 194). [read] and [read_line] are always the file read and the
-   line there. [nowhere] is the location an error carries when it is raised where none is at hand,
-   for an enclosing form to fill in. *)
-type loc = Ffi_core.loc = At of { file : string; read : string; line : Z.t; read_line : Z.t; col : Z.t } | NoLoc | Unknown
+(* A position is where a token's first character sits, in the file it was read from, which a `;! file`
+   pragma names: what every message a session writes points at (ASSUMPTIONS 194). [nowhere] is the
+   location an error carries when it is raised where none is at hand, for an enclosing form to fill in. *)
+type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 
 type name = Ffi_core.name = Src of string | Gen of Z.t * string
 type raw = Ffi_core.raw = Atom of loc * name | Handle of loc * int * Ffi_core.reading * Ffi_core.mult * Obj.t | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
@@ -12,8 +10,8 @@ exception Syntax of loc * string
 
 let nowhere = Unknown
 let placed = function At _ -> true | NoLoc | Unknown -> false
-let where fallback = function At { file; line; col; _ } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | Unknown -> fallback | NoLoc -> ""
-let file_of = function At { read; _ } -> read | NoLoc | Unknown -> ""
+let where fallback = function At { file; line; col } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | Unknown -> fallback | NoLoc -> ""
+let file_of = function At { file; _ } -> file | NoLoc | Unknown -> ""
 let label w label = if w = "" then label else w ^ ": " ^ label
 let labelled fallback l = label (where fallback l)
 
@@ -35,27 +33,32 @@ type token = LParen | RParen | Dollar | Item of raw | Invalid of string | Pragma
 
 let unterminated = "unterminated string literal"
 
-(* [bol] is the offset the current line starts at, so a token's column is its own offset from there. A
-   string literal's token is placed at its opening quote, the line its own rather than the line it closes
-   on, which is what makes a position the start of the token it names. *)
-let scan_upto file src =
+type file = { path : string; src : string; name : string; toks : (loc * int * token) list; stopped : (loc * string) option }
+
+(* The files a source holds (DESIGN.md section 4): a `;! file` pragma ends the one being read and starts the
+   one it names, its lines counted from 1 on the line after the pragma. [bol] is the offset the current
+   line starts at, so a token's column is its own offset from there. A string literal's token is placed at
+   its opening quote, the line its own rather than the line it closes on, which is what makes a position
+   the start of the token it names; an unterminated one is reported there too. *)
+let files path src =
   let n = String.length src in
-  let out = ref [] and named = ref (file, 0) in
-  let at line bol i = At { file = fst !named; read = file; line = Z.of_int (line - snd !named); read_line = Z.of_int line; col = Z.of_int (i - bol + 1) } in
+  let out = ref [] and finished = ref [] and name = ref path in
+  let at line bol i = At { file = !name; line = Z.of_int line; col = Z.of_int (i - bol + 1) } in
   let err l msg = raise (Syntax (l, msg)) in
+  let cut stopped = finished := { path; src; name = !name; toks = List.rev !out; stopped } :: !finished; out := [] in
   let rec skip p i = if i < n && p src.[i] then skip p (i + 1) else i in
-  let rec string buf line bol i =
-    if i >= n then err (at line bol i) unterminated
+  let rec string opened buf line bol i =
+    if i >= n then err opened unterminated
     else
       match src.[i] with
       | '"' -> (line, bol, i + 1)
       | '\\' ->
-          let e = if i + 1 < n then src.[i + 1] else err (at line bol i) unterminated in
+          let e = if i + 1 < n then src.[i + 1] else err opened unterminated in
           let hex = i + 3 < n && e = 'x' && String.for_all (function '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true | _ -> false) (String.sub src (i + 2) 2) in
           Buffer.add_char buf (match e with 'n' -> '\n' | 't' -> '\t' | '"' | '\\' -> e | 'x' when hex -> Char.chr (int_of_string ("0x" ^ String.sub src (i + 2) 2)) | _ -> err (at line bol i) ("unknown escape \\" ^ String.make 1 e));
-          string buf line bol (i + if hex then 4 else 2)
-      | '\n' -> Buffer.add_char buf '\n'; string buf (line + 1) (i + 1) (i + 1)
-      | c -> Buffer.add_char buf c; string buf line bol (i + 1)
+          string opened buf line bol (i + if hex then 4 else 2)
+      | '\n' -> Buffer.add_char buf '\n'; string opened buf (line + 1) (i + 1) (i + 1)
+      | c -> Buffer.add_char buf c; string opened buf line bol (i + 1)
   in
   let emit t = out := t :: !out in
   let item l w =
@@ -78,7 +81,7 @@ let scan_upto file src =
     match literal with
     | Some (make, start) ->
       let buf = Buffer.create 16 in
-      let line', _, j = string buf line bol start in
+      let line', _, j = string (at line bol i) buf line bol start in
       if line' <> line then err (at line bol i) "a pragma ends with its line";
       make (at line bol i) (Buffer.contents buf) :: pragma ~quoted line bol j (k - 1)
     | None ->
@@ -90,11 +93,15 @@ let scan_upto file src =
       match src.[i] with
       | '\n' -> go (line + 1) (i + 1) (i + 1)
       | ' ' | '\t' | '\r' -> go line bol (i + 1)
-      | ';' when i + 1 < n && src.[i + 1] = '!' ->
-          let words = match pragma line bol (i + 2) 2 with Atom (_, Src "warn") :: _ as ws -> ws | ws -> pragma ~quoted:(match ws with Atom (_, Src "file") :: _ -> true | _ -> false) line bol (i + 2) 3 in
-          emit (at line bol i, i, Pragma words);
-          (match words with [ Atom (_, Src "file"); Str (_, s) ] -> named := (s, line) | _ -> ());
-          go line bol (skip (( <> ) '\n') i)
+      | ';' when i + 1 < n && src.[i + 1] = '!' -> (
+          let next line = go line bol (skip (( <> ) '\n') i) in
+          match pragma line bol (i + 2) 2 with
+          | Atom (_, Src "warn") :: _ as ws -> emit (at line bol i, i, Pragma ws); next line
+          | Atom (_, Src "file") :: _ -> (
+              match pragma ~quoted:true line bol (i + 2) 3 with
+              | [ _; Str (_, f) ] when f <> "" -> cut None; name := f; next 0
+              | _ -> err (at line bol i) "`;! file` takes one non-empty string literal, the file's name")
+          | _ -> emit (at line bol i, i, Pragma (pragma line bol (i + 2) 3)); next line)
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
@@ -107,17 +114,13 @@ let scan_upto file src =
   and literal make line bol i start =
     let buf = Buffer.create 16 in
     let opened = at line bol i in
-    let line, bol, j = string buf line bol start in
+    let line, bol, j = string opened buf line bol start in
     emit (opened, i, Item (make opened (Buffer.contents buf))); go line bol j
   in
-  let stopped = match go 1 0 0 with () -> None | exception Syntax (l, m) -> Some (l, m) in
-  (List.rev !out, stopped)
+  cut (match go 1 0 0 with () -> None | exception Syntax (l, m) -> Some (l, m));
+  List.rev !finished
 
-let scan file src =
-  match scan_upto file src with ts, None -> ts | _, Some (l, m) -> raise (Syntax (l, m))
-
-let tokenize file src = List.map (fun (l, _, t) -> (l, t)) (scan file src)
-
+(* What a source holds, read whole, for text that is not a file named on the command line. *)
 (* A parenthesis a file gets wrong is found faster with bin/shape than from the one position a message names. *)
 let shape_notes = ref true
 
@@ -127,7 +130,7 @@ let shape_note path =
 type region = { name : string; from : loc; until : loc option; mutable used : bool }
 
 let regions : (string, region list) Hashtbl.t = Hashtbl.create 8
-let coords = function At { read_line; col; _ } -> (read_line, col) | NoLoc | Unknown -> (Z.zero, Z.zero)
+let coords = function At { line; col; _ } -> (line, col) | NoLoc | Unknown -> (Z.zero, Z.zero)
 let compare_loc a b = let (al, ac), (bl, bc) = (coords a, coords b) in match Z.compare al bl with 0 -> Z.compare ac bc | c -> c
 let before a b = compare_loc a b < 0
 let covers r l = not (before l r.from) && match r.until with Some u -> before l u | None -> true
@@ -135,11 +138,12 @@ let covers r l = not (before l r.from) && match r.until with Some u -> before l 
 (* [read_items] reads until the enclosing form's terminator, which it leaves in place;
    a [$] form ends at that same terminator (DESIGN.md section 2). [shape] false leaves out the note on a
    parenthesis error, where the indentation check has already written it. *)
-let parse ?(shape = true) file src =
-  let toks = ref (tokenize file src) in
+let parse ?(shape = true) (f : file) =
+  Option.iter (fun (l, m) -> raise (Syntax (l, m))) f.stopped;
+  let toks = ref (List.map (fun (l, _, t) -> (l, t)) f.toks) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
-  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (file_of l) else m) in
+  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note f.path else m) in
   let opened = ref [] and closed = ref [] in
   let suppression l w = function
     | Atom (_, Src "warn") :: Atom (_, Src name) :: _ -> (
@@ -154,8 +158,6 @@ let parse ?(shape = true) file src =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
     | Some (l, Pragma (Atom (_, Src (("suppress" | "restore") as w)) :: rest)) -> advance (); suppression l w rest; read_items ~top acc
-    | Some (l, Pragma (Atom (_, Src "file") :: rest)) ->
-        (match rest with [ Str _ ] -> advance (); read_items ~top acc | _ -> raise (Syntax (l, "`;! file` takes one string literal, the file's name")))
     | Some (_, Pragma (Atom (wl, w) :: _)) when w <> Src "warn" -> raise (Syntax (wl, Printf.sprintf "unknown pragma `%s`" (Literal.name w)))
     | Some (l, Pragma []) -> raise (Syntax (l, "a pragma needs a word after `;!`"))
     | Some (l, Pragma words) ->
@@ -176,5 +178,7 @@ let parse ?(shape = true) file src =
   let items = read_items ~top:true [] in
   (match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> ());
   let unclosed = List.map (fun (name, from) -> { name; from; until = None; used = false }) !opened in
-  Hashtbl.replace regions file (List.sort (fun a b -> compare_loc a.from b.from) (!closed @ unclosed));
+  Hashtbl.replace regions f.name (List.sort (fun a b -> compare_loc a.from b.from) (!closed @ unclosed));
   items
+
+let read name src = List.concat_map (fun f -> parse f) (files name src)

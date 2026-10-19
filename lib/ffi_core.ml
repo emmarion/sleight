@@ -1,6 +1,6 @@
 type slice = string * int * int
 
-type loc = At of { file : string; read : string; line : Z.t; read_line : Z.t; col : Z.t } | NoLoc | Unknown
+type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 type name = Src of string | Gen of Z.t * string
 type mult = Erased | Many | Unique
 type reading = MintedIs | MintedType
@@ -137,7 +137,7 @@ type 'v pos_model = NoPos | MkPos of 'v * 'v * 'v
 type 'v symbol_model = SName of 'v | SGen of 'v * 'v
 type 'v raw_model = RawSymbol of 'v * 'v | RawWild of 'v | RawList of 'v * 'v | RawSettled of 'v * 'v
 
-let pos_view ~str ~nat = function At { file; line; col; _ } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos
+let pos_view ~str ~nat = function At { file; line; col } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos
 
 let raw_view ~handle ~symbol ~get ~str ~nat ~pos ~list ~raw v =
   let p l = pos (pos_view ~str ~nat l) in
@@ -155,7 +155,7 @@ let raw_model i fs = match (i, fs) with
   | 0, [ p; s ] -> RawSymbol (p, s) | 1, [ p ] -> RawWild p | 2, [ p; xs ] -> RawList (p, xs) | 3, [ p; h ] -> RawSettled (p, h) | _ -> invalid_arg "raw_model"
 
 let raw_of ~unhandle ~unsymbol ~text ~z ~pos ~list ~raw m =
-  let l p = match pos p with NoPos -> NoLoc | MkPos (f, line, col) -> At { file = text f; read = text f; line = z line; read_line = z line; col = z col } in
+  let l p = match pos p with NoPos -> NoLoc | MkPos (f, line, col) -> At { file = text f; line = z line; col = z col } in
   let rec items v = match list v with Nil -> [] | Cons (x, rest) -> raw x :: items rest in
   match m with
   | RawSymbol (p, s) -> Atom (l p, match unsymbol s with SName t -> Src (text t) | SGen (n, t) -> Gen (z n, text t))

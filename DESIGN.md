@@ -145,14 +145,12 @@ ignored. A region that silences nothing produces a warning. A second
 `suppress` for a name that is already open, or a `restore` with no open
 `suppress`, is an error.
 
-`;! file "name"` names every position after it, to the next `;! file`
-or the end of the file, `name`, with lines counted from 1 on the line
-after it: in messages and in every `Pos` a macro receives. Columns are
-unchanged. Its one argument is a string literal; anything else is an
-error. It may appear at any depth and grants nothing to `read-file`
-(§65). `;! suppress` regions belong to the file being read, whatever
-`;! file` says. A position rebuilt from a `Pos` belongs to the place the
-`Pos` names.
+`;! file "name"` ends the file being read and starts one named `name`.
+Each file a source holds this way means what it would as a separate
+file of the unit (§27), its lines counted from 1 after the pragma,
+except that its name grants nothing to `read-file` (§65). Its one
+argument is a non-empty string literal; anything else is an error. A
+position rebuilt from a `Pos` belongs to the place the `Pos` names.
 
 Pragmas are read from source text alone. Nothing a macro returns is a
 pragma, and no parser from text to `Raw` may process one.
@@ -2967,7 +2965,7 @@ checking it. `here` must name one of these, spelled as the command line
 names it; standard input is not one. `path` is resolved against that
 name's directory and must land, through any symlinks, inside that directory or
 below it. Otherwise, for `NoPos`, and where the read fails, it
-answers `Fail`. `--confine-dir` does not apply to it.
+answers `Fail`. The fence (MANUAL.md) does not apply to it.
 
 ## 66. `Placed`
 

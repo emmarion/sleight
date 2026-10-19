@@ -8,17 +8,21 @@ let world args =
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
     exit; print = print_endline; fence = ref Program.unconfined; limit = ref None; used = ref 0 }
 
-let run consume ?last env path =
+let run consume ~last (env, _) path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
-  let warned = Sleight.Indent.warn path src in
-  match report path (fun () -> Elab.run_toplevel ~consume ~path ?last env (Reader.parse ~shape:(not warned) path src)) with Some env -> env | None -> exit 1
+  let files = Reader.files path src in
+  let final = List.length files - 1 in
+  List.fold_left
+    (fun (env, _) (i, (f : Reader.file)) -> match report f.name (fun () -> Elab.run_file ~consume ~last:(last && i = final) env f) with Some env -> (env, f.name) | None -> exit 1)
+    (env, path) (List.mapi (fun i f -> (i, f)) files)
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =
   let unfinished src =
-    match Reader.scan_upto "repl" src with
-    | _, Some (_, m) -> m = Reader.unterminated
-    | toks, None -> (match Sleight.Indent.balance toks with _ :: _, None -> true | _ -> false)
+    match List.rev (Reader.files "repl" src) with
+    | { stopped = Some (_, m); _ } :: _ -> m = Reader.unterminated
+    | f :: _ -> (match Sleight.Indent.balance f.toks with _ :: _, None -> true | _ -> false)
+    | [] -> false
   in
   let rec form buf =
     print_string (if Buffer.length buf = 0 then "> " else "  ");
@@ -31,7 +35,7 @@ let repl consume env =
   let rec loop env =
     match form (Buffer.create 64) with
     | None -> print_newline ()
-    | Some src -> loop (Option.value (report "repl" (fun () -> Elab.run_toplevel ~consume ~path:"repl" env (Reader.parse "repl" src))) ~default:env)
+    | Some src -> loop (Option.value (report "repl" (fun () -> List.fold_left (fun env f -> Elab.run_toplevel ~consume ~path:"repl" env (Reader.parse f)) env (Reader.files "repl" src))) ~default:env)
   in
   loop env
 
@@ -84,10 +88,11 @@ let () =
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.map (fun v -> (v, Elab.source_dir v)) (values "--comptime-unconfine");
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
   let last = List.length files - 1 in
-  let env = settle (List.fold_left (fun env (i, f) -> run held ~last:(i = last) env f) env (List.mapi (fun i f -> (i, f)) files)) in
+  let env, final = List.fold_left (fun acc (i, f) -> run held ~last:(i = last) acc f) (env, "-") (List.mapi (fun i f -> (i, f)) files) in
+  let env = settle env in
   if flag "--repl" then repl consume env;
   let env = settle env in
   if !Elab.goal_mode <> Elab.Unrequired then
-    match report (List.nth files last) Elab.close_goal with Some report -> Option.iter prerr_endline report | None -> exit 1
+    match report final Elab.close_goal with Some report -> Option.iter prerr_endline report | None -> exit 1
   else
   Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Extract.emit env (List.rev !Env.trace)))) extract

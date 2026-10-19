@@ -2261,7 +2261,7 @@ and elab_unary spos env l args =
     Printf.sprintf "(eq-trans (Nat) %s (Succ %s) (Succ %s) %s %s)" (Z.to_string n) (Z.to_string z) below stp congd
   in
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
-  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse "<unary>" src)))
+  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.read "<unary>" src)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)
@@ -2692,3 +2692,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
    | item :: _ -> List.iter (fun r -> if not r.Reader.used then warn_at r.from [] "`;! suppress warn` for %s silenced nothing" (tick r.name)) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (Reader.file_of (loc item))))
    | [] -> ());
   env
+
+let run_file ?consume ?last env (f : Reader.file) =
+  let warned = Indent.warn f in
+  run_toplevel ?consume ~path:f.name ?last env (Reader.parse ~shape:(not warned) f)

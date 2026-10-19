@@ -180,6 +180,15 @@
   (let-match many r2 (Cons _ c _) ((Nil _) (PosSpot $ NoPos)))
   (PosSpot $ MkPos (heap-str _ hp f) (heap-nat _ hp l) (heap-nat _ hp c)))
 
+(def-fns _
+  ((many syn-absolute : (many (String) file) (subterm many (Syn) r) -> (many (Syn) r2))
+    (let ((many (Spot) p)) $ match many (raw-pos r) _ ((MkSpot l c) (PosSpot $ MkPos file l c)) ((PosSpot q) (PosSpot q)))
+    (match many r _
+      ((RAtom _ s) (RAtom p s)) ((RWild _) (RWild p)) ((RNat _ n) (RNat p n)) ((RChr _ n) (RChr p n)) ((RString _ s) (RString p s))
+      ((RList _ xs) (RList p $ notail $ syns-absolute file xs))))
+  ((many syns-absolute : (many (String) file) (subterm many (List $ Syn) xs) -> (many (List $ Syn) r))
+    (match many xs _ ((Nil _) (Nil _)) ((Cons _ x rest) (Cons _ (notail $ syn-absolute file x) $ notail $ syns-absolute file rest)))))
+
 (def-fns _ $ (many heap-syns : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Maybe $ String) file) (subterm many (List $ Ref Block hs) refs) -> (many (String) f) (many (List $ Syn) xs))
   (let-match many refs (Cons _ a rest) ((Nil _) (values (match many file _ ((Some _ f) f) ((None _) "")) $ Nil _)))
   (let ((erased _) (many b) (erased _)) (hread _ hp a))
@@ -187,7 +196,7 @@
   (let-match many p (PRaw g r) (else (tail $ heap-syns _ hp file rest)))
   (let ((many (Maybe $ String) adopted)) $ match many file _ ((Some _ f) (Some _ f)) ((None _) (match many (str-is-empty g) _ ((BTrue) (None _)) ((BFalse) (Some _ g)))))
   (let ((many f) (many xs)) $ notail $ heap-syns _ hp adopted rest)
-  (values f $ Cons _ (match many (or (str-is-empty g) $ str-eq f g) _ ((BTrue) r) ((BFalse) (syn-respot (Absolute g) r))) xs))
+  (values f $ Cons _ (match many (or (str-is-empty g) $ str-eq f g) _ ((BTrue) r) ((BFalse) (syn-absolute g r))) xs))
 
 (def-fns _ $ (many heap-handle : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (Name) n))
   (let ((erased _) (many b) (erased _)) (hread _ hp a))

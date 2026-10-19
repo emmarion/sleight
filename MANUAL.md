@@ -99,7 +99,7 @@ read relative to (DESIGN.md section 65), beside the program's source
 files, without reading anything: a read relative to it resolves against
 the directory its text names, as for a source file (ASSUMPTIONS.md 219),
 and one relative to a directory that does not exist answers `Fail`. A
-name a `;! file` pragma gives a position (DESIGN.md section 4) is
+name a `;! file` pragma gives a file (DESIGN.md section 4) is
 readable relative to only through this flag. Each occurrence adds one
 name, and the flag may be given any number of times. The fence
 does not apply to `read-file`. slc takes the same flag.
@@ -237,10 +237,9 @@ ways the warning does not count as uses.
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,
 `syntax error` or `note` in place of `error` for those. A position is where a
-token's first character sits, both counted from one. The file is the one a
-`;! file` pragma in force there gives (DESIGN.md section 4), its lines counted
-from the line after the pragma, and otherwise the file the form was read from. A message about two
-places writes the second as a `note` on its own line under it, which may be
+token's first character sits, both counted from one. The file is the one the
+form was read from, as a `;! file` pragma names it (DESIGN.md section 4). A
+message about two places writes the second as a `note` on its own line under it, which may be
 in another file. A
 form a macro places at `NoPos` (DESIGN.md section 62) is about nowhere, and a
 message about it carries no location at all, not even a file; a position a macro

@@ -505,9 +505,7 @@
 
 (def-fns _ $ (many spot-rope : (many (String) file) (many (Spot) p) -> (many (Rope) r))
   (let-match many (spot-pos file p) (MkPos f l c) ((NoPos) (RStr "Ffi_core.NoLoc")))
-  (let ((many read)) $ match many p (((String) _)) ((PosSpot _) f) (else file))
-  (let ((many rl) (many _)) $ spot-coords p)
-  (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ rcat3 (RStr "; read = ") (quoted read) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; read_line = ") (z-rope rl)) $ rcat3 (RStr "; col = ") (z-rope c) $ RStr " })"))
+  (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; col = ") (z-rope c)) $ RStr " })"))
 
 ; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function
 ; bound by a group is named, so a call of it is direct, a value use its closure.

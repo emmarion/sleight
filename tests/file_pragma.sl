@@ -4,13 +4,17 @@
 
 ;! warn MkBox boxing is slow
 ;! suppress warn MkBox
+(let ((many _)) (MkBox 1))
 ;! file "claimed/box.sl"
-(let ((many a)) (MkBox 1))
-;! restore warn MkBox
+(let ((many b)) (MkBox 2))
+b
+;! file "claimed/two.sl"
 (def-fns _ $ (many two : -> (many (Box) r))
-  ;! file "claimed/two.sl"
-  (MkBox 2))
+  (MkBox 3))
 (two)
 ; expect: (MkBox 2)
-; warns: claimed/two.sl:1:4: warning: application of `MkBox`: boxing is slow
+; expect: (MkBox 3)
+; warns: claimed/box.sl:1:18: warning: application of `MkBox`: boxing is slow
+; warns: tests/file_pragma.sl:5:1: note: `;! warn` for `MkBox` is here
+; warns: claimed/two.sl:2:4: warning: application of `MkBox`: boxing is slow
 ; warns: tests/file_pragma.sl:5:1: note: `;! warn` for `MkBox` is here

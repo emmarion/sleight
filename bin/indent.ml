@@ -7,14 +7,17 @@ let issues = ref 0
 
 let check_file path =
   let src = match Sleight.Program.read_file path with s -> s | exception Sys_error m -> prerr_endline m; exit 2 in
-  let found, stopped = Indent.issues path src in
-  List.iter (fun i -> incr issues; print_string (Indent.show i)) found;
-  (match stopped with
-   | None -> ()
-   | Some (l, m) ->
-       incr issues;
-       Printf.printf "%s: %s -- everything above is what was read before that\n" (Sleight.Reader.where path l) m);
-  if found <> [] || stopped <> None then print_endline (Sleight.Reader.shape_note path)
+  List.iter
+    (fun f ->
+      let found, stopped = Indent.issues f in
+      List.iter (fun i -> incr issues; print_string (Indent.show i)) found;
+      (match stopped with
+       | None -> ()
+       | Some (l, m) ->
+           incr issues;
+           Printf.printf "%s: %s -- everything above is what was read before that\n" (Sleight.Reader.where path l) m);
+      if found <> [] || stopped <> None then print_endline (Sleight.Reader.shape_note path))
+    (Sleight.Reader.files path src)
 
 let () =
   let files = List.tl (Array.to_list Sys.argv) in

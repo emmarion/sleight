@@ -2,7 +2,7 @@
 
    Not part of the language: a claim the source makes about itself, which the
    driver checks and warns about (bin/indent.ml runs it alone). It reads
-   Reader.scan_upto's tokens rather than re-scanning bytes, so it skips
+   Reader.files's tokens rather than re-scanning bytes, so it skips
    comments and strings exactly the way the real reader does, and it runs
    before parsing, so a file the reader goes on to refuse is still reported
    on -- which is the case it is most wanted for.
@@ -137,22 +137,21 @@ let balance toks =
     ([], None) toks
 
 (* The issues, in line order, and where the lexer stopped if it could not finish the file. *)
-let issues path src =
-  let toks, stopped = scan_upto path src in
-  let toks = List.filter (function _, _, Pragma _ -> false | _ -> true) toks in
+let issues (f : file) =
+  let toks = List.filter (function _, _, Pragma _ -> false | _ -> true) f.toks in
   let acc = ref [] in
   let report i = acc := i :: !acc in
-  check_lines report (checkable_lines report src toks);
+  check_lines report (checkable_lines report f.src toks);
   let opens, surplus = balance toks in
   Option.iter (fun l -> report { at = l; note = false; msg = "a `)` here closes more than is open (surplus `)`)" }) surplus;
   List.iteri
     (fun k l -> report { at = l; note = k > 0; msg = (if k = 0 then "this form is never closed" else "and this one") })
     opens;
-  (List.rev !acc, stopped)
+  (List.rev !acc, f.stopped)
 
 (* Whether it warned, and so wrote the note on bin/shape, which the reader's error then need not repeat. *)
-let warn path src =
-  let found = fst (issues path src) in
+let warn (f : file) =
+  let found = fst (issues f) in
   List.iter (fun i -> !Env.warn (show i)) found;
-  if found <> [] && !Reader.shape_notes then !Env.warn (Reader.shape_note path ^ "\n");
+  if found <> [] && !Reader.shape_notes then !Env.warn (Reader.shape_note f.path ^ "\n");
   found <> []
