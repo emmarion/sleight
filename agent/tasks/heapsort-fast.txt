@@ -58,6 +58,3 @@ K = 1048576):
 ```
 (let ((erased (Lt 1048576 u62-modulus) mib-below-u62)) (prove-literal-lt 1048576 4611686018427387904))
 ```
-
-Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
-`u62-*` call, and array writes that are not `-imm`.
