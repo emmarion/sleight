@@ -278,7 +278,7 @@ and plain cx = function
           "(Obj.repr (fun held -> " ^ dispatch cx adt (List.init (List.length adt.ctors) Fun.id) "held" arms None ^ "))"
       | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
-  | V.VToken -> "(Obj.repr ())"
+  | V.VToken | V.VVacant -> "(Obj.repr ())"
   | V.VHandle (x, r, m, v) -> Printf.sprintf "(Obj.repr (%s, %s))" (handle x r m) (value cx v)
 
 and closure cx cl =
@@ -419,7 +419,7 @@ let collect env items =
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
     | V.VHandle (_, _, _, v) -> value v
-    | V.VFn _ | V.VToken -> ())
+    | V.VFn _ | V.VToken | V.VVacant -> ())
   and handles = function Ffi_core.Handle (_, _, _, _, v) -> value (Obj.obj v) | List (_, rs) -> List.iter handles rs | _ -> ()
   and code c =
     (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());

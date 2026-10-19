@@ -273,6 +273,14 @@ let wrappers disc shapes =
   let cs = non_phantom shapes in
   if tagged disc shapes || List.exists (fun (_, n) -> n <> 1) cs then [] else List.map fst cs
 
+let hollow env c =
+  match matchables env (tid_of env Reader.nowhere c) with
+  | (mid, d, cs) :: _ when List.exists (fun (_, c') -> c' = Var c) cs ->
+      let shapes = shapes env Reader.nowhere cs in
+      (match type_of env mid with Matchable (_, _, ext, _, _) -> not ext | _ -> false)
+      && not (tagged d shapes) && List.for_all (fun (_, n) -> n = 0) (non_phantom shapes)
+  | _ -> false
+
 let newtype_of env c =
   List.find_map (fun o -> if not (names_var c o.Env.names) then None else match type_of env o.Env.obj with
     | Matchable (d, true, _, _, cs) when List.mem c (wrappers d (shapes env Reader.nowhere cs)) -> Some o.obj
@@ -1288,9 +1296,10 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               if pos <> Erased then warn_use env (loc head) "application of" h.term;
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~ctor:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
-              let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
-              let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
-              let place = term_place env (App (h.term, List.rev acc)) in
+              let ctor = match canon env h.term with Var c -> c | _ -> -1 in
+              let hollow = ctor >= 0 && hollow env ctor in
+              let code = if pos = Erased then V.CErased else if hollow then V.CConst V.VVacant else if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
+              let place = if hollow then Some (slot_of Prelude.null) else term_place env (App (h.term, List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
           | Cell (c, slots) -> elab_cell_invoke env expect l (callee pos) h hcode c slots args
           | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
@@ -1499,10 +1508,12 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let ct, params, _ = cell_shape env l pos c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
         (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
-      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst Prelude.vacant)) in
+      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.VVacant)) in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
-      (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
+      let hollow = hollow env c in
+      let env, place = if hollow then (place env x (slot_of Prelude.null), Some (slot_of Prelude.null)) else (env, None) in
+      (env, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else if hollow then V.CConst V.VVacant else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ m; u; List (il, c :: items) ] ->
       (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
       let mode = written env pos l "cell-write" (mult_or env l m) in

@@ -334,14 +334,24 @@
   (let ((erased _) (erased pf)) (refs-widen _ _ _ sf fs))
   (coerce fs pf))
 
+(def-fns _ $ (many settled-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
+  (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
+  (match many s _ ((SHypothetical _) (None _)) ((SSettled _ v _) (Some _ v))))
+
+(def-fns _ $ (many hollow-shape : (many (Bool) tagged) (many (List $ Nat) arities) -> (many (Bool) r))
+  (and (not tagged) $ nat-list-eq arities $ list-replicate _ (list-length _ arities) 0))
+
 (def-fns _ $ (many construct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) c) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let-match many c (MkCtor _ _ index _ _ ext _ newtype2))
+  (let-match many c (MkCtor _ _ index _ tagged ext shape newtype2))
   (match many ext _
     ((Some _ e)
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ ext-construct _ hp e index args)
       (values hl2 hp2 sf2 v))
     ((None _)
       (let-match many newtype2 (BFalse) ((BTrue) (tuple _ hp args)))
+      (let ((many vacant)) $ match many (hollow-shape tagged shape) (((Maybe $ Ref Block hs) _)) ((BTrue) (settled-ref _ (heap-entries _ hp) null-id)) ((BFalse) (None _)))
+      (let-match many vacant (None _) ((Some _ v) (values hs hp (le-refl hs) v)))
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BTag _ c args)
       (values hl2 hp2 sf2 v))))
 
@@ -691,11 +701,6 @@
       (match many env _
         ((FrVals _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))
         ((FrGroup _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))))))
-
-(def-fns _ $ (many settled-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
-  (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
-  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
-  (match many s _ ((SHypothetical _) (None _)) ((SSettled _ v _) (Some _ v))))
 
 (def-fns _ $ (many settled-entry-value : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (match many (settled-ref _ (heap-entries _ hp) x) _
@@ -1376,6 +1381,7 @@
               (let ((erased _) (erased pf2)) (refs-widen _ _ _ sf fields))
               (let ((many hp3)) (hwrite _ hp2 target (BTag _ ctor (replace-fields _ (coerce fields pf2) indices vals))))
               (values h2 hp3 (le-refl h2) (Cons _ target (Nil _)) (PkMany _ _ target (Nil _) (PkNil _))))
+            ((BToken _) (values h2 hp2 (le-refl h2) (Cons _ target (Nil _)) (PkMany _ _ target (Nil _) (PkNil _))))
             (else (error-vals _ hp2 many-one "not a cell"))))
         (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) vs pk w2))
       ; a copy of the block with the writes applied (section 37), the old block untouched
@@ -1394,6 +1400,7 @@
               (let ((erased _) (erased pf2)) (refs-widen _ _ _ sf fields))
               (let ((erased h3) (many hp3) (erased le3) (many v)) (halloc _ hp2 (BTag _ ctor (replace-fields _ (coerce fields pf2) indices vals))))
               (values h3 hp3 le3 (Cons _ v (Nil _)) (PkMany _ _ v (Nil _) (PkNil _))))
+            ((BToken _) (let ((many v)) (coerce cv pcv)) (values h2 hp2 (le-refl h2) (Cons _ v (Nil _)) (PkMany _ _ v (Nil _) (PkNil _))))
             (else (error-vals _ hp2 many-one "not a cell"))))
         (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) vs pk w2))
       ((CCellRead _ _ index cell)

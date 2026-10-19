@@ -37,7 +37,7 @@ let symbol = function Ffi_core.SName s -> plain "Symbol" 0 [ s ] | SGen (n, s) -
 
 (* The interpreter's construction and matching of an extern type, through lib/ffi_core.ml's one-level view. *)
 let bad name v = raise (Eval.Runtime (Printf.sprintf "not a %s: %s" name (show v)))
-let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | v -> bad "constructor" v
+let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | VVacant -> (0, []) | v -> bad "constructor" v
 let unpos v = match des v with 0, [] -> Ffi_core.NoPos | 1, [ f; l; c ] -> MkPos (f, l, c) | _ -> bad "Pos" v
 let unlist v = match des v with 0, [] -> Ffi_core.Nil | 1, [ x; r ] -> Cons (x, r) | _ -> bad "List" v
 let unsymbol v = match des v with 0, [ s ] -> Ffi_core.SName s | 1, [ n; s ] -> SGen (n, s) | _ -> bad "Symbol" v
@@ -87,7 +87,7 @@ let length = spec ~needs:["Array"] 1 (unary (fun a -> int "Nat" (Ffi_core.array_
 let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int "Nat" (Ffi_core.bytes_get (bytes b) (z i))))
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int "Nat" (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
-  [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VToken (z n)))));
+  [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VVacant (z n)))));
     ("array-make", spec ~needs:["Array"] 2 (binary (fun n x -> arr (Ffi_core.array_make (z n) x))));
     ("array-swap", spec ~needs:["Array"] 3 swap);
     ("array-swap-imm", spec ~needs:["Array"] 3 swap);

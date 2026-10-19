@@ -19,6 +19,7 @@ and value =
   | VMatchable of adt
   | VFn of closure
   | VToken
+  | VVacant
   | VHandle of id * Ffi_core.reading * mult * value
 
 and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw | Slots of Ffi_core.slots
@@ -83,10 +84,14 @@ let use_externs = ref true
 let tuple = function [ v ] -> v | [] -> VToken | vs -> VTuple vs
 let untuple n v = match (n, v) with 1, v -> [ v ] | 0, _ -> [] | _, VTuple vs -> vs | _ -> assert false
 
+let hollow adt = adt.ext = None && not adt.tagged && not adt.newtype && List.for_all (fun c -> c.arity = 0) adt.ctors
+
 let construct c args =
   match c.adt.ext with
   | Some e when !use_externs -> e.construct c.index args
-  | _ -> if c.adt.newtype then tuple args else VCtor (c, Array.of_list args)
+  | _ -> if c.adt.newtype then tuple args else if hollow c.adt then VVacant else VCtor (c, Array.of_list args)
+
+let fields = function VCtor (_, fs) -> Array.to_list fs | VVacant -> [] | _ -> assert false
 
 let ctor_at adt i = List.nth adt.ctors i
 
@@ -100,7 +105,7 @@ let dispatch ext tagged v =
 
 let destruct c v = match dispatch c.adt.ext c.adt.tagged v with
   | Some r -> r
-  | None -> (c.index, if c.adt.newtype then untuple c.arity v else match v with VCtor (_, fs) -> Array.to_list fs | _ -> assert false)
+  | None -> (c.index, if c.adt.newtype then untuple c.arity v else fields v)
 
 let rec show ?(seen = []) v =
   let show = show ~seen:(v :: seen) in
@@ -114,4 +119,4 @@ let rec show ?(seen = []) v =
   | VCtorFn c -> "<constructor " ^ c.cname ^ ">"
   | VMatchable adt -> "<matchable " ^ adt.tname ^ ">"
   | VFn cl -> "<function " ^ cl.fn.fname ^ ">"
-  | VToken | VHandle _ -> "_"
+  | VToken | VVacant | VHandle _ -> "_"

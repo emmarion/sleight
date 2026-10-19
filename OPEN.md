@@ -121,6 +121,11 @@ references are to DESIGN.md.
     open how far that reaches: whether it passes into a nested match,
     and whether it stops where a fresh telescope is supplied, as at an
     argument, a typed `let` binder or a proof.
+39. Should a value built by a constructor with no non-erased field, of
+    an untagged type that is not hollow (§33) because another of its
+    non-phantom constructors has one, be the word of `vacant-slot` and
+    be placed there where it is built, as a value of a hollow type is
+    (§36)? Today its word is unspecified.
 
 ## Argument temporaries
 

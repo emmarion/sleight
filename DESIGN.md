@@ -1414,9 +1414,12 @@ constructor's non-erased fields; a single field is stored bare. A
 value carries a tag only when its type is an enum with more than one
 non-phantom constructor. The tag is the constructor's position among
 the non-phantom constructors, and that is all a tag ever
-distinguishes. A phantom constructor takes no discriminant. A value
-with no non-erased field is the tag alone when its type is tagged, and
-an unspecified word otherwise. A union never carries a tag. A newtype
+distinguishes. A phantom constructor takes no discriminant. A type is
+**hollow** when it is not marked `extern`, carries no tag, and none of
+its non-phantom constructors has a non-erased field. A value with no
+non-erased field is the tag alone when its type is tagged, the word of
+`vacant-slot` (§35) when its type is hollow, however the value was
+built, and an unspecified word otherwise. A union never carries a tag. A newtype
 value built by a wrapping constructor is represented exactly as that
 constructor's one non-erased field, with no tag and no wrapper. That
 representation is mandatory for a type marked `newtype` and forbidden
@@ -1527,7 +1530,8 @@ contradiction is an error. After it, `s` is the slot that an entry
 `(many A a at s)` names and that a cell type `(Cell C s)` indexes.
 `vacant-slot`, the built-in `many` constant of type `(Slot)` (§42), is
 its own slot. That makes a cell type that names it the type of a fresh
-cell. Its runtime word is what `cell-alloc` puts in a vacant slot.
+cell. Its runtime word is what `cell-alloc` puts in a vacant slot, and
+the word of every value of a hollow type (§33).
 
 ## 36. `at`
 
@@ -1593,6 +1597,9 @@ a cell invocation (the value with its cell) and a `cell-write` on a
 result with the source); a forwarding `let` (§19); a `let` of
 `(slot-of x)` (with `x`); the `at` return and `at` parameter of a call
 and the `at` entry of a match (with their targets); the delegate annotation (`g` with `f`, §41);
+an application of a constructor of a hollow type, and a `cell-alloc`
+of one, where an opened `Matchable` lists the constructor (the value
+or cell with `vacant-slot`, §33);
 `slot-self` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
@@ -1637,6 +1644,8 @@ its non-erased argument.
 
 **Obtaining a cell.** `(cell-alloc C)` is an expression that yields a
 fresh cell at unique, at no slot, with every slot `vacant-slot` (§35).
+When the opened `Matchable` that lists `C` is that of a hollow type,
+the cell is instead at `vacant-slot` (§36).
 `(cell-alloc (C i1 ... in))` lists every non-erased field; each item is
 a `(Slot)` expression at many, or `_` for `vacant-slot`. A partial list
 is not allowed. A destructure in any mode yields, through its cell
@@ -1732,7 +1741,9 @@ no call that is not skipped, no constructor application, no allocation,
 no store and no copy. Renames, constants, loads from a block, a
 `values`, a match whose every branch erases to nothing (including its
 dispatch), a nested definition whose remainder erases, and absurd code
-all count as nothing. Calling an at-function skips its runtime; its
+all count as nothing. So does an application of a constructor `C`, or
+a `cell-alloc` of `C`, when the opened `Matchable` that lists `C` is
+that of a hollow type (§33). Calling an at-function skips its runtime; its
 arguments are still evaluated, as §15 binds them. A
 function marked `erased` may not be marked `at`: it is only ever called
 where nothing runs, so the mark would claim nothing. The body of an
