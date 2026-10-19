@@ -403,7 +403,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), "--confine-write", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-shape-note", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"

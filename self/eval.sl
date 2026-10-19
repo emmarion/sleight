@@ -863,7 +863,7 @@
   (many RqGetEnvs : -> (RqKind)) (many RqAppendFile : -> (RqKind)) (many RqReadRemaining : -> (RqKind))
   (many RqListDir : -> (RqKind)) (many RqGetCwd : -> (RqKind)) (many RqStat : -> (RqKind))
   (many RqMkDir : -> (RqKind)) (many RqDeleteFile : -> (RqKind)) (many RqDeleteDir : -> (RqKind))
-  (many RqConfineDir : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)))
+  (many RqConfine : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)))
 
 (def-adts $ (RqEntry : -> Type)
   enum
@@ -878,7 +878,7 @@
   rq-cons "WriteFile" (RqWriteFile) $ rq-cons "GetArgs" (RqGetArgs) $ rq-cons "GetEnv" (RqGetEnv) $
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
-  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "ConfineDir" (RqConfineDir) $
+  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "Confine" (RqConfine) $
   rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ rq-cons "Measure" (RqMeasure) $ Nil _)
 
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (RqKind) r))
@@ -887,6 +887,15 @@
   (match many (str-eq name n) _
     ((BTrue) rq)
     ((BFalse) (tail $ request-of rest name))))
+
+(let ((many heap-strs-fuel)) 1000000)
+
+(def-fns _ $ (many heap-strs : (many (List $ Ctor) env) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (List $ String) r))
+  (let-match many fuel (Succ k) ((Zero) (Nil _)))
+  (let ((erased _) (many hp1) (erased le) (many i) (many fields)) (destruct _ hp (pctor env "Cons") a))
+  (let-match many (nat-eq i $ ctor-index $ pctor env "Cons") (BTrue) ((BFalse) (Nil _)))
+  (let ((many a1)) (widen-ref _ _ le a))
+  (Cons _ (heap-str _ hp1 $ field-at _ fields 0 a1) $ notail $ heap-strs env k _ hp1 $ field-at _ fields 1 a1))
 
 (def-fns _ $ (many usage-since : (many (Usage) base) (many (Usage) u) -> (many (Usage) r))
   (let-match many base (MkUsage a0 b0 c0 d0 e0 f0 g0 h0))
@@ -974,8 +983,8 @@
         (let ((unique w1) (many r)) (world-do _ w (DeleteDir s0)))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-result-change env _ hp1 r))
         (values h hpx le a w1))
-      ((RqConfineDir)
-        (let ((unique w1) (many r)) (world-do _ w (ConfineDir s0)))
+      ((RqConfine)
+        (let ((unique w1) (many r)) (world-do _ w $ Confine (heap-strs env heap-strs-fuel _ hp1 f0) (heap-strs env heap-strs-fuel _ hp1 $ field-at _ fields 1 req1)))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-result-unit env _ hp1 r))
         (values h hpx le a w1))
       ((RqConfineOutputBytes)

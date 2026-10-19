@@ -87,7 +87,8 @@ check_test() {
   args=$(directive "$t" args)
   envs=$(directive "$t" env)
   confine=""
-  for d in $(directive "$t" confine-dir); do confine="--confine-dir $d"; done
+  for d in $(directive "$t" confine-read); do confine="$confine --confine-read $d"; done
+  for d in $(directive "$t" confine-write); do confine="$confine --confine-write $d"; done
   for b in $(directive "$t" confine-output-bytes); do confine="$confine --confine-output-bytes $b"; done
   [ -n "$(directive "$t" no-env)" ] && confine="$confine --no-env"
   directive "$t" stdin > "$B/$name.in"

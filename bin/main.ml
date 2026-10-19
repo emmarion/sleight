@@ -6,7 +6,7 @@ let world args =
   let flush_to oc s = output_string oc s; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
-    exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }
+    exit; print = print_endline; fence = ref Program.unconfined; limit = ref None; used = ref 0 }
 
 let run consume ?last env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
@@ -37,7 +37,7 @@ let repl consume env =
 
 (* Arguments after "--" belong to the program (its GetArgs request); the rest are files and flags, in any order, the
    flags in [valued] each taking the argument after it; a flag given twice takes its last value, but for
-   --comptime-unconfine, which takes each. *)
+   --comptime-unconfine, --confine-read and --confine-write, which take each. *)
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
@@ -54,7 +54,9 @@ let () =
   let flags, files = read [] [] args in
   let option f = List.assoc_opt f flags and flag f = List.mem_assoc f flags in
   let extract = option "--extract" in
-  Option.iter (( := ) Extract.fence) (option "--confine-dir");
+  let values f = List.rev (List.filter_map (fun (g, v) -> if g = f then Some v else None) flags) in
+  Extract.reads := values "--confine-read";
+  Extract.writes := values "--confine-write";
   Extract.output_bytes := option "--confine-output-bytes";
   Option.iter (fun p -> Special.help := Program.read_file p) (option "--hints");
   Option.iter (fun f -> match int_of_string_opt f with Some n when n >= 0 -> Eval.fuel := Some n | _ -> prerr_endline "--eval-fuel takes a number of steps"; exit 1) (option "--eval-fuel");
@@ -65,7 +67,7 @@ let () =
   let fail m = prerr_endline m; exit 1 in
   Elab.goal_mode := Option.fold ~none:Elab.Unrequired ~some:(fun m -> match List.assoc_opt m Elab.goal_modes with Some m -> m | None -> fail "--goal takes none, open or proved") (option "--goal");
   Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
-  let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
+  let consume = if extract = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let warned = ref false and pending = ref [] in
   let strict = flag "--warnings-as-errors" in
   if strict then (let warn = !Env.warn in Env.warn := fun s -> warned := true; warn s);
@@ -79,7 +81,7 @@ let () =
   Env.warn_unused := flag "--warn-unused";
   Env.fn_same := flag "--fn-same";
   let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
-  Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.filter_map (fun (f, v) -> if f = "--comptime-unconfine" then Some (v, Elab.source_dir v) else None) flags;
+  Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.map (fun v -> (v, Elab.source_dir v)) (values "--comptime-unconfine");
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
   let last = List.length files - 1 in
   let env = settle (List.fold_left (fun env (i, f) -> run held ~last:(i = last) env f) env (List.mapi (fun i f -> (i, f)) files)) in

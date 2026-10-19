@@ -1986,7 +1986,7 @@ which `lib/prelude.sl` is the reference:
 
   The driver flushes after every write. It never recurses, so an
   unbounded interaction is the driver's loop over total functions, and
-  there is no `bind`. MANUAL.md describes `ConfineDir`,
+  there is no `bind`. MANUAL.md describes `Confine`,
   `ConfineOutputBytes` and the command-line flags that stand in for
   them.
 - **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a

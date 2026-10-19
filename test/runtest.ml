@@ -4,7 +4,8 @@
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
-   "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
+   "; confine-read: dir" and "; confine-write: dir", one directory each, what its file requests start confined to,
+   as --confine-read and --confine-write give it;
    "; comptime-unconfine: name" a name `read-file` may read relative to, as --comptime-unconfine gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
@@ -86,8 +87,10 @@ and run_mode name externs src flags =
   let envs = List.filter_map split_env (directive src "env") in
   Extract.with_env := directive src "no-env" = [];
   let visible = if !Extract.with_env then envs else [] in
-  let fence = ref "/" in
-  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine-dir");
+  let fence = ref Program.unconfined in
+  Extract.reads := directive src "confine-read";
+  Extract.writes := directive src "confine-write";
+  Result.iter_error failwith (Program.restrict fence !Extract.reads !Extract.writes);
   let limit = ref None in
   Extract.output_bytes := None;
   Eval.fuel := Option.map int_of_string (List.nth_opt (directive src "eval-fuel") 0);

@@ -16,6 +16,7 @@ let untuple vs e body =
   | [ v ] -> Printf.sprintf "(let %s = %s in %s)" v e body
   | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
+let quotes ss = "[" ^ String.concat "; " (List.map quote ss) ^ "]"
 let z n = Printf.sprintf "(Z.of_string %s)" ("\"" ^ Z.to_string n ^ "\"")
 let reading = function Ffi_core.MintedIs -> "Ffi_core.MintedIs" | MintedType -> "Ffi_core.MintedType"
 let handle x r m = Printf.sprintf "(%d), %s, Ffi_core.%s" x (reading r) (String.capitalize_ascii (Term.mult_name m))
@@ -78,7 +79,8 @@ type cx = {
 (* An extern type's match and builds are its templates (lib/ffi_templates.txt) unless stripped, or where it
    has none, its runtime view; a template's temporaries are numbered per instantiation. *)
 let templates = ref true
-let fence = ref "/"
+let reads = ref []
+let writes = ref []
 let output_bytes = ref None
 let with_env = ref true
 let template key = if !templates then Ffi_templates.find key else None
@@ -572,7 +574,7 @@ let driver cx =
   let ops =
     [ ("zero", make "Zero"); ("succ", make "Succ"); ("pred", option "Succ");
       ("u8", make "MkU8"); ("un_u8", field "MkU8"); ("char", make "MkChar"); ("un_char", field "MkChar");
-      ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons");
+      ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons"); ("un_list", option "Cons");
       ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
@@ -585,12 +587,12 @@ let driver cx =
              ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }
-let world = Driver_core.start %s %s %b world
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref Driver_core.unconfined; limit = ref None; used = ref 0 }
+let world = Driver_core.start %s %s %s %b world
 let print_final = Driver_core.print world
 let run_program = driver.run_program world
 let run_main = driver.run_main world
-|} (quote !fence) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
+|} (quotes !reads) (quotes !writes) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
 
 let item cx = function
   | Env.Fns fns ->

@@ -61,22 +61,31 @@ the prelude's types, and slc takes the same flag. Only the prelude, or a program
 a definition `extern` (DESIGN.md section 42). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
-`--confine-dir dir` confines a program's file requests to `dir`: a path is
-resolved against the working directory and through any symlinks, and a
-request whose path lands outside `dir` answers `Fail` without being
-performed, while one inside it behaves exactly as it would unconfined.
-Without the flag the fence is `/`, so the same check admits every path.
+`--confine-read dir` and `--confine-write dir` confine a program's file
+requests, its fence, to the directories they name, each flag given any
+number of times: a directory named by either may be read, and one named by
+`--confine-write` written. A path is resolved against the working directory
+and through any symlinks. `ReadFile`, `ReadFileIn`, `ListDir` and `Stat` read,
+and are performed when their path lands in a readable directory or below
+it. `WriteFile`, `AppendFile`, `MkDir`, `DeleteFile` and `DeleteDir` write,
+and are performed when the directory holding their path is a writable
+directory or below one, so a writable directory itself is never created or
+removed. A request the fence does not admit answers `Fail` without being
+performed, while one it admits behaves exactly as it would unconfined.
+Without either flag `/` is writable, so the same check admits every path.
 A path whose symlinks cannot be followed to the end, the resolution
-giving up after 1000 links, counts as outside every fence, `/` included,
-and so does a path with a component before its last that cannot be
-examined, such as one that does not exist.
-A program narrows its own fence with the `ConfineDir` request, which
-refuses a directory outside the current one (`tests/io_confine.sl`).
-Nothing is resolved at compile time: under `--extract` the directory is
-embedded in the OCaml written out as it was given, and the compiled
-program confines itself to it when it starts, a relative one resolving
+giving up after 1000 links, is admitted by no fence, and neither is a
+path with a component before its last that cannot be examined, such as
+one that does not exist. A program narrows its own fence with the
+`Confine reads writes` request, which sets the directories it may read
+and those it may write, and refuses a directory to read that the current
+fence does not let it read, a directory to write that it does not let it
+write, and anything that is not a directory (`tests/io_confine.sl`).
+Nothing is resolved at compile time: under `--extract` the directories are
+embedded in the OCaml written out as they were given, and the compiled
+program confines itself to them when it starts, a relative one resolving
 against the directory the program runs in, and exits with the error if
-it cannot. slc takes the same flag, and under `--interpret` confines
+it cannot. slc takes the same flags, and under `--interpret` confines
 itself once it has read its sources (ASSUMPTIONS.md 198).
 
 `--comptime-unconfine name` adds `name` to the names `read-file` may
@@ -86,7 +95,7 @@ the directory its text names, as for a source file (ASSUMPTIONS.md 219),
 and one relative to a directory that does not exist answers `Fail`. A
 name a `;! file` pragma gives a position (DESIGN.md section 4) is
 readable relative to only through this flag. Each occurrence adds one
-name, and the flag may be given any number of times. `--confine-dir`
+name, and the flag may be given any number of times. The fence
 does not apply to `read-file`. slc takes the same flag.
 
 `--confine-output-bytes n` crashes a program, exit code 1, before the
@@ -94,11 +103,11 @@ request that would take its output past `n` bytes: everything it writes,
 plus 4096 per file or directory it creates, while it has a limit; what it
 writes with none is not counted. It sets or lowers its own limit with
 `ConfineOutputBytes`; a `Nat` too large for an OCaml `int` means no limit
-(`tests/io_output_limit.sl`, ASSUMPTIONS.md 199). Like `--confine-dir`,
+(`tests/io_output_limit.sl`, ASSUMPTIONS.md 199). Like the fence,
 it is embedded under `--extract`, and slc takes it too.
 
 `--no-env` hides the environment from the program: `GetEnv` answers
-`None` and `GetEnvs` the empty list. Like `--confine-dir`, under
+`None` and `GetEnvs` the empty list. Like the fence, under
 `--extract` it is embedded in the program written out, and slc takes
 the same flag.
 
@@ -212,7 +221,7 @@ under further flags, which `test/runtest.ml` requires to be refused and which a
 test naming a flag that only one implementation takes runs under that one alone, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
-atom's id. `; confine-dir: dir`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
+atom's id. `; confine-read: dir`, `; confine-write: dir`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
 `; no-env: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
 the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep

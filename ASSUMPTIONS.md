@@ -2034,7 +2034,7 @@ session's, made without the owner.
 
 ## Confining file requests (section 27)
 
-The `ConfineDir` request, the `--confine-dir` flag and the fence model are as
+The `Confine` request, the `--confine-read` and `--confine-write` flags and the fence model are as
 MANUAL.md describes them; the choices below are the session's.
 
 198. **What the fence admits, and when.** Each file request resolves
@@ -2045,17 +2045,20 @@ MANUAL.md describes them; the choices below are the session's.
      cannot be looked up, since the kernel's lookup, as the session
      reads it, cannot get past that component either. `MkDir`,
      `DeleteFile` and `DeleteDir` do not follow a symlink in last position, as their
-     syscalls do not, so a symlink inside the fence that points out of
-     it can be deleted; a trailing `/`, `.` or `..` makes the last
-     component followed after all, erring towards refusing. The fence's
-     own directory is inside it, so a program may delete the directory
-     it is confined to. Under `--interpret` slc performs `ConfineDir` once
-     every source is read, with `/` when no flag is given, so its own
+     syscalls do not, so a symlink in a writable directory that points out of
+     the fence can be deleted; a trailing `/`, `.` or `..` makes the last
+     component followed after all, erring towards refusing. Every request that
+     writes, rewriting an existing file included, needs the directory holding its
+     resolved path writable, not only those that create or remove an entry; the
+     session's reading is that this differs from checking the path itself only
+     at a writable directory, which is no file. `Confine` with both lists empty
+     admits nothing, while no flag at all leaves `/` writable. Under `--interpret` slc performs `Confine` once
+     every source is read, with `/` writable when no flag is given, so its own
      reading of its sources is never fenced; a directory the program
      cannot be confined to is reported with slc's `slc: ` prefix there,
      and without it by the reference and by a compiled program. The
      fence belongs to the process rather than to one final, so a
-     `ConfineDir` in one file's `Program` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
+     `Confine` in one file's `Program` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
      inside one run of its own driver. The check is made before the request and not
      atomically with it, so it is not expected to hold against another
      process changing the directory tree in between, and a hard link

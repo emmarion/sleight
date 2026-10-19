@@ -1,3 +1,5 @@
+type fence = { reads : string list; writes : string list }
+
 type world = {
   read_rest : unit -> string;
   read_line : unit -> string option;
@@ -9,7 +11,7 @@ type world = {
   cwd : unit -> string;
   exit : int -> unit;
   print : string -> unit;
-  fence : string ref;
+  fence : fence ref;
   limit : int option ref;
   used : int ref;
 }
@@ -32,7 +34,7 @@ type 'v request =
   | MkDir of 'v
   | DeleteFile of 'v
   | DeleteDir of 'v
-  | ConfineDir of 'v
+  | Confine of 'v * 'v
   | ConfineOutputBytes of 'v
   | Measure of 'v
 
@@ -50,6 +52,7 @@ type 'v ops = {
   snil : 'v;
   scons : 'v -> 'v -> 'v;
   un_str : 'v -> ('v * 'v) option;
+  un_list : 'v -> ('v * 'v) option;
   some : 'v -> 'v;
   none : 'v;
   ok : 'v -> 'v;
@@ -100,14 +103,24 @@ let resolve ~follow p =
   in
   go 1000 [] (parts (if Filename.is_relative p then Sys.getcwd () ^ "/" ^ p else p))
 
-let inside dir ~follow p =
-  let rec prefix = function [], _ -> true | f :: fs, c :: cs -> f = c && prefix (fs, cs) | _ :: _, [] -> false in
-  match resolve ~follow p with
-  | cs -> Ok (if prefix (parts dir, cs) then Some cs else None)
-  | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
+let rec prefix = function [], _ -> true | f :: fs, c :: cs -> f = c && prefix (fs, cs) | _ :: _, [] -> false
+let covers dirs cs = List.exists (fun d -> prefix (parts d, cs)) dirs
+let parent cs = match List.rev cs with [] -> [] | _ :: up -> List.rev up
 
-let admits fence ~follow p =
-  Result.bind (inside !fence ~follow p) (function Some cs -> Ok cs | None -> Error (p ^ ": outside the confined directory " ^ !fence))
+let resolved ~follow p = match resolve ~follow p with cs -> Ok cs | exception ((Sys_error _ | Unix.Unix_error _) as e) -> Error (explain e)
+let inside dir ~follow p = Result.map (fun cs -> if covers [ dir ] cs then Some cs else None) (resolved ~follow p)
+
+type access = Read | Write
+
+let unconfined = { reads = []; writes = [ "/" ] }
+let reaches f access cs = covers (match access with Read -> f.reads @ f.writes | Write -> f.writes) cs
+let outside access p = Error (p ^ ": outside the " ^ (match access with Read -> "readable" | Write -> "writable") ^ " directories")
+
+let admits fence access ~follow p =
+  Result.bind (resolved ~follow p) (fun cs ->
+      match access with
+      | Read -> if reaches !fence Read cs then Ok cs else outside Read p
+      | Write -> if reaches !fence Write (parent cs) then Ok cs else Error (p ^ ": not inside a writable directory"))
 
 let within dir p =
   match path (resolve ~follow:true dir) with
@@ -123,12 +136,16 @@ let within dir p =
 
 let read_within dir p = Result.bind (within dir p) (fun (_, read) -> read ())
 
-let confine fence dir =
-  Result.bind (admits fence ~follow:true dir) (fun cs ->
-      match (Unix.stat (path cs)).st_kind with
-      | Unix.S_DIR -> fence := path cs; Ok ()
-      | _ -> Error (dir ^ ": not a directory")
-      | exception e -> Error (explain e))
+let confine fence reads writes =
+  let dir access d =
+    Result.bind (resolved ~follow:true d) (fun cs ->
+        if not (reaches !fence access cs) then outside access d
+        else match (Unix.stat (path cs)).st_kind with Unix.S_DIR -> Ok (path cs) | _ -> Error (d ^ ": not a directory") | exception e -> Error (explain e))
+  in
+  let rec all access = function [] -> Ok [] | d :: ds -> Result.bind (dir access d) (fun p -> Result.map (List.cons p) (all access ds)) in
+  Result.bind (all Read reads) (fun reads -> Result.map (fun writes -> fence := { reads; writes }) (all Write writes))
+
+let restrict fence reads writes = if reads = [] && writes = [] then Ok () else confine fence reads writes
 
 let entry_bytes = 4096
 let clamp z = if Z.fits_int z then Some (Z.to_int z) else None
@@ -136,9 +153,9 @@ let clamp z = if Z.fits_int z then Some (Z.to_int z) else None
 let output_limit b =
   if b <> "" && String.for_all (fun c -> c >= '0' && c <= '9') b then Ok (clamp (Z.of_string b)) else Error (b ^ ": not a number of bytes")
 
-let start dir bytes env w =
+let start reads writes bytes env w =
   let fail m = prerr_endline m; exit 1 in
-  Result.iter_error fail (confine w.fence dir);
+  Result.iter_error fail (restrict w.fence reads writes);
   Option.iter (fun b -> w.limit := Result.fold ~ok:Fun.id ~error:fail (output_limit b)) bytes;
   if env then w else { w with env = (fun _ -> None); envs = (fun () -> []) }
 
@@ -188,15 +205,15 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
       | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e))
     in
     let created p = if Sys.file_exists p then 0 else entry_bytes in
-    let fenced ?(follow = true) ?(cost = fun _ -> 0) path answer =
+    let fenced ?(access = Read) ?(follow = true) ?(cost = fun _ -> 0) path answer =
       let p = to_string path in
-      match admits w.fence ~follow p with
+      match admits w.fence access ~follow p with
       | Ok _ -> if spend w (cost p) then answer p else raise (Halt 1)
       | Error m -> o.fail (of_string m)
     in
     let read p = result (fun () -> of_string (read_file p)) in
     let write out s = let s = to_string s in if spend w (String.length s) then (out s; o.unit) else raise (Halt 1) in
-    let write_to f path s = let s = to_string s in fenced ~cost:(fun p -> String.length s + created p) path (fun p -> result (fun () -> f p s; o.unit)) in
+    let write_to f path s = let s = to_string s in fenced ~access:Write ~cost:(fun p -> String.length s + created p) path (fun p -> result (fun () -> f p s; o.unit)) in
     match o.request req with
     | WriteOut s -> write w.out s
     | WriteErr s -> write w.err s
@@ -222,10 +239,12 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
             | _ -> o.ok o.is_other
             | exception Unix.Unix_error (Unix.ENOENT, _, _) -> o.ok o.missing
             | exception (Unix.Unix_error _ as e) -> o.fail (of_string (explain e)))
-    | MkDir path -> fenced ~follow:false ~cost:created path (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
-    | DeleteFile path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
-    | DeleteDir path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
-    | ConfineDir dir -> (match confine w.fence (to_string dir) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
+    | MkDir path -> fenced ~access:Write ~follow:false ~cost:created path (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
+    | DeleteFile path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
+    | DeleteDir path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
+    | Confine (reads, writes) ->
+        let rec strs v = match o.un_list v with Some (x, rest) -> to_string x :: strs rest | None -> [] in
+        (match confine w.fence (strs reads) (strs writes) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
     | ConfineOutputBytes bytes -> (
         let z = to_z bytes in
         match !(w.limit) with
