@@ -45,6 +45,10 @@ All paths are relative to the sandbox root."""
 class PathEscape(Exception):
     pass
 
+
+class Refused(Exception):
+    pass
+
 _NOFOLLOW = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
 _DIRFLAGS = _NOFOLLOW | os.O_DIRECTORY
 
@@ -754,6 +758,8 @@ def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), st
         except urllib.error.HTTPError as e:
             detail = e.read().decode()[:500]
             _log(LOG_PATH, f"---- error {_ts()} ({time.time() - t0:.1f}s) ----\nHTTP {e.code} {e.reason}: {detail}\n")
+            if why := _policy(_json_or_empty(detail).get("error")):
+                raise Refused(why)
             if e.code not in (408, 409, 429, 500, 502, 503, 504, 520, 522, 524) or attempt == tries - 1:
                 sys.exit(f"{e.code} {e.reason}: {detail}")
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
@@ -762,6 +768,18 @@ def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), st
                 sys.exit(f"network error after {tries} tries: {e}")
         _say(f"[retry {attempt + 1}/{tries - 1} in {2 ** attempt}s]")
         time.sleep(2 ** attempt)
+
+
+def _json_or_empty(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return {}
+
+
+def _policy(error):
+    if isinstance(error, dict) and str(error.get("code") or "").endswith("_policy"):
+        return f"{error['code']}: {error.get('message', '')}"
 
 
 def _fetch(url, headers):
@@ -792,6 +810,9 @@ class Anthropic:
 
     def truncated(self, reply):
         return reply.get("stop_reason") == "max_tokens"
+
+    def refusal(self, reply):
+        return "stop_reason: refusal" if reply.get("stop_reason") == "refusal" else None
 
     def send(self, messages):
         return post(self.base + "/messages", {
@@ -837,6 +858,9 @@ class OpenAICompat:
     def truncated(self, reply):
         return reply["choices"][0].get("finish_reason") == "length"
 
+    def refusal(self, reply):
+        return "finish_reason: content_filter" if reply["choices"][0].get("finish_reason") == "content_filter" else None
+
     def window(self):
         return self.limit("max_context_length") or self.model().get("max_model_len")
 
@@ -881,6 +905,13 @@ class OpenAI(OpenAICompat):
 
     def truncated(self, reply):
         return reply.get("status") == "incomplete" and (reply.get("incomplete_details") or {}).get("reason") == "max_output_tokens"
+
+    def refusal(self, reply):
+        if reply.get("status") != "failed":
+            return None
+        if why := _policy(reply.get("error")):
+            return why
+        raise RuntimeError(f"the response failed: {json.dumps(reply.get('error'))}")
 
     def send(self, messages):
         return post(self.base + "/responses", {
@@ -1019,6 +1050,8 @@ def run(prompt):
             "usage": reply.get("usage"), "cost": (reply.get("cost") or {}).get("request_cost_usd"),
             "energy": (reply.get("energy") or {}).get("energy_joules")}) + "\n")
         turn += 1
+        if why := api.refusal(reply):
+            raise Refused(why)
         assistant, text, calls = api.parse(reply)
         if text.strip() or calls:
             messages.append(assistant)
@@ -1275,6 +1308,9 @@ def _session(loop, i, pairs):
         try:
             session(loop / f"{i:02}", prompt, seeds)
             break
+        except Refused as e:
+            _log(loop / f"{i:02}" / "transcript.log", f"\n[the provider refused: {e}]\n")
+            _stop(loop, f"session {i}/{rec['n']}: the provider refused: {e}; stopping, since a retry would send the same conversation")
         except (Exception, SystemExit):
             traceback.print_exc()
             if attempt == SESSION_TRIES:
