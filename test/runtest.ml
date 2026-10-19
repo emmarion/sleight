@@ -15,7 +15,10 @@
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
    "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;
-   "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself. *)
+   "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself;
+   "; goal: mode" runs it under --goal mode, extracting nothing when the mode is open or proved;
+   "; flags: --f ..." gives it further command-line flags, which must be refused, a test naming one that only
+   slc takes passing here. *)
 open Sleight
 
 let dir = "../tests"
@@ -64,11 +67,13 @@ let extracted name externs templates source limit input args envs expect stderr 
 (* Every test runs with the FFI's implementations and again with them stripped (section 42's invariant). *)
 let rec run_test name =
   let src = read (Filename.concat dir (name ^ ".sl")) in
+  let flags = List.filter (String.starts_with ~prefix:"--") (List.concat_map (String.split_on_char ' ') (directive src "flags")) in
+  if List.exists (fun f -> not (List.mem f (Program.valued @ Program.switches))) flags then None else
   let modes = [ (true, "with externs"); (false, "without externs") ] in
   let modes = if directive src "externs" = [ "only" ] then [ List.hd modes ] else modes in
-  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src)) modes
+  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src flags)) modes
 
-and run_mode name externs src =
+and run_mode name externs src flags =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and library = Buffer.create 64 and code = ref 0 in
   Env.warn := Buffer.add_string warnings;
@@ -95,17 +100,23 @@ and run_mode name externs src =
   (* The test's own final is run only after the extracted sources are taken: running it may update a unique
      Settled in place, which the extracted program must start from as elaboration left it, as --extract does. *)
   let final = ref None in
+  let prelude = directive src "prelude" <> [ "none" ] in
+  Elab.goal_mode := (match directive src "goal" with [ m ] -> List.assoc m Elab.goal_modes | _ -> Elab.Unrequired);
+  Elab.goal := None;
+  Elab.discharged := false;
+  let goal = !Elab.goal_mode <> Elab.Unrequired in
   let outcome =
     try
+      Option.iter (fun m -> raise (Env.Error (Reader.nowhere, m))) (Program.goal_refusal !Elab.goal_mode ((if prelude then [] else [ "--no-prelude" ]) @ flags));
+      if flags <> [] then failwith "the flags of a `; flags:` directive were not refused";
       Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs);
-      let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
+      let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) ~last:false env (Reader.parse ~shape:(not warned) (label n) src) in
       let need env n =
         let outside = String.starts_with ~prefix:"../" n in
         Env.warn_unused := outside;
         Env.warn := Buffer.add_string (if outside then library else warnings);
         Fun.protect ~finally:(fun () -> Env.warn := Buffer.add_string warnings) (fun () -> one env n)
       in
-      let prelude = directive src "prelude" <> [ "none" ] in
       Env.warn_unused := false;
       let env = List.fold_left need (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
       Env.warn_unused := directive src "warn-unused" <> [ "no" ];
@@ -116,8 +127,9 @@ and run_mode name externs src =
       let warned = Indent.warn (label name) src in
       let env = Elab.run_toplevel ~consume:(fun env ty v -> final := Some (env, ty, v)) env (Reader.parse ~shape:(not warned) (label name) src) in
       let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
-      let sources = List.map (fun t -> (t, source t)) (if externs then [ true; false ] else [ true ]) in
+      let sources = List.map (fun t -> (t, source t)) (if goal then [] else if externs then [ true; false ] else [ true ]) in
       Option.iter (fun (env, ty, v) -> consume env ty v) !final;
+      Option.iter (fun r -> Buffer.add_string errors (r ^ "\n")) (Elab.close_goal ());
       Ok (sources, Buffer.contents printed)
     with e -> (match Program.explain (label name) e with Some m -> Error m | None -> raise e)
   in
@@ -149,6 +161,7 @@ and run_mode name externs src =
   match outcome with
   | _ when Buffer.length library > 0 -> Some ("a file it needs from outside tests/ warns:\n" ^ Buffer.contents library)
   | _ when mismatched_warnings <> None -> mismatched_warnings
+  | Ok (_, out) when goal && failures = [] && out = expect && Buffer.contents errors = stderr -> None
   | Ok (sources, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
       let limit = directive src "extract-bytes-at-most" in

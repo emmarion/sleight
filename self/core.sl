@@ -252,7 +252,7 @@
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK)) (many StDefUnique : -> (StmtK))
     (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK)) (many StUnary : -> (StmtK))
     (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
-    (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)))
+    (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)))
   ((FormerK : -> Type)
     enum
     (many FoFn : -> (FormerK)) (many FoTyCtor : -> (FormerK)) (many FoValCtor : -> (FormerK))
@@ -276,7 +276,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16)))
 
 (def-fns _ $ (many former-code : (many (FormerK) k) -> (many (Nat) n))
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoUniqueFn) 4) ((FoCell) 5)))
@@ -335,7 +335,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "goal" (SpStmt $ StGoal) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
   sp-cons "place-at" (SpExpr $ ExPlaceAt) $ sp-cons "place-at-many" (SpExpr $ ExPlaceAtMany) $ sp-cons "unplace-at" (SpExpr $ ExUnplaceAt) $ sp-cons "unplace-at-many" (SpExpr $ ExUnplaceAtMany) $ sp-cons "placed-slot" (SpExpr $ ExPlacedSlot) $ sp-cons "placed-eq" (SpExpr $ ExPlacedEq) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
@@ -2229,9 +2229,15 @@
   enum
   (many MkPrimSig : (many (Sp) prim) (many (Multiplicity) mult) (many (List $ Entry) params) (many (List $ Entry) rets) -> (PrimSig)))
 
+(def-adts $ (GoalMode : -> Type) enum (many GoalUnrequired : -> (GoalMode)) (many GoalOpen : -> (GoalMode)) (many GoalProved : -> (GoalMode)))
+
+(def-adts $ (Goals : -> Type)
+  enum
+  (many MkGoals : (many (GoalMode) mode) (many (Maybe $ Loc) site) (many (Multiplicity) mult) (many (Term) ty) (many (String) report) (many (Bool) discharged) -> (Goals)))
+
 (def-adts $ (Macros : -> Type)
   enum
-  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) (many (Nat) fuel) (many (Bool) fns-same-on) -> (Macros)))
+  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) (many (Nat) fuel) (many (Bool) fns-same-on) (many (Goals) goals) -> (Macros)))
 
 (def-adts $ (Tracked : -> Type)
   enum
@@ -2253,7 +2259,7 @@
   ((Uses : -> Type) enum (many MkUses : (many (IdMap $ Use) map) (many (List $ Nat) dirty) -> (Uses)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
   ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) (many (Bool) unwarned) -> (Pragmas)))
-  ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (Name) name) (many (Loc) here) -> (Said)))
+  ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidNote : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (Name) name) (many (Loc) here) -> (Said)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (List $ Nat) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
@@ -2557,29 +2563,33 @@
 (def-fns _ $ (many env-set-macros : (many (Env) e) (many (Macros) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn x))))
 (def-fns _ $ (many env-expansions : (many (Env) e) -> (many (Nat) r))
-  (match many (env-macros e) _ ((MkMacros n _ _ _ _ _) n)))
+  (match many (env-macros e) _ ((MkMacros n _ _ _ _ _ _) n)))
 (def-fns _ $ (many env-set-expansions : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros _ g ps ss f fs) (env-set-macros e $ MkMacros x g ps ss f fs))))
+  (match many (env-macros e) _ ((MkMacros _ g ps ss f fs gl) (env-set-macros e $ MkMacros x g ps ss f fs gl))))
 (def-fns _ $ (many env-gensyms : (many (Env) e) -> (many (Nat) r))
-  (match many (env-macros e) _ ((MkMacros _ g _ _ _ _) g)))
+  (match many (env-macros e) _ ((MkMacros _ g _ _ _ _ _) g)))
 (def-fns _ $ (many env-set-gensyms : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n _ ps ss f fs) (env-set-macros e $ MkMacros n x ps ss f fs))))
+  (match many (env-macros e) _ ((MkMacros n _ ps ss f fs gl) (env-set-macros e $ MkMacros n x ps ss f fs gl))))
 (def-fns _ $ (many env-prims : (many (Env) e) -> (many (List $ PrimSig) r))
-  (match many (env-macros e) _ ((MkMacros _ _ ps _ _ _) ps)))
+  (match many (env-macros e) _ ((MkMacros _ _ ps _ _ _ _) ps)))
 (def-fns _ $ (many env-add-prim : (many (Env) e) (many (PrimSig) p) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps ss f fs) (env-set-macros e $ MkMacros n g (Cons _ p ps) ss f fs))))
+  (match many (env-macros e) _ ((MkMacros n g ps ss f fs gl) (env-set-macros e $ MkMacros n g (Cons _ p ps) ss f fs gl))))
 (def-fns _ $ (many env-sources : (many (Env) e) -> (many (List $ String) r))
-  (match many (env-macros e) _ ((MkMacros _ _ _ ss _ _) ss)))
+  (match many (env-macros e) _ ((MkMacros _ _ _ ss _ _ _) ss)))
 (def-fns _ $ (many env-set-sources : (many (Env) e) (many (List $ String) ss) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps _ f fs) (env-set-macros e $ MkMacros n g ps ss f fs))))
+  (match many (env-macros e) _ ((MkMacros n g ps _ f fs gl) (env-set-macros e $ MkMacros n g ps ss f fs gl))))
 (def-fns _ $ (many env-fuel : (many (Env) e) -> (many (Nat) r))
-  (match many (env-macros e) _ ((MkMacros _ _ _ _ f _) f)))
+  (match many (env-macros e) _ ((MkMacros _ _ _ _ f _ _) f)))
 (def-fns _ $ (many env-set-fuel : (many (Env) e) (many (Nat) f) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps ss _ fs) (env-set-macros e $ MkMacros n g ps ss f fs))))
+  (match many (env-macros e) _ ((MkMacros n g ps ss _ fs gl) (env-set-macros e $ MkMacros n g ps ss f fs gl))))
 (def-fns _ $ (many env-fn-same : (many (Env) e) -> (many (Bool) r))
-  (match many (env-macros e) _ ((MkMacros _ _ _ _ _ fs) fs)))
+  (match many (env-macros e) _ ((MkMacros _ _ _ _ _ fs _) fs)))
 (def-fns _ $ (many env-set-fn-same : (many (Env) e) (many (Bool) fs) -> (many (Env) r))
-  (match many (env-macros e) _ ((MkMacros n g ps ss f _) (env-set-macros e $ MkMacros n g ps ss f fs))))
+  (match many (env-macros e) _ ((MkMacros n g ps ss f _ gl) (env-set-macros e $ MkMacros n g ps ss f fs gl))))
+(def-fns _ $ (many env-goals : (many (Env) e) -> (many (Goals) r))
+  (match many (env-macros e) _ ((MkMacros _ _ _ _ _ _ gl) gl)))
+(def-fns _ $ (many env-set-goals : (many (Env) e) (many (Goals) x) -> (many (Env) r))
+  (match many (env-macros e) _ ((MkMacros n g ps ss f fs _) (env-set-macros e $ MkMacros n g ps ss f fs x))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
@@ -3506,7 +3516,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse))))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) $ MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ BFalse)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

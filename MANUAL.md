@@ -141,6 +141,24 @@ lexer cannot finish is reported as far as it got.
 `--no-shape-note` leaves out the note naming the `bin/shape` command that a file
 with a parenthesis mistake otherwise gets; slc takes the same flag.
 
+`--goal mode` says what the unit's `goal` (DESIGN.md section 71) requires;
+`mode` is `none`, the default, `open` or `proved`. Under `none` the driver
+is as described above, whether or not a file sets a goal. Under `open` and
+`proved` the driver is off: nothing is run, printed or written once the
+files are elaborated, a final expression included. `open` fails a run in
+which no file sets a goal or a file ends in an expression; `proved` fails
+one in which no file sets a goal, a file before the last ends in an
+expression, or the last does not end in one that checks against the goal.
+When it succeeds, `proved` writes one `note` to stderr, in the format
+below, at the `goal` form, with the goal shown canonically as the scope
+there spells it (ASSUMPTIONS.md 223, 225): `` spec.sl:6:1: note: proved
+`(goal many (Doubler))` `` (`tests/goal_proved_fn.sl`). The reference
+refuses `--extract`, `--repl` and `--no-prelude` with `open` or `proved`;
+slc takes the same flag and refuses `--interpret` and `--no-prelude` with
+them, and then writes no OCaml. Warnings are reported as they are without
+the flag, and `--warnings-as-errors` fails a run that warns before any
+goal is checked.
+
 `--hints file` reads the hints that diagnostics attach to special forms
 and pieces of grammar from `file`, in place of `lib/specials.txt` and in
 its format; slc takes the same flag. `--first-error`, slc's alone, stops
@@ -178,7 +196,10 @@ whether or not it is then refused,
 `Program` must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, `; extract-bytes-at-most: n`
 bounds the size of the OCaml that extracting it writes, `; prelude: none` runs it
-under `--no-prelude`, and `; error: text`
+under `--no-prelude`, `; goal: mode` under `--goal mode`, extracting nothing and
+having no `slc --interpret` run when the mode is `open` or `proved`, `; flags: --f ...`
+under further flags, which `test/runtest.ml` requires to be refused and which a
+test naming a flag that only one implementation takes runs under that one alone, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-dir: dir`, `; confine-output-bytes: n`,

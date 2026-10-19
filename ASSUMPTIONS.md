@@ -2335,3 +2335,24 @@ silent.
      list; it now reads the first return that is neither erased nor
      written `at`, which for every earlier extern is the same return.
      The reference checks such types by name and reads no return.
+
+## The `goal` form and `--goal`
+
+223. **Where `--goal proved` reports.** The report is a `note` in the
+     message format of MANUAL.md, and both compilers write it to stderr
+     with their other messages, where stdout would otherwise hold slc's
+     OCaml or a program's output. A `; stderr:` directive checks it.
+
+224. **The final expression under `--goal open` or `proved` is not
+     evaluated.** The session reads "nothing is run after elaboration" as
+     covering the run a final expression gets in run position, so under
+     `proved` the last file's final expression is elaborated and checked
+     against the goal, and its code is never run; the checks the driver
+     of section 27 makes of a final value's type, such as the two forms a
+     final function may take, are not made either.
+
+225. **The goal is shown as the scope where it is set spells it.** The
+     report points at the `goal` form, so its keyword, multiplicity and
+     type are written as a message about that place writes them, even
+     when a later binder shadows a name the type mentions.
+

@@ -57,6 +57,12 @@ check_test() {
   [ "$(directive "$t" warn-unused)" = no ] || both="$both --warn-unused"
   [ "$(directive "$t" fn-same)" = yes ] && both="$both --fn-same"
   for n in $(directive "$t" eval-fuel); do both="$both --eval-fuel $n"; done
+  goal=$(directive "$t" goal)
+  [ -n "$goal" ] && both="$both --goal $goal"
+  case $goal in open|proved) [ "$flags" = --interpret ] && { echo "skip $name"; return; } ;; *) goal="" ;; esac
+  extra=$(directive "$t" flags)
+  case " $extra " in *" --extract "*|*" --repl "*) echo "skip $name"; return ;; esac
+  both="$both $extra"
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
     if "$B/slc" $both $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
@@ -88,7 +94,11 @@ check_test() {
   (cd "$B" && env -i $envs "$ROOT/$REF" $both $confine $files -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
   # The reference elaborates and runs in one process, so its stderr is its warnings and the program's own;
   # each slc run is compared with that whole stream, a compiled program's being slc's then the program's.
-  if [ "$flags" = --interpret ]; then
+  if [ -n "$goal" ]; then
+    (cd "$B" && env -i $envs "$B/slc" $both $confine $files < "$name.in" > "$name.out" 2> "$name.err"); code=$?
+    cp "$B/$name.err" "$B/$name.slc.err"
+    check_warns "$t" "$name" || return
+  elif [ "$flags" = --interpret ]; then
     (cd "$B" && env -i $envs "$B/slc" $both $confine --interpret $files -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
     cp "$B/$name.slc.err" "$B/$name.err"

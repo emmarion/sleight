@@ -67,6 +67,13 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
+let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
+let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ]
+
+let goal_refusal mode flags =
+  if mode = Elab.Unrequired then None
+  else List.find_map (fun f -> if List.mem f [ "--extract"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
+
 let consume w env ty v =
   match final env ty with
   | Main -> (driver env).run_main w v

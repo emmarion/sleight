@@ -8,10 +8,10 @@ let world args =
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
     exit; print = print_endline; fence = ref "/"; limit = ref None; used = ref 0 }
 
-let run consume env path =
+let run consume ?last env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
   let warned = Sleight.Indent.warn path src in
-  match report path (fun () -> Elab.run_toplevel ~consume ~path env (Reader.parse ~shape:(not warned) path src)) with Some env -> env | None -> exit 1
+  match report path (fun () -> Elab.run_toplevel ~consume ~path ?last env (Reader.parse ~shape:(not warned) path src)) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =
@@ -40,8 +40,7 @@ let repl consume env =
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
-  let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints"; "--eval-fuel" ]
-  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ] in
+  let valued = Program.valued and switches = Program.switches in
   let rec read flags files = function
     | [] -> (flags, List.rev files)
     | f :: v :: rest when List.mem f valued -> read ((f, v) :: flags) files rest
@@ -62,6 +61,9 @@ let () =
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");
   Reader.shape_notes := not (flag "--no-shape-note");
+  let fail m = prerr_endline m; exit 1 in
+  Elab.goal_mode := Option.fold ~none:Elab.Unrequired ~some:(fun m -> match List.assoc_opt m Elab.goal_modes with Some m -> m | None -> fail "--goal takes none, open or proved") (option "--goal");
+  Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
   let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let warned = ref false and pending = ref [] in
   let strict = flag "--warnings-as-errors" in
@@ -78,12 +80,12 @@ let () =
   let env = match report "lib/prelude.sl" (Builtin.load ~prelude:(not (flag "--no-prelude"))) with Some env -> env | None -> exit 1 in
   let dir_of f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i in
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, dir_of f)) files;
-  let env =
-    match files with
-    | [] when not (flag "--repl") -> settle (run held env "-")
-    | files ->
-        let env = settle (List.fold_left (run held) env files) in
-        if flag "--repl" then repl consume env;
-        settle env
-  in
+  let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
+  let last = List.length files - 1 in
+  let env = settle (List.fold_left (fun env (i, f) -> run held ~last:(i = last) env f) env (List.mapi (fun i f -> (i, f)) files)) in
+  if flag "--repl" then repl consume env;
+  let env = settle env in
+  if !Elab.goal_mode <> Elab.Unrequired then
+    match report (List.nth files last) Elab.close_goal with Some report -> Option.iter prerr_endline report | None -> exit 1
+  else
   Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Extract.emit env (List.rev !Env.trace)))) extract
