@@ -12,13 +12,6 @@ is a design decision. Remove an entry when it is fixed.
    code never becomes `(values)` for `check_marks` to fold. Such a
    function is only ever called erased, so nothing runs wrongly.
 
-4. **`(share u)` is accepted as the head of a type form.**
-   `tests/type_head_unique_const_degrade.sl` expects it, although a type
-   is an erased position, where `share` is an error. `elab_term` reads
-   the head through `special_of` without the position check that
-   `read_special` makes. Reported by a review session; not reproduced
-   independently.
-
 13. **Diagnostics found wanting by the sweep.** `slc` and the
     reference differ in wording on some refusals; one seen is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body

@@ -624,18 +624,20 @@ let expand env raw =
         (macro_of env head)
   | _ -> None
 
-let settle_head : (Env.t -> mult -> raw -> Env.t * raw) ref = ref (fun env _ raw -> (env, raw))
+let settle_head : (mult -> Env.t -> raw -> Env.t * raw) ref = ref (fun _ env raw -> (env, raw))
 
-let rec expand_one pos env raw =
-  let env, raw = !settle_head env pos raw in
+let named_head env = function List (_, List (l, _) :: _) -> error l "no function is called while a type is elaborated, so a head in a type cannot be a form (section 9)" | raw -> (env, raw)
+
+let rec expand_one head env raw =
+  let env, raw = head env raw in
   match expand env raw with
   | None -> (env, raw)
-  | Some (env, [ r ]) -> expand_one pos env r
+  | Some (env, [ r ]) -> expand_one head env r
   | Some (_, rs) -> error (loc raw) "%s must expand to one form here, and expanded to %d" (brief raw) (List.length rs)
 
 let rec expand_seq pos env = function
   | item :: rest ->
-      let env, item = !settle_head env pos item in
+      let env, item = !settle_head pos env item in
       (match expand env item with Some (env, out) -> expand_seq pos env (out @ rest) | None -> (env, item :: rest))
   | [] -> (env, [])
 
@@ -835,15 +837,13 @@ let pragma env l = function
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (settled env V.VToken) Prelude.level_term
 
 let rec elab_term ?expect env raw =
-  let env, raw = erased_reads (expand_one Many) env raw in
+  let env, raw = erased_reads (expand_one named_head) env raw in
   match raw with
   | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Hypothetical type_term in (env, Var x)
   | Handle (_, x, MintedType, _, _) -> refer x; let t = (minted_fact env x).ty in (enter_mentioned env t, t)
   | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
-      if computed env head && (entry env (reference env l head "a head")).state = Hypothetical then
-        error_in env (loc head) "a computed head in a type must be `Settled`, and this one is `Hypothetical`";
       match special_of env head with
       | Some sp -> elab_type_form env l sp args
       | None -> (
@@ -883,7 +883,7 @@ and elab_type_form env l sp args =
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), cs))
   | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "%s" (help env (Sp.misuse sp))
   | Sp.DumpContext, _ -> dump_context env l Dump.Type args
-  | Sp.CompileError, _ -> compile_error Erased env l args
+  | Sp.CompileError, _ -> compile_error named_head Erased env l args
   | (Sp.LevelOf | Sp.MatchableOf | Sp.DelegateOf | Sp.NumeralOf | Sp.SlotOf | Sp.AtFnOf), _ -> fetched env l sp args
   | _ -> error l "%s cannot appear in a type" (tick (speller env (Sp.name sp)))
 
@@ -926,12 +926,14 @@ and fetched env l sp args =
       match List.find_opt about env.scope.ids with Some y -> (env, Var y) | None -> error l "%s has no `Delegate` proof in scope" (qname env g))
   | _ -> error l "%s" (help env (Sp.misuse sp))
 
-and compile_text pos env l sp = function
+and compile_text head pos env l sp = function
   | [ raw ] ->
       let env, x, m = match raw with
         | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, x, made env raw x)
-        | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let env = admitted env a in let x = reference env (loc a) a "a name" in (env, x, made env a x)
-        | _ -> (match !settle_head env Many (List (loc raw, [ raw ])) with env, List (_, [ Handle (_, x, _, m, _) ]) -> (env, x, m) | _ -> assert false) in
+        | _ -> (match head env (List (loc raw, [ raw ])) with
+            | env, List (_, [ Handle (_, x, _, m, _) ]) -> (env, x, m)
+            | env, List (_, [ List (_, [ _; a ]) ]) -> let env = admitted env a in let x = reference env (loc a) a "a name" in (env, x, made env a x)
+            | _ -> assert false) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
       (match (if m = Erased then None else settled_value env x str) with
        | Some v -> (read_special pos env raw, str_host env l v)
@@ -941,7 +943,7 @@ and compile_text pos env l sp = function
              (if m = Erased then "is erased" else if e.state = Hypothetical then "is `Hypothetical`" else "has type " ^ qshow env (minted_type env x) ^ ", not the prelude's `String`"))
   | _ -> error l "%s" (help env (Sp.misuse sp))
 
-and compile_error : 'a. mult -> Env.t -> Reader.loc -> Reader.raw list -> 'a = fun pos env l args -> error l "%s" (snd (compile_text pos env l Sp.CompileError args))
+and compile_error : 'a. (Env.t -> raw -> Env.t * raw) -> mult -> Env.t -> Reader.loc -> Reader.raw list -> 'a = fun head pos env l args -> error l "%s" (snd (compile_text head pos env l Sp.CompileError args))
 
 (* The form's arguments are terms in section 9's grammar, each shown with its type where it has one. *)
 and dump_context : 'a. Env.t -> Reader.loc -> Dump.goal -> Reader.raw list -> 'a = fun env l goal args ->
@@ -1268,7 +1270,7 @@ and elab_erased env raw =
 
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
-  let env, raw = expand_one pos env raw in
+  let env, raw = expand_one (!settle_head pos) env raw in
   match raw with
   | Atom (l, _) | Handle (l, _, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
       let env, x = atom_entry env raw in
@@ -1322,7 +1324,7 @@ and elab_head env pos l raw =
       let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
       (placed env x r.place,res_of env x,V.CVar x)
 
-and computed_head env pos raw =
+and computed_head pos env raw =
   match raw with
   | List (l, (List (hl, _) as h) :: args) when not (named_share env h) ->
       let env, r, _ = elab_head env pos hl h in
@@ -1774,7 +1776,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       | [ sg; gty; g; sf; fty; f ] -> mint env (proof_type Prelude.coercible [ sg; gty; g; sf; fty; f ])
       | _ -> assert false)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
-  | Sp.CompileError, _ -> compile_error pos env l args
+  | Sp.CompileError, _ -> compile_error (!settle_head Many) pos env l args
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick ("(" ^ speller env (Sp.name sp) ^ if args = [] then ")" else " ...)")) (help env (Sp.hints (Sp.name sp)))
   | sp, _ -> error l "%s" (help env (Sp.misuse sp))
 
@@ -2143,8 +2145,8 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
       | Some Sp.Unary, _ -> elab_unary spos env l args
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
-      | Some Sp.CompileError, _ -> compile_error spos env l args
-      | Some Sp.CompileWarn, _ -> let env, text = compile_text spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
+      | Some Sp.CompileError, _ -> compile_error (!settle_head Many) spos env l args
+      | Some Sp.CompileWarn, _ -> let env, text = compile_text (!settle_head Many) spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
       | Some Sp.SlotSelf, [ a ] ->
           let env = admitted env a in
           let x = reference env (loc a) a "a variable" in

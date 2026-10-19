@@ -226,7 +226,8 @@ A list is elaborated according to its head:
    name or a literal is its own entry. A head that is a form is
    `Settled` in run position, since it runs as soon as it is
    elaborated (§29); inside a body it is `Settled` only when it
-   forwards a `Settled` entry, as `(share n)` does (§16). An erased
+   forwards a `Settled` entry, as `(share n)` does (§16). In a type,
+   no head is computed (§9). An erased
    `Settled` holds only the token of §5 and has no value to dispatch
    on. A head that is not dispatched is elaborated only once, and is
    the callee of item 2. Annotation tokens (§54) are not heads, and are
@@ -387,10 +388,9 @@ name.
 
 ## 9. Restricted dependent types
 
-The elaborated form of a type never contains a function call. A
-head computed in a type must elaborate to a `Settled` entry (§6),
-which is read at elaboration and leaves no call behind. A type is
-built from:
+The elaborated form of a type never contains a function call, and
+elaborating a type calls none: the only code that runs is a macro's
+expansion (§62). A type is built from:
 
 1. variable references,
 2. applications of a type constructor,

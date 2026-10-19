@@ -9,5 +9,6 @@
 ((pick let) ((many x)) 5)
 (let ((many y)) ((pick values) 6))
 (let ((many z)) ((idm splice) 7))
-(let ((many ((pick Fn) (level-of inc) (many (Nat) a) -> (many (Nat) b)) g)) inc)
+(let ((many F)) (pick Fn))
+(let ((many (F (level-of inc) (many (Nat) a) -> (many (Nat) b)) g)) inc)
 (MkPair (Nat) (Pair (Nat) (Pair (Nat) (Nat))) x $ MkPair (Nat) (Pair (Nat) (Nat)) y $ MkPair (Nat) (Nat) z (g 7))

@@ -1,4 +1,4 @@
-; expect: 0
+; error: tests/type_head_share_bad.sl:6:14: error: no function is called while a type is elaborated, so a head in a type cannot be a form (section 9)
 (def-fns _ $ (many take : (unique (Special) _s) -> (many (Nat) r)) (Zero))
 (def-lvl lv)
 (def-fns lv $ (many idf : (many (Nat) n) -> (many (Nat) r)) n)
