@@ -54,7 +54,9 @@ by the owner and apply to every session.
 
 11. **Never commit an unapproved design decision.** The docs and code
     record the owner's decisions; Claude proposes, the owner disposes,
-    and the proposing happens in chat. If, while applying agreed edits,
+    and the proposing happens in chat. A proposal is succinct: it
+    states the design, not how it is implemented or how it came about.
+    If, while applying agreed edits,
     a gap or contradiction turns up that the agreed edits don't cover,
     stop and ask — do not invent a resolution and write it into any
     committed file, however hedged or clearly flagged: "flagged for
@@ -65,11 +67,14 @@ by the owner and apply to every session.
     wording choices while applying approved edits are fine.)
 
 12. **Every change to DESIGN.md needs the owner's confirmation of its
-    exact wording first.** Before
-    editing one of them, show the owner the proposed text — the file,
-    the section, the passage being replaced, and the replacement,
-    verbatim — and change the file only after the owner confirms that
-    wording. A decision the owner made in chat is not yet permission to
+    exact wording first.** The wording is discussed after the change
+    is implemented, so that it describes what was built. Before
+    editing one of them, show the owner the proposed edit one section
+    at a time, each with enough unchanged text around it to read it in
+    place, new text in bold and removed text in strikethrough, and
+    change the file only after the owner confirms that wording. Keep
+    the wording succinct: DESIGN.md states what the language is, not
+    how an implementation does it. A decision the owner made in chat is not yet permission to
     write it into one of these files: the words are the owner's to
     confirm, and a session's paraphrase of a decision can smuggle in a
     claim the owner never made. (Rule 11 governs whether a decision is
