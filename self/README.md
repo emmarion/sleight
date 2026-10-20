@@ -47,8 +47,9 @@ do: verify that the interpreter's evaluation is honest (DESIGN.md section 29's
 interpreter-trust obligation applies to it as much as to `lib/`).
 
 The compile-time part is the "comp time / Const stuff" the owner asked
-the compiler to interpret: `self/eval.sl` is a plain recursive
-interpreter over the post-erasure code, run on every run-position
+the compiler to interpret: the interpreter (`eval` and `apply`, in the
+main block of `self/elab.sl`) is a plain recursive interpreter over the
+post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as host
@@ -92,7 +93,8 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   objects (sections 5, 7; ASSUMPTIONS 139),
   canonicalization, instantiation, forced unification with its three
   contradictions (section 7), term identity, and the built-in entries.
-- `eval.sl` — the compile-time interpreter over the store: every value
+- `eval.sl` — the store the compile-time interpreter runs over, and
+  that interpreter's conventions, though its functions are in `elab.sl`: every value
   is an address, every step returns the grown store with a proof of the
   growth by which what was held before is widened, and a run-position
   statement is a session that reads the store out of the environment
@@ -108,7 +110,9 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
-  expansion of `unary` and `distinct`, and the top level.
+  expansion of `unary` and `distinct`, and the top level. Its main block
+  also holds the compile-time interpreter and macro expansion, at one
+  level with the elaborator (see termination below).
 - `runtime.ml` — what the OCaml runtime every compiled program starts
   with adds to `lib/ffi_core.ml` and `lib/driver_core.ml`: `absurd`,
   the phantom indices of narrowing, the identity `Matchable`, each
@@ -244,7 +248,14 @@ the entry says otherwise, and recorded so it can be revisited.
   a function hands its whole raw to another, a `Steps` budget decreases
   instead, one step per hop, its size fixed by the code's shape and
   stated in the type, so the zero case is refuted rather than reported
-  (ASSUMPTIONS 96).
+  (ASSUMPTIONS 96). Because the elaborator's main block also holds the
+  interpreter and macro expansion, a call within it is ordered first by
+  the expansion budget, then by an erased count of callbacks from the
+  interpreter into the elaborator, which no call currently decreases,
+  then by an erased hop count that each function fixes in its type as a
+  `hop-` constant and that drops on every call from the elaborator
+  towards the interpreter; after those three, each function decreases
+  as described above, the interpreter by its fuel.
 - **Canonicalization and forced unification terminate by proof**
   (ASSUMPTIONS 93 and 94). The fact table is a trie whose type index
   counts its rule-free entries; the rewrite rules are a list in the
