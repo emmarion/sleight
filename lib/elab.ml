@@ -49,8 +49,8 @@ let rec enter_mentioned env t =
     | _ -> env) 0 env t
 
 (* A special form's head: a Settled, non-erased entry of type (Special) holding one of its variants (section 6). *)
-let minted_fact env m = Option.value (IntMap.find_opt m (trusted env)) ~default:(fact env m)
-let minted_type env x = canon { env with facts = trusted env } (minted_fact env (entry env x).minted).ty
+let minted_fact env m = Option.value (IntMap.find_opt m (trusted env).facts) ~default:(fact env m)
+let minted_type env x = canon (comptime_boundary env) (minted_fact env (entry env x).minted).ty
 let minted_is env x = Var (entry env x).minted
 let settled_value env x ty = let env = enter_mentioned env (Var x) in match entry env x with
   | { state = Settled v; mult = (Many | Unique); _ } when equal (minted_type env x) ty -> Some v
@@ -541,7 +541,7 @@ let implement env p args = match p, args with
   | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
       [ literal_handle env (match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v)) ]
   | Sp.SettledEq, [ _; V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
-      let snap = List.fold_left enter_mentioned { env with facts = trusted env } [ Var x; Var y ] in
+      let snap = List.fold_left enter_mentioned (comptime_boundary env) [ Var x; Var y ] in
       let a = denoted snap x rx and b = denoted snap y ry in
       let snap = List.fold_left enter_mentioned snap (a @ b) in
       [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
@@ -550,7 +550,7 @@ let implement env p args = match p, args with
   | (Sp.SettledTyApply | Sp.SettledValApply), pos :: _ :: hs ->
       let l = match Ffi.unpos pos with Ffi_core.MkPos (f, line, col) -> Reader.At { file = str_host env Reader.nowhere f; line = nat_z env Reader.nowhere line; col = nat_z env Reader.nowhere col } | NoPos -> Reader.NoLoc in
       let hs = List.map (function V.VHandle (x, r, m, v) -> (x, r, m, v) | _ -> raise (Eval.Runtime "expected a handle")) hs in
-      let snap = List.fold_left (fun env (x, r, _, _) -> let env = enter_mentioned env (Var x) in List.fold_left enter_mentioned env (denoted env x r)) { env with facts = trusted env } hs in
+      let snap = List.fold_left (fun env (x, r, _, _) -> let env = enter_mentioned env (Var x) in List.fold_left enter_mentioned env (denoted env x r)) (comptime_boundary env) hs in
       let x, r, _, _ = List.hd hs in
       [ (match !applied_handles snap l p (List.hd (denoted snap x r)) (List.map (fun (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v)) hs) with
          | exception Error (l', m) -> pbuild env "Fail" [ str_value env (report l' m) ]

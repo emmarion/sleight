@@ -2811,7 +2811,7 @@
   (let ((erased _) (erased _) (many tb3)) $ reenter-lits minted _ _ fr2 $ table-weaken _ _ _ _ tb $ lt-weaken fr fr2 p)
   (MkEnv _ hp2 sc en2 _ _ fr2 tb3 rp ob li2 fi2 lv st cl2 wa2 tk2 lt2 lo pr us hn ex2))
 
-(def-fns _ $ (many trusted-snapshot : (many (Env) env) -> (many (Env) r))
+(def-fns _ $ (many comptime-boundary : (many (Env) env) -> (many (Env) r))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (let-match many env (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let ((erased _) (erased _) (many tb0)) $ match many rp (((Nat) n0) ((Facts n0) f0) ((Table n0 f0 bnd) _))
@@ -3495,7 +3495,7 @@
   (type-in _ _ bnd tb x))
 
 (def-fns _ $ (many minted-type : (many (Env) env) (many (Nat) m) -> (many (Term) t))
-  (match many (is-literal env m) _ ((BTrue) (type-of (trusted-snapshot env) m)) ((BFalse) (trusted-type env m))))
+  (match many (is-literal env m) _ ((BTrue) (type-of (comptime-boundary env) m)) ((BFalse) (trusted-type env m))))
 (def-fns _ $ (many minted-is : (many (Nat) m) -> (many (Term) t))
   (TVar m))
 

@@ -5190,7 +5190,7 @@
     (let-match unique w (MkMacroState sl e _ ewp u))
     (let ((unique ew0)) (unplace-at _ _ _ ewp))
     (let-match erased (placed-slot _ _ _ ewp) (Refl _ _))
-    (let ((many snap)) $ env-at-loc (trusted-snapshot $ env-with-heap e _ hp) lo)
+    (let ((many snap)) $ env-at-loc (comptime-boundary $ env-with-heap e _ hp) lo)
     (let ((many before)) $ list-length _ $ env-said snap)
     (let ((many (Term) h)) $ match many hrefs _ ((Cons _ c _) (match many (heap-denoted snap _ hp c) _ ((Cons _ t _) t) ((Nil _) (TErr "not a handle")))) ((Nil _) (TErr "no handle")))
     (let ((many hty)) $ match many (term-type snap h) (((Term) _)) ((Some _ ty) (canon-env snap ty)) ((None _) (TErr "no type")))

@@ -1193,7 +1193,7 @@
   (let-match many r2 (Cons _ q r3) ((Nil _) (None _)))
   (let-match many r3 (Cons _ none r4) ((Nil _) (None _)))
   (let-match many r4 (Cons _ some _) ((Nil _) (None _)))
-  (let ((many snap)) $ trusted-snapshot e)
+  (let ((many snap)) $ comptime-boundary e)
   (Some _ $ match many (terms-canon-eq snap (heap-denoted snap _ hp p) $ heap-denoted snap _ hp q) _ ((BTrue) some) ((BFalse) none)))
 
 (def-fns _ $ (many mint-refused : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) ->

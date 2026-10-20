@@ -109,6 +109,7 @@ type scope = { ids : id list; named : id NameMap.t }
    facts in force; [touched] holds the objects whose names changed since [merge_opens] last ran. *)
 type opened = { obj : id; kind : [ `Matchable | `AtFn | `Other ]; names : term list }
 type opens = { opened : opened list; touched : id list }
+type snapshot = { facts : fact IntMap.t; opens : opens }
 
 (* A use, with where it was: what the other one of a conflicting pair names. *)
 type use = Shared | Consumed
@@ -130,14 +131,14 @@ type t = {
   subterms : id list;
   enclosing : id option;
   run_pos : bool;
-  trusted : fact IntMap.t;
+  trusted : snapshot;
   values : Value.venv;
   pending : (id * Value.code) list;
   prelude : scope;
 }
 
 let empty =
-  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -195,7 +196,8 @@ let outside env = Seq.take_while (fun (x, _) -> x < 0) (IntMap.to_seq env.entrie
 let present_literals env = List.of_seq (Seq.filter_map (fun (x, _) -> Hashtbl.find_opt literal_of x) (outside env))
 let carry outer inner = Seq.fold_left (fun env (x, _) -> enter_row env x) outer (outside inner)
 
-let trusted env = if env.run_pos then env.facts else env.trusted
+let trusted env = if env.run_pos then { facts = env.facts; opens = env.opens } else env.trusted
+let comptime_boundary env = let t = trusted env in { env with facts = t.facts; opens = t.opens; run_pos = true }
 let leave_run env = { env with run_pos = false; trusted = trusted env }
 
 
