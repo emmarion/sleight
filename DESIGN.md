@@ -632,10 +632,7 @@ ways. The second and third are uses:
 
 Every argument to a constructor, a function or a cell behaves as if it
 were first bound to an anonymous variable. An argument that is already
-a variable is not rebound. An argument that is not a variable is bound
-before the call in two cases: when its parameter is non-erased and the
-call is in a non-erased position, and when a later entry of the
-signature names its slot (§36, §35). The binding is a statement (§27)
+a variable is not rebound. That binding is a statement (§27)
 placed just before the statement or final form that contains the call,
 so its entry stays in scope, anonymously, for the rest of the
 expression around it, as the entries of a `let`'s right-hand-side
