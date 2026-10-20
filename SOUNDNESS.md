@@ -163,8 +163,8 @@ with its models (§42), the `Slots` functions of §69 included, and
 `slot-eq`, which §42 exempts from that, answers `Some` only for one
 word (§67); `cell-same` yields its `JMEq` only for equal cells (§68),
 which rests on OPEN.md 3; `comptime-match` reads correct values (§29,
-OPEN.md 4), as do `settled-eq`, `resolve` and `settled-value` (§64,
-§65); the other primitives of §65 and the driver's answers to
+OPEN.md 4), as do `settled-eq`, `resolve`, `settled-value`,
+`settled-ty-apply` and `settled-val-apply` (§64, §65); the other primitives of §65 and the driver's answers to
 `world-do` (§42) give values of their declared types; and the axioms
 `gensym-unique`, `placed-slot` and `placed-eq` (§65, §66) and the
 literal facts of §45 are true.

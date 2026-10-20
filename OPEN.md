@@ -198,10 +198,6 @@ references are to DESIGN.md.
     consumes the value, and no `settled-value` reads an `MUnique` handle
     (§64). It would need use accounting for an entry that no scope
     holds. Deferred.
-35. Should there be a `settled-apply`, applying a handle to a type
-    constructor to handles to its arguments and minting the application
-    as a type entry? A macro could then mint at a type such as `(List X)`
-    for a user's `X` that no `Settled` entry names yet. Deferred.
 36. Should `fn-same` (§70) be available without `--fn-same`, or at all?
     It appears consistent with what the checker can currently express,
     since no form seems able to tell apart two `Fn` entries of one type.

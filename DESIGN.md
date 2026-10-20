@@ -2002,8 +2002,8 @@ which `lib/prelude.sl` is the reference:
   `gensym`, `gensym-unique`, `settled-type`, `settled-erase`,
   `settled-mult`, `settled-value`, `settled-eq`, `intern-nat`,
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
-  `resolve` and `read-file`, and the function `symbol-eq`. §62 to §65 describe them and the special form
-  `settled-of`.
+  `resolve` and `read-file`, and the function `symbol-eq`. §62 to §65 describe them and the special forms
+  `settled-of`, `settled-ty-apply` and `settled-val-apply`.
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
   `placed-eq`. §66 describes them. §67 describes `slot-eq`.
@@ -2476,7 +2476,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `settled-of`, `settled-type`, `settled-erase`, `settled-mult` and
   `settled-value` (§64), `gensym`, `settled-eq`, `intern-nat`,
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
-  `resolve` and `read-file` (§65),
+  `resolve`, `read-file`, `settled-ty-apply` and `settled-val-apply` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
   (§66), `slot-eq` (§67), `cell-same` (§68) and `fn-same` (§70).
 - the `at` wrapper around a cell invocation or an at-function call,
@@ -2900,7 +2900,8 @@ and passed along rather than joined. Only the expander supplies a
 `MacroWorld`, to a macro's function. It has no constructor and is no
 entry, so a non-erased one never escapes an expansion, and the forms below that take
 one run only there. A function that takes a macro world returns it `at`
-its parameter. The forms are primitives, checked as calls:
+its parameter. The forms below are primitives, apart from the two
+special forms that end this section, checked as calls:
 
 ```scheme
 (def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
@@ -2982,6 +2983,27 @@ names it; standard input is not one. `path` is resolved against that
 name's directory and must land, through any symlinks, inside that directory or
 below it. Otherwise, for `NoPos`, and where the read fails, it
 answers `Fail`. The fence (MANUAL.md) does not apply to it.
+
+`(settled-ty-apply mw c a1 ... an)` and `(settled-val-apply mw c a1 ... an)`
+take `mw` at `unique` and handles `c : (Settled m C t)` and
+`ai : (Settled mi Ai ti)` at `many`. They give
+`(unique (MacroWorld) mw2 at mw)` and
+`(many (Result (Settled m R (t t1 ... tn))) r)`, where `R` is the type of
+`(t t1 ... tn)`. Where the form is written:
+
+- `C` must canonicalize to a `TyCtor` former, or to a `ValCtor` former for
+  `settled-val-apply`;
+- `(t t1 ... tn)` must check as a term (§9);
+- every handle must be `MErased`, except that for `settled-val-apply` `m`
+  may be `(MMany)`, and then so is each non-erased field's handle.
+
+Where it runs, the application is checked again, against the facts
+`settled-eq` reads. On failure the form answers `Fail` with the
+elaborator's report, located at the form; the report's text may change.
+Otherwise it answers `Ok` with a handle to a fresh anonymous `Settled`
+entry, outside every scope, whose `is` rule is the application. At
+`(MMany)` that entry holds the constructor applied to the fields' values.
+In an erased position the form mints nothing.
 
 ## 66. `Placed`
 
