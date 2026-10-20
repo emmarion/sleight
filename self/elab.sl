@@ -5521,7 +5521,7 @@
     (let ((many by-name)) $ match many (share-arg env xraw) (((Bool) _)) ((Some _ a) (match many a (((Bool) _)) ((RList _ _) (BFalse)) (else (BTrue)))) ((None _) (BFalse)))
     (let-match many by-name (BFalse) ((BTrue) (values ew env $ None _)))
     (let ((unique ew1) (many env2) (many ress) (many h) (erased lock)) $ notail $ elab-expr-demand ew fuel sugar xraw env ctx (Cons _ mode $ Nil _) no-tele (CCPlain) (Fixed _))
-    (let ((many env3) (many _) (many y)) $ prepare-argument env2 mode (first-res _ _ ress lock) $ BTrue)
+    (let ((many env3) (many _) (many y)) $ prepare-argument (settle-res env2 $ first-res _ _ ress lock) mode (first-res _ _ ress lock) $ BTrue)
     (values ew1 (settled-from _ _ env3 (hoisted-code _ (Cons _ mode $ Nil _) h) y) $ Some _ y))
 
   ((many compute-head : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) items) (many (Env) envl) (many (List $ List $ Nat) ctx) (many (Multiplicity) pos) -> (unique (ElabWorld) ewr at ew)
