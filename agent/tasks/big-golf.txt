@@ -1,4 +1,4 @@
-#!pi -k HANDOFF.md:180000 -n 10 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+#!pi -k HANDOFF.md:180000 -n 10 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
 Your task is to create a 512 KiB file called BIG.
 Or: to lay the groundwork for a future session to do so.
 

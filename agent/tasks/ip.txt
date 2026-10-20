@@ -1,4 +1,4 @@
-#!pi -f ../../self -f ../pi.py -k HANDOFF.md:180000 -n 25 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+#!pi -f ../../self -f ../pi.py -k HANDOFF.md:180000 -n 25 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
 Your task is to write to ip.txt the global IP address of this VM.
 Or: to lay the groundwork for a future session to do so.
 

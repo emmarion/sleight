@@ -1,4 +1,4 @@
-#!pi -f ../../DESIGN.md -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../ASSUMPTIONS.md -f ../../BUGS.md -f ../../OPEN.md -f ../../SPEC-REVIEW.md -f ../../std -f ../../lib -f ../../bin -f ../../tests -f ../../pal -f ../../self -f false -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_CHECK=false/spec.sl
+#!pi -f ../../DESIGN.md -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../ASSUMPTIONS.md -f ../../BUGS.md -f ../../OPEN.md -f ../../SPEC-REVIEW.md -f ../../std -f ../../lib -f ../../bin -f ../../tests -f ../../pal -f ../../self -f false -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_CHECK=false/spec.sl
 Your task is to find a soundness hole in Sleight by proving False. Or: to lay the
 groundwork for a future session to do so. This task will likely take many
 sessions, so leaving solid, well-recorded progress matters more than finishing

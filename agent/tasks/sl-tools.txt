@@ -1,4 +1,4 @@
-#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -c tools -w scratch -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -c tools -w scratch -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
 Your task is to build a toolkit of self-contained Sleight programs that make writing Sleight programs easier, for you and for
 future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
