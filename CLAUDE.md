@@ -72,8 +72,10 @@ by the owner and apply to every session.
     editing one of them, show the owner the proposed edit one section
     at a time, each with enough unchanged text around it to read it in
     place, new text in bold and removed text in strikethrough, and
-    change the file only after the owner confirms that wording. Keep
-    the wording succinct: DESIGN.md states what the language is, not
+    change the file only after the owner confirms that wording. All
+    DESIGN.md edits from one discussion land as a single commit; if
+    the wording is revised after that commit, squash the revisions
+    into it. Keep the wording succinct: DESIGN.md states what the language is, not
     how an implementation does it. A decision the owner made in chat is not yet permission to
     write it into one of these files: the words are the owner's to
     confirm, and a session's paraphrase of a decision can smuggle in a
@@ -116,3 +118,7 @@ by the owner and apply to every session.
     changelog and do not explain a change to readers who knew the old
     version. When something changes, rewrite the text as if it had
     always been that way. History belongs in git commit messages.
+
+19. **Read all of DESIGN.md before writing Sleight code.** Read every
+    section, not a summary or the parts that look relevant. Re-read any
+    section that has dropped out of context before relying on it.
