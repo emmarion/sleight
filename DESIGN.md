@@ -851,7 +851,8 @@ A value of such a type is represented as that field (§33).
 declared under exactly one type constructor in `def-adts`. Its return
 is a saturated application of that type constructor, with one argument
 per entry of the type constructor's telescope. The arguments are
-expressions in the constructor's own telescope, in §9's grammar.
+expressions in §9's grammar, and may refer to the constructor's own
+telescope and to any entry in scope.
 
 **Indices are not shared scope.** A type constructor's parameters are
 in scope only in its own telescope. A constructor that constrains an
