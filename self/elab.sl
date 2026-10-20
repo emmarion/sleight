@@ -3090,7 +3090,7 @@
     (subterm many (List $ Maybe $ Nat) ids) -> (many (List $ Code ctx many-one) codes))
   (let-match many ids (Cons _ id rest) ((Nil _) (Nil _)))
   (Cons _ (match many id (((Code ctx many-one) _))
-    ((None _) (CValue _ (BToken _))) ((Some _ x) (var-code env ctx x))) (notail $ cell-slot-codes env ctx rest)))
+    ((None _) (var-code env ctx null-id)) ((Some _ x) (var-code env ctx x))) (notail $ cell-slot-codes env ctx rest)))
 
 (def-fns _ $ (many cell-slot-writes : (many (Env) env) (many (List $ List $ Nat) ctx)
     (subterm many (List $ Maybe $ Nat) ids) (many (Nat) index) -> (many (List $ Pair (Nat) $ Code ctx many-one) writes))
