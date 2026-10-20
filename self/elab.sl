@@ -2899,6 +2899,7 @@
 
 (def-fns _ $ (many pattern-cell-option : (many (Env) env) (many (Multiplicity) mult) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Bool) extra) (many (Maybe $ Syn) name) -> (many (Env) out) (many (Maybe $ Nat) cell))
   (let-match many extra (BTrue) ((BFalse) (values env (None _))))
+  (let-match many name (Some _ _) ((None _) (values env (None _))))
   (let ((many env1) (many id)) (pattern-cell env mult scrut c fids name))
   (let ((many env2)) (match many (res-term scrut) (((Env) _)) ((TVar x) (forward-state env1 id x)) (else env1)))
   (values env2 (Some _ id)))
