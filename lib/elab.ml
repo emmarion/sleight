@@ -896,9 +896,11 @@ and elab_type_form env l sp args =
 and slot_var env l = function
   | [ a ] ->
       let env, x = atom_entry_or env (loc a) a "a direct variable reference" in
-      if List.mem x env.ctor_tele then error_in env (loc a) "`slot-of` in a constructor's telescope cannot name %s, bound by a telescope still being written" (qname env x);
+      unwritten env (loc a) "`slot-of`" x;
       (env, x)
   | _ -> error l "%s" (help env (Sp.misuse Sp.SlotOf))
+
+and unwritten env l form x = if List.mem x env.ctor_tele then error_in env l "%s cannot name %s, an entry of a constructor's telescope still being written" form (qname env x)
 
 and fetched env l sp args =
   match (sp, args) with
@@ -963,13 +965,13 @@ and elab_fn_type ?(unique = false) env lv ps rs =
   (carry env env', (if unique then UniqueFn (lv, params, rets) else Fn (lv, params, rets)), ids)
 
 and elab_tyctor env l ps ret =
-  let env', _, tele = elab_tele { env with ctor_tele = env.signature } ~ctor:true ~mults:(fun _ l -> function None -> Some Erased | Some m -> no_mult env "a type constructor's parameters" l m) ps in
+  let env', _, tele = elab_tele env ~ctor:true ~mults:(fun _ l -> function None -> Some Erased | Some m -> no_mult env "a type constructor's parameters" l m) ps in
   let env' = match ret with [ r ] -> let env', r = elab_term env' r in check_equal env' l r type_term; env' | _ -> error_in env l "`TyCtor` returns `Type`" in
   (carry env env', TyCtor tele)
 
 and elab_valctor env l items =
   let ps, ret = split_arrow env l items in
-  let env', ids, tele = elab_tele { env with ctor_tele = env.signature } ~ctor:true ps in
+  let env', ids, tele = elab_tele env ~ctor:true ps in
   let env', ret = match ret with [ r ] -> elab_type env' r | _ -> error l "a constructor returns one type" in
   settle env' l ret;
   (match canon env' ret with
@@ -1013,6 +1015,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope and match annotation entries";
           if lit_of raw <> None then error_in env (loc raw) "`at` names a variable, not a literal";
           let x = reference env (loc raw) raw "a location variable" in
+          unwritten env (loc raw) "`at`" x;
           refer ~live:(mult <> Erased && not env.usage_erased) x;
           if (entry env x).mult = Erased && mult <> Erased then error_in env (loc raw) "`at` needs a variable declared `many` or `unique`";
           slot_of x) e.s_place in
@@ -1020,7 +1023,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Hypothetical ty ?rule) in
         pend x;
         let env = placed env x place in
-        (i + 1, { env with signature = x :: env.signature; ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract_slots env ids) sg; place = Option.map (abstract_slots env ids) place; loc = e.s_loc } :: tele))
+        (i + 1, { env with ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract_slots env ids) sg; place = Option.map (abstract_slots env ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
   in
   (env, List.rev ids, List.rev tele)
@@ -2029,7 +2032,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
         in
         let env', _, ann_tele = elab_tele env ~places:true ~mults ~holes:true ann in
-        let env = { env' with scope = env.scope; signature = env.signature } in
+        let env = { env' with scope = env.scope } in
         let env = match tele with Some tele when List.length tele = List.length ann_tele -> solve_tele ~strict:true env l tele ann_tele | _ -> env in
         List.iter (fun e -> settle env l (sg_term e.sg)) ann_tele;
         (env, List.map (fun e -> { e with sg = map_sg (metaless env) e.sg }) ann_tele)
@@ -2195,7 +2198,7 @@ and elab_let spos env l args =
   let env, tele, tele_ids =
     if binders <> [] && List.for_all (fun b -> b.s_sg <> None) binders then
       let env', ids, t = elab_tele env ~holes:true ~written:false binder_raws in
-      ({ env' with scope = env.scope; signature = env.signature }, Some t, ids)
+      ({ env' with scope = env.scope }, Some t, ids)
     else (env, None, [])
   in
   let after, wrap, final = elab_stmts ~within:"item of a `let`'s right-hand side" spos env l rhs in

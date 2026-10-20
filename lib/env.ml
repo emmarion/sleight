@@ -114,7 +114,6 @@ type opens = { opened : opened list; touched : id list }
 type use = Shared | Consumed
 
 type t = {
-  signature : id list;
   ctor_tele : id list;
   in_extern : bool;
   unwarned : bool;
@@ -138,7 +137,7 @@ type t = {
 }
 
 let empty =
-  { signature = []; ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter

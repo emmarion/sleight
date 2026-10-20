@@ -1,2 +1,2 @@
-; error: `slot-of` in a constructor's telescope cannot name `x`, bound by a telescope still being written
+; error: `slot-of` cannot name `x`, an entry of a constructor's telescope still being written
 (def-adts $ (T : ((Slot) s) -> Type) enum (many C : (many (Nat) x) -> (T (slot-of x))))

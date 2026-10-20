@@ -1054,6 +1054,10 @@
 (def-fns _ $ (many no-mult : (many (Env) env) (many (Spot) epos) (many (String) what) (many (Multiplicity) m) -> (many (Env) r))
   (error-at env epos $ say env $ str-cat3 what " take no multiplicity; drop `" $ str-cat (mult-name m) "`"))
 
+(def-fns _ $ (many unwritten : (many (Env) env) (many (Spot) pos) (many (String) form) (many (Nat) id) -> (many (Env) r))
+  (def-fns msg-lvl $ (many bound-msg : -> (many (String) s)) (str-cat3 (say env $ str-cat form " cannot name ") (qshown env id) (say env ", an entry of a constructor's telescope still being written")))
+  (env-back env $ error-when-msg (env-at env pos) (list-mem-bin (env-ctor-tele env) id) bound-msg))
+
 (def-fns _ $ (many at-place : (many (Env) env) (many (Bool) places) (many (Multiplicity) mult) (many (Spot) epos) (many (Syn) target) -> (many (Env) r) (many (Maybe $ Term) p))
   (let-match many places (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` is allowed only on function telescope and match annotation entries") $ None _)))
   (let ((many tpos)) $ raw-pos target)
@@ -1062,8 +1066,9 @@
     ((RAtom _ n) (var-found (env-at env tpos) n))
     (else (values (error-at env tpos $ str-cat "expected a location variable, got " $ qraw target) $ None _)))
   (let-match many found (Some _ x) ((None _) (values (env-back env envv) $ None _)))
-  (let-match many (or (mult-is-many $ entry-mult-of env x) $ not $ mult-is-many mult) (BTrue) ((BFalse) (values (error-at env tpos $ say env "`at` needs a variable declared `many` or `unique`") $ None _)))
-  (values (env-refer env (and (mult-is-many mult) $ not $ env-usage-erased env) x) $ Some _ $ slot-atom x))
+  (let ((many envu)) $ unwritten env tpos "`at`" x)
+  (let-match many (or (mult-is-many $ entry-mult-of envu x) $ not $ mult-is-many mult) (BTrue) ((BFalse) (values (error-at envu tpos $ say envu "`at` needs a variable declared `many` or `unique`") $ None _)))
+  (values (env-refer envu (and (mult-is-many mult) $ not $ env-usage-erased envu) x) $ Some _ $ slot-atom x))
 
 (def-fns _ $ (many not-name : (many (Syn) raw) -> (many (String) s))
   (match many (raw-handle raw) _ ((BTrue) (str-cat3 "a handle to " (qraw raw) " is not a name")) ((BFalse) (str-cat (show-r raw) " is a literal, not a name"))))
@@ -3083,8 +3088,7 @@
 ; `(slot-of x)`: the automatic slot of x's binder (section 35), a direct variable reference and no use.
 (def-fns _ $ (many slot-var : (many (Env) env) (many (Syn) raw) -> (many (Env) env2) (many (Nat) id))
   (let ((many env1) (many id)) (var-of-raw env raw "a direct variable reference"))
-  (def-fns msg-lvl $ (many bound-msg : -> (many (String) s)) (str-cat3 (say env1 "`slot-of` in a constructor's telescope cannot name ") (qshown env1 id) ", bound by a telescope still being written"))
-  (values (env-back env1 $ error-when-msg (env-at env1 $ raw-pos raw) (list-mem-bin (env-ctor-tele env1) id) bound-msg) id))
+  (values (unwritten env1 (raw-pos raw) "`slot-of`" id) id))
 
 (def-fns _ $ (many cell-slot-codes : (many (Env) env) (many (List $ List $ Nat) ctx)
     (subterm many (List $ Maybe $ Nat) ids) -> (many (List $ Code ctx many-one) codes))
@@ -6019,7 +6023,7 @@
 
   ((many elab-tyctor : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Term) t))
     (let-match many piece (MkPair _ _ ps ret))
-    (let ((unique ew1) (many env2) (many _) (many tele)) $ notail $ elab-tele ew fuel sugar root st ps (env-set-ctor-tele env $ env-signature env) (MMErased) (Nil _) (BFalse) (BFalse) (BFalse) $ BTrue)
+    (let ((unique ew1) (many env2) (many _) (many tele)) $ notail $ elab-tele ew fuel sugar root st ps env (MMErased) (Nil _) (BFalse) (BFalse) (BFalse) $ BTrue)
     (let ((unique ew2) (many (Env) env3))
       (match many ret (((ElabWorld) _ at ew1) ((Env) env3))
         ((Cons _ s more)
@@ -6035,7 +6039,7 @@
   ; closed ValCtor type; the return is an application of a type constructor in scope (section 11).
   ((many elab-valctor : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ Entry) tele) (many (Term) ret) (many (Term) t))
     (let-match many piece (MkPair _ _ ps rets))
-    (let ((unique ew1) (many env2) (many ids) (many tele)) $ notail $ elab-tele ew fuel sugar root st ps (env-set-ctor-tele env $ env-signature env) (MMDeclared) (Nil _) (BFalse) (BFalse) (BFalse) $ BTrue)
+    (let ((unique ew1) (many env2) (many ids) (many tele)) $ notail $ elab-tele ew fuel sugar root st ps env (MMDeclared) (Nil _) (BFalse) (BFalse) (BFalse) $ BTrue)
     (let ((unique ew2) (many (Env) env3a) (many (Term) ret))
       (match many rets (((ElabWorld) _ at ew1) ((Env) env3a) ((Term) ret))
         ((Nil _) (values ew1 (env-error env2 "a constructor returns one type") $ TErr "no return"))
@@ -6054,7 +6058,7 @@
                          $ match many (type-of env3 t) (((Bool) _)) ((TTyCtor _) (BTrue)) (else (BFalse)))) (else (BFalse)))) (else (BFalse))))
     (def-fns msg-lvl $ (many msg-return : -> (many (String) s)) (str-cat "a constructor returns an application of a type constructor in scope, not " $ qshow env3 ret))
     (let ((many env4)) $ error-unless-msg env3 ok msg-return)
-    (values ew2 (env-set-ctor-tele (env-set-signature env4 $ env-signature env) $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract-slots env4 (list-rev _ ids) ret))
+    (values ew2 (env-set-ctor-tele env4 $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract-slots env4 (list-rev _ ids) ret))
 
   ; Source entries into a closed telescope, each name bound for the entries after it (section 3).
   ; [ids]: binders already in force, innermost first.
@@ -6097,8 +6101,7 @@
     (let ((many env3p) (many x)) $ bind-as env2a (BFalse) holes nm (Some _ $ loc-in env2a epos) warns mult ty rule delegate-id)
     (let ((many env3b)) $ env-pend env3p x)
     (let ((many env3)) (placed-at env3b x atplace))
-    (let ((many env3s)) (env-set-signature env3 (Cons _ x (env-signature env3))))
-    (let ((many env3e)) $ match many ctor (((Env) _)) ((BTrue) (env-set-ctor-tele env3s (Cons _ x $ env-ctor-tele env3s))) ((BFalse) env3s))
+    (let ((many env3e)) $ match many ctor (((Env) _)) ((BTrue) (env-set-ctor-tele env3 (Cons _ x $ env-ctor-tele env3))) ((BFalse) env3))
     (let ((many ap)) $ match many atplace (((Maybe $ Term) _)) ((None _) (None _)) ((Some _ p) (Some _ $ abstract-slots env2a (bin-ids-of ids) p)))
     (let ((many entry3)) $ MkEntry nm sub2 mult (abstract-slots-sg env2a (bin-ids-of ids) sg) ap (Some _ $ loc-in env2a epos))
     (let ((unique ew4) (many env4) (many bound2) (many tele)) $ notail $ elab-src-entries ew1 fuel sugar root st rest env3e mode2 (Cons _ (TVar x) ids) (Cons _ x bound) outer subterm-ok holes places ctor warns)
