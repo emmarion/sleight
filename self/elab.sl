@@ -4972,9 +4972,10 @@
 (let ((erased hop-6)) (Succ hop-5))
 (let ((erased hop-7)) (Succ hop-6))
 (let ((erased hop-8)) (Succ hop-7))
+(let ((erased hop-9)) (Succ hop-8))
 
 (def-fns _
-  ((many eval : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (St hs ctx) st) (erased Type W) (many (Performer W) pf) (unique W w) ->
+  ((many eval : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (St hs ctx) st) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) ->
       (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk) (unique W w2 at w))
     (match many code _
       ((CVar _ _ p)
@@ -5120,20 +5121,26 @@
             (else (error-vals _ hp1 many-one "not a cell"))))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) vs pk w1))
       ((CWorldDo _ req)
-        (let ((erased _) (many hp1) (erased le1) (many rvs) (erased rpk) (unique W w1)) (notail $ eval xf callbacks _ fuel _ hp _ _ req st _ pf w))
-        (let-match many pf (MkPerformer _ perform _))
-        (let ((erased h2) (many hp2) (erased le2) (many v) (unique W w2)) (perform _ hp1 (vals-one _ rvs rpk) w1))
+        (let ((erased h1) (many hp1) (erased le1) (many rvs) (erased rpk) (unique W w1)) (notail $ eval xf callbacks _ fuel _ hp _ _ req st _ pf w))
+        (let ((erased h2) (many hp2) (erased le2) (many v) (unique W w2))
+          (match many pf (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((Ref Block h2) v) (W w2 at w1))
+            ((MkPerformer _ _ _ perform _) (perform _ hp1 (vals-one _ rvs rpk) w1))
+            ((MkMacroPerformer _ _ _ perform _) (perform _ hp1 (vals-one _ rvs rpk) w1))))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ v (Nil _)) (PkMany _ _ v (Nil _) (PkNil _)) w2))
       ((CPrim _ ms2 p args)
         (let ((erased h1) (many hp1) (erased le1) (many avs) (unique W w1)) (notail $ eval-list xf callbacks _ fuel _ hp _ args st _ pf w))
-        (let-match many pf (MkPerformer _ _ prim))
         (let ((erased _) (many hp2) (erased le2) (many vs) (unique W w2))
           (match many (or (sp-eq p $ SpExpr $ ExSettledType) $ or (sp-eq p $ SpExpr $ ExSettledErase) $ or (sp-eq p $ SpExpr $ ExSettledValue) $ sp-eq p $ SpExpr $ ExSettledMult) (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((List $ Ref Block h2) vs) (W w2 at w1))
             ((BTrue)
               (let ((erased hc) (many hpc) (erased lec) (many v)) $ settled-prim _ hp1 p avs)
               (values hc hpc lec (Cons _ v $ Nil _) w1))
             ((BFalse)
-              (let-match many (sp-eq p $ SpExpr $ ExSlotEq) (BTrue) ((BFalse) (prim _ hp1 p avs w1)))
+              (let-match many (sp-eq p $ SpExpr $ ExSlotEq) (BTrue)
+                ((BFalse)
+                  (let-match many pf (MkMacroPerformer s x k _ prim) ((MkPerformer _ _ _ _ prim) (prim _ hp1 p avs w1)))
+                  (let-match many (or (sp-eq p $ SpExpr $ ExSettledTyApply) $ sp-eq p $ SpExpr $ ExSettledValApply) (BTrue) ((BFalse) (prim _ hp1 p avs w1)))
+                  (let ((erased h3) (many hp3) (erased le3) (many v) (unique (MacroState s) w3)) $ notail $ apply-answer x k _ s _ hp1 (sp-eq p $ SpExpr $ ExSettledTyApply) avs w1)
+                  (values h3 hp3 le3 (Cons _ v $ Nil _) w3)))
               (let-match many (slot-eq-answer _ avs) (Some _ v)
                 ((None _)
                   (let ((erased hc) (many hpc) (erased lec) (many e)) $ halloc _ hp1 $ BError _ "`slot-eq` with no constructors")
@@ -5144,7 +5151,7 @@
       ((CAbsurd _ ms2) (error-w _ hp ms2 "absurd code reached" _ w))
       ((CError _ ms2 m) (error-w _ hp ms2 m _ w))))
 
-  ((many eval-list : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (St hs ctx) st) (erased Type W) (many (Performer W) pf) (unique W w) ->
+  ((many eval-list : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (St hs ctx) st) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) ->
       (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique W w2 at w))
     (let-match many cs (Cons _ c rest) ((Nil _) (values hs hp (le-refl hs) (Nil _) w)))
     (let ((erased _) (many hp1) (erased le1) (many vs1) (erased pk1) (unique W w1)) $ notail $ eval xf callbacks _ fuel _ hp _ _ c st _ pf w)
@@ -5156,7 +5163,7 @@
 
   ((many eval-updates : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp)
       (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) slots)
-      (many (St hs ctx) st) (erased Type W) (many (Performer W) pf) (unique W w) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2)
+      (many (St hs ctx) st) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2)
       (erased (Suffix Block hs2 hs) le) (many (List $ Nat) indices) (many (List $ Ref Block hs2) vals) (unique W w2 at w))
     (let-match many slots (Cons _ slot rest) ((Nil _) (values hs hp (le-refl hs) (Nil _) (Nil _) w)))
     (let-match many slot (MkPair _ _ i code))
@@ -5168,7 +5175,7 @@
     (let ((erased _) (erased pv)) (ref-widen _ _ _ le2 v))
     (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ i indices) (Cons _ (coerce v pv) vals) w2))
 
-  ((many eval-picked : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (subterm many (List $ Multiplicity) ms) (erased (Picked (Code ctx many-one) ms cs) pk) (many (St hs ctx) st) (erased Type W) (many (Performer W) pf) (unique W w) ->
+  ((many eval-picked : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (subterm many (List $ Multiplicity) ms) (erased (Picked (Code ctx many-one) ms cs) pk) (many (St hs ctx) st) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) ->
       (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) rpk) (unique W w2 at w))
     (let-match many ms (Cons _ m rest) ((Nil _) (values hs hp (le-refl hs) (Nil _) (PkNil _) w)))
     (match many m _
@@ -5197,7 +5204,7 @@
         (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk) (unique W w2)) $ tail $ eval-picked xf callbacks _ fuel _ hp _ cs rest p st _ pf w)
         (values h2 hp2 le2 vs (PkErased _ rest vs rpk) w2))))
 
-  ((many eval-branch : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) (many (List $ Ref Block hs) fields) (many (St hs ctx) st) (erased Type W) (many (Performer W) pf) (unique W w) ->
+  ((many eval-branch : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) (many (List $ Ref Block hs) fields) (many (St hs ctx) st) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) ->
       (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ns vs) pk) (unique W w2 at w))
     (let-match many bs (Cons _ b rest) ((Nil _) (error-w _ hp ns (str-cat "no branch for discriminant " $ nat-str i) _ w)))
     (let-match many b (MkBranch _ _ d ids body))
@@ -5211,7 +5218,7 @@
   ; and the frames the group closed over. A missing member is an error block (ASSUMPTIONS 127). The call
   ; site's index and the member's returns are reconciled before the body runs, not after, so the body's
   ; values are the call's own and the call to eval is a tail call (section 19).
-  ((many apply : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) f) (many (List $ Ref Block hs) args) (many (List $ Multiplicity) ms) (erased Type W) (many (Performer W) pf) (unique W w) ->
+  ((many apply : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-0 is _) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) f) (many (List $ Ref Block hs) args) (many (List $ Multiplicity) ms) (erased Type W) (many (Performer W xf callbacks) pf) (unique W w) ->
       (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk) (unique W w2 at w))
     (let ((erased _) (many fb) (erased flt)) (hread _ hp f))
     (match many fb _
@@ -5254,7 +5261,7 @@
 
   ((many run-code : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-1 is _) (many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (List $ Multiplicity) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
     (let ((unique (Unit) u)) (MkUnit))
-    (let ((erased h2) (many hp2) (erased le) (many vs) (erased pk) (unique (Unit) _)) $ tail $ eval xf callbacks _ fuel _ hp _ _ code (MkSt _ _ $ FrNil _) _ compile-time u)
+    (let ((erased h2) (many hp2) (erased le) (many vs) (erased pk) (unique (Unit) _)) $ tail $ eval xf callbacks _ fuel _ hp _ _ code (MkSt _ _ $ FrNil _) _ (compile-time xf callbacks) u)
     (values h2 hp2 le vs pk))
 
   ((many env-run-final : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Term) ty) -> (many (Env) r))
@@ -5276,8 +5283,58 @@
     (let ((erased _) (many h3)) $ set-field-states _ h2 fids mults fs)
     (env-with-heap e _ h3))
 
-  ((many env-expand : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-1 is _) (unique (ElabWorld) ew) (many (Env) e) (many (Nat) m) (many (ExtType) ext) (many (String) file) (many (Spot) here) (many (List $ Syn) args) -> (unique (ElabWorld) ew2 at ew) (many (Env) r) (many (Result $ List $ Syn) out))
+  ((many apply-answer : (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-9 is _) (erased (Slot) s) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Bool) ty-apply) (many (List $ Ref Block hs) args) (unique (MacroState s) w) ->
+      (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (MacroState s) w2 at w))
+    (let-match many (apply-parts _ hp args) (Some _ parts)
+      ((None _)
+        (let ((erased hx) (many hpx) (erased sx) (many ex)) $ halloc _ hp $ BError _ "`settled-ty-apply` or `settled-val-apply` with malformed arguments")
+        (values hx hpx sx ex w)))
+    (let-match many parts (MkApplyParts _ lo okc failc ci mult hrefs))
+    (let ((many (Spot) spot)) $ match many lo _ ((MkLoc _ l) l))
+    (let-match unique w (MkMacroState sl e _ ewp u))
+    (let ((unique ew0)) (unplace-at _ _ _ ewp))
+    (let-match erased (placed-slot _ _ _ ewp) (Refl _ _))
+    (let ((many snap)) $ env-at-loc (trusted-snapshot $ env-with-heap e _ hp) lo)
+    (let ((many before)) $ list-length _ $ env-said snap)
+    (let ((many (Term) h)) $ match many hrefs _ ((Cons _ c _) (match many (heap-denoted snap _ hp c) _ ((Cons _ t _) t) ((Nil _) (TErr "not a handle")))) ((Nil _) (TErr "no handle")))
+    (let ((many hty)) $ match many (term-type snap h) (((Term) _)) ((Some _ ty) (canon-env snap ty)) ((None _) (TErr "no type")))
+    (let ((many (Maybe $ List $ Entry) fields)) $ match many hty _
+      ((TTyCtor tl) (match many ty-apply _ ((BTrue) (Some _ tl)) ((BFalse) (None _))))
+      ((TValCtor tl _) (match many ty-apply _ ((BTrue) (None _)) ((BFalse) (Some _ tl))))
+      (else (None _)))
+    (let ((many (String) form)) $ match many ty-apply _ ((BTrue) "settled-ty-apply") ((BFalse) "settled-val-apply"))
+    (let ((unique ew1) (many env1) (many t) (many ty)) $ match many fields (((ElabWorld) _ at ew0) ((Env) _) ((Term) _) ((Term) _))
+      ((None _)
+        (let ((many what)) $ match many ty-apply (((String) _)) ((BTrue) "type constructor") ((BFalse) "value constructor"))
+        (values ew0 (env-error snap $ str-cat (tick form) $ str-cat " takes a handle to a " $ str-cat what $ str-cat " first, and " $ str-cat (qshow snap h) $ str-cat " has type " $ qshow snap hty) h hty))
+      ((Some _ _)
+        (let ((many raw)) $ RList spot $ handle-raws _ hp spot hrefs)
+        (notail $ elab-term ew0 fuel callbacks _ (raw-size raw) raw snap (BFalse) (None _))))
+    (let-match many (env-failed env1) (BTrue)
+      ((BFalse)
+        (let ((erased _) (many hp1) (erased s1) (many value)) $ match many mult (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Maybe $ Ref Block h1) b))
+          ((Many)
+            (let-match many (settled-ref _ (heap-entries _ hp) ci) (Some _ cv) ((None _) (values hs hp (le-refl hs) $ None _)))
+            (let ((erased _) (many cvb) (erased _)) (hread _ hp cv))
+            (let-match many cvb (BCtorFn _ ct) (else (values hs hp (le-refl hs) $ None _)))
+            (let ((erased h1) (many hp1) (erased s1) (many v)) $ construct _ hp ct $ field-refs _ hp (match many fields (((List $ Entry) _)) ((Some _ tl) tl) ((None _) (Nil _))) $ list-drop _ 1 hrefs)
+            (values h1 hp1 s1 $ Some _ v))
+          (else (values hs hp (le-refl hs) $ None _)))
+        (let ((many e2) (erased _) (many hp2) (erased s2) (many hv)) $ mint-at e _ hp1 mult ty (Some _ t) value)
+        (let ((erased h3) (many hp3) (erased s3) (many v)) $ construct _ hp2 okc $ Cons _ hv $ Nil _)
+        (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ s1 s2) s3) v (u sl e2 _ $ place-at _ ew1))))
+    (let ((many (String) text)) $ match many (oldest-error (env-said env1) (nat-sub (list-length _ $ env-said env1) before) $ None _) _
+      ((Some _ lt)
+        (let-match many lt (MkPair _ _ l m))
+        (let ((many r) (many _)) $ resolve-marks l m (Nil _))
+        r)
+      ((None _) (str-cat (tick form) " failed")))
+    (let ((erased h4) (many hp4) (erased s4) (many v)) $ store-wrapped-str _ hp failc text)
+    (values h4 hp4 s4 v (u sl e _ $ place-at _ ew1)))
+
+  ((many env-expand : (subterm many (Nat) xf) (subterm erased (Nat) _) (subterm erased hop-1 is _) (unique (ElabWorld) ew) (many (Env) e) (many (Nat) m) (many (ExtType) ext) (many (String) file) (many (Spot) here) (many (List $ Syn) args) -> (unique (ElabWorld) ew2 at ew) (many (Env) r) (many (Result $ List $ Syn) out))
     (let-match many ext (ExtRaw np mp nl cs _ _) (else (values ew e $ Fail _ "the prelude's `Raw` is not the FFI's")))
+    (let-match many xf (Succ x) ((Zero) (values ew e $ Fail _ "more than 10000 macro expansions")))
     (let ((erased _) (many h)) $ env-heap e)
     (let-match many (settled-ref _ (heap-entries _ h) m) (Some _ f) ((None _) (values ew e $ Fail _ "the macro has no value")))
     (let ((erased _) (many hp1) (erased s1) (many hv)) $ pos-block _ h np mp file here)
@@ -5293,7 +5350,7 @@
         (erased (Hist Block) hb) (many (Heap hb) hr) (erased (Suffix Block hb ha) le) (many (List $ Ref Block hb) vs) (unique (MacroState sl) w2 at w))
       (macro-prim sl _ hq prim xs w))
     (let ((unique (MacroState sl) w)) (MkMacroState sl e _ $ place-at _ ew))
-    (let ((erased _) (many hp3) (erased _) (many vs) (erased pk) (unique (MacroState sl) w2)) $ notail $ apply xf callbacks _ (env-fuel e) _ hpt (widen-ref _ _ s12 f) (Cons _ token $ Cons _ (widen-ref _ _ s2t hv) $ Cons _ (widen-ref _ _ st av) $ Nil _) many-one _ (MkPerformer _ requests prims) w)
+    (let ((erased _) (many hp3) (erased _) (many vs) (erased pk) (unique (MacroState sl) w2)) $ notail $ apply x _ _ (env-fuel e) _ hpt (widen-ref _ _ s12 f) (Cons _ token $ Cons _ (widen-ref _ _ s2t hv) $ Cons _ (widen-ref _ _ st av) $ Nil _) many-one _ (MkMacroPerformer sl x 0 requests prims) w)
     (let-match unique w2 (MkMacroState _ e2 _ ewp2))
     (let ((unique ew2)) (unplace-at _ _ _ ewp2))
     (let-match erased (placed-slot _ _ _ ewp2) (Refl _ _))
@@ -5323,7 +5380,7 @@
     (let ((many codes) (erased cpk)) $ const-codes ctx expect ids)
     (values (sweep-run env2 start $ scope-ids $ env-scope env2) $ hoist-none ctx expect $ CValues _ expect codes cpk))
 
-  ((many expand : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Expansion) x))
+  ((many expand : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Expansion) x))
     (let-match many raw (RList p items) (else (values ew env $ None _)))
     (let-match many items (Cons _ head args) ((Nil _) (values ew env $ None _)))
     (let-match many (macro-entry env head) (Some _ m) ((None _) (values ew env $ None _)))
@@ -5337,7 +5394,7 @@
       ((Ok _ xs) (values ew1 env2 $ Some _ $ Spliced xs))
       ((Fail _ msg) (values ew1 env2 $ Some _ $ Refused $ str-cat3 "macro " (qraw head) $ str-cat " failed: " msg))))
 
-  ((many expand-one : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-3 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ Syn) x))
+  ((many expand-one : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-3 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ Syn) x))
     (let ((unique ew1) (many env2) (many x)) $ notail $ expand xf callbacks _ ew env raw)
     (let-match many x (Some _ ex) ((None _) (values ew1 env2 $ None _)))
     (let-match many ex (Spliced out) ((Refused m) (values ew1 env2 $ Some _ $ Fail _ m)))
@@ -5345,7 +5402,7 @@
     (let-match many out (Cons _ r more) ((Nil _) (values ew1 env2 $ Some _ $ Fail _ bad)))
     (match many more _ ((Nil _) (values ew1 env2 $ Some _ $ Ok _ r)) ((Cons _ _ _) (values ew1 env2 $ Some _ $ Fail _ bad))))
 
-  ((many splice-go : (unique (ElabWorld) ew) (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-3 is _) (subterm many (Nat) fuel) (many (Env) env) (subterm many (List $ Syn) items) (many (Bool) changed) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  ((many splice-go : (unique (ElabWorld) ew) (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-3 is _) (subterm many (Nat) fuel) (many (Env) env) (subterm many (List $ Syn) items) (many (Bool) changed) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
     (let-match many items (Cons _ item rest) ((Nil _) (values ew env changed (Nil _) $ None _)))
     (let ((unique ew1) (many env2) (many x)) $ notail $ expand xf callbacks _ ew env item)
     (let-match many x (Some _ ex)
@@ -5357,10 +5414,10 @@
     (let ((many all) (erased _)) $ list-append _ out rest)
     (tail $ splice-go ew1 xf callbacks _ f2 env2 all $ BTrue))
 
-  ((many splice : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-4 is _) (unique (ElabWorld) ew) (many (Env) env) (many (List $ Syn) items) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  ((many splice : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-4 is _) (unique (ElabWorld) ew) (many (Env) env) (many (List $ Syn) items) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
     (tail $ splice-go ew xf callbacks _ expansion-limit env items $ BFalse))
 
-  ((many splice-items-of : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-5 is _) (unique (ElabWorld) ew) (many (Env) env) (subterm many (List $ Syn) entries) (many (Bool) changed) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  ((many splice-items-of : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-5 is _) (unique (ElabWorld) ew) (many (Env) env) (subterm many (List $ Syn) entries) (many (Bool) changed) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
     (let-match many entries (Cons _ e rest) ((Nil _) (values ew env changed (Nil _) $ None _)))
     (let ((unique ew1) (many env2) (many ch2) (many e2) (many err2))
       (match many e (((ElabWorld) _ at ew) ((Env) a) ((Bool) b) ((Syn) c) ((Maybe $ Pair (Syn) (String)) d))
@@ -5370,12 +5427,12 @@
     (let ((unique ew3) (many env4) (many ch3) (many out) (many err)) $ notail $ splice-items-of xf callbacks _ ew1 env2 rest $ or changed ch2)
     (values ew3 env4 ch3 (Cons _ e2 out) err))
 
-  ((many splice-entries : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (List $ Syn) entries) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  ((many splice-entries : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (List $ Syn) entries) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
     (let ((unique ew1) (many env2) (many ch) (many out) (many err)) $ notail $ splice xf callbacks _ ew env entries)
     (let-match many err (None _) ((Some _ _) (values ew1 env2 ch out err)))
     (tail $ splice-items-of xf callbacks _ ew1 env2 out ch))
 
-  ((many splice-tail : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-5 is _) (unique (ElabWorld) ew) (many (Env) env) (subterm many (Nat) k) (many (List $ Syn) items) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
+  ((many splice-tail : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-5 is _) (unique (ElabWorld) ew) (many (Env) env) (subterm many (Nat) k) (many (List $ Syn) items) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
     (let-match many k (Succ k2)
       ((Zero)
         (let ((unique ew1) (many env2) (many changed) (many out) (many err)) $ notail $ splice xf callbacks _ ew env items)
@@ -5387,7 +5444,7 @@
     (let-match many r (Some _ rr) ((None _) (values ew2 env2 $ None _)))
     (match many rr _ ((Fail _ m) (values ew2 env2 $ Some _ $ Fail _ m)) ((Ok _ out) (values ew2 env2 $ Some _ $ Ok _ $ Cons _ x out))))
 
-  ((many splice-call : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ Syn) x))
+  ((many splice-call : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ Syn) x))
     (let-match many raw (RList p items) (else (values ew env $ None _)))
     (let-match many items (Cons _ head _) ((Nil _) (values ew env $ None _)))
     (let-match many (match many (special-of env head) (((Bool) _)) ((None _) (BTrue)) ((Some _ sp) (sp-eq sp $ SpExpr $ ExValues))) (BTrue) ((BFalse) (values ew env $ None _)))
@@ -5395,7 +5452,7 @@
     (let-match many r (Some _ rr) ((None _) (values ew1 env2 $ None _)))
     (match many rr _ ((Fail _ m) (values ew1 env2 $ Some _ $ Fail _ m)) ((Ok _ out) (values ew1 env2 $ Some _ $ Ok _ $ RList p out))))
 
-  ((many splice-binders : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-7 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) head) (many (List $ Syn) args) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
+  ((many splice-binders : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-7 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) head) (many (List $ Syn) args) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
     (let-match many args (Cons _ bk rhs) ((Nil _) (values ew env $ None _)))
     (let-match many bk (RList bp bs) (else (values ew env $ None _)))
     (let ((unique ew1) (many e0) (many changed) (many out) (many err)) $ notail $ splice-entries xf callbacks _ ew (env-set-usage-erased env $ BTrue) bs)
@@ -5404,7 +5461,7 @@
     (let-match many err (None _) ((Some _ e) (match many e _ ((MkPair _ _ item m) (values ew1 (env-at e2 $ raw-pos item) $ Some _ $ Fail _ m)))))
     (values ew1 e2 $ Some _ $ Ok _ $ Cons _ head $ Cons _ (RList bp out) rhs))
 
-  ((many body-head : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) item) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Expansion) x))
+  ((many body-head : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-6 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) item) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Expansion) x))
     (let ((unique ew1) (many env2) (many x)) $ notail $ expand xf callbacks _ ew env item)
     (let-match many x (None _) ((Some _ _) (values ew1 env2 x)))
     (let-match many item (RList p items) (else (values ew1 env2 $ None _)))
@@ -7189,11 +7246,11 @@
     (let ((many env1a) (many mwid)) $ prelude-id env0 "MacroWorld")
     (let ((many env1b) (many multid)) $ prelude-id env1a "Mult")
     (let ((many env1c) (many settledid)) $ prelude-id env1b "Settled")
-    (let ((many env1d) (many maybeid)) $ prelude-id env1c "Maybe")
+    (let ((many env1d) (many resultid)) $ prelude-id env1c "Result")
     (let ((many env1e) (many erasedid)) $ prelude-id env1d "MErased")
     (let ((many env1f) (many manyid)) $ prelude-id env1e "MMany")
-    (let ((many env1g) (many cn)) $ prelude-id env1f "None")
-    (let ((many env1h) (many cs)) $ prelude-id env1g "Some")
+    (let ((many env1g) (many cfail)) $ prelude-id env1f "Fail")
+    (let ((many env1h) (many cok)) $ prelude-id env1g "Ok")
     (let ((many env2) (many ms)) $ apply-metas env1h multid hs)
     (let ((many mwty)) $ TApp (TVar mwid) $ Nil _)
     (let ((many params)) $ Cons _ (MkEntry (Some _ $ NSrc "mw") (BFalse) (Once) (SgTy mwty) (None _) (None _)) $ apply-params settledid (Zero) ms)
@@ -7230,9 +7287,12 @@
     (let ((many raw)) $ RList here raws)
     (let ((unique ew2) (many env6) (many t) (many ty)) $ notail $ elab-term ew1 f2 callbacks _ (raw-size raw) raw env5 (BFalse) (None _))
     (let-match many (env-failed env6) (BFalse) ((BTrue) (let ((many e) (many rs) (many c)) $ failed env6) (values ew2 e rs c)))
-    (let ((many result)) $ TApp (TVar maybeid) $ Cons _ (TApp (TVar settledid) $ Cons _ (match many ty-apply _ ((BTrue) none-mult) ((BFalse) mc)) $ Cons _ ty $ Cons _ t $ Nil _) $ Nil _)
+    (let ((many result)) $ TApp (TVar resultid) $ Cons _ (TApp (TVar settledid) $ Cons _ (match many ty-apply _ ((BTrue) none-mult) ((BFalse) mc)) $ Cons _ ty $ Cons _ t $ Nil _) $ Nil _)
     (let ((many rets)) $ Cons _ mw2 $ Cons _ (MkEntry (Some _ $ NSrc "r") (BFalse) (Many) (SgTy result) (None _) (None _)) $ Nil _)
-    (let ((many all) (erased _)) $ list-append _ (Cons _ (nullary-ctor-code ctx2 cn) $ Cons _ (CConst ctx2 cs) $ Nil _) actuals)
+    (let ((many (String) file) (many (Spot) spot)) $ match many (env-loc env0) _ ((MkLoc f l) (values f l)))
+    (let ((many (Nat) line) (many (Nat) col)) $ match many spot _ ((MkSpot ln cl) (values ln cl)) ((PosSpot p) (match many p _ ((MkPos _ ln cl) (values ln cl)) ((NoPos) (values 0 0)))))
+    (let ((many where)) $ Cons _ (CValue ctx2 $ BExt _ $ PStr file) $ Cons _ (CValue ctx2 $ BExt _ $ PNat line) $ Cons _ (CValue ctx2 $ BExt _ $ PNat col) $ Cons _ (CConst ctx2 cok) $ Cons _ (CConst ctx2 cfail) $ Nil _)
+    (let ((many all) (erased _)) $ list-append _ where actuals)
     (tail $ call-returns fuel callbacks _ ew2 env6 ctx ctx2 apre expect rets acc pos demand (None _) (tick $ kw-mark $ sp-name sp) $ InvPrim _ sp all))
 
   ((many elab-adt-headers : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) adts) (many (Env) env) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (AdtHeaders adts) hs) (many (Tids adts hs) tids))

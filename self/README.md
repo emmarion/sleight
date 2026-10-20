@@ -251,8 +251,9 @@ the entry says otherwise, and recorded so it can be revisited.
   (ASSUMPTIONS 96). Because the elaborator's main block also holds the
   interpreter and macro expansion, a call within it is ordered first by
   the expansion budget, then by an erased count of callbacks from the
-  interpreter into the elaborator, which no call currently decreases,
-  then by an erased hop count that each function fixes in its type as a
+  interpreter into the elaborator, which the interpreter learns from the
+  macro run's `Performer` when a primitive calls back, then by an erased
+  hop count that each function fixes in its type as a
   `hop-` constant and that drops on every call from the elaborator
   towards the interpreter; after those three, each function decreases
   as described above, the interpreter by its fuel.

@@ -3749,15 +3749,6 @@
     ((TValCtor _ ret) (Some _ $ instantiate (list-rev _ args) ret))
     (else (None _))))
 
-(def-fns _ $ (many app-fits : (many (Env) env) (subterm many (List $ Entry) tele) (many (List $ Term) args) (many (List $ Term) acc) -> (many (Bool) r))
-  (let-match many tele (Cons _ e rest) ((Nil _) (match many args _ ((Nil _) (BTrue)) (else (BFalse)))))
-  (let-match many args (Cons _ a more) ((Nil _) (BFalse)))
-  (let-match many (term-type env a) (Some _ ta) ((None _) (BFalse)))
-  (let ((many (Bool) fits)) $ match many (entry-sg e) _
-    ((SgTy t) (term-eq (canon-env env ta) $ canon-env env $ instantiate acc t))
-    ((SgIs t ty) (and (term-eq (canon-env env a) $ canon-env env $ instantiate acc t) $ term-eq (canon-env env ta) $ canon-env env $ instantiate acc ty)))
-  (and fits $ notail $ app-fits env rest more $ Cons _ a acc))
-
 (def-adts $ (SolTypes : ((Nat) n) ((Facts n) f) -> Type)
   enum
   (many MkSolTypes : (erased (Nat) n) (erased (Facts n) f) (many (Term) a) (erased (Fr n f a) pa) (many (Term) b) (erased (Fr n f b) pb) -> (SolTypes n f))

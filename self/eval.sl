@@ -1238,11 +1238,6 @@
   (let-match many pl (PHandle i _ m _) (else (None _)))
   (Some _ $ MkPair _ _ i m))
 
-(def-fns _ $ (many refs-denoted : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (List $ Ref Block hs) refs) -> (many (List $ Term) r))
-  (let-match many refs (Cons _ a more) ((Nil _) (Nil _)))
-  (let ((many later)) $ notail $ refs-denoted e _ hp more)
-  (match many (heap-denoted e _ hp a) _ ((Cons _ t _) (Cons _ t later)) ((Nil _) (Cons _ (TErr "not a handle") later))))
-
 (def-fns _ $ (many field-refs : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (List $ Entry) tele) (many (List $ Ref Block hs) refs) -> (many (List $ Ref Block hs) r))
   (let-match many tele (Cons _ e rest) ((Nil _) (Nil _)))
   (let-match many refs (Cons _ a more) ((Nil _) (Nil _)))
@@ -1251,46 +1246,6 @@
   (let-match many (handle-id _ hp a) (Some _ im) ((None _) later))
   (let-match many im (MkPair _ _ i _))
   (match many (settled-ref _ (heap-entries _ hp) i) _ ((Some _ v) (Cons _ v later)) ((None _) later)))
-
-(def-fns _ $ (many apply-refused : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) ->
-    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let ((erased hl) (many hp2) (erased sf) (many v)) $ halloc _ hp $ BError _ "`settled-ty-apply` or `settled-val-apply` with malformed arguments")
-  (values e hl hp2 sf v))
-
-(def-fns _ $ (many apply-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Bool) ty-apply) (many (List $ Ref Block hs) args) ->
-    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let-match many args (Cons _ none r1) ((Nil _) (apply-refused e _ hp)))
-  (let-match many r1 (Cons _ somer r2) ((Nil _) (apply-refused e _ hp)))
-  (let-match many r2 (Cons _ _ r3) ((Nil _) (apply-refused e _ hp)))
-  (let-match many r3 (Cons _ c frefs) ((Nil _) (apply-refused e _ hp)))
-  (let ((erased _) (many sb) (erased _)) (hread _ hp somer))
-  (let-match many sb (BCtorFn _ somec) (else (apply-refused e _ hp)))
-  (let-match many (handle-id _ hp c) (Some _ cm) ((None _) (apply-refused e _ hp)))
-  (let-match many cm (MkPair _ _ ci mult))
-  (let ((many snap)) $ trusted-snapshot e)
-  (let-match many (heap-denoted snap _ hp c) (Cons _ h _) ((Nil _) (apply-refused e _ hp)))
-  (let ((many ts)) $ refs-denoted snap _ hp frefs)
-  (let ((many (Maybe $ List $ Entry) tele)) $ match many (term-type snap h) _
-    ((Some _ hty) (match many (canon-env snap hty) _
-      ((TTyCtor tl) (match many ty-apply _ ((BTrue) (Some _ tl)) ((BFalse) (None _))))
-      ((TValCtor tl _) (match many ty-apply _ ((BTrue) (None _)) ((BFalse) (Some _ tl))))
-      (else (None _))))
-    ((None _) (None _)))
-  (let-match many tele (Some _ tl) ((None _) (values e hs hp (le-refl hs) none)))
-  (let ((many t)) $ TApp h ts)
-  (let-match many (app-fits snap tl ts $ Nil _) (BTrue) ((BFalse) (values e hs hp (le-refl hs) none)))
-  (let-match many (term-type snap t) (Some _ ty) ((None _) (values e hs hp (le-refl hs) none)))
-  (let ((erased _) (many hp1) (erased s1) (many value)) $ match many mult (((Hist Block) h1) ((Heap h1) p1) ((Suffix Block h1 hs) q1) ((Maybe $ Ref Block h1) b))
-    ((Many)
-      (let-match many (settled-ref _ (heap-entries _ hp) ci) (Some _ cv) ((None _) (values hs hp (le-refl hs) $ None _)))
-      (let ((erased _) (many cb) (erased _)) (hread _ hp cv))
-      (let-match many cb (BCtorFn _ ct) (else (values hs hp (le-refl hs) $ None _)))
-      (let ((erased h1) (many hp1) (erased s1) (many v)) $ construct _ hp ct $ field-refs _ hp tl frefs)
-      (values h1 hp1 s1 $ Some _ v))
-    (else (values hs hp (le-refl hs) $ None _)))
-  (let ((many e2) (erased _) (many hp2) (erased s2) (many hv)) $ mint-at e _ hp1 mult ty (Some _ t) value)
-  (let ((erased h3) (many hp3) (erased s3) (many v)) $ construct _ hp2 somec $ Cons _ hv $ Nil _)
-  (values e2 h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ s1 s2) s3) v))
 
 (def-fns _ $ (many path-dir : (many (String) path) -> (many (String) dir))
   (let-match many (list-rev _ $ split-on path 47) (Cons _ _ above) ((Nil _) "."))
@@ -1326,17 +1281,77 @@
   (let ((erased h3) (many hp3) (erased l3) (many v)) $ match many r (((Hist Block) h3) ((Heap h3) hp3) ((Suffix Block h3 hs) l3) ((Ref Block h3) v)) ((Ok _ s) (store-wrapped-str _ hp okc s)) ((Fail _ m) (store-wrapped-str _ hp failc m)))
   (values h3 hp3 l3 v w1))
 
+(def-adts $ (ApplyParts : ((Hist Block) hs) -> Type)
+  enum
+  (many MkApplyParts : (erased (Hist Block) hs) (many (Loc) l) (many (Ctor) okc) (many (Ctor) failc) (many (Nat) ci) (many (Multiplicity) mult) (many (List $ Ref Block hs) hrefs) -> (ApplyParts hs)))
+
+(def-fns _ $ (many apply-parts : (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (many (Maybe $ ApplyParts hs) r))
+  (let-match many args (Cons _ fr r1) ((Nil _) (None _)))
+  (let-match many r1 (Cons _ lr r2) ((Nil _) (None _)))
+  (let-match many r2 (Cons _ cr r3) ((Nil _) (None _)))
+  (let-match many r3 (Cons _ okr r4) ((Nil _) (None _)))
+  (let-match many r4 (Cons _ failr r5) ((Nil _) (None _)))
+  (let-match many r5 (Cons _ _ hrefs) ((Nil _) (None _)))
+  (let-match many hrefs (Cons _ c _) ((Nil _) (None _)))
+  (let ((erased _) (many fb) (erased _)) (hread _ hp fr))
+  (let-match many fb (BExt _ fp) (else (None _)))
+  (let-match many fp (PStr file) (else (None _)))
+  (let ((erased _) (many lb) (erased _)) (hread _ hp lr))
+  (let-match many lb (BExt _ lp) (else (None _)))
+  (let-match many lp (PNat line) (else (None _)))
+  (let ((erased _) (many cb) (erased _)) (hread _ hp cr))
+  (let-match many cb (BExt _ cp) (else (None _)))
+  (let-match many cp (PNat col) (else (None _)))
+  (let ((erased _) (many ob) (erased _)) (hread _ hp okr))
+  (let-match many ob (BCtorFn _ okc) (else (None _)))
+  (let ((erased _) (many xb) (erased _)) (hread _ hp failr))
+  (let-match many xb (BCtorFn _ failc) (else (None _)))
+  (let-match many (handle-id _ hp c) (Some _ cm) ((None _) (None _)))
+  (let-match many cm (MkPair _ _ ci mult))
+  (Some _ $ MkApplyParts _ (MkLoc file $ MkSpot line col) okc failc ci mult hrefs))
+
+(def-fns _ $ (many handle-raws : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Spot) l) (subterm many (List $ Ref Block hs) refs) -> (many (List $ Syn) r))
+  (let-match many refs (Cons _ a more) ((Nil _) (Nil _)))
+  (let ((many later)) $ notail $ handle-raws _ hp l more)
+  (let ((erased _) (many b) (erased _)) (hread _ hp a))
+  (let-match many b (BExt _ pl) (else later))
+  (let-match many pl (PHandle i rd m shown) (else later))
+  (Cons _ (RAtom l $ NHandle i rd m shown) later))
+
+(def-fns _ $ (many oldest-error : (subterm many (List $ Said) ss) (many (Nat) k) (many (Maybe $ Pair (Loc) (String)) found) -> (many (Maybe $ Pair (Loc) (String)) r))
+  (let-match many k (Succ k2) ((Zero) found))
+  (let-match many ss (Cons _ x rest) ((Nil _) found))
+  (let ((many (Maybe $ Pair (Loc) (String)) found2)) $ match many x _ ((SaidError l t) (Some _ $ MkPair _ _ l t)) (else found))
+  (tail $ oldest-error rest k2 found2))
+
 (def-lvl macro-lvl)
 (def-lvl perform-lvl)
 
-(def-adts $ (Performer : (Type W) -> Type)
+(def-adts $ (ElabWorld : -> Type)
+  enum newtype
+  (many MkElabWorld : (unique (World) w) -> (ElabWorld)))
+
+; The macro world (DESIGN.md section 65): the program store, which an expansion threads and its primitives
+; extend where they run. [s] is the slot of the elaborator's world, which the state holds placed at [s] so that
+; an expansion gets it back where it was.
+(def-adts $ (MacroState : ((Slot) s) -> Type)
   enum
-  (many MkPerformer : (erased Type W)
+  (many MkMacroState : (erased (Slot) s) (many (Env) e) (erased (ElabWorld) wv) (unique (Placed s (ElabWorld) wv) ew) -> (MacroState s)))
+
+(def-adts $ (Performer : (Type W) ((Nat) x) ((Nat) c) -> Type)
+  enum
+  (many MkPerformer : (erased Type W) (erased (Nat) x) (erased (Nat) c)
      (many (Fn perform-lvl (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) req) (unique W w) ->
           (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique W w2 at w)) f)
      (many (Fn perform-lvl (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) (unique W w) ->
           (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique W w2 at w)) g)
-     -> (Performer W)))
+     -> (Performer W x c))
+  (many MkMacroPerformer : (erased (Slot) s) (many (Nat) x) (many (Nat) k)
+     (many (Fn perform-lvl (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) req) (unique (MacroState s) w) ->
+          (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (MacroState s) w2 at w)) f)
+     (many (Fn perform-lvl (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) (unique (MacroState s) w) ->
+          (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique (MacroState s) w2 at w)) g)
+     -> (Performer (MacroState s) x (Succ k))))
 
 (def-fns perform-lvl $ (many no-world : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) _req) (unique (Unit) w) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (Unit) w2 at w))
@@ -1352,18 +1367,8 @@
   (let ((erased hl2) (many hp2) (erased sf2) (many vs) (erased pk)) $ error-vals _ hp ms msg)
   (values hl2 hp2 sf2 vs pk w))
 
-(let ((many compile-time)) (MkPerformer (Unit) no-world no-prim))
-
-(def-adts $ (ElabWorld : -> Type)
-  enum newtype
-  (many MkElabWorld : (unique (World) w) -> (ElabWorld)))
-
-; The macro world (DESIGN.md section 65): the program store, which an expansion threads and its primitives
-; extend where they run. [s] is the slot of the elaborator's world, which the state holds placed at [s] so that
-; an expansion gets it back where it was.
-(def-adts $ (MacroState : ((Slot) s) -> Type)
-  enum
-  (many MkMacroState : (erased (Slot) s) (many (Env) e) (erased (ElabWorld) wv) (unique (Placed s (ElabWorld) wv) ew) -> (MacroState s)))
+(def-fns _ $ (many compile-time : (erased (Nat) x) (erased (Nat) c) -> (many (Performer (Unit) x c) p))
+  (MkPerformer _ _ _ no-world no-prim))
 
 (def-fns macro-lvl $ (many macro-no-world : (erased (Slot) s) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) _req) (unique (MacroState s) w) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (MacroState s) w2 at w))
@@ -1396,10 +1401,6 @@
           (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BError _ "`settled-eq` with no handles")
           (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e wv ew)))
       (values hs hp (le-refl hs) (Cons _ v $ Nil _) $ u sl e wv ew)))
-  (let-match many (or (sp-eq prim $ SpExpr $ ExSettledTyApply) $ sp-eq prim $ SpExpr $ ExSettledValApply) (BFalse)
-    ((BTrue)
-      (let ((many e2) (erased hl2) (many hp2) (erased sf2) (many v)) $ apply-answer e _ hp (sp-eq prim $ SpExpr $ ExSettledTyApply) args)
-      (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e2 wv ew)))
   (let-match many (mint-mult prim) (None _)
     ((Some _ mult)
       (let ((many e2) (erased hl2) (many hp2) (erased sf2) (many v)) $ mint-answer e _ hp mult args)
