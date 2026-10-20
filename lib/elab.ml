@@ -79,7 +79,7 @@ let brief = function
   | r -> tick (Reader.show r)
 let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (help env (String.concat "" (List.map Sp.role_hints (misplaced env raw))))
 let at loc f = try f () with Error (Reader.Unknown, msg) -> error loc "%s" msg
-let var env loc n = match lookup env n with Some x -> refer x; x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
+let var env loc n = match find env n with Found (x, _) -> refer x; x | Unbound -> error loc "unbound name %s%s" (tick_name n) (hint env n)
 let reference env loc raw what = match raw with
   | Atom (_, n) -> var env loc n
   | Handle (_, x, MintedIs, _, _) when x >= 0 || IntMap.mem x env.entries -> refer x; x
@@ -562,10 +562,10 @@ let implement env p args = match p, args with
              pbuild env "Ok" [ mint_entry env ~rule:t ty mult v ]) ]
   | Sp.Resolve, [ _; s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
-      [ (match Option.map (entry env) (lookup env name) with
-         | None -> pbuild env "RUnbound" []
-         | Some { state = Hypothetical; _ } -> pbuild env "RHypothetical" []
-         | Some { state = Settled v; mult; minted; _ } -> pbuild env "RSettled" [ V.VHandle (minted, MintedIs, mult, if mult = Many then v else V.VToken) ]) ]
+      [ (match find env name with
+         | Unbound -> pbuild env "RUnbound" []
+         | Found (_, { state = Hypothetical; _ }) -> pbuild env "RHypothetical" []
+         | Found (_, { state = Settled v; mult; minted; _ }) -> pbuild env "RSettled" [ V.VHandle (minted, MintedIs, mult, if mult = Many then v else V.VToken) ]) ]
   | Sp.ReadFile, [ _; here; path ] ->
       let text = str_host env Reader.nowhere in
       let read = match Ffi.unpos here with
@@ -577,7 +577,7 @@ let implement env p args = match p, args with
 let rec macro_of env raw =
   let held x = Option.bind (prelude_id env "Macro") (fun m -> settled_value env x (App (Var m, []))) in
   match raw with
-  | Atom (_, n) -> Option.bind (lookup env n) held
+  | Atom (_, n) -> (match find env n with Found (x, _) -> held x | Unbound -> None)
   | Handle (_, x, _, m, _) when m <> Erased -> held x
   | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> macro_of env a
   | _ -> None
@@ -621,14 +621,13 @@ let read_special pos env raw =
 
 let macro_refused env l head =
   let shown = tick (Reader.show head) in
-  let rec held = function Atom (_, n) -> lookup env n | Handle (_, x, MintedIs, _, _) -> Some x | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> held a | _ -> None in
-  let x = held head in
+  let rec held = function Atom (_, n) -> find env n | Handle (_, x, MintedIs, _, _) -> Found (x, entry env x) | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> held a | _ -> Unbound in
   let bound x how where = let e = entry env x in if Reader.placed e.at then [ (e.at, respell env (Printf.sprintf "%s is bound%s here%s" (qname env x) how where)) ] else [] in
   let dyn = ", where every binding is `Hypothetical`" in
-  match Option.map (fun x -> (x, entry env x)) x with
-  | Some (x, { mult = Erased; state = Settled _; _ }) -> error_with ~hint:(respell env "bind it `many` to expand it") l (bound x " `erased`" "") "%s is an erased macro, and only a non-erased one is expanded" shown
-  | Some (x, { mult = Erased; _ }) -> error_with_in env l (bound x " `erased`" dyn) "%s is an erased macro, expanded only where its head is constant-known and non-erased" shown
-  | Some (x, { state = Hypothetical; _ }) -> error_with ~hint:(respell env "a macro reaches a body through a run-position binding, named directly or forwarded by a `let`") l (bound x "" dyn) "%s is a macro, expanded only where its head is constant-known" shown
+  match held head with
+  | Found (x, { mult = Erased; state = Settled _; _ }) -> error_with ~hint:(respell env "bind it `many` to expand it") l (bound x " `erased`" "") "%s is an erased macro, and only a non-erased one is expanded" shown
+  | Found (x, { mult = Erased; _ }) -> error_with_in env l (bound x " `erased`" dyn) "%s is an erased macro, expanded only where its head is constant-known and non-erased" shown
+  | Found (x, { state = Hypothetical; _ }) -> error_with ~hint:(respell env "a macro reaches a body through a run-position binding, named directly or forwarded by a `let`") l (bound x "" dyn) "%s is a macro, expanded only where its head is constant-known" shown
   | _ -> error l "%s is a macro, expanded only where its head is constant-known" shown
 
 let expand env raw =

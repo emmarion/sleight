@@ -203,6 +203,9 @@ let leave_run env = { env with run_pos = false; trusted = trusted env }
 
 let lookup env name = NameMap.find_opt name env.scope.named
 
+type found = Found of id * entry | Unbound
+let find env name = match lookup env name with Some x -> Found (x, entry env x) | None -> Unbound
+
 let distance a b =
   let a = String.lowercase_ascii a and b = String.lowercase_ascii b in
   let d = Array.make_matrix (String.length a + 1) (String.length b + 1) 0 in
