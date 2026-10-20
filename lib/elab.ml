@@ -523,12 +523,21 @@ let literal_handle env lit =
 
 let denoted env x r = let f = minted_fact env x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ]
 
-let mint env y r mult v =
-  let env = enter_mentioned env (Var y) in
-  let ty = List.hd (denoted env y r) in
-  let x, env = bind (enter_mentioned env ty) ~literal:true None mult (Settled v) ty in
+let mint_entry env ?rule ty mult v =
+  let env = List.fold_left enter_mentioned env (ty :: Option.to_list rule) in
+  let x, env = bind env ~literal:true None mult (Settled v) ?rule ty in
   record_minted x (List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]);
   V.VHandle (x, MintedIs, mult, v)
+
+let mint env y r mult v = let env = enter_mentioned env (Var y) in mint_entry env (List.hd (denoted env y r)) mult v
+
+let rec app_fits env tele args acc = match tele, args with
+  | [], [] -> true
+  | (e : entry) :: rest, (a, ta) :: more ->
+      let same x y = equal (canon env x) (canon env y) in
+      (match e.sg with Ty t -> same ta (instantiate acc t) | Is t -> same a (instantiate acc t) && same ta (infer env Reader.nowhere (instantiate acc t)))
+      && app_fits env rest more (a :: acc)
+  | _ -> false
 
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
@@ -541,6 +550,19 @@ let implement env p args = match p, args with
       [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
   | Sp.MintSettled, [ _; V.VHandle (y, r, _, _); v ] -> [ mint env y r Many v ]
   | Sp.MintSettledErased, [ _; V.VHandle (y, r, _, _) ] -> [ mint env y r Erased V.VToken ]
+  | (Sp.SettledTyApply | Sp.SettledValApply), _ :: hs ->
+      let hs = List.map (function V.VHandle (x, r, m, v) -> (x, r, m, v) | _ -> raise (Eval.Runtime "expected a handle")) hs in
+      let snap = List.fold_left (fun env (x, _, _, _) -> enter_mentioned env (Var x)) { env with facts = trusted env } hs in
+      let snap = List.fold_left (fun env (x, r, _, _) -> List.fold_left enter_mentioned env (denoted env x r)) snap hs in
+      let (h, hty), args = match List.map (fun (x, r, _, _) -> match denoted snap x r with [ t; ty ] -> (t, ty) | _ -> assert false) hs with d :: ds -> (d, ds) | [] -> assert false in
+      let former = match canon snap hty, p with TyCtor tele, Sp.SettledTyApply -> Some (tele, type_term) | ValCtor (tele, r), Sp.SettledValApply -> Some (tele, r) | _ -> None in
+      [ (match former with
+         | Some (tele, r) when app_fits snap tele args [] ->
+             let _, _, mult, c = List.hd hs in
+             let fields = List.filter_map (fun ((e : entry), (_, _, _, v)) -> if e.mult = Erased then None else Some v) (List.combine tele (List.tl hs)) in
+             let v = if mult = Many then List.hd (Eval.apply c fields) else V.VToken in
+             pbuild env "Some" [ mint_entry env ~rule:(App (h, List.map fst args)) (instantiate (List.rev_map fst args) r) mult v ]
+         | _ -> pbuild env "None" []) ]
   | Sp.Resolve, [ _; s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
       [ (match Option.map (entry env) (lookup env name) with
@@ -1110,6 +1132,10 @@ and elab_term_args env loc ~callee ?what ?expect tele ret args =
   in
   (env, acc)
 
+let ctor_tele env l sp h = match canon env (infer env l h), sp with
+  | TyCtor tele, Sp.SettledTyApply | ValCtor (tele, _), Sp.SettledValApply -> tele
+  | ty, _ -> error l "%s takes a handle to a %s first, and %s has type %s" (tick (Sp.name sp)) (if sp = Sp.SettledTyApply then "type constructor" else "value constructor") (qshow env h) (qshow env ty)
+
 (* [ids] as in [open_tele]. *)
 (* Where each of a body's results is written: the entries of a final values form holding one per result, else
    the final expression, which is what a mismatch with the returns points at. *)
@@ -1463,7 +1489,7 @@ and call_returns ?sink ~demand env expect l callee_name acc rets inner =
 and elab_special ?sink ?final demand tele env expect l sp args =
   let pos = pos_of env expect in
   let m =
-    if List.mem sp (Sp.WorldDo :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
+    if List.mem sp (Sp.WorldDo :: Sp.SettledTyApply :: Sp.SettledValApply :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
   in
   let expected_type env = match tele with
@@ -1635,6 +1661,37 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let h, env = bind env None (under pos Many) Hypothetical (App (id "Settled", [ m; minted_type env x; minted_is env x ])) in
       produced env [] "a handle and so many" (type_of env h) Many;
       (env, [ res_of env h ], if pos = Erased then V.CErased else V.CConst (V.VHandle ((entry env x).minted, MintedIs, mode, match (entry env x).state with Settled v when mode = Many -> v | _ -> V.VToken)))
+  | (Sp.SettledTyApply | Sp.SettledValApply), mw :: (_ :: _ as hs) ->
+      let shown () = tick (speller env (Sp.name sp)) in
+      let id s = match prelude_id env s with Some i -> Var i | None -> error l "%s needs the prelude's `%s`, which `--no-prelude` leaves out" (shown ()) s in
+      let entry ?name ?place mult t = { name = Option.map (fun n -> Src n) name; subterm = false; mult; sg = Ty t; place; loc = Reader.nowhere } in
+      let meta env ty = let x, env = bind env ~meta:true None Erased Hypothetical ty in (env, Var x) in
+      let env, indices = List.fold_left_map (fun env _ ->
+        let env, m = meta env (App (id "Mult", [])) in
+        let env, ty = meta env type_term in
+        let env, t = meta env ty in (env, (m, ty, t))) env hs in
+      let params = entry ~name:"mw" Unique (App (id "MacroWorld", [])) :: List.mapi (fun i (m, ty, t) -> entry ~name:(if i = 0 then "c" else "a" ^ string_of_int i) Many (App (id "Settled", [ m; ty; t ]))) indices in
+      let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
+      let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~pos params (mw :: hs) elab_arg in
+      let hds = List.combine hs (List.map (fun (m, ty, t) -> (canon env (metaless env m), metaless env ty, metaless env t)) indices) in
+      let at_mult s m = equal m (App (id s, [])) in
+      let mult_error raw m want = error_in env (Reader.loc raw) "%s takes this handle at %s, and its `Mult` is %s" (shown ()) want (qshow env m) in
+      let (_, (mc, _, tc)) = List.hd hds in
+      let tele = ctor_tele env l sp tc in
+      if sp = Sp.SettledTyApply then List.iter (fun (raw, (m, _, _)) -> if not (at_mult "MErased" m) then mult_error raw m "`(MErased)`") hds
+      else (
+        if not (at_mult "MErased" mc || at_mult "MMany" mc) then mult_error (List.hd hs) mc "`(MErased)` or `(MMany)`";
+        List.iteri (fun i (raw, (m, _, _)) -> match List.nth_opt tele i with
+          | Some (e : entry) -> let want = if e.mult = Erased then App (id "MErased", []) else mc in if not (equal m want) then mult_error raw m (qshow env want)
+          | None -> ()) (List.tl hds));
+      let env, raws = List.fold_left_map (fun env (_, (_, _, t)) -> match t with
+        | Var x -> (env, Handle (l, x, MintedIs, Erased, Obj.repr V.VToken))
+        | t -> let x, env = bind env None Erased Hypothetical (infer env l t) ~rule:t in (env, Handle (l, x, MintedIs, Erased, Obj.repr V.VToken))) env hds in
+      let env, t = elab_term env (List (l, raws)) in
+      let ty = infer env l t in
+      let result = App (id "Maybe", [ App (id "Settled", [ (if sp = Sp.SettledTyApply then App (id "MErased", []) else mc); ty; t ]) ]) in
+      let rets = [ entry ~name:"mw2" ~place:(SlotOf (Bound (List.length acc - 1))) Unique (App (id "MacroWorld", [])); entry ~name:"r" Many result ] in
+      call_returns ?sink ~demand env expect l shown acc rets (fun _ -> V.CPrim (sp, codes))
   | sp, _ when List.mem sp primitives -> (
       let shown () = tick (speller env (Sp.name sp)) in
       match Hashtbl.find_opt prims sp with

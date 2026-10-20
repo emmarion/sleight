@@ -1,0 +1,11 @@
+; needs: ../std/macro macro_settled_apply_lib
+; expect: (MkPair _ _ (MkPair _ _ (MkPair _ _ 3 4) $ Cons _ (MkPair _ _ 3 4) $ Nil _) $ MkPair _ _ (MkPair _ _ 5 0) $ MkPair _ _ 5 9)
+(def-fns _ $ (erased lt-3-5 : (erased (Lt 3 5) p) -> (erased (Lt 3 5) r)) p)
+(let ((erased q)) (lt-3-5 (lit-lt 3 5)))
+(let ((many p) (many l)) (values (pair-of 3 4)))
+(def-fns _ $ (many in-body : (many (Nat) n) -> (many (Pair (Nat) (Nat)) r))
+  (let ((erased _)) (lt-3-5 (lit-lt 3 5)))
+  (let ((many p2) (many _)) (values (pair-of 5 6)))
+  (let-match many p2 (MkPair _ _ a _))
+  (MkPair _ _ a n))
+(MkPair _ _ (MkPair _ _ p l) $ MkPair _ _ (in-body 0) $ MkPair _ _ (succ-of 4) (succ-of 8))

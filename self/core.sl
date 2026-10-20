@@ -266,7 +266,7 @@
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
     (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
-    (many ExSettledType : -> (ExprK)) (many ExSettledErase : -> (ExprK)) (many ExResolve : -> (ExprK)) (many ExReadFile : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)) (many ExMintSettled : -> (ExprK)) (many ExMintSettledErased : -> (ExprK))
+    (many ExSettledType : -> (ExprK)) (many ExSettledErase : -> (ExprK)) (many ExResolve : -> (ExprK)) (many ExReadFile : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)) (many ExMintSettled : -> (ExprK)) (many ExMintSettledErased : -> (ExprK)) (many ExSettledTyApply : -> (ExprK)) (many ExSettledValApply : -> (ExprK))
     (many ExPlaceAt : -> (ExprK)) (many ExPlaceAtMany : -> (ExprK)) (many ExUnplaceAt : -> (ExprK)) (many ExUnplaceAtMany : -> (ExprK)) (many ExPlacedSlot : -> (ExprK)) (many ExPlacedEq : -> (ExprK)) (many ExSlotEq : -> (ExprK)) (many ExCellSame : -> (ExprK)) (many ExFnSame : -> (ExprK)))
   ((MarkK : -> Type)
     enum
@@ -288,7 +288,7 @@
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
     ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
     ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35) ((ExSettledType) 36) ((ExSettledEq) 37) ((ExSettledErase) 38) ((ExResolve) 39) ((ExReadFile) 40)
-    ((ExPlaceAt) 41) ((ExPlaceAtMany) 42) ((ExUnplaceAt) 43) ((ExUnplaceAtMany) 44) ((ExPlacedSlot) 45) ((ExPlacedEq) 46) ((ExMintSettled) 47) ((ExMintSettledErased) 48) ((ExSlotEq) 49) ((ExCellSame) 50) ((ExFnSame) 51)))
+    ((ExPlaceAt) 41) ((ExPlaceAtMany) 42) ((ExUnplaceAt) 43) ((ExUnplaceAtMany) 44) ((ExPlacedSlot) 45) ((ExPlacedEq) 46) ((ExMintSettled) 47) ((ExMintSettledErased) 48) ((ExSlotEq) 49) ((ExCellSame) 50) ((ExFnSame) 51) ((ExSettledTyApply) 52) ((ExSettledValApply) 53)))
 
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
@@ -335,7 +335,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "goal" (SpStmt $ StGoal) $ sp-cons "qed" (SpStmt $ StQed) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-erase" (SpExpr $ ExSettledErase) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "resolve" (SpExpr $ ExResolve) $ sp-cons "read-file" (SpExpr $ ExReadFile) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "mint-settled" (SpExpr $ ExMintSettled) $ sp-cons "mint-settled-erased" (SpExpr $ ExMintSettledErased) $ sp-cons "settled-ty-apply" (SpExpr $ ExSettledTyApply) $ sp-cons "settled-val-apply" (SpExpr $ ExSettledValApply) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $ sp-cons "goal" (SpStmt $ StGoal) $ sp-cons "qed" (SpStmt $ StQed) $ sp-cons "slot-eq" (SpExpr $ ExSlotEq) $ sp-cons "cell-same" (SpExpr $ ExCellSame) $ sp-cons "fn-same" (SpExpr $ ExFnSame) $
   sp-cons "place-at" (SpExpr $ ExPlaceAt) $ sp-cons "place-at-many" (SpExpr $ ExPlaceAtMany) $ sp-cons "unplace-at" (SpExpr $ ExUnplaceAt) $ sp-cons "unplace-at-many" (SpExpr $ ExUnplaceAtMany) $ sp-cons "placed-slot" (SpExpr $ ExPlacedSlot) $ sp-cons "placed-eq" (SpExpr $ ExPlacedEq) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
@@ -3748,6 +3748,15 @@
     ((TTyCtor _) (Some _ type-term))
     ((TValCtor _ ret) (Some _ $ instantiate (list-rev _ args) ret))
     (else (None _))))
+
+(def-fns _ $ (many app-fits : (many (Env) env) (subterm many (List $ Entry) tele) (many (List $ Term) args) (many (List $ Term) acc) -> (many (Bool) r))
+  (let-match many tele (Cons _ e rest) ((Nil _) (match many args _ ((Nil _) (BTrue)) (else (BFalse)))))
+  (let-match many args (Cons _ a more) ((Nil _) (BFalse)))
+  (let-match many (term-type env a) (Some _ ta) ((None _) (BFalse)))
+  (let ((many (Bool) fits)) $ match many (entry-sg e) _
+    ((SgTy t) (term-eq (canon-env env ta) $ canon-env env $ instantiate acc t))
+    ((SgIs t ty) (and (term-eq (canon-env env a) $ canon-env env $ instantiate acc t) $ term-eq (canon-env env ta) $ canon-env env $ instantiate acc ty)))
+  (and fits $ notail $ app-fits env rest more $ Cons _ a acc))
 
 (def-adts $ (SolTypes : ((Nat) n) ((Facts n) f) -> Type)
   enum
