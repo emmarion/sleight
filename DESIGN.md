@@ -450,8 +450,9 @@ former of its own:
 Of the three formers, only `Fn` and `UniqueFn` have a return
 telescope; a match's annotation is one too (§26). All three formers
 use the telescope notion of §3. In a `TyCtor` or `ValCtor` telescope,
-`slot-of` may name only a variable that no telescope still being
-written binds (§35), and `at` may not be written. The declaration
+`at` may not be written on an entry, and neither `slot-of` nor an `at`
+in a function type nested there may name an entry of that telescope or
+of a constructor telescope enclosing it (§35, §36). The declaration
 syntax `name : (telescope) -> (telescope)` used in §55 and §56 is sugar
 for these formers plus a name and, for a function, a body. A
 function's level is written on its `def-fns`. `is` (§12) may be used
@@ -1527,11 +1528,8 @@ erased exactly when `x` is, so for an erased `x` it may stand only in
 erased positions. Its argument is a direct variable reference (§15),
 not a use of `x`. It may be written in a type or `is` expression,
 including a function telescope or a match annotation, where it may
-name an earlier entry of the same telescope. In the telescope of a
-type or value constructor it may name only a variable that no
-telescope still being written binds: not a field of that telescope,
-in a later field's type or in the return, and not an entry of an
-enclosing telescope. As an expression it takes the multiplicity of its
+name an earlier entry of the same telescope. What it may name is
+restricted as the target of `at` is (§36). As an expression it takes the multiplicity of its
 position, including `unique`. Its word is the word of `x`, and the
 result is at `x`, so a `let` of it is at the same slot as `x`.
 
@@ -1556,15 +1554,24 @@ names may share one `at`: `(many (Nat) r at x)`,
 `(unique a is r at a)`. The value is at the same location as `v`. `v`
 may be any variable in scope: an earlier entry of the same telescope,
 including a return entry, or a variable from an enclosing scope, for
-`def-fns`, `def-unique` and a match annotation alike. The only restriction is the rule of
+`def-fns`, `def-unique` and a match annotation alike, except an entry
+of a type or value constructor's telescope that is still being
+written. Such an entry is refused in the later entries of that
+telescope and in its return, however deeply the `at` is nested there,
+for example in a function type that is a field's type: a function
+telescope does not stop the search outward. A constructor's telescope
+refuses only its own entries and those of a constructor telescope
+enclosing it, so an entry of a function telescope that a `TyCtor` or
+`ValCtor` type is written in may be named. The argument of `slot-of`
+is restricted in the same way (§35). Beyond this, there is the rule of
 §7 that no fact outlives an entry it mentions, which keeps a function
 whose type names a closed-over variable inside that variable's scope.
 The slot of the entry (§35) is `(slot-of v)`, always, even when `v` is
 itself a `(Slot)`. An erased entry may be `at` any variable. A `many`
 or `unique` entry may only be `at` a `many` or `unique` variable,
 because its word is its target's word and an erased target has none.
-`at` may not be written on a `let` binder, in the telescope of a type
-or value constructor, or with a literal as its target. An `at` return
+`at` may not be written on a `let` binder, on an entry of the
+telescope of a type or value constructor, or with a literal as its target. An `at` return
 may be `many`, and may be combined with `is`.
 
 **In a value constructor.** To keep a field's word at a slot, declare
