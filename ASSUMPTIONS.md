@@ -2109,21 +2109,12 @@ reading that may be mistaken.
      bound first because a later entry of the signature names its
      parameter's slot, by `(slot-of p)` or `at p`, is found by
      `Elab.slot_named_params`; the entry is erased when the argument
-     is, and its slot is the slot the signature then speaks of. Section
-     35 gives a meta no slot of its own and says no more. Here the slot
-     of a `_` argument's meta is read through its solution each time it
-     is read (`Env.canon`; `meta-slot-in` in `self/core.sl`, whose slot
-     map marks a meta's entry `MetaSlot`): solved to a variable, it is
-     that variable's slot, through any chain of metas; solved to any
-     other term, it is a fresh slot, as that term written out would get
-     by being bound first; unsolved, it stays `(slot-of m)`, open like
-     the meta and settled with it. A parameter's meta solved from a
-     written variable is also placed at that variable's slot when the
-     argument is read (`Elab.check_args`, `check-args-go`), since the
-     solution a reader sees is canonical and does not say which
-     variable was written (`tests/slot_of_param_type_ruled.sl`). So, as
-     far as this session has found, the order in which a call's metas
-     are solved does not change the slot one names. The `at` check of
+     is, and its slot is the slot the signature then speaks of. A
+     parameter's meta solved from a written variable is placed at that
+     variable's slot when the argument is read (`Elab.check_args`,
+     `check-args-go`), since the solution a reader sees is canonical and
+     does not say which variable was written
+     (`tests/slot_of_param_type_ruled.sl`). The `at` check of
      section 36 waits for the call's metas to settle at its closing
      paren, rather than running as each argument is read. A solved meta
      inside `slot-of` resolves to that slot (`Env.metaless`), so no

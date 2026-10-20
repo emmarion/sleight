@@ -1050,6 +1050,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
         if wild arg then (
           if under pos e.mult <> Erased then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` stands only for an erased argument, and this one is not erased" (fst (Lazy.force about));
           if e.place <> None then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` cannot stand for an argument written `at`" (fst (Lazy.force about));
+          if List.mem i named then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` cannot stand for an argument whose slot the signature names" (fst (Lazy.force about));
           (env, Var m :: acc, codes, ats))
         else
           let env, r, code = elab env (c.used e.mult) arg (Some [ { e with sg } ]) in

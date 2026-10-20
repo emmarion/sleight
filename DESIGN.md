@@ -1588,7 +1588,8 @@ what an `at` canonicalizes to. At a call, the argument for a parameter
 written `at` is elaborated at the parameter's multiplicity and its uses
 count like any argument's. If it is not a variable, it is bound first.
 Its slot must equal the target's slot, instantiated with the earlier
-arguments, and it is not passed. `_` cannot stand for it. Inside the
+arguments, and it is not passed. `_` cannot stand for it, nor for any
+argument whose slot the signature names (§50). Inside the
 body, the parameter is a
 rename of its target's word. An `at` return is absent from the physical
 values of a call. A `let` binds it like any return, and the elaborator
@@ -2320,16 +2321,25 @@ down to zero, to stand as the length of a `Vec`.
 
 ## 50. `_` for an inferred argument
 
-**Where `_` may stand.** As an argument that is erased where it stands:
-an erased argument of any application in item 2 of §6, including a
-cell invocation, or any argument of a call that is in an erased
-position. Also as an argument of `coercible-wrap`, as the `Sharing`
-argument of `coercible-refl`, `coercible-wrap` and `coercible-ctor`
-(§34), and in place of any type, including a whole binder type or
-annotation entry. Each such `_` is a fresh unification variable, a
-**meta**. `_` cannot stand for the argument of a parameter written `at`
-(§36). `_` as an item of `cell-alloc` or `cell-write` (§37), and `_`
-as a binder (§1), are separate forms, not metas.
+**Where `_` may stand.** As an argument only when all of these hold:
+
+1. the argument is erased where it stands: an erased argument of any
+   application in item 2 of §6, including a cell invocation, or any
+   argument of a call that is in an erased position;
+2. its parameter is not written `at` anything (§36);
+3. no other entry of the signature is `at` it, including returns and
+   entries of nested types;
+4. no other entry of the signature applies `slot-of` (§35) to it, with
+   the same scope.
+
+Together, items 3 and 4 say that a `_` never stands for an argument
+whose slot the signature mentions, so no question arises of what slot
+a `_` argument has. Also as an argument of `coercible-wrap`, as the
+`Sharing` argument of `coercible-refl`, `coercible-wrap` and
+`coercible-ctor` (§34), and in place of any type, including a whole
+binder type or annotation entry. Each such `_` is a fresh unification
+variable, a **meta**. `_` as an item of `cell-alloc` or `cell-write`
+(§37), and `_` as a binder (§1), are separate forms, not metas.
 
 **Expectation.** Some positions expect a telescope, each entry a type
 or an `is` term, and that expectation helps solve the metas inside

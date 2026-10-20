@@ -7301,9 +7301,11 @@
             (let ((many (Env) env2) (many (Term) t))
               (match many (mult-is-many mult) _
                 ((BTrue) (values (wild-error env apos arg-about "`_` stands only for an erased argument, and this one is not erased") $ TErr "wild"))
-                ((BFalse) (match many (entry-place e) (((Env) _) ((Term) _))
-                  ((None _) (values env $ TVar m))
-                  ((Some _ _) (values (wild-error env apos arg-about "`_` cannot stand for an argument written `at`") $ TErr "wild"))))))
+                ((BFalse)
+                  (let-match many (entry-place e) (None _) ((Some _ _) (values (wild-error env apos arg-about "`_` cannot stand for an argument written `at`") $ TErr "wild")))
+                  (match many (list-mem-bin slotted $ list-length _ acc) _
+                    ((BFalse) (values env $ TVar m))
+                    ((BTrue) (values (wild-error env apos arg-about "`_` cannot stand for an argument whose slot the signature names") $ TErr "wild"))))))
             (tail $ check-args-go ew fuel sugar root arest st env2 callee ctx0 ctx chain rest mrest lp pos as-term prepare fields slotted (Cons _ t acc) (Cons _ (type-of env2 m) tys) ids ats))
           ((BFalse)
             (let ((unique ew1) (many (Env) env2) (many (Res) rarg) (many (List $ List $ Nat) ctxa) (many (StmtCode ctx ctxa) prea) (many (Code ctxa (Cons (Multiplicity) mult (Nil (Multiplicity)))) code))
