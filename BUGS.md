@@ -108,3 +108,16 @@ is a design decision. Remove an entry when it is fixed.
     that only rename are resolved away, which seems not to settle a let of
     a constant. Which answer is wanted is not decided here. No test has
     this shape.
+
+21. **`slc` refuses a `tail` call returned beside an `at` entry.** With
+    `f` returning `(unique (World) w2 at w) (many (Nat) n)` and `g`
+    returning `(many (Nat) n)`, both in one `def-fns` block, the body
+    `(values w (tail $ g rest))` of `f` is accepted by the reference and
+    refused by `slc` as "a `tail`-marked call is not in tail position",
+    on `origin/main` as of `e6ebf28` and after `5da2b75`; the same holds
+    with `(many (Nat) j at k)` in place of the world. The reference drops
+    an `at` entry from the returns before judging tail position (DESIGN.md
+    §19, §36); `slc`'s `tails-ok` and `call-report` appear to see a
+    `values` form of two entries and treat every entry as non-tail. No
+    test has this shape; `open-contradicts` in `self/elab.sl` takes and
+    returns the macro world so that `elab-refute` avoids it.
