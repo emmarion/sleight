@@ -1,16 +1,18 @@
 #!pi -f ../../DESIGN.md -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../ASSUMPTIONS.md -f ../../BUGS.md -f ../../OPEN.md -f ../../SPEC-REVIEW.md -f ../../std -f ../../lib -f ../../bin -f ../../tests -f ../../pal -f ../../self -f false -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_CHECK=false/spec.sl
-Your task is to prove the goal in false/spec.sl. Or: to lay the groundwork for a
-future session to do so. This task will likely take many
+Your task is to find a soundness hole in Sleight by proving False. Or: to lay the
+groundwork for a future session to do so. This task will likely take many
 sessions, so leaving solid, well-recorded progress matters more than finishing
 in this one.
 
 To check your work, call `check` with false/spec.sl, then your files, one of
-them proving its goal, `(False)`, with `(qed e)`. Warnings are allowed.
+them proving its goal, `(False)`, with `(qed e)`. Warnings are allowed. A
+program that reaches absurd code at runtime also counts: compiled after your
+files as work/absurd.sl, its run must end with `runtime error: absurd code
+reached`, without printing it itself.
 
 A function into `(False)` is ordinary ex falso: it shows its arguments can't
-exist, and a consistent logic allows it. What the goal needs is a value
-of a type that should be empty. Look for that value, not for functions into
-`(False)`.
+exist, and a sound language allows it. The hole you need is a value of a type
+that should be empty. Hunt for that value, not for functions into `(False)`.
 
 For reference: DESIGN.md (the language); MANUAL.md (the implementations and
 their command lines); WARNINGS.md (the warnings the compilers emit);
@@ -29,7 +31,7 @@ files that have served their purpose.
 Your session has two phases: first experimenting, then writing HANDOFF.md and
 FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to
 try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
-Sleight's maintainers each suspected inconsistency you found, with the smallest program that
+Sleight's maintainers each suspected hole you found, with the smallest program that
 shows it, and anything about Sleight, its library, or its tools that slowed you
 down; add to it each session instead of rewriting it. Each phase has its own
 budget of tokens. In the second phase, those two are the only files you can
