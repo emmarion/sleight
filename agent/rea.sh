@@ -7,7 +7,7 @@ CACHE=~/.cache/sleight
 usage() {
     cat >&2 <<EOF
 usage: $0 create [--slc FILE|REV]
-           create a $TAG droplet in nyc3 (size $SIZE, swap $SWAP) with Java 21, binutils, OCaml, Node 24, Claude Code, Ghidra
+           create a $TAG droplet in the first of $REGIONS offering size $SIZE (swap $SWAP) with Java 21, binutils, OCaml, Node 24, Claude Code, Ghidra
            and REA (github.com/morluto/rea, registered with Claude Code), and a user slc with passwordless sudo
            whose ~/slc/slc, never run, is FILE or slc built at REV [HEAD] (cached in ${CACHE/#$HOME/~}); Claude Code
            there trusts ~/slc; from a terminal, the script ends by signing it in to your Claude subscription and

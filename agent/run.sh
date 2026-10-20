@@ -7,7 +7,7 @@ usage() {
 usage: $0 [IP] [--models M,...] [--copies N] [--per-box K] [--size S] PI-ARGS...
            start N copies [1] of pi.py PI-ARGS (paths relative to agent/) per model, each in its own tmux
            session, passing on PI_* variables: on IP, after deploying HEAD there, or else on new $TAG
-           droplets in nyc3 (size $SIZE) of K runs each [all of them]; M is provider:model, or a model
+           droplets in the first of $REGIONS offering size $SIZE of K runs each [all of them]; M is provider:model, or a model
            whose provider is guessed: claude-* anthropic, gpt-* openai, else neuralwatt [\$PI_MODEL]
        $0 resume [-n N] RUN-DIR [IP]
            continue a fetched or local run: on IP if it still has the run, else on a new droplet that gets
