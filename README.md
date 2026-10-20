@@ -118,8 +118,7 @@ files end in `.sl`; GitHub shows them as Scheme.
 - [DESIGN.md](DESIGN.md), the specification, cited by section number
   from everything else here. [OPEN.md](OPEN.md) lists the questions it
   does not answer; [SPEC-REVIEW.md](SPEC-REVIEW.md) the open points a
-  review found in it; [MACROS.md](MACROS.md) macro proposals not yet in
-  it.
+  review found in it.
 - [EXAMPLES.md](EXAMPLES.md), the tests worth reading first.
 - [SOUNDNESS.md](SOUNDNESS.md), why `Type : Type` with no positivity
   requirement appears sound here, and what that assumes.
