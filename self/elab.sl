@@ -2626,7 +2626,10 @@
 
 
 (def-fns _ $ (many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info))
-  (values env $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env))
+  (let ((many found)) $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env)
+  (match many found _
+    ((Some _ _) (values env found))
+    ((None _) (values (env-error env $ str-cat (qshown env tid) (say env " has no `Matchable` open")) found))))
 
 (def-fns _ $ (many first-stored : (subterm many (List $ Entry) tele) -> (many (Maybe $ Entry) r))
   (let-match many tele (Cons _ e rest) ((Nil _) (None _)))
@@ -2955,7 +2958,7 @@
   (let ((many env1) (many found)) (find-matchable env tid))
   (let-match many found (Some _ info)
     ((None _)
-      (values (env-error env1 (say env1 "cell constructor has no opened `Matchable`"))
+      (values env1
         (MkCtor (entry-name-or-id env c) c 0 (stored-count params) (BFalse) (None _) (Nil _) (BFalse)) params ret (Erased))))
   (let-match many info (MkMatchInfo mid disc cs _))
   (let ((many env2)) (match many (type-of env1 mid) (((Env) _))
@@ -3340,7 +3343,7 @@
     ((None _) (values (env-error env1 $ str-cat3 "cannot match on " (qshow env1 $ res-term sres) $ str-cat " : " $ qshow env1 $ res-ty sres) $ None _)))
   (let ((many env2) (many found)) $ find-matchable env1 tid)
   (let-match many found (Some _ info)
-    ((None _) (values (env-error env2 $ str-cat (qshown env2 tid) (say env2 " has no `Matchable` open")) $ None _)))
+    ((None _) (values env2 $ None _)))
   (values env2 $ Some _ $ MkPair _ _ tid info))
 
 (def-fns _ $ (many warn-match : (many (Env) env) (many (Bool) runs) (many (Nat) tid) -> (many (Env) r))
@@ -4690,10 +4693,9 @@
         ((None _) (env-error env6 $ str-cat (qshown env6 c) " is not a run-position constructor"))
         ((Some _ ct)
           (let ((many env6b) (many mi)) $ env-destruct env6 x ct)
-          (let-match many mi (Some _ i) ((None _) env6b))
-          (match many (nat-cmp i $ ctor-index ct) (((Env) _))
-            ((CEq _ _ _) env6b)
-            (else (env-error env6b $ str-cat3 (say env6b "`comptime-match`: expected ") (qshown env6b c) $ str-cat ", got " $ tick $ rope-str $ show-typed env6b (type-of env6b x) x))))))
+          (match many (headed-by mi ct) (((Env) _))
+            ((BTrue) env6b)
+            ((BFalse) (env-error env6b $ str-cat3 (say env6b "`comptime-match`: expected ") (qshown env6b c) $ str-cat ", got " $ tick $ rope-str $ show-typed env6b (type-of env6b x) x))))))
     (let ((many extra)) (match many found (((Bool) _)) ((None _) (BFalse)) ((Some _ info) (match many info _ ((MkMatchInfo mid _ cs _) (and (mult-is-many $ marker cs c) $ cells-allowed env7 mid $ BFalse))))))
     (let ((many mults)) (field-mults (tele-mults tele) mode))
     (let ((many ppos)) $ match many (list-nth _ rest 1) (((Spot) _)) ((NthHit _ _ _ pr _) (raw-pos pr)) ((NthMiss _ _ _ _) (here-pos env7)))
@@ -5643,7 +5645,7 @@
         (let ((many env2) (many tid)) $ named env arg "a type constructor")
         (let ((many env3) (many info)) $ find-matchable env2 tid)
         (let-match many info (Some _ i)
-          ((None _) (values ew (env-error env3 $ str-cat (qshown env3 tid) (say env3 " has no `Matchable` open")) $ None _)))
+          ((None _) (values ew env3 $ None _)))
         (match many i _ ((MkMatchInfo mid _ _ _) (values ew env3 $ Some _ $ TVar mid))))
       ((ExNumeralOf) (let ((many ewt1) (many ewt2)) (numeral-of-term env arg)) (values ew ewt1 ewt2))
       ((ExSlotOf) (let ((many env2) (many id)) (slot-var env arg)) (values ew env2 $ Some _ $ slot-term-of env2 id))

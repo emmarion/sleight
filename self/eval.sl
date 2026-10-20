@@ -380,12 +380,16 @@
       (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ (ctor-index ct) (coerce fs p3)))
     (else (values hs hp (le-refl hs) $ None _))))
 
-(def-fns _ $ (many destruct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) c) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) i) (many (List $ Ref Block hs2) fields))
-  (let-match many c (MkCtor _ _ index arity tagged ext _ newtype2))
+(def-fns _ $ (many destruct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) c) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Nat) i) (many (List $ Ref Block hs2) fields))
+  (let-match many c (MkCtor _ _ index arity tagged ext shape newtype2))
   (let ((erased hs2) (many hp2) (erased le) (many read)) $ dispatch _ hp ext tagged v)
-  (let-match many read (None _) ((Some _ p) (match many p _ ((MkPair _ _ i fs) (values hs2 hp2 le i fs)))))
+  (let-match many read (None _) ((Some _ p) (match many p _ ((MkPair _ _ i fs) (values hs2 hp2 le (Some _ i) fs)))))
   (let ((erased _) (erased p4)) (ref-widen _ _ _ le v))
-  (values hs2 hp2 le index $ ctor-fields _ hp2 newtype2 arity (coerce v p4)))
+  (let ((many sole)) $ and (not $ is-some _ ext) $ and (not tagged) $ nat-eq 1 $ list-length _ shape)
+  (values hs2 hp2 le (match many sole (((Maybe $ Nat) _)) ((BTrue) (Some _ index)) ((BFalse) (None _))) $ ctor-fields _ hp2 newtype2 arity (coerce v p4)))
+
+(def-fns _ $ (many headed-by : (many (Maybe $ Nat) i) (many (Ctor) c) -> (many (Bool) r))
+  (match many i _ ((Some _ j) (nat-eq j $ ctor-index c)) ((None _) (BFalse))))
 
 (def-fns _ $ (many ctor-at : (many (Adt) adt) (many (Nat) i) -> (many (Maybe $ Ctor) c))
   (match many (list-nth _ (adt-ctors adt) i) _ ((NthHit _ _ _ c _) (Some _ c)) ((NthMiss _ _ _ _) (None _))))
@@ -902,7 +906,7 @@
 (def-fns _ $ (many heap-strs : (many (List $ Ctor) env) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (List $ String) r))
   (let-match many fuel (Succ k) ((Zero) (Nil _)))
   (let ((erased _) (many hp1) (erased le) (many i) (many fields)) (destruct _ hp (pctor env "Cons") a))
-  (let-match many (nat-eq i $ ctor-index $ pctor env "Cons") (BTrue) ((BFalse) (Nil _)))
+  (let-match many (headed-by i $ pctor env "Cons") (BTrue) ((BFalse) (Nil _)))
   (let ((many a1)) (widen-ref _ _ le a))
   (Cons _ (heap-str _ hp1 $ field-at _ fields 0 a1) $ notail $ heap-strs env k _ hp1 $ field-at _ fields 1 a1))
 
@@ -916,7 +920,7 @@
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
   (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor env "WriteOut") req))
   (let ((many req1)) (widen-ref _ _ le1 req))
-  (let ((many name)) $ match many (list-nth _ rq i) (((String) _)) ((NthHit _ _ _ c _) (ctor-name c)) ((NthMiss _ _ _ _) ""))
+  (let ((many name)) $ match many i (((String) _)) ((None _) "") ((Some _ j) (match many (list-nth _ rq j) _ ((NthHit _ _ _ c _) (ctor-name c)) ((NthMiss _ _ _ _) ""))))
   (let ((many f0)) (field-at _ fields 0 req1))
   (let ((many s0)) (heap-str _ hp1 f0))
   (let ((many s1)) (heap-str _ hp1 $ field-at _ fields 1 req1))
@@ -1002,7 +1006,7 @@
         (values h hpx le a w1))
       ((RqMeasure)
         (let ((erased _) (many hpc) (erased lec) (many ci) (many _)) (destruct _ hp1 (pctor env "Start") f0))
-        (let ((unique w1) (many u)) (world-do _ w $ Measure $ match many (nat-eq ci $ ctor-index $ pctor env "Start") (((Stopwatch) _)) ((BTrue) (Start)) ((BFalse) (Stop))))
+        (let ((unique w1) (many u)) (world-do _ w $ Measure $ match many (headed-by ci $ pctor env "Start") (((Stopwatch) _)) ((BTrue) (Start)) ((BFalse) (Stop))))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-usage env _ hpc (usage-since base u)))
         (values h hpx (hist-le-trans _ _ _ lec le) a w1))))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v w2))
@@ -1676,12 +1680,13 @@
   (let ((erased _) (many h3)) $ set-field-states _ h2 ids ms vs)
   (env-with-heap e _ h3))
 
-; The discriminant of a Settled entry's value under a constructor's reading, or None where it is no Settled.
+; The discriminant of a Settled entry's value under a constructor's reading, or None where it is no Settled or
+; its discriminant cannot be read.
 (def-fns _ $ (many env-destruct : (many (Env) e) (many (Nat) x) (many (Ctor) ct) -> (many (Env) r) (many (Maybe $ Nat) i))
   (let ((erased _) (many h)) $ env-heap e)
   (let-match many (settled-ref _ (heap-entries _ h) x) (Some _ v) ((None _) (values e $ None _)))
   (let ((erased _) (many h2) (erased _) (many i) (many _)) $ destruct _ h ct v)
-  (values (env-with-heap e _ h2) $ Some _ i))
+  (values (env-with-heap e _ h2) i))
 
 (def-fns _ $ (many env-set-fields : (many (Env) e) (many (Nat) x) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Multiplicity) mults) -> (many (Env) r))
   (let ((erased _) (many h)) $ env-heap e)

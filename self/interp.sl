@@ -90,7 +90,7 @@
   (let-match many (heap-crash _ hp) (None _) ((Some _ m) (runtime-error m w)))
   (let ((erased _) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
   (let ((many f0)) (field-at _ fields 0 (widen-ref _ _ le1 v)))
-  (let-match many (nat-eq i $ ctor-index $ pctor pcs "Continue") (BTrue)
+  (let-match many (headed-by i $ pctor pcs "Continue") (BTrue)
     ((BFalse)
       (let ((many n)) (heap-nat _ hp1 f0))
       (match many (lt-dec n u8-modulus) _
