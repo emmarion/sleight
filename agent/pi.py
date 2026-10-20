@@ -1165,6 +1165,21 @@ def session(run_dir, prompt, seeds):
         shutil.rmtree(SANDBOX_ROOT)
         shutil.rmtree(COMPILER.parent)
         os.close(ROOT_FD)
+        _save_nw_session()
+
+
+def _save_nw_session():
+    log = RUN_DIR / "requests.jsonl"
+    if PROVIDER != "neuralwatt" or not log.exists():
+        return
+    sent = len(log.read_text().splitlines())
+    for wait in (0, 5, 15, 40):
+        time.sleep(wait)
+        rec = _fetch(f"{OpenAICompat.base}/usage/sessions/{SESSION_ID}?limit=2000", OpenAICompat().auth())
+        if len(rec.get("turns") or []) >= sent:
+            break
+    if rec:
+        (RUN_DIR / "nw-session.json").write_text(json.dumps(rec, indent=1) + "\n")
 
 
 def _commit():

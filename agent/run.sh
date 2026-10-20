@@ -223,6 +223,8 @@ from pathlib import Path
 def spent(log):
     m = next((m for l in reversed(log.read_text(errors="replace").splitlines()) if (m := re.search(r", \$([\d.]+)(?:, ([\d,.]+) J)? spent", l))), None)
     return (float(m[1]), float((m[2] or "0").replace(",", ""))) if m else (0, 0)
+def charged(f):
+    return sum(t.get("charged_energy_kwh") or 0 for t in json.loads(f.read_text()).get("turns") or [])
 runs = sorted(Path.home().glob("sl/agent/results/*/run.json"))
 if not runs:
     print("no runs")
@@ -240,9 +242,11 @@ for rec in runs:
     done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} done"
     cost, energy = map(sum, zip((0, 0), *map(spent, d.glob("*/transcript.log"))))
     total = f"${cost:.4f}, {energy:,.0f} J in all" if cost or energy else ""
+    kwh = list(map(charged, d.glob("*/nw-session.json")))
+    billed = f"{sum(kwh) * 1000:,.1f} Wh, ${sum(kwh) * 7:.4f} at $7/kWh, over {len(kwh)} session{'s' * (len(kwh) != 1)}" if kwh else ""
     ctx, _, session = context.removeprefix("[context: ").removesuffix("]").partition(", $")
     print(("live" if live else "stopped") + "  " + d.name)
-    for label, value in (("sessions", done), ("spent", total), ("settings", settings), ("context", ctx), ("session", session and "$" + session)):
+    for label, value in (("sessions", done), ("spent", total), ("charged", billed), ("settings", settings), ("context", ctx), ("session", session and "$" + session)):
         if value:
             print(f"    {label:<9} {value}")
 PY
