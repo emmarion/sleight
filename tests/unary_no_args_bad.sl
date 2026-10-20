@@ -1,2 +1,2 @@
-; error: `unary` takes one or two literals
+; error: `unary` takes one or two constants of type `Nat` or `Char`
 (unary)

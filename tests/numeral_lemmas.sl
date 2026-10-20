@@ -1,6 +1,6 @@
 ; needs: list vec
 ; expect: 0
-; What the sugar expands to, written out: numeral-succ over a BinSucc witness gives an Eq the let-match
+; Reasoning through the Numeral relation by hand: numeral-succ over a BinSucc witness gives an Eq the let-match
 ; carries outward, and numeral-inj's Eq between two differing spellings refutes a branch vacuously.
 
 (let-match erased

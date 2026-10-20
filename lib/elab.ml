@@ -89,12 +89,6 @@ let made env raw x = Option.value (handle_made raw) ~default:(entry env x).mult
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
-(* Elaborate in the prelude's scope, so user shadowing cannot reach a generated form; the level context
-   stays the caller's. *)
-let in_prelude env f =
-  let frame, r = f { env with scope = env.prelude } in
-  ({ frame with scope = env.scope }, r)
-
 (* An atom naming an entry, read through any alias rule the fact table holds for it (section 19). *)
 let named_of env loc what x = match canon env (Var x) with Var x -> x | t -> error loc "%s is not %s" (qshow env t) what
 let named env loc what raw = named_of env loc what (reference env loc raw what)
@@ -465,7 +459,7 @@ let str_value env s =
   | Some adt -> V.VExt (adt, V.Slice (s, 0, String.length s))
   | None -> String.fold_right (fun c rest -> pbuild env "SCons" [ pbuild env "MkChar" [ pbuild env "MkU8" [ peano env (Char.code c) ] ]; rest ]) s (pbuild env "SNil" [])
 
-(* The bijective base-2 spelling of [z] as a term (Literal.bin, as source). *)
+(* The bijective base-2 spelling of [z] as a term: (B1 b) is 2b+1, (B2 b) is 2b+2. *)
 let rec bin_term env z =
   match Ffi_core.half_view ~z:Fun.id ~nat:Fun.id z with HZ -> papp env "BZ" [] | H1 b -> papp env "B1" [ bin_term env b ] | H2 b -> papp env "B2" [ bin_term env b ]
 
@@ -683,17 +677,6 @@ let erased_reads f env x = let env', r = f { env with usage_erased = true } x in
 let spliced_entries env entries =
   let env, entries = spliced env entries in
   List.fold_left_map (fun env -> function List (l, items) -> let env, items = spliced env items in (env, List (l, items)) | e -> (env, e)) env entries
-
-(* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
-let numeral_entry env loc raw =
-  let z, lit =
-    match lit_of raw with
-    | Some (Literal.Numeral z as lit) -> (z, lit)
-    | Some (Literal.Char c as lit) -> (Z.of_int c, lit)
-    | _ -> error loc "%s is not a numeral or character literal" (tick (Reader.show raw))
-  in
-  let env = intern env loc lit in
-  (env, z, (Hashtbl.find literal_rows (Z.to_string z)).lit_id, Literal.spell lit)
 
 let listed_ctors env loc tid =
   let _, _, cs = find_matchable env loc tid in
@@ -1731,14 +1714,6 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
-  | Sp.ProveLiteralLt, [ a; b ] ->
-      let numeral env raw = match lit_of raw with
-        | Some (Literal.Numeral _) -> numeral_entry env l raw
-        | _ -> error_in env l "`prove-literal-lt` takes two numerals, got %s" (tick (Reader.show raw)) in
-      let env, za, xa, sa = numeral env a in
-      let env, zb, xb, sb = numeral env b in
-      if Z.geq za zb then error_in env l "`prove-literal-lt`: %s is not below %s" sa sb;
-      mint env (papp env "Lt" [ Var xa; Var xb ])
   | Sp.LevelOf, _ -> let env, lv = fetched env l sp args in erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
   | Sp.ProveSubterm, [ a; b ] ->
       let env, a = elab_term env a in
@@ -2218,7 +2193,6 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.DefPrim, _ -> (elab_def_prim env l args, Fun.id)
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
-      | Some Sp.Unary, _ -> elab_unary spos env l args
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
       | Some ((Sp.Goal | Sp.Qed) as f), _ -> error_in env l "`%s` is allowed only as a top-level form of a file" (Sp.name f)
       | Some Sp.CompileError, _ -> compile_error (!settle_head Many) spos env l args
@@ -2296,42 +2270,6 @@ and elab_let spos env l args =
   if tele_ids <> [] then List.iter2 stand_for tele_ids ids;
   let ids = non_erased env' ids in
   (env', if env.run_pos then Fun.id else fun rest -> wrap (lets temps (if pos_of env expect = Erased then rest else V.CLet (ids, code, rest))))
-
-(* [unary] elaborates to calls on the prelude's Numeral lemmas, in the prelude's scope so
-   user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
-and elab_unary spos env l args =
-  let a, rest = match args with a :: ([] | [ _ ] as rest) -> (a, rest) | _ -> error_in env l "`unary` takes one or two literals" in
-  let env, za, _, sa = numeral_entry env l a in
-  let env, lo =
-    match rest with
-    | [ b ] ->
-        let env, zb, _, sb = numeral_entry env l b in
-        if Z.geq zb za then error_in env l "`unary`: %s does not exceed %s" sa sb;
-        (env, zb)
-    | _ -> (env, Z.zero)
-  in
-  let k = Z.sub za lo in
-  if Z.gt k (Z.of_int 4096) then error_in env l "`unary`: %s successors is beyond the limit" (Z.to_string k);
-  let rec upto z acc = if Z.geq z za then List.rev acc else upto (Z.succ z) (z :: acc) in
-  let env = List.fold_left (fun env z -> intern env l (Literal.Numeral z)) env (za :: upto lo []) in
-  (* Fold the one-step proofs into a single Eq relating the literal to [floor] under k successors, so one
-     let-match mints one rule and the literals walked over stay opaque. *)
-  let floor, acc =
-    if List.length args = 1 then ("(Zero)", "(numeral-zero 0 (numeral-of 0))")
-    else (Z.to_string lo, Printf.sprintf "(Refl (Nat) %s)" (Z.to_string lo))
-  in
-  let step acc z =
-    let n = Z.succ z in
-    let below = Literal.succs (Z.to_int (Z.sub z lo)) floor in
-    let stp =
-      Printf.sprintf "(numeral-succ %s %s %s %s %s (numeral-of %s) (numeral-of %s))" (Literal.bin z)
-        (Literal.bin n) (Z.to_string z) (Z.to_string n) (Literal.bin_succ z) (Z.to_string z) (Z.to_string n)
-    in
-    let congd = Printf.sprintf "(eq-cong-succ %s %s %s)" (Z.to_string z) below acc in
-    Printf.sprintf "(eq-trans (Nat) %s (Succ %s) (Succ %s) %s %s)" (Z.to_string n) (Z.to_string z) below stp congd
-  in
-  let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
-  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.read "<unary>" src)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)

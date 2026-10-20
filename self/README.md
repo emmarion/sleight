@@ -35,9 +35,7 @@ verification against the stored value, `let-match` binding outward, the
 tail and delegate marks on the normalized code, newtype shape, extern
 claims, the opening of a marked `Matchable` that every read of one
 requires and the contradiction `open-absurd` cashes in (ASSUMPTIONS
-139-142), and the reader's and literals' syntax errors; `unary` and
-`distinct` (DESIGN.md section 49) expand to the prelude calls the reference
-writes down, in the prelude's scope as there; a `_` argument (DESIGN.md section 50)
+139-142), and the reader's and literals' syntax errors; a `_` argument (DESIGN.md section 50)
 is solved as the reference solves it, by a meta the scope and the
 type-directed lookups never see, and the unifier's forcing mode is a
 flag. Its error messages are the reference's, and
@@ -110,7 +108,7 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
-  expansion of `unary` and `distinct`, and the top level. Its main block
+  expansion of a `let-match` with branches, and the top level. Its main block
   also holds the compile-time interpreter and macro expansion, at one
   level with the elaborator (see termination below).
 - `runtime.ml` — what the OCaml runtime every compiled program starts
@@ -361,14 +359,11 @@ the entry says otherwise, and recorded so it can be revisited.
   prelude's scope, so no name is looked up while a program runs. A
   prelude renaming those needs a changed emitter.
 - **The elaborator's group carries a budget of sugar expansions** as its
-  first `subterm` parameter, ahead of the raw. `unary` and `distinct`
-  write their prelude calls down when the form is reached, as the
-  reference does, and the raw they then elaborate is of the elaborator's
-  own making, which is no descent into the form; spending one unit of
-  the budget is the decrease the checker sees instead. The forms are
-  built as raws rather than text read back (ASSUMPTIONS 124). A
-  `let-match` with branches (DESIGN.md section 52) spends one unit on the `match`
-  it is rewritten to, and those can nest, so the budget is the
+  first `subterm` parameter, ahead of the raw. A `let-match` with
+  branches (DESIGN.md section 52) is rewritten to a `match` when the form
+  is reached, and the raw then elaborated is of the elaborator's own
+  making, which is no descent into the form; spending one unit of the
+  budget is the decrease the checker sees instead. Those rewrites can nest, so the budget is the
   top-level form's size (ASSUMPTIONS 197); its zero case
   is reported as an internal error, not refuted, since the sugar forms
   are found by resolving a head in the prelude's scope, which no proof

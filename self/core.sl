@@ -250,7 +250,7 @@
   ((StmtK : -> Type)
     enum
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK)) (many StDefUnique : -> (StmtK))
-    (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK)) (many StUnary : -> (StmtK))
+    (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK))
     (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
     (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)) (many StQed : -> (StmtK)))
   ((FormerK : -> Type)
@@ -265,7 +265,7 @@
     (many ExSubtermTrans : -> (ExprK)) (many ExPredatesSubterm : -> (ExprK)) (many ExCoerce : -> (ExprK))
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
-    (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
+    (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
     (many ExSettledType : -> (ExprK)) (many ExSettledErase : -> (ExprK)) (many ExResolve : -> (ExprK)) (many ExReadFile : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)) (many ExMintSettled : -> (ExprK)) (many ExMintSettledErased : -> (ExprK)) (many ExSettledTyApply : -> (ExprK)) (many ExSettledValApply : -> (ExprK))
     (many ExPlaceAt : -> (ExprK)) (many ExPlaceAtMany : -> (ExprK)) (many ExUnplaceAt : -> (ExprK)) (many ExUnplaceAtMany : -> (ExprK)) (many ExPlacedSlot : -> (ExprK)) (many ExPlacedEq : -> (ExprK)) (many ExSlotEq : -> (ExprK)) (many ExCellSame : -> (ExprK)) (many ExFnSame : -> (ExprK)))
   ((MarkK : -> Type)
@@ -276,7 +276,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
 
 (def-fns _ $ (many former-code : (many (FormerK) k) -> (many (Nat) n))
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoUniqueFn) 4) ((FoCell) 5)))
@@ -286,7 +286,7 @@
     ((ExMatch) 0) ((ExMatchableOf) 1) ((ExSlotOf) 2) ((ExAtFnOf) 20) ((ExShare) 21) ((ExCellAlloc) 22) ((ExCellWrite) 23) ((ExCellMatch) 24) ((ExCoercibleShare) 25) ((ExNumeralOf) 3) ((ExLevelOf) 4) ((ExProveSubterm) 5)
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
-    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
+    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
     ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35) ((ExSettledType) 36) ((ExSettledEq) 37) ((ExSettledErase) 38) ((ExResolve) 39) ((ExReadFile) 40)
     ((ExPlaceAt) 41) ((ExPlaceAtMany) 42) ((ExUnplaceAt) 43) ((ExUnplaceAtMany) 44) ((ExPlacedSlot) 45) ((ExPlacedEq) 46) ((ExMintSettled) 47) ((ExMintSettledErased) 48) ((ExSlotEq) 49) ((ExCellSame) 50) ((ExFnSame) 51) ((ExSettledTyApply) 52) ((ExSettledValApply) 53)))
 
@@ -301,7 +301,7 @@
     ((SpExpr k)
       (match many k _
         ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExSettledOf) (Some _ 2)) ((ExCellSame) (Some _ 2)) ((ExFnSame) (Some _ 2))
-        ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExProveLiteralLt) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
+        ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
         (else (None _))))
     (else (None _))))
 
@@ -324,7 +324,7 @@
 (let ((many sp-table))
   $ sp-cons "let" (SpStmt $ StLet) $ sp-cons "def-lvl" (SpStmt $ StDefLvl) $ sp-cons "def-fns" (SpStmt $ StDefFns) $ sp-cons "def-unique" (SpStmt $ StDefUnique) $
   sp-cons "def-adts" (SpStmt $ StDefAdts) $ sp-cons "comptime-match" (SpStmt $ StComptimeMatch) $
-  sp-cons "let-match" (SpStmt $ StLetMatch) $ sp-cons "unary" (SpStmt $ StUnary) $ sp-cons "prove-literal-lt" (SpExpr $ ExProveLiteralLt) $
+  sp-cons "let-match" (SpStmt $ StLetMatch) $
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
   sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
   sp-cons "Matchable" (SpFormer $ FoMatchable) $

@@ -532,9 +532,9 @@ These are the **erased positions**:
   multiplicity of its own binder;
 - the scrutinee of an `erased` match;
 - the proof argument of a `coerce`; every argument of a `coercible-*`
-  form, of `prove-subterm`, of `prove-predates`, of `prove-literal-lt`
-  and of the three axioms; and the proof inside `(subterm p)` and
-  `(predates p)` (§18, §19, §33, §45);
+  form, of `prove-subterm`, of `prove-predates` and of the three
+  axioms; and the proof inside `(subterm p)` and `(predates p)` (§18,
+  §19, §33);
 - the body of an absurd-by-proof branch and the body of an `absurd`
   function (§21, §25);
 - the head of a call written `(at erased (f ...))` (§39);
@@ -1093,7 +1093,7 @@ expression that contains it, are visible to the rest of that
 expression, and are gone when it ends. A statement produces no values.
 The statements are `let`, `def-lvl`, `def-fns`, `def-unique` (§32),
 `def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`
-and `open-at-fn` (§35, §39), `unary` (§49), `dump-context`
+and `open-at-fn` (§35, §39), `dump-context`
 (MANUAL.md), `compile-error` and `compile-warn` (§4), and `goal` and `qed` (§71). All of them
 except `comptime-match`, `goal` and `qed` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
 define outward and each definition's parameters inward.
@@ -2003,7 +2003,9 @@ which `lib/prelude.sl` is the reference:
   `settled-mult`, `settled-value`, `settled-eq`, `intern-nat`,
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
   `resolve` and `read-file`, and the function `symbol-eq`. §62 to §65 describe them and the special forms
-  `settled-of`, `settled-ty-apply` and `settled-val-apply`.
+  `settled-of`, `settled-ty-apply` and `settled-val-apply`. The
+  prelude also defines the macros `prove-literal-lt` (§45) and `unary`
+  (§49).
 - **Placement.** The opaque `Placed` and the primitives `place-at`,
   `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
   `placed-eq`. §66 describes them. §67 describes `slot-eq`.
@@ -2226,8 +2228,10 @@ proof by its spelling; for a character literal it yields the proof of
 the character's code, and for a string literal or a name it is an
 error. So two spellings equated in a branch refute the branch, and
 `unary` (§49) produces the one rule that a `Succ` shape needs.
-`(prove-literal-lt a b)`, for numerals `a` below `b`, creates
-`(Lt a b)`, asserted as a character's bound is. A character literal is
+`(prove-literal-lt a b)` mints `(Lt a b)` after deciding it with
+`lt-dec`. Its arguments are `Settled` `many` constants of type `Nat`
+or `Char`, a character standing for its code; like a `comptime-match`,
+it relies on the evaluator (§29). A character literal is
 transparent down to its opaque `Nat`: its entry carries
 `is (MkChar (MkU8 n p))`, where `n` is the entry of its code's numeral
 and `p` is the erased proof of its bound, asserted rather than decided.
@@ -2300,24 +2304,14 @@ describes, and a written annotation is an error.
 
 ## 49. `unary`
 
-`unary` reasons about a numeral through the prelude's `Numeral`
-relation (§45) rather than about its opaque `Nat`. It elaborates into
-ordinary calls on prelude lemmas, in the prelude's scope, so that no
-shadowing reaches them, and carries no meaning of its own. It takes a
-numeral or a character literal; a character stands for its code.
-
-`(unary a b)` is a statement. `b` must be below `a`. It creates one
-rule, `a is (Succ ... b)` with as many successors as separate the two.
-The rule is built from the one-step proofs of `numeral-succ`, each
-given the `BinSucc` witness that one spelling steps to the next, folded
-together by `eq-cong-succ` and `eq-trans`, and carried out by a single
-`let-match`. `(unary a)` is the same with `(Zero)` as the floor,
-reached through `numeral-zero`. The literals walked over are not
-mentioned by the rule and stay opaque: `(unary 5 3)` says
-`5 is (Succ (Succ 3))` and nothing about `4`. The distance is at most
-4096. What the rule buys is a literal that can be used where a `Succ`
-shape is wanted: to peel a `Vec`, or, with a `unary` for each literal
-down to zero, to stand as the length of a `Vec`.
+`(unary a b)` expands to a statement that creates one rule,
+`a is (Succ ... b)`, with as many successors as separate the two, at
+most 1024; `b` must not exceed `a`. Its arguments are as for
+`prove-literal-lt` (§45). It mints the `Eq` the rule needs after
+checking it with `nat-cmp`, and matches it against `Refl` with a
+`let-match`. `(unary a)` takes `(Zero)` as the floor. The constants
+walked over stay opaque: `(unary 5 3)` says `5 is (Succ (Succ 3))` and
+nothing about `4`.
 
 ## 50. `_` for an inferred argument
 
@@ -2451,7 +2445,6 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `open-adt`: opens a `Matchable` (§8).
 - `slot-self`: makes a `(Slot)` variable its own slot (§35).
 - `open-at-fn`: opens an `AtFn` proof (§39).
-- `unary`: rewrites a numeral to successor form (§49).
 - `dump-context`: stops elaboration with a report of the context
   (MANUAL.md). Also usable as an expression and as a type.
 - `compile-error`, `compile-warn`: report an error or a warning (§4).
@@ -2491,7 +2484,6 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).
-- `prove-literal-lt` (§45).
 - `placed-slot` and `placed-eq` (§66).
 
 **Fetch forms**, which may also be written inside a type or `is`

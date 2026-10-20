@@ -618,9 +618,8 @@ assumed. As elsewhere here, each is the session's reading, checked by
     not the declaration.
 ## `let-match`, and reasoning about literals through their spelling
 
-DESIGN.md sections 27 and 49 describe `let-match` and `unary`. What
-follows is how the session built them and what it assumed while doing
-so.
+DESIGN.md section 27 describes `let-match`. What follows is how the
+session built it and what it assumed while doing so.
 
 100. **Its code depends on the scrutinee's erasure and on run position.**
     An erased scrutinee emits nothing, matching `elab_match`'s rule
@@ -631,10 +630,6 @@ so.
     one-branch `CMatch` wrapping the rest of the enclosing expression.
     So a `let-match` at top level does not cost the code after it its
     run position.
-104. **`unary` elaborates to prelude calls in the prelude's scope**
-    (`Elab.elab_unary`, `Elab.in_prelude`), as with a literal's own
-    expansion (51). The level context stays the caller's. `unary`
-    interns every literal on the walk (`Elab.intern`).
 107. **The prelude's character operations** (`lib/prelude.sl`).
     `char-cmp`'s arguments coerce down through `Char`'s and `U8`'s
     newtype wrappers to their codes, the call to `u62-cmp` is a
@@ -655,42 +650,23 @@ so.
     out of range becomes (`tests/char_convert.sl` writes both
     directions out).
 
-108. **"Mint" in these notes means a fact or entry reaching the tables,
-    not a claim about who checked it.** For `unary`
-    nothing is asserted: the elaborator writes down terms — a `Bin`
-    spelling, a `BinSucc` witness, a call — and the refinement reaches
-    §7's table through the same `refine` an ordinary match branch uses.
-    A wrong term does not typecheck, which the session checked by
-    handing `numeral-succ` a witness and then a spelling that lie; both
-    are rejected. What is not checked, here as everywhere a numeral is
-    involved, is that a literal's runtime `Nat` is the number its source
-    spelled, which rests on `bin-to-nat`'s extern (§42's invariant, and
-    DESIGN.md section 29's note on facts).
-
-## The compiler in `self/`: `let-match` and `unary`
+## The compiler in `self/`: `let-match`
 
 How `self/` implements the forms above; `self/bootstrap.sh` is the
 check, and none of it is design.
 
-111. **`unary` is expanded where the form is reached, on
-    a budget.** `elab-unary` makes the reference's
-    checks in its order, with its messages, then builds the same forms
-    by the same fold (124) and elaborates them in the prelude's scope (a
-    `prelude` field of the `Env`, set by `self/main.sl` after the first
-    file, which is the prelude). The compiler's elaborator recurses on
-    the raw it elaborates (96), and a raw of its own making is no
-    decrease; so every function of the elaborator's group takes a `Nat`
-    budget of expansions as a `subterm` parameter, passed unchanged on
-    every call but the one that elaborates a generated form, which
-    decreases it, and the checker accepts that as the lexicographic
-    decrease it accepts for `canon` (93). The top level starts the
-    budget at the form's size (197); the zero case is reported as an
-    internal error, as no proof here says a generated form contains no
-    sugar. As in the reference, a function shadowing `unary` or a `let`
-    aliasing it resolves as any other head does. The session's reading
-    is that the derivation reaching `refine` (108) is the reference's
-    own. `let-match` is ported as the reference has it, with `SMatch` as
-    the statement code of a one-branch match wrapping the rest.
+111. **A generated form is elaborated on a budget.** The compiler's
+    elaborator recurses on the raw it elaborates (96), and the `match`
+    a `let-match` with branches is rewritten to (197) is a raw of its
+    own making, which is no decrease; so every function of the
+    elaborator's group takes a `Nat` budget of expansions as a
+    `subterm` parameter, passed unchanged on every call but the one
+    that elaborates a generated form, which decreases it, and the
+    checker accepts that as the lexicographic decrease it accepts for
+    `canon` (93). The top level starts the budget at the form's size
+    (197); the zero case is reported as an internal error. `let-match`
+    is ported as the reference has it, with `SMatch` as the statement
+    code of a one-branch match wrapping the rest.
 112. **A `U8` is its `Nat` inside the compiler too.** With `U8` a newtype
     (DESIGN.md section 42) the compiler's value model has no `U8`
     payload: a character literal's value and the `String` FFI's
@@ -946,16 +922,9 @@ session's.
      values (composed from the binders' by `lockstep-trans`) and refutes
      both empty cases, `erased-in-many` walks under the proof, and
      `check-args-go` takes the proof relating the telescope to its
-     metas. `unary` builds its generated forms as `Syn` values (`gen-of`,
-     `bin-raw`) rather than text read back by the reader, at line 1 as
-     the reader would give them. Not done: the sugar budget's zero case
-     (111) stays reported. A sugar-freeness relation on the generated
-     form would not obviously refute it: the sugar forms are dispatched
-     by resolving a head in the prelude's scope, not by its spelling, so
-     such a proof would have to speak about that scope. The session's
-     reading, not a proof, is that the case is unreachable anyway:
-     `unary` checks its arguments are literals before spending the
-     budget. Also left: `bind-let`'s `tele`, whose empty case silently
+     metas. Not done: the sugar budget's zero case (111) stays
+     reported; the session's reading, not a proof, is that it is
+     unreachable (197). Also left: `bind-let`'s `tele`, whose empty case silently
      stops checking rather than reporting. `self/bootstrap.sh` is the
      evidence.
 
@@ -1882,12 +1851,7 @@ OCaml. The shapes below are the session's, made without the owner.
     having none to carry. A string literal is placed at its opening
     quote, its line its own rather than the line it closes on, and an
     unterminated one is reported there, so that a position is always
-    the start of the token it names. The
-    reference reads a form generated by `unary` under the pseudo-file
-    `<unary>`, the lines being the generated text's; `slc` builds those
-    forms rather than reading them back and leaves the file as it
-    stands, so the two differ on an error inside one, which is an
-    internal error either way.
+    the start of the token it names.
 
     The two implementations place a message differently in one
     respect: the reference carries a location per form, while `slc`
@@ -2018,9 +1982,8 @@ session's, made without the owner.
     such `let-match`es arbitrarily deep. The top level starts the budget
     at the size of the form being elaborated, its count of atoms and
     lists; the session's reading is that no chain of expansions can
-    outrun it, each one being spent on a distinct `let-match` or `unary`
-    in that form, and the generated forms of the latter containing no
-    sugar. The zero case stays an internal error.
+    outrun it, each one being spent on a distinct `let-match` in that
+    form. The zero case stays an internal error.
 
 ## Confining file requests (section 27)
 
@@ -2123,7 +2086,7 @@ reading that may be mistaken.
 
 212. **Literals outside every scope (sections 5, 18, 45).** Both compilers
     intern a literal where it is first met, from an expression's literal case,
-    `numeral-of`, `prove-literal-lt` and `unary`, with no pass over a
+    `numeral-of` and the `intern-*` primitives, with no pass over a
     form ahead of elaborating it. The reference keeps one program-wide
     table (`Env.literal_rows`) from a literal's value to the entries it
     minted, with their values and the Peano ladder, reset with the FFI

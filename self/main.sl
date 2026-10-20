@@ -9,7 +9,7 @@
   (tail $ write-lines rest $ say-to (BTrue) "\n" $ say-to (BTrue) e w))
 
 ; Each file the sources hold, with the name the messages give it; a syntax error ends that file's reading. The first
-; source is the prelude, whose scope the generated forms of unary elaborate in (lib/builtin.ml).
+; source is the prelude (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (unique (ElabWorld) ew) (many (Bool) notes) (subterm many (List $ SrcFile) srcs) (many (Env) env) (many (Bool) first) -> (unique (ElabWorld) ewr at ew) (many (Env) r))
   (let-match many srcs (Cons _ f rest) ((Nil _) (values ew env)))
   (let-match many f (MkSrcFile path name _ _))

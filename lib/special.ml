@@ -1,5 +1,5 @@
 type t =
-  | Let | DefLvl | DefFns | DefUnique | DefAdts | ComptimeMatch | LetMatch | Unary | ProveLiteralLt | OpenAdt | OpenAbsurd
+  | Let | DefLvl | DefFns | DefUnique | DefAdts | ComptimeMatch | LetMatch | OpenAdt | OpenAbsurd
   | Fn | UniqueFn | TyCtor | ValCtor | Matchable
   | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
@@ -8,7 +8,7 @@ type t =
   | Erased | Many | Unique | Colon | Is | Arrow | Subterm | Enum | Union | Tail | NoTail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
-  [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefUnique, "def-unique"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match"); (Unary, "unary"); (ProveLiteralLt, "prove-literal-lt");
+  [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefUnique, "def-unique"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match");
     (OpenAdt, "open-adt"); (OpenAbsurd, "open-absurd");
     (Fn, "Fn"); (UniqueFn, "UniqueFn"); (TyCtor, "TyCtor"); (ValCtor, "ValCtor"); (Matchable, "Matchable");
     (CellAlloc, "cell-alloc"); (CellWrite, "cell-write"); (CellMatch, "cell-match"); (Cell, "Cell"); (SlotOf, "slot-of"); (SlotSelf, "slot-self"); (AtFnOf, "at-fn-of"); (OpenAtFn, "open-at-fn"); (At, "at"); (Share, "share"); (Match, "match"); (MatchableOf, "matchable-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
@@ -23,7 +23,7 @@ let all =
     (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]
 
 let name s = List.assoc s all
-let statements = [ Let; DefLvl; DefFns; DefUnique; DefAdts; ComptimeMatch; LetMatch; Unary; OpenAdt; SlotSelf; OpenAtFn; DumpContext; CompileError; CompileWarn; DefOpaque; DefPrim; Goal; Qed ]
+let statements = [ Let; DefLvl; DefFns; DefUnique; DefAdts; ComptimeMatch; LetMatch; OpenAdt; SlotSelf; OpenAtFn; DumpContext; CompileError; CompileWarn; DefOpaque; DefPrim; Goal; Qed ]
 
 let help = ref Specials_source.source
 

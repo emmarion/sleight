@@ -185,13 +185,15 @@ that the test does not make is a mistake in this file.
   longer `at` the world it came from. [`tests/world_erased.sl`](tests/world_erased.sl) shows a
   `world-do` in an erased position performing nothing.
 - [`tests/prove_literal_lt.sl`](tests/prove_literal_lt.sl), [`tests/numeral_succ.sl`](tests/numeral_succ.sl),
-  [`tests/numeral_lemmas.sl`](tests/numeral_lemmas.sl) — reasoning about literals through the prelude's
-  `Numeral` relation rather than about their opaque `Nat`s.
-  `prove-literal-lt` gives an `Lt` between two numerals, which with
-  `lt-asym` refutes a branch that has equated them; `unary` rewrites a literal
-  to successor form, walking only as far as the floor it is given, which is
-  what lets one index a `Vec`. The third writes out what both expand to, so
-  the sugar can be read against the calls it stands for.
+  [`tests/unary_constant.sl`](tests/unary_constant.sl), [`tests/numeral_lemmas.sl`](tests/numeral_lemmas.sl) —
+  reasoning about literals, whose `Nat`s are opaque. The prelude's macro
+  `prove-literal-lt` gives an `Lt` between two constants, which with
+  `lt-asym` refutes a branch that has equated them; its macro `unary`
+  rewrites a constant to successor form, walking only as far as the floor it
+  is given, which is what lets one index a `Vec`, and the third test gives it a
+  computed constant. The fourth reasons through the prelude's `Numeral`
+  relation by hand: `numeral-succ` over a `BinSucc` witness, and
+  `numeral-inj` refuting a branch.
 - [`tests/bare_call.sl`](tests/bare_call.sl), [`tests/bare_lex.sl`](tests/bare_lex.sl) — calls with no decrease
   annotation ([DESIGN.md](DESIGN.md) section 48): the first has a `Predates` proof and a `Subterm`
   proof inferred beside a written `_`; the second is [`tests/ackermann.sl`](tests/ackermann.sl)

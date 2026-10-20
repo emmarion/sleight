@@ -3078,54 +3078,6 @@
 (def-fns _ $ (many lit-number : (many (Syn) raw) -> (many (Maybe $ Nat) n))
   (match many raw _ ((RNat _ n) (Some _ n)) ((RChr _ c) (Some _ c)) (else (None _))))
 
-; How a numeral or character literal is spelled in a message (lib/literal.ml's spell).
-(def-fns _ $ (many literal-spelled : (many (Syn) raw) (many (Nat) z) -> (many (String) s))
-  (match many raw _ ((RChr _ _) (rope-str $ lit-char-rope z)) (else (nat-str z))))
-
-; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
-; (lib/elab.ml's numeral_entry).
-(def-fns _ $ (many numeral-entry : (many (Env) env) (many (Syn) raw0) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
-  (let ((many raw)) $ syn-literal env raw0)
-  (let-match many (lit-number raw) (Some _ z)
-    ((None _)
-      (values (env-error env
-                (str-cat (qraw raw) " is not a numeral or character literal"))
-              $ None _)))
-  (let ((many env1)) $ intern-raw env raw)
-  (match many (lit-lookup env1 $ nat-str z) _
-    ((None _) (values env1 $ None _))
-    ((Some _ x) (values env1 $ Some _ $ MkPair _ _ z x))))
-
-(def-fns _ $ (many literal-lt-entry : (many (Env) env) (many (Syn) raw0) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
-  (let ((many raw)) $ syn-literal env raw0)
-  (let ((many (Bool) numeral)) $ match many raw (((Bool) b)) ((RNat _ _) (BTrue)) (else (BFalse)))
-  (match many numeral _
-    ((BFalse) (values (env-error env $ str-cat (say env "`prove-literal-lt` takes two numerals, got ") $ qraw raw) $ None _))
-    ((BTrue) (numeral-entry env raw))))
-
-(def-fns _ $ (many mint-literal-lt : (many (Env) env) (many (List $ Syn) args) -> (many (Env) r) (many (Maybe $ Res) res))
-  (let-match many args (Cons _ araw rest) ((Nil _) (values env $ None _)))
-  (let-match many rest (Cons _ braw _) ((Nil _) (values env $ None _)))
-  (let ((many env1) (many ea)) $ literal-lt-entry env araw)
-  (let ((many env2) (many eb)) $ literal-lt-entry env1 braw)
-  (let-match many ea (Some _ pa) ((None _) (values env2 $ None _)))
-  (let-match many eb (Some _ pb) ((None _) (values env2 $ None _)))
-  (let-match many pa (MkPair _ _ za xa))
-  (let-match many pb (MkPair _ _ zb xb))
-  (let-match many (nat-lt za zb) (BTrue)
-    ((BFalse) (values (env-error env2 $ str-cat3 (say env2 "`prove-literal-lt`: ") (nat-str za) $ str-cat " is not below " $ nat-str zb) $ None _)))
-  (let ((many env3) (many lt)) $ prelude-id env2 "Lt")
-  (let ((many env4) (many r)) $ mint env3 $ proof-type lt $ Cons _ (TVar xa) $ Cons _ (TVar xb) $ Nil _)
-  (values env4 $ Some _ r))
-
-; A generated form is elaborated in the prelude's scope, so user shadowing cannot reach it, and the caller's
-; scope restored after; the level context stays the caller's throughout (lib/elab.ml's in_prelude).
-(def-fns _ $ (many generated-form : (many (Env) env) -> (many (Env) r))
-  (env-set-scope env $ env-prelude env))
-
-(def-fns _ $ (many leave-prelude : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
-  (env-set-scope inner $ env-scope outer))
-
 (def-fns _ $ (many cc-eq : (many (CC) a) (many (CC) b) -> (many (Bool) r))
   (match many a _
     ((CCPlain) (match many b _ ((CCPlain) (BTrue)) (else (BFalse))))
@@ -4600,11 +4552,6 @@
 ; Every function recurses on a raw it elaborates: the first subterm parameter is that raw or list, a later
 ; one a structure parsed from it (its entries prove they sit inside it) or a Steps budget spent when a
 ; function hands its whole raw to another.
-; ---- Sugar (DESIGN.md section 49): unary stands for calls on the prelude's Numeral lemmas, written
-; down as the reference writes them and elaborated where the form is met. The elaborator's group takes a
-; budget of such expansions as its first subterm parameter, spent when a generated form is elaborated,
-; which is what lets that raw be of the elaborator's own making (ASSUMPTIONS 111).
-
 (def-fns _
   ((many raw-size : (subterm many (Syn) raw) -> (many (Nat) n))
     (match many raw _
@@ -4614,58 +4561,6 @@
     (match many rs _
       ((Nil _) 0)
       ((Cons _ r rest) (nat-add (notail $ raw-size r) $ notail $ raws-size rest)))))
-
-(def-fns _ $ (many gen-atom : (many (String) s) -> (many (Syn) r))
-  (RAtom (MkSpot 1 1) $ NSrc s))
-
-(def-fns _ $ (many gen-nat : (many (Nat) n) -> (many (Syn) r))
-  (RNat (MkSpot 1 1) n))
-
-(def-fns _ $ (many gen-of : (many (String) head) (many (List $ Syn) args) -> (many (Syn) r))
-  (RList (MkSpot 1 1) $ Cons _ (gen-atom head) args))
-
-(def-fns _ $ (many gen-numeral-of : (many (Nat) n) -> (many (Syn) r))
-  (gen-of "numeral-of" $ Cons _ (gen-nat n) $ Nil _))
-
-(def-fns _ $ (many bin-raw : (subterm many (Bin) b) -> (many (Syn) r))
-  (gen-of (bin-ctor b) $ match many b (((List $ Syn) _)) ((BZ) (Nil _)) ((B1 x) (Cons _ (notail $ bin-raw x) $ Nil _)) ((B2 x) (Cons _ (notail $ bin-raw x) $ Nil _))))
-
-(def-fns _ $ (many bin-text : (many (Nat) n) -> (many (Syn) r))
-  (bin-raw $ bin-of-nat n))
-
-(def-fns _ $ (many bin-succ : (subterm many (Bin) b) -> (many (Bin) c))
-  (match many b _ ((BZ) (B1 $ BZ)) ((B1 b1) (B2 b1)) ((B2 b1) (B1 $ notail $ bin-succ b1))))
-
-; The witness that n's spelling steps to (n+1)'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)).
-(def-fns _ $ (many bin-succ-witness : (subterm many (Bin) b) -> (many (Syn) r))
-  (match many b _
-    ((BZ) (gen-of "BSZ" $ Nil _))
-    ((B1 x) (gen-of "BS1" $ Cons _ (bin-raw x) $ Nil _))
-    ((B2 x) (gen-of "BS2" $ Cons _ (bin-raw x) $ Cons _ (bin-raw $ bin-succ x) $ Cons _ (notail $ bin-succ-witness x) $ Nil _))))
-
-(def-fns _ $ (many succs : (subterm many (Nat) k) (many (Syn) base) -> (many (Syn) r))
-  (match many k _
-    ((Zero) base)
-    ((Succ j) (tail $ succs j $ gen-of "Succ" $ Cons _ base $ Nil _))))
-
-(def-fns _ $ (many unary-fold : (subterm many (Nat) k) (many (Nat) z) (many (Nat) lo) (many (Syn) floor) (many (Syn) acc) -> (many (Syn) r))
-  (let-match many k (Succ j) ((Zero) acc))
-  (let ((many n)) $ Succ z)
-  (let ((many below)) $ succs (nat-sub z lo) floor)
-  (let ((many stp)) $ gen-of "numeral-succ" $ Cons _ (bin-text z) $ Cons _ (bin-text n) $ Cons _ (gen-nat z) $ Cons _ (gen-nat n)
-                      $ Cons _ (bin-succ-witness $ bin-of-nat z) $ Cons _ (gen-numeral-of z) $ Cons _ (gen-numeral-of n) $ Nil _)
-  (let ((many congd)) $ gen-of "eq-cong-succ" $ Cons _ (gen-nat z) $ Cons _ below $ Cons _ acc $ Nil _)
-  (let ((many acc2)) $ gen-of "eq-trans" $ Cons _ (gen-of "Nat" $ Nil _) $ Cons _ (gen-nat n) $ Cons _ (gen-of "Succ" $ Cons _ (gen-nat z) $ Nil _)
-                      $ Cons _ (gen-of "Succ" $ Cons _ below $ Nil _) $ Cons _ stp $ Cons _ congd $ Nil _)
-  (tail $ unary-fold j n lo floor acc2))
-
-(def-fns _ $ (many unary-source : (many (Nat) za) (many (Nat) lo) (many (Bool) floored) -> (many (Syn) r))
-  (let ((many (Syn) floor) (many (Syn) acc))
-    (match many floored _
-      ((BFalse) (values (gen-of "Zero" $ Nil _) $ gen-of "numeral-zero" $ Cons _ (gen-nat 0) $ Cons _ (gen-numeral-of 0) $ Nil _))
-      ((BTrue) (values (gen-nat lo) $ gen-of "Refl" $ Cons _ (gen-of "Nat" $ Nil _) $ Cons _ (gen-nat lo) $ Nil _))))
-  (gen-of "let-match" $ Cons _ (gen-atom "erased") $ Cons _ (unary-fold (nat-sub za lo) lo lo floor acc)
-    $ Cons _ (gen-of "Refl" $ Cons _ (RWild $ MkSpot 1 1) $ Cons _ (RWild $ MkSpot 1 1) $ Nil _) $ Nil _))
 
 
 ; ---- dump-context (ASSUMPTIONS 196, lib/dump.ml)
@@ -5712,11 +5607,6 @@
                       (match many found (((ElabWorld) _ at ew19) ((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
                         ((None _) (values ew19 env2 (Nil _) $ hoist-none ctx expect $ CError _ expect "numeral-of"))
                         ((Some _ p) (erased-result ew19 ctx expect proof-what env2 $ res-of env2 $ term-var p))))
-                    ((ExProveLiteralLt)
-                      (let ((many env2) (many found)) $ mint-literal-lt env0 args)
-                      (match many found (((ElabWorld) _ at ew4) ((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
-                        ((None _) (values ew4 env2 (Nil _) $ hoist-none ctx expect $ CError _ expect "prove-literal-lt"))
-                        ((Some _ r) (erased-result ew4 ctx expect proof-what env2 r))))
                     ((ExOpenAbsurd)
                       (let-match many args (Cons _ eraw more) ((Nil _) (malformed ew4 ctx expect env0 sp)))
                       (let-match many more (Cons _ ann more2) ((Nil _) (malformed ew4 ctx expect env0 sp)))
@@ -6709,7 +6599,6 @@
               (let ((many env2) (many sc)) $ elab-comptime-match ctx env1 args pre)
               (values ew7 env2 ctx sc))
             ((StLetMatch) (notail $ elab-let-match ew fuel callbacks _ sugar args envl2 ctx spos))
-            ((StUnary) (notail $ elab-unary ew fuel callbacks _ sugar args envl2 ctx spos))
             ((StOpenAdt) (notail $ elab-open-adt ew fuel callbacks _ sugar args envl2 ctx spos))
             ((StSlotSelf)
               (let-match many args (Cons _ a more) ((Nil _) (values ew (env-error envl2 $ sp-misuse envl2 sp) ctx $ SNone _)))
@@ -6873,36 +6762,6 @@
             (let-match many alias (Some _ x) ((None _) (values ew3 envr rctx bound)))
             (let ((many bindcell)) (SLet rctx many-one (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code envr rctx saved)))
             (values ew3 envr (Cons _ (Cons _ x (Nil _)) rctx) (SSeq _ _ _ bound bindcell)))))))
-
-  ; unary (DESIGN.md section 49): the literals checked in the reference's order, then the let-match the form stands
-  ; for, written out as there.
-  ((many elab-unary : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Multiplicity) spos) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
-    (let ((many arity-error)) $ env-error env (say env "`unary` takes one or two literals"))
-    (let-match many args (Cons _ araw rest) ((Nil _) (values ew arity-error ctx $ SNone _)))
-    (let ((many env1) (many ea)) $ numeral-entry env araw)
-    (let-match many ea (Some _ pa) ((None _) (values ew env1 ctx $ SNone _)))
-    (let-match many pa (MkPair _ _ za _))
-    (let ((many (Env) env2) (many (Maybe $ Nat) lo))
-      (match many rest _
-        ((Nil _) (values env1 $ Some _ 0))
-        ((Cons _ braw rest2)
-          (let-match many rest2 (Nil _) ((Cons _ _ _) (values arity-error $ None _)))
-          (let ((many env2) (many eb)) $ numeral-entry env1 braw)
-          (let-match many eb (Some _ pb) ((None _) (values env2 $ None _)))
-          (let-match many pb (MkPair _ _ zb _))
-          (match many (nat-lt zb za) (((Env) _) ((Maybe $ Nat) l0))
-            ((BTrue) (values env2 $ Some _ zb))
-            ((BFalse) (values (env-error env2 $ str-cat3 (say env2 "`unary`: ") (literal-spelled araw za) $ str-cat " does not exceed " $ literal-spelled braw zb) $ None _))))))
-    (let-match many lo (Some _ l) ((None _) (values ew env2 ctx $ SNone _)))
-    (let ((many k)) $ nat-sub za l)
-    (let-match many (nat-lt 4096 k) (BFalse)
-      ((BTrue) (values ew (env-error env2 $ str-cat3 (say env2 "`unary`: ") (nat-str k) " successors is beyond the limit") ctx $ SNone _)))
-    (let ((many (Bool) floored)) $ match many rest _ ((Nil _) (BFalse)) ((Cons _ _ _) (BTrue)))
-    (let-match many sugar (Succ k2)
-      ((Zero) (values ew (env-error env2 "internal: a generated form contains sugar") ctx $ SNone _)))
-    (let ((many gen)) $ unary-source za l floored)
-    (let ((unique ew1) (many env3) (many ctx2) (many sc)) $ notail $ elab-stmt ew fuel callbacks _ k2 gen (generated-form env2) ctx spos "item of a body")
-    (values ew1 (leave-prelude env2 env3) ctx2 sc))
 
   ; let (section 19): binders, then the right-hand side; run at once in run position (section 29); an
   ; annotation is a checked redundancy.
