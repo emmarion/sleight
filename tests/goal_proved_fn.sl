@@ -4,5 +4,6 @@
   (let ((many m) (erased _)) (add n n))
   m)
 (qed (MkDoubler (level-of twice) twice))
+; expect: --goal proved: PASS
 ; stderr: tests/goal_spec.sl:6:1: note: proved `(goal many (Doubler))`
 ; stderr: tests/goal_proved_fn.sl:6:1: note: by this `qed`

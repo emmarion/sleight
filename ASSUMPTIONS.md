@@ -2297,11 +2297,6 @@ silent.
 
 ## The `goal` and `qed` forms and `--goal`
 
-223. **Where `--goal open` and `proved` report.** The reports are `note`s
-     in the message format of MANUAL.md, and both compilers write them to
-     stderr with their other messages, where stdout would otherwise hold
-     slc's OCaml or a program's output. A `; stderr:` directive checks them.
-
 225. **The goal is shown as the scope where it is set spells it.** The
      note on the goal points at the `goal` form, so its keyword, multiplicity and
      type are written as a message about that place writes them, even

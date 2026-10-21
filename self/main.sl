@@ -69,6 +69,12 @@
   (let-match many (str-eq g "proved") (BTrue) ((BFalse) (None _)))
   (Some _ $ GoalProved))
 
+(def-fns run-lvl $ (many goal-verdict : (many (List $ Pair (String) $ String) flags) (many (Bool) pass) (unique (World) w) -> (unique (World) w2 at w))
+  (let-match many (flag-value flags "--goal") (Some _ g) ((None _) w))
+  (let-match many (goal-mode-of g) (Some _ gm) ((None _) w))
+  (let-match many gm (GoalUnrequired) (else (say-to (BFalse) (str-cat3 "--goal " g $ str-cat ": " $ match many pass _ ((BTrue) "PASS\n") ((BFalse) "FAIL\n")) w)))
+  w)
+
 (def-fns util-lvl $ (many failed : (many (String) m) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit _ exit-fail)))
 
@@ -91,7 +97,7 @@
   (let ((many goal-arg)) $ match many (flag-value flags "--goal") (((String) _)) ((Some _ g) g) ((None _) "none"))
   (let ((many mode)) $ goal-mode-of goal-arg)
   (let-match many mode (Some _ gm) ((None _) (failed "--goal takes none, open or proved" w)))
-  (let-match many (match many gm (((Maybe $ String) _)) ((GoalUnrequired) (None _)) (else (goal-refused flags))) (None _) ((Some _ f) (failed (str-cat3 "--goal " goal-arg $ str-cat " does not take " f) w)))
+  (let-match many (match many gm (((Maybe $ String) _)) ((GoalUnrequired) (None _)) (else (goal-refused flags))) (None _) ((Some _ f) (failed (str-cat3 "--goal " goal-arg $ str-cat " does not take " f) $ goal-verdict flags (BFalse) w)))
   (let ((many base-env)) (env-set-goals (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources) $ MkGoals gm (None _) (Many) (TErr "no goal") "" $ None _))
   (let ((many builtins)) $ env-set-fn-same (match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f $ Zero)) ((None _) base-env)) $ has-flag flags "--fn-same")
   (let ((unique ew)) (MkElabWorld w))
@@ -102,8 +108,8 @@
   (let ((many env)) $ match many (or by-warnings $ env-failed env0) (((Env) _)) ((BTrue) env0) ((BFalse) (close-goal env0 $ last-path files)))
   (let ((unique w1)) $ write-lines (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))
     $ write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) w0)
-  (let-match many (or (env-failed env) by-warnings) (BFalse) ((BTrue) (values w1 (Exit _ exit-fail))))
-  (let-match many gm (GoalUnrequired) (else (values w1 (Exit _ exit-ok))))
+  (let-match many (or (env-failed env) by-warnings) (BFalse) ((BTrue) (values (goal-verdict flags (BFalse) w1) (Exit _ exit-fail))))
+  (let-match many gm (GoalUnrequired) (else (values (goal-verdict flags (BTrue) w1) (Exit _ exit-ok))))
   (let-match many (has-flag flags "--interpret") (BTrue)
     ((BFalse)
       (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env env)
@@ -119,7 +125,7 @@
 (def-fns slc-lvl $ (many read-files : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (subterm many (List $ String) paths) (many (List $ Pair (String) $ String) acc) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many paths (Cons _ path rest) ((Nil _) (compile flags pargs help (list-rev _ acc) w)))
   (let ((unique w1) (many r)) (world-do _ w (ReadFile path)))
-  (let-match many r (Ok _ src) ((Fail _ m) (failed m w1)))
+  (let-match many r (Ok _ src) ((Fail _ m) (failed m $ goal-verdict flags (BFalse) w1)))
   (tail $ read-files flags pargs help rest (Cons _ (MkPair _ _ path src) acc) w1))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.

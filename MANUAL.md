@@ -175,11 +175,18 @@ applied or written once the files are elaborated. `open` fails a run in
 which no file sets a goal or a `qed` proves it; `proved` fails one in which
 no file sets a goal or no `qed` proves it. When it succeeds, each writes a
 `note` to stderr, in the format below, at the `goal` form, with the goal
-shown canonically as the scope there spells it (ASSUMPTIONS.md 223, 225),
+shown canonically as the scope there spells it (ASSUMPTIONS.md 225),
 and `proved` writes a second at the `qed`: `` spec.sl:2:1: note: open
 `(goal erased (False))` `` (`tests/goal_false_open.sl`), and
 `` spec.sl:6:1: note: proved `(goal many (Doubler))` `` followed by
-`` proof.sl:6:1: note: by this `qed` `` (`tests/goal_proved_fn.sl`). The reference
+`` proof.sl:6:1: note: by this `qed` `` (`tests/goal_proved_fn.sl`).
+Stdout then holds one line, `--goal open: PASS` or `--goal proved: PASS`,
+and the exit code is 0. A run that fails once the mode is read writes
+`--goal open: FAIL` or `--goal proved: FAIL` there instead and exits
+non-zero; one that stops without writing the line has failed too. Nothing
+else is written to stdout under these modes. The notes on stderr are for
+reading, not for deciding whether a run succeeded: the files being checked
+can make the compiler write text that looks like them. The reference
 refuses `--extract`, `--repl` and `--no-prelude` with `open` or `proved`;
 slc takes the same flag and refuses `--interpret` and `--no-prelude` with
 them, and then writes no OCaml. Warnings are reported as they are without

@@ -69,6 +69,8 @@ let () =
   Reader.shape_notes := not (flag "--no-shape-note");
   let fail m = prerr_endline m; exit 1 in
   Elab.goal_mode := Option.fold ~none:Elab.Unrequired ~some:(fun m -> match List.assoc_opt m Elab.goal_modes with Some m -> m | None -> fail "--goal takes none, open or proved") (option "--goal");
+  let passed = ref false in
+  if !Elab.goal_mode <> Elab.Unrequired then at_exit (fun () -> print_endline (Program.goal_verdict !Elab.goal_mode !passed));
   Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
   let consume = if extract = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let warned = ref false and pending = ref [] in
@@ -91,6 +93,6 @@ let () =
   if flag "--repl" then repl consume env;
   let env = settle env in
   if !Elab.goal_mode <> Elab.Unrequired then
-    match report final Elab.close_goal with Some report -> Option.iter prerr_endline report | None -> exit 1
+    match report final Elab.close_goal with Some report -> Option.iter prerr_endline report; passed := true | None -> exit 1
   else
   Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Extract.emit env (List.rev !Env.trace)))) extract

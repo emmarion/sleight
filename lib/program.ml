@@ -75,6 +75,8 @@ let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
   else List.find_map (fun f -> if List.mem f [ "--extract"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
 
+let goal_verdict mode passed = Printf.sprintf "--goal %s: %s" (Elab.goal_name mode) (if passed then "PASS" else "FAIL")
+
 let consume w env ty v =
   match final env ty with
   | Main -> (driver env).run_main w v

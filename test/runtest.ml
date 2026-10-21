@@ -134,7 +134,7 @@ and run_mode name externs src flags =
       let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
       let sources = List.map (fun t -> (t, source t)) (if goal then [] else if externs then [ true; false ] else [ true ]) in
       Option.iter (fun (env, ty, v) -> consume env ty v) !final;
-      Option.iter (fun r -> Buffer.add_string errors (r ^ "\n")) (Elab.close_goal ());
+      Option.iter (fun r -> Buffer.add_string errors (r ^ "\n"); Buffer.add_string printed (Program.goal_verdict !Elab.goal_mode true ^ "\n")) (Elab.close_goal ());
       Ok (sources, Buffer.contents printed)
     with e -> (match Program.explain (label name) e with Some m -> Error m | None -> raise e)
   in
