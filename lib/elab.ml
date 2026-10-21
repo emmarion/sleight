@@ -2629,6 +2629,7 @@ let set_goal env l = function
       Option.iter (fun (at, _, _, _) -> error_with_in env l [ (at, "the goal is set here") ] "a unit sets at most one `goal`") !goal;
       let mult = mult_or env (loc m) m in
       let env, ty = elab_type env t in
+      settle env (loc t) ty;
       goal := Some (l, mult, ty, env);
       env
   | _ -> error l "%s" (help env (Sp.misuse Sp.Goal))
