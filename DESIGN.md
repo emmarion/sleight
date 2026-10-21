@@ -741,10 +741,12 @@ that entry as from any other. Inside a body those entries are
 `Hypothetical`; in run position they are `Settled` from the moment
 the form has run (§29). An `erased` binder of a `Settled` entry
 holds the token of §5, not its value. A `unique` binder of a
-`Settled` entry does not forward its state, because it takes the
-value over: in run position it is minted afresh, with its own type
-as its minted type and itself as its minted `is` (§29), and inside a
-body it is `Hypothetical`.
+`Settled` entry does not forward `Settled`, the stored value, the
+minted type or the minted `is`, because it takes the value over: in
+run position it is minted afresh, with its own type as its minted
+type and itself as its minted `is` (§29), and inside a body it is
+`Hypothetical`. It still takes over the level-mint marker and the
+introduction order.
 Forwarding is one way a `Settled` can reach a function body, for example
 a special form renamed locally. The other ways are a direct reference
 to the entry, and a macro expansion that mentions it.
