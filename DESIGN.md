@@ -365,12 +365,12 @@ tag, the marks, the number of constructors, each constructor's
 multiplicity marker, the constructors and the type constructor, and so
 their signatures. Two that cannot be unified contradict. Two that can
 be unified become one; the entry kept is the one the elaborator can
-best read, which is a `Settled` with the type's own declaration if there
-is one, and otherwise one that is non-erased and still bound. So two
+best read, which is a non-erased `Settled` if there is one, and
+otherwise one that is non-erased and still bound. So two
 opened `Matchable`s for one type are never ambiguous: either they are
 one, or they contradict. The facts this adds are justified by
 `def-adts` being the only place a `Matchable` is created: two that name
-one constructor describe one declaration.
+one constructor were added to scope with it by one `def-adts`.
 
 **What requires an open.** The disjointness rule of §7; `match`,
 `let-match` and `comptime-match`; the emptiness check of §25 and §51;
@@ -382,13 +382,13 @@ one constructor describe one declaration.
 not gated. A match or `let-match` that dispatches at runtime, meaning
 one at `many` or `unique` on a non-erased scrutinee, uses its
 `Matchable` at `many` and requires the opened entry to be
-**readable**: either a `Settled` with the type's declaration, or
-non-erased and still bound. A `comptime-match` requires the stricter
-of the two, a `Settled` with the declaration. Readability is judged at
-the match. A `many` parameter opened at `erased` therefore serves no
-dispatching match. An unopened `Matchable` leaves its type constructor
-opaque, so an unopened first-class type constructor unifies with any
-other type constructor of the same signature.
+**readable**: non-erased, and either `Settled` or still bound. A
+`comptime-match` requires the stricter of the two, a non-erased
+`Settled`. Readability is judged at the match. A `many` parameter
+opened at `erased` therefore serves no dispatching match. An unopened
+`Matchable` leaves its type constructor opaque, so an unopened
+first-class type constructor unifies with any other type constructor
+of the same signature.
 
 `def-adts` is the only place a `Matchable` is created. Declaring an
 ADT creates an anonymous `Matchable` from its tag, its marks and its
@@ -397,6 +397,11 @@ constructor markers, and opens it. The built-in `Special` and
 `Predates`, `Subterm`, `Coercible`, `Delegate`, `AtFn`, `Slot` and
 `World` have no `Matchable` and are never opened, so they are neither
 matchable nor empty (§25).
+
+A `def-adts` leaves no trace but the entries it adds to scope: its
+type constructors, value constructors and `Matchable`s, each holding
+only what §5 gives every entry. This is its meaning; warnings and
+error messages may also use where and how it is written.
 
 `(matchable-of T)` takes a bare, unapplied type constructor and yields
 the opened `Matchable` for it. It is an error when none is open. The
