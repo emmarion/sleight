@@ -352,7 +352,8 @@ let fetches ?except env =
       | None, App (Var c, [ _; Var g ]) when c = !atfn_ctor && not (List.mem (c, g) seen) ->
           ((c, g) :: seen, match name_for g with Some n -> (y, (y, form "at-fn-of" n)) :: acc | None -> acc)
       | _ -> (seen, acc)) ([], []) env.scope.ids)
-  @ List.filter_map (fun r -> Option.bind r.lit_proof (fun p -> match canon env (Var p) with Var a -> Some (a, (p, form "numeral-of" (Literal.spell r.lit))) | _ -> None)) (present_literals env)
+  @ List.concat_map (fun r -> List.filter_map (fun (head, x, t) -> match canon env t with Var a -> Some (a, (x, form head (Literal.spell r.lit))) | _ -> None)
+      (("slot-of", r.lit_id, slot_of r.lit_id) :: Option.fold ~none:[] ~some:(fun p -> [ ("numeral-of", p, Var p) ]) r.lit_proof)) (present_literals env)
 
 (* An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
    an anonymous marker. *)
