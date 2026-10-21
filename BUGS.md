@@ -121,3 +121,19 @@ is a design decision. Remove an entry when it is fixed.
     `values` form of two entries and treat every entry as non-tail. No
     test has this shape; `open-contradicts` in `self/elab.sl` takes and
     returns the macro world so that `elab-refute` avoids it.
+
+22. **Checking is exponential in a term's sharing.** Canonical forms
+    are expanded in full and walked as trees, so the cost seems to
+    track the expanded size, not the source. Reproduced with n lets
+    `(let ((erased x{i+1})) (Node x{i} x{i})))` in a function body:
+    the reference takes 6.8 s and 301 MB at n=20 and times out at
+    n=22; `slc` overflows its stack at n=18 (3.1 s and 196 MB under
+    `ulimit -s unlimited`). An unshared chain stays flat, even 1000
+    deep. The same growth was seen at `many`, in run position, through
+    a call's `is` return, and with the chain then matched, `is`-checked,
+    used as a type index, or given to `prove-subterm`. A failing
+    `prove-subterm` is worst, since its message prints the expanded
+    term (22 s and 5.2 MB at n=18). Memoizing `canon` alone (not
+    committed) left the time exponential in `fold_vars` and `unify`, so
+    a fix probably has to make every term walk sharing-aware, in both
+    compilers.
