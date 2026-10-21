@@ -563,6 +563,9 @@ a call or a cell invocation instead names how its head is taken (§37,
 §39). A statement's position is that of the
 expression it belongs to (§27), so this rule also covers `let-match`,
 every binder of a `let`, and `open-adt`.
+A constructor's marker in `def-adts` is not held to it: the marker
+says whether the constructor is phantom (§21), whatever the position
+of the `def-adts`.
 
 For a call or a constructor application:
 
