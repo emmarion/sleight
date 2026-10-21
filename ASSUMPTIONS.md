@@ -686,42 +686,40 @@ check, and none of it is design.
     `tests/bare_call.sl`, `tests/no_predates.sl`, `tests/no_subterm.sl`
     and `tests/level_alias_bad.sl` are the evidence.
 
-## A match's results are out of scope for its own branches
+## A form's results are out of scope for its own body
 
 Item 114 records a choice the session made, in the reference and in
 `self/`, while fixing a program the owner sent. The reasoning is the
-session's and may be wrong (CLAUDE.md rule 1); the two tests are what
-was checked by running (rule 2).
+session's and may be wrong (CLAUDE.md rule 1); the tests it names are
+what was checked by running (rule 2).
 
-114. **A `match`'s result entries are opened after its branches**
-    (`Elab.elab_match`; `elab-match` in `self/elab.sl`). A match's
-    annotation is a telescope, and the entries it opens stand for what
-    the match produces. Their names are dropped
-    (`~names:(anon ann_tele)`), so nothing reaches them by name; but the
-    lookups that go by type scan `env.scope` regardless — for a
-    `Matchable` heading a type constructor (§8, `find_matchable`), for a
-    `Newtype` naming a constructor (§33), and for an anonymous
-    `Delegate` about a function (§19). Were the entries bound before the
-    branches, a branch could satisfy the annotation by fetching the
-    entry the annotation had just minted, and `check_results` would
-    compare that entry with itself. `(match erased (Zero) (((Matchable
-    enum Level) m)) (else (matchable-of Level)))` would then bind an
-    erased `Matchable` for `Level` listing no constructors, which reads
-    as `(Level)` being an empty type, so an `absurd` body (§25) would be
-    accepted for a `def-lvl` level and `(False)` would follow
-    (`tests/match_result_matchable_bad.sl`, the owner's program); and
-    the same shape for a `Matchable` marked `newtype` would mint a
-    `Newtype` for a constructor whose `def-adts` entry carries no
-    `newtype` mark, after which `coerce` would hand a tagged
-    `(MkBox (Succ (Zero)))` to a position of type `(Nat)`
-    (`tests/match_result_newtype_bad.sl`). The results are opened after
-    the branches, the coverage check and the `else`. DESIGN.md does not
-    appear to say either way. That a branch may not read what the match
-    it belongs to produces looks to the session like plugging a
-    circularity rather than a design choice, but it is recorded here in
-    case the owner reads §21's annotation as binding for the branches;
-    the entries are anonymous, so the question is only about the
-    type-directed lookups.
+114. **A form's result entries are opened after the form**
+    (`Elab.open_results`; `open-results` in `self/elab.sl`). A
+    `match`'s or `cell-match`'s annotation is a telescope, as are a
+    call's returns, and the entries opened for it stand for what the
+    form produces. Their names are dropped, so nothing reaches them by
+    name; but `delegate-of` and `at-fn-of` (§19, §39) find a proof by
+    scanning `env.scope` for an anonymous entry of its type. Were the
+    entries bound before the form's branches, body or arguments, these
+    could fetch the entry the annotation had just minted, and
+    `check_results` would compare that entry with itself. A `match`
+    annotated with a `Delegate` from `id` to `yes`, a function of
+    another type, whose `else` is `(delegate-of id)`, would then supply
+    that proof, and coercing `id` through it appears to put a `Nat`
+    where a `Bool` is expected (`tests/match_result_delegate_bad.sl`;
+    also `match_result_atfn_bad`, `cell_match_result_atfn_bad` and
+    `call_result_atfn_bad`). The results are opened after everything
+    the form elaborates: for a match, the branches, the coverage check
+    and the `else`. DESIGN.md does not appear to say either way. That a
+    form's body may not read what the form produces looks to the
+    session like plugging a circularity rather than a design choice,
+    but it is recorded here in case the owner reads §21's annotation as
+    binding for the branches; the entries are anonymous, so the
+    question is only about the type-directed lookups. The `Matchable`
+    and `Newtype` lookups (§8, §33) read only opened `Matchable`s, so
+    as far as the session can tell an unopened result entry does not
+    reach them (`tests/match_result_matchable_bad.sl`,
+    `match_result_newtype_bad.sl`).
 
 ## `_` for an erased argument
 

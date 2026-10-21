@@ -28,7 +28,8 @@
   (let ((unique w2) (many read)) (world-do _ w1 (ReadFile "io-test.txt")))
   (let-match many read (Ok _ s) ((Fail _ m) (let ((unique w3) (many _)) (world-do _ w2 (WriteErr m))) (values w3 (Exit P code1))))
   (let ((unique w3) (many _)) (world-do _ w2 (WriteOut s)))
-  (let ((unique w4) (many args)) (world-do _ w3 (GetArgs)))
-  (values (list-args args w4) (Exit P code0)))
+  (let ((unique w4) (many _)) (world-do _ w3 (DeleteFile "io-test.txt")))
+  (let ((unique w5) (many args)) (world-do _ w4 (GetArgs)))
+  (values (list-args args w5) (Exit P code0)))
 
 (Continue P start)

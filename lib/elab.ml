@@ -380,7 +380,10 @@ let field_ats tele fields = if List.length fields = List.length tele then List.m
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns
    their ids in order. [ats] given means this site is where the source writes the binders -- a pattern's
    fields -- so they are the ones shadowing warns at; without it the telescope is being read back and each
-   entry keeps the position its declaration carried (Env.bind). *)
+   entry keeps the position its declaration carried (Env.bind).
+   A form's results are opened with [open_results], and only after everything the form elaborates: `delegate-of`
+   and `at-fn-of` fetch an anonymous entry in scope by its type (ASSUMPTIONS 114), so a result entry opened
+   earlier could, it seems, be fetched as the proof of itself. *)
 let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta tele =
   let nth l i default = match l with Some l -> List.nth l i | None -> default in
   let _, env, _, fresh =
@@ -395,6 +398,8 @@ let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta te
       (0, env, ids, []) tele
   in
   (env, List.rev fresh)
+
+let open_results env ?ats ?mults ?ids tele = open_tele env ~word:false ~names:(anon tele) ?ats ?mults ?ids tele
 
 (* Printing a value against its type (section 27's printed final; section 45). The three literal types print
    as the literals they read back from (Literal.spell); a value whose type names a readable Matchable prints as
@@ -1457,7 +1462,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
 
 and call_returns ?sink ~demand env expect l callee_name acc rets inner =
   let pos = pos_of env expect in
-  let env, ids = open_tele env ~word:false ~names:(anon rets) ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
+  let env, ids = open_results env ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check ?sink l expect ids;
   List.iter2 (fun (m, (e : entry)) x ->
     let name = match e.name with Some n -> tick_name n ^ " " | None -> "" in
@@ -1710,7 +1715,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.OpenAbsurd, [ e; ann ] ->
       open_contradicts env l e;
       let env, ann_tele, _ = result_tele ~demand tele env expect l ann in
-      let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
+      let env, ids = open_results env ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
   | Sp.LevelOf, _ -> let env, lv = fetched env l sp args in erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
@@ -1895,7 +1900,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let body = match back with None -> bcode | Some x -> V.CLet ([x], V.CVar sid, bcode) in
       List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) (project_code (keeps ann_tele) body) in
       let env = {env with uses = envb.uses} in
-      let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
+      let env, result_ids = open_results env ann_tele in
       let env, code = closing env [sid] (V.CLet ([sid], code, reconstruct env l ann_tele result_ids body)) in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "%s" (help env (Sp.misuse Sp.CellMatch))
@@ -2049,7 +2054,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
                 live = List.filter_map (fun (c, _, _) -> discriminant shapes c) real @ List.filter_map (discriminant shapes) reachable }
       in
       let env = { env with uses = !branch_uses } in
-      let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
+      let env, result_ids = open_results env ann_tele in
       let env, code = swrap env (if pos = Erased then code else reconstruct env l ann_tele result_ids code) in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "%s" (help env (Sp.misuse Sp.Match))

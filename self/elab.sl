@@ -1884,6 +1884,9 @@
   (many MMErased : -> (MultsMode))
   (many MMExpect : (many (List $ Multiplicity) ms) -> (MultsMode)))
 
+; A form's results are opened with open-results, and only after everything the form elaborates: `delegate-of`
+; and `at-fn-of` fetch an anonymous entry in scope by its type (ASSUMPTIONS 114), so a result entry opened
+; earlier could, it seems, be fetched as the proof of itself.
 (def-fns _ $ (many open-tele : (subterm many (List $ Entry) tele) (many (Env) env) (many (Maybe $ List $ Maybe $ Name) names) (many (Maybe $ List $ Maybe $ Loc) sites) (many (Maybe $ List $ Multiplicity) mults) (many (List $ Term) ids) (many (Bool) meta) ->
     (many (Env) r) (many (List $ Nat) fresh) (erased (Lockstep (Entry) (Nat) tele fresh) lock))
   (let-match many tele (Cons _ e rest) ((Nil _) (values env (Nil _) (LsNil _ _))))
@@ -1915,6 +1918,10 @@
   (match many tele _
     ((Nil _) (Nil _))
     ((Cons _ _ rest) (Cons _ (None _) $ notail $ anon-names rest))))
+
+(def-fns _ $ (many open-results : (many (List $ Entry) tele) (many (Env) env) (many (Maybe $ List $ Maybe $ Loc) sites) (many (Maybe $ List $ Multiplicity) mults) (many (List $ Term) ids) ->
+    (many (Env) r) (many (List $ Nat) fresh) (erased (Lockstep (Entry) (Nat) tele fresh) lock))
+  (open-tele tele env (Some _ $ anon-names tele) sites mults ids $ BFalse))
 
 (def-fns _ $ (many finish-mode-tele : (many (Env) env) (many (List $ Entry) tele) (many (Multiplicity) pos) (many (Bool) final) ->
     (many (Env) out) (many (List $ Entry) selected) (many (List $ Multiplicity) inner) (many (DemandBridge many-one inner) bridge))
@@ -5429,7 +5436,7 @@
   ((many call-returns : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (unique (ElabWorld) ew) (many (Env) env3) (many (List $ List $ Nat) ctx) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) pre) (many (List $ Multiplicity) expect) (many (List $ Entry) rets) (many (List $ Term) acc) (many (Multiplicity) pos) (many (ExprDemand expect) demand) (many (Maybe $ Nat) cid) (many (String) fallback) (many (Invoke ctx2) inv) -> (unique (ElabWorld) ewr at ew)
       (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
     (let ((many rmults)) $ physical-mults rets)
-    (let ((many env4) (many ids) (erased _)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env3) (Some _ $ under-list (tele-mults rets) pos) acc $ BFalse)
+    (let ((many env4) (many ids) (erased _)) $ open-results rets env3 (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env3) (Some _ $ under-list (tele-mults rets) pos) acc)
     (let ((many (Env) env5) (many (Hoisted ctx expect) code))
       (match many (mult-is-many pos) _
         ((BFalse) (values env4 $ hoist-none ctx expect $ CErased _ expect))
@@ -5624,7 +5631,7 @@
                       (let-match many h0 (MkHoisted _ _ c0 _ code0))
                       (let ((unique ew20b) (many env3)) $ notail $ open-contradicts fuel callbacks _ ew20 c0 env0 env1 (first-res _ _ ress lock) code0)
                       (let ((unique ew21) (many env4) (many ann-tele) (many _) (many _) (many _)) $ notail $ result-tele ew20b fuel callbacks _ sugar ann env3 expect tele demand)
-                      (let ((many env5) (many rids) (erased _)) $ open-tele ann-tele env4 (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
+                      (let ((many env5) (many rids) (erased _)) $ open-results ann-tele env4 (None _) (None _) (Nil _))
                       (values ew21 env5 (ress-of rids env5) $ hoist-none ctx expect $ match many pos (((Code ctx expect) _)) ((Erased) (CErased _ expect)) (else (CAbsurd _ expect))))
                     ((ExLevelOf)
                       (let ((unique ew22) (many env2) (many found)) $ notail $ fetched ew4 fuel callbacks _ sugar args one-step env0 ex)
@@ -6294,7 +6301,7 @@
     (let ((many env10)) (refuse-when (env-back env env10a) (match many atmatch (((Bool) _)) ((BTrue) (not $ erases-to-nothing _ _ $ normalize bctx expect2 bcode)) ((BFalse) (BFalse)))
       "the body of an at-`cell-match` must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))
     (let ((many env11) (many resultids) (erased _))
-      (open-tele anntele (env-set-uses (env-discard env6 env10) $ env-uses env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
+      (open-results anntele (env-set-uses (env-discard env6 env10) $ env-uses env10) (None _) (None _) (Nil _)))
     (let ((many body-code)) (CLet _ ms _ ids ipk (CValues _ ms codes cpk) bcode))
     (let ((many env12) (many code)) (match many atmatch (((Env) _) ((Code ictx expect2) _))
       ((BFalse) (reconstruct ictx env11 expect2 anntele resultids (BFalse) $ CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode) body-code))
@@ -7456,7 +7463,7 @@
               (match many more3 (((Code ctx4 expect2) _))
                 ((Nil _) (CMatch _ expect2 (CErased _ many-one) (ShNone _) (real-branches-code _ _ real ss) dflt live))
                 ((Cons _ _ _) (CError _ expect2 "one real branch"))))))))
-    (let ((many env8) (many rids) (erased _)) $ open-tele ann-tele env7w (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
+    (let ((many env8) (many rids) (erased _)) $ open-results ann-tele env7w (None _) (None _) (Nil _))
     (let ((many env9) (many code2)) $ reconstruct ctx4 env8 expect2 ann-tele rids atmatch code)
     (values ew5 env9 (ress-of rids env9) $ MkHoisted _ _ sctx spre $ bridge-code _ outer-expect expect2 bridge (match many pos _ ((Erased) (CErased _ expect2)) (else (CLet source-ctx many-one expect2 (Cons _ saved (Nil _)) (PkMany _ (Nil _) saved (Nil _) (PkNil _)) source-code code2)))))
 
