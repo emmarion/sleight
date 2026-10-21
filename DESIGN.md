@@ -304,7 +304,7 @@ after verifying the constructor against the stored value. `let-match`
 exports them after refuting every other constructor (§27). Facts added
 while testing a constructor do not escape the test.
 
-Forcing fails, and so refutes the branch, in exactly three cases:
+Forcing fails, and so refutes the branch, in exactly four cases:
 
 1. An atom `x` is equated with an expression that contains `x`, after
    existing atom-to-atom aliases are resolved. (`x = x` is a no-op.)
@@ -319,6 +319,10 @@ Forcing fails, and so refutes the branch, in exactly three cases:
    `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
    A rule maps an atom to a closed expression, so no rule could make
    the two sides identical. The language has no eta rule.
+4. Two expressions that are not atoms are equated and differ in form
+   apart from their subexpressions: in their former, in their number of
+   arguments or entries, or in an entry's multiplicity. For example, two
+   `Fn` types of different arity.
 
 ## 8. `Matchable` and constructor disjointness
 
@@ -2226,7 +2230,9 @@ also interns the numeral of its code.
 `(Succ (Succ (Succ (Zero))))`. `(numeral-of lit)` yields a literal's
 proof by its spelling; for a character literal it yields the proof of
 the character's code, and for a string literal or a name it is an
-error. So two spellings equated in a branch refute the branch, and
+error. So a branch that equates two numerals of different spellings
+can be refuted by the program through their `numeral-of` proofs, though
+not by forcing alone, and
 `unary` (§49) produces the one rule that a `Succ` shape needs.
 `(prove-literal-lt a b)` mints `(Lt a b)` after deciding it with
 `lt-dec`. Its arguments are `Settled` `many` constants of type `Nat`
