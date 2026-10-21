@@ -549,7 +549,7 @@ let unify env a b = unify_in env a b
 let place env x p =
   let s = (entry env x).slot in
   if (fact env s).rule <> None then unify_in ~force:true env (Var s) p
-  else match canon env p with Var t when t = s -> env | t -> { env with facts = IntMap.add s { (fact env s) with rule = Some t } env.facts }
+  else match canon env p with Var t when t = s -> env | t when occurs s t -> unify_in ~force:true env (Var s) t | t -> { env with facts = IntMap.add s { (fact env s) with rule = Some t } env.facts }
 let placed env x = function Some p -> place env x p | None -> env
 
 (* A forcing leaves the opened objects it touched to be merged, so its environment comes back as [forced], which

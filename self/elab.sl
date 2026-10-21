@@ -633,6 +633,9 @@
   (let ((erased _) (many e)) $ entry env x)
   (match many e _ ((MkEInfo _ nm _ _ _ _ _ _) (not $ is-some _ nm))))
 
+(def-fns _ $ (many callee-written : (many (Callee) c) -> (many (Maybe $ Name) w))
+  (match many c _ ((CalleeHead _ head _ _) (raw-atom head)) (else (None _))))
+
 (def-fns _ $ (many describe : (many (Env) env) (many (Syn) head) (many (Term) h) (many (Term) hty) -> (many (Callee) c))
   (CalleeHead env (match many (computed-raw env head) (((Syn) _)) ((BTrue) (RList (raw-pos head) $ Nil _)) ((BFalse) head)) h hty))
 
@@ -6344,7 +6347,7 @@
           (let-match many more2 (Nil _) ((Cons _ _ _) (values (bad) (Many) cr)))
           (match many (mult-of env mraw) (((Env) _) ((Multiplicity) m0) ((Syn) r0))
             ((None _) (values (env-error env $ str-cat "expected a multiplicity, got " $ qraw mraw) (Many) cr))
-            ((Some _ mm) (values env mm cr))))))
+            ((Some _ mm) (values (error-when env (mult-is-once mm) "a `Matchable` constructor cannot be `unique`") mm cr))))))
     (let ((many env2) (many cid)) $ named env1 craw "a constructor")
     (let ((many env3) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar rest env2)
     (values env3 $ Cons _ (MkMCtor m $ TVar cid) mcs))
@@ -7235,7 +7238,8 @@
       (match many craw _
         ((RList _ items)
           (let-match many items (Cons _ mraw items1) ((Nil _) (values (bad) $ None _)))
-          (let ((many env0) (many mult)) $ mult-checked envl mraw)
+          (let ((many envm) (many mult)) $ mult-checked envl mraw)
+          (let ((many env0)) $ error-when envm (mult-is-once mult) "a constructor declaration cannot be `unique`")
           (def-fns misuse-lvl $ (many bad0 : -> (many (Env) r)) (env-error env0 $ str-cat "malformed constructor" $ sp-hints env0 "constructor"))
           (let-match many items1 (Cons _ nraw more) ((Nil _) (values (bad0) $ None _)))
           (let-match many more (Cons _ colon sg) ((Nil _) (values (bad0) $ None _)))
@@ -7727,7 +7731,7 @@
     (let ((many bad-share)) $ and (not bad-fn) $ and uq $ and (mult-is-many pos) $ not $ mult-is-once $ res-erasure callee)
     (let ((many env14)) $ match many bad-fn (((Env) _)) ((BTrue) (env-error-with env13w (head-notes env13w callee) $ str-cat3 "erased function " (head-name env13w callee) " called in a non-erased position")) ((BFalse) env13w))
     (let ((many env0)) $ match many bad-share (((Env) _)) ((BTrue) (env-error-with env14 (head-notes env14 callee) $ str-cat3 (say env14 "a shared `UniqueFn` ") (head-name env14 callee) " is callable only erased")) ((BFalse) env14))
-    (let ((many env1)) $ match many (res-term callee) (((Env) _)) ((TVar x2) (match many (or erased-head $ or bad-fn bad-share) (((Env) _)) ((BTrue) env0) ((BFalse) (use-entry env0 mode x2 $ BFalse)))) (else env0))
+    (let ((many env1)) $ match many (res-term callee) (((Env) _)) ((TVar x2) (match many (or erased-head $ or bad-fn bad-share) (((Env) _)) ((BTrue) env0) ((BFalse) (use-entry-as env0 mode x2 (BFalse) $ callee-written desc)))) (else env0))
     (let ((many env1a) (many _) (many hid) (many ctx1) (many hsc)) $ match many erased-head (((Env) _) ((Res) _) ((Nat) _) ((List $ List $ Nat) c1) ((StmtCode ctx c1) _))
       ((BTrue) (notail $ hoist-argument fuel callbacks _ env1 ctx (Erased) (Erased) callee $ CErased _ $ Cons _ (Erased) $ Nil _))
       ((BFalse) (notail $ hoist-argument fuel callbacks _ env1 ctx mode pos callee hcode)))
