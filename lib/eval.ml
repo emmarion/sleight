@@ -46,10 +46,11 @@ let rec eval env code =
   | CCellWrite (_, c, ss) | CCellCopy (_, c, ss) -> (
       match eval1 env c with
       | VVacant -> [ VVacant ]
-      | VCtor (k, fs) ->
-          let fs = match code with CCellCopy _ -> Array.copy fs | _ -> fs in
+      | VCtor (k, fs) as v ->
+          let copies = match code with CCellCopy _ -> true | _ -> false in
+          let fs = if copies then Array.copy fs else fs in
           List.iter (fun (i,s) -> fs.(i) <- eval1 env s) ss;
-          [ VCtor (k, fs) ]
+          [ (if copies then VCtor (k, fs) else v) ]
       | _ -> raise (Runtime "not a cell"))
   | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))
   | CWorldDo c -> [ !perform (eval1 env c) ]

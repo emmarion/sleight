@@ -571,9 +571,8 @@
       (else (ErPayload $ PStr "an extern with no implementation of its own"))))
   (match many res _
     ((ErArrayNew length2)
-      (let ((erased _) (many hp1) (erased le1) (many blank)) (halloc _ hp (BToken _)))
-      (let ((erased h2) (many hp2) (erased le2) (many array)) (halloc _ hp1 (array-block _ (repeat-field _ length2 blank))))
-      (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ array (Nil _))))
+      (let-match many (settled-ref _ (heap-entries _ hp) null-id) (Some _ blank) ((None _) (alloc-one _ hp (BError _ "array-new: no vacant-slot"))))
+      (alloc-one _ hp (array-block _ (repeat-field _ length2 blank))))
     ((ErListToArray)
       (alloc-one _ hp $ match many (match many a (((Maybe $ List $ Ref Block hs) _)) ((Some _ x) (list-refs (hsize _ hp) _ hp x)) ((None _) (Some _ $ Nil _))) _
         ((Some _ xs) (array-block _ xs)) ((None _) (BError _ "list-to-array: out of fuel"))))

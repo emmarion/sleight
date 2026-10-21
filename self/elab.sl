@@ -2213,7 +2213,7 @@
 ; A result that is not a variable is bound to an anonymous one for the entries after it, so that a later
 ; entry's `at` can name the slot it sits in (DESIGN.md section 15).
 (def-fns _ $ (many result-term : (many (Env) env) (many (Res) r) -> (many (Env) r2) (many (Term) t))
-  (let-match many (res-term r) (TVar _) (else (values env $ res-term r)))
+  (let-match many (match many (res-term r) (((Bool) _)) ((TVar _) (BTrue)) (else (BFalse))) (BFalse) ((BTrue) (values env $ res-term r)))
   (let-match many (res-place r) (Some _ p) ((None _) (values env $ res-term r)))
   (let ((many env2) (many y)) $ bind-as env (BFalse) (BTrue) (None _) (None _) (BFalse) (res-erasure r) (res-ty r) (Some _ $ res-term r) delegate-id)
   (values (env-place-at env2 y p) $ TVar y))

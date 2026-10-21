@@ -163,7 +163,7 @@ let fact env x = IntMap.find x env.facts
 let entry_name env x = match (entry env x).name with Some n -> Literal.name n | None -> "__" ^ string_of_int x
 let anonymous env x =
   let e = entry env x in
-  let owner = if e.slot = x then Some (entry env (x - 1)) else None in
+  let owner = if e.slot = x then Some (entry env (if x < 0 then x + 1 else x - 1)) else None in
   match owner with
   | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
   | _ -> marker (if e.meta then '?' else if x < 0 then 'c' else '_') x e.at

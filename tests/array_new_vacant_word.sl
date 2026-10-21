@@ -1,0 +1,11 @@
+; expect: (Cons _ 1 $ Cons _ 1 $ Nil _)
+(def-fns _ $ (many vacant : -> (many (Nat) r))
+  (let ((erased _) (unique a) (erased all)) (array-new (Nat) (Succ (Zero))))
+  (let-match erased all (RepeatCons _ _ _ _ _))
+  (let ((unique (Uninit (Nat) vacant-slot) is m) (erased _) (unique _) (erased _))
+    (array-swap _ _ a (Zero) (Init _ (Succ (Zero))) _ (NthHere _ _ _)))
+  (let-match unique m (Uninit _ s))
+  (match many (slot-eq s vacant-slot) _ ((Some _ _) 1) ((None _) 0)))
+(let ((many at-compile)) (vacant))
+(def-fns _ $ (many main : -> (many (List (Nat)) r)) (Cons _ at-compile $ Cons _ (vacant) $ Nil _))
+main

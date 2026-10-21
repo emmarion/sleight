@@ -14,6 +14,7 @@ let level_term = App (Var level, [])
 let slot, env = Env.bind env (Some (Reader.Src "Slot")) Erased token (TyCtor [])
 let slot_term = App (Var slot, [])
 let () = Env.slot_type := slot_term
+let env = List.fold_left (fun env x -> let s = (Env.entry env x).slot in { env with Env.facts = V.IntMap.add s { (Env.fact env s) with ty = slot_term } env.Env.facts }) env [ univ; type_; level; slot ]
 let null, env = Env.bind env (Some (Reader.Src "vacant-slot")) Many token slot_term
 let env = Env.place env null (Var null)
 let () = Term.univ := univ; Term.type_entry := type_
