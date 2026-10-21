@@ -6288,7 +6288,7 @@
     (let ((many env10)) (refuse-when (env-back env env10a) (match many atmatch (((Bool) _)) ((BTrue) (not $ erases-to-nothing _ _ $ normalize bctx expect2 bcode)) ((BFalse) (BFalse)))
       "the body of an at-`cell-match` must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))
     (let ((many env11) (many resultids) (erased _))
-      (open-tele anntele (env-discard env6 env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
+      (open-tele anntele (env-set-uses (env-discard env6 env10) $ env-uses env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
     (let ((many body-code)) (CLet _ ms _ ids ipk (CValues _ ms codes cpk) bcode))
     (let ((many env12) (many code)) (match many atmatch (((Env) _) ((Code ictx expect2) _))
       ((BFalse) (reconstruct ictx env11 expect2 anntele resultids (BFalse) $ CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode) body-code))
