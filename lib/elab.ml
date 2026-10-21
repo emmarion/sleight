@@ -2409,7 +2409,10 @@ and elab_def_fns ?(unique = false) env l args =
         let env = if not atfn then env else let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in merge_opens (forcing (opens_add env p)) in
         let env = match delegates with
           | None -> env
-          | Some f -> let fty = infer env fl (Var f) in snd (witness (placed env x (Some (slot_of f))) (proof_type Prelude.delegate [ sharing_of_fn env ty; ty; Var x; sharing_of_fn env fty; fty; Var f ])) in
+          | Some f ->
+              let fty = infer env fl (Var f) in
+              (match canon env fty with Fn _ | UniqueFn _ -> () | t -> error_in env fl "%s is declared `at` %s, which is not a function: it has type %s" (tick (spell_binder name)) (qname env f) (qshow env t));
+              snd (witness (placed env x (Some (slot_of f))) (proof_type Prelude.delegate [ sharing_of_fn env ty; ty; Var x; sharing_of_fn env fty; fty; Var f ])) in
         (env, (x, h))) env fns in
       let fids, headers = List.split fids_headers in
       let define x (fl, name, mult, absurd, (impl, extern, atfn, delegates), ty, sig_ids, body) =
