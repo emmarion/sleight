@@ -123,6 +123,8 @@ at the code being run:
 - **(I3) `Predates` is true.** For every `(Predates A x L)` token in
   scope, every level occurring in the value of `x`, or `x` itself if it
   is a level, was minted strictly before the level `L` denotes.
+- **(I4) No phantom head.** No value bound at a non-erased position is
+  headed by a phantom constructor (§21).
 
 **Preservation of (I2) and (I3)** appears to follow form by form:
 
@@ -149,6 +151,18 @@ already minted, so (I3) holds of the new token. The lemma does use that
 since a parameter's level may have been minted after anything at all.
 `tests/paradox_curry_bad.sl` and `tests/predates_*` exercise this check.
 
+**Preservation of (I4)** appears to follow from rule 2 of §14: a
+phantom constructor enters scope erased, so no application of one
+yields a non-erased result. The other ways a non-erased value can
+arise are a `coerce` (§33), whose proof forms relate a phantom-headed
+value only to one with the same head, and the primitives, extern
+functions and `Settled` reads assumed correct below.
+`mint-settled-erased` holds only a token (§65). (S) uses (I4) in three
+places. A phantom branch under a non-erased scrutinee is erased, not
+refuted. Such a branch does not count toward the one-real-branch rule
+on a union (§21). And `coercible-ctor` accepts a phantom constructor
+(§33).
+
 **Preservation of (I1)** is the load-bearing lemma that this note does
 *not* prove; `lean/` proves it for its fragment (part 10). It needs the
 forcing rules of §7 to be valid for equality of value trees: constructor
@@ -168,6 +182,42 @@ OPEN.md 4), as do `settled-eq`, `resolve`, `settled-value`,
 `world-do` (§42) give values of their declared types; and the axioms
 `gensym-unique`, `placed-slot` and `placed-eq` (§65, §66) and the
 literal facts of §45 are true.
+
+Two of these assumptions need more care than "agrees with its model":
+
+- **Run-time comparisons yield true equalities.** Forcing treats a
+  constructor as injective in every field, erased ones included. That
+  is valid for value trees, but a run compares words, and the erased
+  parts of a value leave no trace in its word. So every `Eq` or `JMEq`
+  that `slot-eq`, `cell-same`, `fn-same` or a `*-same` function of §42
+  yields has to hold of the values in the full semantics, at least in
+  every part that forcing can tell apart. Two values that differ only
+  in erased parts can share a word. For example, every value of a
+  hollow type is at `vacant-slot` (§33). For that reason no such form
+  may be offered for an arbitrary type. Here is how each existing form
+  appears to meet the requirement:
+  - `nat-same`, `u8-same`, `char-same` and `string-same` compare
+    values that have no erased parts.
+  - For `bytes-same` and `half-same`, the erased index is assumed to
+    be determined by the contents. This has not been checked.
+  - `array-same-factory` takes element equality from the caller's
+    checked `eq`.
+  - `fn-same` can relate two distinct definitions at one word, a
+    `delegate` body and its callee (§33). This appears harmless only
+    because §7 gives a declared name no distinctness of its own, and
+    because equal types constrain the captured erased values that a
+    type mentions.
+  - `cell-same` requires one `enum` `Matchable`. It also leans on
+    (I4): empty cells of a hollow type share `vacant-slot`, but a
+    hollow `enum` has at most one non-phantom constructor.
+- **A word made unique by wrapping is never written in place.**
+  `coercible-wrap` of a `many` field gives a `(Unique)` side (§33), so
+  it turns a shared word into a unique one. That appears safe only
+  because nothing writes that word in place. A newtype's non-phantom
+  constructors have no cell (§37). The other possible writer is an
+  extern function that takes a value at `unique`, and §42 allows a type
+  marked both `extern` and `newtype`. Its FFI author must not mutate
+  such a value in place. The prelude has no such type.
 
 ## 5. Totality (T)
 
@@ -245,7 +295,7 @@ trees built by constructors.
 (E) is where §10 meets §17. The stripped run skips every erased
 computation and uses its declared result as if it had produced one. By
 (T), each skipped computation would have finished in the full
-semantics, with results satisfying (I1) to (I3). So each state the
+semantics, with results satisfying (I1) to (I4). So each state the
 stripped run reaches corresponds to a reachable state of the full
 semantics, where (S) holds. Without (T) this step fails: a
 non-terminating erased proof of `False` would be skipped and its claim
@@ -299,7 +349,13 @@ revisiting:
 - a way to build a telescope at run time, or any other way for the
   number of `subterm` parameters a call can meet to be unbounded
   (part 5);
-- a construct that runs at the top level without being total.
+- a construct that runs at the top level without being total;
+- a non-erased way to produce a phantom-headed value, against (I4);
+- a form that yields an `Eq` or `JMEq` from comparing words, at a
+  type whose values can share a word while differing in a part that
+  forcing can tell apart (part 4);
+- a cell for a newtype constructor, or any other in-place write to a
+  unique word that `coercible-wrap` may have made from a shared one.
 
 ## 10. What `lean/` checks
 
@@ -323,3 +379,24 @@ proved ("What is proved"), and what is outside the proof
 Whatever `lean/README.md` lists as not supported, and the FFI's
 implementations of extern functions beyond those it proves, are argued
 above at most.
+
+## 11. What is trusted
+
+Beyond the assumptions of part 4, the guarantees seem to rest on the
+following parts of the implementation. None of them is checked by
+the checker or by `lean/`:
+
+- **The compile-time evaluator.** It runs run-position forms (§29).
+  The facts those forms record are true only if it computes what the
+  full semantics would.
+- **The FFI implementations.** They are unchecked OCaml.
+  `lib/ffi_core.ml` uses unchecked array and string access and
+  `Obj.magic`, relying on the erased proofs in the extern signatures.
+  So a false proof that reaches them, through a gap in (E) or a false
+  assumption above, can cause an out-of-bounds access or wrapped
+  integer arithmetic, not just a wrong answer.
+- **zarith's representation.** `small` in `lib/ffi_core.ml` reads a
+  zarith integer as an OCaml `int`. That is correct only for values
+  below 2^62, which zarith stores unboxed. The runtime checks the
+  platform side of this at startup. That `small` is applied only to
+  such values rests on the bound proofs in the U62 signatures.
