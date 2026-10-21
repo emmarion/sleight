@@ -2354,7 +2354,7 @@ and elab_comptime_match env l args =
       let tid = match type_head env (type_of env x) with Some t -> t | None -> error l "scrutinee is not a datatype value" in
       let mid, disc, ctors = find_matchable env l tid in
       warn_use env l "match on" (Var tid);
-      if adt_of env mid = None then error_in env l "the `Matchable` for %s is not Settled, so `comptime-match` cannot consult it" (qname env tid);
+      if adt_of env mid = None then error_in env l "the `Matchable` for %s is %s, so `comptime-match` cannot consult it" (qname env tid) (if (entry env mid).mult = Erased then "erased" else "not Settled");
       let env = use env l Many mid in
       if disc = Union then error_in env l "`comptime-match` needs an `enum`, not a `union`";
       if marker env pl tid ctors c = Erased then error_in env pl "`comptime-match`: %s is phantom, so no non-erased value is headed by it" (qname env c);

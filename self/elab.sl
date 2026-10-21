@@ -4541,7 +4541,7 @@
         ((None _) env5)
         ((Some _ info)
           (let-match many info (MkMatchInfo mid disc mctors _))
-          (let ((many env5a)) $ match many (is-some _ $ adt-of env5 mid) (((Env) _)) ((BTrue) env5) ((BFalse) (env-error env5 $ str-cat3 (say env5 "the `Matchable` for ") (qshown env5 tid) (say env5 " is not Settled, so `comptime-match` cannot consult it"))))
+          (let ((many env5a)) $ match many (is-some _ $ adt-of env5 mid) (((Env) _)) ((BTrue) env5) ((BFalse) (env-error env5 $ str-cat3 (say env5 "the `Matchable` for ") (qshown env5 tid) (say env5 $ match many (entry-mult-of env5 mid) (((String) _)) ((Erased) " is erased, so `comptime-match` cannot consult it") (else " is not Settled, so `comptime-match` cannot consult it")))))
           (let ((many env5b)) $ use-entry (warn-use env5a (env-loc env5a) "match on" $ TVar tid) (Many) mid (BFalse))
           (let ((many env6a)) $ match many disc (((Env) _)) ((DUnion) (env-error env5b (say env5b "`comptime-match` needs an `enum`, not a `union`"))) ((DEnum) env5b))
           (let ((many env6b) (many mk)) $ marker-checked env6a tid mctors c)
