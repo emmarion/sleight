@@ -917,8 +917,8 @@ either be refuted or be covered by the `else`.
 
 **One real branch.** A match in an erased position is unconstrained,
 and so is an at-match (§40) on a union under a `many` or `unique`
-scrutinee, which does not dispatch. Otherwise, if at least one of its
-results is non-erased: when the discriminant is non-erased, that is, a
+scrutinee, which does not dispatch. Otherwise: when the discriminant
+is non-erased, that is, a
 `many` or `unique` match on an enum, there is a runtime tag to
 dispatch on. When the discriminant is erased, that is, an `erased`
 match or a match on a union in any mode, at most one branch may be
@@ -1204,7 +1204,8 @@ as soon as it is elaborated (§27), and the stored value of its
 `Settled` result is read. A variable is read as it is, and
 `(share x)` (§16) at `many` is the explicit degradation a unique
 `Settled` needs. The type must be an enum, not a union. `C`
-must not be phantom. The pattern binds every field, including the
+must not be phantom, and must be listed by the opened `Matchable` of
+`x`'s type. The pattern binds every field, including the
 erased ones, and may bind a cell binder where the type has cells
 (§23). This is the
 one statement confined to run position (§27). The form consults the
