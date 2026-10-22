@@ -512,6 +512,7 @@ let goal : (Reader.loc * mult * term * Env.t) option ref = ref None
 let discharged : Reader.loc option ref = ref None
 let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i
 let gensyms = ref 0
+let on_run : (Env.t -> unit) ref = ref ignore
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
 let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.SlotEq ]
@@ -2226,7 +2227,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
 and not_a_statement within env raw =
   not_a env (if misplaced env raw = [] then Printf.sprintf "not a statement\nhint: every %s but the last must be a statement" (respell env within) else "not a statement") raw
 
-and run_code env code = Eval.eval env.values code
+and run_code env code = !on_run env; Eval.eval env.values code
 
 (* Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
    produce (DESIGN.md section 50); the check of each binder against its value stays as it was. The right-hand side's

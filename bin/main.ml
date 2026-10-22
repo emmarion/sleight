@@ -15,8 +15,12 @@ let run consume (env, _) path =
     (fun (env, _) (f : Reader.file) -> match report f.name (fun () -> Elab.run_file ~consume env f) with Some env -> (env, f.name) | None -> exit 1)
     (env, path) files
 
-(* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
+(* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was,
+   but for the unique entries code that ran before it consumed. *)
 let repl consume env =
+  let consumed = ref Env.IntMap.empty in
+  let keep = Env.IntMap.union (fun _ u _ -> Some u) in
+  Elab.on_run := (fun e -> consumed := keep (Env.IntMap.filter (fun _ (u, _) -> u = Env.Consumed) e.Env.uses) !consumed);
   let unfinished src =
     match List.rev (Reader.files "repl" src) with
     | { stopped = Some (_, m); _ } :: _ -> m = Reader.unterminated
@@ -34,7 +38,12 @@ let repl consume env =
   let rec loop env =
     match form (Buffer.create 64) with
     | None -> print_newline ()
-    | Some src -> loop (Option.value (report "repl" (fun () -> List.fold_left (fun env f -> Elab.run_toplevel ~consume ~path:"repl" env (Reader.parse f)) env (Reader.files "repl" src))) ~default:env)
+    | Some src ->
+        consumed := Env.IntMap.empty;
+        loop
+          (match report "repl" (fun () -> List.fold_left (fun env f -> Elab.run_toplevel ~consume ~path:"repl" env (Reader.parse f)) env (Reader.files "repl" src)) with
+           | Some env -> env
+           | None -> { env with Env.uses = keep (Env.IntMap.filter (fun x _ -> Env.IntMap.mem x env.Env.entries) !consumed) env.uses })
   in
   loop env
 

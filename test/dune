@@ -12,3 +12,16 @@
  (libraries sleight unix)
  (deps
   (alias sources)))
+
+(rule
+ (action
+  (with-stdin-from
+   repl_consumed.in
+   (with-outputs-to
+    repl_consumed.out
+    (run %{exe:../bin/main.exe} --repl)))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff repl_consumed.expected repl_consumed.out)))

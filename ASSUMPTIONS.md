@@ -59,7 +59,11 @@ ground.
 
 36. The `--repl` flag reads one form
     at a time and prints every expression's value, which goes beyond
-    section 27's one-expression file; it is a convenience only.
+    section 27's one-expression file; it is a convenience only. An
+    input that fails leaves the scope as it was before that input,
+    except that a unique entry consumed by run-position code the input
+    ran (section 27) stays consumed, since that code may have updated
+    its value in place.
 
 ## Extern types and the FFI (section 42)
 

@@ -1,0 +1,8 @@
+(def-adts $ (Box : (Type A) -> Type) enum (many Boxed : (erased Type A) (many A v) -> (Box A)))
+(let ((unique bx)) (Boxed (Nat) 41))
+nosuchname
+(let ((unique zz)) (let-match unique bx (Boxed _ n u)) (let ((unique b2)) (u (String) "hello")) nosuchname)
+(let ((many sb)) (share bx))
+(let ((unique by)) (Boxed (Nat) 1))
+(let ((unique c)) (let-match unique by (Boxed _ n u)) (u (String) "hello")) nosuchname
+(let ((many sc)) (share by))

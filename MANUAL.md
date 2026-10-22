@@ -37,7 +37,9 @@ _build/self/slc --interpret tests/io_echo.sl
 
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
-forms interactively. A file's final expression is printed, unless its
+forms interactively; an input that fails leaves the scope as it was
+before it, but for the unique entries that code it ran consumed
+(ASSUMPTIONS 36). A file's final expression is printed, unless its
 value is a `Program`, when the driver runs it step by step, applying each
 step's continuation, a `UniqueFn`, once to the world, whose requests
 `world-do` performs as the code reaches them
@@ -217,7 +219,8 @@ own sources at that commit and on the sample programs under `bench/`, and
 slc on generated programs of doubling size, one shape each, with each
 time's ratio to the previous size's. `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both
-ways, against the same directives. A test's comment lines say what it needs, read wherever in the file
+ways, against the same directives; it also feeds `test/repl_consumed.in`
+to `--repl` and compares what it writes with `test/repl_consumed.expected`. A test's comment lines say what it needs, read wherever in the file
 they sit; one that names a line of the test itself is written at the end, so
 that adding it does not move the lines it names. `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is a line the test must print, `; stdin: text` a
