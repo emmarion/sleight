@@ -896,7 +896,9 @@ and elab_type_form env l sp args =
         | List (cl, [ m; c ]) -> let m = mult_or env cl m in
             if m = Unique then error_in env cl "a `Matchable` constructor cannot be `unique`";
             let env, x = atom_entry_or env cl c "a constructor" in
-            (env, (m, Var (named_of env cl "a constructor" x)))
+            let x = named_of env cl "a constructor" x in
+            ignore (ctor_type env cl x);
+            (env, (m, Var x))
         | raw -> error (loc raw) "expected a constructor marker" in
       let env, cs = List.fold_left_map ctor env cs in
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), cs))

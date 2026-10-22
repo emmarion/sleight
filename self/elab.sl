@@ -6375,8 +6375,8 @@
           (match many (mult-of env mraw) (((Env) _) ((Multiplicity) m0) ((Syn) r0))
             ((None _) (values (env-error env $ str-cat "expected a multiplicity, got " $ qraw mraw) (Many) cr))
             ((Some _ mm) (values (error-when env (mult-is-once mm) "a `Matchable` constructor cannot be `unique`") mm cr))))))
-    (let ((many env2) (many cid)) $ named env1 craw "a constructor")
-    (let ((many env3) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar rest env2)
+    (let ((many env2) (many cid)) $ ctor-var (env-at env1 $ raw-pos c) craw)
+    (let ((many env3) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar rest $ env-back env1 env2)
     (values env3 $ Cons _ (MkMCtor m $ TVar cid) mcs))
 
   ; The signature pieces [piece] were read from [root]; [st] pays for the parse of each telescope.
