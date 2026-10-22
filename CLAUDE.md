@@ -122,3 +122,11 @@ by the owner and apply to every session.
 19. **Read all of DESIGN.md before writing Sleight code.** Read every
     section, not a summary or the parts that look relevant. Re-read any
     section that has dropped out of context before relying on it.
+
+20. **Wait on a command, not on a process-name search.** To wait for a
+    long run, run it with `run_in_background` and let its completion
+    notice arrive, or have the command itself write a marker when it
+    finishes (`cmd > log 2>&1; echo "exit $?" >> log`) and wait on that
+    marker, with a bounded loop. Never poll with `pgrep -f`/`pkill -f`
+    on a pattern: the polling shell's own command line contains the
+    pattern, so it matches itself and the loop never ends.

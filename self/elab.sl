@@ -416,15 +416,23 @@
   (let-match many (lit-spelling (env-lits env) x) (Some _ s) ((None _) (None _)))
   (match many (names-lit s) _ ((BTrue) (Some _ s)) ((BFalse) (None _))))
 
-; An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
-; an anonymous marker (Env.name_of).
-(def-fns _ $ (many shown-name : (many (Env) env) (many (Nat) x) -> (many (String) r))
+; An entry by its own name, else by the numeral or string literal it is, else, where [aliases], by a name in scope
+; equal to it, else by a fetch form yielding it, else as an anonymous marker (Env.name_of).
+(def-fns _ $ (many entry-shown-name : (many (Env) env) (many (Bool) aliases) (many (Nat) x) -> (many (String) r))
   (let-match many (env-entry-name env x) (None _) ((Some _ n) (name-text n)))
   (let-match many (lit-name env x) (None _) ((Some _ s) s))
   (let-match many (is-meta env x) (BFalse) ((BTrue) (anon-mark env x)))
+  (let-match many (match many aliases (((Maybe $ Pair (Nat) (String)) _))
+      ((BTrue) (best-cand x (name-cands env (list1 _ x) (None _) (name-index-entries _ $ scope-names $ env-scope env) $ Nil _) $ None _))
+      ((BFalse) (None _)))
+    (None _)
+    ((Some _ p) (match many p _ ((MkPair _ _ _ nm) nm))))
   (let-match many (best-cand x (fetch-cands env $ None _) $ None _) (Some _ p)
     ((None _) (anon-mark env x)))
   (match many p _ ((MkPair _ _ _ fm) fm)))
+
+(def-fns _ $ (many shown-name : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (entry-shown-name env (BTrue) x))
 
 (def-fns _ $ (many qshown : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (tick $ shown-name env x))
@@ -1506,7 +1514,7 @@
   (let-match many (is-settled env x) (BFalse) ((BTrue) (CConst _ x)))
   (match many (mem-dec x ctx) _
     ((Some _ p) (CVar _ x p))
-    ((None _) (CError _ many-one $ str-cat "internal: not bound at runtime: " $ shown-name env x))))
+    ((None _) (CError _ many-one $ str-cat "internal: not bound at runtime: " $ entry-shown-name env (BFalse) x))))
 
 (def-fns _ $ (many matchable-code : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Multiplicity) pos) (many (Nat) x) -> (many (Code ctx (Cons (Multiplicity) pos (Nil (Multiplicity)))) r))
   (match many pos _
@@ -4660,7 +4668,7 @@
       ((Hit _ _ _ u _)
         (match many u _
           ((UseConsumed l) (str-cat3 "unique: consumed at " (loc-str $ Some _ l) ", so usable only erased from here on"))
-          ((UseShared l) (str-cat3 "unique: shared at " (loc-str $ Some _ l) $ str-cat3 (say env ", so usable at many, written `(share ") (shown-name env x) ")`, and never again at unique"))))))
+          ((UseShared l) (str-cat3 "unique: shared at " (loc-str $ Some _ l) $ str-cat3 (say env ", so usable at many, written `(share ") (entry-shown-name env (BFalse) x) ")`, and never again at unique"))))))
   (Cons _ status $ when-str (list-mem-bin (env-captures env) x) (say env "unique: closed over by the enclosing `def-fns`, so usable here only erased or through `share`") $ Nil _))
 
 (def-fns _ $ (many entry-value : (many (Env) env) (many (Nat) x) -> (many (List $ String) r))
@@ -4677,7 +4685,7 @@
         (let ((many r)) $ canon-env env r0)
         (let ((many (Bool) anonymous)) $ match many r _ ((TVar y) (match many (env-entry-name env y) _ ((None _) (BTrue)) ((Some _ _) (BFalse)))) (else (BFalse)))
         (match many anonymous _ ((BTrue) (Nil _)) ((BFalse) (list1 _ $ str-cat "is " $ show-t-except env r $ Some _ x))))))
-  (Cons _ (str-cat3 (shown-name env x) " : " $ str-cat3 (show-t env $ type-of env x) "  [" $ str-cat (entry-flags env x) "]")
+  (Cons _ (str-cat3 (entry-shown-name env (BFalse) x) " : " $ str-cat3 (show-t env $ type-of env x) "  [" $ str-cat (entry-flags env x) "]")
     $ prefix-all "    " $ cat-strs is-line $ cat-strs (entry-value env x) $ unique-status env x))
 
 (def-fns _ $ (many ctor-strs : (many (Env) env) (subterm many (List $ MCtor) cs) -> (many (List $ String) r))
@@ -4691,7 +4699,7 @@
   (let ((many _) (many found)) $ find-matchable env tid)
   (let-match many found (Some _ info) ((None _) (Nil _)))
   (match many info _
-    ((MkMatchInfo _ _ cs _) (list1 _ $ str-cat3 "constructors of `" (shown-name env tid) $ str-cat "`: " $ join-strs (ctor-strs env cs) "; "))))
+    ((MkMatchInfo _ _ cs _) (list1 _ $ str-cat3 "constructors of `" (entry-shown-name env (BFalse) tid) $ str-cat "`: " $ join-strs (ctor-strs env cs) "; "))))
 
 (def-fns _ $ (many ctor-lines-tele : (many (Env) env) (subterm many (List $ Entry) es) -> (many (List $ String) r))
   (let-match many es (Cons _ e rest) ((Nil _) (Nil _)))
@@ -4767,7 +4775,7 @@
 (def-fns _ $ (many at-member : (many (Env) env) (many (Nat) x) -> (many (Maybe $ String) r))
   (let-match many (lit-spelling (env-lits env) x) (None _)
     ((Some _ s) (Some _ s)))
-  (match many (or (bound-here env x) $ nat-eq x null-id) _ ((BTrue) (Some _ $ shown-name env x)) ((BFalse) (None _))))
+  (match many (or (bound-here env x) $ nat-eq x null-id) _ ((BTrue) (Some _ $ entry-shown-name env (BFalse) x)) ((BFalse) (None _))))
 
 (def-fns _ $ (many at-members : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) shown) (many (Bool) bound))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (BFalse))))

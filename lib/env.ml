@@ -355,28 +355,28 @@ let fetches ?except env =
   @ List.concat_map (fun r -> List.filter_map (fun (head, x, t) -> match canon env t with Var a -> Some (a, (x, form head (Literal.spell r.lit))) | _ -> None)
       (("slot-of", r.lit_id, slot_of r.lit_id) :: Option.fold ~none:[] ~some:(fun p -> [ ("numeral-of", p, Var p) ]) r.lit_proof)) (present_literals env)
 
-(* An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
-   an anonymous marker. *)
-let name_of env x = match (entry env x).name with
-  | Some n -> Literal.name n
-  | None ->
-    match Hashtbl.find_opt literal_of x with
-    | Some { lit = (Literal.Numeral _ | Literal.Str _) as lit; _ } -> Literal.spell lit
-    | _ -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
-
-let namer ?except env terms =
+let namer ?except ?(aliases = true) env terms =
   let atoms = List.fold_left (fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0) [] terms in
   let of_atom x = match canon env (Var x) with Var a when List.mem a atoms -> Some a | _ -> if List.mem x atoms then Some x else None in
   let lits = List.filter_map (fun r -> match r.lit with
     | (Literal.Numeral _ | Literal.Str _) as lit -> Option.map (fun a -> (a, (r.lit_id, Literal.spell lit))) (of_atom r.lit_id)
     | _ -> None) (present_literals env) in
-  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, Literal.name n))) (of_atom x)) (NameMap.bindings env.scope.named) in
+  let names = List.filter_map (fun (n, x) -> if Some x = except || not aliases then None else Option.map (fun a -> (a, (x, Literal.name n))) (of_atom x)) (NameMap.bindings env.scope.named) in
   let fetched = lazy (fetches ?except env) in
   fun x ->
     if (entry env x).meta then anonymous env x
     else match newest lits x, newest names x with
       | Some (_, n), _ | None, Some (_, n) -> n
       | None, None -> (match newest (Lazy.force fetched) x with Some (_, n) -> n | None -> anonymous env x)
+
+(* An entry by its own name, else by the numeral or string literal it is, else as [namer] names it; [aliases]
+   false keeps an anonymous entry from being shown by a name that merely equals it. *)
+let name_of ?aliases env x = match (entry env x).name with
+  | Some n -> Literal.name n
+  | None ->
+    match Hashtbl.find_opt literal_of x with
+    | Some { lit = (Literal.Numeral _ | Literal.Str _) as lit; _ } -> Literal.spell lit
+    | _ -> namer ?aliases env [ Var x ] x
 
 let rec shown ?except env t =
   match canon env t with

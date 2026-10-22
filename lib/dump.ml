@@ -9,6 +9,7 @@ module V = Value
 type goal = Statement | Type | Values of mult list * tele option
 
 let where l = Reader.where "-" l
+let name_of = name_of ~aliases:false
 let is_prelude env x = List.mem x env.prelude.ids
 let proofs = [ Prelude.predates; Prelude.subterm; Prelude.coercible; Prelude.delegate; Prelude.atfn ]
 

@@ -1,4 +1,4 @@
-; error: the `Matchable` for `__1` is erased, so `comptime-match` cannot consult it
+; error: the `Matchable` for `T` is erased, so `comptime-match` cannot consult it
 ; A Matchable bound and opened at erased is Settled but holds only the token, so comptime-match cannot read it.
 (def-fns _ $ (many mk : -> (erased (TyCtor -> Type) T)
     (many (ValCtor -> (T)) C) (many (ValCtor -> (T)) D)
