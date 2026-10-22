@@ -1,0 +1,5 @@
+; expect: (Boxed _ "hi")
+(def-adts $ (Box : (Type A) -> Type) enum (many Boxed : (erased Type A) (many A v) -> (Box A)))
+(let ((unique bx)) (Boxed (Nat) 41))
+(let ((unique c)) (match unique bx (((Box (String)) r)) ((Boxed _ _ u) (u (String) "hi"))))
+(share c)

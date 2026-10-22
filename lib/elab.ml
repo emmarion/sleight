@@ -817,13 +817,13 @@ let pattern env what mode (scrut : res) l c mults extra fields =
   let cell = List.nth fields n in
   (List.filteri (fun i _ -> i < n) fields, Some ((binder_or l cell "a cell binder"), loc cell))
 
-let pattern_cell env l mult scrut c fids name =
+let pattern_cell ?state env l mult scrut c fids name =
   match name with
   | None -> (env, None)
   | Some (name, at) ->
       let _, params, _ = cell_shape env l mult c in
       let slots = List.map slot_of (runtime_ids params fids) in
-      let state = match scrut.term with Var x -> (entry env x).state | _ -> Hypothetical in
+      let state = match state, scrut.term with Some s, _ -> s | None, Var x -> (entry env x).state | None, _ -> Hypothetical in
       let x, env = bind env ~word:true ~at name mult state (Cell (Var c, slots)) in
       track env Optional x;
       (placed env x scrut.place, Some x)
@@ -1972,7 +1972,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
             (fun tele -> if kind = `Auto then List.map (fun _ -> Reader.nowhere) tele else field_ats tele fs) in
         let forced, cell = match forced with
           | None -> (None,None)
-          | Some e -> let e,x = pattern_cell e bl (if phantom then Erased else smult) sres c fids name in (Some e,x) in
+          | Some e -> let e,x = pattern_cell ~state:Hypothetical e bl (if phantom then Erased else smult) sres c fids name in (Some e,x) in
         let unreachable = phantom && smult <> Erased in
         let result =
           match (kind, forced) with
