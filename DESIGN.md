@@ -2837,8 +2837,10 @@ texts are equal too; any other pair answers `None`.
   (many MErased : -> (Mult))
   (many MMany : -> (Mult))
   (many MUnique : -> (Mult)))
+```
 
-(def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
+```scheme
+Settled : ((Mult) m) (Type T) (T t) -> Type
 ```
 
 A handle `(Settled m T t)` denotes `t`, of type `T`, held at
@@ -2856,16 +2858,16 @@ matching constructor. It is not a use of `x`; each splice of the handle
 is. The other forms on handles are primitives:
 
 ```scheme
-(def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
-    (many (Settled (MErased) Type T) h)))
+settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) Type T) h)
 
-(def-prim $ (many settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
-    (many (Settled (MErased) T t) h)))
+settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) T t) h)
 
-(def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
-    (many m is r)))
+settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many m is r)
 
-(def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
+settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)
 ```
 
 `settled-type` turns a handle that reads an entry's minted `is` into
@@ -2892,12 +2894,20 @@ be a binder, any more than anything else that is not a name can.
 ## 65. The macro world
 
 ```scheme
-(def-opaque $ (MacroWorld : -> Type))
-(def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
-
 (def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
   enum
   (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
+
+(def-adts $ (Resolution : -> Type)
+  enum
+  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
+  (many RHypothetical : -> (Resolution))
+  (many RUnbound : -> (Resolution)))
+```
+
+```scheme
+MacroWorld : -> Type
+Gensym : ((Nat) n) ((String) s) -> Type
 ```
 
 The macro world is the elaborator's program store: the run-position
@@ -2912,44 +2922,38 @@ its parameter. The forms below are primitives, apart from the two
 special forms that end this section, checked as calls:
 
 ```scheme
-(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
-    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
+gensym : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
 
-(def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
+erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
-    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
+    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)
 
-(def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
+settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
     (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
-    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
 
-(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
-    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
+intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)
 
-(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
-    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
+intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)
 
-(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
-    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
+intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)
 
-(def-prim $ (many mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
-    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)))
+mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)
 
-(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
-    (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)))
+mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)
 
-(def-adts $ (Resolution : -> Type)
-  enum
-  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
-  (many RHypothetical : -> (Resolution))
-  (many RUnbound : -> (Resolution)))
+resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+    (unique mw is mw2 at mw) (many (Resolution) r)
 
-(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
-    (unique mw is mw2 at mw) (many (Resolution) r)))
-
-(def-prim $ (many read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
-    (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)))
+read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+    (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)
 ```
 
 `gensym` mints a number, counting from 1 over the whole run, every file
@@ -3019,26 +3023,26 @@ The prelude declares an opaque type that holds a value at a slot named
 in its type:
 
 ```scheme
-(def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
+Placed : ((Slot) s) (Type T) (T v) -> Type
 
-(def-prim $ (many place-at : (erased Type T) (unique T x) ->
-    (unique (Placed (slot-of x) T x) p at x)))
+place-at : (erased Type T) (unique T x) ->
+    (unique (Placed (slot-of x) T x) p at x)
 
-(def-prim $ (many place-at-many : (erased Type T) (many T x) ->
-    (many (Placed (slot-of x) T x) p at x)))
+place-at-many : (erased Type T) (many T x) ->
+    (many (Placed (slot-of x) T x) p at x)
 
-(def-prim $ (many unplace-at : (erased (Slot) s) (erased Type T) (erased T v)
-    (unique (Placed s T v) p) -> (unique v is x at p)))
+unplace-at : (erased (Slot) s) (erased Type T) (erased T v)
+    (unique (Placed s T v) p) -> (unique v is x at p)
 
-(def-prim $ (many unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v)
-    (many (Placed s T v) p) -> (many v is x at p)))
+unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v)
+    (many (Placed s T v) p) -> (many v is x at p)
 
-(def-prim $ (erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v)
-    (erased (Placed s T v) p) -> (erased (Eq (Slot) (slot-of p) s) e)))
+erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v)
+    (erased (Placed s T v) p) -> (erased (Eq (Slot) (slot-of p) s) e)
 
-(def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
+erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
     (erased (Placed s T v) p) (erased (Placed s T v) q) ->
-    (erased (Eq (Placed s T v) p q) e)))
+    (erased (Eq (Placed s T v) p q) e)
 ```
 
 A `(Placed s T v)` holds `v` and is represented as the word of `v`.
@@ -3065,8 +3069,8 @@ kept at a slot is declared the same way (§36).
 ## 67. `slot-eq`
 
 ```scheme
-(def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) ->
-    (many (Maybe (Eq (Slot) a b)) r)))
+slot-eq : (many (Slot) a) (many (Slot) b) ->
+    (many (Maybe (Eq (Slot) a b)) r)
 ```
 
 `Some` proves that `a` and `b` hold one word (§38). `None` proves

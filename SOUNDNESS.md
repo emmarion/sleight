@@ -65,6 +65,18 @@ runs. It is the run-time reading that the language relies on: an erased
 proof is never checked again, so what matters is that it would have
 evaluated to a value had it run.
 
+These claims are meant relative to the shipped prelude,
+`lib/prelude.sl`: its extern models and its `def-prim` and `def-opaque`
+signatures are among the assumptions of parts 4 and 11. A program run
+with `--no-prelude` may write its own extern models (§42) and its own
+`def-prim` and `def-opaque` declarations (INTERNALS.md 1, 2). As far
+as a session has checked, these are then trusted axioms that the
+checker does not verify: a model is checked against the FFI table,
+keyed by name, for non-erased arity and constructor shape only, and a
+`def-prim` signature not at all. A false one can make an accepted
+program reach an `absurd` body or a refuted branch, so the claims do
+not cover such a program.
+
 ## 2. Why the two features usually break a system, and why that seems not to apply here
 
 In a dependently typed language, `Type : Type` (Girard's paradox, in
