@@ -2204,8 +2204,8 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
           let x, env = mint_level env ~at:(loc n) ((binder_or l n "a name")) in
           track env Definition x;
           (env, Fun.id)
-      | Some Sp.DefFns, _ -> elab_def_fns env l args
-      | Some Sp.DefUnique, _ -> elab_def_fns ~unique:true env l args
+      | Some Sp.DefFns, _ -> elab_def_fns spos env l args
+      | Some Sp.DefUnique, _ -> elab_def_fns ~unique:true spos env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
       | Some Sp.DefOpaque, _ -> (elab_def_opaque env l args, Fun.id)
       | Some Sp.DefPrim, _ -> (elab_def_prim env l args, Fun.id)
@@ -2384,7 +2384,7 @@ and elab_comptime_match env l args =
       (env, Fun.id)
   | _ -> error l "%s" (help env (Sp.misuse Sp.ComptimeMatch))
 
-and elab_def_fns ?(unique = false) env l args =
+and elab_def_fns ?(unique = false) spos env l args =
   match args with
   | [] -> error_in env l "`def-fns` needs a level"
   | lv :: fns ->
@@ -2400,7 +2400,7 @@ and elab_def_fns ?(unique = false) env l args =
       let header env raw =
         match raw with
         | List (_, List (fl, m :: rest) :: body) -> (
-            let mult = mult_or env fl m in
+            let mult = written ~noun:" function" env spos fl (if unique then "def-unique" else "def-fns") (mult_or env fl m) in
             let marks, rest = def_marks env fl [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
             let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some (named env (loc f) "a function name" f), n :: rest) | _ -> (None, rest) in
             match rest with

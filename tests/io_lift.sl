@@ -12,6 +12,21 @@
 (def-lvl proof-lvl)
 (def-lvl lift-lvl)
 (let ((erased pl)) (prove-predates proof-lvl lift-lvl))
+(def-fns proof-lvl
+ ((erased lift-proof : (erased (Level) B) (erased (Predates (Level) proof-lvl B) pb) (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm unique (Program A) io) ->
+    (erased (Program B) out) (erased (Coercible (Unique) (Program B) out (Unique) (Program A) io) p))
+  (let-match erased io (Continue _ k) ((Exit _ c) (values (Exit B c) (coercible-ctor (Unique) Exit B A (coercible-refl (Shared) c)))))
+  (let ((erased o) (erased q)) (lift-fn B pb A ab k))
+  (values (Continue B o) (coercible-ctor (Unique) Continue B A q)))
+ ((many lift-fn : (erased (Level) B) (erased (Predates (Level) proof-lvl B) pb) (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm unique (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) ->
+    (unique (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o)
+    (erased (Coercible (Unique) (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o
+                       (Unique) (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) p))
+  (def-unique B $ (unique o at k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next))
+    (let ((unique w2) (unique r)) (delegate (k (predates ab) w)))
+    (let ((erased _) (erased q)) (lift-proof (predates pb) B pb A ab r))
+    (values w2 (coerce r (coercible-sym q))))
+  (values o (coercible-of (delegate-of o)))))
 
 (def-fns lift-lvl $ (erased lift2 : (erased (Level) L1) (erased (Level) L2) (unique (Program L1) io1) (unique (Program L2) io2) ->
     (erased (Level) B) (erased (Program B) o1) (erased (Program B) o2)
@@ -19,22 +34,9 @@
   (def-lvl B)
   (let ((erased p1)) (prove-predates L1 B))
   (let ((erased p2)) (prove-predates L2 B))
-  (def-fns proof-lvl $ (erased lift-proof : (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm unique (Program A) io) ->
-      (erased (Program B) out) (erased (Coercible (Unique) (Program B) out (Unique) (Program A) io) p))
-    (def-fns proof-lvl $ (erased lift-fn : (subterm unique (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) ->
-        (erased (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o)
-        (erased (Coercible (Unique) (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o
-                           (Unique) (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) p))
-      (def-unique B $ (unique o at k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next))
-        (let ((unique w2) (unique r)) (delegate (k (predates ab) w)))
-        (let ((erased _) (erased q)) (lift-proof A ab r))
-        (values w2 (coerce r (coercible-sym q))))
-      (values o (coercible-of (delegate-of o))))
-    (let-match erased io (Continue _ k) ((Exit _ c) (values (Exit B c) (coercible-ctor (Unique) Exit B A (coercible-refl (Shared) c)))))
-    (let ((erased o) (erased q)) (lift-fn k))
-    (values (Continue B o) (coercible-ctor (Unique) Continue B A q)))
-  (let ((erased x1) (erased q1)) (lift-proof L1 p1 io1))
-  (let ((erased x2) (erased q2)) (lift-proof L2 p2 io2))
+  (let ((erased pb)) (prove-predates proof-lvl B))
+  (let ((erased x1) (erased q1)) (lift-proof B pb L1 p1 io1))
+  (let ((erased x2) (erased q2)) (lift-proof B pb L2 p2 io2))
   (values B x1 x2 (coercible-sym q1) (coercible-sym q2)))
 
 (def-lvl A10)
