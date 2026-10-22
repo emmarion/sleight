@@ -2689,6 +2689,9 @@
   (let ((many env2) (many r2)) $ match many what (((Env) _) ((Res) _)) ((None _) (values env $ conformed (pos-in env expect) r)) ((Some _ w) (produced env w (pos-in env expect) r)))
   (values ew env2 (Cons _ r2 $ Nil _) $ hoist-none ctx expect $ CErased _ expect))
 
+(def-fns _ $ (many returns-own : (many (Env) env) (many (Nat) tid) (many (Term) ret) -> (many (Bool) r))
+  (match many (type-head env ret) _ ((Some _ t) (nat-eq t tid)) ((None _) (BFalse))))
+
 ; A constructor named in source, read through its alias, which must hold a value constructor.
 (def-fns _ $ (many ctor-var : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Nat) c))
   (let ((many env2) (many c)) $ named env raw "a constructor")
@@ -6063,7 +6066,7 @@
               ((Nil _) (values ew (env-error env $ sp-misuse env $ SpFormer $ FoMatchable) $ TErr "malformed Matchable")))
             (let ((many env2) (many disc)) $ disc-of-checked env d)
             (let ((many env3) (many tid)) $ named env2 t "a type constructor")
-            (let ((many env4) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar (subterm (within-in cs rest (List (Syn)) args (within-step cs marked rest (prove-subterm cs marked) wm) (prove-subterm rest args))) cs env3)
+            (let ((many env4) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar (subterm (within-in cs rest (List (Syn)) args (within-step cs marked rest (prove-subterm cs marked) wm) (prove-subterm rest args))) cs tid env3)
             (values ew env4 $ TMatchable disc nt ext (TVar tid) mcs))
           ))
       ((SpStmt sk)
@@ -6363,7 +6366,7 @@
     (let ((unique ew2) (many env2) (many slots)) (notail $ elab-slot-terms ew1 fuel callbacks _ sugar rest (check env1 "type" ty slot-term)))
     (values ew2 env2 (Cons _ term slots)))
 
-  ((many elab-mctors : (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) cs) (many (Env) env) -> (many (Env) r) (many (List $ MCtor) mcs))
+  ((many elab-mctors : (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) cs) (many (Nat) tid) (many (Env) env) -> (many (Env) r) (many (List $ MCtor) mcs))
     (let-match many cs (Cons _ c rest) ((Nil _) (values env $ Nil _)))
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error env "expected (multiplicity Constructor)"))
     (let ((many (Env) env1) (many (Multiplicity) m) (many (Syn) craw))
@@ -6375,8 +6378,15 @@
           (match many (mult-of env mraw) (((Env) _) ((Multiplicity) m0) ((Syn) r0))
             ((None _) (values (env-error env $ str-cat "expected a multiplicity, got " $ qraw mraw) (Many) cr))
             ((Some _ mm) (values (error-when env (mult-is-once mm) "a `Matchable` constructor cannot be `unique`") mm cr))))))
-    (let ((many env2) (many cid)) $ ctor-var (env-at env1 $ raw-pos c) craw)
-    (let ((many env3) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar rest $ env-back env1 env2)
+    (let ((many env1c)) $ env-at env1 $ raw-pos c)
+    (let ((many env2) (many cid)) $ ctor-var env1c craw)
+    (let ((many _) (many ret)) $ ctor-type env2 cid)
+    (let ((many (Env) env2r)) $ match many ret _
+      ((TErr _) env2)
+      (else (match many (returns-own env2 tid ret) _
+        ((BTrue) env2)
+        ((BFalse) (env-error env2 $ str-cat3 (qshown env2 cid) " must return an application of " $ qshown env2 tid)))))
+    (let ((many env3) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar rest tid $ env-back env1 env2r)
     (values env3 $ Cons _ (MkMCtor m $ TVar cid) mcs))
 
   ; The signature pieces [piece] were read from [root]; [st] pays for the parse of each telescope.
@@ -7279,9 +7289,9 @@
     (let ((many env0a) (many ps) (many after) (erased wa)) $ split-arrow sg _ (WHere sg) env0)
     (let ((unique ew2) (many env2) (many tele) (many ret) (many ty)) $ notail $ elab-valctor ew1 fuel callbacks _ sugar (subterm (subterm-trans psg $ prove-subterm craw ctors)) sg one-step (MkPair _ _ ps $ subs-of after _ wa) env0a)
     (let ((many (Env) env2b))
-      (match many (type-head env2 ret) _
-        ((None _) (env-error env2 $ str-cat3 (tick $ spell-binder name) " must return an application of " $ qshown env2 tid))
-        ((Some _ t) (match many (nat-cmp t tid) (((Env) _)) ((CEq _ _ _) env2) (else (env-error env2 $ str-cat3 (tick $ spell-binder name) " must return an application of " $ qshown env2 tid))))))
+      (match many (returns-own env2 tid ret) _
+        ((BTrue) env2)
+        ((BFalse) (env-error env2 $ str-cat3 (tick $ spell-binder name) " must return an application of " $ qshown env2 tid))))
     (let ((many (Env) env2c))
       (match many (and (not $ mult-is-many mult) $ not $ nat-is-zero $ many-count tele) _
         ((BTrue) (env-warn env2b $ located env2b ": warning: " $ str-cat3 "phantom constructor " (tick $ spell-binder name) " has a non-erased field"))

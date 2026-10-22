@@ -246,6 +246,8 @@ let held_needs_many env loc tid mid =
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (qname env c)
 
+let returns_own env tid ret = match canon env ret with App (Var t, _) -> t = tid | _ -> false
+
 let tid_of env loc c = Option.get (type_head env (snd (ctor_type env loc c)))
 let marker env loc tid ctors c =
   match List.find_opt (fun (_, c') -> c' = Var c) ctors with
@@ -892,16 +894,17 @@ and elab_type_form env l sp args =
   | Sp.Matchable, d :: rest ->
       let ms, rest = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in
       let t, cs = match rest with t :: cs -> (t, cs) | _ -> error l "%s" (help env (Sp.misuse sp)) in
+      let tid = tyname env l t in
       let ctor env = function
         | List (cl, [ m; c ]) -> let m = mult_or env cl m in
             if m = Unique then error_in env cl "a `Matchable` constructor cannot be `unique`";
             let env, x = atom_entry_or env cl c "a constructor" in
             let x = named_of env cl "a constructor" x in
-            ignore (ctor_type env cl x);
+            if not (returns_own env tid (snd (ctor_type env cl x))) then error cl "%s must return an application of %s" (qname env x) (qname env tid);
             (env, (m, Var x))
         | raw -> error (loc raw) "expected a constructor marker" in
       let env, cs = List.fold_left_map ctor env cs in
-      (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), cs))
+      (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var tid, cs))
   | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "%s" (help env (Sp.misuse sp))
   | Sp.DumpContext, _ -> dump_context env l Dump.Type args
   | Sp.CompileError, _ -> compile_error named_head Erased env l args
@@ -2573,7 +2576,7 @@ and elab_def_adts env adts =
           if mult = Unique then error_in env cl "a constructor declaration cannot be `unique`";
           let name = binder_or cl n "a constructor name" in
           let env', tele, ret, ty = elab_valctor env cl rest in
-          (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" (tick (spell_binder name)) (qname env tid));
+          if not (returns_own env' tid ret) then error cl "%s must return an application of %s" (tick (spell_binder name)) (qname env tid);
           if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl [] "phantom constructor %s has a non-erased field" (tick (spell_binder name));
           let c, env = bind (carry env env') ~at:cl name mult (if mult = Erased then settled env V.VToken else Hypothetical) ty in
           (env, (mult, c))
