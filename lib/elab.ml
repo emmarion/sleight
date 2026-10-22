@@ -444,7 +444,8 @@ let str_host env loc v =
    the program's one Peano chain, extended on demand, so numerals and characters share it wherever they stand
    and the extractor, which shares by identity, emits each Nat once per program. *)
 let papp env n args = App (Var (Option.get (prelude_id env n)), args)
-let pbuild env n args = V.construct (ctor_of env Reader.nowhere (Option.get (prelude_id env n))) args
+let pctor ?(loc = Reader.nowhere) env n = ctor_of env loc (match prelude_id env n with Some x -> x | None -> error loc "unbound name %s" (tick n))
+let pbuild ?loc env n args = V.construct (pctor ?loc env n) args
 
 (* The FFI's ADT for the prelude type [c] constructs, where the FFI holds it and is in use. *)
 let ext_adt env c = match (ctor_of env Reader.nowhere (Option.get (prelude_id env c))).V.adt with { ext = Some _; _ } as adt when !V.use_externs -> Some adt | _ -> None
@@ -1697,8 +1698,13 @@ and elab_special ?sink ?final demand tele env expect l sp args =
           let rets = if m = Erased then List.map (fun (e : entry) -> { e with mult = Erased }) rets else rets in
           let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
           let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
-          let codes = if sp = Sp.SettledMult then codes @ List.map (fun c -> V.CConst (pbuild env c [])) [ "MErased"; "MMany"; "MUnique" ]
-            else if sp = Sp.SlotEq then codes @ [ V.CConst (pbuild env "None" []); V.CConst (pbuild env "Some" [ pbuild env "Refl" [] ]) ] else codes in
+          let ctors = List.map (pctor ~loc:l env) (match sp with
+            | Sp.SettledMult -> [ "MErased"; "MMany"; "MUnique" ] | Sp.SlotEq -> [ "None"; "Some"; "Refl" ] | Sp.SettledEq -> [ "None"; "Some"; "JMRefl" ]
+            | Sp.Resolve -> [ "RSettled"; "RHypothetical"; "RUnbound" ] | Sp.ReadFile -> [ "Ok"; "Fail" ] | _ -> []) in
+          let codes = codes @ match sp, ctors with
+            | Sp.SettledMult, _ -> List.map (fun c -> V.CConst (V.construct c [])) ctors
+            | Sp.SlotEq, [ none; some; refl ] -> [ V.CConst (V.construct none []); V.CConst (V.construct some [ V.construct refl [] ]) ]
+            | _ -> [] in
           call_returns ?sink ~demand env expect l shown acc rets (fun _ -> if List.mem sp implemented then V.CPrim (sp, codes) else V.CValues []))
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name sp)));
