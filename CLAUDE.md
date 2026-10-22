@@ -109,9 +109,10 @@ by the owner and apply to every session.
 16. **Compiler warnings are documented in WARNINGS.md.**
 
 17. **Lazy diagnostics; time slc on slc.** Build message text only when
-    the message is reported. Before pushing an elaborator change, time
-    slc compiling itself against `origin/main`'s slc on the same input;
-    a slowdown beyond noise is a regression.
+    the message is reported. Before an elaborator change is pushed to
+    any branch other than the session's own working branch, time slc
+    compiling itself against `origin/main`'s slc on the same input; a
+    slowdown beyond noise is a regression.
 
 18. **Docs state the present, not the past.** DESIGN.md, README.md
     and the other notes describe how things are now. They are not a
