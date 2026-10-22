@@ -1360,9 +1360,10 @@ erased proof that the two are coercible (§60).
 **The proof types.** `Sharing` is a built-in enum with the nullary
 constructors `Unique` and `Shared` (§42). `Coercible : ((Sharing) sa)
 (Type A) (A a) ((Sharing) sb) (Type B) (B b) -> Type` is opaque (§8)
-and erased by kind. A side describes a non-erased use. There is no
-erased side, because a `coerce` is never used erased and its proof is
-always erased. `Delegate : ((Sharing) sg) (Type G) (G g) ((Sharing) sf)
+and erased by kind. A side gives the multiplicity at which a
+non-erased `coerce` uses its source or yields its result. There is no
+erased side: in an erased position, the position alone makes both
+erased (§14). `Delegate : ((Sharing) sg) (Type G) (G g) ((Sharing) sf)
 (Type F) (F f) -> Type` has the same shape. It records that the body of
 `g` is a `delegate` call to `f` (§19). Only `def-fns` and `def-unique`
 introduce it, with `(Shared)` for an `Fn` side and `(Unique)` for a
@@ -1373,13 +1374,14 @@ introduce it, with `(Shared)` for an `Fn` side and `(Unique)` for a
 type of `p`, and `b` is read from that type. The form produces one
 value `d : B` with `d is b` (§12). `d` is `Hypothetical` inside a body (§28)
 and `Settled` in run position, from the moment the `coerce` has run
-(§29). In a position of
+(§29). In a non-erased position of
 multiplicity `m`, with `sa` and `sb` canonicalizing to `(Unique)` or
 `(Shared)` there, the form uses `a` at the multiplicity of `sa`,
 consuming it if that is `(Unique)` (§15), and yields its result at the
 multiplicity of `sb`. If `sb` is `(Shared)` and `m` is `unique`, that
 is an error. If `sb` is `(Unique)` and `m` is `many`, the result is a
-unique value in a many position and needs a written `share` (§16). `p`
+unique value in a many position and needs a written `share` (§16). In
+an erased position, `sa` and `sb` may be any `(Sharing)` values. `p`
 is always erased. The result is at `a` (§36).
 
 **Creating proofs.** All of the following are special forms (§54),
@@ -1422,9 +1424,9 @@ the expected type (§50).
    it in a `coerce`, the source must canonicalize to `(C sources)`,
    which is what entering a `C` branch forces (§7); such a proof is
    therefore built per branch from the binders of the branch. The form
-   consults no `Matchable` and does not refuse a phantom `C`, because a
-   proof between two phantom-headed values is never used: no non-erased
-   value is headed by a phantom constructor (§14).
+   consults no `Matchable` and does not refuse a phantom `C`, because
+   the source of a non-erased `coerce` is never phantom-headed at run
+   time: no value at run time is headed by a phantom constructor (§14).
 7. `(coercible-of d)`: from `d : (Delegate sg G g sf F f)`, the proof
    `(Coercible sg G g sf F f)`.
 8. `(delegate-of g)`: for a function `g` whose body is a `delegate`
@@ -1465,9 +1467,10 @@ constructor. Erased fields occupy no space. The pointer of a
 type (§42) may be marked `newtype`; its FFI author then guarantees the
 field representation. A newtype may wrap a field of an extern type.
 
-Only non-phantom constructors and non-erased functions matter in items
-5 to 8, because a `coerce` produces a non-erased value, which none of
-the others can head (§14).
+Wherever it runs, a non-erased `coerce` produces neither a value
+headed by a phantom constructor nor an erased function (§14). Item 5
+refuses a phantom constructor for this reason; item 6 cannot produce
+one there; and items 7 and 8 relate only non-erased functions (§19).
 
 A proof about a container, for example a proof that every element of a
 list is wrapped, is built by recursion in an `erased` function that
@@ -1493,8 +1496,7 @@ built-in enum `Sharing` (§42):
   (many Shared : -> (Sharing)))
 ```
 
-There is no erased side: a `coerce` is never used erased and its proof
-is always erased, so a side describes a non-erased use.
+There is no erased side (§33).
 `coercible-refl`, `coercible-wrap` and `coercible-ctor` take a
 `(Sharing)` value `s` as their first argument; `_` there is solved
 from the expected type (§50), with no default. `coercible-ctor` and
