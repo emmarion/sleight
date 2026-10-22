@@ -16,12 +16,12 @@
 (rule
  (action
   (with-stdin-from
-   repl_consumed.in
+   repl_rollback.in
    (with-outputs-to
-    repl_consumed.out
+    repl_rollback.out
     (run %{exe:../bin/main.exe} --repl)))))
 
 (rule
  (alias runtest)
  (action
-  (diff repl_consumed.expected repl_consumed.out)))
+  (diff repl_rollback.expected repl_rollback.out)))

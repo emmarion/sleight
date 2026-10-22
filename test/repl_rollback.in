@@ -6,3 +6,6 @@ nosuchname
 (let ((unique by)) (Boxed (Nat) 1))
 (let ((unique c)) (let-match unique by (Boxed _ n u)) (u (String) "hello")) nosuchname
 (let ((many sc)) (share by))
+(def-adts $ (T : -> Type) enum (many MkT : -> (T))) (goal many (T)) nosuchname
+(goal many (Nat))
+(qed 3)

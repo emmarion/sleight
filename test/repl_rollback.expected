@@ -8,4 +8,6 @@ repl:1:77: error: unbound name `nosuchname`
 hint: nearest in scope: SName
 repl:1:25: error: unique value `by` has conflicting non-erased uses
 repl:1:37: note: already used at unique here
-> > > > > > > > > 
+repl:1:69: error: unbound name `nosuchname`
+hint: nearest in scope: SName
+> > > > > > > > > > > > 
