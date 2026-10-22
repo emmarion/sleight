@@ -82,7 +82,7 @@ sort on unique lists certified against [`msort/spec.sl`](msort/spec.sl).
 [`agent/`](agent/) runs LLM agents on Sleight programming tasks over many
 sessions; the heap sort above was written that way. The October 14,
 2026 talk ([`talk/slides.md`](talk/slides.md), PDF at
-https://doi.org/10.5281/zenodo.23367392) reports how the models did.
+https://github.com/emmarion/sleight/releases/download/v0.2.0/slides.pdf) reports how the models did.
 
 ## What might be new
 
