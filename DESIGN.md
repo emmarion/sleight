@@ -536,9 +536,13 @@ These are the **erased positions**:
 - an argument for a parameter or field declared erased;
 - any argument of a type constructor (§21);
 - a type or `is` expression (§9, §12);
-- the final expression of the right-hand side of a `let` whose binders
-  are all `erased`; in a `values` there, each entry takes the
-  multiplicity of its own binder;
+- the final expression of the right-hand side of a `let` with no
+  non-erased binder;
+- an entry of the `values` that ends a `let`'s right-hand side, when
+  the entry's binder is `erased`;
+- the body of a function with no non-erased return entry;
+- an entry of the `values` that ends a function body, when the entry's
+  return entry is `erased`;
 - the scrutinee of an `erased` match;
 - the proof argument of a `coerce`; every argument of a `coercible-*`
   form, of `prove-subterm`, of `prove-predates` and of the three
@@ -553,8 +557,7 @@ The branch of a phantom constructor under a non-erased scrutinee is
 erased throughout (§21). So is the body of an `erased` function: it is
 checked with every return entry `erased`, whatever its signature says,
 so such a function can only be held or called at `erased`. Every other
-position is non-erased, including a position of size zero that is not
-inside an erased position.
+position is non-erased.
 
 Checking is local. Referring to an `erased` name from a non-erased
 position is an error. Referring to a `many` name from anywhere is
@@ -567,7 +570,8 @@ A multiplicity written on a form must match the form's position. A
 a call or a cell invocation instead names how its head is taken (§37,
 §39). A statement's position is that of the
 expression it belongs to (§27), so this rule also covers `let-match`,
-every binder of a `let`, and `open-adt`.
+every binder of a `let`, `open-adt`, and the marker of each function in
+a `def-fns` or `def-unique`.
 A constructor's marker in `def-adts` is not held to it: the marker
 says whether the constructor is phantom (§21), whatever the position
 of the `def-adts`.
@@ -624,10 +628,7 @@ mention contributes nothing: an `(absurd C)` branch, an absurd-by-proof
 branch, and the branch of a phantom constructor under a `many` or
 `unique` scrutinee (§21). An `else` branch takes part like any other.
 
-A `unique` value need not be used. A `let` with no binders runs its
-right-hand side, because a position of size zero is non-erased outside
-an erased position (§14).
-This is how a value is consumed for its effect alone.
+A `unique` value need not be used.
 
 **Four kinds of mention.** A variable occurs in code in one of four
 ways. The second and third are uses:
@@ -2441,8 +2442,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 **Statements** (§27):
 
 - `let`: zero or more binders, bracketed, then statements, then the
-  final expression (§19, §26, §12). With zero binders it runs the
-  right-hand side for its effect on unique values (§15).
+  final expression (§19, §26, §12).
 - `def-lvl`: creates a fresh `Level` (§18).
 - `def-fns`: one or more mutually recursive functions at one level,
   written on the form, each with its own `erased`/`many` marker (§14),
