@@ -1,0 +1,27 @@
+#!pi -f ../../DESIGN.md -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../lib/prelude.sl -f ../../std -f ../../tests -f ../../pal -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 6 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=yes
+Your task is to find where Sleight's compiler messages mislead. Write programs
+as someone learning Sleight would, including the mistakes a learner makes;
+compile them with `sl`; and judge each error and warning. Does it name the real
+problem? Does it point at the right place? If it suggests a fix, does the fix
+work? Follow each message's advice and record whether it led to a working
+program.
+
+FEEDBACK.md is the product. For each message that misled you, give the smallest
+program that shows it, the message, what was actually wrong, and the message
+you would have wanted. Note messages that were notably good, too. Also report
+any program that DESIGN.md says is valid but `sl` refuses, or the reverse,
+citing the section.
+
+For reference: DESIGN.md (the language), MANUAL.md (the tools), WARNINGS.md
+(the warnings), lib/prelude.sl (the standard library), std/ (lemma libraries),
+tests/ and pal/ (example programs).
+
+Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. Put
+experiments in scratch/.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md and
+FEEDBACK.md. HANDOFF.md tells the next session which areas are covered and
+what to try next; rewrite it each session. Add to FEEDBACK.md each session
+rather than rewriting it. Each phase has its own budget of tokens. In the
+second phase, those two are the only files you can edit, so spend the first
+phase on the task itself.
