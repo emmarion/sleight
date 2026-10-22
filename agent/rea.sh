@@ -67,11 +67,18 @@ EOF
     $SSH slc@"$ip" bash -eu <<'EOF'
 chmod 755 ~/slc/slc
 curl -fsSL https://claude.ai/install.sh | bash >/dev/null
+mkdir -p ~/.claude
+cat > ~/.claude/CLAUDE.md <<'MD'
+# This machine
+
+You are on a private, disposable VPS that exists only for this work and is destroyed afterwards. You have passwordless sudo. Install whatever you need (system packages, language packages, or tools built from source) without asking first.
+MD
+python3 -c 'import json, os; f = os.path.expanduser("~/.claude/settings.json"); d = json.load(open(f)) if os.path.exists(f) else {}; d.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"; d["skipDangerousModePermissionPrompt"] = True; json.dump(d, open(f, "w"), indent=2)'
 mkdir -p ~/tools && cd ~/tools
-curl -fsSLO "$(curl -fsSL https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest | grep -o 'https://[^"]*PUBLIC[^"]*\.zip' | head -1)"
+curl -fsSLO "$(curl -fsSL https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/tags/Ghidra_12.1.4_build | grep -o 'https://[^"]*PUBLIC[^"]*\.zip' | head -1)"
 unzip -q ghidra_*.zip && rm ghidra_*.zip
 ln -s ~/tools/ghidra_*_PUBLIC ~/tools/ghidra
-sudo npm install --global --silent rea-agents >/dev/null
+sudo npm install --global --silent rea-agents@6.7.0 >/dev/null
 export GHIDRA_INSTALL_DIR=$(readlink -f ~/tools/ghidra)
 echo "export GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR" >> ~/.profile
 rea setup --yes --client claude_code --json | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(d["status"] != "ready" or not d["doctor"]["healthy"])'
