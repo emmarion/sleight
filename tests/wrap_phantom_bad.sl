@@ -1,4 +1,4 @@
-; error: has no opened newtype `Matchable`
+; error: `Ghost` is phantom, so it is not a wrapping constructor
 ; warns: tests/wrap_phantom_bad.sl:7:3: warning: phantom constructor `Ghost` has a non-erased field
 
 (def-adts $ (T : -> Type)

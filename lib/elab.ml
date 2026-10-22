@@ -1792,7 +1792,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let env, s = side env s in
       let c = ctor_var env l c in
       let params, ret = ctor_type env l c in
-      if newtype_of env c = None then error_in env l "%s has no opened newtype `Matchable` for its wrapping constructor" (qname env c);
+      if newtype_of env c = None then
+        if List.exists (fun (_, _, cs) -> List.mem (Erased, Var c) cs) (matchables env (tid_of env l c)) then error_in env l "%s is phantom, so it is not a wrapping constructor" (qname env c)
+        else error_in env l "%s has no opened newtype `Matchable` for its wrapping constructor" (qname env c);
       let callee = { subject = lazy (sprintf_in env "`coercible-wrap` of %s" (qname env c)); apposed = false; notes = lazy (declared_as env c); used = (fun _ -> Erased); marks = true } in
       let env, acc = elab_term_args env l ~callee ~what:"more argument" params (Var c) args in
       List.iter (settle env l) acc;

@@ -1481,6 +1481,12 @@
   (let ((many ss)) $ shapes cs env)
   (and (not ext) $ and (list-mem-bin (mctor-ids cs) c) $ hollow-shape (tagged-of disc ss) $ cshape-arities $ non-phantom ss))
 
+(def-fns _ $ (many phantom-ctor : (many (Env) env) (many (Nat) c) -> (many (Bool) r))
+  (let ((many tid)) $ tid-of env c)
+  (let-match many (find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env) (Some _ info) ((None _) (BFalse)))
+  (let-match many info (MkMatchInfo _ _ cs _))
+  (mult-eq (marker cs c) $ Erased))
+
 (def-fns _ $ (many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (many (List $ Ctor) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
   (match many s _
@@ -5724,7 +5730,7 @@
                       (let-match many rest (Cons _ craw wargs) ((Nil _) (malformed ew38 ctx expect env1 sp)))
                       (let ((many env2) (many cid)) $ ctor-var env1 craw)
                       (let ((many ctele) (many ret)) $ ctor-type env2 cid)
-                      (let ((many env3)) $ match many (find-newtype env2 cid) (((Env) _)) ((None _) (env-error env2 $ str-cat (qshown env2 cid) (say env2 " has no opened newtype `Matchable` for its wrapping constructor"))) ((Some _ _) env2))
+                      (let ((many env3)) $ match many (find-newtype env2 cid) (((Env) _)) ((None _) (env-error env2 $ str-cat (qshown env2 cid) $ say env2 $ match many (phantom-ctor env2 cid) _ ((BTrue) " is phantom, so it is not a wrapping constructor") ((BFalse) " has no opened newtype `Matchable` for its wrapping constructor"))) ((Some _ _) env2))
                       (let ((unique ew39) (many env4a) (many acc) (many tys) (many _) (many _) (many _)) $ notail $ check-args ew38 fuel callbacks _ sugar wargs (subs-all wargs) one-step env3 (CalleeWrap env3 cid) ctx ctele (Erased) no-tele (ARApp (TVar cid) ret) (BTrue) (BFalse) (BFalse))
                       (let ((many env4)) $ settle-list acc env4a)
                       (let ((many env5) (many f) (many fty))
