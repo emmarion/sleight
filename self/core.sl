@@ -189,25 +189,23 @@
 (def-fns _ $ (many under : (many (Multiplicity) pos) (many (Multiplicity) m) -> (many (Multiplicity) r))
   (match many pos _ ((Erased) (Erased)) ((Many) m) ((Once) m)))
 
-; The position of a list of expected multiplicities: erased when the list is non-empty and every entry is.
+; The position of a list of expected multiplicities: erased when every entry is, so when there are none.
 (def-adts $ (PosOf : ((List $ Multiplicity) ms) ((Multiplicity) pos) -> Type)
   enum
-  (many PoNil : -> (PosOf (Nil (Multiplicity)) (Many)))
+  (many PoNil : -> (PosOf (Nil (Multiplicity)) (Erased)))
   (many PoMany : (erased (List $ Multiplicity) rest) -> (PosOf (Cons (Multiplicity) (Many) rest) (Many)))
   (many PoOnce : (erased (List $ Multiplicity) rest) -> (PosOf (Cons (Multiplicity) (Once) rest) (Many)))
-  (many PoOnly : -> (PosOf (Cons (Multiplicity) (Erased) (Nil (Multiplicity))) (Erased)))
-  (many PoErased : (erased (Multiplicity) m) (erased (List $ Multiplicity) rest) (erased (Multiplicity) p) (erased (PosOf (Cons (Multiplicity) m rest) p) q) -> (PosOf (Cons (Multiplicity) (Erased) (Cons (Multiplicity) m rest)) p)))
+  (many PoErased : (erased (List $ Multiplicity) rest) (erased (Multiplicity) p) (erased (PosOf rest p) q) -> (PosOf (Cons (Multiplicity) (Erased) rest) p)))
 
 (def-fns _ $ (many pos-of : (subterm many (List $ Multiplicity) ms) -> (many (Multiplicity) r) (erased (PosOf ms r) pf))
-  (let-match many ms (Cons _ m rest) ((Nil _) (values (Many) (PoNil))))
+  (let-match many ms (Cons _ m rest) ((Nil _) (values (Erased) (PoNil))))
   (let-match many m (Erased) ((Many) (values (Many) (PoMany _))) ((Once) (values (Many) (PoOnce _))))
-  (let-match many rest (Cons _ _ _) ((Nil _) (values (Erased) (PoOnly))))
   (let ((many p) (erased q)) $ tail $ pos-of rest)
-  (values p (PoErased _ _ _ q)))
+  (values p (PoErased _ _ q)))
 
 (def-fns _ $ (many pos-mult : (many (List $ Multiplicity) ms) -> (many (Multiplicity) r))
   (let-match many ms (Cons _ m rest)
-    ((Nil _) (Many)))
+    ((Nil _) (Erased)))
   (match many m _ ((Once) (match many rest _ ((Nil _) (Once)) ((Cons _ _ _) (Many)))) (else (let ((many r) (erased _)) (pos-of ms)) r)))
 
 (def-fns _ $ (many mult-is-once : (many (Multiplicity) m) -> (many (Bool) r))

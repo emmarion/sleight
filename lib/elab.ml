@@ -26,7 +26,7 @@ let is_atfn_proof env x g = match type_of env x with App (Var c, [ _; Var g' ]) 
 
 
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
-let pos_of env expect = if expect = [] && env.usage_erased || expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
+let pos_of expect = if List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
 let atom = function Atom (_, n) -> Some n | _ -> None
 let not_name loc what raw = match raw with
   | Nat _ | Char _ | Str _ -> error loc "%s is a literal, not a name" (Reader.show raw)
@@ -1269,7 +1269,7 @@ let demanded env demand mult ty =
 let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false) env expect raw : Env.t * res list * V.code =
   let l = loc raw in
   let outer_erased = env.usage_erased in
-  let env = { env with usage_erased = outer_erased || pos_of env expect = Erased } in
+  let env = { env with usage_erased = outer_erased || pos_of expect = Erased } in
   let start = !counter in
   let env, ress, code = elab_form ?sink ~final demand cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
@@ -1281,7 +1281,7 @@ let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false)
   ({ env with usage_erased = outer_erased }, ress, code)
 
 and run_form env l start expect ress code =
-  let erased = pos_of env expect = Erased in
+  let erased = pos_of expect = Erased in
   let values = spread expect (if erased then [] else run_code env code) in
   let minted env x = x > start && (entry env x).state = Hypothetical && not (entry env x).meta in
   let env = List.fold_left2 (fun env r v -> match r.term with Var y when minted env y -> set_state env y (Settled v) | _ -> env) env ress values in
@@ -1306,7 +1306,7 @@ and elab_erased env raw =
   (env, r.term)
 
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
-  let pos = pos_of env expect in
+  let pos = pos_of expect in
   let env, raw = expand_one (!settle_head pos) env raw in
   match raw with
   | Atom (l, _) | Handle (l, _, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
@@ -1370,7 +1370,7 @@ and computed_head pos env raw =
   | _ -> (env, raw)
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
-  let pos = pos_of env expect in
+  let pos = pos_of expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
   let skipped = pos <> Erased && atfn_open env callee.term in
@@ -1468,7 +1468,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
     if skipped then V.CValues [] else V.CApp (hcode, codes, cc))
 
 and call_returns ?sink ~demand env expect l callee_name acc rets inner =
-  let pos = pos_of env expect in
+  let pos = pos_of expect in
   let env, ids = open_results env ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check ?sink l expect ids;
   List.iter2 (fun (m, (e : entry)) x ->
@@ -1489,7 +1489,7 @@ and call_returns ?sink ~demand env expect l callee_name acc rets inner =
   (env, List.map (res_of env) ids, code)
 
 and elab_special ?sink ?final demand tele env expect l sp args =
-  let pos = pos_of env expect in
+  let pos = pos_of expect in
   let m =
     if List.mem sp (Sp.WorldDo :: Sp.SettledTyApply :: Sp.SettledValApply :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
@@ -1860,7 +1860,7 @@ and cell_items env pos l (what, il, c, params) slots items =
   (env, List.rev slots, List.rev writes, fun body -> List.fold_left (fun b (x,c) -> V.CLet ([x], c, b)) body bindings)
 
 and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args =
-  let pos = pos_of env expect in
+  let pos = pos_of expect in
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
   let ct, params, ret = cell_shape env l pos c in
   (* the cell is taken at the position's multiplicity: read and copied at `many` where it stores, consumed at
@@ -1886,7 +1886,7 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
 and elab_cell_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: u :: ann :: List (pl, c :: names) :: body ->
-      if pos_of env expect = Erased then error_in env l "`cell-match` in an erased position";
+      if pos_of expect = Erased then error_in env l "`cell-match` in an erased position";
       let mode = mult_or env l m in
       if mode = Erased then error_in env l "`cell-match` takes its cell at `many` or `unique`";
       let env, r, code = elab_expr1 env mode u in
@@ -1933,7 +1933,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
   match args with
   | m :: scrut :: ann :: branches ->
       let env, branches = spliced env branches in
-      let pos = pos_of env expect in
+      let pos = pos_of expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
       let extra = match cells with Some c -> c | None -> cells_allowed env mid in
@@ -2126,19 +2126,19 @@ and elab_body ?tele ?sink env expect l items = hoisted env (fun env -> elab_body
 
 and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
-  let env, items = expand_seq (pos_of env expect) env items in
+  let env, items = expand_seq (pos_of expect) env items in
   let env, items = match items with
     | List (ll, h :: m :: scrut :: pat :: branches) :: rest when is_special env h Sp.LetMatch -> let env, branches = spliced env branches in (env, List (ll, h :: m :: scrut :: pat :: branches) :: rest)
     | items -> (env, items) in
   match items with
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
-      elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Wild ll :: List (loc pat, pat :: rest) :: branches)
+      elab_match ?sink ~form:"let-match" tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Wild ll :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
-      let env, wrap = elab_stmt (pos_of env expect) env stmt in
+      let env, wrap = elab_stmt (pos_of expect) env stmt in
       let env, ress, code = elab_body ?tele ?sink env expect l rest in
       (env, ress, wrap code)
   | items ->
-      let env, _, final = elab_stmts (pos_of env expect) env l items in
+      let env, _, final = elab_stmts (pos_of expect) env l items in
       elab_expr ?tele ?sink ~final:true env expect final
 
 and deep_body env = function
@@ -2265,7 +2265,7 @@ and elab_let spos env l args =
   let inner, ress, code = elab_expr ?tele ~sink { after with pending = [] } expect final in
   let temps = inner.pending in
   let inner = { inner with pending = after.pending } in
-  let values = if env.run_pos && pos_of env expect <> Erased then run_code inner code else [] in
+  let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
   let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
     let env =
@@ -2287,7 +2287,7 @@ and elab_let spos env l args =
   (match ids with first :: _ -> List.iter (track env' (Let (first, List.length rhs = 1))) ids | [] -> ());
   if tele_ids <> [] then List.iter2 stand_for tele_ids ids;
   let ids = non_erased env' ids in
-  (env', if env.run_pos then Fun.id else fun rest -> wrap (lets temps (if pos_of env expect = Erased then rest else V.CLet (ids, code, rest))))
+  (env', if env.run_pos then Fun.id else fun rest -> wrap (lets temps (if pos_of expect = Erased then rest else V.CLet (ids, code, rest))))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)
