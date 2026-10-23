@@ -1,0 +1,2 @@
+; expect: (Cons _ (None _) $ Cons _ (Some _ 0) $ Cons _ (None _) $ Cons _ (Some _ 10) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (Some _ 120) $ Nil _)
+(Cons _ (str-nat "007") $ Cons _ (str-nat "0") $ Cons _ (str-nat "00") $ Cons _ (str-nat "10") $ Cons _ (str-nat "") $ Cons _ (str-nat "12a") $ Cons _ (str-nat "-1") $ Cons _ (str-nat "0x1F") $ Cons _ (str-nat "1_000") $ Cons _ (str-nat " 4") $ Cons _ (str-nat "120") $ Nil _)

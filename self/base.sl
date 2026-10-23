@@ -144,10 +144,8 @@
     ((BTrue) (LChar))
     ((BFalse) (LName))))
 
-(def-fns _ $ (many parse-nat : (subterm many (String) s) (many (Nat) acc) -> (many (Nat) n))
-  (match many s _
-    ((SNil) acc)
-    ((SCons c rest) (tail $ parse-nat rest $ nat-add (nat-mul 10 acc) $ nat-sub (char-code c) 48))))
+(def-fns _ $ (many parse-nat : (many (String) s) -> (many (Nat) n))
+  (match many (str-nat s) _ ((Some _ n) n) ((None _) 0)))
 
 (def-fns _ $ (many is-hex : (many (Char) c) -> (many (Bool) r))
   (or (char-between c 48 57) $ or (char-between c 97 102) $ char-between c 65 70))

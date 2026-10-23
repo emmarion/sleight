@@ -143,7 +143,7 @@ let entry_bytes = 4096
 let clamp z = if Z.fits_int z then Some (Z.to_int z) else None
 
 let output_limit b =
-  if b <> "" && String.for_all (fun c -> c >= '0' && c <= '9') b then Ok (clamp (Z.of_string b)) else Error (b ^ ": not a number of bytes")
+  match Ffi_core.nat_of_string b with Some z -> Ok (clamp z) | None -> Error (b ^ ": not a number of bytes")
 
 let start reads writes bytes env w =
   let fail m = prerr_endline m; exit 1 in

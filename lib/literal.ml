@@ -6,7 +6,8 @@ type t = Numeral of Z.t | Char of int | Str of string
 let classify s =
   let n = String.length s in
   if n > 0 && String.for_all (fun c -> c >= '0' && c <= '9') s then
-    if n > 1 && s.[0] = '0' then `Bad (s ^ " has a leading zero") else `Lit (Numeral (Z.of_string s))
+    if n > 1 && s.[0] = '0' then `Bad (s ^ " has a leading zero")
+    else (match Ffi_core.nat_of_string s with Some z -> `Lit (Numeral z) | None -> assert false)
   else if n >= 2 && s.[0] = '"' then `Lit (Str (String.sub s 1 (n - 2)))
   else if n >= 2 && String.sub s 0 2 = "#\\" then
     match String.sub s 2 (n - 2) with

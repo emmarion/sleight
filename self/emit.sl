@@ -114,11 +114,6 @@
   enum
   (many MkTemplate : (many (String) kind) (many (String) type) (many (Nat) index) (many (List $ Piece) pieces) -> (Template)))
 
-(def-fns _ $ (many digits-of : (many (String) s) -> (many (Maybe $ Nat) r))
-  (match many (and (not $ str-is-empty s) $ all-digits s) _
-    ((BTrue) (Some _ $ parse-nat s 0))
-    ((BFalse) (None _))))
-
 (def-fns _ $ (many parse-hole : (many (String) h) -> (many (Maybe $ Hole) r))
   (let-match many h (SCons c rest) ((SNil) (None _)))
   (let-match many (char-is c 115) (BFalse)
@@ -128,11 +123,11 @@
       (let-match many (split-on rest 46) (Cons _ i more) ((Nil _) (None _)))
       (let-match many more (Cons _ j none) ((Nil _) (None _)))
       (let-match many none (Nil _) ((Cons _ _ _) (None _)))
-      (let-match many (digits-of i) (Some _ ni)
+      (let-match many (str-nat i) (Some _ ni)
         ((None _) (None _)))
-      (match many (digits-of j) _ ((Some _ nj) (Some _ $ HField ni nj)) ((None _) (None _))))
+      (match many (str-nat j) _ ((Some _ nj) (Some _ $ HField ni nj)) ((None _) (None _))))
     ((BFalse)
-      (let-match many (digits-of rest) (Some _ n) ((None _) (None _)))
+      (let-match many (str-nat rest) (Some _ n) ((None _) (None _)))
       (let-match many (char-is c 98) (BFalse) ((BTrue) (Some _ $ HBody n)))
       (let-match many (char-is c 97) (BFalse)
         ((BTrue) (Some _ $ HArg n)))
@@ -160,7 +155,7 @@
   (let-match many more (Cons _ type rest) ((Nil _) (None _)))
   (let-match many (or (str-eq kind "match") $ str-eq kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces)))
   (let-match many rest (Cons _ i _) ((Nil _) (None _)))
-  (let-match many (digits-of i) (Some _ n2)
+  (let-match many (str-nat i) (Some _ n2)
     ((None _) (None _)))
   (match many (str-eq kind "build") _ ((BTrue) (Some _ $ MkTemplate kind type n2 pieces)) ((BFalse) (None _))))
 

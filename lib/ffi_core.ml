@@ -107,6 +107,10 @@ let str_cmp (s1, o1, l1) (s2, o2, l2) =
 let str_length (_, _, l) = Z.of_int l
 let str_split (s, o, l) k = let k = Z.to_int k in ((s, o, k), (s, o + k, l - k))
 let nat_str n = let s = Z.to_string n in (s, 0, String.length s)
+let str_nat (s, o, l) =
+  let rec digits i = i = l || (s.[o + i] >= '0' && s.[o + i] <= '9' && digits (i + 1)) in
+  if l > 0 && digits 0 && (l = 1 || s.[o] <> '0') then Some (Z.of_substring s ~pos:o ~len:l) else None
+let nat_of_string s = str_nat (s, 0, String.length s)
 let append ((s1, o1, l1) as a) ((s2, o2, l2) as b) =
   if l1 = 0 then b else if l2 = 0 then a
   else let buf = Bytes.create (l1 + l2) in Bytes.blit_string s1 o1 buf 0 l1; Bytes.blit_string s2 o2 buf l1 l2; (Bytes.unsafe_to_string buf, 0, l1 + l2)

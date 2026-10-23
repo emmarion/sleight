@@ -107,7 +107,7 @@
   (let-match many (literal-error w) (None _) ((Some _ msg) (TError pos msg)))
   (match many (classify w) _
     ((LName) (TItem $ RAtom pos $ NSrc w))
-    ((LNumeral) (TItem $ RNat pos $ parse-nat w 0))
+    ((LNumeral) (TItem $ RNat pos $ parse-nat w))
     ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Nat) _)) ((Some _ n) n) ((None _) 0)))))
 
 (def-fns _ $ (many word-tok : (many (Spot) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))

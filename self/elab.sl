@@ -1995,7 +1995,7 @@
 ; trial turned on, a character standing for its code, with the first of [within] it sits in; numerals come
 ; first, then characters, each in order of value (lib/elab.ml's literal_notes).
 (def-fns _ $ (many lit-value : (many (String) s) -> (many (Nat) n))
-  (let-match many (all-digits s) (BFalse) ((BTrue) (parse-nat s 0)))
+  (let-match many (all-digits s) (BFalse) ((BTrue) (parse-nat s)))
   (match many (char-lit-code s) _ ((Some _ n) n) ((None _) 0)))
 
 (def-fns _ $ (many lit-before : (many (String) a) (many (String) b) -> (many (Bool) r))

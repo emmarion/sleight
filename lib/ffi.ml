@@ -128,6 +128,7 @@ let fns : (string * fn_spec) list =
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
+    ("str-nat", spec ~needs:[ "Maybe" ] 1 (unary (fun a -> match Ffi_core.str_nat (slice a) with Some n -> plain "Maybe" 1 [ int "Nat" n ] | None -> plain "Maybe" 0 [])));
     ("nat-mod", spec 2 (nats "Nat" Ffi_core.nat_mod));
     ("shl", spec 2 (nats "Nat" Ffi_core.shl));
     ("shr", spec 2 (nats "Nat" Ffi_core.shr));
@@ -157,7 +158,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]) ]
+let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
   let ns = List.map (fun (c : ctor) -> c.arity) adt.ctors in

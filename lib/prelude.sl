@@ -1898,3 +1898,21 @@
     (let ((unique mw3) (many hp)) (mint-settled-erased mw2 _ th p))
     (values mw3 $ Cons _ (raw here _ _ _ hp) $ Nil _))
   (values (MkMacro _ unary-fn) (MkMacro _ prove-literal-lt-fn)))
+
+(def-fns _ $ (many digit-of : (many (Char) c) -> (many (Maybe (Nat)) d))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 code _))
+  (let-match many (lt-dec code forty-eight) (No _ _ ge) ((Yes _ _ _) (None (Nat))))
+  (let ((many d) (erased _)) (sub code forty-eight ge))
+  (match many (lt-dec d ten) _ ((Yes _ _ _) (Some (Nat) d)) ((No _ _ _) (None (Nat)))))
+
+(def-fns _ $ (many digits-nat : (subterm many (String) s) (many (Nat) acc) -> (many (Maybe (Nat)) n))
+  (let-match many s (SCons c rest) ((SNil) (Some (Nat) acc)))
+  (let-match many (digit-of c) (Some _ d) ((None _) (None (Nat))))
+  (tail $ digits-nat rest $ nat-add (nat-mul ten acc) d))
+
+(def-fns _ $ (many extern str-nat : (many (String) s) -> (many (Maybe (Nat)) n))
+  (let-match many s (SCons c rest) ((SNil) (None (Nat))))
+  (let-match many (digit-of c) (Some _ d) ((None _) (None (Nat))))
+  (let-match many d (Zero) ((Succ _) (tail $ digits-nat rest d)))
+  (match many rest _ ((SNil) (Some (Nat) d)) ((SCons _ _) (None (Nat)))))

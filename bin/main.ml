@@ -76,7 +76,7 @@ let () =
   Extract.writes := values "--confine-write";
   Extract.output_bytes := option "--confine-output-bytes";
   Option.iter (fun p -> Special.help := Program.read_file p) (option "--hints");
-  Option.iter (fun f -> match int_of_string_opt f with Some n when n >= 0 -> Eval.fuel := Some n | _ -> prerr_endline "--eval-fuel takes a number of steps"; exit 1) (option "--eval-fuel");
+  Option.iter (fun f -> match Ffi_core.nat_of_string f with Some n when Z.fits_int n -> Eval.fuel := Some (Z.to_int n) | _ -> prerr_endline "--eval-fuel takes a number of steps"; exit 1) (option "--eval-fuel");
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");
