@@ -569,8 +569,9 @@
 (def-fns _ $ (many char-eq-nocase : (many (Char) a) (many (Char) b) -> (many (Bool) r))
   (char-eqb (char-lower a) (char-lower b)))
 
-(def-fns _ $ (many distance-first-row : (subterm many (String) bs) (many (Nat) j) -> (many (List $ Nat) r))
-  (Cons _ j $ match many bs (((List $ Nat) _)) ((SNil) (Nil _)) ((SCons _ rest) (notail $ distance-first-row rest $ Succ j))))
+(def-fns _ $ (many distance-first-row : (subterm many (String) bs) (many (Nat) j) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many bs (SCons _ rest) ((SNil) (list-rev _ $ Cons _ j acc)))
+  (tail $ distance-first-row rest (Succ j) $ Cons _ j acc))
 
 (def-fns _ $ (many distance-swap : (many (Char) c) (many (Maybe $ Char) cp) (many (Char) bc) (many (Maybe $ Char) bp) (many (List $ Nat) up2) -> (many (Maybe $ Nat) r))
   (let-match many cp (Some _ ap) ((None _) (None _)))
@@ -579,22 +580,22 @@
   (match many (and (char-eq-nocase c bq) $ char-eq-nocase ap bc) _ ((BTrue) (Some _ q)) ((BFalse) (None _))))
 
 (def-fns _ $ (many distance-row : (many (Char) c) (many (Maybe $ Char) cp) (subterm many (String) bs) (many (Maybe $ Char) bp)
-    (many (List $ Nat) up) (many (List $ Nat) up2) (many (Nat) left) -> (many (List $ Nat) r))
-  (let-match many bs (SCons bc rest) ((SNil) (Nil _)))
-  (let-match many up (Cons _ diag up-rest) ((Nil _) (Nil _)))
-  (let-match many up-rest (Cons _ above _) ((Nil _) (Nil _)))
+    (many (List $ Nat) up) (many (List $ Nat) up2) (many (Nat) left) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many bs (SCons bc rest) ((SNil) (list-rev _ acc)))
+  (let-match many up (Cons _ diag up-rest) ((Nil _) (list-rev _ acc)))
+  (let-match many up-rest (Cons _ above _) ((Nil _) (list-rev _ acc)))
   (let ((many best)) (nat-min (Succ $ nat-min above left) $ match many (char-eq-nocase c bc) (((Nat) _)) ((BTrue) diag) ((BFalse) (Succ diag))))
   (let ((many here)) (match many (distance-swap c cp bc bp up2) (((Nat) _)) ((Some _ q) (nat-min best $ Succ q)) ((None _) best)))
   (let ((many up2-next)) (match many bp (((List $ Nat) _)) ((None _) up2) ((Some _ _) (match many up2 (((List $ Nat) _)) ((Nil _) up2) ((Cons _ _ r2) r2)))))
-  (Cons _ here $ notail $ distance-row c cp rest (Some _ bc) up-rest up2-next here))
+  (tail $ distance-row c cp rest (Some _ bc) up-rest up2-next here $ Cons _ here acc))
 
 (def-fns _ $ (many distance-rows : (subterm many (String) xs) (many (Maybe $ Char) cp) (many (String) b) (many (Nat) i) (many (List $ Nat) up) (many (List $ Nat) up2) -> (many (List $ Nat) r))
   (let-match many xs (SCons c rest) ((SNil) up))
-  (let ((many row)) (Cons _ (Succ i) $ distance-row c cp b (None _) up up2 (Succ i)))
+  (let ((many row)) (distance-row c cp b (None _) up up2 (Succ i) $ Cons _ (Succ i) $ Nil _))
   (tail $ distance-rows rest (Some _ c) b (Succ i) row up))
 
 (def-fns _ $ (many distance : (many (String) a) (many (String) b) -> (many (Nat) d))
-  (let ((many first)) (distance-first-row b 0))
+  (let ((many first)) (distance-first-row b 0 $ Nil _))
   (let-match many (list-rev _ $ distance-rows a (None _) b 0 first first) (Cons _ d _) ((Nil _) 0))
   d)
 
@@ -729,8 +730,10 @@
     (tail $ nm-kids-entries _ kids path acc2))
   ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
     (let-match many kids (Cons _ k rest) ((Nil _) acc))
-    (match many k _
-      ((MkKid _ c submap) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))
+    (let-match many k (MkKid _ c submap))
+    (match many rest _
+      ((Nil _) (tail $ nm-entries _ submap (rcat path $ RChar c) acc))
+      ((Cons _ _ _) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))
 
 (def-adts $ (NameIndex : (Type V) -> Type)
   enum

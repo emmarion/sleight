@@ -140,7 +140,7 @@ let covers r l = not (before l r.from) && match r.until with Some u -> before l 
    parenthesis error, where the indentation check has already written it. *)
 let parse ?(shape = true) (f : file) =
   Option.iter (fun (l, m) -> raise (Syntax (l, m))) f.stopped;
-  let toks = ref (List.map (fun (l, _, t) -> (l, t)) f.toks) in
+  let toks = ref (List.rev (List.rev_map (fun (l, _, t) -> (l, t)) f.toks)) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
   let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note f.path else m) in
