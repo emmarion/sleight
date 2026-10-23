@@ -17,6 +17,9 @@ usage: $0 create [--slc FILE|REV]
            [./slc-x86_64-linux-SHORTHASH], and destroy the droplet
        $0 ls
            list the $TAG droplets
+       $0 fetch IP
+           mirror the droplet's ~/slc, except the slc binary, and Claude Code's transcripts into
+           agent/results/$TAG-MMDD-HHMMSS/, named for when the droplet was created
        $0 destroy [--yes] IP
            destroy a $TAG droplet
 The DigitalOcean token is read from \$PI_DO_ENV [~/.config/pi/do.env] and never leaves this machine.
@@ -118,6 +121,16 @@ EOF
     ;;
 ls)
     rows
+    ;;
+fetch)
+    [ $# -eq 2 ] || usage
+    read -r id name <<<"$(droplet "$2")" || true
+    [ -n "${id:-}" ] || { echo "$2 is not a $TAG droplet; refusing" >&2; exit 1; }
+    dir=agent/results/$TAG-$(dctl compute droplet get "$id" --output json | python3 -c 'import json, sys; t = json.load(sys.stdin)[0]["created_at"]; print(t[5:7] + t[8:10] + "-" + t[11:13] + t[14:16] + t[17:19])')
+    mkdir -p "$dir"
+    rsync -a --delete --exclude /slc -e "$SSH" slc@"$2":slc/ "$dir/slc/"
+    rsync -a --delete -e "$SSH" slc@"$2":.claude/projects/ "$dir/transcripts/"
+    echo "fetched into $dir ($(du -sh "$dir" | awk '{print $1}'))"
     ;;
 destroy)
     yes=0
