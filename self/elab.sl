@@ -4024,8 +4024,8 @@
 (def-adts $ (Ann : ((List $ Syn) root) -> Type)
   enum
   (many AnnNone : (erased (List $ Syn) root) -> (Ann root))
-  (many AnnPredates : (erased (List $ Syn) root) (many (Spot) ap) (many (Given root) g) -> (Ann root))
-  (many AnnSubterm : (erased (List $ Syn) root) (many (Spot) ap) (many (Nat) i) (many (Given root) g) -> (Ann root)))
+  (many AnnPredates : (erased (List $ Syn) root) (many (Spot) ap) (many (Bool) via-handle) (many (Given root) g) -> (Ann root))
+  (many AnnSubterm : (erased (List $ Syn) root) (many (Spot) ap) (many (Bool) via-handle) (many (Nat) i) (many (Given root) g) -> (Ann root)))
 
 (def-fns _ $ (many given-of : (erased (List $ Syn) root) (many (Syn) p) (erased (Subterm (Syn) p (List $ Syn) root) q) -> (many (Given root) g))
   (match many (is-underscore p) _ ((BTrue) (Inferred _)) ((BFalse) (Written _ p q))))
@@ -4037,8 +4037,8 @@
   (let-match many prest (Nil _) ((Cons _ _ _) (AnnNone _)))
   (let ((erased pp)) $ subterm-trans (prove-subterm p arg) pa)
   (let-match many (is-mark env k $ MkPredates) (BFalse)
-    ((BTrue) (AnnPredates _ (raw-pos arg) $ given-of _ p pp)))
-  (match many (is-mark env k $ MkSubterm) _ ((BTrue) (AnnSubterm _ (raw-pos arg) i $ given-of _ p pp)) ((BFalse) (AnnNone _))))
+    ((BTrue) (AnnPredates _ (raw-pos arg) (raw-handle k) $ given-of _ p pp)))
+  (match many (is-mark env k $ MkSubterm) _ ((BTrue) (AnnSubterm _ (raw-pos arg) (raw-handle k) i $ given-of _ p pp)) ((BFalse) (AnnNone _))))
 
 ; The annotation and the arguments without it.
 (def-fns _ $ (many split-annotation : (subterm many (List $ Syn) args) (erased (List $ Syn) root) (erased (Within args root) w) (many (Env) env) (many (Nat) i) -> (many (Env) env2) (many (Ann root) ann) (many (List $ Sub root) rest))
@@ -4050,10 +4050,10 @@
     (else
       (let ((many env1) (many later) (many rest)) $ notail $ split-annotation more _ wm env i)
       (let ((many env2)) $ match many ann (((Env) _))
-        ((AnnPredates _ ap _) (match many (nat-is-zero i) _ ((BTrue) env1) ((BFalse) (error-at env1 ap $ say env "`predates` is written immediately after the callee"))))
+        ((AnnPredates _ ap _ _) (match many (nat-is-zero i) _ ((BTrue) env1) ((BFalse) (error-at env1 ap $ say env "`predates` is written immediately after the callee"))))
         (else env1))
       (let ((many (String) twice)) "a call carries at most one decrease annotation")
-      (values (match many later (((Env) _)) ((AnnNone _) env2) ((AnnPredates _ ap _) (error-at env2 ap twice)) ((AnnSubterm _ ap _ _) (error-at env2 ap twice))) ann rest)))
+      (values (match many later (((Env) _)) ((AnnNone _) env2) ((AnnPredates _ ap _ _) (error-at env2 ap twice)) ((AnnSubterm _ ap _ _ _) (error-at env2 ap twice))) ann rest)))
   (let ((many env1) (many ann2) (many rest)) $ notail $ split-annotation more _ wm env $ Succ i)
   (values env1 ann2 $ Cons _ (MkSub _ arg pa) rest))
 
@@ -4083,9 +4083,9 @@
 
 (def-fns _ $ (many resolve-ann : (many (Env) env) (erased (List $ Syn) root) (many (Ann root) ann) (many (Res) callee) (many (Bool) same) (many (List $ Nat) positions) (many (List $ Term) args) -> (many (Env) r) (many (Ann root) a))
   (let-match many ann (AnnNone _) (else (values env ann)))
-  (let-match many same (BTrue) ((BFalse) (values env $ AnnPredates _ (here-pos env) $ Inferred _)))
+  (let-match many same (BTrue) ((BFalse) (values env $ AnnPredates _ (here-pos env) (BFalse) $ Inferred _)))
   (match many (first-differing positions env args 0) _
-    ((Some _ i) (values env $ AnnSubterm _ (here-pos env) i $ Inferred _))
+    ((Some _ i) (values env $ AnnSubterm _ (here-pos env) (BFalse) i $ Inferred _))
     ((None _) (values (env-error env $ str-cat3 "same-level call to " (qshow env $ res-term callee) $ str-cat " decreases no subterm argument" $ lower-level-hint env callee) $ AnnNone _))))
 
 (def-fns _ $ (many index-of-nat : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r))
@@ -4133,8 +4133,8 @@
   (let ((many (Spot) ap) (many (String) kw) (many (Bool) drop))
     (match many ann (((Spot) p) ((String) k) ((Bool) d))
       ((AnnNone _) (values (here-pos env) "" (BFalse)))
-      ((AnnPredates _ p0 _) (values p0 "predates" $ match many (canon-env env lv) (((Bool) _)) ((TVar m) (provable-predates env m cur)) (else (BFalse))))
-      ((AnnSubterm _ p0 i _) (values p0 "subterm" $ subterm-provable-at env params args i))))
+      ((AnnPredates _ p0 h _) (values p0 "predates" $ and (not h) $ match many (canon-env env lv) (((Bool) _)) ((TVar m) (provable-predates env m cur)) (else (BFalse))))
+      ((AnnSubterm _ p0 h i _) (values p0 "subterm" $ and (not h) $ subterm-provable-at env params args i))))
   (match many drop (((Env) _))
     ((BFalse) checked)
     ((BTrue) (env-warn-at checked (loc-in checked ap) $ say checked $ str-cat3 "unnecessary `(" kw " _)`; drop it"))))
@@ -5617,7 +5617,7 @@
                       (let ((unique ew16) (many env2) (many ress) (many ctx2) (many pre) (many codes) (erased pk)) $ notail $ elab-values ew4 fuel callbacks _ sugar args env1 ctx expect tele $ Nil _)
                       (values ew16 env2 ress $ MkHoisted _ _ ctx2 pre $ CValues _ expect codes pk))
                     ((ExMatch)
-                      (let ((unique ew17) (many env2) (many ress) (many code)) $ notail $ elab-match ew4 fuel callbacks _ sugar args env0 ctx expect tele demand (BFalse) "`match`" $ match many final (((Maybe $ Loc) _)) ((BTrue) (Some _ $ loc-in envl $ raw-pos head)) ((BFalse) (None _)))
+                      (let ((unique ew17) (many env2) (many ress) (many code)) $ notail $ elab-match ew4 fuel callbacks _ sugar args env0 ctx expect tele demand (BFalse) "`match`" $ match many (and final $ not $ raw-handle head) (((Maybe $ Loc) _)) ((BTrue) (Some _ $ loc-in envl $ raw-pos head)) ((BFalse) (None _)))
                       (values ew17 env2 ress code))
                     ((ExMatchableOf)
                       (let ((unique ew18) (many env3) (many found)) $ notail $ fetched ew4 fuel callbacks _ sugar args one-step env0 ex)
@@ -7792,7 +7792,7 @@
         (let ((many env1) (many ann2)) $ resolve-ann env _ ann callee same positions args)
         (match many ann2 _
           ((AnnNone _) (values ew env1))
-          ((AnnSubterm _ ap i g)
+          ((AnnSubterm _ ap _ i g)
             (let-match many same (BTrue) ((BFalse) (values ew (env-error env1 $ annotation-kind env1 callee same))))
             (let-match many (index-of-nat positions i 0) (Some _ kk)
               ((None _) (values ew (not-subterm-param env1 ap desc params sites positions i))))
@@ -7809,7 +7809,7 @@
             (let ((many env4) (many _) (many s1) (many _) (many s3)) $ expect-proof4 env3 subterm-id " or `_`" pres)
             (let ((many env5)) $ check env4 "value" s1 arg)
             (values ew1 (check env5 "value" s3 $ TVar counterpart)))
-          ((AnnPredates _ _ g)
+          ((AnnPredates _ _ _ g)
             (let-match many same (BFalse) ((BTrue) (values ew (env-error env1 $ annotation-kind env1 callee same))))
             (let ((unique ew3) (many (Env) env2) (many (Res) pres))
               (match many g (((ElabWorld) _ at ew) ((Env) env2) ((Res) pres))

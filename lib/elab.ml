@@ -1316,7 +1316,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
   | List (l, head :: args) -> (
       match special_of env head with
       | Some sp when Sp.has_role sp -> not_a env "not an expression" raw
-      | Some sp -> elab_special ?sink ?final:(if final then Some (loc head) else None) demand expect_tele (read_special pos env head) expect l sp args
+      | Some sp -> elab_special ?sink ?final:(match head with Handle _ -> None | _ when final -> Some (loc head) | _ -> None) demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
           let env, args = spliced env args in
           let env, h, hcode = elab_head env pos l head in
@@ -1387,7 +1387,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
           let predates = is_special env k Sp.Predates in
           if found <> None then error al "a call carries at most one decrease annotation";
           if predates && i > 0 then error_in env al "`predates` is written immediately after the callee";
-          go i (Some (al, if predates then `Predates p else `Subterm (i, p))) acc rest
+          go i (Some (al, (match k with Handle _ -> true | _ -> false), if predates then `Predates p else `Subterm (i, p))) acc rest
       | a :: rest -> go (i + 1) found (a :: acc) rest
       | [] -> (found, List.rev acc)
     in
@@ -1452,13 +1452,13 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   in
   let env = match written with
     | None -> check l (inferred ())
-    | Some (al, a) ->
+    | Some (al, via_handle, a) ->
         let env' = check al (Some a) in
         let unnecessary = match env.level, a with
           | At _, `Subterm (i, _) -> provable_subterm env (List.nth arg_terms i) (Var (counterpart al (Option.get (find_index (( = ) i) subterm_params))))
           | At cur, `Predates _ -> (match canon env lv with Var m -> provable_predates env m cur | _ -> false)
           | Top, _ -> false in
-        if unnecessary then
+        if unnecessary && not via_handle then
           warn_in env al [] "unnecessary %s; drop it" (tick (Printf.sprintf "(%s _)" (speller env (match a with `Predates _ -> "predates" | `Subterm _ -> "subterm"))));
         env'
   in

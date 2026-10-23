@@ -39,9 +39,10 @@ Tests: `tests/shadow_builtin_warn.sl`, `tests/universe_shadowed_bad.sl`.
 ``unnecessary `(predates _)`; drop it`` or
 ``unnecessary `(subterm _)`; drop it``. A call inside a function body
 carries a written decrease annotation (§19) that the elaborator would
-have inferred on its own from a bare call (§48).
+have inferred on its own from a bare call (§48), and the annotation's
+head is not a handle (§64).
 `lib/elab.ml` (`elab_call`), `self/elab.sl`.
-Tests: `tests/vec_map.sl`, `tests/trans.sl`.
+Tests: `tests/vec_map.sl`, `tests/trans.sl`, `tests/macro_head_warn.sl`.
 
 ## 4. Unmarked same-level call
 
@@ -55,12 +56,13 @@ Test: `tests/same_level_branch_callee.sl`.
 ## 5. Lopsided `match`
 
 ``lopsided `match`; flatten it with a `let-match` on C``. A `match` in
-final position outside run position has exactly one branch whose body
+final position outside run position, its head not a handle (§64), has
+exactly one branch whose body
 is deep, meaning it has statements or is itself a `match` or
 `cell-match`, and that branch is a reachable constructor branch `C`.
 The suggested rewrite is a `let-match` with branches (§52).
 `lib/elab.ml` (`elab_match`), `self/elab.sl`.
-Tests: `tests/at_match.sl`, `tests/vec_append.sl`.
+Tests: `tests/at_match.sl`, `tests/vec_append.sl`, `tests/macro_head_warn.sl`.
 
 ## 6. A runtime `absurd`
 
