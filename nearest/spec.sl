@@ -96,3 +96,27 @@
     (many NoWords : (erased (String) q) (erased (Nat) d) -> (Nearest q (Nil (String)) d (Nil (String))))
     (many Closest : (erased (String) q) (erased (List (String)) ws) (erased (Nat) d) (erased (String) r) (erased (List (String)) rs)
        (erased (Ranked q ws d (Cons (String) r rs)) ranked) -> (Nearest q ws d (Cons (String) r rs)))))
+
+(def-adts
+  ((NotNewline : ((Char) c) -> Type)
+    enum
+    (many BeforeNewline : (erased (Nat) n) (erased (Lt n u8-modulus) p) (erased (Lt n 10) below) -> (NotNewline (MkChar (MkU8 n p))))
+    (many AfterNewline : (erased (Nat) n) (erased (Lt n u8-modulus) p) (erased (Lt 10 n) above) -> (NotNewline (MkChar (MkU8 n p))))))
+
+(def-adts
+  ((WordThen : ((String) text) ((String) w) ((String) rest) -> Type)
+    enum
+    (many LastChar : (erased (Char) c) (erased (NotNewline c) nl) -> (WordThen (SCons c (SNil)) (SCons c (SNil)) (SNil)))
+    (many EndOfLine : (erased (Char) c) (erased (String) r) (erased (NotNewline c) nl)
+       -> (WordThen (SCons c (SCons #\newline r)) (SCons c (SNil)) (SCons #\newline r)))
+    (many MoreChars : (erased (Char) c) (erased (String) t) (erased (String) w) (erased (String) r) (erased (NotNewline c) nl)
+       (erased (WordThen t w r) more) -> (WordThen (SCons c t) (SCons c w) r))))
+
+(def-adts
+  ((Words : ((String) text) ((List (String)) ws) -> Type)
+    enum
+    (many NoText : -> (Words (SNil) (Nil (String))))
+    (many SkipNewline : (erased (String) rest) (erased (List (String)) ws) (erased (Words rest ws) more)
+       -> (Words (SCons #\newline rest) ws))
+    (many TakeWord : (erased (String) text) (erased (String) w) (erased (String) rest) (erased (List (String)) ws)
+       (erased (WordThen text w rest) word) (erased (Words rest ws) more) -> (Words text (Cons (String) w ws)))))

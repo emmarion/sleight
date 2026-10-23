@@ -1,0 +1,7 @@
+(def-fns _ $ (many answer : (many (String) text) (many (String) query) -> (many (String) out))
+  (let ((many qs) (erased _)) (split-words query))
+  (let-match many qs (Cons _ q _) ((Nil _) "no query word\n"))
+  (let ((many ws) (erased _)) (split-words text))
+  (let ((many best) (many ties)) (nearest-names q ws))
+  (let-match many best (Some _ d) ((None _) "no words\n"))
+  (show d ties))

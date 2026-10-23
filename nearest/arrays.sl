@@ -121,24 +121,6 @@
     ((FoldAbove _ p _) (lt-trans _ _ _ p u8-below-u62))))
 
 (def-adts
-  ((At : ((List (U8)) xs) ((Nat) o) ((String) w) -> Type)
-    enum
-    (many AtEnd : (erased (List (U8)) xs) (erased (Nat) o) -> (At xs o (SNil)))
-    (many AtChar : (erased (List (U8)) xs) (erased (Nat) o) (erased (U8) u) (erased (String) w)
-       (erased (Nth (U8) xs o u) here) (erased (At xs (Succ o) w) rest) -> (At xs o (SCons (MkChar u) w)))))
-
-(def-fns _ $ (erased at-shift : (erased (List (U8)) xs) (erased (Nat) o) (erased (String) w) (erased (U8) u)
-    (subterm erased (At xs o w) p) -> (erased (At (Cons (U8) u xs) (Succ o) w) r))
-  (match erased p _
-    ((AtEnd _ _) (AtEnd _ _))
-    ((AtChar _ _ c w1 here rest) (AtChar _ _ c w1 (NthThere _ u xs o c here) (at-shift _ _ _ u rest)))))
-
-(def-fns _ $ (erased at-start : (subterm erased (String) w) (erased (List (U8)) xs) (erased (StrBytes w xs) p) -> (erased (At xs (Zero) w) r))
-  (match erased p _
-    ((SBNil) (AtEnd _ _))
-    ((SBCons u w1 xs1 p1) (AtChar _ _ u w1 (NthHere _ u xs1) (at-shift _ _ _ u (at-start w1 xs1 p1))))))
-
-(def-adts
   ((Coded : ((String) w) ((Nat) p) ((List (Copy (U62))) ks) -> Type)
     enum
     (many CodedNil : (erased (List (Copy (U62))) ks) -> (Coded (SNil) (Zero) ks))
@@ -296,19 +278,21 @@
     ((No _ _ _) (Cramped lq lw cap))))
 
 (def-fns _ $ (many word-distance : (erased (String) q) (many (Codes q) cq) (many (Nat) lq) (erased (StrLength q lq) pq)
-    (many (String) w) (many (Nat) lw) (erased (StrLength w lw) pw) (many (Nat) cap)
+    (erased (List (U8)) xs) (many (Bytes xs) bs) (erased (Nat) n) (erased (Length (U8) xs n) ln)
+    (many (Nat) s) (many (Nat) lw) (erased (Nat) e) (erased (Add s lw e) sum) (erased (Lt e (Succ n)) le)
+    (erased (String) wt) (erased (Drop xs s wt) dw) (erased (String) w) (erased (String) t) (erased (WordThen wt w t) wth) (erased (StrLength w lw) pw)
+    (many (Nat) cap)
     (erased (List (Copy (U62))) ks) (unique (Array (Copy (U62)) ks) ka) (erased (Length (Copy (U62)) ks cap) lk) (erased (List (Copy (U62))) x0) (unique (Array (Copy (U62)) x0) b0) (erased (Length (Copy (U62)) x0 cap) l0) (erased (List (Copy (U62))) x1) (unique (Array (Copy (U62)) x1) b1) (erased (Length (Copy (U62)) x1 cap) l1) (erased (List (Copy (U62))) x2) (unique (Array (Copy (U62)) x2) b2) (erased (Length (Copy (U62)) x2 cap) l2)
-    -> (many (Nat) n) (erased (Distance q w n) d)
+    -> (many (Nat) d) (erased (Distance q w d) dist)
     (erased (List (Copy (U62))) ks2) (unique (Array (Copy (U62)) ks2) ka2 at ka) (erased (Length (Copy (U62)) ks2 cap) lk2) (erased (List (Copy (U62))) y0) (unique (Array (Copy (U62)) y0) r0 at b0) (erased (Length (Copy (U62)) y0 cap) k0) (erased (List (Copy (U62))) y1) (unique (Array (Copy (U62)) y1) r1 at b1) (erased (Length (Copy (U62)) y1 cap) k1) (erased (List (Copy (U62))) y2) (unique (Array (Copy (U62)) y2) r2 at b2) (erased (Length (Copy (U62)) y2 cap) k2))
   (match many (room lq lw cap) _
     ((Cramped _ _ _)
-      (let ((many n) (erased d)) (distance-codes q cq w (codes w)))
-      (values n d ks ka lk x0 b0 l0 x1 b1 l1 x2 b2 l2))
+      (let ((many ws)) (word-string xs bs n ln s lw e sum le wt dw w t wth pw))
+      (let ((many d) (erased dist)) (distance-codes q cq w (codes ws)))
+      (values d dist ks ka lk x0 b0 l0 x1 b1 l1 x2 b2 l2))
     ((Roomy _ _ _ fit pc)
-      (let ((erased xs) (unique bw) (erased sb)) (str-bytes-copy w))
-      (let ((many bs)) (share bw))
-      (let ((erased ks1) (unique ka1) (erased cw) (erased lk1)) (fill-codes xs bs w (Zero) (at-start w xs sb) lw pw ks ka cap lk pc))
-      (let ((unique ka2) (many n) (erased y0) (unique r0) (erased t0) (erased k0) (erased y1) (unique r1) (erased _) (erased k1) (erased y2) (unique r2) (erased k2))
+      (let ((erased ks1) (unique ka1) (erased cw) (erased lk1)) (fill-codes xs bs w s (drop-word-at xs s wt dw w t wth) lw pw ks ka cap lk pc))
+      (let ((unique ka2) (many d) (erased y0) (unique r0) (erased t0) (erased k0) (erased y1) (unique r1) (erased _) (erased k1) (erased y2) (unique r2) (erased k2))
         (rows-arr q cq lq pq w lw pw fit ks1 cw ka1 cap pc x0 b0 l0 x1 b1 l1 x2 b2 l2))
       (let ((erased _) (erased _) (erased dist)) (tab-at _ _ _ _ _ t0))
-      (values n dist ks1 ka2 lk1 y0 r0 k0 y1 r1 k1 y2 r2 k2))))
+      (values d dist ks1 ka2 lk1 y0 r0 k0 y1 r1 k1 y2 r2 k2))))
