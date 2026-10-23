@@ -1,0 +1,62 @@
+#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../heapsort/flat -f heapsort-fast -f ../../self -f edit-distance-fast -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl edit-distance-fast/spec.sl"
+Your task is to write a fast function in Sleight that computes the edit
+distance between two strings, certified correct against the goal in
+edit-distance-fast/spec.sl. Or: to lay the groundwork for a future session to
+do so. This task will likely take many sessions, so leaving
+solid, well-recorded progress matters more than finishing in this one.
+
+The distance is the one GCC uses for its spelling suggestions: an insertion or
+a deletion costs 2, a substitution costs 0 between equal bytes, 1 between bytes
+that differ only in ASCII case, and 2 otherwise, and swapping two adjacent
+bytes costs 2. A swapped pair is not edited further (the "optimal string
+alignment" distance). spec.sl defines it as `Dist xs ys d`, by its usual
+recurrence. Your `edit-distance-fast` takes each string as a `Text`, its bytes
+with an erased proof that their length is below `max-array-length`, and
+returns the distance with its `Dist` proof.
+
+To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
+std/tactics.sl, edit-distance-fast/spec.sl, then your files, one of them
+proving the goal with `(qed e)`. To time it, compile the same files followed by
+edit-distance-fast/perf.sl with `sl`; perf.sl calls your `edit-distance-fast`.
+The finished solution must compile with no warnings, and none of your files may
+contain a `;! suppress`; intermediate work may have both. A solution is not
+finished while it makes more than a constant number of allocations per call,
+any array write could be an `-imm` one, any runtime arithmetic could be a
+`u62-*` call, or any runtime recursion could be a tail call, even if
+measurements show no gain.
+
+For reference: MANUAL.md (the implementations and their command lines),
+WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
+prelude.sl (the standard library), std/ (source libraries, among them
+std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
+`SetNth` and `Repeat`), tests/ (example programs), flat/ (a fast heap sort
+certified against heapsort-fast/spec.sl; flat/README.md describes it), and
+self/ (the compiler, itself written in Sleight).
+
+Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session.
+Generally put experiments and `sl` captures in scratch/, which does not carry
+over; helper programs worth keeping can go in work/. Keep work/ tidy, pruning
+files that have served their purpose.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md and
+FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to
+try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
+Sleight's maintainers what slowed you down because of Sleight, its library, or its tools,
+rather than because of the problem itself; add to it each session instead of
+rewriting it. Each phase has its own budget of tokens. In the second phase,
+those two are the only files you can edit; there's no need to edit them, or to
+read FEEDBACK.md, before then, so spend the first phase on the task itself.
+
+Hint: perf.sl times the call alone and reports what it allocates. To try other
+lengths, copy it to scratch/ and change both `perf-n` or `perf-m` and the
+numeral that its `-fits` bound names.
+
+Hint: to compile without running, use the `sl` tool's `ocaml` option.
+
+Hint: a byte read with `bytes-get-many` is a `U8`, whose code a `let-match` on
+`MkU8` gives, and a `let-match` on `MkText` unwraps a `Text` at no cost, since
+it is a newtype.
+
+Hint: the costs 0, 1 and 2 in spec.sl are numerals, opaque to the checker;
+`(unary 2)` and its like give the rules that `Add` proofs over them need, and
+`prove-literal-lt` proves a bound between numerals in one line.
