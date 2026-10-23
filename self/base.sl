@@ -8,9 +8,6 @@
 
 ; ---- Nat
 
-(def-fns _ $ (many cmp-is-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r))
-  (match many c _ ((CEq _ _ _) (BTrue)) (else (BFalse))))
-
 (def-fns _ $ (many cmp-index : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Nat) i))
   (match many c _ ((CLt _ _ _ _ _) 0) ((CEq _ _ _) 1) ((CGt _ _ _ _ _) 2)))
 
@@ -20,8 +17,11 @@
 (def-fns _ $ (many nat-lt : (many (Nat) a) (many (Nat) b) -> (many (Bool) r))
   (cmp-is-lt _ _ _ _ $ nat-cmp a b))
 
-(def-fns _ $ (many nat-eq : (many (Nat) a) (many (Nat) b) -> (many (Bool) r))
-  (cmp-is-eq _ _ _ _ $ nat-cmp a b))
+(def-fns _ $ (many is-same : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (EqDec T R a b) e) -> (many (Bool) r))
+  (match many e _ ((Equal _ _ _) (BTrue)) ((Unequal _ _ _ _ _) (BFalse))))
+
+(def-fns _ $ (many nat-eqb : (many (Nat) a) (many (Nat) b) -> (many (Bool) r))
+  (is-same _ _ _ _ $ nat-eq a b))
 
 (def-fns _ $ (many nat-pred : (many (Nat) n) -> (many (Nat) m))
   (match many n _ ((Zero) (Zero)) ((Succ k) k)))
@@ -48,11 +48,11 @@
     ((Yes _ _ p) (MkChar $ MkU8 n p))
     ((No _ _ _) #\x00)))
 
-(def-fns _ $ (many char-eq : (many (Char) a) (many (Char) b) -> (many (Bool) r))
-  (cmp-is-eq _ _ _ _ $ char-cmp a b))
+(def-fns _ $ (many char-eqb : (many (Char) a) (many (Char) b) -> (many (Bool) r))
+  (is-same _ _ _ _ $ char-eq a b))
 
 (def-fns _ $ (many char-is : (many (Char) c) (many (Nat) code) -> (many (Bool) r))
-  (nat-eq (char-code c) code))
+  (nat-eqb (char-code c) code))
 
 ; code in [lo, hi]
 (def-fns _ $ (many char-between : (many (Char) c) (many (Nat) lo) (many (Nat) hi) -> (many (Bool) r))
@@ -63,8 +63,8 @@
   (let ((many s) (erased _)) (delegate (flatten r)))
   s)
 
-(def-fns _ $ (many str-eq : (many (String) a) (many (String) b) -> (many (Bool) r))
-  (cmp-is-eq _ _ _ _ $ str-cmp a b))
+(def-fns _ $ (many str-eqb : (many (String) a) (many (String) b) -> (many (Bool) r))
+  (is-same _ _ _ _ $ str-eq a b))
 
 (def-fns _ $ (many str-is-empty : (many (String) s) -> (many (Bool) r))
   (match many s _ ((SNil) (BTrue)) ((SCons _ _) (BFalse))))
@@ -108,7 +108,7 @@
 (def-fns _ $ (many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r))
   (match many a _
     ((Nil _) (match many b _ ((Nil _) (BTrue)) ((Cons _ _ _) (BFalse))))
-    ((Cons _ x rest) (match many b _ ((Nil _) (BFalse)) ((Cons _ y rest2) (and (nat-eq x y) $ tail $ nat-list-eq rest rest2))))))
+    ((Cons _ x rest) (match many b _ ((Nil _) (BFalse)) ((Cons _ y rest2) (and (nat-eqb x y) $ tail $ nat-list-eq rest rest2))))))
 
 ; A shape as the FFI's error messages spell it, its arities separated by spaces.
 (def-fns _ $ (many spell-nats : (subterm many (List $ Nat) ns) -> (many (String) s))
@@ -534,17 +534,17 @@
 (def-fns _ $ (many list-mem-str : (subterm many (List $ String) xs) (many (String) x) -> (many (Bool) r))
   (let-match many xs (Cons _ y rest)
     ((Nil _) (BFalse)))
-  (match many (str-eq x y) _ ((BTrue) (BTrue)) ((BFalse) (tail $ list-mem-str rest x))))
+  (match many (str-eqb x y) _ ((BTrue) (BTrue)) ((BFalse) (tail $ list-mem-str rest x))))
 
 (def-fns _ $ (many index-of-bin : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (let-match many xs (Cons _ y rest) ((Nil _) (None _)))
-  (match many (nat-eq x y) _
+  (match many (nat-eqb x y) _
     ((BTrue) (Some _ i))
     ((BFalse) (tail $ index-of-bin rest x $ Succ i))))
 
 (def-fns _ $ (many list-mem-bin : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (let-match many xs (Cons _ y rest) ((Nil _) (BFalse)))
-  (match many (nat-eq x y) _ ((BTrue) (BTrue)) ((BFalse) (tail $ list-mem-bin rest x))))
+  (match many (nat-eqb x y) _ ((BTrue) (BTrue)) ((BFalse) (tail $ list-mem-bin rest x))))
 
 (def-fns _ $ (many join-strs : (subterm many (List $ String) xs) (many (String) sep) -> (many (String) r))
   (let-match many xs (Cons _ x rest)
@@ -558,7 +558,7 @@
   (match many (char-between c 65 90) _ ((BTrue) (char-of-code $ nat-add (char-code c) 32)) ((BFalse) c)))
 
 (def-fns _ $ (many char-eq-nocase : (many (Char) a) (many (Char) b) -> (many (Bool) r))
-  (char-eq (char-lower a) (char-lower b)))
+  (char-eqb (char-lower a) (char-lower b)))
 
 (def-fns _ $ (many distance-first-row : (subterm many (String) bs) (many (Nat) j) -> (many (List $ Nat) r))
   (Cons _ j $ match many bs (((List $ Nat) _)) ((SNil) (Nil _)) ((SCons _ rest) (notail $ distance-first-row rest $ Succ j))))
@@ -630,22 +630,22 @@
 
 (def-fns _ $ (many escape-char : (many (Char) c) -> (many (Rope) r))
   (let ((many k)) $ char-code c)
-  (let-match many (nat-eq k 34) (BFalse) ((BTrue) (RStr "\\\"")))
-  (let-match many (nat-eq k 92) (BFalse) ((BTrue) (RStr "\\\\")))
-  (let-match many (nat-eq k 10) (BFalse) ((BTrue) (RStr "\\n")))
-  (let-match many (nat-eq k 9) (BFalse) ((BTrue) (RStr "\\t")))
+  (let-match many (nat-eqb k 34) (BFalse) ((BTrue) (RStr "\\\"")))
+  (let-match many (nat-eqb k 92) (BFalse) ((BTrue) (RStr "\\\\")))
+  (let-match many (nat-eqb k 10) (BFalse) ((BTrue) (RStr "\\n")))
+  (let-match many (nat-eqb k 9) (BFalse) ((BTrue) (RStr "\\t")))
   (match many (and (nat-lt 31 k) (nat-lt k 127)) _
     ((BTrue) (RChar c))
     ((BFalse) (rcat (RStr "\\x") $ hex-byte-rope k))))
 
 (def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
-  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eq n 40) $ or (nat-eq n 41) $ nat-eq n 59))
+  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eqb n 40) $ or (nat-eqb n 41) $ nat-eqb n 59))
 
 ; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
 (def-fns _ $ (many lit-char-rope : (many (Nat) c) -> (many (Rope) r))
-  (let-match many (nat-eq c 32) (BFalse) ((BTrue) (RStr "#\\space")))
-  (let-match many (nat-eq c 10) (BFalse) ((BTrue) (RStr "#\\newline")))
-  (let-match many (nat-eq c 9) (BFalse) ((BTrue) (RStr "#\\tab")))
+  (let-match many (nat-eqb c 32) (BFalse) ((BTrue) (RStr "#\\space")))
+  (let-match many (nat-eqb c 10) (BFalse) ((BTrue) (RStr "#\\newline")))
+  (let-match many (nat-eqb c 9) (BFalse) ((BTrue) (RStr "#\\tab")))
   (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
   (rcat (RStr "#\\x") $ hex-byte-rope c))
 
@@ -664,7 +664,7 @@
 
 (def-fns _ $ (many is-plain-name : (many (String) s) -> (many (Bool) r))
   (let-match many s (SCons c _) ((SNil) (BFalse)))
-  (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eq s "_") $ and (not $ str-eq s "$")
+  (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eqb s "_") $ and (not $ str-eqb s "$")
     $ and (not $ char-is c 34) $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
 
 (def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
@@ -703,9 +703,9 @@
 
 (def-fns _ $ (many name-eq : (many (Name) a) (many (Name) b) -> (many (Bool) r))
   (match many a _
-    ((NSrc s) (match many b _ ((NSrc t) (str-eq s t)) (else (BFalse))))
-    ((NGen m _) (match many b _ ((NGen n _) (nat-eq m n)) (else (BFalse))))
-    ((NHandle m ra _ _) (match many b _ ((NHandle n rb _ _) (and (nat-eq m n) $ reading-eq ra rb)) (else (BFalse))))))
+    ((NSrc s) (match many b _ ((NSrc t) (str-eqb s t)) (else (BFalse))))
+    ((NGen m _) (match many b _ ((NGen n _) (nat-eqb m n)) (else (BFalse))))
+    ((NHandle m ra _ _) (match many b _ ((NHandle n rb _ _) (and (nat-eqb m n) $ reading-eq ra rb)) (else (BFalse))))))
 
 (def-fns _ $ (many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (match many rs _

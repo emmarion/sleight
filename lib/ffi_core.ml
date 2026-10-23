@@ -14,6 +14,8 @@ type 'v str = SNil | SCons of 'v * 'v
 type 'v rope = REmpty | RStr of 'v | RCat of 'v * 'v | RChar of 'v
 type cmp = CLt | CEq | CGt
 type dec = Yes | No
+type eq_dec = Equal | Unequal
+type bit = Bit0 | Bit1
 
 let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
 
@@ -70,6 +72,11 @@ let order c = if c < 0 then CLt else if c = 0 then CEq else CGt
 let nat_cmp a b = order (Z.compare a b)
 let decide b = if b then Yes else No
 let lt_dec a b = decide (Z.lt a b)
+let eq_dec b = if b then Equal else Unequal
+let bit b = if b then Bit1 else Bit0
+let nat_eq a b = eq_dec (Z.equal a b)
+let bit_length n = Z.of_int (Z.numbits n)
+let bit_test n k = bit (Z.fits_int k && Z.testbit n (Z.to_int k))
 let nat_mod = Z.rem
 let nat_halve n = n
 let shl n k = if n == Z.zero then Z.zero else Z.shift_left n (Z.to_int k)
@@ -94,6 +101,9 @@ let u62_dec a : Z.t = Obj.magic (small a - 1 : int)
 let u62_divmod a b = (u62_div a b, u62_mod a b)
 let u62_cmp a b = order (compare (small a) (small b))
 let u62_lt_dec a b = decide (small a < small b)
+let u62_eq a b = eq_dec (small a = small b)
+let u62_bit_length = bit_length
+let u62_bit_test n k = bit ((small n lsr small k) land 1 = 1)
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
   let n = if l1 < l2 then l1 else l2 in
@@ -105,6 +115,9 @@ let str_cmp (s1, o1, l1) (s2, o2, l2) =
   in
   go 0
 let str_length (_, _, l) = Z.of_int l
+let str_eq (s1, o1, l1) (s2, o2, l2) =
+  let rec go i = i = l1 || (String.unsafe_get s1 (o1 + i) = String.unsafe_get s2 (o2 + i) && go (i + 1)) in
+  eq_dec (l1 = l2 && go 0)
 let str_split (s, o, l) k = let k = Z.to_int k in ((s, o, k), (s, o + k, l - k))
 let nat_str n = let s = Z.to_string n in (s, 0, String.length s)
 let str_nat (s, o, l) =

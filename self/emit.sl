@@ -153,11 +153,11 @@
   (let ((many pieces)) $ parse-pieces n text $ Nil _)
   (let-match many (split-on head 32) (Cons _ kind more) ((Nil _) (None _)))
   (let-match many more (Cons _ type rest) ((Nil _) (None _)))
-  (let-match many (or (str-eq kind "match") $ str-eq kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces $ Nil _)))
+  (let-match many (or (str-eqb kind "match") $ str-eqb kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces $ Nil _)))
   (let-match many rest (Cons _ i _) ((Nil _) (None _)))
   (let-match many (str-nat i) (Some _ n2)
     ((None _) (None _)))
-  (match many (str-eq kind "build") _ ((BTrue) (Some _ $ MkTemplate kind type n2 pieces $ Nil _)) ((BFalse) (None _))))
+  (match many (str-eqb kind "build") _ ((BTrue) (Some _ $ MkTemplate kind type n2 pieces $ Nil _)) ((BFalse) (None _))))
 
 (def-fns _ $ (many parse-templates : (subterm many (List $ String) lines) -> (many (List $ Template) r))
   (let-match many lines (Cons _ line rest) ((Nil _) (Nil _)))
@@ -168,7 +168,7 @@
 (def-fns _ $ (many find-entry : (subterm many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ Template) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (None _)))
   (let-match many t (MkTemplate b ty i _ _))
-  (let ((many hit)) $ match many (nat-eq i index) (((Bool) _)) ((BFalse) (BFalse)) ((BTrue) (and (str-eq b kind) $ str-eq ty type)))
+  (let ((many hit)) $ match many (nat-eqb i index) (((Bool) _)) ((BFalse) (BFalse)) ((BTrue) (and (str-eqb b kind) $ str-eqb ty type)))
   (match many hit _
     ((BTrue) (Some _ t))
     ((BFalse) (tail $ find-entry rest kind type index))))
@@ -318,12 +318,12 @@
   (let-match many arms (Cons _ arm rest)
     ((Nil _) (None _)))
   (let-match many arm (MkArm d _ _))
-  (match many (nat-eq d i) _ ((BTrue) (Some _ arm)) ((BFalse) (tail $ arm-at rest i))))
+  (match many (nat-eqb d i) _ ((BTrue) (Some _ arm)) ((BFalse) (tail $ arm-at rest i))))
 
 (def-fns _ $ (many nat-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (match many xs _
     ((Nil _) (BFalse))
-    ((Cons _ y rest) (or (nat-eq x y) $ tail $ nat-mem rest x))))
+    ((Cons _ y rest) (or (nat-eqb x y) $ tail $ nat-mem rest x))))
 
 (def-fns _ $ (many fill-hole : (many (Filling) f) (many (Hole) h) -> (many (Rope) r))
   (let-match many f (MkFilling scrut prefix arms live dflt args))
@@ -515,7 +515,7 @@
     ((AkVariant) (match many fs _
       ((Nil _) (RStr $ str-cat3 "(Driver_core." (ctor-name c) ")"))
       (else (rcat3 (RStr $ str-cat3 "(Driver_core." (ctor-name c) " (") (commas fs) $ RStr "))"))))
-    ((AkIs n) (RStr $ match many (str-eq n $ ctor-name c) _ ((BTrue) "true") ((BFalse) "false"))))
+    ((AkIs n) (RStr $ match many (str-eqb n $ ctor-name c) _ ((BTrue) "true") ((BFalse) "false"))))
   (match many (str-cmp (ctor-name c) cname) _
     ((CEq _ _ _) (rcat3 (RStr "(Some (") (commas fs) $ RStr "))"))
     (else (RStr "None"))))
@@ -768,11 +768,11 @@
       (rcat5 (RStr "~") (RStr label) (RStr ":(fun v -> ") (dispatch-rope d 0 adt (all-live adt) (RStr "v") (ffi-arms $ adt-ctors adt) $ None _) $ RStr ") "))))
 
 (def-fns _ $ (many ffi-extra : (many (String) name) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
-  (let-match many (str-eq name "flatten") (BFalse)
+  (let-match many (str-eqb name "flatten") (BFalse)
     ((BTrue) (rcat (ffi-view "rope" "Rope" env d) $ RStr "~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr ")))
-  (let-match many (str-eq name "list-to-array") (BFalse)
+  (let-match many (str-eqb name "list-to-array") (BFalse)
     ((BTrue) (ffi-view "list" "List" env d)))
-  (match many (str-eq name "array-new") _ ((BTrue) (RStr "~blank:(Obj.repr ()) ")) ((BFalse) (REmpty))))
+  (match many (str-eqb name "array-new") _ ((BTrue) (RStr "~blank:(Obj.repr ()) ")) ((BFalse) (REmpty))))
 
 (def-fns _ $ (many objs : (subterm many (List $ Rope) ps) -> (many (List $ Rope) r))
   (match many ps _
@@ -859,7 +859,7 @@
   (let-match many (head-of _ f env ns) (HFn _ id) (else (None _)))
   (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t) ((None _) (None _)))
   (let-match many t (MkTemplate _ _ _ _ outcomes))
-  (match many (and (nat-eq x y) $ and (not $ list-is-empty _ outcomes) $ nat-list-eq outcomes $ adt-shape adt) _
+  (match many (and (nat-eqb x y) $ and (not $ list-is-empty _ outcomes) $ nat-list-eq outcomes $ adt-shape adt) _
     ((BTrue) (Some _ t))
     ((BFalse) (None _))))
 
@@ -1035,7 +1035,7 @@
 (def-fns _ $ (many nat-list-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (match many xs _
     ((Nil _) (BFalse))
-    ((Cons _ y rest) (or (nat-eq x y) $ tail $ nat-list-mem rest x))))
+    ((Cons _ y rest) (or (nat-eqb x y) $ tail $ nat-list-mem rest x))))
 
 (def-fns _
   ((many collect-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r))

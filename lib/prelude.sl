@@ -78,6 +78,28 @@
     (many CGt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                 (erased (R b a) q) -> (Cmp T R a b))))
 
+(def-adts
+  ((Apart : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
+    enum
+    (many ApLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                 (erased (R a b) p) -> (Apart T R a b))
+    (many ApGt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                 (erased (R b a) q) -> (Apart T R a b))))
+
+(def-adts
+  ((EqDec : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
+    enum
+    (many Equal : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (EqDec T R a a))
+    (many Unequal : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                    (erased (Apart T R a b) d) -> (EqDec T R a b))))
+
+(def-fns _ $ (many cmp-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+    (many (Cmp T R a b) c) -> (many (EqDec T R a b) e))
+  (match many c _
+    ((CLt _ _ _ _ p) (Unequal T R a b $ ApLt T R a b p))
+    ((CEq _ _ _) (Equal T R a))
+    ((CGt _ _ _ _ q) (Unequal T R a b $ ApGt T R a b q))))
+
 (def-fns _ $ (erased add-zero-right : (subterm erased (Nat) a) -> (erased (Add a (Zero) a) p))
   (match erased a _
     ((Zero) (AddZero (Zero)))
@@ -166,6 +188,14 @@
         ((CLt _ _ _ _ p) (CLt (Nat) Lt a b (LtS a1 b1 p)))
         ((CEq _ _ _) (CEq (Nat) Lt a))
         ((CGt _ _ _ _ q) (CGt (Nat) Lt a b (LtS b1 a1 q)))))))
+
+(def-fns _ $ (many extern nat-eq : (many (Nat) a) (many (Nat) b) -> (many (EqDec (Nat) Lt a b) e))
+  (tail (cmp-eq (Nat) Lt a b (nat-cmp a b))))
+
+(def-fns _ $ (erased absurd apart-irrefl : (erased (Nat) a) (erased (Apart (Nat) Lt a a) d) -> (erased (False) f))
+  (match erased d _
+    (absurd (ApLt _ _ _ _ p) (lt-asym a a p (lt-weaken a a p)))
+    (absurd (ApGt _ _ _ _ q) (lt-asym a a q (lt-weaken a a q)))))
 
 (def-adts
   ((Mul : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
@@ -427,6 +457,11 @@
     (many (Dec n m) d))
   (tail (lt-dec n m)))
 
+(def-fns _ $ (many extern u62-eq : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
+    (many (EqDec (Nat) Lt n m) e))
+  (tail (nat-eq n m)))
+
 (def-adts $ (Bin : -> Type)
   enum
   (many BZ : -> (Bin))
@@ -651,6 +686,83 @@
   (let-match erased q (DS a2 b2 qq))
   (double-parity a1 a2 b2 pp qq))
 
+(def-fns _ $ (erased bitcons-fn : (erased (Nat) m1) (erased (Bit) x1) (erased (Nat) m2) (erased (Bit) x2) (erased (Nat) n)
+    (erased (BitCons m1 x1 n) p) (erased (BitCons m2 x2 n) q) -> (erased (Eq (Nat) m1 m2) em) (erased (Eq (Bit) x1 x2) ex))
+  (match erased p _
+    ((BC0 _ d dd1)
+      (let-match erased q (BC0 _ _ dd2) (absurd (BC1 _ d2 dd2) (double-parity m1 m2 d2 dd1 dd2)))
+      (match erased (double-inj m1 m2 d dd1 dd2) _ ((Refl _ _) (values (Refl (Nat) m1) (Refl (Bit) x1)))))
+    ((BC1 _ d dd1)
+      (let-match erased q (BC1 _ _ dd2) (absurd (BC0 _ _ dd2) (double-parity m2 m1 d dd2 dd1)))
+      (match erased (double-inj m1 m2 d dd1 dd2) _ ((Refl _ _) (values (Refl (Nat) m1) (Refl (Bit) x1)))))))
+
+(def-adts
+  ((BitLength : ((Nat) n) ((Nat) l) -> Type)
+    enum
+    (many BLZero : -> (BitLength (Zero) (Zero)))
+    (many BLCons : (erased (Nat) m) (erased (Bit) x) (erased (Nat) n) (erased (Nat) l)
+       (erased (BitCons m x n) c) (erased (Lt (Zero) n) pos) (erased (BitLength m l) p) -> (BitLength n (Succ l)))))
+
+(def-adts
+  ((BitAt : ((Nat) n) ((Nat) k) ((Bit) x) -> Type)
+    enum
+    (many BitAtZ : (erased (Nat) m) (erased (Bit) x) (erased (Nat) n) (erased (BitCons m x n) c) -> (BitAt n (Zero) x))
+    (many BitAtS : (erased (Nat) m) (erased (Bit) y) (erased (Nat) n) (erased (Nat) k) (erased (Bit) x)
+       (erased (BitCons m y n) c) (erased (BitAt m k x) p) -> (BitAt n (Succ k) x))))
+
+(def-fns _ $ (many extern bit-length : (subterm many (Nat) n) -> (many (Nat) l) (erased (BitLength n l) p))
+  (let-match many n (Succ n0) ((Zero) (values (Zero) (BLZero))))
+  (let ((many m) (erased x) (erased c)) (nat-bit n))
+  (let ((erased sm)) (lt-subterm m n (bitcons-lt m x n c (LtZ n0))))
+  (let ((many l) (erased p)) (notail $ bit-length (subterm sm) m))
+  (values (Succ l) (BLCons m x n l c (LtZ n0) p)))
+
+(def-fns _ $ (many extern bit-test : (many (Nat) n) (subterm many (Nat) k) -> (many (Bit) x) (erased (BitAt n k x) p))
+  (let ((many m) (many y) (erased c)) (nat-bit n))
+  (let-match many k (Succ k1) ((Zero) (values y (BitAtZ m y n c))))
+  (let ((many x) (erased p)) (tail $ bit-test m k1))
+  (values x (BitAtS m y n k1 x c p)))
+
+(def-fns _ $ (many nat-bit-length at bit-length : (many (Nat) n) -> (many (Nat) l))
+  (let ((many l) (erased _)) (delegate (bit-length n)))
+  l)
+
+(def-fns _ $ (many nat-bit-test at bit-test : (many (Nat) n) (many (Nat) k) -> (many (Bit) x))
+  (let ((many x) (erased _)) (delegate (bit-test n k)))
+  x)
+
+(def-fns _ $ (many extern u62-bit-length : (many (Nat) n) (erased (Lt n u62-modulus) _pn) ->
+    (many (Nat) l) (erased (BitLength n l) p))
+  (tail (bit-length n)))
+
+(def-fns _ $ (many extern u62-bit-test : (many (Nat) n) (many (Nat) k)
+    (erased (Lt n u62-modulus) _pn) (erased (Lt k (Succ sixty-two)) _pk) ->
+    (many (Bit) x) (erased (BitAt n k x) p))
+  (tail (bit-test n k)))
+
+(def-fns _ $ (erased bit-length-fn : (erased (Nat) n) (erased (Nat) l1) (erased (Nat) l2)
+    (subterm erased (BitLength n l1) p) (erased (BitLength n l2) q) -> (erased (Eq (Nat) l1 l2) e))
+  (match erased p _
+    ((BLZero) (match erased q _ ((BLZero) (Refl (Nat) l1)) (absurd (BLCons _ _ _ _ _ pos _) pos)))
+    ((BLCons m1 x1 _ k1 c1 pos1 p1)
+      (let-match erased q (BLCons m2 x2 _ k2 c2 _ q1) (absurd (BLZero) pos1))
+      (let ((erased em) (erased _)) (bitcons-fn m1 x1 m2 x2 n c1 c2))
+      (let-match erased em (Refl _ _))
+      (match erased (bit-length-fn m1 k1 k2 p1 q1) _ ((Refl _ _) (Refl (Nat) l1))))))
+
+(def-fns _ $ (erased bit-at-fn : (erased (Nat) n) (erased (Nat) k) (erased (Bit) x1) (erased (Bit) x2)
+    (subterm erased (BitAt n k x1) p) (erased (BitAt n k x2) q) -> (erased (Eq (Bit) x1 x2) e))
+  (match erased p _
+    ((BitAtZ m1 _ _ c1)
+      (let-match erased q (BitAtZ m2 _ _ c2))
+      (let ((erased _) (erased ex)) (bitcons-fn m1 x1 m2 x2 n c1 c2))
+      ex)
+    ((BitAtS m1 y1 _ k1 _ c1 p1)
+      (let-match erased q (BitAtS m2 y2 _ _ _ c2 q1))
+      (let ((erased em) (erased _)) (bitcons-fn m1 y1 m2 y2 n c1 c2))
+      (let-match erased em (Refl _ _))
+      (bit-at-fn m1 k1 x1 x2 p1 q1))))
+
 (def-fns _ $ (erased numeral-zero :
     (erased (Nat) n) (erased (Numeral (BZ) n) v) -> (erased (Eq (Nat) n (Zero)) e))
   (match erased v _
@@ -770,6 +882,33 @@
                 (coercible-ctor (Shared) CGt (Nat) (Char) Lt CharLt ka a kb b q (MkCharLt nb ma pb pa q))))))
   (coerce r cr))
 
+(def-fns char-lvl $ (many char-eq at u62-eq : (many (Char) a) (many (Char) b) ->
+    (many (EqDec (Char) CharLt a b) e))
+  (let-match erased a (MkChar ua))
+  (let-match erased ua (MkU8 ma pa))
+  (let-match erased b (MkChar ub))
+  (let-match erased ub (MkU8 nb pb))
+  (let ((many ka)) (coerce a (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ua))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 ma pa)))))
+  (let ((many kb)) (coerce b (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ub))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 nb pb)))))
+  (let ((many r)) (delegate (u62-eq ka kb (lt-trans _ _ _ pa u8-below-u62) (lt-trans _ _ _ pb u8-below-u62))))
+  (let ((erased _) (erased cr))
+    (match erased r (((EqDec (Char) CharLt a b) e2)
+                     ((Coercible (Shared) (EqDec (Nat) Lt ka kb) r (Shared) (EqDec (Char) CharLt a b) e2) cc))
+      ((Equal _ _ _)
+        (let-match erased (lt-unique ma u8-modulus pa pb) (Refl _ _))
+        (values (Equal (Char) CharLt a)
+                (coercible-ctor (Shared) Equal (Nat) (Char) Lt CharLt ka a)))
+      ((Unequal _ _ _ _ d)
+        (let ((erased d2))
+          (match erased d (((Apart (Char) CharLt a b) x))
+            ((ApLt _ _ _ _ p) (ApLt (Char) CharLt a b (MkCharLt ma nb pa pb p)))
+            ((ApGt _ _ _ _ q) (ApGt (Char) CharLt a b (MkCharLt nb ma pb pa q)))))
+        (values (Unequal (Char) CharLt a b d2)
+                (coercible-ctor (Shared) Unequal (Nat) (Char) Lt CharLt ka a kb b d d2)))))
+  (coerce r cr))
+
 (def-adts $ (String : -> Type)
   enum extern
   (many SNil : -> (String))
@@ -815,6 +954,22 @@
     ((CLt _ _ _ _ q) (CLt _ _ a b $ SLtTail c s t q))
     ((CEq _ _ _) (CEq _ _ a))
     ((CGt _ _ _ _ q) (CGt _ _ a b $ SLtTail c t s q))))
+
+(def-fns _ $ (many extern str-eq : (subterm many (String) a) (many (String) b) -> (many (EqDec (String) StrLt a b) r))
+  (let-match many a (SCons c s)
+    ((SNil) (match many b _ ((SNil) (Equal _ _ a)) ((SCons d t) (Unequal _ _ a b $ ApLt _ _ a b $ SLtNil d t)))))
+  (let-match many b (SCons d t) ((SNil) (Unequal _ _ a b $ ApGt _ _ a b $ SLtNil c s)))
+  (let-match many (char-eq c d) (Equal _ _ _)
+    ((Unequal _ _ _ _ dc)
+      (Unequal _ _ a b $ match erased dc _
+        ((ApLt _ _ _ _ p) (ApLt _ _ a b $ SLtHead c d s t p))
+        ((ApGt _ _ _ _ p) (ApGt _ _ a b $ SLtHead d c t s p)))))
+  (match many (notail $ str-eq s t) _
+    ((Equal _ _ _) (Equal _ _ a))
+    ((Unequal _ _ _ _ ds)
+      (Unequal _ _ a b $ match erased ds _
+        ((ApLt _ _ _ _ q) (ApLt _ _ a b $ SLtTail c s t q))
+        ((ApGt _ _ _ _ q) (ApGt _ _ a b $ SLtTail c t s q))))))
 
 (def-adts
   ((StrLength : ((String) s) ((Nat) n) -> Type)

@@ -196,7 +196,7 @@
   (let-match many p (PRaw g r) (else (tail $ heap-syns _ hp file rest)))
   (let ((many (Maybe $ String) adopted)) $ match many file _ ((Some _ f) (Some _ f)) ((None _) (match many (str-is-empty g) _ ((BTrue) (None _)) ((BFalse) (Some _ g)))))
   (let ((many f) (many xs)) $ notail $ heap-syns _ hp adopted rest)
-  (values f $ Cons _ (match many (or (str-is-empty g) $ str-eq f g) _ ((BTrue) r) ((BFalse) (syn-absolute g r))) xs))
+  (values f $ Cons _ (match many (or (str-is-empty g) $ str-eqb f g) _ ((BTrue) r) ((BFalse) (syn-absolute g r))) xs))
 
 (def-fns _ $ (many heap-handle : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (Name) n))
   (let ((erased _) (many b) (erased _)) (hread _ hp a))
@@ -385,11 +385,11 @@
   (let ((erased hs2) (many hp2) (erased le) (many read)) $ dispatch _ hp ext tagged v)
   (let-match many read (None _) ((Some _ p) (match many p _ ((MkPair _ _ i fs) (values hs2 hp2 le (Some _ i) fs)))))
   (let ((erased _) (erased p4)) (ref-widen _ _ _ le v))
-  (let ((many sole)) $ and (not $ is-some _ ext) $ and (not tagged) $ nat-eq 1 $ list-length _ shape)
+  (let ((many sole)) $ and (not $ is-some _ ext) $ and (not tagged) $ nat-eqb 1 $ list-length _ shape)
   (values hs2 hp2 le (match many sole (((Maybe $ Nat) _)) ((BTrue) (Some _ index)) ((BFalse) (None _))) $ ctor-fields _ hp2 newtype2 arity (coerce v p4)))
 
 (def-fns _ $ (many headed-by : (many (Maybe $ Nat) i) (many (Ctor) c) -> (many (Bool) r))
-  (match many i _ ((Some _ j) (nat-eq j $ ctor-index c)) ((None _) (BFalse))))
+  (match many i _ ((Some _ j) (nat-eqb j $ ctor-index c)) ((None _) (BFalse))))
 
 (def-fns _ $ (many ctor-at : (many (Adt) adt) (many (Nat) i) -> (many (Maybe $ Ctor) c))
   (match many (list-nth _ (adt-ctors adt) i) _ ((NthHit _ _ _ c _) (Some _ c)) ((NthMiss _ _ _ _) (None _))))
@@ -546,6 +546,10 @@
       ((ExNatCmp) (ErCtor (cmp-index _ _ _ _ $ nat-cmp na nb) $ Nil _))
       ((ExLtDec) (ErCtor (match many (lt-dec na nb) (((Nat) _)) ((Yes _ _ _) 0) ((No _ _ _) 1)) $ Nil _))
       ((ExStrCmp) (ErCtor (cmp-index _ _ _ _ $ str-cmp sa sb) $ Nil _))
+      ((ExNatEq) (ErCtor (match many (nat-eq na nb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))
+      ((ExStrEq) (ErCtor (match many (str-eq sa sb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))
+      ((ExBitLength) (ErPayload $ PNat $ nat-bit-length na))
+      ((ExBitTest) (ErCtor (match many (nat-bit-test na nb) (((Nat) _)) ((Bit0) 0) ((Bit1) 1)) $ Nil _))
       ((ExNatHalve) (ErPayload $ PHalf na))
       ((ExStrLength) (let ((many len) (erased _)) (str-length sa)) (ErPayload $ PNat len))
       ((ExNatStr) (ErPayload $ PStr $ nat-str na))
@@ -715,7 +719,7 @@
   (let-match many r1 (Cons _ b r2) ((Nil _) (None _)))
   (let-match many r2 (Cons _ none r3) ((Nil _) (None _)))
   (let-match many r3 (Cons _ some _) ((Nil _) (None _)))
-  (Some _ $ match many (nat-eq (ref-pos _ _ a) (ref-pos _ _ b)) _ ((BTrue) some) ((BFalse) none)))
+  (Some _ $ match many (nat-eqb (ref-pos _ _ a) (ref-pos _ _ b)) _ ((BTrue) some) ((BFalse) none)))
 
 (def-fns _ $ (many settled-prim : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) p) (many (List $ Ref Block hs) args) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
@@ -752,7 +756,7 @@
 (def-fns _ $ (many has-branch : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) -> (many (Bool) r))
   (let-match many bs (Cons _ b rest)
     ((Nil _) (BFalse)))
-  (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ tail $ has-branch _ _ rest i))))
+  (match many b _ ((MkBranch _ _ d _ _) (or (nat-eqb d i) $ tail $ has-branch _ _ rest i))))
 
 (def-fns _ $ (many widen-ref : (erased (Hist Block) a) (erased (Hist Block) b) (erased (Suffix Block b a) le) (many (Ref Block a) r) -> (many (Ref Block b) r2))
   (let ((erased _) (erased p)) (ref-widen _ _ _ le r))
@@ -766,7 +770,7 @@
 
 (def-fns _ $ (many pctor : (subterm many (List $ Ctor) env) (many (String) name) -> (many (Ctor) c))
   (let-match many env (Cons _ c rest) ((Nil _) (MkCtor name 0 0 0 (BFalse) (None _) (Nil _) (BFalse))))
-  (match many (str-eq (ctor-name c) name) _ ((BTrue) c) ((BFalse) (tail $ pctor rest name))))
+  (match many (str-eqb (ctor-name c) name) _ ((BTrue) c) ((BFalse) (tail $ pctor rest name))))
 
 (def-fns _ $ (many field-at : (erased (Hist Block) hs) (many (List $ Ref Block hs) fields) (many (Nat) i) (many (Ref Block hs) v) -> (many (Ref Block hs) r))
   (match many (list-nth _ fields i) _ ((NthHit _ _ _ x _) x) ((NthMiss _ _ _ _) v)))
@@ -897,7 +901,7 @@
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (RqKind) r))
   (let-match many es (Cons _ e rest) ((Nil _) (RqUnknown)))
   (let-match many e (MkRqEntry n rq))
-  (match many (str-eq name n) _
+  (match many (str-eqb name n) _
     ((BTrue) rq)
     ((BFalse) (tail $ request-of rest name))))
 

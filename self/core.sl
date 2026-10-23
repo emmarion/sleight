@@ -305,10 +305,10 @@
 
 (def-fns _ $ (many sp-eq : (many (Sp) a) (many (Sp) b) -> (many (Bool) r))
   (match many a _
-    ((SpStmt ka) (match many b _ ((SpStmt kb) (nat-eq (stmt-code ka) $ stmt-code kb)) (else (BFalse))))
-    ((SpFormer ka) (match many b _ ((SpFormer kb) (nat-eq (former-code ka) $ former-code kb)) (else (BFalse))))
-    ((SpExpr ka) (match many b _ ((SpExpr kb) (nat-eq (expr-code ka) $ expr-code kb)) (else (BFalse))))
-    ((SpMark ka) (match many b _ ((SpMark kb) (nat-eq (mark-code ka) $ mark-code kb)) (else (BFalse))))))
+    ((SpStmt ka) (match many b _ ((SpStmt kb) (nat-eqb (stmt-code ka) $ stmt-code kb)) (else (BFalse))))
+    ((SpFormer ka) (match many b _ ((SpFormer kb) (nat-eqb (former-code ka) $ former-code kb)) (else (BFalse))))
+    ((SpExpr ka) (match many b _ ((SpExpr kb) (nat-eqb (expr-code ka) $ expr-code kb)) (else (BFalse))))
+    ((SpMark ka) (match many b _ ((SpMark kb) (nat-eqb (mark-code ka) $ mark-code kb)) (else (BFalse))))))
 
 (def-adts $ (SpEntry : -> Type)
   enum
@@ -412,7 +412,8 @@
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1)) (many ExStrNat : -> (Extern 1))
     (many ExU62Add : -> (Extern 2)) (many ExU62Sub : -> (Extern 2)) (many ExU62Mul : -> (Extern 2)) (many ExU62Div : -> (Extern 2)) (many ExU62Divmod : -> (Extern 2)) (many ExU62Mod : -> (Extern 2)) (many ExU62Cmp : -> (Extern 2))
-    (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExArrayGet : -> (Extern 2))
+    (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExNatEq : -> (Extern 2)) (many ExU62Eq : -> (Extern 2)) (many ExStrEq : -> (Extern 2))
+    (many ExBitLength : -> (Extern 1)) (many ExU62BitLength : -> (Extern 1)) (many ExBitTest : -> (Extern 2)) (many ExU62BitTest : -> (Extern 2)) (many ExArrayGet : -> (Extern 2))
     (many ExArrayGetMany : -> (Extern 2)) (many ExArrayLengthMany : -> (Extern 1))
     (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
     (many ExBytesLength : -> (Extern 1)) (many ExBytesLengthMany : -> (Extern 1)) (many ExStrBytesCopy : -> (Extern 1)) (many ExBytesStr : -> (Extern 1))
@@ -438,6 +439,7 @@
     ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExNatStr) (None _)) ((ExStrNat) (Some _ $ Cons _ 0 $ Cons _ 1 $ Nil _))
     ((ExU62Add) (None _)) ((ExU62Sub) (None _)) ((ExU62Mul) (None _)) ((ExU62Div) (None _)) ((ExU62Divmod) (None _)) ((ExU62Mod) (None _)) ((ExU62Cmp) (Some _ cmp))
     ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExArrayGet) (None _))
+    ((ExNatEq) (Some _ dec)) ((ExU62Eq) (Some _ dec)) ((ExStrEq) (Some _ dec)) ((ExBitLength) (None _)) ((ExU62BitLength) (None _)) ((ExBitTest) (Some _ dec)) ((ExU62BitTest) (Some _ dec))
     ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _))
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
@@ -452,13 +454,14 @@
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1) ((ExStrNat) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)
+    ((ExNatEq) 2) ((ExU62Eq) 2) ((ExStrEq) 2) ((ExBitLength) 1) ((ExU62BitLength) 1) ((ExBitTest) 2) ((ExU62BitTest) 2)
     ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
     ((ExSlotsNew) 0) ((ExSlotsFind) 2) ((ExSlotsIntern) 2) ((ExSlotsLength) 1)))
 
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
   (match many e _
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
-    ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62And) (ExNatAnd)) ((ExU62Or) (ExNatOr)) ((ExU62Xor) (ExNatXor)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExArrayGet) (ExArrayPluck))
+    ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62And) (ExNatAnd)) ((ExU62Or) (ExNatOr)) ((ExU62Xor) (ExNatXor)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExU62Eq) (ExNatEq)) ((ExU62BitLength) (ExBitLength)) ((ExU62BitTest) (ExBitTest)) ((ExArrayGet) (ExArrayPluck))
     ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesLengthMany) (ExBytesLength))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     (else e)))
@@ -474,6 +477,7 @@
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str") ((ExStrNat) "str-nat")
     ((ExU62Add) "u62-add") ((ExU62Sub) "u62-sub") ((ExU62Mul) "u62-mul") ((ExU62Div) "u62-div") ((ExU62Divmod) "u62-divmod") ((ExU62Mod) "u62-mod") ((ExU62Cmp) "u62-cmp")
     ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExArrayGet) "array-get")
+    ((ExNatEq) "nat-eq") ((ExU62Eq) "u62-eq") ((ExStrEq) "str-eq") ((ExBitLength) "bit-length") ((ExU62BitLength) "u62-bit-length") ((ExBitTest) "bit-test") ((ExU62BitTest) "u62-bit-test")
     ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many")
     ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
     ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str") ((ExBytesCopy) "bytes-copy") ((ExArrayCopy) "array-copy")
@@ -489,6 +493,8 @@
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $ Cons _ (MkSomeExtern _ $ ExStrNat) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $
   Cons _ (MkSomeExtern _ $ ExLtDec) $ Cons _ (MkSomeExtern _ $ ExU62LtDec) $ Cons _ (MkSomeExtern _ $ ExArrayGet) $
+  Cons _ (MkSomeExtern _ $ ExNatEq) $ Cons _ (MkSomeExtern _ $ ExU62Eq) $ Cons _ (MkSomeExtern _ $ ExStrEq) $
+  Cons _ (MkSomeExtern _ $ ExBitLength) $ Cons _ (MkSomeExtern _ $ ExU62BitLength) $ Cons _ (MkSomeExtern _ $ ExBitTest) $ Cons _ (MkSomeExtern _ $ ExU62BitTest) $
   Cons _ (MkSomeExtern _ $ ExArrayGetMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthMany) $
   Cons _ (MkSomeExtern _ $ ExBytesMake) $ Cons _ (MkSomeExtern _ $ ExBytesGet) $ Cons _ (MkSomeExtern _ $ ExBytesGetMany) $ Cons _ (MkSomeExtern _ $ ExBytesSet) $
   Cons _ (MkSomeExtern _ $ ExBytesLength) $ Cons _ (MkSomeExtern _ $ ExBytesLengthMany) $ Cons _ (MkSomeExtern _ $ ExStrBytesCopy) $ Cons _ (MkSomeExtern _ $ ExBytesStr) $
@@ -498,7 +504,7 @@
 
 (def-fns _ $ (many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r))
   (let-match many es (Cons _ e rest) ((Nil _) (None _)))
-  (match many (match many e (((Bool) _)) ((MkSomeExtern _ x) (str-eq name $ ext-name _ x))) _
+  (match many (match many e (((Bool) _)) ((MkSomeExtern _ x) (str-eqb name $ ext-name _ x))) _
     ((BTrue) (Some _ e))
     ((BFalse) (tail $ extern-named rest name))))
 
@@ -616,11 +622,11 @@
     ((ExtSlots _ _) (Cons _ 1 $ Nil _))))
 
 (def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
-  (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
-  (let-match many (str-eq name "Half") (BFalse) ((BTrue) (Some _ $ ExtHalf)))
-  (let-match many (str-eq name "String") (BFalse) ((BTrue) (Some _ $ ExtString)))
-  (let-match many (str-eq name "Array") (BFalse) ((BTrue) (Some _ $ ExtArray)))
-  (match many (str-eq name "Bytes") _ ((BTrue) (Some _ $ ExtBytes)) ((BFalse) (None _))))
+  (let-match many (str-eqb name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
+  (let-match many (str-eqb name "Half") (BFalse) ((BTrue) (Some _ $ ExtHalf)))
+  (let-match many (str-eqb name "String") (BFalse) ((BTrue) (Some _ $ ExtString)))
+  (let-match many (str-eqb name "Array") (BFalse) ((BTrue) (Some _ $ ExtArray)))
+  (match many (str-eqb name "Bytes") _ ((BTrue) (Some _ $ ExtBytes)) ((BFalse) (None _))))
 
 ; Widening the bound of every holder of addresses is a coerce (section 33).
 
@@ -757,48 +763,27 @@
 (def-fns _ $ (many func-top : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Bool) b))
   (match many f _ ((MkFunc _ _ _ _ _ _ _ _ top) top) ((MkAlias _ _ _ _ _) (BFalse))))
 
-; ---- Decidable equality on ids, with inequality as the order either way so a refuted branch stays refutable.
-
-(def-adts
-  ((Neq : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many NeqLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Neq a b))
-    (many NeqGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) p) -> (Neq a b)))
-  ((NatDec : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many BYes : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) p) -> (NatDec a b))
-    (many BNo : (erased (Nat) a) (erased (Nat) b) (erased (Neq a b) p) -> (NatDec a b))))
+; ---- Apartness of ids (the prelude's Apart), the order either way, so a refuted branch stays refutable.
 
 (def-fns _ $ (erased absurd le-lt-absurd : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) (erased (Lt b a) q) -> (erased (False) f))
   (lt-asym b a q p))
 
-(def-fns _ $ (erased absurd neq-irrefl : (erased (Nat) a) (erased (Neq a a) p) -> (erased (False) f))
-  (match erased p _
-    (absurd (NeqLt _ _ q) (lt-irrefl a q))
-    (absurd (NeqGt _ _ q) (lt-irrefl a q))))
+(def-fns _ $ (erased apart-sym : (erased (Nat) a) (erased (Nat) b) (erased (Apart (Nat) Lt a b) p) -> (erased (Apart (Nat) Lt b a) q))
+  (match erased p _ ((ApLt _ _ _ _ q) (ApGt _ _ _ _ q)) ((ApGt _ _ _ _ q) (ApLt _ _ _ _ q))))
 
-(def-fns _ $ (erased neq-sym : (erased (Nat) a) (erased (Nat) b) (erased (Neq a b) p) -> (erased (Neq b a) q))
-  (match erased p _ ((NeqLt _ _ q) (NeqGt _ _ q)) ((NeqGt _ _ q) (NeqLt _ _ q))))
-
-(def-fns _ $ (erased neq-pred : (erased (Nat) a) (erased (Nat) b) (erased (Neq (Succ a) (Succ b)) p) -> (erased (Neq a b) q))
+(def-fns _ $ (erased apart-pred : (erased (Nat) a) (erased (Nat) b) (erased (Apart (Nat) Lt (Succ a) (Succ b)) p) -> (erased (Apart (Nat) Lt a b) q))
   (match erased p _
-    ((NeqLt _ _ q)
+    ((ApLt _ _ _ _ q)
       (let-match erased q (LtS _ _ q2))
-      (NeqLt _ _ q2))
-    ((NeqGt _ _ q)
+      (ApLt _ _ _ _ q2))
+    ((ApGt _ _ _ _ q)
       (let-match erased q (LtS _ _ q2))
-      (NeqGt _ _ q2))))
+      (ApGt _ _ _ _ q2))))
 
-(def-fns _ $ (erased neq-half : (erased (Nat) a) (erased (Nat) da) (erased (Nat) b) (erased (Nat) db) (erased (Double a da) dda) (erased (Double b db) ddb) (erased (Neq da db) p) -> (erased (Neq a b) q))
+(def-fns _ $ (erased apart-half : (erased (Nat) a) (erased (Nat) da) (erased (Nat) b) (erased (Nat) db) (erased (Double a da) dda) (erased (Double b db) ddb) (erased (Apart (Nat) Lt da db) p) -> (erased (Apart (Nat) Lt a b) q))
   (match erased p _
-    ((NeqLt _ _ q) (NeqLt _ _ $ double-lt-inv a da b db dda ddb q))
-    ((NeqGt _ _ q) (NeqGt _ _ $ double-lt-inv b db a da ddb dda q))))
-
-(def-fns _ $ (many nat-eq-dec : (many (Nat) a) (many (Nat) b) -> (many (NatDec a b) r))
-  (match many (nat-cmp a b) _
-    ((CLt _ _ _ _ p) (BNo _ _ $ NeqLt _ _ p))
-    ((CEq _ _ _) (BYes _ _ $ Refl _ a))
-    ((CGt _ _ _ _ q) (BNo _ _ $ NeqGt _ _ q))))
+    ((ApLt _ _ _ _ q) (ApLt _ _ _ _ $ double-lt-inv a da b db dda ddb q))
+    ((ApGt _ _ _ _ q) (ApGt _ _ _ _ $ double-lt-inv b db a da ddb dda q))))
 
 ; ---- The rules list: membership, appending at the end as a relation, and membership through a path context.
 
@@ -1855,7 +1840,7 @@
 (def-fns _ $ (many nats-remove : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ y rest)
     ((Nil _) (Nil _)))
-  (match many (nat-eq x y) _ ((BTrue) (tail $ nats-remove rest x)) ((BFalse) (Cons _ y $ notail $ nats-remove rest x))))
+  (match many (nat-eqb x y) _ ((BTrue) (tail $ nats-remove rest x)) ((BFalse) (Cons _ y $ notail $ nats-remove rest x))))
 
 (def-fns _ $ (many nats-dup : (subterm many (List $ Nat) xs) -> (many (Maybe $ Nat) r))
   (let-match many xs (Cons _ x rest)
@@ -1878,13 +1863,13 @@
 ; The object of id x replaced, with the names it held.
 (def-fns _ $ (many opened-swap : (subterm many (List $ Opened) os) (many (Opened) o) -> (many (List $ Opened) r) (many (List $ Nat) old))
   (let-match many os (Cons _ p rest) ((Nil _) (values (Nil _) (Nil _))))
-  (let-match many (nat-eq (opened-x p) $ opened-x o) (BFalse) ((BTrue) (values (Cons _ o rest) $ opened-names p)))
+  (let-match many (nat-eqb (opened-x p) $ opened-x o) (BFalse) ((BTrue) (values (Cons _ o rest) $ opened-names p)))
   (let ((many r) (many old)) $ notail $ opened-swap rest o)
   (values (Cons _ p r) old))
 
 (def-fns _ $ (many opened-take : (subterm many (List $ Opened) os) (many (Nat) x) -> (many (List $ Opened) r) (many (List $ Nat) names))
   (let-match many os (Cons _ p rest) ((Nil _) (values (Nil _) (Nil _))))
-  (let-match many (nat-eq (opened-x p) x) (BFalse) ((BTrue) (values rest $ opened-names p)))
+  (let-match many (nat-eqb (opened-x p) x) (BFalse) ((BTrue) (values rest $ opened-names p)))
   (let ((many r) (many names)) $ notail $ opened-take rest x)
   (values (Cons _ p r) names))
 
@@ -2058,7 +2043,7 @@
     ((TMatchable _ _ _ t cs) (values (OKMatchable) $ Cons _ (var-id t) $ mctor-ids cs))
     (else (values (OKNone) $ Nil _)))
   (let-match many h (TVar c) (else (values (OKNone) $ Nil _)))
-  (let-match many (and (nat-eq c atfn-id) $ nat-eq (list-length _ args) 2) (BTrue) ((BFalse) (values (OKNone) $ Nil _)))
+  (let-match many (and (nat-eqb c atfn-id) $ nat-eqb (list-length _ args) 2) (BTrue) ((BFalse) (values (OKNone) $ Nil _)))
   (let-match many (list-nth _ args 1) (NthHit _ _ _ g _) ((NthMiss _ _ _ _) (values (OKNone) $ Nil _)))
   (values (OKAtFn) $ Cons _ (var-id g) $ Nil _))
 
@@ -2176,27 +2161,27 @@
     ((MkTable n0 f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 (above-weaken (Nil $ Digit) c c2 n0 f0 ab le) op sl))))
 
 ; Two distinct variables: ruling the newer out leaves the older rule-free, so the alias is fresh.
-(def-fns _ $ (erased in-out-neq : (erased (Nat) z) (erased (Nat) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o) (erased (Neq z x) ne) (erased (In z n f) p) -> (erased (In z k f2) q))
+(def-fns _ $ (erased in-out-neq : (erased (Nat) z) (erased (Nat) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o) (erased (Apart (Nat) Lt z x) ne) (erased (In z n f) p) -> (erased (In z k f2) q))
   (match erased o _
     ((OutHere _ _ _ _ _ _ _ _)
       (match erased p _
-        (absurd (InHere _ _ _ _ _ _ _) (neq-irrefl _ ne))
+        (absurd (InHere _ _ _ _ _ _ _) (apart-irrefl _ ne))
         ((In1 _ _ ddz _ _ _ _ _ _ _ _ q1) (In1 _ _ ddz _ _ _ _ _ _ _ _ q1))
         ((In2 _ _ ddz _ _ _ _ _ _ _ _ q1) (In2 _ _ ddz _ _ _ _ _ _ _ _ q1))))
     ((Out1 x1 dx ddx t0 _ n1 _ _ _ one _ _ k1 _ one2 _ q)
       (match erased p _
         ((InHere _ _ _ _ _ _ _) (InHere _ _ _ _ _ _ _))
         ((In1 z1 dz ddz _ _ _ _ _ _ _ _ q1)
-          (In1 _ _ ddz _ _ _ _ _ _ _ _ $ in-out-neq z1 x1 t0 n1 one k1 one2 q (neq-half z1 dz x1 dx ddz ddx $ neq-pred dz dx ne) q1))
+          (In1 _ _ ddz _ _ _ _ _ _ _ _ $ in-out-neq z1 x1 t0 n1 one k1 one2 q (apart-half z1 dz x1 dx ddz ddx $ apart-pred dz dx ne) q1))
         ((In2 _ _ ddz _ _ _ _ _ _ _ _ q1) (In2 _ _ ddz _ _ _ _ _ _ _ _ q1))))
     ((Out2 x1 dx ddx t0 _ _ a2 _ _ _ two _ k2 _ two2 _ q)
       (match erased p _
         ((InHere _ _ _ _ _ _ _) (InHere _ _ _ _ _ _ _))
         ((In1 _ _ ddz _ _ _ _ _ _ _ _ q1) (In1 _ _ ddz _ _ _ _ _ _ _ _ q1))
         ((In2 z1 dz ddz _ _ _ _ _ _ _ _ q1)
-          (In2 _ _ ddz _ _ _ _ _ _ _ _ $ in-out-neq z1 x1 t0 a2 two k2 two2 q (neq-half z1 dz x1 dx ddz ddx $ neq-pred dz dx $ neq-pred (Succ dz) (Succ dx) ne) q1))))))
+          (In2 _ _ ddz _ _ _ _ _ _ _ _ $ in-out-neq z1 x1 t0 a2 two k2 two2 q (apart-half z1 dz x1 dx ddz ddx $ apart-pred dz dx $ apart-pred (Succ dz) (Succ dx) ne) q1))))))
 
-(def-fns _ $ (many rule-out-var : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) ne) -> (many (Added n f bnd) r))
+(def-fns _ $ (many rule-out-var : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Apart (Nat) Lt older newer) ne) -> (many (Added n f bnd) r))
   (let-match many tb (MkTable _ f0 _ ru _ ord keys ar c1 ab op sl))
   (match many (facts-rule-out _ f0 newer pn $ TVar older) _
     ((MkRemoved _ _ k _ f2 o)
@@ -2511,7 +2496,7 @@
     (many (Maybe $ Loc) r))
   (let-match many cl (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkPair _ _ n l))
-  (match many (str-eq n name) (((Maybe $ Loc) _))
+  (match many (str-eqb n name) (((Maybe $ Loc) _))
     ((BTrue) (Some _ l))
     ((BFalse) (tail $ claimed-at rest name))))
 (def-fns _ $ (many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r))
@@ -2630,7 +2615,7 @@
   (let-match many ms (Cons _ m rest)
     ((Nil _) (None _)))
   (let-match many m (MkMsgMeta i n _))
-  (match many (str-eq i id) _ ((BTrue) (Some _ n)) ((BFalse) (tail (meta-find rest id)))))
+  (match many (str-eqb i id) _ ((BTrue) (Some _ n)) ((BFalse) (tail (meta-find rest id)))))
 
 (def-fns _ $ (many is-hole-key : (many (String) id) -> (many (Bool) r))
   (match many id _ ((SCons c _) (char-is c 63)) ((SNil) (BFalse))))
@@ -2729,7 +2714,7 @@
   (let-match many ss (Cons _ x rest) ((Nil _) (BFalse)))
   (let-match many x (SaidError _ t)
     (else (tail $ said-has rest text)))
-  (match many (str-eq t text) _ ((BTrue) (BTrue)) ((BFalse) (tail $ said-has rest text))))
+  (match many (str-eqb t text) _ ((BTrue) (BTrue)) ((BFalse) (tail $ said-has rest text))))
 (def-fns _ $ (many env-fail : (many (Env) e) (many (String) text) -> (many (Env) r))
   (let ((many said)) $ env-said e)
   (match many (and (said-failed (BFalse) said) $ or (str-contains text "<error: ") $ said-has said text) _
@@ -2885,7 +2870,7 @@
   (let ((erased _) (many o)) $ entry env $ nat-pred x)
   (let-match many o (MkEInfo _ _ _ _ _ _ ome osite))
   (let ((erased _) (erased _) (erased bnd) (many tb)) $ env-table env)
-  (let ((many owned)) $ and (match many (table-slot-of _ _ bnd tb x) (((Bool) _)) ((Some _ s) (nat-eq s x)) ((None _) (BFalse))) $ not $ str-is-empty $ loc-str osite)
+  (let ((many owned)) $ and (match many (table-slot-of _ _ bnd tb x) (((Bool) _)) ((Some _ s) (nat-eqb s x)) ((None _) (BFalse))) $ not $ str-is-empty $ loc-str osite)
   (let ((many kind) (many where)) $ match many owned (((String) _) ((String) _))
     ((BTrue) (values (match many ome (((String) _)) ((BTrue) "m") ((BFalse) "s")) $ loc-str osite))
     ((BFalse) (values (match many me (((String) _)) ((BTrue) "?") ((BFalse) (match many (is-literal env x) _ ((BTrue) "c") ((BFalse) "_")))) $ loc-str site)))
@@ -3112,7 +3097,7 @@
 (def-fns _ $ (many lit-of : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Pair (String) (Syn)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
   (let-match many l (MkLitEntry y _ lit _ _))
-  (match many (nat-eq x y) _ ((BTrue) lit) ((BFalse) (tail $ lit-of rest x))))
+  (match many (nat-eqb x y) _ ((BTrue) lit) ((BFalse) (tail $ lit-of rest x))))
 
 (def-fns _ $ (many spelling-of : (many (Maybe $ Pair (String) (Syn)) lit) -> (many (Maybe $ String) r))
   (let-match many lit (Some _ p) ((None _) (None _)))
@@ -3143,7 +3128,7 @@
   (let-match many nm (NSrc s) (else names))
   (let-match many (lookup env nm) (Some _ y)
     ((None _) names))
-  (match many (nat-eq x y) _ ((BTrue) (Cons _ s names)) ((BFalse) names)))
+  (match many (nat-eqb x y) _ ((BTrue) (Cons _ s names)) ((BFalse) names)))
 
 (def-fns _ $ (many nearest-names : (many (String) name) (subterm many (List $ String) xs) -> (many (Maybe $ Nat) best) (many (List $ String) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (None _) (Nil _))))
@@ -3152,7 +3137,7 @@
   (let-match many best (Some _ b) ((None _) (values (Some _ d) $ list1 _ x)))
   (match many (nat-lt d b) _
     ((BTrue) (values (Some _ d) $ list1 _ x))
-    ((BFalse) (values best $ match many (nat-eq d b) (((List $ String) _)) ((BTrue) (Cons _ x ties)) ((BFalse) ties)))))
+    ((BFalse) (values best $ match many (nat-eqb d b) (((List $ String) _)) ((BTrue) (Cons _ x ties)) ((BFalse) ties)))))
 
 (def-fns _ $ (many hint : (many (Env) env) (many (Name) n) -> (many (String) r))
   (let-match many n (NSrc name) (else ""))
@@ -3226,7 +3211,7 @@
     ((TMatchable _ _ _ _ _) (BTrue))
     ((TSlotOf _) (BFalse))
     ((TCell _ _) (BFalse)) (else (BFalse)))
-  (match many h _ ((TVar x) (or (nat-eq x objid) $ nat-eq x atfn-id)) (else (BFalse))))
+  (match many h _ ((TVar x) (or (nat-eqb x objid) $ nat-eqb x atfn-id)) (else (BFalse))))
 
 ; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
 
@@ -3235,7 +3220,7 @@
 (def-fns _ $ (many kw-find : (subterm many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (Maybe $ Pair (Nat) (String)) r))
   (let-match many kws (Cons _ k rest) ((Nil _) (None _)))
   (let-match many k (MkPair _ _ b2 v))
-  (match many (str-eq b b2) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ kw-find rest b))))
+  (match many (str-eqb b b2) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ kw-find rest b))))
 
 (def-fns _ $ (many kw-spell : (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (String) r))
   (let-match many (kw-find kws b) (Some _ v)
@@ -3244,7 +3229,7 @@
 
 (def-fns _ $ (many is-universe : (many (Term) h) (many (List $ Term) args) -> (many (Bool) r))
   (let-match many h (TVar u) (else (BFalse)))
-  (and (nat-eq u univ-id) $ list-is-empty _ args))
+  (and (nat-eqb u univ-id) $ list-is-empty _ args))
 
 (def-fns _ $ (many show-universe : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) -> (many (String) r))
   (let-match many (kw-find kws universe-key) (Some _ v)
@@ -3588,8 +3573,8 @@
 (def-fns _
   ((many term-eq : (subterm many (Term) a) (many (Term) b) -> (many (Bool) r))
     (match many a _
-      ((TVar x) (match many b _ ((TVar y) (nat-eq x y)) (else (BFalse))))
-      ((TBound k) (match many b _ ((TBound j) (nat-eq k j)) (else (BFalse))))
+      ((TVar x) (match many b _ ((TVar y) (nat-eqb x y)) (else (BFalse))))
+      ((TBound k) (match many b _ ((TBound j) (nat-eqb k j)) (else (BFalse))))
       ((TApp h as) (match many b _
                      ((TApp h2 as2) (and (notail $ term-eq h h2) $ tail $ terms-eq as as2)) (else (BFalse))))
       ((TCell h as) (match many b _
@@ -3670,7 +3655,7 @@
   (let-match many cs (Cons _ c rest) ((Nil _) (BFalse)))
   (let-match many c (MkMCtor _ t))
   (match many t _
-    ((TVar y) (or (nat-eq x y) $ tail $ mctors-list rest x)) (else (tail $ mctors-list rest x))))
+    ((TVar y) (or (nat-eqb x y) $ tail $ mctors-list rest x)) (else (tail $ mctors-list rest x))))
 
 ; Constructors one opened Matchable lists are distinct (section 8), first-class ones included: the objects
 ; naming x, found through the index, are those whose canonical constructors, the names after the type
@@ -3679,7 +3664,7 @@
   (let-match many os (Cons _ o rest) ((Nil _) (BFalse)))
   (let-match many o (MkOpened ox k names))
   (let ((many (Bool) here))
-    (match many (and (list-mem-bin cands ox) $ nat-eq (open-kind-code k) 0) _
+    (match many (and (list-mem-bin cands ox) $ nat-eqb (open-kind-code k) 0) _
       ((BFalse) (BFalse))
       ((BTrue) (match many names (((Bool) _)) ((Nil _) (BFalse)) ((Cons _ _ ctors) (and (list-mem-bin ctors x) $ list-mem-bin ctors y))))))
   (match many here _
@@ -3694,7 +3679,7 @@
 (def-fns _ $ (many atfn-open-in : (subterm many (List $ Opened) os) (many (Nat) f) -> (many (Bool) r))
   (let-match many os (Cons _ o rest) ((Nil _) (BFalse)))
   (let-match many o (MkOpened _ k names))
-  (match many (and (nat-eq (open-kind-code k) 1) $ list-mem-bin names f) _
+  (match many (and (nat-eqb (open-kind-code k) 1) $ list-mem-bin names f) _
     ((BTrue) (BTrue))
     ((BFalse) (tail $ atfn-open-in rest f))))
 
@@ -3786,20 +3771,20 @@
             (typed-solution _ bnd _ _ tb2 p x b $ notail $ unify (subterm p) k f2 bnd tb2 s1 ps1 s2 ps2 env2 force)))
         (let ((erased px)) $ fr-var _ _ _ pa)
         (let ((erased py)) $ fr-var _ _ _ pb)
-        (let-match many (nat-eq-dec x y) (BNo _ _ ne) ((BYes _ _ _) (Same _ _ env)))
+        (let-match many (nat-eq x y) (Unequal _ _ _ _ ne) ((Equal _ _ _) (Same _ _ env)))
         (let ((erased _) (many ex)) $ entry env x)
         (let ((erased _) (many ey)) $ entry env y)
         (let-match many ex (MkEInfo _ _ _ _ _ iox mx _))
         (let-match many ey (MkEInfo _ _ _ _ _ ioy my _))
-        (let ((many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) neq))
+        (let ((many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Apart (Nat) Lt older newer) neq))
           (match many (older-of iox ioy x y) _
             ((BTrue) (values y x py px ne))
-            ((BFalse) (values x y px py $ neq-sym _ _ ne))))
+            ((BFalse) (values x y px py $ apart-sym _ _ ne))))
         (match many (or mx my) _
           ((BTrue)
-            (let ((many (Nat) m) (many (Nat) o) (erased (In m n f) pm) (erased (In o n f) po2) (erased (Neq o m) neq2))
-              (match many (and mx $ or (not my) $ nat-eq x newer) _
-                ((BTrue) (values x y px py $ neq-sym _ _ ne))
+            (let ((many (Nat) m) (many (Nat) o) (erased (In m n f) pm) (erased (In o n f) po2) (erased (Apart (Nat) Lt o m) neq2))
+              (match many (and mx $ or (not my) $ nat-eqb x newer) _
+                ((BTrue) (values x y px py $ apart-sym _ _ ne))
                 ((BFalse) (values y x py px ne))))
             (let-match many (rule-out-var _ _ bnd tb m o pm po2 neq2) (MkAdded k _ _ _ tb2))
             (let ((many env2)) $ env-set-table env _ _ bnd tb2)
@@ -3902,7 +3887,7 @@
                 (lift _ bnd _ _ tb2 p $ notail $ unify (subterm p) k f2 bnd tb2 ret3 pret3 ret4 pret4 env2 force))
               ((TMatchable d nt ex t cs)
                 (let-match many b (TMatchable d2 nt2 ex2 t2 cs2) (else (contradiction n bnd a b)))
-                (let-match many (and (bool-eq nt nt2) $ and (bool-eq ex ex2) $ and (disc-eq d d2) $ nat-eq (list-length _ cs) $ list-length _ cs2) (BTrue)
+                (let-match many (and (bool-eq nt nt2) $ and (bool-eq ex ex2) $ and (disc-eq d d2) $ nat-eqb (list-length _ cs) $ list-length _ cs2) (BTrue)
                   ((BFalse) (contradiction _ bnd a b)))
                 (let ((erased pt) (erased pcs)) (fr-matchable _ _ _ _ _ _ _ pa))
                 (let ((erased pt2) (erased pcs2)) (fr-matchable _ _ _ _ _ _ _ pb))

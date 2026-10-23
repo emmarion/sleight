@@ -61,12 +61,12 @@
 (def-fns util-lvl $ (many goal-refused : (subterm many (List $ Pair (String) $ String) flags) -> (many (Maybe $ String) r))
   (let-match many flags (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkPair _ _ f _))
-  (match many (or (str-eq f "--interpret") (str-eq f "--no-prelude")) _ ((BTrue) (Some _ f)) ((BFalse) (tail $ goal-refused rest))))
+  (match many (or (str-eqb f "--interpret") (str-eqb f "--no-prelude")) _ ((BTrue) (Some _ f)) ((BFalse) (tail $ goal-refused rest))))
 
 (def-fns util-lvl $ (many goal-mode-of : (many (String) g) -> (many (Maybe $ GoalMode) r))
-  (let-match many (str-eq g "none") (BFalse) ((BTrue) (Some _ $ GoalUnrequired)))
-  (let-match many (str-eq g "open") (BFalse) ((BTrue) (Some _ $ GoalOpen)))
-  (let-match many (str-eq g "proved") (BTrue) ((BFalse) (None _)))
+  (let-match many (str-eqb g "none") (BFalse) ((BTrue) (Some _ $ GoalUnrequired)))
+  (let-match many (str-eqb g "open") (BFalse) ((BTrue) (Some _ $ GoalOpen)))
+  (let-match many (str-eqb g "proved") (BTrue) ((BFalse) (None _)))
   (Some _ $ GoalProved))
 
 (def-fns run-lvl $ (many goal-verdict : (many (List $ Pair (String) $ String) flags) (many (Bool) pass) (unique (World) w) -> (unique (World) w2 at w))
@@ -131,7 +131,7 @@
 ; The files up to a "--", and the interpreted program's own arguments after it.
 (def-fns util-lvl $ (many split-args : (subterm many (List $ String) args) -> (many (List $ String) files) (many (List $ String) pargs))
   (let-match many args (Cons _ p rest) ((Nil _) (values (Nil _) (Nil _))))
-  (let-match many (str-eq p "--") (BFalse) ((BTrue) (values (Nil _) rest)))
+  (let-match many (str-eqb p "--") (BFalse) ((BTrue) (values (Nil _) rest)))
   (let ((many files) (many pargs)) (notail $ split-args rest))
   (values (Cons _ p files) pargs))
 

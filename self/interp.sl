@@ -38,12 +38,12 @@
 (def-fns _ $ (many flag-value : (subterm many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (Maybe $ String) r))
   (let-match many flags (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkPair _ _ g v))
-  (match many (str-eq f g) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ flag-value rest f))))
+  (match many (str-eqb f g) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ flag-value rest f))))
 
 (def-fns _ $ (many flag-values : (subterm many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (List $ String) r))
   (let-match many flags (Cons _ p rest) ((Nil _) (Nil _)))
   (let-match many p (MkPair _ _ g v))
-  (match many (str-eq f g) _ ((BTrue) (Cons _ v $ notail $ flag-values rest f)) ((BFalse) (tail $ flag-values rest f))))
+  (match many (str-eqb f g) _ ((BTrue) (Cons _ v $ notail $ flag-values rest f)) ((BFalse) (tail $ flag-values rest f))))
 
 (def-fns _ $ (many has-flag : (many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (Bool) r))
   (is-some _ $ flag-value flags f))

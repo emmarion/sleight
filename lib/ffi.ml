@@ -125,7 +125,11 @@ let fns : (string * fn_spec) list =
     ("divmod", spec 2 (quotient Ffi_core.divmod));
     ("nat-cmp", decision "Cmp" z Ffi_core.nat_cmp);
     ("lt-dec", decision "Dec" z Ffi_core.lt_dec);
+    ("nat-eq", decision "EqDec" z Ffi_core.nat_eq);
+    ("bit-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.bit_length (z a)))));
+    ("bit-test", decision "Bit" z Ffi_core.bit_test);
     ("str-cmp", decision "Cmp" slice Ffi_core.str_cmp);
+    ("str-eq", decision "EqDec" slice Ffi_core.str_eq);
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
@@ -151,6 +155,9 @@ let fns : (string * fn_spec) list =
     ("u62-dec", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_dec (z a)))));
     ("u62-cmp", decision "Cmp" z Ffi_core.u62_cmp);
     ("u62-lt-dec", decision "Dec" z Ffi_core.u62_lt_dec);
+    ("u62-eq", decision "EqDec" z Ffi_core.u62_eq);
+    ("u62-bit-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_bit_length (z a)))));
+    ("u62-bit-test", decision "Bit" z Ffi_core.u62_bit_test);
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));
     ("trim", spec 1 (unary (fun s -> text (Ffi_core.trim (slice s)))));
     ("append", spec 2 (binary (fun a b -> text (Ffi_core.append (slice a) (slice b)))));
@@ -159,7 +166,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
+let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("EqDec", [ 0; 0 ]); ("Bit", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let shape_of name = match List.assoc_opt name types with Some t -> t.shape | None -> List.assoc name plain_shapes
 let check_shape loc name adt =
