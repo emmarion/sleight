@@ -1938,8 +1938,8 @@ are erased fields and erased functions, so none is built at runtime.
   command-line flags that stand in for them.
 - **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a
   line and a column (`Nat`). A message about a form at `NoPos` carries
-  no location, not even a file; one at `MkPos` names exactly that
-  position.
+  no location, not even a file, beyond its calls' (§62); one at `MkPos`
+  names exactly that position.
 
 ## 43. Extern types and functions
 
@@ -2661,8 +2661,11 @@ or `let-match`, as a constructor of a `def-adts`, and as an argument or
 an entry of a `values`, where its forms take its place. Anywhere else it
 must return exactly one form. The forms are elaborated and checked as if
 they had been written there, so a macro can only steer what it
-generates. At most 10000 expansions run in one run, every file on the
-command line included.
+generates. A message arising from the forms a call returned names the
+call, then each call that returned it in turn. One about how many items
+a list holds, or a branch or final expression it lacks, names each call
+spliced into the list and how many forms it gave. At most 10000
+expansions run in one run, every file on the command line included.
 
 ## 63. `Symbol` and `Raw`
 
