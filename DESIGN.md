@@ -1904,86 +1904,14 @@ function, no type counts as marked `extern` for the purposes of §37
 and §43.
 
 **The source prelude** `lib/prelude.sl` is elaborated before a
-program's files. Its names are ordinary and may be shadowed. Its
-levels are anonymous except `nat-lvl`, `char-lvl`, `str-lvl` and
-`thunk-lvl`, which a program proves `Predates` against; for example, a
-function at level `L` that calls `nat-add` proves
-`(prove-predates nat-lvl L)`. Its proofs are erased fields and erased
-functions, so none is built at runtime. It contains the following,
-along with further types, functions and lemmas not described here, for
-which `lib/prelude.sl` is the reference:
+program's files. Its names are ordinary and may be shadowed. Its proofs
+are erased fields and erased functions, so none is built at runtime.
+`lib/prelude.sl` is the reference for what it defines.
 
-- **Equality and arithmetic.** `False`; `Eq : (Type A) (A x) (A y)`
-  with `Refl`; the relations `Add`, `Lt`, `Double`, `Pow2`, `Mod` and
-  `Mul`, with every field erased, where `Add` recurses on its first
-  argument (`AddZero : (Add (Zero) b b)`); `Dec a b` with `Yes` and
-  `No`; and `Cmp T R a b` with `CLt`, `CEq` and `CGt`. `Cmp` is
-  parametric in a carrier and its strict order, and every field is
-  erased, so a value is only its tag and two instances differ by a
-  coercion.
-- **`Nat`**, the Peano enum of §56, marked `extern`. The FFI holds it
-  as an arbitrary-precision integer. The extern functions over it
-  return their specifications along with their values: `add` returns
-  an `Add`; `sub` is exact, takes `(Lt b (Succ a))`, and returns an
-  `Add`; `mul` returns a `Mul`; `div`, `divmod` and `nat-mod` take
-  `(Lt (Zero) c)` and return `Mul`, `Add`, `Lt` and `Mod` evidence;
-  `nat-cmp` returns a `Cmp (Nat) Lt a b`; `lt-dec` returns a `Dec`;
-  `shl` and `shr` go through `Pow2` and `Mul`; `nat-and`, `nat-or` and
-  `nat-xor` return a `Bitwise` relation over `Bit` and `BitOp`;
-  `nat-halve` returns a `Half n`, the extern enum of `HZ`, `H1` and
-  `H2` through which a `Nat` is walked digit by digit. `nat-add`,
-  `nat-mul`, `nat-shl` and `nat-shr` are `delegate`s that drop the
-  proofs. `double` and `pow2` are plain source. The lemmas over these,
-  such as `lt-trans`, `add-le-left` and `lt-subterm`, which turns
-  `(Lt a b)` into the `Subterm` that a decrease needs, are erased
-  functions. There is no narrowing function from `Nat` to `U8`.
-- **`U8`** and **`U62`**. Each is an enum marked `newtype` with one
-  constructor that holds a `Nat` and an erased `Lt` proof of its bound:
-
-  ```scheme
-  (def-adts $ (U8 : -> Type)
-    enum newtype
-    (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
-  ```
-
-  `u8-modulus` is a `many` top-level constant, `(pow2 eight)`, bound
-  together with its `Pow2` proof. `u62-modulus` and `sixty-two` are
-  erased top-level bindings, so the prelude never computes 2^62. A
-  `U8` is built by `MkU8` with a proof: by reflection for a hand-built
-  value (a `comptime-match` on a decided `lt-dec`, §28), and by
-  matching `lt-dec` for a computed value. It is taken apart by
-  matching. The `U62` operations take `Nat`s with erased proofs that
-  the operands and results are below the modulus: `u62-add`,
-  `u62-sub`, `u62-mul`, `u62-div`, `u62-mod`, `u62-divmod`, `u62-cmp`,
-  `u62-lt-dec`, `u62-shl`, `u62-shr`, `u62-and`, `u62-or`, `u62-xor`,
-  `u62-inc` and `u62-dec`. Each is extern and modelled on the
-  corresponding `Nat` primitive, so the FFI runs each as one machine
-  operation. This relies on the host having native integers of at
-  least 63 bits, which the FFI checks.
-- **Numerals.** `Bin`, bijective base 2, with `BZ`, `B1` and `B2`; the
-  relation `Numeral b n`; `bin-to-nat`, which returns a `Nat` with its
-  `Numeral` proof; `BinSucc`; and the erased lemmas `numeral-zero`,
-  `numeral-fn`, `numeral-inj`, `numeral-succ`, `double-fn`,
-  `double-inj` and `double-parity` that §45 and §49 rely on.
-- **Characters and strings.** `Char`, an enum marked `newtype` over
-  `U8`; `CharLt`; `char-cmp`, which is `u62-cmp` on the codes by a
-  `delegate` under coercions; `String`, an enum marked `extern` with
-  `SNil` and `SCons` over `Char`, which the FFI holds as a byte slice;
-  `Append`, `StrLt` and `StrLength`; the extern functions `append`,
-  `str-cmp`, `str-length`, `str-split` (the first `k` characters and
-  the rest, given the length), `nat-str` (decimal) and `trim` (whose
-  return `is` its argument and whose implementation is a copy);
-  `str-append`, a `delegate` over `append`; and `Rope`, with `REmpty`,
-  `RStr`, `RCat` and `RChar`, with the extern `flatten`, which returns
-  a `Flat` proof.
-- **Containers.** `Unit`, `Bool`, `Maybe`, `Result` (whose `Fail`
-  carries a `String`), `List` (§55) with the list relations `Length`,
-  `Nth`, `SetNth` and `Repeat` (§44), `Pair`, `EntryKind` (`IsFile`,
-  `IsDir`, `IsOther`, `Missing`) and `Change` (`Changed`, `Unchanged`).
-- **`thunk` and `unique-thunk`**, at `thunk-lvl`. `thunk` takes a
-  value and returns a nullary `Fn` that holds it, at any type and any
-  level. `unique-thunk` does the same for a unique value and a
-  `UniqueFn`.
+- **`U62`.** Its operations take `Nat`s with erased proofs that the
+  operands and results are below `u62-modulus`, so the FFI runs each as
+  one machine operation. This relies on the host having native
+  integers of at least 63 bits, which the FFI checks.
 - **`Program` and `Request`.** `(Program L)` is an enum indexed by a
   level, read by the driver (§27). `Exit` carries a `U8` exit code.
   `Continue` carries a continuation
@@ -2005,61 +1933,13 @@ which `lib/prelude.sl` is the reference:
   for the requests and their answers.
 
   The driver flushes after every write. It never recurses, so an
-  unbounded interaction is the driver's loop over total functions, and
-  there is no `bind`. MANUAL.md describes `ConfinePaths`,
-  `ConfineOutputBytes` and the command-line flags that stand in for
-  them.
+  unbounded interaction is the driver's loop over total functions.
+  MANUAL.md describes `ConfinePaths`, `ConfineOutputBytes` and the
+  command-line flags that stand in for them.
 - **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a
   line and a column (`Nat`). A message about a form at `NoPos` carries
   no location, not even a file; one at `MkPos` names exactly that
   position.
-- **Macros.** `Macro`, `Symbol`, `Raw`, `Mult`, `Resolution`, `JMEq`,
-  the opaque `Gensym`, `MacroWorld` and `Settled`, and the primitives
-  `gensym`, `gensym-unique`, `settled-type`, `settled-erase`,
-  `settled-mult`, `settled-value`, `settled-eq`, `intern-nat`,
-  `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
-  `resolve` and `read-file`, and the function `symbol-eq`. §62 to §65 describe them and the special forms
-  `settled-of`, `settled-ty-apply` and `settled-val-apply`. The
-  prelude also defines the macros `prove-literal-lt` (§45) and `unary`
-  (§49).
-- **Placement.** The opaque `Placed` and the primitives `place-at`,
-  `place-at-many`, `unplace-at`, `unplace-at-many`, `placed-slot` and
-  `placed-eq`. §66 describes them. §67 describes `slot-eq`.
-- **Slot tables.** `Slots`, marked `extern`, with `SlotItem`, `NthLast`,
-  `SlotFind` and `SlotIntern`, and the extern functions `slots-new`,
-  `slots-find`, `slots-intern` and `slots-length`. §69 describes them.
-- **`ErasedOr`**, with `EONonErased` and the phantom `EOErased`. §68
-  describes it and `cell-same`, and §70 describes `fn-same`. On it the
-  prelude builds these `extern at` and at-functions (§39):
-
-  ```scheme
-  nat-same : (subterm many (Nat) a) (many (Nat) b at a) ->
-      (many (ErasedOr (Eq (Nat) a b)) r at vacant-slot)
-  u8-same : (subterm many (U8) a) (many (U8) b at a) ->
-      (many (ErasedOr (Eq (U8) a b)) r at vacant-slot)
-  char-same : (subterm many (Char) a) (many (Char) b at a) ->
-      (many (ErasedOr (Eq (Char) a b)) r at vacant-slot)
-  string-same : (subterm many (String) a) (many (String) b at a) ->
-      (many (ErasedOr (Eq (String) a b)) r at vacant-slot)
-  bytes-same : (erased (List (U8)) xs) (erased (List (U8)) ys)
-      (subterm many (Bytes xs) a) (many (Bytes ys) b at a) ->
-      (many (ErasedOr (JMEq (Bytes xs) a (Bytes ys) b)) r at vacant-slot)
-  half-same : (erased (Nat) n) (erased (Nat) k)
-      (subterm many (Half n) a) (many (Half k) b at a) ->
-      (many (ErasedOr (JMEq (Half n) a (Half k) b)) r at vacant-slot)
-  array-same-factory : (erased (Level) M) ->
-      (erased (Level) L)
-      (many (Fn L (erased Type A)
-                (many (Fn M (subterm many A x) (many A y at x) ->
-                          (many (ErasedOr (Eq A x y)) r at vacant-slot)) eq)
-                (erased (AtFn _ eq) eq-at)
-                (erased (List A) xs) (erased (List A) ys)
-                (subterm many (Array A xs) a) (many (Array A ys) b at a) ->
-                (many (ErasedOr (JMEq (Array A xs) a (Array A ys) b)) r at vacant-slot))
-            same)
-      (erased (AtFn _ same) same-at)
-  ```
-- **Arrays**: see §44.
 
 ## 43. Extern types and functions
 
