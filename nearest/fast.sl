@@ -30,13 +30,6 @@
       ((SwapCosts x1 x2 a2 y1 y2 b2 _ c1 l1 c2 l2 c m j rest en)
         (SwapCosts y1 y2 b2 x1 x2 a2 k c2 (cost-sym x2 y1 c2 l2) c1 (cost-sym x1 y2 c1 l1) c (add-comm c1 c2 c m) j (at-least-sym _ _ _ rest) en)))))
 
-(def-fns _ $ (erased letter-cost : (erased (Char) x) (erased (Char) y) -> (erased (Nat) c) (erased (LetterCost x y c) lc))
-  (let ((erased i) (erased fx)) (fold x))
-  (let ((erased j) (erased fy)) (fold y))
-  (match erased (letters x y i fx j fy) (((Nat) c) ((LetterCost x y c) lc))
-    ((SameLetters _ _ s) (values (Zero) (LettersMatch x y s)))
-    ((DifferentLetters _ _ d) (values (Succ (Zero)) (LettersDiffer x y d)))))
-
 (def-fns _ $ (erased covers-free : (erased (Nat) c) (erased (Nat) k) -> (erased (Covers c k k) r))
   (let ((erased s) (erased p)) (add c k))
   (MkCovers c k k s p (MkLe k s (add-le-right c k s p))))
