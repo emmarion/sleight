@@ -3033,8 +3033,8 @@
   (values env3 (Cons _ (MkPair _ _ id (CCellRead _ k2 index (var-code env3 ctx sid))) pairs) restnames))
 
 (def-fns _ $ (many malformed-entry : (many (Env) env) (many (Syn) r) -> (many (Env) e))
-  (let-match many (list-rev _ $ raw-items r) (Cons _ last _) ((Nil _) (env-error env $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
-  (let-match many (or (raw-is-literal last) $ raw-handle last) (BTrue) ((BFalse) (env-error env $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
+  (let-match many (list-rev _ $ raw-items r) (Cons _ last _) ((Nil _) (error-at env (raw-pos r) $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
+  (let-match many (or (raw-is-literal last) $ raw-handle last) (BTrue) ((BFalse) (error-at env (raw-pos r) $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
   (error-at env (raw-pos last) $ not-name $ syn-literal env last))
 
 (def-fns _ $ (many parse-entries-checked : (erased (List $ Syn) root) (subterm many (List $ Sub root) subs) (many (Env) env) -> (many (Env) r) (many (List $ SrcEntry root) es))
@@ -3043,7 +3043,7 @@
     (match many s _
       ((MkSub _ r p)
         (let-match many (raw-atom r) (None _)
-          ((Some _ str) (values (env-error env $ str-cat "expected a telescope entry, got " $ name-text str) $ Nil _)))
+          ((Some _ _) (values (error-at env (raw-pos r) $ str-cat "expected a telescope entry, got " $ qraw r) $ Nil _)))
         (let ((many es)) $ parse-entry env r _ p)
         (match many es (((Env) _) ((List $ SrcEntry root) l))
           ((Nil _) (values (malformed-entry env r) es))
