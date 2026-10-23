@@ -20,13 +20,14 @@ let marker kind x at = Printf.sprintf "\001%c%d\001%s\002" kind x (Reader.where 
 let frames : (int, string Lazy.t * Reader.loc) Hashtbl.t = Hashtbl.create 16
 let current = ref 0
 let stamp l = match l with Reader.Framed _ | Reader.Unknown -> l | l -> Reader.Framed (!current, l)
+let at_frame frame l = match frame with Some f -> Reader.Framed (f, Reader.bare l) | None -> l
 let framing l = match stamp l with Reader.Framed (id, _) when id > 0 -> Printf.sprintf "\003%d\003" id | _ -> ""
 let spliced_lists : (Reader.loc * (int * int) list) list ref = ref []
 let with_splices l splices f = if splices = [] then f () else (let outer = !spliced_lists in spliced_lists := (l, splices) :: outer; Fun.protect ~finally:(fun () -> spliced_lists := outer) f)
 let splice_notes_of splices =
   List.map (fun (id, n) -> let head, call = Hashtbl.find frames id in (call, Printf.sprintf "the expansion of %s here gave %s" (Lazy.force head) (match n with 0 -> "no forms" | 1 -> "1 form" | n -> string_of_int n ^ " forms"))) splices
 let splice_notes l = let l = Reader.bare l in splice_notes_of (List.concat_map (fun (o, s) -> if Reader.bare o == l then s else []) (List.rev !spliced_lists))
-let in_frame l f = match l with Reader.Framed (id, _) -> let outer = !current in current := id; Fun.protect ~finally:(fun () -> current := outer) f | _ -> f ()
+let with_frame frame f = match frame with Some id -> let outer = !current in current := id; Fun.protect ~finally:(fun () -> current := outer) f | None -> f ()
 
 let unframed s =
   let b = Buffer.create (String.length s) and ids = ref [] in

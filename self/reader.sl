@@ -25,9 +25,15 @@
   (let ((many r) (erased _)) (list-append _ (notail $ spot-splices q) s))
   r)
 
+(def-fns _ $ (many spot-unframed : (subterm many (Spot) p) -> (many (Spot) q))
+  (match many p _ ((ExpSpot _ q) (tail $ spot-unframed q)) ((SplicedSpot s q) (SplicedSpot s $ notail $ spot-unframed q)) (else p)))
+
+(def-fns _ $ (many spot-reframed : (many (Nat) x) (many (Spot) p) -> (many (Spot) q))
+  (match many x _ ((Zero) (spot-unframed p)) (else (ExpSpot x $ spot-unframed p))))
+
 (def-fns _ $ (many spot-in : (many (Spot) outer) (many (Spot) p) -> (many (Spot) r))
   (let-match many (spot-framed p) (BFalse) ((BTrue) p))
-  (match many (spot-frame outer) _ ((Zero) p) (else (ExpSpot (spot-frame outer) p))))
+  (spot-reframed (spot-frame outer) p))
 
 (def-fns _ $ (many spot-pos : (many (String) file) (many (Spot) p) -> (many (Pos) q))
   (match many (spot-bare p) _ ((MkSpot l c) (MkPos file l c)) ((PosSpot q) q) (else (NoPos))))
@@ -44,9 +50,6 @@
 
 (def-fns _ $ (many raw-pos : (many (Syn) r) -> (many (Spot) pos))
   (match many r _ ((RAtom l _) l) ((RWild l) l) ((RNat l _) l) ((RChr l _) l) ((RString l _) l) ((RList l _) l)))
-
-(def-fns _ $ (many raw-at : (many (Spot) p) (many (Syn) r) -> (many (Syn) r2))
-  (match many r _ ((RAtom _ s) (RAtom p s)) ((RWild _) (RWild p)) ((RNat _ n) (RNat p n)) ((RChr _ c) (RChr p c)) ((RString _ s) (RString p s)) ((RList _ xs) (RList p xs))))
 
 ; Where a form's first item sits, which is what a declaration's messages name: the signature rather than
 ; the entry that carries it.

@@ -2211,9 +2211,15 @@
   enum
   (many MkGoals : (many (GoalMode) mode) (many (Maybe $ Loc) site) (many (Multiplicity) mult) (many (Term) ty) (many (String) report) (many (Maybe $ Pair (Loc) $ String) by) -> (Goals)))
 
+(def-adts $ (Held : -> Type)
+  enum
+  (many MkHeld : (many (List $ Nat) frames) (many (List $ List $ Nat) pieces) (many (List $ Pair (Nat) (Nat)) splices) -> (Held)))
+
+(let ((many held-none)) $ MkHeld (Nil _) (Nil _) $ Nil _)
+
 (def-adts $ (Trail : -> Type)
   enum
-  (many MkTrail : (many (IdMap $ Pair (Syn) (Loc)) frames) (many (List $ Pair (Nat) (Nat)) spliced) -> (Trail)))
+  (many MkTrail : (many (IdMap $ Pair (Syn) (Loc)) frames) (many (Held) held) -> (Trail)))
 
 (def-adts $ (Macros : -> Type)
   enum
@@ -2575,15 +2581,15 @@
 (def-fns _ $ (many env-set-trail : (many (Env) e) (many (Trail) x) -> (many (Env) r))
   (match many (env-macros e) _ ((MkMacros n g ps ss f fs gl _) (env-set-macros e $ MkMacros n g ps ss f fs gl x))))
 (def-fns _ $ (many env-add-frame : (many (Env) e) (many (Nat) x) (many (Syn) head) (many (Loc) call) -> (many (Env) r))
-  (let-match many (env-trail e) (MkTrail fr sp))
-  (env-set-trail e $ MkTrail (idmap-set _ x (MkPair _ _ head call) fr) sp))
+  (let-match many (env-trail e) (MkTrail fr hd))
+  (env-set-trail e $ MkTrail (idmap-set _ x (MkPair _ _ head call) fr) hd))
 (def-fns _ $ (many env-frame : (many (Env) e) (many (Nat) x) -> (many (Maybe $ Pair (Syn) (Loc)) r))
   (let-match many (env-trail e) (MkTrail fr _))
   (match many (idmap-get _ x fr) _ ((Hit _ _ _ v _) (Some _ v)) ((Miss _ _ _ _) (None _))))
-(def-fns _ $ (many env-spliced : (many (Env) e) -> (many (List $ Pair (Nat) (Nat)) r))
-  (match many (env-trail e) _ ((MkTrail _ sp) sp)))
-(def-fns _ $ (many env-set-spliced : (many (Env) e) (many (List $ Pair (Nat) (Nat)) sp) -> (many (Env) r))
-  (match many (env-trail e) _ ((MkTrail fr _) (env-set-trail e $ MkTrail fr sp))))
+(def-fns _ $ (many env-set-held : (many (Env) e) (many (Held) hd) -> (many (Env) r))
+  (match many (env-trail e) _ ((MkTrail fr _) (env-set-trail e $ MkTrail fr hd))))
+(def-fns _ $ (many env-take-held : (many (Env) e) -> (many (Env) r) (many (Held) hd))
+  (match many (env-trail e) _ ((MkTrail _ hd) (values (env-set-held e held-none) hd))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
@@ -2598,8 +2604,12 @@
   (match many (env-loc e) _ ((MkLoc f old) (MkLoc f $ spot-in old pos))))
 (def-fns _ $ (many env-at : (many (Env) e) (many (Spot) pos) -> (many (Env) r))
   (env-at-loc e $ loc-in e pos))
-(def-fns _ $ (many env-at-root : (many (Env) e) (many (Spot) pos) -> (many (Env) r))
-  (match many (env-loc e) _ ((MkLoc f _) (env-at-loc e $ MkLoc f pos))))
+(def-fns _ $ (many env-expansion : (many (Env) e) -> (many (Nat) x))
+  (match many (env-loc e) _ ((MkLoc _ p) (spot-frame p))))
+(def-fns _ $ (many env-in-expansion : (many (Env) e) (many (Nat) x) -> (many (Env) r))
+  (match many (env-loc e) _ ((MkLoc f p) (env-at-loc e $ MkLoc f $ spot-reframed x p))))
+(def-fns _ $ (many env-entering : (many (Env) e) (many (Nat) x) -> (many (Env) r))
+  (match many x _ ((Zero) e) (else (env-in-expansion e x))))
 ; Restores [outer]'s position in [inner], on leaving the form that set it.
 (def-fns _ $ (many env-back : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (env-at-loc inner $ env-loc outer))
@@ -3517,7 +3527,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) $ MkTrail (MEmpty _) $ Nil _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) $ MkTrail (MEmpty _) held-none)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

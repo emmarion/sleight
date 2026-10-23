@@ -26,7 +26,7 @@
           ((None _) shape)
           ((Some _ pn) (match many pn _ ((MkPair _ _ np nm) (Cons _ (located (env-at envw np) ": note: " nm) shape)))))
         (values ew (env-fail envw $ join-strs (Cons _ (located (env-at envw pos) ": syntax error: " m) lines) "\n")))
-      ((None _) (let ((unique ew2) (many envt)) $ run-toplevel ew expansion-limit items 0 first $ env-set-regions envw regions) (values ew2 (end-file envt)))))
+      ((None _) (let ((unique ew2) (many envt)) $ run-toplevel ew expansion-limit items (Nil _) 0 first $ env-set-regions envw regions) (values ew2 (end-file envt)))))
   (tail $ run-files ew1 notes rest (match many first (((Env) _)) ((BTrue) (env-set-externs (env-set-prelude env2 $ env-scope env2) $ BFalse)) ((BFalse) env2)) $ BFalse))
 
 (def-fns util-lvl $ (many src-paths : (subterm many (List $ Pair (String) $ String) srcs) -> (many (List $ String) r))

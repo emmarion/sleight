@@ -528,6 +528,9 @@
 (def-fns _ $ (many list-nth-or : (erased Type A) (many (List A) xs) (many (Nat) i) (many A dflt) -> (many A r))
   (match many (list-nth _ xs i) _ ((NthHit _ _ _ x _) x) ((NthMiss _ _ _ _) dflt)))
 
+(def-fns _ $ (many list-pop : (erased Type A) (many (List A) xs) (many A dflt) -> (many A x) (many (List A) rest))
+  (match many xs _ ((Cons _ x rest) (values x rest)) ((Nil _) (values dflt $ Nil _))))
+
 (def-fns _ $ (many list1 : (erased Type A) (many A x) -> (many (List A) r))
   (Cons _ x $ Nil _))
 
