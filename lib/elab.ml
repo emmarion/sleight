@@ -201,7 +201,6 @@ let computed env = function Handle (_, x, MintedIs, _, _) -> x >= 0 && (entry en
 
 let describe env pos raw term ty =
   let raw = if computed env raw then List (Reader.loc raw, []) else raw in
-  let term = match raw with Handle (_, x, MintedIs, _, _) -> Var x | _ -> term in
   let used, marks = match ty with Fn _ | UniqueFn _ -> (under pos, true) | TyCtor _ -> (Fun.id, false) | _ -> (field_under pos, true) in
   let apposed = match ty, raw with Cell _, (Atom _ | Handle _) -> true | _ -> false in
   let view = lazy (
@@ -1324,6 +1323,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
           let hty = canon env h.ty in
           if nullary env "Macro" hty then macro_refused env l head;
           let callee pos = describe env pos head h.term hty in
+          let made = handle_made head in
           let env, rs, code = match hty with
           | TyCtor tele ->
               let c = callee pos in
@@ -1334,16 +1334,16 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               if pos <> Erased && h.erasure = Erased then error_with l (head_notes env h) "erased constructor %s in a non-erased position" (head_name env h);
               let pos = demanded env demand pos ret in
               if pos <> Erased then warn_use env (loc head) "application of" h.term;
-              let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
+              let env = match h.term with Var x -> use env l ?made (under pos Many) x | _ -> env in
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~ctor:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
               let ctor = match canon env h.term with Var c -> c | _ -> -1 in
               let hollow = ctor >= 0 && hollow env ctor in
               let code = if pos = Erased then V.CErased else if hollow then V.CConst V.VVacant else if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
               let place = if hollow then Some (slot_of Prelude.null) else term_place env (App (h.term, List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
-          | Cell (c, slots) -> elab_cell_invoke env expect l (callee pos) h hcode c slots args
-          | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
-          | Fn (lv, params, rets) -> elab_call ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
+          | Cell (c, slots) -> elab_cell_invoke ?made env expect l (callee pos) h hcode c slots args
+          | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?made ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
+          | Fn (lv, params, rets) -> elab_call ?made ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
           | ty -> error l "%s : %s is not applicable" (qshow env h.term) (qshow env ty) in
           (env, rs, code)))
 
@@ -1353,6 +1353,7 @@ and elab_head env pos l raw =
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
   | Handle (_, x, _, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
+  | Handle (_, _, MintedIs, _, _) -> let env, x = atom_entry env raw in (env,res_of env x,V.CVar x)
   | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
@@ -1370,7 +1371,7 @@ and computed_head pos env raw =
       (env, List (l, Handle (hl, x, MintedIs, (entry env x).mult, Obj.repr V.VToken) :: args))
   | _ -> (env, raw)
 
-and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
+and elab_call ?(unique = false) ?(assert_at = false) ?made ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
   let pos = pos_of expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
@@ -1381,7 +1382,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   let erased_head = assert_at && not unique in
   if pos <> Erased && not erased_head && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
   if unique && pos <> Erased && callee.erasure = Many then error_with_in env l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
-  let env = match callee.term with Var x when not erased_head -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
+  let env = match callee.term with Var x when not erased_head -> use env l ?made (under pos (if unique then Unique else Many)) x | _ -> env in
   let written, args =
     let rec go i found acc = function
       | List (al, [ k; p ]) :: rest when is_special env k Sp.Predates || is_special env k Sp.Subterm ->
@@ -1860,14 +1861,14 @@ and cell_items env pos l (what, il, c, params) slots items =
     (env, r.term :: ss, (i, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) items in
   (env, List.rev slots, List.rev writes, fun body -> List.fold_left (fun b (x,c) -> V.CLet ([x], c, b)) body bindings)
 
-and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args =
+and elab_cell_invoke ?(full = false) ?made env expect l callee h hcode ctor slots args =
   let pos = pos_of expect in
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
   let ct, params, ret = cell_shape env l pos c in
   (* the cell is taken at the position's multiplicity: read and copied at `many` where it stores, consumed at
      `unique` (section 37) *)
   let shared = pos = Many in
-  let env = match h.term with Var x -> use env l pos x | _ -> env in
+  let env = match h.term with Var x -> use env l ?made pos x | _ -> env in
   let rec marks mark args = match args with
     | List (_, [a]) :: rest when is_special env a Sp.At -> marks true rest
     | a :: rest -> (mark, a) :: marks false rest
