@@ -22,7 +22,7 @@ type form = { at : loc; depth : int; text : string; mutable closes : loc }
 
 let place path ?(mark = "") ?(col = true) = function
   | At { file; line; col = c } -> (if file = path then "" else file ^ ":") ^ mark ^ Z.to_string line ^ if col then ":" ^ Z.to_string c else ""
-  | NoLoc | Unknown -> ""
+  | NoLoc | Unknown | Framed _ -> ""
 
 let () =
   let closers = ref false and path = ref "" in

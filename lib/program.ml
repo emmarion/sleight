@@ -63,7 +63,7 @@ let driver env =
    evaluator's code has no locations at all (ASSUMPTIONS 194). *)
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Reader.labelled path l "syntax error: " ^ m)
-  | Env.Error (l, m) -> let here = Reader.where path l in Some (Env.resolve here (Reader.label here "error: " ^ m))
+  | Env.Error (l, m) -> let here = Reader.where path l in Some (Env.resolve here (Reader.label here "error: " ^ Env.framing l ^ m))
   | Env.Contradiction m -> Some (Env.resolve path (path ^ ": error: contradiction: " ^ Lazy.force m))
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None

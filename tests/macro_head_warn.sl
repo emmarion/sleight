@@ -43,5 +43,8 @@
 (Cons _ (pick 3) $ Cons _ (pick-named 0) $ Cons _ (thrice 1) $ Nil _)
 ; expect: (Cons _ 3 $ Cons _ 0 $ Cons _ 5 $ Nil _)
 ; warns: tests/macro_head_warn.sl:36:3: warning: lopsided `match`; flatten it with a `let-match` on `Succ`
+; warns: tests/macro_head_warn.sl:36:3: note: in the expansion of `if-zero-named` here
 ; warns: tests/macro_head_warn.sl:40:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/macro_head_warn.sl:40:19: note: in the expansion of `down-named` here
 ; warns: tests/macro_head_warn.sl:41:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/macro_head_warn.sl:41:3: note: in the expansion of `down` here

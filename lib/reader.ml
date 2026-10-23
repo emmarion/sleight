@@ -1,7 +1,7 @@
 (* A position is where a token's first character sits, in the file it was read from, which a `;! file`
    pragma names: what every message a session writes points at (ASSUMPTIONS 194). [nowhere] is the
    location an error carries when it is raised where none is at hand, for an enclosing form to fill in. *)
-type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
+type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown | Framed of int * loc
 
 type name = Ffi_core.name = Src of string | Gen of Z.t * string
 type raw = Ffi_core.raw = Atom of loc * name | Handle of loc * int * Ffi_core.reading * Ffi_core.mult * Obj.t | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
@@ -9,13 +9,17 @@ type raw = Ffi_core.raw = Atom of loc * name | Handle of loc * int * Ffi_core.re
 exception Syntax of loc * string
 
 let nowhere = Unknown
-let placed = function At _ -> true | NoLoc | Unknown -> false
-let where fallback = function At { file; line; col } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | Unknown -> fallback | NoLoc -> ""
-let file_of = function At { file; _ } -> file | NoLoc | Unknown -> ""
+let rec bare = function Framed (_, l) -> bare l | l -> l
+let placed l = match bare l with At _ -> true | NoLoc | Unknown | Framed _ -> false
+let where fallback l = match bare l with At { file; line; col } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | Unknown -> fallback | NoLoc | Framed _ -> ""
+let file_of l = match bare l with At { file; _ } -> file | NoLoc | Unknown | Framed _ -> ""
 let label w label = if w = "" then label else w ^ ": " ^ label
 let labelled fallback l = label (where fallback l)
 
 let loc = function Atom (l, _) | Handle (l, _, _, _, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
+let with_loc l = function
+  | Atom (_, n) -> Atom (l, n) | Handle (_, x, r, m, v) -> Handle (l, x, r, m, v) | Wild _ -> Wild l
+  | Nat (_, z) -> Nat (l, z) | Char (_, c) -> Char (l, c) | Str (_, s) -> Str (l, s) | List (_, xs) -> List (l, xs)
 
 let handle_name = ref (fun x -> string_of_int x)
 
@@ -130,7 +134,7 @@ let shape_note path =
 type region = { name : string; from : loc; until : loc option; mutable used : bool }
 
 let regions : (string, region list) Hashtbl.t = Hashtbl.create 8
-let coords = function At { line; col; _ } -> (line, col) | NoLoc | Unknown -> (Z.zero, Z.zero)
+let coords l = match bare l with At { line; col; _ } -> (line, col) | NoLoc | Unknown | Framed _ -> (Z.zero, Z.zero)
 let compare_loc a b = let (al, ac), (bl, bc) = (coords a, coords b) in match Z.compare al bl with 0 -> Z.compare ac bc | c -> c
 let before a b = compare_loc a b < 0
 let covers r l = not (before l r.from) && match r.until with Some u -> before l u | None -> true

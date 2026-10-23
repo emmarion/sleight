@@ -1,6 +1,6 @@
 type slice = string * int * int
 
-type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
+type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown | Framed of int * loc
 type name = Src of string | Gen of Z.t * string
 type mult = Erased | Many | Unique
 type reading = MintedIs | MintedType
@@ -154,7 +154,7 @@ type 'v pos_model = NoPos | MkPos of 'v * 'v * 'v
 type 'v symbol_model = SName of 'v | SGen of 'v * 'v
 type 'v raw_model = RawSymbol of 'v * 'v | RawWild of 'v | RawList of 'v * 'v | RawSettled of 'v * 'v
 
-let pos_view ~str ~nat = function At { file; line; col } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos
+let rec pos_view ~str ~nat = function At { file; line; col } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos | Framed (_, l) -> pos_view ~str ~nat l
 
 let raw_view ~handle ~symbol ~get ~str ~nat ~pos ~list ~raw v =
   let p l = pos (pos_view ~str ~nat l) in

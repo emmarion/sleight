@@ -4,4 +4,6 @@
 
 (warn-here)
 ; warns: tests/file_pragma_here.sl:2:1: warning: here
+; warns: tests/file_pragma_here.sl:2:1: note: in the expansion of `warn-here` here
 ; warns: claimed/here.sl:2:1: warning: here
+; warns: claimed/here.sl:2:1: note: in the expansion of `warn-here` here

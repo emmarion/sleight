@@ -7,10 +7,30 @@
 (def-adts $ (Spot : -> Type)
   enum
   (many MkSpot : (many (Nat) line) (many (Nat) col) -> (Spot))
-  (many PosSpot : (many (Pos) p) -> (Spot)))
+  (many PosSpot : (many (Pos) p) -> (Spot))
+  (many ExpSpot : (many (Nat) expansion) (many (Spot) p) -> (Spot))
+  (many SplicedSpot : (many (List $ Pair (Nat) (Nat)) splices) (many (Spot) p) -> (Spot)))
+
+(def-fns _ $ (many spot-bare : (subterm many (Spot) p) -> (many (Spot) q))
+  (match many p _ ((ExpSpot _ q) (tail $ spot-bare q)) ((SplicedSpot _ q) (tail $ spot-bare q)) (else p)))
+
+(def-fns _ $ (many spot-framed : (subterm many (Spot) p) -> (many (Bool) r))
+  (match many p _ ((ExpSpot _ _) (BTrue)) ((SplicedSpot _ q) (tail $ spot-framed q)) (else (BFalse))))
+
+(def-fns _ $ (many spot-frame : (subterm many (Spot) p) -> (many (Nat) x))
+  (match many p _ ((ExpSpot x _) x) ((SplicedSpot _ q) (tail $ spot-frame q)) (else 0)))
+
+(def-fns _ $ (many spot-splices : (subterm many (Spot) p) -> (many (List $ Pair (Nat) (Nat)) s))
+  (let-match many p (SplicedSpot s q) ((ExpSpot _ q) (tail $ spot-splices q)) (else (Nil _)))
+  (let ((many r) (erased _)) (list-append _ (notail $ spot-splices q) s))
+  r)
+
+(def-fns _ $ (many spot-in : (many (Spot) outer) (many (Spot) p) -> (many (Spot) r))
+  (let-match many (spot-framed p) (BFalse) ((BTrue) p))
+  (match many (spot-frame outer) _ ((Zero) p) (else (ExpSpot (spot-frame outer) p))))
 
 (def-fns _ $ (many spot-pos : (many (String) file) (many (Spot) p) -> (many (Pos) q))
-  (match many p _ ((MkSpot l c) (MkPos file l c)) ((PosSpot q) q)))
+  (match many (spot-bare p) _ ((MkSpot l c) (MkPos file l c)) ((PosSpot q) q) (else (NoPos))))
 
 (def-adts
   ((Syn : -> Type)
@@ -24,6 +44,9 @@
 
 (def-fns _ $ (many raw-pos : (many (Syn) r) -> (many (Spot) pos))
   (match many r _ ((RAtom l _) l) ((RWild l) l) ((RNat l _) l) ((RChr l _) l) ((RString l _) l) ((RList l _) l)))
+
+(def-fns _ $ (many raw-at : (many (Spot) p) (many (Syn) r) -> (many (Syn) r2))
+  (match many r _ ((RAtom _ s) (RAtom p s)) ((RWild _) (RWild p)) ((RNat _ n) (RNat p n)) ((RChr _ c) (RChr p c)) ((RString _ s) (RString p s)) ((RList _ xs) (RList p xs))))
 
 ; Where a form's first item sits, which is what a declaration's messages name: the signature rather than
 ; the entry that carries it.

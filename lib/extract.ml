@@ -23,9 +23,9 @@ let handle x r m = Printf.sprintf "(%d), %s, Ffi_core.%s" x (reading r) (String.
 let handle_ty = "int * Ffi_core.reading * Ffi_core.mult * Obj.t"
 
 let rec raw value r =
-  let l = function
+  let rec l = function
     | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
-    | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" in
+    | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" | Framed (_, p) -> l p in
   match r with
   | Ffi_core.Atom (p, Src s) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Src %s))" (l p) (quote s)
   | Ffi_core.Atom (p, Gen (g, s)) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Gen (%s, %s)))" (l p) (z g) (quote s)

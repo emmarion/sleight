@@ -256,9 +256,17 @@ token's first character sits, both counted from one. The file is the one the
 form was read from, as a `;! file` pragma names it (DESIGN.md section 4). A
 message about two places writes the second as a `note` on its own line under it, which may be
 in another file. A
-form a macro places at `NoPos` (DESIGN.md section 62) is about nowhere, and a
-message about it carries no location at all, not even a file; a position a macro
-gives with `MkPos` is written exactly as given. A
+form a macro places at `NoPos` (DESIGN.md section 62) is about nowhere, and the
+line of a message about it carries no location at all, not even a file; a position a macro
+gives with `MkPos` is written exactly as given. A message issued while the
+elaborator works on the forms a macro call returned names that call in a note,
+`` path:line:col: note: in the expansion of `m` here ``, followed by the call that
+returned that call, if one did, and so on outward; each note of the message is
+followed in the same way by the calls its own position was met under, and a call
+is named once per message (ASSUMPTIONS 226). A message about how many items a
+list holds, or about a branch or a final expression it lacks, names each call
+spliced into that list and how many forms it gave,
+`` note: the expansion of `m` here gave no forms ``. A
 message with nothing to point at — a contradiction that reached the driver, a
 runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).

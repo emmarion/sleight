@@ -17,13 +17,39 @@ let numbering : (string, int) Hashtbl.t = Hashtbl.create 16
 
 let marker kind x at = Printf.sprintf "\001%c%d\001%s\002" kind x (Reader.where "" at)
 
+let frames : (int, string Lazy.t * Reader.loc) Hashtbl.t = Hashtbl.create 16
+let current = ref 0
+let stamp l = match l with Reader.Framed _ | Reader.Unknown -> l | l -> Reader.Framed (!current, l)
+let framing l = match stamp l with Reader.Framed (id, _) when id > 0 -> Printf.sprintf "\003%d\003" id | _ -> ""
+let spliced_lists : (Reader.loc * (int * int) list) list ref = ref []
+let with_splices l splices f = if splices = [] then f () else (let outer = !spliced_lists in spliced_lists := (l, splices) :: outer; Fun.protect ~finally:(fun () -> spliced_lists := outer) f)
+let splice_notes_of splices =
+  List.map (fun (id, n) -> let head, call = Hashtbl.find frames id in (call, Printf.sprintf "the expansion of %s here gave %s" (Lazy.force head) (match n with 0 -> "no forms" | 1 -> "1 form" | n -> string_of_int n ^ " forms"))) splices
+let splice_notes l = let l = Reader.bare l in splice_notes_of (List.concat_map (fun (o, s) -> if Reader.bare o == l then s else []) (List.rev !spliced_lists))
+let in_frame l f = match l with Reader.Framed (id, _) -> let outer = !current in current := id; Fun.protect ~finally:(fun () -> current := outer) f | _ -> f ()
+
+let unframed s =
+  let b = Buffer.create (String.length s) and ids = ref [] in
+  let rec go i =
+    match String.index_from_opt s i '\003' with
+    | None -> Buffer.add_string b (String.sub s i (String.length s - i))
+    | Some j -> let k = String.index_from s (j + 1) '\003' in Buffer.add_string b (String.sub s i (j - i)); ids := int_of_string (String.sub s (j + 1) (k - j - 1)) :: !ids; go (k + 1) in
+  go 0;
+  (Buffer.contents b, List.rev !ids)
+
 let hint_line s =
   let sub = ": hint: " in
   let rec go i = i + String.length sub <= String.length s && (String.sub s i (String.length sub) = sub || go (i + 1)) in
   String.starts_with ~prefix:"hint: " s || go 0
 
 let resolve here s =
-  let seen = ref [] in
+  let seen = ref [] and shown = ref [] in
+  let rec chain id =
+    if id = 0 || List.mem id !shown then ""
+    else (
+      shown := id :: !shown;
+      let head, call = Hashtbl.find frames id in
+      Printf.sprintf "\n%s in the expansion of %s here" (Reader.labelled "-" call "note:") (Lazy.force head) ^ chain (match call with Reader.Framed (outer, _) -> outer | _ -> 0)) in
   let number key =
     match Hashtbl.find_opt numbering key with
     | Some n -> n
@@ -45,6 +71,8 @@ let resolve here s =
       | _ -> ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
     if at = "" then Printf.sprintf "\n%s `%s` is %s" (Reader.label here "note:") shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
   let line s =
+    let s, ids = unframed s in
+    let calls = String.concat "" (List.map chain ids) in
     let b = Buffer.create (String.length s) and fresh = ref [] in
     let rec go i =
       match String.index_from_opt s i '\001' with
@@ -59,7 +87,7 @@ let resolve here s =
     in
     go 0;
     let notes = String.concat "" (List.map note !fresh) and body = Buffer.contents b in
-    if notes <> "" && hint_line body then String.sub notes 1 (String.length notes - 1) ^ "\n" ^ body else body ^ notes
+    if notes <> "" && hint_line body then String.sub notes 1 (String.length notes - 1) ^ "\n" ^ body ^ calls else body ^ notes ^ calls
   in
   String.concat "\n" (List.map line (String.split_on_char '\n' s))
 
@@ -67,19 +95,19 @@ type held = Said of string | Shadow of int * int * Reader.loc * Reader.name * Re
 let held : held list ref = ref []
 
 let warn_at l notes fmt =
-  let note (nl, m) = Printf.sprintf "\n%s %s" (Reader.labelled "-" nl "note:") m in
+  let note (nl, m) = Printf.sprintf "\n%s%s %s" (Reader.labelled "-" nl "note:") (framing nl) m in
   Printf.ksprintf
     (fun s ->
       let here = Reader.where "-" l in
-      let s = resolve here (Printf.sprintf "%s %s%s" (Reader.label here "warning:") s (String.concat "" (List.map note notes))) ^ "\n" in
+      let s = resolve here (Printf.sprintf "%s%s %s%s" (Reader.label here "warning:") (framing l) s (String.concat "" (List.map note notes))) ^ "\n" in
       if !held = [] then !warn s else held := Said s :: !held)
     fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
 let error_with ?hint ?(hints = "") loc notes fmt =
-  let note s (l, m) = Printf.sprintf "%s\n%s %s" s (Reader.labelled "-" l "note:") m in
-  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
+  let note s (l, m) = Printf.sprintf "%s\n%s%s %s" s (Reader.labelled "-" l "note:") (framing l) m in
+  Printf.ksprintf (fun s -> raise (Error (stamp loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
 
 let error loc fmt = error_with loc [] fmt
 
@@ -437,6 +465,7 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
 let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
+  let at = stamp at in
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let mint = if literal then fresh_literal else fresh in
@@ -659,4 +688,4 @@ let use env loc ?(sharing = false) ?written ?made mult x =
      | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (qname env x)
      | Some (Shared, pl) when mult = Unique -> error_with loc [ (pl, "already shared here") ] "unique value %s has conflicting non-erased uses" (qname env x)
      | _ -> ());
-    { env with uses = IntMap.add x ((if mult = Unique then Consumed else Shared), loc) env.uses })
+    { env with uses = IntMap.add x ((if mult = Unique then Consumed else Shared), stamp loc) env.uses })

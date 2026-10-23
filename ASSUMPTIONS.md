@@ -2231,6 +2231,31 @@ reading that may be mistaken.
     `placed-slot` after an expansion, so that the world comes back `at` the
     one that went in.
 
+226. **Which calls a message names, where DESIGN.md section 62 is
+    silent.** A call's notes read ``in the expansion of `m` here``, `m` as
+    the call's head is written, innermost first; a line's call notes
+    follow its notes on `__` numbers, and a call already named in the
+    message is not named again. A form a call returns belongs to that
+    call even when an earlier call returned it first, so `(f (m))`, with
+    `f` a macro that passes its argument through, names `f` alone; the
+    statements after a returned `let-match` with branches keep the
+    expansion they belong to when DESIGN.md section 52 moves them into
+    it. A position the elaborators keep for a later message, a binder's
+    or a unique use's, keeps the calls it was met under; the positions
+    in notes on `__` numbers do not. The messages about a list as a whole
+    are those about the number of arguments of an application, of
+    entries of a `values` or of binders of a `let`, a `match` or
+    `let-match` missing a branch, a body without a final expression, and
+    a type not of newtype shape; they name each call spliced into the
+    list as ``the expansion of `m` here gave N forms``, `no forms` and
+    `1 form` for those counts. A call spliced into a function's telescope
+    is not named at the function's calls. The reference keeps the
+    current expansion in a variable it restores on leaving the form
+    that set it; `slc` keeps it in the position its environment is at,
+    so a form there takes the expansion of the form the environment was
+    last placed at, and its top level places each form the expander did
+    not stamp at no expansion.
+
 ## The world (section 42)
 
 Choices both implementations make about the world where DESIGN.md is

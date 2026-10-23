@@ -17,17 +17,24 @@
   (le-then-lt x y z u v))
 "ok"
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `lt-le-trans` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `lt-weaken` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `LtS` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `MkLe` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `le-lt` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `lt-pred` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_le_lemma.sl:15:5: warning: declaration of `lt-succ-left` shadows a previous binder
+; warns: tests/tactic_le_lemma.sl:14:1: note: in the expansion of `lt-lemma` here
 ; warns: <**>std/nat.sl:<**>: note: shadowed binder is here
 ; warn-unused: no

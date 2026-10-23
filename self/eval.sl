@@ -180,9 +180,16 @@
   (let-match many r2 (Cons _ c _) ((Nil _) (PosSpot $ NoPos)))
   (PosSpot $ MkPos (heap-str _ hp f) (heap-nat _ hp l) (heap-nat _ hp c)))
 
+(def-fns _ $ (many spot-absolute : (many (String) file) (subterm many (Spot) p) -> (many (Spot) q))
+  (match many p _
+    ((MkSpot l c) (PosSpot $ MkPos file l c))
+    ((PosSpot _) p)
+    ((ExpSpot x q) (ExpSpot x $ notail $ spot-absolute file q))
+    ((SplicedSpot s q) (SplicedSpot s $ notail $ spot-absolute file q))))
+
 (def-fns _
   ((many syn-absolute : (many (String) file) (subterm many (Syn) r) -> (many (Syn) r2))
-    (let ((many (Spot) p)) $ match many (raw-pos r) _ ((MkSpot l c) (PosSpot $ MkPos file l c)) ((PosSpot q) (PosSpot q)))
+    (let ((many (Spot) p)) $ spot-absolute file $ raw-pos r)
     (match many r _
       ((RAtom _ s) (RAtom p s)) ((RWild _) (RWild p)) ((RNat _ n) (RNat p n)) ((RChr _ n) (RChr p n)) ((RString _ s) (RString p s))
       ((RList _ xs) (RList p $ notail $ syns-absolute file xs))))

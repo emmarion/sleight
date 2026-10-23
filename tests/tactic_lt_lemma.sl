@@ -21,9 +21,13 @@
   (chain3 a b c d b z x x x y))
 "ok"
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `lt-succ` shadows a previous binder
+; warns: tests/tactic_lt_lemma.sl:9:1: note: in the expansion of `lt-lemma` here
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `lt-trans` shadows a previous binder
+; warns: tests/tactic_lt_lemma.sl:9:1: note: in the expansion of `lt-lemma` here
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `def-fns` shadows a built-in
+; warns: tests/tactic_lt_lemma.sl:9:1: note: in the expansion of `lt-lemma` here
 ; warns: tests/tactic_lt_lemma.sl:9:69: warning: declaration of `compile-error` shadows a built-in
+; warns: tests/tactic_lt_lemma.sl:9:1: note: in the expansion of `lt-lemma` here
 ; warn-unused: no
