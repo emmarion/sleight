@@ -201,6 +201,7 @@ let computed env = function Handle (_, x, MintedIs, _, _) -> x >= 0 && (entry en
 
 let describe env pos raw term ty =
   let raw = if computed env raw then List (Reader.loc raw, []) else raw in
+  let term = match raw with Handle (_, x, MintedIs, _, _) -> Var x | _ -> term in
   let used, marks = match ty with Fn _ | UniqueFn _ -> (under pos, true) | TyCtor _ -> (Fun.id, false) | _ -> (field_under pos, true) in
   let apposed = match ty, raw with Cell _, (Atom _ | Handle _) -> true | _ -> false in
   let view = lazy (
