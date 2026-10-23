@@ -2589,7 +2589,11 @@
 (def-fns _ $ (many env-set-held : (many (Env) e) (many (Held) hd) -> (many (Env) r))
   (match many (env-trail e) _ ((MkTrail fr _) (env-set-trail e $ MkTrail fr hd))))
 (def-fns _ $ (many env-take-held : (many (Env) e) -> (many (Env) r) (many (Held) hd))
-  (match many (env-trail e) _ ((MkTrail _ hd) (values (env-set-held e held-none) hd))))
+  (let-match many (env-trail e) (MkTrail _ hd))
+  (let-match many hd (MkHeld fs pss sps))
+  (match many (and (list-is-empty _ fs) $ and (list-is-empty _ pss) $ list-is-empty _ sps) _
+    ((BTrue) (values e hd))
+    ((BFalse) (values (env-set-held e held-none) hd))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
@@ -2607,6 +2611,7 @@
 (def-fns _ $ (many env-expansion : (many (Env) e) -> (many (Nat) x))
   (match many (env-loc e) _ ((MkLoc _ p) (spot-frame p))))
 (def-fns _ $ (many env-in-expansion : (many (Env) e) (many (Nat) x) -> (many (Env) r))
+  (let-match many (nat-eqb (env-expansion e) x) (BFalse) ((BTrue) e))
   (match many (env-loc e) _ ((MkLoc f p) (env-at-loc e $ MkLoc f $ spot-reframed x p))))
 (def-fns _ $ (many env-entering : (many (Env) e) (many (Nat) x) -> (many (Env) r))
   (match many x _ ((Zero) e) (else (env-in-expansion e x))))
