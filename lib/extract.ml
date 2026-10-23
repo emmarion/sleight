@@ -132,7 +132,7 @@ let bind_args cx es k =
   let text = k n (List.map fst args) in
   if binds = [] then text else Printf.sprintf "(let %s in %s)" (concat " and " binds) text
 
-let fill_template cx ps es =
+let fill_build cx ps es =
   bind_args cx es (fun n names -> "(" ^ Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(List.nth names) ^ ")")
 
 let build cx c es =
@@ -140,10 +140,39 @@ let build cx c es =
   | Ext name -> (
       match template (Ffi_templates.Build (name, c.index)) with
       | None -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
-      | Some ps -> fill_template cx ps es)
+      | Some ps -> fill_build cx ps es)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern ~fill:"(Obj.repr ())" cx c es)
   | Untagged _ -> tuple es
   | Union -> one_block cx es
+
+let dummy n i j = Printf.sprintf "x%d_f%d_%d" n i j
+
+let outcome_arms ?rebind cx a live arms default n =
+  let live = List.sort_uniq compare live in
+  let arm i = List.find_opt (fun (c, _, _) -> c.V.index = i) arms in
+  let field i j = match arm i with Some (_, vs, _) -> List.nth vs j | None -> dummy n i j in
+  let built i = let c = V.ctor_at a i in build cx c (List.init c.V.arity (field i)) in
+  let at i b = match rebind with None -> b | Some x -> Printf.sprintf "(let %s = %s in %s)" x (built i) b in
+  let defaulted = List.filter (fun i -> arm i = None && List.mem i live) (List.init (List.length a.V.ctors) Fun.id) in
+  let dflt, thunk =
+    match default with
+    | Some d when List.length defaulted > 1 ->
+        let arg i = if rebind = None then "()" else built i in
+        ((fun i -> Printf.sprintf "(x%d_d %s)" n (arg i)), fun t -> Printf.sprintf "(let x%d_d %s = %s in %s)" n (Option.value rebind ~default:"()") d t)
+    | Some d -> ((fun i -> at i d), Fun.id)
+    | None -> ((fun _ -> "(absurd ())"), Fun.id)
+  in
+  let body i = match arm i with Some (_, _, b) -> at i b | None -> if List.mem i live then dflt i else "(absurd ())" in
+  (body, field, thunk)
+
+let fill_template ?arms cx fname ps es =
+  bind_args cx es (fun n names ->
+    let body, field, thunk =
+      match (arms, Ffi.result_adt fname) with
+      | Some k, _ -> k n
+      | None, Some a -> outcome_arms cx a [] (List.map (fun c -> let fs = List.init c.V.arity (dummy n c.V.index) in (c, fs, build cx c fs)) a.V.ctors) None n
+      | None, None -> ((fun _ -> assert false), (fun _ _ -> assert false), Fun.id) in
+    thunk ("(" ^ Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field ~body ~arg:(List.nth names) ^ ")"))
 
 let field_match cx c target body =
   let ty, k, rest = match shape c.V.adt with
@@ -179,17 +208,7 @@ let dispatch cx a live scrut arms default =
   match templated with
   | Some ps ->
       let n = stamp cx in
-      let live = List.sort_uniq compare live in
-      let arm i = List.find_opt (fun (c, _, _) -> c.V.index = i) arms in
-      let defaulted = List.filter (fun i -> arm i = None && List.mem i live) (List.init (List.length a.V.ctors) Fun.id) in
-      let dflt, thunk =
-        match default with
-        | Some d when List.length defaulted > 1 -> (Printf.sprintf "(x%d_d ())" n, fun t -> Printf.sprintf "(let x%d_d () = %s in %s)" n d t)
-        | Some d -> (d, Fun.id)
-        | None -> ("(absurd ())", Fun.id)
-      in
-      let body i = match arm i with Some (_, _, b) -> b | None -> if List.mem i live then dflt else "(absurd ())" in
-      let field i j = match arm i with Some (_, vs, _) -> List.nth vs j | None -> Printf.sprintf "x%d_f%d_%d" n i j in
+      let body, field, thunk = outcome_arms cx a live arms default n in
       let s, bind = if Ffi_templates.is_name scrut then (scrut, Fun.id) else (Printf.sprintf "x%d" n, fun t -> Printf.sprintf "(let x%d = %s in %s)" n scrut t) in
       bind (thunk ("(" ^ Ffi_templates.fill ps ~scrut:(fun () -> s) ~temp:(Printf.sprintf "x%d_t%d" n) ~field ~body ~arg:(fun _ -> assert false) ^ ")"))
   | None ->
@@ -314,7 +333,7 @@ and fn cx scope name f =
     match f.V.impl with
     | Some _ when !V.use_externs -> (
         match template (Ffi_templates.Fn f.fname) with
-        | Some ps -> fill_template cx ps (List.map var f.params)
+        | Some ps -> fill_template cx f.fname ps (List.map var f.params)
         | None ->
             let view label ctor =
               let a = (Program.ctor cx.env ctor).V.adt in
@@ -330,6 +349,25 @@ and fn cx scope name f =
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
+
+and head cx scope f =
+  let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
+  let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
+  match f with
+  | V.CVar x when List.mem_assoc x scope.locals -> `Fn (var x, List.assoc x scope.locals)
+  | V.CVar x -> (
+      match captured x with
+      | Some (V.VCtorFn c) -> `Ctor c
+      | Some (V.VFn cl) -> (
+          match (cl.fn.impl, template (Ffi_templates.Fn cl.fn.fname)) with
+          | Some _, Some ps when !V.use_externs -> `Inline (cl.fn.fname, ps)
+          | _ -> `Fn (closure cx cl, List.length cl.fn.params))
+      | _ -> `Dyn)
+  | V.CConst (V.VCtorFn c) -> `Ctor c
+  | _ -> `Dyn
+
+and bound cx scope ids rhs body =
+  if ids = [] then Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body) else untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
 
 and expr cx scope code = match code with
   | V.CVar x when x < 0 -> define cx x (Hashtbl.find V.literal_values x)
@@ -348,29 +386,18 @@ and expr cx scope code = match code with
   | V.CValues cs -> (match List.map (expr cx scope) cs with [ e ] -> e | es -> bind_args cx es (fun _ -> tuple))
   | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
-      let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
-      let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
-      let head =
-        match f with
-        | V.CVar x when List.mem_assoc x scope.locals -> `Fn (var x, List.assoc x scope.locals)
-        | V.CVar x -> (
-            match captured x with
-            | Some (V.VCtorFn c) -> `Ctor c
-            | Some (V.VFn cl) -> (
-                match (cl.fn.impl, template (Ffi_templates.Fn cl.fn.fname)) with
-                | Some _, Some ps when !V.use_externs -> `Inline ps
-                | _ -> `Fn (closure cx cl, List.length cl.fn.params))
-            | _ -> `Dyn)
-        | V.CConst (V.VCtorFn c) -> `Ctor c
-        | _ -> `Dyn
-      in
-      match (cc, head) with
+      match (cc, head cx scope f) with
       | V.Ctor, `Ctor c -> build cx c es
-      | _, `Inline ps -> fill_template cx ps es
+      | _, `Inline (fname, ps) -> fill_template cx fname ps es
       | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
       | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
-  | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
-  | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
+  | V.CLet ([ x ], (V.CApp (f, es, _) as rhs), (V.CMatch ({ scrut = V.CVar y; shape = V.Known a; _ } as m) as body)) when V.resolve y = x -> (
+      match head cx scope f with
+      | `Inline (fname, ps) when Ffi_templates.outcomes ps && List.memq a (Option.to_list (Ffi.result_adt fname)) ->
+          let arms = List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches in
+          fill_template ~arms:(outcome_arms ~rebind:(var x) cx a m.live arms (Option.map (expr cx scope) m.default)) cx fname ps (List.map (expr cx scope) es)
+      | _ -> bound cx scope [ x ] rhs body)
+  | V.CLet (ids, rhs, body) -> bound cx scope ids rhs body
   | V.CLetRec (fns, body) ->
       let scope = { scope with locals = List.map (fun (x, f) -> (x, List.length f.V.params)) fns @ scope.locals } in
       Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fun (x, f) -> fn cx scope (var x) f) fns)) (expr cx scope body)

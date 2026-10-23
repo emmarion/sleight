@@ -2,7 +2,9 @@
 ; "build T i: text" for its constructor i, text being OCaml over Obj.t with holes {s} the scrutinee,
 ; {bI} the body of constructor I's arm, {fI.J} the binder of its field J, {aI} a build argument and {tK}
 ; a temporary. Every hole but a body is filled with a variable name, and a body sits in tail position.
-; "fn F: text" is extern function F, {aI} its I-th non-erased argument, text its non-erased results.
+; "fn F: text" is extern function F, {aI} its I-th non-erased argument, text its non-erased results; a
+; function that decides a value may instead reach {bI}, at most once each, for the outcome of constructor I,
+; with {fI.J} bound to its field J.
 match Nat: if (Obj.obj {s} : Z.t) == Z.zero then {b0} else let {f1.0} = (if Obj.is_int {s} then Obj.repr ((Obj.obj {s} : int) - 1) else Obj.repr (Z.pred (Obj.obj {s} : Z.t))) in {b1}
 build Nat 0: Obj.repr Z.zero
 build Nat 1: (if Obj.is_int {a0} && (Obj.obj {a0} : int) < max_int then Obj.repr ((Obj.obj {a0} : int) + 1) else Obj.repr (Z.succ (Obj.obj {a0} : Z.t)))
@@ -13,8 +15,8 @@ build Half 2: Obj.repr (Z.add (Z.shift_left (Obj.obj {a0} : Z.t) 1) (Z.of_int 2)
 match String: let ({t0}, {t1}, {t2}) = (Obj.obj {s} : Ffi_core.slice) in if {t2} = 0 then {b0} else let {f1.0} = Obj.repr (Z.of_int (Char.code (String.unsafe_get {t0} {t1}))) and {f1.1} = Obj.repr (({t0}, {t1} + 1, {t2} - 1) : Ffi_core.slice) in {b1}
 build String 0: Obj.repr (("", 0, 0) : Ffi_core.slice)
 build String 1: let ({t0}, {t1}, {t2}) = (Obj.obj {a1} : Ffi_core.slice) in Obj.repr ((String.make 1 (Char.chr (Z.to_int (Obj.obj {a0} : Z.t))) ^ String.sub {t0} {t1} {t2}, 0, {t2} + 1) : Ffi_core.slice)
-fn nat-cmp: if Obj.is_int {a0} && Obj.is_int {a1} then (let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in Obj.repr (if {t0} < {t1} then 0 else if {t0} = {t1} then 1 else 2)) else let {t2} = Z.compare (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) in Obj.repr (if {t2} < 0 then 0 else if {t2} = 0 then 1 else 2)
-fn lt-dec: Obj.repr (if (if Obj.is_int {a0} && Obj.is_int {a1} then (Obj.obj {a0} : int) < (Obj.obj {a1} : int) else Z.lt (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t)) then 0 else 1)
+fn nat-cmp: let {t3} () = {b0} and {t4} () = {b1} and {t5} () = {b2} in if Obj.is_int {a0} && Obj.is_int {a1} then (let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in if {t0} < {t1} then {t3} () else if {t0} = {t1} then {t4} () else {t5} ()) else let {t2} = Z.compare (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) in if {t2} < 0 then {t3} () else if {t2} = 0 then {t4} () else {t5} ()
+fn lt-dec: let {t0} () = {b0} and {t1} () = {b1} in if Obj.is_int {a0} && Obj.is_int {a1} then (if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {t0} () else {t1} ()) else if Z.lt (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) then {t0} () else {t1} ()
 fn u62-add: Obj.repr ((Obj.obj {a0} : int) + (Obj.obj {a1} : int))
 fn u62-sub: Obj.repr ((Obj.obj {a0} : int) - (Obj.obj {a1} : int))
 fn u62-mul: Obj.repr ((Obj.obj {a0} : int) * (Obj.obj {a1} : int))
@@ -28,8 +30,8 @@ fn u62-xor: Obj.repr ((Obj.obj {a0} : int) lxor (Obj.obj {a1} : int))
 fn u62-inc: Obj.repr ((Obj.obj {a0} : int) + 1)
 fn u62-dec: Obj.repr ((Obj.obj {a0} : int) - 1)
 fn u62-divmod: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in Obj.repr (Obj.repr ({t0} / {t1}), Obj.repr ({t0} mod {t1}))
-fn u62-cmp: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in Obj.repr (if {t0} < {t1} then 0 else if {t0} = {t1} then 1 else 2)
-fn u62-lt-dec: Obj.repr (if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then 0 else 1)
+fn u62-cmp: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in if {t0} < {t1} then {b0} else if {t0} = {t1} then {b1} else {b2}
+fn u62-lt-dec: if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {b0} else {b1}
 fn array-pluck: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
 fn array-get: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
 fn array-get-many: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))

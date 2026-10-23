@@ -14,7 +14,7 @@ let reset () = Hashtbl.reset registered; Hashtbl.reset claimed; Hashtbl.reset ad
 
 (* An implementation together with everything its declaration is checked against, so that one cannot be registered
    without its arity, the plain types it builds or reads, or the shape its view has. *)
-type fn_spec = { takes : int; needs : string list; run : value list -> value list }
+type fn_spec = { takes : int; needs : string list; decides : string option; run : value list -> value list }
 type ty_spec = { shape : int list; view : adt -> ext }
 
 let arity = Eval.Runtime "extern arity"
@@ -79,7 +79,8 @@ let nats name f = binary (fun a b -> int name (f (z a) (z b)))
 let quotient f = function [ a; b ] -> let q, r = f (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity
 let tag name get f = binary (fun a b -> plain name (Obj.magic (f (get a) (get b)) : int) [])
 
-let spec ?(needs = []) takes run = { takes; needs; run }
+let spec ?(needs = []) ?decides takes run = { takes; needs; decides; run }
+let decision name get f = spec ~needs:[ name ] ~decides:name 2 (tag name get f)
 let swap = function [ a; i; x ] -> [ Ffi_core.array_swap (array a) (z i) x ] | _ -> raise arity
 let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity
 let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i)))
@@ -122,9 +123,9 @@ let fns : (string * fn_spec) list =
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
     ("div", spec 2 (nats "Nat" Ffi_core.div));
     ("divmod", spec 2 (quotient Ffi_core.divmod));
-    ("nat-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.nat_cmp));
-    ("lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.lt_dec));
-    ("str-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" slice Ffi_core.str_cmp));
+    ("nat-cmp", decision "Cmp" z Ffi_core.nat_cmp);
+    ("lt-dec", decision "Dec" z Ffi_core.lt_dec);
+    ("str-cmp", decision "Cmp" slice Ffi_core.str_cmp);
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
@@ -148,8 +149,8 @@ let fns : (string * fn_spec) list =
     ("u62-xor", spec 2 (nats "Nat" Ffi_core.u62_xor));
     ("u62-inc", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_inc (z a)))));
     ("u62-dec", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_dec (z a)))));
-    ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.u62_cmp));
-    ("u62-lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.u62_lt_dec));
+    ("u62-cmp", decision "Cmp" z Ffi_core.u62_cmp);
+    ("u62-lt-dec", decision "Dec" z Ffi_core.u62_lt_dec);
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));
     ("trim", spec 1 (unary (fun s -> text (Ffi_core.trim (slice s)))));
     ("append", spec 2 (binary (fun a b -> text (Ffi_core.append (slice a) (slice b)))));
@@ -160,13 +161,10 @@ let fns : (string * fn_spec) list =
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
 let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
+let shape_of name = match List.assoc_opt name types with Some t -> t.shape | None -> List.assoc name plain_shapes
 let check_shape loc name adt =
   let ns = List.map (fun (c : ctor) -> c.arity) adt.ctors in
-  let want =
-    match List.assoc_opt name types with
-    | Some t -> t.shape
-    | None -> ( match List.assoc_opt name plain_shapes with Some s -> s | None -> Env.error loc "the FFI records no shape for %s" (Env.tick name))
-  in
+  let want = try shape_of name with Not_found -> Env.error loc "the FFI records no shape for %s" (Env.tick name) in
   let tagged_want = List.length want > 1 in
   if (List.length ns > 1 && not adt.tagged) || ns <> want then
     Env.error loc "the extern implementation of %s has the %sshape (%s), its declaration %s(%s)" (Env.tick name) (if tagged_want then "tagged " else "") (spell want) (if tagged_want && not adt.tagged then "the untagged " else "") (spell ns);
@@ -190,7 +188,7 @@ let claim_fn loc name n =
       List.iter
         (fun t -> match Hashtbl.find_opt adts t with Some adt -> check_shape loc t adt | None -> Env.error loc "the extern implementation of %s needs %s declared before it" (Env.tick name) (Env.tick t))
         spec.needs;
-      (try Ffi_templates.check_fn name n with Failure m -> Env.error loc "%s" m);
+      (try Ffi_templates.check_fn name n (Option.map shape_of spec.decides) with Failure m -> Env.error loc "%s" m);
       bind loc name;
       spec.run
 
@@ -198,3 +196,5 @@ let claim_type loc name adt =
   match List.assoc_opt name types with
   | None -> Env.error loc "no extern implementation for %s" (Env.tick name)
   | Some spec -> check_shape loc name adt; bind loc name; Hashtbl.replace registered name adt; spec.view adt
+
+let result_adt name = Option.bind (List.assoc_opt name fns) (fun spec -> Option.bind spec.decides (Hashtbl.find_opt adts))

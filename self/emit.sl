@@ -112,7 +112,7 @@
 
 (def-adts $ (Template : -> Type)
   enum
-  (many MkTemplate : (many (String) kind) (many (String) type) (many (Nat) index) (many (List $ Piece) pieces) -> (Template)))
+  (many MkTemplate : (many (String) kind) (many (String) type) (many (Nat) index) (many (List $ Piece) pieces) (many (List $ Nat) outcomes) -> (Template)))
 
 (def-fns _ $ (many parse-hole : (many (String) h) -> (many (Maybe $ Hole) r))
   (let-match many h (SCons c rest) ((SNil) (None _)))
@@ -153,11 +153,11 @@
   (let ((many pieces)) $ parse-pieces n text $ Nil _)
   (let-match many (split-on head 32) (Cons _ kind more) ((Nil _) (None _)))
   (let-match many more (Cons _ type rest) ((Nil _) (None _)))
-  (let-match many (or (str-eq kind "match") $ str-eq kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces)))
+  (let-match many (or (str-eq kind "match") $ str-eq kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces $ Nil _)))
   (let-match many rest (Cons _ i _) ((Nil _) (None _)))
   (let-match many (str-nat i) (Some _ n2)
     ((None _) (None _)))
-  (match many (str-eq kind "build") _ ((BTrue) (Some _ $ MkTemplate kind type n2 pieces)) ((BFalse) (None _))))
+  (match many (str-eq kind "build") _ ((BTrue) (Some _ $ MkTemplate kind type n2 pieces $ Nil _)) ((BFalse) (None _))))
 
 (def-fns _ $ (many parse-templates : (subterm many (List $ String) lines) -> (many (List $ Template) r))
   (let-match many lines (Cons _ line rest) ((Nil _) (Nil _)))
@@ -165,13 +165,18 @@
     ((Some _ t) (Cons _ t $ notail $ parse-templates rest))
     ((None _) (tail $ parse-templates rest))))
 
-(def-fns _ $ (many find-template : (subterm many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ List $ Piece) r))
+(def-fns _ $ (many find-entry : (subterm many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ Template) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (None _)))
-  (let-match many t (MkTemplate b ty i ps))
+  (let-match many t (MkTemplate b ty i _ _))
   (let ((many hit)) $ match many (nat-eq i index) (((Bool) _)) ((BFalse) (BFalse)) ((BTrue) (and (str-eq b kind) $ str-eq ty type)))
   (match many hit _
-    ((BTrue) (Some _ ps))
-    ((BFalse) (tail $ find-template rest kind type index))))
+    ((BTrue) (Some _ t))
+    ((BFalse) (tail $ find-entry rest kind type index))))
+
+(def-fns _ $ (many find-template : (many (List $ Template) ts) (many (String) kind) (many (String) type) (many (Nat) index) -> (many (Maybe $ List $ Piece) r))
+  (let-match many (find-entry ts kind type index) (Some _ t) ((None _) (None _)))
+  (let-match many t (MkTemplate _ _ _ ps _))
+  (Some _ ps))
 
 (def-fns _ $ (many str-is-name : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
@@ -189,8 +194,8 @@
 (def-fns _ $ (many decl-templates : (many (Decls) d) -> (many (List $ Template) ts))
   (match many d _ ((MkDecls _ _ ts _) ts)))
 
-(def-fns _ $ (many decl-call-template : (many (Decls) d) (many (Nat) id) (many (List $ Piece) ps) -> (many (Decls) r))
-  (match many d _ ((MkDecls shapes2 narrows ts cs) (MkDecls shapes2 narrows (Cons _ (MkTemplate "call" "" id ps) ts) cs))))
+(def-fns _ $ (many decl-call-template : (many (Decls) d) (many (Nat) id) (many (List $ Piece) ps) (many (List $ Nat) outcomes) -> (many (Decls) r))
+  (match many d _ ((MkDecls shapes2 narrows ts cs) (MkDecls shapes2 narrows (Cons _ (MkTemplate "call" "" id ps outcomes) ts) cs))))
 
 (def-fns _ $ (many decl-const : (many (Decls) d) (many (Nat) id) -> (many (Decls) r))
   (match many d _ ((MkDecls shapes2 narrows ts cs) (MkDecls shapes2 narrows ts $ Cons _ id cs))))
@@ -363,11 +368,31 @@
   (let ((many names) (many binds)) $ bind-args (str-cat "tup" $ nat-str depth) rs 0)
   (let-binds-rope binds $ tuple-rope names))
 
-(def-fns _ $ (many templated-build : (many (List $ Piece) ps) (many (Nat) depth) (many (List $ Rope) args) -> (many (Rope) r))
-  (let ((many prefix)) $ str-cat "x" $ nat-str depth)
+(def-fns _ $ (many has-outcomes : (subterm many (List $ Piece) ps) -> (many (Bool) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) (BFalse)))
+  (let-match many p (PHole h) ((PLit _) (tail $ has-outcomes rest)))
+  (match many h _ ((HBody _) (BTrue)) (else (tail $ has-outcomes rest))))
+
+(def-fns _ $ (many dummy-fields : (many (String) prefix) (many (Nat) i) (subterm many (Nat) n) (many (Nat) j) -> (many (List $ Rope) r))
+  (let-match many n (Succ k) ((Zero) (Nil _)))
+  (Cons _ (RStr $ str-cat3 prefix "_f" $ str-cat3 (nat-str i) "_" $ nat-str j) $ notail $ dummy-fields prefix i k (Succ j)))
+
+(def-fns _ $ (many tagged-build : (many (Decls) d) (many (List $ Nat) s) (many (Nat) i) (many (List $ Rope) fs) -> (many (Rope) r))
+  (rcat3 (RStr "(Obj.repr (") (pattern-rope d s i fs "(Obj.repr ())") $ RStr "))"))
+
+(def-fns _ $ (many outcome-builds : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Nat) rest) (many (Nat) i) (many (String) prefix) -> (many (List $ Arm) r))
+  (let-match many rest (Cons _ n more) ((Nil _) (Nil _)))
+  (let ((many fs)) $ dummy-fields prefix i n 0)
+  (Cons _ (MkArm i fs $ tagged-build d s i fs) $ notail $ outcome-builds d s more (Succ i) prefix))
+
+(def-fns _ $ (many templated-fill : (many (List $ Piece) ps) (many (String) prefix) (many (List $ Rope) args) (many (List $ Arm) arms) (many (Rope) open) (many (Rope) close) -> (many (Rope) r))
   (let ((many names) (many binds)) (bind-args prefix args 0))
-  (let ((many text)) $ fill-pieces ps $ MkFilling "" prefix (Nil _) (Nil _) (REmpty) names)
-  (let-binds-rope binds $ rcat3 (RStr "(") text $ RStr ")"))
+  (let ((many text)) $ fill-pieces ps $ MkFilling "" prefix arms (Nil _) (REmpty) names)
+  (let-binds-rope binds $ rcat5 open (RStr "(") text (RStr ")") close))
+
+(def-fns _ $ (many templated-build : (many (Decls) d) (many (List $ Piece) ps) (many (List $ Nat) outcomes) (many (Nat) depth) (many (List $ Rope) args) -> (many (Rope) r))
+  (let ((many prefix)) $ str-cat "x" $ nat-str depth)
+  (templated-fill ps prefix args (outcome-builds d outcomes outcomes 0 prefix) (REmpty) (REmpty)))
 
 ; How many of the constructors from i on the default stands for: those live with no arm of their own.
 (def-fns _ $ (many count-defaulted : (subterm many (Nat) n) (many (Nat) i) (many (List $ Arm) arms) (many (List $ Nat) live) -> (many (Nat) r))
@@ -376,6 +401,26 @@
   (match many (and (nat-mem live i) $ match many (arm-at arms i) (((Bool) _)) ((None _) (BTrue)) ((Some _ _) (BFalse))) _
     ((BTrue) (Succ rest))
     ((BFalse) rest)))
+
+(def-fns _ $ (many fused-arms : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Nat) rest) (many (Nat) i) (many (String) prefix) (many (Rope) x) (many (List $ Arm) arms) (many (List $ Nat) live) (many (Maybe $ Rope) dflt) (many (Bool) shared) -> (many (List $ Arm) r))
+  (let-match many rest (Cons _ n more) ((Nil _) (Nil _)))
+  (let ((many later)) $ notail $ fused-arms d s more (Succ i) prefix x arms live dflt shared)
+  (let-match many (arm-at arms i) (None _)
+    ((Some _ arm) (match many arm _ ((MkArm _ fs body) (Cons _ (MkArm i fs $ untuple-rope (Cons _ x $ Nil _) (tagged-build d s i fs) body) later)))))
+  (let-match many dflt (Some _ dd) ((None _) later))
+  (let-match many (nat-mem live i) (BTrue) ((BFalse) later))
+  (let ((many fs)) $ dummy-fields prefix i n 0)
+  (let ((many v)) $ tagged-build d s i fs)
+  (Cons _ (MkArm i fs $ match many shared (((Rope) _)) ((BTrue) (rcat3 (RStr $ str-cat3 "(" prefix "_d ") v $ RStr ")")) ((BFalse) (untuple-rope (Cons _ x $ Nil _) v dd))) later))
+
+(def-fns _ $ (many templated-fused : (many (Decls) d) (many (List $ Piece) ps) (many (Nat) depth) (many (List $ Rope) args) (many (List $ Nat) s) (many (List $ Nat) live) (many (Rope) x) (many (List $ Arm) arms) (many (Maybe $ Rope) dflt) -> (many (Rope) r))
+  (let ((many prefix)) $ str-cat "x" $ nat-str depth)
+  (let ((many shared)) $ nat-lt 1 $ count-defaulted (list-length _ s) 0 arms live)
+  (let ((many (Rope) open) (many (Rope) close))
+    (match many dflt _
+      ((Some _ dd) (match many shared _ ((BTrue) (values (rcat5 (RStr $ str-cat3 "(let " prefix "_d ") x (RStr " = ") dd $ RStr " in ") (RStr ")"))) ((BFalse) (values (REmpty) (REmpty)))))
+      ((None _) (values (REmpty) (REmpty)))))
+  (templated-fill ps prefix args (fused-arms d s s 0 prefix x arms live dflt shared) open close))
 
 ; A match through its template: the scrutinee bound to a name unless it is one, a default filling more
 ; than one arm bound once as a thunk so its text is written once, and each arm's body in place.
@@ -401,7 +446,7 @@
 (def-fns _ $ (many plain-build : (many (Decls) d) (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r))
   (let-match many (ctor-newtype c) (BFalse) ((BTrue) (tuple-rope args)))
   (match many (ctor-tagged c) _
-    ((BTrue) (rcat3 (RStr "(Obj.repr (") (pattern-rope d (ctor-shape c) (ctor-index c) args "(Obj.repr ())") $ RStr "))"))
+    ((BTrue) (tagged-build d (ctor-shape c) (ctor-index c) args))
     ((BFalse) (block-build d args))))
 
 (def-fns _ $ (many build-rope : (many (Decls) d) (many (Nat) depth) (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r))
@@ -410,7 +455,7 @@
     ((None _)
       (plain-build d c args)))
   (match many (find-template (decl-templates d) "build" (ext-type-name e) index) _
-    ((Some _ ps) (templated-build ps depth args))
+    ((Some _ ps) (templated-build d ps (Nil _) depth args))
     ((None _) (rcat3 (RStr $ str-cat3 "(con_" (ext-type-name e) " (Obj.repr (") (pattern-rope d shape index args "_") $ RStr ")))"))))
 
 (def-fns _ $ (many ctor-fn-rope : (many (Decls) d) (many (Ctor) c) -> (many (Rope) r))
@@ -734,9 +779,15 @@
     ((Nil _) (Nil _))
     ((Cons _ p rest) (Cons _ (rcat3 (RStr "(Obj.obj ") p $ RStr ")") $ notail $ objs rest))))
 
+(def-fns _ $ (many outcomes-of : (many (String) name) (many (List $ Piece) ps) -> (many (List $ Nat) s))
+  (let-match many (has-outcomes ps) (BTrue) ((BFalse) (Nil _)))
+  (let-match many (extern-of name) (Some _ se) ((None _) (Nil _)))
+  (let-match many se (MkSomeExtern _ e))
+  (match many (ext-result-shape _ e) _ ((Some _ s) s) ((None _) (Nil _))))
+
 (def-fns _ $ (many ffi-call : (many (String) name) (many (List $ Rope) params) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
   (match many (find-template (decl-templates d) "fn" name 0) _
-    ((Some _ ps) (templated-build ps 0 params))
+    ((Some _ ps) (templated-build d ps (outcomes-of name ps) 0 params))
     ((None _) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ ffi-extra name env d) (match many params _ ((Nil _) (RStr "()")) (else (rjoin (objs params) " "))) $ RStr "))"))))
 
 
@@ -793,6 +844,25 @@
   (let ((many body)) $ let-binds-rope binds stores)
   (rcat5 (RStr "(let ") cr (rcat3 (RStr " = ") cell $ RStr " in ") body $ RStr ")"))
 
+(def-fns _ $ (many let-rope : (many (List $ Rope) xs) (many (Rope) rr) (many (Rope) body) -> (many (Rope) r))
+  (match many xs _
+    ((Nil _) (rcat5 (RStr "(let _ = ") rr (RStr " in ") body $ RStr ")"))
+    ((Cons _ _ _) (untuple-rope xs rr body))))
+
+(def-fns _ $ (many fusing : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Code ctx many-one) f)
+    (many (Code (Cons (List (Nat)) ids ctx) many-one) scrut) (many (Shape (Cons (List (Nat)) ids ctx)) shape) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) ->
+    (many (Maybe $ Template) r))
+  (let-match many ids (Cons _ x more) ((Nil _) (None _)))
+  (let-match many more (Nil _) ((Cons _ _ _) (None _)))
+  (let-match many scrut (CVar _ y _) (else (None _)))
+  (let-match many shape (ShKnown _ adt) (else (None _)))
+  (let-match many (head-of _ f env ns) (HFn _ id) (else (None _)))
+  (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t) ((None _) (None _)))
+  (let-match many t (MkTemplate _ _ _ _ outcomes))
+  (match many (and (nat-eq x y) $ and (not $ list-is-empty _ outcomes) $ nat-list-eq outcomes $ adt-shape adt) _
+    ((BTrue) (Some _ t))
+    ((BFalse) (None _))))
+
 ; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
 
 (def-fns _
@@ -808,18 +878,25 @@
         (match many (head-of _ f env ns) _
           ((HCtor c) (build-rope d (names-depth _ ns) c ars))
           ((HFn name id)
-            (match many (find-template (decl-templates d) "call" "" id) _
-              ((Some _ ps) (templated-build ps (names-depth _ ns) ars))
-              ((None _) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")"))))
+            (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t)
+              ((None _) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")")))
+            (let-match many t (MkTemplate _ _ _ ps outcomes))
+            (templated-build d ps outcomes (names-depth _ ns) ars))
           ((HDyn)
             (let ((many fr)) $ notail $ emit-code _ _ f env ns d)
             (dyn-call fr ars))))
       ((CLet _ _ _ ids _ rhs rest)
         (let ((many rr)) $ notail $ emit-code _ _ rhs env ns d)
-        (let ((many body)) $ notail $ emit-code _ _ rest env (push-names _ ids env ns) d)
-        (match many ids _
-          ((Nil _) (rcat5 (RStr "(let _ = ") rr (RStr " in ") body $ RStr ")"))
-          ((Cons _ _ _) (untuple-rope (names-of-ids ids env) rr body))))
+        (let ((many ns2)) $ push-names _ ids env ns)
+        (let ((many xs)) $ names-of-ids ids env)
+        (let-match many rhs (CApp _ _ f args _) (else (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
+        (let-match many rest (CMatch _ _ scrut shape branches dfl live) (else (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
+        (let-match many (fusing _ ids f scrut shape env ns d) (Some _ t) ((None _) (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
+        (let-match many t (MkTemplate _ _ _ ps outcomes))
+        (let ((many ars)) $ notail $ emit-codes _ args env ns d)
+        (let ((many arms)) $ notail $ emit-arms _ _ branches env ns2 d)
+        (let ((many (Maybe $ Rope) dr)) (match many dfl _ ((None _) (None _)) ((Some _ dd) (Some _ $ notail $ emit-code _ _ dd env (push-names _ (Nil _) env ns2) d))))
+        (templated-fused d ps (names-depth _ ns) ars outcomes live (list-nth-or _ xs 0 $ RStr "_") arms dr))
       ((CLetRec _ _ _ g rest)
         (let-match many g (MkGroup _ ids fns _))
         (let ((many ns3)) $ push-fn-names _ ids fns env "" ns)
@@ -1012,7 +1089,7 @@
           (let-match many im (MkImpl se _))
           (let-match many se (MkSomeExtern _ e))
           (match many (find-template (decl-templates d) "fn" (ext-name _ e) 0) _
-            ((Some _ ps) (decl-call-template d fid ps))
+            ((Some _ ps) (decl-call-template d fid ps $ outcomes-of (ext-name _ e) ps))
             ((None _) d)))))
     (tail $ collect-group _ _ rest env d1))
 

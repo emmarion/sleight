@@ -53,6 +53,8 @@ let table =
 
 let find key = List.assoc_opt key (Lazy.force table)
 
+let outcomes ps = List.exists (function Hole (Body _) -> true | _ -> false) ps
+
 let reads what noun n ps =
   let count h = List.length (List.filter (( = ) (Hole h)) ps) in
   for j = 0 to n - 1 do if count (Arg j) = 0 then Printf.ksprintf failwith "%s must read {a%d}" what j done;
@@ -63,30 +65,43 @@ let reads what noun n ps =
       | _ -> ())
     ps
 
-(* Against the shape [ns], the many-field arities of the type's constructors: a match fills each body and
-   each field binder exactly once and no hole beyond the shape; a build reads each argument. *)
-let check name ns =
+(* Against the shape [ns], the many-field arities of the type's constructors: [ps] fills each constructor's body
+   exactly once ([every]) or at most once, binds each of its fields as often as it fills its body, and names
+   nothing beyond the shape. *)
+let arms what ns ~every ps =
   let err fmt = Printf.ksprintf failwith fmt in
-  let count h ps = List.length (List.filter (( = ) (Hole h)) ps) in
-  let arity i = if i < List.length ns then List.nth ns i else err "template for %s names constructor %d, which it has not" name i in
-  (match find (Match name) with
-   | None -> ()
-   | Some ps ->
-       List.iteri
-         (fun i n ->
-           if count (Body i) ps <> 1 then err "the match template for %s must fill {b%d} exactly once" name i;
-           for j = 0 to n - 1 do if count (Field (i, j)) ps <> 1 then err "the match template for %s must bind {f%d.%d} exactly once" name i j done)
-         ns;
-       List.iter
-         (function
-           | Hole (Body i) -> ignore (arity i)
-           | Hole (Field (i, j)) -> if j >= arity i then err "the match template for %s binds {f%d.%d}, beyond the constructor's fields" name i j
-           | Hole (Arg _) -> err "the match template for %s takes no {a} hole" name
-           | _ -> ())
-         ps);
+  let count h = List.length (List.filter (( = ) (Hole h)) ps) in
+  let arity i = if i < List.length ns then List.nth ns i else err "%s names constructor %d, which it has not" what i in
+  List.iteri
+    (fun i n ->
+      let b = count (Body i) in
+      if b > 1 || (every && b = 0) then err "%s must fill {b%d} %s" what i (if every then "exactly once" else "at most once");
+      for j = 0 to n - 1 do if count (Field (i, j)) <> b then err "%s must bind {f%d.%d} as often as it fills {b%d}" what i j i done)
+    ns;
+  List.iter
+    (function
+      | Hole (Body i) -> ignore (arity i)
+      | Hole (Field (i, j)) -> if j >= arity i then err "%s binds {f%d.%d}, beyond the constructor's fields" what i j
+      | _ -> ())
+    ps
+
+let check name ns =
+  Option.iter
+    (fun ps ->
+      let what = "the match template for " ^ name in
+      if List.exists (function Hole (Arg _) -> true | _ -> false) ps then failwith (what ^ " takes no {a} hole");
+      arms what ns ~every:true ps)
+    (find (Match name));
   List.iteri (fun i n -> Option.iter (reads (Printf.sprintf "the build template for %s %d" name i) "fields" n) (find (Build (name, i)))) ns
 
-let check_fn name n = Option.iter (reads ("the template for " ^ name) "arguments" n) (find (Fn name))
+let check_fn name n decides =
+  Option.iter
+    (fun ps ->
+      let what = "the template for " ^ name in
+      match decides with
+      | Some ns when outcomes ps -> reads what "arguments" n (List.filter (function Hole (Body _ | Field _) -> false | _ -> true) ps); arms what ns ~every:false ps
+      | _ -> reads what "arguments" n ps)
+    (find (Fn name))
 
 let fill ps ~scrut ~temp ~field ~body ~arg =
   String.concat ""
