@@ -47,9 +47,7 @@ rewriting it. Each phase has its own budget of tokens. In the second phase,
 those two are the only files you can edit; there's no need to edit them, or to
 read FEEDBACK.md, before then, so spend the first phase on the task itself.
 
-Hint: perf.sl times the call alone and reports what it allocates. To try other
-lengths, copy it to scratch/ and change both `perf-n` or `perf-m` and the
-numeral that its `-fits` bound names.
+Hint: perf.sl times the calls alone and reports what they allocate.
 
 Hint: to compile without running, use the `sl` tool's `ocaml` option.
 

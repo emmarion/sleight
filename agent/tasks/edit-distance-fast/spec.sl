@@ -22,21 +22,19 @@
         -> (Fold (MkU8 n p) (MkU8 n p)))))
 
 (def-adts
-  ((Apart : ((U8) x) ((U8) y) -> Type)
+  ((U8Lt : ((U8) x) ((U8) y) -> Type)
     enum
-    (many ApartLt : (erased (Nat) n) (erased (Lt n u8-modulus) p) (erased (Nat) m) (erased (Lt m u8-modulus) q)
-        (erased (Lt n m) lt) -> (Apart (MkU8 n p) (MkU8 m q)))
-    (many ApartGt : (erased (Nat) n) (erased (Lt n u8-modulus) p) (erased (Nat) m) (erased (Lt m u8-modulus) q)
-        (erased (Lt m n) gt) -> (Apart (MkU8 n p) (MkU8 m q)))))
+    (many MkU8Lt : (erased (Nat) n) (erased (Lt n u8-modulus) p) (erased (Nat) m) (erased (Lt m u8-modulus) q)
+        (erased (Lt n m) lt) -> (U8Lt (MkU8 n p) (MkU8 m q)))))
 
 (def-adts
   ((Cost : ((U8) x) ((U8) y) ((Nat) c) -> Type)
     enum
     (many CostSame : (erased (U8) x) -> (Cost x x 0))
     (many CostCase : (erased (U8) x) (erased (U8) y) (erased (U8) f)
-        (erased (Fold x f) fx) (erased (Fold y f) fy) (erased (Apart x y) apart) -> (Cost x y 1))
+        (erased (Fold x f) fx) (erased (Fold y f) fy) (erased (Apart (U8) U8Lt x y) apart) -> (Cost x y 1))
     (many CostOther : (erased (U8) x) (erased (U8) y) (erased (U8) f) (erased (U8) g)
-        (erased (Fold x f) fx) (erased (Fold y g) fy) (erased (Apart f g) apart) -> (Cost x y 2))))
+        (erased (Fold x f) fx) (erased (Fold y g) fy) (erased (Apart (U8) U8Lt f g) apart) -> (Cost x y 2))))
 
 (def-adts
   ((AtMost : ((Nat) d) ((List (Nat)) cs) -> Type)
@@ -79,10 +77,10 @@
     (many SwapNoRight : (erased (U8) x) (erased (List (U8)) xs) (erased (U8) y)
         -> (Swap x xs y (Nil (U8)) (Nil (Nat))))
     (many SwapNoFirst : (erased (U8) x) (erased (U8) x2) (erased (List (U8)) xs)
-        (erased (U8) y) (erased (U8) y2) (erased (List (U8)) ys) (erased (Apart x y2) apart)
+        (erased (U8) y) (erased (U8) y2) (erased (List (U8)) ys) (erased (Apart (U8) U8Lt x y2) apart)
         -> (Swap x (Cons (U8) x2 xs) y (Cons (U8) y2 ys) (Nil (Nat))))
     (many SwapNoSecond : (erased (U8) x) (erased (U8) x2) (erased (List (U8)) xs)
-        (erased (U8) y) (erased (U8) y2) (erased (List (U8)) ys) (erased (Apart x2 y) apart)
+        (erased (U8) y) (erased (U8) y2) (erased (List (U8)) ys) (erased (Apart (U8) U8Lt x2 y) apart)
         -> (Swap x (Cons (U8) x2 xs) y (Cons (U8) y2 ys) (Nil (Nat))))))
 
 ; These warnings fire only on code that runs. Erased code (proofs, erased
