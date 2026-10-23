@@ -31,9 +31,11 @@
     (many NewlineByte : (erased (U8) b) (erased (Eq (Char) (MkChar b) #\newline) e) -> (ByteKind b))
     (many OtherByte : (erased (U8) b) (erased (NotNewline (MkChar b)) nl) -> (ByteKind b))))
 
+(let ((erased ten-small)) (lt-trans _ _ _ (prove-literal-lt 10 u8-modulus) u8-below-u62))
+
 (def-fns _ $ (many classify : (many (U8) b) -> (many (ByteKind b) r))
   (let-match many b (MkU8 n p))
-  (let-match many (nat-cmp n 10) (CEq _ _ _)
+  (let-match many (u62-cmp n 10 (lt-trans _ _ _ p u8-below-u62) ten-small) (CEq _ _ _)
     ((CLt _ _ _ _ lt) (OtherByte b (BeforeNewline n p lt)))
     ((CGt _ _ _ _ gt) (OtherByte b (AfterNewline n p gt))))
   (let-match erased #\newline (MkChar u0))
