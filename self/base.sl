@@ -405,13 +405,22 @@
     ((CEq _ _ _) (Cons _ (MkKid _ c submap) rest))
     (else (Cons _ k $ notail $ nm-replace-kid _ rest c submap))))
 
-(def-fns _ $ (many nm-set : (erased Type V) (subterm many (String) name) (many V v) (many (NameMap V) m) -> (many (NameMap V) r))
+(def-fns _ $ (many nm-rebuild : (erased Type V) (subterm many (List $ Pair (NameMap V) (Char)) path) (many (NameMap V) inner) -> (many (NameMap V) r))
+  (let-match many path (Cons _ step rest) ((Nil _) inner))
+  (let-match many step (MkPair _ _ m c))
   (let-match many m (NMNode _ here kids))
-  (let-match many name (SCons c rest) ((SNil) (NMNode _ (Some _ v) kids)))
+  (tail $ nm-rebuild _ rest $ NMNode _ here $ nm-replace-kid _ kids c inner))
+
+(def-fns _ $ (many nm-set-at : (erased Type V) (subterm many (String) name) (many V v) (many (NameMap V) m) (many (List $ Pair (NameMap V) (Char)) path) -> (many (NameMap V) r))
+  (let-match many m (NMNode _ _ kids))
+  (let-match many name (SCons c rest) ((SNil) (tail $ nm-rebuild _ path $ NMNode _ (Some _ v) kids)))
   (let ((many (NameMap V) submap)) (match many (nm-kid _ kids c) _
                     ((KMiss _ _ _ _) (nm-empty _))
                     ((KHit _ _ _ s _) s)))
-  (NMNode _ here $ nm-replace-kid _ kids c $ notail $ nm-set _ rest v submap))
+  (tail $ nm-set-at _ rest v submap $ Cons _ (MkPair _ _ m c) path))
+
+(def-fns _ $ (many nm-set : (erased Type V) (many (String) name) (many V v) (many (NameMap V) m) -> (many (NameMap V) r))
+  (tail $ nm-set-at _ name v m $ Nil _))
 
 ; ---- Lists
 

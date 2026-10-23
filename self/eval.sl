@@ -1039,35 +1039,19 @@
   (let ((many env2) (many x)) $ prelude-id env name)
   (values env2 $ TApp (TVar x) $ Nil _))
 
-(let ((many two-dec)) (lt-dec (Zero) 2))
-(comptime-match many two-dec (Yes tda2 tdb2 two-positive))
-(let ((many two-dec2)) (lt-dec (Succ (Zero)) 2))
-(comptime-match many two-dec2 (Yes tea2 teb2 two-above-one))
-
-; The bijective spelling by halving: n is B1 of the spelling of q when n - 1 is 2q, B2 of it when 2q + 1.
-(def-fns _ $ (many bin-of-nat : (subterm many (Nat) n) -> (many (Bin) b))
-  (let-match many n (Succ n1) ((Zero) (BZ)))
-  (let-match many n1 (Succ n2) ((Zero) (B1 $ BZ)))
-  (let ((many q) (many r) (erased m) (erased mm) (erased a) (erased _)) (divmod n1 2 two-positive))
-  (let ((erased lt)) (lt-weaken q n1 $ divmod-lt n2 2 q r m mm a two-above-one))
-  (let ((many b)) (notail $ bin-of-nat (subterm (lt-subterm q n lt)) q))
-  (match many r _ ((Zero) (B1 b)) ((Succ _) (B2 b))))
-
-(def-fns _ $ (many bin-ctor : (many (Bin) b) -> (many (String) name))
-  (match many b _ ((BZ) "BZ") ((B1 _) "B1") ((B2 _) "B2")))
-
-(def-fns _ $ (many bin-term : (subterm many (Bin) b) (many (Env) env) -> (many (Env) r) (many (Term) t))
-  (let ((many env2) (many c)) $ prelude-id env $ bin-ctor b)
-  (let ((many (Env) env3) (many (List $ Term) args))
-    (match many b _
-      ((BZ) (values env2 $ Nil _))
-      ((B1 b1) (let ((many env3) (many t)) $ notail $ bin-term b1 env2) (values env3 $ Cons _ t $ Nil _))
-      ((B2 b1) (let ((many env3) (many t)) $ notail $ bin-term b1 env2) (values env3 $ Cons _ t $ Nil _))))
-  (values env3 $ TApp (TVar c) args))
+; The bijective spelling of n has digit B1 where n + 1 has bit 0 and B2 where it has bit 1, below its leading one;
+; this reads the k bits below index k, most significant first.
+(def-fns _ $ (many spell-bits : (many (Nat) b1) (many (Nat) b2) (many (Nat) m) (subterm many (Nat) k) (many (Term) t) -> (many (Term) r))
+  (let-match many k (Succ i) ((Zero) t))
+  (tail $ spell-bits b1 b2 m i $ TApp (TVar $ match many (nat-bit-test m i) (((Nat) _)) ((Bit0) b1) ((Bit1) b2)) $ Cons _ t $ Nil _))
 
 ; The bijective base-2 spelling of a number as a term over the prelude's Bin (section 45).
 (def-fns _ $ (many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t))
-  (bin-term (bin-of-nat n) env))
+  (let ((many env1) (many bz)) $ prelude-id env "BZ")
+  (let ((many env2) (many b1)) $ prelude-id env1 "B1")
+  (let ((many env3) (many b2)) $ prelude-id env2 "B2")
+  (let-match many (nat-bit-length $ Succ n) (Succ k) ((Zero) (values env3 $ TApp (TVar bz) $ Nil _)))
+  (values env3 $ spell-bits b1 b2 (Succ n) k $ TApp (TVar bz) $ Nil _))
 
 ; ---- The source spelling of a literal, which a printed Nat, Char or String reads back from
 ; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
