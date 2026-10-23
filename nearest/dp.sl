@@ -1,0 +1,205 @@
+(def-fns _ $ (erased covers-paid : (erased (Nat) c) (erased (Nat) j) -> (erased (Covers (Succ c) j (Succ j)) r))
+  (let ((erased s) (erased p)) (add c j))
+  (MkCovers _ _ _ (Succ s) (AddSucc c j s p) (MkLe _ _ (LtS _ _ (add-le-right c j s p)))))
+
+(def-fns _ $ (erased covers-mono : (erased (Nat) c) (erased (Nat) j) (erased (Nat) t) (erased (Nat) n)
+    (erased (Covers c j t) cv) (erased (Lt n (Succ t)) le) -> (erased (Covers c j n) r))
+  (let-match erased cv (MkCovers _ _ _ s total enough))
+  (MkCovers c j n s total (MkLe n s (le-trans n t s le (le-lt t s enough)))))
+
+(def-fns _ $ (erased swap-mono : (erased (Char) x) (erased (String) a) (erased (Char) y) (erased (String) b) (erased (Nat) t) (erased (Nat) n)
+    (erased (SwapBound x a y b t) p) (erased (Lt n (Succ t)) le) -> (erased (SwapBound x a y b n) r))
+  (match erased p _
+    ((NothingToSwapLeft _ _ _ _) (NothingToSwapLeft x y b n))
+    ((NothingToSwapRight _ _ _ _) (NothingToSwapRight x a y n))
+    ((SwapCosts x1 x2 a2 y1 y2 b2 _ c1 l1 c2 l2 c m j rest enough)
+      (SwapCosts x1 x2 a2 y1 y2 b2 n c1 l1 c2 l2 c m j rest (covers-mono _ _ _ _ enough le)))))
+
+(def-fns _ $ (erased swap-mismatch : (erased (Char) x1) (erased (Char) x2) (erased (String) a) (erased (Char) y1) (erased (Char) y2) (erased (String) b)
+    (erased (Nat) m3) (erased (Nat) m4) (erased (Nat) c1) (erased (LetterCost x1 y2 c1) l1) (erased (Nat) c2) (erased (LetterCost x2 y1 c2) l2)
+    (erased (Nat) c) (erased (Add c1 c2 (Succ c)) mismatches) (erased (AtLeast a b m4) rest) (erased (Lt m3 (Succ (Succ m4))) near)
+    -> (erased (Nat) t) (erased (SwapBound x1 (SCons x2 a) y1 (SCons y2 b) t) sb) (erased (Lt (Succ m3) (Succ t)) big))
+  (let ((erased u) (erased pu)) (add c m4))
+  (values (Succ (Succ u))
+    (SwapCosts x1 x2 a y1 y2 b _ c1 l1 c2 l2 (Succ c) mismatches m4 rest
+      (MkCovers _ _ _ _ (AddSucc _ _ _ (AddSucc c m4 u pu)) (MkLe _ _ (lt-succ _))))
+    (LtS _ _ (le-trans m3 (Succ m4) (Succ u) near (LtS _ _ (add-le-right c m4 u pu))))))
+
+(def-fns _ $ (erased cell-bound : (erased (Char) x) (erased (String) a) (erased (Char) y) (erased (String) b) (erased (Nat) n)
+    (erased (Nat) cp) (erased (LetterCost x y cp) lc) (erased (Nat) m3) (erased (AtLeast a b m3) a3) (erased (Nat) mk) (erased (Add cp m3 mk) pk) (erased (Lt n (Succ mk)) lk)
+    (erased (Nat) m1) (erased (AtLeast a (SCons y b) m1) a1) (erased (Lt n (Succ (Succ m1))) l1)
+    (erased (Nat) m2) (erased (AtLeast (SCons x a) b m2) a2) (erased (Lt n (Succ (Succ m2))) l2)
+    (erased (Nat) t) (erased (SwapBound x a y b t) sb) (erased (Lt n (Succ t)) ls)
+    -> (erased (AtLeast (SCons x a) (SCons y b) n) r))
+  (EveryFirstStep x y a b n cp lc m3 a3 (MkCovers _ _ _ _ pk (MkLe _ _ lk))
+    m1 a1 (covers-mono _ _ _ _ (covers-paid (Zero) m1) l1)
+    m2 a2 (covers-mono _ _ _ _ (covers-paid (Zero) m2) l2)
+    (swap-mono _ _ _ _ _ _ sb ls)))
+
+(def-fns _ $ (many fold : (many (Char) c) -> (many (Nat) k) (erased (Folded c k) f))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 n p))
+  (let-match many (nat-cmp n 64) (CGt _ _ _ _ lo)
+    ((CLt _ _ _ _ b) (values n (FoldBelow n p (lt-trans n 64 65 b (lt-succ 64)))))
+    ((CEq _ _ _) (values n (FoldBelow n p (lt-succ 64)))))
+  (let-match many (nat-cmp n 91) (CLt _ _ _ _ hi)
+    ((CEq _ _ _) (values n (FoldAbove n p (lt-succ 90))))
+    ((CGt _ _ _ _ g) (values n (FoldAbove n p (lt-trans 90 91 n (lt-succ 90) g)))))
+  (let ((many k) (erased s)) (add n 32))
+  (values k (FoldUpper n p lo hi k s)))
+
+(def-adts
+  ((Letters : ((Char) x) ((Char) y) -> Type)
+    enum
+    (many SameLetters : (erased (Char) x) (erased (Char) y) (erased (SameLetter x y) s) -> (Letters x y))
+    (many DifferentLetters : (erased (Char) x) (erased (Char) y) (erased (DifferentLetter x y) d) -> (Letters x y))))
+
+(def-adts
+  ((Codes : ((String) s) -> Type)
+    enum
+    (many CNil : -> (Codes (SNil)))
+    (many CCons : (erased (Char) c) (erased (String) s) (many (Nat) k) (erased (Folded c k) f) (many (Codes s) rest) -> (Codes (SCons c s)))))
+
+(def-fns _ $ (many codes : (subterm many (String) s) -> (many (Codes s) r))
+  (let-match many s (SCons c s1) ((SNil) (CNil)))
+  (let ((many k) (erased f)) (fold c))
+  (CCons c s1 k f $ notail $ codes s1))
+
+(def-fns _ $ (many letters : (erased (Char) x) (erased (Char) y) (many (Nat) i) (erased (Folded x i) fx) (many (Nat) j) (erased (Folded y j) fy)
+    -> (many (Letters x y) r))
+  (match many (nat-cmp i j) _
+    ((CLt _ _ _ _ lt) (DifferentLetters x y (Below x y i j fx fy lt)))
+    ((CEq _ _ _) (SameLetters x y (Same x y i fx fy)))
+    ((CGt _ _ _ _ gt) (DifferentLetters x y (Above x y i j fx fy gt)))))
+
+(def-adts
+  ((Row : ((String) a) ((String) b) -> Type)
+    enum
+    (many RowEnd : (erased (String) a) (many (Nat) n) (erased (Distance a (SNil) n) d) -> (Row a (SNil)))
+    (many RowCons : (erased (String) a) (erased (Char) y) (erased (String) b) (many (Nat) n) (erased (Distance a (SCons y b) n) d)
+       (many (Row a b) rest) -> (Row a (SCons y b)))))
+
+(def-adts
+  ((Prev : ((String) a) ((String) b) -> Type)
+    enum
+    (many NoPrev : (erased (String) b) -> (Prev (SNil) b))
+    (many HasPrev : (erased (Char) x) (erased (String) a) (erased (String) b) (many (Row a b) row) -> (Prev (SCons x a) b))))
+
+(def-fns _ $ (many row-head : (erased (String) a) (erased (String) b) (many (Row a b) r) -> (many (Nat) n) (erased (Distance a b n) d))
+  (match many r _
+    ((RowEnd _ n d) (values n d))
+    ((RowCons _ _ _ n d _) (values n d))))
+
+(def-fns _ $ (many prev-rest : (erased (String) a) (erased (Char) y) (erased (String) b) (many (Prev a (SCons y b)) p) -> (many (Prev a b) r))
+  (let-match many p (HasPrev x a1 _ row) ((NoPrev _) (NoPrev b)))
+  (let-match many row (RowCons _ _ _ _ _ rest))
+  (HasPrev x a1 b rest))
+
+(def-fns _ $ (many pick : (erased (String) s) (erased (String) t) (many (Nat) i) (erased (Edits s t i) ei) (many (Nat) j) (erased (Edits s t j) ej)
+    -> (many (Nat) n) (erased (Edits s t n) e) (erased (Lt n (Succ i)) li) (erased (Lt n (Succ j)) lj))
+  (match many (nat-cmp i j) _
+    ((CLt _ _ _ _ p) (values i ei (lt-succ i) (lt-weaken i j p)))
+    ((CEq _ _ _) (values i ei (lt-succ i) (lt-succ i)))
+    ((CGt _ _ _ _ p) (values j ej (lt-weaken j i p) (lt-succ j)))))
+
+(def-fns _ $ (many keeps : (erased (Char) x) (many (Nat) kx) (erased (Folded x kx) fx) (erased (String) a)
+    (erased (Char) y) (many (Nat) ky) (erased (Folded y ky) fy) (erased (String) b) (many (Nat) m3) (erased (Distance a b m3) d3)
+    -> (many (Nat) mk) (erased (Edits (SCons x a) (SCons y b) mk) e) (erased (Nat) cp) (erased (LetterCost x y cp) lc) (erased (Add cp m3 mk) pk))
+  (let-match erased d3 (MkDistance _ _ _ e3 _))
+  (match many (letters x y kx fx ky fy) _
+    ((SameLetters _ _ s) (values m3 (Keep x y a b m3 s e3) (Zero) (LettersMatch x y s) (AddZero m3)))
+    ((DifferentLetters _ _ df) (values (Succ m3) (Replace x y a b m3 e3) (Succ (Zero)) (LettersDiffer x y df) (AddSucc (Zero) m3 m3 (AddZero m3))))))
+
+(def-fns _ $ (many swaps : (erased (Char) x) (many (Nat) kx) (erased (Folded x kx) fx) (erased (String) a) (many (Codes a) ca)
+    (erased (Char) y) (many (Nat) ky) (erased (Folded y ky) fy) (erased (String) b) (many (Codes b) cb) (many (Prev a (SCons y b)) up2)
+    (many (Nat) m3) (erased (Distance a b m3) d3)
+    -> (many (Nat) cs) (erased (Edits (SCons x a) (SCons y b) cs) e) (erased (Nat) t) (erased (SwapBound x a y b t) sb) (erased (Lt cs (Succ t)) le))
+  (let-match erased d3 (MkDistance _ _ _ e3 a3))
+  (let ((erased fallback)) (Replace x y a b m3 e3))
+  (let-match many up2 (HasPrev x2 a2 _ row2) ((NoPrev _) (values (Succ m3) fallback (Succ m3) (NothingToSwapLeft x y b (Succ m3)) (lt-succ _))))
+  (let-match many cb (CCons y2 b2 ky2 fy2 _) ((CNil) (values (Succ m3) fallback (Succ m3) (NothingToSwapRight x a y (Succ m3)) (lt-succ _))))
+  (let-match many ca (CCons _ _ kx2 fx2 _))
+  (let-match many row2 (RowCons _ _ _ _ _ rest2))
+  (let-match many rest2 (RowCons _ _ _ _ _ rest3))
+  (let ((many m4) (erased d4)) (row-head _ _ rest3))
+  (let-match erased d4 (MkDistance _ _ _ e4 a4))
+  (let ((erased near)) (at-least-sound _ _ _ _ (Replace x2 y2 a2 b2 m4 e4) a3))
+  (match many (letters x y2 kx fx ky2 fy2) _
+    ((SameLetters _ _ s1)
+      (let-match many (letters x2 y kx2 fx2 ky fy) (SameLetters _ _ s2)
+        ((DifferentLetters _ _ d2)
+          (let ((erased t) (erased sb) (erased big))
+            (swap-mismatch x x2 a2 y y2 b2 m3 m4 _ (LettersMatch x y2 s1) _ (LettersDiffer x2 y d2) (Zero) (AddZero _) a4 near))
+          (values (Succ m3) fallback t sb big)))
+      (values (Succ m4) (Swap x x2 y y2 a2 b2 m4 s1 s2 e4) (Succ m4)
+        (SwapCosts x x2 a2 y y2 b2 _ _ (LettersMatch x y2 s1) _ (LettersMatch x2 y s2) _ (AddZero (Zero)) m4 a4 (covers-paid (Zero) m4))
+        (lt-succ _)))
+    ((DifferentLetters _ _ d1)
+      (let ((erased c2) (erased lc2) (erased mism)) (match erased (letters x2 y kx2 fx2 ky fy) (((Nat) c2) ((LetterCost x2 y c2) lc2) ((Add (Succ (Zero)) c2 (Succ c2)) mism))
+        ((SameLetters _ _ s2) (values (Zero) (LettersMatch x2 y s2) (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero)))))
+        ((DifferentLetters _ _ d2) (values (Succ (Zero)) (LettersDiffer x2 y d2) (AddSucc (Zero) (Succ (Zero)) (Succ (Zero)) (AddZero (Succ (Zero))))))))
+      (let ((erased t) (erased sb) (erased big))
+        (swap-mismatch x x2 a2 y y2 b2 m3 m4 _ (LettersDiffer x y2 d1) c2 lc2 c2 mism a4 near))
+      (values (Succ m3) fallback t sb big))))
+
+(def-fns _ $ (many cell : (erased (Char) x) (many (Nat) kx) (erased (Folded x kx) fx) (erased (String) a) (many (Codes a) ca)
+    (erased (Char) y) (many (Nat) ky) (erased (Folded y ky) fy) (erased (String) b) (many (Codes b) cb)
+    (many (Nat) m1) (erased (Distance a (SCons y b) m1) d1)
+    (many (Nat) m2) (erased (Distance (SCons x a) b m2) d2)
+    (many (Nat) m3) (erased (Distance a b m3) d3)
+    (many (Prev a (SCons y b)) up2)
+    -> (many (Nat) n) (erased (Distance (SCons x a) (SCons y b) n) d))
+  (let-match erased d1 (MkDistance _ _ _ e1 a1))
+  (let-match erased d2 (MkDistance _ _ _ e2 a2))
+  (let-match erased d3 (MkDistance _ _ _ _ a3))
+  (let ((many mk) (erased ek) (erased cp) (erased lc) (erased pk)) (keeps x kx fx a y ky fy b m3 d3))
+  (let ((many cs) (erased es) (erased t) (erased sb) (erased lts)) (swaps x kx fx a ca y ky fy b cb up2 m3 d3))
+  (let ((many p) (erased ep) (erased lp1) (erased lp2))
+    (pick _ _ (Succ m1) (Delete x a (SCons y b) m1 e1) (Succ m2) (Insert y (SCons x a) b m2 e2)))
+  (let ((many q) (erased eq) (erased lqk) (erased lqs)) (pick _ _ mk ek cs es))
+  (let ((many n) (erased en) (erased lnp) (erased lnq)) (pick _ _ p ep q eq))
+  (values n (MkDistance _ _ n en
+    (cell-bound x a y b n cp lc m3 a3 mk pk (le-trans n q mk lnq lqk)
+      m1 a1 (le-trans n p (Succ m1) lnp lp1) m2 a2 (le-trans n p (Succ m2) lnp lp2)
+      t sb (le-trans n cs t (le-trans n q cs lnq lqs) lts)))))
+
+(def-fns _ $ (many row-empty : (erased (String) b) (subterm many (Codes b) cb) -> (many (Row (SNil) b) r))
+  (let-match many cb (CCons y b1 _ _ cb1) ((CNil) (RowEnd _ (Zero) (MkDistance _ _ _ (Done) (Trivially _ _)))))
+  (let ((many r1)) (notail $ row-empty b1 cb1))
+  (let ((many m) (erased d)) (row-head _ _ r1))
+  (let-match erased d (MkDistance _ _ _ e lb))
+  (RowCons _ y b1 (Succ m) (MkDistance _ _ _ (Insert y (SNil) b1 m e) (OnlyInserts y b1 (Succ m) m lb (covers-paid (Zero) m))) r1))
+
+(def-fns _ $ (many row-step : (erased (Char) x) (many (Nat) kx) (erased (Folded x kx) fx) (erased (String) a) (many (Codes a) ca)
+    (erased (String) b) (subterm many (Codes b) cb) (many (Row a b) up) (many (Prev a b) up2)
+    -> (many (Row (SCons x a) b) r))
+  (let-match many cb (CCons y b1 ky fy cb1)
+    ((CNil)
+      (let-match many up (RowEnd _ m dm))
+      (let-match erased dm (MkDistance _ _ _ e lb))
+      (RowEnd _ (Succ m) (MkDistance _ _ _ (Delete x a (SNil) m e) (OnlyDeletes x a (Succ m) m lb (covers-paid (Zero) m))))))
+  (let-match many up (RowCons _ _ _ m1 d1 up1))
+  (let ((many m3) (erased d3)) (row-head _ _ up1))
+  (let ((many r1)) (notail $ row-step x kx fx a ca b1 cb1 up1 (prev-rest a y b1 up2)))
+  (let ((many m2) (erased d2)) (row-head _ _ r1))
+  (let ((many n) (erased d)) (cell x kx fx a ca y ky fy b1 cb1 m1 d1 m2 d2 m3 d3 up2))
+  (RowCons _ y b1 n d r1))
+
+(def-fns _ $ (many rows : (erased (String) a) (subterm many (Codes a) ca) (erased (String) b) (many (Codes b) cb) -> (many (Row a b) r) (many (Prev a b) p))
+  (let-match many ca (CCons x a1 kx fx ca1) ((CNil) (values (row-empty b cb) (NoPrev b))))
+  (let ((many r1) (many p1)) (notail $ rows a1 ca1 b cb))
+  (values (row-step x kx fx a1 ca1 b cb r1 p1) (HasPrev x a1 b r1)))
+
+(def-fns _ $ (many distance-codes : (erased (String) a) (many (Codes a) ca) (erased (String) b) (many (Codes b) cb) -> (many (Nat) n) (erased (Distance a b n) d))
+  (let ((many r) (many _)) (rows a ca b cb))
+  (row-head _ _ r))
+
+(def-fns _ $ (many distance : (many (String) a) (many (String) b) -> (many (Nat) n) (erased (Distance a b n) d))
+  (distance-codes a (codes a) b (codes b)))
+
+(def-fns _ $ (erased rerank : (erased (String) q) (erased (List (String)) ws) (erased (Nat) d) (erased (List (String)) rs) (erased (Nat) e)
+    (subterm erased (Ranked q ws d rs) p) (erased (Lt e d) lt) -> (erased (Ranked q ws e (Nil (String))) r))
+  (match erased p _
+    ((RankedNil _ _) (RankedNil q e))
+    ((RankedTie _ w ws1 _ rs1 dist rest) (RankedFar q w ws1 e _ d dist lt (rerank _ _ _ _ _ rest lt)))
+    ((RankedFar _ w ws1 _ rs1 f dist far rest) (RankedFar q w ws1 e _ f dist (lt-trans e d f lt far) (rerank _ _ _ _ _ rest lt)))))

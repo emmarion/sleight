@@ -1,0 +1,22 @@
+(def-fns _ $ (many nearest-coded : (erased (String) q) (many (Codes q) cq) (subterm many (List (String)) ws)
+    -> (many (Nat) d) (many (List (String)) rs) (erased (Nearest q ws d rs) p))
+  (let-match many ws (Cons _ w rest) ((Nil _) (values 0 (Nil _) (NoWords q 0))))
+  (let ((many e) (erased de)) (distance-codes q cq w (codes w)))
+  (let ((many d) (many rs) (erased p)) (notail $ nearest-coded q cq rest))
+  (let-match many rs (Cons _ r1 rs1)
+    ((Nil _)
+      (let-match erased p (NoWords _ _))
+      (values e (Cons _ w (Nil _)) (Closest q _ e w _ (RankedTie q w rest e _ de (RankedNil q e))))))
+  (let-match erased p (Closest _ _ _ _ _ ranked))
+  (match many (nat-cmp e d) _
+    ((CLt _ _ _ _ lt) (values e (Cons _ w (Nil _)) (Closest q _ e w _ (RankedTie q w rest e _ de (rerank _ _ _ _ _ ranked lt)))))
+    ((CEq _ _ _) (values d (Cons _ w rs) (Closest q _ d w _ (RankedTie q w rest d _ de ranked))))
+    ((CGt _ _ _ _ gt) (values d rs (Closest q _ d r1 rs1 (RankedFar q w rest d _ e de gt ranked))))))
+
+(def-fns _ $ (many nearest : (many (String) q) (many (List (String)) ws)
+    -> (many (Nat) d) (many (List (String)) rs) (erased (Nearest q ws d rs) p))
+  (nearest-coded q (codes q) ws))
+
+(def-fns _ $ (many nearest-names : (many (String) q) (many (List $ String) ws) -> (many (Maybe $ Nat) best) (many (List $ String) r))
+  (let ((many d) (many rs) (erased _)) (nearest q ws))
+  (match many rs _ ((Nil _) (values (None _) rs)) ((Cons _ _ _) (values (Some _ d) rs))))
