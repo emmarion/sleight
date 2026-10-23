@@ -11,8 +11,8 @@
   (let ((unique mw1) (many h)) (intern-nat mw0 (nat-add (nat-add n n) $ settled-value _ _ (settled-of many k))))
   (let ((unique mw2) (many s)) (intern-string mw1 "hi"))
   (let ((unique mw3) (many c)) (intern-char mw2 #\z))
-  (values mw3 $ one $ form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $
-    two (RawSettled p _ _ _ h) (form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (RawSettled p _ _ _ s) (RawSettled p _ _ _ c))))
+  (values mw3 $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "MkPair")) $ Cons _ (RawWild here) $ Cons _ (RawWild here) $
+    Cons _ (RawSettled p _ _ _ h) $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "MkPair")) $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ Cons _ (RawSettled p _ _ _ s) $ Cons _ (RawSettled p _ _ _ c) $ Nil _) $ Nil _) $ Nil _))
 (let ((many dbl)) (MkMacro _ dbl-fn))
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))

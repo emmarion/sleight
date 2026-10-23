@@ -181,7 +181,7 @@
 (def-fns _ $ (many str-is-name : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (or (char-is c 95) $ or (char-is c 39) $ or (char-between c 48 57) $ or (char-between c 97 122) $ char-between c 65 90) $ notail $ str-is-name rest))))
+    ((SCons c rest) (and (or (char-is c 95) $ or (char-is c 39) $ or (char-between c 48 57) $ or (char-between c 97 122) $ char-between c 65 90) $ tail $ str-is-name rest))))
 
 (def-fns _ $ (many rope-is-name : (many (Rope) r) -> (many (Bool) b))
   (let ((many s)) $ rope-str r)
@@ -323,7 +323,7 @@
 (def-fns _ $ (many nat-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (match many xs _
     ((Nil _) (BFalse))
-    ((Cons _ y rest) (or (nat-eq x y) $ notail $ nat-mem rest x))))
+    ((Cons _ y rest) (or (nat-eq x y) $ tail $ nat-mem rest x))))
 
 (def-fns _ $ (many fill-hole : (many (Filling) f) (many (Hole) h) -> (many (Rope) r))
   (let-match many f (MkFilling scrut prefix arms live dflt args))
@@ -963,7 +963,7 @@
 (def-fns _ $ (many nat-list-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (match many xs _
     ((Nil _) (BFalse))
-    ((Cons _ y rest) (or (nat-eq x y) $ notail $ nat-list-mem rest x))))
+    ((Cons _ y rest) (or (nat-eq x y) $ tail $ nat-list-mem rest x))))
 
 (def-fns _
   ((many collect-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r))

@@ -4,7 +4,7 @@
   (let-match many rs (Cons _ r _) ((Nil _) (RawWild (NoPos))))
   r)
 (let ((many s) (many a) (many four)) (values "s" #\a 4))
-(let ((many out)) (swap-out (NoPos) (three (name (MkPos "x.sl" 1 2) "nat-add") (RawSettled (NoPos) _ _ _ (settled-of many s)) $ RawList (NoPos) $ three (RawSettled (NoPos) _ _ _ (settled-of many a)) (RawWild (NoPos)) (RawSettled (NoPos) _ _ _ (settled-of many four)))))
+(let ((many out)) (swap-out (NoPos) (Cons _ (RawSymbol (MkPos "x.sl" 1 2) (SName "nat-add")) $ Cons _ (RawSettled (NoPos) _ _ _ (settled-of many s)) $ Cons _ (RawList (NoPos) $ Cons _ (RawSettled (NoPos) _ _ _ (settled-of many a)) $ Cons _ (RawWild (NoPos)) $ Cons _ (RawSettled (NoPos) _ _ _ (settled-of many four)) $ Nil _) $ Nil _)))
 (def-fns _ $ (many flat : (many (Raw) r) -> (many (Raw) f))
   (let-match many r (RawList p items) (else r))
   (let-match many items (Cons _ g rest) (else r))

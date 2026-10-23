@@ -20,7 +20,7 @@ From the repository root, after the dependencies in MANUAL.md are installed:
 ```sh
 dune build
 dune exec bin/main.exe -- \
-  self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
+  std/macro.sl self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
   pal/palindrome_lemmas.sl pal/palindrome_centers.sl pal/palindrome_seed.sl \
   pal/palindrome_manacher.sl tests/palindrome_manacher.sl
 ```
@@ -37,7 +37,7 @@ For a fast standalone program, use an existing `slc` built as described in
 ```sh
 mkdir -p _build/pal-fast
 _build/self/slc \
-  self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
+  std/macro.sl self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
   pal/palindrome_lemmas.sl pal/palindrome_centers.sl pal/palindrome_seed.sl \
   pal/palindrome_manacher.sl pal/manacher_main.sl > _build/pal-fast/manacher.ml
 ocamlfind ocamlopt -w -a -package zarith,unix -linkpkg \

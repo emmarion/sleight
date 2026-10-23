@@ -37,7 +37,7 @@
 
 (def-fns _ $ (many split-arrow : (subterm many (List $ Raw) xs) (many (Pos) p) -> (many (List $ Raw) params) (many (List $ Raw) returns))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (Nil _))))
-  (let-match many (same-sym x (name p "->")) (BFalse) ((BTrue) (values (Nil _) rest)))
+  (let-match many (same-sym x (RawSymbol p (SName "->"))) (BFalse) ((BTrue) (values (Nil _) rest)))
   (let ((many ps) (many rs)) (notail $ split-arrow rest p))
   (values (Cons _ x ps) rs))
 
@@ -58,25 +58,25 @@
 
 (def-fns _ $ (many lemma-app : (many (Pos) p) (erased Type T) (erased T t) (many (Settled (MErased) T t) h)
     (many (Nat) k) (many (List $ Raw) args) -> (many (Raw) r))
-  (app p (ref p _ _ _ h) $ wilds k p args))
+  (RawList p $ Cons _ (RawSettled p _ _ _ h) $ wilds k p args))
 
 (def-fns _ $ (many steps : (subterm many (Nat) k) (erased Type T) (erased T t) (many (Settled (MErased) T t) h)
     (many (Raw) proof) (many (Pos) p) -> (many (Raw) r))
   (match many k _
     ((Zero) proof)
-    ((Succ k1) (lemma-app p _ _ h 2 $ one $ notail $ steps k1 _ _ h proof p))))
+    ((Succ k1) (lemma-app p _ _ h 2 $ Cons _ (notail $ steps k1 _ _ h proof p) $ Nil _))))
 
-(def-fns _ $ (many peel : (subterm many (Nat) pp) (many (Nat) qq) (many (Raw) proof) (many (Pos) p) ->
-    (many (Nat) pp2) (many (Nat) qq2) (many (Raw) proof2))
-  (let-match many pp (Succ p1) ((Zero) (values pp qq proof)))
-  (let-match many qq (Succ q1) ((Zero) (values pp qq proof)))
+(def-fns _ $ (many peel : (subterm many (Nat) pn) (many (Nat) qn) (many (Raw) proof) (many (Pos) p) ->
+    (many (Nat) pn2) (many (Nat) qn2) (many (Raw) proof2))
+  (let-match many pn (Succ p1) ((Zero) (values pn qn proof)))
+  (let-match many qn (Succ q1) ((Zero) (values pn qn proof)))
   (tail $ peel p1 q1 (steps 1 _ _ (settled-of erased lt-pred) proof p) p))
 
 (def-fns _ $ (many finish : (many (Edge) path) (many (Raw) z) (many (Nat) a) (many (Nat) b) (many (Pos) p) -> (many (Maybe (Raw)) proof))
-  (let-match many path (MkEdge _ pp qq pr y))
+  (let-match many path (MkEdge _ pn qn pr y))
   (let-match many (same-raw y z) (BTrue) ((BFalse) (None _)))
-  (let-match many (monus (nat-add qq a) (nat-add b pp)) (Zero) (else (None _)))
-  (let ((many p1) (many q1) (many pr1)) (peel pp qq pr p))
+  (let-match many (monus (nat-add qn a) (nat-add b pn)) (Zero) (else (None _)))
+  (let ((many p1) (many q1) (many pr1)) (peel pn qn pr p))
   (let ((many up)) (monus a p1))
   (Some _ $ steps (monus b (nat-add q1 up)) _ _ (settled-of erased lt-weaken)
     (steps (monus p1 a) _ _ (settled-of erased lt-succ-left) (steps up _ _ (settled-of erased LtS) pr1 p) p) p))
@@ -87,13 +87,13 @@
   (tail $ seen-raw x rest))
 
 (def-fns _ $ (many extend : (many (Edge) path) (many (Edge) e) (many (List $ Raw) seen) (many (Pos) p) -> (many (Maybe (Edge)) out))
-  (let-match many path (MkEdge x pp qq pr y))
+  (let-match many path (MkEdge x pn qn pr y))
   (let-match many e (MkEdge u r t h v))
   (let-match many (same-raw u y) (BTrue) ((BFalse) (None _)))
   (let-match many (seen-raw v seen) (BFalse) ((BTrue) (None _)))
-  (Some _ $ MkEdge x (Succ $ nat-add pp r) (nat-add qq t)
+  (Some _ $ MkEdge x (Succ $ nat-add pn r) (nat-add qn t)
     (lemma-app p _ _ (settled-of erased lt-le-trans) 3 $
-      two (steps (Succ r) _ _ (settled-of erased LtS) pr p) (steps (Succ qq) _ _ (settled-of erased LtS) h p))
+      Cons _ (steps (Succ r) _ _ (settled-of erased LtS) pr p) $ Cons _ (steps (Succ qn) _ _ (settled-of erased LtS) h p) $ Nil _)
     v))
 
 (def-fns _ $ (many reach : (subterm many (Nat) fuel) (many (List (Edge)) edges) (subterm many (List (Edge)) todo)
@@ -125,11 +125,11 @@
   (let ((many x) (many y) (many z)) (values (raw-at xs 0 p) (raw-at xs 1 p) (raw-at xs 2 p)))
   (match many k _
     ((HLt) (Cons _ (MkEdge x 0 0 n y) more))
-    ((HLe) (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased le-lt) 2 $ one n) y) more))
+    ((HLe) (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased le-lt) 2 $ Cons _ n $ Nil _) y) more))
     ((HAdd)
-      (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased add-le-left) 3 $ one n) z) $
-        Cons _ (MkEdge y 0 1 (lemma-app p _ _ (settled-of erased add-le-right) 3 $ one n) z) more))
-    ((HDouble) (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased double-le) 2 $ one n) y) more))
+      (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased add-le-left) 3 $ Cons _ n $ Nil _) z) $
+        Cons _ (MkEdge y 0 1 (lemma-app p _ _ (settled-of erased add-le-right) 3 $ Cons _ n $ Nil _) z) more))
+    ((HDouble) (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased double-le) 2 $ Cons _ n $ Nil _) y) more))
     (else more)))
 
 (def-fns _ $ (many order-edges : (unique (MacroWorld) mw) (subterm many (List $ Raw) params) (many (Pos) p) ->
@@ -147,25 +147,25 @@
 (def-fns _ $ (many norm-edges : (unique (MacroWorld) mw) (subterm many (List (Edge)) es) ->
     (unique (MacroWorld) mw2 at mw) (many (List (Edge)) out))
   (let-match many es (Cons _ e rest) ((Nil _) (values mw (Nil _))))
-  (let-match many e (MkEdge x pp qq pr y))
+  (let-match many e (MkEdge x pn qn pr y))
   (let ((unique mw1) (many u) (many i)) (decompose mw x))
   (let ((unique mw2) (many v) (many j)) (decompose mw1 y))
   (let ((unique mw3) (many more)) (notail $ norm-edges mw2 rest))
-  (values mw3 $ Cons _ (MkEdge u (nat-add pp i) (nat-add qq j) pr v) more))
+  (values mw3 $ Cons _ (MkEdge u (nat-add pn i) (nat-add qn j) pr v) more))
 
 (def-fns _ $ (many prove-lt : (many (List (Edge)) edges) (many (Raw) x) (many (Nat) a) (many (Raw) z) (many (Nat) b) (many (Pos) p) ->
     (many (Maybe (Raw)) proof))
-  (reach (edge-count edges) edges edges (MkEdge x 0 1 (app p (ref p _ _ _ (settled-of erased lt-succ)) $ one x) x) (one x) z a b p))
+  (reach (edge-count edges) edges edges (MkEdge x 0 1 (RawList p $ Cons _ (RawSettled p _ _ _ (settled-of erased lt-succ)) $ Cons _ x $ Nil _) x) (Cons _ x $ Nil _) z a b p))
 
 (def-fns _ $ (many cycle : (many (List (Edge)) edges) (subterm many (List (Edge)) todo) (many (Pos) p) -> (many (Maybe (Raw)) proof))
   (let-match many todo (Cons _ e rest) ((Nil _) (None _)))
   (let-match many e (MkEdge u _ _ _ v))
-  (let-match many (reach (edge-count edges) edges edges e (one v) u 0 0 p) (None _) ((Some _ r) (Some _ r)))
+  (let-match many (reach (edge-count edges) edges edges e (Cons _ v $ Nil _) u 0 0 p) (None _) ((Some _ r) (Some _ r)))
   (tail $ cycle edges rest p))
 
 (def-fns _ $ (many lemma-map : (many (Pos) p) (erased Type T) (erased T t) (many (Settled (MErased) T t) h) (many (Nat) k)
     (many (Maybe (Raw)) proof) -> (many (Maybe (Raw)) r))
-  (match many proof _ ((Some _ pr) (Some _ $ lemma-app p _ _ h k $ one pr)) ((None _) (None _))))
+  (match many proof _ ((Some _ pr) (Some _ $ lemma-app p _ _ h k $ Cons _ pr $ Nil _)) ((None _) (None _))))
 
 (def-fns _ $ (many goal-proof : (many (OrderHead) k) (many (List (Edge)) edges) (many (Raw) x) (many (Nat) a) (many (Raw) z) (many (Nat) b)
     (many (Pos) p) -> (many (Maybe (Raw)) proof))
@@ -200,5 +200,5 @@
   (let ((unique mw5) (many z) (many b)) (decompose mw4 (raw-at g1 1 here)))
   (let-match many (goal-proof k edges x a z b here) (Some _ body)
     ((None _) (macro-fail mw5 here "lt-lemma: no chain of hypotheses reaches the goal")))
-  (values mw5 $ one $ form here $ Cons _ (RawSettled here _ _ _ (settled-of many def-fns)) $ two (RawWild here) $ form here $ two header body))
+  (values mw5 $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many def-fns)) $ Cons _ (RawWild here) $ Cons _ (RawList here $ Cons _ header $ Cons _ body $ Nil _) $ Nil _) $ Nil _))
 (let ((many lt-lemma)) (MkMacro _ lt-lemma-fn))

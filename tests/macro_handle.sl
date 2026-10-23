@@ -14,7 +14,7 @@
 (def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many h)) nat-add)
-  (values mw $ one $ form here $ Cons _ (RawSettled here _ _ _ (settled-of many h)) $ Cons _ (RawSettled here _ _ _ (settled-of many k)) args))
+  (values mw $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many h)) $ Cons _ (RawSettled here _ _ _ (settled-of many k)) args) $ Nil _))
 (let ((many plus-k)) (MkMacro _ plus-k-fn))
 (def-fns _ $ (many f : (many (Nat) nat-add) (many (Nat) k) -> (many (Nat) r))
   (plus-k k))
@@ -23,12 +23,12 @@
 (def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw9) (many lit)) (nat-raw mw here 7))
-  (values mw9 $ one $ form here $ three (RawSettled here _ _ _ (settled-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) lit))
+  (values mw9 $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many let)) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSymbol here (SName "x")) $ Nil _) $ Nil _) $ Cons _ lit $ Nil _) $ Nil _))
 (let ((many seven)) (MkMacro _ seven-fn))
 
 (def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ one $ RawSettled here _ _ _ (settled-of erased Nat)))
+  (values mw $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of erased Nat)) $ Nil _) $ Nil _))
 (let ((many PNat)) (MkMacro _ nat-fn))
 
 (let ((many let)) 0)

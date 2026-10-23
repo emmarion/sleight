@@ -56,6 +56,8 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
 
 ## Files
 
+- `../std/macro.sl` — loaded first; slc takes its `and` and `or` macros
+  from it.
 - `base.sl` — booleans, `Nat`/`Char`/`String` helpers over the
   prelude's externs, a trie map over `Nat` identifiers walked by the
   prelude's `Half`, a trie map keyed by names, list helpers, and helpers

@@ -19,7 +19,7 @@ set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; [ "$B" = one ] && B=_build/self; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
-SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
+SL="std/macro.sl self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 REF=_build/default/bin/main.exe
 # what lib/embed.sl and self/header.sl read into slc when it is compiled
 EMBEDDED="lib/ffi_core.ml lib/driver_core.ml lib/ffi_templates.txt lib/specials.txt lib/prelude.sl self/runtime.ml"

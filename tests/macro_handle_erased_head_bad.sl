@@ -4,6 +4,6 @@
 (def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many h)) nat-add)
-  (values mw $ one $ form here $ Cons _ (RawSettled here _ _ _ (settled-of erased h)) args))
+  (values mw $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of erased h)) args) $ Nil _))
 (let ((many plus-k)) (MkMacro _ plus-k-fn))
 (plus-k 1 2)

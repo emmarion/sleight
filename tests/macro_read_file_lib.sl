@@ -14,7 +14,7 @@
   (let ((unique mw2) (many r)) (read-file mw1 from path))
   (let ((many text)) $ match many r (((String) _)) ((Ok _ s) s) ((Fail _ m) (str-append "Fail: " m)))
   (let ((unique mw3) (many o)) (str-raw mw2 here text))
-  (values mw3 $ one o))
+  (values mw3 $ Cons _ o $ Nil _))
 (def-fns _ $ (many include-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (read-at mw here here args))

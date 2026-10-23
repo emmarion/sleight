@@ -10,7 +10,10 @@ this file by name.
 ## Source libraries
 
 [`std/`](std/) holds source libraries a program names on the command line before its
-own files. [`std/macro.sl`](std/macro.sl) holds helpers for writing macros, [`std/nat.sl`](std/nat.sl)
+own files. [`std/macro.sl`](std/macro.sl) holds `qq`, a quasi-quote whose names resolve where it
+is written, with `~` and `~@` to insert and splice forms, `def-macro`, which defines a macro
+from a header `(name args [here [mw]])` and a body, the macros `and` and `or`, and helpers
+for writing macros, [`std/nat.sl`](std/nat.sl)
 holds `Le`, the non-strict order on `Nat`, `Ne`, inequality as one of the
 two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
 `add-le-right` and `double-le`, [`std/list.sl`](std/list.sl) holds lemmas

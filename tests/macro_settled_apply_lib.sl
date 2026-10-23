@@ -35,7 +35,7 @@
   (let ((unique mw2) (many rt)) (settled-ty-apply mw1 (settled-of erased Lt) (settled-erase _ _ _ ca) (settled-erase _ _ _ cb)))
   (let-match many rt (Ok _ th) ((Fail _ msg) (macro-fail mw2 here msg)))
   (let ((unique mw3) (many hp)) (mint-settled-erased mw2 _ th p))
-  (values mw3 $ one $ RawSettled here _ _ _ hp))
+  (values mw3 $ Cons _ (RawSettled here _ _ _ hp) $ Nil _))
 (let ((many lit-lt)) (MkMacro _ lit-lt-fn))
 
 (def-fns _ $ (many pair-of-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
@@ -51,7 +51,7 @@
   (let ((unique mw3) (many r2)) (settled-ty-apply mw2 (settled-of erased List) (settled-type _ _ _ p-h)))
   (let-match many r2 (Ok _ lt-h) ((Fail _ msg) (macro-fail mw3 here msg)))
   (let ((unique mw4) (many l-h)) (mint-settled mw3 _ lt-h (Cons _ (settled-value _ _ p-h) $ Nil _)))
-  (values mw4 $ two (RawSettled here _ _ _ p-h) (RawSettled here _ _ _ l-h)))
+  (values mw4 $ Cons _ (RawSettled here _ _ _ p-h) $ Cons _ (RawSettled here _ _ _ l-h) $ Nil _))
 (let ((many pair-of)) (MkMacro _ pair-of-fn))
 
 (def-fns _ $ (many succ-of-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
@@ -62,7 +62,7 @@
   (let-match many ha (MkNatH _ ca))
   (let ((unique mw2) (many r)) (settled-val-apply mw1 (settled-of many Succ) ca))
   (let-match many r (Ok _ h) ((Fail _ msg) (macro-fail mw2 here msg)))
-  (values mw2 $ one $ RawSettled here _ _ _ h))
+  (values mw2 $ Cons _ (RawSettled here _ _ _ h) $ Nil _))
 (let ((many succ-of)) (MkMacro _ succ-of-fn))
 
 (def-adts $ (Same : ((Nat) a) -> Type)

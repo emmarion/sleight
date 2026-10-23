@@ -618,7 +618,7 @@
 
 (def-fns _ $ (many any-stored : (subterm many (List $ Entry) es) -> (many (Bool) r))
   (let-match many es (Cons _ e rest) ((Nil _) (BFalse)))
-  (or (entry-stored e) $ notail $ any-stored rest))
+  (or (entry-stored e) $ tail $ any-stored rest))
 
 (def-fns _ $ (many kind-name : (many (Env) env) (many (Term) ty) -> (many (String) s))
   (let-match many (canon-env env ty) (TFn uq _ _ _)
@@ -745,7 +745,7 @@
 (def-fns _ $ (many same-value : (many (Env) env) (many (Nat) x) (subterm many (List $ Pair (Nat) (Name)) found) -> (many (Bool) r))
   (let-match many found (Cons _ f rest) ((Nil _) (BFalse)))
   (let-match many f (MkPair _ _ y _))
-  (or (equal-env env (TVar x) (TVar y)) $ notail $ same-value env x rest))
+  (or (equal-env env (TVar x) (TVar y)) $ tail $ same-value env x rest))
 
 (def-fns _ $ (many typed-entries : (many (Env) env) (many (Term) ty) (subterm many (List $ Nat) xs) (many (List $ Pair (Nat) (Name)) found) -> (many (List $ Pair (Nat) (Name)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) found))
@@ -1423,7 +1423,7 @@
 (def-fns _ $ (many some-not-single : (subterm many (List $ CShape) ss) -> (many (Bool) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (BFalse)))
   (let-match many s (MkCShape m _ n))
-  (or (and (mult-is-many m) $ not $ nat-eq n 1) $ notail $ some-not-single rest))
+  (or (and (mult-is-many m) $ not $ nat-eq n 1) $ tail $ some-not-single rest))
 
 ; The wrapping constructors of a type of newtype shape (section 33), none if it is not of that shape.
 (def-fns _ $ (many newtype-wrappers : (many (Disc) disc) (many (List $ CShape) ss) -> (many (List $ Nat) r))
@@ -1732,7 +1732,7 @@
   (match many (entry-stored e) _ ((BTrue) (Cons _ x more)) ((BFalse) more)))
 
 (def-fns _ $ (many has-place : (subterm many (List $ Entry) tele) -> (many (Bool) r))
-  (match many tele _ ((Nil _) (BFalse)) ((Cons _ e rest) (or (is-some _ $ entry-place e) $ notail $ has-place rest))))
+  (match many tele _ ((Nil _) (BFalse)) ((Cons _ e rest) (or (is-some _ $ entry-place e) $ tail $ has-place rest))))
 
 (def-fns _ $ (many runtime-count : (subterm many (List $ Entry) tele) -> (many (Nat) n))
   (let-match many tele (Cons _ e rest) ((Nil _) 0))
@@ -1988,7 +1988,7 @@
   ((many subterm-in : (subterm many (List $ Term) ts) (many (Term) a) -> (many (Bool) r))
     (match many ts _
       ((Nil _) (BFalse))
-      ((Cons _ t rest) (or (term-eq a t) $ or (notail $ is-strict-subterm t a) $ notail $ subterm-in rest a)))))
+      ((Cons _ t rest) (or (term-eq a t) $ or (notail $ is-strict-subterm t a) $ tail $ subterm-in rest a)))))
 
 ; A literal is an atom to the unifier (DESIGN.md section 45): checking fails where one meets a Succ shape or another
 ; literal, and forcing binds one where a contradiction was wanted. The notes name each literal a check or a
@@ -2016,7 +2016,7 @@
 (def-fns _ $ (many code-of-char : (many (Term) t) (subterm many (List $ Pair (Term) (LitEntry)) hs) -> (many (Bool) r))
   (let-match many hs (Cons _ h rest)
     ((Nil _) (BFalse)))
-  (match many h _ ((MkPair _ _ ct _) (or (and (not $ all-digits $ hit-spelling h) $ is-strict-subterm ct t) $ notail $ code-of-char t rest))))
+  (match many h _ ((MkPair _ _ ct _) (or (and (not $ all-digits $ hit-spelling h) $ is-strict-subterm ct t) $ tail $ code-of-char t rest))))
 
 ; The hits kept, a numeral that is a hit character's code left out, in order.
 (def-fns _ $ (many hits-kept : (subterm many (List $ Pair (Term) (LitEntry)) hs) (many (List $ Pair (Term) (LitEntry)) all) (many (List $ Pair (Term) (LitEntry)) acc) -> (many (List $ Pair (Term) (LitEntry)) r))
@@ -2060,7 +2060,7 @@
   (let-match many p (MkPair _ _ a b))
   (or (and (not $ or (has-meta-env env a) $ has-meta-env env b)
         $ or (term-eq t a) $ or (term-eq t b) $ or (is-strict-subterm t a) $ is-strict-subterm t b)
-    $ notail $ pair-side env t rest))
+    $ tail $ pair-side env t rest))
 
 (def-fns _ $ (many check-hits : (many (Env) env) (subterm many (List $ Pair (Term) (LitEntry)) ls) (many (List $ Pair (Term) (Term)) pairs) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
@@ -2077,7 +2077,7 @@
   (match many (term-eq u t) _ ((BTrue) more) ((BFalse) (Cons _ u more))))
 
 (def-fns _ $ (many term-among : (many (Term) t) (subterm many (List $ Term) ts) -> (many (Bool) r))
-  (match many ts _ ((Nil _) (BFalse)) ((Cons _ u rest) (or (term-eq t u) $ notail $ term-among t rest))))
+  (match many ts _ ((Nil _) (BFalse)) ((Cons _ u rest) (or (term-eq t u) $ tail $ term-among t rest))))
 
 (def-fns _ $ (many forced-hits : (many (Env) trial) (subterm many (List $ Pair (Term) (LitEntry)) ls) (many (List $ Term) bound) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
@@ -3500,7 +3500,7 @@
 (def-fns _ $ (many bins-eq : (subterm many (List $ Nat) as) (many (List $ Nat) bs) -> (many (Bool) r))
   (let-match many as (Cons _ x rest)
     ((Nil _) (list-is-empty _ bs)))
-  (match many bs _ ((Nil _) (BFalse)) ((Cons _ y brest) (and (nat-eq x y) $ notail $ bins-eq rest brest))))
+  (match many bs _ ((Nil _) (BFalse)) ((Cons _ y brest) (and (nat-eq x y) $ tail $ bins-eq rest brest))))
 
 ; Whether a body returns exactly the let's ids, in order, with the two erasure lists then agreeing on their many entries.
 (def-fns _ $ (many returns-same : (erased (List $ List $ Nat) ctx) (subterm many (List $ Multiplicity) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) _pk) (subterm many (List $ Multiplicity) ns) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ns cs) _qk) -> (many (Maybe $ ManySame ms ns) r))
@@ -3848,21 +3848,21 @@
       ((CWorldDo _ _) (BFalse))
       ((CPrim _ _ _ _) (BFalse))
       ((CValues _ _ cs _) (tail $ erases-list _ cs))
-      ((CLet _ _ _ _ _ rhs rest) (and (notail $ erases-to-nothing _ _ rhs) $ notail $ erases-to-nothing _ _ rest))
+      ((CLet _ _ _ _ _ rhs rest) (and (notail $ erases-to-nothing _ _ rhs) $ tail $ erases-to-nothing _ _ rest))
       ((CLetRec _ _ _ _ rest) (tail $ erases-to-nothing _ _ rest))
       ((CMatch _ _ scrut shape bs dfl _)
         (and (notail $ erases-to-nothing _ _ scrut)
           $ and (match many shape (((Bool) _)) ((ShHeld _ mc _) (notail $ erases-to-nothing _ _ mc)) (else (BTrue)))
-          $ and (notail $ erases-branches _ _ bs) $ match many dfl (((Bool) _)) ((Some _ d) (notail $ erases-to-nothing _ _ d)) ((None _) (BTrue))))
+          $ and (notail $ erases-branches _ _ bs) $ match many dfl (((Bool) _)) ((Some _ d) (tail $ erases-to-nothing _ _ d)) ((None _) (BTrue))))
       (else (BTrue))))
   ((many erases-list : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Bool) r))
     (match many cs _
       ((Nil _) (BTrue))
-      ((Cons _ c rest) (and (notail $ erases-to-nothing _ _ c) $ notail $ erases-list _ rest))))
+      ((Cons _ c rest) (and (notail $ erases-to-nothing _ _ c) $ tail $ erases-list _ rest))))
   ((many erases-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) -> (many (Bool) r))
     (let-match many bs (Cons _ b rest)
       ((Nil _) (BTrue)))
-    (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ erases-to-nothing _ _ body) $ notail $ erases-branches _ _ rest)))))
+    (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ erases-to-nothing _ _ body) $ tail $ erases-branches _ _ rest)))))
 
 
 ; ---- tail and delegate (section 19): judged on the normalized post-erasure code, per
@@ -3874,38 +3874,38 @@
 (def-fns _ $ (many marked-call : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (CC) cc) -> (many (Bool) r))
   (match many code _
     ((CApp _ _ _ _ cc2) (cc-eq cc cc2))
-    ((CLet _ _ _ _ _ rhs rest) (or (notail $ marked-call _ _ rhs cc) $ notail $ marked-call _ _ rest cc))
+    ((CLet _ _ _ _ _ rhs rest) (or (notail $ marked-call _ _ rhs cc) $ tail $ marked-call _ _ rest cc))
     (else (BFalse))))
 
 (def-fns _
   ((many has-marked : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) c) (many (Bool) only) -> (many (Bool) r))
     (match many c _
-      ((CApp _ _ f args cc) (or (cc-marked cc only) $ or (notail $ has-marked _ _ f only) $ notail $ has-marked-list _ args only))
+      ((CApp _ _ f args cc) (or (cc-marked cc only) $ or (notail $ has-marked _ _ f only) $ tail $ has-marked-list _ args only))
 
       ((CCellAlloc _ _ slots) (tail $ has-marked-list _ slots only))
-      ((CCellWrite _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
-      ((CCellCopy _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
+      ((CCellWrite _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ tail $ has-marked-slots _ slots only))
+      ((CCellCopy _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ tail $ has-marked-slots _ slots only))
       ((CCellRead _ _ _ cell) (tail $ has-marked _ _ cell only))
       ((CWorldDo _ req) (tail $ has-marked _ _ req only))
       ((CPrim _ _ _ args) (tail $ has-marked-list _ args only))
       ((CValues _ _ cs _) (tail $ has-marked-list _ cs only))
-      ((CLet _ _ _ _ _ rhs rest) (or (notail $ has-marked _ _ rhs only) $ notail $ has-marked _ _ rest only))
+      ((CLet _ _ _ _ _ rhs rest) (or (notail $ has-marked _ _ rhs only) $ tail $ has-marked _ _ rest only))
       ((CLetRec _ _ _ _ rest) (tail $ has-marked _ _ rest only))
-      ((CMatch _ _ scrut shape bs dfl _) (or (notail $ has-marked _ _ scrut only) $ or (match many shape (((Bool) _)) ((ShKnown _ _) (BFalse)) ((ShNone _) (BFalse)) ((ShHeld _ mc _) (notail $ has-marked _ _ mc only))) $ or (notail $ has-marked-branches _ _ bs only) $ match many dfl (((Bool) _)) ((Some _ d) (notail $ has-marked _ _ d only)) ((None _) (BFalse)))) (else (BFalse))))
+      ((CMatch _ _ scrut shape bs dfl _) (or (notail $ has-marked _ _ scrut only) $ or (match many shape (((Bool) _)) ((ShKnown _ _) (BFalse)) ((ShNone _) (BFalse)) ((ShHeld _ mc _) (notail $ has-marked _ _ mc only))) $ or (notail $ has-marked-branches _ _ bs only) $ match many dfl (((Bool) _)) ((Some _ d) (tail $ has-marked _ _ d only)) ((None _) (BFalse)))) (else (BFalse))))
   ((many has-marked-list : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Bool) only) -> (many (Bool) r))
     (match many cs _
       ((Nil _) (BFalse))
-      ((Cons _ c rest) (or (notail $ has-marked _ _ c only) $ notail $ has-marked-list _ rest only))))
+      ((Cons _ c rest) (or (notail $ has-marked _ _ c only) $ tail $ has-marked-list _ rest only))))
 
   ((many has-marked-slots : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) slots) (many (Bool) only) -> (many (Bool) r))
     (let-match many slots (Cons _ slot rest)
       ((Nil _) (BFalse)))
-    (match many slot _ ((MkPair _ _ _ code) (or (notail $ has-marked _ _ code only) $ notail $ has-marked-slots _ rest only))))
+    (match many slot _ ((MkPair _ _ _ code) (or (notail $ has-marked _ _ code only) $ tail $ has-marked-slots _ rest only))))
 
   ((many has-marked-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) only) -> (many (Bool) r))
     (let-match many bs (Cons _ b rest)
       ((Nil _) (BFalse)))
-    (match many b _ ((MkBranch _ _ _ _ body) (or (notail $ has-marked _ _ body only) $ notail $ has-marked-branches _ _ rest only)))))
+    (match many b _ ((MkBranch _ _ _ _ body) (or (notail $ has-marked _ _ body only) $ tail $ has-marked-branches _ _ rest only)))))
 
 ; Every marked call sits in tail position: the body's final call, through lets, let recs and match branches
 ; for tail, directly for delegate.
@@ -3916,7 +3916,7 @@
       ((CLet _ _ _ _ _ rhs rest)
         (match many direct _
           ((BTrue) (not $ has-marked _ _ c $ BFalse))
-          ((BFalse) (and (not $ has-marked _ _ rhs $ BFalse) $ notail $ tails-ok _ _ rest direct))))
+          ((BFalse) (and (not $ has-marked _ _ rhs $ BFalse) $ tail $ tails-ok _ _ rest direct))))
       ((CLetRec _ _ _ _ rest)
         (match many direct _
           ((BTrue) (not $ has-marked _ _ rest $ BFalse))
@@ -3926,7 +3926,7 @@
         (and (not $ has-marked _ _ scrut $ BFalse)
           (and (match many shape (((Bool) _)) ((ShKnown _ _) (BTrue)) ((ShNone _) (BTrue)) ((ShHeld _ mc _) (not $ has-marked _ _ mc $ BFalse)))
             (and (notail $ tails-ok-branches _ _ bs direct)
-              $ match many dfl (((Bool) _)) ((Some _ d) (notail $ tails-ok _ _ d direct)) ((None _) (BTrue))))))
+              $ match many dfl (((Bool) _)) ((Some _ d) (tail $ tails-ok _ _ d direct)) ((None _) (BTrue))))))
 
       ((CCellAlloc _ _ slots) (not $ has-marked-list _ slots $ BFalse))
       ((CCellWrite _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
@@ -3938,7 +3938,7 @@
   ((many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r))
     (let-match many bs (Cons _ b rest)
       ((Nil _) (BTrue)))
-    (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ tails-ok _ _ body direct) $ notail $ tails-ok-branches _ _ rest direct)))))
+    (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ tails-ok _ _ body direct) $ tail $ tails-ok-branches _ _ rest direct)))))
 
 ; Every call with whether it sits in tail position, as tails-ok reads it: a notail call there is refused, and
 ; an unmarked same-level call warns, naming the mark that fits.
@@ -4296,12 +4296,12 @@
 (def-fns _ $ (many tele-has-meta : (subterm many (List $ Entry) es) (many (Env) env) -> (many (Bool) r))
   (match many es _
     ((Nil _) (BFalse))
-    ((Cons _ e rest) (or (has-meta-env env $ sg-term $ entry-sg e) $ notail $ tele-has-meta rest env))))
+    ((Cons _ e rest) (or (has-meta-env env $ sg-term $ entry-sg e) $ tail $ tele-has-meta rest env))))
 
 (def-fns _ $ (many terms-have-meta : (subterm many (List $ Term) ts) (many (Env) env) -> (many (Bool) r))
   (match many ts _
     ((Nil _) (BFalse))
-    ((Cons _ t rest) (or (has-meta-env env t) $ notail $ terms-have-meta rest env))))
+    ((Cons _ t rest) (or (has-meta-env env t) $ tail $ terms-have-meta rest env))))
 
 (def-fns _ $ (many metaless-list : (subterm many (List $ Term) ts) (many (Env) env) -> (many (List $ Term) r))
   (match many ts _
@@ -4323,7 +4323,7 @@
 (def-fns _ $ (many any-wild : (erased (List $ Syn) root) (subterm many (List $ Sub root) args) -> (many (Bool) r))
   (let-match many args (Cons _ s rest)
     ((Nil _) (BFalse)))
-  (match many s _ ((MkSub _ arg _) (or (is-underscore arg) $ notail $ any-wild _ rest))))
+  (match many s _ ((MkSub _ arg _) (or (is-underscore arg) $ tail $ any-wild _ rest))))
 
 ; Where each `_` among [args] is written, for the meta that stands for it; nothing for any other argument.
 (def-fns _ $ (many wild-sites : (erased (List $ Syn) root) (many (Env) env) (subterm many (List $ Sub root) args) -> (many (List $ Maybe $ Loc) r))

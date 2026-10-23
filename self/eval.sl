@@ -566,8 +566,8 @@
         (ErPair (PStr a1) (PStr b1)))
       ((ExDivmod)
         (let-match many (lt-dec (Zero) nb) (Yes _ _ pos) ((No _ _ _) (ErPayload $ PStr "divmod: zero divisor")))
-        (let ((many qq) (many rr) (erased _) (erased _) (erased _) (erased _)) $ divmod na nb pos)
-        (ErPair (PNat qq) (PNat rr)))
+        (let ((many quo) (many rem) (erased _) (erased _) (erased _) (erased _)) $ divmod na nb pos)
+        (ErPair (PNat quo) (PNat rem)))
       (else (ErPayload $ PStr "an extern with no implementation of its own"))))
   (match many res _
     ((ErArrayNew length2)
@@ -751,7 +751,7 @@
 (def-fns _ $ (many has-branch : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) -> (many (Bool) r))
   (let-match many bs (Cons _ b rest)
     ((Nil _) (BFalse)))
-  (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ notail $ has-branch _ _ rest i))))
+  (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ tail $ has-branch _ _ rest i))))
 
 (def-fns _ $ (many widen-ref : (erased (Hist Block) a) (erased (Hist Block) b) (erased (Suffix Block b a) le) (many (Ref Block a) r) -> (many (Ref Block b) r2))
   (let ((erased _) (erased p)) (ref-widen _ _ _ le r))
@@ -1184,7 +1184,7 @@
 (def-fns _ $ (many terms-canon-eq : (many (Env) e) (subterm many (List $ Term) a) (many (List $ Term) b) -> (many (Bool) r))
   (let-match many a (Cons _ s ra) ((Nil _) (match many b _ ((Nil _) (BTrue)) (else (BFalse)))))
   (let-match many b (Cons _ t rb) ((Nil _) (BFalse)))
-  (and (term-eq (canon-env e s) (canon-env e t)) $ notail $ terms-canon-eq e ra rb))
+  (and (term-eq (canon-env e s) (canon-env e t)) $ tail $ terms-canon-eq e ra rb))
 
 (def-fns _ $ (many settled-eq-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (many (Maybe $ Ref Block hs) v))
   (let-match many args (Cons _ _ r1) ((Nil _) (None _)))

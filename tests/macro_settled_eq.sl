@@ -21,10 +21,7 @@
   (let ((unique mw8) (many r6)) (settled-eq _ _ _ _ _ _ mw7 (settled-type _ _ _ fresh) (settled-type _ _ _ (settled-of many uno))))
   (let ((many s)) (str-append (said _ _ _ _ r1) $ str-append (said _ _ _ _ r2) $ str-append (said _ _ _ _ r3) $ str-append (said _ _ _ _ r4) $ str-append (said _ _ _ _ r5) (said _ _ _ _ r6)))
   (let ((unique mw9) (many sr)) (str-raw mw8 here s))
-  (values mw9 $ two
-    (form here $ three (name here "let") (form here $ one $ form here $ three (name here "many") (RawSettled here _ _ _ tx) (name here "zs")) (name here "ys"))
-    (form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (name here "zs") $
-      form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two sr (name here "erased-name"))))
+  (values mw9 $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSettled here _ _ _ tx) $ Cons _ (RawSymbol here (SName "zs")) $ Nil _) $ Nil _) $ Cons _ (RawSymbol here (SName "ys")) $ Nil _) $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "MkPair")) $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ Cons _ (RawSymbol here (SName "zs")) $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "MkPair")) $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ Cons _ sr $ Cons _ (RawSymbol here (SName "erased-name")) $ Nil _) $ Nil _) $ Nil _))
 (let ((many eqs)) (MkMacro _ eqs-fn))
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))

@@ -8,7 +8,7 @@
   (let-match many args (Cons _ f r1) ((Nil _) (Nil _)))
   (let-match many r1 (Cons _ a r2) ((Nil _) (Nil _)))
   (let-match many r2 (Cons _ b _) ((Nil _) (Nil _)))
-  (one $ form here $ three f b a))
+  (Cons _ (RawList here $ Cons _ f $ Cons _ b $ Cons _ a $ Nil _) $ Nil _))
 (def-fns _ $ (many swap-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw $ swap-out here args))
@@ -16,7 +16,7 @@
 
 (def-fns _ $ (many warn-at : (unique (MacroWorld) mw) (many (Pos) p) (many (String) s) -> (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many m)) (str-raw mw p s))
-  (values mw1 $ one $ form p $ two (name p "compile-warn") m))
+  (values mw1 $ Cons _ (RawList p $ Cons _ (RawSymbol p (SName "compile-warn")) $ Cons _ m $ Nil _) $ Nil _))
 
 (def-fns _ $ (many warn-here-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
@@ -41,11 +41,11 @@
 (def-fns _ $ (many line-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (match many here _
-    ((NoPos) (let ((unique mw1) (many r)) (nat-raw mw here 0)) (values mw1 $ one r))
-    ((MkPos _ l _) (let ((unique mw1) (many r)) (nat-raw mw here l)) (values mw1 $ one r))))
+    ((NoPos) (let ((unique mw1) (many r)) (nat-raw mw here 0)) (values mw1 $ Cons _ r $ Nil _))
+    ((MkPos _ l _) (let ((unique mw1) (many r)) (nat-raw mw here l)) (values mw1 $ Cons _ r $ Nil _))))
 (let ((many line)) (MkMacro _ line-fn))
 
 (def-fns _ $ (many loop-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ one $ name here "loop"))
+  (values mw $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "loop")) $ Nil _) $ Nil _))
 (let ((many loop)) (MkMacro _ loop-fn))

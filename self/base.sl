@@ -6,12 +6,6 @@
 (def-fns _ $ (many not : (many (Bool) b) -> (many (Bool) r))
   (match many b _ ((BTrue) (BFalse)) ((BFalse) (BTrue))))
 
-(def-fns _ $ (many and : (many (Bool) a) (many (Bool) b) -> (many (Bool) r))
-  (match many a _ ((BTrue) b) ((BFalse) (BFalse))))
-
-(def-fns _ $ (many or : (many (Bool) a) (many (Bool) b) -> (many (Bool) r))
-  (match many a _ ((BTrue) (BTrue)) ((BFalse) b)))
-
 ; ---- Nat
 
 (def-fns _ $ (many cmp-is-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r))
@@ -114,7 +108,7 @@
 (def-fns _ $ (many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r))
   (match many a _
     ((Nil _) (match many b _ ((Nil _) (BTrue)) ((Cons _ _ _) (BFalse))))
-    ((Cons _ x rest) (match many b _ ((Nil _) (BFalse)) ((Cons _ y rest2) (and (nat-eq x y) $ notail $ nat-list-eq rest rest2))))))
+    ((Cons _ x rest) (match many b _ ((Nil _) (BFalse)) ((Cons _ y rest2) (and (nat-eq x y) $ tail $ nat-list-eq rest rest2))))))
 
 ; A shape as the FFI's error messages spell it, its arities separated by spaces.
 (def-fns _ $ (many spell-nats : (subterm many (List $ Nat) ns) -> (many (String) s))
@@ -126,7 +120,7 @@
 (def-fns _ $ (many all-digits : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (char-between c 48 57) $ notail $ all-digits rest))))
+    ((SCons c rest) (and (char-between c 48 57) $ tail $ all-digits rest))))
 
 ; A numeral or a #\c character literal, which no name may spell (section 1, ASSUMPTIONS 51).
 (def-fns _ $ (many is-literal-name : (many (String) s) -> (many (Bool) r))
@@ -668,7 +662,7 @@
 (def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (word-code $ char-code c) $ notail $ all-word-chars rest))))
+    ((SCons c rest) (and (word-code $ char-code c) $ tail $ all-word-chars rest))))
 
 (def-fns _ $ (many is-plain-name : (many (String) s) -> (many (Bool) r))
   (let-match many s (SCons c _) ((SNil) (BFalse)))

@@ -15,7 +15,7 @@
     ((RHypothetical) "hypothetical")
     ((RUnbound) "unbound"))
   (let ((unique mw2) (many o)) (str-raw mw1 here t))
-  (values mw2 $ one o))
+  (values mw2 $ Cons _ o $ Nil _))
 (let ((many probe)) (MkMacro _ probe-fn))
 (def-fns _ $ (many same-let-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
@@ -26,7 +26,7 @@
       (values mw3 $ match many e (((String) _)) ((Some _ _) "same") ((None _) "other")))
     (else (values mw1 "other")))
   (let ((unique mw3) (many o)) (str-raw mw2 here t))
-  (values mw3 $ one o))
+  (values mw3 $ Cons _ o $ Nil _))
 (let ((many same-let)) (MkMacro _ same-let-fn))
 (def-fns _ $ (many inside : (many (Nat) y) -> (many (String) s))
   (probe y))
@@ -41,17 +41,17 @@
   (let-match many a (RawSymbol _ s) (else (values mw (Nil _))))
   (let-match many s (SGen _ t _) (else (values mw (Nil _))))
   (let ((unique mw1) (many o)) (str-raw mw here t))
-  (values mw1 $ one o))
+  (values mw1 $ Cons _ o $ Nil _))
 (let ((many gen-name)) (MkMacro _ gen-name-fn))
 (def-fns _ $ (many named : (many (Pos) here) (many (String) b) (many (Raw) call) -> (many (Raw) r))
-  (form here $ three (name here "let") (form here $ one $ form here $ two (name here "many") (name here b)) call))
+  (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSymbol here (SName b)) $ Nil _) $ Nil _) $ Cons _ call $ Nil _))
 (def-fns _ $ (many gen-probe-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many n) (erased g)) (gensym mw "fresh"))
   (let ((many sym)) (RawSymbol here $ SGen n "fresh" g))
-  (let ((many bind)) (form here $ three (name here "let") (form here $ one $ form here $ two (name here "many") sym) (name here "k")))
-  (values mw1 $ Cons _ (named here "before-gen" $ form here $ two (name here "probe") sym) $ Cons _ bind $
-    two (named here "after-gen" $ form here $ two (name here "probe") sym) (named here "gen-text" $ form here $ two (name here "gen-name") sym)))
+  (let ((many bind)) (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ sym $ Nil _) $ Nil _) $ Cons _ (RawSymbol here (SName "k")) $ Nil _))
+  (values mw1 $ Cons _ (named here "before-gen" $ RawList here $ Cons _ (RawSymbol here (SName "probe")) $ Cons _ sym $ Nil _) $ Cons _ bind $
+    Cons _ (named here "after-gen" $ RawList here $ Cons _ (RawSymbol here (SName "probe")) $ Cons _ sym $ Nil _) $ Cons _ (named here "gen-text" $ RawList here $ Cons _ (RawSymbol here (SName "gen-name")) $ Cons _ sym $ Nil _) $ Nil _))
 (let ((many gen-probe)) (MkMacro _ gen-probe-fn))
 (gen-probe)
 (MkPair _ _ (MkPair _ _ (probe k) $ MkPair _ _ (probe E) (probe nope)) $ MkPair _ _ (MkPair _ _ (inside 1) $ MkPair _ _ before (shadowing 2)) $

@@ -4,6 +4,6 @@
 (def-fns _ $ (many m-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw9) (many lit)) (nat-raw mw here 7))
-  (values mw9 $ one $ form here $ three (name here "let") (form here $ one $ form here $ two (name here "many") (RawSettled here _ _ _ (settled-of many k))) lit))
+  (values mw9 $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSettled here _ _ _ (settled-of many k)) $ Nil _) $ Nil _) $ Cons _ lit $ Nil _) $ Nil _))
 (let ((many m)) (MkMacro _ m-fn))
 (m)

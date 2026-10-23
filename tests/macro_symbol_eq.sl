@@ -10,7 +10,7 @@
   (let-match many a (RawSymbol _ x) (else (values mw (Nil _))))
   (let-match many b (RawSymbol _ y) (else (values mw (Nil _))))
   (let ((unique mw1) (many o)) (str-raw mw here $ said x y))
-  (values mw1 $ one o))
+  (values mw1 $ Cons _ o $ Nil _))
 (let ((many same-name)) (MkMacro _ same-name-fn))
 (def-fns _ $ (many gensyms-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
@@ -20,6 +20,6 @@
   (let ((many b)) (SGen m "t" h))
   (let ((many t)) $ str-append (said a a) $ str-append " " $ str-append (said a b) $ str-append " " $ said a $ SName "t")
   (let ((unique mw3) (many o)) (str-raw mw2 here t))
-  (values mw3 $ one o))
+  (values mw3 $ Cons _ o $ Nil _))
 (let ((many gensyms)) (MkMacro _ gensyms-fn))
 (MkPair _ _ (same-name x x) $ MkPair _ _ (same-name x y) (gensyms))

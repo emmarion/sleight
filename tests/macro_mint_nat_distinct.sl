@@ -8,6 +8,6 @@
   (let ((unique mw2) (many b)) (mint-settled mw1 _ nat-h 3))
   (let ((unique mw3) (many e)) (settled-eq _ _ _ _ _ _ mw2 a b))
   (let ((unique mw4) (many s)) (str-raw mw3 here $ match many e (((String) t)) ((Some _ _) "equal") ((None _) "distinct")))
-  (values mw4 $ one s))
+  (values mw4 $ Cons _ s $ Nil _))
 (let ((many twice)) (MkMacro _ twice-fn))
 (twice)

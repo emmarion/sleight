@@ -1,7 +1,7 @@
 #!/bin/sh
 # Times the self-hosted compiler (self/README.md) on a copy of its own sources at a given commit and on the
-# sample programs under bench/*.sl. The sources are the self/*.sl files of that commit, materialized under
-# the build directory with the lib/ files its header is generated from, so that later edits change the
+# sample programs under bench/*.sl. The sources are the files that commit's self/bootstrap.sh compiles slc from,
+# materialized under the build directory with the lib/ files its header is generated from, so that later edits change the
 # compiler but not its input; the commit has to be reachable (not in a shallow clone) and its sources written
 # in the syntax the measured slc accepts.
 # Usage: bench/bench.sh [-n runs] [-b build-dir] <commit> [slc-binary]   (defaults: 5 runs, _build/self, _build/self/slc)
@@ -15,10 +15,10 @@ shift $((OPTIND - 1))
 PINNED=$(git rev-parse --short --verify "$1^{commit}") || { echo "commit $1 is not reachable here (a shallow clone? git fetch --unshallow)"; exit 2; }
 SLC=${2:-$B/slc}
 P=_build/bench/$PINNED
-[ -d "$P/self" ] || { mkdir -p "$P" && git archive "$PINNED" self lib | tar -x -C "$P"; } || exit 1
+[ -d "$P/self" ] || { mkdir -p "$P" && git archive "$PINNED" self lib std | tar -x -C "$P"; } || exit 1
 [ ! -f "$P/self/gen_header.py" ] || python3 "$P/self/gen_header.py" || exit 1
 PIN=""
-for f in self/base self/heap self/reader self/core self/eval self/elab lib/embed self/header self/emit self/interp self/main; do [ -f "$P/$f.sl" ] && PIN="$PIN $P/$f.sl"; done
+for f in $(sed -n 's/^SL="\(.*\)"$/\1/p' "$P/self/bootstrap.sh"); do [ -f "$P/$f" ] && PIN="$PIN $P/$f"; done
 
 # timed <file> <command...>: runs the command, writing "wall-seconds user-seconds max-rss-KB" to the file (GNU time
 # takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes).

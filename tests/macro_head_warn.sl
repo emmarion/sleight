@@ -3,27 +3,27 @@
   (let-match many args (Cons _ n r1) ((Nil _) (Nil _)))
   (let-match many r1 (Cons _ a r2) ((Nil _) (Nil _)))
   (let-match many r2 (Cons _ b _) ((Nil _) (Nil _)))
-  (one $ form here $ Cons _ head $ Cons _ (name here "many") $ Cons _ n $ Cons _ (RawWild here)
-    $ two (form here $ two (form here $ one $ name here "Zero") a) (form here $ two (form here $ two (name here "Succ") (RawWild here)) b)))
+  (Cons _ (RawList here $ Cons _ head $ Cons _ (RawSymbol here (SName "many")) $ Cons _ n $ Cons _ (RawWild here)
+    $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "Zero")) $ Nil _) $ Cons _ a $ Nil _) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "Succ")) $ Cons _ (RawWild here) $ Nil _) $ Cons _ b $ Nil _) $ Nil _) $ Nil _))
 (def-fns _ $ (many if-zero-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ if-zero-with (ref here _ _ _ (settled-of many match)) here args))
+  (values mw $ if-zero-with (RawSettled here _ _ _ (settled-of many match)) here args))
 (let ((many if-zero)) (MkMacro _ if-zero-fn))
 (def-fns _ $ (many if-zero-named-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ if-zero-with (name here "match") here args))
+  (values mw $ if-zero-with (RawSymbol here (SName "match")) here args))
 (let ((many if-zero-named)) (MkMacro _ if-zero-named-fn))
 
 (def-fns _ $ (many down-with : (many (Raw) head) (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out))
   (let-match many args (Cons _ f rest) ((Nil _) (Nil _)))
-  (one $ form here $ Cons _ f $ Cons _ (form here $ two head (RawWild here)) rest))
+  (Cons _ (RawList here $ Cons _ f $ Cons _ (RawList here $ Cons _ head $ Cons _ (RawWild here) $ Nil _) rest) $ Nil _))
 (def-fns _ $ (many down-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ down-with (ref here _ _ _ (settled-of many predates)) here args))
+  (values mw $ down-with (RawSettled here _ _ _ (settled-of many predates)) here args))
 (let ((many down)) (MkMacro _ down-fn))
 (def-fns _ $ (many down-named-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ down-with (name here "predates") here args))
+  (values mw $ down-with (RawSymbol here (SName "predates")) here args))
 (let ((many down-named)) (MkMacro _ down-named-fn))
 
 (def-fns _ $ (many inc : (many (Nat) n) -> (many (Nat) m))

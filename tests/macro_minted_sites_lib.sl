@@ -10,7 +10,7 @@
     (Cons _ (notail $ subst h x) $ notail $ subst-list h rest)))
 (def-fns _ $ (many place-in : (many (Raw) h) (many (List $ Raw) args) -> (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (Nil _)))
-  (one $ subst h a))
+  (Cons _ (subst h a) $ Nil _))
 (let ((erased nat-ty)) (Nat))
 (let ((many nat-h)) (settled-of erased nat-ty))
 (let ((erased slot-ty)) (Slot))

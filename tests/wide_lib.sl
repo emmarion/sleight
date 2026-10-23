@@ -33,17 +33,17 @@
   (match many (nat-cmp a k) _ ((CLt _ _ _ _ _) (Succ a)) (else 1)))
 
 (def-fns _ $ (many wide-item : (many (WideKind) kind) (many (Pos) p) (many (Raw) ty) (many (Raw) field) (many (Raw) nm) (many (Nat) a) -> (many (Raw) r))
-  (let ((many fields)) $ repeated (form p $ three (name p "many") field $ RawWild p) a $ two (name p "->") $ form p $ one ty)
+  (let ((many fields)) $ repeated (RawList p $ Cons _ (RawSymbol p (SName "many")) $ Cons _ field $ Cons _ (RawWild p) $ Nil _) a $ Cons _ (RawSymbol p (SName "->")) $ Cons _ (RawList p $ Cons _ ty $ Nil _) $ Nil _)
   (match many kind _
-    ((WkCtors) (form p $ Cons _ (name p "many") $ Cons _ nm $ Cons _ (name p ":") fields))
-    ((WkParams) (form p $ three (name p "erased") (form p $ Cons _ (name p "ValCtor") fields) nm))
-    ((WkMatchable) (form p $ two (name p "many") nm))
+    ((WkCtors) (RawList p $ Cons _ (RawSymbol p (SName "many")) $ Cons _ nm $ Cons _ (RawSymbol p (SName ":")) fields))
+    ((WkParams) (RawList p $ Cons _ (RawSymbol p (SName "erased")) $ Cons _ (RawList p $ Cons _ (RawSymbol p (SName "ValCtor")) fields) $ Cons _ nm $ Nil _))
+    ((WkMatchable) (RawList p $ Cons _ (RawSymbol p (SName "many")) $ Cons _ nm $ Nil _))
     ((WkNames) nm)))
 
 (def-fns _ $ (many wide-items : (many (WideKind) kind) (many (Pos) p) (many (Raw) ty) (many (Raw) field) (many (String) prefix)
     (many (Nat) k) (many (Nat) a) (many (Nat) i) (subterm many (Nat) n) -> (many (List $ Raw) r))
   (let-match many n (Succ m) ((Zero) (Nil _)))
-  (let ((many nm)) $ name p $ str-append prefix $ nat-str i)
+  (let ((many nm)) $ RawSymbol p (SName (str-append prefix $ nat-str i)))
   (Cons _ (wide-item kind p ty field nm a) $ notail $ wide-items kind p ty field prefix k (next-arity a k) (Succ i) m))
 
 (let ((many wide-usage)) "`(wide kind T P n k F)`, kind one of ctors, params, matchable, names")
@@ -63,6 +63,6 @@
   (let-match many (kind-of $ sym-text kr) (Some _ kind) ((None _) (macro-fail mw3 here wide-usage)))
   (let ((many items)) $ wide-items kind here ty field (sym-text pre) k2 (next-arity k2 k2) 0 n2)
   (let-match many kind (WkMatchable) (else (values mw3 items)))
-  (values mw3 $ one $ form here $ Cons _ (name here "Matchable") $ Cons _ (name here "enum") $ Cons _ ty items))
+  (values mw3 $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "Matchable")) $ Cons _ (RawSymbol here (SName "enum")) $ Cons _ ty items) $ Nil _))
 
 (let ((many wide)) (MkMacro _ wide-fn))

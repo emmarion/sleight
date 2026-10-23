@@ -3,6 +3,6 @@
 (let ((many xs)) (Cons (Nat) 1 $ Nil (Nat)))
 (def-fns _ $ (many again-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ three (name here "settled-of") (name here "erased") (RawSettled here _ _ _ (settled-type _ _ _ (settled-of many xs)))))
+  (values mw $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "settled-of")) $ Cons _ (RawSymbol here (SName "erased")) $ Cons _ (RawSettled here _ _ _ (settled-type _ _ _ (settled-of many xs))) $ Nil _) $ Nil _))
 (let ((many again)) (MkMacro _ again-fn))
 (let ((many h)) (again))

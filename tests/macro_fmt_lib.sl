@@ -38,17 +38,17 @@
     (else (match many args _
       ((Nil _) (values (None _) args))
       ((Cons _ a more) (values (Some _ $ match many f (((Raw) x))
-          ((FmtNat) (form p $ two (ref p _ _ _ (settled-of many nat-str)) a))
+          ((FmtNat) (RawList p $ Cons _ (RawSettled p _ _ _ (settled-of many nat-str)) $ Cons _ a $ Nil _))
           (else a))
         more))))))
 
 (def-fns _ $ (many render : (many (Pos) p) (subterm many (List $ Fmt) fs) (many (List $ Raw) args) -> (many (Maybe $ Raw) r))
   (let-match many fs (Cons _ f rest)
-    ((Nil _) (match many args _ ((Nil _) (Some _ $ form p $ one $ ref p _ _ _ (settled-of many REmpty))) (else (None _)))))
+    ((Nil _) (match many args _ ((Nil _) (Some _ $ RawList p $ Cons _ (RawSettled p _ _ _ (settled-of many REmpty)) $ Nil _)) (else (None _)))))
   (let ((many ms) (many more)) (fill p f args))
   (let-match many ms (Some _ str) ((None _) (None _)))
   (let-match many (notail $ render p rest more) (Some _ t) ((None _) (None _)))
-  (Some _ $ form p $ three (ref p _ _ _ (settled-of many RCat)) (form p $ two (ref p _ _ _ (settled-of many RStr)) str) t))
+  (Some _ $ RawList p $ Cons _ (RawSettled p _ _ _ (settled-of many RCat)) $ Cons _ (RawList p $ Cons _ (RawSettled p _ _ _ (settled-of many RStr)) $ Cons _ str $ Nil _) $ Cons _ t $ Nil _))
 
 (let ((erased macro-type)) (Macro))
 
@@ -62,7 +62,7 @@
   (def-fns _ $ (many apply-fn : (unique (MacroWorld) aw) (many (Pos) at-here) (many (List $ Raw) xs) ->
       (unique (MacroWorld) aw2 at aw) (many (List $ Raw) o))
     (let-match many (render at-here fs xs) (Some _ t) ((None _) (macro-fail aw at-here "fmt: wrong number of arguments")))
-    (values aw $ one $ form at-here $ two (ref at-here _ _ _ (settled-of many rope-str)) t))
+    (values aw $ Cons _ (RawList at-here $ Cons _ (RawSettled at-here _ _ _ (settled-of many rope-str)) $ Cons _ t $ Nil _) $ Nil _))
   (let ((unique mw2) (many h)) (mint-settled mw1 _ (settled-of erased macro-type) (MkMacro _ apply-fn)))
-  (values mw2 $ one $ RawSettled here _ _ _ h))
+  (values mw2 $ Cons _ (RawSettled here _ _ _ h) $ Nil _))
 (let ((many fmt)) (MkMacro _ fmt-fn))

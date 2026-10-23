@@ -5,6 +5,6 @@
 (def-fns _ $ (many mint-numeral-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ nat-h 3))
-  (values mw1 $ one $ form here $ two (name here "numeral-of") (RawSettled here _ _ _ h)))
+  (values mw1 $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "numeral-of")) $ Cons _ (RawSettled here _ _ _ h) $ Nil _) $ Nil _))
 (let ((many numeral)) (MkMacro _ mint-numeral-fn))
 (let ((erased p)) (numeral))

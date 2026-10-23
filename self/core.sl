@@ -3209,7 +3209,7 @@
     (match many sg _ ((SgTy t) (tail $ term-vars t acc3)) ((SgIs t _) (tail $ term-vars t acc3)))))
 
 (def-fns _ $ (many any-meta : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (Bool) r))
-  (match many xs _ ((Nil _) (BFalse)) ((Cons _ x rest) (or (is-meta env x) $ notail $ any-meta env rest))))
+  (match many xs _ ((Nil _) (BFalse)) ((Cons _ x rest) (or (is-meta env x) $ tail $ any-meta env rest))))
 
 ; Whether a canonical term still mentions an unsolved meta.
 (def-fns _ $ (many has-meta : (many (Term) t) (many (Env) env) -> (many (Bool) r))
@@ -3591,17 +3591,17 @@
       ((TVar x) (match many b _ ((TVar y) (nat-eq x y)) (else (BFalse))))
       ((TBound k) (match many b _ ((TBound j) (nat-eq k j)) (else (BFalse))))
       ((TApp h as) (match many b _
-                     ((TApp h2 as2) (and (notail $ term-eq h h2) $ notail $ terms-eq as as2)) (else (BFalse))))
+                     ((TApp h2 as2) (and (notail $ term-eq h h2) $ tail $ terms-eq as as2)) (else (BFalse))))
       ((TCell h as) (match many b _
-                     ((TCell h2 as2) (and (notail $ term-eq h h2) $ notail $ terms-eq as as2)) (else (BFalse))))
+                     ((TCell h2 as2) (and (notail $ term-eq h h2) $ tail $ terms-eq as as2)) (else (BFalse))))
       ((TFn uq l p r) (match many b _
-                     ((TFn uq2 l2 p2 r2) (and (bool-eq uq uq2) $ and (notail $ term-eq l l2) $ and (notail $ tele-eq p p2) $ notail $ tele-eq r r2)) (else (BFalse))))
+                     ((TFn uq2 l2 p2 r2) (and (bool-eq uq uq2) $ and (notail $ term-eq l l2) $ and (notail $ tele-eq p p2) $ tail $ tele-eq r r2)) (else (BFalse))))
       ((TTyCtor p) (match many b _
                      ((TTyCtor p2) (tail $ tele-eq p p2)) (else (BFalse))))
       ((TValCtor p r) (match many b _
-                        ((TValCtor p2 r2) (and (notail $ tele-eq p p2) $ notail $ term-eq r r2)) (else (BFalse))))
+                        ((TValCtor p2 r2) (and (notail $ tele-eq p p2) $ tail $ term-eq r r2)) (else (BFalse))))
       ((TMatchable d nt ex t c) (match many b _
-                            ((TMatchable d2 nt2 ex2 t2 c2) (and (bool-eq nt nt2) $ and (bool-eq ex ex2) $ and (disc-eq d d2) $ and (notail $ term-eq t t2) $ notail $ mctors-eq c c2)) (else (BFalse))))
+                            ((TMatchable d2 nt2 ex2 t2 c2) (and (bool-eq nt nt2) $ and (bool-eq ex ex2) $ and (disc-eq d d2) $ and (notail $ term-eq t t2) $ tail $ mctors-eq c c2)) (else (BFalse))))
       ((TSlotOf c) (match many b _ ((TSlotOf c2) (tail $ term-eq c c2)) (else (BFalse))))
       ((TErr _) (BFalse))))
   ((many places-eq : (subterm many (Maybe $ Term) a) (many (Maybe $ Term) b) -> (many (Bool) r))
@@ -3611,7 +3611,7 @@
     (let-match many as (Cons _ a rest) ((Nil _) (list-is-empty _ bs)))
     (match many bs _
       ((Nil _) (BFalse))
-      ((Cons _ b rest2) (and (notail $ term-eq a b) $ notail $ terms-eq rest rest2))))
+      ((Cons _ b rest2) (and (notail $ term-eq a b) $ tail $ terms-eq rest rest2))))
   ((many tele-eq : (subterm many (List $ Entry) as) (many (List $ Entry) bs) -> (many (Bool) r))
     (let-match many as (Cons _ a rest) ((Nil _) (list-is-empty _ bs)))
     (let-match many bs (Cons _ b rest2) ((Nil _) (BFalse)))
@@ -3621,13 +3621,13 @@
       ((SgTy t) (match many sg2 _ ((SgTy t2) (notail $ term-eq t t2)) ((SgIs _ _) (BFalse))))
       ((SgIs t _) (match many sg2 _ ((SgTy _) (BFalse)) ((SgIs t2 _) (notail $ term-eq t t2)))))
     (and (mult-eq m m2) $ and (bool-eq s s2)
-      $ and (notail $ places-eq place place2) $ and same $ notail $ tele-eq rest rest2))
+      $ and (notail $ places-eq place place2) $ and same $ tail $ tele-eq rest rest2))
   ((many mctors-eq : (subterm many (List $ MCtor) as) (many (List $ MCtor) bs) -> (many (Bool) r))
     (let-match many as (Cons _ a rest) ((Nil _) (list-is-empty _ bs)))
     (let-match many bs (Cons _ b rest2) ((Nil _) (BFalse)))
     (let-match many a (MkMCtor m t))
     (match many b _
-      ((MkMCtor m2 t2) (and (mult-eq m m2) $ and (notail $ term-eq t t2) $ notail $ mctors-eq rest rest2)))))
+      ((MkMCtor m2 t2) (and (mult-eq m m2) $ and (notail $ term-eq t t2) $ tail $ mctors-eq rest rest2)))))
 
 (def-fns _ $ (many equal-env : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Bool) r))
   (term-eq (canon-env env a) $ canon-env env b))
@@ -3670,7 +3670,7 @@
   (let-match many cs (Cons _ c rest) ((Nil _) (BFalse)))
   (let-match many c (MkMCtor _ t))
   (match many t _
-    ((TVar y) (or (nat-eq x y) $ notail $ mctors-list rest x)) (else (tail $ mctors-list rest x))))
+    ((TVar y) (or (nat-eq x y) $ tail $ mctors-list rest x)) (else (tail $ mctors-list rest x))))
 
 ; Constructors one opened Matchable lists are distinct (section 8), first-class ones included: the objects
 ; naming x, found through the index, are those whose canonical constructors, the names after the type
@@ -3713,26 +3713,26 @@
   ((many dangling : (subterm many (Term) t) (many (Nat) d) -> (many (Bool) r))
     (match many t _
       ((TBound k) (not $ nat-lt k d))
-      ((TApp h args) (or (notail $ dangling h d) $ notail $ dangling-list args d))
-      ((TCell h args) (or (notail $ dangling h d) $ notail $ dangling-list args d))
-      ((TFn _ l ps rs) (or (notail $ dangling l d) $ or (notail $ dangling-tele ps d) $ notail $ dangling-tele rs $ nat-add d $ list-length _ ps))
+      ((TApp h args) (or (notail $ dangling h d) $ tail $ dangling-list args d))
+      ((TCell h args) (or (notail $ dangling h d) $ tail $ dangling-list args d))
+      ((TFn _ l ps rs) (or (notail $ dangling l d) $ or (notail $ dangling-tele ps d) $ tail $ dangling-tele rs $ nat-add d $ list-length _ ps))
       ((TTyCtor ps) (tail $ dangling-tele ps d))
-      ((TValCtor ps ret) (or (notail $ dangling-tele ps d) $ notail $ dangling ret $ nat-add d $ list-length _ ps))
-      ((TMatchable _ _ _ ty cs) (or (notail $ dangling ty d) $ notail $ dangling-mctors cs d))
+      ((TValCtor ps ret) (or (notail $ dangling-tele ps d) $ tail $ dangling ret $ nat-add d $ list-length _ ps))
+      ((TMatchable _ _ _ ty cs) (or (notail $ dangling ty d) $ tail $ dangling-mctors cs d))
       ((TSlotOf c) (tail $ dangling c d)) (else (BFalse))))
   ((many dangling-list : (subterm many (List $ Term) ts) (many (Nat) d) -> (many (Bool) r))
     (match many ts _
       ((Nil _) (BFalse))
-      ((Cons _ t rest) (or (notail $ dangling t d) $ notail $ dangling-list rest d))))
+      ((Cons _ t rest) (or (notail $ dangling t d) $ tail $ dangling-list rest d))))
   ((many dangling-mctors : (subterm many (List $ MCtor) cs) (many (Nat) d) -> (many (Bool) r))
     (let-match many cs (Cons _ c rest)
       ((Nil _) (BFalse)))
-    (match many c _ ((MkMCtor _ t) (or (notail $ dangling t d) $ notail $ dangling-mctors rest d))))
+    (match many c _ ((MkMCtor _ t) (or (notail $ dangling t d) $ tail $ dangling-mctors rest d))))
   ((many dangling-tele : (subterm many (List $ Entry) es) (many (Nat) d) -> (many (Bool) r))
     (let-match many es (Cons _ e rest) ((Nil _) (BFalse)))
     (let-match many e (MkEntry _ _ _ sg place _))
     (or (match many sg (((Bool) _)) ((SgTy t) (notail $ dangling t d)) ((SgIs t _) (notail $ dangling t d)))
-      $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (notail $ dangling p d))) $ notail $ dangling-tele rest $ Succ d)))
+      $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (notail $ dangling p d))) $ tail $ dangling-tele rest $ Succ d)))
 
 (def-fns _ $ (many term-type : (many (Env) env) (many (Term) t) -> (many (Maybe $ Term) r))
   (let-match many t (TApp h args)
