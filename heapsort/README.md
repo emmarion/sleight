@@ -26,8 +26,8 @@ repository root:
 
 ```
 dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.sl \
-  $(cat heapsort/mimo/files.txt) agent/tasks/heapsort-fast/accept.sl \
-  agent/tasks/heapsort-fast/perf.sl --extract heapsort/mimo_perf.ml
+  $(cat heapsort/mimo/files.txt) agent/tasks/heapsort-fast/perf.sl \
+  --extract heapsort/mimo_perf.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg heapsort/mimo_perf.ml -o heapsort/mimo_perf && heapsort/mimo_perf
 ```
 
@@ -46,7 +46,7 @@ that commit and reading the erased OCaml of each first pass to judge that it
 is a heap sort; that judgment and the `notes` column are its reading and may
 be wrong. Dollars are the provider's reported cost for Neuralwatt models and
 `agent/pi.py`'s list-price estimate otherwise. The `sort_ms` columns are
-`perf.sl`'s own `wall-ns` reading, which brackets only the call to `accept`:
+`perf.sl`'s own `wall-ns` reading, which brackets only the sort:
 the median and minimum of 9 rounds on an Apple M4 Pro (OCaml 5.4.1), each
 round running every passing session's build once, in turn, with nothing
 else running. `fastest_passing_session` is the run's passing session with

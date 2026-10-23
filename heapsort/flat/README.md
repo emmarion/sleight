@@ -7,7 +7,7 @@ files in order. From the repository root:
 ```
 T=agent/tasks/heapsort-fast
 dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.sl std/tactics.sl $T/spec.sl \
-  $(cat heapsort/flat/files.txt) $T/accept.sl $T/perf.sl --extract flat_perf.ml
+  $(cat heapsort/flat/files.txt) $T/perf.sl --extract flat_perf.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg flat_perf.ml -o flat_perf && ./flat_perf
 ```
 
@@ -25,4 +25,4 @@ ocamlfind ocamlopt -package zarith,unix -linkpkg flat_perf.ml -o flat_perf && ./
   them, and the loops, whose levels come later, may call any of them.
   Lemmas these functions call precede `(def-lvl Inv)`.
 - `loops.sl`: `sift` and `sift-to`, `heapify` and `sortdown`.
-- `sort.sl`: `heapsort-fast`, which `accept.sl` calls.
+- `sort.sl`: `heapsort-fast`, which `perf.sl` calls.
