@@ -53,12 +53,16 @@ let table =
 
 let find key = List.assoc_opt key (Lazy.force table)
 
-let reads what noun n ps =
+let outcomes ps = List.exists (function Hole (Body _) -> true | _ -> false) ps
+
+let reads ?(results = false) what noun n ps =
   let count h = List.length (List.filter (( = ) (Hole h)) ps) in
   for j = 0 to n - 1 do if count (Arg j) = 0 then Printf.ksprintf failwith "%s must read {a%d}" what j done;
   List.iter
     (function
       | Hole (Arg j) when j >= n -> Printf.ksprintf failwith "%s reads {a%d}, beyond its %s" what j noun
+      | Hole (Body i) when results && count (Body i) > 1 -> Printf.ksprintf failwith "%s must fill {b%d} at most once" what i
+      | Hole (Body _ | Field _) when results -> ()
       | Hole (Scrut | Body _ | Field _) -> Printf.ksprintf failwith "%s takes only {a} and {t} holes" what
       | _ -> ())
     ps
@@ -86,7 +90,7 @@ let check name ns =
          ps);
   List.iteri (fun i n -> Option.iter (reads (Printf.sprintf "the build template for %s %d" name i) "fields" n) (find (Build (name, i)))) ns
 
-let check_fn name n = Option.iter (reads ("the template for " ^ name) "arguments" n) (find (Fn name))
+let check_fn name n = Option.iter (reads ~results:true ("the template for " ^ name) "arguments" n) (find (Fn name))
 
 let fill ps ~scrut ~temp ~field ~body ~arg =
   String.concat ""

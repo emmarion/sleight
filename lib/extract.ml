@@ -132,7 +132,7 @@ let bind_args cx es k =
   let text = k n (List.map fst args) in
   if binds = [] then text else Printf.sprintf "(let %s in %s)" (concat " and " binds) text
 
-let fill_template cx ps es =
+let fill_build cx ps es =
   bind_args cx es (fun n names -> "(" ^ Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(List.nth names) ^ ")")
 
 let build cx c es =
@@ -140,10 +140,24 @@ let build cx c es =
   | Ext name -> (
       match template (Ffi_templates.Build (name, c.index)) with
       | None -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
-      | Some ps -> fill_template cx ps es)
+      | Some ps -> fill_build cx ps es)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern ~fill:"(Obj.repr ())" cx c es)
   | Untagged _ -> tuple es
   | Union -> one_block cx es
+
+let dummy n i j = Printf.sprintf "x%d_f%d_%d" n i j
+let fields_of n c = List.init c.V.arity (dummy n c.V.index)
+
+(* An extern function's template filled at [names]: its outcome holes, if it has any, with [arms] where the
+   call is matched at once, and otherwise each with its constructor built from the fields the template binds. *)
+let fill_template ?arms cx fname ps es =
+  bind_args cx es (fun n names ->
+    let body, field, thunk =
+      match (arms, Ffi.result_adt fname) with
+      | Some k, _ -> k n
+      | None, Some a when Ffi_templates.outcomes ps -> ((fun i -> let c = V.ctor_at a i in build cx c (fields_of n c)), dummy n, Fun.id)
+      | _ -> ((fun _ -> assert false), (fun _ _ -> assert false), Fun.id) in
+    thunk ("(" ^ Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field ~body ~arg:(List.nth names) ^ ")"))
 
 let field_match cx c target body =
   let ty, k, rest = match shape c.V.adt with
@@ -165,31 +179,45 @@ let field_copy cx c target =
   if c.V.arity = 0 then build cx c [] else
   field_match cx c target (fun r -> build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)))
 
-let cell_block cx c es =
+let rec cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
   build cx c es
 
 (* A match over [a]'s constructors: [arms] pair each constructor with its field names and body, [live] the
    discriminants that can occur, which narrows a tagged type so OCaml drops the others; an extern value is
    unwrapped one level first. *)
-let dispatch cx a live scrut arms default =
+(* The holes of a template that takes [a]'s outcomes apart, for instantiation [n]: each arm's body and field
+   binders, a live arm without one the [default], bound once as a thunk when it stands for more than one
+   constructor, and a refuted arm [absurd ()]. With [rebind], each body first binds that name to the value it
+   stands for, built from the fields. *)
+and outcome_arms ?rebind cx a live arms default n =
+  let live = List.sort_uniq compare live in
+  let arm i = List.find_opt (fun (c, _, _) -> c.V.index = i) arms in
+  let field i j = match arm i with Some (_, vs, _) -> List.nth vs j | None -> dummy n i j in
+  let at i b = match rebind with None -> b | Some x -> let c = V.ctor_at a i in Printf.sprintf "(let %s = %s in %s)" x (build cx c (List.init c.V.arity (field i))) b in
+  let defaulted = List.filter (fun i -> arm i = None && List.mem i live) (List.init (List.length a.V.ctors) Fun.id) in
+  let dflt, thunk =
+    match default with
+    | Some d when List.length defaulted > 1 -> (
+        match rebind with
+        | None -> ((fun _ -> Printf.sprintf "(x%d_d ())" n), fun t -> Printf.sprintf "(let x%d_d () = %s in %s)" n d t)
+        | Some x ->
+            let c i = V.ctor_at a i in
+            ((fun i -> Printf.sprintf "(x%d_d %s)" n (build cx (c i) (List.init (c i).V.arity (field i)))), fun t -> Printf.sprintf "(let x%d_d %s = %s in %s)" n x d t))
+    | Some d -> ((fun i -> at i d), Fun.id)
+    | None -> ((fun _ -> "(absurd ())"), Fun.id)
+  in
+  let body i = match arm i with Some (_, _, b) -> at i b | None -> if List.mem i live then dflt i else "(absurd ())" in
+  (body, field, thunk)
+
+and dispatch cx a live scrut arms default =
   let cases pat = concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pat c vs) body) arms) in
   let templated = match shape a with Ext name -> template (Ffi_templates.Match name) | _ -> None in
   let scrut = match shape a with Ext name when templated = None -> Printf.sprintf "(des_%s %s)" name scrut | _ -> scrut in
   match templated with
   | Some ps ->
       let n = stamp cx in
-      let live = List.sort_uniq compare live in
-      let arm i = List.find_opt (fun (c, _, _) -> c.V.index = i) arms in
-      let defaulted = List.filter (fun i -> arm i = None && List.mem i live) (List.init (List.length a.V.ctors) Fun.id) in
-      let dflt, thunk =
-        match default with
-        | Some d when List.length defaulted > 1 -> (Printf.sprintf "(x%d_d ())" n, fun t -> Printf.sprintf "(let x%d_d () = %s in %s)" n d t)
-        | Some d -> (d, Fun.id)
-        | None -> ("(absurd ())", Fun.id)
-      in
-      let body i = match arm i with Some (_, _, b) -> b | None -> if List.mem i live then dflt else "(absurd ())" in
-      let field i j = match arm i with Some (_, vs, _) -> List.nth vs j | None -> Printf.sprintf "x%d_f%d_%d" n i j in
+      let body, field, thunk = outcome_arms cx a live arms default n in
       let s, bind = if Ffi_templates.is_name scrut then (scrut, Fun.id) else (Printf.sprintf "x%d" n, fun t -> Printf.sprintf "(let x%d = %s in %s)" n scrut t) in
       bind (thunk ("(" ^ Ffi_templates.fill ps ~scrut:(fun () -> s) ~temp:(Printf.sprintf "x%d_t%d" n) ~field ~body ~arg:(fun _ -> assert false) ^ ")"))
   | None ->
@@ -314,7 +342,7 @@ and fn cx scope name f =
     match f.V.impl with
     | Some _ when !V.use_externs -> (
         match template (Ffi_templates.Fn f.fname) with
-        | Some ps -> fill_template cx ps (List.map var f.params)
+        | Some ps -> fill_template cx f.fname ps (List.map var f.params)
         | None ->
             let view label ctor =
               let a = (Program.ctor cx.env ctor).V.adt in
@@ -330,6 +358,22 @@ and fn cx scope name f =
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
+
+and head cx scope f =
+  let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
+  let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
+  match f with
+  | V.CVar x when List.mem_assoc x scope.locals -> `Fn (var x, List.assoc x scope.locals)
+  | V.CVar x -> (
+      match captured x with
+      | Some (V.VCtorFn c) -> `Ctor c
+      | Some (V.VFn cl) -> (
+          match (cl.fn.impl, template (Ffi_templates.Fn cl.fn.fname)) with
+          | Some _, Some ps when !V.use_externs -> `Inline (cl.fn.fname, ps)
+          | _ -> `Fn (closure cx cl, List.length cl.fn.params))
+      | _ -> `Dyn)
+  | V.CConst (V.VCtorFn c) -> `Ctor c
+  | _ -> `Dyn
 
 and expr cx scope code = match code with
   | V.CVar x when x < 0 -> define cx x (Hashtbl.find V.literal_values x)
@@ -348,27 +392,19 @@ and expr cx scope code = match code with
   | V.CValues cs -> (match List.map (expr cx scope) cs with [ e ] -> e | es -> bind_args cx es (fun _ -> tuple))
   | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
-      let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
-      let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
-      let head =
-        match f with
-        | V.CVar x when List.mem_assoc x scope.locals -> `Fn (var x, List.assoc x scope.locals)
-        | V.CVar x -> (
-            match captured x with
-            | Some (V.VCtorFn c) -> `Ctor c
-            | Some (V.VFn cl) -> (
-                match (cl.fn.impl, template (Ffi_templates.Fn cl.fn.fname)) with
-                | Some _, Some ps when !V.use_externs -> `Inline ps
-                | _ -> `Fn (closure cx cl, List.length cl.fn.params))
-            | _ -> `Dyn)
-        | V.CConst (V.VCtorFn c) -> `Ctor c
-        | _ -> `Dyn
-      in
-      match (cc, head) with
+      match (cc, head cx scope f) with
       | V.Ctor, `Ctor c -> build cx c es
-      | _, `Inline ps -> fill_template cx ps es
+      | _, `Inline (fname, ps) -> fill_template cx fname ps es
       | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
       | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
+  | V.CLet ([ x ], V.CApp (f, es, _), V.CMatch ({ scrut = V.CVar y; shape = V.Known a; _ } as m))
+    when V.resolve y = x
+         && (match head cx scope f with `Inline (fname, ps) -> Ffi_templates.outcomes ps && (match Ffi.result_adt fname with Some r -> r == a | None -> false) | _ -> false) -> (
+      match head cx scope f with
+      | `Inline (fname, ps) ->
+          let arms = List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches in
+          fill_template ~arms:(outcome_arms ~rebind:(var x) cx a m.live arms (Option.map (expr cx scope) m.default)) cx fname ps (List.map (expr cx scope) es)
+      | _ -> assert false)
   | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
   | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
   | V.CLetRec (fns, body) ->

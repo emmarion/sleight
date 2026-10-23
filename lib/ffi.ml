@@ -197,3 +197,5 @@ let claim_type loc name adt =
   match List.assoc_opt name types with
   | None -> Env.error loc "no extern implementation for %s" (Env.tick name)
   | Some spec -> check_shape loc name adt; bind loc name; Hashtbl.replace registered name adt; spec.view adt
+
+let result_adt name = match List.assoc_opt name fns with Some { needs = t :: _; _ } -> Hashtbl.find_opt adts t | _ -> None
