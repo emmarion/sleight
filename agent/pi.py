@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fnmatch, functools, hashlib, json, os, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, random, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -48,6 +48,12 @@ class PathEscape(Exception):
 
 class Refused(Exception):
     pass
+
+
+class Failed(Exception):
+    def __init__(self, error):
+        super().__init__(json.dumps(error))
+        self.error = error
 
 _NOFOLLOW = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
 _DIRFLAGS = _NOFOLLOW | os.O_DIRECTORY
@@ -718,6 +724,8 @@ def assemble_sse(r):
         for d in _sse(r):
             extra.update({k: d[k] for k in ("usage", "cost", "energy") if d.get(k)})
             finish = "runaway repetition" if d.get("type") == "runaway" else finish
+            if isinstance(d.get("error"), dict):
+                raise Failed(d["error"])
             for ch in d.get("choices") or []:
                 finish = ch.get("finish_reason") or finish
                 delta = ch.get("delta") or {}
@@ -743,31 +751,57 @@ def assemble_sse(r):
     return {"choices": [{"message": msg, "finish_reason": finish}], **extra}
 
 
-def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), stream=None):
+def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "15")), stream=None):
     global _LOG_N
     for attempt in range(tries):
         req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"content-type": "application/json", **headers})
         _LOG_N += 1
         _log(LOG_PATH, _banner(f"  (retry {attempt})" if attempt else "") + f"{url}\n---- request ----\n{json.dumps(body, indent=2, ensure_ascii=False)}\n")
-        t0 = time.time()
+        t0, said, error = time.time(), {}, None
         try:
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as r:
+                said = r.headers
                 reply = stream(r) if stream else json.loads(r.read())
             _log(LOG_PATH, f"---- response {_ts()} ({time.time() - t0:.1f}s) ----\n{json.dumps(reply, indent=2, ensure_ascii=False)}\n")
+            if reply.get("status") == "failed":
+                raise Failed(reply.get("error"))
             return reply
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode()[:500]
-            _log(LOG_PATH, f"---- error {_ts()} ({time.time() - t0:.1f}s) ----\nHTTP {e.code} {e.reason}: {detail}\n")
-            if why := _policy(_json_or_empty(detail).get("error")):
+        except Failed as e:
+            error = e.error if isinstance(e.error, dict) else {}
+            _log(LOG_PATH, f"---- failed {_ts()} ({time.time() - t0:.1f}s) ----\n{json.dumps(e.error, ensure_ascii=False)}\n")
+            if why := _policy(error):
                 raise Refused(why)
-            if e.code not in (408, 409, 429, 500, 502, 503, 504, 520, 522, 524) or attempt == tries - 1:
+            if error.get("retryable") is False or attempt == tries - 1:
+                raise RuntimeError(f"the response failed: {json.dumps(e.error)}")
+        except urllib.error.HTTPError as e:
+            detail, said = e.read().decode()[:500], e.headers
+            error = _json_or_empty(detail).get("error")
+            _log(LOG_PATH, f"---- error {_ts()} ({time.time() - t0:.1f}s) ----\nHTTP {e.code} {e.reason}: {detail}\n")
+            if why := _policy(error):
+                raise Refused(why)
+            if not (e.code in (408, 409, 429) or e.code >= 500) or attempt == tries - 1:
                 sys.exit(f"{e.code} {e.reason}: {detail}")
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             _log(LOG_PATH, f"---- error {_ts()} ({time.time() - t0:.1f}s) ----\nnetwork: {e}\n")
             if attempt == tries - 1:
                 sys.exit(f"network error after {tries} tries: {e}")
-        _say(f"[retry {attempt + 1}/{tries - 1} in {2 ** attempt}s]")
-        time.sleep(2 ** attempt)
+        wait = _retry_wait(attempt, said, error)
+        _say(f"[retry {attempt + 1}/{tries - 1} in {wait:.1f}s]")
+        time.sleep(wait)
+
+
+def _retry_wait(attempt, headers, error):
+    for name, scale in (("retry-after-ms", 1000), ("retry-after", 1)):
+        try:
+            wait = float((headers or {}).get(name)) / scale
+        except (TypeError, ValueError):
+            continue
+        if 0 < wait <= 120:
+            return wait
+    strategy = (error or {}).get("retry_strategy") if isinstance(error, dict) else None
+    strategy = strategy if isinstance(strategy, dict) else {}
+    first, cap = float(strategy.get("suggested_initial_delay_s") or 2), float(strategy.get("max_delay_s") or 60)
+    return min(first * 2 ** attempt, cap) * (1 - 0.25 * random.random())
 
 
 def _json_or_empty(text):
@@ -907,11 +941,7 @@ class OpenAI(OpenAICompat):
         return reply.get("status") == "incomplete" and (reply.get("incomplete_details") or {}).get("reason") == "max_output_tokens"
 
     def refusal(self, reply):
-        if reply.get("status") != "failed":
-            return None
-        if why := _policy(reply.get("error")):
-            return why
-        raise RuntimeError(f"the response failed: {json.dumps(reply.get('error'))}")
+        return None
 
     def send(self, messages):
         return post(self.base + "/responses", {
@@ -1365,7 +1395,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_MAX_TOKENS     output tokens per reply [the model's maximum]\n"
          "  PI_EFFORT         reasoning effort [unset]\n"
          "  PI_STREAM         stream replies [1]\n"
-         "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [1800 s, 6 tries]\n"
+         "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [1800 s, 15 tries]\n"
          "  PI_MAX_EMPTY      replies in a row without a tool call before giving up [3]\n"
          "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
          "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
