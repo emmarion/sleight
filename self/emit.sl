@@ -266,7 +266,7 @@
   (match many a _ ((Zero) k) ((Succ _) (Succ k))))
 
 (def-fns _ $ (many shape-wide : (many (List $ Nat) s) -> (many (Bool) r))
-  (nat-lt 246 $ filled-count s))
+  (nat-lt 244 $ filled-count s))
 
 (def-fns _ $ (many widest : (subterm many (List $ Nat) s) -> (many (Nat) n))
   (let-match many s (Cons _ a rest) ((Nil _) 0))

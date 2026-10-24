@@ -1,6 +1,6 @@
 ; needs: ../std/macro wide_lib
 ; expect: (MkPair _ _ (Cons _ 5 $ Cons _ 3 $ Cons _ 6 $ Cons _ 7 $ Cons _ 100 $ Cons _ 0 $ Cons _ 6 $ Cons _ 6 $ Cons _ 7 $ Cons _ 1 $ Cons _ 6 $ Cons _ 6 $ Nil _) $ Cons _ (C245 1 2 3) $ Cons _ (C124 1 2) $ Cons _ (Z1) $ Cons _ (C245 1 2 3) $ Nil _)
-; An enum with more than 246 constructors that have fields, past OCaml's block tags: built, matched in
+; An enum with more than 244 constructors that have fields, past OCaml's block tags: built, matched in
 ; each mode, embedded and printed.
 (def-adts $ (Big : -> Type)
   enum

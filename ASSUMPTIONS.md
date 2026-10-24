@@ -203,10 +203,11 @@ that runs, in each of its modes.
     being the entry's, so shadowed names stay distinct; a literal is
     `l<n>`, a closure `cl<n>_<name>`, and a constructor shape's OCaml
     type and constructors `t<n>` and `K<n>_<i>`. The source names come
-    from a table `Env.bind` fills (`Env.names`). OCaml gives at most
-    246 constructors with fields a block tag of their own, so a shape
-    with more of them, a **wide** shape, keeps its nullary constructors
-    as `K<n>_<i>` and puts every other under one constructor `K<n>_w`,
+    from a table `Env.bind` fills (`Env.names`). OCaml 5 gives at most
+    244 constructors with fields a block tag of their own (OCaml 4,
+    246), so a shape with more of them, a **wide** shape, keeps its
+    nullary constructors as `K<n>_<i>` and puts every other under one
+    constructor `K<n>_w`,
     whose record holds the constructor's position as an `int` field
     `d` ahead of its fields, padded with `()` to the widest
     constructor's. That `d` stands in for the tag section 33 asks for,

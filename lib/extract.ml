@@ -91,7 +91,7 @@ let shape_index cx ns =
   go 0 !(cx.shapes)
 let type_name cx ns = "t" ^ string_of_int (shape_index cx ns)
 let ctor_at cx ns i = Printf.sprintf "K%d_%d" (shape_index cx ns) i
-let wide ns = List.length (List.filter (( <> ) 0) ns) > 246
+let wide ns = List.length (List.filter (( <> ) 0) ns) > 244
 let wide_ctor cx ns = Printf.sprintf "K%d_w" (shape_index cx ns)
 let widest ns = List.fold_left max 0 ns
 
