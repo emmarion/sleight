@@ -1,0 +1,5 @@
+*_perf.ml
+*_perf
+*.cmi
+*.cmx
+*.o

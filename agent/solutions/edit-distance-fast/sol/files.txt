@@ -1,0 +1,14 @@
+agent/solutions/edit-distance-fast/sol/literals.sl
+agent/solutions/edit-distance-fast/sol/arith.sl
+agent/solutions/edit-distance-fast/sol/cost.sl
+agent/solutions/edit-distance-fast/sol/least.sl
+agent/solutions/edit-distance-fast/sol/cell.sl
+agent/solutions/edit-distance-fast/sol/bounds.sl
+agent/solutions/edit-distance-fast/sol/suffix.sl
+agent/solutions/edit-distance-fast/sol/text.sl
+agent/solutions/edit-distance-fast/sol/boundary.sl
+agent/solutions/edit-distance-fast/sol/row.sl
+agent/solutions/edit-distance-fast/sol/initial-row.sl
+agent/solutions/edit-distance-fast/sol/swap.sl
+agent/solutions/edit-distance-fast/sol/build-row.sl
+agent/solutions/edit-distance-fast/sol/distance.sl

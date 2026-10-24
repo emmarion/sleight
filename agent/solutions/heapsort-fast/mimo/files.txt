@@ -1,0 +1,10 @@
+agent/solutions/heapsort-fast/mimo/lemmas.sl
+agent/solutions/heapsort-fast/mimo/u62imm.sl
+agent/solutions/heapsort-fast/mimo/heappf.sl
+agent/solutions/heapsort-fast/mimo/tree.sl
+agent/solutions/heapsort-fast/mimo/heap.sl
+agent/solutions/heapsort-fast/mimo/heap2.sl
+agent/solutions/heapsort-fast/mimo/heap3.sl
+agent/solutions/heapsort-fast/mimo/heap4.sl
+agent/solutions/heapsort-fast/mimo/loops.sl
+agent/solutions/heapsort-fast/mimo/sort.sl

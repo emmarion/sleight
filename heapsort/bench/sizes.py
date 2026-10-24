@@ -39,7 +39,8 @@ ROWS = [
     ("Lean verified", "yes", [part(H / "HeapSort.lean"), part(H / "Int63.lean")]),
     ("Idris 2 (plain port)", "no", [part(H / "bench/Hs.idr", r"^Arr : Type", r"^fill :")]),
     ("Idris 2 certified", "yes", [part(H / "idris/Arr.idr"), part(H / "idris/HeapSort.idr")]),
-    *((f"Sleight {d}/", "yes", sl(R, H / d / "files.txt")) for d in ("opus", "mimo", "flat")),
+    *((f"Sleight {Path(d).name}/", "yes", sl(R, R / d / "files.txt"))
+      for d in ("agent/solutions/heapsort-fast/opus", "agent/solutions/heapsort-fast/mimo", "heapsort/flat")),
     *((name, "yes", sl(Path(p), Path(p) / "work/files.txt")) for name, p in (a.split("=", 1) for a in sys.argv[1:])),
     ("Sleight spec.sl (given, not counted above)", "", [part(R / "agent/tasks/heapsort-fast/spec.sl")]),
 ]

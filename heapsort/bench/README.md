@@ -14,7 +14,8 @@ python3 heapsort/bench/run.py [ROUNDS] [EXTRA-SLC-BINARY...]
 ats2-lang` with `PATSHOME` set), `lake` and `idris2`. For each C compiler in
 `CCS` (default `cc`) it builds `_build/driver_CC` from `ats/` (C, ATS plain
 and ATS certified, each timed inside its entry point). It also builds the Sleight
-sorts in `opus/`, `mimo/` and `flat/` with `self/release.sh`'s slc,
+sorts in `agent/solutions/heapsort-fast/opus/`, `agent/solutions/heapsort-fast/mimo/`
+and `flat/` with `self/release.sh`'s slc,
 `heapsort.ml`'s sort with `ml_main.ml` (with and without `-unsafe`),
 `HeapSort.lean`'s sort through `lean/`, and `Hs.idr`, an unverified Idris 2
 port of the same sift-down sort. `run.py` runs every program once per round,

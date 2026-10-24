@@ -1,0 +1,45 @@
+; ASCII folding and byte cost. All runtime values are machine immediates.
+(let ((erased ed-32-fit)) (prove-literal-lt 32 4611686018427387904))
+(let ((erased ed-65-fit)) (prove-literal-lt 65 4611686018427387904))
+(let ((erased ed-91-fit)) (prove-literal-lt 91 4611686018427387904))
+(unary 65 64)
+(unary 91 90)
+
+(def-fns _ $ (erased ed-fold-bound : (erased (Nat) n m) (erased (Lt n 91) hi)
+    (erased (Add 32 n m) lower) -> (erased (Lt m u8-modulus) fits))
+  (lt-trans m 123 u8-modulus
+    (ed-add-mono 32 n 91 m 123 lower ed-fold-limit-sum hi)
+    (prove-literal-lt 123 u8-modulus)))
+
+(def-fns _ $ (many ed-fold : (many (U8) x) -> (many (U8) f) (erased (Fold x f) folded))
+  (let-match many x (MkU8 n p))
+  (let ((erased pn)) (lt-trans n u8-modulus u62-modulus p u8-below-u62))
+  (let-match many (u62-lt-dec n 65 pn ed-65-fit) (No _ _ lo)
+    ((Yes _ _ below) (values x (FoldBelow n p below))))
+  (let-match many (u62-lt-dec n 91 pn ed-91-fit) (Yes _ _ hi)
+    ((No _ _ above) (values x (FoldAbove n p (lt-pred _ _ above)))))
+  (let ((erased m) (erased lower)) (add 32 n))
+  (let ((erased q)) (ed-fold-bound n m hi lower))
+  (let ((many v)) (u62-add 32 n m lower (lt-trans m u8-modulus u62-modulus q u8-below-u62)))
+  (values (MkU8 v q) (FoldUpper n p m q (lt-pred _ _ lo) hi lower)))
+
+(def-fns _ $ (many ed-byte-eq : (many (U8) x y) -> (many (EqDec (U8) U8Lt x y) eq))
+  (let-match many x (MkU8 n p))
+  (let-match many y (MkU8 m q))
+  (let-match many (u62-eq n m (lt-trans _ _ _ p u8-below-u62) (lt-trans _ _ _ q u8-below-u62)) (Equal _ _ _)
+    ((Unequal _ _ _ _ apart)
+      (Unequal (U8) U8Lt x y
+        (match erased apart (((Apart (U8) U8Lt x y) a))
+          ((ApLt _ _ _ _ lt) (ApLt (U8) U8Lt x y (MkU8Lt n p m q lt)))
+          ((ApGt _ _ _ _ gt) (ApGt (U8) U8Lt x y (MkU8Lt m q n p gt)))))))
+  (let-match erased (lt-unique m u8-modulus p q) (Refl _ _))
+  (Equal (U8) U8Lt x))
+
+(def-fns _ $ (many ed-cost : (many (U8) x y) -> (many (Nat) c) (erased (Cost x y c) cost))
+  (let-match many (ed-byte-eq x y) (Unequal _ _ _ _ apart)
+    ((Equal _ _ _) (values 0 (CostSame x))))
+  (let ((many f) (erased fx)) (ed-fold x))
+  (let ((many g) (erased gy)) (ed-fold y))
+  (match many (ed-byte-eq f g) _
+    ((Equal _ _ _) (values 1 (CostCase x y f fx gy apart)))
+    ((Unequal _ _ _ _ fg) (values 2 (CostOther x y f g fx gy fg)))))

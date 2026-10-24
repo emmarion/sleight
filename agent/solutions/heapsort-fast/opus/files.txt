@@ -1,0 +1,6 @@
+agent/solutions/heapsort-fast/opus/hs-base.sl
+agent/solutions/heapsort-fast/opus/hs-heap.sl
+agent/solutions/heapsort-fast/opus/hs-sift.sl
+agent/solutions/heapsort-fast/opus/hs-phase.sl
+agent/solutions/heapsort-fast/opus/hs-bounds.sl
+agent/solutions/heapsort-fast/opus/hs-hole.sl

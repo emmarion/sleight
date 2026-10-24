@@ -17,24 +17,10 @@ ocamlopt -unsafe -inline 200 -o heapsort_ml_unsafe heapsort.ml && ./heapsort_ml_
 lake build && .lake/build/bin/bench
 ```
 
-`mimo/` holds an Sleight heap sort certified against
-`agent/tasks/heapsort-fast/spec.sl`, written by the mimo-v2.6-pro agent
-on the heapsort-fast task. `mimo/files.txt` lists its files in order. It
-sorts a different input, `perf.sl`'s 2^20 pseudo-random integers below
-2^30, once, and prints the time and what the sort allocates. From the
-repository root:
-
-```
-dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.sl \
-  $(cat heapsort/mimo/files.txt) agent/tasks/heapsort-fast/perf.sl \
-  --extract heapsort/mimo_perf.ml
-ocamlfind ocamlopt -package zarith,unix -linkpkg heapsort/mimo_perf.ml -o heapsort/mimo_perf && heapsort/mimo_perf
-```
-
-`opus/` holds another, written by the claude-opus-5-5 agent in the first
-session of run `20261012-1220-claude-opus-5-5-heapsort-fast`; of the runs in
-`agent-runs-8860c75.csv`, it is the smallest solution by non-whitespace
-characters outside comments. It runs as `mimo/` does, with `opus` for `mimo`.
+`agent/solutions/heapsort-fast/` holds Sleight heap sorts certified against
+`agent/tasks/heapsort-fast/spec.sl` that agents wrote on the heapsort-fast
+task; its README says how to run them. `flat/` holds another, with flat
+invariants; `flat/README.md` describes it.
 
 `agent-runs-8860c75.csv` lists the heapsort-fast agent runs made on commit
 8860c75, one row per run: the first session whose `work/` passed (it

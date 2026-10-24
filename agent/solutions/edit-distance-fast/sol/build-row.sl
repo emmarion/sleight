@@ -1,0 +1,76 @@
+; Fill a nonempty-source row from right to left. Previous-row diagonal and
+; current-row insertion distances are cached, as is the next target byte.
+; All three arrays are unique; the two borrowed states are forwarded.
+(def-fns _ $ (many ed-build-row-loop :
+    (many (U8) x) (erased (List (U8)) xs) (erased (Nat) nx)
+    (erased (Length (U8) (Cons (U8) x xs) nx) lx) (erased (Lt nx max-array-length) fx)
+    (erased (List (U8)) ys) (many (Bytes ys) bytes) (erased (Nat) n)
+    (erased (Length (U8) ys n) len) (erased (Lt n max-array-length) fits)
+    (erased (List (Copy (U62))) old1) (erased (EdRow xs ys old1) row1) (unique (Array (Copy (U62)) old1) prev1)
+    (many (U8) x2) (many (Bool) has-x) (erased (List (Copy (U62))) old2)
+    (erased (EdPrevious xs ys old2 x2 has-x) previous) (unique (Array (Copy (U62)) old2) prev2)
+    (subterm many (Nat) i) (erased (Lt i (Succ n)) in)
+    (erased (List (U8)) rest) (erased (EdSuffix (U8) ys i rest) suffix)
+    (many (U8) y2) (many (Bool) has-y) (erased (EdHead rest y2 has-y) head)
+    (erased (List (Copy (U62))) cells) (unique (Array (Copy (U62)) cells) buf)
+    (erased (List (Copy (U62))) partial) (erased (EdSuffix (Copy (U62)) cells i partial) computed)
+    (erased (EdRow (Cons (U8) x xs) rest partial) row)
+    (many (Nat) a) (erased (Dist xs rest a) da) (erased (Lt a ed-value-limit) pa)
+    (many (Nat) e) (erased (Dist (Cons (U8) x xs) rest e) de) (erased (Lt e ed-value-limit) pe) ->
+    (erased (List (Copy (U62))) updated) (unique (Array (Copy (U62)) updated) out at buf)
+    (erased (EdRow (Cons (U8) x xs) ys updated) final-row)
+    (unique prev1 is prev1out at prev1) (unique prev2 is prev2out at prev2))
+  (let ((erased ip)) (lt-le-trans i (Succ n) u62-modulus in
+    (LtS n u62-modulus (lt-trans n max-array-length u62-modulus fits max-array-length-below-u62))))
+  (let-match many (u62-lt-dec 0 i u62-modulus-pos ip) (Yes _ _ pos)
+    ((No _ _ iz)
+      (let-match erased iz (LtZ _) (absurd (LtS _ _ bad) bad))
+      (let-match erased suffix (EdSuffixHere _ _))
+      (let-match erased computed (EdSuffixHere _ _))
+      (values cells buf row prev1 prev2)))
+  (let-match erased pos (LtZ k))
+  (let ((many j)) (u62-dec k i ip))
+  (let ((erased y) (erased target-prev)) (ed-suffix-prev (U8) ys k rest suffix))
+  (let ((many byte)) (bytes-get-many ys bytes j y (ed-suffix-nth (U8) ys k y rest target-prev)))
+  (let ((many b) (erased db) (erased pb) (unique prev1a))
+    (ed-row-get xs ys old1 row1 prev1 j (Cons _ y rest) target-prev))
+  (let ((many d) (erased dist) (erased pd) (unique prev2a))
+    (ed-select-cell x xs byte rest ys n len fits i suffix x2 has-x old2 previous prev2 y2 has-y head
+      a da pa b db pb e de pe))
+  (let ((erased m) (erased lm) (erased pm)) (ed-suffix-small-length ys n len fits k (Cons _ y rest) target-prev))
+  (let ((erased small)) (ed-dist-small (Cons _ x xs) (Cons _ y rest) d dist nx m lx lm fx pm))
+  (let ((erased updated) (unique out) (erased new-computed)) (ed-array-before cells buf j partial computed d pd))
+  (let ((erased new-row)) (EdRowCons (Cons _ x xs) y rest d pd dist small partial row))
+  (let-match erased in (LtS _ _ kn))
+  (tail (ed-build-row-loop x xs nx lx fx ys bytes n len fits old1 row1 prev1a x2 has-x old2 previous prev2a
+    j (lt-weaken k n kn) (Cons _ y rest) target-prev byte (BTrue) (EdHeadCons y rest)
+    updated out (Cons _ (MkCopy _ (MkU62 d pd)) partial) new-computed new-row b db pb d dist small)))
+
+(def-fns _ $ (many ed-build-row :
+    (many (U8) x) (erased (List (U8)) xs) (erased (Nat) nx)
+    (erased (Length (U8) (Cons (U8) x xs) nx) lx) (erased (Lt nx max-array-length) fx)
+    (erased (List (U8)) ys) (many (Bytes ys) bytes) (many (Nat) n)
+    (erased (Length (U8) ys n) len) (erased (Lt n max-array-length) fits)
+    (erased (List (Copy (U62))) old1) (erased (EdRow xs ys old1) row1) (unique (Array (Copy (U62)) old1) prev1)
+    (many (U8) x2) (many (Bool) has-x) (erased (List (Copy (U62))) old2)
+    (erased (EdPrevious xs ys old2 x2 has-x) previous) (unique (Array (Copy (U62)) old2) prev2)
+    (erased (List (Copy (U62))) cells) (unique (Array (Copy (U62)) cells) buf)
+    (erased (Length (Copy (U62)) cells (Succ n)) buffer-length)
+    (many (Nat) bd) (erased (Dist xs (Nil (U8)) bd) boundary) (erased (Lt bd ed-value-limit) bd-small) ->
+    (erased (List (Copy (U62))) updated) (unique (Array (Copy (U62)) updated) out at buf)
+    (erased (EdRow (Cons (U8) x xs) ys updated) final-row)
+    (unique prev1 is prev1out at prev1) (unique prev2 is prev2out at prev2)
+    (many (Nat) new-bd) (erased (Dist (Cons (U8) x xs) (Nil (U8)) new-bd) new-boundary)
+    (erased (Lt new-bd ed-value-limit) new-bd-small))
+  (let ((many e) (erased sum) (erased pe)) (ed-plus2 bd bd-small))
+  (let ((erased de)) (DistDelete x xs bd boundary e sum))
+  (let ((erased small)) (ed-dist-small (Cons _ x xs) (Nil _) e de nx 0 lx (LengthNil _) fx
+    (prove-literal-lt 0 18014398509481984)))
+  (let ((erased last)) (ed-suffix-end (Copy (U62)) cells (Succ n) buffer-length))
+  (let ((erased cells1) (unique buf1) (erased computed)) (ed-array-before cells buf n (Nil _) last e pe))
+  (let ((erased updated) (unique out) (erased row) (unique prev1a) (unique prev2a))
+    (ed-build-row-loop x xs nx lx fx ys bytes n len fits old1 row1 prev1 x2 has-x old2 previous prev2
+      n (lt-succ n) (Nil _) (ed-suffix-end (U8) ys n len) x (BFalse) (EdHeadNil x)
+      cells1 buf1 (Cons _ (MkCopy _ (MkU62 e pe)) (Nil _)) computed
+      (EdRowNil (Cons _ x xs) e pe de small) bd boundary bd-small e de small))
+  (values updated out row prev1a prev2a e de small))
