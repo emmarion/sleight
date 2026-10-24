@@ -228,7 +228,7 @@ let bytes_get_many = bytes_get
 let bytes_set b i x = Bytes.unsafe_set b (small i) (Char.unsafe_chr (small x))
 let bytes_length b = Z.of_int (Bytes.length b)
 let bytes_length_many = bytes_length
-let str_bytes_copy (s, o, l) = Bytes.of_string (String.sub s o l)
+let str_bytes_copy (s, o, l) = let b = Bytes.create l in Bytes.blit_string s o b 0 l; b
 let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)
 let bytes_copy = Bytes.copy
 let array_copy = Array.copy

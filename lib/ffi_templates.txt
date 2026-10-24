@@ -51,7 +51,7 @@ fn bytes-get-many: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) 
 fn bytes-set: Bytes.unsafe_set (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Char.unsafe_chr (Obj.obj {a2} : int)); Obj.repr ()
 fn bytes-length: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
 fn bytes-length-many: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
-fn str-bytes-copy: let ({t0}, {t1}, {t2}) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Bytes.of_string (String.sub {t0} {t1} {t2}))
+fn str-bytes-copy: let ({t0}, {t1}, {t2}) = (Obj.obj {a0} : Ffi_core.slice) in let {t3} = Bytes.create {t2} in Bytes.blit_string {t0} {t1} {t3} 0 {t2}; Obj.repr {t3}
 fn bytes-str: let {t0} = (Obj.obj {a0} : bytes) in Obj.repr ((Bytes.unsafe_to_string {t0}, 0, Bytes.length {t0}) : Ffi_core.slice)
 fn bytes-copy: Obj.repr (Bytes.copy (Obj.obj {a0} : bytes))
 fn array-copy: Obj.repr (Array.copy (Obj.obj {a0} : Ffi_core.word array))
