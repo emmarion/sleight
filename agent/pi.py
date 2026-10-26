@@ -450,30 +450,43 @@ def check(files):
     return out
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None, warn_unused=False):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None, asm=None, warn_unused=False):
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
         raise ValueError("`paths` must name at least one file")
     if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
         raise ValueError("`capture` cannot name a kept file")
-    if ocaml and os.path.normpath(ocaml) in KEEP:
-        raise ValueError("`ocaml` cannot name a kept file")
-    if ocaml and (stdin or args or gc_stats):
-        raise ValueError("`stdin`, `args` and `gc_stats` need a run, which `ocaml` skips")
+    for name, out in (("ocaml", ocaml), ("asm", asm)):
+        if out and os.path.normpath(out) in KEEP:
+            raise ValueError(f"`{name}` cannot name a kept file")
+    if ocaml and asm and os.path.normpath(ocaml) == os.path.normpath(asm):
+        raise ValueError("`ocaml` and `asm` cannot name the same file")
+    if (ocaml or asm) and (stdin or args or gc_stats):
+        raise ValueError("`stdin`, `args` and `gc_stats` need a run, which `ocaml` and `asm` skip")
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         why, c, head = _compile(tmp, [(_source_name(p), read_bytes(p)) for p in paths],
                                 [*(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_fence(),
                                  "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-exec"], capture,
-                                None if ocaml else str(Path(tmp, "p")))
+                                None if ocaml or asm else str(Path(tmp, "p")))
         if not why and c.returncode in (2, 3):
             with open(RUN_DIR / "build-failures.log", "a") as f:
                 f.write(f"{_iso(time.time())}: slc exited {c.returncode}\n{_text(c.stderr)}")
             return f"internal error: building the compiler's output: slc exited {c.returncode}; this is not your program's fault"
         if why or c.returncode:
             return head
-        if ocaml:
-            return f"{head}\nocaml: wrote {write_bytes(ocaml, c.stdout)}"
+        if ocaml or asm:
+            wrote = [f"ocaml: wrote {write_bytes(ocaml, c.stdout)}"] if ocaml else []
+            if asm:
+                Path(tmp, "p.ml").write_bytes(c.stdout)
+                why, a = _proc(["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-S", "-c", "p.ml"], tmp, SLC_TIMEOUT,
+                               env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
+                if why or a.returncode:
+                    with open(RUN_DIR / "build-failures.log", "a") as f:
+                        f.write(f"{_iso(time.time())}: ocamlopt -S {why or f'exited {a.returncode}'}\n{_text(a.stderr)}")
+                    return f"internal error: generating assembly from the compiler's output: ocamlopt {why or f'exited {a.returncode}'}; this is not your program's fault"
+                wrote.append(f"asm: wrote {write_bytes(asm, Path(tmp, 'p.s').read_bytes())}")
+            return "\n".join([head, *wrote])
         t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
@@ -565,12 +578,13 @@ TOOLS = {
                "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. "
                + ("With `ocaml`, the program is not built or run: if it compiles, the OCaml code the compiler translates it into "
                   "is written to the file `ocaml` names, and only the compiler's messages are returned. Functions that are never called at run time, "
-                  "including those called only at compile time, are left out of it. " if OCAML else "")
+                  "including those called only at compile time, are left out of it. "
+                  "With `asm`, the same, but the file holds the assembly that OCaml code compiles to when a program is built. " if OCAML else "")
                + ("With `warn_unused`, the compiler also warns about each binder below the top level that is never used, "
                   "or is not erased but used only in erased positions, in every file it reads, the libraries included. " if WARN_UNUSED else "")
                + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
-           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}) | ({"warn_unused": BOOL} if WARN_UNUSED else {}), ["paths"]),
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR, "asm": STR} if OCAML else {}) | ({"warn_unused": BOOL} if WARN_UNUSED else {}), ["paths"]),
     **({"check": (check, "Proves the task's goal from `files`, the full compile order, and records the attempt. Reports the result and any warnings.",
                   {"files": STRS}, ["files"])} if CHECK else {}),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
@@ -1391,8 +1405,8 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
          "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
          "                    `first_error` decides, defaulting to every error [yes]\n"
-         "  PI_OCAML          let the `sl` tool's `ocaml` parameter write the program's OCaml translation to a file instead of\n"
-         "                    running it [0]\n"
+         "  PI_OCAML          let the `sl` tool's `ocaml` and `asm` parameters write the program's OCaml translation, or the\n"
+         "                    assembly it compiles to, to a file instead of running it [0]\n"
          "  PI_WARN_UNUSED    let the `sl` tool's `warn_unused` parameter turn on the compiler's unused-binder warnings [0]\n"
          "  PI_CHECK          the files, separated by spaces, that the `check` tool requires before the agent's own; the tool\n"
          "                    exists only when this is set; each check is kept in the session's checks/ []\n"
