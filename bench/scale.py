@@ -48,6 +48,12 @@ def big_block(n):
     return ["(def-fns _\n"+"\n".join(fs)+")","(h0 5)"]
 def comptime_list(n):
     return ["(let ((many xs)) "+"(Cons (Nat) 1 $ "*n+"Nil (Nat))", "(length _ xs)"] if False else ["(let ((many xs)) "+"(Cons (Nat) 1 $ "+"Cons (Nat) 1 $ "*(n-1)+"Nil (Nat)))","xs"]
+def wild_list(n):
+    return ["(let ((many xs)) "+"(Cons _ 1 $ "+"Cons _ 1 $ "*(n-1)+"Nil (Nat)))","xs"]
+def body_list(n):
+    return ["(def-fns _ $ (many f : (many (Nat) n) -> (many (List $ Nat) r))\n  "+"(Cons (Nat) n $ "+"Cons (Nat) n $ "*(n-1)+"Nil (Nat)))","(f 1)"]
+def nested_ctor(n):
+    return ["(def-adts $ (U : -> Type)\n  enum\n  (many UZ : -> (U))\n  (many US : (many (U) t) -> (U)))","(let ((many u)) "+"(US $ "+"US $ "*(n-1)+"UZ))","u"]
 def many_uniques(n):
     out=["(def-fns _ $ (many f : (many (Nat) n) -> (many (Nat) r))"]
     for i in range(n): out.append(f"  (let ((unique u{i})) (Zero))\n  (let ((many w{i})) (share u{i}))")

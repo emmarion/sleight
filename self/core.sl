@@ -2265,10 +2265,11 @@
 
 (def-adts $ (Scope : -> Type)
   enum
-  (many MkScope : (many (NameIndex $ Nat) names) (many (List $ Nat) ids) -> (Scope)))
-(def-fns _ $ (many scope-names : (many (Scope) s) -> (many (NameIndex $ Nat) r)) (match many s _ ((MkScope n _) n)))
-(def-fns _ $ (many scope-ids : (many (Scope) s) -> (many (List $ Nat) r)) (match many s _ ((MkScope _ ids) ids)))
-(let ((many scope-empty)) (MkScope (name-index-empty _) (Nil _)))
+  (many MkScope : (many (NameIndex $ Nat) names) (many (List $ Nat) ids) (many (List $ Pair (Nat) $ List $ Nat) swept) -> (Scope)))
+(def-fns _ $ (many scope-names : (many (Scope) s) -> (many (NameIndex $ Nat) r)) (match many s _ ((MkScope n _ _) n)))
+(def-fns _ $ (many scope-ids : (many (Scope) s) -> (many (List $ Nat) r)) (match many s _ ((MkScope _ ids _) ids)))
+(def-fns _ $ (many scope-swept : (many (Scope) s) -> (many (List $ Pair (Nat) $ List $ Nat) r)) (match many s _ ((MkScope _ _ sw) sw)))
+(let ((many scope-empty)) (MkScope (name-index-empty _) (Nil _) (Nil _)))
 
 (def-adts $ (Sink : -> Type)
   enum
@@ -2811,7 +2812,7 @@
   (let-match many outer (MkEnv _ _ sc _ _ _ fr _ rp _ _ _ lv st _ _ _ _ lo pr us hn _))
   (match many inner _
     ((MkEnv _ hp2 sc2 en2 _ _ fr2 tb2 _ ob2 li2 fi2 _ _ cl2 wa2 tk2 lt2 _ _ us2 _ ex2)
-      (MkEnv _ hp2 (MkScope (scope-names sc) $ scope-ids sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 tk2 lt2 lo pr (unique-restore us us2) hn ex2))))
+      (MkEnv _ hp2 (MkScope (scope-names sc) (scope-ids sc2) $ scope-swept sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 tk2 lt2 lo pr (unique-restore us us2) hn ex2))))
 
 (def-fns _ $ (many reenter-facts : (subterm many (List $ LitFact) facts) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many facts (Cons _ fact rest) ((Nil _) (values n f tb)))
@@ -3371,7 +3372,7 @@
   (let ((many (Scope) sc2))
     (match many (or meta literal) _
       ((BTrue) sc)
-      ((BFalse) (match many sc _ ((MkScope names ids) (MkScope (match many name (((NameIndex $ Nat) _)) ((None _) names) ((Some _ n) (name-index-set _ n x names))) $ Cons _ x ids))))))
+      ((BFalse) (match many sc _ ((MkScope names ids sw) (MkScope (match many name (((NameIndex $ Nat) _)) ((None _) names) ((Some _ n) (name-index-set _ n x names))) (Cons _ x ids) sw))))))
   (let ((many en2)) $ idmap-set _ x (MkEInfo _ name mult (SHypothetical _) (BFalse) (match many literal (((Maybe $ Nat) _)) ((BTrue) (None _)) ((BFalse) (Some _ x))) meta site) en)
   (let ((erased (Nat) nf2) (erased (Facts nf2) ff2) (many (Table nf2 ff2 x) tb2))
     (match many rule _

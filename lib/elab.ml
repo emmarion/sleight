@@ -1083,6 +1083,12 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
   let wilds = List.exists wild args in
   let against ~strict env = match expect with Some tele when wilds -> solve_tele ~strict env loc tele (result mvars) | _ -> env in
   let env = against ~strict:false env in
+  let read = List.concat_map (fun x -> type_of env x :: Option.to_list (fact env x).rule) metas @ match expect with
+    | Some tele when wilds ->
+        let rs = result mvars in
+        if List.length tele <> List.length rs then List.map (fun r -> sg_term r.sg) rs
+        else List.concat (List.map2 (fun e r -> match e.sg, r.sg with Ty _, Is t -> if has_dangling t then [] else [ infer env loc t ] | _ -> [ sg_term r.sg ]) tele rs)
+    | _ -> [] in
   let env, acc, codes, ats =
     List.fold_left2
       (fun (env, acc, codes, ats) (i, e, m) arg -> Env.with_frame (Option.join (List.nth_opt frames i)) @@ fun () ->
@@ -1113,7 +1119,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
           let target = function SlotOf (Bound k) as p -> Option.value (term_place env (List.nth acc k)) ~default:(instantiate acc p) | p -> instantiate acc p in
           let ats = match e.place with Some p -> (arg, i, e.name, target p, r.place) :: ats | None -> ats in
-          let env = solve ~about "value" env (Reader.loc arg) r.term (Var m) in
+          let env = if (fact env m).rule = None && not (List.exists (occurs m) read) then env else solve ~about "value" env (Reader.loc arg) r.term (Var m) in
           let env = match r.term with Var y when not (is_meta env y) -> placed env m (Some (slot_of y)) | _ -> env in
           (env, r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
       (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
@@ -1292,28 +1298,34 @@ let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false)
   let l = loc raw in
   let outer_erased = env.usage_erased in
   let env = { env with usage_erased = outer_erased || pos_of expect = Erased } in
-  let start = !counter in
+  let start = !counter and outer = env.scope in
   let env, ress, code = elab_form ?sink ~final demand cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
   count_check ?sink l expect ress;
   List.iter2 (fun m r ->
     let m = demanded env demand m r.ty in
     if not outer_erased then Option.iter (fun how -> error l "internal: an unchecked result %s" how) (misuse m r.erasure)) expect ress;
-  let env, code = if env.run_pos then run_form env l start expect ress code else (env, code) in
+  let env, code = if env.run_pos then run_form env l start outer expect ress code else (env, code) in
   ({ env with usage_erased = outer_erased }, ress, code)
 
-and run_form env l start expect ress code =
+and run_form env l start outer expect ress code =
   let erased = pos_of expect = Erased in
   let values = spread expect (if erased then [] else run_code env code) in
   let minted env x = x > start && (entry env x).state = Hypothetical && not (entry env x).meta in
   let env = List.fold_left2 (fun env r v -> match r.term with Var y when minted env y -> set_state env y (Settled v) | _ -> env) env ress values in
-  let rec sweep env = function
-    | x :: rest when x > start ->
-        if not (minted env x) then sweep env rest
-        else if (entry env x).mult = Erased then sweep (set_state env x (Settled V.VToken)) rest
+  let rec sweep env records ids = match ids, records with
+    | x :: _, _ when x <= start -> (env, ids)
+    | x :: _, (top, below) :: rest when top = x -> sweep env rest below
+    | x :: rest, _ ->
+        let rec passed = function (top, _) :: rs when top >= x -> passed rs | rs -> rs in
+        if not (minted env x) then sweep env (passed records) rest
+        else if (entry env x).mult = Erased then sweep (set_state env x (Settled V.VToken)) (passed records) rest
         else error_in env l "internal: run-position entry %s has no value" (qname env x)
+    | [], _ -> (env, []) in
+  let env, reached = sweep env env.scope.swept env.scope.ids in
+  let env = match env.scope.ids with
+    | x :: _ when x > start && List.nth_opt reached 0 = List.nth_opt outer.ids 0 -> { env with scope = { env.scope with swept = (x, outer.ids) :: outer.swept } }
     | _ -> env in
-  let env = sweep env env.scope.ids in
   let word r v = match r.term with Var y when (entry env y).state <> Hypothetical -> V.CVar y | _ -> V.CConst v in
   let codes = List.filter_map (fun ((m, r), v) -> if m = Erased then None else Some (word r v)) (List.combine (List.combine expect ress) values) in
   (env, if erased then V.CErased else match codes with [ c ] -> c | cs -> V.CValues cs)

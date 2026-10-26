@@ -131,7 +131,7 @@ module NameMap = Map.Make (struct
 end)
 
 (* The scope (section 5): its entries newest first, and the newest named entry of each name, for lookup. *)
-type scope = { ids : id list; named : id NameMap.t }
+type scope = { ids : id list; named : id NameMap.t; swept : (id * id list) list }
 
 (* An opened Matchable (section 8) with the names its type holds canonically, the type constructor
    first. The names are read again whenever a variable is ruled out ([add_rule]), so they are current under the
@@ -167,7 +167,7 @@ type t = {
 }
 
 let empty =
-  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty; swept = [] }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty; swept = [] } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -490,7 +490,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
       name;
   Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Hypothetical; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
-  let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
+  let scope = if meta || literal then env.scope else { env.scope with ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
   (x, set_state ?minted env x state)
 

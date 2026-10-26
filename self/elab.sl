@@ -974,13 +974,47 @@
   (let ((many (Heap hs) h2)) $ match many (settled-ref _ (heap-entries _ h) x) _ ((None _) (heap-set-settled _ h x v)) ((Some _ _) h))
   (tail $ set-run-states _ h2 rest vrest))
 
-(def-fns _ $ (many sweep-run : (many (Env) env) (many (Nat) start) (subterm many (List $ Nat) ids) -> (many (Env) r))
+(def-fns _ $ (many sweep-plain : (many (Env) env) (many (Nat) start) (subterm many (List $ Nat) ids) -> (many (Env) r))
   (let-match many ids (Cons _ x rest) ((Nil _) env))
   (let-match many (nat-lt start x) (BTrue) ((BFalse) env))
-  (let-match many (or (is-settled env x) $ is-meta env x) (BFalse) ((BTrue) (tail $ sweep-run env start rest)))
+  (let-match many (or (is-settled env x) $ is-meta env x) (BFalse) ((BTrue) (tail $ sweep-plain env start rest)))
   (match many (entry-mult-of env x) _
-    ((Erased) (tail $ sweep-run (set-state-closed env x $ BToken _) start rest))
+    ((Erased) (tail $ sweep-plain (set-state-closed env x $ BToken _) start rest))
     (else (env-error env $ str-cat3 "internal: run-position entry " (qname env x) " has no value"))))
+
+(def-fns _ $ (many records-below : (subterm many (List $ Pair (Nat) $ List $ Nat) rs) (many (Nat) x) -> (many (List $ Pair (Nat) $ List $ Nat) r))
+  (let-match many rs (Cons _ p rest) ((Nil _) rs))
+  (let-match many p (MkPair _ _ top _))
+  (match many (nat-lt top x) _ ((BTrue) rs) ((BFalse) (tail $ records-below rest x))))
+
+(def-fns _ $ (many record-at : (many (List $ Pair (Nat) $ List $ Nat) rs) (many (Nat) x) -> (many (Maybe $ List $ Nat) r))
+  (let-match many rs (Cons _ p _) ((Nil _) (None _)))
+  (let-match many p (MkPair _ _ top below))
+  (match many (nat-eqb top x) _ ((BTrue) (Some _ below)) ((BFalse) (None _))))
+
+(def-fns _ $ (many sweep-run : (subterm many (Nat) fuel) (many (Env) env) (many (Nat) start) (many (List $ Pair (Nat) $ List $ Nat) records) (many (List $ Nat) ids) -> (many (Env) r) (many (List $ Nat) reached))
+  (let-match many ids (Cons _ x rest) ((Nil _) (values env ids)))
+  (let-match many (nat-lt start x) (BTrue) ((BFalse) (values env ids)))
+  (let-match many fuel (Succ f) ((Zero) (values (sweep-plain env start ids) ids)))
+  (let ((many rs)) $ records-below records $ Succ x)
+  (let-match many (record-at rs x) (None _) ((Some _ below) (tail $ sweep-run f env start (records-below rs x) below)))
+  (let-match many (or (is-settled env x) $ is-meta env x) (BFalse) ((BTrue) (tail $ sweep-run f env start rs rest)))
+  (match many (entry-mult-of env x) _
+    ((Erased) (tail $ sweep-run f (set-state-closed env x $ BToken _) start rs rest))
+    (else (values (env-error env $ str-cat3 "internal: run-position entry " (qname env x) " has no value") ids))))
+
+(def-fns _ $ (many same-head : (many (List $ Nat) xs) (many (List $ Nat) ys) -> (many (Bool) r))
+  (match many xs _
+    ((Nil _) (match many ys _ ((Nil _) (BTrue)) ((Cons _ _ _) (BFalse))))
+    ((Cons _ x _) (match many ys _ ((Nil _) (BFalse)) ((Cons _ y _) (nat-eqb x y))))))
+
+(def-fns _ $ (many sweep-scope : (many (Env) env) (many (Nat) start) (many (Scope) outer) -> (many (Env) r))
+  (let ((many sc)) $ env-scope env)
+  (let ((many env2) (many reached)) $ sweep-run (env-fresh-bound env) env start (scope-swept sc) (scope-ids sc))
+  (let-match many (scope-ids sc) (Cons _ x _) ((Nil _) env2))
+  (let-match many (and (nat-lt start x) $ same-head reached $ scope-ids outer) (BTrue) ((BFalse) env2))
+  (let ((many sc2)) $ env-scope env2)
+  (env-set-scope env2 $ MkScope (scope-names sc2) (scope-ids sc2) $ Cons _ (MkPair _ _ x $ scope-ids outer) $ scope-swept outer))
 
 (def-fns _ $ (many const-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Multiplicity) ms) (many (List $ Nat) ids) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk))
   (let-match many ms (Cons _ m rest) ((Nil _) (values (Nil _) (PkNil _))))
@@ -4364,6 +4398,29 @@
   (let-match many (nat-cmp n m) (CEq _ _ _) (else (match many strict _ ((BTrue) (count-error env " values" n m)) ((BFalse) env))))
   (let ((many env2) (many ok)) $ solve-tele tele res env strict)
   (match many (or ok strict) _ ((BTrue) env2) ((BFalse) env)))
+
+(def-fns _ $ (many sg-reads : (many (Sg) sg) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (match many sg _ ((SgTy t) (term-vars t acc)) ((SgIs t ty) (term-vars t $ term-vars ty acc))))
+
+(def-fns _
+  ((many meta-reads : (subterm many (List $ Nat) ms) (many (Env) env) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+    (let-match many ms (Cons _ x rest) ((Nil _) acc))
+    (let ((many _) (many rule)) $ fact-at env x)
+    (let ((many acc2)) $ match many rule (((List $ Nat) _)) ((None _) acc) ((Some _ t) (term-vars t acc)))
+    (tail $ meta-reads rest env $ term-vars (type-of env x) acc2))
+  ((many result-reads : (subterm many (List $ Entry) res) (many (List $ Entry) expect) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+    (let-match many res (Cons _ r rest) ((Nil _) acc))
+    (let-match many expect (Cons _ e erest) ((Nil _) (tail $ result-reads rest expect $ sg-reads (entry-sg r) acc)))
+    (let ((many acc2)) $ match many (entry-sg e) (((List $ Nat) _))
+      ((SgTy _) (match many (sg-type $ entry-sg r) (((List $ Nat) _)) ((None _) acc) ((Some _ t) (term-vars t acc))))
+      ((SgIs _ _) (sg-reads (entry-sg r) acc)))
+    (tail $ result-reads rest erest acc2)))
+
+(def-fns _ $ (many arg-reads : (many (Env) env) (many (List $ Nat) metas) (many (Maybe $ List $ Entry) expect) (many (AppResult) result) (many (List $ Term) mvars) (many (Bool) wilds) -> (many (List $ Nat) r))
+  (let ((many acc)) $ meta-reads metas env $ Nil _)
+  (let-match many expect (Some _ tele) ((None _) acc))
+  (let-match many wilds (BTrue) ((BFalse) acc))
+  (result-reads (app-result-tele result mvars) tele acc))
 
 (def-fns _ $ (many tele-has-meta : (subterm many (List $ Entry) es) (many (Env) env) -> (many (Bool) r))
   (match many es _

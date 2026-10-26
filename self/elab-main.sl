@@ -453,16 +453,16 @@
     (let-match many ctx (Nil _) ((Cons _ _ _) (values env (Cons _ frame ctx) $ SLet _ many-one frame (PkMany _ (Nil _) id (Nil _) $ PkNil _) code)))
     (values (notail $ env-run-let xf callbacks _ env many-one code frame) ctx $ SNone _))
 
-  ((many run-form : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (many (Env) env) (many (Nat) start) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (List $ Res) ress) (many (Hoisted ctx expect) h) -> (many (Env) r) (many (Hoisted ctx expect) h2))
+  ((many run-form : (subterm erased (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (many (Env) env) (many (Nat) start) (many (Scope) outer) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (List $ Res) ress) (many (Hoisted ctx expect) h) -> (many (Env) r) (many (Hoisted ctx expect) h2))
     (let-match many (and (env-run-pos env) $ not $ env-failed env) (BTrue) ((BFalse) (values env h)))
     (let-match many ctx (Nil _) ((Cons _ _ _) (values env h)))
-    (let-match many (mult-is-many $ pos-mult expect) (BTrue) ((BFalse) (values (sweep-run env start $ scope-ids $ env-scope env) h)))
+    (let-match many (mult-is-many $ pos-mult expect) (BTrue) ((BFalse) (values (sweep-scope env start outer) h)))
     (let ((many env1) (many ids)) $ run-ids env start expect ress)
     (let ((erased _) (many hp)) $ env-heap env1)
     (let ((erased _) (many hp2) (erased _) (many vs) (erased _)) $ notail $ run-code xf callbacks _ (env-fuel env1) _ hp _ $ hoisted-code _ expect h)
     (let ((many env2)) $ env-with-heap env1 _ $ set-run-states _ hp2 ids vs)
     (let ((many codes) (erased cpk)) $ const-codes ctx expect ids)
-    (values (sweep-run env2 start $ scope-ids $ env-scope env2) $ hoist-none ctx expect $ CValues _ expect codes cpk))
+    (values (sweep-scope env2 start outer) $ hoist-none ctx expect $ CValues _ expect codes cpk))
 
   ((many expand : (subterm many (Nat) xf) (subterm erased (Nat) callbacks) (subterm erased hop-2 is _) (unique (ElabWorld) ew) (many (Env) env) (many (Syn) raw) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (Maybe $ Expansion) x))
     (let-match many raw (RList p items) (else (values ew env $ None _)))
@@ -1076,7 +1076,7 @@
     (let ((many env3) (many code3)) $ notail $ run-form fuel callbacks _ (env-set-usage-erased (env-back env $ match many demand (((Env) _))
       ((Fixed _) (erased-in-many expect ress2 lock env2))
       ((CallableHead p) (mode-result-check env2 ress2 p $ BFalse))
-      ((FinalDemand) (mode-result-check env2 ress2 (Many) $ BTrue))) $ env-usage-erased env) start ctx expect ress2 code)
+      ((FinalDemand) (mode-result-check env2 ress2 (Many) $ BTrue))) $ env-usage-erased env) start (env-scope env) ctx expect ress2 code)
     (values ew7 env3 ress2 code3 lock))
   ; A values of one entry under a head or driver demand: the entry is elaborated under the same demand.
   ((many elab-values-one : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) (many (ExprDemand many-one) demand) (many (List $ Nat) frames) -> (unique (ElabWorld) ewr at ew)
@@ -2926,13 +2926,14 @@
     (let-match many (nat-eqb (list-length _ tele) $ list-length _ args) (BTrue)
       ((BFalse) (let ((many errs)) $ count-errs tele) (values ew (count-mismatch env2 callee tele pos (list-length _ args) $ spliced-here env2) errs errs ctx (SNone _) (Nil _))))
     (let ((many slotted)) $ match many result (((List $ Nat) _)) ((ARCall rets) (slot-named-params tele rets)) ((ARApp _ _) (Nil _)))
-    (let ((unique ew1) (many env3) (many acc) (many tys) (many ctx2) (many pre) (many codes) (many ats)) $ notail $ check-args-go ew fuel callbacks _ sugar root args k env2 callee ctx ctx (SNone _) tele metas lock pos as-term prepare fields slotted (Nil _) (Nil _) (Nil _) (Nil _))
+    (let ((many reads)) $ arg-reads env2 metas expect result mvars wilds)
+    (let ((unique ew1) (many env3) (many acc) (many tys) (many ctx2) (many pre) (many codes) (many ats)) $ notail $ check-args-go ew fuel callbacks _ sugar root args k env2 callee ctx ctx (SNone _) tele metas lock pos as-term prepare fields slotted reads (Nil _) (Nil _) (Nil _) (Nil _))
     (let ((many (Env) env4)) $ match many (and boundary $ terms-have-meta acc env3) _ ((BTrue) (solve-against env3 expect result mvars wilds $ BTrue)) ((BFalse) env3))
     (let ((many (Env) env5)) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) (sub-raws _ args) tele callee env4 1)) ((BFalse) env4))
     (let ((many (Env) env6)) $ report-ats (list-rev _ ats) callee env5)
     (values ew1 env6 (metaless-list acc env6) (metaless-list tys env6) ctx2 pre codes))
 
-  ((many check-args-go : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (Callee) callee) (many (List $ List $ Nat) ctx0) (many (List $ List $ Nat) ctx) (many (StmtCode ctx0 ctx) chain) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Multiplicity) pos) (many (Bool) as-term) (many (Bool) prepare) (many (Bool) fields) (many (List $ Nat) slotted) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Nat) ids) (many (List $ AtCheck) ats) -> (unique (ElabWorld) ewr at ew)
+  ((many check-args-go : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (Callee) callee) (many (List $ List $ Nat) ctx0) (many (List $ List $ Nat) ctx) (many (StmtCode ctx0 ctx) chain) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Multiplicity) pos) (many (Bool) as-term) (many (Bool) prepare) (many (Bool) fields) (many (List $ Nat) slotted) (many (List $ Nat) reads) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Nat) ids) (many (List $ AtCheck) ats) -> (unique (ElabWorld) ewr at ew)
       (many (Env) r) (many (List $ Term) acc2) (many (List $ Term) tys2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx0 ctx2) pre2) (many (List $ Code ctx2 many-one) codes2) (many (List $ AtCheck) ats2))
     (match many tele _
       ((Nil _)
@@ -2961,7 +2962,7 @@
                   (match many (list-mem-bin slotted $ list-length _ acc) _
                     ((BFalse) (values envf $ TVar m))
                     ((BTrue) (values (wild-error envf apos arg-about "`_` cannot stand for an argument whose slot the signature names") $ TErr "wild"))))))
-            (tail $ check-args-go ew fuel callbacks _ sugar root arest st (env-in-expansion env2 $ env-expansion env) callee ctx0 ctx chain rest mrest lp pos as-term prepare fields slotted (Cons _ t acc) (Cons _ (type-of env2 m) tys) ids ats))
+            (tail $ check-args-go ew fuel callbacks _ sugar root arest st (env-in-expansion env2 $ env-expansion env) callee ctx0 ctx chain rest mrest lp pos as-term prepare fields slotted reads (Cons _ t acc) (Cons _ (type-of env2 m) tys) ids ats))
           ((BFalse)
             (let ((unique ew1) (many (Env) env2) (many (Res) rarg) (many (List $ List $ Nat) ctxa) (many (StmtCode ctx ctxa) prea) (many (Code ctxa (Cons (Multiplicity) mult (Nil (Multiplicity)))) code))
               (match many as-term (((ElabWorld) _ at ew) ((Env) env2) ((Res) rarg) ((List $ List $ Nat) ctxa) ((StmtCode ctx ctxa) prea) ((Code ctxa (Cons (Multiplicity) mult (Nil (Multiplicity)))) code))
@@ -2976,7 +2977,10 @@
               ((BTrue) (MkRes (res-term rarg) (res-ty rarg) (res-erasure rarg) $ term-place env2 $ res-term rarg))
               ((BFalse) rarg))
             (let ((many env3)) $ env-back env2 $ check-sg-about (env-at env2 apos) sg r (Some _ arg) arg-about)
-            (let ((many env4a) (many _)) $ solve-about (env-at env3 apos) "value" (res-term r) (TVar m) (BTrue) (None _) arg-about)
+            (let ((many _) (many mrule)) $ fact-at env3 m)
+            (let ((many env4a) (many _)) $ match many (and (not $ is-some _ mrule) $ not $ list-mem-bin reads m) (((Env) _) ((Bool) _))
+              ((BTrue) (values env3 $ BTrue))
+              ((BFalse) (solve-about (env-at env3 apos) "value" (res-term r) (TVar m) (BTrue) (None _) arg-about)))
             (let ((many env4b)) $ match many (res-term r) (((Env) _))
               ((TVar y) (match many (is-meta env4a y) _ ((BTrue) env4a) ((BFalse) (slot-at env4a m (Succ m) (TSlotOf $ TVar y)))))
               (else env4a))
@@ -2997,7 +3001,7 @@
                 ((None _) (values ats $ BFalse))
                 ((Some _ pl) (values (Cons _ (MkAtCheck apos (Succ $ list-length _ acc) (entry-name e) (at-target env5a acc pl) $ res-place r2) ats) $ BTrue))))
             (let ((many ids2)) $ match many (or omitted $ not $ mult-is-many mult) (((List $ Nat) _)) ((BTrue) ids) ((BFalse) (Cons _ id ids)))
-            (tail $ check-args-go ew1 fuel callbacks _ sugar root arest st (env-in-expansion env5a $ env-expansion env) callee ctx0 ctxb (SSeq _ _ _ chain $ SSeq _ _ _ prea scb) rest mrest lp pos as-term prepare fields slotted
+            (tail $ check-args-go ew1 fuel callbacks _ sugar root arest st (env-in-expansion env5a $ env-expansion env) callee ctx0 ctxb (SSeq _ _ _ chain $ SSeq _ _ _ prea scb) rest mrest lp pos as-term prepare fields slotted reads
               (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) ids2 ats2))))))
 
   ; A function call (section 19): a lower-level call carries a Predates proof about the callee's level, a
