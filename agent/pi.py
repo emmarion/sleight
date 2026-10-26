@@ -417,7 +417,7 @@ def _compile(tmp, sources, flags, capture=None, build=None):
         (src / name).parent.mkdir(parents=True, exist_ok=True)
         (src / name).write_bytes(data)
     why, c = _proc([COMPILER, *flags, *(["--build", build] if build else []), "--no-shape-note", *(name for name, _ in sources)], src,
-                   SLC_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp} if build else {})
+                   SLC_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
     messages = _shown(capture, "slc.err", c.stderr)
     if why or c.returncode:
         return why, c, f"compile: {why or f'failed (exit {c.returncode})'}\n{messages}"
