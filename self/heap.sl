@@ -18,11 +18,6 @@
 
 ; ---- lemmas over the prelude's Lt and Double
 
-(def-fns _ $ (erased add-shift : (erased (Nat) n) (erased (Nat) k) (erased (Nat) size) (subterm erased (Add n (Succ k) size) sum) -> (erased (Add (Succ n) k size) r))
-  (match erased sum _
-    ((AddZero _) (AddSucc (Zero) k k (AddZero k)))
-    ((AddSucc a _ c q) (AddSucc (Succ a) k c (add-shift a k c q)))))
-
 (def-fns _ $ (erased absurd lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f))
   (lt-asym a a p (lt-succ a)))
 

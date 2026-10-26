@@ -56,7 +56,9 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
 
 ## Files
 
-- `../std/macro.sl` — loaded first; slc takes its `and` and `or` macros
+- `../std/list.sl` — loaded first; `escape.sl` takes its lemmas about
+  `Length`, `Nth`, `SetNth` and `Repeat` from it.
+- `../std/macro.sl` — loaded next; slc takes its `and` and `or` macros
   from it.
 - `base.sl` — booleans, `Nat`/`Char`/`String` helpers over the
   prelude's externs, a trie map over `Nat` identifiers walked by the
@@ -69,6 +71,10 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   `list-append` a `Concat` proof. `nat-eq`, `str-eq`,
   `list-length` and friends are forgetful wrappers over those, for the
   sites that combine several decisions with `and`/`or`.
+- `escape.sl` — how a string or a name is spelled back as source:
+  `lit-string` escapes a string into one `Bytes` buffer, sized by a first
+  pass, every read and write in bounds by proof; each byte's width is
+  read from a 256-entry table built when slc is compiled.
 - `heap.sl` — a store for the compile-time interpreter, parametric in
   its block type: addresses below a bound, carried as their bijective
   spelling with erased `Numeral` and `Lt` proofs, widened by a `coerce`;

@@ -1155,7 +1155,7 @@
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (erased h1) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PStr body) str-ty (None _))
-  (values (record-literal env2 (string-key body) x (None _) (rope-str $ lit-string-rope body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
+  (values (record-literal env2 (string-key body) x (None _) (lit-string body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
 
 (def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ String) k))
   (match many raw _

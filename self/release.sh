@@ -11,7 +11,7 @@ mkdir -p "$(dirname "$OUT")"
 OUT=$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")
 B=$(dirname "$OUT")/release-work
 mkdir -p "$B"
-SL="std/macro.sl self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/elab-main.sl self/interp.sl self/main.sl"
+SL="std/list.sl std/macro.sl self/base.sl self/escape.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/elab-main.sl self/interp.sl self/main.sl"
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 REL=
 ocamlfind ocamlopt -config | grep -q '^flambda: true' && REL=-O3

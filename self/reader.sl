@@ -443,7 +443,7 @@
       ((RWild _) (RStr "_"))
       ((RNat _ n) (RStr $ nat-str n))
       ((RChr _ c) (lit-char-rope c))
-      ((RString _ s) (lit-string-rope s))
+      ((RString _ s) (RStr $ lit-string s))
       ((RList _ items) (rwrap "(" (rjoin (notail $ show-raws items) " ") ")"))))
   ((many show-raws : (subterm many (List $ Syn) rs) -> (many (List $ Rope) out))
     (match many rs _

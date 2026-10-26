@@ -4440,7 +4440,7 @@
         ((BFalse) (None $ Rope))))
     ((PStr st)
       (match many (prelude-nullary env ty "String") (((Maybe $ Rope) _))
-        ((BTrue) (Some _ $ lit-string-rope st))
+        ((BTrue) (Some _ $ RStr $ lit-string st))
         ((BFalse) (None $ Rope))))
     ((PHalf _) (None $ Rope))
     ((PBytes _) (None $ Rope))

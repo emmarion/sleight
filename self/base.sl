@@ -629,8 +629,11 @@
 (let ((many sixteen-dec)) (lt-dec (Zero) 16))
 (comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
 
+(def-fns _ $ (many hex-code : (many (Nat) n) -> (many (Nat) c))
+  (match many (nat-lt n 10) _ ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
+
 (def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
-  (RChar $ char-of-code $ match many (nat-lt n 10) (((Nat) _)) ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
+  (RChar $ char-of-code $ hex-code n))
 
 (def-fns _ $ (many hex-byte-rope : (many (Nat) c) -> (many (Rope) r))
   (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _)) (divmod c 16 sixteen-positive))
@@ -640,16 +643,6 @@
   (match many (and (is-hex a) (is-hex b)) _
     ((BTrue) (Some _ $ char-of-code $ nat-add (nat-mul (hex-digit a) 16) $ hex-digit b))
     ((BFalse) (None _))))
-
-(def-fns _ $ (many escape-char : (many (Char) c) -> (many (Rope) r))
-  (let ((many k)) $ char-code c)
-  (let-match many (nat-eqb k 34) (BFalse) ((BTrue) (RStr "\\\"")))
-  (let-match many (nat-eqb k 92) (BFalse) ((BTrue) (RStr "\\\\")))
-  (let-match many (nat-eqb k 10) (BFalse) ((BTrue) (RStr "\\n")))
-  (let-match many (nat-eqb k 9) (BFalse) ((BTrue) (RStr "\\t")))
-  (match many (and (nat-lt 31 k) (nat-lt k 127)) _
-    ((BTrue) (RChar c))
-    ((BFalse) (rcat (RStr "\\x") $ hex-byte-rope k))))
 
 (def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
   (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eqb n 40) $ or (nat-eqb n 41) $ nat-eqb n 59))
@@ -662,14 +655,6 @@
   (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
   (rcat (RStr "#\\x") $ hex-byte-rope c))
 
-(def-fns _ $ (many str-escape : (subterm many (String) s) (many (Rope) acc) -> (many (Rope) r))
-  (match many s _
-    ((SNil) acc)
-    ((SCons c rest) (tail $ str-escape rest $ rcat acc $ escape-char c))))
-
-(def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
-  (rwrap "\"" (str-escape s $ REmpty) "\""))
-
 (def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
@@ -679,9 +664,6 @@
   (let-match many s (SCons c _) ((SNil) (BFalse)))
   (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eqb s "_") $ and (not $ str-eqb s "$")
     $ and (not $ char-is c 34) $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
-
-(def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
-  (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ lit-string-rope s))))
 
 (def-adts $ (Multiplicity : -> Type)
   enum
@@ -704,15 +686,6 @@
   (many NSrc : (many (String) s) -> (Name))
   (many NGen : (many (Nat) n) (many (String) s) -> (Name))
   (many NHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (String) shown) -> (Name)))
-
-(def-fns _ $ (many spell-name : (many (Name) n) -> (many (String) r))
-  (match many n _
-    ((NSrc s) (spell-text s))
-    ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))
-    ((NHandle _ _ _ s) s)))
-
-(def-fns _ $ (many name-text : (many (Name) n) -> (many (String) r))
-  (match many n _ ((NSrc s) s) (else (spell-name n))))
 
 (def-fns _ $ (many name-eq : (many (Name) a) (many (Name) b) -> (many (Bool) r))
   (match many a _
