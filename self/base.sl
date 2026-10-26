@@ -321,7 +321,51 @@
   (let ((many (List $ Pair (Nat) V) acc2)) $ match many here _ ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ b v) acc)))
   (tail $ idmap-pairs _ two a2 (nat-add a2 b) $ notail $ idmap-pairs _ one a2 (nat-add a b) acc2))
 
-; ---- NameMap: a persistent trie keyed by a string's characters
+; ---- Lemmas over the prelude's Append and StrLength
+
+(def-fns _ $ (erased append-nil-right : (subterm erased (String) s) -> (erased (Append s (SNil) s) p))
+  (match erased s _
+    ((SNil) (AppNil (SNil)))
+    ((SCons c t) (AppCons c t (SNil) t (append-nil-right t)))))
+
+(def-fns _ $ (erased append-unique : (erased (String) a b t u s) (erased (Nat) i)
+    (subterm erased (Append a t s) p) (erased (StrLength a i) la) (erased (Append b u s) q) (erased (StrLength b i) lb) ->
+    (erased (Eq (String) t u) e))
+  (match erased p _
+    ((AppNil _)
+      (let-match erased la (SLenNil))
+      (let-match erased lb (SLenNil))
+      (let-match erased q (AppNil _))
+      (Refl _ t))
+    ((AppCons _ a1 _ s1 p1)
+      (let-match erased la (SLenCons _ _ i1 la1))
+      (let-match erased lb (SLenCons _ b1 _ lb1))
+      (let-match erased q (AppCons _ _ _ _ q1))
+      (append-unique a1 b1 t u s1 i1 p1 la1 q1 lb1))))
+
+(def-fns _ $ (erased append-snoc : (erased (String) a t s) (erased (Char) c) (erased (Nat) i)
+    (subterm erased (Append a (SCons c t) s) p) (erased (StrLength a i) la) ->
+    (erased (String) a2) (erased (Append a2 t s) q) (erased (StrLength a2 (Succ i)) la2))
+  (match erased p _
+    ((AppNil _)
+      (let-match erased la (SLenNil))
+      (values (SCons c (SNil)) (AppCons c (SNil) t t (AppNil t)) (SLenCons c (SNil) (Zero) (SLenNil))))
+    ((AppCons d a1 _ s1 p1)
+      (let-match erased la (SLenCons _ _ i1 la1))
+      (let ((erased a3) (erased q1) (erased l1)) (append-snoc a1 t s1 c i1 p1 la1))
+      (values (SCons d a3) (AppCons d a3 t s1 q1) (SLenCons d a3 (Succ i1) l1)))))
+
+(def-fns _ $ (erased prefix-lt : (erased (String) a t s) (erased (Nat) i len)
+    (subterm erased (Append a t s) p) (erased (StrLength a i) la) (erased (StrLength s len) ls) ->
+    (erased (Lt i (Succ len)) lt))
+  (match erased p _
+    ((AppNil _) (let-match erased la (SLenNil)) (LtZ len))
+    ((AppCons _ a1 _ s1 p1)
+      (let-match erased la (SLenCons _ _ i1 la1))
+      (let-match erased ls (SLenCons _ _ len1 ls1))
+      (LtS i1 (Succ len1) (prefix-lt a1 t s1 i1 len1 p1 la1 ls1)))))
+
+; ---- NameMap: a persistent radix trie; an edge is its first character and the rest of its label
 
 (def-adts
   ((NameMap : (Type V) -> Type)
@@ -329,38 +373,55 @@
     (many NMNode : (erased Type V) (many (Maybe V) here) (many (List $ NMKid V) kids) -> (NameMap V)))
   ((NMKid : (Type V) -> Type)
     enum
-    (many MkKid : (erased Type V) (many (Char) c) (many (NameMap V) submap) -> (NMKid V))))
+    (many MkKid : (erased Type V) (many (Char) c) (many (String) lab) (many (NameMap V) submap) -> (NMKid V))))
 
-; A lookup's evidence: a kid for each character, then the value; or no kid for some character, or an empty slot.
+; A lookup's evidence: an edge for each step, its label a prefix of the name, then the value; or no edge for
+; some character, a label the name does not start with, or an empty slot.
 (def-adts
-  ((KidIs : (Type V) ((Char) c) ((NameMap V) submap) ((List $ NMKid V) kids) -> Type)
+  ((KidIs : (Type V) ((Char) c) ((String) lab) ((NameMap V) submap) ((List $ NMKid V) kids) -> Type)
     enum
-    (many KHere : (erased Type V) (erased (Char) c) (erased (NameMap V) submap) (erased (List $ NMKid V) rest) -> (KidIs V c submap $ Cons (NMKid V) (MkKid V c submap) rest))
-    (many KThere : (erased Type V) (erased (Char) c) (erased (NameMap V) submap) (erased (NMKid V) k) (erased (List $ NMKid V) rest) (erased (KidIs V c submap rest) p)
-       -> (KidIs V c submap $ Cons (NMKid V) k rest)))
+    (many KHere : (erased Type V) (erased (Char) c) (erased (String) lab) (erased (NameMap V) submap) (erased (List $ NMKid V) rest)
+       -> (KidIs V c lab submap $ Cons (NMKid V) (MkKid V c lab submap) rest))
+    (many KThere : (erased Type V) (erased (Char) c) (erased (String) lab) (erased (NameMap V) submap) (erased (NMKid V) k) (erased (List $ NMKid V) rest)
+       (erased (KidIs V c lab submap rest) p) -> (KidIs V c lab submap $ Cons (NMKid V) k rest)))
   ((NoKid : (Type V) ((Char) c) ((List $ NMKid V) kids) -> Type)
     enum
     (many NKNil : (erased Type V) (erased (Char) c) -> (NoKid V c $ Nil $ NMKid V))
-    (many NKLt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) submap) (erased (List $ NMKid V) rest) (erased (CharLt c d) lt) (erased (NoKid V c rest) p)
-       -> (NoKid V c $ Cons (NMKid V) (MkKid V d submap) rest))
-    (many NKGt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) submap) (erased (List $ NMKid V) rest) (erased (CharLt d c) gt) (erased (NoKid V c rest) p)
-       -> (NoKid V c $ Cons (NMKid V) (MkKid V d submap) rest)))
+    (many NKLt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (String) lab) (erased (NameMap V) submap) (erased (List $ NMKid V) rest)
+       (erased (CharLt c d) lt) (erased (NoKid V c rest) p) -> (NoKid V c $ Cons (NMKid V) (MkKid V d lab submap) rest))
+    (many NKGt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (String) lab) (erased (NameMap V) submap) (erased (List $ NMKid V) rest)
+       (erased (CharLt d c) gt) (erased (NoKid V c rest) p) -> (NoKid V c $ Cons (NMKid V) (MkKid V d lab submap) rest)))
   ((KidLookup : (Type V) ((Char) c) ((List $ NMKid V) kids) -> Type)
     enum
-    (many KHit : (erased Type V) (erased (Char) c) (erased (List $ NMKid V) kids) (many (NameMap V) submap) (erased (KidIs V c submap kids) p) -> (KidLookup V c kids))
+    (many KHit : (erased Type V) (erased (Char) c) (erased (List $ NMKid V) kids) (many (String) lab) (many (NameMap V) submap)
+       (erased (KidIs V c lab submap kids) p) (erased (Subterm (NameMap V) submap (List $ NMKid V) kids) st) -> (KidLookup V c kids))
     (many KMiss : (erased Type V) (erased (Char) c) (erased (List $ NMKid V) kids) (erased (NoKid V c kids) p) -> (KidLookup V c kids)))
+  ((NotPrefix : ((String) lab) ((String) name) -> Type)
+    enum
+    (many NPShort : (erased (String) lab) (erased (String) name) (erased (Nat) n) (erased (Nat) len)
+       (erased (StrLength name n) ln) (erased (StrLength lab len) ll) (erased (Lt n len) lt) -> (NotPrefix lab name))
+    (many NPDiff : (erased (String) lab) (erased (String) name) (erased (String) p) (erased (String) r) (erased (Nat) len)
+       (erased (Append p r name) ap) (erased (StrLength p len) lp) (erased (StrLength lab len) ll) (erased (Apart (String) StrLt p lab) d)
+       -> (NotPrefix lab name)))
   ((NMapsTo : (Type V) ((String) name) (V v) ((NameMap V) m) -> Type)
     enum
     (many NMHere : (erased Type V) (erased V v) (erased (List $ NMKid V) kids) -> (NMapsTo V (SNil) v $ NMNode V (Some V v) kids))
-    (many NMStep : (erased Type V) (erased (Char) c) (erased (String) rest) (erased V v) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NameMap V) submap)
-                   (erased (KidIs V c submap kids) k) (erased (NMapsTo V rest v submap) p) -> (NMapsTo V (SCons c rest) v $ NMNode V here kids)))
+    (many NMStep : (erased Type V) (erased (Char) c) (erased (String) lab) (erased (String) name) (erased (String) rest) (erased V v)
+       (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NameMap V) submap)
+       (erased (KidIs V c lab submap kids) k) (erased (Append lab rest name) ap) (erased (NMapsTo V rest v submap) p)
+       -> (NMapsTo V (SCons c name) v $ NMNode V here kids)))
   ((NAbsent : (Type V) ((String) name) ((NameMap V) m) -> Type)
     enum
     (many NAHere : (erased Type V) (erased (List $ NMKid V) kids) -> (NAbsent V (SNil) $ NMNode V (None V) kids))
     (many NANoKid : (erased Type V) (erased (Char) c) (erased (String) rest) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NoKid V c kids) n)
        -> (NAbsent V (SCons c rest) $ NMNode V here kids))
-    (many NAStep : (erased Type V) (erased (Char) c) (erased (String) rest) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NameMap V) submap)
-                   (erased (KidIs V c submap kids) k) (erased (NAbsent V rest submap) p) -> (NAbsent V (SCons c rest) $ NMNode V here kids)))
+    (many NADiverge : (erased Type V) (erased (Char) c) (erased (String) lab) (erased (String) name) (erased (Maybe V) here)
+       (erased (List $ NMKid V) kids) (erased (NameMap V) submap) (erased (KidIs V c lab submap kids) k) (erased (NotPrefix lab name) np)
+       -> (NAbsent V (SCons c name) $ NMNode V here kids))
+    (many NAStep : (erased Type V) (erased (Char) c) (erased (String) lab) (erased (String) name) (erased (String) rest)
+       (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NameMap V) submap)
+       (erased (KidIs V c lab submap kids) k) (erased (Append lab rest name) ap) (erased (NAbsent V rest submap) p)
+       -> (NAbsent V (SCons c name) $ NMNode V here kids)))
   ((NLookup : (Type V) ((String) name) ((NameMap V) m) -> Type)
     enum
     (many NHit : (erased Type V) (erased (String) name) (erased (NameMap V) m) (many V v) (erased (NMapsTo V name v m) p) -> (NLookup V name m))
@@ -371,56 +432,81 @@
 
 (def-fns _ $ (many nm-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) -> (many (KidLookup V c kids) r))
   (let-match many kids (Cons _ k rest) ((Nil _) (KMiss _ _ _ $ NKNil _ c)))
-  (let-match many k (MkKid _ c1 sub3))
+  (let-match many k (MkKid _ c1 lab3 sub3))
   (match many (char-cmp c c1) _
-    ((CEq _ _ _) (KHit _ _ _ sub3 $ KHere _ c sub3 rest))
+    ((CEq _ _ _) (KHit _ _ _ lab3 sub3 (KHere _ c lab3 sub3 rest) (prove-subterm sub3 kids)))
     ((CLt _ _ _ _ lt)
       (let ((many r)) (tail $ nm-kid _ rest c))
       (let ((erased _) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
-        ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
-        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKLt _ c c1 sub3 rest lt p))))
+        ((KHit _ _ _ lab2 sub2 p st)
+          (let ((erased p2)) (KThere _ c lab2 sub2 k rest p))
+          (let ((erased st2)) (subterm-trans st (prove-subterm rest kids)))
+          (values (KHit _ _ _ lab2 sub2 p2 st2)
+            (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) lab2) (coercible-refl (Shared) sub2) p p2 st st2)))
+        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKLt _ c c1 lab3 sub3 rest lt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKLt _ c c1 lab3 sub3 rest lt p))))
       (coerce r cp))
     ((CGt _ _ _ _ gt)
       (let ((many r)) (tail $ nm-kid _ rest c))
       (let ((erased _) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
-        ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
-        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKGt _ c c1 sub3 rest gt p))))
+        ((KHit _ _ _ lab2 sub2 p st)
+          (let ((erased p2)) (KThere _ c lab2 sub2 k rest p))
+          (let ((erased st2)) (subterm-trans st (prove-subterm rest kids)))
+          (values (KHit _ _ _ lab2 sub2 p2 st2)
+            (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) lab2) (coercible-refl (Shared) sub2) p p2 st st2)))
+        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKGt _ c c1 lab3 sub3 rest gt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKGt _ c c1 lab3 sub3 rest gt p))))
       (coerce r cp))))
 
-(def-fns _ $ (many nm-get : (erased Type V) (subterm many (String) name) (many (NameMap V) m) -> (many (NLookup V name m) r))
+(def-fns _ $ (many nm-get : (erased Type V) (many (String) name) (subterm many (NameMap V) m) -> (many (NLookup V name m) r))
   (let-match many m (NMNode _ here kids))
-  (let-match many name (SCons c rest)
+  (let-match many name (SCons c name1)
     ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
-  (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
-  (let ((many r)) (tail $ nm-get _ rest submap))
+  (let-match many (nm-kid _ kids c) (KHit _ _ _ lab submap k st) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c name1 here kids n)))
+  (let ((many ln) (erased lnp)) (str-length name1))
+  (let ((many ll) (erased llp)) (str-length lab))
+  (let-match many (lt-dec ln ll) (No _ _ ge)
+    ((Yes _ _ lt) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPShort lab name1 ln ll lnp llp lt)))
+  (let ((many p) (many rest) (erased ap) (erased lp)) (str-split name1 ll ln lnp ge))
+  (let-match many (str-eq p lab) (Equal _ _ _)
+    ((Unequal _ _ _ _ d) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPDiff lab name1 p rest ll ap lp llp d)))
+  (let ((many r)) (tail $ nm-get _ rest (subterm (subterm-trans st (prove-subterm kids m))) submap))
   (let ((erased _) (erased cp)) $ match erased r (((NLookup V name m) r2) ((Coercible (Shared) (NLookup V rest submap) r (Shared) (NLookup V name m) r2) cp))
-    ((NHit _ _ _ v p) (values (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p) (coercible-ctor (Shared) NHit V V rest name submap m (coercible-refl (Shared) v) p $ NMStep _ c rest v here kids submap k p)))
-    ((NMiss _ _ _ p) (values (NMiss _ _ _ $ NAStep _ c rest here kids submap k p) (coercible-ctor (Shared) NMiss V V rest name submap m p $ NAStep _ c rest here kids submap k p))))
+    ((NHit _ _ _ v q) (values (NHit _ _ _ v $ NMStep _ c lab name1 rest v here kids submap k ap q)
+      (coercible-ctor (Shared) NHit V V rest name submap m (coercible-refl (Shared) v) q $ NMStep _ c lab name1 rest v here kids submap k ap q)))
+    ((NMiss _ _ _ q) (values (NMiss _ _ _ $ NAStep _ c lab name1 rest here kids submap k ap q)
+      (coercible-ctor (Shared) NMiss V V rest name submap m q $ NAStep _ c lab name1 rest here kids submap k ap q))))
   (coerce r cp))
 
-(def-fns _ $ (many nm-replace-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (NameMap V) submap) -> (many (List $ NMKid V) r))
-  (let-match many kids (Cons _ k rest) ((Nil _) (Cons _ (MkKid _ c submap) $ Nil _)))
-  (let-match many k (MkKid _ c1 _))
+(def-fns _ $ (many nm-put-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (String) lab) (many (NameMap V) submap) -> (many (List $ NMKid V) r))
+  (let-match many kids (Cons _ k rest) ((Nil _) (Cons _ (MkKid _ c lab submap) $ Nil _)))
+  (let-match many k (MkKid _ c1 _ _))
   (match many (char-cmp c c1) _
-    ((CEq _ _ _) (Cons _ (MkKid _ c submap) rest))
-    (else (Cons _ k $ notail $ nm-replace-kid _ rest c submap))))
+    ((CEq _ _ _) (Cons _ (MkKid _ c lab submap) rest))
+    (else (Cons _ k $ notail $ nm-put-kid _ rest c lab submap))))
 
-(def-fns _ $ (many nm-rebuild : (erased Type V) (subterm many (List $ Pair (NameMap V) (Char)) path) (many (NameMap V) inner) -> (many (NameMap V) r))
-  (let-match many path (Cons _ step rest) ((Nil _) inner))
-  (let-match many step (MkPair _ _ m c))
+; The longest common prefix of [a] and [b], as its length and the rests of both, with [a]'s prefix as evidence.
+(def-fns _ $ (many common-prefix : (erased (String) s) (subterm many (String) a) (many (String) b) (many (Nat) k)
+    (erased (String) p) (erased (Append p a s) ap) (erased (StrLength p k) lp) ->
+    (many (Nat) n) (many (String) a2) (many (String) b2) (erased (String) q) (erased (Append q a2 s) aq) (erased (StrLength q n) lq))
+  (let-match many a (SCons c a1) ((SNil) (values k a b p ap lp)))
+  (let-match many b (SCons d b1) ((SNil) (values k a b p ap lp)))
+  (let-match many (char-eq c d) (Equal _ _ _) ((Unequal _ _ _ _ _) (values k a b p ap lp)))
+  (let ((erased p2) (erased ap2) (erased lp2)) (append-snoc p a1 s c k ap lp))
+  (tail $ common-prefix s a1 b1 (Succ k) p2 ap2 lp2))
+
+(def-fns _ $ (many nm-set : (erased Type V) (many (String) name) (many V v) (subterm many (NameMap V) m) -> (many (NameMap V) r))
   (let-match many m (NMNode _ here kids))
-  (tail $ nm-rebuild _ rest $ NMNode _ here $ nm-replace-kid _ kids c inner))
-
-(def-fns _ $ (many nm-set-at : (erased Type V) (subterm many (String) name) (many V v) (many (NameMap V) m) (many (List $ Pair (NameMap V) (Char)) path) -> (many (NameMap V) r))
-  (let-match many m (NMNode _ _ kids))
-  (let-match many name (SCons c rest) ((SNil) (tail $ nm-rebuild _ path $ NMNode _ (Some _ v) kids)))
-  (let ((many (NameMap V) submap)) (match many (nm-kid _ kids c) _
-                    ((KMiss _ _ _ _) (nm-empty _))
-                    ((KHit _ _ _ s _) s)))
-  (tail $ nm-set-at _ rest v submap $ Cons _ (MkPair _ _ m c) path))
-
-(def-fns _ $ (many nm-set : (erased Type V) (many (String) name) (many V v) (many (NameMap V) m) -> (many (NameMap V) r))
-  (tail $ nm-set-at _ name v m $ Nil _))
+  (let-match many name (SCons c name1) ((SNil) (NMNode _ (Some _ v) kids)))
+  (let ((many leaf)) (NMNode _ (Some _ v) $ Nil _))
+  (let-match many (nm-kid _ kids c) (KHit _ _ _ lab submap _ st) ((KMiss _ _ _ _) (NMNode _ here $ nm-put-kid _ kids c name1 leaf)))
+  (let ((many k) (many lt) (many nt) (erased q) (erased aq) (erased lq)) (common-prefix lab lab name1 (Zero) (SNil) (AppNil lab) (SLenNil)))
+  (let-match many lt (SCons d lt1)
+    ((SNil) (NMNode _ here $ nm-put-kid _ kids c lab $ notail $ nm-set _ nt v (subterm (subterm-trans st (prove-subterm kids m))) submap)))
+  (let ((erased len) (erased ll)) (str-length lab))
+  (let ((many lp) (many _) (erased _) (erased _)) (str-split lab k len ll (prefix-lt q lt lab k len aq lq ll)))
+  (let ((many mid)) $ match many nt (((NameMap V) _))
+    ((SNil) (NMNode _ (Some _ v) $ Cons _ (MkKid _ d lt1 submap) $ Nil _))
+    ((SCons e nt1) (NMNode _ (None _) $ Cons _ (MkKid _ d lt1 submap) $ Cons _ (MkKid _ e nt1 leaf) $ Nil _)))
+  (NMNode _ here $ nm-put-kid _ kids c lp mid))
 
 ; ---- Lists
 
@@ -706,10 +792,11 @@
     (tail $ nm-kids-entries _ kids path acc2))
   ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
     (let-match many kids (Cons _ k rest) ((Nil _) acc))
-    (let-match many k (MkKid _ c submap))
+    (let-match many k (MkKid _ c lab submap))
+    (let ((many path2)) (rcat3 path (RChar c) (RStr lab)))
     (match many rest _
-      ((Nil _) (tail $ nm-entries _ submap (rcat path $ RChar c) acc))
-      ((Cons _ _ _) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))
+      ((Nil _) (tail $ nm-entries _ submap path2 acc))
+      ((Cons _ _ _) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap path2 acc)))))
 
 (def-adts $ (NameIndex : (Type V) -> Type)
   enum

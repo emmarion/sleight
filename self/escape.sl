@@ -16,48 +16,6 @@
   (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _)) (divmod k 16 sixteen-positive))
   (hex-code $ match many (nat-eqb d 2) _ ((BTrue) hi) ((BFalse) lo)))
 
-(def-fns _ $ (erased append-nil-right : (subterm erased (String) s) -> (erased (Append s (SNil) s) p))
-  (match erased s _
-    ((SNil) (AppNil (SNil)))
-    ((SCons c t) (AppCons c t (SNil) t (append-nil-right t)))))
-
-(def-fns _ $ (erased append-unique : (erased (String) a b t u s) (erased (Nat) i)
-    (subterm erased (Append a t s) p) (erased (StrLength a i) la) (erased (Append b u s) q) (erased (StrLength b i) lb) ->
-    (erased (Eq (String) t u) e))
-  (match erased p _
-    ((AppNil _)
-      (let-match erased la (SLenNil))
-      (let-match erased lb (SLenNil))
-      (let-match erased q (AppNil _))
-      (Refl _ t))
-    ((AppCons _ a1 _ s1 p1)
-      (let-match erased la (SLenCons _ _ i1 la1))
-      (let-match erased lb (SLenCons _ b1 _ lb1))
-      (let-match erased q (AppCons _ _ _ _ q1))
-      (append-unique a1 b1 t u s1 i1 p1 la1 q1 lb1))))
-
-(def-fns _ $ (erased append-snoc : (erased (String) a t s) (erased (Char) c) (erased (Nat) i)
-    (subterm erased (Append a (SCons c t) s) p) (erased (StrLength a i) la) ->
-    (erased (String) a2) (erased (Append a2 t s) q) (erased (StrLength a2 (Succ i)) la2))
-  (match erased p _
-    ((AppNil _)
-      (let-match erased la (SLenNil))
-      (values (SCons c (SNil)) (AppCons c (SNil) t t (AppNil t)) (SLenCons c (SNil) (Zero) (SLenNil))))
-    ((AppCons d a1 _ s1 p1)
-      (let-match erased la (SLenCons _ _ i1 la1))
-      (let ((erased a3) (erased q1) (erased l1)) (append-snoc a1 t s1 c i1 p1 la1))
-      (values (SCons d a3) (AppCons d a3 t s1 q1) (SLenCons d a3 (Succ i1) l1)))))
-
-(def-fns _ $ (erased prefix-lt : (erased (String) a t s) (erased (Nat) i len)
-    (subterm erased (Append a t s) p) (erased (StrLength a i) la) (erased (StrLength s len) ls) ->
-    (erased (Lt i (Succ len)) lt))
-  (match erased p _
-    ((AppNil _) (let-match erased la (SLenNil)) (LtZ len))
-    ((AppCons _ a1 _ s1 p1)
-      (let-match erased la (SLenCons _ _ i1 la1))
-      (let-match erased ls (SLenCons _ _ len1 ls1))
-      (LtS i1 (Succ len1) (prefix-lt a1 t s1 i1 len1 p1 la1 ls1)))))
-
 (def-fns _ $ (erased add-shift : (erased (Nat) a b c) (subterm erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
   (match erased p _
     ((AddZero _) (AddSucc (Zero) b b (AddZero b)))
