@@ -38,6 +38,7 @@ let driver env =
     | "ConfinePaths", [ r; w ] -> ConfinePaths (r, w)
     | "ConfineOutputBytes", [ n ] -> ConfineOutputBytes n
     | "Measure", [ m ] -> Measure m
+    | "Exec", [ p; a; e; d; i ] -> Exec (p, a, e, d, i)
     | _ -> assert false
   in
   let step v = match des "Exit" v with 0, [ x ] -> Exit x | 1, [ k ] -> Continue k | _ -> assert false in
@@ -52,10 +53,12 @@ let driver env =
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
       snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);
       un_list = (fun v -> match des "Nil" v with 1, [ x; r ] -> Some (x, r) | _ -> None);
+      un_pair = (fun v -> match des "MkPair" v with _, [ a; b ] -> (a, b) | _ -> assert false);
+      un_some = (fun v -> match des "None" v with 1, [ x ] -> Some x | _ -> None);
       some = (fun x -> build "Some" [ x ]); none = build "None" []; ok = (fun x -> build "Ok" [ x ]); fail = (fun x -> build "Fail" [ x ]); unit = build "MkUnit" [];
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
-      changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage");
+      changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage"); mk_exited = V.VCtorFn (c "MkExited");
       request; step; is_start; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file
@@ -69,7 +72,7 @@ let explain path = function
   | _ -> None
 
 let valued = [ "--extract"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
-let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ]
+let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ]
 
 let goal_refusal mode flags =
   if mode = Elab.Unrequired then None

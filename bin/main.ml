@@ -6,7 +6,7 @@ let world args =
   let flush_to oc s = output_string oc s; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
-    exit; print = print_endline; fence = ref Program.unconfined; limit = ref None; used = ref 0 }
+    exit; print = print_endline; exec = true; fence = ref Program.unconfined; limit = ref None; used = ref 0 }
 
 let run consume (env, _) path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
@@ -80,13 +80,14 @@ let () =
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");
+  Extract.with_exec := not (flag "--no-exec");
   Reader.shape_notes := not (flag "--no-shape-note");
   let fail m = prerr_endline m; exit 1 in
   Elab.goal_mode := Option.fold ~none:Elab.Unrequired ~some:(fun m -> match List.assoc_opt m Elab.goal_modes with Some m -> m | None -> fail "--goal takes none, open or proved") (option "--goal");
   let passed = ref false in
   if !Elab.goal_mode <> Elab.Unrequired then at_exit (fun () -> print_endline (Program.goal_verdict !Elab.goal_mode !passed));
   Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
-  let consume = if extract = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
+  let consume = if extract = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env !Extract.with_exec (world program_args)) else fun _ _ _ -> () in
   let warned = ref false and pending = ref [] in
   let strict = flag "--warnings-as-errors" in
   if strict then (let warn = !Env.warn in Env.warn := fun s -> warned := true; warn s);

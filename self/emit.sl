@@ -507,7 +507,11 @@
   (many AkOption : (many (String) cname) -> (ArmKind))
   (many AkField : -> (ArmKind))
   (many AkVariant : -> (ArmKind))
+  (many AkTuple : -> (ArmKind))
   (many AkIs : (many (String) cname) -> (ArmKind)))
+
+(def-fns _ $ (many bool-ml : (many (Bool) b) -> (many (String) s))
+  (match many b _ ((BTrue) "true") ((BFalse) "false")))
 
 (def-fns _ $ (many arm-body : (many (ArmKind) k) (many (Ctor) c) (many (List $ Rope) fs) -> (many (Rope) r))
   (let-match many k (AkOption cname)
@@ -515,7 +519,8 @@
     ((AkVariant) (match many fs _
       ((Nil _) (RStr $ str-cat3 "(Driver_core." (ctor-name c) ")"))
       (else (rcat3 (RStr $ str-cat3 "(Driver_core." (ctor-name c) " (") (commas fs) $ RStr "))"))))
-    ((AkIs n) (RStr $ match many (str-eqb n $ ctor-name c) _ ((BTrue) "true") ((BFalse) "false"))))
+    ((AkTuple) (rcat3 (RStr "(") (commas fs) $ RStr ")"))
+    ((AkIs n) (RStr $ bool-ml $ str-eqb n $ ctor-name c)))
   (match many (str-cmp (ctor-name c) cname) _
     ((CEq _ _ _) (rcat3 (RStr "(Some (") (commas fs) $ RStr "))"))
     (else (RStr "None"))))
@@ -1268,7 +1273,7 @@
     (rcat5 (driver-op "zero" $ driver-make d env "Zero") (driver-op "succ" $ driver-make d env "Succ") (driver-op "pred" $ driver-un d env "Nat" $ AkOption "Succ")
       (driver-op "u8" $ driver-make d env "MkU8") $ driver-op "un_u8" $ driver-un d env "U8" $ AkField)
     (rcat5 (driver-op "char" $ driver-make d env "MkChar") (driver-op "un_char" $ driver-un d env "Char" $ AkField) (driver-op "snil" $ driver-make d env "SNil")
-      (driver-op "scons" $ driver-make d env "SCons") $ rcat (driver-op "un_str" $ driver-un d env "String" $ AkOption "SCons") $ driver-op "un_list" $ driver-un d env "List" $ AkOption "Cons")
+      (driver-op "scons" $ driver-make d env "SCons") $ rcat (driver-op "un_str" $ driver-un d env "String" $ AkOption "SCons") $ rcat3 (driver-op "un_list" $ driver-un d env "List" $ AkOption "Cons") (driver-op "un_pair" $ driver-un d env "Pair" $ AkTuple) $ driver-op "un_some" $ driver-un d env "Maybe" $ AkOption "Some")
     (rcat5 (driver-op "some" $ driver-make d env "Some") (driver-op "none" $ driver-make d env "None") (driver-op "ok" $ driver-make d env "Ok")
       (driver-op "fail" $ driver-make d env "Fail") $ driver-op "unit" $ driver-make d env "MkUnit")
     (rcat5 (driver-op "cons" $ driver-make d env "Cons") (driver-op "nil" $ driver-make d env "Nil")
@@ -1276,17 +1281,17 @@
         (driver-op "is_dir" $ driver-make d env "IsDir") (driver-op "is_other" $ driver-make d env "IsOther")
         $ driver-op "missing" $ driver-make d env "Missing")
       (rcat4 (driver-op "changed" $ driver-make d env "Changed") (driver-op "unchanged" $ driver-make d env "Unchanged")
-        (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")")
+        (rcat (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")") $ driver-op "mk_exited" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkExited") $ RStr ")")
         $ rcat3 (driver-op "request" $ driver-un d env "Request" $ AkVariant) (driver-op "step" $ driver-un d env "Program" $ AkVariant)
         $ driver-op "is_start" $ driver-un d env "Stopwatch" $ AkIs "Start")
       $ RStr "Driver_core.apply = (fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs) }\n")))
 
-(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) -> (many (Rope) r))
+(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) -> (many (Rope) r))
   (match many (prelude-ctor env "Exit") _
     ((None _) (REmpty))
     ((Some _ _) (rcat5 (driver-rope-of d env) (RStr "let world = Driver_core.start ") (rcat3 (bracketed $ quoted-all reads) (RStr " ") (bracketed $ quoted-all writes))
       (match many bytes _ ((None _) (RStr " None")) ((Some _ b) (rcat3 (RStr " (Some ") (quoted b) $ RStr ")")))
-      $ RStr $ str-cat (match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")) "let print_final = Driver_core.print world\n"))))
+      $ RStr $ str-cat3 " " (bool-ml with-env) $ str-cat3 " " (bool-ml with-exec) " world\nlet print_final = Driver_core.print world\n"))))
 
 ; ---- A printer per type for a final function's result (lib/extract.ml's show): each constructor's return
 ; type is unified with the type to find its many fields' types, as entering a branch does.
@@ -1455,7 +1460,7 @@
     ((Nil _) acc))
   (match many p _ ((MkPair _ _ v _) (tail (roots-of-finals _ rest env en $ Cons _ v acc)))))
 
-(def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
+(def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb _))
@@ -1469,4 +1474,4 @@
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
   (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env d2)
-  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env) (rcat3 skeletons defs fills) finals))
+  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env with-exec) (rcat3 skeletons defs fills) finals))

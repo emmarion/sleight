@@ -122,6 +122,21 @@ it is embedded under `--extract`, and slc takes it too.
 `--extract` it is embedded in the program written out, and slc takes
 the same flag.
 
+`Exec prog args env dir stdin` runs another program and waits for it.
+The child gets `args` after its own name, exactly the variables `env`
+lists, the working directory `dir` (the program's own for `None`) and
+`stdin` as its standard input, and the request answers `MkExited` with
+its exit code and everything it wrote to standard output and standard
+error. A `prog` without a `/` is looked up in the `PATH` that `env`
+gives, not the program's own. A program that cannot be found or started,
+and one a signal kills, answers `Fail`. What the child writes does not
+count towards `--confine-output-bytes` until the program writes it out
+itself. The child is not bound by the fence, so `Exec` answers `Fail`
+without running anything unless the fence lets the program write `/`,
+and `--no-exec` makes it answer `Fail` always. Like the fence, under
+`--extract` the flag is embedded in the program written out, and slc
+takes the same flag (`tests/io_exec.sl`, `tests/io_no_exec.sl`).
+
 `--eval-fuel n` bounds the evaluator. An application spends one unit of
 fuel, a call to a function interpreted from its body one more, and each
 gives its units back when it returns, so `n` bounds how deeply
@@ -243,7 +258,7 @@ test naming a flag that only one implementation takes runs under that one alone,
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-read: path`, `; confine-write: path`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
-`; no-env: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
+`; no-env: yes`, `; no-exec: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
 the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep
 the examples' text, and a few macro tests, whose binders a macro reaches in

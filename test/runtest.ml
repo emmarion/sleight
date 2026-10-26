@@ -9,6 +9,7 @@
    "; comptime-unconfine: name" a name `read-file` may read relative to, as --comptime-unconfine gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
+   "; no-exec: yes" refuses it the Exec request, as --no-exec does;
    the test's own binders are checked as --warn-unused does, unless it says "; warn-unused: no";
    a needed file from outside tests/, such as ../std/nat, is checked as --warn-unused does whatever the test
    says, and fails the test if it warns at all, as the prelude, checked once before any test, fails the run;
@@ -87,6 +88,7 @@ and run_mode name externs src flags =
   let envs = List.filter_map split_env (directive src "env") in
   Extract.with_env := directive src "no-env" = [];
   let visible = if !Extract.with_env then envs else [] in
+  Extract.with_exec := directive src "no-exec" = [];
   let fence = ref Program.unconfined in
   Extract.reads := directive src "confine-read";
   Extract.writes := directive src "confine-write";
@@ -98,7 +100,7 @@ and run_mode name externs src flags =
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
       env = (fun n -> List.assoc_opt n visible); envs = (fun () -> visible); cwd = Sys.getcwd;
-      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); fence; limit; used = ref 0 }
+      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); exec = !Extract.with_exec; fence; limit; used = ref 0 }
   in
   let consume = Program.consume world in
   (* The test's own final is run only after the extracted sources are taken: running it may update a unique

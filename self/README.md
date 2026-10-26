@@ -160,8 +160,8 @@ writing the program out (`interp.sl`), the interpreted program's
 arguments following a `--` after the files. `--confine-read dir` and
 `--confine-write dir` confine the program's file requests as the
 reference's flags do
-(ASSUMPTIONS 198), and `--no-env` hides the environment from it as
-the reference's does.
+(ASSUMPTIONS 198), `--no-env` hides the environment from it and
+`--no-exec` refuses it `Exec`, as the reference's do.
 
 `self/bootstrap.sh` does four things. It extracts `slc` to a native
 binary with the reference extractor (`--extract`), since running the

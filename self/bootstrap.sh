@@ -91,6 +91,7 @@ check_test() {
   for d in $(directive "$t" confine-write); do confine="$confine --confine-write $d"; done
   for b in $(directive "$t" confine-output-bytes); do confine="$confine --confine-output-bytes $b"; done
   [ -n "$(directive "$t" no-env)" ] && confine="$confine --no-env"
+  [ -n "$(directive "$t" no-exec)" ] && confine="$confine --no-exec"
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program

@@ -469,7 +469,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         why, c, head = _compile(tmp, [(_source_name(p), read_bytes(p)) for p in paths],
                                 [*(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_fence(),
-                                 "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env"], capture)
+                                 "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-exec"], capture)
         if why or c.returncode:
             return head
         if ocaml:

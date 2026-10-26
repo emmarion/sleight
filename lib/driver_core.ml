@@ -11,6 +11,7 @@ type world = {
   cwd : unit -> string;
   exit : int -> unit;
   print : string -> unit;
+  exec : bool;
   fence : fence ref;
   limit : int option ref;
   used : int ref;
@@ -37,6 +38,7 @@ type 'v request =
   | ConfinePaths of 'v * 'v
   | ConfineOutputBytes of 'v
   | Measure of 'v
+  | Exec of 'v * 'v * 'v * 'v * 'v
 
 type 'v step = Exit of 'v | Continue of 'v
 
@@ -53,6 +55,8 @@ type 'v ops = {
   scons : 'v -> 'v -> 'v;
   un_str : 'v -> ('v * 'v) option;
   un_list : 'v -> ('v * 'v) option;
+  un_pair : 'v -> 'v * 'v;
+  un_some : 'v -> 'v option;
   some : 'v -> 'v;
   none : 'v;
   ok : 'v -> 'v;
@@ -68,6 +72,7 @@ type 'v ops = {
   changed : 'v;
   unchanged : 'v;
   mk_usage : 'v;
+  mk_exited : 'v;
   request : 'v -> 'v request;
   step : 'v -> 'v step;
   is_start : 'v -> bool;
@@ -145,11 +150,77 @@ let clamp z = if Z.fits_int z then Some (Z.to_int z) else None
 let output_limit b =
   match Ffi_core.nat_of_string b with Some z -> Ok (clamp z) | None -> Error (b ^ ": not a number of bytes")
 
-let start reads writes bytes env w =
+let start reads writes bytes env exec w =
   let fail m = prerr_endline m; exit 1 in
   Result.iter_error fail (restrict w.fence reads writes);
   Option.iter (fun b -> w.limit := Result.fold ~ok:Fun.id ~error:fail (output_limit b)) bytes;
+  let w = { w with exec = w.exec && exec } in
   if env then w else { w with env = (fun _ -> None); envs = (fun () -> []) }
+
+let signal_names =
+  Sys.[ (sigabrt, "SIGABRT"); (sigalrm, "SIGALRM"); (sigfpe, "SIGFPE"); (sighup, "SIGHUP"); (sigill, "SIGILL"); (sigint, "SIGINT");
+        (sigkill, "SIGKILL"); (sigpipe, "SIGPIPE"); (sigquit, "SIGQUIT"); (sigsegv, "SIGSEGV"); (sigterm, "SIGTERM"); (sigusr1, "SIGUSR1");
+        (sigusr2, "SIGUSR2"); (sigbus, "SIGBUS"); (sigtrap, "SIGTRAP"); (sigxcpu, "SIGXCPU"); (sigxfsz, "SIGXFSZ") ]
+
+let found prog env =
+  let runnable p = Sys.file_exists p && not (is_dir p) && (try Unix.access p [ Unix.X_OK ]; true with Unix.Unix_error _ -> false) in
+  let absolute p = if Filename.is_relative p then Filename.concat (Sys.getcwd ()) p else p in
+  if String.contains prog '/' then Ok (absolute prog)
+  else
+    let dirs = Option.fold ~none:[] ~some:(String.split_on_char ':') (List.assoc_opt "PATH" env) in
+    Option.to_result ~none:(prog ^ ": not found on the PATH it was given")
+      (List.find_opt runnable (List.map (fun d -> absolute (Filename.concat (if d = "" then "." else d) prog)) dirs))
+
+(* The child reports a failure to start through a close-on-exec pipe, which reads empty once the exec succeeds. *)
+let exec prog args env dir input =
+  Result.bind (found prog env) (fun path ->
+      let in_r, in_w = Unix.pipe ~cloexec:true () and out_r, out_w = Unix.pipe ~cloexec:true () in
+      let err_r, err_w = Unix.pipe ~cloexec:true () and why_r, why_w = Unix.pipe ~cloexec:true () in
+      match Unix.fork () with
+      | 0 ->
+          (try
+             Option.iter Unix.chdir dir;
+             List.iter (fun (a, b) -> Unix.dup2 ~cloexec:false a b) [ (in_r, Unix.stdin); (out_w, Unix.stdout); (err_w, Unix.stderr) ];
+             Unix.execve path (Array.of_list (prog :: args)) (Array.of_list (List.map (fun (n, v) -> n ^ "=" ^ v) env))
+           with e -> let m = Bytes.of_string (explain e) in ignore (Unix.write why_w m 0 (Bytes.length m)));
+          Unix._exit 127
+      | pid ->
+          List.iter Unix.close [ in_r; out_w; err_w; why_w ];
+          let pipe = Sys.signal Sys.sigpipe Sys.Signal_ignore in
+          let out = Buffer.create 4096 and err = Buffer.create 256 and why = Buffer.create 64 and chunk = Bytes.create 65536 in
+          let len = String.length input in
+          let rec loop sent readers =
+            let writers = if sent < len then [ in_w ] else [] in
+            if readers <> [] || writers <> [] then begin
+              let ready_r, ready_w, _ = try Unix.select readers writers [] (-1.) with Unix.Unix_error (Unix.EINTR, _, _) -> ([], [], []) in
+              let sent =
+                if ready_w = [] then sent
+                else
+                  let sent = match Unix.single_write_substring in_w input sent (len - sent) with
+                    | n -> sent + n
+                    | exception Unix.Unix_error ((Unix.EAGAIN | Unix.EINTR), _, _) -> sent
+                    | exception Unix.Unix_error (Unix.EPIPE, _, _) -> len in
+                  if sent = len then Unix.close in_w;
+                  sent
+              in
+              let still fd =
+                not (List.mem fd ready_r)
+                || match Unix.read fd chunk 0 (Bytes.length chunk) with
+                   | 0 -> Unix.close fd; false
+                   | n -> Buffer.add_subbytes (if fd = out_r then out else if fd = err_r then err else why) chunk 0 n; true
+                   | exception Unix.Unix_error (Unix.EINTR, _, _) -> true
+              in
+              loop sent (List.filter still readers)
+            end
+          in
+          Unix.set_nonblock in_w;
+          if len = 0 then Unix.close in_w;
+          Fun.protect ~finally:(fun () -> Sys.set_signal Sys.sigpipe pipe) (fun () -> loop 0 [ out_r; err_r; why_r ]);
+          match snd (Unix.waitpid [] pid) with
+          | _ when Buffer.length why > 0 -> Error (prog ^ ": " ^ Buffer.contents why)
+          | Unix.WEXITED code -> Ok (code, Buffer.contents out, Buffer.contents err)
+          | Unix.WSIGNALED s | Unix.WSTOPPED s ->
+              Error (prog ^ ": killed by signal " ^ Option.value (List.assoc_opt s signal_names) ~default:(string_of_int s)))
 
 let host_envs () =
   List.filter_map
@@ -169,11 +240,11 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
   let rec count z v = match o.pred v with Some p -> count (Z.succ z) p | None -> z in
   let to_z = Option.value nat_to_z ~default:(count Z.zero) in
   let u8 v = Z.to_int (to_z (o.un_u8 v)) in
+  let nat n = match nat_of_z with Some f -> f (Z.of_int n) | None -> let rec go n = if n = 0 then o.zero else o.succ (go (n - 1)) in go n in
   let of_string s =
     match str_of_host with
     | Some f -> f s
     | None ->
-        let rec nat n = if n = 0 then o.zero else o.succ (nat (n - 1)) in
         String.fold_right (fun ch acc -> o.scons (o.char (o.u8 (nat (Char.code ch)))) acc) s o.snil
   in
   let to_string v =
@@ -190,6 +261,8 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     let entered = Gc.minor_words () in
     let result f = match f () with x -> o.ok x | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e)) in
     let list of_item xs = List.fold_right (fun x acc -> o.cons (of_item x) acc) xs o.nil in
+    let rec items of_item v = match o.un_list v with Some (x, rest) -> of_item x :: items of_item rest | None -> [] in
+    let strs = items to_string in
     let change already f =
       match f () with
       | () -> o.ok o.changed
@@ -235,7 +308,6 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     | DeleteFile path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
     | DeleteDir path -> fenced ~access:Write ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
     | ConfinePaths (reads, writes) ->
-        let rec strs v = match o.un_list v with Some (x, rest) -> to_string x :: strs rest | None -> [] in
         (match confine w.fence (strs reads) (strs writes) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
     | ConfineOutputBytes bytes -> (
         let z = to_z bytes in
@@ -270,6 +342,17 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
           measure extra
         end
         else reading entered 0.
+    | Exec (prog, args, env, dir, input) -> (
+        let prog = to_string prog in
+        let refuse why = o.fail (of_string (prog ^ ": " ^ why)) in
+        if not w.exec then refuse "exec is disabled (--no-exec)"
+        else if not (reaches !(w.fence) Write []) then refuse "exec needs the whole filesystem writable, which the fence does not allow"
+        else
+          let env = items (fun v -> let n, x = o.un_pair v in (to_string n, to_string x)) env in
+          match exec prog (strs args) env (Option.map to_string (o.un_some dir)) (to_string input) with
+          | Ok (code, out, err) -> o.ok (o.apply o.mk_exited [ o.u8 (nat code); of_string out; of_string err ])
+          | Error m -> o.fail (of_string m)
+          | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e)))
   in
   let run_program _w v =
     ignore (Lazy.force started);

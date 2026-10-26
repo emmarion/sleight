@@ -83,6 +83,7 @@ let reads = ref []
 let writes = ref []
 let output_bytes = ref None
 let with_env = ref true
+let with_exec = ref true
 let template key = if !templates then Ffi_templates.find key else None
 let stamp cx = incr cx.temps; !(cx.temps)
 
@@ -601,11 +602,11 @@ let driver cx =
   let ops =
     [ ("zero", make "Zero"); ("succ", make "Succ"); ("pred", option "Succ");
       ("u8", make "MkU8"); ("un_u8", field "MkU8"); ("char", make "MkChar"); ("un_char", field "MkChar");
-      ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons"); ("un_list", option "Cons");
+      ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons"); ("un_list", option "Cons"); ("un_pair", un "MkPair" (fun _ fs -> Printf.sprintf "(%s)" (concat ", " fs))); ("un_some", option "Some");
       ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
-      ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")");
+      ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")"); ("mk_exited", "(Obj.repr " ^ make "MkExited" ^ ")");
       ("request", un "WriteOut" variant); ("step", un "Exit" variant);
       ("is_start", un "Start" (fun ct _ -> string_of_bool (ct.V.cname = "Start")));
       ("apply", apply_ocaml) ]
@@ -614,12 +615,12 @@ let driver cx =
              ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref Driver_core.unconfined; limit = ref None; used = ref 0 }
-let world = Driver_core.start %s %s %s %b world
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; exec = true; fence = ref Driver_core.unconfined; limit = ref None; used = ref 0 }
+let world = Driver_core.start %s %s %s %b %b world
 let print_final = Driver_core.print world
 let run_program = driver.run_program world
 let run_main = driver.run_main world
-|} (quotes !reads) (quotes !writes) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
+|} (quotes !reads) (quotes !writes) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env !with_exec
 
 let item cx = function
   | Env.Fns fns ->

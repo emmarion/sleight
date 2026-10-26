@@ -18,7 +18,7 @@
 ; ---- The compiler's command-line flags (self/main.sl).
 ; The flags slc takes alone, and those taking the argument after them.
 (def-fns _ $ (many switches : -> (many (List $ String) r))
-  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Nil _))
+  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--no-exec" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Nil _))
 
 (def-fns _ $ (many valued : -> (many (List $ String) r))
   (Cons _ "--confine-read" $ Cons _ "--confine-write" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
@@ -107,7 +107,7 @@
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.
 
-(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many fi (Cons _ f rest) ((Nil _) (values w (Exit _ exit-ok))))
   (let-match many f (MkPair _ _ v0 ty))
   (let ((many v)) (widen-ref _ _ le v0))
@@ -125,19 +125,19 @@
         (let-match unique wo (MkElabWorld _ pw))
         (let ((unique w0)) (unplace-at _ _ _ pw))
         (let-match erased (placed-slot _ _ _ pw) (Refl _ _))
-        (let ((erased hl2) (many hq2) (erased sf2) (many r) (unique w3)) $ perform-request pcs rq pargs with-env base _ hq req w0)
+        (let ((erased hl2) (many hq2) (erased sf2) (many r) (unique w3)) $ perform-request pcs rq pargs with-env with-exec base _ hq req w0)
         (values hl2 hq2 sf2 r $ MkElabWorld _ $ place-at _ w3))
       (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) _args) (unique (ElabWorld) wo) ->
           (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (ElabWorld) wo2 at wo))
         (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ $ no-macro-world prim)
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
       (tail $ interp-program (env-fuel env) pcs (MkPerformer (ElabWorld) 0 0 perform world-prim) _ hp v w1))
-    ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
+    ((FPlain) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
     ((FThunk t)
       (let ((erased _) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) _)) (apply 0 0 _ (env-fuel env) _ hp v (Nil _) many-one _ (compile-time 0 0) u))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (heap-crash _ hp1) (None _) ((Some _ m) (runtime-error m w)))
-      (tail $ interp-finals env pargs with-env _ rest _ hp1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
+      (tail $ interp-finals env pargs with-env with-exec _ rest _ hp1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
     ((FMain)
       (let ((unique w1) (many input)) (world-do _ w (ReadRemaining)))
       (let ((erased _) (many hp1) (erased le1) (many s)) (alloc-ext _ hp (PStr input)))
@@ -145,4 +145,4 @@
       (let ((erased le12)) (hist-le-trans _ _ _ le1 le2))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (heap-crash _ hp2) (None _) ((Some _ m) (runtime-error m w1)))
-      (tail $ interp-finals env pargs with-env _ rest _ hp2 (hist-le-trans _ _ _ le le12) $ say-to (BFalse) (heap-str _ hp2 r) w1))))
+      (tail $ interp-finals env pargs with-env with-exec _ rest _ hp2 (hist-le-trans _ _ _ le le12) $ say-to (BFalse) (heap-str _ hp2 r) w1))))

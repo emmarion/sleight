@@ -858,19 +858,29 @@
   (let ((erased h2) (many hp2) (erased le2) (many v)) (store-ok env _ hp1 l))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v))
 
-(def-fns _ $ (many store-nats : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (List $ Nat) ns) ->
+(def-fns _ $ (many store-exts : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (List $ Payload) ps) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) rs))
-  (let-match many ns (Cons _ n rest) ((Nil _) (values hs hp (le-refl hs) (Nil _))))
-  (let ((erased _) (many hp1) (erased le1) (many r)) (alloc-ext _ hp (PNat n)))
-  (let ((erased h2) (many hp2) (erased le2) (many rs)) (notail $ store-nats _ hp1 rest))
+  (let-match many ps (Cons _ p rest) ((Nil _) (values hs hp (le-refl hs) (Nil _))))
+  (let ((erased _) (many hp1) (erased le1) (many r)) (alloc-ext _ hp p))
+  (let ((erased h2) (many hp2) (erased le2) (many rs)) (notail $ store-exts _ hp1 rest))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ (widen-ref _ _ le2 r) rs)))
 
 (def-fns _ $ (many store-usage : (many (List $ Ctor) env) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Usage) u) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (let-match many u (MkUsage a b c d e f g h))
-  (let ((erased _) (many hp1) (erased le1) (many rs)) (store-nats _ hp $ Cons _ a $ Cons _ b $ Cons _ c $ Cons _ d $ Cons _ e $ Cons _ f $ Cons _ g $ Cons _ h $ Nil _))
+  (let ((erased _) (many hp1) (erased le1) (many rs)) (store-exts _ hp $ Cons _ (PNat a) $ Cons _ (PNat b) $ Cons _ (PNat c) $ Cons _ (PNat d) $ Cons _ (PNat e) $ Cons _ (PNat f) $ Cons _ (PNat g) $ Cons _ (PNat h) $ Nil _))
   (let ((erased h2) (many hp2) (erased le2) (many v)) (construct _ hp1 (pctor env "MkUsage") rs))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v))
+
+(def-fns _ $ (many store-result-exited : (many (List $ Ctor) env) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Result $ Exited) r) ->
+    (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (let-match many r (Ok _ x) ((Fail _ m) (store-fail env _ hp m)))
+  (let-match many x (MkExited code out err))
+  (let-match many code (MkU8 n _))
+  (let ((erased _) (many hp1) (erased le1) (many rs)) (store-exts _ hp $ Cons _ (PNat n) $ Cons _ (PStr out) $ Cons _ (PStr err) $ Nil _))
+  (let ((erased _) (many hp2) (erased le2) (many e)) (construct _ hp1 (pctor env "MkExited") rs))
+  (let ((erased h3) (many hp3) (erased le3) (many v)) (store-ok env _ hp2 e))
+  (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) v))
 
 (def-adts $ (RqKind : -> Type)
   enum
@@ -880,7 +890,7 @@
   (many RqGetEnvs : -> (RqKind)) (many RqAppendFile : -> (RqKind)) (many RqReadRemaining : -> (RqKind))
   (many RqListDir : -> (RqKind)) (many RqGetCwd : -> (RqKind)) (many RqStat : -> (RqKind))
   (many RqMkDir : -> (RqKind)) (many RqDeleteFile : -> (RqKind)) (many RqDeleteDir : -> (RqKind))
-  (many RqConfinePaths : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)))
+  (many RqConfinePaths : -> (RqKind)) (many RqConfineOutputBytes : -> (RqKind)) (many RqMeasure : -> (RqKind)) (many RqExec : -> (RqKind)))
 
 (def-adts $ (RqEntry : -> Type)
   enum
@@ -896,7 +906,7 @@
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
   rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "ConfinePaths" (RqConfinePaths) $
-  rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ rq-cons "Measure" (RqMeasure) $ Nil _)
+  rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ rq-cons "Measure" (RqMeasure) $ rq-cons "Exec" (RqExec) $ Nil _)
 
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (RqKind) r))
   (let-match many es (Cons _ e rest) ((Nil _) (RqUnknown)))
@@ -914,12 +924,27 @@
   (let ((many a1)) (widen-ref _ _ le a))
   (Cons _ (heap-str _ hp1 $ field-at _ fields 0 a1) $ notail $ heap-strs env k _ hp1 $ field-at _ fields 1 a1))
 
+(def-fns _ $ (many heap-pairs : (many (List $ Ctor) env) (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (List $ Pair (String) (String)) r))
+  (let-match many fuel (Succ k) ((Zero) (Nil _)))
+  (let ((erased _) (many hp1) (erased le) (many i) (many fields)) (destruct _ hp (pctor env "Cons") a))
+  (let-match many (headed-by i $ pctor env "Cons") (BTrue) ((BFalse) (Nil _)))
+  (let ((many a1)) (widen-ref _ _ le a))
+  (let ((many p)) (field-at _ fields 0 a1))
+  (let ((erased _) (many hp2) (erased le2) (many _) (many pf)) (destruct _ hp1 (pctor env "MkPair") p))
+  (let ((many p2)) (widen-ref _ _ le2 p))
+  (Cons _ (MkPair _ _ (heap-str _ hp2 $ field-at _ pf 0 p2) (heap-str _ hp2 $ field-at _ pf 1 p2)) $ notail $ heap-pairs env k _ hp2 $ widen-ref _ _ le2 $ field-at _ fields 1 a1))
+
+(def-fns _ $ (many heap-maybe-str : (many (List $ Ctor) env) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (Maybe $ String) r))
+  (let ((erased _) (many hp1) (erased le) (many i) (many fields)) (destruct _ hp (pctor env "Some") a))
+  (let-match many (headed-by i $ pctor env "Some") (BTrue) ((BFalse) (None _)))
+  (Some _ $ heap-str _ hp1 $ field-at _ fields 0 $ widen-ref _ _ le a))
+
 (def-fns _ $ (many usage-since : (many (Usage) base) (many (Usage) u) -> (many (Usage) r))
   (let-match many base (MkUsage a0 b0 c0 d0 e0 f0 g0 h0))
   (let-match many u (MkUsage a b c d e f g h))
   (MkUsage (nat-sub a a0) (nat-sub b b0) (nat-sub c c0) (nat-sub d d0) (nat-sub e e0) (nat-sub f f0) (nat-sub g g0) (nat-sub h h0)))
 
-(def-fns _ $ (many perform-request : (many (List $ Ctor) env) (many (List $ Ctor) rq) (many (List $ String) pargs) (many (Bool) with-env) (many (Usage) base)
+(def-fns _ $ (many perform-request : (many (List $ Ctor) env) (many (List $ Ctor) rq) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (many (Usage) base)
     (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) req) (unique (World) w at vacant-slot) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
   (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor env "WriteOut") req))
@@ -1012,7 +1037,16 @@
         (let ((erased _) (many hpc) (erased lec) (many ci) (many _)) (destruct _ hp1 (pctor env "Start") f0))
         (let ((unique w1) (many u)) (world-do _ w $ Measure $ match many (headed-by ci $ pctor env "Start") (((Stopwatch) _)) ((BTrue) (Start)) ((BFalse) (Stop))))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-usage env _ hpc (usage-since base u)))
-        (values h hpx (hist-le-trans _ _ _ lec le) a w1))))
+        (values h hpx (hist-le-trans _ _ _ lec le) a w1))
+      ((RqExec)
+        (let-match many with-exec (BTrue)
+          ((BFalse)
+            (let ((erased h) (many hpx) (erased le) (many a)) (store-fail env _ hp1 $ str-cat s0 ": exec is disabled (--no-exec)"))
+            (values h hpx le a w)))
+        (let ((unique w1) (many r)) (world-do _ w $ Exec s0 (heap-strs env heap-strs-fuel _ hp1 $ field-at _ fields 1 req1) (heap-pairs env heap-strs-fuel _ hp1 $ field-at _ fields 2 req1)
+          (heap-maybe-str env _ hp1 $ field-at _ fields 3 req1) (heap-str _ hp1 $ field-at _ fields 4 req1)))
+        (let ((erased h) (many hpx) (erased le) (many a)) (store-result-exited env _ hp1 r))
+        (values h hpx le a w1))))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v w2))
 
 (def-fns _ $ (many no-macro-world : (many (Sp) prim) -> (many (String) msg))

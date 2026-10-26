@@ -1137,6 +1137,10 @@
   (many Start : -> (Stopwatch))  ; allocates the answer, compacts the heap, then reads
   (many Stop : -> (Stopwatch)))  ; reads, then allocates the answer; no compaction
 
+(def-adts $ (Exited : -> Type)
+  enum
+  (many MkExited : (many (U8) code) (many (String) out) (many (String) err) -> (Exited)))
+
 (def-adts $ (Request : (Type A) -> Type)
   enum
   (many WriteOut : (many (String) text) -> (Request (Unit)))
@@ -1158,7 +1162,9 @@
   (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
   (many ConfinePaths : (many (List (String)) reads) (many (List (String)) writes) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (many (Stopwatch) s) -> (Request (Usage))))  ; totals since the Program began
+  (many Measure : (many (Stopwatch) s) -> (Request (Usage)))  ; totals since the Program began
+  (many Exec : (many (String) prog) (many (List (String)) args) (many (List (Pair (String) (String))) env)
+     (many (Maybe (String)) dir) (many (String) stdin) -> (Request (Result (Exited)))))
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern
