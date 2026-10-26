@@ -24,7 +24,7 @@ SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 _on = lambda name, default="0": os.environ.get(name, default) not in ("0", "false", "")
 CHECK = [os.path.normpath(f) for f in os.environ.get("PI_CHECK", "").split()]
 REQUESTS_LOG, RUN_STATS, OCAML, WARN_UNUSED = _on("PI_REQUESTS_LOG"), _on("PI_RUN_STATS", "1"), _on("PI_OCAML"), _on("PI_WARN_UNUSED")
-SLC_TIMEOUT, RUN_TIMEOUT = 60, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
+SLC_TIMEOUT, RUN_TIMEOUT = int(os.environ.get("PI_SLC_TIMEOUT", "60")), int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
@@ -1386,6 +1386,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_MAX_EMPTY      replies in a row without a tool call before giving up [3]\n"
          "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
          "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
+         "  PI_SLC_TIMEOUT    seconds each compile may run, `native-compute` included [60]\n"
          "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
          "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
