@@ -24,7 +24,7 @@ speed of the code they produce, are not aims.
 - Multiplicities and erasure: §13 to §16.
 - Termination: §17 to §20.
 - Data types and matching: §21 to §25.
-- Expressions, statements and compile time: §26 to §32.
+- Expressions, statements and compile time: §26 to §32, and §72.
 - Coercion: §33, §34.
 - Slots, `at` and cells: §35 to §41, and §66 to §70.
 - The prelude, the FFI and literals: §42 to §45.
@@ -1294,7 +1294,9 @@ function of no arguments: its binders declare their multiplicities at
 its boundary, as a signature does, and its result type needs no
 annotation. Every fact derived from a stored value, that is, a
 `comptime-match` and everything that follows from the fields it binds,
-relies on the evaluator having evaluated correctly.
+relies on the evaluator having evaluated correctly. A stored value
+that `native-compute` produced relies on its compiled run in the same
+way (§72).
 
 ## 30. Bottom-up type inference
 
@@ -2369,7 +2371,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
   `intern-char`, `intern-string`, `mint-settled`, `mint-settled-erased`,
   `resolve`, `read-file`, `settled-ty-apply` and `settled-val-apply` (§65),
   `place-at`, `place-at-many`, `unplace-at` and `unplace-at-many`
-  (§66), `slot-eq` (§67), `cell-same` (§68) and `fn-same` (§70).
+  (§66), `slot-eq` (§67), `cell-same` (§68), `fn-same` (§70) and
+  `native-compute` (§72).
 - the `at` wrapper around a cell invocation or an at-function call,
   `(at m (...))`, `m` the multiplicity its head is taken at (§37,
   §39).
@@ -3049,3 +3052,23 @@ is an error.
 `--goal` (MANUAL.md) is `none`, `open` or `proved`. Under `none`, the default, a goal requires nothing and the driver is as §27 describes. Under `open` and `proved`, the driver is off: a final expression runs as any form in run position does, and nothing is printed, applied or written after elaboration. `open` requires a goal and no `qed`. `proved` requires a goal and a `qed`. On success, each reports the goal and where it is set, and `proved` also where it is discharged, as notes on standard error (MANUAL.md). Standard output holds one line: `--goal open: PASS` or `--goal proved: PASS` when the requirement is met, and the same with `FAIL` when it is not. It is the only output on standard output.
 
 A goal is one type, not a telescope; an existential, such as a function with its level, is packaged by an ADT (§21).
+
+## 72. `native-compute`
+
+`(native-compute f)` is an expression confined to run position (§27),
+in a `many` position. `f` is a size-one expression whose result is a
+`Settled` `many` entry (§29) whose type canonicalizes to
+`(Fn L -> (many T r))`: no parameters, and one `many` return, which may
+be written with `is` but not `at`. `T` is an application of a type
+constructor whose opened `Matchable` (§8) is a non-erased `Settled`, as
+for `comptime-match`. That `Matchable` is an `enum`, and none of its
+non-phantom constructors has a non-erased field. The type may be marked
+`extern`.
+
+The form means the call `(f)`, and its result is `Settled` as that
+call's would be (§29). It is how a program asks for a run-position call
+to be run by compiled code rather than by the evaluator, as a final
+`Fn` is (§27). The compiled run hands back only the constructor, so its
+erased fields take the tokens of §5. It may crash where the evaluator
+would not, and the other way round (§31). A run that cannot be compiled
+or that crashes is an error at the form.
