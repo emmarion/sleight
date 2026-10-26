@@ -69,16 +69,22 @@
   (let ((many acc2) (erased ad)) (add w acc))
   (tail $ escaped-width s len ls i1 a2 (SCons c b) p2 la2 acc2 (EWCons k q b w acc acc2 ew e ad)))
 
+(def-fns _ $ (many bytes-write : (erased (List (U8)) xs) (erased (Nat) n) (erased (Length (U8) xs n) l) (unique (Bytes xs) b)
+    (many (Nat) i) (erased (Lt i n) lt) (many (Nat) k) ->
+    (erased (List (U8)) ys) (erased (Length (U8) ys n) l2) (unique (Bytes ys) r at b))
+  (let ((erased x) (erased nth)) (nth-exists _ xs n i l lt))
+  (let-match many (char-of-code k) (MkChar u))
+  (let ((erased ys) (unique b2) (erased sp)) (bytes-set _ b i u x nth))
+  (values ys (setnth-length _ xs i n u ys sp l) b2))
+
 (def-fns _ $ (many put-bytes : (many (Nat) k) (many (Nat) w) (subterm many (Nat) left) (many (Nat) d)
     (erased (Nat) rest rr m) (erased (Add left rest rr) al)
     (erased (List (U8)) xs) (erased (Length (U8) xs (Succ m)) l) (unique (Bytes xs) b) (many (Nat) j) (erased (Add j rr m) aj) ->
     (erased (List (U8)) ys) (erased (Length (U8) ys (Succ m)) l2) (unique (Bytes ys) r at b) (many (Nat) j2) (erased (Add j2 rest m) aj2))
   (let-match many left (Succ left1) ((Zero) (let-match erased al (AddZero _)) (values xs l b j aj)))
   (let-match erased al (AddSucc _ _ rr1 al1))
-  (let ((erased x) (erased nth)) (nth-exists _ xs (Succ m) j l (add-le-left j rr m aj)))
-  (let-match many (char-of-code $ escape-byte k w d) (MkChar u))
-  (let ((erased ys) (unique b2) (erased sp)) (bytes-set _ b j u x nth))
-  (tail $ put-bytes k w left1 (Succ d) rest rr1 m al1 ys (setnth-length _ xs j (Succ m) u ys sp l) b2 (Succ j) (add-shift j rr1 m aj)))
+  (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs (Succ m) l b j (add-le-left j rr m aj) (escape-byte k w d)))
+  (tail $ put-bytes k w left1 (Succ d) rest rr1 m al1 ys l2 b2 (Succ j) (add-shift j rr1 m aj)))
 
 (def-fns _ $ (many escape-into : (many (String) s) (erased (Nat) len) (erased (StrLength s len) ls)
     (subterm many (Nat) left) (many (Nat) i) (erased (String) a t) (erased (Append a t s) p) (erased (StrLength a i) la)
@@ -111,6 +117,124 @@
   (let ((many c)) (share b2))
   (let ((many r) (erased _)) (bytes-str _ c))
   r)
+
+(def-fns _ $ (many escape-ok : (many (Char) e) -> (many (Bool) r))
+  (let ((many n)) $ char-code e)
+  (or (nat-eqb n 110) $ or (nat-eqb n 116) $ or (nat-eqb n 34) $ nat-eqb n 92))
+
+(def-fns _ $ (many unescape : (many (Char) e) -> (many (Char) c))
+  (let ((many n)) $ char-code e)
+  (match many (nat-cmp n 110) _
+    ((CEq _ _ _) #\newline)
+    (else
+      (match many (nat-cmp n 116) _
+        ((CEq _ _ _) #\tab)
+        (else e)))))
+
+(def-fns _ $ (erased add-lt : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Lt a c) q))
+  (let-match erased (add-le-left (Succ a) b c (add-shift a b c p)) (LtS _ _ q))
+  q)
+
+(def-fns _ $ (erased add-zero-eq : (erased (Nat) a c) (subterm erased (Add a (Zero) c) p) -> (erased (Eq (Nat) a c) e))
+  (let-match erased p (AddSucc a1 _ c1 p1) ((AddZero _) (Refl _ a)))
+  (let-match erased (add-zero-eq a1 c1 p1) (Refl _ _))
+  (Refl _ a))
+
+(def-fns _ $ (erased strbytes-length : (erased (String) s) (erased (List (U8)) xs) (erased (Nat) n)
+    (subterm erased (StrBytes s xs) p) (erased (Length (U8) xs n) l) -> (erased (StrLength s n) r))
+  (match erased p _
+    ((SBNil) (let-match erased l (LengthNil _)) (SLenNil))
+    ((SBCons u s1 xs1 p1) (let-match erased l (LengthCons _ _ _ n1 l1)) (SLenCons (MkChar u) s1 n1 (strbytes-length s1 xs1 n1 p1 l1)))))
+
+(def-adts $ (EscState : -> Type)
+  enum
+  (many EsNorm : -> (EscState))
+  (many EsEsc : -> (EscState))
+  (many EsHex0 : -> (EscState))
+  (many EsHex1 : -> (EscState)))
+
+(def-adts $ (Scan : ((Nat) len) -> Type)
+  enum
+  (many ScanEnd : (erased (Nat) len) (many (Nat) e) (erased (Lt e len) lt) (many (Bool) esc) -> (Scan len))
+  (many ScanUnterminated : (erased (Nat) len) -> (Scan len))
+  (many ScanBad : (erased (Nat) len) (many (Nat) off) (many (Char) e) -> (Scan len)))
+
+(def-fns _ $ (many read-scan : (many (String) s) (erased (Nat) len) (erased (StrLength s len) ls)
+    (many (Nat) i) (subterm many (Nat) left) (erased (Add i left len) sum) (many (EscState) st) (many (Nat) bs) (many (Bool) esc) ->
+    (many (Scan len) r))
+  (let-match many left (Succ l1)
+    ((Zero) (match many st _ ((EsNorm) (ScanUnterminated _)) ((EsEsc) (ScanUnterminated _)) (else (ScanBad _ bs #\x78)))))
+  (let ((erased lt)) (add-lt i l1 len sum))
+  (let ((many c) (erased _) (erased _) (erased _) (erased _)) (str-get s i len ls lt))
+  (let ((erased sum2)) (add-shift i l1 len sum))
+  (match many st _
+    ((EsNorm)
+      (let-match many (char-is c 34) (BFalse) ((BTrue) (ScanEnd _ i lt esc)))
+      (let-match many (char-is c 92) (BFalse) ((BTrue) (tail $ read-scan s len ls (Succ i) l1 sum2 (EsEsc) i (BTrue))))
+      (tail $ read-scan s len ls (Succ i) l1 sum2 (EsNorm) bs esc))
+    ((EsEsc)
+      (let-match many (char-is c 120) (BFalse) ((BTrue) (tail $ read-scan s len ls (Succ i) l1 sum2 (EsHex0) bs esc)))
+      (let-match many (escape-ok c) (BTrue) ((BFalse) (ScanBad _ bs c)))
+      (tail $ read-scan s len ls (Succ i) l1 sum2 (EsNorm) bs esc))
+    ((EsHex0)
+      (let-match many (is-hex c) (BTrue) ((BFalse) (ScanBad _ bs #\x78)))
+      (tail $ read-scan s len ls (Succ i) l1 sum2 (EsHex1) bs esc))
+    ((EsHex1)
+      (let-match many (is-hex c) (BTrue) ((BFalse) (ScanBad _ bs #\x78)))
+      (tail $ read-scan s len ls (Succ i) l1 sum2 (EsNorm) bs esc))))
+
+(def-fns _ $ (many unescape-into : (many (String) raw) (erased (Nat) n) (erased (StrLength raw n) lr)
+    (many (Nat) i) (subterm many (Nat) left) (erased (Add i left n) sum) (many (EscState) st) (many (Nat) hi)
+    (erased (List (U8)) xs) (erased (Length (U8) xs n) l) (unique (Bytes xs) b) (many (Nat) j) (erased (Lt j (Succ i)) le) ->
+    (erased (List (U8)) ys) (erased (Length (U8) ys n) l2) (unique (Bytes ys) r at b) (many (Nat) j2) (erased (Lt j2 (Succ n)) le2))
+  (let-match many left (Succ l1)
+    ((Zero) (let-match erased (add-zero-eq i n sum) (Refl _ _)) (values xs l b j le)))
+  (let ((erased lt)) (add-lt i l1 n sum))
+  (let ((many c) (erased _) (erased _) (erased _) (erased _)) (str-get raw i n lr lt))
+  (let ((erased sum2)) (add-shift i l1 n sum))
+  (let ((erased skip)) (lt-weaken j (Succ i) le))
+  (let ((erased wrote)) (LtS j (Succ i) le))
+  (let ((erased lj)) (lt-le-trans j (Succ i) n le (LtS i n lt)))
+  (match many st _
+    ((EsNorm)
+      (let-match many (char-is c 92) (BFalse) ((BTrue) (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsEsc) hi xs l b j skip)))
+      (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs n l b j lj $ char-code c))
+      (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsNorm) hi ys l2 b2 (Succ j) wrote))
+    ((EsEsc)
+      (let-match many (char-is c 120) (BFalse) ((BTrue) (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsHex0) hi xs l b j skip)))
+      (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs n l b j lj $ char-code $ unescape c))
+      (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsNorm) hi ys l2 b2 (Succ j) wrote))
+    ((EsHex0) (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsHex1) (hex-digit c) xs l b j skip))
+    ((EsHex1)
+      (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs n l b j lj $ nat-add (nat-mul hi 16) $ hex-digit c))
+      (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsNorm) hi ys l2 b2 (Succ j) wrote))))
+
+(def-adts $ (Unescaped : -> Type)
+  enum
+  (many ReadOk : (many (String) body) (many (Nat) used) (many (String) rest) -> (Unescaped))
+  (many ReadUnterminated : -> (Unescaped))
+  (many ReadBadEscape : (many (Nat) off) (many (Char) e) -> (Unescaped))
+  (many ReadNoQuote : -> (Unescaped)))
+
+(def-fns _ $ (many read-string : (many (String) s) -> (many (Unescaped) r))
+  (let-match many s (SCons q s1) ((SNil) (ReadNoQuote)))
+  (let-match many (char-is q 34) (BTrue) ((BFalse) (ReadNoQuote)))
+  (let ((many len) (erased ls)) (str-length s1))
+  (let-match many (read-scan s1 len ls (Zero) len (AddZero len) (EsNorm) (Zero) (BFalse)) (ScanEnd _ e lt esc)
+    ((ScanUnterminated _) (ReadUnterminated))
+    ((ScanBad _ off c) (ReadBadEscape (Succ off) c)))
+  (let ((many raw) (many _) (erased _) (erased lr)) (str-split s1 e len ls (lt-weaken e len lt)))
+  (let ((many _) (many rest) (erased _) (erased _)) (str-split s1 (Succ e) len ls (LtS e len lt)))
+  (let ((many used)) (Succ (Succ e)))
+  (let-match many esc (BTrue) ((BFalse) (ReadOk raw used rest)))
+  (let-match many (char-of-code 0) (MkChar z))
+  (let ((erased xs) (unique b) (erased rp)) (bytes-make e z))
+  (let ((erased ys) (erased l2) (unique b2) (many j) (erased le))
+    (unescape-into raw e lr (Zero) e (AddZero e) (EsNorm) (Zero) xs (repeat-length _ e z xs rp) b (Zero) (LtZ (Zero))))
+  (let ((many c)) (share b2))
+  (let ((many full) (erased sb)) (bytes-str _ c))
+  (let ((many body) (many _) (erased _) (erased _)) (str-split full j e (strbytes-length full ys e sb l2) le))
+  (ReadOk body used rest))
 
 (def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
   (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ RStr $ lit-string s))))

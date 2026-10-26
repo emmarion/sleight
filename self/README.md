@@ -71,10 +71,14 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   `list-append` a `Concat` proof. `nat-eq`, `str-eq`,
   `list-length` and friends are forgetful wrappers over those, for the
   sites that combine several decisions with `and`/`or`.
-- `escape.sl` — how a string or a name is spelled back as source:
-  `lit-string` escapes a string into one `Bytes` buffer, sized by a first
-  pass, every read and write in bounds by proof; each byte's width is
-  read from a 256-entry table built when slc is compiled.
+- `escape.sl` — how a string or a name is spelled as source, and how a
+  string literal is read back: `lit-string` escapes a string into one
+  `Bytes` buffer, sized by a first pass, each byte's width read from a
+  256-entry table built when slc is compiled; `read-string` reads a
+  literal from its opening quote by index, returning the body, the
+  length taken and the rest, the body a slice of the source when nothing
+  is escaped and otherwise decoded into one `Bytes` buffer. Every read
+  and write of both is in bounds by proof.
 - `heap.sl` — a store for the compile-time interpreter, parametric in
   its block type: addresses below a bound, carried as their bijective
   spelling with erased `Numeral` and `Lt` proofs, widened by a `coerce`;
@@ -85,8 +89,8 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
   tokenizer, a word being a slice of the source cut by the prelude's
   `str-split` under an `Add` invariant counting the characters taken
-  and remaining, a string literal a `Rope` of characters flattened
-  once, and a fold over the tokens with a stack of open forms. It also
+  and remaining, a string literal read by `escape.sl`'s `read-string`
+  and then walked for its lines and tabs, and a fold over the tokens with a stack of open forms. It also
   holds the port of `lib/indent.ml`, the indentation check the driver
   runs over each file before parsing it: a second scan of the source
   text, since the tokens above carry a line but no column. Both sides
