@@ -119,7 +119,7 @@ is a design decision. Remove an entry when it is fixed.
     an `at` entry from the returns before judging tail position (DESIGN.md
     §19, §36); `slc`'s `tails-ok` and `call-report` appear to see a
     `values` form of two entries and treat every entry as non-tail. No
-    test has this shape; `open-contradicts` in `self/elab.sl` takes and
+    test has this shape; `open-contradicts` in `self/elab-main.sl` takes and
     returns the macro world so that `elab-refute` avoids it.
 
 22. **Checking is exponential in a term's sharing.** Canonical forms

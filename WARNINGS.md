@@ -71,14 +71,14 @@ Tests: `tests/at_match.sl`, `tests/vec_append.sl`, `tests/macro_head_warn.sl`.
 `absurd`; mark the enclosing branch or function `absurd` instead``. A
 non-erased match that is not an at-match has no real branch and no
 `else`, in code that is not itself erased.
-`lib/elab.ml` (`elab_match`), `self/elab.sl`.
+`lib/elab.ml` (`elab_match`), `self/elab-main.sl`.
 Tests: `tests/match_no_branches_warn.sl`, `tests/else_phantom_only.sl`.
 
 ## 7. Phantom constructor with a non-erased field
 
 ``phantom constructor `C` has a non-erased field``. A `def-adts`
 constructor marked `erased` (§21) declares a field `many` or `unique`.
-`lib/elab.ml` (`elab_def_adts`), `self/elab.sl`.
+`lib/elab.ml` (`elab_def_adts`), `self/elab-main.sl`.
 Tests: `tests/phantom_warn.sl`, `tests/wrap_phantom_bad.sl`.
 
 ## 8. Indentation
@@ -111,7 +111,7 @@ Specified in DESIGN.md section 4.
   `self/elab.sl`. Tests: `tests/warn_pragma.sl`,
   `tests/warn_pragma_function.sl`, `tests/warn_pragma_at.sl`.
 - ``;! suppress warn` for NAME silenced nothing``. `lib/elab.ml` (`run_toplevel`),
-  `self/elab.sl`. Test: `tests/suppress_warn.sl`.
+  `self/elab-main.sl`. Test: `tests/suppress_warn.sl`.
 - The text of a `compile-warn` (§4). Test: `tests/compile_warn.sl`.
 
 ## 10. Unused binder
@@ -126,6 +126,6 @@ for a parameter with ``, or rename it `_NAME` `` added. Off unless
 binders, names starting with `_`, gensyms (DESIGN.md section 63), the
 type and value constructors a `def-adts` defines, and names in types,
 returns and match annotations. See OPEN.md 30, 31, 37 and 38.
-`lib/elab.ml` (`report_unused`), `self/elab.sl`. Tests:
+`lib/elab.ml` (`report_unused`), `self/elab-main.sl`. Tests:
 `tests/unused_warn.sl`, `tests/unused_params_warn.sl`,
 `tests/unused_settled_of_warn.sl`.

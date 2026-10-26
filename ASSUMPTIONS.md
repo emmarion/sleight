@@ -684,7 +684,7 @@ check, and none of it is design.
     the tests' are, by reflection at top level.
 
 113. **A call with no decrease annotation gets one inferred** (DESIGN.md
-    section 48; `Elab.elab_call`, `elab-call` in `self/elab.sl`). That
+    section 48; `Elab.elab_call`, `elab-call` in `self/elab-main.sl`). That
     the first differing position is the only one an annotation could
     succeed at, and so that bare calls accept exactly what a written `_`
     annotation accepts, is the session's reading, not the owner's;

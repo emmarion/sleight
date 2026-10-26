@@ -138,6 +138,10 @@ that the test does not make is a mistake in this file.
   omitted, it would prove `False`.
 - [`tests/comptime.sl`](tests/comptime.sl) and [`tests/comptime_transparent.sl`](tests/comptime_transparent.sl) — `comptime-match`
   verifying a `Settled` and binding its fields `Settled`, proof by reflection.
+- [`tests/native_compute.sl`](tests/native_compute.sl) — the reflection of
+  [`tests/u8.sl`](tests/u8.sl) with the decision compiled: `native-compute` runs `lt-dec`
+  as extracted OCaml and reads back a `Dec` whose fields are all erased, and
+  `comptime-match` takes the proof out of it.
 - [`tests/comptime_tail.sl`](tests/comptime_tail.sl) — a loop run at elaboration whose measure is
   erased. A non-erased binary counter drives the dispatch, while the
   `subterm` decrease is taken on an erased `Nat` tied to that counter by the

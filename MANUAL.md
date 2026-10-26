@@ -178,6 +178,13 @@ exits with code 1.
 `--extract` and `--build` can be given together, and slc takes `--build` and
 `--byte` the same way.
 
+`native-compute` writes the program elaborated so far out as `--extract`
+would, with the form's function as its one final, compiles it with
+`ocamlfind ocamlopt -package zarith,unix -linkpkg` in a fresh temporary
+directory (slc makes it with `mktemp -d`), runs it, and removes the
+directory. Both programs are looked up on the compiler's own `PATH`, and
+a failure to start, compile or run either is an error at the form.
+
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program
 does with the interpreter on the same files, runs every test again under
@@ -270,7 +277,9 @@ means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id. `; confine-read: path`, `; confine-write: path`, `; comptime-unconfine: name`, `; confine-output-bytes: n`,
 `; no-env: yes`, `; no-exec: yes`, `; eval-fuel: n` and `; fn-same: yes` run the test under
-the corresponding flags. Every test runs under `--warn-unused`, its own binders checked, unless it
+the corresponding flags. `; host-path: yes` keeps the host's `PATH` where
+`self/bootstrap.sh` otherwise clears the environment, for a test whose
+compilation runs `native-compute`. Every test runs under `--warn-unused`, its own binders checked, unless it
 says `; warn-unused: no`: the tests of DESIGN.md's worked examples, which keep
 the examples' text, and a few macro tests, whose binders a macro reaches in
 ways the warning does not count as uses.

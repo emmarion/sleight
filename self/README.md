@@ -46,7 +46,7 @@ interpreter-trust obligation applies to it as much as to `lib/`).
 
 The compile-time part is the "comp time / Const stuff" the owner asked
 the compiler to interpret: the interpreter (`eval` and `apply`, in the
-main block of `self/elab.sl`) is a plain recursive interpreter over the
+elaborator's main block, `self/elab-main.sl`) is a plain recursive interpreter over the
 post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
@@ -94,7 +94,7 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   canonicalization, instantiation, forced unification with its three
   contradictions (section 7), term identity, and the built-in entries.
 - `eval.sl` — the store the compile-time interpreter runs over, and
-  that interpreter's conventions, though its functions are in `elab.sl`: every value
+  that interpreter's conventions, though its functions are in `elab-main.sl`: every value
   is an address, every step returns the grown store with a proof of the
   growth by which what was held before is widened, and a run-position
   statement is a session that reads the store out of the environment
@@ -106,13 +106,17 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   host frame, as the standing exception below says. Every evaluation
   function threads a world of a type it is generic in, with the
   `Performer` that answers a `world-do` (ASSUMPTIONS 188).
-- `elab.sl` — the elaborator and checker: head dispatch, calls with
+- `elab.sl` and `elab-main.sl` — the elaborator and checker: head dispatch, calls with
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
-  expansion of a `let-match` with branches, and the top level. Its main block
+  expansion of a `let-match` with branches, and the top level. `elab.sl` holds
+  what the main block calls; `elab-main.sl` holds the main block, which
   also holds the compile-time interpreter and macro expansion, at one
-  level with the elaborator (see termination below).
+  level with the elaborator (see termination below). `elab-main.sl` comes
+  after `emit.sl`, so that `native-compute` can extract the program so far,
+  compile it with `ocamlfind` and run it through the `World` its `ElabWorld`
+  carries.
 - `runtime.ml` — what the OCaml runtime every compiled program starts
   with adds to `lib/ffi_core.ml` and `lib/driver_core.ml`: `absurd`,
   the phantom indices of narrowing, the identity `Matchable`, each
