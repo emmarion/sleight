@@ -1,8 +1,8 @@
 #!/bin/sh
 # Bootstraps the self-hosted compiler (self/README.md) and checks it against the reference interpreter:
-#   1. builds the reference and extracts slc (self/*.sl) to a native binary with the reference extractor;
+#   1. builds the reference and extracts slc (self/*.sl) to a native binary with the reference's --build;
 #   2. compiles every tests/*.sl with slc, in parallel: a test with an "; error:" directive must be refused
-#      with a message mentioning that text; any other is built (to bytecode, the faster compile) and run with
+#      with a message mentioning that text; any other is built by slc --build (to bytecode, the faster compile) and run with
 #      the test's stdin and arguments, and its stdout, exit code, and stderr after slc's own messages compared
 #      with the reference interpreter's on the same files, given to both as absolute paths; the extern, thunk, main, char, nat and bytes tests are compiled again with
 #      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
@@ -24,7 +24,6 @@ REF=_build/default/bin/main.exe
 # what lib/embed.sl and self/header.sl read into slc when it is compiled
 EMBEDDED="lib/ffi_core.ml lib/driver_core.ml lib/ffi_templates.txt lib/specials.txt lib/prelude.sl self/runtime.ml"
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
-OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 # has <file> <directive text>: the text is on a line of the file, "<**>" in it matching any run of characters.
@@ -107,15 +106,14 @@ check_test() {
     check_warns "$t" "$name" || return
     cp "$B/$name.slc.err" "$B/$name.err"
   else
-  if ! "$B/slc" $both $confine $flags $files > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+  rm -rf "$B/$name.exe.build"
+  if ! "$B/slc" $both $confine $flags --byte --build "$B/$name.exe" $files 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
   for n in $(directive "$t" extract-bytes-at-most); do
+    "$B/slc" $both $confine $flags $files > "$B/$name.ml" 2> /dev/null
     [ "$(wc -c < "$B/$name.ml")" -le "$n" ] || { echo "FAIL $name: slc wrote $(wc -c < "$B/$name.ml") bytes of OCaml, more than $n"; return; }
   done
-  if ! $OCB "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
-    echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
-  fi
   check_warns "$t" "$name" || return
   (cd "$B" && env -i $envs "./$name.exe" $args < "$name.in" > "$name.out" 2> "$name.prog.err"); code=$?
   cat "$B/$name.slc.err" "$B/$name.prog.err" > "$B/$name.err"
@@ -133,8 +131,8 @@ build_slc() {
   key=$(cat $SL $EMBEDDED $REF | md5sum)
   if [ "${1:-}" = cached ] && [ -x "$B/slc" ] && [ "$key" = "$(cat "$B/slc.key" 2>/dev/null)" ]; then return; fi
   echo "== extracting slc with the reference extractor"
-  $REF --warnings-as-errors --warn-unused $SL --extract "$B/slc.ml" || exit 1
-  $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
+  rm -rf "$B/slc.build"
+  $REF --warnings-as-errors --warn-unused $SL --extract "$B/slc.ml" --build "$B/slc" || exit 1
   echo "$key" > "$B/slc.key"
 }
 check_all() {

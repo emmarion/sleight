@@ -71,12 +71,34 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
-let valued = [ "--extract"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
-let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same" ]
+let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
+let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same"; "--byte" ]
 
 let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
-  else List.find_map (fun f -> if List.mem f [ "--extract"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
+  else List.find_map (fun f -> if List.mem f [ "--extract"; "--build"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
+
+let build byte path ml =
+  let dir = path ^ ".build" in
+  let fail code m = prerr_endline m; code in
+  let guarded f = try f () with (Unix.Unix_error _ | Sys_error _) as e -> Error (Driver_core.explain e) in
+  if Sys.file_exists dir then fail 3 (dir ^ ": already exists")
+  else
+    let src = Filename.concat dir "main.ml" in
+    let ran =
+      guarded (fun () ->
+          Sys.mkdir dir 0o755;
+          Out_channel.with_open_bin src (fun oc -> output_string oc ml);
+          exec "ocamlfind" [ (if byte then "ocamlc" else "ocamlopt"); "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; path ] (host_envs ()) None "")
+    in
+    let removed =
+      guarded (fun () -> if Sys.file_exists dir then (Array.iter (fun f -> Sys.remove (Filename.concat dir f)) (Sys.readdir dir); Sys.rmdir dir); Ok ())
+    in
+    match ran with
+    | Error m -> fail 3 m
+    | Ok (code, out, err) ->
+        prerr_string (out ^ err);
+        if code <> 0 then fail 2 (Printf.sprintf "ocamlfind exited with code %d" code) else Result.fold ~ok:(fun () -> 0) ~error:(fail 3) removed
 
 let goal_verdict mode passed = Printf.sprintf "--goal %s: %s" (Elab.goal_name mode) (if passed then "PASS" else "FAIL")
 

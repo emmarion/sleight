@@ -34,7 +34,7 @@ test/one.sh tests/list.sl
 self/bootstrap.sh
 dune exec bin/shape.exe -- tests/list.sl
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
-ocamlfind ocamlopt -package zarith,unix -linkpkg echo.ml -o echo && ./echo
+dune exec bin/main.exe -- tests/io_echo.sl --build echo && ./echo
 _build/self/slc --interpret tests/io_echo.sl
 ```
 
@@ -167,6 +167,17 @@ interpreter does on the same files, which `dune test` checks
 (ASSUMPTIONS.md 61-67); every value is an `Obj.t`, so the output is not
 typed OCaml.
 
+`--build prog` writes the same program out and compiles it to `prog` with
+`ocamlfind ocamlopt -package zarith,unix -linkpkg`, or with `ocamlc`, to
+bytecode, under `--byte`. The OCaml and the files the compiler makes
+beside it go in a directory `prog.build`, removed afterwards; `--build` fails
+without compiling where that directory already exists. What the compiler
+prints goes to stderr, and a compile that fails exits with code 2. Any other failure of `--build`, such as
+ocamlfind not starting, exits with code 3, where an error in the files
+exits with code 1.
+`--extract` and `--build` can be given together, and slc takes `--build` and
+`--byte` the same way.
+
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program
 does with the interpreter on the same files, runs every test again under
@@ -207,8 +218,8 @@ non-zero; one that stops without writing the line has failed too. Nothing
 else is written to stdout under these modes. The notes on stderr are for
 reading, not for deciding whether a run succeeded: the files being checked
 can make the compiler write text that looks like them. The reference
-refuses `--extract`, `--repl` and `--no-prelude` with `open` or `proved`;
-slc takes the same flag and refuses `--interpret` and `--no-prelude` with
+refuses `--extract`, `--build`, `--repl` and `--no-prelude` with `open` or `proved`;
+slc takes the same flag and refuses `--interpret`, `--no-prelude` and `--build` with
 them, and then writes no OCaml. Warnings are reported as they are without
 the flag, and `--warnings-as-errors` fails a run that warns before any
 goal is checked.

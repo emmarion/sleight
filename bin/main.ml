@@ -70,7 +70,7 @@ let () =
   in
   let flags, files = read [] [] args in
   let option f = List.assoc_opt f flags and flag f = List.mem_assoc f flags in
-  let extract = option "--extract" in
+  let extract = option "--extract" and build = option "--build" in
   let values f = List.rev (List.filter_map (fun (g, v) -> if g = f then Some v else None) flags) in
   Extract.reads := values "--confine-read";
   Extract.writes := values "--confine-write";
@@ -83,11 +83,12 @@ let () =
   Extract.with_exec := not (flag "--no-exec");
   Reader.shape_notes := not (flag "--no-shape-note");
   let fail m = prerr_endline m; exit 1 in
+  if flag "--byte" && build = None then fail "--byte needs --build";
   Elab.goal_mode := Option.fold ~none:Elab.Unrequired ~some:(fun m -> match List.assoc_opt m Elab.goal_modes with Some m -> m | None -> fail "--goal takes none, open or proved") (option "--goal");
   let passed = ref false in
   if !Elab.goal_mode <> Elab.Unrequired then at_exit (fun () -> print_endline (Program.goal_verdict !Elab.goal_mode !passed));
   Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
-  let consume = if extract = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env !Extract.with_exec (world program_args)) else fun _ _ _ -> () in
+  let consume = if extract = None && build = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env !Extract.with_exec (world program_args)) else fun _ _ _ -> () in
   let warned = ref false and pending = ref [] in
   let strict = flag "--warnings-as-errors" in
   if strict then (let warn = !Env.warn in Env.warn := fun s -> warned := true; warn s);
@@ -110,4 +111,6 @@ let () =
   if !Elab.goal_mode <> Elab.Unrequired then
     match report final Elab.close_goal with Some report -> Option.iter prerr_endline report; passed := true | None -> exit 1
   else
-  Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Extract.emit env (List.rev !Env.trace)))) extract
+  let ml = lazy (Extract.emit env (List.rev !Env.trace)) in
+  Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Lazy.force ml))) extract;
+  Option.iter (fun path -> let code = Program.build (flag "--byte") path (Lazy.force ml) in if code <> 0 then exit code) build

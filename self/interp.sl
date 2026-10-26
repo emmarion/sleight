@@ -18,10 +18,10 @@
 ; ---- The compiler's command-line flags (self/main.sl).
 ; The flags slc takes alone, and those taking the argument after them.
 (def-fns _ $ (many switches : -> (many (List $ String) r))
-  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--no-exec" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Nil _))
+  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--no-exec" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Cons _ "--byte" $ Nil _))
 
 (def-fns _ $ (many valued : -> (many (List $ String) r))
-  (Cons _ "--confine-read" $ Cons _ "--confine-write" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
+  (Cons _ "--build" $ Cons _ "--confine-read" $ Cons _ "--confine-write" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
 
 ; The flags among the arguments, in any order, the last given first and a switch's value "", and the files in order.
 (def-fns _ $ (many read-flags : (subterm many (List $ String) args) (many (List $ Pair (String) $ String) flags) (many (List $ String) files)
@@ -54,6 +54,9 @@
   (let ((unique w1) (many _)) (world-do _ w $ match many err (((Request $ Unit) _)) ((BTrue) (WriteErr s)) ((BFalse) (WriteOut s))))
   w1)
 
+(def-fns _ $ (many failed-with : (erased (Level) L) (many (U8) code) (many (String) m) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program L) p))
+  (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit L code)))
+
 (def-lvl util-lvl)
 (def-lvl interp-lvl)
 (def-lvl finals-lvl)
@@ -69,6 +72,12 @@
 (let ((many one-below-modulus)) $ lt-dec 1 u8-modulus)
 (comptime-match many one-below-modulus (Yes fail-a fail-b fail-lt))
 (let ((many exit-fail)) $ MkU8 1 fail-lt)
+(let ((many two-below-modulus)) $ lt-dec 2 u8-modulus)
+(comptime-match many two-below-modulus (Yes build-a build-b build-lt))
+(let ((many exit-ocamlopt)) $ MkU8 2 build-lt)
+(let ((many three-below-modulus)) $ lt-dec 3 u8-modulus)
+(comptime-match many three-below-modulus (Yes tool-a tool-b tool-lt))
+(let ((many exit-toolchain)) $ MkU8 3 tool-lt)
 
 (def-fns util-lvl $ (many runtime-error : (many (String) m) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (values (say-to (BTrue) (str-cat3 "slc: runtime error: " m "\n") w) (Exit _ exit-fail)))

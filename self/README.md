@@ -143,14 +143,16 @@ dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
 self/release.sh            # or: builds _build/release/slc, unchecked
 _build/self/slc tests/list.sl > list.ml
-ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
+_build/self/slc tests/list.sl --build list && ./list
 _build/self/slc --interpret tests/io_echo.sl -- arg1 arg2
 ```
 
 `slc` takes the files to compile as its program arguments, elaborates
 them in one scope in order after the prelude it embeds (`lib/embed.sl`'s
 `prelude-source`, which `--no-prelude` leaves out) as the interpreter does,
-and writes the OCaml program to stdout; elaboration errors go to stderr
+and writes the OCaml program to stdout, or under `--build prog` compiles it to
+`prog` as the reference's `--build` does (MANUAL.md), `--byte` choosing
+bytecode; `--build` refuses `--interpret`. Elaboration errors go to stderr
 with exit code 1. The compiled program takes its own arguments after
 `--` and behaves as `lib/program.ml` would: a final `String -> String`
 function runs over stdin, a `Program` is run, a function from
@@ -164,11 +166,11 @@ reference's flags do
 `--no-exec` refuses it `Exec`, as the reference's do.
 
 `self/bootstrap.sh` does four things. It extracts `slc` to a native
-binary with the reference extractor (`--extract`), since running the
+binary with the reference extractor (`--extract` and `--build`), since running the
 compiler under the reference *interpreter* takes seconds per file where
 the native binary takes milliseconds. It compiles every `tests/*.sl`
 with that binary, the tests in parallel: a test with an `; error:` directive must be refused
-with a message mentioning the text, and any other is built (to bytecode,
+with a message mentioning the text, and any other is built with `slc --byte --build` (to bytecode,
 whose compiler is the faster one at that size) and run with
 the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. It runs
