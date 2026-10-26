@@ -114,7 +114,7 @@
   (let ((unique (Unit) u)) (MkUnit))
   (match many (classify-final env ty) _
     ((FProgram)
-      (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Stopwatch" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Request" $ Nil _)
+      (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Stopwatch" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Exited" $ Cons _ "Request" $ Nil _)
       (let ((unique w1) (many base)) (world-do _ w (Measure (Stop))))
       (let ((many rq)) $ match many (prelude-adt env "Request") (((List $ Ctor) _)) ((Some _ a) (adt-ctors a)) ((None _) (Nil _)))
       (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Heap h) hq) (many (Ref Block h) req) (unique (ElabWorld) wo) ->
