@@ -1,137 +1,3 @@
-(def-adts $ (Dir : -> Type)
-  enum
-  (many DL : -> (Dir))
-  (many DR : -> (Dir)))
-
-(def-adts $ (Tr : -> Type)
-  enum
-  (many Halt : -> (Tr))
-  (many Go : (many (Bit) w) (many (Dir) d) (many (Nat) q) -> (Tr)))
-
-(def-adts $ (Cfg : -> Type)
-  enum
-  (many MkCfg : (many (Nat) q) (many (List (Bit)) l) (many (Bit) h) (many (List (Bit)) r) -> (Cfg)))
-
-(def-adts
-  ((Look : ((List (Tr)) m) ((Nat) q) ((Bit) b) ((Tr) t) -> Type)
-    enum
-    (many Look0 : (erased (Tr) t0 t1) (erased (List (Tr)) rest) -> (Look (Cons (Tr) t0 (Cons (Tr) t1 rest)) (Zero) (Bit0) t0))
-    (many Look1 : (erased (Tr) t0 t1) (erased (List (Tr)) rest) -> (Look (Cons (Tr) t0 (Cons (Tr) t1 rest)) (Zero) (Bit1) t1))
-    (many LookS : (erased (Tr) t0 t1) (erased (List (Tr)) rest) (erased (Nat) q) (erased (Bit) b) (erased (Tr) t)
-       (erased (Look rest q b t) p) -> (Look (Cons (Tr) t0 (Cons (Tr) t1 rest)) (Succ q) b t))))
-
-(def-adts
-  ((Pop : ((List (Bit)) xs) ((Bit) b) ((List (Bit)) ys) -> Type)
-    enum
-    (many PopNil : -> (Pop (Nil (Bit)) (Bit0) (Nil (Bit))))
-    (many PopCons : (erased (Bit) b) (erased (List (Bit)) ys) -> (Pop (Cons (Bit) b ys) b ys))))
-
-(def-adts
-  ((Step : ((List (Tr)) m) ((Cfg) c) ((Cfg) d) -> Type)
-    enum
-    (many StepL : (erased (List (Tr)) m) (erased (Nat) q q2) (erased (List (Bit)) l r l2) (erased (Bit) h w h2)
-       (erased (Look m q h (Go w (DL) q2)) lk) (erased (Pop l h2 l2) pp)
-       -> (Step m (MkCfg q l h r) (MkCfg q2 l2 h2 (Cons (Bit) w r))))
-    (many StepR : (erased (List (Tr)) m) (erased (Nat) q q2) (erased (List (Bit)) l r r2) (erased (Bit) h w h2)
-       (erased (Look m q h (Go w (DR) q2)) lk) (erased (Pop r h2 r2) pp)
-       -> (Step m (MkCfg q l h r) (MkCfg q2 (Cons (Bit) w l) h2 r2)))))
-
-(def-adts
-  ((HaltsIn : ((List (Tr)) m) ((Cfg) c) ((Nat) s) -> Type)
-    enum
-    (many HStop : (erased (List (Tr)) m) (erased (Nat) q) (erased (List (Bit)) l r) (erased (Bit) h)
-       (erased (Look m q h (Halt)) lk) -> (HaltsIn m (MkCfg q l h r) (Succ (Zero))))
-    (many HMove : (erased (List (Tr)) m) (erased (Cfg) c d) (erased (Nat) s)
-       (erased (Step m c d) st) (erased (HaltsIn m d s) rest) -> (HaltsIn m c (Succ s)))))
-
-(def-adts
-  ((TrOK : ((Nat) n) ((Tr) t) -> Type)
-    enum
-    (many OKHalt : (erased (Nat) n) -> (TrOK n (Halt)))
-    (many OKGo : (erased (Nat) n q) (erased (Bit) w) (erased (Dir) d) (erased (Lt q n) p) -> (TrOK n (Go w d q)))))
-
-(def-adts
-  ((Rows : ((Nat) n) ((Nat) k) ((List (Tr)) m) -> Type)
-    enum
-    (many RowsZ : (erased (Nat) n) -> (Rows n (Zero) (Nil (Tr))))
-    (many RowsS : (erased (Nat) n k) (erased (Tr) t0 t1) (erased (List (Tr)) rest)
-       (erased (TrOK n t0) o0) (erased (TrOK n t1) o1) (erased (Rows n k rest) p)
-       -> (Rows n (Succ k) (Cons (Tr) t0 (Cons (Tr) t1 rest))))))
-
-(def-adts $ (BBIs : ((Nat) n) ((Nat) k) -> Type)
-  enum
-  (many MkBB : (erased (Nat) n k) (erased (List (Tr)) champ) (erased (Rows n n champ) cw)
-     (erased (HaltsIn champ (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) k) ch)
-     (erased (Level) lv)
-     (erased (Fn lv (erased (List (Tr)) m) (erased (Rows n n m) w) (erased (Nat) s)
-                 (erased (HaltsIn m (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) s) hm) ->
-                 (erased (Lt s (Succ k)) p)) bound)
-     -> (BBIs n k)))
-
-(def-fns _ $ (erased look-fn : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bit) b) (erased (Tr) t u)
-    (subterm erased (Look m q b t) p) (erased (Look m q b u) p2) -> (erased (Eq (Tr) t u) e))
-  (match erased p _
-    ((Look0 t0 t1 rest) (let-match erased p2 (Look0 _ _ _)) (Refl (Tr) t))
-    ((Look1 t0 t1 rest) (let-match erased p2 (Look1 _ _ _)) (Refl (Tr) t))
-    ((LookS t0 t1 rest q1 b1 t1x p1)
-      (let-match erased p2 (LookS _ _ _ _ _ u1 p21))
-      (look-fn rest q1 b t u p1 p21))))
-
-(def-fns _ $ (erased pop-fn : (erased (List (Bit)) xs ys zs) (erased (Bit) b c)
-    (erased (Pop xs b ys) p) (erased (Pop xs c zs) p2) -> (erased (Eq (Bit) b c) e) (erased (Eq (List (Bit)) ys zs) f))
-  (match erased p _
-    ((PopNil) (let-match erased p2 (PopNil)) (values (Refl (Bit) b) (Refl (List (Bit)) ys)))
-    ((PopCons b1 ys1) (let-match erased p2 (PopCons _ _)) (values (Refl (Bit) b) (Refl (List (Bit)) ys)))))
-
-(def-fns _ $ (erased step-fn : (erased (List (Tr)) m) (erased (Cfg) c d e)
-    (erased (Step m c d) p) (erased (Step m c e) p2) -> (erased (Eq (Cfg) d e) eq))
-  (match erased p _
-    ((StepL m1 q q2 l r l2 h w h2 lk pp)
-      (match erased p2 _
-        ((StepL _ _ q3 _ _ l3 _ w3 h3 lk3 pp3)
-          (let-match erased (look-fn m q h _ _ lk lk3) (Refl _ _))
-          (let ((erased e1) (erased e2)) (pop-fn l l2 l3 h2 h3 pp pp3))
-          (let-match erased e1 (Refl _ _))
-          (let-match erased e2 (Refl _ _))
-          (Refl (Cfg) d))
-        (absurd (StepR _ _ q3 _ _ r3 _ w3 h3 lk3 pp3) (look-fn m q h _ _ lk lk3))))
-    ((StepR m1 q q2 l r r2 h w h2 lk pp)
-      (match erased p2 _
-        (absurd (StepL _ _ q3 _ _ l3 _ w3 h3 lk3 pp3) (look-fn m q h _ _ lk lk3))
-        ((StepR _ _ q3 _ _ r3 _ w3 h3 lk3 pp3)
-          (let-match erased (look-fn m q h _ _ lk lk3) (Refl _ _))
-          (let ((erased e1) (erased e2)) (pop-fn r r2 r3 h2 h3 pp pp3))
-          (let-match erased e1 (Refl _ _))
-          (let-match erased e2 (Refl _ _))
-          (Refl (Cfg) d))))))
-
-(def-fns _ $ (erased halts-fn : (erased (List (Tr)) m) (erased (Cfg) c) (erased (Nat) s t)
-    (subterm erased (HaltsIn m c s) p) (erased (HaltsIn m c t) p2) -> (erased (Eq (Nat) s t) e))
-  (match erased p _
-    ((HStop m1 q l r h lk)
-      (match erased p2 _
-        ((HStop _ _ _ _ _ lk2) (Refl (Nat) s))
-        ((HMove _ _ d2 t1 st2 rest2)
-          (match erased st2 _
-            (absurd (StepL _ _ _ _ _ _ _ _ _ lk2 _) (look-fn m q h _ _ lk lk2))
-            (absurd (StepR _ _ _ _ _ _ _ _ _ lk2 _) (look-fn m q h _ _ lk lk2))))))
-    ((HMove m1 c1 d s1 st rest)
-      (match erased p2 _
-        ((HStop _ q l r h lk2)
-          (match erased st _
-            (absurd (StepL _ _ _ _ _ _ _ _ _ lk _) (look-fn m q h _ _ lk lk2))
-            (absurd (StepR _ _ _ _ _ _ _ _ _ lk _) (look-fn m q h _ _ lk lk2))))
-        ((HMove _ _ d2 t1 st2 rest2)
-          (let-match erased (step-fn m c d d2 st st2) (Refl _ _))
-          (eq-cong-succ s1 t1 (halts-fn m d s1 t1 rest rest2)))))))
-
-(def-adts
-  ((Mem : (Type A) (A x) ((List A) xs) -> Type)
-    enum
-    (many MemHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Mem A x (Cons A x rest)))
-    (many MemThere : (erased Type A) (erased A x y) (erased (List A) rest) (erased (Mem A x rest) p)
-       -> (Mem A x (Cons A y rest)))))
-
 (def-adts $ (Flag : -> Type)
   enum
   (many FZ : -> (Flag))
@@ -139,79 +5,79 @@
 
 (def-adts $ (Side : -> Type)
   enum
-  (many MkSide : (many (List (Bit)) seg) (many (Flag) f) -> (Side)))
+  (many MkSide : (many (List (Bool)) seg) (many (Flag) f) -> (Side)))
 
 (def-adts $ (ACfg : -> Type)
   enum
-  (many MkA : (many (Nat) q) (many (Side) l) (many (Bit) h) (many (Side) r) -> (ACfg)))
+  (many MkA : (many (Nat) q) (many (Side) l) (many (Bool) h) (many (Side) r) -> (ACfg)))
 
 (def-adts
-  ((AllZero : ((List (Bit)) xs) -> Type)
+  ((AllZero : ((List (Bool)) xs) -> Type)
     enum
-    (many AZNil : -> (AllZero (Nil (Bit))))
-    (many AZCons : (erased (List (Bit)) xs) (erased (AllZero xs) p) -> (AllZero (Cons (Bit) (Bit0) xs)))))
+    (many AZNil : -> (AllZero (Nil (Bool))))
+    (many AZCons : (erased (List (Bool)) xs) (erased (AllZero xs) p) -> (AllZero (Cons (Bool) (BFalse) xs)))))
 
 (def-adts
-  ((GS : ((Side) s) ((List (Bit)) xs) -> Type)
+  ((GS : ((Side) s) ((List (Bool)) xs) -> Type)
     enum
-    (many GZ : (erased (List (Bit)) xs) (erased (AllZero xs) z) -> (GS (MkSide (Nil (Bit)) (FZ)) xs))
-    (many GT : (erased (List (Bit)) xs) -> (GS (MkSide (Nil (Bit)) (FT)) xs))
-    (many GC1 : (erased (List (Bit)) seg xs) (erased (Flag) f) (erased (Bit) b) (erased (GS (MkSide seg f) xs) g)
-       -> (GS (MkSide (Cons (Bit) b seg) f) (Cons (Bit) b xs)))
-    (many GC0 : (erased (List (Bit)) seg) (erased (Flag) f) (erased (GS (MkSide seg f) (Nil (Bit))) g)
-       -> (GS (MkSide (Cons (Bit) (Bit0) seg) f) (Nil (Bit))))))
+    (many GZ : (erased (List (Bool)) xs) (erased (AllZero xs) z) -> (GS (MkSide (Nil (Bool)) (FZ)) xs))
+    (many GT : (erased (List (Bool)) xs) -> (GS (MkSide (Nil (Bool)) (FT)) xs))
+    (many GC1 : (erased (List (Bool)) seg xs) (erased (Flag) f) (erased (Bool) b) (erased (GS (MkSide seg f) xs) g)
+       -> (GS (MkSide (Cons (Bool) b seg) f) (Cons (Bool) b xs)))
+    (many GC0 : (erased (List (Bool)) seg) (erased (Flag) f) (erased (GS (MkSide seg f) (Nil (Bool))) g)
+       -> (GS (MkSide (Cons (Bool) (BFalse) seg) f) (Nil (Bool))))))
 
 (def-adts
   ((GCfg : ((ACfg) a) ((Cfg) c) -> Type)
     enum
-    (many MkGCfg : (erased (Nat) q) (erased (Side) sl sr) (erased (List (Bit)) l r) (erased (Bit) h)
+    (many MkGCfg : (erased (Nat) q) (erased (Side) sl sr) (erased (List (Bool)) l r) (erased (Bool) h)
        (erased (GS sl l) gl) (erased (GS sr r) gr) -> (GCfg (MkA q sl h sr) (MkCfg q l h r)))))
 
 (def-adts
-  ((APop : ((Side) s) ((Bit) b) ((Side) s2) -> Type)
+  ((APop : ((Side) s) ((Bool) b) ((Side) s2) -> Type)
     enum
-    (many APZ : -> (APop (MkSide (Nil (Bit)) (FZ)) (Bit0) (MkSide (Nil (Bit)) (FZ))))
-    (many APT : (erased (Bit) b) -> (APop (MkSide (Nil (Bit)) (FT)) b (MkSide (Nil (Bit)) (FT))))
-    (many APC : (erased (List (Bit)) seg) (erased (Flag) f) (erased (Bit) b)
-       -> (APop (MkSide (Cons (Bit) b seg) f) b (MkSide seg f)))))
+    (many APZ : -> (APop (MkSide (Nil (Bool)) (FZ)) (BFalse) (MkSide (Nil (Bool)) (FZ))))
+    (many APT : (erased (Bool) b) -> (APop (MkSide (Nil (Bool)) (FT)) b (MkSide (Nil (Bool)) (FT))))
+    (many APC : (erased (List (Bool)) seg) (erased (Flag) f) (erased (Bool) b)
+       -> (APop (MkSide (Cons (Bool) b seg) f) b (MkSide seg f)))))
 
 (def-adts
-  ((DropLast : ((List (Bit)) xs) ((Bit) x) ((List (Bit)) ys) -> Type)
+  ((DropLast : ((List (Bool)) xs) ((Bool) x) ((List (Bool)) ys) -> Type)
     enum
-    (many DL1 : (erased (Bit) x) -> (DropLast (Cons (Bit) x (Nil (Bit))) x (Nil (Bit))))
-    (many DL2 : (erased (List (Bit)) xs ys) (erased (Bit) x b) (erased (DropLast xs x ys) p)
-       -> (DropLast (Cons (Bit) b xs) x (Cons (Bit) b ys)))))
+    (many DL1 : (erased (Bool) x) -> (DropLast (Cons (Bool) x (Nil (Bool))) x (Nil (Bool))))
+    (many DL2 : (erased (List (Bool)) xs ys) (erased (Bool) x b) (erased (DropLast xs x ys) p)
+       -> (DropLast (Cons (Bool) b xs) x (Cons (Bool) b ys)))))
 
 (def-adts
-  ((FlagAfter : ((Flag) f) ((Bit) x) ((Flag) g) -> Type)
+  ((FlagAfter : ((Flag) f) ((Bool) x) ((Flag) g) -> Type)
     enum
-    (many FAZ : -> (FlagAfter (FZ) (Bit0) (FZ)))
-    (many FAT : (erased (Flag) f) (erased (Bit) x) -> (FlagAfter f x (FT)))))
+    (many FAZ : -> (FlagAfter (FZ) (BFalse) (FZ)))
+    (many FAT : (erased (Flag) f) (erased (Bool) x) -> (FlagAfter f x (FT)))))
 
 (def-adts
-  ((APush : ((Side) s) ((Bit) w) ((Side) s2) -> Type)
+  ((APush : ((Side) s) ((Bool) w) ((Side) s2) -> Type)
     enum
-    (many PKeep : (erased (List (Bit)) seg) (erased (Flag) f) (erased (Bit) w)
-       -> (APush (MkSide seg f) w (MkSide (Cons (Bit) w seg) f)))
-    (many PDrop : (erased (List (Bit)) seg seg2) (erased (Flag) f f2) (erased (Bit) w x)
-       (erased (DropLast (Cons (Bit) w seg) x seg2) dl) (erased (FlagAfter f x f2) fa)
+    (many PKeep : (erased (List (Bool)) seg) (erased (Flag) f) (erased (Bool) w)
+       -> (APush (MkSide seg f) w (MkSide (Cons (Bool) w seg) f)))
+    (many PDrop : (erased (List (Bool)) seg seg2) (erased (Flag) f f2) (erased (Bool) w x)
+       (erased (DropLast (Cons (Bool) w seg) x seg2) dl) (erased (FlagAfter f x f2) fa)
        -> (APush (MkSide seg f) w (MkSide seg2 f2)))))
 
-(def-fns _ $ (erased pop-sound : (erased (Side) s) (erased (List (Bit)) xs ys) (erased (Bit) b)
+(def-fns _ $ (erased pop-sound : (erased (Side) s) (erased (List (Bool)) xs ys) (erased (Bool) b)
     (erased (GS s xs) g) (erased (Pop xs b ys) p) ->
     (erased (Side) s2) (erased (APop s b s2) ap) (erased (GS s2 ys) g2))
   (match erased g _
     ((GZ xs1 z)
       (match erased p _
-        ((PopNil) (values (MkSide (Nil (Bit)) (FZ)) (APZ) (GZ (Nil (Bit)) (AZNil))))
+        ((PopNil) (values (MkSide (Nil (Bool)) (FZ)) (APZ) (GZ (Nil (Bool)) (AZNil))))
         ((PopCons b1 ys1)
           (let-match erased z (AZCons _ z1))
-          (values (MkSide (Nil (Bit)) (FZ)) (APZ) (GZ ys z1)))))
-    ((GT xs1) (values (MkSide (Nil (Bit)) (FT)) (APT b) (GT ys)))
+          (values (MkSide (Nil (Bool)) (FZ)) (APZ) (GZ ys z1)))))
+    ((GT xs1) (values (MkSide (Nil (Bool)) (FT)) (APT b) (GT ys)))
     ((GC1 seg xs1 f b1 g1) (let-match erased p (PopCons _ _)) (values (MkSide seg f) (APC seg f b) g1))
     ((GC0 seg f g1) (let-match erased p (PopNil)) (values (MkSide seg f) (APC seg f b) g1))))
 
-(def-fns _ $ (erased drop-sound : (erased (List (Bit)) seg seg2 xs) (erased (Flag) f f2) (erased (Bit) x)
+(def-fns _ $ (erased drop-sound : (erased (List (Bool)) seg seg2 xs) (erased (Flag) f f2) (erased (Bool) x)
     (erased (GS (MkSide seg f) xs) g) (subterm erased (DropLast seg x seg2) dl) (erased (FlagAfter f x f2) fa) ->
     (erased (GS (MkSide seg2 f2) xs) g2))
   (match erased dl _
@@ -225,43 +91,43 @@
     ((DL2 segt segt2 x1 b dl1)
       (match erased g _
         ((GC1 _ xs1 _ _ g1) (GC1 segt2 xs1 f2 b (drop-sound segt segt2 xs1 f f2 x g1 dl1 fa)))
-        ((GC0 _ _ g1) (GC0 segt2 f2 (drop-sound segt segt2 (Nil (Bit)) f f2 x g1 dl1 fa)))))))
+        ((GC0 _ _ g1) (GC0 segt2 f2 (drop-sound segt segt2 (Nil (Bool)) f f2 x g1 dl1 fa)))))))
 
-(def-fns _ $ (erased push-sound : (erased (Side) s s2) (erased (List (Bit)) xs) (erased (Bit) w)
-    (erased (GS s xs) g) (erased (APush s w s2) ap) -> (erased (GS s2 (Cons (Bit) w xs)) g2))
+(def-fns _ $ (erased push-sound : (erased (Side) s s2) (erased (List (Bool)) xs) (erased (Bool) w)
+    (erased (GS s xs) g) (erased (APush s w s2) ap) -> (erased (GS s2 (Cons (Bool) w xs)) g2))
   (match erased ap _
     ((PKeep seg f _) (GC1 seg xs f w g))
     ((PDrop seg seg2 f f2 _ x dl fa)
-      (drop-sound (Cons (Bit) w seg) seg2 (Cons (Bit) w xs) f f2 x (GC1 seg xs f w g) dl fa))))
+      (drop-sound (Cons (Bool) w seg) seg2 (Cons (Bool) w xs) f f2 x (GC1 seg xs f w g) dl fa))))
 
 (def-adts
-  ((Place : ((Dir) d) ((Nat) q) ((Side) p) ((Bit) b) ((Side) o) ((ACfg) a) -> Type)
+  ((Place : ((Dir) d) ((Nat) q) ((Side) p) ((Bool) b) ((Side) o) ((ACfg) a) -> Type)
     enum
-    (many PlL : (erased (Nat) q) (erased (Side) p o) (erased (Bit) b) -> (Place (DL) q p b o (MkA q p b o)))
-    (many PlR : (erased (Nat) q) (erased (Side) p o) (erased (Bit) b) -> (Place (DR) q p b o (MkA q o b p)))))
+    (many PlL : (erased (Nat) q) (erased (Side) p o) (erased (Bool) b) -> (Place (DL) q p b o (MkA q p b o)))
+    (many PlR : (erased (Nat) q) (erased (Side) p o) (erased (Bool) b) -> (Place (DR) q p b o (MkA q o b p)))))
 
 (def-adts
   ((AllPop : ((List (ACfg)) S) ((Dir) d) ((Nat) q) ((Side) p) ((Side) o) -> Type)
     enum
     (many AllZ : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
-       (erased (Place d q (MkSide (Nil (Bit)) (FZ)) (Bit0) o a) pl) (erased (Mem (ACfg) a S) mm)
-       -> (AllPop S d q (MkSide (Nil (Bit)) (FZ)) o))
+       (erased (Place d q (MkSide (Nil (Bool)) (FZ)) (BFalse) o a) pl) (erased (Mem (ACfg) a S) mm)
+       -> (AllPop S d q (MkSide (Nil (Bool)) (FZ)) o))
     (many AllT : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a0 a1)
-       (erased (Place d q (MkSide (Nil (Bit)) (FT)) (Bit0) o a0) pl0) (erased (Mem (ACfg) a0 S) mm0)
-       (erased (Place d q (MkSide (Nil (Bit)) (FT)) (Bit1) o a1) pl1) (erased (Mem (ACfg) a1 S) mm1)
-       -> (AllPop S d q (MkSide (Nil (Bit)) (FT)) o))
+       (erased (Place d q (MkSide (Nil (Bool)) (FT)) (BFalse) o a0) pl0) (erased (Mem (ACfg) a0 S) mm0)
+       (erased (Place d q (MkSide (Nil (Bool)) (FT)) (BTrue) o a1) pl1) (erased (Mem (ACfg) a1 S) mm1)
+       -> (AllPop S d q (MkSide (Nil (Bool)) (FT)) o))
     (many AllC : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
-       (erased (List (Bit)) seg) (erased (Flag) f) (erased (Bit) b)
+       (erased (List (Bool)) seg) (erased (Flag) f) (erased (Bool) b)
        (erased (Place d q (MkSide seg f) b o a) pl) (erased (Mem (ACfg) a S) mm)
-       -> (AllPop S d q (MkSide (Cons (Bit) b seg) f) o))))
+       -> (AllPop S d q (MkSide (Cons (Bool) b seg) f) o))))
 
 (def-adts
   ((AOK : ((List (Tr)) m) ((List (ACfg)) S) ((ACfg) a) -> Type)
     enum
-    (many AOKL : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r r2) (erased (Bit) h w)
+    (many AOKL : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r r2) (erased (Bool) h w)
        (erased (Look m q h (Go w (DL) q2)) lk) (erased (APush r w r2) ap) (erased (AllPop S (DL) q2 l r2) al)
        -> (AOK m S (MkA q l h r)))
-    (many AOKR : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r l2) (erased (Bit) h w)
+    (many AOKR : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r l2) (erased (Bool) h w)
        (erased (Look m q h (Go w (DR) q2)) lk) (erased (APush l w l2) ap) (erased (AllPop S (DR) q2 r l2) al)
        -> (AOK m S (MkA q l h r)))))
 
@@ -278,7 +144,7 @@
     ((MemHere _ _ rest) (let-match erased cl (CCons _ _ _ _ ok _)) ok)
     ((MemThere _ _ y rest mm1) (let-match erased cl (CCons _ _ _ _ _ cl1)) (closed-get m S rest a cl1 mm1))))
 
-(def-fns _ $ (erased allpop-mem : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) p o p2) (erased (Bit) b)
+(def-fns _ $ (erased allpop-mem : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) p o p2) (erased (Bool) b)
     (erased (AllPop S d q p o) al) (erased (APop p b p2) ap) ->
     (erased (ACfg) a) (erased (Place d q p2 b o a) pl) (erased (Mem (ACfg) a S) mm))
   (match erased ap _
@@ -286,8 +152,8 @@
     ((APT _)
       (let-match erased al (AllT _ _ _ _ a0 a1 pl0 mm0 pl1 mm1))
       (match erased b _
-        ((Bit0) (values a0 pl0 mm0))
-        ((Bit1) (values a1 pl1 mm1))))
+        ((BFalse) (values a0 pl0 mm0))
+        ((BTrue) (values a1 pl1 mm1))))
     ((APC seg f _) (let-match erased al (AllC _ _ _ _ a _ _ _ pl mm)) (values a pl mm))))
 
 (def-fns _ $ (erased never : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Closed m S S) cl)
@@ -310,7 +176,7 @@
               (let ((erased gr2)) (push-sound sr r2 r w gr ap))
               (let ((erased a2) (erased pl) (erased mm2)) (allpop-mem S (DL) q2 sl r2 p2 h2 al app))
               (let-match erased pl (PlL _ _ _ _))
-              (never m S cl a2 mm2 d (MkGCfg q2 p2 r2 l2 (Cons (Bit) w r) h2 gl2 gr2) s1 hs1))
+              (never m S cl a2 mm2 d (MkGCfg q2 p2 r2 l2 (Cons (Bool) w r) h2 gl2 gr2) s1 hs1))
             (absurd (AOKR _ _ _ _ _ _ _ _ _ lk2 _ _) (look-fn m q h _ _ lk lk2))))
         ((StepR _ _ q2 _ _ r2 _ w h2 lk pp)
           (match erased ok _
@@ -321,82 +187,61 @@
               (let ((erased gl2)) (push-sound sl l2 l w gl ap))
               (let ((erased a2) (erased pl) (erased mm2)) (allpop-mem S (DR) q2 sr l2 p2 h2 al app))
               (let-match erased pl (PlR _ _ _ _))
-              (never m S cl a2 mm2 d (MkGCfg q2 l2 p2 (Cons (Bit) w l) r2 h2 gl2 gr2) s1 hs1))))))))
-
-(def-adts $ (Res : (Type P) -> Type)
-  enum
-  (many ROk : (erased Type P) (erased P p) -> (Res P))
-  (many RFail : (erased Type P) -> (Res P)))
+              (never m S cl a2 mm2 d (MkGCfg q2 l2 p2 (Cons (Bool) w l) r2 h2 gl2 gr2) s1 hs1))))))))
 
 (def-adts
-  ((LookR : ((List (Tr)) m) ((Nat) q) ((Bit) b) -> Type)
+  ((LookR : ((List (Tr)) m) ((Nat) q) ((Bool) b) -> Type)
     enum
-    (many LFound : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bit) b) (many (Tr) t) (erased (Look m q b t) p) -> (LookR m q b))
-    (many LMiss : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bit) b) -> (LookR m q b))))
+    (many LFound : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) b) (many (Tr) t) (erased (Look m q b t) p) -> (LookR m q b))
+    (many LMiss : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) b) -> (LookR m q b))))
 
-(def-fns _ $ (many look : (subterm many (List (Tr)) m) (many (Nat) q) (many (Bit) b) -> (many (LookR m q b) r))
+(def-fns _ $ (many look : (subterm many (List (Tr)) m) (many (Nat) q) (many (Bool) b) -> (many (LookR m q b) r))
   (let-match many m (Cons _ t0 m1) ((Nil _) (LMiss m q b)))
   (let-match many m1 (Cons _ t1 rest) ((Nil _) (LMiss m q b)))
   (match many q _
     ((Zero)
       (match many b _
-        ((Bit0) (LFound m q b t0 (Look0 t0 t1 rest)))
-        ((Bit1) (LFound m q b t1 (Look1 t0 t1 rest)))))
+        ((BFalse) (LFound m q b t0 (Look0 t0 t1 rest)))
+        ((BTrue) (LFound m q b t1 (Look1 t0 t1 rest)))))
     ((Succ q1)
       (let-match many (notail $ look rest q1 b) (LFound _ _ _ t p) ((LMiss _ _ _) (LMiss m q b)))
       (LFound m q b t (LookS t0 t1 rest q1 b t p)))))
 
-(def-fns _ $ (many pop : (many (List (Bit)) xs) -> (many (Bit) b) (many (List (Bit)) ys) (erased (Pop xs b ys) p))
+(def-fns _ $ (many pop : (many (List (Bool)) xs) -> (many (Bool) b) (many (List (Bool)) ys) (erased (Pop xs b ys) p))
   (match many xs _
-    ((Nil _) (values (Bit0) (Nil (Bit)) (PopNil)))
+    ((Nil _) (values (BFalse) (Nil (Bool)) (PopNil)))
     ((Cons _ b ys) (values b ys (PopCons b ys)))))
 
-(def-adts
-  ((SimR : ((List (Tr)) m) ((Cfg) c) -> Type)
-    enum
-    (many SHalt : (erased (List (Tr)) m) (erased (Cfg) c) (many (Nat) s) (erased (HaltsIn m c s) p) -> (SimR m c))
-    (many SRun : (erased (List (Tr)) m) (erased (Cfg) c) -> (SimR m c))))
-
 (def-fns _ $ (many sim : (many (List (Tr)) m) (subterm many (Nat) fuel)
-    (many (Nat) q) (many (List (Bit)) l) (many (Bit) h) (many (List (Bit)) r) -> (many (SimR m (MkCfg q l h r)) res))
+    (many (Nat) q) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (SimR m (MkCfg q l h r)) res))
   (let-match many fuel (Succ f) ((Zero) (SRun m (MkCfg q l h r))))
   (let-match many (look m q h) (LFound _ _ _ t lk) ((LMiss _ _ _) (SRun m (MkCfg q l h r))))
   (let-match many t (Go w d q2) ((Halt) (SHalt m (MkCfg q l h r) (Succ (Zero)) (HStop m q l r h lk))))
   (match many d _
     ((DL)
       (let ((many h2) (many l2) (erased pp)) (pop l))
-      (let-match many (notail $ sim m f q2 l2 h2 (Cons (Bit) w r)) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
+      (let-match many (notail $ sim m f q2 l2 h2 (Cons (Bool) w r)) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
       (SHalt m (MkCfg q l h r) (Succ s) (HMove m (MkCfg q l h r) _ s (StepL m q q2 l r l2 h w h2 lk pp) p)))
     ((DR)
       (let ((many h2) (many r2) (erased pp)) (pop r))
-      (let-match many (notail $ sim m f q2 (Cons (Bit) w l) h2 r2) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
+      (let-match many (notail $ sim m f q2 (Cons (Bool) w l) h2 r2) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
       (SHalt m (MkCfg q l h r) (Succ s) (HMove m (MkCfg q l h r) _ s (StepR m q q2 l r r2 h w h2 lk pp) p)))))
-
-(def-fns _ $ (many eq-bit : (many (Bit) x) (many (Bit) y) -> (many (Maybe (Eq (Bit) x y)) r))
-  (match many x _
-    ((Bit0) (match many y _ ((Bit0) (Some _ (Refl (Bit) x))) ((Bit1) (None _))))
-    ((Bit1) (match many y _ ((Bit1) (Some _ (Refl (Bit) x))) ((Bit0) (None _))))))
 
 (def-fns _ $ (many eq-flag : (many (Flag) x) (many (Flag) y) -> (many (Maybe (Eq (Flag) x y)) r))
   (match many x _
     ((FZ) (match many y _ ((FZ) (Some _ (Refl (Flag) x))) ((FT) (None _))))
     ((FT) (match many y _ ((FT) (Some _ (Refl (Flag) x))) ((FZ) (None _))))))
 
-(def-fns _ $ (many eq-nat : (many (Nat) x) (many (Nat) y) -> (many (Maybe (Eq (Nat) x y)) r))
-  (match many (nat-eq x y) _
-    ((Equal _ _ _) (Some _ (Refl (Nat) x)))
-    (else (None _))))
-
-(def-fns _ $ (many eq-bits : (subterm many (List (Bit)) x) (many (List (Bit)) y) -> (many (Maybe (Eq (List (Bit)) x y)) r))
+(def-fns _ $ (many eq-bits : (subterm many (List (Bool)) x) (many (List (Bool)) y) -> (many (Maybe (Eq (List (Bool)) x y)) r))
   (match many x _
-    ((Nil _) (match many y _ ((Nil _) (Some _ (Refl (List (Bit)) x))) (else (None _))))
+    ((Nil _) (match many y _ ((Nil _) (Some _ (Refl (List (Bool)) x))) (else (None _))))
     ((Cons _ a xs)
       (let-match many y (Cons _ b ys) ((Nil _) (None _)))
       (let-match many (eq-bit a b) (Some _ e1) ((None _) (None _)))
       (let-match many (notail $ eq-bits xs ys) (Some _ e2) ((None _) (None _)))
       (let-match many e1 (Refl _ _))
       (let-match many e2 (Refl _ _))
-      (Some _ (Refl (List (Bit)) x)))))
+      (Some _ (Refl (List (Bool)) x)))))
 
 (def-fns _ $ (many eq-side : (many (Side) x) (many (Side) y) -> (many (Maybe (Eq (Side) x y)) r))
   (let-match many x (MkSide s1 f1))
@@ -428,39 +273,39 @@
       (let-match many (notail $ find a rest) (ROk _ mm) ((RFail _) (RFail _)))
       (ROk _ (MemThere (ACfg) a b rest mm)))))
 
-(def-fns _ $ (many shorter : (many (List (Bit)) xs) (subterm many (Nat) n) -> (many (Bool) b))
+(def-fns _ $ (many shorter : (many (List (Bool)) xs) (subterm many (Nat) n) -> (many (Bool) b))
   (let-match many n (Succ n1) ((Zero) (BFalse)))
   (match many xs _
     ((Nil _) (BTrue))
     ((Cons _ _ rest) (tail $ shorter rest n1))))
 
 (def-adts
-  ((DropR : ((List (Bit)) xs) -> Type)
+  ((DropR : ((List (Bool)) xs) -> Type)
     enum
-    (many DLOk : (erased (List (Bit)) xs) (many (Bit) x) (many (List (Bit)) ys) (erased (DropLast xs x ys) p) -> (DropR xs))
-    (many DLNone : (erased (List (Bit)) xs) -> (DropR xs))))
+    (many DLOk : (erased (List (Bool)) xs) (many (Bool) x) (many (List (Bool)) ys) (erased (DropLast xs x ys) p) -> (DropR xs))
+    (many DLNone : (erased (List (Bool)) xs) -> (DropR xs))))
 
-(def-fns _ $ (many drop-last : (subterm many (List (Bit)) xs) -> (many (DropR xs) r))
+(def-fns _ $ (many drop-last : (subterm many (List (Bool)) xs) -> (many (DropR xs) r))
   (let-match many xs (Cons _ b rest) ((Nil _) (DLNone xs)))
   (match many (notail $ drop-last rest) _
-    ((DLOk _ x ys p) (DLOk xs x (Cons (Bit) b ys) (DL2 rest ys x b p)))
-    ((DLNone _) (let-match many rest (Nil _) ((Cons _ _ _) (DLNone xs))) (DLOk xs b (Nil (Bit)) (DL1 b)))))
+    ((DLOk _ x ys p) (DLOk xs x (Cons (Bool) b ys) (DL2 rest ys x b p)))
+    ((DLNone _) (let-match many rest (Nil _) ((Cons _ _ _) (DLNone xs))) (DLOk xs b (Nil (Bool)) (DL1 b)))))
 
-(def-fns _ $ (many flag-after : (many (Flag) f) (many (Bit) x) -> (many (Flag) g) (erased (FlagAfter f x g) p))
+(def-fns _ $ (many flag-after : (many (Flag) f) (many (Bool) x) -> (many (Flag) g) (erased (FlagAfter f x g) p))
   (match many f _
-    ((FZ) (match many x _ ((Bit0) (values (FZ) (FAZ))) ((Bit1) (values (FT) (FAT f x)))))
+    ((FZ) (match many x _ ((BFalse) (values (FZ) (FAZ))) ((BTrue) (values (FT) (FAT f x)))))
     ((FT) (values (FT) (FAT f x)))))
 
-(def-fns _ $ (many apush : (many (Nat) rad) (many (Side) s) (many (Bit) w) -> (many (Side) s2) (erased (APush s w s2) p))
+(def-fns _ $ (many apush : (many (Nat) rad) (many (Side) s) (many (Bool) w) -> (many (Side) s2) (erased (APush s w s2) p))
   (let-match many s (MkSide seg f))
   (match many (shorter seg rad) _
-    ((BTrue) (values (MkSide (Cons (Bit) w seg) f) (PKeep seg f w)))
+    ((BTrue) (values (MkSide (Cons (Bool) w seg) f) (PKeep seg f w)))
     ((BFalse)
-      (let-match many (drop-last (Cons (Bit) w seg)) (DLOk _ x seg2 dl) ((DLNone _) (values (MkSide (Cons (Bit) w seg) f) (PKeep seg f w))))
+      (let-match many (drop-last (Cons (Bool) w seg)) (DLOk _ x seg2 dl) ((DLNone _) (values (MkSide (Cons (Bool) w seg) f) (PKeep seg f w))))
       (let ((many f2) (erased fa)) (flag-after f x))
       (values (MkSide seg2 f2) (PDrop seg seg2 f f2 w x dl fa)))))
 
-(def-fns _ $ (many place : (many (Dir) d) (many (Nat) q) (many (Side) p) (many (Bit) b) (many (Side) o) ->
+(def-fns _ $ (many place : (many (Dir) d) (many (Nat) q) (many (Side) p) (many (Bool) b) (many (Side) o) ->
     (many (ACfg) a) (erased (Place d q p b o a) pl))
   (match many d _
     ((DL) (values (MkA q p b o) (PlL q p o b)))
@@ -473,13 +318,13 @@
     ((Nil _)
       (match many f _
         ((FZ)
-          (let ((many a) (erased pl)) (place d q p (Bit0) o))
+          (let ((many a) (erased pl)) (place d q p (BFalse) o))
           (let-match many (find a S) (ROk _ mm) ((RFail _) (RFail _)))
           (ROk _ (AllZ S d q o a pl mm)))
         ((FT)
-          (let ((many a0) (erased pl0)) (place d q p (Bit0) o))
+          (let ((many a0) (erased pl0)) (place d q p (BFalse) o))
           (let-match many (find a0 S) (ROk _ mm0) ((RFail _) (RFail _)))
-          (let ((many a1) (erased pl1)) (place d q p (Bit1) o))
+          (let ((many a1) (erased pl1)) (place d q p (BTrue) o))
           (let-match many (find a1 S) (ROk _ mm1) ((RFail _) (RFail _)))
           (ROk _ (AllT S d q o a0 a1 pl0 mm0 pl1 mm1)))))
     ((Cons _ b seg1)
@@ -512,11 +357,11 @@
   (let-match many p (MkSide seg f))
   (match many seg _
     ((Nil _)
-      (let ((many a0) (erased _)) (place d q p (Bit0) o))
+      (let ((many a0) (erased _)) (place d q p (BFalse) o))
       (match many f _
         ((FZ) (Cons _ a0 (Nil (ACfg))))
         ((FT)
-          (let ((many a1) (erased _)) (place d q p (Bit1) o))
+          (let ((many a1) (erased _)) (place d q p (BTrue) o))
           (Cons _ a0 $ Cons _ a1 $ Nil (ACfg)))))
     ((Cons _ b seg1)
       (let ((many a) (erased _)) (place d q (MkSide seg1 f) b o))
@@ -549,45 +394,25 @@
   ((Good : ((Nat) k) ((List (Tr)) m) -> Type)
     enum
     (many GHalt : (erased (Nat) k s) (erased (List (Tr)) m)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) s) h) (erased (Lt s (Succ k)) lt) -> (Good k m))
+       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) (erased (Lt s (Succ k)) lt) -> (Good k m))
     (many GNever : (erased (Nat) k) (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Closed m S S) cl)
-       (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (GCfg a (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit)))) g)
+       (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (GCfg a (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) g)
        -> (Good k m))))
 
 (def-fns _ $ (many decide : (many (Nat) rad) (many (Nat) simfuel) (many (Nat) expfuel) (many (Nat) k) (many (List (Tr)) m) ->
     (many (Res (Good k m)) r))
-  (match many (sim m simfuel (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) _
+  (match many (sim m simfuel (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) _
     ((SHalt _ _ s h)
       (let-match many (lt-dec s (Succ k)) (Yes _ _ lt) ((No _ _ _) (RFail _)))
       (ROk _ (GHalt k s m h lt)))
     ((SRun _ _)
-      (let ((many a0)) (MkA (Zero) (MkSide (Nil (Bit)) (FZ)) (Bit0) (MkSide (Nil (Bit)) (FZ))))
+      (let ((many a0)) (MkA (Zero) (MkSide (Nil (Bool)) (FZ)) (BFalse) (MkSide (Nil (Bool)) (FZ))))
       (let-match many (explore rad m expfuel (Cons _ a0 (Nil (ACfg))) (Nil (ACfg))) (Some _ S) ((None _) (RFail _)))
       (let-match many (closed rad m S S) (ROk _ cl) ((RFail _) (RFail _)))
       (let-match many (find a0 S) (ROk _ mm) ((RFail _) (RFail _)))
       (ROk _ (GNever k m S cl a0 mm
-        (MkGCfg (Zero) (MkSide (Nil (Bit)) (FZ)) (MkSide (Nil (Bit)) (FZ)) (Nil (Bit)) (Nil (Bit)) (Bit0)
-          (GZ (Nil (Bit)) (AZNil)) (GZ (Nil (Bit)) (AZNil))))))))
-
-(def-adts
-  ((Or : (Type P) (Type Q) -> Type)
-    enum
-    (many InL : (erased Type P Q) (erased P p) -> (Or P Q))
-    (many InR : (erased Type P Q) (erased Q q) -> (Or P Q))))
-
-(def-fns _ $ (erased lt-succ-cases : (erased (Nat) q n) (subterm erased (Lt q (Succ n)) lt) -> (erased (Or (Eq (Nat) q n) (Lt q n)) r))
-  (match erased lt _
-    ((LtZ _)
-      (match erased n _
-        ((Zero) (InL _ _ (Refl (Nat) q)))
-        ((Succ n1) (InR _ _ (LtZ n1)))))
-    ((LtS a _ p)
-      (match erased n _
-        (absurd (Zero) p)
-        ((Succ n1)
-          (match erased (lt-succ-cases a n1 p) _
-            ((InL _ _ e) (let-match erased e (Refl _ _)) (InL _ _ (Refl (Nat) q)))
-            ((InR _ _ l) (InR _ _ (LtS a n1 l)))))))))
+        (MkGCfg (Zero) (MkSide (Nil (Bool)) (FZ)) (MkSide (Nil (Bool)) (FZ)) (Nil (Bool)) (Nil (Bool)) (BFalse)
+          (GZ (Nil (Bool)) (AZNil)) (GZ (Nil (Bool)) (AZNil))))))))
 
 (def-adts
   ((Range : ((Nat) n) ((List (Nat)) xs) -> Type)
@@ -614,13 +439,13 @@
     enum
     (many OptsZ : -> (Opts (Nil (Nat)) (Cons (Tr) (Halt) (Nil (Tr)))))
     (many OptsS : (erased (Nat) q) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Opts xs os) p)
-       -> (Opts (Cons (Nat) q xs) (Cons (Tr) (Go (Bit0) (DL) q) $ Cons (Tr) (Go (Bit0) (DR) q) $
-                                   Cons (Tr) (Go (Bit1) (DL) q) $ Cons (Tr) (Go (Bit1) (DR) q) os)))))
+       -> (Opts (Cons (Nat) q xs) (Cons (Tr) (Go (BFalse) (DL) q) $ Cons (Tr) (Go (BFalse) (DR) q) $
+                                   Cons (Tr) (Go (BTrue) (DL) q) $ Cons (Tr) (Go (BTrue) (DR) q) os)))))
 
 (def-fns _ $ (many opts : (subterm many (List (Nat)) xs) -> (many (List (Tr)) os) (erased (Opts xs os) p))
   (let-match many xs (Cons _ q rest) ((Nil _) (values (Cons (Tr) (Halt) (Nil (Tr))) (OptsZ))))
   (let ((many os) (erased p)) (notail $ opts rest))
-  (values (Cons (Tr) (Go (Bit0) (DL) q) $ Cons (Tr) (Go (Bit0) (DR) q) $ Cons (Tr) (Go (Bit1) (DL) q) $ Cons (Tr) (Go (Bit1) (DR) q) os)
+  (values (Cons (Tr) (Go (BFalse) (DL) q) $ Cons (Tr) (Go (BFalse) (DR) q) $ Cons (Tr) (Go (BTrue) (DL) q) $ Cons (Tr) (Go (BTrue) (DR) q) os)
           (OptsS q rest os p)))
 
 (def-fns _ $ (erased mem-skip4 : (erased (Tr) t a b c d) (erased (List (Tr)) os) (erased (Mem (Tr) t os) mm) ->
@@ -633,7 +458,7 @@
     ((OptsZ) (MemHere (Tr) (Halt) (Nil (Tr))))
     ((OptsS q xs1 os1 p1) (mem-skip4 (Halt) _ _ _ _ os1 (opts-halt xs1 os1 p1)))))
 
-(def-fns _ $ (erased opts-go : (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Nat) q) (erased (Bit) w) (erased (Dir) d)
+(def-fns _ $ (erased opts-go : (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Nat) q) (erased (Bool) w) (erased (Dir) d)
     (subterm erased (Opts xs os) p) (erased (Mem (Nat) q xs) mq) -> (erased (Mem (Tr) (Go w d q) os) mm))
   (match erased p _
     (absurd (OptsZ) mq)
@@ -641,11 +466,11 @@
       (match erased mq _
         ((MemHere _ _ _)
           (match erased w _
-            ((Bit0)
+            ((BFalse)
               (match erased d _
                 ((DL) (MemHere (Tr) (Go w d q) _))
                 ((DR) (MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))))
-            ((Bit1)
+            ((BTrue)
               (match erased d _
                 ((DL) (MemThere _ _ _ _ $ MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))
                 ((DR) (MemThere _ _ _ _ $ MemThere _ _ _ _ $ MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))))))
@@ -746,31 +571,43 @@
 (def-fns _ $ (erased bound-of : (erased (Nat) n k j) (erased (List (Nat)) xs) (erased (List (Tr)) O)
     (erased (Cov k O (Nil (Tr)) j) cv) (erased (Double n j) dj) (erased (Range n xs) rg) (erased (Opts xs O) op)
     (erased (List (Tr)) m) (erased (Rows n n m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) s) h) -> (erased (Lt s (Succ k)) p))
+    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ k)) p))
   (let ((erased g)) (cov-good n k j xs O (Nil (Tr)) m m cv (rows-flat n n j m w dj) rg op (RA0 m)))
   (match erased g _
     ((GHalt _ s2 _ h2 lt) (let-match erased (halts-fn m _ s s2 h h2) (Refl _ _)) lt)
     (absurd (GNever _ _ S cl a mm ga) (never m S cl a mm _ ga s h))))
 
 (unary 2)
+
 (let ((many xs) (erased rg)) (range 2))
+
 (let ((many O) (erased op)) (opts xs))
+
 (let ((many j) (erased dj)) (double 2))
+
 (let ((many res)) (cov j O 1 100 1000 6 O (Nil (Tr))))
+
 (comptime-match many res (ROk _ cv))
 
-(let ((many champ)) (Cons _ (Go (Bit1) (DR) 1) $ Cons _ (Go (Bit1) (DL) 1) $ Cons _ (Go (Bit1) (DL) 0) $ Cons _ (Halt) $ Nil (Tr)))
-(let ((many cs)) (sim champ 100 (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))))
+(let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Halt) $ Nil (Tr)))
+
+(let ((many cs)) (sim champ 100 (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))))
+
 (comptime-match many cs (SHalt _ _ s6 ch))
+
 (comptime-match many (nat-eq s6 6) (Equal _ _ _))
+
 (let ((erased l12)) (prove-literal-lt 1 2))
+
 (let ((erased l02)) (prove-literal-lt 0 2))
-(let ((erased cw)) (RowsS 2 (Succ (Zero)) (Go (Bit1) (DR) 1) (Go (Bit1) (DL) 1) _ (OKGo 2 1 (Bit1) (DR) l12) (OKGo 2 1 (Bit1) (DL) l12)
-                     (RowsS 2 (Zero) (Go (Bit1) (DL) 0) (Halt) (Nil (Tr)) (OKGo 2 0 (Bit1) (DL) l02) (OKHalt 2) (RowsZ 2))))
+
+(let ((erased cw)) (RowsS 2 (Succ (Zero)) (Go (BTrue) (DR) 1) (Go (BTrue) (DL) 1) _ (OKGo 2 1 (BTrue) (DR) l12) (OKGo 2 1 (BTrue) (DL) l12)
+                     (RowsS 2 (Zero) (Go (BTrue) (DL) 0) (Halt) (Nil (Tr)) (OKGo 2 0 (BTrue) (DL) l02) (OKHalt 2) (RowsZ 2))))
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 2 2 m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bit)) (Bit0) (Nil (Bit))) s) h) -> (erased (Lt s (Succ 6)) p))
+    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 6)) p))
   (bound-of 2 6 j xs O cv dj rg op m w s h))
 
 (goal erased (BBIs 2 6))
+
 (qed (MkBB 2 6 champ cw ch (level-of bound) bound))
