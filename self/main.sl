@@ -85,15 +85,9 @@
   (let ((erased hs) (many h)) (env-heap env))
   (interp-finals env pargs with-env with-exec _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
 
-(def-fns util-lvl $ (many delete-files : (many (String) dir) (subterm many (List $ String) names) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
-  (let-match many names (Cons _ n rest) ((Nil _) w))
-  (let ((unique w1) (many _)) (world-do _ w $ DeleteFile $ str-cat3 dir "/" n))
-  (tail $ delete-files dir rest w1))
-
 (def-fns util-lvl $ (many ocamlfind : (many (List $ String) args) (many (Result $ Unit) wrote) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Exited) r))
   (let-match many wrote (Ok _ _) ((Fail _ m) (values w (Fail _ m))))
-  (let ((unique w1) (many envs)) (world-do _ w $ GetEnvs))
-  (world-do _ w1 $ Exec "ocamlfind" args envs (None _) ""))
+  (host-exec "ocamlfind" args w))
 
 (def-fns run-lvl $ (many build : (many (Bool) byte) (many (String) path) (many (String) ml) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((many dir)) $ str-cat path ".build")
@@ -146,7 +140,7 @@
   (let-match many gm (GoalUnrequired) (else (values (goal-verdict flags (BTrue) w1) (Exit _ exit-ok))))
   (let-match many (has-flag flags "--interpret") (BTrue)
     ((BFalse)
-      (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env with-exec env)
+      (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env with-exec env $ None _)
       (match many (flag-value flags "--build") _
         ((Some _ path) (build (has-flag flags "--byte") path out w1))
         ((None _) (values (say-to (BFalse) out w1) (Exit _ exit-ok))))))

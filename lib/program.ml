@@ -78,6 +78,8 @@ let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
   else List.find_map (fun f -> if List.mem f [ "--extract"; "--build"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
 
+let compile byte src exe = exec "ocamlfind" [ (if byte then "ocamlc" else "ocamlopt"); "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; exe ] (host_envs ()) None ""
+
 let build byte path ml =
   let dir = path ^ ".build" in
   let fail code m = prerr_endline m; code in
@@ -88,8 +90,8 @@ let build byte path ml =
     let ran =
       guarded (fun () ->
           Sys.mkdir dir 0o755;
-          Out_channel.with_open_bin src (fun oc -> output_string oc ml);
-          exec "ocamlfind" [ (if byte then "ocamlc" else "ocamlopt"); "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; path ] (host_envs ()) None "")
+          write_file src ml;
+          compile byte src path)
     in
     let removed =
       guarded (fun () -> if Sys.file_exists dir then (Array.iter (fun f -> Sys.remove (Filename.concat dir f)) (Sys.readdir dir); Sys.rmdir dir); Ok ())

@@ -183,7 +183,7 @@ let ladder : Value.value array ref = ref [||]
 let () = Reader.handle_name := fun x -> match Hashtbl.find_opt literal_of x, Hashtbl.find_opt names x with Some r, _ -> Literal.spell r.lit | None, Some n -> Literal.name n | None, None -> "_"
 let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset minted_rows; Hashtbl.reset Value.literal_values; ladder := [||]
 
-type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
+type item = Fns of (id * Value.fn) list | Final of Value.value * term * string | Native of Value.value * Value.adt
 
 let trace : item list ref = ref []
 

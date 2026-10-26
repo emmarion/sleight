@@ -518,6 +518,7 @@ let discharged : Reader.loc option ref = ref None
 let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i
 let gensyms = ref 0
 let on_run : (Env.t -> unit) ref = ref ignore
+let native : (Env.t -> V.value -> V.adt -> (int, string) result) ref = ref (fun _ _ _ -> Stdlib.Error "no compiler is linked in")
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
 let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.SlotEq ]
@@ -1393,7 +1394,7 @@ and computed_head pos env raw =
       (env, List (l, Handle (hl, x, MintedIs, (entry env x).mult, Obj.repr V.VToken) :: args))
   | _ -> (env, raw)
 
-and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) ?(frames = []) cc env ?tele expect l hl c callee hcode lv params rets args =
+and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) ?(frames = []) ?run cc env ?tele expect l hl c callee hcode lv params rets args =
   let pos = pos_of expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
@@ -1489,11 +1490,11 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) ?(f
         env'
   in
   let callee_name () = match callee.term with Var x -> qname env x | _ -> "this call" in
-  call_returns ?sink ~demand env expect l callee_name acc rets (fun env ->
+  call_returns ?sink ~demand ?run env expect l callee_name acc rets (fun env ->
     let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, lazy (qshow env callee.term)) | _ -> cc in
     if skipped then V.CValues [] else V.CApp (hcode, codes, cc))
 
-and call_returns ?sink ~demand env expect l callee_name acc rets inner =
+and call_returns ?sink ~demand ?(run = run_code) env expect l callee_name acc rets inner =
   let pos = pos_of expect in
   let env, ids = open_results env ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check ?sink l expect ids;
@@ -1509,7 +1510,7 @@ and call_returns ?sink ~demand env expect l callee_name acc rets inner =
     else if not env.run_pos then (env, build kept)
     else
       let all = List.map (fun x -> (entry env x).mult) ids in
-      let env = List.fold_left2 (fun env x v -> set_state env x (Settled v)) env ids (spread all (run_code env (build all))) in
+      let env = List.fold_left2 (fun env x v -> set_state env x (Settled v)) env ids (spread all (run env (build all))) in
       (env, V.CValues (List.filter_map (fun (m, x) -> if m = Erased then None else Some (V.CVar x)) (List.combine kept ids)))
   in
   (env, List.map (res_of env) ids, code)
@@ -1656,6 +1657,28 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       produced env [] "many" (type_of env x) Many;
       let env = place env x (slot_of Prelude.null) in
       (env, [ { (res_of env x) with place = Some (slot_of Prelude.null) } ], V.CVar Prelude.null)
+  | Sp.NativeCompute, [ f ] ->
+      if not env.run_pos then error_in env l "`native-compute` is confined to run position";
+      if m <> Many then error_in env l "`native-compute` produces its result at `many`";
+      let env, h, hcode = elab_head env Many l f in
+      let lv, ret = match canon env h.ty with
+        | Fn (lv, [], [ ({ mult = Many; place = None; _ } as ret) ]) -> (lv, ret)
+        | t -> error_in env l "`native-compute` takes a function of no parameters and one `many` return not written `at`, and %s : %s is not one" (qshow env h.term) (qshow env t) in
+      let ty = match ret.sg with Ty t -> t | Is t -> infer env l t in
+      let tid = match type_head env ty with Some t -> t | None -> error_in env l "`native-compute` returns a value of an enum, and %s is not a datatype" (qshow env ty) in
+      let mid, disc, _ = find_matchable env l tid in
+      let adt = match adt_of env mid with Some a -> a | None -> error_in env l "the `Matchable` for %s is %s, so `native-compute` cannot read its result back" (qname env tid) (if (entry env mid).mult = Erased then "erased" else "not Settled") in
+      let env = use env l Many mid in
+      if disc = Union then error_in env l "`native-compute` returns a value of an `enum`, not a `union`";
+      (match List.find_opt (fun c -> c.V.arity > 0) adt.ctors with
+       | Some c -> error_in env l "`native-compute` returns a value of an enum whose constructors have only erased fields, and %s of %s has a non-erased one" (tick c.V.cname) (qname env tid)
+       | None -> ());
+      let run env _ =
+        match !native env (List.hd (Eval.eval env.values hcode)) adt with
+        | Ok i when i >= 0 && i < List.length adt.ctors -> [ V.construct (V.ctor_at adt i) [] ]
+        | Ok i -> error_in env l "`native-compute`: the compiled function answered discriminant %d, which %s does not have" i (qname env tid)
+        | Stdlib.Error msg -> error_in env l "`native-compute`: %s" msg in
+      elab_call ~run V.Plain env ?tele expect l (loc f) (describe env Many f h.term (canon env h.ty)) h hcode lv [] [ ret ] []
   | Sp.Values, _ ->
       let env, args, splices = spliced_framed env (unframed args) in
       let frames, args = List.split args in

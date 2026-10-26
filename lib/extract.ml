@@ -457,14 +457,14 @@ let collect env items =
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
   Hashtbl.iter (fun _ v -> value v) V.literal_values;
-  List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
+  List.iter (function Env.Final (v, _, _) -> value v | Env.Native (v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
     List.concat_map
       (function
         | Env.Fns fs -> List.filter_map (fun (x, _) -> match IntMap.find_opt x env.values with Some (V.VFn cl) -> Some (cl, var x) | _ -> None) fs
-        | Env.Final _ -> [])
+        | Env.Final _ | Env.Native _ -> [])
       items
   in
   { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; fills = Buffer.create 1024; actions = Buffer.create 1024; shows = ref []; words = Buffer.create 256; narrows = ref []; temps = ref 0 }
@@ -640,6 +640,9 @@ let item cx = function
             | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
+  | Env.Native (v, a) ->
+      let arms = List.map (fun c -> (c, [], Printf.sprintf "print_int %d" c.V.index)) a.V.ctors in
+      Buffer.add_string cx.actions (Printf.sprintf "let () = let v = (Obj.obj %s : unit -> Obj.t) () in %s\n" (value cx v) (dispatch cx a (all a) "v" arms None))
 
 let emit env items =
   let cx = collect env items in
@@ -660,3 +663,26 @@ let emit env items =
       Buffer.contents cx.out;
       Buffer.contents cx.fills;
       Buffer.contents cx.actions ]
+
+(* A native-compute runs its function compiled, beside the run-position functions so far, and answers the
+   discriminant the compiled program prints. *)
+let () =
+  Elab.native := fun env v a ->
+    let ml = emit env (List.filter (function Env.Fns _ -> true | _ -> false) (List.rev !Env.trace) @ [ Env.Native (v, a) ]) in
+    let dir = Filename.temp_file "sleight" ".native" in
+    let file = Filename.concat dir in
+    let ( let* ) = Result.bind in
+    let exited what = function
+      | Ok (0, out, _) -> Ok out
+      | Ok (code, out, err) -> Stdlib.Error (Printf.sprintf "%s exited with code %d\n%s%s" what code out err)
+      | Stdlib.Error m -> Stdlib.Error m in
+    let run () =
+      Sys.remove dir;
+      Sys.mkdir dir 0o700;
+      Program.write_file (file "main.ml") ml;
+      let* _ = exited "ocamlfind" (Program.compile false (file "main.ml") (file "main")) in
+      let* out = exited "the compiled function" (Program.exec (file "main") [] (Program.host_envs ()) None "") in
+      Option.to_result ~none:("the compiled function printed " ^ out) (int_of_string_opt out) in
+    let result = try run () with (Unix.Unix_error _ | Sys_error _) as e -> Stdlib.Error (Driver_core.explain e) in
+    (try Array.iter (fun f -> Sys.remove (file f)) (Sys.readdir dir); Sys.rmdir dir with Sys_error _ -> ());
+    result

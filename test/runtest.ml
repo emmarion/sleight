@@ -14,6 +14,8 @@
    a needed file from outside tests/, such as ../std/nat, is checked as --warn-unused does whatever the test
    says, and fails the test if it warns at all, as the prelude, checked once before any test, fails the run;
    "; eval-fuel: n" bounds the evaluator as --eval-fuel does;
+   "; host-path: yes" keeps the host's PATH where self/bootstrap.sh clears the environment, for a test whose
+   compilation runs the host's tools;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
