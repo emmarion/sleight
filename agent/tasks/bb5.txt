@@ -1,0 +1,49 @@
+#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../self -f bb5 -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_SLC_TIMEOUT=300 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl bb5/defs.sl bb5/spec.sl"
+Your task is to prove in Sleight that the fifth busy beaver number is
+47,176,870, against the goal in bb5/spec.sl. Or: to lay the groundwork for a
+future session to do so. This task will likely take many sessions, so leaving
+solid, well-recorded progress matters more than finishing in this one.
+
+The machines are Turing machines with two symbols. A machine with n states,
+numbered from 0, has one entry for each state and symbol: either `Halt`, or a
+symbol to write, a direction to move and a state to go to. It starts in state 0
+on a tape of all 0s, and each step reads the symbol under the head and follows
+its entry; a step that reaches a `Halt` entry is the last, and counts.
+bb5/defs.sl defines this as `HaltsIn n m c k`, and `BusyBeaver n v`: a machine
+with n states that halts in v steps, and a proof that no machine with n states
+halts in more. bb5/spec.sl sets the goal `(BusyBeaver 5 47176870)`.
+
+bb5/bb2.sl, bb5/bb3.sl and bb5/bb4.sl set the goals for 2, 3 and 4 states,
+whose values are 6, 21 and 107. They are steps along the way, not the task.
+Compiling one of them with `sl`, after std/nat.sl, std/list.sl, std/macro.sl,
+std/tactics.sl and bb5/defs.sl and before your files, checks a `qed` against
+its goal.
+
+To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
+std/tactics.sl, bb5/defs.sl, bb5/spec.sl, then your files, one of them proving
+the goal with `(qed e)`. The finished proof must compile with no warnings, and
+none of your files may contain a `;! suppress`; intermediate work may have both.
+
+For reference: MANUAL.md (the implementations and their command lines),
+WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
+prelude.sl (the standard library), std/ (source libraries, among them
+std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
+`SetNth` and `Repeat`), tests/ (example programs), and self/ (the compiler,
+itself written in Sleight).
+
+Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session.
+Generally put experiments and `sl` captures in scratch/, which does not carry
+over; helper programs worth keeping can go in work/. Keep work/ tidy, pruning
+files that have served their purpose.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md and
+FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to
+try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
+Sleight's maintainers what slowed you down because of Sleight, its library, or its tools,
+rather than because of the problem itself; add to it each session instead of
+rewriting it. Each phase has its own budget of tokens. In the second phase,
+those two are the only files you can edit; there's no need to edit them, or to
+read FEEDBACK.md, before then, so spend the first phase on the task itself.
+
+Hint: `native-compute` (DESIGN.md §72) runs a call in run position as compiled
+code, and its result's erased fields come back as proofs.
