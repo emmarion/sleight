@@ -172,3 +172,71 @@
           (match erased (lt-succ-cases a n1 p) _
             ((InL _ _ e) (let-match erased e (Refl _ _)) (InL _ _ (Refl (Nat) q)))
             ((InR _ _ l) (InR _ _ (LtS a n1 l)))))))))
+
+(def-adts
+  ((Range : ((Nat) n) ((List (Nat)) xs) -> Type)
+    enum
+    (many RgZ : -> (Range (Zero) (Nil (Nat))))
+    (many RgS : (erased (Nat) n) (erased (List (Nat)) xs) (erased (Range n xs) p) -> (Range (Succ n) (Cons (Nat) n xs)))))
+
+(def-fns _ $ (many range : (subterm many (Nat) n) -> (many (List (Nat)) xs) (erased (Range n xs) p))
+  (let-match many n (Succ n1) ((Zero) (values (Nil (Nat)) (RgZ))))
+  (let ((many xs) (erased p)) (notail $ range n1))
+  (values (Cons (Nat) n1 xs) (RgS n1 xs p)))
+
+(def-fns _ $ (erased range-mem : (erased (Nat) n q) (erased (List (Nat)) xs) (subterm erased (Range n xs) p) (erased (Lt q n) lt) ->
+    (erased (Mem (Nat) q xs) mm))
+  (match erased p _
+    (absurd (RgZ) lt)
+    ((RgS n1 xs1 p1)
+      (match erased (lt-succ-cases q n1 lt) _
+        ((InL _ _ e) (let-match erased e (Refl _ _)) (MemHere (Nat) q xs1))
+        ((InR _ _ l) (MemThere (Nat) q n1 xs1 (range-mem n1 q xs1 p1 l)))))))
+
+(def-adts
+  ((Opts : ((List (Nat)) xs) ((List (Tr)) os) -> Type)
+    enum
+    (many OptsZ : -> (Opts (Nil (Nat)) (Cons (Tr) (Halt) (Nil (Tr)))))
+    (many OptsS : (erased (Nat) q) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Opts xs os) p)
+       -> (Opts (Cons (Nat) q xs) (Cons (Tr) (Go (BFalse) (DL) q) $ Cons (Tr) (Go (BFalse) (DR) q) $
+                                   Cons (Tr) (Go (BTrue) (DL) q) $ Cons (Tr) (Go (BTrue) (DR) q) os)))))
+
+(def-fns _ $ (many opts : (subterm many (List (Nat)) xs) -> (many (List (Tr)) os) (erased (Opts xs os) p))
+  (let-match many xs (Cons _ q rest) ((Nil _) (values (Cons (Tr) (Halt) (Nil (Tr))) (OptsZ))))
+  (let ((many os) (erased p)) (notail $ opts rest))
+  (values (Cons (Tr) (Go (BFalse) (DL) q) $ Cons (Tr) (Go (BFalse) (DR) q) $ Cons (Tr) (Go (BTrue) (DL) q) $ Cons (Tr) (Go (BTrue) (DR) q) os)
+          (OptsS q rest os p)))
+
+(def-fns _ $ (erased mem-skip4 : (erased (Tr) t a b c d) (erased (List (Tr)) os) (erased (Mem (Tr) t os) mm) ->
+    (erased (Mem (Tr) t (Cons (Tr) a $ Cons (Tr) b $ Cons (Tr) c $ Cons (Tr) d os)) r))
+  (MemThere _ t a _ $ MemThere _ t b _ $ MemThere _ t c _ $ MemThere _ t d _ mm))
+
+(def-fns _ $ (erased opts-halt : (erased (List (Nat)) xs) (erased (List (Tr)) os) (subterm erased (Opts xs os) p) ->
+    (erased (Mem (Tr) (Halt) os) mm))
+  (match erased p _
+    ((OptsZ) (MemHere (Tr) (Halt) (Nil (Tr))))
+    ((OptsS q xs1 os1 p1) (mem-skip4 (Halt) _ _ _ _ os1 (opts-halt xs1 os1 p1)))))
+
+(def-fns _ $ (erased opts-go : (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Nat) q) (erased (Bool) w) (erased (Dir) d)
+    (subterm erased (Opts xs os) p) (erased (Mem (Nat) q xs) mq) -> (erased (Mem (Tr) (Go w d q) os) mm))
+  (match erased p _
+    (absurd (OptsZ) mq)
+    ((OptsS q1 xs1 os1 p1)
+      (match erased mq _
+        ((MemHere _ _ _)
+          (match erased w _
+            ((BFalse)
+              (match erased d _
+                ((DL) (MemHere (Tr) (Go w d q) _))
+                ((DR) (MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))))
+            ((BTrue)
+              (match erased d _
+                ((DL) (MemThere _ _ _ _ $ MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))
+                ((DR) (MemThere _ _ _ _ $ MemThere _ _ _ _ $ MemThere _ _ _ _ (MemHere (Tr) (Go w d q) _)))))))
+        ((MemThere _ _ _ _ mq1) (mem-skip4 (Go w d q) _ _ _ _ os1 (opts-go xs1 os1 q w d p1 mq1)))))))
+
+(def-fns _ $ (erased tr-mem : (erased (Nat) n) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Tr) t)
+    (erased (TrOK n t) ok) (erased (Range n xs) rg) (erased (Opts xs os) op) -> (erased (Mem (Tr) t os) mm))
+  (match erased ok _
+    ((OKHalt _) (opts-halt xs os op))
+    ((OKGo _ q w d lt) (opts-go xs os q w d op (range-mem n q xs rg lt)))))

@@ -1,0 +1,27 @@
+
+(let ((many xs) (erased rg)) (range 3))
+(let ((many O) (erased op)) (opts xs))
+(let ((many p0) (erased up)) (undefs 3))
+(def-fns _ $ (many run-tree : -> (many (Res (TNode 21 O p0)) r))
+  (let ((many r) (many _)) (build 7 O 21 O p0 hints))
+  r)
+(let ((many res)) (native-compute run-tree))
+(comptime-match many res (ROk _ tn))
+
+(let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BFalse) (DR) 2) $ Cons _ (Go (BTrue) (DL) 2) $ Cons _ (Go (BTrue) (DL) 0) $ Nil (Tr)))
+(let ((many cw0)) (rows-check 3 3 champ))
+(comptime-match many cw0 (ROk _ cw))
+(let ((many cp) (erased cdl)) (defs champ))
+(let ((many cs)) (psim cp 30 (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil cp _)))
+(comptime-match many cs (PSHalt _ ct cq cl cr chh cpr cpl))
+(comptime-match many (nat-eq (Succ ct) 21) (Equal _ _ _))
+(let ((erased cex)) (defl-ext champ cp cdl))
+(let ((erased ch)) (run-add champ _ (MkCfg cq cl chh cr) ct (Succ (Zero)) (Succ ct) (prun-run cp champ cex _ _ ct cpr)
+  (HStop champ cq cl cr chh (ext-look cp champ cq chh _ cex cpl)) (add-succ-right ct (Zero) ct (add-zero-right ct))))
+
+(def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 3 3 m) w) (erased (Nat) s)
+    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 21)) p))
+  (tn-good 3 21 xs O p0 m s tn (ext-undef 3 3 m p0 w up) w rg op h))
+
+(goal erased (BBIs 3 21))
+(qed (MkBB 3 21 champ cw ch (level-of bound) bound))
