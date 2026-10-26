@@ -1662,8 +1662,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       if m <> Many then error_in env l "`native-compute` produces its result at `many`";
       let env, h, hcode = elab_head env Many l f in
       (match h.term with
-       | Var x when h.erasure <> Erased && (match (entry env x).state with Settled _ -> true | Hypothetical -> false) -> ()
-       | t -> error_in env l "`native-compute` needs a Settled, non-erased function, and %s is not one" (qshow env t));
+       | Var x when h.erasure = Many && (match (entry env x).state with Settled _ -> true | Hypothetical -> false) -> ()
+       | t -> error_in env l "`native-compute` needs a Settled `many` function, and %s is not one" (qshow env t));
       let lv, ret = match canon env h.ty with
         | Fn (lv, [], [ ({ mult = Many; place = None; _ } as ret) ]) -> (lv, ret)
         | t -> error_in env l "`native-compute` takes a function of no parameters and one `many` return not written `at`, and %s : %s is not one" (qshow env h.term) (qshow env t) in

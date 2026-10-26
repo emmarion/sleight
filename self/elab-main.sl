@@ -778,8 +778,8 @@
                         (match many fraw (((ElabWorld) _ at ew4) ((Env) env2) ((Res) h) ((List $ List $ Nat) ctxh) ((StmtCode ctx ctxh) hpre) ((Code ctxh (Cons (Multiplicity) pos (Nil (Multiplicity)))) hcode))
                           (else (let ((many env2) (many x)) $ var-of-raw env0 fraw "a name") (values ew4 env2 (res-of env2 x) ctx (SNone _) $ coercible-code _ (Cons _ pos $ Nil _) (Many) $ var-code env2 ctx x))
                           ((RList _ _) (notail $ compute-head ew4 fuel callbacks _ sugar args env0 ctx pos))))
-                      (let-match many (match many (res-term h) (((Bool) _)) ((TVar x) (and (is-settled env2 x) $ mult-is-many $ res-erasure h)) (else (BFalse))) (BTrue)
-                        ((BFalse) (expr-error ew50 ctx expect env2 (str-cat3 (say env2 "`native-compute` needs a Settled, non-erased function, and ") (qshow env2 $ res-term h) " is not one") "native-compute")))
+                      (let-match many (match many (res-term h) (((Bool) _)) ((TVar x) (and (is-settled env2 x) $ mult-eq (res-erasure h) $ Many)) (else (BFalse))) (BTrue)
+                        ((BFalse) (expr-error ew50 ctx expect env2 (str-cat3 (say env2 "`native-compute` needs a Settled `many` function, and ") (qshow env2 $ res-term h) " is not one") "native-compute")))
                       (let ((many fty)) $ canon-env env2 $ res-ty h)
                       (let ((many (Maybe $ Entry) ret)) $ match many fty _
                         ((TFn uq _ ps rs)
