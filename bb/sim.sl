@@ -95,33 +95,33 @@
     ((BTrue) (values o8 (EncT)))))
 
 (def-adts
-  ((AllF : ((List (U8)) as) -> Type)
+  ((Zeros8 : ((List (U8)) as) -> Type)
     enum
-    (many AFNil : -> (AllF (Nil (U8))))
-    (many AFCons : (erased (List (U8)) as) (erased (AllF as) p) -> (AllF (Cons (U8) z8 as)))))
+    (many Z8Nil : -> (Zeros8 (Nil (U8))))
+    (many Z8Cons : (erased (List (U8)) as) (erased (Zeros8 as) p) -> (Zeros8 (Cons (U8) z8 as)))))
 
 (def-adts
-  ((Ext : ((List (Bool)) l) ((List (U8)) as) -> Type)
+  ((EncL : ((List (Bool)) l) ((List (U8)) as) -> Type)
     enum
-    (many ExtNil : (erased (List (U8)) as) (erased (AllF as) z) -> (Ext (Nil (Bool)) as))
-    (many ExtCons : (erased (Bool) b) (erased (U8) u) (erased (List (Bool)) l) (erased (List (U8)) as) (erased (Enc b u) e) (erased (Ext l as) p)
-       -> (Ext (Cons (Bool) b l) (Cons (U8) u as)))))
+    (many ExtNil : (erased (List (U8)) as) (erased (Zeros8 as) z) -> (EncL (Nil (Bool)) as))
+    (many ExtCons : (erased (Bool) b) (erased (U8) u) (erased (List (Bool)) l) (erased (List (U8)) as) (erased (Enc b u) e) (erased (EncL l as) p)
+       -> (EncL (Cons (Bool) b l) (Cons (U8) u as)))))
 
 (def-fns _ $ (erased ext-pop : (erased (List (Bool)) l) (erased (U8) a) (erased (List (U8)) as)
-    (erased (Ext l (Cons (U8) a as)) e) ->
+    (erased (EncL l (Cons (U8) a as)) e) ->
     (erased (Bool) h2) (erased (List (Bool)) l2) (erased (Pop l h2 l2) pp) (erased (Enc h2 a) eq)
-    (erased (Ext l2 as) e2))
+    (erased (EncL l2 as) e2))
   (match erased e _
     ((ExtNil _ z)
-      (let-match erased z (AFCons _ z1))
+      (let-match erased z (Z8Cons _ z1))
       (values (BFalse) (Nil (Bool)) (PopNil) (EncF) (ExtNil as z1)))
     ((ExtCons b _ l1 _ en e1) (values b l1 (PopCons b l1) en e1))))
 
 (def-fns _ $ (erased rep-allf : (erased (Nat) n) (erased (List (U8)) xs)
-    (subterm erased (Repeat (U8) n z8 xs) p) -> (erased (AllF xs) z))
+    (subterm erased (Repeat (U8) n z8 xs) p) -> (erased (Zeros8 xs) z))
   (match erased p _
-    ((RepeatNil _ _) (AFNil))
-    ((RepeatCons _ n1 _ xs1 p1) (AFCons xs1 (rep-allf n1 xs1 p1)))))
+    ((RepeatNil _ _) (Z8Nil))
+    ((RepeatCons _ n1 _ xs1 p1) (Z8Cons xs1 (rep-allf n1 xs1 p1)))))
 
 (def-fns _ $ (erased rep-len : (erased (Nat) n) (erased (List (U8)) xs)
     (subterm erased (Repeat (U8) n z8 xs) p) -> (erased (Length (U8) xs n) l))
@@ -154,17 +154,17 @@
     ((LengthCons _ x rest n1 l1) (SpliceHere A x x rest n1 rest rest (splice-self A rest n1 l1)))))
 
 (def-fns _ $ (many seek : (subterm many (Nat) k) (erased (List (U8)) xs as bs) (many (Nat) i j) (erased (Nat) n)
-    (erased (Zip (U8) xs i as z8 bs) z) (erased (AllF as) fa) (erased (AllF bs) fb)
+    (erased (Zip (U8) xs i as z8 bs) z) (erased (Zeros8 as) fa) (erased (Zeros8 bs) fb)
     (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb) (erased (Add i (Succ j) n) ij) ->
     (many (Nat) i2 j2) (erased (List (U8)) as2 bs2) (erased (Zip (U8) xs i2 as2 z8 bs2) z2)
-    (erased (AllF as2) fa2) (erased (AllF bs2) fb2) (erased (Length (U8) as2 i2) la2) (erased (Length (U8) bs2 j2) lb2)
+    (erased (Zeros8 as2) fa2) (erased (Zeros8 bs2) fb2) (erased (Length (U8) as2 i2) la2) (erased (Length (U8) bs2 j2) lb2)
     (erased (Add i2 (Succ j2) n) ij2))
   (let-match many k (Succ k1) ((Zero) (values i j as bs z fa fb la lb ij)))
   (let-match many j (Succ j1) ((Zero) (values i j as bs z fa fb la lb ij)))
   (let-match erased lb (LengthCons _ b bs1 _ lb1))
-  (let-match erased fb (AFCons _ fb1))
+  (let-match erased fb (Z8Cons _ fb1))
   (tail $ seek k1 xs (Cons (U8) b as) bs1 (Succ i) j1 n
-    (zip-right _ xs as bs1 i z8 b z) (AFCons as fa) fb1 (LengthCons _ _ as i la) lb1 (add-shift i (Succ j1) n ij)))
+    (zip-right _ xs as bs1 i z8 b z) (Z8Cons as fa) fb1 (LengthCons _ _ as i la) lb1 (add-shift i (Succ j1) n ij)))
 
 (def-fns _ $ (erased setnth-len : (erased Type A) (erased (List A) xs ys) (erased (Nat) i n) (erased A w)
     (subterm erased (SetNth A xs i w ys) st) (erased (Length A xs n) l) -> (erased (Length A ys n) l2))
@@ -248,7 +248,7 @@
   ((Start : ((List (U8)) xs) -> Type)
     enum
     (many MkStart : (erased (List (U8)) xs as bs) (many (Nat) i j) (erased (Zip (U8) xs i as z8 bs) z)
-       (erased (AllF as) fa) (erased (AllF bs) fb) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
+       (erased (Zeros8 as) fa) (erased (Zeros8 bs) fb) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
        (erased (Add i (Succ j) N) ij) -> (Start xs))))
 
 (def-fns _ $ (erased add-succ-inv : (erased (Nat) a b c) (erased (Add a (Succ b) (Succ c)) p) -> (erased (Add a b c) q))
@@ -466,7 +466,7 @@
     (erased (Splice (U8) tx lo len ws xs) sp) (erased (Add lo sl i) ai) (erased (Add sl (Succ sr) len) aw) (erased (Add i sr hi) ah)
     (erased (Lt sr (Succ j)) lsr)
     (erased (Run m c0 t (MkCfg q l h r)) run) (erased (Zip (U8) xs i as x bs) z)
-    (erased (Ext l as) xl) (erased (Ext r bs) xr) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
+    (erased (EncL l as) xl) (erased (EncL r bs) xr) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
     (erased (Nat) N) (erased (Add i (Succ j) N) ij) (erased (Lt N u62-modulus) nm) (erased (Add t fuel F) tf) (erased (Lt F u62-modulus) bF)
     (erased (Nat) n) (erased (Rows n n m) wf) (erased (Lt q n) lq) (erased (Double q qq) dq) (erased (Nat) b2) (erased (Double n b2) db) (erased (Length (Copy (BTr)) fa b2) lfa) (erased (Lt b2 u62-modulus) b2m) (erased (Length (U8) xs N) lx) ->
     (many (SimR m c0) res) (erased (List (U8)) ys) (unique (Bytes ys) out) (erased (List (U8)) ws2)
@@ -855,7 +855,7 @@
   (let-match erased (rep-same N tx tx2 rp rp2) (Refl _ _))
   (let-match erased rp (RepeatCons _ _ _ b0 rp0))
   (let ((many i) (many j) (erased as) (erased bs) (erased z) (erased fa) (erased fb) (erased la) (erased lb) (erased ij))
-    (seek 32768 tx (Nil (U8)) b0 (Zero) N1 N (ZHere _ _ b0) (AFNil) (rep-allf _ b0 rp0) (LengthNil _) (rep-len _ b0 rp0) (AddZero _)))
+    (seek 32768 tx (Nil (U8)) b0 (Zero) N1 N (ZHere _ _ b0) (Z8Nil) (rep-allf _ b0 rp0) (LengthNil _) (rep-len _ b0 rp0) (AddZero _)))
   (let ((many st)) (MkStart tx as bs i j z fa fb la lb ij))
   (let ((many tm)) (share tmpl))
   (let-match many (check-all cs tx tm (LengthCons _ _ _ _ (rep-len _ b0 rp0)) st a) (ROk _ ah) ((RFail _) (RFail _)))
