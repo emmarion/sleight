@@ -991,6 +991,15 @@
   (let ((many a1) (many b) (erased p) (erased la1)) (notail $ str-split rest k1 len1 l1 q))
   (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))
 
+(def-fns _ $ (many extern str-get : (many (String) s) (subterm many (Nat) i) (erased (Nat) len) (erased (StrLength s len) l) (erased (Lt i len) lt) ->
+    (many (Char) c) (erased (String) a) (erased (String) b) (erased (Append a (SCons c b) s) p) (erased (StrLength a i) la))
+  (let-match many s (SCons d rest) (absurd (SNil) (let-match erased l (SLenNil)) lt))
+  (let-match erased l (SLenCons _ _ len1 l1))
+  (let-match many i (Succ i1) ((Zero) (values d (SNil) rest (AppNil _) (SLenNil))))
+  (let-match erased lt (LtS _ _ q))
+  (let ((many c) (erased a1) (erased b) (erased p) (erased la1)) (tail $ str-get rest i1 len1 l1 q))
+  (values c (SCons d a1) b (AppCons d a1 (SCons c b) rest p) (SLenCons d a1 i1 la1)))
+
 (def-adts $ (Rope : -> Type)
   enum
   (many REmpty : -> (Rope))

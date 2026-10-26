@@ -131,6 +131,7 @@ let fns : (string * fn_spec) list =
     ("str-cmp", decision "Cmp" slice Ffi_core.str_cmp);
     ("str-eq", decision "EqDec" slice Ffi_core.str_eq);
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
+    ("str-get", spec 2 (binary (fun a i -> int "Nat" (Ffi_core.str_get (slice a) (z i)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
     ("str-nat", spec ~needs:[ "Maybe" ] 1 (unary (fun a -> match Ffi_core.str_nat (slice a) with Some n -> plain "Maybe" 1 [ int "Nat" n ] | None -> plain "Maybe" 0 [])));

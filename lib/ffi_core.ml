@@ -118,6 +118,7 @@ let str_length (_, _, l) = Z.of_int l
 let str_eq (s1, o1, l1) (s2, o2, l2) =
   let rec go i = i = l1 || (String.unsafe_get s1 (o1 + i) = String.unsafe_get s2 (o2 + i) && go (i + 1)) in
   eq_dec (l1 = l2 && go 0)
+let str_get (s, o, _) i = Z.of_int (Char.code (String.unsafe_get s (o + Z.to_int i)))
 let str_split (s, o, l) k = let k = Z.to_int k in ((s, o, k), (s, o + k, l - k))
 let nat_str n = let s = Z.to_string n in (s, 0, String.length s)
 let str_nat (s, o, l) =

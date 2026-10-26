@@ -1,0 +1,12 @@
+; expect: (MkPair _ _ (Cons _ (Some _ #\a) $ Cons _ (Some _ #\b) $ Cons _ (Some _ #\xff) $ Cons _ (None _) $ Nil _) $ Cons _ (Some _ #\x00) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Nil _)
+(def-fns _ $ (many char-at : (many (String) s) (many (Nat) i) -> (many (Maybe (Char)) r))
+  (let ((many len) (erased l)) (str-length s))
+  (let-match many (lt-dec i len) (Yes _ _ lt) ((No _ _ _) (None _)))
+  (let ((many c) (erased _) (erased _) (erased _) (erased _)) (str-get s i len l lt))
+  (Some _ c))
+(def-fns _ $ (many chars : (many (String) s) -> (many (List $ Maybe (Char)) r))
+  (Cons _ (char-at s 0) $ Cons _ (char-at s 2) $ Cons _ (char-at s 3) $ Cons _ (char-at s 4) $ Nil _))
+(let ((many early)) (chars "a\"b\xff"))
+(def-fns _ $ (many get-test : -> (many (Pair (List $ Maybe (Char)) (List $ Maybe (Char))) r))
+  (MkPair _ _ early $ chars "\x00q"))
+get-test

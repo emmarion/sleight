@@ -410,7 +410,7 @@
     (many ExShl : -> (Extern 2)) (many ExShr : -> (Extern 2)) (many ExU62Shl : -> (Extern 2)) (many ExU62Shr : -> (Extern 2))
     (many ExNatAnd : -> (Extern 2)) (many ExNatOr : -> (Extern 2)) (many ExNatXor : -> (Extern 2)) (many ExU62And : -> (Extern 2)) (many ExU62Or : -> (Extern 2)) (many ExU62Xor : -> (Extern 2)) (many ExU62Inc : -> (Extern 1)) (many ExU62Dec : -> (Extern 1))
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
-    (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1)) (many ExStrNat : -> (Extern 1))
+    (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExStrGet : -> (Extern 2)) (many ExNatStr : -> (Extern 1)) (many ExStrNat : -> (Extern 1))
     (many ExU62Add : -> (Extern 2)) (many ExU62Sub : -> (Extern 2)) (many ExU62Mul : -> (Extern 2)) (many ExU62Div : -> (Extern 2)) (many ExU62Divmod : -> (Extern 2)) (many ExU62Mod : -> (Extern 2)) (many ExU62Cmp : -> (Extern 2))
     (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExNatEq : -> (Extern 2)) (many ExU62Eq : -> (Extern 2)) (many ExStrEq : -> (Extern 2))
     (many ExBitLength : -> (Extern 1)) (many ExU62BitLength : -> (Extern 1)) (many ExBitTest : -> (Extern 2)) (many ExU62BitTest : -> (Extern 2)) (many ExArrayGet : -> (Extern 2))
@@ -436,7 +436,7 @@
     ((ExNatCmp) (Some _ cmp)) ((ExStrCmp) (Some _ cmp))
     ((ExAdd) (None _)) ((ExSub) (None _)) ((ExMul) (None _)) ((ExDiv) (None _)) ((ExDivmod) (None _))
     ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExShl) (None _)) ((ExShr) (None _)) ((ExU62Shl) (None _)) ((ExU62Shr) (None _)) ((ExNatAnd) (None _)) ((ExNatOr) (None _)) ((ExNatXor) (None _)) ((ExU62And) (None _)) ((ExU62Or) (None _)) ((ExU62Xor) (None _)) ((ExU62Inc) (None _)) ((ExU62Dec) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
-    ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExNatStr) (None _)) ((ExStrNat) (Some _ $ Cons _ 0 $ Cons _ 1 $ Nil _))
+    ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExStrGet) (None _)) ((ExNatStr) (None _)) ((ExStrNat) (Some _ $ Cons _ 0 $ Cons _ 1 $ Nil _))
     ((ExU62Add) (None _)) ((ExU62Sub) (None _)) ((ExU62Mul) (None _)) ((ExU62Div) (None _)) ((ExU62Divmod) (None _)) ((ExU62Mod) (None _)) ((ExU62Cmp) (Some _ cmp))
     ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExArrayGet) (None _))
     ((ExNatEq) (Some _ dec)) ((ExU62Eq) (Some _ dec)) ((ExStrEq) (Some _ dec)) ((ExBitLength) (None _)) ((ExU62BitLength) (None _)) ((ExBitTest) (Some _ dec)) ((ExU62BitTest) (Some _ dec))
@@ -451,7 +451,7 @@
     ((ExArrayNew) 1) ((ExArraySwap) 3) ((ExArrayPluck) 2) ((ExArrayPlace) 3)
     ((ExArraySwapImm) 3) ((ExArrayPlaceImm) 3) ((ExArrayLength) 1) ((ExListToArray) 1) ((ExArrayMake) 2)
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2) ((ExShl) 2) ((ExShr) 2) ((ExU62Shl) 2) ((ExU62Shr) 2) ((ExNatAnd) 2) ((ExNatOr) 2) ((ExNatXor) 2) ((ExU62And) 2) ((ExU62Or) 2) ((ExU62Xor) 2) ((ExU62Inc) 1) ((ExU62Dec) 1)
-    ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1) ((ExStrNat) 1)
+    ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExStrGet) 2) ((ExNatStr) 1) ((ExStrNat) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)
     ((ExNatEq) 2) ((ExU62Eq) 2) ((ExStrEq) 2) ((ExBitLength) 1) ((ExU62BitLength) 1) ((ExBitTest) 2) ((ExU62BitTest) 2)
@@ -474,7 +474,7 @@
     ((ExShl) "shl") ((ExShr) "shr") ((ExU62Shl) "u62-shl") ((ExU62Shr) "u62-shr")
     ((ExNatAnd) "nat-and") ((ExNatOr) "nat-or") ((ExNatXor) "nat-xor") ((ExU62And) "u62-and") ((ExU62Or) "u62-or") ((ExU62Xor) "u62-xor") ((ExU62Inc) "u62-inc") ((ExU62Dec) "u62-dec")
     ((ExNatHalve) "nat-halve") ((ExTrim) "trim") ((ExFlatten) "flatten")
-    ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str") ((ExStrNat) "str-nat")
+    ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExStrGet) "str-get") ((ExNatStr) "nat-str") ((ExStrNat) "str-nat")
     ((ExU62Add) "u62-add") ((ExU62Sub) "u62-sub") ((ExU62Mul) "u62-mul") ((ExU62Div) "u62-div") ((ExU62Divmod) "u62-divmod") ((ExU62Mod) "u62-mod") ((ExU62Cmp) "u62-cmp")
     ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExArrayGet) "array-get")
     ((ExNatEq) "nat-eq") ((ExU62Eq) "u62-eq") ((ExStrEq) "str-eq") ((ExBitLength) "bit-length") ((ExU62BitLength) "u62-bit-length") ((ExBitTest) "bit-test") ((ExU62BitTest) "u62-bit-test")
@@ -490,7 +490,7 @@
   Cons _ (MkSomeExtern _ $ ExShl) $ Cons _ (MkSomeExtern _ $ ExShr) $ Cons _ (MkSomeExtern _ $ ExU62Shl) $ Cons _ (MkSomeExtern _ $ ExU62Shr) $
   Cons _ (MkSomeExtern _ $ ExNatAnd) $ Cons _ (MkSomeExtern _ $ ExNatOr) $ Cons _ (MkSomeExtern _ $ ExNatXor) $ Cons _ (MkSomeExtern _ $ ExU62And) $ Cons _ (MkSomeExtern _ $ ExU62Or) $ Cons _ (MkSomeExtern _ $ ExU62Xor) $ Cons _ (MkSomeExtern _ $ ExU62Inc) $ Cons _ (MkSomeExtern _ $ ExU62Dec) $
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
-  Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $ Cons _ (MkSomeExtern _ $ ExStrNat) $
+  Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExStrGet) $ Cons _ (MkSomeExtern _ $ ExNatStr) $ Cons _ (MkSomeExtern _ $ ExStrNat) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $
   Cons _ (MkSomeExtern _ $ ExLtDec) $ Cons _ (MkSomeExtern _ $ ExU62LtDec) $ Cons _ (MkSomeExtern _ $ ExArrayGet) $
   Cons _ (MkSomeExtern _ $ ExNatEq) $ Cons _ (MkSomeExtern _ $ ExU62Eq) $ Cons _ (MkSomeExtern _ $ ExStrEq) $

@@ -552,6 +552,7 @@
       ((ExBitTest) (ErCtor (match many (nat-bit-test na nb) (((Nat) _)) ((Bit0) 0) ((Bit1) 1)) $ Nil _))
       ((ExNatHalve) (ErPayload $ PHalf na))
       ((ExStrLength) (let ((many len) (erased _)) (str-length sa)) (ErPayload $ PNat len))
+      ((ExStrGet) (ErPayload $ PNat $ byte-at sa nb))
       ((ExNatStr) (ErPayload $ PStr $ nat-str na))
       ((ExStrNat) (match many (str-nat sa) _ ((None _) (ErCtor 0 $ Nil _)) ((Some _ k) (ErCtor 1 $ Cons _ (PNat k) $ Nil _))))
       ((ExNatMod)
