@@ -1,4 +1,4 @@
-(def-fns _ $ (many is-head : (unique (MacroWorld) mw) (many (Raw) hd)
+(def-fns _ $ (many is-head : (unique (MacroWorld) mw at vacant-slot) (many (Raw) hd)
     (erased Type T) (erased T t) (many (Settled (MErased) T t) want) -> (unique (MacroWorld) mw2 at mw) (many (Bool) b))
   (let-match many hd (RawSymbol _ s) (else (values mw (BFalse))))
   (let ((unique mw1) (many res)) (resolve mw s))
@@ -16,13 +16,13 @@
   (many HDouble : -> (OrderHead))
   (many HOther : -> (OrderHead)))
 
-(def-fns _ $ (many head-or : (unique (MacroWorld) mw) (many (Raw) hd) (erased Type T) (erased T t) (many (Settled (MErased) T t) want)
+(def-fns _ $ (many head-or : (unique (MacroWorld) mw at vacant-slot) (many (Raw) hd) (erased Type T) (erased T t) (many (Settled (MErased) T t) want)
     (many (OrderHead) k) (many (OrderHead) found) -> (unique (MacroWorld) mw2 at mw) (many (OrderHead) r))
   (let-match many found (HOther) (else (values mw found)))
   (let ((unique mw1) (many b)) (is-head mw hd _ _ want))
   (values mw1 $ match many b (((OrderHead) _)) ((BTrue) k) ((BFalse) found)))
 
-(def-fns _ $ (many order-head : (unique (MacroWorld) mw) (many (Raw) hd) -> (unique (MacroWorld) mw2 at mw) (many (OrderHead) k))
+(def-fns _ $ (many order-head : (unique (MacroWorld) mw at vacant-slot) (many (Raw) hd) -> (unique (MacroWorld) mw2 at mw) (many (OrderHead) k))
   (let ((unique mw1) (many k1)) (head-or mw hd _ _ (settled-of erased Lt) (HLt) (HOther)))
   (let ((unique mw2) (many k2)) (head-or mw1 hd _ _ (settled-of erased Le) (HLe) k1))
   (let ((unique mw3) (many k3)) (head-or mw2 hd _ _ (settled-of erased Ne) (HNe) k2))
@@ -108,7 +108,7 @@
       (notail $ reach f1 edges edges path2 (Cons _ v seen) z a b p))))
   (match many attempt _ ((Some _ r) (Some _ r)) ((None _) (tail $ reach fuel edges rest path seen z a b p))))
 
-(def-fns _ $ (many decompose : (unique (MacroWorld) mw) (subterm many (Raw) t) -> (unique (MacroWorld) mw2 at mw) (many (Raw) base) (many (Nat) n))
+(def-fns _ $ (many decompose : (unique (MacroWorld) mw at vacant-slot) (subterm many (Raw) t) -> (unique (MacroWorld) mw2 at mw) (many (Raw) base) (many (Nat) n))
   (let-match many t (RawList _ ts) (else (values mw t (Zero))))
   (let-match many ts (Cons _ hd t1) ((Nil _) (values mw t (Zero))))
   (let-match many t1 (Cons _ x t2) ((Nil _) (values mw t (Zero))))
@@ -132,7 +132,7 @@
     ((HDouble) (Cons _ (MkEdge x 0 1 (lemma-app p _ _ (settled-of erased double-le) 2 $ Cons _ n $ Nil _) y) more))
     (else more)))
 
-(def-fns _ $ (many order-edges : (unique (MacroWorld) mw) (subterm many (List $ Raw) params) (many (Pos) p) ->
+(def-fns _ $ (many order-edges : (unique (MacroWorld) mw at vacant-slot) (subterm many (List $ Raw) params) (many (Pos) p) ->
     (unique (MacroWorld) mw2 at mw) (many (List (Edge)) out))
   (let-match many params (Cons _ prm rest) ((Nil _) (values mw (Nil _))))
   (let ((unique mw1) (many later)) (notail $ order-edges mw rest p))
@@ -144,7 +144,7 @@
   (let ((unique mw2) (many k)) (order-head mw1 hd))
   (values mw2 $ hyp-edges k xs names p later))
 
-(def-fns _ $ (many norm-edges : (unique (MacroWorld) mw) (subterm many (List (Edge)) es) ->
+(def-fns _ $ (many norm-edges : (unique (MacroWorld) mw at vacant-slot) (subterm many (List (Edge)) es) ->
     (unique (MacroWorld) mw2 at mw) (many (List (Edge)) out))
   (let-match many es (Cons _ e rest) ((Nil _) (values mw (Nil _))))
   (let-match many e (MkEdge x pn qn pr y))
@@ -177,7 +177,7 @@
   (let-match many (lemma-map p _ _ (settled-of erased NeLt) 2 $ prove-lt edges x a z b p) (None _) ((Some _ pr) (Some _ pr)))
   (lemma-map p _ _ (settled-of erased NeGt) 2 $ prove-lt edges z b x a p))
 
-(def-fns _ $ (many lt-lemma-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many lt-lemma-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ header _) ((Nil _) (macro-fail mw here "lt-lemma: expected a signature")))
   (let-match many header (RawList _ hs) (else (macro-fail mw here "lt-lemma: expected a signature")))

@@ -1,7 +1,7 @@
 ; needs: ../std/macro macro_fmt_lib
 ; expect: "<7>"
 (let ((erased special-type)) (Special))
-(def-fns _ $ (many minted-let-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many minted-let-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ (settled-of erased special-type) let))
   (values mw1 $ Cons _ (RawSettled here _ _ _ h) $ Nil _))

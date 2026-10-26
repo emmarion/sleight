@@ -1,6 +1,6 @@
 ; needs: ../std/macro ../std/nat ../std/tactics
 ; expect: "ok"
-(def-fns _ $ (many gen-name : (unique (MacroWorld) mw) (many (Pos) p) (many (String) s) ->
+(def-fns _ $ (many gen-name : (unique (MacroWorld) mw at vacant-slot) (many (Pos) p) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Raw) r))
   (let ((unique mw1) (many n) (erased g)) (gensym mw s))
   (values mw1 (RawSymbol p $ SGen n s g)))
@@ -8,7 +8,7 @@
 (def-fns _ $ (many entry : (many (Pos) p) (many (String) m) (many (Raw) ty) (many (Raw) x) -> (many (Raw) r))
   (RawList p $ Cons _ (RawSymbol p (SName m)) $ Cons _ ty $ Cons _ x $ Nil _))
 
-(def-fns _ $ (many gen-chain-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many gen-chain-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many a)) (gen-name mw here "a"))
   (let ((unique mw2) (many b)) (gen-name mw1 here "b"))

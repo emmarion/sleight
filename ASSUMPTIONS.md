@@ -2259,10 +2259,7 @@ reading that may be mistaken.
 Choices both implementations make about the world where DESIGN.md is
 silent.
 
-214. **A world is a token word at runtime.** A continuation's world
-     parameter is passed as an argument like any non-erased one, the
-     driver supplying a token, and is never returned, the world a step
-     or a `world-do` gives back being `at` the one it took (section 36).
+214. **`world-do` is a node of its own.**
      `world-do` is a node of the post-erasure code of its own (`CWorldDo`
      in both compilers), evaluated by the driver's `perform` whether or
      not extern implementations run, and extracted to a call of it. A

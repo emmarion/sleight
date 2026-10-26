@@ -1129,7 +1129,7 @@
   enum
   (many Exit : (erased (Level) L) (many (U8) code) -> (Program L))
   (many Continue : (erased (Level) L)
-     (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
+     (unique (UniqueFn L (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program L) p)) k)
      -> (Program L)))
 
 (def-adts $ (Stopwatch : -> Type)
@@ -1562,7 +1562,7 @@
 (def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
 (def-opaque $ (MacroWorld : -> Type))
 
-(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
+(def-prim $ (many gensym : (unique (MacroWorld) mw at vacant-slot) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
 
 (def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
@@ -1585,7 +1585,7 @@
 
 (def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
-    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique (MacroWorld) mw at vacant-slot) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
     (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
 
 (def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
@@ -1612,19 +1612,19 @@
     (erased (Placed s T v) p) (erased (Placed s T v) q) ->
     (erased (Eq (Placed s T v) p q) e)))
 
-(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+(def-prim $ (many intern-nat : (unique (MacroWorld) mw at vacant-slot) (many (Nat) n) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
 
-(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+(def-prim $ (many intern-char : (unique (MacroWorld) mw at vacant-slot) (many (Char) c) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
 
-(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+(def-prim $ (many intern-string : (unique (MacroWorld) mw at vacant-slot) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
-(def-prim $ (many mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+(def-prim $ (many mint-settled : (unique (MacroWorld) mw at vacant-slot) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)))
 
-(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+(def-prim $ (many mint-settled-erased : (unique (MacroWorld) mw at vacant-slot) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)))
 
 (def-adts $ (Symbol : -> Type)
@@ -1728,10 +1728,10 @@
   (many RHypothetical : -> (Resolution))
   (many RUnbound : -> (Resolution)))
 
-(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+(def-prim $ (many resolve : (unique (MacroWorld) mw at vacant-slot) (many (Symbol) s) ->
     (unique mw is mw2 at mw) (many (Resolution) r)))
 
-(def-prim $ (many read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+(def-prim $ (many read-file : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (String) path) ->
     (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)))
 
 (def-adts $ (Raw : -> Type)
@@ -1744,7 +1744,7 @@
 (def-adts $ (Macro : -> Type)
   enum newtype
   (many MkMacro : (erased (Level) L)
-     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+     (many (Fn L (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
                (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
      -> (Macro)))
 
@@ -1971,11 +1971,11 @@
     (RawSettled p _ _ _ h))
   (def-fns _ $ (many app : (many (Pos) p) (many (Raw) f) (many (List $ Raw) xs) -> (many (Raw) r))
     (RawList p $ Cons _ f xs))
-  (def-fns _ $ (many fail : (unique (MacroWorld) mw) (many (Pos) p) (many (String) s) ->
+  (def-fns _ $ (many fail : (unique (MacroWorld) mw at vacant-slot) (many (Pos) p) (many (String) s) ->
       (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
     (let ((unique mw1) (many h)) (intern-string mw s))
     (values mw1 $ Cons _ (app p (raw p _ _ _ (settled-of many compile-error)) $ Cons _ (raw p _ _ _ h) $ Nil _) $ Nil _))
-  (def-fns _ $ (many constant : (unique (MacroWorld) mw) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (Const)) c))
+  (def-fns _ $ (many constant : (unique (MacroWorld) mw at vacant-slot) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (Const)) c))
     (let ((unique mw0) (many res)) (match many r (((MacroWorld) w at mw) ((Resolution) _))
       ((RawSettled _ _ _ _ c) (values mw (RSettled _ _ _ c)))
       ((RawSymbol _ s) (resolve mw s))
@@ -1991,7 +1991,7 @@
     (let-match many u (MkU8 n _))
     (let ((unique mw3) (many h)) (intern-nat mw2 n))
     (values mw3 (Some _ $ MkConst _ h)))
-  (def-fns _ $ (many constants : (unique (MacroWorld) mw) (subterm many (List $ Raw) rs) ->
+  (def-fns _ $ (many constants : (unique (MacroWorld) mw at vacant-slot) (subterm many (List $ Raw) rs) ->
       (unique (MacroWorld) mw2 at mw) (many (Maybe $ List $ Const) cs))
     (let-match many rs (Cons _ r rest) ((Nil _) (values mw (Some _ $ Nil _))))
     (let ((unique mw1) (many c)) (constant mw r))
@@ -1999,13 +1999,13 @@
     (let ((unique mw2) (many more)) (notail $ constants mw1 rest))
     (let-match many more (Some _ xs) ((None _) (values mw2 (None _))))
     (values mw2 (Some _ $ Cons _ x xs)))
-  (def-fns _ $ (many succs : (unique (MacroWorld) mw) (subterm many (Nat) k) (erased (Nat) n) (many (Settled (MMany) (Nat) n) h) ->
+  (def-fns _ $ (many succs : (unique (MacroWorld) mw at vacant-slot) (subterm many (Nat) k) (erased (Nat) n) (many (Settled (MMany) (Nat) n) h) ->
       (unique (MacroWorld) mw2 at mw) (many (Result (Const)) r))
     (let-match many k (Succ k1) ((Zero) (values mw (Ok _ $ MkConst _ h))))
     (let ((unique mw1) (many r)) (settled-val-apply mw (settled-of many Succ) h))
     (let-match many r (Ok _ h1) ((Fail _ msg) (values mw1 (Fail _ msg))))
     (tail $ succs mw1 k1 _ h1))
-  (def-fns _ $ (many unary-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+  (def-fns _ $ (many unary-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
       (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
     (let ((many usage)) "`unary` takes one or two constants of type `Nat` or `Char`")
     (let ((unique mw1) (many cs)) (constants mw args))
@@ -2035,7 +2035,7 @@
     (values mw5 $ Cons _ (app here (raw here _ _ _ (settled-of many let-match))
       $ Cons _ (raw here _ _ _ (settled-of many erased)) $ Cons _ (raw here _ _ _ hp)
       $ Cons _ (app here (raw here _ _ _ (settled-of many Refl)) $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ Nil _) $ Nil _) $ Nil _))
-  (def-fns _ $ (many prove-literal-lt-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+  (def-fns _ $ (many prove-literal-lt-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
       (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
     (let ((many usage)) "`prove-literal-lt` takes two constants of type `Nat` or `Char`")
     (let ((unique mw1) (many cs)) (constants mw args))

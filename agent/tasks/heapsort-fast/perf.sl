@@ -57,7 +57,7 @@
 
 (def-lvl Perf)
 
-(def-unique Perf $ (unique perf-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Perf) next))
+(def-unique Perf $ (unique perf-start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program Perf) next))
   (let ((erased xs) (erased small) (erased len) (many cs) (erased rel))
     (perf-gen perf-size 42 _ (add-zero-right _) _ (AllToNil _ _ _) (LengthNil _) (Nil _) (CopiesNil _)))
   (let ((unique a)) (list-to-array _ cs))

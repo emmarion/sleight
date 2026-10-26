@@ -2,7 +2,7 @@
 ; expect: (MkPair _ _ (MkPair _ _ 46 $ MkPair _ _ "hi" #\z) $ MkPair _ _ (MkPair _ _ 40 40) $ MkPair _ _ "erased many unique" "many")
 (let ((many k)) 40)
 (let ((unique u)) (MkPair _ _ 1 2))
-(def-fns _ $ (many dbl-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many dbl-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
   (let ((unique mw0) (many mn)) (arg-nat mw a))

@@ -19,7 +19,7 @@
     ((IsOther) "other")
     ((Missing) "missing")))
 
-(def-fns _ $ (many show-kind : (many (String) label) (many (Result (EntryKind)) r) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns _ $ (many show-kind : (many (String) label) (many (Result (EntryKind)) r) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let ((unique w1) (many _)) (world-do _ w $ match many r (((Request (Unit)) _))
     ((Ok _ k) (WriteOut (str-append label (str-append (kind-name k) "\n"))))
     ((Fail _ m) (WriteErr m))))
@@ -27,7 +27,7 @@
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many _)) (world-do _ w (DeleteFile "io-stat-test.txt")))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteFile "io-stat-test.txt" "one")))
   (let ((unique w3) (many _)) (world-do _ w2 (AppendFile "io-stat-test.txt" "two")))

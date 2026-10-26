@@ -248,7 +248,7 @@
 
 (def-lvl Demo)
 
-(def-unique Demo $ (unique demo-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Demo) next))
+(def-unique Demo $ (unique demo-start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program Demo) next))
   (let ((erased xs) (erased asc) (erased small) (erased len) (many cs) (erased rel))
     (gen demo-top demo-top-fits demo-h0r demo-dh0 demo-h0-fits (Nil (Nat)) (AscOne (Nat) Le demo-h0)
       (AllToCons (Nat) Lt demo-h0 (Nil (Nat)) u62-modulus demo-h0-fits (AllToNil (Nat) Lt u62-modulus))

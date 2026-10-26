@@ -5,7 +5,7 @@
 (let ((erased E)) (Nat))
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
-(def-fns _ $ (many probe-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many probe-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
   (let-match many a (RawSymbol _ s) (else (values mw (Nil _))))
@@ -17,7 +17,7 @@
   (let ((unique mw2) (many o)) (str-raw mw1 here t))
   (values mw2 $ Cons _ o $ Nil _))
 (let ((many probe)) (MkMacro _ probe-fn))
-(def-fns _ $ (many same-let-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many same-let-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many r)) (resolve mw $ SName "let"))
   (let ((unique mw2) (many t)) $ match many r (((MacroWorld) _ at mw1) ((String) _))
@@ -35,7 +35,7 @@
   (same-let))
 (def-fns _ $ (many branch : (many (Maybe (Nat)) m) -> (many (String) s))
   (match many m _ ((None _) (probe k)) ((Some _ v) (probe v))))
-(def-fns _ $ (many gen-name-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many gen-name-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
   (let-match many a (RawSymbol _ s) (else (values mw (Nil _))))
@@ -45,7 +45,7 @@
 (let ((many gen-name)) (MkMacro _ gen-name-fn))
 (def-fns _ $ (many named : (many (Pos) here) (many (String) b) (many (Raw) call) -> (many (Raw) r))
   (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSymbol here (SName b)) $ Nil _) $ Nil _) $ Cons _ call $ Nil _))
-(def-fns _ $ (many gen-probe-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many gen-probe-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many n) (erased g)) (gensym mw "fresh"))
   (let ((many sym)) (RawSymbol here $ SGen n "fresh" g))

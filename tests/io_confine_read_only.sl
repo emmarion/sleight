@@ -12,14 +12,14 @@
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
-(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
+(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w at vacant-slot) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
   (let ((unique w1) (many r)) (world-do _ w req))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   w2)
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1)) (report _ "stat cwd" w (Stat ".")))
   (let ((unique w2)) (report _ "list cwd" w1 (ListDir ".")))
   (let ((unique w3)) (report _ "mkdir" w2 (MkDir "io-confine-read-only-test")))

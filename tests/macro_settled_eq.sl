@@ -7,7 +7,7 @@
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) s))
   (match many r _ ((None _) "no") ((Some _ _) "yes")))
-(def-fns _ $ (many eqs-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many eqs-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many tx)) (settled-type _ _ _ (settled-of many xs)))
   (let ((many ty)) (settled-type _ _ _ (settled-of many ys)))

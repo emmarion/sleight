@@ -16,7 +16,7 @@
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
-(def-fns PA $ (many count : (unique (Counter) c) (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next))
+(def-fns PA $ (many count : (unique (Counter) c) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next))
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
   (match many line _
     ((None _)
@@ -26,10 +26,10 @@
         ((No _ _ _) (values w1 (Exit P code0)))))
     ((Some _ _)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
-      (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next)) (count c2 v))
+      (def-unique P $ (unique again : (unique (World) v at vacant-slot) -> (unique (World) v2 at v) (unique (Program P) next)) (count c2 v))
       (values w1 (Continue P again)))))
 
 (let ((unique (Counter) counter)) (MkCounter 0))
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next)) (count counter w))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next)) (count counter w))
 
 (Continue P start)

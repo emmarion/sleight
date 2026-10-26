@@ -19,19 +19,19 @@
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
-(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
+(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w at vacant-slot) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
   (let ((unique w1) (many r)) (world-do _ w req))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   w2)
 
-(def-fns _ $ (many read-in : (many (String) label) (unique (World) w) (many (String) dir) (many (String) path) -> (unique (World) w2 at w))
+(def-fns _ $ (many read-in : (many (String) label) (unique (World) w at vacant-slot) (many (String) dir) (many (String) path) -> (unique (World) w2 at w))
   (let ((unique w1) (many r)) (world-do _ w (ReadFileIn dir path)))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ x) (str-append " read " $ str-append x "\n")) ((Fail _ m) (str-append ": " $ str-append m "\n"))))))
   w2)
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1)) (report _ "mkdir" w (MkDir "io-rfi-test")))
   (let ((unique w2)) (report _ "mkdir in" w1 (MkDir "io-rfi-test/in")))
   (let ((unique w3)) (report _ "write" w2 (WriteFile "io-rfi-test/in/a.txt" "inner")))

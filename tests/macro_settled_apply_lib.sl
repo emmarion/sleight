@@ -3,7 +3,7 @@
   enum
   (many MkNatH : (erased (Nat) n) (many (Settled (MMany) (Nat) n) h) -> (NatH)))
 
-(def-fns _ $ (many arg-nat-h : (unique (MacroWorld) mw) (many (Raw) r) ->
+(def-fns _ $ (many arg-nat-h : (unique (MacroWorld) mw at vacant-slot) (many (Raw) r) ->
     (unique (MacroWorld) mw2 at mw) (many (Maybe (NatH)) v))
   (let-match many r (RawSettled _ _ _ _ c) (else (values mw (None _))))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw (None _))))
@@ -12,7 +12,7 @@
   (let-match erased j (JMRefl _ _))
   (values mw1 (Some _ $ MkNatH _ c)))
 
-(def-fns _ $ (many two-nats : (unique (MacroWorld) mw) (many (List $ Raw) args) ->
+(def-fns _ $ (many two-nats : (unique (MacroWorld) mw at vacant-slot) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (Maybe $ Pair (NatH) (NatH)) r))
   (let-match many args (Cons _ ra r1) ((Nil _) (values mw (None _))))
   (let-match many r1 (Cons _ rb r2) ((Nil _) (values mw (None _))))
@@ -23,7 +23,7 @@
   (let-match many mb (Some _ hb) ((None _) (values mw2 (None _))))
   (values mw2 (Some _ $ MkPair _ _ ha hb)))
 
-(def-fns _ $ (many lit-lt-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many lit-lt-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many m)) (two-nats mw args))
   (let-match many m (Some _ ab) ((None _) (macro-fail mw1 here "`lit-lt` takes two numerals")))
@@ -38,7 +38,7 @@
   (values mw3 $ Cons _ (RawSettled here _ _ _ hp) $ Nil _))
 (let ((many lit-lt)) (MkMacro _ lit-lt-fn))
 
-(def-fns _ $ (many pair-of-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many pair-of-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many m)) (two-nats mw args))
   (let-match many m (Some _ ab) ((None _) (macro-fail mw1 here "`pair-of` takes two numerals")))
@@ -54,7 +54,7 @@
   (values mw4 $ Cons _ (RawSettled here _ _ _ p-h) $ Cons _ (RawSettled here _ _ _ l-h) $ Nil _))
 (let ((many pair-of)) (MkMacro _ pair-of-fn))
 
-(def-fns _ $ (many succ-of-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many succ-of-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ ra _) ((Nil _) (macro-fail mw here "`succ-of` takes a numeral")))
   (let ((unique mw1) (many ma)) (arg-nat-h mw ra))
@@ -69,7 +69,7 @@
   enum
   (many MkSame : (erased (Nat) a) (erased a is b) -> (Same a)))
 
-(def-fns _ $ (many same-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many same-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many nat-h)) (settled-of erased nat-type))
   (let ((unique mw1) (many x)) (mint-settled mw _ nat-h 5))

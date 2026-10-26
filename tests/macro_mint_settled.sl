@@ -4,7 +4,7 @@
 (comptime-match many xs (Cons _ x rest))
 (def-fns _ $ (many in-body : -> (many (List (Nat)) r))
   (mint-list 5))
-(def-fns _ $ (many distinct-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many distinct-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many v)) (Cons _ 1 $ Nil _))
   (let ((unique mw1) (many a)) (mint-settled mw _ nats-h v))
@@ -13,7 +13,7 @@
   (let ((unique mw4) (many s)) (str-raw mw3 here $ match many e _ ((Some _ _) "equal") ((None _) "distinct")))
   (values mw4 $ Cons _ s $ Nil _))
 (let ((many distinct)) (MkMacro _ distinct-fn))
-(def-fns _ $ (many mint-eq-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many mint-eq-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ nats-h (Nil _)))
   (let ((many nats-raw)) $ RawList here $ Cons _ (RawSymbol here (SName "List")) $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "Nat")) $ Nil _) $ Nil _)

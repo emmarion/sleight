@@ -50,7 +50,7 @@
 
 ; ---- The levels of the compiler's own Program (self/main.sl), and the codes it exits with.
 
-(def-fns _ $ (many say-to : (many (Bool) err) (many (String) s) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns _ $ (many say-to : (many (Bool) err) (many (String) s) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let ((unique w1) (many _)) (world-do _ w $ match many err (((Request $ Unit) _)) ((BTrue) (WriteErr s)) ((BFalse) (WriteOut s))))
   w1)
 
@@ -70,7 +70,7 @@
 (comptime-match many one-below-modulus (Yes fail-a fail-b fail-lt))
 (let ((many exit-fail)) $ MkU8 1 fail-lt)
 
-(def-fns util-lvl $ (many runtime-error : (many (String) m) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns util-lvl $ (many runtime-error : (many (String) m) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (values (say-to (BTrue) (str-cat3 "slc: runtime error: " m "\n") w) (Exit _ exit-fail)))
 
 (def-fns util-lvl $ (many heap-crash : (erased (Hist Block) hs) (many (Heap hs) hp) -> (many (Maybe $ String) m))
@@ -86,7 +86,7 @@
 ; ---- The Program walk: each Continue step of the program becomes one of slc's, applying the program's
 ; continuation with self/eval.sl's apply to slc's own world, which a world-do it meets performs.
 
-(def-fns interp-lvl $ (many interp-program : (many (Nat) fuel) (many (List $ Ctor) pcs) (many (Performer (World) 0 0) pf) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns interp-lvl $ (many interp-program : (many (Nat) fuel) (many (List $ Ctor) pcs) (many (Performer (ElabWorld) 0 0) pf) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many (heap-crash _ hp) (None _) ((Some _ m) (runtime-error m w)))
   (let ((erased _) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
   (let ((many f0)) (field-at _ fields 0 (widen-ref _ _ le1 v)))
@@ -96,16 +96,18 @@
       (match many (lt-dec n u8-modulus) _
         ((Yes _ _ p) (values w (Exit _ (MkU8 n p))))
         ((No _ _ _) (values w (Exit _ exit-fail))))))
-  (def-unique io-lvl $ (unique step : (unique (World) u) -> (unique (World) u2 at u) (unique (Program io-lvl) next))
-    (let ((erased _) (many hp2) (erased le2) (many token)) $ halloc _ hp1 $ BToken _)
-    (let ((erased _) (many hp3) (erased _) (many vs) (erased pk) (unique (World) u1)) (apply 0 0 _ fuel _ hp2 (widen-ref _ _ le2 f0) (Cons _ token $ Nil _) many-one _ pf u))
+  (def-unique io-lvl $ (unique step : (unique (World) u at vacant-slot) -> (unique (World) u2 at u) (unique (Program io-lvl) next))
+    (let ((erased _) (many hp3) (erased _) (many vs) (erased pk) (unique (ElabWorld) eu)) (apply 0 0 _ fuel _ hp1 f0 (Nil _) many-one _ pf $ MkElabWorld _ $ place-at _ u))
+    (let-match unique eu (MkElabWorld _ pu))
+    (let ((unique u1)) (unplace-at _ _ _ pu))
+    (let-match erased (placed-slot _ _ _ pu) (Refl _ _))
     (tail $ interp-program fuel pcs pf _ hp3 (vals-one _ vs pk) u1))
   (values w (Continue _ step)))
 
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.
 
-(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many fi (Cons _ f rest) ((Nil _) (values w (Exit _ exit-ok))))
   (let-match many f (MkPair _ _ v0 ty))
   (let ((many v)) (widen-ref _ _ le v0))
@@ -115,17 +117,21 @@
       (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Stopwatch" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Request" $ Nil _)
       (let ((unique w1) (many base)) (world-do _ w (Measure (Stop))))
       (let ((many rq)) $ match many (prelude-adt env "Request") (((List $ Ctor) _)) ((Some _ a) (adt-ctors a)) ((None _) (Nil _)))
-      (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Heap h) hq) (many (Ref Block h) req) (unique (World) wo) ->
-          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
+      (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Heap h) hq) (many (Ref Block h) req) (unique (ElabWorld) wo) ->
+          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (ElabWorld) wo2 at wo))
         (let-match many hq (MkHeap _ _ _ _ crash))
         (let-match many crash (None _)
           ((Some _ m) (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ m) (values hl2 hq2 sf2 e wo)))
-        (perform-request pcs rq pargs with-env base _ hq req wo))
-      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) _args) (unique (World) wo) ->
-          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
+        (let-match unique wo (MkElabWorld _ pw))
+        (let ((unique w0)) (unplace-at _ _ _ pw))
+        (let-match erased (placed-slot _ _ _ pw) (Refl _ _))
+        (let ((erased hl2) (many hq2) (erased sf2) (many r) (unique w3)) $ perform-request pcs rq pargs with-env base _ hq req w0)
+        (values hl2 hq2 sf2 r $ MkElabWorld _ $ place-at _ w3))
+      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) _args) (unique (ElabWorld) wo) ->
+          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (ElabWorld) wo2 at wo))
         (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ $ no-macro-world prim)
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
-      (tail $ interp-program (env-fuel env) pcs (MkPerformer (World) 0 0 perform world-prim) _ hp v w1))
+      (tail $ interp-program (env-fuel env) pcs (MkPerformer (ElabWorld) 0 0 perform world-prim) _ hp v w1))
     ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
     ((FThunk t)
       (let ((erased _) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) _)) (apply 0 0 _ (env-fuel env) _ hp v (Nil _) many-one _ (compile-time 0 0) u))

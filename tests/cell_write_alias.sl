@@ -11,7 +11,7 @@
   n)
 (let-match many #\x00 (MkChar exit-code))
 (def-lvl L)
-(def-unique L $ (unique run : (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) out))
+(def-unique L $ (unique run : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program L) out))
   (let ((unique u3)) (cell-write unique u2 (Boxed (slot-of one))))
   (let ((many answer)) (read-at s u3))
   (let ((unique w1) (many _)) (world-do _ w (WriteOut (nat-str answer))))

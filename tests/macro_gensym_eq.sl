@@ -10,7 +10,7 @@
   (match many (gen-eq n s g m t h) _
     ((Some _ _) "same")
     ((None _) "different")))
-(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) args) ->
+(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) _here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many a) (erased ga)) (gensym mw "x"))
   (let ((unique mw2) (many b) (erased gb)) (gensym mw1 "x"))

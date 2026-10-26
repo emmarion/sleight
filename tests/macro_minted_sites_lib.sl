@@ -17,17 +17,17 @@
 (let ((many slot-h)) (settled-of erased slot-ty))
 (let ((erased tc-ty)) (TyCtor (Type A) -> Type))
 (let ((many tc-h)) (settled-of erased tc-ty))
-(def-fns _ $ (many with-nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many with-nat-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ nat-h 3))
   (values mw1 $ place-in (RawSettled here _ _ _ h) args))
 (let ((many with-nat)) (MkMacro _ with-nat-fn))
-(def-fns _ $ (many with-slot-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many with-slot-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled mw _ slot-h vacant-slot))
   (values mw1 $ place-in (RawSettled here _ _ _ h) args))
 (let ((many with-slot)) (MkMacro _ with-slot-fn))
-(def-fns _ $ (many with-tc-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many with-tc-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (mint-settled-erased mw _ tc-h List))
   (values mw1 $ place-in (RawSettled here _ _ _ h) args))

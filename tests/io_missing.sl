@@ -10,7 +10,7 @@
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many r)) (world-do _ w (ReadFile "no-such-file")))
   (match many r (((World) w2 at w) ((Program P) p))
     ((Ok _ s) (let ((unique w2) (many _)) (world-do _ w1 (WriteOut s))) (values w2 (Exit P code0)))

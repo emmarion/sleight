@@ -18,11 +18,11 @@
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
 
-(def-fns _ $ (many say : (many (String) text) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns _ $ (many say : (many (String) text) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let ((unique w1) (many _)) (world-do _ w (WriteOut text)))
   w1)
 
-(def-fns _ $ (many changed : (many (String) yes) (many (String) no) (unique (World) w) (unique (Request (Result (Change))) req) ->
+(def-fns _ $ (many changed : (many (String) yes) (many (String) no) (unique (World) w at vacant-slot) (unique (Request (Result (Change))) req) ->
     (unique (World) w2 at w) (many (Bool) ok))
   (let ((unique w1) (many o)) (world-do _ w req))
   (let-match many o (Ok _ c) ((Fail _ m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (BFalse))))
@@ -30,13 +30,13 @@
     ((Changed) (values (say yes w1) (BTrue)))
     ((Unchanged) (values (say no w1) (BFalse)))))
 
-(def-fns _ $ (many show-entries : (subterm many (List (String)) es) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns _ $ (many show-entries : (subterm many (List (String)) es) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let-match many es (Cons _ e rest) ((Nil _) w))
   (tail $ show-entries rest (say (str-append e "\n") w)))
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many _)) (world-do _ w (DeleteFile "io-dir-test/a.txt")))
   (let ((unique w2) (many _)) (world-do _ w1 (DeleteFile "io-dir-test/b.txt")))
   (let ((unique w3) (many _)) (world-do _ w2 (DeleteDir "io-dir-test")))

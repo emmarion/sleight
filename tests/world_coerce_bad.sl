@@ -4,7 +4,7 @@
 (let ((many code0)) (MkU8 0 zp))
 (def-adts $ (Box : -> Type) enum newtype (many MkBox : (many (World) x) -> (Box)))
 (def-lvl P)
-(def-unique P $ (unique k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique k : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((many s)) (share w))
   (let ((unique (Box) b)) (coerce s (coercible-wrap (Unique) MkBox s)))
   (let-match unique b (MkBox x))

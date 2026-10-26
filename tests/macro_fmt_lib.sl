@@ -20,7 +20,7 @@
 (def-fns _ $ (many one-fmt : (many (Fmt) f) -> (many (List $ Fmt) fs))
   (Cons _ f $ Nil _))
 
-(def-fns _ $ (many parse-fmt : (unique (MacroWorld) mw) (many (Pos) here) (subterm many (String) s) (many (Rope) acc) ->
+(def-fns _ $ (many parse-fmt : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (subterm many (String) s) (many (Rope) acc) ->
     (unique (MacroWorld) mw2 at mw) (many (Maybe $ List $ Fmt) r))
   (let ((unique mw1) (many lit)) (str-raw mw here $ rope-str acc))
   (let-match many s (SCons c rest) ((SNil) (values mw1 (Some _ $ one-fmt $ FmtLit lit))))
@@ -52,14 +52,14 @@
 
 (let ((erased macro-type)) (Macro))
 
-(def-fns _ $ (many fmt-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many fmt-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (macro-fail mw here "fmt: expected a format string")))
   (let ((unique mw0) (many ms)) (arg-string mw a))
   (let-match many ms (Some _ s) ((None _) (macro-fail mw0 here "fmt: expected a format string")))
   (let ((unique mw1) (many mfs)) (parse-fmt mw0 here s (REmpty)))
   (let-match many mfs (Some _ fs) ((None _) (macro-fail mw1 here "fmt: a `~` must be followed by `n`, `s` or `~`")))
-  (def-fns _ $ (many apply-fn : (unique (MacroWorld) aw) (many (Pos) at-here) (many (List $ Raw) xs) ->
+  (def-fns _ $ (many apply-fn : (unique (MacroWorld) aw at vacant-slot) (many (Pos) at-here) (many (List $ Raw) xs) ->
       (unique (MacroWorld) aw2 at aw) (many (List $ Raw) o))
     (let-match many (render at-here fs xs) (Some _ t) ((None _) (macro-fail aw at-here "fmt: wrong number of arguments")))
     (values aw $ Cons _ (RawList at-here $ Cons _ (RawSettled at-here _ _ _ (settled-of many rope-str)) $ Cons _ t $ Nil _) $ Nil _))

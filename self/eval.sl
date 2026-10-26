@@ -920,7 +920,7 @@
   (MkUsage (nat-sub a a0) (nat-sub b b0) (nat-sub c c0) (nat-sub d d0) (nat-sub e e0) (nat-sub f f0) (nat-sub g g0) (nat-sub h h0)))
 
 (def-fns _ $ (many perform-request : (many (List $ Ctor) env) (many (List $ Ctor) rq) (many (List $ String) pargs) (many (Bool) with-env) (many (Usage) base)
-    (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) req) (unique (World) w) ->
+    (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) req) (unique (World) w at vacant-slot) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
   (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor env "WriteOut") req))
   (let ((many req1)) (widen-ref _ _ le1 req))
@@ -1019,8 +1019,7 @@
   (str-cat3 "`" (sp-name prim) "` reached with no macro world"))
 
 (def-fns _ $ (many intern-syn : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) -> (many (Maybe $ Syn) r))
-  (let-match many args (Cons _ _ r1) ((Nil _) (None _)))
-  (let-match many r1 (Cons _ a _) ((Nil _) (None _)))
+  (let-match many args (Cons _ a _) ((Nil _) (None _)))
   (let ((many p)) $ PosSpot $ NoPos)
   (let-match many (sp-eq prim $ SpExpr $ ExInternNat) (BFalse) ((BTrue) (Some _ $ RNat p $ heap-nat _ hp a)))
   (let-match many (sp-eq prim $ SpExpr $ ExInternChar) (BFalse) ((BTrue) (Some _ $ RChr p $ heap-nat _ hp a)))
@@ -1146,8 +1145,7 @@
   (values env2 h2 hp2 s2))
 
 (def-fns _ $ (many resolve-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let-match many args (Cons _ _ r1) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no symbol")))
-  (let-match many r1 (Cons _ s r2) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no symbol")))
+  (let-match many args (Cons _ s r2) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no symbol")))
   (let-match many r2 (Cons _ cs r3) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no constructors")))
   (let-match many r3 (Cons _ ch r4) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no constructors")))
   (let-match many r4 (Cons _ cu _) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no constructors")))
@@ -1176,8 +1174,7 @@
   (and (term-eq (canon-env e s) (canon-env e t)) $ tail $ terms-canon-eq e ra rb))
 
 (def-fns _ $ (many settled-eq-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (many (Maybe $ Ref Block hs) v))
-  (let-match many args (Cons _ _ r1) ((Nil _) (None _)))
-  (let-match many r1 (Cons _ p r2) ((Nil _) (None _)))
+  (let-match many args (Cons _ p r2) ((Nil _) (None _)))
   (let-match many r2 (Cons _ q r3) ((Nil _) (None _)))
   (let-match many r3 (Cons _ none r4) ((Nil _) (None _)))
   (let-match many r4 (Cons _ some _) ((Nil _) (None _)))
@@ -1209,8 +1206,7 @@
 
 (def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Multiplicity) mult) (many (List $ Ref Block hs) args) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let-match many args (Cons _ _ r1) ((Nil _) (mint-refused e _ hp)))
-  (let-match many r1 (Cons _ th r2) ((Nil _) (mint-refused e _ hp)))
+  (let-match many args (Cons _ th r2) ((Nil _) (mint-refused e _ hp)))
   (let-match many (heap-denoted e _ hp th) (Cons _ ty _) ((Nil _) (mint-refused e _ hp)))
   (let-match many mult (Erased) (else
     (let-match many r2 (Cons _ v _)
@@ -1247,15 +1243,14 @@
   (let-match many (list-mem-str (env-sources e) f) (BTrue) ((BFalse) (Fail _ $ str-cat f ": not a source file or a name given to --comptime-unconfine")))
   (Ok _ $ MkPair _ _ (path-dir f) $ heap-str _ hp path))
 
-(def-fns _ $ (many read-refused : (erased (Hist Block) hs) (many (Heap hs) hp) (unique (World) w) ->
+(def-fns _ $ (many read-refused : (erased (Hist Block) hs) (many (Heap hs) hp) (unique (World) w at vacant-slot) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
   (let ((erased h) (many hpx) (erased le) (many a)) $ halloc _ hp $ BError _ "`read-file` with too few arguments")
   (values h hpx le a w))
 
-(def-fns _ $ (many read-file-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) (unique (World) w) ->
+(def-fns _ $ (many read-file-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) (unique (World) w at vacant-slot) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
-  (let-match many args (Cons _ _ r1) ((Nil _) (read-refused _ hp w)))
-  (let-match many r1 (Cons _ here r2) ((Nil _) (read-refused _ hp w)))
+  (let-match many args (Cons _ here r2) ((Nil _) (read-refused _ hp w)))
   (let-match many r2 (Cons _ path r3) ((Nil _) (read-refused _ hp w)))
   (let-match many r3 (Cons _ okr r4) ((Nil _) (read-refused _ hp w)))
   (let-match many r4 (Cons _ failr _) ((Nil _) (read-refused _ hp w)))
@@ -1278,8 +1273,7 @@
   (let-match many r1 (Cons _ lr r2) ((Nil _) (None _)))
   (let-match many r2 (Cons _ cr r3) ((Nil _) (None _)))
   (let-match many r3 (Cons _ okr r4) ((Nil _) (None _)))
-  (let-match many r4 (Cons _ failr r5) ((Nil _) (None _)))
-  (let-match many r5 (Cons _ _ hrefs) ((Nil _) (None _)))
+  (let-match many r4 (Cons _ failr hrefs) ((Nil _) (None _)))
   (let-match many hrefs (Cons _ c _) ((Nil _) (None _)))
   (let ((erased _) (many fb) (erased _)) (hread _ hp fr))
   (let-match many fb (BExt _ fp) (else (None _)))
@@ -1317,7 +1311,7 @@
 
 (def-adts $ (ElabWorld : -> Type)
   enum newtype
-  (many MkElabWorld : (unique (World) w) -> (ElabWorld)))
+  (many MkElabWorld : (erased (World) w) (unique (Placed vacant-slot (World) w) p) -> (ElabWorld)))
 
 ; The macro world (DESIGN.md section 65): the program store, which an expansion threads and its primitives
 ; extend where they run. [s] is the slot of the elaborator's world, which the state holds placed at [s] so that
@@ -1379,9 +1373,11 @@
     ((BTrue)
       (let ((unique ew0)) (unplace-at _ _ _ ew))
       (let-match erased (placed-slot _ _ _ ew) (Refl _ _))
-      (let-match unique ew0 (MkElabWorld w0))
+      (let-match unique ew0 (MkElabWorld _ pw0))
+      (let ((unique w0)) (unplace-at _ _ _ pw0))
+      (let-match erased (placed-slot _ _ _ pw0) (Refl _ _))
       (let ((erased hl2) (many hp2) (erased sf2) (many v) (unique w1)) $ read-file-answer e _ hp args w0)
-      (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e _ $ place-at _ $ MkElabWorld w1)))
+      (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e _ $ place-at _ $ MkElabWorld _ $ place-at _ w1)))
   (let-match many (sp-eq prim $ SpExpr $ ExSettledEq) (BFalse)
     ((BTrue)
       (let-match many (settled-eq-answer e _ hp args) (Some _ v)

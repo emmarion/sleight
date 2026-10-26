@@ -15,14 +15,14 @@
 (comptime-match many d2 (Yes za2 zb2 zp2))
 (let ((many code2)) (MkU8 2 zp2))
 
-(def-fns _ $ (many list-args : (subterm many (List (String)) args) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns _ $ (many list-args : (subterm many (List (String)) args) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let-match many args (Cons _ x rest) ((Nil _) w))
   (let ((unique w1) (many _)) (world-do _ w (WriteErr (str-append x "\n"))))
   (tail $ list-args rest w1))
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many wrote)) (world-do _ w (WriteFile "io-test.txt" "file contents\n")))
   (let-match many wrote (Ok _ _) ((Fail _ m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (Exit P code2))))
   (let ((unique w2) (many read)) (world-do _ w1 (ReadFile "io-test.txt")))

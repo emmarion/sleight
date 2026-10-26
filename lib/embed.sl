@@ -1,7 +1,7 @@
 ; The files of lib/ that slc embeds, each read when slc is compiled. self/header.sl adds self/runtime.ml.
 (let ((erased string-type)) (String))
 
-(def-fns _ $ (many embed-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many embed-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many usage)) (RawList here $ Cons _ (RawSymbol here $ SName "compile-error") $ Nil _))
   (let-match many args (Cons _ a _) ((Nil _) (values mw $ Cons _ usage $ Nil _)))

@@ -9,14 +9,14 @@
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
-(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w) (many (Result A) r))
+(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w at vacant-slot) (unique (Request (Result A)) req) -> (unique (World) w2 at w) (many (Result A) r))
   (let ((unique w1) (many r)) (world-do _ w req))
   (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok _ _) " ok\n") ((Fail _ _) " refused\n")))))
   (values w2 r))
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((unique w1) (many _)) (report _ "huge unlimited" w (ConfineOutputBytes 1180591620717411303424)))
   (let ((unique w2) (many _)) (report _ "lower" w1 (ConfineOutputBytes 50)))
   (let ((unique w3) (many r)) (report _ "huge" w2 (ConfineOutputBytes 1180591620717411303424)))

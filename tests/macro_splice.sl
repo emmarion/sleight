@@ -1,5 +1,5 @@
 ; expect: (MkPair _ _ 4 $ MkPair _ _ "a\tb" #\A)
-(def-fns _ $ (many pass : (unique (MacroWorld) mw) (many (Pos) _here) (many (List $ Raw) args) ->
+(def-fns _ $ (many pass : (unique (MacroWorld) mw at vacant-slot) (many (Pos) _here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw args))
 (let ((many splice)) (MkMacro _ pass))

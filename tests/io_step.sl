@@ -14,19 +14,19 @@
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
-(def-fns P1 $ (many shout : (subterm many (Nat) n) (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next))
+(def-fns P1 $ (many shout : (subterm many (Nat) n) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next))
   (let-match many n (Succ m) ((Zero) (let ((unique w1) (many _)) (world-do _ w (WriteOut "done\n"))) (values w1 (Exit P code0))))
   (let ((unique w1) (many _)) (world-do _ w (WriteOut "tick\n")))
-  (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next))
+  (def-unique P $ (unique again : (unique (World) v at vacant-slot) -> (unique (World) v2 at v) (unique (Program P) next))
     (shout m v))
   (values w1 (Continue P again)))
 
 (def-fns PA $ (many settle : (subterm many (Nat) n) -> (unique (Program P) next))
   (let-match many n (Succ m)
     ((Zero)
-      (def-unique P $ (unique go : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next)) (shout 2 v))
+      (def-unique P $ (unique go : (unique (World) v at vacant-slot) -> (unique (World) v2 at v) (unique (Program P) next)) (shout 2 v))
       (Continue P go)))
-  (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next))
+  (def-unique P $ (unique again : (unique (World) v at vacant-slot) -> (unique (World) v2 at v) (unique (Program P) next))
     (values v (settle m)))
   (Continue P again))
 

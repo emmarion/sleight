@@ -15,7 +15,7 @@
     ((SlotMissing _ _ _) (tail $ count xs l1 t acc))))
 (def-lvl main-lvl)
 (def-fns _ $ (many main : -> (unique (Program main-lvl) r))
-  (def-unique main-lvl $ (unique step : (unique (World) w) -> (unique (World) w2 at w) (unique (Program main-lvl) p))
+  (def-unique main-lvl $ (unique step : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program main-lvl) p))
     (let ((many strs)) (mk 2000 (Nil _)))
     (let ((unique l)) (slots-new (String)))
     (let ((erased _) (unique l2)) (intern-all _ l strs))

@@ -2,7 +2,7 @@
 (def-fns _ $ (many l : (many (Pos) p) (many (List $ Raw) xs) -> (many (Raw) r)) (RawList p xs))
 (def-fns _ $ (many n : (many (Pos) p) (many (String) s) -> (many (Raw) r)) (RawSymbol p (SName s)))
 (def-fns _ $ (many two : (many (Raw) a) (many (Raw) b) -> (many (List $ Raw) out)) (Cons _ a $ Cons _ b $ Nil _))
-(def-fns _ $ (many seq-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many seq-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many k) (erased g)) (gensym mw "tmp"))
   (let ((many t)) (RawSymbol here (SGen k "tmp" g)))

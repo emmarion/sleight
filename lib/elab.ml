@@ -549,16 +549,16 @@ let report l m =
 
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
-  | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
+  | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ v ] ->
       [ literal_handle env (match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v)) ]
-  | Sp.SettledEq, [ _; V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
+  | Sp.SettledEq, [ V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
       let snap = List.fold_left enter_mentioned (comptime_boundary env) [ Var x; Var y ] in
       let a = denoted snap x rx and b = denoted snap y ry in
       let snap = List.fold_left enter_mentioned snap (a @ b) in
       [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
-  | Sp.MintSettled, [ _; V.VHandle (y, r, _, _); v ] -> [ mint env y r Many v ]
-  | Sp.MintSettledErased, [ _; V.VHandle (y, r, _, _) ] -> [ mint env y r Erased V.VToken ]
-  | (Sp.SettledTyApply | Sp.SettledValApply), pos :: _ :: hs ->
+  | Sp.MintSettled, [ V.VHandle (y, r, _, _); v ] -> [ mint env y r Many v ]
+  | Sp.MintSettledErased, [ V.VHandle (y, r, _, _) ] -> [ mint env y r Erased V.VToken ]
+  | (Sp.SettledTyApply | Sp.SettledValApply), pos :: hs ->
       let l = match Ffi.unpos pos with Ffi_core.MkPos (f, line, col) -> Reader.At { file = str_host env Reader.nowhere f; line = nat_z env Reader.nowhere line; col = nat_z env Reader.nowhere col } | NoPos -> Reader.NoLoc in
       let hs = List.map (function V.VHandle (x, r, m, v) -> (x, r, m, v) | _ -> raise (Eval.Runtime "expected a handle")) hs in
       let snap = List.fold_left (fun env (x, r, _, _) -> let env = enter_mentioned env (Var x) in List.fold_left enter_mentioned env (denoted env x r)) (comptime_boundary env) hs in
@@ -571,13 +571,13 @@ let implement env p args = match p, args with
              let fields = List.filter_map (fun ((e : entry), (_, _, _, v)) -> if e.mult = Erased then None else Some v) (List.combine tele (List.tl hs)) in
              let v = if mult = Many then List.hd (Eval.apply c fields) else V.VToken in
              pbuild env "Ok" [ mint_entry env ~rule:t ty mult v ]) ]
-  | Sp.Resolve, [ _; s ] ->
+  | Sp.Resolve, [ s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
       [ (match find env name with
          | Unbound -> pbuild env "RUnbound" []
          | Found (_, { state = Hypothetical; _ }) -> pbuild env "RHypothetical" []
          | Found (_, { state = Settled v; mult; minted; _ }) -> pbuild env "RSettled" [ V.VHandle (minted, MintedIs, mult, if mult = Many then v else V.VToken) ]) ]
-  | Sp.ReadFile, [ _; here; path ] ->
+  | Sp.ReadFile, [ here; path ] ->
       let text = str_host env Reader.nowhere in
       let read = match Ffi.unpos here with
         | Ffi_core.MkPos (f, _, _) -> (match List.assoc_opt (text f) !sources with Some dir -> Driver_core.read_within dir (text path) | None -> Error (text f ^ ": not a source file or a name given to --comptime-unconfine"))
@@ -654,7 +654,7 @@ let expand env raw =
           let here = Ffi.pos (Ffi_core.pos_view ~str:(str_value env) ~nat:(nat_value env) l) in
           let args = List.fold_right (fun a rest -> Ffi.list (Cons (raw_value env a, rest))) args (Ffi.list Nil) in
           Eval.prim := implement env;
-          let out = try Eval.apply f [ V.VToken; here; args ] with Eval.Runtime m -> error l "macro %s failed: %s" (tick (Reader.show head)) m in
+          let out = try Eval.apply f [ here; args ] with Eval.Runtime m -> error l "macro %s failed: %s" (tick (Reader.show head)) m in
           let rec items v = match Ffi.unlist v with Nil -> [] | Cons (x, rest) -> value_raw env l x :: items rest in
           (env, items (List.hd out)))
         (macro_of env head)
@@ -1675,11 +1675,11 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.WorldDo, _ ->
       let request = match prelude_id env "Request" with Some r -> r | None -> error l "`world-do` needs the prelude's `Request`" in
       let e ?place name mult t = { name = Some (Src name); subterm = false; mult; sg = Ty t; place; loc = Reader.nowhere } in
-      let params = [ e "A" Erased type_term; e "w" Unique Prelude.world_term; e "req" Unique (App (Var request, [ Bound 1 ])) ] in
+      let params = [ e "A" Erased type_term; e ~place:(slot_of Prelude.null) "w" Unique Prelude.world_term; e "req" Unique (App (Var request, [ Bound 1 ])) ] in
       let rets = [ e ~place:(SlotOf (Bound 1)) "w2" Unique Prelude.world_term; e "r" Many (Bound 3) ] in
       let c = { subject = lazy "`world-do`"; apposed = false; notes = lazy []; used = under pos; marks = true } in
       let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
-      call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.nth codes 1))
+      call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.hd codes))
   | Sp.SettledOf, [ mraw; a ] ->
       let mode = mult_or env l mraw in
       let env, x = entry_named env (loc a) a "a name" in
@@ -1700,7 +1700,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
         let env, m = meta env (App (id "Mult", [])) in
         let env, ty = meta env type_term in
         let env, t = meta env ty in (env, (m, ty, t))) env hs in
-      let params = entry ~name:"mw" Unique (App (id "MacroWorld", [])) :: List.mapi (fun i (m, ty, t) -> entry ~name:(if i = 0 then "c" else "a" ^ string_of_int i) Many (App (id "Settled", [ m; ty; t ]))) indices in
+      let params = entry ~name:"mw" ~place:(slot_of Prelude.null) Unique (App (id "MacroWorld", [])) :: List.mapi (fun i (m, ty, t) -> entry ~name:(if i = 0 then "c" else "a" ^ string_of_int i) Many (App (id "Settled", [ m; ty; t ]))) indices in
       let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
       let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~pos params (mw :: hs) elab_arg in
       let hds = List.combine hs (List.map (fun (m, ty, t) -> (canon env (metaless env m), metaless env ty, metaless env t)) indices) in

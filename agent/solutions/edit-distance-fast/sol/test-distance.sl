@@ -61,7 +61,7 @@
   (ed-reg-equals _ ed-reg-kitten _ ed-reg-sitting 6 (prove-literal-lt 6 4611686018427387904)))
 
 (def-lvl EdRegression)
-(def-unique EdRegression $ (unique ed-reg-start : (unique (World) w) -> (unique (World) out at w) (unique (Program EdRegression) next))
+(def-unique EdRegression $ (unique ed-reg-start : (unique (World) w at vacant-slot) -> (unique (World) out at w) (unique (Program EdRegression) next))
   (let-match many (ed-reg-suite) (BTrue)
     ((BFalse)
       (let ((unique w1) (many _)) (world-do _ w (WriteOut "FAIL edit-distance regression\n")))

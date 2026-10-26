@@ -4,7 +4,7 @@
 (let ((many k)) 5)
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
-(def-fns _ $ (many mention-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many mention-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "let")) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "erased")) $ Cons _ (RawSymbol here (SName "e")) $ Nil _) $ Nil _) $ Cons _ (RawSettled here _ _ _ (settled-erase _ _ _ (settled-of unique u))) $ Nil _) $ Nil _))
 (let ((many mention)) (MkMacro _ mention-fn))

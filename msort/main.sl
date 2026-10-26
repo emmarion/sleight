@@ -26,7 +26,7 @@
 
 (def-lvl Main)
 
-(def-unique Main $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Main) next))
+(def-unique Main $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program Main) next))
   (let ((unique xs) (erased lxs)) (gen size 42 (UNil) 0 (LNil) (add-zero-right size)))
   (let ((unique stop-req)) (Measure (Stop)))
   (let ((unique w1) (many u0)) (world-do _ w (Measure (Start))))

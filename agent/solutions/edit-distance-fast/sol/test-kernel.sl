@@ -96,7 +96,7 @@
   (str-append label (str-append " " (str-append (nat-str n) (str-append "\n" rest)))))
 
 (def-lvl EdTest)
-(def-unique EdTest $ (unique ed-test-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program EdTest) next))
+(def-unique EdTest $ (unique ed-test-start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program EdTest) next))
   (let ((unique stop)) (Measure (Stop)))
   (let ((unique w1) (many before)) (world-do _ w (Measure (Start))))
   (let ((many sum)) (ed-test-outer u8-modulus (lt-succ u8-modulus) 0 u62-modulus-pos))

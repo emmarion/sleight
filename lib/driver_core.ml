@@ -273,7 +273,7 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
   in
   let run_program _w v =
     ignore (Lazy.force started);
-    let rec loop v = match o.step v with Exit code -> u8 code | Continue k -> loop (o.apply k [ o.unit ]) in
+    let rec loop v = match o.step v with Exit code -> u8 code | Continue k -> loop (o.apply k []) in
     try loop v with Halt code -> code
   in
   let run_main w f = let s = to_string (o.apply f [ of_string (w.read_rest ()) ]) in if spend w (String.length s) then w.out s else w.exit 1 in

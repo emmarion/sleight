@@ -9,7 +9,7 @@
 
 (def-lvl P)
 
-(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((many s)) (sum-to 100))
   (let ((unique w1) (many _)) (world-do _ w (Measure (Start))))
   (let ((unique w2) (many _)) (world-do _ w1 (Measure (Stop))))

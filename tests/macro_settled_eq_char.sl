@@ -8,7 +8,7 @@
 (comptime-match many #\a (MkChar u))
 (comptime-match many u (MkU8 n p))
 (let ((many own)) (MkChar $ MkU8 n p))
-(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many c)) (intern-char mw #\a))
   (let ((unique mw2) (many r1)) (settled-eq _ _ _ _ _ _ mw1 c (settled-of many fresh)))

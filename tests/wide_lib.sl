@@ -48,7 +48,7 @@
 
 (let ((many wide-usage)) "`(wide kind T P n k F)`, kind one of ctors, params, matchable, names")
 
-(def-fns _ $ (many wide-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many wide-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ kr r1) ((Nil _) (macro-fail mw here wide-usage)))
   (let-match many r1 (Cons _ ty r2) ((Nil _) (macro-fail mw here wide-usage)))

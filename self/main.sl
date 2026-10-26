@@ -4,7 +4,7 @@
 ; the program itself (self/interp.sl); elaboration errors go to stderr with exit code 1. The levels are
 ; minted in self/interp.sl.
 
-(def-fns util-lvl $ (many write-lines : (subterm many (List $ String) es) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns util-lvl $ (many write-lines : (subterm many (List $ String) es) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let-match many es (Cons _ e rest) ((Nil _) w))
   (tail $ write-lines rest $ say-to (BTrue) "\n" $ say-to (BTrue) e w))
 
@@ -69,23 +69,23 @@
   (let-match many (str-eqb g "proved") (BTrue) ((BFalse) (None _)))
   (Some _ $ GoalProved))
 
-(def-fns run-lvl $ (many goal-verdict : (many (List $ Pair (String) $ String) flags) (many (Bool) pass) (unique (World) w) -> (unique (World) w2 at w))
+(def-fns run-lvl $ (many goal-verdict : (many (List $ Pair (String) $ String) flags) (many (Bool) pass) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let-match many (flag-value flags "--goal") (Some _ g) ((None _) w))
   (let-match many (goal-mode-of g) (Some _ gm) ((None _) w))
   (let-match many gm (GoalUnrequired) (else (say-to (BFalse) (str-cat3 "--goal " g $ str-cat ": " $ match many pass _ ((BTrue) "PASS\n") ((BFalse) "FAIL\n")) w)))
   w)
 
-(def-fns util-lvl $ (many failed : (many (String) m) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns util-lvl $ (many failed : (many (String) m) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit _ exit-fail)))
 
-(def-fns run-lvl $ (many usage : (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns run-lvl $ (many usage : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-read path] [--confine-write path] [--comptime-unconfine name] [--confine-output-bytes n] [--eval-fuel n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--fn-same] [--no-shape-note] [--hints file] [--goal none|open|proved] file.sl ... [-- arg ...] > out.ml" w))
 
-(def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many h)) (env-heap env))
   (interp-finals env pargs with-env _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
 
-(def-fns compile-lvl $ (many compile : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (many (List $ Pair (String) $ String) srcs) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns compile-lvl $ (many compile : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (many (List $ Pair (String) $ String) srcs) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((many prelude)) $ not $ has-flag flags "--no-prelude")
   (let ((many with-env)) $ not $ has-flag flags "--no-env")
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
@@ -100,10 +100,12 @@
   (let-match many (match many gm (((Maybe $ String) _)) ((GoalUnrequired) (None _)) (else (goal-refused flags))) (None _) ((Some _ f) (failed (str-cat3 "--goal " goal-arg $ str-cat " does not take " f) $ goal-verdict flags (BFalse) w)))
   (let ((many base-env)) (env-set-goals (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources) $ MkGoals gm (None _) (Many) (TErr "no goal") "" $ None _))
   (let ((many builtins)) $ env-set-fn-same (match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f)) ((None _) base-env)) $ has-flag flags "--fn-same")
-  (let ((unique ew)) (MkElabWorld w))
+  (let ((unique ew)) (MkElabWorld _ $ place-at _ w))
   (let ((many files)) $ srcs-files srcs)
   (let ((unique ew1) (many env0)) $ run-files ew (not $ has-flag flags "--no-shape-note") files (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
-  (let-match unique ew1 (MkElabWorld w0))
+  (let-match unique ew1 (MkElabWorld _ pw0))
+  (let ((unique w0)) (unplace-at _ _ _ pw0))
+  (let-match erased (placed-slot _ _ _ pw0) (Refl _ _))
   (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env0) $ said-failed (BTrue) $ env-said env0)
   (let ((many env)) $ match many (or by-warnings $ env-failed env0) (((Env) _)) ((BTrue) env0) ((BFalse) (close-goal env0 $ last-path files)))
   (let ((unique w1)) $ write-lines (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))
@@ -122,7 +124,7 @@
   (let-match many limited (Ok _ _) ((Fail _ m) (failed m w3)))
   (run-program env pargs with-env w3))
 
-(def-fns slc-lvl $ (many read-files : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (subterm many (List $ String) paths) (many (List $ Pair (String) $ String) acc) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns slc-lvl $ (many read-files : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (subterm many (List $ String) paths) (many (List $ Pair (String) $ String) acc) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many paths (Cons _ path rest) ((Nil _) (compile flags pargs help (list-rev _ acc) w)))
   (let ((unique w1) (many r)) (world-do _ w (ReadFile path)))
   (let-match many r (Ok _ src) ((Fail _ m) (failed m $ goal-verdict flags (BFalse) w1)))
@@ -137,7 +139,7 @@
 
 ; Without --no-prelude the embedded prelude goes ahead of the files, under the path the reference names it
 ; by (lib/builtin.ml).
-(def-fns start-lvl $ (many start-with : (many (List $ String) args) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns start-lvl $ (many start-with : (many (List $ String) args) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((many before) (many pargs)) (split-args args))
   (let-match many (read-flags before (Nil _) (Nil _)) (Ok _ read) ((Fail _ m) (failed m w)))
   (let-match many read (MkPair _ _ flags files))
@@ -150,7 +152,7 @@
   (let-match many r (Ok _ text) ((Fail _ m) (failed m w1)))
   (read-files flags pargs text files srcs w1))
 
-(def-unique io-lvl $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-unique io-lvl $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((unique w1) (many args)) (world-do _ w (GetArgs)))
   (start-with args w1))
 

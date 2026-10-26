@@ -11,7 +11,7 @@
 ; warns: <**>:35:13: warning: declaration of `Nat` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 (let ((many k)) 100)
-(def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+(def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many h)) nat-add)
   (values mw $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many h)) $ Cons _ (RawSettled here _ _ _ (settled-of many k)) args) $ Nil _))
@@ -20,13 +20,13 @@
   (plus-k k))
 (let ((many k)) 5)
 
-(def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many seven-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw9) (many lit)) (nat-raw mw here 7))
   (values mw9 $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many let)) $ Cons _ (RawList here $ Cons _ (RawList here $ Cons _ (RawSymbol here (SName "many")) $ Cons _ (RawSymbol here (SName "x")) $ Nil _) $ Nil _) $ Cons _ lit $ Nil _) $ Nil _))
 (let ((many seven)) (MkMacro _ seven-fn))
 
-(def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many nat-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of erased Nat)) $ Nil _) $ Nil _))
 (let ((many PNat)) (MkMacro _ nat-fn))

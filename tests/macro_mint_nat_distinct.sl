@@ -2,7 +2,7 @@
 ; expect: "distinct"
 (let ((erased nat-ty)) (Nat))
 (let ((many nat-h)) (settled-of erased nat-ty))
-(def-fns _ $ (many twice-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many twice-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many a)) (mint-settled mw _ nat-h 3))
   (let ((unique mw2) (many b)) (mint-settled mw1 _ nat-h 3))

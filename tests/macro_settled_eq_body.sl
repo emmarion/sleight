@@ -5,7 +5,7 @@
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) t))
   (match many r _ ((None _) "no") ((Some _ _) "yes")))
-(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) _args) ->
+(def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many lit)) (intern-nat mw (nat-add 9000 1)))
   (let ((unique mw2) (many r1)) (settled-eq _ _ _ _ _ _ mw1 (settled-type _ _ _ lit) (settled-type _ _ _ (settled-of many k))))

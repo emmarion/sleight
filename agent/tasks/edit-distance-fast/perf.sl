@@ -93,7 +93,7 @@
 
 (def-lvl Perf)
 
-(def-unique Perf $ (unique perf-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Perf) next))
+(def-unique Perf $ (unique perf-start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program Perf) next))
   (let ((erased a1) (many s1)) (perf-text perf-letters 3000 (prove-literal-lt 3000 18014398509481984) 42 1))
   (let ((erased b1) (many t1)) (perf-text perf-letters 2800 (prove-literal-lt 2800 18014398509481984) 7 2))
   (let ((erased a2) (many s2)) (perf-text perf-letters 20000 (prove-literal-lt 20000 18014398509481984) 11 3))
