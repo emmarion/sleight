@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fnmatch, functools, hashlib, json, os, random, re, selectors, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, random, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
