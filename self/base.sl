@@ -662,13 +662,13 @@
   (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
   (rcat (RStr "#\\x") $ hex-byte-rope c))
 
-(def-fns _ $ (many str-escape : (subterm many (String) s) -> (many (Rope) r))
+(def-fns _ $ (many str-escape : (subterm many (String) s) (many (Rope) acc) -> (many (Rope) r))
   (match many s _
-    ((SNil) (REmpty))
-    ((SCons c rest) (rcat (escape-char c) $ notail $ str-escape rest))))
+    ((SNil) acc)
+    ((SCons c rest) (tail $ str-escape rest $ rcat acc $ escape-char c))))
 
 (def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
-  (rwrap "\"" (str-escape s) "\""))
+  (rwrap "\"" (str-escape s $ REmpty) "\""))
 
 (def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
