@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fnmatch, functools, hashlib, json, os, random, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, random, re, selectors, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -24,11 +24,11 @@ SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 _on = lambda name, default="0": os.environ.get(name, default) not in ("0", "false", "")
 CHECK = [os.path.normpath(f) for f in os.environ.get("PI_CHECK", "").split()]
 REQUESTS_LOG, RUN_STATS, OCAML, WARN_UNUSED = _on("PI_REQUESTS_LOG"), _on("PI_RUN_STATS", "1"), _on("PI_OCAML"), _on("PI_WARN_UNUSED")
-SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
+SLC_TIMEOUT, RUN_TIMEOUT = 60, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
-MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
+MAX_PROGRAM_OUTPUT = 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = COMPILER = None
 KEEP = {}
 CARRY = []
@@ -281,12 +281,6 @@ def find(glob, path="."):
     return "\n".join([rel for rel, _ in _walk(path) if _glob_match(["**", *Path(glob).parts], Path(rel).parts[top:])][:200]) or "(none)"
 
 
-@functools.cache
-def _ocamlopt():
-    show = ["ocamlfind", "ocamlopt", "-only-show", "-package", "zarith,unix", "-linkpkg", "p.ml", "-o", "p"]
-    return shlex.split(subprocess.run(show, capture_output=True, text=True, check=True).stdout)
-
-
 def _spawn_exec_limited(cmd, env):
     libc = ctypes.CDLL(None, use_errno=True)
     strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[str(x).encode() for x in xs], None)
@@ -417,12 +411,13 @@ def _source_name(p):
     return name
 
 
-def _compile(tmp, sources, flags, capture=None):
+def _compile(tmp, sources, flags, capture=None, build=None):
     src = Path(tmp, "src")
     for name, data in sources:
         (src / name).parent.mkdir(parents=True, exist_ok=True)
         (src / name).write_bytes(data)
-    why, c = _proc([COMPILER, *flags, "--no-shape-note", *(name for name, _ in sources)], src, SLC_TIMEOUT, env={})
+    why, c = _proc([COMPILER, *flags, *(["--build", build] if build else []), "--no-shape-note", *(name for name, _ in sources)], src,
+                   SLC_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp} if build else {})
     messages = _shown(capture, "slc.err", c.stderr)
     if why or c.returncode:
         return why, c, f"compile: {why or f'failed (exit {c.returncode})'}\n{messages}"
@@ -469,24 +464,16 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         why, c, head = _compile(tmp, [(_source_name(p), read_bytes(p)) for p in paths],
                                 [*(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_fence(),
-                                 "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-exec"], capture)
+                                 "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-exec"], capture,
+                                None if ocaml else str(Path(tmp, "p")))
+        if not why and c.returncode in (2, 3):
+            with open(RUN_DIR / "build-failures.log", "a") as f:
+                f.write(f"{_iso(time.time())}: slc exited {c.returncode}\n{_text(c.stderr)}")
+            return f"internal error: building the compiler's output: slc exited {c.returncode}; this is not your program's fault"
         if why or c.returncode:
             return head
         if ocaml:
             return f"{head}\nocaml: wrote {write_bytes(ocaml, c.stdout)}"
-        Path(tmp, "p.ml").write_bytes(c.stdout)
-        why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
-        if why or b.returncode:
-            why = why or f"exited {b.returncode}"
-            ml = Path(tmp, "p.ml")
-            kept = RUN_DIR / f"build-failure-{time.time():.0f}.ml"
-            if ml.stat().st_size <= MAX_KEPT_FAILURE:
-                shutil.copy(ml, kept)
-            with open(RUN_DIR / "build-failures.log", "a") as f:
-                f.write(f"ocamlopt {why}; p.ml was {ml.stat().st_size} bytes, "
-                        + (f"kept as {kept.name}\n" if kept.exists() else "not kept\n")
-                        + _text(b.stdout + b.stderr))
-            return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
         t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
