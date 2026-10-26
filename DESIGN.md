@@ -1915,15 +1915,16 @@ are erased fields and erased functions, so none is built at runtime.
 - **`Program` and `Request`.** `(Program L)` is an enum indexed by a
   level, read by the driver (§27). `Exit` carries a `U8` exit code.
   `Continue` carries a continuation
-  `(unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) next)) k)`,
+  `(unique (UniqueFn L (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program L) next)) k)`,
   which the driver applies to the world, the one value of `World`,
   which only the driver supplies; the `Program` it returns is the next
-  step. So a `Program` is unique throughout, and each continuation is
+  step. A world is taken `at vacant-slot`, so the driver passes it no
+  word (§36). So a `Program` is unique throughout, and each continuation is
   applied once. `(Request A)` is an enum indexed by the type of its
   answer, and the special form `world-do` performs one:
 
   ```scheme
-  (world-do A w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
+  (world-do A w req) : (erased Type A) (unique (World) w at vacant-slot) (unique (Request A) req) ->
                        (unique (World) w2 at w) (many A r)
   ```
 
@@ -2644,7 +2645,7 @@ function it holds:
 (def-adts $ (Macro : -> Type)
   enum newtype
   (many MkMacro : (erased (Level) L)
-     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+     (many (Fn L (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
                (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
      -> (Macro)))
 ```
@@ -2801,12 +2802,12 @@ all of elaboration, carried out of every scope where uses are carried,
 and passed along rather than joined. Only the expander supplies a
 `MacroWorld`, to a macro's function. It has no constructor and is no
 entry, so a non-erased one never escapes an expansion, and the forms below that take
-one run only there. A function that takes a macro world returns it `at`
-its parameter. The forms below are primitives, apart from the two
+one run only there. A function that takes a macro world takes it `at vacant-slot`
+and returns it `at` its parameter. The forms below are primitives, apart from the two
 special forms that end this section, checked as calls:
 
 ```scheme
-gensym : (unique (MacroWorld) mw) (many (String) s) ->
+gensym : (unique (MacroWorld) mw at vacant-slot) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
 
 erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
@@ -2815,28 +2816,28 @@ erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
 
 settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
-    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique (MacroWorld) mw at vacant-slot) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
     (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
 
-intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+intern-nat : (unique (MacroWorld) mw at vacant-slot) (many (Nat) n) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)
 
-intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+intern-char : (unique (MacroWorld) mw at vacant-slot) (many (Char) c) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)
 
-intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+intern-string : (unique (MacroWorld) mw at vacant-slot) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)
 
-mint-settled : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
+mint-settled : (unique (MacroWorld) mw at vacant-slot) (erased Type T) (many (Settled (MErased) Type T) th) (many T v) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) T v) h)
 
-mint-settled-erased : (unique (MacroWorld) mw) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
+mint-settled-erased : (unique (MacroWorld) mw at vacant-slot) (erased Type T) (many (Settled (MErased) Type T) th) (erased T v) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MErased) T v) h)
 
-resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+resolve : (unique (MacroWorld) mw at vacant-slot) (many (Symbol) s) ->
     (unique mw is mw2 at mw) (many (Resolution) r)
 
-read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+read-file : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (String) path) ->
     (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)
 ```
 
@@ -2881,7 +2882,7 @@ below it. Otherwise, for `NoPos`, and where the read fails, it
 answers `Fail`. The fence (MANUAL.md) does not apply to it.
 
 `(settled-ty-apply mw c a1 ... an)` and `(settled-val-apply mw c a1 ... an)`
-take `mw` at `unique` and handles `c : (Settled m C t)` and
+take `mw` at `unique` and `at vacant-slot` and handles `c : (Settled m C t)` and
 `ai : (Settled mi Ai ti)` at `many`. They give
 `(unique (MacroWorld) mw2 at mw)` and
 `(many (Result (Settled m R (t t1 ... tn))) r)`, where `R` is the type of
