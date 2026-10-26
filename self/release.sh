@@ -16,8 +16,8 @@ OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 REL=
 ocamlfind ocamlopt -config | grep -q '^flambda: true' && REL=-O3
 dune build bin/main.exe
-_build/default/bin/main.exe $SL --extract "$B/stage1.ml"
-$OC "$B/stage1.ml" -o "$B/stage1"
+rm -rf "$B/stage1.build"
+_build/default/bin/main.exe $SL --build "$B/stage1"
 "$B/stage1" $SL > "$B/slc.ml"
 (cd "$B" && $OC $REL slc.ml -o "$OUT.tmp")
 strip "$OUT.tmp"

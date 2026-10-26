@@ -14,8 +14,7 @@ From the repository root, with `T=agent/tasks/edit-distance-fast` and
 ```
 F="std/nat.sl std/list.sl std/macro.sl std/tactics.sl $T/spec.sl $(cat $O/files.txt)"
 _build/release/slc --goal proved $F > /dev/null
-_build/release/slc $F $T/perf.sl > agent/solutions/sol_perf.ml
-ocamlfind ocamlopt -package zarith,unix -linkpkg agent/solutions/sol_perf.ml -o agent/solutions/sol_perf && agent/solutions/sol_perf
+_build/release/slc $F $T/perf.sl --build agent/solutions/sol_perf && agent/solutions/sol_perf
 ```
 
 The first command reports the goal proved by the `qed` in `distance.sl`. For a

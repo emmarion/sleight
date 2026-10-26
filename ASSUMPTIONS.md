@@ -272,8 +272,8 @@ that runs, in each of its modes.
     need no extraction) and each of its modes, `test/runtest.ml`
     extracts the elaborated program, drops the final expressions of the
     `needs:` files from the trace (the interpreter runner discards their
-    output too), compiles with `ocamlfind ocamlc -package zarith,unix
-    -linkpkg` into `_build/default/test/extract/`, runs the binary with
+    output too), builds it to bytecode as the reference's `--build --byte` does into
+    `_build/default/test/extract/`, runs the binary with
     the test's stdin and arguments, and requires the directives' stdout,
     stderr and exit code. A missing `ocamlfind` fails those tests rather
     than skipping them. What that shows, precisely: since final

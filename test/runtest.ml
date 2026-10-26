@@ -54,8 +54,10 @@ let extracted name externs templates source limit input args envs expect stderr 
         Some (Printf.sprintf "extraction wrote %d bytes, more than %s" (String.length text) (String.concat ", " limit))
     | Ok text ->
         write (base ^ ".ml") text;
-        if Sys.command (Printf.sprintf "ocamlfind ocamlc -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
-          Some ("extracted program failed to compile, see " ^ base ^ ".log")
+        ignore (Sys.command ("rm -rf " ^ Filename.quote (base ^ ".exe.build")));
+        let built = Program.build true (base ^ ".exe") text in
+        if built <> 0 then
+          Some (Printf.sprintf "extracted program failed to build (exit %d), see the messages above and %s.ml" built base)
         else (
           write (base ^ ".in") input;
           let code =

@@ -11,8 +11,7 @@ against the other heap sorts in `heapsort/`.
 ```
 dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.sl \
   $(cat agent/solutions/heapsort-fast/mimo/files.txt) agent/tasks/heapsort-fast/perf.sl \
-  --extract agent/solutions/mimo_perf.ml
-ocamlfind ocamlopt -package zarith,unix -linkpkg agent/solutions/mimo_perf.ml -o agent/solutions/mimo_perf && agent/solutions/mimo_perf
+  --build agent/solutions/mimo_perf && agent/solutions/mimo_perf
 ```
 
 `opus/` was written by the claude-opus-5-5 agent in the first session of run

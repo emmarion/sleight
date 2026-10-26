@@ -10,7 +10,7 @@ with accept.sl and perf.sl, with no warnings and no `;! suppress`. A run is vali
 built with ocamlfind, prints perf.sl's checksum and `minor-words 0` within a second. Results are cached in
 DIR/sizes.json by session and SLC. Writes DIR/size{,-log,-loglog}.{svg,png}.
 """
-import argparse, hashlib, json, math, os, re, subprocess, sys
+import argparse, hashlib, json, math, os, re, shutil, subprocess, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,13 +66,13 @@ def best_check(session, slc, build):
 
 
 def run_perf(cmd, cwd, build):
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True)
+    build.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(build / "p.build", ignore_errors=True)
+    p = subprocess.run([*cmd, "--build", str((build / "p").resolve())], cwd=cwd, capture_output=True)
+    if p.returncode in (2, 3):
+        return "ocaml"
     if p.returncode or p.stderr.strip():
         return "compile"
-    build.mkdir(parents=True, exist_ok=True)
-    (build / "p.ml").write_bytes(p.stdout)
-    if subprocess.run(["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg", "p.ml", "-o", "p"], cwd=build, capture_output=True).returncode:
-        return "ocaml"
     try:
         out = subprocess.run(["./p"], cwd=build, capture_output=True, text=True, timeout=1).stdout
     except subprocess.TimeoutExpired:

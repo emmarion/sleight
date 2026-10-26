@@ -39,13 +39,11 @@ mkdir -p _build/pal-fast
 _build/self/slc \
   std/macro.sl self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
   pal/palindrome_lemmas.sl pal/palindrome_centers.sl pal/palindrome_seed.sl \
-  pal/palindrome_manacher.sl pal/manacher_main.sl > _build/pal-fast/manacher.ml
-ocamlfind ocamlopt -w -a -package zarith,unix -linkpkg \
-  _build/pal-fast/manacher.ml -o _build/pal-fast/manacher
+  pal/palindrome_manacher.sl pal/manacher_main.sl --build _build/pal-fast/manacher
 python3 pal/check_manacher.py _build/pal-fast/manacher --large
 ```
 
-`ocamlc` can replace `ocamlopt`. To exercise the bytecode build with a small
+`--byte` builds bytecode instead. To exercise the bytecode build with a small
 stack, run `OCAMLRUNPARAM=l=65536 python3 pal/check_manacher.py
 _build/pal-fast/manacher --large` (as one shell command). The 100,000-element
 cases exercise the tail-recursive input conversion, scan, and expansion.
