@@ -1,10 +1,10 @@
-
 (let ((many xs) (erased rg)) (range 3))
 (let ((many O) (erased op)) (opts xs))
 (let ((many p0) (erased up)) (undefs 3))
+(let ((many hs)) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 0 2) $ Cons _ (MkPair _ _ 0 3) $ Cons _ (MkPair _ _ 0 4) $
+  Cons _ (MkPair _ _ 1 4) $ Cons _ (MkPair _ _ 2 2) $ Nil (Pair (Nat) (Nat))))
 (def-fns _ $ (many run-tree : -> (many (Res (TNode 21 O p0)) r))
-  (let ((many r) (many _)) (build 7 O 21 O p0 hints))
-  r)
+  (build 7 O 21 O p0 hs 1000))
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ tn))
 
