@@ -22,4 +22,4 @@
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 4 4 m) w) (erased (Nat) s)
     (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 107)) p))
-  (no-hole s 107 (sym-good 4 107 (Succ (Succ (Zero))) (Nil (List (PT))) xs O OR p0 ta up kr rg op (NCS 4 (Succ (Zero)) l1n) m s w h)))
+  (no-hole 4 s 107 (sym-good 4 107 (Succ (Succ (Zero))) (Nil (List (PT))) xs O OR p0 ta up kr rg op (NCS 4 (Succ (Zero)) l1n) m s w h)))

@@ -841,7 +841,7 @@
         ((NROut _ ps) (classify n k hl p st0 sts ps))))
     (let-match many lf (LSplit _ _ _ _ q h pa) ((LDone _ _ _ _ rz) rz))
     (let-match many pa (MkPar _ t _ _ l r _ _ _ _ _ _ pr pl))
-    (let-match many dep (Succ d1) ((Zero) (RFail _)))
+    (let-match many dep (Succ d1) ((Zero) (match many (find-hole p hl) _ ((Some _ mh) (ROk _ (THole n k hl p mh))) ((None _) (RFail _)))))
     (let ((many c)) (seen p (Succ (Zero))))
     (let-match many (below-of c p) (ROk _ bl) ((RFail _) (RFail _)))
     (let-match many (uf-of c p) (ROk _ uf) ((RFail _) (RFail _)))
@@ -864,6 +864,11 @@
     (let-match many (notail $ build n dep rest k hl p2 pn ns) (ROk _ tn) ((RFail _) (RFail _)))
     (let-match many (notail $ build-all n dep rest k hl p q h pn pa) (ROk _ ta) ((RFail _) (RFail _)))
     (ROk _ (TACons n k hl p p2 q h x rest ps tn ta))))
+
+(def-fns _ $ (many build-at : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (List (Stage)) pn) -> (many (Res (TNode n k hl p)) r))
+  (let ((many z)) (Nil (Bool)))
+  (let ((many sd)) (MkSide (Nil (Cnd)) 1000))
+  (tail $ build n dep (Nil (Tr)) k hl p pn (MkNS p 0 (Zero) 1000 z z (BFalse) sd sd (MkSnap 9 z (BFalse) z) 0 1 (PRNil p _))))
 
 (def-fns _ $ (many build-root : (many (Nat) n dep) (many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl) (many (List (PT)) p)
     (many (List (Stage)) pn) -> (many (Res (TAll n k hl p (Zero) (BFalse) os)) r))

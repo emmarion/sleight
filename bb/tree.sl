@@ -112,13 +112,13 @@
     (absurd (HMove _ _ d s1 _ rest) (never-full m d s1 g rest))))
 
 (def-adts
-  ((InHole : ((List (List (PT))) hl) ((Nat) s) -> Type)
+  ((InHole : ((Nat) n) ((List (List (PT))) hl) ((Nat) s) -> Type)
     enum
-    (many MkIH : (erased (List (List (PT))) hl) (erased (Nat) s) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Mem (List (PT)) p hl) mh)
-       (erased (Ext p m) ex) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (InHole hl s))))
+    (many MkIH : (erased (Nat) n) (erased (List (List (PT))) hl) (erased (Nat) s) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Mem (List (PT)) p hl) mh)
+       (erased (Ext p m) ex) (erased (Rows n n m) wf) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (InHole n hl s))))
 
-(def-fns _ $ (erased no-hole : (erased (Nat) s k) (erased (Or (Lt s (Succ k)) (InHole (Nil (List (PT))) s)) o) -> (erased (Lt s (Succ k)) r))
-  (let-match erased o (InL _ _ lt) ((InR _ _ ih) (let-match erased ih (MkIH _ _ _ _ mh _ _)) (match erased mh _)))
+(def-fns _ $ (erased no-hole : (erased (Nat) n s k) (erased (Or (Lt s (Succ k)) (InHole n (Nil (List (PT))) s)) o) -> (erased (Lt s (Succ k)) r))
+  (let-match erased o (InL _ _ lt) ((InR _ _ ih) (let-match erased ih (MkIH _ _ _ _ _ mh _ _ _)) (match erased mh _)))
   lt)
 
 (def-adts
@@ -148,7 +148,7 @@
 (def-fns _
   ((erased tn-good : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) s)
        (subterm erased (TNode n k hl p) tn) (erased (Ext p m) ex) (erased (Rows n n m) wf)
-       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Or (Lt s (Succ k)) (InHole hl s)) r))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
     (match erased tn _
       ((TH _ _ _ _ t q l r h pr pl lt)
         (let ((erased run)) (prun-run p m ex _ _ t pr))
@@ -156,7 +156,7 @@
           (add-succ-right t (Zero) t (add-zero-right t))))
         (let-match erased (halts-fn m _ s (Succ t) hs h1) (Refl _ _))
         (InL _ _ lt))
-      ((THole _ _ _ _ mh) (InR _ _ (MkIH hl s p m mh ex hs)))
+      ((THole _ _ _ _ mh) (InR _ _ (MkIH n hl s p m mh ex wf hs)))
       (absurd (TN _ _ _ _ sy adj acc S cl aa a0 ma g) (never-n p m ex sy adj acc S cl aa a0 ma _ g s hs))
       (absurd (TF _ _ _ _ g) (never-full m _ s (ag-m p m g ex) hs))
       (absurd (TC _ _ _ _ p2 f mi cy) (never-mir f p p2 m mi cy ex s hs))
@@ -168,7 +168,7 @@
   ((erased ta-pick : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) s q) (erased (Bool) h) (erased (Tr) tq)
        (erased (List (Tr)) os) (subterm erased (TAll n k hl p q h os) ta) (erased (Mem (Tr) tq os) mm) (erased (Ext p m) ex)
        (erased (PLook p q h (Undef)) pl) (erased (Look m q h tq) lkq) (erased (Rows n n m) wf)
-       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Or (Lt s (Succ k)) (InHole hl s)) r))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
     (match erased mm _
       ((MemHere _ _ os1)
         (let-match erased ta (TACons _ _ _ _ p2 _ _ _ _ ps tn _))
@@ -176,3 +176,22 @@
       ((MemThere _ _ y os1 mm1)
         (let-match erased ta (TACons _ _ _ _ _ _ _ _ _ _ _ ta1))
         (ta-pick n k hl p m s q h tq os1 ta1 mm1 ex pl lkq wf hs)))))
+
+(def-adts
+  ((TNs : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (List (PT))) ps) -> Type)
+    enum
+    (many TNsNil : (erased (Nat) n k) (erased (List (List (PT))) hl) -> (TNs n k hl (Nil (List (PT)))))
+    (many TNsCons : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (List (List (PT))) ps)
+       (erased (TNode n k hl p) tn) (erased (TNs n k hl ps) rest) -> (TNs n k hl (Cons (List (PT)) p ps)))))
+
+(def-fns _ $ (erased tns-pick : (erased (Nat) n k) (erased (List (List (PT))) hl ps) (erased (List (PT)) p)
+    (subterm erased (Mem (List (PT)) p ps) mh) (erased (TNs n k hl ps) ts) -> (erased (TNode n k hl p) tn))
+  (match erased mh _
+    ((MemHere _ _ rest) (let-match erased ts (TNsCons _ _ _ _ _ tn _)) tn)
+    ((MemThere _ _ _ rest mm) (let-match erased ts (TNsCons _ _ _ _ _ _ ts1)) (tns-pick n k hl rest p mm ts1))))
+
+(def-fns _ $ (erased hole-good : (erased (Nat) n k s) (erased (List (List (PT))) hl ps) (erased (TNs n k hl ps) ts)
+    (erased (Or (Lt s (Succ k)) (InHole n ps s)) o) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
+  (let-match erased o (InR _ _ ih) ((InL _ _ lt) (InL _ _ lt)))
+  (let-match erased ih (MkIH _ _ _ p m mh ex wf hs))
+  (tn-good n k hl p m s (tns-pick n k hl ps p mh ts) ex wf hs))
