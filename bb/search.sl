@@ -705,6 +705,33 @@
   (let ((many n) (erased _)) (str-length s))
   (tail $ hint-map n s (HE (Nat))))
 
+(def-fns _ $ (many ch-is : (many (Char) c d) -> (many (Bool) b))
+  (match many (char-eq c d) _ ((Equal _ _ _) (BTrue)) (else (BFalse))))
+
+(def-fns _ $ (many pt-of : (many (Char) c1 c2 c3) -> (many (PT) x))
+  (let-match many (ch-is c1 #\-) (BFalse) ((BTrue) (Undef)))
+  (let-match many (ch-is c1 #\H) (BFalse) ((BTrue) (Def (Hlt))))
+  (let ((many d)) (match many (ch-is c2 #\R) (((Mv) e)) ((BTrue) (DR)) ((BFalse) (DL))))
+  (Def (Mov (ch-is c1 #\1) d (dig c3))))
+
+(def-fns _ $ (many pts-of : (subterm many (Nat) n) (many (String) s) -> (many (List (PT)) p) (many (String) s2))
+  (let-match many n (Succ n1) ((Zero) (values (Nil (PT)) s)))
+  (let-match many s (SCons c1 s1) ((SNil) (values (Nil (PT)) s)))
+  (let-match many s1 (SCons c2 s3) ((SNil) (values (Nil (PT)) s)))
+  (let-match many s3 (SCons c3 s4) ((SNil) (values (Nil (PT)) s)))
+  (let ((many p) (many s5)) (notail $ pts-of n1 s4))
+  (values (Cons (PT) (pt-of c1 c2 c3) p) s5))
+
+(def-fns _ $ (many holes-from : (subterm many (Nat) fuel) (many (Nat) k) (many (String) s) -> (many (List (List (PT))) hl))
+  (let-match many fuel (Succ f) ((Zero) (Nil _)))
+  (let-match many s (SCons _ _) ((SNil) (Nil _)))
+  (let ((many p) (many s2)) (pts-of k s))
+  (Cons _ p (notail $ holes-from f k s2)))
+
+(def-fns _ $ (many holes-of : (many (Nat) k) (many (String) s) -> (many (List (List (PT))) hl))
+  (let ((many n) (erased _)) (str-length s))
+  (tail $ holes-from n k s))
+
 (def-fns _ $ (many nth-opt : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (Maybe A) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (None A)))
   (let-match many i (Succ i1) ((Zero) (Some A x)))
