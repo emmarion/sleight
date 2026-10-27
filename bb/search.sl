@@ -164,7 +164,10 @@
       ((Zero) rest)
       ((Succ c1) (match many c1 _ ((Zero) rest) ((Succ _) (Cons (Blk) (MkBlk w (kn c1) (BFalse)) rest))))))
   (let ((many one)) (Cons _ (MkPair _ _ w first) (Nil (Pair (List (KN)) (List (Blk))))))
-  (match many plus _ ((BFalse) one) ((BTrue) (Cons _ (MkPair _ _ w L) one))))
+  (let-match many plus (BTrue) ((BFalse) one))
+  (let ((many low)) (Cons _ (MkPair _ _ w (Cons (Blk) (MkBlk w k1 (BFalse)) rest)) one))
+  (let ((many more)) (match many c (((List (Pair (List (KN)) (List (Blk)))) m)) ((Zero) low) ((Succ c1) (match many c1 (((List (Pair (List (KN)) (List (Blk)))) m)) ((Zero) low) ((Succ _) one)))))
+  (Cons _ (MkPair _ _ w L) more))
 
 (def-adts $ (Tgt : -> Type)
   enum
