@@ -150,22 +150,22 @@
 
 (def-fns _
   ((many build : (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (Tr)) O) (many (List (PT)) p)
-       (many (List (Pair (Nat) (Nat))) hs) (many (Nat) cap) -> (many (Res (TNode k O p)) r))
-    (match many (psim p 30 (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)) _
+       (many (List (Pair (Nat) (Nat))) hs) (many (Nat) cap lim) -> (many (Res (TNode k O p)) r))
+    (match many (psim p lim (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)) _
       ((PSHalt _ t q l r h pr pl)
         (let-match many (lt-dec (Succ t) (Succ k)) (Yes _ _ lt) ((No _ _ _) (RFail _)))
         (ROk _ (TH k O p t q l r h pr pl lt)))
       ((PSUndef _ t q l r h pr pl)
         (let-match many dep (Succ d1) ((Zero) (RFail _)))
-        (let-match many (notail $ build-all d1 O k O p q h hs cap) (ROk _ ta) ((RFail _) (RFail _)))
+        (let-match many (notail $ build-all d1 O k O p q h hs cap lim) (ROk _ ta) ((RFail _) (RFail _)))
         (ROk _ (TS k O p t q l r h pr pl ta)))
       ((PSOut _)
         (let-match many (gen-cert p hs cap) (Some _ ct) ((None _) (RFail _)))
         (check-cert k O p ct))))
   ((many build-all : (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (Tr)) O) (many (List (PT)) p)
-       (many (Nat) q) (many (Bool) h) (many (List (Pair (Nat) (Nat))) hs) (many (Nat) cap) -> (many (Res (TAll k O p q h os)) r))
+       (many (Nat) q) (many (Bool) h) (many (List (Pair (Nat) (Nat))) hs) (many (Nat) cap lim) -> (many (Res (TAll k O p q h os)) r))
     (let-match many os (Cons _ x rest) ((Nil _) (ROk _ (TANil k O p q h))))
     (let-match many (pset p q h (Def x)) (PSOk _ _ _ _ p2 ps) ((PSNo _ _ _ _) (RFail _)))
-    (let-match many (notail $ build dep rest k O p2 hs cap) (ROk _ tn) ((RFail _) (RFail _)))
-    (let-match many (notail $ build-all dep rest k O p q h hs cap) (ROk _ ta) ((RFail _) (RFail _)))
+    (let-match many (notail $ build dep rest k O p2 hs cap lim) (ROk _ tn) ((RFail _) (RFail _)))
+    (let-match many (notail $ build-all dep rest k O p q h hs cap lim) (ROk _ ta) ((RFail _) (RFail _)))
     (ROk _ (TACons k O p p2 q h x rest ps tn ta))))
