@@ -61,74 +61,10 @@
         ((Cons _ h2 r2) (tail $ psim p f (Succ t) q2 (Cons (Bool) w l) h2 r2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl (PopCons h2 r2)))))))))
 
-(def-fns _ $ (many skip-ws : (subterm many (Nat) fuel) (many (String) s) -> (many (String) r))
-  (let-match many fuel (Succ f) ((Zero) s))
-  (let-match many s (SCons c rest) ((SNil) s))
-  (match many (get-dig c) _
-    ((GotOk _ _ _ _ _) s)
-    ((GotNo _ _ _) (tail $ skip-ws f rest))))
-
-(def-fns _ $ (many rd-digits : (subterm many (Nat) fuel) (many (String) s) (many (Nat) acc) -> (many (Nat) n) (many (String) r))
-  (let-match many fuel (Succ f) ((Zero) (values acc s)))
-  (let-match many s (SCons c rest) ((SNil) (values acc s)))
-  (match many (get-dig c) _
-    ((GotOk _ _ _ d _) (let ((many x) (erased _)) (mul acc 10)) (let ((many a2) (erased _)) (add x d)) (tail $ rd-digits f rest a2))
-    ((GotNo _ _ _) (values acc s))))
-
-(def-fns _ $ (many next-nat : (many (String) s) -> (many (Nat) n) (many (String) r))
-  (tail $ rd-digits 20 (skip-ws 100 s) 0))
-
-(def-fns _ $ (many rd-bools : (subterm many (Nat) k) (many (String) s) -> (many (List (Bool)) xs) (many (String) r))
-  (let-match many k (Succ k1) ((Zero) (values (Nil (Bool)) s)))
-  (let ((many v) (many s1)) (next-nat s))
-  (let ((many rest) (many s2)) (notail $ rd-bools k1 s1))
-  (match many v _ ((Zero) (values (Cons (Bool) (BFalse) rest) s2)) (else (values (Cons (Bool) (BTrue) rest) s2))))
-
-(def-fns _ $ (many rd-nats : (subterm many (Nat) k) (many (String) s) -> (many (List (Nat)) xs) (many (String) r))
-  (let-match many k (Succ k1) ((Zero) (values (Nil (Nat)) s)))
-  (let ((many v) (many s1)) (next-nat s))
-  (let ((many rest) (many s2)) (notail $ rd-nats k1 s1))
-  (values (Cons (Nat) v rest) s2))
-
-(def-fns _ $ (many rd-edges : (subterm many (Nat) k) (many (String) s) -> (many (List (Edge)) xs) (many (String) r))
-  (let-match many k (Succ k1) ((Zero) (values (Nil (Edge)) s)))
-  (let ((many a) (many s1)) (next-nat s))
-  (let ((many c) (many s2)) (next-nat s1))
-  (let ((many b) (many s3)) (next-nat s2))
-  (let ((many rest) (many s4)) (notail $ rd-edges k1 s3))
-  (values (Cons (Edge) (MkE a c b) rest) s4))
-
-(def-fns _ $ (many rd-acn : (many (String) s) -> (many (ACN) a) (many (String) r))
-  (let ((many q) (many s1)) (next-nat s))
-  (let ((many sl) (many s2)) (next-nat s1))
-  (let ((many sh) (many s3)) (next-nat s2))
-  (let ((many sr) (many s4)) (next-nat s3))
-  (values (MkACN q sl sh sr) s4))
-
-(def-fns _ $ (many rd-cfgs : (subterm many (Nat) k) (many (String) s) -> (many (List (ACN)) xs) (many (List (Pair (Nat) (Nat))) ch) (many (String) r))
-  (let-match many k (Succ k1) ((Zero) (values (Nil (ACN)) (Nil (Pair (Nat) (Nat))) s)))
-  (let ((many a) (many s1)) (rd-acn s))
-  (let ((many cn) (many s2)) (next-nat s1))
-  (let ((many o2) (many s3)) (next-nat s2))
-  (let ((many rest) (many crest) (many s4)) (notail $ rd-cfgs k1 s3))
-  (values (Cons (ACN) a rest) (Cons (Pair (Nat) (Nat)) (MkPair _ _ cn o2) crest) s4))
-
 (def-adts $ (Cert : -> Type)
   enum
   (many MkCert : (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (Nat)) acc) (many (List (ACN)) S)
      (many (List (Pair (Nat) (Nat))) ch) (many (ACN) a0) -> (Cert)))
-
-(def-fns _ $ (many rd-cert : (many (String) s) -> (many (Cert) c) (many (String) r))
-  (let ((many ns) (many s1)) (next-nat s))
-  (let ((many sy) (many s2)) (rd-bools ns s1))
-  (let ((many ne) (many s3)) (next-nat s2))
-  (let ((many es) (many s4)) (rd-edges ne s3))
-  (let ((many na) (many s5)) (next-nat s4))
-  (let ((many acc) (many s6)) (rd-nats na s5))
-  (let ((many nc) (many s7)) (next-nat s6))
-  (let ((many S) (many ch) (many s8)) (rd-cfgs nc s7))
-  (let ((many a0) (many s9)) (rd-acn s8))
-  (values (MkCert sy es acc S ch a0) s9))
 
 (def-adts
   ((NthR : (Type A) ((List A) xs) ((Nat) i) -> Type)
@@ -277,31 +213,6 @@
   (let-match many (find-nat sr acc) (ROk _ mr) ((RFail _) (RFail _)))
   (ROk _ (TN k O p sy es acc S cl aa a0 ma
     (MkGCN sy es acc (Zero) sl sh sr (Nil (Bool)) (Nil (Bool)) (BFalse) (GAcc sy es acc sl ml) (GAcc sy es acc sr mr) nh))))
-
-(def-fns _
-  ((many build : (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (Tr)) O) (many (List (PT)) p) (many (String) hs) ->
-       (many (Res (TNode k O p)) r) (many (String) hs2))
-    (match many (psim p 30 (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)) _
-      ((PSHalt _ t q l r h pr pl)
-        (let-match many (lt-dec (Succ t) (Succ k)) (Yes _ _ lt) ((No _ _ _) (values (RFail _) hs)))
-        (values (ROk _ (TH k O p t q l r h pr pl lt)) hs))
-      ((PSUndef _ t q l r h pr pl)
-        (let-match many dep (Succ d1) ((Zero) (values (RFail _) hs)))
-        (let ((many ra) (many hs1)) (notail $ build-all d1 O k O p q h hs))
-        (let-match many ra (ROk _ ta) ((RFail _) (values (RFail _) hs1)))
-        (values (ROk _ (TS k O p t q l r h pr pl ta)) hs1))
-      ((PSOut _)
-        (let ((many ct) (many hs1)) (rd-cert hs))
-        (values (check-cert k O p ct) hs1))))
-  ((many build-all : (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (Tr)) O) (many (List (PT)) p)
-       (many (Nat) q) (many (Bool) h) (many (String) hs) -> (many (Res (TAll k O p q h os)) r) (many (String) hs2))
-    (let-match many os (Cons _ x rest) ((Nil _) (values (ROk _ (TANil k O p q h)) hs)))
-    (let-match many (pset p q h (Def x)) (PSOk _ _ _ _ p2 ps) ((PSNo _ _ _ _) (values (RFail _) hs)))
-    (let ((many rn) (many hs1)) (notail $ build dep rest k O p2 hs))
-    (let-match many rn (ROk _ tn) ((RFail _) (values (RFail _) hs1)))
-    (let ((many ra) (many hs2)) (notail $ build-all dep rest k O p q h hs1))
-    (let-match many ra (ROk _ ta) ((RFail _) (values (RFail _) hs2)))
-    (values (ROk _ (TACons k O p p2 q h x rest ps tn ta)) hs2)))
 
 (def-adts
   ((UList : ((Nat) k) ((List (PT)) p) -> Type)
