@@ -518,7 +518,7 @@ let discharged : Reader.loc option ref = ref None
 let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/" | Some i -> String.sub f 0 i
 let gensyms = ref 0
 let on_run : (Env.t -> unit) ref = ref ignore
-let native : (Env.t -> V.value -> V.adt -> (int, string) result) ref = ref (fun _ _ _ -> Stdlib.Error "no compiler is linked in")
+let native : (Env.t -> (V.value * V.adt) list -> ((int, string) result list, string) result) ref = ref (fun _ _ -> Stdlib.Error "no compiler is linked in")
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
 let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.SlotEq ]
@@ -1518,7 +1518,7 @@ and call_returns ?sink ~demand ?(run = run_code) env expect l callee_name acc re
 and elab_special ?sink ?final demand tele env expect l sp args =
   let pos = pos_of expect in
   let m =
-    if List.mem sp (Sp.WorldDo :: Sp.SettledTyApply :: Sp.SettledValApply :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
+    if List.mem sp (Sp.WorldDo :: Sp.SettledTyApply :: Sp.SettledValApply :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.NativeCompute :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
   in
   let expected_type env = match tele with
@@ -1657,31 +1657,47 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       produced env [] "many" (type_of env x) Many;
       let env = place env x (slot_of Prelude.null) in
       (env, [ { (res_of env x) with place = Some (slot_of Prelude.null) } ], V.CVar Prelude.null)
-  | Sp.NativeCompute, [ f ] ->
+  | Sp.NativeCompute, fs ->
       if not env.run_pos then error_in env l "`native-compute` is confined to run position";
-      if m <> Many then error_in env l "`native-compute` produces its result at `many`";
-      let env, h, hcode = elab_head env Many l f in
-      (match h.term with
-       | Var x when h.erasure = Many && (match (entry env x).state with Settled _ -> true | Hypothetical -> false) -> ()
-       | t -> error_in env l "`native-compute` needs a Settled `many` function, and %s is not one" (qshow env t));
-      let lv, ret = match canon env h.ty with
-        | Fn (lv, [], [ ({ mult = Many; place = None; _ } as ret) ]) -> (lv, ret)
-        | t -> error_in env l "`native-compute` takes a function of no parameters and one `many` return not written `at`, and %s : %s is not one" (qshow env h.term) (qshow env t) in
-      let ty = match ret.sg with Ty t -> t | Is t -> infer env l t in
-      let tid = match type_head env ty with Some t -> t | None -> error_in env l "`native-compute` returns a value of an enum, and %s is not a datatype" (qshow env ty) in
-      let mid, disc, _ = find_matchable env l tid in
-      let adt = match adt_of env mid with Some a -> a | None -> error_in env l "the `Matchable` for %s is %s, so `native-compute` cannot read its result back" (qname env tid) (if (entry env mid).mult = Erased then "erased" else "not Settled") in
-      let env = use env l Many mid in
-      if disc = Union then error_in env l "`native-compute` returns a value of an `enum`, not a `union`";
-      (match List.find_opt (fun c -> c.V.arity > 0) adt.ctors with
-       | Some c -> error_in env l "`native-compute` returns a value of an enum whose constructors have only erased fields, and %s of %s has a non-erased one" (tick c.V.cname) (qname env tid)
-       | None -> ());
-      let run env _ =
-        match !native env (List.hd (Eval.eval env.values hcode)) adt with
-        | Ok i when i >= 0 && i < List.length adt.ctors -> [ V.construct (V.ctor_at adt i) [] ]
-        | Ok i -> error_in env l "`native-compute`: the compiled function answered discriminant %d, which %s does not have" i (qname env tid)
-        | Stdlib.Error msg -> error_in env l "`native-compute`: %s" msg in
-      elab_call ~run V.Plain env ?tele expect l (loc f) (describe env Many f h.term (canon env h.ty)) h hcode lv [] [ ret ] []
+      count_check ?sink l expect fs;
+      if expect = [] || List.exists (( <> ) Many) expect then error_in env l "`native-compute` produces its results at `many`";
+      let head env f =
+        let env, h, hcode = elab_head env Many l f in
+        let l = loc f in
+        (match h.term with
+         | Var x when h.erasure = Many && (match (entry env x).state with Settled _ -> true | Hypothetical -> false) -> ()
+         | t -> error_in env l "`native-compute` needs a Settled `many` function, and %s is not one" (qshow env t));
+        let lv, ret = match canon env h.ty with
+          | Fn (lv, [], [ ({ mult = Many; place = None; _ } as ret) ]) -> (lv, ret)
+          | t -> error_in env l "`native-compute` takes a function of no parameters and one `many` return not written `at`, and %s : %s is not one" (qshow env h.term) (qshow env t) in
+        let ty = match ret.sg with Ty t -> t | Is t -> infer env l t in
+        let tid = match type_head env ty with Some t -> t | None -> error_in env l "`native-compute` returns a value of an enum, and %s is not a datatype" (qshow env ty) in
+        let mid, disc, _ = find_matchable env l tid in
+        let adt = match adt_of env mid with Some a -> a | None -> error_in env l "the `Matchable` for %s is %s, so `native-compute` cannot read its result back" (qname env tid) (if (entry env mid).mult = Erased then "erased" else "not Settled") in
+        let env = use env l Many mid in
+        if disc = Union then error_in env l "`native-compute` returns a value of an `enum`, not a `union`";
+        (match List.find_opt (fun c -> c.V.arity > 0) adt.ctors with
+         | Some c -> error_in env l "`native-compute` returns a value of an enum whose constructors have only erased fields, and %s of %s has a non-erased one" (tick c.V.cname) (qname env tid)
+         | None -> ());
+        (env, (f, h, hcode, lv, ret, adt, tid)) in
+      let env, heads = List.fold_left_map head env fs in
+      let answers = lazy (match !native env (List.map (fun (_, _, hcode, _, _, adt, _) -> (List.hd (Eval.eval env.values hcode), adt)) heads) with
+        | Ok rs -> rs
+        | Stdlib.Error msg -> error_in env l "`native-compute`: %s" msg) in
+      let env, ress, codes =
+        List.fold_left2
+          (fun (env, ress, codes) (i, (f, h, hcode, lv, ret, adt, tid)) e ->
+            let run env _ =
+              match List.nth (Lazy.force answers) i with
+              | Ok i when i >= 0 && i < List.length adt.V.ctors -> [ V.construct (V.ctor_at adt i) [] ]
+              | Ok i -> error_in env (loc f) "`native-compute`: the compiled function answered discriminant %d, which %s does not have" i (qname env tid)
+              | Stdlib.Error msg -> error_in env (loc f) "`native-compute`: %s" msg in
+            let tele = Option.map (fun e -> [ { e with sg = map_sg (instantiate (List.map (fun r -> r.term) ress)) e.sg } ]) e in
+            let env, rs, code = elab_call ~run V.Plain env ?tele [ Many ] l (loc f) (describe env Many f h.term (canon env h.ty)) h hcode lv [] [ ret ] [] in
+            (env, rs @ ress, code :: codes))
+          (env, [], []) (List.mapi (fun i h -> (i, h)) heads) (match tele with Some t -> List.map Option.some t | None -> List.map (fun _ -> None) heads)
+      in
+      (env, List.rev ress, V.CValues (List.rev codes))
   | Sp.Values, _ ->
       let env, args, splices = spliced_framed env (unframed args) in
       let frames, args = List.split args in

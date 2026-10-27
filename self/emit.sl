@@ -1429,12 +1429,12 @@
   (let-match many b (BCtorFn _ _) (else (None $ String)))
   (Some _ "_"))
 
-(def-fns _ $ (many final-rope : (many (Env) env) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Term) ty) (many (Maybe $ Adt) native) (many (Decls) d) -> (many (Decls) d2) (many (Rope) r))
+(def-fns _ $ (many final-rope : (many (Env) env) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Term) ty) (many (Maybe $ Adt) native) (many (Nat) idx) (many (Decls) d) -> (many (Decls) d2) (many (Rope) r))
   (let ((many vr)) $ addr-rope _ v)
   (let-match many native (None _)
     ((Some _ adt)
       (let ((many d1)) $ collect-match adt (all-live adt) d)
-      (values d1 $ rcat4 (RStr "let () = let v = (Obj.obj ") vr (RStr " : unit -> Obj.t) () in ") $ rcat (dispatch-rope d1 0 adt (all-live adt) (RStr "v") (ctor-arms d1 (adt-ctors adt) $ AkIndex) $ None _) $ RStr "\n")))
+      (values d1 $ rcat4 (rcat3 (RStr "let () = if Sys.argv.(1) = \"") (RStr $ nat-str idx) $ RStr "\" then let v = (Obj.obj ") vr (RStr " : unit -> Obj.t) () in ") $ rcat (dispatch-rope d1 0 adt (all-live adt) (RStr "v") (ctor-arms d1 (adt-ctors adt) $ AkIndex) $ None _) $ RStr "\n")))
   (match many (classify-final env ty) _
     ((FMain) (values d $ rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
     ((FProgram) (values d $ rcat3 (RStr "let () = exit (driver.run_program world ") vr $ RStr ")\n"))
@@ -1447,12 +1447,13 @@
       (let ((many memo) (many name)) $ show-type show-fuel env ty $ MkShowMemo (env-fresh-bound env) 0 (Nil _) (Nil _) d)
       (values (memo-decls memo) $ rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))
 
-(def-fns _ $ (many emit-finals : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Pair (Ref Block hs) $ Term) fs) (many (Env) env) (many (Maybe $ Adt) native) (many (Decls) d) -> (many (Decls) d2) (many (Rope) r))
+(def-fns _ $ (many emit-finals : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Pair (Ref Block hs) $ Term) fs) (many (Env) env) (many (List $ Adt) natives) (many (Nat) idx) (many (Decls) d) -> (many (Decls) d2) (many (Rope) r))
   (let-match many fs (Cons _ p rest)
     ((Nil _) (values d $ REmpty)))
   (let-match many p (MkPair _ _ v ty))
-  (let ((many d1) (many r1)) $ final-rope env _ hp v ty native d)
-  (let ((many d2) (many r2)) $ notail $ emit-finals _ hp rest env native d1)
+  (let ((many native) (many nrest)) $ match many natives (((Maybe $ Adt) _) ((List $ Adt) _)) ((Cons _ a more) (values (Some _ a) more)) ((Nil _) (values (None _) $ Nil _)))
+  (let ((many d1) (many r1)) $ final-rope env _ hp v ty native idx d)
+  (let ((many d2) (many r2)) $ notail $ emit-finals _ hp rest env nrest (Succ idx) d1)
   (values d2 $ rcat r1 r2))
 
 ; The prelude's types the driver and any printer may name, declared whether or not the program reaches them.
@@ -1467,11 +1468,11 @@
     ((Nil _) acc))
   (match many p _ ((MkPair _ _ v _) (tail (roots-of-finals _ rest env en $ Cons _ v acc)))))
 
-(def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) (many (Maybe $ Adt) native) -> (many (Rope) r))
+(def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) (many (List $ Adt) natives) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Cons _ "ExecJob" $ Cons _ "ExecResults" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates #\newline)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb _))
-  (let ((many d0b) (many _)) $ emit-finals _ hp (list-rev _ fi) env native d0)
+  (let ((many d0b) (many _)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)
   (let ((many roots)) $ settled-refs _ en cids $ roots-of-finals _ fi env en (Nil _))
   (let ((many acc2) (many d2))
@@ -1480,5 +1481,5 @@
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
-  (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env native d2)
+  (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d2)
   (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env with-exec) (rcat3 skeletons defs fills) finals))

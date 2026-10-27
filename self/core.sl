@@ -298,7 +298,7 @@
     ((SpMark k) (match many k _ ((MkTail) (Some _ 1)) ((MkNoTail) (Some _ 1)) ((MkDelegate) (Some _ 1)) (else (None _))))
     ((SpExpr k)
       (match many k _
-        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExSettledOf) (Some _ 2)) ((ExCellSame) (Some _ 2)) ((ExFnSame) (Some _ 2)) ((ExNativeCompute) (Some _ 1))
+        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExSettledOf) (Some _ 2)) ((ExCellSame) (Some _ 2)) ((ExFnSame) (Some _ 2))
         ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
         (else (None _))))
     (else (None _))))

@@ -140,7 +140,7 @@
   (let-match many gm (GoalUnrequired) (else (values (goal-verdict flags (BTrue) w1) (Exit _ exit-ok))))
   (let-match many (has-flag flags "--interpret") (BTrue)
     ((BFalse)
-      (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env with-exec env $ None _)
+      (let ((many out) (erased _)) $ flatten $ emit-program (not $ has-flag flags "--no-templates") reads writes bytes with-env with-exec env $ Nil _)
       (match many (flag-value flags "--build") _
         ((Some _ path) (build (has-flag flags "--byte") path out w1))
         ((None _) (values (say-to (BFalse) out w1) (Exit _ exit-ok))))))
