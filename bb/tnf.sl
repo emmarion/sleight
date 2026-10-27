@@ -200,7 +200,7 @@
   (let-match many (notail $ acc-all sy es acc rest) (ROk _ aa) ((RFail _) (RFail _)))
   (ROk _ (AACons sy es acc rest a c a2 me nb ma aa)))
 
-(def-fns _ $ (many check-cert : (many (Nat) k) (many (List (Tr)) O) (many (List (PT)) p) (many (Cert) ct) -> (many (Res (TNode k O p)) r))
+(def-fns _ $ (many check-cert : (many (Nat) n k) (many (List (PT)) p) (many (Cert) ct) -> (many (Res (TNode n k p)) r))
   (let-match many ct (MkCert sy es acc S ch a0))
   (let-match many (closedn p sy es S S ch) (ROk _ cl) ((RFail _) (RFail _)))
   (let-match many (acc-all sy es acc acc) (ROk _ aa) ((RFail _) (RFail _)))
@@ -211,27 +211,8 @@
   (let-match many h (BFalse) ((BTrue) (RFail _)))
   (let-match many (find-nat sl acc) (ROk _ ml) ((RFail _) (RFail _)))
   (let-match many (find-nat sr acc) (ROk _ mr) ((RFail _) (RFail _)))
-  (ROk _ (TN k O p sy es acc S cl aa a0 ma
+  (ROk _ (TN n k p sy es acc S cl aa a0 ma
     (MkGCN sy es acc (Zero) sl sh sr (Nil (Bool)) (Nil (Bool)) (BFalse) (GAcc sy es acc sl ml) (GAcc sy es acc sr mr) nh))))
-
-(def-adts
-  ((UList : ((Nat) k) ((List (PT)) p) -> Type)
-    enum
-    (many UNil : -> (UList (Zero) (Nil (PT))))
-    (many UCons : (erased (Nat) k) (erased (List (PT)) p) (erased (UList k p) u) -> (UList (Succ k) (Cons (PT) (Undef) (Cons (PT) (Undef) p))))))
-
-(def-fns _ $ (many undefs : (subterm many (Nat) k) -> (many (List (PT)) p) (erased (UList k p) u))
-  (let-match many k (Succ k1) ((Zero) (values (Nil (PT)) (UNil))))
-  (let ((many p) (erased u)) (notail $ undefs k1))
-  (values (Cons (PT) (Undef) (Cons (PT) (Undef) p)) (UCons k1 p u)))
-
-(def-fns _ $ (erased ext-undef : (erased (Nat) n k) (erased (List (Tr)) m) (erased (List (PT)) p)
-    (subterm erased (Rows n k m) rw) (erased (UList k p) u) -> (erased (Ext p m) e))
-  (match erased rw _
-    ((RowsZ _) (let-match erased u (UNil)) (ExNil))
-    ((RowsS _ k1 t0 t1 rest _ _ rw1)
-      (let-match erased u (UCons _ p1 u1))
-      (ExU t0 (Cons (PT) (Undef) p1) (Cons (Tr) t1 rest) (ExU t1 p1 rest (ext-undef n k1 rest p1 rw1 u1))))))
 
 (def-adts
   ((DefL : ((List (Tr)) m) ((List (PT)) p) -> Type)
