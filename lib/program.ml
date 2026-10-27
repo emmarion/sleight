@@ -82,9 +82,9 @@ let goal_refusal mode flags =
 
 let inline : string option ref = ref None
 
-let compile byte src exe =
+let compile byte dir exe =
   let tool = if byte then [ "ocamlc" ] else "ocamlopt" :: Option.fold ~none:[] ~some:(fun n -> [ "-inline"; n ]) !inline in
-  exec "ocamlfind" (tool @ [ "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; exe ]) (host_envs ()) None ""
+  exec "ocamlfind" (tool @ [ "-package"; "zarith,unix"; "-linkpkg"; "main.ml"; "-o"; exe ]) (host_envs ()) (Some dir) ""
 
 let build byte path ml =
   let dir = path ^ ".build" in
@@ -97,7 +97,7 @@ let build byte path ml =
       guarded (fun () ->
           Sys.mkdir dir 0o755;
           write_file src ml;
-          compile byte src path)
+          compile byte dir (if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path else path))
     in
     let removed =
       guarded (fun () -> if Sys.file_exists dir then (Array.iter (fun f -> Sys.remove (Filename.concat dir f)) (Sys.readdir dir); Sys.rmdir dir); Ok ())

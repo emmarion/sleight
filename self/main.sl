@@ -85,9 +85,9 @@
   (let ((erased hs) (many h)) (env-heap env))
   (interp-finals env pargs with-env with-exec _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
 
-(def-fns util-lvl $ (many ocamlfind : (many (List $ String) args) (many (Result $ Unit) wrote) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Exited) r))
+(def-fns util-lvl $ (many ocamlfind : (many (List $ String) args) (many (String) dir) (many (Result $ Unit) wrote) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Exited) r))
   (let-match many wrote (Ok _ _) ((Fail _ m) (values w (Fail _ m))))
-  (host-exec "ocamlfind" args w))
+  (host-exec "ocamlfind" args (Some _ dir) w))
 
 (def-fns run-lvl $ (many build : (many (Bool) byte) (many (Maybe $ String) inline) (many (String) path) (many (String) ml) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((many dir)) $ str-cat path ".build")
@@ -96,7 +96,9 @@
   (let-match many change (Changed) ((Unchanged) (failed-with _ exit-toolchain (str-cat dir ": already exists") w1)))
   (let ((many src)) $ str-cat dir "/main.ml")
   (let ((unique w2) (many wrote)) (world-do _ w1 $ WriteFile src ml))
-  (let ((unique w3) (many ran)) $ ocamlfind (compile-args byte inline src path) wrote w2)
+  (let ((unique w2a) (many cwd)) (world-do _ w2 $ GetCwd))
+  (let ((many exe)) $ match many (str-starts "/" path) (((String) _)) ((BTrue) path) ((BFalse) (str-cat3 cwd "/" path)))
+  (let ((unique w3) (many ran)) $ ocamlfind (compile-args byte inline exe) dir wrote w2a)
   (let ((unique w4) (many entries)) (world-do _ w3 $ ListDir dir))
   (let ((unique w5)) $ delete-files dir (match many entries (((List $ String) _)) ((Ok _ names) names) ((Fail _ _) (Nil _))) w4)
   (let ((unique w6) (many removed)) (world-do _ w5 $ DeleteDir dir))

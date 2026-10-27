@@ -683,7 +683,7 @@ let () =
       Program.write_file (file "main.ml") ml;
       Result.map
         (fun _ -> List.map answer (Program.exec_all (Lazy.force Program.processors) (List.mapi (fun i _ -> (file "main", [ string_of_int i ], Program.host_envs (), None, "")) fs)))
-        (exited "ocamlfind" (Program.compile false (file "main.ml") (file "main"))) in
+        (exited "ocamlfind" (Program.compile false dir (file "main"))) in
     let result = try run () with (Unix.Unix_error _ | Sys_error _) as e -> Stdlib.Error (Driver_core.explain e) in
     (try Array.iter (fun f -> Sys.remove (file f)) (Sys.readdir dir); Sys.rmdir dir with Sys_error _ -> ());
     result
