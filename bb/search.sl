@@ -259,7 +259,7 @@
   (many MkHT : (many (Nat) n mask) (unique (Vec (Nat)) slots) (unique (Vec (List (KN))) keys) (unique (Vec (Nat)) hs) -> (HT)))
 
 (def-fns _ $ (many ht-new : -> (unique (HT) t))
-  (MkHT 0 15 (vec-new _ 16 0) (vec-new _ 16 (Nil (KN))) (vec-new _ 16 0)))
+  (MkHT 0 63 (vec-new _ 64 0) (vec-new _ 32 (Nil (KN))) (vec-new _ 32 0)))
 
 (def-fns _ $ (many ht-probe : (unique (Vec (Nat)) slots) (unique (Vec (List (KN))) keys) (unique (Vec (Nat)) hs) (many (Nat) mask h)
     (many (List (KN)) k) (subterm many (Nat) fuel) (many (Nat) i) ->
@@ -329,7 +329,7 @@
   (many MkTab : (unique (HT) ids pre) (unique (Vec (List (KN))) ix) -> (Tab)))
 
 (def-fns _ $ (many tab-new : -> (unique (Tab) t))
-  (MkTab (ht-new) (ht-new) (vec-new _ 16 (Nil (KN)))))
+  (MkTab (ht-new) (ht-new) (vec-new _ 32 (Nil (KN)))))
 
 (def-fns _ $ (many tab-n : (unique (Tab) t) -> (many (Nat) n) (unique (Tab) t2 at t))
   (let-match unique t (MkTab ids pre ix u))
@@ -346,33 +346,27 @@
   (let ((many r) (unique ids2)) (ht-find ids k))
   (values r (at unique (u ids2 pre ix))))
 
-(def-fns _ $ (many ix-get : (unique (Tab) t) (many (List (KN)) pk) -> (many (List (KN)) ks) (unique (Tab) t2 at t))
-  (let-match unique t (MkTab ids pre ix u))
-  (let ((many r) (unique pre2)) (ht-find pre pk))
-  (let-match many r (Some _ pj) ((None _) (values (Nil _) (at unique (u ids pre2 ix)))))
-  (let ((many ks) (unique ix2)) (vec-get _ ix pj))
-  (values ks (at unique (u ids pre2 ix2))))
-
-(def-fns _ $ (many tab-pre : (unique (Tab) t) (many (List (KN)) pk) -> (many (Nat) pj) (unique (Tab) t2 at t))
+(def-fns _ $ (many ix-get : (unique (Tab) t) (many (List (KN)) pk) -> (many (List (KN)) ks) (many (Nat) pj) (unique (Tab) t2 at t))
   (let-match unique t (MkTab ids pre ix u))
   (let ((many pj) (many _) (unique pre2)) (ht-intern pre pk))
-  (values pj (at unique (u ids pre2 ix))))
+  (let ((many ks) (unique ix2)) (vec-get _ ix pj))
+  (values ks pj (at unique (u ids pre2 ix2))))
 
-(def-fns _ $ (many tab-intern : (many (Bool) ixd) (many (List (KN)) k) (unique (Tab) t) -> (many (KN) i) (unique (Tab) t2 at t) (many (Bool) new))
+(def-fns _ $ (many tab-intern : (many (Bool) ixd) (many (List (KN)) k) (unique (Tab) t) -> (many (KN) i) (unique (Tab) t2 at t) (many (Bool) new) (many (Nat) pj))
   (let-match unique t (MkTab ids pre ix u))
   (let ((many n) (many new) (unique ids2)) (ht-intern ids k))
   (let ((many i)) (kn n))
-  (let-match many new (BTrue) ((BFalse) (values i (at unique (u ids2 pre ix)) (BFalse))))
-  (let-match many ixd (BTrue) ((BFalse) (values i (at unique (u ids2 pre ix)) (BTrue))))
-  (let-match many k (Cons _ side g) ((Nil _) (values i (at unique (u ids2 pre ix)) (BTrue))))
+  (let-match many new (BTrue) ((BFalse) (values i (at unique (u ids2 pre ix)) (BFalse) 0)))
+  (let-match many ixd (BTrue) ((BFalse) (values i (at unique (u ids2 pre ix)) (BTrue) 0)))
+  (let-match many k (Cons _ side g) ((Nil _) (values i (at unique (u ids2 pre ix)) (BTrue) 0)))
   (let ((many pj) (many _) (unique pre2)) (ht-intern pre (Cons (KN) side (but-last _ g))))
   (let ((many old) (unique ix1)) (vec-get _ ix pj))
   (let ((unique ix2)) (vec-set _ ix1 pj (Cons _ i old)))
-  (values i (at unique (u ids2 pre2 ix2)) (BTrue)))
+  (values i (at unique (u ids2 pre2 ix2)) (BTrue) pj))
 
 (def-fns _ $ (many tab-of : (many (Bool) ixd) (subterm many (List (List (KN))) ks) (unique (Tab) t) -> (unique (Tab) t2 at t))
   (let-match many ks (Cons _ k rest) ((Nil _) t))
-  (let ((many _) (unique t1) (many _)) (tab-intern ixd k t))
+  (let ((many _) (unique t1) (many _) (many _)) (tab-intern ixd k t))
   (tail $ tab-of ixd rest t1))
 
 (def-fns _ $ (many tab-bits : (unique (Tab) t) (many (KN) i) (subterm many (Nat) n) -> (many (List (Bool)) bs))
@@ -408,12 +402,13 @@
 (def-fns _ $ (many sn-ix : (many (Setting) se) -> (many (Bool) b))
   (match many se _ ((SN _ _ _ _ _) (BTrue)) ((SW _ _ _) (BFalse))))
 
-(def-fns _ $ (many edges-of : (many (Setting) se) (unique (Tab) st) (many (List (KN)) key) -> (many (List (Pair (KN) (Tgt))) es) (unique (Tab) st2 at st))
-  (let-match many key (Cons _ side g) ((Nil _) (values (Nil _) st)))
-  (let-match many se (SN _ _ _ _ _) ((SW ln T _) (values (rw-edges ln T side g) st)))
-  (let-match many g (Cons _ c gt) ((Nil _) (values (Nil _) st)))
-  (let ((many js) (unique st2)) (ix-get st (Cons (KN) side gt)))
-  (values (with-c c js) st2))
+(def-fns _ $ (many edges-of : (many (Setting) se) (unique (Tab) st) (many (List (KN)) key) ->
+    (many (List (Pair (KN) (Tgt))) es) (many (Nat) pj) (unique (Tab) st2 at st))
+  (let-match many key (Cons _ side g) ((Nil _) (values (Nil _) 0 st)))
+  (let-match many se (SN _ _ _ _ _) ((SW ln T _) (values (rw-edges ln T side g) 0 st)))
+  (let-match many g (Cons _ c gt) ((Nil _) (values (Nil _) 0 st)))
+  (let ((many js) (many pj) (unique st2)) (ix-get st (Cons (KN) side gt)))
+  (values (with-c c js) pj st2))
 
 (def-fns _ $ (many sym-key : (many (Setting) se) (many (KN) w q hb) (many (List (KN)) hist) -> (many (List (KN)) k))
   (let-match many se (SN _ _ H lru _) ((SW _ _ _) (Cons (KN) w (Nil (KN)))))
@@ -447,7 +442,7 @@
   (let-match many x (Def t) ((Undef) (values (None _) sy1 st)))
   (let-match many t (Mov w d q2) ((Hlt) (values (None _) sy1 st)))
   (let ((many wn)) (match many w (((KN) n)) ((BFalse) k0) ((BTrue) k1)))
-  (let ((many sid) (unique sy2) (many _)) (tab-intern (BFalse) (sym-key se wn q hb hist) sy1))
+  (let ((many sid) (unique sy2) (many _) (many _)) (tab-intern (BFalse) (sym-key se wn q hb hist) sy1))
   (let ((many O) (many oi) (many pi)) (match many d (((KN) O) ((KN) oi) ((KN) pi)) ((DL) (values k1 sr sl)) ((DR) (values k0 sl sr))))
   (let ((many okey) (unique st1)) (tab-get st oi))
   (let-match many okey (Cons _ _ o) ((Nil _) (values (None _) sy2 st1)))
@@ -480,13 +475,12 @@
 (def-fns _ $ (many intern-st : (many (Setting) se) (many (List (KN)) key) (unique (GSt) g) -> (many (KN) j) (unique (GSt) g2 at g))
   (let-match unique g (MkGSt sy st S ch ss W wt n u))
   (let ((many ixd)) (sn-ix se))
-  (let ((many j) (unique st2) (many new)) (tab-intern ixd key st))
+  (let ((many j) (unique st2) (many new) (many pj)) (tab-intern ixd key st))
   (let-match many new (BTrue) ((BFalse) (values j (at unique (u sy st2 S ch ss W wt n)))))
   (let-match many ixd (BTrue) ((BFalse) (values j (at unique (u sy st2 S ch ss W wt n)))))
   (let-match many key (Cons _ side kg) ((Nil _) (values j (at unique (u sy st2 S ch ss W wt n)))))
-  (let ((many pj) (unique st3)) (tab-pre st2 (Cons (KN) side (but-last _ kg))))
   (let ((many ws) (unique wt2)) (vec-get _ wt pj))
-  (values j (fire j ws (at unique (u sy st3 S ch ss W wt2 n)))))
+  (values j (fire j ws (at unique (u sy st2 S ch ss W wt2 n)))))
 
 (def-fns _ $ (many add-edges : (many (Setting) se) (many (KN) q2) (many (Mv) d) (many (KN) no) (subterm many (List (Pair (KN) (Tgt))) es)
     (unique (GSt) g) -> (many (List (Nat)) tg) (unique (GSt) g2 at g))
@@ -505,17 +499,16 @@
   (let ((many no) (unique g1)) (intern-st se nk (at unique (u sy2 st2 S ch ss W wt n))))
   (let-match unique g1 (MkGSt sy3 st3 S3 ch3 ss3 W3 wt3 n3 u3))
   (let ((many pkey) (unique st4)) (tab-get st3 pi))
-  (let ((many es) (unique st5)) (edges-of se st4 pkey))
+  (let ((many es) (many pj) (unique st5)) (edges-of se st4 pkey))
   (let ((many tg) (unique g2)) (add-edges se q2 d no es (at unique (u3 sy3 st5 S3 ch3 ss3 W3 wt3 n3))))
   (let-match unique g2 (MkGSt sy4 st6 S4 ch4 ss4 W4 wt4 n4 u4))
   (let ((unique ch5)) (vec-set _ ch4 (kv ai) (MkInfo sid no tg)))
   (let-match many (sn-ix se) (BTrue) ((BFalse) (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt4 n4)))))
-  (let-match many pkey (Cons _ side pg) ((Nil _) (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt4 n4)))))
-  (let-match many pg (Cons _ c gt) ((Nil _) (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt4 n4)))))
-  (let ((many pj) (unique st7)) (tab-pre st6 (Cons (KN) side gt)))
+  (let-match many pkey (Cons _ _ pg) ((Nil _) (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt4 n4)))))
+  (let-match many pg (Cons _ c _) ((Nil _) (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt4 n4)))))
   (let ((many ws) (unique wt5)) (vec-get _ wt4 pj))
   (let ((unique wt6)) (vec-set _ wt5 pj (Cons _ (MkWait q2 d no c ai) ws)))
-  (values (BTrue) (at unique (u4 sy4 st7 S4 ch5 ss4 W4 wt6 n4))))
+  (values (BTrue) (at unique (u4 sy4 st6 S4 ch5 ss4 W4 wt6 n4))))
 
 (def-fns _ $ (many run-wl : (many (List (PT)) p) (many (Setting) se) (many (Nat) cap) (subterm many (Nat) fuel) (unique (GSt) g) -> (many (Bool) ok) (unique (GSt) g2 at g))
   (let-match many fuel (Succ f) ((Zero) (values (BFalse) g)))
@@ -534,7 +527,7 @@
   (let ((many j) (unique st1))
     (match many t (((KN) j) ((Tab) st1 at st))
       ((TId j) (values j st))
-      ((TKey key) (let ((many j) (unique st1) (many _)) (tab-intern ixd key st)) (values j st1))))
+      ((TKey key) (let ((many j) (unique st1) (many _) (many _)) (tab-intern ixd key st)) (values j st1))))
   (let ((unique st2) (many row)) (notail $ row-ids ixd rest st1))
   (values st2 (Cons (Pair (Nat) (Nat)) (MkPair _ _ (kv c) (kv j)) row)))
 
@@ -544,7 +537,7 @@
   (let ((many n) (unique st1)) (tab-n st))
   (let-match many (lt-dec (kv i) n) (Yes _ _ _ _ _) ((No _ _ _ _ _) (Some _ acc)))
   (let ((many key) (unique st2)) (tab-get st1 i))
-  (let ((many es) (unique st3)) (edges-of se st2 key))
+  (let ((many es) (many _) (unique st3)) (edges-of se st2 key))
   (let ((unique st4) (many row)) (row-ids (sn-ix se) es st3))
   (tail $ all-rows se f (k-inc i) st4 (Cons (List (Pair (Nat) (Nat))) row acc)))
 
@@ -586,8 +579,8 @@
   (let ((many a0)) (MkKC k0 li k0 ri))
   (let ((many fuel0) (erased _)) (add cap cap))
   (let ((many _) (many _) (unique ss)) (ht-intern (ht-new) (kc-key a0)))
-  (let ((many ok) (unique g)) (run-wl p se cap fuel0 (MkGSt sy st (Cons (KC) a0 (Nil (KC))) (vec-new _ 16 info0) ss
-    (Cons _ (MkPair _ _ a0 k0) (Nil _)) (vec-new _ 16 (Nil (Wait))) 1)))
+  (let ((many ok) (unique g)) (run-wl p se cap fuel0 (MkGSt sy st (Cons (KC) a0 (Nil (KC))) (vec-new _ 32 info0) ss
+    (Cons _ (MkPair _ _ a0 k0) (Nil _)) (vec-new _ 32 (Nil (Wait))) 1)))
   (let-match many ok (BTrue) ((BFalse) (None _)))
   (let-match unique g (MkGSt sy2 st2 S inf _ _ _ _))
   (let ((many n) (unique st3)) (tab-n st2))
@@ -742,13 +735,17 @@
   (match many d _
     ((DL)
       (let-match many pos (Succ pos1) ((Zero) (NROut p (PSOut p t q l r h pr))))
-      (let ((many h2) (many l2) (erased pp)) (pop l))
-      (tail $ nsim p f (Succ t) q2 pos1 l2 h2 (Cons (Bool) w r) csr2 csl2 opr2 opl2 snap2 st2 nx2
-        (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l2 h w h2 pl pp))))
+      (match many l _
+        ((Nil _) (tail $ nsim p f (Succ t) q2 pos1 l (BFalse) (Cons (Bool) w r) csr2 csl2 opr2 opl2 snap2 st2 nx2
+          (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l h w (BFalse) pl (PullNil)))))
+        ((Cons _ h2 l2) (tail $ nsim p f (Succ t) q2 pos1 l2 h2 (Cons (Bool) w r) csr2 csl2 opr2 opl2 snap2 st2 nx2
+          (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l2 h w h2 pl (PullCons h2 l2)))))))
     ((DR)
-      (let ((many h2) (many r2) (erased pp)) (pop r))
-      (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) h2 r2 csr2 csl2 opr2 opl2 snap2 st2 nx2
-        (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl pp))))))
+      (match many r _
+        ((Nil _) (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) (BFalse) r csr2 csl2 opr2 opl2 snap2 st2 nx2
+          (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r h w (BFalse) pl (PullNil)))))
+        ((Cons _ h2 r2) (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) h2 r2 csr2 csl2 opr2 opl2 snap2 st2 nx2
+          (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl (PullCons h2 r2)))))))))
 
 (def-fns _ $ (many root-par : (many (List (PT)) p) -> (many (Maybe (Par p (Zero) (BFalse))) r))
   (let-match many (plook p (Zero) (BFalse)) (PLOk _ _ _ x pl) ((PLNo _ _ _) (None _)))
