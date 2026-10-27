@@ -4,7 +4,7 @@
 (let ((many show-fuel)) 100000)
 
 (def-fns _ $ (many quoted : (many (String) s) -> (many (Rope) r))
-  (rcat3 (RStr "\"") (ocaml-escape s) $ RStr "\""))
+  (RStr $ lit-string s))
 
 (def-fns _ $ (many nat-rope : (many (Nat) n) -> (many (Rope) r))
   (RStr $ nat-str n))

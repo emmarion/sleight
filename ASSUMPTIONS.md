@@ -897,9 +897,9 @@ session's.
      `rope-str` delegates to `flatten`, and `main.sl` writes its output
      as one string. `RChar`, a character leaf (the owner's question, the
      session's yes), is what anything built character by character
-     uses: slc's tokenizer accumulates a word or a string literal as a
-     rope of `RChar`s and flattens it once, and `base.sl`'s `sanitize`
-     and `ocaml-escape` build ropes the same way. slc's compile-time
+     uses: slc's tokenizer accumulates a pragma's words as ropes of
+     `RChar`s and flattens each once, and `base.sl`'s `sanitize` builds
+     ropes the same way. slc's compile-time
      interpreter flattens a `Rope` value over its heap
      (`flatten-value`, `eval.sl`). `tests/rope.sl` is the evidence, in
      both modes and extracted. Not done: length caching, which would
