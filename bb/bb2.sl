@@ -403,7 +403,7 @@
     (many (Res (Good k m)) r))
   (match many (sim m simfuel (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) _
     ((SHalt _ _ s h)
-      (let-match many (lt-dec s (Succ k)) (Yes _ _ lt) ((No _ _ _) (RFail _)))
+      (let-match many (lt-dec s (Succ k)) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (RFail _)))
       (ROk _ (GHalt k s m h lt)))
     ((SRun _ _)
       (let ((many a0)) (MkA (Zero) (MkSide (Nil (Bool)) (FZ)) (BFalse) (MkSide (Nil (Bool)) (FZ))))

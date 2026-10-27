@@ -188,7 +188,7 @@
 
 (let ((many d16)) (lt-dec 16 s62))
 
-(comptime-match many d16 (Yes _ _ l16))
+(comptime-match many d16 (Yes _ _ _ _ l16))
 
 (let ((many N) (erased pN) (erased posN)) (pow2 16))
 
@@ -196,7 +196,7 @@
 
 (let ((many d40)) (lt-dec 40 s62))
 
-(comptime-match many d40 (Yes _ _ l40))
+(comptime-match many d40 (Yes _ _ _ _ l40))
 
 (let ((many B40) (erased pB40) (erased posB40)) (pow2 40))
 
@@ -230,7 +230,7 @@
 
 (def-fns _ $ (many trok : (many (Nat) n) (many (Tr) t) -> (many (Res (TrOK n t)) r))
   (let-match many t (Go w d q) ((Halt) (ROk _ (OKHalt n))))
-  (let-match many (lt-dec q n) (Yes _ _ p) ((No _ _ _) (RFail _)))
+  (let-match many (lt-dec q n) (Yes _ _ _ _ p) ((No _ _ _ _ _) (RFail _)))
   (ROk _ (OKGo n q w d p)))
 
 (def-fns _ $ (many rows-check : (many (Nat) n) (subterm many (Nat) k) (many (List (Tr)) m) -> (many (Res (Rows n k m)) r))
@@ -544,12 +544,12 @@
 (def-fns _ $ (many window : (many (Nat) s) (erased (List (U8)) tx) (erased (Length (U8) tx N) ltx) (many (Nat) i j)
     (erased (Add i (Succ j) N) ij) -> (many (Win tx i j) w))
   (let ((many full)) (MkWin tx i j (Zero) N i j tx (splice-self _ tx N ltx) (AddZero i) ij (lt-succ i) (lt-succ j)))
-  (let-match many (lt-dec s i) (Yes _ _ pi) ((No _ _ _) full))
-  (let-match many (lt-dec s j) (Yes _ _ pj) ((No _ _ _) full))
+  (let-match many (lt-dec s i) (Yes _ _ _ _ pi) ((No _ _ _ _ _) full))
+  (let-match many (lt-dec s j) (Yes _ _ _ _ pj) ((No _ _ _ _ _) full))
   (let ((many lo) (erased al)) (sub i s (lt-weaken s i pi)))
   (let ((many d) (erased dd)) (double s))
   (let ((many e) (erased ae)) (add lo (Succ d)))
-  (let-match many (lt-dec e (Succ N)) (Yes _ _ pe) ((No _ _ _) full))
+  (let-match many (lt-dec e (Succ N)) (Yes _ _ _ _ pe) ((No _ _ _ _ _) full))
   (let ((erased ws) (erased sp)) (splice-range _ tx N ltx lo (Succ d) e ae pe))
   (MkWin tx i j lo (Succ d) s s ws sp (add-comm s lo i al) (add-succ-right s s d (double-add s d dd)) (lt-weaken s i pi) (lt-weaken s j pj)))
 
@@ -558,18 +558,18 @@
     (many (Res (Checked m n s)) r) (unique (Bytes tx) a2))
   (let-match many st (MkStart _ as bs i j z fa fb la lb ij))
   (let-match many (rows-check n n m) (ROk _ wf) ((RFail _) (values (RFail _) a)))
-  (let-match many (lt-dec (Zero) n) (Yes _ _ lq0) ((No _ _ _) (values (RFail _) a)))
+  (let-match many (lt-dec (Zero) n) (Yes _ _ _ _ lq0) ((No _ _ _ _ _) (values (RFail _) a)))
   (let ((many ft) (erased mb)) (map-b m))
   (let ((unique fxu)) (list-to-array _ ft))
   (let ((many fx)) (share fxu))
   (let ((many b2) (erased db)) (double n))
-  (let-match many (lt-dec b2 B40) (Yes _ _ pb2) ((No _ _ _) (values (RFail _) a)))
+  (let-match many (lt-dec b2 B40) (Yes _ _ _ _ pb2) ((No _ _ _ _ _) (values (RFail _) a)))
   (let-match many (window s tx ltx i j ij) (MkWin _ _ _ lo len sl sr ws0 sp0 ai aw lsl lsr))
   (let ((many hi) (erased ah)) (add i sr))
-  (let-match many (lt-dec s B40) (Yes _ _ ps) ((No _ _ _) (values (RFail _) a)))
+  (let-match many (lt-dec s B40) (Yes _ _ _ _ ps) ((No _ _ _ _ _) (values (RFail _) a)))
   (let ((erased bs40)) (lt-trans s B40 u62-modulus ps NM40))
-  (let-match many (lt-dec lo N) (Yes _ _ plo) ((No _ _ _) (values (RFail _) a)))
-  (let-match many (lt-dec hi N) (Yes _ _ phi) ((No _ _ _) (values (RFail _) a)))
+  (let-match many (lt-dec lo N) (Yes _ _ _ _ plo) ((No _ _ _ _ _) (values (RFail _) a)))
+  (let-match many (lt-dec hi N) (Yes _ _ _ _ phi) ((No _ _ _ _ _) (values (RFail _) a)))
   (let ((many res) (erased ys) (unique a1) (erased ws2) (erased sp2) (erased ly))
     (wsim m ft fx mb s s (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (Zero) (Zero) (Zero) (Nil (Bool)) (Nil (Bool)) (BFalse) z8 (EncF)
       tx a i j as bs sl sr lo hi tx ws0 len (lt-trans lo N u62-modulus plo NM) (lt-trans hi N u62-modulus phi NM) sp0 ai aw ah lsr
