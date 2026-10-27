@@ -881,3 +881,14 @@
    Cons _ (SN 3 3 4 (BFalse) 1600) $ Cons _ (SN 2 2 6 (BFalse) 3200) $ Cons _ (SN 3 3 6 (BFalse) 3200) $
    Cons _ (SN 2 2 8 (BFalse) 1600) $ Cons _ (SN 3 3 8 (BFalse) 1600) $ Cons _ (SN 2 2 0 (BTrue) 10000) $
    Cons _ (SN 4 4 10 (BFalse) 10000) $ Cons _ (SW 2 3 10000) $ Nil (Setting)))
+
+(def-lvl BD)
+(def-fns _ $ (many sub-of : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (Stage)) pn) (many (List (PT)) p)
+    -> (many (Fn BD -> (many (Res (TNode n k hl p)) r)) f))
+  (def-fns BD $ (many go : -> (many (Res (TNode n k hl p)) r)) (build-at n dep k hl p pn))
+  go)
+
+(def-fns _ $ (many top-of : (many (Nat) n dep) (many (List (Tr)) os) (many (Nat) k) (many (List (PT)) p) (many (List (Stage)) pn)
+    (many (List (List (PT))) hl) -> (many (Fn BD -> (many (Res (TAll n k hl p (Zero) (BFalse) os)) r)) f))
+  (def-fns BD $ (many go : -> (many (Res (TAll n k hl p (Zero) (BFalse) os)) r)) (build-root n dep os k hl p pn))
+  go)
