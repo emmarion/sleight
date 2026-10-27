@@ -2058,7 +2058,7 @@
 ; first, then characters, each in order of value (lib/elab.ml's literal_notes).
 (def-fns _ $ (many lit-value : (many (String) s) -> (many (Nat) n))
   (let-match many (all-digits s) (BFalse) ((BTrue) (parse-nat s)))
-  (match many (char-lit-code s) _ ((Some _ n) n) ((None _) 0)))
+  (match many (char-lit-code s) _ ((Some _ c) (char-code c)) ((None _) 0)))
 
 (def-fns _ $ (many lit-before : (many (String) a) (many (String) b) -> (many (Bool) r))
   (match many (all-digits a) _
@@ -3169,7 +3169,7 @@
 
 ; The number a numeral or character literal spells, if the raw is one (lib/literal.ml's classify).
 (def-fns _ $ (many lit-number : (many (Syn) raw) -> (many (Maybe $ Nat) n))
-  (match many raw _ ((RNat _ n) (Some _ n)) ((RChr _ c) (Some _ c)) (else (None _))))
+  (match many raw _ ((RNat _ n) (Some _ n)) ((RChr _ c) (Some _ $ char-code c)) (else (None _))))
 
 (def-fns _ $ (many cc-eq : (many (CC) a) (many (CC) b) -> (many (Bool) r))
   (match many a _
@@ -4435,9 +4435,8 @@
   (match many p (((Maybe $ Rope) _))
     ((PNat n)
       (let-match many (prelude-nullary env ty "Nat") (BFalse) ((BTrue) (Some _ $ RStr $ nat-str n)))
-      (match many (prelude-nullary env ty "Char") (((Maybe $ Rope) _))
-        ((BTrue) (Some _ $ lit-char-rope n))
-        ((BFalse) (None $ Rope))))
+      (let-match many (prelude-nullary env ty "Char") (BTrue) ((BFalse) (None $ Rope)))
+      (match many (char-of-nat n) (((Maybe $ Rope) _)) ((Some _ c) (Some _ $ lit-char-rope c)) ((None _) (None $ Rope))))
     ((PStr st)
       (match many (prelude-nullary env ty "String") (((Maybe $ Rope) _))
         ((BTrue) (Some _ $ RStr $ lit-string st))

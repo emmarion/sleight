@@ -44,7 +44,7 @@
     (many RAtom : (many (Spot) pos) (many (Name) s) -> (Syn))
     (many RWild : (many (Spot) pos) -> (Syn))
     (many RNat : (many (Spot) pos) (many (Nat) n) -> (Syn))
-    (many RChr : (many (Spot) pos) (many (Nat) code) -> (Syn))
+    (many RChr : (many (Spot) pos) (many (Char) c) -> (Syn))
     (many RString : (many (Spot) pos) (many (String) s) -> (Syn))
     (many RList : (many (Spot) pos) (many (List $ Syn) items) -> (Syn))))
 
@@ -133,7 +133,7 @@
   (match many (classify w) _
     ((LName) (TItem $ RAtom pos $ NSrc w))
     ((LNumeral) (TItem $ RNat pos $ parse-nat w))
-    ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Nat) _)) ((Some _ n) n) ((None _) 0)))))
+    ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Char) _)) ((Some _ c) c) ((None _) #\x00)))))
 
 (def-fns _ $ (many word-tok : (many (Spot) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
   (let ((many w) (many _) (erased _) (erased _)) (str-split start k len l (add-le-left k rl len sum)))

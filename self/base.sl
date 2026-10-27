@@ -42,12 +42,6 @@
   (let-match many u (MkU8 k _))
   k)
 
-; A code the modulus does not bound, which no Char holds, becomes NUL.
-(def-fns _ $ (many char-of-code : (many (Nat) n) -> (many (Char) c))
-  (match many (lt-dec n u8-modulus) _
-    ((Yes _ _ _ _ p) (MkChar $ MkU8 n p))
-    ((No _ _ _ _ _) #\x00)))
-
 (def-fns _ $ (many char-eqb : (many (Char) a) (many (Char) b) -> (many (Bool) r))
   (is-same _ _ _ _ $ char-eq a b))
 
@@ -59,15 +53,14 @@
 (def-fns _ $ (erased u8-u62 : (erased (Nat) k) (erased (Lt k u8-modulus) p) -> (erased (Lt k u62-modulus) q))
   (lt-trans _ _ _ p u8-below-u62))
 
-; a minus b, or 0 where b is above a.
-(def-fns _ $ (many char-minus : (many (Char) a) (many (Char) b) -> (many (Nat) d))
+(def-fns _ $ (many char-minus : (many (Char) a) (many (Char) b) -> (many (Nat) d) (erased (Lt d u62-modulus) pd))
   (let-match many a (MkChar ua))
   (let-match many ua (MkU8 ka pa))
   (let-match many b (MkChar ub))
   (let-match many ub (MkU8 kb pb))
-  (let-match many (u62-lt-dec ka kb (u8-u62 _ pa) (u8-u62 _ pb)) (No _ _ _ _ le) ((Yes _ _ _ _ _) 0))
-  (let ((many d) (erased _) (erased _)) (u62-sub ka kb (u8-u62 _ pa) (le-lt-succ _ _ le)))
-  d)
+  (let-match many (u62-lt-dec ka kb (u8-u62 _ pa) (u8-u62 _ pb)) (No _ _ _ _ le) ((Yes _ _ _ _ _) (values (Zero) u62-modulus-pos)))
+  (let ((many d) (erased _) (erased pd)) (u62-sub ka kb (u8-u62 _ pa) (le-lt-succ _ _ le)))
+  (values d pd))
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
   (let ((many s) (erased _)) (delegate (flatten r)))
@@ -161,32 +154,37 @@
   (or (char-between c #\0 #\9) $ or (char-between c #\a #\f) $ char-between c #\A #\F))
 
 (def-fns _ $ (many hex-digit : (many (Char) c) -> (many (Nat) d))
-  (let-match many (char-between c #\0 #\9) (BFalse) ((BTrue) (char-minus c #\0)))
-  (match many (char-between c #\a #\f) _
-    ((BTrue) (nat-add 10 $ char-minus c #\a))
-    ((BFalse) (nat-add 10 $ char-minus c #\A))))
+  (let ((many base) (many offset)) $ match many (char-between c #\0 #\9) (((Char) _) ((Nat) _))
+    ((BTrue) (values #\0 0))
+    ((BFalse) (match many (char-between c #\a #\f) _ ((BTrue) (values #\a 10)) ((BFalse) (values #\A 10)))))
+  (let ((many d) (erased _)) (char-minus c base))
+  (nat-add offset d))
+
+(def-fns _ $ (many byte-of-digits : (many (Nat) hi) (many (Nat) lo) -> (many (Char) c))
+  (let ((many k) (erased q) (erased _)) (nat-mod (nat-add (nat-mul hi 16) lo) u8-modulus u8-modulus-pos))
+  (MkChar $ MkU8 k q))
 
 (def-fns _ $ (many char-lit-body : (many (String) s) -> (many (String) body))
   (let-match many s (SCons _ rest) ((SNil) (SNil)))
   (match many rest _ ((SNil) (SNil)) ((SCons _ rest2) rest2)))
 
-; The code of #\c, #\space, #\newline, #\tab or #\xHH, or None where the literal is malformed.
-(def-fns _ $ (many char-lit-code : (many (String) s) -> (many (Maybe $ Nat) n))
+; The character #\c, #\space, #\newline, #\tab or #\xHH spells, or None where the literal is malformed.
+(def-fns _ $ (many char-lit-code : (many (String) s) -> (many (Maybe $ Char) n))
   (let ((many body)) $ char-lit-body s)
   (match many (str-cmp body "space") _
-    ((CEq _ _ _) (Some _ 32))
+    ((CEq _ _ _) (Some _ #\space))
     (else
       (match many (str-cmp body "newline") _
-        ((CEq _ _ _) (Some _ 10))
+        ((CEq _ _ _) (Some _ #\newline))
         (else
           (match many (str-cmp body "tab") _
-            ((CEq _ _ _) (Some _ 9))
+            ((CEq _ _ _) (Some _ #\tab))
             (else
               (let-match many body (SCons c rest) ((SNil) (None _)))
-              (let-match many rest (SCons h1 rest2) ((SNil) (Some _ $ char-code c)))
+              (let-match many rest (SCons h1 rest2) ((SNil) (Some _ c)))
               (let-match many rest2 (SCons h2 rest3) ((SNil) (None _)))
               (match many (and (char-eqb c #\x) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
-                ((BTrue) (Some _ $ nat-add (nat-mul 16 $ hex-digit h1) $ hex-digit h2))
+                ((BTrue) (Some _ $ byte-of-digits (hex-digit h1) (hex-digit h2)))
                 ((BFalse) (None _))))))))))
 
 ; What is wrong with a literal's spelling, if anything (lib/literal.ml's classify).
@@ -627,11 +625,15 @@
 (def-fns _ $ (many nat-min : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (match many (nat-lt a b) _ ((BTrue) a) ((BFalse) b)))
 
-(def-fns _ $ (many char-lower : (many (Char) c) -> (many (Char) r))
-  (match many (char-between c #\A #\Z) _ ((BTrue) (char-of-code $ nat-add (char-code c) 32)) ((BFalse) c)))
+(let ((erased thirty-two-u62)) (u8-u62 _ (prove-literal-lt 32 u8-modulus)))
+
+(def-fns _ $ (many case-pair : (many (Char) upper) (many (Char) lower) -> (many (Bool) r))
+  (let-match many (char-between upper #\A #\Z) (BTrue) ((BFalse) (BFalse)))
+  (let ((many d) (erased pd)) (char-minus lower upper))
+  (is-same _ _ _ _ $ u62-eq d 32 pd thirty-two-u62))
 
 (def-fns _ $ (many char-eq-nocase : (many (Char) a) (many (Char) b) -> (many (Bool) r))
-  (char-eqb (char-lower a) (char-lower b)))
+  (or (char-eqb a b) $ or (case-pair a b) $ case-pair b a))
 
 (def-fns _ $ (many distance-first-row : (subterm many (String) bs) (many (Nat) j) (many (List $ Nat) acc) -> (many (List $ Nat) r))
   (let-match many bs (SCons _ rest) ((SNil) (list-rev _ $ Cons _ j acc)))
@@ -690,30 +692,36 @@
 (let ((many sixteen-dec)) (lt-dec (Zero) 16))
 (comptime-match many sixteen-dec (Yes _ _ sda sdb sixteen-positive))
 
-(let ((erased ten-u62)) (u8-u62 _ (prove-literal-lt 10 u8-modulus)))
 (let ((erased sixteen-u62)) (u8-u62 _ (prove-literal-lt 16 u8-modulus)))
+(let ((many hex-digits)) "0123456789abcdef")
+(let ((many hex-digits-len) (erased hex-digits-sl)) (str-length hex-digits))
+(comptime-match many (nat-eq hex-digits-len 16) (Equal _ _ _))
 
-(def-fns _ $ (many hex-code : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (many (Nat) c))
-  (match many (u62-lt-dec n 10 p ten-u62) _ ((Yes _ _ _ _ _) (nat-add 48 n)) ((No _ _ _ _ _) (nat-add 87 n))))
+(def-fns _ $ (many hex-chars : (many (Nat) k) (erased (Lt k u8-modulus) q) -> (many (Char) hi) (many (Char) lo))
+  (let ((many h) (many l) (erased _) (erased _) (erased _) (erased lt-l) (erased ph) (erased _))
+    (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
+  (let ((many _) (many h2) (erased _) (erased _) (erased _) (erased lt-h) (erased _) (erased _))
+    (u62-divmod h 16 ph sixteen-u62 sixteen-positive))
+  (let ((many hc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits h2 16 hex-digits-sl lt-h))
+  (let ((many lc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits l 16 hex-digits-sl lt-l))
+  (values hc lc))
 
 (def-fns _ $ (many hex-byte-rope : (many (Char) c) -> (many (Rope) r))
   (let-match many c (MkChar u))
   (let-match many u (MkU8 k q))
-  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _) (erased phi) (erased plo))
-    (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
-  (rcat (RChar $ char-of-code $ hex-code hi phi) $ RChar $ char-of-code $ hex-code lo plo))
+  (let ((many hi) (many lo)) (hex-chars k q))
+  (rcat (RChar hi) $ RChar lo))
 
 (def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
   (match many (and (is-hex a) (is-hex b)) _
-    ((BTrue) (Some _ $ char-of-code $ nat-add (nat-mul (hex-digit a) 16) $ hex-digit b))
+    ((BTrue) (Some _ $ byte-of-digits (hex-digit a) (hex-digit b)))
     ((BFalse) (None _))))
 
 (def-fns _ $ (many word-char : (many (Char) c) -> (many (Bool) r))
   (and (char-between c #\! #\~) $ not $ or (char-eqb c #\x28) $ or (char-eqb c #\x29) $ char-eqb c #\x3b))
 
 ; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
-(def-fns _ $ (many lit-char-rope : (many (Nat) code) -> (many (Rope) r))
-  (let ((many c)) (char-of-code code))
+(def-fns _ $ (many lit-char-rope : (many (Char) c) -> (many (Rope) r))
   (let-match many (char-eqb c #\space) (BFalse) ((BTrue) (RStr "#\\space")))
   (let-match many (char-eqb c #\newline) (BFalse) ((BTrue) (RStr "#\\newline")))
   (let-match many (char-eqb c #\tab) (BFalse) ((BTrue) (RStr "#\\tab")))

@@ -675,7 +675,7 @@
         ((RAtom _ s) (match many s (((String) _) ((Rope) _))
           ((NSrc t) (values "Atom" $ rcat (RStr "Ffi_core.Src ") $ quoted t))
           ((NGen n t) (values "Atom" $ rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")"))
-          ((NHandle x rd m _) (values "Handle" $ handle-rope env x rd m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
+          ((NHandle x rd m _) (values "Handle" $ handle-rope env x rd m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ c) (values "Char" $ nat-rope $ char-code c))
         ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
         ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope env file xs))))
     (match many r (((Rope) _))
