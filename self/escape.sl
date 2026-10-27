@@ -8,12 +8,15 @@
   (let-match many (nat-eqb (escape-letter k) 0) (BTrue) ((BFalse) 2))
   (match many (and (nat-lt 31 k) (nat-lt k 127)) _ ((BTrue) 1) ((BFalse) 4)))
 
-(def-fns _ $ (many escape-byte : (many (Nat) k) (many (Nat) w) (many (Nat) d) -> (many (Nat) c))
+(let ((erased sixteen-u62)) (lt-trans _ _ _ (prove-literal-lt 16 u8-modulus) u8-below-u62))
+
+(def-fns _ $ (many escape-byte : (many (Nat) k) (erased (Lt k u8-modulus) q) (many (Nat) w) (many (Nat) d) -> (many (Nat) c))
   (let-match many (nat-eqb w 1) (BFalse) ((BTrue) k))
   (let-match many (nat-eqb d 0) (BFalse) ((BTrue) 92))
   (let-match many (nat-eqb w 2) (BFalse) ((BTrue) (escape-letter k)))
   (let-match many (nat-eqb d 1) (BFalse) ((BTrue) 120))
-  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _)) (divmod k 16 sixteen-positive))
+  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
+    (u62-divmod k 16 (lt-trans _ _ _ q u8-below-u62) sixteen-u62 sixteen-positive))
   (hex-code $ match many (nat-eqb d 2) _ ((BTrue) hi) ((BFalse) lo)))
 
 (def-fns _ $ (erased add-shift : (erased (Nat) a b c) (subterm erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
@@ -77,14 +80,14 @@
   (let ((erased ys) (unique b2) (erased sp)) (bytes-set _ b i u x nth))
   (values ys (setnth-length _ xs i n u ys sp l) b2))
 
-(def-fns _ $ (many put-bytes : (many (Nat) k) (many (Nat) w) (subterm many (Nat) left) (many (Nat) d)
+(def-fns _ $ (many put-bytes : (many (Nat) k) (erased (Lt k u8-modulus) q) (many (Nat) w) (subterm many (Nat) left) (many (Nat) d)
     (erased (Nat) rest rr m) (erased (Add left rest rr) al)
     (erased (List (U8)) xs) (erased (Length (U8) xs (Succ m)) l) (unique (Bytes xs) b) (many (Nat) j) (erased (Add j rr m) aj) ->
     (erased (List (U8)) ys) (erased (Length (U8) ys (Succ m)) l2) (unique (Bytes ys) r at b) (many (Nat) j2) (erased (Add j2 rest m) aj2))
   (let-match many left (Succ left1) ((Zero) (let-match erased al (AddZero _)) (values xs l b j aj)))
   (let-match erased al (AddSucc _ _ rr1 al1))
-  (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs (Succ m) l b j (add-le-left j rr m aj) (escape-byte k w d)))
-  (tail $ put-bytes k w left1 (Succ d) rest rr1 m al1 ys l2 b2 (Succ j) (add-shift j rr1 m aj)))
+  (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs (Succ m) l b j (add-le-left j rr m aj) (escape-byte k q w d)))
+  (tail $ put-bytes k q w left1 (Succ d) rest rr1 m al1 ys l2 b2 (Succ j) (add-shift j rr1 m aj)))
 
 (def-fns _ $ (many escape-into : (many (String) s) (erased (Nat) len) (erased (StrLength s len) ls)
     (subterm many (Nat) left) (many (Nat) i) (erased (String) a t) (erased (Append a t s) p) (erased (StrLength a i) la)
@@ -102,7 +105,7 @@
   (let-match many u (MkU8 k2 q2))
   (let ((many w2) (erased ew2)) (esc-width-of k2 q2))
   (let-match erased (esc-w-fn k w w2 ew ew2) (Refl _ _))
-  (let ((erased ys) (erased l2) (unique b2) (many j2) (erased aj2)) (put-bytes k2 w2 w2 0 rest rr m ad xs l b j aj))
+  (let ((erased ys) (erased l2) (unique b2) (many j2) (erased aj2)) (put-bytes k2 q2 w2 w2 0 rest rr m ad xs l b j aj))
   (tail $ escape-into s len ls left1 (Succ i) a2 t1 p2 la2 lst1 rest m e1 ys l2 b2 j2 aj2))
 
 (def-fns _ $ (many lit-string : (many (String) s) -> (many (String) r))
