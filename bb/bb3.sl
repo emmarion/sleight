@@ -2,7 +2,7 @@
 (let ((many xs) (erased rg)) (range (Succ (Succ (Zero)))))
 (let ((many O) (erased op)) (opts xs))
 (let ((many OR) (erased kr)) (keep-r O))
-(comptime-match many (lt-dec (Succ (Zero)) 3) (Yes _ _ l1n))
+(comptime-match many (lt-dec (Succ (Zero)) 3) (Yes _ _ _ _ l1n))
 (def-fns _ $ (many run-tree : -> (many (Res (TAll 3 21 p0 (Zero) (BFalse) OR)) r))
   (build-all 3 7 OR 21 p0 (Zero) (BFalse) settings 30))
 (let ((many res)) (native-compute run-tree))
