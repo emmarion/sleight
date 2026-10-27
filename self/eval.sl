@@ -1143,42 +1143,44 @@
 (def-adts $ (LitKey : -> Type)
   enum
   (many LKSpelled : (many (String) s) -> (LitKey))
-  (many LKString : (many (String) body) -> (LitKey)))
+  (many LKString : (many (String) body) -> (LitKey))
+  (many LKNat : (many (Nat) n) -> (LitKey)))
 
 (def-fns _ $ (many record-literal : (many (Env) env) (many (LitKey) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
-  (let-match many (env-literals env) (MkLitTable sp st))
-  (let ((many t2)) $ match many key (((LitTable) _)) ((LKSpelled k) (MkLitTable (nm-set _ k x sp) st)) ((LKString k) (MkLitTable sp $ nm-set _ k x st)))
+  (let-match many (env-literals env) (MkLitTable sp st nu))
+  (let ((many t2)) $ match many key (((LitTable) _))
+    ((LKSpelled k) (MkLitTable (nm-set _ k x sp) st nu))
+    ((LKString k) (MkLitTable sp (nm-set _ k x st) nu))
+    ((LKNat n) (MkLitTable sp st $ run-set _ (nat-run n) x nu)))
   (env-push-lit (env-set-literals env t2) x proof (Some _ node) facts))
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (LitKey) key) -> (many (Maybe $ Nat) r))
-  (let-match many (env-literals env) (MkLitTable sp st))
-  (let ((many (WordMap (String) (Char) (Nat)) m) (many (String) k)) $ match many key _ ((LKSpelled k) (values sp k)) ((LKString k) (values st k)))
-  (let ((erased _) (erased _) (many r)) (nm-get _ k m))
-  (match many r _ ((WHit _ _ _ _ _ _ _ x _) (Some _ x)) ((WMiss _ _ _ _ _ _ _ _) (None _))))
+  (let-match many (env-literals env) (MkLitTable sp st nu))
+  (match many key _
+    ((LKSpelled k) (let ((erased _) (erased _) (many r)) (nm-get _ k sp)) (wm-found _ _ _ _ _ _ _ r))
+    ((LKString k) (let ((erased _) (erased _) (many r)) (nm-get _ k st)) (wm-found _ _ _ _ _ _ _ r))
+    ((LKNat n) (let ((erased _) (erased _) (many r)) (run-get _ (nat-run n) nu)) (wm-found _ _ _ _ _ _ _ r))))
 
-; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
+; Interns a numeral: a Settled Nat entry outside the scope, found by its number, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
-; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
-; relating it to its spelling (ASSUMPTIONS 51).
-(def-fns _ $ (many intern-numeral : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
+(def-fns _ $ (many intern-numeral : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) n) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) x) (many (Nat) proof))
-  (let ((many n)) $ parse-nat key)
   (let ((many env1) (many nat-ty)) $ prelude-type env "Nat")
   (let ((many env2) (erased _) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PNat n) nat-ty (None _))
   (let ((many env2b) (many numeral)) $ prelude-id env2 "Numeral")
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
   (let ((many env3) (erased h2) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 (LKSpelled key) x (Some _ p) (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
+  (values (record-literal env3 (LKNat n) x (Some _ p) (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkLitEntry y proof _ _ _))
   (match many (nat-cmp x y) _ ((CEq _ _ _) proof) (else (tail $ lit-proof rest x))))
 
-(def-fns _ $ (many intern-numeral-once : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
+(def-fns _ $ (many intern-numeral-once : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) n) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) x) (many (Nat) proof))
-  (let-match many (lit-lookup env $ LKSpelled key) (Some _ x) ((None _) (intern-numeral env _ h key)))
+  (let-match many (lit-lookup env $ LKNat n) (Some _ x) ((None _) (intern-numeral env _ h n)))
   (values env hs h (le-refl hs) x $ match many (lit-proof (env-lits env) x) _ ((Some _ p) p) ((None _) (Zero))))
 
 (def-fns _ $ (many prelude-missing : (many (Env) env) (many (String) what) (many (String) ty) -> (many (Maybe $ String) r))
@@ -1194,7 +1196,7 @@
 (def-fns _ $ (many intern-char-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Char) c) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many code)) $ char-code c)
-  (let ((many env2) (erased _) (many hp1) (erased s1) (many num) (many np)) $ intern-numeral-once env _ h $ nat-str code)
+  (let ((many env2) (erased _) (many hp1) (erased s1) (many num) (many np)) $ intern-numeral-once env _ h code)
   (let ((many env2b) (many lt-id)) $ prelude-id env2 "Lt")
   (let ((many env2c) (many modulus)) $ prelude-id env2b "u8-modulus")
   (let ((many lt-ty)) $ TApp (TVar lt-id) $ Cons _ (TVar num) $ Cons _ (TVar modulus) $ Nil _)
@@ -1215,7 +1217,7 @@
 
 (def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ LitKey) k))
   (match many raw _
-    ((RNat _ n) (Some _ $ LKSpelled $ nat-str n))
+    ((RNat _ n) (Some _ $ LKNat n))
     ((RChr _ c) (Some _ $ LKSpelled $ char-key c))
     ((RString _ s) (Some _ $ LKString s))
     (else (None _))))
@@ -1232,7 +1234,7 @@
     ((RChr _ c) (intern-char-lit env _ h c))
     ((RString _ s) (intern-string-lit env _ h s))
     (else (values env hs h (le-refl hs))))
-  (let ((many env2) (erased h2) (many hp2) (erased s2) (many _) (many _)) $ intern-numeral env _ h $ nat-str n)
+  (let ((many env2) (erased h2) (many hp2) (erased s2) (many _) (many _)) $ intern-numeral env _ h n)
   (values env2 h2 hp2 s2))
 
 (def-fns _ $ (many resolve-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))

@@ -693,6 +693,10 @@
 
 (def-fns _ $ (many wm-empty : (erased Type K) (erased Type S) (erased Type V) -> (many (WordMap K S V) m))
   (WMNode _ _ _ (None _) $ Nil _))
+
+(def-fns _ $ (many wm-found : (erased Type K) (erased Type S) (erased (TyCtor (K k) ((List S) w) -> Type) Sp) (erased (TyCtor (S x) (S y) -> Type) R) (erased Type V)
+    (erased (List S) w) (erased (WordMap K S V) m) (many (WLookup K S Sp R V w m) r) -> (many (Maybe V) v))
+  (match many r _ ((WHit _ _ _ _ _ _ _ v _) (Some _ v)) ((WMiss _ _ _ _ _ _ _ _) (None _))))
 (def-fns _ $ (many word-map-factory : (erased (Level) M) (erased Type K) (erased Type S) (erased (TyCtor (K k) ((List S) w) -> Type) Sp) (erased (TyCtor (S x) (S y) -> Type) R)
     (many (KeyOps M K S Sp R) ops) ->
     (erased (Level) L)
@@ -863,6 +867,129 @@
 (let ((many str-key-ops)) (MkKeyOps (level-of str-kview) (String) (Char) StrWord CharLt str-kword str-kview str-klen str-ksplit str-keq str-kdiverge str-scmp))
 (let ((erased _) (many nm-get) (many nm-set)) (word-map-factory _ _ _ _ _ str-key-ops))
 
+(def-adts $ (NatRun : -> Type)
+  enum
+  (many MkNatRun : (many (Nat) src) (many (Nat) off) (many (Nat) len) -> (NatRun)))
+
+(def-adts
+  ((RunWord : ((NatRun) r) ((List (Bit)) w) -> Type)
+    enum
+    (many RWNil : (erased (Nat) src) (erased (Nat) off) -> (RunWord (MkNatRun src off (Zero)) (Nil (Bit))))
+    (many RWCons : (erased (Nat) src) (erased (Nat) off) (erased (Nat) len) (erased (Bit) x) (erased (List (Bit)) w)
+       (erased (BitAt src off x) b) (erased (RunWord (MkNatRun src (Succ off) len) w) p) -> (RunWord (MkNatRun src off (Succ len)) (Cons (Bit) x w))))
+  ((BitLt : ((Bit) a) ((Bit) b) -> Type)
+    enum
+    (many BitLt01 : -> (BitLt (Bit0) (Bit1)))))
+
+(def-fns _ $ (many bit-cmp : (many (Bit) a) (many (Bit) b) -> (many (Cmp (Bit) BitLt a b) c))
+  (match many a _
+    ((Bit0) (match many b _ ((Bit0) (CEq _ _ a)) ((Bit1) (CLt _ _ a b (BitLt01)))))
+    ((Bit1) (match many b _ ((Bit0) (CGt _ _ a b (BitLt01))) ((Bit1) (CEq _ _ a))))))
+
+(def-fns _ $ (erased run-word-at : (erased (Nat) src off) (subterm erased (Nat) len) -> (erased (List (Bit)) w) (erased (RunWord (MkNatRun src off len) w) p))
+  (let-match erased len (Succ l) ((Zero) (values (Nil _) (RWNil src off))))
+  (let ((erased x) (erased b)) (bit-test src off))
+  (let ((erased w) (erased p)) (run-word-at src (Succ off) l))
+  (values (Cons _ x w) (RWCons src off l x w b p)))
+
+(def-fns _ $ (erased run-length : (erased (Nat) src off len) (erased (List (Bit)) w) (subterm erased (RunWord (MkNatRun src off len) w) p) -> (erased (Length (Bit) w len) l))
+  (match erased p _
+    ((RWNil _ _) (LengthNil _))
+    ((RWCons _ _ l1 x w1 _ p1) (LengthCons _ x w1 l1 $ run-length src (Succ off) l1 w1 p1))))
+
+(def-fns _ $ (erased run-split : (erased (Nat) src off len m off2) (subterm erased (Nat) n) (erased (List (Bit)) w)
+    (erased (RunWord (MkNatRun src off len) w) p) (erased (Add n m len) nm) (erased (Add off n off2) on) ->
+    (erased (List (Bit)) wa) (erased (List (Bit)) wb) (erased (RunWord (MkNatRun src off n) wa) pa) (erased (RunWord (MkNatRun src off2 m) wb) pb)
+    (erased (Concat (Bit) wa wb w) c) (erased (Length (Bit) wa n) la))
+  (let-match erased n (Succ n1)
+    ((Zero)
+      (let-match erased nm (AddZero _))
+      (let-match erased (add-fn off (Zero) off2 off on (add-zero-right off)) (Refl _ _))
+      (values (Nil _) w (RWNil src off) p (CatNil _ w) (LengthNil _))))
+  (let-match erased nm (AddSucc _ _ len1 nm1))
+  (let-match erased p (RWCons _ _ _ x w1 b p1))
+  (let ((erased c1) (erased e) (erased on1)) (add-succ-right-inv off n1 off2 on))
+  (let-match erased e (Refl _ _))
+  (let ((erased wa) (erased wb) (erased pa) (erased pb) (erased c) (erased la)) (run-split src (Succ off) len1 m off2 n1 w1 p1 nm1 (AddSucc off n1 c1 on1)))
+  (values (Cons _ x wa) wb (RWCons src off n1 x wa b pa) pb (CatCons _ x wa wb w1 c) (LengthCons _ x wa n1 la)))
+
+(def-fns _ $ (many run-eq : (many (Nat) sa oa) (subterm many (Nat) la) (many (Nat) sb ob lb) (erased (List (Bit)) wa wb)
+    (erased (RunWord (MkNatRun sa oa la) wa) pa) (erased (RunWord (MkNatRun sb ob lb) wb) pb) -> (many (WordEq (Bit) BitLt wa wb) e))
+  (let-match many la (Succ la1)
+    ((Zero)
+      (let-match erased pa (RWNil _ _))
+      (match many lb _
+        ((Zero) (let-match erased pb (RWNil _ _)) (WESame _ _ wa))
+        ((Succ _) (let-match erased pb (RWCons _ _ _ y wb1 _ _)) (WEApart _ _ wa wb $ WALt _ _ wa wb $ LLNil _ _ y wb1)))))
+  (let-match erased pa (RWCons _ _ _ xa wa1 ba pa1))
+  (let-match many lb (Succ lb1) ((Zero) (let-match erased pb (RWNil _ _)) (WEApart _ _ wa wb $ WAGt _ _ wa wb $ LLNil _ _ xa wa1)))
+  (let-match erased pb (RWCons _ _ _ xb wb1 bb pb1))
+  (let ((many x) (erased bx)) (bit-test sa oa))
+  (let-match erased (bit-at-fn sa oa x xa bx ba) (Refl _ _))
+  (let ((many y) (erased by)) (bit-test sb ob))
+  (let-match erased (bit-at-fn sb ob y xb by bb) (Refl _ _))
+  (let-match many (bit-cmp x y) (CEq _ _ _)
+    ((CLt _ _ _ _ q) (WEApart _ _ wa wb $ WALt _ _ wa wb $ LLHead _ _ x y wa1 wb1 q))
+    ((CGt _ _ _ _ q) (WEApart _ _ wa wb $ WAGt _ _ wa wb $ LLHead _ _ y x wb1 wa1 q)))
+  (let ((many r)) (tail $ run-eq sa (Succ oa) la1 sb (Succ ob) lb1 wa1 wb1 pa1 pb1))
+  (let ((erased _) (erased cp)) $ match erased r (((WordEq (Bit) BitLt wa wb) r2) ((Coercible (Shared) (WordEq (Bit) BitLt wa1 wb1) r (Shared) (WordEq (Bit) BitLt wa wb) r2) cp))
+    ((WESame _ _ _) (values (WESame _ _ wa) (coercible-ctor (Shared) WESame (Bit) (Bit) BitLt BitLt wa1 wa)))
+    ((WEApart _ _ _ _ d)
+      (let ((erased d2)) $ match erased d (((WordApart (Bit) BitLt wa wb) d3))
+        ((WALt _ _ _ _ q) (WALt _ _ wa wb $ LLTail _ _ x wa1 wb1 q))
+        ((WAGt _ _ _ _ q) (WAGt _ _ wa wb $ LLTail _ _ x wb1 wa1 q)))
+      (values (WEApart _ _ wa wb d2) (coercible-ctor (Shared) WEApart (Bit) (Bit) BitLt BitLt wa1 wa wb1 wb d d2))))
+  (coerce r cp))
+
+(def-fns _ $ (many run-common : (many (Nat) sa oa) (subterm many (Nat) la) (many (Nat) sb ob lb) (many (Nat) k) ->
+    (many (Nat) n) (many (Nat) oa2) (many (Nat) la2) (many (Nat) ob2) (many (Nat) lb2))
+  (let-match many la (Succ la1) ((Zero) (values k oa la ob lb)))
+  (let-match many lb (Succ lb1) ((Zero) (values k oa la ob lb)))
+  (let-match many (bit-cmp (nat-bit-test sa oa) (nat-bit-test sb ob)) (CEq _ _ _) (else (values k oa la ob lb)))
+  (tail $ run-common sa (Succ oa) la1 sb (Succ ob) lb1 (Succ k)))
+
+(def-fns _
+  ((erased run-kword : (erased (NatRun) r) -> (erased (List (Bit)) w) (erased (RunWord r w) p))
+    (let-match erased r (MkNatRun src off len))
+    (run-word-at src off len))
+  ((many run-kview : (many (NatRun) r) (erased (List (Bit)) w) (erased (RunWord r w) p) -> (many (KView (NatRun) (Bit) RunWord r w) v))
+    (let-match many r (MkNatRun src off len))
+    (let-match many len (Succ l) ((Zero) (let-match erased p (RWNil _ _)) (KEnd _ _ _ r)))
+    (let ((many x) (erased b)) (bit-test src off))
+    (let-match erased p (RWCons _ _ _ x2 w1 b2 p1))
+    (let-match erased (bit-at-fn src off x x2 b b2) (Refl _ _))
+    (KNext _ _ _ r x (MkNatRun src (Succ off) l) w1 p1))
+  ((many run-klen : (many (NatRun) r) (erased (List (Bit)) w) (erased (RunWord r w) p) -> (many (Nat) n) (erased (Length (Bit) w n) l))
+    (let-match many r (MkNatRun src off len))
+    (values len $ run-length src off len w p))
+  ((many run-ksplit : (many (NatRun) r) (erased (List (Bit)) w) (erased (RunWord r w) p) (many (Nat) n) (erased (Nat) len2) (erased (Length (Bit) w len2) l) (erased (Lt n (Succ len2)) le) ->
+      (many (NatRun) a) (many (NatRun) b) (erased (List (Bit)) wa) (erased (List (Bit)) wb) (erased (RunWord a wa) pa) (erased (RunWord b wb) pb)
+      (erased (Concat (Bit) wa wb w) c) (erased (Length (Bit) wa n) la))
+    (let-match many r (MkNatRun src off len))
+    (let-match erased (length-fn _ w len len2 (run-length src off len w p) l) (Refl _ _))
+    (let ((many m) (erased nm)) (sub len n le))
+    (let ((many off2) (erased on)) (add off n))
+    (let ((erased wa) (erased wb) (erased pa) (erased pb) (erased c) (erased la)) (run-split src off len m off2 n w p nm on))
+    (values (MkNatRun src off n) (MkNatRun src off2 m) wa wb pa pb c la))
+  ((many run-keq : (many (NatRun) a) (erased (List (Bit)) wa) (erased (RunWord a wa) pa) (many (NatRun) b) (erased (List (Bit)) wb) (erased (RunWord b wb) pb) ->
+      (many (WordEq (Bit) BitLt wa wb) e))
+    (let-match many a (MkNatRun sa oa la))
+    (let-match many b (MkNatRun sb ob lb))
+    (run-eq sa oa la sb ob lb wa wb pa pb))
+  ((many run-kdiverge : (many (NatRun) a) (many (NatRun) b) -> (many (NatRun) common) (many (NatRun) ra) (many (NatRun) rb))
+    (let-match many a (MkNatRun sa oa la))
+    (let-match many b (MkNatRun sb ob lb))
+    (let ((many k) (many oa2) (many la2) (many ob2) (many lb2)) (run-common sa oa la sb ob lb 0))
+    (values (MkNatRun sa oa k) (MkNatRun sa oa2 la2) (MkNatRun sb ob2 lb2)))
+  ((many run-scmp : (many (Bit) a) (many (Bit) b) -> (many (Cmp (Bit) BitLt a b) c))
+    (bit-cmp a b)))
+
+(let ((many run-key-ops)) (MkKeyOps (level-of run-kview) (NatRun) (Bit) RunWord BitLt run-kword run-kview run-klen run-ksplit run-keq run-kdiverge run-scmp))
+(let ((erased _) (many run-get) (many run-set)) (word-map-factory _ _ _ _ _ run-key-ops))
+
+(def-fns _ $ (many nat-run : (many (Nat) n) -> (many (NatRun) r))
+  (MkNatRun n 0 $ nat-bit-length n))
+
 ; ---- Rope: output built as a tree of chunks (the prelude's), flattened once
 
 (def-fns _ $ (many rcat : (many (Rope) a) (many (Rope) b) -> (many (Rope) r))
@@ -1011,7 +1138,7 @@
   (let-match many m (MkNameIndex _ src gen))
   (let-match many n (NSrc s) (else (gen-get _ n gen)))
   (let ((erased _) (erased _) (many r)) (nm-get _ s src))
-  (match many r _ ((WHit _ _ _ _ _ _ _ x _) (Some _ x)) ((WMiss _ _ _ _ _ _ _ _) (None _))))
+  (wm-found _ _ _ _ _ _ _ r))
 
 (def-fns _ $ (many name-index-set : (erased Type V) (many (Name) n) (many V v) (many (NameIndex V) m) -> (many (NameIndex V) r))
   (let-match many m (MkNameIndex _ src gen))

@@ -1,4 +1,4 @@
-; needs: ../std/macro ../self/base ../pal/palindrome_relations ../pal/palindrome_naive ../pal/palindrome_lemmas ../pal/palindrome_centers ../pal/palindrome_seed ../pal/palindrome_manacher
+; needs: ../std/list ../std/macro ../self/base ../pal/palindrome_relations ../pal/palindrome_naive ../pal/palindrome_lemmas ../pal/palindrome_centers ../pal/palindrome_seed ../pal/palindrome_manacher
 ; expect: (Cons _ 0 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 5 $ Cons _ 5 $ Cons _ 5 $ Cons _ 6 $ Cons _ 1 $ Cons _ 3 $ Cons _ 5 $ Cons _ 13 $ Cons _ 10 $ Cons _ 7 $ Cons _ 11 $ Cons _ 9 $ Cons _ 6 $ Cons _ 12 $ Cons _ 8 $ Cons _ 6 $ Cons _ 9 $ Nil _)
 ; The nullary main makes these runtime checks in extracted programs too.
 ; Covers empty/singleton, odd/even, unequal outer/inner ends, ties, repeated
