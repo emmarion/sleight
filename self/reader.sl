@@ -162,6 +162,13 @@
 (def-fns _ $ (many unterminated : (many (Spot) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
   (end-toks (THalt pos "unterminated string literal") acc))
 
+(def-fns _ $ (many push-tab : (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) r))
+  (let ((many pushed)) (Cons _ (TTab $ MkSpot line $ Succ col) acc))
+  (let-match many acc (Cons _ t _) ((Nil _) pushed))
+  (let-match many t (TTab p) (else pushed))
+  (let ((many l) (many _)) $ spot-coords p)
+  (match many (nat-eqb l line) _ ((BTrue) acc) ((BFalse) pushed)))
+
 ; [col] counts the characters read on the current line, so the character being read sits at column
 ; (Succ col); a newline starts the next line over at zero.
 (def-fns _ $ (many delim-step : (many (Char) c) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) ->
@@ -170,7 +177,7 @@
   (let-match many (char-eq c #\x28) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkSpot line $ Succ col) acc)))
   (let-match many (char-eq c #\x29) (Unequal _ _ _ _ _)
     ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkSpot line $ Succ col) acc)))
-  (let-match many (char-eq c #\tab) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TTab $ MkSpot line $ Succ col) acc)))
+  (let-match many (char-eq c #\tab) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BFalse) line (Succ col) $ push-tab line col acc)))
   (match many (char-eq c #\newline) _
     ((Equal _ _ _) (values (BFalse) (Succ line) 0 acc))
     ((Unequal _ _ _ _ _) (values (BFalse) line (Succ col) acc))))
@@ -299,7 +306,7 @@
     (let-match many s (SCons c rest) ((SNil) (unterminated pos acc)))
     (let-match many (char-eq c #\newline) (Equal _ _ _)
       ((Unequal _ _ _ _ _)
-        (let ((many acc2)) $ match many (char-eq c #\tab) (((List $ Tok) _)) ((Equal _ _ _) (Cons _ (TTab $ MkSpot line $ Succ col) acc)) ((Unequal _ _ _ _ _) acc))
+        (let ((many acc2)) $ match many (char-eq c #\tab) (((List $ Tok) _)) ((Equal _ _ _) (push-tab line col acc)) ((Unequal _ _ _ _ _) acc))
         (tail $ string-lit rest line (Succ col) pos kind u k acc2)))
     (let-match many kind (SKPragma _ _ _) (else (tail $ string-lit rest (Succ line) 0 pos kind u k acc)))
     (end-toks (THalt pos "a pragma ends with its line") acc)))
@@ -487,17 +494,19 @@
   (tail $ ind-fold rest $ ind-tok st t))
 
 ; A line is read as tabbed when a tab sits on it before its first token, a literal's included.
-(def-fns _ $ (many tab-before : (subterm many (List $ Spot) ts) (many (Nat) l) (many (Nat) c) -> (many (Bool) r))
-  (let-match many ts (Cons _ t rest) ((Nil _) (BFalse)))
+(def-fns _ $ (many tab-before : (subterm many (List $ Spot) ts) (many (Nat) l) (many (Nat) c) -> (many (List $ Spot) rest) (many (Bool) r))
+  (let-match many ts (Cons _ t more) ((Nil _) (values ts (BFalse))))
   (let ((many tl) (many tc)) $ spot-coords t)
-  (match many (and (nat-eqb tl l) $ nat-lt tc c) _ ((BTrue) (BTrue)) ((BFalse) (tail $ tab-before rest l c))))
+  (let-match many (and (nat-eqb tl l) $ nat-lt tc c) (BFalse) ((BTrue) (values more (BTrue))))
+  (match many (nat-lt tl l) _ ((BTrue) (values ts (BFalse))) ((BFalse) (tail $ tab-before more l c))))
 
 (def-fns _ $ (many ind-tabbed : (subterm many (List $ IndentLine) ls) (many (List $ Spot) ts) -> (many (List $ Spot) r))
   (let-match many ls (Cons _ il rest) ((Nil _) (Nil _)))
   (let-match many il (MkIndentLine p _ _))
   (let ((many l) (many c)) $ spot-coords p)
-  (let ((many more)) $ notail $ ind-tabbed rest ts)
-  (match many (tab-before ts l c) _ ((BTrue) (Cons _ p more)) ((BFalse) more)))
+  (let ((many ts2) (many hit)) (tab-before ts l c))
+  (let ((many more)) $ notail $ ind-tabbed rest ts2)
+  (match many hit _ ((BTrue) (Cons _ p more)) ((BFalse) more)))
 
 (def-fns _ $ (many ind-cat : (subterm many (List $ String) parts) -> (many (String) r))
   (match many parts _
