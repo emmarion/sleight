@@ -1091,12 +1091,20 @@
 ; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
 ; the language; an emitted printer calls Ffi_core (emit.sl).
 
-(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
-  (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)
-  (env-push-lit env2 x proof (Some _ $ MkPair _ _ spelling node) facts))
+(def-adts $ (LitKey : -> Type)
+  enum
+  (many LKSpelled : (many (String) s) -> (LitKey))
+  (many LKString : (many (String) body) -> (LitKey)))
 
-(def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
-  (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
+(def-fns _ $ (many record-literal : (many (Env) env) (many (LitKey) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
+  (let-match many (env-literals env) (MkLitTable sp st))
+  (let ((many t2)) $ match many key (((LitTable) _)) ((LKSpelled k) (MkLitTable (nm-set _ k x sp) st)) ((LKString k) (MkLitTable sp $ nm-set _ k x st)))
+  (env-push-lit (env-set-literals env t2) x proof (Some _ $ MkPair _ _ spelling node) facts))
+
+(def-fns _ $ (many lit-lookup : (many (Env) env) (many (LitKey) key) -> (many (Maybe $ Nat) r))
+  (let-match many (env-literals env) (MkLitTable sp st))
+  (let ((many (NameMap $ Nat) m) (many (String) k)) $ match many key _ ((LKSpelled k) (values sp k)) ((LKString k) (values st k)))
+  (match many (nm-get _ k m) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
 
 ; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
@@ -1111,7 +1119,7 @@
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
   (let ((many env3) (erased h2) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 key x (Some _ p) key (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
+  (values (record-literal env3 (LKSpelled key) x (Some _ p) key (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
@@ -1120,7 +1128,7 @@
 
 (def-fns _ $ (many intern-numeral-once : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) x) (many (Nat) proof))
-  (let-match many (lit-lookup env key) (Some _ x) ((None _) (intern-numeral env _ h key)))
+  (let-match many (lit-lookup env $ LKSpelled key) (Some _ x) ((None _) (intern-numeral env _ h key)))
   (values env hs h (le-refl hs) x $ match many (lit-proof (env-lits env) x) _ ((Some _ p) p) ((None _) (Zero))))
 
 (def-fns _ $ (many prelude-missing : (many (Env) env) (many (String) what) (many (String) ty) -> (many (Maybe $ String) r))
@@ -1145,23 +1153,20 @@
   (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
   (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
   (let ((many env4) (erased h3) (many hp3) (erased s3) (many x)) $ bind-lit env3d _ hp2 (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
-  (values (record-literal env4 (char-key code) x (Some _ np) (rope-str $ lit-char-rope code) (RChr (PosSpot $ NoPos) code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
+  (values (record-literal env4 (LKSpelled $ char-key code) x (Some _ np) (rope-str $ lit-char-rope code) (RChr (PosSpot $ NoPos) code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
-(def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
-  (rope-str $ RCat (RChar #\x22) $ RStr s))
-
 (def-fns _ $ (many intern-string-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) body) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (erased h1) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PStr body) str-ty (None _))
-  (values (record-literal env2 (string-key body) x (None _) (lit-string body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
+  (values (record-literal env2 (LKString body) x (None _) (lit-string body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
 
-(def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ String) k))
+(def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ LitKey) k))
   (match many raw _
-    ((RNat _ n) (Some _ $ nat-str n))
-    ((RChr _ c) (Some _ $ char-key c))
-    ((RString _ s) (Some _ $ string-key s))
+    ((RNat _ n) (Some _ $ LKSpelled $ nat-str n))
+    ((RChr _ c) (Some _ $ LKSpelled $ char-key c))
+    ((RString _ s) (Some _ $ LKString s))
     (else (None _))))
 
 ; Interns the literal [raw] spells, once per program, into the heap a run threads, so that a macro's intern-
@@ -1172,11 +1177,11 @@
   (let-match many (lit-lookup env key) (None _) ((Some _ _) (values env hs h (le-refl hs))))
   (let ((many (String) ty) (many (String) what)) $ match many raw _ ((RNat _ _) (values "Nat" "a numeral")) ((RChr _ _) (values "Char" "a character literal")) (else (values "String" "a string literal")))
   (let-match many (prelude-missing env what ty) (None _) ((Some _ msg) (values (env-error env msg) hs h (le-refl hs))))
-  (let-match many raw (RNat _ _)
+  (let-match many raw (RNat _ n)
     ((RChr _ c) (intern-char-lit env _ h c))
     ((RString _ s) (intern-string-lit env _ h s))
     (else (values env hs h (le-refl hs))))
-  (let ((many env2) (erased h2) (many hp2) (erased s2) (many _) (many _)) $ intern-numeral env _ h key)
+  (let ((many env2) (erased h2) (many hp2) (erased s2) (many _) (many _)) $ intern-numeral env _ h $ nat-str n)
   (values env2 h2 hp2 s2))
 
 (def-fns _ $ (many resolve-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))

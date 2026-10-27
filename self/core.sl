@@ -2287,12 +2287,16 @@
   (let-match many run (BFalse) ((BTrue) (TrustHere)))
   (match many rp _ ((TrustHere) (TrustThen _ _ c tb)) (else rp)))
 
+(def-adts $ (LitTable : -> Type)
+  enum
+  (many MkLitTable : (many (NameMap $ Nat) spelled) (many (NameMap $ Nat) strings) -> (LitTable)))
+
 (def-adts
   ((Env : -> Type)
     enum
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (Scope) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Trusted) run-pos) (many (List $ Nat) objects)
-       (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
+       (many (LitTable) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
        (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics) (many (Tracking) tracking)
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) (many (Macros) expansions) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
@@ -2449,7 +2453,7 @@
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr (table-unopen _ _ fr tb x) rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-settled : (many (Env) e) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr (table-settled _ _ fr tb) rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
-(def-fns _ $ (many env-literals : (many (Env) e) -> (many (NameMap $ Nat) r))
+(def-fns _ $ (many env-literals : (many (Env) e) -> (many (LitTable) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ li _ _ _ _ _ _ _ _ _ _ _ _) li)))
 
 (def-fns _ $ (many env-level : (many (Env) e) -> (many (Maybe $ Nat) r))
@@ -2533,7 +2537,7 @@
   (match many e _ ((MkEnv _ hp sc en _ _ _ _ rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ c x rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ fr tb rp) ob li fi lv st cl wa tk lt lo pr us hn ex))))
-(def-fns _ $ (many env-set-literals : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))
+(def-fns _ $ (many env-set-literals : (many (Env) e) (many (LitTable) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob _ fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob x fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-prelude : (many (Env) e) -> (many (Scope) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ pr _ _ _) pr)))
@@ -3532,7 +3536,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) $ MkTrail (MEmpty _) held-none)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (MkLitTable (nm-empty _) (nm-empty _)) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) $ MkTrail (MEmpty _) held-none)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)
