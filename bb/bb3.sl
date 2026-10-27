@@ -3,10 +3,11 @@
 (let ((many p0) (erased up)) (undefs 3))
 (let ((many hs)) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 0 2) $ Cons _ (MkPair _ _ 0 3) $ Cons _ (MkPair _ _ 0 4) $
   Cons _ (MkPair _ _ 1 4) $ Cons _ (MkPair _ _ 2 2) $ Nil (Pair (Nat) (Nat))))
-(def-fns _ $ (many run-tree : -> (many (Res (TNode 21 O p0)) r))
-  (build 7 O 21 O p0 hs 1000))
+(let ((many OR) (erased kr)) (keep-r O))
+(def-fns _ $ (many run-tree : -> (many (Res (TAll 21 O p0 (Zero) (BFalse) OR)) r))
+  (build-all 7 OR 21 O p0 (Zero) (BFalse) hs 1000))
 (let ((many res)) (native-compute run-tree))
-(comptime-match many res (ROk _ tn))
+(comptime-match many res (ROk _ ta))
 
 (let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BFalse) (DR) 2) $ Cons _ (Go (BTrue) (DL) 2) $ Cons _ (Go (BTrue) (DL) 0) $ Nil (Tr)))
 (let ((many cw0)) (rows-check 3 3 champ))
@@ -21,7 +22,7 @@
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 3 3 m) w) (erased (Nat) s)
     (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 21)) p))
-  (tn-good 3 21 xs O p0 m s tn (ext-undef 3 3 m p0 w up) w rg op h))
+  (sym-good 3 21 xs O OR p0 ta up kr rg op m s w h))
 
 (goal erased (BBIs 3 21))
 (qed (MkBB 3 21 champ cw ch (level-of bound) bound))
