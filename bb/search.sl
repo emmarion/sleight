@@ -193,9 +193,7 @@
     (many HE : (erased Type A) -> (HMap A))
     (many HN : (erased Type A) (many (KN) h) (many (List (KN)) k) (many A v) (many (HMap A) c0 c1 c2 c3) -> (HMap A))))
 
-(def-fns _ $ (many hash : (subterm many (List (KN)) k) (many (Nat) h) (erased (Lt h B) ph) -> (many (KN) r))
-  (let-match many k (Cons _ e rest) ((Nil _) (MkKN h ph)))
-  (let-match many e (MkKN x px))
+(def-fns _ $ (many hstep : (many (Nat) h) (erased (Lt h B) ph) (many (Nat) x) (erased (Lt x B) px) -> (many (KN) r))
   (let ((erased r) (erased mr)) (mul h HM))
   (let ((erased lr)) (mul-mono-l h B HM r BM ph mr mBM pM0))
   (let ((many m)) (u62-mul h HM (lt-trans h B u62-modulus ph bB) lM r mr (lt-trans r BM u62-modulus lr bBM)))
@@ -205,6 +203,12 @@
   (let ((erased lsm)) (lt-trans s B9 u62-modulus ls b9))
   (let ((many s2)) (u62-add m x s as lsm))
   (let ((many h2) (erased lh2) (erased _) (erased _)) (u62-mod s2 B lsm bB posB))
+  (MkKN h2 lh2))
+
+(def-fns _ $ (many hash : (subterm many (List (KN)) k) (many (Nat) h) (erased (Lt h B) ph) -> (many (KN) r))
+  (let-match many k (Cons _ e rest) ((Nil _) (MkKN h ph)))
+  (let-match many e (MkKN x px))
+  (let-match many (hstep h ph x px) (MkKN h2 lh2))
   (tail $ hash rest h2 lh2))
 
 (def-fns _ $ (many hit : (many (KN) h h2) (many (List (KN)) k k2) -> (many (Bool) b))
