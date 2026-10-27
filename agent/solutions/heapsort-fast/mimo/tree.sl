@@ -62,7 +62,7 @@
 
 ; Every node of subtree(i) is at or above i.
 (def-fns _ $ (erased below-ge : (erased (Nat) i) (erased (Nat) d) (erased (Nat) h)
-    (subterm erased (Below i d h) b) -> (erased (Le i h) out))
+    (subterm erased (Below i d h) b) -> (erased (NatLe i h) out))
   (let-match erased b (BLeft _ _ dd _ _ _ bel)
     ((BRight _ _ dd _ _ _ bel)
       (le-trans i (Succ (Succ d)) h (le-of-lt _ _ (lt-weaken i (Succ d) (double-lt i d dd)))
@@ -75,7 +75,7 @@
   ((Gap : ((Nat) i) ((Nat) d) ((Nat) h) -> Type)
     enum
     (many GapEq : (erased (Nat) i) (erased (Nat) d) (erased (Nat) h) (erased (Eq (Nat) h i) e) -> (Gap i d h))
-    (many GapGe : (erased (Nat) i) (erased (Nat) d) (erased (Nat) h) (erased (Le (Succ d) h) l) -> (Gap i d h))))
+    (many GapGe : (erased (Nat) i) (erased (Nat) d) (erased (Nat) h) (erased (NatLe (Succ d) h) l) -> (Gap i d h))))
 
 (def-fns _ $ (erased below-gap : (erased (Nat) i) (erased (Nat) d) (erased (Nat) h)
     (subterm erased (Below i d h) b) -> (erased (Gap i d h) out))
@@ -172,9 +172,9 @@
 
 (def-fns _ $ (erased tri : (erased (Nat) a) (erased (Nat) b) -> (erased (Tri a b) t))
   (let-match erased (lt-dec a b) (Yes _ _ _ _ p)
-    ((No _ _ _ _ le-r) (let ((erased r)) (lt-eq-succ _ _ le-r))
+    ((No _ _ _ _ le-r) (let ((erased r)) (le-lt-succ _ _ le-r))
       (let-match erased (lt-dec b a) (Yes _ _ _ _ q)
-        ((No _ _ _ _ le-s) (let ((erased s)) (lt-eq-succ _ _ le-s)) (TriE a b (le-antisym a b r s))))
+        ((No _ _ _ _ le-s) (let ((erased s)) (le-lt-succ _ _ le-s)) (TriE a b (le-antisym a b r s))))
       (TriG a b q)))
   (TriL a b p))
 
@@ -284,7 +284,7 @@
       (match erased g _
         (absurd (GapEq _ _ _ e2) (match erased e2 _))
         (absurd (GapGe _ _ _ l)
-          (let-match erased l (MkLe _ _ q))
+          (let-match erased l (MkNatLe _ _ q))
           (let-match erased q (LtS _ _ q1))
           (let ((erased dbl)) (below-dd (Succ d) du (Succ (Succ d)) b1))
           (let-match erased dbl (DS _ b2 dbl2))
@@ -294,7 +294,7 @@
       (match erased g _
         (absurd (GapEq _ _ _ e2) (match erased e2 _))
         (absurd (GapGe _ _ _ l)
-          (let-match erased l (MkLe _ _ q))
+          (let-match erased l (MkNatLe _ _ q))
           (let-match erased q (LtS _ _ q1))
           (let ((erased dbl)) (below-dd (Succ (Succ d)) dv (Succ d) b1))
           (let-match erased dbl (DS _ b2 dbl2))
@@ -310,7 +310,7 @@
 ; node m of subtree(i0) differs from any node h of subtree(i). This is the fact
 ; that lets the build loop's sift at j leave the heaps at [j+1, 2j] alone.
 (def-fns _ $ (erased cross-ne : (erased (Nat) i0) (erased (Nat) d0) (erased (Double i0 d0) dd0)
-    (erased (Nat) i) (erased (Lt i0 i) lt1) (erased (Le i d0) le2)
+    (erased (Nat) i) (erased (Lt i0 i) lt1) (erased (NatLe i d0) le2)
     (erased (Nat) dm) (erased (Nat) m) (erased (Below i0 d0 m) bm)
     (erased (Nat) dh) (erased (Nat) h) (erased (Below i dh h) bh) -> (erased (Ne m h) out))
   (let ((erased t)) (tri m h))
@@ -333,8 +333,8 @@
           (let-match erased e2 (Refl _ _))
           (lt-irrefl i0 lt1))
         (absurd (GapGe _ _ _ l)
-          (let-match erased le2 (MkLe _ _ le2p))
-          (let-match erased l (MkLe _ _ q1))
+          (let-match erased le2 (MkNatLe _ _ le2p))
+          (let-match erased l (MkNatLe _ _ q1))
           (lt-asym i (Succ d0) le2p q1))))
     (absurd (AOVU _ _ dv b1)
       (let-match erased (double-fn i dv dh (below-dd i dv i0 b1) (below-dd i dh h bh)) (Refl _ _))
@@ -344,7 +344,7 @@
           (let-match erased e2 (Refl _ _))
           (lt-irrefl i0 lt1))
         (absurd (GapGe _ _ _ l)
-          (let-match erased l (MkLe _ _ q1))
+          (let-match erased l (MkNatLe _ _ q1))
           (lt-asym (Succ dh) i
             (lt-le-trans (Succ dh) (Succ i0) i q1 (LtS i0 i lt1))
             (lt-weaken i (Succ dh) (double-lt i dh (below-dd i dh h bh)))))))))

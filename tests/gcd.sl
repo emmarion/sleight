@@ -8,7 +8,7 @@
 (let ((erased sg)) (prove-predates S G))
 (def-fns G $ (many gcd-mod : (subterm many (Nat) n) (many (Nat) d1) -> (many (Nat) r) (erased (Lt r (Succ d1)) p))
   (let-match many (lt-dec (predates ng) n (Succ d1)) (No _ _ _ _ le-q) ((Yes _ _ _ _ q) (values n q)))
-  (let ((erased q)) (lt-eq-succ _ _ le-q))
+  (let ((erased q)) (le-lt-succ _ _ le-q))
   (let ((erased lt1)) (match erased q (((Lt d1 n) l)) (absurd LtZ) ((LtS _ _ p1) p1)))
   (let ((many r0) (erased sp)) (sub-pos (predates sg) n d1 lt1))
   (tail $ gcd-mod (subterm sp) r0 d1))

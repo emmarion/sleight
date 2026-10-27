@@ -88,11 +88,11 @@
                     (erased (Apart T R a b) d) -> (EqDec T R a b))))
 
 (def-adts
-  ((LtEq : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
+  ((Le : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
     enum
-    (many LtEqLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
-                   (erased (R a b) p) -> (LtEq T R a b))
-    (many LtEqEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (LtEq T R a a))))
+    (many LeLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                   (erased (R a b) p) -> (Le T R a b))
+    (many LeEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (Le T R a a))))
 
 (def-adts
   ((Dec : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
@@ -100,7 +100,7 @@
     (many Yes : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                 (erased (R a b) p) -> (Dec T R a b))
     (many No : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
-               (erased (LtEq T R b a) q) -> (Dec T R a b))))
+               (erased (Le T R b a) q) -> (Dec T R a b))))
 
 (def-fns _ $ (many cmp-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
     (many (Cmp T R a b) c) -> (many (EqDec T R a b) e))
@@ -185,10 +185,10 @@
     ((LtZ b) (LtZ (Succ b)))
     ((LtS a b p1) (LtS a (Succ b) (lt-weaken a b p1)))))
 
-(def-fns _ $ (erased lt-eq-succ : (erased (Nat) a) (erased (Nat) b) (erased (LtEq (Nat) Lt a b) p) -> (erased (Lt a (Succ b)) q))
+(def-fns _ $ (erased le-lt-succ : (erased (Nat) a) (erased (Nat) b) (erased (Le (Nat) Lt a b) p) -> (erased (Lt a (Succ b)) q))
   (match erased p _
-    ((LtEqLt _ _ _ _ r) (lt-weaken a b r))
-    ((LtEqEq _ _ _) (lt-succ a))))
+    ((LeLt _ _ _ _ r) (lt-weaken a b r))
+    ((LeEq _ _ _) (lt-succ a))))
 
 (def-fns _ $ (many extern nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c))
   (match many a _
@@ -318,8 +318,8 @@
 (def-fns nat-lvl $ (many extern lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec (Nat) Lt a b) d))
   (match many (nat-cmp a b) _
     ((CLt _ _ _ _ p) (Yes (Nat) Lt a b p))
-    ((CEq _ _ _) (No (Nat) Lt a a (LtEqEq (Nat) Lt a)))
-    ((CGt _ _ _ _ q) (No (Nat) Lt a b (LtEqLt (Nat) Lt b a q)))))
+    ((CEq _ _ _) (No (Nat) Lt a a (LeEq (Nat) Lt a)))
+    ((CGt _ _ _ _ q) (No (Nat) Lt a b (LeLt (Nat) Lt b a q)))))
 
 (def-fns _ $ (many succ-mod : (many (Nat) r) (many (Nat) c) (erased (Nat) s) (erased (Lt r c) p) (erased (Mod s c r) q) ->
     (many (Nat) r1) (erased (Lt r1 c) p1) (erased (Mod (Succ s) c r1) q1))
@@ -942,11 +942,11 @@
                 (coercible-ctor (Shared) Yes (Nat) (Char) Lt CharLt ka a kb b p (MkCharLt ma nb pa pb p))))
       ((No _ _ _ _ q)
         (let ((erased q2))
-          (match erased q (((LtEq (Char) CharLt b a) x))
-            ((LtEqLt _ _ _ _ s) (LtEqLt (Char) CharLt b a (MkCharLt nb ma pb pa s)))
-            ((LtEqEq _ _ _)
+          (match erased q (((Le (Char) CharLt b a) x))
+            ((LeLt _ _ _ _ s) (LeLt (Char) CharLt b a (MkCharLt nb ma pb pa s)))
+            ((LeEq _ _ _)
               (let-match erased (lt-unique ma u8-modulus pa pb) (Refl _ _))
-              (LtEqEq (Char) CharLt a))))
+              (LeEq (Char) CharLt a))))
         (values (No (Char) CharLt a b q2)
                 (coercible-ctor (Shared) No (Nat) (Char) Lt CharLt ka a kb b q q2)))))
   (coerce r cr))
@@ -2115,7 +2115,7 @@
   (let-match many c (MkChar u))
   (let-match many u (MkU8 code _))
   (let-match many (lt-dec code forty-eight) (No _ _ _ _ le-ge) ((Yes _ _ _ _ _) (None (Nat))))
-  (let ((erased ge)) (lt-eq-succ _ _ le-ge))
+  (let ((erased ge)) (le-lt-succ _ _ le-ge))
   (let ((many d) (erased _)) (sub code forty-eight ge))
   (match many (lt-dec d ten) _ ((Yes _ _ _ _ _) (Some (Nat) d)) ((No _ _ _ _ _) (None (Nat)))))
 

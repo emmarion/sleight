@@ -2,7 +2,7 @@
     (erased (Nat) n0) (erased (Length (Nat) xs n0) len0) (erased (Lt n0 max-array-length) fits)
     (erased (List (Copy (Nat))) cs) (unique (Array (Copy (Nat)) cs) a) (erased (Copies (Nat) xs cs) rel0) ->
     (erased (List (Nat)) ys) (erased (List (Copy (Nat))) ds) (unique (Array (Copy (Nat)) ds) r at a)
-    (erased (Copies (Nat) ys ds) cp) (erased (SortedPerm (Nat) Le xs ys) correct))
+    (erased (Copies (Nat) ys ds) cp) (erased (SortedPerm (Nat) NatLe xs ys) correct))
   (let ((erased us) (erased rel) (erased b) (erased c)) (to-u62 xs cs rel0 small a))
   (let ((many n) (erased lenu) (unique a1)) (array-length _ _ (coerce a c)))
   (let ((erased len)) (rel-length xs us rel n lenu))

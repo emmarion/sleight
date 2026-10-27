@@ -1,5 +1,5 @@
 ; work/lemmas.sl: shared erased lemmas for the certified in-place sort.
-; All proofs here are erased and never run. spec.sl already provides Le, MkLe.
+; All proofs here are erased and never run. spec.sl already provides NatLe, MkNatLe.
 
 (def-adts
   ((GE : ((Nat) a) ((Nat) b) -> Type)
@@ -7,20 +7,20 @@
     (many MkGE : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) p) -> (GE a b))))
 
 (def-fns _ $ (erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c)
-    (erased (Le a b) p) (erased (Le b c) q) -> (erased (Le a c) r))
-  (let-match erased p (MkLe _ _ p1))
-  (let-match erased q (MkLe _ _ q1))
-  (MkLe a c (lt-le-trans a (Succ b) (Succ c) p1 (LtS b (Succ c) q1))))
+    (erased (NatLe a b) p) (erased (NatLe b c) q) -> (erased (NatLe a c) r))
+  (let-match erased p (MkNatLe _ _ p1))
+  (let-match erased q (MkNatLe _ _ q1))
+  (MkNatLe a c (lt-le-trans a (Succ b) (Succ c) p1 (LtS b (Succ c) q1))))
 
-(def-fns _ $ (erased ge-of-le : (erased (Nat) a) (erased (Nat) b) (subterm erased (Le a b) p) -> (erased (GE b a) q))
-  (let-match erased p (MkLe _ _ p1))
+(def-fns _ $ (erased ge-of-le : (erased (Nat) a) (erased (Nat) b) (subterm erased (NatLe a b) p) -> (erased (GE b a) q))
+  (let-match erased p (MkNatLe _ _ p1))
   (MkGE b a p1))
 
-(def-fns _ $ (erased le-of-lt : (erased (Nat) a) (erased (Nat) b) (subterm erased (Lt a b) p) -> (erased (Le a b) q))
-  (MkLe a b (lt-weaken a b p)))
+(def-fns _ $ (erased le-of-lt : (erased (Nat) a) (erased (Nat) b) (subterm erased (Lt a b) p) -> (erased (NatLe a b) q))
+  (MkNatLe a b (lt-weaken a b p)))
 
-(def-fns _ $ (erased le-refl : (erased (Nat) a) -> (erased (Le a a) q))
-  (MkLe a a (lt-succ a)))
+(def-fns _ $ (erased le-refl : (erased (Nat) a) -> (erased (NatLe a a) q))
+  (MkNatLe a a (lt-succ a)))
 
 (def-fns _ $ (erased perm-refl : (subterm erased (List (Nat)) xs) -> (erased (Permutation (Nat) xs xs) p))
   (match erased xs _
@@ -100,19 +100,19 @@
        (erased (Snoc xs v ys) p) -> (Snoc (Cons (Nat) x xs) v (Cons (Nat) x ys)))))
 
 (def-fns _ $ (erased asc-snoc : (erased (List (Nat)) ps) (erased (Nat) v) (erased (List (Nat)) ps2)
-    (erased (Snoc ps v ps2) sns) (subterm erased (Ascending (Nat) Le ps) asc)
-    (erased (AllTo (Nat) Le ps v) all) -> (erased (Ascending (Nat) Le ps2) out))
+    (erased (Snoc ps v ps2) sns) (subterm erased (Ascending (Nat) NatLe ps) asc)
+    (erased (AllTo (Nat) NatLe ps v) all) -> (erased (Ascending (Nat) NatLe ps2) out))
   (let-match erased sns (SnCons x xs1 v1 ys1 s1)
     ((SnNil _)
       (let-match erased asc (AscNil _ _))
-      (AscOne (Nat) Le v)))
+      (AscOne (Nat) NatLe v)))
   (let-match erased all (AllToCons _ _ x1 rest _ px prest))
   (let-match erased s1 (SnCons y ys3 v2 ys4 s2)
     ((SnNil _)
       (let-match erased asc (AscOne _ _ _))
-      (AscCons (Nat) Le x1 v1 (Nil (Nat)) px (AscOne (Nat) Le v1))))
+      (AscCons (Nat) NatLe x1 v1 (Nil (Nat)) px (AscOne (Nat) NatLe v1))))
   (let-match erased asc (AscCons _ _ _ y1 rest1 xy ascy))
-  (AscCons (Nat) Le x1 y1 ys4 xy (asc-snoc (Cons (Nat) y1 rest1) v1 ys1 s1 ascy prest)))
+  (AscCons (Nat) NatLe x1 y1 ys4 xy (asc-snoc (Cons (Nat) y1 rest1) v1 ys1 s1 ascy prest)))
 
 ; ---- Split: ys = ps ++ ss at position i ----
 (def-adts
@@ -164,11 +164,11 @@
 
 (def-fns _ $ (erased rangele-nth : (erased (List (Nat)) ps) (erased (List (Nat)) ss)
     (erased (Nat) t) (erased (Nat) v) (subterm erased (RangeLe ps ss) rl) (erased (Nth (Nat) ss t v) nt)
-    -> (erased (AllTo (Nat) Le ps v) out))
+    -> (erased (AllTo (Nat) NatLe ps v) out))
   (let-match erased rl (RLCons p1 ps1 ss1 hd rest)
-    ((RLNil _) (AllToNil (Nat) Le v)))
+    ((RLNil _) (AllToNil (Nat) NatLe v)))
   (let-match erased (allto-nth (Nat) GE ss1 p1 hd t v nt) (MkGE _ _ g1))
-  (AllToCons (Nat) Le p1 ps1 v (MkLe p1 v g1) (rangele-nth ps1 ss1 t v rest nt)))
+  (AllToCons (Nat) NatLe p1 ps1 v (MkNatLe p1 v g1) (rangele-nth ps1 ss1 t v rest nt)))
 
 (def-fns _ $ (erased rangele-tail : (erased (List (Nat)) ps) (erased (List (Nat)) ss) (erased (Nat) u)
     (erased (List (Nat)) ss2) (subterm erased (RangeLe ps ss) rl) (erased (TailRep ss u ss2) trp)
@@ -218,7 +218,7 @@
     -> (erased (MinScan ss v2 t) out))
   (let-match erased ms (MSCons w ss1 v1 t1 le rest)
     ((MSNil _ _) (MSNil ss v2)))
-  (let-match erased (le-trans v2 v w (MkLe v2 v lt) (MkLe v w le)) (MkLe _ _ lw))
+  (let-match erased (le-trans v2 v w (MkNatLe v2 v lt) (MkNatLe v w le)) (MkNatLe _ _ lw))
   (MSCons w ss1 v2 t1 lw (min-scan-mono ss1 v v2 t1 rest lt)))
 
 (def-fns _ $ (erased min-scan-full : (erased (List (Nat)) ss) (erased (Nat) v) (erased (Nat) t)

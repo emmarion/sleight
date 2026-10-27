@@ -836,7 +836,7 @@ below are the session's.
      source.** `Cmp` is plain source too, and the FFI builds it through
      its constructor (123). `nat-cmp` sits at an anonymous level below
      `nat-lvl` so that `lt-dec`, at `nat-lvl`, can call it; its `No`
-     evidence is `LtEqEq` for the `CEq` case and `LtEqLt` for `CGt`.
+     evidence is `LeEq` for the `CEq` case and `LeLt` for `CGt`.
 123. **An extern over a plain ADT takes that type's constructor or
      destructor; nothing is extern for the FFI's convenience.**
      `Ffi.note` records every declared type by name (first declaration

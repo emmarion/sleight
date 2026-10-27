@@ -10,7 +10,7 @@
 ; heap-here: replacing the root's value when the new one fits (the sift exit).
 ; heap-replace: changing node h's value from v to w inside subtree(i) keeps
 ;   subtree(i) a max-heap, provided w <= v and w fits at h; it returns the new
-;   value at i and its Le to the old one so the caller can re-establish the
+;   value at i and its NatLe to the old one so the caller can re-establish the
 ;   parent edge.
 
 ; ---- congr-top: the write position is strictly above the subtree root ----
@@ -121,7 +121,7 @@
 ; walk unchanged; bu is rebuilt per node.
 (def-fns _ $ (erased congr-cross :
     (erased (Nat) i0) (erased (Nat) d0) (erased (Double i0 d0) dd0)
-    (erased (Nat) i) (erased (Nat) di) (erased (Lt i0 i) lt1) (erased (Le i d0) le2)
+    (erased (Nat) i) (erased (Nat) di) (erased (Lt i0 i) lt1) (erased (NatLe i d0) le2)
     (erased (Nat) dm) (erased (Nat) m) (erased (Below i0 d0 m) bm)
     (erased (Nat) u) (erased (Below i di u) bu)
     (erased (List (Nat)) ys) (erased (Nat) hi) (erased (Nat) dx)
@@ -169,14 +169,14 @@
         (erased (Nat) w) (erased (Double h dh) dd) (erased (Nat) d2) (erased (Double (Succ dh) d2) dd2)
         (erased (Nat) z) (erased (Nth (Nat) ys (Succ dh) z) nz)
         (erased (Lt (Succ dh) hi) lin) (erased (Lt hi (Succ (Succ (Succ dh)))) nron)
-        (erased (Le z w) le) -> (Fits ys hi h dh w))
+        (erased (NatLe z w) le) -> (Fits ys hi h dh w))
     (many FitTwo : (erased (List (Nat)) ys) (erased (Nat) hi) (erased (Nat) h) (erased (Nat) dh)
         (erased (Nat) w) (erased (Double h dh) dd) (erased (Nat) d2) (erased (Double (Succ dh) d2) dd2)
         (erased (Nat) d3) (erased (Double (Succ (Succ dh)) d3) dd3)
         (erased (Nat) z1) (erased (Nat) z2)
         (erased (Nth (Nat) ys (Succ dh) z1) nz1) (erased (Nth (Nat) ys (Succ (Succ dh)) z2) nz2)
         (erased (Lt (Succ (Succ dh)) hi) rin)
-        (erased (Le z1 w) le1) (erased (Le z2 w) le2) -> (Fits ys hi h dh w))))
+        (erased (NatLe z1 w) le1) (erased (NatLe z2 w) le2) -> (Fits ys hi h dh w))))
 
 ; The Double witness a Fits carries.
 (def-fns _ $ (erased fit-dd : (erased (List (Nat)) ys) (erased (Nat) hi) (erased (Nat) h) (erased (Nat) dh)
@@ -194,7 +194,7 @@
     (subterm erased (HeapOn ys hi h d) H)
     (erased (Nat) v) (erased (Nth (Nat) ys h v) nv)
     (erased (Nat) w) (erased (List (Nat)) ys') (erased (SetNth (Nat) ys h w ys') st)
-    (erased (Le w v) lew) (erased (Fits ys hi h d w) fit)
+    (erased (NatLe w v) lew) (erased (Fits ys hi h d w) fit)
     -> (erased (HeapOn ys' hi h d) out))
   (match erased H _
     ((HLeaf _ _ _ _ dd nl)
@@ -238,20 +238,20 @@
     (erased (Nat) dh) (erased (Nat) h) (erased (Below i d h) b) (erased (Lt h hi) hlt)
     (erased (Nat) v) (erased (Nth (Nat) ys h v) nv)
     (erased (Nat) w) (erased (List (Nat)) ys') (erased (SetNth (Nat) ys h w ys') st)
-    (erased (Le w v) lew) (erased (Fits ys hi h dh w) fit)
+    (erased (NatLe w v) lew) (erased (Fits ys hi h dh w) fit)
     ->
     (erased (HeapOn ys' hi i d) out) (erased (Nat) w2) (erased (Nth (Nat) ys' i w2) nw2)
-    (erased (Nat) v2) (erased (Nth (Nat) ys i v2) nv2) (erased (Le w2 v2) le2))
+    (erased (Nat) v2) (erased (Nth (Nat) ys i v2) nv2) (erased (NatLe w2 v2) le2))
   (let-match erased b (BLeft _ _ ddx d2b dd2b _ bel)
     ((BRight _ _ ddx d3b dd3b _ bel)
       (let-match erased H (HTwo _ _ _ _ _ d2 dd2 d3 dd3 x y z nx ny nz rin le1 le2 subl subr)
-        (absurd (HLeaf _ _ _ _ _ nl) (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkLe _ _ gl)) (lt-asym h (Succ (Succ d)) (lt-weaken h (Succ d) (lt-le-trans h hi (Succ d) hlt nl)) gl))
-        (absurd (HOne _ _ _ _ _ _ _ x y nx ny lin nron le subl) (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkLe _ _ gl)) (lt-asym h (Succ (Succ d)) (lt-le-trans h hi (Succ (Succ d)) hlt nron) gl)))
+        (absurd (HLeaf _ _ _ _ _ nl) (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkNatLe _ _ gl)) (lt-asym h (Succ (Succ d)) (lt-weaken h (Succ d) (lt-le-trans h hi (Succ d) hlt nl)) gl))
+        (absurd (HOne _ _ _ _ _ _ _ x y nx ny lin nron le subl) (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkNatLe _ _ gl)) (lt-asym h (Succ (Succ d)) (lt-le-trans h hi (Succ (Succ d)) hlt nron) gl)))
       (let-match erased (double-fn (Succ (Succ d)) d3 d3b dd3 dd3b) (Refl _ _))
       (let ((erased ih) (erased w2) (erased nw2) (erased v2) (erased nv2) (erased lei))
         (heap-replace ys hi (Succ (Succ d)) d3 subr dh h bel hlt v nv w ys' st lew fit))
       (let-match erased (nth-fn (Nat) ys (Succ (Succ d)) z v2 nz nv2) (Refl _ _))
-      (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkLe _ _ glr))
+      (let-match erased (below-ge (Succ (Succ d)) d3b h bel) (MkNatLe _ _ glr))
       (let ((erased nxl)) (setnth-nth-diff (Nat) ys h w ys' st i x nx (NeLO i h (lt-le-trans i (Succ (Succ d)) h (lt-weaken i (Succ d) (double-lt i d ddx)) glr))))
       (let ((erased nyl)) (setnth-nth-diff (Nat) ys h w ys' st (Succ d) y ny (NeLO (Succ d) h (lt-le-trans (Succ d) (Succ (Succ d)) h (lt-succ (Succ d)) glr))))
       (let ((erased bil)) (BHere (Succ d) d2 dd2))
@@ -265,16 +265,16 @@
       (let ((erased ih) (erased w2) (erased nw2) (erased v2) (erased nv2) (erased lei))
         (heap-replace ys hi (Succ d) d2h subl dh h bel hlt v nv w ys' st lew fit))
       (let-match erased (nth-fn (Nat) ys (Succ d) y v2 ny nv2) (Refl _ _))
-      (let-match erased (below-ge (Succ d) d2b h bel) (MkLe _ _ gll))
+      (let-match erased (below-ge (Succ d) d2b h bel) (MkNatLe _ _ gll))
       (let ((erased nxl)) (setnth-nth-diff (Nat) ys h w ys' st i x nx (NeLO i h (lt-le-trans i (Succ d) h (double-lt i d ddx) gll))))
       (let ((erased bil)) (BHere (Succ (Succ d)) d3 dd3))
       (let ((erased nzl)) (setnth-nth-diff (Nat) ys h w ys' st (Succ (Succ d)) z nz (sib-ne i d ddx d2b h bel d3 (Succ (Succ d)) (BHere (Succ (Succ d)) d3 dd3))))
       (values (HTwo ys' hi i d ddx d2h dd2h d3 dd3 x w2 z nxl nw2 nzl rin (le-trans w2 y x lei le1) le2 ih (congr-sib i d ddx h d2b bel d3 (Succ (Succ d)) bil ys hi d3 subr w ys' st)) x nxl x nx (le-refl x)))
-    (absurd (HLeaf _ _ _ _ _ nl) (let-match erased (below-ge (Succ d) d2b h bel) (MkLe _ _ gl)) (lt-asym h (Succ d) (lt-le-trans h hi (Succ d) hlt nl) gl)))
+    (absurd (HLeaf _ _ _ _ _ nl) (let-match erased (below-ge (Succ d) d2b h bel) (MkNatLe _ _ gl)) (lt-asym h (Succ d) (lt-le-trans h hi (Succ d) hlt nl) gl)))
   (let-match erased (double-fn (Succ d) d2 d2b dd2 dd2b) (Refl _ _))
   (let ((erased ih) (erased w2) (erased nw2) (erased v2) (erased nv2) (erased lei))
     (heap-replace ys hi (Succ d) d2 subl dh h bel hlt v nv w ys' st lew fit))
   (let-match erased (nth-fn (Nat) ys (Succ d) y v2 ny nv2) (Refl _ _))
-  (let-match erased (below-ge (Succ d) d2b h bel) (MkLe _ _ gll))
+  (let-match erased (below-ge (Succ d) d2b h bel) (MkNatLe _ _ gll))
   (let ((erased nxl)) (setnth-nth-diff (Nat) ys h w ys' st i x nx (NeLO i h (lt-le-trans i (Succ d) h (double-lt i d ddx) gll))))
   (values (HOne ys' hi i d ddx d2 dd2 x w2 nxl nw2 lin nron (le-trans w2 y x lei le) ih) x nxl x nx (le-refl x)))

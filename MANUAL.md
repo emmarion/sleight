@@ -14,7 +14,7 @@ own files. [`std/macro.sl`](std/macro.sl) holds `qq`, a quasi-quote whose names 
 is written, with `~` and `~@` to insert and splice forms, `def-macro`, which defines a macro
 from a header `(name args [here [mw]])` and a body, the macros `and` and `or`, and helpers
 for writing macros, [`std/nat.sl`](std/nat.sl)
-holds `Le`, the non-strict order on `Nat`, `Ne`, inequality as one of the
+holds `NatLe`, the non-strict order on `Nat`, `Ne`, inequality as one of the
 two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
 `add-le-right` and `double-le`, [`std/list.sl`](std/list.sl) holds lemmas
 about the prelude's `Length`, `Nth`, `SetNth`, `Repeat` and `NthLast`, and

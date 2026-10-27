@@ -13,12 +13,12 @@
 ; from a hole h, swapping it with its larger child until it fits. `SinkInv ws H
 ; hi i0 h x` says: H is a max-heap on the subtree rooted at i0; ws is H with the
 ; hole h holding x instead of H's value v there (so `SetNth H h x ws`); and
-; `Le x v` (the displaced value v is >= x). It is INDUCTIVE: swapping the hole h
+; `NatLe x v` (the displaced value v is >= x). It is INDUCTIVE: swapping the hole h
 ; with the larger child c maps H to H' = H[h := H[c]] (still a heap -- because
 ; H[parent of h] >= H[h] >= H[c] = H'[h] and H[c] >= H[c's children] and H[c] >= H[c+1]
 ; as c is the larger child), and ws to ws' = H'[c := x], with the new hole at c
 ; and H'[c] = H[c] >= x. At the end (x fits, or h is a leaf) `SetNth H h x ws`
-; with `Le x v` and H a heap forces ws itself to be a heap.
+; with `NatLe x v` and H a heap forces ws itself to be a heap.
 
 (def-adts
   ((HeapOn : ((List (Nat)) ys) ((Nat) hi) ((Nat) i) ((Nat) d) -> Type)
@@ -28,13 +28,13 @@
         (erased (Double i d) dd) (erased (Lt hi (Succ (Succ d))) nl)
         -> (HeapOn ys hi i d))
     ; left child (Succ d) in, right child (Succ (Succ d)) out: 2i+1 < hi <= 2i+2.
-    ; Max-heap: child <= parent, i.e. (Le y x) with x at the parent, y at the child.
+    ; Max-heap: child <= parent, i.e. (NatLe y x) with x at the parent, y at the child.
     (many HOne : (erased (List (Nat)) ys) (erased (Nat) hi) (erased (Nat) i) (erased (Nat) d)
         (erased (Double i d) dd) (erased (Nat) d2) (erased (Double (Succ d) d2) dd2)
         (erased (Nat) x) (erased (Nat) y)
         (erased (Nth (Nat) ys i x) nx) (erased (Nth (Nat) ys (Succ d) y) ny)
         (erased (Lt (Succ d) hi) lin) (erased (Lt hi (Succ (Succ (Succ d)))) nron)
-        (erased (Le y x) le) (erased (HeapOn ys hi (Succ d) d2) subl)
+        (erased (NatLe y x) le) (erased (HeapOn ys hi (Succ d) d2) subl)
         -> (HeapOn ys hi i d))
     ; both children in: 2i+2 < hi.
     (many HTwo : (erased (List (Nat)) ys) (erased (Nat) hi) (erased (Nat) i) (erased (Nat) d)
@@ -43,7 +43,7 @@
         (erased (Nat) x) (erased (Nat) y) (erased (Nat) z)
         (erased (Nth (Nat) ys i x) nx) (erased (Nth (Nat) ys (Succ d) y) ny) (erased (Nth (Nat) ys (Succ (Succ d)) z) nz)
         (erased (Lt (Succ (Succ d)) hi) rin)
-        (erased (Le y x) le1) (erased (Le z x) le2)
+        (erased (NatLe y x) le1) (erased (NatLe z x) le2)
         (erased (HeapOn ys hi (Succ d) d2) subl) (erased (HeapOn ys hi (Succ (Succ d)) d3) subr)
         -> (HeapOn ys hi i d))))
 
@@ -53,7 +53,7 @@
     (many MkSink : (erased (List (Nat)) ws) (erased (List (Nat)) H) (erased (Nat) hi) (erased (Nat) i0)
         (erased (Nat) d0) (erased (Nat) h) (erased (Nat) x) (erased (Nat) v)
         (erased (Nth (Nat) H h v) nh) (erased (SetNth (Nat) H h x ws) sh)
-        (erased (HeapOn H hi i0 d0) heap) (erased (Le x v) le)
+        (erased (HeapOn H hi i0 d0) heap) (erased (NatLe x v) le)
         -> (SinkInv ws H hi i0 h x))))
 
 ; `Below i d h`: h is at or below i in the heap tree (h = i, or h in i's left/right
@@ -77,13 +77,13 @@
 ; w inside subtree(i) keeps subtree(i) a max-heap, provided (a) w <= v (so every
 ; ancestor edge is preserved by the chain ancestor >= ... >= v >= w) and (b) w
 ; fits at h (w >= h's children, so h's own child edges hold). Recurse on `Below`,
-; matching `HeapOn` alongside; return also the NEW value at i and its `Le` to the
+; matching `HeapOn` alongside; return also the NEW value at i and its `NatLe` to the
 ; old, so each caller can re-establish the parent edge (the chain the plain "all
 ; edges but the hole" formulation loses):
 ;
 ;   heap-replace : HeapOn ys hi i -> Below i h -> Nth ys h v -> SetNth ys h w ys'
-;                  -> Le w v -> (w >= ys'[h's children])
-;                  -> (HeapOn ys' hi i, Nth ys' i w', Le w' v_i)   with Nth ys i v_i
+;                  -> NatLe w v -> (w >= ys'[h's children])
+;                  -> (HeapOn ys' hi i, Nth ys' i w', NatLe w' v_i)   with Nth ys i v_i
 ;
 ; The sift swap instantiates w := H[c] (c = larger child): w <= v because c is a
 ; child in the heap, and w fits because c is the larger child. Then

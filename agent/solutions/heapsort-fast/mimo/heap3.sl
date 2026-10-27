@@ -14,10 +14,10 @@
 
 ; ---- small conversions ----
 
-; A GE reads as a Le in the other direction.
-(def-fns _ $ (erased le-of-ge : (erased (Nat) a) (erased (Nat) b) (subterm erased (GE a b) g) -> (erased (Le b a) out))
+; A GE reads as a NatLe in the other direction.
+(def-fns _ $ (erased le-of-ge : (erased (Nat) a) (erased (Nat) b) (subterm erased (GE a b) g) -> (erased (NatLe b a) out))
   (let-match erased g (MkGE _ _ p))
-  (MkLe b a p))
+  (MkNatLe b a p))
 
 ; ---- Split / RangeLe across a write ----
 
@@ -102,17 +102,17 @@
 ; The head x of the new suffix is above the old suffix's head (the range fact
 ; at the prefix's head), so Cons x ss is ascending whenever ss is.
 (def-fns _ $ (erased asc-head : (erased (Nat) x) (erased (List (Nat)) ps) (erased (List (Nat)) ss)
-    (erased (RangeLe (Cons (Nat) x ps) ss) rl) (subterm erased (Ascending (Nat) Le ss) asc)
-    -> (erased (Ascending (Nat) Le (Cons (Nat) x ss)) out))
+    (erased (RangeLe (Cons (Nat) x ps) ss) rl) (subterm erased (Ascending (Nat) NatLe ss) asc)
+    -> (erased (Ascending (Nat) NatLe (Cons (Nat) x ss)) out))
   (let-match erased asc (AscCons _ _ s0 s1 rest2 le12 asc1)
-    ((AscNil _ _) (AscOne (Nat) Le x))
+    ((AscNil _ _) (AscOne (Nat) NatLe x))
     ((AscOne _ _ s0b)
       (let-match erased rl (RLCons _ _ _ hd0 _))
       (let-match erased hd0 (AllToCons _ _ _ _ _ g0 _))
-      (AscCons (Nat) Le x s0b (Nil (Nat)) (le-of-ge s0b x g0) asc)))
+      (AscCons (Nat) NatLe x s0b (Nil (Nat)) (le-of-ge s0b x g0) asc)))
   (let-match erased rl (RLCons _ _ _ hd restl))
   (let-match erased hd (AllToCons _ _ _ _ _ g0 _))
-  (AscCons (Nat) Le x s0 (Cons (Nat) s1 rest2) (le-of-ge s0 x g0) asc))
+  (AscCons (Nat) NatLe x s0 (Cons (Nat) s1 rest2) (le-of-ge s0 x g0) asc))
 
 ; ---- the sift's entry Kids after the root swap ----
 
@@ -124,7 +124,7 @@
     (erased (Nat) x) (erased (List (Nat)) ws2) (erased (SetNth (Nat) ws1 k x ws2) s2)
     -> (erased (Kids ws2 k (Zero) (Zero)) out))
   (let ((erased shrunk))
-    (heap-shrink k (Succ k) (MkLe k (Succ k) (lt-weaken k (Succ k) (lt-succ k))) ys (Zero) (Zero) heap))
+    (heap-shrink k (Succ k) (MkNatLe k (Succ k) (lt-weaken k (Succ k) (lt-succ k))) ys (Zero) (Zero) heap))
   (let-match erased shrunk (HTwo _ _ _ _ dd d2 dd2 d3 dd3 x0 y0 z0 nx0 ny0 nz0 rin le1 le2 subl subr)
     ((HLeaf _ _ _ _ ddh nlh) (KLeaf ws2 k (Zero) (Zero) ddh nlh))
     ((HOne _ _ _ _ ddh d2h dd2h xh yh nxh nyh linh nronh leh sublh)
@@ -132,7 +132,7 @@
         (setnth-nth-diff (Nat) ys (Zero) w ws1 s1 (Succ (Zero)) yh nyh (NeGT (Succ (Zero)) (Zero) (LtZ (Zero)))))
       (let ((erased ny2)) (setnth-nth-diff (Nat) ws1 k x ws2 s2 (Succ (Zero)) yh ny1 (NeLO (Succ (Zero)) k linh)))
       (let ((erased subl1)) (congr-top (Zero) (Succ (Zero)) d2h (LtZ (Zero)) ys k sublh w ws1 s1))
-      (let ((erased subl2)) (congr-out k k (MkLe k k (lt-succ k)) ws1 (Succ (Zero)) d2h subl1 x ws2 s2))
+      (let ((erased subl2)) (congr-out k k (MkNatLe k k (lt-succ k)) ws1 (Succ (Zero)) d2h subl1 x ws2 s2))
       (KOne ws2 k (Zero) (Zero) ddh d2h dd2h yh ny2 linh nronh subl2)))
   (let ((erased ny1))
     (setnth-nth-diff (Nat) ys (Zero) w ws1 s1 (Succ (Zero)) y0 ny0 (NeGT (Succ (Zero)) (Zero) (LtZ (Zero)))))
@@ -142,9 +142,9 @@
   (let ((erased ny2)) (setnth-nth-diff (Nat) ws1 k x ws2 s2 (Succ (Zero)) y0 ny1 (NeLO (Succ (Zero)) k one-lt)))
   (let ((erased nz2)) (setnth-nth-diff (Nat) ws1 k x ws2 s2 (Succ (Succ (Zero))) z0 nz1 (NeLO (Succ (Succ (Zero))) k rin)))
   (let ((erased subl1)) (congr-top (Zero) (Succ (Zero)) d2 (LtZ (Zero)) ys k subl w ws1 s1))
-  (let ((erased subl2)) (congr-out k k (MkLe k k (lt-succ k)) ws1 (Succ (Zero)) d2 subl1 x ws2 s2))
+  (let ((erased subl2)) (congr-out k k (MkNatLe k k (lt-succ k)) ws1 (Succ (Zero)) d2 subl1 x ws2 s2))
   (let ((erased subr1)) (congr-top (Zero) (Succ (Succ (Zero))) d3 (LtZ (Succ (Zero))) ys k subr w ws1 s1))
-  (let ((erased subr2)) (congr-out k k (MkLe k k (lt-succ k)) ws1 (Succ (Succ (Zero))) d3 subr1 x ws2 s2))
+  (let ((erased subr2)) (congr-out k k (MkNatLe k k (lt-succ k)) ws1 (Succ (Succ (Zero))) d3 subr1 x ws2 s2))
   (KTwo ws2 k (Zero) (Zero) dd d2 dd2 d3 dd3 y0 z0 ny2 nz2 rin subl2 subr2))
 
 ; ---- the empty-suffix initial state ----

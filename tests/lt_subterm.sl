@@ -49,7 +49,7 @@
 (def-fns M $ (erased sub-lt : (erased (Nat) a) (erased (Nat) b) (erased (Subterm (Nat) a (Nat) b) q) ->
     (erased (Lt a b) l))
   (let-match erased (lt-dec (predates nm) a b) (No _ _ _ _ le-r) ((Yes _ _ _ _ p) p))
-  (let ((erased r)) (lt-eq-succ _ _ le-r))
+  (let ((erased r)) (le-lt-succ _ _ le-r))
   (let-match erased (le-split (predates lm) a b r) (Left _ _ e)
     ((Right _ _ l)
       (explode (predates lm) (Lt a b)

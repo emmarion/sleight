@@ -250,7 +250,7 @@ that the test does not make is a mistake in this file.
   [`tests/macro_symbol_eq.sl`](tests/macro_symbol_eq.sl) compares names and gensyms with `symbol-eq`.
 - [`tests/tactic_lt_lemma.sl`](tests/tactic_lt_lemma.sl) — a proof tactic written as a macro, `lt-lemma`
   from [`std/tactics.sl`](std/tactics.sl). It takes a lemma's whole signature and reads the `Lt`,
-  `Le`, `Add` and `Double` hypotheses and the goal from it as syntax, each side
+  `NatLe`, `Add` and `Double` hypotheses and the goal from it as syntax, each side
   as a base term under some number of `Succ`s. Each hypothesis is an edge
   between two bases, or two for an `(Add a b c)`, one from `a` and one from `b`
   to `c`, carrying its proof as an `Lt` between the two sides, a non-strict one
@@ -269,9 +269,9 @@ that the test does not make is a mistake in this file.
   `add-le-right` and `double-le`. [`tests/tactic_false_lemma_bad.sl`](tests/tactic_false_lemma_bad.sl) is a cycle
   of non-strict steps, and [`tests/tactic_ne_lemma_bad.sl`](tests/tactic_ne_lemma_bad.sl) an `Ne` the
   hypotheses allow to fail.
-  [`tests/tactic_le_lemma.sl`](tests/tactic_le_lemma.sl) covers `Le`: each way of joining a strict and a
-  non-strict step, `(Le a a)` from no hypotheses, a weakened `Lt` and `Le`
-  under `Succ`s; [`tests/tactic_le_lemma_bad.sl`](tests/tactic_le_lemma_bad.sl) is two `Le` steps offered for
+  [`tests/tactic_le_lemma.sl`](tests/tactic_le_lemma.sl) covers `NatLe`: each way of joining a strict and a
+  non-strict step, `(NatLe a a)` from no hypotheses, a weakened `Lt` and `NatLe`
+  under `Succ`s; [`tests/tactic_le_lemma_bad.sl`](tests/tactic_le_lemma_bad.sl) is two `NatLe` steps offered for
   an `Lt` goal. It checks the `Lt` and `Succ` heads against the prelude's
   through `resolve` and `settled-eq`, so the `aliased` lemma's `S` passes,
   and it emits the names it uses as handles, so the `hygienic` lemmas, whose

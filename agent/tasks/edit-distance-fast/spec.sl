@@ -41,7 +41,7 @@
     enum
     (many AtMostNil : (erased (Nat) d) -> (AtMost d (Nil (Nat))))
     (many AtMostCons : (erased (Nat) d) (erased (Nat) c) (erased (List (Nat)) cs)
-        (erased (Le d c) le) (erased (AtMost d cs) rest) -> (AtMost d (Cons (Nat) c cs)))))
+        (erased (NatLe d c) le) (erased (AtMost d cs) rest) -> (AtMost d (Cons (Nat) c cs)))))
 
 (def-adts
   ((Least : ((List (Nat)) cs) ((Nat) d) -> Type)

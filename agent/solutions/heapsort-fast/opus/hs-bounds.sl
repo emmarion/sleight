@@ -65,7 +65,7 @@
 
 (def-fns _ $ (erased ule-of-le : (erased (Nat) x) (erased (Lt x u62-modulus) px) (erased (Nat) y) (erased (Lt y u62-modulus) py)
     (erased (Lt x (Succ y)) le) -> (erased (ULe (MkCopy (U62) (MkU62 x px)) (MkCopy (U62) (MkU62 y py))) r))
-  (MkULe x px y py (MkLe x y le)))
+  (MkULe x px y py (MkNatLe x y le)))
 
 (def-fns _ $ (erased allbelow-shrink : (erased (List Elt) xs) (erased (Nat) n) (erased Elt s)
     (erased (AllBelow xs (Succ n) s) ab) -> (erased (AllBelow xs n s) r))

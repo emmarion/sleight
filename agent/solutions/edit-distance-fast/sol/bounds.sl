@@ -1,26 +1,26 @@
 ; Distance bounds, independent of any implementation of the dynamic program.
-(def-fns _ $ (erased ed-le-trans : (erased (Nat) a b c) (erased (Le a b) ab) (erased (Le b c) bc) ->
-    (erased (Le a c) ac))
-  (MkLe a c (lt-le-trans a (Succ b) (Succ c) (le-lt a b ab) (LtS b (Succ c) (le-lt b c bc)))))
+(def-fns _ $ (erased ed-le-trans : (erased (Nat) a b c) (erased (NatLe a b) ab) (erased (NatLe b c) bc) ->
+    (erased (NatLe a c) ac))
+  (MkNatLe a c (lt-le-trans a (Succ b) (Succ c) (le-lt a b ab) (LtS b (Succ c) (le-lt b c bc)))))
 
 (def-fns _ $ (erased ed-atmost-member : (erased (Nat) d) (erased (List (Nat)) cs)
-    (erased (AtMost d cs) p) (erased (Nat) i c) (subterm erased (Nth (Nat) cs i c) member) -> (erased (Le d c) q))
+    (erased (AtMost d cs) p) (erased (Nat) i c) (subterm erased (Nth (Nat) cs i c) member) -> (erased (NatLe d c) q))
   (let-match erased member (NthThere _ _ rest j _ more)
     ((NthHere _ _ _) (let-match erased p (AtMostCons _ _ _ q _)) q))
   (let-match erased p (AtMostCons _ _ _ _ ys1))
   (ed-atmost-member d rest ys1 j c more))
 
 (def-fns _ $ (erased ed-least-member : (erased (List (Nat)) cs) (erased (Nat) d)
-    (erased (Least cs d) least) (erased (Nat) i c) (erased (Nth (Nat) cs i c) member) -> (erased (Le d c) q))
+    (erased (Least cs d) least) (erased (Nat) i c) (erased (Nth (Nat) cs i c) member) -> (erased (NatLe d c) q))
   (let-match erased least (MkLeast _ _ _ _ below))
   (ed-atmost-member d cs below i c member))
 
-(def-fns _ $ (erased ed-add2-le : (erased (Nat) a d b) (erased (Add 2 a d) sum) (erased (Le a b) ab) ->
-    (erased (Le d (Succ (Succ b))) q))
+(def-fns _ $ (erased ed-add2-le : (erased (Nat) a d b) (erased (Add 2 a d) sum) (erased (NatLe a b) ab) ->
+    (erased (NatLe d (Succ (Succ b))) q))
   (let-match erased sum (AddSucc _ _ _ sum1))
   (let-match erased sum1 (AddSucc _ _ _ sum0))
   (let-match erased sum0 (AddZero _))
-  (MkLe _ _ (LtS _ _ (LtS _ _ (le-lt a b ab)))))
+  (MkNatLe _ _ (LtS _ _ (LtS _ _ (le-lt a b ab)))))
 
 ; The deletion candidate alone suffices in DistStep. This proof does not
 ; recurse into substitution, insertion or Swap; proof-size growth is linear
@@ -28,14 +28,14 @@
 (def-fns _ $ (erased ed-dist-bound : (erased (List (U8)) xs ys) (erased (Nat) d)
     (subterm erased (Dist xs ys d) dist) (erased (Nat) nx ny total upper)
     (erased (Length (U8) xs nx) lx) (erased (Length (U8) ys ny) ly)
-    (erased (Add nx ny total) sum) (erased (Double total upper) twice) -> (erased (Le d upper) bound))
+    (erased (Add nx ny total) sum) (erased (Double total upper) twice) -> (erased (NatLe d upper) bound))
   (match erased dist _
     ((DistNil)
       (let-match erased lx (LengthNil _))
       (let-match erased ly (LengthNil _))
       (let-match erased sum (AddZero _))
       (let-match erased twice (D0))
-      (MkLe 0 0 (lt-succ 0)))
+      (MkNatLe 0 0 (lt-succ 0)))
     ((DistDelete _ rest a da _ add2)
       (let-match erased lx (LengthCons _ _ _ n1 lx1))
       (let-match erased ly (LengthNil _))

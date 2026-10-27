@@ -97,6 +97,6 @@
             (erased (Nat) n) (erased (Length (Nat) xs n) len) (erased (Lt n max-array-length) fits)
             (erased (List (Copy (Nat))) cs) (unique (Array (Copy (Nat)) cs) a) (erased (Copies (Nat) xs cs) rel) ->
             (erased (List (Nat)) ys) (erased (List (Copy (Nat))) ds) (unique (Array (Copy (Nat)) ds) r at a)
-            (erased (Copies (Nat) ys ds) rel2) (erased (SortedPerm (Nat) Le xs ys) correct)) f)
+            (erased (Copies (Nat) ys ds) rel2) (erased (SortedPerm (Nat) NatLe xs ys) correct)) f)
         -> (Heapsort))))
 (goal many (Heapsort))

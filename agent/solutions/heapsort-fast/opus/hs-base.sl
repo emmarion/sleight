@@ -6,7 +6,7 @@
   ((ULe : (Elt a) (Elt b) -> Type)
     enum
     (many MkULe : (erased (Nat) x) (erased (Lt x u62-modulus) px) (erased (Nat) y) (erased (Lt y u62-modulus) py)
-        (erased (Le x y) le) -> (ULe (MkCopy (U62) (MkU62 x px)) (MkCopy (U62) (MkU62 y py))))))
+        (erased (NatLe x y) le) -> (ULe (MkCopy (U62) (MkU62 x px)) (MkCopy (U62) (MkU62 y py))))))
 
 (def-adts
   ((Wr : ((List (Nat)) xs) ((List Elt) ds) -> Type)
@@ -68,18 +68,18 @@
       (values ys2 w4 (PTrans (Nat) xs ys1 ys2 p3 p4)))))
 
 (def-fns _ $ (erased asc-from-u62 : (erased (List (Nat)) ys) (erased (List Elt) es)
-    (erased (Wr ys es) w) (subterm erased (Ascending Elt ULe es) asc) -> (erased (Ascending (Nat) Le ys) asc2))
+    (erased (Wr ys es) w) (subterm erased (Ascending Elt ULe es) asc) -> (erased (Ascending (Nat) NatLe ys) asc2))
   (match erased asc _
-    ((AscNil _ _) (let-match erased w (WrNil)) (AscNil (Nat) Le))
+    ((AscNil _ _) (let-match erased w (WrNil)) (AscNil (Nat) NatLe))
     ((AscOne _ _ e)
       (let-match erased w (WrCons y py ys1 _ w1))
       (let-match erased w1 (WrNil))
-      (AscOne (Nat) Le y))
+      (AscOne (Nat) NatLe y))
     ((AscCons _ _ e f rest le a)
       (let-match erased w (WrCons y py ys1 _ w1))
       (let-match erased w1 (WrCons z pz ys2 _ w2))
       (let-match erased le (MkULe _ _ _ _ yz))
-      (AscCons (Nat) Le y z ys2 yz (asc-from-u62 ys1 (Cons Elt f rest) w1 a)))))
+      (AscCons (Nat) NatLe y z ys2 yz (asc-from-u62 ys1 (Cons Elt f rest) w1 a)))))
 
 ; Swapping two entries is a permutation.
 (def-fns _ $ (erased perm-set-front : (erased (List Elt) rest) (erased (Nat) k) (erased Elt x y) (erased (List Elt) rest2)

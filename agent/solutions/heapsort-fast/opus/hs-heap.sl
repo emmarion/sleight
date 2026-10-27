@@ -3,15 +3,15 @@
 (def-fns _ $ (erased ule-refl : (erased Elt e) -> (erased (ULe e e) r))
   (let-match erased e (MkCopy _ u))
   (let-match erased u (MkU62 x p))
-  (MkULe x p x p (MkLe x x (lt-succ x))))
+  (MkULe x p x p (MkNatLe x x (lt-succ x))))
 
 (def-fns _ $ (erased ule-trans : (erased Elt e) (erased Elt f) (erased Elt g) (erased (ULe e f) p) (erased (ULe f g) q)
     -> (erased (ULe e g) r))
   (let-match erased p (MkULe x px y py xy))
   (let-match erased q (MkULe _ _ z pz yz))
-  (let-match erased xy (MkLe _ _ xy1))
-  (let-match erased yz (MkLe _ _ yz1))
-  (MkULe x px z pz (MkLe x z (lt-le-trans x (Succ y) (Succ z) xy1 (LtS y (Succ z) yz1)))))
+  (let-match erased xy (MkNatLe _ _ xy1))
+  (let-match erased yz (MkNatLe _ _ yz1))
+  (MkULe x px z pz (MkNatLe x z (lt-le-trans x (Succ y) (Succ z) xy1 (LtS y (Succ z) yz1)))))
 
 ; c = 2p+1 or c = 2p+2.
 (def-adts

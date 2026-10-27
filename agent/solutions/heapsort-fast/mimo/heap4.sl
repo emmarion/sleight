@@ -21,31 +21,31 @@
 
 ; ---- small helpers ----
 
-; Le q j implies Le q (Succ j).
-(def-fns _ $ (erased le-step : (erased (Nat) q) (erased (Nat) j) (subterm erased (Le q j) qj)
-    -> (erased (Le q (Succ j)) out))
-  (let-match erased qj (MkLe _ _ lp))
-  (MkLe q (Succ j) (lt-weaken q (Succ j) lp)))
+; NatLe q j implies NatLe q (Succ j).
+(def-fns _ $ (erased le-step : (erased (Nat) q) (erased (Nat) j) (subterm erased (NatLe q j) qj)
+    -> (erased (NatLe q (Succ j)) out))
+  (let-match erased qj (MkNatLe _ _ lp))
+  (MkNatLe q (Succ j) (lt-weaken q (Succ j) lp)))
 
 ; A node at or above the half mark has its children past the bound: the HLeaf
-; shape. From Hf n q (n = 2q + r, r < 2), Double q m, Double j dj, Le q j.
+; shape. From Hf n q (n = 2q + r, r < 2), Double q m, Double j dj, NatLe q j.
 (def-fns _ $ (erased leaf-of-half : (erased (Nat) n) (erased (Nat) q) (subterm erased (Hf n q) hf)
-    (erased (Nat) j) (erased (Nat) dj) (erased (Double j dj) ddj) (erased (Le q j) qj)
+    (erased (Nat) j) (erased (Nat) dj) (erased (Double j dj) ddj) (erased (NatLe q j) qj)
     -> (erased (Lt n (Succ (Succ dj))) out))
   (let-match erased hf (MkHf _ _ m mm r ad rl pq))
   (let ((erased mq)) (mul2-double q m mm))
   (let ((erased mdj)) (double-le q j m dj qj mq ddj))
   (let ((erased sm)) (add-small m r n ad rl))
-  (let-match erased mdj (MkLe _ _ mp))
+  (let-match erased mdj (MkNatLe _ _ mp))
   (lt-le-trans n (Succ (Succ m)) (Succ (Succ dj)) sm
     (LtS (Succ m) (Succ (Succ dj)) (LtS m (Succ dj) mp))))
 
 ; The half mark is at or below the length: q <= n.
 (def-fns _ $ (erased q-le-n : (erased (Nat) n) (erased (Nat) q) (subterm erased (Hf n q) hf)
-    -> (erased (Le q n) out))
+    -> (erased (NatLe q n) out))
   (let-match erased hf (MkHf _ _ m mm r ad rl pq))
-  (let ((erased qm)) (MkLe q m (mul-le q (Succ (Succ (Zero))) m mm (LtZ (Succ (Zero))))))
-  (le-trans q m n qm (MkLe m n (add-le-left m r n ad))))
+  (let ((erased qm)) (MkNatLe q m (mul-le q (Succ (Succ (Zero))) m mm (LtZ (Succ (Zero))))))
+  (le-trans q m n qm (MkNatLe m n (add-le-left m r n ad))))
 
 ; ---- Frames: the disjoint window's heaps ----
 
@@ -56,19 +56,19 @@
         -> (Frames ys n i0 d0 lo lo))
     (many FrCons : (erased (List (Nat)) ys) (erased (Nat) n) (erased (Nat) i0) (erased (Nat) d0)
         (erased (Nat) lo) (erased (Nat) hi)
-        (erased (Nat) di) (erased (Double lo di) ddl) (erased (Lt i0 lo) ltl) (erased (Le lo d0) lel)
+        (erased (Nat) di) (erased (Double lo di) ddl) (erased (Lt i0 lo) ltl) (erased (NatLe lo d0) lel)
         (erased (HeapOn ys n lo di) heap) (erased (Frames ys n i0 d0 (Succ lo) hi) rest)
         -> (Frames ys n i0 d0 lo hi))))
 
 ; A window's range is inhabited only left-to-right: lo <= hi (a nonempty
 ; window with hi < lo is impossible -- used to refute impossible peels).
 (def-fns _ $ (erased frames-le : (erased (List (Nat)) ys) (erased (Nat) n) (erased (Nat) i0) (erased (Nat) d0)
-    (erased (Nat) lo) (erased (Nat) hi) (subterm erased (Frames ys n i0 d0 lo hi) fr) -> (erased (Le lo hi) out))
+    (erased (Nat) lo) (erased (Nat) hi) (subterm erased (Frames ys n i0 d0 lo hi) fr) -> (erased (NatLe lo hi) out))
   (let-match erased fr (FrCons _ _ _ _ _ _ di ddl ltl lel heap rest)
     ((FrNil _ _ _ _ _) (le-refl lo)))
-  (let-match erased (frames-le ys n i0 d0 (Succ lo) hi rest) (MkLe _ _ lp))
+  (let-match erased (frames-le ys n i0 d0 (Succ lo) hi rest) (MkNatLe _ _ lp))
   (let-match erased lp (LtS _ _ lp1))
-  (MkLe lo hi (lt-weaken lo hi lp1)))
+  (MkNatLe lo hi (lt-weaken lo hi lp1)))
 
 ; A write inside subtree(i0) leaves a disjoint window's heaps alone.
 (def-fns _ $ (erased frames-congr : (erased (List (Nat)) ys) (erased (Nat) n) (erased (Nat) i0) (erased (Nat) d0)
@@ -90,7 +90,7 @@
 (def-fns _ $ (erased frames-leaves : (erased (List (Nat)) ys) (erased (Nat) n) (erased (Nat) q)
     (erased (Hf n q) hf) (erased (Nat) i0) (erased (Nat) d0)
     (erased (Nat) lo) (subterm erased (Nat) c) (erased (Add lo c (Succ d0)) ac)
-    (erased (Lt i0 lo) ltl) (erased (Le q lo) qlo)
+    (erased (Lt i0 lo) ltl) (erased (NatLe q lo) qlo)
     -> (erased (Frames ys n i0 d0 lo (Succ d0)) out))
   (let-match erased c (Succ c1)
     ((Zero)
@@ -100,7 +100,7 @@
   (let ((erased gl)) (leaf-of-half n q hf lo di ddl qlo))
   (let ((erased rest))
     (frames-leaves ys n q hf i0 d0 (Succ lo) c1 (add-move lo c1 (Succ d0) ac) (lt-weaken i0 lo ltl) (le-step q lo qlo)))
-  (FrCons ys n i0 d0 lo (Succ d0) di ddl ltl (MkLe lo d0 (add-pos-lt lo (Succ c1) (Succ d0) ac (LtZ c1)))
+  (FrCons ys n i0 d0 lo (Succ d0) di ddl ltl (MkNatLe lo d0 (add-pos-lt lo (Succ c1) (Succ d0) ac (LtZ c1)))
     (HLeaf ys n lo di ddl gl) rest))
 
 ; Moving a window to a lower root: the per-node facts about i0 relax (the new
@@ -117,7 +117,7 @@
     (absurd (FrNil _ _ _ _ _)
       (let ((erased bad)) (add-pos-lt lo (Succ k1) (Succ d2) ac (LtZ k1)))
       (lt-irrefl lo bad)))
-  (FrCons ys n i2 d2 lo (Succ d2) di ddl ltl (MkLe lo d2 (add-pos-lt lo (Succ k1) (Succ d2) ac (LtZ k1)))
+  (FrCons ys n i2 d2 lo (Succ d2) di ddl ltl (MkNatLe lo d2 (add-pos-lt lo (Succ k1) (Succ d2) ac (LtZ k1)))
     heap
     (frames-recert ys n i0 d0 (Succ lo) d2 k1 (add-move lo k1 (Succ d2) ac) rest i2 (lt-weaken i2 lo ltl))))
 
@@ -167,11 +167,11 @@
 
 ; The initial window at the half mark: every node in [j+1, 2j+2] is a leaf.
 (def-fns _ $ (erased binv-leaves : (erased (List (Nat)) ys) (erased (Nat) n) (erased (Nat) q) (erased (Hf n q) hf)
-    (erased (Nat) j) (erased (Nat) dj) (erased (Double j dj) ddj) (erased (Le q (Succ j)) qj)
+    (erased (Nat) j) (erased (Nat) dj) (erased (Double j dj) ddj) (erased (NatLe q (Succ j)) qj)
     -> (erased (BInv ys n j dj) out))
   (let ((erased d2) (erased dd2)) (double (Succ dj)))
   (let ((erased d3) (erased dd3)) (double (Succ (Succ dj))))
-  (let ((erased qk)) (le-trans q (Succ j) (Succ dj) qj (MkLe (Succ j) (Succ dj) (LtS j (Succ dj) (double-lt j dj ddj)))))
+  (let ((erased qk)) (le-trans q (Succ j) (Succ dj) qj (MkNatLe (Succ j) (Succ dj) (LtS j (Succ dj) (double-lt j dj ddj)))))
   (let ((erased gl)) (leaf-of-half n q hf (Succ dj) d2 dd2 qk))
   (let ((erased gr)) (leaf-of-half n q hf (Succ (Succ dj)) d3 dd3 (le-step q (Succ dj) qk)))
   (let ((erased fr))
@@ -215,11 +215,11 @@
       (MkBInv ys n j1 dj1 (Succ (Succ dj1)) (DS j1 dj1 ddj1) newh di ddl heap (FrNil ys n j1 dj1 (Succ j1)))))
   (let-match erased ddj1 (DS j0 dj0 ddj0)
     (absurd (D0)
-      (let-match erased (frames-le ys n (Succ j1) (Succ (Succ dj1)) (Succ (Succ j1)) (Succ dj1) front) (MkLe _ _ bad))
+      (let-match erased (frames-le ys n (Succ j1) (Succ (Succ dj1)) (Succ (Succ j1)) (Succ dj1) front) (MkNatLe _ _ bad))
       (lt-irrefl (Succ (Succ j1)) bad)))
   (MkBInv ys n j1 dj1 dm1 ddm1 h1 dm2 ddm2 h2
     (FrCons ys n j1 dj1 (Succ j1) (Succ dj1) (Succ (Succ dj1)) (DS j1 dj1 ddj1) (lt-succ j1)
-      (MkLe (Succ j1) dj1 (LtS (Succ j0) (Succ (Succ dj0)) (LtS j0 (Succ dj0) (double-lt j0 dj0 ddj0))))
+      (MkNatLe (Succ j1) dj1 (LtS (Succ j0) (Succ (Succ dj0)) (LtS j0 (Succ dj0) (double-lt j0 dj0 ddj0))))
       newh
       (frames-recert ys n (Succ j1) (Succ (Succ dj1)) (Succ (Succ j1)) dj1 j0
         (AddSucc (Succ (Succ j0)) j0 (Succ (Succ dj0))

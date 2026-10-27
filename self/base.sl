@@ -66,7 +66,7 @@
   (let-match many b (MkChar ub))
   (let-match many ub (MkU8 kb pb))
   (let-match many (u62-lt-dec ka kb (u8-u62 _ pa) (u8-u62 _ pb)) (No _ _ _ _ le) ((Yes _ _ _ _ _) 0))
-  (let ((many d) (erased _) (erased _)) (u62-sub ka kb (u8-u62 _ pa) (lt-eq-succ _ _ le)))
+  (let ((many d) (erased _) (erased _)) (u62-sub ka kb (u8-u62 _ pa) (le-lt-succ _ _ le)))
   d)
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
@@ -440,7 +440,7 @@
   (let ((many ll) (erased llp)) (str-length lab))
   (let-match many (lt-dec ln ll) (No _ _ _ _ le-ge)
     ((Yes _ _ _ _ lt) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPShort lab name1 ln ll lnp llp lt)))
-  (let ((erased ge)) (lt-eq-succ _ _ le-ge))
+  (let ((erased ge)) (le-lt-succ _ _ le-ge))
   (let ((many p) (many rest) (erased ap) (erased lp)) (str-split name1 ll ln lnp ge))
   (let-match many (str-eq p lab) (Equal _ _ _)
     ((Unequal _ _ _ _ d) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPDiff lab name1 p rest ll ap lp llp d)))

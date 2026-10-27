@@ -70,7 +70,7 @@
       (let-match erased l1 (LNil))
       (let ((unique r)) (at unique (c1 x xt)))
       (values r (SortCons x (UNil) (LHNil x) (SortNil)) (perm-refl r))))
-  (let ((erased ge)) (lt-eq-succ _ _ le-ge))
+  (let ((erased ge)) (le-lt-succ _ _ le-ge))
   (let-match erased ge (LtS _ _ ge1))
   (let-match erased ge1 (LtS _ _ ge2))
   (let-match erased ge2 (LtZ _))

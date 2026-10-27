@@ -68,5 +68,5 @@
       (erased (Machine n) champion) (erased (HaltsIn n champion blank v) halts)
       (erased (Level) L)
       (erased (Fn L (erased (Machine n) m) (erased (Nat) k) (erased (HaltsIn n m blank k) h) ->
-          (erased (Le k v) le)) bound)
+          (erased (NatLe k v) le)) bound)
       -> (BusyBeaver n v)))

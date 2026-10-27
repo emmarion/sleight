@@ -247,7 +247,7 @@ subtraction, which gets its proof by deciding the comparison:
 ```scheme
 (def-fns _ $ (many monus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let-match many (lt-dec a b) (No _ _ _ _ le-q) ((Yes _ _ _ _ _) 0))
-  (let ((erased q)) (lt-eq-succ _ _ le-q))
+  (let ((erased q)) (le-lt-succ _ _ le-q))
   (let ((many c) (erased _)) (sub a b q))
   c)
 
@@ -258,7 +258,7 @@ subtraction, which gets its proof by deciding the comparison:
 as `_`.)
 
 - `lt-dec` returns `(Dec (Nat) Lt a b)`: either `Yes` with an `(Lt a b)`,
-  or `No` with an `(LtEq (Nat) Lt b a)`, which `lt-eq-succ` turns into
+  or `No` with an `(Le (Nat) Lt b a)`, which `le-lt-succ` turns into
   the `(Lt b (Succ a))` that `sub` takes. `char-lt-dec` makes the same
   decision on characters.
 - This `let-match` has an extra branch. The `Yes` case returns `0`
@@ -291,7 +291,7 @@ can be proved by computing it there and asserting the outcome with
 ```scheme
 (let ((many d)) (lt-dec 10 3))
 (comptime-match many d (No _ _ _ _ le-q))
-(let ((erased q)) (lt-eq-succ _ _ le-q))
+(let ((erased q)) (le-lt-succ _ _ le-q))
 (let ((many c) (erased p)) (sub 10 3 q))
 c
 ```
