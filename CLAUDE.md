@@ -17,7 +17,7 @@ by the owner and apply to every session.
    argument about whether something type-checks or behaves a given way.
 
 3. **This OCaml install may exceed what's in Claude's training weights**
-   for existential types, GADTs, etc. — e.g. a `let` or plain function can
+   for existential types, GADTs, `let rec` inlining, etc. — e.g. a `let` or plain function can
    open an existential type *and* get proper GADT branch refutation of the
    other variants at the same time. Don't assume training-data intuitions
    about OCaml's type-system limits are current; check by compiling (rule 2).
