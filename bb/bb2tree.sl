@@ -21,7 +21,7 @@
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 2 2 m) w) (erased (Nat) s)
     (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 6)) p))
-  (no-hole s 6 (sym-good 2 6 (Succ (Succ (Zero))) (Nil (List (PT))) xs O OR p0 ta up kr rg op (NCS 2 (Succ (Zero)) l1n) m s w h)))
+  (no-hole 2 s 6 (sym-good 2 6 (Succ (Succ (Zero))) (Nil (List (PT))) xs O OR p0 ta up kr rg op (NCS 2 (Succ (Zero)) l1n) m s w h)))
 
 (goal erased (BBIs 2 6))
 (qed (MkBB 2 6 champ cw ch (level-of bound) bound))

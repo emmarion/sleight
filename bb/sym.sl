@@ -71,7 +71,7 @@
 (def-fns _ $ (erased sym-good : (erased (Nat) n k c2) (erased (List (List (PT))) hl) (erased (List (Nat)) xs) (erased (List (Tr)) O OR) (erased (List (PT)) p0)
     (erased (TAll n k hl p0 (Zero) (BFalse) OR) ta) (erased (UList n p0) up) (erased (KeepR O OR) kr) (erased (Range c2 xs) rg)
     (erased (Opts xs O) op) (erased (NextC n (Succ (Zero)) c2) nc) (erased (List (Tr)) m) (erased (Nat) s) (erased (Rows n n m) w)
-    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Or (Lt s (Succ k)) (InHole hl s)) res))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) res))
   (let ((erased m2) (erased w2) (erased t) (erased lk) (erased nl) (erased h2)) (orient n m s w h))
   (let-match erased up (UCons k1 p1 u1) (absurd (UNil) (let-match erased w2 (RowsZ _)) lk))
   (let ((erased m3) (erased ex3) (erased w3) (erased h3) (erased t3) (erased lk3) (erased mm) (erased a) (erased b) (erased e))
