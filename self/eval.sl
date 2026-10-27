@@ -1152,8 +1152,9 @@
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (LitKey) key) -> (many (Maybe $ Nat) r))
   (let-match many (env-literals env) (MkLitTable sp st))
-  (let ((many (NameMap $ Nat) m) (many (String) k)) $ match many key _ ((LKSpelled k) (values sp k)) ((LKString k) (values st k)))
-  (match many (nm-get _ k m) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
+  (let ((many (WordMap (String) (Char) (Nat)) m) (many (String) k)) $ match many key _ ((LKSpelled k) (values sp k)) ((LKString k) (values st k)))
+  (let ((erased _) (erased _) (many r)) (nm-get _ k m))
+  (match many r _ ((WHit _ _ _ _ _ _ _ x _) (Some _ x)) ((WMiss _ _ _ _ _ _ _ _) (None _))))
 
 ; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).

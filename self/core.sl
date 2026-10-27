@@ -2289,7 +2289,7 @@
 
 (def-adts $ (LitTable : -> Type)
   enum
-  (many MkLitTable : (many (NameMap $ Nat) spelled) (many (NameMap $ Nat) strings) -> (LitTable)))
+  (many MkLitTable : (many (WordMap (String) (Char) (Nat)) spelled) (many (WordMap (String) (Char) (Nat)) strings) -> (LitTable)))
 
 (def-adts
   ((Env : -> Type)
@@ -3545,7 +3545,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (MkLitTable (nm-empty _) (nm-empty _)) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) (MkTrail (MEmpty _) held-none) $ None _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (MkLitTable (wm-empty _ _ _) (wm-empty _ _ _)) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) (MkTrail (MEmpty _) held-none) $ None _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

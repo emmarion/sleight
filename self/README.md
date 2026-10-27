@@ -62,7 +62,9 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   from it.
 - `base.sl` — booleans, `Nat`/`Char`/`String` helpers over the
   prelude's externs, a trie map over `Nat` identifiers walked by the
-  prelude's `Half`, a radix trie keyed by names, list helpers, and helpers
+  prelude's `Half`, a radix trie over keys that spell words (`WordMap`, its
+  lookup and update made by `word-map-factory` from a `KeyOps` record of
+  the key type's operations, and made for names), list helpers, and helpers
   over the prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
   orders on `Nat` and `String` are relations decided into the prelude's
   `Cmp`, so a match on `CEq` forces the two equal; a trie lookup returns
