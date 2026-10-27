@@ -104,8 +104,8 @@
 
 (def-adts $ (GSt : -> Type)
   enum
-  (many MkGSt : (many (Tab) sy st) (many (List (ACN)) S) (many (HMap (Bool)) ss) (many (List (ACN)) W) (many (HMap (List (Wait))) wt)
-     (many (Nat) n) -> (GSt)))
+  (many MkGSt : (many (Tab) sy st) (many (List (ACN)) S) (many (List (Pair (Nat) (Nat))) ch) (many (HMap (Bool)) ss) (many (List (ACN)) W)
+     (many (HMap (List (Wait))) wt) (many (Nat) n) -> (GSt)))
 
 (def-adts $ (Setting : -> Type)
   enum
@@ -248,11 +248,11 @@
   (match many d _ ((DL) (MkACN q2 j c no)) ((DR) (MkACN q2 no c j))))
 
 (def-fns _ $ (many add-cfg : (many (ACN) a) (many (GSt) g) -> (many (GSt) g2))
-  (let-match many g (MkGSt sy st S ss W wt n))
+  (let-match many g (MkGSt sy st S ch ss W wt n))
   (let ((many ak)) (acn-key a))
   (match many (hfind _ ss ak) _
     ((Some _ _) g)
-    ((None _) (MkGSt sy st (Cons (ACN) a S) (hset _ ss ak (BTrue)) (Cons (ACN) a W) wt (Succ n)))))
+    ((None _) (MkGSt sy st S ch (hset _ ss ak (BTrue)) (Cons (ACN) a W) wt (Succ n)))))
 
 (def-fns _ $ (many fire : (many (Nat) j) (subterm many (List (Wait)) ws) (many (GSt) g) -> (many (GSt) g2))
   (let-match many ws (Cons _ w rest) ((Nil _) g))
@@ -263,10 +263,10 @@
   (match many (hfind _ wt pk) _ ((Some _ ws) ws) ((None _) (Nil _))))
 
 (def-fns _ $ (many intern-st : (many (Setting) se) (many (List (Nat)) key) (many (GSt) g) -> (many (Nat) j) (many (GSt) g2))
-  (let-match many g (MkGSt sy st S ss W wt n))
+  (let-match many g (MkGSt sy st S ch ss W wt n))
   (let ((many ixd)) (sn-ix se))
   (let ((many j) (many st2) (many new)) (tab-intern ixd key st))
-  (let ((many g1)) (MkGSt sy st2 S ss W wt n))
+  (let ((many g1)) (MkGSt sy st2 S ch ss W wt n))
   (let-match many new (BTrue) ((BFalse) (values j g1)))
   (let-match many ixd (BTrue) ((BFalse) (values j g1)))
   (let-match many key (Cons _ side kg) ((Nil _) (values j g1)))
@@ -280,37 +280,28 @@
   (tail $ add-edges se q2 d no rest (add-cfg (mk-cfg q2 d no c j) g1)))
 
 (def-fns _ $ (many process : (many (List (PT)) p) (many (Setting) se) (many (ACN) a) (many (GSt) g) -> (many (Maybe (GSt)) r))
-  (let-match many g (MkGSt sy st S ss W wt n))
+  (let-match many g (MkGSt sy st S ch ss W wt n))
   (let-match many (push p se a sy st) (Some _ pu) ((None _) (None _)))
-  (let-match many pu (MkPush q2 d _ sy2 nk pi))
-  (let ((many no) (many g1)) (intern-st se nk (MkGSt sy2 st S ss W wt n)))
-  (let-match many g1 (MkGSt _ st1 _ _ _ _ _))
+  (let-match many pu (MkPush q2 d sid sy2 nk pi))
+  (let ((many no) (many g0)) (intern-st se nk (MkGSt sy2 st S ch ss W wt n)))
+  (let-match many g0 (MkGSt sy1 st1 S1 ch1 ss1 W1 wt1 n1))
+  (let ((many g1)) (MkGSt sy1 st1 (Cons (ACN) a S1) (Cons _ (MkPair _ _ sid no) ch1) ss1 W1 wt1 n1))
   (let-match many (tab-get st1 pi) (Some _ pkey) ((None _) (None _)))
   (let ((many g2)) (add-edges se q2 d no (edges-of se st1 pkey) g1))
   (let-match many (sn-ix se) (BTrue) ((BFalse) (Some _ g2)))
   (let-match many pkey (Cons _ side pg) ((Nil _) (Some _ g2)))
   (let-match many pg (Cons _ c gt) ((Nil _) (Some _ g2)))
   (let ((many pk)) (Cons (Nat) side gt))
-  (let-match many g2 (MkGSt sy3 st3 S3 ss3 W3 wt3 n3))
-  (Some _ (MkGSt sy3 st3 S3 ss3 W3 (hset _ wt3 pk (Cons _ (MkWait q2 d no c) (waits wt3 pk))) n3)))
+  (let-match many g2 (MkGSt sy3 st3 S3 ch3 ss3 W3 wt3 n3))
+  (Some _ (MkGSt sy3 st3 S3 ch3 ss3 W3 (hset _ wt3 pk (Cons _ (MkWait q2 d no c) (waits wt3 pk))) n3)))
 
 (def-fns _ $ (many run-wl : (many (List (PT)) p) (many (Setting) se) (many (Nat) cap) (subterm many (Nat) fuel) (many (GSt) g) -> (many (Maybe (GSt)) r))
   (let-match many fuel (Succ f) ((Zero) (None _)))
-  (let-match many g (MkGSt sy st S ss W wt n))
+  (let-match many g (MkGSt sy st S ch ss W wt n))
   (let-match many W (Cons _ a rest) ((Nil _) (Some _ g)))
   (let-match many (lt-dec n cap) (Yes _ _ _ _ _) ((No _ _ _ _ _) (None _)))
-  (let-match many (process p se a (MkGSt sy st S ss rest wt n)) (Some _ g2) ((None _) (None _)))
+  (let-match many (process p se a (MkGSt sy st S ch ss rest wt n)) (Some _ g2) ((None _) (None _)))
   (tail $ run-wl p se cap f g2))
-
-(def-fns _ $ (many choices : (many (List (PT)) p) (many (Setting) se) (subterm many (List (ACN)) T) (many (Tab) sy st) ->
-    (many (Maybe (List (Pair (Nat) (Nat)))) r))
-  (let-match many T (Cons _ a rest) ((Nil _) (Some _ (Nil (Pair (Nat) (Nat))))))
-  (let-match many (push p se a sy st) (Some _ pu) ((None _) (None _)))
-  (let-match many pu (MkPush _ _ sid _ nk _))
-  (let-match many st (MkTab _ ids _ _))
-  (let-match many (hfind _ ids nk) (Some _ no) ((None _) (None _)))
-  (let-match many (notail $ choices p se rest sy st) (Some _ cs) ((None _) (None _)))
-  (Some _ (Cons (Pair (Nat) (Nat)) (MkPair _ _ sid no) cs)))
 
 (def-fns _ $ (many edge-ids : (many (Bool) ixd) (many (Nat) i) (subterm many (List (Pair (Nat) (List (Nat)))) es) (many (Tab) st) (many (List (Edge)) acc) ->
     (many (Tab) st2) (many (List (Edge)) acc2))
@@ -353,9 +344,8 @@
   (let ((many ss)) (hset _ (HE (Bool)) (acn-key a0) (BTrue)))
   (let ((many fuel0) (erased _)) (add cap cap))
   (let ((many as)) (Cons (ACN) a0 (Nil (ACN))))
-  (let-match many (run-wl p se cap fuel0 (MkGSt sy st as ss as (HE (List (Wait))) 1)) (Some _ g) ((None _) (None _)))
-  (let-match many g (MkGSt sy2 st2 S _ _ _ _))
-  (let-match many (choices p se S sy2 st2) (Some _ ch) ((None _) (None _)))
+  (let-match many (run-wl p se cap fuel0 (MkGSt sy st (Nil (ACN)) (Nil _) ss as (HE (List (Wait))) 1)) (Some _ g) ((None _) (None _)))
+  (let-match many g (MkGSt sy2 st2 S ch _ _ _ _))
   (let-match many st2 (MkTab n _ _ _))
   (let ((many fuel) (erased _)) (add n cap))
   (let-match many (all-edges se fuel 0 st2 (Nil (Edge))) (Some _ es) ((None _) (None _)))
