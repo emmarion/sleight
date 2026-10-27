@@ -162,12 +162,14 @@
 (def-fns _ $ (many unterminated : (many (Spot) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
   (end-toks (THalt pos "unterminated string literal") acc))
 
-(def-fns _ $ (many push-tab : (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) r))
-  (let ((many pushed)) (Cons _ (TTab $ MkSpot line $ Succ col) acc))
-  (let-match many acc (Cons _ t _) ((Nil _) pushed))
-  (let-match many t (TTab p) (else pushed))
+(def-fns _ $ (many tab-on : (many (Nat) line) (many (List $ Tok) acc) -> (many (Bool) r))
+  (let-match many acc (Cons _ t _) ((Nil _) (BFalse)))
+  (let-match many t (TTab p) (else (BFalse)))
   (let ((many l) (many _)) $ spot-coords p)
-  (match many (nat-eqb l line) _ ((BTrue) acc) ((BFalse) pushed)))
+  (nat-eqb l line))
+
+(def-fns _ $ (many push-tab : (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) r))
+  (match many (tab-on line acc) _ ((BTrue) acc) ((BFalse) (Cons _ (TTab $ MkSpot line $ Succ col) acc))))
 
 ; [col] counts the characters read on the current line, so the character being read sits at column
 ; (Succ col); a newline starts the next line over at zero.
@@ -215,6 +217,27 @@
   (let-match many n (RString _ f) (else bad))
   (let-match many more (Nil _) ((Cons _ _ _) bad))
   (match many (str-is-empty f) _ ((BTrue) bad) ((BFalse) (TFile f))))
+
+(def-fns _ $ (many lit-walk : (many (String) s) (erased (Nat) len) (erased (StrLength s len) ls) (erased (Nat) n) (erased (Lt n (Succ len)) le)
+    (many (Nat) i) (subterm many (Nat) left) (erased (Add i left n) sum) (many (Bool) pragma) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) ->
+    (many (Bool) stop) (many (Nat) line2) (many (Nat) col2) (many (List $ Tok) acc2))
+  (let-match many left (Succ l1) ((Zero) (values (BFalse) line col acc)))
+  (let ((erased lt)) (lt-le-trans i n len (add-lt i l1 n sum) le))
+  (let ((many c) (erased _) (erased _) (erased _) (erased _)) (str-get s i len ls lt))
+  (let ((erased sum2)) (add-shift i l1 n sum))
+  (let-match many (char-eq c #\newline) (Equal _ _ _)
+    ((Unequal _ _ _ _ _)
+      (let ((many acc2)) $ match many (char-eq c #\tab) (((List $ Tok) _)) ((Equal _ _ _) (push-tab line col acc)) ((Unequal _ _ _ _ _) acc))
+      (tail $ lit-walk s len ls n le (Succ i) l1 sum2 pragma line (Succ col) acc2)))
+  (match many pragma _
+    ((BTrue) (values (BTrue) line col acc))
+    ((BFalse) (tail $ lit-walk s len ls n le (Succ i) l1 sum2 pragma (Succ line) 0 acc))))
+
+(def-fns _ $ (erased suffix-sub : (erased (String) a) (erased (Char) q) (erased (String) t s) (subterm erased (Append a (SCons q t) s) p) ->
+    (erased (Subterm (String) t (String) s) r))
+  (match erased p _
+    ((AppNil _) (prove-subterm t s))
+    ((AppCons _ a1 _ s1 p1) (subterm-trans (suffix-sub a1 q t s1 p1) (prove-subterm s1 s)))))
 
 ; Tokens accumulate reversed in [acc]; an atom's or a literal's characters accumulate as a rope; [line] and
 ; [col] count the newlines and the characters passed, and a token is placed where it starts, a string
@@ -292,24 +315,22 @@
         (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))
   ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Spot) pos) (many (StrKind) kind)
       (many (Unescaped) u) (many (Nat) count) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (let-match many count (Succ k)
-      ((Zero)
-        (let-match many u (ReadOk body _ _)
-          ((ReadBadEscape _ e) (end-toks (bad-escape (MkSpot line $ Succ col) e) acc))
-          (else (unterminated pos acc)))
-        (let-match many s (SCons _ rest) ((SNil) (unterminated pos acc)))
-        (let-match many kind (SKPragma pp ws nm)
-          ((SKLit) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RString pos body) acc))
-          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RAtom pos $ NSrc body) acc)))
-        (let ((many w)) $ match many nm (((Syn) _)) ((BTrue) (RAtom pos $ NSrc body)) ((BFalse) (RString pos body)))
-        (tail $ pragma-line rest line (Succ col) pp (Cons _ w ws) (None _) (REmpty) (REmpty) acc)))
-    (let-match many s (SCons c rest) ((SNil) (unterminated pos acc)))
-    (let-match many (char-eq c #\newline) (Equal _ _ _)
-      ((Unequal _ _ _ _ _)
-        (let ((many acc2)) $ match many (char-eq c #\tab) (((List $ Tok) _)) ((Equal _ _ _) (push-tab line col acc)) ((Unequal _ _ _ _ _) acc))
-        (tail $ string-lit rest line (Succ col) pos kind u k acc2)))
-    (let-match many kind (SKPragma _ _ _) (else (tail $ string-lit rest (Succ line) 0 pos kind u k acc)))
-    (end-toks (THalt pos "a pragma ends with its line") acc)))
+    (let ((many len) (erased ls)) (str-length s))
+    (let-match many (lt-dec count (Succ len)) (Yes _ _ _ _ le) ((No _ _ _ _ _) (unterminated pos acc)))
+    (let ((many pragma)) $ match many kind (((Bool) _)) ((SKPragma _ _ _) (BTrue)) (else (BFalse)))
+    (let ((many stop) (many line2) (many col2) (many acc2)) (lit-walk s len ls count le (Zero) count (AddZero count) pragma line col acc))
+    (let-match many stop (BFalse) ((BTrue) (end-toks (THalt pos "a pragma ends with its line") acc2)))
+    (let-match many u (ReadOk body _ _)
+      ((ReadBadEscape _ e) (end-toks (bad-escape (MkSpot line2 $ Succ col2) e) acc2))
+      (else (unterminated pos acc2)))
+    (let ((many _) (many after) (erased ap) (erased _)) (str-split s count len ls le))
+    (let-match many after (SCons _ rest) ((SNil) (unterminated pos acc2)))
+    (let ((erased st)) (suffix-sub _ _ _ _ ap))
+    (let-match many kind (SKPragma pp ws nm)
+      ((SKLit) (tail $ tokenize (subterm st) rest line2 (Succ col2) $ Cons _ (TItem $ RString pos body) acc2))
+      ((SKName) (tail $ tokenize (subterm st) rest line2 (Succ col2) $ Cons _ (TItem $ RAtom pos $ NSrc body) acc2)))
+    (let ((many w)) $ match many nm (((Syn) _)) ((BTrue) (RAtom pos $ NSrc body)) ((BFalse) (RString pos body)))
+    (tail $ pragma-line (subterm st) rest line2 (Succ col2) pp (Cons _ w ws) (None _) (REmpty) (REmpty) acc2)))
 
 ; A frame is an open form: where it opened, whether $ opened it, and its items so far, reversed.
 (def-adts $ (Frame : -> Type)
