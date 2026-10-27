@@ -51,14 +51,23 @@
 (def-fns _ $ (many char-eqb : (many (Char) a) (many (Char) b) -> (many (Bool) r))
   (is-same _ _ _ _ $ char-eq a b))
 
-(def-fns _ $ (many char-is : (many (Char) c) (many (Nat) code) -> (many (Bool) r))
-  (nat-eqb (char-code c) code))
-
 ; code in [lo, hi]
-(def-fns _ $ (many char-between : (many (Char) c) (many (Nat) lo) (many (Nat) hi) -> (many (Bool) r))
-  (let ((many n)) $ char-code c)
-  (let-match many (lt-dec n lo) (No _ _ _ _ _) ((Yes _ _ _ _ _) (BFalse)))
-  (match many (lt-dec hi n) _ ((Yes _ _ _ _ _) (BFalse)) ((No _ _ _ _ _) (BTrue))))
+(def-fns _ $ (many char-between : (many (Char) c) (many (Char) lo) (many (Char) hi) -> (many (Bool) r))
+  (let-match many (char-lt-dec c lo) (No _ _ _ _ _) ((Yes _ _ _ _ _) (BFalse)))
+  (match many (char-lt-dec hi c) _ ((Yes _ _ _ _ _) (BFalse)) ((No _ _ _ _ _) (BTrue))))
+
+(def-fns _ $ (erased u8-u62 : (erased (Nat) k) (erased (Lt k u8-modulus) p) -> (erased (Lt k u62-modulus) q))
+  (lt-trans _ _ _ p u8-below-u62))
+
+; a minus b, or 0 where b is above a.
+(def-fns _ $ (many char-minus : (many (Char) a) (many (Char) b) -> (many (Nat) d))
+  (let-match many a (MkChar ua))
+  (let-match many ua (MkU8 ka pa))
+  (let-match many b (MkChar ub))
+  (let-match many ub (MkU8 kb pb))
+  (let-match many (u62-lt-dec ka kb (u8-u62 _ pa) (u8-u62 _ pb)) (No _ _ _ _ le) ((Yes _ _ _ _ _) 0))
+  (let ((many d) (erased _) (erased _)) (u62-sub ka kb (u8-u62 _ pa) (lt-eq-succ _ _ le)))
+  d)
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
   (let ((many s) (erased _)) (delegate (flatten r)))
@@ -79,30 +88,30 @@
 (def-fns _ $ (many str-starts : (subterm many (String) p) (many (String) s) -> (many (Bool) r))
   (let-match many p (SCons c prest) ((SNil) (BTrue)))
   (let-match many s (SCons d srest) ((SNil) (BFalse)))
-  (match many (char-is d $ char-code c) _ ((BTrue) (tail $ str-starts prest srest)) ((BFalse) (BFalse))))
+  (match many (char-eqb d c) _ ((BTrue) (tail $ str-starts prest srest)) ((BFalse) (BFalse))))
 
 (def-fns _ $ (many str-contains : (subterm many (String) s) (many (String) p) -> (many (Bool) r))
   (let-match many (str-starts p s) (BFalse) ((BTrue) (BTrue)))
   (let-match many s (SCons _ rest) ((SNil) (BFalse)))
   (tail $ str-contains rest p))
 
-(def-fns _ $ (many str-until-onto : (many (Rope) acc) (subterm many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after))
+(def-fns _ $ (many str-until-onto : (many (Rope) acc) (subterm many (String) s) (many (Char) code) -> (many (String) before) (many (Maybe $ String) after))
   (let-match many s (SCons c rest) ((SNil) (values (rope-str acc) (None _))))
-  (match many (char-is c code) _
+  (match many (char-eqb c code) _
     ((BTrue) (values (rope-str acc) (Some _ rest)))
     ((BFalse) (tail (str-until-onto (RCat acc $ RChar c) rest code)))))
 
-(def-fns _ $ (many str-until : (many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after))
+(def-fns _ $ (many str-until : (many (String) s) (many (Char) code) -> (many (String) before) (many (Maybe $ String) after))
   (str-until-onto (REmpty) s code))
 
-(def-fns _ $ (many str-split-fuel : (subterm many (Nat) fuel) (many (String) s) (many (Nat) code) -> (many (List $ String) r))
+(def-fns _ $ (many str-split-fuel : (subterm many (Nat) fuel) (many (String) s) (many (Char) code) -> (many (List $ String) r))
   (let ((many b) (many a)) (str-until s code))
   (let-match many a (Some _ rest) ((None _) (Cons _ b $ Nil _)))
   (match many fuel _
     ((Zero) (Cons _ b $ Nil _))
     ((Succ f) (Cons _ b $ notail $ str-split-fuel f rest code))))
 
-(def-fns _ $ (many split-on : (many (String) s) (many (Nat) code) -> (many (List $ String) r))
+(def-fns _ $ (many split-on : (many (String) s) (many (Char) code) -> (many (List $ String) r))
   (let ((many n) (erased _)) (str-length s))
   (str-split-fuel n s code))
 
@@ -121,13 +130,13 @@
 (def-fns _ $ (many all-digits : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (char-between c 48 57) $ tail $ all-digits rest))))
+    ((SCons c rest) (and (char-between c #\0 #\9) $ tail $ all-digits rest))))
 
 ; A numeral or a #\c character literal, which no name may spell (section 1, ASSUMPTIONS 51).
 (def-fns _ $ (many is-literal-name : (many (String) s) -> (many (Bool) r))
   (let-match many s (SCons c rest) ((SNil) (BFalse)))
   (or (all-digits s)
-    $ and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))))
+    $ and (char-eqb c #\#) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-eqb c2 #\\))))
 
 (def-fns _ $ (many is-reserved-name : (many (String) s) -> (many (Bool) r))
   (str-starts "__" s))
@@ -141,7 +150,7 @@
 (def-fns _ $ (many classify : (many (String) s) -> (many (LitKind) k))
   (let-match many s (SCons c rest) ((SNil) (LName)))
   (let-match many (all-digits s) (BFalse) ((BTrue) (LNumeral)))
-  (match many (and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))) _
+  (match many (and (char-eqb c #\#) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-eqb c2 #\\))) _
     ((BTrue) (LChar))
     ((BFalse) (LName))))
 
@@ -149,14 +158,13 @@
   (match many (str-nat s) _ ((Some _ n) n) ((None _) 0)))
 
 (def-fns _ $ (many is-hex : (many (Char) c) -> (many (Bool) r))
-  (or (char-between c 48 57) $ or (char-between c 97 102) $ char-between c 65 70))
+  (or (char-between c #\0 #\9) $ or (char-between c #\a #\f) $ char-between c #\A #\F))
 
 (def-fns _ $ (many hex-digit : (many (Char) c) -> (many (Nat) d))
-  (let ((many n)) $ char-code c)
-  (let-match many (char-between c 48 57) (BFalse) ((BTrue) (nat-sub n 48)))
-  (match many (char-between c 97 102) _
-    ((BTrue) (nat-sub n 87))
-    ((BFalse) (nat-sub n 55))))
+  (let-match many (char-between c #\0 #\9) (BFalse) ((BTrue) (char-minus c #\0)))
+  (match many (char-between c #\a #\f) _
+    ((BTrue) (nat-add 10 $ char-minus c #\a))
+    ((BFalse) (nat-add 10 $ char-minus c #\A))))
 
 (def-fns _ $ (many char-lit-body : (many (String) s) -> (many (String) body))
   (let-match many s (SCons _ rest) ((SNil) (SNil)))
@@ -177,7 +185,7 @@
               (let-match many body (SCons c rest) ((SNil) (None _)))
               (let-match many rest (SCons h1 rest2) ((SNil) (Some _ $ char-code c)))
               (let-match many rest2 (SCons h2 rest3) ((SNil) (None _)))
-              (match many (and (char-is c 120) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
+              (match many (and (char-eqb c #\x) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
                 ((BTrue) (Some _ $ nat-add (nat-mul 16 $ hex-digit h1) $ hex-digit h2))
                 ((BFalse) (None _))))))))))
 
@@ -187,7 +195,7 @@
     ((LName) (None _))
     ((LNumeral)
       (let-match many s (SCons c rest) ((SNil) (None _)))
-      (match many (and (char-is c 48) $ not $ str-is-empty rest) _
+      (match many (and (char-eqb c #\0) $ not $ str-is-empty rest) _
         ((BTrue) (Some _ $ str-cat s " has a leading zero"))
         ((BFalse) (None _))))
     ((LChar)
@@ -197,8 +205,8 @@
 
 ; An Sleight name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
 (def-fns _ $ (many sanitize-char : (many (Char) c) -> (many (Char) r))
-  (let ((many ok)) (or (char-between c 48 57)
-                    $ or (char-between c 65 90) $ char-between c 97 122))
+  (let ((many ok)) (or (char-between c #\0 #\9)
+                    $ or (char-between c #\A #\Z) $ char-between c #\a #\z))
   (match many ok _ ((BTrue) c) ((BFalse) #\_)))
 
 (def-fns _ $ (many sanitize-onto : (many (Rope) acc) (subterm many (String) s) -> (many (Rope) r))
@@ -620,7 +628,7 @@
   (match many (nat-lt a b) _ ((BTrue) a) ((BFalse) b)))
 
 (def-fns _ $ (many char-lower : (many (Char) c) -> (many (Char) r))
-  (match many (char-between c 65 90) _ ((BTrue) (char-of-code $ nat-add (char-code c) 32)) ((BFalse) c)))
+  (match many (char-between c #\A #\Z) _ ((BTrue) (char-of-code $ nat-add (char-code c) 32)) ((BFalse) c)))
 
 (def-fns _ $ (many char-eq-nocase : (many (Char) a) (many (Char) b) -> (many (Bool) r))
   (char-eqb (char-lower a) (char-lower b)))
@@ -682,41 +690,45 @@
 (let ((many sixteen-dec)) (lt-dec (Zero) 16))
 (comptime-match many sixteen-dec (Yes _ _ sda sdb sixteen-positive))
 
-(def-fns _ $ (many hex-code : (many (Nat) n) -> (many (Nat) c))
-  (match many (lt-dec n 10) _ ((Yes _ _ _ _ _) (nat-add 48 n)) ((No _ _ _ _ _) (nat-add 87 n))))
+(let ((erased ten-u62)) (u8-u62 _ (prove-literal-lt 10 u8-modulus)))
+(let ((erased sixteen-u62)) (u8-u62 _ (prove-literal-lt 16 u8-modulus)))
 
-(def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
-  (RChar $ char-of-code $ hex-code n))
+(def-fns _ $ (many hex-code : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (many (Nat) c))
+  (match many (u62-lt-dec n 10 p ten-u62) _ ((Yes _ _ _ _ _) (nat-add 48 n)) ((No _ _ _ _ _) (nat-add 87 n))))
 
-(def-fns _ $ (many hex-byte-rope : (many (Nat) c) -> (many (Rope) r))
-  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _)) (divmod c 16 sixteen-positive))
-  (rcat (hex-rope hi) $ hex-rope lo))
+(def-fns _ $ (many hex-byte-rope : (many (Char) c) -> (many (Rope) r))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 k q))
+  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _) (erased phi) (erased plo))
+    (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
+  (rcat (RChar $ char-of-code $ hex-code hi phi) $ RChar $ char-of-code $ hex-code lo plo))
 
 (def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
   (match many (and (is-hex a) (is-hex b)) _
     ((BTrue) (Some _ $ char-of-code $ nat-add (nat-mul (hex-digit a) 16) $ hex-digit b))
     ((BFalse) (None _))))
 
-(def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
-  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eqb n 40) $ or (nat-eqb n 41) $ nat-eqb n 59))
+(def-fns _ $ (many word-char : (many (Char) c) -> (many (Bool) r))
+  (and (char-between c #\! #\~) $ not $ or (char-eqb c #\x28) $ or (char-eqb c #\x29) $ char-eqb c #\x3b))
 
 ; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
-(def-fns _ $ (many lit-char-rope : (many (Nat) c) -> (many (Rope) r))
-  (let-match many (nat-eqb c 32) (BFalse) ((BTrue) (RStr "#\\space")))
-  (let-match many (nat-eqb c 10) (BFalse) ((BTrue) (RStr "#\\newline")))
-  (let-match many (nat-eqb c 9) (BFalse) ((BTrue) (RStr "#\\tab")))
-  (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
+(def-fns _ $ (many lit-char-rope : (many (Nat) code) -> (many (Rope) r))
+  (let ((many c)) (char-of-code code))
+  (let-match many (char-eqb c #\space) (BFalse) ((BTrue) (RStr "#\\space")))
+  (let-match many (char-eqb c #\newline) (BFalse) ((BTrue) (RStr "#\\newline")))
+  (let-match many (char-eqb c #\tab) (BFalse) ((BTrue) (RStr "#\\tab")))
+  (let-match many (word-char c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar c)))
   (rcat (RStr "#\\x") $ hex-byte-rope c))
 
 (def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (word-code $ char-code c) $ tail $ all-word-chars rest))))
+    ((SCons c rest) (and (word-char c) $ tail $ all-word-chars rest))))
 
 (def-fns _ $ (many is-plain-name : (many (String) s) -> (many (Bool) r))
   (let-match many s (SCons c _) ((SNil) (BFalse)))
   (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eqb s "_") $ and (not $ str-eqb s "$")
-    $ and (not $ char-is c 34) $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
+    $ and (not $ char-eqb c #\") $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
 
 (def-adts $ (Multiplicity : -> Type)
   enum

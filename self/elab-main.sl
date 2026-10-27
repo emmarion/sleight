@@ -19,7 +19,7 @@
 (def-fns _ $ (many native-run : (many (String) ml) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Nat) r))
   (let ((unique w1) (many tmp)) $ host-exec "mktemp" (Cons _ "-d" $ Nil _) w)
   (let-match many (exited-ok "mktemp" tmp) (Ok _ mout) ((Fail _ m) (values w1 $ Fail _ m)))
-  (let ((many dir) (many _)) $ str-until mout 10)
+  (let ((many dir) (many _)) $ str-until mout #\newline)
   (let ((many src)) $ str-cat dir "/main.ml")
   (let ((many exe)) $ str-cat dir "/main")
   (let ((unique w2) (many wrote)) (world-do _ w1 $ WriteFile src ml))

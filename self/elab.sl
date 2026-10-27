@@ -178,9 +178,9 @@
 
 (def-fns _ $ (many respell-scan : (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (Bool) code) (subterm many (String) s) (many (Bool) quoted) (many (Rope) tok) (many (Rope) out) -> (many (Rope) r))
   (let-match many s (SCons c rest) ((SNil) (rcat out $ RStr $ spell-tok kws quoted tok)))
-  (let-match many (or (char-is c 96) $ or (char-is c 32) $ or (char-is c 40) $ or (char-is c 41) $ char-is c 10) (BTrue)
+  (let-match many (or (char-eqb c #\`) $ or (char-eqb c #\space) $ or (char-eqb c #\x28) $ or (char-eqb c #\x29) $ char-eqb c #\newline) (BTrue)
     ((BFalse) (tail $ respell-scan kws code rest quoted (rcat tok $ RChar c) out)))
-  (let ((many q2)) $ match many (and (char-is c 96) $ not code) (((Bool) _)) ((BTrue) (not quoted)) ((BFalse) quoted))
+  (let ((many q2)) $ match many (and (char-eqb c #\`) $ not code) (((Bool) _)) ((BTrue) (not quoted)) ((BFalse) quoted))
   (tail $ respell-scan kws code rest q2 (REmpty) (rcat3 out (RStr $ spell-tok kws quoted tok) $ RChar c)))
 
 (def-fns _ $ (many say : (many (Env) env) (many (String) s) -> (many (String) r))
@@ -290,7 +290,7 @@
   (tail $ name-cands env atoms except rest $ match many skip (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) acc) ((BFalse) (cand-of env atoms x (spell-name n) acc))))
 
 (def-fns _ $ (many names-lit : (many (String) s) -> (many (Bool) r))
-  (or (all-digits s) $ match many s _ ((SCons c _) (char-is c 34)) ((SNil) (BFalse))))
+  (or (all-digits s) $ match many s _ ((SCons c _) (char-eqb c #\")) ((SNil) (BFalse))))
 
 (def-fns _ $ (many lit-cands : (many (Env) env) (many (List $ Nat) atoms) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
@@ -448,7 +448,7 @@
 
 (def-fns _ $ (many spell-marks-scan : (many (Env) env) (subterm many (String) s) (many (Bool) inmark) (many (Rope) mark) (many (Rope) out) -> (many (Rope) r))
   (let-match many s (SCons c rest) ((SNil) out))
-  (match many (char-is c 5) _
+  (match many (char-eqb c #\x05) _
     ((BTrue) (match many inmark _
       ((BTrue) (tail $ spell-marks-scan env rest (BFalse) (REmpty) (rcat out $ RStr $ spell env $ rope-str mark)))
       ((BFalse) (tail $ spell-marks-scan env rest (BTrue) (REmpty) out))))
@@ -839,13 +839,13 @@
 
 (def-fns _ $ (many frame-lines : (many (Env) e) (subterm many (List $ String) lines) (many (List $ Nat) shown) -> (many (List $ String) r))
   (let-match many lines (Cons _ line rest) ((Nil _) (Nil _)))
-  (let ((many text) (many xs)) $ unmarked $ split-on line 3)
+  (let ((many text) (many xs)) $ unmarked $ split-on line #\x03)
   (let ((many ls) (many shown2)) $ chains e xs shown)
   (let ((many after) (erased _)) $ list-append _ ls $ notail $ frame-lines e rest shown2)
   (Cons _ text after))
 
 (def-fns _ $ (many expand-frames : (many (Env) e) (many (String) x) -> (many (String) r))
-  (join-strs (frame-lines e (split-on x 10) $ Nil _) "\n"))
+  (join-strs (frame-lines e (split-on x #\newline) $ Nil _) "\n"))
 
 (def-fns _ $ (many splice-notes : (many (Env) e) (subterm many (List $ Pair (Nat) (Nat)) splices) -> (many (List $ Pair (Loc) $ String) r))
   (let-match many splices (Cons _ s rest) ((Nil _) (Nil _)))
@@ -2458,7 +2458,7 @@
 (def-fns _ $ (many drop-prefix : (subterm many (String) p) (many (String) s) -> (many (Maybe $ String) r))
   (let-match many p (SCons c prest) ((SNil) (Some _ s)))
   (let-match many s (SCons d srest) ((SNil) (None _)))
-  (match many (char-is d $ char-code c) _ ((BTrue) (tail $ drop-prefix prest srest)) ((BFalse) (None _))))
+  (match many (char-eqb d c) _ ((BTrue) (tail $ drop-prefix prest srest)) ((BFalse) (None _))))
 
 (def-fns _ $ (many help-lines-in : (subterm many (List $ String) ls) (many (String) prefix) -> (many (List $ String) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))

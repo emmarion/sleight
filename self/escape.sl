@@ -1,22 +1,21 @@
-(def-fns _ $ (many escape-letter : (many (Nat) k) -> (many (Nat) e))
-  (let-match many (nat-eq k 34) (Unequal _ _ _ _ _) ((Equal _ _ _) 34))
-  (let-match many (nat-eq k 92) (Unequal _ _ _ _ _) ((Equal _ _ _) 92))
-  (let-match many (nat-eq k 10) (Unequal _ _ _ _ _) ((Equal _ _ _) 110))
-  (match many (nat-eq k 9) _ ((Equal _ _ _) 116) ((Unequal _ _ _ _ _) 0)))
+(def-fns _ $ (many escape-letter : (many (Char) c) -> (many (Nat) e))
+  (let-match many (char-eq c #\") (Unequal _ _ _ _ _) ((Equal _ _ _) 34))
+  (let-match many (char-eq c #\\) (Unequal _ _ _ _ _) ((Equal _ _ _) 92))
+  (let-match many (char-eq c #\newline) (Unequal _ _ _ _ _) ((Equal _ _ _) 110))
+  (match many (char-eq c #\tab) _ ((Equal _ _ _) 116) ((Unequal _ _ _ _ _) 0)))
 
 (def-fns _ $ (many escape-width : (many (Nat) k) -> (many (Nat) w))
-  (let-match many (nat-eqb (escape-letter k) 0) (BTrue) ((BFalse) 2))
-  (match many (and (nat-lt 31 k) (nat-lt k 127)) _ ((BTrue) 1) ((BFalse) 4)))
-
-(let ((erased sixteen-u62)) (lt-trans _ _ _ (prove-literal-lt 16 u8-modulus) u8-below-u62))
+  (let ((many c)) (char-of-code k))
+  (let-match many (nat-eqb (escape-letter c) 0) (BTrue) ((BFalse) 2))
+  (match many (char-between c #\space #\~) _ ((BTrue) 1) ((BFalse) 4)))
 
 (def-fns _ $ (many escape-byte : (many (Nat) k) (erased (Lt k u8-modulus) q) (many (Nat) w) (many (Nat) d) -> (many (Nat) c))
   (let-match many (nat-eq w 1) (Unequal _ _ _ _ _) ((Equal _ _ _) k))
   (let-match many d (Succ d1) ((Zero) 92))
-  (let-match many d1 (Succ d2) ((Zero) (match many (nat-eq w 2) _ ((Equal _ _ _) (escape-letter k)) ((Unequal _ _ _ _ _) 120))))
-  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
-    (u62-divmod k 16 (lt-trans _ _ _ q u8-below-u62) sixteen-u62 sixteen-positive))
-  (hex-code $ match many d2 _ ((Zero) hi) ((Succ _) lo)))
+  (let-match many d1 (Succ d2) ((Zero) (match many (nat-eq w 2) _ ((Equal _ _ _) (escape-letter $ MkChar $ MkU8 k q)) ((Unequal _ _ _ _ _) 120))))
+  (let ((many hi) (many lo) (erased _) (erased _) (erased _) (erased _) (erased phi) (erased plo))
+    (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
+  (match many d2 _ ((Zero) (hex-code hi phi)) ((Succ _) (hex-code lo plo))))
 
 (def-fns _ $ (erased add-shift : (erased (Nat) a b c) (subterm erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
   (match erased p _
@@ -124,13 +123,8 @@
   (or (char-eqb e #\n) $ or (char-eqb e #\t) $ or (char-eqb e #\") $ char-eqb e #\\))
 
 (def-fns _ $ (many unescape : (many (Char) e) -> (many (Char) c))
-  (let ((many n)) $ char-code e)
-  (match many (nat-cmp n 110) _
-    ((CEq _ _ _) #\newline)
-    (else
-      (match many (nat-cmp n 116) _
-        ((CEq _ _ _) #\tab)
-        (else e)))))
+  (let-match many (char-eq e #\n) (Unequal _ _ _ _ _) ((Equal _ _ _) #\newline))
+  (match many (char-eq e #\t) _ ((Equal _ _ _) #\tab) ((Unequal _ _ _ _ _) e)))
 
 (def-fns _ $ (erased add-lt : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Lt a c) q))
   (let-match erased (add-le-left (Succ a) b c (add-shift a b c p)) (LtS _ _ q))
@@ -219,7 +213,7 @@
 
 (def-fns _ $ (many read-string : (many (String) s) -> (many (Unescaped) r))
   (let-match many s (SCons q s1) ((SNil) (ReadNoQuote)))
-  (let-match many (char-is q 34) (BTrue) ((BFalse) (ReadNoQuote)))
+  (let-match many (char-eqb q #\") (BTrue) ((BFalse) (ReadNoQuote)))
   (let ((many len) (erased ls)) (str-length s1))
   (let-match many (read-scan s1 len ls (Zero) len (AddZero len) (EsNorm) (Zero) (BFalse)) (ScanEnd _ e lt esc)
     ((ScanUnterminated _) (ReadUnterminated))

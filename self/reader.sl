@@ -121,10 +121,9 @@
   (str-cat path ": note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes"))
 
 (def-fns _ $ (many is-delim : (many (Char) c) -> (many (Bool) r))
-  (let ((many n)) $ char-code c)
-  (let-match many (nat-lt n 33) (BFalse) ((BTrue) (BTrue)))
-  (let-match many (nat-lt 59 n) (BFalse) ((BTrue) (BFalse)))
-  (or (nat-eqb n 40) $ or (nat-eqb n 41) $ nat-eqb n 59))
+  (let-match many (char-lt-dec c #\!) (No _ _ _ _ _) ((Yes _ _ _ _ _) (BTrue)))
+  (let-match many (char-lt-dec #\x3b c) (No _ _ _ _ _) ((Yes _ _ _ _ _) (BFalse)))
+  (or (char-eqb c #\x28) $ or (char-eqb c #\x29) $ char-eqb c #\x3b))
 
 (def-fns _ $ (many word-item : (many (Spot) pos) (many (String) w) -> (many (Tok) t))
   (let-match many (str-eqb w "_") (BFalse) ((BTrue) (TItem $ RWild pos)))
@@ -167,15 +166,14 @@
 ; (Succ col); a newline starts the next line over at zero.
 (def-fns _ $ (many delim-step : (many (Char) c) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) ->
     (many (Bool) comment) (many (Nat) line2) (many (Nat) col2) (many (List $ Tok) acc2))
-  (let ((many n)) $ char-code c)
-  (let-match many (nat-eqb n 59) (BFalse) ((BTrue) (values (BTrue) line (Succ col) acc)))
-  (let-match many (nat-eqb n 40) (BFalse) ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkSpot line $ Succ col) acc)))
-  (let-match many (nat-eqb n 41) (BFalse)
-    ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkSpot line $ Succ col) acc)))
-  (let-match many (nat-eqb n 9) (BFalse) ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TTab $ MkSpot line $ Succ col) acc)))
-  (match many (nat-eqb n 10) _
-    ((BTrue) (values (BFalse) (Succ line) 0 acc))
-    ((BFalse) (values (BFalse) line (Succ col) acc))))
+  (let-match many (char-eq c #\x3b) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) line (Succ col) acc)))
+  (let-match many (char-eq c #\x28) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkSpot line $ Succ col) acc)))
+  (let-match many (char-eq c #\x29) (Unequal _ _ _ _ _)
+    ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkSpot line $ Succ col) acc)))
+  (let-match many (char-eq c #\tab) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BFalse) line (Succ col) $ Cons _ (TTab $ MkSpot line $ Succ col) acc)))
+  (match many (char-eq c #\newline) _
+    ((Equal _ _ _) (values (BFalse) (Succ line) 0 acc))
+    ((Unequal _ _ _ _ _) (values (BFalse) line (Succ col) acc))))
 
 (def-fns _ $ (many pragma-first : (many (List $ Syn) words) -> (many (String) s))
   (let-match many (list-rev _ words) (Cons _ w _)
@@ -222,11 +220,11 @@
         (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col acc)
         (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
       ((BFalse)
-        (let-match many (char-is c 34) (BFalse)
+        (let-match many (char-eqb c #\") (BFalse)
           ((BTrue)
             (let ((many u)) (read-string s))
             (tail $ string-lit rest line (Succ col) (MkSpot line $ Succ col) (SKLit) u (lit-count u rest) acc)))
-        (let-match many (and (char-is c 35) $ str-starts "\"" rest) (BFalse)
+        (let-match many (and (char-eqb c #\#) $ str-starts "\"" rest) (BFalse)
           ((BTrue)
             (let-match many rest (SCons _ rest2) ((SNil) (list-rev _ acc)))
             (let ((many u)) (read-string rest))
@@ -236,22 +234,22 @@
         (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkSpot line $ Succ col) acc))))
   ((many comment-start : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
-    (let-match many (char-is c 33) (BFalse)
+    (let-match many (char-eqb c #\!) (BFalse)
       ((BTrue) (tail $ pragma-line rest line (Succ col) (MkSpot line col) (Nil _) (None _) (REmpty) (REmpty) acc)))
-    (match many (char-is c 10) _
+    (match many (char-eqb c #\newline) _
       ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
       ((BFalse) (tail $ skip-comment rest line acc))))
   ((many pragma-line : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Spot) pos) (many (List $ Syn) words)
       (many (Maybe $ Spot) start) (many (Rope) cur) (many (Rope) blanks) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (end-toks (pragma-done $ pragma-tok pos start cur words) acc)))
-    (let-match many (char-is c 10) (BFalse)
+    (let-match many (char-eqb c #\newline) (BFalse)
       ((BTrue)
         (let ((many t)) $ pragma-done $ pragma-tok pos start cur words)
         (match many t _
           ((TFile _) (tail $ tokenize rest 1 0 $ Cons _ t acc))
           ((THalt _ _) (end-toks t acc))
           (else (tail $ tokenize rest (Succ line) 0 $ Cons _ t acc)))))
-    (match many (or (char-is c 32) $ or (char-is c 9) $ char-is c 13) _
+    (match many (or (char-eqb c #\space) $ or (char-eqb c #\tab) $ char-eqb c #\x0d) _
       ((BTrue)
         (let-match many start (Some _ _) ((None _) (tail $ pragma-line rest line (Succ col) pos words start cur blanks acc)))
         (match many (nat-lt (list-length _ words) $ pragma-limit words) _
@@ -261,11 +259,11 @@
         (let-match many start (None _)
           ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc)))
         (let ((many open)) $ nat-lt (list-length _ words) $ pragma-limit words)
-        (let-match many (and open $ and (char-is c 34) $ str-eqb (pragma-first words) "file") (BFalse)
+        (let-match many (and open $ and (char-eqb c #\") $ str-eqb (pragma-first words) "file") (BFalse)
           ((BTrue)
             (let ((many u)) (read-string s))
             (tail $ string-lit rest line (Succ col) (MkSpot line $ Succ col) (SKPragma pos words $ BFalse) u (lit-count u rest) acc)))
-        (let-match many (and open $ and (char-is c 35) $ str-starts "\"" rest) (BFalse)
+        (let-match many (and open $ and (char-eqb c #\#) $ str-starts "\"" rest) (BFalse)
           ((BTrue)
             (let-match many rest (SCons _ rest2) ((SNil) (list-rev _ acc)))
             (let ((many u)) (read-string rest))
@@ -273,7 +271,7 @@
         (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkSpot line $ Succ col) (RChar c) (REmpty) acc))))
   ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
-    (match many (char-is c 10) _
+    (match many (char-eqb c #\newline) _
       ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
       ((BFalse) (tail $ skip-comment rest line acc))))
   ((many word : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (String) start) (erased (Nat) len) (erased (StrLength start len) l) (many (Nat) k) (erased (Nat) rl) (erased (StrLength s rl) lr) (erased (Add k rl len) sum) (many (Spot) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))

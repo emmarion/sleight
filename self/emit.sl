@@ -116,11 +116,11 @@
 
 (def-fns _ $ (many parse-hole : (many (String) h) -> (many (Maybe $ Hole) r))
   (let-match many h (SCons c rest) ((SNil) (None _)))
-  (let-match many (char-is c 115) (BFalse)
+  (let-match many (char-eqb c #\s) (BFalse)
     ((BTrue) (match many (str-is-empty rest) _ ((BTrue) (Some _ $ HScrut)) ((BFalse) (None _)))))
-  (match many (char-is c 102) _
+  (match many (char-eqb c #\f) _
     ((BTrue)
-      (let-match many (split-on rest 46) (Cons _ i more) ((Nil _) (None _)))
+      (let-match many (split-on rest #\.) (Cons _ i more) ((Nil _) (None _)))
       (let-match many more (Cons _ j none) ((Nil _) (None _)))
       (let-match many none (Nil _) ((Cons _ _ _) (None _)))
       (let-match many (str-nat i) (Some _ ni)
@@ -128,18 +128,18 @@
       (match many (str-nat j) _ ((Some _ nj) (Some _ $ HField ni nj)) ((None _) (None _))))
     ((BFalse)
       (let-match many (str-nat rest) (Some _ n) ((None _) (None _)))
-      (let-match many (char-is c 98) (BFalse) ((BTrue) (Some _ $ HBody n)))
-      (let-match many (char-is c 97) (BFalse)
+      (let-match many (char-eqb c #\b) (BFalse) ((BTrue) (Some _ $ HBody n)))
+      (let-match many (char-eqb c #\a) (BFalse)
         ((BTrue) (Some _ $ HArg n)))
-      (match many (char-is c 116) _ ((BTrue) (Some _ $ HTemp n)) ((BFalse) (None _))))))
+      (match many (char-eqb c #\t) _ ((BTrue) (Some _ $ HTemp n)) ((BFalse) (None _))))))
 
 ; The pieces of a template's text, accumulated in reverse; a malformed hole stays as text for the OCaml
 ; compiler to refuse.
 (def-fns _ $ (many parse-pieces : (subterm many (Nat) fuel) (many (String) s) (many (List $ Piece) acc) -> (many (List $ Piece) r))
-  (let ((many lit) (many after)) (str-until s 123))
+  (let ((many lit) (many after)) (str-until s #\{))
   (let ((many (List $ Piece) acc1)) $ match many (str-is-empty lit) _ ((BTrue) acc) ((BFalse) (Cons _ (PLit lit) acc)))
   (let-match many after (Some _ rest) ((None _) (list-rev _ acc1)))
-  (let ((many name) (many after2)) (str-until rest 125))
+  (let ((many name) (many after2)) (str-until rest #\}))
   (let ((many (Piece) piece)) $ match many (parse-hole name) _ ((Some _ h) (PHole h)) ((None _) (PLit $ str-cat3 "{" name "}")))
   (let-match many after2 (Some _ rest2) ((None _) (list-rev _ $ Cons _ piece acc1)))
   (match many fuel _
@@ -147,11 +147,11 @@
     ((Succ f) (tail $ parse-pieces f rest2 $ Cons _ piece acc1))))
 
 (def-fns _ $ (many parse-template : (many (String) line) -> (many (Maybe $ Template) r))
-  (let ((many head) (many after)) (str-until line 58))
+  (let ((many head) (many after)) (str-until line #\:))
   (let-match many after (Some _ text) ((None _) (None _)))
   (let ((many n) (erased _)) (str-length text))
   (let ((many pieces)) $ parse-pieces n text $ Nil _)
-  (let-match many (split-on head 32) (Cons _ kind more) ((Nil _) (None _)))
+  (let-match many (split-on head #\space) (Cons _ kind more) ((Nil _) (None _)))
   (let-match many more (Cons _ type rest) ((Nil _) (None _)))
   (let-match many (or (str-eqb kind "match") $ str-eqb kind "fn") (BFalse) ((BTrue) (Some _ $ MkTemplate kind type 0 pieces $ Nil _)))
   (let-match many rest (Cons _ i _) ((Nil _) (None _)))
@@ -181,7 +181,7 @@
 (def-fns _ $ (many str-is-name : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (or (char-is c 95) $ or (char-is c 39) $ or (char-between c 48 57) $ or (char-between c 97 122) $ char-between c 65 90) $ tail $ str-is-name rest))))
+    ((SCons c rest) (and (or (char-eqb c #\_) $ or (char-eqb c #\') $ or (char-between c #\0 #\9) $ or (char-between c #\a #\z) $ char-between c #\A #\Z) $ tail $ str-is-name rest))))
 
 (def-fns _ $ (many rope-is-name : (many (Rope) r) -> (many (Bool) b))
   (let ((many s)) $ rope-str r)
@@ -1468,7 +1468,7 @@
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) (many (Maybe $ Adt) native) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
+  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates #\newline)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb _))
   (let ((many d0b) (many _)) $ emit-finals _ hp (list-rev _ fi) env native d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)

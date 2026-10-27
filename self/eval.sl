@@ -1272,7 +1272,7 @@
   (match many (settled-ref _ (heap-entries _ hp) i) _ ((Some _ v) (Cons _ v later)) ((None _) later)))
 
 (def-fns _ $ (many path-dir : (many (String) path) -> (many (String) dir))
-  (let-match many (list-rev _ $ split-on path 47) (Cons _ _ above) ((Nil _) "."))
+  (let-match many (list-rev _ $ split-on path #\/) (Cons _ _ above) ((Nil _) "."))
   (let-match many above (Cons _ _ _) ((Nil _) "."))
   (let ((many d)) $ join-strs (list-rev _ above) "/")
   (match many (str-is-empty d) _ ((BTrue) "/") ((BFalse) d)))

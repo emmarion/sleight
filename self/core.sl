@@ -2547,7 +2547,7 @@
 (def-fns _ $ (many env-help : (many (Env) e) -> (many (List $ String) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn _) hn)))
 (def-fns _ $ (many env-set-help : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us _ ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us (split-on x 10) ex))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us _ ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us (split-on x #\newline) ex))))
 (def-fns _ $ (many env-macros : (many (Env) e) -> (many (Macros) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ex) ex)))
 (def-fns _ $ (many env-set-macros : (many (Env) e) (many (Macros) x) -> (many (Env) r))
@@ -2663,7 +2663,7 @@
   (match many (str-eqb i id) _ ((BTrue) (Some _ n)) ((BFalse) (tail (meta-find rest id)))))
 
 (def-fns _ $ (many is-hole-key : (many (String) id) -> (many (Bool) r))
-  (match many id _ ((SCons c _) (char-is c 63)) ((SNil) (BFalse))))
+  (match many id _ ((SCons c _) (char-eqb c #\?)) ((SNil) (BFalse))))
 
 (def-fns _ $ (many key-count : (subterm many (List $ MsgMeta) ms) (many (Bool) hole) -> (many (Nat) n))
   (let-match many ms (Cons _ m rest) ((Nil _) (Zero)))
@@ -2677,20 +2677,20 @@
   (values n $ Cons _ (MkMsgMeta id n "") table))
 
 (def-fns _ $ (many is-kw-key : (many (String) id) -> (many (Bool) r))
-  (match many id _ ((SCons c _) (char-is c 107)) ((SNil) (BFalse))))
+  (match many id _ ((SCons c _) (char-eqb c #\k)) ((SNil) (BFalse))))
 
 (def-fns _ $ (many meta-shown : (many (String) id) (many (Nat) n) -> (many (String) r))
   (let-match many id (SCons c rest)
     ((SNil) (str-cat "__" $ nat-str n)))
-  (match many (char-is c 107) _ ((BTrue) (str-cat "__" rest)) ((BFalse) (str-cat (match many (char-is c 63) (((String) _)) ((BTrue) "__?") ((BFalse) "__")) $ nat-str n))))
+  (match many (char-eqb c #\k) _ ((BTrue) (str-cat "__" rest)) ((BFalse) (str-cat (match many (char-eqb c #\?) (((String) _)) ((BTrue) "__?") ((BFalse) "__")) $ nat-str n))))
 
 ; [mode] is 0 in the text, 1 in a marker's id and 2 in its position.
 (def-fns _ $ (many meta-scan : (subterm many (String) s) (many (Nat) mode) (many (Rope) out) (many (Rope) id) (many (Rope) where) (many (List $ MsgMeta) seen) (many (List $ MsgMeta) table) ->
     (many (Rope) r) (many (List $ MsgMeta) seen2) (many (List $ MsgMeta) table2))
   (let-match many s (SCons c rest) ((SNil) (values out seen table)))
-  (let-match many (char-is c 1) (BFalse)
+  (let-match many (char-eqb c #\x01) (BFalse)
     ((BTrue) (match many mode _ ((Zero) (tail (meta-scan rest 1 out (REmpty) (REmpty) seen table))) (else (tail (meta-scan rest 2 out id where seen table))))))
-  (match many (char-is c 2) _
+  (match many (char-eqb c #\x02) _
     ((BTrue)
       (let ((many key)) $ rope-str id)
       (let ((many n) (many table2)) $ match many (is-kw-key key) (((Nat) _) ((List $ MsgMeta) _)) ((BTrue) (values 0 table)) ((BFalse) (meta-number key table)))
@@ -2706,15 +2706,15 @@
 
 (def-fns _ $ (many anon-note : (many (String) id) -> (many (String) r))
   (let-match many id (SCons c _) ((SNil) "anonymous, minted here"))
-  (let-match many (char-is c 63) (BFalse) ((BTrue) "the `_` written here"))
-  (let-match many (char-is c 109) (BFalse) ((BTrue) "the slot of the `_` written here"))
-  (let-match many (char-is c 115) (BFalse) ((BTrue) "the slot of the entry bound here"))
-  (let-match many (char-is c 99) (BFalse) ((BTrue) "a constant a macro minted"))
+  (let-match many (char-eqb c #\?) (BFalse) ((BTrue) "the `_` written here"))
+  (let-match many (char-eqb c #\m) (BFalse) ((BTrue) "the slot of the `_` written here"))
+  (let-match many (char-eqb c #\s) (BFalse) ((BTrue) "the slot of the entry bound here"))
+  (let-match many (char-eqb c #\c) (BFalse) ((BTrue) "a constant a macro minted"))
   "anonymous, minted here")
 
 (def-fns _ $ (many anon-supplied : (many (String) id) -> (many (String) r))
   (let-match many id (SCons c _) ((SNil) "anonymous, minted by the elaborator rather than written in the source"))
-  (let-match many (char-is c 99) (BFalse) ((BTrue) "a constant a macro minted, not written in the source"))
+  (let-match many (char-eqb c #\c) (BFalse) ((BTrue) "a constant a macro minted, not written in the source"))
   "anonymous, minted by the elaborator rather than written in the source")
 
 (def-fns _ $ (many meta-notes : (many (String) here) (subterm many (List $ MsgMeta) ms) -> (many (List $ String) r))
@@ -2746,7 +2746,7 @@
     ((BFalse) (let ((many notes) (erased _)) (list-append _ mine more)) (values (Cons _ line notes) table3))))
 
 (def-fns _ $ (many resolve-marks : (many (Loc) lo) (many (String) x) (many (List $ MsgMeta) table) -> (many (String) r) (many (List $ MsgMeta) table2))
-  (let ((many ls) (many table2)) $ resolve-lines lo (split-on x 10) (Nil _) table)
+  (let ((many ls) (many table2)) $ resolve-lines lo (split-on x #\newline) (Nil _) table)
   (values (join-strs ls "\n") table2))
 
 (def-fns _ $ (many frame-mark : (many (Env) e) (many (Loc) l) -> (many (String) r))
@@ -2942,7 +2942,7 @@
 
 ; A name or term in a message is set off in backticks; a literal already reads as one and is left bare.
 (def-fns _ $ (many tick : (many (String) s) -> (many (String) r))
-  (match many (or (is-literal-name s) $ match many s (((Bool) _)) ((SNil) (BFalse)) ((SCons c _) (char-is c 34))) _
+  (match many (or (is-literal-name s) $ match many s (((Bool) _)) ((SNil) (BFalse)) ((SCons c _) (char-eqb c #\"))) _
     ((BTrue) s)
     ((BFalse) (str-cat3 "`" s "`"))))
 
