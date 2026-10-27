@@ -391,7 +391,7 @@
       (let-match erased (swap-same (Zero) r y sw) (Refl _ _))
       (values m ex w hs tq lk (opts-go xs os r wb d op (range-mem c2 r xs rg lt)) (Zero) (Zero)
         (XTG (BFalse) (Zero) (Zero) wb d d r r (FlN d) sw))))
-  (let ((erased ge)) (lt-eq-succ c2 r gle))
+  (let ((erased ge)) (le-lt-succ c2 r gle))
   (let-match erased nc (NCS _ _ lcn) (absurd (NCN _) (lt-asym r n lr ge)))
   (let-match erased ge (LtS _ _ gcr))
   (let ((erased ab)) (ApGt _ _ r c gcr))
