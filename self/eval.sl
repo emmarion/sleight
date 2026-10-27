@@ -745,7 +745,7 @@
   (let-match many pl (PHandle x rd mult shown) (else (halloc _ hp $ BError _ "not a handle")))
   (let-match many (sp-eq p $ SpExpr $ ExSettledErase) (BFalse) ((BTrue) (alloc-ext _ hp $ PHandle x rd (Erased) shown)))
   (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
-    ((BTrue) (alloc-ext _ hp $ match many rd _ ((MintedIs) (PHandle x (MintedType) (Erased) "_")) ((MintedType) (PHandle type-id (MintedIs) (Erased) "Type")))))
+    ((BTrue) (alloc-ext _ hp $ match many rd _ ((MintedIs) (PHandle x (MintedType) (Erased) $ ShText "_")) ((MintedType) (PHandle type-id (MintedIs) (Erased) $ ShText "Type")))))
   (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (tail $ settled-entry-value _ hp x)))
   (let-match many hidden (Cons _ e r1) ((Nil _) (halloc _ hp $ BError _ "`settled-mult` with no constructors")))
   (let-match many r1 (Cons _ m r2) ((Nil _) (halloc _ hp $ BError _ "`settled-mult` with no constructors")))
@@ -1113,10 +1113,10 @@
   (many LKSpelled : (many (String) s) -> (LitKey))
   (many LKString : (many (String) body) -> (LitKey)))
 
-(def-fns _ $ (many record-literal : (many (Env) env) (many (LitKey) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
+(def-fns _ $ (many record-literal : (many (Env) env) (many (LitKey) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
   (let-match many (env-literals env) (MkLitTable sp st))
   (let ((many t2)) $ match many key (((LitTable) _)) ((LKSpelled k) (MkLitTable (nm-set _ k x sp) st)) ((LKString k) (MkLitTable sp $ nm-set _ k x st)))
-  (env-push-lit (env-set-literals env t2) x proof (Some _ $ MkPair _ _ spelling node) facts))
+  (env-push-lit (env-set-literals env t2) x proof (Some _ node) facts))
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (LitKey) key) -> (many (Maybe $ Nat) r))
   (let-match many (env-literals env) (MkLitTable sp st))
@@ -1136,7 +1136,7 @@
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
   (let ((many env3) (erased h2) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 (LKSpelled key) x (Some _ p) key (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
+  (values (record-literal env3 (LKSpelled key) x (Some _ p) (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
@@ -1171,14 +1171,14 @@
   (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
   (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
   (let ((many env4) (erased h3) (many hp3) (erased s3) (many x)) $ bind-lit env3d _ hp2 (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
-  (values (record-literal env4 (LKSpelled $ char-key c) x (Some _ np) (rope-str $ lit-char-rope c) (RChr (PosSpot $ NoPos) c) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
+  (values (record-literal env4 (LKSpelled $ char-key c) x (Some _ np) (RChr (PosSpot $ NoPos) c) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
 (def-fns _ $ (many intern-string-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) body) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (erased h1) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PStr body) str-ty (None _))
-  (values (record-literal env2 (LKString body) x (None _) (lit-string body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
+  (values (record-literal env2 (LKString body) x (None _) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
 
 (def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ LitKey) k))
   (match many raw _
@@ -1213,7 +1213,7 @@
   (let-match many st (SSettled _ _ m) ((SHypothetical _) (values hs hp (le-refl hs) ch)))
   (let ((erased _) (many b) (erased _)) (hread _ hp cs))
   (let-match many b (BCtorFn _ ct) (else (halloc _ hp $ BError _ "`resolve` with no constructor for a Settled")))
-  (let ((many shown)) $ match many (lit-spelling (env-lits e) m) (((String) _)) ((Some _ k) k) ((None _) (entry-name-or-id e m)))
+  (let ((many shown)) $ match many (lit-shown (env-lits e) m) (((Shown) _)) ((Some _ k) k) ((None _) (ShText $ entry-name-or-id e m)))
   (let ((erased _) (many hp1) (erased s1) (many a)) $ alloc-ext _ hp $ PHandle m (MintedIs) mult shown)
   (let ((erased h2) (many hp2) (erased s2) (many r)) $ halloc _ hp1 $ BTag _ ct $ Cons _ a $ Nil _)
   (values h2 hp2 (hist-le-trans _ _ _ s1 s2) r))
@@ -1259,7 +1259,7 @@
     ((Some _ v) (values hs hp1 (le-refl hs) v))
     ((None _) (halloc _ hp1 $ BToken _)))
   (let ((many hp3)) $ heap-with-entries _ hp2 $ entries-set-state _ (heap-entries _ hp2) x $ SSettled _ a x)
-  (let ((erased hs4) (many hp4) (erased s4) (many hv)) $ alloc-ext _ hp3 $ PHandle x (MintedIs) mult "_")
+  (let ((erased hs4) (many hp4) (erased s4) (many hv)) $ alloc-ext _ hp3 $ PHandle x (MintedIs) mult $ ShText "_")
   (values (env-push-lit e2 x (None _) (None _) $ Cons _ (MkLitFact x ty rule) $ Nil _) hs4 hp4 (hist-le-trans _ _ _ s1 s4) hv))
 
 (def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Multiplicity) mult) (many (List $ Ref Block hs) args) ->
@@ -1453,7 +1453,7 @@
       (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e wv ew)))
   (let ((many e2) (erased _) (many hp2) (erased sf2)) $ intern-lit e _ hp lit)
   (let ((many x)) $ match many (lit-key lit) (((Nat) x)) ((Some _ key) (match many (lit-lookup e2 key) (((Nat) x)) ((Some _ y) y) ((None _) (Zero)))) ((None _) (Zero)))
-  (let ((many shown)) $ match many (lit-spelling (env-lits e2) x) (((String) t)) ((Some _ t) t) ((None _) "_"))
+  (let ((many shown)) $ match many (lit-shown (env-lits e2) x) (((Shown) t)) ((Some _ t) t) ((None _) (ShText "_")))
   (let ((erased hl3) (many hp3) (erased sf3) (many v)) $ alloc-ext _ hp2 $ PHandle x (MintedIs) (Many) shown)
   (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) (Cons _ v $ Nil _) $ u sl e2 wv ew))
 

@@ -803,11 +803,18 @@
     ((MintedIs) (match many b _ ((MintedIs) (BTrue)) ((MintedType) (BFalse))))
     ((MintedType) (match many b _ ((MintedIs) (BFalse)) ((MintedType) (BTrue))))))
 
+(def-adts $ (Shown : -> Type)
+  enum
+  (many ShText : (many (String) s) -> (Shown))
+  (many ShNat : (many (Nat) n) -> (Shown))
+  (many ShChr : (many (Char) c) -> (Shown))
+  (many ShStr : (many (String) s) -> (Shown)))
+
 (def-adts $ (Name : -> Type)
   enum
   (many NSrc : (many (String) s) -> (Name))
   (many NGen : (many (Nat) n) (many (String) s) -> (Name))
-  (many NHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (String) shown) -> (Name)))
+  (many NHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (Shown) shown) -> (Name)))
 
 (def-fns _ $ (many name-eq : (many (Name) a) (many (Name) b) -> (many (Bool) r))
   (match many a _

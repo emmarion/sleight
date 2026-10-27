@@ -425,14 +425,17 @@
     (match many r _
       ((RAtom _ s) (RStr $ spell-name s))
       ((RWild _) (RStr "_"))
-      ((RNat _ n) (RStr $ nat-str n))
-      ((RChr _ c) (lit-char-rope c))
-      ((RString _ s) (RStr $ lit-string s))
+      ((RNat _ n) (RStr $ shown-text $ ShNat n))
+      ((RChr _ c) (RStr $ shown-text $ ShChr c))
+      ((RString _ s) (RStr $ shown-text $ ShStr s))
       ((RList _ items) (rwrap "(" (rjoin (notail $ show-raws items) " ") ")"))))
   ((many show-raws : (subterm many (List $ Syn) rs) -> (many (List $ Rope) out))
     (match many rs _
       ((Nil _) (Nil _))
       ((Cons _ r rest) (Cons _ (notail $ show-raw r) $ notail $ show-raws rest)))))
+
+(def-fns _ $ (many syn-shown : (many (Syn) r) -> (many (Shown) s))
+  (match many r _ ((RNat _ n) (ShNat n)) ((RChr _ c) (ShChr c)) ((RString _ s) (ShStr s)) (else (ShText $ rope-str $ show-raw r))))
 
 ; The indentation check of lib/indent.ml, read from one file's tokens: indentation is a claim about paren
 ; nesting, and a line's claim is checked against the depth in force where its first token starts. It runs

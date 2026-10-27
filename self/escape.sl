@@ -233,11 +233,18 @@
 (def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
   (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ RStr $ lit-string s))))
 
+(def-fns _ $ (many shown-text : (many (Shown) s) -> (many (String) r))
+  (match many s _
+    ((ShText t) t)
+    ((ShNat n) (nat-str n))
+    ((ShChr c) (rope-str $ lit-char-rope c))
+    ((ShStr t) (lit-string t))))
+
 (def-fns _ $ (many spell-name : (many (Name) n) -> (many (String) r))
   (match many n _
     ((NSrc s) (spell-text s))
     ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))
-    ((NHandle _ _ _ s) s)))
+    ((NHandle _ _ _ s) (shown-text s))))
 
 (def-fns _ $ (many name-text : (many (Name) n) -> (many (String) r))
   (match many n _ ((NSrc s) s) (else (spell-name n))))

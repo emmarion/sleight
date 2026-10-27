@@ -522,7 +522,7 @@
     (many PStr : (many (String) s) -> (Payload))
     (many PBytes : (many (String) s) -> (Payload))
     (many PRaw : (many (String) file) (many (Syn) r) -> (Payload))
-    (many PHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (String) shown) -> (Payload)))
+    (many PHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (Shown) shown) -> (Payload)))
   ((ExtType : -> Type)
     enum
     (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType))
@@ -2259,7 +2259,7 @@
     (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) -> (LitFact)))
   ((LitEntry : -> Type)
     enum
-    (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (Maybe $ Pair (String) (Syn)) lit) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
+    (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (Maybe $ Syn) lit) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
 
 (let ((many unique-empty)) (MkUniqueState (Nil _) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _) (BFalse)) (MEmpty _) (BFalse)))
 
@@ -2529,7 +2529,7 @@
   (let-match many lits (Cons _ l rest) ((Nil _) acc))
   (match many (nat-lt bound $ lit-ordinal lits) _ ((BTrue) (tail $ lits-since rest bound $ Cons _ l acc)) ((BFalse) acc)))
 
-(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (Maybe $ Pair (String) (Syn)) lit) (many (List $ LitFact) facts) -> (many (Env) r))
+(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (Maybe $ Syn) lit) (many (List $ LitFact) facts) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk (Cons _ (MkLitEntry x proof lit facts (Succ $ lit-ordinal lt)) lt) lo pr us hn ex))))
 (def-fns _ $ (many env-set-scope : (many (Env) e) (many (Scope) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp _ en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp x en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
@@ -3143,17 +3143,22 @@
     ((Many) (match many demand _ ((Once) (Some _ "used at unique")) (else (None _))))
     ((Once) (match many demand _ ((Many) (Some _ "used at many without `share`")) (else (None _))))))
 
-(def-fns _ $ (many lit-of : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Pair (String) (Syn)) r))
+(def-fns _ $ (many lit-of : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Syn) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
   (let-match many l (MkLitEntry y _ lit _ _))
   (match many (nat-eqb x y) _ ((BTrue) lit) ((BFalse) (tail $ lit-of rest x))))
 
-(def-fns _ $ (many spelling-of : (many (Maybe $ Pair (String) (Syn)) lit) -> (many (Maybe $ String) r))
-  (let-match many lit (Some _ p) ((None _) (None _)))
-  (match many p _ ((MkPair _ _ s _) (Some _ s))))
+(def-fns _ $ (many spelling-of : (many (Maybe $ Syn) lit) -> (many (Maybe $ String) r))
+  (match many lit _ ((Some _ r) (Some _ $ shown-text $ syn-shown r)) ((None _) (None _))))
+
+(def-fns _ $ (many lit-shown : (many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Shown) r))
+  (match many (lit-of ls x) _ ((Some _ r) (Some _ $ syn-shown r)) ((None _) (None _))))
+
+(def-fns _ $ (many lit-entry-node : (many (LitEntry) l) -> (many (Maybe $ Syn) r))
+  (match many l _ ((MkLitEntry _ _ lit _ _) lit)))
 
 (def-fns _ $ (many lit-entry-spelling : (many (LitEntry) l) -> (many (Maybe $ String) r))
-  (match many l _ ((MkLitEntry _ _ lit _ _) (spelling-of lit))))
+  (spelling-of $ lit-entry-node l))
 
 (def-fns _ $ (many lit-spelling : (many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ String) r))
   (spelling-of $ lit-of ls x))
