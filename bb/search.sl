@@ -271,7 +271,7 @@
 (unary 64 63)
 (comptime-match many (lt-dec 64 B) (Yes _ _ _ _ pb64))
 (let ((erased pm64)) (lt-trans 64 B u62-modulus pb64 bB))
-(let ((many u0)) (MkU62 0 (lt-trans 0 B u62-modulus pk0 bB)))
+(let ((many u62z)) (MkU62 0 (lt-trans 0 B u62-modulus pk0 bB)))
 
 (def-adts $ (HT : -> Type)
   enum
@@ -279,7 +279,7 @@
      (unique (Vec (U62)) hs) -> (HT)))
 
 (def-fns _ $ (many ht-new : -> (unique (HT) t))
-  (MkHT 0 63 pm64 (vec-new _ 64 u0) (vec-new _ 32 (Nil (KN))) (vec-new _ 32 u0)))
+  (MkHT 0 63 pm64 (vec-new _ 64 u62z) (vec-new _ 32 (Nil (KN))) (vec-new _ 32 u62z)))
 
 (def-fns _ $ (many ht-next : (many (Nat) mask i) (erased (Lt (Succ mask) u62-modulus) pm) (erased (Lt i (Succ mask)) li) ->
     (many (Nat) j) (erased (Lt j (Succ mask)) lj))
@@ -353,7 +353,7 @@
   (let-match many (lt-dec sz B) (Yes _ _ _ _ pszb) ((No _ _ _ _ _) (values n (BTrue) (u n1 (at) mask pm (at) s2 (at) k2 (at) h2))))
   (let ((erased psz)) (lt-trans sz B u62-modulus pszb bB))
   (let-match many sz (Succ mask2) ((Zero) (values n (BTrue) (u n1 (at) mask pm (at) s2 (at) k2 (at) h2))))
-  (let ((unique s3) (unique h3)) (ht-rehash (vec-new _ sz u0) h2 mask2 psz n1 0))
+  (let ((unique s3) (unique h3)) (ht-rehash (vec-new _ sz u62z) h2 mask2 psz n1 0))
   (values n (BTrue) (u n1 mask2 psz s3 (at) k2 (at) h3)))
 
 (def-fns _ $ (many ht-key : (unique (HT) t) (many (Nat) i) -> (many (List (KN)) k) (unique (HT) t2 at t))
