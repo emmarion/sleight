@@ -37,7 +37,7 @@
     enum
     (many PSHalt : (erased (List (PT)) p) (many (Nat) t) (erased (Nat) q) (erased (List (Bool)) l r) (erased (Bool) h)
        (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) (erased (PLook p q h (Def (Hlt))) pl) -> (PSimR p))
-    (many PSUndef : (erased (List (PT)) p) (erased (Nat) t) (many (Nat) q) (erased (List (Bool)) l r) (many (Bool) h)
+    (many PSUndef : (erased (List (PT)) p) (many (Nat) t q) (many (List (Bool)) l r) (many (Bool) h)
        (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) (erased (PLook p q h (Undef)) pl) -> (PSimR p))
     (many PSOut : (erased (List (PT)) p) (many (Nat) t q) (many (List (Bool)) l r) (many (Bool) h)
        (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) -> (PSimR p))))

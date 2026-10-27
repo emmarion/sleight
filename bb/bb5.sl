@@ -7,7 +7,7 @@
 (let ((many OR) (erased kr)) (keep-r O))
 (comptime-match many (lt-dec (Succ (Zero)) 5) (Yes _ _ _ _ l1n))
 (def-fns _ $ (many run-tree : -> (many (Res (TAll 5 47176870 holes p0 (Zero) (BFalse) OR)) r))
-  (build-all 5 14 OR 47176870 holes p0 (Zero) (BFalse) (Cons _ (MkStage 300 settings (None _)) $ Cons _ (MkStage 2400000 settings2 (Some _ (hints-of hint-str))) $ Cons _ (MkStage 47176871 (Nil (Setting)) (None _)) $ Nil (Stage))))
+  (build-root 5 14 OR 47176870 holes p0 (Cons _ (MkStage 300 settings (None _)) $ Cons _ (MkStage 2400000 settings2 (Some _ (hints-of hint-str))) $ Cons _ (MkStage 47176871 (Nil (Setting)) (None _)) $ Nil (Stage))))
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 

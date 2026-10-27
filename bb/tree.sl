@@ -6,6 +6,34 @@
     (many PSS : (erased (PT) x0 x1 y) (erased (List (PT)) rest rest2) (erased (Nat) q) (erased (Bool) b) (erased (PSet rest q b y rest2) p)
        -> (PSet (Cons (PT) x0 (Cons (PT) x1 rest)) (Succ q) b y (Cons (PT) x0 (Cons (PT) x1 rest2))))))
 
+(def-fns _ $ (erased plook-set : (erased (List (PT)) p p2) (erased (Nat) q q2) (erased (Bool) h b2) (erased (PT) y) (erased (Tr) t)
+    (subterm erased (PSet p q h y p2) ps) (erased (PLook p q h (Undef)) pu) (erased (PLook p q2 b2 (Def t)) pd) -> (erased (PLook p2 q2 b2 (Def t)) r))
+  (match erased ps _
+    ((PS0 x0 x1 _ rest)
+      (let-match erased pu (PL0 _ _ _))
+      (match erased pd _
+        ((PL1 _ _ _) (PL1 y x1 rest))
+        ((PLS _ _ _ q1 _ _ pl1) (PLS y x1 rest q1 b2 (Def t) pl1))))
+    ((PS1 x0 x1 _ rest)
+      (let-match erased pu (PL1 _ _ _))
+      (match erased pd _
+        ((PL0 _ _ _) (PL0 x0 y rest))
+        ((PLS _ _ _ q1 _ _ pl1) (PLS x0 y rest q1 b2 (Def t) pl1))))
+    ((PSS x0 x1 _ rest rest2 q1 _ ps1)
+      (let-match erased pu (PLS _ _ _ _ _ _ pu1))
+      (match erased pd _
+        ((PL0 _ _ _) (PL0 x0 x1 rest2))
+        ((PL1 _ _ _) (PL1 x0 x1 rest2))
+        ((PLS _ _ _ q3 _ _ pl1) (PLS x0 x1 rest2 q3 b2 (Def t) (plook-set rest rest2 q1 q3 h b2 y t ps1 pu1 pl1)))))))
+
+(def-fns _ $ (erased prun-set : (erased (List (PT)) p p2) (erased (Nat) q) (erased (Bool) h) (erased (PT) y) (erased (Conf) c0 c) (erased (Nat) t)
+    (erased (PSet p q h y p2) ps) (erased (PLook p q h (Undef)) pu) (subterm erased (PRunTo p c0 t c) pr) -> (erased (PRunTo p2 c0 t c) r))
+  (let-match erased pr (PRSnoc _ _ c1 _ t1 pr1 st) ((PRNil _ _) (PRNil p2 c0)))
+  (let ((erased r1)) (prun-set p p2 q h y c0 c1 t1 ps pu pr1))
+  (match erased st _
+    ((PStepL _ q1 q2 l rr l2 h1 w h2 pl pp) (PRSnoc p2 c0 c1 c t1 r1 (PStepL p2 q1 q2 l rr l2 h1 w h2 (plook-set p p2 q q1 h h1 y _ ps pu pl) pp)))
+    ((PStepR _ q1 q2 l rr r2 h1 w h2 pl pp) (PRSnoc p2 c0 c1 c t1 r1 (PStepR p2 q1 q2 l rr r2 h1 w h2 (plook-set p p2 q q1 h h1 y _ ps pu pl) pp)))))
+
 (def-fns _ $ (erased ext-look-any : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) b) (erased (PT) x)
     (erased (Ext p m) e) (subterm erased (PLook p q b x) pl) -> (erased (Tr) t) (erased (Look m q b t) lk))
   (match erased pl _
