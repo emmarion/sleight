@@ -11,7 +11,7 @@
 (def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
 (def-fns P1 $ (many shout : (subterm many (Nat) n) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next))

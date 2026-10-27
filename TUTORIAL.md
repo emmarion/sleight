@@ -246,7 +246,8 @@ subtraction, which gets its proof by deciding the comparison:
 
 ```scheme
 (def-fns _ $ (many monus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
-  (let-match many (lt-dec a b) (No _ _ q) ((Yes _ _ _) 0))
+  (let-match many (lt-dec a b) (No _ _ _ _ le-q) ((Yes _ _ _ _ _) 0))
+  (let ((erased q)) (lt-eq-succ _ _ le-q))
   (let ((many c) (erased _)) (sub a b q))
   c)
 
@@ -256,11 +257,13 @@ subtraction, which gets its proof by deciding the comparison:
 [`tests/tutorial_monus.sl`](tests/tutorial_monus.sl) prints `(MkPair _ _ 0 7)`. (Erased fields print
 as `_`.)
 
-- `lt-dec` returns `(Dec a b)`: either `Yes` with an `(Lt a b)`, or `No`
-  with an `(Lt b (Succ a))`.
+- `lt-dec` returns `(Dec (Nat) Lt a b)`: either `Yes` with an `(Lt a b)`,
+  or `No` with an `(LtEq (Nat) Lt b a)`, which `lt-eq-succ` turns into
+  the `(Lt b (Succ a))` that `sub` takes. `char-lt-dec` makes the same
+  decision on characters.
 - This `let-match` has an extra branch. The `Yes` case returns `0`
   straight away, and the `No` case continues with the rest of the body,
-  holding `q` (§52).
+  holding `le-q` (§52).
 - A function can return several values. `let` binds them one by one, here
   `c` and an erased proof that is dropped (§26).
 
@@ -287,14 +290,15 @@ can be proved by computing it there and asserting the outcome with
 
 ```scheme
 (let ((many d)) (lt-dec 10 3))
-(comptime-match many d (No _ _ q))
+(comptime-match many d (No _ _ _ _ le-q))
+(let ((erased q)) (lt-eq-succ _ _ le-q))
 (let ((many c) (erased p)) (sub 10 3 q))
 c
 ```
 
 [`tests/tutorial_reflect.sl`](tests/tutorial_reflect.sl) prints `7`. `comptime-match` fails to compile
-unless `d` really is a `No`, and it binds that `No`'s proof `q` for the
-code after it. A hand-built `U8` gets its bound proof this way (§42).
+unless `d` really is a `No`, and it binds that `No`'s proof `le-q` for
+the code after it. A hand-built `U8` gets its bound proof this way (§42).
 
 ## 7. Unique values and updates in place
 
@@ -394,7 +398,7 @@ or `Exit` (§42):
 ```scheme
 (def-lvl P)
 (let ((many d)) (lt-dec 0 u8-modulus))
-(comptime-match many d (Yes _ _ p))
+(comptime-match many d (Yes _ _ _ _ p))
 (let ((many ok)) (MkU8 0 p))
 
 (def-unique P $ (unique start : (unique (World) w at vacant-slot) ->

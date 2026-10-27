@@ -1,7 +1,7 @@
 ; expect: (MkPair _ _ (Cons _ (Some _ #\a) $ Cons _ (Some _ #\b) $ Cons _ (Some _ #\xff) $ Cons _ (None _) $ Nil _) $ Cons _ (Some _ #\x00) $ Cons _ (None _) $ Cons _ (None _) $ Cons _ (None _) $ Nil _)
 (def-fns _ $ (many char-at : (many (String) s) (many (Nat) i) -> (many (Maybe (Char)) r))
   (let ((many len) (erased l)) (str-length s))
-  (let-match many (lt-dec i len) (Yes _ _ lt) ((No _ _ _) (None _)))
+  (let-match many (lt-dec i len) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (None _)))
   (let ((many c) (erased _) (erased _) (erased _) (erased _)) (str-get s i len l lt))
   (Some _ c))
 (def-fns _ $ (many chars : (many (String) s) -> (many (List $ Maybe (Char)) r))

@@ -29,13 +29,13 @@
 (let ((erased bp)) (prove-predates B P))
 (let ((erased np)) (prove-predates nat-lvl P))
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (def-unique P $ (unique k : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next))
   (let ((many n)) (g3 (predates bp) 4))
   (match many (lt-dec (predates np) n u8-modulus) (((World) w2 at w) ((Program P) next))
-    ((Yes _ _ p) (values w (Exit P (MkU8 n p))))
-    ((No _ _ _) (values w (Exit P code0)))))
+    ((Yes _ _ _ _ p) (values w (Exit P (MkU8 n p))))
+    ((No _ _ _ _ _) (values w (Exit P code0)))))
 
 (Continue P k)
 ; warns: tests/io_closure_in_data.sl:10:14: warning: unnecessary `(predates _)`; drop it

@@ -17,7 +17,7 @@
   (tail $ checksum xt (nat-add i 1) (nat-add acc (nat-mul i v))))
 
 (def-fns _ $ (many minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
-  (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ _ _ le) ((No _ _ _ _ _) 0))
   (let ((many c) (erased _)) (sub a b le))
   c)
 

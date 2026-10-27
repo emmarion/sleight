@@ -4,7 +4,7 @@
 
 (let ((many three)) (Succ (Succ (Succ (Zero)))))
 (let ((many d)) (lt-dec three u8-modulus))
-(comptime-match many d (Yes a b p))
+(comptime-match many d (Yes _ _ a b p))
 (let ((many x)) (MkU8 three p))
 
 (let-match many x (MkU8 xn xq))

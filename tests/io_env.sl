@@ -7,7 +7,7 @@
 ; GetEnv answers with Maybe; GetEnvs lists the whole environment sorted by name, whatever order it was given in.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 ; Why PWD and SHLVL are dropped: under OCaml 5.5 (seen with 5.5.0 and 5.5.1, perhaps other 5.x releases), ocamlc
 ; builds a bytecode executable whose first line is a `#!/bin/sh`-style shell-script launcher that finds ocamlrun

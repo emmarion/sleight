@@ -26,8 +26,8 @@
     (erased (EdRow (Nil (U8)) ys updated) final-row))
   (let ((erased ip)) (lt-le-trans i (Succ n) u62-modulus in
     (LtS n u62-modulus (lt-trans n max-array-length u62-modulus fits max-array-length-below-u62))))
-  (let-match many (u62-lt-dec 0 i u62-modulus-pos ip) (Yes _ _ pos)
-    ((No _ _ iz)
+  (let-match many (u62-lt-dec 0 i u62-modulus-pos ip) (Yes _ _ _ _ pos)
+    ((No _ _ _ _ le-iz) (let ((erased iz)) (lt-eq-succ _ _ le-iz))
       (let-match erased iz (LtZ _) (absurd (LtS _ _ bad) bad))
       (let-match erased suffix (EdSuffixHere _ _))
       (let-match erased computed (EdSuffixHere _ _))

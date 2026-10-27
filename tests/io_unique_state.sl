@@ -13,7 +13,7 @@
 (def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
 (def-fns PA $ (many count : (unique (Counter) c) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) next))
@@ -22,8 +22,8 @@
     ((None _)
       (let-match unique c (MkCounter n))
       (match many (lt-dec n u8-modulus) _
-        ((Yes _ _ p) (values w1 (Exit P (MkU8 n p))))
-        ((No _ _ _) (values w1 (Exit P code0)))))
+        ((Yes _ _ _ _ p) (values w1 (Exit P (MkU8 n p))))
+        ((No _ _ _ _ _) (values w1 (Exit P code0)))))
     ((Some _ _)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
       (def-unique P $ (unique again : (unique (World) v at vacant-slot) -> (unique (World) v2 at v) (unique (Program P) next)) (count c2 v))

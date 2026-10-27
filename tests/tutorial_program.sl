@@ -2,7 +2,7 @@
 ; exit: 0
 (def-lvl P)
 (let ((many d)) (lt-dec 0 u8-modulus))
-(comptime-match many d (Yes _ _ p))
+(comptime-match many d (Yes _ _ _ _ p))
 (let ((many ok)) (MkU8 0 p))
 
 (def-unique P $ (unique start : (unique (World) w at vacant-slot) ->

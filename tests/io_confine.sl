@@ -42,7 +42,7 @@
 ; stays, and the next run reuses it.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
 (def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w at vacant-slot) (unique (Request (Result A)) req) -> (unique (World) w2 at w))

@@ -835,9 +835,8 @@ below are the session's.
 120. **`lt-dec`'s model is derived from `nat-cmp`, and `Dec` is plain
      source.** `Cmp` is plain source too, and the FFI builds it through
      its constructor (123). `nat-cmp` sits at an anonymous level below
-     `nat-lvl` so that `lt-dec`, at `nat-lvl`, can call it; the lemmas
-     are `lt-succ` (`Lt a (Succ a)`) for the `CEq` case and `lt-weaken`
-     (`Lt x y -> Lt x (Succ y)`) for `CGt`.
+     `nat-lvl` so that `lt-dec`, at `nat-lvl`, can call it; its `No`
+     evidence is `LtEqEq` for the `CEq` case and `LtEqLt` for `CGt`.
 123. **An extern over a plain ADT takes that type's constructor or
      destructor; nothing is extern for the FFI's convenience.**
      `Ffi.note` records every declared type by name (first declaration

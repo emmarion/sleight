@@ -12,7 +12,7 @@
 ; answers Fail, and so does every Exec once the fence is narrowed.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 
 (def-fns _ $ (many shown : (many (Result (Exited)) r) -> (many (String) s))

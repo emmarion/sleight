@@ -6,13 +6,13 @@
 ; argument list threads the world, giving it back at itself.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (let ((many d1)) (lt-dec 1 u8-modulus))
-(comptime-match many d1 (Yes za1 zb1 zp1))
+(comptime-match many d1 (Yes _ _ za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
 (let ((many d2)) (lt-dec 2 u8-modulus))
-(comptime-match many d2 (Yes za2 zb2 zp2))
+(comptime-match many d2 (Yes _ _ za2 zb2 zp2))
 (let ((many code2)) (MkU8 2 zp2))
 
 (def-fns _ $ (many list-args : (subterm many (List (String)) args) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))

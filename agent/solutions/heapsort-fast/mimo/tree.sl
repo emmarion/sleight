@@ -171,10 +171,10 @@
     (many TriG : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) q) -> (Tri a b))))
 
 (def-fns _ $ (erased tri : (erased (Nat) a) (erased (Nat) b) -> (erased (Tri a b) t))
-  (let-match erased (lt-dec a b) (Yes _ _ p)
-    ((No _ _ r)
-      (let-match erased (lt-dec b a) (Yes _ _ q)
-        ((No _ _ s) (TriE a b (le-antisym a b r s))))
+  (let-match erased (lt-dec a b) (Yes _ _ _ _ p)
+    ((No _ _ _ _ le-r) (let ((erased r)) (lt-eq-succ _ _ le-r))
+      (let-match erased (lt-dec b a) (Yes _ _ _ _ q)
+        ((No _ _ _ _ le-s) (let ((erased s)) (lt-eq-succ _ _ le-s)) (TriE a b (le-antisym a b r s))))
       (TriG a b q)))
   (TriL a b p))
 

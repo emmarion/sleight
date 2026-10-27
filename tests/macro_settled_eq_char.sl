@@ -3,7 +3,7 @@
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) t))
   (match many r _ ((None _) "no") ((Some _ _) "yes")))
-(comptime-match many (lt-dec 97 u8-modulus) (Yes a b q))
+(comptime-match many (lt-dec 97 u8-modulus) (Yes _ _ a b q))
 (let ((many fresh)) (MkChar $ MkU8 97 q))
 (comptime-match many #\a (MkChar u))
 (comptime-match many u (MkU8 n p))

@@ -27,8 +27,8 @@
   (match many n _ ((Zero) (Zero)) ((Succ k) k)))
 
 (def-fns _ $ (many nat-sub : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
-  (let-match many (lt-dec b (Succ a)) (Yes _ _ le)
-    ((No _ _ _) (Zero)))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ _ _ le)
+    ((No _ _ _ _ _) (Zero)))
   (let ((many c) (erased _)) (sub a b le))
   c)
 
@@ -45,8 +45,8 @@
 ; A code the modulus does not bound, which no Char holds, becomes NUL.
 (def-fns _ $ (many char-of-code : (many (Nat) n) -> (many (Char) c))
   (match many (lt-dec n u8-modulus) _
-    ((Yes _ _ p) (MkChar $ MkU8 n p))
-    ((No _ _ _) #\x00)))
+    ((Yes _ _ _ _ p) (MkChar $ MkU8 n p))
+    ((No _ _ _ _ _) #\x00)))
 
 (def-fns _ $ (many char-eqb : (many (Char) a) (many (Char) b) -> (many (Bool) r))
   (is-same _ _ _ _ $ char-eq a b))
@@ -57,8 +57,8 @@
 ; code in [lo, hi]
 (def-fns _ $ (many char-between : (many (Char) c) (many (Nat) lo) (many (Nat) hi) -> (many (Bool) r))
   (let ((many n)) $ char-code c)
-  (let-match many (lt-dec n lo) (No _ _ _) ((Yes _ _ _) (BFalse)))
-  (match many (lt-dec hi n) _ ((Yes _ _ _) (BFalse)) ((No _ _ _) (BTrue))))
+  (let-match many (lt-dec n lo) (No _ _ _ _ _) ((Yes _ _ _ _ _) (BFalse)))
+  (match many (lt-dec hi n) _ ((Yes _ _ _ _ _) (BFalse)) ((No _ _ _ _ _) (BTrue))))
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
   (let ((many s) (erased _)) (delegate (flatten r)))
@@ -430,8 +430,9 @@
   (let-match many (nm-kid _ kids c) (KHit _ _ _ lab submap k st) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c name1 here kids n)))
   (let ((many ln) (erased lnp)) (str-length name1))
   (let ((many ll) (erased llp)) (str-length lab))
-  (let-match many (lt-dec ln ll) (No _ _ ge)
-    ((Yes _ _ lt) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPShort lab name1 ln ll lnp llp lt)))
+  (let-match many (lt-dec ln ll) (No _ _ _ _ le-ge)
+    ((Yes _ _ _ _ lt) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPShort lab name1 ln ll lnp llp lt)))
+  (let ((erased ge)) (lt-eq-succ _ _ le-ge))
   (let ((many p) (many rest) (erased ap) (erased lp)) (str-split name1 ll ln lnp ge))
   (let-match many (str-eq p lab) (Equal _ _ _)
     ((Unequal _ _ _ _ d) (NMiss _ _ _ $ NADiverge _ c lab name1 here kids submap k $ NPDiff lab name1 p rest ll ap lp llp d)))
@@ -679,10 +680,10 @@
     ((Cons _ _ _) (RCat r $ RCat (RStr sep) $ notail $ rjoin rest sep))))
 
 (let ((many sixteen-dec)) (lt-dec (Zero) 16))
-(comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
+(comptime-match many sixteen-dec (Yes _ _ sda sdb sixteen-positive))
 
 (def-fns _ $ (many hex-code : (many (Nat) n) -> (many (Nat) c))
-  (match many (lt-dec n 10) _ ((Yes _ _ _) (nat-add 48 n)) ((No _ _ _) (nat-add 87 n))))
+  (match many (lt-dec n 10) _ ((Yes _ _ _ _ _) (nat-add 48 n)) ((No _ _ _ _ _) (nat-add 87 n))))
 
 (def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
   (RChar $ char-of-code $ hex-code n))

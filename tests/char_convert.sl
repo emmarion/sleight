@@ -3,7 +3,7 @@
 ; take it back apart.
 
 (let ((many d)) (lt-dec 3 u8-modulus))
-(comptime-match many d (Yes a b p))
+(comptime-match many d (Yes _ _ a b p))
 (let ((many c)) (MkChar (MkU8 3 p)))
 (let-match many c (MkChar u))
 (let-match many u (MkU8 n q))

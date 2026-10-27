@@ -61,12 +61,6 @@
     (many ModSub : (erased (Nat) s1) (erased (Nat) c) (erased (Nat) s) (erased (Nat) r) (erased (Add c s1 s) a) (erased (Mod s1 c r) m)
        -> (Mod s c r))))
 
-(def-adts
-  ((Dec : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many Yes : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Dec a b))
-    (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
-
 ; Parametric in the carrier and its strict order, every field erased, so a value is only its tag and two
 ; instances differ by a coercion (section 33).
 (def-adts
@@ -92,6 +86,21 @@
     (many Equal : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (EqDec T R a a))
     (many Unequal : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                     (erased (Apart T R a b) d) -> (EqDec T R a b))))
+
+(def-adts
+  ((LtEq : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
+    enum
+    (many LtEqLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                   (erased (R a b) p) -> (LtEq T R a b))
+    (many LtEqEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (LtEq T R a a))))
+
+(def-adts
+  ((Dec : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
+    enum
+    (many Yes : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                (erased (R a b) p) -> (Dec T R a b))
+    (many No : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+               (erased (LtEq T R b a) q) -> (Dec T R a b))))
 
 (def-fns _ $ (many cmp-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
     (many (Cmp T R a b) c) -> (many (EqDec T R a b) e))
@@ -175,6 +184,11 @@
   (match erased p _
     ((LtZ b) (LtZ (Succ b)))
     ((LtS a b p1) (LtS a (Succ b) (lt-weaken a b p1)))))
+
+(def-fns _ $ (erased lt-eq-succ : (erased (Nat) a) (erased (Nat) b) (erased (LtEq (Nat) Lt a b) p) -> (erased (Lt a (Succ b)) q))
+  (match erased p _
+    ((LtEqLt _ _ _ _ r) (lt-weaken a b r))
+    ((LtEqEq _ _ _) (lt-succ a))))
 
 (def-fns _ $ (many extern nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c))
   (match many a _
@@ -301,11 +315,11 @@
   (let ((many b) (erased p)) (add a a))
   (values b (add-diag-double a b p)))
 
-(def-fns nat-lvl $ (many extern lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec a b) d))
+(def-fns nat-lvl $ (many extern lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec (Nat) Lt a b) d))
   (match many (nat-cmp a b) _
-    ((CLt _ _ _ _ p) (Yes a b p))
-    ((CEq _ _ _) (No a b (lt-succ a)))
-    ((CGt _ _ _ _ q) (No a b (lt-weaken b a q)))))
+    ((CLt _ _ _ _ p) (Yes (Nat) Lt a b p))
+    ((CEq _ _ _) (No (Nat) Lt a a (LtEqEq (Nat) Lt a)))
+    ((CGt _ _ _ _ q) (No (Nat) Lt a b (LtEqLt (Nat) Lt b a q)))))
 
 (def-fns _ $ (many succ-mod : (many (Nat) r) (many (Nat) c) (erased (Nat) s) (erased (Lt r c) p) (erased (Mod s c r) q) ->
     (many (Nat) r1) (erased (Lt r1 c) p1) (erased (Mod (Succ s) c r1) q1))
@@ -454,7 +468,7 @@
 
 (def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m)
     (erased (Lt n u62-modulus) _pn) (erased (Lt m u62-modulus) _pm) ->
-    (many (Dec n m) d))
+    (many (Dec (Nat) Lt n m) d))
   (tail (lt-dec n m)))
 
 (def-fns _ $ (many extern u62-eq : (many (Nat) n) (many (Nat) m)
@@ -909,6 +923,34 @@
                 (coercible-ctor (Shared) Unequal (Nat) (Char) Lt CharLt ka a kb b d d2)))))
   (coerce r cr))
 
+(def-fns char-lvl $ (many char-lt-dec at u62-lt-dec : (many (Char) a) (many (Char) b) ->
+    (many (Dec (Char) CharLt a b) d))
+  (let-match erased a (MkChar ua))
+  (let-match erased ua (MkU8 ma pa))
+  (let-match erased b (MkChar ub))
+  (let-match erased ub (MkU8 nb pb))
+  (let ((many ka)) (coerce a (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ua))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 ma pa)))))
+  (let ((many kb)) (coerce b (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ub))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 nb pb)))))
+  (let ((many r)) (delegate (u62-lt-dec ka kb (lt-trans _ _ _ pa u8-below-u62) (lt-trans _ _ _ pb u8-below-u62))))
+  (let ((erased _) (erased cr))
+    (match erased r (((Dec (Char) CharLt a b) d2)
+                     ((Coercible (Shared) (Dec (Nat) Lt ka kb) r (Shared) (Dec (Char) CharLt a b) d2) cc))
+      ((Yes _ _ _ _ p)
+        (values (Yes (Char) CharLt a b (MkCharLt ma nb pa pb p))
+                (coercible-ctor (Shared) Yes (Nat) (Char) Lt CharLt ka a kb b p (MkCharLt ma nb pa pb p))))
+      ((No _ _ _ _ q)
+        (let ((erased q2))
+          (match erased q (((LtEq (Char) CharLt b a) x))
+            ((LtEqLt _ _ _ _ s) (LtEqLt (Char) CharLt b a (MkCharLt nb ma pb pa s)))
+            ((LtEqEq _ _ _)
+              (let-match erased (lt-unique ma u8-modulus pa pb) (Refl _ _))
+              (LtEqEq (Char) CharLt a))))
+        (values (No (Char) CharLt a b q2)
+                (coercible-ctor (Shared) No (Nat) (Char) Lt CharLt ka a kb b q q2)))))
+  (coerce r cr))
+
 (def-adts $ (String : -> Type)
   enum extern
   (many SNil : -> (String))
@@ -1028,16 +1070,16 @@
 
 (let ((many ten)) (Succ (Succ eight)))
 (let ((many ten-dec)) (lt-dec (Zero) ten))
-(comptime-match many ten-dec (Yes tda tdb ten-positive))
+(comptime-match many ten-dec (Yes _ _ tda tdb ten-positive))
 (let ((many ten-dec2)) (lt-dec (Succ (Zero)) ten))
-(comptime-match many ten-dec2 (Yes tea teb ten-above-one))
+(comptime-match many ten-dec2 (Yes _ _ tea teb ten-above-one))
 (let ((many forty-eight)) (nat-add (nat-mul (Succ (Succ (Succ (Succ (Zero))))) ten) eight))
 
 (def-fns _ $ (many digit-char : (many (Nat) d) -> (many (Char) c))
   (let ((many code)) (nat-add forty-eight d))
   (match many (lt-dec code u8-modulus) _
-    ((Yes _ _ p) (MkChar $ MkU8 code p))
-    ((No _ _ _) (MkChar $ MkU8 (Zero) u8-modulus-pos))))
+    ((Yes _ _ _ _ p) (MkChar $ MkU8 code p))
+    ((No _ _ _ _ _) (MkChar $ MkU8 (Zero) u8-modulus-pos))))
 
 (def-fns _ $ (many nat-digits : (subterm many (Nat) n) (many (Rope) acc) -> (many (Rope) r))
   (let-match many n (Succ n1) ((Zero) acc))
@@ -2035,11 +2077,11 @@
     (let-match many a (MkConst _ ha))
     (let-match many b (MkConst _ hb))
     (let ((many za) (many zb)) (values (settled-value _ _ ha) (settled-value _ _ hb)))
-    (let-match many (lt-dec zb (Succ za)) (Yes _ _ le)
-      ((No _ _ _) (fail mw2 here $ str-append "`unary`: " $ str-append (nat-str zb) $ str-append " exceeds " $ nat-str za)))
+    (let-match many (lt-dec zb (Succ za)) (Yes _ _ _ _ le)
+      ((No _ _ _ _ _) (fail mw2 here $ str-append "`unary`: " $ str-append (nat-str zb) $ str-append " exceeds " $ nat-str za)))
     (let ((many k) (erased _)) (sub za zb le))
-    (let-match many (lt-dec 1024 k) (No _ _ _)
-      ((Yes _ _ _) (fail mw2 here $ str-append "`unary`: " $ str-append (nat-str k) " successors is beyond the limit")))
+    (let-match many (lt-dec 1024 k) (No _ _ _ _ _)
+      ((Yes _ _ _ _ _) (fail mw2 here $ str-append "`unary`: " $ str-append (nat-str k) " successors is beyond the limit")))
     (let ((unique mw3) (many rs)) (succs mw2 k _ hb))
     (let-match many rs (Ok _ s) ((Fail _ msg) (fail mw3 here msg)))
     (let-match many s (MkConst _ hs))
@@ -2061,8 +2103,8 @@
     (let-match many a (MkConst _ ha))
     (let-match many b (MkConst _ hb))
     (let ((many za) (many zb)) (values (settled-value _ _ ha) (settled-value _ _ hb)))
-    (let-match many (lt-dec za zb) (Yes _ _ p)
-      ((No _ _ _) (fail mw1 here $ str-append "`prove-literal-lt`: " $ str-append (nat-str za) $ str-append " is not below " $ nat-str zb)))
+    (let-match many (lt-dec za zb) (Yes _ _ _ _ p)
+      ((No _ _ _ _ _) (fail mw1 here $ str-append "`prove-literal-lt`: " $ str-append (nat-str za) $ str-append " is not below " $ nat-str zb)))
     (let ((unique mw2) (many rt)) (settled-ty-apply mw1 (settled-of erased Lt) (settled-erase _ _ _ ha) (settled-erase _ _ _ hb)))
     (let-match many rt (Ok _ th) ((Fail _ msg) (fail mw2 here msg)))
     (let ((unique mw3) (many hp)) (mint-settled-erased mw2 _ th p))
@@ -2072,9 +2114,10 @@
 (def-fns _ $ (many digit-of : (many (Char) c) -> (many (Maybe (Nat)) d))
   (let-match many c (MkChar u))
   (let-match many u (MkU8 code _))
-  (let-match many (lt-dec code forty-eight) (No _ _ ge) ((Yes _ _ _) (None (Nat))))
+  (let-match many (lt-dec code forty-eight) (No _ _ _ _ le-ge) ((Yes _ _ _ _ _) (None (Nat))))
+  (let ((erased ge)) (lt-eq-succ _ _ le-ge))
   (let ((many d) (erased _)) (sub code forty-eight ge))
-  (match many (lt-dec d ten) _ ((Yes _ _ _) (Some (Nat) d)) ((No _ _ _) (None (Nat)))))
+  (match many (lt-dec d ten) _ ((Yes _ _ _ _ _) (Some (Nat) d)) ((No _ _ _ _ _) (None (Nat)))))
 
 (def-fns _ $ (many digits-nat : (subterm many (String) s) (many (Nat) acc) -> (many (Maybe (Nat)) n))
   (let-match many s (SCons c rest) ((SNil) (Some (Nat) acc)))

@@ -42,7 +42,7 @@
 (def-lvl A10)
 (def-lvl A1)
 (let ((many d3)) (lt-dec 3 u8-modulus))
-(comptime-match many d3 (Yes za3 zb3 zp3))
+(comptime-match many d3 (Yes _ _ za3 zb3 zp3))
 (let ((many code3)) (MkU8 3 zp3))
 (def-fns A10 $ (many lib-echo : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program A1) p))
   (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
@@ -54,7 +54,7 @@
 
 (def-lvl A2)
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (def-unique A2 $ (unique banner : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program A2) p))
   (let ((unique w1) (many args)) (world-do _ w (GetArgs)))

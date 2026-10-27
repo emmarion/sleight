@@ -1,6 +1,6 @@
 ; error: declared `many`, used at unique
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za zb zp))
+(comptime-match many d0 (Yes _ _ za zb zp))
 (let ((many code0)) (MkU8 0 zp))
 (def-adts $ (Box : -> Type) enum newtype (many MkBox : (unique (World) x) -> (Box)))
 (def-lvl P)

@@ -48,7 +48,8 @@
 
 (def-fns M $ (erased sub-lt : (erased (Nat) a) (erased (Nat) b) (erased (Subterm (Nat) a (Nat) b) q) ->
     (erased (Lt a b) l))
-  (let-match erased (lt-dec (predates nm) a b) (No _ _ r) ((Yes _ _ p) p))
+  (let-match erased (lt-dec (predates nm) a b) (No _ _ _ _ le-r) ((Yes _ _ _ _ p) p))
+  (let ((erased r)) (lt-eq-succ _ _ le-r))
   (let-match erased (le-split (predates lm) a b r) (Left _ _ e)
     ((Right _ _ l)
       (explode (predates lm) (Lt a b)
@@ -61,9 +62,9 @@
 ; warns: tests/lt_subterm.sl:41:31: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/lt_subterm.sl:42:43: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/lt_subterm.sl:51:29: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:52:31: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:57:56: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:57:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:55:56: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:55:15: warning: unnecessary `(predates _)`; drop it
-; warns: tests/lt_subterm.sl:54:16: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:53:31: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:58:56: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:58:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:56:56: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:56:15: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:55:16: warning: unnecessary `(predates _)`; drop it

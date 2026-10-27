@@ -17,7 +17,7 @@
   (match many (nat-cmp a b) _
     ((CLt _ _ _ _ _) (match many (nat-cmp b c) _ ((CLt _ _ _ _ _) 0) ((CEq _ _ _) 1) ((CGt _ _ _ _ _) 2)))
     ((CEq _ _ _) 3)
-    ((CGt _ _ _ _ _) (match many (lt-dec c a) _ ((Yes _ _ _) 4) ((No _ _ _) 5)))))
+    ((CGt _ _ _ _ _) (match many (lt-dec c a) _ ((Yes _ _ _ _ _) 4) ((No _ _ _ _ _) 5)))))
 
 (def-fns _ $ (many unequal : (many (Nat) a) (many (Nat) b) -> (many (Nat) r))
   (match many (nat-cmp a b) _
@@ -30,8 +30,8 @@
 (def-fns _ $ (many count : (subterm many (Nat) n) (many (Nat) acc) -> (many (Nat) r))
   (let-match many n (Succ k) ((Zero) acc))
   (match many (lt-dec k 500000) _
-    ((Yes _ _ _) (tail $ count k acc))
-    ((No _ _ _) (tail $ count k $ Succ acc))))
+    ((Yes _ _ _ _ _) (tail $ count k acc))
+    ((No _ _ _ _ _) (tail $ count k $ Succ acc))))
 
 (def-fns _ $ (many run : -> (many (Out) o))
   (let ((many big)) (nat-mul (nat-mul 1073741824 1073741824) 1024))

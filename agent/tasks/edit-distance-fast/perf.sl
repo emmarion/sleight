@@ -87,7 +87,7 @@
   (str-append label (str-append " " (str-append (nat-str v) (str-append "\n" rest)))))
 
 (def-fns _ $ (many perf-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
-  (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ _ _ le) ((No _ _ _ _ _) 0))
   (let ((many c) (erased _)) (sub a b le))
   c)
 

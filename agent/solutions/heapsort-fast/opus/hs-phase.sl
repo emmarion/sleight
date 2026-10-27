@@ -163,7 +163,7 @@
 
 (def-fns _ $ (erased covers-prepend : (erased (List Elt) xs) (erased (Nat) n) (erased (Nat) k) (erased (Nat) c)
     (erased (Covers xs n k (Succ c)) cv) (erased (ParentOf k c) pk) -> (erased (Covers xs n k c) r))
-  (let-match erased (lt-dec c n) (Yes _ _ cn) ((No _ _ q) (CEnd xs n k c q)))
+  (let-match erased (lt-dec c n) (Yes _ _ _ _ cn) ((No _ _ _ _ le-q) (let ((erased q)) (lt-eq-succ _ _ le-q)) (CEnd xs n k c q)))
   (CSkip xs n k c pk cn cv))
 
 ; Moving the build phase down to position i, whose children are 2i+1 and 2i+2.

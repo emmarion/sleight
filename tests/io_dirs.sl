@@ -12,10 +12,10 @@
 ; A failure ends the program through a Result-returning step, its helpers threading the world.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (let ((many d1)) (lt-dec 1 u8-modulus))
-(comptime-match many d1 (Yes za1 zb1 zp1))
+(comptime-match many d1 (Yes _ _ za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
 
 (def-fns _ $ (many say : (many (String) text) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))

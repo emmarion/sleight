@@ -177,8 +177,8 @@
     (many (List (Copy (Nat))) cs) (erased (Copies (Nat) (Cons (Nat) h acc) cs) rel)
     -> (erased (List (Nat)) xs) (erased (Ascending (Nat) Le xs) asc2) (erased (AllTo (Nat) Lt xs u62-modulus) small2)
     (erased (Length (Nat) xs total) len2) (many (List (Copy (Nat))) cs2) (erased (Copies (Nat) xs cs2) rel2))
-  (let-match many (u62-lt-dec (Zero) j u62-modulus-pos jm) (Yes _ _ jpos)
-    ((No _ _ jz)
+  (let-match many (u62-lt-dec (Zero) j u62-modulus-pos jm) (Yes _ _ _ _ jpos)
+    ((No _ _ _ _ le-jz) (let ((erased jz)) (lt-eq-succ _ _ le-jz))
       (let-match erased jz (LtZ _) (absurd (LtS _ _ z0) z0))
       (let-match erased count (AddZero _))
       (values (Cons (Nat) h acc) asc small len cs rel)))
@@ -203,7 +203,7 @@
     (erased (List (Copy (Nat))) cs) (many (Array (Copy (Nat)) cs) a) (erased (Copies (Nat) xs cs) rel)
     (subterm many (Nat) q) (erased (Lt q u62-modulus) qm) (many (Nat) found)
     (erased (Nat) t) (erased (Add found q t) ft) (erased (Lt t u62-modulus) tm) -> (many (Nat) total))
-  (let-match many (u62-lt-dec (Zero) q u62-modulus-pos qm) (Yes _ _ qpos) ((No _ _ _) found))
+  (let-match many (u62-lt-dec (Zero) q u62-modulus-pos qm) (Yes _ _ _ _ qpos) ((No _ _ _ _ _) found))
   (let-match erased qpos (LtZ q1))
   (let ((erased q1m)) (lt-trans q1 q u62-modulus (lt-succ q1) qm))
   (let ((many q1r)) (u62-dec q1 q qm))
@@ -239,7 +239,7 @@
 ;! suppress warn lt-dec
 ;! suppress warn sub
 (def-fns _ $ (many demo-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
-  (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ _ _ le) ((No _ _ _ _ _) 0))
   (let ((many c) (erased _)) (sub a b le))
   c)
 ;! restore warn sub

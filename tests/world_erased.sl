@@ -2,7 +2,7 @@
 ; exit: 3
 (def-lvl P)
 (let ((many d3)) (lt-dec 3 u8-modulus))
-(comptime-match many d3 (Yes za3 zb3 zp3))
+(comptime-match many d3 (Yes _ _ za3 zb3 zp3))
 (let ((many code3)) (MkU8 3 zp3))
 (def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
   (let ((erased _) (erased _)) (world-do _ w (WriteOut "never\n")))

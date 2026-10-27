@@ -26,7 +26,7 @@
     (erased (List Elt) ys) (erased (Swap xs k m ys) sw) (erased Elt xm) (erased (Nth Elt xs m xm) nm)
     (erased (Lt a (Succ m)) am) (erased (Lt k m) km)
     (erased (Nat) len) (erased (Length Elt xs len) lenp) (erased (Lt n (Succ len)) nl) -> (erased (Bnd ys n c k) r))
-  (let-match erased (lt-dec c n) (Yes _ _ cn) ((No _ _ q) (BOut ys n c k q)))
+  (let-match erased (lt-dec c n) (Yes _ _ _ _ cn) ((No _ _ _ _ le-q) (let ((erased q)) (lt-eq-succ _ _ le-q)) (BOut ys n c k q)))
   (let ((erased xc) (erased nc)) (nth-exists Elt xs len c lenp (lt-le-trans c n len cn nl)))
   (let ((erased mc)) (parent-lt m c pmc))
   (let ((erased le)) (covers-lookup xs n k a cv c (lt-trans a (Succ m) (Succ c) am (LtS m c mc)) cn m pmc (NeG m k km)

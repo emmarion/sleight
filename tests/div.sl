@@ -17,7 +17,7 @@
 (let ((erased nq)) (prove-predates nat-lvl Q))
 (let ((erased sq)) (prove-predates S Q))
 (def-fns Q $ (many slow-div : (subterm many (Nat) n) (many (Nat) d1) -> (many (Nat) q))
-  (let-match many (lt-dec (predates nq) d1 n) (Yes _ _ lt) ((No _ _ _) (Zero)))
+  (let-match many (lt-dec (predates nq) d1 n) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (Zero)))
   (let ((many r) (erased p)) (sub-pos (predates sq) n d1 lt))
   (Succ (notail $ slow-div (subterm p) r d1)))
 

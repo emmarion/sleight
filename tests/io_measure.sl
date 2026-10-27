@@ -1,7 +1,7 @@
 ; expect: 5050
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
-(comptime-match many d0 (Yes za zb zp))
+(comptime-match many d0 (Yes _ _ za zb zp))
 
 (def-fns _ $ (many sum-to : (subterm many (Nat) n) -> (many (Nat) s))
   (let-match many n (Succ m) ((Zero) 0))
