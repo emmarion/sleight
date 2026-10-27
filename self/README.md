@@ -77,8 +77,11 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   256-entry table built when slc is compiled; `read-string` reads a
   literal from its opening quote by index, returning the body, the
   length taken and the rest, the body a slice of the source when nothing
-  is escaped and otherwise decoded into one `Bytes` buffer. Every read
-  and write of both is in bounds by proof.
+  is escaped and otherwise decoded into one `Bytes` buffer of the
+  decoded length, which the scan for the closing quote counts: both
+  passes build an `EscRun`, the decoding steps over the source's
+  characters, and the decoder's writes are bounded by the scan's count
+  through it. Every read and write of both is in bounds by proof.
 - `heap.sl` — a store for the compile-time interpreter, parametric in
   its block type: addresses below a bound, carried as their bijective
   spelling with erased `Numeral` and `Lt` proofs, widened by a `coerce`;
