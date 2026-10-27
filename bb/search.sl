@@ -663,7 +663,66 @@
 
 (def-adts $ (Stage : -> Type)
   enum
-  (many MkStage : (many (Nat) steps) (many (List (Setting)) hs) -> (Stage)))
+  (many MkStage : (many (Nat) steps) (many (List (Setting)) hs) (many (Maybe (HMap (Nat))) hints) -> (Stage)))
+
+(def-fns _ $ (many pt-code : (many (PT) x) -> (many (Nat) c))
+  (let-match many x (Def t) ((Undef) 0))
+  (let-match many t (Mov w d q) ((Hlt) 1))
+  (let ((many wd)) (match many w (((Nat) a)) ((BFalse) (match many d (((Nat) a)) ((DL) 0) ((DR) 1))) ((BTrue) (match many d (((Nat) a)) ((DL) 2) ((DR) 3)))))
+  (let ((many a) (erased _)) (mul wd 8))
+  (let ((many b) (erased _)) (add a q))
+  (let ((many c) (erased _)) (add b 2))
+  c)
+
+(def-fns _ $ (many pt-key : (subterm many (List (PT)) p) -> (many (List (KN)) k))
+  (let-match many p (Cons _ x rest) ((Nil _) (Nil (KN))))
+  (Cons (KN) (kn (pt-code x)) (notail $ pt-key rest)))
+
+(def-fns _ $ (many dig : (many (Char) c) -> (many (Nat) d))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 v _))
+  (let-match many (lt-dec 48 (Succ v)) (Yes _ _ _ _ le) ((No _ _ _ _ _) 0))
+  (let ((many d) (erased _)) (sub v 48 le))
+  d)
+
+(def-fns _ $ (many take-digs : (subterm many (Nat) n) (many (String) s) -> (many (List (KN)) k) (many (String) s2))
+  (let-match many n (Succ n1) ((Zero) (values (Nil (KN)) s)))
+  (let-match many s (SCons c rest) ((SNil) (values (Nil (KN)) s)))
+  (let ((many ks) (many s2)) (notail $ take-digs n1 rest))
+  (values (Cons (KN) (kn (dig c)) ks) s2))
+
+(def-fns _ $ (many hint-map : (subterm many (Nat) fuel) (many (String) s) (many (HMap (Nat)) m) -> (many (HMap (Nat)) r))
+  (let-match many fuel (Succ f) ((Zero) m))
+  (let ((many ks) (many s2)) (take-digs 10 s))
+  (let ((many ds) (many s3)) (take-digs 2 s2))
+  (let-match many ds (Cons _ a ds1) ((Nil _) m))
+  (let-match many ds1 (Cons _ b _) ((Nil _) m))
+  (let ((many a10) (erased _)) (mul (kv a) 10))
+  (let ((many i) (erased _)) (add a10 (kv b)))
+  (tail $ hint-map f s3 (hset _ m ks i)))
+
+(def-fns _ $ (many hints-of : (many (String) s) -> (many (HMap (Nat)) m))
+  (let ((many n) (erased _)) (str-length s))
+  (tail $ hint-map n s (HE (Nat))))
+
+(def-fns _ $ (many nth-opt : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (Maybe A) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (None A)))
+  (let-match many i (Succ i1) ((Zero) (Some A x)))
+  (tail $ nth-opt A rest i1))
+
+(def-adts $ (Try : -> Type)
+  enum
+  (many TGot : (many (Cert) ct) -> (Try))
+  (many TMiss : -> (Try))
+  (many TBad : -> (Try)))
+
+(def-fns _ $ (many stage-try : (many (Stage) st) (many (List (PT)) p) -> (many (Try) r))
+  (let-match many st (MkStage _ hs hm))
+  (let-match many hm (Some _ m) ((None _) (match many (gen-cert p hs) _ ((Some _ ct) (TGot ct)) ((None _) (TMiss)))))
+  (let-match many (hfind _ m (pt-key p)) (Some _ i) ((None _) (TMiss)))
+  (let-match many (nth-opt _ hs i) (Some _ se) ((None _) (TBad)))
+  (let-match many (search p se) (Some _ ct) ((None _) (TBad)))
+  (TGot ct))
 
 (def-fns _ $ (many eq-pts : (subterm many (List (PT)) a) (many (List (PT)) b) -> (many (Maybe (Eq (List (PT)) a b)) r))
   (let-match many a (Cons _ x xs) ((Nil _) (match many b _ ((Nil _) (Some _ (Refl (List (PT)) a))) ((Cons _ _ _) (None _)))))
@@ -691,7 +750,7 @@
        (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) (erased (PLook p q h (Undef)) pl)
        -> (Leaf n k hl p))))
 
-(def-fns _ $ (many classify : (many (Nat) n k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (List (Setting)) hs)
+(def-fns _ $ (many classify : (many (Nat) n k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (Stage) cur)
     (subterm many (List (Stage)) sts) (many (PSimR p) res) -> (many (Leaf n k hl p) r))
   (let ((many fail)) (LDone n k hl p (RFail _)))
   (match many res _
@@ -700,11 +759,12 @@
       (LDone n k hl p (ROk _ (TH n k hl p t q l r h pr pl lt))))
     ((PSUndef _ t q l r h pr pl) (LSplit n k hl p t q l r h pr pl))
     ((PSOut _ t q l r h pr)
-      (let-match many (gen-cert p hs) (None _) ((Some _ ct) (LDone n k hl p (check-cert n k hl p ct))))
-      (let-match many sts (Cons _ st rest)
-        ((Nil _) (match many (find-hole p hl) _ ((Some _ mh) (LDone n k hl p (ROk _ (THole n k hl p mh)))) ((None _) fail))))
-      (let-match many st (MkStage steps hs2))
-      (tail $ classify n k hl p hs2 rest (psim p steps t q l h r pr)))))
+      (let ((many tr)) (stage-try cur p))
+      (let-match many tr (TMiss) ((TGot ct) (LDone n k hl p (check-cert n k hl p ct))) ((TBad) fail))
+      (let-match many (find-hole p hl) (None _) ((Some _ mh) (LDone n k hl p (ROk _ (THole n k hl p mh)))))
+      (let-match many sts (Cons _ st rest) ((Nil _) fail))
+      (let-match many st (MkStage steps _ _))
+      (tail $ classify n k hl p st rest (psim p steps t q l h r pr)))))
 
 (def-fns _
   ((many build : (many (Nat) n) (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl)
@@ -712,8 +772,8 @@
     (let-match many (all-go p) (RFail _) ((ROk _ g) (ROk _ (TF n k hl p g))))
     (let-match many (cyc-cert n k hl p) (RFail _) ((ROk _ tn) (ROk _ tn)))
     (let-match many pn (Cons _ st0 sts) ((Nil _) (RFail _)))
-    (let-match many st0 (MkStage lim hs))
-    (let-match many (classify n k hl p hs sts (psim p lim (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)))
+    (let-match many st0 (MkStage lim _ _))
+    (let-match many (classify n k hl p st0 sts (psim p lim (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)))
       (LSplit _ _ _ _ t q l r h pr pl) ((LDone _ _ _ _ res) res))
     (let-match many dep (Succ d1) ((Zero) (RFail _)))
     (let ((many c)) (seen p (Succ (Zero))))
