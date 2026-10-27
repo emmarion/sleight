@@ -102,7 +102,7 @@ and run_mode name externs src flags =
   Eval.fuel := Option.map int_of_string (List.nth_opt (directive src "eval-fuel") 0);
   List.iter (fun b -> limit := Result.fold ~ok:Fun.id ~error:failwith (Program.output_limit b); Extract.output_bytes := Some b) (directive src "confine-output-bytes");
   let world =
-    { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
+    { Program.read_rest; read_line; out = Buffer.add_substring printed; err = Buffer.add_substring errors; args;
       env = (fun n -> List.assoc_opt n visible); envs = (fun () -> visible); cwd = Sys.getcwd;
       exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); exec = !Extract.with_exec; fence; limit; used = ref 0 }
   in

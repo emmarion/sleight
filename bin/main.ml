@@ -3,7 +3,7 @@ open Sleight
 let report path f = try Some (f ()) with e -> (match Program.explain path e with Some m -> prerr_endline m; None | None -> raise e)
 
 let world args =
-  let flush_to oc s = output_string oc s; flush oc in
+  let flush_to oc s o l = output_substring oc s o l; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
     exit; print = print_endline; exec = true; fence = ref Program.unconfined; limit = ref None; used = ref 0 }

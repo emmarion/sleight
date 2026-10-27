@@ -587,7 +587,7 @@ let rec show cx env ty =
 (* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the
    FFI's slice converts to and from the host's string directly. *)
 let host_conversions =
-  "~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) "
+  "~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_slice:(fun v -> (Obj.obj v : Ffi_core.slice)) "
 let nat_conversion = "~nat_to_z:(fun v -> (Obj.obj v : Z.t)) ~nat_of_z:Obj.repr "
 let apply_ocaml =
   "(fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs)"
@@ -614,7 +614,7 @@ let driver cx =
   let host = (match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "")
              ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
-  ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
+  ^ Printf.sprintf {|let flush_to oc s o l = output_substring oc s o l; flush oc
 let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; exec = true; fence = ref Driver_core.unconfined; limit = ref None; used = ref 0 }
 let world = Driver_core.start %s %s %s %b %b world
 let print_final = Driver_core.print world

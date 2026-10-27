@@ -135,19 +135,24 @@ let flatten ~rope ~slice ~z ~str root =
   match rope root with
   | RStr s -> str (slice s)
   | _ ->
-      let buf = Buffer.create 64 in
-      let rec go = function
-        | [] -> ()
+      let rec walk leaf acc = function
+        | [] -> acc
         | v :: rest -> (
             match rope v with
-            | REmpty -> go rest
-            | RStr s -> let s, o, l = slice s in Buffer.add_substring buf s o l; go rest
-            | RCat (a, b) -> go (a :: b :: rest)
-            | RChar c -> Buffer.add_char buf (Char.chr (Z.to_int (z c))); go rest)
+            | REmpty -> walk leaf acc rest
+            | RCat (a, b) -> walk leaf acc (a :: b :: rest)
+            | node -> walk leaf (leaf acc node) rest)
       in
-      go [ root ];
-      let s = Buffer.contents buf in
-      str (s, 0, String.length s)
+      let buf = Bytes.create (walk (fun n -> function RStr s -> let _, _, l = slice s in n + l | RChar _ -> n + 1 | _ -> n) 0 [ root ]) in
+      let n =
+        walk
+          (fun j -> function
+            | RStr s -> let s, o, l = slice s in Bytes.blit_string s o buf j l; j + l
+            | RChar c -> Bytes.set buf j (Char.chr (Z.to_int (z c))); j + 1
+            | _ -> j)
+          0 [ root ]
+      in
+      str (Bytes.unsafe_to_string buf, 0, n)
 
 type 'a array_model = ANil | ACons of 'a * 'a
 type 'v list_model = Nil | Cons of 'v * 'v

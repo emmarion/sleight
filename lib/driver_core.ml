@@ -3,8 +3,8 @@ type fence = { reads : string list; writes : string list }
 type world = {
   read_rest : unit -> string;
   read_line : unit -> string option;
-  out : string -> unit;
-  err : string -> unit;
+  out : string -> int -> int -> unit;
+  err : string -> int -> int -> unit;
   args : string list;
   env : string -> string option;
   envs : unit -> (string * string) list;
@@ -84,8 +84,9 @@ type 'v t = { of_string : string -> 'v; to_string : 'v -> string; perform : worl
 exception Halt of int
 
 let read_file path = In_channel.with_open_bin path In_channel.input_all
-let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
-let append_file path s = Out_channel.with_open_gen [ Open_append; Open_creat; Open_wronly ] 0o666 path (fun oc -> Out_channel.output_string oc s)
+let save flags path (s, o, l) = Out_channel.with_open_gen flags 0o666 path (fun oc -> Out_channel.output_substring oc s o l)
+let replacing = [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+let write_file path s = save replacing path (s, 0, String.length s)
 let explain = function Unix.Unix_error (e, _, a) -> (if a = "" then "" else a ^ ": ") ^ Unix.error_message e | Sys_error m -> m | e -> Printexc.to_string e
 let is_dir p = match (Unix.stat p).st_kind with Unix.S_DIR -> true | _ -> false | exception _ -> false
 let parts p = List.filter (fun c -> c <> "" && c <> ".") (String.split_on_char '/' p)
@@ -232,11 +233,11 @@ let spend w cost =
   | None -> true
   | Some limit ->
       cost <= limit - !(w.used) && (w.used := !(w.used) + cost; true)
-      || (w.err (Printf.sprintf "runtime error: output limit exceeded: this request would bring the program's approximate output to %d bytes, over its limit of %d\n" (!(w.used) + cost) limit); false)
+      || (let m = Printf.sprintf "runtime error: output limit exceeded: this request would bring the program's approximate output to %d bytes, over its limit of %d\n" (!(w.used) + cost) limit in w.err m 0 (String.length m); false)
 
 let print w s = if spend w (String.length s + 1) then w.print s else w.exit 1
 
-let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
+let make ?str_of_host ?str_to_slice ?nat_to_z ?nat_of_z o =
   let rec count z v = match o.pred v with Some p -> count (Z.succ z) p | None -> z in
   let to_z = Option.value nat_to_z ~default:(count Z.zero) in
   let u8 v = Z.to_int (to_z (o.un_u8 v)) in
@@ -247,15 +248,16 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     | None ->
         String.fold_right (fun ch acc -> o.scons (o.char (o.u8 (nat (Char.code ch)))) acc) s o.snil
   in
-  let to_string v =
-    match str_to_host with
+  let to_slice v =
+    match str_to_slice with
     | Some f -> f v
     | None ->
         let buf = Buffer.create 64 in
         let rec go v = match o.un_str v with Some (ch, rest) -> Buffer.add_char buf (Char.chr (u8 (o.un_char ch))); go rest | None -> () in
         go v;
-        Buffer.contents buf
+        (Buffer.contents buf, 0, Buffer.length buf)
   in
+  let to_string v = let s, i, n = to_slice v in String.sub s i n in
   let started = lazy (Unix.gettimeofday (), Unix.times (), Gc.quick_stat (), Gc.minor_words ()) in
   let perform w req =
     let entered = Gc.minor_words () in
@@ -277,8 +279,8 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
       | Error m -> o.fail (of_string m)
     in
     let read p = result (fun () -> of_string (read_file p)) in
-    let write out s = let s = to_string s in if spend w (String.length s) then (out s; o.unit) else raise (Halt 1) in
-    let write_to f path s = let s = to_string s in fenced ~access:Write ~cost:(fun p -> String.length s + created p) path (fun p -> result (fun () -> f p s; o.unit)) in
+    let write out s = let t, i, n = to_slice s in if spend w n then (out t i n; o.unit) else raise (Halt 1) in
+    let write_to flags path s = let (_, _, n) as x = to_slice s in fenced ~access:Write ~cost:(fun p -> n + created p) path (fun p -> result (fun () -> save flags p x; o.unit)) in
     match o.request req with
     | WriteOut s -> write w.out s
     | WriteErr s -> write w.err s
@@ -288,11 +290,11 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
         match within (to_string dir) (to_string path) with
         | Ok (full, read) -> fenced (of_string full) (fun _ -> match read () with Ok s -> o.ok (of_string s) | Error m -> o.fail (of_string m))
         | Error m -> o.fail (of_string m))
-    | WriteFile (path, s) -> write_to write_file path s
+    | WriteFile (path, s) -> write_to replacing path s
     | GetArgs -> list of_string w.args
     | GetEnv name -> (match w.env (to_string name) with Some v -> o.some (of_string v) | None -> o.none)
     | GetEnvs -> list (fun (n, v) -> o.pair (of_string n) (of_string v)) (List.sort compare (w.envs ()))
-    | AppendFile (path, s) -> write_to append_file path s
+    | AppendFile (path, s) -> write_to [ Open_append; Open_creat; Open_wronly ] path s
     | ReadRemaining -> of_string (w.read_rest ())
     | ListDir path -> fenced path (fun p -> result (fun () -> list of_string (List.sort compare (Array.to_list (Sys.readdir p)))))
     | GetCwd -> of_string (w.cwd ())
@@ -359,5 +361,5 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
     let rec loop v = match o.step v with Exit code -> u8 code | Continue k -> loop (o.apply k []) in
     try loop v with Halt code -> code
   in
-  let run_main w f = let s = to_string (o.apply f [ of_string (w.read_rest ()) ]) in if spend w (String.length s) then w.out s else w.exit 1 in
+  let run_main w f = let s, i, n = to_slice (o.apply f [ of_string (w.read_rest ()) ]) in if spend w n then w.out s i n else w.exit 1 in
   { of_string; to_string; perform; run_program; run_main }
