@@ -4,12 +4,6 @@
   (let-match many (nat-eq x y) (Equal _ _ _) (else (BFalse)))
   (tail $ nats-eq xr yr))
 
-(def-fns _ $ (many key-index : (many (List (Nat)) k) (subterm many (List (List (Nat))) t) (many (Nat) i) -> (many (Maybe (Nat)) r))
-  (let-match many t (Cons _ x rest) ((Nil _) (None _)))
-  (match many (nats-eq k x) _
-    ((BTrue) (Some _ i))
-    ((BFalse) (tail $ key-index k rest (Succ i)))))
-
 (def-fns _ $ (many snoc : (erased Type A) (subterm many (List A) xs) (many A y) -> (many (List A) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Cons A y (Nil A))))
   (Cons A x (notail $ snoc A rest y)))
@@ -28,22 +22,85 @@
   (let-match many n (Succ n1) ((Zero) (Nil A)))
   (Cons A x (notail $ repeat A n1 x)))
 
-(def-fns _ $ (many intern : (many (List (Nat)) k) (many (List (List (Nat))) t) -> (many (Nat) i) (many (List (List (Nat))) t2) (many (Bool) new))
-  (let-match many (key-index k t 0) (None _) ((Some _ i) (values i t (BFalse))))
-  (let ((many n) (erased _)) (list-count _ t))
-  (values n (snoc _ t k) (BTrue)))
+(def-adts
+  ((HMap : (Type A) -> Type)
+    enum
+    (many HE : (erased Type A) -> (HMap A))
+    (many HN : (erased Type A) (many (Nat) h) (many (List (Nat)) k) (many A v) (many (HMap A) l) (many (HMap A) r) -> (HMap A))))
 
-(def-fns _ $ (many bits : (subterm many (List (List (Nat))) t) -> (many (List (Bool)) bs))
-  (let-match many t (Cons _ key rest) ((Nil _) (Nil (Bool))))
-  (let ((many more)) (notail $ bits rest))
+(def-fns _ $ (many hash : (subterm many (List (Nat)) k) (many (Nat) acc) -> (many (Nat) h))
+  (let-match many k (Cons _ x rest) ((Nil _) acc))
+  (let ((many a1) (erased _)) (mul acc 8))
+  (let ((many a2) (erased _)) (add a1 (Succ x)))
+  (tail $ hash rest a2))
+
+(def-fns _ $ (many hit : (many (Nat) h h2) (many (List (Nat)) k k2) -> (many (Bool) b))
+  (match many (nat-eq h h2) _ ((Equal _ _ _) (nats-eq k k2)) (else (BFalse))))
+
+(def-fns _ $ (many hget : (erased Type A) (subterm many (HMap A) t) (many (Nat) h hh) (many (List (Nat)) k) -> (many (Maybe A) r))
+  (let-match many t (HN _ h2 k2 v l r) ((HE _) (None A)))
+  (let-match many (hit h h2 k k2) (BFalse) ((BTrue) (Some A v)))
+  (match many (nat-halve hh) _
+    ((HZ) (tail $ hget A l h hh k))
+    ((H1 m _ _) (tail $ hget A l h m k))
+    ((H2 m _ _) (tail $ hget A r h m k))))
+
+(def-fns _ $ (many hput : (erased Type A) (subterm many (HMap A) t) (many (Nat) h hh) (many (List (Nat)) k) (many A v) -> (many (HMap A) r))
+  (let-match many t (HN _ h2 k2 v2 l r) ((HE _) (HN A h k v (HE A) (HE A))))
+  (let-match many (hit h h2 k k2) (BFalse) ((BTrue) (HN A h k v l r)))
+  (match many (nat-halve hh) _
+    ((HZ) (HN A h2 k2 v2 (notail $ hput A l h hh k v) r))
+    ((H1 m _ _) (HN A h2 k2 v2 (notail $ hput A l h m k v) r))
+    ((H2 m _ _) (HN A h2 k2 v2 l (notail $ hput A r h m k v)))))
+
+(def-fns _ $ (many hfind : (erased Type A) (many (HMap A) t) (many (List (Nat)) k) -> (many (Maybe A) r))
+  (let ((many h)) (hash k 0))
+  (hget A t h h k))
+
+(def-fns _ $ (many hset : (erased Type A) (many (HMap A) t) (many (List (Nat)) k) (many A v) -> (many (HMap A) r))
+  (let ((many h)) (hash k 0))
+  (hput A t h h k v))
+
+(def-adts $ (Tab : -> Type)
+  enum
+  (many MkTab : (many (Nat) n) (many (HMap (Nat)) ids) (many (HMap (List (Nat))) keys) (many (HMap (List (List (Nat)))) ix) -> (Tab)))
+
+(def-fns _ $ (many tab-get : (many (Tab) t) (many (Nat) i) -> (many (Maybe (List (Nat))) k))
+  (let-match many t (MkTab _ _ keys _))
+  (hget _ keys i i (Cons (Nat) i (Nil (Nat)))))
+
+(def-fns _ $ (many ix-get : (many (Tab) t) (many (List (Nat)) pk) -> (many (List (List (Nat))) ks))
+  (let-match many t (MkTab _ _ _ ix))
+  (match many (hfind _ ix pk) _ ((Some _ ks) ks) ((None _) (Nil _))))
+
+(def-fns _ $ (many tab-intern : (many (Bool) ixd) (many (List (Nat)) k) (many (Tab) t) -> (many (Nat) i) (many (Tab) t2) (many (Bool) new))
+  (let-match many t (MkTab n ids keys ix))
+  (let ((many h)) (hash k 0))
+  (let-match many (hget _ ids h h k) (None _) ((Some _ i) (values i t (BFalse))))
+  (let ((many ix2))
+    (match many ixd (((HMap (List (List (Nat)))) x))
+      ((BFalse) ix)
+      ((BTrue)
+        (let-match many k (Cons _ side g) ((Nil _) ix))
+        (let ((many pk)) (Cons (Nat) side (but-last _ g)))
+        (hset _ ix pk (Cons _ k (ix-get t pk))))))
+  (values n (MkTab (Succ n) (hput _ ids h h k n) (hput _ keys n n (Cons (Nat) n (Nil (Nat))) k) ix2) (BTrue)))
+
+(def-fns _ $ (many tab-of : (many (Bool) ixd) (subterm many (List (List (Nat))) ks) (many (Tab) t) -> (many (Tab) t2))
+  (let-match many ks (Cons _ k rest) ((Nil _) t))
+  (let ((many _) (many t1) (many _)) (tab-intern ixd k t))
+  (tail $ tab-of ixd rest t1))
+
+(def-fns _ $ (many tab-bits : (many (Tab) t) (many (Nat) i) (subterm many (Nat) n) -> (many (List (Bool)) bs))
+  (let-match many n (Succ n1) ((Zero) (Nil (Bool))))
+  (let ((many more)) (notail $ tab-bits t (Succ i) n1))
+  (let-match many (tab-get t i) (Some _ key) ((None _) more))
   (let-match many key (Cons _ b _) ((Nil _) more))
-  (match many b _
-    ((Zero) (Cons (Bool) (BFalse) more))
-    ((Succ _) (Cons (Bool) (BTrue) more))))
+  (match many b _ ((Zero) (Cons (Bool) (BFalse) more)) ((Succ _) (Cons (Bool) (BTrue) more))))
 
 (def-adts $ (GSt : -> Type)
   enum
-  (many MkGSt : (many (List (List (Nat))) sy) (many (List (List (Nat))) st) (many (List (ACN)) S) (many (Bool) ch) -> (GSt)))
+  (many MkGSt : (many (Tab) sy st) (many (List (ACN)) S) (many (HMap (Bool)) ss) (many (Bool) ch) -> (GSt)))
 
 (def-adts $ (Setting : -> Type)
   enum
@@ -129,19 +186,18 @@
   (let-match many u (Cons _ c u1) ((Nil _) (rw-pop-edges side (rw-pops ln T L))))
   (Cons _ (MkPair _ _ c (Cons (Nat) side (rw-enc u1 L))) (Nil _)))
 
-(def-fns _ $ (many sn-edges : (many (Nat) side c) (many (List (Nat)) gt) (subterm many (List (List (Nat))) t) -> (many (List (Pair (Nat) (List (Nat)))) es))
-  (let-match many t (Cons _ key rest) ((Nil _) (Nil _)))
-  (let ((many more)) (notail $ sn-edges side c gt rest))
-  (let-match many key (Cons _ s2 g2) ((Nil _) more))
-  (let-match many (nat-eq s2 side) (Equal _ _ _) (else more))
-  (let-match many (nats-eq (but-last _ g2) gt) (BTrue) ((BFalse) more))
-  (Cons _ (MkPair _ _ c key) more))
+(def-fns _ $ (many with-c : (many (Nat) c) (subterm many (List (List (Nat))) ks) -> (many (List (Pair (Nat) (List (Nat)))) es))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
+  (Cons _ (MkPair _ _ c k) (notail $ with-c c rest)))
 
-(def-fns _ $ (many edges-of : (many (Setting) se) (many (List (List (Nat))) st) (many (List (Nat)) key) -> (many (List (Pair (Nat) (List (Nat)))) es))
+(def-fns _ $ (many sn-ix : (many (Setting) se) -> (many (Bool) b))
+  (match many se _ ((SN _ _ _ _ _) (BTrue)) ((SW _ _ _) (BFalse))))
+
+(def-fns _ $ (many edges-of : (many (Setting) se) (many (Tab) st) (many (List (Nat)) key) -> (many (List (Pair (Nat) (List (Nat)))) es))
   (let-match many key (Cons _ side g) ((Nil _) (Nil _)))
   (let-match many se (SN _ _ _ _ _) ((SW ln T _) (rw-edges ln T side g)))
   (let-match many g (Cons _ c gt) ((Nil _) (Nil _)))
-  (sn-edges side c gt st))
+  (with-c c (ix-get st (Cons (Nat) side gt))))
 
 (def-fns _ $ (many sym-key : (many (Setting) se) (many (Nat) w q hb) (many (List (Nat)) hist) -> (many (List (Nat)) k))
   (let-match many se (SN _ _ H lru _) ((SW _ _ _) (Cons (Nat) w (Nil (Nat)))))
@@ -162,44 +218,49 @@
 
 (def-adts $ (Push : -> Type)
   enum
-  (many MkPush : (many (Nat) q2) (many (Dir) d) (many (Nat) sid) (many (List (List (Nat))) sy) (many (Nat) no)
-     (many (List (List (Nat))) st) (many (Bool) new) (many (Nat) pi) -> (Push)))
+  (many MkPush : (many (Nat) q2) (many (Dir) d) (many (Nat) sid) (many (Tab) sy) (many (Nat) no) (many (Tab) st) (many (Bool) new) (many (Nat) pi) -> (Push)))
 
 (def-fns _ $ (many push : (many (List (PT)) p) (many (Setting) se) (many (ACN) a) (many (GSt) g) -> (many (Maybe (Push)) r))
-  (let-match many g (MkGSt sy st _ _))
+  (let-match many g (MkGSt sy st _ _ _))
   (let-match many a (MkACN q sl sh sr))
-  (let-match many (nth-r _ sy sh) (NOk _ _ _ hs _) ((NNo _ _ _) (None _)))
+  (let-match many (tab-get sy sh) (Some _ hs) ((None _) (None _)))
   (let-match many hs (Cons _ hb hist) ((Nil _) (None _)))
   (let ((many b)) (match many hb (((Bool) b)) ((Zero) (BFalse)) (else (BTrue))))
   (let-match many (plook p q b) (PLOk _ _ _ x _) ((PLNo _ _ _) (None _)))
   (let-match many x (Def t) ((Undef) (None _)))
   (let-match many t (Go w d q2) ((Halt) (None _)))
   (let ((many wn)) (match many w (((Nat) n)) ((BFalse) 0) ((BTrue) 1)))
-  (let ((many sid) (many sy2) (many _)) (intern (sym-key se wn q hb hist) sy))
+  (let ((many sid) (many sy2) (many _)) (tab-intern (BFalse) (sym-key se wn q hb hist) sy))
   (let ((many O) (many oi) (many pi)) (match many d (((Nat) O) ((Nat) oi) ((Nat) pi)) ((DL) (values 1 sr sl)) ((DR) (values 0 sl sr))))
-  (let-match many (nth-r _ st oi) (NOk _ _ _ okey _) ((NNo _ _ _) (None _)))
+  (let-match many (tab-get st oi) (Some _ okey) ((None _) (None _)))
   (let-match many okey (Cons _ _ o) ((Nil _) (None _)))
-  (let ((many no) (many st2) (many new)) (intern (push-key se O sid o) st))
+  (let ((many no) (many st2) (many new)) (tab-intern (sn-ix se) (push-key se O sid o) st))
   (Some _ (MkPush q2 d sid sy2 no st2 new pi)))
 
-(def-fns _ $ (many add-succ : (many (Nat) q2) (many (Dir) d) (many (Nat) no) (subterm many (List (Pair (Nat) (List (Nat)))) es)
-    (many (List (List (Nat))) st) (many (List (ACN)) S) (many (Bool) ch) -> (many (List (List (Nat))) st2) (many (List (ACN)) S2) (many (Bool) ch2))
-  (let-match many es (Cons _ e rest) ((Nil _) (values st S ch)))
+(def-fns _ $ (many acn-key : (many (ACN) a) -> (many (List (Nat)) k))
+  (let-match many a (MkACN q sl sh sr))
+  (Cons (Nat) q $ Cons (Nat) sl $ Cons (Nat) sh $ Cons (Nat) sr $ Nil (Nat)))
+
+(def-fns _ $ (many add-succ : (many (Bool) ixd) (many (Nat) q2) (many (Dir) d) (many (Nat) no) (subterm many (List (Pair (Nat) (List (Nat)))) es)
+    (many (Tab) st) (many (List (ACN)) S) (many (HMap (Bool)) ss) (many (Bool) ch) ->
+    (many (Tab) st2) (many (List (ACN)) S2) (many (HMap (Bool)) ss2) (many (Bool) ch2))
+  (let-match many es (Cons _ e rest) ((Nil _) (values st S ss ch)))
   (let-match many e (MkPair _ _ c key))
-  (let ((many j) (many st1) (many _)) (intern key st))
+  (let ((many j) (many st1) (many _)) (tab-intern ixd key st))
   (let ((many a)) (match many d (((ACN) a)) ((DL) (MkACN q2 j c no)) ((DR) (MkACN q2 no c j))))
-  (match many (find-acn a S) _
-    ((ROk _ _) (tail $ add-succ q2 d no rest st1 S ch))
-    ((RFail _) (tail $ add-succ q2 d no rest st1 (snoc _ S a) (BTrue)))))
+  (let ((many ak)) (acn-key a))
+  (match many (hfind _ ss ak) _
+    ((Some _ _) (tail $ add-succ ixd q2 d no rest st1 S ss ch))
+    ((None _) (tail $ add-succ ixd q2 d no rest st1 (Cons (ACN) a S) (hset _ ss ak (BTrue)) (BTrue)))))
 
 (def-fns _ $ (many step-cfg : (many (List (PT)) p) (many (Setting) se) (many (ACN) a) (many (GSt) g) -> (many (Maybe (GSt)) r))
   (let-match many (push p se a g) (Some _ pu) ((None _) (None _)))
   (let-match many pu (MkPush q2 d _ sy2 no st2 new pi))
-  (let-match many g (MkGSt _ _ S ch))
-  (let-match many (nth-r _ st2 pi) (NOk _ _ _ pkey _) ((NNo _ _ _) (None _)))
+  (let-match many g (MkGSt _ _ S ss ch))
+  (let-match many (tab-get st2 pi) (Some _ pkey) ((None _) (None _)))
   (let ((many ch1)) (match many new (((Bool) c)) ((BTrue) (BTrue)) ((BFalse) ch)))
-  (let ((many st3) (many S2) (many ch2)) (add-succ q2 d no (edges-of se st2 pkey) st2 S ch1))
-  (Some _ (MkGSt sy2 st3 S2 ch2)))
+  (let ((many st3) (many S2) (many ss2) (many ch2)) (add-succ (sn-ix se) q2 d no (edges-of se st2 pkey) st2 S ss ch1))
+  (Some _ (MkGSt sy2 st3 S2 ss2 ch2)))
 
 (def-fns _ $ (many pass : (many (List (PT)) p) (many (Setting) se) (subterm many (List (ACN)) T) (many (GSt) g) -> (many (Maybe (GSt)) r))
   (let-match many T (Cons _ a rest) ((Nil _) (Some _ g)))
@@ -208,9 +269,9 @@
 
 (def-fns _ $ (many fixpoint : (many (List (PT)) p) (many (Setting) se) (many (Nat) cap) (subterm many (Nat) fuel) (many (GSt) g) -> (many (Maybe (GSt)) r))
   (let-match many fuel (Succ f) ((Zero) (None _)))
-  (let-match many g (MkGSt sy st S _))
-  (let-match many (pass p se S (MkGSt sy st S (BFalse))) (Some _ g2) ((None _) (None _)))
-  (let-match many g2 (MkGSt _ _ S2 ch))
+  (let-match many g (MkGSt sy st S ss _))
+  (let-match many (pass p se S (MkGSt sy st S ss (BFalse))) (Some _ g2) ((None _) (None _)))
+  (let-match many g2 (MkGSt _ _ S2 _ ch))
   (let ((many n) (erased _)) (list-count _ S2))
   (let-match many (lt-dec n cap) (Yes _ _ _) ((No _ _ _) (None _)))
   (match many ch _ ((BFalse) (Some _ g2)) ((BTrue) (tail $ fixpoint p se cap f g2))))
@@ -223,47 +284,53 @@
   (let-match many (notail $ choices p se rest g) (Some _ cs) ((None _) (None _)))
   (Some _ (Cons (Pair (Nat) (Nat)) (MkPair _ _ sid no) cs)))
 
-(def-fns _ $ (many edge-ids : (many (Nat) i) (subterm many (List (Pair (Nat) (List (Nat)))) es) (many (List (List (Nat))) st) (many (List (Edge)) acc) ->
-    (many (List (List (Nat))) st2) (many (List (Edge)) acc2))
+(def-fns _ $ (many edge-ids : (many (Bool) ixd) (many (Nat) i) (subterm many (List (Pair (Nat) (List (Nat)))) es) (many (Tab) st) (many (List (Edge)) acc) ->
+    (many (Tab) st2) (many (List (Edge)) acc2))
   (let-match many es (Cons _ e rest) ((Nil _) (values st acc)))
   (let-match many e (MkPair _ _ c key))
-  (let ((many j) (many st1) (many _)) (intern key st))
-  (tail $ edge-ids i rest st1 (Cons (Edge) (MkE i c j) acc)))
+  (let ((many j) (many st1) (many _)) (tab-intern ixd key st))
+  (tail $ edge-ids ixd i rest st1 (Cons (Edge) (MkE i c j) acc)))
 
-(def-fns _ $ (many all-edges : (many (Setting) se) (subterm many (Nat) fuel) (many (Nat) i) (many (List (List (Nat))) st) (many (List (Edge)) acc) ->
+(def-fns _ $ (many all-edges : (many (Setting) se) (subterm many (Nat) fuel) (many (Nat) i) (many (Tab) st) (many (List (Edge)) acc) ->
     (many (Maybe (List (Edge))) es))
   (let-match many fuel (Succ f) ((Zero) (None _)))
-  (let-match many (nth-r _ st i) (NOk _ _ _ key _) ((NNo _ _ _) (Some _ acc)))
-  (let ((many st2) (many acc2)) (edge-ids i (edges-of se st key) st acc))
+  (let-match many (tab-get st i) (Some _ key) ((None _) (Some _ acc)))
+  (let ((many st2) (many acc2)) (edge-ids (sn-ix se) i (edges-of se st key) st acc))
   (tail $ all-edges se f (Succ i) st2 acc2))
 
 (def-fns _ $ (many zero-keys : (many (Nat) side) (subterm many (Nat) j) (many (List (List (Nat))) acc) -> (many (List (List (Nat))) r))
   (let-match many j (Succ j1) ((Zero) acc))
   (tail $ zero-keys side j1 (Cons _ (Cons (Nat) side (rw-enc (repeat _ j1 0) (Nil (Blk)))) acc)))
 
-(def-fns _ $ (many init-st : (many (Setting) se) ->
-    (many (List (List (Nat))) sy st) (many (Nat) li ri cap) (many (List (Nat)) acc))
+(def-fns _ $ (many empty-tab : -> (many (Tab) t))
+  (MkTab 0 (HE (Nat)) (HE (List (Nat))) (HE (List (List (Nat))))))
+
+(def-fns _ $ (many init-st : (many (Setting) se) -> (many (Tab) sy st) (many (Nat) li ri cap) (many (List (Nat)) acc))
+  (let ((many sy1)) (tab-of (BFalse) (Cons _ (Cons (Nat) 0 (Nil (Nat))) $ Cons _ (Cons (Nat) 1 (Nil (Nat))) $ Nil (List (Nat))) (empty-tab)))
   (let-match many se (SW ln _ cap)
     ((SN kl kr _ _ cap)
-      (values (Cons _ (Cons (Nat) 0 (Nil (Nat))) (Nil (List (Nat))))
-        (Cons _ (Cons (Nat) 0 (repeat _ kl 0)) $ Cons _ (Cons (Nat) 1 (repeat _ kr 0)) $ Nil (List (Nat)))
+      (values sy1 (tab-of (BTrue) (Cons _ (Cons (Nat) 0 (repeat _ kl 0)) $ Cons _ (Cons (Nat) 1 (repeat _ kr 0)) $ Nil (List (Nat))) (empty-tab))
         0 1 cap (Cons (Nat) 0 $ Cons (Nat) 1 $ Nil (Nat)))))
-  (let ((many st)) (zero-keys 0 ln (zero-keys 1 ln (Nil (List (Nat))))))
-  (let ((many n) (erased _)) (list-count _ st))
+  (let ((many keys)) (zero-keys 0 ln (zero-keys 1 ln (Nil (List (Nat))))))
+  (let ((many st)) (tab-of (BFalse) keys (empty-tab)))
+  (let ((many n) (erased _)) (list-count _ keys))
   (let ((many acc) (erased _)) (range n))
-  (let ((many ri)) (match many (key-index (Cons (Nat) 1 (rw-enc (but-last _ (repeat _ ln 0)) (Nil (Blk)))) st 0) (((Nat) i)) ((Some _ i) i) ((None _) 0)))
-  (values (Cons _ (Cons (Nat) 0 (Nil (Nat))) $ Cons _ (Cons (Nat) 1 (Nil (Nat))) $ Nil (List (Nat))) st 0 ri cap acc))
+  (let-match many st (MkTab _ ids _ _))
+  (let ((many ri)) (match many (hfind _ ids (Cons (Nat) 1 (rw-enc (but-last _ (repeat _ ln 0)) (Nil (Blk))))) (((Nat) i)) ((Some _ i) i) ((None _) 0)))
+  (values sy1 st 0 ri cap acc))
 
 (def-fns _ $ (many search : (many (List (PT)) p) (many (Setting) se) -> (many (Maybe (Cert)) r))
   (let ((many sy) (many st) (many li) (many ri) (many cap) (many acc)) (init-st se))
   (let ((many a0)) (MkACN 0 li 0 ri))
-  (let-match many (fixpoint p se cap cap (MkGSt sy st (Cons (ACN) a0 (Nil (ACN))) (BFalse))) (Some _ g) ((None _) (None _)))
-  (let-match many g (MkGSt sy2 st2 S _))
+  (let ((many ss)) (hset _ (HE (Bool)) (acn-key a0) (BTrue)))
+  (let-match many (fixpoint p se cap cap (MkGSt sy st (Cons (ACN) a0 (Nil (ACN))) ss (BFalse))) (Some _ g) ((None _) (None _)))
+  (let-match many g (MkGSt sy2 st2 S _ _))
   (let-match many (choices p se S g) (Some _ ch) ((None _) (None _)))
-  (let ((many n) (erased _)) (list-count _ st2))
+  (let-match many st2 (MkTab n _ _ _))
   (let ((many fuel) (erased _)) (add n cap))
   (let-match many (all-edges se fuel 0 st2 (Nil (Edge))) (Some _ es) ((None _) (None _)))
-  (Some _ (MkCert (bits sy2) es acc S ch a0)))
+  (let-match many sy2 (MkTab nsy _ _ _))
+  (Some _ (MkCert (tab-bits sy2 0 nsy) es acc S ch a0)))
 
 (def-fns _ $ (many gen-cert : (many (List (PT)) p) (subterm many (List (Setting)) hs) -> (many (Maybe (Cert)) r))
   (let-match many hs (Cons _ se rest) ((Nil _) (None _)))
@@ -301,9 +368,17 @@
   (let-match many (notail $ uf-of c1 rest) (ROk _ u) ((RFail _) (RFail _)))
   (ROk _ (UFS c1 x0 x1 rest u)))
 
+(def-fns _ $ (many all-go : (subterm many (List (PT)) p) -> (many (Res (AllGo p)) r))
+  (let-match many p (Cons _ x rest) ((Nil _) (ROk _ (AGNil))))
+  (let-match many x (Def t) ((Undef) (RFail _)))
+  (let-match many t (Go w d q) ((Halt) (RFail _)))
+  (let-match many (notail $ all-go rest) (ROk _ g) ((RFail _) (RFail _)))
+  (ROk _ (AGCons w d q rest g)))
+
 (def-fns _
   ((many build : (many (Nat) n) (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (PT)) p)
        (many (List (Setting)) hs) (many (Nat) lim) -> (many (Res (TNode n k p)) r))
+    (let-match many (all-go p) (RFail _) ((ROk _ g) (ROk _ (TF n k p g))))
     (match many (psim p lim (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p _)) _
       ((PSHalt _ t q l r h pr pl)
         (let-match many (lt-dec (Succ t) (Succ k)) (Yes _ _ lt) ((No _ _ _) (RFail _)))
