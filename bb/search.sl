@@ -327,7 +327,7 @@
   (let ((many ev0) (erased _)) (add qd (kv hb)))
   (let ((many ev)) (kn ev0))
   (match many lru _
-    ((BTrue) (Cons (KN) w (Cons (KN) ev (drop-k ev hist))))
+    ((BTrue) (Cons (KN) w (Cons (KN) q (drop-k q hist))))
     ((BFalse) (Cons (KN) w (take _ H (Cons (KN) ev hist))))))
 
 (def-fns _ $ (many push-key : (many (Setting) se) (many (KN) O sid) (many (List (KN)) o) -> (many (List (KN)) k))
@@ -615,7 +615,6 @@
     (many (List (Bool)) r) (many (Side) sr sl) (many (Snap) snap) (many (Nat) st nx) (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr)
     -> (many (NR p) res))
   (let ((many out)) (NROut p (PSOut p t q l r h pr)))
-  (let-match many fuel (Succ f) ((Zero) out))
   (let-match many (cfg-eq snap q l h r) (BFalse)
     ((BTrue)
       (let ((many n) (erased _)) (list-count _ l))
@@ -626,6 +625,7 @@
   (let-match many cr (None _) ((Some _ c) (NRCyc p c)))
   (let ((many cl) (many sl2)) (side sl (BTrue) t pos q r h l))
   (let-match many cl (None _) ((Some _ c) (NRCyc p c)))
+  (let-match many fuel (Succ f) ((Zero) out))
   (let-match many (plook p q h) (PLOk _ _ _ x pl) ((PLNo _ _ _) out))
   (let-match many x (Def tr) ((Undef) (NRUndef p q h (MkPar p t q pos l r h sr sl snap st nx pr pl))))
   (let-match many tr (Mov w d q2) ((Hlt) (NRHalt p t q l r h pr pl)))
