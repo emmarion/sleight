@@ -21,7 +21,7 @@
   (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--no-exec" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Cons _ "--fn-same" $ Cons _ "--byte" $ Nil _))
 
 (def-fns _ $ (many valued : -> (many (List $ String) r))
-  (Cons _ "--build" $ Cons _ "--confine-read" $ Cons _ "--confine-write" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--goal" $ Nil _))
+  (Cons _ "--build" $ Cons _ "--confine-read" $ Cons _ "--confine-write" $ Cons _ "--comptime-unconfine" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Cons _ "--eval-fuel" $ Cons _ "--inline" $ Cons _ "--goal" $ Nil _))
 
 ; The flags among the arguments, in any order, the last given first and a switch's value "", and the files in order.
 (def-fns _ $ (many read-flags : (subterm many (List $ String) args) (many (List $ Pair (String) $ String) flags) (many (List $ String) files)

@@ -199,6 +199,8 @@ removes the directory. Both programs are looked up on the compiler's own
 failure to start or run the compiled program is an error at the argument
 it ran.
 
+`--inline n` adds `-inline n` to the compiler's ocamlopt commands.
+
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program
 does with the interpreter on the same files, runs every test again under

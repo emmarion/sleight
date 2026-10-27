@@ -73,14 +73,18 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
-let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
+let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--inline"; "--goal" ]
 let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same"; "--byte" ]
 
 let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
   else List.find_map (fun f -> if List.mem f [ "--extract"; "--build"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
 
-let compile byte src exe = exec "ocamlfind" [ (if byte then "ocamlc" else "ocamlopt"); "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; exe ] (host_envs ()) None ""
+let inline : string option ref = ref None
+
+let compile byte src exe =
+  let tool = if byte then [ "ocamlc" ] else "ocamlopt" :: Option.fold ~none:[] ~some:(fun n -> [ "-inline"; n ]) !inline in
+  exec "ocamlfind" (tool @ [ "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; exe ]) (host_envs ()) None ""
 
 let build byte path ml =
   let dir = path ^ ".build" in
