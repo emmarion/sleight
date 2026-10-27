@@ -178,7 +178,7 @@
       (tail $ read-scan s len ls (Succ i) l1 sum2 (EsNorm) bs esc))))
 
 (def-fns _ $ (many unescape-into : (many (String) raw) (erased (Nat) n) (erased (StrLength raw n) lr)
-    (many (Nat) i) (subterm many (Nat) left) (erased (Add i left n) sum) (many (EscState) st) (many (Nat) hi)
+    (many (Nat) i) (subterm many (Nat) left) (erased (Add i left n) sum) (many (EscState) st) (many (Nibble) hi)
     (erased (List (U8)) xs) (erased (Length (U8) xs n) l) (unique (Bytes xs) b) (many (Nat) j) (erased (Lt j (Succ i)) le) ->
     (erased (List (U8)) ys) (erased (Length (U8) ys n) l2) (unique (Bytes ys) r at b) (many (Nat) j2) (erased (Lt j2 (Succ n)) le2))
   (let-match many left (Succ l1)
@@ -200,7 +200,7 @@
       (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsNorm) hi ys l2 b2 (Succ j) wrote))
     ((EsHex0) (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsHex1) (hex-digit c) xs l b j skip))
     ((EsHex1)
-      (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs n l b j lj $ byte-of-digits hi $ hex-digit c))
+      (let ((erased ys) (erased l2) (unique b2)) (bytes-write xs n l b j lj $ byte-of-nibbles hi $ hex-digit c))
       (tail $ unescape-into raw n lr (Succ i) l1 sum2 (EsNorm) hi ys l2 b2 (Succ j) wrote))))
 
 (def-adts $ (Unescaped : -> Type)
@@ -224,7 +224,7 @@
   (let-match many #\x00 (MkChar z))
   (let ((erased xs) (unique b) (erased rp)) (bytes-make e z))
   (let ((erased ys) (erased l2) (unique b2) (many j) (erased le))
-    (unescape-into raw e lr (Zero) e (AddZero e) (EsNorm) (Zero) xs (repeat-length _ e z xs rp) b (Zero) (LtZ (Zero))))
+    (unescape-into raw e lr (Zero) e (AddZero e) (EsNorm) (MkNibble (Zero) sixteen-positive) xs (repeat-length _ e z xs rp) b (Zero) (LtZ (Zero))))
   (let ((many c)) (share b2))
   (let ((many full) (erased sb)) (bytes-str _ c))
   (let ((many body) (many _) (erased _) (erased _)) (str-split full j e (strbytes-length full ys e sb l2) le))

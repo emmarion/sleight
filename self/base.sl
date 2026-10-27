@@ -153,16 +153,70 @@
 (def-fns _ $ (many is-hex : (many (Char) c) -> (many (Bool) r))
   (or (char-between c #\0 #\9) $ or (char-between c #\a #\f) $ char-between c #\A #\F))
 
-(def-fns _ $ (many hex-digit : (many (Char) c) -> (many (Nat) d))
-  (let ((many base) (many offset)) $ match many (char-between c #\0 #\9) (((Char) _) ((Nat) _))
-    ((BTrue) (values #\0 0))
-    ((BFalse) (match many (char-between c #\a #\f) _ ((BTrue) (values #\a 10)) ((BFalse) (values #\A 10)))))
-  (let ((many d) (erased _)) (char-minus c base))
-  (nat-add offset d))
+(let ((many sixteen-dec)) (lt-dec (Zero) 16))
+(comptime-match many sixteen-dec (Yes _ _ sda sdb sixteen-positive))
+(let ((many m256) (erased sixteen-squared)) (mul 16 16))
+(comptime-match many (nat-eq m256 u8-modulus) (Equal _ _ _))
+(let ((many s16) (erased ten-six)) (add 10 6))
+(comptime-match many (nat-eq s16 16) (Equal _ _ _))
 
-(def-fns _ $ (many byte-of-digits : (many (Nat) hi) (many (Nat) lo) -> (many (Char) c))
-  (let ((many k) (erased q) (erased _)) (nat-mod (nat-add (nat-mul hi 16) lo) u8-modulus u8-modulus-pos))
-  (MkChar $ MkU8 k q))
+(def-fns _ $ (erased add-lt-mono : (erased (Nat) a x y s t) (subterm erased (Add a x s) p) (erased (Add a y t) q) (erased (Lt x y) l) -> (erased (Lt s t) r))
+  (match erased p _
+    ((AddZero _) (let-match erased q (AddZero _)) l)
+    ((AddSucc a1 _ s1 p1)
+      (let-match erased q (AddSucc _ _ t1 q1))
+      (LtS s1 t1 (add-lt-mono a1 x y s1 t1 p1 q1 l)))))
+
+(def-fns _ $ (erased mul-le-mono : (erased (Nat) c q m x y) (erased (Lt c (Succ q)) l) (subterm erased (Mul c m x) p) (erased (Mul q m y) r) -> (erased (Lt x (Succ y)) o))
+  (let-match erased p (MulSucc c1 _ x1 _ p1 ax) ((MulZero _) (LtZ y)))
+  (let-match erased l (LtS _ _ l1))
+  (let-match erased r (MulSucc q1 _ y1 _ r1 ay) (absurd (MulZero _) l1))
+  (add-lt-mono m x1 (Succ y1) x (Succ y) (add-comm _ _ _ ax) (add-succ-right _ _ _ (add-comm _ _ _ ay)) (mul-le-mono c1 q1 m x1 y1 l1 p1 r1)))
+
+(def-fns _ $ (erased div-small : (erased (Nat) q c m r n s) (erased (Mul q c m) mm) (erased (Add m r n) ad) (erased (Lt n s) ns) (erased (Mul c c s) cc) -> (erased (Lt q c) l))
+  (let-match erased (lt-dec q c) (Yes _ _ _ _ l)
+    (absurd (No _ _ _ _ ge) (lt-asym n m (lt-le-trans n s m ns (mul-le-mono c q c s m (le-lt-succ _ _ ge) cc mm)) (add-le-left m r n ad))))
+  l)
+
+(def-fns _ $ (erased digits-byte : (erased (Nat) a b x v) (erased (Lt a 16) pa) (erased (Lt b 16) pb) (erased (Mul a 16 x) mx) (erased (Add x b v) av) -> (erased (Lt v u8-modulus) l))
+  (let ((erased x2) (erased a16)) (add x 16))
+  (lt-le-trans v x2 u8-modulus (add-lt-mono x b 16 v x2 av a16 pb)
+    (mul-le-mono (Succ a) 16 16 x2 u8-modulus (LtS a 16 pa) (MulSucc a 16 x x2 mx a16) sixteen-squared)))
+
+(def-adts $ (Nibble : -> Type)
+  enum newtype
+  (many MkNibble : (many (Nat) n) (erased (Lt n 16) p) -> (Nibble)))
+
+(def-fns _ $ (many range-digit : (many (Nat) k) (erased (Lt k u62-modulus) pk) (many (Nat) lo) (erased (Lt lo u62-modulus) plo)
+    (many (Nat) width) (erased (Lt width u62-modulus) pw) (many (Nat) off) (erased (Nat) top) (erased (Add off width top) aw) (erased (Lt top (Succ 16)) ptop)
+    -> (many (Maybe $ Nibble) r))
+  (let-match many (u62-lt-dec k lo pk plo) (No _ _ _ _ ge) ((Yes _ _ _ _ _) (None _)))
+  (let ((many x) (erased _) (erased px)) (u62-sub k lo pk (le-lt-succ _ _ ge)))
+  (let-match many (u62-lt-dec x width px pw) (Yes _ _ _ _ xw) ((No _ _ _ _ _) (None _)))
+  (let ((many d) (erased ad)) (add off x))
+  (Some _ $ MkNibble d (lt-le-trans d top 16 (add-lt-mono off x width d top ad aw xw) ptop)))
+
+(let ((erased b48)) (u8-u62 _ (prove-literal-lt 48 u8-modulus)))
+(let ((erased b97)) (u8-u62 _ (prove-literal-lt 97 u8-modulus)))
+(let ((erased b65)) (u8-u62 _ (prove-literal-lt 65 u8-modulus)))
+(let ((erased b10)) (u8-u62 _ (prove-literal-lt 10 u8-modulus)))
+(let ((erased b6)) (u8-u62 _ (prove-literal-lt 6 u8-modulus)))
+(let ((erased ten-top)) (lt-weaken _ _ (prove-literal-lt 10 16)))
+
+(def-fns _ $ (many hex-digit : (many (Char) c) -> (many (Nibble) d))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 k q))
+  (let ((erased pk)) (u8-u62 _ q))
+  (let-match many (range-digit k pk 48 b48 10 b10 (Zero) _ (AddZero 10) ten-top) (None _) ((Some _ d) d))
+  (let-match many (range-digit k pk 97 b97 6 b6 10 _ ten-six (lt-succ 16)) (None _) ((Some _ d) d))
+  (match many (range-digit k pk 65 b65 6 b6 10 _ ten-six (lt-succ 16)) _ ((Some _ d) d) ((None _) (MkNibble (Zero) sixteen-positive))))
+
+(def-fns _ $ (many byte-of-nibbles : (many (Nibble) hi) (many (Nibble) lo) -> (many (Char) c))
+  (let-match many hi (MkNibble a pa))
+  (let-match many lo (MkNibble b pb))
+  (let ((many x) (erased mx)) (mul a 16))
+  (let ((many v) (erased av)) (add x b))
+  (MkChar $ MkU8 v (digits-byte a b x v pa pb mx av)))
 
 (def-fns _ $ (many char-lit-body : (many (String) s) -> (many (String) body))
   (let-match many s (SCons _ rest) ((SNil) (SNil)))
@@ -184,7 +238,7 @@
               (let-match many rest (SCons h1 rest2) ((SNil) (Some _ c)))
               (let-match many rest2 (SCons h2 rest3) ((SNil) (None _)))
               (match many (and (char-eqb c #\x) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
-                ((BTrue) (Some _ $ byte-of-digits (hex-digit h1) (hex-digit h2)))
+                ((BTrue) (Some _ $ byte-of-nibbles (hex-digit h1) (hex-digit h2)))
                 ((BFalse) (None _))))))))))
 
 ; What is wrong with a literal's spelling, if anything (lib/literal.ml's classify).
@@ -689,20 +743,15 @@
     ((Nil _) r)
     ((Cons _ _ _) (RCat r $ RCat (RStr sep) $ notail $ rjoin rest sep))))
 
-(let ((many sixteen-dec)) (lt-dec (Zero) 16))
-(comptime-match many sixteen-dec (Yes _ _ sda sdb sixteen-positive))
-
 (let ((erased sixteen-u62)) (u8-u62 _ (prove-literal-lt 16 u8-modulus)))
 (let ((many hex-digits)) "0123456789abcdef")
 (let ((many hex-digits-len) (erased hex-digits-sl)) (str-length hex-digits))
 (comptime-match many (nat-eq hex-digits-len 16) (Equal _ _ _))
 
 (def-fns _ $ (many hex-chars : (many (Nat) k) (erased (Lt k u8-modulus) q) -> (many (Char) hi) (many (Char) lo))
-  (let ((many h) (many l) (erased _) (erased _) (erased _) (erased lt-l) (erased ph) (erased _))
+  (let ((many h) (many l) (erased kk) (erased mm) (erased ad) (erased lt-l) (erased _) (erased _))
     (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
-  (let ((many _) (many h2) (erased _) (erased _) (erased _) (erased lt-h) (erased _) (erased _))
-    (u62-divmod h 16 ph sixteen-u62 sixteen-positive))
-  (let ((many hc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits h2 16 hex-digits-sl lt-h))
+  (let ((many hc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits h 16 hex-digits-sl (div-small h 16 kk l k u8-modulus mm ad q sixteen-squared)))
   (let ((many lc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits l 16 hex-digits-sl lt-l))
   (values hc lc))
 
@@ -714,7 +763,7 @@
 
 (def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
   (match many (and (is-hex a) (is-hex b)) _
-    ((BTrue) (Some _ $ byte-of-digits (hex-digit a) (hex-digit b)))
+    ((BTrue) (Some _ $ byte-of-nibbles (hex-digit a) (hex-digit b)))
     ((BFalse) (None _))))
 
 (def-fns _ $ (many word-char : (many (Char) c) -> (many (Bool) r))
