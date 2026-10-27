@@ -17,7 +17,7 @@ build String 0: Obj.repr (("", 0, 0) : Ffi_core.slice)
 build String 1: let ({t0}, {t1}, {t2}) = (Obj.obj {a1} : Ffi_core.slice) in Obj.repr ((String.make 1 (Char.chr (Z.to_int (Obj.obj {a0} : Z.t))) ^ String.sub {t0} {t1} {t2}, 0, {t2} + 1) : Ffi_core.slice)
 fn nat-cmp: let {t3} () = {b0} and {t4} () = {b1} and {t5} () = {b2} in if Obj.is_int {a0} && Obj.is_int {a1} then (let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in if {t0} < {t1} then {t3} () else if {t0} = {t1} then {t4} () else {t5} ()) else let {t2} = Z.compare (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) in if {t2} < 0 then {t3} () else if {t2} = 0 then {t4} () else {t5} ()
 fn lt-dec: let {t0} () = {b0} and {t1} () = {b1} in if Obj.is_int {a0} && Obj.is_int {a1} then (if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {t0} () else {t1} ()) else if Z.lt (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) then {t0} () else {t1} ()
-fn nat-eq: if Z.equal (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) then {b0} else {b1}
+fn nat-eq: if (if Obj.is_int {a0} then {a0} == {a1} else Z.equal (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t)) then {b0} else {b1}
 fn u62-add: Obj.repr ((Obj.obj {a0} : int) + (Obj.obj {a1} : int))
 fn u62-sub: Obj.repr ((Obj.obj {a0} : int) - (Obj.obj {a1} : int))
 fn u62-mul: Obj.repr ((Obj.obj {a0} : int) * (Obj.obj {a1} : int))
