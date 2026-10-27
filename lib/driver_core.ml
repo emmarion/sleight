@@ -38,7 +38,7 @@ type 'v request =
   | ConfinePaths of 'v * 'v
   | ConfineOutputBytes of 'v
   | Measure of 'v
-  | Exec of 'v * 'v * 'v * 'v * 'v
+  | Exec of 'v * 'v
 
 type 'v step = Exit of 'v | Continue of 'v
 
@@ -73,6 +73,8 @@ type 'v ops = {
   unchanged : 'v;
   mk_usage : 'v;
   mk_exited : 'v;
+  un_job : 'v -> 'v * 'v * 'v * 'v * 'v;
+  exec_results : 'v -> 'v;
   request : 'v -> 'v request;
   step : 'v -> 'v step;
   is_start : 'v -> bool;
@@ -172,61 +174,95 @@ let found prog env =
     Option.to_result ~none:(prog ^ ": not found on the PATH it was given")
       (List.find_opt runnable (List.map (fun d -> absolute (Filename.concat (if d = "" then "." else d) prog)) dirs))
 
+type job = {
+  prog : string; pid : int; input : string; in_w : Unix.file_descr; mutable sent : int;
+  mutable readers : (Unix.file_descr * Buffer.t) list; out : Buffer.t; err : Buffer.t; why : Buffer.t;
+}
+
 (* The child reports a failure to start through a close-on-exec pipe, which reads empty once the exec succeeds. *)
-let exec prog args env dir input =
+let spawn (prog, args, env, dir, input) =
   Result.bind (found prog env) (fun path ->
-      let in_r, in_w = Unix.pipe ~cloexec:true () and out_r, out_w = Unix.pipe ~cloexec:true () in
-      let err_r, err_w = Unix.pipe ~cloexec:true () and why_r, why_w = Unix.pipe ~cloexec:true () in
-      match Unix.fork () with
-      | 0 ->
-          (try
-             Option.iter Unix.chdir dir;
-             List.iter (fun (a, b) -> Unix.dup2 ~cloexec:false a b) [ (in_r, Unix.stdin); (out_w, Unix.stdout); (err_w, Unix.stderr) ];
-             Unix.execve path (Array.of_list (prog :: args)) (Array.of_list (List.map (fun (n, v) -> n ^ "=" ^ v) env))
-           with e -> let m = Bytes.of_string (explain e) in ignore (Unix.write why_w m 0 (Bytes.length m)));
-          Unix._exit 127
-      | pid ->
-          List.iter Unix.close [ in_r; out_w; err_w; why_w ];
-          let pipe = Sys.signal Sys.sigpipe Sys.Signal_ignore in
-          let out = Buffer.create 4096 and err = Buffer.create 256 and why = Buffer.create 64 and chunk = Bytes.create 65536 in
-          let len = String.length input in
-          let rec loop sent readers =
-            let writers = if sent < len then [ in_w ] else [] in
-            if readers <> [] || writers <> [] then begin
-              let ready_r, ready_w, _ = try Unix.select readers writers [] (-1.) with Unix.Unix_error (Unix.EINTR, _, _) -> ([], [], []) in
-              let sent =
-                if ready_w = [] then sent
-                else
-                  let sent = match Unix.single_write_substring in_w input sent (len - sent) with
-                    | n -> sent + n
-                    | exception Unix.Unix_error ((Unix.EAGAIN | Unix.EINTR), _, _) -> sent
-                    | exception Unix.Unix_error (Unix.EPIPE, _, _) -> len in
-                  if sent = len then Unix.close in_w;
-                  sent
-              in
-              let still fd =
-                not (List.mem fd ready_r)
-                || match Unix.read fd chunk 0 (Bytes.length chunk) with
-                   | 0 -> Unix.close fd; false
-                   | n -> Buffer.add_subbytes (if fd = out_r then out else if fd = err_r then err else why) chunk 0 n; true
-                   | exception Unix.Unix_error (Unix.EINTR, _, _) -> true
-              in
-              loop sent (List.filter still readers)
-            end
-          in
-          Unix.set_nonblock in_w;
-          if len = 0 then Unix.close in_w;
-          Fun.protect ~finally:(fun () -> Sys.set_signal Sys.sigpipe pipe) (fun () -> loop 0 [ out_r; err_r; why_r ]);
-          match snd (Unix.waitpid [] pid) with
-          | _ when Buffer.length why > 0 -> Error (prog ^ ": " ^ Buffer.contents why)
-          | Unix.WEXITED code -> Ok (code, Buffer.contents out, Buffer.contents err)
-          | Unix.WSIGNALED s | Unix.WSTOPPED s ->
-              Error (prog ^ ": killed by signal " ^ Option.value (List.assoc_opt s signal_names) ~default:(string_of_int s)))
+      match
+        let in_r, in_w = Unix.pipe ~cloexec:true () and out_r, out_w = Unix.pipe ~cloexec:true () in
+        let err_r, err_w = Unix.pipe ~cloexec:true () and why_r, why_w = Unix.pipe ~cloexec:true () in
+        match Unix.fork () with
+        | 0 ->
+            (try
+               Option.iter Unix.chdir dir;
+               List.iter (fun (a, b) -> Unix.dup2 ~cloexec:false a b) [ (in_r, Unix.stdin); (out_w, Unix.stdout); (err_w, Unix.stderr) ];
+               Unix.execve path (Array.of_list (prog :: args)) (Array.of_list (List.map (fun (n, v) -> n ^ "=" ^ v) env))
+             with e -> let m = Bytes.of_string (explain e) in ignore (Unix.write why_w m 0 (Bytes.length m)));
+            Unix._exit 127
+        | pid ->
+            List.iter Unix.close [ in_r; out_w; err_w; why_w ];
+            Unix.set_nonblock in_w;
+            if input = "" then Unix.close in_w;
+            let out = Buffer.create 4096 and err = Buffer.create 256 and why = Buffer.create 64 in
+            { prog; pid; input; in_w; sent = 0; readers = [ (out_r, out); (err_r, err); (why_r, why) ]; out; err; why }
+      with
+      | j -> Ok j
+      | exception ((Unix.Unix_error _ | Sys_error _) as e) -> Error (prog ^ ": " ^ explain e))
+
+let writing j = j.sent < String.length j.input
+
+let reap j =
+  match snd (Unix.waitpid [] j.pid) with
+  | _ when Buffer.length j.why > 0 -> Error (j.prog ^ ": " ^ Buffer.contents j.why)
+  | Unix.WEXITED code -> Ok (code, Buffer.contents j.out, Buffer.contents j.err)
+  | Unix.WSIGNALED s | Unix.WSTOPPED s ->
+      Error (j.prog ^ ": killed by signal " ^ Option.value (List.assoc_opt s signal_names) ~default:(string_of_int s))
+
+let pump chunk running =
+  let readers = List.concat_map (fun (_, j) -> List.map fst j.readers) running in
+  let writers = List.filter_map (fun (_, j) -> if writing j then Some j.in_w else None) running in
+  let ready_r, ready_w, _ = try Unix.select readers writers [] (-1.) with Unix.Unix_error (Unix.EINTR, _, _) -> ([], [], []) in
+  List.iter
+    (fun (_, j) ->
+      if writing j && List.mem j.in_w ready_w then begin
+        (j.sent <- match Unix.single_write_substring j.in_w j.input j.sent (String.length j.input - j.sent) with
+          | n -> j.sent + n
+          | exception Unix.Unix_error ((Unix.EAGAIN | Unix.EINTR), _, _) -> j.sent
+          | exception Unix.Unix_error (Unix.EPIPE, _, _) -> String.length j.input);
+        if not (writing j) then Unix.close j.in_w
+      end;
+      j.readers <-
+        List.filter
+          (fun (fd, buf) ->
+            not (List.mem fd ready_r)
+            || match Unix.read fd chunk 0 (Bytes.length chunk) with
+               | 0 -> Unix.close fd; false
+               | n -> Buffer.add_subbytes buf chunk 0 n; true
+               | exception Unix.Unix_error (Unix.EINTR, _, _) -> true)
+          j.readers)
+    running
+
+let exec_all k jobs =
+  let results = Array.make (List.length jobs) (Error "") and chunk = Bytes.create 65536 in
+  let rec loop pending running =
+    match (pending, List.partition (fun (_, j) -> j.readers = [] && not (writing j)) running) with
+    | [], ([], []) -> ()
+    | _, ((_ :: _ as finished), live) -> List.iter (fun (i, j) -> results.(i) <- reap j) finished; loop pending live
+    | (i, job) :: rest, ([], live) when List.length live < k -> (
+        match spawn job with Ok j -> loop rest ((i, j) :: live) | Error m -> results.(i) <- Error m; loop rest live)
+    | _, ([], live) -> pump chunk live; loop pending live
+  in
+  let pipe = Sys.signal Sys.sigpipe Sys.Signal_ignore in
+  Fun.protect ~finally:(fun () -> Sys.set_signal Sys.sigpipe pipe) (fun () -> loop (List.mapi (fun i job -> (i, job)) jobs) []);
+  Array.to_list results
+
+let exec prog args env dir input = List.hd (exec_all 1 [ (prog, args, env, dir, input) ])
 
 let host_envs () =
   List.filter_map
     (fun s -> Option.map (fun i -> (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))) (String.index_opt s '='))
     (Array.to_list (Unix.environment ()))
+
+let processors =
+  lazy
+    (let ask prog args = match exec prog args (host_envs ()) None "" with Ok (0, out, _) -> int_of_string_opt (String.trim out) | _ -> None in
+     match List.find_map (fun (prog, args) -> Option.bind (ask prog args) (fun n -> if n > 0 then Some n else None)) [ ("nproc", []); ("getconf", [ "_NPROCESSORS_ONLN" ]) ] with
+     | Some n -> n
+     | None -> 1)
 
 let spend w cost =
   match !(w.limit) with
@@ -344,17 +380,24 @@ let make ?str_of_host ?str_to_slice ?nat_to_z ?nat_of_z o =
           measure extra
         end
         else reading entered 0.
-    | Exec (prog, args, env, dir, input) -> (
-        let prog = to_string prog in
-        let refuse why = o.fail (of_string (prog ^ ": " ^ why)) in
-        if not w.exec then refuse "exec is disabled (--no-exec)"
-        else if not (reaches !(w.fence) Write []) then refuse "exec needs the whole filesystem writable, which the fence does not allow"
-        else
-          let env = items (fun v -> let n, x = o.un_pair v in (to_string n, to_string x)) env in
-          match exec prog (strs args) env (Option.map to_string (o.un_some dir)) (to_string input) with
-          | Ok (code, out, err) -> o.ok (o.apply o.mk_exited [ o.u8 (nat code); of_string out; of_string err ])
-          | Error m -> o.fail (of_string m)
-          | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e)))
+    | Exec (most, jobs) ->
+        let pair v = let n, x = o.un_pair v in (to_string n, to_string x) in
+        let job v = let p, a, e, d, i = o.un_job v in (to_string p, strs a, items pair e, Option.map to_string (o.un_some d), to_string i) in
+        let jobs = items job jobs in
+        let refuse why = List.map (fun (prog, _, _, _, _) -> Error (prog ^ ": " ^ why)) jobs in
+        let most = Option.map to_z (o.un_some most) in
+        let rs =
+          if jobs = [] then []
+          else if not w.exec then refuse "exec is disabled (--no-exec)"
+          else if not (reaches !(w.fence) Write []) then refuse "exec needs the whole filesystem writable, which the fence does not allow"
+          else if most = Some Z.zero then refuse "max-parallel is 0"
+          else
+            match exec_all (match most with Some z -> Option.value (clamp z) ~default:max_int | None -> Lazy.force processors) jobs with
+            | rs -> rs
+            | exception ((Unix.Unix_error _ | Sys_error _) as e) -> refuse (explain e)
+        in
+        o.exec_results
+          (list (function Ok (code, out, err) -> o.ok (o.apply o.mk_exited [ o.u8 (nat code); of_string out; of_string err ]) | Error m -> o.fail (of_string m)) rs)
   in
   let run_program _w v =
     ignore (Lazy.force started);

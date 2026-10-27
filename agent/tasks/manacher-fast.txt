@@ -1,4 +1,4 @@
-#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f manacher-fast -c work -w scratch -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_CHECK="self/base.sl pal/palindrome_relations.sl manacher-fast/below.sl"
+#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f manacher-fast -c work -w scratch -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_INLINE=1 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_CHECK="self/base.sl pal/palindrome_relations.sl manacher-fast/below.sl"
 Your task is to write a fast, certified implementation of Manacher's algorithm in Sleight.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
 well-recorded progress matters more than finishing in this one.

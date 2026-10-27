@@ -38,7 +38,7 @@ let driver env =
     | "ConfinePaths", [ r; w ] -> ConfinePaths (r, w)
     | "ConfineOutputBytes", [ n ] -> ConfineOutputBytes n
     | "Measure", [ m ] -> Measure m
-    | "Exec", [ p; a; e; d; i ] -> Exec (p, a, e, d, i)
+    | "Exec", [ m; js ] -> Exec (m, js)
     | _ -> assert false
   in
   let step v = match des "Exit" v with 0, [ x ] -> Exit x | 1, [ k ] -> Continue k | _ -> assert false in
@@ -59,6 +59,8 @@ let driver env =
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
       changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage"); mk_exited = V.VCtorFn (c "MkExited");
+      un_job = (fun v -> match des "MkExecJob" v with _, [ p; a; e; d; i ] -> (p, a, e, d, i) | _ -> assert false);
+      exec_results = (fun rs -> build "MkExecResults" [ rs ]);
       request; step; is_start; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file
@@ -71,14 +73,18 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
-let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--goal" ]
+let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--inline"; "--goal" ]
 let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same"; "--byte" ]
 
 let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
   else List.find_map (fun f -> if List.mem f [ "--extract"; "--build"; "--repl"; "--no-prelude" ] then Some (Printf.sprintf "--goal %s does not take %s" (Elab.goal_name mode) f) else None) flags
 
-let compile byte src exe = exec "ocamlfind" [ (if byte then "ocamlc" else "ocamlopt"); "-package"; "zarith,unix"; "-linkpkg"; src; "-o"; exe ] (host_envs ()) None ""
+let inline : string option ref = ref None
+
+let compile byte dir exe =
+  let tool = if byte then [ "ocamlc" ] else "ocamlopt" :: Option.fold ~none:[] ~some:(fun n -> [ "-inline"; n ]) !inline in
+  exec "ocamlfind" (tool @ [ "-package"; "zarith,unix"; "-linkpkg"; "main.ml"; "-o"; exe ]) (host_envs ()) (Some dir) ""
 
 let build byte path ml =
   let dir = path ^ ".build" in
@@ -91,7 +97,7 @@ let build byte path ml =
       guarded (fun () ->
           Sys.mkdir dir 0o755;
           write_file src ml;
-          compile byte src path)
+          compile byte dir (if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path else path))
     in
     let removed =
       guarded (fun () -> if Sys.file_exists dir then (Array.iter (fun f -> Sys.remove (Filename.concat dir f)) (Sys.readdir dir); Sys.rmdir dir); Ok ())

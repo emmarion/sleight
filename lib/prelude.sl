@@ -1192,6 +1192,18 @@
   enum
   (many MkExited : (many (U8) code) (many (String) out) (many (String) err) -> (Exited)))
 
+(def-adts $ (ExecJob : -> Type)
+  enum
+  (many MkExecJob : (many (String) prog) (many (List (String)) args) (many (List (Pair (String) (String))) env)
+     (many (Maybe (String)) dir) (many (String) stdin) -> (ExecJob)))
+
+(def-adts $ (ExecResults : ((List (ExecJob)) jobs) -> Type)
+  enum newtype
+  (many MkExecResults : (erased (List (ExecJob)) jobs)
+     (many (List (Result (Exited))) rs) (erased (Nat) n)
+     (erased (Length (ExecJob) jobs n) p) (erased (Length (Result (Exited)) rs n) q)
+     -> (ExecResults jobs)))
+
 (def-adts $ (Request : (Type A) -> Type)
   enum
   (many WriteOut : (many (String) text) -> (Request (Unit)))
@@ -1214,8 +1226,7 @@
   (many ConfinePaths : (many (List (String)) reads) (many (List (String)) writes) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
   (many Measure : (many (Stopwatch) s) -> (Request (Usage)))  ; totals since the Program began
-  (many Exec : (many (String) prog) (many (List (String)) args) (many (List (Pair (String) (String))) env)
-     (many (Maybe (String)) dir) (many (String) stdin) -> (Request (Result (Exited)))))
+  (many Exec : (many (Maybe (Nat)) max-parallel) (many (List (ExecJob)) jobs) -> (Request (ExecResults jobs))))
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern

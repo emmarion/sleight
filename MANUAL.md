@@ -122,20 +122,30 @@ it is embedded under `--extract`, and slc takes it too.
 `--extract` it is embedded in the program written out, and slc takes
 the same flag.
 
-`Exec prog args env dir stdin` runs another program and waits for it.
-The child gets `args` after its own name, exactly the variables `env`
-lists, the working directory `dir` (the program's own for `None`) and
-`stdin` as its standard input, and the request answers `MkExited` with
-its exit code and everything it wrote to standard output and standard
-error. A `prog` without a `/` is looked up in the `PATH` that `env`
-gives, not the program's own. A program that cannot be found or started,
-and one a signal kills, answers `Fail`. What the child writes does not
-count towards `--confine-output-bytes` until the program writes it out
-itself. The child is not bound by the fence, so `Exec` answers `Fail`
-without running anything unless the fence lets the program write `/`,
-and `--no-exec` makes it answer `Fail` always. Like the fence, under
-`--extract` the flag is embedded in the program written out, and slc
-takes the same flag (`tests/io_exec.sl`, `tests/io_no_exec.sl`).
+`Exec max-parallel jobs` runs other programs and waits for them all.
+Each job is `MkExecJob prog args env dir stdin`: the child gets `args`
+after its own name, exactly the variables `env` lists, the working
+directory `dir` (the program's own for `None`) and `stdin` as its
+standard input. A `prog` without a `/` is looked up in the `PATH` that
+`env` gives, not the program's own. At most `max-parallel` jobs run at
+once, started in the order of `jobs`, the next as soon as one finishes.
+`None` is the number of processors `nproc` reports, run with the
+driver's own environment, so `OMP_NUM_THREADS` there lowers it even
+under `--no-env`; failing that, `getconf _NPROCESSORS_ONLN`; failing
+that, 1. The request answers `MkExecResults`, one result per job in the
+order of `jobs`, with erased proofs that the two lists have one length:
+`MkExited` with the child's exit code and everything it wrote to
+standard output and standard error, or `Fail` for a program that
+cannot be found or started and for one a signal kills. One job's
+failure does not stop the others. What a child writes does not count
+towards `--confine-output-bytes` until the program writes it out
+itself. A request with no jobs answers no results. Otherwise every job
+answers `Fail` without running when `max-parallel` is `Some 0`, and,
+since a child is not bound by the fence, unless the fence lets the
+program write `/`; `--no-exec` makes every job answer `Fail` always.
+Like the fence, under `--extract` the flag is embedded in the program
+written out, and slc takes the same flag (`tests/io_exec.sl`,
+`tests/io_no_exec.sl`).
 
 `--eval-fuel n` bounds the evaluator. An application spends one unit of
 fuel, a call to a function interpreted from its body one more, and each
@@ -179,11 +189,17 @@ exits with code 1.
 `--byte` the same way.
 
 `native-compute` writes the program elaborated so far out as `--extract`
-would, with the form's function as its one final, compiles it with
+would, with one final per argument, selected by its index as the
+program's first argument, compiles it once with
 `ocamlfind ocamlopt -package zarith,unix -linkpkg` in a fresh temporary
-directory (slc makes it with `mktemp -d`), runs it, and removes the
-directory. Both programs are looked up on the compiler's own `PATH`, and
-a failure to start, compile or run either is an error at the form.
+directory (slc makes it with `mktemp -d`), runs it once per argument, as
+many runs at once as `Exec` with a `max-parallel` of `None` allows, and
+removes the directory. Both programs are looked up on the compiler's own
+`PATH`. A failure to start or compile is an error at the form, and a
+failure to start or run the compiled program is an error at the argument
+it ran.
+
+`--inline n` adds `-inline n` to the compiler's ocamlopt commands.
 
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program

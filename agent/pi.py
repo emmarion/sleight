@@ -23,7 +23,7 @@ REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 _on = lambda name, default="0": os.environ.get(name, default) not in ("0", "false", "")
 CHECK = [os.path.normpath(f) for f in os.environ.get("PI_CHECK", "").split()]
-REQUESTS_LOG, RUN_STATS, OCAML, WARN_UNUSED = _on("PI_REQUESTS_LOG"), _on("PI_RUN_STATS", "1"), _on("PI_OCAML"), _on("PI_WARN_UNUSED")
+REQUESTS_LOG, RUN_STATS, OCAML, WARN_UNUSED, INLINE = _on("PI_REQUESTS_LOG"), _on("PI_RUN_STATS", "1"), _on("PI_OCAML"), _on("PI_WARN_UNUSED"), _on("PI_INLINE")
 SLC_TIMEOUT, RUN_TIMEOUT = int(os.environ.get("PI_SLC_TIMEOUT", "60")), int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
@@ -429,7 +429,7 @@ def _literal(s):
     return '"' + "".join("\\" + chr(b) if b in b'"\\' else chr(b) if 0x20 <= b < 0x7F else f"\\x{b:02X}" for b in s.encode()) + '"'
 
 
-def check(files):
+def check(files, inline=None):
     if isinstance(files, str):
         files = [files] if files else []
     files, k = [os.path.normpath(f) for f in files], len(CHECK)
@@ -439,18 +439,18 @@ def check(files):
     bundle = b"".join(f";! file {_literal(f)}\n".encode() + d + (b"" if d.endswith(b"\n") else b"\n") for f, d in parts)
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-check-") as tmp:
         why, c, out = _compile(tmp, [(_source_name(f), read_bytes(f)) for f in CHECK] + [(".pi/check.sl", bundle)],
-                               ["--goal", "proved", *(["--first-error"] if FIRST_ERROR == "yes" else [])])
+                               ["--goal", "proved", *(["--first-error"] if FIRST_ERROR == "yes" else []), *_inline(inline)])
     kept = RUN_DIR / "checks"
     kept.mkdir(exist_ok=True)
     n = len(list(kept.glob("*.sl"))) + 1
     (kept / f"{n:03}.sl").write_bytes(bundle)
     (kept / f"{n:03}.json").write_text(json.dumps({"time": _iso(time.time()), "files": files, "size": sum(len(d) for _, d in parts),
-                                                "exit": c.returncode, "why": why,
+                                                "inline": inline, "exit": c.returncode, "why": why,
                                                 "messages": _text(c.stderr)}, indent=1) + "\n")
     return out
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None, asm=None, warn_unused=False):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None, asm=None, warn_unused=False, inline=None):
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
@@ -466,7 +466,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         raise ValueError("`stdin`, `args` and `gc_stats` need a run, which `ocaml` and `asm` skip")
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         why, c, head = _compile(tmp, [(_source_name(p), read_bytes(p)) for p in paths],
-                                [*(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_fence(),
+                                [*(["--first-error"] if first_error else []), *(["--warn-unused"] if warn_unused else []), *_inline(inline), *_fence(),
                                  "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", "--no-exec"], capture,
                                 None if ocaml or asm else str(Path(tmp, "p")))
         if not why and c.returncode in (2, 3):
@@ -479,7 +479,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
             wrote = [f"ocaml: wrote {write_bytes(ocaml, c.stdout)}"] if ocaml else []
             if asm:
                 Path(tmp, "p.ml").write_bytes(c.stdout)
-                why, a = _proc(["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-S", "-c", "p.ml"], tmp, SLC_TIMEOUT,
+                why, a = _proc(["ocamlfind", "ocamlopt", *_inline(inline, "-inline"), "-package", "zarith,unix", "-S", "-c", "p.ml"], tmp, SLC_TIMEOUT,
                                env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
                 if why or a.returncode:
                     with open(RUN_DIR / "build-failures.log", "a") as f:
@@ -491,6 +491,10 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+
+
+def _inline(n, flag="--inline"):
+    return [] if n is None else [flag, str(n)]
 
 
 def _fence():
@@ -557,7 +561,8 @@ FIRST_ERROR_NOTES = {
     "choose": "By default the compiler reports every error it finds; with `first_error` set to true, only its first. "
               "Errors after the first are best-effort and may be unreliable.",
 }
-STR, STRS, INT, BOOL = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}, {"type": "boolean"}
+INLINE_NOTE = "With `inline`, every ocamlopt compile uses that `-inline` level (default 10); higher inlines larger functions. "
+STR, STRS, INT, BOOL, NAT = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}, {"type": "boolean"}, {"type": "integer", "minimum": 0}
 TOOLS = {
     "read": (read, "Read a file, with line numbers. `offset` is the first line to show (from 1), `limit` how many (default 2000).",
              {"path": STR, "offset": INT, "limit": INT}, ["path"]),
@@ -582,11 +587,13 @@ TOOLS = {
                   "With `asm`, the same, but the file holds the assembly that OCaml code compiles to when a program is built. " if OCAML else "")
                + ("With `warn_unused`, the compiler also warns about each binder below the top level that is never used, "
                   "or is not erased but used only in erased positions, in every file it reads, the libraries included. " if WARN_UNUSED else "")
+               + (INLINE_NOTE if INLINE else "")
                + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
-           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR, "asm": STR} if OCAML else {}) | ({"warn_unused": BOOL} if WARN_UNUSED else {}), ["paths"]),
-    **({"check": (check, "Proves the task's goal from `files`, the full compile order, and records the attempt. Reports the result and any warnings.",
-                  {"files": STRS}, ["files"])} if CHECK else {}),
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR, "asm": STR} if OCAML else {}) | ({"warn_unused": BOOL} if WARN_UNUSED else {}) | ({"inline": NAT} if INLINE else {}), ["paths"]),
+    **({"check": (check, "Proves the task's goal from `files`, the full compile order, and records the attempt. Reports the result and any warnings."
+                  + (" With `inline`, as for `sl`." if INLINE else ""),
+                  {"files": STRS} | ({"inline": NAT} if INLINE else {}), ["files"])} if CHECK else {}),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -604,6 +611,8 @@ def _check(name, args):
     for k, v in args.items():
         if props[k] is BOOL and not isinstance(v, bool):
             raise ValueError(f"`{k}` must be true or false")
+        if props[k] is NAT and (isinstance(v, bool) or not isinstance(v, int) or v < 0):
+            raise ValueError(f"`{k}` must be a non-negative integer")
 
 
 def _ts():
@@ -1408,6 +1417,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_OCAML          let the `sl` tool's `ocaml` and `asm` parameters write the program's OCaml translation, or the\n"
          "                    assembly it compiles to, to a file instead of running it [0]\n"
          "  PI_WARN_UNUSED    let the `sl` tool's `warn_unused` parameter turn on the compiler's unused-binder warnings [0]\n"
+         "  PI_INLINE         let `sl` and `check` take `inline`, ocamlopt's `-inline` level [0]\n"
          "  PI_CHECK          the files, separated by spaces, that the `check` tool requires before the agent's own; the tool\n"
          "                    exists only when this is set; each check is kept in the session's checks/ []\n"
          "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]\n"

@@ -457,7 +457,7 @@ let collect env items =
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
   Hashtbl.iter (fun _ v -> value v) V.literal_values;
-  List.iter (function Env.Final (v, _, _) -> value v | Env.Native (v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
+  List.iter (function Env.Final (v, _, _) -> value v | Env.Native (_, v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
@@ -607,6 +607,7 @@ let driver cx =
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
       ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")"); ("mk_exited", "(Obj.repr " ^ make "MkExited" ^ ")");
+      ("un_job", un "MkExecJob" (fun _ fs -> Printf.sprintf "(%s)" (concat ", " fs))); ("exec_results", make "MkExecResults");
       ("request", un "WriteOut" variant); ("step", un "Exit" variant);
       ("is_start", un "Start" (fun ct _ -> string_of_bool (ct.V.cname = "Start")));
       ("apply", apply_ocaml) ]
@@ -640,9 +641,9 @@ let item cx = function
             | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
-  | Env.Native (v, a) ->
+  | Env.Native (i, v, a) ->
       let arms = List.map (fun c -> (c, [], Printf.sprintf "print_int %d" c.V.index)) a.V.ctors in
-      Buffer.add_string cx.actions (Printf.sprintf "let () = let v = (Obj.obj %s : unit -> Obj.t) () in %s\n" (value cx v) (dispatch cx a (all a) "v" arms None))
+      Buffer.add_string cx.actions (Printf.sprintf "let () = if Sys.argv.(1) = \"%d\" then let v = (Obj.obj %s : unit -> Obj.t) () in %s\n" i (value cx v) (dispatch cx a (all a) "v" arms None))
 
 let emit env items =
   let cx = collect env items in
@@ -664,25 +665,25 @@ let emit env items =
       Buffer.contents cx.fills;
       Buffer.contents cx.actions ]
 
-(* A native-compute runs its function compiled, beside the run-position functions so far, and answers the
-   discriminant the compiled program prints. *)
+(* A native-compute compiles its functions once, beside the run-position functions so far, runs each by its
+   index, as many at once as the host has processors, and answers the discriminant each run prints. *)
 let () =
-  Elab.native := fun env v a ->
-    let ml = emit env (List.filter (function Env.Fns _ -> true | _ -> false) (List.rev !Env.trace) @ [ Env.Native (v, a) ]) in
+  Elab.native := fun env fs ->
+    let ml = emit env (List.filter (function Env.Fns _ -> true | _ -> false) (List.rev !Env.trace) @ List.mapi (fun i (v, a) -> Env.Native (i, v, a)) fs) in
     let dir = Filename.temp_file "sleight" ".native" in
     let file = Filename.concat dir in
-    let ( let* ) = Result.bind in
     let exited what = function
       | Ok (0, out, _) -> Ok out
       | Ok (code, out, err) -> Stdlib.Error (Printf.sprintf "%s exited with code %d\n%s%s" what code out err)
       | Stdlib.Error m -> Stdlib.Error m in
+    let answer r = Result.bind (exited "the compiled function" r) (fun out -> Option.to_result ~none:("the compiled function printed " ^ out) (int_of_string_opt out)) in
     let run () =
       Sys.remove dir;
       Sys.mkdir dir 0o700;
       Program.write_file (file "main.ml") ml;
-      let* _ = exited "ocamlfind" (Program.compile false (file "main.ml") (file "main")) in
-      let* out = exited "the compiled function" (Program.exec (file "main") [] (Program.host_envs ()) None "") in
-      Option.to_result ~none:("the compiled function printed " ^ out) (int_of_string_opt out) in
+      Result.map
+        (fun _ -> List.map answer (Program.exec_all (Lazy.force Program.processors) (List.mapi (fun i _ -> (file "main", [ string_of_int i ], Program.host_envs (), None, "")) fs)))
+        (exited "ocamlfind" (Program.compile false dir (file "main"))) in
     let result = try run () with (Unix.Unix_error _ | Sys_error _) as e -> Stdlib.Error (Driver_core.explain e) in
     (try Array.iter (fun f -> Sys.remove (file f)) (Sys.readdir dir); Sys.rmdir dir with Sys_error _ -> ());
     result

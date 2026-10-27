@@ -594,7 +594,7 @@
   (many InvApp : (erased (List $ List $ Nat) ctx) (many (Nat) hid) (many (List $ Code ctx many-one) actuals) (many (CC) cc) (many (Bool) skipped) -> (Invoke ctx))
   (many InvWorld : (erased (List $ List $ Nat) ctx) (many (List $ Code ctx many-one) actuals) -> (Invoke ctx))
   (many InvPrim : (erased (List $ List $ Nat) ctx) (many (Sp) prim) (many (List $ Code ctx many-one) actuals) -> (Invoke ctx))
-  (many InvNative : (erased (List $ List $ Nat) ctx) (many (Nat) hid) (many (Adt) adt) -> (Invoke ctx)))
+  (many InvNative : (erased (List $ List $ Nat) ctx) (many (Nat) cid) -> (Invoke ctx)))
 
 (def-fns _ $ (many prim-sig-in : (subterm many (List $ PrimSig) ps) (many (Sp) sp) -> (many (Maybe $ PrimSig) r))
   (let-match many ps (Cons _ p rest) ((Nil _) (None _)))
