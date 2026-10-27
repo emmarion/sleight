@@ -29,18 +29,20 @@
 (let ((erased bB)) NM40)
 (let ((many B61) (erased pB61) (erased _)) (pow2 61))
 (let ((erased b61)) (pow2-lt 61 sixty-two B61 u62-modulus l61 pB61 u62-modulus-pow2))
-(let ((many B8) (erased mB8)) (mul B 8))
-(let ((many B9) (erased aB9)) (add B8 B))
+(let ((many HM)) 1000003)
+(let ((many BM) (erased mBM)) (mul B HM))
+(let ((many B9) (erased aB9)) (add BM B))
 (comptime-match many (lt-dec B9 B61) (Yes _ _ _ _ p9))
 (let ((erased b9)) (lt-trans B9 B61 u62-modulus p9 b61))
-(let ((erased bB8)) (lt-trans B8 B9 u62-modulus (add-pos-lt B8 B B9 aB9 posB) b9))
+(let ((erased bBM)) (lt-trans BM B9 u62-modulus (add-pos-lt BM B B9 aB9 posB) b9))
 (comptime-match many (lt-dec 0 B) (Yes _ _ _ _ pk0))
 (comptime-match many (lt-dec 1 B) (Yes _ _ _ _ pk1))
-(comptime-match many (lt-dec 8 B) (Yes _ _ _ _ p8))
-(comptime-match many (lt-dec (Zero) 8) (Yes _ _ _ _ p08))
-(let ((erased l8)) (lt-trans 8 B u62-modulus p8 bB))
-(let ((erased sh0)) (LtZ sixty-two))
-(let ((erased sh1)) (LtS (Zero) sixty-two (lt-pos eight sixty-two (eight-lt-sixty-two))))
+(comptime-match many (lt-dec HM B) (Yes _ _ _ _ pM))
+(comptime-match many (lt-dec (Zero) HM) (Yes _ _ _ _ pM0))
+(let ((erased lM)) (lt-trans HM B u62-modulus pM bB))
+(comptime-match many (lt-dec 0 (Succ s62)) (Yes _ _ _ _ sh0))
+(comptime-match many (lt-dec 1 (Succ s62)) (Yes _ _ _ _ sh1))
+(comptime-match many (lt-dec 2 (Succ s62)) (Yes _ _ _ _ sh2))
 
 (def-adts $ (KN : -> Type)
   enum newtype
@@ -164,34 +166,39 @@
   (let ((many one)) (Cons _ (MkPair _ _ w first) (Nil (Pair (List (KN)) (List (Blk))))))
   (match many plus _ ((BFalse) one) ((BTrue) (Cons _ (MkPair _ _ w L) one))))
 
+(def-adts $ (Tgt : -> Type)
+  enum
+  (many TId : (many (KN) j) -> (Tgt))
+  (many TKey : (many (List (KN)) k) -> (Tgt)))
+
 (def-fns _ $ (many rw-pop-edges : (many (KN) side) (subterm many (List (Pair (List (KN)) (List (Blk)))) ps) ->
-    (many (List (Pair (KN) (List (KN)))) es))
+    (many (List (Pair (KN) (Tgt))) es))
   (let-match many ps (Cons _ pr rest) ((Nil _) (Nil _)))
   (let ((many more)) (notail $ rw-pop-edges side rest))
   (let-match many pr (MkPair _ _ w L))
   (let-match many w (Cons _ c w1) ((Nil _) more))
-  (Cons _ (MkPair _ _ c (Cons (KN) side (rw-enc w1 L))) more))
+  (Cons _ (MkPair _ _ c (TKey (Cons (KN) side (rw-enc w1 L)))) more))
 
-(def-fns _ $ (many rw-edges : (many (Nat) ln T) (many (KN) side) (many (List (KN)) g) -> (many (List (Pair (KN) (List (KN)))) es))
+(def-fns _ $ (many rw-edges : (many (Nat) ln T) (many (KN) side) (many (List (KN)) g) -> (many (List (Pair (KN) (Tgt))) es))
   (let ((many u) (many L)) (rw-dec ln g))
   (let-match many u (Cons _ c u1) ((Nil _) (rw-pop-edges side (rw-pops ln T L))))
-  (Cons _ (MkPair _ _ c (Cons (KN) side (rw-enc u1 L))) (Nil _)))
+  (Cons _ (MkPair _ _ c (TKey (Cons (KN) side (rw-enc u1 L)))) (Nil _)))
 
 (def-adts
   ((HMap : (Type A) -> Type)
     enum
     (many HE : (erased Type A) -> (HMap A))
-    (many HN : (erased Type A) (many (KN) h) (many (List (KN)) k) (many A v) (many (HMap A) l) (many (HMap A) r) -> (HMap A))))
+    (many HN : (erased Type A) (many (KN) h) (many (List (KN)) k) (many A v) (many (HMap A) c0 c1 c2 c3) -> (HMap A))))
 
 (def-fns _ $ (many hash : (subterm many (List (KN)) k) (many (Nat) h) (erased (Lt h B) ph) -> (many (KN) r))
   (let-match many k (Cons _ e rest) ((Nil _) (MkKN h ph)))
   (let-match many e (MkKN x px))
-  (let ((erased r) (erased mr)) (mul h 8))
-  (let ((erased lr)) (mul-mono-l h B 8 r B8 ph mr mB8 p08))
-  (let ((many m)) (u62-mul h 8 (lt-trans h B u62-modulus ph bB) l8 r mr (lt-trans r B8 u62-modulus lr bB8)))
+  (let ((erased r) (erased mr)) (mul h HM))
+  (let ((erased lr)) (mul-mono-l h B HM r BM ph mr mBM pM0))
+  (let ((many m)) (u62-mul h HM (lt-trans h B u62-modulus ph bB) lM r mr (lt-trans r BM u62-modulus lr bBM)))
   (let ((erased s) (erased as)) (add m x))
-  (let ((erased t1) (erased ta)) (add B8 x))
-  (let ((erased ls)) (lt-trans s t1 B9 (add-mono-l m B8 x s t1 lr as ta) (add-mono-r B8 x B t1 B9 px ta aB9)))
+  (let ((erased t1) (erased ta)) (add BM x))
+  (let ((erased ls)) (lt-trans s t1 B9 (add-mono-l m BM x s t1 lr as ta) (add-mono-r BM x B t1 B9 px ta aB9)))
   (let ((erased lsm)) (lt-trans s B9 u62-modulus ls b9))
   (let ((many s2)) (u62-add m x s as lsm))
   (let ((many h2) (erased lh2) (erased _) (erased _)) (u62-mod s2 B lsm bB posB))
@@ -203,23 +210,32 @@
 
 (def-fns _ $ (many hget : (erased Type A) (subterm many (HMap A) t) (many (KN) h) (many (Nat) hh) (erased (Lt hh u62-modulus) ph)
     (many (List (KN)) k) -> (many (Maybe A) r))
-  (let-match many t (HN _ h2 k2 v l r) ((HE _) (None A)))
+  (let-match many t (HN _ h2 k2 v c0 c1 c2 c3) ((HE _) (None A)))
   (let-match many (hit h h2 k k2) (BFalse) ((BTrue) (Some A v)))
-  (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased pq)) (u62-shr hh (Succ (Zero)) ph sh1))
-  (let ((many bt) (erased _)) (u62-bit-test hh (Zero) ph sh0))
-  (match many bt _
-    ((Bit0) (tail $ hget A l h q pq k))
-    ((Bit1) (tail $ hget A r h q pq k))))
+  (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased pq)) (u62-shr hh 2 ph sh2))
+  (let ((many b0) (erased _)) (u62-bit-test hh 0 ph sh0))
+  (let ((many b1) (erased _)) (u62-bit-test hh 1 ph sh1))
+  (match many b1 _
+    ((Bit0) (match many b0 _ ((Bit0) (tail $ hget A c0 h q pq k)) ((Bit1) (tail $ hget A c1 h q pq k))))
+    ((Bit1) (match many b0 _ ((Bit0) (tail $ hget A c2 h q pq k)) ((Bit1) (tail $ hget A c3 h q pq k))))))
 
 (def-fns _ $ (many hput : (erased Type A) (subterm many (HMap A) t) (many (KN) h) (many (Nat) hh) (erased (Lt hh u62-modulus) ph)
     (many (List (KN)) k) (many A v) -> (many (HMap A) r))
-  (let-match many t (HN _ h2 k2 v2 l r) ((HE _) (HN A h k v (HE A) (HE A))))
-  (let-match many (hit h h2 k k2) (BFalse) ((BTrue) (HN A h k v l r)))
-  (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased pq)) (u62-shr hh (Succ (Zero)) ph sh1))
-  (let ((many bt) (erased _)) (u62-bit-test hh (Zero) ph sh0))
-  (match many bt _
-    ((Bit0) (HN A h2 k2 v2 (notail $ hput A l h q pq k v) r))
-    ((Bit1) (HN A h2 k2 v2 l (notail $ hput A r h q pq k v)))))
+  (let ((many e)) (HE A))
+  (let-match many t (HN _ h2 k2 v2 c0 c1 c2 c3) ((HE _) (HN A h k v e e e e)))
+  (let-match many (hit h h2 k k2) (BFalse) ((BTrue) (HN A h k v c0 c1 c2 c3)))
+  (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased pq)) (u62-shr hh 2 ph sh2))
+  (let ((many b0) (erased _)) (u62-bit-test hh 0 ph sh0))
+  (let ((many b1) (erased _)) (u62-bit-test hh 1 ph sh1))
+  (match many b1 _
+    ((Bit0)
+      (match many b0 _
+        ((Bit0) (HN A h2 k2 v2 (notail $ hput A c0 h q pq k v) c1 c2 c3))
+        ((Bit1) (HN A h2 k2 v2 c0 (notail $ hput A c1 h q pq k v) c2 c3))))
+    ((Bit1)
+      (match many b0 _
+        ((Bit0) (HN A h2 k2 v2 c0 c1 (notail $ hput A c2 h q pq k v) c3))
+        ((Bit1) (HN A h2 k2 v2 c0 c1 c2 (notail $ hput A c3 h q pq k v)))))))
 
 (def-fns _ $ (many hat : (erased Type A) (many (HMap A) t) (many (KN) h) (many (List (KN)) k) -> (many (Maybe A) r))
   (let-match many h (MkKN hv ph))
@@ -237,13 +253,13 @@
 
 (def-adts $ (Tab : -> Type)
   enum
-  (many MkTab : (many (KN) n) (many (HMap (KN)) ids) (many (HMap (List (KN))) keys) (many (HMap (List (List (KN)))) ix) -> (Tab)))
+  (many MkTab : (many (KN) n) (many (HMap (KN)) ids) (many (HMap (List (KN))) keys) (many (HMap (List (KN))) ix) -> (Tab)))
 
 (def-fns _ $ (many tab-get : (many (Tab) t) (many (KN) i) -> (many (Maybe (List (KN))) k))
   (let-match many t (MkTab _ _ keys _))
-  (hat _ keys i (Cons (KN) i (Nil (KN)))))
+  (hat _ keys i (Nil (KN))))
 
-(def-fns _ $ (many ix-get : (many (Tab) t) (many (List (KN)) pk) -> (many (List (List (KN))) ks))
+(def-fns _ $ (many ix-get : (many (Tab) t) (many (List (KN)) pk) -> (many (List (KN)) ks))
   (let-match many t (MkTab _ _ _ ix))
   (match many (hfind _ ix pk) _ ((Some _ ks) ks) ((None _) (Nil _))))
 
@@ -252,13 +268,13 @@
   (let ((many h)) (hash k 0 pk0))
   (let-match many (hat _ ids h k) (None _) ((Some _ i) (values i t (BFalse))))
   (let ((many ix2))
-    (match many ixd (((HMap (List (List (KN)))) x))
+    (match many ixd (((HMap (List (KN))) x))
       ((BFalse) ix)
       ((BTrue)
         (let-match many k (Cons _ side g) ((Nil _) ix))
         (let ((many pk)) (Cons (KN) side (but-last _ g)))
-        (hset _ ix pk (Cons _ k (ix-get t pk))))))
-  (values n (MkTab (k-inc n) (hat-put _ ids h k n) (hat-put _ keys n (Cons (KN) n (Nil (KN))) k) ix2) (BTrue)))
+        (hset _ ix pk (Cons _ n (ix-get t pk))))))
+  (values n (MkTab (k-inc n) (hat-put _ ids h k n) (hat-put _ keys n (Nil (KN)) k) ix2) (BTrue)))
 
 (def-fns _ $ (many tab-of : (many (Bool) ixd) (subterm many (List (List (KN))) ks) (many (Tab) t) -> (many (Tab) t2))
   (let-match many ks (Cons _ k rest) ((Nil _) t))
@@ -289,14 +305,14 @@
   (many MkGSt : (many (Tab) sy st) (many (List (KC)) S) (many (HMap (Info)) ch) (many (HMap (KN)) ss) (many (List (Pair (KC) (KN))) W)
      (many (HMap (List (Wait))) wt) (many (Nat) n) -> (GSt)))
 
-(def-fns _ $ (many with-c : (many (KN) c) (subterm many (List (List (KN))) ks) -> (many (List (Pair (KN) (List (KN)))) es))
-  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
-  (Cons _ (MkPair _ _ c k) (notail $ with-c c rest)))
+(def-fns _ $ (many with-c : (many (KN) c) (subterm many (List (KN)) js) -> (many (List (Pair (KN) (Tgt))) es))
+  (let-match many js (Cons _ j rest) ((Nil _) (Nil _)))
+  (Cons _ (MkPair _ _ c (TId j)) (notail $ with-c c rest)))
 
 (def-fns _ $ (many sn-ix : (many (Setting) se) -> (many (Bool) b))
   (match many se _ ((SN _ _ _ _ _) (BTrue)) ((SW _ _ _) (BFalse))))
 
-(def-fns _ $ (many edges-of : (many (Setting) se) (many (Tab) st) (many (List (KN)) key) -> (many (List (Pair (KN) (List (KN)))) es))
+(def-fns _ $ (many edges-of : (many (Setting) se) (many (Tab) st) (many (List (KN)) key) -> (many (List (Pair (KN) (Tgt))) es))
   (let-match many key (Cons _ side g) ((Nil _) (Nil _)))
   (let-match many se (SN _ _ _ _ _) ((SW ln T _) (rw-edges ln T side g)))
   (let-match many g (Cons _ c gt) ((Nil _) (Nil _)))
@@ -354,10 +370,10 @@
   (values x (MkGSt sy st (Cons (KC) a S) ch (hset _ ss ak x) (Cons _ (MkPair _ _ a x) W) wt (Succ n))))
 
 (def-fns _ $ (many inf-get : (many (HMap (Info)) ch) (many (KN) i) -> (many (Maybe (Info)) r))
-  (hat _ ch i (Cons (KN) i (Nil (KN)))))
+  (hat _ ch i (Nil (KN))))
 
 (def-fns _ $ (many inf-set : (many (HMap (Info)) ch) (many (KN) i) (many (Info) v) -> (many (HMap (Info)) r))
-  (hat-put _ ch i (Cons (KN) i (Nil (KN))) v))
+  (hat-put _ ch i (Nil (KN)) v))
 
 (def-fns _ $ (many fire : (many (KN) j) (subterm many (List (Wait)) ws) (many (GSt) g) -> (many (GSt) g2))
   (let-match many ws (Cons _ w rest) ((Nil _) g))
@@ -383,11 +399,11 @@
   (let-match many key (Cons _ side kg) ((Nil _) (values j g1)))
   (values j (fire j (waits wt (Cons (KN) side (but-last _ kg))) g1)))
 
-(def-fns _ $ (many add-edges : (many (Setting) se) (many (KN) q2) (many (Dir) d) (many (KN) no) (subterm many (List (Pair (KN) (List (KN)))) es)
+(def-fns _ $ (many add-edges : (many (Setting) se) (many (KN) q2) (many (Dir) d) (many (KN) no) (subterm many (List (Pair (KN) (Tgt))) es)
     (many (GSt) g) -> (many (List (Nat)) tg) (many (GSt) g2))
   (let-match many es (Cons _ e rest) ((Nil _) (values (Nil (Nat)) g)))
-  (let-match many e (MkPair _ _ c key))
-  (let ((many j) (many g1)) (intern-st se key g))
+  (let-match many e (MkPair _ _ c t))
+  (let ((many j) (many g1)) (match many t (((KN) j) ((GSt) g1)) ((TId j) (values j g)) ((TKey key) (intern-st se key g))))
   (let ((many x) (many g2)) (add-cfg (mk-cfg q2 d no c j) g1))
   (let ((many tg) (many g3)) (notail $ add-edges se q2 d no rest g2))
   (values (Cons (Nat) (kv x) tg) g3))
@@ -418,11 +434,14 @@
   (let-match many (process p se a ai (MkGSt sy st S ch ss rest wt n)) (Some _ g2) ((None _) (None _)))
   (tail $ run-wl p se cap f g2))
 
-(def-fns _ $ (many row-ids : (many (Bool) ixd) (subterm many (List (Pair (KN) (List (KN)))) es) (many (Tab) st) ->
+(def-fns _ $ (many row-ids : (many (Bool) ixd) (subterm many (List (Pair (KN) (Tgt))) es) (many (Tab) st) ->
     (many (Tab) st2) (many (List (Pair (Nat) (Nat))) row))
   (let-match many es (Cons _ e rest) ((Nil _) (values st (Nil (Pair (Nat) (Nat))))))
-  (let-match many e (MkPair _ _ c key))
-  (let ((many j) (many st1) (many _)) (tab-intern ixd key st))
+  (let-match many e (MkPair _ _ c t))
+  (let ((many j) (many st1))
+    (match many t (((KN) j) ((Tab) st1))
+      ((TId j) (values j st))
+      ((TKey key) (let ((many j) (many st1) (many _)) (tab-intern ixd key st)) (values j st1))))
   (let ((many st2) (many row)) (notail $ row-ids ixd rest st1))
   (values st2 (Cons (Pair (Nat) (Nat)) (MkPair _ _ (kv c) (kv j)) row)))
 
@@ -449,7 +468,7 @@
   (tail $ zero-keys side j1 (Cons _ (Cons (KN) side (rw-enc (repeat _ j1 k0) (Nil (Blk)))) acc)))
 
 (def-fns _ $ (many empty-tab : -> (many (Tab) t))
-  (MkTab k0 (HE (KN)) (HE (List (KN))) (HE (List (List (KN))))))
+  (MkTab k0 (HE (KN)) (HE (List (KN))) (HE (List (KN)))))
 
 (def-fns _ $ (many init-st : (many (Setting) se) -> (many (Tab) sy st) (many (KN) li ri) (many (Nat) cap) (many (List (Nat)) acc))
   (let ((many sy1)) (tab-of (BFalse) (Cons _ (Cons (KN) k0 (Nil (KN))) $ Cons _ (Cons (KN) k1 (Nil (KN))) $ Nil (List (KN))) (empty-tab)))
