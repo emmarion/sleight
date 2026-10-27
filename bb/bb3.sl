@@ -5,7 +5,7 @@
   Cons _ (MkPair _ _ 1 4) $ Cons _ (MkPair _ _ 2 2) $ Nil (Pair (Nat) (Nat))))
 (let ((many OR) (erased kr)) (keep-r O))
 (def-fns _ $ (many run-tree : -> (many (Res (TAll 21 O p0 (Zero) (BFalse) OR)) r))
-  (build-all 7 OR 21 O p0 (Zero) (BFalse) hs 1000))
+  (build-all 7 OR 21 O p0 (Zero) (BFalse) hs 1000 30))
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 
