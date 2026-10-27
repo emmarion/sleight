@@ -2,7 +2,12 @@
 
 (def-fns _ $ (many host-exec : (many (String) prog) (many (List $ String) args) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Exited) r))
   (let ((unique w1) (many envs)) (world-do _ w $ GetEnvs))
-  (world-do _ w1 $ Exec prog args envs (None _) ""))
+  (let ((unique w2) (many done)) (world-do _ w1 $ Exec (Some _ 1) $ Cons _ (MkExecJob prog args envs (None _) "") $ Nil _))
+  (let-match many done (MkExecResults _ rs _ p q))
+  (let-match erased p (LengthCons _ _ _ _ p1))
+  (let-match erased p1 (LengthNil _))
+  (let-match many rs (Cons _ r _) (absurd (Nil _) q))
+  (values w2 r))
 
 (def-fns _ $ (many delete-files : (many (String) dir) (subterm many (List $ String) names) (unique (World) w at vacant-slot) -> (unique (World) w2 at w))
   (let-match many names (Cons _ n rest) ((Nil _) w))

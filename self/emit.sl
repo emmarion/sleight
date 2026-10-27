@@ -1283,7 +1283,8 @@
         (driver-op "is_dir" $ driver-make d env "IsDir") (driver-op "is_other" $ driver-make d env "IsOther")
         $ driver-op "missing" $ driver-make d env "Missing")
       (rcat4 (driver-op "changed" $ driver-make d env "Changed") (driver-op "unchanged" $ driver-make d env "Unchanged")
-        (rcat (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")") $ driver-op "mk_exited" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkExited") $ RStr ")")
+        (rcat (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")") $ rcat3 (driver-op "mk_exited" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkExited") $ RStr ")")
+          (driver-op "un_job" $ driver-un d env "ExecJob" $ AkTuple) $ driver-op "exec_results" $ driver-make d env "MkExecResults")
         $ rcat3 (driver-op "request" $ driver-un d env "Request" $ AkVariant) (driver-op "step" $ driver-un d env "Program" $ AkVariant)
         $ driver-op "is_start" $ driver-un d env "Stopwatch" $ AkIs "Start")
       $ RStr "Driver_core.apply = (fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs) }\n")))
@@ -1468,7 +1469,7 @@
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) (many (Maybe $ Adt) native) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates #\newline)) ((BFalse) (Nil _))) (Nil _))
+  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Cons _ "ExecJob" $ Cons _ "ExecResults" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates #\newline)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb _))
   (let ((many d0b) (many _)) $ emit-finals _ hp (list-rev _ fi) env native d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)

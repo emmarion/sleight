@@ -38,7 +38,7 @@ let driver env =
     | "ConfinePaths", [ r; w ] -> ConfinePaths (r, w)
     | "ConfineOutputBytes", [ n ] -> ConfineOutputBytes n
     | "Measure", [ m ] -> Measure m
-    | "Exec", [ p; a; e; d; i ] -> Exec (p, a, e, d, i)
+    | "Exec", [ m; js ] -> Exec (m, js)
     | _ -> assert false
   in
   let step v = match des "Exit" v with 0, [ x ] -> Exit x | 1, [ k ] -> Continue k | _ -> assert false in
@@ -59,6 +59,8 @@ let driver env =
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
       changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage"); mk_exited = V.VCtorFn (c "MkExited");
+      un_job = (fun v -> match des "MkExecJob" v with _, [ p; a; e; d; i ] -> (p, a, e, d, i) | _ -> assert false);
+      exec_results = (fun rs -> build "MkExecResults" [ rs ]);
       request; step; is_start; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file

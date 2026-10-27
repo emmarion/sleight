@@ -607,6 +607,7 @@ let driver cx =
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
       ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")"); ("mk_exited", "(Obj.repr " ^ make "MkExited" ^ ")");
+      ("un_job", un "MkExecJob" (fun _ fs -> Printf.sprintf "(%s)" (concat ", " fs))); ("exec_results", make "MkExecResults");
       ("request", un "WriteOut" variant); ("step", un "Exit" variant);
       ("is_start", un "Start" (fun ct _ -> string_of_bool (ct.V.cname = "Start")));
       ("apply", apply_ocaml) ]
