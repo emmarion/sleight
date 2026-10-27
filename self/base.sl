@@ -289,8 +289,6 @@
   (let ((many (List $ Pair (Nat) V) acc2)) $ match many here _ ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ b v) acc)))
   (tail $ idmap-pairs _ two a2 (nat-add a2 b) $ notail $ idmap-pairs _ one a2 (nat-add a b) acc2))
 
-; ---- Lemmas over the prelude's Append and StrLength
-
 (def-fns _ $ (erased append-nil-right : (subterm erased (String) s) -> (erased (Append s (SNil) s) p))
   (match erased s _
     ((SNil) (AppNil (SNil)))
@@ -451,7 +449,6 @@
     ((CEq _ _ _) (Cons _ (MkKid _ c lab submap) rest))
     (else (Cons _ k $ notail $ nm-put-kid _ rest c lab submap))))
 
-; The longest common prefix of [a] and [b], as its length and the rests of both, with [a]'s prefix as evidence.
 (def-fns _ $ (many common-prefix : (erased (String) s) (subterm many (String) a) (many (String) b) (many (Nat) k)
     (erased (String) p) (erased (Append p a s) ap) (erased (StrLength p k) lp) ->
     (many (Nat) n) (many (String) a2) (many (String) b2) (erased (String) q) (erased (Append q a2 s) aq) (erased (StrLength q n) lq))

@@ -142,8 +142,6 @@
     ((CEq _ _ _) (TDollar pos))
     (else (word-item pos w))))
 
-; How many characters after a literal's opening quote the reader walks: up to its closing quote, up to
-; the backslash of a bad escape, or to the end of the text.
 (def-fns _ $ (many lit-count : (many (Unescaped) u) (many (String) rest) -> (many (Nat) n))
   (match many u _
     ((ReadOk _ used _) (nat-pred $ nat-pred used))
