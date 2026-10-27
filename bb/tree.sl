@@ -1,31 +1,3 @@
-
-(def-adts
-  ((PStep : ((List (PT)) p) ((Cfg) c) ((Cfg) d) -> Type)
-    enum
-    (many PStepL : (erased (List (PT)) p) (erased (Nat) q q2) (erased (List (Bool)) l r l2) (erased (Bool) h w h2)
-       (erased (PLook p q h (Def (Go w (DL) q2))) pl) (erased (Pop l h2 l2) pp)
-       -> (PStep p (MkCfg q l h r) (MkCfg q2 l2 h2 (Cons (Bool) w r))))
-    (many PStepR : (erased (List (PT)) p) (erased (Nat) q q2) (erased (List (Bool)) l r r2) (erased (Bool) h w h2)
-       (erased (PLook p q h (Def (Go w (DR) q2))) pl) (erased (Pop r h2 r2) pp)
-       -> (PStep p (MkCfg q l h r) (MkCfg q2 (Cons (Bool) w l) h2 r2)))))
-
-(def-adts
-  ((PRunTo : ((List (PT)) p) ((Cfg) c0) ((Nat) t) ((Cfg) c) -> Type)
-    enum
-    (many PRNil : (erased (List (PT)) p) (erased (Cfg) c0) -> (PRunTo p c0 (Zero) c0))
-    (many PRSnoc : (erased (List (PT)) p) (erased (Cfg) c0 c d) (erased (Nat) t)
-       (erased (PRunTo p c0 t c) r) (erased (PStep p c d) st) -> (PRunTo p c0 (Succ t) d))))
-
-(def-fns _ $ (erased prun-run : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Ext p m) ex) (erased (Cfg) c0 c) (erased (Nat) t)
-    (subterm erased (PRunTo p c0 t c) pr) -> (erased (Run m c0 t c) r))
-  (match erased pr _
-    ((PRNil _ _) (RNil m c0))
-    ((PRSnoc _ _ c1 _ t1 pr1 st)
-      (let ((erased r1)) (prun-run p m ex c0 c1 t1 pr1))
-      (match erased st _
-        ((PStepL _ q q2 l rr l2 h w h2 pl pp) (RSnoc m c0 c1 c t1 r1 (StepL m q q2 l rr l2 h w h2 (ext-look p m q h _ ex pl) pp)))
-        ((PStepR _ q q2 l rr r2 h w h2 pl pp) (RSnoc m c0 c1 c t1 r1 (StepR m q q2 l rr r2 h w h2 (ext-look p m q h _ ex pl) pp)))))))
-
 (def-adts
   ((PSet : ((List (PT)) p) ((Nat) q) ((Bool) b) ((PT) y) ((List (PT)) p2) -> Type)
     enum
@@ -126,7 +98,8 @@
        (erased (Nat) c c2) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Range c2 xs) rg) (erased (Opts xs os) op)
        (erased (NextC n c c2) nc) (erased (UF c p) uf) (erased (Below c p) bl) (erased (Lt q c) lq)
        (erased (TAll n k p q h os) ta) -> (TNode n k p))
-    (many TF : (erased (Nat) n k) (erased (List (PT)) p) (erased (AllGo p) g) -> (TNode n k p)))
+    (many TF : (erased (Nat) n k) (erased (List (PT)) p) (erased (AllGo p) g) -> (TNode n k p))
+    (many TC : (erased (Nat) n k) (erased (List (PT)) p p2) (erased (Bool) f) (erased (Mir f p p2) mi) (erased (Cyc p2) cy) -> (TNode n k p)))
   ((TAll : ((Nat) n) ((Nat) k) ((List (PT)) p) ((Nat) q) ((Bool) h) ((List (Tr)) os) -> Type)
     enum
     (many TANil : (erased (Nat) n k) (erased (List (PT)) p) (erased (Nat) q) (erased (Bool) h) -> (TAll n k p q h (Nil (Tr))))
@@ -146,6 +119,7 @@
         lt)
       (absurd (TN _ _ _ sy adj acc S cl aa a0 ma g) (never-n p m ex sy adj acc S cl aa a0 ma _ g s hs))
       (absurd (TF _ _ _ g) (never-full m _ s (ag-m p m g ex) hs))
+      (absurd (TC _ _ _ p2 f mi cy) (never-mir f p p2 m mi cy ex s hs))
       ((TS _ _ _ t q l r h pr pl c c2 xs os rg op nc uf bl lq ta)
         (let ((erased tq) (erased lkq)) (ext-look-any p m q h _ ex pl))
         (let ((erased m2) (erased ex2) (erased wf2) (erased hs2) (erased tq2) (erased lk2) (erased mm) (erased _) (erased _) (erased _))
