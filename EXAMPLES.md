@@ -142,6 +142,9 @@ that the test does not make is a mistake in this file.
   [`tests/u8.sl`](tests/u8.sl) with the decision compiled: `native-compute` runs `lt-dec`
   as extracted OCaml and reads back a `Dec` whose fields are all erased, and
   `comptime-match` takes the proof out of it.
+- [`tests/native_compute_macro.sl`](tests/native_compute_macro.sl) — a macro that reads a `Settled` list of
+  bounds and spreads it into one `native-compute`, one compiled decision per bound, each function's
+  type depending on its bound.
 - [`tests/comptime_tail.sl`](tests/comptime_tail.sl) — a loop run at elaboration whose measure is
   erased. A non-erased binary counter drives the dispatch, while the
   `subterm` decrease is taken on an erased `Nat` tied to that counter by the

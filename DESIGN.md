@@ -3055,8 +3055,9 @@ A goal is one type, not a telescope; an existential, such as a function with its
 
 ## 72. `native-compute`
 
-`(native-compute f)` is an expression confined to run position (§27),
-in a `many` position. `f` is a size-one expression whose result is a
+`(native-compute f1 … fn)` is an expression confined to run position
+(§27), with one or more arguments and each of its results in a `many`
+position. Each `fi` is a size-one expression whose result is a
 `Settled` `many` entry (§29) whose type canonicalizes to
 `(Fn L -> (many T r))`: no parameters, and one `many` return, which may
 be written with `is` but not `at`. `T` is an application of a type
@@ -3065,10 +3066,11 @@ for `comptime-match`. That `Matchable` is an `enum`, and none of its
 non-phantom constructors has a non-erased field. The type may be marked
 `extern`.
 
-The form means the call `(f)`, and its result is `Settled` as that
-call's would be (§29). It is how a program asks for a run-position call
-to be run by compiled code rather than by the evaluator, as a final
+The form means `(values (f1) … (fn))`, and each result is `Settled` as
+its call's would be (§29). It is how a program asks for run-position
+calls to be run by compiled code rather than by the evaluator, as a final
 `Fn` is (§27). The compiled run hands back only the constructor, so its
 erased fields take the tokens of §5. It may crash where the evaluator
-would not, and the other way round (§31). A run that cannot be compiled
-or that crashes is an error at the form.
+would not, and the other way round (§31). A program that cannot be
+compiled is an error at the form, and a run that crashes is an error at
+its argument.

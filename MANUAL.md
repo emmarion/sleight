@@ -189,11 +189,15 @@ exits with code 1.
 `--byte` the same way.
 
 `native-compute` writes the program elaborated so far out as `--extract`
-would, with the form's function as its one final, compiles it with
+would, with one final per argument, selected by its index as the
+program's first argument, compiles it once with
 `ocamlfind ocamlopt -package zarith,unix -linkpkg` in a fresh temporary
-directory (slc makes it with `mktemp -d`), runs it, and removes the
-directory. Both programs are looked up on the compiler's own `PATH`, and
-a failure to start, compile or run either is an error at the form.
+directory (slc makes it with `mktemp -d`), runs it once per argument, as
+many runs at once as `Exec` with a `max-parallel` of `None` allows, and
+removes the directory. Both programs are looked up on the compiler's own
+`PATH`. A failure to start or compile is an error at the form, and a
+failure to start or run the compiled program is an error at the argument
+it ran.
 
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program
