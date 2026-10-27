@@ -1,10 +1,10 @@
-(let ((many champ2)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Halt) $ Nil (Tr)))
+(let ((many champ2)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BTrue) (DL) 0) $ Cons _ (Hlt) $ Nil (Tr)))
 
-(let ((many champ3)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BFalse) (DR) 2) $ Cons _ (Go (BTrue) (DL) 2) $ Cons _ (Go (BTrue) (DL) 0) $ Nil (Tr)))
+(let ((many champ3)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Hlt) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BFalse) (DR) 2) $ Cons _ (Mov (BTrue) (DL) 2) $ Cons _ (Mov (BTrue) (DL) 0) $ Nil (Tr)))
 
-(let ((many champ4)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Go (BFalse) (DL) 2) $ Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 3) $ Cons _ (Go (BTrue) (DR) 3) $ Cons _ (Go (BFalse) (DR) 0) $ Nil (Tr)))
+(let ((many champ4)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BTrue) (DL) 0) $ Cons _ (Mov (BFalse) (DL) 2) $ Cons _ (Hlt) $ Cons _ (Mov (BTrue) (DL) 3) $ Cons _ (Mov (BTrue) (DR) 3) $ Cons _ (Mov (BFalse) (DR) 0) $ Nil (Tr)))
 
-(let ((many champ5)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 2) $ Cons _ (Go (BTrue) (DR) 2) $ Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DR) 3) $ Cons _ (Go (BFalse) (DL) 4) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Go (BTrue) (DL) 3) $ Cons _ (Halt) $ Cons _ (Go (BFalse) (DL) 0) $ Nil (Tr)))
+(let ((many champ5)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DL) 2) $ Cons _ (Mov (BTrue) (DR) 2) $ Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DR) 3) $ Cons _ (Mov (BFalse) (DL) 4) $ Cons _ (Mov (BTrue) (DL) 0) $ Cons _ (Mov (BTrue) (DL) 3) $ Cons _ (Hlt) $ Cons _ (Mov (BFalse) (DL) 0) $ Nil (Tr)))
 
 (let ((many qs)) (Cons _ (MkCase champ2 2 6) $ Cons _ (MkCase champ3 3 21) $ Cons _ (MkCase champ4 4 107) $ Cons _ (MkCase champ5 5 47176870) $ Nil (Case)))
 
@@ -26,6 +26,6 @@
 
 (let-match erased am5 (AMCons _ _ _ m5 _))
 
-(goal erased (HaltsIn champ5 (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) 47176870))
+(goal erased (HaltsAt champ5 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) 47176870))
 
 (qed (ah-get cs champ5 5 47176870 ah m5))

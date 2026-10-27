@@ -6,14 +6,14 @@
     ((LookS _ _ rest q1 _ _ lk1) (let-match erased rw (RowsS _ k1 _ _ _ _ _ rw1)) (look-ok n k1 q1 rest b t rw1 lk1))))
 
 (def-adts
-  ((Run : ((List (Tr)) m) ((Cfg) c0) ((Nat) t) ((Cfg) c) -> Type)
+  ((Run : ((List (Tr)) m) ((Conf) c0) ((Nat) t) ((Conf) c) -> Type)
     enum
-    (many RNil : (erased (List (Tr)) m) (erased (Cfg) c0) -> (Run m c0 (Zero) c0))
-    (many RSnoc : (erased (List (Tr)) m) (erased (Cfg) c0 c d) (erased (Nat) t)
-       (erased (Run m c0 t c) r) (erased (Step m c d) st) -> (Run m c0 (Succ t) d))))
+    (many RNil : (erased (List (Tr)) m) (erased (Conf) c0) -> (Run m c0 (Zero) c0))
+    (many RSnoc : (erased (List (Tr)) m) (erased (Conf) c0 c d) (erased (Nat) t)
+       (erased (Run m c0 t c) r) (erased (Stp m c d) st) -> (Run m c0 (Succ t) d))))
 
-(def-fns _ $ (erased run-add : (erased (List (Tr)) m) (erased (Cfg) c0 c) (erased (Nat) t s u)
-    (subterm erased (Run m c0 t c) r) (erased (HaltsIn m c s) h) (erased (Add t s u) a) -> (erased (HaltsIn m c0 u) h0))
+(def-fns _ $ (erased run-add : (erased (List (Tr)) m) (erased (Conf) c0 c) (erased (Nat) t s u)
+    (subterm erased (Run m c0 t c) r) (erased (HaltsAt m c s) h) (erased (Add t s u) a) -> (erased (HaltsAt m c0 u) h0))
   (match erased r _
     ((RNil _ _) (let-match erased a (AddZero _)) h)
     ((RSnoc _ _ c1 _ t1 r1 st)
@@ -77,11 +77,11 @@
 
 (let ((erased l0)) (prove-literal-lt 0 u8-modulus))
 
-(let ((erased l1)) (prove-literal-lt 1 u8-modulus))
+(let ((erased one-u8)) (prove-literal-lt 1 u8-modulus))
 
 (let ((many z8)) (MkU8 (Zero) l0))
 
-(let ((many o8)) (MkU8 (Succ (Zero)) l1))
+(let ((many o8)) (MkU8 (Succ (Zero)) one-u8))
 
 (def-adts
   ((Enc : ((Bool) b) ((U8) u) -> Type)
@@ -109,13 +109,11 @@
 
 (def-fns _ $ (erased ext-pop : (erased (List (Bool)) l) (erased (U8) a) (erased (List (U8)) as)
     (erased (EncL l (Cons (U8) a as)) e) ->
-    (erased (Bool) h2) (erased (List (Bool)) l2) (erased (Pop l h2 l2) pp) (erased (Enc h2 a) eq)
+    (erased (Bool) h2) (erased (List (Bool)) l2) (erased (Pull l h2 l2) pp) (erased (Enc h2 a) eq)
     (erased (EncL l2 as) e2))
-  (match erased e _
-    ((ExtNil _ z)
-      (let-match erased z (Z8Cons _ z1))
-      (values (BFalse) (Nil (Bool)) (PopNil) (EncF) (ExtNil as z1)))
-    ((ExtCons b _ l1 _ en e1) (values b l1 (PopCons b l1) en e1))))
+  (let-match erased e (ExtNil _ z) ((ExtCons b _ l1 _ en e1) (values b l1 (PullCons b l1) en e1)))
+  (let-match erased z (Z8Cons _ z1))
+  (values (BFalse) (Nil (Bool)) (PullNil) (EncF) (ExtNil as z1)))
 
 (def-fns _ $ (erased rep-allf : (erased (Nat) n) (erased (List (U8)) xs)
     (subterm erased (Repeat (U8) n z8 xs) p) -> (erased (Zeros8 xs) z))
@@ -204,7 +202,7 @@
 
 (unary 1)
 
-(let ((many N1) (erased aN)) (sub N 1 (LtS (Zero) N posN)))
+(let ((many Nm1) (erased aN)) (sub N 1 (LtS (Zero) N posN)))
 
 (let-match erased aN (AddSucc _ _ _ aN0))
 
@@ -219,17 +217,17 @@
     enum
     (many AHNil : -> (AllHalt (Nil (Case))))
     (many AHCons : (erased (List (Tr)) m) (erased (Nat) n s) (erased (List (Case)) rest) (erased (Rows n n m) w)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) (erased (AllHalt rest) p)
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) (erased (AllHalt rest) p)
        -> (AllHalt (Cons (Case) (MkCase m n s) rest)))))
 
 (def-adts
   ((Checked : ((List (Tr)) m) ((Nat) n) ((Nat) s) -> Type)
     enum
     (many MkChecked : (erased (List (Tr)) m) (erased (Nat) n s) (erased (Rows n n m) w)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (Checked m n s))))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (Checked m n s))))
 
 (def-fns _ $ (many trok : (many (Nat) n) (many (Tr) t) -> (many (Res (TrOK n t)) r))
-  (let-match many t (Go w d q) ((Halt) (ROk _ (OKHalt n))))
+  (let-match many t (Mov w d q) ((Hlt) (ROk _ (OKHalt n))))
   (let-match many (lt-dec q n) (Yes _ _ _ _ p) ((No _ _ _ _ _) (RFail _)))
   (ROk _ (OKGo n q w d p)))
 
@@ -245,11 +243,11 @@
       (ROk _ (RowsS n k1 t0 t1 rest o0 o1 rw)))))
 
 (def-adts
-  ((Start : ((List (U8)) xs) -> Type)
+  ((Origin : ((List (U8)) xs) -> Type)
     enum
     (many MkStart : (erased (List (U8)) xs as bs) (many (Nat) i j) (erased (Zip (U8) xs i as z8 bs) z)
        (erased (Zeros8 as) fa) (erased (Zeros8 bs) fb) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
-       (erased (Add i (Succ j) N) ij) -> (Start xs))))
+       (erased (Add i (Succ j) N) ij) -> (Origin xs))))
 
 (def-fns _ $ (erased add-succ-inv : (erased (Nat) a b c) (erased (Add a (Succ b) (Succ c)) p) -> (erased (Add a b c) q))
   (let ((erased c1) (erased e) (erased q1)) (add-succ-right-inv a b (Succ c) p))
@@ -273,12 +271,10 @@
       (values ws2 (SpliceThere A x tx1 lo1 len ws2 xs21 sp21)))
     ((SpliceHere _ x y tx1 len1 ws1 xs1 sp1)
       (let-match erased ad (AddZero _))
-      (match erased st _
-        ((SetHere _ _ _ _) (values (Cons A w ws1) (SpliceHere A x w tx1 len1 ws1 xs1 sp1)))
-        ((SetThere _ _ _ e1 _ xs21 st1)
-          (let-match erased lt (LtS _ _ lt1))
-          (let ((erased ws2) (erased sp21)) (splice-set A tx1 ws1 xs1 xs21 (Zero) len1 e1 e1 w sp1 st1 (AddZero e1) lt1))
-          (values (Cons A y ws2) (SpliceHere A x y tx1 len1 ws2 xs21 sp21)))))))
+      (let-match erased st (SetThere _ _ _ e1 _ xs21 st1) ((SetHere _ _ _ _) (values (Cons A w ws1) (SpliceHere A x w tx1 len1 ws1 xs1 sp1))))
+      (let-match erased lt (LtS _ _ lt1))
+      (let ((erased ws2) (erased sp21)) (splice-set A tx1 ws1 xs1 xs21 (Zero) len1 e1 e1 w sp1 st1 (AddZero e1) lt1))
+      (values (Cons A y ws2) (SpliceHere A x y tx1 len1 ws2 xs21 sp21)))))
 
 (def-fns _ $ (erased splice-restore : (erased Type A) (erased (List A) tx ws xs ys zs) (erased (Nat) lo len)
     (subterm erased (Splice A tx lo len ws xs) p) (erased (Splice A xs lo len ys zs) q) (erased (Splice A tx lo len ys tx) r) ->
@@ -304,14 +300,14 @@
 (def-adts $ (BTr : -> Type)
   enum
   (many BHalt : -> (BTr))
-  (many BGo : (many (U8) wu) (many (Dir) d) (many (Nat) q) -> (BTr)))
+  (many BGo : (many (U8) wu) (many (Mv) d) (many (Nat) q) -> (BTr)))
 
 (def-adts
   ((TrB : ((Tr) t) ((BTr) bt) -> Type)
     enum
-    (many TBH : -> (TrB (Halt) (BHalt)))
-    (many TBG : (erased (Bool) w) (erased (U8) wu) (erased (Dir) d) (erased (Nat) q) (erased (Enc w wu) e)
-       -> (TrB (Go w d q) (BGo wu d q)))))
+    (many TBH : -> (TrB (Hlt) (BHalt)))
+    (many TBG : (erased (Bool) w) (erased (U8) wu) (erased (Mv) d) (erased (Nat) q) (erased (Enc w wu) e)
+       -> (TrB (Mov w d q) (BGo wu d q)))))
 
 (def-fns _ $ (erased splice-same : (erased Type A) (erased (List A) tx ws ds) (erased (Nat) lo len)
     (subterm erased (Splice A tx lo len ws ds) p) -> (erased (List A) old) (erased (Splice A ds lo len old ds) q))
@@ -329,9 +325,9 @@
 
 (def-fns _ $ (erased slack-pos : (erased (Nat) a s b) (erased (Add a s b) p) (erased (Apart (Nat) Lt a b) ap) ->
     (erased (Nat) s1) (erased (Eq (Nat) s (Succ s1)) e))
-  (match erased s _
-    ((Zero) (let-match erased (add-zero-eq a b p) (Refl _ _)) (values (Zero) (match erased (apart-irrefl a ap) _)))
-    ((Succ s1) (values s1 (Refl _ s)))))
+  (let-match erased s (Zero) ((Succ s1) (values s1 (Refl _ s))))
+  (let-match erased (add-zero-eq a b p) (Refl _ _))
+  (values (Zero) (match erased (apart-irrefl a ap) _)))
 
 (def-adts $ (BRow : -> Type)
   enum
@@ -354,24 +350,22 @@
 (def-fns _ $ (erased lt-nth : (erased Type A) (erased (List A) xs) (erased (Nat) n q) (subterm erased (Length A xs n) l) (erased (Lt q n) lt) ->
     (erased A x) (erased (Nth A xs q x) p))
   (let-match erased l (LengthCons _ y rest n1 l1) (absurd (LengthNil _) lt))
-  (match erased q _
-    ((Zero) (values y (NthHere A y rest)))
-    ((Succ q1)
-      (let-match erased lt (LtS _ _ lt1))
-      (let ((erased x) (erased p1)) (lt-nth A rest n1 q1 l1 lt1))
-      (values x (NthThere A y rest q1 x p1)))))
+  (let-match erased q (Succ q1) ((Zero) (values y (NthHere A y rest))))
+  (let-match erased lt (LtS _ _ lt1))
+  (let ((erased x) (erased p1)) (lt-nth A rest n1 q1 l1 lt1))
+  (values x (NthThere A y rest q1 x p1)))
 
-(def-fns _ $ (erased le-lt : (erased (Nat) x y z) (erased (Lt x (Succ y)) p) (erased (Lt y z) q) -> (erased (Lt x z) r))
-  (match erased (lt-succ-cases x y p) _
-    ((InL _ _ e) (let-match erased e (Refl _ _)) q)
-    ((InR _ _ l) (lt-trans x y z l q))))
+(def-fns _ $ (erased le-then-lt : (erased (Nat) x y z) (erased (Lt x (Succ y)) p) (erased (Lt y z) q) -> (erased (Lt x z) r))
+  (let-match erased (lt-succ-cases x y p) (InL _ _ e) ((InR _ _ l) (lt-trans x y z l q)))
+  (let-match erased e (Refl _ _))
+  q)
 
 (def-adts
   ((TrD : ((Tr) t) ((BTr) bt) -> Type)
     enum
-    (many TDH : -> (TrD (Halt) (BHalt)))
-    (many TDG : (erased (Bool) w) (erased (U8) wu) (erased (Dir) d) (erased (Nat) q qq) (erased (Enc w wu) e) (erased (Double q qq) dq)
-       -> (TrD (Go w d q) (BGo wu d qq)))))
+    (many TDH : -> (TrD (Hlt) (BHalt)))
+    (many TDG : (erased (Bool) w) (erased (U8) wu) (erased (Mv) d) (erased (Nat) q qd) (erased (Enc w wu) e) (erased (Double q qd) dq)
+       -> (TrD (Mov w d q) (BGo wu d qd)))))
 
 (def-adts
   ((MapB : ((List (Tr)) m) ((List (Copy (BTr))) fa) -> Type)
@@ -389,12 +383,10 @@
 (def-fns _ $ (many map-b : (subterm many (List (Tr)) m) -> (many (List (Copy (BTr))) fa) (erased (MapB m fa) p))
   (let-match many m (Cons _ t rest) ((Nil _) (values (Nil (Copy (BTr))) (MBNil))))
   (let ((many fa) (erased p)) (notail $ map-b rest))
-  (match many t _
-    ((Halt) (values (Cons (Copy (BTr)) (MkCopy (BTr) (BHalt)) fa) (MBCons t (BHalt) rest fa (TDH) p)))
-    ((Go w d q)
-      (let ((many wu) (erased e)) (enc w))
-      (let ((many qq) (erased dq)) (double q))
-      (values (Cons (Copy (BTr)) (MkCopy (BTr) (BGo wu d qq)) fa) (MBCons t (BGo wu d qq) rest fa (TDG w wu d q qq e dq) p)))))
+  (let-match many t (Mov w d q) ((Hlt) (values (Cons (Copy (BTr)) (MkCopy (BTr) (BHalt)) fa) (MBCons t (BHalt) rest fa (TDH) p))))
+  (let ((many wu) (erased e)) (enc w))
+  (let ((many qd) (erased dq)) (double q))
+  (values (Cons (Copy (BTr)) (MkCopy (BTr) (BGo wu d qd)) fa) (MBCons t (BGo wu d qd) rest fa (TDG w wu d q qd e dq) p)))
 
 (def-fns _ $ (erased map-nth : (erased (List (Tr)) m) (erased (List (Copy (BTr))) fa) (erased (Nat) k) (erased (BTr) bt)
     (subterm erased (Nth (Copy (BTr)) fa k (MkCopy (BTr) bt)) p) (erased (MapB m fa) mb) ->
@@ -458,20 +450,20 @@
           (LookS t0 t1 rest q1 h t (idx-look n k1 q1 a1 (Succ a1) rest h t rw1 lq1 da1 (IdxT a1) nt2)))))))
 
 (def-fns _ $ (many wsim : (erased (List (Tr)) m) (erased (List (Copy (BTr))) fa) (many (Array (Copy (BTr)) fa) fx) (erased (MapB m fa) mb) (many (Nat) F) (subterm many (Nat) fuel)
-    (erased (Cfg) c0) (erased (Nat) t) (erased (Nat) q) (many (Nat) qq)
+    (erased (Conf) c0) (erased (Nat) t) (erased (Nat) q) (many (Nat) qd)
     (erased (List (Bool)) l r) (erased (Bool) h) (erased (U8) x) (erased (Enc h x) ex)
     (erased (List (U8)) xs) (unique (Bytes xs) a) (many (Nat) i) (erased (Nat) j) (erased (List (U8)) as bs)
     (erased (Nat) sl sr) (many (Nat) lo hi) (erased (List (U8)) tx ws) (erased (Nat) len)
     (erased (Lt lo u62-modulus) blo) (erased (Lt hi u62-modulus) bhi)
     (erased (Splice (U8) tx lo len ws xs) sp) (erased (Add lo sl i) ai) (erased (Add sl (Succ sr) len) aw) (erased (Add i sr hi) ah)
     (erased (Lt sr (Succ j)) lsr)
-    (erased (Run m c0 t (MkCfg q l h r)) run) (erased (Zip (U8) xs i as x bs) z)
+    (erased (Run m c0 t (MkConf q l h r)) run) (erased (Zip (U8) xs i as x bs) z)
     (erased (EncL l as) xl) (erased (EncL r bs) xr) (erased (Length (U8) as i) la) (erased (Length (U8) bs j) lb)
-    (erased (Nat) N) (erased (Add i (Succ j) N) ij) (erased (Lt N u62-modulus) nm) (erased (Add t fuel F) tf) (erased (Lt F u62-modulus) bF)
-    (erased (Nat) n) (erased (Rows n n m) wf) (erased (Lt q n) lq) (erased (Double q qq) dq) (erased (Nat) b2) (erased (Double n b2) db) (erased (Length (Copy (BTr)) fa b2) lfa) (erased (Lt b2 u62-modulus) b2m) (erased (Length (U8) xs N) lx) ->
+    (erased (Nat) Nt) (erased (Add i (Succ j) Nt) ij) (erased (Lt Nt u62-modulus) nm) (erased (Add t fuel F) tf) (erased (Lt F u62-modulus) bF)
+    (erased (Nat) n) (erased (Rows n n m) wf) (erased (Lt q n) lq) (erased (Double q qd) dq) (erased (Nat) b2) (erased (Double n b2) db) (erased (Length (Copy (BTr)) fa b2) lfa) (erased (Lt b2 u62-modulus) b2m) (erased (Length (U8) xs Nt) lx) ->
     (many (SimR m c0) res) (erased (List (U8)) ys) (unique (Bytes ys) out) (erased (List (U8)) ws2)
-    (erased (Splice (U8) tx lo len ws2 ys) sp2) (erased (Length (U8) ys N) ly))
-  (let ((erased bf)) (le-lt fuel F u62-modulus (add-le-left fuel t F (add-comm t fuel F tf)) bF))
+    (erased (Splice (U8) tx lo len ws2 ys) sp2) (erased (Length (U8) ys Nt) ly))
+  (let ((erased bf)) (le-then-lt fuel F u62-modulus (add-le-left fuel t F (add-comm t fuel F tf)) bF))
   (let-match many (u62-eq (Zero) fuel u62-modulus-pos bf) (Unequal _ _ _ _ apf) ((Equal _ _ _) (values (SRun m c0) xs a ws sp lx)))
   (let ((erased f0) (erased ef)) (slack-pos (Zero) fuel fuel (AddZero fuel) apf))
   (let-match erased ef (Refl _ _))
@@ -479,30 +471,30 @@
   (let ((many u) (unique a1)) (bytes-get _ a i x (zip-nth _ xs as bs i _ z)))
   (let-match many u (MkU8 nb _))
   (let ((erased k) (erased ad) (erased lkb) (erased ix))
-    (match erased ex (((Nat) k) ((Add qq nb k) ad) ((Lt k b2) lkb) ((Idx qq h k) ix))
-      ((EncF) (values qq (add-zero-right qq) (lt-trans qq (Succ qq) b2 (lt-succ qq) (idx-lt q n qq b2 lq dq db)) (IdxF qq)))
-      ((EncT) (values (Succ qq) (add-succ-right qq (Zero) qq (add-zero-right qq)) (idx-lt q n qq b2 lq dq db) (IdxT qq)))))
-  (let ((many kk)) (u62-add qq nb k ad (lt-trans k b2 u62-modulus lkb b2m)))
+    (match erased ex (((Nat) k) ((Add qd nb k) ad) ((Lt k b2) lkb) ((Idx qd h k) ix))
+      ((EncF) (values qd (add-zero-right qd) (lt-trans qd (Succ qd) b2 (lt-succ qd) (idx-lt q n qd b2 lq dq db)) (IdxF qd)))
+      ((EncT) (values (Succ qd) (add-succ-right qd (Zero) qd (add-zero-right qd)) (idx-lt q n qd b2 lq dq db) (IdxT qd)))))
+  (let ((many kk)) (u62-add qd nb k ad (lt-trans k b2 u62-modulus lkb b2m)))
   (let ((erased cx) (erased np)) (lt-nth _ fa b2 k lfa lkb))
   (let ((many cell)) (array-get-many _ _ fx kk cx np))
   (let-match many cell (MkCopy _ bt))
   (let ((erased tr) (erased nt) (erased tbt)) (map-nth m fa k bt np mb))
-  (let ((erased lk)) (idx-look n n q qq k m h tr wf lq dq ix nt))
+  (let ((erased lk)) (idx-look n n q qd k m h tr wf lq dq ix nt))
   (let-match many bt (BGo wu d qq2)
     ((BHalt)
       (let-match erased tbt (TDH))
       (let ((many c) (erased ac)) (sub F fuel (add-le-left _ _ _ (add-comm t fuel F tf))))
       (let-match erased (add-cancel fuel t c F (add-comm t fuel F tf) ac) (Refl _ _))
-      (values (SHalt m c0 (Succ c) (run-add m c0 (MkCfg q l h r) t (Succ (Zero)) (Succ t) run (HStop m q l r h lk)
+      (values (SHalt m c0 (Succ c) (run-add m c0 (MkConf q l h r) t (Succ (Zero)) (Succ t) run (HStop m q l r h lk)
         (add-succ-right t (Zero) t (add-zero-right t)))) xs a1 ws sp lx)))
   (let-match erased tbt (TDG w _ _ q2 _ ew dq2))
   (let-match erased (look-ok n n q m h _ wf lk) (OKGo _ _ _ _ lq2))
   (let ((erased ys) (unique a2) (erased st)) (bytes-set _ a1 i wu x (zip-nth _ xs as bs i _ z)))
   (let ((erased z2)) (zip-set _ xs ys as bs i x wu z st))
-  (let ((erased lx2)) (setnth-len _ xs ys i N wu st lx))
+  (let ((erased lx2)) (setnth-len _ xs ys i Nt wu st lx))
   (let ((erased ws3) (erased sp3)) (splice-set _ tx ws xs ys lo len i sl wu sp st ai (add-pos-lt sl (Succ sr) len aw (LtZ sr))))
   (let ((erased tf2)) (add-shift t f F tf))
-  (let ((erased bi)) (lt-trans i N u62-modulus (add-pos-lt i (Succ j) N ij (LtZ j)) nm))
+  (let ((erased bi)) (lt-trans i Nt u62-modulus (add-pos-lt i (Succ j) Nt ij (LtZ j)) nm))
   (match many d _
     ((DL)
       (let-match many (u62-eq lo i blo bi) (Unequal _ _ _ _ apl) ((Equal _ _ _) (values (SRun m c0) ys a2 ws3 sp3 lx2)))
@@ -515,9 +507,9 @@
       (tail $ wsim m fa fx mb F f c0 (Succ t) q2 qq2 l2 (Cons (Bool) w r) h2 a0 e2 ys a2 (u62-dec i1 i bi) (Succ j) as1 (Cons (U8) wu bs)
         sl1 (Succ sr) lo hi tx ws3 len blo bhi sp3 (add-succ-inv lo sl1 i1 ai) (add-unshift sl1 (Succ sr) len aw) (add-unshift i1 sr hi ah)
         (LtS sr (Succ j) lsr)
-        (RSnoc m c0 (MkCfg q l h r) _ t run (StepL m q q2 l r l2 h w h2 lk pp))
+        (RSnoc m c0 (MkConf q l h r) _ t run (StepL m q q2 l r l2 h w h2 lk pp))
         (zip-left _ ys as1 bs i1 wu a0 z2)
-        xl2 (ExtCons w wu r bs ew xr) la1 (LengthCons _ _ bs j lb) N (add-unshift i1 (Succ j) N ij) nm tf2 bF n wf lq2 dq2 b2 db lfa b2m lx2))
+        xl2 (ExtCons w wu r bs ew xr) la1 (LengthCons _ _ bs j lb) Nt (add-unshift i1 (Succ j) Nt ij) nm tf2 bF n wf lq2 dq2 b2 db lfa b2m lx2))
     ((DR)
       (let-match many (u62-eq i hi bi bhi) (Unequal _ _ _ _ aph) ((Equal _ _ _) (values (SRun m c0) ys a2 ws3 sp3 lx2)))
       (let ((erased sr1) (erased es)) (slack-pos i sr hi ah aph))
@@ -527,12 +519,12 @@
       (let-match erased lb (LengthCons _ b0 bs1 _ lb1))
       (let ((erased h2) (erased r2) (erased pp) (erased e2) (erased xr2)) (ext-pop r b0 bs1 xr))
       (let-match erased lsr (LtS _ _ lsr1))
-      (tail $ wsim m fa fx mb F f c0 (Succ t) q2 qq2 (Cons (Bool) w l) r2 h2 b0 e2 ys a2 (u62-inc i (right-bound i j1 N u62-modulus ij nm)) j1
+      (tail $ wsim m fa fx mb F f c0 (Succ t) q2 qq2 (Cons (Bool) w l) r2 h2 b0 e2 ys a2 (u62-inc i (right-bound i j1 Nt u62-modulus ij nm)) j1
         (Cons (U8) wu as) bs1
         (Succ sl) sr1 lo hi tx ws3 len blo bhi sp3 (add-succ-right lo sl i ai) (add-shift sl (Succ sr1) len aw) (add-shift i sr1 hi ah) lsr1
-        (RSnoc m c0 (MkCfg q l h r) _ t run (StepR m q q2 l r r2 h w h2 lk pp))
+        (RSnoc m c0 (MkConf q l h r) _ t run (StepR m q q2 l r r2 h w h2 lk pp))
         (zip-right _ ys as bs1 i wu b0 z2)
-        (ExtCons w wu l as ew xl) xr2 (LengthCons _ _ as i la) lb1 N (add-shift i (Succ j1) N ij) nm tf2 bF n wf lq2 dq2 b2 db lfa b2m lx2))))
+        (ExtCons w wu l as ew xl) xr2 (LengthCons _ _ as i la) lb1 Nt (add-shift i (Succ j1) Nt ij) nm tf2 bF n wf lq2 dq2 b2 db lfa b2m lx2))))
 
 (def-adts
   ((Win : ((List (U8)) tx) ((Nat) i) ((Nat) j) -> Type)
@@ -554,7 +546,7 @@
   (MkWin tx i j lo (Succ d) s s ws sp (add-comm s lo i al) (add-succ-right s s d (double-add s d dd)) (lt-weaken s i pi) (lt-weaken s j pj)))
 
 (def-fns _ $ (many check-case : (many (List (Tr)) m) (many (Nat) n s) (erased (List (U8)) tx) (many (Bytes tx) tmpl)
-    (erased (Length (U8) tx N) ltx) (many (Start tx) st) (unique (Bytes tx) a) ->
+    (erased (Length (U8) tx N) ltx) (many (Origin tx) st) (unique (Bytes tx) a) ->
     (many (Res (Checked m n s)) r) (unique (Bytes tx) a2))
   (let-match many st (MkStart _ as bs i j z fa fb la lb ij))
   (let-match many (rows-check n n m) (ROk _ wf) ((RFail _) (values (RFail _) a)))
@@ -571,9 +563,9 @@
   (let-match many (lt-dec lo N) (Yes _ _ _ _ plo) ((No _ _ _ _ _) (values (RFail _) a)))
   (let-match many (lt-dec hi N) (Yes _ _ _ _ phi) ((No _ _ _ _ _) (values (RFail _) a)))
   (let ((many res) (erased ys) (unique a1) (erased ws2) (erased sp2) (erased ly))
-    (wsim m ft fx mb s s (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (Zero) (Zero) (Zero) (Nil (Bool)) (Nil (Bool)) (BFalse) z8 (EncF)
+    (wsim m ft fx mb s s (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (Zero) (Zero) (Zero) (Nil (Bool)) (Nil (Bool)) (BFalse) z8 (EncF)
       tx a i j as bs sl sr lo hi tx ws0 len (lt-trans lo N u62-modulus plo NM) (lt-trans hi N u62-modulus phi NM) sp0 ai aw ah lsr
-      (RNil m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) z (ExtNil as fa) (ExtNil bs fb) la lb
+      (RNil m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) z (ExtNil as fa) (ExtNil bs fb) la lb
       N ij NM (AddZero s) bs40 n wf lq0 (D0) b2 db (mapb-len m ft b2 mb (rows-len n n b2 m wf db)) (lt-trans b2 B40 u62-modulus pb2 NM40) ltx))
   (let ((erased old) (erased spo)) (splice-same _ tx ws2 ys lo len sp2))
   (let ((erased zs) (unique a4) (erased sp)) (bytes-blit _ tmpl lo _ a1 lo len ws0 sp0 old spo))
@@ -583,7 +575,7 @@
   (values (ROk _ (MkChecked m n s wf hh)) a4))
 
 (def-fns _ $ (many check-all : (subterm many (List (Case)) cs) (erased (List (U8)) tx) (many (Bytes tx) tmpl)
-    (erased (Length (U8) tx N) ltx) (many (Start tx) st) (unique (Bytes tx) a) -> (many (Res (AllHalt cs)) r))
+    (erased (Length (U8) tx N) ltx) (many (Origin tx) st) (unique (Bytes tx) a) -> (many (Res (AllHalt cs)) r))
   (let-match many cs (Cons _ c rest) ((Nil _) (ROk _ (AHNil))))
   (let-match many c (MkCase m n s))
   (let ((many rc) (unique a2)) (check-case m n s tx tmpl ltx st a))
@@ -594,7 +586,7 @@
 
 (def-fns _ $ (erased ah-get : (erased (List (Case)) cs) (erased (List (Tr)) m) (erased (Nat) n s)
     (erased (AllHalt cs) ah) (subterm erased (Mem (Case) (MkCase m n s) cs) mm) ->
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h))
   (match erased mm _
     ((MemHere _ _ _) (let-match erased ah (AHCons _ _ _ _ _ h _)) h)
     ((MemThere _ _ _ rest mm1) (let-match erased ah (AHCons _ _ _ _ _ _ ah1)) (ah-get rest m n s ah1 mm1))))
@@ -621,7 +613,7 @@
     (many CB1 : -> (CharBit #\1 (BTrue)))))
 
 (def-adts
-  ((CharDir : ((Char) c) ((Dir) d) -> Type)
+  ((CharDir : ((Char) c) ((Mv) d) -> Type)
     enum
     (many CDL : -> (CharDir #\L (DL)))
     (many CDR : -> (CharDir #\R (DR)))))
@@ -644,40 +636,44 @@
     (many CD9 : -> (CharDig #\9 9))))
 
 (def-fns _ $ (many get-bit : (many (Char) c) -> (many (Got (Bool) CharBit c) r))
-  (match many (char-eq c #\0) _ ((Equal _ _ _) (GotOk _ _ c (BFalse) (CB0))) (else
-  (match many (char-eq c #\1) _ ((Equal _ _ _) (GotOk _ _ c (BTrue) (CB1))) (else (GotNo _ _ c))))))
+  (let-match many (char-eq c #\0) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (BFalse) (CB0))))
+  (let-match many (char-eq c #\1) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (BTrue) (CB1))))
+  (GotNo _ _ c))
 
-(def-fns _ $ (many get-dir : (many (Char) c) -> (many (Got (Dir) CharDir c) r))
-  (match many (char-eq c #\L) _ ((Equal _ _ _) (GotOk _ _ c (DL) (CDL))) (else
-  (match many (char-eq c #\R) _ ((Equal _ _ _) (GotOk _ _ c (DR) (CDR))) (else (GotNo _ _ c))))))
+(def-fns _ $ (many get-dir : (many (Char) c) -> (many (Got (Mv) CharDir c) r))
+  (let-match many (char-eq c #\L) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (DL) (CDL))))
+  (let-match many (char-eq c #\R) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (DR) (CDR))))
+  (GotNo _ _ c))
 
 (def-fns _ $ (many get-st : (many (Char) c) -> (many (Got (Nat) CharSt c) r))
-  (match many (char-eq c #\A) _ ((Equal _ _ _) (GotOk _ _ c (Zero) (CSA))) (else
-  (match many (char-eq c #\B) _ ((Equal _ _ _) (GotOk _ _ c (Succ (Zero)) (CSB))) (else
-  (match many (char-eq c #\C) _ ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Zero))) (CSC))) (else
-  (match many (char-eq c #\D) _ ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Succ (Zero)))) (CSD))) (else
-  (match many (char-eq c #\E) _ ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Succ (Succ (Zero))))) (CSE))) (else (GotNo _ _ c))))))))))))
+  (let-match many (char-eq c #\A) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (Zero) (CSA))))
+  (let-match many (char-eq c #\B) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (Succ (Zero)) (CSB))))
+  (let-match many (char-eq c #\C) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Zero))) (CSC))))
+  (let-match many (char-eq c #\D) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Succ (Zero)))) (CSD))))
+  (let-match many (char-eq c #\E) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c (Succ (Succ (Succ (Succ (Zero))))) (CSE))))
+  (GotNo _ _ c))
 
 (def-fns _ $ (many get-dig : (many (Char) c) -> (many (Got (Nat) CharDig c) r))
-  (match many (char-eq c #\0) _ ((Equal _ _ _) (GotOk _ _ c 0 (CD0))) (else
-  (match many (char-eq c #\1) _ ((Equal _ _ _) (GotOk _ _ c 1 (CD1))) (else
-  (match many (char-eq c #\2) _ ((Equal _ _ _) (GotOk _ _ c 2 (CD2))) (else
-  (match many (char-eq c #\3) _ ((Equal _ _ _) (GotOk _ _ c 3 (CD3))) (else
-  (match many (char-eq c #\4) _ ((Equal _ _ _) (GotOk _ _ c 4 (CD4))) (else
-  (match many (char-eq c #\5) _ ((Equal _ _ _) (GotOk _ _ c 5 (CD5))) (else
-  (match many (char-eq c #\6) _ ((Equal _ _ _) (GotOk _ _ c 6 (CD6))) (else
-  (match many (char-eq c #\7) _ ((Equal _ _ _) (GotOk _ _ c 7 (CD7))) (else
-  (match many (char-eq c #\8) _ ((Equal _ _ _) (GotOk _ _ c 8 (CD8))) (else
-  (match many (char-eq c #\9) _ ((Equal _ _ _) (GotOk _ _ c 9 (CD9))) (else (GotNo _ _ c))))))))))))))))))))))
+  (let-match many (char-eq c #\0) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 0 (CD0))))
+  (let-match many (char-eq c #\1) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 1 (CD1))))
+  (let-match many (char-eq c #\2) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 2 (CD2))))
+  (let-match many (char-eq c #\3) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 3 (CD3))))
+  (let-match many (char-eq c #\4) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 4 (CD4))))
+  (let-match many (char-eq c #\5) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 5 (CD5))))
+  (let-match many (char-eq c #\6) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 6 (CD6))))
+  (let-match many (char-eq c #\7) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 7 (CD7))))
+  (let-match many (char-eq c #\8) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 8 (CD8))))
+  (let-match many (char-eq c #\9) (Unequal _ _ _ _ _) ((Equal _ _ _) (GotOk _ _ c 9 (CD9))))
+  (GotNo _ _ c))
 
 (def-adts
   ((PTr : ((String) s) ((Tr) t) ((String) s2) -> Type)
     enum
-    (many PTH : (erased (String) s) -> (PTr (SCons #\- (SCons #\- (SCons #\- s))) (Halt) s))
-    (many PTZ : (erased (Char) c1 c2) (erased (String) s) -> (PTr (SCons c1 (SCons c2 (SCons #\Z s))) (Halt) s))
-    (many PTG : (erased (Char) c1 c2 c3) (erased (String) s) (erased (Bool) w) (erased (Dir) d) (erased (Nat) q)
+    (many PTH : (erased (String) s) -> (PTr (SCons #\- (SCons #\- (SCons #\- s))) (Hlt) s))
+    (many PTZ : (erased (Char) c1 c2) (erased (String) s) -> (PTr (SCons c1 (SCons c2 (SCons #\Z s))) (Hlt) s))
+    (many PTG : (erased (Char) c1 c2 c3) (erased (String) s) (erased (Bool) w) (erased (Mv) d) (erased (Nat) q)
        (erased (CharBit c1 w) pw) (erased (CharDir c2 d) pd) (erased (CharSt c3 q) pq)
-       -> (PTr (SCons c1 (SCons c2 (SCons c3 s))) (Go w d q) s))))
+       -> (PTr (SCons c1 (SCons c2 (SCons c3 s))) (Mov w d q) s))))
 
 (def-adts
   ((PRows : ((String) s) ((List (Tr)) m) ((Nat) k) ((String) s2) -> Type)
@@ -716,26 +712,26 @@
   (let-match many s1 (SCons c2 s2) ((SNil) (PNo _ _ s)))
   (let-match many s2 (SCons c3 s3) ((SNil) (PNo _ _ s)))
   (match many (char-eq c3 #\Z) _
-    ((Equal _ _ _) (POk _ _ s (Halt) s3 (PTZ c1 c2 s3)))
+    ((Equal _ _ _) (POk _ _ s (Hlt) s3 (PTZ c1 c2 s3)))
     (else
       (match many (char-eq c1 #\-) _
         ((Equal _ _ _)
           (let-match many (char-eq c2 #\-) (Equal _ _ _) (else (PNo _ _ s)))
           (let-match many (char-eq c3 #\-) (Equal _ _ _) (else (PNo _ _ s)))
-          (POk _ _ s (Halt) s3 (PTH s3)))
+          (POk _ _ s (Hlt) s3 (PTH s3)))
         (else
           (let-match many (get-bit c1) (GotOk _ _ _ w pw) ((GotNo _ _ _) (PNo _ _ s)))
           (let-match many (get-dir c2) (GotOk _ _ _ d pd) ((GotNo _ _ _) (PNo _ _ s)))
           (let-match many (get-st c3) (GotOk _ _ _ q pq) ((GotNo _ _ _) (PNo _ _ s)))
-          (POk _ _ s (Go w d q) s3 (PTG c1 c2 c3 s3 w d q pw pd pq)))))))
+          (POk _ _ s (Mov w d q) s3 (PTG c1 c2 c3 s3 w d q pw pd pq)))))))
 
 (def-adts
-  ((RowsR : ((String) s) -> Type)
+  ((RowsStr : ((String) s) -> Type)
     enum
-    (many RowsOk : (erased (String) s) (many (List (Tr)) m) (many (Nat) k) (many (String) s2) (erased (PRows s m k s2) p) -> (RowsR s))
-    (many RowsNo : (erased (String) s) -> (RowsR s))))
+    (many RowsOk : (erased (String) s) (many (List (Tr)) m) (many (Nat) k) (many (String) s2) (erased (PRows s m k s2) p) -> (RowsStr s))
+    (many RowsNo : (erased (String) s) -> (RowsStr s))))
 
-(def-fns _ $ (many p-rows : (subterm many (Nat) fuel) (many (String) s) -> (many (RowsR s) r))
+(def-fns _ $ (many p-rows : (subterm many (Nat) fuel) (many (String) s) -> (many (RowsStr s) r))
   (let-match many fuel (Succ f) ((Zero) (RowsNo s)))
   (let-match many (p-tr s) (POk _ _ _ t0 s1 p0) ((PNo _ _ _) (RowsNo s)))
   (let-match many (p-tr s1) (POk _ _ _ t1 s2 p1) ((PNo _ _ _) (RowsNo s)))
@@ -781,16 +777,16 @@
       (let-match many (notail $ p-cases f s2) (CasesOk _ cs pc) ((CasesNo _) (CasesNo s)))
       (CasesOk s (Cons (Case) (MkCase m n v) cs) (PCCons s s1 s2 m n v cs pr pn pc)))))
 
-(def-fns _ $ (many eq-dir : (many (Dir) x) (many (Dir) y) -> (many (Maybe (Eq (Dir) x y)) r))
+(def-fns _ $ (many eq-dir : (many (Mv) x) (many (Mv) y) -> (many (Maybe (Eq (Mv) x y)) r))
   (match many x _
-    ((DL) (match many y _ ((DL) (Some _ (Refl (Dir) x))) ((DR) (None _))))
-    ((DR) (match many y _ ((DR) (Some _ (Refl (Dir) x))) ((DL) (None _))))))
+    ((DL) (match many y _ ((DL) (Some _ (Refl (Mv) x))) ((DR) (None _))))
+    ((DR) (match many y _ ((DR) (Some _ (Refl (Mv) x))) ((DL) (None _))))))
 
 (def-fns _ $ (many eq-tr : (many (Tr) x) (many (Tr) y) -> (many (Maybe (Eq (Tr) x y)) r))
   (match many x _
-    ((Halt) (match many y _ ((Halt) (Some _ (Refl (Tr) x))) (else (None _))))
-    ((Go w d q)
-      (let-match many y (Go w2 d2 q2) ((Halt) (None _)))
+    ((Hlt) (match many y _ ((Hlt) (Some _ (Refl (Tr) x))) (else (None _))))
+    ((Mov w d q)
+      (let-match many y (Mov w2 d2 q2) ((Hlt) (None _)))
       (let-match many (eq-bit w w2) (Some _ e1) ((None _) (None _)))
       (let-match many (eq-dir d d2) (Some _ e2) ((None _) (None _)))
       (let-match many (eq-nat q q2) (Some _ e3) ((None _) (None _)))
@@ -855,7 +851,7 @@
   (let-match erased (rep-same N tx tx2 rp rp2) (Refl _ _))
   (let-match erased rp (RepeatCons _ _ _ b0 rp0))
   (let ((many i) (many j) (erased as) (erased bs) (erased z) (erased fa) (erased fb) (erased la) (erased lb) (erased ij))
-    (seek 32768 tx (Nil (U8)) b0 (Zero) N1 N (ZHere _ _ b0) (Z8Nil) (rep-allf _ b0 rp0) (LengthNil _) (rep-len _ b0 rp0) (AddZero _)))
+    (seek 32768 tx (Nil (U8)) b0 (Zero) Nm1 N (ZHere _ _ b0) (Z8Nil) (rep-allf _ b0 rp0) (LengthNil _) (rep-len _ b0 rp0) (AddZero _)))
   (let ((many st)) (MkStart tx as bs i j z fa fb la lb ij))
   (let ((many tm)) (share tmpl))
   (let-match many (check-all cs tx tm (LengthCons _ _ _ _ (rep-len _ b0 rp0)) st a) (ROk _ ah) ((RFail _) (RFail _)))

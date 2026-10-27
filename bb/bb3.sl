@@ -8,7 +8,7 @@
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 
-(let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BFalse) (DR) 2) $ Cons _ (Go (BTrue) (DL) 2) $ Cons _ (Go (BTrue) (DL) 0) $ Nil (Tr)))
+(let ((many champ)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Hlt) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BFalse) (DR) 2) $ Cons _ (Mov (BTrue) (DL) 2) $ Cons _ (Mov (BTrue) (DL) 0) $ Nil (Tr)))
 (let ((many cw0)) (rows-check 3 3 champ))
 (comptime-match many cw0 (ROk _ cw))
 (let ((many cp) (erased cdl)) (defs champ))
@@ -16,11 +16,11 @@
 (comptime-match many cs (PSHalt _ ct cq cl cr chh cpr cpl))
 (comptime-match many (nat-eq (Succ ct) 21) (Equal _ _ _))
 (let ((erased cex)) (defl-ext champ cp cdl))
-(let ((erased ch)) (run-add champ _ (MkCfg cq cl chh cr) ct (Succ (Zero)) (Succ ct) (prun-run cp champ cex _ _ ct cpr)
+(let ((erased ch)) (run-add champ _ (MkConf cq cl chh cr) ct (Succ (Zero)) (Succ ct) (prun-run cp champ cex _ _ ct cpr)
   (HStop champ cq cl cr chh (ext-look cp champ cq chh _ cex cpl)) (add-succ-right ct (Zero) ct (add-zero-right ct))))
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 3 3 m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 21)) p))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 21)) p))
   (sym-good 3 21 (Succ (Succ (Zero))) xs O OR p0 ta up kr rg op (NCS 3 (Succ (Zero)) l1n) m s w h))
 
 (goal erased (BBIs 3 21))

@@ -8,8 +8,8 @@
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 
-(let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Go (BFalse) (DL) 2) $
-  Cons _ (Halt) $ Cons _ (Go (BTrue) (DL) 3) $ Cons _ (Go (BTrue) (DR) 3) $ Cons _ (Go (BFalse) (DR) 0) $ Nil (Tr)))
+(let ((many champ)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BTrue) (DL) 0) $ Cons _ (Mov (BFalse) (DL) 2) $
+  Cons _ (Hlt) $ Cons _ (Mov (BTrue) (DL) 3) $ Cons _ (Mov (BTrue) (DR) 3) $ Cons _ (Mov (BFalse) (DR) 0) $ Nil (Tr)))
 (let ((many cw0)) (rows-check 4 4 champ))
 (comptime-match many cw0 (ROk _ cw))
 (let ((many cp) (erased cdl)) (defs champ))
@@ -17,12 +17,9 @@
 (comptime-match many cs (PSHalt _ ct cq cl cr chh cpr cpl))
 (comptime-match many (nat-eq (Succ ct) 107) (Equal _ _ _))
 (let ((erased cex)) (defl-ext champ cp cdl))
-(let ((erased ch)) (run-add champ _ (MkCfg cq cl chh cr) ct (Succ (Zero)) (Succ ct) (prun-run cp champ cex _ _ ct cpr)
+(let ((erased ch)) (run-add champ _ (MkConf cq cl chh cr) ct (Succ (Zero)) (Succ ct) (prun-run cp champ cex _ _ ct cpr)
   (HStop champ cq cl cr chh (ext-look cp champ cq chh _ cex cpl)) (add-succ-right ct (Zero) ct (add-zero-right ct))))
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 4 4 m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 107)) p))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 107)) p))
   (sym-good 4 107 (Succ (Succ (Zero))) xs O OR p0 ta up kr rg op (NCS 4 (Succ (Zero)) l1n) m s w h))
-
-(goal erased (BBIs 4 107))
-(qed (MkBB 4 107 champ cw ch (level-of bound) bound))

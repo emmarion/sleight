@@ -61,22 +61,22 @@
   (match erased s _ ((SwA _ _) lb) ((SwB _ _) la) ((SwO _ _ _ _ _) lx)))
 
 (def-adts
-  ((Flip : ((Bool) f) ((Dir) d) ((Dir) e) -> Type)
+  ((Flip : ((Bool) f) ((Mv) d) ((Mv) e) -> Type)
     enum
-    (many FlN : (erased (Dir) d) -> (Flip (BFalse) d d))
+    (many FlN : (erased (Mv) d) -> (Flip (BFalse) d d))
     (many FlL : -> (Flip (BTrue) (DL) (DR)))
     (many FlR : -> (Flip (BTrue) (DR) (DL)))))
 
-(def-fns _ $ (erased flip-of : (erased (Bool) f) (erased (Dir) d) -> (erased (Dir) e) (erased (Flip f d e) fl))
+(def-fns _ $ (erased flip-of : (erased (Bool) f) (erased (Mv) d) -> (erased (Mv) e) (erased (Flip f d e) fl))
   (let-match erased f (BTrue) ((BFalse) (values d (FlN d))))
   (match erased d _ ((DL) (values (DR) (FlL))) ((DR) (values (DL) (FlR)))))
 
 (def-adts
   ((XT : ((Bool) f) ((Nat) a) ((Nat) b) ((Tr) t) ((Tr) u) -> Type)
     enum
-    (many XTH : (erased (Bool) f) (erased (Nat) a b) -> (XT f a b (Halt) (Halt)))
-    (many XTG : (erased (Bool) f) (erased (Nat) a b) (erased (Bool) w) (erased (Dir) d e) (erased (Nat) q q2)
-       (erased (Flip f d e) fl) (erased (Swap a b q q2) s) -> (XT f a b (Go w d q) (Go w e q2)))))
+    (many XTH : (erased (Bool) f) (erased (Nat) a b) -> (XT f a b (Hlt) (Hlt)))
+    (many XTG : (erased (Bool) f) (erased (Nat) a b) (erased (Bool) w) (erased (Mv) d e) (erased (Nat) q q2)
+       (erased (Flip f d e) fl) (erased (Swap a b q q2) s) -> (XT f a b (Mov w d q) (Mov w e q2)))))
 
 (def-adts
   ((XM : ((Bool) f) ((Nat) a) ((Nat) b) ((List (Tr)) m) ((List (Tr)) v) -> Type)
@@ -86,10 +86,10 @@
        (erased (XT f a b t u) e) (erased (XM f a b m v) r) -> (XM f a b (Cons (Tr) t m) (Cons (Tr) u v)))))
 
 (def-fns _ $ (erased xt-of : (erased (Bool) f) (erased (Nat) a b) (erased (Tr) t) -> (erased (Tr) u) (erased (XT f a b t u) e))
-  (let-match erased t (Go w d q) ((Halt) (values (Halt) (XTH f a b))))
+  (let-match erased t (Mov w d q) ((Hlt) (values (Hlt) (XTH f a b))))
   (let ((erased e) (erased fl)) (flip-of f d))
   (let ((erased q2) (erased s)) (swap-of a b q))
-  (values (Go w e q2) (XTG f a b w d e q q2 fl s)))
+  (values (Mov w e q2) (XTG f a b w d e q q2 fl s)))
 
 (def-fns _ $ (erased xm-of : (erased (Bool) f) (erased (Nat) a b) (subterm erased (List (Tr)) m) -> (erased (List (Tr)) v) (erased (XM f a b m v) x))
   (let-match erased m (Cons _ t rest) ((Nil _) (values (Nil (Tr)) (XMNil f a b))))
@@ -251,17 +251,17 @@
     (many FC1 : (erased (List (Bool)) l r) -> (FCfg (BTrue) l r r l))))
 
 (def-fns _ $ (erased pm-halts : (erased (Bool) f) (erased (Nat) a b) (erased (List (Tr)) m v) (erased (Nat) q q2) (erased (List (Bool)) l r l2 r2)
-    (erased (Bool) h) (erased (Nat) s) (subterm erased (HaltsIn m (MkCfg q l h r) s) hs) (erased (PermM f a b m v) pm)
-    (erased (Swap a b q q2) sw) (erased (FCfg f l r l2 r2) fc) -> (erased (HaltsIn v (MkCfg q2 l2 h r2) s) res))
+    (erased (Bool) h) (erased (Nat) s) (subterm erased (HaltsAt m (MkConf q l h r) s) hs) (erased (PermM f a b m v) pm)
+    (erased (Swap a b q q2) sw) (erased (FCfg f l r l2 r2) fc) -> (erased (HaltsAt v (MkConf q2 l2 h r2) s) res))
   (match erased hs _
     ((HStop _ _ _ _ _ lk)
-      (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Halt) lk pm sw))
+      (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Hlt) lk pm sw))
       (let-match erased e (XTH _ _ _))
       (HStop v q2 l2 r2 h lk2))
     ((HMove _ _ _ s1 st rest)
       (match erased st _
         ((StepL _ _ q3 _ _ k1x _ w h2 lk pp)
-          (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Go w (DL) q3) lk pm sw))
+          (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Mov w (DL) q3) lk pm sw))
           (let-match erased e (XTG _ _ _ _ _ _ _ q4 fl s3))
           (match erased fc _
             ((FC0 _ _)
@@ -273,7 +273,7 @@
               (HMove v _ _ s1 (StepR v q2 q4 r l k1x h w h2 lk2 pp)
                 (pm-halts f a b m v q3 q4 k1x (Cons (Bool) w r) (Cons (Bool) w r) k1x h2 s1 rest pm s3 (FC1 k1x (Cons (Bool) w r)))))))
         ((StepR _ _ q3 _ _ r1 _ w h2 lk pp)
-          (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Go w (DR) q3) lk pm sw))
+          (let ((erased u) (erased e) (erased lk2)) (pm-look f a b m v q q2 h (Mov w (DR) q3) lk pm sw))
           (let-match erased e (XTG _ _ _ _ _ _ _ q4 fl s3))
           (match erased fc _
             ((FC0 _ _)
@@ -316,9 +316,9 @@
     enum
     (many BlwNil : (erased (Nat) c) -> (Below c (Nil (PT))))
     (many BlwU : (erased (Nat) c) (erased (List (PT)) p) (erased (Below c p) r) -> (Below c (Cons (PT) (Undef) p)))
-    (many BlwH : (erased (Nat) c) (erased (List (PT)) p) (erased (Below c p) r) -> (Below c (Cons (PT) (Def (Halt)) p)))
-    (many BlwG : (erased (Nat) c) (erased (List (PT)) p) (erased (Bool) w) (erased (Dir) d) (erased (Nat) q) (erased (Lt q c) lq)
-       (erased (Below c p) r) -> (Below c (Cons (PT) (Def (Go w d q)) p)))))
+    (many BlwH : (erased (Nat) c) (erased (List (PT)) p) (erased (Below c p) r) -> (Below c (Cons (PT) (Def (Hlt)) p)))
+    (many BlwG : (erased (Nat) c) (erased (List (PT)) p) (erased (Bool) w) (erased (Mv) d) (erased (Nat) q) (erased (Lt q c) lq)
+       (erased (Below c p) r) -> (Below c (Cons (PT) (Def (Mov w d q)) p)))))
 
 (def-fns _ $ (erased xm-ext : (erased (Nat) a b c) (erased (List (PT)) p) (erased (List (Tr)) m v) (subterm erased (Ext p m) ex)
     (erased (XM (BFalse) a b m v) x) (erased (Below c p) tb) (erased (Lt c (Succ a)) ca) (erased (Lt c (Succ b)) cb) -> (erased (Ext p v) ex2))
@@ -333,12 +333,12 @@
       (match erased tb _
         ((BlwH _ _ tb1)
           (let-match erased e (XTH _ _ _))
-          (ExD (Halt) p1 v1 (xm-ext a b c p1 m1 v1 ex1 x1 tb1 ca cb)))
+          (ExD (Hlt) p1 v1 (xm-ext a b c p1 m1 v1 ex1 x1 tb1 ca cb)))
         ((BlwG _ _ w d q lq tb1)
           (let-match erased e (XTG _ _ _ _ _ _ _ q2 fl s))
           (let-match erased fl (FlN _))
           (let-match erased (swap-below a b q q2 s (lt-le-trans q c a lq ca) (lt-le-trans q c b lq cb)) (Refl _ _))
-          (ExD (Go w d q) p1 v1 (xm-ext a b c p1 m1 v1 ex1 x1 tb1 ca cb)))))))
+          (ExD (Mov w d q) p1 v1 (xm-ext a b c p1 m1 v1 ex1 x1 tb1 ca cb)))))))
 
 (def-fns _ $ (erased ext-set-uf : (erased (Nat) c q) (erased (List (PT)) p) (erased (List (Tr)) m m2) (erased (Tr) t0 t1)
     (erased (Ext p m) ex) (subterm erased (SetRow m q t0 t1 m2) sr) (erased (UF c p) uf) (erased (Lt c (Succ q)) cq) -> (erased (Ext p m2) ex2))
@@ -379,12 +379,12 @@
 (def-fns _ $ (erased fit : (erased (Nat) n c c2 q s) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (List (PT)) p) (erased (List (Tr)) m)
     (erased (Bool) h) (erased (Tr) tq) (erased (Range c2 xs) rg) (erased (Opts xs os) op) (erased (NextC n c c2) nc) (erased (UF c p) uf)
     (erased (Below c p) bl) (erased (Lt q c) lq) (erased (Ext p m) ex) (erased (Rows n n m) w)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) (erased (Look m q h tq) lk) ->
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) (erased (Look m q h tq) lk) ->
     (erased (List (Tr)) m2) (erased (Ext p m2) ex2) (erased (Rows n n m2) w2)
-    (erased (HaltsIn m2 (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs2) (erased (Tr) tq2) (erased (Look m2 q h tq2) lk2)
+    (erased (HaltsAt m2 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs2) (erased (Tr) tq2) (erased (Look m2 q h tq2) lk2)
     (erased (Mem (Tr) tq2 os) mm) (erased (Nat) a b) (erased (XT (BFalse) a b tq tq2) e))
   (let-match erased (look-ok n n q m h tq w lk) (OKGo _ r wb d lr)
-    ((OKHalt _) (values m ex w hs (Halt) lk (opts-halt xs os op) (Zero) (Zero) (XTH (BFalse) (Zero) (Zero)))))
+    ((OKHalt _) (values m ex w hs (Hlt) lk (opts-halt xs os op) (Zero) (Zero) (XTH (BFalse) (Zero) (Zero)))))
   (let-match erased (lt-dec r c2) (No _ _ _ _ gle)
     ((Yes _ _ _ _ lt)
       (let ((erased y) (erased sw)) (swap-of (Zero) (Zero) r))
