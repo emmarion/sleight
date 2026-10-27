@@ -3,8 +3,8 @@
 (let ((many O) (erased op)) (opts xs))
 (let ((many OR) (erased kr)) (keep-r O))
 (comptime-match many (lt-dec (Succ (Zero)) 3) (Yes _ _ _ _ l1n))
-(def-fns _ $ (many run-tree : -> (many (Res (TAll 3 21 p0 (Zero) (BFalse) OR)) r))
-  (build-all 3 7 OR 21 p0 (Zero) (BFalse) settings 30))
+(def-fns _ $ (many run-tree : -> (many (Res (TAll 3 21 (Nil (List (PT))) p0 (Zero) (BFalse) OR)) r))
+  (build-all 3 7 OR 21 (Nil (List (PT))) p0 (Zero) (BFalse) (MkPlan settings (Nil (Setting)) 30 0)))
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 
@@ -21,7 +21,7 @@
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 3 3 m) w) (erased (Nat) s)
     (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 21)) p))
-  (sym-good 3 21 (Succ (Succ (Zero))) xs O OR p0 ta up kr rg op (NCS 3 (Succ (Zero)) l1n) m s w h))
+  (no-hole s 21 (sym-good 3 21 (Succ (Succ (Zero))) (Nil (List (PT))) xs O OR p0 ta up kr rg op (NCS 3 (Succ (Zero)) l1n) m s w h)))
 
 (goal erased (BBIs 3 21))
 (qed (MkBB 3 21 champ cw ch (level-of bound) bound))

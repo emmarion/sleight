@@ -365,7 +365,7 @@
   (let-match many (notail $ acc-all sy SY adj AA acc rest badj bacc bas1) (ROk _ aa) ((RFail _) (RFail _)))
   (ROk _ (AACons sy adj acc rest a c a2 (MkEIn adj a c a2 row nr mr) nb ma aa)))
 
-(def-fns _ $ (many check-cert : (many (Nat) n k) (many (List (PT)) p) (many (Cert) ct) -> (many (Res (TNode n k p)) r))
+(def-fns _ $ (many check-cert : (many (Nat) n k) (erased (List (List (PT))) hl) (many (List (PT)) p) (many (Cert) ct) -> (many (Res (TNode n k hl p)) r))
   (let-match many ct (MkCert sy adj acc S ch a0))
   (let-match many (bd-acns (Cons (ACN) a0 S)) (ROk _ bS0) ((RFail _) (RFail _)))
   (let-match erased bS0 (AllCons _ _ _ _ ba0 bS))
@@ -385,7 +385,7 @@
   (let-match many h (BFalse) ((BTrue) (RFail _)))
   (let-match many (find-nat sl acc bl bacc) (ROk _ ml) ((RFail _) (RFail _)))
   (let-match many (find-nat sr acc br bacc) (ROk _ mr) ((RFail _) (RFail _)))
-  (ROk _ (TN n k p sy adj acc S cl aa a0 ma
+  (ROk _ (TN n k hl p sy adj acc S cl aa a0 ma
     (MkGCN sy adj acc (Zero) sl sh sr (Nil (Bool)) (Nil (Bool)) (BFalse) (GAcc sy adj acc sl ml) (GAcc sy adj acc sr mr) nh))))
 
 (def-adts
@@ -466,7 +466,7 @@
   (let-match erased e2 (Refl _ _))
   (Some _ (Refl (List (Bool)) xs)))
 
-(def-fns _ $ (many check-cyc : (many (Nat) n k) (many (List (PT)) p) (many (Bool) f) (many (Nat) t1 D P) -> (many (Res (TNode n k p)) res))
+(def-fns _ $ (many check-cyc : (many (Nat) n k) (erased (List (List (PT))) hl) (many (List (PT)) p) (many (Bool) f) (many (Nat) t1 D P) -> (many (Res (TNode n k hl p)) res))
   (let ((many p2) (erased mi))
     (match many f (((List (PT)) p2) ((Mir f p p2) mi))
       ((BFalse) (values p (MirN p)))
@@ -485,4 +485,4 @@
   (let-match many (split-at D x2) (MkSpl _ x3 w cw) ((NoSpl _) (RFail _)))
   (let-match many (eq-bools x3 x) (Some _ e4) ((None _) (RFail _)))
   (let-match erased e4 (Refl _ _))
-  (ROk _ (TC n k p p2 f mi (MkCyc p2 t T q x w x2 r y l h pr c lr cw))))
+  (ROk _ (TC n k hl p p2 f mi (MkCyc p2 t T q x w x2 r y l h pr c lr cw))))
