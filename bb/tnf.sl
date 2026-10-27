@@ -11,8 +11,10 @@
   (match many q _
     ((Zero) (match many b _ ((BFalse) (PLOk p q b x0 (PL0 x0 x1 rest))) ((BTrue) (PLOk p q b x1 (PL1 x0 x1 rest)))))
     ((Succ q1)
-      (let-match many (notail $ plook rest q1 b) (PLOk _ _ _ x pl) ((PLNo _ _ _) (PLNo p q b)))
-      (PLOk p q b x (PLS x0 x1 rest q1 b x pl)))))
+      (let ((many r1)) (notail $ plook rest q1 b))
+      (match many r1 _
+        ((PLOk _ _ _ x pl) (coerce r1 (coercible-ctor (Shared) PLOk rest p q1 q b b (coercible-refl (Shared) x) pl (PLS x0 x1 rest q1 b x pl))))
+        ((PLNo _ _ _) (coerce r1 (coercible-ctor (Shared) PLNo rest p q1 q b b)))))))
 
 (def-adts
   ((PSetR : ((List (PT)) p) ((Nat) q) ((Bool) b) ((PT) y) -> Type)
