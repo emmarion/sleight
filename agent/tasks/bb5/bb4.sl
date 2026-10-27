@@ -1,1 +1,1 @@
-(goal many (BusyBeaver 4 107))
+(goal erased (BusyBeaver 4 107))
