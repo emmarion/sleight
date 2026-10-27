@@ -1,12 +1,10 @@
 (let ((many p0) (erased up)) (undefs 3))
-(let ((many hs)) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 0 2) $ Cons _ (MkPair _ _ 0 3) $ Cons _ (MkPair _ _ 0 4) $
-  Cons _ (MkPair _ _ 1 4) $ Cons _ (MkPair _ _ 2 2) $ Nil (Pair (Nat) (Nat))))
 (let ((many xs) (erased rg)) (range (Succ (Succ (Zero)))))
 (let ((many O) (erased op)) (opts xs))
 (let ((many OR) (erased kr)) (keep-r O))
 (comptime-match many (lt-dec (Succ (Zero)) 3) (Yes _ _ l1n))
 (def-fns _ $ (many run-tree : -> (many (Res (TAll 3 21 p0 (Zero) (BFalse) OR)) r))
-  (build-all 3 7 OR 21 p0 (Zero) (BFalse) hs 1000 30))
+  (build-all 3 7 OR 21 p0 (Zero) (BFalse) settings 30))
 (let ((many res)) (native-compute run-tree))
 (comptime-match many res (ROk _ ta))
 
