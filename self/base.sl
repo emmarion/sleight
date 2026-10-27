@@ -57,7 +57,8 @@
 ; code in [lo, hi]
 (def-fns _ $ (many char-between : (many (Char) c) (many (Nat) lo) (many (Nat) hi) -> (many (Bool) r))
   (let ((many n)) $ char-code c)
-  (and (not $ nat-lt n lo) $ not $ nat-lt hi n))
+  (let-match many (lt-dec n lo) (No _ _ _) ((Yes _ _ _) (BFalse)))
+  (match many (lt-dec hi n) _ ((Yes _ _ _) (BFalse)) ((No _ _ _) (BTrue))))
 
 (def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
   (let ((many s) (erased _)) (delegate (flatten r)))
@@ -681,7 +682,7 @@
 (comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
 
 (def-fns _ $ (many hex-code : (many (Nat) n) -> (many (Nat) c))
-  (match many (nat-lt n 10) _ ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
+  (match many (lt-dec n 10) _ ((Yes _ _ _) (nat-add 48 n)) ((No _ _ _) (nat-add 87 n))))
 
 (def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
   (RChar $ char-of-code $ hex-code n))
