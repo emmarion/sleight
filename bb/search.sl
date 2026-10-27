@@ -763,7 +763,9 @@
       (let-match many tr (TMiss) ((TGot ct) (LDone n k hl p (check-cert n k hl p ct))) ((TBad) fail))
       (let-match many (find-hole p hl) (None _) ((Some _ mh) (LDone n k hl p (ROk _ (THole n k hl p mh)))))
       (let-match many sts (Cons _ st rest) ((Nil _) fail))
-      (let-match many st (MkStage steps _ _))
+      (let-match many st (MkStage steps _ hm))
+      (let-match many hm (Some _ _) ((None _) (tail $ classify n k hl p st rest (psim p steps t q l h r pr))))
+      (let-match many (stage-try st p) (TMiss) ((TGot ct) (LDone n k hl p (check-cert n k hl p ct))) ((TBad) fail))
       (tail $ classify n k hl p st rest (psim p steps t q l h r pr)))))
 
 (def-fns _
