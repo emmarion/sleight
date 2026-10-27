@@ -61,10 +61,14 @@
         ((Cons _ h2 r2) (tail $ psim p f (Succ t) q2 (Cons (Bool) w l) h2 r2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl (PopCons h2 r2)))))))))
 
+(def-adts $ (Choice : -> Type)
+  enum
+  (many MkCh : (many (Nat) cn o2) (many (List (Nat)) tg) -> (Choice)))
+
 (def-adts $ (Cert : -> Type)
   enum
-  (many MkCert : (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (Nat)) acc) (many (List (ACN)) S)
-     (many (List (Pair (Nat) (Nat))) ch) (many (ACN) a0) -> (Cert)))
+  (many MkCert : (many (List (Bool)) sy) (many (List (List (Pair (Nat) (Nat)))) adj) (many (List (Nat)) acc) (many (List (ACN)) S)
+     (many (List (Choice)) ch) (many (ACN) a0) -> (Cert)))
 
 (def-adts
   ((NthR : (Type A) ((List A) xs) ((Nat) i) -> Type)
@@ -72,13 +76,52 @@
     (many NOk : (erased Type A) (erased (List A) xs) (erased (Nat) i) (many A x) (erased (Nth A xs i x) p) -> (NthR A xs i))
     (many NNo : (erased Type A) (erased (List A) xs) (erased (Nat) i) -> (NthR A xs i))))
 
-(def-fns _ $ (many nth-r : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (NthR A xs i) r))
-  (let-match many xs (Cons _ x rest) ((Nil _) (NNo A xs i)))
-  (match many i _
-    ((Zero) (NOk A xs i x (NthHere A x rest)))
-    ((Succ i1)
-      (let-match many (notail $ nth-r A rest i1) (NOk _ _ _ y p) ((NNo _ _ _) (NNo A xs i)))
-      (NOk A xs i y (NthThere A x rest i1 y p)))))
+(def-adts
+  ((CopyL : (Type A) ((List A) xs) ((List (Copy A)) ys) -> Type)
+    enum
+    (many CLNil : (erased Type A) -> (CopyL A (Nil A) (Nil (Copy A))))
+    (many CLCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (List (Copy A)) ys) (erased (CopyL A xs ys) r)
+       -> (CopyL A (Cons A x xs) (Cons (Copy A) (MkCopy A x) ys)))))
+
+(def-fns _ $ (many copies : (erased Type A) (subterm many (List A) xs) -> (many (List (Copy A)) ys) (erased (CopyL A xs ys) c))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil (Copy A)) (CLNil A))))
+  (let ((many ys) (erased c)) (notail $ copies A rest))
+  (values (Cons (Copy A) (MkCopy A x) ys) (CLCons A x rest ys c)))
+
+(def-fns _ $ (erased copy-nth : (erased Type A) (erased (List A) xs) (erased (List (Copy A)) ys) (erased (Nat) i) (erased A x)
+    (erased (CopyL A xs ys) c) (subterm erased (Nth (Copy A) ys i (MkCopy A x)) p) -> (erased (Nth A xs i x) q))
+  (match erased p _
+    ((NthHere _ _ rest) (let-match erased c (CLCons _ _ xs1 _ _)) (NthHere A x xs1))
+    ((NthThere _ _ rest i1 _ p1)
+      (let-match erased c (CLCons _ x0 xs1 _ c1))
+      (NthThere A x0 xs1 i1 x (copy-nth A xs1 rest i1 x c1 p1)))))
+
+(def-adts
+  ((AV : (Type A) ((List A) xs) -> Type)
+    enum
+    (many MkAV : (erased Type A) (erased (List A) xs) (erased (List (Copy A)) ys) (many (Array (Copy A) ys) ar) (many (Nat) n)
+       (erased (Length (Copy A) ys n) ln) (erased (CopyL A xs ys) cl) -> (AV A xs))))
+
+(def-fns _ $ (many mk-av : (erased Type A) (many (List A) xs) -> (many (AV A xs) v))
+  (let ((many ys) (erased cl)) (copies A xs))
+  (let ((unique au)) (list-to-array A ys))
+  (let ((many ar)) (share au))
+  (let ((many n) (erased ln)) (array-length-many _ _ ar))
+  (MkAV A xs ys ar n ln cl))
+
+(def-fns _ $ (many aget : (erased Type A) (erased (List A) xs) (many (AV A xs) v) (many (Nat) i) -> (many (NthR A xs i) r))
+  (let-match many v (MkAV _ _ ys ar n ln cl))
+  (let-match many (lt-dec i n) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (NNo A xs i)))
+  (let ((erased y) (erased ny)) (lt-nth (Copy A) ys n i ln lt))
+  (let ((many cell)) (array-get-many _ _ ar i y ny))
+  (let-match many cell (MkCopy _ x))
+  (NOk A xs i x (copy-nth A xs ys i x cl ny)))
+
+(def-fns _ $ (erased nth-mem : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A x) (subterm erased (Nth A xs i x) p) ->
+    (erased (Mem A x xs) m))
+  (match erased p _
+    ((NthHere _ _ rest) (MemHere A x rest))
+    ((NthThere _ y rest i1 _ p1) (MemThere A x y rest (nth-mem A rest i1 x p1)))))
 
 (def-adts
   ((All : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type)
@@ -99,14 +142,25 @@
        -> (BdA (MkACN q sl sh sr)))))
 
 (def-adts
-  ((BdE : ((Edge) e) -> Type)
-    enum
-    (many MkBdE : (erased (Nat) s c s2) (erased (Lt s B40) a) (erased (Lt c B40) b) (erased (Lt s2 B40) d) -> (BdE (MkE s c s2)))))
-
-(def-adts
   ((BdP : ((Pair (Nat) (Nat)) c) -> Type)
     enum
     (many MkBdP : (erased (Nat) a b) (erased (Lt a B40) pa) (erased (Lt b B40) pb) -> (BdP (MkPair (Nat) (Nat) a b)))))
+
+(def-adts
+  ((BdRow : ((List (Pair (Nat) (Nat))) row) -> Type)
+    enum
+    (many MkBdRow : (erased (List (Pair (Nat) (Nat))) row) (erased (All (Pair (Nat) (Nat)) BdP row) b) -> (BdRow row))))
+
+(def-adts
+  ((BdC : ((Choice) c) -> Type)
+    enum
+    (many MkBdC : (erased (Nat) cn o2) (erased (List (Nat)) tg) (erased (Lt cn B40) pc) (erased (Lt o2 B40) po) -> (BdC (MkCh cn o2 tg)))))
+
+(def-fns _ $ (erased all-nth : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased (List A) xs) (erased (Nat) i) (erased A x)
+    (subterm erased (All A P xs) al) (erased (Nth A xs i x) n) -> (erased (P x) px))
+  (match erased n _
+    ((NthHere _ _ _) (let-match erased al (AllCons _ _ _ _ px _)) px)
+    ((NthThere _ _ rest i1 _ n1) (let-match erased al (AllCons _ _ _ _ _ al1)) (all-nth A P rest i1 x al1 n1))))
 
 (def-fns _ $ (many beq : (many (Nat) x y) (erased (Lt x B40) px) (erased (Lt y B40) py) -> (many (EqDec (Nat) Lt x y) e))
   (tail $ u62-eq x y (lt-trans x B40 u62-modulus px NM40) (lt-trans y B40 u62-modulus py NM40)))
@@ -124,15 +178,6 @@
   (let-match many (notail $ bd-acns rest) (ROk _ r) ((RFail _) (RFail _)))
   (ROk _ (AllCons (ACN) BdA a rest (MkBdA q sl sh sr pq pl ph pr) r)))
 
-(def-fns _ $ (many bd-edges : (subterm many (List (Edge)) xs) -> (many (Res (All (Edge) BdE xs)) r))
-  (let-match many xs (Cons _ e rest) ((Nil _) (ROk _ (AllNil (Edge) BdE))))
-  (let-match many e (MkE s c s2))
-  (let-match many (bd s) (ROk _ ps) ((RFail _) (RFail _)))
-  (let-match many (bd c) (ROk _ pc) ((RFail _) (RFail _)))
-  (let-match many (bd s2) (ROk _ p2) ((RFail _) (RFail _)))
-  (let-match many (notail $ bd-edges rest) (ROk _ r) ((RFail _) (RFail _)))
-  (ROk _ (AllCons (Edge) BdE e rest (MkBdE s c s2 ps pc p2) r)))
-
 (def-fns _ $ (many bd-nats : (subterm many (List (Nat)) xs) -> (many (Res (All (Nat) BdN xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (ROk _ (AllNil (Nat) BdN))))
   (let-match many (bd x) (ROk _ px) ((RFail _) (RFail _)))
@@ -147,15 +192,19 @@
   (let-match many (notail $ bd-pairs rest) (ROk _ r) ((RFail _) (RFail _)))
   (ROk _ (AllCons (Pair (Nat) (Nat)) BdP c rest (MkBdP a b pa pb) r)))
 
-(def-fns _ $ (many eq-edge : (many (Edge) x) (many (Edge) y) (erased (BdE x) bx) (erased (BdE y) by) -> (many (Maybe (Eq (Edge) x y)) r))
-  (let-match many x (MkE a1 b1 c1))
-  (let-match many y (MkE a2 b2 c2))
-  (let-match erased bx (MkBdE _ _ _ pa1 pb1 pc1))
-  (let-match erased by (MkBdE _ _ _ pa2 pb2 pc2))
-  (let-match many (beq a1 a2 pa1 pa2) (Equal _ _ _) (else (None _)))
-  (let-match many (beq b1 b2 pb1 pb2) (Equal _ _ _) (else (None _)))
-  (let-match many (beq c1 c2 pc1 pc2) (Equal _ _ _) (else (None _)))
-  (Some _ (Refl (Edge) x)))
+(def-fns _ $ (many bd-rows : (subterm many (List (List (Pair (Nat) (Nat)))) xs) -> (many (Res (All (List (Pair (Nat) (Nat))) BdRow xs)) r))
+  (let-match many xs (Cons _ row rest) ((Nil _) (ROk _ (AllNil (List (Pair (Nat) (Nat))) BdRow))))
+  (let-match many (bd-pairs row) (ROk _ b) ((RFail _) (RFail _)))
+  (let-match many (notail $ bd-rows rest) (ROk _ r) ((RFail _) (RFail _)))
+  (ROk _ (AllCons (List (Pair (Nat) (Nat))) BdRow row rest (MkBdRow row b) r)))
+
+(def-fns _ $ (many bd-chs : (subterm many (List (Choice)) xs) -> (many (Res (All (Choice) BdC xs)) r))
+  (let-match many xs (Cons _ c rest) ((Nil _) (ROk _ (AllNil (Choice) BdC))))
+  (let-match many c (MkCh cn o2 tg))
+  (let-match many (bd cn) (ROk _ pc) ((RFail _) (RFail _)))
+  (let-match many (bd o2) (ROk _ po) ((RFail _) (RFail _)))
+  (let-match many (notail $ bd-chs rest) (ROk _ r) ((RFail _) (RFail _)))
+  (ROk _ (AllCons (Choice) BdC c rest (MkBdC cn o2 tg pc po) r)))
 
 (def-fns _ $ (many eq-acn : (many (ACN) x) (many (ACN) y) (erased (BdA x) bx) (erased (BdA y) by) -> (many (Maybe (Eq (ACN) x y)) r))
   (let-match many x (MkACN a1 b1 c1 d1))
@@ -178,15 +227,19 @@
       (let-match many (notail $ find-acn a rest ba bs1) (ROk _ mm) ((RFail _) (RFail _)))
       (ROk _ (MemThere (ACN) a b rest mm)))))
 
-(def-fns _ $ (many find-edge : (many (Edge) a) (subterm many (List (Edge)) xs) (erased (BdE a) ba) (erased (All (Edge) BdE xs) bs) ->
-    (many (Res (Mem (Edge) a xs)) r))
-  (let-match many xs (Cons _ b rest) ((Nil _) (RFail _)))
-  (let-match erased bs (AllCons _ _ _ _ bb bs1))
-  (match many (eq-edge a b ba bb) _
-    ((Some _ e) (let-match many e (Refl _ _)) (ROk _ (MemHere (Edge) a rest)))
-    ((None _)
-      (let-match many (notail $ find-edge a rest ba bs1) (ROk _ mm) ((RFail _) (RFail _)))
-      (ROk _ (MemThere (Edge) a b rest mm)))))
+(def-fns _ $ (many find-pair : (many (Nat) c s2) (subterm many (List (Pair (Nat) (Nat))) row) (erased (Lt c B40) pc) (erased (Lt s2 B40) p2)
+    (erased (All (Pair (Nat) (Nat)) BdP row) br) -> (many (Res (Mem (Pair (Nat) (Nat)) (MkPair (Nat) (Nat) c s2) row)) r))
+  (let-match many row (Cons _ e rest) ((Nil _) (RFail _)))
+  (let-match erased br (AllCons _ _ _ _ be br1))
+  (let-match many e (MkPair _ _ c1 s3))
+  (let-match erased be (MkBdP _ _ pc1 p3))
+  (let ((many next))
+    (match many (notail $ find-pair c s2 rest pc p2 br1) (((Res (Mem (Pair (Nat) (Nat)) (MkPair (Nat) (Nat) c s2) row)) x))
+      ((ROk _ mm) (ROk _ (MemThere _ _ e rest mm)))
+      ((RFail _) (RFail _))))
+  (let-match many (beq c c1 pc pc1) (Equal _ _ _) (else next))
+  (let-match many (beq s2 s3 p2 p3) (Equal _ _ _) (else next))
+  (ROk _ (MemHere _ _ rest)))
 
 (def-fns _ $ (many find-nat : (many (Nat) a) (subterm many (List (Nat)) xs) (erased (Lt a B40) ba) (erased (All (Nat) BdN xs) bs) ->
     (many (Res (Mem (Nat) a xs)) r))
@@ -203,107 +256,136 @@
     ((DL) (values (MkACN q p c o) (PNL q p c o) (MkBdA q p c o bq bp bc bo)))
     ((DR) (values (MkACN q o c p) (PNR q p c o) (MkBdA q o c p bq bo bc bp)))))
 
-(def-fns _ $ (many all-from : (many (List (ACN)) S) (many (Dir) d) (many (Nat) q o s) (subterm many (List (Edge)) es)
-    (erased (All (ACN) BdA S) bS) (erased (Lt q B40) bq) (erased (Lt o B40) bo) (erased (Lt s B40) bs) (erased (All (Edge) BdE es) be) ->
-    (many (Res (AllFrom S d q o es s)) r))
-  (let-match many es (Cons _ e rest) ((Nil _) (ROk _ (AFNil S d q o s))))
-  (let-match erased be (AllCons _ _ _ _ b1 be1))
-  (let-match many e (MkE s1 c s2))
-  (let-match erased b1 (MkBdE _ _ _ p1 pc p2))
-  (let-match many (notail $ all-from S d q o s rest bS bq bo bs be1) (ROk _ af) ((RFail _) (RFail _)))
-  (match many (beq s1 s p1 bs) _
-    ((Equal _ _ _)
-      (let ((many a) (erased pl) (erased ba)) (place-n d q s2 c o bq p2 pc bo))
-      (let-match many (find-acn a S ba bS) (ROk _ ma) ((RFail _) (RFail _)))
-      (ROk _ (AFHit S d q o s c s2 rest a pl ma af)))
-    ((Unequal _ _ _ _ ap) (ROk _ (AFSkip S d q o s s1 c s2 rest ap af)))))
+(def-fns _ $ (many all-from : (many (List (ACN)) S) (many (AV (ACN) S) SA) (many (Dir) d) (many (Nat) q o) (subterm many (List (Pair (Nat) (Nat))) row)
+    (many (List (Nat)) tg) (erased (All (ACN) BdA S) bS) (erased (Lt q B40) bq) (erased (Lt o B40) bo)
+    (erased (All (Pair (Nat) (Nat)) BdP row) br) -> (many (Res (AllFrom S d q o row)) r))
+  (let-match many row (Cons _ e rest) ((Nil _) (ROk _ (AFNil S d q o))))
+  (let-match many tg (Cons _ j tgr) ((Nil _) (RFail _)))
+  (let-match erased br (AllCons _ _ _ _ be br1))
+  (let-match many e (MkPair _ _ c s2))
+  (let-match erased be (MkBdP _ _ pc p2))
+  (let ((many a) (erased pl) (erased ba)) (place-n d q s2 c o bq p2 pc bo))
+  (let-match many (aget _ _ SA j) (NOk _ _ _ x nx) ((NNo _ _ _) (RFail _)))
+  (let-match many (eq-acn a x ba (all-nth (ACN) BdA S j x bS nx)) (Some _ ex) ((None _) (RFail _)))
+  (let-match many ex (Refl _ _))
+  (let-match many (notail $ all-from S SA d q o rest tgr bS bq bo br1) (ROk _ af) ((RFail _) (RFail _)))
+  (ROk _ (AFHit S d q o c s2 rest a pl (nth-mem (ACN) S j a nx) af)))
 
-(def-fns _ $ (many aokn : (many (List (PT)) p) (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (ACN)) S)
-    (many (ACN) a) (many (Nat) cn o2) (erased (All (ACN) BdA S) bS) (erased (All (Edge) BdE es) be) (erased (BdA a) ba)
-    (erased (Lt cn B40) bc) (erased (Lt o2 B40) bo) -> (many (Res (AOKN p sy es S a)) r))
+(def-fns _ $ (many edge-in : (many (List (List (Pair (Nat) (Nat)))) adj) (many (AV (List (Pair (Nat) (Nat))) adj) AA) (many (Nat) s c s2) (erased (All (List (Pair (Nat) (Nat))) BdRow adj) badj)
+    (erased (Lt c B40) pc) (erased (Lt s2 B40) p2) -> (many (Res (EIn adj s c s2)) r))
+  (let-match many (aget _ _ AA s) (NOk _ _ _ row nr) ((NNo _ _ _) (RFail _)))
+  (let-match erased (all-nth (List (Pair (Nat) (Nat))) BdRow adj s row badj nr) (MkBdRow _ br))
+  (let-match many (find-pair c s2 row pc p2 br) (ROk _ mr) ((RFail _) (RFail _)))
+  (ROk _ (MkEIn adj s c s2 row nr mr)))
+
+(def-adts
+  ((SidesR : ((List (List (Pair (Nat) (Nat)))) adj) ((List (ACN)) S) ((Dir) d) ((Nat) q2) ((Nat) o2) ((Nat) cn) ((Nat) sp) ((Nat) so) -> Type)
+    enum
+    (many SOk : (erased (List (List (Pair (Nat) (Nat)))) adj) (erased (List (ACN)) S) (erased (Dir) d) (erased (Nat) q2 o2 cn sp so) (erased (List (Pair (Nat) (Nat))) row)
+       (erased (EIn adj o2 cn so) me) (erased (Nth (List (Pair (Nat) (Nat))) adj sp row) nr) (erased (AllFrom S d q2 o2 row) af) -> (SidesR adj S d q2 o2 cn sp so))
+    (many SNo : (erased (List (List (Pair (Nat) (Nat)))) adj) (erased (List (ACN)) S) (erased (Dir) d) (erased (Nat) q2 o2 cn sp so) -> (SidesR adj S d q2 o2 cn sp so))))
+
+(def-fns _ $ (many sides : (many (List (List (Pair (Nat) (Nat)))) adj) (many (AV (List (Pair (Nat) (Nat))) adj) AA) (many (List (ACN)) S) (many (AV (ACN) S) SA) (many (Dir) d)
+    (many (Nat) q2 o2 cn sp so) (many (List (Nat)) tg) (erased (All (ACN) BdA S) bS) (erased (All (List (Pair (Nat) (Nat))) BdRow adj) badj)
+    (erased (Lt q2 B40) bq2) (erased (Lt o2 B40) bo2) (erased (Lt cn B40) bcn) (erased (Lt sp B40) bp) (erased (Lt so B40) bo) ->
+    (many (SidesR adj S d q2 o2 cn sp so) r))
+  (let-match many (edge-in adj AA o2 cn so badj bcn bo) (ROk _ me) ((RFail _) (SNo adj S d q2 o2 cn sp so)))
+  (let-match many (aget _ _ AA sp) (NOk _ _ _ row nr) ((NNo _ _ _) (SNo adj S d q2 o2 cn sp so)))
+  (let-match erased (all-nth (List (Pair (Nat) (Nat))) BdRow adj sp row badj nr) (MkBdRow _ brow))
+  (let-match many (all-from S SA d q2 o2 row tg bS bq2 bo2 brow) (ROk _ af) ((RFail _) (SNo adj S d q2 o2 cn sp so)))
+  (SOk adj S d q2 o2 cn sp so row me nr af))
+
+(def-fns _ $ (many aokn : (many (List (PT)) p) (many (List (Bool)) sy) (many (AV (Bool) sy) SY) (many (List (List (Pair (Nat) (Nat)))) adj) (many (AV (List (Pair (Nat) (Nat))) adj) AA)
+    (many (List (ACN)) S) (many (AV (ACN) S) SA) (many (ACN) a) (many (Choice) ch) (erased (All (ACN) BdA S) bS)
+    (erased (All (List (Pair (Nat) (Nat))) BdRow adj) badj) (erased (BdA a) ba) (erased (BdC ch) bc) -> (many (Res (AOKN p sy adj S a)) r))
   (let-match many a (MkACN q sl sh sr))
   (let-match erased ba (MkBdA _ _ _ _ _ bl _ br))
-  (let-match many (nth-r _ sy sh) (NOk _ _ _ h nh) ((NNo _ _ _) (RFail _)))
+  (let-match many ch (MkCh cn o2 tg))
+  (let-match erased bc (MkBdC _ _ _ bcn bo2))
+  (let-match many (aget _ _ SY sh) (NOk _ _ _ h nh) ((NNo _ _ _) (RFail _)))
   (let-match many (plook p q h) (PLOk _ _ _ x pl) ((PLNo _ _ _) (RFail _)))
   (let-match many x (Def t) ((Undef) (RFail _)))
   (let-match many t (Go w d q2) ((Halt) (RFail _)))
   (let-match many (bd q2) (ROk _ bq2) ((RFail _) (RFail _)))
-  (let-match many (nth-r _ sy cn) (NOk _ _ _ w2 nw) ((NNo _ _ _) (RFail _)))
+  (let-match many (aget _ _ SY cn) (NOk _ _ _ w2 nw) ((NNo _ _ _) (RFail _)))
   (let-match many (eq-bit w2 w) (Some _ ew) ((None _) (RFail _)))
   (let-match many ew (Refl _ _))
   (match many d _
     ((DL)
-      (let-match many (find-edge (MkE o2 cn sr) es (MkBdE o2 cn sr bo bc br) be) (ROk _ me) ((RFail _) (RFail _)))
-      (let-match many (all-from S (DL) q2 o2 sl es bS bq2 bo bl be) (ROk _ af) ((RFail _) (RFail _)))
-      (ROk _ (AKL p sy es S q sl sh sr q2 cn o2 h w pl nh nw me af)))
+      (let-match many (sides adj AA S SA (DL) q2 o2 cn sl sr tg bS badj bq2 bo2 bcn bl br) (SOk _ _ _ _ _ _ _ _ row me nr af) ((SNo _ _ _ _ _ _ _ _) (RFail _)))
+      (ROk _ (AKL p sy adj S q sl sh sr q2 cn o2 h w pl nh nw row me nr af)))
     ((DR)
-      (let-match many (find-edge (MkE o2 cn sl) es (MkBdE o2 cn sl bo bc bl) be) (ROk _ me) ((RFail _) (RFail _)))
-      (let-match many (all-from S (DR) q2 o2 sr es bS bq2 bo br be) (ROk _ af) ((RFail _) (RFail _)))
-      (ROk _ (AKR p sy es S q sl sh sr q2 cn o2 h w pl nh nw me af)))))
+      (let-match many (sides adj AA S SA (DR) q2 o2 cn sr sl tg bS badj bq2 bo2 bcn br bl) (SOk _ _ _ _ _ _ _ _ row me nr af) ((SNo _ _ _ _ _ _ _ _) (RFail _)))
+      (ROk _ (AKR p sy adj S q sl sh sr q2 cn o2 h w pl nh nw row me nr af)))))
 
-(def-fns _ $ (many closedn : (many (List (PT)) p) (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (ACN)) S)
-    (subterm many (List (ACN)) T) (many (List (Pair (Nat) (Nat))) ch) (erased (All (ACN) BdA S) bS) (erased (All (Edge) BdE es) be)
-    (erased (All (ACN) BdA T) bT) (erased (All (Pair (Nat) (Nat)) BdP ch) bch) -> (many (Res (ClosedN p sy es S T)) r))
-  (let-match many T (Cons _ a rest) ((Nil _) (ROk _ (CNNil p sy es S))))
+(def-fns _ $ (many closedn : (many (List (PT)) p) (many (List (Bool)) sy) (many (AV (Bool) sy) SY) (many (List (List (Pair (Nat) (Nat)))) adj) (many (AV (List (Pair (Nat) (Nat))) adj) AA)
+    (many (List (ACN)) S) (many (AV (ACN) S) SA) (subterm many (List (ACN)) T) (many (List (Choice)) ch)
+    (erased (All (ACN) BdA S) bS) (erased (All (List (Pair (Nat) (Nat))) BdRow adj) badj) (erased (All (ACN) BdA T) bT) (erased (All (Choice) BdC ch) bch) ->
+    (many (Res (ClosedN p sy adj S T)) r))
+  (let-match many T (Cons _ a rest) ((Nil _) (ROk _ (CNNil p sy adj S))))
   (let-match erased bT (AllCons _ _ _ _ ba bT1))
   (let-match many ch (Cons _ c crest) ((Nil _) (RFail _)))
   (let-match erased bch (AllCons _ _ _ _ bc bch1))
-  (let-match many c (MkPair _ _ cn o2))
-  (let-match erased bc (MkBdP _ _ bcn bo2))
-  (let-match many (aokn p sy es S a cn o2 bS be ba bcn bo2) (ROk _ ok) ((RFail _) (RFail _)))
-  (let-match many (notail $ closedn p sy es S rest crest bS be bT1 bch1) (ROk _ cl) ((RFail _) (RFail _)))
-  (ROk _ (CNCons p sy es S rest a ok cl)))
+  (let-match many (aokn p sy SY adj AA S SA a c bS badj ba bc) (ROk _ ok) ((RFail _) (RFail _)))
+  (let-match many (notail $ closedn p sy SY adj AA S SA rest crest bS badj bT1 bch1) (ROk _ cl) ((RFail _) (RFail _)))
+  (ROk _ (CNCons p sy adj S rest a ok cl)))
 
 (def-adts
-  ((BlankR : ((List (Bool)) sy) ((List (Edge)) es) ((List (Nat)) acc) ((Nat) a) -> Type)
+  ((BlankR : ((List (Bool)) sy) ((List (Pair (Nat) (Nat))) row) ((List (Nat)) acc) -> Type)
     enum
-    (many BOk : (erased (List (Bool)) sy) (erased (List (Edge)) es) (erased (List (Nat)) acc) (erased (Nat) a) (many (Nat) c a2)
-       (erased (Mem (Edge) (MkE a c a2) es) me) (erased (Nth (Bool) sy c (BFalse)) nb) (erased (Mem (Nat) a2 acc) ma) -> (BlankR sy es acc a))
-    (many BNo : (erased (List (Bool)) sy) (erased (List (Edge)) es) (erased (List (Nat)) acc) (erased (Nat) a) -> (BlankR sy es acc a))))
+    (many BOk : (erased (List (Bool)) sy) (erased (List (Pair (Nat) (Nat))) row) (erased (List (Nat)) acc) (many (Nat) c a2)
+       (erased (Mem (Pair (Nat) (Nat)) (MkPair (Nat) (Nat) c a2) row) mr) (erased (Nth (Bool) sy c (BFalse)) nb) (erased (Mem (Nat) a2 acc) ma)
+       -> (BlankR sy row acc))
+    (many BNo : (erased (List (Bool)) sy) (erased (List (Pair (Nat) (Nat))) row) (erased (List (Nat)) acc) -> (BlankR sy row acc))))
 
-(def-fns _ $ (many blank-from : (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (Nat)) acc) (many (Nat) a)
-    (subterm many (List (Edge)) es0) (erased (All (Edge) BdE es) be) (erased (All (Nat) BdN acc) bacc) (erased (Lt a B40) pa)
-    (erased (All (Edge) BdE es0) be0) -> (many (BlankR sy es acc a) r))
-  (let-match many es0 (Cons _ e rest) ((Nil _) (BNo sy es acc a)))
-  (let-match erased be0 (AllCons _ _ _ _ b1 be1))
-  (let-match many e (MkE s c a2))
-  (let-match erased b1 (MkBdE _ _ _ ps pc p2))
-  (let ((many next)) (notail $ blank-from sy es acc a rest be bacc pa be1))
-  (let-match many (beq s a ps pa) (Equal _ _ _) (else next))
-  (let-match many (nth-r _ sy c) (NOk _ _ _ b nb) ((NNo _ _ _) next))
+(def-fns _ $ (many blank-row : (many (List (Bool)) sy) (many (AV (Bool) sy) SY) (many (List (Nat)) acc) (subterm many (List (Pair (Nat) (Nat))) row)
+    (erased (All (Nat) BdN acc) bacc) (erased (All (Pair (Nat) (Nat)) BdP row) br) -> (many (BlankR sy row acc) r))
+  (let-match many row (Cons _ e rest) ((Nil _) (BNo sy row acc)))
+  (let-match erased br (AllCons _ _ _ _ be br1))
+  (let-match many e (MkPair _ _ c a2))
+  (let-match erased be (MkBdP _ _ _ p2))
+  (let ((many next))
+    (match many (notail $ blank-row sy SY acc rest bacc br1) (((BlankR sy row acc) x))
+      ((BOk _ _ _ c3 a3 mr nb ma) (BOk sy row acc c3 a3 (MemThere _ _ e rest mr) nb ma))
+      ((BNo _ _ _) (BNo sy row acc))))
+  (let-match many (aget _ _ SY c) (NOk _ _ _ b nb) ((NNo _ _ _) next))
   (let-match many b (BFalse) ((BTrue) next))
   (let-match many (find-nat a2 acc p2 bacc) (ROk _ ma) ((RFail _) next))
-  (let-match many (find-edge (MkE a c a2) es (MkBdE a c a2 pa pc p2) be) (ROk _ me) ((RFail _) next))
-  (BOk sy es acc a c a2 me nb ma))
+  (BOk sy row acc c a2 (MemHere _ _ rest) nb ma))
 
-(def-fns _ $ (many acc-all : (many (List (Bool)) sy) (many (List (Edge)) es) (many (List (Nat)) acc) (subterm many (List (Nat)) as)
-    (erased (All (Edge) BdE es) be) (erased (All (Nat) BdN acc) bacc) (erased (All (Nat) BdN as) bas) -> (many (Res (AccAll sy es acc as)) r))
-  (let-match many as (Cons _ a rest) ((Nil _) (ROk _ (AANil sy es acc))))
-  (let-match erased bas (AllCons _ _ _ _ ba bas1))
-  (let-match erased ba (MkBdN _ pa))
-  (let-match many (blank-from sy es acc a es be bacc pa be) (BOk _ _ _ _ c a2 me nb ma) ((BNo _ _ _ _) (RFail _)))
-  (let-match many (notail $ acc-all sy es acc rest be bacc bas1) (ROk _ aa) ((RFail _) (RFail _)))
-  (ROk _ (AACons sy es acc rest a c a2 me nb ma aa)))
+(def-fns _ $ (many acc-all : (many (List (Bool)) sy) (many (AV (Bool) sy) SY) (many (List (List (Pair (Nat) (Nat)))) adj) (many (AV (List (Pair (Nat) (Nat))) adj) AA) (many (List (Nat)) acc)
+    (subterm many (List (Nat)) as) (erased (All (List (Pair (Nat) (Nat))) BdRow adj) badj) (erased (All (Nat) BdN acc) bacc) (erased (All (Nat) BdN as) bas) ->
+    (many (Res (AccAll sy adj acc as)) r))
+  (let-match many as (Cons _ a rest) ((Nil _) (ROk _ (AANil sy adj acc))))
+  (let-match erased bas (AllCons _ _ _ _ _ bas1))
+  (let-match many (aget _ _ AA a) (NOk _ _ _ row nr) ((NNo _ _ _) (RFail _)))
+  (let-match erased (all-nth (List (Pair (Nat) (Nat))) BdRow adj a row badj nr) (MkBdRow _ br))
+  (let-match many (blank-row sy SY acc row bacc br) (BOk _ _ _ c a2 mr nb ma) ((BNo _ _ _) (RFail _)))
+  (let-match many (notail $ acc-all sy SY adj AA acc rest badj bacc bas1) (ROk _ aa) ((RFail _) (RFail _)))
+  (ROk _ (AACons sy adj acc rest a c a2 (MkEIn adj a c a2 row nr mr) nb ma aa)))
 
 (def-fns _ $ (many check-cert : (many (Nat) n k) (many (List (PT)) p) (many (Cert) ct) -> (many (Res (TNode n k p)) r))
-  (let-match many ct (MkCert sy es acc S ch a0))
+  (let-match many ct (MkCert sy adj acc S ch a0))
   (let-match many (bd-acns (Cons (ACN) a0 S)) (ROk _ bS0) ((RFail _) (RFail _)))
   (let-match erased bS0 (AllCons _ _ _ _ ba0 bS))
-  (let-match many (bd-edges es) (ROk _ be) ((RFail _) (RFail _)))
+  (let-match many (bd-rows adj) (ROk _ badj) ((RFail _) (RFail _)))
   (let-match many (bd-nats acc) (ROk _ bacc) ((RFail _) (RFail _)))
-  (let-match many (bd-pairs ch) (ROk _ bch) ((RFail _) (RFail _)))
-  (let-match many (closedn p sy es S S ch bS be bS bch) (ROk _ cl) ((RFail _) (RFail _)))
-  (let-match many (acc-all sy es acc acc be bacc bacc) (ROk _ aa) ((RFail _) (RFail _)))
+  (let-match many (bd-chs ch) (ROk _ bch) ((RFail _) (RFail _)))
+  (let ((many SY)) (mk-av _ sy))
+  (let ((many AA)) (mk-av _ adj))
+  (let ((many SA)) (mk-av _ S))
+  (let-match many (closedn p sy SY adj AA S SA S ch bS badj bS bch) (ROk _ cl) ((RFail _) (RFail _)))
+  (let-match many (acc-all sy SY adj AA acc acc badj bacc bacc) (ROk _ aa) ((RFail _) (RFail _)))
   (let-match many (find-acn a0 S ba0 bS) (ROk _ ma) ((RFail _) (RFail _)))
   (let-match many a0 (MkACN q0 sl sh sr))
   (let-match erased ba0 (MkBdA _ _ _ _ _ bl _ br))
   (let-match many q0 (Zero) ((Succ _) (RFail _)))
-  (let-match many (nth-r _ sy sh) (NOk _ _ _ h nh) ((NNo _ _ _) (RFail _)))
+  (let-match many (aget _ _ SY sh) (NOk _ _ _ h nh) ((NNo _ _ _) (RFail _)))
   (let-match many h (BFalse) ((BTrue) (RFail _)))
   (let-match many (find-nat sl acc bl bacc) (ROk _ ml) ((RFail _) (RFail _)))
   (let-match many (find-nat sr acc br bacc) (ROk _ mr) ((RFail _) (RFail _)))
-  (ROk _ (TN n k p sy es acc S cl aa a0 ma
-    (MkGCN sy es acc (Zero) sl sh sr (Nil (Bool)) (Nil (Bool)) (BFalse) (GAcc sy es acc sl ml) (GAcc sy es acc sr mr) nh))))
+  (ROk _ (TN n k p sy adj acc S cl aa a0 ma
+    (MkGCN sy adj acc (Zero) sl sh sr (Nil (Bool)) (Nil (Bool)) (BFalse) (GAcc sy adj acc sl ml) (GAcc sy adj acc sr mr) nh))))
 
 (def-adts
   ((DefL : ((List (Tr)) m) ((List (PT)) p) -> Type)
