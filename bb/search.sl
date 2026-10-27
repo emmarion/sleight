@@ -298,7 +298,7 @@
 
 (def-adts $ (Wait : -> Type)
   enum
-  (many MkWait : (many (KN) q2) (many (Dir) d) (many (KN) no c src) -> (Wait)))
+  (many MkWait : (many (KN) q2) (many (Mv) d) (many (KN) no c src) -> (Wait)))
 
 (def-adts $ (GSt : -> Type)
   enum
@@ -320,8 +320,8 @@
 
 (def-fns _ $ (many sym-key : (many (Setting) se) (many (KN) w q hb) (many (List (KN)) hist) -> (many (List (KN)) k))
   (let-match many se (SN _ _ H lru _) ((SW _ _ _) (Cons (KN) w (Nil (KN)))))
-  (let ((many qq) (erased _)) (add (kv q) (kv q)))
-  (let ((many ev0) (erased _)) (add qq (kv hb)))
+  (let ((many qd) (erased _)) (add (kv q) (kv q)))
+  (let ((many ev0) (erased _)) (add qd (kv hb)))
   (let ((many ev)) (kn ev0))
   (match many lru _
     ((BTrue) (Cons (KN) w (Cons (KN) ev (drop-k ev hist))))
@@ -338,7 +338,7 @@
 
 (def-adts $ (Push : -> Type)
   enum
-  (many MkPush : (many (KN) q2) (many (Dir) d) (many (KN) sid) (many (Tab) sy) (many (List (KN)) nk) (many (KN) pi) -> (Push)))
+  (many MkPush : (many (KN) q2) (many (Mv) d) (many (KN) sid) (many (Tab) sy) (many (List (KN)) nk) (many (KN) pi) -> (Push)))
 
 (def-fns _ $ (many push : (many (List (PT)) p) (many (Setting) se) (many (KC) a) (many (Tab) sy st) -> (many (Maybe (Push)) r))
   (let-match many a (MkKC q sl sh sr))
@@ -347,7 +347,7 @@
   (let ((many b)) (match many (k-eq hb k0) (((Bool) b)) ((BTrue) (BFalse)) ((BFalse) (BTrue))))
   (let-match many (plook p (kv q) b) (PLOk _ _ _ x _) ((PLNo _ _ _) (None _)))
   (let-match many x (Def t) ((Undef) (None _)))
-  (let-match many t (Go w d q2) ((Halt) (None _)))
+  (let-match many t (Mov w d q2) ((Hlt) (None _)))
   (let ((many wn)) (match many w (((KN) n)) ((BFalse) k0) ((BTrue) k1)))
   (let ((many sid) (many sy2) (many _)) (tab-intern (BFalse) (sym-key se wn q hb hist) sy))
   (let ((many O) (many oi) (many pi)) (match many d (((KN) O) ((KN) oi) ((KN) pi)) ((DL) (values k1 sr sl)) ((DR) (values k0 sl sr))))
@@ -359,7 +359,7 @@
   (let-match many a (MkKC q sl sh sr))
   (Cons (KN) q $ Cons (KN) sl $ Cons (KN) sh $ Cons (KN) sr $ Nil (KN)))
 
-(def-fns _ $ (many mk-cfg : (many (KN) q2) (many (Dir) d) (many (KN) no c j) -> (many (KC) a))
+(def-fns _ $ (many mk-cfg : (many (KN) q2) (many (Mv) d) (many (KN) no c j) -> (many (KC) a))
   (match many d _ ((DL) (MkKC q2 j c no)) ((DR) (MkKC q2 no c j))))
 
 (def-fns _ $ (many add-cfg : (many (KC) a) (many (GSt) g) -> (many (KN) x) (many (GSt) g2))
@@ -399,7 +399,7 @@
   (let-match many key (Cons _ side kg) ((Nil _) (values j g1)))
   (values j (fire j (waits wt (Cons (KN) side (but-last _ kg))) g1)))
 
-(def-fns _ $ (many add-edges : (many (Setting) se) (many (KN) q2) (many (Dir) d) (many (KN) no) (subterm many (List (Pair (KN) (Tgt))) es)
+(def-fns _ $ (many add-edges : (many (Setting) se) (many (KN) q2) (many (Mv) d) (many (KN) no) (subterm many (List (Pair (KN) (Tgt))) es)
     (many (GSt) g) -> (many (List (Nat)) tg) (many (GSt) g2))
   (let-match many es (Cons _ e rest) ((Nil _) (values (Nil (Nat)) g)))
   (let-match many e (MkPair _ _ c t))
@@ -586,7 +586,7 @@
   (let-match many (side hs (BTrue) t pos q r h l) (None _) ((Some _ c) (Some _ c)))
   (let-match many (plook p q h) (PLOk _ _ _ x _) ((PLNo _ _ _) (None _)))
   (let-match many x (Def tr) ((Undef) (None _)))
-  (let-match many tr (Go w d q2) ((Halt) (None _)))
+  (let-match many tr (Mov w d q2) ((Hlt) (None _)))
   (let ((many cur)) (MkHE q pos l h r))
   (let ((many hs2)) (Cons (HEnt) cur hs))
   (let ((many snap2) (many st2) (many nx2))
@@ -611,7 +611,7 @@
 (def-fns _ $ (many seen : (subterm many (List (PT)) p) (many (Nat) c) -> (many (Nat) r))
   (let-match many p (Cons _ x rest) ((Nil _) c))
   (let-match many x (Def t) ((Undef) (tail $ seen rest c)))
-  (let-match many t (Go _ _ q) ((Halt) (tail $ seen rest c)))
+  (let-match many t (Mov _ _ q) ((Hlt) (tail $ seen rest c)))
   (let-match many (lt-dec q c) (No _ _ _ _ _) ((Yes _ _ _ _ _) (tail $ seen rest c)))
   (tail $ seen rest (Succ q)))
 
@@ -619,7 +619,7 @@
   (let-match many p (Cons _ x rest) ((Nil _) (ROk _ (BlwNil c))))
   (let-match many (notail $ below-of c rest) (ROk _ b) ((RFail _) (RFail _)))
   (let-match many x (Def t) ((Undef) (ROk _ (BlwU c rest b))))
-  (let-match many t (Go w d q) ((Halt) (ROk _ (BlwH c rest b))))
+  (let-match many t (Mov w d q) ((Hlt) (ROk _ (BlwH c rest b))))
   (let-match many (lt-dec q c) (Yes _ _ _ _ lq) ((No _ _ _ _ _) (RFail _)))
   (ROk _ (BlwG c rest w d q lq b)))
 
@@ -642,7 +642,7 @@
 (def-fns _ $ (many all-go : (subterm many (List (PT)) p) -> (many (Res (AllGo p)) r))
   (let-match many p (Cons _ x rest) ((Nil _) (ROk _ (AGNil))))
   (let-match many x (Def t) ((Undef) (RFail _)))
-  (let-match many t (Go w d q) ((Halt) (RFail _)))
+  (let-match many t (Mov w d q) ((Hlt) (RFail _)))
   (let-match many (notail $ all-go rest) (ROk _ g) ((RFail _) (RFail _)))
   (ROk _ (AGCons w d q rest g)))
 

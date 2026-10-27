@@ -28,10 +28,10 @@
        -> (GS (MkSide (Cons (Bool) (BFalse) seg) f) (Nil (Bool))))))
 
 (def-adts
-  ((GCfg : ((ACfg) a) ((Cfg) c) -> Type)
+  ((GCfg : ((ACfg) a) ((Conf) c) -> Type)
     enum
     (many MkGCfg : (erased (Nat) q) (erased (Side) sl sr) (erased (List (Bool)) l r) (erased (Bool) h)
-       (erased (GS sl l) gl) (erased (GS sr r) gr) -> (GCfg (MkA q sl h sr) (MkCfg q l h r)))))
+       (erased (GS sl l) gl) (erased (GS sr r) gr) -> (GCfg (MkA q sl h sr) (MkConf q l h r)))))
 
 (def-adts
   ((APop : ((Side) s) ((Bool) b) ((Side) s2) -> Type)
@@ -64,18 +64,18 @@
        -> (APush (MkSide seg f) w (MkSide seg2 f2)))))
 
 (def-fns _ $ (erased pop-sound : (erased (Side) s) (erased (List (Bool)) xs ys) (erased (Bool) b)
-    (erased (GS s xs) g) (erased (Pop xs b ys) p) ->
+    (erased (GS s xs) g) (erased (Pull xs b ys) p) ->
     (erased (Side) s2) (erased (APop s b s2) ap) (erased (GS s2 ys) g2))
   (match erased g _
     ((GZ xs1 z)
       (match erased p _
-        ((PopNil) (values (MkSide (Nil (Bool)) (FZ)) (APZ) (GZ (Nil (Bool)) (AZNil))))
-        ((PopCons b1 ys1)
+        ((PullNil) (values (MkSide (Nil (Bool)) (FZ)) (APZ) (GZ (Nil (Bool)) (AZNil))))
+        ((PullCons b1 ys1)
           (let-match erased z (AZCons _ z1))
           (values (MkSide (Nil (Bool)) (FZ)) (APZ) (GZ ys z1)))))
     ((GT xs1) (values (MkSide (Nil (Bool)) (FT)) (APT b) (GT ys)))
-    ((GC1 seg xs1 f b1 g1) (let-match erased p (PopCons _ _)) (values (MkSide seg f) (APC seg f b) g1))
-    ((GC0 seg f g1) (let-match erased p (PopNil)) (values (MkSide seg f) (APC seg f b) g1))))
+    ((GC1 seg xs1 f b1 g1) (let-match erased p (PullCons _ _)) (values (MkSide seg f) (APC seg f b) g1))
+    ((GC0 seg f g1) (let-match erased p (PullNil)) (values (MkSide seg f) (APC seg f b) g1))))
 
 (def-fns _ $ (erased drop-sound : (erased (List (Bool)) seg seg2 xs) (erased (Flag) f f2) (erased (Bool) x)
     (erased (GS (MkSide seg f) xs) g) (subterm erased (DropLast seg x seg2) dl) (erased (FlagAfter f x f2) fa) ->
@@ -101,22 +101,22 @@
       (drop-sound (Cons (Bool) w seg) seg2 (Cons (Bool) w xs) f f2 x (GC1 seg xs f w g) dl fa))))
 
 (def-adts
-  ((Place : ((Dir) d) ((Nat) q) ((Side) p) ((Bool) b) ((Side) o) ((ACfg) a) -> Type)
+  ((Place : ((Mv) d) ((Nat) q) ((Side) p) ((Bool) b) ((Side) o) ((ACfg) a) -> Type)
     enum
     (many PlL : (erased (Nat) q) (erased (Side) p o) (erased (Bool) b) -> (Place (DL) q p b o (MkA q p b o)))
     (many PlR : (erased (Nat) q) (erased (Side) p o) (erased (Bool) b) -> (Place (DR) q p b o (MkA q o b p)))))
 
 (def-adts
-  ((AllPop : ((List (ACfg)) S) ((Dir) d) ((Nat) q) ((Side) p) ((Side) o) -> Type)
+  ((AllPop : ((List (ACfg)) S) ((Mv) d) ((Nat) q) ((Side) p) ((Side) o) -> Type)
     enum
-    (many AllZ : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
+    (many AllZ : (erased (List (ACfg)) S) (erased (Mv) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
        (erased (Place d q (MkSide (Nil (Bool)) (FZ)) (BFalse) o a) pl) (erased (Mem (ACfg) a S) mm)
        -> (AllPop S d q (MkSide (Nil (Bool)) (FZ)) o))
-    (many AllT : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a0 a1)
+    (many AllT : (erased (List (ACfg)) S) (erased (Mv) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a0 a1)
        (erased (Place d q (MkSide (Nil (Bool)) (FT)) (BFalse) o a0) pl0) (erased (Mem (ACfg) a0 S) mm0)
        (erased (Place d q (MkSide (Nil (Bool)) (FT)) (BTrue) o a1) pl1) (erased (Mem (ACfg) a1 S) mm1)
        -> (AllPop S d q (MkSide (Nil (Bool)) (FT)) o))
-    (many AllC : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
+    (many AllC : (erased (List (ACfg)) S) (erased (Mv) d) (erased (Nat) q) (erased (Side) o) (erased (ACfg) a)
        (erased (List (Bool)) seg) (erased (Flag) f) (erased (Bool) b)
        (erased (Place d q (MkSide seg f) b o a) pl) (erased (Mem (ACfg) a S) mm)
        -> (AllPop S d q (MkSide (Cons (Bool) b seg) f) o))))
@@ -125,10 +125,10 @@
   ((AOK : ((List (Tr)) m) ((List (ACfg)) S) ((ACfg) a) -> Type)
     enum
     (many AOKL : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r r2) (erased (Bool) h w)
-       (erased (Look m q h (Go w (DL) q2)) lk) (erased (APush r w r2) ap) (erased (AllPop S (DL) q2 l r2) al)
+       (erased (Look m q h (Mov w (DL) q2)) lk) (erased (APush r w r2) ap) (erased (AllPop S (DL) q2 l r2) al)
        -> (AOK m S (MkA q l h r)))
     (many AOKR : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Nat) q q2) (erased (Side) l r l2) (erased (Bool) h w)
-       (erased (Look m q h (Go w (DR) q2)) lk) (erased (APush l w l2) ap) (erased (AllPop S (DR) q2 r l2) al)
+       (erased (Look m q h (Mov w (DR) q2)) lk) (erased (APush l w l2) ap) (erased (AllPop S (DR) q2 r l2) al)
        -> (AOK m S (MkA q l h r)))))
 
 (def-adts
@@ -144,7 +144,7 @@
     ((MemHere _ _ rest) (let-match erased cl (CCons _ _ _ _ ok _)) ok)
     ((MemThere _ _ y rest mm1) (let-match erased cl (CCons _ _ _ _ _ cl1)) (closed-get m S rest a cl1 mm1))))
 
-(def-fns _ $ (erased allpop-mem : (erased (List (ACfg)) S) (erased (Dir) d) (erased (Nat) q) (erased (Side) p o p2) (erased (Bool) b)
+(def-fns _ $ (erased allpop-mem : (erased (List (ACfg)) S) (erased (Mv) d) (erased (Nat) q) (erased (Side) p o p2) (erased (Bool) b)
     (erased (AllPop S d q p o) al) (erased (APop p b p2) ap) ->
     (erased (ACfg) a) (erased (Place d q p2 b o a) pl) (erased (Mem (ACfg) a S) mm))
   (match erased ap _
@@ -157,8 +157,8 @@
     ((APC seg f _) (let-match erased al (AllC _ _ _ _ a _ _ _ pl mm)) (values a pl mm))))
 
 (def-fns _ $ (erased never : (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Closed m S S) cl)
-    (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (Cfg) c) (erased (GCfg a c) g)
-    (erased (Nat) s) (subterm erased (HaltsIn m c s) hs) -> (erased (False) f))
+    (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (Conf) c) (erased (GCfg a c) g)
+    (erased (Nat) s) (subterm erased (HaltsAt m c s) hs) -> (erased (False) f))
   (let-match erased g (MkGCfg q sl sr l r h gl gr))
   (let ((erased ok)) (closed-get m S S a cl mm))
   (match erased hs _
@@ -207,25 +207,25 @@
       (let-match many (notail $ look rest q1 b) (LFound _ _ _ t p) ((LMiss _ _ _) (LMiss m q b)))
       (LFound m q b t (LookS t0 t1 rest q1 b t p)))))
 
-(def-fns _ $ (many pop : (many (List (Bool)) xs) -> (many (Bool) b) (many (List (Bool)) ys) (erased (Pop xs b ys) p))
+(def-fns _ $ (many pop : (many (List (Bool)) xs) -> (many (Bool) b) (many (List (Bool)) ys) (erased (Pull xs b ys) p))
   (match many xs _
-    ((Nil _) (values (BFalse) (Nil (Bool)) (PopNil)))
-    ((Cons _ b ys) (values b ys (PopCons b ys)))))
+    ((Nil _) (values (BFalse) (Nil (Bool)) (PullNil)))
+    ((Cons _ b ys) (values b ys (PullCons b ys)))))
 
 (def-fns _ $ (many sim : (many (List (Tr)) m) (subterm many (Nat) fuel)
-    (many (Nat) q) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (SimR m (MkCfg q l h r)) res))
-  (let-match many fuel (Succ f) ((Zero) (SRun m (MkCfg q l h r))))
-  (let-match many (look m q h) (LFound _ _ _ t lk) ((LMiss _ _ _) (SRun m (MkCfg q l h r))))
-  (let-match many t (Go w d q2) ((Halt) (SHalt m (MkCfg q l h r) (Succ (Zero)) (HStop m q l r h lk))))
+    (many (Nat) q) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (SimR m (MkConf q l h r)) res))
+  (let-match many fuel (Succ f) ((Zero) (SRun m (MkConf q l h r))))
+  (let-match many (look m q h) (LFound _ _ _ t lk) ((LMiss _ _ _) (SRun m (MkConf q l h r))))
+  (let-match many t (Mov w d q2) ((Hlt) (SHalt m (MkConf q l h r) (Succ (Zero)) (HStop m q l r h lk))))
   (match many d _
     ((DL)
       (let ((many h2) (many l2) (erased pp)) (pop l))
-      (let-match many (notail $ sim m f q2 l2 h2 (Cons (Bool) w r)) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
-      (SHalt m (MkCfg q l h r) (Succ s) (HMove m (MkCfg q l h r) _ s (StepL m q q2 l r l2 h w h2 lk pp) p)))
+      (let-match many (notail $ sim m f q2 l2 h2 (Cons (Bool) w r)) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkConf q l h r))))
+      (SHalt m (MkConf q l h r) (Succ s) (HMove m (MkConf q l h r) _ s (StepL m q q2 l r l2 h w h2 lk pp) p)))
     ((DR)
       (let ((many h2) (many r2) (erased pp)) (pop r))
-      (let-match many (notail $ sim m f q2 (Cons (Bool) w l) h2 r2) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkCfg q l h r))))
-      (SHalt m (MkCfg q l h r) (Succ s) (HMove m (MkCfg q l h r) _ s (StepR m q q2 l r r2 h w h2 lk pp) p)))))
+      (let-match many (notail $ sim m f q2 (Cons (Bool) w l) h2 r2) (SHalt _ _ s p) ((SRun _ _) (SRun m (MkConf q l h r))))
+      (SHalt m (MkConf q l h r) (Succ s) (HMove m (MkConf q l h r) _ s (StepR m q q2 l r r2 h w h2 lk pp) p)))))
 
 (def-fns _ $ (many eq-flag : (many (Flag) x) (many (Flag) y) -> (many (Maybe (Eq (Flag) x y)) r))
   (match many x _
@@ -305,13 +305,13 @@
       (let ((many f2) (erased fa)) (flag-after f x))
       (values (MkSide seg2 f2) (PDrop seg seg2 f f2 w x dl fa)))))
 
-(def-fns _ $ (many place : (many (Dir) d) (many (Nat) q) (many (Side) p) (many (Bool) b) (many (Side) o) ->
+(def-fns _ $ (many place : (many (Mv) d) (many (Nat) q) (many (Side) p) (many (Bool) b) (many (Side) o) ->
     (many (ACfg) a) (erased (Place d q p b o a) pl))
   (match many d _
     ((DL) (values (MkA q p b o) (PlL q p o b)))
     ((DR) (values (MkA q o b p) (PlR q p o b)))))
 
-(def-fns _ $ (many all-pop : (many (List (ACfg)) S) (many (Dir) d) (many (Nat) q) (many (Side) p) (many (Side) o) ->
+(def-fns _ $ (many all-pop : (many (List (ACfg)) S) (many (Mv) d) (many (Nat) q) (many (Side) p) (many (Side) o) ->
     (many (Res (AllPop S d q p o)) r))
   (let-match many p (MkSide seg f))
   (match many seg _
@@ -335,7 +335,7 @@
 (def-fns _ $ (many aok : (many (Nat) rad) (many (List (Tr)) m) (many (List (ACfg)) S) (many (ACfg) a) -> (many (Res (AOK m S a)) r))
   (let-match many a (MkA q l h r))
   (let-match many (look m q h) (LFound _ _ _ t lk) ((LMiss _ _ _) (RFail _)))
-  (let-match many t (Go w d q2) ((Halt) (RFail _)))
+  (let-match many t (Mov w d q2) ((Hlt) (RFail _)))
   (match many d _
     ((DL)
       (let ((many r2) (erased ap)) (apush rad r w))
@@ -353,7 +353,7 @@
   (let-match many (notail $ closed rad m S rest) (ROk _ cl) ((RFail _) (RFail _)))
   (ROk _ (CCons m S rest a ok cl)))
 
-(def-fns _ $ (many pops : (many (Dir) d) (many (Nat) q) (many (Side) p) (many (Side) o) -> (many (List (ACfg)) as))
+(def-fns _ $ (many pops : (many (Mv) d) (many (Nat) q) (many (Side) p) (many (Side) o) -> (many (List (ACfg)) as))
   (let-match many p (MkSide seg f))
   (match many seg _
     ((Nil _)
@@ -370,7 +370,7 @@
 (def-fns _ $ (many succs : (many (Nat) rad) (many (List (Tr)) m) (many (ACfg) a) -> (many (Maybe (List (ACfg))) r))
   (let-match many a (MkA q l h r))
   (let-match many (look m q h) (LFound _ _ _ t _) ((LMiss _ _ _) (None _)))
-  (let-match many t (Go w d q2) ((Halt) (None _)))
+  (let-match many t (Mov w d q2) ((Hlt) (None _)))
   (match many d _
     ((DL) (let ((many r2) (erased _)) (apush rad r w)) (Some _ (pops (DL) q2 l r2)))
     ((DR) (let ((many l2) (erased _)) (apush rad l w)) (Some _ (pops (DR) q2 r l2)))))
@@ -394,9 +394,9 @@
   ((Good : ((Nat) k) ((List (Tr)) m) -> Type)
     enum
     (many GHalt : (erased (Nat) k s) (erased (List (Tr)) m)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) (erased (Lt s (Succ k)) lt) -> (Good k m))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) (erased (Lt s (Succ k)) lt) -> (Good k m))
     (many GNever : (erased (Nat) k) (erased (List (Tr)) m) (erased (List (ACfg)) S) (erased (Closed m S S) cl)
-       (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (GCfg a (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) g)
+       (erased (ACfg) a) (erased (Mem (ACfg) a S) mm) (erased (GCfg a (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) g)
        -> (Good k m))))
 
 (def-fns _ $ (many decide : (many (Nat) rad) (many (Nat) simfuel) (many (Nat) expfuel) (many (Nat) k) (many (List (Tr)) m) ->
@@ -503,7 +503,7 @@
 (def-fns _ $ (erased bound-of : (erased (Nat) n k j) (erased (List (Nat)) xs) (erased (List (Tr)) O)
     (erased (Cov k O (Nil (Tr)) j) cv) (erased (Double n j) dj) (erased (Range n xs) rg) (erased (Opts xs O) op)
     (erased (List (Tr)) m) (erased (Rows n n m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ k)) p))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ k)) p))
   (let ((erased g)) (cov-good n k j xs O (Nil (Tr)) m m cv (rows-flat n n j m w dj) rg op (RA0 m)))
   (match erased g _
     ((GHalt _ s2 _ h2 lt) (let-match erased (halts-fn m _ s s2 h h2) (Refl _ _)) lt)
@@ -521,7 +521,7 @@
 
 (comptime-match many res (ROk _ cv))
 
-(let ((many champ)) (Cons _ (Go (BTrue) (DR) 1) $ Cons _ (Go (BTrue) (DL) 1) $ Cons _ (Go (BTrue) (DL) 0) $ Cons _ (Halt) $ Nil (Tr)))
+(let ((many champ)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DL) 1) $ Cons _ (Mov (BTrue) (DL) 0) $ Cons _ (Hlt) $ Nil (Tr)))
 
 (let ((many cs)) (sim champ 100 (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))))
 
@@ -533,11 +533,11 @@
 
 (let ((erased l02)) (prove-literal-lt 0 2))
 
-(let ((erased cw)) (RowsS 2 (Succ (Zero)) (Go (BTrue) (DR) 1) (Go (BTrue) (DL) 1) _ (OKGo 2 1 (BTrue) (DR) l12) (OKGo 2 1 (BTrue) (DL) l12)
-                     (RowsS 2 (Zero) (Go (BTrue) (DL) 0) (Halt) (Nil (Tr)) (OKGo 2 0 (BTrue) (DL) l02) (OKHalt 2) (RowsZ 2))))
+(let ((erased cw)) (RowsS 2 (Succ (Zero)) (Mov (BTrue) (DR) 1) (Mov (BTrue) (DL) 1) _ (OKGo 2 1 (BTrue) (DR) l12) (OKGo 2 1 (BTrue) (DL) l12)
+                     (RowsS 2 (Zero) (Mov (BTrue) (DL) 0) (Hlt) (Nil (Tr)) (OKGo 2 0 (BTrue) (DL) l02) (OKHalt 2) (RowsZ 2))))
 
 (def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 2 2 m) w) (erased (Nat) s)
-    (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 6)) p))
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 6)) p))
   (bound-of 2 6 j xs O cv dj rg op m w s h))
 
 (goal erased (BBIs 2 6))

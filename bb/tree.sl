@@ -51,15 +51,15 @@
   ((AllGo : ((List (PT)) p) -> Type)
     enum
     (many AGNil : -> (AllGo (Nil (PT))))
-    (many AGCons : (erased (Bool) w) (erased (Dir) d) (erased (Nat) q) (erased (List (PT)) p) (erased (AllGo p) g)
-       -> (AllGo (Cons (PT) (Def (Go w d q)) p)))))
+    (many AGCons : (erased (Bool) w) (erased (Mv) d) (erased (Nat) q) (erased (List (PT)) p) (erased (AllGo p) g)
+       -> (AllGo (Cons (PT) (Def (Mov w d q)) p)))))
 
 (def-adts
   ((AllGoM : ((List (Tr)) m) -> Type)
     enum
     (many AGMNil : -> (AllGoM (Nil (Tr))))
-    (many AGMCons : (erased (Bool) w) (erased (Dir) d) (erased (Nat) q) (erased (List (Tr)) m) (erased (AllGoM m) g)
-       -> (AllGoM (Cons (Tr) (Go w d q) m)))))
+    (many AGMCons : (erased (Bool) w) (erased (Mv) d) (erased (Nat) q) (erased (List (Tr)) m) (erased (AllGoM m) g)
+       -> (AllGoM (Cons (Tr) (Mov w d q) m)))))
 
 (def-fns _ $ (erased ag-m : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (AllGo p) g) (subterm erased (Ext p m) ex) -> (erased (AllGoM m) gm))
   (match erased ex _
@@ -68,7 +68,7 @@
     ((ExD t p1 m1 e1) (let-match erased g (AGCons w d q _ g1)) (AGMCons w d q m1 (ag-m p1 m1 g1 e1)))))
 
 (def-fns _ $ (erased absurd go-no-halt : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) b) (erased (AllGoM m) g)
-    (subterm erased (Look m q b (Halt)) lk) -> (erased (False) f))
+    (subterm erased (Look m q b (Hlt)) lk) -> (erased (False) f))
   (match erased lk _
     (absurd (Look0 _ _ _) (match erased g _))
     (absurd (Look1 _ _ _) (let-match erased g (AGMCons _ _ _ _ g1)) (match erased g1 _))
@@ -77,8 +77,8 @@
       (let-match erased g1 (AGMCons _ _ _ _ g2))
       (go-no-halt rest q1 b g2 lk1))))
 
-(def-fns _ $ (erased absurd never-full : (erased (List (Tr)) m) (erased (Cfg) c) (erased (Nat) s) (erased (AllGoM m) g)
-    (subterm erased (HaltsIn m c s) hs) -> (erased (False) f))
+(def-fns _ $ (erased absurd never-full : (erased (List (Tr)) m) (erased (Conf) c) (erased (Nat) s) (erased (AllGoM m) g)
+    (subterm erased (HaltsAt m c s) hs) -> (erased (False) f))
   (match erased hs _
     (absurd (HStop _ q _ _ h lk) (go-no-halt m q h g lk))
     (absurd (HMove _ _ d s1 _ rest) (never-full m d s1 g rest))))
@@ -87,14 +87,14 @@
   ((TNode : ((Nat) n) ((Nat) k) ((List (PT)) p) -> Type)
     enum
     (many TH : (erased (Nat) n k) (erased (List (PT)) p) (erased (Nat) t q) (erased (List (Bool)) l r) (erased (Bool) h)
-       (erased (PRunTo p (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkCfg q l h r)) pr) (erased (PLook p q h (Def (Halt))) pl)
+       (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) (erased (PLook p q h (Def (Hlt))) pl)
        (erased (Lt (Succ t) (Succ k)) lt) -> (TNode n k p))
     (many TN : (erased (Nat) n k) (erased (List (PT)) p)
        (erased (List (Bool)) sy) (erased (List (List (Pair (Nat) (Nat)))) adj) (erased (List (Nat)) acc) (erased (List (ACN)) S)
        (erased (ClosedN p sy adj S S) cl) (erased (AccAll sy adj acc acc) aa) (erased (ACN) a0) (erased (Mem (ACN) a0 S) ma)
-       (erased (GCN sy adj acc a0 (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) g) -> (TNode n k p))
+       (erased (GCN sy adj acc a0 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) g) -> (TNode n k p))
     (many TS : (erased (Nat) n k) (erased (List (PT)) p) (erased (Nat) t q) (erased (List (Bool)) l r) (erased (Bool) h)
-       (erased (PRunTo p (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkCfg q l h r)) pr) (erased (PLook p q h (Undef)) pl)
+       (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) (erased (PLook p q h (Undef)) pl)
        (erased (Nat) c c2) (erased (List (Nat)) xs) (erased (List (Tr)) os) (erased (Range c2 xs) rg) (erased (Opts xs os) op)
        (erased (NextC n c c2) nc) (erased (UF c p) uf) (erased (Below c p) bl) (erased (Lt q c) lq)
        (erased (TAll n k p q h os) ta) -> (TNode n k p))
@@ -109,11 +109,11 @@
 (def-fns _
   ((erased tn-good : (erased (Nat) n k) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) s)
        (subterm erased (TNode n k p) tn) (erased (Ext p m) ex) (erased (Rows n n m) wf)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Lt s (Succ k)) r))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Lt s (Succ k)) r))
     (match erased tn _
       ((TH _ _ _ t q l r h pr pl lt)
         (let ((erased run)) (prun-run p m ex _ _ t pr))
-        (let ((erased h1)) (run-add m _ (MkCfg q l h r) t (Succ (Zero)) (Succ t) run (HStop m q l r h (ext-look p m q h _ ex pl))
+        (let ((erased h1)) (run-add m _ (MkConf q l h r) t (Succ (Zero)) (Succ t) run (HStop m q l r h (ext-look p m q h _ ex pl))
           (add-succ-right t (Zero) t (add-zero-right t))))
         (let-match erased (halts-fn m _ s (Succ t) hs h1) (Refl _ _))
         lt)
@@ -128,7 +128,7 @@
   ((erased ta-pick : (erased (Nat) n k) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) s q) (erased (Bool) h) (erased (Tr) tq)
        (erased (List (Tr)) os) (subterm erased (TAll n k p q h os) ta) (erased (Mem (Tr) tq os) mm) (erased (Ext p m) ex)
        (erased (PLook p q h (Undef)) pl) (erased (Look m q h tq) lkq) (erased (Rows n n m) wf)
-       (erased (HaltsIn m (MkCfg (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Lt s (Succ k)) r))
+       (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Lt s (Succ k)) r))
     (match erased mm _
       ((MemHere _ _ os1)
         (let-match erased ta (TACons _ _ _ p2 _ _ _ _ ps tn _))
