@@ -1045,21 +1045,24 @@
 
 (def-adts $ (Snap : -> Type)
   enum
-  (many MkSnap : (many (Nat) q pos) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (Snap)))
+  (many MkSnap : (many (Nat) q pos) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) (many (Nat) st nx) -> (Snap)))
 
-(let ((many snap0)) (MkSnap 9 0 (Nil (Bool)) (BFalse) (Nil (Bool))))
+(let ((many snap0)) (MkSnap 9 0 (Nil (Bool)) (BFalse) (Nil (Bool)) 0 1))
 (let ((many side0)) (MkSide (Nil (Cnd)) 1000))
 
 (def-fns _ $ (many cfg-eq : (many (Snap) a) (many (Nat) q pos) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (Bool) b))
-  (let-match many a (MkSnap q1 p1 la h1 r1))
+  (let-match many a (MkSnap q1 p1 la h1 r1 _ _))
   (let-match many (nat-eq p1 pos) (Equal _ _ _) (else (BFalse)))
   (let-match many (nat-eq q1 q) (Equal _ _ _) (else (BFalse)))
   (let-match many (bit-eq h1 h) (BTrue) ((BFalse) (BFalse)))
   (let-match many (same la l) (BTrue) ((BFalse) (BFalse)))
   (tail $ same r1 r))
 
-(def-fns _ $ (many snap-at : (many (Bool) now) (many (Snap) snap) (many (Nat) q pos) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (Snap) s))
-  (match many now _ ((BTrue) (MkSnap q pos l h r)) ((BFalse) snap)))
+(def-fns _ $ (many snap-at : (many (Snap) snap) (many (Nat) t q pos) (many (List (Bool)) l) (many (Bool) h) (many (List (Bool)) r) -> (many (Snap) s))
+  (let-match many snap (MkSnap _ _ _ _ _ _ nx))
+  (let-match many (nat-eq t nx) (Equal _ _ _) (else snap))
+  (let ((many nx2) (erased _)) (add nx nx))
+  (MkSnap q pos l h r t nx2))
 
 (def-adts
   ((Par : ((List (PT)) p) ((Nat) q) ((Bool) h) -> Type)
@@ -1083,10 +1086,11 @@
     (many NROut : (erased (List (PT)) p) (many (PSimR p) r) -> (NR p))))
 
 (def-fns _ $ (many nloop : (many (List (PT)) p) (subterm many (Nat) fuel) (many (Nat) t q pos) (many (List (Bool)) l) (many (Bool) h)
-    (many (List (Bool)) r) (many (List (Cnd)) csr csl) (many (Nat) opr opl) (many (Snap) snap) (many (Nat) st nx)
+    (many (List (Bool)) r) (many (List (Cnd)) csr csl) (many (Nat) opr opl) (many (Snap) snap)
     (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) -> (many (NR p) res))
   (let-match many (cfg-eq snap q pos l h r) (BFalse)
     ((BTrue)
+      (let-match many snap (MkSnap _ _ _ _ _ st _))
       (let ((many n) (erased _)) (list-count _ l))
       (let-match many (lt-dec st (Succ t)) (Yes _ _ _ _ le) ((No _ _ _ _ _) (NROut p (PSOut p t q l r h pr))))
       (let ((many P) (erased _)) (sub t st le))
@@ -1095,38 +1099,36 @@
   (let-match many (side-hit l csl (BTrue) opl t q r h) (None _) ((Some _ c) (NRCyc p c)))
   (let-match many fuel (Succ f) ((Zero) (NROut p (PSOut p t q l r h pr))))
   (let-match many (plook p q h) (PLOk _ _ _ x pl) ((PLNo _ _ _) (NROut p (PSOut p t q l r h pr))))
-  (let-match many x (Def tr) ((Undef) (NRUndef p q h (MkPar p t q pos l r h (MkSide csr opr) (MkSide csl opl) snap st nx pr pl))))
+  (let-match many x (Def tr) ((Undef) (let-match many snap (MkSnap _ _ _ _ _ st nx)) (NRUndef p q h (MkPar p t q pos l r h (MkSide csr opr) (MkSide csl opl) snap st nx pr pl))))
   (let-match many tr (Mov w d q2) ((Hlt) (NRHalt p t q l r h pr pl)))
   (let ((many csr2)) (side-cs r csr opr t pos q l h))
   (let ((many csl2)) (side-cs l csl opl t pos q r h))
   (let ((many opr2)) (at-end _ r pos opr))
   (let ((many opl2)) (at-end _ l pos opl))
-  (let ((many now)) (match many (nat-eq t nx) (((Bool) b)) ((Equal _ _ _) (BTrue)) (else (BFalse))))
-  (let ((many snap2)) (snap-at now snap q pos l h r))
-  (let ((many st2)) (pick _ now t st))
-  (let ((many nx2)) (match many now (((Nat) n)) ((BTrue) (let ((many n2) (erased _)) (add nx nx)) n2) ((BFalse) nx)))
+  (let ((many snap2)) (snap-at snap t q pos l h r))
   (match many d _
     ((DL)
       (let-match many pos (Succ pos1) ((Zero) (NROut p (PSOut p t q l r h pr))))
       (let ((many opr3)) (ext (BFalse) opr2 pos1))
       (match many l _
-        ((Nil _) (tail $ nloop p f (Succ t) q2 pos1 l (BFalse) (Cons (Bool) w r) (Nil _) csl2 opr3 opl2 snap2 st2 nx2
+        ((Nil _) (tail $ nloop p f (Succ t) q2 pos1 l (BFalse) (Cons (Bool) w r) (Nil _) csl2 opr3 opl2 snap2
           (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l h w (BFalse) pl (PullNil)))))
-        ((Cons _ h2 l2) (tail $ nloop p f (Succ t) q2 pos1 l2 h2 (Cons (Bool) w r) csr2 csl2 opr3 opl2 snap2 st2 nx2
+        ((Cons _ h2 l2) (tail $ nloop p f (Succ t) q2 pos1 l2 h2 (Cons (Bool) w r) csr2 csl2 opr3 opl2 snap2
           (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l2 h w h2 pl (PullCons h2 l2)))))))
     ((DR)
       (let ((many pos2)) (Succ pos))
       (let ((many opl3)) (ext (BTrue) opl2 pos2))
       (match many r _
-        ((Nil _) (tail $ nloop p f (Succ t) q2 pos2 (Cons (Bool) w l) (BFalse) r csr2 (Nil _) opr2 opl3 snap2 st2 nx2
+        ((Nil _) (tail $ nloop p f (Succ t) q2 pos2 (Cons (Bool) w l) (BFalse) r csr2 (Nil _) opr2 opl3 snap2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r h w (BFalse) pl (PullNil)))))
-        ((Cons _ h2 r2) (tail $ nloop p f (Succ t) q2 pos2 (Cons (Bool) w l) h2 r2 csr2 csl2 opr2 opl3 snap2 st2 nx2
+        ((Cons _ h2 r2) (tail $ nloop p f (Succ t) q2 pos2 (Cons (Bool) w l) h2 r2 csr2 csl2 opr2 opl3 snap2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl (PullCons h2 r2)))))))))
 
 (def-fns _ $ (many nsim : (many (List (PT)) p) (subterm many (Nat) fuel) (many (Nat) t q pos) (many (List (Bool)) l) (many (Bool) h)
     (many (List (Bool)) r) (many (List (Cnd)) csr csl) (many (Nat) opr opl) (many (Snap) snap) (many (Nat) st nx)
     (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) -> (many (NR p) res))
-  (nloop p fuel t q pos l h r csr csl (ext (BFalse) opr pos) (ext (BTrue) opl pos) snap st nx pr))
+  (let-match many snap (MkSnap q1 p1 l1 h1 r1 _ _))
+  (nloop p fuel t q pos l h r csr csl (ext (BFalse) opr pos) (ext (BTrue) opl pos) (MkSnap q1 p1 l1 h1 r1 st nx) pr))
 
 (def-fns _ $ (many root-par : (many (List (PT)) p) -> (many (Maybe (Par p (Zero) (BFalse))) r))
   (let-match many (plook p (Zero) (BFalse)) (PLOk _ _ _ x pl) ((PLNo _ _ _) (None _)))
