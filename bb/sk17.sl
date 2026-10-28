@@ -826,7 +826,7 @@
   (let ((erased g6) (erased rc6)) (rcat _ _ _ _ _ rc1 rc5))
   (values B4 lw g6 rc6))
 
-(def-fns _ $ (erased cycle : (erased (Nat) N0' x0 M2 M4) (erased (List (Nat)) c O) (erased (List (Bool)) B') (erased (Cy N0' (Cons (Nat) x0 c) O M2 M4) cy) (erased (EncA (Succ x0) c B') ea)
+(def-fns _ $ (erased sk17-cycle : (erased (Nat) N0' x0 M2 M4) (erased (List (Nat)) c O) (erased (List (Bool)) B') (erased (Cy N0' (Cons (Nat) x0 c) O M2 M4) cy) (erased (EncA (Succ x0) c B') ea)
     -> (erased (List (Bool)) B2') (erased (Lw O B2') lw) (erased (Reach p17 (MkTc 2 (DL) B' (bits "0")) (MkTc 2 (DL) B2' (bits "0")) (BTrue)) rc))
   (let-match erased cy (MkCy _ _ r00 r01 t00 N1h N2' N4 _ z0 rs rr T0t A R4 A2 R42 Q _ tn p2 slc px zc ze vt pt a1 d2 rva sla d4 rv4 slr aa rr2 vo vq))
   (let ((erased B1') (erased ea1) (erased rcz)) (mstep-o x0 c z0 B' px (ze-sw c z0 ze zc) ea))
@@ -1128,11 +1128,11 @@
     ((InL _ _ e) (let-match erased e (Refl _ _)) (let-match erased (ctz-fn v i i1 c c1) (Refl _ _)) p1))
   (no-look a b1 v i n1 l1 l3 c))
 
-(def-fns _ $ (erased double-le : (erased (Nat) a b a2 b2) (subterm erased (Lt a (Succ b)) l) (erased (Double a a2) da) (erased (Double b b2) db) -> (erased (Lt a2 (Succ b2)) r))
+(def-fns _ $ (erased sk17-double-le : (erased (Nat) a b a2 b2) (subterm erased (Lt a (Succ b)) l) (erased (Double a a2) da) (erased (Double b b2) db) -> (erased (Lt a2 (Succ b2)) r))
   (let-match erased da (DS a1 a3 da1) ((D0) (LtZ b2)))
   (let-match erased db (DS b1 b3 db1) (absurd (D0) (let-match erased l (LtS _ _ l1)) l1))
   (let-match erased l (LtS _ _ l1))
-  (LtS (Succ a3) (Succ (Succ b3)) (LtS a3 (Succ b3) (double-le a1 b1 a3 b3 l1 da1 db1))))
+  (LtS (Succ a3) (Succ (Succ b3)) (LtS a3 (Succ b3) (sk17-double-le a1 b1 a3 b3 l1 da1 db1))))
 
 (def-fns _ $ (erased rv-le-top : (erased (Nat) n N') (erased (List (Nat)) r t) (subterm erased (RV n r) rv) (erased (TopN N' t) tn) (erased (SL r t) s) -> (erased (Lt n (Succ N')) l))
   (match erased rv _
@@ -1140,11 +1140,11 @@
     ((RVE q _ rs d rr)
       (let-match erased s (SLC _ _ _ t1 s1))
       (let-match erased tn (TNS q2 N1' _ tn1 d2))
-      (lt-weaken n (Succ N1') (double-le q q2 n N1' (rv-le-top q q2 rs t1 rr tn1 s1) d d2)))
+      (lt-weaken n (Succ N1') (sk17-double-le q q2 n N1' (rv-le-top q q2 rs t1 rr tn1 s1) d d2)))
     ((RVO q n1 rs d rr)
       (let-match erased s (SLC _ _ _ t1 s1))
       (let-match erased tn (TNS q2 N1' _ tn1 d2))
-      (LtS n1 (Succ N1') (double-le q q2 n1 N1' (rv-le-top q q2 rs t1 rr tn1 s1) d d2)))))
+      (LtS n1 (Succ N1') (sk17-double-le q q2 n1 N1' (rv-le-top q q2 rs t1 rr tn1 s1) d d2)))))
 
 (def-fns _ $ (erased pb-half : (erased (Nat) n) (subterm erased (PB n (BFalse)) p) -> (erased (Nat) m) (erased (Double m n) d))
   (let-match erased p (PBF n1 p1) ((PB0) (values (Zero) (D0))))
@@ -1215,7 +1215,7 @@
   (let-match erased ph (MkPh _ _ N2' N4 M N0d N0h _ O rs cy u' am tn e0 d0 po bc ol))
   (let ((erased x0) (erased c) (erased ex)) (cy-ex N0' N2' N4 X O cy))
   (let-match erased ex (Refl _ _))
-  (let ((erased B2') (erased lw2) (erased rc)) (cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
+  (let ((erased B2') (erased lw2) (erased rc)) (sk17-cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
   (let-match erased J (Succ J1)
     ((Zero)
       (let-match erased bc (BCE _ _ w _ k _ n ck pk) (absurd (BCO _ _ _ _ pj _ _) pj))
@@ -1823,7 +1823,7 @@
   (let ((erased O2) (erased cy2) (erased u2')) (step-hi N0' j2 N2' N4 X O cy u'))
   (let ((erased x0) (erased c) (erased ex)) (cy-ex N0' N2' N4 X O cy))
   (let-match erased ex (Refl _ _))
-  (let ((erased B2') (erased lw2) (erased rc)) (cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
+  (let ((erased B2') (erased lw2) (erased rc)) (sk17-cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
   (let ((erased Y3) (erased O3) (erased B3) (erased cy3) (erased u3') (erased lw3) (erased g) (erased rc3)) (descend N0' N2' N4 j2 O O2 B2' cy2 u2' pj2 lw2))
   (values Y3 O3 B3 cy3 u3' lw3 (BTrue) (reach-catT p17 _ _ _ _ rc rc3)))
 
@@ -1831,7 +1831,7 @@
     -> (erased (List (Bool)) B2') (erased (Lw O B2') lw2) (erased (Reach p17 (MkTc 2 (DL) B' (bits "0")) (MkTc 2 (DL) B2' (bits "0")) (BTrue)) rc))
   (let ((erased x0) (erased c) (erased ex)) (cy-ex N0' N2' N4 X O cy))
   (let-match erased ex (Refl _ _))
-  (cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
+  (sk17-cycle N0' x0 N2' N4 c O B' cy (EAS x0 c B' lw)))
 
 (def-fns _ $ (erased trans : (erased (Nat) N0') (erased (List (Nat)) X O rs) (erased (List (Bool)) B') (erased (Cy N0' X O (Succ (Zero)) N0') cy) (erased (U2 X (Succ (Zero)) O) u')
     (erased (TopN N0' rs) tn) (erased (OL rs) ol) (erased (Lw O B') lw)

@@ -26,19 +26,19 @@
        -> (TRow t0 t1 (BTrue) i row))))
 
 (def-adts
-  ((Edge : ((List (List (Nat))) t0) ((List (List (Nat))) t1) ((Bool) b) ((Nat) i) ((Nat) j) -> Type)
+  ((FEdge : ((List (List (Nat))) t0) ((List (List (Nat))) t1) ((Bool) b) ((Nat) i) ((Nat) j) -> Type)
     enum
-    (many MkEdge : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i j) (erased (List (Nat)) row)
-       (erased (TRow t0 t1 b i row) tr) (erased (Mem (Nat) j row) mj) -> (Edge t0 t1 b i j))))
+    (many MkFEdge : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i j) (erased (List (Nat)) row)
+       (erased (TRow t0 t1 b i row) tr) (erased (Mem (Nat) j row) mj) -> (FEdge t0 t1 b i j))))
 
 (def-adts
   ((NAcc : ((List (List (Nat))) t0) ((List (List (Nat))) t1) ((Nat) bot) ((Nat) j) ((List (Bool)) w) -> Type)
     enum
     (many NAEnd : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot) -> (NAcc t0 t1 bot bot (Nil (Bool))))
-    (many NAZero : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot j k) (erased (Edge t0 t1 (BFalse) j k) e)
+    (many NAZero : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot j k) (erased (FEdge t0 t1 (BFalse) j k) e)
        (erased (NAcc t0 t1 bot k (Nil (Bool))) a) -> (NAcc t0 t1 bot j (Nil (Bool))))
     (many NAStep : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot j k) (erased (Bool) b) (erased (List (Bool)) w)
-       (erased (Edge t0 t1 b j k) e) (erased (NAcc t0 t1 bot k w) a) -> (NAcc t0 t1 bot j (Cons (Bool) b w)))))
+       (erased (FEdge t0 t1 b j k) e) (erased (NAcc t0 t1 bot k w) a) -> (NAcc t0 t1 bot j (Cons (Bool) b w)))))
 
 (def-adts
   ((CAcc : ((Nat) K) ((List (Pair (Nat) (Nat))) dfa) ((List (List (Nat))) t0) ((List (List (Nat))) t1) ((Nat) bot) ((Conf) c) -> Type)
@@ -52,7 +52,7 @@
     enum
     (many AYNil : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i) -> (AllY t0 t1 b i (Nil (Nat))))
     (many AYCons : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i y) (erased (List (Nat)) ys)
-       (erased (Edge t0 t1 b i y) e) (erased (AllY t0 t1 b i ys) rest) -> (AllY t0 t1 b i (Cons (Nat) y ys)))))
+       (erased (FEdge t0 t1 b i y) e) (erased (AllY t0 t1 b i ys) rest) -> (AllY t0 t1 b i (Cons (Nat) y ys)))))
 
 (def-adts
   ((AllX : ((List (List (Nat))) t0) ((List (List (Nat))) t1) ((Bool) b) ((Nat) i) ((Bool) w) ((List (Nat)) xs) -> Type)
@@ -76,11 +76,11 @@
       ((Nat) d) ((Nat) a0) ((Nat) a1) -> Type)
     enum
     (many FCU : (erased (Nat) K) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot q) (erased (Bool) b) (erased (Nat) d a0 a1 i)
-       (erased (NIx K d q i) ix) (erased (Edge t0 t1 b i bot) e) -> (FCond K t0 t1 bot q b (Undef) d a0 a1))
+       (erased (NIx K d q i) ix) (erased (FEdge t0 t1 b i bot) e) -> (FCond K t0 t1 bot q b (Undef) d a0 a1))
     (many FCH : (erased (Nat) K) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot q) (erased (Bool) b) (erased (Nat) d a0 a1 i)
-       (erased (NIx K d q i) ix) (erased (Edge t0 t1 b i bot) e) -> (FCond K t0 t1 bot q b (Def (Hlt)) d a0 a1))
+       (erased (NIx K d q i) ix) (erased (FEdge t0 t1 b i bot) e) -> (FCond K t0 t1 bot q b (Def (Hlt)) d a0 a1))
     (many FCR : (erased (Nat) K) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot q) (erased (Bool) b w) (erased (Nat) q2 d a0 a1 i dw i2)
-       (erased (NIx K d q i) ix) (erased (Pick w a0 a1 dw) pk) (erased (NIx K dw q2 i2) ix2) (erased (Edge t0 t1 b i i2) e)
+       (erased (NIx K d q i) ix) (erased (Pick w a0 a1 dw) pk) (erased (NIx K dw q2 i2) ix2) (erased (FEdge t0 t1 b i i2) e)
        -> (FCond K t0 t1 bot q b (Def (Mov w (DR) q2)) d a0 a1))
     (many FCL : (erased (Nat) K) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot q) (erased (Bool) b w) (erased (Nat) q2 d a0 a1)
        (erased (LC K t0 t1 q b w q2 (BFalse) d a0 a1) lc0) (erased (LC K t0 t1 q b w q2 (BTrue) d a0 a1) lc1)
@@ -140,7 +140,7 @@
     (many MkFarOK : (erased (List (PT)) p) (erased (Nat) K) (erased (List (Pair (Nat) (Nat))) dfa) (erased (List (List (Nat))) t0 t1)
        (erased (Nat) bot a1 i00) (erased (List (Nat)) ds R row00)
        (erased (Nth (Pair (Nat) (Nat)) dfa (Zero) (MkPair (Nat) (Nat) (Zero) a1)) z) (erased (Mem (Nat) (Zero) ds) m0) (erased (DC dfa ds ds) dc)
-       (erased (FP K dfa t0 t1 bot ds (Zero) p) fp) (erased (Edge t0 t1 (BFalse) bot bot) e0) (erased (Edge t0 t1 (BTrue) bot bot) e1)
+       (erased (FP K dfa t0 t1 bot ds (Zero) p) fp) (erased (FEdge t0 t1 (BFalse) bot bot) e0) (erased (FEdge t0 t1 (BTrue) bot bot) e1)
        (erased (NIx K (Zero) (Zero) i00) ix0) (erased (TRow t0 t1 (BFalse) i00 row00) tr0) (erased (Sub row00 R) am0)
        (erased (RC t0 t1 R R) rc) (erased (NotIn bot R) ni) -> (FarOK p))))
 
@@ -180,18 +180,18 @@
     ((MemThere _ _ _ rest mx1) (let-match erased am (SubCons _ _ _ _ am1)) (sub-get x rest R am1 mx1))))
 
 (def-fns _ $ (erased ally-get : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i y) (erased (List (Nat)) ys)
-    (erased (AllY t0 t1 b i ys) ay) (subterm erased (Mem (Nat) y ys) my) -> (erased (Edge t0 t1 b i y) e))
+    (erased (AllY t0 t1 b i ys) ay) (subterm erased (Mem (Nat) y ys) my) -> (erased (FEdge t0 t1 b i y) e))
   (match erased my _
     ((MemHere _ _ _) (let-match erased ay (AYCons _ _ _ _ _ _ e _)) e)
     ((MemThere _ _ _ rest my1) (let-match erased ay (AYCons _ _ _ _ _ _ _ ay1)) (ally-get t0 t1 b i y rest ay1 my1))))
 
 (def-fns _ $ (erased allx-get : (erased (List (List (Nat))) t0 t1) (erased (Bool) b) (erased (Nat) i) (erased (Bool) w) (erased (Nat) x y)
-    (erased (List (Nat)) xs) (erased (AllX t0 t1 b i w xs) ax) (subterm erased (Mem (Nat) x xs) mx) (erased (Edge t0 t1 w x y) e) ->
-    (erased (Edge t0 t1 b i y) r))
+    (erased (List (Nat)) xs) (erased (AllX t0 t1 b i w xs) ax) (subterm erased (Mem (Nat) x xs) mx) (erased (FEdge t0 t1 w x y) e) ->
+    (erased (FEdge t0 t1 b i y) r))
   (match erased mx _
     ((MemHere _ _ _)
       (let-match erased ax (AXCons _ _ _ _ _ _ _ row tr ay _))
-      (let-match erased e (MkEdge _ _ _ _ _ row2 tr2 my))
+      (let-match erased e (MkFEdge _ _ _ _ _ row2 tr2 my))
       (let-match erased (trow-fn t0 t1 w x row row2 tr tr2) (Refl _ _))
       (ally-get t0 t1 b i y row ay my))
     ((MemThere _ _ _ rest mx1) (let-match erased ax (AXCons _ _ _ _ _ _ _ _ _ _ ax1)) (allx-get t0 t1 b i w x y rest ax1 mx1 e))))
@@ -205,7 +205,7 @@
 (def-fns _ $ (erased zpath : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot k) (erased (List (Nat)) R) (erased (RC t0 t1 R R) rc)
     (erased (Mem (Nat) k R) mk) (subterm erased (NAcc t0 t1 bot k (Nil (Bool))) na) -> (erased (Mem (Nat) bot R) r))
   (let-match erased na (NAZero _ _ _ _ k2 e na1) ((NAEnd _ _ _) mk))
-  (let-match erased e (MkEdge _ _ _ _ _ row tr my))
+  (let-match erased e (MkFEdge _ _ _ _ _ row tr my))
   (let ((erased row2) (erased tr2) (erased am)) (rc-get t0 t1 R R k rc mk))
   (let-match erased (trow-fn t0 t1 (BFalse) k row row2 tr tr2) (Refl _ _))
   (zpath t0 t1 bot k2 R rc (sub-get k2 row R am my) na1))
@@ -215,8 +215,8 @@
     (absurd (MemHere _ _ _) (let-match erased ni (NICons _ _ _ ap _)) (apart-irrefl y ap))
     (absurd (MemThere _ _ _ rest my1) (let-match erased ni (NICons _ _ _ _ ni1)) (notin-mem y rest ni1 my1))))
 
-(def-fns _ $ (erased nacc-bot : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot) (erased (Edge t0 t1 (BFalse) bot bot) e0)
-    (erased (Edge t0 t1 (BTrue) bot bot) e1) (subterm erased (List (Bool)) w) -> (erased (NAcc t0 t1 bot bot w) a))
+(def-fns _ $ (erased nacc-bot : (erased (List (List (Nat))) t0 t1) (erased (Nat) bot) (erased (FEdge t0 t1 (BFalse) bot bot) e0)
+    (erased (FEdge t0 t1 (BTrue) bot bot) e1) (subterm erased (List (Bool)) w) -> (erased (NAcc t0 t1 bot bot w) a))
   (let-match erased w (Cons _ b w1) ((Nil _) (NAEnd t0 t1 bot)))
   (let ((erased a1)) (nacc-bot t0 t1 bot e0 e1 w1))
   (match erased b _
@@ -304,11 +304,11 @@
 (def-fns _ $ (erased acc-stop : (erased (Nat) K) (erased (List (Pair (Nat) (Nat))) dfa) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot q)
     (erased (Bool) h) (erased (PT) x) (erased (List (Nat)) ds) (erased (List (Bool)) l r)
     (erased (Mem (Nat) (Zero) ds) m0) (erased (DC dfa ds ds) dc) (erased (FD K dfa t0 t1 bot q h x ds) fd) (erased (Stops x) sx)
-    (erased (Edge t0 t1 (BFalse) bot bot) e0) (erased (Edge t0 t1 (BTrue) bot bot) e1) -> (erased (CAcc K dfa t0 t1 bot (MkConf q l h r)) ca))
+    (erased (FEdge t0 t1 (BFalse) bot bot) e0) (erased (FEdge t0 t1 (BTrue) bot bot) e1) -> (erased (CAcc K dfa t0 t1 bot (MkConf q l h r)) ca))
   (let ((erased d) (erased dr) (erased md)) (drun-ex dfa ds l m0 dc))
   (let ((erased _) (erased _) (erased _) (erased fc)) (fd-get K dfa t0 t1 bot q h x ds d fd md))
   (let ((erased i) (erased ix) (erased e))
-    (match erased sx (((Nat) i) ((NIx K d q i) ix) ((Edge t0 t1 h i bot) e))
+    (match erased sx (((Nat) i) ((NIx K d q i) ix) ((FEdge t0 t1 h i bot) e))
       ((StU) (let-match erased fc (FCU _ _ _ _ _ _ _ _ _ i ix e)) (values i ix e))
       ((StH) (let-match erased fc (FCH _ _ _ _ _ _ _ _ _ i ix e)) (values i ix e))))
   (MkCA K dfa t0 t1 bot q d i l r h dr ix (NAStep t0 t1 bot i bot h r e (nacc-bot t0 t1 bot e0 e1 r))))
@@ -316,7 +316,7 @@
 (def-fns _ $ (erased far-acc : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Ext p m) ex)
     (erased (Nat) K) (erased (List (Pair (Nat) (Nat))) dfa) (erased (List (List (Nat))) t0 t1) (erased (Nat) bot a1z) (erased (List (Nat)) ds)
     (erased (Nth (Pair (Nat) (Nat)) dfa (Zero) (MkPair (Nat) (Nat) (Zero) a1z)) z) (erased (Mem (Nat) (Zero) ds) m0) (erased (DC dfa ds ds) dc)
-    (erased (FP K dfa t0 t1 bot ds (Zero) p) fp) (erased (Edge t0 t1 (BFalse) bot bot) e0) (erased (Edge t0 t1 (BTrue) bot bot) e1)
+    (erased (FP K dfa t0 t1 bot ds (Zero) p) fp) (erased (FEdge t0 t1 (BFalse) bot bot) e0) (erased (FEdge t0 t1 (BTrue) bot bot) e1)
     (erased (Conf) c) (erased (Nat) s) (subterm erased (HaltsAt m c s) hs) -> (erased (CAcc K dfa t0 t1 bot c) ca))
   (match erased hs _
     ((HStop _ q l r h lk)
@@ -351,11 +351,11 @@
           (let-match erased na1 (NAStep _ _ _ _ x1 _ _ ea1 na2))
           (let-match erased na2 (NAStep _ _ _ _ y _ _ ew na3))
           (let ((erased dc1) (erased i2) (erased dr) (erased ix2) (erased eb))
-            (match erased h1 (((Nat) dc1) ((Nat) i2) ((DRun dfa l dc1) dr) ((NIx K dc1 q i2) ix2) ((Edge t0 t1 h i2 y) eb))
+            (match erased h1 (((Nat) dc1) ((Nat) i2) ((DRun dfa l dc1) dr) ((NIx K dc1 q i2) ix2) ((FEdge t0 t1 h i2 y) eb))
               ((BFalse)
                 (let-match erased lc0 (MkLC _ _ _ _ _ _ _ _ _ _ _ dn i i2 row pk ix ix2 tr ax))
                 (let-match erased (idx-fn K d1 q2 i1 i ix1 ix) (Refl _ _))
-                (let-match erased ea1 (MkEdge _ _ _ _ _ row2 tr2 mx))
+                (let-match erased ea1 (MkFEdge _ _ _ _ _ row2 tr2 mx))
                 (let-match erased (trow-fn t0 t1 h1 i1 row row2 tr tr2) (Refl _ _))
                 (let ((erased eb)) (allx-get t0 t1 h i2 w x1 y row ax mx ew))
                 (let ((erased dr))
@@ -370,7 +370,7 @@
               ((BTrue)
                 (let-match erased lc1 (MkLC _ _ _ _ _ _ _ _ _ _ _ dn i i2 row pk ix ix2 tr ax))
                 (let-match erased (idx-fn K d1 q2 i1 i ix1 ix) (Refl _ _))
-                (let-match erased ea1 (MkEdge _ _ _ _ _ row2 tr2 mx))
+                (let-match erased ea1 (MkFEdge _ _ _ _ _ row2 tr2 mx))
                 (let-match erased (trow-fn t0 t1 h1 i1 row row2 tr tr2) (Refl _ _))
                 (let ((erased eb)) (allx-get t0 t1 h i2 w x1 y row ax mx ew))
                 (let-match erased pp (PullCons _ _))
@@ -384,7 +384,7 @@
   (let-match erased dr (DRNil _))
   (let-match erased (idx-fn K (Zero) (Zero) i i00 ix ix0) (Refl _ _))
   (let-match erased na (NAStep _ _ _ _ k _ _ e nk))
-  (let-match erased e (MkEdge _ _ _ _ _ row tr mk))
+  (let-match erased e (MkFEdge _ _ _ _ _ row tr mk))
   (let-match erased (trow-fn t0 t1 (BFalse) i row row00 tr tr0) (Refl _ _))
   (notin-mem bot R ni (zpath t0 t1 bot k R rc (sub-get k row R am0 mk) nk)))
 
@@ -425,10 +425,10 @@
   (let-match many (notail $ mem-n y rest) (ROk _ mm) ((RFail _) (RFail _)))
   (ROk _ (MemThere (Nat) y x rest mm)))
 
-(def-fns _ $ (many edge-of : (erased (List (List (Nat))) t0 t1) (many (FA t0 t1) fa) (many (Bool) b) (many (Nat) i j) -> (many (Res (Edge t0 t1 b i j)) r))
+(def-fns _ $ (many edge-of : (erased (List (List (Nat))) t0 t1) (many (FA t0 t1) fa) (many (Bool) b) (many (Nat) i j) -> (many (Res (FEdge t0 t1 b i j)) r))
   (let-match many (trow-of t0 t1 fa b i) (TROk _ _ _ _ row tr) ((TRNo _ _ _ _) (RFail _)))
   (let-match many (mem-n j row) (ROk _ mj) ((RFail _) (RFail _)))
-  (ROk _ (MkEdge t0 t1 b i j row tr mj)))
+  (ROk _ (MkFEdge t0 t1 b i j row tr mj)))
 
 (def-fns _ $ (many ally-of : (erased (List (List (Nat))) t0 t1) (many (FA t0 t1) fa) (many (Bool) b) (many (Nat) i) (subterm many (List (Nat)) ys) ->
     (many (Res (AllY t0 t1 b i ys)) r))
