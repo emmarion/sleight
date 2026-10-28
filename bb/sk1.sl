@@ -2400,14 +2400,14 @@
   (let-match many d (DR) ((DL) (simple-l c0 ac l rr)))
   (match many (ac-st c0 ac) _ ((AcNo _) (simple-r c0 ac l rr)) (else ac2 ac2)))
 
-(def-fns _ $ (many trun-to : (erased (Cf) c0) (many (Ac c0) ac) (many (Cf) goal) (subterm many (Nat) fuel) -> (many (Res (TRun c0 goal (BTrue))) r))
+(def-fns _ $ (many trun-to : (erased (Cf) c0) (many (Ac c0) ac) (many (Cf) tgt) (subterm many (Nat) fuel) -> (many (Res (TRun c0 tgt (BTrue))) r))
   (let-match many ac (AcOk _ c g tr) ((AcNo _) (RFail _)))
-  (let-match many (eq-cf c goal) (None _) ((Some _ e)
+  (let-match many (eq-cf c tgt) (None _) ((Some _ e)
     (let-match erased e (Refl _ _))
     (let-match many g (BTrue) ((BFalse) (RFail _)))
     (ROk _ tr)))
   (let-match many fuel (Succ f) ((Zero) (RFail _)))
-  (tail $ trun-to c0 (tstep c0 ac) goal f))
+  (tail $ trun-to c0 (tstep c0 ac) tgt f))
 
 (let ((many uj)) (Cons (Sy) iD (Cons (Sy) (YF (QC2)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 95)) (Cons (Sy) (YF (QC0)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7713)) (Cons (Sy) iD (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 1866)) (Cons (Sy) (YF (QC1)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 13231)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 6197)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 11066)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7279)) (Cons (Sy) (YF (QC0)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 10524)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7550)) (Cons (Sy) (YF (QC2)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 10389)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7618)) (Cons (Sy) (YF (QC1)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 10355)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7635)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 10347)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7639)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 10345)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7640)) (Cons (Sy) (YF (QC1)) (Nil (Sy))))))))))))))))))))))))))))))))))))))))
 (let ((many uk)) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7639)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 10347)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7635)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 10355)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7619)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 10387)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7555)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 10515)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 7299)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 11027)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 6275)) (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 13075)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 2179)) (Cons (Sy) iD (Cons (Sy) iD (Cons (Sy) (YW (KX) (MkAm (BFalse) 7088)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 1)) (Cons (Sy) (YC) (Cons (Sy) (YW (KX) (MkAm (BFalse) 3849)) (Cons (Sy) iP (Cons (Sy) (YE) (Nil (Sy)))))))))))))))))))))))))))))))))))))

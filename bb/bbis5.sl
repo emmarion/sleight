@@ -1,0 +1,6 @@
+(comptime-match many holes2 (Nil _))
+(def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 5 5 m) w) (erased (Nat) s)
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 47176870)) p))
+  (no-hole 5 s 47176870 (bound5 m w s h)))
+(goal erased (BBIs 5 47176870))
+(qed (MkBB 5 47176870 champ cw ch (level-of bound) bound))
