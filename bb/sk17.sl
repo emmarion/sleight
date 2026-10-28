@@ -1277,3 +1277,32 @@
       (TNS _ _ _ (TNS _ _ _ (TNS _ _ _ (TN0) (D0)) (DS _ _ (D0))) (DS _ _ (DS _ _ (DS _ _ (D0))))) (P2C _ _ _ (P2C _ _ _ (P2C _ _ _ (P2N)))) (SLC _ _ _ _ (SLC _ _ _ _ (SLC _ _ _ _ (SLN)))) (PB0) (ZCC _ _ (PBF _ (PBT _ (PBF _ (PBT _ (PB0))))) (ZCC _ _ (PBF _ (PBT _ (PB0))) (ZCL _ (PB0)))) (ZEC _ _ _ (ZEC _ _ _ (ZEL _)))
       (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddZero _)) (VAC _ _ _ _ _ _ (AddZero _) (VAC _ _ _ _ _ _ (AddZero _) (VAN)))))) (PBF _ (PBT _ (PBF _ (PBT _ (PBF _ (PBT _ (PBF _ (PBT _ (PB0))))))))) (AddZero _) (DS _ _ (DS _ _ (DS _ _ (D0)))) (RVO _ _ _ (DS _ _ (D0)) (RVO _ _ _ (D0) (RVE _ _ _ (D0) (RVE _ _ _ (D0) (RVN))))) (SLC _ _ _ _ (SLC _ _ _ _ (SLC _ _ _ _ (SLC _ _ _ _ (SLN))))) (DS _ _ (DS _ _ (DS _ _ (DS _ _ (D0))))) (RVE _ _ _ (DS _ _ (DS _ _ (D0))) (RVE _ _ _ (DS _ _ (D0)) (RVO _ _ _ (D0) (RVN)))) (SLC _ _ _ _ (SLC _ _ _ _ (SLC _ _ _ _ (SLN)))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddZero _)) (VAC _ _ _ _ _ _ (AddZero _) (VAC _ _ _ _ _ _ (AddZero _) (VAN))))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddZero _)) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddZero _)) (VAN)))) (VAC _ _ _ _ _ _ (AddZero _) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAN))))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))))) (VAC _ _ _ _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))) (VAC _ _ _ _ _ _ (AddZero _) (VAC _ _ _ _ _ _ (AddZero _) (VAN))))))
     (U2S _ _ _ _ (U2S _ _ _ _ (U2S _ _ _ _ (U20 _ _)))) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero _))))) (TNS _ _ _ (TNS _ _ _ (TNS _ _ _ (TN0) (D0)) (DS _ _ (D0))) (DS _ _ (DS _ _ (DS _ _ (D0))))) (Refl _ n7) (DS _ _ (DS _ _ (DS _ _ (D0)))) (PBT _ (PBF _ (PBT _ (PB0)))) (BCO n3 n4 n4 n3 (PBT _ (PBF _ (PBT _ (PB0)))) (NOZ n4) (MBB n3)))))
+
+(def-adts
+  ((OVX : ((List (Nat)) c) ((List (Nat)) c6) ((List (Nat)) cz) -> Type)
+    enum
+    (many OVL : (erased (Nat) y) -> (OVX (Cons (Nat) y (Nil (Nat))) (Cons (Nat) (Succ y) (Cons (Nat) (Zero) (Nil (Nat))))
+       (Cons (Nat) (Succ y) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat))))))))
+    (many OVC : (erased (Nat) x) (erased (List (Nat)) xs ys zs) (erased (OVX xs ys zs) o) -> (OVX (Cons (Nat) x xs) (Cons (Nat) x ys) (Cons (Nat) x zs)))))
+
+(def-fns _ $ (erased topn-odd : (erased (Nat) q r) (erased (List (Nat)) rs) (erased (TopN q (Cons (Nat) r rs)) t) -> (erased (PB q (BTrue)) p))
+  (let-match erased t (TNS q1 n _ t1 d))
+  (PBT n (double-pb q1 n d)))
+
+(def-fns _ $ (erased ov-sw : (erased (Nat) M r) (erased (List (Nat)) rs c) (subterm erased (TopN M (Cons (Nat) r rs)) tn) (erased (VP c (Cons (Nat) r rs)) vp) (erased (NZ c (Cons (Nat) r rs)) nz)
+    -> (erased (List (Nat)) c6 cz) (erased (Sw c cz) w) (erased (OVX c c6 cz) o) (erased (ZC c6) zc))
+  (let-match erased tn (TNS q n _ t1 d))
+  (let-match erased vp (VPC c0 _ cs _ p pc pr vp1))
+  (let-match erased nz (NZ1 c00 _ _ _ nz1))
+  (let-match erased rs (Cons _ r2 rs2)
+    ((Nil _)
+      (let-match erased t1 (TN0))
+      (let-match erased d (D0))
+      (let-match erased vp1 (VPN))
+      (let-match erased (pb-fn (Succ (Zero)) _ _ pr (PBT (Zero) (PB0))) (Refl _ _))
+      (values (Cons (Nat) (Succ c0) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ c0) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat))))))
+        (SwOv c0 pc) (OVL c0) (ZCC c0 _ (PBF c0 pc) (ZCL (Zero) (PB0))))))
+  (let ((erased pq)) (topn-odd q r2 rs2 t1))
+  (let-match erased (pb-fn (Succ q) _ _ pr (PBF q pq)) (Refl _ _))
+  (let ((erased c6t) (erased czt) (erased w1) (erased o1) (erased zc1)) (ov-sw q r2 rs2 cs t1 vp1 nz1))
+  (values (Cons (Nat) c0 c6t) (Cons (Nat) c0 czt) (SwEven c00 cs czt pc w1) (OVC c0 cs c6t czt o1) (ZCC c00 c6t pc zc1)))
