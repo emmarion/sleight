@@ -2114,11 +2114,17 @@
     ((BFalse) (match many k2 _ ((BFalse) (CaOk n1 n2 (MkAm (BFalse) c3) (CAF c1 c2 c3 p))) ((BTrue) (CaOk n1 n2 (MkAm (BTrue) c3) (CAR c1 c2 c3 p)))))
     ((BTrue) (match many k2 _ ((BFalse) (CaOk n1 n2 (MkAm (BTrue) c3) (CAL c1 c2 c3 p))) ((BTrue) (CaNo n1 n2))))))
 
-(def-fns _ $ (many nz-of : (many (Am) n) -> (many (Maybe (Nz n)) r))
+(def-adts
+  ((NzR : ((Am) n) -> Type)
+    enum
+    (many NzY : (erased (Am) n) (erased (Nz n) nz) -> (NzR n))
+    (many NzN : -> (NzR az))))
+
+(def-fns _ $ (many nz-of : (many (Am) n) -> (many (NzR n) r))
   (let-match many n (MkAm k c))
-  (let-match many k (BFalse) ((BTrue) (Some _ (NzT c))))
-  (let-match many c (Succ c1) ((Zero) (None _)))
-  (Some _ (NzF c1)))
+  (let-match many k (BFalse) ((BTrue) (NzY n (NzT c))))
+  (let-match many c (Succ c1) ((Zero) (NzN)))
+  (NzY n (NzF c1)))
 
 (def-adts
   ((PuR : ((Pk) k) ((Am) n) ((List (Sy)) t) -> Type)
@@ -2127,11 +2133,7 @@
     (many PuNo : (erased (Pk) k) (erased (Am) n) (erased (List (Sy)) t) -> (PuR k n t))))
 
 (def-fns _ $ (many tpush : (many (Pk) k) (many (Am) n) (many (List (Sy)) t) -> (many (PuR k n t) r))
-  (let-match many (nz-of n) (Some _ nz) ((None _)
-    (let-match many n (MkAm b c))
-    (let-match many b (BFalse) ((BTrue) (PuNo k n t)))
-    (let-match many c (Zero) ((Succ _) (PuNo k n t)))
-    (PuOk k n t t (TPZ k t))))
+  (let-match many (nz-of n) (NzY _ nz) ((NzN) (PuOk k n t t (TPZ k t))))
   (let-match many (tnk-of k t) (None _) ((Some _ nk) (PuOk k n t (Cons (Sy) (YW k n) t) (TPC k n t nz nk))))
   (let-match many t (Cons _ s t0) ((Nil _) (PuNo k n t)))
   (let-match many s (YW k2 m) (else (PuNo k n t)))
@@ -2171,12 +2173,8 @@
         ((QD)
           (let-match many (notail $ tstride az n t0) (StOk _ _ _ t1 s1) ((StNo _ _ _) (StNo xs n t)))
           (let ((many dt)) (Cons (Sy) iD t1))
-          (let-match many (nz-of xs) (None _)
-            ((Some _ nz) (StOk xs n t (Cons (Sy) (YW (KX) xs) dt) (TStD xs n t0 t1 _ s1 (TPC (KX) xs dt nz (TNF (KX) (QD) t1))))))
-          (let-match many xs (MkAm b c))
-          (let-match many b (BFalse) ((BTrue) (StNo xs n t)))
-          (let-match many c (Zero) ((Succ _) (StNo xs n t)))
-          (StOk xs n t dt (TStD xs n t0 t1 dt s1 (TPZ (KX) dt))))
+          (let-match many (nz-of xs) (NzY _ nz) ((NzN) (StOk xs n t dt (TStD xs n t0 t1 dt s1 (TPZ (KX) dt)))))
+          (StOk xs n t (Cons (Sy) (YW (KX) xs) dt) (TStD xs n t0 t1 _ s1 (TPC (KX) xs dt nz (TNF (KX) (QD) t1)))))
         (else (StNo xs n t))))
     ((YC)
       (let-match many (cn-sub n xs) (CsOk _ _ d cs) ((CsNo _ _) (StNo xs n t)))
