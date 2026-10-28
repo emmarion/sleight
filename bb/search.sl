@@ -1008,8 +1008,7 @@
     ((Yes _ _ _ _ _) (match many fl _ ((BFalse) a) ((BTrue) b)))
     ((No _ _ _ _ _) (match many fl _ ((BFalse) b) ((BTrue) a)))))
 
-(def-fns _ $ (many cand : (many (Bool) fl) (many (Cnd) e) (many (Nat) ex q) (many (List (Bool)) nr) (many (Bool) h) -> (many (Maybe (Nat)) r))
-  (let-match many e (MkCnd _ q1 p1 _ nr1 h1))
+(def-fns _ $ (many cand : (many (Bool) fl) (many (Nat) q1 p1) (many (List (Bool)) nr1) (many (Bool) h1) (many (Nat) ex q) (many (List (Bool)) nr) (many (Bool) h) -> (many (Maybe (Nat)) r))
   (let-match many (nat-eq q1 q) (Equal _ _ _) (else (None _)))
   (let-match many (bit-eq h1 h) (BTrue) ((BFalse) (None _)))
   (let ((many a) (many b)) (match many fl (((Nat) a) ((Nat) b)) ((BFalse) (values ex p1)) ((BTrue) (values p1 ex))))
@@ -1021,10 +1020,9 @@
 (def-fns _ $ (many scan : (subterm many (List (Cnd)) cs) (many (Bool) fl) (many (Nat) ex q) (many (List (Bool)) nr) (many (Bool) h)
     -> (many (Maybe (Pair (Nat) (Nat))) res))
   (let-match many cs (Cons _ e rest) ((Nil _) (None _)))
-  (let-match many (cand fl e ex q nr h) (None _) ((Some _ D) (let-match many e (MkCnd t1 _ _ _ _ _)) (Some _ (MkPair _ _ t1 D))))
-  (let-match many rest (Cons _ e2 _) ((Nil _) (None _)))
-  (let-match many e2 (MkCnd _ _ _ ex2 _ _))
-  (tail $ scan rest fl (ext fl ex ex2) q nr h))
+  (let-match many e (MkCnd t1 q1 p1 ex1 nr1 h1))
+  (let-match many (cand fl q1 p1 nr1 h1 ex q nr h) (None _) ((Some _ D) (Some _ (MkPair _ _ t1 D))))
+  (tail $ scan rest fl (ext fl ex ex1) q nr h))
 
 (def-adts $ (Side : -> Type)
   enum
@@ -1032,8 +1030,7 @@
 
 (def-fns _ $ (many side-cs : (many (List (Bool)) far) (many (List (Cnd)) cs) (many (Nat) op t pos q) (many (List (Bool)) nr) (many (Bool) h) -> (many (List (Cnd)) cs2))
   (let-match many far (Nil _) ((Cons _ _ _) cs))
-  (let ((many cs1)) (match many cs (((List (Cnd)) x)) ((Nil _) cs) ((Cons _ e rest) (let-match many e (MkCnd t1 q1 p1 _ nr1 h1)) (Cons _ (MkCnd t1 q1 p1 op nr1 h1) rest))))
-  (Cons _ (MkCnd t q pos pos nr h) cs1))
+  (Cons _ (MkCnd t q pos op nr h) cs))
 
 (def-fns _ $ (many side-hit : (many (List (Bool)) far) (many (List (Cnd)) cs) (many (Bool) fl) (many (Nat) op t q) (many (List (Bool)) nr) (many (Bool) h) -> (many (Maybe (CycF)) r))
   (let-match many far (Nil _) ((Cons _ _ _) (None _)))
