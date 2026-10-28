@@ -1396,11 +1396,11 @@
   r)
 
 (let ((many settings))
-  (Cons _ (SN 1 1 0 (BFalse) 100) $ Cons _ (SN 2 2 0 (BFalse) 200) $ Cons _ (SN 3 3 0 (BFalse) 400) $
-   Cons _ (SN 2 2 2 (BFalse) 1600) $ Cons _ (SN 3 3 2 (BFalse) 1600) $ Cons _ (SN 2 2 4 (BFalse) 600) $
-   Cons _ (SN 3 3 4 (BFalse) 1600) $ Cons _ (SN 2 2 6 (BFalse) 3200) $ Cons _ (SN 3 3 6 (BFalse) 3200) $
-   Cons _ (SN 2 2 8 (BFalse) 1600) $ Cons _ (SN 3 3 8 (BFalse) 1600) $ Cons _ (SN 2 2 0 (BTrue) 10000) $
-   Cons _ (SN 4 4 10 (BFalse) 10000) $ Cons _ (SW 2 3 10000) $ Nil (Setting)))
+  (Cons _ (SN 1 1 0 (BFalse) 100) $ Cons _ (SN 3 3 0 (BFalse) 400) $ Cons _ (SN 3 3 4 (BFalse) 1600) $
+   Cons _ (SN 3 3 8 (BFalse) 1600) $ Cons _ (SN 2 2 2 (BFalse) 1600) $ Cons _ (SN 4 4 10 (BFalse) 10000) $
+   Cons _ (SN 2 2 0 (BTrue) 10000) $ Cons _ (SN 2 2 6 (BFalse) 3200) $ Cons _ (SN 3 3 2 (BFalse) 1600) $
+   Cons _ (SN 2 2 8 (BFalse) 1600) $ Cons _ (SN 2 2 0 (BFalse) 200) $ Cons _ (SN 3 3 6 (BFalse) 3200) $
+   Cons _ (SN 2 2 4 (BFalse) 600) $ Cons _ (SW 2 3 10000) $ Nil (Setting)))
 
 (def-lvl BD)
 (def-fns _ $ (many sub-of : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (Stage)) pn) (many (List (PT)) p)
