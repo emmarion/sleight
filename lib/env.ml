@@ -142,6 +142,7 @@ type snapshot = { facts : fact IntMap.t; opens : opens }
 
 (* A use, with where it was: what the other one of a conflicting pair names. *)
 type use = Shared | Consumed
+type mstate = { mcount : int; pending : (id * Reader.loc) list }
 
 type t = {
   ctor_tele : id list;
@@ -150,6 +151,7 @@ type t = {
   externs : bool;
   warned : (Reader.loc * string) IntMap.t;
   uses : (use * Reader.loc) IntMap.t;
+  muses : mstate IntMap.t;
   captures : id list;
   usage_erased : bool;
   scope : scope;
@@ -167,7 +169,7 @@ type t = {
 }
 
 let empty =
-  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; muses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -620,6 +622,9 @@ let rec merge_opens (Forcing env) =
 let join_uses a b =
   IntMap.union (fun _ (x, lx) (y, ly) -> Some (if x = Consumed then (x, lx) else if y = Consumed then (y, ly) else (x, lx))) a b
 
+let join_muses a b =
+  IntMap.union (fun _ x y -> Some { mcount = max x.mcount y.mcount; pending = List.sort_uniq compare (x.pending @ y.pending) }) a b
+
 let misuse demand supply =
   if demand <> Erased && supply = Erased then Some "used in a non-erased position"
   else if demand = Unique && supply = Many then Some "used at unique"
@@ -664,7 +669,45 @@ let track env kind x =
 
 let stand_for x y = if !warn_unused then (Hashtbl.replace refs y (Level (max (level x) (level y))); Hashtbl.replace refs x (Target y))
 
-let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset refs
+let measure = Sys.getenv_opt "SLEIGHT_MEASURE"
+let use_tag = ref "other"
+let m_sites : (id * Reader.loc, string) Hashtbl.t = Hashtbl.create 64
+let m_nonfinal : (id * Reader.loc, unit) Hashtbl.t = Hashtbl.create 64
+let m_max : (id, int) Hashtbl.t = Hashtbl.create 64
+let m_captured : (id, unit) Hashtbl.t = Hashtbl.create 64
+let m_types : (id, string) Hashtbl.t = Hashtbl.create 64
+let m_binders : (id, tracked) Hashtbl.t = Hashtbl.create 64
+let m_type env x = match canon env (type_of env x) with
+  | App (Var c, _) | Var c -> entry_name env c | Fn _ -> "Fn" | UniqueFn _ -> "UniqueFn" | _ -> "other"
+let rec base_loc = function Reader.Framed (_, l) -> base_loc l | l -> l
+let show_loc l = match base_loc l with Reader.At { file; line; col } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | _ -> "?"
+let m_record env loc x =
+  let tag = if List.mem x env.captures then "captured" else !use_tag in
+  use_tag := "other";
+  match Hashtbl.find_opt tracked x with
+  | Some t when measure <> None && t.mult = Many && t.kind <> Definition ->
+      let key = (x, stamp loc) in
+      if not (Hashtbl.mem m_sites key) || tag <> "other" then Hashtbl.replace m_sites key tag;
+      if tag = "captured" then Hashtbl.replace m_captured x ();
+      if not (Hashtbl.mem m_types x) then Hashtbl.replace m_types x (m_type env x);
+      let st = Option.value (IntMap.find_opt x env.muses) ~default:{ mcount = 0; pending = [] } in
+      if List.mem key st.pending then env else (
+        List.iter (fun k -> Hashtbl.replace m_nonfinal k ()) st.pending;
+        let n = st.mcount + 1 in
+        Hashtbl.replace m_max x (max n (Option.value (Hashtbl.find_opt m_max x) ~default:0));
+        { env with muses = IntMap.add x { mcount = n; pending = [ key ] } env.muses })
+  | _ -> env
+let () = Option.iter (fun path -> at_exit (fun () ->
+  let oc = open_out path in
+  let kind = function Let _ -> "let" | Param -> "param" | Field -> "field" | Optional -> "optional" | Definition -> "definition" in
+  Hashtbl.iter (fun x t -> Hashtbl.replace m_binders x t) tracked;
+  Hashtbl.iter (fun x t -> if t.mult = Many && t.kind <> Definition && not t.erased_scope then
+    Printf.fprintf oc "B\t%d\t%s\t%s\t%s\t%s\t%d\t%b\n" x (Literal.name t.binder) (show_loc t.at) (kind t.kind)
+      (Option.value (Hashtbl.find_opt m_types x) ~default:"?") (Option.value (Hashtbl.find_opt m_max x) ~default:0) (Hashtbl.mem m_captured x)) m_binders;
+  Hashtbl.iter (fun (x, l) tag -> Printf.fprintf oc "U\t%d\t%s\t%s\t%b\n" x (show_loc l) tag (Hashtbl.mem m_nonfinal (x, l))) m_sites;
+  close_out oc)) measure
+
+let reset_tracking () = Hashtbl.iter (fun x t -> Hashtbl.replace m_binders x t) tracked; Hashtbl.reset tracked; Hashtbl.reset refs
 
 let refer ?(live = false) x =
   if !warn_unused then
@@ -683,6 +726,7 @@ let use env loc ?(sharing = false) ?written ?made mult x =
     | Some d, _ -> ([], Printf.sprintf "a handle to %s, made `%s`" (qshow env (Var x)) (speller env (mult_name d)))
     | None, None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
   check_mult env loc explain mult (if sharing && mult = Many then Many else Option.value made ~default:e.mult);
+  let env = m_record env loc x in
   if e.mult <> Unique then env else (
     if mult = Unique && List.mem x env.captures then error_in env loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
