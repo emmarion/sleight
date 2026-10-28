@@ -5,6 +5,7 @@
   Cons _ (hc "0R11L00R20L01L31R21L11L4---0L1" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 2 2) $ Cons _ (MkPair _ _ 0 1) $ Nil _))) $
   Cons _ (hc "0R10R01L2---0L30L20R41R11R41R0" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 0) $ Cons _ (MkPair _ _ 2 2) $ Nil _))) $
   Cons _ (hc "0R10R01L2---0L30L21R30R41L10R0" (HFar (BTrue) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 5 6) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 7 4) $ Cons _ (MkPair _ _ 8 4) $ Cons _ (MkPair _ _ 9 10) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 5 6) $ Cons _ (MkPair _ _ 4 3) $ Nil _))) $
+  Cons _ (hc "0R10L21L21R11L31L01R41R3---1R2" (HSet (SN 3 3 1 (BTrue) 10000))) $
   Cons _ (hc "0R10L41L21R11R11L3---0L00R01L4" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 2 2) $ Cons _ (MkPair _ _ 0 1) $ Nil _))) $
   Cons _ (hc "0R10L41L21R11L01L3---0L00R01L4" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 2 2) $ Cons _ (MkPair _ _ 0 1) $ Nil _))) $
   Cons _ (hc "0R10L21R2---0L31R41L41L31R00R0" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 5) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 6 7) $ Cons _ (MkPair _ _ 6 8) $ Cons _ (MkPair _ _ 6 6) $ Cons _ (MkPair _ _ 6 8) $ Cons _ (MkPair _ _ 9 10) $ Cons _ (MkPair _ _ 4 6) $ Cons _ (MkPair _ _ 11 7) $ Cons _ (MkPair _ _ 6 5) $ Nil _))) $
@@ -36,12 +37,14 @@
   Cons _ (hc "1R10R01L2---0L30L20R41R01R40R0" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 0) $ Cons _ (MkPair _ _ 2 2) $ Nil _))) $
   Cons _ (hc "1R1---1L21L31R31L21R40L11R00R2" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 5) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 6 4) $ Cons _ (MkPair _ _ 6 7) $ Cons _ (MkPair _ _ 6 6) $ Cons _ (MkPair _ _ 8 9) $ Cons _ (MkPair _ _ 6 10) $ Cons _ (MkPair _ _ 7 7) $ Cons _ (MkPair _ _ 6 4) $ Nil _))) $
   Cons _ (hc "1R1---1L20L41R30L10R31R00L20R0" (HCyc (BTrue) 32419 55 91995)) $
+  Cons _ (hc "1R10R31L21L11R00L10R41R0---1L1" (HSet (SN 5 5 1 (BTrue) 10000))) $
   Cons _ (hc "1R10R31L21L41R00L11R2---0L20R4" (HSet (SW 12 3 20000))) $
   Cons _ (hc "1R11R21L21R11L30R01L40L11L0---" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 1) $ Cons _ (MkPair _ _ 3 4) $ Cons _ (MkPair _ _ 5 6) $ Cons _ (MkPair _ _ 7 2) $ Cons _ (MkPair _ _ 5 5) $ Cons _ (MkPair _ _ 5 5) $ Cons _ (MkPair _ _ 3 8) $ Cons _ (MkPair _ _ 7 2) $ Nil _))) $
   Cons _ (hc "1R10L11L20R40L30R01L00R01R3---" (HCyc (BTrue) 13051 18 1432)) $
   Cons _ (hc "1R10L41R2---0R30R21L30L00L10L4" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 5 6) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 7 4) $ Cons _ (MkPair _ _ 2 4) $ Cons _ (MkPair _ _ 8 9) $ Cons _ (MkPair _ _ 5 6) $ Cons _ (MkPair _ _ 4 3) $ Nil _))) $
   Cons _ (hc "1R10R41R21R41L3---1L01L41R00L3" (HSet (SW 10 3 200000))) $
   Cons _ (hc "1R10R31R2---1L31L41R41L31R00L2" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 5) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 6 7) $ Cons _ (MkPair _ _ 8 8) $ Cons _ (MkPair _ _ 9 6) $ Cons _ (MkPair _ _ 9 6) $ Cons _ (MkPair _ _ 4 10) $ Cons _ (MkPair _ _ 9 9) $ Cons _ (MkPair _ _ 8 8) $ Nil _))) $
+  Cons _ (hc "1R11L01R21R41L31L2---1L10L00R1" (HSet (SN 3 3 1 (BTrue) 10000))) $
   Cons _ (hc "1R10L31R20R41R3---1L41L01R01L4" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 5) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 4 6) $ Cons _ (MkPair _ _ 7 8) $ Cons _ (MkPair _ _ 4 9) $ Cons _ (MkPair _ _ 6 6) $ Cons _ (MkPair _ _ 4 10) $ Cons _ (MkPair _ _ 4 10) $ Nil _))) $
   Cons _ (hc "1R11L01R20L41R30R01R4---1L01L1" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 5) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 4 4) $ Cons _ (MkPair _ _ 4 6) $ Cons _ (MkPair _ _ 7 8) $ Cons _ (MkPair _ _ 4 9) $ Cons _ (MkPair _ _ 6 6) $ Cons _ (MkPair _ _ 4 10) $ Cons _ (MkPair _ _ 4 10) $ Nil _))) $
   Cons _ (hc "1R11L01R21R30L00R4---0R20L21R4" (HFar (BFalse) (Cons _ (MkPair _ _ 0 1) $ Cons _ (MkPair _ _ 2 3) $ Cons _ (MkPair _ _ 2 2) $ Cons _ (MkPair _ _ 0 1) $ Nil _))) $

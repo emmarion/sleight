@@ -717,7 +717,8 @@
   (let ((many t1)) (uinc t0))
   (match many lru _
     ((BTrue)
-      (let ((many k) (unique s5)) (it-copy-skip (it-put s4 t1 q) (uinc so) (uinc t1) q hl))
+      (let ((many e)) (match many H (((U62) e)) ((Zero) q) ((Succ _) (uadd (uadd q q) hb))))
+      (let ((many k) (unique s5)) (it-copy-skip (it-put s4 t1 e) (uinc so) (uinc t1) e hl))
       (tail $ it-intern s5 (uinc (uinc k))))
     ((BFalse)
       (let-match many H (Succ hm) ((Zero) (tail $ it-intern-h s4 u1 h1 p1)))
