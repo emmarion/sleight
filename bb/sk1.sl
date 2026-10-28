@@ -2159,6 +2159,24 @@
   (let ((many d) (erased ad)) (sub c n p))
   (CsOk n xs (MkAm k d) (MkCnSub n c d k ad)))
 
+(def-fns _ $ (erased cn-add-z : (erased (Am) v) -> (erased (CnAdd az v v) r))
+  (let-match erased v (MkAm k c))
+  (cn-add-f k (Zero) c c (AddZero c)))
+
+(def-adts
+  ((XdR : ((Am) xs v) ((List (Sy)) t) -> Type)
+    enum
+    (many XdY : (erased (Am) v) (erased (List (Sy)) t) (erased (Nz v) nz) -> (XdR az v (Cons (Sy) iD t)))
+    (many XdN : (erased (Am) xs v) (erased (List (Sy)) t) -> (XdR xs v t))))
+
+(def-fns _ $ (many xd-of : (many (Am) xs v) (many (List (Sy)) t) -> (many (XdR xs v t) r))
+  (let-match many (nz-of xs) (NzN) ((NzY _ _) (XdN xs v t)))
+  (let-match many (nz-of v) (NzY _ nz) ((NzN) (XdN xs v t)))
+  (let-match many t (Cons _ s t1) ((Nil _) (XdN xs v t)))
+  (let-match many s (YF f) (else (XdN xs v t)))
+  (let-match many f (QD) (else (XdN xs v t)))
+  (XdY v t1 nz))
+
 (def-adts
   ((StR : ((Am) xs) ((Nat) n) ((List (Sy)) t) -> Type)
     enum
@@ -2193,6 +2211,10 @@
     ((YW k v)
       (match many k _
         ((KX)
+          (let-match many (xd-of xs v t0) (XdN _ _ _) ((XdY _ _ nz)
+            (let-match many t0 (Cons _ _ t3))
+            (let-match many (notail $ tstride az n t3) (StOk _ _ _ t2 s1) ((StNo _ _ _) (StNo xs n t)))
+            (StOk xs n t (Cons (Sy) s (Cons (Sy) iD t2)) (TStX az v v n t0 _ (cn-add-z v) (TStD v n t3 t2 _ s1 (TPC (KX) v (Cons (Sy) iD t2) nz (TNF (KX) (QD) t2)))))))
           (let-match many (cn-add xs v) (CaOk _ _ xs2 ca) ((CaNo _ _) (StNo xs n t)))
           (let ((many r1)) (tail $ tstride xs2 n t0))
           (match many r1 (at (((StR xs n t) r2 at r1)))
