@@ -1116,13 +1116,13 @@
     ((DL)
       (let-match many pos (Succ pos1) ((Zero) (NROut p (PSOut p t q l r h pr))))
       (match many l _
-        ((Nil _) (tail $ nsim p f (Succ t) q2 pos1 l (BFalse) (Cons (Bool) w r) csr2 csl2 opr2 opl2 snap2 st2 nx2
+        ((Nil _) (tail $ nsim p f (Succ t) q2 pos1 l (BFalse) (Cons (Bool) w r) (Nil _) csl2 opr2 opl2 snap2 st2 nx2
           (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l h w (BFalse) pl (PullNil)))))
         ((Cons _ h2 l2) (tail $ nsim p f (Succ t) q2 pos1 l2 h2 (Cons (Bool) w r) csr2 csl2 opr2 opl2 snap2 st2 nx2
           (PRSnoc p _ _ _ t pr (PStepL p q q2 l r l2 h w h2 pl (PullCons h2 l2)))))))
     ((DR)
       (match many r _
-        ((Nil _) (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) (BFalse) r csr2 csl2 opr2 opl2 snap2 st2 nx2
+        ((Nil _) (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) (BFalse) r csr2 (Nil _) opr2 opl2 snap2 st2 nx2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r h w (BFalse) pl (PullNil)))))
         ((Cons _ h2 r2) (tail $ nsim p f (Succ t) q2 (Succ pos) (Cons (Bool) w l) h2 r2 csr2 csl2 opr2 opl2 snap2 st2 nx2
           (PRSnoc p _ _ _ t pr (PStepR p q q2 l r r2 h w h2 pl (PullCons h2 r2)))))))))
