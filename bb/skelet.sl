@@ -1731,6 +1731,14 @@
 (comptime-match many (sob-of p26 3 1) (ROk _ sgb26))
 (comptime-match many (sou-of p26 3 1 2) (ROk _ sgu26))
 (comptime-match many (sk26-of p26) (ROk _ sgi26))
+(let ((many p15m)) (Cons _ (Def (Mov (BTrue) (DL) 1)) $ Cons _ (Undef) $ Cons _ (Def (Mov (BTrue) (DL) 2)) $ Cons _ (Def (Mov (BTrue) (DR) 1)) $
+  Cons _ (Def (Mov (BTrue) (DR) 3)) $ Cons _ (Def (Mov (BTrue) (DL) 4)) $ Cons _ (Def (Mov (BTrue) (DR) 1)) $ Cons _ (Def (Mov (BFalse) (DR) 3)) $
+  Cons _ (Def (Mov (BTrue) (DL) 0)) $ Cons _ (Def (Mov (BFalse) (DL) 2)) $ Nil (PT)))
+(sk-family Sk15 MkSk15 sk15-of ()
+  (u-i15 ((Zero) DR "" TZ "" TZ) (4 DL "" TZ "101011" TZ)))
+(comptime-match many (sob-of p15m 4 3) (ROk _ sgb15))
+(comptime-match many (sou-of p15m 4 3 1) (ROk _ sgu15))
+(comptime-match many (sk15-of p15m) (ROk _ sgi15))
 
 (def-adts
   ((SkOK : ((List (PT)) p) -> Type)
@@ -1739,9 +1747,11 @@
     (many SK34 : -> (SkOK p34))
     (many SK35 : -> (SkOK p35))
     (many SK33 : -> (SkOK p33))
-    (many SK26 : -> (SkOK p26))))
+    (many SK26 : -> (SkOK p26))
+    (many SK15 : -> (SkOK p15m))
+    (many SKM : (erased (List (PT)) p p2) (erased (Mir (BTrue) p p2) mi) (erased (SkOK p2) sk) -> (SkOK p))))
 
-(def-fns _ $ (erased absurd never-sk : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (SkOK p) sk) (erased (Ext p m) ex)
+(def-fns _ $ (erased absurd never-sk : (erased (List (PT)) p) (erased (List (Tr)) m) (subterm erased (SkOK p) sk) (erased (Ext p m) ex)
     (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f))
   (match erased sk _
     (absurd (SK10) (never-sk10 m ex s hs))
@@ -1749,12 +1759,23 @@
     (absurd (SK35) (never-so p35 sgb35 sgr35 sg35 m ex s hs))
     (absurd (SK33) (never-so33 p33 sgb33 sgr33 sg33 m ex s hs))
     (absurd (SK26) (never-u p26 3 1 2 sgb26 sgu26 m ex _ (UIF 3 (bits "110") (bits "11111011") (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRN)))))
-      (u-i26 p26 sgi26 (Nil (Bool)) (Nil (Bool))) s hs))))
+      (u-i26 p26 sgi26 (Nil (Bool)) (Nil (Bool))) s hs))
+    (absurd (SK15) (never-u p15m 4 3 1 sgb15 sgu15 m ex _ (UIF 4 (Nil (Bool)) (bits "11") (RRN)) (u-i15 p15m sgi15 (Nil (Bool)) (Nil (Bool))) s hs))
+    (absurd (SKM _ p2 mi sk2)
+      (let ((erased m2) (erased ex2) (erased hs2)) (mir-halts (BTrue) p p2 m mi ex s hs))
+      (never-sk p2 m2 sk2 ex2 s hs2))))
 
-(def-fns _ $ (many check-sk : (many (List (PT)) p) -> (many (Res (SkOK p)) r))
+(def-fns _ $ (many check-sk0 : (many (List (PT)) p) -> (many (Res (SkOK p)) r))
   (let-match many (eq-pts p p10) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK10))))
   (let-match many (eq-pts p p34) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK34))))
   (let-match many (eq-pts p p35) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK35))))
   (let-match many (eq-pts p p33) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK33))))
   (let-match many (eq-pts p p26) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK26))))
+  (let-match many (eq-pts p p15m) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (SK15))))
   (RFail _))
+
+(def-fns _ $ (many check-sk : (many (List (PT)) p) -> (many (Res (SkOK p)) r))
+  (let-match many (check-sk0 p) (RFail _) ((ROk _ sk) (ROk _ sk)))
+  (let ((many p2) (erased xp)) (flip-p p))
+  (let-match many (check-sk0 p2) (ROk _ sk) ((RFail _) (RFail _)))
+  (ROk _ (SKM p p2 (MirY p p2 xp) sk)))
