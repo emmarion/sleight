@@ -1295,6 +1295,14 @@
   (let-match many r (Some _ ct) ((None _) (values (TBad) w1)))
   (values (TGot ct) w1))
 
+(def-fns _ $ (many stage-ahead : (many (Stage) cur) (many (List (Stage)) sts) (many (List (PT)) p) (unique (WS) w) -> (many (Try) r) (unique (WS) w2 at w))
+  (let-match many sts (Cons _ st _) ((Nil _) (tail $ stage-try cur p w)))
+  (let-match many st (MkStage _ _ hm _))
+  (let-match many hm (Some _ _) ((None _) (tail $ stage-try cur p w)))
+  (let ((many tr) (unique w1)) (stage-try st p w))
+  (let-match many tr (TMiss) (else (values tr w1)))
+  (tail $ stage-try cur p w1))
+
 (def-fns _ $ (many eq-pts : (subterm many (List (PT)) a) (many (List (PT)) b) -> (many (Maybe (Eq (List (PT)) a b)) r))
   (let-match many a (Cons _ x xs) ((Nil _) (match many b _ ((Nil _) (Some _ (Refl (List (PT)) a))) ((Cons _ _ _) (None _)))))
   (let-match many b (Cons _ y ys) ((Nil _) (None _)))
@@ -1329,15 +1337,12 @@
     ((PSUndef _ t q l r h pr pl)
       (values (LSplit n k hl p q h (MkPar p t q 1000 l r h side0 side0 snap0 0 1 pr pl)) w))
     ((PSOut _ t q l r h pr)
-      (let ((many tr) (unique w1)) (stage-try cur p w))
+      (let ((many tr) (unique w1)) (stage-ahead cur sts p w))
       (let-match many tr (TMiss) ((TGot ct) (values (LDone n k hl p (check-cert n k hl p ct)) w1)) ((TBad) (values fail w1)))
       (let-match many (find-hole p hl) (None _) ((Some _ mh) (values (LDone n k hl p (ROk _ (THole n k hl p mh))) w1)))
       (let-match many sts (Cons _ st rest) ((Nil _) (values fail w1)))
-      (let-match many st (MkStage lim _ hm _))
-      (let-match many hm (Some _ _) ((None _) (tail $ classify n k hl p st rest (psim p lim t q l h r pr) w1)))
-      (let ((many tr2) (unique w2)) (stage-try st p w1))
-      (let-match many tr2 (TMiss) ((TGot ct) (values (LDone n k hl p (check-cert n k hl p ct)) w2)) ((TBad) (values fail w2)))
-      (tail $ classify n k hl p st rest (psim p lim t q l h r pr) w2))))
+      (let-match many st (MkStage lim _ _ _))
+      (tail $ classify n k hl p st rest (psim p lim t q l h r pr) w1))))
 
 (def-fns _
   ((many build : (many (Nat) n) (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl)
@@ -1406,11 +1411,11 @@
   r)
 
 (let ((many settings))
-  (Cons _ (SN 1 1 0 (BFalse) 100) $ Cons _ (SN 3 3 0 (BFalse) 400) $ Cons _ (SN 3 3 4 (BFalse) 1600) $
-   Cons _ (SN 3 3 8 (BFalse) 1600) $ Cons _ (SN 2 2 2 (BFalse) 1600) $ Cons _ (SN 4 4 10 (BFalse) 10000) $
+  (Cons _ (SN 1 1 0 (BFalse) 100) $ Cons _ (SN 2 2 0 (BFalse) 200) $ Cons _ (SN 2 2 2 (BFalse) 1600) $
+   Cons _ (SN 2 2 4 (BFalse) 600) $ Cons _ (SN 3 3 6 (BFalse) 3200) $ Cons _ (SN 3 3 0 (BFalse) 400) $
+   Cons _ (SN 3 3 4 (BFalse) 1600) $ Cons _ (SN 3 3 8 (BFalse) 1600) $ Cons _ (SN 4 4 10 (BFalse) 10000) $
    Cons _ (SN 2 2 0 (BTrue) 10000) $ Cons _ (SN 2 2 6 (BFalse) 3200) $ Cons _ (SN 3 3 2 (BFalse) 1600) $
-   Cons _ (SN 2 2 8 (BFalse) 1600) $ Cons _ (SN 2 2 0 (BFalse) 200) $ Cons _ (SN 3 3 6 (BFalse) 3200) $
-   Cons _ (SN 2 2 4 (BFalse) 600) $ Cons _ (SW 2 3 10000) $ Nil (Setting)))
+   Cons _ (SN 2 2 8 (BFalse) 1600) $ Cons _ (SW 2 3 10000) $ Nil (Setting)))
 
 (def-lvl BD)
 (def-fns _ $ (many sub-of : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (Stage)) pn) (many (List (PT)) p)
