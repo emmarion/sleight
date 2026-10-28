@@ -1191,6 +1191,23 @@
     ((ROk _ r) (coerce r1 (coercible-ctor (Shared) ROk (AllGo rest) (AllGo p) r (AGCons w d q rest r))))
     ((RFail _) (coerce r1 (coercible-ctor (Shared) RFail (AllGo rest) (AllGo p))))))
 
+(def-adts
+  ((Fill : ((List (PT)) p) ((Nat) q) ((Bool) h) -> Type)
+    enum
+    (many MkFill : (erased (List (PT)) p p1) (erased (Nat) q) (erased (Bool) h) (erased (PT) y) (erased (PSet p q h y p1) ps) (erased (AllGo p1) g) -> (Fill p q h))))
+
+(def-fns _ $ (many fill-of : (many (List (PT)) p) (many (Nat) q) (many (Bool) h) -> (many (Maybe (Fill p q h)) r))
+  (let-match many (pset p q h (Def (Mov (BFalse) (DL) (Zero)))) (PSOk _ _ _ _ p1 ps) ((PSNo _ _ _ _) (None _)))
+  (let-match many (all-go p1) (ROk _ g) ((RFail _) (None _)))
+  (Some _ (MkFill p p1 q h _ ps g)))
+
+(def-fns _ $ (many fill-opt : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (many (Nat) q) (many (Bool) h) (many (Tr) x)
+    (many (Maybe (Fill p q h)) fl) -> (many (Maybe (Opt n k hl p q h x)) r))
+  (let-match many fl (Some _ f) ((None _) (None _)))
+  (let-match many x (Mov w d q2) ((Hlt) (None _)))
+  (let-match erased f (MkFill _ p1 _ _ y ps g))
+  (Some _ (OGo n k hl p p1 q h y w d q2 ps g)))
+
 (def-adts $ (Stage : -> Type)
   enum
   (many MkStage : (many (Nat) lim) (many (List (Setting)) hs) (many (Maybe (HMap (Nat))) hints) (many (Maybe (String)) src) -> (Stage)))
@@ -1347,7 +1364,6 @@
 (def-fns _
   ((many build : (many (Nat) n) (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl)
        (many (List (PT)) p) (many (List (Stage)) pn) (many (NS p) ns) (unique (WS) w) -> (many (Res (TNode n k hl p)) r) (unique (WS) w2 at w))
-    (let-match many (all-go p) (RFail _) ((ROk _ g) (values (ROk _ (TF n k hl p g)) w)))
     (let-match many pn (Cons _ st0 sts) ((Nil _) (values (RFail _) w)))
     (let-match many st0 (MkStage lim _ _ _))
     (let-match many ns (MkNS _ t0 q0 pos0 lz r0 h0 sr sl snap st nx pr0))
@@ -1377,21 +1393,26 @@
     (let-match many nc (ROk _ nc1) ((RFail _) (values (RFail _) w1)))
     (let ((many xs) (erased rg)) (range c2))
     (let ((many os2) (erased op)) (opts xs))
-    (let ((many ra) (unique w2)) (notail $ build-all n d1 os2 k hl p q h pn pa w1))
+    (let ((many ra) (unique w2)) (notail $ build-all n d1 os2 k hl p q h (fill-of p q h) pn pa w1))
     (let-match many ra (ROk _ ta) ((RFail _) (values (RFail _) w2)))
     (values (ROk _ (TS n k hl p t q l r h pr pl c c2 xs os2 rg op nc1 uf bl lq ta)) w2))
   ((many build-all : (many (Nat) n) (subterm many (Nat) dep) (subterm many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl)
-       (many (List (PT)) p) (many (Nat) q) (many (Bool) h) (many (List (Stage)) pn) (many (Par p q h) pa) (unique (WS) w) ->
+       (many (List (PT)) p) (many (Nat) q) (many (Bool) h) (many (Maybe (Fill p q h)) fl) (many (List (Stage)) pn) (many (Par p q h) pa) (unique (WS) w) ->
        (many (Res (TAll n k hl p q h os)) r) (unique (WS) w2 at w))
     (let-match many os (Cons _ x rest) ((Nil _) (values (ROk _ (TANil n k hl p q h)) w)))
-    (let-match many (pset p q h (Def x)) (PSOk _ _ _ _ p2 ps) ((PSNo _ _ _ _) (values (RFail _) w)))
-    (let-match many pa (MkPar _ t _ pos l r _ sr sl snap st nx pr pl))
-    (let ((many ns)) (MkNS p2 t q pos l r h sr sl snap st nx (prun-set p p2 q h (Def x) _ _ t ps pl pr)))
-    (let ((many rn) (unique w1)) (notail $ build n dep rest k hl p2 pn ns w))
-    (let-match many rn (ROk _ tn) ((RFail _) (values (RFail _) w1)))
-    (let ((many ra) (unique w2)) (notail $ build-all n dep rest k hl p q h pn pa w1))
+    (let ((many ro) (unique w1))
+      (match many (fill-opt n k hl p q h x fl) (((Res (Opt n k hl p q h x)) r) ((WS) w1 at w))
+        ((Some _ o) (values (ROk _ o) w))
+        ((None _)
+          (let-match many (pset p q h (Def x)) (PSOk _ _ _ _ p2 ps) ((PSNo _ _ _ _) (values (RFail _) w)))
+          (let-match many pa (MkPar _ t _ pos l r _ sr sl snap st nx pr pl))
+          (let ((many ns)) (MkNS p2 t q pos l r h sr sl snap st nx (prun-set p p2 q h (Def x) _ _ t ps pl pr)))
+          (let ((many rn) (unique w2)) (notail $ build n dep rest k hl p2 pn ns w))
+          (values (match many rn (((Res (Opt n k hl p q h x)) ro)) ((ROk _ tn) (ROk _ (OTree n k hl p p2 q h x ps tn))) ((RFail _) (RFail _))) w2))))
+    (let-match many ro (ROk _ o) ((RFail _) (values (RFail _) w1)))
+    (let ((many ra) (unique w2)) (notail $ build-all n dep rest k hl p q h fl pn pa w1))
     (let-match many ra (ROk _ ta) ((RFail _) (values (RFail _) w2)))
-    (values (ROk _ (TACons n k hl p p2 q h x rest ps tn ta)) w2)))
+    (values (ROk _ (TACons n k hl p q h x rest o ta)) w2)))
 
 (def-fns _ $ (many stages-load : (subterm many (List (Stage)) pn) -> (many (List (Stage)) r))
   (let-match many pn (Cons _ st rest) ((Nil _) (Nil (Stage))))
@@ -1401,13 +1422,14 @@
 
 (def-fns _ $ (many build-at : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (List (Stage)) pn) -> (many (Res (TNode n k hl p)) r))
   (let ((many z)) (Nil (Bool)))
+  (let-match many (all-go p) (RFail _) ((ROk _ g) (ROk _ (TF n k hl p g))))
   (let ((many r) (unique _)) (build n dep (Nil (Tr)) k hl p (stages-load pn) (MkNS p 0 (Zero) 1000 z z (BFalse) side0 side0 snap0 0 1 (PRNil p _)) (ws-new)))
   r)
 
 (def-fns _ $ (many build-root : (many (Nat) n dep) (many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl) (many (List (PT)) p)
     (many (List (Stage)) pn) -> (many (Res (TAll n k hl p (Zero) (BFalse) os)) r))
   (let-match many (root-par p) (Some _ pa) ((None _) (RFail _)))
-  (let ((many r) (unique _)) (build-all n dep os k hl p (Zero) (BFalse) (stages-load pn) pa (ws-new)))
+  (let ((many r) (unique _)) (build-all n dep os k hl p (Zero) (BFalse) (fill-of p (Zero) (BFalse)) (stages-load pn) pa (ws-new)))
   r)
 
 (let ((many settings))

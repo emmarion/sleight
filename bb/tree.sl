@@ -121,6 +121,23 @@
   (let-match erased o (InL _ _ lt) ((InR _ _ ih) (let-match erased ih (MkIH _ _ _ _ _ mh _ _ _)) (match erased mh _)))
   lt)
 
+(def-fns _ $ (erased ag-alt : (erased (List (PT)) p p1) (erased (Nat) q) (erased (Bool) h) (erased (PT) y) (erased (Bool) w) (erased (Mv) d) (erased (Nat) q2)
+    (subterm erased (PSet p q h y p1) ps) (erased (AllGo p1) g) -> (erased (List (PT)) p2) (erased (PSet p q h (Def (Mov w d q2)) p2) ps2) (erased (AllGo p2) g2))
+  (let ((erased y2)) (Def (Mov w d q2)))
+  (match erased ps _
+    ((PS0 x0 x1 _ rest)
+      (let-match erased g (AGCons _ _ _ _ g1))
+      (values (Cons (PT) y2 (Cons (PT) x1 rest)) (PS0 x0 x1 y2 rest) (AGCons w d q2 _ g1)))
+    ((PS1 x0 x1 _ rest)
+      (let-match erased g (AGCons w0 d0 q0 _ g1))
+      (let-match erased g1 (AGCons _ _ _ _ g2))
+      (values (Cons (PT) x0 (Cons (PT) y2 rest)) (PS1 x0 x1 y2 rest) (AGCons w0 d0 q0 _ (AGCons w d q2 _ g2))))
+    ((PSS x0 x1 _ rest rest2 q1 _ ps1)
+      (let-match erased g (AGCons w0 d0 q0 _ g1))
+      (let-match erased g1 (AGCons w1 d1 q3 _ g2))
+      (let ((erased r3) (erased ps3) (erased g3)) (ag-alt rest rest2 q1 h y w d q2 ps1 g2))
+      (values (Cons (PT) x0 (Cons (PT) x1 r3)) (PSS x0 x1 y2 rest r3 q1 h ps3) (AGCons w0 d0 q0 _ (AGCons w1 d1 q3 _ g3))))))
+
 (def-adts
   ((TNode : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (PT)) p) -> Type)
     enum
@@ -142,8 +159,14 @@
   ((TAll : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (PT)) p) ((Nat) q) ((Bool) h) ((List (Tr)) os) -> Type)
     enum
     (many TANil : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (Nat) q) (erased (Bool) h) -> (TAll n k hl p q h (Nil (Tr))))
-    (many TACons : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p p2) (erased (Nat) q) (erased (Bool) h) (erased (Tr) x) (erased (List (Tr)) os)
-       (erased (PSet p q h (Def x) p2) ps) (erased (TNode n k hl p2) tn) (erased (TAll n k hl p q h os) rest) -> (TAll n k hl p q h (Cons (Tr) x os)))))
+    (many TACons : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (Nat) q) (erased (Bool) h) (erased (Tr) x) (erased (List (Tr)) os)
+       (erased (Opt n k hl p q h x) o) (erased (TAll n k hl p q h os) rest) -> (TAll n k hl p q h (Cons (Tr) x os))))
+  ((Opt : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (PT)) p) ((Nat) q) ((Bool) h) ((Tr) x) -> Type)
+    enum
+    (many OTree : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p p2) (erased (Nat) q) (erased (Bool) h) (erased (Tr) x)
+       (erased (PSet p q h (Def x) p2) ps) (erased (TNode n k hl p2) tn) -> (Opt n k hl p q h x))
+    (many OGo : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p p1) (erased (Nat) q) (erased (Bool) h) (erased (PT) y)
+       (erased (Bool) w) (erased (Mv) d) (erased (Nat) q2) (erased (PSet p q h y p1) ps) (erased (AllGo p1) g) -> (Opt n k hl p q h (Mov w d q2)))))
 
 (def-fns _
   ((erased tn-good : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Nat) s)
@@ -171,10 +194,14 @@
        (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
     (match erased mm _
       ((MemHere _ _ os1)
-        (let-match erased ta (TACons _ _ _ _ p2 _ _ _ _ ps tn _))
-        (tn-good n k hl p2 m s tn (ext-set p p2 m q h tq ex ps lkq) wf hs))
+        (let-match erased ta (TACons _ _ _ _ _ _ _ _ o _))
+        (match erased o _
+          ((OTree _ _ _ _ p2 _ _ _ ps tn) (tn-good n k hl p2 m s tn (ext-set p p2 m q h tq ex ps lkq) wf hs))
+          (absurd (OGo _ _ _ _ p1 _ _ y w d q2 ps g)
+            (let ((erased p2) (erased ps2) (erased g2)) (ag-alt p p1 q h y w d q2 ps g))
+            (never-full m _ s (ag-m p2 m g2 (ext-set p p2 m q h tq ex ps2 lkq)) hs))))
       ((MemThere _ _ y os1 mm1)
-        (let-match erased ta (TACons _ _ _ _ _ _ _ _ _ _ _ ta1))
+        (let-match erased ta (TACons _ _ _ _ _ _ _ _ _ ta1))
         (ta-pick n k hl p m s q h tq os1 ta1 mm1 ex pl lkq wf hs)))))
 
 (def-adts
