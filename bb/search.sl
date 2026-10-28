@@ -322,8 +322,8 @@
   (let-match many (u62-lt-dec x B px bB) (Yes _ _ _ _ lx) ((No _ _ _ _ _) u62z))
   (let-match many (u62-lt-dec y B py bB) (Yes _ _ _ _ ly) ((No _ _ _ _ _) u62z))
   (let ((erased s) (erased as)) (add x y))
-  (let ((erased t) (erased at)) (add B y))
-  (let ((erased ls)) (lt-trans s B2 u62-modulus (lt-trans s t B2 (add-mono-l x B y s t lx as at) (add-mono-r B y B t B2 ly at aB2)) bB2))
+  (let ((erased t) (erased aty)) (add B y))
+  (let ((erased ls)) (lt-trans s B2 u62-modulus (lt-trans s t B2 (add-mono-l x B y s t lx as aty) (add-mono-r B y B t B2 ly aty aB2)) bB2))
   (MkU62 (u62-add x y s as ls) ls))
 
 (def-fns _ $ (many ueq : (many (U62) a b) -> (many (Bool) r))
