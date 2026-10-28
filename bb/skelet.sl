@@ -257,6 +257,13 @@
   (let ((erased v) (erased hd) (erased lt)) (xrun-halts p m ex c3 c2 g1 ua xr1 hs2))
   (values c2 a2 v hd lt))
 
+(def-fns _ $ (erased halts-init : (erased (List (PT)) p) (erased (List (Tr)) m) (erased (Ext p m) ex) (erased (Tc) e)
+    (erased (Reach p (MkTc (Zero) (DR) (Nil (Bool)) (Nil (Bool))) e (BTrue)) rc) (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs)
+    -> (erased (Conf) c2) (erased (AsC e c2) ac2) (erased (Nat) v) (erased (HaltsAt m c2 v) hd))
+  (let ((erased c2) (erased ac2) (erased v) (erased hd) (erased _))
+    (reach-halts p m ex _ e _ s rc (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool)))) hs))
+  (values c2 ac2 v hd))
+
 (def-adts
   ((SPopR : ((Sd) s) -> Type)
     enum
@@ -594,8 +601,7 @@
 
 (def-fns _ $ (erased absurd never-sk10 : (erased (List (Tr)) m) (erased (Ext p10 m) ex)
     (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f))
-  (let ((erased c0)) (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool)))))
-  (let ((erased c2) (erased ac2) (erased v) (erased hd) (erased lt)) (reach-halts p10 m ex _ _ _ s (sk10-i p10 sg10 (Nil (Bool)) (Nil (Bool))) c0 hs))
+  (let ((erased c2) (erased ac2) (erased v) (erased hd)) (halts-init p10 m ex _ (sk10-i p10 sg10 (Nil (Bool)) (Nil (Bool))) s hs))
   (sk10-loop m ex _ (MkI10 (ZE) (ZI (ZE)) _ _ (LRE) (ZRI _ _ (ZRE)) (IncE)) c2 ac2 v hd))
 
 (def-fns _ $ (erased le-tr : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
@@ -1093,8 +1099,7 @@
 
 (def-fns _ $ (erased absurd never-so : (erased (List (PT)) p) (erased (SoB p 2 1) sb) (erased (SoR p 2 (BFalse)) sr) (erased (So34 p) sg) (erased (List (Tr)) m) (erased (Ext p m) ex)
     (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f))
-  (let ((erased c0)) (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool)))))
-  (let ((erased c2) (erased ac2) (erased v) (erased hd) (erased lt)) (reach-halts p m ex _ _ _ s (so-i0 p sg (Nil (Bool)) (Nil (Bool))) c0 hs))
+  (let ((erased c2) (erased ac2) (erased v) (erased hd)) (halts-init p m ex _ (so-i0 p sg (Nil (Bool)) (Nil (Bool))) s hs))
   (so-loop p sb sr sg m ex _ (MkSoI (bits "1000010110") (bits "1110101010111011111011")
     (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRN)))))))))))) c2 ac2 v hd))
 
@@ -1414,8 +1419,7 @@
 (def-fns _ $ (erased absurd never-so33 : (erased (List (PT)) p) (erased (SoB p 2 1) sb) (erased (SoR p 4 (BTrue)) sr) (erased (So33 p) sg)
     (erased (List (Tr)) m) (erased (Ext p m) ex)
     (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f))
-  (let ((erased c0)) (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool)))))
-  (let ((erased c2) (erased ac2) (erased v) (erased hd) (erased lt)) (reach-halts p m ex _ _ _ s (t-i0 p sg (Nil (Bool)) (Nil (Bool))) c0 hs))
+  (let ((erased c2) (erased ac2) (erased v) (erased hd)) (halts-init p m ex _ (t-i0 p sg (Nil (Bool)) (Nil (Bool))) s hs))
   (so33-loop p sb sr sg m ex _ (MkI33 (bits "10") (bits "1000") (bits "1110101011") (CatC _ _ _ _ _ (CatC _ _ _ _ _ (CatN _ _)))
     (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRC _ _ _ (RRN)))))) c2 ac2 v hd))
 
@@ -1719,8 +1723,7 @@
 (def-fns _ $ (erased absurd never-u : (erased (List (PT)) p) (erased (Nat) qd qb qc) (erased (SoB p qd qb) sb) (erased (SoU p qd qb qc) su) (erased (List (Tr)) m) (erased (Ext p m) ex)
     (erased (Tc) e) (erased (UI qd e) iv) (erased (Reach p (MkTc (Zero) (DR) (Nil (Bool)) (Nil (Bool))) e (BTrue)) rc)
     (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f))
-  (let ((erased c0)) (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool)))))
-  (let ((erased c2) (erased ac2) (erased v) (erased hd) (erased lt)) (reach-halts p m ex _ e _ s rc c0 hs))
+  (let ((erased c2) (erased ac2) (erased v) (erased hd)) (halts-init p m ex _ rc s hs))
   (loop-u p qd qb qc sb su m ex e iv c2 ac2 v hd))
 
 (let ((many p26)) (Cons _ (Def (Mov (BTrue) (DR) 1)) $ Cons _ (Def (Mov (BTrue) (DL) 3)) $ Cons _ (Def (Mov (BTrue) (DR) 2)) $ Cons _ (Def (Mov (BFalse) (DR) 1)) $
