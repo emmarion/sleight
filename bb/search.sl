@@ -1238,11 +1238,26 @@
 (def-fns _ $ (many ch-is : (many (Char) c d) -> (many (Bool) b))
   (match many (char-eq c d) _ ((Equal _ _ _) (BTrue)) (else (BFalse))))
 
+(def-fns _ $ (many nth-opt : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (Maybe A) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (None A)))
+  (let-match many i (Succ i1) ((Zero) (Some A x)))
+  (tail $ nth-opt A rest i1))
+
+(def-fns _ $ (many pt-qs : (many (Bool) b) (many (Mv) d) (subterm many (Nat) n) (many (List (PT)) acc) -> (many (List (PT)) r))
+  (let-match many n (Succ m) ((Zero) acc))
+  (tail $ pt-qs b d m (Cons _ (Def (Mov b d m)) acc)))
+(let ((many pt-tab)) (Cons _ (Undef) $ Cons _ (Def (Hlt)) $
+  pt-qs (BFalse) (DL) 10 $ pt-qs (BFalse) (DR) 10 $ pt-qs (BTrue) (DL) 10 $ pt-qs (BTrue) (DR) 10 $ Nil _))
+
 (def-fns _ $ (many pt-of : (many (Char) c1 c2 c3) -> (many (PT) x))
   (let-match many (ch-is c1 #\-) (BFalse) ((BTrue) (Undef)))
-  (let-match many (ch-is c1 #\H) (BFalse) ((BTrue) (Def (Hlt))))
-  (let ((many d)) (match many (ch-is c2 #\R) (((Mv) e)) ((BTrue) (DR)) ((BFalse) (DL))))
-  (Def (Mov (ch-is c1 #\1) d (dig c3))))
+  (let ((many o1)) (match many (ch-is c1 #\1) (((Nat) o)) ((BTrue) 22) ((BFalse) 2)))
+  (let ((many o2)) (match many (ch-is c2 #\R) (((Nat) o)) ((BTrue) 10) ((BFalse) 0)))
+  (let ((many o3) (erased _)) (add o1 o2))
+  (let ((many o4) (erased _)) (add o3 (dig c3)))
+  (let ((many i)) (match many (ch-is c1 #\H) (((Nat) i)) ((BTrue) 1) ((BFalse) o4)))
+  (let-match many (nth-opt _ pt-tab i) (Some _ x) ((None _) (Undef)))
+  x)
 
 (def-fns _ $ (many pts-of : (subterm many (Nat) n) (many (String) s) -> (many (List (PT)) p) (many (String) s2))
   (let-match many n (Succ n1) ((Zero) (values (Nil (PT)) s)))
@@ -1261,11 +1276,6 @@
 (def-fns _ $ (many holes-of : (many (Nat) k) (many (String) s) -> (many (List (List (PT))) hl))
   (let ((many n) (erased _)) (str-length s))
   (tail $ holes-from n k s))
-
-(def-fns _ $ (many nth-opt : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (Maybe A) r))
-  (let-match many xs (Cons _ x rest) ((Nil _) (None A)))
-  (let-match many i (Succ i1) ((Zero) (Some A x)))
-  (tail $ nth-opt A rest i1))
 
 (def-adts $ (Try : -> Type)
   enum
