@@ -52,7 +52,7 @@
 (def-fns _ $ (many close-one : (many (Nat) n k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (HCert) hc) -> (many (Res (HNode n k hl p)) r))
   (match many hc _
     ((HKeep) (match many (find-hole p hl) _ ((Some _ mh) (ROk _ (HNT n k hl p (THole n k hl p mh)))) ((None _) (RFail _))))
-    ((HSet se) (match many (search p se) _ ((Some _ ct) (hn-of n k hl p (check-cert n k hl p ct))) ((None _) (RFail _))))
+    ((HSet se) (let ((many sr) (unique _)) (search p se 24 (ws-new))) (match many sr _ ((Some _ ct) (hn-of n k hl p (check-cert n k hl p ct))) ((None _) (RFail _))))
     ((HCyc f t1 D P) (hn-of n k hl p (check-cyc n k hl p f t1 D P)))
     ((HFar f dfa)
       (let ((many p2) (erased mi)) (mir-of f p))
