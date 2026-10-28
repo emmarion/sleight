@@ -2964,6 +2964,21 @@
     (many SwOk : (erased (Nat) xs n) (erased (List (Sy)) u) (many (List (Sy)) w) (many (Nat) m) (erased (Sw xs n u w m) p) -> (SwR xs n u))
     (many SwNo : (erased (Nat) xs n) (erased (List (Sy)) u) -> (SwR xs n u))))
 
+(def-adts
+  ((Xz : ((Nat) xs c) ((List (Sy)) u) -> Type)
+    enum
+    (many XzY : (erased (Nat) c1) (erased (List (Sy)) u) -> (Xz (Zero) (Succ c1) (Cons (Sy) iD u)))
+    (many XzN : (erased (Nat) xs c) (erased (List (Sy)) u) -> (Xz xs c u))))
+
+(def-fns _ $ (many xz-of : (many (Nat) xs c) (many (List (Sy)) u) -> (many (Xz xs c u) r))
+  (let-match many xs (Zero) ((Succ _) (XzN xs c u)))
+  (let-match many (nat-cmp (Zero) c) (CLt _ _ _ _ p) ((CEq _ _ _) (XzN xs c u)) (absurd (CGt _ _ _ _ q) q))
+  (let-match erased p (LtZ c1))
+  (let-match many u (Cons _ s u1) ((Nil _) (XzN xs c u)))
+  (let-match many s (YF f) (else (XzN xs c u)))
+  (let-match many f (QD) (else (XzN xs c u)))
+  (XzY c1 u1))
+
 (def-fns _ $ (many sw-of : (many (Nat) xs n) (subterm many (List (Sy)) u) -> (many (SwR xs n u) r))
   (let-match many u (Cons _ s u0) ((Nil _)
     (let ((many w) (erased pu)) (push-ex (KX) xs (Nil (Sy))))
@@ -2988,6 +3003,11 @@
       (let-match many b (BFalse) ((BTrue) (SwNo xs n u)))
       (match many k _
         ((KX)
+          (let-match many (xz-of xs c u0) (XzN _ _ _) ((XzY c1 _)
+            (let-match many u0 (Cons _ _ u1))
+            (let-match many (notail $ sw-of (Zero) n u1) (SwOk _ _ _ w1 m s1) ((SwNo _ _ _) (SwNo xs n u)))
+            (let ((many w)) (Cons (Sy) s (Cons (Sy) iD w1)))
+            (SwOk xs n u w m (SwX xs n c c m u0 w (AddZero c) (SwD c n m u1 w1 w s1 (PuC (KX) c1 _ (NKF (KX) (QD) w1)))))))
           (let ((many xs2) (erased a)) (add xs c))
           (let-match many (notail $ sw-of xs2 n u0) (SwOk _ _ _ w m s1) ((SwNo _ _ _) (SwNo xs n u)))
           (SwOk xs n u w m (SwX xs n c xs2 m u0 w a s1)))
