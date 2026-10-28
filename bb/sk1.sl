@@ -3406,10 +3406,10 @@
   (let ((many ac)) (AcOk c0 c0 (BFalse) (TRZ c0)))
   (match many d _
     ((DR)
-      (let-match many (lz-fold l w k z) (LsForce) (else r r))
       (let-match many (sw-of (Zero) 1 w) (SwNo _ _ _) ((SwOk _ _ _ w2 m s)
-        (let-match many (lz-stride l w w2 m k z s) (LsForce) (else r r))
-        (lz-push d l w k z nx)))
+        (let-match many (cap-ok m (zk-cap k)) (BTrue) ((BFalse) (lz-push d l w k z nx)))
+        (let-match many (lz-fold l w k z) (LsForce) (else r r))
+        (lz-stride l w w2 m k z s)))
       (let-match many (lenge 5 w) (BTrue) ((BFalse) (lz-push d l w k z nx)))
       (lz-simple d l w k z nx (simple-r c0 ac l w)))
     ((DL)
