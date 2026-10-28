@@ -2434,18 +2434,34 @@
     (many ClC : (erased (List (Sy)) t) (erased (Cld t) p) -> (Cld (Cons (Sy) (YC) t)))
     (many ClW : (erased (Pk) k) (erased (Nat) c) (erased (List (Sy)) t) (erased (Cld t) p) -> (Cld (Cons (Sy) (YW k (MkAm (BFalse) c)) t)))))
 
-(def-fns _ $ (many cld-of : (subterm many (List (Sy)) t) -> (many (Res (Cld t)) r))
-  (let-match many t (Cons _ s t0) ((Nil _) (RFail _)))
+(def-adts
+  ((CldK : ((List (Sy)) u t) -> Type)
+    enum
+    (many CkNil : (erased (List (Sy)) t) -> (CldK t t))
+    (many CkF : (erased (Fx) f) (erased (List (Sy)) u t) (erased (CldK (Cons (Sy) (YF f) u) t) k) -> (CldK u t))
+    (many CkC : (erased (List (Sy)) u t) (erased (CldK (Cons (Sy) (YC) u) t) k) -> (CldK u t))
+    (many CkW : (erased (Pk) k) (erased (Nat) c) (erased (List (Sy)) u t) (erased (CldK (Cons (Sy) (YW k (MkAm (BFalse) c)) u) t) q) -> (CldK u t))))
+
+(def-fns _ $ (erased cld-k : (erased (List (Sy)) u t) (subterm erased (CldK u t) k) (erased (Cld u) p) -> (erased (Cld t) r))
+  (match erased k _
+    ((CkNil _) p)
+    ((CkF f _ _ k1) (cld-k _ t k1 (ClF f u p)))
+    ((CkC _ _ k1) (cld-k _ t k1 (ClC u p)))
+    ((CkW kk c _ _ k1) (cld-k _ t k1 (ClW kk c u p)))))
+
+(def-fns _ $ (many cld-go : (subterm many (List (Sy)) u) (erased (List (Sy)) t) (erased (CldK u t) k) -> (many (Res (Cld t)) r))
+  (let-match many u (Cons _ s u0) ((Nil _) (RFail _)))
   (match many s _
-    ((YE) (let-match many t0 (Nil _) (else (RFail _))) (ROk _ (ClE)))
-    ((YF f) (let-match many (notail $ cld-of t0) (ROk _ p) ((RFail _) (RFail _))) (ROk _ (ClF f t0 p)))
-    ((YC) (let-match many (notail $ cld-of t0) (ROk _ p) ((RFail _) (RFail _))) (ROk _ (ClC t0 p)))
-    ((YW k n)
+    ((YE) (let-match many u0 (Nil _) (else (RFail _))) (ROk _ (cld-k u t k (ClE))))
+    ((YF f) (tail $ cld-go u0 t (CkF f u0 t k)))
+    ((YC) (tail $ cld-go u0 t (CkC u0 t k)))
+    ((YW kk n)
       (let-match many n (MkAm b c))
       (let-match many b (BFalse) ((BTrue) (RFail _)))
-      (let-match many (notail $ cld-of t0) (ROk _ p) ((RFail _) (RFail _)))
-      (ROk _ (ClW k c t0 p)))
+      (tail $ cld-go u0 t (CkW kk c u0 t k)))
     (else (RFail _))))
+
+(def-fns _ $ (many cld-of : (many (List (Sy)) t) -> (many (Res (Cld t)) r)) (cld-go t t (CkNil t)))
 
 (let ((many sk1-blank)) (MkCf (DR) (Cons (Sy) (YE) (Nil (Sy))) (Cons (Sy) (YE) (Nil (Sy)))))
 
