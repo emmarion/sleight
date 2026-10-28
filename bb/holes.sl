@@ -7,7 +7,8 @@
   (many HCyc : (many (Bool) f) (many (Nat) t1 D P) -> (HCert))
   (many HPat : (many (Bool) f) (many (String) s) -> (HCert))
   (many HSk : -> (HCert))
-  (many HSk17 : -> (HCert)))
+  (many HSk17 : -> (HCert))
+  (many HSk1 : -> (HCert)))
 
 (def-adts
   ((HNode : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (PT)) p) -> Type)
@@ -20,7 +21,8 @@
     (many HNP : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p p2) (erased (Bool) f) (erased (Mir f p p2) mi)
        (erased (PatOK p2) po) -> (HNode n k hl p))
     (many HNK : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (SkOK p) sk) -> (HNode n k hl p))
-    (many HN17 : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (Eq (List (PT)) p p17) e) -> (HNode n k hl p))))
+    (many HN17 : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (Eq (List (PT)) p p17) e) -> (HNode n k hl p))
+    (many HN1 : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (Eq (List (PT)) p sk1p) e) -> (HNode n k hl p))))
 
 (def-adts
   ((HNs : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (List (PT))) ps) -> Type)
@@ -51,7 +53,8 @@
       (let ((erased m2) (erased ex2) (erased hs2)) (mir-halts f p p2 m mi ex s hs1))
       (never-pat p2 m2 po ex2 s hs2))
     (absurd (HNK _ _ _ _ sk) (never-sk p m sk ex s hs1))
-    (absurd (HN17 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk17 m ex s hs1))))
+    (absurd (HN17 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk17 m ex s hs1))
+    (absurd (HN1 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk1 sk1-ok m ex s hs1))))
 
 (def-fns _ $ (many mir-of : (many (Bool) f) (many (List (PT)) p) -> (many (List (PT)) p2) (erased (Mir f p p2) mi))
   (let-match many f (BTrue) ((BFalse) (values p (MirN p))))
@@ -76,7 +79,8 @@
       (let ((many p2) (erased mi)) (mir-of f p))
       (match many (check-pat p2 (pat-cert s)) _ ((ROk _ po) (ROk _ (HNP n k hl p p2 f mi po))) ((RFail _) (RFail _))))
     ((HSk) (match many (check-sk p) _ ((ROk _ sk) (ROk _ (HNK n k hl p sk))) ((RFail _) (RFail _))))
-    ((HSk17) (match many (eq-pts p p17) _ ((Some _ e) (ROk _ (HN17 n k hl p e))) ((None _) (RFail _))))))
+    ((HSk17) (match many (eq-pts p p17) _ ((Some _ e) (ROk _ (HN17 n k hl p e))) ((None _) (RFail _))))
+    ((HSk1) (match many (eq-pts p sk1p) _ ((Some _ e) (ROk _ (HN1 n k hl p e))) ((None _) (RFail _))))))
 
 (def-fns _ $ (many hc : (many (String) s) (many (HCert) c) -> (many (Pair (List (PT)) (HCert)) r))
   (let ((many p) (many _)) (pts-of 10 s))
