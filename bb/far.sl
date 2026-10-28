@@ -388,15 +388,14 @@
   (let-match erased (trow-fn t0 t1 (BFalse) i row row00 tr tr0) (Refl _ _))
   (notin-mem bot R ni (zpath t0 t1 bot k R rc (sub-get k row R am0 mk) nk)))
 
-(def-fns _ $ (erased absurd never-far-mir : (erased (Bool) f) (erased (List (PT)) p p2) (erased (List (Tr)) m) (erased (Mir f p p2) mi) (erased (FarOK p2) fo)
-    (erased (Ext p m) ex) (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) -> (erased (False) f2))
-  (match erased mi _
-    (absurd (MirN _) (never-far p m fo ex s hs))
-    (absurd (MirY _ _ xp)
-      (let ((erased v) (erased x)) (xm-of (BTrue) (Zero) (Zero) m))
-      (never-far p2 v fo (ext-xp p p2 m v ex x xp) s
-        (pm-halts (BTrue) (Zero) (Zero) m v (Zero) (Zero) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (BFalse) s hs
-          (PMId (BTrue) (Zero) m v x) (SwA (Zero) (Zero)) (FC1 (Nil (Bool)) (Nil (Bool))))))))
+(def-fns _ $ (erased mir-halts : (erased (Bool) f) (erased (List (PT)) p p2) (erased (List (Tr)) m) (erased (Mir f p p2) mi) (erased (Ext p m) ex)
+    (erased (Nat) s) (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs) ->
+    (erased (List (Tr)) m2) (erased (Ext p2 m2) ex2) (erased (HaltsAt m2 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) hs2))
+  (let-match erased mi (MirY _ _ xp) ((MirN _) (values m ex hs)))
+  (let ((erased v) (erased x)) (xm-of (BTrue) (Zero) (Zero) m))
+  (values v (ext-xp p p2 m v ex x xp)
+    (pm-halts (BTrue) (Zero) (Zero) m v (Zero) (Zero) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (BFalse) s hs
+      (PMId (BTrue) (Zero) m v x) (SwA (Zero) (Zero)) (FC1 (Nil (Bool)) (Nil (Bool))))))
 
 (def-adts $ (FarCert : -> Type)
   enum
@@ -667,74 +666,3 @@
   (let ((many i00) (erased _)) (idx-of K 0 0))
   (let ((many fuel) (erased _)) (mul M M))
   (MkFC K dfa t0 t1 bot ds (zclose t0 fuel (row-at t0 i00) (Nil (Nat)))))
-
-(def-adts $ (HCert : -> Type)
-  enum
-  (many HKeep : -> (HCert))
-  (many HFar : (many (Bool) f) (many (List (Pair (Nat) (Nat))) dfa) -> (HCert))
-  (many HSet : (many (Setting) se) -> (HCert))
-  (many HCyc : (many (Bool) f) (many (Nat) t1 D P) -> (HCert)))
-
-(def-adts
-  ((HNode : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (PT)) p) -> Type)
-    enum
-    (many HNT : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (TNode n k hl p) tn) -> (HNode n k hl p))
-    (many HNF : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p p2) (erased (Bool) f) (erased (Mir f p p2) mi)
-       (erased (FarOK p2) fo) -> (HNode n k hl p))))
-
-(def-adts
-  ((HNs : ((Nat) n) ((Nat) k) ((List (List (PT))) hl) ((List (List (PT))) ps) -> Type)
-    enum
-    (many HNsNil : (erased (Nat) n k) (erased (List (List (PT))) hl) -> (HNs n k hl (Nil (List (PT)))))
-    (many HNsCons : (erased (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (erased (List (List (PT))) ps)
-       (erased (HNode n k hl p) hn) (erased (HNs n k hl ps) rest) -> (HNs n k hl (Cons (List (PT)) p ps)))))
-
-(def-fns _ $ (erased hns-pick : (erased (Nat) n k) (erased (List (List (PT))) hl ps) (erased (List (PT)) p)
-    (subterm erased (Mem (List (PT)) p ps) mh) (erased (HNs n k hl ps) hs) -> (erased (HNode n k hl p) hn))
-  (match erased mh _
-    ((MemHere _ _ _) (let-match erased hs (HNsCons _ _ _ _ _ hn _)) hn)
-    ((MemThere _ _ _ rest mm) (let-match erased hs (HNsCons _ _ _ _ _ _ hs1)) (hns-pick n k hl rest p mm hs1))))
-
-(def-fns _ $ (erased hns-good : (erased (Nat) n k s) (erased (List (List (PT))) hl ps) (erased (HNs n k hl ps) hs)
-    (erased (Or (Lt s (Succ k)) (InHole n ps s)) o) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
-  (let-match erased o (InR _ _ ih) ((InL _ _ lt) (InL _ _ lt)))
-  (let-match erased ih (MkIH _ _ _ p m mh ex wf hs1))
-  (match erased (hns-pick n k hl ps p mh hs) _
-    ((HNT _ _ _ _ tn) (tn-good n k hl p m s tn ex wf hs1))
-    (absurd (HNF _ _ _ _ p2 f mi fo) (never-far-mir f p p2 m mi fo ex s hs1))))
-
-(def-fns _ $ (many close-one : (many (Nat) n k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (HCert) hc) -> (many (Res (HNode n k hl p)) r))
-  (let ((many tnode))
-    (match many hc (((Res (TNode n k hl p)) x))
-      ((HKeep) (match many (find-hole p hl) _ ((Some _ mh) (ROk _ (THole n k hl p mh))) ((None _) (RFail _))))
-      ((HSet se) (match many (search p se) _ ((Some _ ct) (check-cert n k hl p ct)) ((None _) (RFail _))))
-      ((HCyc f t1 D P) (check-cyc n k hl p f t1 D P))
-      ((HFar _ _) (RFail _))))
-  (let-match many hc (HFar f dfa) (else (match many tnode _ ((ROk _ tn) (ROk _ (HNT n k hl p tn))) ((RFail _) (RFail _)))))
-  (let ((many p2) (erased mi))
-    (match many f (((List (PT)) p2) ((Mir f p p2) mi))
-      ((BFalse) (values p (MirN p)))
-      ((BTrue) (let ((many p3) (erased xp)) (flip-p p)) (values p3 (MirY p p3 xp)))))
-  (let-match many (check-far p2 (far-gen p2 n dfa)) (ROk _ fo) ((RFail _) (RFail _)))
-  (ROk _ (HNF n k hl p p2 f mi fo)))
-
-(def-fns _ $ (many hc : (many (String) s) (many (HCert) c) -> (many (Pair (List (PT)) (HCert)) r))
-  (let ((many p) (many _)) (pts-of 10 s))
-  (MkPair _ _ p c))
-
-(def-fns _ $ (many hc-find : (many (List (PT)) p) (subterm many (List (Pair (List (PT)) (HCert))) cs) -> (many (HCert) c))
-  (let-match many cs (Cons _ e rest) ((Nil _) (HKeep)))
-  (let-match many e (MkPair _ _ q c))
-  (match many (eq-pts p q) _ ((Some _ _) c) ((None _) (tail $ hc-find p rest))))
-
-(def-fns _ $ (many keep-holes : (subterm many (List (List (PT))) ps) (many (List (Pair (List (PT)) (HCert))) cs) -> (many (List (List (PT))) r))
-  (let-match many ps (Cons _ p rest) ((Nil _) (Nil _)))
-  (let ((many ks)) (notail $ keep-holes rest cs))
-  (match many (hc-find p cs) _ ((HKeep) (Cons _ p ks)) (else ks)))
-
-(def-fns _ $ (many close-holes : (many (Nat) n k) (many (List (List (PT))) hl) (subterm many (List (List (PT))) ps) (many (List (Pair (List (PT)) (HCert))) cs)
-    -> (many (Res (HNs n k hl ps)) r))
-  (let-match many ps (Cons _ p rest) ((Nil _) (ROk _ (HNsNil n k hl))))
-  (let-match many (close-one n k hl p (hc-find p cs)) (ROk _ hn) ((RFail _) (RFail _)))
-  (let-match many (notail $ close-holes n k hl rest cs) (ROk _ hs) ((RFail _) (RFail _)))
-  (ROk _ (HNsCons n k hl p rest hn hs)))
