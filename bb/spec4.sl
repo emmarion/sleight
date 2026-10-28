@@ -11,9 +11,7 @@
 (comptime-match many (nat-eq nr 4) (Equal _ _ _))
 
 (def-fns _ $ (many run-champ : -> (many (Res (HaltsIn 4 (MkMachine 4 srows len) blank 107)) r))
-  (let-match many (spec-sim 4 srows len 200 (Zero) (Nil (Sym)) (Sym0) (Nil (Sym))) (SSHalt _ _ _ k hs) ((SSNo _ _ _) (RFail _)))
-  (let-match many (nat-eq k 107) (Equal _ _ _) (else (RFail _)))
-  (ROk _ hs))
+  (spec-sim 4 srows len 107 107 blank (Zero) (Nil (Sym)) (Sym0) (Nil (Sym)) (LdNil 4 (MkMachine 4 srows len) blank 107)))
 (let ((many cres)) (native-compute run-champ))
 (comptime-match many cres (ROk _ champ-h))
 

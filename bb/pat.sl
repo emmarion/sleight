@@ -561,15 +561,15 @@
     (many OrR : (erased Type A) (erased A l r) -> (Ori A (DR) l r r l))))
 
 (def-adts
-  ((Pop : ((List (It)) S) ((Bool) b) ((List (It)) S2) -> Type)
+  ((PPop : ((List (It)) S) ((Bool) b) ((List (It)) S2) -> Type)
     enum
-    (many PoE : -> (Pop (Nil (It)) (BFalse) (Nil (It))))
-    (many PoW : (erased (Bool) b) (erased (List (Bool)) w) (erased (List (It)) S) -> (Pop (Cons (It) (IW (Cons (Bool) b w)) S) b (Cons (It) (IW w) S)))
-    (many PoS : (erased (It) i) (erased (List (It)) S S2) (erased (Bool) b) (erased (IWd i (Nil (Bool))) iw) (erased (Pop S b S2) p)
-       -> (Pop (Cons (It) i S) b S2))))
+    (many PoE : -> (PPop (Nil (It)) (BFalse) (Nil (It))))
+    (many PoW : (erased (Bool) b) (erased (List (Bool)) w) (erased (List (It)) S) -> (PPop (Cons (It) (IW (Cons (Bool) b w)) S) b (Cons (It) (IW w) S)))
+    (many PoS : (erased (It) i) (erased (List (It)) S S2) (erased (Bool) b) (erased (IWd i (Nil (Bool))) iw) (erased (PPop S b S2) p)
+       -> (PPop (Cons (It) i S) b S2))))
 
 (def-fns _ $ (erased pop-ok : (erased (List (Nat)) s) (erased (List (It)) S S2) (erased (Bool) b h2) (erased (List (Bool)) x x2)
-    (subterm erased (Pop S b S2) po) (erased (SdIn s S x) si) (erased (Pull x h2 x2) pp) -> (erased (Eq (Bool) h2 b) e) (erased (SdIn s S2 x2) si2))
+    (subterm erased (PPop S b S2) po) (erased (SdIn s S x) si) (erased (Pull x h2 x2) pp) -> (erased (Eq (Bool) h2 b) e) (erased (SdIn s S2 x2) si2))
   (let-match erased si (MkSI _ _ _ L e z))
   (match erased po _
     ((PoE)
@@ -634,7 +634,7 @@
        (erased (CutP (BFalse) v P Pz) c0) (erased (CutP (BTrue) v P Ps) c1) (erased (Cl ps p Pz) kz) (erased (Cl ps p Ps) ks) -> (Cl ps p P))
     (many ClLeaf : (erased (List (Pat)) ps) (erased (List (PT)) p) (erased (Nat) q q2 j) (erased (Bool) h b w) (erased (Mv) d)
        (erased (List (It)) L R X Y X2 L2 R2) (erased (Pat) T) (erased (List (List (At))) t)
-       (erased (PLook p q h (Def (Mov w d q2))) pl) (erased (Ori (List (It)) d L R X Y) o1) (erased (Pop X b X2) po)
+       (erased (PLook p q h (Def (Mov w d q2))) pl) (erased (Ori (List (It)) d L R X Y) o1) (erased (PPop X b X2) po)
        (erased (Ori (List (It)) d L2 R2 X2 (Cons (It) (IW (Cons (Bool) w (Nil (Bool)))) Y)) o2) (erased (Nth (Pat) ps j T) nt)
        (erased (Match (MkPat q2 L2 b R2) T t) mt) -> (Cl ps p (MkPat q L h R)))))
 
@@ -831,7 +831,7 @@
 (def-adts
   ((PopR : ((List (It)) S) -> Type)
     enum
-    (many PRGot : (erased (List (It)) S) (many (Bool) b) (many (List (It)) S2) (erased (Pop S b S2) po) -> (PopR S))
+    (many PRGot : (erased (List (It)) S) (many (Bool) b) (many (List (It)) S2) (erased (PPop S b S2) po) -> (PopR S))
     (many PRVar : (erased (List (It)) S) (many (Nat) v) -> (PopR S))))
 
 (def-fns _ $ (many pop-skip : (erased (It) i) (erased (List (It)) S) (erased (IWd i (Nil (Bool))) iw) (many (PopR S) r) -> (many (PopR (Cons (It) i S)) r2))

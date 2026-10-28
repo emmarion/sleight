@@ -114,3 +114,8 @@
     (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Or (Lt s (Succ 47176870)) (InHole 5 holes2 s)) p))
   (hns-good 5 47176870 s holes2 holes hs2
     (hole-good 5 47176870 s holes cut ts (sym-good 5 47176870 (Succ (Succ (Zero))) cut xs O OR p0 ta up kr rg op (NCS 5 (Succ (Zero)) l1n) m s w h))))
+
+(comptime-match many holes2 (Nil _))
+(def-fns _ $ (erased bound : (erased (List (Tr)) m) (erased (Rows 5 5 m) w) (erased (Nat) s)
+    (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Lt s (Succ 47176870)) p))
+  (no-hole 5 s 47176870 (bound5 m w s h)))
