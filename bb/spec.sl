@@ -128,24 +128,24 @@
   (let-match many (notail $ nth-row n rest q1) (NROk _ _ _ f0 f1 nth) ((NRNo _ _ _) (NRNo n rows q)))
   (NROk n rows q f0 f1 (NthThere (Row n) row rest q1 _ nth)))
 
-(def-adts $ (Leads : ((Nat) n) ((Machine n) m) ((Cfg) c0 c) ((Nat) a b) -> Type)
+(def-adts $ (SpLeads : ((Nat) n) ((Machine n) m) ((Cfg) c0 c) ((Nat) a b) -> Type)
   enum
-  (many LdNil : (erased (Nat) n) (erased (Machine n) m) (erased (Cfg) c) (erased (Nat) a) -> (Leads n m c c a a))
+  (many LdNil : (erased (Nat) n) (erased (Machine n) m) (erased (Cfg) c) (erased (Nat) a) -> (SpLeads n m c c a a))
   (many LdStep : (erased (Nat) n) (erased (Machine n) m) (erased (Cfg) c0 c c2) (erased (Nat) a b)
-    (erased (Leads n m c0 c (Succ a) b) p) (erased (Step n m c c2) s) -> (Leads n m c0 c2 a b)))
+    (erased (SpLeads n m c0 c (Succ a) b) p) (erased (Step n m c c2) s) -> (SpLeads n m c0 c2 a b)))
 
 (def-fns _ $ (erased lead-halts : (erased (Nat) n) (erased (Machine n) m) (erased (Cfg) c0 c) (erased (Nat) a b)
-    (subterm erased (Leads n m c0 c a b) p) (erased (HaltsIn n m c a) h) -> (erased (HaltsIn n m c0 b) r))
+    (subterm erased (SpLeads n m c0 c a b) p) (erased (HaltsIn n m c a) h) -> (erased (HaltsIn n m c0 b) r))
   (match erased p _
     ((LdNil _ _ _ _) h)
     ((LdStep _ _ _ c1 _ _ _ p1 s) (lead-halts n m c0 c1 (Succ a) b p1 (HaltLater n m c1 c s a h)))))
 
-(def-fns _ $ (many spop : (many (List (Sym)) zs) -> (many (Sym) h) (many (List (Sym)) ys) (erased (Pop zs h ys) p))
+(def-fns _ $ (many spec-pop : (many (List (Sym)) zs) -> (many (Sym) h) (many (List (Sym)) ys) (erased (Pop zs h ys) p))
   (match many zs _ ((Nil _) (values (Sym0) zs (PopNil))) ((Cons _ x ys) (values x ys (PopCons x ys)))))
 
 (def-fns _ $ (many spec-sim : (erased (Nat) n) (many (List (Row n)) rows) (erased (Length (Row n) rows n) len) (subterm many (Nat) a)
     (erased (Nat) b) (erased (Cfg) c0) (many (Nat) q) (many (List (Sym)) ls) (many (Sym) h) (many (List (Sym)) rs)
-    (erased (Leads n (MkMachine n rows len) c0 (MkCfg q ls h rs) a b) p) -> (many (Res (HaltsIn n (MkMachine n rows len) c0 b)) r))
+    (erased (SpLeads n (MkMachine n rows len) c0 (MkCfg q ls h rs) a b) p) -> (many (Res (HaltsIn n (MkMachine n rows len) c0 b)) r))
   (let ((many mm)) (MkMachine n rows len))
   (let-match many a (Succ f) ((Zero) (RFail _)))
   (let-match many (nth-row n rows q) (NROk _ _ _ e0 e1 nth) ((NRNo _ _ _) (RFail _)))
@@ -157,8 +157,8 @@
     ((Halt _) (let-match many f (Zero) (else (RFail _))) (ROk _ (lead-halts n mm c0 _ _ b p (HaltNow n mm q ls h rs look)))))
   (match many d _
     ((Left)
-      (let ((many h2) (many ls2) (erased pp)) (spop ls))
+      (let ((many h2) (many ls2) (erased pp)) (spec-pop ls))
       (tail $ spec-sim n rows len f b c0 q2 ls2 h2 (Cons (Sym) w rs) (LdStep n mm c0 _ _ f b p (StepLeft n mm q ls h rs w q2 bl look h2 ls2 pp))))
     ((Right)
-      (let ((many h2) (many rs2) (erased pp)) (spop rs))
+      (let ((many h2) (many rs2) (erased pp)) (spec-pop rs))
       (tail $ spec-sim n rows len f b c0 q2 (Cons (Sym) w ls) h2 rs2 (LdStep n mm c0 _ _ f b p (StepRight n mm q ls h rs w q2 bl look h2 rs2 pp))))))
