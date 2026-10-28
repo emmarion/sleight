@@ -2114,8 +2114,10 @@
       (match many k _
         ((KX)
           (let-match many (cn-add xs v) (CaOk _ _ xs2 ca) ((CaNo _ _) (StNo xs n t)))
-          (let-match many (notail $ tstride xs2 n t0) (StOk _ _ _ t2 s1) ((StNo _ _ _) (StNo xs n t)))
-          (StOk xs n t t2 (TStX xs v xs2 n t0 t2 ca s1)))
+          (let ((many r1)) (tail $ tstride xs2 n t0))
+          (match many r1 (at (((StR xs n t) r2 at r1)))
+            ((StOk _ _ _ t2 s1) (coerce r1 (coercible-ctor (Shared) StOk xs2 xs n n t0 t (coercible-refl (Shared) t2) s1 (TStX xs v xs2 n t0 t2 ca s1))))
+            ((StNo _ _ _) (coerce r1 (coercible-ctor (Shared) StNo xs2 xs n n t0 t)))))
         ((KG)
           (let-match many (notail $ tstride az n t0) (StOk _ _ _ t1 s1) ((StNo _ _ _) (StNo xs n t)))
           (let-match many (tpush (KG) v t1) (PuOk _ _ _ t2 pu) ((PuNo _ _ _) (StNo xs n t)))
