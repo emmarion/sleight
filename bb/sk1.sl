@@ -2106,13 +2106,19 @@
     (many CaOk : (erased (Am) n1 n2) (many (Am) n3) (erased (CnAdd n1 n2 n3) p) -> (CaR n1 n2))
     (many CaNo : (erased (Am) n1 n2) -> (CaR n1 n2))))
 
+(def-fns _ $ (erased cn-add-f : (erased (Bool) k) (erased (Nat) c1 c2 c3) (erased (Add c1 c2 c3) p) -> (erased (CnAdd (MkAm (BFalse) c1) (MkAm k c2) (MkAm k c3)) r))
+  (match erased k _ ((BFalse) (CAF c1 c2 c3 p)) ((BTrue) (CAR c1 c2 c3 p))))
+
 (def-fns _ $ (many cn-add : (many (Am) n1) (many (Am) n2) -> (many (CaR n1 n2) r))
   (let-match many n1 (MkAm kk1 c1))
   (let-match many n2 (MkAm k2 c2))
+  (let-match many kk1 (BFalse) ((BTrue)
+    (let-match many k2 (BFalse) ((BTrue) (CaNo n1 n2)))
+    (let ((many c3) (erased p)) (add c1 c2))
+    (CaOk n1 n2 (MkAm (BTrue) c3) (CAL c1 c2 c3 p))))
+  (let-match many c1 (Succ _) ((Zero) (CaOk n1 n2 n2 (cn-add-f k2 c1 c2 c2 (AddZero c2)))))
   (let ((many c3) (erased p)) (add c1 c2))
-  (match many kk1 _
-    ((BFalse) (match many k2 _ ((BFalse) (CaOk n1 n2 (MkAm (BFalse) c3) (CAF c1 c2 c3 p))) ((BTrue) (CaOk n1 n2 (MkAm (BTrue) c3) (CAR c1 c2 c3 p)))))
-    ((BTrue) (match many k2 _ ((BFalse) (CaOk n1 n2 (MkAm (BTrue) c3) (CAL c1 c2 c3 p))) ((BTrue) (CaNo n1 n2))))))
+  (CaOk n1 n2 (MkAm k2 c3) (cn-add-f k2 c1 c2 c3 p)))
 
 (def-adts
   ((NzR : ((Am) n) -> Type)
