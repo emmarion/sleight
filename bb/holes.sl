@@ -37,7 +37,7 @@
     ((MemHere _ _ _) (let-match erased hs (HNsCons _ _ _ _ _ hn _)) hn)
     ((MemThere _ _ _ rest mm) (let-match erased hs (HNsCons _ _ _ _ _ _ hs1)) (hns-pick n k hl rest p mm hs1))))
 
-(def-fns _ $ (erased hns-good : (erased (Nat) n k s) (erased (List (List (PT))) hl ps) (erased (HNs n k hl ps) hs)
+(def-fns _ $ (erased hns-good : (erased (MainOK) mk) (erased (Nat) n k s) (erased (List (List (PT))) hl ps) (erased (HNs n k hl ps) hs)
     (erased (Or (Lt s (Succ k)) (InHole n ps s)) o) -> (erased (Or (Lt s (Succ k)) (InHole n hl s)) r))
   (let-match erased o (InR _ _ ih) ((InL _ _ lt) (InL _ _ lt)))
   (let-match erased ih (MkIH _ _ _ p m mh ex wf hs1))
@@ -54,7 +54,7 @@
       (never-pat p2 m2 po ex2 s hs2))
     (absurd (HNK _ _ _ _ sk) (never-sk p m sk ex s hs1))
     (absurd (HN17 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk17 m ex s hs1))
-    (absurd (HN1 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk1 sk1-ok m ex s hs1))))
+    (absurd (HN1 _ _ _ _ e) (let-match erased e (Refl _ _)) (never-sk1 mk m ex s hs1))))
 
 (def-fns _ $ (many mir-of : (many (Bool) f) (many (List (PT)) p) -> (many (List (PT)) p2) (erased (Mir f p p2) mi))
   (let-match many f (BTrue) ((BFalse) (values p (MirN p))))

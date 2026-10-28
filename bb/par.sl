@@ -13,14 +13,23 @@
     (Cons _ (raw1 here (qq (many (~ g)))) bs1) (Cons _ (raw-app here subf hr) cs1)
     (Cons _ (raw1 here (qq (comptime-match many (~ g) (ROk _ (~ t))))) ms1)))
 
+(def-fns _ $ (many par-extras : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (subterm many (List $ Raw) xs) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) bs cs ms))
+  (let-match many xs (Cons _ f r1) ((Nil _) (values mw (Nil _) (Nil _) (Nil _))))
+  (let-match many r1 (Cons _ t rest) ((Nil _) (values mw (Nil _) (Nil _) (Nil _))))
+  (let ((unique mw1) (many bs1) (many cs1) (many ms1)) (notail $ par-extras mw here rest))
+  (let ((unique mw2) (many g)) (fresh-raw mw1 here "r"))
+  (values mw2 (Cons _ (raw1 here (qq (many (~ g)))) bs1) (Cons _ f cs1)
+    (Cons _ (raw1 here (qq (comptime-match many (~ g) (ROk _ (~ t))))) ms1)))
+
 (def-macro (native-tree args here mw)
-  (let ((many usage)) "`native-tree` takes a cut list, a top builder, a subtree builder and the names for the cut, the top tree and the subtrees")
+  (let ((many usage)) "`native-tree` takes a cut list, a top builder, a subtree builder, the names for the cut, the top tree and the subtrees, then function and result-name pairs to run alongside")
   (let-match many args (Cons _ src r1) ((Nil _) (macro-fail mw here usage)))
   (let-match many r1 (Cons _ top r2) ((Nil _) (macro-fail mw here usage)))
   (let-match many r2 (Cons _ subf r3) ((Nil _) (macro-fail mw here usage)))
   (let-match many r3 (Cons _ cut r4) ((Nil _) (macro-fail mw here usage)))
   (let-match many r4 (Cons _ ta r5) ((Nil _) (macro-fail mw here usage)))
-  (let-match many r5 (Cons _ ts _) ((Nil _) (macro-fail mw here usage)))
+  (let-match many r5 (Cons _ ts xs) ((Nil _) (macro-fail mw here usage)))
   (let-match many src (RawSymbol _ s) (else (macro-fail mw here usage)))
   (let ((unique mw1) (many res)) (resolve mw s))
   (let-match many res (RSettled _ _ _ c) (else (macro-fail mw1 here usage)))
@@ -28,8 +37,9 @@
   (let-match many v (Some _ ps) ((None _) (macro-fail mw2 here usage)))
   (let ((unique mw3) (many cutx) (many tnsx) (many bs) (many cs) (many ms)) (par-parts mw2 here subf ps))
   (let ((unique mw4) (many rt)) (fresh-raw mw3 here "rt"))
-  (values mw4 $ raws-append
+  (let ((unique mw5) (many xbs) (many xcs) (many xms)) (par-extras mw4 here xs))
+  (values mw5 $ raws-append
     (qq (let ((many (~ cut))) (~ cutx))
-        (let ((many (~ rt)) (~@ bs)) (native-compute (~ (raw-app here top cut)) (~@ cs)))
+        (let ((~@ xbs) (many (~ rt)) (~@ bs)) (native-compute (~@ xcs) (~ (raw-app here top cut)) (~@ cs)))
         (comptime-match many (~ rt) (ROk _ (~ ta))))
-    (raws-append ms (qq (let ((erased (~ ts))) (~ tnsx))))))
+    (raws-append xms $ raws-append ms (qq (let ((erased (~ ts))) (~ tnsx))))))

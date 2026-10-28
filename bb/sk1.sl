@@ -2867,5 +2867,3 @@
   (sk1-loop env2 v (hl-close env2 (Zero) (Zero) v (DR) _ _ zl zr e (TpC env2 (Zero) (BTrue) _ _ y zl (TpV y (Nil (Sy)) (Zero)) wd)
     (reenv env env2 rr (Zero) (BFalse) uk zr cld-uk tr) td hz2)))
 
-(let ((many sk1-res)) (native-compute main-run))
-(comptime-match many sk1-res (ROk _ sk1-ok))

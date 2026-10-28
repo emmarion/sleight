@@ -109,11 +109,11 @@
 (let ((many O) (erased op)) (opts xs))
 (let ((many OR) (erased kr)) (keep-r O))
 (comptime-match many (lt-dec (Succ (Zero)) 5) (Yes _ _ _ _ l1n))
-(native-tree cut-src (top-of 5 2 OR 47176870 p0 stages) (sub-of 5 14 47176870 holes stages) cut ta ts)
+(native-tree cut-src (top-of 5 2 OR 47176870 p0 stages) (sub-of 5 14 47176870 holes stages) cut ta ts main-run sk1-ok)
 
 (def-fns _ $ (erased bound5 : (erased (List (Tr)) m) (erased (Rows 5 5 m) w) (erased (Nat) s)
     (erased (HaltsAt m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) s) h) -> (erased (Or (Lt s (Succ 47176870)) (InHole 5 holes2 s)) p))
-  (hns-good 5 47176870 s holes2 holes hs2
+  (hns-good sk1-ok 5 47176870 s holes2 holes hs2
     (hole-good 5 47176870 s holes cut ts (sym-good 5 47176870 (Succ (Succ (Zero))) cut xs O OR p0 ta up kr rg op (NCS 5 (Succ (Zero)) l1n) m s w h))))
 
 (comptime-match many holes2 (Nil _))
