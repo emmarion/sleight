@@ -1,14 +1,6 @@
 (let ((erased par-pt-type)) (List (PT)))
 (let ((erased par-cut-type)) (List (List (PT))))
 
-(def-fns _ $ (many raw1 : (many (Pos) here) (many (List $ Raw) rs) -> (many (Raw) r))
-  (let-match many rs (Cons _ r _) ((Nil _) (RawWild here)))
-  r)
-
-(def-fns _ $ (many raw-app : (many (Pos) here) (many (Raw) f) (many (Raw) x) -> (many (Raw) r))
-  (let-match many f (RawList p xs) (else (RawList here $ Cons _ f $ Cons _ x $ Nil _)))
-  (RawList p (raws-append xs $ Cons _ x $ Nil _)))
-
 (def-fns _ $ (many par-parts : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (Raw) subf) (subterm many (List (List (PT))) ps) ->
     (unique (MacroWorld) mw2 at mw) (many (Raw) cut tns) (many (List $ Raw) bs cs ms))
   (let-match many ps (Cons _ p rest) ((Nil _) (values mw (raw1 here (qq (Nil _))) (raw1 here (qq (TNsNil _ _ _))) (Nil _) (Nil _) (Nil _))))
