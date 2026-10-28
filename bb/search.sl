@@ -1194,7 +1194,7 @@
 
 (def-adts $ (Stage : -> Type)
   enum
-  (many MkStage : (many (Nat) lim) (many (List (Setting)) hs) (many (Maybe (HMap (Nat))) hints) -> (Stage)))
+  (many MkStage : (many (Nat) lim) (many (List (Setting)) hs) (many (Maybe (HMap (Nat))) hints) (many (Maybe (String)) src) -> (Stage)))
 
 (def-fns _ $ (many pt-code : (many (PT) x) -> (many (Nat) c))
   (let-match many x (Def t) ((Undef) 0))
@@ -1275,7 +1275,7 @@
   (many TBad : -> (Try)))
 
 (def-fns _ $ (many stage-try : (many (Stage) st) (many (List (PT)) p) (unique (WS) w) -> (many (Try) r) (unique (WS) w2 at w))
-  (let-match many st (MkStage _ hs hm))
+  (let-match many st (MkStage _ hs hm _))
   (let-match many hm (Some _ m)
     ((None _)
       (let ((many r) (unique w1)) (gen-cert p hs w))
@@ -1324,7 +1324,7 @@
       (let-match many tr (TMiss) ((TGot ct) (values (LDone n k hl p (check-cert n k hl p ct)) w1)) ((TBad) (values fail w1)))
       (let-match many (find-hole p hl) (None _) ((Some _ mh) (values (LDone n k hl p (ROk _ (THole n k hl p mh))) w1)))
       (let-match many sts (Cons _ st rest) ((Nil _) (values fail w1)))
-      (let-match many st (MkStage lim _ hm))
+      (let-match many st (MkStage lim _ hm _))
       (let-match many hm (Some _ _) ((None _) (tail $ classify n k hl p st rest (psim p lim t q l h r pr) w1)))
       (let ((many tr2) (unique w2)) (stage-try st p w1))
       (let-match many tr2 (TMiss) ((TGot ct) (values (LDone n k hl p (check-cert n k hl p ct)) w2)) ((TBad) (values fail w2)))
@@ -1335,7 +1335,7 @@
        (many (List (PT)) p) (many (List (Stage)) pn) (many (NS p) ns) (unique (WS) w) -> (many (Res (TNode n k hl p)) r) (unique (WS) w2 at w))
     (let-match many (all-go p) (RFail _) ((ROk _ g) (values (ROk _ (TF n k hl p g)) w)))
     (let-match many pn (Cons _ st0 sts) ((Nil _) (values (RFail _) w)))
-    (let-match many st0 (MkStage lim _ _))
+    (let-match many st0 (MkStage lim _ _ _))
     (let-match many ns (MkNS _ t0 q0 pos0 lz r0 h0 sr sl snap st nx pr0))
     (let-match many sr (MkSide csr opr))
     (let-match many sl (MkSide csl opl))
@@ -1379,15 +1379,21 @@
     (let-match many ra (ROk _ ta) ((RFail _) (values (RFail _) w2)))
     (values (ROk _ (TACons n k hl p p2 q h x rest ps tn ta)) w2)))
 
+(def-fns _ $ (many stages-load : (subterm many (List (Stage)) pn) -> (many (List (Stage)) r))
+  (let-match many pn (Cons _ st rest) ((Nil _) (Nil (Stage))))
+  (let-match many st (MkStage lim hs hm src))
+  (let ((many st2)) (match many src (((Stage) s)) ((None _) st) ((Some _ s) (MkStage lim hs (Some _ (hints-of s)) (None _)))))
+  (Cons (Stage) st2 (notail $ stages-load rest)))
+
 (def-fns _ $ (many build-at : (many (Nat) n dep k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (List (Stage)) pn) -> (many (Res (TNode n k hl p)) r))
   (let ((many z)) (Nil (Bool)))
-  (let ((many r) (unique _)) (build n dep (Nil (Tr)) k hl p pn (MkNS p 0 (Zero) 1000 z z (BFalse) side0 side0 snap0 0 1 (PRNil p _)) (ws-new)))
+  (let ((many r) (unique _)) (build n dep (Nil (Tr)) k hl p (stages-load pn) (MkNS p 0 (Zero) 1000 z z (BFalse) side0 side0 snap0 0 1 (PRNil p _)) (ws-new)))
   r)
 
 (def-fns _ $ (many build-root : (many (Nat) n dep) (many (List (Tr)) os) (many (Nat) k) (many (List (List (PT))) hl) (many (List (PT)) p)
     (many (List (Stage)) pn) -> (many (Res (TAll n k hl p (Zero) (BFalse) os)) r))
   (let-match many (root-par p) (Some _ pa) ((None _) (RFail _)))
-  (let ((many r) (unique _)) (build-all n dep os k hl p (Zero) (BFalse) pn pa (ws-new)))
+  (let ((many r) (unique _)) (build-all n dep os k hl p (Zero) (BFalse) (stages-load pn) pa (ws-new)))
   r)
 
 (let ((many settings))
