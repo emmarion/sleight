@@ -159,6 +159,68 @@
       (ExD u p21 v1 (ext-xp p1 p21 m1 v1 ex1 x1 xp1)))))
 
 (def-adts
+  ((XE : ((PT) x) ((PT) y) -> Type)
+    enum
+    (many XEU : -> (XE (Undef) (Undef)))
+    (many XED : (erased (Tr) t u) (erased (XT (BTrue) (Zero) (Zero) t u) e) -> (XE (Def t) (Def u)))))
+
+(def-fns _ $ (erased xp-cons : (erased (PT) x) (erased (List (PT)) rest p2) (erased (XP (Cons (PT) x rest) p2) xp)
+    -> (erased (PT) y) (erased (List (PT)) rest2) (erased (Eq (List (PT)) p2 (Cons (PT) y rest2)) eq) (erased (XE x y) xe) (erased (XP rest rest2) xr))
+  (match erased xp _
+    ((XPU _ r1 x1) (values (Undef) r1 (Refl (List (PT)) p2) (XEU) x1))
+    ((XPD t u _ r1 e x1) (values (Def u) r1 (Refl (List (PT)) p2) (XED t u e) x1))))
+
+(def-fns _ $ (erased xp-pair : (erased (PT) x0 x1) (erased (List (PT)) rest p2) (erased (XP (Cons (PT) x0 (Cons (PT) x1 rest)) p2) xp)
+    -> (erased (PT) y0 y1) (erased (List (PT)) rest2) (erased (Eq (List (PT)) p2 (Cons (PT) y0 (Cons (PT) y1 rest2))) eq)
+    (erased (XE x0 y0) e0) (erased (XE x1 y1) e1) (erased (XP rest rest2) xr))
+  (let ((erased y0) (erased p21) (erased eq0) (erased e0) (erased xp1)) (xp-cons x0 (Cons (PT) x1 rest) p2 xp))
+  (let-match erased eq0 (Refl _ _))
+  (let ((erased y1) (erased r2) (erased eq1) (erased e1) (erased xr)) (xp-cons x1 rest p21 xp1))
+  (let-match erased eq1 (Refl _ _))
+  (values y0 y1 r2 (Refl (List (PT)) p2) e0 e1 xr))
+
+(def-fns _ $ (erased xe-mov : (erased (Bool) w) (erased (Mv) d) (erased (Nat) q) (erased (PT) y) (erased (XE (Def (Mov w d q)) y) xe)
+    -> (erased (Mv) e) (erased (Flip (BTrue) d e) fl) (erased (Eq (PT) y (Def (Mov w e q))) eq))
+  (let-match erased xe (XED _ u xt))
+  (let-match erased xt (XTG _ _ _ _ _ e _ q2 fl s))
+  (let-match erased (swap-same (Zero) q q2 s) (Refl _ _))
+  (values e fl (Refl _ _)))
+
+(def-fns _ $ (erased plook-xp : (erased (List (PT)) p p2) (erased (Nat) q q2) (erased (Bool) h w) (erased (Mv) d) (erased (XP p p2) xp)
+    (subterm erased (PLook p q h (Def (Mov w d q2))) pl) -> (erased (Mv) e) (erased (Flip (BTrue) d e) fl) (erased (PLook p2 q h (Def (Mov w e q2))) pl2))
+  (match erased pl _
+    ((PL0 x0 x1 rest)
+      (let ((erased y0) (erased y1) (erased r2) (erased eq) (erased e0) (erased e1) (erased xr)) (xp-pair x0 x1 rest p2 xp))
+      (let-match erased eq (Refl _ _))
+      (let ((erased e) (erased fl) (erased eq2)) (xe-mov w d q2 y0 e0))
+      (let-match erased eq2 (Refl _ _))
+      (values e fl (PL0 y0 y1 r2)))
+    ((PL1 x0 x1 rest)
+      (let ((erased y0) (erased y1) (erased r2) (erased eq) (erased e0) (erased e1) (erased xr)) (xp-pair x0 x1 rest p2 xp))
+      (let-match erased eq (Refl _ _))
+      (let ((erased e) (erased fl) (erased eq2)) (xe-mov w d q2 y1 e1))
+      (let-match erased eq2 (Refl _ _))
+      (values e fl (PL1 y0 y1 r2)))
+    ((PLS x0 x1 rest q1 _ _ pl1)
+      (let ((erased y0) (erased y1) (erased r2) (erased eq) (erased e0) (erased e1) (erased xr)) (xp-pair x0 x1 rest p2 xp))
+      (let-match erased eq (Refl _ _))
+      (let ((erased e) (erased fl) (erased pl3)) (plook-xp rest r2 q1 q2 h w d xr pl1))
+      (values e fl (PLS y0 y1 r2 q1 h _ pl3)))))
+
+(def-fns _ $ (erased prun-flip : (erased (List (PT)) p p2) (erased (Nat) qz q t) (erased (List (Bool)) lz rz l r) (erased (Bool) hz h) (erased (XP p p2) xp)
+    (subterm erased (PRunTo p (MkConf qz lz hz rz) t (MkConf q l h r)) pr) -> (erased (PRunTo p2 (MkConf qz rz hz lz) t (MkConf q r h l)) r2))
+  (let-match erased pr (PRSnoc _ _ _ _ t1 pr1 st) ((PRNil _ _) (PRNil p2 _)))
+  (match erased st _
+      ((PStepL _ q1 q2 l1 r1 l2 h1 w h2 pl pp)
+        (let ((erased e) (erased fl) (erased pl2)) (plook-xp p p2 q1 q2 h1 w (DL) xp pl))
+        (let-match erased fl (FlL))
+        (PRSnoc p2 _ _ _ t1 (prun-flip p p2 qz q1 t1 lz rz l1 r1 hz h1 xp pr1) (PStepR p2 q1 q2 r1 l1 l2 h1 w h2 pl2 pp)))
+      ((PStepR _ q1 q2 l1 r1 r2 h1 w h2 pl pp)
+        (let ((erased e) (erased fl) (erased pl2)) (plook-xp p p2 q1 q2 h1 w (DR) xp pl))
+        (let-match erased fl (FlR))
+        (PRSnoc p2 _ _ _ t1 (prun-flip p p2 qz q1 t1 lz rz l1 r1 hz h1 xp pr1) (PStepL p2 q1 q2 r1 l1 r2 h1 w h2 pl2 pp)))))
+
+(def-adts
   ((Mir : ((Bool) f) ((List (PT)) p) ((List (PT)) p2) -> Type)
     enum
     (many MirN : (erased (List (PT)) p) -> (Mir (BFalse) p p))
