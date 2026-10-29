@@ -68,7 +68,7 @@ type cx = {
   shared : int ref;
   closures : (V.closure * string) list ref;
   out : Buffer.t;
-  fills : Buffer.t;
+  fills : string list ref;
   actions : Buffer.t;
   shows : (term * string * string ref) list ref;
   words : Buffer.t;
@@ -234,6 +234,14 @@ let bucket cx v =
   let h = Hashtbl.hash v in
   match Hashtbl.find_opt cx.seen h with Some b -> b | None -> let b = ref [] in Hashtbl.add cx.seen h b; b
 
+let add_fill cx s = cx.fills := s :: !(cx.fills)
+
+let rec fill_chunks k = function
+  | [] -> []
+  | fills ->
+      let part keep = List.filteri (fun i _ -> keep (i < 100)) fills in
+      Printf.sprintf "let[@inline never] fill_%d () =\n  %s\nlet () = fill_%d ()" k (concat ";\n  " (part Fun.id)) k :: fill_chunks (k + 1) (part not)
+
 let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 
 let rec value cx v =
@@ -244,12 +252,12 @@ let rec value cx v =
       named_buffer cx (Obj.repr t) "Obj.repr (Ffi_core.slots_new ())" (fun name ->
         Array.iter (fun k ->
           let rhs = value cx (Obj.magic k) in
-          Buffer.add_string cx.fills (Printf.sprintf "let () = ignore (Ffi_core.slots_add (Obj.obj %s) %s)\n" name rhs)) (Ffi_core.slots_keys t))
+          add_fill cx (Printf.sprintf "ignore (Ffi_core.slots_add (Obj.obj %s) %s)" name rhs)) (Ffi_core.slots_keys t))
   | V.VExt (_, Array a) ->
       named_buffer cx (Obj.repr a) (Printf.sprintf "Obj.repr (Array.make %d (Obj.repr ()))" (Array.length a)) (fun name ->
         Array.iteri (fun i v ->
           let rhs = value cx v in
-          Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a)
+          add_fill cx (Printf.sprintf "Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)" name i rhs)) a)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
       match List.find_opt (function V.VCtor (_, vs'), _ -> vs' == vs | _ -> false) !b with
@@ -261,7 +269,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
           Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = %s\n" (field_write cx c name [ (i, rhs) ]))) vs;
+            add_fill cx (field_write cx c name [ (i, rhs) ])) vs;
           name)
   | _ -> (
       let b = bucket cx v in
@@ -467,7 +475,7 @@ let collect env items =
         | Env.Final _ | Env.Native _ -> [])
       items
   in
-  { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; fills = Buffer.create 1024; actions = Buffer.create 1024; shows = ref []; words = Buffer.create 256; narrows = ref []; temps = ref 0 }
+  { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; fills = ref []; actions = Buffer.create 1024; shows = ref []; words = Buffer.create 256; narrows = ref []; temps = ref 0 }
 
 let all a = List.init (List.length a.V.ctors) Fun.id
 
@@ -553,7 +561,7 @@ let rec show cx env ty =
                         | Settled v ->
                             let name = Printf.sprintf "word_%d" (stamp cx) in
                             Buffer.add_string cx.words (Printf.sprintf "let %s : Obj.t ref = ref (Obj.repr ())\n" name);
-                            Buffer.add_string cx.fills (Printf.sprintf "let () = %s := %s\n" name (value cx v));
+                            add_fill cx (Printf.sprintf "%s := (%s)" name (value cx v));
                             "!" ^ name
                         | Hypothetical -> "(Obj.repr ())"), i)
                   | None -> (Printf.sprintf "f%d" i, i + 1) in
@@ -662,7 +670,7 @@ let emit env items =
       Buffer.contents cx.words;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);
       Buffer.contents cx.out;
-      Buffer.contents cx.fills;
+      concat "\n" (fill_chunks 0 (List.rev !(cx.fills)));
       Buffer.contents cx.actions ]
 
 (* A native-compute compiles its functions once, beside the run-position functions so far, runs each by its
