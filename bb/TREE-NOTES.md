@@ -97,6 +97,10 @@ bb/bb5.sl is unchanged.
   overall; the present order looks close to the best of those tried.
 - Making `lsim` tail-recursive through the `coerce` idiom of `plook`:
   slightly more instructions.
+- A two-pass `list_to_array` in the runtime (self/runtime.ml), tried on
+  the captured OCaml: job 30 went from 11.69G to 11.66G instructions,
+  although `check-cert`'s calls to it show about 2.9% inclusive; most of
+  that cost appears to be in the per-element list view, not the copy.
 
 ## What might be the next large wins
 
