@@ -1234,6 +1234,11 @@
   (let ((many env2) (erased h2) (many hp2) (erased s2) (many _) (many _)) $ intern-numeral env _ h $ nat-str n)
   (values env2 h2 hp2 s2))
 
+(def-fns _ $ (many stand-in : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Nat) x) -> (many (Bool) r))
+  (let-match many (settled-ref _ (heap-entries _ hp) x) (Some _ v) ((None _) (BFalse)))
+  (let ((erased _) (many b) (erased _)) (hread _ hp v))
+  (match many b _ ((BToken _) (BTrue)) (else (BFalse))))
+
 (def-fns _ $ (many resolve-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (let-match many args (Cons _ s r2) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no symbol")))
   (let-match many r2 (Cons _ cs r3) ((Nil _) (halloc _ hp $ BError _ "`resolve` with no constructors")))
@@ -1243,6 +1248,7 @@
   (let ((erased _) (many info)) $ entry e x)
   (let-match many info (MkEInfo _ _ mult st _ _ _ _))
   (let-match many st (SSettled _ _ m) ((SHypothetical _) (values hs hp (le-refl hs) ch)))
+  (let-match many (and (env-failed e) $ and (mult-is-many mult) $ stand-in _ hp x) (BFalse) ((BTrue) (values hs hp (le-refl hs) ch)))
   (let ((erased _) (many b) (erased _)) (hread _ hp cs))
   (let-match many b (BCtorFn _ ct) (else (halloc _ hp $ BError _ "`resolve` with no constructor for a Settled")))
   (let ((many shown)) $ match many (lit-shown (env-lits e) m) (((Shown) _)) ((Some _ k) k) ((None _) (ShText $ entry-name-or-id e m)))

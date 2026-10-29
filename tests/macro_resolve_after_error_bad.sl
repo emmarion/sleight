@@ -1,0 +1,20 @@
+; needs: ../std/macro
+; error: tests/macro_resolve_after_error_bad.sl:17:19: error: `Zero` expects 0 arguments, got 1
+
+(let ((erased lt)) (List (Nat)))
+(def-fns _ $ (many walk : (subterm many (List (Nat)) ps) -> (many (Nat) n))
+  (let-match many ps (Cons _ p rest) ((Nil _) 0))
+  (Succ (notail $ walk rest)))
+(def-macro (m args here mw)
+  (let-match many args (Cons _ src r1) ((Nil _) (macro-fail mw here "no argument")))
+  (let-match many src (RawSymbol _ s) (else (macro-fail mw here "not a name")))
+  (let ((unique mw1) (many res)) (resolve mw s))
+  (let-match many res (RSettled _ _ _ c) (else (macro-fail mw1 here "not settled")))
+  (let ((unique mw2) (many v)) (arg-value mw1 (RawSettled here _ _ _ c) _ (settled-of erased lt)))
+  (let-match many v (Some _ ps) ((None _) (macro-fail mw2 here "none")))
+  (let ((unique mw3) (many r)) (nat-raw mw2 here (walk ps)))
+  (values mw3 (Cons _ r $ Nil _)))
+(let ((many bad)) (Zero (Zero)))
+(def-fns _ $ (many one : -> (many (List (Nat)) r)) (Cons _ 1 $ Nil _))
+(let ((many xs)) (one))
+(let ((many k)) (m xs))
