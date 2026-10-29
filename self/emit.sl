@@ -1217,38 +1217,43 @@
 (def-fns _ $ (many blank-words : (subterm many (Nat) n) -> (many (List $ Rope) r))
   (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ (RStr "(Obj.repr ())") $ notail $ blank-words k))))
 
-(def-fns _ $ (many block-stores : (erased (Hist Block) hs) (many (Decls) d) (many (Ctor) c) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) -> (many (Rope) r))
-  (let-match many fields (Cons _ f rest) ((Nil _) (REmpty)))
-  (rcat3 (RStr "let () = ")
-    (field-store-rope d c dest (Cons _ index $ Nil _) (Cons _ (addr-rope _ f) $ Nil _) "bf")
-    $ rcat (RStr "\n") $ notail $ block-stores _ d c rest dest $ Succ index))
+(def-fns _ $ (many block-stores : (erased (Hist Block) hs) (many (Decls) d) (many (Ctor) c) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) (many (List $ Rope) acc) -> (many (List $ Rope) r))
+  (let-match many fields (Cons _ f rest) ((Nil _) acc))
+  (Cons _ (field-store-rope d c dest (Cons _ index $ Nil _) (Cons _ (addr-rope _ f) $ Nil _) "bf") $ notail $ block-stores _ d c rest dest (Succ index) acc))
 
-(def-fns _ $ (many array-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) -> (many (Rope) r))
-  (match many fields _
-    ((Nil _) (REmpty))
-    ((Cons _ f rest)
-      (rcat5 (RStr "let () = Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Ffi_core.word array) ") (nat-rope index) $ RStr " (Obj.obj ") (addr-rope _ f) $ rcat (RStr " : Ffi_core.word)\n") $ notail $ array-stores _ rest dest $ Succ index))))
+(def-fns _ $ (many array-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) (many (List $ Rope) acc) -> (many (List $ Rope) r))
+  (let-match many fields (Cons _ f rest) ((Nil _) acc))
+  (Cons _ (rcat5 (RStr "Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Ffi_core.word array) ") (nat-rope index) $ RStr " (Obj.obj ") (addr-rope _ f) $ RStr " : Ffi_core.word)")
+    $ notail $ array-stores _ rest dest (Succ index) acc))
 
-(def-fns _ $ (many slots-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) keys) (many (Rope) dest) -> (many (Rope) r))
-  (match many keys _
-    ((Nil _) (REmpty))
-    ((Cons _ k rest) (rcat5 (RStr "let () = ignore (Ffi_core.slots_add (Obj.obj ") dest (RStr ") ") (addr-rope _ k) $ rcat (RStr ")\n") $ notail $ slots-stores _ rest dest))))
+(def-fns _ $ (many slots-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) keys) (many (Rope) dest) (many (List $ Rope) acc) -> (many (List $ Rope) r))
+  (let-match many keys (Cons _ k rest) ((Nil _) acc))
+  (Cons _ (rcat5 (RStr "ignore (Ffi_core.slots_add (Obj.obj ") dest (RStr ") ") (addr-rope _ k) $ RStr ")") $ notail $ slots-stores _ rest dest acc))
+
+(def-fns _ $ (many fill-chunks : (subterm many (List $ Rope) fills) (many (Nat) k) (many (Nat) n) -> (many (Rope) r))
+  (let-match many fills (Cons _ f rest) ((Nil _) (REmpty)))
+  (let ((many name)) $ str-cat "fill_" $ nat-str k)
+  (let ((many (Rope) start)) $ match many n _ ((Zero) (RStr $ str-cat3 "let[@inline never] " name " () =\n  ")) (else (REmpty)))
+  (let ((many (Bool) more)) $ match many rest _ ((Nil _) (BFalse)) ((Cons _ _ _) (nat-lt (Succ n) 100)))
+  (rcat3 start f $ match many more _
+    ((BTrue) (rcat (RStr ";\n  ") $ notail $ fill-chunks rest k $ Succ n))
+    ((BFalse) (rcat (RStr $ str-cat3 "\nlet () = " name " ()\n") $ notail $ fill-chunks rest (Succ k) 0))))
 
 (def-fns _ $ (many emit-blocks : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) order)
-    (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (Rope) fills))
-  (let-match many order (Cons _ at2 rest) ((Nil _) (values (REmpty) (REmpty) $ REmpty)))
+    (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (List $ Rope) fills))
+  (let-match many order (Cons _ at2 rest) ((Nil _) (values (REmpty) (REmpty) $ Nil _)))
   (let ((erased _) (many blk) (erased _)) $ store-read Block hs hp at2)
   (let ((many before) (many middle) (many after)) $ notail $ emit-blocks _ hp rest env d)
   (match many blk _
     ((BTag _ c fields)
       (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = ") (plain-build d c $ blank-words $ list-length _ fields) $ RStr "\n")
-      (values (rcat skeleton before) middle $ rcat (block-stores _ d c fields (addr-rope _ at2) 0) after))
+      (values (rcat skeleton before) middle $ block-stores _ d c fields (addr-rope _ at2) 0 after))
     ((BArray _ n es)
       (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope n) $ RStr " (Obj.repr ()))\n")
-      (values (rcat skeleton before) middle $ rcat (array-stores _ (idmap-prefix _ es n $ Nil _) (addr-rope _ at2) 0) after))
+      (values (rcat skeleton before) middle $ array-stores _ (idmap-prefix _ es n $ Nil _) (addr-rope _ at2) 0 after))
     ((BSlots _ n ks _)
       (let ((many skeleton)) $ rcat3 (RStr "let ") (addr-rope _ at2) $ RStr " : Obj.t = Obj.repr (Ffi_core.slots_new ())\n")
-      (values (rcat skeleton before) middle $ rcat (slots-stores _ (idmap-prefix _ ks n $ Nil _) (addr-rope _ at2)) after))
+      (values (rcat skeleton before) middle $ slots-stores _ (idmap-prefix _ ks n $ Nil _) (addr-rope _ at2) after))
     (else (values before (rcat (block-let _ at2 _ blk env d) middle) after))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
@@ -1482,4 +1487,4 @@
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
   (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d2)
-  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env with-exec) (rcat3 skeletons defs fills) finals))
+  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env with-exec) (rcat3 skeletons defs $ fill-chunks fills 0 0) finals))
