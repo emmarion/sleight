@@ -487,13 +487,13 @@
   (let-match erased e2 (Refl _ _))
   (Some _ (Refl (List (Bool)) xs)))
 
-(def-fns _ $ (many check-cyc : (many (Nat) n k) (erased (List (List (PT))) hl) (many (List (PT)) p) (many (Bool) f) (many (Nat) t1 D P) -> (many (Res (TNode n k hl p)) res))
-  (let ((many p2) (erased mi))
-    (match many f (((List (PT)) p2) ((Mir f p p2) mi))
-      ((BFalse) (values p (MirN p)))
-      ((BTrue) (let ((many p3) (erased xp)) (flip-p p)) (values p3 (MirY p p3 xp)))))
-  (let-match many (psim p2 t1 (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p2 _)) (PSOut _ t q l r h pr)
-    (else (RFail _)))
+(def-fns _ $ (many mir-pick : (many (List (PT)) p) (many (Bool) f) -> (many (List (PT)) p2) (erased (Mir f p p2) mi))
+  (let-match many f (BTrue) ((BFalse) (values p (MirN p))))
+  (let ((many p3) (erased xp)) (flip-p p))
+  (values p3 (MirY p p3 xp)))
+
+(def-fns _ $ (many cyc-from : (many (Nat) n k) (erased (List (List (PT))) hl) (erased (List (PT)) p) (many (List (PT)) p2) (erased (Bool) f) (erased (Mir f p p2) mi)
+    (many (Nat) t q D P) (many (List (Bool)) l r) (many (Bool) h) (erased (PRunTo p2 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) -> (many (Res (TNode n k hl p)) res))
   (let-match many (split-at D l) (MkSpl _ x y c) ((NoSpl _) (RFail _)))
   (let-match many P (Succ T) ((Zero) (RFail _)))
   (let-match many (lsim p2 P q x h r) (LSOk _ _ _ qe x2 he re lr) ((LSNo _ _ _) (RFail _)))
@@ -507,3 +507,16 @@
   (let-match many (eq-bools x3 x) (Some _ e4) ((None _) (RFail _)))
   (let-match erased e4 (Refl _ _))
   (ROk _ (TC n k hl p p2 f mi (MkCyc p2 t T q x w x2 r y l h pr c lr cw))))
+
+(def-fns _ $ (many check-cyc : (many (Nat) n k) (erased (List (List (PT))) hl) (many (List (PT)) p) (many (Bool) f) (many (Nat) t1 D P) -> (many (Res (TNode n k hl p)) res))
+  (let ((many p2) (erased mi)) (mir-pick p f))
+  (let-match many (psim p2 t1 (Zero) (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)) (PRNil p2 _)) (PSOut _ t q l r h pr)
+    (else (RFail _)))
+  (tail $ cyc-from n k hl p p2 f mi t q D P l r h pr))
+
+(def-fns _ $ (many check-cyc-at : (many (Nat) n k) (erased (List (List (PT))) hl) (many (List (PT)) p) (many (Bool) f) (many (Nat) t D P) (many (Nat) q)
+    (many (List (Bool)) l r) (many (Bool) h) (erased (PRunTo p (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) t (MkConf q l h r)) pr) -> (many (Res (TNode n k hl p)) res))
+  (let ((many p2) (erased mi)) (mir-pick p f))
+  (match many f _
+    ((BFalse) (let-match erased mi (MirN _)) (tail $ cyc-from n k hl p p2 f mi t q D P l r h pr))
+    ((BTrue) (let-match erased mi (MirY _ _ xp)) (tail $ cyc-from n k hl p p2 f mi t q D P r l h (prun-flip p p2 (Zero) q t (Nil (Bool)) (Nil (Bool)) l r (BFalse) h xp pr)))))
