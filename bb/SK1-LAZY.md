@@ -7,7 +7,7 @@ should be read as rough.
 ## Background
 
 `main-run` follows the Coq proof `BusyCoq/Skelet1.v`: about 88 million
-symbolic steps over configurations `MkCf d l r`. On rightward steps it
+symbolic steps over configurations `MkCf d l le r re`. On rightward steps it
 first tries a stride, `tstride az 1 r`, a single pass over the whole
 right tape (a few hundred symbols). Strides are a large share of the
 steps, and most of the right tape seems to be touched only by strides.
