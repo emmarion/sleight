@@ -3,10 +3,10 @@
 
 (let ((erased lt)) (List (Nat)))
 (def-fns _ $ (many walk : (subterm many (List (Nat)) ps) -> (many (Nat) n))
-  (let-match many ps (Cons _ p rest) ((Nil _) 0))
+  (let-match many ps (Cons _ _ rest) ((Nil _) 0))
   (Succ (notail $ walk rest)))
 (def-macro (m args here mw)
-  (let-match many args (Cons _ src r1) ((Nil _) (macro-fail mw here "no argument")))
+  (let-match many args (Cons _ src _) ((Nil _) (macro-fail mw here "no argument")))
   (let-match many src (RawSymbol _ s) (else (macro-fail mw here "not a name")))
   (let ((unique mw1) (many res)) (resolve mw s))
   (let-match many res (RSettled _ _ _ c) (else (macro-fail mw1 here "not settled")))
