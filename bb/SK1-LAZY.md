@@ -1,97 +1,77 @@
-# Lazy strides in the Skelet #1 run: a nested design (idea, not built)
+# Lazy strides in the Skelet #1 run
 
-This note describes a possible further speedup of `main-run` in
-`bb/sk1.sl`. Nothing here is implemented, and the claims about cost are
-estimates from profiling, not measurements of a built version.
+This note describes how `main-run` in `bb/sk1.sl` keeps strides lazy.
+The cost figures are from single instrumented runs on one machine and
+should be read as rough.
 
 ## Background
 
 `main-run` follows the Coq proof `BusyCoq/Skelet1.v`: about 88 million
 symbolic steps over configurations `MkCf d l r`. On rightward steps it
 first tries a stride, `tstride az 1 r`, a single pass over the whole
-right tape (a few hundred symbols). Strides are about 14 million of the
-steps. Between two strides the head seems to read under two right-tape
-symbols on average, with rare excursions of about 120. So most of the
-right tape is touched only by strides.
+right tape (a few hundred symbols). Strides are a large share of the
+steps, and most of the right tape seems to be touched only by strides.
 
-The run in `bb/sk1.sl` makes strides lazy at the runner level:
+## The lazy runner
 
-- the right tape is kept as an explicit window `w`, an implicit `D`, and
-  a raw tail `t` that still owes `p` strides, so the real tape is
-  `w ++ D :: stride(0, p, t)`;
-- a stride runs only over `w` (`sw-of`, relation `Sw`) and adds its
-  multiplier to `p`;
-- ordinary steps run on the window, and frame lemmas (`trun-fr` and the
-  lemmas under it) carry them to the full tape;
-- forcing does one real `tstride az p t`; the full `MRun` for the lazy
-  stretch is then rebuilt from an erased log (`Lz`), using `st-add` to
-  split the summed stride back into single strides.
+`lrun` keeps the right tape as an explicit window `w`, an implicit `D`,
+and a stack `Zk` of segments. Each level holds a segment, a pending
+stride count (`Pn`: none, or `PnP q`) and a capacity estimate; levels
+are separated by implicit `D`s, and the bottom level `ZkB` is a raw tail
+with no `D` after it. The relation `Dn k x` says the stack stands for
+the explicit tape `x`: each level's segment, followed by `D` and the
+level below, strided by the level's pending count. Splitting just after
+a `D` makes the carry into the next level 0, so striding a level by `q`
+should equal striding its segment by `q` (`Swin`, `sw-of`) and the level
+below by the multiplier that comes out (`sw-st` proves this).
 
-A second design, also built and also passing both BB(5) goals but not in
-this tree, puts the laziness in the tape instead: a symbol `YL p c u`
-standing for the tape `u` strided `p` times, with `c` strides of
-capacity left. Its meaning is a `Tp` case (`TpL`) carrying
-`St 0 (p + c) u w` for some `w`, so a stride over a tape ending in `YL`
-costs only the explicit prefix plus a check against `c`. Forcing uses a
-functionality lemma (`st-fn`: `St xs n t t1` and `St xs n t t2` give
-`t1 = t2`). Its measured job time was about the same as the runner-level
-design.
+The runner's moves:
 
-## What both designs leave on the table
+- a stride over the window (`LzS`) runs `sw-of` on `w` only and adds the
+  multiplier to the top level's count (`Kt`, `Pq`), after checking it
+  against the top level's capacity;
+- ordinary steps run on the window (`LzT`); the frame lemmas under
+  `trun-fr` carry them to the full tape;
+- when the window gets short, or the top capacity runs out, `lp-of`
+  exposes the top level (`LzP`): it strides just that segment by its
+  count and adds the resulting multiplier to the level below;
+- when a stride succeeds on a window of 16 or more symbols, `lz-fold`
+  first moves the window's tail back onto the stack as segments of
+  about 8 symbols with no pending count (`LzF`, chunked by `ch-of`);
+- entering the lazy runner (`lz-enter`) chunks the tail the same way
+  (`LzB`), and the first lazy step is a stride.
 
-In both, forcing is one real stride over the whole lazy tail, which is
-O(tape). In the tape-symbol design an instrumented run showed about
-360 thousand force-and-relazify cycles, each a few full passes over the
-tape. These are probably a large part of the remaining cost of the
-Skelet #1 job.
+The capacity of a level is `ms-k` of its segment, given the capacity of
+the level below, minus its pending count. It is only a runtime estimate:
+if it is too generous, a later stride of a segment fails and the run
+returns `RFail`, which would show up as a failed job, not as an unsound
+result.
 
-## The idea: nest the lazy segments
+Leaving the lazy runner (`lz-go`, used when the configuration matches
+the `try-uni` or `cyc-of` pattern, or when no lazy step applies) calls
+`den`, which pushes the counts down level by level and strides only the
+bottom level with `tstride`, so it should cost about one pass over the
+tape. The `MRun` for the lazy stretch is rebuilt from the erased log
+`Lz` by `lz-force`, using `st-add` to split summed strides back into
+single strides.
 
-The two designs supply complementary halves.
+## Measurements
 
-- **Nesting, from the tape symbol.** Because `YL` is an ordinary symbol
-  with its meaning in `Tp`, the tail `u` can itself end in another `YL`.
-  The right tape then becomes a chain of segments, each owing its own
-  number of strides:
+In one instrumented run, before the stack was added (a single raw tail
+with one pending count), the window averaged about 100 symbols, `sw-of`
+took about half of the job's instructions, and there were about 61
+thousand forces, about 54 thousand of them from capacity. With the
+stack there were about 14 thousand forces (about 6.4 thousand from the
+`try-uni` pattern), and elaboration plus the Skelet #1 job took about
+18 s user instead of about 45 s.
 
-  ```
-  w1 ++ YL(p1, w2 ++ YL(p2, w3 ++ YL(p3, ...)))
-  ```
+## What is left
 
-- **Splitting after a `D`, from the runner design.** Splitting just
-  after a `D` makes the carry into the tail 0. Then striding
-  `segment ++ rest` by `n` should equal striding the segment by `n` and
-  striding `rest` by `n * 4^k`, where `k` is the number of `C` symbols in
-  the segment (`sw-st` proves the corresponding fact for the window).
-
-Together these would make forcing local. Exposing the next segment means
-striding only `w2` by `p1` and adding `p1 * 4^k` (with `k` the number of
-`C`s in `w2`) to `p2`, after a capacity check. That is O(segment), not
-O(tape). It is lazy propagation, as in a segment tree.
-
-The template jump in `try-uni`, which strides the right tape by
-`n * 215779`, could also stay lazy by adding to the outermost pending
-count when the capacity allows, rather than forcing. The capacity
-estimate `ms-of` would read the explicit prefix and the outer segment's
-capacity.
-
-## What it would take
-
-- A `Tp` meaning for nested `YL`, which the tape-symbol design almost
-  has already, since `u` is an arbitrary tape.
-- A lemma pushing a pending stride one level down: from
-  `St 0 p (w ++ YL(q, c, u)) h`, where `w` ends just after a `D`, derive
-  the meaning of `stride(0, p, w) ++ YL(q + p * 4^k, c - p * 4^k, u)`.
-  This combines `sw-st`-style composition with `st-fn` and `st-add`.
-- Capacity bookkeeping per segment, and a rule for when to split a long
-  explicit window into a new segment.
-
-## Expected value
-
-On its own this would probably cut the Skelet #1 job well below its
-current time. But that job runs in the same parallel batch as the BB(5)
-search-tree jobs, which seem to set that batch's wall time (about
-175 s on 4 cores at the time of writing). So the nested design would
-change the end-to-end check time only once the tree jobs are much
-faster. Until then it is mainly of interest as the cleanest form of the
-lazy-stride idea.
+`sw-of` is still the largest single cost in a profile. Most of it seems
+to come from rightward steps whose stride fails some way into the
+window, usually at a `C` whose `X` count is smaller than the stride's
+multiplier there; the window is long at those times because pushes
+have exposed segments up to that `C`. Each such step rescans the window
+up to the failing `C`. Two things that did not help in one measurement
+each: also folding on leftward steps, and a non-allocating pre-check
+before `sw-of`.
