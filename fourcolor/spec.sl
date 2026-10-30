@@ -1,0 +1,1 @@
+(goal erased (FourColor))
