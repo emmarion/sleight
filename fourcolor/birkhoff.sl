@@ -527,3 +527,112 @@
       (nontrivial-rev d m e n f _ _ hdA hdB cx cn nt) h2 bb) (BMNeed _ _ _ _ _ _ _ _ _ _ _ _ ms2 n2)
     ((BMShort _ _ _ _ _ _ _ _ _ _ _ _ sh) (BKShort d x0 h m e n f p ts sh)))
   (BKMaps d x0 h m dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 br n1 n2))
+
+(def-fns _ $ (erased need-hit : (erased (Nat) d dd h m) (erased (List (Nat)) ed nd fd bd) (erased (List (Ctree)) ts) (erased (List (Mp)) ms) (erased (Ctree) t)
+    (subterm erased (BNeed d dd h m ed nd fd bd ts ms) bn) (erased (MpCols ms) mc) (erased (Elem (Ctree) t ts) el) (erased (Length (Nat) bd (Succ (Succ h))) lbd)
+    -> (erased (List (Col)) et et2 ct) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtMem t et2) mt) (erased (Ctr (C0) et ct) cr)
+    (erased (Holds (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) ct) p))
+  (let-match erased bn (BNCons _ _ _ _ d2 _ _ _ _ e2 n2 f2 cp t1 ts1 ms1 bp h2 g2 b2 pl2 pc2 lt2 ss bn1) (absurd (BNNil _ _ _ _ _ _ _ _) el))
+  (let-match erased mc (MCCons _ _ _ _ ks _ c mc1))
+  (match erased el _
+    ((ElHere _ _ _) (side-trace h m d2 dd e2 n2 f2 ed nd fd bd ks cp t ss bp lbd c))
+    ((ElThere _ _ _ _ el1) (need-hit d dd h m ed nd fd bd ts1 ms1 t bn1 mc1 el1 lbd))))
+
+; The traces that are not ring traces of a map, with a certificate (decide_ring_trace).
+(def-adts $ (NRT : ((RArgs) a) ((List (Col)) et) -> Type)
+  enum
+  (many MkNRT : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (RTNo e f r et) no) -> (NRT (MkRArgs d e n f r) et)))
+
+; colorable_from_ring for a map with no four-colouring: no ring trace of one side has its reverse on the other.
+(def-fns _ $ (erased glue-ring : (erased (Nat) d x0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Col)) c1 c2)
+    (erased (Hypermap d e n f) hm) (erased (Connected d e n f) cn) (erased (NoExt d e f (Nil (Nat)) (Nil (Nat)) (Nil (Nat))) nce)
+    (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br) (erased (RevApp (Col) c1 (Nil (Col)) c2) re)
+    (erased (RingTrace ed1 fd1 bd1 c1) td1) (erased (RingTrace ed2 fd2 bd2 c2) td2) -> (erased (False) fl))
+  (let-match erased br (MkBRing _ _ y0 _ _ _ _ _ _ Q er hdA hdB _ _ _ _ _ _ _ _ rm ra cx h1 h2))
+  (let-match erased h1 (MkBHalf _ _ _ dr1 _ _ _ _ _ _ _ er1 nr1 fr1 hd1 hr1 _ br1 zs1 RV1 pt1 rb1 rv1 rbr1 ds1 ap1))
+  (let-match erased h2 (MkBHalf _ _ _ dr2 _ _ _ _ _ _ _ er2 nr2 fr2 hd2 hr2 _ br2 zs2 RV2 pt2 rb2 rv2 rbr2 ds2 ap2))
+  (let ((erased ks) (erased c)) (colorable-from-ring d dd1 dr1 dd2 dr2 e n f ed1 nd1 fd1 er1 nr1 fr1 hd1 hr1 bd1 br1 ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2
+    _ _ hdA hdB zs1 zs2 RV2 c1 c2 pt1 rb1 ds1 cx cn pt2 rv2 rbr2 ds2 ap2 td1 re td2))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f hm))
+  (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
+  (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks nce (JoinNil ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
+
+(def-lvl BL)
+(let ((erased prdc)) (prove-predates RDC BL))
+(let ((erased BN) (erased bcs)) (birkhoff-check-sound BL))
+
+; A side of the check for a side of a ring: its ring traces, the traces that are not, and the maps of the basis programs
+; coloured.
+(def-fns _ $ (erased mk-side : (erased (Nat) d x0 dd h m) (erased (List (Nat)) e n f p ed nd fd bd) (erased (List (Ctree)) ts) (erased (List (Mp)) ms)
+    (erased (BHalf d e n f x0 p dd ed nd fd bd) hf) (erased (Length (Nat) (Cons (Nat) x0 p) (Succ (Succ h))) lr)
+    (erased (BNeed d dd h m ed nd fd bd ts ms) bn) (erased (MpCols ms) mc) (erased (RelC) R) (erased (KClosed BL (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) R) cl)
+    -> (erased (BSide BL h m ts (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) (MkPred (RArgs) (MkRArgs dd ed nd fd bd) NRT)) s))
+  (let-match erased hf (MkBHalf _ _ _ dr _ _ _ _ _ _ _ er nr fr hd hr _ br zs RV pt rb rv rbr ds ap))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr hG hdm hrm io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr2 rv0 pp med mnd mer mnr))
+  (let ((erased ub)) (respects-under hd bd bG dd rbd lhd))
+  (let ((erased lbd)) (half-lbd hd bd _ (Succ (Succ h)) rb lr))
+  (let ((erased a)) (MkRArgs dd ed nd fd bd))
+  (def-fns BL
+    ((erased dec : (erased (List (Col)) ct) -> (erased (Or (Holds (MkPred (RArgs) a RTP) ct) (Holds (MkPred (RArgs) a NRT) ct)) r))
+      (match erased (decide-ring-trace dd ed nd fd bd hdm ub ct) _
+        ((RDYes _ _ _ _ rt) (InL _ _ (MkHolds (RArgs) a RTP ct (MkRTP dd ed nd fd bd ct rt))))
+        ((RDNo _ _ _ _ no) (InR _ _ (MkHolds (RArgs) a NRT ct (MkNRT dd ed nd fd bd ct no))))))
+    ((erased ref : (erased (List (Col)) ct) (erased (Holds (MkPred (RArgs) a RTP) ct) p) (erased (Holds (MkPred (RArgs) a NRT) ct) q) -> (erased (False) f))
+      (let-match erased p (MkHolds _ _ _ _ p1))
+      (let-match erased p1 (MkRTP _ _ _ _ _ _ rt))
+      (let-match erased q (MkHolds _ _ _ _ q1))
+      (let-match erased q1 (MkNRT _ _ _ _ _ _ no))
+      (rtno-sound ed fd bd ct no rt))
+    ((erased hit : (erased (Ctree) t) (erased (Elem (Ctree) t ts) el) -> (erased (List (Col)) et et2 ct) (erased (Length (Col) et (Succ h)) len)
+        (erased (ETrace et et2) e) (erased (CtMem t et2) mt) (erased (Ctr (C0) et ct) cr) (erased (Holds (MkPred (RArgs) a RTP) ct) p))
+      (need-hit d dd h m ed nd fd bd ts ms t bn mc el lbd)))
+  (MkBSide BL h m ts _ _ R cl dec ref hit))
+
+; Birkhoff_valid of birkhoff.v, with the minimality of the map entering as data: a planar bridgeless plain cubic connected map
+; with no four-colouring (a search certificate) has no ring of h + 2 darts nontrivial for m, given the fields of a
+; BirkhoffCheck h m and four-colourings of the maps birkhoff-maps names for the ring.
+(def-fns _ $ (erased birkhoff-ring : (erased (Nat) d x0 h m n0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Ctree)) ts)
+    (erased (List (Mp)) ms1 ms2) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
+    (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
+    (erased (NoExt d e f (Nil (Nat)) (Nil (Nat)) (Nil (Nat))) nce) (erased (Length (Nat) (Cons (Nat) x0 p) (Succ (Succ h))) lr)
+    (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge)
+    (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (BK h ts ctu gtu n0 ctu gtu) bk)
+    (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br) (erased (BNeed d dd1 h m ed1 nd1 fd1 bd1 ts ms1) n1)
+    (erased (BNeed d dd2 h m ed2 nd2 fd2 bd2 ts ms2) n2) (erased (MpCols ms1) c1) (erased (MpCols ms2) c2) -> (erased (False) fl))
+  (let-match erased br (MkBRing _ _ y0 _ _ _ _ _ _ Q er hdA hdB _ _ _ _ _ _ _ _ rm ra cx h1 h2))
+  (let ((erased hf1)) h1)
+  (let ((erased hf2)) h2)
+  (let-match erased hf1 (MkBHalf _ _ _ dr1 _ _ _ _ _ _ _ er1 nr1 fr1 hd1 hr1 _ br1 zs1 RV1 pt1 rb1 rv1 rbr1 ds1 ap1))
+  (let-match erased hf2 (MkBHalf _ _ _ dr2 _ _ _ _ _ _ _ er2 nr2 fr2 hd2 hr2 _ br2 zs2 RV2 pt2 rb2 rv2 rbr2 ds2 ap2))
+  (let ((erased r)) (Cons (Nat) x0 p))
+  (let ((erased RR)) (Cons (Nat) y0 Q))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rg2 pr2 _ _))
+  (let ((erased lr2)) (rr-length e r er RR (Succ (Succ h)) rm ra lr))
+  (let ((erased er3) (erased RR3) (erased hdC) (erased hdD) (erased rm3) (erased ra3) (erased cx3)) (rev-ctx d y0 e n f Q hm gen pl rg2 pr2))
+  (let ((erased cx4)) cx3)
+  (let-match erased cx4 (MkRevCtx _ _ y3 _ _ _ _ Q3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ rg3 _ _ _))
+  (let ((erased dd3) (erased ed3) (erased nd3) (erased fd3) (erased bd3) (erased h3)) (half-of d y3 e n f Q3 hm gen rg3))
+  (let-match erased h3 (MkBHalf _ _ _ dr3 _ _ _ _ _ _ _ er4 nr3 fr3 hd3 hr3 _ br3 zs3 RV3 pt3 rb3 rv3 rbr3 ds3 ap3))
+  (let ((erased R1) (erased cl1)) (ring-disk-closed BL prdc d dd1 dr1 dd2 dr2 e n f ed1 nd1 fd1 er1 nr1 fr1 hd1 hr1 bd1 br1 ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2
+    r RR hdA hdB zs1 zs2 RV2 pt1 rb1 ds1 cx cn pt2 rv2 rbr2 ds2 ap2 cu))
+  (let ((erased R2) (erased cl2)) (ring-disk-closed BL prdc d dd2 dr2 dd3 dr3 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 ed3 nd3 fd3 er4 nr3 fr3 hd3 hr3 bd3 br3
+    RR _ hdC hdD zs2 zs3 RV3 pt2 rb2 ds2 cx3 cn pt3 rv3 rbr3 ds3 ap3 cu))
+  (let ((erased T1)) (MkPred (RArgs) (MkRArgs dd1 ed1 nd1 fd1 bd1) RTP))
+  (let ((erased T2)) (MkPred (RArgs) (MkRArgs dd2 ed2 nd2 fd2 bd2) RTP))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f hm))
+  (def-fns BL
+    ((erased g12 : (erased (List (Col)) c1 c2) (erased (RevApp (Col) c2 (Nil (Col)) c1) rv) (erased (Holds T1 c1) hp) (erased (Holds T2 c2) hq) -> (erased (False) f))
+      (let-match erased hp (MkHolds _ _ _ _ p1))
+      (let-match erased p1 (MkRTP _ _ _ _ _ _ td1))
+      (let-match erased hq (MkHolds _ _ _ _ q1))
+      (let-match erased q1 (MkRTP _ _ _ _ _ _ td2))
+      (glue-ring d x0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 c1 c2 hm cn nce br (revapp-flip (Col) c2 (Nil _) c1 c2 rv (RANil _ c2)) td1 td2))
+    ((erased g21 : (erased (List (Col)) c1 c2) (erased (RevApp (Col) c2 (Nil (Col)) c1) rv) (erased (Holds T2 c1) hp) (erased (Holds T1 c2) hq) -> (erased (False) f))
+      (let-match erased hp (MkHolds _ _ _ _ p1))
+      (let-match erased p1 (MkRTP _ _ _ _ _ _ td2))
+      (let-match erased hq (MkHolds _ _ _ _ q1))
+      (let-match erased q1 (MkRTP _ _ _ _ _ _ td1))
+      (glue-ring d x0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 c2 c1 hm cn nce br rv td1 td2)))
+  (bcs h m n0 ts ctu gtu ce ge gc bk T1 _ T2 _ (mk-side d x0 dd1 h m e n f p ed1 nd1 fd1 bd1 ts ms1 h1 lr n1 c1 R1 cl1)
+    (mk-side d y0 dd2 h m e n f Q ed2 nd2 fd2 bd2 ts ms2 h2 lr2 n2 c2 R2 cl2) (MkBGlue BL T1 T2 g12 g21)))
