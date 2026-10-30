@@ -272,3 +272,40 @@
   (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased ky) (erased py)) (nth-exists _ ks d y lk (perm-val d a y n ni pn back)))
   (trace-nz d a y ka ky ka e n f ks p rc1 c c cs1 et h col rp pka pc rr1 nc1 ctr pc py (node-color d y a ky ka e n f ks h col back py pka)))
+
+(def-fns _ $ (erased absurd addc-self : (erased (Col) a t) (erased (AddC a a t) p) (erased (NZ t) nz) -> (erased (False) r))
+  (match erased p _ (absurd (Add00) nz) (absurd (Add11) nz) (absurd (Add22) nz) (absurd (Add33) nz)))
+
+; (a + g) + x = (a + x) + g.
+(def-fns _ $ (erased addc-mid : (erased (Col) a g c x e1 h) (erased (AddC a g c) pc) (erased (AddC a x e1) px) (erased (AddC e1 g h) ph)
+    -> (erased (AddC c x h) r))
+  (let ((erased t) (erased pt)) (addc-c c x))
+  (let ((erased gx) (erased pgx)) (addc-c g x))
+  (let-match erased (addc-fn a gx t h (addc-assoc a g x c gx t pc pt pgx) (addc-assoc a x g e1 gx h px ph (addc-comm g x gx pgx))) (Refl _ _))
+  pt)
+
+; A Y step replaces the first entry e1 of a ring trace by g and h, for nonzero g and h with e1 + g = h.
+(def-fns _ $ (erased cpcol-y : (erased (List (Step)) cp) (erased (List (Col)) r1) (erased (Col) e1 g h) (erased (CpCol cp (Cons (Col) e1 r1)) cc)
+    (erased (AddC e1 g h) p) (erased (NZ g) ng) (erased (NZ h) nh) -> (erased (CpCol (Cons (Step) (SY) cp) (Cons (Col) g (Cons (Col) h r1))) res))
+  (let ((erased nzs)) (cpcol-nz cp _ cc))
+  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
+  (let-match erased tr (MkTrace a cs1 _ ctr))
+  (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
+  (let-match erased ctr (CTStep _ _ x _ cs2 _ pax ctr1)
+    (absurd (CTLast _ _ _ paa) (let-match erased nzs (AllNZCons _ _ nz0 _)) (addc-self a e1 paa nz0)))
+  (let-match erased nc1 (NCsCons kx _ rc2 _ px1 nc2))
+  (let ((erased c) (erased pc)) (addc-c a g))
+  (let ((erased kc) (erased lc) (erased pkc)) (ncol-num c))
+  (let ((erased acg)) (addc-cancel a c g pc))
+  (let ((erased e1m) (erased f1m) (erased r1m) (erased stu) (erased n1) (erased pm1)) (ecpU-c d e f r n pm))
+  (let ((erased ks1) (erased col1) (erased rr1)) (ecpU-color d kc ka e n f r e1m f1m r1m ks rc1 pm stu col rr lc
+    (apart-sym ka kc (nz-apart ka kc a c g pa pkc acg ng))))
+  (let ((erased e2) (erased f2) (erased r2) (erased stn) (erased n2) (erased pm2)) (ecpN-c (Succ (Succ d)) e1m f1m r1m n1 pm1))
+  (let ((erased cxh)) (addc-mid a g c x e1 h pc pax p))
+  (let ((erased ks2) (erased col2) (erased rr2)) (ecpN-color (Succ (Succ d)) kc kx e1m n1 f1m r1m e2 f2 r2 ks1 _ _ pm1 stn col1 rr1
+    (R3Four ka kc ka kx rc2) (nz-apart kc kx c x h pkc px1 cxh nh)))
+  (MkCpCol (Cons (Step) (SY) cp) (Succ (Succ (Succ (Succ d)))) e2 f2 r2 ks2 _ (Cons (Col) a (Cons (Col) c (Cons (Col) x cs2))) _
+    (CmY d cp e f r e1m f1m r1m e2 f2 r2 cm stu stn) col2 rr2
+    (NCsCons ka a _ _ pa (NCsCons kc c _ _ pkc (NCsCons kx x _ _ px1 nc2)))
+    (MkTrace a _ _ (CTStep a a c g _ _ acg (CTStep a c x h _ _ cxh ctr1)))))
