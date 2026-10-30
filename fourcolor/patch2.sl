@@ -327,3 +327,98 @@
       (outer-moves-g d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri L labf rsf ids LH outer inner gf gf gfr pt hv pmf pmfr grf grfr io rof clf llf dhr lhr uhr rlh spo
         (graph-fun d f gf grf))
       (MkClasses gf d kf ids labf rsf io llf lrf drf fixf clf rof) uo)))
+
+; patch_gcomp: a map is patched, along empty rings, from the darts h of a set closed under its permutations and the others, each
+; renumbered by its position in its list.
+
+(def-fns _ $ (erased app-nth : (erased (List (Nat)) pre ys zs) (erased (Nat) y j) (subterm erased (AppN pre (Cons (Nat) y ys) zs) ap) (erased (Length (Nat) pre j) l)
+    -> (erased (Nth (Nat) zs j y) r))
+  (let-match erased ap (AppCons pre1 _ zs1 a ap1) ((AppNil _) (let-match erased l (LengthNil _)) (NthHere _ y ys)))
+  (let-match erased l (LengthCons _ _ _ j1 l1))
+  (NthThere _ a zs1 j1 y (app-nth pre1 ys zs1 y j1 ap1 l1)))
+
+(def-fns _ $ (erased app-step : (erased (List (Nat)) pre ys zs) (erased (Nat) y) (subterm erased (AppN pre (Cons (Nat) y ys) zs) ap)
+    -> (erased (List (Nat)) pre2) (erased (HSnoc (Nat) pre y pre2) s) (erased (AppN pre2 ys zs) r))
+  (let-match erased ap (AppCons pre1 _ zs1 a ap1) ((AppNil _) (values (Cons _ y (Nil _)) (SnocNil _ y) (AppCons (Nil _) ys ys y (AppNil ys)))))
+  (let ((erased pre3) (erased s1) (erased r1)) (app-step pre1 ys zs1 y ap1))
+  (values (Cons _ a pre3) (SnocCons _ a y pre1 pre3 s1) (AppCons pre3 ys zs1 a r1)))
+
+; pos sends the darts of h to their positions in h: pos . h = 0..k-1, read from the position j of the suffix rest of h.
+(def-fns _ $ (erased inv-iota : (erased (Nat) d k j m) (erased (List (Nat)) h ids pos idk pre rest P S) (erased (InvL h ids pos) iv) (erased (Distinct h) dh)
+    (erased (Iota d ids) io) (erased (Under h d) uh) (erased (Iota k idk) iok) (erased (AppN pre rest h) ap) (erased (Length (Nat) pre j) lp)
+    (erased (AppN P S idk) aq) (erased (Length (Nat) P j) lq) (subterm erased (Length (Nat) rest m) lr) (erased (Length (Nat) S m) ls)
+    -> (erased (Respects pos rest S) r))
+  (let-match erased lr (LengthCons _ x rest1 m1 lr1) ((LengthNil _) (let-match erased ls (LengthNil _)) (RespNil pos)))
+  (let-match erased ls (LengthCons _ s S1 _ ls1))
+  (let ((erased px)) (app-nth pre rest1 h x j ap lp))
+  (let-match erased (iota-at k j s idk iok (app-nth P S1 idk s j aq lq)) (Refl _ _))
+  (let ((erased pre2) (erased sp) (erased ap2)) (app-step pre rest1 h x ap))
+  (let ((erased P2) (erased sq) (erased aq2)) (app-step P S1 idk j aq))
+  (RespCons pos rest1 S1 x j (inv-nth h ids pos x x j iv dh (iota-nth d x ids io (under-nth h j x d uh px)) px)
+    (inv-iota d k (Succ j) m1 h ids pos idk pre2 rest1 P2 S1 iv dh io uh iok ap2 (snoc-length _ pre pre2 x j sp lp) aq2 (snoc-length _ P P2 j j sq lq) lr1 ls1)))
+
+; h . pos is the identity on the darts of h.
+(def-fns _ $ (erased inv-back : (erased (Nat) d) (erased (List (Nat)) h ids pos xs ys) (erased (InvL h ids pos) iv) (erased (Distinct h) dh) (erased (Iota d ids) io)
+    (erased (Under h d) uh) (erased (Sub xs h) sx) (subterm erased (Respects pos xs ys) rp) -> (erased (Respects h ys xs) r))
+  (let-match erased rp (RespCons _ xs1 ys1 w j pw rp1) ((RespNil _) (RespNil h)))
+  (let-match erased sx (HSubCons _ _ _ iw sx1))
+  (let ((erased j2) (erased hw)) (in-nth w h iw))
+  (let-match erased (nth-fn _ pos w j j2 pw (inv-nth h ids pos w w j2 iv dh (iota-nth d w ids io (under-nth h j2 w d uh hw)) hw)) (Refl _ _))
+  (RespCons h ys1 xs1 j w hw (inv-back d h ids pos xs1 ys1 iv dh io uh sx1 rp1)))
+
+; p sends the darts of xs, in h, into h when h is shut under the bonds of p.
+(def-fns _ $ (erased resp-shut : (erased (Nat) d) (erased (List (Nat)) p h xs ys) (erased (List (Bond)) gp) (erased (Graph d p gp) gr) (erased (Shut h gp) sh)
+    (erased (Sub xs h) sx) (subterm erased (Respects p xs ys) rp) -> (erased (Sub ys h) r))
+  (let-match erased rp (RespCons _ xs1 ys1 x y px rp1) ((RespNil _) (HSubNil h)))
+  (let-match erased sx (HSubCons _ _ _ ix sx1))
+  (HSubCons y ys1 h (shut-adj-in h gp x y (graph-adj d x y p gp gr px) sh ix) (resp-shut d p h xs1 ys1 gp gr sh sx1 rp1)))
+
+; A set shut under the bonds of a permutation is shut under those of its inverse.
+(def-fns _ $ (erased shut-inv : (erased (Nat) d) (erased (List (Nat)) p q h) (erased (List (Bond)) gp g) (erased (HPerm d p q) pm) (erased (Graph d p gp) gr)
+    (erased (Shut h gp) sh) (subterm erased (Fun q g) fn) -> (erased (Shut h g) r))
+  (let-match erased fn (FunCons _ g1 x y qx fn1) ((FunNil _) (ShutNil h)))
+  (let ((erased rest)) (shut-inv d p q h gp g1 pm gr sh fn1))
+  (let ((erased a)) (adj-sym gp y x (graph-adj d y x p gp gr (perm-inv d x y q p (perm-sym d p q pm) qx))))
+  (match erased (in-dec x h) _
+    ((OrL _ _ ix) (ShutIn h g1 x y ix (shut-adj-in h gp x y a sh ix) rest))
+    ((OrR _ _ ox) (ShutOut h g1 x y ox (shut-adj-out h gp x y a sh ox) rest))))
+
+(def-fns _ $ (erased morph-of : (erased (Nat) d k) (erased (List (Nat)) h p q pk ph m) (erased (HPerm d p q) pm) (erased (Length (Nat) h k) lh) (erased (Length (Nat) pk k) lk)
+    (erased (Under h d) uh) (erased (Respects p h ph) rph) (erased (Respects h pk ph) rk) (subterm erased (Under m k) u) -> (erased (MorphOff h pk p (Nil (Nat)) m) r))
+  (let-match erased u (UnderCons m1 i _ li u1) ((UnderNil _) (MONil h pk p (Nil _))))
+  (let ((erased z) (erased hz)) (nth-exists _ h k i lh li))
+  (let ((erased w) (erased pz) (erased lw)) (perm-nth d z p q pm (under-nth h i z d uh hz)))
+  (let ((erased j) (erased pj)) (nth-exists _ pk k i lk li))
+  (MOAt h pk p (Nil _) m1 i j z w pj hz (respects-nth h pk ph i j w rk pj (respects-at p h ph i z w rph hz pz)) pz
+    (morph-of d k h p q pk ph m1 pm lh lk uh rph rk u1)))
+
+; The restriction pk of a permutation p of 0..d-1 to the darts h, shut under p, renumbered by their positions pos in h, is a
+; permutation of 0..k-1 with h (pk i) = p (h i).
+(def-fns _ $ (erased sub-perm : (erased (Nat) d k) (erased (List (Nat)) p q h ids pos idk) (erased (List (Bond)) gp gq) (erased (HPerm d p q) pm)
+    (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) (erased (Shut h gp) shp) (erased (Shut h gq) shq) (erased (Iota d ids) io) (erased (Iota k idk) iok)
+    (erased (Distinct h) dh) (erased (Length (Nat) h k) lh) (erased (Under h d) uh) (erased (InvL h ids pos) iv) (erased (Length (Nat) pos d) lpos)
+    -> (erased (List (Nat)) pk qk) (erased (HPerm k pk qk) pmk) (erased (MorphOff h pk p (Nil (Nat)) idk) mp) (erased (MorphOff h qk q (Nil (Nat)) idk) mq))
+  (let ((erased pmq)) (perm-sym d p q pm))
+  (let-match erased pm (HMkPerm _ _ _ ids2 io2 lp qp pq))
+  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
+  (let ((erased lq)) (perm-length d q p pmq))
+  (let ((erased ph) (erased rph)) (respects-exists p h d uh lp))
+  (let ((erased qh) (erased rqh)) (respects-exists q h d uh lq))
+  (let ((erased pk) (erased rpk)) (respects-exists pos ph d (respects-under-vals p h ph d rph (perm-under d p q pm)) lpos))
+  (let ((erased qk) (erased rqk)) (respects-exists pos qh d (respects-under-vals q h qh d rqh (perm-under d q p pmq)) lpos))
+  (let ((erased lph)) (respects-length p h ph k rph lh))
+  (let ((erased lqh)) (respects-length q h qh k rqh lh))
+  (let ((erased lpk)) (respects-length pos ph pk k rpk lph))
+  (let ((erased lqk)) (respects-length pos qh qk k rqk lqh))
+  (let ((erased shh)) (sub-refl h))
+  (let ((erased ak)) (inv-back d h ids pos ph pk iv dh io uh (resp-shut d p h h ph gp grp shp shh rph) rpk))
+  (let ((erased bk)) (inv-back d h ids pos qh qk iv dh io uh (resp-shut d q h h qh gq grq shq shh rqh) rqk))
+  (let ((erased idh)) (respects-id-left d ids h io uh))
+  (let ((erased ph-h)) (respects-assoc-inv h p q ph ids h rph idh qp))
+  (let ((erased qh-h)) (respects-assoc-inv h q p qh ids h rqh idh pq))
+  (let ((erased posh)) (inv-iota d k (Zero) k h ids pos idk (Nil _) h (Nil _) idk iv dh io uh iok (AppNil h) (LengthNil _) (AppNil idk) (LengthNil _) lh (iota-length k idk iok)))
+  (let ((erased qkpk)) (respects-assoc pk qh pos h qk idk k (respects-assoc pk h q ph qh h k ak ph-h rqh lqh lh) posh rqk lqk lqh))
+  (let ((erased pkqk)) (respects-assoc qk ph pos h pk idk k (respects-assoc qk h p qh ph h k bk qh-h rph lph lh) posh rpk lpk lph))
+  (let ((erased uidk)) (perm-under k idk idk (perm-id k idk iok)))
+  (values pk qk (HMkPerm k pk qk idk iok lpk qkpk pkqk)
+    (morph-of d k h p q pk ph idk pm lh lpk uh rph ak uidk) (morph-of d k h q p qk qh idk pmq lh lqk uh rqh bk uidk)))
