@@ -224,3 +224,160 @@
   (match erased ne _
     ((ApLt _ _ _ _ l) (compat-in-lt es m k a b c d dr e1 e2 l))
     ((ApGt _ _ _ _ l) (compat-sym c d a b (compat-in-lt es k m c d a b dr e2 e1 l)))))
+
+(def-fns _ $ (erased nth-inj : (erased (List (Point)) pts) (erased (Nat) i j) (erased (Point) x) (erased (PW (Point) LexLt pts) sp)
+    (erased (Nth (Point) pts i x) ni) (erased (Nth (Point) pts j x) nj) -> (erased (Eq (Nat) i j) e))
+  (match erased (nat-cmp i j) _
+    (absurd (CLt _ _ _ _ l) (lex-irrefl x (pw-nth _ _ pts i j x x sp ni nj l)))
+    ((CEq _ _ _) (Refl _ i))
+    (absurd (CGt _ _ _ _ l) (lex-irrefl x (pw-nth _ _ pts j i x x sp nj ni l)))))
+
+(def-fns _ $ (erased ei-same : (erased (List (Edge)) es) (erased (Nat) m) (erased (Point) a b p q)
+    (erased (EdgeIn es m a b) e1) (erased (EdgeIn es m p q) e2) -> (erased (Or (Eq (Point) p a) (Eq (Point) p b)) r))
+  (match erased e1 _
+    ((EIFwd _ _ _ _ n1)
+      (match erased e2 _
+        ((EIFwd _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrL _ _ (Refl _ p)))
+        ((EIRev _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrR _ _ (Refl _ p)))))
+    ((EIRev _ _ _ _ n1)
+      (match erased e2 _
+        ((EIFwd _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrR _ _ (Refl _ p)))
+        ((EIRev _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrL _ _ (Refl _ p)))))))
+
+; A drawn point strictly inside the span of a drawn edge is off its line.
+(def-fns _ $ (erased offline-at : (erased (List (Edge)) es) (erased (Drawing es) dr) (erased (Nat) m mp) (erased (Point) a b p q)
+    (erased (EdgeIn es m a b) e1) (erased (EdgeIn es mp p q) e2) (erased (LexLt a p) lap) (erased (LexLt p b) lpb) -> (erased (OffLine a b p) o))
+  (match erased (cmp-eq _ _ _ _ (nat-cmp m mp)) _
+    ((Unequal _ _ _ _ ne) (compat-off a b p q (compat-in es m mp a b p q dr e1 e2 ne) (ApGt _ _ p a lap) (ApLt _ _ p b lpb)))
+    (absurd (Equal _ _ _)
+      (match erased (ei-same es m a b p q e1 e2) _
+        (absurd (OrL _ _ e) (let-match erased e (Refl _ _)) (lex-irrefl p lap))
+        (absurd (OrR _ _ e) (let-match erased e (Refl _ _)) (lex-irrefl p lpb))))))
+
+; The sweep is at point p, number k of pts, an end of the edge mp of es.
+(def-adts $ (Here : ((List (Edge)) es) ((List (Point)) pts) ((Nat) k) ((Point) p) -> Type)
+  enum
+  (many MkHere : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p)
+      (erased (Drawing es) dr) (erased (PW (Point) LexLt pts) sp) (erased (Nth (Point) pts k p) np)
+      (erased (Nat) mp) (erased (Point) q) (erased (EdgeIn es mp p q) ep) -> (Here es pts k p)))
+
+(def-adts $ (Ctx : -> Type)
+  enum
+  (many MkCtx : (many (List (Edge)) es) (many (List (Point)) pts) (many (Nat) k) (many (List (Edge)) l) -> (Ctx)))
+
+; The edge ab, with a before b, is crossed by the sweep between points k-1 and k.
+(def-adts $ (Act : ((Ctx) c) ((Edge) e) -> Type)
+  enum
+  (many MkAct : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) l) (erased (Point) a b)
+      (erased (Nat) i j m) (erased (EdgeIn es m a b) ei) (erased (Nth (Point) pts i a) na) (erased (Nth (Point) pts j b) nb)
+      (erased (Lt i k) lik) (erased (Lt k (Succ j)) lkj) -> (Act (MkCtx es pts k l) (MkEdge a b))))
+
+(def-adts $ (Abv : ((Point) p) ((Edge) e) -> Type)
+  enum
+  (many MkAbv : (erased (Point) a b p) (erased (LexLt a p) l1) (erased (LexLt p b) l2) (erased (Left a b p) h) -> (Abv p (MkEdge a b))))
+
+(def-adts $ (AtP : ((Point) p) ((Edge) e) -> Type)
+  enum
+  (many MkAtP : (erased (Point) a p) (erased (LexLt a p) l1) -> (AtP p (MkEdge a p))))
+
+(def-adts $ (Und : ((Point) p) ((Edge) e) -> Type)
+  enum
+  (many MkUnd : (erased (Point) a b p) (erased (LexLt a p) l1) (erased (LexLt p b) l2) (erased (Left b a p) h) -> (Und p (MkEdge a b))))
+
+(def-adts $ (Side : ((Point) p) ((Edge) e) -> Type)
+  enum
+  (many StA : (erased (Point) p) (erased (Edge) e) (erased (Abv p e) s) -> (Side p e))
+  (many StT : (erased (Point) p) (erased (Edge) e) (erased (AtP p e) s) -> (Side p e))
+  (many StU : (erased (Point) p) (erased (Edge) e) (erased (Und p e) s) -> (Side p e)))
+
+(def-fns _ $ (erased stat-of : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (List (Edge)) l)
+    (erased (Edge) e) (erased (Here es pts k p) hr) (erased (Act (MkCtx es pts k l) e) ac) -> (erased (Side p e) s))
+  (let-match erased hr (MkHere _ _ _ _ dr sp np mp q ep))
+  (let-match erased ac (MkAct _ _ _ _ a b i j m ei na nb lik lkj))
+  (let ((erased lap)) (pw-nth _ _ pts i k a p sp na np lik))
+  (match erased (nat-cmp k j) _
+    ((CEq _ _ _) (let-match erased (nth-fn _ pts k p b np nb) (Refl _ _)) (StT p e (MkAtP a p lap)))
+    ((CLt _ _ _ _ lt)
+      (let ((erased lpb)) (pw-nth _ _ pts k j p b sp np nb lt))
+      (match erased (offline-at es dr m mp a b p q ei ep lap lpb) _
+        ((OffLeft _ _ _ h) (StA p e (MkAbv a b p lap lpb h)))
+        ((OffRight _ _ _ h) (StU p e (MkUnd a b p lap lpb h)))))
+    (absurd (CGt _ _ _ _ gt) (lt-asym j k gt lkj))))
+
+(def-adts $ (SB : ((Edge) e) ((Edge) f) -> Type)
+  enum
+  (many MkSB : (erased (Point) a b c d) (erased (Below (MkEdge a b) (MkEdge c d)) bl) (erased (Compatible a b c d) cp)
+      -> (SB (MkEdge a b) (MkEdge c d))))
+
+(def-adts $ (TU : ((Point) p) ((Edge) e) -> Type)
+  enum
+  (many TUT : (erased (Point) p) (erased (Edge) e) (erased (AtP p e) s) -> (TU p e))
+  (many TUU : (erased (Point) p) (erased (Edge) e) (erased (Und p e) s) -> (TU p e)))
+
+(def-fns _ $ (erased under-tail : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (List (Edge)) l)
+    (erased (Edge) x) (erased (List (Edge)) ys) (erased (Here es pts k p) hr) (erased (Und p x) ux)
+    (subterm erased (AllR (Edge) (Edge) SB x ys) sb) (erased (AllR (Ctx) (Edge) Act (MkCtx es pts k l) ys) acts) ->
+    (erased (AllR (Point) (Edge) Und p ys) r))
+  (let-match erased sb (ARCons _ _ _ _ y ys1 sxy sb1) ((ARNil _ _ _ _) (ARNil _ _ _ p)))
+  (let-match erased acts (ARCons _ _ _ _ _ _ ay acts1))
+  (let-match erased ux (MkUnd a b _ lap lpb hu))
+  (let-match erased sxy (MkSB _ _ c d bl cp))
+  (let ((erased lab)) (lex-trans a p b lap lpb))
+  (ARCons _ _ _ p y ys1
+    (match erased (stat-of es pts k p l y hr ay) _
+      (absurd (StA _ _ s) (let-match erased s (MkAbv _ _ _ lcp lpd ho))
+        (sweep-under-over a b c d p bl cp lab (lex-trans c p d lcp lpd) lap lpb lcp lpd hu ho))
+      (absurd (StT _ _ s) (let-match erased s (MkAtP _ _ lcp)) (sweep-end-under a b c p bl cp lcp lap lpb hu))
+      ((StU _ _ s) s))
+    (under-tail es pts k p l x ys1 hr ux sb1 acts1)))
+
+(def-fns _ $ (erased at-tail : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (List (Edge)) l)
+    (erased (Edge) x) (erased (List (Edge)) ys) (erased (Here es pts k p) hr) (erased (AtP p x) tx)
+    (subterm erased (AllR (Edge) (Edge) SB x ys) sb) (erased (AllR (Ctx) (Edge) Act (MkCtx es pts k l) ys) acts) ->
+    (erased (AllR (Point) (Edge) TU p ys) r))
+  (let-match erased sb (ARCons _ _ _ _ y ys1 sxy sb1) ((ARNil _ _ _ _) (ARNil _ _ _ p)))
+  (let-match erased acts (ARCons _ _ _ _ _ _ ay acts1))
+  (let-match erased tx (MkAtP a _ lap))
+  (let-match erased sxy (MkSB _ _ c d bl cp))
+  (ARCons _ _ _ p y ys1
+    (match erased (stat-of es pts k p l y hr ay) _
+      (absurd (StA _ _ s) (let-match erased s (MkAbv _ _ _ lcp lpd ho)) (sweep-end-over a p c d bl cp lap lcp lpd ho))
+      ((StT _ _ s) (TUT p y s))
+      ((StU _ _ s) (TUU p y s)))
+    (at-tail es pts k p l x ys1 hr tx sb1 acts1)))
+
+(def-fns _ $ (erased split-t : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (List (Edge)) l)
+    (erased (List (Edge)) xs) (erased (Here es pts k p) hr) (subterm erased (AllR (Point) (Edge) TU p xs) tus)
+    (erased (PW (Edge) SB xs) pw) (erased (AllR (Ctx) (Edge) Act (MkCtx es pts k l) xs) acts) ->
+    (erased (List (Edge)) r q) (erased (LApp (Edge) r q xs) a) (erased (AllR (Point) (Edge) AtP p r) ats) (erased (AllR (Point) (Edge) Und p q) uns))
+  (let-match erased tus (ARCons _ _ _ _ x xs1 tx tus1)
+    ((ARNil _ _ _ _) (values (Nil _) (Nil _) (LAppNil _ (Nil _)) (ARNil _ _ _ p) (ARNil _ _ _ p))))
+  (let-match erased pw (PWCons _ _ _ _ h pw1))
+  (let-match erased acts (ARCons _ _ _ _ _ _ ax acts1))
+  (let-match erased tx (TUT _ _ s)
+    ((TUU _ _ s) (values (Nil _) xs (LAppNil _ xs) (ARNil _ _ _ p) (ARCons _ _ _ p x xs1 s (under-tail es pts k p l x xs1 hr s h acts1)))))
+  (let ((erased r1) (erased q) (erased a) (erased ats) (erased uns)) (split-t es pts k p l xs1 hr tus1 pw1 acts1))
+  (values (Cons _ x r1) q (LAppCons _ x r1 q xs1 a) (ARCons _ _ _ p x r1 s ats) uns))
+
+; The active edges, bottom to top, are those p is above, then those ending at p, then those p is below.
+(def-fns _ $ (erased split-a : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (List (Edge)) l)
+    (erased (List (Edge)) xs) (erased (Here es pts k p) hr) (subterm erased (PW (Edge) SB xs) pw)
+    (erased (AllR (Ctx) (Edge) Act (MkCtx es pts k l) xs) acts) ->
+    (erased (List (Edge)) pp r q pr) (erased (LApp (Edge) pp r pr) a1) (erased (LApp (Edge) pr q xs) a2)
+    (erased (AllR (Point) (Edge) Abv p pp) abs) (erased (AllR (Point) (Edge) AtP p r) ats) (erased (AllR (Point) (Edge) Und p q) uns))
+  (let-match erased pw (PWCons _ _ x xs1 h pw1)
+    ((PWNil _ _) (values (Nil _) (Nil _) (Nil _) (Nil _) (LAppNil _ (Nil _)) (LAppNil _ (Nil _)) (ARNil _ _ _ p) (ARNil _ _ _ p) (ARNil _ _ _ p))))
+  (let-match erased acts (ARCons _ _ _ _ _ _ ax acts1))
+  (match erased (stat-of es pts k p l x hr ax) _
+    ((StA _ _ s)
+      (let ((erased p1) (erased r) (erased q) (erased pr1) (erased a1) (erased a2) (erased abs) (erased ats) (erased uns))
+        (split-a es pts k p l xs1 hr pw1 acts1))
+      (values (Cons _ x p1) r q (Cons _ x pr1) (LAppCons _ x p1 r pr1 a1) (LAppCons _ x pr1 q xs1 a2) (ARCons _ _ _ p x p1 s abs) ats uns))
+    ((StT _ _ s)
+      (let ((erased r1) (erased q) (erased a) (erased ats) (erased uns))
+        (split-t es pts k p l xs1 hr (at-tail es pts k p l x xs1 hr s h acts1) pw1 acts1))
+      (values (Nil _) (Cons _ x r1) q (Cons _ x r1) (LAppNil _ (Cons _ x r1)) (LAppCons _ x r1 q xs1 a) (ARNil _ _ _ p)
+        (ARCons _ _ _ p x r1 s ats) uns))
+    ((StU _ _ s)
+      (values (Nil _) (Nil _) xs (Nil _) (LAppNil _ (Nil _)) (LAppNil _ xs) (ARNil _ _ _ p) (ARNil _ _ _ p)
+        (ARCons _ _ _ p x xs1 s (under-tail es pts k p l x xs1 hr s h acts1))))))
