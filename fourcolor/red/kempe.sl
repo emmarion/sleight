@@ -238,8 +238,10 @@
   ((CEv : ((Ctree) t) ((ES) st) -> Type)
     enum
     (many CEvE : (erased (ES) st) -> (CEv (CEmpty) st))
-    (many CEvS : (erased (Ctree) t) (erased (ES) st) (erased (NotOdd st) n) (erased (CEvAt t st (C0)) a0) (erased (CEvAt t st (C1)) a1)
-        (erased (CEvAt t st (C2)) a2) (erased (CEvAt t st (C3)) a3) -> (CEv t st)))
+    (many CEvEv : (erased (Ctree) t) -> (CEv t (ESEven)))
+    (many CEvL : (erased (Ctree) lf) (erased (ES) st) (erased (NotOdd st) n) -> (CEv (CLeaf lf) st))
+    (many CEvN : (erased (Ctree) t1 t2 t3) (erased (ES) st) (erased (CEvAt (CNode t1 t2 t3) st (C0)) a0) (erased (CEvAt (CNode t1 t2 t3) st (C1)) a1)
+        (erased (CEvAt (CNode t1 t2 t3) st (C2)) a2) (erased (CEvAt (CNode t1 t2 t3) st (C3)) a3) -> (CEv (CNode t1 t2 t3) st)))
   ((CEvAt : ((Ctree) t) ((ES) st) ((Col) e) -> Type)
     enum
     (many MkCEvAt : (erased (Ctree) t u) (erased (ES) st st2) (erased (Col) e) (erased (CtSel t e u) s) (erased (ESStep st e st2) p)
@@ -249,12 +251,14 @@
     (erased (ERun st et (BTrue)) r))
   (match erased c _
     (absurd (CEvE _) (mem-empty et m))
-    ((CEvS _ _ n a0 a1 a2 a3)
-      (match erased et _
-        ((Nil _) (ERNil st (BTrue) (notodd-end st n)))
-        ((Cons _ e et1)
-          (let-match erased (match erased e (((CEvAt t st e) k)) ((C0) a0) ((C1) a1) ((C2) a2) ((C3) a3)) (MkCEvAt _ u _ st2 _ s p c1))
-          (ERCons st st2 e et1 (BTrue) p (cev-mem u st2 et1 c1 (mem-sel t u e et1 m s))))))))
+    ((CEvEv _) (run-even et))
+    ((CEvL lf _ n) (let-match erased (leaf-mem-nil lf et m) (Refl _ _)) (ERNil st (BTrue) (notodd-end st n)))
+    ((CEvN t1 t2 t3 _ a0 a1 a2 a3)
+      (let ((erased e) (erased et1) (erased q) (erased u) (erased s) (erased m1)) (cons-mem t1 t2 t3 t et (CCNode t1 t2 t3) m))
+      (let-match erased q (Refl _ _))
+      (let-match erased (match erased e (((CEvAt t st e) k)) ((C0) a0) ((C1) a1) ((C2) a2) ((C3) a3)) (MkCEvAt _ u2 _ st2 _ s2 p c1))
+      (let-match erased (sel-fn t u u2 e s s2) (Refl _ _))
+      (ERCons st st2 e et1 (BTrue) p (cev-mem u st2 et1 c1 m1)))))
 
 ; One step of a balanced completion: from d open chords and parity b, the symbol s leads to d2 and b2.
 (def-adts $ (GStep : ((Nat) d) ((Bool) b) ((Gsym) s) ((Nat) d2) ((Bool) b2) -> Type)
@@ -271,6 +275,7 @@
     (many GCNilOk : (erased (GSet) gs) (erased (Nat) d) (erased (Bool) b) (erased (GBal d b (Nil (Gsym))) g) (erased (GRoot gs (Succ (Zero))) r)
         -> (GCov gs d b (Zero)))
     (many GCNilBad : (erased (GSet) gs) (erased (Nat) d) (erased (Bool) b) (erased (EndBad d b) e) -> (GCov gs d b (Zero)))
+    (many GCVac : (erased (GSet) gs) (erased (Nat) d n) (erased (Bool) b) (erased (Lt (Succ n) d) l) -> (GCov gs d b n))
     (many GCCons : (erased (GSet) gs) (erased (Nat) d n) (erased (Bool) b) (erased (GCovAt gs d b n (GPush)) c0) (erased (GCovAt gs d b n (GSkip)) c1)
         (erased (GCovAt gs d b n (GPop0)) c2) (erased (GCovAt gs d b n (GPop1)) c3) -> (GCov gs d b (Succ n))))
   ((GCovAt : ((GSet) gs) ((Nat) d) ((Bool) b) ((Nat) n) ((Gsym) s) -> Type)
@@ -296,17 +301,28 @@
     ((GBPop0 d1 _ _ g1) (values d1 b (GStPop0 d1 b) g1))
     ((GBPop1 d1 _ c _ n g1) (values d1 c (GStPop1 d1 b c n) g1))))
 
-(def-fns _ $ (erased gcov-mem : (erased (GSet) gs) (erased (Nat) d n) (erased (Bool) b) (subterm erased (List (Gsym)) w) (erased (GCov gs d b n) c)
-    (erased (Length (Gsym) w n) l) (erased (GBal d b w) g) -> (erased (GMem gs w) r))
+(def-fns _ $ (erased gbal-depth : (erased (Nat) d n) (erased (Bool) b) (subterm erased (List (Gsym)) w) (erased (GBal d b w) g)
+    (erased (Length (Gsym) w n) l) -> (erased (Lt d (Succ (Succ n))) r))
   (match erased w _
     ((Nil _)
       (let-match erased l (LengthNil _))
-      (match erased c _
-        ((GCNilOk _ _ _ _ rt) (let-match erased rt (GROne)) (GMNil))
-        (absurd (GCNilBad _ _ _ e) (endbad-bal d b e g))))
+      (match erased g _ ((GBEnd0) (LtZ (Succ (Zero)))) ((GBEnd1 _) (LtS (Zero) (Succ (Zero)) (LtZ (Zero))))))
     ((Cons _ s w1)
       (let-match erased l (LengthCons _ _ _ n1 l1))
-      (let-match erased c (GCCons _ _ _ _ c0 c1 c2 c3))
+      (match erased g _
+        ((GBPush _ _ _ g1) (lt-weaken d (Succ (Succ n1)) (lt-weaken d (Succ n1) (lt-pred d (Succ n1) (gbal-depth (Succ d) n1 b w1 g1 l1)))))
+        ((GBSkip _ _ c _ _ g1) (lt-weaken d (Succ n) (gbal-depth d n1 c w1 g1 l1)))
+        ((GBPop0 d1 _ _ g1) (LtS d1 (Succ n) (gbal-depth d1 n1 b w1 g1 l1)))
+        ((GBPop1 d1 _ c _ _ g1) (LtS d1 (Succ n) (gbal-depth d1 n1 c w1 g1 l1)))))))
+
+(def-fns _ $ (erased gcov-mem : (erased (GSet) gs) (erased (Nat) d n) (erased (Bool) b) (subterm erased (List (Gsym)) w) (erased (GCov gs d b n) c)
+    (erased (Length (Gsym) w n) l) (erased (GBal d b w) g) -> (erased (GMem gs w) r))
+  (match erased c _
+    (absurd (GCVac _ _ _ _ lv) (lt-asym (Succ n) d lv (gbal-depth d n b w g l)))
+    ((GCNilOk _ _ _ _ rt) (let-match erased l (LengthNil _)) (let-match erased rt (GROne)) (GMNil))
+    (absurd (GCNilBad _ _ _ e) (let-match erased l (LengthNil _)) (endbad-bal d b e g))
+    ((GCCons _ _ n1 _ c0 c1 c2 c3)
+      (let-match erased l (LengthCons _ s w1 _ l1))
       (let ((erased d2) (erased b2) (erased st) (erased g1)) (gbal-step d b s w1 g))
       (match erased (match erased s (((GCovAt gs d b n1 s) k)) ((GPush) c0) ((GSkip) c1) ((GPop0) c2) ((GPop1) c3)) _
         ((GCAOk _ gs2 _ d3 _ _ b3 _ st2 p c4)
@@ -344,20 +360,25 @@
       (let-match erased (pcnt-fn rest et b b2 ca ca2) (Refl _ _))
       (add-fn a b n m pa pa2))))
 
+(def-adts $ (RSCons : ((Bstack) bs) ((GSet) gs) ((List RS) a) ((List RS) b) -> Type)
+  enum
+  (many RSE : (erased (Bstack) bs) (erased (List RS) a) -> (RSCons bs (GSG (GEmpty)) a a))
+  (many RSC : (erased (Bstack) bs) (erased (GSet) gs) (erased (List RS) a) -> (RSCons bs gs a (Cons RS (MkRx (GSet) bs gs) a))))
+
 (def-adts $ (PPop : ((Bstack) bs) ((Col) e) ((GSet) gs) ((List RS) a) ((List RS) c) -> Type)
   enum
   (many PPNone : (erased (Col) e) (erased (GSet) gs) (erased (List RS) a) -> (PPop (BS0) e gs a a))
-  (many PPSome : (erased (Bstack) bs b) (erased (Gsym) s) (erased (Col) e) (erased (GSet) gs g2) (erased (List RS) a)
-      (erased (Popped bs b) pp) (erased (Sym s bs e b) z) (erased (GSel gs s g2) p) -> (PPop bs e gs a (Cons RS (MkRx (GSet) b g2) a))))
+  (many PPSome : (erased (Bstack) bs b) (erased (Gsym) s) (erased (Col) e) (erased (GSet) gs g2) (erased (List RS) a c)
+      (erased (Popped bs b) pp) (erased (Sym s bs e b) z) (erased (GSel gs s g2) p) (erased (RSCons b g2 a c) q) -> (PPop bs e gs a c)))
 
 ; b is a with the gram sets of x shifted past each symbol matching e.
 (def-adts $ (PStepE : (RS x) ((Col) e) ((List RS) a) ((List RS) b) -> Type)
   enum
   (many PSE0 : (erased RS x) (erased (List RS) a) -> (PStepE x (C0) a a))
-  (many PSE1 : (erased (Bstack) bs) (erased (GSet) gs g1) (erased (List RS) a) (erased (GSel gs (GSkip) g1) p)
-      -> (PStepE (MkRx (GSet) bs gs) (C1) a (Cons RS (MkRx (GSet) bs g1) a)))
-  (many PSE23 : (erased (Bstack) bs bs1) (erased (Col) e) (erased (GSet) gs g1) (erased (List RS) a c) (erased (Sym (GPush) bs e bs1) y)
-      (erased (GSel gs (GPush) g1) p) (erased (PPop bs e gs a c) pp) -> (PStepE (MkRx (GSet) bs gs) e a (Cons RS (MkRx (GSet) bs1 g1) c))))
+  (many PSE1 : (erased (Bstack) bs) (erased (GSet) gs g1) (erased (List RS) a b) (erased (GSel gs (GSkip) g1) p) (erased (RSCons bs g1 a b) q)
+      -> (PStepE (MkRx (GSet) bs gs) (C1) a b))
+  (many PSE23 : (erased (Bstack) bs bs1) (erased (Col) e) (erased (GSet) gs g1) (erased (List RS) a c b) (erased (Sym (GPush) bs e bs1) y)
+      (erased (GSel gs (GPush) g1) p) (erased (PPop bs e gs a c) pp) (erased (RSCons bs1 g1 c b) q) -> (PStepE (MkRx (GSet) bs gs) e a b)))
 
 (def-adts $ (PSplitE : ((Col) e) ((List RS) a) ((List RS) ps) ((List RS) s) -> Type)
   enum
@@ -365,37 +386,40 @@
   (many PSCons : (erased (Col) e) (erased RS x) (erased (List RS) a b rest s) (erased (PStepE x e a b) p) (erased (PSplitE e b rest s) q)
       -> (PSplitE e a (Cons RS x rest) s)))
 
+(def-fns _ $ (erased rscons-cnt : (erased (Bstack) bs) (erased (GSet) gs) (erased (List RS) a b) (erased (List (Col)) et) (erased (Nat) u v w)
+    (erased (RSCons bs gs a b) p) (erased (PCnt a et u) ca) (erased (PCnt b et w) cb) (erased (MC gs bs et v) m) -> (erased (Add v u w) r))
+  (match erased p _
+    ((RSE _ _) (let-match erased (mc-zero bs et v m) (Refl _ _)) (let-match erased (pcnt-fn a et u w ca cb) (Refl _ _)) (AddZero u))
+    ((RSC _ _ _)
+      (let-match erased cb (PCCons _ _ _ _ v2 u2 _ m2 c2 s))
+      (let-match erased (mc-fn gs bs et v v2 m m2) (Refl _ _))
+      (let-match erased (pcnt-fn a et u u2 ca c2) (Refl _ _))
+      s)))
+
 (def-fns _ $ (erased pstepe-cnt : (erased (Bstack) bs) (erased (GSet) gs) (erased (Col) e) (erased (List RS) a b) (erased (List (Col)) et)
     (erased (Nat) u v w) (erased (PStepE (MkRx (GSet) bs gs) e a b) st) (erased (PCnt a et u) ca) (erased (PCnt b et w) cb)
     (erased (MC gs bs (Cons (Col) e et) v) m) -> (erased (Add v u w) r))
   (match erased st _
     ((PSE0 _ _) (let-match erased (mc-inv-0 gs bs et v m) (Refl _ _)) (let-match erased (pcnt-fn a et u w ca cb) (Refl _ _)) (AddZero u))
-    ((PSE1 _ _ g1 _ p)
+    ((PSE1 _ _ g1 _ _ p q)
       (let ((erased g2) (erased p2) (erased m1)) (mc-inv-skip gs bs et v m))
       (let-match erased (gsel-fn gs g1 g2 (GSkip) p p2) (Refl _ _))
-      (let-match erased cb (PCCons _ _ _ _ v2 u2 _ m2 c2 s2))
-      (let-match erased (mc-fn g1 bs et v v2 m1 m2) (Refl _ _))
-      (let-match erased (pcnt-fn a et u u2 ca c2) (Refl _ _))
-      s2)
-    ((PSE23 _ bs1 _ _ g1 _ c y p pp)
-      (let-match erased cb (PCCons _ _ _ _ v1 uc _ m1 cq s1))
+      (rscons-cnt bs g1 a b et u v w q ca cb m1))
+    ((PSE23 _ bs1 _ _ g1 _ c _ y p pp q)
+      (let ((erased uc) (erased cq)) (pcnt-exists c et))
       (match erased pp _
         ((PPNone _ _ _)
           (let ((erased g2) (erased p2) (erased m2)) (mc-inv-push gs bs1 e et v y m))
           (let-match erased (gsel-fn gs g1 g2 (GPush) p p2) (Refl _ _))
-          (let-match erased (mc-fn g1 bs1 et v v1 m2 m1) (Refl _ _))
-          (let-match erased (pcnt-fn a et u uc ca cq) (Refl _ _))
-          s1)
-        ((PPSome _ b0 s _ _ g2 _ pp1 z p2)
+          (rscons-cnt bs1 g1 a b et u v w q ca cb m2))
+        ((PPSome _ b0 s _ _ g2 _ _ pp1 z p2 q2)
           (let ((erased n1) (erased n2) (erased h1) (erased h2) (erased s3) (erased m3) (erased s4) (erased m4) (erased ad))
             (mc-inv-pp gs bs b0 bs1 s e et v y pp1 z m))
           (let-match erased (gsel-fn gs g1 h1 (GPush) p s3) (Refl _ _))
           (let-match erased (gsel-fn gs g2 h2 s p2 s4) (Refl _ _))
-          (let-match erased (mc-fn g1 bs1 et n1 v1 m3 m1) (Refl _ _))
-          (let-match erased cq (PCCons _ _ _ _ v2 u2 _ m5 c5 s5))
-          (let-match erased (mc-fn g2 b0 et n2 v2 m4 m5) (Refl _ _))
-          (let-match erased (pcnt-fn a et u u2 ca c5) (Refl _ _))
-          (let ((erased k) (erased q4) (erased q5)) (add-assoc-back n1 n2 u uc w s1 s5))
+          (let ((erased k2)) (rscons-cnt b0 g2 a c et u n2 uc q2 ca cq m4))
+          (let ((erased k3)) (rscons-cnt bs1 g1 c b et uc n1 w q cq cb m3))
+          (let ((erased k) (erased q4) (erased q5)) (add-assoc-back n1 n2 u uc w k3 k2))
           (let-match erased (add-fn n1 n2 k v q4 ad) (Refl _ _))
           q5)))))
 
@@ -772,3 +796,66 @@
   (let-match erased p (AddZero _))
   (KGram P et (am-build P h ctu gtr gtu (MkKVWrap P h ctu gtr gtu kv) et et len mb (Nil _) (Nil _) (BS0) (Zero) (BFalse) (MPreNil (BS0))
     (GPreNil (Zero) (BFalse)) (RANil (Col) et))))
+
+(def-adts $ (KrC : (Pred P) ((Nat) h) -> Type)
+  enum
+  (many KDoneC : (erased Pred P) (erased (Nat) h) (many (Ctree) ctu) (many (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
+      (erased (CtH (Succ h) ctu) hc) -> (KrC P h))
+  (many KGoC : (erased Pred P) (erased (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu) (erased (KV P h ctu (GEmpty) gtu) kv)
+      (erased (CtKC P h ctr) ck) (erased (CtH (Succ h) ctu) hc) -> (KrC P h)))
+
+; ktc_step of kempetree.v.
+(def-fns _ $ (many ktc-step-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu) (many (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
+    (erased (CtH (Succ h) ctu) hc) -> (many (KrC P h) k))
+  (let-match many ctu (CEmpty) (else
+    (let-match many gtr (GEmpty) (else
+      (let-match many gtu (GEmpty) (else
+        (let ((erased r)) (Cons RG (MkRx (Gtree) (BS0) gtr) (Nil RG)))
+        (let ((many keep) (many gone) (erased cr) (erased hk) (erased hg)) (ctree-restrict-c h ctu (Cons _ (MkRx _ (BS0) gtr) $ Nil _) hc))
+        (let ((many ctr) (erased rl) (erased _)) (ctree-union-rotlr (Succ h) gone gone hg hg))
+        (KGoC P h keep ctr gtu (KVRestr P h ctu keep gone gtr gtu kv hc hk cr)
+          (CKGone P h ctu keep gone ctr gtr gtu (MkKVWrap P h ctu gtr gtu kv) hc hg cr rl) hk)))
+      (KDoneC P h (CEmpty) (GEmpty) (GEmpty) (KVEmpty P h ctu gtr kv) (HE (Succ h)))))
+    (KDoneC P h ctu gtr gtu kv hc)))
+  (KDoneC P h ctu gtr gtu kv hc))
+
+; Kempe_tree_closure of kempetree.v.
+(def-fns _ $ (many ktc-c : (erased Pred P) (subterm many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
+    (erased (KV P h ctu (GEmpty) gtu) kv) (erased (CtKC P h ctr) ck) (erased (CtH (Succ h) ctu) hc) ->
+    (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KV P h ctu2 gtr2 gtu2) kv2) (erased (CtH (Succ h) ctu2) hc2))
+  (let-match many d (Succ d1)
+    ((Zero)
+      (let ((many hit) (many miss) (erased pt) (erased hs)) (gtree-restrict-c gtu (Cons _ (MkRx _ (BS0) ctr) $ Nil _)))
+      (values ctu hit miss (KVSplit P h ctu ctr gtu hit miss kv ck pt hs) hc)))
+  (let ((many c1) (many g1) (many u1) (erased kv1) (erased hc1)) (notail $ ktc-c P d1 h ctu ctr gtu kv ck hc))
+  (let ((many (Ctree) c2) (many (Gtree) g2) (many (Gtree) u2) (erased (KV P h c2 g2 u2) kv2) (erased (CtH (Succ h) c2) hc2))
+    (match many (ktc-step-c P h c1 g1 u1 kv1 hc1) _
+      ((KDoneC _ _ a b c k hk) (values a b c k hk))
+      ((KGoC _ _ a b c k ck2 hk) (notail $ ktc-c P d1 h a b c k ck2 hk))))
+  (match many (ktc-step-c P h c2 g2 u2 kv2 hc2) _
+    ((KDoneC _ _ a b c k hk) (values a b c k hk))
+    ((KGoC _ _ a b c k ck2 hk) (tail $ ktc-c P d1 h a b c k ck2 hk))))
+
+(def-adts $ (KSound : (Pred P) ((Nat) h) ((Ctree) ct) -> Type)
+  enum
+  (many MkKSound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ct) (erased (Gtree) gtr gtu) (erased (KV P h ct gtr gtu) kv)
+      -> (KSound P h ct)))
+
+; Kempe_tree of kempetree.v, from initial trees ctu and gtu carrying the base certificates and from ctr, whose traces satisfy P.
+(def-fns _ $ (many kempe-tree-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
+    (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart)) ge)
+    (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (CtAllP P ctr (Nil (Col))) ca) (erased (CtH (Succ h) ctu) hc) ->
+    (many (Ctree) ct) (erased (KSound P h ct) ks))
+  (let ((many ct) (many gtr) (many gtu2) (erased kv) (erased _))
+    (ktc-c P (Succ $ Succ h) h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr ca) hc))
+  (values ct (MkKSound P h ct gtr gtu2 kv)))
+
+; The meaning of the Kempe tree, with the contract test: an even trace of a ctree disjoint from it is in the co-closure.
+(def-fns _ $ (erased kempe-tree-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound P h kt) ks)
+    (erased (CtDisj kt ct) dj) (erased (List (Col)) et) (erased (CtMem ct et) m) (erased (EvenT et (BTrue)) ev)
+    (erased (Length (Col) et (Succ h)) len) -> (erased (KC P et) r))
+  (let-match erased ks (MkKSound _ _ _ gtr gtu kv))
+  (let ((erased n) (erased s)) (sub-exists kt et))
+  (match erased n _
+    ((Zero) (kempe-sound P h kt gtr gtu kv et ev len s))
+    (absurd (Succ n1) (disj-mem kt ct et dj (MkCtMem kt et n1 s) m))))
