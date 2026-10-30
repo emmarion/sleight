@@ -46,28 +46,30 @@
       (erased (Nth (Nat) nd d c) p) (erased (SetNth (Nat) nd d x nd1) s) (erased (Snoc (Nat) nd1 c nd2) q)
       -> (Insert nd d x nd2)))
 
+; e2 is e with the two darts n and n+1 of a new edge appended.
+(def-adts $ (EdgeGrow : ((List (Nat)) e) ((Nat) n) ((List (Nat)) e2) -> Type)
+  enum
+  (many MkEdgeGrow : (erased (List (Nat)) e e1 e2) (erased (Nat) n) (erased (Length (Nat) e n) len)
+      (erased (Snoc (Nat) e (Succ n) e1) s1) (erased (Snoc (Nat) e1 n e2) s2) -> (EdgeGrow e n e2)))
+
 ; Maps of genus 0 without loops, built one edge at a time. Each edge adds the darts n and n+1.
 (def-adts $ (PlaneMap : ((List (Nat)) e) ((List (Nat)) nd) -> Type)
   enum
   (many PMNil : -> (PlaneMap (Nil (Nat)) (Nil (Nat))))
   ; An edge with two new vertices.
-  (many PMIsolated : (erased (List (Nat)) e nd e1 e2 nd1 nd2) (erased (Nat) n)
-      (erased (PlaneMap e nd) m) (erased (Length (Nat) e n) len)
-      (erased (Snoc (Nat) e (Succ n) e1) se1) (erased (Snoc (Nat) e1 n e2) se2)
-      (erased (Snoc (Nat) nd n nd1) sn1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
+  (many PMIsolated : (erased (List (Nat)) e nd e2 nd1 nd2) (erased (Nat) n)
+      (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Snoc (Nat) nd n nd1) sn1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
   ; An edge from the corner after d to a new vertex.
-  (many PMPendant : (erased (List (Nat)) e nd e1 e2 nd1 nd2) (erased (Nat) n d)
-      (erased (PlaneMap e nd) m) (erased (Length (Nat) e n) len) (erased (Lt d n) bd)
-      (erased (Snoc (Nat) e (Succ n) e1) se1) (erased (Snoc (Nat) e1 n e2) se2)
+  (many PMPendant : (erased (List (Nat)) e nd e2 nd1 nd2) (erased (Nat) n d)
+      (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d n) bd)
       (erased (Insert nd d n nd1) i1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
   ; An edge from the corner after d1 to the corner after d2, at another vertex: a labelling constant along nd separates them.
-  (many PMChord : (erased (List (Nat)) e nd e1 e2 nd1 nd2 vl) (erased (Nat) n d1 d2)
-      (erased (PlaneMap e nd) m) (erased (Length (Nat) e n) len) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
+  (many PMChord : (erased (List (Nat)) e nd e2 nd1 nd2 vl) (erased (Nat) n d1 d2)
+      (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
       (erased (Separates vl nd d1 d2) loopless)
       (erased (Joinable e nd d1 d2) j)
-      (erased (Snoc (Nat) e (Succ n) e1) se1) (erased (Snoc (Nat) e1 n e2) se2)
       (erased (Insert nd d1 n nd1) i1) (erased (Insert nd1 d2 (Succ n) nd2) i2)
       -> (PlaneMap e2 nd2)))
 

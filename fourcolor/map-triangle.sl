@@ -6,15 +6,16 @@
 (let ((erased fo)) (Succ th))
 (let ((erased fi)) (Succ fo))
 (let ((erased N)) (Nil (Nat)))
-(let ((erased m1)) (PMIsolated N N (Cons _ o N) (Cons _ o $ Cons _ z N) (Cons _ z N) (Cons _ z $ Cons _ o N) z (PMNil) (LengthNil _)
-   (SnocNil _ o) (SnocCons _ o z N (Cons _ z N) (SnocNil _ z)) (SnocNil _ z) (SnocCons _ z o N (Cons _ o N) (SnocNil _ o))))
+(let ((erased m1)) (PMIsolated N N (Cons _ o $ Cons _ z N) (Cons _ z N) (Cons _ z $ Cons _ o N) z (PMNil)
+   (MkEdgeGrow N (Cons _ o N) _ z (LengthNil _) (SnocNil _ o) (SnocCons _ o z N (Cons _ z N) (SnocNil _ z))) (SnocNil _ z) (SnocCons _ z o N (Cons _ o N) (SnocNil _ o))))
 (let ((erased e1)) (Cons _ o $ Cons _ z N))
 (let ((erased nd1)) (Cons _ z $ Cons _ o N))
 (let ((erased e2)) (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw N))
 (let ((erased nd2)) (Cons _ z $ Cons _ tw $ Cons _ o $ Cons _ th N))
-(let ((erased m2)) (PMPendant e1 nd1 (Cons _ o $ Cons _ z $ Cons _ th N) e2 (Cons _ z $ Cons _ tw $ Cons _ o N) nd2 tw o m1
-   (LengthCons _ o _ _ $ LengthCons _ z _ _ $ LengthNil _) (LtS _ _ (LtZ _))
-   (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ th) (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ tw)
+(let ((erased m2)) (PMPendant e1 nd1 e2 (Cons _ z $ Cons _ tw $ Cons _ o N) nd2 tw o m1
+   (MkEdgeGrow _ (Cons _ o $ Cons _ z $ Cons _ th N) _ _ (LengthCons _ o _ _ $ LengthCons _ z _ _ $ LengthNil _)
+     (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ th) (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ tw))
+   (LtS _ _ (LtZ _))
    (MkInsert _ (Cons _ z $ Cons _ tw N) _ _ _ o (NthThere _ _ _ _ _ $ NthHere _ _ _) (SetThere _ _ _ _ _ _ $ SetHere _ _ _ _)
       (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ o))
    (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ th)))
@@ -26,14 +27,15 @@
 (let ((erased e3)) (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi $ Cons _ fo N))
 (let ((erased nd3a)) (Cons _ z $ Cons _ tw $ Cons _ o $ Cons _ fo $ Cons _ th N))
 (let ((erased nd3)) (Cons _ fi $ Cons _ tw $ Cons _ o $ Cons _ fo $ Cons _ th $ Cons _ z N))
-(let ((erased m3)) (PMChord e2 nd2 (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi N) e3 nd3a nd3 vl fo th z m2
-   (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _)
+(let ((erased m3)) (PMChord e2 nd2 e3 nd3a nd3 vl fo th z m2
+   (MkEdgeGrow _ (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi N) _ _
+     (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _)
+     (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ fi)
+     (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ fo))
    (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (LtZ _) loopless
    (JoinFace e2 nd2 th z th z (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) (NthHere _ _ _)
      (FRStep _ _ th tw o z (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _)
        (FRStep _ _ o z z z (NthThere _ _ _ _ _ $ NthHere _ _ _) (NthHere _ _ _) (FRHere _ _ z))))
-   (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ fi)
-   (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ fo)
    (MkInsert _ (Cons _ z $ Cons _ tw $ Cons _ o $ Cons _ fo N) _ _ _ th (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _)
       (SetThere _ _ _ _ _ _ $ SetThere _ _ _ _ _ _ $ SetThere _ _ _ _ _ _ $ SetHere _ _ _ _)
       (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ th))
