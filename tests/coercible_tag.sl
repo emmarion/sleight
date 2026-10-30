@@ -1,5 +1,5 @@
 ; externs: only
-; expect: (MkPair _ _ (Cons _ 0 $ Cons _ 17 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Nil _) $ MkPair _ _ (MkU62 0 _) $ MkU62 1 _)
+; expect: (MkPair _ _ (Cons _ 0 $ Cons _ 17 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 5 $ Cons _ 9 $ Nil _) $ MkPair _ _ (MkU62 0 _) $ MkU62 1 _)
 (def-adts $ (Shade : -> Type)
   enum
   (many Red : -> (Shade))
@@ -12,6 +12,14 @@
   enum
   (many Lo : -> (Side (Zero)))
   (many Hi : (erased (Nat) k) -> (Side (Succ k))))
+
+(def-adts $ (One : -> Type)
+  enum
+  (erased NoOne : -> (One))
+  (many MkOne : -> (One)))
+
+(def-fns _ $ (many one-nine : (many (One) o) -> (many (Nat) r))
+  (match many o _ ((NoOne) 0) ((MkOne) 9)))
 
 (def-fns _ $ (many code : (many (Shade) c) -> (many (Nat) n))
   (match many c _
@@ -36,7 +44,9 @@
 
 (def-fns _ $ (many main : -> (many (Pair (List (Nat)) (Pair (U62) (U62))) r))
   (let ((many back)) (coerce 2 (coercible-sym (coercible-tag (Shared) Blue 7))))
-  (MkPair _ _ (Cons _ (code (Red)) $ Cons _ (code (Mix 7)) $ Cons _ (code (Green)) $ Cons _ (code back) $ Cons _ (code settled) $ Nil _)
+  (let ((many one)) (coerce 0 (coercible-sym (coercible-tag (Shared) MkOne))))
+  (MkPair _ _ (Cons _ (code (Red)) $ Cons _ (code (Mix 7)) $ Cons _ (code (Green)) $ Cons _ (code back) $ Cons _ (code settled)
+                 $ Cons _ (nat-add 5 $ coerce (MkOne) (coercible-tag (Shared) MkOne)) $ Cons _ (one-nine one) $ Nil _)
     (MkPair _ _ (bool-u62 (BTrue)) (bool-u62 (BFalse)))))
 
 main
