@@ -2448,43 +2448,43 @@
 ; cs2 is cs with s added to each colour.
 (def-adts $ (Shift : ((Col) s) ((List (Col)) cs cs2) -> Type)
   enum
-  (many SNil : (erased (Col) s) -> (Shift s (Nil (Col)) (Nil (Col))))
-  (many SCons : (erased (Col) s c c2) (erased (List (Col)) cs cs2) (erased (AddK c s c2) a) (erased (Shift s cs cs2) rest)
+  (many ShNil : (erased (Col) s) -> (Shift s (Nil (Col)) (Nil (Col))))
+  (many ShCons : (erased (Col) s c c2) (erased (List (Col)) cs cs2) (erased (AddK c s c2) a) (erased (Shift s cs cs2) rest)
       -> (Shift s (Cons (Col) c cs) (Cons (Col) c2 cs2))))
 
 (def-fns _ $ (erased tf-shift : (erased (Col) a a2 c c2 s) (erased (List (Col)) lc lc2 et) (subterm erased (TraceFrom a c lc et) t)
     (erased (TraceFrom a2 c2 lc2 et) t2) (erased (AddK c s c2) ad) -> (erased (Shift s lc lc2) r))
   (match erased t _
-    ((TFEnd _ _ x a1) (let-match erased t2 (TFEnd _ _ _ _) (absurd (TFCons _ _ _ _ _ _ _ t3) t3)) (SNil s))
+    ((TFEnd _ _ x a1) (let-match erased t2 (TFEnd _ _ _ _) (absurd (TFCons _ _ _ _ _ _ _ t3) t3)) (ShNil s))
     ((TFCons _ _ c3 x lc1 et1 a1 t1)
       (let-match erased t2 (TFCons _ _ c4 _ lc3 _ b2 t3) (absurd (TFEnd _ _ _ _) t1))
       (let ((erased v) (erased pv)) (addc-total s c3))
       (let-match erased (addc-fn c2 x c4 v (addc-swap c2 c4 x b2) (addc-swap c2 v x (addc-tri c s c3 c2 v x ad pv a1))) (Refl _ _))
       (let ((erased p3)) (addc-comm s c3 c4 pv))
-      (SCons s c3 c4 lc1 lc3 p3 (tf-shift a a2 c3 c4 s lc1 lc3 et1 t1 t3 p3)))))
+      (ShCons s c3 c4 lc1 lc3 p3 (tf-shift a a2 c3 c4 s lc1 lc3 et1 t1 t3 p3)))))
 
 ; Two colourings with one trace differ by a constant colour.
 (def-fns _ $ (erased trace-shift : (erased (List (Col)) cs cs2 et) (erased (Trace cs et) t) (erased (Trace cs2 et) t2)
     -> (erased (Col) s) (erased (Shift s cs cs2) r))
   (match erased t _
-    ((TrNil) (let-match erased t2 (TrNil) (absurd (TrCons _ _ _ t3) t3)) (values (C0) (SNil (C0))))
+    ((TrNil) (let-match erased t2 (TrNil) (absurd (TrCons _ _ _ t3) t3)) (values (C0) (ShNil (C0))))
     ((TrCons c lc _ t1)
       (let-match erased t2 (TrCons c2 lc2 _ t3) (absurd (TrNil) t1))
       (let ((erased s) (erased a)) (addc-total c c2))
       (let ((erased p)) (addc-swap c c2 s a))
-      (values s (SCons s c c2 lc lc2 p (tf-shift c c2 c c2 s lc lc2 et t1 t3 p))))))
+      (values s (ShCons s c c2 lc lc2 p (tf-shift c c2 c c2 s lc lc2 et t1 t3 p))))))
 
 (def-fns _ $ (erased shift-revapp : (erased (Col) s) (erased (List (Col)) pre pre2 w w2 r) (subterm erased (Shift s pre pre2) sp) (erased (Shift s w w2) sw)
     (erased (RevApp (Col) pre w r) ra) -> (erased (List (Col)) r2) (erased (RevApp (Col) pre2 w2 r2) ra2) (erased (Shift s r r2) res))
-  (let-match erased sp (SCons _ c c2 pre1 pre3 a sp1) ((SNil _) (let-match erased ra (RANil _ _)) (values w2 (RANil _ w2) sw)))
+  (let-match erased sp (ShCons _ c c2 pre1 pre3 a sp1) ((ShNil _) (let-match erased ra (RANil _ _)) (values w2 (RANil _ w2) sw)))
   (let-match erased ra (RACons _ _ _ _ _ ra1))
-  (let ((erased r2) (erased ra2) (erased res)) (shift-revapp s pre1 pre3 (Cons _ c w) (Cons _ c2 w2) r sp1 (SCons s c c2 w w2 a sw) ra1))
+  (let ((erased r2) (erased ra2) (erased res)) (shift-revapp s pre1 pre3 (Cons _ c w) (Cons _ c2 w2) r sp1 (ShCons s c c2 w w2 a sw) ra1))
   (values r2 (RACons _ c2 pre3 w2 r2 ra2) res))
 
 (def-fns _ $ (erased shift-fn : (erased (Col) s) (erased (List (Col)) cs a b) (subterm erased (Shift s cs a) p) (erased (Shift s cs b) q)
     -> (erased (Eq (List (Col)) a b) e))
-  (let-match erased p (SCons _ c c2 cs1 a1 p1 r1) ((SNil _) (let-match erased q (SNil _)) (Refl _ a)))
-  (let-match erased q (SCons _ _ c3 _ b1 q1 r2))
+  (let-match erased p (ShCons _ c c2 cs1 a1 p1 r1) ((ShNil _) (let-match erased q (ShNil _)) (Refl _ a)))
+  (let-match erased q (ShCons _ _ c3 _ b1 q1 r2))
   (let-match erased (addc-fn c s c2 c3 p1 q1) (Refl _ _))
   (let-match erased (shift-fn s cs1 a1 b1 r1 r2) (Refl _ _))
   (Refl _ a))
@@ -2575,12 +2575,12 @@
     (subterm erased (Respects g ls ls2) rp) (erased (All2 (Nat) (Col) ColOf ls cs) al)
     -> (erased (List (Col)) cs2) (erased (All2 (Nat) (Col) ColOf ls2 cs2) al2) (erased (Shift s cs cs2) sh))
   (let-match erased rp (RespCons _ ls1 ls3 k k2 pk rp1)
-    ((RespNil _) (let-match erased al (All2Nil _ _ _)) (values (Nil _) (All2Nil _ _ ColOf) (SNil s))))
+    ((RespNil _) (let-match erased al (All2Nil _ _ _)) (values (Nil _) (All2Nil _ _ ColOf) (ShNil s))))
   (let-match erased al (All2Cons _ _ _ _ c _ cs1 o al1))
   (let-match erased (shifttab-at s g k k2 t pk) (MkShiftN _ c3 c2 _ _ pc ac qc))
   (let-match erased (colof-fn k c c3 o pc) (Refl _ _))
   (let ((erased cs3) (erased al3) (erased sh3)) (cols-shift s g ls1 ls3 cs1 t rp1 al1))
-  (values (Cons _ c2 cs3) (All2Cons _ _ ColOf k2 c2 ls3 cs3 qc al3) (SCons s c c2 cs1 cs3 ac sh3)))
+  (values (Cons _ c2 cs3) (All2Cons _ _ ColOf k2 c2 ls3 cs3 qc al3) (ShCons s c c2 cs1 cs3 ac sh3)))
 
 ; x and y sit at one position of xs and ys.
 (def-adts $ (In2 : ((List (Nat)) xs ys) ((Nat) x y) -> Type)
@@ -2621,17 +2621,17 @@
     ((OrR _ _ j) (match erased j _ ((I2Here _ _ _ _) (OrL _ _ (I2Here s s2 p1 p2))) ((I2There _ _ _ _ _ _ j1) (OrR _ _ j1))))))
 
 ; The colourings kd of the disk map and kr of the remainder map agree on the ring: kr . br is rev (kd . bd).
-(def-adts $ (Agree : ((List (Nat)) bd br kd kr) -> Type)
+(def-adts $ (ColAgree : ((List (Nat)) bd br kd kr) -> Type)
   enum
-  (many MkAgree : (erased (List (Nat)) bd br kd kr L Lr) (erased (Respects kd bd L) rl) (erased (Respects kr br Lr) rlr) (erased (RevApp (Nat) L (Nil (Nat)) Lr) rv)
-      -> (Agree bd br kd kr)))
+  (many MkColAgree : (erased (List (Nat)) bd br kd kr L Lr) (erased (Respects kd bd L) rl) (erased (Respects kr br Lr) rlr) (erased (RevApp (Nat) L (Nil (Nat)) Lr) rv)
+      -> (ColAgree bd br kd kr)))
 
 ; eq_kdr: a dart of both images has one colour.
 (def-fns _ $ (erased ring-agree : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Agree bd br kd kr) ag) (erased (Nat) xd xr x c)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (ColAgree bd br kd kr) ag) (erased (Nat) xd xr x c)
     (erased (In xd bd) ixd) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hr xr x) rx) (erased (Nth (Nat) kr xr c) pc) -> (erased (Nth (Nat) kd xd c) r))
   (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
-  (let-match erased ag (MkAgree _ _ _ _ L Lr rl rlr rvl))
+  (let-match erased ag (MkColAgree _ _ _ _ L Lr rl rlr rvl))
   (let ((erased ixr)) (hd-hr-ring d xd xr x hd hr bd br bG bGr ids pp io uhr dhr rbd rbr rv hx rx))
   (let ((erased x2) (erased c2) (erased p1) (erased p2) (erased i2)) (respects-in2 hr kr br bGr Lr xr rbr rlr ixr))
   (let-match erased (nth-fn _ hr xr x2 x p1 rx) (Refl _ _))
@@ -2704,7 +2704,7 @@
 
 ; The colour of the image of a dart of the remainder map, or of the disk map, is its colour there.
 (def-fns _ $ (erased col-r : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) xr x c) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) kr xr c) pc) -> (erased (Nth (Nat) ks x c) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2717,7 +2717,7 @@
       (let-match erased (nth-fn _ kr xr c2 c pc2 pc) (Refl _ _))
       q)))
 (def-fns _ $ (erased col-d : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) xd x c) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) kd xd c) pc) -> (erased (Nth (Nat) ks x c) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2735,7 +2735,7 @@
 
 ; A face step from the image of a disk dart off bd keeps the colour.
 (def-fns _ $ (erased face-d-step : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) xd x y c) (erased (Nth (Nat) hd xd x) hx) (erased (NotIn xd bd) out) (erased (Nth (Nat) f x y) pf) (erased (Nth (Nat) ks x c) pc) -> (erased (Nth (Nat) ks y c) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2760,7 +2760,7 @@
 
 ; A face walk avoiding the image of hr keeps the colour.
 (def-fns _ $ (erased path-const : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) a b l) (erased (List (Nat)) ws) (subterm erased (Path f hr a b ws) w) (erased (Nth (Nat) ks a l) p) -> (erased (Nth (Nat) ks b l) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2781,7 +2781,7 @@
 
 ; A face step from an image of the remainder map keeps the colour.
 (def-fns _ $ (erased face-r-step : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) xr x y c) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) f x y) pf) (erased (Nth (Nat) ks x c) pc) -> (erased (Nth (Nat) ks y c) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2809,7 +2809,7 @@
 
 ; The glued colouring is constant along faces.
 (def-fns _ $ (erased glue-face : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) x y c) (erased (Nth (Nat) f x y) pf) (erased (Nth (Nat) ks x c) pc) -> (erased (Nth (Nat) ks y c) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2831,7 +2831,7 @@
 
 ; An edge step from an image of the remainder map changes the colour.
 (def-fns _ $ (erased edge-r-step : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) xr x y a b) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) e x y) pe) (erased (Nth (Nat) ks x a) pa) (erased (Nth (Nat) ks y b) pb) -> (erased (Apart (Nat) Lt a b) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2859,7 +2859,7 @@
 
 ; The glued colouring gives the ends of each edge different colours.
 (def-fns _ $ (erased glue-edge : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (Nat) x y a b) (erased (Nth (Nat) e x y) pe) (erased (Nth (Nat) ks x a) pa) (erased (Nth (Nat) ks y b) pb) -> (erased (Apart (Nat) Lt a b) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
@@ -2874,23 +2874,22 @@
   (let-match erased cr (MkFourColoring _ _ _ ker rfr rer dfr ur))
   (let ((erased lkd)) (respects-length kd fd kd dd rfd lfd))
   (let ((erased lkr)) (respects-length kr fr kr dr rfr lfr))
-  (match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (pre-lt d x y e nf pme pe))) _
-    ((PtDisk _ _ _ _ xd px out outr)
-      (let ((erased lxd)) (nth-lt-length _ hd xd dd x px lhd))
-      (let ((erased yd) (erased pyd) (erased lyd)) (perm-nth dd xd ed nfd pmed lxd))
-      (let ((erased w) (erased hw) (erased qw)) (morph hd ed e bd idd dd xd yd x med iod lxd out pyd px))
-      (let-match erased (nth-fn _ e x w y qw pe) (Refl _ _))
-      (let ((erased a0) (erased pa0)) (nth-exists _ kd dd xd lkd lxd))
-      (let ((erased b0) (erased pb0)) (nth-exists _ kd dd yd lkd lyd))
-      (let-match erased (nth-fn _ ks x a0 a (col-d d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr xd x a0 px pa0) pa) (Refl _ _))
-      (let-match erased (nth-fn _ ks y b0 b (col-d d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr yd y b0 hw pb0) pb) (Refl _ _))
-      (let ((erased ged) (erased gred)) (perm-graph dd ed nfd pmed))
-      (proper-adj kd ged xd yd a b (graph-adj dd xd yd ed ged gred pyd) (coloring-proper dd ed fd kd idd ged cd gred iod lkd) pa0 pb0))
+  (let-match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (pre-lt d x y e nf pme pe))) (PtDisk _ _ _ _ xd px out outr)
     ((PtRing _ _ _ _ xd xr px pin pr) (edge-r-step d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr xr x y a b pr pe pa pb))
-    ((PtRest _ _ _ _ xr pr outd) (edge-r-step d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr xr x y a b pr pe pa pb))))
+    ((PtRest _ _ _ _ xr pr outd) (edge-r-step d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr xr x y a b pr pe pa pb)))
+  (let ((erased lxd)) (nth-lt-length _ hd xd dd x px lhd))
+  (let ((erased yd) (erased pyd) (erased lyd)) (perm-nth dd xd ed nfd pmed lxd))
+  (let ((erased w) (erased hw) (erased qw)) (morph hd ed e bd idd dd xd yd x med iod lxd out pyd px))
+  (let-match erased (nth-fn _ e x w y qw pe) (Refl _ _))
+  (let ((erased a0) (erased pa0)) (nth-exists _ kd dd xd lkd lxd))
+  (let ((erased b0) (erased pb0)) (nth-exists _ kd dd yd lkd lyd))
+  (let-match erased (nth-fn _ ks x a0 a (col-d d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr xd x a0 px pa0) pa) (Refl _ _))
+  (let-match erased (nth-fn _ ks y b0 b (col-d d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr yd y b0 hw pb0) pb) (Refl _ _))
+  (let ((erased ged) (erased gred)) (perm-graph dd ed nfd pmed))
+  (proper-adj kd ged xd yd a b (graph-adj dd xd yd ed ged gred pyd) (coloring-proper dd ed fd kd idd ged cd gred iod lkd) pa0 pb0))
 
 (def-fns _ $ (erased glue-const : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (List (Nat)) pi) (erased (List (Bond)) g0) (erased (HPerm d f pi) pm) (subterm erased (Fun f g0) fn)
     -> (erased (Const ks g0) r))
   (let-match erased fn (FunCons _ g1 u v pf fn1) ((FunNil _) (ConstNil ks)))
@@ -2898,7 +2897,7 @@
   (ConstCons ks g1 u v l pl (glue-face d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr u v l pf pl) (glue-const d dd dr e n f ed nd fd er nr fr hd hr bd br kd kr ks ids pt ag gl io cd cr pi g1 pm fn1)))
 
 (def-fns _ $ (erased glue-proper : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr ks ids) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
-    (erased (Agree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
+    (erased (ColAgree bd br kd kr) ag) (erased (Glue hd hr bd kd kr ids ks) gl) (erased (Iota d ids) io) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     (erased (List (Nat)) pi) (erased (List (Bond)) g0) (erased (HPerm d e pi) pm) (subterm erased (Fun e g0) fn)
     -> (erased (Proper ks g0) r))
   (let-match erased fn (FunCons _ g1 u v pe fn1) ((FunNil _) (ProperNil ks)))
@@ -2932,11 +2931,11 @@
   (let ((erased cs2) (erased co2) (erased sh2)) (cols-shift s g Ld L2 csd tab rL cod))
   (let ((erased L2r) (erased rvL)) (revapp-exists (Nat) L2 (Nil _)))
   (let ((erased cs2r) (erased rvc2) (erased al)) (all2-revapp (Nat) (Col) ColOf L2 (Nil _) L2r cs2 (Nil _) co2 (All2Nil _ _ ColOf) rvL))
-  (let ((erased r2) (erased rvr2) (erased sh3)) (shift-revapp s csd cs2 (Nil _) (Nil _) csd2 sh2 (SNil s) rvc))
+  (let ((erased r2) (erased rvr2) (erased sh3)) (shift-revapp s csd cs2 (Nil _) (Nil _) csd2 sh2 (ShNil s) rvc))
   (let-match erased (revapp-fn (Col) cs2 (Nil _) cs2r r2 rvc2 rvr2) (Refl _ _))
   (let-match erased (shift-fn s csd2 cs2r csr sh3 sh) (Refl _ _))
   (let-match erased (cols-inj L2r Lr csr al cor) (Refl _ _))
-  (let ((erased ag)) (MkAgree bd br kd2 kr L2 Lr rld2 rlr rvL))
+  (let ((erased ag)) (MkColAgree bd br kd2 kr L2 Lr rld2 rlr rvL))
   (let-match erased cr (MkFourColoring _ _ _ ker rfr rer dfr ur))
   (let ((erased lkr)) (respects-length kr fr kr dr rfr lfr))
   (let ((erased ks) (erased gl)) (glue-exists dd dr hd hr bd kd2 kr ids pp lhd lkd2 lhr lkr))
