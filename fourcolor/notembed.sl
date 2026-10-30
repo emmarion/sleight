@@ -236,15 +236,17 @@
       -> (CfCerts cfs)))
 
 ; embed_valid_contract of embed.v, with minimality as data, taken as a hypothesis: the image ccr = map h1 cc of a valid
-; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces.
+; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces, given cface_h1 (h1 sends
+; each face step along fm, as the patch gives it).
 (def-adts $ (EmbedValid : -> Type)
   enum
   (many MkEmbedValid : (erased (Level) F B)
-      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr h1f)
           (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
           (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh)
           (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (ValidContract ec nc fc rc cc) vc)
-          (erased (Respects h1 cc ccr) rcc) -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
+          (erased (Respects h1 cc ccr) rcc) (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf)
+          -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
       -> (EmbedValid)))
 
 ; The case of contract3.sl's contract-all left open (CAFive, triad_valid), taken as a hypothesis: in a map as embed.v takes
@@ -366,7 +368,7 @@
     (let ((erased iec)) (ie-conv ec cc ie pi))
     (let ((erased uc) (erased uie)) (ie-under dc ec cc ie iec le (perm-under dc ec nf pme)))
     (let ((erased ccr) (erased rcc)) (respects-exists h1 cc dc uc lh))
-    (let-match erased (evf dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr en ok fu fa io el lh pb ncol conn v rcc) (OrL _ _ vm)
+    (let-match erased (evf dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr h1f en ok fu fa io el lh pb ncol conn v rcc rf1 rcf) (OrL _ _ vm)
       ((OrR _ _ r) (reduces-lift Bv B dm em nm fm r q2)))
     (let-match erased pb (MkPbpp _ _ _ _ hm gen bl pl pc))
     (let-match erased g (MkGeo _ _ _ _ _ hg pe2 cu olg pag))
