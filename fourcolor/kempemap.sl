@@ -1,5 +1,6 @@
-; Kempe chains, after kempe.v: the chromogram operations gram_neg, gram_flip and gram_rot of its KempeMap section, with
-; matchg read as red/bridge.sl's MatchG.
+; Kempe chains, after kempe.v: the chromogram operations gram_neg, gram_flip and gram_rot, with matchg read as
+; red/bridge.sl's MatchG, and Kempe_map, by kempe.v's induction with the dart-preserving Walkup transforms of
+; hypjordan.sl in place of the darts of the smaller map.
 
 ; bs has n entries.
 (def-adts $ (Depth : ((Bstack) bs) ((Nat) n) -> Type)
