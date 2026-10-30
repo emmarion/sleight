@@ -276,6 +276,11 @@
 
 ; The computation of the ring traces of the contract colourings, one step at a time.
 
+(def-adts $ (Chk : (Type P) -> Type)
+  enum
+  (many CkY : (erased Type P) (erased P p) -> (Chk P))
+  (many CkN : (erased Type P) -> (Chk P)))
+
 (def-adts $ (LMem : (Type A) (A x) ((List A) xs) -> Type)
   enum
   (many LMHere : (erased Type A) (erased A x) (erased (List A) xs) -> (LMem A x (Cons A x xs)))
@@ -494,42 +499,53 @@
 (def-adts $ (StepL : ((List (Nat)) ie) ((CK) k) ((Nat) d) ((List (List (Col))) ls acc ls2) -> Type)
   enum
   (many SLNil : (erased (List (Nat)) ie) (erased (CK) k) (erased (Nat) d) (erased (List (List (Col))) acc) -> (StepL ie k d (Nil (List (Col))) acc acc))
-  (many SLCons : (erased (List (Nat)) ie) (erased (CK) k) (erased (Nat) d) (erased (List (Col)) et) (erased (List (List (Col))) ls acc ls1 ls2)
-      (erased (StepL ie k d ls acc ls1) p) (erased (Opts ie k d et ls1 ls2) q) -> (StepL ie k d (Cons (List (Col)) et ls) acc ls2)))
+  (many SLCons : (erased (List (Nat)) ie) (erased (CK) k) (erased (Nat) d) (erased (List (Col)) et) (erased (List (List (Col))) ls acc acc1 ls2)
+      (erased (Opts ie k d et acc acc1) q) (erased (StepL ie k d ls acc1 ls2) p) -> (StepL ie k d (Cons (List (Col)) et ls) acc ls2)))
 
 (def-fns _ $ (many stepl-c : (many (List (Nat)) ie) (many (CK) k) (many (Nat) d) (subterm many (List (List (Col))) ls) (many (List (List (Col))) acc)
     -> (many (List (List (Col))) ls2) (erased (StepL ie k d ls acc ls2) p))
   (let-match many ls (Cons _ et rest) ((Nil _) (values acc (SLNil ie k d acc))))
-  (let ((many ls1) (erased p)) (notail $ stepl-c ie k d rest acc))
-  (let ((many ls2) (erased q)) (opts-c ie k d et ls1))
-  (values ls2 (SLCons ie k d et rest acc ls1 ls2 p q)))
+  (let ((many acc1) (erased q)) (opts-c ie k d et acc))
+  (let ((many ls2) (erased p)) (tail $ stepl-c ie k d rest acc1))
+  (values ls2 (SLCons ie k d et rest acc acc1 ls2 q p)))
+
+(def-fns _ $ (erased stepl-mono : (erased (List (Nat)) ie) (erased (CK) k) (erased (Nat) d) (erased (List (Col)) x) (erased (List (List (Col))) ls acc ls2)
+    (subterm erased (StepL ie k d ls acc ls2) p) (erased (LMem (List (Col)) x acc) m) -> (erased (LMem (List (Col)) x ls2) r))
+  (let-match erased p (SLCons _ _ _ et rest _ acc1 _ q p1) ((SLNil _ _ _ _) m))
+  (stepl-mono ie k d x rest acc1 ls2 p1 (opts-mono ie k d et x acc acc1 q m)))
 
 (def-fns _ $ (erased stepl-hit : (erased (List (Nat)) ie) (erased (CK) k) (erased (Nat) d) (erased (List (Col)) et o) (erased (Col) u) (erased (List (FU)) cks)
     (erased (List (List (Col))) ls acc ls2) (subterm erased (StepL ie k d ls acc ls2) p) (erased (LMem (List (Col)) et ls) m) (erased (Cand k d et u cks o) c)
     (erased (AllFlag ie cks) af) -> (erased (LMem (List (Col)) o ls2) r))
-  (let-match erased p (SLCons _ _ _ et1 rest _ ls1 _ p1 q) (absurd (SLNil _ _ _ _) m))
+  (let-match erased p (SLCons _ _ _ et1 rest _ acc1 _ q p1) (absurd (SLNil _ _ _ _) m))
   (match erased m _
-    ((LMHere _ _ _) (opts-hit ie k d et o u ls1 ls2 cks q c af))
-    ((LMThere _ _ _ _ m1) (opts-mono ie k d et1 o ls1 ls2 q (stepl-hit ie k d et o u cks rest acc ls1 p1 m1 c af)))))
+    ((LMHere _ _ _) (stepl-mono ie k d o rest acc1 ls2 p1 (opts-hit ie k d et o u acc acc1 cks q c af)))
+    ((LMThere _ _ _ _ m1) (stepl-hit ie k d et o u cks rest acc1 ls2 p1 m1 c af))))
 
-(def-adts $ (RotL : ((Nat) k) ((List (List (Col))) ls ls2) -> Type)
+(def-adts $ (RotL : ((Nat) k) ((List (List (Col))) ls acc ls2) -> Type)
   enum
-  (many RLNil : (erased (Nat) k) -> (RotL k (Nil (List (Col))) (Nil (List (Col)))))
-  (many RLCons : (erased (Nat) k) (erased (List (Col)) et et2) (erased (List (List (Col))) ls ls2) (erased (Rot (Col) k et et2) rt) (erased (RotL k ls ls2) p)
-      -> (RotL k (Cons (List (Col)) et ls) (Cons (List (Col)) et2 ls2))))
+  (many RLNil : (erased (Nat) k) (erased (List (List (Col))) acc) -> (RotL k (Nil (List (Col))) acc acc))
+  (many RLCons : (erased (Nat) k) (erased (List (Col)) et et2) (erased (List (List (Col))) ls acc ls2) (erased (Rot (Col) k et et2) rt)
+      (erased (RotL k ls (Cons (List (Col)) et2 acc) ls2) p) -> (RotL k (Cons (List (Col)) et ls) acc ls2)))
 
-(def-fns _ $ (many rotl-c : (many (Nat) k) (subterm many (List (List (Col))) ls) -> (many (List (List (Col))) ls2) (erased (RotL k ls ls2) p))
-  (let-match many ls (Cons _ et rest) ((Nil _) (values (Nil _) (RLNil k))))
+(def-fns _ $ (many rotl-c : (many (Nat) k) (subterm many (List (List (Col))) ls) (many (List (List (Col))) acc) -> (many (List (List (Col))) ls2)
+    (erased (RotL k ls acc ls2) p))
+  (let-match many ls (Cons _ et rest) ((Nil _) (values acc (RLNil k acc))))
   (let ((many et2) (erased rt)) (rot-c _ k et))
-  (let ((many ls2) (erased p)) (notail $ rotl-c k rest))
-  (values (Cons _ et2 ls2) (RLCons k et et2 rest ls2 rt p)))
+  (let ((many ls2) (erased p)) (tail $ rotl-c k rest (Cons _ et2 acc)))
+  (values ls2 (RLCons k et et2 rest acc ls2 rt p)))
 
-(def-fns _ $ (erased rotl-hit : (erased (Nat) k) (erased (List (Col)) et et2) (erased (List (List (Col))) ls ls2) (subterm erased (RotL k ls ls2) p)
+(def-fns _ $ (erased rotl-mono : (erased (Nat) k) (erased (List (Col)) x) (erased (List (List (Col))) ls acc ls2) (subterm erased (RotL k ls acc ls2) p)
+    (erased (LMem (List (Col)) x acc) m) -> (erased (LMem (List (Col)) x ls2) r))
+  (let-match erased p (RLCons _ et et2 rest _ _ _ p1) ((RLNil _ _) m))
+  (rotl-mono k x rest (Cons (List (Col)) et2 acc) ls2 p1 (LMThere _ x et2 acc m)))
+
+(def-fns _ $ (erased rotl-hit : (erased (Nat) k) (erased (List (Col)) et et2) (erased (List (List (Col))) ls acc ls2) (subterm erased (RotL k ls acc ls2) p)
     (erased (LMem (List (Col)) et ls) m) (erased (Rot (Col) k et et2) rt) -> (erased (LMem (List (Col)) et2 ls2) r))
-  (let-match erased p (RLCons _ et1 et3 rest rest2 rt1 p1) (absurd (RLNil _) m))
+  (let-match erased p (RLCons _ et1 et3 rest _ _ rt1 p1) (absurd (RLNil _ _) m))
   (let-match erased m (LMThere _ _ _ _ m1)
-    ((LMHere _ _ _) (let-match erased (rot-fn _ k et et3 et2 rt1 rt) (Refl _ _)) (LMHere _ et2 rest2)))
-  (LMThere _ et2 et3 rest2 (rotl-hit k et et2 rest rest2 p1 m1 rt)))
+    ((LMHere _ _ _) (let-match erased (rot-fn _ k et et3 et2 rt1 rt) (Refl _ _)) (rotl-mono k et2 rest (Cons (List (Col)) et2 acc) ls2 p1 (LMHere _ et2 acc))))
+  (rotl-hit k et et2 rest (Cons (List (Col)) et3 acc) ls2 p1 m1 rt))
 
 ; ls holds the ring trace of every contract colouring of the map of cp, which has d darts, whose contract darts are ie.
 (def-adts $ (LRel : ((List (Nat)) ie) ((List (Step)) cp) ((Nat) d) ((List (List (Col))) ls) -> Type)
@@ -537,7 +553,7 @@
   (many LrNil : (erased (List (Nat)) ie) (erased (List (List (Col))) ls) (erased (Opts ie (KU) (Zero) (Nil (Col)) (Nil (List (Col))) ls) p)
       -> (LRel ie (Nil (Step)) (Succ (Succ (Zero))) ls))
   (many LrR : (erased (List (Nat)) ie) (erased (Nat) k d) (erased (List (Step)) cp) (erased (List (List (Col))) ls ls2) (erased (LRel ie cp d ls) p)
-      (erased (RotL k ls ls2) q) -> (LRel ie (Cons (Step) (SR k) cp) d ls2))
+      (erased (RotL k ls (Nil (List (Col))) ls2) q) -> (LRel ie (Cons (Step) (SR k) cp) d ls2))
   (many LrY : (erased (List (Nat)) ie) (erased (Nat) d) (erased (List (Step)) cp) (erased (List (List (Col))) ls ls2) (erased (LRel ie cp d ls) p)
       (erased (StepL ie (KY) d ls (Nil (List (Col))) ls2) q) -> (LRel ie (Cons (Step) (SY) cp) (Succ (Succ (Succ (Succ d)))) ls2))
   (many LrH : (erased (List (Nat)) ie) (erased (Nat) d) (erased (List (Step)) cp) (erased (List (List (Col))) ls ls2) (erased (LRel ie cp d ls) p)
@@ -553,7 +569,7 @@
     ((Nil _) (let ((many ls) (erased p)) (opts-c ie (KU) (Zero) (Nil _) (Nil _))) (LRYes ie cp (Succ (Succ (Zero))) ls (LrNil ie ls p))))
   (let-match many (notail $ lrel-c ie rest) (LRYes _ _ d ls p) ((LRNo _ _) (LRNo ie cp)))
   (match many s _
-    ((SR k) (let ((many ls2) (erased q)) (rotl-c k ls)) (LRYes ie cp d ls2 (LrR ie k d rest ls ls2 p q)))
+    ((SR k) (let ((many ls2) (erased q)) (rotl-c k ls (Nil _))) (LRYes ie cp d ls2 (LrR ie k d rest ls ls2 p q)))
     ((SY) (let ((many ls2) (erased q)) (stepl-c ie (KY) d ls (Nil _))) (LRYes ie cp (Succ (Succ (Succ (Succ d)))) ls2 (LrY ie d rest ls ls2 p q)))
     ((SH) (let ((many ls2) (erased q)) (stepl-c ie (KH) d ls (Nil _))) (LRYes ie cp (Succ (Succ (Succ (Succ (Succ (Succ d)))))) ls2 (LrH ie d rest ls ls2 p q)))
     (else (LRNo ie cp))))
@@ -719,7 +735,7 @@
       (let-match erased lr (LrR _ _ _ _ ls1 _ lr1 q))
       (let ((erased rc1) (erased cs1) (erased et1) (erased rr1) (erased nc1) (erased tr1) (erased m1)) (lrel-hit cp1 d e f r1 ie ks big ls1 c1 lr1 ctx))
       (let ((erased rc) (erased cs) (erased et) (erased rr) (erased nc) (erased tr) (erased rte)) (ring-rot k ks r1 r rc1 cs1 et1 rt rr1 nc1 tr1))
-      (values rc cs et rr nc tr (rotl-hit k et1 et ls1 ls q m1 rte)))
+      (values rc cs et rr nc tr (rotl-hit k et1 et ls1 (Nil (List (Col))) ls q m1 rte)))
     (absurd (CmRr _ _ _ _ _ _ _ _ _ _) lr)
     (absurd (CmU _ _ _ _ _ _ _ _ _ _) lr)
     (absurd (CmK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) lr)
@@ -820,19 +836,28 @@
   (many AOCons : (erased (Ctree) kt) (erased (Col) e0) (erased (List (Col)) et et2) (erased (List (List (Col))) ls) (erased (ETrace et et2) tr)
       (erased (CtSub kt et2 (Zero)) s) (erased (AllOut kt ls) rest) -> (AllOut kt (Cons (List (Col)) (Cons (Col) e0 et) ls))))
 
-(def-adts $ (AllOutD : ((Ctree) kt) ((List (List (Col))) ls) -> Type)
-  enum
-  (many AOYes : (erased (Ctree) kt) (erased (List (List (Col))) ls) (erased (AllOut kt ls) p) -> (AllOutD kt ls))
-  (many AONo : (erased (Ctree) kt) (erased (List (List (Col))) ls) -> (AllOutD kt ls)))
-
-(def-fns _ $ (many allout-c : (many (Ctree) kt) (subterm many (List (List (Col))) ls) -> (many (AllOutD kt ls) r))
-  (let-match many ls (Cons _ et rest) ((Nil _) (AOYes kt ls (AONil kt))))
-  (let-match many et (Cons _ e0 et1) ((Nil _) (AONo kt ls)))
+; Tail-recursive: zs is ls reversed onto acc.
+(def-fns _ $ (many allout-c : (many (Ctree) kt) (subterm many (List (List (Col))) ls) (erased (List (List (Col))) acc zs)
+    (erased (RevApp (List (Col)) ls acc zs) ra) (erased (AllOut kt acc) pa) -> (many (Chk (AllOut kt zs)) r))
+  (let-match many ls (Cons _ et rest) ((Nil _) (let-match erased ra (RANil _ _)) (CkY _ pa)))
+  (let-match erased ra (RACons _ _ _ _ _ ra1))
+  (let-match many et (Cons _ e0 et1) ((Nil _) (CkN _)))
   (let ((many et2) (erased tr)) (etrace-c et1))
   (let ((many k) (erased s)) (sub-exists kt et2))
-  (let-match many k (Zero) ((Succ _) (AONo kt ls)))
-  (let-match many (allout-c kt rest) (AOYes _ _ p) ((AONo _ _) (AONo kt ls)))
-  (AOYes kt ls (AOCons kt e0 et1 et2 rest tr s p)))
+  (let-match many k (Zero) ((Succ _) (CkN _)))
+  (tail $ allout-c kt rest (Cons _ et acc) zs ra1 (AOCons kt e0 et1 et2 acc tr s pa)))
+
+(def-fns _ $ (erased revapp-mem-r : (erased Type A) (erased A x) (erased (List A) pre w r) (subterm erased (RevApp A pre w r) ra) (erased (LMem A x w) m)
+    -> (erased (LMem A x r) res))
+  (let-match erased ra (RACons _ s pre1 _ _ ra1) ((RANil _ _) m))
+  (revapp-mem-r A x pre1 (Cons A s w) r ra1 (LMThere A x s w m)))
+
+(def-fns _ $ (erased revapp-mem-l : (erased Type A) (erased A x) (erased (List A) pre w r) (subterm erased (RevApp A pre w r) ra) (erased (LMem A x pre) m)
+    -> (erased (LMem A x r) res))
+  (let-match erased ra (RACons _ s pre1 _ _ ra1) (absurd (RANil _ _) m))
+  (match erased m _
+    ((LMHere _ _ _) (revapp-mem-r A x pre1 (Cons A x w) r ra1 (LMHere A x w)))
+    ((LMThere _ _ _ _ m1) (revapp-mem-l A x pre1 (Cons A s w) r ra1 m1))))
 
 (def-fns _ $ (erased allout-mem : (erased (Ctree) kt) (erased (List (Col)) x) (erased (List (List (Col))) ls) (subterm erased (LMem (List (Col)) x ls) m)
     (erased (AllOut kt ls) ao) -> (erased (Col) e0) (erased (List (Col)) et et2) (erased (Eq (List (Col)) x (Cons (Col) e0 et)) q) (erased (ETrace et et2) tr)
@@ -843,10 +868,11 @@
     ((LMThere _ _ _ _ m1) (allout-mem kt x rest m1 ao1))))
 
 (def-fns _ $ (erased contract-ok : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (Nat) d) (erased (List (Nat)) e n f r ie)
-    (erased (List (List (Col))) ls) (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v)
-    (erased (InsertE e cc ie) pi) (erased (LRel ie cp d ls) lr) (erased (AllOut kt ls) ao) -> (erased (ContractOK cp cc kt) ok))
+    (erased (List (List (Col))) ls zs) (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v)
+    (erased (InsertE e cc ie) pi) (erased (LRel ie cp d ls) lr) (erased (RevApp (List (Col)) ls (Nil (List (Col))) zs) ra) (erased (AllOut kt zs) ao)
+    -> (erased (ContractOK cp cc kt) ok))
   (def-lvl G)
   (def-fns G $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
       (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m))
-    (allout-mem kt et ls (cccol-hit cp cc d e f r ie ls c pi lr et col) ao))
+    (allout-mem kt et zs (revapp-mem-l (List (Col)) et ls (Nil (List (Col))) zs ra (cccol-hit cp cc d e f r ie ls c pi lr et col)) ao))
   (MkContractOK cp cc kt d e n f r c h v G g))

@@ -119,11 +119,6 @@
 
 ; The validity of a contract, decided on the concrete map.
 
-(def-adts $ (Chk : (Type P) -> Type)
-  enum
-  (many CkY : (erased Type P) (erased P p) -> (Chk P))
-  (many CkN : (erased Type P) -> (Chk P)))
-
 (def-adts $ (RespD : ((List (Nat)) lab xs) -> Type)
   enum
   (many RsYes : (erased (List (Nat)) lab xs) (many (List (Nat)) ls) (erased (Respects lab xs ls) p) -> (RespD lab xs))
@@ -312,3 +307,46 @@
   (let-match many cf (CkY _ rf) ((CkN _) (CkN _)))
   (let-match many (ccsize-c e f r ie cc flab d rf) (CkY _ sz) ((CkN _) (CkN _)))
   (CkY _ (MkValidContract e n f r cc ie pi off sp sz)))
+
+; The configuration cf is C-reducible with its contract.
+(def-adts $ (Reducible : ((Config) cf) -> Type)
+  enum
+  (many MkReducible : (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (CfContract cp cci cc) pc) (erased (CRed cp cc) red)
+      -> (Reducible (MkConfig sym cci cp))))
+
+(def-fns _ $ (many red-c : (many (Config) cf) (many (List (InitE)) cache) -> (many (Chk (Reducible cf)) r) (many (List (InitE)) cache2))
+  (let-match many cf (MkConfig sym cci cp))
+  (let-match many (noa-dec cp) (NoAYes _ na) ((NoANo _) (values (CkN _) cache)))
+  (let ((many d) (many e) (many f) (many r) (erased c)) (cpmap-c cp na))
+  (let ((erased n) (erased pm)) (cpmap-map cp d e f r c))
+  (let ((erased h)) (pointed-hyper d e n f r pm))
+  (let ((many xs) (erased pce)) (ctrenum-c cp na))
+  (let ((many cc) (erased pk)) (pick-c cci (Zero) xs))
+  (let-match many (inserte-c e cc) (IEYes _ _ ie pi) ((IENo _ _) (values (CkN _) cache)))
+  (let-match many (valid-c d e f r cc ie n h pi) (CkY _ v) ((CkN _) (values (CkN _) cache)))
+  (let-match many (lrel-c ie cp) (LRYes _ _ d2 ls lr) ((LRNo _ _) (values (CkN _) cache)))
+  (let-match erased (lrel-d ie cp d d2 e f r ls c lr) (Refl _ _))
+  (let ((many kc) (many cache2)) (kempe-tree-chk cp cache))
+  (let-match many kc (KCYes _ h0 kt ks cs na2) ((KCNo _) (values (CkN _) cache2)))
+  (let ((erased zs) (erased ra)) (revapp-exists (List (Col)) ls (Nil (List (Col)))))
+  (let-match many (allout-c kt ls (Nil _) zs ra (AONil kt)) (CkY _ ao) ((CkN _) (values (CkN _) cache2)))
+  (values (CkY _ (MkReducible sym cci cc cp (MkCfContract cp cci xs cc pce pk)
+    (check-reducible-valid cp cc kt (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie ls zs c h v pi lr ra ao)))) cache2))
+
+(def-adts $ (AllRed : ((List (Config)) cfs) -> Type)
+  enum
+  (many ARNil : -> (AllRed (Nil (Config))))
+  (many ARCons : (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible cf) p) (erased (AllRed cfs) rest) -> (AllRed (Cons (Config) cf cfs))))
+
+(def-fns _ $ (many red-all-c : (subterm many (List (Config)) cfs) (many (List (InitE)) cache) -> (many (Chk (AllRed cfs)) r))
+  (let-match many cfs (Cons _ cf rest) ((Nil _) (CkY _ (ARNil))))
+  (let ((many b) (many cache2)) (red-c cf cache))
+  (let-match many b (CkY _ p) ((CkN _) (CkN _)))
+  (let-match many (red-all-c rest cache2) (CkY _ q) ((CkN _) (CkN _)))
+  (CkY _ (ARCons cf rest p q)))
+
+(def-adts $ (AllRedC : ((List (List (Config))) css) -> Type)
+  enum
+  (many ARCNil : -> (AllRedC (Nil (List (Config)))))
+  (many ARCCons : (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (AllRed cs) p) (erased (AllRedC css) rest)
+      -> (AllRedC (Cons (List (Config)) cs css))))
