@@ -1763,9 +1763,8 @@ copy of its word aliases nothing that matters (§13). A signature that
 speaks of a slot abstracts over it as a `(Slot)` parameter; for
 example, `(erased (Slot) s) (unique (Cell Pair2 s s) u)` says that the
 two slots hold one thing. Two slots are equal exactly when they
-canonicalize to one atom (§35). Forcing never refutes on two slots,
-because `Slot` has no constructors, and nothing relies on two slots
-being distinct. A slot says nothing about contents: the content of a
+canonicalize to one atom (§35). Nothing relies on two slots being
+distinct. A slot says nothing about contents: the content of a
 slot is not a subterm of the slot, and only `is` speaks about contents.
 
 `cell-match` reads the words of a cell out. It is an expression with
