@@ -90,3 +90,12 @@ is attached.
 
 - `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are positive certificates (labellings), not negations, so that later proofs never have to call a function held in data. `map-triangle.sl`
   builds a triangle as a `PlaneMap`, as a check of the definitions.
+- `ring.sl`: `ring-check`, a normaliser of `Expr` to sorted lists of
+  monomials, and `ring-sound`, which turns equal normal forms into
+  `(Eq (Nat) n1 n2)` for any two `Eval` derivations; `ring-test.sl`
+  uses it on (a+b)(a+b). `orient.sl`: Knuth's CC axioms 1, 2, 4 and 5
+  for `Left` (`left-rot`, `left-antisym`, `left-interior`, `left-trans`)
+  and, in place of axiom 3, `left-dec`, which decides between `Left p q r`,
+  `Left q p r` and `Collinear p q r`; `orient-test.sl` states them as a
+  goal. Both test files pass `--goal proved` under slc and the reference
+  in the runs this session made.
