@@ -7,4 +7,4 @@
   hd)
 head
 ; warns: tests/bytes_match_warn.sl:6:3: warning: match on `Bytes`: copies the buffer's tail, O(n); read with `bytes-get` and `bytes-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1418:1: note: `;! warn` for `Bytes` is here
+; warns: lib/prelude.sl:1478:1: note: `;! warn` for `Bytes` is here
