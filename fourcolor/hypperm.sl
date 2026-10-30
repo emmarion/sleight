@@ -267,3 +267,218 @@
   (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
   (let ((erased xs2) (erased w2)) (cycle d u x p q pm pu (nth-lt-length _ p u d x pu lp)))
   (path-cat p _ xs2 xs1 x u y w2 w1))
+
+(def-fns _ $ (erased perm-val : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
+    -> (erased (Lt y d) ly))
+  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (nth-lt-length _ q y d x (respects-nth q p ids x y x qp px (iota-nth d x ids io (nth-lt-length _ p x d y px lp)))
+    (respects-length-inv p q ids d pq (iota-length d ids io))))
+
+(def-fns _ $ (erased perm-inv : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
+    -> (erased (Nth (Nat) q y x) r))
+  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (respects-nth q p ids x y x qp px (iota-nth d x ids io (nth-lt-length _ p x d y px lp))))
+
+(def-fns _ $ (erased perm-sym : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Perm d q p) r))
+  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (MkPerm d q p ids io (respects-length-inv p q ids d pq (iota-length d ids io)) pq qp))
+
+(def-fns _ $ (erased cut-first : (erased (List (Nat)) p s xs) (erased (Nat) x y) (subterm erased (Path p s x y xs) w)
+    -> (erased (List (Nat)) xs2) (erased (Path p (Cons (Nat) y s) x y xs2) r))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1) ((PathHere _ _ _) (values (Nil _) (PathHere p _ x))))
+  (let-match erased (nat-eq x y) (Unequal _ _ _ _ ne) ((Equal _ _ _) (values (Nil _) (PathHere p _ x))))
+  (let ((erased xs3) (erased w3)) (cut-first p s xs1 z y w1))
+  (values (Cons _ x xs3) (PathStep p _ xs3 x z y px (NotInCons x y s ne out) w3)))
+
+; Drop the part of a walk before its last departure from c.
+(def-fns _ $ (erased cut-last : (erased (List (Nat)) p s xs) (erased (Nat) x y c c2) (subterm erased (Path p s x y xs) w)
+    (erased (Nth (Nat) p c c2) pc) -> (erased (Or (SomePath p (Cons (Nat) c s) x y) (SomePath p (Cons (Nat) c s) c2 y)) r))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1)
+    ((PathHere _ _ _) (OrL _ _ (MkSomePath p _ (Nil _) x x (PathHere p _ x)))))
+  (let-match erased (cut-last p s xs1 z y c c2 w1 pc) (OrL _ _ sp) ((OrR _ _ sp) (OrR _ _ sp)))
+  (let-match erased sp (MkSomePath _ _ xs3 _ _ w3))
+  (let-match erased (nat-eq x c) (Equal _ _ _)
+    ((Unequal _ _ _ _ ne) (OrL _ _ (MkSomePath p _ (Cons _ x xs3) x y (PathStep p _ xs3 x z y px (NotInCons x c s ne out) w3)))))
+  (let-match erased (nth-fn _ p x z c2 px pc) (Refl _ _))
+  (OrR _ _ sp))
+
+; A walk from x to y that never leaves y, and never leaves c unless it starts at c2, the step after c.
+(def-fns _ $ (erased cut-both : (erased (List (Nat)) p xs) (erased (Nat) x y c c2) (erased (Path p (Nil (Nat)) x y xs) w)
+    (erased (Nth (Nat) p c c2) pc)
+    -> (erased (Or (SomePath p (Cons (Nat) c (Cons (Nat) y (Nil (Nat)))) x y) (SomePath p (Cons (Nat) c (Cons (Nat) y (Nil (Nat)))) c2 y)) r))
+  (let ((erased xs2) (erased w2)) (cut-first p (Nil _) xs x y w))
+  (cut-last p _ xs2 x y c c2 w2 pc))
+
+; Every bond of g is a dart x and the entry of p at x.
+(def-adts $ (Fun : ((List (Nat)) p) ((List (Bond)) g) -> Type)
+  enum
+  (many FunNil : (erased (List (Nat)) p) -> (Fun p (Nil (Bond))))
+  (many FunCons : (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (Nat) x y) (erased (Nth (Nat) p x y) px) (erased (Fun p g) rest)
+      -> (Fun p (Cons (Bond) (MkBond x y) g))))
+
+; Every bond of h is at some position of g.
+(def-adts $ (Within : ((List (Bond)) h) ((List (Bond)) g) -> Type)
+  enum
+  (many WithinNil : (erased (List (Bond)) g) -> (Within (Nil (Bond)) g))
+  (many WithinCons : (erased (List (Bond)) h g) (erased (Bond) b) (erased (Nat) j) (erased (Nth (Bond) g j b) p) (erased (Within h g) rest)
+      -> (Within (Cons (Bond) b h) g)))
+
+(def-fns _ $ (erased within-cons : (erased (List (Bond)) h g) (erased (Bond) b) (subterm erased (Within h g) w) -> (erased (Within h (Cons (Bond) b g)) r))
+  (let-match erased w (WithinCons h1 _ b1 j p w1) ((WithinNil _) (WithinNil _)))
+  (WithinCons h1 _ b1 (Succ j) (NthThere _ b g j b1 p) (within-cons h1 g b w1)))
+
+(def-fns _ $ (erased within-self : (subterm erased (List (Bond)) g) -> (erased (Within g g) r))
+  (let-match erased g (Cons _ b g1) ((Nil _) (WithinNil _)))
+  (WithinCons g1 g b (Zero) (NthHere _ b g1) (within-cons g1 g1 b (within-self g1))))
+
+(def-fns _ $ (erased zip-nth-inv : (erased (List (Nat)) xs ys) (erased (List (Bond)) g) (erased (Nat) j x y) (subterm erased (Zip xs ys g) z)
+    (erased (Nth (Bond) g j (MkBond x y)) p) -> (erased (Nth (Nat) xs j x) px) (erased (Nth (Nat) ys j y) py))
+  (let-match erased z (ZipCons xs1 ys1 g1 x0 y0 z1) (absurd (ZipNil) p))
+  (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) (values (NthHere _ x xs1) (NthHere _ y ys1))))
+  (let ((erased px) (erased py)) (zip-nth-inv xs1 ys1 g1 j1 x y z1 p1))
+  (values (NthThere _ x0 xs1 j1 x px) (NthThere _ y0 ys1 j1 y py)))
+
+(def-fns _ $ (erased fun-within : (erased (Nat) d) (erased (List (Nat)) p ids) (erased (List (Bond)) g h) (erased (Iota d ids) io)
+    (erased (Zip ids p g) z) (subterm erased (Within h g) w) -> (erased (Fun p h) r))
+  (let-match erased w (WithinCons h1 _ b j pj w1) ((WithinNil _) (FunNil p)))
+  (let-match erased b (MkBond x y))
+  (let ((erased px) (erased py)) (zip-nth-inv ids p g j x y z pj))
+  (let-match erased (iota-at d j x ids io px) (Refl _ _))
+  (FunCons p h1 x y py (fun-within d p ids g h1 io z w1)))
+
+(def-fns _ $ (erased graph-fun : (erased (Nat) d) (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (Graph d p g) gr) -> (erased (Fun p g) r))
+  (let-match erased gr (MkGraph _ _ ids _ io lp z))
+  (fun-within d p ids g g io z (within-self g)))
+
+; p2 is p with a sent to u and b to v.
+(def-adts $ (Upd2 : ((List (Nat)) p) ((Nat) a u b v) ((List (Nat)) p2) -> Type)
+  enum
+  (many MkUpd2 : (erased (List (Nat)) p p1 p2) (erased (Nat) a u b v) (erased (Apart (Nat) Lt a b) ne)
+      (erased (SetNth (Nat) p a u p1) s1) (erased (SetNth (Nat) p1 b v p2) s2) -> (Upd2 p a u b v p2)))
+
+(def-adts $ (UpdCase : ((List (Nat)) p) ((Nat) a u b v x y) -> Type)
+  enum
+  (many UCa : (erased (List (Nat)) p) (erased (Nat) a u b v) -> (UpdCase p a u b v a u))
+  (many UCb : (erased (List (Nat)) p) (erased (Nat) a u b v) -> (UpdCase p a u b v b v))
+  (many UCo : (erased (List (Nat)) p) (erased (Nat) a u b v x y) (erased (Apart (Nat) Lt x a) na) (erased (Apart (Nat) Lt x b) nb)
+      (erased (Nth (Nat) p x y) px) -> (UpdCase p a u b v x y)))
+
+(def-fns _ $ (erased setnth-keep : (erased (List (Nat)) xs ys) (erased (Nat) i j y x) (erased (SetNth (Nat) xs i y ys) s)
+    (erased (Nth (Nat) xs j x) p) (erased (Apart (Nat) Lt j i) ne) -> (erased (Nth (Nat) ys j x) r))
+  (match erased ne _
+    ((ApLt _ _ _ _ l) (setnth-nth-lt _ xs i j y x ys s p l))
+    ((ApGt _ _ _ _ l) (setnth-nth-gt _ xs i j y x ys s p l))))
+
+(def-fns _ $ (erased setnth-back : (erased (List (Nat)) xs ys) (erased (Nat) i j y x) (erased (SetNth (Nat) xs i y ys) s)
+    (erased (Nth (Nat) ys j x) p) (erased (Apart (Nat) Lt j i) ne) -> (erased (Nth (Nat) xs j x) r))
+  (match erased ne _
+    ((ApLt _ _ _ _ l) (setnth-back-lt _ xs i j y x ys s p l))
+    ((ApGt _ _ _ _ l) (setnth-back-gt _ xs i j y x ys s p l))))
+
+(def-fns _ $ (erased upd2-a : (erased (List (Nat)) p p2) (erased (Nat) a u b v) (erased (Upd2 p a u b v p2) up) -> (erased (Nth (Nat) p2 a u) r))
+  (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
+  (setnth-keep p1 p2 b a v u s2 (setnth-nth _ p a u p1 s1) ne))
+
+(def-fns _ $ (erased upd2-b : (erased (List (Nat)) p p2) (erased (Nat) a u b v) (erased (Upd2 p a u b v p2) up) -> (erased (Nth (Nat) p2 b v) r))
+  (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
+  (setnth-nth _ p1 b v p2 s2))
+
+(def-fns _ $ (erased upd2-other : (erased (List (Nat)) p p2) (erased (Nat) a u b v x y) (erased (Upd2 p a u b v p2) up)
+    (erased (Nth (Nat) p x y) px) (erased (Apart (Nat) Lt x a) na) (erased (Apart (Nat) Lt x b) nb) -> (erased (Nth (Nat) p2 x y) r))
+  (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
+  (setnth-keep p1 p2 b x v y s2 (setnth-keep p p1 a x u y s1 px na) nb))
+
+(def-fns _ $ (erased upd2-case : (erased (List (Nat)) p p2) (erased (Nat) a u b v x y) (erased (Upd2 p a u b v p2) up)
+    (erased (Nth (Nat) p2 x y) px) -> (erased (UpdCase p a u b v x y) r))
+  (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
+  (let-match erased (nat-eq x b) (Unequal _ _ _ _ nb)
+    ((Equal _ _ _) (let-match erased (nth-fn _ p2 b y v px (setnth-nth _ p1 b v p2 s2)) (Refl _ _)) (UCb p a u b v)))
+  (let ((erased q1)) (setnth-back p1 p2 b x v y s2 px nb))
+  (let-match erased (nat-eq x a) (Unequal _ _ _ _ na)
+    ((Equal _ _ _) (let-match erased (nth-fn _ p1 a y u q1 (setnth-nth _ p a u p1 s1)) (Refl _ _)) (UCa p a u b v)))
+  (UCo p a u b v x y na nb (setnth-back p p1 a x u y s1 q1 na)))
+
+(def-fns _ $ (erased upd2-length : (erased (List (Nat)) p p2) (erased (Nat) a u b v d) (erased (Upd2 p a u b v p2) up)
+    (erased (Length (Nat) p d) l) -> (erased (Length (Nat) p2 d) r))
+  (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
+  (setnth-length _ p1 b d v p2 s2 (setnth-length _ p a d u p1 s1 l)))
+
+(def-fns _ $ (erased upd2-exists : (erased (List (Nat)) p) (erased (Nat) a u b v d) (erased (Length (Nat) p d) l)
+    (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Apart (Nat) Lt a b) ne) -> (erased (List (Nat)) p2) (erased (Upd2 p a u b v p2) up))
+  (let ((erased p1) (erased s1)) (setnth-exists _ p d a u l la))
+  (let ((erased p2) (erased s2)) (setnth-exists _ p1 d b v (setnth-length _ p a d u p1 s1 l) lb))
+  (values p2 (MkUpd2 p p1 p2 a u b v ne s1 s2)))
+
+(def-fns _ $ (erased upd2-self : (erased (List (Nat)) p) (erased (Nat) a u b v d) (erased (Length (Nat) p d) l)
+    (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Apart (Nat) Lt a b) ne) (erased (Nth (Nat) p a u) pa) (erased (Nth (Nat) p b v) pb)
+    -> (erased (Upd2 p a u b v p) up))
+  (let ((erased p1) (erased s1)) (setnth-exists _ p d a u l la))
+  (let-match erased (setnth-same _ p a u p1 pa s1) (Refl _ _))
+  (let ((erased p2) (erased s2)) (setnth-exists _ p d b v l lb))
+  (let-match erased (setnth-same _ p b v p2 pb s2) (Refl _ _))
+  (MkUpd2 p p p a u b v ne s1 s2))
+
+(def-fns _ $ (erased upd2-graph : (erased (List (Nat)) p p2) (erased (Nat) a u b v d) (erased (Upd2 p a u b v p2) up)
+    (erased (Length (Nat) p d) l) -> (erased (List (Bond)) g2) (erased (Graph d p2 g2) gr))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased lp2)) (upd2-length p p2 a u b v d up l))
+  (let ((erased g2) (erased z)) (zip-exists ids p2 d (iota-length d ids io) lp2))
+  (values g2 (MkGraph d p2 ids g2 io lp2 z)))
+
+(def-fns _ $ (erased below-upd2 : (erased (Nat) d a u b v) (erased (List (Nat)) p q p2) (erased (List (Bond)) g2) (subterm erased (Fun p2 g2) f)
+    (erased (Upd2 p a u b v p2) up) (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
+    -> (erased (Below g2 d) r))
+  (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
+  (let ((erased rest)) (below-upd2 d a u b v p q p2 g1 f1 up pm la lu lb lv))
+  (let-match erased (upd2-case p p2 a u b v x y up px) (UCo _ _ _ _ _ _ _ _ _ q1)
+    ((UCa _ _ _ _ _) (BelowCons g1 a u d la lu rest))
+    ((UCb _ _ _ _ _) (BelowCons g1 b v d lb lv rest)))
+  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (BelowCons g1 x y d (nth-lt-length _ p x d y q1 lp) (perm-val d x y p q pm q1) rest))
+
+; With h the graph of p0, p with a and b fixed, the graph of p2 joins what a-u, b-v and h join.
+(def-fns _ $ (erased spans-upd2-in : (erased (Nat) d a u b v) (erased (List (Nat)) p p0 p2) (erased (List (Bond)) g0 g2)
+    (subterm erased (Fun p2 g2) f) (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p0 g0) gr0)
+    -> (erased (Spans (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)) g2) r))
+  (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (SpansNil _)))
+  (let ((erased h)) (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)))
+  (let ((erased rest)) (spans-upd2-in d a u b v p p0 p2 g0 g1 f1 up up0 gr0))
+  (match erased (upd2-case p p2 a u b v x y up px) _
+    ((UCa _ _ _ _ _) (SpansCons h g1 a u (conn-adj h a u (AdjFwd _ a u)) rest))
+    ((UCb _ _ _ _ _) (SpansCons h g1 b v (conn-adj h b v (AdjThere _ (MkBond a u) b v (AdjFwd g0 b v))) rest))
+    ((UCo _ _ _ _ _ _ _ na nb q1)
+      (SpansCons h g1 x y (conn-adj h x y (AdjThere _ (MkBond a u) x y (AdjThere g0 (MkBond b v) x y
+        (graph-adj d x y p0 g0 gr0 (upd2-other p p0 a a b b x y up0 q1 na nb))))) rest))))
+
+(def-fns _ $ (erased spans-upd2-out : (erased (Nat) d a u b v) (erased (List (Nat)) p p0 p2) (erased (List (Bond)) g0 g2)
+    (subterm erased (Fun p0 g0) f) (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p2 g2) gr2)
+    -> (erased (Spans g2 g0) r))
+  (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (SpansNil _)))
+  (let ((erased rest)) (spans-upd2-out d a u b v p p0 p2 g1 g2 f1 up up0 gr2))
+  (match erased (upd2-case p p0 a a b b x y up0 px) _
+    ((UCa _ _ _ _ _) (SpansCons g2 g1 a a (ConnHere g2 a) rest))
+    ((UCb _ _ _ _ _) (SpansCons g2 g1 b b (ConnHere g2 b) rest))
+    ((UCo _ _ _ _ _ _ _ na nb q1)
+      (SpansCons g2 g1 x y (conn-adj g2 x y (graph-adj d x y p2 g2 gr2 (upd2-other p p2 a u b v x y up q1 na nb))) rest))))
+
+; The classes of the graph of p2 are those of a-u, b-v and the graph of p0.
+(def-fns _ $ (erased classes-upd2 : (erased (Nat) d k a u b v) (erased (List (Nat)) p q p0 p2) (erased (List (Bond)) g0 g2)
+    (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p0 g0) gr0) (erased (Graph d p2 g2) gr2)
+    (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
+    (erased (Classes (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)) d k) cs) -> (erased (Classes g2 d k) r))
+  (classes-equiv _ g2 d k cs (SpansCons g2 _ a u (conn-adj g2 a u (graph-adj d a u p2 g2 gr2 (upd2-a p p2 a u b v up)))
+      (SpansCons g2 _ b v (conn-adj g2 b v (graph-adj d b v p2 g2 gr2 (upd2-b p p2 a u b v up)))
+        (spans-upd2-out d a u b v p p0 p2 g0 g2 (graph-fun d p0 g0 gr0) up up0 gr2)))
+    (spans-upd2-in d a u b v p p0 p2 g0 g2 (graph-fun d p2 g2 gr2) up up0 gr0)
+    (below-upd2 d a u b v p q p2 g2 (graph-fun d p2 g2 gr2) up pm la lu lb lv)))
+
+(def-fns _ $ (erased classes-upd2-back : (erased (Nat) d k a u b v) (erased (List (Nat)) p q p0 p2) (erased (List (Bond)) g0 g2)
+    (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p0 g0) gr0) (erased (Graph d p2 g2) gr2)
+    (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
+    (erased (Classes g2 d k) cs) -> (erased (Classes (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)) d k) r))
+  (classes-equiv g2 _ d k cs
+    (spans-upd2-in d a u b v p p0 p2 g0 g2 (graph-fun d p2 g2 gr2) up up0 gr0)
+    (SpansCons g2 _ a u (conn-adj g2 a u (graph-adj d a u p2 g2 gr2 (upd2-a p p2 a u b v up)))
+      (SpansCons g2 _ b v (conn-adj g2 b v (graph-adj d b v p2 g2 gr2 (upd2-b p p2 a u b v up)))
+        (spans-upd2-out d a u b v p p0 p2 g0 g2 (graph-fun d p0 g0 gr0) up up0 gr2)))
+    (BelowCons _ a u d la lu (BelowCons _ b v d lb lv (below-upd2 d a a b b p q p0 g0 (graph-fun d p0 g0 gr0) up0 pm la la lb lb)))))
