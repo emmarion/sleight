@@ -1,0 +1,36 @@
+; The contraction of contract_coloring of contract.v, with minimality as data. Load after contract.sl and birkhoff2.sl.
+
+; WalkupF at the live dart z: z cut out of e and n, and added to the dead darts.
+(def-fns _ $ (erased walk-dead-f : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
+    -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Eq (Nat) m (Succ m1)) em) (erased (Dead d e2 n2 f2 (Cons (Nat) z s) m1) dd2))
+  (let ((erased hr) (erased gr)) (genus-rot2 d (Zero) e n f h g))
+  (let ((erased f2) (erased e2) (erased n2) (erased m1) (erased ske) (erased skn) (erased h2) (erased g2) (erased em) (erased dd2))
+    (walk-dead d m z f e n s hr gr (dead-rot d m n f e s (dead-rot d m e n f s dd)) lz out))
+  (values e2 n2 f2 m1 ske skn (hyper-rot d f2 e2 n2 h2) (genus-rot d (Zero) f2 e2 n2 h2 g2) em (dead-rot d m1 f2 e2 n2 _ dd2)))
+
+(def-fns _ $ (erased fixed-out : (erased (Nat) d x y) (erased (List (Nat)) p q s) (erased (HPerm d p q) pm) (erased (FixedIn p s) fx) (erased (Nth (Nat) p x y) px)
+    (erased (NotIn x s) out) -> (erased (NotIn y s) r))
+  (let-match erased (in-dec y s) (OrR _ _ r)
+    (absurd (OrL _ _ iy)
+      (let-match erased (perm-inj d x y y p q pm px (fixed-at p s y fx iy)) (Refl _ _))
+      (apart-irrefl x (notin-in x x s out iy))))
+  r)
+
+; The contraction of the edge x, ex: WalkupF at x, then at ex, both kept as dead darts. The faces of x and ex merge.
+(def-fns _ $ (erased contract-dead : (erased (Nat) d m x ex) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Dead d e n f s m) dd) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) e x ex) pex) (erased (Apart (Nat) Lt ex x) nex)
+    -> (erased (List (Nat)) e1 n1 f1 e2 n2 f2) (erased (Nat) m2) (erased (Skip e x e1) ske1) (erased (Skip n x n1) skn1) (erased (Skip e1 ex e2) ske2)
+    (erased (Skip n1 ex n2) skn2) (erased (Hypermap d e1 n1 f1) h1) (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 (Zero)) g2)
+    (erased (Eq (Nat) m (Succ (Succ m2))) em) (erased (Dead d e2 n2 f2 (Cons (Nat) ex (Cons (Nat) x s)) m2) dd2))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased dd (MkDead _ _ k _ _ _ _ fe fn ff ds ls us a))
+  (let ((erased oex)) (fixed-out d x ex e nf s pe fe pex out))
+  (let ((erased e1) (erased n1) (erased f1) (erased m1) (erased ske1) (erased skn1) (erased h1) (erased g1) (erased em1) (erased dd1))
+    (walk-dead-f d m x e n f s h g dd lx out))
+  (let ((erased e2) (erased n2) (erased f2) (erased m2) (erased ske2) (erased skn2) (erased h2) (erased g2) (erased em2) (erased dd2))
+    (walk-dead-f d m1 ex e1 n1 f1 (Cons _ x s) h1 g1 dd1 (perm-val d x ex e nf pe pex) (NotInCons ex x s nex oex)))
+  (let-match erased em1 (Refl _ _))
+  (let-match erased em2 (Refl _ _))
+  (values e1 n1 f1 e2 n2 f2 m2 ske1 skn1 ske2 skn2 h1 h2 g2 (Refl _ m) dd2))
