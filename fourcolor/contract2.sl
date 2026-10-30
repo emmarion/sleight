@@ -552,3 +552,37 @@
     (erased (Nth (Nat) e x y) pxy) (erased (NotIn x s) ox) -> (erased (Seps f x y) r))
   (let-match erased lb (MkLB _ _ _ _ ge gr so))
   (so-adj x y f s ge so (graph-adj d x y e ge gr pxy) ox (fixed-out d x y e ei s pe fx pxy ox)))
+
+; L is lab with the label a renamed b.
+(def-adts $ (MergeL : ((List (Nat)) lab) ((Nat) a b) ((List (Nat)) L) -> Type)
+  enum
+  (many MLNil : (erased (Nat) a b) -> (MergeL (Nil (Nat)) a b (Nil (Nat))))
+  (many MLHit : (erased (List (Nat)) lab L) (erased (Nat) a b) (erased (MergeL lab a b L) rest) -> (MergeL (Cons (Nat) a lab) a b (Cons (Nat) b L)))
+  (many MLMiss : (erased (List (Nat)) lab L) (erased (Nat) l a b) (erased (Apart (Nat) Lt l a) ne) (erased (MergeL lab a b L) rest)
+      -> (MergeL (Cons (Nat) l lab) a b (Cons (Nat) l L))))
+
+(def-fns _ $ (erased merge-exists : (subterm erased (List (Nat)) lab) (erased (Nat) a b) -> (erased (List (Nat)) L) (erased (MergeL lab a b L) r))
+  (let-match erased lab (Cons _ l lab1) ((Nil _) (values (Nil _) (MLNil a b))))
+  (let ((erased L1) (erased m1)) (merge-exists lab1 a b))
+  (let-match erased (nat-eq l a) (Unequal _ _ _ _ ne) ((Equal _ _ _) (values (Cons _ b L1) (MLHit lab1 L1 a b m1))))
+  (values (Cons _ l L1) (MLMiss lab1 L1 l a b ne m1)))
+
+(def-fns _ $ (erased merge-hit : (erased (List (Nat)) lab L) (erased (Nat) a b i) (subterm erased (MergeL lab a b L) m) (erased (Nth (Nat) lab i a) p)
+    -> (erased (Nth (Nat) L i b) r))
+  (match erased m _
+    (absurd (MLNil _ _) p)
+    ((MLHit lab1 L1 _ _ m1) (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) (NthHere _ b L1))) (NthThere _ b L1 j1 b (merge-hit lab1 L1 a b j1 m1 p1)))
+    ((MLMiss lab1 L1 l _ _ ne m1)
+      (let-match erased p (NthThere _ _ _ j1 _ p1) (absurd (NthHere _ _ _) (apart-irrefl a ne)))
+      (NthThere _ l L1 j1 b (merge-hit lab1 L1 a b j1 m1 p1)))))
+
+(def-fns _ $ (erased merge-miss : (erased (List (Nat)) lab L) (erased (Nat) a b i l) (subterm erased (MergeL lab a b L) m) (erased (Nth (Nat) lab i l) p)
+    (erased (Apart (Nat) Lt l a) ne) -> (erased (Nth (Nat) L i l) r))
+  (match erased m _
+    (absurd (MLNil _ _) p)
+    ((MLHit lab1 L1 _ _ m1)
+      (let-match erased p (NthThere _ _ _ j1 _ p1) (absurd (NthHere _ _ _) (apart-irrefl a ne)))
+      (NthThere _ b L1 j1 l (merge-miss lab1 L1 a b j1 l m1 p1 ne)))
+    ((MLMiss lab1 L1 l0 _ _ ne0 m1)
+      (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) (NthHere _ l L1)))
+      (NthThere _ l0 L1 j1 l (merge-miss lab1 L1 a b j1 l m1 p1 ne)))))
