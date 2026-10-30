@@ -137,3 +137,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `red/`: an unverified port of the Coq proof's C-reducibility check.
   In one run it accepted all 633 configurations under `native-compute`
   in about 4.5 minutes on a 4-core cloud VM. It carries no proofs yet.
+- `unav/`: an unverified port of the unavoidability check (the
+  presentations of hub arities 5 to 11, hubcaps, `redpart` through the
+  quiz tree, and the bound for larger hubs). In one run every script
+  passed, in about 4.4 s of compute; five broken variants of the arity-5
+  script were rejected. It carries no proofs yet.
