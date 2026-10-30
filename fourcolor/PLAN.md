@@ -193,14 +193,10 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   (`kcc-kempe`). The induction uses dart-preserving Walkup transforms,
   the darts taken out kept as dead darts that colourings ignore.
 - `patch.sl` (load after `kempemap.sl`): the start of a port of `patch.v`.
-  `Patch` keeps the disk and remainder maps on the darts of the whole
-  map, each fixing the inside of the other (dead darts), in place of
-  injections; so far only the closure lemmas closed_Gd and closed_Gr and
-  the face morphisms hdF and hrF are proved. Dead darts are fixed by the
-  edge permutation, so plain, bridgeless and four-colourable would need
-  versions restricted to live darts, as `kempemap.sl` has for colourings;
-  whether to do that or to compact the darts is open. `sew.v`, `snip.v`
-  and `revsnip.v` are not started.
+  `Patch` glues a disk map and a remainder map, each a hypermap on its own
+  darts, sent into the whole map by injections listed by their images;
+  so far only the face morphisms hdF and hrF are proved. `sew.v`,
+  `snip.v` and `revsnip.v` are not started.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
