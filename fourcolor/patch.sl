@@ -2180,3 +2180,41 @@
       (allsep-r d dd dr kfr e n f ed nd fd er nr fr hd hr bd br fi fri nfr idr ge gf gfr ger pt pmf pmfr pmer pe grf sp csr
         (outer-moves-r d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri idr gfr gf pt pmf pmfr grf ior lhr uhr (graph-fun dr fr gfr pfr))
         mer ior lhr (graph-fun dr er ger per)))))
+
+; Darts of the remainder map are on one face exactly when their images are (patch_face_r), with gf and gfr the graphs of f and fr.
+(def-fns _ $ (erased patch-face-r-push : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf gfr)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Graph dr fr gfr) grfr) (erased (Nat) xr yr x)
+    (erased (Conn gfr xr yr) c) (erased (Nth (Nat) hr xr x) hx) -> (erased (Nat) y) (erased (Nth (Nat) hr yr y) hy) (erased (Conn gf x y) r))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
+  (let ((erased y) (erased hy) (erased cy) (erased iy))
+    (conn-move gfr gf idr hr xr yr x c (outer-moves-r d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri idr gfr gf pt pmf pmfr grf ior lhr uhr (graph-fun dr fr gfr grfr))
+      (iota-in dr xr idr ior (nth-lt-length _ hr xr dr x hx lhr)) hx))
+  (values y hy cy))
+
+(def-fns _ $ (erased patch-face-r-pull : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf gfr)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Graph dr fr gfr) grfr) (erased (Nat) xr yr x y)
+    (erased (Conn gf x y) c) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) hr yr y) hy) -> (erased (Conn gfr xr yr) r))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
+  (let ((erased kf) (erased csf)) (classes-exists gf d (graph-below d f fi gf (graph-fun d f gf grf) pmf)))
+  (let-match erased csf (MkClasses _ _ _ ids2 labf rsf io2 llf lrf drf fixf clf rof))
+  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
+  (let ((erased uids)) (perm-under d ids ids (perm-id d ids io)))
+  (let ((erased LH) (erased rlh)) (respects-exists labf hr d uhr llf))
+  (let ((erased outer) (erased inner) (erased spo)) (sb-exists labf LH d llf ids uids))
+  (let ((erased L) (erased hv)) (outer-hitinv d f fi hr labf rsf ids LH outer inner ids gf pmf grf io rof uhr rlh spo uids))
+  (let ((erased ix)) (outer-mem d x xr hr labf ids LH outer inner io llf uhr rlh spo hx))
+  (let ((erased iy)) (outer-mem d y yr hr labf ids LH outer inner io llf uhr rlh spo hy))
+  (let ((erased lx)) (under-nth hr xr x d uhr hx))
+  (let ((erased ly)) (under-nth hr yr y d uhr hy))
+  (let ((erased y2) (erased hy2) (erased cy) (erased iy2))
+    (conn-move gf gfr outer L x y xr c
+      (outer-moves-g d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri L labf rsf ids LH outer inner gf gf gfr pt hv pmf pmfr grf grfr io rof clf llf dhr lhr uhr rlh spo
+        (graph-fun d f gf grf))
+      ix (hitinv-at f hr hr outer ids L x x x xr hv dhr (iota-nth d x ids io lx) ix (MkFirstHit f hr (Nil _) x x (PathHere f hr x) (nth-in hr xr x hx)) hx)))
+  (let-match erased (nth-fn _ L y y2 yr hy2
+    (hitinv-at f hr hr outer ids L y y y yr hv dhr (iota-nth d y ids io ly) iy (MkFirstHit f hr (Nil _) y y (PathHere f hr y) (nth-in hr yr y hy)) hy)) (Refl _ _))
+  cy)
