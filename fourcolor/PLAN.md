@@ -447,6 +447,34 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `BirkGeo` and `NotEmbed` to `FourColor` is not yet checked in one
   run, and whether a fixed list of smaller maps per reduction suffices
   for the arguments of `birkhoff.v` and `embed.v` is not yet known.
+- `embed2.sl` (load after `embed.sl`, in its chain with `geomring sew
+  snip srcycle revsnip revsnip2 revsnip3` loaded after `split`): first-order
+  pieces of embed.v's not_embed_reducible, as far as both compilers check
+  them, for the patch of the map that embed_patch would build; the
+  embedding itself (embed_functor to embed_patch) and contract.v's
+  contract_coloring are not ported. `pull-col`: a four-colouring of a map
+  gives one of a second map through a dart map that sends face and edge
+  images into the faces of the images (`Reach`). `embed-color`: from such
+  a dart map of the disk map into a configuration map, a four-colouring of
+  the configuration map with trace et on the disk ring's image, and a ring
+  trace rot 1 (rev et) of the remainder map, the map is four-coloured
+  (`patch-colorable`). `rem-col`: a contract colouring (`CCColoring`) whose
+  contract darts miss the remainder map four-colours it. `rem-kempe`: the
+  remainder map of a patch of a planar plain cubic map, its ring rotated
+  by one, is a `KempeRing` (embed_closure). `cc-pull`: a contract
+  colouring of the map, through a dart map that commutes with edge, sends
+  faces into faces and sends the contract darts of the configuration, and
+  only those, onto the map's (`InSides`), gives the fields of red/cfred.sl's
+  `CcColoring` on the configuration map (the first half of embed_contract).
+  Not done: the trace equations of embed_contract, the use of `CRed`, and
+  `NotEmbed` itself. As `CRed` is stated, its coclosure function sits at
+  a level minted inside `check-reducible-valid`, and the glue of a
+  `Reduces`, at a level fixed beforehand, cannot call it, since nothing
+  proves that level predates the glue's (a small test of this shape was
+  refused by both compilers). A `CRed` indexed by a level minted at the
+  top level, as the `KClosed` sets of `ring-disk-closed` are, appears to
+  avoid this. That these statements match Coq's has been checked only by
+  reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
