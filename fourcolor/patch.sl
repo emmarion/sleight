@@ -2444,3 +2444,81 @@
   (let ((erased csr) (erased rvc) (erased cor)) (all2-revapp (Nat) (Col) ColOf L (Nil _) Lr cs (Nil _) co (All2Nil _ _ ColOf) rvl))
   (let ((erased et2) (erased rr)) (rotrev-exists et))
   (values et et2 (MkRingTrace ed fd bd kd L cs et cd rld co t) rr (MkRingTrace er fr br kr Lr csr et2 cr rlr cor (trace-rev cs csr et et2 t rvc rr))))
+
+; cs2 is cs with s added to each colour.
+(def-adts $ (Shift : ((Col) s) ((List (Col)) cs cs2) -> Type)
+  enum
+  (many SNil : (erased (Col) s) -> (Shift s (Nil (Col)) (Nil (Col))))
+  (many SCons : (erased (Col) s c c2) (erased (List (Col)) cs cs2) (erased (AddK c s c2) a) (erased (Shift s cs cs2) rest)
+      -> (Shift s (Cons (Col) c cs) (Cons (Col) c2 cs2))))
+
+(def-fns _ $ (erased tf-shift : (erased (Col) a a2 c c2 s) (erased (List (Col)) lc lc2 et) (subterm erased (TraceFrom a c lc et) t)
+    (erased (TraceFrom a2 c2 lc2 et) t2) (erased (AddK c s c2) ad) -> (erased (Shift s lc lc2) r))
+  (match erased t _
+    ((TFEnd _ _ x a1) (let-match erased t2 (TFEnd _ _ _ _) (absurd (TFCons _ _ _ _ _ _ _ t3) t3)) (SNil s))
+    ((TFCons _ _ c3 x lc1 et1 a1 t1)
+      (let-match erased t2 (TFCons _ _ c4 _ lc3 _ b2 t3) (absurd (TFEnd _ _ _ _) t1))
+      (let ((erased v) (erased pv)) (addc-total s c3))
+      (let-match erased (addc-fn c2 x c4 v (addc-swap c2 c4 x b2) (addc-swap c2 v x (addc-tri c s c3 c2 v x ad pv a1))) (Refl _ _))
+      (let ((erased p3)) (addc-comm s c3 c4 pv))
+      (SCons s c3 c4 lc1 lc3 p3 (tf-shift a a2 c3 c4 s lc1 lc3 et1 t1 t3 p3)))))
+
+; Two colourings with one trace differ by a constant colour.
+(def-fns _ $ (erased trace-shift : (erased (List (Col)) cs cs2 et) (erased (Trace cs et) t) (erased (Trace cs2 et) t2)
+    -> (erased (Col) s) (erased (Shift s cs cs2) r))
+  (match erased t _
+    ((TrNil) (let-match erased t2 (TrNil) (absurd (TrCons _ _ _ t3) t3)) (values (C0) (SNil (C0))))
+    ((TrCons c lc _ t1)
+      (let-match erased t2 (TrCons c2 lc2 _ t3) (absurd (TrNil) t1))
+      (let ((erased s) (erased a)) (addc-total c c2))
+      (let ((erased p)) (addc-swap c c2 s a))
+      (values s (SCons s c c2 lc lc2 p (tf-shift c c2 c c2 s lc lc2 et t1 t3 p))))))
+
+(def-fns _ $ (erased shift-revapp : (erased (Col) s) (erased (List (Col)) pre pre2 w w2 r) (subterm erased (Shift s pre pre2) sp) (erased (Shift s w w2) sw)
+    (erased (RevApp (Col) pre w r) ra) -> (erased (List (Col)) r2) (erased (RevApp (Col) pre2 w2 r2) ra2) (erased (Shift s r r2) res))
+  (let-match erased sp (SCons _ c c2 pre1 pre3 a sp1) ((SNil _) (let-match erased ra (RANil _ _)) (values w2 (RANil _ w2) sw)))
+  (let-match erased ra (RACons _ _ _ _ _ ra1))
+  (let ((erased r2) (erased ra2) (erased res)) (shift-revapp s pre1 pre3 (Cons _ c w) (Cons _ c2 w2) r sp1 (SCons s c c2 w w2 a sw) ra1))
+  (values r2 (RACons _ c2 pre3 w2 r2 ra2) res))
+
+(def-fns _ $ (erased shift-fn : (erased (Col) s) (erased (List (Col)) cs a b) (subterm erased (Shift s cs a) p) (erased (Shift s cs b) q)
+    -> (erased (Eq (List (Col)) a b) e))
+  (let-match erased p (SCons _ c c2 cs1 a1 p1 r1) ((SNil _) (let-match erased q (SNil _)) (Refl _ a)))
+  (let-match erased q (SCons _ _ c3 _ b1 q1 r2))
+  (let-match erased (addc-fn c s c2 c3 p1 q1) (Refl _ _))
+  (let-match erased (shift-fn s cs1 a1 b1 r1 r2) (Refl _ _))
+  (Refl _ a))
+
+(def-fns _ $ (erased cols-inj : (erased (List (Nat)) a b) (erased (List (Col)) cs) (subterm erased (All2 (Nat) (Col) ColOf a cs) p)
+    (erased (All2 (Nat) (Col) ColOf b cs) q) -> (erased (Eq (List (Nat)) a b) e))
+  (let-match erased p (All2Cons _ _ _ k c a1 cs1 p1 r1) ((All2Nil _ _ _) (let-match erased q (All2Nil _ _ _)) (Refl _ a)))
+  (let-match erased q (All2Cons _ _ _ k2 _ b1 _ q1 r2))
+  (let-match erased (colof-inj k k2 c p1 q1) (Refl _ _))
+  (let-match erased (cols-inj a1 b1 cs1 r1 r2) (Refl _ _))
+  (Refl _ a))
+
+; k2 names the colour of k shifted by s.
+(def-adts $ (ShiftN : ((Col) s) ((Nat) k k2) -> Type)
+  enum
+  (many MkShiftN : (erased (Col) s c c2) (erased (Nat) k k2) (erased (ColOf k c) p) (erased (AddK c s c2) a) (erased (ColOf k2 c2) q) -> (ShiftN s k k2)))
+
+; g sends each colour below 4 to its shift by s.
+(def-adts $ (ShiftTab : ((Col) s) ((List (Nat)) g) -> Type)
+  enum
+  (many MkShiftTab : (erased (Col) s) (erased (Nat) a0 a1 a2 a3) (erased (ShiftN s (Zero) a0) p0) (erased (ShiftN s (Succ (Zero)) a1) p1)
+      (erased (ShiftN s (Succ (Succ (Zero))) a2) p2) (erased (ShiftN s (Succ (Succ (Succ (Zero)))) a3) p3)
+      -> (ShiftTab s (Cons (Nat) a0 (Cons (Nat) a1 (Cons (Nat) a2 (Cons (Nat) a3 (Nil (Nat)))))))))
+
+(def-fns _ $ (erased shiftn-exists : (erased (Col) s c) (erased (Nat) k) (erased (ColOf k c) p) -> (erased (Nat) k2) (erased (ShiftN s k k2) r))
+  (let ((erased c2) (erased a)) (addc-total c s))
+  (let ((erased k2) (erased q)) (natof-exists c2))
+  (values k2 (MkShiftN s c c2 k k2 p a q)))
+
+(def-fns _ $ (erased shifttab-exists : (erased (Col) s) -> (erased (List (Nat)) g) (erased (ShiftTab s g) t) (erased (Length (Nat) g 4) l))
+  (unary 4)
+  (let ((erased a0) (erased p0)) (shiftn-exists s (C0) (Zero) (CO0)))
+  (let ((erased a1) (erased p1)) (shiftn-exists s (C1) (Succ (Zero)) (CO1)))
+  (let ((erased a2) (erased p2)) (shiftn-exists s (C2) (Succ (Succ (Zero))) (CO2)))
+  (let ((erased a3) (erased p3)) (shiftn-exists s (C3) (Succ (Succ (Succ (Zero)))) (CO3)))
+  (let ((erased g)) (Cons (Nat) a0 (Cons (Nat) a1 (Cons (Nat) a2 (Cons (Nat) a3 (Nil (Nat)))))))
+  (values g (MkShiftTab s a0 a1 a2 a3 p0 p1 p2 p3) (LengthCons _ a0 _ _ (LengthCons _ a1 _ _ (LengthCons _ a2 _ _ (LengthCons _ a3 _ _ (LengthNil _)))))))
