@@ -1,6 +1,6 @@
-; minimal_counter_example_is_cubic of coloring.v, and birkhoff.v's spoke ring, min_arity and
-; minimal_counter_example_is_plain_cubic_pentagonal (embed.sl's BirkGeo), with minimality as data: each step gives the
-; fact or a Reduces. Load after birkhoff2.sl and split.sl.
+; minimal_counter_example_is_cubic of coloring.v (cubic-reduces), with minimality as data, and from it embed.sl's BirkGeo
+; (birkhoff.v's minimal_counter_example_is_plain_cubic_pentagonal), with min_arity taken as a hypothesis (MinArity). Load
+; after embed.sl, in the chain that PLAN.md gives.
 
 (def-fns _ $ (erased skip-id : (erased (Nat) d z) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk) (erased (Nth (Nat) p z z) pz)
     -> (erased (Eq (List (Nat)) p2 p) r))
@@ -741,3 +741,27 @@
     ((OrL _ _ rk) (OrL _ _ (MkAllOrder d _ n ks ol rk))))
   (let-match erased nt (MkNodeTwo _ x y _ pxy pyx nyx lx))
   (OrR _ _ (cubic-cut B pb d x y e n f p pxy pyx nyx lx)))
+
+; min_arity of birkhoff.v at every dart, with minimality as data, left open here: a planar bridgeless plain cubic connected
+; map that the search finds uncolourable has every face above four darts, or reduces.
+(def-adts $ (MinArity : -> Type)
+  enum
+  (many MkMinArity : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
+          (erased (Connected d e n f) conn) (erased (NoColoring e f) ncol) -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r)) ma)
+      -> (MinArity)))
+
+; embed.sl's BirkGeo, from MinArity: the map is cubic or reduces (cubic-reduces), and then pentagonal or reduces.
+(def-fns _ $ (erased birk-geo : (erased (MinArity) mh) -> (erased (BirkGeo) r))
+  (let-match erased mh (MkMinArity Fm Bm ma))
+  (def-lvl B)
+  (let ((erased qc) (erased qm)) (values (prove-predates (level-of cubic-glue) B) (prove-predates Bm B)))
+  (def-fns _ $ (erased geo : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (NoColoring e f) ncol)
+      (erased (Connected d e n f) conn) -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r))
+    (unary 4)
+    (let-match erased (cubic-reduces B qc d e n f p) (OrL _ _ cu) ((OrR _ _ r) (values (Nil _) (OrR _ _ r))))
+    (let-match erased (ma d e n f p cu conn ncol) (OrL _ _ pg) ((OrR _ _ r) (values (Nil _) (OrR _ _ (reduces-lift Bm B d e n f r qm)))))
+    (let-match erased pg (MkPentagonal _ _ ks ol ab))
+    (let-match erased p (MkPbpp _ _ _ _ h g bl pl pc))
+    (values ks (OrL _ _ (MkGeo d e n f ks h pl cu ol ab))))
+  (MkBirkGeo (level-of geo) B geo))

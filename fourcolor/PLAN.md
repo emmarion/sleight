@@ -419,7 +419,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   at a level and a bound of its own: `BirkGeo`, birkhoff.v's
   minimal_counter_example_is_plain_cubic_pentagonal (a connected `Pbpp`
   map with a `NoColoring` is a `Geo` or has a `Reduces`; its cubic part
-  is coloring.v's minimal_counter_example_is_cubic, not ported either),
+  is coloring.v's minimal_counter_example_is_cubic, which `birkhoff3.sl`
+  proves; `birkhoff3.sl` reduces `BirkGeo` to `MinArity`),
   and `NotEmbed cfs`, embed.v's not_embed_reducible for the
   configurations of cfs (such a map that is a `Geo`, with a configuration
   of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed` for
@@ -534,8 +535,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `BirkhoffChecks` (with m 1 for five darts and 0 below, `BkMode`), and
   `ring-two` shows a ring of a bridgeless map has two darts; the induction
   on the ring size that Coq's Birkhoff makes is in `birkhoff2.sl`. The cubicity and connectedness of a
-  minimal counterexample (minimal_counter_example_is_cubic, not ported;
-  `split.sl`'s `split-reduces` for connectedness) are hypotheses. That these
+  minimal counterexample (`birkhoff3.sl`'s `cubic-reduces`;
+  `split.sl`'s `split-reduces` for connectedness) are hypotheses here. That these
   statements match Coq's has been checked only by reading. Load order:
   `std/nat.sl std/list.sl ring.sl`, then `base map lists planemap walk
   frontier labels hypgraph hypperm hypermap hypplane hypeuler hypderived
@@ -566,10 +567,34 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   one face whose edge images are on one face give a `Reduces`, through
   the ring x :: edge y of `srcycle-ring`). That these statements match
   Coq's has been checked only by reading.
+- `birkhoff3.sl` (load after `embed.sl`, in the chain below): as far as
+  both compilers check it, minimal_counter_example_is_cubic of
+  `coloring.v` with minimality as data, and `embed.sl`'s `BirkGeo` from
+  one hypothesis. `cubic-reduces`: a `Pbpp` map is cubic, or reduces,
+  through `cubic-glue`, to the one map left by WalkupE at the two darts x,
+  y of a node cycle of order 2 (an order of 1 contradicts bridgelessness,
+  `orders-three`). The cut is made in two stages: WalkupE twice with the
+  darts kept as fixed points (`walk2`, `Walk2`), then two WalkupEs at
+  those fixed darts, which only renumber (`drop-two`, `Drop2`, with H
+  sending the darts of the smaller map to those of the map off x and y,
+  and t back). The smaller map is planar from `walkup-e`'s genus bound,
+  and bridgeless, plain and precubic through H (`cut-pbpp`); a
+  four-colouring of it gives one of the map (`lift-color`), with x and y
+  coloured as the faces they lie on, or 0 and 1 when e x = y and the two
+  faces are x and y alone (`XYCol`). `birk-geo` gives `BirkGeo` from
+  `MinArity`, birkhoff.v's min_arity at every dart with minimality as
+  data, stated whole-map as `Pentagonal` or a `Reduces` for a planar
+  bridgeless plain cubic connected map with a `NoColoring`; `MinArity` is
+  not proved. That these statements match Coq's has been checked only by
+  reading. Chain (both compilers, about 75 s with slc in one run): that of
+  `embed.sl` below, with `red/bcheck cpcomp` after `red/ccheck`, and
+  `cpgeom ringdec traceconv birkhoff birkfit birkhoff2` after `revsnip3`
+  (before `unav/realias`), then `embed.sl birkhoff3.sl`.
 - Still open: the rest of part B. From a reading of `birkhoff.v`, the
-  spoke ring lemmas, min_arity and those after them are not ported, nor
-  is minimal_counter_example_is_cubic of `coloring.v`; `embed.sl`'s
-  `BirkGeo` needs the cubicity and min_arity.
+  spoke ring lemmas and min_arity (`birkhoff3.sl`'s `MinArity`) are not
+  ported; Coq's min_arity uses scycle_spoke_ring, diskF_spoke_ring,
+  chordless_spoke_ring and size_spoke_ring, and a colouring for the case
+  of an empty diskFC.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
