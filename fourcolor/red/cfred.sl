@@ -115,3 +115,106 @@
     (let ((erased ct2) (erased cr) (erased s)) (trace-ctr cs et e0 tr))
     (kcc-ring cp et ct2 e0 (kempe-treeP-c (MkPred (List (Step)) cp CpColR) h kt ks et et2 ct2 l1 e (disj-sub kt ct et2 dj m) cr) s L))
   (MkKHalf cp ct F f))
+
+; C-reducibility of coloring.v, on the maps of cpmap.sl.
+
+; ie lists each dart of cc followed by its edge image (Gonthier's insertE).
+(def-adts $ (InsertE : ((List (Nat)) e cc ie) -> Type)
+  enum
+  (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
+  (many IECons : (erased (List (Nat)) e cc ie) (erased (Nat) y z) (erased (Nth (Nat) e y z) p) (erased (InsertE e cc ie) rest)
+      -> (InsertE e (Cons (Nat) y cc) (Cons (Nat) y (Cons (Nat) z ie)))))
+
+; From dart x on, the colours ke of the edge images equal the colours ks exactly at the darts of ie.
+(def-adts $ (CcEdge : ((List (Nat)) ie) ((Nat) x) ((List (Nat)) ke ks) -> Type)
+  enum
+  (many CENil : (erased (List (Nat)) ie) (erased (Nat) x) -> (CcEdge ie x (Nil (Nat)) (Nil (Nat))))
+  (many CEIn : (erased (List (Nat)) ie ke ks) (erased (Nat) x a) (erased (In x ie) p) (erased (CcEdge ie (Succ x) ke ks) rest)
+      -> (CcEdge ie x (Cons (Nat) a ke) (Cons (Nat) a ks)))
+  (many CEOut : (erased (List (Nat)) ie ke ks) (erased (Nat) x a b) (erased (NotIn x ie) p) (erased (Apart (Nat) Lt a b) ne) (erased (CcEdge ie (Succ x) ke ks) rest)
+      -> (CcEdge ie x (Cons (Nat) a ke) (Cons (Nat) b ks))))
+
+; ks is a colouring of the map (e, f) for the contract cc (Gonthier's cc_coloring), with colours below 4.
+(def-adts $ (CcColoring : ((List (Nat)) e f cc ks) -> Type)
+  enum
+  (many MkCcColoring : (erased (List (Nat)) e f cc ks ie ke) (erased (InsertE e cc ie) pi) (erased (Respects ks f ks) face) (erased (Respects ks e ke) ce)
+      (erased (CcEdge ie (Zero) ke ks) edge) (erased (Under ks 4) four) -> (CcColoring e f cc ks)))
+
+; et is the ring trace of a colouring of the map of cp for the contract cc (cc_ring_trace of coloring.v, on the ring of CpCol).
+(def-adts $ (CcCol : ((List (Step)) cp) ((List (Nat)) cc) ((List (Col)) et) -> Type)
+  enum
+  (many MkCcCol : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ks rc) (erased (List (Col)) cs et)
+      (erased (Cpmap cp d e f r) c) (erased (CcColoring e f cc ks) col) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
+      -> (CcCol cp cc et)))
+
+; os is the face orbit of x, starting at x.
+(def-adts $ (Orbit : ((List (Nat)) p) ((Nat) x) ((List (Nat)) os) -> Type)
+  enum
+  (many MkOrbit : (erased (List (Nat)) p xs) (erased (Nat) x y) (erased (Nth (Nat) p x y) px) (erased (Path p (Cons (Nat) x (Nil (Nat))) y x xs) w)
+      -> (Orbit p x (Cons (Nat) x xs))))
+
+; No edge image of a dart of os is on the face of y: a labelling constant along f tells them apart.
+(def-adts $ (NotAdj : ((List (Nat)) e f os) ((Nat) y) -> Type)
+  enum
+  (many MkNotAdj : (erased (List (Nat)) e f os lab eos ls) (erased (Nat) y l) (erased (Respects lab f lab) rf) (erased (Respects e os eos) re)
+      (erased (Respects lab eos ls) rl) (erased (Nth (Nat) lab y l) py) (erased (NotIn l ls) out) -> (NotAdj e f os y)))
+
+; The edge image of y is on the face of a dart of p.
+(def-adts $ (EBand : ((List (Nat)) e f p) ((Nat) y) -> Type)
+  enum
+  (many MkEBand : (erased (List (Nat)) e f p) (erased (Nat) y z) (erased (Nth (Nat) e y z) pz) (erased (Fband f p z) b) -> (EBand e f p y)))
+
+; x is a triad for p (Gonthier's triad): three darts of its face have their edge images on faces of p, and some dart of p
+; is not adjacent to x.
+(def-adts $ (Triad : ((List (Nat)) e f p) ((Nat) x) -> Type)
+  enum
+  (many MkTriad : (erased (List (Nat)) e f p os) (erased (Nat) x y1 y2 y3 y) (erased (Orbit f x os) o) (erased (In y1 os) i1) (erased (In y2 os) i2)
+      (erased (In y3 os) i3) (erased (Distinct (Cons (Nat) y1 (Cons (Nat) y2 (Cons (Nat) y3 (Nil (Nat)))))) dy) (erased (EBand e f p y1) b1)
+      (erased (EBand e f p y2) b2) (erased (EBand e f p y3) b3) (erased (In y p) iy) (erased (NotAdj e f os y) na) -> (Triad e f p x)))
+
+; cc has one to four darts, and a triad in the kernel of r if four.
+(def-adts $ (CcSize : ((List (Nat)) e f r ie cc) -> Type)
+  enum
+  (many CsSmall : (erased (List (Nat)) e f r ie cc) (erased (Nat) k) (erased (Length (Nat) cc k) l) (erased (Lt (Zero) k) lo) (erased (Lt k 4) hi)
+      -> (CcSize e f r ie cc))
+  (many CsTriad : (erased (List (Nat)) e f r ie cc) (erased (Nat) x) (erased (Length (Nat) cc 4) l) (erased (Kernel f r x) kx) (erased (Triad e f ie x) t)
+      -> (CcSize e f r ie cc)))
+
+; cc is a valid contract for the ring r (Gonthier's valid_contract).
+(def-adts $ (ValidContract : ((List (Nat)) e n f r cc) -> Type)
+  enum
+  (many MkValidContract : (erased (List (Nat)) e n f r cc ie) (erased (InsertE e cc ie) pi) (erased (Disj r ie) off) (erased (Simple n ie) sp)
+      (erased (CcSize e f r ie cc) sz) -> (ValidContract e n f r cc)))
+
+; The map of cp is C-reducible with contract cc (C_reducible of coloring.v, for the ring of cfring of cfmap.v), for the
+; Kempe-closed sets at every level.
+(def-adts $ (CRed : ((List (Step)) cp) ((List (Nat)) cc) -> Type)
+  enum
+  (many MkCRed : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Cpmap cp d e f r) c)
+      (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v) (erased (Level) F)
+      (erased (Fn F (erased (List (Col)) et) (erased (CcCol cp cc et) col) (erased (Level) L) -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) et) k)) g)
+      -> (CRed cp cc)))
+
+; What contract_ctreeP of cfcontract.v gives for a contract tree ct: cc is valid, and the even normal form of every contract
+; ring trace without its first entry is in ct.
+(def-adts $ (ContractOK : ((List (Step)) cp) ((List (Nat)) cc) ((Ctree) ct) -> Type)
+  enum
+  (many MkContractOK : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) ct) (erased (Nat) d) (erased (List (Nat)) e n f r)
+      (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v) (erased (Level) G)
+      (erased (Fn G (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
+          (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtMem ct et2) m)) g)
+      -> (ContractOK cp cc ct)))
+
+; check_reducible_valid, given contract_ctreeP for the contract tree.
+(def-fns _ $ (erased check-reducible-valid : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) ct) (erased (KHalf cp ct) kh)
+    (erased (ContractOK cp cc ct) ok) -> (erased (CRed cp cc) r))
+  (let-match erased kh (MkKHalf _ _ F0 kf))
+  (let-match erased ok (MkContractOK _ _ _ d e n f r c h v G cg))
+  (def-lvl F)
+  (def-fns F $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) (erased (Level) L) -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) et) k))
+    (let ((erased e0) (erased et1) (erased et2) (erased q) (erased tr) (erased m)) (cg et col))
+    (let-match erased q (Refl _ _))
+    (let-match erased col (MkCcCol _ _ d2 e2 f2 r2 ks rc cs _ c2 _ rr nc trc))
+    (let ((erased k) (erased lk) (erased csz)) (cpmap-size cp d2 e2 f2 r2 c2))
+    (kf cs et1 et2 e0 k trc (trace-length cs et k trc (ncols-length rc cs k nc (respects-length ks r2 rc k rr lk))) csz tr m L))
+  (MkCRed cp cc d e n f r c h v F g))
