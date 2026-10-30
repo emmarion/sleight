@@ -1453,17 +1453,28 @@
 
 ; The Immediate proof lets extraction skip OCaml's write barrier, measured ~4x faster.
 (def-fns _ $ (many extern array-swap-imm : (erased Type A) (erased (List A) xs)
-    (unique (Array A xs) a) (many (Nat) i) (unique A x)
-    (erased A m) (erased (Nth A xs i m) nth) (erased (Immediate A) _imm) ->
+    (unique (Array A xs) a) (subterm many (Nat) i) (unique A x)
+    (erased A m) (erased (Nth A xs i m) nth) (erased (Immediate A) im) ->
     (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
     (erased (SetNth A xs i x ys) p))
-  (tail (array-swap _ _ a i x _ nth)))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (Cons A x xs1)
+        (u _ _ (imm (ImmPlaced _ im _ hd (place-at _ hd)) (ImmPlaced _ im _ x (place-at _ x))) x (at) tl)
+        (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap-imm _ _ tl i1 x _ q im)))
+      (values old (Cons A hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place-imm : (erased Type A) (erased (List A) xs)
     (unique (Array A xs) a) (many (Nat) i) (unique A x)
-    (erased A m) (erased (Nth A xs i m) nth) (erased (Immediate A) _imm) ->
+    (erased A m) (erased (Nth A xs i m) nth) (erased (Immediate A) im) ->
     (erased (List A) ys) (unique (Array A ys) r at a) (erased (SetNth A xs i x ys) p))
-  (tail (array-place _ _ a i x _ nth)))
+  (let ((unique _) (erased ys) (unique r) (erased p)) (array-swap-imm _ _ a i x _ nth im))
+  (values ys r p))
 
 (def-fns _ $ (many extern array-length : (erased Type A) (erased (List A) xs)
     (subterm unique (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p) (unique a is r at a))
