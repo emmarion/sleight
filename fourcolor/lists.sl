@@ -1,8 +1,3 @@
-(def-adts $ (Or : (Type P) (Type Q) -> Type)
-  enum
-  (many OrL : (erased Type P Q) (erased P p) -> (Or P Q))
-  (many OrR : (erased Type P Q) (erased Q q) -> (Or P Q)))
-
 (def-fns _ $ (erased snoc-length : (erased Type A) (erased (List A) xs ys) (erased A a) (erased (Nat) n)
     (subterm erased (Snoc A xs a ys) s) (erased (Length A xs n) l) -> (erased (Length A ys (Succ n)) r))
   (match erased s _

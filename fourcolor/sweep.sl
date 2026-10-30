@@ -13,12 +13,13 @@
   (many MkClosed : (many (Nat) t) (many (List (Nat)) r) -> (Closed)))
 
 ; A sweep from step t on, over the active items xs, each item being the label it starts at, in sweep order.
-; Step t removes a run r of consecutive items and puts k new items, labelled t, in its place.
+; Step t removes a run r of consecutive items, which start at distinct labels, and puts k new items, labelled t, in
+; its place.
 (def-adts $ (Trace : ((Nat) t) ((List (Nat)) xs) ((List (Closed)) cs) -> Type)
   enum
   (many TrDone : (erased (Nat) t) -> (Trace t (Nil (Nat)) (Nil (Closed))))
   (many TrStep : (erased (Nat) t k) (erased (List (Nat)) xs p r q pr ns pn ys) (erased (List (Closed)) cs)
-      (erased (LApp (Nat) p r pr) a1) (erased (LApp (Nat) pr q xs) a2)
+      (erased (LApp (Nat) p r pr) a1) (erased (LApp (Nat) pr q xs) a2) (erased (Distinct r) dr)
       (erased (Repeat (Nat) k t ns) rk) (erased (LApp (Nat) p ns pn) a3) (erased (LApp (Nat) pn q ys) a4)
       (erased (Trace (Succ t) ys cs) rest)
       -> (Trace t xs (Cons (Closed) (MkClosed t r) cs))))

@@ -9,13 +9,7 @@
   (many DartsCons : (erased (Nat) d) (erased (List (Nat)) xs s) (erased (List (Group)) gs) (erased (Darts gs s) p)
       -> (Darts (Cons (Group) (MkGroup d xs) gs) (Cons (Nat) d s))))
 
-(def-adts $ (Distinct : ((List (Nat)) s) -> Type)
-  enum
-  (many DistNil : -> (Distinct (Nil (Nat))))
-  (many DistCons : (erased (Nat) x) (erased (List (Nat)) s) (erased (NotIn x s) p) (erased (Distinct s) rest)
-      -> (Distinct (Cons (Nat) x s))))
-
-; Every element of s xs outside m.
+; Every element of s is outside m.
 (def-adts $ (Disj : ((List (Nat)) s) ((List (Nat)) m) -> Type)
   enum
   (many DisjNil : (erased (List (Nat)) m) -> (Disj (Nil (Nat)) m))

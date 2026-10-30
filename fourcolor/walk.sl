@@ -1,20 +1,3 @@
-(def-adts $ (NotIn : ((Nat) x) ((List (Nat)) s) -> Type)
-  enum
-  (many NotInNil : (erased (Nat) x) -> (NotIn x (Nil (Nat))))
-  (many NotInCons : (erased (Nat) x y) (erased (List (Nat)) s) (erased (Apart (Nat) Lt x y) ne) (erased (NotIn x s) rest)
-      -> (NotIn x (Cons (Nat) y s))))
-
-(def-adts $ (In : ((Nat) x) ((List (Nat)) s) -> Type)
-  enum
-  (many InHere : (erased (Nat) x) (erased (List (Nat)) s) -> (In x (Cons (Nat) x s)))
-  (many InThere : (erased (Nat) x y) (erased (List (Nat)) s) (erased (In x s) p) -> (In x (Cons (Nat) y s))))
-
-(def-fns _ $ (erased notin-in : (erased (Nat) x y) (erased (List (Nat)) s) (subterm erased (NotIn x s) p) (erased (In y s) q) ->
-    (erased (Apart (Nat) Lt x y) ne))
-  (let-match erased p (NotInCons _ z s1 ne1 p1) (absurd (NotInNil _) q))
-  (let-match erased q (InThere _ _ _ q1) ((InHere _ _) ne1))
-  (notin-in x y s1 p1 q1))
-
 ; A face walk from a to b whose every step leaves through an edge image outside s: the corners after the
 ; darts of s are never passed.
 (def-adts $ (Walk : ((List (Nat)) e) ((List (Nat)) nd) ((List (Nat)) s) ((Nat) a) ((Nat) b) -> Type)
