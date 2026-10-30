@@ -299,3 +299,78 @@
   (let ((erased pt2)) (trace-perm g ip cs cs2 et et3 (permns-cols g lc lc2 cs cs2 al co co2) t t2))
   (let-match erased (permt-fn g et et2 et3 pt pt2) (Refl _ _))
   (MkRingTrace e f r ks2 lc2 cs2 et2 c2 rl2 co2 t2))
+
+; ins lists each dart x of cc followed by e x (Gonthier's insertE cc).
+(def-adts $ (InsertE : ((List (Nat)) e cc ins) -> Type)
+  enum
+  (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
+  (many IECons : (erased (List (Nat)) e cc ins) (erased (Nat) x y) (erased (Nth (Nat) e x y) px) (erased (InsertE e cc ins) rest)
+      -> (InsertE e (Cons (Nat) x cc) (Cons (Nat) x (Cons (Nat) y ins)))))
+
+; ks gives the two ends of each bond x-y of g the same colour when x is in ins, and different colours otherwise.
+(def-adts $ (EdgeCC : ((List (Nat)) ins ks) ((List (Bond)) g) -> Type)
+  enum
+  (many ECNil : (erased (List (Nat)) ins ks) -> (EdgeCC ins ks (Nil (Bond))))
+  (many ECIn : (erased (List (Nat)) ins ks) (erased (List (Bond)) g) (erased (Nat) x y l) (erased (In x ins) px) (erased (Nth (Nat) ks x l) p1)
+      (erased (Nth (Nat) ks y l) p2) (erased (EdgeCC ins ks g) rest) -> (EdgeCC ins ks (Cons (Bond) (MkBond x y) g)))
+  (many ECOut : (erased (List (Nat)) ins ks) (erased (List (Bond)) g) (erased (Nat) x y l1 l2) (erased (NotIn x ins) px) (erased (Nth (Nat) ks x l1) p1)
+      (erased (Nth (Nat) ks y l2) p2) (erased (Apart (Nat) Lt l1 l2) ne) (erased (EdgeCC ins ks g) rest) -> (EdgeCC ins ks (Cons (Bond) (MkBond x y) g))))
+
+; cc_coloring cc ks: a colouring constant on faces and on the edges of insertE cc, and proper on the other edges.
+(def-adts $ (CCColoring : ((Nat) d) ((List (Nat)) e f cc ks) -> Type)
+  enum
+  (many MkCCColoring : (erased (Nat) d) (erased (List (Nat)) e f cc ks ins) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)
+      (erased (Graph d e ge) gr) (erased (Respects ks f ks) rf) (erased (EdgeCC ins ks ge) ec) (erased (Under ks 4) u) (erased (Length (Nat) ks d) lk)
+      -> (CCColoring d e f cc ks)))
+
+; cc_ring_trace cc r et.
+(def-adts $ (CCRingTrace : ((Nat) d) ((List (Nat)) e f cc r) ((List (Col)) et) -> Type)
+  enum
+  (many MkCCRingTrace : (erased (Nat) d) (erased (List (Nat)) e f cc r ks lc) (erased (List (Col)) cs et) (erased (CCColoring d e f cc ks) c)
+      (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (CCRingTrace d e f cc r et)))
+
+; cc_colorable cc.
+(def-adts $ (CCColorable : ((Nat) d) ((List (Nat)) e f cc) -> Type)
+  enum
+  (many MkCCColorable : (erased (Nat) d) (erased (List (Nat)) e f cc ks) (erased (CCColoring d e f cc ks) c) -> (CCColorable d e f cc)))
+
+; minimal_counter_example: a planar bridgeless plain precubic hypermap with no four-colouring, all of whose smaller such
+; hypermaps have one.
+(def-adts $ (MinimalCounterExample : ((Nat) d) ((List (Nat)) e n f) -> Type)
+  enum
+  (many MkMinimalCounterExample : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+      (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Precubic d n) pc) (erased (Level) L1)
+      (erased (Fn L1 (erased (List (Nat)) ks) (erased (FourColoring e f ks) c) -> (erased (False) r)) noncol)
+      (erased (Level) L2)
+      (erased (Fn L2 (erased (Nat) d2) (erased (List (Nat)) e2 n2 f2) (erased (Hypermap d2 e2 n2 f2) h2) (erased (Genus d2 e2 n2 f2 (Zero)) g2)
+          (erased (Bridgeless d2 e2 n2 f2) b2) (erased (AllOrder d2 e2 (Succ (Succ (Zero)))) pl2) (erased (Precubic d2 n2) pc2) (erased (Lt d2 d) lt)
+          -> (erased (List (Nat)) ks) (erased (FourColoring e2 f2 ks) c)) minimal)
+      -> (MinimalCounterExample d e n f)))
+
+(def-fns _ $ (erased proper-cc : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (Proper ks g) pr) -> (erased (EdgeCC (Nil (Nat)) ks g) r))
+  (let-match erased pr (ProperCons _ g1 x y l1 l2 p1 p2 ne pr1) ((ProperNil _) (ECNil _ ks)))
+  (ECOut _ ks g1 x y l1 l2 (NotInNil x) p1 p2 ne (proper-cc ks g1 pr1)))
+
+(def-fns _ $ (erased cc-proper : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (EdgeCC (Nil (Nat)) ks g) ec) -> (erased (Proper ks g) r))
+  (match erased ec _
+    ((ECNil _ _) (ProperNil ks))
+    (absurd (ECIn _ _ _ _ _ _ ix _ _ _) ix)
+    ((ECOut _ _ g1 x y l1 l2 _ p1 p2 ne ec1) (ProperCons ks g1 x y l1 l2 p1 p2 ne (cc-proper ks g1 ec1)))))
+
+; With no contract edge, a contract colouring is a four-colouring.
+(def-fns _ $ (erased four-cc : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) c)
+    -> (erased (CCColoring d e f (Nil (Nat)) ks) r))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased ge) (erased gr)) (graph-exists d e le))
+  (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
+  (let ((erased lk)) (respects-length ks f ks d rf lf))
+  (MkCCColoring d e f _ ks _ ge (IENil e) gr rf (proper-cc ks ge (coloring-proper d e f ks ids ge c gr io lk)) u lk))
+
+(def-fns _ $ (erased cc-four : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (CCColoring d e f (Nil (Nat)) ks) c)
+    -> (erased (FourColoring e f ks) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let-match erased c (MkCCColoring _ _ _ _ _ ins ge ie gr rf ec u lk))
+  (let-match erased ie (IENil _))
+  (proper-coloring d e f ks ids ge (cc-proper ks ge ec) gr io rf u lk (perm-under d e nf pe)))
