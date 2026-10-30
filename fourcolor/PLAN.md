@@ -248,7 +248,7 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   and cpmap_bridgeless of `cfmap.v`; decide_ring_trace of `coloring.v`;
   quasicubic_Euler, srcycleI and scycle_cface of `geometry.v`; and the
   Birkhoff_check computation itself, which Coq runs by vm_compute. None of
-  these is ported.
+  these appears to be ported, going by a search of the files for them.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
