@@ -184,3 +184,42 @@
   (let ((erased sr)) (sub-refl (Cons _ z (Cons _ x2 B))))
   (MkFEmpty d z e n f lab _ (Cons _ x2 B) hd1 zs1 lr1 rg1 sr sr ds1 rl1
     (fc-all d x0 x1 x2 z ez e n f lab p A B hd zs hd1 zs1 hd2 zs2 lr1 cc d0 d1 d2 cn fl fm rl1 hd1 (sub-refl hd1))))
+
+(def-fns _ $ (erased app-fn : (erased (List (Nat)) ys zs zs2) (subterm erased (List (Nat)) xs) (erased (AppN xs ys zs) a) (erased (AppN xs ys zs2) b)
+    -> (erased (Eq (List (Nat)) zs zs2) r))
+  (let-match erased a (AppCons xs1 _ zs1 x a1) ((AppNil _) (let-match erased b (AppNil _)) (Refl _ zs)))
+  (let-match erased b (AppCons _ _ zs3 _ b1))
+  (let-match erased (app-fn ys zs1 zs3 xs1 a1 b1) (Refl _ _))
+  (Refl _ zs))
+
+(def-fns _ $ (erased app-assoc : (erased (List (Nat)) Y Z Y1 W) (subterm erased (List (Nat)) X) (erased (AppN X Y Z) a) (erased (AppN Y1 W Y) b)
+    -> (erased (List (Nat)) M) (erased (AppN X Y1 M) c) (erased (AppN M W Z) d))
+  (let-match erased a (AppCons X1 _ Z1 x a1) ((AppNil _) (values Y1 (AppNil Y1) b)))
+  (let ((erased M1) (erased c1) (erased d1)) (app-assoc Y Z1 Y1 W X1 a1 b))
+  (values (Cons _ x M1) (AppCons X1 Y1 M1 x c1) (AppCons M1 W Z1 x d1)))
+
+(def-fns _ $ (erased rp-end-in : (erased (List (Nat)) e f) (erased (Nat) x y) (subterm erased (List (Nat)) p) (erased (RPath e f x p y) rp) -> (erased (In y (Cons (Nat) x p)) r))
+  (let-match erased rp (RPCons _ _ p1 _ ex z _ pe sp rp1) ((RPNil _ _ _) (InHere x (Nil _))))
+  (InThere y x _ (rp-end-in e f z y p1 rp1)))
+
+(def-fns _ $ (erased snoc-lt : (erased (List (Nat)) Y Zl Wl) (erased (Nat) y b y2 n) (subterm erased (List (Nat)) X) (erased (AppN X (Cons (Nat) y (Cons (Nat) b Y)) Zl) ap)
+    (erased (AppN X (Cons (Nat) y2 (Nil (Nat))) Wl) aw) (erased (Length (Nat) Zl n) lz) -> (erased (Nat) m) (erased (Length (Nat) Wl m) lw) (erased (Lt m n) lt))
+  (let-match erased ap (AppCons X1 _ Z1 a ap1)
+    ((AppNil _) (let-match erased aw (AppNil _)) (let-match erased lz (LengthCons _ _ _ n1 lz1)) (let-match erased lz1 (LengthCons _ _ _ n2 _))
+      (values (Succ (Zero)) (LengthCons _ y2 (Nil _) (Zero) (LengthNil _)) (LtS (Zero) (Succ n2) (LtZ n2)))))
+  (let-match erased aw (AppCons _ _ Wl1 _ aw1))
+  (let-match erased lz (LengthCons _ _ _ n1 lz1))
+  (let ((erased m) (erased lw) (erased lt)) (snoc-lt Y Z1 Wl1 y b y2 n1 X1 ap1 aw1 lz1))
+  (values (Succ m) (LengthCons _ a Wl1 m lw) (LtS m n1 lt)))
+
+(def-fns _ $ (erased proper-mid : (erased (List (Nat)) e Y Z) (erased (Nat) x a b) (erased (List (Nat)) X) (erased (AppN X (Cons (Nat) a (Cons (Nat) b Y)) Z) ap)
+    -> (erased (Proper e (Cons (Nat) x Z)) r))
+  (let-match erased ap (AppCons X1 _ Z1 c ap1) ((AppNil _) (ProperBig e Y x a b)))
+  (let-match erased ap1 (AppCons _ _ Z2 c2 _) ((AppNil _) (ProperBig e (Cons _ b Y) x c a)))
+  (ProperBig e Z2 x c c2))
+
+; No dart of a bridgeless cubic map shares a face with its node image.
+(def-fns _ $ (erased absurd nbridge : (erased (Nat) d u nu) (erased (List (Nat)) e n f nf fi) (erased (Hypermap d e n f) h) (erased (HPerm d e nf) pe) (erased (HPerm d f fi) pf)
+    (erased (Bridgeless d e n f) bl) (erased (Nth (Nat) n u nu) pn) (erased (Lt nu d) lnu) (erased (SomePath f (Nil (Nat)) nu u) sp) -> (erased (False) r))
+  (let ((erased a) (erased pa) (erased la)) (perm-nth d nu e nf pe lnu))
+  (no-bridge d nu a e n f bl pa (some-cat f nu u a sp (some-sym d a u f fi pf (some-step f a u (hyper-third d a nu u e n f h pa pn)) la))))
