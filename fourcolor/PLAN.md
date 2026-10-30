@@ -537,9 +537,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   top-level levels are `KCB` (`red/bridge.sl`), `COB` and `KHL`, that of
   the Kempe half (`red/cfred.sl`), `CGL`, that of the contract half
   (`red/ccomp.sl`), and `CRX` (`red/ccheck.sl`), at which `red-c` builds
-  `Reducible CRX`. In a test run, a function at a fixed level built this
-  way from a `CRed CRX` and a `KClosed` checked, and three broken variants
-  of it (K or L minted too early, or X a parameter) were rejected.
+  `Reducible CRX`. In a test run with both compilers, a function at a
+  fixed level built this way from a `CRed CRX` and a `KClosed` checked,
+  and three broken variants of it (K or L minted too early, or X a
+  parameter) were rejected.
   `red/goal-c.sl` sets and proves the goal `AllRedC CRX` on the chunks of
   `red/configs.sl`: every configuration appears to be C-reducible, in the
   sense of `CRed`, with its contract. Load order: `std/nat.sl
@@ -551,8 +552,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl` or `red/goal-c.sl` (with
   `--goal proved`). `red/goal-c.sl`
-  proved its goal in about 7.4 and 9 minutes of wall time (15.5 of user time)
-  in two runs on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
+  proved its goal with slc in about 7.4, 9 and 12 minutes of wall time in
+  three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/bcheck.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
