@@ -1,5 +1,4 @@
-; The goal FourColor of defs.sl, with no hypotheses, by four-color-open of fcopen.sl on the computed unav-proof,
-; all-red-proof, birkhoff-proof and cfcerts-proof. Load after embed4proof.sl, in the chain PLAN.md gives.
+; The goal FourColor of defs.sl, with no hypotheses, by fcproof.sl's four-color-proof. Load after fcproof.sl.
 
 (goal erased (FourColor))
-(qed (four-color-open unav-proof all-red-proof birkhoff-proof cfcerts-proof))
+(qed four-color-proof)
