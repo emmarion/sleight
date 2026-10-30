@@ -70,6 +70,27 @@ Following the Coq development, roughly in its file order:
    `present11.v`, which would be carried as data trees checked by a
    verified interpreter rather than as hand-written proofs.
 
+### Part B, module by module
+
+A map `(e, nd)` of `map.sl` appears to be a hypermap in the Coq proof's
+sense with edge `e` and face `nd`; `Colored` is then its
+`four_colorable` and `PlaneMap`'s looplessness its `bridgeless`, so part
+B is its `four_color_hypermap` for the maps `PlaneMap` builds. The Coq
+files group into layers by their imports (line counts of the Coq files):
+
+| layer | Coq files | role |
+|---|---|---|
+| 0 | color 479, chromogram 272, dyck 51, ctree 501, gtree 315, ctreerestrict 388, gtreerestrict 277, initctree 215, initgtree 138 | colour traces and the trees of the reducibility check; no hypermaps |
+| 1 | hypermap 483, walkup 646, jordan 333, geometry 813 | hypermaps, genus, the Jordan property |
+| 2 | coloring 532, kempe 358, patch 657, sew 255, snip 481, revsnip 538, cube 210, cfmap 1547, cfcolor 697, cfcontract 1029, kempetree 422, cfreducible 114, quiz 494 | colourings, Kempe chains, gluing maps, configurations as maps, the reducibility semantics |
+| 3 | birkhoff 677, contract 429, embed 1467, cfquiz 787, quiztree 338, part 1305, discharge 410, hubcap 431, redpart 1283 | minimal counterexamples, embedding configurations, discharging |
+| 4 | present 252, present5 .. present11 (16,000 lines of scripts), unavoidability 34, configurations 2129, the job and task files, combinatorial4ct 30 | the data and the final assembly |
+
+In Sleight the computational steps (layer 0, `cfmap`'s construction,
+the reducibility and hubcap checks, the presentations) would be
+certified functions run under `native-compute`; the rest would be erased
+lemmas.
+
 ## Scale
 
 The Coq proof directory is about 43,000 lines, written with heavy proof
