@@ -16,25 +16,25 @@
   (many Sz1 : (erased (Bstack) bs) (erased (Nat) n) (erased (Sz bs n) p) -> (Sz (BP1 bs) (Succ n))))
 
 ; The symbol s takes n open chords to n2.
-(def-adts $ (Step : ((Gsym) s) ((Nat) n n2) -> Type)
+(def-adts $ (DStep : ((Gsym) s) ((Nat) n n2) -> Type)
   enum
-  (many StSkip : (erased (Nat) n) -> (Step (GSkip) n n))
-  (many StPush : (erased (Nat) n) -> (Step (GPush) n (Succ n)))
-  (many StPop0 : (erased (Nat) n) -> (Step (GPop0) (Succ n) n))
-  (many StPop1 : (erased (Nat) n) -> (Step (GPop1) (Succ n) n)))
+  (many StSkip : (erased (Nat) n) -> (DStep (GSkip) n n))
+  (many StPush : (erased (Nat) n) -> (DStep (GPush) n (Succ n)))
+  (many StPop0 : (erased (Nat) n) -> (DStep (GPop0) (Succ n) n))
+  (many StPop1 : (erased (Nat) n) -> (DStep (GPop1) (Succ n) n)))
 
 ; From n open chords, w never closes more than it opens and ends with none open.
 (def-adts $ (Dep : ((Nat) n) ((List (Gsym)) w) -> Type)
   enum
   (many DNil : -> (Dep (Zero) (Nil (Gsym))))
-  (many DCons : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w) (erased (Step s n n2) st) (erased (Dep n2 w) d)
+  (many DCons : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w) (erased (DStep s n n2) st) (erased (Dep n2 w) d)
       -> (Dep n (Cons (Gsym) s w))))
 
 ; gram_neg_rec n w = w2.
 (def-adts $ (Neg : ((Nat) n) ((List (Gsym)) w w2) -> Type)
   enum
   (many NgNil : (erased (Nat) n) -> (Neg n (Nil (Gsym)) (Nil (Gsym))))
-  (many NgStep : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w w2) (erased (Step s n n2) st) (erased (Neg n2 w w2) p)
+  (many NgStep : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w w2) (erased (DStep s n n2) st) (erased (Neg n2 w w2) p)
       -> (Neg n (Cons (Gsym) s w) (Cons (Gsym) s w2)))
   (many NgP0 : (erased (List (Gsym)) w) -> (Neg (Zero) (Cons (Gsym) (GPop0) w) (Cons (Gsym) (GPop1) w)))
   (many NgP1 : (erased (List (Gsym)) w) -> (Neg (Zero) (Cons (Gsym) (GPop1) w) (Cons (Gsym) (GPop0) w))))
@@ -43,7 +43,7 @@
 (def-adts $ (Flip : ((Nat) n) ((List (Gsym)) w w2) -> Type)
   enum
   (many FlNil : (erased (Nat) n) -> (Flip n (Nil (Gsym)) (Cons (Gsym) (GPush) (Nil (Gsym)))))
-  (many FlStep : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w w2) (erased (Step s n n2) st) (erased (Flip n2 w w2) p)
+  (many FlStep : (erased (Gsym) s) (erased (Nat) n n2) (erased (List (Gsym)) w w2) (erased (DStep s n n2) st) (erased (Flip n2 w w2) p)
       -> (Flip n (Cons (Gsym) s w) (Cons (Gsym) s w2)))
   (many FlP0 : (erased (List (Gsym)) w w2) (erased (Neg (Zero) w w2) p) -> (Flip (Zero) (Cons (Gsym) (GPop0) w) (Cons (Gsym) (GPush) w2)))
   (many FlP1 : (erased (List (Gsym)) w) -> (Flip (Zero) (Cons (Gsym) (GPop1) w) (Cons (Gsym) (GPush) w))))
@@ -76,11 +76,11 @@
     ((Bot0 _ b1 c1 p1) (let-match erased q (Bot0 _ _ c2 q1)) (let-match erased (bot-fn x b1 c1 c2 p1 q1) (Refl _ _)) (Refl _ b2))
     ((Bot1 _ b1 c1 p1) (let-match erased q (Bot1 _ _ c2 q1)) (let-match erased (bot-fn x b1 c1 c2 p1 q1) (Refl _ _)) (Refl _ b2))))
 
-(def-fns _ $ (erased step-succ : (erased (Gsym) s) (erased (Nat) n n2) (erased (Step s n n2) st) -> (erased (Step s (Succ n) (Succ n2)) r))
+(def-fns _ $ (erased step-succ : (erased (Gsym) s) (erased (Nat) n n2) (erased (DStep s n n2) st) -> (erased (DStep s (Succ n) (Succ n2)) r))
   (match erased st _ ((StSkip _) (StSkip (Succ n))) ((StPush _) (StPush (Succ n))) ((StPop0 m) (StPop0 (Succ m))) ((StPop1 m) (StPop1 (Succ m)))))
 
 (def-fns _ $ (erased sym-sz : (erased (Gsym) s) (erased (Bstack) bs bs2) (erased (Col) e) (erased (Nat) n) (erased (Sym s bs e bs2) sy) (erased (Sz bs n) z)
-    -> (erased (Nat) n2) (erased (Sz bs2 n2) z2) (erased (Step s n n2) st))
+    -> (erased (Nat) n2) (erased (Sz bs2 n2) z2) (erased (DStep s n n2) st))
   (match erased sy _
     ((SSkip _) (values n z (StSkip n)))
     ((SPush2 _) (values (Succ n) (Sz0 bs n z) (StPush n)))
@@ -112,7 +112,7 @@
 
 ; A symbol that leaves the bottom bit alone, read without it.
 (def-fns _ $ (erased sym-unbot : (erased (Gsym) s) (erased (Bstack) s2 b2 sb) (erased (Col) e) (erased (Bool) x) (erased (Nat) n n2) (erased (Sym s s2 e b2) sy)
-    (erased (Bot x sb s2) p) (erased (Sz sb n) z) (erased (Step s n n2) st) -> (erased (Bstack) b) (erased (Sym s sb e b) sy2) (erased (Bot x b b2) q) (erased (Sz b n2) z2))
+    (erased (Bot x sb s2) p) (erased (Sz sb n) z) (erased (DStep s n n2) st) -> (erased (Bstack) b) (erased (Sym s sb e b) sy2) (erased (Bot x b b2) q) (erased (Sz b n2) z2))
   (match erased sy _
     ((SSkip _) (let-match erased st (StSkip _)) (values sb (SSkip sb) p z))
     ((SPush2 _) (let-match erased st (StPush _)) (values (BP0 sb) (SPush2 sb) (Bot0 x sb s2 p) (Sz0 sb n z)))
@@ -230,7 +230,7 @@
     ((Bot0 _ b1 c1 p1) (let-match erased z (Sz0 _ m z1)) (Sz0 c1 (Succ m) (bot-sz x b1 c1 m p1 z1)))
     ((Bot1 _ b1 c1 p1) (let-match erased z (Sz1 _ m z1)) (Sz1 c1 (Succ m) (bot-sz x b1 c1 m p1 z1)))))
 
-(def-fns _ $ (erased step-fn : (erased (Gsym) s) (erased (Nat) n a b) (erased (Step s n a) p) (erased (Step s n b) q) -> (erased (Eq (Nat) a b) e))
+(def-fns _ $ (erased step-fn : (erased (Gsym) s) (erased (Nat) n a b) (erased (DStep s n a) p) (erased (DStep s n b) q) -> (erased (Eq (Nat) a b) e))
   (match erased p _
     ((StSkip _) (let-match erased q (StSkip _)) (Refl _ a))
     ((StPush _) (let-match erased q (StPush _)) (Refl _ a))

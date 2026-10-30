@@ -453,7 +453,17 @@
     (erased (Length (Col) et (Succ h)) len) (erased (Ctr (C0) et ctc) cr) -> (erased (KCC P ctc) r))
   (kc-kcc P et ctc (kempe-tree-sound P h kt ct ks dj et m ev len) cr))
 
-(let ((erased Rel)) (TyCtor ((List (Col)) ct) ((List (Gsym)) w) -> Type))
+; A relation between traces and chromograms with one parameter, as data, like PredC.
+(def-adts $ (RelC : -> Type)
+  enum
+  (many MkRel : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) -> (RelC)))
+
+(let ((erased Rel)) (RelC))
+
+(def-adts $ (HoldsR : ((RelC) R) ((List (Col)) ct) ((List (Gsym)) w) -> Type)
+  enum
+  (many MkHoldsR : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) (erased (List (Col)) ct)
+      (erased (List (Gsym)) w) (erased (R x ct w) h) -> (HoldsR (MkRel X x R) ct w)))
 
 ; After Kempe_closed of chromogram.v, by functions at level L, with R naming the chromogram the definition asks for: the colour
 ; permutations of each trace of P2 are in P2, and each trace of P2 matches a chromogram w with R ct w, every trace matching which is in P2.
@@ -462,8 +472,8 @@
   (many MkKClosed : (erased (Level) L) (erased Pred P2) (erased Rel R)
       (erased (Fn L (erased (List (Col)) ct ct2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g ct ct2) pt) (erased (Holds P2 ct) p) ->
           (erased (Holds P2 ct2) q)) cp)
-      (erased (Fn L (erased (List (Col)) ct) (erased (Holds P2 ct) p) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) ct w) m) (erased (R ct w) r)) cg)
-      (erased (Fn L (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (R ct w) r) (erased (MatchG (BS0) ct2 w) m) -> (erased (Holds P2 ct2) q)) cm)
+      (erased (Fn L (erased (List (Col)) ct) (erased (Holds P2 ct) p) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) ct w) m) (erased (HoldsR R ct w) r)) cg)
+      (erased (Fn L (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (HoldsR R ct w) r) (erased (MatchG (BS0) ct2 w) m) -> (erased (Holds P2 ct2) q)) cm)
       -> (KClosed L P2 R)))
 
 ; After Kempe_coclosure of chromogram.v: for the sets closed at a level L, the co-closure KCC meets every closed set holding the trace.
@@ -481,7 +491,7 @@
       (let ((erased w) (erased m) (erased r)) (cg ct p))
       (amc-walk Q P2 R cl ct w r (BS0) ct (Nil _) w a m (RANil _ w)))
     ((erased amc-walk : (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct0) (erased (List (Gsym)) w0)
-        (erased (R ct0 w0) r) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u) (subterm erased (AMC Q bs ct pre) a)
+        (erased (HoldsR R ct0 w0) r) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u) (subterm erased (AMC Q bs ct pre) a)
         (erased (MatchG bs ct u) m) (erased (RevApp (Gsym) pre u w0) ra) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2))
       (let-match erased cl (MkKClosed _ _ _ _ _ cm))
       (match erased m _
