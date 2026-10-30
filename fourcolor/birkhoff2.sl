@@ -176,3 +176,30 @@
       (let ((erased dx) (erased ox)) (disk-edge-inv d x ex x e n f p hm gen rg dn (NotInCons ex x p aex (NotInCons ex y (Nil _) ney (NotInNil ex))) pex))
       (apart-irrefl x (notin-in x x r ox (InHere x p)))))
   (nontrivial0 d x nx nex e n f p hd zs hm gen rg ds dfx izs knex))
+
+; double_dart of birkhoff.v: two distinct darts x and y on one face, with their edge images on one face, give the ring
+; x :: edge y, nontrivial for 0 (nontrivial-cycle2), so the map reduces.
+(def-fns _ $ (erased double-dart : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x y ex ey)
+    (erased (List (Nat)) e n f) (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
+    (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
+    (erased (Connected d e n f) cn) (erased (NoColoring e f) nc) (erased (Nth (Nat) e x ex) pex) (erased (Nth (Nat) e y ey) pey)
+    (erased (SomePath f (Nil (Nat)) x y) wxy) (erased (SomePath f (Nil (Nat)) ex ey) wex) (erased (Apart (Nat) Lt x y) nxy)
+    -> (erased (Reduces B d e n f) r))
+  (unary 6)
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f hm))
+  (let ((erased gf) (erased grf)) (perm-graph d f fi pmf))
+  (let ((erased lx) (erased ly)) (values (perm-val d ex x nf e (perm-sym d e nf pme) (perm-inv d x ex e nf pme pex))
+    (perm-val d ey y nf e (perm-sym d e nf pme) (perm-inv d y ey e nf pme pey))))
+  (let ((erased pey2) (erased _)) (plain-eq d y ey e pl ly pey))
+  (let ((erased p)) (Cons (Nat) ey (Nil (Nat))))
+  (let ((erased rg)) (srcycle-ring d x e n f p gf hm bl grf
+    (SRCons e f (Nil _) gf x x ex ey pex wex (FANil gf x) (SRNil e f gf x ey y pey2 (some-sym d x y f fi pmf wxy lx)))))
+  (let-match erased (nat-eq ex ey) (Unequal _ _ _ _ nee)
+    (absurd (Equal _ _ _)
+      (let ((erased pa) (erased _)) (plain-eq d x ex e pl lx pex))
+      (let ((erased pb2) (erased _)) (plain-eq d y ex e pl ly pey))
+      (let-match erased (nth-fn _ e ex x y pa pb2) (Refl _ _))
+      (apart-irrefl x nxy)))
+  (birkhoff-reduces B pb d x (Succ (Succ (Zero))) (Zero) e n f p bks hm gen bl pl cu cn nc rg
+    (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
+    (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
