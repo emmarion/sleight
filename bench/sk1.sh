@@ -1,20 +1,20 @@
 #!/bin/sh
 # Times the Skelet #1 job (bb/sk1.sl's main-run) alone: elaborates just the files it needs plus a native-compute of
 # main-run, captures the generated OCaml, and reruns the compiled job. Results go to _build/sk1/results.tsv.
-# Usage: bench/sk1.sh [-n runs] [-m main.ml] [-p] [-f] [-s slc] [-e entry file] [label]
+# Usage: bench/sk1.sh [-n runs] [-m main.ml] [-p] [-f] [-s slc] [-x "extra deps"] [-e entry file] [label]
 #   -m  skip elaboration and time a given (perhaps hand-edited) main.ml   -p  also profile a prefix run under callgrind
 #   -f  also run the full BB(5) check of bb/README.md
 set -u
 cd "$(dirname "$0")/.."
-RUNS=2 ML= PROF= FULL= SLC=_build/release/slc ENTRY=main-run EFILE=bb/sk1.sl PFUEL=${PFUEL:-10000000}
-while getopts n:m:pfs:e: opt; do case $opt in n) RUNS=$OPTARG;; m) ML=$(realpath "$OPTARG");; p) PROF=1;; f) FULL=1;; s) SLC=$OPTARG;; e) ENTRY=$OPTARG;; *) exit 2;; esac; done
+RUNS=2 ML= PROF= FULL= XDEPS= SLC=_build/release/slc ENTRY=main-run EFILE=bb/sk1.sl PFUEL=${PFUEL:-10000000}
+while getopts n:m:pfs:x:e: opt; do case $opt in n) RUNS=$OPTARG;; m) ML=$(realpath "$OPTARG");; p) PROF=1;; f) FULL=1;; s) SLC=$OPTARG;; x) XDEPS=$OPTARG;; e) ENTRY=$OPTARG;; *) exit 2;; esac; done
 shift $((OPTIND - 1))
 [ "$ENTRY" = main-run ] || { EFILE=$1; shift; }
 LABEL=${1:-}
 B=$(pwd)/_build/sk1
 mkdir -p "$B/wrap"
 DEPS="std/list.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/search.sl bb/far.sl std/macro.sl bb/pat.sl bb/skelet.sl bb/sk1.sl"
-[ "$EFILE" = bb/sk1.sl ] || DEPS="$DEPS $EFILE"
+[ "$EFILE" = bb/sk1.sl ] || DEPS="$DEPS $XDEPS $EFILE"
 REV=$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- bb || echo "+$(git diff HEAD -- bb | sha1sum | cut -c1-7)")
 ELAB=-
 if [ -z "$ML" ]; then
