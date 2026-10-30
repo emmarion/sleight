@@ -233,6 +233,23 @@
   (values ts2 bt2 (setnth-length _ ts q cap u ts2 st1 l1)
     (RgC ts2 ns q j s x t u c0 (setnth-nth _ ts q u ts2 st1) nn0 cu (ecd-any t s c c0 e nc) (rg-frt ts ts2 ns (Succ q) j q u x rg st1 (lt-succ q)))))
 
+(def-fns _ $ (many nc-of : (many (Tg) t) -> (many (Maybe (NoCnt t)) r))
+  (match many t _
+    ((TgQD) (Some _ (NcQD))) ((TgQP) (Some _ (NcQP))) ((TgQC0) (Some _ (NcQC0))) ((TgQC1) (Some _ (NcQC1))) ((TgQC2) (Some _ (NcQC2)))
+    ((TgQF0) (Some _ (NcQF0))) ((TgQF1) (Some _ (NcQF1))) ((TgQF2) (Some _ (NcQF2))) ((TgQF3) (Some _ (NcQF3))) ((TgQG0) (Some _ (NcQG0)))
+    ((TgQG1) (Some _ (NcQG1))) ((TgQG2) (Some _ (NcQG2))) ((TgC) (Some _ (NcC))) ((TgE) (Some _ (NcE))) ((TgV) (Some _ (NcV)))
+    (else (None _))))
+
+; wr-cons, leaving the count array alone for a tag that carries no count.
+(def-fns _ $ (many wr-any : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
+    (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) q) (erased (Lt q cap) lq) (many (Tg) t) (many (Nat) c)
+    (erased (Sy) s) (erased (Ecd s t c) e) (erased (Nat) j) (erased (List (Sy)) x) (erased (Rg ts ns (Succ q) j x) rg)
+    -> (erased (List (U8)) ts2) (erased (List (Copy (Nat))) ns2) (unique (Bytes ts2) bt2 at bt) (unique (Array (Copy (Nat)) ns2) bc2 at bc)
+    (erased (Length (U8) ts2 cap) l3) (erased (Length (Copy (Nat)) ns2 cap) l4) (erased (Rg ts2 ns2 q j (Cons (Sy) s x)) rg2))
+  (let-match many (nc-of t) (Some _ nc) ((None _) (tail $ wr-cons cap ts ns bt bc l1 l2 q lq t c s e j x rg)))
+  (let ((erased ts2) (unique bt2) (erased l3) (erased rg2)) (wr-tag cap ts ns bt l1 l2 q lq t nc s c e j x rg))
+  (values ts2 ns bt2 bc l3 l2 rg2))
+
 (def-adts
   ((Nk1 : ((Pk) k) ((Sy) s) -> Type)
     enum
@@ -501,7 +518,7 @@
   (let-match many p (Succ q) ((Zero) (values ts1 ns1 bt1 bc1 l5 l6 (WlNo _ _ _ _ _))))
   (let ((erased lq)) (lt-pred q j cap (rg-le ts1 ns1 p j z0 rg0) le))
   (let ((many t) (many c) (erased ec)) (enc-sy s))
-  (let ((erased ts2) (erased ns2) (unique bt2) (unique bc2) (erased l7) (erased l8) (erased rg2)) (wr-cons cap ts1 ns1 bt1 bc1 l5 l6 q lq t c s ec j z0 rg0))
+  (let ((erased ts2) (erased ns2) (unique bt2) (unique bc2) (erased l7) (erased l8) (erased rg2)) (wr-any cap ts1 ns1 bt1 bc1 l5 l6 q lq t c s ec j z0 rg0))
   (values ts2 ns2 bt2 bc2 l7 l8 (WlOk _ _ _ _ _ q _ (CatC (Sy) s x0 y z0 c0) rg2)))
 
 ; Copies cells i to j-1 of the a-buffers, holding x, in front of the range e to k-1 of the b-buffers, holding y.
@@ -526,7 +543,7 @@
   (let-match many p (Succ q) ((Zero) (values atg2 acn2 ts1 ns1 bt1 bc1 l5 l6 (WlNo _ _ _ _ _))))
   (let ((erased lq)) (lt-pred q k cap (rg-le ts1 ns1 p k z0 rg0) le))
   (let ((erased ts2) (erased ns2) (unique bt2) (unique bc2) (erased l7) (erased l8) (erased rg2))
-    (wr-cons cap ts1 ns1 bt1 bc1 l5 l6 q lq (coerce v (coercible-sym cu)) cv s ec k z0 rg0))
+    (wr-any cap ts1 ns1 bt1 bc1 l5 l6 q lq (coerce v (coercible-sym cu)) cv s ec k z0 rg0))
   (values atg2 acn2 ts2 ns2 bt2 bc2 l7 l8 (WlOk _ _ _ _ _ q _ (CatC (Sy) s x0 y z0 c0) rg2)))
 
 (def-adts
@@ -593,17 +610,6 @@
   (many LaNo : (erased (Nat) cap) (unique (Sb cap) s0) (unique (Sb cap) s1) (unique (Sb cap) s2) -> (Lza cap))
   (many LaDead : (erased (Nat) cap) -> (Lza cap)))
 
-(def-fns _ $ (many lz-want-a : (many (Mv) d) (many (List (Sy)) l) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg)
-    (unique (Array (Copy (Nat)) ns) cn) (many (Nat) i e) (erased (List (Sy)) w) (erased (Rg ts ns i e w) rg)
-    -> (unique tg is tg2 at tg) (unique cn is cn2 at cn) (many (Bool) b))
-  (let-match many d (DR) ((DL) (values tg cn (BFalse))))
-  (let-match many (uni-l l) (UlNo _) ((UlOk _ _ _ _) (values tg cn (BTrue))))
-  (let-match many l (Cons _ s0 _) ((Nil _) (values tg cn (BFalse))))
-  (let-match many s0 (YF f0) (else (values tg cn (BFalse))))
-  (let-match many f0 (QC0) (else (values tg cn (BFalse))))
-  (let ((unique tg2) (unique cn2) (many wl)) (rd-list ts ns tg cn i e w rg))
-  (values tg2 cn2 (lz-want d l wl)))
-
 ; A runner result from a list-side LsGo: the new window is written back into the window buffer.
 (def-fns _ $ (many la-of : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Mv) d9) (many (List (Sy)) l9 w9) (many (Zk) k9) (erased (Lz k9 d9 l9 w9) z9)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
@@ -628,9 +634,9 @@
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) i j) (erased (List (Sy)) w) (erased (Rg ts ns i j w) rg)
     (unique (Sb cap) sc) (many (Zk) k) (erased (Lz k (DR) l w) z) -> (unique (Fda cap e ts ns) r))
-  (let ((many i16) (erased _)) (add i 16))
+  (let ((many i16) (erased _)) (add i 32))
   (let-match many (lt-dec j i16) (No _ _ _ _ _) ((Yes _ _ _ _ _) (FdNo _ e ts ns tg cn sc)))
-  (let ((unique tg1) (many dr)) (dsplit-a ts ns tg 6 i j w rg))
+  (let ((unique tg1) (many dr)) (dsplit-a ts ns tg 10 i j w rg))
   (let-match many dr (DaOk _ _ _ _ _ sp w1 w2 c r1 r2) ((DaNo _ _ _ _ _) (FdNo _ e ts ns tg1 cn sc)))
   (let-match unique sc (MkSb _ cts cns ctg ccn lc1 lc2))
   (let ((unique tg2) (unique cn2) (erased cts2) (erased cns2) (unique ctg2) (unique ccn2) (erased lc3) (erased lc4) (many sr))
@@ -1059,6 +1065,21 @@
         ((QG1) (rule-w c0 cap e eb ts ns tg cn q1 q2 (DL) l i w rg (BFalse) tr r-g1 k-g1))
         ((QG2) (rule-w c0 cap e eb ts ns tg cn q1 q2 (DL) l i w rg (BFalse) tr r-g2 k-g2))))
     (else (WsNo c0 ts ns cap e tg cn (BFalse)))))
+
+(def-fns _ $ (many lz-want-a : (many (Mv) d) (many (List (Sy)) l) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg)
+    (unique (Array (Copy (Nat)) ns) cn) (many (Nat) i e) (erased (List (Sy)) w) (erased (Rg ts ns i e w) rg)
+    -> (unique tg is tg2 at tg) (unique cn is cn2 at cn) (many (Bool) b))
+  (let-match many d (DR) ((DL) (values tg cn (BFalse))))
+  (let-match many (uni-l l) (UlNo _) ((UlOk _ _ _ _) (values tg cn (BTrue))))
+  (let-match many l (Cons _ s0 _) ((Nil _) (values tg cn (BFalse))))
+  (let-match many s0 (YF f0) (else (values tg cn (BFalse))))
+  (let-match many f0 (QC0) (else (values tg cn (BFalse))))
+  (let ((unique tg1) (unique cn1) (many st)) (strip-w ts ns tg cn uk i e w rg))
+  (let-match many st (StwOk _ _ _ _ _ i2 x c rg2) ((StwNo _ _ _ _ _) (values tg1 cn1 (BFalse))))
+  (let-match many (nat-eq i2 e) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values tg1 cn1 (BFalse))))
+  (let-match erased rg2 (RgC _ _ _ _ s1 x1 t1 u1 c1 nt1 nn1 cu1 ec1 r1) (absurd (RgN _ _ _) (apart-irrefl i2 ap)))
+  (let ((many v) (unique tg2)) (bytes-get _ tg1 i2 _ nt1))
+  (match many (coerce v (coercible-sym cu1)) _ ((TgQD) (values tg2 cn1 (BTrue))) (else (values tg2 cn1 (BFalse)))))
 
 (def-fns _ $ (many lz-list : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Mv) d) (many (List (Sy)) l)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)

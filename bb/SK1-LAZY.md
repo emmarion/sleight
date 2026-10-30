@@ -35,9 +35,10 @@ The runner's moves:
 - when the window gets short, or the top capacity runs out, `lp-of`
   exposes the top level (`LzP`): it strides just that segment by its
   count and adds the resulting multiplier to the level below;
-- when a stride succeeds on a window of 16 or more symbols, `lz-fold`
-  first moves the window's tail back onto the stack as segments of
-  about 8 symbols with no pending count (`LzF`, chunked by `ch-of`);
+- when a stride succeeds and leaves a window of 16 or more symbols,
+  `lz-fold` splits that strided window at its first `D` at offset 6 or
+  more and moves what follows back onto the stack as segments of about
+  96 symbols with no pending count (`LzF`, chunked by `ch-of`);
 - entering the lazy runner (`lz-enter`) chunks the tail the same way
   (`LzB`), and the first lazy step is a stride.
 
@@ -65,13 +66,33 @@ stack there were about 14 thousand forces (about 6.4 thousand from the
 `try-uni` pattern), and elaboration plus the Skelet #1 job took about
 18 s user instead of about 45 s.
 
+With the fold applied to the strided window and the sizes above, in one
+set of measurements on a 4-core container the Skelet #1 job took about
+12.4 s user, where folding the unstrided window (and striding its prefix
+again) at 16 symbols with segments of about 8 took about 16.2 s. The
+sizes came from a sweep of variants of the generated OCaml; fold lengths
+from 12 to 16 and segment sizes from 64 to 128 measured within noise of
+each other.
+
 ## What is left
 
-`sw-of` is still the largest single cost in a profile. Most of it seems
-to come from rightward steps whose stride fails some way into the
-window, usually at a `C` whose `X` count is smaller than the stride's
-multiplier there; the window is long at those times because pushes
-have exposed segments up to that `C`. Each such step rescans the window
-up to the failing `C`. Two things that did not help in one measurement
-each: also folding on leftward steps, and a non-allocating pre-check
-before `sw-of`.
+`sw-of` is still the largest single cost in a profile. In one
+instrumented run with the sizes above, about 26 million of the 43
+million strides tried by `lstep` failed, and they made about 422 million
+of its 641 million `sw-of` steps; most failures are at a `C` whose `X`
+count is smaller than the stride's multiplier there, some of them after
+dozens of symbols, since pushes expose whole segments. Each such step
+rescans the window up to the failing `C`. Things that did not help in
+one measurement each: also folding on leftward steps; a non-allocating
+pre-check before `sw-of`, before every stride or only after a failed
+one (a scan of the list seems to cost about as much per symbol as the
+stride); and remembering the failing segment by the identity of its
+first cell, which predicted most failures but whose walk to that cell
+cost about as much again.
+
+`bb/sk1a.sl` is an experiment that keeps the window in a tag buffer and
+a count array instead of a list (`main-run-a`), still folding before the
+stride; in one measurement its job took about 16.0 s user, so it is not
+used. Its stride costs less per symbol than `sw-of` in a micro-benchmark,
+but writing counts, appending and reading cells back into lists for the
+stack took more than that saved.
