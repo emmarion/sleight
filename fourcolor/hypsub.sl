@@ -572,3 +572,93 @@
       ((OrL _ _ i) (app-in-l t zs st x ap (split-in t xs ys zs x sp i)))
       ((OrR _ _ i) (app-in-r t zs st x ap i)))
     (split-app-sub t xs ys zs st m1 sp ap sb1)))
+
+; z is the first dart of t on the walk along p from x.
+(def-adts $ (FirstHit : ((List (Nat)) p t) ((Nat) x z) -> Type)
+  enum
+  (many MkFirstHit : (erased (List (Nat)) p t xs) (erased (Nat) x z) (erased (Path p t x z xs) w) (erased (In z t) iz) -> (FirstHit p t x z)))
+
+(def-fns _ $ (erased first-hit : (erased (List (Nat)) p s t xs) (erased (Nat) x y) (subterm erased (Path p s x y xs) w) (erased (In y t) iy)
+    -> (erased (Nat) z) (erased (FirstHit p t x z) r))
+  (match erased (in-dec x t) _
+    ((OrL _ _ ix) (values x (MkFirstHit p t (Nil _) x x (PathHere p t x) ix)))
+    ((OrR _ _ ox)
+      (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t ox iy))))
+      (let ((erased z) (erased fh)) (first-hit p s t xs1 x1 y w1 iy))
+      (let-match erased fh (MkFirstHit _ _ ws _ _ w2 iz))
+      (values z (MkFirstHit p t (Cons _ x ws) x z (PathStep p t ws x x1 z px ox w2) iz)))))
+
+(def-fns _ $ (erased hit-unique : (erased (List (Nat)) p t xs ys) (erased (Nat) x z1 z2) (subterm erased (Path p t x z1 xs) w1) (erased (Path p t x z2 ys) w2)
+    (erased (In z1 t) i1) (erased (In z2 t) i2) -> (erased (Eq (Nat) z1 z2) e))
+  (match erased w1 _
+    ((PathHere _ _ _)
+      (match erased w2 _ ((PathHere _ _ _) (Refl _ z1)) (absurd (PathStep _ _ _ _ _ _ _ out _) (apart-irrefl x (notin-in x x t out i1)))))
+    ((PathStep _ _ xs1 _ a _ pa out w3)
+      (match erased w2 _
+        (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t out i2)))
+        ((PathStep _ _ ys1 _ b _ pb _ w4) (let-match erased (nth-fn _ p x a b pa pb) (Refl _ _)) (hit-unique p t xs1 ys1 a z1 z2 w3 w4 i1 i2))))))
+
+(def-fns _ $ (erased hit-fn : (erased (List (Nat)) p t) (erased (Nat) x z1 z2) (erased (FirstHit p t x z1) f1) (erased (FirstHit p t x z2) f2) -> (erased (Eq (Nat) z1 z2) e))
+  (let-match erased f1 (MkFirstHit _ _ xs _ _ w1 i1))
+  (let-match erased f2 (MkFirstHit _ _ ys _ _ w2 i2))
+  (hit-unique p t xs ys x z1 z2 w1 w2 i1 i2))
+
+(def-fns _ $ (erased hit-next : (erased (List (Nat)) p t) (erased (Nat) x x1 z) (erased (FirstHit p t x z) fh) (erased (NotIn x t) ox) (erased (Nth (Nat) p x x1) px)
+    -> (erased (FirstHit p t x1 z) r))
+  (let-match erased fh (MkFirstHit _ _ xs _ _ w iz))
+  (let-match erased w (PathStep _ _ xs1 _ a _ pa _ w1) (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t ox iz))))
+  (let-match erased (nth-fn _ p x a x1 pa px) (Refl _ _))
+  (MkFirstHit p t xs1 x1 z w1 iz))
+
+; ys lists the darts of xs whose labels under lab are in t, and zs the others.
+(def-adts $ (SplitBy : ((List (Nat)) lab t xs ys zs) -> Type)
+  enum
+  (many SBNil : (erased (List (Nat)) lab t) -> (SplitBy lab t (Nil (Nat)) (Nil (Nat)) (Nil (Nat))))
+  (many SBIn : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) x l) (erased (Nth (Nat) lab x l) px) (erased (In l t) p) (erased (SplitBy lab t xs ys zs) rest)
+      -> (SplitBy lab t (Cons (Nat) x xs) (Cons (Nat) x ys) zs))
+  (many SBOut : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) x l) (erased (Nth (Nat) lab x l) px) (erased (NotIn l t) p) (erased (SplitBy lab t xs ys zs) rest)
+      -> (SplitBy lab t (Cons (Nat) x xs) ys (Cons (Nat) x zs))))
+
+(def-fns _ $ (erased sb-exists : (erased (List (Nat)) lab t) (erased (Nat) d) (erased (Length (Nat) lab d) ll) (erased (List (Nat)) xs) (subterm erased (Under xs d) u)
+    -> (erased (List (Nat)) ys zs) (erased (SplitBy lab t xs ys zs) r))
+  (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (values (Nil _) (Nil _) (SBNil lab t))))
+  (let ((erased ys1) (erased zs1) (erased r1)) (sb-exists lab t d ll xs1 u1))
+  (let ((erased l) (erased px)) (nth-exists _ lab d x ll lx))
+  (match erased (in-dec l t) _
+    ((OrL _ _ p) (values (Cons _ x ys1) zs1 (SBIn lab t xs1 ys1 zs1 x l px p r1)))
+    ((OrR _ _ p) (values ys1 (Cons _ x zs1) (SBOut lab t xs1 ys1 zs1 x l px p r1)))))
+
+(def-fns _ $ (erased sb-in-key : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) y) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (In y ys) iy)
+    -> (erased (Nat) l) (erased (Nth (Nat) lab y l) py) (erased (In l t) il))
+  (match erased sp _
+    (absurd (SBNil _ _) iy)
+    ((SBIn _ _ xs1 ys1 zs1 x l px p sp1)
+      (match erased iy _ ((InHere _ _) (values l px p)) ((InThere _ _ _ iy1) (sb-in-key lab t xs1 ys1 zs1 y sp1 iy1))))
+    ((SBOut _ _ xs1 ys1 zs1 x l px p sp1) (sb-in-key lab t xs1 ys1 zs1 y sp1 iy))))
+
+(def-fns _ $ (erased sb-split : (erased (List (Nat)) lab t xs ys zs X T Z) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (SplitBy lab t X T Z) spT)
+    (erased (Sub ys T) sb) -> (erased (Split T xs ys zs) r))
+  (match erased sp _
+    ((SBNil _ _) (SpNil T))
+    ((SBIn _ _ xs1 ys1 zs1 x l px p sp1)
+      (let-match erased sb (SubCons _ _ _ ix sb1))
+      (SpIn T xs1 ys1 zs1 x ix (sb-split lab t xs1 ys1 zs1 X T Z sp1 spT sb1)))
+    ((SBOut _ _ xs1 ys1 zs1 x l px p sp1)
+      (SpOut T xs1 ys1 zs1 x
+        (match erased (in-dec x T) _
+          (absurd (OrL _ _ ix)
+            (let ((erased l2) (erased p2) (erased i2)) (sb-in-key lab t X T Z x spT ix))
+            (let-match erased (nth-fn _ lab x l l2 px p2) (Refl _ _))
+            (apart-irrefl l (notin-in l l t p i2)))
+          ((OrR _ _ o) o))
+        (sb-split lab t xs1 ys1 zs1 X T Z sp1 spT sb)))))
+
+(def-fns _ $ (erased sb-out-key : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) z l) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (In z zs) iz)
+    (erased (Nth (Nat) lab z l) pz) -> (erased (NotIn l t) r))
+  (match erased sp _
+    (absurd (SBNil _ _) iz)
+    ((SBIn _ _ xs1 ys1 zs1 x l1 px p sp1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz pz))
+    ((SBOut _ _ xs1 ys1 zs1 x l1 px p sp1)
+      (match erased iz _
+        ((InHere _ _) (let-match erased (nth-fn _ lab z l l1 pz px) (Refl _ _)) p)
+        ((InThere _ _ _ iz1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz1 pz))))))
