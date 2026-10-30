@@ -1,23 +1,5 @@
-; embed5.sl's FullRed, after embed_full of embed.v, with minimality as data. Load after embed5.sl, in its chain. That these
-; statements match Coq's has been checked only by reading.
-
-; radius2 of embeddable as a certificate over the kernel as: from the face of x0, each kernel dart x is two edge steps away,
-; x0 ~ a, edge a = ea in as, ea ~ eb = edge b, b ~ x (~ the faces of the configuration map).
-(def-adts $ (R2At : ((List (Nat)) ec fc as) ((Nat) x0 x) -> Type)
-  enum
-  (many MkR2At : (erased (List (Nat)) ec fc as) (erased (Nat) x0 x a ea b eb) (erased (SomePath fc (Nil (Nat)) x0 a) pa) (erased (Nth (Nat) ec a ea) pea)
-      (erased (In ea as) iea) (erased (SomePath fc (Nil (Nat)) ea eb) pab) (erased (Nth (Nat) ec b eb) peb) (erased (SomePath fc (Nil (Nat)) b x) pb)
-      -> (R2At ec fc as x0 x)))
-
-(def-adts $ (R2All : ((List (Nat)) ec fc as) ((Nat) x0) ((List (Nat)) xs) -> Type)
-  enum
-  (many R2Nil : (erased (List (Nat)) ec fc as) (erased (Nat) x0) -> (R2All ec fc as x0 (Nil (Nat))))
-  (many R2Cons : (erased (List (Nat)) ec fc as xs) (erased (Nat) x0 x) (erased (R2At ec fc as x0 x) p) (erased (R2All ec fc as x0 xs) rest)
-      -> (R2All ec fc as x0 (Cons (Nat) x xs))))
-
-(def-adts $ (Radius2 : ((List (Nat)) ec fc as) -> Type)
-  enum
-  (many MkRadius2 : (erased (List (Nat)) ec fc as) (erased (Nat) x0) (erased (In x0 as) jx0) (erased (R2All ec fc as x0 as) ra) -> (Radius2 ec fc as)))
+; embed5.sl's FullRedR, after embed_full of embed.v, with minimality as data. Load after embed5.sl, in its chain. That
+; these statements match Coq's has been checked only by reading.
 
 (def-fns _ $ (erased r2-at : (erased (List (Nat)) ec fc as xs) (erased (Nat) x0 x) (subterm erased (R2All ec fc as x0 xs) ra) (erased (In x xs) ix)
     -> (erased (R2At ec fc as x0 x) r))
@@ -374,15 +356,6 @@
           (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
           (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (False) r)) tr)
       -> (TrivRed)))
-
-; embed5.sl's FullRed with the radius2 certificate of the configuration as one more argument.
-(def-adts $ (FullRedR : -> Type)
-  enum
-  (many MkFullRedR : (erased (Level) F B)
-      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
-          (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
-      -> (FullRedR)))
 
 ; FullRedR from BirkhoffChecks and TrivRed. A level factory: red is at a level F minted after that of the hypothesis.
 (def-fns _ $ (erased full-red-of : (erased (BirkhoffChecks) bks) (erased (TrivRed) trd) -> (erased (FullRedR) r))
