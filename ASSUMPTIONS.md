@@ -2063,9 +2063,9 @@ reading that may be mistaken.
      check then covers.
 
 209. **`array-pluck` and `array-unpluck` (section 44).** `array-pluck`'s
-     one store, of `(Uninit A (slot-of hd))` into the slot already
-     holding `hd`, is written full-at, so the model stores nothing, as
-     the FFI's implementation does. The lemma from `SetNth` to `Nth`
+     one store, of the `Plucked` leftover that an at-match on `hd`
+     builds, into the slot already holding `hd`, is written full-at, so
+     the model stores nothing, as the FFI's implementation does. The lemma from `SetNth` to `Nth`
      that a caller of `array-unpluck` needs is not in the prelude;
      `std/list.sl` has it as `setnth-nth`, and
      `tests/array_unpluck.sl` proves its own.

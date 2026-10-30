@@ -3,7 +3,7 @@
   (let ((unique a))
     (ACons _ _ (Init _ (Succ (Succ (Succ (Succ (Zero))))))
       (ACons _ _ (Init _ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (ANil (MaybeUninit (Nat))))))
-  (let ((unique item) (erased _) (unique b) (erased cleared))
+  (let ((unique item) (erased _) (erased _) (erased _) (unique b) (erased cleared))
     (array-pluck _ _ a (Succ (Zero)) _ (NthThere _ _ _ _ _ (NthHere _ _ _))))
   (let-match unique item (Init _ value))
   (let-match erased cleared (SetThere _ _ _ _ _ _ step))

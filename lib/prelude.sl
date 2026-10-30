@@ -1286,10 +1286,39 @@
 ;! warn ACons copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ;! warn Array copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 
+(def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
+
+(def-prim $ (many place-at : (erased Type T) (unique T x) -> (unique (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many place-at-many : (erased Type T) (many T x) -> (many (Placed (slot-of x) T x) p at x)))
+
+(def-prim $ (many unplace-at : (erased (Slot) s) (erased Type T) (erased T v) (unique (Placed s T v) p) ->
+    (unique v is x at p)))
+
+(def-prim $ (many unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v) (many (Placed s T v) p) ->
+    (many v is x at p)))
+
+(def-prim $ (erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v) (erased (Placed s T v) p) ->
+    (erased (Eq (Slot) (slot-of p) s) e)))
+
+(def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
+    (erased (Placed s T v) p) (erased (Placed s T v) q) ->
+    (erased (Eq (Placed s T v) p q) e)))
+
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
-  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
+  (many Vacant : (erased Type A) (many vacant-slot is s) -> (MaybeUninit A))
+  (many Stale : (erased Type A) (many (Slot) s) (erased A v) (erased (Placed s A v) p) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+
+(def-adts $ (Plucked : (Type A) ((Slot) s) ((MaybeUninit A) m) ((MaybeUninit A) left) -> Type)
+  enum
+  (many PluckVacant : (erased Type A) ->
+     (Plucked A vacant-slot (Vacant A vacant-slot) (Vacant A vacant-slot)))
+  (many PluckStale : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p) ->
+     (Plucked A s (Stale A s v p) (Stale A s v p)))
+  (many PluckInit : (erased Type A) (erased (Slot) s) (erased A x) (erased (Placed s A x) p) ->
+     (Plucked A s (Init A x) (Stale A s x p))))
 
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
@@ -1299,7 +1328,8 @@
   ((Immediate : (Type A) -> Type)
     enum
     (many ImmU62 : -> (Immediate (U62)))
-    (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))))
+    (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))
+    (many ImmMaybe : (erased Type A) (erased (Immediate A) p) -> (Immediate (MaybeUninit A)))))
 
 (def-adts
   ((AllInit : (Type A) ((List (MaybeUninit A)) xs) ((List A) ys) -> Type)
@@ -1311,10 +1341,10 @@
 
 (def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
     (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
-    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p))
+    (erased (Repeat (MaybeUninit A) n (Vacant A vacant-slot) xs) p))
   (let-match many n (Succ n1) ((Zero) (values (Nil _) (ANil _) (RepeatNil _ _))))
   (let ((erased xs1) (unique tl) (erased q)) (notail $ array-new A n1))
-  (values (Cons (MaybeUninit A) (Uninit A vacant-slot) xs1) (ACons _ _ (Uninit _ vacant-slot) tl) (RepeatCons _ _ _ _ q)))
+  (values (Cons (MaybeUninit A) (Vacant A vacant-slot) xs1) (ACons _ _ (Vacant _ vacant-slot) tl) (RepeatCons _ _ _ _ q)))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (List A) xs)
     (unique (Array A xs) a) (subterm many (Nat) i) (unique A x)
@@ -1331,29 +1361,40 @@
       (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
       (values old (Cons A hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
-; The plucked element's Uninit holds the element's own slot: the old word stays in the array, which may
+(def-fns _ $ (many at pluck-split : (erased Type A) (unique (MaybeUninit A) m) ->
+    (unique m is v at m) (unique (MaybeUninit A) left at m) (erased (Plucked A (slot-of v) v left) pl))
+  (match unique m (at ((m is v at m) ((MaybeUninit A) left at m) ((Plucked A (slot-of v) v left) pl)))
+    ((Vacant _ s) (slot-self s) (values (Vacant _ s) (Vacant _ s) (PluckVacant _)))
+    ((Stale _ s w q) (slot-self s) (values (Stale _ s w q) (Stale _ s w q) (PluckStale _ s w q)))
+    ((Init _ x)
+      (let ((erased q)) (place-at-many _ x))
+      (values (Init _ x) (Stale _ (slot-of x) x q) (PluckInit _ (slot-of x) x q)))))
+
+; The plucked element's leftover holds the element's own word: the old word stays in the array, which may
 ; keep the plucked value alive, a potential memory leak until the element is overwritten or put back.
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
-    (unique m is v) (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
-    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p))
+    (unique m is v) (erased (MaybeUninit A) left) (erased (Plucked A (slot-of v) v left) pl)
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i left ys) p))
   (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
-      (values hd (Cons (MaybeUninit A) (Uninit A (slot-of hd)) xs1) (at unique (u _ _ (Uninit _ (slot-of hd)) tl))
-              (SetHere _ _ _ _)))
+      (let ((unique v) (unique left) (erased pl)) (pluck-split _ hd))
+      (values v left pl (Cons (MaybeUninit A) left xs1) (at unique (u _ _ left tl)) (SetHere _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
-      (let ((unique v) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
-      (values v (Cons (MaybeUninit A) hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+      (let ((unique v) (erased left) (erased pl) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v left pl (Cons (MaybeUninit A) hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 ; Puts a plucked element back into the slot it came from, which already holds its word, so the call is
 ; skipped (section 39): the marks are a promise and the function has no implementation.
 (def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
-    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased A w) (erased (Placed (slot-of x) A w) pw)
+    (erased (Nth (MaybeUninit A) xs i (Stale A (slot-of x) w pw)) nth) ->
     (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
     (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p))
   (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
@@ -1361,12 +1402,12 @@
                      ((SetNth (MaybeUninit A) xs i (Init A x) ys) p)))
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
-      (let-match unique hd (Uninit _ s))
+      (let-match unique hd (Stale _ s _ _))
       (slot-self s)
       (values (Cons (MaybeUninit A) (Init A x) xs1) (at unique (u _ _ (Init _ x) tl)) (SetHere _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
-      (let ((erased ys1) (unique tl3) (erased p1)) (at erased (array-unpluck _ _ tl i1 x q)))
+      (let ((erased ys1) (unique tl3) (erased p1)) (at erased (array-unpluck _ _ tl i1 x _ _ q)))
       (values (Cons (MaybeUninit A) hd ys1) (at unique (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
@@ -1780,25 +1821,6 @@
 
 (def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
 
-(def-opaque $ (Placed : ((Slot) s) (Type T) (T v) -> Type))
-
-(def-prim $ (many place-at : (erased Type T) (unique T x) -> (unique (Placed (slot-of x) T x) p at x)))
-
-(def-prim $ (many place-at-many : (erased Type T) (many T x) -> (many (Placed (slot-of x) T x) p at x)))
-
-(def-prim $ (many unplace-at : (erased (Slot) s) (erased Type T) (erased T v) (unique (Placed s T v) p) ->
-    (unique v is x at p)))
-
-(def-prim $ (many unplace-at-many : (erased (Slot) s) (erased Type T) (erased T v) (many (Placed s T v) p) ->
-    (many v is x at p)))
-
-(def-prim $ (erased placed-slot : (erased (Slot) s) (erased Type T) (erased T v) (erased (Placed s T v) p) ->
-    (erased (Eq (Slot) (slot-of p) s) e)))
-
-(def-prim $ (erased placed-eq : (erased (Slot) s) (erased Type T) (erased T v)
-    (erased (Placed s T v) p) (erased (Placed s T v) q) ->
-    (erased (Eq (Placed s T v) p q) e)))
-
 (def-prim $ (many intern-nat : (unique (MacroWorld) mw at vacant-slot) (many (Nat) n) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
 
@@ -1851,13 +1873,18 @@
   enum
   (many VacatedNil : (erased Type A) -> (Vacated A (Nil (MaybeUninit (USlotItem A))) (Nil (MaybeUninit (USlotItem A)))))
   (many VacatedInit : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
+     (erased (Placed s (USlotItem A) (MkUSlotItem A s v p)) q)
      (erased (List (MaybeUninit (USlotItem A))) ys us) (erased (Vacated A ys us) r)
      -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Init (USlotItem A) (MkUSlotItem A s v p)) ys)
-                   (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) us)))
-  (many VacatedUninit : (erased Type A) (erased (Slot) s)
+                   (Cons (MaybeUninit (USlotItem A)) (Stale (USlotItem A) s (MkUSlotItem A s v p) q) us)))
+  (many VacatedVacant : (erased Type A)
      (erased (List (MaybeUninit (USlotItem A))) ys us) (erased (Vacated A ys us) r)
-     -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) ys)
-                   (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) us))))
+     -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Vacant (USlotItem A) vacant-slot) ys)
+                   (Cons (MaybeUninit (USlotItem A)) (Vacant (USlotItem A) vacant-slot) us)))
+  (many VacatedStale : (erased Type A) (erased (Slot) s) (erased (USlotItem A) w) (erased (Placed s (USlotItem A) w) q)
+     (erased (List (MaybeUninit (USlotItem A))) ys us) (erased (Vacated A ys us) r)
+     -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Stale (USlotItem A) s w q) ys)
+                   (Cons (MaybeUninit (USlotItem A)) (Stale (USlotItem A) s w q) us))))
 
 (def-fns _ $ (many extern array-move : (erased Type A) (erased (List (MaybeUninit (USlotItem A))) xs ds ys old)
     (subterm unique (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
@@ -1888,15 +1915,18 @@
   (let-match unique src (ACons _ _ h stl su) (absurd ANil))
   (let ((erased zs1) (erased us1) (erased ws1) (unique dtl3) (unique stl3) (erased p1) (erased q1) (erased v1))
     (notail $ array-move _ _ _ _ _ stl (Zero) dtl (Zero) n1 f1 t1))
-  (let ((erased (Vacated A (Cons _ h ys1) (Cons _ (Uninit _ (slot-of h)) us1)) v))
-    (match erased h _
-      ((Init _ it)
-        (let-match erased it (MkUSlotItem _ _ _ pl))
-        (let-match erased (placed-slot _ _ _ pl) (Refl _ _))
-        (VacatedInit _ _ _ pl _ _ v1))
-      ((Uninit _ s0) (slot-self s0) (VacatedUninit _ s0 _ _ v1))))
-  (values (Cons _ h zs1) (Cons _ (Uninit _ (slot-of h)) us1) (Cons _ (Uninit _ (slot-of h)) ws1)
-          (du _ _ h (at) dtl3) (at unique (su _ _ (Uninit _ (slot-of h)) stl3))
+  (let ((unique h2) (unique left) (erased pl)) (pluck-split _ h))
+  (let ((erased (Vacated A (Cons _ h ys1) (Cons _ left us1)) v))
+    (match erased pl _
+      ((PluckInit _ _ _ q)
+        (let-match erased h2 (Init _ it))
+        (let-match erased it (MkUSlotItem _ _ _ pi))
+        (let-match erased (placed-slot _ _ _ pi) (Refl _ _))
+        (VacatedInit _ _ _ pi q _ _ v1))
+      ((PluckVacant _) (VacatedVacant _ _ _ v1))
+      ((PluckStale _ s w q) (VacatedStale _ s w q _ _ v1))))
+  (values (Cons _ h2 zs1) (Cons _ left us1) (Cons _ left ws1)
+          (du _ _ h2 (at) dtl3) (at unique (su _ _ left stl3))
           (SpliceHere _ _ _ _ _ _ _ p1) (SpliceHere _ _ _ _ _ _ _ q1) v))
 
 (def-adts $ (SlotFind : (Type A) ((List (SlotItem A)) xs) ((Slot) s) (Type U) (U u) -> Type)
