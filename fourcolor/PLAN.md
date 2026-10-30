@@ -546,8 +546,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   dart maps that `embed-color` and `rem-col` take, hd = h1 . embd, and
   cface_h1), from two hypotheses: `FullRed` (a `FullBad` pair gives a
   `Reduces`; in Coq this is radius2, the reductions of the path to a
-  hom ring of at most five darts, Birkhoff, and trivial_hom_ring, none
-  ported) and `PatchOpen` (the construction of embed_disk, embed_rem and
+  hom ring of at most five darts, Birkhoff, and trivial_hom_ring;
+  `fullred.sl` has the first three, with radius2 as a certificate) and `PatchOpen` (the construction of embed_disk, embed_rem and
   embed_patch, with cface_h1, not ported). Also not done: `Disj hr ins`
   (it appears to follow from the patch's `PatchParts`), cubic_embr
   (`rem-kempe` reads quasicubic off any patch), embed_valid_contract and
@@ -556,6 +556,33 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
   only by reading.
+- `fullred.sl` (load after `embed5.sl`, in its chain): part of embed.v's
+  embed_full, as far as both compilers check it, with minimality as data.
+  `FullRed` as `embed5.sl` states it takes no fact about the configuration
+  beyond `EEnv`, `GcOK` and `FunctorAll`, while Coq's proof also uses the
+  radius of the kernel (radius2 of embeddable) and, for five darts, the
+  ring arities behind adj_kernel_max; it appears not to be provable as
+  stated by Coq's route. `FullRedR` is `FullRed` with one more argument,
+  `Radius2`, a certificate (a kernel dart x0 and, for each kernel dart,
+  the two edge steps that reach it from the face of x0) that no run
+  decides yet. `bad-hom` follows the first two reductions of embed_full:
+  a `FullBad` pair and the certificate give a walk of five rlink steps
+  through the face of x0, which `shorten` (Coq's induction on the path)
+  turns into a `HomBad`, a pre_hom_ring of at most five darts whose last
+  dart does not rlink to its first (told apart by a face labelling,
+  `Kernel`). `hom-birk` decides whether the image ring is nontrivial for
+  the m of `BkMode`, and then reduces the map through
+  `birkhoff-reduces`, or gives a `HomTrivial` (one side of the ring meets
+  at most m faces off it, `TrivSide`). `full-red-of` gives a `FullRedR`
+  from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
+  taken as a hypothesis: in Coq trivial_hom_ring, its use on the reversed
+  ring, and for five darts the spoke ring with adj11_edge and
+  adj_kernel_max, none ported. `embed-main` takes `FullRed`, so using
+  `FullRedR` there would add the certificate to the arguments of `run`.
+  That these statements match Coq's has been checked only by reading.
+  Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
+  fullred` (in one run about 66 s with slc and 161 s with the reference
+  compiler).
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
