@@ -928,3 +928,120 @@
   (values (Cons _ (MkClosed (Succ k) lr) cs1)
     (TrStep (Succ k) c ls lp lr lq lpr ln lpn ls2 cs1 al1 al2 (labels-distinct pts sp p r lr pwr ats labr) rp al3 al4 tr1)
     (done-step pts sp k p np l pp r q pr a1 a2 abs uns lr labr cs1 es lv dn1)))
+
+(def-adts $ (Ends : ((List (Point)) pts) ((Edge) e) -> Type)
+  enum
+  (many MkEnds : (erased (List (Point)) pts) (erased (Point) u v) (erased (Mem (Point) pts u) mu) (erased (Mem (Point) pts v) mv)
+      -> (Ends pts (MkEdge u v))))
+
+; s2 is s with p added, unless p was in it.
+(def-adts $ (Ext : ((Point) p) ((List (Point)) s) ((List (Point)) s2) -> Type)
+  enum
+  (many ExtSame : (erased (Point) p) (erased (List (Point)) s) (erased (Mem (Point) s p) m) -> (Ext p s s))
+  (many ExtIns : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ins (Point) p s s2) i) -> (Ext p s s2)))
+
+(def-fns _ $ (erased allr-ext : (erased Type A) (erased (TyCtor (A x) ((Point) y) -> Type) R) (erased A c) (erased (Point) p) (erased (List (Point)) s s2)
+    (erased (AllR A (Point) R c s) h) (erased (R c p) hp) (erased (Ext p s s2) x) -> (erased (AllR A (Point) R c s2) r))
+  (match erased x _ ((ExtSame _ _ _) h) ((ExtIns _ _ _ i) (allr-ins _ _ _ c p s s2 i hp h))))
+
+(def-fns _ $ (erased mem-ext : (erased (Point) p q) (erased (List (Point)) s s2) (erased (Mem (Point) s q) m) (erased (Ext p s s2) x) ->
+    (erased (Mem (Point) s2 q) r))
+  (match erased x _ ((ExtSame _ _ _) m) ((ExtIns _ _ _ i) (mem-ins _ q p s s2 i (OrR _ _ m)))))
+
+(def-fns _ $ (erased mem-ext-new : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ext p s s2) x) -> (erased (Mem (Point) s2 p) r))
+  (match erased x _ ((ExtSame _ _ m) m) ((ExtIns _ _ _ i) (mem-ins _ p p s s2 i (OrL _ _ (Refl _ p))))))
+
+(def-fns _ $ (erased ends-lift : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ext p s s2) x) (erased (List (Edge)) es2)
+    (subterm erased (AllR (List (Point)) (Edge) Ends s es2) h) -> (erased (AllR (List (Point)) (Edge) Ends s2 es2) r))
+  (let-match erased h (ARCons _ _ _ _ e es3 he h1) ((ARNil _ _ _ _) (ARNil _ _ _ _)))
+  (let-match erased he (MkEnds _ u v mu mv))
+  (ARCons _ _ _ _ e es3 (MkEnds s2 u v (mem-ext p u s s2 mu x) (mem-ext p v s s2 mv x)) (ends-lift p s s2 x es3 h1)))
+
+(def-fns _ $ (erased allr-lex : (erased (Point) p h) (erased (List (Point)) s) (erased (LexLt p h) l) (subterm erased (AllR (Point) (Point) LexLt h s) a) ->
+    (erased (AllR (Point) (Point) LexLt p s) r))
+  (let-match erased a (ARCons _ _ _ _ y s1 hy a1) ((ARNil _ _ _ _) (ARNil _ _ _ p)))
+  (ARCons _ _ _ p y s1 (lex-trans p h y l hy) (allr-lex p h s1 l a1)))
+
+(def-fns _ $ (erased lins : (erased (Point) p) (erased (List (Point)) s) (subterm erased (PW (Point) LexLt s) pw) ->
+    (erased (List (Point)) s2) (erased (Ext p s s2) x) (erased (PW (Point) LexLt s2) pw2))
+  (let-match erased pw (PWCons _ _ h s1 hh pw1)
+    ((PWNil _ _) (values (Cons _ p (Nil _)) (ExtIns p (Nil _) _ (InsH _ p (Nil _))) (PWCons _ _ p (Nil _) (ARNil _ _ _ p) (PWNil _ _)))))
+  (let-match erased (lex-cmp p h) (CGt _ _ _ _ l)
+    ((CLt _ _ _ _ l) (values (Cons _ p s) (ExtIns p s _ (InsH _ p s)) (PWCons _ _ p s (ARCons _ _ _ p h s1 l (allr-lex p h s1 l hh)) pw)))
+    ((CEq _ _ _) (values s (ExtSame p s (MemHere _ p s1)) pw)))
+  (let ((erased s3) (erased x3) (erased pw3)) (lins p s1 pw1))
+  (values (Cons _ h s3)
+    (match erased x3 (((Ext p s (Cons (Point) h s3)) x))
+      ((ExtSame _ _ m) (ExtSame p s (MemThere _ p h s1 m)))
+      ((ExtIns _ _ _ i) (ExtIns p s _ (InsT _ p h s1 s3 i))))
+    (PWCons _ _ h s3 (allr-ext _ _ h p s1 s3 hh l x3) pw3)))
+
+; The ends of the edges of es2, a suffix of es from position m on, sorted and without repeats.
+(def-fns _ $ (erased pts-of : (erased (List (Edge)) es pre) (subterm erased (List (Edge)) es2) (erased (Nat) m) (erased (LApp (Edge) pre es2 es) ap)
+    (erased (Length (Edge) pre m) lm) ->
+    (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (AllR (List (Edge)) (Point) Vert es pts) vs)
+    (erased (AllR (List (Point)) (Edge) Ends pts es2) en))
+  (let-match erased es2 (Cons _ e r) ((Nil _) (values (Nil _) (PWNil _ _) (ARNil _ _ _ es) (ARNil _ _ _ (Nil _)))))
+  (let-match erased e (MkEdge u v))
+  (let ((erased pre2) (erased ap2) (erased lm2)) (lapp-shift _ pre r es e m ap lm))
+  (let ((erased s0) (erased pw0) (erased vs0) (erased en0)) (pts-of es pre2 r (Succ m) ap2 lm2))
+  (let ((erased ne)) (lapp-nth _ pre r es e m ap lm))
+  (let ((erased s1) (erased x1) (erased pw1)) (lins v s0 pw0))
+  (let ((erased s2) (erased x2) (erased pw2)) (lins u s1 pw1))
+  (values s2 pw2
+    (allr-ext _ _ es u s1 s2 (allr-ext _ _ es v s0 s1 vs0 (MkVert es v m u (EIRev es m v u ne)) x1) (MkVert es u m v (EIFwd es m u v ne)) x2)
+    (ARCons _ _ _ s2 e r (MkEnds s2 u v (mem-ext-new u s1 s2 x2) (mem-ext u v s1 s2 (mem-ext-new v s0 s1 x1) x2))
+      (ends-lift u s1 s2 x2 r (ends-lift v s0 s1 x1 r en0)))))
+
+(def-fns _ $ (erased mem-nth : (erased Type A) (erased (List A) xs) (erased A x) (subterm erased (Mem A xs x) m) ->
+    (erased (Nat) i) (erased (Nth A xs i x) n))
+  (let-match erased m (MemThere _ _ y xs1 m1) ((MemHere _ _ xs1) (values (Zero) (NthHere A x xs1))))
+  (let ((erased i) (erased n)) (mem-nth A xs1 x m1))
+  (values (Succ i) (NthThere A y xs1 i x n)))
+
+(def-fns _ $ (erased absurd pa-irrefl : (erased (Point) p) (erased (PointApart p p) d) -> (erased (False) f))
+  (match erased d _
+    (absurd (ApartX px _ _ _ a) (apart-irrefl px a))
+    (absurd (ApartY _ py _ _ a) (apart-irrefl py a))))
+
+(def-fns _ $ (erased pre-all : (erased (List (Point)) pts) (erased (List (Edge)) es2) (subterm erased (Drawing es2) dr)
+    (erased (AllR (List (Point)) (Edge) Ends pts es2) en) -> (erased (AllR (List (Point)) (Edge) Pre pts es2) r))
+  (let-match erased dr (DrawCons a b es3 nd _ rest) ((DrawNil) (ARNil _ _ _ pts)))
+  (let-match erased en (ARCons _ _ _ _ e _ he en1))
+  (let-match erased he (MkEnds _ _ _ ma mb))
+  (let ((erased i) (erased na)) (mem-nth _ pts a ma))
+  (let ((erased j) (erased nb)) (mem-nth _ pts b mb))
+  (let ((erased rest2)) (pre-all pts es3 rest en1))
+  (let-match erased (nat-cmp i j) (CLt _ _ _ _ l)
+    ((CGt _ _ _ _ l) (ARCons _ _ _ pts e es3 (MkPre pts e b a j i (NmR pts b a j i nb na l)) rest2))
+    (absurd (CEq _ _ _) (let-match erased (nth-fn _ pts i a b na nb) (Refl _ _)) (pa-irrefl a nd)))
+  (ARCons _ _ _ pts e es3 (MkPre pts e a b i j (NmF pts a b i j na nb l)) rest2))
+
+(def-fns _ $ (erased live-init : (erased (List (Point)) pts) (erased (List (Edge)) es2) (subterm erased (AllR (List (Point)) (Edge) Pre pts es2) h) ->
+    (erased (AllR (LCtx) (Edge) Live (MkLCtx pts (Zero) (Nil (Edge))) es2) r))
+  (let-match erased h (ARCons _ _ _ _ e es3 he h1) ((ARNil _ _ _ _) (ARNil _ _ _ _)))
+  (let-match erased he (MkPre _ _ a b i j nm))
+  (ARCons _ _ _ _ e es3 (LvBefore pts (Zero) (Nil _) e a b i j nm (LtZ i)) (live-init pts es3 h1)))
+
+(def-fns _ $ (erased lex-apart : (erased (Point) p q) (erased (LexLt p q) l) -> (erased (PointApart p q) d))
+  (match erased l _
+    ((LexX px py qx qy lt) (ApartX px py qx qy (ApLt _ _ px qx lt)))
+    ((LexY x py qy lt) (ApartY x py x qy (ApLt _ _ py qy lt)))))
+
+(def-fns _ $ (erased allr-apart : (erased (Point) p) (erased (List (Point)) ps) (subterm erased (AllR (Point) (Point) LexLt p ps) a) ->
+    (erased (AllApart p ps) r))
+  (let-match erased a (ARCons _ _ _ _ q ps1 l a1) ((ARNil _ _ _ _) (AANil p)))
+  (AACons p q ps1 (lex-apart p q l) (allr-apart p ps1 a1)))
+
+(def-fns _ $ (erased pts-apart : (erased (List (Point)) ps) (subterm erased (PW (Point) LexLt ps) pw) -> (erased (PtsApart ps) r))
+  (let-match erased pw (PWCons _ _ p ps1 h pw1) ((PWNil _ _) (PANil)))
+  (PACons p ps1 (allr-apart p ps1 h) (pts-apart ps1 pw1)))
+
+; The geometric half of part A (SWEEP.md): every drawing has a sweep plan.
+(def-fns _ $ (erased drawing-plan : (erased (List (Edge)) es) (erased (Drawing es) d) -> (erased (SweepPlan es) p))
+  (let ((erased pts) (erased sp) (erased vs) (erased en)) (pts-of es (Nil _) es (Zero) (LAppNil _ es) (LengthNil _)))
+  (let ((erased n) (erased len)) (length-exists _ pts))
+  (let ((erased cs) (erased tr) (erased dn))
+    (sweep es d pts sp vs (pre-all pts es d en) n len (Zero) n (AddZero n) (Nil _) (Nil _) (LbNil pts) (PWNil _ _) (ARNil _ _ _ _)
+      (live-init pts es (pre-all pts es d en))))
+  (MkSweepPlan es pts cs (pts-apart pts sp) tr (done-cov pts cs es dn)))
