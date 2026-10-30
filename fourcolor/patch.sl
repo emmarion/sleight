@@ -1372,3 +1372,83 @@
             (MkRingAt _ _ _ _ wd w iw hw cw))
           (MkRingAt hd bd g u2 wd w iw hw (ConnStep g u2 v2 w av cw)))
         ((OrR _ _ ra) ra)))))
+
+; A dart of both images is the image of a dart of br.
+(def-fns _ $ (erased hd-hr-ring : (erased (Nat) d xd xr x) (erased (List (Nat)) hd hr bd br bG bGr ids) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Under hr d) uhr) (erased (Distinct hr) dhr) (erased (Respects hd bd bG) rbd) (erased (Respects hr br bGr) rbr) (erased (RevApp (Nat) bG (Nil (Nat)) bGr) rv)
+    (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hr xr x) rx) -> (erased (In xr br) r))
+  (match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (under-nth hr xr x d uhr rx))) _
+    (absurd (PtDisk _ _ _ _ xd2 px out outr) (apart-irrefl x (notin-in x x hr outr (nth-in hr xr x rx))))
+    ((PtRing _ _ _ _ xd2 xr2 px pin pr)
+      (let ((erased r2) (erased ir2) (erased p2)) (respects-in hr br bGr x rbr (revapp-in bG (Nil _) bGr x rv (OrL _ _ (in-map hd bd bG xd2 x pin rbd px)))))
+      (let-match erased (distinct-nth hr r2 xr x dhr p2 rx) (Refl _ _))
+      ir2)
+    (absurd (PtRest _ _ _ _ xr2 pr outd) (apart-irrefl x (notin-in x x hd outd (nth-in hd xd x hx))))))
+
+; Any two darts of a node cycle are joined.
+(def-fns _ $ (erased ring-conn : (erased (Nat) k r1 r2) (erased (List (Nat)) n R) (erased (List (Bond)) gn g) (erased (NCyc n R) nc) (erased (Graph k n gn) gr)
+    (erased (Spans g gn) sp) (erased (In r1 R) i1) (erased (In r2 R) i2) -> (erased (Conn g r1 r2) r))
+  (let-match erased nc (NCCons _ xs r0 yl fp back) (absurd (NCNil _) i1))
+  (let ((erased cv)) (fpath-covers n xs gn k r0 r0 yl gr (ConnHere gn r0) fp))
+  (let ((erased s1) (erased j1) (erased c1)) (covers-at gn (Cons _ r0 (Nil _)) (Cons _ r0 xs) r1 cv i1))
+  (let ((erased s2) (erased j2) (erased c2)) (covers-at gn (Cons _ r0 (Nil _)) (Cons _ r0 xs) r2 cv i2))
+  (let-match erased j1 (InHere _ _) (absurd (InThere _ _ _ i) i))
+  (let-match erased j2 (InHere _ _) (absurd (InThere _ _ _ i) i))
+  (spans-conn g gn r1 r2 (conn-cat gn r1 r0 r2 (conn-sym gn r0 r1 c1) c2) sp))
+
+; The face step in the remainder map is a face walk in the whole map.
+(def-fns _ $ (erased r-face-conn : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br fi) (erased (List (Bond)) gf)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (HPerm d f fi) pmf) (erased (Graph d f gf) grf) (erased (Under hr d) uhr)
+    (erased (Nat) xr yr x y) (erased (Nth (Nat) fr xr yr) pfr) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) hr yr y) hy) -> (erased (Conn gf x y) r))
+  (let ((erased x1) (erased px1) (erased lx1)) (perm-nth d x f fi pmf (under-nth hr xr x d uhr hx)))
+  (let-match erased (face-next-r d dd dr e n f ed nd fd er nr fr hd hr bd br pt xr yr x x1 y pfr hx px1 hy) (MkFirstHit _ _ ws _ _ w iy))
+  (ConnStep gf x x1 y (graph-adj d x x1 f gf grf px1) (path-graph-conn d x1 y f hr ws gf w grf)))
+
+; ls sends each dart x of xs to its position in hr, to a dart of br whose image is joined to x in g if x is in a and not in hr, and to 0
+; if x is not in a.
+(def-adts $ (RingInv : ((List (Nat)) hr br a) ((List (Bond)) g) ((List (Nat)) xs ls) -> Type)
+  enum
+  (many RvNil : (erased (List (Nat)) hr br a) (erased (List (Bond)) g) -> (RingInv hr br a g (Nil (Nat)) (Nil (Nat))))
+  (many RvHit : (erased (List (Nat)) hr br a xs ls) (erased (List (Bond)) g) (erased (Nat) x j) (erased (Nth (Nat) hr j x) pj) (erased (RingInv hr br a g xs ls) rest)
+      -> (RingInv hr br a g (Cons (Nat) x xs) (Cons (Nat) j ls)))
+  (many RvRing : (erased (List (Nat)) hr br a xs ls) (erased (List (Bond)) g) (erased (Nat) x r w) (erased (NotIn x hr) ox) (erased (In r br) ir) (erased (Nth (Nat) hr r w) pw)
+      (erased (Conn g x w) c) (erased (RingInv hr br a g xs ls) rest) -> (RingInv hr br a g (Cons (Nat) x xs) (Cons (Nat) r ls)))
+  (many RvOut : (erased (List (Nat)) hr br a xs ls) (erased (List (Bond)) g) (erased (Nat) x) (erased (NotIn x a) oa) (erased (RingInv hr br a g xs ls) rest)
+      -> (RingInv hr br a g (Cons (Nat) x xs) (Cons (Nat) (Zero) ls))))
+
+; What the entry of a dart of a is.
+(def-adts $ (RingAt2 : ((List (Nat)) hr br) ((List (Bond)) g) ((Nat) x r) -> Type)
+  enum
+  (many RAHit : (erased (List (Nat)) hr br) (erased (List (Bond)) g) (erased (Nat) x r) (erased (Nth (Nat) hr r x) pr) -> (RingAt2 hr br g x r))
+  (many RARing : (erased (List (Nat)) hr br) (erased (List (Bond)) g) (erased (Nat) x r w) (erased (NotIn x hr) ox) (erased (In r br) ir) (erased (Nth (Nat) hr r w) pw)
+      (erased (Conn g x w) c) -> (RingAt2 hr br g x r)))
+
+(def-fns _ $ (erased ringinv-at : (erased (List (Nat)) hr br a xs ls) (erased (List (Bond)) g) (erased (Nat) i x) (subterm erased (RingInv hr br a g xs ls) rv)
+    (erased (Nth (Nat) xs i x) px) (erased (In x a) ia) -> (erased (Nat) r) (erased (Nth (Nat) ls i r) pr) (erased (RingAt2 hr br g x r) ra))
+  (match erased rv _
+    (absurd (RvNil _ _ _ _) px)
+    ((RvHit _ _ _ xs1 ls1 _ y j pj rv1)
+      (match erased px _
+        ((NthHere _ _ _) (values j (NthHere _ j ls1) (RAHit hr br g x j pj)))
+        ((NthThere _ _ _ i1 _ px1)
+          (let ((erased r) (erased pr) (erased ra)) (ringinv-at hr br a xs1 ls1 g i1 x rv1 px1 ia))
+          (values r (NthThere _ j ls1 i1 r pr) ra))))
+    ((RvRing _ _ _ xs1 ls1 _ y r0 w ox ir pw c rv1)
+      (match erased px _
+        ((NthHere _ _ _) (values r0 (NthHere _ r0 ls1) (RARing hr br g x r0 w ox ir pw c)))
+        ((NthThere _ _ _ i1 _ px1)
+          (let ((erased r) (erased pr) (erased ra)) (ringinv-at hr br a xs1 ls1 g i1 x rv1 px1 ia))
+          (values r (NthThere _ r0 ls1 i1 r pr) ra))))
+    ((RvOut _ _ _ xs1 ls1 _ y oa rv1)
+      (match erased px _
+        (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x a oa ia)))
+        ((NthThere _ _ _ i1 _ px1)
+          (let ((erased r) (erased pr) (erased ra)) (ringinv-at hr br a xs1 ls1 g i1 x rv1 px1 ia))
+          (values r (NthThere _ (Zero) ls1 i1 r pr) ra))))))
+
+; The entry of an image of hr is its position.
+(def-fns _ $ (erased ring-at-hit : (erased (List (Nat)) hr br) (erased (List (Bond)) g) (erased (Nat) x r j) (erased (RingAt2 hr br g x r) ra) (erased (Distinct hr) dh)
+    (erased (Nth (Nat) hr j x) pj) -> (erased (Eq (Nat) r j) e))
+  (match erased ra _
+    ((RAHit _ _ _ _ _ pr) (distinct-nth hr r j x dh pr pj))
+    (absurd (RARing _ _ _ _ _ w ox ir pw c) (apart-irrefl x (notin-in x x hr ox (nth-in hr j x pj))))))
