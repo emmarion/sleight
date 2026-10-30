@@ -596,7 +596,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   disk ring sent to rev (map edge rc), Coq's map edge of its ring, which
   is rev rc here, embd onto the darts off rc (`InEither`), and cface_h1),
   from two hypotheses: `FullRedR` (a `FullBad` pair, with the
-  configuration's `Radius2` certificate, gives a `Reduces`; in Coq
+  configuration's `Radius2` and `KerMax` certificates, gives a `Reduces`; in Coq
   radius2, the reductions of the path to a hom ring of at most five
   darts, Birkhoff, and trivial_hom_ring; `fullred.sl`'s `full-red-of`
   gives it from `BirkhoffChecks` and `TrivRed`) and `PatchOpen` (the
@@ -604,7 +604,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   for a ring rc that is a `NodeRing`: rev rc, Coq's ring as it appears
   to be read here, a node cycle on distinct faces, embeddable's sfcycle
   node; `embed6.sl`'s `patch-open` proves it). `run` takes the
-  certificates `NodeRing` and `Radius2` of the configuration as
+  certificates `NodeRing`, `Radius2` and `KerMax` of the configuration as
   arguments. embed_valid_contract is in `evalid.sl`. Chain: that of
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
@@ -614,9 +614,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   Coq's proof uses the radius of the kernel (radius2 of embeddable) and,
   for five darts, the ring arities behind adj_kernel_max, which are not
   facts of `EEnv`, `GcOK` and `FunctorAll`; so embed5.sl's `FullRedR`
-  takes `Radius2`, a certificate (a kernel dart x0 and, for each kernel
-  dart, the two edge steps that reach it from the face of x0) that no run
-  decides yet. `bad-hom` follows the first two reductions of embed_full:
+  takes two certificates that `embed4.sl`'s run decides: `Radius2` (a
+  kernel dart x0 and, for each kernel dart, the two edge steps that reach
+  it from the face of x0) and `KerMax` (after adj_kernel_max, which Coq
+  reads off good_ring_arity: from each dart off the kernel, one of its
+  first five face iterates has its edge image off the kernel). `bad-hom` follows the
+  first two reductions of embed_full:
   a `FullBad` pair and the certificate give a walk of five rlink steps
   through the face of x0, which `shorten` (Coq's induction on the path)
   turns into a `HomBad`, a pre_hom_ring of at most five darts whose last
@@ -625,8 +628,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the m of `BkMode`, and then reduces the map through
   `birkhoff-reduces`, or gives a `HomTrivial` (one side of the ring meets
   at most m faces off it, `TrivSide`). `full-red-of` gives a `FullRedR`
-  from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
-  taken as a hypothesis, which `trivred.sl` gives from a narrower one.
+  from `BirkhoffChecks` and `TrivRed` (a `HomTrivial` gives a `Reduces`,
+  for any bound above the level of `birk-glue`), taken as a hypothesis,
+  which `trivred.sl` gives from a narrower one.
   That these statements match Coq's has been checked only by reading.
   Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
   fullred` (in one run about 66 s with slc and 161 s with the reference
@@ -645,23 +649,43 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   whose diskN side is the other side of R (`hd-zs`, through revsnip.sl's
   `rev-disk`); `hom-proper` is hp_ok. What is left of a `HomTrivial`
   (`ht-five`) is a `HomFive`: a hom ring of five darts that does not
-  close, whose diskN side meets exactly one face off it. `TrivFive`, its
-  refutation, is taken as a hypothesis (`triv-red-of` gives `TrivRed`
-  from it): in Coq the spoke ring of that face with adj11_edge, whose
-  proof goes through chordless_spoke_ring and so through Birkhoff, and
-  adj_kernel_max, from the ring arities of the configuration. Here
-  Birkhoff gives a `Reduces` rather than a contradiction, so `TrivFive`
-  as stated (ending in `False`, as `TrivRed` does) may not be provable by
-  Coq's route; that has not been settled. No ring-arity certificate is
-  taken yet. That these statements match Coq's has been checked only by
+  close, whose diskN side meets exactly one face off it. `TrivFive` (a
+  `HomFive` gives a `Reduces`, for any bound above the level of
+  `birk-glue`) is taken as a hypothesis (`triv-red-of` gives `TrivRed`
+  from it), which `trivfive.sl` proves. The two statements give a
+  `Reduces` rather than `False`, since the five-dart case goes through
+  Birkhoff (chordless_spoke_ring, adj11_edge), which gives a `Reduces`
+  here. That these statements match Coq's has been checked only by
   reading.
+- `trivfive.sl` (load after `triad.sl`, in the chain of `fcgoal.sl`):
+  trivred.sl's `TrivFive`, the five-dart case of embed.v's embed_full,
+  as far as both compilers check it, with minimality as data.
+  `triv-five` gives it by `five-red`. The one face off the ring that the
+  diskN side meets, that of y, is read as triad.sl's `FRec` (or the map
+  reduces, `fr-make`); its spoke labels are labels of the ring
+  (`spk-sub`: the node image of each spoke is in diskN, so on a face of
+  the ring), so with more than four darts it is adjacent to every face
+  of the ring (`cover`). For each ring dart v, n v is on the face of y,
+  or the map reduces (`ring-adj`, through evalid.sl's `adj11`; n (e v)
+  on it would put e v in diskN, against diskN_edge_ring). Then the next
+  ring dart is f (f (e v)) (`ring-step`, two spokes of one face on one
+  face being one), the walk's next dart in the configuration map is
+  f (f (e x)) (`cfg-step`, through embed_functor and cface_inj_embed),
+  and so the node images t0 .. t4 of the walk satisfy f t(i+1) = t i,
+  with their edge images in the kernel (`en-in`). If t4 is in the
+  kernel, the ring would close (`close`: n (f (f (e z))) and n x have one
+  image, so are one dart); otherwise embed5.sl's `KerMax` at t4 is
+  contradicted (`kr-dead`), which is where Coq uses adj_kernel_max. In
+  a test run a broken variant (`close` without identifying the image of
+  t4) was rejected. That these statements match Coq's has been checked
+  only by reading.
 - `notembed.sl` (load after `contract3.sl` and `embed6.sl`, with `iealias.sl` loaded after
   `red/cfred.sl`): not_embed_reducible of embed.v with minimality as data,
   as far as both compilers check it. `not-embed` gives embed.sl's
   `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
   (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
   (the per-configuration certificates: embed4.sl's `GcOK` and
-  `FunctorAll` and embed5.sl's `NodeRing` and `Radius2`, for a
+  `FunctorAll` and embed5.sl's `NodeRing`, `Radius2` and `KerMax`, for a
   configuration of cfs; `embed4goal.sl` proves it), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
@@ -697,7 +721,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   A run decides, per configuration of red/configs.sl on the map cpmap.sl
   builds, a bundle `CfGc` (listed by `AllGc`): its kernel, embed3.sl's
   `GcOK`, `NodeRing` (rc read backwards along node, as embed5.sl states
-  it), `Radius2`, and for each kernel dart whose edge image is in the
+  it), `Radius2`, `KerMax` (`kmall-c`), and for each kernel dart whose edge image is in the
   kernel a refutation (`Refut`) of its not being central. `cf-gcok`,
   `cf-functor` and `cfcerts-of` move these to any `KernelList` and any
   `EEnv` on the map of a configuration of cfs (through `cpmap-fn` and
@@ -711,12 +735,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   knows are not central, which the preembedding's rlink paths of central
   darts refute (`cut-sound`, `path-cross`). The search is unchecked; its
   tree is checked. On a 4-core cloud VM `--goal proved` passed in about
-  430 s with slc and 440 s with the reference compiler (under `ulimit -s
+  400 s with slc and 430 s with the reference compiler (under `ulimit -s
   unlimited`), the whole chain and the compiled run, in one run each.
   In a test run three broken variants were rejected: `node-rule` without
   its last step (a type error), and the run with no cut leaf or with a
   flood fill that ignores the darts known not central (the run answers
-  `ChkNo`). Ring arities (good_ring_arity) are not in the bundle. That these
+  `ChkNo`). That these
   statements match Coq's has been checked only by reading.
 - `evalid.sl` (load after `notembed.sl`, in the chain of `fcgoal.sl`
   below; `fcgoal.sl` also checks after it): embed_valid_contract of
@@ -778,15 +802,15 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variant (Birkhoff for five darts given the ring nontrivial for 0
   only) was rejected. That these statements match Coq's has been checked
   only by reading.
-- `fcgoal.sl` (load after `evalid.sl` and `triad.sl`, in the chain below): sets and
-  proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
-  and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
-  `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
-  their own) and the hypotheses `CfCerts cfs` and `TrivFive`, through
-  `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`. Here css is
+- `fcgoal.sl` (load after `evalid.sl`, `triad.sl` and `trivfive.sl`, in the chain below): sets and
+  proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`,
+  `BirkhoffChecks` and `CfCerts cfs` (the statements of `unav/qztgoal.sl`,
+  `red/goal-c.sl`, `red/bgoal.sl` and `embed4goal.sl`, whose computed proofs run in units of
+  their own), through
+  `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `triv-five`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
-  proved. Chain (both compilers, with `--goal proved`; about 50 s with slc and 115 s
+  proved. Chain (both compilers, with `--goal proved`; about 54 s with slc and 124 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
   std/list.sl ring.sl`, then `defs
   orient base sweep geo plan map lists planemap walk frontier labels rot
@@ -799,7 +823,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  contract3 embed6 fullred trivred notembed evalid triad fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  contract3 embed6 fullred trivred notembed evalid triad trivfive fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check

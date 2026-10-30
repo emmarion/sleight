@@ -528,8 +528,8 @@
   enum
   (many MkRadius2 : (erased (List (Nat)) ec fc as) (erased (Nat) x0) (erased (In x0 as) jx0) (erased (R2All ec fc as x0 as) ra) -> (Radius2 ec fc as)))
 
-; adj_kernel_max of embed.v, read off good_ring_arity, as a certificate: from each dart w off the kernel, one of w, f w, ...,
-; f^4 w has its edge image off the kernel. KmRun ... j w: one of the first j + 1 face iterates of w does.
+; After adj_kernel_max of embed.v (which Coq reads off good_ring_arity), as a certificate: from each dart w off the kernel,
+; one of w, f w, ..., f^4 w has its edge image off the kernel. KmRun ... j w: one of the first j + 1 face iterates of w does.
 (def-adts $ (KmRun : ((List (Nat)) ec fc as) ((Nat) j w) -> Type)
   enum
   (many KrHere : (erased (List (Nat)) ec fc as) (erased (Nat) j w ew) (erased (Nth (Nat) ec w ew) pe) (erased (NotIn ew as) oe) -> (KmRun ec fc as j w))
