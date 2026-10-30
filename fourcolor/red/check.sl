@@ -42,25 +42,3 @@
   (let ((many ctr) (erased ht) (erased rt)) (cpcolor-c h cp cs na))
   (let ((many kt) (erased ks)) (kempe-tree-c (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hc))
   (values (KCYes cp h kt ks cs na) cache2))
-
-; cf passes the check against the contract tree ct.
-(def-adts $ (RedChk : ((Config) cf) -> Type)
-  enum
-  (many RCYes : (erased (Bool) sym) (erased (List (Nat)) cc) (erased (List (Step)) cp) (erased (Nat) h) (erased (Ctree) kt ct)
-      (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks) (erased (Cprsize cp (Succ (Succ h))) cs) (erased (NoA cp) na) (erased (CtDisj kt ct) dj)
-      -> (RedChk (MkConfig sym cc cp)))
-  (many RCNo : (erased (Config) cf) -> (RedChk cf)))
-
-(def-fns _ $ (many check-reducible-c : (many (Config) cf) (many (List (InitE)) cache) -> (many (RedChk cf) b) (many (List (InitE)) cache2))
-  (let-match many cf (MkConfig sym cc cp))
-  (let-match many (contract-ctree cf) (Some _ ct) ((None _) (values (RCNo cf) cache)))
-  (let ((many kc) (many cache2)) (kempe-tree-chk cp cache))
-  (let-match many kc (KCYes _ h kt ks cs na) ((KCNo _) (values (RCNo cf) cache2)))
-  (match many (ctree-disjoint kt ct) _
-    ((DjYes _ _ dj) (values (RCYes sym cc cp h kt ct ks cs na dj) cache2))
-    ((DjNo _ _ _) (values (RCNo cf) cache2))))
-
-(def-fns _ $ (many check-all-c : (subterm many (List (Config)) cfs) (many (List (InitE)) cache) -> (many (Bool) b))
-  (let-match many cfs (Cons _ cf rest) ((Nil _) (BTrue)))
-  (let ((many b) (many cache2)) (check-reducible-c cf cache))
-  (match many b _ ((RCYes _ _ _ _ _ _ _ _ _ _) (tail $ check-all-c rest cache2)) ((RCNo _) (BFalse))))

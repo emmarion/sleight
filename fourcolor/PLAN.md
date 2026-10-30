@@ -174,7 +174,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   (`CpColR`), to the certified Kempe tree. `cfmap-run.sl` and
   `cpcolor-run.sl` ran all 633 configurations once, matching `red.sl`'s
   ring sizes and trees. The A step of the programs, planarity of
-  configuration maps and the completeness direction are not done.
+  configuration maps and the completeness direction of `cpcolor-c` are
+  not done; completeness for contract colourings is in `red/ccomp.sl`.
 - `colalias.sl`, `ringtrace.sl`, `kempemap.sl`, `kempegoal.sl` (load
   `colalias.sl` after `coloring.sl`, then `red/red.sl`, `red/color.sl`,
   `red/ctree.sl`, `red/gtree.sl`, `red/grestrict.sl`,
@@ -212,28 +213,37 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   co-closure to one on complete traces stated after `chromogram.v`
   (`KCC`), and `KCC` to `Kempe_coclosure` for every set closed by
   functions at a given level (`kcc-coclosure`, a level factory).
-  `red/check.sl`'s `check-reducible-c` builds the Kempe tree of the ring
-  traces from `cpcolor-c` and returns its soundness and disjointness
-  evidence. `red/gramrot.sl` ports gram_neg, gram_flip and gram_rot and both
-  directions of their match lemmas from `kempe.v`. `red/cfred.sl` states C_reducible of
-  `coloring.v` on the configuration maps (`CRed`) and proves
-  check_reducible_valid with what contract_ctreeP would give
-  (`ContractOK`) as a hypothesis. Nothing produces a `ContractOK` yet:
-  cfctr and its correctness, the completeness half of ctree_mem_cpcolor
-  (with A steps) and the validity checks of `cfcontract.v` are not
-  ported, and `check-reducible-c` still takes its contract tree from
-  `red.sl`. Load order: `std/nat.sl std/list.sl`, then `base map lists
-  planemap walk frontier labels hypgraph hypperm hypermap hypplane
-  hypeuler hypderived hyprelabel hypwalkup hypgeom` (each `.sl`), then
-  `cfmap.sl red/red.sl cpmap.sl red/color.sl cfcolor.sl red/ctree.sl
-  red/gtree.sl red/grestrict.sl red/crestrict.sl red/kempe.sl
-  cpcolor.sl red/configs.sl red/bridge.sl red/init.sl red/check.sl
-  red/gramrot.sl red/cfred.sl`, then `red/sanity-c.sl` or `red/run-c.sl`.
-  In two runs (about 5.3 and 6 minutes of wall time, 17 of user time,
-  on a 4-core cloud VM), `red/run-c.sl` accepted all 633 configurations against
-  their ring traces; that says each configuration's Kempe tree is
-  disjoint from `red.sl`'s unverified contract tree, not yet that the
-  configuration is C-reducible.
+  `red/check.sl`'s `kempe-tree-chk` builds the Kempe tree of the ring
+  traces from `cpcolor-c` with its soundness evidence. `red/gramrot.sl`
+  ports gram_rot and both directions of match_gram_rot of `kempe.v`.
+  `red/cfred.sl` states C_reducible of `coloring.v` on the configuration
+  maps (`CRed`) and proves check_reducible_valid from a Kempe half
+  (`KHalf`) and a contract half (`ContractOK`), both stated against the
+  Kempe tree rather than a contract tree. The contract half does not go
+  through cfctr: `red/ccomp.sl` computes, for programs of R, Y and H
+  steps, a list holding the ring trace of every contract colouring (its
+  completeness is `lrel-hit` and `cccol-hit`), and checks that the even
+  normal form of each, without its first entry, has multiplicity zero in
+  the Kempe tree (`contract-ok`). `red/ccheck.sl` defines the contract
+  of a configuration on these dart numbers (`CfContract`, after
+  cfcontract and ctrenum of `cfcontract.v`; written for this numbering,
+  not checked against Coq's), decides `ValidContract` on the concrete map
+  (`valid-c`), and puts the pieces together (`red-c`, `Reducible`).
+  `red/goal-c.sl` sets and proves the goal `AllRedC` on the chunks of
+  `red/configs.sl`: every configuration appears to be C-reducible, in the
+  sense of `CRed`, with its contract. Load order: `std/nat.sl
+  std/list.sl`, then `base map lists planemap walk frontier labels
+  hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
+  hypwalkup hypgeom` (each `.sl`), then `cfmap.sl red/red.sl cpmap.sl
+  red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
+  red/crestrict.sl red/kempe.sl cpcolor.sl red/configs.sl red/bridge.sl
+  red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
+  red/ccheck.sl`, then `red/sanity-c.sl` or `red/goal-c.sl` (with
+  `--goal proved`). `red/goal-c.sl`
+  proved its goal in about 7.4 and 9 minutes of wall time (15.5 of user time)
+  in two runs on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
+  been checked against Coq's C_reducible and valid_contract beyond
+  reading them.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
