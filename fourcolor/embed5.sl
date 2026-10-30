@@ -311,3 +311,162 @@
     ((HeN _ _ _ _ _ _ _ _ _ x2 z w a ox px ox2 pz iz pw pa pu) (inj-node dc dm x y z u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa oxr ly oyr pz iz hx hy))
     (absurd (HeEN _ _ _ _ _ _ _ _ _ x2 z t w w1 w2 ox px ox2 pz oz pt it pw p1 p2 pu)
       (no-heen dc dm x x2 t ec nc fc ksc rc em nm fm ksm as hl en ok lx oxr px ox ox2 pt it))))
+
+(def-fns _ $ (erased gm-geo : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    -> (erased (Geo dm em nm fm ksm) g))
+  (let-match erased en (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
+  g)
+
+; embedE and embedN over the darts xs, as patch.sl's MorphOff: h1 (edge x) = edge (h1 x), and h1 (node x) = node (h1 x) off rc.
+(def-fns _ $ (erased h1-morph-e : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el)
+    (erased (Length (Nat) h1 dc) lh) (subterm erased (List (Nat)) xs) (erased (Under xs dc) ux) -> (erased (MorphOff h1 ec em (Nil (Nat)) xs) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (MONil h1 ec em (Nil _))))
+  (let-match erased ux (UnderCons _ _ _ lx ux1))
+  (let ((erased y) (erased _) (erased _) (erased py) (erased ly) (erased _) (erased _) (erased _) (erased _))
+    (hyper-step dc x ec nc fc (gc-hyper dc dm ec nc fc ksc rc em nm fm ksm as hl en) lx))
+  (let ((erased z) (erased pz)) (nth-exists _ h1 dc x lh lx))
+  (let ((erased w) (erased pw)) (nth-exists _ h1 dc y lh ly))
+  (MOAt h1 ec em (Nil _) xs1 x y z w py pz pw
+    (embed-e dc dm x y z w ec nc fc ksc rc em nm fm ksm as hl en ok fu py (embl-at dc x z ec nc em nm fm as hl ids h1 io el lh pz)
+      (embl-at dc y w ec nc em nm fm as hl ids h1 io el lh pw))
+    (h1-morph-e dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu io el lh xs1 ux1)))
+
+(def-fns _ $ (erased h1-morph-n : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el)
+    (erased (Length (Nat) h1 dc) lh) (subterm erased (List (Nat)) xs) (erased (Under xs dc) ux) -> (erased (MorphOff h1 nc nm rc xs) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (MONil h1 nc nm rc)))
+  (let-match erased ux (UnderCons _ _ _ lx ux1))
+  (let ((erased rest)) (h1-morph-n dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu io el lh xs1 ux1))
+  (let-match erased (in-dec x rc) (OrR _ _ ox) ((OrL _ _ ix) (MOSkip h1 nc nm rc xs1 x ix rest)))
+  (let ((erased _) (erased y) (erased _) (erased _) (erased _) (erased py) (erased ly) (erased _) (erased _))
+    (hyper-step dc x ec nc fc (gc-hyper dc dm ec nc fc ksc rc em nm fm ksm as hl en) lx))
+  (let ((erased z) (erased pz)) (nth-exists _ h1 dc x lh lx))
+  (let ((erased w) (erased pw)) (nth-exists _ h1 dc y lh ly))
+  (MOAt h1 nc nm rc xs1 x y z w py pz pw
+    (embed-n dc dm x y z w ec nc fc ksc rc em nm fm ksm as hl en ok fu ox py (embl-at dc x z ec nc em nm fm as hl ids h1 io el lh pz)
+      (embl-at dc y w ec nc em nm fm as hl ids h1 io el lh pw))
+    rest))
+
+; ie = insertE cc is shut under edge in the configuration map, and ins = insertE ccr in the map.
+(def-fns _ $ (erased gc-img : (erased (Nat) dc dm y z) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl cc ie) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (subterm erased (InsertE ec cc ie) iec) (erased (Under cc dc) uc) (erased (In y ie) iy) (erased (Nth (Nat) ec y z) pz)
+    -> (erased (In z ie) r))
+  (let-match erased iec (IECons _ cc1 ie1 c c2 pc iec1) (absurd (IENil _) iy))
+  (let-match erased uc (UnderCons _ _ _ lc uc1))
+  (match erased iy _
+    ((InHere _ _) (let-match erased (nth-fn _ ec c c2 z pc pz) (Refl _ _)) (InThere z c _ (InHere z ie1)))
+    ((InThere _ _ _ iy1)
+      (match erased iy1 _
+        ((InHere _ _)
+          (let-match erased (gc-at dc c ec nc rc as ok lc) (MkGcAt _ _ _ _ _ ex nx pex pxe pnx rs ep cl cs))
+          (let-match erased (nth-fn _ ec c c2 ex pc pex) (Refl _ _))
+          (let-match erased (nth-fn _ ec c2 c z pxe pz) (Refl _ _))
+          (InHere c _))
+        ((InThere _ _ _ iy2) (InThere z c _ (InThere z c2 _ (gc-img dc dm y z ec nc fc ksc rc em nm fm ksm as hl cc1 ie1 en ok iec1 uc1 iy2 pz))))))))
+
+(def-fns _ $ (erased gm-img : (erased (Nat) dm u z) (erased (List (Nat)) em nm fm ksm ccr ins) (erased (Geo dm em nm fm ksm) g) (subterm erased (InsertE em ccr ins) iem)
+    (erased (In u ins) iu) (erased (Nth (Nat) em u z) pz) -> (erased (In z ins) r))
+  (let-match erased iem (IECons _ cc1 ins1 c c2 pc iem1) (absurd (IENil _) iu))
+  (match erased iu _
+    ((InHere _ _) (let-match erased (nth-fn _ em c c2 z pc pz) (Refl _ _)) (InThere z c _ (InHere z ins1)))
+    ((InThere _ _ _ iu1)
+      (match erased iu1 _
+        ((InHere _ _) (let-match erased (nth-fn _ em c2 c z (gm-ee dm c c2 em nm fm ksm g pc) pz) (Refl _ _)) (InHere c _))
+        ((InThere _ _ _ iu2) (InThere z c _ (InThere z c2 _ (gm-img dm u z em nm fm ksm cc1 ins1 g iem1 iu2 pz))))))))
+
+; h1 x is in ins when x is in ie.
+(def-fns _ $ (erased ins-in : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Iota dc ids) io)
+    (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (subterm erased (InsertE ec cc ie) iec) (erased (Respects h1 cc ccr) rcc)
+    (erased (InsertE em ccr ins) iem) (erased (In x ie) ix) (erased (Nth (Nat) h1 x u) pu) -> (erased (In u ins) r))
+  (let-match erased iec (IECons _ cc1 ie1 c c2 pc iec1) (absurd (IENil _) ix))
+  (let-match erased rcc (RespCons _ _ ccr1 _ l pl rcc1))
+  (let-match erased iem (IECons _ _ ins1 _ l2 pl2 iem1))
+  (match erased ix _
+    ((InHere _ _) (let-match erased (nth-fn _ h1 x u l pu pl) (Refl _ _)) (InHere u _))
+    ((InThere _ _ _ ix1)
+      (match erased ix1 _
+        ((InHere _ _)
+          (let-match erased (nth-fn _ em l l2 u pl2 (embed-e dc dm c x l u ec nc fc ksc rc em nm fm ksm as hl en ok fu pc
+              (embl-at dc c l ec nc em nm fm as hl ids h1 io el lh pl) (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu))) (Refl _ _))
+          (InThere u l _ (InHere u ins1)))
+        ((InThere _ _ _ ix2)
+          (InThere u l _ (InThere u l2 _ (ins-in dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc1 ie1 ccr1 ins1 en ok fu io el lh iec1 rcc1 iem1 ix2 pu))))))))
+
+; Off rc, h1 x is in ins only when x is in ie (embed_inj).
+(def-fns _ $ (erased ins-apart : (erased (Nat) dc dm x c u l) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
+    (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (Lt x dc) lx) (erased (NotIn x rc) oxr)
+    (erased (NotIn c rc) ocr) (erased (Apart (Nat) Lt x c) nxc) (erased (Nth (Nat) h1 x u) pu) (erased (Nth (Nat) h1 c l) pl) -> (erased (Apart (Nat) Lt u l) r))
+  (let-match erased (nat-eq u l) (Unequal _ _ _ _ a)
+    (absurd (Equal _ _ _)
+      (let-match erased (embed-inj dc dm x c u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa lx oxr (nth-lt-length _ h1 c dc u pl lh) ocr
+          (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu) (embl-at dc c u ec nc em nm fm as hl ids h1 io el lh pl)) (Refl _ _))
+      (apart-irrefl x nxc)))
+  a)
+
+(def-fns _ $ (erased ins-out : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
+    (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (subterm erased (InsertE ec cc ie) iec)
+    (erased (Respects h1 cc ccr) rcc) (erased (InsertE em ccr ins) iem) (erased (Disj ie rc) dj) (erased (Lt x dc) lx) (erased (NotIn x rc) oxr)
+    (erased (NotIn x ie) ox) (erased (Nth (Nat) h1 x u) pu) -> (erased (NotIn u ins) r))
+  (let-match erased iec (IECons _ cc1 ie1 c c2 pc iec1)
+    ((IENil _) (let-match erased rcc (RespNil _)) (let-match erased iem (IENil _)) (NotInNil u)))
+  (let-match erased rcc (RespCons _ _ ccr1 _ l pl rcc1))
+  (let-match erased iem (IECons _ _ ins1 _ l2 pl2 iem1))
+  (let-match erased dj (DisjCons _ _ _ oc dj2))
+  (let-match erased dj2 (DisjCons _ _ _ oc2 dj1))
+  (let-match erased ox (NotInCons _ _ _ nx1 ox2))
+  (let-match erased ox2 (NotInCons _ _ _ nx2 ox1))
+  (let ((erased lc)) (nth-lt-length _ h1 c dc l pl lh))
+  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+    (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
+  (let ((erased v) (erased pv)) (nth-exists _ h1 dc c2 lh (perm-val dc c c2 ec nfc qe pc)))
+  (let-match erased (nth-fn _ em l l2 v pl2 (embed-e dc dm c c2 l v ec nc fc ksc rc em nm fm ksm as hl en ok fu pc
+      (embl-at dc c l ec nc em nm fm as hl ids h1 io el lh pl) (embl-at dc c2 v ec nc em nm fm as hl ids h1 io el lh pv))) (Refl _ _))
+  (NotInCons u l _ (ins-apart dc dm x c u l ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu fa io el lh lx oxr oc nx1 pu pl)
+    (NotInCons u l2 _ (ins-apart dc dm x c2 u l2 ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu fa io el lh lx oxr oc2 nx2 pu pv)
+      (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc1 ie1 ccr1 ins1 en ok fu fa io el lh iec1 rcc1 iem1 dj1 lx oxr ox1 pu))))
+
+; On rc, h1 x is in ins only when x is in ie: through edge x, off rc.
+(def-fns _ $ (erased ins-ring : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
+    (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
+    (erased (Respects h1 cc ccr) rcc) (erased (InsertE em ccr ins) iem) (erased (Disj ie rc) dj) (erased (Under cc dc) uc) (erased (Lt x dc) lx) (erased (In x rc) ixr)
+    (erased (Nth (Nat) h1 x u) pu) -> (erased (NotIn u ins) r))
+  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pex pxe pnx rs ep cl cs))
+  (let-match erased ep (OrR _ _ oer) (absurd (OrL _ _ oxr) (in-notin x rc ixr oxr)))
+  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+    (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
+  (let ((erased lex)) (perm-val dc x ex ec nfc qe pex))
+  (let-match erased (in-dec ex ie) (OrR _ _ oe)
+    (absurd (OrL _ _ ie1) (in-notin x rc ixr (disj-notin x ie rc dj (gc-img dc dm ex x ec nc fc ksc rc em nm fm ksm as hl cc ie en ok iec uc ie1 pxe)))))
+  (let ((erased v) (erased pv)) (nth-exists _ h1 dc ex lh lex))
+  (let ((erased ov)) (ins-out dc dm ex v ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lex oer oe pv))
+  (let ((erased puv)) (embed-e dc dm x ex u v ec nc fc ksc rc em nm fm ksm as hl en ok fu pex
+    (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu) (embl-at dc ex v ec nc em nm fm as hl ids h1 io el lh pv)))
+  (match erased (in-dec u ins) _
+    (absurd (OrL _ _ iu) (in-notin v ins (gm-img dm u v em nm fm ksm ccr ins (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) iem iu puv) ov))
+    ((OrR _ _ o) o)))
+
+; embed2.sl's InSides: the darts of h1 from place x on are in ins = insertE (map h1 cc) exactly when their place is in ie = insertE cc.
+(def-fns _ $ (erased ins-sides : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins pre)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
+    (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
+    (erased (Respects h1 cc ccr) rcc) (erased (InsertE em ccr ins) iem) (erased (Disj ie rc) dj) (erased (Under cc dc) uc) (subterm erased (List (Nat)) hs)
+    (erased (AppN pre hs h1) ap) (erased (Length (Nat) pre x) lp) -> (erased (InSides ie ins x hs) r))
+  (let-match erased hs (Cons _ u hs1) ((Nil _) (SdNil ie ins x)))
+  (let ((erased pu)) (app-nth pre hs1 h1 u x ap lp))
+  (let ((erased lx)) (nth-lt-length _ h1 x dc u pu lh))
+  (let ((erased pre2) (erased sn) (erased ap2)) (app-step pre hs1 h1 u ap))
+  (let ((erased rest)) (ins-sides dc dm (Succ x) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins pre2 en ok fu fa io el lh iec rcc iem dj uc hs1 ap2
+    (snoc-length _ pre pre2 u x sn lp)))
+  (match erased (in-dec x ie) _
+    ((OrL _ _ ix) (SdIn ie ins hs1 x u ix (ins-in dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu io el lh iec rcc iem ix pu) rest))
+    ((OrR _ _ ox)
+      (SdOut ie ins hs1 x u ox
+        (match erased (in-dec x rc) (((NotIn u ins) r))
+          ((OrL _ _ ixr) (ins-ring dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj uc lx ixr pu))
+          ((OrR _ _ oxr) (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lx oxr ox pu)))
+        rest))))
