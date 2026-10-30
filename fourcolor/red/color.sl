@@ -34,7 +34,7 @@
   (many ET2 : (erased (List (Col)) l) -> (EvenTail (Cons (Col) (C2) l) (BTrue)))
   (many ET3 : (erased (List (Col)) l) -> (EvenTail (Cons (Col) (C3) l) (BFalse))))
 
-; even_trace of color.v: the tail, normalised by the head's edge rotation, is an even tail.
+; After even_trace of color.v: the tail, normalised by the head's edge rotation, is an even tail.
 (def-adts $ (EvenT : ((List (Col)) et) ((Bool) b) -> Type)
   enum
   (many EvNil : -> (EvenT (Nil (Col)) (BTrue)))
@@ -45,7 +45,7 @@
   (many Ev3 : (erased (List (Col)) l l2) (erased (Bool) b) (erased (PermT p231 l l2) q) (erased (EvenTail l2 b) p)
       -> (EvenT (Cons (Col) (C3) l) b)))
 
-; etrace of color.v: et itself if it is even, otherwise et with Color2 and Color3 swapped.
+; After etrace of color.v: et itself if it is even, otherwise et with Color2 and Color3 swapped.
 (def-adts $ (ETrace : ((List (Col)) et) ((List (Col)) et2) -> Type)
   enum
   (many ETrEven : (erased (List (Col)) et) (erased (EvenT et (BTrue)) p) -> (ETrace et et))
@@ -56,7 +56,7 @@
   (many NotT : -> (Not (BTrue) (BFalse)))
   (many NotF : -> (Not (BFalse) (BTrue))))
 
-; One symbol of a partial chromogram matching one trace color, from open-chord stack bs to bs2 (matchpg of chromogram.v).
+; One symbol of a partial chromogram matching one trace color, from open-chord stack bs to bs2 (after matchpg of chromogram.v).
 (def-adts $ (Sym : ((Gsym) s) ((Bstack) bs) ((Col) e) ((Bstack) bs2) -> Type)
   enum
   (many SSkip : (erased (Bstack) bs) -> (Sym (GSkip) bs (C1) bs))
@@ -73,7 +73,7 @@
   (many MPCons : (erased (Bstack) bs bs2) (erased (Col) e) (erased (Gsym) s) (erased (List (Col)) et) (erased (List (Gsym)) w)
       (erased (Sym s bs e bs2) p) (erased (MatchPG bs2 et w) q) -> (MatchPG bs (Cons (Col) e et) (Cons (Gsym) s w))))
 
-; The completion cgram of w, from d open chords and parity b, is balanced (chromogram.v).
+; The completion cgram of w, from d open chords and parity b, is balanced (after chromogram.v).
 (def-adts $ (GBal : ((Nat) d) ((Bool) b) ((List (Gsym)) w) -> Type)
   enum
   (many GBEnd0 : -> (GBal (Zero) (BTrue) (Nil (Gsym))))
@@ -87,7 +87,7 @@
   (many GBPop1 : (erased (Nat) d) (erased (Bool) b c) (erased (List (Gsym)) w) (erased (Not b c) n) (erased (GBal d c w) p)
       -> (GBal (Succ d) b (Cons (Gsym) (GPop1) w))))
 
-; init_gtree_spec of initgtree.v: a partial chromogram of n symbols whose completion is balanced.
+; After init_gtree_spec of initgtree.v: a partial chromogram of n symbols whose completion is balanced.
 (def-adts $ (InitG : ((Nat) n) ((List (Gsym)) w) -> Type)
   enum
   (many MkInitG : (erased (Nat) n) (erased (List (Gsym)) w) (erased (Length (Gsym) w n) l) (erased (GBal (Zero) (BFalse) w) b)

@@ -13,7 +13,7 @@
   (many RootN : (erased (Ctree) t1 t2 t3) -> (CtRoot (CNode t1 t2 t3) (Zero)))
   (many RootE : -> (CtRoot (CEmpty) (Zero))))
 
-; ctree_sub of ctree.v: the multiplicity n of the trace et in t.
+; After ctree_sub of ctree.v: the multiplicity n of the trace et in t.
 (def-adts $ (CtSub : ((Ctree) t) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many SubNil : (erased (Ctree) t) (erased (Nat) n) (erased (CtRoot t n) p) -> (CtSub t (Nil (Col)) n))
@@ -162,7 +162,7 @@
   (let-match erased k (HN _ _ _ _ k1 k2 k3))
   (match erased s _ ((SelN0 _ _ _) (HE h)) ((SelN1 _ _ _) k1) ((SelN2 _ _ _) k2) ((SelN3 _ _ _) k3)))
 
-; ctree_union of ctree.v, on trees of one height.
+; After ctree_union of ctree.v, on trees of one height.
 (def-adts $ (CtOr : ((Ctree) tl) ((Ctree) tr) ((Ctree) t) -> Type)
   enum
   (many OrEL : (erased (Ctree) t) -> (CtOr (CEmpty) t t))
@@ -219,7 +219,7 @@
         ((SelN2 _ _ _) (or-lift (CNode l1 l2 l3) (CNode r1 r2 r3) l2 r2 e et1 (SelN2 l1 l2 l3) (SelN2 r1 r2 r3) (or-mem l2 r2 u2 et1 o2 m1)))
         ((SelN3 _ _ _) (or-lift (CNode l1 l2 l3) (CNode r1 r2 r3) l3 r3 e et1 (SelN3 l1 l2 l3) (SelN3 r1 r2 r3) (or-mem l3 r3 u3 et1 o3 m1)))))))
 
-; t2 holds the traces whose image under g is in t (ctree_rotl and ctree_rotr of ctree.v, for g = p312 and p231).
+; t2 holds the traces whose image under g is in t (after ctree_rotl and ctree_rotr of ctree.v, for g = p312 and p231).
 (def-adts $ (CtPerm : ((Perm) g) ((Ctree) t) ((Ctree) t2) -> Type)
   enum
   (many CPE : (erased (Perm) g) -> (CtPerm g (CEmpty) (CEmpty)))
@@ -293,7 +293,7 @@
         ((SelN2 _ _ _) (pm-lift g t u2 e g2 et1 (PC2 g1 g2 g3) s2 (perm-mem g u2 a2 et1 p2 m1)))
         ((SelN3 _ _ _) (pm-lift g t u3 e g3 et1 (PC3 g1 g2 g3) s3 (perm-mem g u3 a3 et1 p3 m1)))))))
 
-; ctree_union_rotlr of ctree.v: t holds the union of the left rotation of tl and the right rotation of tr.
+; After ctree_union_rotlr of ctree.v: t holds the union of the left rotation of tl and the right rotation of tr.
 (def-adts $ (CtRLR : ((Ctree) tl) ((Ctree) tr) ((Ctree) t) -> Type)
   enum
   (many RLN : (erased (Ctree) l1 l2 l3 r1 r2 r3 u1 u2 u3 t) (erased (CtRLR l3 r2 u1) o1) (erased (CtRLR l1 r3 u2) o2)
@@ -356,7 +356,7 @@
         ((SelN3 _ _ _) (rlr-lift tl tr l2 r1 e (C2) (C1) et1 (PC3 (C3) (C1) (C2)) (SelN2 l1 l2 l3) (PC3 (C2) (C3) (C1)) (SelN1 r1 r2 r3)
           (rlr-mem l2 r1 u3 et1 o3 m1)))))))
 
-; ctree_disjoint of ctree.v.
+; After ctree_disjoint of ctree.v.
 (def-adts $ (CtDisj : ((Ctree) tl) ((Ctree) tr) -> Type)
   enum
   (many DjN : (erased (Ctree) l1 l2 l3 r1 r2 r3) (erased (CtDisj l1 r1) d1) (erased (CtDisj l2 r2) d2) (erased (CtDisj l3 r3) d3)

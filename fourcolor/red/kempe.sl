@@ -18,7 +18,7 @@
   (many PPar0 : (erased (Bool) b) -> (PopPar (GPop0) b b))
   (many PPar1 : (erased (Bool) b c) (erased (Not b c) n) -> (PopPar (GPop1) b c)))
 
-; The Kempe co-closure of P (Kempe_coclosure of chromogram.v), as the least set of partial traces holding P, holding
+; The Kempe co-closure of P (after Kempe_coclosure of chromogram.v), as the least set of partial traces holding P, holding
 ; each trace that a colour permutation sends into it, and holding each trace all of whose balanced matching
 ; chromograms are matched by a trace in it. AM P bs d b et pre: every chromogram w matching et from the stack bs, whose
 ; completion from d open chords and parity b is balanced, has its whole chromogram (the reverse of pre, then w)
@@ -70,7 +70,6 @@
 (def-fns _ $ (erased absurd endbad-bal : (erased (Nat) d) (erased (Bool) b) (erased (EndBad d b) e) (erased (GBal d b (Nil (Gsym))) g) -> (erased (False) f))
   (match erased e _ (absurd (EB0) g) (absurd (EB2 _ _) g)))
 
-; A matching, balanced chromogram has its witness.
 (def-fns _ $ (erased am-sound : (erased Pred P) (erased (Bstack) bs) (erased (Nat) d) (erased (Bool) b) (erased (List (Col)) et)
     (erased (List (Gsym)) pre w full) (subterm erased (MatchPG bs et w) mt) (erased (AM P bs d b et pre) a) (erased (GBal d b w) g)
     (erased (RevApp (Gsym) pre w full) ra) -> (erased (Wit P full) r))
@@ -110,7 +109,7 @@
                   (let-match erased (not-fn b c c2 n n2) (Refl _ _))
                   (am-sound P bs2 d1 c et1 (Cons _ s pre) w1 full mt1 a1 g1 ra1))))))))))
 
-; even_trace of color.v as an automaton over the trace.
+; After even_trace of color.v as an automaton over the trace.
 (def-adts $ (ES : -> Type)
   enum
   (many ESStart : -> (ES))
@@ -582,7 +581,6 @@
 (def-fns _ $ (erased monus-pos : (erased (Nat) n k m) (subterm erased (Monus n k (Succ m)) o) -> (erased (Lt (Zero) n) r))
   (match erased o _ ((MoZ _) (LtZ m)) ((MoS n1 _ _ _) (LtZ n1))))
 
-; From a + b <= n, b <= n - a.
 (def-fns _ $ (erased monus-le : (erased (Nat) a b ab n m) (subterm erased (Add a b ab) p) (erased (Lt ab (Succ n)) l) (erased (Monus n a m) o) ->
     (erased (Lt b (Succ m)) r))
   (match erased p _
@@ -603,7 +601,7 @@
   (let-match erased (mc-zero bs et n m) (Refl _ _))
   m)
 
-; Kempe_valid of kempetree.v, for soundness only: a history of the Kempe_tree_closure state (ctu, gtr, gtu), from
+; After Kempe_valid of kempetree.v, for soundness only: a history of the Kempe_tree_closure state (ctu, gtr, gtu), from
 ; initial trees satisfying the three certificates above. ctr holds traces of the co-closure, of length h + 1.
 (def-adts
   ((KV : (Pred P) ((Nat) h) ((Ctree) ctu) ((Gtree) gtr) ((Gtree) gtu) -> Type)
@@ -653,7 +651,6 @@
       (kv-even P h ctu0 gtr0 gtu kv0 et (MkCtMem ctu0 et n1 s)))
     (absurd (KVEmpty _ _ _ _ _) (mem-empty et m))))
 
-; Kempe_valid's multiplicities: for an even trace, the matches in gtr and gtu are bounded by the multiplicity in ctu.
 (def-fns _ $ (erased kv-count : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KV P h ctu gtr gtu) kv)
     (erased (List (Col)) et) (erased (Nat) n a b) (erased (ERun (ESStart) et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len)
     (erased (CtSub ctu et n) s) (erased (MC (GSG gtr) (BS0) et a) ma) (erased (MC (GSG gtu) (BS0) et b) mb) ->
@@ -692,7 +689,6 @@
     ((InR _ _ pm) (let-match erased pm (MkPermMem _ _ _ et2 pt m2)) (values p231 (IP231) et2 pt m2))))
 
 (def-fns _
-  ; The chromograms of the initial gtree have either stayed in gtu or been witnessed by a co-closure trace.
   ((erased kv-closed : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KV P h ctu gtr gtu) kv)
       (erased (List (Gsym)) w) (erased (InitG (Succ h) w) ig) -> (erased (Or (GMem (GSG gtu) w) (Wit P w)) r))
     (match erased kv _
@@ -712,7 +708,6 @@
         (match erased (kv-closed P h ctu0 gtr0 (GEmpty) kv0 w ig) _
           (absurd (InL _ _ g0) (gmem-empty w g0))
           ((InR _ _ wt) (InR _ _ wt))))))
-  ; Every trace of ctr is in the co-closure.
   ((erased ck-mem : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctr) (subterm erased (CtKC P h ctr) ck) (erased (List (Col)) et)
       (erased (CtMem ctr et) m) -> (erased (KC P et) r))
     (match erased ck _
@@ -735,7 +730,6 @@
         (KPerm P et et2 g ip pt
           (KGram P et2 (am-build P h ctu gtr gtu kw et2 et2 len mb (Nil _) (Nil _) (BS0) (Zero) (BFalse) (MPreNil (BS0)) (GPreNil (Zero) (BFalse))
             (RANil (Col) et2)))))))
-  ; With no chromogram of gtu matching full, every balanced chromogram matching full has a witness.
   ((erased am-build : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KVWrap P h ctu gtr gtu) kw)
       (subterm erased (List (Col)) et) (erased (List (Col)) full) (erased (Length (Col) full (Succ h)) len) (erased (MC (GSG gtu) (BS0) full (Zero)) mz)
       (erased (List (Col)) etc) (erased (List (Gsym)) pre) (erased (Bstack) bs) (erased (Nat) d) (erased (Bool) b)
@@ -785,7 +779,6 @@
                         (absurd (GPush) (match erased z _ (absurd (SPush2 _) pp) (absurd (SPush3 _) pp)))
                         (absurd (GSkip) (let-match erased z (SSkip _)) pp)))))))))))))
 
-; Soundness of the Kempe tree state: an even trace of length h + 1 absent from ctu is in the co-closure of P.
 (def-fns _ $ (erased kempe-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
     (erased (List (Col)) et) (erased (EvenT et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len) (erased (CtSub ctu et (Zero)) s) ->
     (erased (KC P et) r))
@@ -804,7 +797,6 @@
   (many KGoC : (erased Pred P) (erased (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu) (erased (KV P h ctu (GEmpty) gtu) kv)
       (erased (CtKC P h ctr) ck) (erased (CtH (Succ h) ctu) hc) -> (KrC P h)))
 
-; ktc_step of kempetree.v.
 (def-fns _ $ (many ktc-step-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu) (many (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
     (erased (CtH (Succ h) ctu) hc) -> (many (KrC P h) k))
   (let-match many ctu (CEmpty) (else
@@ -819,7 +811,6 @@
     (KDoneC P h ctu gtr gtu kv hc)))
   (KDoneC P h ctu gtr gtu kv hc))
 
-; Kempe_tree_closure of kempetree.v.
 (def-fns _ $ (many ktc-c : (erased Pred P) (subterm many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
     (erased (KV P h ctu (GEmpty) gtu) kv) (erased (CtKC P h ctr) ck) (erased (CtH (Succ h) ctu) hc) ->
     (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KV P h ctu2 gtr2 gtu2) kv2) (erased (CtH (Succ h) ctu2) hc2))
@@ -841,7 +832,6 @@
   (many MkKSound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ct) (erased (Gtree) gtr gtu) (erased (KV P h ct gtr gtu) kv)
       -> (KSound P h ct)))
 
-; Kempe_tree of kempetree.v, from initial trees ctu and gtu carrying the base certificates and from ctr, whose traces satisfy P.
 (def-fns _ $ (many kempe-tree-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
     (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart)) ge)
     (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (CtAllP P ctr (Nil (Col))) ca) (erased (CtH (Succ h) ctu) hc) ->
@@ -850,7 +840,6 @@
     (ktc-c P (Succ $ Succ h) h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr ca) hc))
   (values ct (MkKSound P h ct gtr gtu2 kv)))
 
-; The meaning of the Kempe tree, with the contract test: an even trace of a ctree disjoint from it is in the co-closure.
 (def-fns _ $ (erased kempe-tree-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound P h kt) ks)
     (erased (CtDisj kt ct) dj) (erased (List (Col)) et) (erased (CtMem ct et) m) (erased (EvenT et (BTrue)) ev)
     (erased (Length (Col) et (Succ h)) len) -> (erased (KC P et) r))

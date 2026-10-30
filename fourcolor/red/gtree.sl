@@ -59,7 +59,7 @@
   (many Popped0 : (erased (Bstack) b) -> (Popped (BP0 b) b))
   (many Popped1 : (erased (Bstack) b) -> (Popped (BP1 b) b)))
 
-; match_count of gtree.v: n chromograms of gs match et from the stack bs.
+; After match_count of gtree.v: n chromograms of gs match et from the stack bs.
 (def-adts $ (MC : ((GSet) gs) ((Bstack) bs) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many MCNil : (erased (GSet) gs) (erased (Bstack) bs) (erased (Nat) n) (erased (GRoot gs n) p) -> (MC gs bs (Nil (Col)) n))
@@ -74,7 +74,7 @@
       (erased (MC g1 bs1 et n1) q1) (erased (Sym s bs e b) y2) (erased (GSel gs s g2) p2) (erased (MC g2 b et n2) q2)
       (erased (Add n1 n2 n) a) -> (MC gs bs (Cons (Col) e et) n)))
 
-; a and b partition gs (sgtree_partition of gtree.v).
+; a and b partition gs (after sgtree_partition of gtree.v).
 (def-adts
   ((GPart : ((GSet) gs) ((GSet) a) ((GSet) b) -> Type)
     enum
@@ -176,7 +176,6 @@
     ((SPop03 _) (let-match erased q (SPop03 _)) (Refl _ x))
     ((SPop13 _) (let-match erased q (SPop13 _)) (Refl _ x))))
 
-; At most one symbol pops a given stack against a given colour.
 (def-fns _ $ (erased pop-fn : (erased (Gsym) s t) (erased (Bstack) bs b) (erased (Col) e) (erased (Popped bs b) pp)
     (erased (Sym s bs e b) p) (erased (Sym t bs e b) q) -> (erased (Eq (Gsym) s t) r))
   (match erased p _
@@ -354,7 +353,6 @@
 (def-fns _ $ (erased add-pos-l : (erased (Nat) a b c) (erased (Add a b c) p) (erased (Lt (Zero) a) l) -> (erased (Lt (Zero) c) r))
   (add-pos-r b a c (add-comm a b c p) l))
 
-; A chromogram of gs matching et makes the match count positive.
 (def-fns _ $ (erased mc-pos : (erased (GSet) gs) (erased (Bstack) bs) (erased (List (Col)) et) (subterm erased (List (Gsym)) w) (erased (Nat) n)
     (erased (GMem gs w) g) (erased (MatchPG bs et w) mt) (erased (MC gs bs et n) m) -> (erased (Lt (Zero) n) r))
   (match erased g _
@@ -403,7 +401,6 @@
   (let ((erased ab) (erased r) (erased s)) (add-assoc-back a1 b c bc abc1 p1 q))
   (values (Succ ab) (AddSucc a1 b ab r) (AddSucc ab c abc1 s)))
 
-; (x1 + y1) + (x2 + y2) = (x1 + x2) + (y1 + y2).
 (def-fns _ $ (erased add-swap : (erased (Nat) x1 y1 n1 x2 y2 n2 n x y) (erased (Add x1 y1 n1) p1) (erased (Add x2 y2 n2) p2)
     (erased (Add n1 n2 n) p) (erased (Add x1 x2 x) px) (erased (Add y1 y2 y) py) -> (erased (Add x y n) r))
   (let ((erased t1) (erased q1) (erased q2)) (add-assoc x1 y1 n2 n1 n p1 p))

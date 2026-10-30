@@ -1,6 +1,6 @@
 (let ((erased RG)) (Rx (Gtree)))
 
-; ctr_sub of ctreerestrict.v: n matches of et in the restriction list r.
+; After ctr_sub of ctreerestrict.v: n matches of et in the restriction list r.
 (def-adts $ (RCnt : ((List RG) r) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many RCNil : (erased (List (Col)) et) -> (RCnt (Nil RG) et (Zero)))
@@ -35,19 +35,6 @@
 (def-fns _ $ (erased monus-zero : (subterm erased (Nat) k) -> (erased (Monus (Zero) k (Zero)) p))
   (match erased k _ ((Zero) (MoZ (Zero))) ((Succ k1) (MoE k1))))
 
-(def-fns _ $ (erased monus-exists : (subterm erased (Nat) n) (erased (Nat) k) -> (erased (Nat) m) (erased (Monus n k m) p))
-  (let-match erased k (Succ k1) ((Zero) (values n (MoZ n))))
-  (let-match erased n (Succ n1) ((Zero) (values (Zero) (MoE k1))))
-  (let ((erased m) (erased p)) (monus-exists n1 k1))
-  (values m (MoS n1 k1 m p)))
-
-(def-fns _ $ (erased monus-fn : (erased (Nat) n k m1 m2) (subterm erased (Monus n k m1) p) (erased (Monus n k m2) q) -> (erased (Eq (Nat) m1 m2) e))
-  (match erased p _
-    ((MoZ _) (let-match erased q (MoZ _)) (Refl _ m1))
-    ((MoE _) (let-match erased q (MoE _)) (Refl _ m1))
-    ((MoS n1 k1 _ p1) (let-match erased q (MoS _ _ _ q1)) (monus-fn n1 k1 m1 m2 p1 q1))))
-
-; (n - a) - b = n - (a + b).
 (def-fns _ $ (erased monus-add : (erased (Nat) n a m b m2 ab) (subterm erased (Monus n a m) p) (erased (Monus m b m2) q) (erased (Add a b ab) s) ->
     (erased (Monus n ab m2) r))
   (match erased p _
@@ -71,7 +58,7 @@
       (erased (Popped bs b) pp) (erased (Sym s bs e b) z) (erased (Pick4 (Gtree) s t0 t1 t2 t3 ts) pk) (erased (RCons b ts a c) p)
       -> (PopRC bs e t0 t1 t2 t3 a c)))
 
-; b is a with the matches that the restriction x has on traces beginning with e, shifted past e (ctr_split of ctreerestrict.v).
+; b is a with the matches that the restriction x has on traces beginning with e, shifted past e (after ctr_split of ctreerestrict.v).
 (def-adts $ (CStepE : (RG x) ((Col) e) ((List RG) a) ((List RG) b) -> Type)
   enum
   (many SENone : (erased (Bstack) bs) (erased (Gtree) g) (erased (Bits) q) (erased (Col) e) (erased (List RG) a) (erased (LeafSet g q) l)
@@ -195,7 +182,6 @@
   (let-match erased p (GSelL _ b0 b1 b2 b3 b _ _ l2 pk bsp) (absurd (GSelN _ _ _ _ _ _ _) l))
   (mc-bset-long b gs bs e et n bsp m))
 
-; A gtree leaf holds no chromogram of two or more symbols.
 (def-fns _ $ (erased mc-leaf-long : (erased (Gtree) g) (erased (Bits) q) (erased (Bstack) bs) (erased (Col) e e2) (erased (List (Col)) et)
     (erased (Nat) n) (erased (LeafSet g q) l) (erased (MC (GSG g) bs (Cons (Col) e (Cons (Col) e2 et)) n) m) -> (erased (Eq (Nat) n (Zero)) r))
   (let ((erased et1)) (Cons (Col) e2 et))
@@ -221,7 +207,6 @@
     (erased (GSel (GSG (GNode t0 t1 t2 t3)) s gs) p) -> (erased (Eq (GSet) gs (GSG u)) e))
   (gsel-fn (GSG (GNode t0 t1 t2 t3)) gs (GSG u) s p (GSelN t0 t1 t2 t3 u s pk)))
 
-; Splitting the restriction x by the colour e adds the matches x has on traces e :: et.
 (def-fns _ $ (erased cstepe-cnt : (erased RG x) (erased (Col) e e2) (erased (List RG) a b) (erased (List (Col)) et) (erased (Nat) u v w)
     (erased (CStepE x e a b) st) (erased (RCnt a (Cons (Col) e2 et) u) ca) (erased (RCnt b (Cons (Col) e2 et) w) cb)
     (erased (MCX x (Cons (Col) e (Cons (Col) e2 et)) v) mx) -> (erased (Add v u w) r))
@@ -274,7 +259,6 @@
   (many B2NT : -> (B2N (BTrue) (Succ (Zero))))
   (many B2NF : -> (B2N (BFalse) (Zero))))
 
-; decr-if of red.sl: lf less one leaf when b holds.
 (def-fns _ $ (many decr-if-c : (many (Bool) b) (many (Ctree) lf) (erased (Nat) n) (erased (CtRoot lf n) p) (erased (CtH (Zero) lf) hh) ->
     (many (Ctree) r) (erased (Nat) m k) (erased (CtRoot r m) q) (erased (CtH (Zero) r) hr) (erased (B2N b k) bk) (erased (Monus n k m) o))
   (let ((erased one)) (Succ (Zero)))
@@ -306,10 +290,6 @@
     ((GL23) (values F F T T (GBLeaf g _ (LS23))))
     ((GEmpty) (values F F F F (GBLeaf g _ (LSE))))))
 
-(def-fns _ $ (erased b2n-fn : (erased (Bool) b) (erased (Nat) n m) (erased (B2N b n) p) (erased (B2N b m) q) -> (erased (Eq (Nat) n m) e))
-  (match erased p _ ((B2NT) (let-match erased q (B2NT)) (Refl _ n)) ((B2NF) (let-match erased q (B2NF)) (Refl _ n))))
-
-; The gram set after symbol s of g holds the empty chromogram k times, k being the bit of s.
 (def-fns _ $ (erased gsel-root : (erased (Gtree) g) (erased (Bool) b0 b1 b2 b3 b) (erased (Gsym) s) (erased (Nat) k)
     (erased (GBitsOf g (MkBits b0 b1 b2 b3)) gb) (erased (Pick4 (Bool) s b0 b1 b2 b3 b) pk) (erased (B2N b k) bk) ->
     (erased (GSet) gs) (erased (GSel (GSG g) s gs) sl) (erased (GRoot gs k) rt))
@@ -352,7 +332,6 @@
   (let ((erased g2) (erased s2) (erased r2)) (gsel-root g b0 b1 b2 b3 bp s kp gb pk bkp))
   (MkMCX bs g (Cons _ e (Nil _)) k (MCPP (GSG g) g1 g2 bs b bs1 s e (Nil _) k0 kp k pp y s1 (MCNil g1 bs1 k0 r1) z s2 (MCNil g2 b kp r2) a)))
 
-; Two decrements, by the pop bit then by the push bit, for a colour matched by a push and a pop.
 (def-fns _ $ (many decr2 : (erased (Gtree) g) (erased (Bool) b1 b2 b3) (many (Bool) b0 bp) (erased (Bstack) bs b bs1) (erased (Gsym) s) (erased (Col) e)
     (many (Ctree) lf) (erased (Nat) n) (erased (CtRoot lf n) p) (erased (CtH (Zero) lf) hh) (erased (GBitsOf g (MkBits b0 b1 b2 b3)) gb)
     (erased (Pick4 (Bool) s b0 b1 b2 b3 bp) pk) (erased (Popped bs b) pp) (erased (Sym (GPush) bs e bs1) y) (erased (Sym s bs e b) z) ->
@@ -432,7 +411,7 @@
 (def-fns _ $ (erased ife-h : (erased (Ctree) t l g) (erased (IfE t l g) p) (erased (CtH (Zero) t) h) -> (erased (CtH (Zero) g) r))
   (match erased p _ ((IEY _) h) ((IEN _ _) (HE (Zero)))))
 
-; ctree_restrict of ctreerestrict.v: keep holds the traces of t less their matches in r, gone those of t that keep lost.
+; After ctree_restrict of ctreerestrict.v: keep holds the traces of t less their matches in r, gone those of t that keep lost.
 (def-adts $ (CRes : ((Nat) h) ((Ctree) t) ((List RG) r) ((Ctree) keep) ((Ctree) gone) -> Type)
   enum
   (many CRNil : (erased (Nat) h) (erased (Ctree) t) -> (CRes h t (Nil RG) t (CEmpty)))
@@ -479,11 +458,6 @@
         (cons-h (Zero) l1 l2 l3 keep ck hl1 hl2 hl3)
         (cons-h (Zero) g1 g2 g3 gone cg (ife-h t1 l1 g1 f1 k1) (ife-h t2 l2 g2 f2 k2) (ife-h t3 l3 g3 f3 k3))))))
 
-(def-fns _ $ (erased sub-zero : (erased (Ctree) t) (erased (List (Col)) et) (erased (Nat) n) (erased (CtSub t et n) s) (erased (Eq (Ctree) t (CEmpty)) e) ->
-    (erased (Eq (Nat) n (Zero)) r))
-  (let-match erased e (Refl _ _))
-  (sub-fn t et n (Zero) s (empty-sub et)))
-
 (def-fns _ $ (erased keep-sel : (erased (Ctree) a1 a2 a3 keep u) (erased (Col) e) (erased (List (Col)) et) (erased (Nat) m)
     (erased (CtCons a1 a2 a3 keep) ck) (erased (CtSel (CNode a1 a2 a3) e u) sl) (erased (CtSub u et m) s) -> (erased (CtSub keep (Cons (Col) e et) m) r))
   (SubCons keep u e et m (cons-sel-back a1 a2 a3 keep u e ck sl) s))
@@ -506,7 +480,6 @@
   (let-match erased ks (MkKeepSub _ _ _ _ m o s))
   (MkKeepSub keep (Cons _ e et) n k m o (keep-sel a1 a2 a3 keep u e et m ck sl s)))
 
-; Pointwise meaning of ctree_restrict: the multiplicity in keep is that in t less the match count in r.
 (def-fns _ $ (erased cres-sub : (erased (Nat) h) (erased (Ctree) t keep gone) (erased (List RG) r) (erased (List (Col)) et) (erased (Nat) n k)
     (subterm erased (CRes h t r keep gone) c) (erased (CtH (Succ h) t) ht) (erased (Length (Col) et (Succ h)) len) (erased (CtSub t et n) s)
     (erased (RCnt r et k) rk) -> (erased (KeepSub keep et n k) res))
@@ -574,7 +547,6 @@
       (keep-sel l1 l2 l3 keep lu e (Nil _) (Zero) ck sl (empty-sub (Nil _)))))
     (absurd (IEN _ _) (mem-empty (Nil _) m))))
 
-; The traces of gone are those of t whose multiplicity in keep is zero.
 (def-fns _ $ (erased cres-gone : (erased (Nat) h) (erased (Ctree) t keep gone) (erased (List RG) r) (erased (List (Col)) et)
     (subterm erased (CRes h t r keep gone) c) (erased (Length (Col) et (Succ h)) len) (erased (CtMem gone et) mg) -> (erased (Gone t keep et) res))
   (match erased c _

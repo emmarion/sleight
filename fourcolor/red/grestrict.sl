@@ -71,13 +71,6 @@
           (let-match erased (gsel-fn gs gs2 gs3 s sl sl2) (Refl _ _))
           (rjust-hits s r r2 w1 j (ghit-mem gs2 r2 w1 h4 m1)))))))
 
-(def-fns _ $ (erased rjust-weak : (erased (Gsym) s) (erased RC x) (erased (List RC) r r2) (subterm erased (RJust s r r2) j) ->
-    (erased (RJust s (Cons RC x r) r2) k))
-  (match erased j _
-    ((RJNil _ _) (RJNil s (Cons RC x r)))
-    ((RJCons _ _ r3 bs bs2 t t2 e el y sl j1)
-      (RJCons s (Cons RC x r) r3 bs bs2 t t2 e (ElThere RC (MkRx (Ctree) bs t) x r el) y sl (rjust-weak s x r r3 j1)))))
-
 (def-fns _
   ((erased part-sym : (erased (GSet) gs a b) (subterm erased (GPart gs a b) p) -> (erased (GPart gs b a) q))
     (match erased p _
@@ -194,7 +187,6 @@
       (let-match erased (gsel-fn a a1 a2 s sa sa2) (Refl _ _))
       (values r2 j h4))))
 
-; A gram set equal to a, as b is empty, is hit wherever a is.
 (def-fns _
   ((erased ghit-part : (erased (GSet) gs a) (erased (List RC) r) (subterm erased (GPart gs a (GSG (GEmpty))) p) (erased (GHit a r) h) ->
       (erased (GHit gs r) res))

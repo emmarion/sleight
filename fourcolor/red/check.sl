@@ -45,7 +45,6 @@
         ((Zero) (match many gs _ ((GSOne) (GCYes gs d b (Zero) (GCNilOk gs d b (GBEnd1 b) (GROne)))) (else no)))
         ((Succ d2) (GCYes gs d b (Zero) (GCNilBad gs d b (EB2 d2 b))))))))
 
-; Checks that gs holds every chromogram of n symbols balanced from d open chords and parity b.
 (def-fns _ $ (many check-gcov : (many (GSet) gs) (many (Nat) d) (many (Bool) b) (subterm many (Nat) n) -> (many (GCovRes gs d b n) r))
   (let ((many no)) (GCNo gs d b n))
   (let-match many (lt-dec (Succ n) d) (No _ _ _ _ _) ((Yes _ _ _ _ lv) (GCYes gs d b n (GCVac gs d n b lv))))
@@ -103,7 +102,6 @@
 (def-fns _ $ (many st-kind : (many (ES) st) -> (many (StKind st) k))
   (match many st _ ((ESOdd) (SKOdd)) ((ESEven) (SKEven)) ((ESStart) (SKOther st (NOS))) ((ESTail g) (SKOther st (NOT g)))))
 
-; Checks that every trace of t, read from st, is even.
 (def-fns _ $ (many check-cev : (subterm many (Ctree) t) (many (ES) st) -> (many (CEvRes t st) r))
   (let ((many no)) (CEvNo t st))
   (match many (st-kind st) _
@@ -207,7 +205,6 @@
   (many GEYes : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (GE t ps st) g) -> (GERes t ps st))
   (many GENo : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) -> (GERes t ps st)))
 
-; At a colour where t has no subtree, the split gram sets must be empty.
 (def-fns _ $ (many ge-dead-at : (erased (Ctree) t) (many (List RS) ps) (many (ES) st) (many (Col) e) (erased (CtSel t e (CEmpty)) sl) ->
     (many (Maybe (GEAt t ps st e)) r))
   (let ((many ps2) (erased sp)) (psplit-c e (Nil _) ps))
@@ -215,7 +212,6 @@
   (let-match many ps2 (Nil _) (else (None _)))
   (Some _ (MkGEAt t (CEmpty) ps ps2 st st2 e sl sp p (GEDead (CEmpty) ps2 st2 (PZNil)))))
 
-; Checks that, for every even trace read from st, the multiplicity in t bounds the matches of ps.
 (def-fns _ $ (many check-ge : (subterm many (Ctree) t) (many (List RS) ps) (many (ES) st) -> (many (GERes t ps st) r))
   (let ((many no)) (GENo t ps st))
   (let-match many ps (Cons _ _ _) ((Nil _) (GEYes t ps st (GEDead t ps st (PZNil)))))
@@ -257,7 +253,6 @@
       (erased (CtH (Succ h) ctu) hc) -> (BaseRes h ctu gtu))
   (many BaseNo : (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtu) -> (BaseRes h ctu gtu)))
 
-; The base certificates of kempe.sl for ctu and gtu, as initial trees for traces of length h + 1.
 (def-fns _ $ (many check-base : (many (Nat) h) (many (Ctree) ctu) (many (Gtree) gtu) -> (many (BaseRes h ctu gtu) r))
   (let ((many no)) (BaseNo h ctu gtu))
   (let-match many (check-h (Succ h) ctu) (HYes2 _ _ hc) ((HNo2 _ _) no))
@@ -276,8 +271,6 @@
     ((CLeaf lf) (let ((erased et) (erased r)) (revapp-exists (Col) pre (Nil _))) (CAPL AnyT lf pre et r (MkAnyT et)))
     ((CNode t1 t2 t3) (CAPN AnyT t1 t2 t3 pre (capp-any t1 (Cons _ (C1) pre)) (capp-any t2 (Cons _ (C2) pre)) (capp-any t3 (Cons _ (C3) pre))))))
 
-; kempe-tree of red.sl through kempe-tree-c, with the initial trees checked; AnyT stands in for the ring trace predicate,
-; whose certificate for cpcolor is out of scope here.
 (def-fns _ $ (many kempe-tree-chk : (many (List (Step)) cp) -> (many (Maybe (Ctree)) r))
   (let-match many (cprsize cp) (Succ n1) ((Zero) (Some _ (CEmpty))))
   (let-match many n1 (Succ h) ((Zero) (Some _ (CEmpty))))
