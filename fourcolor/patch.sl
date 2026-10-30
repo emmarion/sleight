@@ -106,3 +106,27 @@
   (let ((erased w2) (erased hx2) (erased pew)) (morph hr er e (Nil (Nat)) idr dr b xr w mer ior lb (NotInNil b) peb hb))
   (let-match erased (nth-fn (Nat) hr xr w2 x hx2 hx) (Refl _ _))
   (hyper-third d x w y e n f h pew pny))
+
+; The image of hr is closed under e (closed_Gr).
+(def-fns _ $ (erased closed-gr : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Nat) xr x y) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) e x y) pe)
+    -> (erased (Nat) yr) (erased (Nth (Nat) hr yr y) hy))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnf) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
+  (let ((erased lx)) (nth-lt-length _ hr xr dr x hx lhr))
+  (let ((erased yr) (erased pyr) (erased ly)) (perm-nth dr xr er nfr pmer lx))
+  (let ((erased w) (erased hy) (erased pew)) (morph hr er e (Nil (Nat)) idr dr xr yr x mer ior lx (NotInNil xr) pyr hx))
+  (let-match erased (nth-fn (Nat) e x w y pew pe) (Refl _ _))
+  (values yr hy))
+
+; The image of hd is closed under n (closed_Gd).
+(def-fns _ $ (erased closed-gd : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Nat) xd x y) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) n x y) pn)
+    -> (erased (Nat) yd) (erased (Nth (Nat) hd yd y) hy))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnf) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
+  (let ((erased lx)) (nth-lt-length _ hd xd dd x hx lhd))
+  (let ((erased yd) (erased pyd) (erased ly)) (perm-nth dd xd nd ndi pmnd lx))
+  (let ((erased w) (erased hy) (erased pnw)) (morph hd nd n (Nil (Nat)) idd dd xd yd x mnd iod lx (NotInNil xd) pyd hx))
+  (let-match erased (nth-fn (Nat) n x w y pnw pn) (Refl _ _))
+  (values yd hy))
