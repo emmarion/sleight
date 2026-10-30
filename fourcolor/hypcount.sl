@@ -115,18 +115,37 @@
       (erased (Path p (Cons (Nat) r (Nil (Nat))) y r xs) w) (erased (AppN (Cons (Nat) r xs) ls ls2) ap) (erased (OrbCat p rs ls) rest)
       -> (OrbCat p (Cons (Nat) r rs) ls2)))
 
-(def-fns _ $ (erased orbcat-exists : (erased (Nat) d c k) (erased (List (Nat)) p q rs) (erased (Perm d p q) pm) (erased (AllOrder d p c) ao)
-    (subterm erased (Under rs d) u) (erased (Length (Nat) rs k) lk)
-    -> (erased (List (Nat)) ls) (erased (Nat) len) (erased (OrbCat p rs ls) oc) (erased (Length (Nat) ls len) l) (erased (Mul k c len) m))
-  (let-match erased u (UnderCons rs1 r _ lr u1)
-    ((UnderNil _) (let-match erased lk (LengthNil _)) (values (Nil _) (Zero) (OCNil p) (LengthNil _) (MulZero c))))
-  (let-match erased lk (LengthCons _ _ _ k1 lk1))
-  (let-match erased (all-order d c r p ao lr) (MkOrder _ xs _ y c1 py w lxs))
-  (let ((erased ls1) (erased len1) (erased oc1) (erased l1) (erased m1)) (orbcat-exists d c k1 p q rs1 pm ao u1 lk1))
+; ns sums to s.
+(def-adts $ (SumN : ((List (Nat)) ns) ((Nat) s) -> Type)
+  enum
+  (many SumNil : -> (SumN (Nil (Nat)) (Zero)))
+  (many SumCons : (erased (Nat) c s s2) (erased (List (Nat)) ns) (erased (SumN ns s) p) (erased (Add c s s2) a) -> (SumN (Cons (Nat) c ns) s2)))
+
+(def-fns _ $ (erased sumn-fn : (erased (List (Nat)) ns) (erased (Nat) a b) (subterm erased (SumN ns a) p) (erased (SumN ns b) q) -> (erased (Eq (Nat) a b) e))
+  (let-match erased p (SumCons c s1 _ ns1 p1 a1) ((SumNil) (let-match erased q (SumNil)) (Refl _ a)))
+  (let-match erased q (SumCons _ s2 _ _ q1 a2))
+  (let-match erased (sumn-fn ns1 s1 s2 p1 q1) (Refl _ _))
+  (add-fn c s1 a b a1 a2))
+
+; The cycles through the darts rs, whose orders are os, laid end to end.
+(def-fns _ $ (erased orbcat-sum : (erased (List (Nat)) p rs os) (subterm erased (Orders p rs os) ob)
+    -> (erased (List (Nat)) ls) (erased (Nat) len) (erased (OrbCat p rs ls) oc) (erased (Length (Nat) ls len) l) (erased (SumN os len) sm))
+  (let-match erased ob (OrdCons _ rs1 os1 r c o ob1) ((OrdNil _) (values (Nil _) (Zero) (OCNil p) (LengthNil _) (SumNil))))
+  (let-match erased o (MkOrder _ xs _ y c1 py w lxs))
+  (let ((erased ls1) (erased len1) (erased oc1) (erased l1) (erased m1)) (orbcat-sum p rs1 os1 ob1))
   (let ((erased ls2) (erased ap)) (app-exists (Cons _ r xs) ls1))
   (let ((erased len2) (erased a2)) (add-ex c len1))
   (values ls2 len2 (OCCons p rs1 xs ls1 ls2 r y py w ap oc1) (app-length (Cons _ r xs) ls1 ls2 c len1 len2 ap (LengthCons _ r xs c1 lxs) l1 a2)
-    (MulSucc k1 c len1 len2 m1 (add-comm c len1 len2 a2))))
+    (SumCons c len1 len2 os1 m1 a2)))
+
+(def-fns _ $ (erased orders-all : (erased (Nat) d c k) (erased (List (Nat)) p rs) (erased (AllOrder d p c) ao) (subterm erased (Under rs d) u)
+    (erased (Length (Nat) rs k) lk) -> (erased (List (Nat)) os) (erased (Nat) s) (erased (Orders p rs os) ob) (erased (SumN os s) sm) (erased (Mul k c s) m))
+  (let-match erased u (UnderCons rs1 r _ lr u1)
+    ((UnderNil _) (let-match erased lk (LengthNil _)) (values (Nil _) (Zero) (OrdNil p) (SumNil) (MulZero c))))
+  (let-match erased lk (LengthCons _ _ _ k1 lk1))
+  (let ((erased os1) (erased s1) (erased ob1) (erased sm1) (erased m1)) (orders-all d c k1 p rs1 ao u1 lk1))
+  (let ((erased s2) (erased a2)) (add-ex c s1))
+  (values (Cons _ c os1) s2 (OrdCons p rs1 os1 r c (all-order d c r p ao lr) ob1) (SumCons c s1 s2 os1 sm1 a2) (MulSucc k1 c s1 s2 m1 (add-comm c s1 s2 a2))))
 
 (def-fns _ $ (erased orbit-label : (erased (Nat) d r y x) (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (List (Nat)) lab xs) (erased (Graph d p g) gr) (erased (Const lab g) cl)
     (erased (Path p (Cons (Nat) r (Nil (Nat))) y r xs) w) (erased (Nth (Nat) lab r r) prr) (erased (In x (Cons (Nat) r xs)) ix)
@@ -191,15 +210,23 @@
   (let ((erased irt) (erased cn)) (classes-root g d ids lab rs x rt io ro prt lx))
   (SubCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (cover-sub d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
-; If every dart has order c under p, and p has k orbits, then k * c = d.
-(def-fns _ $ (erased orbit-count : (erased (Nat) d k c) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob)
-    (erased (AllOrder d p c) ao) -> (erased (Mul k c d) r))
-  (let-match erased ob (MkOrbits _ _ _ g gr cs))
-  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
-  (let ((erased ls) (erased len) (erased oc) (erased lls) (erased m)) (orbcat-exists d c k p q rs pm ao (respects-under lab rs rs d fix ll) lr))
+; The orders os of p at the roots rs of its classes sum to d.
+(def-fns _ $ (erased orbit-sum : (erased (Nat) d) (erased (List (Nat)) p q ids lab rs os) (erased (List (Bond)) g) (erased (Perm d p q) pm) (erased (Graph d p g) gr)
+    (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Distinct rs) dr) (erased (Respects lab rs rs) fix) (erased (Const lab g) cl)
+    (erased (Rooted g rs ids lab) ro) (erased (Orders p rs os) ob) -> (erased (SumN os d) r))
+  (let ((erased ls) (erased len) (erased oc) (erased lls) (erased m)) (orbcat-sum p rs os ob))
   (let ((erased li)) (iota-length d ids io))
   (let ((erased p1)) (pigeonhole ls ids len d (orbcat-distinct d p g lab rs rs ls gr cl fix (sub-refl rs) dr oc)
     (lab-sub d p g lab rs ls ids ls io ll gr cl fix oc (sub-refl ls)) lls li))
   (let ((erased p2)) (pigeonhole ids ls d len (iota-distinct d ids io) (cover-sub d p q g lab rs ls ids ids pm io ll gr ro oc (sub-refl ids)) li lls))
   (let-match erased (le-antisym len d p1 p2) (Refl _ _))
+  m)
+
+; If every dart has order c under p, and p has k orbits, then k * c = d.
+(def-fns _ $ (erased orbit-count : (erased (Nat) d k c) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob)
+    (erased (AllOrder d p c) ao) -> (erased (Mul k c d) r))
+  (let-match erased ob (MkOrbits _ _ _ g gr cs))
+  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
+  (let ((erased os) (erased s) (erased oo) (erased sm) (erased m)) (orders-all d c k p rs ao (respects-under lab rs rs d fix ll) lr))
+  (let-match erased (sumn-fn os s d sm (orbit-sum d p q ids lab rs os g pm gr io ll dr fix cl ro oo)) (Refl _ _))
   m)
