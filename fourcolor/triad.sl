@@ -288,3 +288,69 @@
     (NotInCons l2 lx _ (apart-sym lx l2 (edge-apart d b2 eb3 lx l2 e n f fe lab c peb3 plb2 pl2)) (NotInNil l2)))))))
   (cx-ring B d y (Succ (Succ (Succ (Succ (Zero))))) e n f fe lab p m rg (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _)
     (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (nontrivial0 d y ea2 eb3 e n f p hd zs h gen rg ds dt iz ky)))
+
+(def-fns _ $ (erased orders-in : (erased (List (Nat)) p xs ks) (erased (Nat) b x) (subterm erased (Orders p xs ks) os) (erased (Above ks b) ab) (erased (In x xs) ix)
+    -> (erased (Nat) k) (erased (Order p x k) o) (erased (Lt b k) lt))
+  (let-match erased os (OrdCons _ xs1 ks1 x0 k0 o0 os1) (absurd (OrdNil _) ix))
+  (let-match erased ab (AboveCons _ _ _ l0 ab1))
+  (match erased ix (((Nat) k) ((Order p x k) o) ((Lt b k) lt))
+    ((InHere _ _) (values k0 o0 l0))
+    ((InThere _ _ _ ix1) (orders-in p xs1 ks1 b x os1 ab1 ix1))))
+
+; Every face has more than four darts, as Geo has it.
+(def-fns _ $ (erased pent-at : (erased (Nat) d x) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Lt x d) lx)
+    -> (erased (Nat) k) (erased (Order f x k) o) (erased (Lt 4 k) lt))
+  (let-match erased ol (MkOrderList _ _ ids _ io os))
+  (orders-in f ids ks 4 x os ab (iota-in d x ids io lx)))
+
+(def-fns _ $ (erased u-apart : (erased (Nat) u v eu ev l l2) (erased (List (Nat)) e lab) (erased (Apart (Nat) Lt l l2) ne) (erased (Nth (Nat) e u eu) pu)
+    (erased (Nth (Nat) e v ev) pv) (erased (Nth (Nat) lab eu l) pl) (erased (Nth (Nat) lab ev l2) pl2) -> (erased (Apart (Nat) Lt u v) r))
+  (let-match erased (nat-eq u v) (Unequal _ _ _ _ nuv)
+    (absurd (Equal _ _ _) (let-match erased (nth-fn _ e u eu ev pu pv) (Refl _ _)) (let-match erased (nth-fn _ lab eu l l2 pl pl2) (Refl _ _)) (apart-irrefl l ne)))
+  nuv)
+
+(def-fns _ $ (erased absurd same-out : (erased (Nat) x a b) (erased (List (Nat)) f) (erased (Nth (Nat) f x a) pa) (erased (Nth (Nat) f x b) pb)
+    (erased (Apart (Nat) Lt a b) ne) -> (erased (False) r))
+  (let-match erased (nth-fn _ f x a b pa pb) (Refl _ _))
+  (apart-irrefl a ne))
+
+(def-fns _ $ (erased absurd same-in : (erased (Nat) d x a b) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pm) (erased (Nth (Nat) f a x) pa)
+    (erased (Nth (Nat) f b x) pb) (erased (Apart (Nat) Lt a b) ne) -> (erased (False) r))
+  (let-match erased (perm-inj d a b x f fi pm pa pb) (Refl _ _))
+  (apart-irrefl a ne))
+
+; Two darts u and v of one face, with the faces of their edge images adjacent through z, follow one another on the face, or
+; the map reduces (chord-gen).
+(def-fns _ $ (erased consec : (erased (Level) B) (erased (Nat) d u v eu ev z ez lx lu lv) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
+    (erased (Nth (Nat) lab u lx) pu) (erased (Nth (Nat) lab v lx) pv) (erased (Apart (Nat) Lt u v) nuv)
+    (erased (Nth (Nat) e u eu) peu) (erased (Nth (Nat) lab eu lu) plu) (erased (Nth (Nat) e v ev) pev) (erased (Nth (Nat) lab ev lv) plv)
+    (erased (Nth (Nat) lab z lu) pz) (erased (Nth (Nat) e z ez) pez) (erased (Nth (Nat) lab ez lv) plz)
+    -> (erased (HOr (HOr (Nth (Nat) f u v) (Nth (Nat) f v u)) (Reduces B d e n f)) r))
+  (let ((erased m2)) m)
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
+  (let ((erased c2)) c)
+  (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased fu) (erased pfu) (erased _)) (perm-nth d u f fi pmf (pre-lt d u eu e nf pme peu)))
+  (let ((erased fv) (erased pfv) (erased _)) (perm-nth d v f fi pmf (pre-lt d v ev e nf pme pev)))
+  (let-match erased (nat-eq fu v) (Unequal _ _ _ _ nfu) ((Equal _ _ _) (OrL _ _ (OrL _ _ pfu))))
+  (let-match erased (nat-eq fv u) (Unequal _ _ _ _ nfv) ((Equal _ _ _) (OrL _ _ (OrR _ _ pfv))))
+  (OrR _ _ (chord-gen B d u v fu fv eu ev z ez lx lu lv e n f fe lab m pu pv nuv pfu nfu pfv nfv peu plu pev plv pz pez plz)))
+
+(def-fns _ $ (erased lab-sub : (erased (Nat) d a l) (erased (List (Nat)) f lab os) (erased (FaceLab d f lab) fl) (erased (Orbit f a os) o) (erased (Nth (Nat) lab a l) pa)
+    (subterm erased (List (Nat)) Vs) (erased (LabAll lab l Vs) al) -> (erased (WSub Vs os) r))
+  (let-match erased al (LabCons _ Vs1 _ v pv al1) ((LabNil _ _) (HSubNil os)))
+  (HSubCons v Vs1 os (orbit-in a v f os o (facelab-same d a v l f lab fl pa pv)) (lab-sub d a l f lab os fl o pa Vs1 al1)))
+
+; Three darts of a face of more than four darts, each the face image of the one before, are not a whole face.
+(def-fns _ $ (erased absurd tri : (erased (Nat) d x lx k a b c) (erased (List (Nat)) e n f fe lab Vs ls) (erased (FRec d e n f fe lab x lx k Vs ls) fr)
+    (erased (FaceLab d f lab) fl) (erased (Lt 4 k) l4) (erased (Nth (Nat) lab a lx) pa) (erased (Nth (Nat) f a b) pab) (erased (Nth (Nat) f b c) pbc)
+    (erased (Nth (Nat) f c a) pca) (erased (Apart (Nat) Lt b a) nba) (erased (Apart (Nat) Lt c a) nca) -> (erased (False) r))
+  (let-match erased fr (MkFRec _ _ _ _ _ _ _ _ _ _ Rs _ o lv dv al rv rl dl plx))
+  (let ((erased os)) (Cons _ a (Cons _ b (Cons _ c (Nil _)))))
+  (let ((erased ob)) (MkOrbit f (Cons _ b (Cons _ c (Nil _))) a b pab
+    (PathStep f _ (Cons _ c (Nil _)) b c a pbc (NotInCons b a _ nba (NotInNil b))
+      (PathStep f _ (Nil _) c a a pca (NotInCons c a _ nca (NotInNil c)) (PathHere f _ a)))))
+  (unary 4)
+  (lt-irrefl 4 (lt-le-trans 4 k 4 l4 (lt-weaken k 4 (pigeonhole Vs os k 3 dv (lab-sub d a lx f lab os fl ob pa Vs al) lv
+    (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))))))
