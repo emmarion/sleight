@@ -1,6 +1,6 @@
 ; Patching two maps to cover a larger one, after patch.v. The disk map (ed, nd, fd) on the darts 0..dd-1 and the
 ; remainder map (er, nr, fr) on 0..dr-1 are sent into the darts 0..d-1 of the whole map (e, n, f) by the injections hd
-; and hr, listed by their images. Load after kempemap.sl.
+; and hr, listed by their images. Load after kempemap.sl, with hypsub.sl after colalias.sl.
 
 ; For each dart x of xs not in b, h (p x) = q (h x).
 (def-adts $ (MorphOff : ((List (Nat)) h p q b xs) -> Type)
