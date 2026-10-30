@@ -109,11 +109,13 @@ is attached.
 
 ## Status
 
-Load order for the part A files: `std/nat.sl std/list.sl`, then in
-`fourcolor/`: `base.sl map.sl lists.sl planemap.sl walk.sl frontier.sl
-labels.sl defs.sl sweep.sl rot.sl fan.sl build.sl readback.sl
-parta.sl`. With `--goal proved` the last one checks `PartA`; both compilers pass it
-with `--warnings-as-errors`.
+`reduce.sl` proves `Reduction`: a function giving every `PlaneMap` a
+`Colored` colouring gives `FourColor`. So part A is done and only part B
+is open. Checked by both compilers with
+
+```sh
+slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl --goal proved
+```
 
 - `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
   positive certificates (labellings), not negations, so that later
@@ -121,13 +123,14 @@ with `--warnings-as-errors`.
   builds a triangle as a `PlaneMap`, as a check of the definitions.
 - `sweep.sl`: `SweepPlan`, the interface between the geometric and the
   combinatorial halves of part A (SWEEP.md).
-- `parta.sl` proves `PartA`: from a function giving every `Drawing` a
-  `SweepPlan` and a function giving every `PlaneMap` a `Colored`
-  colouring, `FourColor` follows. Its combinatorial content is in
-  `frontier.sl` (the sweep's steps on the frontier), `fan.sl` (one step
-  of the sweep), `build.sl` (a whole trace) and `readback.sl`.
-- Still open: `Drawing es -> SweepPlan es` (the geometry of the sweep),
-  and all of part B.
+- `parta.sl`: from a function giving every `Drawing` a `SweepPlan` and
+  a function giving every `PlaneMap` a `Colored` colouring, `FourColor`
+  follows. Its combinatorial content is in `frontier.sl` (the sweep's
+  steps on the frontier), `fan.sl` (one step of the sweep), `build.sl`
+  (a whole trace) and `readback.sl`.
+- `geo.sl`, `plan.sl`: `drawing-plan`, every `Drawing` has a
+  `SweepPlan`; `plan-test.sl` checks it alone.
+- Still open: all of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.

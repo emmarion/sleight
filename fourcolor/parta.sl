@@ -21,5 +21,5 @@
     (plan-paint es e nd ks pm mf col))
   (MkFourColor M thm))
 
-(goal erased (PartA))
-(qed (MkPartA (level-of part-a) part-a))
+
+
