@@ -114,7 +114,7 @@
 ; Exchanging the images of two darts keeps a permutation.
 (def-fns _ $ (erased perm-swap : (erased (Nat) d a b a2 b2) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm)
     (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
-    -> (erased (List (Nat)) q2) (erased (Perm d p2 q2) r))
+    -> (erased (List (Nat)) q2) (erased (Upd2 q b2 a a2 b q2) uq) (erased (Perm d p2 q2) r))
   (let-match erased up (MkUpd2 _ _ _ _ _ _ _ ne _ _))
   (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
   (let ((erased li)) (iota-length d ids io))
@@ -125,7 +125,7 @@
   (let ((erased lq2)) (upd2-length q q2 b2 a a2 b d uq lq))
   (let ((erased g2) (erased z2)) (zip-exists ids p2 d li lp2))
   (let ((erased h2) (erased w2)) (zip-exists ids q2 d li lq2))
-  (values q2 (MkPerm d p2 q2 ids io lp2
+  (values q2 uq (MkPerm d p2 q2 ids io lp2
     (inv-respects ids p2 q2 g2 z2 (inv-swap d a b a2 b2 p q p2 q2 g2 (graph-fun d p2 g2 (MkGraph d p2 ids g2 io lp2 z2)) pm up uq pa pb))
     (inv-respects ids q2 p2 h2 w2 (inv-swap d b2 a2 b a q p q2 p2 h2 (graph-fun d q2 h2 (MkGraph d q2 ids h2 io lq2 w2)) (perm-sym d p q pm) uq up
       (perm-inv d b b2 p q pm pb) (perm-inv d a a2 p q pm pa))))))
@@ -215,7 +215,7 @@
   (let ((erased b2) (erased pb) (erased lb2)) (perm-nth d a2 f fi pf la2))
   (let ((erased f2) (erased up)) (upd2-exists f a b2 a2 a2 d (perm-length d f fi pf) la la2 ne))
   (let ((erased xs) (erased w)) (cycle d a a2 f fi pf pa la))
-  (let ((erased fi2) (erased pf2)) (perm-swap d a a2 a2 b2 f fi f2 pf pa pb up))
+  (let ((erased fi2) (erased _) (erased pf2)) (perm-swap d a a2 a2 b2 f fi f2 pf pa pb up))
   (values b2 f2 fi2 pb up pf2 (orbits-split d k a a2 a2 b2 f fi f2 xs pf of pa pb up la la2 w)))
 
 ; 2 kc + d = k1 + k2 + k3 + 2 gen, in the shape of Genus.
