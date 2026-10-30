@@ -84,3 +84,13 @@
     ((EBOld _ _ _ _ q) (edge-old e0 e n b a g (pm-edge-inv e0 nd0 a b (subterm sm) m0 q)))
     ((EBLow _ _) (edge-high e0 e n g))
     ((EBHigh _ _) (edge-low e0 e n g))))
+
+(def-fns _ $ (erased pm-edge-bound : (erased (List (Nat)) e nd) (erased (Nat) a b n) (subterm erased (PlaneMap e nd) m)
+    (erased (Nth (Nat) e a b) p) (erased (Length (Nat) e n) l) -> (erased (Lt b n) r))
+  (let ((erased e0) (erased nd0) (erased n0) (erased g) (erased m0) (erased sm)) (pm-last e nd a b m p))
+  (let ((erased l0) (erased l2)) (grow-length e0 e n0 g))
+  (let-match erased (length-fn _ e n (Succ (Succ n0)) l l2) (Refl _ _))
+  (match erased (edge-back e0 e n0 a b g p) _
+    ((EBOld _ _ _ _ q) (lt-weaken b (Succ n0) (lt-weaken b n0 (pm-edge-bound e0 nd0 a b n0 (subterm sm) m0 q l0))))
+    ((EBLow _ _) (lt-succ (Succ n0)))
+    ((EBHigh _ _) (lt-weaken n0 (Succ n0) (lt-succ n0)))))

@@ -50,8 +50,42 @@
     ((AgInsert _ _ _ d x i m) (insert-other nd nd2 d x q c i p (notin-in q d s out m)))
     ((AgTrans _ nd1 _ _ g1 g2) (agree-nth nd1 nd2 s q c g2 (agree-nth nd nd1 s q c g1 p out) out))))
 
-(def-fns _ $ (erased walk-grow : (erased (List (Nat)) e nd e2 nd2 s) (erased (Nat) a b) (subterm erased (Walk e nd s a b) w)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 s) gn) -> (erased (Walk e2 nd2 s a b) r))
+; Every element of m is in s.
+(def-adts $ (Sub : ((List (Nat)) m) ((List (Nat)) s) -> Type)
+  enum
+  (many SubNil : (erased (List (Nat)) s) -> (Sub (Nil (Nat)) s))
+  (many SubCons : (erased (Nat) x) (erased (List (Nat)) m s) (erased (In x s) p) (erased (Sub m s) rest) -> (Sub (Cons (Nat) x m) s)))
+
+; Every element of s2 is in s or at least n.
+(def-adts $ (SubFresh : ((List (Nat)) s2) ((List (Nat)) s) ((Nat) n) -> Type)
+  enum
+  (many SFNil : (erased (List (Nat)) s) (erased (Nat) n) -> (SubFresh (Nil (Nat)) s n))
+  (many SFOld : (erased (Nat) x n) (erased (List (Nat)) s2 s) (erased (In x s) p) (erased (SubFresh s2 s n) rest)
+      -> (SubFresh (Cons (Nat) x s2) s n))
+  (many SFNew : (erased (Nat) x n) (erased (List (Nat)) s2 s) (erased (Lt n (Succ x)) p) (erased (SubFresh s2 s n) rest)
+      -> (SubFresh (Cons (Nat) x s2) s n)))
+
+(def-fns _ $ (erased notin-sub : (erased (Nat) q) (erased (List (Nat)) m s) (subterm erased (Sub m s) sb) (erased (NotIn q s) out) ->
+    (erased (NotIn q m) r))
+  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (NotInNil q)))
+  (NotInCons q x m1 (notin-in q x s out p) (notin-sub q m1 s sb1 out)))
+
+(def-fns _ $ (erased notin-fresh : (erased (Nat) q n) (erased (List (Nat)) s2 s) (subterm erased (SubFresh s2 s n) sf)
+    (erased (NotIn q s) out) (erased (Lt q n) bq) -> (erased (NotIn q s2) r))
+  (match erased sf _
+    ((SFNil _ _) (NotInNil q))
+    ((SFOld x _ s3 _ p sf1) (NotInCons q x s3 (notin-in q x s out p) (notin-fresh q n s3 s sf1 out bq)))
+    ((SFNew x _ s3 _ p sf1) (NotInCons q x s3 (ApLt _ _ q x (lt-le-trans q n x bq p)) (notin-fresh q n s3 s sf1 out bq)))))
+
+; A walk in a plane map of size n may avoid any set of old corners and new darts.
+(def-fns _ $ (erased walk-reset : (erased (List (Nat)) e nd s s2) (erased (Nat) a b n) (subterm erased (Walk e nd s a b) w)
+    (erased (PlaneMap e nd) m) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf) -> (erased (Walk e nd s2 a b) r))
+  (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e nd s2 a)))
+  (WalkStep e nd s2 a q c b pe pn (notin-fresh q n s2 s sf out (pm-edge-bound e nd a q n m pe l))
+    (walk-reset e nd s s2 c b n w1 m l sf)))
+
+(def-fns _ $ (erased walk-grow : (erased (List (Nat)) e nd e2 nd2 s m) (erased (Nat) a b) (subterm erased (Walk e nd s a b) w)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb) -> (erased (Walk e2 nd2 s a b) r))
   (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e2 nd2 s a)))
-  (WalkStep e2 nd2 s a q c b (agree-nth e e2 (Nil (Nat)) a q ge pe (NotInNil a)) (agree-nth nd nd2 s q c gn pn out) out
-    (walk-grow e nd e2 nd2 s c b w1 ge gn)))
+  (WalkStep e2 nd2 s a q c b (agree-nth e e2 (Nil (Nat)) a q ge pe (NotInNil a)) (agree-nth nd nd2 m q c gn pn (notin-sub q m s sb out)) out
+    (walk-grow e nd e2 nd2 s m c b w1 ge gn sb)))
