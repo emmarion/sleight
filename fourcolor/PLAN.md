@@ -356,11 +356,31 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   srcycle to scycle rlink only (`srcycle-ring`): in a bridgeless map an
   srcycle, stated as `SRPath` with the darts that srpath keeps off a
   face told apart by face labellings (`FaceApart`), is a `Ring`.
-- Still open: the rest of part B. `birkhoff.v` appears to need, from a reading of its proofs:
-  cpmap_planar and cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to
-  be `cpmap.sl`'s `cprsize-proper`; Coq proves cpmap_planar through
-  quasicubic_Euler, the face counts of the U and N steps and
-  cpmap_connected, none of which is ported for `cpmap.sl` yet); and
+- `cpgeom.sl` (load after `revsnip3.sl`, in its chain with `cfmap.sl`
+  loaded after `hypcubic.sl` and `cpmap.sl` after `red/red.sl`; `cpmap.sl`
+  ends with aliases for the names of `cfmap.sl` that `kempemap.sl` and
+  `snip.sl` define again): cpmap_connected, cpmap_bridgeless and
+  cpmap_planar of `cfmap.v`, as far as both compilers check them, as one
+  statement, `cpmap-geom`: the map of a cubic program, with the node
+  permutation of any `PointedMap` of it, is connected, bridgeless and of
+  genus 0. With it, cycle_rev_cpring and ucycle_rev_cpring (`ring-cycle`:
+  rev r is an `NCyc` without repeats), and the facts quasicubic_Euler takes
+  of such a map, with quasicubic read as `geomring.sl`'s `OrdersOff` on rev r
+  (`cpmap-qgeo`, a `QGeo`). The recursion carries Euler's equation in the
+  form 6 kf = d + 2 k + 6 (`QEuler`, k the ring size) through each U and N
+  step (`geo-u`, `geo-n`, `geo-y`, `geo-h`) and reads the genus off it once,
+  at the end, where Coq applies quasicubic_Euler at every step. The H step
+  uses a ring of at least two darts (`cprsize-proper`, through
+  `ring-fixed`), as Coq's bridgeless_ecpH does. That these statements match
+  Coq's has been checked only by reading. Load order: `std/nat.sl
+  std/list.sl ring.sl`, then `base map lists planemap walk frontier labels
+  hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
+  hypwalkup hypgeom hypjordan hyptree hypwalkeq hypcount hypcubic cfmap cube
+  coloring colalias hypsub`, `red/red.sl cpmap.sl`, `red/` `color ctree gtree
+  grestrict crestrict kempe bridge gramrot`, then `ringtrace kempemap patch
+  sew patch2 snip revsnip revsnip2 srcycle ringdec geomring revsnip3
+  cpgeom` (each `.sl`).
+- Still open: the rest of part B. `birkhoff.v` appears to need, from a reading of its proofs,
   Birkhoff_valid itself, which would build the two `BSide`s and the
   `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring

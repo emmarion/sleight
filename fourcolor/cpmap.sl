@@ -285,3 +285,12 @@
     ((SU) (NoAYes cp (NoAU rest p)))
     ((SK) (NoAYes cp (NoAK rest p)))
     ((SA) (NoANo cp))))
+
+; Names of cfmap.sl that later files of the hypermap layer define again, kept for the files loaded after them.
+(let ((erased CRPath)) RPath)
+(let ((erased CRPNil)) RPNil)
+(let ((erased CRPCons)) RPCons)
+(let ((erased crpath-last)) rpath-last)
+(let ((erased CLast)) Last)
+(let ((erased CQuasiCubic)) QuasiCubic)
+(let ((erased CMkQuasiCubic)) MkQuasiCubic)
