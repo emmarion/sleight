@@ -1031,3 +1031,101 @@
       (let ((erased w4)) (pc-step (MkSec ta3 th3 tf3) o4 (Cons _ (MkSec ta4 th4 tf4) ost5) q5 r4 fit3 pa4 w5))
       (let ((erased w3)) (pc-step (MkSec ta2 th2 tf2) o3 _ r4 r3 fit2 pa3 w4))
       (values a lt pa iu os ob (pc-step2 (MkSec ta0 th0 tf0) (MkSec ta1 th1 tf1) o12 _ r3 q fit01 pa12 w3)))))
+
+; How one rule r of drs moves the source count c of a dart: c drops to c1 past r, by one when r fits.
+(def-adts $ (SrcStep : ((Nat) a) ((List (Sec)) os) ((List (Sub)) r) ((Nat) c c1) -> Type)
+  enum
+  (many SSkip : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) -> (SrcStep a os r c c))
+  (many SFit : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) (erased (Length (Sub) r a) l) (erased (Pw (Sec) (Sub) FitSec os r) fz)
+      -> (SrcStep a os r (Succ c) c)))
+
+(def-fns _ $ (erased src-step : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) (erased (List (List (Sub))) drs qs)
+    (erased (OfSize a (Cons (List (Sub)) r drs) qs) sz) (erased (Count os qs c) k)
+    -> (erased (List (List (Sub))) qs1) (erased (Nat) c1) (erased (OfSize a drs qs1) sz1) (erased (Count os qs1 c1) k1) (erased (SrcStep a os r c c1) st))
+  (match erased sz _
+    ((OSIn _ _ _ qs1 l sz1)
+      (match erased k _
+        ((CYes _ _ _ c1 fz k1) (values qs1 c1 sz1 k1 (SFit a c1 os r l fz)))
+        ((CNo _ _ _ _ _ k1) (values qs1 c sz1 k1 (SSkip a c os r)))))
+    ((OSOut _ _ _ _ _ _ _ sz1) (values qs c sz1 k (SSkip a c os r)))))
+
+(def-fns _ $ (erased count-tail : (erased (List (Sec)) os) (erased (List (Sub)) q) (erased (List (List (Sub))) rs) (erased (Nat) t)
+    (erased (Count os (Cons (List (Sub)) q rs) t) k) -> (erased (Nat) t1) (erased (Count os rs t1) k1) (erased (Lt t1 (Succ t)) le))
+  (match erased k _
+    ((CYes _ _ _ t1 _ k1) (values t1 k1 (lt-weaken t1 (Succ t1) (lt-succ t1))))
+    ((CNo _ _ _ _ _ k1) (values t k1 (lt-succ t)))))
+
+; A rule fitting z exactly, read through its converse at w.
+(def-fns _ $ (erased conv-fit : (erased (Nat) d z w nhub a y2 s2) (erased (List (Nat)) e n f ks) (erased (List (Sub)) r q) (erased (Rg) u)
+    (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
+    (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)
+    (erased (Iter f 2 w s2) it) (erased (ConvOk r u q) cv) (erased (Length (Sub) r a) l) (erased (Pw (Sec) (Sub) FitSec osz r) fz)
+    -> (erased (InRg nhub u) iu) (erased (Pw (Sec) (Sub) FitSec osw q) fw))
+  (let ((erased x)) (MkExactAt e f ks z a osz r pz obz (MkExact osz r a fz (obs-len e f ks z a osz obz) l)))
+  (let ((erased a2) (erased _) (erased pa2) (erased iu) (erased os2) (erased ob2) (erased fw)) (conv-sound d z y2 s2 w e n f ks r q u g lz x iy ps2 it cv))
+  (let-match erased (nth-fn _ ks w a2 nhub pa2 pw) (Refl _ _))
+  (let-match erased (obs-fn e f ks w nhub os2 osw ob2 obw) (Refl _ _))
+  (values iu fw))
+
+; Each rule of drs fitting z exactly has its converse in rt fitting w, so dscore1 at face^2 z is at most the count at w.
+(def-fns _ $ (erased tgt-le : (erased (Nat) d z w nhub a c t y2 s2) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt qs)
+    (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
+    (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)
+    (erased (Iter f 2 w s2) it) (subterm erased (Tgt nhub drs rt) tg) (erased (OfSize a drs qs) sz) (erased (Count osz qs c) kz) (erased (Count osw rt t) kw)
+    -> (erased (Lt c (Succ t)) r))
+  (match erased tg _
+    ((TgNil _) (let-match erased sz (OSNil _)) (let-match erased kz (CNil _)) (LtZ t))
+    ((TgIn _ r q u drs1 rt1 cv tg1)
+      (let ((erased qs1) (erased c1) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
+      (match erased st _
+        ((SSkip _ _ _ _)
+          (let ((erased t1) (erased kw1) (erased lt1)) (count-tail osw q rt1 t kw))
+          (lt-le-trans c (Succ t1) (Succ t)
+            (tgt-le d z w nhub a c t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw1) (LtS t1 (Succ t) lt1)))
+        ((SFit _ _ _ _ l fz)
+          (let ((erased _) (erased fw)) (conv-fit d z w nhub a y2 s2 e n f ks r q u osz osw g lz pz obz pw obw iy ps2 it cv l fz))
+          (let-match erased kw (CYes _ _ _ t1 _ kw1) (absurd (CNo _ _ _ _ b _) (fit-bad osw q fw b)))
+          (LtS c1 (Succ t1) (tgt-le d z w nhub a c1 t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw1)))))
+    ((TgOut _ r q u drs1 _ cv o tg1)
+      (let ((erased qs1) (erased c1) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
+      (match erased st _
+        ((SSkip _ _ _ _) (tgt-le d z w nhub a c t y2 s2 e n f ks drs1 rt qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw))
+        (absurd (SFit _ _ _ _ l fz)
+          (let ((erased iu) (erased _)) (conv-fit d z w nhub a y2 s2 e n f ks r q u osz osw g lz pz obz pw obw iy ps2 it cv l fz))
+          (in-out nhub u iu o))))))
+
+(def-fns _ $ (erased tgt-at-mk : (erased (Nat) d w nhub) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt) (erased (Geo d e n f ks) g)
+    (erased (Tgt nhub drs rt) tg) (erased (Lt w d) lw) (erased (Nth (Nat) ks w nhub) pw) -> (erased (TgtAt e n f ks drs rt nhub w) r))
+  (let-match erased g (MkGeo _ _ _ _ _ h pl _ ol _))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased u) (erased pu) (erased lu) (erased _)) (face-walk d w nhub e n f ks h ol 2 lw pw))
+  (let ((erased v) (erased _) (erased _) (erased pv) (erased lv) (erased _) (erased _) (erased _) (erased _)) (hyper-step d u e n f h lu))
+  (let ((erased c) (erased ds)) (dscore1-exists d v e n f ks drs g lv))
+  (let-match erased ds (MkDScore1 _ _ _ _ _ qs _ z a _ osz iv pz obz sz kz))
+  (let-match erased iv (MkInvF2 _ _ _ a1 a2 a3 _ p1 p2 p3 p4))
+  (let ((erased la2)) (img-lt d a1 a2 e nf pe (img-lt d v a1 n ni pn lv p1) p2))
+  (let ((erased iz)) (two-step f z a2 v (fen d a2 a3 z e n f h la2 p3 p4) (fen d v a1 a2 e n f h lv p1 p2)))
+  (let ((erased osw) (erased obw)) (obs-exists d w e n f ks g nhub lw))
+  (let ((erased t) (erased kw)) (count-exists osw rt))
+  (let ((erased pvu) (erased _)) (plain-eq d u v e pl lu pv))
+  (MkTgtAt e n f ks drs rt nhub w u v c t osw pu pv ds obw kw
+    (tgt-le d z w nhub a c t v u e n f ks drs rt qs osz osw g (iter-lt-inv d 2 z v f fi pf lv iz) pz obz pw obw iz pvu pu tg sz kz kw)))
+
+(def-fns _ $ (erased tgt-snoc : (erased (List (Nat)) e n f ks ws ws2) (erased (List (List (Sub))) drs rt) (erased (Nat) nhub w a) (erased (Nth (Nat) ks w a) pa)
+    (erased (Or (Apart (Nat) Lt a nhub) (TgtAt e n f ks drs rt nhub w)) t) (erased (TgtAll e n f ks drs rt nhub ws) ta) (subterm erased (Snoc (Nat) ws w ws2) s)
+    -> (erased (TgtAll e n f ks drs rt nhub ws2) r))
+  (let-match erased s (SnocCons _ _ _ ws1 ys s1) ((SnocNil _ _) (TACons e n f ks (Nil _) drs rt nhub w a pa t (TANil e n f ks drs rt nhub))))
+  (let-match erased ta (TACons _ _ _ _ _ _ _ _ x ax pax tx rest))
+  (TACons e n f ks ys drs rt nhub x ax pax tx (tgt-snoc e n f ks ws1 ys drs rt nhub w a pa t rest s1)))
+
+(def-fns _ $ (erased tgt-all : (erased (Nat) d k nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt) (erased (Geo d e n f ks) g)
+    (erased (Tgt nhub drs rt) tg) (subterm erased (Iota k ws) io) (erased (Lt k (Succ d)) lk) -> (erased (TgtAll e n f ks drs rt nhub ws) r))
+  (let-match erased io (IotaS k1 ws1 _ io1 s) ((IotaZ) (TANil e n f ks drs rt nhub)))
+  (let-match erased lk (LtS _ _ lw))
+  (let-match erased g (MkGeo _ _ _ _ _ _ _ _ ol _))
+  (let ((erased a) (erased pa) (erased _)) (arity-at d k1 f ks ol lw))
+  (let ((erased t))
+    (match erased (nat-eq a nhub) (((Or (Apart (Nat) Lt a nhub) (TgtAt e n f ks drs rt nhub k1)) t))
+      ((Equal _ _ _) (OrR _ _ (tgt-at-mk d k1 nhub e n f ks drs rt g tg lw pa)))
+      ((Unequal _ _ _ _ ap) (OrL _ _ ap))))
+  (tgt-snoc e n f ks ws1 ws drs rt nhub k1 a pa t (tgt-all d k1 nhub e n f ks ws1 drs rt g tg io1 (lt-weaken k1 d lw)) s))
