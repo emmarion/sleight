@@ -173,7 +173,7 @@
 
 (def-fns _ $ (many sde-sv : (many (Bool) e) (many (List (Sy)) lp lp2) (erased (List (Sy)) r) (unique (Sv r) rv) -> (unique (Sdv e lp lp2 r) res))
   (let ((many n) (erased sb) (unique rv1)) (sub-all r rv))
-  (let ((unique rv2) (many st)) (strip-v r rv1 lp 0 n r sb))
+  (let ((unique rv2) (many st)) (strip-v r rv1 lp n r sb))
   (let-match many st (StvOk _ _ _ _ _ i2 x np c lnp ad sbx) ((StvNo _ _ _ _ _) (SdvNo e lp lp2 r rv2)))
   (let-match erased ad (AddZero _))
   (let-match many e (BTrue)
@@ -427,7 +427,7 @@
   (let-match many s0 (YF f0) (else (values rv (RFail _))))
   (let-match many f0 (QC0) (else (values rv (RFail _))))
   (let ((many n) (erased sb) (unique rv1)) (sub-all R rv))
-  (let ((unique rv2) (many st)) (strip-v R rv1 uk 0 n R sb))
+  (let ((unique rv2) (many st)) (strip-v R rv1 uk n R sb))
   (let-match many st (StvOk _ _ _ _ _ i2 x _ c _ _ sbx) ((StvNo _ _ _ _ _) (values rv2 (RFail _))))
   (let-match many (nat-eq i2 n) (Equal _ _ _) ((Unequal _ _ _ _ _) (values rv2 (RFail _))))
   (let-match erased (sub-nil R x n sbx) (Refl _ _))
