@@ -551,9 +551,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   four with red/cfred.sl's `Triad`) and gives a `ContractOut`
   (contract3_valid through `birkhoff-reduces`), or, for four darts, a
   contract ring of five darts nontrivial for 0 (`CAFive`): that case is
-  triad_valid, not ported (it needs fcard_adj_max and the rest of
-  birkhoff.v's SpokeRing section; `notembed.sl` takes it as the
-  hypothesis `TriadFive`). `contract2.sl` and `birkhoff2.sl`
+  triad_valid, which `triad.sl` proves (`notembed.sl` takes it as
+  `TriadFive`). `contract2.sl` and `birkhoff2.sl`
   keep walk.sl's `Sub` and hypsub.sl's `split-cover` as `WSub` and
   `hsplit-cover`, which the `unav/` files define again. That these
   statements match Coq's has been checked only by reading.
@@ -649,7 +648,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   reduces, given cface_h1 as the `EmbedPatch` gives it; `evalid.sl`
   proves it) and `TriadFive` (contract3.sl's `CAFive` case, with the map's
   `Pbpp`, `Connected`, `Geo`, `NoColoring` and `BirkhoffChecks`, gives a
-  `ContractOut`). A disconnected map splits (`split-reduces`); otherwise
+  `ContractOut`; `triad.sl` proves it). A disconnected map splits (`split-reduces`); otherwise
   `embed-main` embeds the kernel or the map reduces, and the contraction
   of map h1 cc (`contract-all`, with its `CSize` read off the size
   conditions of that `ValidContract`) is the one map of a `Reduces` whose glue,
@@ -702,12 +701,41 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `--goal proved`, about 50 s with slc and 113 s with the reference
   compiler). `fcgoal.sl` still takes `EmbedValid` as a hypothesis. That
   these statements match Coq's has been checked only by reading.
-- `fcgoal.sl` (load after `evalid.sl`, in the chain below): sets and
+- `triad.sl` (load after `evalid.sl`, in the chain of `fcgoal.sl`): triad_valid
+  of contract.v with minimality as data, and the parts of birkhoff.v's
+  SpokeRing section it uses, for faces of any size, as far as both
+  compilers check them. Faces are read through a `FaceLab` labelling.
+  `FRec` is the face of a dart with its orbit and the distinct labels of
+  the faces of its spokes (`fr-make`, scycle_spoke_ring through
+  double-dart; `fr-hit` and `fr-wit` read fband_spoke_ring as membership
+  in those labels). `chord-gen` is chordless_spoke_ring (the ring v :: e z
+  :: e u of three darts, nontrivial for 0), `adj12` adj12_edge (a ring of
+  four darts), and `adj-max` fcard_adj_max, through cross_adj (`cross`)
+  and, where Coq counts faces, through the orientation of pairs of darts
+  of one face (`consec`, `fan-or`, `tri-or`; three darts each the face
+  image of the next would be a whole face, against `Geo`'s faces of more
+  than four darts). `triad-reduces` follows triad_valid: a dart of diskF
+  and one of diskFC (nontrivial-pick) each have a spoke off the faces of
+  the ring, which makes the ring nontrivial for 1 (`nt1`), against
+  Birkhoff, or one of them is a hub whose spokes are all on faces of the
+  ring (`hub-dec`); its five or more spoke faces are then all five faces
+  of the ring (`cover`), the faces of insertE are faces of the ring
+  (`ins-band`: otherwise the ring is a contract ring of the contract
+  without one dart, against `ring-max`), and the triad's three faces are
+  adjacent to the triad dart and to the hub, against `adj-max`, or the
+  triad dart is on the face of the hub, against `NotAdj`. `triad-five`
+  proves `notembed.sl`'s `TriadFive`, at a level `TB` minted at the top
+  level after `birk-glue`'s. It does not use the sparsity of insertE
+  beyond the `NonTrivial` that `CAFive` already carries. In a test run a
+  broken variant (Birkhoff for five darts given the ring nontrivial for 0
+  only) was rejected. That these statements match Coq's has been checked
+  only by reading.
+- `fcgoal.sl` (load after `evalid.sl` and `triad.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
   `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
-  their own) and the hypotheses `CfCerts cfs`, `TrivRed` and `TriadFive`, through
-  `embed-analysis`, `birk-geo-of`, `full-red-of`, `embed-valid`, `not-embed` and `four-color-from`. Here css is
+  their own) and the hypotheses `CfCerts cfs` and `TrivRed`, through
+  `embed-analysis`, `birk-geo-of`, `full-red-of`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
   proved. Chain (both compilers, with `--goal proved`; about 50 s with slc and 115 s
@@ -723,7 +751,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  contract3 embed6 fullred notembed evalid fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  contract3 embed6 fullred notembed evalid triad fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check

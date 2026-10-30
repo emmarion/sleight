@@ -44,7 +44,7 @@
   (let ((erased ll)) (respects-length lab f lab d rl lf))
   (let-match erased o (MkOrder _ xs _ y k1 py w lxs))
   (let ((erased lx) (erased ly)) (values (pre-lt d x y f fi pmf py) (perm-val d x y f fi pmf py)))
-  (let ((erased uxs) (erased _)) (path-under d y x f fi _ xs pmf w ly))
+  (let ((erased uxs)) (path-under d y x f _ xs lf w))
   (let ((erased Vs)) (Cons _ x xs))
   (let ((erased Rs) (erased rv)) (respects-exists fe Vs d (UnderCons xs x d lx uxs) lfe))
   (let ((erased l) (erased plx)) (nth-exists _ lab d x ll lx))
