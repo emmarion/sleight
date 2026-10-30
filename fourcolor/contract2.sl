@@ -889,3 +889,54 @@
   (let-match erased (in-dec a s) (OrR _ _ o)
     (absurd (OrL _ _ i) (nth-fn _ lab a (Zero) (Succ (Zero)) pl (ind-in s ids lab a a id (iota-nth d a ids io la) i))))
   o)
+
+; The live darts hd of (d, e, n, f), off the dead ones s, carry the map (dl, el, nl, fl).
+(def-adts $ (LivePart : ((Nat) d dl) ((List (Nat)) e n f s el nl fl hd) -> Type)
+  enum
+  (many MkLivePart : (erased (Nat) d dl dr) (erased (List (Nat)) e n f s el nl fl er nr fr hd hr ids lab)
+      (erased (Patch d dl dr e n f el nl fl er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt) (erased (Iota d ids) io) (erased (Ind s ids lab) id)
+      (erased (SplitBy lab (Cons (Nat) (Zero) (Nil (Nat))) ids hd hr) sp) -> (LivePart d dl e n f s el nl fl hd)))
+
+(def-fns _ $ (erased live-part : (erased (Nat) d m) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) hm) (erased (Dead d e n f s m) dd)
+    -> (erased (Nat) dl) (erased (List (Nat)) el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp))
+  (let ((erased dl) (erased dr) (erased el) (erased nl) (erased fl) (erased er) (erased nr) (erased fr) (erased hd) (erased hr) (erased ids) (erased lab)
+      (erased pt) (erased io) (erased id) (erased sp)) (dead-patch d m e n f s hm dd))
+  (values dl el nl fl hd (MkLivePart d dl dr e n f s el nl fl er nr fr hd hr ids lab pt io id sp)))
+
+(def-fns _ $ (erased lp-in : (erased (Nat) d dl a) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp) (erased (Lt a d) la)
+    (erased (NotIn a s) oa) -> (erased (Nat) i) (erased (Nth (Nat) hd i a) pi) (erased (Lt i dl) li))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased i) (erased pi)) (in-nth a hd (live-in d a s ids lab hd hr io id sp la oa)))
+  (values i pi (nth-lt-length _ hd i dl a pi lhd)))
+
+(def-fns _ $ (erased lp-out : (erased (Nat) d dl i a) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
+    (erased (Nth (Nat) hd i a) pi) -> (erased (Lt a d) la) (erased (NotIn a s) oa))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased la)) (under-nth hd i a d uhd pi))
+  (values la (in-live d a s ids lab hd hr io id sp la (nth-in hd i a pi))))
+
+(def-fns _ $ (erased lp-inj : (erased (Nat) d dl i j a) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
+    (erased (Nth (Nat) hd i a) pi) (erased (Nth (Nat) hd j a) pj) -> (erased (Eq (Nat) i j) r))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (distinct-nth hd i j a dhd pi pj))
+
+(def-fns _ $ (erased lp-e : (erased (Nat) d dl i j a) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
+    (erased (Nth (Nat) el i j) pij) (erased (Nth (Nat) hd i a) pi) -> (erased (Nat) b) (erased (Nth (Nat) hd j b) pj) (erased (Nth (Nat) e a b) pab))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnf) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dl el nl fl hd2))
+  (morph hd el e (Nil _) idd dl i j a med iod (pre-lt dl i j el nfd pmed pij) (NotInNil i) pij pi))
+
+(def-fns _ $ (erased lp-f : (erased (Nat) d dl i j a b) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
+    (erased (Nth (Nat) fl i j) pij) (erased (Nth (Nat) hd i a) pi) (erased (Nth (Nat) hd j b) pj) -> (erased (Nth (Nat) f a b) r))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (patch-face-d d dl dr e n f el nl fl er nr fr hd hr (Nil _) (Nil _) pt i j a b (NotInNil i) pij pi pj))
+
+(def-fns _ $ (erased lp-map : (erased (Nat) d dl) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
+    -> (erased (Hypermap dl el nl fl) h) (erased (Length (Nat) hd dl) lh))
+  (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr h hd2 hr2 io2 iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (values hd2 lhd))
