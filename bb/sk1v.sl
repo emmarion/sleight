@@ -439,6 +439,14 @@
   (let-match erased lq (LqC x zs0 _ _ _ _ _ _ _ _ _ _ _ _) (absurd (LqN _ _ _) (apart-irrefl p ap)))
   (values (QtC x zs0) v2))
 
+(def-fns _ $ (many sv-hd : (erased (List (Sy)) r) (unique (Sv r) v) -> (many (Qt r) q) (unique v is v2 at v))
+  (let-match unique v (MkSv _ tps cps n cap l1 l2 ly tb ca u))
+  (let ((many d) (unique tb1)) (cap-dec tps cap tb l1))
+  (let ((unique v2)) (at unique (u r tps cps n cap l1 l2 ly tb1 ca)))
+  (let-match many (bd-eqd cap d n (Zero) (ly-le r tps cps n cap ly l1) (LtZ cap)) (Unequal _ _ _ _ ap) ((Equal _ _ _) (let-match erased ly (LyN _ _)) (values (QtN) v2)))
+  (let-match erased ly (LyC x r0 _ _ _ _ _ _ _ _ _ _ _) (absurd (LyN _ _) (apart-irrefl (Zero) ap)))
+  (values (QtC x r0) v2))
+
 (def-fns _ $ (many qv-put : (erased (List (Sy)) zs) (erased (List (U8)) tps) (erased (List (Copy (Nat))) cps) (many (Nat) p) (erased (Nat) cap)
     (erased (Length (U8) tps cap) l1) (erased (Length (Copy (Nat)) cps cap) l2) (erased (Lq zs tps cps (Succ p) cap) lq) (erased (Lt p cap) lt)
     (unique (Bytes tps) tb) (unique (Array (Copy (Nat)) cps) ca) (many (Tg) t) (many (Nat) c) (erased (Sy) s) (erased (Ecd s t c) e)
