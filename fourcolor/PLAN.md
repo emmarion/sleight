@@ -811,12 +811,14 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variant (Birkhoff for five darts given the ring nontrivial for 0
   only) was rejected. That these statements match Coq's has been checked
   only by reading.
-- `fcmany.sl` (load after `defs.sl`): sets the goal `FourColorM`, the
+- `fcmany.sl` (load after `defs.sl` and before `coloring.sl`, whose
+  `Proper` shadows `defs.sl`'s): sets the goal `FourColorM`, the
   four colour theorem as a program: a function, not erased, from the edges
   `es` of a drawing to a list `ks` of paints, with the `Drawing` certificate
   and the `Proper` result erased. Both compilers accept it alone under
   `--goal open`.
-- `paint.sl`, `paint-run.sl` (load after `readback.sl`): `paint-go`
+- `paint.sl`, `paint-run.sl` (load after `readback.sl` and before
+  `coloring.sl`): `paint-go`
   searches for a proper four-colouring of the endpoints of a list of
   edges from their coordinates alone, an edge at a time: it paints each
   endpoint not yet painted with each colour below 4 in turn, then checks
@@ -832,9 +834,13 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   into the wrong child, and a function returning the erased colouring.
 - `fcmanyfinal.sl` (load after `fcproof.sl`, `paint.sl` and `fcmany.sl`, in
   the chain below): proves `FourColorM` by `four-color-m` on `fcproof.sl`'s
-  `four-color-proof`. Chain: that of `fcfinal.sl` with `fcproof paint
-  fcmany fcmanyfinal` in place of `fcproof fcfinal`, with `--goal proved`.
-  TIMING-MANY
+  `four-color-proof`. Chain: that of `fcfinal.sl` with `paint fcmany`
+  after `readback` and `fcmanyfinal` in place of `fcfinal`, with `--goal
+  proved`.
+  In one run on a 4-core cloud VM it passed with slc in about 1670 s
+  (28 minutes), and in one with the reference compiler (under `ulimit -s
+  unlimited`) in about 3520 s (59 minutes), the two runs sharing the VM,
+  each at most about 3.3 GB resident.
 - `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl`, `trivfive.sl` and
   `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
   from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
@@ -868,7 +874,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
   that of `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c
   red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
-  `--goal proved`. TIMING-FINAL In test runs on the chain of
+  `--goal proved`. In one run on a 4-core cloud VM, sharing it with two
+  other runs of this size, it passed with slc in about 2190 s (36
+  minutes), at most about 3.3 GB resident; the reference compiler has
+  checked the same computations in `fcmanyfinal.sl`'s unit (above). In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
