@@ -1,4 +1,3 @@
-; externs: only
 ; expect: (MkPair _ _ 2 0)
 (let-match many #\J (MkChar j))
 (def-fns _ $ (many length-dec-test : -> (many (Pair (Nat) (Nat)) result))

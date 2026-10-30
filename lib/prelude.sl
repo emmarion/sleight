@@ -530,14 +530,53 @@
     (absurd P0))
   (match erased (pow2-fn k1 v1 w1 p1 q1) _ ((Refl _ _) (double-fn v1 v2 w2 d1 d2))))
 
-(def-fns _ $ (many u62-modulus-many : -> (many u62-modulus is m))
+(def-fns _ $ (many sixty-two-many : -> (many sixty-two is k))
   (let ((many s) (erased ps)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
   (let-match erased (mul-fn _ _ _ _ ps sixty-mul) (Refl _ _))
   (let ((many t) (erased pt)) (add s (Succ (Succ (Zero)))))
   (let-match erased (add-fn _ _ _ _ pt sixty-two-add) (Refl _ _))
-  (let ((many v) (erased pv) (erased _)) (pow2 t))
+  t)
+
+(def-fns _ $ (many u62-modulus-many : -> (many u62-modulus is m))
+  (let ((many v) (erased pv) (erased _)) (pow2 (sixty-two-many)))
   (let-match erased (pow2-fn _ _ _ pv u62-modulus-pow2) (Refl _ _))
   v)
+
+(def-fns _ $ (erased lt-double-succ : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d)
+    (subterm erased (Lt a b) l) (erased (Double a c) p) (erased (Double b d) q) -> (erased (Lt (Succ c) d) r))
+  (match erased l _
+    ((LtZ _)
+      (let-match erased p (D0))
+      (let-match erased q (DS _ d1 _))
+      (LtS (Zero) (Succ d1) (LtZ d1)))
+    ((LtS a1 b1 l1)
+      (let-match erased p (DS _ c1 p1))
+      (let-match erased q (DS _ d1 q1))
+      (LtS (Succ (Succ c1)) (Succ d1) (LtS (Succ c1) d1 (lt-double-succ a1 b1 c1 d1 l1 p1 q1))))))
+
+(def-fns _ $ (erased le-double : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d)
+    (erased (Le (Nat) Lt a b) l) (erased (Double a c) p) (erased (Double b d) q) -> (erased (Le (Nat) Lt c d) r))
+  (let-match erased l (LeEq _ _ _) ((LeLt _ _ _ _ l1) (LeLt (Nat) Lt c d (double-mono a b c d l1 p q))))
+  (let-match erased (double-fn a c d p q) (Refl _ _))
+  (LeEq (Nat) Lt c))
+
+(def-fns _ $ (many lt-pow2-dec : (many (Nat) n) (subterm many (Nat) k) (erased (Nat) v) (erased (Pow2 k v) p) ->
+    (many (Dec (Nat) Lt n v) d))
+  (let-match many k (Succ k1)
+    ((Zero)
+      (let-match erased p (P0) (absurd PS))
+      (lt-dec n (Succ (Zero)))))
+  (let-match erased p (PS _ v1 _ p1 dv) (absurd P0))
+  (match many (nat-halve n) _
+    ((HZ) (Yes (Nat) Lt n v (pow2-pos _ _ p)))
+    ((H1 m d dd)
+      (match many (notail $ lt-pow2-dec m k1 v1 p1) _
+        ((Yes _ _ _ _ l) (Yes (Nat) Lt n v (lt-double-succ m v1 d v l dd dv)))
+        ((No _ _ _ _ q) (No (Nat) Lt n v (LeLt (Nat) Lt v n (le-lt-succ v d (le-double v1 m v d q dv dd)))))))
+    ((H2 m d dd)
+      (match many (notail $ lt-pow2-dec (Succ m) k1 v1 p1) _
+        ((Yes _ _ _ _ l) (Yes (Nat) Lt n v (double-mono (Succ m) v1 (Succ (Succ d)) v l (DS m d dd) dv)))
+        ((No _ _ _ _ q) (No (Nat) Lt n v (le-double v1 (Succ m) v (Succ (Succ d)) q dv (DS m d dd))))))))
 
 (def-fns _ $ (many extern shl : (many (Nat) n) (many (Nat) k) ->
     (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
@@ -1388,7 +1427,7 @@
     (subterm unique (Array A xs) a) ->
     (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique a is r at a))
   (let ((many l) (erased p1) (unique a1)) (array-length _ _ a))
-  (values l p1 (lt-dec l (u62-modulus-many)) a1))
+  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) a1))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -1488,7 +1527,7 @@
 (def-fns _ $ (many extern bytes-length-dec : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
     (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique b is r at b))
   (let ((many l) (erased p1) (unique b1)) (bytes-length _ b))
-  (values l p1 (lt-dec l (u62-modulus-many)) b1))
+  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) b1))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
