@@ -839,3 +839,76 @@
   (let-match erased eq (Refl _ _))
   (patch-colorable d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 ev et2 pt2 td2
     (RRCons ev E et2 s (revapp-flip (Col) et (Nil _) ev et re (RANil (Col) et)) se) tr))
+
+; ks lists, for each dart x of xs, the colour under kr of a dart of hr sent to x.
+(def-adts $ (Pull : ((List (Nat)) hr kr xs ks) -> Type)
+  enum
+  (many PlNil : (erased (List (Nat)) hr kr) -> (Pull hr kr (Nil (Nat)) (Nil (Nat))))
+  (many PlCons : (erased (List (Nat)) hr kr xs ks) (erased (Nat) x j c) (erased (Nth (Nat) hr j x) px) (erased (Nth (Nat) kr j c) pc) (erased (Pull hr kr xs ks) rest)
+      -> (Pull hr kr (Cons (Nat) x xs) (Cons (Nat) c ks))))
+
+(def-fns _ $ (erased pull-exists : (erased (List (Nat)) hr kr) (erased (Nat) k) (erased (Length (Nat) hr k) lh) (erased (Length (Nat) kr k) lk) (subterm erased (List (Nat)) xs)
+    (erased (Sub xs hr) sb) -> (erased (List (Nat)) ks) (erased (Pull hr kr xs ks) r))
+  (let-match erased sb (HSubCons x xs1 _ ix sb1) ((HSubNil _) (values (Nil _) (PlNil hr kr))))
+  (let ((erased j) (erased pj)) (in-nth x hr ix))
+  (let ((erased c) (erased pc)) (nth-exists _ kr k j lk (nth-lt-length _ hr j k x pj lh)))
+  (let ((erased ks1) (erased r1)) (pull-exists hr kr k lh lk xs1 sb1))
+  (values (Cons _ c ks1) (PlCons hr kr xs1 ks1 x j c pj pc r1)))
+
+(def-fns _ $ (erased pull-nth : (erased (List (Nat)) hr kr xs ks) (erased (Nat) i x c) (subterm erased (Pull hr kr xs ks) pu) (erased (Nth (Nat) xs i x) px)
+    (erased (Nth (Nat) ks i c) pc) -> (erased (Nat) j) (erased (Nth (Nat) hr j x) pj) (erased (Nth (Nat) kr j c) qc))
+  (let-match erased pu (PlCons _ _ xs1 ks1 y j c0 py pc0 pu1) (absurd (PlNil _ _) px))
+  (let-match erased px (NthThere _ _ _ i0 _ px1) ((NthHere _ _ _) (let-match erased pc (NthHere _ _ _)) (values j py pc0)))
+  (let-match erased pc (NthThere _ _ _ _ _ pc1))
+  (pull-nth hr kr xs1 ks1 i0 x c pu1 px1 pc1))
+
+(def-fns _ $ (erased pull-length : (erased (List (Nat)) hr kr xs ks) (erased (Nat) k) (subterm erased (Pull hr kr xs ks) pu) (erased (Length (Nat) xs k) l)
+    -> (erased (Length (Nat) ks k) r))
+  (let-match erased pu (PlCons _ _ xs1 ks1 x j c px pc pu1) ((PlNil _ _) l))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (LengthCons _ c ks1 k1 (pull-length hr kr xs1 ks1 k1 pu1 l1)))
+
+(def-fns _ $ (erased pull-under : (erased (List (Nat)) hr kr xs ks) (subterm erased (Pull hr kr xs ks) pu) (erased (Under kr 4) u) -> (erased (Under ks 4) r))
+  (let-match erased pu (PlCons _ _ xs1 ks1 x j c px pc pu1) ((PlNil _ _) (UnderNil 4)))
+  (UnderCons ks1 c 4 (under-nth kr j c 4 u pc) (pull-under hr kr xs1 ks1 pu1 u)))
+
+(def-fns _ $ (erased resp-pull : (erased (List (Nat)) hr kr RV M) (subterm erased (List (Nat)) B) (erased (Respects hr B RV) rh) (erased (Respects kr B M) rk)
+    -> (erased (Pull hr kr RV M) r))
+  (let-match erased rh (RespCons _ Bt RV1 b x px rh1) ((RespNil _) (let-match erased rk (RespNil _)) (PlNil hr kr)))
+  (let-match erased rk (RespCons _ _ M1 _ c pc rk1))
+  (PlCons hr kr RV1 M1 x b c px pc (resp-pull hr kr RV1 M1 Bt rh1 rk1)))
+
+(def-fns _ $ (erased pull-compose : (erased (List (Nat)) hr kr hd kd R L) (subterm erased (List (Nat)) B) (erased (Pull hr kr hd kd) pu) (erased (Respects hd B R) rb)
+    (erased (Respects kd B L) rl) -> (erased (Pull hr kr R L) r))
+  (let-match erased rb (RespCons _ Bt R1 b x px rb1) ((RespNil _) (let-match erased rl (RespNil _)) (PlNil hr kr)))
+  (let-match erased rl (RespCons _ _ L1 _ c pc rl1))
+  (let ((erased j) (erased pj) (erased qc)) (pull-nth hr kr hd kd b x c pu px pc))
+  (PlCons hr kr R1 L1 x j c pj qc (pull-compose hr kr hd kd R1 L1 Bt pu rb1 rl1)))
+
+(def-fns _ $ (erased pull-snoc : (erased (List (Nat)) hr kr p L rr N) (erased (Nat) x0 j l0) (subterm erased (Pull hr kr p L) pu) (erased (Nth (Nat) hr j x0) px)
+    (erased (Nth (Nat) kr j l0) pc) (erased (HSnoc (Nat) p x0 rr) sn) (erased (HSnoc (Nat) L l0 N) sl) -> (erased (Pull hr kr rr N) r))
+  (let-match erased pu (PlCons _ _ p1 L1 x i c qx qc pu1)
+    ((PlNil _ _) (let-match erased sn (SnocNil _ _)) (let-match erased sl (SnocNil _ _)) (PlCons hr kr (Nil _) (Nil _) x0 j l0 px pc (PlNil hr kr))))
+  (let-match erased sn (SnocCons _ _ _ _ rr1 sn1))
+  (let-match erased sl (SnocCons _ _ _ _ Nt sl1))
+  (PlCons hr kr rr1 Nt x i c qx qc (pull-snoc hr kr p1 L1 rr1 Nt x0 j l0 pu1 px pc sn1 sl1)))
+
+; kr, a four-colouring of a remainder map, is constant on the darts of hr with images on one face of the whole map.
+(def-fns _ $ (erased rem-face : (erased (Nat) d dd dr a b j j2 c c2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kr)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (FourColoring er fr kr) ck) (erased (SomePath f (Nil (Nat)) a b) sp)
+    (erased (Nth (Nat) hr j a) pa) (erased (Nth (Nat) hr j2 b) pb) (erased (Nth (Nat) kr j c) pc) (erased (Nth (Nat) kr j2 c2) pc2) -> (erased (Eq (Nat) c c2) eq))
+  (let ((erased pt2)) pt)
+  (let-match erased pt2
+    (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hdm hrm io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hrm))
+  (let ((erased ler) (erased lnr) (erased lfr)) (hyper-lengths dr er nr fr hrm))
+  (let ((erased gf) (erased grf)) (perm-graph d f fi pmf))
+  (let ((erased gfr) (erased grfr)) (perm-graph dr fr fri pmfr))
+  (let-match erased sp (MkSomePath _ _ xs _ _ w))
+  (let-match erased ck (MkFourColoring _ _ _ ke rf re df u))
+  (nth-fn _ kr j2 c c2
+    (conn-const kr gfr j j2 c
+      (patch-face-r-pull d dd dr e n f ed nd fd er nr fr hd hr bd br gf gfr pt grf grfr j j2 a b (path-graph-conn d a b f (Nil _) xs gf w grf) pa pb)
+      (resp-const dr kr fr gfr (graph-fun dr fr gfr grfr) rf (respects-length kr fr kr dr rf lfr)) pc)
+    pc2))
