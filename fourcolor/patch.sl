@@ -2581,3 +2581,111 @@
   (let-match erased (colof-fn k c c3 o pc) (Refl _ _))
   (let ((erased cs3) (erased al3) (erased sh3)) (cols-shift s g ls1 ls3 cs1 t rp1 al1))
   (values (Cons _ c2 cs3) (All2Cons _ _ ColOf k2 c2 ls3 cs3 qc al3) (SCons s c c2 cs1 cs3 ac sh3)))
+
+; x and y sit at one position of xs and ys.
+(def-adts $ (In2 : ((List (Nat)) xs ys) ((Nat) x y) -> Type)
+  enum
+  (many I2Here : (erased (Nat) x y) (erased (List (Nat)) xs ys) -> (In2 (Cons (Nat) x xs) (Cons (Nat) y ys) x y))
+  (many I2There : (erased (Nat) a b x y) (erased (List (Nat)) xs ys) (erased (In2 xs ys x y) p) -> (In2 (Cons (Nat) a xs) (Cons (Nat) b ys) x y)))
+
+(def-fns _ $ (erased respects-in2 : (erased (List (Nat)) h k R S T) (erased (Nat) z) (subterm erased (Respects h R S) rh) (erased (Respects k R T) rk)
+    (erased (In z R) iz) -> (erased (Nat) x y) (erased (Nth (Nat) h z x) px) (erased (Nth (Nat) k z y) py) (erased (In2 S T x y) r))
+  (let-match erased rh (RespCons _ R1 S1 j l p rh1) (absurd (RespNil _) iz))
+  (let-match erased rk (RespCons _ _ T1 _ l2 p2 rk1))
+  (match erased iz _
+    ((InHere _ _) (values l l2 p p2 (I2Here l l2 S1 T1)))
+    ((InThere _ _ _ iz1)
+      (let ((erased x) (erased y) (erased px) (erased py) (erased r)) (respects-in2 h k R1 S1 T1 z rh1 rk1 iz1))
+      (values x y px py (I2There l l2 x y S1 T1 r)))))
+
+(def-fns _ $ (erased in2-respects : (erased (List (Nat)) h k R S T) (erased (Nat) x y) (subterm erased (In2 S T x y) i) (erased (Respects h R S) rh)
+    (erased (Respects k R T) rk) -> (erased (Nat) z) (erased (In z R) iz) (erased (Nth (Nat) h z x) px) (erased (Nth (Nat) k z y) py))
+  (let-match erased rh (RespCons _ R1 S1 j l p rh1) (absurd (RespNil _) i))
+  (let-match erased rk (RespCons _ _ T1 _ l2 p2 rk1))
+  (match erased i _
+    ((I2Here _ _ _ _) (values j (InHere j R1) p p2))
+    ((I2There _ _ _ _ _ _ i1)
+      (let ((erased z) (erased iz) (erased px) (erased py)) (in2-respects h k R1 S1 T1 x y i1 rh1 rk1))
+      (values z (InThere z j R1 iz) px py))))
+
+(def-fns _ $ (erased revapp-in2 : (erased (List (Nat)) pre1 w1 r1 pre2 w2 r2) (erased (Nat) x y n) (erased (In2 r1 r2 x y) i)
+    (subterm erased (RevApp (Nat) pre1 w1 r1) ra1) (erased (RevApp (Nat) pre2 w2 r2) ra2) (erased (Length (Nat) pre1 n) l1) (erased (Length (Nat) pre2 n) l2)
+    -> (erased (HOr (In2 pre1 pre2 x y) (In2 w1 w2 x y)) r))
+  (let-match erased ra1 (RACons _ s p1 _ _ rb1)
+    ((RANil _ _) (let-match erased l1 (LengthNil _)) (let-match erased l2 (LengthNil _)) (let-match erased ra2 (RANil _ _)) (OrR _ _ i)))
+  (let-match erased l1 (LengthCons _ _ _ n1 m1))
+  (let-match erased l2 (LengthCons _ s2 p2 _ m2))
+  (let-match erased ra2 (RACons _ _ _ _ _ rb2))
+  (match erased (revapp-in2 p1 (Cons _ s w1) r1 p2 (Cons _ s2 w2) r2 x y n1 i rb1 rb2 m1 m2) _
+    ((OrL _ _ j) (OrL _ _ (I2There s s2 x y p1 p2 j)))
+    ((OrR _ _ j) (match erased j _ ((I2Here _ _ _ _) (OrL _ _ (I2Here s s2 p1 p2))) ((I2There _ _ _ _ _ _ j1) (OrR _ _ j1))))))
+
+; The colourings kd of the disk map and kr of the remainder map agree on the ring: kr . br is rev (kd . bd).
+(def-adts $ (Agree : ((List (Nat)) bd br kd kr) -> Type)
+  enum
+  (many MkAgree : (erased (List (Nat)) bd br kd kr L Lr) (erased (Respects kd bd L) rl) (erased (Respects kr br Lr) rlr) (erased (RevApp (Nat) L (Nil (Nat)) Lr) rv)
+      -> (Agree bd br kd kr)))
+
+; eq_kdr: a dart of both images has one colour.
+(def-fns _ $ (erased ring-agree : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kd kr)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Agree bd br kd kr) ag) (erased (Nat) xd xr x c)
+    (erased (In xd bd) ixd) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hr xr x) rx) (erased (Nth (Nat) kr xr c) pc) -> (erased (Nth (Nat) kd xd c) r))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let-match erased ag (MkAgree _ _ _ _ L Lr rl rlr rvl))
+  (let ((erased ixr)) (hd-hr-ring d xd xr x hd hr bd br bG bGr ids pp io uhr dhr rbd rbr rv hx rx))
+  (let ((erased x2) (erased c2) (erased p1) (erased p2) (erased i2)) (respects-in2 hr kr br bGr Lr xr rbr rlr ixr))
+  (let-match erased (nth-fn _ hr xr x2 x p1 rx) (Refl _ _))
+  (let-match erased (nth-fn _ kr xr c2 c p2 pc) (Refl _ _))
+  (let ((erased k) (erased lbd)) (length-exists _ bd))
+  (let-match erased (revapp-in2 bG (Nil _) bGr L (Nil _) Lr x c k i2 rv rvl (respects-length hd bd bG k rbd lbd) (respects-length kd bd L k rl lbd))
+    (OrL _ _ i3) (absurd (OrR _ _ i4) i4))
+  (let ((erased zd) (erased izd) (erased pz) (erased qz)) (in2-respects hd kd bd bG L x c i3 rbd rl))
+  (let-match erased (distinct-nth hd zd xd x dhd pz hx) (Refl _ _))
+  qz)
+
+; A dart of both images comes from bd.
+(def-fns _ $ (erased both-ring : (erased (Nat) d xd xr x) (erased (List (Nat)) hd hr bd ids) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Under hd d) uhd) (erased (Distinct hd) dhd) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hr xr x) rx) -> (erased (In xd bd) r))
+  (match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (under-nth hd xd x d uhd hx))) _
+    (absurd (PtDisk _ _ _ _ ud px out outr) (apart-irrefl x (notin-in x x hr outr (nth-in hr xr x rx))))
+    ((PtRing _ _ _ _ ud ur px pin pr) (let-match erased (distinct-nth hd ud xd x dhd px hx) (Refl _ _)) pin)
+    (absurd (PtRest _ _ _ _ ur pr outd) (apart-irrefl x (notin-in x x hd outd (nth-in hd xd x hx))))))
+
+; c is the colour of x, read off the disk map at a dart off bd or off the remainder map.
+(def-adts $ (GlueAt : ((List (Nat)) hd hr bd kd kr) ((Nat) x c) -> Type)
+  enum
+  (many GAD : (erased (List (Nat)) hd hr bd kd kr) (erased (Nat) x c xd) (erased (Nth (Nat) hd xd x) px) (erased (NotIn xd bd) out) (erased (Nth (Nat) kd xd c) pc)
+      -> (GlueAt hd hr bd kd kr x c))
+  (many GAR : (erased (List (Nat)) hd hr bd kd kr) (erased (Nat) x c xr) (erased (Nth (Nat) hr xr x) px) (erased (Nth (Nat) kr xr c) pc)
+      -> (GlueAt hd hr bd kd kr x c)))
+
+(def-adts $ (Glue : ((List (Nat)) hd hr bd kd kr xs ks) -> Type)
+  enum
+  (many GlNil : (erased (List (Nat)) hd hr bd kd kr) -> (Glue hd hr bd kd kr (Nil (Nat)) (Nil (Nat))))
+  (many GlCons : (erased (List (Nat)) hd hr bd kd kr xs ks) (erased (Nat) x c) (erased (GlueAt hd hr bd kd kr x c) p) (erased (Glue hd hr bd kd kr xs ks) rest)
+      -> (Glue hd hr bd kd kr (Cons (Nat) x xs) (Cons (Nat) c ks))))
+
+(def-fns _ $ (erased glue-exists : (erased (Nat) dd dr) (erased (List (Nat)) hd hr bd kd kr xs) (subterm erased (PatchParts hd hr bd xs) pp)
+    (erased (Length (Nat) hd dd) lhd) (erased (Length (Nat) kd dd) lkd) (erased (Length (Nat) hr dr) lhr) (erased (Length (Nat) kr dr) lkr)
+    -> (erased (List (Nat)) ks) (erased (Glue hd hr bd kd kr xs ks) r))
+  (let-match erased pp (PPCons _ _ _ xs1 x p pp1) ((PPNil _ _ _) (values (Nil _) (GlNil hd hr bd kd kr))))
+  (let ((erased ks1) (erased r1)) (glue-exists dd dr hd hr bd kd kr xs1 pp1 lhd lkd lhr lkr))
+  (let ((erased c) (erased ga))
+    (match erased p (((Nat) c) ((GlueAt hd hr bd kd kr x c) ga))
+      ((PtDisk _ _ _ _ xd px out outr)
+        (let ((erased c) (erased pc)) (nth-exists _ kd dd xd lkd (nth-lt-length _ hd xd dd x px lhd)))
+        (values c (GAD hd hr bd kd kr x c xd px out pc)))
+      ((PtRing _ _ _ _ xd xr px pin pr)
+        (let ((erased c) (erased pc)) (nth-exists _ kr dr xr lkr (nth-lt-length _ hr xr dr x pr lhr)))
+        (values c (GAR hd hr bd kd kr x c xr pr pc)))
+      ((PtRest _ _ _ _ xr pr outd)
+        (let ((erased c) (erased pc)) (nth-exists _ kr dr xr lkr (nth-lt-length _ hr xr dr x pr lhr)))
+        (values c (GAR hd hr bd kd kr x c xr pr pc)))))
+  (values (Cons _ c ks1) (GlCons hd hr bd kd kr xs1 ks1 x c ga r1)))
+
+(def-fns _ $ (erased glue-nth : (erased (List (Nat)) hd hr bd kd kr xs ks) (erased (Nat) i x) (subterm erased (Glue hd hr bd kd kr xs ks) gl)
+    (erased (Nth (Nat) xs i x) p) -> (erased (Nat) c) (erased (Nth (Nat) ks i c) q) (erased (GlueAt hd hr bd kd kr x c) ga))
+  (let-match erased gl (GlCons _ _ _ _ _ xs1 ks1 y c1 ga1 gl1) (absurd (GlNil _ _ _ _ _) p))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values c1 (NthHere _ c1 ks1) ga1)))
+  (let ((erased c) (erased q) (erased ga)) (glue-nth hd hr bd kd kr xs1 ks1 i1 x gl1 p1))
+  (values c (NthThere _ c1 ks1 i1 c q) ga))
