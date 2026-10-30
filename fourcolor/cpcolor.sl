@@ -63,3 +63,35 @@
           (PTCons g (C2) g2 pre2 pre (PC2 g1 g2 g3) pp) pi ip)
         (ctring-perm cp g gi u3 a3 (Cons (Col) g3 pre) (Cons (Col) (C3) pre2) p3 (ctring-sel cp w1 w2 w3 u3 g3 pre s3 r)
           (PTCons g (C3) g3 pre2 pre (PC3 g1 g2 g3) pp) pi ip)))))
+
+(def-fns _ $ (many permc-r : (many (Perm) g) (many (Col) c) -> (many (Col) d) (erased (PermC g c d) p))
+  (let-match many g (MkPerm p1 p2 p3))
+  (match many c _ ((C0) (values c (PC0 g))) ((C1) (values p1 (PC1 p1 p2 p3))) ((C2) (values p2 (PC2 p1 p2 p3))) ((C3) (values p3 (PC3 p1 p2 p3)))))
+
+; t2 has t below colour c (Gonthier's ctree_cons_e).
+(def-fns _ $ (many ct-cons-e-c : (erased (List (Step)) cp) (erased (List (Col)) pre) (erased (Nat) h) (many (Col) c) (many (Ctree) t) (erased (CtH h t) ht)
+    (erased (CtRing cp t (Cons (Col) c pre)) rt) -> (many (Ctree) t2) (erased (CtH (Succ h) t2) ht2) (erased (CtRing cp t2 pre) rt2))
+  (let ((erased e) (erased he) (erased re2) (erased re3)) (values (CEmpty) (HE h) (CRE cp (Cons (Col) (C2) pre)) (CRE cp (Cons (Col) (C3) pre))))
+  (match many c _
+    ((C0) (values (CEmpty) (HE (Succ h)) (CRE cp pre)))
+    ((C1) (let ((many t2) (erased cc)) (ctree-cons t (CEmpty) (CEmpty)))
+      (values t2 (cons-h h t e e t2 cc ht he he) (ctring-cons cp t e e t2 pre cc rt re2 re3)))
+    ((C2) (let ((many t2) (erased cc)) (ctree-cons (CEmpty) t (CEmpty)))
+      (values t2 (cons-h h e t e t2 cc he ht he) (ctring-cons cp e t e t2 pre cc (CRE cp (Cons (Col) (C1) pre)) rt re3)))
+    ((C3) (let ((many t2) (erased cc)) (ctree-cons (CEmpty) (CEmpty) t))
+      (values t2 (cons-h h e e t t2 cc he he ht) (ctring-cons cp e e t t2 pre cc (CRE cp (Cons (Col) (C1) pre)) re2 rt)))))
+
+(let ((many simple-leaf-c)) (CLeaf (CEmpty)))
+
+; The tree of the one trace et under g, after the reversed prefix pre (cfcbr2 of cfcolor.v), given that trace is good.
+(def-fns _ $ (many cfcbr2-c : (erased (List (Step)) cp) (erased (List (Col)) pre get full) (erased (Col) e0) (many (Perm) g) (subterm many (List (Col)) et)
+    (erased (PermT g et get) pt) (erased (RevApp (Col) pre get full) ra) (erased (CpCol cp (Cons (Col) e0 full)) cc)
+    -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt))
+  (let-match many et (Cons _ e rest)
+    ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CRL cp (CEmpty) pre full e0 ra cc))))
+  (let-match erased pt (PTCons _ _ c _ grest pc pt1))
+  (let ((many c2) (erased pc2)) (permc-r g e))
+  (let-match erased (permc-fn g e c c2 pc pc2) (Refl _ _))
+  (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1)) (notail $ cfcbr2-c cp (Cons (Col) c pre) grest full e0 g rest pt1 (RACons (Col) c pre grest full ra) cc))
+  (let ((many t) (erased ht) (erased rt)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
+  (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt))
