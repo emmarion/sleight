@@ -541,3 +541,85 @@
     (allr-ins _ _ _ _ x n1 n2 ins (MkStarts p b lq) st1)
     (allr-ins _ _ _ _ x n1 n2 ins (MkInFrom es pts m m p b (lt-succ m) ei) inf2)
     (ARCons _ _ _ _ e r (NcYes pts k n2 e p b j nm (mem-ins _ x x n1 n2 ins (OrL _ _ (Refl _ x)))) (newc-lift pts k x n1 n2 r ins nc1))))
+
+; ls lists the labels of the starts of the edges of l.
+(def-adts $ (Labels : ((List (Point)) pts) ((List (Edge)) l) ((List (Nat)) ls) -> Type)
+  enum
+  (many LbNil : (erased (List (Point)) pts) -> (Labels pts (Nil (Edge)) (Nil (Nat))))
+  (many LbCons : (erased (List (Point)) pts) (erased (Point) a b) (erased (Nat) i) (erased (Nth (Point) pts i a) na)
+      (erased (List (Edge)) l) (erased (List (Nat)) ls) (erased (Labels pts l ls) rest)
+      -> (Labels pts (Cons (Edge) (MkEdge a b) l) (Cons (Nat) (Succ i) ls))))
+
+(def-fns _ $ (erased labels-split : (erased (List (Point)) pts) (erased (List (Edge)) xs ys zs) (erased (List (Nat)) lz)
+    (subterm erased (LApp (Edge) xs ys zs) ap) (erased (Labels pts zs lz) lab) ->
+    (erased (List (Nat)) lx ly) (erased (Labels pts xs lx) l1) (erased (Labels pts ys ly) l2) (erased (LApp (Nat) lx ly lz) a))
+  (let-match erased ap (LAppCons _ _ xs1 _ zs1 a1) ((LAppNil _ _) (values (Nil _) lz (LbNil pts) lab (LAppNil _ lz))))
+  (let-match erased lab (LbCons _ a b i na _ lz1 lab1))
+  (let ((erased lx1) (erased ly) (erased l1) (erased l2) (erased a2)) (labels-split pts xs1 ys zs1 lz1 a1 lab1))
+  (values (Cons _ (Succ i) lx1) ly (LbCons pts a b i na xs1 lx1 l1) l2 (LAppCons _ (Succ i) lx1 ly lz1 a2)))
+
+(def-fns _ $ (erased labels-join : (erased (List (Point)) pts) (erased (List (Edge)) xs ys zs) (erased (List (Nat)) lx ly)
+    (subterm erased (LApp (Edge) xs ys zs) ap) (erased (Labels pts xs lx) l1) (erased (Labels pts ys ly) l2) ->
+    (erased (List (Nat)) lz) (erased (Labels pts zs lz) lab) (erased (LApp (Nat) lx ly lz) a))
+  (let-match erased ap (LAppCons _ _ xs1 _ zs1 a1) ((LAppNil _ _) (let-match erased l1 (LbNil _)) (values ly l2 (LAppNil _ ly))))
+  (let-match erased l1 (LbCons _ a b i na _ lx1 l3))
+  (let ((erased lz1) (erased lab1) (erased a2)) (labels-join pts xs1 ys zs1 lx1 ly a1 l3 l2))
+  (values (Cons _ (Succ i) lz1) (LbCons pts a b i na zs1 lz1 lab1) (LAppCons _ (Succ i) lx1 ly lz1 a2)))
+
+(def-fns _ $ (erased labels-mem : (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (List (Edge)) l) (erased (List (Nat)) ls)
+    (erased (Point) a b) (erased (Nat) i) (subterm erased (Labels pts l ls) lab) (erased (Mem (Edge) l (MkEdge a b)) m) (erased (Nth (Point) pts i a) na) ->
+    (erased (In (Succ i) ls) r))
+  (let-match erased lab (LbCons _ a1 b1 u1 na1 l1 ls1 lab1) (absurd (LbNil _) m))
+  (let-match erased m (MemThere _ _ _ _ m1)
+    ((MemHere _ _ _) (let-match erased (nth-inj pts i u1 a sp na na1) (Refl _ _)) (InHere (Succ i) ls1)))
+  (InThere (Succ i) (Succ u1) ls1 (labels-mem pts sp l1 ls1 a b i lab1 m1 na)))
+
+(def-fns _ $ (erased labels-act : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) l)
+    (subterm erased (AllR (Ctx) (Edge) Act (MkCtx es pts k) l) acts) -> (erased (List (Nat)) ls) (erased (Labels pts l ls) lab))
+  (let-match erased acts (ARCons _ _ _ _ x l1 ax acts1) ((ARNil _ _ _ _) (values (Nil _) (LbNil pts))))
+  (let-match erased ax (MkAct _ _ _ a b i _ _ _ na _ _ _))
+  (let ((erased ls1) (erased lab1)) (labels-act es pts k l1 acts1))
+  (values (Cons _ (Succ i) ls1) (LbCons pts a b i na l1 ls1 lab1)))
+
+(def-fns _ $ (erased labels-fan : (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (Point) p) (erased (Nat) k)
+    (erased (Nth (Point) pts k p) np) (erased (List (Edge)) n) (erased (List (Nat)) ln) (erased (AllR (Point) (Edge) Starts p n) st)
+    (subterm erased (Labels pts n ln) lab) -> (erased (Nat) c) (erased (Repeat (Nat) c (Succ k) ln) rp))
+  (let-match erased lab (LbCons _ a b i na n1 ln1 lab1) ((LbNil _) (values (Zero) (RepeatNil _ (Succ k)))))
+  (let-match erased st (ARCons _ _ _ _ _ _ s st1))
+  (let-match erased s (MkStarts _ _ _))
+  (let-match erased (nth-inj pts i k p sp na np) (Refl _ _))
+  (let ((erased c) (erased rp)) (labels-fan pts sp p k np n1 ln1 st1 lab1))
+  (values (Succ c) (RepeatCons _ c (Succ k) ln1 rp)))
+
+(def-fns _ $ (erased absurd sb-irrefl : (erased (Point) a b) (erased (SB (MkEdge a b) (MkEdge a b)) s) -> (erased (False) f))
+  (let-match erased s (MkSB _ _ _ _ bl _))
+  (match erased bl _
+    (absurd (BelowL _ _ _ _ lt _) (lex-irrefl a lt))
+    (absurd (BelowR _ _ _ _ lt _) (lex-irrefl a lt))
+    (absurd (BelowS _ _ _ h) (collinear-left a b b (coll-rot b a b (coll-same b a)) h))))
+
+(def-fns _ $ (erased apart-succ : (erased (Nat) i j) (erased (Apart (Nat) Lt i j) d) -> (erased (Apart (Nat) Lt (Succ i) (Succ j)) r))
+  (match erased d _
+    ((ApLt _ _ _ _ l) (ApLt _ _ (Succ i) (Succ j) (LtS i j l)))
+    ((ApGt _ _ _ _ l) (ApGt _ _ (Succ i) (Succ j) (LtS j i l)))))
+
+(def-fns _ $ (erased notin-lab : (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (Point) a p) (erased (Nat) i)
+    (erased (Nth (Point) pts i a) na) (erased (List (Edge)) r) (erased (List (Nat)) lr) (subterm erased (AllR (Edge) (Edge) SB (MkEdge a p) r) sb)
+    (erased (AllR (Point) (Edge) AtP p r) ats) (erased (Labels pts r lr) lab) -> (erased (NotIn (Succ i) lr) ni))
+  (let-match erased sb (ARCons _ _ _ _ y r1 sy sb1) ((ARNil _ _ _ _) (let-match erased lab (LbNil _)) (NotInNil (Succ i))))
+  (let-match erased ats (ARCons _ _ _ _ _ _ ay ats1))
+  (let-match erased ay (MkAtP c _ _))
+  (let-match erased lab (LbCons _ _ _ u2 nc _ lr1 lab1))
+  (let ((erased rest)) (notin-lab pts sp a p i na r1 lr1 sb1 ats1 lab1))
+  (match erased (cmp-eq _ _ _ _ (nat-cmp i u2)) _
+    ((Unequal _ _ _ _ d) (NotInCons (Succ i) (Succ u2) lr1 (apart-succ i u2 d) rest))
+    (absurd (Equal _ _ _) (let-match erased (nth-fn _ pts i a c na nc) (Refl _ _)) (sb-irrefl a p sy))))
+
+(def-fns _ $ (erased labels-distinct : (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (Point) p) (erased (List (Edge)) r)
+    (erased (List (Nat)) lr) (subterm erased (PW (Edge) SB r) pw) (erased (AllR (Point) (Edge) AtP p r) ats) (erased (Labels pts r lr) lab) ->
+    (erased (Distinct lr) d))
+  (let-match erased pw (PWCons _ _ x r1 h pw1) ((PWNil _ _) (let-match erased lab (LbNil _)) (DistNil)))
+  (let-match erased ats (ARCons _ _ _ _ _ _ ax ats1))
+  (let-match erased ax (MkAtP a _ _))
+  (let-match erased lab (LbCons _ _ _ i na _ lr1 lab1))
+  (DistCons (Succ i) lr1 (notin-lab pts sp a p i na r1 lr1 h ats1 lab1) (labels-distinct pts sp p r1 lr1 pw1 ats1 lab1)))
