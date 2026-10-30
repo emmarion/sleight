@@ -12,5 +12,5 @@
     -> (erased (FourColor) r))
   (part-a (level-of drawing-plan) drawing-plan L colour))
 
-(goal erased (Reduction))
-(qed (MkReduction (level-of reduction) reduction))
+
+

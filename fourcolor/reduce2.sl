@@ -1,0 +1,22 @@
+; The four colour theorem for drawings, from Gonthier's four colour theorem for hypermaps, on these definitions.
+(def-adts $ (HypReduction : -> Type)
+  enum
+  (many MkHypReduction : (erased (Level) F)
+      (erased (Fn F (erased (Level) L)
+          (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+              (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour)
+          -> (erased (FourColor) r)) reduce)
+      -> (HypReduction)))
+
+(def-fns _ $ (erased hyp-reduction : (erased (Level) L)
+    (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+        (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour)
+    -> (erased (FourColor) r))
+  (def-fns _ $ (erased plane-colour : (erased (List (Nat)) e nd) (erased (PlaneMap e nd) m) -> (erased (List (Nat)) ks) (erased (Colored ks e nd ks) c))
+    (let ((erased d) (erased n) (erased h) (erased pl) (erased b)) (plane-hypermap e nd m))
+    (let ((erased ks) (erased c)) (colour d e n nd h pl b))
+    (values ks (coloring-colored ks e nd c)))
+  (reduction (level-of plane-colour) plane-colour))
+
+(goal erased (HypReduction))
+(qed (MkHypReduction (level-of hyp-reduction) hyp-reduction))

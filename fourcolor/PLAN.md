@@ -109,12 +109,15 @@ is attached.
 
 ## Status
 
-`reduce.sl` proves `Reduction`: a function giving every `PlaneMap` a
-`Colored` colouring gives `FourColor`. So part A is done and only part B
-is open. Checked by both compilers with
+`reduce2.sl` proves `HypReduction`: a function giving every hypermap
+of genus 0 that is bridgeless (on `hypermap.sl`'s definitions) a
+`FourColoring` gives `FourColor`. So part A is done, and part B is
+exactly Gonthier's `four_color_hypermap` on these definitions.
+`reduce.sl` is the same with `PlaneMap` and `Colored` in place of the
+hypermap notions. Checked by both compilers with
 
 ```sh
-slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl --goal proved
+slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl fourcolor/hypgraph.sl fourcolor/hypperm.sl fourcolor/hypermap.sl fourcolor/hypplane.sl fourcolor/reduce2.sl --goal proved
 ```
 
 - `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
