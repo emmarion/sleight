@@ -471,16 +471,26 @@
           ((OrR _ _ oxr) (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lx oxr ox pu)))
         rest))))
 
+; Each dart of xs is in r or in s.
+(def-adts $ (InEither : ((List (Nat)) r s xs) -> Type)
+  enum
+  (many IeNil : (erased (List (Nat)) r s) -> (InEither r s (Nil (Nat))))
+  (many IeCons : (erased (List (Nat)) r s xs) (erased (Nat) x) (erased (Or (In x r) (In x s)) p) (erased (InEither r s xs) rest)
+      -> (InEither r s (Cons (Nat) x xs))))
+
 ; What embed_disk, embed_rem and embed_patch give embed2.sl and contract.sl: a patch of the map (em, nm, fm) from a disk map,
-; whose darts embd sends into the configuration map as pull-col asks with its ring bd sent to erc = map edge rc, and hd =
-; h1 . embd, and a remainder map; with cface_h1 (h1 sends faces into faces). Not built here.
+; whose darts embd sends into the configuration map as pull-col asks, onto the darts off rc, with its ring bd sent to erc =
+; rev (map edge rc) (Coq's map edge of its ring, which is rev rc here), and hd = h1 . embd, and a remainder map; with
+; cface_h1 (h1 sends faces into faces). Not built here.
 (def-adts $ (EmbedPatch : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
-  (many MkEmbedPatch : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f)
+  (many MkEmbedPatch : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc0 erc h1f idc)
       (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (erased (Length (Nat) embd dd) le) (erased (Under embd dc) ue)
       (erased (Respects embd fd q1) r1) (erased (Reach fc embd q1) rc1) (erased (Respects ec embd q2) r2) (erased (Respects embd ed q3) r3)
-      (erased (Reach fc q2 q3) rc2) (erased (Respects ec rc erc) re) (erased (Respects embd bd erc) rb) (erased (Respects h1 embd hd) rh)
-      (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) -> (EmbedPatch dc ec fc rc dm em nm fm h1)))
+      (erased (Reach fc q2 q3) rc2) (erased (Respects ec rc erc0) re) (erased (RevApp (Nat) erc0 (Nil (Nat)) erc) rv)
+      (erased (Respects embd bd erc) rb) (erased (Respects h1 embd hd) rh)
+      (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) (erased (Iota dc idc) ioc)
+      (erased (InEither rc embd idc) cv) -> (EmbedPatch dc ec fc rc dm em nm fm h1)))
 
 ; The construction of embed_disk, embed_rem and embed_patch, taken as a hypothesis: a function at a level F giving the
 ; EmbedPatch of an embedding h1 listed on the darts ids of the configuration map.
