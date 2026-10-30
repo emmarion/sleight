@@ -48,12 +48,10 @@
       (erased (Lt m (Succ r)) s) -> (ColorFor rep ks l (Zero))))
 
 (def-fns _ $ (erased color-for : (erased (List (Nat)) rep ks) (erased (Nat) l) -> (erased (Nat) c) (erased (ColorFor rep ks l c) cf))
-  (match erased (nth-dec rep l) _
-    ((NDShort _ _ m lm s) (values (Zero) (CFNoRep rep ks l m lm s)))
-    ((NDHas _ _ r pr)
-      (match erased (nth-dec ks r) _
-        ((NDHas _ _ c pc) (values c (CFHas rep ks l r c pr pc)))
-        ((NDShort _ _ m lm s) (values (Zero) (CFNoKs rep ks l r m pr lm s)))))))
+  (let-match erased (nth-dec rep l) (NDHas _ _ r pr) ((NDShort _ _ m lm s) (values (Zero) (CFNoRep rep ks l m lm s))))
+  (match erased (nth-dec ks r) _
+    ((NDHas _ _ c pc) (values c (CFHas rep ks l r c pr pc)))
+    ((NDShort _ _ m lm s) (values (Zero) (CFNoKs rep ks l r m pr lm s)))))
 
 (def-fns _ $ (erased color-for-fn : (erased (List (Nat)) rep ks) (erased (Nat) l r c c2) (erased (ColorFor rep ks l c) cf)
     (erased (Nth (Nat) rep l r) pr) (erased (Nth (Nat) ks r c2) pc) -> (erased (Eq (Nat) c c2) q))

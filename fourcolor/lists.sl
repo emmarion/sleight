@@ -78,9 +78,8 @@
       (let-match erased e (Refl _ _))
       (let-match erased (nth-fn _ nd2 n y c q (snoc-new _ nd1 nd2 c n sn (setnth-length _ nd d n x nd1 s l))) (Refl _ _))
       (IBNew nd d x n y pc)))
-  (match erased (nat-cmp i d) _
+  (let-match erased (nat-cmp i d) (CEq _ _ _)
     ((CLt _ _ _ _ lt) (IBOld nd d x n i y (setnth-back-lt _ nd d i x y nd1 s q1 lt) (ApLt _ _ i d lt)))
-    ((CEq _ _ _)
-      (let-match erased (nth-fn _ nd1 d y x q1 (setnth-nth _ nd d x nd1 s)) (Refl _ _))
-      (IBAt nd d x n))
-    ((CGt _ _ _ _ gt) (IBOld nd d x n i y (setnth-back-gt _ nd d i x y nd1 s q1 gt) (ApGt _ _ i d gt)))))
+    ((CGt _ _ _ _ gt) (IBOld nd d x n i y (setnth-back-gt _ nd d i x y nd1 s q1 gt) (ApGt _ _ i d gt))))
+  (let-match erased (nth-fn _ nd1 d y x q1 (setnth-nth _ nd d x nd1 s)) (Refl _ _))
+  (IBAt nd d x n))

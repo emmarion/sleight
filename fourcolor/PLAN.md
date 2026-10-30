@@ -112,7 +112,8 @@ is attached.
 Load order for the part A files: `std/nat.sl std/list.sl`, then in
 `fourcolor/`: `base.sl map.sl lists.sl planemap.sl walk.sl frontier.sl
 labels.sl defs.sl sweep.sl rot.sl fan.sl build.sl readback.sl
-parta.sl`. With `--goal proved` the last one checks `PartA`.
+parta.sl`. With `--goal proved` the last one checks `PartA`; both compilers pass it
+with `--warnings-as-errors`.
 
 - `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
   positive certificates (labellings), not negations, so that later
