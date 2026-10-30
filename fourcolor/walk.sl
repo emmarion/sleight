@@ -90,3 +90,8 @@
 (def-fns _ $ (erased sf-of-sub : (erased (List (Nat)) m s) (erased (Nat) n) (subterm erased (Sub m s) sb) -> (erased (SubFresh m s n) r))
   (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SFNil s n)))
   (SFOld x n m1 s p (sf-of-sub m1 s n sb1)))
+
+(def-fns _ $ (erased walk-weaken : (erased (List (Nat)) e nd s s2) (erased (Nat) a b) (subterm erased (Walk e nd s a b) w)
+    (erased (Sub s2 s) sb) -> (erased (Walk e nd s2 a b) r))
+  (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e nd s2 a)))
+  (WalkStep e nd s2 a q c b pe pn (notin-sub q s2 s sb out) (walk-weaken e nd s s2 c b w1 sb)))

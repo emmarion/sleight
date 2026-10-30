@@ -187,3 +187,45 @@
     pc (snoc-old _ nd1 nd2 (Succ n) c n sn (insert-new nd nd1 d n n c i1 ln pc)) pm l sf ge gn sb))
   (values e2 nd1 nd2 g i1 sn pm2
     (ChainCons e2 nd2 s2 xb ys _ d (Succ n) d k0 (ChainCons e2 nd2 s2 ys xc rest (Succ n) n d k1 ch3))))
+
+(def-fns _ $ (erased link-weaken : (erased (List (Nat)) e nd s s2) (erased (Nat) d1 d2) (erased (Link e nd s d1 d2) k)
+    (erased (Sub s2 s) sb) -> (erased (Link e nd s2 d1 d2) r))
+  (let-match erased k (MkLink _ _ _ _ _ c p pc pp w))
+  (MkLink e nd s2 d1 d2 c p pc pp (walk-weaken e nd s s2 c p w sb)))
+
+(def-fns _ $ (erased chain-weaken : (erased (List (Nat)) e nd s s2) (erased (List (Group)) gs) (erased (Nat) dn)
+    (subterm erased (Chain e nd s gs dn) ch) (erased (Sub s2 s) sb) -> (erased (Chain e nd s2 gs dn) r))
+  (match erased ch _
+    ((ChainOne _ _ _ xs d _ k) (ChainOne e nd s2 xs d dn (link-weaken e nd s s2 d dn k sb)))
+    ((ChainCons _ _ _ xs ys gs1 d d2 _ k rest)
+      (ChainCons e nd s2 xs ys gs1 d d2 dn (link-weaken e nd s s2 d d2 k sb) (chain-weaken e nd s s2 _ dn rest sb)))))
+
+; An empty group c after the second one leaves the frontier; the walks on either side of it join through its corner.
+(def-fns _ $ (erased drop-step : (erased (List (Nat)) e nd sr xb ya z) (erased (List (Group)) rest) (erased (Nat) db y1 c c2)
+    (erased (PlaneMap e nd) pm)
+    (erased (Chain e nd (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c $ Cons (Nat) c2 sr)
+      (Cons (Group) (MkGroup db xb) $ Cons (Group) (MkGroup y1 ya) $ Cons (Group) (MkGroup c (Nil (Nat))) $
+       Cons (Group) (MkGroup c2 z) rest) db) ch)
+    (erased (Distinct (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c $ Cons (Nat) c2 sr)) dist)
+    -> (erased (Chain e nd (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c2 sr)
+      (Cons (Group) (MkGroup db xb) $ Cons (Group) (MkGroup y1 ya) $ Cons (Group) (MkGroup c2 z) rest) db) ch2))
+  (let ((erased s)) (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c $ Cons (Nat) c2 sr))
+  (let ((erased s2)) (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c2 sr))
+  (let ((erased sb)) (SubCons db _ s (InHere db _) $ SubCons y1 _ s (InThere y1 db _ $ InHere y1 _) $
+    sub-cons db (Cons _ c2 sr) _ $ sub-cons y1 (Cons _ c2 sr) _ $ sub-cons c (Cons _ c2 sr) _ $ sub-refl (Cons _ c2 sr)))
+  (let-match erased ch (ChainCons _ _ _ _ _ _ _ _ _ k0 ch1))
+  (let-match erased ch1 (ChainCons _ _ _ _ _ _ _ _ _ k1 ch2))
+  (let-match erased ch2 (ChainCons _ _ _ _ _ _ _ _ _ k2 ch3))
+  (let-match erased k1 (MkLink _ _ _ _ _ c1 p1 pc1 pp1 w1))
+  (let-match erased k2 (MkLink _ _ _ _ _ c3 p3 pc3 pp3 w3))
+  (let-match erased dist (DistCons _ _ ndb dist1))
+  (let-match erased dist1 (DistCons _ _ ny1 dist2))
+  (let-match erased dist2 (DistCons _ _ nc _))
+  (let ((erased _) (erased ndb1)) (notin-head db y1 _ ndb))
+  (let ((erased db-c) (erased _)) (notin-head db c _ ndb1))
+  (let ((erased y1-c) (erased _)) (notin-head y1 c _ ny1))
+  (let ((erased out)) (NotInCons c db _ (apart-sym db c db-c) $ NotInCons c y1 _ (apart-sym y1 c y1-c) nc))
+  (let ((erased w)) (walk-cat e nd s2 c1 p1 p3 (walk-weaken e nd s s2 c1 p1 w1 sb)
+    (WalkStep e nd s2 p1 c c3 p3 (pm-edge-inv e nd c p1 pm pp1) pc3 out (walk-weaken e nd s s2 c3 p3 w3 sb))))
+  (ChainCons e nd s2 xb ya _ db y1 db (link-weaken e nd s s2 db y1 k0 sb)
+    (ChainCons e nd s2 ya z rest y1 c2 db (MkLink e nd s2 y1 c2 c1 p3 pc1 pp3 w) (chain-weaken e nd s s2 _ db ch3 sb))))
