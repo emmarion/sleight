@@ -105,3 +105,59 @@
   (let-match erased (gcomp-split d e n f hm gen bl pl pc ld) (OrR _ _ sp) ((OrL _ _ cn) (OrL _ _ cn)))
   (let-match erased sp (MkGcompSplit _ dd dr _ _ _ ed nd fd er nr fr hd hr pt gd bd pld pcd ltd gr br plr pcr ltr))
   (OrR _ _ (MkPlanned d e n f _ (PSplit d dd dr e n f ed nd fd er nr fr hd hr pt gd bd pld pcd ltd gr br plr pcr ltr))))
+
+(def-fns _ $ (erased lt-succ-of : (erased (Nat) a b) (erased (Lt a b) p) -> (erased (Nat) b1) (erased (Eq (Nat) b (Succ b1)) e))
+  (match erased p _ ((LtZ b1) (values b1 (Refl _ b))) ((LtS _ b1 _) (values b1 (Refl _ b)))))
+
+(def-fns _ $ (erased lt-ls : (erased (Nat) a c b) (subterm erased (Lt a c) p) (erased (Lt c (Succ b)) q) -> (erased (Lt a b) r))
+  (match erased p _
+    ((LtZ c1)
+      (let-match erased q (LtS _ _ q1))
+      (let ((erased b1) (erased eb)) (lt-succ-of c1 b q1))
+      (let-match erased eb (Refl _ _))
+      (LtZ b1))
+    ((LtS a1 c1 p1)
+      (let-match erased q (LtS _ _ q1))
+      (let ((erased b1) (erased eb)) (lt-succ-of c1 b q1))
+      (let-match erased eb (Refl _ _))
+      (LtS a1 b1 (lt-ls a1 c1 b1 p1 q1)))))
+
+(def-fns _ $ (erased lt-tr : (erased (Nat) a c b) (erased (Lt a c) p) (erased (Lt c b) q) -> (erased (Lt a b) r))
+  (let ((erased b1) (erased eb)) (lt-succ-of c b q))
+  (let-match erased eb (Refl _ _))
+  (lt-succ-left a b (LtS a b1 (lt-ls a c b1 p q))))
+
+(def-fns _ $ (erased bkmode-fn : (erased (Nat) k m1 m2) (erased (BkMode k m1) b1) (erased (BkMode k m2) b2) -> (erased (Eq (Nat) m1 m2) r))
+  (match erased b1 _
+    ((BMLow _ l1) (match erased b2 _ ((BMLow _ _) (Refl _ m1)) (absurd (BMFive) (lt-irrefl k l1))))
+    ((BMFive) (match erased b2 _ (absurd (BMLow _ l2) (lt-irrefl k l2)) ((BMFive) (Refl _ m1))))))
+
+; The theorem Birkhoff of birkhoff.v for a planar bridgeless plain cubic connected map: a ring of k darts, k below 6, nontrivial
+; for the m of BkMode k m, has a plan. The induction on the ring size follows birkhoff-maps' Shorter rings until birkhoff-maps
+; names the maps of the check, so one plan names every map needed.
+(def-fns _ $ (erased birkhoff-go : (erased (Nat) d x0 k m) (erased (List (Nat)) e n f p) (subterm erased (Nat) b) (erased (Lt k b) lb)
+    (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
+    (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
+    (erased (Ring e f x0 p) rg) (erased (Length (Nat) (Cons (Nat) x0 p) k) lr) (erased (Lt k 6) l6) (erased (BkMode k m) md)
+    (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt) -> (erased (Planned d e n f) r))
+  (unary 6)
+  (let ((erased h) (erased m2) (erased eq) (erased bc) (erased md2)) (birkhoff-check-at k bks (ring-two d x0 k e n f p hm bl rg lr) l6))
+  (let-match erased eq (Refl _ _))
+  (let-match erased (bkmode-fn k m m2 md md2) (Refl _ _))
+  (let-match erased bc (MkBirkhoffCheck _ _ n0 cps ts ctu gtu ce ge gc bb bk))
+  (match erased (birkhoff-maps d h m x0 e n f p cps ts hm gen bl pl cu cn rg lr nt bb) _
+    ((BKShort _ _ _ _ _ _ _ _ _ sh)
+      (let-match erased sh (MkShorter _ _ y0 k2 _ _ _ Q rq nq lq lt))
+      (let-match erased lb (LtS _ b1 lb1))
+      (birkhoff-go d y0 k2 (Zero) e n f Q b1 (lt-ls k2 k b1 lt lb) bks hm gen bl pl cu cn rq lq (lt-tr k2 k 6 lt l6)
+        (BMLow k2 (lt-ls k2 k (Succ (Succ (Succ (Succ (Succ (Zero)))))) lt l6)) nq))
+    ((BKMaps _ _ _ _ dd1 dd2 _ _ _ _ ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 _ ms1 ms2 br n1 n2)
+      (let ((erased ms) (erased ap)) (mp-app ms1 ms2))
+      (MkPlanned d e n f ms (PBirk d x0 h m n0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 ms ctu gtu gen pl cu cn lr ce ge gc bk br n1 n2 ap)))))
+
+(def-fns _ $ (erased birkhoff-plan : (erased (Nat) d x0 k m) (erased (List (Nat)) e n f p) (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm)
+    (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
+    (erased (Length (Nat) (Cons (Nat) x0 p) k) lr) (erased (Lt k 6) l6) (erased (BkMode k m) md) (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt)
+    -> (erased (Planned d e n f) r))
+  (birkhoff-go d x0 k m e n f p 6 l6 bks hm gen bl pl cu cn rg lr l6 md nt))
