@@ -158,8 +158,9 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `coloring.sl`, `colorgoal.sl` (load after `cube.sl`): from
   `coloring.v`, `colorable_bridgeless`, the colourings of the dual and
   the mirror, and `decide_colorable`, a search over the colours of each
-  dart in turn whose failure is an erased function from any
-  four-colouring to `False`. The search also fixes the colours of a list
+  dart in turn whose failure is a certificate (`NoExt`), which
+  `noext-sound` turns into an erased function from any four-colouring to
+  `False`. The search also fixes the colours of a list
   of darts (`search-ring`); `decide_colorable` is its case with no darts.
 - `hypjordan.sl`, `hyptree.sl`, `hypwalkeq.sl`, `hypcount.sl`,
   `hypcubic.sl`: planar maps have no Moebius path (`planar-moebius`, an
@@ -317,7 +318,7 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   dart of diskF r and one of diskFC r for any m, and `nontrivial0`).
   ring_disk_closed (`ring-disk-closed`, given cubic G): the ring traces of
   the disk map of r form a red/bridge.sl `KClosed` set, by functions at a
-  level it returns. It goes through the remainder map of RR, whose ring
+  level L the caller gives with a proof that `RDC` predates it. It goes through the remainder map of RR, whose ring
   br2 = init ++ [l] is read as l :: init (`ring-turn` of `kempemap.sl`), so
   that `kempe-map` applies to the traces `cotrace` rotates, with `rt-rot`
   and `rt-unrot` moving a ring trace across that rotation and `snoc-inj`
@@ -340,8 +341,9 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `Ring` here, never empty, does not need.
 - `ringdec.sl` (load after `ringtrace.sl`): decide_ring_trace of
   `coloring.v` (`decide-ring-trace`): a list of colours is a ring trace of
-  a list of darts, or a function sends every such ring trace to `False`.
-  It runs `search-ring` once for each first colour.
+  a list of darts, or a certificate (`RTNo`) says that none is, which
+  `rtno-sound` turns into a refutation of any ring trace at its own fixed
+  level. It runs `search-ring` once for each first colour.
 - `geomring.sl` (load after `patch.sl`): simple_cface of `geometry.v`,
   from which scycle_cface follows (`simple-cface`), and quasicubic_Euler
   (`quasicubic-euler`): in a connected map whose edges have two darts,
@@ -380,9 +382,51 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   grestrict crestrict kempe bridge gramrot`, then `ringtrace kempemap patch
   sew patch2 snip revsnip revsnip2 srcycle ringdec geomring revsnip3
   cpgeom` (each `.sl`).
-- Still open: the rest of part B. `birkhoff.v` appears to need, from a reading of its proofs,
-  Birkhoff_valid itself, which would build the two `BSide`s and the
-  `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
+- `birkhoff.sl` (load after the chain below): Birkhoff_valid of
+  `birkhoff.v`, as far as both compilers check it, with the minimality of
+  the map entering as data rather than as a function: `birkhoff-maps`, a
+  static function, takes a ring r of h + 2 darts nontrivial for m of a
+  planar bridgeless plain cubic connected map and the basis of a
+  `BirkhoffCheck h m`, and gives either a ring of fewer darts nontrivial
+  for 0 (`Shorter`, from a chord of a side, through `ring-disk-chord`) or
+  the two sides of r and its reversed ring (`BRing`) with, for each side
+  and each basis program, the map chkbP glues (`side-map`: the disk map
+  sewn to the program's map on its ring a :: p read as the node cycle
+  a :: rev p, after Coq's rotr 1 (rev (cpring G))), each planar,
+  bridgeless, plain, precubic and smaller (`BNeed`, the maps listed by
+  `Mp`); `birkhoff-ring` takes those, the other fields of the
+  `BirkhoffCheck`, four-colourings of all those maps (`MpCols`) and a
+  search certificate that the map has no four-colouring (`NoExt`), and
+  gives `False`. It builds the `BSide`s at the fixed level `BL`
+  (`mk-side`: `decide-ring-trace` for the decision, `rtno-sound` for
+  disjointness, `side-trace` and `bkprog-hit` for the basis traces,
+  `ring-disk-closed` for the closure) and the `BGlue` from
+  `colorable-from-ring`, and calls `birkhoff-check-sound BL`, instantiated
+  at the top level. The size bound of chkbP is `birkhoff-size`, from
+  `outer-count` (the faces of the remainder map, through
+  `patch-fcard-face-r`, number at least k + m + 1) and quasicubic_Euler,
+  with one identity checked by `ring-check`. For the theorem Birkhoff,
+  `birkhoff-check-at` reads the check for a ring of 2 to 5 darts off
+  `BirkhoffChecks` (with m 1 for five darts and 0 below, `BkMode`), and
+  `ring-two` shows a ring of a bridgeless map has two darts; the induction
+  on the ring size that Coq's Birkhoff makes is left to the caller, which
+  can follow a `Shorter` ring down. The cubicity and connectedness of a
+  minimal counterexample (minimal_counter_example_is_cubic, not ported;
+  `mce-connected` calls the stored minimality) are hypotheses. That these
+  statements match Coq's has been checked only by reading. Load order:
+  `std/nat.sl std/list.sl ring.sl`, then `base map lists planemap walk
+  frontier labels hypgraph hypperm hypermap hypplane hypeuler hypderived
+  hyprelabel hypwalkup hypgeom hypjordan hyptree hypwalkeq hypcount
+  hypcubic cube coloring colalias hypsub`, then `cfmap red/red cpmap
+  red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict
+  red/kempe cpcolor red/configs red/bridge red/init red/check red/gramrot
+  red/cfred red/ccomp red/ccheck red/bcheck cpcomp`, then `ringtrace
+  kempemap patch patch2 geomring sew snip srcycle revsnip revsnip2
+  revsnip3 cpgeom ringdec birkhoff` (each `.sl`).
+- Still open: the rest of part B. From a reading of `birkhoff.v`, the
+  corollaries of Birkhoff (nontrivial_cycle2, double_dart, the spoke ring
+  lemmas, min_arity and those after it) are not ported, nor is
+  minimal_counter_example_is_cubic of `coloring.v`.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
@@ -443,16 +487,15 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   and `kempe-sound` that of Kempe_validP. `birkhoff-check-sound`, a level
   factory, proves the part of Birkhoff_valid that rests on the check: for
   two sides `BSide` (a Kempe-closed set T of complete traces, a decision
-  between T and a set NT disjoint from it, and, for each basis program, a
-  trace in T whose even normal form is in the program's tree) related by
-  `BGlue` (no trace of one side has its reverse in the other), a
-  `BirkhoffCheck` gives `False`. `bgoal.sl` proves `BirkhoffChecks`,
+  between T and a set NT disjoint from it, and, for each basis tree of the
+  check, a trace in T whose even normal form is in the tree) related by
+  `BGlue` (no trace of one side has its reverse in the other), the fields
+  of a `BirkhoffCheck` give `False`. `bgoal.sl` proves `BirkhoffChecks`,
   Birkhoff2 to Birkhoff5 with Coq's iteration counts and basis programs;
   in one run the computation took about 6 s under the reference compiler.
-  Whether `BSide` and `BGlue` are what the rest of Birkhoff_valid can
-  provide has been checked only by reading; `BkProg` carries
+  `birkhoff.sl` builds the sides and the glue; `BkProg` carries
   `cpcolor-c`'s evidence of both halves, and `cpcomp.sl`'s `bkprog-hit`
-  is meant to give the `CtMem` that a `BSide`'s third field asks for.
+  gives the `CtMem` that a `BSide`'s third field asks for.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
