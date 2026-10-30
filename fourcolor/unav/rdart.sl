@@ -133,7 +133,8 @@
 (def-adts $ (RFs : ((RDart) t u) -> Type)
   enum
   (many FsF : (erased (RFace) i) (erased (Nat) k) -> (RFs (DF i k) (DF i (Succ k))))
-  (many FsB : (erased (RFace) i) (erased (Nat) k) -> (RFs (DB i (Succ k)) (DB i k)))
+  (many FsB : (erased (RFace) i) (erased (Nat) k) -> (RFs (DB i (Succ (Succ k))) (DB i (Succ k))))
+  (many FsOne : (erased (RFace) i) -> (RFs (DB i 1) (DF i (Zero))))
   (many FsZ : (erased (RFace) i) -> (RFs (DB i (Zero)) (DF i 1))))
 
 (def-adts $ (RFi : ((RDart) t u) -> Type)
@@ -145,7 +146,9 @@
 (def-fns _ $ (many dfs : (many (RDart) t) -> (many (RDart) u) (erased (RFs t u) w))
   (match many t _
     ((DF i k) (values (DF i (Succ k)) (FsF i k)))
-    ((DB i k) (match many k _ ((Zero) (values (DF i 1) (FsZ i))) ((Succ k1) (values (DB i k1) (FsB i k1)))))))
+    ((DB i k)
+      (let-match many k (Succ k1) ((Zero) (values (DF i 1) (FsZ i))))
+      (match many k1 _ ((Zero) (values (DF i (Zero)) (FsOne i))) ((Succ k2) (values (DB i k1) (FsB i k2)))))))
 
 (def-fns _ $ (many dfi : (many (RDart) t) -> (many (RDart) u) (erased (RFi t u) w))
   (match many t _
@@ -162,7 +165,13 @@
       (let-match erased s (RSB _ _ _ _ b _ _ bb it))
       (let-match erased it (ItS _ _ _ z _ pz it1))
       (let-match erased (nth-fn _ f y y1 z py pz) (Refl _ _))
-      (RSB e f x0 k b y1 i bb it1))
+      (RSB e f x0 (Succ k) b y1 i bb it1))
+    ((FsOne i)
+      (let-match erased s (RSB _ _ _ _ b _ _ bb it))
+      (let-match erased it (ItS _ _ _ z _ pz it1))
+      (let-match erased it1 (ItZ _ _))
+      (let-match erased (nth-fn _ f y y1 z py pz) (Refl _ _))
+      (RSF e f x0 (Zero) b y1 i bb (ItZ f y1)))
     ((FsZ i)
       (let-match erased s (RSB _ _ _ _ b _ _ bb it))
       (let-match erased it (ItZ _ _))
@@ -267,8 +276,8 @@
 
 (def-adts $ (RKnown : ((List (Sub)) p) ((RFace) i) ((Nat) a) -> Type)
   enum
-  (many KH : (erased (List (Sub)) p) (erased (Nat) a) (erased (Length (Sub) p a) l) -> (RKnown p (FH) a))
-  (many KR : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a) (erased (RRange p i (MkRg a a)) r) (erased (Lt a 9) l) -> (RKnown p i a)))
+  (many KnH : (erased (List (Sub)) p) (erased (Nat) a) (erased (Length (Sub) p a) l) -> (RKnown p (FH) a))
+  (many KnR : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a) (erased (RRange p i (MkRg a a)) r) (erased (Lt a 9) l) -> (RKnown p i a)))
 
 (def-fns _ $ (erased pw-back : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) j)
     (erased B y) (subterm erased (Pw A B R xs ys) w) (erased (Nth B ys j y) py) -> (erased A x) (erased (Nth A xs j x) px) (erased (R x y) r))
@@ -412,25 +421,25 @@
     -> (erased (Nth (Nat) ks b a) q))
   (let-match erased g (MkGeo _ _ _ _ _ _ _ _ ol _))
   (match erased kn _
-    ((KH _ _ l)
+    ((KnH _ _ l)
       (let-match erased bb (RBH _ _ _))
       (let-match erased ex (MkExactAt _ _ _ _ na os _ pn ob xx))
       (let-match erased xx (MkExact _ _ nx pw lo lp))
       (let-match erased (length-fn _ os na nx (obs-len e f ks x0 na os ob) lo) (Refl _ _))
       (let-match erased (length-fn _ p a na l lp) (Refl _ _))
       pn)
-    ((KR _ _ _ rr l)
+    ((KnR _ _ _ rr l)
       (let ((erased c) (erased pc) (erased _)) (arity-at d b f ks ol lb))
       (let-match erased (in-single c a (rrange-sound x0 b c e f ks p ex i (MkRg a a) rr bb pc) l) (Refl _ _))
       pc)))
 
 (def-adts $ (RNorm : ((List (Sub)) p) ((RDart) t u) -> Type)
   enum
-  (many NmB : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add k m a) ad)
+  (many NmDB : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add k m a) ad)
       -> (RNorm p (DB i k) (DF i m)))
-  (many NmF : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add a m k) ad)
+  (many NmDF : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add a m k) ad)
       -> (RNorm p (DF i k) (DF i m)))
-  (many NmR : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add k m a) ad)
+  (many NmFB : (erased (List (Sub)) p) (erased (RFace) i) (erased (Nat) a k m) (erased (RKnown p i a) kn) (erased (Add k m a) ad)
       -> (RNorm p (DF i k) (DB i m))))
 
 (def-fns _ $ (erased rnorm-sound : (erased (Nat) d x0 y) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p) (erased (Geo d e n f ks) g)
@@ -439,7 +448,7 @@
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
   (match erased nm _
-    ((NmB _ i a k m kn ad)
+    ((NmDB _ i a k m kn ad)
       (let-match erased s (RSB _ _ _ _ b _ _ bb it))
       (let ((erased lb)) (iter-lt d k y b f fi qf ly it))
       (let ((erased pb)) (rknown-sound d x0 b a e n f ks p g ex i kn bb lb))
@@ -448,13 +457,13 @@
       (let ((erased w) (erased i1) (erased i2)) (iter-split f k m a y y ad (face-cycle d y a f ks ol ly pay)))
       (let-match erased (iter-fn f k y w b i1 it) (Refl _ _))
       (RSF e f x0 m b y i bb i2))
-    ((NmF _ i a k m kn ad)
+    ((NmDF _ i a k m kn ad)
       (let-match erased s (RSF _ _ _ _ b _ _ bb it))
       (let ((erased lb)) (iter-lt-inv d k b y f fi qf ly it))
       (let ((erased w) (erased i1) (erased i2)) (iter-split f a m k b y ad it))
       (let-match erased (iter-fn f a b w b i1 (face-cycle d b a f ks ol lb (rknown-sound d x0 b a e n f ks p g ex i kn bb lb))) (Refl _ _))
       (RSF e f x0 m b y i bb i2))
-    ((NmR _ i a k m kn ad)
+    ((NmFB _ i a k m kn ad)
       (let-match erased s (RSF _ _ _ _ b _ _ bb it))
       (let ((erased lb)) (iter-lt-inv d k b y f fi qf ly it))
       (let ((erased w) (erased i1) (erased i2)) (iter-split f k m a b b ad (face-cycle d b a f ks ol lb (rknown-sound d x0 b a e n f ks p g ex i kn bb lb))))
