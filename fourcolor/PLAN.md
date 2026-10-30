@@ -113,9 +113,10 @@ is attached.
 cubic hypermap of genus 0 that is bridgeless (on `hypermap.sl` and
 `hypgeom.sl`'s definitions) a `FourColoring` gives `FourColor`. So part
 A and the cube reduction of part B are done; what is open is Gonthier's
-theorem for plain cubic maps. `inductgoal.sl` proves `FourColorFrom`
-from it: an `Analysis` (`induct.sl`, the one step left open there) gives
-`FourColor`. `reduce.sl` and `reduce2.sl` are the
+theorem for plain cubic maps. `inductfc.sl` proves `FourColorFrom`
+from it (`inductgoal.sl` checks it): an `Analysis` (`induct.sl`) gives
+`FourColor`. `fcgoal.sl` proves `FourColor` from the steps of part B
+still open, taken as arguments (its entry below). `reduce.sl` and `reduce2.sl` are the
 intermediate forms (with `PlaneMap`, and with all bridgeless hypermaps);
 `reduce2-goal.sl`, `cube-goal.sl` and `reduce3-goal.sl` check them alone.
 Checked by both compilers with
@@ -125,10 +126,10 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 ```
 
 and `FourColorFrom` with `fourcolor/coloring.sl` loaded after
-`fourcolor/cubegoal.sl`, and `fourcolor/induct.sl fourcolor/inductgoal.sl`
+`fourcolor/cubegoal.sl`, and `fourcolor/induct.sl fourcolor/inductfc.sl fourcolor/inductgoal.sl`
 in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
 
-- `induct.sl`, `inductgoal.sl` (load `induct.sl` after `coloring.sl`):
+- `induct.sl`, `inductfc.sl`, `inductgoal.sl` (load `induct.sl` after `coloring.sl`):
   four_color_hypermap's induction on the number of darts, with the
   minimality of a counterexample entering as data rather than as a
   function, since a function stored in a counterexample would have to
@@ -145,8 +146,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   four-colouring every `Pbpp` map: `col-all` colours a list of maps below
   a bound, each by the search or by the glue of its reduction from the
   colourings of its list below a smaller bound, calling only functions
-  minted before it. `inductgoal.sl` sets and proves `FourColorFrom`
-  (`Analysis` to `FourColor`, through `CubicReduction`).
+  minted before it. `inductfc.sl` proves `FourColorFrom`
+  (`four-color-from`, `Analysis` to `FourColor`, through `CubicReduction`),
+  and `inductgoal.sl` sets it as a goal.
   `reduces-lift` raises the bound of a reduction.
  `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
   positive certificates (labellings), not negations, so that later
@@ -446,10 +448,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `embed.sl embedgoal.sl`. `realias.sl` and `unav/realias.sl` put back
   names that a later file of the chain defines again (hypcount.sl's
   `AppN` constructors, base.sl's `Or`); `colalias.sl` keeps the former.
-  `inductgoal.sl` and `embedgoal.sl` are separate units, so the step from
-  `BirkGeo` and `NotEmbed` to `FourColor` is not yet checked in one
-  run, and whether a fixed list of smaller maps per reduction suffices
-  for the arguments of `birkhoff.v` and `embed.v` is not yet known.
+  `fcgoal.sl` chains `embed-analysis` with `inductfc.sl` in one run.
 - `embed2.sl` (load after `embed.sl`, in its chain with `geomring sew
   snip srcycle revsnip revsnip2 revsnip3` loaded after `split`): first-order
   pieces of embed.v's not_embed_reducible, as far as both compilers check
@@ -469,15 +468,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   faces into faces and sends the contract darts of the configuration, and
   only those, onto the map's (`InSides`), gives the fields of red/cfred.sl's
   `CcColoring` on the configuration map (the first half of embed_contract).
-  The trace equations of embed_contract are in `contract.sl`. Not done:
-  the use of `CRed`, and `NotEmbed` itself. As `CRed` is stated, its coclosure function sits at
-  a level minted inside `check-reducible-valid`, and the glue of a
-  `Reduces`, at a level fixed beforehand, cannot call it, since nothing
-  proves that level predates the glue's (a small test of this shape was
-  refused by both compilers). A `CRed` indexed by a level minted at the
-  top level, as the `KClosed` sets of `ring-disk-closed` are, appears to
-  avoid this. That these statements match Coq's has been checked only by
-  reading.
+  The trace equations of embed_contract are in `contract.sl`, and the use
+  of `CRed` and `NotEmbed` itself in `notembed.sl`. That these statements
+  match Coq's has been checked only by reading.
 - `traceconv.sl` (load after `ringtrace.sl`; in the birkhoff chain
   before `birkhoff.sl`, in the embed chain after `embed2.sl`): the colour
   numbers and traces of `cfcolor.sl` (`NCols`, `CTr`) read as those of
@@ -527,10 +520,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `Contraction` or a `Reduces` (`ContractOut`). `contract-go`, for any
   nonempty contract whose insertE is sparse, gives the same or a live
   bridge arising after at least one contraction (`CGLater`), which
-  `contract3.sl` handles. Not done: reading the
-  contract off red/cfred.sl's `ValidContract`, whose `InsertE` is a type
-  of the same shape that ringtrace.sl defines again, so a conversion
-  would have to be loaded between the two. The combined load order,
+  `contract3.sl` handles. `notembed.sl` reads the contract off
+  red/cfred.sl's `ValidContract`, whose `InsertE` is a type of the same
+  shape that ringtrace.sl defines again, through `iealias.sl`. The
+  combined load order,
   checked by both compilers (about 25 and 60 s in one run each): the
   birkhoff chain of the `birkhoff.sl` entry with `birkfit.sl`, then
   `birkhoff2.sl embed2.sl contract.sl contract2.sl` (`embed2.sl` does not
@@ -559,7 +552,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (contract3_valid through `birkhoff-reduces`), or, for four darts, a
   contract ring of five darts nontrivial for 0 (`CAFive`): that case is
   triad_valid, not ported (it needs fcard_adj_max and the rest of
-  birkhoff.v's SpokeRing section). `contract2.sl` and `birkhoff2.sl`
+  birkhoff.v's SpokeRing section; `notembed.sl` takes it as the
+  hypothesis `TriadFive`). `contract2.sl` and `birkhoff2.sl`
   keep walk.sl's `Sub` and hypsub.sl's `split-cover` as `WSub` and
   `hsplit-cover`, which the `unav/` files define again. That these
   statements match Coq's has been checked only by reading.
@@ -592,25 +586,135 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   From the certificate: pre_embed_inj (`pre-embed-inj`), embed_inj off rc
   (`embed-inj`), and embed2.sl's `InSides` for ie = insertE cc and
   ins = insertE (map h1 cc) (`ins-sides`, with ie off rc, stated with
-  ringtrace.sl's `InsertE`, which shadows red/cfred.sl's, so a
-  `ValidContract`'s ie is not yet connected to it). embedE at every dart
+  ringtrace.sl's `InsertE`, which shadows red/cfred.sl's; `notembed.sl`
+  converts a `ValidContract`'s). embedE at every dart
   and embedN off rc are given as patch.sl's `MorphOff` lists
   (`h1-morph-e`, `h1-morph-n`). `embed-main`, a level factory, gives for a
   connected `Pbpp` map with a `NoColoring` a `Reduces` or an `EmbedOut`
   (h1, those lists, the certificate and an `EmbedPatch`: the `Patch` and
-  dart maps that `embed-color` and `rem-col` take, hd = h1 . embd, and
-  cface_h1), from two hypotheses: `FullRed` (a `FullBad` pair gives a
-  `Reduces`; in Coq this is radius2, the reductions of the path to a
-  hom ring of at most five darts, Birkhoff, and trivial_hom_ring, none
-  ported) and `PatchOpen` (the construction of embed_disk, embed_rem and
-  embed_patch, with cface_h1, not ported). Also not done: `Disj hr ins`
-  (it appears to follow from the patch's `PatchParts`), cubic_embr
-  (`rem-kempe` reads quasicubic off any patch), embed_valid_contract and
-  adj11_edge of birkhoff.v (no spoke rings are ported), radius2, and the
-  ring conditions of `embed-contract-trace`. Chain: that of
+  dart maps that `embed-color` and `rem-col` take, hd = h1 . embd, the
+  disk ring sent to rev (map edge rc), Coq's map edge of its ring, which
+  is rev rc here, embd onto the darts off rc (`InEither`), and cface_h1),
+  from two hypotheses: `FullRedR` (a `FullBad` pair, with the
+  configuration's `Radius2` certificate, gives a `Reduces`; in Coq
+  radius2, the reductions of the path to a hom ring of at most five
+  darts, Birkhoff, and trivial_hom_ring; `fullred.sl`'s `full-red-of`
+  gives it from `BirkhoffChecks` and `TrivRed`) and `PatchOpen` (the
+  construction of embed_disk, embed_rem and embed_patch, with cface_h1,
+  for a ring rc that is a `NodeRing`: rev rc, Coq's ring as it appears
+  to be read here, a node cycle on distinct faces, embeddable's sfcycle
+  node; `embed6.sl`'s `patch-open` proves it). `run` takes the
+  certificates `NodeRing` and `Radius2` of the configuration as
+  arguments. Also not done: embed_valid_contract and adj11_edge of
+  birkhoff.v (`notembed.sl` takes the first as a hypothesis). Chain: that of
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
   only by reading.
+- `fullred.sl` (load after `embed5.sl`, in its chain): part of embed.v's
+  embed_full, as far as both compilers check it, with minimality as data.
+  Coq's proof uses the radius of the kernel (radius2 of embeddable) and,
+  for five darts, the ring arities behind adj_kernel_max, which are not
+  facts of `EEnv`, `GcOK` and `FunctorAll`; so embed5.sl's `FullRedR`
+  takes `Radius2`, a certificate (a kernel dart x0 and, for each kernel
+  dart, the two edge steps that reach it from the face of x0) that no run
+  decides yet. `bad-hom` follows the first two reductions of embed_full:
+  a `FullBad` pair and the certificate give a walk of five rlink steps
+  through the face of x0, which `shorten` (Coq's induction on the path)
+  turns into a `HomBad`, a pre_hom_ring of at most five darts whose last
+  dart does not rlink to its first (told apart by a face labelling,
+  `Kernel`). `hom-birk` decides whether the image ring is nontrivial for
+  the m of `BkMode`, and then reduces the map through
+  `birkhoff-reduces`, or gives a `HomTrivial` (one side of the ring meets
+  at most m faces off it, `TrivSide`). `full-red-of` gives a `FullRedR`
+  from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
+  taken as a hypothesis: in Coq trivial_hom_ring, its use on the reversed
+  ring, and for five darts the spoke ring with adj11_edge and
+  adj_kernel_max, none ported; if those need the ring arities, `TrivRed`
+  as stated may lack a hypothesis (not checked).
+  That these statements match Coq's has been checked only by reading.
+  Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
+  fullred` (in one run about 66 s with slc and 161 s with the reference
+  compiler).
+- `notembed.sl` (load after `contract3.sl` and `embed6.sl`, with `iealias.sl` loaded after
+  `red/cfred.sl`): not_embed_reducible of embed.v with minimality as data,
+  as far as both compilers check it. `not-embed` gives embed.sl's
+  `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
+  (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
+  (the per-configuration certificates: embed4.sl's `GcOK` and
+  `FunctorAll`, which embed4.sl's `cf-gcok` and `cf-functor` appear to
+  give from its `AllGc`, and embed5.sl's `NodeRing` and `Radius2`, for a
+  configuration of cfs, meant to be decided by a run), `EmbedValid`
+  (embed_valid_contract: the image map h1 cc of the configuration's
+  contract is a `ValidContract` of the map for the empty ring, or the map
+  reduces) and `TriadFive` (contract3.sl's `CAFive` case, with the map's
+  `Pbpp`, `Connected`, `Geo`, `NoColoring` and `BirkhoffChecks`, gives a
+  `ContractOut`). A disconnected map splits (`split-reduces`); otherwise
+  `embed-main` embeds the kernel or the map reduces, and the contraction
+  of map h1 cc (`contract-all`, with its `CSize` read off the size
+  conditions of that `ValidContract`) is the one map of a `Reduces` whose glue,
+  `ne-glue`, follows embed_contract and not_embed_reducible:
+  `contraction-lift`, `cc-pull`, `rem-col` and `embed-contract-trace` give
+  one trace of a contract colouring of the configuration and of a
+  colouring of the remainder map on its ring rotated by one, `CRed`'s
+  co-closure meets the ring traces of the remainder map, Kempe-closed
+  (`kclosed-at`, kempemap.sl's `kempe-closed` at a level the caller gives,
+  from `rem-kempe`), in a trace of a colouring of the configuration map,
+  and `ne-finish` turns it into the arguments of `embed-color`. The levels
+  follow red/cfred.sl's caller recipe: NL for the closed set, NR, NW and NY,
+  then NK for the glue, all at the top level. Along the way: face sends the
+  edge images of the configuration's ring to the ring rotated by one
+  (`ring-fe`); h1 rc and hr (rotr 1 br) are paired along faces
+  (`reach-step`, `reach-unsnoc`, `reach-flip`); and `Disj hr ins` follows
+  from `PatchParts` (`ins-off`, `ins-hr`, `ie-off-erc`). In a test run two
+  broken variants (the pairing not flipped, and NK minted before NY) were
+  rejected, and in another a variant passing `CAFive`'s insertE to
+  `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
+  reading.
+- `fcgoal.sl` (load after `notembed.sl`, in the chain below): sets and
+  proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
+  and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
+  `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
+  their own) and the hypotheses `CfCerts cfs`, `TrivRed`, `EmbedValid`
+  and `TriadFive`, through `embed-analysis`, `birk-geo-of`,
+  `full-red-of`, `not-embed` and `four-color-from`. Here css is
+  `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
+  computes cfs with `concat-cfs` instead, and that the two agree is not
+  proved. Chain (both compilers, with `--goal proved`; about 52 s with slc and 133 s
+  with the reference compiler in one run each): `std/macro.sl std/nat.sl
+  std/list.sl ring.sl`, then `defs
+  orient base sweep geo plan map lists planemap walk frontier labels rot
+  fan build readback parta reduce hypgraph hypperm hypermap hypplane
+  reduce2 hypeuler hypderived hyprelabel hypwalkup hypgeom hypjordan
+  hyptree hypwalkeq hypcount hypcubic cube cubegoal reduce3 coloring induct
+  inductfc cfmap colalias hypsub unav/faces`, the red chain from `red/red`
+  to `red/bcheck` as in the `embed.sl` entry, then `cpcomp iealias realias
+  ringtrace kempemap patch patch2 split geomring sew snip srcycle revsnip
+  revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
+  embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
+  the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
+  contract3 embed6 fullred notembed fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  whose `Sub` it would otherwise read.
+- `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
+  embed_patch and cface_h1 of embed.v, as far as both compilers check
+  them: `patch-open` proves embed5.sl's `PatchOpen`. Without `NodeRing`,
+  the patch PatchOpen asks for appears not always to exist (for instance,
+  it seems, when the ring is the union of two node cycles in different
+  components). The construction (`embed-patch6`) runs on the node cycle
+  rr = rev rc that a `NodeRing` names, to which `env-rev` carries `EEnv`
+  and `GcOK` (they read only which darts are on the ring); `patch-at`
+  reads its disk ring, sent to map edge rr = rev (map edge rc), as
+  `EmbedPatch` takes it. The disk map is Coq's embed_disk on the darts
+  embd off the ring, with its edge sending each dart of map edge rr to
+  the next one; the remainder map is on rev (h1 . map edge rr) followed
+  by the darts of the map off h1 . embd, with its node sending each dart
+  of that reversed ring to the next one; both are restricted from
+  permutations of the whole maps as in `snip.sl` (`bij-build`,
+  `restrict`), and the patch's simple disk ring is `snip.sl`'s
+  `disk-simple`. cface_h1 goes through the patch's `face-hd` where fc x
+  is on the ring. In a test run, a variant passing the reversal of
+  the disk ring's image the wrong way round was rejected. Chain: that of `embed5.sl`, then
+  `embed6`. That these statements match Coq's has been checked only by
+  reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
