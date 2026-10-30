@@ -144,7 +144,8 @@
   (let-match erased ly (LayC _ _ _ _ _ ly1 nt))
   (let-match many n (Succ m))
   (let ((many y) (unique a2)) (array-get _ _ a m x nt))
-  (values y (u A xs ps m ly1 (at) a2 (at) d)))
+  (let ((unique v2)) (u A xs ps m ly1 (at) a2 (at) d))
+  (values y v2))
 
 (def-fns _ $ (many av-set-top : (erased Type A) (erased A x) (erased (List A) xs) (unique (Av A (Cons A x xs)) v) (many A y) ->
     (unique (Av A (Cons A y xs)) v2 at v))
