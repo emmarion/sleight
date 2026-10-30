@@ -118,6 +118,19 @@
     (sv-put r zt zc n cap2 lzt lzc ly1 le bt2 bc2 t c s e))
   (u _ tps3 cps3 (Succ n) cap2 l3 l4 ly2 tb3 ca3))
 
+(def-fns _ $ (erased imm-nat : (many (Nat) n) (erased (Lt n u62-modulus) q) -> (erased (ImmSlot (slot-of n)) r))
+  (ImmPlaced _ (ImmU62) _ _ (place-at-many _ (coerce n (coercible-wrap (Shared) MkU62 n q)))))
+
+(def-fns _ $ (many sv-store : (erased (List (Sy)) r) (erased (List (U8)) tps) (erased (List (Copy (Nat))) cps) (many (Nat) n0 n) (erased (Nat) cap)
+    (erased (Length (U8) tps cap) l1) (erased (Length (Copy (Nat)) cps cap) l2) (erased (Ly r tps cps n) ly) (erased (Lt n0 (Succ cap)) b0)
+    (unique (Bytes tps) tb) (unique (Array (Copy (Nat)) cps) ca) (unique (Cell MkSv (slot-of n0) (slot-of tb) (slot-of ca)) u) -> (unique (Sv r) v at u))
+  (let ((erased len) (erased lp) (many d) (unique tb1)) (bytes-length-dec _ tb))
+  (let-match erased (length-fn (U8) tps len cap lp l1) (Refl _ _))
+  (let-match many d (Yes _ _ _ _ q) ((No _ _ _ _ _) (u r tps cps n cap l1 l2 ly (at) tb1 (at) ca)))
+  (let ((erased qc)) (LtS cap u62-modulus q))
+  (u r tps cps (imm (imm-nat n0 (lt-le-trans n0 (Succ cap) u62-modulus b0 qc)) (imm-nat n (lt-le-trans n (Succ cap) u62-modulus (ly-le r tps cps n cap ly l1) qc)))
+    n cap l1 l2 ly (at) tb1 (at) ca))
+
 (def-fns _ $ (many sv-push : (erased (List (Sy)) r) (unique (Sv r) v) (many (Tg) t) (many (Nat) c) (erased (Sy) s) (erased (Ecd s t c) e)
     -> (unique (Sv (Cons (Sy) s r)) v2 at v))
   (let-match unique v (MkSv _ tps cps n cap l1 l2 ly tb ca u))
@@ -125,7 +138,7 @@
   (let-match erased (length-fn (U8) tps len cap lt0 l1) (Refl _ _))
   (let-match many (lt-dec n len) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (sv-grow-push r tps cps n len l1 l2 ly tb0 ca t c s e _ _ _ u)))
   (let ((erased tps2) (erased cps2) (erased l3) (erased l4) (erased ly2) (unique tb2) (unique ca2)) (sv-put r tps cps n len l1 l2 ly lt tb0 ca t c s e))
-  (u _ tps2 cps2 (Succ n) cap l3 l4 ly2 (at) tb2 (at) ca2))
+  (sv-store _ tps2 cps2 n (Succ n) cap l3 l4 ly2 (ly-le r tps cps n cap ly l1) tb2 ca2 u))
 
 (def-fns _ $ (many sv-tagp : (erased (List (Sy)) r) (unique (Sv r) v) (many (Nat) p) (erased (Nat) i n) (erased (Sy) s) (erased (Nth (Sy) r i s) nt)
     (erased (Length (Sy) r n) l) (erased (Add (Succ i) p n) ad) -> (many (Tg) t) (erased (Nat) c) (erased (Ecd s t c) e) (unique v is v2 at v))
@@ -201,7 +214,7 @@
   (let-match unique v (MkSv _ tps cps n cap l1 l2 ly tb ca u))
   (let-match erased ly (LyC _ _ _ _ _ _ _ _ ly1 _ _ _ _))
   (let-match many n (Succ m))
-  (u r tps cps m cap l1 l2 ly1 (at) tb (at) ca))
+  (sv-store r tps cps n m cap l1 l2 ly1 (ly-le _ tps cps n cap ly l1) tb ca u))
 
 (def-fns _ $ (many sv-set-top : (erased (Sy) s) (erased (List (Sy)) r) (unique (Sv (Cons (Sy) s r)) v) (many (Tg) t) (many (Nat) c) (erased (Sy) s2) (erased (Ecd s2 t c) e)
     -> (unique (Sv (Cons (Sy) s2 r)) v2 at v))
@@ -216,11 +229,11 @@
     -> (unique (Sv ys) v2 at v))
   (let-match unique v (MkSv _ tps cps n cap l1 l2 ly tb ca u))
   (let ((many m) (erased ad) (unique tb1)) (sv-sub tps cap tb l1 n k (ly-le r tps cps n cap ly l1) (ly-drop-le p ys r tps cps n k c ly lk)))
-  (u ys tps cps m cap l1 l2 (ly-drop p ys r tps cps n k m c ly lk ad) (at) tb1 (at) ca))
+  (sv-store ys tps cps n m cap l1 l2 (ly-drop p ys r tps cps n k m c ly lk ad) (ly-le r tps cps n cap ly l1) tb1 ca u))
 
 (def-fns _ $ (many sv-clear : (erased (List (Sy)) r) (unique (Sv r) v) -> (unique (Sv (Nil (Sy))) v2 at v))
   (let-match unique v (MkSv _ tps cps n cap l1 l2 ly tb ca u))
-  (u _ tps cps (Zero) cap l1 l2 (LyN tps cps) (at) tb (at) ca))
+  (sv-store _ tps cps n (Zero) cap l1 l2 (LyN tps cps) (ly-le r tps cps n cap ly l1) tb ca u))
 
 (def-fns _ $ (many sv-move : (erased (Sy) x) (erased (List (Sy)) zs r) (unique (Sv (Cons (Sy) x zs)) zv) (unique (Sv r) rv)
     -> (unique (Sv zs) zv2 at zv) (unique (Sv (Cons (Sy) x r)) rv2 at rv))
@@ -229,7 +242,7 @@
   (let-match many n (Succ m))
   (let ((many y) (unique tb2)) (bytes-get _ tb m w nu))
   (let ((many cy) (unique ca2)) (array-get _ _ ca m c nc))
-  (let ((unique zv2)) (u zs tps cps m cap l1 l2 ly1 (at) tb2 (at) ca2))
+  (let ((unique zv2)) (sv-store zs tps cps n m cap l1 l2 ly1 (ly-le _ tps cps n cap ly l1) tb2 ca2 u))
   (values zv2 (sv-push r rv (coerce y (coercible-sym cu)) cy x e)))
 
 (def-fns _ $ (many sv-dup : (erased (List (Sy)) r) (unique (Sv r) rv) (many (Nat) i) (erased (Sy) x) (erased (Nth (Sy) r i x) nt) (erased (List (Sy)) zs) (unique (Sv zs) zv)
