@@ -86,17 +86,17 @@
   (match many r _ ((TsoY _ _ _ _ s) (TsoY xs n _ t2 (TStX xs v xs2 n t t2 ca s))) ((TsoN _ _ _) (TsoN xs n _))))
 
 (def-adts
-  ((Wc : ((Sy) s) ((Nat) c) -> Type)
+  ((Twc : ((Sy) s) ((Nat) c) -> Type)
     enum
-    (many WcX : (erased (Bool) b) (erased (Nat) c) -> (Wc (YW (KX) (MkAm b c)) c))
-    (many WcG : (erased (Bool) b) (erased (Nat) c) -> (Wc (YW (KG) (MkAm b c)) c))
-    (many WcO : (erased (Sy) s) (erased (Nat) c) -> (Wc s c))))
+    (many TwX : (erased (Bool) b) (erased (Nat) c) -> (Twc (YW (KX) (MkAm b c)) c))
+    (many TwG : (erased (Bool) b) (erased (Nat) c) -> (Twc (YW (KG) (MkAm b c)) c))
+    (many TwO : (erased (Sy) s) (erased (Nat) c) -> (Twc s c))))
 
-(def-fns _ $ (many wc-of : (many (Tg) t) (erased (Sy) s) (erased (Nat) c) (erased (Ecd s t c) e) -> (many (Wc s c) w))
+(def-fns _ $ (many tw-of : (many (Tg) t) (erased (Sy) s) (erased (Nat) c) (erased (Ecd s t c) e) -> (many (Twc s c) w))
   (match many t _
-    ((TgXF) (let-match erased e (EcXF _)) (WcX (BFalse) c)) ((TgXT) (let-match erased e (EcXT _)) (WcX (BTrue) c))
-    ((TgGF) (let-match erased e (EcGF _)) (WcG (BFalse) c)) ((TgGT) (let-match erased e (EcGT _)) (WcG (BTrue) c))
-    (else (WcO s c))))
+    ((TgXF) (let-match erased e (EcXF _)) (TwX (BFalse) c)) ((TgXT) (let-match erased e (EcXT _)) (TwX (BTrue) c))
+    ((TgGF) (let-match erased e (EcGF _)) (TwG (BFalse) c)) ((TgGT) (let-match erased e (EcGT _)) (TwG (BTrue) c))
+    (else (TwO s c))))
 
 (def-fns _ $ (many wb-of : (many (Tg) t) (erased (Pk) k) (erased (Bool) b) (erased (Nat) c) (erased (Ecd (YW k (MkAm b c)) t c) e) -> (many b is r))
   (match many t _
@@ -118,8 +118,8 @@
   (let ((erased b1)) (add-bd (Succ i) q1 nr aq1 bd))
   (let ((many i1)) (u62-inc i b1))
   (let ((many t) (erased c) (erased e) (unique rv1)) (sv-tagp r rv q1 i nr x nt lr aq1))
-  (match many (wc-of t x c e) _
-    ((WcX b _)
+  (match many (tw-of t x c e) _
+    ((TwX b _)
       (let ((many cv) (erased t5) (erased e5) (unique rv2)) (sv-cntp r rv1 q1 i nr x nt lr aq1))
       (let-match erased (ecd-wc2 (KX) b c cv t5 e5) (Refl _ _))
       (let ((many vb)) (wb-of t (KX) b c e))
@@ -144,7 +144,7 @@
               (values rv4 t2 ov1 (tso-x _ _ _ n u0 t2 (CAL xc cv xc2 ad) r1))))
           (let ((unique rv4) (erased t2) (unique ov1) (many r1)) (notail $ tstride-p vb xc2 n r rv3 i1 j u0 sb1 ov q1 nr lr aq1 jn bd))
           (values rv4 t2 ov1 (tso-x _ _ _ n u0 t2 (cn-add-f vb xc cv xc2 ad) r1)))))
-    ((WcG b _)
+    ((TwG b _)
       (let ((many gc) (erased t5) (erased e5) (unique rv2)) (sv-cntp r rv1 q1 i nr x nt lr aq1))
       (let-match erased (ecd-wc2 (KG) b c gc t5 e5) (Refl _ _))
       (let ((many gb)) (wb-of t (KG) b c e))
@@ -155,7 +155,7 @@
       (let ((erased t3) (unique ov3) (many p2)) (tpush-v (KX) xb xc t2 ov2))
       (let-match many p2 (PvOk _ _ _ _ pu2) ((PvNo _ _ _) (let ((erased t4) (unique ov4) (many r4)) (tso-no (MkAm xb xc) n u t3 ov3)) (values rv3 t4 ov4 r4)))
       (values rv3 t3 ov3 (TsoY _ n u t3 (TStG _ _ n u0 t1 t2 t3 s1 pu pu2))))
-    ((WcO _ _)
+    ((TwO _ _)
       (match many t _
         ((TgQP)
           (let-match erased e (EcQP _))
@@ -470,7 +470,7 @@
   (let ((unique ac2) (many ok)) (ac-st-o c0 ac1))
   (match many ok _ ((BTrue) ac2) ((BFalse) (simple-r-o c0 ac2 l h0 h1 h2))))
 
-(def-fns _ $ (many cld-go : (erased (List (Sy)) r) (unique (Sv r) rv) (many (Nat) i n) (erased (List (Sy)) u) (subterm erased (Sub r i n u) sb) (erased (CldK u r) k)
+(def-fns _ $ (many cld-l : (erased (List (Sy)) r) (unique (Sv r) rv) (many (Nat) i n) (erased (List (Sy)) u) (subterm erased (Sub r i n u) sb) (erased (CldK u r) k)
     (erased (Nat) nr) (erased (Length (Sy) r nr) lr) (erased (Lt n (Succ nr)) jn) -> (unique rv is rv2 at rv) (many (Res (Cld r)) res))
   (let ((many dd) (unique rv0)) (sv-bd r rv nr lr))
   (let-match many (bd-eqd nr dd i n (sub-in r u i n nr sb jn) jn) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values rv0 (RFail _))))
@@ -482,18 +482,18 @@
       (let-match many (bd-eqd nr dd i1 n (sub-in r u0 (Succ i) n nr sb1 jn) jn) (Equal _ _ _) ((Unequal _ _ _ _ _) (values rv1 (RFail _))))
       (let-match erased (sub-nil r u0 (Succ i) sb1) (Refl _ _))
       (values rv1 (ROk _ (cld-k u r k (ClE)))))
-    ((YF f) (tail $ cld-go r rv1 i1 n u0 sb1 (CkF f u0 r k) nr lr jn))
-    ((YC) (tail $ cld-go r rv1 i1 n u0 sb1 (CkC u0 r k) nr lr jn))
+    ((YF f) (tail $ cld-l r rv1 i1 n u0 sb1 (CkF f u0 r k) nr lr jn))
+    ((YC) (tail $ cld-l r rv1 i1 n u0 sb1 (CkC u0 r k) nr lr jn))
     ((YW kk m)
       (let-match many m (MkAm b c))
       (let-match many b (BFalse) ((BTrue) (values rv1 (RFail _))))
-      (tail $ cld-go r rv1 i1 n u0 sb1 (CkW kk c u0 r k) nr lr jn))
+      (tail $ cld-l r rv1 i1 n u0 sb1 (CkW kk c u0 r k) nr lr jn))
     (else (values rv1 (RFail _)))))
 
 (def-fns _ $ (many cld-v : (erased (List (Sy)) r) (unique (Sv r) rv) (many (Nat) n) (erased (List (Sy)) u) (erased (Sub r (Zero) n u) sb) (erased (CldK u r) k)
     -> (unique rv is rv2 at rv) (many (Res (Cld r)) res))
   (let ((erased nr) (erased lr)) (len-e r))
-  (cld-go r rv 0 n u sb k nr lr (sub-end r u (Zero) n nr sb lr (LtZ nr))))
+  (cld-l r rv 0 n u sb k nr lr (sub-end r u (Zero) n nr sb lr (LtZ nr))))
 
 (def-fns _ $ (many cyc-of-v : (many (Mv) d) (many (List (Sy)) l) (erased (List (Sy)) R) (unique (Sv R) rv) (erased (MRun sk1-blank (MkCf d l R)) mr)
     -> (unique rv is rv2 at rv) (many (Res (MainOK)) r))
@@ -632,8 +632,8 @@
       (let ((erased s4) (erased ins2) (erased st2)) (tst-st (Zero) (Zero) az q t tz t st (af-ins 1 t af1) (CVF 1 (Zero))))
       (let-match erased (ins-af 1 tz s4 af2 ins2) (Refl _ _))
       (let ((erased lb)) (sub-length R R (Zero) n n sb (AddZero n)))
-      (let ((many dd) (unique rvb)) (sv-bd R rv3 n lb))
-      (let-match many dd (BdY _ bd) ((BdN _) (FvNo)))
+      (let ((many dd2) (unique rvb)) (sv-bd R rv3 n lb))
+      (let-match many dd2 (BdY _ bd) ((BdN _) (FvNo)))
       (let ((unique rv4) (erased zs1) (erased o1) (unique zv1) (erased c1) (erased rz1)) (cp-win R rvb 0 wl w s1 (Nil (Sy)) (Nil (Sy)) zv (RvN) n lb bd))
       (let-match erased c1 (CatN _ _))
       (let ((unique zv2)) (qv-push zs1 zv1 (TgQD) 0 iD (EcQD 0)))
