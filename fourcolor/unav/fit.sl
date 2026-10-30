@@ -62,7 +62,7 @@
     ((CEq _ _ _) (LeY a a (lt-succ a)))
     ((CGt _ _ _ _ q) (LeN a b q))))
 
-(def-fns _ $ (erased le-trans : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
+(def-fns _ $ (erased le-tr : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
 
 (def-fns _ $ (erased absurd lt-le-absurd : (erased (Nat) a b) (erased (Lt a b) p) (erased (Lt b (Succ a)) q) -> (erased (False) f))
@@ -88,7 +88,7 @@
 (def-fns _ $ (erased rg-sub : (erased (Nat) a) (erased (Rg) r q) (erased (InRg a r) p) (erased (RgSub r q) s) -> (erased (InRg a q) t))
   (let-match erased p (MkInRg _ m lo hi c l u))
   (let-match erased s (MkRgSub _ _ c2 d2 l2 u2))
-  (MkInRg a m c2 d2 c (le-trans c2 lo m l2 l) (le-trans m hi d2 u u2)))
+  (MkInRg a m c2 d2 c (le-tr c2 lo m l2 l) (le-tr m hi d2 u u2)))
 
 (def-fns _ $ (erased rg-dis : (erased (Nat) a) (erased (Rg) r q) (erased (InRg a r) p) (erased (RgDis r q) s) -> (erased (OutRg a q) t))
   (let-match erased p (MkInRg _ m lo hi c l u))

@@ -49,7 +49,7 @@
 (def-fns _ $ (erased le-sum : (erased (Nat) a b c d x y) (erased (Lt a (Succ b)) l) (erased (Lt c (Succ d)) k) (erased (Add a c x) p)
     (erased (Add b d y) q) -> (erased (Lt x (Succ y)) r))
   (let ((erased z) (erased pz)) (add a d))
-  (le-trans x z y (add-le-r a c x d z p pz k) (add-le-r d a z b y (add-comm a d z pz) (add-comm b d y q) l)))
+  (le-tr x z y (add-le-r a c x d z p pz k) (add-le-r d a z b y (add-comm a d z pz) (add-comm b d y q) l)))
 
 (def-fns _ $ (erased add-eq : (erased (Nat) a b c d) (erased (Add a b c) p) (erased (Add a b d) q) -> (erased (Eq (Nat) c d) e))
   (add-fn a b c d p q))
@@ -279,7 +279,7 @@
   (let-match erased d (D1Step _ p1 r rs1 rs2 _ dns _ acc1 _ wm ws di dt)
     ((D1Nil _ _ _) (let-match erased k (CNil _)) (OrL _ _ (LtZ ns)))
     ((D1Small _ r rs1 _ l _ pl lt)
-      (OrL _ _ (le-trans c (Succ l) ns (count-le os rs c (Succ l) k (LengthCons _ r rs1 l pl)) (LtS l ns lt)))))
+      (OrL _ _ (le-tr c (Succ l) ns (count-le os rs c (Succ l) k (LengthCons _ r rs1 l pl)) (LtS l ns lt)))))
   (let-match erased k (CYes _ _ _ c1 fr k1) ((CNo _ _ _ _ _ k1) (db1-sound os p rs1 ns c acc1 out x dt k1)))
   (let ((erased x1)) (exact-meet os p r p1 x fr wm))
   (let-match erased x1 (MkExact _ _ _ f1 _ _))
@@ -375,7 +375,7 @@
   (let-match erased d (D2Step _ p1 r rt1 _ _ _ _ acc1 _ wm di dt)
     ((D2Nil _ _ _ _ _) (let-match erased kt (CNil _)) (OrL _ _ (LtZ w)))
     ((D2Small _ r rt1 _ _ _ l _ pl lt)
-      (OrL _ _ (le-trans ct nt w (le-trans ct (Succ l) nt (count-le os rt ct (Succ l) kt (LengthCons _ r rt1 l pl)) (LtS l nt lt))
+      (OrL _ _ (le-tr ct nt w (le-tr ct (Succ l) nt (count-le os rt ct (Succ l) kt (LengthCons _ r rt1 l pl)) (LtS l nt lt))
         (add-le-right cs nt w aw)))))
   (let-match erased kt (CYes _ _ _ c1 fr kt1)
     ((CNo _ _ _ _ b kt1) (db2-sound os p rt1 rs (Cons _ r ru) acc1 out nt ct cs w x dt kt1 ks (CNo os r ru (Zero) b ku) aw)))
@@ -459,12 +459,12 @@
   (values ac bd q5 q3 q6))
 
 ; Lists cut after n entries, appended, and rotated by n as rot of part.sl does.
-(def-adts $ (Cut : (Type A) ((Nat) n) ((List A) xs pre post) -> Type)
+(def-adts $ (CutAt : (Type A) ((Nat) n) ((List A) xs pre post) -> Type)
   enum
-  (many CutZ : (erased Type A) (erased (List A) xs) -> (Cut A (Zero) xs (Nil A) xs))
-  (many CutNil : (erased Type A) (erased (Nat) n) -> (Cut A (Succ n) (Nil A) (Nil A) (Nil A)))
-  (many CutS : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs pre post) (erased (Cut A n xs pre post) c)
-      -> (Cut A (Succ n) (Cons A x xs) (Cons A x pre) post)))
+  (many CutAtZ : (erased Type A) (erased (List A) xs) -> (CutAt A (Zero) xs (Nil A) xs))
+  (many CutAtNil : (erased Type A) (erased (Nat) n) -> (CutAt A (Succ n) (Nil A) (Nil A) (Nil A)))
+  (many CutAtS : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs pre post) (erased (CutAt A n xs pre post) c)
+      -> (CutAt A (Succ n) (Cons A x xs) (Cons A x pre) post)))
 
 (def-adts $ (LApp : (Type A) ((List A) xs ys zs) -> Type)
   enum
@@ -473,14 +473,14 @@
 
 (def-adts $ (Rot : (Type A) ((Nat) n) ((List A) xs ys) -> Type)
   enum
-  (many MkRot : (erased Type A) (erased (Nat) n) (erased (List A) xs ys pre post) (erased (Cut A n xs pre post) c) (erased (LApp A post pre ys) a)
+  (many MkRot : (erased Type A) (erased (Nat) n) (erased (List A) xs ys pre post) (erased (CutAt A n xs pre post) c) (erased (LApp A post pre ys) a)
       -> (Rot A n xs ys)))
 
-(def-fns _ $ (many cut-c : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) pre post) (erased (Cut A n xs pre post) c))
-  (let-match many n (Succ n1) ((Zero) (values (Nil _) xs (CutZ _ xs))))
-  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (Nil _) (CutNil _ n1))))
+(def-fns _ $ (many cut-c : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) pre post) (erased (CutAt A n xs pre post) c))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) xs (CutAtZ _ xs))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (Nil _) (CutAtNil _ n1))))
   (let ((many pre) (many post) (erased c)) (notail $ cut-c _ n1 rest))
-  (values (Cons _ x pre) post (CutS _ n1 x rest pre post c)))
+  (values (Cons _ x pre) post (CutAtS _ n1 x rest pre post c)))
 
 (def-fns _ $ (many app-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (LApp A xs ys zs) a))
   (let-match many xs (Cons _ x rest) ((Nil _) (values ys (LAppNil _ ys))))
@@ -500,14 +500,14 @@
       (erased (List B) ys) (erased (R x y) p) (erased (PwE A B R xs ys) rest) -> (PwE A B R (Cons A x xs) (Cons B y ys))))
 
 (def-fns _ $ (erased pwe-cut : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased (Nat) n) (erased (List A) xs a b)
-    (erased (List B) ys c d) (subterm erased (PwE A B R xs ys) p) (erased (Cut A n xs a b) cx) (erased (Cut B n ys c d) cy)
+    (erased (List B) ys c d) (subterm erased (PwE A B R xs ys) p) (erased (CutAt A n xs a b) cx) (erased (CutAt B n ys c d) cy)
     -> (erased (PwE A B R a c) r1) (erased (PwE A B R b d) r2))
   (match erased cx _
-    ((CutZ _ _) (let-match erased cy (CutZ _ _)) (values (PwENil A B R) p))
-    ((CutNil _ _) (let-match erased p (PwENil _ _ _)) (let-match erased cy (CutNil _ _)) (values (PwENil A B R) (PwENil A B R)))
-    ((CutS _ n1 x xs1 a1 _ cx1)
+    ((CutAtZ _ _) (let-match erased cy (CutAtZ _ _)) (values (PwENil A B R) p))
+    ((CutAtNil _ _) (let-match erased p (PwENil _ _ _)) (let-match erased cy (CutAtNil _ _)) (values (PwENil A B R) (PwENil A B R)))
+    ((CutAtS _ n1 x xs1 a1 _ cx1)
       (let-match erased p (PwECons _ _ _ _ y _ ys1 rxy p1))
-      (let-match erased cy (CutS _ _ _ _ c1 _ cy1))
+      (let-match erased cy (CutAtS _ _ _ _ c1 _ cy1))
       (let ((erased q1) (erased q2)) (pwe-cut A B R n1 xs1 a1 b ys1 c1 d p1 cx1 cy1))
       (values (PwECons A B R x y a1 c1 rxy q1) q2))))
 
@@ -692,7 +692,7 @@
       (let ((erased le1)) (count-le os1 rt1 ct1 (Succ l1) kt1 (LengthCons _ r rt3 l1 pl1)))
       (let ((erased le2)) (count-le os2 rt2 ct2 l2 kt2 pl2))
       (let ((erased le3)) (le-sum ct1 (Succ l1) ct2 l2 ts (Succ l) le1 le2 ats (AddSucc l1 l2 l al)))
-      (OrL _ _ (le-trans ts nt w (le-trans ts (Succ l) nt le3 (LtS l nt lt)) (add-le-right sc nt w aw))))
+      (OrL _ _ (le-tr ts nt w (le-tr ts (Succ l) nt le3 (LtS l nt lt)) (add-le-right sc nt w aw))))
     ((E2Step _ _ _ _ _ r q1 q2 rt3 _ _ _ _ _ _ acc1 _ wm wr di dt)
       (let-match erased kt1 (CYes _ _ _ c1 fr kt3)
         ((CNo _ _ _ _ b kt3)

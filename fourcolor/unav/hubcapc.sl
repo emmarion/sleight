@@ -52,7 +52,7 @@
 (def-fns _ $ (erased finish : (erased (Nat) l mr l2 r ml r2) (erased (Add l mr l2) p) (erased (Add r ml r2) q) (erased (Lt l2 (Succ r2)) le)
     (erased (Lt ml (Succ mr)) lm) -> (erased (Lt l (Succ r)) o))
   (let ((erased r3) (erased q3)) (add r mr))
-  (let ((erased le2)) (le-trans l2 r2 r3 le (add-le-r r ml r2 mr r3 q q3 lm)))
+  (let ((erased le2)) (le-tr l2 r2 r3 le (add-le-r r ml r2 mr r3 q q3 lm)))
   (add-le-cancel-l l mr l2 r r3 (add-comm l mr l2 p) (add-comm r mr r3 q3) le2))
 
 ; ((d + m) + (p + x)) + s = (((d + p) + s) + (m + x)).
@@ -330,3 +330,59 @@
   (let-match erased (add-eq kn ss c3 r q4 ar) (Refl _ _))
   (let-match erased (add-eq kn ss c4 r q5 ar) (Refl _ _))
   (values kp kn l r dk al ar (half-le l r l2 r3 q3 q6 le2)))
+
+; The rotation hubcap_rot uses at constraint index j, and hub_subn i j.
+(def-adts $ (Shift : ((Nat) nhub j k) -> Type)
+  enum
+  (many ShLo : (erased (Nat) nhub j k) (erased (Lt 1 j) l) (erased (Monus j 2 k) mo) -> (Shift nhub j k))
+  (many ShHi : (erased (Nat) nhub j t k) (erased (Add nhub j t) a) (erased (Monus t 2 k) mo) -> (Shift nhub j k)))
+
+(def-adts $ (HubSubn : ((Nat) nhub i j k) -> Type)
+  enum
+  (many HSLe : (erased (Nat) nhub i j k) (erased (Lt j (Succ i)) l) (erased (Monus i j k) mo) -> (HubSubn nhub i j k))
+  (many HSGt : (erased (Nat) nhub i j t k) (erased (Add i nhub t) a) (erased (Monus t j k) mo) -> (HubSubn nhub i j k)))
+
+(def-fns _ $ (many shift-c : (many (Nat) nhub j) -> (many (Nat) k) (erased (Shift nhub j k) w))
+  (match many (nat-cmp 1 j) _
+    ((CLt _ _ _ _ l) (let ((many k) (erased mo)) (monus-c j 2)) (values k (ShLo nhub j k l mo)))
+    (else (let ((many t) (erased a)) (add nhub j)) (let ((many k) (erased mo)) (monus-c t 2)) (values k (ShHi nhub j t k a mo)))))
+
+(def-fns _ $ (many hub-subn-c : (many (Nat) nhub i j) -> (many (Nat) k) (erased (HubSubn nhub i j k) w))
+  (match many (le-dec j i) _
+    ((LeY _ _ l) (let ((many k) (erased mo)) (monus-c i j)) (values k (HSLe nhub i j k l mo)))
+    ((LeN _ _ _) (let ((many t) (erased a)) (add i nhub)) (let ((many k) (erased mo)) (monus-c t j)) (values k (HSGt nhub i j t k a mo)))))
+
+; A successful hubcap_fit: per constraint, the check of dbound.sl on p rotated as hubcap_rot does.
+(def-adts $ (HFit : ((Nat) nhub) ((List (Sub)) p) ((List (List (Sub))) rt rs) ((List (Hc)) hc) ((List (List (Sub))) acc out) -> Type)
+  enum
+  (many HFNil : (erased (Nat) nhub) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc) -> (HFit nhub p rt rs (Nil (Hc)) acc acc))
+  (many HFOne : (erased (Nat) nhub j k) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out) (erased (List (Hc)) hc)
+      (erased (Shift nhub j k) sh) (erased (Rot (Sub) k p pj) ro) (erased (Db2Top pj rt rs b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest)
+      -> (HFit nhub p rt rs (Cons (Hc) (HC1 j b) hc) acc out))
+  (many HFTwo : (erased (Nat) nhub j1 j2 k i) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out)
+      (erased (List (Hc)) hc) (erased (Shift nhub j1 k) sh) (erased (Rot (Sub) k p pj) ro) (erased (HubSubn nhub j2 j1 i) hs)
+      (erased (E2Top nhub pj rt rs i b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest) -> (HFit nhub p rt rs (Cons (Hc) (HC2 j1 j2 b) hc) acc out)))
+
+(def-fns _ $ (many hubcap-fit-c : (many (Nat) nhub) (many (List (Sub)) p) (many (List (List (Sub))) rt rs) (subterm many (List (Hc)) hc)
+    (many (List (List (Sub))) acc) -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (HFit nhub p rt rs hc acc out)) w))
+  (let-match many hc (Cons _ h rest) ((Nil _) (values (BTrue) acc (IfY _ (HFNil nhub p rt rs acc)))))
+  (match many h _
+    ((HC1 j b)
+      (let ((many k) (erased sh)) (shift-c nhub j))
+      (let ((many pj) (erased ro)) (rot-c _ k p))
+      (let ((many ok1) (many acc1) (erased w1)) (check-dbound2-c pj rt rs b acc))
+      (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) acc1 (IfF _))))
+      (let-match erased w1 (IfY _ d))
+      (let ((many ok) (many out) (erased w)) (tail $ hubcap-fit-c nhub p rt rs rest acc1))
+      (values ok out (match erased w _ ((IfY _ q) (IfY _ (HFOne nhub j k b p pj rt rs acc acc1 out rest sh ro d q))) ((IfF _) (IfF _)))))
+    ((HC2 j1 j2 b)
+      (let ((many k) (erased sh)) (shift-c nhub j1))
+      (let ((many pj) (erased ro)) (rot-c _ k p))
+      (let ((many i) (erased hs)) (hub-subn-c nhub j2 j1))
+      (let ((many ok1) (many acc1) (erased w1)) (check-2dbound2-c nhub pj rt rs i b acc))
+      (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) acc1 (IfF _))))
+      (let-match erased w1 (IfY _ d))
+      (let ((many ok) (many out) (erased w)) (tail $ hubcap-fit-c nhub p rt rs rest acc1))
+      (values ok out (match erased w _
+        ((IfY _ q) (IfY _ (HFTwo nhub j1 j2 k i b p pj rt rs acc acc1 out rest sh ro hs d q)))
+        ((IfF _) (IfF _)))))))
