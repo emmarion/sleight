@@ -1,3 +1,83 @@
+(def-fns _ $ (erased reps-at : (erased (List (Nat)) nd rep ls) (erased (Nat) i j k l) (subterm erased (Reps nd rep i ls) rs)
+    (erased (Nth (Nat) ls j l) p) (erased (Add j i k) a) -> (erased (Nat) r) (erased (Nth (Nat) rep l r) pr) (erased (NodeReach nd r k) reach))
+  (let-match erased rs (RepsCons _ _ ls1 _ l1 r1 pr1 reach1 rs1) (absurd (RepsNil _ _ _) p))
+  (let-match erased p (NthThere _ _ _ j1 _ p1)
+    ((NthHere _ _ _) (let-match erased a (AddZero _)) (values r1 pr1 reach1)))
+  (let-match erased a (AddSucc _ _ k1 a1))
+  (reps-at nd rep ls1 (Succ i) j1 k l rs1 p1 (add-succ-right j1 i k1 a1)))
+
+(def-fns _ $ (erased alllt-nth : (erased (List (Nat)) s) (erased (Nat) n i x) (subterm erased (AllLt s n) al) (erased (Nth (Nat) s i x) p) ->
+    (erased (Lt x n) r))
+  (let-match erased al (ALCons y _ s1 q al1) (absurd (ALNil _) p))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) q))
+  (alllt-nth s1 n i1 x al1 p1))
+
+(def-fns _ $ (erased alllt-snoc : (erased (List (Nat)) s s2) (erased (Nat) n a) (subterm erased (AllLt s n) al) (erased (Lt a n) la)
+    (erased (Snoc (Nat) s a s2) sn) -> (erased (AllLt s2 n) r))
+  (let-match erased al (ALCons y _ s1 q al1) ((ALNil _) (let-match erased sn (SnocNil _ _)) (ALCons a n _ la (ALNil n))))
+  (let-match erased sn (SnocCons _ _ _ _ s3 sn1))
+  (ALCons y n s3 q (alllt-snoc s1 s3 n a al1 la sn1)))
+
+(def-fns _ $ (erased alllt-succ : (erased (List (Nat)) s) (erased (Nat) n) (subterm erased (AllLt s n) al) -> (erased (AllLt s (Succ n)) r))
+  (let-match erased al (ALCons y _ s1 q al1) ((ALNil _) (ALNil (Succ n))))
+  (ALCons y (Succ n) s1 (lt-weaken y n q) (alllt-succ s1 n al1)))
+
+(def-fns _ $ (erased allis-alllt : (erased (List (Nat)) s) (erased (Nat) u n) (subterm erased (AllIs s u) a) (erased (Lt u n) l) ->
+    (erased (AllLt s n) r))
+  (let-match erased a (AllIsCons _ s1 a1) ((AllIsNil _) (ALNil n)))
+  (ALCons u n s1 l (allis-alllt s1 u n a1 l)))
+
+(def-fns _ $ (erased alllt-app : (erased (List (Nat)) a b c) (erased (Nat) n) (subterm erased (LApp (Nat) a b c) p)
+    (erased (AllLt a n) la) (erased (AllLt b n) lb) -> (erased (AllLt c n) r))
+  (let-match erased p (LAppCons _ x a1 _ c1 p1) ((LAppNil _ _) lb))
+  (let-match erased la (ALCons _ _ _ q la1))
+  (ALCons x n c1 q (alllt-app a1 b c1 n p1 la1 lb)))
+
+(def-fns _ $ (erased alllt-app-l : (erased (List (Nat)) a b c) (erased (Nat) n) (subterm erased (LApp (Nat) a b c) p)
+    (erased (AllLt c n) lc) -> (erased (AllLt a n) la) (erased (AllLt b n) lb))
+  (let-match erased p (LAppCons _ x a1 _ c1 p1) ((LAppNil _ _) (values (ALNil n) lc)))
+  (let-match erased lc (ALCons _ _ _ q lc1))
+  (let ((erased la) (erased lb)) (alllt-app-l a1 b c1 n p1 lc1))
+  (values (ALCons x n a1 q la) lb))
+
+(def-fns _ $ (erased grouplab-lt : (erased (List (Nat)) pl fl) (erased (List (Group)) gs) (erased (Nat) t) (subterm erased (GroupLab pl gs) gl)
+    (erased (AllLt pl t) al) (erased (GFlat gs fl) gf) -> (erased (AllLt fl t) r))
+  (let-match erased gl (GLCons _ xs d u gs1 p a gl1) ((GLNil _) (let-match erased gf (GFlatNil)) (ALNil t)))
+  (let-match erased gf (GFlatCons _ _ fl1 _ _ q gf1))
+  (alllt-app xs fl1 fl t q (allis-alllt xs u t a (alllt-nth pl t d u al p)) (grouplab-lt pl fl1 gs1 t gl1 al gf1)))
+
+(def-fns _ $ (erased grouplab-grow : (erased (List (Nat)) pl pl2) (erased (List (Group)) gs) (erased (Nat) a) (subterm erased (GroupLab pl gs) gl)
+    (erased (Snoc (Nat) pl a pl2) sn) -> (erased (GroupLab pl2 gs) r))
+  (let-match erased gl (GLCons _ xs d u gs1 p q gl1) ((GLNil _) (GLNil pl2)))
+  (GLCons pl2 xs d u gs1 (snoc-old _ pl pl2 a u d sn p) q (grouplab-grow pl pl2 gs1 a gl1 sn)))
+
+(def-fns _ $ (erased repeat-allis : (erased (Nat) k t) (erased (List (Nat)) ns) (subterm erased (Repeat (Nat) k t ns) rp) -> (erased (AllIs ns t) r))
+  (let-match erased rp (RepeatCons _ k1 _ ns1 rp1) ((RepeatNil _ _) (AllIsNil t)))
+  (AllIsCons t ns1 (repeat-allis k1 t ns1 rp1)))
+
+; Some edge of the map joins a dart labelled s to one labelled t.
+(def-adts $ (Joined : ((List (Nat)) e) ((List (Nat)) pl) ((Nat) s) ((Nat) t) -> Type)
+  enum
+  (many MkJoined : (erased (List (Nat)) e pl) (erased (Nat) s t x y) (erased (Nth (Nat) e x y) pe) (erased (Nth (Nat) pl x s) ps)
+      (erased (Nth (Nat) pl y t) pt) -> (Joined e pl s t)))
+
+(def-adts $ (AllJoined : ((List (Nat)) e) ((List (Nat)) pl) ((List (Nat)) r) ((Nat) t) -> Type)
+  enum
+  (many AJNil : (erased (List (Nat)) e pl) (erased (Nat) t) -> (AllJoined e pl (Nil (Nat)) t))
+  (many AJCons : (erased (List (Nat)) e pl r) (erased (Nat) s t) (erased (Joined e pl s t) j) (erased (AllJoined e pl r t) rest)
+      -> (AllJoined e pl (Cons (Nat) s r) t)))
+
+(def-fns _ $ (erased joined-grow : (erased (List (Nat)) e pl e2 pl2) (erased (Nat) s t) (erased (Joined e pl s t) j)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree pl pl2 (Nil (Nat))) gp) -> (erased (Joined e2 pl2 s t) r))
+  (let-match erased j (MkJoined _ _ _ _ x y pe ps pt))
+  (MkJoined e2 pl2 s t x y (agree-nth e e2 (Nil _) x y ge pe (NotInNil x)) (agree-nth pl pl2 (Nil _) x s gp ps (NotInNil x))
+    (agree-nth pl pl2 (Nil _) y t gp pt (NotInNil y))))
+
+(def-fns _ $ (erased alljoined-grow : (erased (List (Nat)) e pl e2 pl2 r) (erased (Nat) t) (subterm erased (AllJoined e pl r t) j)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree pl pl2 (Nil (Nat))) gp) -> (erased (AllJoined e2 pl2 r t) res))
+  (let-match erased j (AJCons _ _ r1 s _ j1 rest) ((AJNil _ _ _) (AJNil e2 pl2 t)))
+  (AJCons e2 pl2 r1 s t (joined-grow e pl e2 pl2 s t j1 ge gp) (alljoined-grow e pl e2 pl2 r1 t rest ge gp)))
+
 ; The sweep's state before step t: the map, its darts' labels pl, one representative dart per label in rep, and the
 ; frontier gs, whose items in order are fl.
 (def-adts $ (State : ((Nat) t) ((List (Nat)) e) ((List (Nat)) nd) ((List (Nat)) pl) ((List (Nat)) rep) ((List (Group)) gs)
