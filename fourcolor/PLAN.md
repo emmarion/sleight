@@ -111,10 +111,8 @@ is attached.
 
 `reduce3.sl` proves `CubicReduction`: a function giving every plain
 cubic hypermap of genus 0 that is bridgeless (on `hypermap.sl` and
-`hypgeom.sl`'s definitions) a `FourColoring` gives `FourColor`. So part
-A and the cube reduction of part B are done; what is open is Gonthier's
-theorem for plain cubic maps. `inductfc.sl` proves `FourColorFrom`
-from it (`inductgoal.sl` checks it): an `Analysis` (`induct.sl`) gives
+`hypgeom.sl`'s definitions) a `FourColoring` gives `FourColor`.
+`inductfc.sl` proves `FourColorFrom` (`inductgoal.sl` checks it): an `Analysis` (`induct.sl`) gives
 `FourColor`. `fcgoal.sl` proves `FourColor` from the four computed
 steps of part B, taken as arguments, and `fcfinal.sl` proves `FourColor`
 itself, with no hypotheses, in one unit with the runs that compute those
