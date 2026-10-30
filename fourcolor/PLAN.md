@@ -183,7 +183,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   then the other three; they also check after the whole chain of the `red/` entry
   below, `red/cfred.sl` included): ring traces of four-colourings
   (`RingTrace`, on `red/`'s colours), contract colourings and
-  `MinimalCounterExample` after `coloring.v`, and `kempe.v`.
+  `MinimalCounterExample` after `coloring.v` (indexed by the levels of its
+  two functions, so that a level factory can call them), and `kempe.v`.
   `kempegoal.sl` checks `KempeMap`: for a duplicate-free node cycle r of
   a genus-0 hypermap whose edges have two darts and which has
   n (n (n x)) = x off r, ring traces are closed under colour
@@ -209,8 +210,26 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   and colorable_patch in both directions (`colorable-patch` and
   `patch-colorable`, with `RotRev` for rot 1 (rev et) and `trace-rev`
   for trace_rev).
-  Not done: outer_hd and patch_face_d as stated in Coq, bridgeless_patch,
-  patch_gcomp and minimal_counter_example_is_connected.
+  The rest of `patch.v` is in `patch2.sl`.
+- `patch2.sl` (load after `patch.sl`; it does not need `sew.sl`): the rest
+  of `patch.v`, as far as slc checks it. outer_hd in both directions
+  (`outer-hd-in`, `outer-hd-out`), with `band-dec` deciding between `Fband`
+  and `Kernel`; patch_face_d (`patch-face-d-pull`, with the hypothesis that
+  the face of the disk dart misses bd, which outer_hd appears to make
+  equivalent to Coq's); bridgeless_patch read constructively
+  (`bridgeless-patch`: with both parts bridgeless, the whole map is
+  bridgeless or bd has a `Chord`, a positive witness meant to stand for
+  ~~ chordless bd, stated for an edge cycle with next r x read as e x);
+  patch_connected_r; patch_fcard_face_r, with outer given as a `BandSplit`
+  of the darts by whether their face meets the image of hr; patch_gcomp
+  (`patch-gcomp`, the parts renumbered by position, through `sub-perm` and
+  `sub-map`, which restrict a hypermap to a set of darts shut under its
+  permutations); and minimal_counter_example_is_connected, as `gcomp-split`
+  (a planar bridgeless plain precubic map with a dart is connected or
+  patched along empty rings from two smaller such maps) and the level
+  factory `mce-connected`, which calls the two functions of a
+  `MinimalCounterExample`. Whether `Chord` matches Coq's chordless has been
+  checked only by reading.
 - `sew.sl` (load after `patch.sl`): sew_map and sew_map_patch of `sew.v`
   as one existence statement, `sew-exists`: a disk map with a simple edge
   cycle bd and a remainder map with a duplicate-free node cycle br of the
