@@ -21,15 +21,6 @@
       (let ((erased et2) (erased e2) (erased s2) (erased pt2) (erased pc)) (permt-snoc g et1 ct1 ct3 e pt1 s1))
       (values (Cons _ x2 et2) e2 (SnocCons _ x2 e2 et2 ct3 s2) (PTCons g x x2 et1 et2 px pt2) pc))))
 
-(def-fns _ $ (erased snoc-inj : (erased Type A) (erased (List A) xs ys zs) (erased A x y) (subterm erased (Snoc A xs x zs) p) (erased (Snoc A ys y zs) q)
-    -> (erased (Eq (List A) (Cons A x xs) (Cons A y ys)) e))
-  (match erased p _
-    ((SnocNil _ _) (match erased q _ ((SnocNil _ _) (Refl _ (Cons A x xs))) (absurd (SnocCons _ _ _ _ _ q1) q1)))
-    ((SnocCons _ a _ xs1 zs1 p1)
-      (match erased q _
-        (absurd (SnocNil _ _) p1)
-        ((SnocCons _ _ _ ys1 _ q1) (let-match erased (snoc-inj A xs1 ys1 zs1 x y p1 q1) (Refl _ _)) (Refl _ (Cons A x xs)))))))
-
 ; The rotation P o rotr 1 of a Kempe-closed P is Kempe-closed (closedP1 in check_reducible_valid), at a level above P's.
 (def-fns _ $ (erased kclosed-rot : (erased (Level) L) -> (erased (Level) M)
     (erased (Fn M (erased Pred P2) (erased Rel R) (erased (KClosed L P2 R) cl) -> (erased (KClosed M (MkPred (PredC) P2 RotP) (MkRel (RelC) R RotR)) c2)) f))
