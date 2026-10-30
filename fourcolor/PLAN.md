@@ -570,25 +570,28 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   dart maps that `embed-color` and `rem-col` take, hd = h1 . embd, the
   disk ring sent to rev (map edge rc), Coq's map edge of its ring, which
   is rev rc here, embd onto the darts off rc (`InEither`), and cface_h1),
-  from two hypotheses: `FullRed` (a `FullBad` pair gives a
-  `Reduces`; in Coq this is radius2, the reductions of the path to a
-  hom ring of at most five darts, Birkhoff, and trivial_hom_ring;
-  `fullred.sl` has the first three, with radius2 as a certificate) and `PatchOpen` (the construction of embed_disk, embed_rem and
-  embed_patch, with cface_h1, not ported). Also not done:
-  embed_valid_contract and adj11_edge of birkhoff.v, and radius2
-  (`notembed.sl` takes the first as a hypothesis). Chain: that of
+  from two hypotheses: `FullRedR` (a `FullBad` pair, with the
+  configuration's `Radius2` certificate, gives a `Reduces`; in Coq
+  radius2, the reductions of the path to a hom ring of at most five
+  darts, Birkhoff, and trivial_hom_ring; `fullred.sl`'s `full-red-of`
+  gives it from `BirkhoffChecks` and `TrivRed`) and `PatchOpen` (the
+  construction of embed_disk, embed_rem and embed_patch, with cface_h1,
+  for a ring rc that is a `NodeRing`: rev rc, Coq's ring as it appears
+  to be read here, a node cycle on distinct faces, embeddable's sfcycle
+  node; `embed6.sl`'s `patch-open` proves it). `run` takes the
+  certificates `NodeRing` and `Radius2` of the configuration as
+  arguments. Also not done: embed_valid_contract and adj11_edge of
+  birkhoff.v (`notembed.sl` takes the first as a hypothesis). Chain: that of
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
   only by reading.
 - `fullred.sl` (load after `embed5.sl`, in its chain): part of embed.v's
   embed_full, as far as both compilers check it, with minimality as data.
-  `FullRed` as `embed5.sl` states it takes no fact about the configuration
-  beyond `EEnv`, `GcOK` and `FunctorAll`, while Coq's proof also uses the
-  radius of the kernel (radius2 of embeddable) and, for five darts, the
-  ring arities behind adj_kernel_max; it appears not to be provable as
-  stated by Coq's route. `FullRedR` is `FullRed` with one more argument,
-  `Radius2`, a certificate (a kernel dart x0 and, for each kernel dart,
-  the two edge steps that reach it from the face of x0) that no run
+  Coq's proof uses the radius of the kernel (radius2 of embeddable) and,
+  for five darts, the ring arities behind adj_kernel_max, which are not
+  facts of `EEnv`, `GcOK` and `FunctorAll`; so embed5.sl's `FullRedR`
+  takes `Radius2`, a certificate (a kernel dart x0 and, for each kernel
+  dart, the two edge steps that reach it from the face of x0) that no run
   decides yet. `bad-hom` follows the first two reductions of embed_full:
   a `FullBad` pair and the certificate give a walk of five rlink steps
   through the face of x0, which `shorten` (Coq's induction on the path)
@@ -601,8 +604,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
   taken as a hypothesis: in Coq trivial_hom_ring, its use on the reversed
   ring, and for five darts the spoke ring with adj11_edge and
-  adj_kernel_max, none ported. `embed-main` takes `FullRed`, so using
-  `FullRedR` there would add the certificate to the arguments of `run`.
+  adj_kernel_max, none ported; if those need the ring arities, `TrivRed`
+  as stated may lack a hypothesis (not checked).
   That these statements match Coq's has been checked only by reading.
   Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
   fullred` (in one run about 66 s with slc and 161 s with the reference
@@ -610,10 +613,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
 - `notembed.sl` (load after `embed5.sl`, with `iealias.sl` loaded after
   `red/cfred.sl`): not_embed_reducible of embed.v with minimality as data,
   as far as both compilers check it. `not-embed` gives embed.sl's
-  `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRed` and
-  `PatchOpen`, and three hypotheses: `GcFun cfs` (embed4.sl's `GcOK` and
-  `FunctorAll` for a configuration of cfs, which embed4.sl's `cf-gcok` and
-  `cf-functor` appear to give from its `AllGc`), `EmbedValid`
+  `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
+  (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
+  (the per-configuration certificates: embed4.sl's `GcOK` and
+  `FunctorAll`, which embed4.sl's `cf-gcok` and `cf-functor` appear to
+  give from its `AllGc`, and embed5.sl's `NodeRing` and `Radius2`, for a
+  configuration of cfs, meant to be decided by a run), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
   reduces) and `ContractLater` (contract2.sl's `CGLater` case gives a
@@ -641,12 +646,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
   `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
-  their own) and the hypotheses `FullRed`, `PatchOpen`, `GcFun cfs`,
-  `EmbedValid` and `ContractLater`, through `embed-analysis`,
-  `birk-geo-of`, `not-embed` and `four-color-from`. Here css is
+  their own) and the hypotheses `CfCerts cfs`, `TrivRed`, `EmbedValid`
+  and `ContractLater`, through `embed-analysis`, `birk-geo-of`,
+  `full-red-of`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
-  proved. Chain (both compilers, with `--goal proved`; about 80 s with slc and 220 s
+  proved. Chain (both compilers, with `--goal proved`; about 60 s with slc and 115 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
   std/list.sl ring.sl`, then `defs
   orient base sweep geo plan map lists planemap walk frontier labels rot
@@ -659,8 +664,29 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  notembed fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  embed6 fullred notembed fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
+- `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
+  embed_patch and cface_h1 of embed.v, as far as both compilers check
+  them: `patch-open` proves embed5.sl's `PatchOpen`. Without `NodeRing`,
+  the patch PatchOpen asks for appears not always to exist (for instance,
+  it seems, when the ring is the union of two node cycles in different
+  components). The construction (`embed-patch6`) runs on the node cycle
+  rr = rev rc that a `NodeRing` names, to which `env-rev` carries `EEnv`
+  and `GcOK` (they read only which darts are on the ring); `patch-at`
+  reads its disk ring, sent to map edge rr = rev (map edge rc), as
+  `EmbedPatch` takes it. The disk map is Coq's embed_disk on the darts
+  embd off the ring, with its edge sending each dart of map edge rr to
+  the next one; the remainder map is on rev (h1 . map edge rr) followed
+  by the darts of the map off h1 . embd, with its node sending each dart
+  of that reversed ring to the next one; both are restricted from
+  permutations of the whole maps as in `snip.sl` (`bij-build`,
+  `restrict`), and the patch's simple disk ring is `snip.sl`'s
+  `disk-simple`. cface_h1 goes through the patch's `face-hd` where fc x
+  is on the ring. In a test run, a variant passing the reversal of
+  the disk ring's image the wrong way round was rejected. Chain: that of `embed5.sl`, then
+  `embed6`. That these statements match Coq's has been checked only by
+  reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
