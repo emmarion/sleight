@@ -227,3 +227,49 @@
           (let-match erased (lapp-fn _ m2 b y q s4 m2b) (Refl _ _))
           (let-match erased (lapp-fn _ q p x qp s5 a3) (Refl _ _))
           (CRFlat _ fl r qp bp m2 m rm2 s2 s3))))))
+
+; y is non-empty when v is.
+(def-adts $ (Lead : ((List (Nat)) v) ((List (Nat)) y) -> Type)
+  enum
+  (many LeadNil : (erased (List (Nat)) y) -> (Lead (Nil (Nat)) y))
+  (many LeadCons : (erased (List (Nat)) v y) (erased (Nat) x) -> (Lead v (Cons (Nat) x y))))
+
+; The cut of fl into u ++ v falls inside the group (d, b ++ y) of gs, after the groups gs1.
+(def-adts $ (Cut : ((List (Group)) gs) ((List (Nat)) u) ((List (Nat)) v) -> Type)
+  enum
+  (many MkCut : (erased (List (Group)) gs gs1 gs2) (erased (List (Nat)) u v b y by f1 f2) (erased (Nat) d)
+      (erased (LApp (Group) gs1 (Cons (Group) (MkGroup d by) gs2) gs) pg) (erased (LApp (Nat) b y by) pb)
+      (erased (GFlat gs1 f1) g1) (erased (GFlat gs2 f2) g2) (erased (LApp (Nat) f1 b u) pu) (erased (LApp (Nat) y f2 v) pv)
+      (erased (Lead v y) ld) -> (Cut gs u v)))
+
+(def-fns _ $ (erased cut-head : (erased (Nat) d0) (erased (List (Nat)) x0 u v m fl1) (erased (List (Group)) gs1)
+    (erased (LApp (Nat) u m x0) p1) (erased (LApp (Nat) m fl1 v) p2) (erased (GFlat gs1 fl1) g) (erased (Lead v m) ld)
+    -> (erased (Cut (Cons (Group) (MkGroup d0 x0) gs1) u v) c))
+  (MkCut _ (Nil _) gs1 u v u m x0 (Nil _) fl1 d0 (LAppNil _ _) p1 (GFlatNil) g (LAppNil _ u) p2 ld))
+
+(def-fns _ $ (erased cut-cons : (erased (Nat) d0) (erased (List (Nat)) x0 u v m) (erased (List (Group)) gs1)
+    (erased (LApp (Nat) x0 m u) p) (erased (Cut gs1 m v) c) -> (erased (Cut (Cons (Group) (MkGroup d0 x0) gs1) u v) r))
+  (let-match erased c (MkCut _ gs3 gs4 _ _ b y by f3 f4 d pg pb g3 g4 pu pv ld))
+  (let ((erased f1) (erased q1) (erased q2)) (lapp-assoc-back _ x0 f3 b m u pu p))
+  (MkCut _ (Cons _ (MkGroup d0 x0) gs3) gs4 u v b y by f1 f4 d (LAppCons _ (MkGroup d0 x0) gs3 _ gs1 pg) pb
+    (GFlatCons d0 x0 f3 f1 gs3 q1 g3) g4 q2 pv ld))
+
+(def-fns _ $ (erased group-split : (erased (List (Group)) gs1) (erased (Nat) d0) (erased (List (Nat)) x0 u v fl)
+    (subterm erased (GFlat (Cons (Group) (MkGroup d0 x0) gs1) fl) gf) (erased (LApp (Nat) u v fl) p)
+    -> (erased (Cut (Cons (Group) (MkGroup d0 x0) gs1) u v) c))
+  (let-match erased gf (GFlatCons _ _ fl1 _ _ px gf1))
+  (match erased (lapp-split _ u v x0 fl1 fl p px) _
+    ((SplitLeft _ _ _ _ _ m um mv)
+      (let-match erased m (Nil _) ((Cons _ y ys) (cut-head d0 x0 u v m fl1 gs1 um mv gf1 (LeadCons v ys y))))
+      (let-match erased mv (LAppNil _ _))
+      (let-match erased v (Cons _ y ys) ((Nil _) (cut-head d0 x0 u v m fl1 gs1 um mv gf1 (LeadNil m))))
+      (let-match erased gf1 (GFlatCons d1 x1 _ _ gs2 _ _))
+      (let-match erased (lapp-fn _ u (Nil _) x0 u um (lapp-nil _ u)) (Refl _ _))
+      (cut-cons d0 x0 u v (Nil _) gs1 (lapp-nil _ u) (group-split gs2 d1 x1 (Nil _) v fl1 gf1 (LAppNil _ v))))
+    ((SplitRight _ _ _ _ _ m xm mv)
+      (let-match erased gf1 (GFlatCons d1 x1 _ _ gs2 _ _)
+        ((GFlatNil)
+          (let-match erased mv (LAppNil _ _))
+          (let-match erased (lapp-fn _ x0 (Nil _) u x0 xm (lapp-nil _ x0)) (Refl _ _))
+          (cut-head d0 x0 u v (Nil _) fl1 gs1 (lapp-nil _ u) (LAppNil _ fl1) gf1 (LeadNil (Nil _)))))
+      (cut-cons d0 x0 u v m gs1 xm (group-split gs2 d1 x1 m v fl1 gf1 mv)))))
