@@ -229,15 +229,18 @@
       (classes-link-same g2 d kc2 a a2 cs2 cn la la2))
     (es-conn kc2 d kx kn kf gen2 es2)))
 
-; Three darts w, z, b with f w = z, f z = b, n b = w and n w = z make the genus positive.
-(def-fns _ $ (erased absurd planar-torus : (erased (Nat) d w z b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
-    (erased (Genus d e n f (Zero)) p) (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
-    (erased (Nth (Nat) f z b) pz) (erased (Nth (Nat) n b w) pb) (erased (Nth (Nat) n w z) pnw) -> (erased (False) r))
+; Cutting z out of its face cycle, with w the dart before it, lowers the genus when z reaches w along c = n . f and the
+; links of n and the cut face permutation still join w and z: walks along c from x1 to w and from x2 to z that leave
+; neither, with n x1 = x2.
+(def-fns _ $ (erased absurd face-drop : (erased (Nat) d w z x1 x2) (erased (List (Nat)) e n f c s xs ys1 ys2) (erased (Hypermap d e n f) h)
+    (erased (Genus d e n f (Zero)) p) (erased (Respects n f c) rc) (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne)
+    (erased (Lt w d) lw) (erased (Path c (Nil (Nat)) z w xs) cw) (erased (In w s) iw) (erased (In z s) iz) (erased (Nth (Nat) n x1 x2) px)
+    (erased (Path c s x1 w ys1) w1) (erased (Path c s x2 z ys2) w2) -> (erased (False) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf) (erased kx) (erased kn) (erased kf) (erased kc)
       (erased ox) (erased on) (erased of) (erased gn) (erased gf) (erased g) (erased grn) (erased grf) (erased cg) (erased cs) (erased es))
     (genus-core d (Zero) e n f h p))
+  (let-match erased (respects-fn n f c nf rc rnf) (Refl _ _))
   (let ((erased b2) (erased f2) (erased fi2) (erased pb2) (erased up) (erased pf2) (erased of2)) (split-fixed d kf w z f fi pf of pw ne lw))
-  (let-match erased (nth-fn _ f z b2 b pb2 pz) (Refl _ _))
   (let ((erased e2) (erased h2)) (hyper-mk d n ni f2 fi2 pn pf2))
   (let ((erased gen2) (erased p2)) (even-genus d e2 n f2 h2))
   (let ((erased nf2) (erased _) (erased _) (erased rnf2) (erased _) (erased _) (erased _) (erased kx2) (erased kn2) (erased kf2) (erased kc2)
@@ -246,13 +249,24 @@
   (let-match erased (graph-fn d n gn gn2 grn grn2) (Refl _ _))
   (let-match erased (orbits-unique d kn2 kn n on2 on) (Refl _ _))
   (let-match erased (orbits-unique d kf2 (Succ kf) f2 of3 of2) (Refl _ _))
-  (let ((erased v) (erased pv)) (nth-exists _ nf d z (respects-length n f nf d rnf (perm-length d f fi pf)) (perm-val d w z f fi pf pw)))
-  (let-match erased (nth-fn _ n b v w (respects-nth n f nf z b v rnf pz pv) pb) (Refl _ _))
+  (let ((erased lf)) (perm-length d f fi pf))
+  (let ((erased cn)) (conn-cat g2 w x1 z (conn-sym g2 x1 w (path-conn-comp d x1 w w b2 z z n f f2 c s ys1 gn gf2 g2 w1 iw iz rc up lf grn grf2 cg2))
+    (ConnStep g2 x1 x2 z (adj-cat-l gn gf2 g2 x1 x2 (graph-adj d x1 x2 n gn grn px) cg2)
+      (path-conn-comp d x2 z w b2 z z n f f2 c s ys2 gn gf2 g2 w2 iw iz rc up lf grn grf2 cg2))))
   (let ((erased cs3) (erased es3))
-    (euler-drop d kn kf kx kx2 kc2 gen2 w z b n ni f fi nf f2 fi2 nf2 (Cons _ z (Nil _)) gn gf g gf2 g2 pn pf pf2 rnf rnf2 ox ox2 grn grf grf2
-      cg cg2 pw pz up cs2 es2 (PathStep nf _ _ z w w pv (NotInNil z) (PathHere nf _ w))
-      (conn-adj g2 w z (adj-cat-l gn gf2 g2 w z (graph-adj d w z n gn grn pnw) cg2))))
-  (genus-unique d (Zero) (Succ gen2) e n f p (core-genus d kx kn kf kc2 (Succ gen2) e n f nf ni fi gn gf g pe rnf pn pf ox on of grn grf cg cs3 es3)))
+    (euler-drop d kn kf kx kx2 kc2 gen2 w z b2 n ni f fi c f2 fi2 nf2 xs gn gf g gf2 g2 pn pf pf2 rc rnf2 ox ox2 grn grf grf2
+      cg cg2 pw pb2 up cs2 es2 cw cn))
+  (genus-unique d (Zero) (Succ gen2) e n f p (core-genus d kx kn kf kc2 (Succ gen2) e n f c ni fi gn gf g pe rc pn pf ox on of grn grf cg cs3 es3)))
+
+; Three darts w, z, b with f w = z, f z = b, n b = w and n w = z make the genus positive.
+(def-fns _ $ (erased absurd planar-torus : (erased (Nat) d w z b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    (erased (Genus d e n f (Zero)) p) (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
+    (erased (Nth (Nat) f z b) pz) (erased (Nth (Nat) n b w) pb) (erased (Nth (Nat) n w z) pnw) -> (erased (False) r))
+  (let ((erased c) (erased ni) (erased fi) (erased rc) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased v) (erased pv)) (nth-exists _ c d z (respects-length n f c d rc (perm-length d f fi pf)) (perm-val d w z f fi pf pw)))
+  (let-match erased (nth-fn _ n b v w (respects-nth n f c z b v rc pz pv) pb) (Refl _ _))
+  (face-drop d w z w z e n f c (Cons _ z (Cons _ w (Nil _))) (Cons _ z (Nil _)) (Nil _) (Nil _) h p rc pw ne lw
+    (PathStep c _ _ z w w pv (NotInNil z) (PathHere c _ w)) (InThere w z _ (InHere w _)) (InHere z _) pnw (PathHere c _ w) (PathHere c _ z)))
 
 (def-fns _ $ (erased mem2-a : (erased (List (Nat)) p) (erased (Nat) a b) (subterm erased (Mem2 p a b) m) -> (erased (In a p) r))
   (match erased m _
