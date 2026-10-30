@@ -267,3 +267,21 @@
       (let ((erased n) (erased pm)) (ecpN-map (Succ (Succ (Succ (Succ d0)))) e2 n2 f2 r2 e f r pm2 nn2))
       (values n pm (ecpN-cubic (Succ (Succ (Succ (Succ d0)))) (Succ k0) e2 n2 f2 r2 e n f r pm2 nn2 (pointed-hyper d e n f r pm) qc2 l2
         (LtS (Zero) (Succ k1) (LtZ k1)))))))
+
+; Decides whether cp has no A step.
+(def-adts $ (NoADec : ((List (Step)) cp) -> Type)
+  enum
+  (many NoAYes : (erased (List (Step)) cp) (erased (NoA cp) p) -> (NoADec cp))
+  (many NoANo : (erased (List (Step)) cp) -> (NoADec cp)))
+
+(def-fns _ $ (many noa-dec : (subterm many (List (Step)) cp) -> (many (NoADec cp) r))
+  (let-match many cp (Cons _ s rest) ((Nil _) (NoAYes cp (NoANil))))
+  (let-match many (notail $ noa-dec rest) (NoAYes _ p) ((NoANo _) (NoANo cp)))
+  (match many s _
+    ((SR k) (NoAYes cp (NoAR k rest p)))
+    ((SRr) (NoAYes cp (NoARr rest p)))
+    ((SY) (NoAYes cp (NoAY rest p)))
+    ((SH) (NoAYes cp (NoAH rest p)))
+    ((SU) (NoAYes cp (NoAU rest p)))
+    ((SK) (NoAYes cp (NoAK rest p)))
+    ((SA) (NoANo cp))))
