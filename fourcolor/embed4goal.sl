@@ -1,6 +1,7 @@
-; embed4.sl's AllGc for the configurations of red/configs.sl, decided by one compiled run. Load after embed4.sl.
+; embed4.sl's AllGc for the configurations of red/configs.sl (cfs as fcgoal.sl computes it), decided by one compiled run.
+; Load after embed4.sl.
 
-(let ((many cfs)) (concat-cfs (config-chunks)))
+(let ((many cfs) (erased cl)) (concat-c (config-chunks)))
 
 (goal erased (AllGc cfs))
 

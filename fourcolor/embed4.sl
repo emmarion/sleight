@@ -61,7 +61,9 @@
 (def-adts $ (FAt : ((List (Nat)) ec nc fid as) ((Nat) x) -> Type)
   enum
   (many FaOut : (erased (List (Nat)) ec nc fid as) (erased (Nat) x y) (erased (Nth (Nat) ec x y) py) (erased (NotIn y as) o) -> (FAt ec nc fid as x))
-  (many FaRef : (erased (List (Nat)) ec nc fid as) (erased (Nat) x) (erased (Refut ec nc fid as (Cons (Nat) x (Nil (Nat))) (Nil (Nat))) r) -> (FAt ec nc fid as x)))
+  (many FaRef : (erased (List (Nat)) ec nc fid as) (erased (Nat) x) (erased (Refut ec nc fid as (Cons (Nat) x (Nil (Nat))) (Nil (Nat))) r) -> (FAt ec nc fid as x))
+  (many FaEdge : (erased (List (Nat)) ec nc fid as) (erased (Nat) x y) (erased (Nth (Nat) ec x y) py) (erased (Refut ec nc fid as (Cons (Nat) y (Nil (Nat))) (Nil (Nat))) r)
+      -> (FAt ec nc fid as x)))
 
 (def-adts $ (FAll : ((List (Nat)) ec nc fid as xs) -> Type)
   enum
@@ -119,7 +121,7 @@
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (let-match erased (gc-at dc x ec nc rc as ok (nth-lt-length _ ec x dc y py le)) (MkGcAt _ _ _ _ _ ex nx pex pyx pnx rsx epx clx csx))
   (let-match erased (nth-fn _ ec x y ex py pex) (Refl _ _))
-  (let ((erased v) (erased pv) (erased lv)) (h-val dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix))
+  (let ((erased v) (erased pv) (erased lvd)) (h-val dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix))
   (match erased s _
     ((CsCen _ _ _ _ c)
       (let-match erased c (MkCentral _ _ _ _ y2 w2 v2 py2 pw2 pv2 pm2))
@@ -130,7 +132,7 @@
       (let-match erased c (MkNonCen _ _ _ _ y2 w2 v2 u2 py2 pw2 pv2 pu2 ne))
       (let-match erased (nth-fn _ ec y x y2 pyx py2) (Refl _ _))
       (let-match erased (nth-fn _ hl x v v2 pv pv2) (Refl _ _))
-      (let ((erased u) (erased _) (erased _) (erased pu) (erased _) (erased _) (erased _) (erased _) (erased _)) (gm-step dm v em nm fm ksm g lv))
+      (let ((erased u) (erased _) (erased _) (erased pu) (erased _) (erased _) (erased _) (erased _) (erased _)) (gm-step dm v em nm fm ksm g lvd))
       (match erased (nat-eq u w2) _
         ((Unequal _ _ _ _ ne2) (CsNon ec em hl x (MkNonCen ec em hl x y v w2 u py pv pw2 pu ne2)))
         (absurd (Equal _ _ _)
@@ -277,11 +279,6 @@
         (absurd (CxNon _ _ _ _ _ _ i)
           (cstat-clash ec em hl t (CsCen ec em hl t ct) (cstat-of dc dm t ec nc fc ksc rc em nm fm ksm as hl as0 fid ns (BFalse) fe it i an)))))))
 
-(def-fns _ $ (erased rlto-at : (erased (List (Nat)) ec fc em hl as ys) (erased (Nat) x y) (subterm erased (RlTo ec fc em hl as x ys) rt) (erased (In y ys) iy)
-    -> (erased (List (Nat)) p) (erased (RlPath ec fc em hl as x p y) r))
-  (let-match erased rt (RTCons _ _ _ _ _ ys1 p1 _ y1 rp rt1) (absurd (RTNil _ _ _ _ _ _) iy))
-  (match erased iy _ ((InHere _ _) (values p1 rp)) ((InThere _ _ _ iy1) (rlto-at ec fc em hl as ys1 x y rt1 iy1))))
-
 ; A cut of the kernel faces, labelled 1 and 0, with x and y on its two sides: the rlink path of the preembedding from the face
 ; of x to y crosses it.
 (def-fns _ $ (erased absurd cut-sound : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid lab ns)
@@ -351,7 +348,12 @@
           (in-notin y as0 (kl-move dc y fc rc as as0 lf kl kl0 iy) o))
         (absurd (FaRef _ _ _ _ _ rr)
           (refut-sound dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid (Cons (Nat) x (Nil (Nat))) (Nil (Nat)) fe rr
-            (AcCons ec em hl (Nil (Nat)) (BFalse) x s (AcNil ec em hl (BFalse))) (AcNil ec em hl (BTrue)))))))
+            (AcCons ec em hl (Nil (Nat)) (BFalse) x s (AcNil ec em hl (BFalse))) (AcNil ec em hl (BTrue))))
+        (absurd (FaEdge _ _ _ _ _ y2 py2 rr)
+          (let-match erased (nth-fn _ ec x y y2 py py2) (Refl _ _))
+          (refut-sound dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid (Cons (Nat) y (Nil (Nat))) (Nil (Nat)) fe rr
+            (AcCons ec em hl (Nil (Nat)) (BFalse) y (cstat-edge dc dm y x ec nc fc ksc rc em nm fm ksm as hl as0 fid (BFalse) fe iy pyx s) (AcNil ec em hl (BFalse)))
+            (AcNil ec em hl (BTrue)))))))
   (let-match erased s (CsCen _ _ _ _ c))
   (OrR _ _ c))
 
@@ -400,13 +402,45 @@
   (let-match erased ok (MkGcOK _ _ _ _ _ ids io ga))
   (MkGcOK dc ec nc rc as ids io (gcall-move dc ec nc fc rc as0 as ids lf kl0 kl ga)))
 
-; What a run decides of a configuration of red/configs.sl on the map cpmap.sl builds: its kernel as, the conditions GcOK, and
-; for each kernel dart whose edge image is in the kernel a refutation of it not being central, with fid labelling the faces.
+; rc runs backwards along node: its reverse is a node cycle on distinct faces (embeddable's sfcycle node rc, read on rev rc).
+(def-adts $ (RingBack : ((List (Nat)) nc fc rc) -> Type)
+  enum
+  (many MkRingBack : (erased (List (Nat)) nc fc rc cp) (erased (Nat) c0) (erased (RevApp (Nat) rc (Nil (Nat)) (Cons (Nat) c0 cp)) rv)
+      (erased (SCycle nc fc c0 cp) sc) -> (RingBack nc fc rc)))
+
+; good_ring_arity: each dart of xs has a face of 3 to 6 darts.
+(def-adts $ (RingAr : ((List (Nat)) fc xs) -> Type)
+  enum
+  (many RaNil : (erased (List (Nat)) fc) -> (RingAr fc (Nil (Nat))))
+  (many RaCons : (erased (List (Nat)) fc xs) (erased (Nat) x k) (erased (Order fc x k) o) (erased (Lt (Succ (Succ (Zero))) k) l1)
+      (erased (Lt k (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) l2) (erased (RingAr fc xs) rest) -> (RingAr fc (Cons (Nat) x xs))))
+
+(def-fns _ $ (erased r2at-move : (erased (Nat) dc x0 x) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (erased (R2At ec fc as0 x0 x) p) -> (erased (R2At ec fc as x0 x) r))
+  (let-match erased p (MkR2At _ _ _ _ _ a ea b eb pa pea iea pab peb pb))
+  (MkR2At ec fc as x0 x a ea b eb pa pea (kl-move dc ea fc rc as0 as lf kl0 kl iea) pab peb pb))
+
+(def-fns _ $ (erased r2all-move : (erased (Nat) dc x0) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (erased (R2All ec fc as0 x0 as0) ra) (subterm erased (List (Nat)) xs) (erased (InAll xs as) ia) -> (erased (R2All ec fc as x0 xs) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (R2Nil ec fc as x0)))
+  (let-match erased ia (IaCons _ _ _ ix ia1))
+  (R2Cons ec fc as xs1 x0 x (r2at-move dc x0 x ec fc rc as0 as lf kl0 kl (r2-at ec fc as0 as0 x0 x ra (kl-move dc x fc rc as as0 lf kl kl0 ix)))
+    (r2all-move dc x0 ec fc rc as0 as lf kl0 kl ra xs1 ia1)))
+
+(def-fns _ $ (erased radius-move : (erased (Nat) dc) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (erased (Radius2 ec fc as0) rd) -> (erased (Radius2 ec fc as) r))
+  (let-match erased rd (MkRadius2 _ _ _ x0 jx0 ra))
+  (MkRadius2 ec fc as x0 (kl-move dc x0 fc rc as0 as lf kl0 kl jx0) (r2all-move dc x0 ec fc rc as0 as lf kl0 kl ra as (ia-self as))))
+
+; What a run decides of a configuration of red/configs.sl on the map cpmap.sl builds: its kernel as, the conditions GcOK, for
+; each kernel dart whose edge image is in the kernel a refutation of it not being central (fid labelling the faces), the
+; ring read backwards as a node cycle, radius2 and good_ring_arity.
 (def-adts $ (CfGc : ((Config) cf) -> Type)
   enum
   (many MkCfGc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc as fid)
       (erased (Cpmap cp dc ec fc rc) cm) (erased (Hypermap dc ec nc fc) hc) (erased (KernelList dc fc rc as) kl) (erased (GcOK dc ec nc rc as) ok)
-      (erased (Respects fid fc fid) rf) (erased (FAll ec nc fid as as) fa) -> (CfGc (MkConfig sym cci cp))))
+      (erased (Respects fid fc fid) rf) (erased (FAll ec nc fid as as) fa) (erased (RingBack nc fc rc) rb) (erased (Radius2 ec fc as) rd) (erased (RingAr fc rc) ra)
+      -> (CfGc (MkConfig sym cci cp))))
 
 (def-adts $ (AllGc : ((List (Config)) cfs) -> Type)
   enum
@@ -420,17 +454,17 @@
 (def-fns _ $ (erased cfgc-at : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc)
     (erased (CfGc (MkConfig sym cci cp)) c) (erased (Cpmap cp dc ec fc rc) cm) (erased (Hypermap dc ec nc fc) h)
     -> (erased (List (Nat)) as0 fid) (erased (KernelList dc fc rc as0) kl0) (erased (GcOK dc ec nc rc as0) ok0) (erased (Respects fid fc fid) rf)
-    (erased (FAll ec nc fid as0 as0) fa))
-  (let-match erased c (MkCfGc _ _ _ dc0 ec0 nc0 fc0 rc0 as0 fid cm0 hc0 kl0 ok0 rf fa))
+    (erased (FAll ec nc fid as0 as0) fa) (erased (RingBack nc fc rc) rb) (erased (Radius2 ec fc as0) rd) (erased (RingAr fc rc) ra))
+  (let-match erased c (MkCfGc _ _ _ dc0 ec0 nc0 fc0 rc0 as0 fid cm0 hc0 kl0 ok0 rf fa rb rd ra))
   (let-match erased (cpmap-fn cp dc0 dc ec0 fc0 rc0 ec fc rc cm0 cm) (Refl _ _))
   (let-match erased (hyper-node-unique dc ec nc0 fc nc hc0 h) (Refl _ _))
-  (values as0 fid kl0 ok0 rf fa))
+  (values as0 fid kl0 ok0 rf fa rb rd ra))
 
 ; GcOK for any kernel list of a configuration of cfs, on the map cpmap.sl builds.
 (def-fns _ $ (erased cf-gcok : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc)
     (erased (List (Nat)) ec nc fc rc as) (erased (AllGc cfs) ag) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (Hypermap dc ec nc fc) h) (erased (KernelList dc fc rc as) kl) -> (erased (GcOK dc ec nc rc as) r))
-  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm h))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm h))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc h))
   (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0))
 
@@ -440,10 +474,31 @@
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (FunctorAll ec em as hl as) r))
   (let ((erased en2)) en)
   (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
-  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (let ((erased fe)) (MkFEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid en kl0 (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0) rf))
   (functor-list dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid fe fa as (ia-self as)))
+
+; The ring, radius2 and good_ring_arity for an EEnv on the map cpmap.sl builds of a configuration of cfs.
+(def-fns _ $ (erased cf-extra : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
+    (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (AllGc cfs) ag) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
+    (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (RingBack nc fc rc) rb) (erased (Radius2 ec fc as) rd) (erased (RingAr fc rc) ra))
+  (let-match erased en (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased rb) (erased rd) (erased ra))
+    (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
+  (values rb (radius-move dc ec fc rc as0 as lf kl0 kl rd) ra))
+
+; notembed.sl's GcFun from AllGc. A level factory: gc is at a level minted after those of cf-gcok and cf-functor.
+(def-fns _ $ (erased gcfun-of : (erased (List (Config)) cfs) (erased (AllGc cfs) ag) -> (erased (GcFun cfs) r))
+  (def-lvl F)
+  (def-fns F $ (erased gc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
+      (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
+      (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu))
+    (let ((erased en2)) en)
+    (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
+    (values (cf-gcok cfs sym cci cp dc ec nc fc rc as ag m c hc kl) (cf-functor cfs sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl ag m c en)))
+  (MkGcFun cfs F gc))
 
 ; The run. The kernel is labelled by a face walk to the ring; the refutations are found by a search on the statuses of the
 ; kernel darts (unknown, not central, central) that applies node-rule, splits on a dart, or closes with a cut of the kernel
@@ -484,9 +539,9 @@
 
 (def-fns _ $ (many rs-c : (many (List (Nat)) nc rc) (many (Nat) x nx) -> (many (Checked (RingSide nc rc x nx)) r))
   (let-match many (nth-q (Nat) nc nx) (NQYes _ _ _ nnx pnn) ((NQNo _ _ _) (ChkNo _)))
-  (match many (in-q x rc) _
-    ((IQIn _ _ ix) (match many (in-q nx rc) _ ((IQIn _ _ inx) (ChkYes _ (RsOn nc rc x nx ix inx))) ((IQOut _ _ _) (ChkNo _))))
-    ((IQOut _ _ ox) (rs-off nc rc x nx nnx ox pnn))))
+  (let-match many (in-q x rc) (IQIn _ _ ix) ((IQOut _ _ ox) (rs-off nc rc x nx nnx ox pnn)))
+  (let-match many (in-q nx rc) (IQIn _ _ inx) ((IQOut _ _ _) (ChkNo _)))
+  (ChkYes _ (RsOn nc rc x nx ix inx)))
 
 (def-fns _ $ (many ep-c : (many (List (Nat)) rc) (many (Nat) x ex) -> (many (Checked (Or (NotIn x rc) (NotIn ex rc))) r))
   (let-match many (in-q x rc) (IQIn _ _ _) ((IQOut _ _ o) (ChkYes _ (OrL _ _ o))))
@@ -594,19 +649,25 @@
 (def-fns _ $ (many st-c : (many (Nat) z y) (many (List (Nat)) ns cs) -> (many (Nat) s))
   (bif _ (orb (mem-nat z ns) (mem-nat y ns)) 1 (bif _ (orb (mem-nat z cs) (mem-nat y cs)) 2 0)))
 
-; Mode 0: a not central-known, b and c central; 1: a not central, b central, c unknown; 2: a not central, b and c unknown.
+; Mode 0: a not central-known, b and c central; 1: a not central, b central, c unknown; 3: a not central, b unknown, c central;
+; 2: a not central, b and c unknown.
 (def-fns _ $ (many fits : (many (Nat) mode sa sb sc) -> (many (Bool) r))
   (match many (nat-eqb mode 0) _
     ((BTrue) (andb (negb (nat-eqb sa 2)) (andb (nat-eqb sb 2) (nat-eqb sc 2))))
-    ((BFalse) (andb (nat-eqb sa 1) (andb (nat-eqb sb (bif _ (nat-eqb mode 1) 2 0)) (nat-eqb sc 0))))))
+    ((BFalse) (andb (nat-eqb sa 1) (andb (nat-eqb sb (bif _ (nat-eqb mode 1) 2 0)) (nat-eqb sc (bif _ (nat-eqb mode 3) 2 0)))))))
 
-(def-fns _ $ (many scan-c : (erased (List (Nat)) ec nc as) (many (Nat) mode) (many (List (Nat)) ns cs) (subterm many (List (TriD ec nc as)) ts)
-    -> (many (Maybe (TriD ec nc as)) r))
-  (let-match many ts (Cons _ td rest) ((Nil _) (None _)))
+(def-fns _ $ (many hit : (erased (List (Nat)) ec nc as) (many (Maybe (TriD ec nc as)) h) (many (Bool) ok) (many (TriD ec nc as) td) -> (many (Maybe (TriD ec nc as)) r))
+  (match many h _ ((None _) (bif _ ok (Some _ td) h)) ((Some _ _) h)))
+
+; The first rotation fitting each mode, 0, 1, 3 and 2, in one pass.
+(def-fns _ $ (many scan-c : (erased (List (Nat)) ec nc as) (many (List (Nat)) ns cs) (many (Maybe (TriD ec nc as)) h0 h1 h3 h2)
+    (subterm many (List (TriD ec nc as)) ts) -> (many (Maybe (TriD ec nc as)) r0 r1 r3 r2))
+  (let-match many ts (Cons _ td rest) ((Nil _) (values h0 h1 h3 h2)))
+  (let-match many h0 (None _) ((Some _ _) (values h0 h1 h3 h2)))
   (let-match many td (MkTriD _ _ _ a b c ea eb ecc _ _ _ _ _ _ _ _ _ _))
-  (match many (fits mode (st-c a ea ns cs) (st-c b eb ns cs) (st-c c ecc ns cs)) _
-    ((BTrue) (Some _ td))
-    ((BFalse) (tail $ scan-c ec nc as mode ns cs rest))))
+  (let ((many sa) (many sb) (many sc)) (values (st-c a ea ns cs) (st-c b eb ns cs) (st-c c ecc ns cs)))
+  (tail $ scan-c ec nc as ns cs (hit ec nc as h0 (fits 0 sa sb sc) td) (hit ec nc as h1 (fits 1 sa sb sc) td) (hit ec nc as h3 (fits 3 sa sb sc) td)
+    (hit ec nc as h2 (fits 2 sa sb sc) td) rest))
 
 (def-fns _ $ (many alive-c : (many (List (Nat)) ns) (subterm many (List (KEdge)) ks) -> (many (List (KEdge)) r))
   (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
@@ -635,18 +696,21 @@
   enum
   (many PlNode : (erased (List (Nat)) ec nc as) (many (TriD ec nc as) t) -> (Plan ec nc as))
   (many PlSplitC : (erased (List (Nat)) ec nc as) (many (TriD ec nc as) t) -> (Plan ec nc as))
+  (many PlSplitB : (erased (List (Nat)) ec nc as) (many (TriD ec nc as) t) -> (Plan ec nc as))
   (many PlSplit : (erased (List (Nat)) ec nc as) (many (TriD ec nc as) t) -> (Plan ec nc as))
   (many PlCut : (erased (List (Nat)) ec nc as) (many (List (Nat)) lab) (many (Nat) y) -> (Plan ec nc as))
   (many PlNone : (erased (List (Nat)) ec nc as) -> (Plan ec nc as)))
 
 (def-fns _ $ (many plan-c : (many (Nat) d) (many (List (Nat)) fid as) (erased (List (Nat)) ec nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
     (many (List (Nat)) ns cs) -> (many (Plan ec nc as) p))
-  (let-match many (scan-c ec nc as 0 ns cs ts) (None _) ((Some _ td) (PlNode ec nc as td)))
-  (let-match many (scan-c ec nc as 1 ns cs ts) (None _) ((Some _ td) (PlSplitC ec nc as td)))
+  (let ((many m0) (many m1) (many m3) (many m2)) (scan-c ec nc as ns cs (None _) (None _) (None _) (None _) ts))
+  (let-match many m0 (None _) ((Some _ td) (PlNode ec nc as td)))
+  (let-match many m1 (None _) ((Some _ td) (PlSplitC ec nc as td)))
+  (let-match many m3 (None _) ((Some _ td) (PlSplitB ec nc as td)))
   (let-match many as (Cons _ x0 _) ((Nil _) (PlNone ec nc as)))
   (let ((many lab)) (flood fid (set-at _ (nseq _ d 0) (get-at _ fid x0 0) 1) (alive-c ns kes) d))
   (let-match many (first-zero fid lab as) (None _) ((Some _ y) (PlCut ec nc as lab y)))
-  (match many (scan-c ec nc as 2 ns cs ts) _ ((Some _ td) (PlSplit ec nc as td)) ((None _) (PlNone ec nc as))))
+  (match many m2 _ ((Some _ td) (PlSplit ec nc as td)) ((None _) (PlNone ec nc as))))
 
 (def-fns _ $ (many labat-c : (many (List (Nat)) fid lab) (many (Nat) x k) -> (many (Checked (LabAt fid lab x k)) r))
   (let-match many (nth-q (Nat) fid x) (NQYes _ _ _ i pi) ((NQNo _ _ _) (ChkNo _)))
@@ -684,6 +748,15 @@
       (ChkYes _ (RfSplit ec nc fid as ns cs c ecc pcc ic iec r1
         (RfNode ec nc fid as ns cs2 a b c t (ein-weaken ec cs b c ibc) (EiHere ec cs2 c (InHere c cs))
           (RfConf ec nc fid as ns (Cons (Nat) a cs2) a ia ian (EiHere ec (Cons (Nat) a cs2) a (InHere a cs2)))))))
+    ((PlSplitB _ _ _ td)
+      (let-match many td (MkTriD _ _ _ a b c ea eb ecc t pa pb pcc ia ib ic iea ieb iec))
+      (let-match many (ein-c ec a ea pa ns) (ChkYes _ ian) ((ChkNo _) (ChkNo _)))
+      (let-match many (ein-c ec c ecc pcc cs) (ChkYes _ icc) ((ChkNo _) (ChkNo _)))
+      (let-match many (notail $ refute-c d ec fid as nc ts kes (Cons _ b ns) cs fuel1) (ChkYes _ r1) ((ChkNo _) (ChkNo _)))
+      (let ((erased cs2)) (Cons (Nat) b cs))
+      (ChkYes _ (RfSplit ec nc fid as ns cs b eb pb ib ieb r1
+        (RfNode ec nc fid as ns cs2 a b c t (EiHere ec cs2 b (InHere b cs)) (ein-weaken ec cs c b icc)
+          (RfConf ec nc fid as ns (Cons (Nat) a cs2) a ia ian (EiHere ec (Cons (Nat) a cs2) a (InHere a cs2)))))))
     ((PlSplit _ _ _ td)
       (let-match many td (MkTriD _ _ _ a b c ea eb ecc t pa pb pcc ia ib ic iea ieb iec))
       (let-match many (notail $ refute-c d ec fid as nc ts kes (Cons _ b ns) cs fuel1) (ChkYes _ r1) ((ChkNo _) (ChkNo _)))
@@ -698,14 +771,125 @@
       (ChkYes _ (RfCut ec nc fid as ns cs lab x0 y (InHere x0 as1) lx iy ly ca)))
     ((PlNone _ _ _) (ChkNo _))))
 
-(def-fns _ $ (many fall-c : (many (Nat) d) (many (List (Nat)) ec fid as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
-    (subterm many (List (Nat)) xs) -> (many (Checked (FAll ec nc fid as xs)) r))
+(def-adts $ (RefD : ((List (Nat)) ec nc fid as) -> Type)
+  enum
+  (many MkRefD : (erased (List (Nat)) ec nc fid as) (many (Nat) z) (erased (Refut ec nc fid as (Cons (Nat) z (Nil (Nat))) (Nil (Nat))) r) -> (RefD ec nc fid as)))
+
+(def-adts $ (RefQ : ((List (Nat)) ec nc fid as) ((Nat) z) -> Type)
+  enum
+  (many RqYes : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) (erased (Refut ec nc fid as (Cons (Nat) z (Nil (Nat))) (Nil (Nat))) r) -> (RefQ ec nc fid as z))
+  (many RqNo : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) -> (RefQ ec nc fid as z)))
+
+; A refutation for each kernel dart below its edge image in the kernel.
+(def-fns _ $ (many refs-c : (many (Nat) d) (many (List (Nat)) ec fid as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
+    (subterm many (List (KEdge)) ks) -> (many (List (RefD ec nc fid as)) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
+  (let-match many k (MkKEdge z _))
+  (let ((many rs)) (notail $ refs-c d ec fid as nc ts kes rest))
+  (match many (refute-c d ec fid as nc ts kes (Cons _ z (Nil _)) (Nil _) (Succ d)) _ ((ChkYes _ rr) (Cons _ (MkRefD ec nc fid as z rr) rs)) ((ChkNo _) rs)))
+
+(def-fns _ $ (many ref-find : (erased (List (Nat)) ec nc fid as) (many (Nat) z) (subterm many (List (RefD ec nc fid as)) rs) -> (many (RefQ ec nc fid as z) r))
+  (let-match many rs (Cons _ rd rest) ((Nil _) (RqNo ec nc fid as z)))
+  (let-match many rd (MkRefD _ _ _ _ y rr))
+  (match many (nat-eq y z) _ ((Equal _ _ _) (RqYes ec nc fid as z rr)) ((Unequal _ _ _ _ _) (tail $ ref-find ec nc fid as z rest))))
+
+(def-fns _ $ (many fall-c : (many (List (Nat)) ec fid as) (erased (List (Nat)) nc) (many (List (RefD ec nc fid as)) rs) (subterm many (List (Nat)) xs)
+    -> (many (Checked (FAll ec nc fid as xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (ChkYes _ (FsNil ec nc fid as))))
-  (let-match many (notail $ fall-c d ec fid as nc ts kes rest) (ChkYes _ fr) ((ChkNo _) (ChkNo _)))
+  (let-match many (notail $ fall-c ec fid as nc rs rest) (ChkYes _ fr) ((ChkNo _) (ChkNo _)))
   (let-match many (nth-q (Nat) ec x) (NQYes _ _ _ y py) ((NQNo _ _ _) (ChkNo _)))
   (let-match many (in-q y as) (IQIn _ _ _) ((IQOut _ _ o) (ChkYes _ (FsCons ec nc fid as rest x (FaOut ec nc fid as x y py o) fr))))
-  (let-match many (refute-c d ec fid as nc ts kes (Cons _ x (Nil _)) (Nil _) (Succ d)) (ChkYes _ rr) ((ChkNo _) (ChkNo _)))
-  (ChkYes _ (FsCons ec nc fid as rest x (FaRef ec nc fid as x rr) fr)))
+  (let-match many (ref-find ec nc fid as x rs) (RqNo _ _ _ _ _) ((RqYes _ _ _ _ _ rr) (ChkYes _ (FsCons ec nc fid as rest x (FaRef ec nc fid as x rr) fr))))
+  (let-match many (ref-find ec nc fid as y rs) (RqYes _ _ _ _ _ rr) ((RqNo _ _ _ _ _) (ChkNo _)))
+  (ChkYes _ (FsCons ec nc fid as rest x (FaEdge ec nc fid as x y py rr) fr)))
+
+(def-fns _ $ (many rev-c : (subterm many (List (Nat)) xs) (many (List (Nat)) w) -> (many (List (Nat)) r) (erased (RevApp (Nat) xs w r) p))
+  (let-match many xs (Cons _ s pre) ((Nil _) (values w (RANil (Nat) w))))
+  (let ((many r) (erased p)) (tail $ rev-c pre (Cons _ s w)))
+  (values r (RACons (Nat) s pre w r p)))
+
+(def-fns _ $ (many fpath-c : (many (List (Nat)) r) (many (Nat) x) (subterm many (List (Nat)) p) -> (many (Nat) y) (many (Checked (FPath r x p y)) c))
+  (let-match many p (Cons _ z rest) ((Nil _) (values x (ChkYes _ (FPNil r x)))))
+  (let ((many y) (many c1)) (notail $ fpath-c r z rest))
+  (let-match many c1 (ChkYes _ fp) ((ChkNo _) (values y (ChkNo _))))
+  (let-match many (nat-at r x z) (ChkYes _ pz) ((ChkNo _) (values y (ChkNo _))))
+  (values y (ChkYes _ (FPCons r rest x z y pz fp))))
+
+(def-fns _ $ (many dist-c : (subterm many (List (Nat)) xs) -> (many (Checked (Distinct xs)) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (ChkYes _ (DistNil))))
+  (let-match many (in-q x rest) (IQOut _ _ o) ((IQIn _ _ _) (ChkNo _)))
+  (let-match many (notail $ dist-c rest) (ChkYes _ dr) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (DistCons x rest o dr)))
+
+(def-fns _ $ (many ringback-c : (many (List (Nat)) nc fc rc fid) (erased (Respects fid fc fid) rf) -> (many (Checked (RingBack nc fc rc)) r))
+  (let ((many rr) (erased rv)) (rev-c rc (Nil _)))
+  (let-match many rr (Cons _ c0 cp) ((Nil _) (ChkNo _)))
+  (let ((many y) (many cf)) (fpath-c nc c0 cp))
+  (let-match many cf (ChkYes _ fp) ((ChkNo _) (ChkNo _)))
+  (let-match many (nat-at nc y c0) (ChkYes _ back) ((ChkNo _) (ChkNo _)))
+  (let-match many (resp-q fid rr) (RQYes _ _ ls rp) ((RQNo _ _) (ChkNo _)))
+  (let-match many (dist-c ls) (ChkYes _ dl) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (MkRingBack nc fc rc cp c0 rv (MkSCycle nc fc cp c0 y fp back (MkSimple fc rr fid ls rf rp dl)))))
+
+(def-fns _ $ (many ringar-c : (many (List (Nat)) fc) (many (Nat) d) (subterm many (List (Nat)) xs) -> (many (Checked (RingAr fc xs)) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (ChkYes _ (RaNil fc))))
+  (let-match many (notail $ ringar-c fc d rest) (ChkYes _ ra) ((ChkNo _) (ChkNo _)))
+  (let ((many k) (many co)) (order-c fc x d))
+  (let-match many co (ChkYes _ o) ((ChkNo _) (ChkNo _)))
+  (let-match many (lt-dec (Succ (Succ (Zero))) k) (Yes _ _ _ _ l1) ((No _ _ _ _ _) (ChkNo _)))
+  (let-match many (lt-dec k (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) (Yes _ _ _ _ l2) ((No _ _ _ _ _) (ChkNo _)))
+  (ChkYes _ (RaCons fc rest x k o l1 l2 ra)))
+
+(def-fns _ $ (many spath-c : (many (List (Nat)) f) (many (Nat) x y) (subterm many (Nat) fuel) -> (many (Checked (SomePath f (Nil (Nat)) x y)) r))
+  (let-match many (nat-eq x y) (Unequal _ _ _ _ _) ((Equal _ _ _) (ChkYes _ (MkSomePath f (Nil _) (Nil _) x x (PathHere f (Nil _) x)))))
+  (let-match many fuel (Succ f1) ((Zero) (ChkNo _)))
+  (let-match many (nth-q (Nat) f x) (NQYes _ _ _ z pz) ((NQNo _ _ _) (ChkNo _)))
+  (let-match many (notail $ spath-c f z y f1) (ChkYes _ sp) ((ChkNo _) (ChkNo _)))
+  (let-match erased sp (MkSomePath _ _ xs _ _ w))
+  (ChkYes _ (MkSomePath f (Nil _) (Cons _ x xs) x y (PathStep f (Nil _) xs x z y pz (NotInNil x) w))))
+
+(def-fns _ $ (many face-orbit : (many (List (Nat)) f) (many (Nat) x y) (subterm many (Nat) fuel) -> (many (List (Nat)) r))
+  (let-match many fuel (Succ f1) ((Zero) (Nil _)))
+  (let ((many z)) (get-at _ f y 0))
+  (Cons _ y (match many (nat-eqb z x) (((List (Nat)) r)) ((BTrue) (Nil _)) ((BFalse) (notail $ face-orbit f x z f1)))))
+
+(def-fns _ $ (many r2-pairs : (many (List (Nat)) ec as) (subterm many (List (Nat)) xs) -> (many (List (KEdge)) r))
+  (let-match many xs (Cons _ a rest) ((Nil _) (Nil _)))
+  (let ((many ea)) (get-at _ ec a 0))
+  (let ((many r1)) (notail $ r2-pairs ec as rest))
+  (bif _ (mem-nat ea as) (Cons _ (MkKEdge a ea) r1) r1))
+
+(def-fns _ $ (many find-pair : (many (List (Nat)) fid) (many (Nat) t) (subterm many (List (KEdge)) ps) -> (many (Maybe (KEdge)) r))
+  (let-match many ps (Cons _ pr rest) ((Nil _) (None _)))
+  (let-match many pr (MkKEdge a ea))
+  (match many (nat-eqb (get-at _ fid ea 0) t) _ ((BTrue) (Some _ pr)) ((BFalse) (tail $ find-pair fid t rest))))
+
+(def-fns _ $ (many r2b-c : (many (List (Nat)) ec fc fid as) (many (Nat) d x0 x) (many (List (KEdge)) prs) (subterm many (List (Nat)) bs)
+    -> (many (Checked (R2At ec fc as x0 x)) r))
+  (let-match many bs (Cons _ b rest) ((Nil _) (ChkNo _)))
+  (let ((many eb)) (get-at _ ec b 0))
+  (let-match many (find-pair fid (get-at _ fid eb 0) prs) (Some _ pr) ((None _) (tail $ r2b-c ec fc fid as d x0 x prs rest)))
+  (let-match many pr (MkKEdge a ea))
+  (let-match many (spath-c fc x0 a d) (ChkYes _ pa) ((ChkNo _) (ChkNo _)))
+  (let-match many (nat-at ec a ea) (ChkYes _ pea) ((ChkNo _) (ChkNo _)))
+  (let-match many (in-q ea as) (IQIn _ _ iea) ((IQOut _ _ _) (ChkNo _)))
+  (let-match many (spath-c fc ea eb d) (ChkYes _ pab) ((ChkNo _) (ChkNo _)))
+  (let-match many (nat-at ec b eb) (ChkYes _ peb) ((ChkNo _) (ChkNo _)))
+  (let-match many (spath-c fc b x d) (ChkYes _ pb) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (MkR2At ec fc as x0 x a ea b eb pa pea iea pab peb pb)))
+
+(def-fns _ $ (many r2all-c : (many (List (Nat)) ec fc fid as) (many (Nat) d x0) (many (List (KEdge)) prs) (subterm many (List (Nat)) xs)
+    -> (many (Checked (R2All ec fc as x0 xs)) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (ChkYes _ (R2Nil ec fc as x0))))
+  (let-match many (r2b-c ec fc fid as d x0 x prs (face-orbit fc x x d)) (ChkYes _ p) ((ChkNo _) (ChkNo _)))
+  (let-match many (notail $ r2all-c ec fc fid as d x0 prs rest) (ChkYes _ ra) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (R2Cons ec fc as rest x0 x p ra)))
+
+(def-fns _ $ (many radius-c : (many (List (Nat)) ec fc fid as) (many (Nat) d) (subterm many (List (Nat)) x0s) -> (many (Checked (Radius2 ec fc as)) r))
+  (let-match many x0s (Cons _ x0 rest) ((Nil _) (ChkNo _)))
+  (let-match many (in-q x0 as) (IQIn _ _ jx0) ((IQOut _ _ _) (ChkNo _)))
+  (let-match many (r2all-c ec fc fid as d x0 (r2-pairs ec as (face-orbit fc x0 x0 d)) as) (ChkYes _ ra) ((ChkNo _) (tail $ radius-c ec fc fid as d rest)))
+  (ChkYes _ (MkRadius2 ec fc as x0 jx0 ra)))
 
 (def-fns _ $ (many cfgc-c : (many (Config) cf) -> (many (Checked (CfGc cf)) r))
   (let-match many cf (MkConfig sym cci cp))
@@ -725,8 +909,12 @@
   (let-match many (gcall-c e n r as ids) (ChkYes _ ga) ((ChkNo _) (ChkNo _)))
   (let ((many fid)) (fid-c f d ids))
   (let-match many (resp-to fid f fid) (ChkYes _ rsp) ((ChkNo _) (ChkNo _)))
-  (let-match many (fall-c d e fid as n (tris-c e n as as) (kes-c e as as) as) (ChkYes _ fa) ((ChkNo _) (ChkNo _)))
-  (ChkYes _ (MkCfGc sym cci cp d e n f r as fid c hc (MkKernelList d f r as ids io ka kv) (MkGcOK d e n r as ids io ga) rsp fa)))
+  (let ((many kes)) (kes-c e as as))
+  (let-match many (fall-c e fid as n (refs-c d e fid as n (tris-c e n as as) kes kes) as) (ChkYes _ fa) ((ChkNo _) (ChkNo _)))
+  (let-match many (ringback-c n f r fid rsp) (ChkYes _ rb) ((ChkNo _) (ChkNo _)))
+  (let-match many (radius-c e f fid as d as) (ChkYes _ rd) ((ChkNo _) (ChkNo _)))
+  (let-match many (ringar-c f d r) (ChkYes _ ra) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (MkCfGc sym cci cp d e n f r as fid c hc (MkKernelList d f r as ids io ka kv) (MkGcOK d e n r as ids io ga) rsp fa rb rd ra)))
 
 (def-fns _ $ (many allgc-c : (subterm many (List (Config)) cfs) -> (many (Checked (AllGc cfs)) r))
   (let-match many cfs (Cons _ cf rest) ((Nil _) (ChkYes _ (AgNil))))
