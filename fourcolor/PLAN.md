@@ -701,7 +701,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `--goal proved`, about 50 s with slc and 113 s with the reference
   compiler). `fcgoal.sl` still takes `EmbedValid` as a hypothesis. That
   these statements match Coq's has been checked only by reading.
-- `triad.sl` (load after `evalid.sl`, in the chain of `fcgoal.sl`): triad_valid
+- `triad.sl` (load after `evalid.sl`, whose `orbit-in` it uses, in the chain of `fcgoal.sl`): triad_valid
   of contract.v with minimality as data, and the parts of birkhoff.v's
   SpokeRing section it uses, for faces of any size, as far as both
   compilers check them. Faces are read through a `FaceLab` labelling.

@@ -1,24 +1,7 @@
 ; triad_valid of contract.v with minimality as data, and the parts of birkhoff.v's SpokeRing section it uses, for faces of any
 ; size: the face of a dart read with the labels of its spokes, chordless_spoke_ring, adj12_edge and fcard_adj_max. Load after
-; contract3.sl, in its chain. Faces are read through a FaceLab labelling throughout. That these statements match Coq's has been
-; checked only by reading.
-
-(def-fns _ $ (erased orbit-walk : (erased (Nat) x a b) (erased (List (Nat)) f os s ws) (erased (Orbit f x os) o) (subterm erased (Path f s a b ws) w)
-    (erased (In a os) ia) -> (erased (In b os) r))
-  (let-match erased w (PathStep _ _ ws1 _ a1 _ pa _ w1) ((PathHere _ _ _) ia))
-  (let ((erased o2)) o)
-  (let-match erased o2 (MkOrbit _ xs _ y px wo))
-  (orbit-walk x a1 b f os s ws1 o w1 (match erased ia (((In a1 os) r))
-    ((InHere _ _) (let-match erased (nth-fn _ f x y a1 px pa) (Refl _ _)) (path-start-in f _ xs y x wo))
-    ((InThere _ _ _ ia1) (path-next f _ xs y x a a1 wo ia1 pa)))))
-
-; Every dart on the face of x is on its orbit.
-(def-fns _ $ (erased orbit-in : (erased (Nat) x u) (erased (List (Nat)) f os) (erased (Orbit f x os) o) (erased (SomePath f (Nil (Nat)) x u) sp)
-    -> (erased (In u os) r))
-  (let ((erased o2)) o)
-  (let-match erased o2 (MkOrbit _ xs _ y px wo))
-  (let-match erased sp (MkSomePath _ _ ws _ _ w))
-  (orbit-walk x x u f os (Nil _) ws o w (InHere x xs)))
+; evalid.sl (whose orbit-in it uses), in the chain of fcgoal.sl. Faces are read through a FaceLab labelling throughout. That
+; these statements match Coq's has been checked only by reading.
 
 (def-fns _ $ (erased orbit-lab : (erased (Nat) x l) (erased (List (Nat)) f lab os) (erased (Orbit f x os) o) (erased (Respects lab f lab) rf)
     (erased (Nth (Nat) lab x l) pl) -> (erased (LabAll lab l os) r))
@@ -61,7 +44,7 @@
   (let-match erased fr (MkFRec _ _ _ _ _ _ _ _ _ _ Rs _ o lv dv al rv rl dl plx))
   (let ((erased c2)) c)
   (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl0 cu rfe kfe io ufe lfe fl rlf))
-  (let ((erased s) (erased ps) (erased is)) (respects-val fe Vs Rs u rv (orbit-in x u f Vs o (facelab-same d x u lx f lab fl plx pu))))
+  (let ((erased s) (erased ps) (erased is)) (respects-val fe Vs Rs u rv (orbit-in f Vs x u o (facelab-same d x u lx f lab fl plx pu))))
   (let ((erased eu2) (erased pe2) (erased pf)) (fe-split d u s e n f fe lab c ps))
   (let-match erased (nth-fn _ e u eu eu2 pe pe2) (Refl _ _))
   (in-map lab Rs ls s l is rl (respects-nth lab f lab eu s l rlf pf pl)))
@@ -218,8 +201,8 @@
     pea (facelab-same d ea y ly f lab fl plea py)
     (MkSimple f q lab lq rl rlq
       (DistCons ly _ (NotInCons ly lw _ nyw (NotInCons ly lz _ (apart-sym lz ly nzy) (NotInCons ly lx _ (apart-sym lx ly nxy) (NotInNil ly))))
-      (DistCons lw _ (NotInCons lw lz _ nwz (NotInCons lw lx _ (apart-sym lx lw nxw) (NotInNil lw)))
-      (DistCons lz _ (NotInCons lz lx _ (apart-sym lx lz nxz) (NotInNil lz)) (DistCons lx _ (NotInNil lx) (DistNil))))))))
+        (DistCons lw _ (NotInCons lw lz _ nwz (NotInCons lw lx _ (apart-sym lx lw nxw) (NotInNil lw)))
+          (DistCons lz _ (NotInCons lz lx _ (apart-sym lx lz nxz) (NotInNil lz)) (DistCons lx _ (NotInNil lx) (DistNil))))))))
   (let ((erased ia) (erased ieb)) (values (InThere a y _ (InThere a ex1 _ (InThere a eb _ (InHere a (Nil _))))) (InThere eb y _ (InThere eb ex1 _ (InHere eb (Cons _ a (Nil _)))))))
   (let ((erased ur)) (ring-under d y e n f p h rg))
   (let ((erased hd) (erased zs) (erased ds)) (ds-exists d e n f q h ur))
@@ -340,7 +323,7 @@
 (def-fns _ $ (erased lab-sub : (erased (Nat) d a l) (erased (List (Nat)) f lab os) (erased (FaceLab d f lab) fl) (erased (Orbit f a os) o) (erased (Nth (Nat) lab a l) pa)
     (subterm erased (List (Nat)) Vs) (erased (LabAll lab l Vs) al) -> (erased (WSub Vs os) r))
   (let-match erased al (LabCons _ Vs1 _ v pv al1) ((LabNil _ _) (HSubNil os)))
-  (HSubCons v Vs1 os (orbit-in a v f os o (facelab-same d a v l f lab fl pa pv)) (lab-sub d a l f lab os fl o pa Vs1 al1)))
+  (HSubCons v Vs1 os (orbit-in f os a v o (facelab-same d a v l f lab fl pa pv)) (lab-sub d a l f lab os fl o pa Vs1 al1)))
 
 ; Three darts of a face of more than four darts, each the face image of the one before, are not a whole face.
 (def-fns _ $ (erased absurd tri : (erased (Nat) d x lx k a b c) (erased (List (Nat)) e n f fe lab Vs ls) (erased (FRec d e n f fe lab x lx k Vs ls) fr)
@@ -704,7 +687,7 @@
     (erased (NotAdj e f os y) na) (erased (Nth (Nat) lab x0 l) px) (erased (Nth (Nat) lab w l) pw) (erased (Nth (Nat) e w ew) pe) (erased (Nth (Nat) lab ew ly) pl)
     (erased (Nth (Nat) lab y ly) py) -> (erased (False) r))
   (let-match erased na (MkNotAdj _ _ _ lab2 eos ls2 _ l2 rf2 re rl2 py2 out))
-  (let ((erased ew2) (erased pe2) (erased iew)) (respects-val e os eos w re (orbit-in x0 w f os o (facelab-same d x0 w l f lab fl px pw))))
+  (let ((erased ew2) (erased pe2) (erased iew)) (respects-val e os eos w re (orbit-in f os x0 w o (facelab-same d x0 w l f lab fl px pw))))
   (let-match erased (nth-fn _ e w ew ew2 pe pe2) (Refl _ _))
   (let-match erased (facelab-same d y ew ly f lab fl py pl) (MkSomePath _ _ ws _ _ wy))
   (apart-irrefl l2 (notin-in l2 l2 ls2 out (in-map lab2 eos ls2 ew l2 iew rl2 (path-label f lab2 _ ws y ew l2 wy rf2 py2)))))
