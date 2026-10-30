@@ -1,0 +1,116 @@
+; walkq, flatq and fitqz of quiz.v as relations on the hypermaps of hypermap.sl, over the types of quiz.sl and qfit.sl.
+; Load after qfit.sl.
+
+; Testing q at x visits the darts s before t and asks the arities as before at, each read in ks.
+(def-adts $ (WalkS : ((List (Nat)) e n ks) ((Nat) x) ((Qn) q) ((List (Nat)) s t as at) -> Type)
+  enum
+  (many WS0 : (erased (List (Nat)) e n ks t at) (erased (Nat) x) -> (WalkS e n ks x (Qask0) t t at at))
+  (many WS1 : (erased (List (Nat)) e n ks t at) (erased (Nat) x qa) (erased (Nth (Nat) ks x qa) pa)
+      -> (WalkS e n ks x (Qask1 qa) (Cons (Nat) x t) t (Cons (Nat) qa at) at))
+  (many WSL : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x qa y) (erased (Qn) q) (erased (Nth (Nat) ks x qa) pa)
+      (erased (QStepL e n x y) sp) (erased (WalkS e n ks y q s t as at) w) -> (WalkS e n ks x (QaskL qa q) (Cons (Nat) x s) t (Cons (Nat) qa as) at))
+  (many WSR : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x qa y) (erased (Qn) q) (erased (Nth (Nat) ks x qa) pa)
+      (erased (QStepR e n x y) sp) (erased (WalkS e n ks y q s t as at) w) -> (WalkS e n ks x (QaskR qa q) (Cons (Nat) x s) t (Cons (Nat) qa as) at))
+  (many WSLR : (erased (List (Nat)) e n ks s u t as au at) (erased (Nat) x qa yl yr) (erased (Qn) ql qr) (erased (Nth (Nat) ks x qa) pa)
+      (erased (QStepL e n x yl) sl) (erased (WalkS e n ks yl ql s u as au) wl) (erased (QStepR e n x yr) sr) (erased (WalkS e n ks yr qr u t au at) wr)
+      -> (WalkS e n ks x (QaskLR qa ql qr) (Cons (Nat) x s) t (Cons (Nat) qa as) at))
+  (many WSLL : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x qa xl c c2 y) (erased (Qn) q) (erased (QStepL e n x xl) s1)
+      (erased (Nth (Nat) n xl c) pc) (erased (Nth (Nat) e c c2) pc2) (erased (Nth (Nat) ks c2 qa) pa) (erased (QStepL e n xl y) s2)
+      (erased (WalkS e n ks y q s t as at) w) -> (WalkS e n ks x (QaskLL qa q) (Cons (Nat) c2 s) t (Cons (Nat) qa as) at))
+  (many WSRR : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x qa xr y) (erased (Qn) q) (erased (QStepR e n x xr) s1)
+      (erased (Nth (Nat) ks xr qa) pa) (erased (QStepR e n xr y) s2) (erased (WalkS e n ks y q s t as at) w)
+      -> (WalkS e n ks x (QaskRR qa q) (Cons (Nat) xr s) t (Cons (Nat) qa as) at)))
+
+; walkqz: the walk of q0 at x then that of q1 at edge x.
+(def-adts $ (WalkZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) ((List (Nat)) s as) -> Type)
+  enum
+  (many MkWalkZ : (erased (List (Nat)) e n ks s u as au) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (WalkS e n ks x q0 s u as au) w0)
+      (erased (Nth (Nat) e x x1) px) (erased (WalkS e n ks x1 q1 u (Nil (Nat)) au (Nil (Nat))) w1) -> (WalkZ e n ks x (MkQuiz q0 q1) s as)))
+
+; fitqz qz x.
+(def-adts $ (FitZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) -> Type)
+  enum
+  (many MkFitZ : (erased (List (Nat)) e n ks) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (FitQ e n ks x q0) f0) (erased (Nth (Nat) e x x1) px)
+      (erased (FitQ e n ks x1 q1) f1) -> (FitZ e n ks x (MkQuiz q0 q1))))
+
+(def-fns _ $ (erased fitq-walk : (erased (List (Nat)) e n ks t at) (erased (Nat) x) (erased (Qn) q) (subterm erased (FitQ e n ks x q) fq)
+    -> (erased (List (Nat)) s as) (erased (WalkS e n ks x q s t as at) w))
+  (match erased fq _
+    ((FQ0 _ _ _ _) (values t at (WS0 e n ks t at x)))
+    ((FQ1 _ _ _ _ qa pa) (values (Cons _ x t) (Cons _ qa at) (WS1 e n ks t at x qa pa)))
+    ((FQL _ _ _ _ qa y q1 pa sp r)
+      (let ((erased s) (erased as) (erased w)) (fitq-walk e n ks t at y q1 r))
+      (values (Cons _ x s) (Cons _ qa as) (WSL e n ks s t as at x qa y q1 pa sp w)))
+    ((FQR _ _ _ _ qa y q1 pa sp r)
+      (let ((erased s) (erased as) (erased w)) (fitq-walk e n ks t at y q1 r))
+      (values (Cons _ x s) (Cons _ qa as) (WSR e n ks s t as at x qa y q1 pa sp w)))
+    ((FQLR _ _ _ _ qa yl yr ql qr pa sl rl sr rr)
+      (let ((erased u) (erased au) (erased wr)) (fitq-walk e n ks t at yr qr rr))
+      (let ((erased s) (erased as) (erased wl)) (fitq-walk e n ks u au yl ql rl))
+      (values (Cons _ x s) (Cons _ qa as) (WSLR e n ks s u t as au at x qa yl yr ql qr pa sl wl sr wr)))
+    ((FQLL _ _ _ _ qa xl c c2 y q1 s1 pc pc2 pa s2 r)
+      (let ((erased s) (erased as) (erased w)) (fitq-walk e n ks t at y q1 r))
+      (values (Cons _ c2 s) (Cons _ qa as) (WSLL e n ks s t as at x qa xl c c2 y q1 s1 pc pc2 pa s2 w)))
+    ((FQRR _ _ _ _ qa xr y q1 s1 pa s2 r)
+      (let ((erased s) (erased as) (erased w)) (fitq-walk e n ks t at y q1 r))
+      (values (Cons _ xr s) (Cons _ qa as) (WSRR e n ks s t as at x qa xr y q1 s1 pa s2 w)))))
+
+(def-fns _ $ (erased fitz-walk : (erased (List (Nat)) e n ks) (erased (Nat) x) (erased (Quiz) qz) (erased (FitZ e n ks x qz) fz)
+    -> (erased (List (Nat)) s as) (erased (WalkZ e n ks x qz s as) w))
+  (let-match erased fz (MkFitZ _ _ _ _ x1 q0 q1 f0 px f1))
+  (let ((erased u) (erased au) (erased w1)) (fitq-walk e n ks (Nil _) (Nil _) x1 q1 f1))
+  (let ((erased s) (erased as) (erased w0)) (fitq-walk e n ks u au x q0 f0))
+  (values s as (MkWalkZ e n ks s u as au x x1 q0 q1 w0 px w1)))
+
+; Two walks of one question, in any two maps, ask the same arities.
+(def-fns _ $ (erased walk-as : (erased (List (Nat)) e n ks e2 n2 ks2 s t as at s2 t2 as2) (erased (Nat) x x2) (erased (Qn) q)
+    (subterm erased (WalkS e n ks x q s t as at) w) (erased (WalkS e2 n2 ks2 x2 q s2 t2 as2 at) w2) -> (erased (Eq (List (Nat)) as as2) r))
+  (match erased w _
+    ((WS0 _ _ _ _ _ _) (let-match erased w2 (WS0 _ _ _ _ _ _)) (Refl _ as))
+    ((WS1 _ _ _ _ _ _ qa _) (let-match erased w2 (WS1 _ _ _ _ _ _ _ _)) (Refl _ as))
+    ((WSL _ _ _ s1 _ as1 _ _ _ y q1 _ _ w1)
+      (let-match erased w2 (WSL _ _ _ s3 _ as3 _ _ _ y2 _ _ _ w3))
+      (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))
+      (Refl _ as))
+    ((WSR _ _ _ s1 _ as1 _ _ _ y q1 _ _ w1)
+      (let-match erased w2 (WSR _ _ _ s3 _ as3 _ _ _ y2 _ _ _ w3))
+      (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))
+      (Refl _ as))
+    ((WSLR _ _ _ s1 u _ as1 au _ _ _ yl yr ql qr _ _ wl _ wr)
+      (let-match erased w2 (WSLR _ _ _ s3 u3 _ as3 au3 _ _ _ yl3 yr3 _ _ _ _ wl3 _ wr3))
+      (let-match erased (walk-as e n ks e2 n2 ks2 u t au at u3 t2 au3 yr yr3 qr wr wr3) (Refl _ _))
+      (let-match erased (walk-as e n ks e2 n2 ks2 s1 u as1 au s3 u3 as3 yl yl3 ql wl wl3) (Refl _ _))
+      (Refl _ as))
+    ((WSLL _ _ _ s1 _ as1 _ _ _ _ _ _ y q1 _ _ _ _ _ w1)
+      (let-match erased w2 (WSLL _ _ _ s3 _ as3 _ _ _ _ _ _ y2 _ _ _ _ _ _ w3))
+      (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))
+      (Refl _ as))
+    ((WSRR _ _ _ s1 _ as1 _ _ _ _ y q1 _ _ _ w1)
+      (let-match erased w2 (WSRR _ _ _ s3 _ as3 _ _ _ _ y2 _ _ _ _ w3))
+      (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))
+      (Refl _ as))))
+
+; The walked darts carry the asked arities: map ks s = as when map ks t = at.
+(def-fns _ $ (erased walk-arity : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x) (erased (Qn) q) (subterm erased (WalkS e n ks x q s t as at) w)
+    (erased (Respects ks t at) rt) -> (erased (Respects ks s as) r))
+  (match erased w _
+    ((WS0 _ _ _ _ _ _) rt)
+    ((WS1 _ _ _ _ _ _ qa pa) (RespCons ks t at x qa pa rt))
+    ((WSL _ _ _ s1 _ as1 _ _ qa y q1 pa _ w1) (RespCons ks s1 as1 x qa pa (walk-arity e n ks s1 t as1 at y q1 w1 rt)))
+    ((WSR _ _ _ s1 _ as1 _ _ qa y q1 pa _ w1) (RespCons ks s1 as1 x qa pa (walk-arity e n ks s1 t as1 at y q1 w1 rt)))
+    ((WSLR _ _ _ s1 u _ as1 au _ _ qa yl yr ql qr pa _ wl _ wr)
+      (RespCons ks s1 as1 x qa pa (walk-arity e n ks s1 u as1 au yl ql wl (walk-arity e n ks u t au at yr qr wr rt))))
+    ((WSLL _ _ _ s1 _ as1 _ _ qa _ _ c2 y q1 _ _ _ pa _ w1) (RespCons ks s1 as1 c2 qa pa (walk-arity e n ks s1 t as1 at y q1 w1 rt)))
+    ((WSRR _ _ _ s1 _ as1 _ _ qa xr y q1 _ pa _ w1) (RespCons ks s1 as1 xr qa pa (walk-arity e n ks s1 t as1 at y q1 w1 rt)))))
+
+(def-fns _ $ (erased walkz-arity : (erased (List (Nat)) e n ks s as) (erased (Nat) x) (erased (Quiz) qz) (erased (WalkZ e n ks x qz s as) w)
+    -> (erased (Respects ks s as) r))
+  (let-match erased w (MkWalkZ _ _ _ _ u _ au _ x1 q0 q1 w0 _ w1))
+  (walk-arity e n ks s u as au x q0 w0 (walk-arity e n ks u (Nil _) au (Nil _) x1 q1 w1 (RespNil ks))))
+
+(def-fns _ $ (erased walkz-as : (erased (List (Nat)) e n ks e2 n2 ks2 s as s2 as2) (erased (Nat) x x2) (erased (Quiz) qz)
+    (erased (WalkZ e n ks x qz s as) w) (erased (WalkZ e2 n2 ks2 x2 qz s2 as2) w2) -> (erased (Eq (List (Nat)) as as2) r))
+  (let-match erased w (MkWalkZ _ _ _ _ u _ au _ x1 q0 q1 w0 _ w1))
+  (let-match erased w2 (MkWalkZ _ _ _ _ u2 _ au2 _ x3 _ _ w2a _ w2b))
+  (let-match erased (walk-as e n ks e2 n2 ks2 u (Nil _) au (Nil _) u2 (Nil _) au2 x1 x3 q1 w1 w2b) (Refl _ _))
+  (walk-as e n ks e2 n2 ks2 s u as au s2 u2 as2 x x2 q0 w0 w2a))
