@@ -108,17 +108,17 @@
   (AllNZCons g (Cons (Col) h r) ng (AllNZCons h r nh a)))
 
 ; Every trace that the steps cp1 can give from et has its normalisation in t.
-(def-fns _ $ (erased cov-mem : (erased (List (Step)) cp1) (erased (List (Col)) et et2) (erased (Ctree) t) (subterm erased (Cov cp1 et t) cv)
+(def-fns _ $ (erased cov-mem : (erased (List (Step)) cp1) (erased (List (Col)) et et2) (erased (Ctree) t) (subterm erased (CpCov cp1 et t) cv)
     (erased (StepsTr cp1 et et2) st) (erased (AllNZ et) nz) -> (erased (BrMem et2 t) r))
   (match erased cv _
-    ((CvNil _ _ bm) (let-match erased st (SNil _)) bm)
-    (absurd (CvVoid s cp2 _ _ nt) (let-match erased st (SCons _ _ _ et1 _ s1 _)) (notr-refute s et et1 nt s1))
-    ((CvR k cp2 _ et3 _ rt c)
+    ((CoNil _ _ bm) (let-match erased st (SNil _)) bm)
+    (absurd (CoVoid s cp2 _ _ nt) (let-match erased st (SCons _ _ _ et1 _ s1 _)) (notr-refute s et et1 nt s1))
+    ((CoR k cp2 _ et3 _ rt c)
       (let-match erased st (SCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STR _ _ _ rt1))
       (let-match erased (rot-fn (Col) k et et1 et3 rt1 rt) (Refl _ _))
       (cov-mem cp2 et1 et2 t c st1 (allnz-rot k et et1 rt nz)))
-    ((CvU cp2 _ t1 t2 t3 u _ ou o c1 c2 c3)
+    ((CoU cp2 _ t1 t2 t3 u _ ou o c1 c2 c3)
       (let-match erased st (SCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STU c _ nzc))
       (let ((erased a)) (allnz2 c c et nzc nzc nz))
@@ -126,7 +126,7 @@
         ((NZ1) (brmem-or t1 u t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
         ((NZ2) (brmem-or t1 u t et2 o (InR _ _ (brmem-or t2 t3 u et2 ou (InL _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
         ((NZ3) (brmem-or t1 u t et2 o (InR _ _ (brmem-or t2 t3 u et2 ou (InR _ _ (cov-mem cp2 et1 et2 t3 c3 st1 a))))))))
-    ((CvY e1 e2 e3 r1 cp2 t1 t2 _ p2 p3 c1 c2 o)
+    ((CoY e1 e2 e3 r1 cp2 t1 t2 _ p2 p3 c1 c2 o)
       (let-match erased st (SCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STY _ g h _ pa ng nh))
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
@@ -135,7 +135,7 @@
       (match erased (third-pick e1 e2 e3 g h (third-of e1 e2 e3 a23 nz1 n2 n3) (third-of e1 g h pa nz1 ng nh)) _
         ((PkSame _ _) (brmem-or t1 t2 t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
         ((PkSwap _ _) (brmem-or t1 t2 t et2 o (InR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
-    ((CvH0 e1 e2 g1 g2 r2 cp2 t1 t2 _ p p2 p3 c1 c2 o)
+    ((CoH0 e1 e2 g1 g2 r2 cp2 t1 t2 _ p p2 p3 c1 c2 o)
       (let-match erased st (SCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STH _ _ ee g s h _ pee ps ph ng ns nh))
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
@@ -147,7 +147,7 @@
       (match erased (third-pick e1 g1 g2 g s (third-of e1 g1 g2 a23 nz1 n2 n3) (third-of e1 g s ps nz1 ng ns)) _
         ((PkSame _ _) (brmem-or t1 t2 t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
         ((PkSwap _ _) (brmem-or t1 t2 t et2 o (InR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
-    ((CvH e1 e2 sm r2 cp2 _ p nzs c)
+    ((CoH e1 e2 sm r2 cp2 _ p nzs c)
       (let-match erased st (SCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STH _ _ ee g s h _ pee ps ph ng ns nh))
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
@@ -256,7 +256,7 @@
     (permc-invert (MkPerm a b c) g (C3) c pi (PC3 a b c))))
 
 ; Up to a colour permutation, every trace that the steps cp1 can give from c c has its normalisation in t.
-(def-fns _ $ (erased cov0-mem : (erased (List (Step)) cp1) (erased (Col) c) (erased (List (Col)) et2) (erased (Ctree) t) (subterm erased (Cov0 cp1 t) cv)
+(def-fns _ $ (erased cov0-mem : (erased (List (Step)) cp1) (erased (Col) c) (erased (List (Col)) et2) (erased (Ctree) t) (subterm erased (CpCov0 cp1 t) cv)
     (erased (StepsTr cp1 (Cons (Col) c (Cons (Col) c (Nil (Col)))) et2) st) (erased (NZ c) nz)
     -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Col)) pet) (erased (PermT g et2 pet) pt) (erased (BrMem pet t) bm))
   (let ((erased cc2) (erased nil)) (values (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Nil (Col))))
@@ -389,7 +389,7 @@
 
 ; The tree t0 of cpcolor0-c holds rest, normalised by any colour permutation taking e1 to C1 to an even tail, for a trace
 ; e0 :: e1 :: rest that the steps rcp can give from c c.
-(def-fns _ $ (erased core-mem : (erased (List (Step)) rcp) (erased (Ctree) t0) (erased (Cov0 rcp t0) cv) (erased (Col) c e0 e1) (erased (List (Col)) rest l2)
+(def-fns _ $ (erased core-mem : (erased (List (Step)) rcp) (erased (Ctree) t0) (erased (CpCov0 rcp t0) cv) (erased (Col) c e0 e1) (erased (List (Col)) rest l2)
     (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
     (erased (AllNZ (Cons (Col) e0 (Cons (Col) e1 rest))) a) (erased (Perm) rho) (erased (IsPerm rho) irho) (erased (PermC rho e1 (C1)) prho)
     (erased (PermT rho rest l2) ptr) (erased (EvenTail l2 (BTrue)) evl) -> (erased (CtMem t0 l2) r))
@@ -416,7 +416,7 @@
         ((NrOdd _ _ _ qq) (let-match erased (permt-fn p132 grest q l2 qq ptz) (Refl _ _)) mq)))))
 
 ; The tree of cpcolor-c holds every even trace e1 :: rest for which e0 :: e1 :: rest is reached from c c by its steps.
-(def-fns _ $ (erased comp-mem : (erased (List (Step)) rcp) (erased (Ctree) t0 ta tb t) (erased (Cov0 rcp t0) cv) (erased (CtCons t0 ta tb t) cc)
+(def-fns _ $ (erased comp-mem : (erased (List (Step)) rcp) (erased (Ctree) t0 ta tb t) (erased (CpCov0 rcp t0) cv) (erased (CtCons t0 ta tb t) cc)
     (erased (CtPerm p312 t0 ta) pa) (erased (CtPerm p231 t0 tb) pb) (erased (Col) c e0 e1) (erased (List (Col)) rest)
     (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
     (erased (AllNZ (Cons (Col) e0 (Cons (Col) e1 rest))) a) (erased (EvenT (Cons (Col) e1 rest) (BTrue)) ev) -> (erased (CtMem t (Cons (Col) e1 rest)) r))

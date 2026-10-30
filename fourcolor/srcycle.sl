@@ -1,11 +1,11 @@
 ; srcycleI of geometry.v, on the rings of snip.sl. Load after snip.sl.
 
 ; No dart of zs is on the face of x, each told apart from x by a labelling constant on the faces (the bonds gf).
-(def-adts $ (SepAll : ((List (Bond)) gf) ((Nat) x) ((List (Nat)) zs) -> Type)
+(def-adts $ (FaceApart : ((List (Bond)) gf) ((Nat) x) ((List (Nat)) zs) -> Type)
   enum
-  (many SANil : (erased (List (Bond)) gf) (erased (Nat) x) -> (SepAll gf x (Nil (Nat))))
-  (many SACons : (erased (List (Bond)) gf) (erased (Nat) x z) (erased (List (Nat)) zs) (erased (Sep gf x z) s) (erased (SepAll gf x zs) rest)
-      -> (SepAll gf x (Cons (Nat) z zs))))
+  (many FANil : (erased (List (Bond)) gf) (erased (Nat) x) -> (FaceApart gf x (Nil (Nat))))
+  (many FACons : (erased (List (Bond)) gf) (erased (Nat) x z) (erased (List (Nat)) zs) (erased (Sep gf x z) s) (erased (FaceApart gf x zs) rest)
+      -> (FaceApart gf x (Cons (Nat) z zs))))
 
 ; srpath of geometry.v: from x the darts p, each on the face of the edge image of the one before and on no face of the
 ; darts before that one, the edge image of the last on the face of x0; gf holds the bonds of the face permutation.
@@ -14,7 +14,7 @@
   (many SRNil : (erased (List (Nat)) e f) (erased (List (Bond)) gf) (erased (Nat) x0 x ex) (erased (Nth (Nat) e x ex) pe) (erased (SomePath f (Nil (Nat)) ex x0) w)
       -> (SRPath e f gf x0 x (Nil (Nat))))
   (many SRCons : (erased (List (Nat)) e f p) (erased (List (Bond)) gf) (erased (Nat) x0 x ex y) (erased (Nth (Nat) e x ex) pe)
-      (erased (SomePath f (Nil (Nat)) ex y) w) (erased (SepAll gf x p) sa) (erased (SRPath e f gf x0 y p) rest) -> (SRPath e f gf x0 x (Cons (Nat) y p))))
+      (erased (SomePath f (Nil (Nat)) ex y) w) (erased (FaceApart gf x p) sa) (erased (SRPath e f gf x0 y p) rest) -> (SRPath e f gf x0 x (Cons (Nat) y p))))
 
 ; The class labels of darts told apart are apart.
 (def-fns _ $ (erased sep-lab : (erased (Nat) d a b la lb) (erased (List (Nat)) lab rs ids) (erased (List (Bond)) g) (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro)
@@ -28,9 +28,9 @@
       (sep-conn g a b s (conn-cat g a la b (conn-sym g la a ca) cb)))))
 
 (def-fns _ $ (erased seps-notin : (erased (Nat) d x lx) (erased (List (Nat)) lab rs ids zs ls) (erased (List (Bond)) g) (erased (Iota d ids) io)
-    (erased (Rooted g rs ids lab) ro) (erased (Length (Nat) lab d) ll) (erased (Nth (Nat) lab x lx) px) (subterm erased (SepAll g x zs) sa)
+    (erased (Rooted g rs ids lab) ro) (erased (Length (Nat) lab d) ll) (erased (Nth (Nat) lab x lx) px) (subterm erased (FaceApart g x zs) sa)
     (erased (Respects lab zs ls) rl) -> (erased (NotIn lx ls) r))
-  (let-match erased sa (SACons _ _ z zs1 s sa1) ((SANil _ _) (let-match erased rl (RespNil _)) (NotInNil lx)))
+  (let-match erased sa (FACons _ _ z zs1 s sa1) ((FANil _ _) (let-match erased rl (RespNil _)) (NotInNil lx)))
   (let-match erased rl (RespCons _ _ ls1 _ lz pz rl1))
   (NotInCons lx lz ls1 (sep-lab d x z lx lz lab rs ids g io ro s px pz ll) (seps-notin d x lx lab rs ids zs1 ls1 g io ro ll px sa1 rl1)))
 
