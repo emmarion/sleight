@@ -354,3 +354,109 @@
   (unary 4)
   (lt-irrefl 4 (lt-le-trans 4 k 4 l4 (lt-weaken k 4 (pigeonhole Vs os k 3 dv (lab-sub d a lx f lab os fl ob pa Vs al) lv
     (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))))))
+
+(def-fns _ $ (erased absurd fan-or : (erased (Nat) d u0 u1 u2 u3) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pm)
+    (erased (HOr (Nth (Nat) f u0 u1) (Nth (Nat) f u1 u0)) o1) (erased (HOr (Nth (Nat) f u0 u2) (Nth (Nat) f u2 u0)) o2)
+    (erased (HOr (Nth (Nat) f u0 u3) (Nth (Nat) f u3 u0)) o3) (erased (Apart (Nat) Lt u1 u2) a12) (erased (Apart (Nat) Lt u1 u3) a13)
+    (erased (Apart (Nat) Lt u2 u3) a23) -> (erased (False) r))
+  (match erased o1 _
+    (absurd (OrL _ _ p1) (match erased o2 _
+      (absurd (OrL _ _ p2) (same-out u0 u1 u2 f p1 p2 a12))
+      (absurd (OrR _ _ q2) (match erased o3 _
+        (absurd (OrL _ _ p3) (same-out u0 u1 u3 f p1 p3 a13))
+        (absurd (OrR _ _ q3) (same-in d u0 u2 u3 f fi pm q2 q3 a23))))))
+    (absurd (OrR _ _ q1) (match erased o2 _
+      (absurd (OrR _ _ q2) (same-in d u0 u1 u2 f fi pm q1 q2 a12))
+      (absurd (OrL _ _ p2) (match erased o3 _
+        (absurd (OrL _ _ p3) (same-out u0 u2 u3 f p2 p3 a23))
+        (absurd (OrR _ _ q3) (same-in d u0 u1 u3 f fi pm q1 q3 a13))))))))
+
+(def-fns _ $ (erased absurd tri-or : (erased (Nat) d x lx k u1 u2 u3) (erased (List (Nat)) e n f fe lab Vs ls) (erased (FRec d e n f fe lab x lx k Vs ls) fr)
+    (erased (FaceLab d f lab) fl) (erased (Lt 4 k) l4) (erased (Nth (Nat) lab u1 lx) pu1)
+    (erased (HOr (Nth (Nat) f u1 u2) (Nth (Nat) f u2 u1)) o12) (erased (HOr (Nth (Nat) f u1 u3) (Nth (Nat) f u3 u1)) o13)
+    (erased (HOr (Nth (Nat) f u2 u3) (Nth (Nat) f u3 u2)) o23) (erased (Apart (Nat) Lt u1 u2) a12) (erased (Apart (Nat) Lt u1 u3) a13)
+    (erased (Apart (Nat) Lt u2 u3) a23) -> (erased (False) r))
+  (match erased o12 _
+    (absurd (OrL _ _ p12) (match erased o13 _
+      (absurd (OrL _ _ p13) (same-out u1 u2 u3 f p12 p13 a23))
+      (absurd (OrR _ _ q13) (match erased o23 _
+        (absurd (OrL _ _ p23) (tri d x lx k u1 u2 u3 e n f fe lab Vs ls fr fl l4 pu1 p12 p23 q13 (apart-sym u1 u2 a12) (apart-sym u1 u3 a13)))
+        (absurd (OrR _ _ q23) (same-out u3 u1 u2 f q13 q23 a12))))))
+    (absurd (OrR _ _ q12) (match erased o13 _
+      (absurd (OrL _ _ p13) (match erased o23 _
+        (absurd (OrL _ _ p23) (same-out u2 u1 u3 f q12 p23 a13))
+        (absurd (OrR _ _ q23) (tri d x lx k u1 u3 u2 e n f fe lab Vs ls fr fl l4 pu1 p13 q23 q12 (apart-sym u1 u3 a13) (apart-sym u1 u2 a12)))))
+      (absurd (OrR _ _ q13) (match erased o23 _
+        (absurd (OrL _ _ p23) (same-out u2 u1 u3 f q12 p23 a13))
+        (absurd (OrR _ _ q23) (same-out u3 u1 u2 f q13 q23 a12))))))))
+
+; cross_adj: faces ti and tj adjacent to lx through ui and uj and to lh through wi and wj, with lx not adjacent to lh, are
+; adjacent (adj12), so ui and uj follow one another on their face (consec), or the map reduces.
+(def-fns _ $ (erased cross : (erased (Level) B) (erased (Nat) d ui eui uj euj wi ewi wj ewj ti tj lx lh xr kx) (erased (List (Nat)) e n f fe lab Vx lsx)
+    (erased (MinCx B d e n f fe lab) m) (erased (FRec d e n f fe lab xr lx kx Vx lsx) fx)
+    (erased (Nth (Nat) lab ui lx) pui) (erased (Nth (Nat) e ui eui) peui) (erased (Nth (Nat) lab eui ti) plui)
+    (erased (Nth (Nat) lab uj lx) puj) (erased (Nth (Nat) e uj euj) peuj) (erased (Nth (Nat) lab euj tj) pluj)
+    (erased (Nth (Nat) lab wi lh) pwi) (erased (Nth (Nat) e wi ewi) pewi) (erased (Nth (Nat) lab ewi ti) plwi)
+    (erased (Nth (Nat) lab wj lh) pwj) (erased (Nth (Nat) e wj ewj) pewj) (erased (Nth (Nat) lab ewj tj) plwj)
+    (erased (Apart (Nat) Lt ti tj) nij) (erased (Apart (Nat) Lt lx lh) nxh) (erased (NotIn lh lsx) ox) (erased (Apart (Nat) Lt ui uj) aij)
+    -> (erased (HOr (HOr (Nth (Nat) f ui uj) (Nth (Nat) f uj ui)) (Reduces B d e n f)) r))
+  (let ((erased m2)) m)
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
+  (let ((erased c2)) c)
+  (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased k) (erased o)) (order-at d eui f fi pmf (perm-val d ui eui e nf pme peui)))
+  (let ((erased lz) (erased Vz) (erased lsz) (erased fo)) (fr-make B d eui k e n f fe lab m o))
+  (let-match erased fo (OrL _ _ fz) ((OrR _ _ r) (OrR _ _ r)))
+  (let ((erased fz2)) fz)
+  (let-match erased fz2 (MkFRec _ _ _ _ _ _ _ _ _ _ Rs _ oz lv dv al rv rlz dl plx))
+  (let-match erased (nth-fn _ lab eui lz ti plx plui) (Refl _ _))
+  (match erased (in-dec tj lsz) _
+    ((OrL _ _ iz)
+      (let ((erased z) (erased ez) (erased _) (erased pz) (erased pez) (erased plz)) (fr-wit d eui ti k tj e n f fe lab Vz lsz fz c iz))
+      (consec B d ui uj eui euj z ez lx ti tj e n f fe lab m pui puj aij peui plui peuj pluj pz pez plz))
+    ((OrR _ _ oz2)
+      (let ((erased pwj2) (erased _)) (plain-eq d wj ewj e pl (pre-lt d wj ewj e nf pme pewj) pewj))
+      (let ((erased pwi2) (erased _)) (plain-eq d wi ewi e pl (pre-lt d wi ewi e nf pme pewi) pewi))
+      (OrR _ _ (adj12 B d uj euj ewj wj ewi wi ui eui lx tj lh ti xr kx eui k e n f fe lab Vx lsx Vz lsz m fx fz
+        puj peuj pluj plwj pwj2 pwj plwi pwi2 pwi pui peui plui nij oz2 nxh ox)))))
+
+; fcard_adj_max: with the faces lx and lh apart and the first of more than four darts, three distinct faces adjacent to both
+; make the map reduce.
+(def-fns _ $ (erased adj-max : (erased (Level) B) (erased (Nat) d xr lx kx hr lh kh t1 t2 t3) (erased (List (Nat)) e n f fe lab Vx lsx Vh lsh)
+    (erased (MinCx B d e n f fe lab) m) (erased (FRec d e n f fe lab xr lx kx Vx lsx) fx) (erased (FRec d e n f fe lab hr lh kh Vh lsh) fh)
+    (erased (Lt 4 kx) l4) (erased (Apart (Nat) Lt lx lh) nxh) (erased (Apart (Nat) Lt t1 t2) n12) (erased (Apart (Nat) Lt t1 t3) n13)
+    (erased (Apart (Nat) Lt t2 t3) n23) (erased (In t1 lsx) x1) (erased (In t2 lsx) x2) (erased (In t3 lsx) x3) (erased (In t1 lsh) h1)
+    (erased (In t2 lsh) h2) (erased (In t3 lsh) h3) -> (erased (Reduces B d e n f) r))
+  (let ((erased m2)) m)
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
+  (let ((erased c2)) c)
+  (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased u1) (erased eu1) (erased _) (erased pu1) (erased peu1) (erased plu1)) (fr-wit d xr lx kx t1 e n f fe lab Vx lsx fx c x1))
+  (let ((erased u2) (erased eu2) (erased _) (erased pu2) (erased peu2) (erased plu2)) (fr-wit d xr lx kx t2 e n f fe lab Vx lsx fx c x2))
+  (let ((erased u3) (erased eu3) (erased _) (erased pu3) (erased peu3) (erased plu3)) (fr-wit d xr lx kx t3 e n f fe lab Vx lsx fx c x3))
+  (let ((erased w1) (erased ew1) (erased _) (erased pw1) (erased pew1) (erased plw1)) (fr-wit d hr lh kh t1 e n f fe lab Vh lsh fh c h1))
+  (let ((erased w2) (erased ew2) (erased _) (erased pw2) (erased pew2) (erased plw2)) (fr-wit d hr lh kh t2 e n f fe lab Vh lsh fh c h2))
+  (let ((erased w3) (erased ew3) (erased _) (erased pw3) (erased pew3) (erased plw3)) (fr-wit d hr lh kh t3 e n f fe lab Vh lsh fh c h3))
+  (let ((erased a12) (erased a13) (erased a23)) (values (u-apart u1 u2 eu1 eu2 t1 t2 e lab n12 peu1 peu2 plu1 plu2)
+    (u-apart u1 u3 eu1 eu3 t1 t3 e lab n13 peu1 peu3 plu1 plu3) (u-apart u2 u3 eu2 eu3 t2 t3 e lab n23 peu2 peu3 plu2 plu3)))
+  (match erased (in-dec lh lsx) _
+    ((OrL _ _ ih)
+      (let ((erased u0) (erased eu0) (erased _) (erased pu0) (erased peu0) (erased plu0)) (fr-wit d xr lx kx lh e n f fe lab Vx lsx fx c ih))
+      (let ((erased a01) (erased a02) (erased a03)) (values
+        (u-apart u0 u1 eu0 eu1 lh t1 e lab (edge-apart d w1 ew1 lh t1 e n f fe lab c pew1 pw1 plw1) peu0 peu1 plu0 plu1)
+        (u-apart u0 u2 eu0 eu2 lh t2 e lab (edge-apart d w2 ew2 lh t2 e n f fe lab c pew2 pw2 plw2) peu0 peu2 plu0 plu2)
+        (u-apart u0 u3 eu0 eu3 lh t3 e lab (edge-apart d w3 ew3 lh t3 e n f fe lab c pew3 pw3 plw3) peu0 peu3 plu0 plu3)))
+      (let-match erased (consec B d u0 u1 eu0 eu1 w1 ew1 lx lh t1 e n f fe lab m pu0 pu1 a01 peu0 plu0 peu1 plu1 pw1 pew1 plw1) (OrL _ _ o1) ((OrR _ _ r) r))
+      (let-match erased (consec B d u0 u2 eu0 eu2 w2 ew2 lx lh t2 e n f fe lab m pu0 pu2 a02 peu0 plu0 peu2 plu2 pw2 pew2 plw2) (OrL _ _ o2) ((OrR _ _ r) r))
+      (let-match erased (consec B d u0 u3 eu0 eu3 w3 ew3 lx lh t3 e n f fe lab m pu0 pu3 a03 peu0 plu0 peu3 plu3 pw3 pew3 plw3) (OrL _ _ o3) ((OrR _ _ r) r))
+      (match erased (fan-or d u0 u1 u2 u3 f fi pmf o1 o2 o3 a12 a13 a23) _))
+    ((OrR _ _ ox)
+      (let-match erased (cross B d u1 eu1 u2 eu2 w1 ew1 w2 ew2 t1 t2 lx lh xr kx e n f fe lab Vx lsx m fx pu1 peu1 plu1 pu2 peu2 plu2
+        pw1 pew1 plw1 pw2 pew2 plw2 n12 nxh ox a12) (OrL _ _ o12) ((OrR _ _ r) r))
+      (let-match erased (cross B d u1 eu1 u3 eu3 w1 ew1 w3 ew3 t1 t3 lx lh xr kx e n f fe lab Vx lsx m fx pu1 peu1 plu1 pu3 peu3 plu3
+        pw1 pew1 plw1 pw3 pew3 plw3 n13 nxh ox a13) (OrL _ _ o13) ((OrR _ _ r) r))
+      (let-match erased (cross B d u2 eu2 u3 eu3 w2 ew2 w3 ew3 t2 t3 lx lh xr kx e n f fe lab Vx lsx m fx pu2 peu2 plu2 pu3 peu3 plu3
+        pw2 pew2 plw2 pw3 pew3 plw3 n23 nxh ox a23) (OrL _ _ o23) ((OrR _ _ r) r))
+      (match erased (tri-or d xr lx kx u1 u2 u3 e n f fe lab Vx lsx fx fl l4 pu1 o12 o13 o23 a12 a13 a23) _))))
