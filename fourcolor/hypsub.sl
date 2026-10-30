@@ -374,3 +374,114 @@
     (sub-trans rs st u (app-sub rs1 rs2 rs st aprs (app-sub-l s t st rs1 ap sr1) (app-sub-r s t st rs2 ap sr2)) us)
     (pairsep-union d s t rs1 rs2 rs g aprs ps1 ps2 sr1 sr2 sh bg dj uds udt)
     (covers-union g s t st rs1 rs2 rs u cv1 cv2 aprs ap su)))
+
+; Each dart x of xs goes by f1 to a dart y of t, which f2 sends to a dart joined to x in g.
+(def-adts $ (Lift : ((List (Bond)) g) ((List (Nat)) f1 f2 t xs) -> Type)
+  enum
+  (many LiftNil : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t) -> (Lift g f1 f2 t (Nil (Nat))))
+  (many LiftCons : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t xs) (erased (Nat) x y z) (erased (Nth (Nat) f1 x y) p1) (erased (In y t) iy)
+      (erased (Nth (Nat) f2 y z) p2) (erased (Conn g x z) c) (erased (Lift g f1 f2 t xs) rest) -> (Lift g f1 f2 t (Cons (Nat) x xs))))
+
+; Each bond of g has both ends off xs, or both on xs and sent by f to darts joined in g2.
+(def-adts $ (Moves : ((List (Bond)) g) ((List (Nat)) xs f) ((List (Bond)) g2) -> Type)
+  enum
+  (many MvNil : (erased (List (Nat)) xs f) (erased (List (Bond)) g2) -> (Moves (Nil (Bond)) xs f g2))
+  (many MvIn : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (erased (Nat) x y x2 y2) (erased (In x xs) ix) (erased (In y xs) iy)
+      (erased (Nth (Nat) f x x2) px) (erased (Nth (Nat) f y y2) py) (erased (Conn g2 x2 y2) c) (erased (Moves g xs f g2) rest)
+      -> (Moves (Cons (Bond) (MkBond x y) g) xs f g2))
+  (many MvOut : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (erased (Nat) x y) (erased (NotIn x xs) ox) (erased (NotIn y xs) oy)
+      (erased (Moves g xs f g2) rest) -> (Moves (Cons (Bond) (MkBond x y) g) xs f g2)))
+
+(def-fns _ $ (erased lift-at : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t xs) (erased (Nat) x) (subterm erased (Lift g f1 f2 t xs) lf) (erased (In x xs) ix)
+    -> (erased (Nat) y z) (erased (Nth (Nat) f1 x y) p1) (erased (In y t) iy) (erased (Nth (Nat) f2 y z) p2) (erased (Conn g x z) c))
+  (let-match erased lf (LiftCons _ _ _ _ xs1 x0 y z p1 iy p2 c lf1) (absurd (LiftNil _ _ _ _) ix))
+  (match erased ix _ ((InHere _ _) (values y z p1 iy p2 c)) ((InThere _ _ _ ix1) (lift-at g f1 f2 t xs1 x lf1 ix1))))
+
+(def-fns _ $ (erased moves-tail : (erased (List (Bond)) g g2) (erased (Bond) b) (erased (List (Nat)) xs f) (erased (Moves (Cons (Bond) b g) xs f g2) mv)
+    -> (erased (Moves g xs f g2) r))
+  (match erased mv _
+    ((MvIn _ _ _ _ x y x2 y2 ix iy px py c rest) rest)
+    ((MvOut _ _ _ _ x y ox oy rest) rest)))
+
+(def-fns _ $ (erased adj-move : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (erased (Nat) x y x2) (subterm erased (Adj g x y) a) (erased (Moves g xs f g2) mv)
+    (erased (In x xs) ix) (erased (Nth (Nat) f x x2) px) -> (erased (Nat) y2) (erased (Nth (Nat) f y y2) py) (erased (Conn g2 x2 y2) c) (erased (In y xs) iy))
+  (match erased a _
+    ((AdjFwd g1 _ _)
+      (match erased mv _
+        ((MvIn _ _ _ _ _ _ x3 y3 _ iy px3 py3 c3 _) (let-match erased (nth-fn _ f x x3 x2 px3 px) (Refl _ _)) (values y3 py3 c3 iy))
+        (absurd (MvOut _ _ _ _ _ _ ox _ _) (apart-irrefl x (notin-in x x xs ox ix)))))
+    ((AdjBwd g1 _ _)
+      (match erased mv _
+        ((MvIn _ _ _ _ _ _ x3 y3 iy _ px3 py3 c3 _) (let-match erased (nth-fn _ f x y3 x2 py3 px) (Refl _ _)) (values x3 px3 (conn-sym g2 x3 y3 c3) iy))
+        (absurd (MvOut _ _ _ _ _ _ _ oy _) (apart-irrefl x (notin-in x x xs oy ix)))))
+    ((AdjThere g1 b _ _ a1) (adj-move g1 g2 xs f x y x2 a1 (moves-tail g1 g2 b xs f mv) ix px))))
+
+(def-fns _ $ (erased conn-move : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (erased (Nat) x y x2) (subterm erased (Conn g x y) cn) (erased (Moves g xs f g2) mv)
+    (erased (In x xs) ix) (erased (Nth (Nat) f x x2) px) -> (erased (Nat) y2) (erased (Nth (Nat) f y y2) py) (erased (Conn g2 x2 y2) c) (erased (In y xs) iy))
+  (let-match erased cn (ConnStep _ _ w _ a cn1) ((ConnHere _ _) (values x2 px (ConnHere g2 x2) ix)))
+  (let ((erased w2) (erased pw) (erased cw) (erased iw)) (adj-move g g2 xs f x w x2 a mv ix px))
+  (let ((erased y2) (erased py) (erased cy) (erased iy)) (conn-move g g2 xs f w y w2 cn1 mv iw pw))
+  (values y2 py (conn-cat g2 x2 w2 y2 cw cy) iy))
+
+(def-fns _ $ (erased lift-image : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t xs m) (erased (Lift g f1 f2 t xs) lf) (subterm erased (Sub m xs) sb)
+    -> (erased (List (Nat)) ims) (erased (Respects f1 m ims) rp) (erased (Sub ims t) si))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (values (Nil _) (RespNil f1) (SubNil t))))
+  (let ((erased y) (erased z) (erased p1) (erased iy) (erased p2) (erased c)) (lift-at g f1 f2 t xs x lf ix))
+  (let ((erased ims1) (erased rp1) (erased si1)) (lift-image g f1 f2 t xs m1 lf sb1))
+  (values (Cons _ y ims1) (RespCons f1 m1 ims1 x y p1 rp1) (SubCons y ims1 t iy si1)))
+
+; Darts told apart in g1 have images told apart in g2.
+(def-fns _ $ (erased sep-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) d k2 a b a2 b2) (erased (Sep g1 a b) sp)
+    (erased (In a s1) ia) (erased (In b s1) ib) (erased (Nth (Nat) h a a2) pa) (erased (Nth (Nat) h b b2) pb) (erased (Lift g1 h l s2 s1) lf)
+    (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (Sep g2 a2 b2) r))
+  (let ((erased a3) (erased a4) (erased qa) (erased ja) (erased la) (erased ca)) (lift-at g1 h l s2 s1 a lf ia))
+  (let ((erased b3) (erased b4) (erased qb) (erased jb) (erased lb) (erased cb)) (lift-at g1 h l s2 s1 b lf ib))
+  (let-match erased (nth-fn _ h a a3 a2 qa pa) (Refl _ _))
+  (let-match erased (nth-fn _ h b b3 b2 qb pb) (Refl _ _))
+  (match erased (classes-dec g2 d k2 a2 b2 cs (under-in s2 a2 d us ja) (under-in s2 b2 d us jb)) _
+    (absurd (OrL _ _ c)
+      (let ((erased b5) (erased q5) (erased c5) (erased i5)) (conn-move g2 g1 s2 l a2 b2 a4 c mv ja la))
+      (let-match erased (nth-fn _ l b2 b5 b4 q5 lb) (Refl _ _))
+      (sep-conn g1 a b sp (conn-cat g1 a a4 b ca (conn-cat g1 a4 b4 b c5 (conn-sym g1 b b4 cb)))))
+    ((OrR _ _ s) s)))
+
+(def-fns _ $ (erased sepall-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l m ims) (erased (Nat) d k2 a a2) (subterm erased (SepAll g1 a m) sa)
+    (erased (In a s1) ia) (erased (Sub m s1) sb) (erased (Nth (Nat) h a a2) pa) (erased (Respects h m ims) rp) (erased (Lift g1 h l s2 s1) lf)
+    (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (SepAll g2 a2 ims) r))
+  (let-match erased sa (SACons _ _ b m1 sp sa1) ((SANil _ _) (let-match erased rp (RespNil _)) (SANil g2 a2)))
+  (let-match erased rp (RespCons _ _ ims1 _ b2 pb rp1))
+  (let-match erased sb (SubCons _ _ _ ib sb1))
+  (SACons g2 a2 b2 ims1 (sep-map g1 g2 s1 s2 h l d k2 a b a2 b2 sp ia ib pa pb lf mv cs us)
+    (sepall-map g1 g2 s1 s2 h l m1 ims1 d k2 a a2 sa1 ia sb1 pa rp1 lf mv cs us)))
+
+(def-fns _ $ (erased pairsep-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l m ims) (erased (Nat) d k2) (subterm erased (PairSep g1 m) ps)
+    (erased (Sub m s1) sb) (erased (Respects h m ims) rp) (erased (Lift g1 h l s2 s1) lf) (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs)
+    (erased (Under s2 d) us) -> (erased (PairSep g2 ims) r))
+  (let-match erased ps (PSCons _ a m1 sa ps1) ((PSNil _) (let-match erased rp (RespNil _)) (PSNil g2)))
+  (let-match erased rp (RespCons _ _ ims1 _ a2 pa rp1))
+  (let-match erased sb (SubCons _ _ _ ia sb1))
+  (PSCons g2 a2 ims1 (sepall-map g1 g2 s1 s2 h l m1 ims1 d k2 a a2 sa ia sb1 pa rp1 lf mv cs us)
+    (pairsep-map g1 g2 s1 s2 h l m1 ims1 d k2 ps1 sb1 rp1 lf mv cs us)))
+
+(def-fns _ $ (erased covers-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l rs ims m) (erased (Covers g1 rs s1) cv) (erased (Sub rs s1) sr)
+    (erased (Respects h rs ims) rp) (erased (Lift g1 h l s2 s1) lf1) (erased (Lift g2 l h s1 s2) lf2) (erased (Moves g1 s1 h g2) mv)
+    (subterm erased (Sub m s2) sb) -> (erased (Covers g2 ims m) r))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g2 ims)))
+  (let ((erased y) (erased z) (erased p1) (erased iy) (erased p2) (erased cxz)) (lift-at g2 l h s1 s2 x lf2 ix))
+  (let ((erased r) (erased pin) (erased cry)) (covers-at g1 rs s1 y cv iy))
+  (let ((erased ir)) (sub-in rs s1 r sr pin))
+  (let ((erased r2) (erased z2) (erased q1) (erased ir2) (erased q2) (erased crz)) (lift-at g1 h l s2 s1 r lf1 ir))
+  (let ((erased z3) (erased q3) (erased c3) (erased i3)) (conn-move g1 g2 s1 h r y r2 cry mv ir q1))
+  (let-match erased (nth-fn _ h y z3 z q3 p2) (Refl _ _))
+  (CovCons g2 ims m1 x r2 (in-map h rs ims r r2 pin rp q1) (conn-cat g2 r2 z x c3 (conn-sym g2 x z cxz))
+    (covers-map g1 g2 s1 s2 h l rs ims m1 cv sr rp lf1 lf2 mv sb1)))
+
+; The classes of g1 on s1 and of g2 on s2 correspond through h and l, which send darts of one to darts of the other joined to
+; them (Gonthier's adjunction_n_comp).
+(def-fns _ $ (erased co-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) k d k2) (erased (ClassesOn g1 s1 k) co)
+    (erased (Lift g1 h l s2 s1) lf1) (erased (Lift g2 l h s1 s2) lf2) (erased (Moves g1 s1 h g2) mv1) (erased (Moves g2 s2 l g1) mv2)
+    (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (ClassesOn g2 s2 k) r))
+  (let-match erased co (MkClassesOn _ _ rs _ lr sr ps cv))
+  (let ((erased ims) (erased rp) (erased si)) (lift-image g1 h l s2 s1 rs lf1 sr))
+  (MkClassesOn g2 s2 ims k (respects-length h rs ims k rp lr) si (pairsep-map g1 g2 s1 s2 h l rs ims d k2 ps sr rp lf1 mv2 cs us)
+    (covers-map g1 g2 s1 s2 h l rs ims s2 cv sr rp lf1 lf2 mv1 (sub-refl s2))))
