@@ -780,11 +780,11 @@
                         (absurd (GSkip) (let-match erased z (SSkip _)) pp)))))))))))))
 
 (def-fns _ $ (erased kempe-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
-    (erased (List (Col)) et) (erased (EvenT et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len) (erased (CtSub ctu et (Zero)) s) ->
+    (erased (List (Col)) et) (erased (ERun (ESStart) et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len) (erased (CtSub ctu et (Zero)) s) ->
     (erased (KC P et) r))
   (let ((erased a) (erased ma)) (mc-exists (GSG gtr) (BS0) et))
   (let ((erased b) (erased mb)) (mc-exists (GSG gtu) (BS0) et))
-  (let ((erased ab) (erased p) (erased l)) (kv-count P h ctu gtr gtu kv et (Zero) a b (even-run et (BTrue) ev) len s ma mb))
+  (let ((erased ab) (erased p) (erased l)) (kv-count P h ctu gtr gtu kv et (Zero) a b ev len s ma mb))
   (let-match erased l (LtZ _) (absurd (LtS _ _ l1) l1))
   (let-match erased p (AddZero _))
   (KGram P et (am-build P h ctu gtr gtu (MkKVWrap P h ctu gtr gtu kv) et et len mb (Nil _) (Nil _) (BS0) (Zero) (BFalse) (MPreNil (BS0))
@@ -846,5 +846,85 @@
   (let-match erased ks (MkKSound _ _ _ gtr gtu kv))
   (let ((erased n) (erased s)) (sub-exists kt et))
   (match erased n _
-    ((Zero) (kempe-sound P h kt gtr gtu kv et ev len s))
+    ((Zero) (kempe-sound P h kt gtr gtu kv et (even-run et (BTrue) ev) len s))
     (absurd (Succ n1) (disj-mem kt ct et dj (MkCtMem kt et n1 s) m))))
+
+(def-adts $ (FlipPair : ((Perm) g) ((Perm) g2) -> Type)
+  enum
+  (many FP123 : -> (FlipPair p123 p123))
+  (many FP312 : -> (FlipPair p312 p231))
+  (many FP231 : -> (FlipPair p231 p312)))
+
+(def-fns _ $ (erased flip-c : (erased (Perm) g g2) (erased (Col) c d c2 d2) (erased (FlipPair g g2) fp) (erased (PermC g c d) p)
+    (erased (PermC p132 c c2) q) (erased (PermC g2 c2 d2) r) -> (erased (PermC p132 d d2) res))
+  (match erased fp _
+    ((FP123) (match erased p _
+      ((PC0 _) (let-match erased q (PC0 _)) (let-match erased r (PC0 _)) (PC0 p132))
+      ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (let-match erased r (PC1 _ _ _)) (PC1 (C1) (C3) (C2)))
+      ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (let-match erased r (PC3 _ _ _)) (PC2 (C1) (C3) (C2)))
+      ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (let-match erased r (PC2 _ _ _)) (PC3 (C1) (C3) (C2)))))
+    ((FP312) (match erased p _
+      ((PC0 _) (let-match erased q (PC0 _)) (let-match erased r (PC0 _)) (PC0 p132))
+      ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (let-match erased r (PC1 _ _ _)) (PC3 (C1) (C3) (C2)))
+      ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (let-match erased r (PC3 _ _ _)) (PC1 (C1) (C3) (C2)))
+      ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (let-match erased r (PC2 _ _ _)) (PC2 (C1) (C3) (C2)))))
+    ((FP231) (match erased p _
+      ((PC0 _) (let-match erased q (PC0 _)) (let-match erased r (PC0 _)) (PC0 p132))
+      ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (let-match erased r (PC1 _ _ _)) (PC2 (C1) (C3) (C2)))
+      ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (let-match erased r (PC3 _ _ _)) (PC3 (C1) (C3) (C2)))
+      ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (let-match erased r (PC2 _ _ _)) (PC1 (C1) (C3) (C2)))))))
+
+(def-fns _ $ (erased permc-total : (erased (Perm) g) (erased (Col) c) -> (erased (Col) d) (erased (PermC g c d) p))
+  (let-match erased g (MkPerm p1 p2 p3))
+  (match erased c _ ((C0) (values c (PC0 g))) ((C1) (values p1 (PC1 p1 p2 p3))) ((C2) (values p2 (PC2 p1 p2 p3))) ((C3) (values p3 (PC3 p1 p2 p3)))))
+
+; A tail read as odd by g reads as even by the flipped g2 once Color2 and Color3 are swapped.
+(def-fns _ $ (erased flip-run : (erased (Perm) g g2) (erased (List (Col)) l l2) (erased (FlipPair g g2) fp) (subterm erased (PermT p132 l l2) pt)
+    (erased (ERun (ESTail g) l (BFalse)) run) -> (erased (ERun (ESTail g2) l2 (BTrue)) r))
+  (match erased pt _
+    (absurd (PTNil _) (let-match erased run (ERNil _ _ e)) e)
+    ((PTCons _ c c2 l1 l3 q pt1)
+      (let-match erased run (ERCons _ st _ _ _ stp run1))
+      (let ((erased d2) (erased r2)) (permc-total g2 c2))
+      (match erased stp _
+        ((EStT0 _ _ p)
+          (let-match erased (flip-c g g2 c (C0) c2 d2 fp p q r2) (PC0 _))
+          (ERCons (ESTail g2) (ESTail g2) c2 l3 (BTrue) (EStT0 g2 c2 r2) (flip-run g g2 l1 l3 fp pt1 run1)))
+        ((EStT1 _ _ p)
+          (let-match erased (flip-c g g2 c (C1) c2 d2 fp p q r2) (PC1 _ _ _))
+          (ERCons (ESTail g2) (ESTail g2) c2 l3 (BTrue) (EStT1 g2 c2 r2) (flip-run g g2 l1 l3 fp pt1 run1)))
+        (absurd (EStT2 _ _ p) (erun-fn (ESEven) l1 (BTrue) (BFalse) (run-even l1) run1))
+        ((EStT3 _ _ p)
+          (let-match erased (flip-c g g2 c (C3) c2 d2 fp p q r2) (PC3 _ _ _))
+          (ERCons (ESTail g2) (ESEven) c2 l3 (BTrue) (EStT2 g2 c2 r2) (run-even l3)))))))
+
+(def-fns _ $ (erased etrace-run : (erased (List (Col)) et et2) (erased (ETrace et et2) e) -> (erased (ERun (ESStart) et2 (BTrue)) r))
+  (match erased e _
+    ((ETrEven _ p) (even-run et (BTrue) p))
+    ((ETrOdd _ _ p pt)
+      (let ((erased run)) (even-run et (BFalse) p))
+      (let-match erased pt (PTCons _ c c2 l l2 q pt1) (absurd (PTNil _) (let-match erased run (ERNil _ _ x)) x))
+      (let-match erased run (ERCons _ st _ _ _ stp run1))
+      (match erased stp _
+        (absurd (EStS0) (erun-fn (ESEven) l (BTrue) (BFalse) (run-even l) run1))
+        ((EStS1) (let-match erased q (PC1 _ _ _)) (ERCons (ESStart) (ESTail p123) c2 l2 (BTrue) (EStS1) (flip-run p123 p123 l l2 (FP123) pt1 run1)))
+        ((EStS2) (let-match erased q (PC2 _ _ _)) (ERCons (ESStart) (ESTail p231) c2 l2 (BTrue) (EStS3) (flip-run p312 p231 l l2 (FP312) pt1 run1)))
+        ((EStS3) (let-match erased q (PC3 _ _ _)) (ERCons (ESStart) (ESTail p312) c2 l2 (BTrue) (EStS2) (flip-run p231 p312 l l2 (FP231) pt1 run1)))))))
+
+(def-fns _ $ (erased permt-length : (erased (Perm) g) (erased (List (Col)) et et2) (erased (Nat) n) (subterm erased (PermT g et et2) p)
+    (erased (Length (Col) et n) l) -> (erased (Length (Col) et2 n) r))
+  (match erased p _
+    ((PTNil _) l)
+    ((PTCons _ c d et1 et3 _ p1) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ d et3 n1 (permt-length g et1 et3 n1 p1 l1)))))
+
+; Soundness half of Kempe_treeP of kempetree.v, on partial traces: a trace of length h + 1 whose even normal form has
+; multiplicity zero in the Kempe tree is in the co-closure of P.
+(def-fns _ $ (erased kempe-treeP : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt) (erased (KSound P h kt) ks)
+    (erased (List (Col)) et et2) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) s) ->
+    (erased (KC P et) r))
+  (let-match erased ks (MkKSound _ _ _ gtr gtu kv))
+  (match erased e _
+    ((ETrEven _ _) (kempe-sound P h kt gtr gtu kv et (etrace-run et et2 e) len s))
+    ((ETrOdd _ _ _ pt)
+      (KPerm P et et2 p132 (IP132) pt
+        (kempe-sound P h kt gtr gtu kv et2 (etrace-run et et2 e) (permt-length p132 et et2 (Succ h) pt len) s)))))
