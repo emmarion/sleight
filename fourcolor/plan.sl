@@ -487,3 +487,57 @@
   (let ((erased ys1) (erased ins1) (erased pw3)) (ins-fan p q lq xs1 pw1 st1 ce1))
   (values (Cons _ y ys1) (InsT _ x y xs1 ys1 ins1)
     (PWCons _ _ y ys1 (allr-ins _ _ _ y x xs1 ys1 ins1 (MkSB p r p q (BelowS p r q (left-rot q p r h)) (compat-sym p q p r cp)) hy) pw3)))
+
+(def-fns _ $ (erased nrm-parts : (erased (List (Point)) pts) (erased (Edge) e) (erased (Point) a b) (erased (Nat) i j) (erased (Nrm pts e a b i j) nm) ->
+    (erased (Nth (Point) pts i a) na) (erased (Nth (Point) pts j b) nb) (erased (Lt i j) l))
+  (match erased nm _ ((NmF _ _ _ _ _ na nb l) (values na nb l)) ((NmR _ _ _ _ _ na nb l) (values na nb l))))
+
+(def-adts $ (LCtx : -> Type)
+  enum
+  (many MkLCtx : (many (List (Point)) pts) (many (Nat) k) (many (List (Edge)) l) -> (LCtx)))
+
+; Whether the drawn edge e starts at point k, and if so that its normal form is in n.
+(def-adts $ (NewC : ((LCtx) c) ((Edge) e) -> Type)
+  enum
+  (many NcNo : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) n) (erased (Edge) e) (erased (Point) a b) (erased (Nat) i j)
+      (erased (Nrm pts e a b i j) nm) (erased (Apart (Nat) Lt i k) d) -> (NewC (MkLCtx pts k n) e))
+  (many NcYes : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) n) (erased (Edge) e) (erased (Point) a b) (erased (Nat) j)
+      (erased (Nrm pts e a b k j) nm) (erased (Mem (Edge) n (MkEdge a b)) mb) -> (NewC (MkLCtx pts k n) e)))
+
+(def-fns _ $ (erased newc-lift : (erased (List (Point)) pts) (erased (Nat) k) (erased (Edge) x) (erased (List (Edge)) n1 n2 es2)
+    (erased (Ins (Edge) x n1 n2) ins) (subterm erased (AllR (LCtx) (Edge) NewC (MkLCtx pts k n1) es2) h) ->
+    (erased (AllR (LCtx) (Edge) NewC (MkLCtx pts k n2) es2) r))
+  (let-match erased h (ARCons _ _ _ _ e r1 he h1) ((ARNil _ _ _ _) (ARNil _ _ _ _)))
+  (ARCons _ _ _ _ e r1
+    (match erased he _
+      ((NcNo _ _ _ _ a b i j nm d) (NcNo pts k n2 e a b i j nm d))
+      ((NcYes _ _ _ _ a b j nm mb) (NcYes pts k n2 e a b j nm (mem-ins _ _ x n1 n2 ins (OrR _ _ mb)))))
+    (newc-lift pts k x n1 n2 r1 ins h1)))
+
+; The edges of es2, a suffix of es from position m on, that start at point k, sorted by direction.
+(def-fns _ $ (erased scan-new : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (Here es pts k p) hr)
+    (erased (List (Edge)) pre es2) (erased (Nat) m) (erased (LApp (Edge) pre es2 es) ap) (erased (Length (Edge) pre m) lm)
+    (subterm erased (AllR (List (Point)) (Edge) Pre pts es2) prs) ->
+    (erased (List (Edge)) n) (erased (PW (Edge) SB n) pw) (erased (AllR (Ctx) (Edge) Act (MkCtx es pts (Succ k)) n) acts)
+    (erased (AllR (Point) (Edge) Starts p n) st) (erased (AllR (Ctx) (Edge) InFrom (MkCtx es pts m) n) inf)
+    (erased (AllR (LCtx) (Edge) NewC (MkLCtx pts k n) es2) nc))
+  (let-match erased hr (MkHere _ _ _ _ dr sp np _ _ _))
+  (let-match erased prs (ARCons _ _ _ _ e r pe prs1)
+    ((ARNil _ _ _ _) (values (Nil _) (PWNil _ _) (ARNil _ _ _ _) (ARNil _ _ _ _) (ARNil _ _ _ _) (ARNil _ _ _ _))))
+  (let ((erased pre2) (erased ap2) (erased lm2)) (lapp-shift _ pre r es e m ap lm))
+  (let ((erased n1) (erased pw1) (erased acts1) (erased st1) (erased inf1) (erased nc1)) (scan-new es pts k p hr pre2 r (Succ m) ap2 lm2 prs1))
+  (let-match erased pe (MkPre _ _ a b i j nm))
+  (let ((erased ei)) (norm-ei pts es e a b i j m nm (lapp-nth _ pre r es e m ap lm)))
+  (let ((erased na) (erased nb) (erased l)) (nrm-parts pts e a b i j nm))
+  (let ((erased inf2)) (inf-weaken es pts m n1 inf1))
+  (let-match erased (cmp-eq _ _ _ _ (nat-cmp i k)) (Equal _ _ _)
+    ((Unequal _ _ _ _ d) (values n1 pw1 acts1 st1 inf2 (ARCons _ _ _ _ e r (NcNo pts k n1 e a b i j nm d) nc1))))
+  (let-match erased (nth-fn _ pts k a p na np) (Refl _ _))
+  (let ((erased lq)) (pw-nth _ _ pts k j p b sp na nb l))
+  (let ((erased x)) (MkEdge p b))
+  (let ((erased n2) (erased ins) (erased pw2)) (ins-fan p b lq n1 pw1 st1 (ce-from es pts dr m p b ei n1 inf1)))
+  (values n2 pw2
+    (allr-ins _ _ _ _ x n1 n2 ins (MkAct es pts (Succ k) p b k j m ei na nb (lt-succ k) (LtS k j l)) acts1)
+    (allr-ins _ _ _ _ x n1 n2 ins (MkStarts p b lq) st1)
+    (allr-ins _ _ _ _ x n1 n2 ins (MkInFrom es pts m m p b (lt-succ m) ei) inf2)
+    (ARCons _ _ _ _ e r (NcYes pts k n2 e p b j nm (mem-ins _ x x n1 n2 ins (OrL _ _ (Refl _ x)))) (newc-lift pts k x n1 n2 r ins nc1))))
