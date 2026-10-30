@@ -222,3 +222,61 @@
   (let ((erased ws) (erased rw) (erased r)) (zeros-resp zs p d d rz (perm-under d p q pm) (perm-length d p q pm)))
   (let-match erased (repeat-fn _ d (Zero) ws zs rw rz) (Refl _ _))
   (values zs r (repeat-length _ d (Zero) zs rz) rz))
+
+; The classes of the edge and face links of a grown map, from those of the old links and some new bonds ex.
+(def-fns _ $ (erased comps-equiv : (erased (Nat) d k) (erased (List (Bond)) ge gnd gc ge2 gnd2 gc2 ex x) (erased (Classes x d k) cs)
+    (erased (Cat ex gc x) cx) (erased (Cat ge gnd gc) cg) (erased (Cat ge2 gnd2 gc2) cg2) (erased (Spans ge2 ge) se) (erased (Spans gnd2 gnd) sn)
+    (erased (Spans gc2 ex) sx) (erased (Spans x ge2) te) (erased (Spans x gnd2) tn) (erased (Below gc2 d) bg) -> (erased (Classes gc2 d k) r))
+  (classes-equiv x gc2 d k cs
+    (spans-cat gc2 ex gc x cx sx (spans-cat gc2 ge gnd gc cg (spans-lift-l ge2 gnd2 gc2 ge se cg2) (spans-lift-r ge2 gnd2 gc2 gnd sn cg2)))
+    (spans-cat x ge2 gnd2 gc2 cg2 te tn) bg))
+
+(def-fns _ $ (erased spans-old : (erased (List (Bond)) ge gnd gc ex x) (erased (Cat ge gnd gc) cg) (erased (Cat ex gc x) cx)
+    -> (erased (Spans x ge) se) (erased (Spans x gnd) sn))
+  (values (spans-lift-r ex gc x ge (spans-lift-l ge gnd gc ge (spans-self ge) cg) cx)
+    (spans-lift-r ex gc x gnd (spans-lift-r ge gnd gc gnd (spans-self gnd) cg) cx)))
+
+; A face walk of map.sl from a to b is a walk back along e . ndi from b to a.
+(def-fns _ $ (erased fr-path : (erased (Nat) d a b) (erased (List (Nat)) e nd ndi nn) (subterm erased (FaceReach e nd a b) fr)
+    (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn) (erased (Respects e ndi nn) rn) -> (erased (List (Nat)) xs) (erased (Path nn (Nil (Nat)) b a xs) r))
+  (let-match erased fr (FRStep _ _ _ q c _ pq pc fr1) ((FRHere _ _ _) (values (Nil _) (PathHere nn _ a))))
+  (let ((erased xs1) (erased w1)) (fr-path d c b e nd ndi nn fr1 pe pn rn))
+  (let ((erased lc)) (perm-val d q c nd ndi pn pc))
+  (let ((erased lnn)) (respects-length e ndi nn d rn (perm-length d ndi nd (perm-sym d nd ndi pn))))
+  (let ((erased w) (erased pw)) (nth-exists _ nn d c lnn lc))
+  (let-match erased (nth-fn _ e q w a (respects-nth e ndi nn c q w rn (perm-inv d q c nd ndi pn pc) pw) (perm-inv d a q e e pe pq)) (Refl _ _))
+  (let ((erased xs2) (erased sn) (erased w2)) (path-snoc nn _ xs1 b c a w1 pw (NotInNil c)))
+  (values xs2 w2))
+
+(def-fns _ $ (erased fr-conn : (erased (Nat) d a b) (erased (List (Nat)) e nd) (erased (List (Bond)) ge gnd gc) (subterm erased (FaceReach e nd a b) fr)
+    (erased (Graph d e ge) pe) (erased (Graph d nd gnd) pn) (erased (Cat ge gnd gc) cg) -> (erased (Conn gc a b) r))
+  (let-match erased fr (FRStep _ _ _ q c _ pq pc fr1) ((FRHere _ _ _) (ConnHere gc a)))
+  (ConnStep gc a q b (adj-cat-l ge gnd gc a q (graph-adj d a q e ge pe pq) cg)
+    (ConnStep gc q c b (adj-cat-r ge gnd gc q c (graph-adj d q c nd gnd pn pc) cg) (fr-conn d c b e nd ge gnd gc fr1 pe pn cg))))
+
+(def-fns _ $ (erased path-insert : (erased (List (Nat)) p p2 s xs) (erased (Nat) x y a d) (subterm erased (Path p s x y xs) w)
+    (erased (Insert p a d p2) ins) (erased (Length (Nat) p d) lp) -> (erased (List (Nat)) ys) (erased (Path p2 (Nil (Nat)) x y ys) r))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
+  (let ((erased ys1) (erased v1)) (path-insert p p2 s xs1 z y a d w1 ins lp))
+  (match erased (nat-eq x a) _
+    ((Equal _ _ _)
+      (values (Cons _ x (Cons _ d ys1)) (PathStep p2 _ _ x d y (insert-at p p2 x d ins) (NotInNil x)
+        (PathStep p2 _ ys1 d z y (insert-new p p2 x d d z ins lp px) (NotInNil d) v1))))
+    ((Unequal _ _ _ _ ne) (values (Cons _ x ys1) (PathStep p2 _ ys1 x z y (insert-other p p2 a d x z ins px ne) (NotInNil x) v1)))))
+
+; A labelling constant along e and nd is constant along e . ndi.
+(def-fns _ $ (erased const-nn : (erased (List (Nat)) lab e nd ids lab0 nn0 ndi0) (erased (Nat) d) (subterm erased (Respects e ndi0 nn0) rn)
+    (erased (Respects nd ndi0 ids) rd) (erased (Respects lab ids lab0) rl) (erased (Respects lab e lab) le) (erased (Respects lab nd lab) ln)
+    (erased (Length (Nat) lab d) ll) -> (erased (Respects lab nn0 lab0) r))
+  (let-match erased rn (RespCons _ ndi1 nn1 u w p1 rn1) ((RespNil _) (let-match erased rd (RespNil _)) (let-match erased rl (RespNil _)) (RespNil lab)))
+  (let-match erased rd (RespCons _ _ ids1 _ i p2 rd1))
+  (let-match erased rl (RespCons _ _ lab1 _ l p3 rl1))
+  (let ((erased l2) (erased pu)) (nth-exists _ lab d u ll (nth-lt-length _ nd u d i p2 (respects-length-inv lab nd lab d ln ll))))
+  (let-match erased (nth-fn _ lab i l2 l (respects-nth lab nd lab u i l2 ln p2 pu) p3) (Refl _ _))
+  (RespCons lab nn1 lab1 w l (respects-nth lab e lab u w l le p1 pu) (const-nn lab e nd ids1 lab1 nn1 ndi1 d rn1 rd1 rl1 le ln ll)))
+
+(def-fns _ $ (erased const-cat : (erased (List (Nat)) lab) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Const lab g) cl)
+    (erased (Const lab h) ch) -> (erased (Const lab gh) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) ch))
+  (let-match erased cl (ConstCons _ _ x y l px py cl1))
+  (ConstCons lab gh1 x y l px py (const-cat lab g1 h gh1 c1 cl1 ch)))
