@@ -68,87 +68,21 @@
       (UWalk d x a i e f ks wobl cobl out pa ad pn
         (pres-sound d a e n f ks ws drs rt rs g sz iw (tgt-all d d a e n f ks ws drs rt g tg iw (lt-succ d)) x pos neg out p lx dsc lt xa pr)))))
 
-; The statement: some dart of a plain cubic connected pentagonal map of genus 0 has positive dscore, and each such dart has
-; its UnavAt.
-(def-adts $ (Unav : ((List (List (Sub))) drs) ((List (List (List (Sub)))) wobl) ((List (List (Sub))) cobl) -> Type)
+; The statement for the rules drs: the certified walks and cap checks succeed with obligation lists wobl and cobl, some
+; dart of a plain cubic connected pentagonal map of genus 0 has positive dscore, and on a plain cubic pentagonal map,
+; for any rules and successful checks, each dart of positive dscore has its UnavAt.
+(def-adts $ (Unav : ((List (List (Sub))) drs) -> Type)
   enum
-  (many MkUnav : (erased (List (List (Sub))) drs cobl) (erased (List (List (List (Sub)))) wobl) (erased (Level) lv1 lv2)
-      (erased (Fn lv1 (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Connected d e n f) cc)
-          (erased (Genus d e n f (Zero)) gen)
-          -> (erased (Nat) x pos neg) (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) dsc) (erased (Lt neg pos) lt)) somepos)
-      (erased (Fn lv2 (erased (Nat) d x pos neg) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
-          (erased (DScore d e n f ks drs x pos neg) dsc) (erased (Lt neg pos) lt) -> (erased (UnavAt d e f ks wobl cobl x) r)) every)
-      -> (Unav drs wobl cobl)))
-
-; Equality of obligation lists, decided, so that a compiled run can check a walk against a written list.
-(def-fns _ $ (many rg-eq-c : (many (Rg) x y) -> (many (Bool) ok) (erased (IfT ok (Eq (Rg) x y)) w))
-  (let-match many y (MkRg lo hi))
-  (rg-is x lo hi))
-
-(def-fns _ $ (many rgs-eq-c : (subterm many (List (Rg)) xs) (many (List (Rg)) ys) -> (many (Bool) ok) (erased (IfT ok (Eq (List (Rg)) xs ys)) w))
-  (match many xs _
-    ((Nil _) (let-match many ys (Nil _) (else (values (BFalse) (IfF _)))) (values (BTrue) (IfY _ (Refl _ xs))))
-    ((Cons _ x xs1)
-      (let-match many ys (Cons _ y ys1) (else (values (BFalse) (IfF _))))
-      (let ((many o1) (erased w1)) (rg-eq-c x y))
-      (let-match many o1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-      (let-match erased w1 (IfY _ e1))
-      (let-match erased e1 (Refl _ _))
-      (let ((many o) (erased w)) (tail $ rgs-eq-c xs1 ys1))
-      (values o (match erased w _ ((IfY _ e) (let-match erased e (Refl _ _)) (IfY _ (Refl _ xs))) ((IfF _) (IfF _)))))))
-
-(def-fns _ $ (many sub-eq-c : (many (Sub) x y) -> (many (Bool) ok) (erased (IfT ok (Eq (Sub) x y)) w))
-  (let-match many x (MkSub s h fs))
-  (let-match many y (MkSub s2 h2 fs2))
-  (let ((many o1) (erased w1)) (rg-eq-c s s2))
-  (let ((many o2) (erased w2)) (rg-eq-c h h2))
-  (let ((many o3) (erased w3)) (rgs-eq-c fs fs2))
-  (let-match many o1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-  (let-match many o2 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-  (let-match many o3 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-  (let-match erased w1 (IfY _ e1))
-  (let-match erased e1 (Refl _ _))
-  (let-match erased w2 (IfY _ e2))
-  (let-match erased e2 (Refl _ _))
-  (let-match erased w3 (IfY _ e3))
-  (let-match erased e3 (Refl _ _))
-  (values (BTrue) (IfY _ (Refl _ x))))
-
-(def-fns _ $ (many part-eq-c : (subterm many (List (Sub)) xs) (many (List (Sub)) ys) -> (many (Bool) ok) (erased (IfT ok (Eq (List (Sub)) xs ys)) w))
-  (match many xs _
-    ((Nil _) (let-match many ys (Nil _) (else (values (BFalse) (IfF _)))) (values (BTrue) (IfY _ (Refl _ xs))))
-    ((Cons _ x xs1)
-      (let-match many ys (Cons _ y ys1) (else (values (BFalse) (IfF _))))
-      (let ((many o1) (erased w1)) (sub-eq-c x y))
-      (let-match many o1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-      (let-match erased w1 (IfY _ e1))
-      (let-match erased e1 (Refl _ _))
-      (let ((many o) (erased w)) (tail $ part-eq-c xs1 ys1))
-      (values o (match erased w _ ((IfY _ e) (let-match erased e (Refl _ _)) (IfY _ (Refl _ xs))) ((IfF _) (IfF _)))))))
-
-(def-fns _ $ (many obl-eq-c : (subterm many (List (List (Sub))) xs) (many (List (List (Sub))) ys) -> (many (Bool) ok) (erased (IfT ok (Eq (List (List (Sub))) xs ys)) w))
-  (match many xs _
-    ((Nil _) (let-match many ys (Nil _) (else (values (BFalse) (IfF _)))) (values (BTrue) (IfY _ (Refl _ xs))))
-    ((Cons _ x xs1)
-      (let-match many ys (Cons _ y ys1) (else (values (BFalse) (IfF _))))
-      (let ((many o1) (erased w1)) (part-eq-c x y))
-      (let-match many o1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-      (let-match erased w1 (IfY _ e1))
-      (let-match erased e1 (Refl _ _))
-      (let ((many o) (erased w)) (tail $ obl-eq-c xs1 ys1))
-      (values o (match erased w _ ((IfY _ e) (let-match erased e (Refl _ _)) (IfY _ (Refl _ xs))) ((IfF _) (IfF _)))))))
-
-(def-fns _ $ (many wobl-eq-c : (subterm many (List (List (List (Sub)))) xs) (many (List (List (List (Sub)))) ys) -> (many (Bool) ok) (erased (IfT ok (Eq (List (List (List (Sub)))) xs ys)) w))
-  (match many xs _
-    ((Nil _) (let-match many ys (Nil _) (else (values (BFalse) (IfF _)))) (values (BTrue) (IfY _ (Refl _ xs))))
-    ((Cons _ x xs1)
-      (let-match many ys (Cons _ y ys1) (else (values (BFalse) (IfF _))))
-      (let ((many o1) (erased w1)) (obl-eq-c x y))
-      (let-match many o1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-      (let-match erased w1 (IfY _ e1))
-      (let-match erased e1 (Refl _ _))
-      (let ((many o) (erased w)) (tail $ wobl-eq-c xs1 ys1))
-      (values o (match erased w _ ((IfY _ e) (let-match erased e (Refl _ _)) (IfY _ (Refl _ xs))) ((IfF _) (IfF _)))))))
+  (many MkUnav : (erased (List (List (Sub))) drs cobl) (erased (List (List (List (Sub)))) wobl) (erased (Small drs) sm)
+      (erased (WalkL drs wobl 5 12) wl) (erased (CapL drs (Nil (List (Sub))) cobl 5 9) cl) (erased (Level) lv1 lv2)
+      (erased (Fn lv1 (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) rs) (erased (Geo d e n f ks) g)
+          (erased (Connected d e n f) cc) (erased (Genus d e n f (Zero)) gen)
+          -> (erased (Nat) x pos neg) (erased (Lt x d) lx) (erased (DScore d e n f ks rs x pos neg) dsc) (erased (Lt neg pos) lt)) somepos)
+      (erased (Fn lv2 (erased (Nat) d x pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) rs acc cob)
+          (erased (List (List (List (Sub)))) wob) (erased (Small rs) sm2) (erased (WalkL rs wob 5 12) wl2) (erased (CapL rs acc cob 5 9) cl2)
+          (erased (Geo d e n f ks) g) (erased (Lt x d) lx) (erased (DScore d e n f ks rs x pos neg) dsc) (erased (Lt neg pos) lt)
+          -> (erased (UnavAt d e f ks wob cob x) r)) every)
+      -> (Unav drs)))
 
 (def-adts $ (Checked : (Type P) -> Type)
   enum
