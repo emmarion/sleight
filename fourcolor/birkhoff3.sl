@@ -1,0 +1,61 @@
+; minimal_counter_example_is_cubic of coloring.v, and birkhoff.v's spoke ring, min_arity and
+; minimal_counter_example_is_plain_cubic_pentagonal (embed.sl's BirkGeo), with minimality as data: each step gives the
+; fact or a Reduces. Load after birkhoff2.sl and split.sl.
+
+(def-fns _ $ (erased skip-id : (erased (Nat) d z) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk) (erased (Nth (Nat) p z z) pz)
+    -> (erased (Eq (List (Nat)) p2 p) r))
+  (match erased sk _
+    ((SkipFixed _ _ _) (Refl _ p))
+    (absurd (SkipCut _ _ _ w u pw _ ne _) (let-match erased (perm-inj d w z z p q pm pw pz) (Refl _ _)) (apart-irrefl w ne))))
+
+; A WalkupE at a dart z that p fixes: p2 i = s (p (s i)) below d, so s0, the swap s without its last entry, sends p2 to p.
+(def-fns _ $ (erased cut-morph : (erased (Nat) d z) (erased (List (Nat)) p q s s0 p2 m) (erased (HPerm (Succ d) p q) pm) (erased (Swap (Succ d) z d s) sw)
+    (erased (Snoc (Nat) s0 z s) sn) (erased (Length (Nat) s0 d) l0) (erased (Length (Nat) p2 d) lp2) (erased (Cut d z s p p2) ct) (erased (Nth (Nat) p z z) pz)
+    (subterm erased (Under m d) u) -> (erased (MorphOff s0 p2 p (Nil (Nat)) m) r))
+  (let-match erased u (UnderCons m1 i _ li u1) ((UnderNil _) (MONil s0 p2 p (Nil _))))
+  (let-match erased sw (MkSwap _ _ _ _ ps psz psd))
+  (let-match erased ct (MkCut _ _ _ _ p1 pb _ sk cj sb))
+  (let-match erased (skip-id (Succ d) z p q p1 pm sk pz) (Refl _ _))
+  (let-match erased cj (MkConj _ _ _ t _ rt rb))
+  (let ((erased a) (erased psa)) (nth-exists _ s0 d i l0 li))
+  (let ((erased psi)) (snoc-old _ s0 s z a i sn psa))
+  (let ((erased v) (erased pv) (erased lv)) (perm-nth (Succ d) a p q pm (perm-val (Succ d) i a s s ps psi)))
+  (let ((erased w) (erased psv) (erased lw)) (perm-nth (Succ d) v s s ps lv))
+  (let-match erased (snoc-back _ p2 pb d w i d sb lp2 (respects-at s t pb i v w rb (respects-at p s t i a v rt psi pv) psv)) (OrL _ _ p2i)
+    (absurd (OrR _ _ ei) (let-match erased ei (Refl _ _)) (lt-irrefl i li)))
+  (let-match erased (nat-eq v z) (Unequal _ _ _ _ nvz)
+    (absurd (Equal _ _ _)
+      (let-match erased (perm-inj (Succ d) a z z p q pm pv pz) (Refl _ _))
+      (let-match erased (perm-inj (Succ d) i d z s s ps psi psd) (Refl _ _))
+      (lt-irrefl i li)))
+  (let-match erased (snoc-back _ s0 s z v w d sn l0 (perm-inv (Succ d) v w s s ps psv)) (OrL _ _ ps0w)
+    (absurd (OrR _ _ ew) (let-match erased ew (Refl _ _)) (let-match erased (nth-fn _ s d v z (perm-inv (Succ d) v w s s ps psv) psd) (Refl _ _))
+      (apart-irrefl v nvz)))
+  (MOAt s0 p2 p (Nil _) m1 i w a v p2i psa ps0w pv (cut-morph d z p q s s0 p2 m1 pm sw sn l0 lp2 ct pz u1)))
+
+(def-fns _ $ (erased morph-comp : (erased (Nat) ka) (erased (List (Nat)) h1 h2 hh pa pb pc ia m) (erased (MorphOff h1 pb pa (Nil (Nat)) ia) m1)
+    (erased (Iota ka ia) io) (erased (Length (Nat) h1 ka) l1) (erased (Under h2 ka) u2) (erased (Respects h1 h2 hh) rh)
+    (subterm erased (MorphOff h2 pc pb (Nil (Nat)) m) m2) -> (erased (MorphOff hh pc pa (Nil (Nat)) m) r))
+  (let-match erased m2 (MOAt _ _ _ _ ms i y z w pcy hz hy pbz rest) ((MONil _ _ _ _) (MONil hh pc pa (Nil _))) (absurd (MOSkip _ _ _ _ _ _ ib _) ib))
+  (let ((erased lz)) (under-nth h2 i z ka u2 hz))
+  (let ((erased a) (erased pa1)) (nth-exists _ h1 ka z l1 lz))
+  (let ((erased b) (erased hb) (erased pab)) (morph h1 pb pa (Nil _) ia ka z w a m1 io lz (NotInNil z) pbz pa1))
+  (MOAt hh pc pa (Nil _) ms i y a b pcy (respects-at h1 h2 hh i z a rh hz pa1) (respects-at h1 h2 hh y w b rh hy hb) pab
+    (morph-comp ka h1 h2 hh pa pb pc ia ms m1 io l1 u2 rh rest)))
+
+; WalkupE at a dart z fixed by n and f: the map on d darts, with s0 sending its node and face permutations to those of the map.
+(def-fns _ $ (erased drop-dead : (erased (Nat) d z) (erased (List (Nat)) e n f idd) (erased (Hypermap (Succ d) e n f) h) (erased (Genus (Succ d) e n f (Zero)) g)
+    (erased (Lt z (Succ d)) lz) (erased (Nth (Nat) n z z) pnz) (erased (Nth (Nat) f z z) pfz) (erased (Iota d idd) io)
+    -> (erased (List (Nat)) e2 n2 f2 s s0) (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Swap (Succ d) z d s) sw)
+    (erased (Snoc (Nat) s0 z s) sn) (erased (Length (Nat) s0 d) l0) (erased (MorphOff s0 n2 n (Nil (Nat)) idd) mn) (erased (MorphOff s0 f2 f (Nil (Nat)) idd) mf))
+  (let ((erased s) (erased e2) (erased n2) (erased f2) (erased gen2) (erased sw) (erased cn) (erased cf) (erased h2) (erased g2) (erased le))
+    (walkup-e d (Zero) z e n f h g lz))
+  (let-match erased (lt-one gen2 le) (Refl _ _))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core (Succ d) e n f h))
+  (let ((erased le2) (erased ln2) (erased lf2)) (hyper-lengths d e2 n2 f2 h2))
+  (let ((erased sw2)) sw)
+  (let-match erased sw2 (MkSwap _ _ _ _ ps psz psd))
+  (let ((erased s0) (erased a) (erased sn) (erased l0)) (snoc-split _ s d (perm-length (Succ d) s s ps)))
+  (let-match erased (nth-fn _ s d a z (snoc-new _ s0 s a d sn l0) psd) (Refl _ _))
+  (let ((erased ui)) (perm-under d idd idd (perm-id d idd io)))
+  (values e2 n2 f2 s s0 h2 g2 sw sn l0 (cut-morph d z n ni s s0 n2 idd pn sw sn l0 ln2 cn pnz ui) (cut-morph d z f fi s s0 f2 idd pf sw sn l0 lf2 cf pfz ui)))
