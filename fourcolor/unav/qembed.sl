@@ -647,3 +647,245 @@
   (let-match erased w (MkWalkZ _ _ _ _ u _ au _ x1 q0 q1 w0 px w1))
   (walk-under d x e n ks s u as au ei ni q0 pe pn w0 lx
     (walk-under d x1 e n ks u (Nil _) au (Nil _) ei ni q1 pe pn w1 (img-lt d x x1 e ei pe lx px) (UnderNil d))))
+
+; cface (edge x) y (Gonthier's rlink).
+(def-adts $ (Rlink : ((List (Nat)) e f) ((Nat) x y) -> Type)
+  enum
+  (many MkRlink : (erased (List (Nat)) e f) (erased (Nat) x y z) (erased (Nth (Nat) e x z) pz) (erased (SomePath f (Nil (Nat)) z y) w) -> (Rlink e f x y)))
+
+; path rlink x (rcons p y), with the darts of p in as and central.
+(def-adts $ (RlPath : ((List (Nat)) ec fc em hl as) ((Nat) x) ((List (Nat)) p) ((Nat) y) -> Type)
+  enum
+  (many RPLast : (erased (List (Nat)) ec fc em hl as) (erased (Nat) x y) (erased (Rlink ec fc x y) l) -> (RlPath ec fc em hl as x (Nil (Nat)) y))
+  (many RPStep : (erased (List (Nat)) ec fc em hl as p) (erased (Nat) x z y) (erased (Rlink ec fc x z) l) (erased (In z as) iz) (erased (Central ec em hl z) cz)
+      (erased (RlPath ec fc em hl as z p y) rest) -> (RlPath ec fc em hl as x (Cons (Nat) z p) y)))
+
+(def-adts $ (RlTo : ((List (Nat)) ec fc em hl as) ((Nat) x) ((List (Nat)) ys) -> Type)
+  enum
+  (many RTNil : (erased (List (Nat)) ec fc em hl as) (erased (Nat) x) -> (RlTo ec fc em hl as x (Nil (Nat))))
+  (many RTCons : (erased (List (Nat)) ec fc em hl as ys p) (erased (Nat) x y) (erased (RlPath ec fc em hl as x p y) rp) (erased (RlTo ec fc em hl as x ys) rest)
+      -> (RlTo ec fc em hl as x (Cons (Nat) y ys))))
+
+; Gonthier's preembedding of the darts as of (ec, nc, fc) into (em, fm), hl listing h, at a dart x of as: h (face x) = face (h x),
+; h keeps the arity, some dart of the face of x is central, and node (face x) is joined to every dart of as by a path of
+; central darts of as (rlink_connected asks this only of central darts).
+(def-adts $ (PeAt : ((List (Nat)) ec nc fc ksc em fm ksm as hl) ((Nat) x) -> Type)
+  enum
+  (many MkPeAt : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) (erased (Nat) x x1 w w1 a y z)
+      (erased (Nth (Nat) fc x x1) px) (erased (Nth (Nat) hl x w) pw) (erased (Nth (Nat) hl x1 w1) pw1) (erased (Nth (Nat) fm w w1) pf)
+      (erased (Nth (Nat) ksc x a) pa) (erased (Nth (Nat) ksm w a) pma) (erased (SomePath fc (Nil (Nat)) x y) py) (erased (Central ec em hl y) cy)
+      (erased (Nth (Nat) nc x1 z) pz) (erased (RlTo ec fc em hl as z as) rl) -> (PeAt ec nc fc ksc em fm ksm as hl x)))
+
+(def-adts $ (PeAll : ((List (Nat)) ec nc fc ksc em fm ksm as hl xs) -> Type)
+  enum
+  (many PANil : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) -> (PeAll ec nc fc ksc em fm ksm as hl (Nil (Nat))))
+  (many PACons : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl xs) (erased (Nat) x) (erased (PeAt ec nc fc ksc em fm ksm as hl x) p)
+      (erased (PeAll ec nc fc ksc em fm ksm as hl xs) rest) -> (PeAll ec nc fc ksc em fm ksm as hl (Cons (Nat) x xs))))
+
+(def-adts $ (Preembedding : ((List (Nat)) ec nc fc ksc em fm ksm as hl) -> Type)
+  enum
+  (many MkPreembedding : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) (erased (PeAll ec nc fc ksc em fm ksm as hl as) pa)
+      -> (Preembedding ec nc fc ksc em fm ksm as hl)))
+
+; as lists the kernel of the ring r among the darts below d (Gonthier's kernel r): each of its darts is in it, and every
+; other dart is on the face band of r.
+(def-adts $ (KerAll : ((List (Nat)) f r as) -> Type)
+  enum
+  (many KANil : (erased (List (Nat)) f r) -> (KerAll f r (Nil (Nat))))
+  (many KACons : (erased (List (Nat)) f r as) (erased (Nat) x) (erased (Kernel f r x) k) (erased (KerAll f r as) rest) -> (KerAll f r (Cons (Nat) x as))))
+
+(def-adts $ (Covered : ((List (Nat)) f r as xs) -> Type)
+  enum
+  (many CvNil : (erased (List (Nat)) f r as) -> (Covered f r as (Nil (Nat))))
+  (many CvIn : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (In x as) i) (erased (Covered f r as xs) rest) -> (Covered f r as (Cons (Nat) x xs)))
+  (many CvBand : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (Fband f r x) b) (erased (Covered f r as xs) rest) -> (Covered f r as (Cons (Nat) x xs))))
+
+(def-adts $ (KernelList : ((Nat) d) ((List (Nat)) f r as) -> Type)
+  enum
+  (many MkKernelList : (erased (Nat) d) (erased (List (Nat)) f r as ids) (erased (Iota d ids) io) (erased (KerAll f r as) ka) (erased (Covered f r as ids) cv)
+      -> (KernelList d f r as)))
+
+(def-adts $ (KinList : ((List (KSt)) st) ((List (Nat)) xs as) -> Type)
+  enum
+  (many KLNil : (erased (List (KSt)) st) -> (KinList st (Nil (Nat)) (Nil (Nat))))
+  (many KLIn : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x i j) (erased (Nth (KSt) st x (KIn i j)) p) (erased (KinList st xs as) rest)
+      -> (KinList st (Cons (Nat) x xs) (Cons (Nat) x as)))
+  (many KLOut : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x) (erased (Nth (KSt) st x (KOut)) p) (erased (KinList st xs as) rest)
+      -> (KinList st (Cons (Nat) x xs) as)))
+
+(def-fns _ $ (erased covered-cons : (erased (List (Nat)) f r as ys) (erased (Nat) x) (subterm erased (Covered f r as ys) cv) -> (erased (Covered f r (Cons (Nat) x as) ys) r))
+  (match erased cv _
+    ((CvNil _ _ _) (CvNil f r (Cons _ x as)))
+    ((CvIn _ _ _ ys1 y i cv1) (CvIn f r (Cons _ x as) ys1 y (InThere y x as i) (covered-cons f r as ys1 x cv1)))
+    ((CvBand _ _ _ ys1 y b cv1) (CvBand f r (Cons _ x as) ys1 y b (covered-cons f r as ys1 x cv1)))))
+
+(def-fns _ $ (erased kin-split : (erased (List (Nat)) ec nc fc ksc rc s0c ys) (erased (List (KSt)) st) (subterm erased (DartsOK ec nc fc ksc rc s0c st ys) dk)
+    -> (erased (List (Nat)) as) (erased (AllKin st as) ak) (erased (KerAll fc rc as) ka) (erased (Covered fc rc as ys) cv) (erased (KinList st ys as) kl))
+  (let-match erased dk (DKCons _ _ _ _ _ _ ys1 _ x d dk1) ((DKNil _ _ _ _ _ _ _) (values (Nil _) (AKNil st) (KANil fc rc) (CvNil fc rc (Nil _)) (KLNil st))))
+  (let ((erased as) (erased ak) (erased ka) (erased cv) (erased kl)) (kin-split ec nc fc ksc rc s0c ys1 st dk1))
+  (match erased d _
+    ((DOut _ _ _ _ _ _ _ _ _ ps fb _ _) (values as ak ka (CvBand fc rc as ys1 x fb cv) (KLOut st ys1 as x ps kl)))
+    ((DIn _ _ _ _ _ _ _ _ i j _ _ _ _ _ _ _ ps _ _ _ _ _ _ _ _ _ _ _ _ _ _ kx)
+      (values (Cons _ x as) (AKCons st x as (MkKin st x i j ps) ak) (KACons fc rc as x kx ka)
+        (CvIn fc rc (Cons _ x as) ys1 x (InHere x as) (covered-cons fc rc as ys1 x cv)) (KLIn st ys1 as x i j ps kl)))))
+
+(def-fns _ $ (erased kl-in : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) y i j) (subterm erased (KinList st xs as) kl) (erased (In y xs) iy)
+    (erased (Nth (KSt) st y (KIn i j)) py) -> (erased (In y as) r))
+  (match erased kl _
+    (absurd (KLNil _) iy)
+    ((KLIn _ xs1 as1 x _ _ _ kl1)
+      (match erased iy _ ((InHere _ _) (InHere y as1)) ((InThere _ _ _ iy1) (InThere y x as1 (kl-in st xs1 as1 y i j kl1 iy1 py)))))
+    ((KLOut _ xs1 _ x px kl1)
+      (match erased iy _
+        (absurd (InHere _ _) (nth-fn (KSt) st y (KIn i j) (KOut) py px))
+        ((InThere _ _ _ iy1) (kl-in st xs1 as y i j kl1 iy1 py))))))
+
+; The darts a path of the certificate may use: walk darts and their edge images, which are central.
+(def-adts $ (CenOK : ((List (Nat)) ec s0c) ((Nat) p) -> Type)
+  enum
+  (many COWalk : (erased (List (Nat)) ec s0c) (erased (Nat) k p) (erased (Nth (Nat) s0c k p) pk) -> (CenOK ec s0c p))
+  (many COEdge : (erased (List (Nat)) ec s0c) (erased (Nat) k c p) (erased (Nth (Nat) s0c k c) pk) (erased (Nth (Nat) ec c p) pe) -> (CenOK ec s0c p)))
+
+; A path from the walk face i to the walk face j: a dart p on face i whose edge image is on the face the rest leaves from.
+(def-adts $ (DPath : ((List (Nat)) ec s0c) ((List (KSt)) st) ((Nat) i) ((List (Nat)) p) ((Nat) j) -> Type)
+  enum
+  (many DPNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) (erased (Nat) i) -> (DPath ec s0c st i (Nil (Nat)) i))
+  (many DPCons : (erased (List (Nat)) ec s0c ps) (erased (List (KSt)) st) (erased (Nat) i p j jp q i2 jq) (erased (Nth (KSt) st p (KIn i jp)) psp)
+      (erased (Nth (Nat) ec p q) pq) (erased (Nth (KSt) st q (KIn i2 jq)) psq) (erased (CenOK ec s0c p) co) (erased (DPath ec s0c st i2 ps j) rest)
+      -> (DPath ec s0c st i (Cons (Nat) p ps) j)))
+
+(def-adts $ (Reach : ((List (Nat)) ec s0c) ((List (KSt)) st) ((Nat) i) ((List (Nat)) js) -> Type)
+  enum
+  (many RNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) (erased (Nat) i) -> (Reach ec s0c st i (Nil (Nat))))
+  (many RCons : (erased (List (Nat)) ec s0c js p) (erased (List (KSt)) st) (erased (Nat) i j) (erased (DPath ec s0c st i p j) dp) (erased (Reach ec s0c st i js) rest)
+      -> (Reach ec s0c st i (Cons (Nat) j js))))
+
+(def-adts $ (ReachAll : ((List (Nat)) ec s0c) ((List (KSt)) st) ((List (Nat)) ixs js) -> Type)
+  enum
+  (many RANil : (erased (List (Nat)) ec s0c js) (erased (List (KSt)) st) -> (ReachAll ec s0c st (Nil (Nat)) js))
+  (many RACons : (erased (List (Nat)) ec s0c ixs js) (erased (List (KSt)) st) (erased (Nat) i) (erased (Reach ec s0c st i js) r) (erased (ReachAll ec s0c st ixs js) rest)
+      -> (ReachAll ec s0c st (Cons (Nat) i ixs) js)))
+
+(def-fns _ $ (erased reach-row : (erased (List (Nat)) ec s0c js) (erased (List (KSt)) st) (erased (Nat) i j) (subterm erased (Reach ec s0c st i js) r) (erased (In j js) ij)
+    -> (erased (List (Nat)) p) (erased (DPath ec s0c st i p j) dp))
+  (let-match erased r (RCons _ _ js1 p _ _ j1 dp r1) (absurd (RNil _ _ _ _) ij))
+  (match erased ij _ ((InHere _ _) (values p dp)) ((InThere _ _ _ ij1) (reach-row ec s0c js1 st i j r1 ij1))))
+
+(def-fns _ $ (erased reach-get : (erased (List (Nat)) ec s0c ixs js) (erased (List (KSt)) st) (erased (Nat) i j) (subterm erased (ReachAll ec s0c st ixs js) ra)
+    (erased (In i ixs) ii) (erased (In j js) ij) -> (erased (List (Nat)) p) (erased (DPath ec s0c st i p j) dp))
+  (let-match erased ra (RACons _ _ ixs1 _ _ i1 r ra1) (absurd (RANil _ _ _ _) ii))
+  (match erased ii _ ((InHere _ _) (reach-row ec s0c js st i j r ij)) ((InThere _ _ _ ii1) (reach-get ec s0c ixs1 js st i j ra1 ii1 ij))))
+
+(def-fns _ $ (erased cen-ok : (erased (Nat) dc dm p) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
+    (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
+    (erased (CenOK ec s0c p) co) -> (erased (Central ec em hl p) r))
+  (match erased co _
+    ((COWalk _ _ k _ pk) (acd-nth ec em hl s0c k p acd pk))
+    ((COEdge _ _ k c _ pk pe)
+      (cen-edge dc dm c p ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (allkin-nth st s0c k c aks pk) (acd-nth ec em hl s0c k c acd pk) pe))))
+
+; A certificate path from face i turns into an rlink path from any dart z whose edge image is on face i.
+(def-fns _ $ (erased dp-rl : (erased (Nat) dc dm z w i jw j jy y) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids p) (erased (List (KSt)) st)
+    (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
+    (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (subterm erased (DPath ec s0c st i p j) dp) (erased (Nth (Nat) ec z w) pzw)
+    (erased (Nth (KSt) st w (KIn i jw)) pw) (erased (Nth (KSt) st y (KIn j jy)) py) -> (erased (RlPath ec fc em hl as z p y) r))
+  (match erased dp _
+    ((DPNil _ _ _ _) (RPLast ec fc em hl as z y (MkRlink ec fc z y w pzw (coord-path dc dm w y i jw jy ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw py))))
+    ((DPCons _ _ ps _ _ q _ jp q2 i2 jq psp pq psq co dp1)
+      (let ((erased lq)) (kin-lt dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st q i jp psp)))
+      (RPStep ec fc em hl as ps z q y (MkRlink ec fc z q w pzw (coord-path dc dm w q i jw jp ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw psp))
+        (kl-in st ids as q i jp kl (iota-in dc q ids io lq) psp) (cen-ok dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en acd aks co)
+        (dp-rl dc dm q q2 i2 jq j jy y ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ps st en acd aks kl io dp1 pq psq py)))))
+
+; The derived facts the preembedding is built from.
+(def-adts $ (PEnv : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) dm) ((List (Nat)) em nm fm ksm s0m hl as) -> Type)
+  enum
+  (many MkPEnv : (erased (Nat) dc dm k) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ixs) (erased (List (KSt)) st)
+      (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
+      (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (ReachAll ec s0c st ixs ixs) ra)
+      -> (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as)))
+
+(def-fns _ $ (erased rl-to : (erased (Nat) dc dm z x i jx) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ys) (erased (List (KSt)) st)
+    (erased (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as) pv) (subterm erased (AllKin st ys) ak) (erased (Nth (Nat) ec z x) pzx)
+    (erased (Nth (KSt) st x (KIn i jx)) px) -> (erased (RlTo ec fc em hl as z ys) r))
+  (let-match erased ak (AKCons _ y ys1 ky ak1) ((AKNil _) (RTNil ec fc em hl as z)))
+  (let-match erased pv (MkPEnv _ _ k _ _ _ _ _ _ _ _ _ _ _ _ _ ids ixs _ en acd aks kl io ls iok ra))
+  (let ((erased i1) (erased _) (erased c) (erased _) (erased ps) (erased pc) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
+    (kin-anchor dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st x i jx px)))
+  (let-match erased (nth-fn (KSt) st x (KIn i jx) (KIn i1 _) px ps) (Refl _ _))
+  (let ((erased j) (erased jy) (erased cy) (erased _) (erased psy) (erased pcy) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
+    (kin-anchor dc dm y ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky))
+  (let ((erased p) (erased dp))
+    (reach-get ec s0c ixs ixs st i j ra (iota-in k i ixs iok (nth-lt-length (Nat) s0c i k c pc ls)) (iota-in k j ixs iok (nth-lt-length (Nat) s0c j k cy pcy ls))))
+  (RTCons ec fc em hl as ys1 p z y (dp-rl dc dm z x i jx j jy y ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids p st en acd aks kl io dp pzx px psy)
+    (rl-to dc dm z x i jx ec nc fc ksc rc s0c em nm fm ksm s0m hl as ys1 st pv ak1 pzx px)))
+
+(def-fns _ $ (erased pe-at : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as) (erased (List (KSt)) st)
+    (erased (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as) pv) (erased (AllKin st as) aka) (erased (Kin st x) kx)
+    -> (erased (PeAt ec nc fc ksc em fm ksm as hl x) r))
+  (let-match erased pv (MkPEnv _ _ k _ _ _ _ _ _ _ _ _ _ _ _ _ ids ixs _ en acd aks kl io ls iok ra))
+  (let ((erased w) (erased x1) (erased w1) (erased pw) (erased px) (erased _) (erased pw1) (erased pf)) (kin-face dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kx))
+  (let ((erased i) (erased j) (erased c) (erased a) (erased ps) (erased pc) (erased _) (erased pa) (erased _) (erased pxa) (erased pc0) (erased _))
+    (kin-anchor dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kx))
+  (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 as0 _ hc olc io2 lst dk g hr uh us rac ram))
+  (let-match erased g (MkGeo _ _ _ _ _ hm _ _ olm _))
+  (let ((erased v) (erased pv0) (erased itw)) (hl-at st s0m fm hl x i j w hr ps pw))
+  (let ((erased l) (erased pl) (erased qc)) (resp-at ksc s0c as0 i c rac pc))
+  (let-match erased (nth-fn (Nat) ksc c a l pa qc) (Refl _ _))
+  (let ((erased l2) (erased pl2) (erased qm)) (resp-at ksm s0m as0 i v ram pv0))
+  (let-match erased (nth-fn (Nat) as0 i a l2 pl pl2) (Refl _ _))
+  (let ((erased pma)) (iter-arity dm j v w a em nm fm ksm hm olm itw (under-nth s0m i v dm us pv0) qm))
+  (let ((erased cnf) (erased cni) (erased cfi) (erased _) (erased cpe) (erased cpn) (erased cpf)) (hyper-core dc ec nc fc hc))
+  (let ((erased lx1)) (img-lt dc x x1 fc cfi cpf (kin-lt dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kx) px))
+  (let ((erased z) (erased pz) (erased lz)) (perm-nth dc x1 nc cni cpn lx1))
+  (let ((erased w2) (erased pw2) (erased _)) (perm-nth dc z ec cnf cpe lz))
+  (let-match erased (perm-inj dc w2 x x1 fc cfi cpf (fen dc x1 z w2 ec nc fc hc lx1 pz pw2) px) (Refl _ _))
+  (MkPeAt ec nc fc ksc em fm ksm as hl x x1 w w1 a c z px pw pw1 pf pxa pma
+    (coord-path dc dm x c i j (Zero) ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ps pc0) (acd-nth ec em hl s0c i c acd pc) pz
+    (rl-to dc dm z x i j ec nc fc ksc rc s0c em nm fm ksm s0m hl as as st pv aka pw2 ps)))
+
+(def-fns _ $ (erased pe-all : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as xs) (erased (List (KSt)) st)
+    (erased (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as) pv) (erased (AllKin st as) aka) (subterm erased (AllKin st xs) ak)
+    -> (erased (PeAll ec nc fc ksc em fm ksm as hl xs) r))
+  (let-match erased ak (AKCons _ x xs1 kx ak1) ((AKNil _) (PANil ec nc fc ksc em fm ksm as hl)))
+  (PACons ec nc fc ksc em fm ksm as hl xs1 x (pe-at dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl as st pv aka kx)
+    (pe-all dc dm ec nc fc ksc rc s0c em nm fm ksm s0m hl as xs1 st pv aka ak1)))
+
+; What a run checks of a configuration map Gc with ring rc and a quiz qz of two QaskR questions at x0c: the place of each
+; dart (DartsOK), the walk s0c of qz with its arities, whose darts are at the places k, 0, and a path between any two walk
+; faces (ReachAll).
+(def-adts $ (QzCert : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Quiz) qz) ((Nat) x0c) -> Type)
+  enum
+  (many MkQzCert : (erased (Nat) dc k x0c a0 a1) (erased (List (Nat)) ec nc fc ksc rc s0c asc ids ixs) (erased (List (KSt)) st) (erased (Qn) q01 q10)
+      (erased (Hypermap dc ec nc fc) hc) (erased (OrderList dc fc ksc) olc) (erased (Iota dc ids) io) (erased (Length (KSt) st dc) lst)
+      (erased (DartsOK ec nc fc ksc rc s0c st ids) dk) (erased (StIx st k) sx) (erased (WalkZ ec nc ksc x0c (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) s0c asc) wz)
+      (erased (WPos st s0c (Zero)) wp) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (ReachAll ec s0c st ixs ixs) ra)
+      -> (QzCert dc ec nc fc ksc rc (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) x0c)))
+
+; quiz_preembedding: h sends x0c to x0m and is a preembedding of the kernel as of rc.
+(def-fns _ $ (erased quiz-preembedding : (erased (Nat) dc x0c dm x0m) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm) (erased (Quiz) qz)
+    (erased (QzCert dc ec nc fc ksc rc qz x0c) cert) (erased (Geo dm em nm fm ksm) g) (erased (Lt x0m dm) lx0) (erased (FitZ em nm ksm x0m qz) fz)
+    -> (erased (List (Nat)) as hl) (erased (KernelList dc fc rc as) kls) (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0))
+  (let-match erased cert (MkQzCert _ k _ a0 a1 _ _ _ _ _ s0c asc ids ixs st q01 q10 hc olc io lst dk sx wz wp ls iok ra))
+  (let-match erased g (MkGeo _ _ _ _ _ hm _ _ _ _))
+  (let ((erased mnf) (erased mni) (erased mfi) (erased _) (erased mpe) (erased mpn) (erased mpf)) (hyper-core dm em nm fm hm))
+  (let ((erased s0m) (erased asm) (erased wzm)) (fitz-walk em nm ksm x0m qz fz))
+  (let-match erased (walkz-as ec nc ksc em nm ksm s0c asc s0m asm x0c x0m qz wz wzm) (Refl _ _))
+  (let ((erased rac)) (walkz-arity ec nc ksc s0c asc x0c qz wz))
+  (let ((erased ram)) (walkz-arity em nm ksm s0m asc x0m qz wzm))
+  (let ((erased us)) (walkz-under dm x0m em nm ksm s0m asc mnf mni qz mpe mpn wzm lx0))
+  (let ((erased lsm)) (respects-length-inv ksm s0m asc k ram (respects-length ksc s0c asc k rac ls)))
+  (let ((erased hl) (erased hr) (erased uh)) (hl-exists dm k x0m s0m fm mfi st sx lsm us mpf lx0))
+  (let ((erased en)) (MkQEnv dc dm ec nc fc ksc rc s0c em nm fm ksm s0m hl ids asc st hc olc io lst dk g hr uh us rac ram))
+  (let ((erased rs)) (wpos-resp dc dm (Zero) k ec nc fc ksc rc s0c em nm fm ksm s0m hl s0c s0m (Nil _) st en wp (AppNil s0m) (LengthNil _) ls lsm))
+  (let ((erased aks)) (wpos-kin st s0c (Zero) wp))
+  (let ((erased acd)) (walk-central dc dm x0c x0m a0 a1 ec nc fc ksc rc s0c em nm fm ksm s0m hl asc asc st en q01 q10 wz wzm rs aks))
+  (let ((erased as) (erased aka) (erased ka) (erased cv) (erased kl)) (kin-split ec nc fc ksc rc s0c ids st dk))
+  (let ((erased pv)) (MkPEnv dc dm k ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ixs st en acd aks kl io ls iok ra))
+  (let-match erased wz (MkWalkZ _ _ _ _ _ _ _ _ _ _ _ w0 _ _))
+  (let-match erased w0 (WSR _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased wzm (MkWalkZ _ _ _ _ _ _ _ _ _ _ _ w0m _ _))
+  (let-match erased w0m (WSR _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased rs (RespCons _ _ _ _ _ h0 _))
+  (values as hl (MkKernelList dc fc rc as ids io ka cv)
+    (MkPreembedding ec nc fc ksc em fm ksm as hl (pe-all dc dm ec nc fc ksc rc s0c em nm fm ksm s0m hl as as st pv aka aka)) h0))
