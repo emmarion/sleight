@@ -28,14 +28,13 @@ reading code and from one profile, not measurements of this design.
 ### 1b. Scratch
 
 - One scratch tag/count pair for the whole run.
-- Its contents go onto a vector by one tail-recursive per-cell copy, not
-  a blit: `array-blit` and `bytes-blit` take their source at `many`, and
-  a shared scratch could not be used at `unique` again (DESIGN.md §15,
-  §16).
-- The scratch is another stack vector (1a). A stride pushes its output
-  onto it near end first; popping it then yields the far end first, so
-  pushing each popped cell onto the right vector leaves the near end on
-  top.
+- The scratch is a stack that grows downward: its top is at the lowest
+  occupied physical index, so the occupied range holds its logical list
+  in order. A stride pushes its output onto it near end first, so that
+  range is already in the order the right vector needs above its top,
+  and one `bytes-blit` and one `array-blit`, which take their source at
+  `unique`, copy it there.
+- Doubling copies the old contents to the high end of the new arrays.
 
 ### 1c. Proofs
 
@@ -95,11 +94,8 @@ force/enter logic. Only their data representation changes.
 
 ## 3. Open questions
 
-1. Whether doubling copies with a blit, which is possible there because
-   the old array is discarded, and whether `caml_array_blit` uses
-   `memmove` or the write barrier for an array in the major heap.
-2. Whether the scratch's copy back can later use a blit, if a blit that
-   takes its source at `unique` becomes available.
+1. Whether `caml_array_blit` uses `memmove` or the write barrier for an
+   array in the major heap.
 
 ## 4. Measuring
 
