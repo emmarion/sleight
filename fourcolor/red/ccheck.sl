@@ -308,13 +308,15 @@
   (let-match many (ccsize-c e f r ie cc flab d rf) (CkY _ sz) ((CkN _) (CkN _)))
   (CkY _ (MkValidContract e n f r cc ie pi off sp sz)))
 
-; The configuration cf is C-reducible with its contract.
-(def-adts $ (Reducible : ((Config) cf) -> Type)
+; The configuration cf is C-reducible with its contract, by a function at level X.
+(def-adts $ (Reducible : ((Level) X) ((Config) cf) -> Type)
   enum
-  (many MkReducible : (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (CfContract cp cci cc) pc) (erased (CRed cp cc) red)
-      -> (Reducible (MkConfig sym cci cp))))
+  (many MkReducible : (erased (Level) X) (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (CfContract cp cci cc) pc) (erased (CRed X cp cc) red)
+      -> (Reducible X (MkConfig sym cci cp))))
 
-(def-fns _ $ (many red-c : (many (Config) cf) (many (List (InitE)) cache) -> (many (Chk (Reducible cf)) r) (many (List (InitE)) cache2))
+(def-lvl CRX)
+
+(def-fns _ $ (many red-c : (many (Config) cf) (many (List (InitE)) cache) -> (many (Chk (Reducible CRX cf)) r) (many (List (InitE)) cache2))
   (let-match many cf (MkConfig sym cci cp))
   (let-match many (noa-dec cp) (NoAYes _ na) ((NoANo _) (values (CkN _) cache)))
   (let ((many d) (many e) (many f) (many r) (erased c)) (cpmap-c cp na))
@@ -330,23 +332,25 @@
   (let-match many kc (KCYes _ h0 kt ks cs na2) ((KCNo _) (values (CkN _) cache2)))
   (let ((erased zs) (erased ra)) (revapp-exists (List (Col)) ls (Nil (List (Col)))))
   (let-match many (allout-c kt ls (Nil _) zs ra (AONil kt)) (CkY _ ao) ((CkN _) (values (CkN _) cache2)))
-  (values (CkY _ (MkReducible sym cci cc cp (MkCfContract cp cci xs cc pce pk)
-    (check-reducible-valid cp cc kt (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie ls zs c h v pi lr ra ao)))) cache2))
+  (values (CkY _ (MkReducible CRX sym cci cc cp (MkCfContract cp cci xs cc pce pk)
+    (check-reducible-valid CRX CGL (prove-predates KHL CRX) (prove-predates CGL CRX) cp cc kt
+      (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie ls zs c h v pi lr ra ao)))) cache2))
 
-(def-adts $ (AllRed : ((List (Config)) cfs) -> Type)
+(def-adts $ (AllRed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
-  (many ARNil : -> (AllRed (Nil (Config))))
-  (many ARCons : (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible cf) p) (erased (AllRed cfs) rest) -> (AllRed (Cons (Config) cf cfs))))
+  (many ARNil : (erased (Level) X) -> (AllRed X (Nil (Config))))
+  (many ARCons : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible X cf) p) (erased (AllRed X cfs) rest)
+      -> (AllRed X (Cons (Config) cf cfs))))
 
-(def-fns _ $ (many red-all-c : (subterm many (List (Config)) cfs) (many (List (InitE)) cache) -> (many (Chk (AllRed cfs)) r))
-  (let-match many cfs (Cons _ cf rest) ((Nil _) (CkY _ (ARNil))))
+(def-fns _ $ (many red-all-c : (subterm many (List (Config)) cfs) (many (List (InitE)) cache) -> (many (Chk (AllRed CRX cfs)) r))
+  (let-match many cfs (Cons _ cf rest) ((Nil _) (CkY _ (ARNil CRX))))
   (let ((many b) (many cache2)) (red-c cf cache))
   (let-match many b (CkY _ p) ((CkN _) (CkN _)))
   (let-match many (notail $ red-all-c rest cache2) (CkY _ q) ((CkN _) (CkN _)))
-  (CkY _ (ARCons cf rest p q)))
+  (CkY _ (ARCons CRX cf rest p q)))
 
-(def-adts $ (AllRedC : ((List (List (Config))) css) -> Type)
+(def-adts $ (AllRedC : ((Level) X) ((List (List (Config))) css) -> Type)
   enum
-  (many ARCNil : -> (AllRedC (Nil (List (Config)))))
-  (many ARCCons : (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (AllRed cs) p) (erased (AllRedC css) rest)
-      -> (AllRedC (Cons (List (Config)) cs css))))
+  (many ARCNil : (erased (Level) X) -> (AllRedC X (Nil (List (Config)))))
+  (many ARCCons : (erased (Level) X) (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (AllRed X cs) p) (erased (AllRedC X css) rest)
+      -> (AllRedC X (Cons (List (Config)) cs css))))
