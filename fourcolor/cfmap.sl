@@ -1,0 +1,270 @@
+; The maps of configuration construction programs, after Gonthier and Werner's cfmap.v, on the hypermaps of hypermap.sl.
+
+(def-fns _ $ (many nth-c : (erased (Nat) k) (subterm many (List (Nat)) xs) (many (Nat) i) (erased (Length (Nat) xs k) l) (erased (Lt i k) lt)
+    -> (many (Nat) x) (erased (Nth (Nat) xs i x) p))
+  (let-match many xs (Cons _ y rest) (absurd (Nil _) (let-match erased l (LengthNil _)) lt))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (let-match many i (Succ i1) ((Zero) (values y (NthHere _ y rest))))
+  (let-match erased lt (LtS _ _ lt1))
+  (let ((many x) (erased p)) (tail $ nth-c k1 rest i1 l1 lt1))
+  (values x (NthThere _ y rest i1 x p)))
+
+(def-fns _ $ (many setnth-c : (erased (Nat) k) (subterm many (List (Nat)) xs) (many (Nat) i y) (erased (Length (Nat) xs k) l) (erased (Lt i k) lt)
+    -> (many (List (Nat)) ys) (erased (SetNth (Nat) xs i y ys) p))
+  (let-match many xs (Cons _ x rest) (absurd (Nil _) (let-match erased l (LengthNil _)) lt))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (let-match many i (Succ i1) ((Zero) (values (Cons _ y rest) (SetHere _ x y rest))))
+  (let-match erased lt (LtS _ _ lt1))
+  (let ((many ys) (erased p)) (notail $ setnth-c k1 rest i1 y l1 lt1))
+  (values (Cons _ x ys) (SetThere _ x rest i1 y ys p)))
+
+(def-fns _ $ (many snoc-c : (subterm many (List (Nat)) xs) (many (Nat) a) -> (many (List (Nat)) ys) (erased (Snoc (Nat) xs a ys) p))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Cons _ a (Nil _)) (SnocNil _ a))))
+  (let ((many ys) (erased p)) (notail $ snoc-c rest a))
+  (values (Cons _ x ys) (SnocCons _ x a rest ys p)))
+
+(def-fns _ $ (many insert-c : (erased (Nat) k) (many (List (Nat)) xs) (many (Nat) c x) (erased (Length (Nat) xs k) l) (erased (Lt c k) lt)
+    -> (many (List (Nat)) ys) (erased (Insert xs c x ys) p))
+  (let ((many v) (erased pv)) (nth-c k xs c l lt))
+  (let ((many xs1) (erased s1)) (setnth-c k xs c x l lt))
+  (let ((many ys) (erased s2)) (snoc-c xs1 v))
+  (values ys (MkInsert xs xs1 ys c x v pv s1 s2)))
+
+; y is the last entry of xs.
+(def-adts $ (Last : ((List (Nat)) xs) ((Nat) y) -> Type)
+  enum
+  (many LastOne : (erased (Nat) y) -> (Last (Cons (Nat) y (Nil (Nat))) y))
+  (many LastCons : (erased (Nat) x y) (erased (List (Nat)) xs) (erased (Last xs y) p) -> (Last (Cons (Nat) x xs) y)))
+
+(def-fns _ $ (many last-c : (many (Nat) a) (subterm many (List (Nat)) p) -> (many (Nat) y) (erased (Last (Cons (Nat) a p) y) l))
+  (let-match many p (Cons _ b rest) ((Nil _) (values a (LastOne a))))
+  (let ((many y) (erased l)) (tail $ last-c b rest))
+  (values y (LastCons a y p l)))
+
+; The darts of p, each sent by n to the one before it, from x to y: a node path read backwards.
+(def-adts $ (RPath : ((List (Nat)) n) ((Nat) x) ((List (Nat)) p) ((Nat) y) -> Type)
+  enum
+  (many RPNil : (erased (List (Nat)) n) (erased (Nat) x) -> (RPath n x (Nil (Nat)) x))
+  (many RPCons : (erased (List (Nat)) n p) (erased (Nat) x z y) (erased (Nth (Nat) n z x) pz) (erased (RPath n z p y) rest)
+      -> (RPath n x (Cons (Nat) z p) y)))
+
+; r is a whole node cycle read backwards, without repeats, from its head (Gonthier's cpring of the dart after the head).
+(def-adts $ (Cpring : ((List (Nat)) n r) -> Type)
+  enum
+  (many MkCpring : (erased (List (Nat)) n p) (erased (Nat) a y) (erased (RPath n a p y) rp) (erased (Nth (Nat) n a y) back)
+      (erased (Distinct (Cons (Nat) a p)) dp) -> (Cpring n (Cons (Nat) a p))))
+
+; x0 is the reference dart of the ring r: its second dart, or its only one.
+(def-adts $ (Ptr : ((List (Nat)) r) ((Nat) x0) -> Type)
+  enum
+  (many PtrOne : (erased (Nat) x) -> (Ptr (Cons (Nat) x (Nil (Nat))) x))
+  (many PtrTwo : (erased (Nat) a x) (erased (List (Nat)) p) -> (Ptr (Cons (Nat) a (Cons (Nat) x p)) x)))
+
+; A hypermap with its ring (Gonthier's pointed_map, with cpring of the pointer).
+(def-adts $ (PointedMap : ((Nat) d) ((List (Nat)) e n f r) -> Type)
+  enum
+  (many MkPointedMap : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Cpring n r) cr)
+      -> (PointedMap d e n f r)))
+
+(def-fns _ $ (erased rpath-last : (erased (List (Nat)) n p) (erased (Nat) a y) (subterm erased (RPath n a p y) rp) -> (erased (Last (Cons (Nat) a p) y) r))
+  (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (LastOne a)))
+  (LastCons a y p (rpath-last n p1 z y rp1)))
+
+(def-fns _ $ (erased last-fn : (erased (List (Nat)) xs) (erased (Nat) y z) (subterm erased (Last xs y) p) (erased (Last xs z) q) -> (erased (Eq (Nat) y z) e))
+  (match erased p _
+    ((LastOne _) (let-match erased q (LastOne _) (absurd (LastCons _ _ _ q1) q1)) (Refl _ y))
+    ((LastCons _ _ xs1 p1) (let-match erased q (LastCons _ _ _ q1) (absurd (LastOne _) p1)) (last-fn xs1 y z p1 q1))))
+
+; The cancellation laws of a hypermap, read as lookups.
+(def-fns _ $ (erased hyper-node : (erased (Nat) d x y z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    (erased (Nth (Nat) e x y) px) (erased (Nth (Nat) f y z) py) -> (erased (Nth (Nat) n z x) r))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased lx)) (nth-lt-length _ e x d y px le))
+  (let ((erased w) (erased pw)) (nth-exists _ fe d x (respects-length f e fe d cfe le) lx))
+  (let-match erased (nth-fn _ f y z w py (respects-nth f e fe x y w cfe px pw)) (Refl _ _))
+  (respects-nth n fe ids x z x ke pw (iota-nth d x ids io lx)))
+
+(def-fns _ $ (erased hyper-back : (erased (Nat) d x z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Nth (Nat) n z x) pz)
+    -> (erased (Nat) y) (erased (Nth (Nat) e x y) px) (erased (Nth (Nat) f y z) py))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased lz)) (nth-lt-length _ n z d x pz ln))
+  (let ((erased y) (erased py0)) (nth-exists _ en d z (respects-length e n en d cen ln) lz))
+  (values y (respects-nth e n en z x y cen pz py0) (respects-nth f en ids z y z kn py0 (iota-nth d z ids io lz))))
+
+; A hypermap from its edge and face permutations.
+(def-fns _ $ (erased hyper-ef : (erased (Nat) d) (erased (List (Nat)) e ei f fi) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf)
+    -> (erased (List (Nat)) n) (erased (Hypermap d e n f) h))
+  (let ((erased n) (erased h)) (hyper-mk d f fi e ei pf pe))
+  (values n (hyper-rot d f e n (hyper-rot d n f e h))))
+
+; Gonthier's cpmap0: two darts, edge and node exchanging them, face fixing them, and the ring [1, 0].
+(def-fns _ $ (erased cpmap0 : -> (erased (PointedMap (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
+    (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Zero) (Cons (Nat) (Succ (Zero)) (Nil (Nat))))
+    (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))) r))
+  (let ((erased z) (erased o) (erased two)) (values (Zero) (Succ (Zero)) (Succ (Succ (Zero)))))
+  (let ((erased l1) (erased l0)) (values (Cons (Nat) o (Nil (Nat))) (Cons (Nat) z (Nil (Nat)))))
+  (let ((erased sw) (erased id)) (values (Cons (Nat) o l0) (Cons (Nat) z l1)))
+  (let ((erased io)) (IotaS o l0 id (IotaS z (Nil (Nat)) l0 (IotaZ) (SnocNil _ z)) (SnocCons _ z o (Nil (Nat)) l1 (SnocNil _ o))))
+  (let ((erased s0) (erased s1)) (values (NthHere _ o l0) (NthThere _ o l0 z z (NthHere _ z (Nil (Nat))))))
+  (let ((erased i0) (erased i1)) (values (NthHere _ z l1) (NthThere _ z l1 z o (NthHere _ o (Nil (Nat))))))
+  (let ((erased rsw)) (RespCons sw l0 l1 o z s1 (RespCons sw (Nil (Nat)) (Nil (Nat)) z o s0 (RespNil sw))))
+  (let ((erased rid)) (RespCons id l1 l1 z z i0 (RespCons id (Nil (Nat)) (Nil (Nat)) o o i1 (RespNil id))))
+  (let ((erased lsw)) (LengthCons _ o _ o (LengthCons _ z _ z (LengthNil _))))
+  (let ((erased lid)) (LengthCons _ z _ o (LengthCons _ o _ z (LengthNil _))))
+  (let ((erased n) (erased h)) (hyper-ef two sw sw id id (MkPerm two sw sw id io lsw rsw rsw) (MkPerm two id id id io lid rid rid)))
+  (let ((erased n0)) (hyper-node two z o o sw n id h s0 i1))
+  (let ((erased n1)) (hyper-node two o z z sw n id h s1 i0))
+  (let ((erased _) (erased ln) (erased _)) (hyper-lengths two sw n id h))
+  (let-match erased ln (LengthCons _ h0 t0 _ ln1))
+  (let-match erased ln1 (LengthCons _ h1 t1 _ ln2))
+  (let-match erased ln2 (LengthNil _))
+  (let-match erased n1 (NthHere _ _ _))
+  (let-match erased n0 (NthThere _ _ _ _ _ n0a))
+  (let-match erased n0a (NthHere _ _ _))
+  (MkPointedMap two sw n id sw h
+    (MkCpring n l0 o z (RPCons n (Nil (Nat)) o z z (NthHere _ o l0) (RPNil n z)) s1
+      (DistCons o l0 (NotInCons o z (Nil (Nat)) (ApGt _ _ o z (LtZ (Zero))) (NotInNil o)) (DistCons z (Nil (Nat)) (NotInNil z) (DistNil))))))
+
+; ys is xs rotated left by one place k times.
+(def-adts $ (Rots : ((Nat) k) ((List (Nat)) xs ys) -> Type)
+  enum
+  (many RotsZ : (erased (List (Nat)) xs) -> (Rots (Zero) xs xs))
+  (many RotsS : (erased (Nat) k x) (erased (List (Nat)) xs xs2 ys) (erased (Snoc (Nat) xs x xs2) s) (erased (Rots k xs2 ys) rest)
+      -> (Rots (Succ k) (Cons (Nat) x xs) ys)))
+
+; Gonthier's rot k: rotation left by k places, which leaves xs alone when k exceeds its length.
+(def-adts $ (Rot : ((Nat) k) ((List (Nat)) xs ys) -> Type)
+  enum
+  (many RotIn : (erased (Nat) k m) (erased (List (Nat)) xs ys) (erased (Length (Nat) xs m) l) (erased (Lt k (Succ m)) le) (erased (Rots k xs ys) rs)
+      -> (Rot k xs ys))
+  (many RotOver : (erased (Nat) k m) (erased (List (Nat)) xs) (erased (Length (Nat) xs m) l) (erased (Lt m k) gt) -> (Rot k xs xs)))
+
+(def-fns _ $ (many size-c : (subterm many (List (Nat)) xs) -> (many (Nat) m) (erased (Length (Nat) xs m) l))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (LengthNil _))))
+  (let ((many m) (erased l)) (notail $ size-c rest))
+  (values (Succ m) (LengthCons _ x rest m l)))
+
+(def-fns _ $ (many rots-c : (subterm many (Nat) k) (many (List (Nat)) xs) (erased (Nat) m) (erased (Length (Nat) xs m) l) (erased (Lt k (Succ m)) le)
+    -> (many (List (Nat)) ys) (erased (Rots k xs ys) r))
+  (let-match many k (Succ k1) ((Zero) (values xs (RotsZ xs))))
+  (let-match many xs (Cons _ x rest) (absurd (Nil _) (let-match erased l (LengthNil _)) (let-match erased le (LtS _ _ le1)) le1))
+  (let-match erased l (LengthCons _ _ _ m1 l1))
+  (let ((many xs2) (erased s)) (snoc-c rest x))
+  (let ((many ys) (erased r)) (tail $ rots-c k1 xs2 m (snoc-length _ rest xs2 x m1 s l1) (lt-succ-left k1 (Succ m) le)))
+  (values ys (RotsS k1 x rest xs2 ys s r)))
+
+(def-fns _ $ (many rot-c : (many (Nat) k) (many (List (Nat)) xs) -> (many (List (Nat)) ys) (erased (Rot k xs ys) r))
+  (let ((many m) (erased l)) (size-c xs))
+  (match many (nat-cmp k m) _
+    ((CLt _ _ _ _ lt) (let ((many ys) (erased rs)) (rots-c k xs m l (lt-weaken k m lt))) (values ys (RotIn k m xs ys l (lt-weaken k m lt) rs)))
+    ((CEq _ _ _) (let ((many ys) (erased rs)) (rots-c k xs m l (lt-succ k))) (values ys (RotIn k m xs ys l (lt-succ k) rs)))
+    ((CGt _ _ _ _ gt) (values xs (RotOver k m xs l gt)))))
+
+(def-fns _ $ (erased rpath-snoc : (erased (List (Nat)) n p p2) (erased (Nat) x y z) (subterm erased (RPath n x p y) rp) (erased (Nth (Nat) n z y) pz)
+    (erased (Snoc (Nat) p z p2) s) -> (erased (RPath n x p2 z) r))
+  (match erased rp _
+    ((RPNil _ _) (let-match erased s (SnocNil _ _)) (RPCons n (Nil (Nat)) x z z pz (RPNil n z)))
+    ((RPCons _ p1 _ w _ pw rp1)
+      (let-match erased s (SnocCons _ _ _ _ q1 s1))
+      (RPCons n q1 x w z pw (rpath-snoc n p1 q1 w y z rp1 pz s1)))))
+
+(def-fns _ $ (erased cpring-rot1 : (erased (List (Nat)) n p q) (erased (Nat) a) (erased (Cpring n (Cons (Nat) a p)) cr) (erased (Snoc (Nat) p a q) s)
+    -> (erased (Cpring n q) r))
+  (let-match erased cr (MkCpring _ _ _ y rp back dp))
+  (let-match erased rp (RPCons _ p1 _ b _ pb rp1) ((RPNil _ _) (let-match erased s (SnocNil _ _)) cr))
+  (let-match erased s (SnocCons _ _ _ _ q1 s1))
+  (MkCpring n q1 b a (rpath-snoc n p1 q1 b y a rp1 back s1) pb (distinct-snoc-cons a p q s dp)))
+
+(def-fns _ $ (erased cpring-rots : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (subterm erased (Rots k xs ys) rs)
+    -> (erased (Cpring n ys) r))
+  (let-match erased rs (RotsS k1 x xs1 xs2 _ s rs1) ((RotsZ _) cr))
+  (cpring-rots n xs2 ys k1 (cpring-rot1 n xs1 xs2 x cr s) rs1))
+
+(def-fns _ $ (erased cpring-rot : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (erased (Rot k xs ys) rt)
+    -> (erased (Cpring n ys) r))
+  (match erased rt _
+    ((RotIn _ m _ _ l le rs) (cpring-rots n xs ys k cr rs))
+    ((RotOver _ m _ l gt) cr)))
+
+(def-fns _ $ (erased perm-fix2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Snoc (Nat) p d p2) s)
+    -> (erased (List (Nat)) q2) (erased (Perm (Succ d) p2 q2) r))
+  (let ((erased q2) (erased sq)) (snoc-exists _ q d))
+  (values q2 (perm-fix d p q p2 q2 pm s sq)))
+
+(def-fns _ $ (erased perm-insert2 : (erased (Nat) d c a) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Insert p c d p2) ins)
+    (erased (Nth (Nat) p c a) pc) -> (erased (List (Nat)) q2) (erased (Perm (Succ d) p2 q2) r))
+  (let ((erased q2) (erased iq)) (insert-exists q a d c (perm-inv d c a p q pm pc)))
+  (values q2 (perm-insert d c a p q p2 q2 pm ins iq pc)))
+
+(def-fns _ $ (erased perm-grow2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (EdgeGrow p d p2) g)
+    -> (erased (List (Nat)) q2) (erased (Perm (Succ (Succ d)) p2 q2) r))
+  (let ((erased p0) (erased s) (erased ins)) (grow-insert p p2 d g))
+  (let ((erased len) (erased _)) (grow-length p p2 d g))
+  (let ((erased q0) (erased pm0)) (perm-fix2 d p q p0 pm s))
+  (perm-insert2 (Succ d) d d p0 q0 p2 pm0 ins (snoc-new _ p p0 d d s len)))
+
+; Outside the faces t of the darts s at which f2 differs from f, and with e2 extending e, node agrees.
+(def-fns _ $ (erased node-move : (erased (Nat) d d2 z u) (erased (List (Nat)) e n f e2 n2 f2 s t) (erased (Hypermap d e n f) h)
+    (erased (Hypermap d2 e2 n2 f2) h2) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) st)
+    (erased (Nth (Nat) n z u) pz) (erased (NotIn z t) out) -> (erased (Nth (Nat) n2 z u) r))
+  (let ((erased v) (erased pu) (erased pv)) (hyper-back d u z e n f h pz))
+  (let-match erased (in-dec v s) (OrR _ _ vs) (absurd (OrL _ _ i) (apart-irrefl z (notin-in z z t out (in-map f s t v z i st pv)))))
+  (hyper-node d2 u v z e2 n2 f2 h2 (agree-nth e e2 (Nil (Nat)) u v ge pu (NotInNil u)) (agree-nth f f2 s v z gf pv vs)))
+
+(def-fns _ $ (erased rpath-move : (erased (Nat) d d2 a y) (erased (List (Nat)) e n f e2 n2 f2 s t p) (erased (Hypermap d e n f) h)
+    (erased (Hypermap d2 e2 n2 f2) h2) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) st)
+    (subterm erased (RPath n a p y) rp) (erased (Disj p t) dj) -> (erased (RPath n2 a p y) r))
+  (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (RPNil n2 a)))
+  (let-match erased dj (DisjCons _ _ _ out dj1))
+  (RPCons n2 p1 a z y (node-move d d2 z a e n f e2 n2 f2 s t h h2 ge gf st pz out) (rpath-move d d2 z y e n f e2 n2 f2 s t p1 h h2 ge gf st rp1 dj1)))
+
+(def-fns _ $ (erased rpath-alllt : (erased (Nat) d a y) (erased (List (Nat)) n p) (subterm erased (RPath n a p y) rp) (erased (Length (Nat) n d) l)
+    -> (erased (AllLt p d) r))
+  (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (ALNil d)))
+  (ALCons z d p1 (nth-lt-length _ n z d a pz l) (rpath-alllt d z y n p1 rp1 l)))
+
+; The darts of a ring are below d.
+(def-fns _ $ (erased cpring-alllt : (erased (Nat) d) (erased (List (Nat)) n r) (erased (Cpring n r) cr) (erased (Length (Nat) n d) l) -> (erased (AllLt r d) res))
+  (let-match erased cr (MkCpring _ p a y rp back dp))
+  (ALCons a d p (nth-lt-length _ n a d y back l) (rpath-alllt d a y n p rp l)))
+
+; The U step: a new edge d-(d+1), d a face of its own and d+1 put into the face before the head a of the ring, after
+; c = e (n a); both new darts go in front of the ring (Gonthier's ecpU).
+(def-adts $ (EcpU : ((Nat) d) ((List (Nat)) e f r e2 f2 r2) -> Type)
+  enum
+  (many MkEcpU : (erased (Nat) d b c) (erased (List (Nat)) e f r e2 f0 f2) (erased (Last r b) lb) (erased (Nth (Nat) e b c) pc)
+      (erased (EdgeGrow e d e2) g) (erased (Snoc (Nat) f d f0) s) (erased (Insert f0 c (Succ d) f2) ins)
+      -> (EcpU d e f r e2 f2 (Cons (Nat) (Succ d) (Cons (Nat) d r)))))
+
+(def-fns _ $ (erased ecpU-map : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2) (erased (PointedMap d e n f r) pm) (erased (EcpU d e f r e2 f2 r2) st)
+    -> (erased (List (Nat)) n2) (erased (PointedMap (Succ (Succ d)) e2 n2 f2 r2) res))
+  (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
+  (let-match erased st (MkEcpU _ b c _ _ _ _ f0 _ lb pc g s ins))
+  (let-match erased cr (MkCpring _ p a y rp back dp))
+  (let-match erased (last-fn r b y lb (rpath-last n p a y rp)) (Refl _ _))
+  (let ((erased ei) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased v) (erased pv) (erased pfa)) (hyper-back d b a e n f h back))
+  (let-match erased (nth-fn _ e b c v pc pv) (Refl _ _))
+  (let ((erased lc)) (perm-val d b c e ei pe pc))
+  (let ((erased d1) (erased d2)) (values (Succ d) (Succ (Succ d))))
+  (let ((erased ei2) (erased pe2)) (perm-grow2 d e ei e2 pe g))
+  (let ((erased fi0) (erased pf0)) (perm-fix2 d f fi f0 pf s))
+  (let ((erased lf0)) (snoc-length _ f f0 d d s lf))
+  (let ((erased f0c)) (snoc-old _ f f0 d a c s pfa))
+  (let ((erased fi2) (erased pf2)) (perm-insert2 d1 c a f0 fi0 f2 pf0 ins f0c))
+  (let ((erased n2) (erased h2)) (hyper-ef d2 e2 ei2 f2 fi2 pe2 pf2))
+  (let ((erased ndd)) (hyper-node d2 d1 d d e2 n2 f2 h2 (edge-high e e2 d g) (insert-other f0 f2 c d1 d d ins (snoc-new _ f f0 d d s lf) (ApGt _ _ d c lc))))
+  (let ((erased nad)) (hyper-node d2 d d1 a e2 n2 f2 h2 (edge-low e e2 d g) (insert-new f0 f2 c d1 d1 a ins lf0 f0c)))
+  (let ((erased nbd)) (hyper-node d2 b c d1 e2 n2 f2 h2 (edge-old e e2 d b c g pc) (insert-at f0 f2 c d1 ins)))
+  (let ((erased cs) (erased as)) (values (Cons (Nat) c (Nil (Nat))) (Cons (Nat) a (Nil (Nat)))))
+  (let ((erased ag)) (AgTrans f f0 f2 cs (AgSnoc f f0 cs d s) (AgInsert f0 f2 cs c d1 ins (InHere c (Nil (Nat))))))
+  (let-match erased dp (DistCons _ _ ap dp1))
+  (let ((erased rp2)) (rpath-move d d2 a b e n f e2 n2 f2 cs as p h h2 (grow-agree e e2 d g) ag (RespCons f (Nil (Nat)) (Nil (Nat)) c a pfa (RespNil f))
+    rp (notin-disj1 a p ap)))
+  (let ((erased al)) (cpring-alllt d n r cr ln))
+  (values n2 (MkPointedMap d2 e2 n2 f2 r2 h2 (MkCpring n2 (Cons (Nat) d r) d1 b (RPCons n2 r d1 d b ndd (RPCons n2 p d a b nad rp2)) nbd
+    (DistCons d1 (Cons (Nat) d r) (NotInCons d1 d r (ApGt _ _ d1 d (lt-succ d)) (lt-notin d1 d r al (lt-weaken d d1 (lt-succ d))))
+      (DistCons d r (lt-notin d d r al (lt-succ d)) dp))))))
