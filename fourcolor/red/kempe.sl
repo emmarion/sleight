@@ -1,4 +1,14 @@
-(let ((erased Pred)) (TyCtor ((List (Col)) et) -> Type))
+; A predicate on traces with one parameter x of any type X, as data, so that a parameterised one can be passed.
+(def-adts $ (PredC : -> Type)
+  enum
+  (many MkPred : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) et) -> Type) Q) -> (PredC)))
+
+(let ((erased Pred)) (PredC))
+
+(def-adts $ (Holds : ((PredC) P) ((List (Col)) et) -> Type)
+  enum
+  (many MkHolds : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) et) -> Type) Q) (erased (List (Col)) et) (erased (Q x et) h)
+      -> (Holds (MkPred X x Q) et)))
 
 ; r is the reverse of pre followed by w.
 (def-adts $ (RevApp : (Type A) ((List A) pre) ((List A) w) ((List A) r) -> Type)
@@ -26,7 +36,7 @@
 (def-adts
   ((KC : (Pred P) ((List (Col)) et) -> Type)
     enum
-    (many KIn : (erased Pred P) (erased (List (Col)) et ct) (erased (Ctr (C0) et ct) c) (erased (P ct) p) -> (KC P et))
+    (many KIn : (erased Pred P) (erased (List (Col)) et ct) (erased (Ctr (C0) et ct) c) (erased (Holds P ct) p) -> (KC P et))
     (many KPerm : (erased Pred P) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g et et2) pt)
         (erased (KC P et2) k) -> (KC P et))
     (many KGram : (erased Pred P) (erased (List (Col)) et) (erased (AM P (BS0) (Zero) (BFalse) et (Nil (Gsym))) a) -> (KC P et)))
@@ -551,13 +561,13 @@
   enum
   (many CAPE : (erased Pred P) (erased (List (Col)) pre) -> (CtAllP P (CEmpty) pre))
   (many CAPL : (erased Pred P) (erased (Ctree) lf) (erased (List (Col)) pre et ct) (erased (RevApp (Col) pre (Nil (Col)) et) r)
-      (erased (Ctr (C0) et ct) c) (erased (P ct) p) -> (CtAllP P (CLeaf lf) pre))
+      (erased (Ctr (C0) et ct) c) (erased (Holds P ct) p) -> (CtAllP P (CLeaf lf) pre))
   (many CAPN : (erased Pred P) (erased (Ctree) t1 t2 t3) (erased (List (Col)) pre) (erased (CtAllP P t1 (Cons (Col) (C1) pre)) a1)
       (erased (CtAllP P t2 (Cons (Col) (C2) pre)) a2) (erased (CtAllP P t3 (Cons (Col) (C3) pre)) a3) -> (CtAllP P (CNode t1 t2 t3) pre)))
 
 (def-fns _ $ (erased capp-mem : (erased Pred P) (erased (Ctree) t) (erased (List (Col)) pre full) (subterm erased (List (Col)) et)
     (erased (CtAllP P t pre) a) (erased (CtMem t et) m) (erased (RevApp (Col) pre et full) r) ->
-    (erased (List (Col)) ct) (erased (Ctr (C0) full ct) c) (erased (P ct) res))
+    (erased (List (Col)) ct) (erased (Ctr (C0) full ct) c) (erased (Holds P ct) res))
   (match erased a _
     (absurd (CAPE _ _) (mem-empty et m))
     ((CAPL _ lf _ et2 ct r2 c p) (let-match erased (leaf-mem-nil lf et m) (Refl _ _)) (let-match erased (revapp-fn (Col) pre et full et2 r r2) (Refl _ _))

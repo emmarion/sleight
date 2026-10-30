@@ -67,6 +67,13 @@
   (many Add32 : -> (AddC (C3) (C2) (C1)))
   (many Add33 : -> (AddC (C3) (C3) (C0))))
 
+(def-fns _ $ (erased addc-k : (erased (Col) a b c) (erased (AddC a b c) p) -> (erased (AddK a b c) q))
+  (match erased p _
+    ((Add00) (AZL (C0))) ((Add01) (AZL (C1))) ((Add02) (AZL (C2))) ((Add03) (AZL (C3)))
+    ((Add10) (AZR (C1))) ((Add11) (ASame (C1))) ((Add12) (AThird _ _ _ (T123))) ((Add13) (AThird _ _ _ (T132)))
+    ((Add20) (AZR (C2))) ((Add21) (AThird _ _ _ (T213))) ((Add22) (ASame (C2))) ((Add23) (AThird _ _ _ (T231)))
+    ((Add30) (AZR (C3))) ((Add31) (AThird _ _ _ (T312))) ((Add32) (AThird _ _ _ (T321))) ((Add33) (ASame (C3)))))
+
 (def-fns _ $ (many addc-c : (many (Col) a b) -> (many (Col) c) (erased (AddC a b c) p))
   (match many a _
     ((C0) (match many b _ ((C0) (values (C0) (Add00))) ((C1) (values (C1) (Add01))) ((C2) (values (C2) (Add02))) ((C3) (values (C3) (Add03)))))
