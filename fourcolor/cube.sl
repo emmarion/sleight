@@ -1196,3 +1196,122 @@
       LLCons _ _ _ _ _ _ _ _ _ _ sLN s5 (link-lift gN gc d tg5 labN ids LN5 I5 LkN (lift-zip gN gc d tg5 ids n I5 N5 (graph-zip d n ids gN grN io) s5 sN5 (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grc (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rnid s5 sN5)) sLN s5) $
       LLNil d gc)))))
 
+
+; The cube's glink classes are those of the map: every dart of the cube is joined to block 0 of its dart of the map.
+(def-fns _ $ (erased cube-glink : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (Nat) kc) (erased (List (Bond)) gG) (erased (Glink d e n f gG) glG) (erased (Classes gG d kc) csG)
+    -> (erased (List (Bond)) gC) (erased (Glink D ce cn cf gC) glC) (erased (Classes gC D kc) r))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf) (MkFacts _ _ _ _ _ _ _ _ RI _ _ _ _ _ _ _ Reid _ _ Ridn _ _ Ride Rnid Rfid _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased le (MkLaid _ _ _ lye sze))
+  (let-match erased ln (MkLaid _ _ _ lyn szn))
+  (let-match erased lf (MkLaid _ _ _ lyf szf))
+  (let ((erased gce) (erased grce)) (graph-exists D ce (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD)))
+  (let ((erased gcn) (erased grcn)) (graph-exists D cn (lay-length d tg6 D _ cn lyn szn (six _ _ _ _ _ _) aD)))
+  (let ((erased gcf) (erased grcf)) (graph-exists D cf (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD)))
+  (let ((erased gcnf) (erased catnf)) (cat-exists gcn gcf))
+  (let ((erased gC) (erased cat)) (cat-exists gce gcnf))
+  (let ((erased glC)) (MkGlink D ce cn cf gce gcn gcf gcnf gC grce grcn grcf catnf cat))
+  (let ((erased spE) (erased spN) (erased spF)) (glink-spans D ce cn cf gce gcn gcf gC glC grce grcn grcf))
+  (let-match erased glG (MkGlink _ _ _ _ ge gn gf gnf _ gre grn grf c1 c2))
+  (let-match erased csG (MkClasses _ _ _ idsG labG rsG ioG llG lrG drG fixG clG roG))
+  (let-match erased (iota-fn d ids idsG io ioG) (Refl _ _))
+  (let ((erased sGe) (erased sGn) (erased sGf)) (glink-spans d e n f ge gn gf gG glG gre grn grf))
+  (let ((erased RGe)) (graph-resp d e labG ge gre (const-spans labG gG ge d clG llG sGe (graph-below d e nf ge (graph-fun d e ge gre) pe)) llG))
+  (let ((erased cGn)) (const-spans labG gG gn d clG llG sGn (graph-below d n ni gn (graph-fun d n gn grn) pn)))
+  (let ((erased RGn)) (graph-resp d n labG gn grn cGn llG))
+  (let ((erased RGf)) (graph-resp d f labG gf grf (const-spans labG gG gf d clG llG sGf (graph-below d f fi gf (graph-fun d f gf grf) pf)) llG))
+  (let ((erased RGnf)) (respects-assoc-inv f n labG nf labG labG rnf RGf RGn))
+  (let ((erased gni) (erased grni)) (perm-graph d ni n (perm-sym d n ni pn)))
+  (let ((erased RGni)) (graph-resp d ni labG gni grni (const-inv d labG n ni gn gni (graph-fun d ni gni grni) (perm-sym d n ni pn) grn cGn) llG))
+  (let ((erased RGid)) (respects-id-right d ids labG io llG))
+  (let ((erased lab) (erased ll)) (laid-exists d _ (SizedCons _ (Zero) _ _ llG $ SizedCons _ (Zero) _ _ llG $ SizedCons _ (Zero) _ _ llG $ SizedCons _ (Zero) _ _ llG $ SizedCons _ (Zero) _ _ llG $ SizedCons _ (Zero) _ _ llG $ SizedNil d)))
+  (let-match erased ll (MkLaid _ _ _ lyl szl))
+  (let ((erased lD)) (lay-length d tg6 D _ lab lyl szl (six _ _ _ _ _ _) aD))
+  (let ((erased cle)) (resp-const D lab ce gce (graph-fun D ce gce grce) (lay-respects d _ _ _ lab ce lab lyl szl lye lyl
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGe $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGnf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) RGnf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGe $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RGid $
+      LRNil _)) lD))
+  (let ((erased cln)) (resp-const D lab cn gcn (graph-fun D cn gcn grcn) (lay-respects d _ _ _ lab cn lab lyl szl lyn lyl
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) RGn $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGe $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGnf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RGni $
+      LRNil _)) lD))
+  (let ((erased clf)) (resp-const D lab cf gcf (graph-fun D cf gcf grcf) (lay-respects d _ _ _ lab cf lab lyl szl lyf lyl
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGid $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RGf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGe $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RGn $
+      LRNil _)) lD))
+  (let ((erased cl)) (const-cat lab gce gcnf gC cat cle (const-cat lab gcn gcf gcnf catnf cln clf)))
+  (let ((erased sr)) (Cons _ (MkBlk (Zero) rsG) $ Nil (Blk)))
+  (let ((erased rs) (erased lr)) (lay-exists d sr))
+  (let ((erased I0) (erased s0)) (shf-exists d (Zero) ids))
+  (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
+  (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
+  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased I4) (erased s4)) (shf-exists d tg4 ids))
+  (let ((erased I5) (erased s5)) (shf-exists d tg5 ids))
+  (let ((erased LG0) (erased sLG)) (shf-exists d (Zero) labG))
+  (let ((erased E0) (erased sE0)) (shf-exists d (Zero) e))
+  (let ((erased E1) (erased sE1)) (shf-exists d tg1 e))
+  (let ((erased E2) (erased sE2)) (shf-exists d tg2 e))
+  (let ((erased E3) (erased sE3)) (shf-exists d tg3 e))
+  (let ((erased Nb0) (erased sN0)) (shf-exists d (Zero) n))
+  (let ((erased Nb1) (erased sN1)) (shf-exists d tg1 n))
+  (let ((erased F0) (erased sF0)) (shf-exists d (Zero) f))
+  (let ((erased LkG) (erased SG)) (rooted-link gG rsG ids labG roG))
+  (let ((erased k01)) (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthHere _ _ _) RI s0 s1) spF))
+  (let ((erased k12)) (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthHere _ _ _) RI s1 s2) spF))
+  (let ((erased k23)) (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI s2 s3) spF))
+  (let ((erased LIE)) (link-trans gC _ _ _ k01 (link-trans gC _ _ _ (link-spans gce gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le grce (NthThere _ _ _ _ _ $ NthHere _ _ _) Reid s1 sE3) spE) (link-sym gC _ _ (link-trans gC _ _ _ (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthHere _ _ _) Ride sE0 sE1) spF) (link-trans gC _ _ _ (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthHere _ _ _) Ride sE1 sE2) spF) (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ride sE2 sE3) spF)))))))
+  (let ((erased LIN)) (link-trans gC _ _ _ (link-spans gcn gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ ln grcn (NthHere _ _ _) Rnid s0 sN1) spN) (link-sym gC _ _ (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthHere _ _ _) Ridn sN0 sN1) spF))))
+  (let ((erased LIF)) (link-trans gC _ _ _ k01 (link-trans gC _ _ _ k12 (link-trans gC _ _ _ k23 (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rfid s3 sF0) spF)))))
+  (let ((erased LG)) (link-lift gG gC d (Zero) labG ids LG0 I0 LkG
+    (lift-cat ge gnf gG gC d (Zero) c2 (lift-zip ge gC d (Zero) ids e I0 E0 (graph-zip d e ids ge gre io) s0 sE0 LIE)
+      (lift-cat gn gf gnf gC d (Zero) c1 (lift-zip gn gC d (Zero) ids n I0 Nb0 (graph-zip d n ids gn grn io) s0 sN0 LIN)
+        (lift-zip gf gC d (Zero) ids f I0 F0 (graph-zip d f ids gf grf io) s0 sF0 LIF)))
+    sLG s0))
+  (values gC glC (lay-classes _ _ _ _ _ _ _ _ _ _ _ ll (six _ _ _ _ _ _) aD lr
+    (SpreadCons _ _ _ _ drG (respects-under labG rsG rsG d fixG llG) (AvNil _) $
+      SpreadNil d)
+    (BLenCons _ _ kc (Zero) kc _ lrG (BLenNil) (add-zero-right kc)) li ioD
+    (LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) fixG $
+      LRNil _)
+    cl
+    (LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSCons _ _ _ _ _ _ (NthHere _ _ _) SG $
+      LSNil _)
+    (LLCons _ _ _ _ _ _ _ _ _ _ sLG s0 LG $
+      LLCons _ _ _ _ _ _ _ _ _ _ sLG s1 (link-trans gC _ _ _ LG k01) $
+      LLCons _ _ _ _ _ _ _ _ _ _ sLG s2 (link-trans gC _ _ _ LG (link-trans gC _ _ _ k01 k12)) $
+      LLCons _ _ _ _ _ _ _ _ _ _ sLG s3 (link-trans gC _ _ _ LG (link-trans gC _ _ _ k01 (link-trans gC _ _ _ k12 k23))) $
+      LLCons _ _ _ _ _ _ _ _ _ _ sLG s4 (link-trans gC _ _ _ LG (link-trans gC _ _ _ LIE (link-trans gC _ _ _ (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthHere _ _ _) Ride sE0 sE1) spF) (link-trans gC _ _ _ (link-spans gcf gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthThere _ _ _ _ _ $ NthHere _ _ _) Ride sE1 sE2) spF) (link-sym gC _ _ (link-spans gce gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le grce (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Reid s4 sE2) spE)))))) $
+      LLCons _ _ _ _ _ _ _ _ _ _ sLG s5 (link-trans gC _ _ _ LG (link-spans gce gC _ _ (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le grce (NthHere _ _ _) RI s0 s5) spE)) $
+      LLNil d gC))))
+
+
+; The cube has the genus of the map.
+(def-fns _ $ (erased cube-genus : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (Nat) gen) (erased (Genus d e n f gen) g)
+    -> (erased (Genus D ce cn cf gen) r))
+  (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased gG) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
+    (genus-parts d gen e n f g))
+  (let ((erased K3) (erased a3) (erased oce)) (cube-edges d D e n f ce cn cf cu))
+  (let ((erased K2) (erased a2) (erased ocn)) (cube-nodes d D e n f ce cn cf cu))
+  (let ((erased a) (erased kF) (erased a1) (erased a0) (erased ocf)) (cube-faces d D e n f ce cn cf cu ke kn kf oe on of))
+  (let ((erased gC) (erased glC) (erased ccC)) (cube-glink d D e n f ce cn cf cu kc gG gl cc))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (genus-make D gen kc K3 K2 kF ce cn cf gC oce ocn ocf glC ccC (es-cube kc d ke kn kf gen D K3 K2 a kF es aD a3 a2 a1 a0)))
+
