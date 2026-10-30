@@ -74,25 +74,41 @@ sizes came from a sweep of variants of the generated OCaml; fold lengths
 from 12 to 16 and segment sizes from 64 to 128 measured within noise of
 each other.
 
+## Failing strides
+
+After a stride of the window fails, `lstep`'s next step either removes the
+window's first symbol (a `D` moved left by `r-dr`, or an `X` or `G` block
+with a false flag moved left by `ac-mvr`) or pushes a segment onto the
+window's end. Neither seems able to make the stride succeed: dropping a
+`D` or `G` at the front changes no later segment, dropping an `X` only
+lowers the carry into the first `C`, and the push adds symbols after the
+point where the stride failed. `LsGo` carries a flag saying that the
+window's stride is known to fail, and `lstep` then skips `sw-of`.
+Skipping a stride needs no proof, since a failed stride produces none, so
+a wrong flag would change the course of the run but not what it proves.
+In one instrumented run about 18.7 million strides were skipped, and
+running `sw-of` on each of them anyway found none that succeeded; the
+Skelet #1 job took about 10.5 s user, against about 12.4 s without the
+skip.
+
 ## What is left
 
-`sw-of` is still the largest single cost in a profile. In one
-instrumented run with the sizes above, about 26 million of the 43
-million strides tried by `lstep` failed, and they made about 422 million
-of its 641 million `sw-of` steps; most failures are at a `C` whose `X`
-count is smaller than the stride's multiplier there, some of them after
-dozens of symbols, since pushes expose whole segments. Each such step
-rescans the window up to the failing `C`. Things that did not help in
-one measurement each: also folding on leftward steps; a non-allocating
-pre-check before `sw-of`, before every stride or only after a failed
-one (a scan of the list seems to cost about as much per symbol as the
-stride); and remembering the failing segment by the identity of its
-first cell, which predicted most failures but whose walk to that cell
-cost about as much again.
+In one instrumented run with the skip, `sw-of` made about 343 million
+steps: about 219 million in about 17 million strides that succeeded, about
+84 million in about 7 million that failed and were not skipped, and the
+rest in strides of stack segments. `sw-of` was about 21% of the job's
+instructions, with `push-ex`, `lenge`, `lstep`, `Z.add` and `rapp-of`
+next at about 6 to 8% each. Things that did not help in one measurement
+each: also folding on leftward steps; a non-allocating pre-check before
+`sw-of`, before every stride or only after a failed one (a scan of the
+list seems to cost about as much per symbol as the stride); and
+remembering the failing segment by the identity of its first cell, which
+predicted most failures but whose walk to that cell cost about as much
+again.
 
 `bb/sk1a.sl` is an experiment that keeps the window in a tag buffer and
 a count array instead of a list (`main-run-a`), still folding before the
-stride; in one measurement its job took about 16.0 s user, so it is not
-used. Its stride costs less per symbol than `sw-of` in a micro-benchmark,
-but writing counts, appending and reading cells back into lists for the
-stack took more than that saved.
+stride and without the skip; in one measurement its job took about 16.0 s
+user, so it is not used. Its stride costs less per symbol than `sw-of` in
+a micro-benchmark, but writing counts, appending and reading cells back
+into lists for the stack took more than that saved.
