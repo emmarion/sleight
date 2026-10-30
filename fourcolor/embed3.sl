@@ -1,5 +1,5 @@
 ; Parts of the embedding construction of embed.v (from a preembedding of a configuration's kernel to an embedding), with
-; minimality as data. Load after embed2.sl, in its chain.
+; minimality as data. Load after contract.sl, in the chain of embed2.sl followed by traceconv.sl and contract.sl.
 
 ; What the lemmas of embed.v read off the configuration map (ec, nc, fc) with ring rc and arities ksc, its kernel as, the
 ; map (em, nm, fm) with arities ksm, and the preembedding hl.
@@ -458,23 +458,23 @@
 
 ; embed is defined at every dart.
 (def-fns _ $ (erased h1-exists : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-    (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx) -> (erased (Nat) u) (erased (HEmb ec nc em nm fm as hl x u) hx))
+    (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx) -> (erased (Nat) u) (erased (HEmb ec nc em nm fm as hl x u) hx) (erased (Lt u dm) lu))
   (let ((erased en2)) en)
   (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
   (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pex pyx pnx rsx epx clx csx))
   (let-match erased (in-dec x as) (OrR _ _ ox)
-    ((OrL _ _ ix) (let ((erased w) (erased pw) (erased _)) (h-val dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix)) (values w (HeK ec nc em nm fm as hl x w ix pw))))
+    ((OrL _ _ ix) (let ((erased w) (erased pw) (erased lw)) (h-val dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix)) (values w (HeK ec nc em nm fm as hl x w ix pw) lw)))
   (let-match erased (in-dec ex as) (OrR _ _ oy)
     ((OrL _ _ iy)
       (let ((erased w) (erased pw) (erased lw)) (h-val dc dm ex ec nc fc ksc rc em nm fm ksm as hl en iy))
-      (let ((erased u) (erased _) (erased _) (erased pu) (erased _) (erased _) (erased _) (erased _) (erased _)) (gm-step dm w em nm fm ksm g lw))
-      (values u (HeE ec nc em nm fm as hl x u ex w ox pex iy pw pu))))
+      (let ((erased u) (erased _) (erased _) (erased pu) (erased lu) (erased _) (erased _) (erased _) (erased _)) (gm-step dm w em nm fm ksm g lw))
+      (values u (HeE ec nc em nm fm as hl x u ex w ox pex iy pw pu) lu)))
   (let-match erased (in-dec nx as) (OrR _ _ oz)
     ((OrL _ _ iz)
       (let ((erased w) (erased pw) (erased lw)) (h-val dc dm nx ec nc fc ksc rc em nm fm ksm as hl en iz))
       (let ((erased a) (erased _) (erased _) (erased pa) (erased la) (erased _) (erased _) (erased _) (erased _)) (gm-step dm w em nm fm ksm g lw))
-      (let ((erased _) (erased _) (erased u) (erased _) (erased _) (erased _) (erased _) (erased pu) (erased _)) (gm-step dm a em nm fm ksm g la))
-      (values u (HeN ec nc em nm fm as hl x u ex nx w a ox pex oy pnx iz pw pa pu))))
+      (let ((erased _) (erased _) (erased u) (erased _) (erased _) (erased _) (erased _) (erased pu) (erased lu)) (gm-step dm a em nm fm ksm g la))
+      (values u (HeN ec nc em nm fm as hl x u ex nx w a ox pex oy pnx iz pw pa pu) lu)))
   (let-match erased csx (OrR _ _ c1) (absurd (OrL _ _ i) (in-notin x as i ox)))
   (let-match erased c1 (OrR _ _ c2) (absurd (OrL _ _ i) (in-notin ex as i oy)))
   (let-match erased c2 (OrR _ _ ni) (absurd (OrL _ _ i) (in-notin nx as i oz)))
@@ -482,5 +482,42 @@
   (let ((erased w) (erased pw) (erased lw)) (h-val dc dm t ec nc fc ksc rc em nm fm ksm as hl en it))
   (let ((erased _) (erased w1) (erased _) (erased _) (erased _) (erased p1) (erased l1) (erased _) (erased _)) (gm-step dm w em nm fm ksm g lw))
   (let ((erased _) (erased w2) (erased _) (erased _) (erased _) (erased p2) (erased l2) (erased _) (erased _)) (gm-step dm w1 em nm fm ksm g l1))
-  (let ((erased u) (erased _) (erased _) (erased pu) (erased _) (erased _) (erased _) (erased _) (erased _)) (gm-step dm w2 em nm fm ksm g l2))
-  (values u (HeEN ec nc em nm fm as hl x u ex nx t w w1 w2 ox pex oy pnx oz pt it pw p1 p2 pu)))
+  (let ((erased u) (erased _) (erased _) (erased pu) (erased lu) (erased _) (erased _) (erased _) (erased _)) (gm-step dm w2 em nm fm ksm g l2))
+  (values u (HeEN ec nc em nm fm as hl x u ex nx t w w1 w2 ox pex oy pnx oz pt it pw p1 p2 pu) lu))
+
+; h1 lists embed at the darts xs.
+(def-adts $ (EmbL : ((List (Nat)) ec nc em nm fm as hl xs h1) -> Type)
+  enum
+  (many EbNil : (erased (List (Nat)) ec nc em nm fm as hl) -> (EmbL ec nc em nm fm as hl (Nil (Nat)) (Nil (Nat))))
+  (many EbCons : (erased (List (Nat)) ec nc em nm fm as hl xs h1) (erased (Nat) x u) (erased (HEmb ec nc em nm fm as hl x u) hx)
+      (erased (EmbL ec nc em nm fm as hl xs h1) rest) -> (EmbL ec nc em nm fm as hl (Cons (Nat) x xs) (Cons (Nat) u h1))))
+
+(def-fns _ $ (erased embl-exists : (erased (Nat) dc dm k) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (subterm erased (List (Nat)) xs) (erased (Under xs dc) ux) (erased (Length (Nat) xs k) lx)
+    -> (erased (List (Nat)) h1) (erased (EmbL ec nc em nm fm as hl xs h1) el) (erased (Under h1 dm) uh) (erased (Length (Nat) h1 k) lh))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (let-match erased lx (LengthNil _)) (values (Nil _) (EbNil ec nc em nm fm as hl) (UnderNil dm) (LengthNil _))))
+  (let-match erased ux (UnderCons _ _ _ lx0 ux1))
+  (let-match erased lx (LengthCons _ _ _ k1 lx1))
+  (let ((erased u) (erased hx) (erased lu)) (h1-exists dc dm x ec nc fc ksc rc em nm fm ksm as hl en ok lx0))
+  (let ((erased h1) (erased el) (erased uh) (erased lh)) (embl-exists dc dm k1 ec nc fc ksc rc em nm fm ksm as hl en ok xs1 ux1 lx1))
+  (values (Cons _ u h1) (EbCons ec nc em nm fm as hl xs1 h1 x u hx el) (UnderCons h1 u dm lu uh) (LengthCons _ u h1 k1 lh)))
+
+(def-fns _ $ (erased embl-nth : (erased (List (Nat)) ec nc em nm fm as hl xs h1) (erased (Nat) i x u) (subterm erased (EmbL ec nc em nm fm as hl xs h1) el)
+    (erased (Nth (Nat) xs i x) px) (erased (Nth (Nat) h1 i u) pu) -> (erased (HEmb ec nc em nm fm as hl x u) r))
+  (let-match erased el (EbCons _ _ _ _ _ _ _ xs1 h2 y v hy el1) (absurd (EbNil _ _ _ _ _ _ _) px))
+  (match erased px _
+    ((NthHere _ _ _) (let-match erased pu (NthHere _ _ _)) hy)
+    ((NthThere _ _ _ j1 _ px1) (let-match erased pu (NthThere _ _ _ _ _ pu1)) (embl-nth ec nc em nm fm as hl xs1 h2 j1 x u el1 px1 pu1))))
+
+; The list h1 of embed on the darts 0..dc-1 of the configuration map (embl-at reads it), its values darts of the map.
+(def-fns _ $ (erased h1-list : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (erased (Iota dc ids) io) -> (erased (List (Nat)) h1) (erased (EmbL ec nc em nm fm as hl ids h1) el)
+    (erased (Length (Nat) h1 dc) lh) (erased (Under h1 dm) uh))
+  (let ((erased lid)) (iota-length dc ids io))
+  (let ((erased uid)) (respects-under ids ids ids dc (respects-id-right dc ids ids io lid) lid))
+  (let ((erased h1) (erased el) (erased uh) (erased lh)) (embl-exists dc dm dc ec nc fc ksc rc em nm fm ksm as hl en ok ids uid lid))
+  (values h1 el lh uh))
+
+(def-fns _ $ (erased embl-at : (erased (Nat) dc x u) (erased (List (Nat)) ec nc em nm fm as hl ids h1) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el)
+    (erased (Length (Nat) h1 dc) lh) (erased (Nth (Nat) h1 x u) pu) -> (erased (HEmb ec nc em nm fm as hl x u) r))
+  (embl-nth ec nc em nm fm as hl ids h1 x x u el (iota-nth dc x ids io (nth-lt-length _ h1 x dc u pu lh)) pu))

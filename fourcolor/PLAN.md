@@ -506,6 +506,32 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   turned into a `Reduces` by `birkhoff2.sl`'s `birkhoff-reduces`; that it
   suffices is not checked. That these statements match Coq's has been
   checked only by reading.
+- `embed3.sl` (load after `contract.sl`, in the embed chain): the first
+  part of embed.v's embedding construction, as far as both compilers
+  check it, on an `EEnv` (the configuration map with its ring, arities
+  and `KernelList`, a `Geo` map and a `Preembedding` hl of the kernel).
+  The kernel is closed under face both ways (`ker-face`,
+  `ker-face-inv`); cface_ac_h and cface_h_ac (`face-h`, `h-face-back`);
+  cface_inj_embed (`cface-inj`). embed is the relation `HEmb` (h x on
+  the kernel, otherwise read off edge x, node x or node (edge x), the
+  first in the kernel, as Coq's embed), total (`h1-exists`) and listed
+  on the darts 0..dc-1 with its values darts of the map (`h1-list`,
+  read by `embl-at`), in the list form `embed-contract-trace` and
+  `cc-pull` take. embedE at every dart (`embed-e`) and embedN at every
+  dart off rc (`embed-n`) are proved from two certificates taken as
+  hypotheses: `GcOK`, per dart of the configuration map, edge an
+  involution, node keeping rc and of order 3 off it, and the conclusions
+  of edge_perimeter, chordless_perimeter and embed_cases (meant to be
+  decided on the concrete maps by a run, which is not written), and
+  `FunctorAll`, embed_functor's conclusion (each kernel dart whose edge
+  image is in the kernel is central), not proved. Still open from
+  embed.v: embed_functor, trivial_hom_ring, embed_full (where Birkhoff
+  enters, meant to give a `Reduces` through `birkhoff-reduces`, which
+  needs `birkhoff2.sl` in this chain; no combined load order is checked),
+  pre_embed_inj, embed_inj, the disk and remainder maps and their
+  `Patch` (embed_disk, embed_rem, embed_patch), cubic_embr, cface_h1,
+  embed_valid_contract, and the run deciding `GcOK` and radius2. That
+  these statements match Coq's has been checked only by reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
