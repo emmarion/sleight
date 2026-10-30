@@ -2087,3 +2087,144 @@
       (km-turn d e n f s ks (Cons _ z B) A R2 R (JoinCons B A p z j3) j
         (step-b d z ez fz fez nez e n f s ks e2 n2 f2 p h ct lc lz zs pez pfz pfez nfez lt oz oe
           (kempe-build N1 d m2 e2 n2 f2 _ ks (Cons _ nez (Cons _ fz p)) ids h2 g2 dd2 lm2 pl2 io roH lcH))))))
+
+(def-fns _ $ (erased proper-live : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (Proper ks g) pr) -> (erased (EdgeLive (Nil (Nat)) ks g) r))
+  (let-match erased pr (ProperCons _ g1 x y l1 l2 p1 p2 ne pr1) ((ProperNil _) (ELNil _ ks)))
+  (ELLive _ ks g1 x y l1 l2 (NotInNil x) p1 p2 ne (proper-live ks g1 pr1)))
+
+(def-fns _ $ (erased live-proper : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (EdgeLive (Nil (Nat)) ks g) el) -> (erased (Proper ks g) r))
+  (match erased el _
+    ((ELNil _ _) (ProperNil ks))
+    (absurd (ELDead _ _ _ _ _ ix _) ix)
+    ((ELLive _ _ g1 x y l1 l2 _ p1 p2 ne el1) (ProperCons ks g1 x y l1 l2 p1 p2 ne (live-proper ks g1 el1)))))
+
+(def-fns _ $ (erased four-live : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) c)
+    -> (erased (LiveColoring d (Nil (Nat)) e f ks) r))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased ge) (erased gr)) (graph-exists d e le))
+  (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
+  (let ((erased lk)) (respects-length ks f ks d rf lf))
+  (MkLC d _ e f ks ge gr rf (proper-live ks ge (coloring-proper d e f ks ids ge c gr io lk)) u lk))
+
+(def-fns _ $ (erased live-four : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (LiveColoring d (Nil (Nat)) e f ks) lc)
+    -> (erased (FourColoring e f ks) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let-match erased lc (MkLC _ _ _ _ _ ge gr rf el u lk))
+  (proper-coloring d e f ks ids ge (live-proper ks ge el) gr io rf u lk (perm-under d e nf pe)))
+
+(def-fns _ $ (erased invb-order : (erased (Nat) d) (erased (List (Nat)) e) (erased (List (Bond)) g) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (Length (Nat) e d) le) (subterm erased (Fun e g) fg) -> (erased (InvB e g) r))
+  (let-match erased fg (FunCons _ g1 x y px fg1) ((FunNil _) (IBNil e)))
+  (let ((erased q) (erased _)) (plain-eq d x y e pl (nth-lt-length _ e x d y px le) px))
+  (IBCons e g1 x y q (invb-order d e g1 pl le fg1)))
+
+(def-fns _ $ (erased plain-of : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    -> (erased (Plain d e) r))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased g) (erased gr)) (graph-exists d e le))
+  (MkPlain d e g gr (invb-order d e g pl le (graph-fun d e g gr))))
+
+; trace (c0 :: lc) is urtrace (lc ++ [c0]).
+(def-fns _ $ (erased tracefrom-pair : (erased (Col) c0 c) (erased (List (Col)) lc lc2 et) (subterm erased (TraceFrom c0 c lc et) t) (erased (HSnoc (Col) lc c0 lc2) sn)
+    -> (erased (PairFrom c lc2 et) r))
+  (match erased t _
+    ((TFEnd _ _ s a) (let-match erased sn (SnocNil _ _)) (PFCons c c0 s (Nil _) (Nil _) a (PFNil c0)))
+    ((TFCons _ _ c2 s lc1 et1 a t1)
+      (let-match erased sn (SnocCons _ _ _ _ lc3 sn1))
+      (PFCons c c2 s lc3 et1 a (tracefrom-pair c0 c2 lc1 lc3 et1 t1 sn1)))))
+
+(def-fns _ $ (erased pair-tracefrom : (erased (Col) c0 c) (erased (List (Col)) lc lc2 et) (subterm erased (HSnoc (Col) lc c0 lc2) sn) (erased (PairFrom c lc2 et) pf)
+    -> (erased (TraceFrom c0 c lc et) r))
+  (match erased sn _
+    ((SnocNil _ _) (let-match erased pf (PFCons _ _ s _ _ a pf1)) (let-match erased pf1 (PFNil _)) (TFEnd c0 c s a))
+    ((SnocCons _ c2 _ lc1 lc3 sn1)
+      (let-match erased pf (PFCons _ _ s _ et1 a pf1))
+      (TFCons c0 c c2 s lc1 et1 a (pair-tracefrom c0 c2 lc1 lc3 et1 sn1 pf1)))))
+
+(def-fns _ $ (erased trace-utr : (erased (Col) c) (erased (List (Col)) lc lc2 et) (erased (Trace (Cons (Col) c lc) et) t) (erased (HSnoc (Col) lc c lc2) sn)
+    -> (erased (UTr lc2 et) r))
+  (let-match erased t (TrCons _ _ _ t1))
+  (let ((erased pf)) (tracefrom-pair c c lc lc2 et t1 sn))
+  (match erased sn _
+    ((SnocNil _ _) (UTCons c c (Nil _) et (LFNil _ c) pf))
+    ((SnocCons _ c1 _ lc1 lc3 sn1) (UTCons c1 c lc3 et (lastfrom-snoc (Col) c1 c lc3 lc sn) pf))))
+
+(def-fns _ $ (erased utr-trace : (erased (Col) c) (erased (List (Col)) lc lc2 et) (erased (UTr lc2 et) u) (erased (HSnoc (Col) lc c lc2) sn)
+    -> (erased (Trace (Cons (Col) c lc) et) r))
+  (let-match erased u (UTCons c1 l lc3 _ lt pf) (absurd (UTNil) sn))
+  (let-match erased (lastfrom-fn (Col) c1 l c lc3 lt (lastfrom-snoc (Col) c1 c lc3 lc sn)) (Refl _ _))
+  (TrCons c lc et (pair-tracefrom c c lc lc2 et sn pf)))
+
+(def-fns _ $ (erased avoid-nil : (subterm erased (List (Nat)) r) -> (erased (Avoid (Nil (Nat)) r) a))
+  (let-match erased r (Cons _ x r1) ((Nil _) (AvNil _)))
+  (AvCons _ r1 x (NotInNil x) (avoid-nil r1)))
+
+(def-fns _ $ (erased respects-unsnoc : (erased (List (Nat)) k r0 R lcR) (erased (Nat) x) (subterm erased (HSnoc (Nat) r0 x R) sn) (erased (Respects k R lcR) rp)
+    -> (erased (List (Nat)) lc0) (erased (Nat) l) (erased (HSnoc (Nat) lc0 l lcR) sl) (erased (Respects k r0 lc0) r) (erased (Nth (Nat) k x l) pl))
+  (match erased sn _
+    ((SnocNil _ _) (let-match erased rp (RespCons _ _ _ _ l pl rp1)) (let-match erased rp1 (RespNil _)) (values (Nil _) l (SnocNil _ l) (RespNil k) pl))
+    ((SnocCons _ a _ r1 R1 sn1)
+      (let-match erased rp (RespCons _ _ lc1 _ la pa rp1))
+      (let ((erased lc0) (erased l) (erased sl) (erased r) (erased pl)) (respects-unsnoc k r1 R1 lc1 x sn1 rp1))
+      (values (Cons _ la lc0) l (SnocCons _ la l lc0 lc1 sl) (RespCons k r1 lc0 a la pa r) pl))))
+
+(def-fns _ $ (erased cols-unsnoc : (erased (List (Nat)) lc0 lc) (erased (List (Col)) cs) (erased (Nat) l) (subterm erased (HSnoc (Nat) lc0 l lc) sn)
+    (erased (All2 (Nat) (Col) ColOf lc cs) co) -> (erased (List (Col)) cs0) (erased (Col) c) (erased (HSnoc (Col) cs0 c cs) sc)
+    (erased (All2 (Nat) (Col) ColOf lc0 cs0) r) (erased (ColOf l c) pc))
+  (match erased sn _
+    ((SnocNil _ _) (let-match erased co (All2Cons _ _ _ _ c _ _ pc co1)) (let-match erased co1 (All2Nil _ _ _))
+      (values (Nil _) c (SnocNil _ c) (All2Nil _ _ ColOf) pc))
+    ((SnocCons _ a _ lc1 lc2 sn1)
+      (let-match erased co (All2Cons _ _ _ _ b _ cs1 pb co1))
+      (let ((erased cs0) (erased c) (erased sc) (erased r) (erased pc)) (cols-unsnoc lc1 lc2 cs1 l sn1 co1))
+      (values (Cons _ b cs0) c (SnocCons _ b c cs0 cs1 sc) (All2Cons _ _ ColOf a b lc1 cs0 pb r) pc))))
+
+; The ring of Kempe_map is cubic off r: every dart of 0..d-1 not in r has n (n (n x)) = x.
+(def-adts $ (QuasiCubic : ((Nat) d) ((List (Nat)) n r) -> Type)
+  enum
+  (many MkQuasiCubic : (erased (Nat) d) (erased (List (Nat)) n r ids) (erased (Iota d ids) io) (erased (QCubic n r ids) qc) -> (QuasiCubic d n r)))
+
+; The certificate of Kempe_map for the ring r and the chromogram w, on the rotation of r that urtrace reads.
+(def-adts $ (KRing : ((Nat) d) ((List (Nat)) e n f r) ((List (Gsym)) w) -> Type)
+  enum
+  (many KRNil : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (FourColoring e f ks) c) -> (KRing d e n f (Nil (Nat)) (Nil (Gsym))))
+  (many KRCons : (erased (Nat) d x) (erased (List (Nat)) e n f r0 R) (erased (List (Gsym)) w) (erased (Hypermap d e n f) h)
+      (erased (HSnoc (Nat) r0 x R) sn) (erased (KGood d e n f (Nil (Nat)) R w) kg) -> (KRing d e n f (Cons (Nat) x r0) w)))
+
+; Kempe_map, the second half of Kempe_closed (ring_trace r) for a ring r of a planar plain map cubic off r: each ring trace
+; matches a chromogram w with a certificate ...
+(def-fns _ $ (erased kempe-map : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (Hypermap d e n f) h)
+    (erased (Genus d e n f (Zero)) g) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (QuasiCubic d n r) qc) (erased (NCyc n r) nc)
+    (erased (Distinct r) ds) (erased (RingTrace e f r et) rt) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) et w) m) (erased (KRing d e n f r w) kr))
+  (let-match erased rt (MkRingTrace _ _ _ ks lc cs _ c rl co t))
+  (let-match erased r (Cons _ x r0)
+    ((Nil _) (let-match erased rl (RespNil _)) (let-match erased co (All2Nil _ _ _)) (let-match erased t (TrNil)) (values (Nil _) (MGNil) (KRNil d e n f ks c))))
+  (let-match erased qc (MkQuasiCubic _ _ _ ids io qc1))
+  (let ((erased R) (erased sn)) (snoc-exists _ r0 x))
+  (let ((erased ro)) (ring-rot n (Nil _) r0 R ids x (MkRingOK n (Nil _) r ids nc ds (avoid-nil r) qc1) sn))
+  (let ((erased lc0)) (four-live d e n f ks h c))
+  (let ((erased dd)) (MkDead d d (Zero) e n f (Nil _) (FixNil e) (FixNil n) (FixNil f) (DistNil) (LengthNil _) (UnderNil d) (AddZero d)))
+  (let-match erased (kempe-build (Succ d) d d e n f (Nil _) ks R ids h g dd (lt-succ d) (plain-of d e n f h pl) io ro lc0)
+    (MkKMatch _ _ _ _ _ _ _ lcR csR etR w rpR coR utR m kg))
+  (let-match erased rl (RespCons _ _ lc1 _ l pl0 rl1))
+  (let ((erased lc2) (erased sl)) (snoc-exists _ lc1 l))
+  (let-match erased (respects-fn ks R lcR lc2 rpR (respects-snoc ks r0 R lc1 lc2 x l rl1 pl0 sn sl)) (Refl _ _))
+  (let-match erased co (All2Cons _ _ _ _ c0 _ cs1 pc0 co1))
+  (let ((erased cs2) (erased sc) (erased co2)) (cols-snoc lc1 lcR cs1 l c0 co1 sl pc0))
+  (let-match erased (cols-fn lcR csR cs2 coR co2) (Refl _ _))
+  (let-match erased (utr-fn csR etR et utR (trace-utr c0 cs1 csR et t sc)) (Refl _ _))
+  (values w m (KRCons d x e n f r0 R w h sn kg)))
+
+; ... every trace matching which is a ring trace.
+(def-fns _ $ (erased kempe-sound : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Gsym)) w) (erased (List (Col)) et)
+    (erased (KRing d e n f r w) kr) (erased (MatchG (BS0) et w) m) -> (erased (RingTrace e f r et) rt))
+  (match erased kr _
+    ((KRNil _ _ _ _ ks c) (let-match erased m (MGNil)) (MkRingTrace e f _ ks (Nil _) (Nil _) (Nil _) c (RespNil ks) (All2Nil _ _ ColOf) (TrNil)))
+    ((KRCons _ x _ _ _ r0 R _ h sn kg)
+      (let-match erased (kgood-sound d e n f (Nil _) R w et kg m) (MkLRT _ _ _ _ _ ks lcR csR _ lc rpR coR utR))
+      (let ((erased lc0) (erased l) (erased sl) (erased rp0) (erased pl)) (respects-unsnoc ks r0 R lcR x sn rpR))
+      (let ((erased cs0) (erased c) (erased sc) (erased co0) (erased pc)) (cols-unsnoc lc0 lcR csR l sl coR))
+      (MkRingTrace e f _ ks _ _ et (live-four d e n f ks h lc) (RespCons ks r0 lc0 x l pl rp0) (All2Cons _ _ ColOf l c lc0 cs0 pc co0)
+        (utr-trace c cs0 csR et utR sc)))))
