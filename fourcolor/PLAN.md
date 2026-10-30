@@ -240,6 +240,16 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `unav/fit.sl`, `dbound.sl`, `hubcapc.sl`, `faces.sl`, `obsmap.sl`,
   `dscore.sl`, `runc.sl`: the part operations, dbound checks and hubcap
   check certified down to a statement about the arities around a hub;
-  `runc.sl` reran every presentation through them once. Not yet linked
-  to `dscore` on hypermaps: `fitp_converse`, the discharge total of 120
-  and the presentation walk's soundness are open.
+  `runc.sl` reran every presentation through them once.
+- `unav/posz.sl`, `pwalk.sl`, `hubsound.sl`, `pwsound.sl`, `conv.sl`,
+  `cap.sl`, `unav.sl`, `unavgoal.sl`: these appear to link the checks to
+  `dscore` on hypermaps. `unavgoal.sl` sets the goal `Unav`: the
+  certified walks of arities 5 to 11 and the cap checks succeed for the
+  rules of `data.sl`, some dart of a plain cubic connected pentagonal
+  map of genus 0 has positive dscore, and each such dart has an
+  obligation of its arity's walk (or a cap obligation, from arity 12)
+  fitting exactly at some dart. One compiled run does the checks and
+  asks `redpart` of every obligation (about 335,000); in one run
+  `--goal proved` passed in about a minute. That `redpart` holds of the
+  lists in `Unav` rests on that run, not on the type, and `redpart`
+  and the quiz tree are unverified.
