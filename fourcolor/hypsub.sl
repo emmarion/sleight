@@ -523,3 +523,43 @@
       (match erased px _
         (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x h o (nth-in h j x pj))))
         ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (inv-nth h xs1 ls1 i1 x j iv1 dh px1 pj)))))))
+
+(def-fns _ $ (erased shut-tail : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Bond) b) (erased (Shut c (Cons (Bond) b g)) sh) -> (erased (Shut c g) r))
+  (match erased sh _ ((ShutIn _ _ _ _ px py rest) rest) ((ShutOut _ _ _ _ px py rest) rest)))
+
+(def-fns _ $ (erased shut-adj-in : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Nat) x y) (subterm erased (Adj g x y) a) (erased (Shut c g) sh)
+    (erased (In x c) ix) -> (erased (In y c) r))
+  (match erased a _
+    ((AdjFwd g1 _ _) (match erased sh _ ((ShutIn _ _ _ _ px py _) py) (absurd (ShutOut _ _ _ _ px py _) (apart-irrefl x (notin-in x x c px ix)))))
+    ((AdjBwd g1 _ _) (match erased sh _ ((ShutIn _ _ _ _ px py _) px) (absurd (ShutOut _ _ _ _ px py _) (apart-irrefl x (notin-in x x c py ix)))))
+    ((AdjThere g1 b _ _ a1) (shut-adj-in c g1 x y a1 (shut-tail c g1 b sh) ix))))
+
+(def-fns _ $ (erased shut-adj-out : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Nat) x y) (subterm erased (Adj g x y) a) (erased (Shut c g) sh)
+    (erased (NotIn x c) ox) -> (erased (NotIn y c) r))
+  (match erased a _
+    ((AdjFwd g1 _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ px py _) (apart-irrefl x (notin-in x x c ox px))) ((ShutOut _ _ _ _ px py _) py)))
+    ((AdjBwd g1 _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ px py _) (apart-irrefl x (notin-in x x c ox py))) ((ShutOut _ _ _ _ px py _) px)))
+    ((AdjThere g1 b _ _ a1) (shut-adj-out c g1 x y a1 (shut-tail c g1 b sh) ox))))
+
+(def-fns _ $ (erased moves-shut : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (subterm erased (Moves g xs f g2) mv) -> (erased (Shut xs g) r))
+  (match erased mv _
+    ((MvNil _ _ _) (ShutNil xs))
+    ((MvIn g1 _ _ _ x y x2 y2 ix iy px py c rest) (ShutIn xs g1 x y ix iy (moves-shut g1 g2 xs f rest)))
+    ((MvOut g1 _ _ _ x y ox oy rest) (ShutOut xs g1 x y ox oy (moves-shut g1 g2 xs f rest)))))
+
+(def-fns _ $ (erased moves-cat : (erased (List (Bond)) g h gh g2) (erased (List (Nat)) xs f) (subterm erased (Cat g h gh) c) (erased (Moves g xs f g2) mg)
+    (erased (Moves h xs f g2) mh) -> (erased (Moves gh xs f g2) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) mh))
+  (match erased mg _
+    ((MvIn _ _ _ _ x y x2 y2 ix iy px py cn rest) (MvIn gh1 g2 xs f x y x2 y2 ix iy px py cn (moves-cat g1 h gh1 g2 xs f c1 rest mh)))
+    ((MvOut _ _ _ _ x y ox oy rest) (MvOut gh1 g2 xs f x y ox oy (moves-cat g1 h gh1 g2 xs f c1 rest mh)))))
+
+(def-fns _ $ (erased shut-cat-l : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s gh) sh) -> (erased (Shut s g) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (ShutNil s)))
+  (match erased sh _
+    ((ShutIn _ _ x y px py rest) (ShutIn s g1 x y px py (shut-cat-l s g1 h gh1 c1 rest)))
+    ((ShutOut _ _ x y px py rest) (ShutOut s g1 x y px py (shut-cat-l s g1 h gh1 c1 rest)))))
+
+(def-fns _ $ (erased shut-cat-r : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s gh) sh) -> (erased (Shut s h) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
+  (shut-cat-r s g1 h gh1 c1 (shut-tail s gh1 b sh)))
