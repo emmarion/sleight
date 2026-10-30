@@ -1843,22 +1843,26 @@
   enum newtype
   (many MkSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (many (Placed s A v) p) -> (SlotItem A)))
 
-(def-adts $ (Vacated : (Type A) ((List (MaybeUninit (SlotItem A))) ys) ((List (MaybeUninit (SlotItem A))) us) -> Type)
-  enum
-  (many VacatedNil : (erased Type A) -> (Vacated A (Nil (MaybeUninit (SlotItem A))) (Nil (MaybeUninit (SlotItem A)))))
-  (many VacatedInit : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
-     (erased (List (MaybeUninit (SlotItem A))) ys us) (erased (Vacated A ys us) r)
-     -> (Vacated A (Cons (MaybeUninit (SlotItem A)) (Init (SlotItem A) (MkSlotItem A s v p)) ys)
-                   (Cons (MaybeUninit (SlotItem A)) (Uninit (SlotItem A) s) us)))
-  (many VacatedUninit : (erased Type A) (erased (Slot) s)
-     (erased (List (MaybeUninit (SlotItem A))) ys us) (erased (Vacated A ys us) r)
-     -> (Vacated A (Cons (MaybeUninit (SlotItem A)) (Uninit (SlotItem A) s) ys)
-                   (Cons (MaybeUninit (SlotItem A)) (Uninit (SlotItem A) s) us))))
+(def-adts $ (USlotItem : (Type A) -> Type)
+  enum newtype
+  (many MkUSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (unique (Placed s A v) p) -> (USlotItem A)))
 
-(def-fns _ $ (many extern array-move : (erased Type A) (erased (List (MaybeUninit (SlotItem A))) xs ds ys old)
+(def-adts $ (Vacated : (Type A) ((List (MaybeUninit (USlotItem A))) ys) ((List (MaybeUninit (USlotItem A))) us) -> Type)
+  enum
+  (many VacatedNil : (erased Type A) -> (Vacated A (Nil (MaybeUninit (USlotItem A))) (Nil (MaybeUninit (USlotItem A)))))
+  (many VacatedInit : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p)
+     (erased (List (MaybeUninit (USlotItem A))) ys us) (erased (Vacated A ys us) r)
+     -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Init (USlotItem A) (MkUSlotItem A s v p)) ys)
+                   (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) us)))
+  (many VacatedUninit : (erased Type A) (erased (Slot) s)
+     (erased (List (MaybeUninit (USlotItem A))) ys us) (erased (Vacated A ys us) r)
+     -> (Vacated A (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) ys)
+                   (Cons (MaybeUninit (USlotItem A)) (Uninit (USlotItem A) s) us))))
+
+(def-fns _ $ (many extern array-move : (erased Type A) (erased (List (MaybeUninit (USlotItem A))) xs ds ys old)
     (subterm unique (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
     (erased (Splice _ xs i n ys xs) from) (erased (Splice _ ds j n old ds) to) ->
-    (erased (List (MaybeUninit (SlotItem A))) zs us ws) (unique (Array _ zs) r at dst) (unique (Array _ ws) s at src)
+    (erased (List (MaybeUninit (USlotItem A))) zs us ws) (unique (Array _ zs) r at dst) (unique (Array _ ws) s at src)
     (erased (Splice _ ds j n ys zs) p) (erased (Splice _ xs i n us ws) q) (erased (Vacated _ ys us) v))
   (let-match many i (Zero)
     ((Succ i1)
@@ -1887,7 +1891,7 @@
   (let ((erased (Vacated A (Cons _ h ys1) (Cons _ (Uninit _ (slot-of h)) us1)) v))
     (match erased h _
       ((Init _ it)
-        (let-match erased it (MkSlotItem _ _ _ pl))
+        (let-match erased it (MkUSlotItem _ _ _ pl))
         (let-match erased (placed-slot _ _ _ pl) (Refl _ _))
         (VacatedInit _ _ _ pl _ _ v1))
       ((Uninit _ s0) (slot-self s0) (VacatedUninit _ s0 _ _ v1))))
