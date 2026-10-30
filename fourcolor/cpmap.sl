@@ -186,3 +186,23 @@
       (let ((erased n0) (erased pm0)) (cpmap-map cp1 d0 e0 f0 r0 c1))
       (let ((erased k2) (erased ps) (erased l2)) (ecpN-size d0 k e0 n0 f0 r1 e f r2 (pointed-rot d0 m e0 n0 f0 r0 r1 pm0 rt) nn (rot-length m k r0 r1 rt l)))
       (values k2 (rot-length (Succ (Zero)) k2 r2 r rt2 l2) (CsK k k2 cp1 cs ps)))))
+
+; The ring of a cubic program's map has more than one dart (cpmap_proper), and that of a configuration program's map
+; more than two (cfmap_long).
+(def-fns _ $ (erased cprsize-proper : (erased (List (Step)) cp) (erased (Nat) k) (erased (Cprsize cp k) cs) (subterm erased (CubicProg cp) cq)
+    -> (erased (Lt (Succ (Zero)) k) r))
+  (match erased cq _
+    ((CubNil) (let-match erased cs (CsNil)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero))))
+    ((CubR j cp1 cq1) (let-match erased cs (CsR _ _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
+    ((CubY cp1 cq1) (let-match erased cs (CsY k1 _ cs1)) (lt-weaken (Succ (Zero)) k1 (cprsize-proper cp1 k1 cs1 cq1)))
+    ((CubH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
+    ((CubU cp1 cq1) (let-match erased cs (CsU k1 _ cs1))
+      (lt-weaken (Succ (Zero)) (Succ k1) (lt-weaken (Succ (Zero)) k1 (cprsize-proper cp1 k1 cs1 cq1))))))
+
+(def-fns _ $ (erased cprsize-long : (erased (List (Step)) cp) (erased (Nat) k) (erased (Cprsize cp k) cs) (subterm erased (ConfigProg cp) cq)
+    -> (erased (Lt (Succ (Succ (Zero))) k) r))
+  (match erased cq _
+    ((CfgR j cp1 cq1) (let-match erased cs (CsR _ _ _ cs1)) (cprsize-long cp1 k cs1 cq1))
+    ((CfgY1) (let-match erased cs (CsY _ _ cs1)) (let-match erased cs1 (CsNil)) (lt-succ (Succ (Succ (Zero)))))
+    ((CfgY cp1 cq1) (let-match erased cs (CsY k1 _ cs1)) (lt-weaken (Succ (Succ (Zero))) k1 (cprsize-long cp1 k1 cs1 cq1)))
+    ((CfgH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-long cp1 k cs1 cq1))))
