@@ -30,7 +30,7 @@
     ((Bot0 bs1 X1 _ p1) (let-match erased q (Bot0 _ Y1 _ q1)) (let-match erased (bot-fn bs1 X1 Y1 b p1 q1) (Refl _ _)) (Refl _ X))
     ((Bot1 bs1 X1 _ p1) (let-match erased q (Bot1 _ Y1 _ q1)) (let-match erased (bot-fn bs1 X1 Y1 b p1 q1) (Refl _ _)) (Refl _ X))))
 
-(def-fns _ $ (erased not-exists : (erased (Bool) b) -> (erased (Bool) a) (erased (Not a b) n))
+(def-fns _ $ (erased not-pre : (erased (Bool) b) -> (erased (Bool) a) (erased (Not a b) n))
   (match erased b _ ((BTrue) (values (BFalse) (NotF))) ((BFalse) (values (BTrue) (NotT)))))
 
 ; A run of the chromogram w on the trace et from the bit stack bs to bs2.
@@ -200,7 +200,7 @@
       (match erased y _
         ((SSkip _)
           (let ((erased b1) (erased p1)) (mt-bal bs1 n et1 w1 m1 dp))
-          (let ((erased b) (erased nb)) (not-exists b1))
+          (let ((erased b) (erased nb)) (not-pre b1))
           (values b (BalCons n n b b1 s w1 (GStSkip n b b1 nb) p1)))
         ((SPush2 _) (let ((erased b1) (erased p1)) (mt-bal bs1 (Succ n) et1 w1 m1 (Dp0 bs n dp))) (values b1 (BalCons n (Succ n) b1 b1 s w1 (GStPush n b1) p1)))
         ((SPush3 _) (let ((erased b1) (erased p1)) (mt-bal bs1 (Succ n) et1 w1 m1 (Dp1 bs n dp))) (values b1 (BalCons n (Succ n) b1 b1 s w1 (GStPush n b1) p1)))
@@ -215,12 +215,12 @@
         ((SPop12 _)
           (let-match erased dp (Dp1 _ n1 dp1))
           (let ((erased b1) (erased p1)) (mt-bal bs1 n1 et1 w1 m1 dp1))
-          (let ((erased b) (erased nb)) (not-exists b1))
+          (let ((erased b) (erased nb)) (not-pre b1))
           (values b (BalCons n n1 b b1 s w1 (GStPop1 n1 b b1 nb) p1)))
         ((SPop13 _)
           (let-match erased dp (Dp0 _ n1 dp1))
           (let ((erased b1) (erased p1)) (mt-bal bs1 n1 et1 w1 m1 dp1))
-          (let ((erased b) (erased nb)) (not-exists b1))
+          (let ((erased b) (erased nb)) (not-pre b1))
           (values b (BalCons n n1 b b1 s w1 (GStPop1 n1 b b1 nb) p1)))))))
 
 ; gram_neg_rec n w = w2.
@@ -257,12 +257,12 @@
     ((GNHere s t w1 np) (GNHere t s w1 (negpop-sym s t np)))))
 
 ; One step from the stacks with bottoms b and c, at a step that does not pop past them.
-(def-fns _ $ (erased sym-rebot : (erased (Gsym) s) (erased (Bstack) sb B B1 C) (erased (Col) e) (erased (Bool) b c) (erased (Sym s B e B1) y)
+(def-fns _ $ (erased sym-rebot : (erased (Gsym) s) (erased (Bstack) sb B Bb1 C) (erased (Col) e) (erased (Bool) b c) (erased (Sym s B e Bb1) y)
     (erased (Bot sb b B) pb) (erased (Bot sb c C) pc) (erased (Unbot s sb) ub)
-    -> (erased (Bstack) sb1 C1) (erased (Sym s sb e sb1) y0) (erased (Bot sb1 b B1) pb1) (erased (Bot sb1 c C1) pc1) (erased (Sym s C e C1) r))
-  (let ((erased sb1) (erased y0) (erased pb1)) (sym-unbot s B B1 sb e b y pb ub))
-  (let ((erased C1) (erased pc1)) (bot-exists sb1 c))
-  (values sb1 C1 y0 pb1 pc1 (sym-bot s sb sb1 C C1 e c y0 pc pc1)))
+    -> (erased (Bstack) sb1 Cc1) (erased (Sym s sb e sb1) y0) (erased (Bot sb1 b Bb1) pb1) (erased (Bot sb1 c Cc1) pc1) (erased (Sym s C e Cc1) r))
+  (let ((erased sb1) (erased y0) (erased pb1)) (sym-unbot s B Bb1 sb e b y pb ub))
+  (let ((erased Cc1) (erased pc1)) (bot-exists sb1 c))
+  (values sb1 Cc1 y0 pb1 pc1 (sym-bot s sb sb1 C Cc1 e c y0 pc pc1)))
 
 ; match_gram_neg: a match of gram_neg w from a stack with bottom bit b is a match of w from the stack with the other bottom bit.
 (def-fns _ $ (erased mg-neg : (erased (Bstack) sb B C) (erased (Nat) n) (erased (Bool) b c) (erased (List (Gsym)) w w2) (erased (List (Col)) et)
@@ -271,28 +271,28 @@
   (match erased g _
     (absurd (GNNil _) (let-match erased m (MGNil)) pb)
     ((GNPush _ w1 w3 g1)
-      (let-match erased m (MGCons _ B1 e _ et1 _ y m1))
-      (let ((erased sb1) (erased C1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot (GPush) sb B B1 C e b c y pb pc (UBPush sb)))
-      (MGCons C C1 e (GPush) et1 w1 yc (mg-neg sb1 B1 C1 (Succ n) b c w1 w3 et1 (push-depth sb sb1 e n y0 dp) g1 pb1 pc1 nt m1)))
+      (let-match erased m (MGCons _ Bb1 e _ et1 _ y m1))
+      (let ((erased sb1) (erased Cc1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot (GPush) sb B Bb1 C e b c y pb pc (UBPush sb)))
+      (MGCons C Cc1 e (GPush) et1 w1 yc (mg-neg sb1 Bb1 Cc1 (Succ n) b c w1 w3 et1 (push-depth sb sb1 e n y0 dp) g1 pb1 pc1 nt m1)))
     ((GNSkip _ w1 w3 g1)
-      (let-match erased m (MGCons _ B1 e _ et1 _ y m1))
-      (let ((erased sb1) (erased C1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot (GSkip) sb B B1 C e b c y pb pc (UBSkip sb)))
+      (let-match erased m (MGCons _ Bb1 e _ et1 _ y m1))
+      (let ((erased sb1) (erased Cc1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot (GSkip) sb B Bb1 C e b c y pb pc (UBSkip sb)))
       (let-match erased y0 (SSkip _))
-      (MGCons C C1 e (GSkip) et1 w1 yc (mg-neg sb1 B1 C1 n b c w1 w3 et1 dp g1 pb1 pc1 nt m1)))
+      (MGCons C Cc1 e (GSkip) et1 w1 yc (mg-neg sb1 Bb1 Cc1 n b c w1 w3 et1 dp g1 pb1 pc1 nt m1)))
     ((GNPop n1 s t w1 w3 np g1)
-      (let-match erased m (MGCons _ B1 e _ et1 _ y m1))
-      (let ((erased sb1) (erased C1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot s sb B B1 C e b c y pb pc (depth-unbot s sb n1 dp)))
-      (MGCons C C1 e s et1 w1 yc (mg-neg sb1 B1 C1 n1 b c w1 w3 et1 (pop-depth s t sb sb1 e n1 np y0 dp) g1 pb1 pc1 nt m1)))
+      (let-match erased m (MGCons _ Bb1 e _ et1 _ y m1))
+      (let ((erased sb1) (erased Cc1) (erased y0) (erased pb1) (erased pc1) (erased yc)) (sym-rebot s sb B Bb1 C e b c y pb pc (depth-unbot s sb n1 dp)))
+      (MGCons C Cc1 e s et1 w1 yc (mg-neg sb1 Bb1 Cc1 n1 b c w1 w3 et1 (pop-depth s t sb sb1 e n1 np y0 dp) g1 pb1 pc1 nt m1)))
     ((GNHere s t w1 np)
       (let-match erased dp (DpZ))
-      (let-match erased m (MGCons _ B1 e _ et1 _ y m1))
+      (let-match erased m (MGCons _ Bb1 e _ et1 _ y m1))
       (match erased np _
         ((NP01) (match erased nt _
-          ((NotT) (let-match erased pb (BotT)) (let-match erased pc (BotF)) (let-match erased y (SPop12 _)) (MGCons C B1 e s et1 w1 (SPop02 B1) m1))
-          ((NotF) (let-match erased pb (BotF)) (let-match erased pc (BotT)) (let-match erased y (SPop13 _)) (MGCons C B1 e s et1 w1 (SPop03 B1) m1))))
+          ((NotT) (let-match erased pb (BotT)) (let-match erased pc (BotF)) (let-match erased y (SPop12 _)) (MGCons C Bb1 e s et1 w1 (SPop02 Bb1) m1))
+          ((NotF) (let-match erased pb (BotF)) (let-match erased pc (BotT)) (let-match erased y (SPop13 _)) (MGCons C Bb1 e s et1 w1 (SPop03 Bb1) m1))))
         ((NP10) (match erased nt _
-          ((NotT) (let-match erased pb (BotT)) (let-match erased pc (BotF)) (let-match erased y (SPop03 _)) (MGCons C B1 e s et1 w1 (SPop13 B1) m1))
-          ((NotF) (let-match erased pb (BotF)) (let-match erased pc (BotT)) (let-match erased y (SPop02 _)) (MGCons C B1 e s et1 w1 (SPop12 B1) m1))))))))
+          ((NotT) (let-match erased pb (BotT)) (let-match erased pc (BotF)) (let-match erased y (SPop03 _)) (MGCons C Bb1 e s et1 w1 (SPop13 Bb1) m1))
+          ((NotF) (let-match erased pb (BotF)) (let-match erased pc (BotT)) (let-match erased y (SPop02 _)) (MGCons C Bb1 e s et1 w1 (SPop12 Bb1) m1))))))))
 
 ; gram_flip_rec n w = w2.
 (def-adts $ (Flip : ((Nat) n) ((List (Gsym)) w w2) -> Type)
@@ -348,25 +348,25 @@
     ((FlPush _ w1 w3 f1)
       (let-match erased m (MGCons _ sb1 e _ et1 _ y m1))
       (let ((erased A1) (erased pa1) (erased ya)) (sym-bot2 (GPush) sb sb1 A e (BTrue) (BFalse) y pa))
-      (let ((erased B1) (erased pb1) (erased yb)) (sym-bot2 (GPush) sb sb1 B e (BFalse) (BTrue) y pb))
-      (match erased (flip-fwd sb1 A1 B1 (Succ n) w1 w3 et1 (push-depth sb sb1 e n y dp) f1 pa1 pb1 m1) _
+      (let ((erased Bb1) (erased pb1) (erased yb)) (sym-bot2 (GPush) sb sb1 B e (BFalse) (BTrue) y pb))
+      (match erased (flip-fwd sb1 A1 Bb1 (Succ n) w1 w3 et1 (push-depth sb sb1 e n y dp) f1 pa1 pb1 m1) _
         ((InL _ _ ma) (InL _ _ (MGCons A A1 e (GPush) et1 w1 ya ma)))
-        ((InR _ _ mb) (InR _ _ (MGCons B B1 e (GPush) et1 w1 yb mb)))))
+        ((InR _ _ mb) (InR _ _ (MGCons B Bb1 e (GPush) et1 w1 yb mb)))))
     ((FlSkip _ w1 w3 f1)
       (let-match erased m (MGCons _ sb1 e _ et1 _ y m1))
       (let-match erased y (SSkip _))
       (let ((erased A1) (erased pa1) (erased ya)) (sym-bot2 (GSkip) sb sb1 A e (BTrue) (BFalse) y pa))
-      (let ((erased B1) (erased pb1) (erased yb)) (sym-bot2 (GSkip) sb sb1 B e (BFalse) (BTrue) y pb))
-      (match erased (flip-fwd sb1 A1 B1 n w1 w3 et1 dp f1 pa1 pb1 m1) _
+      (let ((erased Bb1) (erased pb1) (erased yb)) (sym-bot2 (GSkip) sb sb1 B e (BFalse) (BTrue) y pb))
+      (match erased (flip-fwd sb1 A1 Bb1 n w1 w3 et1 dp f1 pa1 pb1 m1) _
         ((InL _ _ ma) (InL _ _ (MGCons A A1 e (GSkip) et1 w1 ya ma)))
-        ((InR _ _ mb) (InR _ _ (MGCons B B1 e (GSkip) et1 w1 yb mb)))))
+        ((InR _ _ mb) (InR _ _ (MGCons B Bb1 e (GSkip) et1 w1 yb mb)))))
     ((FlPop n1 s t w1 w3 np f1)
       (let-match erased m (MGCons _ sb1 e _ et1 _ y m1))
       (let ((erased A1) (erased pa1) (erased ya)) (sym-bot2 s sb sb1 A e (BTrue) (BFalse) y pa))
-      (let ((erased B1) (erased pb1) (erased yb)) (sym-bot2 s sb sb1 B e (BFalse) (BTrue) y pb))
-      (match erased (flip-fwd sb1 A1 B1 n1 w1 w3 et1 (pop-depth s t sb sb1 e n1 np y dp) f1 pa1 pb1 m1) _
+      (let ((erased Bb1) (erased pb1) (erased yb)) (sym-bot2 s sb sb1 B e (BFalse) (BTrue) y pb))
+      (match erased (flip-fwd sb1 A1 Bb1 n1 w1 w3 et1 (pop-depth s t sb sb1 e n1 np y dp) f1 pa1 pb1 m1) _
         ((InL _ _ ma) (InL _ _ (MGCons A A1 e s et1 w1 ya ma)))
-        ((InR _ _ mb) (InR _ _ (MGCons B B1 e s et1 w1 yb mb)))))
+        ((InR _ _ mb) (InR _ _ (MGCons B Bb1 e s et1 w1 yb mb)))))
     ((FlHere0 w1 w3 g)
       (let-match erased dp (DpZ))
       (let-match erased pa (MkBot2 _ _ _ _ _ pa1 pa2))
@@ -1394,9 +1394,9 @@
         ((InThere _ _ _ r) r)))
       (let ((erased kf0)) (set2-other k1s k0 z kfz ez cez fez cez st2 pcez nfez (apart-sym ez fez (notin-in ez fez p oe infez))))
       (let ((erased ltc)) (lastfrom-cols lcp csp kfz cez Cfz Cez (lastfrom-resp k0 p lcp z fez kfz cez lt0 rp0 kf0) co0 oez))
-      (let ((erased t) (erased at)) (addc-total Cez Cfz))
-      (let-match erased (addc-cancel c0 e0 v t ad (addc-tri Cez Cnez Cfz c0 v t a1 a2 at)) (Refl _ _))
-      (MkLRT d s e f _ k0 _ _ _ lc0 rp0 co0 (UTCons Cfz Cez csp _ ltc (PFCons Cez Cfz e0 csp X at pfp))))))
+      (let ((erased t) (erased ats)) (addc-total Cez Cfz))
+      (let-match erased (addc-cancel c0 e0 v t ad (addc-tri Cez Cnez Cfz c0 v t a1 a2 ats)) (Refl _ _))
+      (MkLRT d s e f _ k0 _ _ _ lc0 rp0 co0 (UTCons Cfz Cez csp _ ltc (PFCons Cez Cfz e0 csp X ats pfp))))))
 
 ; R is a cycle of n (Gonthier's fcycle node), or empty.
 (def-adts $ (NCyc : ((List (Nat)) n R) -> Type)
@@ -1405,10 +1405,10 @@
   (many NCCons : (erased (List (Nat)) n xs) (erased (Nat) x y) (erased (FPath n x xs y) fp) (erased (Nth (Nat) n y x) back) -> (NCyc n (Cons (Nat) x xs))))
 
 ; No dart of R is in s.
-(def-adts $ (Avoid : ((List (Nat)) s R) -> Type)
+(def-adts $ (Off : ((List (Nat)) s R) -> Type)
   enum
-  (many AvNil : (erased (List (Nat)) s) -> (Avoid s (Nil (Nat))))
-  (many AvCons : (erased (List (Nat)) s R) (erased (Nat) x) (erased (NotIn x s) px) (erased (Avoid s R) rest) -> (Avoid s (Cons (Nat) x R))))
+  (many OffNil : (erased (List (Nat)) s) -> (Off s (Nil (Nat))))
+  (many OffCons : (erased (List (Nat)) s R) (erased (Nat) x) (erased (NotIn x s) px) (erased (Off s R) rest) -> (Off s (Cons (Nat) x R))))
 
 ; Every dart of xs is in R or on a cycle of n of at most three darts (quasicubic r, read on the darts xs).
 (def-adts $ (QCubic : ((List (Nat)) n R xs) -> Type)
@@ -1435,7 +1435,7 @@
 ; The ring data kempe.v keeps along its induction: a duplicate-free node cycle of live darts, off which the map is cubic.
 (def-adts $ (RingOK : ((List (Nat)) n s R ids) -> Type)
   enum
-  (many MkRingOK : (erased (List (Nat)) n s R ids) (erased (NCyc n R) nc) (erased (Distinct R) ds) (erased (Avoid s R) av) (erased (QCubic n R ids) qc)
+  (many MkRingOK : (erased (List (Nat)) n s R ids) (erased (NCyc n R) nc) (erased (Distinct R) ds) (erased (Off s R) av) (erased (QCubic n R ids) qc)
       -> (RingOK n s R ids)))
 
 (def-fns _ $ (erased fpath-snoc : (erased (List (Nat)) r q q2) (erased (Nat) a b c) (subterm erased (FPath r a q b) fp) (erased (Nth (Nat) r b c) pc)
@@ -1467,23 +1467,23 @@
     ((QCIn _ _ xs1 x px q1) (QCIn n R2 xs1 x (in-snoc x y R0 R2 sn px) (qc-rot n R0 R2 xs1 y q1 sn)))
     ((QCOut _ _ xs1 x a b pa pb px q1) (QCOut n R2 xs1 x a b pa pb px (qc-rot n R0 R2 xs1 y q1 sn)))))
 
-(def-fns _ $ (erased avoid-snoc : (erased (List (Nat)) s R0 R2) (erased (Nat) x) (erased (NotIn x s) px) (subterm erased (Avoid s R0) av)
-    (erased (HSnoc (Nat) R0 x R2) sn) -> (erased (Avoid s R2) r))
-  (let-match erased sn (SnocCons _ a _ R1 R3 sn1) ((SnocNil _ _) (AvCons s (Nil _) x px (AvNil s))))
-  (let-match erased av (AvCons _ _ _ pa av1))
-  (AvCons s R3 a pa (avoid-snoc s R1 R3 x px av1 sn1)))
+(def-fns _ $ (erased off-snoc : (erased (List (Nat)) s R0 R2) (erased (Nat) x) (erased (NotIn x s) px) (subterm erased (Off s R0) av)
+    (erased (HSnoc (Nat) R0 x R2) sn) -> (erased (Off s R2) r))
+  (let-match erased sn (SnocCons _ a _ R1 R3 sn1) ((SnocNil _ _) (OffCons s (Nil _) x px (OffNil s))))
+  (let-match erased av (OffCons _ _ _ pa av1))
+  (OffCons s R3 a pa (off-snoc s R1 R3 x px av1 sn1)))
 
 (def-fns _ $ (erased ring-rot : (erased (List (Nat)) n s R0 R2 ids) (erased (Nat) x) (erased (RingOK n s (Cons (Nat) x R0) ids) ro)
     (erased (HSnoc (Nat) R0 x R2) sn) -> (erased (RingOK n s R2 ids) r))
   (let-match erased ro (MkRingOK _ _ _ _ nc ds av qc))
   (let-match erased nc (NCCons _ _ _ y fp back))
-  (let-match erased av (AvCons _ _ _ px av1))
+  (let-match erased av (OffCons _ _ _ px av1))
   (let ((erased nc2)) (match erased fp (((NCyc n R2) r))
     ((FPNil _ _) (let-match erased sn (SnocNil _ _)) (NCCons n (Nil _) x x (FPNil n x) back))
     ((FPCons _ q1 _ r1 _ pr fp1)
       (let-match erased sn (SnocCons _ _ _ _ q3 sn1))
       (NCCons n q3 r1 x (fpath-snoc n q1 q3 r1 y x fp1 back sn1) pr))))
-  (MkRingOK n s R2 ids nc2 (distinct-snoc-cons x R0 R2 sn ds) (avoid-snoc s R0 R2 x px av1 sn) (qc-rot n R0 R2 ids x qc sn)))
+  (MkRingOK n s R2 ids nc2 (distinct-snoc-cons x R0 R2 sn ds) (off-snoc s R0 R2 x px av1 sn) (qc-rot n R0 R2 ids x qc sn)))
 
 (def-fns _ $ (erased join-snoc-r : (erased (List (Nat)) a b ab b2 ab2) (erased (Nat) c) (subterm erased (Join a b ab) j) (erased (HSnoc (Nat) b c b2) sb)
     (erased (HSnoc (Nat) ab c ab2) sab) -> (erased (Join a b2 ab2) r))
@@ -1655,12 +1655,12 @@
   (FPCons n2 q1 a a1 b (cut-n2 d z ez a a1 e n f e2 n2 f2 h ct pa (apart-sym z a za) (apart-sym ez a ea) (apart-sym z a1 za1) (apart-sym ez a1 ea1))
     (fpath-n2 d z ez a1 b e n f e2 n2 f2 q1 h ct fp1 oz1 oe1)))
 
-(def-fns _ $ (erased avoid-extend : (erased (List (Nat)) s R) (erased (Nat) a b) (subterm erased (Avoid s R) av) (erased (NotIn a R) oa) (erased (NotIn b R) ob)
-    -> (erased (Avoid (Cons (Nat) b (Cons (Nat) a s)) R) r))
-  (let-match erased av (AvCons _ R1 x px av1) ((AvNil _) (AvNil _)))
+(def-fns _ $ (erased off-extend : (erased (List (Nat)) s R) (erased (Nat) a b) (subterm erased (Off s R) av) (erased (NotIn a R) oa) (erased (NotIn b R) ob)
+    -> (erased (Off (Cons (Nat) b (Cons (Nat) a s)) R) r))
+  (let-match erased av (OffCons _ R1 x px av1) ((OffNil _) (OffNil _)))
   (let-match erased oa (NotInCons _ _ _ na oa1))
   (let-match erased ob (NotInCons _ _ _ nb ob1))
-  (AvCons _ R1 x (NotInCons x b _ (apart-sym b x nb) (NotInCons x a s (apart-sym a x na) px)) (avoid-extend s R1 a b av1 oa1 ob1)))
+  (OffCons _ R1 x (NotInCons x b _ (apart-sym b x nb) (NotInCons x a s (apart-sym a x na) px)) (off-extend s R1 a b av1 oa1 ob1)))
 
 (def-fns _ $ (erased fixed-cyc3 : (erased (List (Nat)) n s) (erased (Nat) x) (erased (FixedIn n s) fx) (erased (In x s) ix) -> (erased (Cyc3 n x) r))
   (let ((erased p)) (fixed-at n s x fx ix))
@@ -1691,7 +1691,7 @@
   (let-match erased (in-dec x p1) (OrR _ _ op) ((OrL _ _ ip) (InL _ _ ip)))
   (let-match erased (nat-eq x z) (Unequal _ _ _ _ xz) ((Equal _ _ _) (InR _ _ (fixed-cyc3 n2 s2 z fn2 (InThere z ez _ (InHere z s))))))
   (let-match erased (nat-eq x ez) (Unequal _ _ _ _ xe) ((Equal _ _ _) (InR _ _ (fixed-cyc3 n2 s2 ez fn2 (InHere ez _)))))
-  (let-match erased (in-dec x s) (OrR _ _ os) ((OrL _ _ is) (InR _ _ (fixed-cyc3 n2 s2 x fn2 (InThere x ez _ (InThere x z s is))))))
+  (let-match erased (in-dec x s) (OrR _ _ os) ((OrL _ _ isx) (InR _ _ (fixed-cyc3 n2 s2 x fn2 (InThere x ez _ (InThere x z s isx))))))
   (let ((erased ox)) (NotInCons x z _ xz (NotInCons x ez p1 xe op)))
   (let-match erased (qc-at n R ids x qc (iota-in d x ids io lx)) (InR _ _ cy) (absurd (InL _ _ ix) (apart-irrefl x (notin-in x x R ox ix))))
   (let-match erased cy (MkCyc3 _ _ a b pa pb px))
@@ -1722,7 +1722,7 @@
   (let-match erased (in-dec x sH) (OrR _ _ oH) ((OrL _ _ ip) (InL _ _ ip)))
   (let-match erased (nat-eq x z) (Unequal _ _ _ _ xz) ((Equal _ _ _) (InR _ _ (fixed-cyc3 n2 s2 z fn2 (InThere z ez _ (InHere z s))))))
   (let-match erased (nat-eq x ez) (Unequal _ _ _ _ xe) ((Equal _ _ _) (InR _ _ (fixed-cyc3 n2 s2 ez fn2 (InHere ez _)))))
-  (let-match erased (in-dec x s) (OrR _ _ os) ((OrL _ _ is) (InR _ _ (fixed-cyc3 n2 s2 x fn2 (InThere x ez _ (InThere x z s is))))))
+  (let-match erased (in-dec x s) (OrR _ _ os) ((OrL _ _ isx) (InR _ _ (fixed-cyc3 n2 s2 x fn2 (InThere x ez _ (InThere x z s isx))))))
   (let-match erased oH (NotInCons _ _ _ xn oH1))
   (let-match erased oH1 (NotInCons _ _ _ xf op))
   (let ((erased ox)) (NotInCons x z p xz op))
@@ -1760,8 +1760,8 @@
   (let-match erased ds (DistCons _ _ oz0 ds1))
   (let-match erased oz0 (NotInCons _ _ _ _ oz))
   (let-match erased ds1 (DistCons _ _ oe ds2))
-  (let-match erased av (AvCons _ _ _ _ av1))
-  (let-match erased av1 (AvCons _ _ _ _ av2))
+  (let-match erased av (OffCons _ _ _ _ av1))
+  (let-match erased av1 (OffCons _ _ _ _ av2))
   (let ((erased nc2)) (match erased fp1 (((NCyc n2 p1) r))
     ((FPNil _ _) (NCNil n2))
     ((FPCons _ p2 _ q _ peq fp2)
@@ -1770,7 +1770,7 @@
       (NCCons n2 p2 q y (fpath-n2 d z ez q y e n f e2 n2 f2 p2 h ct fp2 oz oe)
         (cut-n2-y d z ez y q e n f e2 n2 f2 h ct back peq (apart-sym z y (notin-in z y p1 oz iy)) (apart-sym ez y (notin-in ez y p1 oe iy))
           (apart-sym z q (notin-in z q p1 oz iq)) (apart-sym ez q (notin-in ez q p1 oe iq)))))))
-  (MkRingOK n2 _ p1 ids nc2 ds2 (avoid-extend s p1 z ez av2 oz oe)
+  (MkRingOK n2 _ p1 ids nc2 ds2 (off-extend s p1 z ez av2 oz oe)
     (qcA d z ez e n f s e2 n2 f2 p1 ids ni ids h ct pm fn2 nc qc io (perm-under d ids ids (perm-id d ids io)))))
 
 ; The ring of the contraction when f z is off the ring z :: p: n (e z) :: f z :: p.
@@ -1785,7 +1785,7 @@
   (let-match erased (nth-fn _ f z fz fz1 pfz pfz1) (Refl _ _))
   (let ((erased R)) (Cons (Nat) z p))
   (let-match erased ro (MkRingOK _ _ _ _ nc ds av qc))
-  (let-match erased av (AvCons _ _ _ zs avp))
+  (let-match erased av (OffCons _ _ _ zs avp))
   (let-match erased ds (DistCons _ _ oz dsp))
   (let-match erased ofz (NotInCons _ _ _ fzz ofzp))
   (let ((erased lz)) (perm-val d ez z e nf pe pze))
@@ -1823,8 +1823,8 @@
       (FPCons n2 p1 fz nz y (cut-n2-fz d z ez fz nz e n f e2 n2 f2 h ct pfzez pnz fzz nfz nzz nze) (fpath-n2 d z ez nz y e n f e2 n2 f2 p1 h ct fp1 oz oep)))
     (cut-n2-y d z ez y nez e n f e2 n2 f2 h ct back pnez yz ye nezz neze)))
   (MkRingOK n2 _ _ ids nc2 (DistCons nez _ (NotInCons nez fz p nezf onezp) (DistCons fz p ofzp dsp))
-    (AvCons _ _ nez (NotInCons nez ez _ neze (NotInCons nez z s nezz nezs))
-      (AvCons _ p fz (NotInCons fz ez _ nfz (NotInCons fz z s fzz fzs)) (avoid-extend s p z ez avp oz oep)))
+    (OffCons _ _ nez (NotInCons nez ez _ neze (NotInCons nez z s nezz nezs))
+      (OffCons _ p fz (NotInCons fz ez _ nfz (NotInCons fz z s fzz fzs)) (off-extend s p z ez avp oz oep)))
     (qcB d z ez fz nez e n f s e2 n2 f2 p ids ni ids h ct pm fn2 nc qc io pfzez pnez (perm-under d ids ids (perm-id d ids io)))))
 
 (def-fns _ $ (erased astep-build : (erased (Col) c) (erased (List (Col)) X) (erased (List (Gsym)) wH) (erased (NonZero c) nz) (erased (MatchG (BS0) X wH) m)
@@ -1974,10 +1974,10 @@
   (many KLA : (erased (List (Nat)) f R) (erased (Nat) z) (erased (In z R) iz) (erased (Nth (Nat) f z z) pz) -> (KLeaf f R))
   (many KLB : (erased (List (Nat)) f R) (erased (Nat) z fz) (erased (In z R) iz) (erased (Nth (Nat) f z fz) pz) (erased (NotIn fz R) ofz) -> (KLeaf f R)))
 
-(def-fns _ $ (erased avoid-at : (erased (List (Nat)) s R) (erased (Nat) z) (subterm erased (Avoid s R) av) (erased (In z R) iz) -> (erased (NotIn z s) r))
-  (let-match erased av (AvCons _ R1 x px av1) (absurd (AvNil _) iz))
+(def-fns _ $ (erased off-at : (erased (List (Nat)) s R) (erased (Nat) z) (subterm erased (Off s R) av) (erased (In z R) iz) -> (erased (NotIn z s) r))
+  (let-match erased av (OffCons _ R1 x px av1) (absurd (OffNil _) iz))
   (let-match erased iz (InThere _ _ _ iz1) ((InHere _ _) px))
-  (avoid-at s R1 z av1 iz1))
+  (off-at s R1 z av1 iz1))
 
 (def-fns _ $ (erased kleaf : (erased (Nat) d x0) (erased (List (Nat)) e n f s ks xs ids) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (RingOK n s (Cons (Nat) x0 xs) ids) ro) (erased (LiveColoring d s e f ks) lc) -> (erased (KLeaf f (Cons (Nat) x0 xs)) r))
@@ -1994,7 +1994,7 @@
       (let ((erased iz)) (path-ncyc n R zs x0 z w nc ix0))
       (let ((erased lz)) (perm-val d z z e nf pe pz))
       (let ((erased kz) (erased pkz)) (lc-col d z s e f ks lc lz))
-      (let ((erased oz)) (avoid-at s R z av iz))
+      (let ((erased oz)) (off-at s R z av iz))
       (apart-irrefl kz (lc-edge d z z kz kz s e f ks lc lz oz pz pkz pkz)))
     ((LeafCut _ _ _ _ z z2 wp pz sp)
       (let-match erased wp (MkSomePath _ _ zs _ _ w))
@@ -2022,7 +2022,7 @@
   (let-match erased ro (MkRingOK _ _ _ _ nc ds av qc))
   (let-match erased nc (NCCons _ _ _ y fp back))
   (let-match erased ds (DistCons _ _ oz dsp))
-  (let-match erased av (AvCons _ _ _ zs avp))
+  (let-match erased av (OffCons _ _ _ zs avp))
   (let ((erased ez) (erased pez) (erased _)) (perm-nth d z e nf pe lz))
   (let ((erased pze)) (plain-at d z ez e pl lz pez))
   (let ((erased e2) (erased n2) (erased f2) (erased m2) (erased ct) (erased h2) (erased g2) (erased em) (erased dd2) (erased ne) (erased oute))
@@ -2157,9 +2157,9 @@
   (let-match erased (lastfrom-fn (Col) c1 l c lc3 lt (lastfrom-snoc (Col) c1 c lc3 lc sn)) (Refl _ _))
   (TrCons c lc et (pair-tracefrom c c lc lc2 et sn pf)))
 
-(def-fns _ $ (erased avoid-nil : (subterm erased (List (Nat)) r) -> (erased (Avoid (Nil (Nat)) r) a))
-  (let-match erased r (Cons _ x r1) ((Nil _) (AvNil _)))
-  (AvCons _ r1 x (NotInNil x) (avoid-nil r1)))
+(def-fns _ $ (erased off-nil : (subterm erased (List (Nat)) r) -> (erased (Off (Nil (Nat)) r) a))
+  (let-match erased r (Cons _ x r1) ((Nil _) (OffNil _)))
+  (OffCons _ r1 x (NotInNil x) (off-nil r1)))
 
 (def-fns _ $ (erased respects-unsnoc : (erased (List (Nat)) k r0 R lcR) (erased (Nat) x) (subterm erased (HSnoc (Nat) r0 x R) sn) (erased (Respects k R lcR) rp)
     -> (erased (List (Nat)) lc0) (erased (Nat) l) (erased (HSnoc (Nat) lc0 l lcR) sl) (erased (Respects k r0 lc0) r) (erased (Nth (Nat) k x l) pl))
@@ -2203,7 +2203,7 @@
     ((Nil _) (let-match erased rl (RespNil _)) (let-match erased co (All2Nil _ _ _)) (let-match erased t (TrNil)) (values (Nil _) (MGNil) (KRNil d e n f ks c))))
   (let-match erased qc (MkQuasiCubic _ _ _ ids io qc1))
   (let ((erased R) (erased sn)) (snoc-exists _ r0 x))
-  (let ((erased ro)) (ring-rot n (Nil _) r0 R ids x (MkRingOK n (Nil _) r ids nc ds (avoid-nil r) qc1) sn))
+  (let ((erased ro)) (ring-rot n (Nil _) r0 R ids x (MkRingOK n (Nil _) r ids nc ds (off-nil r) qc1) sn))
   (let ((erased lc0)) (four-live d e n f ks h c))
   (let ((erased dd)) (MkDead d d (Zero) e n f (Nil _) (FixNil e) (FixNil n) (FixNil f) (DistNil) (LengthNil _) (UnderNil d) (AddZero d)))
   (let-match erased (kempe-build (Succ d) d d e n f (Nil _) ks R ids h g dd (lt-succ d) (plain-of d e n f h pl) io ro lc0)
@@ -2218,7 +2218,7 @@
   (values w m (KRCons d x e n f r0 R w h sn kg)))
 
 ; ... every trace matching which is a ring trace.
-(def-fns _ $ (erased kempe-sound : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Gsym)) w) (erased (List (Col)) et)
+(def-fns _ $ (erased kempe-map-sound : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Gsym)) w) (erased (List (Col)) et)
     (erased (KRing d e n f r w) kr) (erased (MatchG (BS0) et w) m) -> (erased (RingTrace e f r et) rt))
   (match erased kr _
     ((KRNil _ _ _ _ ks c) (let-match erased m (MGNil)) (MkRingTrace e f _ ks (Nil _) (Nil _) (Nil _) c (RespNil ks) (All2Nil _ _ ColOf) (TrNil)))
@@ -2256,7 +2256,7 @@
         (let-match erased a (AMCEnd _ _ w2 ra2 wt) (absurd (AMCOpen _ _ _ pp _) pp))
         (let-match erased (revapp-fn (Gsym) pre u w0 w2 ra ra2) (Refl _ _))
         (let-match erased wt (MkWitC _ _ ct2 m2 k2))
-        (kcc-ring Q d e n f r kr ct2 k2 (kempe-sound d e n f r w0 ct2 kg m2)))
+        (kcc-ring Q d e n f r kr ct2 k2 (kempe-map-sound d e n f r w0 ct2 kg m2)))
       ((MGCons _ bs2 c s ct1 u1 y m1)
         (let ((erased ra1)) (RACons (Gsym) s pre u1 w0 ra))
         (match erased (sym-cls s bs bs2 c y) _

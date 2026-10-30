@@ -21,5 +21,5 @@
       -> (KempeMap)))
 
 (goal erased (KempeMap))
-(qed (MkKempeMap (level-of ring-trace-perm) ring-trace-perm (level-of kempe-map) kempe-map (level-of kempe-sound) kempe-sound
+(qed (MkKempeMap (level-of ring-trace-perm) ring-trace-perm (level-of kempe-map) kempe-map (level-of kempe-map-sound) kempe-map-sound
   (level-of kcc-ring) kcc-ring))
