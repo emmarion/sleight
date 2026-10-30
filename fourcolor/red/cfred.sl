@@ -90,31 +90,27 @@
     (values (Cons _ e1 et1) (MkHolds (List (Step)) cp CpCol (Cons _ e1 et1) c) hp3))
   (MkKCoclo L M3 (MkPred (List (Step)) cp CpCol) (Cons _ e0 et) g))
 
-(def-fns _ $ (erased disj-sub : (erased (Ctree) tl tr) (erased (List (Col)) et) (erased (CtDisj tl tr) d) (erased (CtMem tr et) m) -> (erased (CtSub tl et (Zero)) s))
-  (let ((erased n) (erased s)) (sub-exists tl et))
-  (match erased n _ ((Zero) s) (absurd (Succ n1) (disj-mem tl tr et d (MkCtMem tl et n1 s) m))))
-
-; The Kempe half of check_reducible_valid: every trace e0 :: et of cprsize cp entries whose even normal form of et is in ct is in
-; the co-closure of the ring traces of cp's map, for the closed sets at any level.
-(def-adts $ (KHalf : ((List (Step)) cp) ((Ctree) ct) -> Type)
+; The Kempe half of check_reducible_valid: every trace e0 :: et of cprsize cp entries whose even normal form of et is not in the
+; Kempe tree kt is in the co-closure of the ring traces of cp's map, for the closed sets at any level.
+(def-adts $ (KHalf : ((List (Step)) cp) ((Ctree) kt) -> Type)
   enum
-  (many MkKHalf : (erased (List (Step)) cp) (erased (Ctree) ct) (erased (Level) F)
+  (many MkKHalf : (erased (List (Step)) cp) (erased (Ctree) kt) (erased (Level) F)
       (erased (Fn F (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (Trace cs (Cons (Col) e0 et)) tr)
-          (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtMem ct et2) m) (erased (Level) L)
-          -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r)) f)
-      -> (KHalf cp ct)))
+          (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) m)
+          (erased (Level) L) -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r)) f)
+      -> (KHalf cp kt)))
 
-(def-fns _ $ (erased kempe-half : (erased (List (Step)) cp) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks)
-    (erased (Cprsize cp (Succ (Succ h))) cs0) (erased (CtDisj kt ct) dj) -> (erased (KHalf cp ct) r))
+(def-fns _ $ (erased kempe-half : (erased (List (Step)) cp) (erased (Nat) h) (erased (Ctree) kt) (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks)
+    (erased (Cprsize cp (Succ (Succ h))) cs0) -> (erased (KHalf cp kt) r))
   (def-lvl F)
   (def-fns F $ (erased f : (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (Trace cs (Cons (Col) e0 et)) tr)
-      (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtMem ct et2) m) (erased (Level) L)
-      -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r))
+      (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) m)
+      (erased (Level) L) -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r))
     (let-match erased (cprsize-fn cp k (Succ (Succ h)) c cs0) (Refl _ _))
     (let-match erased l (LengthCons _ _ _ _ l1))
     (let ((erased ct2) (erased cr) (erased s)) (trace-ctr cs et e0 tr))
-    (kcc-ring cp et ct2 e0 (kempe-treeP-c (MkPred (List (Step)) cp CpColR) h kt ks et et2 ct2 l1 e (disj-sub kt ct et2 dj m) cr) s L))
-  (MkKHalf cp ct F f))
+    (kcc-ring cp et ct2 e0 (kempe-treeP-c (MkPred (List (Step)) cp CpColR) h kt ks et et2 ct2 l1 e m cr) s L))
+  (MkKHalf cp kt F f))
 
 ; C-reducibility of coloring.v, on the maps of cpmap.sl.
 
@@ -195,19 +191,19 @@
       (erased (Fn F (erased (List (Col)) et) (erased (CcCol cp cc et) col) (erased (Level) L) -> (erased (KCoclo L (MkPred (List (Step)) cp CpCol) et) k)) g)
       -> (CRed cp cc)))
 
-; What contract_ctreeP of cfcontract.v gives for a contract tree ct: cc is valid, and the even normal form of every contract
-; ring trace without its first entry is in ct.
-(def-adts $ (ContractOK : ((List (Step)) cp) ((List (Nat)) cc) ((Ctree) ct) -> Type)
+; The contract half of check_reducible_valid for the Kempe tree kt: cc is valid, and the even normal form of every contract ring
+; trace without its first entry is not in kt.
+(def-adts $ (ContractOK : ((List (Step)) cp) ((List (Nat)) cc) ((Ctree) kt) -> Type)
   enum
-  (many MkContractOK : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) ct) (erased (Nat) d) (erased (List (Nat)) e n f r)
+  (many MkContractOK : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (Nat) d) (erased (List (Nat)) e n f r)
       (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v) (erased (Level) G)
       (erased (Fn G (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
-          (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtMem ct et2) m)) g)
-      -> (ContractOK cp cc ct)))
+          (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m)) g)
+      -> (ContractOK cp cc kt)))
 
-; check_reducible_valid, given contract_ctreeP for the contract tree.
-(def-fns _ $ (erased check-reducible-valid : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) ct) (erased (KHalf cp ct) kh)
-    (erased (ContractOK cp cc ct) ok) -> (erased (CRed cp cc) r))
+; check_reducible_valid, with the contract half stated against the Kempe tree.
+(def-fns _ $ (erased check-reducible-valid : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (KHalf cp kt) kh)
+    (erased (ContractOK cp cc kt) ok) -> (erased (CRed cp cc) r))
   (let-match erased kh (MkKHalf _ _ F0 kf))
   (let-match erased ok (MkContractOK _ _ _ d e n f r c h v G cg))
   (def-lvl F)
