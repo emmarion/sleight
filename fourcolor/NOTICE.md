@@ -64,8 +64,8 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   minimal_counter_example, restated with minimality as data), `split.sl`
   (`patch.v`, `coloring.v`), `birkfit.sl` and `birkhoff2.sl`
   (`birkhoff.v`), `embed2.sl` (`embed.v`), `contract.sl` (`contract.v`,
-  `embed.v`) and `traceconv.sl` (the traces of `cfcolor.v` and
-  `coloring.v`).
+  `embed.v`), `contract2.sl` (`contract.v`, `walkup.v`) and
+  `traceconv.sl` (the traces of `cfcolor.v` and `coloring.v`).
   Where a Sleight file follows a Coq file, its comments or the commit
   that added it usually name the Coq file; this list is reconstructed
   from those and may be incomplete.

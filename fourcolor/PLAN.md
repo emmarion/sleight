@@ -496,16 +496,47 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   remainder map, with the images of the configuration's `Cpmap` ring
   under h1 reaching along faces those of a ring R under hr, place by
   place (`Reach`), one trace et is a `CcCol` of the configuration and a
-  `RingTrace` of the remainder map on R. Not done: building a
-  `Contraction` from a valid contract (the double WalkupF per contract
-  edge; its bridgelessness, which Coq takes from the absence of contract
-  rings; and that absence, which Coq takes from Birkhoff through
-  sparse_contract_ring, contract_ring_max, contract3_valid and
-  triad_valid). One shape that appears to keep minimality as data is a
-  static function giving a `Contraction` or a contract ring, the latter
-  turned into a `Reduces` by `birkhoff2.sl`'s `birkhoff-reduces`; that it
-  suffices is not checked. That these statements match Coq's has been
-  checked only by reading.
+  `RingTrace` of the remainder map on R. Building a `Contraction` from a
+  contract is in `contract2.sl`. That these statements match Coq's has
+  been checked only by reading.
+- `contract2.sl` (load after `contract.sl` in the combined chain below):
+  contract_coloring's construction of the contracted map, as far as both
+  compilers check it, with minimality as data. Each contract edge x, ex
+  is contracted by WalkupF at x and then at ex, both kept as dead darts
+  fixed by e, n and f (`contract-dead`, `CStep`); the faces of x and ex
+  merge (`cf-face`, `Jump`), and a list q sends x and ex to a live dart r
+  of the merged face (`Rep`, `QMap`) so that every face step, read
+  through q, is a walk along the new faces (`cs-qreach`). `CHist`
+  records the steps from the original map, and reads off them that the
+  map is planar, precubic (`precubic-skip`), plain off the dead darts
+  (`EAgree`, `LPlain`), and that the composite dart map p fixes live
+  darts, is constant on contracted edges and sends faces along faces
+  (`ch-pfix`, `ch-pair`, `ch-reach`). `lb-dec` decides bridgelessness off
+  the dead darts (`LBridgeless`) or finds a live bridge. With no live
+  bridge at the end, `ch-contraction` takes the live darts as a patch
+  along empty rings (`live-part`, through `patch2.sl`'s `patch-lab`,
+  which `patch-gcomp` also uses) and gives the `Contraction` of
+  `contract.sl`: the live part is planar, bridgeless, plain and precubic
+  (`part-pbpp`), and p renumbered by the positions of the live darts
+  satisfies `Reach` and `LiftE`. A live bridge of the first contraction
+  joins the faces of x and ex (`cs-bridge`, `BSides`, by merged face
+  labels), so `double-dart` of `birkhoff2.sl` gives a `Reduces`
+  (`bridge-reduces`). `contract-one`, for a contract of one dart, gives a
+  `Contraction` or a `Reduces` (`ContractOut`). `contract-go`, for any
+  nonempty contract whose insertE is sparse, gives the same or a live
+  bridge arising after at least one contraction (`CGLater`). Not done:
+  that last case, which Coq turns into a contract ring of the original
+  map (the ring lifting in contract_coloring's proof of the bridgeless
+  part) and refutes through Birkhoff (sparse_contract_ring,
+  contract_ring_max, contract3_valid, triad_valid); and reading the
+  contract off red/cfred.sl's `ValidContract`, whose `InsertE` is a type
+  of the same shape that ringtrace.sl defines again, so a conversion
+  would have to be loaded between the two. The combined load order,
+  checked by both compilers (about 25 and 60 s in one run each): the
+  birkhoff chain of the `birkhoff.sl` entry with `birkfit.sl`, then
+  `birkhoff2.sl embed2.sl contract.sl contract2.sl` (`embed2.sl` does not
+  appear to need `embed.sl`; `traceconv.sl` is already in that chain).
+  That these statements match Coq's has been checked only by reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
