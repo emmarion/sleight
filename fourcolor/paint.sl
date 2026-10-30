@@ -1,5 +1,6 @@
 ; A search for a proper four-colouring of the points of a list of edges, on coordinates alone, and FourColorM's function
-; from FourColor: the search's failure is refuted by the erased colouring FourColor gives. Load after readback.sl.
+; from FourColor: the search's failure is refuted by the erased colouring FourColor gives. Load after readback.sl and before
+; coloring.sl, whose Proper shadows defs.sl's.
 
 (def-adts $ (PointDec : ((Point) p) ((Point) q) -> Type)
   enum
@@ -181,13 +182,13 @@
 ; Every paint of pre is ks's colour of its point.
 (def-adts $ (Agrees : ((List (Paint)) pre ks) -> Type)
   enum
-  (many AgNil : (erased (List (Paint)) ks) -> (Agrees (Nil (Paint)) ks))
-  (many AgCons : (erased (List (Paint)) pre ks) (erased (Point) p) (erased (Nat) c) (erased (ColorOf ks p c) co) (erased (Agrees pre ks) g)
+  (many AgreeNil : (erased (List (Paint)) ks) -> (Agrees (Nil (Paint)) ks))
+  (many AgreeCons : (erased (List (Paint)) pre ks) (erased (Point) p) (erased (Nat) c) (erased (ColorOf ks p c) co) (erased (Agrees pre ks) g)
       -> (Agrees (Cons (Paint) (MkPaint p c) pre) ks)))
 
 (def-fns _ $ (erased agrees-colorof : (erased (List (Paint)) pre ks) (erased (Point) a) (erased (Nat) c) (subterm erased (ColorOf pre a c) co)
     (erased (Agrees pre ks) g) -> (erased (ColorOf ks a c) r))
-  (let-match erased g (AgCons pre1 _ _ _ k g1) (absurd (AgNil _) co))
+  (let-match erased g (AgreeCons pre1 _ _ _ k g1) (absurd (AgreeNil _) co))
   (let-match erased co (ColorThere _ _ _ _ _ _ co1) ((ColorHere _ _ _) k))
   (agrees-colorof pre1 ks a c co1 g1))
 
@@ -209,7 +210,7 @@
         (match erased eq (((Nat) c) ((ColorOf ks q c) kq) ((Lt c 4) lq))
           ((EndA _ _) (values ca ka la))
           ((EndB _ _) (values cb kb lb))))
-      (let ((erased g2)) (AgCons pre ks q c kq g))
+      (let ((erased g2)) (AgreeCons pre ks q c kq g))
       (let-match erased lq (LtS _ _ l1) ((LtZ _) (nopaint-sound todo _ ks n0 g2 pr)))
       (let-match erased l1 (LtS _ _ l2) ((LtZ _) (nopaint-sound todo _ ks n1 g2 pr)))
       (let-match erased l2 (LtS _ _ l3) ((LtZ _) (nopaint-sound todo _ ks n2 g2 pr)))
@@ -227,5 +228,5 @@
       ((PaintFound _ _ ks x p) (values ks p))
       (absurd (PaintNone _ _ n)
         (let ((erased ks2) (erased p2)) (t es drawn))
-        (nopaint-sound es (Nil (Paint)) ks2 n (AgNil ks2) p2))))
+        (nopaint-sound es (Nil (Paint)) ks2 n (AgreeNil ks2) p2))))
   (values M thm))
