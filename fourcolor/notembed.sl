@@ -227,3 +227,95 @@
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core dc ec nc fc hc))
   (embed-color dm dd dr dc em nm fm ed nd fd er nr fr hd hr bd br ec fc kc embd q1 q2 q3 erc lce cse w et3 pt col le (respects-length kc fc kc dc rf lf)
     (perm-under dc ec nf pme) lem uem r1 rc1 r2 r3 rc2 reb rle coe (trace-rev csr cse et3 w t3 rvc rrw) (rotrev-sym et3 w rrw) tr4))
+
+; embed4.sl's GcOK and FunctorAll for a configuration of cfs, taken as a hypothesis: a function at a level F.
+(def-adts $ (GcFun : ((List (Config)) cfs) -> Type)
+  enum
+  (many MkGcFun : (erased (List (Config)) cfs) (erased (Level) F)
+      (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
+          (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
+          (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)) gc)
+      -> (GcFun cfs)))
+
+; embed_valid_contract of embed.v, with minimality as data, taken as a hypothesis: the image ccr = map h1 cc of a valid
+; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces.
+(def-adts $ (EmbedValid : -> Type)
+  enum
+  (many MkEmbedValid : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr)
+          (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
+          (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh)
+          (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (ValidContract ec nc fc rc cc) vc)
+          (erased (Respects h1 cc ccr) rcc) -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
+      -> (EmbedValid)))
+
+; The contraction step of contract_coloring of contract.v, with minimality as data, taken as a hypothesis: a valid contract
+; cc of a map as embed.v takes it gives contract.sl's Contraction, or the map reduces.
+(def-adts $ (ContractStep : -> Type)
+  enum
+  (many MkContractStep : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f ks cc) (erased (Pbpp d e n f) pb) (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn)
+          (erased (Geo d e n f ks) g) (erased (ValidContract e n f (Nil (Nat)) cc) vc)
+          -> (erased (List (Mp)) ms) (erased (HOr (Contraction d e n f cc ms) (Reduces B d e n f)) r)) cs)
+      -> (ContractStep)))
+
+; What the glue of not-embed reads: the contraction, the embedding h1 with the patch, the contract, the rings and CRed.
+(def-adts $ (NeW : ((Nat) dw) ((List (Nat)) ew nw fw) ((List (Mp)) mw) -> Type)
+  enum
+  (many MkNeW : (erased (Nat) dm dc dd dr a l)
+      (erased (List (Nat)) em nm fm ec nc fc p cc ie ccr ins h1 q h1f ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc0 erc rs init A B)
+      (erased (List (Step)) cp) (erased (List (Mp)) ms) (erased (Contraction dm em nm fm ccr ms) ct) (erased (Hypermap dc ec nc fc) hc)
+      (erased (InsertE em ccr ins) iem) (erased (Under em dm) ue) (erased (Respects h1 ec q) rq1) (erased (Respects em h1 q) rq2)
+      (erased (Respects h1 fc h1f) rf1) (erased (Reach fm h1 h1f) rcf) (erased (Length (Nat) h1 dc) lh) (erased (Under h1 dm) uh)
+      (erased (InSides ie ins (Zero) h1) sd) (erased (CInsertE ec cc ie) pi) (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm)
+      (erased (Respects h1 (Cons (Nat) a p) A) ra) (erased (Respects hr (Cons (Nat) l init) B) rb) (erased (Reach fm A B) rab)
+      (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (erased (Disj hr ins) dj) (erased (CRed CRX cp cc) cr)
+      (erased (KempeRing dr er nr fr (Cons (Nat) l init)) krg) (erased (HSnoc (Nat) init l br) sn)
+      (erased (Length (Nat) embd dd) lem) (erased (Under embd dc) uem) (erased (Respects embd fd q1) r1) (erased (Reach fc embd q1) rc1)
+      (erased (Respects ec embd q2) r2) (erased (Respects embd ed q3) r3) (erased (Reach fc q2 q3) rc2) (erased (Respects embd bd erc) reb)
+      (erased (RevApp (Nat) erc0 (Nil (Nat)) erc) rv) (erased (Respects fc erc0 rs) rfs) (erased (HSnoc (Nat) p a rs) snp)
+      -> (NeW dm em nm fm ms)))
+
+; The levels of red/cfred.sl's caller recipe: the closed set at NL, the rotation and the walk at NR and NW, the co-closure at
+; NY, and the glue at NK.
+(def-lvl NL)
+(def-lvl NR)
+(def-lvl NW)
+(def-lvl NY)
+(def-lvl NK)
+(let ((erased pxk) (erased pyk) (erased pkl) (erased lv))
+  (values (prove-predates CRX NK) (prove-predates NY NK) (prove-predates KCA NL)
+    (MkCoLv NL NR NW NY (prove-predates COB NR) (prove-predates NL NR) (prove-predates NR NW) (prove-predates NW NY))))
+
+; The glue: the colouring of the contracted map is a contract colouring k of the map (contraction-lift), k . h1 one of the
+; configuration (cc-pull) and k . hr a colouring of the remainder map (rem-col), with one trace et (embed-contract-trace);
+; CRed's coclosure meets the ring traces of the remainder map, Kempe-closed by rem-kempe, in a trace of a colouring of the
+; configuration map, and ne-finish glues the two.
+(def-fns NK $ (erased ne-glue : (erased (Nat) dg) (erased (List (Nat)) eg ng fg) (erased (List (Mp)) mg) (erased (NeW dg eg ng fg mg) w)
+    (erased (MpCols mg) cs) -> (erased (List (Nat)) ks) (erased (FourColoring eg fg ks) c))
+  (let-match erased w (MkNeW dm dc dd dr a l em nm fm ec nc fc p cc ie ccr ins h1 q h1f ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc0 erc rs init A B cp ms
+    ct hc iem ue rq1 rq2 rf1 rcf lh uh sd pi cm ra rb rab pt dj cr krg sn lem uem r1 rc1 r2 r3 rc2 reb rv rfs snp))
+  (let ((erased k) (erased ck)) (contraction-lift dm em nm fm ccr ms ct cs))
+  (let ((erased ck2)) ck)
+  (let-match erased ck2 (MkCCColoring _ _ _ _ _ ins2 ge iek gr rfk eck uk lk))
+  (let ((erased kc) (erased rkc)) (respects-exists k h1 dm uh lk))
+  (let ((erased ke) (erased rf) (erased re) (erased ce) (erased u)) (cc-pull dm dc em fm ec fc h1 q h1f k ccr ie ins kc ck iem ue rq1 rq2 rf1 rcf rkc lh uh sd))
+  (let ((erased kr) (erased rkr) (erased cr2)) (rem-col dm dd dr em nm fm ed nd fd er nr fr hd hr bd br ccr k ins pt ck iem dj))
+  (let ((erased pt2)) pt)
+  (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sdd cyr dbr rbd rbr rvp pp med mnd mer mnr))
+  (let ((erased R)) (Cons (Nat) l init))
+  (let ((erased et) (erased ccol) (erased rt))
+    (embed-contract-trace cp dm dc dr a fm k h1 hr ec fc p cc kc er fr R kr A B cm (MkCcColoring ec fc cc kc ie ke pi rf re ce u) cr2 rfk lk rkc rkr lh uh lhr
+      ra rb rab))
+  (let-match erased cr (MkCRed _ _ _ _ _ _ _ _ _ _ _ g))
+  (let-match erased (g (predates pxk) et ccol NL NY lv) (MkKCoclo _ _ _ _ fk))
+  (let ((erased ra0)) (MkRArgs dr er nr fr R))
+  (let ((erased et2) (erased hq) (erased hp))
+    (fk (predates pyk) (MkPred (RArgs) ra0 RTP) (MkRel (RArgs) ra0 RKP) (kclosed-at NL pkl dr er nr fr R krg) (MkHolds (RArgs) ra0 RTP et (MkRTP dr er nr fr R et rt))))
+  (let-match erased hq (MkHolds _ _ _ _ cpc))
+  (let ((erased d3) (erased e3) (erased f3) (erased r3x) (erased cm3) (erased tc)) (cpcol-rt cp et2 cpc))
+  (let-match erased (cpmap-fn cp dc d3 ec fc (Cons _ a p) e3 f3 r3x cm cm3) (Refl _ _))
+  (let-match erased hp (MkHolds _ _ _ _ hp1))
+  (let-match erased hp1 (MkRTP _ _ _ _ _ _ tr))
+  (ne-finish dm dd dr dc a l em nm fm ed nd fd er nr fr hd hr bd br ec nc fc p embd q1 q2 q3 erc0 erc rs init et2 pt hc lem uem r1 rc1 r2 r3 rc2 reb rv rfs
+    snp sn tc tr))
