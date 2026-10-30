@@ -236,9 +236,9 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   red/crestrict.sl red/kempe.sl cpcolor.sl red/configs.sl red/bridge.sl
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl` or `red/goal-c.sl` (with
-  `--goal proved`). In one run `red/goal-c.sl`
-  proved its goal in about 7.4 minutes of wall time (15.6 of user time)
-  on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
+  `--goal proved`). `red/goal-c.sl`
+  proved its goal in about 7.4 and 9 minutes of wall time (15.5 of user time)
+  in two runs on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `unav/`: an unverified port of the unavoidability check (the
