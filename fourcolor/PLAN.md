@@ -671,8 +671,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   rejected, and in another a variant passing `CAFive`'s insertE to
   `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
   reading.
-- `embed4.sl`, `embed4goal.sl` (load after `notembed.sl`, in the chain
-  of `fcgoal.sl` below):
+- `embed4.sl`, `embed4goal.sl` (load after `evalid.sl`, in the chain
+  of `fcgoal.sl` below, in place of `fcgoal.sl`):
   embed.v's embed_functor and the facts of embeddable that the embedding
   reads, for the configuration maps, as far as both compilers check them.
   A run decides, per configuration of red/configs.sl on the map cpmap.sl
@@ -691,10 +691,13 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   kernel faces (`RfCut`, a face labelling) whose crossing darts the branch
   knows are not central, which the preembedding's rlink paths of central
   darts refute (`cut-sound`, `path-cross`). The search is unchecked; its
-  tree is checked. In one run on a 4-core cloud VM `--goal proved` passed
-  in about 414 s with slc (all of the chain and the compiled run);
-  REFTIME. In a test run three broken variants were rejected (SANITY).
-  Ring arities (good_ring_arity) are not in the bundle. That these
+  tree is checked. On a 4-core cloud VM `--goal proved` passed in about
+  430 s with slc and 440 s with the reference compiler (under `ulimit -s
+  unlimited`), the whole chain and the compiled run, in one run each.
+  In a test run three broken variants were rejected: `node-rule` without
+  its last step (a type error), and the run with no cut leaf or with a
+  flood fill that ignores the darts known not central (the run answers
+  `ChkNo`). Ring arities (good_ring_arity) are not in the bundle. That these
   statements match Coq's has been checked only by reading.
 - `evalid.sl` (load after `notembed.sl`, in the chain of `fcgoal.sl`
   below; `fcgoal.sl` also checks after it): embed_valid_contract of
