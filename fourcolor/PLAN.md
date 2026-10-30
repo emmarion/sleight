@@ -113,16 +113,42 @@ is attached.
 cubic hypermap of genus 0 that is bridgeless (on `hypermap.sl` and
 `hypgeom.sl`'s definitions) a `FourColoring` gives `FourColor`. So part
 A and the cube reduction of part B are done; what is open is Gonthier's
-theorem for plain cubic maps. `reduce.sl` and `reduce2.sl` are the
+theorem for plain cubic maps. `inductgoal.sl` proves `FourColorFrom`
+from it: an `Analysis` (`induct.sl`, the one step left open there) gives
+`FourColor`. `reduce.sl` and `reduce2.sl` are the
 intermediate forms (with `PlaneMap`, and with all bridgeless hypermaps);
-`reduce2-goal.sl` and `cube-goal.sl` check them alone. Checked by both
-compilers with
+`reduce2-goal.sl`, `cube-goal.sl` and `reduce3-goal.sl` check them alone.
+Checked by both compilers with
 
 ```sh
-slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl fourcolor/hypgraph.sl fourcolor/hypperm.sl fourcolor/hypermap.sl fourcolor/hypplane.sl fourcolor/reduce2.sl fourcolor/hypeuler.sl fourcolor/hypderived.sl fourcolor/hyprelabel.sl fourcolor/hypwalkup.sl fourcolor/hypgeom.sl fourcolor/cube.sl fourcolor/cubegoal.sl fourcolor/reduce3.sl --goal proved
+slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl fourcolor/hypgraph.sl fourcolor/hypperm.sl fourcolor/hypermap.sl fourcolor/hypplane.sl fourcolor/reduce2.sl fourcolor/hypeuler.sl fourcolor/hypderived.sl fourcolor/hyprelabel.sl fourcolor/hypwalkup.sl fourcolor/hypgeom.sl fourcolor/cube.sl fourcolor/cubegoal.sl fourcolor/reduce3.sl fourcolor/reduce3-goal.sl --goal proved
 ```
 
-- `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
+and `FourColorFrom` with `fourcolor/coloring.sl` loaded after
+`fourcolor/cubegoal.sl`, and `fourcolor/induct.sl fourcolor/inductgoal.sl`
+in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
+
+- `induct.sl`, `inductgoal.sl` (load `induct.sl` after `coloring.sl`):
+  four_color_hypermap's induction on the number of darts, with the
+  minimality of a counterexample entering as data rather than as a
+  function, since a function stored in a counterexample would have to
+  call the induction, and the induction the lemmas' functions, minted at
+  higher levels (§17). `Reduces B` says that a map reduces to a list of
+  maps (`Mp`), each planar, bridgeless, plain, precubic (`Pbpp`) and
+  smaller (`Smaller`), with a `ColorFrom B`: a witness of a type the
+  reduction chooses and a glue function, at any level with a `Predates`
+  to the bound B, turning four-colourings of the list (`MpCols`) into one
+  of the map. An `Analysis` is a function, at any level, giving every
+  `Pbpp` map with a search certificate of no four-colouring
+  (`NoColoring`, after `NoExt`; `color-dec` decides it) a `Reduces B`, for
+  a bound B it fixes. `four-color-induct` builds from it a function
+  four-colouring every `Pbpp` map: `col-all` colours a list of maps below
+  a bound, each by the search or by the glue of its reduction from the
+  colourings of its list below a smaller bound, calling only functions
+  minted before it. `inductgoal.sl` sets and proves `FourColorFrom`
+  (`Analysis` to `FourColor`, through `CubicReduction`).
+  `reduces-lift` raises the bound of a reduction.
+ `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
   positive certificates (labellings), not negations, so that later
   proofs never have to call a function held in data. `map-triangle.sl`
   builds a triangle as a `PlaneMap`, as a check of the definitions.
@@ -159,8 +185,7 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `coloring.v`, `colorable_bridgeless`, the colourings of the dual and
   the mirror, and `decide_colorable`, a search over the colours of each
   dart in turn whose failure is a certificate (`NoExt`), which
-  `noext-sound` turns into an erased function from any four-colouring to
-  `False`. The search also fixes the colours of a list
+  `noext-sound` turns into a refutation of any four-colouring. The search also fixes the colours of a list
   of darts (`search-ring`); `decide_colorable` is its case with no darts.
 - `hypjordan.sl`, `hyptree.sl`, `hypwalkeq.sl`, `hypcount.sl`,
   `hypcubic.sl`: planar maps have no Moebius path (`planar-moebius`, an
@@ -205,9 +230,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `red/crestrict.sl`, `red/kempe.sl`, `red/bridge.sl`, `red/gramrot.sl`,
   then the other three; they also check after the whole chain of the `red/` entry
   below, `red/cfred.sl` included): ring traces of four-colourings
-  (`RingTrace`, on `red/`'s colours), contract colourings and
-  `MinimalCounterExample` after `coloring.v` (indexed by the levels of its
-  two functions, so that a level factory can call them), and `kempe.v`.
+  (`RingTrace`, on `red/`'s colours), contract colourings after
+  `coloring.v`, and `kempe.v`.
   `kempegoal.sl` checks `KempeMap`: for a duplicate-free node cycle r of
   a genus-0 hypermap whose edges have two darts and which has
   n (n (n x)) = x off r, ring traces are closed under colour
@@ -247,12 +271,16 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   of the darts by whether their face meets the image of hr; patch_gcomp
   (`patch-gcomp`, the parts renumbered by position, through `sub-perm` and
   `sub-map`, which restrict a hypermap to a set of darts shut under its
-  permutations); and minimal_counter_example_is_connected, as `gcomp-split`
-  (a planar bridgeless plain precubic map with a dart is connected or
-  patched along empty rings from two smaller such maps) and the level
-  factory `mce-connected`, which calls the two functions of a
-  `MinimalCounterExample`. Whether `Chord` matches Coq's chordless has been
+  permutations); and minimal_counter_example_is_connected without the
+  minimality, as `gcomp-split` (a planar bridgeless plain precubic map
+  with a dart is connected or patched along empty rings from two smaller
+  such maps). Whether `Chord` matches Coq's chordless has been
   checked only by reading.
+- `split.sl` (load after `patch2.sl` and `induct.sl`):
+  minimal_counter_example_is_connected with minimality as data:
+  `split-reduces`, for any bound above `split-glue`, gives a planar
+  bridgeless plain precubic map with a dart a `Connected`, or a `Reduces`
+  to the two parts of `gcomp-split`, glued by `patch-colorable-nil`.
 - `sew.sl` (load after `patch.sl`): sew_map and sew_map_patch of `sew.v`
   as one existence statement, `sew-exists`: a disk map with a simple edge
   cycle bd and a remainder map with a duplicate-free node cycle br of the
@@ -384,41 +412,41 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   cpgeom` (each `.sl`).
 - `embed.sl`, `embedgoal.sl` (load after `unav/unave.sl`, in the
   chain below): present.v's use of unavoidability and reducibility,
-  as far as both compilers check it. `no-mce` is a level factory: from
-  `UnavE cfs`, `AllRedC css` with `ConcatL css cfs` (css concatenated;
-  `concat-c` computes it with its evidence), and two open steps, each a
-  level factory taken as a hypothesis, it gives for any levels L1 and
-  L2 a function sending every `MinimalCounterExample L1 L2` to `False`.
-  The open steps: `BirkGeo`, birkhoff.v's
-  minimal_counter_example_is_plain_cubic_pentagonal (a minimal
-  counterexample is a `Geo`; its cubic part is coloring.v's
-  minimal_counter_example_is_cubic, not ported either), and `NotEmbed
-  cfs`, embed.v's not_embed_reducible for the configurations of cfs, in
-  the terms `CfEmbed` uses, with `CRed` for C_reducible; it leaves open
-  all of embed.v, contract.v's contract_coloring, which embed.v uses,
-  and Coq's embeddable for the configuration maps. Proved:
-  minimal_counter_example_mirror (`mce-mirror`, a level factory, for
-  the mirror that `MapOrMirror` names, through `perm-unique` and
-  `unav/qmirror.sl`'s `plain-mirror`), `allred-concat` and
-  `reducible-mem`; the connectedness comes from `patch2.sl`'s
-  `mce-connected`. `embedgoal.sl` sets `no-mce`'s type as a goal. The
-  chain, both compilers (with `--goal proved`, about 1 and 2 minutes in
-  one run each): `std/macro.sl std/nat.sl std/list.sl ring.sl`, `base`
-  to `hypcubic`, `cube coloring cfmap colalias hypsub unav/faces`, the
-  red chain from `red/red` to `red/ccheck` in the order of the `red/`
-  entry above, `realias ringtrace kempemap patch patch2 unav/realias`,
-  then `unav/` `part` to `qmirror` as in the entry above, `unave`, and
+  with minimality as data, as far as both compilers check it.
+  `embed-analysis` gives an `Analysis` from `UnavE cfs`, `AllRedC css`
+  with `ConcatL css cfs` (css concatenated; `concat-c` computes it with
+  its evidence), and two open steps taken as hypotheses, each a function
+  at a level and a bound of its own: `BirkGeo`, birkhoff.v's
+  minimal_counter_example_is_plain_cubic_pentagonal (a connected `Pbpp`
+  map with a `NoColoring` is a `Geo` or has a `Reduces`; its cubic part
+  is coloring.v's minimal_counter_example_is_cubic, not ported either),
+  and `NotEmbed cfs`, embed.v's not_embed_reducible for the
+  configurations of cfs (such a map that is a `Geo`, with a configuration
+  of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed` for
+  C_reducible, has a `Reduces`); it leaves open all of embed.v,
+  contract.v's contract_coloring, which embed.v uses, and Coq's
+  embeddable for the configuration maps. The analysis colours a map with
+  no dart, splits a disconnected one (`split-reduces`), and otherwise
+  follows `BirkGeo`, then `UnavE` and `NotEmbed`, on the map or its
+  mirror. Proved: minimal_counter_example_mirror in this form
+  (`pbpp-mirror`, `nocol-mirror`, and `reduces-mirror`, a level factory
+  that turns a reduction of the mirror that `MapOrMirror` names into one
+  of the map, through `perm-unique` and `unav/qmirror.sl`'s
+  `plain-mirror`), `allred-concat` and `reducible-mem`. `embedgoal.sl`
+  sets `embed-analysis`'s type as a goal. The chain, both compilers
+  (with `--goal proved`, about 1 and 2 minutes in one run each):
+  `std/macro.sl std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`,
+  `cube coloring induct cfmap colalias hypsub unav/faces`, the red chain
+  from `red/red` to `red/ccheck` in the order of the `red/` entry above,
+  `realias ringtrace kempemap patch patch2 split unav/realias`, then
+  `unav/` `part` to `qmirror` as in the entry above, `unave`, and
   `embed.sl embedgoal.sl`. `realias.sl` and `unav/realias.sl` put back
   names that a later file of the chain defines again (hypcount.sl's
   `AppN` constructors, base.sl's `Or`); `colalias.sl` keeps the former.
-  Not done: the step from `no-mce` to the four-colouring function
-  `CubicReduction` asks for. Coq's four_color_hypermap inducts on the
-  number of darts; here the minimality function of a
-  `MinimalCounterExample` would call the induction, which would call
-  the function `no-mce`'s factory returns at a level created after the
-  minimality function's, so the levels of §17 appear to rule out that
-  shape of proof. How to state minimality so that the induction can be
-  written is an open question.
+  `inductgoal.sl` and `embedgoal.sl` are separate units, so the step from
+  `BirkGeo` and `NotEmbed` to `FourColor` is not yet checked in one
+  run, and whether a fixed list of smaller maps per reduction suffices
+  for the arguments of `birkhoff.v` and `embed.v` is not yet known.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
@@ -449,17 +477,20 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   on the ring size that Coq's Birkhoff makes is left to the caller, which
   can follow a `Shorter` ring down. The cubicity and connectedness of a
   minimal counterexample (minimal_counter_example_is_cubic, not ported;
-  `mce-connected` calls the stored minimality) are hypotheses. That these
+  `split.sl`'s `split-reduces` for connectedness) are hypotheses. That these
   statements match Coq's has been checked only by reading. Load order:
   `std/nat.sl std/list.sl ring.sl`, then `base map lists planemap walk
   frontier labels hypgraph hypperm hypermap hypplane hypeuler hypderived
   hyprelabel hypwalkup hypgeom hypjordan hyptree hypwalkeq hypcount
-  hypcubic cube coloring colalias hypsub`, then `cfmap red/red cpmap
+  hypcubic cube coloring induct colalias hypsub`, then `cfmap red/red cpmap
   red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict
   red/kempe cpcolor red/configs red/bridge red/init red/check red/gramrot
   red/cfred red/ccomp red/ccheck red/bcheck cpcomp`, then `ringtrace
   kempemap patch patch2 geomring sew snip srcycle revsnip revsnip2
-  revsnip3 cpgeom ringdec birkhoff` (each `.sl`).
+  revsnip3 cpgeom ringdec birkhoff` (each `.sl`). `birkfit.sl` (load
+  after `birkhoff.sl`; with `split.sl` the chain also checks) turns the
+  maps `BNeed` lists into the `Smaller` list of a `Reduces`
+  (`bneed-smaller`).
 - Still open: the rest of part B. From a reading of `birkhoff.v`, the
   corollaries of Birkhoff (nontrivial_cycle2, double_dart, the spoke ring
   lemmas, min_arity and those after it) are not ported, nor is
