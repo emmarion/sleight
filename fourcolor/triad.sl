@@ -784,3 +784,59 @@
     (fr-hit d x0 lx0 kx y1 z1 t1 e n f fe lab Vx lsx fx c py1 pz1 pt1) (fr-hit d x0 lx0 kx y2 z2 t2 e n f fe lab Vx lsx fx c py2 pz2 pt2)
     (fr-hit d x0 lx0 kx y3 z3 t3 e n f fe lab Vx lsx fx c py3 pz3 pt3)
     (sub-in lp lsh t1 cov it1) (sub-in lp lsh t2 cov it2) (sub-in lp lsh t3 cov it3)))
+
+; triad_valid of contract.v with minimality as data: contract3.sl's CAFive case, a contract ring w :: Bs of five darts nontrivial
+; for 0, Bs in the insertE of a contract of four darts with a triad x0, makes the map reduce. A dart y of diskF and one of diskFC
+; (nontrivial0P) are each a hub, or each have a spoke off the faces of the ring, which makes the ring nontrivial for 1, against
+; Birkhoff.
+(def-fns _ $ (erased triad-reduces : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs) (erased (MinCx B d e n f fe lab) m)
+    (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
+    (erased (Triad e f ins x0) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
+    (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt) -> (erased (Reduces B d e n f) r))
+  (unary 5)
+  (unary 6)
+  (let ((erased m2)) m)
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
+  (let ((erased c2)) c)
+  (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ll)) (respects-length lab f lab d rl lf))
+  (let ((erased p)) (Cons _ w Bs))
+  (let ((erased ur)) (ring-under d w e n f Bs h rg))
+  (let ((erased lp) (erased rr)) (respects-exists lab p d ur ll))
+  (let ((erased lp5)) (LengthCons _ w Bs 4 lb))
+  (let ((erased rg2)) rg)
+  (let-match erased rg2 (MkRing _ _ _ _ yl eyl rp pe sw s))
+  (let ((erased tc)) (MkTCx B d w x0 e n f fe lab ks cx ins Bs lp m ol ab sp ie l t rg pr sb lb rr (simple-fl d f lab p lp fl s rr)
+    (respects-length lab p lp 5 rr lp5)))
+  (let ((erased hd) (erased zs) (erased ds)) (ds-exists d e n f p h ur))
+  (let ((erased y0) (erased y1) (erased dy0) (erased iy1) (erased ky1)) (nontrivial-pick d w (Zero) e n f Bs hd zs h gen rg ds nt))
+  (let ((erased dy2)) dy0)
+  (let-match erased dy2 (MkDiskF _ _ _ _ dn0 k0))
+  (let ((erased ly0) (erased hb0)) (hub-dec B d y0 e n f fe lab ks lp m ol ab (kernel-lt d y0 f p lf k0)))
+  (match erased hb0 _
+    ((HDRed _ _ _ _ _ _ _ _ _ _ r) r)
+    ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y0 ly0 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4))
+    ((HDOut _ _ _ _ _ _ _ _ _ _ u0 eu0 l0 py0 pu0 pe0 pl0 o0)
+      (let ((erased ly1) (erased hb1)) (hub-dec B d y1 e n f fe lab ks lp m ol ab (kernel-lt d y1 f p lf ky1)))
+      (match erased hb1 _
+        ((HDRed _ _ _ _ _ _ _ _ _ _ r) r)
+        ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y1 ly1 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4))
+        ((HDOut _ _ _ _ _ _ _ _ _ _ u1 eu1 l1 py1 pu1 pe1 pl1 o1)
+          (birkhoff-reduces B pb d w 5 (Succ (Zero)) e n f Bs bks h gen bl pl cu cn nc rg lp5 (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (BMFive)
+            (nt1 d w y0 ly0 u0 eu0 l0 y1 ly1 u1 eu1 l1 e n f fe lab Bs lp hd zs c rg ds rr dy0 py0 pu0 pe0 pl0 o0 iy1 ky1 py1 pu1 pe1 pl1 o1)))))))
+
+; notembed.sl's TriadFive.
+(def-lvl TB)
+(let ((erased tpb)) (prove-predates (level-of birk-glue) TB))
+
+(def-fns _ $ (erased triad-out : (erased (Nat) d w x) (erased (List (Nat)) e n f ks cx ins Bs) (erased (BirkhoffChecks) bks) (erased (Pbpp d e n f) pb)
+    (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie)
+    (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb)
+    (erased (Length (Nat) Bs 4) lb) (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt) -> (erased (ContractOut TB d e n f cx) r))
+  (let-match erased pb (MkPbpp _ _ _ _ h gen bl pl pc))
+  (let-match erased g (MkGeo _ _ _ _ _ h2 pe cu ol ab))
+  (let ((erased fe) (erased lab) (erased c)) (spk-make d e n f h gen bl pl cu))
+  (COReduce TB d e n f cx (triad-reduces TB d w x e n f fe lab ks cx ins Bs (MkMinCx TB d e n f fe lab tpb bks c cn ncol) ol ab sp ie l t rg pr sb lb nt)))
+
+(let ((erased triad-five)) (MkTriadFive (level-of triad-out) TB triad-out))
