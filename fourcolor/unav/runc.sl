@@ -1,0 +1,60 @@
+; run.sl with the certified pieces in place of part.sl's and hubcap.sl's: splits by split-both, the hubcap and dbound1
+; checks of dbound.sl and hubcapc.sl, whose obligations go to redp afterwards. The presentation walk itself is
+; present.sl's, unverified.
+
+(def-fns _ $ (many redp-all : (many (Ctx) c) (subterm many (List (List (Sub))) obl) -> (many (Bool) b))
+  (let-match many obl (Cons _ q rest) ((Nil _) (BTrue)))
+  (and (redp c q) (tail $ redp-all c rest)))
+
+(def-fns _ $ (many check-c : (many (Ctx) c) (many (List (List (Sub))) env) (many (List (Sub)) p0 p) (subterm many (Script) s) -> (many (Bool) b))
+  (match many s _
+    ((SSplit i j k lo lab l r)
+      (let ((many ql) (many qh) (erased _)) (split-both i j k p))
+      (let ((many pl) (many pr)) (values (bif _ lo ql qh) (bif _ lo qh ql)))
+      (let ((many q0l) (many q0h) (erased _)) (split-both i j k p0))
+      (let ((many p0l)) (bif _ (good-split i j k p0) (bif _ lo q0l q0h) pl))
+      (and (good-split i j k p) (notail $ check-c c env p0l pl l) (tail $ check-c c (bif _ lab (Cons _ p0l env) env) p0 pr r)))
+    ((SRed) (redp c p))
+    ((SHub hc)
+      (let-match many c (MkCtx nhub _ rs rt))
+      (let ((many ok1) (erased _)) (hubcap-cover-c nhub hc))
+      (let ((many ok2) (many obl) (erased _)) (hubcap-fit-c nhub p rt rs hc (Nil _)))
+      (and ok1 ok2 (redp-all c obl)))
+    ((SSim idx mir n)
+      (let ((many ps)) (nth-part idx env))
+      (let ((many p2) (erased _)) (rot-c _ n (bif _ mir (mirror-part p) p)))
+      (let ((many k) (erased _)) (part-cmp p2 ps))
+      (andb (nat-eqb (size _ ps) (size _ p2)) (rel-sub k)))))
+
+(def-fns _ $ (many check-arity-c : (many (Qzt) qt) (many (List (List (Sub))) base) (many (Nat) n) (many (Script) s) -> (many (Bool) b))
+  (let ((many p)) (pcons- n))
+  (check-c (make-ctx n qt base) (Nil _) p p s))
+
+(def-fns _ $ (many check-cap1-c : (many (Qzt) qt) (many (List (List (Sub))) base) (subterm many (Nat) k) -> (many (Bool) b))
+  (let-match many k (Succ k1) ((Zero) (BTrue)))
+  (let ((many n)) (nat-add 5 k1))
+  (let ((many c)) (make-ctx n qt base))
+  (let-match many c (MkCtx _ _ rs _))
+  (let ((many ok) (many obl) (erased _)) (check-dbound1-c (pcons- n) rs 5 (Nil _)))
+  (and ok (redp-all c obl) (tail $ check-cap1-c qt base k1)))
+
+(def-fns _ $ (many j-cap : -> (many (Bool) b)) (check-cap1-c (the-quiz-tree) (base-drules) 4))
+(def-fns _ $ (many j5 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 5 (script5)))
+(def-fns _ $ (many j6 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 6 (script6)))
+(def-fns _ $ (many j7 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 7 (script7)))
+(def-fns _ $ (many j8 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 8 (script8)))
+(def-fns _ $ (many j9 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 9 (script9)))
+(def-fns _ $ (many j10 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 10 (script10)))
+(def-fns _ $ (many j11 : -> (many (Bool) b)) (check-arity-c (the-quiz-tree) (base-drules) 11 (script11)))
+
+(let ((many rc) (many r5) (many r6) (many r7) (many r8) (many r9) (many r10) (many r11))
+  (native-compute j-cap j5 j6 j7 j8 j9 j10 j11))
+
+(comptime-match many rc (BTrue))
+(comptime-match many r5 (BTrue))
+(comptime-match many r6 (BTrue))
+(comptime-match many r7 (BTrue))
+(comptime-match many r8 (BTrue))
+(comptime-match many r9 (BTrue))
+(comptime-match many r10 (BTrue))
+(comptime-match many r11 (BTrue))
