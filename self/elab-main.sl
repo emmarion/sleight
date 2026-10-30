@@ -3122,7 +3122,7 @@
             (let ((many env4a) (many _)) $ solve-about (env-at env3 apos) "value" (res-term r) (TVar m) (BTrue) (None _) arg-about)
             (let ((many env4b)) $ match many (res-term r) (((Env) _))
               ((TVar y) (match many (is-meta env4a y) _ ((BTrue) env4a) ((BFalse) (slot-at env4a m (Succ m) (TSlotOf $ TVar y)))))
-              (else env4a))
+              (else (match many (res-place r) (((Env) _)) ((Some _ pl) (slot-at env4a m (Succ m) pl)) ((None _) env4a))))
             (let ((many env4)) $ env-back env3 env4b)
             (let ((many env5a) (many r2) (many id) (many ctxb) (many scb))
               (match many (and prepare (mult-is-many mult)) (((Env) _) ((Res) r0) ((Nat) x0) ((List $ List $ Nat) cb) ((StmtCode ctxa cb) _))
