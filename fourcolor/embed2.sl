@@ -63,7 +63,7 @@
 (def-fns _ $ (erased ecc-zip : (erased (List (Nat)) xs ys ins ks) (erased (List (Bond)) g) (erased (Nat) j x y a b) (subterm erased (Zip xs ys g) z)
     (erased (EdgeCC ins ks g) ec) (erased (Nth (Nat) xs j x) px) (erased (Nth (Nat) ys j y) py) (erased (NotIn x ins) o) (erased (Nth (Nat) ks x a) pa)
     (erased (Nth (Nat) ks y b) pb) -> (erased (Apart (Nat) Lt a b) r))
-  (let-match erased z (ZipCons xs1 ys1 g1 x0 y0 z1) (absurd (ZipNil) px))
+  (let-match erased z (ZipCons xs1 ys1 gz x0 y0 z1) (absurd (ZipNil) px))
   (match erased px _
     ((NthHere _ _ _)
       (let-match erased py (NthHere _ _ _))
@@ -73,7 +73,7 @@
       ne)
     ((NthThere _ _ _ j1 _ px1)
       (let-match erased py (NthThere _ _ _ _ _ py1))
-      (ecc-zip xs1 ys1 ins ks g1 j1 x y a b z1 (ecc-rest ins ks g1 (MkBond x0 y0) ec) px1 py1 o pa pb))))
+      (ecc-zip xs1 ys1 ins ks gz j1 x y a b z1 (ecc-rest ins ks gz (MkBond x0 y0) ec) px1 py1 o pa pb))))
 
 (def-fns _ $ (erased diff-cc : (erased (Nat) d) (erased (List (Nat)) e ids ins ks h eh A B) (erased (List (Bond)) ge) (erased (Zip ids e ge) z)
     (erased (Iota d ids) io) (erased (EdgeCC ins ks ge) ec) (erased (Respects e h eh) re) (erased (Respects ks eh A) ra) (subterm erased (Respects ks h B) rb)
@@ -154,3 +154,65 @@
       (JoinCons (Nil _) init init l (JoinNil init)) (MkRingOK nr (Nil _) br idr cyr dbr (off-nil br) (oo-qcubic nr br br idr onr (sub-refl br))))
     (MkRingOK _ _ _ _ nc1 ds3 av1 qc1))
   (values init l sn (MkKempeRing dr er nr fr R1 hrm gr plr (MkQuasiCubic dr nr R1 idr ior qc1) nc1 ds3)))
+
+; A contract colouring gives the two ends of the edge link from a dart of ins one colour.
+(def-fns _ $ (erased ecc-same : (erased (List (Nat)) xs ys ins ks) (erased (List (Bond)) g) (erased (Nat) j x y a b) (subterm erased (Zip xs ys g) z)
+    (erased (EdgeCC ins ks g) ec) (erased (Nth (Nat) xs j x) px) (erased (Nth (Nat) ys j y) py) (erased (In x ins) ix) (erased (Nth (Nat) ks x a) pa)
+    (erased (Nth (Nat) ks y b) pb) -> (erased (Eq (Nat) a b) r))
+  (let-match erased z (ZipCons xs1 ys1 gz x0 y0 z1) (absurd (ZipNil) px))
+  (match erased px _
+    ((NthHere _ _ _)
+      (let-match erased py (NthHere _ _ _))
+      (let-match erased ec (ECIn _ _ _ _ _ l _ p1 p2 _) (absurd (ECOut _ _ _ _ _ _ _ o _ _ _ _) (apart-irrefl x (notin-in x x ins o ix))))
+      (let-match erased (nth-fn _ ks x l a p1 pa) (Refl _ _))
+      (let-match erased (nth-fn _ ks y l b p2 pb) (Refl _ _))
+      (Refl _ a))
+    ((NthThere _ _ _ j1 _ px1)
+      (let-match erased py (NthThere _ _ _ _ _ py1))
+      (ecc-same xs1 ys1 ins ks gz j1 x y a b z1 (ecc-rest ins ks gz (MkBond x0 y0) ec) px1 py1 ix pa pb))))
+
+; From dart x on, the darts hs are each in ins exactly when their dart is in ie.
+(def-adts $ (InSides : ((List (Nat)) ie ins) ((Nat) x) ((List (Nat)) hs) -> Type)
+  enum
+  (many SdNil : (erased (List (Nat)) ie ins) (erased (Nat) x) -> (InSides ie ins x (Nil (Nat))))
+  (many SdIn : (erased (List (Nat)) ie ins hs) (erased (Nat) x y) (erased (In x ie) i) (erased (In y ins) iy) (erased (InSides ie ins (Succ x) hs) rest)
+      -> (InSides ie ins x (Cons (Nat) y hs)))
+  (many SdOut : (erased (List (Nat)) ie ins hs) (erased (Nat) x y) (erased (NotIn x ie) o) (erased (NotIn y ins) oy) (erased (InSides ie ins (Succ x) hs) rest)
+      -> (InSides ie ins x (Cons (Nat) y hs))))
+
+(def-fns _ $ (erased cc-edge : (erased (Nat) dm x) (erased (List (Nat)) ie ins k ids em hs qs ks0 ke0) (erased (List (Bond)) ge) (erased (Zip ids em ge) z)
+    (erased (Iota dm ids) io) (erased (EdgeCC ins k ge) ec) (subterm erased (InSides ie ins x hs) sd) (erased (Respects em hs qs) rq) (erased (Respects k hs ks0) rk)
+    (erased (Respects k qs ke0) re) (erased (Under hs dm) uh) -> (erased (CcEdge ie x ke0 ks0) r))
+  (match erased sd _
+    ((SdNil _ _ _) (let-match erased rk (RespNil _)) (let-match erased rq (RespNil _)) (let-match erased re (RespNil _)) (CENil ie x))
+    ((SdIn _ _ hs1 _ y i iy sd1)
+      (let-match erased rq (RespCons _ _ qs1 _ w pw rq1))
+      (let-match erased rk (RespCons _ _ ks1 _ a pa rk1))
+      (let-match erased re (RespCons _ _ ke1 _ b pb re1))
+      (let-match erased uh (UnderCons _ _ _ ly uh1))
+      (let-match erased (ecc-same ids em ins k ge y y w a b z ec (iota-nth dm y ids io ly) pw iy pa pb) (Refl _ _))
+      (CEIn ie ke1 ks1 x a i (cc-edge dm (Succ x) ie ins k ids em hs1 qs1 ks1 ke1 ge z io ec sd1 rq1 rk1 re1 uh1)))
+    ((SdOut _ _ hs1 _ y o oy sd1)
+      (let-match erased rq (RespCons _ _ qs1 _ w pw rq1))
+      (let-match erased rk (RespCons _ _ ks1 _ a pa rk1))
+      (let-match erased re (RespCons _ _ ke1 _ b pb re1))
+      (let-match erased uh (UnderCons _ _ _ ly uh1))
+      (CEOut ie ke1 ks1 x b a o (apart-sym a b (ecc-zip ids em ins k ge y y w a b z ec (iota-nth dm y ids io ly) pw oy pa pb))
+        (cc-edge dm (Succ x) ie ins k ids em hs1 qs1 ks1 ke1 ge z io ec sd1 rq1 rk1 re1 uh1)))))
+
+; The first half of embed_contract: a contract colouring k of the map for ccr gives the colouring k . h1 of a configuration
+; map, constant on faces and with edge colours ke, equal to it exactly on the darts of ie (the fields of red/cfred.sl's
+; CcColoring), when h1 commutes with edge, sends faces into faces, and sends the darts of ie, and only those, into ins.
+(def-fns _ $ (erased cc-pull : (erased (Nat) dm dc) (erased (List (Nat)) em fm ec fc h1 q h1f k ccr ie ins kc) (erased (CCColoring dm em fm ccr k) c)
+    (erased (InsertE em ccr ins) iem) (erased (Under em dm) ue) (erased (Respects h1 ec q) rq1) (erased (Respects em h1 q) rq2) (erased (Respects h1 fc h1f) rf1)
+    (erased (Reach fm h1 h1f) rc) (erased (Respects k h1 kc) rk) (erased (Length (Nat) h1 dc) lh) (erased (Under h1 dm) uh) (erased (InSides ie ins (Zero) h1) sd)
+    -> (erased (List (Nat)) ke) (erased (Respects kc fc kc) rf) (erased (Respects kc ec ke) re) (erased (CcEdge ie (Zero) ke kc) ce) (erased (Under kc 4) u))
+  (let-match erased c (MkCCColoring _ _ _ _ _ ins2 ge ie2 gr rfm ecm um lk))
+  (let-match erased (ccins-fn em ccr ins2 ins ie2 iem) (Refl _ _))
+  (let-match erased gr (MkGraph _ _ ids _ io le z))
+  (let ((erased lkc)) (respects-length k h1 kc dc rk lh))
+  (let ((erased ke) (erased rke)) (respects-exists k q dm (respects-under-vals em h1 q dm rq2 ue) lk))
+  (values ke (respects-assoc fc h1 k h1f kc kc dc rf1 (reach-resp k fm h1 h1f kc rfm rc rk) rk lkc lh)
+    (respects-assoc ec h1 k q kc ke dc rq1 rke rk lkc lh)
+    (cc-edge dm (Zero) ie ins k ids em h1 q kc ke ge z io ecm sd rq2 rk rke uh)
+    (respects-under-vals k h1 kc 4 rk um)))
