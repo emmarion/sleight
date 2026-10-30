@@ -552,7 +552,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (contract3_valid through `birkhoff-reduces`), or, for four darts, a
   contract ring of five darts nontrivial for 0 (`CAFive`): that case is
   triad_valid, not ported (it needs fcard_adj_max and the rest of
-  birkhoff.v's SpokeRing section). `contract2.sl` and `birkhoff2.sl`
+  birkhoff.v's SpokeRing section; `notembed.sl` takes it as the
+  hypothesis `TriadFive`). `contract2.sl` and `birkhoff2.sl`
   keep walk.sl's `Sub` and hypsub.sl's `split-cover` as `WSub` and
   `hsplit-cover`, which the `unav/` files define again. That these
   statements match Coq's has been checked only by reading.
@@ -634,7 +635,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
   fullred` (in one run about 66 s with slc and 161 s with the reference
   compiler).
-- `notembed.sl` (load after `embed5.sl`, with `iealias.sl` loaded after
+- `notembed.sl` (load after `contract3.sl` and `embed6.sl`, with `iealias.sl` loaded after
   `red/cfred.sl`): not_embed_reducible of embed.v with minimality as data,
   as far as both compilers check it. `not-embed` gives embed.sl's
   `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
@@ -645,10 +646,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   configuration of cfs, meant to be decided by a run), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
-  reduces) and `ContractLater` (contract2.sl's `CGLater` case gives a
+  reduces) and `TriadFive` (contract3.sl's `CAFive` case, with the map's
+  `Pbpp`, `Connected`, `Geo`, `NoColoring` and `BirkhoffChecks`, gives a
   `ContractOut`). A disconnected map splits (`split-reduces`); otherwise
   `embed-main` embeds the kernel or the map reduces, and the contraction
-  of map h1 cc (`contract-go`) is the one map of a `Reduces` whose glue,
+  of map h1 cc (`contract-all`, with its `CSize` read off the size
+  conditions of that `ValidContract`) is the one map of a `Reduces` whose glue,
   `ne-glue`, follows embed_contract and not_embed_reducible:
   `contraction-lift`, `cc-pull`, `rem-col` and `embed-contract-trace` give
   one trace of a contract colouring of the configuration and of a
@@ -671,7 +674,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
   `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
   their own) and the hypotheses `CfCerts cfs`, `TrivRed`, `EmbedValid`
-  and `ContractLater`, through `embed-analysis`, `birk-geo-of`,
+  and `TriadFive`, through `embed-analysis`, `birk-geo-of`,
   `full-red-of`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
@@ -688,7 +691,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  embed6 fullred notembed fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  contract3 embed6 fullred notembed fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check
