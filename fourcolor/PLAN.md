@@ -160,9 +160,13 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   the mirror, and `decide_colorable`, a search over the colours of each
   dart in turn whose failure is an erased function from any
   four-colouring to `False`.
-- Still open: the rest of part B, including planar <-> Jordan, the
-  equality case of the Walkup genus (`genus_WalkupE_eq`) and the
-  lemmas of `geometry.v`.
+- `hypjordan.sl`, `hyptree.sl`, `hypwalkeq.sl`, `hypcount.sl`,
+  `hypcubic.sl`: planar maps have no Moebius path (`planar-moebius`, an
+  absurd function later proofs can call directly, in place of applying
+  `Jordan`), Euler_tree for genus 0, the equality case of the walkup
+  genus, same_cskip_edge, and cubic_Euler; `hypjordangoal.sl` and
+  `hypcubicgoal.sl` check them. Jordan implies planar is not proved.
+- Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
