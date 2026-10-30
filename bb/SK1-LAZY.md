@@ -104,7 +104,12 @@ each: also folding on leftward steps; a non-allocating pre-check before
 list seems to cost about as much per symbol as the stride); and
 remembering the failing segment by the identity of its first cell, which
 predicted most failures but whose walk to that cell cost about as much
-again.
+again; with the skip in place, other fold and chunk sizes (12 to 24
+and 4 to 8 for the fold, 64 to 384 for the chunk), all within noise of
+the current ones; and a small-integer fast path for `add` in the
+generated OCaml, which removed `Z.add` calls but not measurable time.
+The job allocates about 7 billion minor-heap words, which may be what
+bounds it more than instruction counts do.
 
 `bb/sk1a.sl` is an experiment that keeps the window in a tag buffer and
 a count array instead of a list (`main-run-a`), still folding before the
