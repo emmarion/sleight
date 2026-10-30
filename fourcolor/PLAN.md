@@ -217,3 +217,10 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   quiz tree, and the bound for larger hubs). In one run every script
   passed, in about 4.4 s of compute; five broken variants of the arity-5
   script were rejected. It carries no proofs yet.
+
+- `unav/fit.sl`, `dbound.sl`, `hubcapc.sl`, `faces.sl`, `obsmap.sl`,
+  `dscore.sl`, `runc.sl`: the part operations, dbound checks and hubcap
+  check certified down to a statement about the arities around a hub;
+  `runc.sl` reran every presentation through them once. Not yet linked
+  to `dscore` on hypermaps: `fitp_converse`, the discharge total of 120
+  and the presentation walk's soundness are open.
