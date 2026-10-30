@@ -343,3 +343,160 @@
   (let-match erased ro (RootedCons _ _ xs1 ls1 x r pin c ro1) ((RootedNil _ _) (values (LinkNil g) (SubNil rs))))
   (let ((erased l1) (erased sb1)) (rooted-link g rs xs1 ls1 ro1))
   (values (LinkCons g ls1 xs1 r x c l1) (SubCons r ls1 rs pin sb1)))
+
+(def-fns _ $ (erased shf-fn : (erased (Nat) d o) (erased (List (Nat)) p b b2) (subterm erased (Shf d o p b) s1) (erased (Shf d o p b2) s2)
+    -> (erased (Eq (List (Nat)) b b2) e))
+  (let-match erased s1 (ShfCons _ _ y z p1 c a1 s11) ((ShfNil _ _) (let-match erased s2 (ShfNil _ _)) (Refl _ b)))
+  (let-match erased s2 (ShfCons _ _ _ z2 _ c2 a2 s21))
+  (let-match erased (at-fn d o y z z2 a1 a2) (Refl _ _))
+  (let-match erased (shf-fn d o p1 c c2 s11 s21) (Refl _ _))
+  (Refl _ b))
+
+; Block t of s is block t + t0 of ids.
+(def-adts $ (Ident : ((Nat) t0) ((List (Nat)) ids) ((List (Blk)) s) -> Type)
+  enum
+  (many IdNil : (erased (Nat) t0) (erased (List (Nat)) ids) -> (Ident t0 ids (Nil (Blk))))
+  (many IdCons : (erased (Nat) t0) (erased (List (Nat)) ids) (erased (List (Blk)) s) (erased (Ident (Succ t0) ids s) rest)
+      -> (Ident t0 ids (Cons (Blk) (MkBlk t0 ids) s))))
+
+(def-fns _ $ (erased ident-nth : (erased (Nat) t0 j o) (erased (List (Nat)) ids p) (erased (List (Blk)) s) (erased (Ident t0 ids s) id)
+    (subterm erased (Nth (Blk) s j (MkBlk o p)) q) -> (erased (Add j t0 o) a) (erased (Eq (List (Nat)) p ids) e))
+  (let-match erased id (IdCons _ _ s1 id1) (absurd (IdNil _ _) q))
+  (let-match erased q (NthThere _ _ _ j1 _ q1) ((NthHere _ _ _) (values (AddZero t0) (Refl _ p))))
+  (let ((erased a) (erased e)) (ident-nth (Succ t0) j1 o ids p s1 id1 q1))
+  (values (add-succ-left j1 t0 o a) e))
+
+; The identity laid out in blocks is the identity.
+(def-fns _ $ (erased lay-iota : (erased (Nat) d m D) (erased (List (Nat)) ids L I) (erased (List (Blk)) s) (erased (Lay d s L) ly) (erased (Sized d s) sz)
+    (erased (Ident (Zero) ids s) id) (erased (Iota d ids) io) (erased (Length (Blk) s m) ls) (erased (At d m (Zero) D) aD) (erased (Iota D I) ioD)
+    -> (erased (Eq (List (Nat)) L I) e))
+  (match erased (list-dec L I D (lay-length d m D s L ly sz ls aD) (iota-length D I ioD)) _
+    ((OrL _ _ e) e)
+    (absurd (OrR _ _ ne)
+      (let-match erased ne (MkNeAt _ _ j a b pa pb ab))
+      (let-match erased (iota-at D j b I ioD pb) (Refl _ _))
+      (let ((erased t) (erased o) (erased p) (erased x) (erased y) (erased ps) (erased px) (erased az) (erased aw) (erased lx))
+        (lay-nth-inv d j a s L ly sz pa))
+      (let ((erased ad) (erased ep)) (ident-nth (Zero) t o ids p s id ps))
+      (let-match erased ep (Refl _ _))
+      (let-match erased (add-fn t (Zero) o t ad (add-zero-right t)) (Refl _ _))
+      (let-match erased (iota-at d x y ids io px) (Refl _ _))
+      (let-match erased (at-fn d t x j a az aw) (Refl _ _))
+      (apart-irrefl j ab))))
+
+; No block of s goes to block o.
+(def-adts $ (Avoid : ((Nat) o) ((List (Blk)) s) -> Type)
+  enum
+  (many AvNil : (erased (Nat) o) -> (Avoid o (Nil (Blk))))
+  (many AvCons : (erased (Nat) o o2) (erased (List (Nat)) p) (erased (List (Blk)) s) (erased (Apart (Nat) Lt o o2) ne) (erased (Avoid o s) rest)
+      -> (Avoid o (Cons (Blk) (MkBlk o2 p) s))))
+
+; The blocks of s go to distinct blocks, each to distinct darts.
+(def-adts $ (Spread : ((Nat) d) ((List (Blk)) s) -> Type)
+  enum
+  (many SpreadNil : (erased (Nat) d) -> (Spread d (Nil (Blk))))
+  (many SpreadCons : (erased (Nat) d o) (erased (List (Nat)) p) (erased (List (Blk)) s) (erased (Distinct p) dp) (erased (Under p d) up)
+      (erased (Avoid o s) av) (erased (Spread d s) rest) -> (Spread d (Cons (Blk) (MkBlk o p) s))))
+
+(def-fns _ $ (erased notin-join : (erased (Nat) z) (erased (List (Nat)) b r xs) (subterm erased (Join b r xs) j) (erased (NotIn z b) nb)
+    (erased (NotIn z r) nr) -> (erased (NotIn z xs) res))
+  (let-match erased j (JoinCons b1 _ xs1 x j1) ((JoinNil _) nr))
+  (let-match erased nb (NotInCons _ _ _ ne nb1))
+  (NotInCons z x xs1 ne (notin-join z b1 r xs1 j1 nb1 nr)))
+
+(def-fns _ $ (erased shf-notin : (erased (Nat) d o o2 y z) (erased (List (Nat)) p b) (subterm erased (Shf d o2 p b) sh) (erased (Under p d) up)
+    (erased (At d o y z) a) (erased (Lt y d) ly) (erased (Or (Apart (Nat) Lt o o2) (NotIn y p)) w) -> (erased (NotIn z b) r))
+  (let-match erased sh (ShfCons _ _ y2 z2 p1 b1 a2 sh1) ((ShfNil _ _) (NotInNil z)))
+  (let-match erased up (UnderCons _ _ _ l2 up1))
+  (let-match erased w (OrR _ _ ni)
+    ((OrL _ _ ne) (NotInCons z z2 b1 (at-apart d o y z o2 y2 z2 a a2 ly l2 (OrL _ _ ne)) (shf-notin d o o2 y z p1 b1 sh1 up1 a ly (OrL _ _ ne)))))
+  (let-match erased ni (NotInCons _ _ _ ne ni1))
+  (NotInCons z z2 b1 (at-apart d o y z o2 y2 z2 a a2 ly l2 (OrR _ _ ne)) (shf-notin d o o2 y z p1 b1 sh1 up1 a ly (OrR _ _ ni1))))
+
+(def-fns _ $ (erased lay-avoid : (erased (Nat) d o y z) (erased (List (Blk)) s) (erased (List (Nat)) r) (subterm erased (Lay d s r) ly) (erased (Spread d s) sp)
+    (erased (Avoid o s) av) (erased (At d o y z) a) (erased (Lt y d) l) -> (erased (NotIn z r) res))
+  (let-match erased ly (LayCons _ o2 p b rest _ s1 sh j ly1) ((LayNil _) (NotInNil z)))
+  (let-match erased sp (SpreadCons _ _ _ _ dp up _ sp1))
+  (let-match erased av (AvCons _ _ _ _ ne av1))
+  (notin-join z b rest r j (shf-notin d o o2 y z p b sh up a l (OrL _ _ ne)) (lay-avoid d o y z s1 rest ly1 sp1 av1 a l)))
+
+(def-fns _ $ (erased distinct-shf : (erased (Nat) d o) (erased (List (Nat)) p b r xs) (erased (List (Blk)) s) (subterm erased (Shf d o p b) sh)
+    (erased (Distinct p) dp) (erased (Under p d) up) (erased (Join b r xs) j) (erased (Distinct r) dr) (erased (Lay d s r) ly) (erased (Spread d s) sp)
+    (erased (Avoid o s) av) -> (erased (Distinct xs) res))
+  (let-match erased sh (ShfCons _ _ y z p1 b1 a sh1) ((ShfNil _ _) (let-match erased j (JoinNil _)) dr))
+  (let-match erased j (JoinCons _ _ xs1 _ j1))
+  (let-match erased dp (DistCons _ _ ny dp1))
+  (let-match erased up (UnderCons _ _ _ l up1))
+  (DistCons z xs1 (notin-join z b1 r xs1 j1 (shf-notin d o o y z p1 b1 sh1 up1 a l (OrR _ _ ny)) (lay-avoid d o y z s r ly sp av a l))
+    (distinct-shf d o p1 b1 r xs1 s sh1 dp1 up1 j1 dr ly sp av)))
+
+(def-fns _ $ (erased lay-distinct : (erased (Nat) d) (erased (List (Blk)) s) (erased (List (Nat)) xs) (subterm erased (Lay d s xs) ly) (erased (Spread d s) sp)
+    -> (erased (Distinct xs) r))
+  (let-match erased ly (LayCons _ o p b rest _ s1 sh j ly1) ((LayNil _) (DistNil)))
+  (let-match erased sp (SpreadCons _ _ _ _ dp up av sp1))
+  (distinct-shf d o p b rest xs s1 sh dp up j (lay-distinct d s1 rest ly1 sp1) ly1 sp1 av))
+
+(def-fns _ $ (erased in-join-l : (erased (Nat) z) (erased (List (Nat)) b r xs) (subterm erased (Join b r xs) j) (erased (In z b) p) -> (erased (In z xs) res))
+  (let-match erased j (JoinCons b1 _ xs1 x j1) (absurd (JoinNil _) p))
+  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere z xs1)))
+  (InThere z x xs1 (in-join-l z b1 r xs1 j1 p1)))
+
+(def-fns _ $ (erased in-join-r : (erased (Nat) z) (erased (List (Nat)) b r xs) (subterm erased (Join b r xs) j) (erased (In z r) p) -> (erased (In z xs) res))
+  (let-match erased j (JoinCons b1 _ xs1 x j1) ((JoinNil _) p))
+  (InThere z x xs1 (in-join-r z b1 r xs1 j1 p)))
+
+(def-fns _ $ (erased shf-in : (erased (Nat) d o y z) (erased (List (Nat)) p b) (subterm erased (Shf d o p b) sh) (erased (In y p) pin) (erased (At d o y z) a)
+    -> (erased (In z b) r))
+  (let-match erased sh (ShfCons _ _ y2 z2 p1 b1 a2 sh1) (absurd (ShfNil _ _) pin))
+  (let-match erased pin (InThere _ _ _ pin1)
+    ((InHere _ _) (let-match erased (at-fn d o y z2 z a2 a) (Refl _ _)) (InHere z2 b1)))
+  (InThere z z2 b1 (shf-in d o y z p1 b1 sh1 pin1 a)))
+
+(def-fns _ $ (erased lay-in : (erased (Nat) d j a y z) (erased (List (Nat)) R rs) (erased (List (Blk)) s) (erased (Lay d s rs) ly)
+    (subterm erased (Nth (Blk) s j (MkBlk a R)) pr) (erased (In y R) pin) (erased (At d a y z) az) -> (erased (In z rs) r))
+  (let-match erased ly (LayCons _ o p b rest _ s1 sh jn ly1) (absurd (LayNil _) pr))
+  (let-match erased pr (NthThere _ _ _ j1 _ pr1) ((NthHere _ _ _) (in-join-l z b rest rs jn (shf-in d a y z R b sh pin az))))
+  (in-join-r z b rest rs jn (lay-in d j1 a y z R rest s1 ly1 pr1 pin az)))
+
+; Each block (a, L) of sl has a block (a, R) in sr with every entry of L in R.
+(def-adts $ (LSub : ((List (Blk)) sl sr) -> Type)
+  enum
+  (many LSNil : (erased (List (Blk)) sr) -> (LSub (Nil (Blk)) sr))
+  (many LSCons : (erased (List (Blk)) sl sr) (erased (Nat) a j) (erased (List (Nat)) L R) (erased (Nth (Blk) sr j (MkBlk a R)) pr)
+      (erased (Sub L R) sb) (erased (LSub sl sr) rest) -> (LSub (Cons (Blk) (MkBlk a L) sl) sr)))
+
+(def-fns _ $ (erased shf-sub : (erased (Nat) d a j) (erased (List (Nat)) L R A rs) (erased (List (Blk)) sr) (subterm erased (Shf d a L A) sh)
+    (erased (Sub L R) sb) (erased (Lay d sr rs) ly) (erased (Nth (Blk) sr j (MkBlk a R)) pr) -> (erased (Sub A rs) r))
+  (let-match erased sh (ShfCons _ _ y z L1 As1 az sh1) ((ShfNil _ _) (SubNil rs)))
+  (let-match erased sb (SubCons _ _ _ pin sb1))
+  (SubCons z As1 rs (lay-in d j a y z R rs sr ly pr pin az) (shf-sub d a j L1 R As1 rs sr sh1 sb1 ly pr)))
+
+(def-fns _ $ (erased sub-join : (erased (List (Nat)) A B C X) (subterm erased (Sub A X) sa) (erased (Sub B X) sb) (erased (Join A B C) j)
+    -> (erased (Sub C X) r))
+  (let-match erased sa (SubCons x As1 _ pin sa1) ((SubNil _) (let-match erased j (JoinNil _)) sb))
+  (let-match erased j (JoinCons _ _ C1 _ j1))
+  (SubCons x C1 X pin (sub-join As1 B C1 X sa1 sb j1)))
+
+(def-fns _ $ (erased lay-sub : (erased (Nat) d) (erased (List (Blk)) sl sr) (erased (List (Nat)) lab rs) (subterm erased (Lay d sl lab) ll)
+    (erased (Lay d sr rs) lr) (erased (LSub sl sr) ls) -> (erased (Sub lab rs) r))
+  (let-match erased ll (LayCons _ a L A rest _ sl1 sh jn ll1) ((LayNil _) (SubNil rs)))
+  (let-match erased ls (LSCons _ _ _ j _ R pr sb ls1))
+  (sub-join A rest lab rs (shf-sub d a j L R A rs sr sh sb lr pr) (lay-sub d sl1 sr rest rs ll1 lr ls1) jn))
+
+; Block by block, the darts that sa and sb lay out are linked in h.
+(def-adts $ (LLink : ((Nat) d) ((List (Bond)) h) ((List (Blk)) sa sb) -> Type)
+  enum
+  (many LLNil : (erased (Nat) d) (erased (List (Bond)) h) -> (LLink d h (Nil (Blk)) (Nil (Blk))))
+  (many LLCons : (erased (Nat) d a b) (erased (List (Bond)) h) (erased (List (Nat)) L M A B) (erased (List (Blk)) sa sb) (erased (Shf d a L A) shA)
+      (erased (Shf d b M B) shB) (erased (Linked h A B) l) (erased (LLink d h sa sb) rest)
+      -> (LLink d h (Cons (Blk) (MkBlk a L) sa) (Cons (Blk) (MkBlk b M) sb))))
+
+(def-fns _ $ (erased lay-link : (erased (Nat) d) (erased (List (Bond)) h) (erased (List (Blk)) sa sb) (erased (List (Nat)) X Y) (subterm erased (Lay d sa X) lx)
+    (erased (Lay d sb Y) ly) (erased (LLink d h sa sb) ll) -> (erased (Linked h X Y) r))
+  (let-match erased ll (LLCons _ a b _ L M A2 Bs2 sa1 sb1 shA2 shB2 l ll1)
+    ((LLNil _ _) (let-match erased lx (LayNil _)) (let-match erased ly (LayNil _)) (LinkNil h)))
+  (let-match erased lx (LayCons _ _ _ A rx _ _ shA jx lx1))
+  (let-match erased ly (LayCons _ _ _ B ry _ _ shB jy ly1))
+  (let-match erased (shf-fn d a L A A2 shA shA2) (Refl _ _))
+  (let-match erased (shf-fn d b M B Bs2 shB shB2) (Refl _ _))
+  (link-join h A B rx ry X Y l (lay-link d h sa1 sb1 rx ry lx1 ly1 ll1) jx jy))
