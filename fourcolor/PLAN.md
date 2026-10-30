@@ -667,7 +667,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (`reach-step`, `reach-unsnoc`, `reach-flip`); and `Disj hr ins` follows
   from `PatchParts` (`ins-off`, `ins-hr`, `ie-off-erc`). In a test run two
   broken variants (the pairing not flipped, and NK minted before NY) were
-  rejected. That these statements match Coq's has been checked only by
+  rejected, and in another a variant passing `CAFive`'s insertE to
+  `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
   reading.
 - `fcgoal.sl` (load after `notembed.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
@@ -678,7 +679,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `full-red-of`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
-  proved. Chain (both compilers, with `--goal proved`; about 60 s with slc and 115 s
+  proved. Chain (both compilers, with `--goal proved`; about 52 s with slc and 133 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
   std/list.sl ring.sl`, then `defs
   orient base sweep geo plan map lists planemap walk frontier labels rot
