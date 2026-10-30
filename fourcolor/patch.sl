@@ -551,3 +551,183 @@
     -> (erased (ClassesOn gD sd c) r))
   (co-map gG gD s sd l h c k kp co (side-lift-g d h l ids sd s s gG iv iod dh uh rp (sub-refl s))
     (side-lift-d k d h l ids sd s sd gD iv iod dh lh uh rp usd (sub-refl sd)) mv2 mv1 cs usd))
+
+; e is 0 for an empty list and 1 otherwise.
+(def-adts $ (NonNil : ((List (Nat)) xs) ((Nat) e) -> Type)
+  enum
+  (many NNNil : -> (NonNil (Nil (Nat)) (Zero)))
+  (many NNCons : (erased (Nat) x) (erased (List (Nat)) xs) -> (NonNil (Cons (Nat) x xs) (Succ (Zero)))))
+
+(def-fns _ $ (erased split-nil : (subterm erased (List (Nat)) xs) -> (erased (Split (Nil (Nat)) xs (Nil (Nat)) xs) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (SpNil (Nil _))))
+  (SpOut (Nil _) xs1 (Nil _) xs1 x (NotInNil x) (split-nil xs1)))
+
+(def-fns _ $ (erased ncyc-shut : (erased (Nat) k) (erased (List (Nat)) p pi b) (erased (List (Bond)) g) (erased (HPerm k p pi) pm) (erased (NCyc p b) nc)
+    (subterm erased (Fun p g) fn) -> (erased (Shut b g) r))
+  (let-match erased fn (FunCons _ g1 x y px fn1) ((FunNil _) (ShutNil b)))
+  (let ((erased rest)) (ncyc-shut k p pi b g1 pm nc fn1))
+  (match erased (in-dec x b) _
+    ((OrL _ _ ib) (ShutIn b g1 x y ib (ncyc-next p b x y nc ib px) rest))
+    ((OrR _ _ ob) (ShutOut b g1 x y ob (off-next k x y p pi b pm nc ob px) rest))))
+
+(def-fns _ $ (erased shut-compl : (erased (Nat) k) (erased (List (Nat)) c idk cs sd) (erased (List (Bond)) g) (subterm erased (Shut c g) sh)
+    (erased (Split c idk cs sd) sp) (erased (Iota k idk) io) (erased (Below g k) bg) -> (erased (Shut sd g) r))
+  (match erased sh _
+    ((ShutNil _) (ShutNil sd))
+    ((ShutIn _ g1 x y px py sh1)
+      (let-match erased bg (BelowCons _ _ _ _ lx ly bg1))
+      (let ((erased dj)) (split-disj c idk cs sd sp))
+      (ShutOut sd g1 x y (notin-of-disj x sd c dj px) (notin-of-disj y sd c dj py) (shut-compl k c idk cs sd g1 sh1 sp io bg1)))
+    ((ShutOut _ g1 x y px py sh1)
+      (let-match erased bg (BelowCons _ _ _ _ lx ly bg1))
+      (ShutIn sd g1 x y (side-in k x c idk cs sd io sp lx px) (side-in k y c idk cs sd io sp ly py) (shut-compl k c idk cs sd g1 sh1 sp io bg1)))))
+
+(def-fns _ $ (erased fpath-covers : (erased (List (Nat)) p xs) (erased (List (Bond)) g) (erased (Nat) k r x y) (erased (Graph k p g) gr) (erased (Conn g r x) c)
+    (subterm erased (FPath p x xs y) fp) -> (erased (Covers g (Cons (Nat) r (Nil (Nat))) (Cons (Nat) x xs)) res))
+  (let ((erased rs)) (Cons (Nat) r (Nil (Nat))))
+  (match erased fp _
+    ((FPNil _ _) (CovCons g rs (Nil _) x r (InHere r (Nil _)) c (CovNil g rs)))
+    ((FPCons _ xs1 _ z _ px fp1)
+      (CovCons g rs (Cons _ z xs1) x r (InHere r (Nil _)) c
+        (fpath-covers p xs1 g k r z y gr (conn-cat g r x z c (conn-adj g x z (graph-adj k x z p g gr px))) fp1)))))
+
+; A cycle of p lies in one orbit, if it is not empty.
+(def-fns _ $ (erased co-cycle : (erased (Nat) k e) (erased (List (Nat)) p b) (erased (List (Bond)) g) (erased (Graph k p g) gr) (erased (NCyc p b) nc)
+    (erased (NonNil b e) nn) -> (erased (ClassesOn g b e) r))
+  (match erased nc _
+    ((NCNil _) (let-match erased nn (NNNil)) (MkClassesOn g (Nil _) (Nil _) (Zero) (LengthNil _) (HSubNil _) (PrNil g) (CovNil g (Nil _))))
+    ((NCCons _ xs x y fp back)
+      (let-match erased nn (NNCons _ _))
+      (let ((erased rs)) (Cons (Nat) x (Nil (Nat))))
+      (MkClassesOn g (Cons _ x xs) rs (Succ (Zero)) (LengthCons _ x (Nil _) (Zero) (LengthNil _)) (HSubCons x (Nil _) _ (InHere x xs) (HSubNil _))
+        (PrCons g x (Nil _) (SANil g x) (PrNil g)) (fpath-covers p xs g k x x y gr (ConnHere g x) fp)))))
+
+(def-fns _ $ (erased cover-app-sub : (erased (Nat) k2) (erased (List (Nat)) h1 h2 b2 id2 cs2 sd2 s2 st xs) (subterm erased (Cover h1 h2 b2 xs) cv)
+    (erased (AppN h1 s2 st) ap) (erased (Split b2 id2 cs2 sd2) sp) (erased (Respects h2 sd2 s2) rp) (erased (Iota k2 id2) io) (erased (Length (Nat) h2 k2) lh)
+    -> (erased (Sub xs st) r))
+  (match erased cv _
+    ((CvNil _ _ _) (HSubNil st))
+    ((CvL _ _ _ xs1 x x1 px cv1) (HSubCons x xs1 st (app-in-l h1 s2 st x ap (nth-in h1 x1 x px)) (cover-app-sub k2 h1 h2 b2 id2 cs2 sd2 s2 st xs1 cv1 ap sp rp io lh)))
+    ((CvR _ _ _ xs1 x x2 px out cv1)
+      (HSubCons x xs1 st
+        (app-in-r h1 s2 st x ap (in-map h2 sd2 s2 x2 x (side-in k2 x2 b2 id2 cs2 sd2 io sp (nth-lt-length _ h2 x2 k2 x px lh) out) rp px))
+        (cover-app-sub k2 h1 h2 b2 id2 cs2 sd2 s2 st xs1 cv1 ap sp rp io lh)))))
+
+; The orbits of q on the whole map, of p1 on one side that h1 sends exactly, and of p2 on the other side, where h2 is exact off
+; the cycle b2 of p2: kq + eb = k1 + k2.
+(def-fns _ $ (erased patch-count : (erased (Nat) k1 k2 d kq ko1 ko2 eb) (erased (List (Nat)) h1 p1 pi1 h2 p2 pi2 q qi b2 id1 id2 ids cs2 sd2 s2)
+    (erased (HPerm k1 p1 pi1) pm1) (erased (HPerm k2 p2 pi2) pm2) (erased (HPerm d q qi) pq)
+    (erased (MorphOff h1 p1 q (Nil (Nat)) id1) mo1) (erased (MorphOff h2 p2 q b2 id2) mo2) (erased (Iota k1 id1) io1) (erased (Iota k2 id2) io2) (erased (Iota d ids) io)
+    (erased (Distinct h1) dh1) (erased (Length (Nat) h1 k1) lh1) (erased (Under h1 d) uh1) (erased (Distinct h2) dh2) (erased (Length (Nat) h2 k2) lh2)
+    (erased (Under h2 d) uh2) (erased (NCyc p2 b2) nc2) (erased (Under b2 k2) ub2) (erased (NonNil b2 eb) nn) (erased (Cover h1 h2 b2 ids) cv)
+    (erased (Split b2 id2 cs2 sd2) sp2) (erased (Respects h2 sd2 s2) rp2) (erased (Disj s2 h1) dj)
+    (erased (Orbits d q kq) oq) (erased (Orbits k1 p1 ko1) o1) (erased (Orbits k2 p2 ko2) o2) -> (erased (Nat) s) (erased (Add kq eb s) a1) (erased (Add ko1 ko2 s) a2))
+  (let-match erased oq (MkOrbits _ _ _ gq grq csq))
+  (let-match erased o1 (MkOrbits _ _ _ gp1 grp1 cs1))
+  (let-match erased o2 (MkOrbits _ _ _ gp2 grp2 cs2c))
+  (let ((erased bq)) (classes-below gq d kq csq))
+  (let ((erased bp2)) (classes-below gp2 k2 ko2 cs2c))
+  (let ((erased uid1)) (perm-under k1 id1 id1 (perm-id k1 id1 io1)))
+  (let ((erased uid2)) (perm-under k2 id2 id2 (perm-id k2 id2 io2)))
+  (let ((erased l1) (erased iv1)) (inv-exists h1 ids))
+  (let ((erased sp1)) (split-nil id1))
+  (let ((erased rp1)) (respects-id-right k1 id1 h1 io1 lh1))
+  (let ((erased mv1a) (erased mv1b))
+    (perm-moves k1 d h1 l1 ids p1 pi1 q qi (Nil _) (Nil _) id1 (Nil _) id1 h1 gp1 gq gp1 gq pm1 pq grp1 grq
+      (ncyc-shut k1 p1 pi1 (Nil _) gp1 pm1 (NCNil p1) (graph-fun k1 p1 gp1 grp1)) (HSubNil _) mo1 io1 io sp1 iv1 dh1 lh1 uh1 uid1 rp1
+      (spans-self gq) (spans-self gp1)))
+  (let ((erased c1)) (side-co k1 d ko1 kq h1 l1 ids id1 h1 gp1 gq iv1 io dh1 lh1 uh1 rp1 uid1 mv1a mv1b csq (co-of-classes gp1 k1 ko1 id1 cs1 io1)))
+  (let ((erased shb)) (ncyc-shut k2 p2 pi2 b2 gp2 pm2 nc2 (graph-fun k2 p2 gp2 grp2)))
+  (let ((erased shs)) (shut-compl k2 b2 id2 cs2 sd2 gp2 shb sp2 io2 bp2))
+  (let ((erased sb2) (erased ssd2)) (split-sub b2 id2 cs2 sd2 sp2))
+  (let ((erased usd2)) (sub-under sd2 id2 k2 ssd2 uid2))
+  (let ((erased ks) (erased cos)) (co-exists gp2 k2 ko2 sd2 cs2c shs usd2))
+  (let ((erased l2) (erased iv2)) (inv-exists h2 ids))
+  (let ((erased mv2a) (erased mv2b))
+    (perm-moves k2 d h2 l2 ids p2 pi2 q qi b2 b2 id2 cs2 sd2 s2 gp2 gq gp2 gq pm2 pq grp2 grq shb (sub-refl b2) mo2 io2 io sp2 iv2 dh2 lh2 uh2 usd2 rp2
+      (spans-self gq) (spans-self gp2)))
+  (let ((erased c2)) (side-co k2 d ks kq h2 l2 ids sd2 s2 gp2 gq iv2 io dh2 lh2 uh2 rp2 usd2 mv2a mv2b csq cos))
+  (let ((erased st2) (erased ap2)) (app-exists b2 sd2))
+  (let ((erased t2) (erased at2)) (add-ex eb ks))
+  (let ((erased all2)) (co-union gp2 k2 eb ks t2 b2 sd2 st2 id2 (co-cycle k2 eb p2 b2 gp2 grp2 nc2 nn) cos ap2
+    (split-app-sub b2 id2 cs2 sd2 st2 id2 sp2 ap2 (sub-refl id2)) (app-sub b2 sd2 st2 id2 ap2 (under-sub k2 b2 id2 ub2 io2) ssd2) shb bp2 (split-disj b2 id2 cs2 sd2 sp2) ub2 usd2 at2))
+  (let-match erased (co-unique gp2 id2 t2 ko2 all2 (co-of-classes gp2 k2 ko2 id2 cs2c io2)) (Refl _ _))
+  (let ((erased st) (erased ap)) (app-exists h1 s2))
+  (let ((erased t1) (erased at1)) (add-ex ko1 ks))
+  (let ((erased us2)) (respects-under-vals h2 sd2 s2 d rp2 uh2))
+  (let ((erased all)) (co-union gq d ko1 ks t1 h1 s2 st ids c1 c2 ap
+    (cover-app-sub k2 h1 h2 b2 id2 cs2 sd2 s2 st ids cv ap sp2 rp2 io2 lh2) (app-sub h1 s2 st ids ap (under-sub d h1 ids uh1 io) (under-sub d s2 ids us2 io))
+    (moves-shut gq gp1 h1 l1 mv1b) bq dj uh1 us2 at1))
+  (let-match erased (co-unique gq ids t1 kq all (co-of-classes gq d kq ids csq io)) (Refl _ _))
+  (let ((erased s) (erased a1)) (add-ex kq eb))
+  (let ((erased x) (erased q1) (erased q2)) (add-assoc ko1 ks eb kq s at1 a1))
+  (let-match erased (add-fn eb ks x t2 (add-comm ks eb x q1) at2) (Refl _ _))
+  (values s a1 q2))
+
+; The image of a dart of the disk map off its ring is not an image of the remainder map.
+(def-fns _ $ (erased disk-notin-r : (erased (Nat) d xd x) (erased (List (Nat)) hd hr bd ids) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Distinct hd) dh) (erased (Under hd d) uh) (erased (Nth (Nat) hd xd x) px) (erased (NotIn xd bd) out) -> (erased (NotIn x hr) r))
+  (match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (under-nth hd xd x d uh px))) _
+    ((PtDisk _ _ _ _ xd2 px2 out2 outr) outr)
+    (absurd (PtRing _ _ _ _ xd2 xr px2 pin pr)
+      (let-match erased (distinct-nth hd xd2 xd x dh px2 px) (Refl _ _))
+      (apart-irrefl xd (notin-in xd xd bd out pin)))
+    (absurd (PtRest _ _ _ _ xr pr outd) (apart-irrefl x (notin-in x x hd outd (nth-in hd xd x px))))))
+
+; The image of a dart of the remainder map off its ring is not an image of the disk map.
+(def-fns _ $ (erased rest-notin-d : (erased (Nat) d xr x) (erased (List (Nat)) hd hr bd br bG bGr ids) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Distinct hr) dh) (erased (Under hr d) uh) (erased (Respects hd bd bG) rbd) (erased (Respects hr br bGr) rbr) (erased (RevApp (Nat) bG (Nil (Nat)) bGr) rv)
+    (erased (Nth (Nat) hr xr x) px) (erased (NotIn xr br) out) -> (erased (NotIn x hd) r))
+  (match erased (parts-at hd hr bd ids x pp (iota-in d x ids io (under-nth hr xr x d uh px))) _
+    (absurd (PtDisk _ _ _ _ xd px2 out2 outr) (apart-irrefl x (notin-in x x hr outr (nth-in hr xr x px))))
+    (absurd (PtRing _ _ _ _ xd xr2 px2 pin pr)
+      (let ((erased xr3) (erased ixr) (erased p3)) (respects-in hr br bGr x rbr (revapp-in bG (Nil _) bGr x rv (OrL _ _ (in-map hd bd bG xd x pin rbd px2)))))
+      (let-match erased (distinct-nth hr xr3 xr x dh p3 px) (Refl _ _))
+      (apart-irrefl xr (notin-in xr xr br out ixr)))
+    ((PtRest _ _ _ _ xr2 pr outd) outd)))
+
+(def-fns _ $ (erased disk-disj : (erased (Nat) d) (erased (List (Nat)) hd hr bd ids idd cs sd m ys) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Distinct hd) dh) (erased (Under hd d) uh) (erased (Split bd idd cs sd) sp) (erased (Sub m sd) sb) (subterm erased (Respects hd m ys) rp)
+    -> (erased (Disj ys hr) r))
+  (let-match erased rp (RespCons _ m1 ys1 xd x px rp1) ((RespNil _) (DisjNil hr)))
+  (let-match erased sb (HSubCons _ _ _ ixd sb1))
+  (DisjCons x ys1 hr (disk-notin-r d xd x hd hr bd ids pp io dh uh px (split-out bd idd cs sd xd sp ixd)) (disk-disj d hd hr bd ids idd cs sd m1 ys1 pp io dh uh sp sb1 rp1)))
+
+(def-fns _ $ (erased rest-disj : (erased (Nat) d) (erased (List (Nat)) hd hr bd br bG bGr ids idr cs sd m ys) (erased (PatchParts hd hr bd ids) pp) (erased (Iota d ids) io)
+    (erased (Distinct hr) dh) (erased (Under hr d) uh) (erased (Respects hd bd bG) rbd) (erased (Respects hr br bGr) rbr) (erased (RevApp (Nat) bG (Nil (Nat)) bGr) rv)
+    (erased (Split br idr cs sd) sp) (erased (Sub m sd) sb) (subterm erased (Respects hr m ys) rp) -> (erased (Disj ys hd) r))
+  (let-match erased rp (RespCons _ m1 ys1 xr x px rp1) ((RespNil _) (DisjNil hd)))
+  (let-match erased sb (HSubCons _ _ _ ixr sb1))
+  (DisjCons x ys1 hd (rest-notin-d d xr x hd hr bd br bG bGr ids pp io dh uh rbd rbr rv px (split-out br idr cs sd xr sp ixr))
+    (rest-disj d hd hr bd br bG bGr ids idr cs sd m1 ys1 pp io dh uh rbd rbr rv sp sb1 rp1)))
+
+; The edge orbits of the whole map, and one more if the ring is not empty, are those of the disk map and of the remainder map.
+(def-fns _ $ (erased edge-patch : (erased (Nat) d dd dr ke ked ker eb) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Orbits d e ke) oe) (erased (Orbits dd ed ked) od) (erased (Orbits dr er ker) orr)
+    (erased (NonNil bd eb) nn) -> (erased (Nat) s) (erased (Add ke eb s) a1) (erased (Add ker ked s) a2))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
+  (let ((erased cs) (erased sdd) (erased sp)) (split-exists bd idd))
+  (let ((erased sb) (erased ssd)) (split-sub bd idd cs sdd sp))
+  (let ((erased s2) (erased rp)) (respects-exists hd sdd dd (sub-under sdd idd dd ssd (perm-under dd idd idd (perm-id dd idd iod))) lhd))
+  (patch-count dr dd d ke ker ked eb hr er nfr hd ed nfd e nf bd idr idd ids cs sdd s2 pmer pmed pme mer med ior iod io dhr lhr uhr dhd lhd uhd cyd
+    (respects-under hd bd bG dd rbd lhd) nn (cover-e hd hr bd ids pp) sp rp (disk-disj d hd hr bd ids idd cs sdd sdd s2 pp io dhd uhd sp (sub-refl sdd) rp)
+    oe orr od))
+
+; The node orbits of the whole map, and one more if the ring is not empty, are those of the disk map and of the remainder map.
+(def-fns _ $ (erased node-patch : (erased (Nat) d dd dr kn knd knr eb) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Orbits d n kn) on) (erased (Orbits dd nd knd) od) (erased (Orbits dr nr knr) orr)
+    (erased (NonNil br eb) nn) -> (erased (Nat) s) (erased (Add kn eb s) a1) (erased (Add knd knr s) a2))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
+  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
+  (let ((erased cs) (erased sdr) (erased sp)) (split-exists br idr))
+  (let ((erased sb) (erased ssd)) (split-sub br idr cs sdr sp))
+  (let ((erased s2) (erased rp)) (respects-exists hr sdr dr (sub-under sdr idr dr ssd (perm-under dr idr idr (perm-id dr idr ior))) lhr))
+  (patch-count dd dr d kn knd knr eb hd nd ndi hr nr nri n ni br idd idr ids cs sdr s2 pmnd pmnr pmn mnd mnr iod ior io dhd lhd uhd dhr lhr uhr cyr
+    (respects-under hr br bGr dr rbr lhr) nn (cover-n hd hr bd br bG bGr ids rbr rv rbd pp) sp rp
+    (rest-disj d hd hr bd br bG bGr ids idr cs sdr sdr s2 pp io dhr uhr rbd rbr rv sp (sub-refl sdr) rp)
+    on od orr))

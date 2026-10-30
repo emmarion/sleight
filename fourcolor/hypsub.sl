@@ -212,8 +212,8 @@
 ; g tells any two darts of rs apart.
 (def-adts $ (PairSep : ((List (Bond)) g) ((List (Nat)) rs) -> Type)
   enum
-  (many PSNil : (erased (List (Bond)) g) -> (PairSep g (Nil (Nat))))
-  (many PSCons : (erased (List (Bond)) g) (erased (Nat) r) (erased (List (Nat)) rs) (erased (SepAll g r rs) s) (erased (PairSep g rs) rest)
+  (many PrNil : (erased (List (Bond)) g) -> (PairSep g (Nil (Nat))))
+  (many PrCons : (erased (List (Bond)) g) (erased (Nat) r) (erased (List (Nat)) rs) (erased (SepAll g r rs) s) (erased (PairSep g rs) rest)
       -> (PairSep g (Cons (Nat) r rs))))
 
 ; The darts of xs lie in k classes of g: rs lists k darts of xs, one of each class.
@@ -249,7 +249,7 @@
 
 (def-fns _ $ (erased joined-distinct : (erased (List (Bond)) g) (erased (List (Nat)) m ims) (subterm erased (PairSep g m) ps) (erased (Joined g m ims) jn)
     -> (erased (Distinct ims) r))
-  (let-match erased ps (PSCons _ r m1 sa ps1) ((PSNil _) (let-match erased jn (JNil _)) (DistNil)))
+  (let-match erased ps (PrCons _ r m1 sa ps1) ((PrNil _) (let-match erased jn (JNil _)) (DistNil)))
   (let-match erased jn (JCons _ _ ims1 _ i c jn1))
   (DistCons i ims1 (joined-notin g m1 ims1 r i sa jn1 c) (joined-distinct g m1 ims1 ps1 jn1)))
 
@@ -284,9 +284,9 @@
 ; Distinct darts fixed by a labelling constant along g are told apart by g.
 (def-fns _ $ (erased fixed-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab rs m) (erased (Const lab g) cl) (erased (Respects lab rs rs) fix)
     (subterm erased (Sub m rs) sb) (erased (Distinct m) dm) -> (erased (PairSep g m) r))
-  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (PSNil g)))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (PrNil g)))
   (let-match erased dm (DistCons _ _ out dm1))
-  (PSCons g x m1 (fixed-sepall g lab rs m1 x cl fix ix sb1 out) (fixed-pairsep g lab rs m1 cl fix sb1 dm1)))
+  (PrCons g x m1 (fixed-sepall g lab rs m1 x cl fix ix sb1 out) (fixed-pairsep g lab rs m1 cl fix sb1 dm1)))
 
 (def-fns _ $ (erased co-of-classes : (erased (List (Bond)) g) (erased (Nat) d k) (erased (List (Nat)) ids) (erased (Classes g d k) cs) (erased (Iota d ids) io)
     -> (erased (ClassesOn g ids k) r))
@@ -350,9 +350,9 @@
     (erased (PairSep g xs) a) (erased (PairSep g ys) b) (erased (Sub xs s) sx) (erased (Sub ys t) sy) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Disj t s) dj) (erased (Under s d) us) (erased (Under t d) ut) -> (erased (PairSep g zs) r))
   (let-match erased ap (AppCons xs1 _ zs1 x ap1) ((AppNil _) b))
-  (let-match erased a (PSCons _ _ _ sa a1))
+  (let-match erased a (PrCons _ _ _ sa a1))
   (let-match erased sx (SubCons _ _ _ ix sx1))
-  (PSCons g x zs1 (sepall-app g x xs1 ys zs1 ap1 sa (shut-sepall d x s t ys g sh bg ix (under-in s x d us ix) dj ut sy))
+  (PrCons g x zs1 (sepall-app g x xs1 ys zs1 ap1 sa (shut-sepall d x s t ys g sh bg ix (under-in s x d us ix) dj ut sy))
     (pairsep-union d s t xs1 ys zs1 g ap1 a1 b sx1 sy sh bg dj us ut)))
 
 (def-fns _ $ (erased covers-union : (erased (List (Bond)) g) (erased (List (Nat)) s t st rs1 rs2 rs u) (erased (Covers g rs1 s) c1) (erased (Covers g rs2 t) c2)
@@ -457,10 +457,10 @@
 (def-fns _ $ (erased pairsep-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l m ims) (erased (Nat) d k2) (subterm erased (PairSep g1 m) ps)
     (erased (Sub m s1) sb) (erased (Respects h m ims) rp) (erased (Lift g1 h l s2 s1) lf) (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs)
     (erased (Under s2 d) us) -> (erased (PairSep g2 ims) r))
-  (let-match erased ps (PSCons _ a m1 sa ps1) ((PSNil _) (let-match erased rp (RespNil _)) (PSNil g2)))
+  (let-match erased ps (PrCons _ a m1 sa ps1) ((PrNil _) (let-match erased rp (RespNil _)) (PrNil g2)))
   (let-match erased rp (RespCons _ _ ims1 _ a2 pa rp1))
   (let-match erased sb (SubCons _ _ _ ia sb1))
-  (PSCons g2 a2 ims1 (sepall-map g1 g2 s1 s2 h l m1 ims1 d k2 a a2 sa ia sb1 pa rp1 lf mv cs us)
+  (PrCons g2 a2 ims1 (sepall-map g1 g2 s1 s2 h l m1 ims1 d k2 a a2 sa ia sb1 pa rp1 lf mv cs us)
     (pairsep-map g1 g2 s1 s2 h l m1 ims1 d k2 ps1 sb1 rp1 lf mv cs us)))
 
 (def-fns _ $ (erased covers-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l rs ims m) (erased (Covers g1 rs s1) cv) (erased (Sub rs s1) sr)
@@ -563,3 +563,12 @@
 (def-fns _ $ (erased shut-cat-r : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s gh) sh) -> (erased (Shut s h) r))
   (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
   (shut-cat-r s g1 h gh1 c1 (shut-tail s gh1 b sh)))
+
+(def-fns _ $ (erased split-app-sub : (erased (List (Nat)) t xs ys zs st m) (erased (Split t xs ys zs) sp) (erased (AppN t zs st) ap) (subterm erased (Sub m xs) sb)
+    -> (erased (Sub m st) r))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (SubNil st)))
+  (SubCons x m1 st
+    (match erased (split-cover t xs ys zs x sp ix) _
+      ((OrL _ _ i) (app-in-l t zs st x ap (split-in t xs ys zs x sp i)))
+      ((OrR _ _ i) (app-in-r t zs st x ap i)))
+    (split-app-sub t xs ys zs st m1 sp ap sb1)))
