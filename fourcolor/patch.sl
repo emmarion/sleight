@@ -731,3 +731,169 @@
     (respects-under hr br bGr dr rbr lhr) nn (cover-n hd hr bd br bG bGr ids rbr rv rbd pp) sp rp
     (rest-disj d hd hr bd br bG bGr ids idr cs sdr sdr s2 pp io dhr uhr rbd rbr rv sp (sub-refl sdr) rp)
     on od orr))
+
+; b follows a in R.
+(def-adts $ (Adj2 : ((List (Nat)) R) ((Nat) a b) -> Type)
+  enum
+  (many A2Here : (erased (Nat) a b) (erased (List (Nat)) R) -> (Adj2 (Cons (Nat) a (Cons (Nat) b R)) a b))
+  (many A2There : (erased (Nat) c a b) (erased (List (Nat)) R) (erased (Adj2 R a b) p) -> (Adj2 (Cons (Nat) c R) a b)))
+
+; R starts with x.
+(def-adts $ (HeadIs : ((List (Nat)) R) ((Nat) x) -> Type)
+  enum
+  (many HI : (erased (Nat) x) (erased (List (Nat)) R) -> (HeadIs (Cons (Nat) x R) x)))
+
+; R ends with x.
+(def-adts $ (LastIs : ((List (Nat)) R) ((Nat) x) -> Type)
+  enum
+  (many LIOne : (erased (Nat) x) -> (LastIs (Cons (Nat) x (Nil (Nat))) x))
+  (many LIMore : (erased (Nat) c x) (erased (List (Nat)) R) (erased (LastIs R x) p) -> (LastIs (Cons (Nat) c R) x)))
+
+; u heads pre and v heads w.
+(def-adts $ (HeadPair : ((List (Nat)) pre w) ((Nat) u v) -> Type)
+  enum
+  (many HP : (erased (Nat) u v) (erased (List (Nat)) pre w) -> (HeadPair (Cons (Nat) u pre) (Cons (Nat) v w) u v)))
+
+(def-fns _ $ (erased lastis-fn : (erased (List (Nat)) R) (erased (Nat) x y) (subterm erased (LastIs R x) p) (erased (LastIs R y) q) -> (erased (Eq (Nat) x y) e))
+  (match erased p _
+    ((LIOne _) (match erased q _ ((LIOne _) (Refl _ x)) (absurd (LIMore _ _ _ q1) q1)))
+    ((LIMore c _ R1 p1) (match erased q _ (absurd (LIOne _) p1) ((LIMore _ _ _ q1) (lastis-fn R1 x y p1 q1))))))
+
+(def-fns _ $ (erased lastis-map : (erased (List (Nat)) h R S) (erased (Nat) x x2) (subterm erased (LastIs R x) p) (erased (Respects h R S) rp) (erased (Nth (Nat) h x x2) px)
+    -> (erased (LastIs S x2) r))
+  (let-match erased rp (RespCons _ R1 S1 j l pj rp1) (absurd (RespNil _) p))
+  (match erased p _
+    ((LIOne _) (let-match erased rp1 (RespNil _)) (let-match erased (nth-fn _ h x l x2 pj px) (Refl _ _)) (LIOne l))
+    ((LIMore _ _ _ p1) (LIMore l x2 S1 (lastis-map h R1 S1 x x2 p1 rp1 px)))))
+
+(def-fns _ $ (erased fpath-lastis : (erased (List (Nat)) n xs) (erased (Nat) x y) (subterm erased (FPath n x xs y) fp) -> (erased (LastIs (Cons (Nat) x xs) y) r))
+  (match erased fp _
+    ((FPNil _ _) (LIOne x))
+    ((FPCons _ xs1 _ z _ px fp1) (LIMore x y (Cons _ z xs1) (fpath-lastis n xs1 z y fp1)))))
+
+(def-fns _ $ (erased revapp-last : (erased (List (Nat)) pre w r) (erased (Nat) z) (subterm erased (RevApp (Nat) pre w r) ra) (erased (LastIs w z) lw)
+    -> (erased (LastIs r z) res))
+  (let-match erased ra (RACons _ s pre1 _ _ ra1) ((RANil _ _) lw))
+  (revapp-last pre1 (Cons _ s w) r z ra1 (LIMore s z w lw)))
+
+(def-fns _ $ (erased revapp-head : (erased (List (Nat)) pre w r) (erased (Nat) z) (subterm erased (RevApp (Nat) pre w r) ra) (erased (LastIs pre z) lp)
+    -> (erased (HeadIs r z) res))
+  (let-match erased ra (RACons _ s pre1 _ _ ra1) (absurd (RANil _ _) lp))
+  (match erased lp _
+    ((LIOne _) (let-match erased ra1 (RANil _ _)) (HI z w))
+    ((LIMore _ _ _ lp1) (revapp-head pre1 (Cons _ s w) r z ra1 lp1))))
+
+(def-fns _ $ (erased revapp-adj-back : (erased (List (Nat)) pre w r) (erased (Nat) u v) (subterm erased (RevApp (Nat) pre w r) ra) (erased (Adj2 r u v) a)
+    -> (erased (HOr (Adj2 pre v u) (HOr (Adj2 w u v) (HeadPair pre w u v))) res))
+  (let-match erased ra (RACons _ s pre1 _ _ ra1) ((RANil _ _) (OrR _ _ (OrL _ _ a))))
+  (match erased (revapp-adj-back pre1 (Cons _ s w) r u v ra1 a) _
+    ((OrL _ _ a1) (OrL _ _ (A2There s v u pre1 a1)))
+    ((OrR _ _ o)
+      (match erased o _
+        ((OrL _ _ a2)
+          (match erased a2 _
+            ((A2Here _ _ w1) (OrR _ _ (OrR _ _ (HP u v pre1 w1))))
+            ((A2There _ _ _ _ a3) (OrR _ _ (OrL _ _ a3)))))
+        ((OrR _ _ hp) (let-match erased hp (HP _ _ p2 _)) (OrL _ _ (A2Here v u p2)))))))
+
+(def-fns _ $ (erased fpath-adj : (erased (List (Nat)) n xs) (erased (Nat) x y a b) (subterm erased (FPath n x xs y) fp) (erased (In a (Cons (Nat) x xs)) ia)
+    (erased (Nth (Nat) n a b) pa) -> (erased (HOr (Adj2 (Cons (Nat) x xs) a b) (Eq (Nat) a y)) r))
+  (match erased fp _
+    ((FPNil _ _) (let-match erased ia (InHere _ _) (absurd (InThere _ _ _ i) i)) (OrR _ _ (Refl _ a)))
+    ((FPCons _ xs1 _ z _ px fp1)
+      (match erased ia _
+        ((InHere _ _) (let-match erased (nth-fn _ n a z b px pa) (Refl _ _)) (OrL _ _ (A2Here a b xs1)))
+        ((InThere _ _ _ ia1)
+          (match erased (fpath-adj n xs1 z y a b fp1 ia1 pa) _
+            ((OrL _ _ a1) (OrL _ _ (A2There x a b (Cons _ z xs1) a1)))
+            ((OrR _ _ e) (OrR _ _ e))))))))
+
+(def-fns _ $ (erased fpath-adj-nth : (erased (List (Nat)) n xs) (erased (Nat) x y a b) (subterm erased (FPath n x xs y) fp) (erased (Adj2 (Cons (Nat) x xs) a b) ad)
+    -> (erased (Nth (Nat) n a b) r))
+  (let-match erased fp (FPCons _ xs1 _ z _ px fp1) (absurd (FPNil _ _) (let-match erased ad (A2There _ _ _ _ a1)) a1))
+  (match erased ad _
+    ((A2Here _ _ _) px)
+    ((A2There _ _ _ _ a1) (fpath-adj-nth n xs1 z y a b fp1 a1))))
+
+(def-fns _ $ (erased adj2-map : (erased (List (Nat)) h R S) (erased (Nat) a b a2 b2) (subterm erased (Adj2 R a b) ad) (erased (Respects h R S) rp)
+    (erased (Nth (Nat) h a a2) pa) (erased (Nth (Nat) h b b2) pb) -> (erased (Adj2 S a2 b2) r))
+  (match erased ad _
+    ((A2Here _ _ R1)
+      (let-match erased rp (RespCons _ _ S1 _ a3 pa3 rp1))
+      (let-match erased rp1 (RespCons _ _ S2 _ b3 pb3 rp2))
+      (let-match erased (nth-fn _ h a a3 a2 pa3 pa) (Refl _ _))
+      (let-match erased (nth-fn _ h b b3 b2 pb3 pb) (Refl _ _))
+      (A2Here a2 b2 S2))
+    ((A2There c _ _ R1 ad1)
+      (let-match erased rp (RespCons _ _ S1 _ c2 pc rp1))
+      (A2There c2 a2 b2 S1 (adj2-map h R1 S1 a b a2 b2 ad1 rp1 pa pb)))))
+
+(def-fns _ $ (erased adj2-unmap : (erased (List (Nat)) h R S) (erased (Nat) u v) (erased (Respects h R S) rp) (subterm erased (Adj2 S u v) ad)
+    -> (erased (Nat) a b) (erased (Adj2 R a b) r) (erased (Nth (Nat) h a u) pa) (erased (Nth (Nat) h b v) pb))
+  (let-match erased rp (RespCons _ R1 S1 a l pa rp1) (absurd (RespNil _) ad))
+  (match erased ad _
+    ((A2Here _ _ S2)
+      (let-match erased rp1 (RespCons _ R2 _ b _ pb _))
+      (values a b (A2Here a b R2) pa pb))
+    ((A2There _ _ _ _ ad1)
+      (let ((erased a1) (erased b1) (erased r1) (erased q1) (erased q2)) (adj2-unmap h R1 S1 u v rp1 ad1))
+      (values a1 b1 (A2There a a1 b1 R1 r1) q1 q2))))
+
+(def-fns _ $ (erased headis-map : (erased (List (Nat)) h R S) (erased (Nat) x) (erased (Respects h R S) rp) (erased (HeadIs R x) hi)
+    -> (erased (Nat) x2) (erased (Nth (Nat) h x x2) px) (erased (HeadIs S x2) r))
+  (let-match erased hi (HI _ R1))
+  (let-match erased rp (RespCons _ _ S1 _ l pl _))
+  (values l pl (HI l S1)))
+
+(def-fns _ $ (erased headis-fn : (erased (List (Nat)) R) (erased (Nat) x y) (erased (HeadIs R x) p) (erased (HeadIs R y) q) -> (erased (Eq (Nat) x y) e))
+  (let-match erased p (HI _ R1))
+  (let-match erased q (HI _ _))
+  (Refl _ x))
+
+(def-fns _ $ (erased lastis-in : (erased (List (Nat)) R) (erased (Nat) x) (subterm erased (LastIs R x) p) -> (erased (In x R) r))
+  (match erased p _
+    ((LIOne _) (InHere x (Nil _)))
+    ((LIMore c _ R1 p1) (InThere x c R1 (lastis-in R1 x p1)))))
+
+(def-fns _ $ (erased respects-val : (erased (List (Nat)) h R S) (erased (Nat) x) (subterm erased (Respects h R S) rp) (erased (In x R) ix)
+    -> (erased (Nat) x2) (erased (Nth (Nat) h x x2) px) (erased (In x2 S) ix2))
+  (let-match erased rp (RespCons _ R1 S1 j l pj rp1) (absurd (RespNil _) ix))
+  (match erased ix _
+    ((InHere _ _) (values l pj (InHere l S1)))
+    ((InThere _ _ _ ix1)
+      (let ((erased x2) (erased px) (erased ix2)) (respects-val h R1 S1 x rp1 ix1))
+      (values x2 px (InThere x2 l S1 ix2)))))
+
+(def-fns _ $ (erased revapp-last-head : (erased (List (Nat)) pre r) (erased (Nat) z) (erased (RevApp (Nat) pre (Nil (Nat)) r) ra) (erased (HeadIs pre z) hp)
+    -> (erased (LastIs r z) res))
+  (let-match erased hp (HI _ pre1))
+  (let-match erased ra (RACons _ _ _ _ _ ra1))
+  (revapp-last pre1 (Cons _ z (Nil _)) r z ra1 (LIOne z)))
+
+; The ring darts of the two maps go round in opposite directions (bGrP): for yr on br with the node step yr2, there are yd and its
+; edge image zd on bd with hd zd = hr yr and hd yd = hr yr2.
+(def-fns _ $ (erased ring-pair : (erased (Nat) yr yr2 u v) (erased (List (Nat)) hd hr ed nr bd br bG bGr) (erased (NCyc ed bd) cyd) (erased (NCyc nr br) cyr)
+    (erased (Respects hd bd bG) rbd) (erased (Respects hr br bGr) rbr) (erased (RevApp (Nat) bG (Nil (Nat)) bGr) rv)
+    (erased (In yr br) iy) (erased (Nth (Nat) nr yr yr2) py) (erased (Nth (Nat) hr yr u) pu) (erased (Nth (Nat) hr yr2 v) pv)
+    -> (erased (Nat) yd zd) (erased (Nth (Nat) ed yd zd) pe) (erased (Nth (Nat) hd zd u) pz) (erased (Nth (Nat) hd yd v) pyd))
+  (let-match erased cyr (NCCons _ rs r0 rl fpr backr) (absurd (NCNil _) iy))
+  (let-match erased cyd (NCCons _ bs b0 bl fpd backd) (absurd (NCNil _) (let-match erased rbd (RespNil _)) (let-match erased rv (RANil _ _)) rbr))
+  (match erased (fpath-adj nr rs r0 rl yr yr2 fpr iy py) _
+    ((OrL _ _ ad)
+      (match erased (revapp-adj-back bG (Nil _) bGr u v rv (adj2-map hr br bGr yr yr2 u v ad rbr pu pv)) _
+        ((OrL _ _ ab)
+          (let ((erased yd) (erased zd) (erased adb) (erased qy) (erased qz)) (adj2-unmap hd bd bG v u rbd ab))
+          (values yd zd (fpath-adj-nth ed bs b0 bl yd zd fpd adb) qz qy))
+        (absurd (OrR _ _ o) (match erased o _ (absurd (OrL _ _ a2) a2) (absurd (OrR _ _ hp) hp)))))
+    ((OrR _ _ e)
+      (let-match erased e (Refl _ _))
+      (let-match erased (nth-fn _ nr yr yr2 r0 py backr) (Refl _ _))
+      (let ((erased u2) (erased pu2) (erased hu)) (headis-map hd bd bG b0 rbd (HI b0 bs)))
+      (let-match erased (lastis-fn bGr u2 u (revapp-last-head bG bGr u2 rv hu)
+        (lastis-map hr br bGr yr u (fpath-lastis nr rs r0 yr fpr) rbr pu)) (Refl _ _))
+      (let ((erased v2) (erased pv2) (erased hv)) (headis-map hr br bGr r0 rbr (HI r0 rs)))
+      (let-match erased (nth-fn _ hr r0 v2 v pv2 pv) (Refl _ _))
+      (let ((erased ll)) (fpath-lastis ed bs b0 bl fpd))
+      (let ((erased l) (erased pl) (erased il)) (respects-val hd bd bG bl rbd (lastis-in bd bl ll)))
+      (let-match erased (headis-fn bGr l v2 (revapp-head bG (Nil _) bGr l rv (lastis-map hd bd bG bl l ll rbd pl)) hv) (Refl _ _))
+      (values bl b0 backd pu2 pl))))
