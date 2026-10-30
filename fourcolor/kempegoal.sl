@@ -1,7 +1,7 @@
 ; Kempe_map of kempe.v: for a ring r of a planar map whose edge permutation is an involution and which is cubic off r,
 ; the ring traces are closed under colour permutations, and each matches a chromogram w with a certificate that every
 ; trace matching w is a ring trace too (Kempe_closed (ring_trace r)); so a ring trace in the Kempe co-closure KCC of red/bridge.sl
-; of a set Q leads to a ring trace in Q.
+; of a set Q leads to a ring trace in Q; and the ring traces are a Kempe-closed set in the sense of red/bridge.sl's KClosed.
 (def-adts $ (KempeMap : -> Type)
   enum
   (many MkKempeMap : (erased (Level) L1)
@@ -17,9 +17,12 @@
           (erased (MatchG (BS0) et w) m) -> (erased (RingTrace e f r et) rt)) sound)
       (erased (Level) L4)
       (erased (Fn L4 (erased Pred Q) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr) (erased (List (Col)) ct)
-          (subterm erased (KCC Q ct) k) (erased (RingTrace e f r ct) p) -> (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (RingTrace e f r ct2) p2)) coclosure)
+          (subterm erased (KCC Q ct) k) (erased (RingTrace e f r ct) p) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (RingTrace e f r ct2) p2)) coclosure)
+      (erased (Level) L5)
+      (erased (Fn L5 (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr)
+          -> (erased (Level) L) (erased (KClosed L (MkPred (RArgs) (MkRArgs d e n f r) RTP) (MkRel (RArgs) (MkRArgs d e n f r) RKP)) cl)) closed)
       -> (KempeMap)))
 
 (goal erased (KempeMap))
 (qed (MkKempeMap (level-of ring-trace-perm) ring-trace-perm (level-of kempe-map) kempe-map (level-of kempe-map-sound) kempe-map-sound
-  (level-of kcc-ring) kcc-ring))
+  (level-of kcc-kempe) kcc-kempe (level-of kempe-closed) kempe-closed))

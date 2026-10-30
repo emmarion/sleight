@@ -88,8 +88,8 @@
 ; et lists the sums of consecutive colours of c :: lc, the last with c0: Gonthier's trace (c0 :: lc) is TraceFrom c0 c0 lc.
 (def-adts $ (TraceFrom : ((Col) c0 c) ((List (Col)) lc et) -> Type)
   enum
-  (many TFEnd : (erased (Col) c0 c s) (erased (AddC c c0 s) a) -> (TraceFrom c0 c (Nil (Col)) (Cons (Col) s (Nil (Col)))))
-  (many TFCons : (erased (Col) c0 c c2 s) (erased (List (Col)) lc et) (erased (AddC c c2 s) a) (erased (TraceFrom c0 c2 lc et) t)
+  (many TFEnd : (erased (Col) c0 c s) (erased (AddK c c0 s) a) -> (TraceFrom c0 c (Nil (Col)) (Cons (Col) s (Nil (Col)))))
+  (many TFCons : (erased (Col) c0 c c2 s) (erased (List (Col)) lc et) (erased (AddK c c2 s) a) (erased (TraceFrom c0 c2 lc et) t)
       -> (TraceFrom c0 c (Cons (Col) c2 lc) (Cons (Col) s et))))
 
 ; Gonthier's trace.

@@ -179,17 +179,21 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `colalias.sl` after `coloring.sl`, then `red/red.sl`, `red/color.sl`,
   `red/ctree.sl`, `red/gtree.sl`, `red/grestrict.sl`,
   `red/crestrict.sl`, `red/kempe.sl`, `red/bridge.sl`, then the other
-  three): ring traces of four-colourings (`RingTrace`, on `red/`'s
-  colours), contract colourings and `MinimalCounterExample` after
-  `coloring.v`, and `kempe.v`. `kempegoal.sl` checks `KempeMap`: for a
-  duplicate-free node cycle r of a genus-0 hypermap whose edges have two
-  darts and which has n (n (n x)) = x off r, ring traces are closed
-  under colour permutations, each matches a chromogram with a
-  certificate (`KRing`) that every trace matching it is a ring trace,
-  and so a ring trace in `red/bridge.sl`'s co-closure `KCC` of a set Q
-  leads to a ring trace in Q (`kcc-ring`). The induction uses
-  dart-preserving Walkup transforms, the darts taken out kept as dead
-  darts that colourings ignore.
+  three; they also check after the whole chain of the `red/` entry
+  below, `red/cfred.sl` included): ring traces of four-colourings
+  (`RingTrace`, on `red/`'s colours), contract colourings and
+  `MinimalCounterExample` after `coloring.v`, and `kempe.v`.
+  `kempegoal.sl` checks `KempeMap`: for a duplicate-free node cycle r of
+  a genus-0 hypermap whose edges have two darts and which has
+  n (n (n x)) = x off r, ring traces are closed under colour
+  permutations, each matches a chromogram with a certificate (`KRing`)
+  that every trace matching it is a ring trace, so the ring traces are
+  a `KClosed` set of `red/bridge.sl` (`kempe-closed`), and a ring trace
+  in the co-closure `KCC` of a set Q leads to a ring trace in Q
+  (`kcc-kempe`). The induction uses dart-preserving Walkup transforms,
+  the darts taken out kept as dead darts that colourings ignore. Its
+  gram_neg, gram_flip and gram_rot duplicate those of `red/gramrot.sl`,
+  written at the same time.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
