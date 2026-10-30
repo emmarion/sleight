@@ -192,11 +192,21 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   in the co-closure `KCC` of a set Q leads to a ring trace in Q
   (`kcc-kempe`). The induction uses dart-preserving Walkup transforms,
   the darts taken out kept as dead darts that colourings ignore.
-- `patch.sl` (load after `kempemap.sl`): the start of a port of `patch.v`.
+- `hypsub.sl` (load after `colalias.sl`, before `red/red.sl`): lists of
+  darts as sets, and `ClassesOn g xs k`, the classes of a graph counted
+  among the darts of a list; `co-map` moves such a count along a pair of
+  dart maps, after `adjunction_n_comp`.
+- `patch.sl` (load after `kempemap.sl`): part of a port of `patch.v`.
   `Patch` glues a disk map and a remainder map, each a hypermap on its own
-  darts, sent into the whole map by injections listed by their images;
-  so far only the face morphisms hdF and hrF are proved. `sew.v`,
-  `snip.v` and `revsnip.v` are not started.
+  darts, sent into the whole map by injections listed by their images.
+  Proved, as far as slc checks them: card_patch, plain_patch and
+  cubic_patch (for any order c), patch_face_r (both directions),
+  patch_face_d', cFhd, patch_bridgeless, the orbit counts of edges, nodes,
+  faces and glink (`edge-patch`, `node-patch`, `face-patch`,
+  `glink-patch`), genus_patch and planar_patch. Not done: outer_hd and
+  patch_face_d as stated in Coq, bridgeless_patch, colorable_patch,
+  patch_gcomp and minimal_counter_example_is_connected. `sew.v`, `snip.v`
+  and `revsnip.v` are not started.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
