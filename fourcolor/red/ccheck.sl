@@ -116,3 +116,199 @@
       (let-match erased lr (LrH _ d3 _ ls1 _ lr1 _))
       (let-match erased (lrel-d ie cp1 d0 d3 e0 f0 r0 ls1 c1 lr1) (Refl _ _))
       (Refl _ d))))
+
+; The validity of a contract, decided on the concrete map.
+
+(def-adts $ (Chk : (Type P) -> Type)
+  enum
+  (many CkY : (erased Type P) (erased P p) -> (Chk P))
+  (many CkN : (erased Type P) -> (Chk P)))
+
+(def-adts $ (RespD : ((List (Nat)) lab xs) -> Type)
+  enum
+  (many RsYes : (erased (List (Nat)) lab xs) (many (List (Nat)) ls) (erased (Respects lab xs ls) p) -> (RespD lab xs))
+  (many RsNo : (erased (List (Nat)) lab xs) -> (RespD lab xs)))
+
+(def-fns _ $ (many respects-c : (many (List (Nat)) lab) (subterm many (List (Nat)) xs) -> (many (RespD lab xs) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (RsYes lab xs (Nil _) (RespNil lab))))
+  (let-match many (nth-d lab x) (NthYes _ _ l p) ((NthNo _ _) (RsNo lab xs)))
+  (let-match many (respects-c lab rest) (RsYes _ _ ls q) ((RsNo _ _) (RsNo lab xs)))
+  (RsYes lab xs (Cons _ l ls) (RespCons lab rest ls x l p q)))
+
+(def-fns _ $ (many leq-c : (subterm many (List (Nat)) xs) (many (List (Nat)) ys) -> (many (Chk (Eq (List (Nat)) xs ys)) r))
+  (let-match many xs (Cons _ x xs1) ((Nil _) (match many ys _ ((Nil _) (CkY _ (Refl _ xs))) (else (CkN _)))))
+  (let-match many ys (Cons _ y ys1) ((Nil _) (CkN _)))
+  (let-match many (nat-eq x y) (Equal _ _ _) (else (CkN _)))
+  (let-match many (leq-c xs1 ys1) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match erased q (Refl _ _))
+  (CkY _ (Refl _ xs)))
+
+(def-fns _ $ (many distinct-c : (subterm many (List (Nat)) s) -> (many (Chk (Distinct s)) r))
+  (let-match many s (Cons _ x rest) ((Nil _) (CkY _ (DistNil))))
+  (let-match many (in-dec-c x rest) (IDOut _ _ p) ((IDIn _ _ _) (CkN _)))
+  (let-match many (distinct-c rest) (CkY _ q) ((CkN _) (CkN _)))
+  (CkY _ (DistCons x rest p q)))
+
+(def-fns _ $ (many disj-c : (subterm many (List (Nat)) s) (many (List (Nat)) m) -> (many (Chk (Disj s m)) r))
+  (let-match many s (Cons _ x rest) ((Nil _) (CkY _ (DisjNil m))))
+  (let-match many (in-dec-c x m) (IDOut _ _ p) ((IDIn _ _ _) (CkN _)))
+  (let-match many (disj-c rest m) (CkY _ q) ((CkN _) (CkN _)))
+  (CkY _ (DisjCons x rest m p q)))
+
+(def-fns _ $ (many orbit-min : (many (List (Nat)) p) (many (Nat) x cur lo) (subterm many (Nat) fuel) -> (many (Nat) r))
+  (let-match many fuel (Succ fuel1) ((Zero) lo))
+  (let-match many (nth-d p cur) (NthYes _ _ nx _) ((NthNo _ _) lo))
+  (let-match many (nat-eq nx x) (Unequal _ _ _ _ _) ((Equal _ _ _) lo))
+  (tail $ orbit-min p x nx (bif _ (nat-ltb nx lo) nx lo) fuel1))
+
+(def-fns _ $ (many labels : (many (List (Nat)) p) (many (Nat) d i) (subterm many (Nat) k) -> (many (List (Nat)) lab))
+  (let-match many k (Succ k1) ((Zero) (Nil _)))
+  (Cons _ (orbit-min p i i i d) (labels p d (Succ i) k1)))
+
+; A labelling of the darts below d constant along p.
+(def-fns _ $ (many flab-c : (many (List (Nat)) p) (many (Nat) d) -> (many (List (Nat)) lab) (many (Chk (Respects lab p lab)) r))
+  (let ((many lab)) (labels p d 0 d))
+  (let-match many (respects-c lab p) (RsYes _ _ ls q) ((RsNo _ _) (values lab (CkN _))))
+  (let-match many (leq-c ls lab) (CkY _ eq) ((CkN _) (values lab (CkN _))))
+  (let-match erased eq (Refl _ _))
+  (values lab (CkY _ q)))
+
+; A labelling constant along f . e is constant along node.
+(def-fns _ $ (erased node-labels : (erased (Nat) d) (erased (List (Nat)) e n f fe lab) (erased (Hypermap d e n f) h) (erased (Respects f e fe) rfe)
+    (erased (Respects lab fe lab) rl) -> (erased (Respects lab n lab) r))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe0 en nf io cfe ke cen kn cnf kf))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased lfe)) (respects-length f e fe d rfe le))
+  (let ((erased ll)) (respects-length lab fe lab d rl lfe))
+  (respects-assoc n fe lab ids lab lab d (respects-assoc n e f en fe ids d cen kn rfe lfe le) (respects-id-right d ids lab io ll) rl ll lfe))
+
+(def-fns _ $ (many simple-c : (erased (List (Nat)) p) (many (List (Nat)) lab ie) (erased (Respects lab p lab) rf) -> (many (Chk (Simple p ie)) r))
+  (let-match many (respects-c lab ie) (RsYes _ _ ls rp) ((RsNo _ _) (CkN _)))
+  (let-match many (distinct-c ls) (CkY _ dl) ((CkN _) (CkN _)))
+  (CkY _ (MkSimple p ie lab ls rf rp dl)))
+
+(def-fns _ $ (many kernel-c : (many (List (Nat)) f r lab) (many (Nat) x) (erased (Respects lab f lab) rf) -> (many (Chk (Kernel f r x)) res))
+  (let-match many (respects-c lab r) (RsYes _ _ ls rp) ((RsNo _ _) (CkN _)))
+  (let-match many (nth-d lab x) (NthYes _ _ l px) ((NthNo _ _) (CkN _)))
+  (let-match many (in-dec-c l ls) (IDOut _ _ out) ((IDIn _ _ _) (CkN _)))
+  (CkY _ (MkKernel f r lab ls x l rf rp px out)))
+
+(def-adts $ (WalkD : ((List (Nat)) p s) ((Nat) x y) -> Type)
+  enum
+  (many WkYes : (erased (List (Nat)) p s) (erased (Nat) x y) (many (List (Nat)) xs) (erased (Path p s x y xs) w) -> (WalkD p s x y))
+  (many WkNo : (erased (List (Nat)) p s) (erased (Nat) x y) -> (WalkD p s x y)))
+
+(def-fns _ $ (many walk-c : (many (List (Nat)) p s) (many (Nat) x y) (subterm many (Nat) fuel) -> (many (WalkD p s x y) r))
+  (let-match many (nat-eq x y) (Unequal _ _ _ _ _) ((Equal _ _ _) (WkYes p s x y (Nil _) (PathHere p s x))))
+  (let-match many fuel (Succ fuel1) ((Zero) (WkNo p s x y)))
+  (let-match many (in-dec-c x s) (IDOut _ _ out) ((IDIn _ _ _) (WkNo p s x y)))
+  (let-match many (nth-d p x) (NthYes _ _ z pz) ((NthNo _ _) (WkNo p s x y)))
+  (let-match many (walk-c p s z y fuel1) (WkYes _ _ _ _ xs w) ((WkNo _ _ _ _) (WkNo p s x y)))
+  (WkYes p s x y (Cons _ x xs) (PathStep p s xs x z y pz out w)))
+
+(def-adts $ (OrbitD : ((List (Nat)) p) ((Nat) x) -> Type)
+  enum
+  (many OrYes : (erased (List (Nat)) p) (erased (Nat) x) (many (List (Nat)) os) (erased (Orbit p x os) o) -> (OrbitD p x))
+  (many OrNo : (erased (List (Nat)) p) (erased (Nat) x) -> (OrbitD p x)))
+
+(def-fns _ $ (many orbit-c : (many (List (Nat)) p) (many (Nat) x d) -> (many (OrbitD p x) r))
+  (let-match many (nth-d p x) (NthYes _ _ y px) ((NthNo _ _) (OrNo p x)))
+  (let-match many (walk-c p (Cons _ x (Nil _)) y x d) (WkYes _ _ _ _ xs w) ((WkNo _ _ _ _) (OrNo p x)))
+  (OrYes p x (Cons _ x xs) (MkOrbit p xs x y px w)))
+
+(def-fns _ $ (many fband-c : (many (List (Nat)) f p) (many (Nat) x) (subterm many (Nat) fuel) -> (many (Chk (Fband f p x)) r))
+  (let-match many (in-dec-c x p) (IDOut _ _ _) ((IDIn _ _ i) (CkY _ (MkFband f p x x i (MkSomePath f (Nil _) (Nil _) x x (PathHere f (Nil _) x))))))
+  (let-match many fuel (Succ fuel1) ((Zero) (CkN _)))
+  (let-match many (nth-d f x) (NthYes _ _ z pz) ((NthNo _ _) (CkN _)))
+  (let-match many (fband-c f p z fuel1) (CkY _ fb) ((CkN _) (CkN _)))
+  (let-match erased fb (MkFband _ _ _ y iy sp))
+  (let-match erased sp (MkSomePath _ _ xs _ _ w))
+  (CkY _ (MkFband f p x y iy (MkSomePath f (Nil _) (Cons _ x xs) x y (PathStep f (Nil _) xs x z y pz (NotInNil x) w)))))
+
+; Each dart of ys is in os and has its edge image on a face of p.
+(def-adts $ (EBs : ((List (Nat)) e f p os ys) -> Type)
+  enum
+  (many EBNil : (erased (List (Nat)) e f p os) -> (EBs e f p os (Nil (Nat))))
+  (many EBCons : (erased (List (Nat)) e f p os ys) (erased (Nat) y) (erased (In y os) i) (erased (EBand e f p y) b) (erased (EBs e f p os ys) rest)
+      -> (EBs e f p os (Cons (Nat) y ys))))
+
+(def-fns _ $ (erased ebs-lift : (erased (List (Nat)) e f p os ys) (erased (Nat) x) (subterm erased (EBs e f p os ys) q) -> (erased (EBs e f p (Cons (Nat) x os) ys) r))
+  (let-match erased q (EBCons _ _ _ _ ys1 y i b rest) ((EBNil _ _ _ _) (EBNil e f p (Cons (Nat) x os))))
+  (EBCons e f p (Cons (Nat) x os) ys1 y (InThere y x os i) b (ebs-lift e f p os ys1 x rest)))
+
+(def-fns _ $ (many ebs-c : (many (List (Nat)) e f p) (subterm many (List (Nat)) os) (many (Nat) d) -> (many (List (Nat)) ys) (erased (EBs e f p os ys) q))
+  (let-match many os (Cons _ y rest) ((Nil _) (values (Nil _) (EBNil e f p os))))
+  (let ((many ys) (erased q)) (ebs-c e f p rest d))
+  (let ((erased q1)) (ebs-lift e f p rest ys y q))
+  (let-match many (nth-d e y) (NthYes _ _ z pz) ((NthNo _ _) (values ys q1)))
+  (let-match many (fband-c f p z d) (CkY _ fb) ((CkN _) (values ys q1)))
+  (values (Cons _ y ys) (EBCons e f p os ys y (InHere y rest) (MkEBand e f p y z pz fb) q1)))
+
+(def-adts $ (AdjD : ((List (Nat)) e f os t) -> Type)
+  enum
+  (many AdYes : (erased (List (Nat)) e f os t) (erased (Nat) y) (erased (In y t) i) (erased (NotAdj e f os y) na) -> (AdjD e f os t))
+  (many AdNo : (erased (List (Nat)) e f os t) -> (AdjD e f os t)))
+
+(def-fns _ $ (many notadj-c : (many (List (Nat)) e f os lab eos ls) (erased (Respects lab f lab) rf) (erased (Respects e os eos) re) (erased (Respects lab eos ls) rl)
+    (subterm many (List (Nat)) t) -> (many (AdjD e f os t) r))
+  (let-match many t (Cons _ y t1) ((Nil _) (AdNo e f os t)))
+  (let ((many (AdjD e f os t1) r1)) (notadj-c e f os lab eos ls rf re rl t1))
+  (let ((many (AdjD e f os t) next)) (match many r1 _ ((AdYes _ _ _ _ y1 i na) (AdYes e f os t y1 (InThere y1 y t1 i) na)) ((AdNo _ _ _ _) (AdNo e f os t))))
+  (let-match many (nth-d lab y) (NthYes _ _ l py) ((NthNo _ _) next))
+  (match many (in-dec-c l ls) _
+    ((IDOut _ _ out) (AdYes e f os t y (InHere y t1) (MkNotAdj e f os lab eos ls y l rf re rl py out)))
+    ((IDIn _ _ _) next)))
+
+(def-fns _ $ (many triad-c : (many (List (Nat)) e f p lab) (many (Nat) x d) (erased (Respects lab f lab) rf) -> (many (Chk (Triad e f p x)) r))
+  (let-match many (orbit-c f x d) (OrYes _ _ os o) ((OrNo _ _) (CkN _)))
+  (let ((many ys) (erased q)) (ebs-c e f p os d))
+  (let-match many ys (Cons _ y1 ys1) ((Nil _) (CkN _)))
+  (let-match many ys1 (Cons _ y2 ys2) ((Nil _) (CkN _)))
+  (let-match many ys2 (Cons _ y3 _) ((Nil _) (CkN _)))
+  (let-match erased q (EBCons _ _ _ _ _ _ i1 b1 q2))
+  (let-match erased q2 (EBCons _ _ _ _ _ _ i2 b2 q3))
+  (let-match erased q3 (EBCons _ _ _ _ _ _ i3 b3 _))
+  (let-match many (distinct-c (Cons _ y1 (Cons _ y2 (Cons _ y3 (Nil _))))) (CkY _ dy) ((CkN _) (CkN _)))
+  (let-match many (respects-c e os) (RsYes _ _ eos re) ((RsNo _ _) (CkN _)))
+  (let-match many (respects-c lab eos) (RsYes _ _ ls rl) ((RsNo _ _) (CkN _)))
+  (let-match many (notadj-c e f os lab eos ls rf re rl p) (AdYes _ _ _ _ y iy na) ((AdNo _ _ _ _) (CkN _)))
+  (CkY _ (MkTriad e f p os x y1 y2 y3 y o i1 i2 i3 dy b1 b2 b3 iy na)))
+
+; Some dart below i is in the kernel of r and a triad for p.
+(def-adts $ (TriadD : ((List (Nat)) e f r p) -> Type)
+  enum
+  (many TrYes : (erased (List (Nat)) e f r p) (erased (Nat) x) (erased (Kernel f r x) kx) (erased (Triad e f p x) t) -> (TriadD e f r p))
+  (many TrNo : (erased (List (Nat)) e f r p) -> (TriadD e f r p)))
+
+(def-fns _ $ (many find-triad : (many (List (Nat)) e f r p lab) (many (Nat) d) (erased (Respects lab f lab) rf) (subterm many (Nat) i) -> (many (TriadD e f r p) res))
+  (let-match many i (Succ x) ((Zero) (TrNo e f r p)))
+  (let ((many (TriadD e f r p) next)) (find-triad e f r p lab d rf x))
+  (let-match many (kernel-c f r lab x rf) (CkY _ kx) ((CkN _) next))
+  (let-match many (triad-c e f p lab x d rf) (CkY _ t) ((CkN _) next))
+  (TrYes e f r p x kx t))
+
+(def-fns _ $ (many ccsize-c : (many (List (Nat)) e f r ie cc lab) (many (Nat) d) (erased (Respects lab f lab) rf) -> (many (Chk (CcSize e f r ie cc)) res))
+  (let ((many k) (erased l)) (size-c _ cc))
+  (let-match many k (Succ k1) ((Zero) (CkN _)))
+  (let ((erased lo)) (LtZ k1))
+  (let-match many k1 (Succ k2) ((Zero) (CkY _ (CsSmall e f r ie cc k l lo (LtS (Zero) (Succ (Succ (Succ (Zero)))) (LtZ (Succ (Succ (Zero)))))))))
+  (let-match many k2 (Succ k3) ((Zero) (CkY _ (CsSmall e f r ie cc k l lo (LtS (Succ (Zero)) (Succ (Succ (Succ (Zero)))) (LtS (Zero) (Succ (Succ (Zero))) (LtZ (Succ (Zero)))))))))
+  (let-match many k3 (Succ k4)
+    ((Zero) (CkY _ (CsSmall e f r ie cc k l lo (LtS (Succ (Succ (Zero))) (Succ (Succ (Succ (Zero)))) (LtS (Succ (Zero)) (Succ (Succ (Zero)))
+      (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))))))))
+  (let-match many k4 (Zero) ((Succ _) (CkN _)))
+  (let-match many (find-triad e f r ie lab d rf d) (TrYes _ _ _ _ x kx t) ((TrNo _ _ _ _) (CkN _)))
+  (CkY _ (CsTriad e f r ie cc x l kx t)))
+
+; Decides whether cc is a valid contract for the ring r of the map (e, n, f), n given as a proof.
+(def-fns _ $ (many valid-c : (many (Nat) d) (many (List (Nat)) e f r cc ie) (erased (List (Nat)) n) (erased (Hypermap d e n f) h) (erased (InsertE e cc ie) pi)
+    -> (many (Chk (ValidContract e n f r cc)) res))
+  (let-match many (disj-c r ie) (CkY _ off) ((CkN _) (CkN _)))
+  (let-match many (respects-c f e) (RsYes _ _ fe rfe) ((RsNo _ _) (CkN _)))
+  (let ((many nlab) (many cn)) (flab-c fe d))
+  (let-match many cn (CkY _ rn) ((CkN _) (CkN _)))
+  (let-match many (simple-c n nlab ie (node-labels d e n f fe nlab h rfe rn)) (CkY _ sp) ((CkN _) (CkN _)))
+  (let ((many flab) (many cf)) (flab-c f d))
+  (let-match many cf (CkY _ rf) ((CkN _) (CkN _)))
+  (let-match many (ccsize-c e f r ie cc flab d rf) (CkY _ sz) ((CkN _) (CkN _)))
+  (CkY _ (MkValidContract e n f r cc ie pi off sp sz)))
