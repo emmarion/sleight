@@ -547,10 +547,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   dart off rc (`embed-n`) are proved from two certificates taken as
   hypotheses: `GcOK`, per dart of the configuration map, edge an
   involution, node keeping rc and of order 3 off it, and the conclusions
-  of edge_perimeter, chordless_perimeter and embed_cases (meant to be
-  decided on the concrete maps by a run, which is not written), and
+  of edge_perimeter, chordless_perimeter and embed_cases (decided on the
+  configuration maps in `embed4.sl`), and
   `FunctorAll`, embed_functor's conclusion (each kernel dart whose edge
-  image is in the kernel is central), not proved. More of embed.v is in
+  image is in the kernel is central; `embed4.sl` proves it for the
+  configuration maps). More of embed.v is in
   `embed5.sl`. That these statements match Coq's has been checked only
   by reading.
 - `embed5.sl` (load after `embed3.sl`): more of embed.v, as far as both
@@ -616,9 +617,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
   (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
   (the per-configuration certificates: embed4.sl's `GcOK` and
-  `FunctorAll`, which embed4.sl's `cf-gcok` and `cf-functor` appear to
-  give from its `AllGc`, and embed5.sl's `NodeRing` and `Radius2`, for a
-  configuration of cfs, meant to be decided by a run), `EmbedValid`
+  `FunctorAll` and embed5.sl's `NodeRing` and `Radius2`, for a
+  configuration of cfs; `embed4goal.sl` proves it), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
   reduces) and `ContractLater` (contract2.sl's `CGLater` case gives a
@@ -642,6 +642,31 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variants (the pairing not flipped, and NK minted before NY) were
   rejected. That these statements match Coq's has been checked only by
   reading.
+- `embed4.sl`, `embed4goal.sl` (load after `notembed.sl`, in the chain
+  of `fcgoal.sl` below with `fullred.sl` loaded after `embed6.sl`):
+  embed.v's embed_functor and the facts of embeddable that the embedding
+  reads, for the configuration maps, as far as both compilers check them.
+  A run decides, per configuration of red/configs.sl on the map cpmap.sl
+  builds, a bundle `CfGc` (listed by `AllGc`): its kernel, embed3.sl's
+  `GcOK`, `NodeRing` (rc read backwards along node, as embed5.sl states
+  it), `Radius2`, and for each kernel dart whose edge image is in the
+  kernel a refutation (`Refut`) of its not being central. `cf-gcok`,
+  `cf-functor` and `cfcerts-of` move these to any `KernelList` and any
+  `EEnv` on the map of a configuration of cfs (through `cpmap-fn` and
+  `hyper-node-unique`), and `embed4goal.sl` sets and proves `CfCerts cfs`
+  (cfs as `fcgoal.sl` computes it). embed_functor is not ported along
+  Coq's induction on disks: a refutation is a case tree on the centrality
+  of kernel darts, closed at each leaf by a clash, by `node-rule` (at a
+  node with every dart and edge image in the kernel, two central darts
+  make the third central, from hF and the cubic map) or by a cut of the
+  kernel faces (`RfCut`, a face labelling) whose crossing darts the branch
+  knows are not central, which the preembedding's rlink paths of central
+  darts refute (`cut-sound`, `path-cross`). The search is unchecked; its
+  tree is checked. In one run on a 4-core cloud VM `--goal proved` passed
+  in about 414 s with slc (all of the chain and the compiled run);
+  REFTIME. In a test run three broken variants were rejected (SANITY).
+  Ring arities (good_ring_arity) are not in the bundle. That these
+  statements match Coq's has been checked only by reading.
 - `fcgoal.sl` (load after `notembed.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
