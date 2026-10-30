@@ -1533,3 +1533,6 @@
     (erased (Nth (Nat) f x y) px) -> (erased (DiskF n f r x) res))
   (let ((erased xs) (erased w)) (cycle d x y f fi pf px (pre-lt d x y f fi pf px)))
   (diskf-walk n f r (Nil _) xs y x w df))
+
+; coloring.sl's Proper, which revsnip.sl shadows.
+(let ((erased KProper)) Proper)

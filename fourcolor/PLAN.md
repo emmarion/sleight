@@ -255,9 +255,9 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `DiskN` (codom_snipd); hd is found from the classes of a graph whose
   classes meeting r appear to make up diskN (`DiskGraph`).
   `patch-parts-planar` gives planar_snipd and planar_snipr for any patch of
-  a planar map. Not done: cface_snipd as stated in Coq (only its direction
-  from the disk map to the whole map, `face-push`), diskFC_face, the
-  rotation lemmas of SnipRot, and the empty ring.
+  a planar map. cface_snipd, diskFC_face and the rotation lemmas of SnipRot
+  are in `revsnip2.sl`. Not done: the empty ring. `snip.sl` ends by naming
+  `coloring.sl`'s `Proper` `KProper`, since `revsnip.sl` shadows it.
 - `revsnip.sl` (load after `snip.sl`): the start of a port of `revsnip.v`,
   for plain maps (every edge orbit of size 2). Proved, as far as both
   compilers check them: scycle_rev_ring (`rev-ring`: rev (map e r) is a
@@ -266,16 +266,43 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   (`disk-edge-ring`), connected_clink (`connected-clink`), and
   diskN_rev_ring for a connected map (`rev-disk`: with `rev-ctx` building
   the two rings and their disks, each dart is in exactly one of the two
-  diskN, `Two`). Not done: the rest of `revsnip.v`, from fband_rev_ring
-  and the chord rings to ring_disk_closed, colorable_from_ring and
-  ring_disk_chord, which `birkhoff.v` uses.
+  diskN, `Two`). More of `revsnip.v` is in `revsnip2.sl`.
+- `revsnip2.sl` (load after `revsnip.sl`): more of `revsnip.v`, as far as
+  both compilers check it. fband_rev_ring and its kernel form (`rev-subs`:
+  RR and r each lie on the faces of the other, `FaceSub`, used through
+  `fband-sub`, `kernel-sub` and `scattered-sub`); nontrivial_ring as
+  `NonTrivial` (m + 1 darts of diskF r and m + 1 darts of diskFC r, each on
+  distinct faces, `Scattered`, with diskN r and the darts off it given by a
+  `DiskSplit`; that this matches Coq's fcard has been checked only by
+  reading); nontrivial_ring_proper (`nontrivial-proper`) and
+  nontrivial_rev_ring (`nontrivial-rev`, which uses `rev-disk` and
+  `rev-subs` where Coq uses diskF_rev_ring, not stated on its own here).
+  From `snip.v`: cface_snipd in both directions (`snipd-push` and
+  `snipd-face-inv`, for a patch whose disk ring is sent to a ring r, as
+  `snip-exists` gives), diskFC_face (`diskfc-face`, `diskfc-face-inv`, with
+  diskFC r read as the darts of a `DiskSplit`'s off-part on no face of r),
+  and diskN_rot and fband_rot (`disk-move`, `fband-move`, for any two lists
+  with the same darts). rev_ring_cotrace in both directions, between the
+  disk map of r and the remainder map of RR = rev (map e r), each given by
+  `snip-exists`, with `rev-ctx`'s `RevCtx`: `cotrace` takes a ring trace et
+  of the disk ring to the ring trace rot 1 et of the remainder ring (Coq
+  states it on rotr 1 of that ring instead), through `Ext`, a colouring of
+  the disk map extended to the whole map by faces, and `cotrace-back` goes
+  back, through `Pull`. colorable_from_ring (`colorable-from-ring`).
+  Not done: ring_disk_closed (it would appear to need the remainder map of
+  RR as a `KempeRing` of `kempemap.sl`, from plain_patch, cubic_patch and
+  planar_snipr, and match_gram_rot of `red/gramrot.sl` to undo the
+  rotation); the chord rings, from chord_ring to nontrivial_chord_ring, and
+  ring_disk_chord; and nontrivial0P, which `birkhoff.v` uses to build a
+  nontrivial ring.
 - `ringdec.sl` (load after `ringtrace.sl`): decide_ring_trace of
   `coloring.v` (`decide-ring-trace`): a list of colours is a ring trace of
   a list of darts, or a function sends every such ring trace to `False`.
   It runs `search-ring` once for each first colour.
 - `geomring.sl` (load after `patch.sl`): simple_cface of `geometry.v`,
   from which scycle_cface follows (`simple-cface`).
-- Still open: the rest of part B. Besides the rest of `snip.v` and `revsnip.v`,
+- Still open: the rest of part B. Besides what `revsnip2.sl` lists as not done
+  and the empty ring of `snip.v`,
   `birkhoff.v` appears to need, from a reading of its proofs: the
   completeness direction of ctree_mem_cpcolor; cpmap_planar and
   cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to be `cpmap.sl`'s
