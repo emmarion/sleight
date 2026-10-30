@@ -199,21 +199,20 @@
   (let-match erased sa (MkSameAt _ _ j z px py))
   (OrR _ _ (MkSameAt xs ys (Succ j) z (NthThere _ x xs1 j z px) (NthThere _ y ys1 j z py))))
 
-; Why no four-colouring of (e, f) on d darts extending pre gives the darts of r the colours lc: pre has d colours and fails
-; the face, ring or edge check, or each colour below 4 for the next dart fails.
+; Why no four-colouring of (e, f) on d darts extends pre and gives the darts of r the colours lc: on a full pre, one of the
+; three checks fails; otherwise each colour of the next dart fails.
 (def-adts $ (NoExt : ((Nat) d) ((List (Nat)) e f r lc pre) -> Type)
   enum
-  (many NoFace : (erased (Nat) d) (erased (List (Nat)) e f r lc pre X) (erased (Respects pre f X) rX) (erased (NeAt X pre) ne)
-      (erased (Length (Nat) pre d) lp) -> (NoExt d e f r lc pre))
-  (many NoRing : (erased (Nat) d) (erased (List (Nat)) e f r lc pre R) (erased (Respects pre r R) rR) (erased (NeAt R lc) ne)
-      (erased (Length (Nat) pre d) lp) -> (NoExt d e f r lc pre))
-  (many NoEdge : (erased (Nat) d) (erased (List (Nat)) e f r lc pre ke) (erased (Respects pre e ke) rke) (erased (SameAt ke pre) sa)
-      (erased (Length (Nat) pre d) lp) -> (NoExt d e f r lc pre))
-  (many NoNext : (erased (Nat) d) (erased (List (Nat)) e f r lc pre) (erased (Nat) i m) (erased (Length (Nat) pre i) lp) (erased (Add i (Succ m) d) a)
-      (erased (List (Nat)) p0 p1 p2 p3) (erased (Snoc (Nat) pre (Zero) p0) s0) (erased (Snoc (Nat) pre (Succ (Zero)) p1) s1)
-      (erased (Snoc (Nat) pre (Succ (Succ (Zero))) p2) s2) (erased (Snoc (Nat) pre (Succ (Succ (Succ (Zero)))) p3) s3)
-      (erased (NoExt d e f r lc p0) n0) (erased (NoExt d e f r lc p1) n1) (erased (NoExt d e f r lc p2) n2) (erased (NoExt d e f r lc p3) n3)
-      -> (NoExt d e f r lc pre)))
+  (many NEFace : (erased (Nat) d) (erased (List (Nat)) e f r lc pre X) (erased (Length (Nat) pre d) lp) (erased (Respects pre f X) rX)
+      (erased (NeAt X pre) ne) -> (NoExt d e f r lc pre))
+  (many NERing : (erased (Nat) d) (erased (List (Nat)) e f r lc pre R) (erased (Length (Nat) pre d) lp) (erased (Respects pre r R) rR)
+      (erased (NeAt R lc) ne) -> (NoExt d e f r lc pre))
+  (many NEEdge : (erased (Nat) d) (erased (List (Nat)) e f r lc pre ke) (erased (Length (Nat) pre d) lp) (erased (Respects pre e ke) rke)
+      (erased (SameAt ke pre) sa) -> (NoExt d e f r lc pre))
+  (many NEStep : (erased (Nat) d i m) (erased (List (Nat)) e f r lc pre p0 p1 p2 p3) (erased (Length (Nat) pre i) lp) (erased (Add i (Succ m) d) a)
+      (erased (Snoc (Nat) pre (Zero) p0) s0) (erased (Snoc (Nat) pre (Succ (Zero)) p1) s1) (erased (Snoc (Nat) pre (Succ (Succ (Zero))) p2) s2)
+      (erased (Snoc (Nat) pre (Succ (Succ (Succ (Zero)))) p3) s3) (erased (NoExt d e f r lc p0) n0) (erased (NoExt d e f r lc p1) n1)
+      (erased (NoExt d e f r lc p2) n2) (erased (NoExt d e f r lc p3) n3) -> (NoExt d e f r lc pre)))
 
 ; The search for a four-colouring of (e, f) on d darts extending pre that gives the darts of r the colours lc: one is found, or
 ; none extends pre.
@@ -233,39 +232,40 @@
   (let-match erased (nth-fn _ xs j a b pa pb) (Refl _ _))
   (apart-irrefl a ab))
 
-; No four-colouring of (e, f) extending pre gives the darts of r the colours lc.
-(def-fns _ $ (erased noext-false : (erased (Nat) d) (erased (List (Nat)) e f r lc pre) (subterm erased (NoExt d e f r lc pre) ne)
-    (erased (List (Nat)) ks rest) (erased (Join pre rest ks) j) (erased (Length (Nat) ks d) l) (erased (FourColoring e f ks) c)
-    (erased (Respects ks r lc) rl) -> (erased (False) res))
-  (unary 4)
+(def-fns _ $ (erased noext-sound : (erased (Nat) d) (erased (List (Nat)) e f r lc pre ks rest) (subterm erased (NoExt d e f r lc pre) ne)
+    (erased (Join pre rest ks) j) (erased (Length (Nat) ks d) l) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl) -> (erased (False) res))
   (match erased ne _
-    ((NoFace _ _ _ _ _ _ X rX nx lp)
+    ((NEFace _ _ _ _ _ _ X lp rX nq)
       (let-match erased (join-all pre rest ks d j lp l) (Refl _ _))
       (let-match erased c (MkFourColoring _ _ _ ke2 rf re df u))
       (let-match erased (respects-fn pre f X pre rX rf) (Refl _ _))
-      (neat-irrefl X nx))
-    ((NoRing _ _ _ _ _ _ R rR nr lp)
+      (neat-irrefl X nq))
+    ((NERing _ _ _ _ _ _ R lp rR nq)
       (let-match erased (join-all pre rest ks d j lp l) (Refl _ _))
       (let-match erased (respects-fn pre r R lc rR rl) (Refl _ _))
-      (neat-irrefl R nr))
-    ((NoEdge _ _ _ _ _ _ ke rke sa lp)
+      (neat-irrefl R nq))
+    ((NEEdge _ _ _ _ _ _ ke lp rke sa)
       (let-match erased (join-all pre rest ks d j lp l) (Refl _ _))
       (let-match erased c (MkFourColoring _ _ _ ke2 rf re df u))
       (let-match erased (respects-fn pre e ke ke2 rke re) (Refl _ _))
       (let-match erased sa (MkSameAt _ _ j2 x px py))
       (apart-irrefl x (differ-nth ke pre j2 x x df px py)))
-    ((NoNext _ _ _ _ _ _ i m1 lp a p0 p1 p2 p3 s0 s1 s2 s3 n0 n1 n2 n3)
+    ((NEStep _ i m1 _ _ _ _ _ p0 p1 p2 p3 lp a s0 s1 s2 s3 n0 n1 n2 n3)
+      (unary 4)
       (let-match erased (join-length-inv pre rest ks i (Succ m1) d j lp l a) (LengthCons _ c0 rest1 _ _))
       (let-match erased c (MkFourColoring _ _ _ _ _ _ _ u))
       (let ((erased lc0)) (under-nth ks i c0 4 u (join-nth-r pre rest ks i (Zero) i c0 j lp (add-zero-right i) (NthHere _ c0 rest1))))
       (let ((erased q) (erased sq)) (snoc-exists _ pre c0))
       (let ((erased jq)) (join-snoc pre rest1 ks q c0 j sq))
-      (let-match erased lc0 (LtS _ _ l1) ((LtZ _) (let-match erased (snoc-fn _ pre q p0 c0 sq s0) (Refl _ _)) (noext-false d e f r lc p0 n0 ks rest1 jq l c rl)))
-      (let-match erased l1 (LtS _ _ l2) ((LtZ _) (let-match erased (snoc-fn _ pre q p1 c0 sq s1) (Refl _ _)) (noext-false d e f r lc p1 n1 ks rest1 jq l c rl)))
-      (let-match erased l2 (LtS _ _ l3) ((LtZ _) (let-match erased (snoc-fn _ pre q p2 c0 sq s2) (Refl _ _)) (noext-false d e f r lc p2 n2 ks rest1 jq l c rl)))
+      (let-match erased lc0 (LtS _ _ l1)
+        ((LtZ _) (let-match erased (snoc-fn _ pre q p0 c0 sq s0) (Refl _ _)) (noext-sound d e f r lc p0 ks rest1 n0 jq l c rl)))
+      (let-match erased l1 (LtS _ _ l2)
+        ((LtZ _) (let-match erased (snoc-fn _ pre q p1 c0 sq s1) (Refl _ _)) (noext-sound d e f r lc p1 ks rest1 n1 jq l c rl)))
+      (let-match erased l2 (LtS _ _ l3)
+        ((LtZ _) (let-match erased (snoc-fn _ pre q p2 c0 sq s2) (Refl _ _)) (noext-sound d e f r lc p2 ks rest1 n2 jq l c rl)))
       (let-match erased l3 (LtZ _) (absurd (LtS _ _ l4) l4))
       (let-match erased (snoc-fn _ pre q p3 c0 sq s3) (Refl _ _))
-      (noext-false d e f r lc p3 n3 ks rest1 jq l c rl))))
+      (noext-sound d e f r lc p3 ks rest1 n3 jq l c rl))))
 
 ; A list of d colours is checked: f-invariance by comparing it with its composite with f, the edges by comparing it with
 ; its composite with e, and the ring by comparing its composite with r with lc.
@@ -276,14 +276,14 @@
   (let ((erased ke) (erased rke)) (respects-exists pre e d ue lp))
   (let ((erased R) (erased rR)) (respects-exists pre r d ur lp))
   (let-match erased (list-dec X pre d (respects-length pre f X d rX lf) lp) (OrL _ _ eq)
-    ((OrR _ _ ne) (NotFound d e f r lc pre (NoFace d e f r lc pre X rX ne lp))))
+    ((OrR _ _ ne) (NotFound d e f r lc pre (NEFace d e f r lc pre X lp rX ne))))
   (let-match erased eq (Refl _ _))
   (let-match erased (list-dec R lc k (respects-length pre r R k rR lr) llc) (OrL _ _ eqr)
-    ((OrR _ _ ne) (NotFound d e f r lc pre (NoRing d e f r lc pre R rR ne lp))))
+    ((OrR _ _ ne) (NotFound d e f r lc pre (NERing d e f r lc pre R lp rR ne))))
   (let-match erased eqr (Refl _ _))
   (let-match erased (differ-dec ke pre d (respects-length pre e ke d rke le) lp) (OrR _ _ sa)
     ((OrL _ _ df) (Found d e f r lc pre pre (MkFourColoring e f pre ke rX rke df up) rR)))
-  (NotFound d e f r lc pre (NoEdge d e f r lc pre ke rke sa lp)))
+  (NotFound d e f r lc pre (NEEdge d e f r lc pre ke lp rke sa)))
 
 ; The search tries each colour below 4 for the next dart.
 (def-fns _ $ (erased search : (erased (Nat) d k) (erased (List (Nat)) e f r lc) (erased (Under e d) ue) (erased (Under f d) uf) (erased (Under r d) ur)
@@ -309,7 +309,7 @@
   (let-match erased (search d k e f r lc ue uf ur le lf lr llc m1 p3 (Succ i) (snoc-length _ pre p3 _ i s3 lp) a1
       (under-snoc-add pre p3 _ 4 s3 up (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)))
     (NotFound _ _ _ _ _ _ n3) ((Found _ _ _ _ _ _ ks c rl) (Found d e f r lc pre ks c rl)))
-  (NotFound d e f r lc pre (NoNext d e f r lc pre i m1 lp a p0 p1 p2 p3 s0 s1 s2 s3 n0 n1 n2 n3)))
+  (NotFound d e f r lc pre (NEStep d i m1 e f r lc pre p0 p1 p2 p3 lp a s0 s1 s2 s3 n0 n1 n2 n3)))
 
 ; A map has a four-colouring that gives the darts of r the colours lc, or none.
 (def-fns _ $ (erased search-ring : (erased (Nat) d k) (erased (List (Nat)) e n f r lc) (erased (Hypermap d e n f) h) (erased (Under r d) ur)
@@ -318,25 +318,18 @@
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (search d k e f r lc (perm-under d e nf pe) (perm-under d f fi pf) ur le lf lr llc d (Nil _) (Zero) (LengthNil _) (AddZero d) (UnderNil 4)))
 
-; No four-colouring of (e, f): the search's evidence for no ring, on d darts.
-(def-adts $ (NoColoring : ((List (Nat)) e f) -> Type)
-  enum
-  (many MkNoColoring : (erased (Nat) d) (erased (List (Nat)) e f) (erased (NoExt d e f (Nil (Nat)) (Nil (Nat)) (Nil (Nat))) ne)
-      (erased (Length (Nat) f d) lf) -> (NoColoring e f)))
-
-(def-fns _ $ (erased no-coloring : (erased (List (Nat)) e f ks) (erased (NoColoring e f) nc) (erased (FourColoring e f ks) c) -> (erased (False) r))
-  (let-match erased nc (MkNoColoring d _ _ ne lf))
-  (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
-  (noext-false d e f (Nil _) (Nil _) (Nil _) ne ks ks (JoinNil ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
-
 ; A map has a four-colouring, or none (decide_colorable).
 (def-adts $ (ColorDec : ((List (Nat)) e f) -> Type)
   enum
   (many Colorable : (erased (List (Nat)) e f ks) (erased (FourColoring e f ks) c) -> (ColorDec e f))
-  (many Uncolorable : (erased (List (Nat)) e f) (erased (NoColoring e f) nc) -> (ColorDec e f)))
+  (many Uncolorable : (erased (List (Nat)) e f) (erased (Level) L)
+      (erased (Fn L (erased (List (Nat)) ks) (erased (FourColoring e f ks) c) -> (erased (False) r)) no) -> (ColorDec e f)))
 
 (def-fns _ $ (erased decide-colorable : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (ColorDec e f) r))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let-match erased (search-ring d (Zero) e n f (Nil _) (Nil _) h (UnderNil d) (LengthNil _) (LengthNil _))
     (NotFound _ _ _ _ _ _ ne) ((Found _ _ _ _ _ _ ks c _) (Colorable e f ks c)))
-  (Uncolorable e f (MkNoColoring d e f ne lf)))
+  (def-fns _ $ (erased never : (erased (List (Nat)) ks) (erased (FourColoring e f ks) c) -> (erased (False) r))
+    (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
+    (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
+  (Uncolorable e f (level-of never) never))

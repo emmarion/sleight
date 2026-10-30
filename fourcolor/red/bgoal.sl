@@ -1,12 +1,6 @@
 ; Birkhoff2 to Birkhoff5 of birkhoff.v: the Birkhoff checks for rings of 2 to 5 faces, with Coq's iteration counts and basis
 ; programs, by the certified check of bcheck.sl run under native-compute. Load after bcheck.sl.
 
-(def-adts $ (BirkhoffChecks : -> Type)
-  enum
-  (many MkBirkhoffChecks : (erased (BirkhoffCheck (Zero) (Zero)) b2) (erased (BirkhoffCheck (Succ (Zero)) (Zero)) b3)
-      (erased (BirkhoffCheck (Succ (Succ (Zero))) (Zero)) b4) (erased (BirkhoffCheck (Succ (Succ (Succ (Zero)))) (Succ (Zero))) b5)
-      -> (BirkhoffChecks)))
-
 (goal erased (BirkhoffChecks))
 
 (def-fns _ $ (many j2 : -> (many (Chk (BirkhoffCheck (Zero) (Zero))) r))
