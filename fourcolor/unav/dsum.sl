@@ -118,17 +118,17 @@
   (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (InclNil ids)))
   (InclCons x xs1 ids (iota-in d x ids io lx) (under-incl d xs1 ids u1 io)))
 
-(def-fns _ $ (erased perm-cover : (erased (Nat) d) (erased (List (Nat)) p q ids zs) (erased (Perm d p q) pm) (subterm erased (Under zs d) u)
+(def-fns _ $ (erased perm-cover : (erased (Nat) d) (erased (List (Nat)) p q ids zs) (erased (HPerm d p q) pm) (subterm erased (Under zs d) u)
     -> (erased (Incl zs p) r))
   (let-match erased u (UnderCons zs1 x _ lx u1) ((UnderNil _) (InclNil p)))
-  (let-match erased pm (MkPerm _ _ _ ids2 io lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids2 io lp qp pq))
   (let ((erased y) (erased py) (erased _)) (perm-nth d x q p (perm-sym d p q pm) lx))
   (InclCons x zs1 p (nth-in p y x (respects-nth p q ids2 x y x pq py (iota-nth d x ids2 io lx))) (perm-cover d p q ids zs1 pm u1)))
 
 ; Summing g at the images of all darts under a permutation p is summing g at all darts.
-(def-fns _ $ (erased perm-total : (erased (Nat) d s) (erased (List (Nat)) g p q gp ids) (erased (Perm d p q) pm) (erased (Iota d ids) io)
+(def-fns _ $ (erased perm-total : (erased (Nat) d s) (erased (List (Nat)) g p q gp ids) (erased (HPerm d p q) pm) (erased (Iota d ids) io)
     (erased (Respects g p gp) rg) (erased (SumAt gp ids s) k) -> (erased (SumAt g ids s) r))
-  (let-match erased pm (MkPerm _ _ _ ids2 io2 lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids2 io2 lp qp pq))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased rid)) (respects-id-right d ids p io lp))
   (let ((erased uid)) (respects-under p ids p d rid lp))
@@ -173,7 +173,7 @@
   (let ((erased s) (erased a)) (add c s1))
   (values s (SACons g xs1 x c s1 s pc k1 a)))
 
-(def-fns _ $ (erased fsum-exists : (erased (Nat) d x) (erased (List (Nat)) f fi g) (erased (Perm d f fi) pf) (erased (Length (Nat) g d) lg)
+(def-fns _ $ (erased fsum-exists : (erased (Nat) d x) (erased (List (Nat)) f fi g) (erased (HPerm d f fi) pf) (erased (Length (Nat) g d) lg)
     (subterm erased (Nat) k) (erased (Lt x d) lx) -> (erased (Nat) s) (erased (FSum f g x k s) r))
   (let-match erased k (Succ k1) ((Zero) (values (Zero) (FSZ f g x))))
   (let ((erased y) (erased py) (erased ly)) (perm-nth d x f fi pf lx))
@@ -215,7 +215,7 @@
   (let ((erased ls2) (erased ap)) (app-exists (Cons _ r xs) ls1))
   (values ls2 (OCCons f rs1 xs ls1 ls2 r y py w ap oc1)))
 
-(def-fns _ $ (erased ocat-under : (erased (Nat) d) (erased (List (Nat)) f fi rs ls) (erased (Perm d f fi) pf) (erased (Under rs d) u)
+(def-fns _ $ (erased ocat-under : (erased (Nat) d) (erased (List (Nat)) f fi rs ls) (erased (HPerm d f fi) pf) (erased (Under rs d) u)
     (subterm erased (OrbCat f rs ls) oc) -> (erased (Under ls d) r))
   (let-match erased oc (OCCons _ rs1 xs ls1 _ r y py w ap oc1) ((OCNil _) (UnderNil d)))
   (let-match erased u (UnderCons _ _ _ lr u1))
@@ -225,7 +225,7 @@
   (under-app d (Cons _ r xs) ls1 ls ap (UnderCons xs r d lr ux) (ocat-under d f fi rs1 ls1 pf u1 oc1)))
 
 (def-fns _ $ (erased roots-cover : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) lab rs ls ids m)
-    (erased (Perm d p q) pm) (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Graph d p g) gr) (erased (Rooted g rs ids lab) ro)
+    (erased (HPerm d p q) pm) (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Graph d p g) gr) (erased (Rooted g rs ids lab) ro)
     (erased (OrbCat p rs ls) oc) (subterm erased (Incl m ids) sm) -> (erased (Incl m ls) r))
   (let-match erased sm (InclCons x m1 _ ix sm1) ((InclNil _) (InclNil ls)))
   (let ((erased j) (erased pj)) (in-nth x ids ix))
@@ -236,7 +236,7 @@
   (InclCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (roots-cover d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
 ; The roots rs of the faces, and the darts ls listed face by face from them: every dart once.
-(def-fns _ $ (erased face-roots : (erased (Nat) d kf) (erased (List (Nat)) f fi ks ids) (erased (Perm d f fi) pf) (erased (Orbits d f kf) ob)
+(def-fns _ $ (erased face-roots : (erased (Nat) d kf) (erased (List (Nat)) f fi ks ids) (erased (HPerm d f fi) pf) (erased (Orbits d f kf) ob)
     (erased (OrderList d f ks) ol) (erased (Iota d ids) io)
     -> (erased (List (Nat)) rs ls) (erased (Length (Nat) rs kf) lr) (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl)
     (erased (Incl ls ids) i1) (erased (Incl ids ls) i2))

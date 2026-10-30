@@ -1,10 +1,10 @@
 ; dscore of discharge.v on the hypermaps of hypermap.sl, for a rule list drs, and posz_dscore: in a plain cubic connected
-; pentagonal map of genus 0, some dart has positive dscore. Load after dsum.sl.
+; pentagonal map of genus 0, some dart has positive dscore. Load after dsum.sl, with fourcolor/colalias.sl loaded before red/red.sl.
 
 (unary 10 9)
 (unary 12 10)
 
-(def-fns _ $ (erased iter-exists : (erased (Nat) d x) (erased (List (Nat)) f fi) (erased (Perm d f fi) pf) (subterm erased (Nat) k) (erased (Lt x d) lx)
+(def-fns _ $ (erased iter-exists : (erased (Nat) d x) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Nat) k) (erased (Lt x d) lx)
     -> (erased (Nat) z) (erased (Iter f k x z) it) (erased (Lt z d) lz))
   (let-match erased k (Succ k1) ((Zero) (values x (ItZ f x) lx)))
   (let ((erased y) (erased py) (erased ly)) (perm-nth d x f fi pf lx))
