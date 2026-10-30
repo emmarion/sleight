@@ -1,6 +1,7 @@
-; Unavoidability in the shape of unavoidability.v: in every plain cubic connected pentagonal map of genus 0 the quiz tree
-; of the configurations fits at some dart. One compiled run does the certified walks and cap checks of unavgoal.sl and
-; the certified redpart of redc.sl on every obligation. Load after redc.sl and data.sl.
+; Unavoidability in the shape of unavoidability.v, with the embedding of quiz.v: in every plain cubic connected pentagonal
+; map of genus 0, a configuration of red/configs.sl has a preembedding of its kernel into the map or its mirror (CfEmbed).
+; One compiled run builds the quiz tree with its evidence (qtree.sl), and does the certified walks and cap checks of
+; unavgoal.sl and the certified redpart of redc.sl on every obligation. Load after qmirror.sl and data.sl.
 
 (def-adts $ (AllRed : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
   enum
@@ -47,20 +48,54 @@
   (let-match erased w2 (IfY _ a2))
   (values (BTrue) (IfY _ (AWCons qt obl rest a1 a2))))
 
-(def-adts $ (UnavQ : ((Qzt) qt) -> Type)
+; The map itself, or its mirror (hyper-mirror of hyprelabel.sl).
+(def-adts $ (MapOrMirror : ((Nat) d) ((List (Nat)) e n f e2 n2 f2) -> Type)
   enum
-  (many MkUnavQ : (erased (Qzt) qt) (erased (Level) lv)
+  (many MoSame : (erased (Nat) d) (erased (List (Nat)) e n f) -> (MapOrMirror d e n f e n f))
+  (many MoMirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Respects f n fn) rfn) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
+      -> (MapOrMirror d e n f fn ni fi)))
+
+; A configuration of cfs, with its map (ec, nc, fc), ring rc and arities ksc as cpmap.sl builds them, has a preembedding
+; h of its kernel as into the map (em, nm, fm) or its mirror, sending x0c to x0m.
+(def-adts $ (CfEmbed : ((List (Config)) cfs) ((Nat) dm) ((List (Nat)) em nm fm ksm) -> Type)
+  enum
+  (many MkCfEmbed : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
+      (erased (List (Nat)) em nm fm ksm em2 nm2 fm2 ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
+      (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (MapOrMirror dm em nm fm em2 nm2 fm2) mo) (erased (Geo dm em2 nm2 fm2 ksm) g2)
+      (erased (KernelList dc fc rc as) kl) (erased (Preembedding ec nc fc ksc em2 fm2 ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx)
+      -> (CfEmbed cfs dm em nm fm ksm)))
+
+(def-fns _ $ (erased hit-embed : (erased (List (Config)) cfs) (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g)
+    (erased (QzHit cfs d e n ks) hit) -> (erased (CfEmbed cfs d e n f ks) r))
+  (let-match erased hit (MkQzHit _ _ y _ _ _ cf qz qz2 m c v fz ly))
+  (let-match erased c (MkCfQz sym cci cp dc x0c ec nc fc rc ksc _ cm pm qc))
+  (let-match erased qc (MkQzCert _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ olc _ _ _ _ _ _ _ _ _))
+  (match erased v _
+    ((VSame _)
+      (let ((erased as) (erased hl) (erased kl) (erased pe) (erased h0)) (quiz-preembedding dc x0c d y ec nc fc ksc rc e n f ks qz qc g ly fz))
+      (MkCfEmbed cfs sym cci cp d dc x0c y e n f ks e n f ec nc fc rc ksc as hl m cm pm olc (MoSame d e n f) g kl pe h0 ly))
+    ((VFlip _ _ fl)
+      (let ((erased fn) (erased ni) (erased fi) (erased g2) (erased rfn) (erased pn) (erased pf)) (geo-mirror d e n f ks g))
+      (let ((erased w) (erased fz2) (erased lw)) (fitz-flip d y e n f ks fn ni qz qz2 g rfn pn ly fl fz))
+      (let ((erased as) (erased hl) (erased kl) (erased pe) (erased h0)) (quiz-preembedding dc x0c d w ec nc fc ksc rc fn ni fi ks qz qc g2 lw fz2))
+      (MkCfEmbed cfs sym cci cp d dc x0c w e n f ks fn ni fi ec nc fc rc ksc as hl m cm pm olc (MoMirror d e n f fn ni fi rfn pn pf) g2 kl pe h0 lw))))
+
+(def-adts $ (UnavE : ((List (Config)) cfs) -> Type)
+  enum
+  (many MkUnavE : (erased (List (Config)) cfs) (erased (Level) lv)
       (erased (Fn lv (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Connected d e n f) cc)
-          (erased (Genus d e n f (Zero)) gen) -> (erased (HasFit d e n ks qt) r)) every)
-      -> (UnavQ qt)))
+          (erased (Genus d e n f (Zero)) gen) -> (erased (CfEmbed cfs d e n f ks) r)) every)
+      -> (UnavE cfs)))
 
 (let ((many drs)) (symmetrize (base-drules)))
 
-(let ((many qt)) (the-quiz-tree))
+(let ((many cfs)) (concat-cfs (config-chunks)))
 
-(goal erased (UnavQ qt))
+(goal erased (UnavE cfs))
 
-(def-fns _ $ (many unavq-run : -> (many (Checked (UnavQ qt)) r))
+(def-fns _ $ (many unave-run : -> (many (Checked (UnavE cfs)) r))
+  (let ((many qt) (many qc)) (quiz-tree-c cfs))
+  (let-match many qc (ChkYes _ qi) ((ChkNo _) (ChkNo _)))
   (let ((many sok) (erased sw)) (small-c drs))
   (let-match many sok (BTrue) ((BFalse) (ChkNo _)))
   (let ((many wok) (many wobl) (erased ww))
@@ -79,17 +114,19 @@
   (let-match erased rw (IfY _ aw))
   (let-match erased rc (IfY _ ac))
   (def-fns _ $ (erased every : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Connected d e n f) cc)
-      (erased (Genus d e n f (Zero)) gen) -> (erased (HasFit d e n ks qt) r))
+      (erased (Genus d e n f (Zero)) gen) -> (erased (CfEmbed cfs d e n f ks) r))
     (let ((erased x) (erased pos) (erased neg) (erased lx) (erased dsc) (erased lt)) (posz-dscore d e n f ks drs g cc gen))
-    (match erased (unav-dart d x pos neg e n f ks drs (Nil _) cobl wobl sm wl cl g lx dsc lt) _
-      ((UWalk _ _ _ i _ _ _ _ _ obl _ _ pn h)
-        (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
-        (red-sound d z e n f ks qt q (allred-mem qt obl q (allredw-nth qt wobl i obl aw pn) m) g lz ex))
-      ((UCap _ _ _ _ _ _ _ _ _ _ h)
-        (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
-        (red-sound d z e n f ks qt q (allred-mem qt cobl q ac m) g lz ex))))
-  (ChkYes _ (MkUnavQ qt (level-of every) every)))
+    (let ((erased (HasFit d e n ks qt) hf))
+      (match erased (unav-dart d x pos neg e n f ks drs (Nil _) cobl wobl sm wl cl g lx dsc lt) _
+        ((UWalk _ _ _ i _ _ _ _ _ obl _ _ pn h)
+          (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
+          (red-sound d z e n f ks qt q (allred-mem qt obl q (allredw-nth qt wobl i obl aw pn) m) g lz ex))
+        ((UCap _ _ _ _ _ _ _ _ _ _ h)
+          (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
+          (red-sound d z e n f ks qt q (allred-mem qt cobl q ac m) g lz ex))))
+    (hit-embed cfs d e n f ks g (qzt-hit cfs d e n f ks qt qi g hf)))
+  (ChkYes _ (MkUnavE cfs (level-of every) every)))
 
-(let ((many res)) (native-compute unavq-run))
+(let ((many res)) (native-compute unave-run))
 (comptime-match many res (ChkYes _ u))
 (qed u)

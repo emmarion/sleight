@@ -7,8 +7,8 @@
 ; A dart of Gc off the kernel, or in it at j face steps from the walk dart i.
 (def-adts $ (KSt : -> Type)
   enum
-  (many KOut : -> (KSt))
-  (many KIn : (many (Nat) i j) -> (KSt)))
+  (many StOut : -> (KSt))
+  (many StIn : (many (Nat) i j) -> (KSt)))
 
 ; j1 is the place after j on a face of a darts.
 (def-adts $ (NextIx : ((Nat) j a j1) -> Type)
@@ -20,13 +20,13 @@
 ; place i, j, its arity, the place of face x, and edge and node of order 2 and 3 at x.
 (def-adts $ (DartOK : ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) x) -> Type)
   enum
-  (many DOut : (erased (List (Nat)) ec nc fc ksc rc s0c) (erased (List (KSt)) st) (erased (Nat) x x1) (erased (Nth (KSt) st x (KOut)) ps)
-      (erased (Fband fc rc x) fb) (erased (Nth (Nat) fc x x1) px) (erased (Nth (KSt) st x1 (KOut)) ps1) -> (DartOK ec nc fc ksc rc s0c st x))
+  (many DOut : (erased (List (Nat)) ec nc fc ksc rc s0c) (erased (List (KSt)) st) (erased (Nat) x x1) (erased (Nth (KSt) st x (StOut)) ps)
+      (erased (Fband fc rc x) fb) (erased (Nth (Nat) fc x x1) px) (erased (Nth (KSt) st x1 (StOut)) ps1) -> (DartOK ec nc fc ksc rc s0c st x))
   (many DIn : (erased (List (Nat)) ec nc fc ksc rc s0c) (erased (List (KSt)) st) (erased (Nat) x i j c a x1 j1 y u1 u2)
-      (erased (Nth (KSt) st x (KIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it) (erased (Nth (Nat) ksc c a) pa) (erased (Lt j a) lj)
-      (erased (Nth (Nat) ksc x a) pxa) (erased (Nth (Nat) fc x x1) px) (erased (Nth (KSt) st x1 (KIn i j1)) ps1) (erased (NextIx j a j1) nx)
+      (erased (Nth (KSt) st x (StIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it) (erased (Nth (Nat) ksc c a) pa) (erased (Lt j a) lj)
+      (erased (Nth (Nat) ksc x a) pxa) (erased (Nth (Nat) fc x x1) px) (erased (Nth (KSt) st x1 (StIn i j1)) ps1) (erased (NextIx j a j1) nx)
       (erased (Nth (Nat) ec x y) pe) (erased (Nth (Nat) ec y x) pe2) (erased (Nth (Nat) nc x u1) pn1) (erased (Nth (Nat) nc u1 u2) pn2)
-      (erased (Nth (Nat) nc u2 x) pn3) (erased (Nth (KSt) st c (KIn i (Zero))) pc0) (erased (Kernel fc rc x) kx)
+      (erased (Nth (Nat) nc u2 x) pn3) (erased (Nth (KSt) st c (StIn i (Zero))) pc0) (erased (Kernel fc rc x) kx)
       -> (DartOK ec nc fc ksc rc s0c st x)))
 
 (def-adts $ (DartsOK : ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((List (Nat)) xs) -> Type)
@@ -40,9 +40,9 @@
   enum
   (many HRNil : (erased (List (Nat)) s0m fm) -> (HlRel (Nil (KSt)) s0m fm (Nil (Nat))))
   (many HROut : (erased (List (KSt)) st) (erased (List (Nat)) s0m fm hl) (erased (Nat) w) (erased (HlRel st s0m fm hl) rest)
-      -> (HlRel (Cons (KSt) (KOut) st) s0m fm (Cons (Nat) w hl)))
+      -> (HlRel (Cons (KSt) (StOut) st) s0m fm (Cons (Nat) w hl)))
   (many HRIn : (erased (List (KSt)) st) (erased (List (Nat)) s0m fm hl) (erased (Nat) i j v w) (erased (Nth (Nat) s0m i v) pv)
-      (erased (Iter fm j v w) it) (erased (HlRel st s0m fm hl) rest) -> (HlRel (Cons (KSt) (KIn i j) st) s0m fm (Cons (Nat) w hl))))
+      (erased (Iter fm j v w) it) (erased (HlRel st s0m fm hl) rest) -> (HlRel (Cons (KSt) (StIn i j) st) s0m fm (Cons (Nat) w hl))))
 
 ; Everything the proof reads off Gc, Gm and h; the walks of the quiz in both maps ask the arities as0.
 (def-adts $ (QEnv : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) dm) ((List (Nat)) em nm fm ksm s0m hl) -> Type)
@@ -54,7 +54,7 @@
 
 (def-adts $ (Kin : ((List (KSt)) st) ((Nat) x) -> Type)
   enum
-  (many MkKin : (erased (List (KSt)) st) (erased (Nat) x i j) (erased (Nth (KSt) st x (KIn i j)) p) -> (Kin st x)))
+  (many MkKin : (erased (List (KSt)) st) (erased (Nat) x i j) (erased (Nth (KSt) st x (StIn i j)) p) -> (Kin st x)))
 
 (def-adts $ (AllKin : ((List (KSt)) st) ((List (Nat)) xs) -> Type)
   enum
@@ -71,14 +71,14 @@
 ; Every dart of s before t is central.
 (def-adts $ (AllCenD : ((List (Nat)) ec em hl s t) -> Type)
   enum
-  (many ACNil : (erased (List (Nat)) ec em hl t) -> (AllCenD ec em hl t t))
-  (many ACCons : (erased (List (Nat)) ec em hl s t) (erased (Nat) x) (erased (Central ec em hl x) c) (erased (AllCenD ec em hl s t) rest)
+  (many CenNil : (erased (List (Nat)) ec em hl t) -> (AllCenD ec em hl t t))
+  (many CenCons : (erased (List (Nat)) ec em hl s t) (erased (Nat) x) (erased (Central ec em hl x) c) (erased (AllCenD ec em hl s t) rest)
       -> (AllCenD ec em hl (Cons (Nat) x s) t)))
 
 (def-fns _ $ (erased acd-trans : (erased (List (Nat)) ec em hl s u t) (subterm erased (AllCenD ec em hl s u) a) (erased (AllCenD ec em hl u t) b)
     -> (erased (AllCenD ec em hl s t) r))
-  (let-match erased a (ACCons _ _ _ s1 _ x c a1) ((ACNil _ _ _ _) b))
-  (ACCons ec em hl s1 t x c (acd-trans ec em hl s1 u t a1 b)))
+  (let-match erased a (CenCons _ _ _ s1 _ x c a1) ((CenNil _ _ _ _) b))
+  (CenCons ec em hl s1 t x c (acd-trans ec em hl s1 u t a1 b)))
 
 (def-fns _ $ (erased iter-last : (erased (List (Nat)) f) (erased (Nat) j v w) (subterm erased (Iter f (Succ j) v w) it)
     -> (erased (Nat) u) (erased (Iter f j v u) r) (erased (Nth (Nat) f u w) pu))
@@ -95,7 +95,7 @@
   (values l2 (NthThere _ l ls1 i1 l2 pl) q))
 
 (def-fns _ $ (erased hl-at : (erased (List (KSt)) st) (erased (List (Nat)) s0m fm hl) (erased (Nat) x i j w) (subterm erased (HlRel st s0m fm hl) hr)
-    (erased (Nth (KSt) st x (KIn i j)) ps) (erased (Nth (Nat) hl x w) pw) -> (erased (Nat) v) (erased (Nth (Nat) s0m i v) pv) (erased (Iter fm j v w) it))
+    (erased (Nth (KSt) st x (StIn i j)) ps) (erased (Nth (Nat) hl x w) pw) -> (erased (Nat) v) (erased (Nth (Nat) s0m i v) pv) (erased (Iter fm j v w) it))
   (match erased hr _
     (absurd (HRNil _ _) ps)
     ((HROut st1 _ _ hl1 w0 hr1)
@@ -129,18 +129,18 @@
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k) -> (erased (Lt x dc) r))
   (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids _ _ hc olc io lst dk g hr uh us rac ram))
   (let-match erased k (MkKin _ _ i j p))
-  (nth-lt-length (KSt) st x dc (KIn i j) p lst))
+  (nth-lt-length (KSt) st x dc (StIn i j) p lst))
 
 ; The fields of a kernel dart.
 (def-fns _ $ (erased kin-ok : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k)
-    -> (erased (Nat) i j c a x1 j1 y u1 u2) (erased (Nth (KSt) st x (KIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it)
+    -> (erased (Nat) i j c a x1 j1 y u1 u2) (erased (Nth (KSt) st x (StIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it)
     (erased (Nth (Nat) ksc c a) pa) (erased (Lt j a) lj) (erased (Nth (Nat) ksc x a) pxa) (erased (Nth (Nat) fc x x1) px)
-    (erased (Nth (KSt) st x1 (KIn i j1)) ps1) (erased (NextIx j a j1) nx) (erased (Nth (Nat) ec x y) pe) (erased (Nth (Nat) ec y x) pe2)
+    (erased (Nth (KSt) st x1 (StIn i j1)) ps1) (erased (NextIx j a j1) nx) (erased (Nth (Nat) ec x y) pe) (erased (Nth (Nat) ec y x) pe2)
     (erased (Nth (Nat) nc x u1) pn1) (erased (Nth (Nat) nc u1 u2) pn2) (erased (Nth (Nat) nc u2 x) pn3))
   (let-match erased k (MkKin _ _ i0 j0 p))
   (match erased (env-dart dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (kin-lt dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en k)) _
-    (absurd (DOut _ _ _ _ _ _ _ _ x1 ps fb px ps1) (nth-fn (KSt) st x (KIn i0 j0) (KOut) p ps))
+    (absurd (DOut _ _ _ _ _ _ _ _ x1 ps fb px ps1) (nth-fn (KSt) st x (StIn i0 j0) (StOut) p ps))
     ((DIn _ _ _ _ _ _ _ _ i j c a x1 j1 y u1 u2 ps pc it pa lj pxa px ps1 nx pe pe2 pn1 pn2 pn3 _ _)
       (values i j c a x1 j1 y u1 u2 ps pc it pa lj pxa px ps1 nx pe pe2 pn1 pn2 pn3))))
 
@@ -160,8 +160,8 @@
     (kin-ok dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en k))
   (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids as0 _ hc olc io lst dk g hr uh us rac ram))
   (let ((erased lhl)) (hl-length st s0m fm hl dc hr lst))
-  (let ((erased w) (erased pw)) (nth-exists (Nat) hl dc x lhl (nth-lt-length (KSt) st x dc (KIn i j) ps lst)))
-  (let ((erased w1) (erased pw1)) (nth-exists (Nat) hl dc x1 lhl (nth-lt-length (KSt) st x1 dc (KIn i j1) ps1 lst)))
+  (let ((erased w) (erased pw)) (nth-exists (Nat) hl dc x lhl (nth-lt-length (KSt) st x dc (StIn i j) ps lst)))
+  (let ((erased w1) (erased pw1)) (nth-exists (Nat) hl dc x1 lhl (nth-lt-length (KSt) st x1 dc (StIn i j1) ps1 lst)))
   (let ((erased v) (erased pv) (erased itw)) (hl-at st s0m fm hl x i j w hr ps pw))
   (let ((erased v1) (erased pv1) (erased itw1)) (hl-at st s0m fm hl x1 i j1 w1 hr ps1 pw1))
   (let-match erased (nth-fn (Nat) s0m i v v1 pv pv1) (Refl _ _))
@@ -211,7 +211,7 @@
   (match erased (env-dart dc dm u ec nc fc ksc rc s0c em nm fm ksm s0m hl st en lu) _
     (absurd (DOut _ _ _ _ _ _ _ _ u1 ps fb px ps1)
       (let-match erased (nth-fn (Nat) fc u x u1 pu px) (Refl _ _))
-      (nth-fn (KSt) st x (KIn i0 j0) (KOut) p ps1))
+      (nth-fn (KSt) st x (StIn i0 j0) (StOut) p ps1))
     ((DIn _ _ _ _ _ _ _ _ i j _ _ _ _ _ _ _ ps _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (MkKin st u i j ps))))
 
 ; The kernel dart before x goes to the dart um before h x.
@@ -296,12 +296,12 @@
   (let ((erased lpm)) (under-nth hl p pm dm uh hp))
   (let ((erased lym)) (img-lt dm pm ym nm mni mpn lpm pym))
   (match erased wc _
-    ((WS0 _ _ _ _ _ _) (let-match erased wm (WS0 _ _ _ _ _ _)) (values (ACNil ec em hl tc) rs ak))
+    ((WS0 _ _ _ _ _ _) (let-match erased wm (WS0 _ _ _ _ _ _)) (values (CenNil ec em hl tc) rs ak))
     ((WS1 _ _ _ _ _ _ _ _)
       (let-match erased wm (WS1 _ _ _ _ _ _ _ _))
       (let-match erased rs (RespCons _ _ _ _ _ hy rs1))
       (let-match erased ak (AKCons _ _ _ ky ak1))
-      (values (ACCons ec em hl tc tc y (cen-node dc dm p y pm ym ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kp py hp pym hy) (ACNil ec em hl tc)) rs1 ak1))
+      (values (CenCons ec em hl tc tc y (cen-node dc dm p y pm ym ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kp py hp pym hy) (CenNil ec em hl tc)) rs1 ak1))
     ((WSR _ _ _ s1 _ as1 _ _ _ y2 q1 _ sp wk1)
       (let-match erased wm (WSR _ _ _ sm1 _ asm1 _ _ _ ym2 _ _ spm wm1))
       (let-match erased sp (MkQStepR _ _ _ ue _ pue py2))
@@ -318,7 +318,7 @@
         (hc-walk dc dm ue y uem y2 ym2 ec nc fc ksc rc s0c em nm fm ksm s0m hl s1 tc as1 atc sm1 tm asm1 atm st en q1 kue ky
           (kin-plain dc dm y ue ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky pue)
           (cen-edge dc dm y ue ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky cy pue) q3a py2 pym2 wk1 wm1 rs1 ak1))
-      (values (ACCons ec em hl s1 tc y cy r1) rt1 ak2))
+      (values (CenCons ec em hl s1 tc y cy r1) rt1 ak2))
     ((WSL _ _ _ s1 _ as1 _ _ _ y2 q1 _ sp wk1)
       (let-match erased wm (WSL _ _ _ sm1 _ asm1 _ _ _ ym2 _ _ spm wm1))
       (let-match erased sp (MkQStepL _ _ _ a1 b1 _ pa1 pb1 py2))
@@ -333,7 +333,7 @@
       (let ((erased r1) (erased rt1) (erased ak2))
         (hc-walk dc dm b1 a1 bm y2 ym2 ec nc fc ksc rc s0c em nm fm ksm s0m hl s1 tc as1 atc sm1 tm asm1 atm st en q1 kb1 ka1 pb1a
           (MkCentral ec em hl b1 a1 bm am pb1a hb1 ha1 qbm) hb1 py2 pym2 wk1 wm1 rs1 ak1))
-      (values (ACCons ec em hl s1 tc y (cen-node dc dm p y pm ym ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kp py hp pym hy) r1) rt1 ak2))
+      (values (CenCons ec em hl s1 tc y (cen-node dc dm p y pm ym ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kp py hp pym hy) r1) rt1 ak2))
     ((WSLR _ _ _ s1 u _ as1 au _ _ _ yl yr ql qr _ sl wl sr wr)
       (let-match erased wm (WSLR _ _ _ sm1 um _ asm1 aum _ _ _ ylm yrm _ _ _ slm wlm srm wrm))
       (let-match erased rs (RespCons _ _ _ _ _ hy rs1))
@@ -360,7 +360,7 @@
         (hc-walk dc dm ue y uem yr yrm ec nc fc ksc rc s0c em nm fm ksm s0m hl u tc au atc um tm aum atm st en qr kue ky
           (kin-plain dc dm y ue ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky pue)
           (cen-edge dc dm y ue ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky cy pue) q3a pyr pyrm wr wrm rt1 ak2))
-      (values (ACCons ec em hl s1 tc y cy (acd-trans ec em hl s1 u tc r1 r2)) rt2 ak3))
+      (values (CenCons ec em hl s1 tc y cy (acd-trans ec em hl s1 u tc r1 r2)) rt2 ak3))
     ((WSLL _ _ _ s1 _ as1 _ _ _ xl c c2 y2 q1 sa pc pc2 _ sb wk1)
       (let-match erased wm (WSLL _ _ _ sm1 _ asm1 _ _ _ xlm cm c2m ym2 _ sam pcm pc2m _ sbm wm1))
       (let-match erased sa (MkQStepL _ _ _ a1 b1 _ pa1 pb1 pxl))
@@ -393,7 +393,7 @@
       (let ((erased cc2)) (MkCentral ec em hl c2 c c2m cm pcc2 hc2 hz qcm))
       (let ((erased r1) (erased rt1) (erased ak2))
         (hc-walk dc dm c2 c c2m y2 ym2 ec nc fc ksc rc s0c em nm fm ksm s0m hl s1 tc as1 atc sm1 tm asm1 atm st en q1 kc2 kz pcc2 cc2 hc2 py2 pym2 wk1 wm1 rs1 ak1))
-      (values (ACCons ec em hl s1 tc c2 cc2 r1) rt1 ak2))
+      (values (CenCons ec em hl s1 tc c2 cc2 r1) rt1 ak2))
     ((WSRR _ _ _ s1 _ as1 _ _ _ xr y2 q1 sa _ sb wk1)
       (let-match erased wm (WSRR _ _ _ sm1 _ asm1 _ _ _ xrm ym2 _ sam _ sbm wm1))
       (let-match erased sa (MkQStepR _ _ _ ue _ pue pxr))
@@ -413,7 +413,7 @@
         (hc-walk dc dm v xr vm y2 ym2 ec nc fc ksc rc s0c em nm fm ksm s0m hl s1 tc as1 atc sm1 tm asm1 atm st en q1 kv kxr
           (kin-plain dc dm xr v ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kxr pv)
           (cen-edge dc dm xr v ec nc fc ksc rc s0c em nm fm ksm s0m hl st en kxr cxr pv) hv py2 pym2 wk1 wm1 rs1 ak1))
-      (values (ACCons ec em hl s1 tc xr cxr r1) rt1 ak2))))
+      (values (CenCons ec em hl s1 tc xr cxr r1) rt1 ak2))))
 
 ; Two walks of one question consume matched darts.
 (def-fns _ $ (erased walk-drop : (erased (List (Nat)) e n ks e2 n2 ks2 s t as at s2 t2 as2 at2 hl) (erased (List (KSt)) st) (erased (Nat) x x2) (erased (Qn) q)
@@ -488,7 +488,7 @@
   (let ((erased r2) (erased _) (erased _))
     (hc-walk dc dm x0c x1 x0m y2 ym2 ec nc fc ksc rc s0c em nm fm ksm s0m hl s2 (Nil _) as2 (Nil _) sm2 (Nil _) asm2 (Nil _) st en q10 kx0 kx1 px cx0 hx0 pty2 ptym2
       wk2 wkm2 rs2 ak2))
-  (ACCons ec em hl s1 (Nil _) x0c cx0 (acd-trans ec em hl s1 u (Nil _) r1 (ACCons ec em hl s2 (Nil _) x1 cx1 r2))))
+  (CenCons ec em hl s1 (Nil _) x0c cx0 (acd-trans ec em hl s1 u (Nil _) r1 (CenCons ec em hl s2 (Nil _) x1 cx1 r2))))
 
 (def-fns _ $ (erased iter-path : (erased (List (Nat)) f) (erased (Nat) k x y) (subterm erased (Iter f k x y) it)
     -> (erased (List (Nat)) xs) (erased (Path f (Nil (Nat)) x y xs) w))
@@ -503,7 +503,7 @@
 
 (def-fns _ $ (erased acd-nth : (erased (List (Nat)) ec em hl s) (erased (Nat) i c) (subterm erased (AllCenD ec em hl s (Nil (Nat))) a) (erased (Nth (Nat) s i c) p)
     -> (erased (Central ec em hl c) r))
-  (let-match erased a (ACCons _ _ _ s1 _ x cx a1) (absurd (ACNil _ _ _ _) p))
+  (let-match erased a (CenCons _ _ _ s1 _ x cx a1) (absurd (CenNil _ _ _ _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) cx))
   (acd-nth ec em hl s1 i1 c a1 p1))
 
@@ -524,23 +524,23 @@
 ; The place of a kernel dart: j face steps from the walk dart c, itself at place i, 0, on a face of a darts.
 (def-fns _ $ (erased kin-anchor : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k)
-    -> (erased (Nat) i j c a) (erased (Nth (KSt) st x (KIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it) (erased (Nth (Nat) ksc c a) pa)
-    (erased (Lt j a) lj) (erased (Nth (Nat) ksc x a) pxa) (erased (Nth (KSt) st c (KIn i (Zero))) pc0) (erased (Kernel fc rc x) kx))
+    -> (erased (Nat) i j c a) (erased (Nth (KSt) st x (StIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it) (erased (Nth (Nat) ksc c a) pa)
+    (erased (Lt j a) lj) (erased (Nth (Nat) ksc x a) pxa) (erased (Nth (KSt) st c (StIn i (Zero))) pc0) (erased (Kernel fc rc x) kx))
   (let-match erased k (MkKin _ _ i0 j0 p))
   (match erased (env-dart dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (kin-lt dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en k)) _
-    (absurd (DOut _ _ _ _ _ _ _ _ x1 ps fb px ps1) (nth-fn (KSt) st x (KIn i0 j0) (KOut) p ps))
+    (absurd (DOut _ _ _ _ _ _ _ _ x1 ps fb px ps1) (nth-fn (KSt) st x (StIn i0 j0) (StOut) p ps))
     ((DIn _ _ _ _ _ _ _ _ i j c a _ _ _ _ _ ps pc it pa lj pxa _ _ _ _ _ _ _ _ pc0 kx) (values i j c a ps pc it pa lj pxa pc0 kx))))
 
 ; Two kernel darts with one walk face are on one face.
 (def-fns _ $ (erased coord-path : (erased (Nat) dc dm x y i j k) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
-    (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Nth (KSt) st x (KIn i j)) px) (erased (Nth (KSt) st y (KIn i k)) py)
+    (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Nth (KSt) st x (StIn i j)) px) (erased (Nth (KSt) st y (StIn i k)) py)
     -> (erased (SomePath fc (Nil (Nat)) x y) r))
   (let ((erased i1) (erased j1) (erased c) (erased a) (erased ps) (erased pc) (erased it) (erased pa) (erased lj) (erased _) (erased pc0) (erased _))
     (kin-anchor dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st x i j px)))
-  (let-match erased (nth-fn (KSt) st x (KIn i j) (KIn i1 j1) px ps) (Refl _ _))
+  (let-match erased (nth-fn (KSt) st x (StIn i j) (StIn i1 j1) px ps) (Refl _ _))
   (let ((erased i2) (erased k2) (erased c2) (erased _) (erased ps2) (erased pc2) (erased it2) (erased _) (erased _) (erased _) (erased _) (erased _))
     (kin-anchor dc dm y ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st y i k py)))
-  (let-match erased (nth-fn (KSt) st y (KIn i k) (KIn i2 k2) py ps2) (Refl _ _))
+  (let-match erased (nth-fn (KSt) st y (StIn i k) (StIn i2 k2) py ps2) (Refl _ _))
   (let-match erased (nth-fn (Nat) s0c i c c2 pc pc2) (Refl _ _))
   (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids _ _ hc olc io lst dk g hr uh us rac ram))
   (let ((erased cyc)) (face-cycle dc c a fc ksc olc (kin-lt dc dm c ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st c i (Zero) pc0)) pa))
@@ -555,7 +555,7 @@
 (def-adts $ (WPos : ((List (KSt)) st) ((List (Nat)) s) ((Nat) k) -> Type)
   enum
   (many WPNil : (erased (List (KSt)) st) (erased (Nat) k) -> (WPos st (Nil (Nat)) k))
-  (many WPCons : (erased (List (KSt)) st) (erased (List (Nat)) s) (erased (Nat) c k) (erased (Nth (KSt) st c (KIn k (Zero))) p) (erased (WPos st s (Succ k)) rest)
+  (many WPCons : (erased (List (KSt)) st) (erased (List (Nat)) s) (erased (Nat) c k) (erased (Nth (KSt) st c (StIn k (Zero))) p) (erased (WPos st s (Succ k)) rest)
       -> (WPos st (Cons (Nat) c s) k)))
 
 (def-fns _ $ (erased app-nth0 : (erased (List (Nat)) pre ys zs) (erased (Nat) y j) (subterm erased (AppN pre (Cons (Nat) y ys) zs) ap) (erased (Length (Nat) pre j) l)
@@ -578,7 +578,7 @@
   (let-match erased ls (LengthCons _ _ _ n1 ls1))
   (let-match erased lsm (LengthCons _ v sm1 _ lsm1))
   (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids _ _ hc olc io lst dk g hr uh us rac ram))
-  (let ((erased w) (erased pw)) (nth-exists (Nat) hl dc c (hl-length st s0m fm hl dc hr lst) (nth-lt-length (KSt) st c dc (KIn k (Zero)) pc lst)))
+  (let ((erased w) (erased pw)) (nth-exists (Nat) hl dc c (hl-length st s0m fm hl dc hr lst) (nth-lt-length (KSt) st c dc (StIn k (Zero)) pc lst)))
   (let ((erased v2) (erased pv2) (erased it)) (hl-at st s0m fm hl c k (Zero) w hr pc pw))
   (let-match erased it (ItZ _ _))
   (let-match erased (nth-fn (Nat) s0m k v w (app-nth0 pre sm1 s0m v k ap lp) pv2) (Refl _ _))
@@ -593,19 +593,19 @@
 ; Each kernel place i, j has i below k.
 (def-adts $ (StIx : ((List (KSt)) st) ((Nat) k) -> Type)
   enum
-  (many SINil : (erased (Nat) k) -> (StIx (Nil (KSt)) k))
-  (many SIOut : (erased (List (KSt)) st) (erased (Nat) k) (erased (StIx st k) rest) -> (StIx (Cons (KSt) (KOut) st) k))
-  (many SIIn : (erased (List (KSt)) st) (erased (Nat) i j k) (erased (Lt i k) li) (erased (StIx st k) rest) -> (StIx (Cons (KSt) (KIn i j) st) k)))
+  (many StxNil : (erased (Nat) k) -> (StIx (Nil (KSt)) k))
+  (many StxOut : (erased (List (KSt)) st) (erased (Nat) k) (erased (StIx st k) rest) -> (StIx (Cons (KSt) (StOut) st) k))
+  (many StxIn : (erased (List (KSt)) st) (erased (Nat) i j k) (erased (Lt i k) li) (erased (StIx st k) rest) -> (StIx (Cons (KSt) (StIn i j) st) k)))
 
 (def-fns _ $ (erased hl-exists : (erased (Nat) dm k x0m) (erased (List (Nat)) s0m fm fi) (erased (List (KSt)) st) (subterm erased (StIx st k) sx)
     (erased (Length (Nat) s0m k) ls) (erased (Under s0m dm) us) (erased (HPerm dm fm fi) pf) (erased (Lt x0m dm) lx0)
     -> (erased (List (Nat)) hl) (erased (HlRel st s0m fm hl) hr) (erased (Under hl dm) uh))
   (match erased sx _
-    ((SINil _) (values (Nil _) (HRNil s0m fm) (UnderNil dm)))
-    ((SIOut st1 _ sx1)
+    ((StxNil _) (values (Nil _) (HRNil s0m fm) (UnderNil dm)))
+    ((StxOut st1 _ sx1)
       (let ((erased hl) (erased hr) (erased uh)) (hl-exists dm k x0m s0m fm fi st1 sx1 ls us pf lx0))
       (values (Cons _ x0m hl) (HROut st1 s0m fm hl x0m hr) (UnderCons hl x0m dm lx0 uh)))
-    ((SIIn st1 i j _ li sx1)
+    ((StxIn st1 i j _ li sx1)
       (let ((erased hl) (erased hr) (erased uh)) (hl-exists dm k x0m s0m fm fi st1 sx1 ls us pf lx0))
       (let ((erased v) (erased pv)) (nth-exists (Nat) s0m k i ls li))
       (let ((erased w) (erased it) (erased lw)) (iter-ex dm v fm fi pf j (under-nth s0m i v dm us pv)))
@@ -678,8 +678,8 @@
 
 (def-adts $ (PeAll : ((List (Nat)) ec nc fc ksc em fm ksm as hl xs) -> Type)
   enum
-  (many PANil : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) -> (PeAll ec nc fc ksc em fm ksm as hl (Nil (Nat))))
-  (many PACons : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl xs) (erased (Nat) x) (erased (PeAt ec nc fc ksc em fm ksm as hl x) p)
+  (many PeNil : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) -> (PeAll ec nc fc ksc em fm ksm as hl (Nil (Nat))))
+  (many PeCons : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl xs) (erased (Nat) x) (erased (PeAt ec nc fc ksc em fm ksm as hl x) p)
       (erased (PeAll ec nc fc ksc em fm ksm as hl xs) rest) -> (PeAll ec nc fc ksc em fm ksm as hl (Cons (Nat) x xs))))
 
 (def-adts $ (Preembedding : ((List (Nat)) ec nc fc ksc em fm ksm as hl) -> Type)
@@ -694,50 +694,50 @@
   (many KANil : (erased (List (Nat)) f r) -> (KerAll f r (Nil (Nat))))
   (many KACons : (erased (List (Nat)) f r as) (erased (Nat) x) (erased (Kernel f r x) k) (erased (KerAll f r as) rest) -> (KerAll f r (Cons (Nat) x as))))
 
-(def-adts $ (Covered : ((List (Nat)) f r as xs) -> Type)
+(def-adts $ (KerCover : ((List (Nat)) f r as xs) -> Type)
   enum
-  (many CvNil : (erased (List (Nat)) f r as) -> (Covered f r as (Nil (Nat))))
-  (many CvIn : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (In x as) i) (erased (Covered f r as xs) rest) -> (Covered f r as (Cons (Nat) x xs)))
-  (many CvBand : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (Fband f r x) b) (erased (Covered f r as xs) rest) -> (Covered f r as (Cons (Nat) x xs))))
+  (many KvNil : (erased (List (Nat)) f r as) -> (KerCover f r as (Nil (Nat))))
+  (many KvIn : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (In x as) i) (erased (KerCover f r as xs) rest) -> (KerCover f r as (Cons (Nat) x xs)))
+  (many KvBand : (erased (List (Nat)) f r as xs) (erased (Nat) x) (erased (Fband f r x) b) (erased (KerCover f r as xs) rest) -> (KerCover f r as (Cons (Nat) x xs))))
 
 (def-adts $ (KernelList : ((Nat) d) ((List (Nat)) f r as) -> Type)
   enum
-  (many MkKernelList : (erased (Nat) d) (erased (List (Nat)) f r as ids) (erased (Iota d ids) io) (erased (KerAll f r as) ka) (erased (Covered f r as ids) cv)
+  (many MkKernelList : (erased (Nat) d) (erased (List (Nat)) f r as ids) (erased (Iota d ids) io) (erased (KerAll f r as) ka) (erased (KerCover f r as ids) cv)
       -> (KernelList d f r as)))
 
 (def-adts $ (KinList : ((List (KSt)) st) ((List (Nat)) xs as) -> Type)
   enum
   (many KLNil : (erased (List (KSt)) st) -> (KinList st (Nil (Nat)) (Nil (Nat))))
-  (many KLIn : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x i j) (erased (Nth (KSt) st x (KIn i j)) p) (erased (KinList st xs as) rest)
+  (many KLIn : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x i j) (erased (Nth (KSt) st x (StIn i j)) p) (erased (KinList st xs as) rest)
       -> (KinList st (Cons (Nat) x xs) (Cons (Nat) x as)))
-  (many KLOut : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x) (erased (Nth (KSt) st x (KOut)) p) (erased (KinList st xs as) rest)
+  (many KLOut : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) x) (erased (Nth (KSt) st x (StOut)) p) (erased (KinList st xs as) rest)
       -> (KinList st (Cons (Nat) x xs) as)))
 
-(def-fns _ $ (erased covered-cons : (erased (List (Nat)) f r as ys) (erased (Nat) x) (subterm erased (Covered f r as ys) cv) -> (erased (Covered f r (Cons (Nat) x as) ys) r))
+(def-fns _ $ (erased covered-cons : (erased (List (Nat)) f r as ys) (erased (Nat) x) (subterm erased (KerCover f r as ys) cv) -> (erased (KerCover f r (Cons (Nat) x as) ys) r))
   (match erased cv _
-    ((CvNil _ _ _) (CvNil f r (Cons _ x as)))
-    ((CvIn _ _ _ ys1 y i cv1) (CvIn f r (Cons _ x as) ys1 y (InThere y x as i) (covered-cons f r as ys1 x cv1)))
-    ((CvBand _ _ _ ys1 y b cv1) (CvBand f r (Cons _ x as) ys1 y b (covered-cons f r as ys1 x cv1)))))
+    ((KvNil _ _ _) (KvNil f r (Cons _ x as)))
+    ((KvIn _ _ _ ys1 y i cv1) (KvIn f r (Cons _ x as) ys1 y (InThere y x as i) (covered-cons f r as ys1 x cv1)))
+    ((KvBand _ _ _ ys1 y b cv1) (KvBand f r (Cons _ x as) ys1 y b (covered-cons f r as ys1 x cv1)))))
 
 (def-fns _ $ (erased kin-split : (erased (List (Nat)) ec nc fc ksc rc s0c ys) (erased (List (KSt)) st) (subterm erased (DartsOK ec nc fc ksc rc s0c st ys) dk)
-    -> (erased (List (Nat)) as) (erased (AllKin st as) ak) (erased (KerAll fc rc as) ka) (erased (Covered fc rc as ys) cv) (erased (KinList st ys as) kl))
-  (let-match erased dk (DKCons _ _ _ _ _ _ ys1 _ x d dk1) ((DKNil _ _ _ _ _ _ _) (values (Nil _) (AKNil st) (KANil fc rc) (CvNil fc rc (Nil _)) (KLNil st))))
+    -> (erased (List (Nat)) as) (erased (AllKin st as) ak) (erased (KerAll fc rc as) ka) (erased (KerCover fc rc as ys) cv) (erased (KinList st ys as) kl))
+  (let-match erased dk (DKCons _ _ _ _ _ _ ys1 _ x d dk1) ((DKNil _ _ _ _ _ _ _) (values (Nil _) (AKNil st) (KANil fc rc) (KvNil fc rc (Nil _)) (KLNil st))))
   (let ((erased as) (erased ak) (erased ka) (erased cv) (erased kl)) (kin-split ec nc fc ksc rc s0c ys1 st dk1))
   (match erased d _
-    ((DOut _ _ _ _ _ _ _ _ _ ps fb _ _) (values as ak ka (CvBand fc rc as ys1 x fb cv) (KLOut st ys1 as x ps kl)))
+    ((DOut _ _ _ _ _ _ _ _ _ ps fb _ _) (values as ak ka (KvBand fc rc as ys1 x fb cv) (KLOut st ys1 as x ps kl)))
     ((DIn _ _ _ _ _ _ _ _ i j _ _ _ _ _ _ _ ps _ _ _ _ _ _ _ _ _ _ _ _ _ _ kx)
       (values (Cons _ x as) (AKCons st x as (MkKin st x i j ps) ak) (KACons fc rc as x kx ka)
-        (CvIn fc rc (Cons _ x as) ys1 x (InHere x as) (covered-cons fc rc as ys1 x cv)) (KLIn st ys1 as x i j ps kl)))))
+        (KvIn fc rc (Cons _ x as) ys1 x (InHere x as) (covered-cons fc rc as ys1 x cv)) (KLIn st ys1 as x i j ps kl)))))
 
 (def-fns _ $ (erased kl-in : (erased (List (KSt)) st) (erased (List (Nat)) xs as) (erased (Nat) y i j) (subterm erased (KinList st xs as) kl) (erased (In y xs) iy)
-    (erased (Nth (KSt) st y (KIn i j)) py) -> (erased (In y as) r))
+    (erased (Nth (KSt) st y (StIn i j)) py) -> (erased (In y as) r))
   (match erased kl _
     (absurd (KLNil _) iy)
     ((KLIn _ xs1 as1 x _ _ _ kl1)
       (match erased iy _ ((InHere _ _) (InHere y as1)) ((InThere _ _ _ iy1) (InThere y x as1 (kl-in st xs1 as1 y i j kl1 iy1 py)))))
     ((KLOut _ xs1 _ x px kl1)
       (match erased iy _
-        (absurd (InHere _ _) (nth-fn (KSt) st y (KIn i j) (KOut) py px))
+        (absurd (InHere _ _) (nth-fn (KSt) st y (StIn i j) (StOut) py px))
         ((InThere _ _ _ iy1) (kl-in st xs1 as y i j kl1 iy1 py))))))
 
 ; The darts a path of the certificate may use: walk darts and their edge images, which are central.
@@ -750,20 +750,20 @@
 (def-adts $ (DPath : ((List (Nat)) ec s0c) ((List (KSt)) st) ((Nat) i) ((List (Nat)) p) ((Nat) j) -> Type)
   enum
   (many DPNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) (erased (Nat) i) -> (DPath ec s0c st i (Nil (Nat)) i))
-  (many DPCons : (erased (List (Nat)) ec s0c ps) (erased (List (KSt)) st) (erased (Nat) i p j jp q i2 jq) (erased (Nth (KSt) st p (KIn i jp)) psp)
-      (erased (Nth (Nat) ec p q) pq) (erased (Nth (KSt) st q (KIn i2 jq)) psq) (erased (CenOK ec s0c p) co) (erased (DPath ec s0c st i2 ps j) rest)
+  (many DPCons : (erased (List (Nat)) ec s0c ps) (erased (List (KSt)) st) (erased (Nat) i p j jp q i2 jq) (erased (Nth (KSt) st p (StIn i jp)) psp)
+      (erased (Nth (Nat) ec p q) pq) (erased (Nth (KSt) st q (StIn i2 jq)) psq) (erased (CenOK ec s0c p) co) (erased (DPath ec s0c st i2 ps j) rest)
       -> (DPath ec s0c st i (Cons (Nat) p ps) j)))
 
 ; Paths from each walk face i to face 0 and back.
 (def-adts $ (Spokes : ((List (Nat)) ec s0c) ((List (KSt)) st) ((List (Nat)) ixs) -> Type)
   enum
-  (many SpNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) -> (Spokes ec s0c st (Nil (Nat))))
-  (many SpCons : (erased (List (Nat)) ec s0c ixs p p2) (erased (List (KSt)) st) (erased (Nat) i) (erased (DPath ec s0c st i p (Zero)) d1)
+  (many SpkNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) -> (Spokes ec s0c st (Nil (Nat))))
+  (many SpkCons : (erased (List (Nat)) ec s0c ixs p p2) (erased (List (KSt)) st) (erased (Nat) i) (erased (DPath ec s0c st i p (Zero)) d1)
       (erased (DPath ec s0c st (Zero) p2 i) d2) (erased (Spokes ec s0c st ixs) rest) -> (Spokes ec s0c st (Cons (Nat) i ixs))))
 
 (def-fns _ $ (erased spoke-get : (erased (List (Nat)) ec s0c ixs) (erased (List (KSt)) st) (erased (Nat) i) (subterm erased (Spokes ec s0c st ixs) sp) (erased (In i ixs) ii)
     -> (erased (List (Nat)) p p2) (erased (DPath ec s0c st i p (Zero)) d1) (erased (DPath ec s0c st (Zero) p2 i) d2))
-  (let-match erased sp (SpCons _ _ ixs1 p p2 _ _ d1 d2 sp1) (absurd (SpNil _ _ _) ii))
+  (let-match erased sp (SpkCons _ _ ixs1 p p2 _ _ d1 d2 sp1) (absurd (SpkNil _ _ _) ii))
   (match erased ii _ ((InHere _ _) (values p p2 d1 d2)) ((InThere _ _ _ ii1) (spoke-get ec s0c ixs1 st i sp1 ii1))))
 
 (def-fns _ $ (erased dp-app : (erased (List (Nat)) ec s0c p p2 ps) (erased (List (KSt)) st) (erased (Nat) i m j) (subterm erased (DPath ec s0c st i p m) d1)
@@ -786,7 +786,7 @@
 (def-fns _ $ (erased dp-rl : (erased (Nat) dc dm z w i jw j jy y) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids p) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
     (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (subterm erased (DPath ec s0c st i p j) dp) (erased (Nth (Nat) ec z w) pzw)
-    (erased (Nth (KSt) st w (KIn i jw)) pw) (erased (Nth (KSt) st y (KIn j jy)) py) -> (erased (RlPath ec fc em hl as z p y) r))
+    (erased (Nth (KSt) st w (StIn i jw)) pw) (erased (Nth (KSt) st y (StIn j jy)) py) -> (erased (RlPath ec fc em hl as z p y) r))
   (match erased dp _
     ((DPNil _ _ _ _) (RPLast ec fc em hl as z y (MkRlink ec fc z y w pzw (coord-path dc dm w y i jw jy ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw py))))
     ((DPCons _ _ ps _ _ q _ jp q2 i2 jq psp pq psq co dp1)
@@ -805,12 +805,12 @@
 
 (def-fns _ $ (erased rl-to : (erased (Nat) dc dm z x i jx) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ys) (erased (List (KSt)) st)
     (erased (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as) pv) (subterm erased (AllKin st ys) ak) (erased (Nth (Nat) ec z x) pzx)
-    (erased (Nth (KSt) st x (KIn i jx)) px) -> (erased (RlTo ec fc em hl as z ys) r))
+    (erased (Nth (KSt) st x (StIn i jx)) px) -> (erased (RlTo ec fc em hl as z ys) r))
   (let-match erased ak (AKCons _ y ys1 ky ak1) ((AKNil _) (RTNil ec fc em hl as z)))
   (let-match erased pv (MkPEnv _ _ k _ _ _ _ _ _ _ _ _ _ _ _ _ ids ixs _ en acd aks kl io ls iok ra))
   (let ((erased i1) (erased _) (erased c) (erased _) (erased ps) (erased pc) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
     (kin-anchor dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st x i jx px)))
-  (let-match erased (nth-fn (KSt) st x (KIn i jx) (KIn i1 _) px ps) (Refl _ _))
+  (let-match erased (nth-fn (KSt) st x (StIn i jx) (StIn i1 _) px ps) (Refl _ _))
   (let ((erased j) (erased jy) (erased cy) (erased _) (erased psy) (erased pcy) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
     (kin-anchor dc dm y ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky))
   (let ((erased p1) (erased _) (erased d1) (erased _)) (spoke-get ec s0c ixs st i ra (iota-in k i ixs iok (nth-lt-length (Nat) s0c i k c pc ls))))
@@ -847,8 +847,8 @@
 (def-fns _ $ (erased pe-all : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as xs) (erased (List (KSt)) st)
     (erased (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as) pv) (erased (AllKin st as) aka) (subterm erased (AllKin st xs) ak)
     -> (erased (PeAll ec nc fc ksc em fm ksm as hl xs) r))
-  (let-match erased ak (AKCons _ x xs1 kx ak1) ((AKNil _) (PANil ec nc fc ksc em fm ksm as hl)))
-  (PACons ec nc fc ksc em fm ksm as hl xs1 x (pe-at dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl as st pv aka kx)
+  (let-match erased ak (AKCons _ x xs1 kx ak1) ((AKNil _) (PeNil ec nc fc ksc em fm ksm as hl)))
+  (PeCons ec nc fc ksc em fm ksm as hl xs1 x (pe-at dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl as st pv aka kx)
     (pe-all dc dm ec nc fc ksc rc s0c em nm fm ksm s0m hl as xs1 st pv aka ak1)))
 
 ; What a run checks of a configuration map Gc with ring rc and a quiz qz of two QaskR questions at x0c: the place of each

@@ -210,13 +210,13 @@
 
 (def-adts $ (RevA : ((List (Nat)) path ps full) -> Type)
   enum
-  (many RvNil : (erased (List (Nat)) ps) -> (RevA (Nil (Nat)) ps ps))
-  (many RvCons : (erased (List (Nat)) rest ps full) (erased (Nat) a) (erased (RevA rest (Cons (Nat) a ps) full) r) -> (RevA (Cons (Nat) a rest) ps full)))
+  (many RevNil : (erased (List (Nat)) ps) -> (RevA (Nil (Nat)) ps ps))
+  (many RevCons : (erased (List (Nat)) rest ps full) (erased (Nat) a) (erased (RevA rest (Cons (Nat) a ps) full) r) -> (RevA (Cons (Nat) a rest) ps full)))
 
 (def-fns _ $ (many put-c : (erased (List (Config)) cfs) (erased (List (Nat)) ps full) (subterm many (List (Nat)) path) (subterm many (Qzt) t) (many (Qn) q1 q2 q3)
     (erased (QEntry cfs full q1 q2 q3) en) (erased (RevA path ps full) ra) (erased (QInv cfs ps t) qi) -> (many (Qzt) r) (erased (QInv cfs ps r) qr))
-  (let-match many path (Cons _ a rest) ((Nil _) (let-match erased ra (RvNil _)) (values (QztLeaf q1 q2 q3 t) (QILeaf cfs ps q1 q2 q3 t en qi))))
-  (let-match erased ra (RvCons _ _ _ _ ra1))
+  (let-match many path (Cons _ a rest) ((Nil _) (let-match erased ra (RevNil _)) (values (QztLeaf q1 q2 q3 t) (QILeaf cfs ps q1 q2 q3 t en qi))))
+  (let-match erased ra (RevCons _ _ _ _ ra1))
   (match many t _
     ((QztNode t5 t6 t7 t8)
       (let-match erased qi (QINode _ _ _ _ _ _ i5 i6 i7 i8))
@@ -263,7 +263,7 @@
     -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let ((erased full)) (Cons (Nat) b3 (Cons (Nat) b2 (Cons (Nat) b1 (Nil (Nat))))))
   (put-c cfs (Nil _) full (Cons _ b1 $ Cons _ b2 $ Cons _ b3 $ Nil _) t r1 r2 r3 (MkQEntry cfs cf qz qz2 a1 a2 a3 b1 b2 b3 q1 q2 q3 r1 r2 r3 m c v tr rt)
-    (RvCons _ _ full b1 (RvCons _ _ full b2 (RvCons _ _ full b3 (RvNil full)))) qi))
+    (RevCons _ _ full b1 (RevCons _ _ full b2 (RevCons _ _ full b3 (RevNil full)))) qi))
 
 (def-fns _ $ (many put-rot-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (many (Nat) a1 a2 a3) (many (Qn) q1 q2 q3)
     (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (many (Qzt) t)
