@@ -88,5 +88,5 @@ is attached.
 
 ## Status
 
-- `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. `map-triangle.sl`
+- `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are positive certificates (labellings), not negations, so that later proofs never have to call a function held in data. `map-triangle.sl`
   builds a triangle as a `PlaneMap`, as a check of the definitions.

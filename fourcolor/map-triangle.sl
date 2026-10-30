@@ -18,21 +18,15 @@
    (MkInsert _ (Cons _ z $ Cons _ tw N) _ _ _ o (NthThere _ _ _ _ _ $ NthHere _ _ _) (SetThere _ _ _ _ _ _ $ SetHere _ _ _ _)
       (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ o))
    (SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocCons _ _ _ _ _ $ SnocNil _ th)))
-(def-fns _ $ (erased absurd no-loop : (erased (Nat) b) (subterm erased (NodeReach nd2 th b) r) (erased (Eq (Nat) b z) eq) -> (erased (False) f))
-  (match erased r _
-    (absurd (NRHere _ _) (match erased eq _))
-    (absurd (NRStep _ _ c _ pn r1)
-      (let-match erased pn (NthThere _ _ _ _ _ p1))
-      (let-match erased p1 (NthThere _ _ _ _ _ p2))
-      (let-match erased p2 (NthThere _ _ _ _ _ p3))
-      (let-match erased p3 (NthHere _ _ _))
-      (no-loop b r1 eq))))
-(def-fns _ $ (erased loopless : (erased (NodeReach nd2 th z) r) -> (erased (False) f))
-  (no-loop z r (Refl _ z)))
+(let ((erased vl)) (Cons _ z $ Cons _ o $ Cons _ o $ Cons _ tw N))
+(let ((erased loopless)) (MkSeparates vl nd2 th z tw z
+   (RespCons _ _ _ z z (NthHere _ _ _) $ RespCons _ _ _ tw o (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) $
+    RespCons _ _ _ o o (NthThere _ _ _ _ _ $ NthHere _ _ _) $ RespCons _ _ _ th tw (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) $ RespNil _)
+   (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) (NthHere _ _ _) (ApGt _ _ _ _ $ LtZ _)))
 (let ((erased e3)) (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi $ Cons _ fo N))
 (let ((erased nd3a)) (Cons _ z $ Cons _ tw $ Cons _ o $ Cons _ fo $ Cons _ th N))
 (let ((erased nd3)) (Cons _ fi $ Cons _ tw $ Cons _ o $ Cons _ fo $ Cons _ th $ Cons _ z N))
-(let ((erased m3)) (PMChord e2 nd2 (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi N) e3 nd3a nd3 fo th z (level-of loopless) m2
+(let ((erased m3)) (PMChord e2 nd2 (Cons _ o $ Cons _ z $ Cons _ th $ Cons _ tw $ Cons _ fi N) e3 nd3a nd3 vl fo th z m2
    (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _)
    (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (LtZ _) loopless
    (JoinFace e2 nd2 th z th z (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) (NthHere _ _ _)

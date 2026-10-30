@@ -14,30 +14,29 @@
       (erased (Nth (Nat) e a b) pe) (erased (Nth (Nat) nd b c) pn) (erased (FaceReach e nd c d) r)
       -> (FaceReach e nd a d)))
 
-(def-adts $ (NodeReach : ((List (Nat)) nd) ((Nat) a) ((Nat) b) -> Type)
+; ls is the suffix of the labelling lab for the darts whose images are listed by xs; each image has the same label.
+(def-adts $ (Respects : ((List (Nat)) lab) ((List (Nat)) xs) ((List (Nat)) ls) -> Type)
   enum
-  (many NRHere : (erased (List (Nat)) nd) (erased (Nat) a) -> (NodeReach nd a a))
-  (many NRStep : (erased (List (Nat)) nd) (erased (Nat) a b c)
-      (erased (Nth (Nat) nd a b) pn) (erased (NodeReach nd b c) r) -> (NodeReach nd a c)))
+  (many RespNil : (erased (List (Nat)) lab) -> (Respects lab (Nil (Nat)) (Nil (Nat))))
+  (many RespCons : (erased (List (Nat)) lab xs ls) (erased (Nat) j l) (erased (Nth (Nat) lab j l) p)
+      (erased (Respects lab xs ls) rest) -> (Respects lab (Cons (Nat) j xs) (Cons (Nat) l ls))))
 
-; b is reached from a by steps of e and nd.
-(def-adts $ (Conn : ((List (Nat)) e) ((List (Nat)) nd) ((Nat) a) ((Nat) b) -> Type)
+; lab is constant along xs and gives d1 and d2 different labels.
+(def-adts $ (Separates : ((List (Nat)) lab) ((List (Nat)) xs) ((Nat) d1) ((Nat) d2) -> Type)
   enum
-  (many CHere : (erased (List (Nat)) e nd) (erased (Nat) a) -> (Conn e nd a a))
-  (many CEdge : (erased (List (Nat)) e nd) (erased (Nat) a b c)
-      (erased (Nth (Nat) e a b) p) (erased (Conn e nd b c) r) -> (Conn e nd a c))
-  (many CNode : (erased (List (Nat)) e nd) (erased (Nat) a b c)
-      (erased (Nth (Nat) nd a b) p) (erased (Conn e nd b c) r) -> (Conn e nd a c)))
+  (many MkSeparates : (erased (List (Nat)) lab xs) (erased (Nat) d1 d2 l1 l2)
+      (erased (Respects lab xs lab) r) (erased (Nth (Nat) lab d1 l1) p1) (erased (Nth (Nat) lab d2 l2) p2)
+      (erased (Apart (Nat) Lt l1 l2) differ) -> (Separates lab xs d1 d2)))
 
 ; The corner after d1 and the corner after d2 may be joined by an edge without changing the genus:
-; they lie on one face, or in different components.
+; they lie on one face, or in different components (a labelling constant along e and nd separates them).
 (def-adts $ (Joinable : ((List (Nat)) e) ((List (Nat)) nd) ((Nat) d1) ((Nat) d2) -> Type)
   enum
   (many JoinFace : (erased (List (Nat)) e nd) (erased (Nat) d1 d2 c1 c2)
       (erased (Nth (Nat) nd d1 c1) p1) (erased (Nth (Nat) nd d2 c2) p2) (erased (FaceReach e nd c1 c2) r)
       -> (Joinable e nd d1 d2))
-  (many JoinApart : (erased (List (Nat)) e nd) (erased (Nat) d1 d2) (erased (Level) L)
-      (erased (Fn L (erased (Conn e nd d1 d2) c) -> (erased (False) f)) apart)
+  (many JoinApart : (erased (List (Nat)) e nd lab) (erased (Nat) d1 d2)
+      (erased (Separates lab e d1 d2) se) (erased (Separates lab nd d1 d2) sn)
       -> (Joinable e nd d1 d2)))
 
 ; Inserts a new dart x after d in the node permutation: nd2 is nd with d sent to x and x sent to d's old image.
@@ -63,10 +62,10 @@
       (erased (Snoc (Nat) e (Succ n) e1) se1) (erased (Snoc (Nat) e1 n e2) se2)
       (erased (Insert nd d n nd1) i1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
-  ; An edge from the corner after d1 to the corner after d2, at another vertex.
-  (many PMChord : (erased (List (Nat)) e nd e1 e2 nd1 nd2) (erased (Nat) n d1 d2) (erased (Level) L)
+  ; An edge from the corner after d1 to the corner after d2, at another vertex: a labelling constant along nd separates them.
+  (many PMChord : (erased (List (Nat)) e nd e1 e2 nd1 nd2 vl) (erased (Nat) n d1 d2)
       (erased (PlaneMap e nd) m) (erased (Length (Nat) e n) len) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
-      (erased (Fn L (erased (NodeReach nd d1 d2) r) -> (erased (False) f)) loopless)
+      (erased (Separates vl nd d1 d2) loopless)
       (erased (Joinable e nd d1 d2) j)
       (erased (Snoc (Nat) e (Succ n) e1) se1) (erased (Snoc (Nat) e1 n e2) se2)
       (erased (Insert nd d1 n nd1) i1) (erased (Insert nd1 d2 (Succ n) nd2) i2)
