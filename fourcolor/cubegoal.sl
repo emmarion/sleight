@@ -26,6 +26,3 @@
       (cube-bridgeless d D e n f ce cn cf cu b) (cube-plain d D e n f ce cn cf cu) (cube-cubic d D e n f ce cn cf cu)))
     (cube-colorable d D e n f ce cn cf cu K c))
   (values (level-of cube-colour) cube-colour))
-
-(goal erased (CubeReduction))
-(qed (MkCubeReduction (level-of cube-reduction) cube-reduction))

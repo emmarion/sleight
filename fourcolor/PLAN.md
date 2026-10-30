@@ -109,15 +109,17 @@ is attached.
 
 ## Status
 
-`reduce2.sl` proves `HypReduction`: a function giving every hypermap
-of genus 0 that is bridgeless (on `hypermap.sl`'s definitions) a
-`FourColoring` gives `FourColor`. So part A is done, and part B is
-exactly Gonthier's `four_color_hypermap` on these definitions.
-`reduce.sl` is the same with `PlaneMap` and `Colored` in place of the
-hypermap notions. Checked by both compilers with
+`reduce3.sl` proves `CubicReduction`: a function giving every plain
+cubic hypermap of genus 0 that is bridgeless (on `hypermap.sl` and
+`hypgeom.sl`'s definitions) a `FourColoring` gives `FourColor`. So part
+A and the cube reduction of part B are done; what is open is Gonthier's
+theorem for plain cubic maps. `reduce.sl` and `reduce2.sl` are the
+intermediate forms (with `PlaneMap`, and with all bridgeless hypermaps);
+`reduce2-goal.sl` and `cube-goal.sl` check them alone. Checked by both
+compilers with
 
 ```sh
-slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl fourcolor/hypgraph.sl fourcolor/hypperm.sl fourcolor/hypermap.sl fourcolor/hypplane.sl fourcolor/reduce2.sl --goal proved
+slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl fourcolor/orient.sl fourcolor/base.sl fourcolor/sweep.sl fourcolor/geo.sl fourcolor/plan.sl fourcolor/map.sl fourcolor/lists.sl fourcolor/planemap.sl fourcolor/walk.sl fourcolor/frontier.sl fourcolor/labels.sl fourcolor/rot.sl fourcolor/fan.sl fourcolor/build.sl fourcolor/readback.sl fourcolor/parta.sl fourcolor/reduce.sl fourcolor/hypgraph.sl fourcolor/hypperm.sl fourcolor/hypermap.sl fourcolor/hypplane.sl fourcolor/reduce2.sl fourcolor/hypeuler.sl fourcolor/hypderived.sl fourcolor/hyprelabel.sl fourcolor/hypwalkup.sl fourcolor/hypgeom.sl fourcolor/cube.sl fourcolor/cubegoal.sl fourcolor/reduce3.sl --goal proved
 ```
 
 - `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are

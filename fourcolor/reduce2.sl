@@ -17,6 +17,3 @@
     (let ((erased ks) (erased c)) (colour d e n nd h pl b))
     (values ks (coloring-colored ks e nd c)))
   (reduction (level-of plane-colour) plane-colour))
-
-(goal erased (HypReduction))
-(qed (MkHypReduction (level-of hyp-reduction) hyp-reduction))
