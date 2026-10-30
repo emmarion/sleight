@@ -141,3 +141,106 @@
       (let-match erased (nth-fn _ fm w w3 w4 pw3 pw4) (Refl _ _))
       (let-match erased lr (LtS _ _ lr1))
       (path-iter-short fm xs3 w3 w a3 r1 wm l3 itm1 lr1))))
+
+; The identities of a plain cubic map that the case analyses below use: e (e w) = w, n (f (e v)) = v and f (e z) = n (n z).
+(def-fns _ $ (erased gm-ee : (erased (Nat) dm w a) (erased (List (Nat)) em nm fm ksm) (erased (Geo dm em nm fm ksm) g) (erased (Nth (Nat) em w a) pa)
+    -> (erased (Nth (Nat) em a w) r))
+  (let-match erased g (MkGeo _ _ _ _ _ hm pem cnm olm pam))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dm em nm fm hm))
+  (let ((erased r) (erased _)) (plain-eq dm w a em pem (nth-lt-length _ em w dm a pa le) pa))
+  r)
+
+(def-fns _ $ (erased gm-nfe : (erased (Nat) dm v a u) (erased (List (Nat)) em nm fm ksm) (erased (Geo dm em nm fm ksm) g) (erased (Nth (Nat) em v a) pa)
+    (erased (Nth (Nat) fm a u) pu) -> (erased (Nth (Nat) nm u v) r))
+  (let-match erased g (MkGeo _ _ _ _ _ hm pem cnm olm pam))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core dm em nm fm hm))
+  (let ((erased t) (erased pt) (erased lt)) (perm-nth dm u nm ni qn (perm-val dm a u fm fi qf pu)))
+  (let ((erased a2) (erased pa2) (erased la2)) (perm-nth dm t em nf qe lt))
+  (let-match erased (perm-inj dm a a2 u fm fi qf pu (hyper-third dm a2 t u em nm fm hm pa2 pt)) (Refl _ _))
+  (let-match erased (perm-inj dm v t a em nf qe pa pa2) (Refl _ _))
+  pt)
+
+(def-fns _ $ (erased gm-fe : (erased (Nat) dm z a b) (erased (List (Nat)) em nm fm ksm) (erased (Geo dm em nm fm ksm) g) (erased (Nth (Nat) em z a) pa)
+    (erased (Nth (Nat) fm a b) pb) -> (erased (Nat) z1) (erased (Nth (Nat) nm z z1) p1) (erased (Nth (Nat) nm z1 b) p2))
+  (let-match erased g (MkGeo _ _ _ _ _ hm pem cnm olm pam))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core dm em nm fm hm))
+  (let ((erased lz)) (perm-val dm a z em nf qe (gm-ee dm z a em nm fm ksm g pa)))
+  (let ((erased z1) (erased p1) (erased _)) (perm-nth dm z nm ni qn lz))
+  (let ((erased z2) (erased p2) (erased p3) (erased _) (erased _)) (cubic-eq dm z z1 nm cnm lz p1))
+  (let-match erased (nth-fn _ fm a b z2 pb (hyper-third dm a z z2 em nm fm hm pa p3)) (Refl _ _))
+  (values z1 p1 p2))
+
+; What a run checks of the configuration map at a dart x, after embeddable and the lemmas of embed.v about the perimeter rc:
+; edge is an involution, node keeps rc and has order 3 off it, x or edge x is off rc (edge_perimeter), two darts off rc
+; joined by an edge are not both off the kernel (chordless_perimeter), and x, edge x, node x or node (edge x) is in the
+; kernel (embed_cases).
+(def-adts $ (RingSide : ((List (Nat)) nc rc) ((Nat) x nx) -> Type)
+  enum
+  (many RsOn : (erased (List (Nat)) nc rc) (erased (Nat) x nx) (erased (In x rc) ix) (erased (In nx rc) inx) -> (RingSide nc rc x nx))
+  (many RsOff : (erased (List (Nat)) nc rc) (erased (Nat) x nx nnx) (erased (NotIn x rc) ox) (erased (NotIn nx rc) onx) (erased (Nth (Nat) nc nx nnx) p1)
+      (erased (Nth (Nat) nc nnx x) p2) -> (RingSide nc rc x nx)))
+
+(def-adts $ (NodeIn : ((List (Nat)) nc as) ((Nat) y) -> Type)
+  enum
+  (many MkNodeIn : (erased (List (Nat)) nc as) (erased (Nat) y z) (erased (Nth (Nat) nc y z) pz) (erased (In z as) iz) -> (NodeIn nc as y)))
+
+(def-adts $ (GcAt : ((List (Nat)) ec nc rc as) ((Nat) x) -> Type)
+  enum
+  (many MkGcAt : (erased (List (Nat)) ec nc rc as) (erased (Nat) x ex nx) (erased (Nth (Nat) ec x ex) pe) (erased (Nth (Nat) ec ex x) pe2)
+      (erased (Nth (Nat) nc x nx) pn) (erased (RingSide nc rc x nx) rs) (erased (Or (NotIn x rc) (NotIn ex rc)) ep)
+      (erased (Or (In x rc) (Or (In ex rc) (Or (In x as) (In ex as)))) cl) (erased (Or (In x as) (Or (In ex as) (Or (In nx as) (NodeIn nc as ex)))) cs)
+      -> (GcAt ec nc rc as x)))
+
+(def-adts $ (GcAll : ((List (Nat)) ec nc rc as xs) -> Type)
+  enum
+  (many GcNil : (erased (List (Nat)) ec nc rc as) -> (GcAll ec nc rc as (Nil (Nat))))
+  (many GcCons : (erased (List (Nat)) ec nc rc as xs) (erased (Nat) x) (erased (GcAt ec nc rc as x) p) (erased (GcAll ec nc rc as xs) rest)
+      -> (GcAll ec nc rc as (Cons (Nat) x xs))))
+
+(def-adts $ (GcOK : ((Nat) dc) ((List (Nat)) ec nc rc as) -> Type)
+  enum
+  (many MkGcOK : (erased (Nat) dc) (erased (List (Nat)) ec nc rc as ids) (erased (Iota dc ids) io) (erased (GcAll ec nc rc as ids) ga) -> (GcOK dc ec nc rc as)))
+
+(def-fns _ $ (erased gcall-at : (erased (List (Nat)) ec nc rc as xs) (erased (Nat) x) (subterm erased (GcAll ec nc rc as xs) ga) (erased (In x xs) ix)
+    -> (erased (GcAt ec nc rc as x) r))
+  (let-match erased ga (GcCons _ _ _ _ xs1 y py ga1) (absurd (GcNil _ _ _ _) ix))
+  (match erased ix _ ((InHere _ _) py) ((InThere _ _ _ ix1) (gcall-at ec nc rc as xs1 x ga1 ix1))))
+
+(def-fns _ $ (erased gc-at : (erased (Nat) dc x) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx) -> (erased (GcAt ec nc rc as x) r))
+  (let-match erased ok (MkGcOK _ _ _ _ _ ids io ga))
+  (gcall-at ec nc rc as ids x ga (iota-in dc x ids io lx)))
+
+; embed_functor of embed.v, as a certificate: each kernel dart whose edge image is in the kernel is central.
+(def-adts $ (EdgeOut : ((List (Nat)) ec as) ((Nat) x) -> Type)
+  enum
+  (many MkEdgeOut : (erased (List (Nat)) ec as) (erased (Nat) x y) (erased (Nth (Nat) ec x y) py) (erased (NotIn y as) oy) -> (EdgeOut ec as x)))
+
+(def-adts $ (FunctorAll : ((List (Nat)) ec em as hl xs) -> Type)
+  enum
+  (many FaNil : (erased (List (Nat)) ec em as hl) -> (FunctorAll ec em as hl (Nil (Nat))))
+  (many FaCons : (erased (List (Nat)) ec em as hl xs) (erased (Nat) x) (erased (Or (EdgeOut ec as x) (Central ec em hl x)) p)
+      (erased (FunctorAll ec em as hl xs) rest) -> (FunctorAll ec em as hl (Cons (Nat) x xs))))
+
+(def-fns _ $ (erased functor-at : (erased (List (Nat)) ec em as hl xs) (erased (Nat) x y w) (subterm erased (FunctorAll ec em as hl xs) fa) (erased (In x xs) ix)
+    (erased (Nth (Nat) ec x y) py) (erased (In y as) iy) (erased (Nth (Nat) hl x w) pw) -> (erased (Nat) v) (erased (Nth (Nat) hl y v) pv) (erased (Nth (Nat) em w v) pm))
+  (let-match erased fa (FaCons _ _ _ _ xs1 x1 p fa1) (absurd (FaNil _ _ _ _) ix))
+  (let-match erased ix (InHere _ _) ((InThere _ _ _ ix1) (functor-at ec em as hl xs1 x y w fa1 ix1 py iy pw)))
+  (let-match erased p (OrR _ _ c)
+    (absurd (OrL _ _ eo) (let-match erased eo (MkEdgeOut _ _ _ y2 py2 oy)) (let-match erased (nth-fn _ ec x y y2 py py2) (Refl _ _)) (apart-irrefl y (notin-in y y as oy iy))))
+  (let-match erased c (MkCentral _ _ _ _ y3 w3 v3 py3 pw3 pv3 pm3))
+  (let-match erased (nth-fn _ ec x y y3 py py3) (Refl _ _))
+  (let-match erased (nth-fn _ hl x w w3 pw pw3) (Refl _ _))
+  (values v3 pv3 pm3))
+
+; embed of embed.v at x: h x on the kernel, and otherwise read off edge x, node x or node (edge x), the first in it.
+(def-adts $ (HEmb : ((List (Nat)) ec nc em nm fm as hl) ((Nat) x u) -> Type)
+  enum
+  (many HeK : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u) (erased (In x as) ix) (erased (Nth (Nat) hl x u) pu) -> (HEmb ec nc em nm fm as hl x u))
+  (many HeE : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u y w) (erased (NotIn x as) ox) (erased (Nth (Nat) ec x y) py) (erased (In y as) iy)
+      (erased (Nth (Nat) hl y w) pw) (erased (Nth (Nat) em w u) pu) -> (HEmb ec nc em nm fm as hl x u))
+  (many HeN : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u y z w a) (erased (NotIn x as) ox) (erased (Nth (Nat) ec x y) py) (erased (NotIn y as) oy)
+      (erased (Nth (Nat) nc x z) pz) (erased (In z as) iz) (erased (Nth (Nat) hl z w) pw) (erased (Nth (Nat) em w a) pa) (erased (Nth (Nat) fm a u) pu)
+      -> (HEmb ec nc em nm fm as hl x u))
+  (many HeEN : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u y z t w w1 w2) (erased (NotIn x as) ox) (erased (Nth (Nat) ec x y) py) (erased (NotIn y as) oy)
+      (erased (Nth (Nat) nc x z) pz) (erased (NotIn z as) oz) (erased (Nth (Nat) nc y t) pt) (erased (In t as) it) (erased (Nth (Nat) hl t w) pw)
+      (erased (Nth (Nat) nm w w1) p1) (erased (Nth (Nat) nm w1 w2) p2) (erased (Nth (Nat) em w2 u) pu) -> (HEmb ec nc em nm fm as hl x u)))
