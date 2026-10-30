@@ -470,3 +470,69 @@
           ((OrL _ _ ixr) (ins-ring dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj uc lx ixr pu))
           ((OrR _ _ oxr) (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lx oxr ox pu)))
         rest))))
+
+; What embed_disk, embed_rem and embed_patch give embed2.sl and contract.sl: a patch of the map (em, nm, fm) from a disk map,
+; whose darts embd sends into the configuration map as pull-col asks with its ring bd sent to erc = map edge rc, and hd =
+; h1 . embd, and a remainder map; with cface_h1 (h1 sends faces into faces). Not built here.
+(def-adts $ (EmbedPatch : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
+  enum
+  (many MkEmbedPatch : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f)
+      (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (erased (Length (Nat) embd dd) le) (erased (Under embd dc) ue)
+      (erased (Respects embd fd q1) r1) (erased (Reach fc embd q1) rc1) (erased (Respects ec embd q2) r2) (erased (Respects embd ed q3) r3)
+      (erased (Reach fc q2 q3) rc2) (erased (Respects ec rc erc) re) (erased (Respects embd bd erc) rb) (erased (Respects h1 embd hd) rh)
+      (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) -> (EmbedPatch dc ec fc rc dm em nm fm h1)))
+
+; The construction of embed_disk, embed_rem and embed_patch, taken as a hypothesis: a function at a level F giving the
+; EmbedPatch of an embedding h1 listed on the darts ids of the configuration map.
+(def-adts $ (PatchOpen : -> Type)
+  enum
+  (many MkPatchOpen : (erased (Level) F)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io)
+          (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (Pbpp dm em nm fm) pb)
+          -> (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep)) mk)
+      -> (PatchOpen)))
+
+; The step of embed_full that rests on Birkhoff, taken as a hypothesis: a pair of kernel darts where embed_full fails, in a
+; map as birkhoff-reduces takes it, gives a reduction (in Coq, through radius2, trivial_hom_ring and Birkhoff).
+(def-adts $ (FullRed : -> Type)
+  enum
+  (many MkFullRed : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+          (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
+      -> (FullRed)))
+
+; What the embedding gives when embed_full holds: embed listed as h1 on the darts ids, embedE at every dart and embedN off
+; rc as MorphOff lists, the certificate of embed_full (for pre-embed-inj, embed-inj and ins-sides), and the patch.
+(def-adts $ (EmbedOut : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl) -> Type)
+  enum
+  (many MkEmbedOut : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (Iota dc ids) io)
+      (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (Under h1 dm) uh) (erased (FullAll ec em hl as as) fa)
+      (erased (MorphOff h1 ec em (Nil (Nat)) ids) me) (erased (MorphOff h1 nc nm rc ids) mn) (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep)
+      -> (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)))
+
+; The embedding of embed.v from a preembedding, with minimality as data: in a connected Pbpp map with no four-colouring, the
+; EEnv of a configuration whose kernel preembeds gives a reduction (where embed_full fails) or an EmbedOut. A level factory:
+; run is at a level L minted after those of the two hypotheses.
+(def-fns _ $ (erased embed-main : (erased (FullRed) frd) (erased (PatchOpen) po) -> (erased (Level) L B)
+    (erased (Fn L (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+        (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+        (erased (Connected dm em nm fm) cn) -> (erased (Or (Reduces B dm em nm fm) (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)) r)) run))
+  (let-match erased frd (MkFullRed F B red))
+  (let-match erased po (MkPatchOpen G mk))
+  (def-lvl L)
+  (let ((erased pf) (erased pg)) (values (prove-predates F L) (prove-predates G L)))
+  (def-fns L $ (erased run : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+      (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+      (erased (Connected dm em nm fm) cn) -> (erased (Or (Reduces B dm em nm fm) (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)) r))
+    (let-match erased (full-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en) (OrR _ _ fa)
+      ((OrL _ _ bad) (OrL _ _ (red (predates pf) dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol cn bad))))
+    (let ((erased ids) (erased io)) (iota-exists dc))
+    (let ((erased h1) (erased el) (erased lh) (erased uh)) (h1-list dc dm ec nc fc ksc rc em nm fm ksm as hl ids en ok io))
+    (let ((erased uid)) (respects-under ids ids ids dc (respects-id-right dc ids ids io (iota-length dc ids io)) (iota-length dc ids io)))
+    (OrR _ _ (MkEmbedOut dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 io el lh uh fa
+      (h1-morph-e dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu io el lh ids uid)
+      (h1-morph-n dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu io el lh ids uid)
+      (mk (predates pg) dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu fa io el lh pb))))
+  (values L B run))
