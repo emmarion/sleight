@@ -303,3 +303,243 @@
   (let-match erased (nth-fn _ f al a2' wt q5 pb2) (Refl _ _))
   (let-match erased (nth-fn _ e wt c2 ut q6 put) (Refl _ _))
   (values (Refl _ a4) v ev (ItS f 2 v be sp1 pv2 (two-step f be sg3 sp1 q3 pq)) pev q7 (Refl _ t4)))
+
+; converse_part's four pieces, case by case, over a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12) and 5 on (C3).
+(def-adts $ (C4 : ((Sub) x0 x1) ((Rg) h45) ((Pc) o) -> Type)
+  enum
+  (many C4No : (erased (Sub) x0 x1) -> (C4 x0 x1 (MkRg 5 9) (PcNil)))
+  (many C4A : (erased (Rg) h34 hx s4) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub s4 (MkRg 5 9) (Nil (Rg))) (MkRg 5 9)
+      (PcPre (Cons (Sub) (MkSub s4 h34 (Nil (Rg))) (Nil (Sub))))))
+  (many C4B5 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 5 5) f41 (Nil (Rg))) f41
+      (PcPre (Cons (Sub) (MkSub (MkRg 5 5) h34 (Nil (Rg))) (Nil (Sub))))))
+  (many C4B6 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Nil (Rg))) (MkRg 5 9)
+      (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h34 (Cons (Rg) f41 (Nil (Rg)))) (Nil (Sub))))))
+  (many C4B7 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Nil (Rg))) (MkRg 5 9)
+      (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h34 (Cons (Rg) f41 (Cons (Rg) (MkRg 5 9) (Nil (Rg))))) (Nil (Sub))))))
+  (many C4F6 : (erased (Rg) h34 hx f41 g1) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Cons (Rg) g1 (Nil (Rg)))) g1
+      (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h34 (Cons (Rg) f41 (Nil (Rg)))) (Nil (Sub))))))
+  (many C4F7 : (erased (Rg) h34 hx f41 g1 g2) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Cons (Rg) g1 (Cons (Rg) g2 (Nil (Rg))))) g2
+      (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h34 (Cons (Rg) f41 (Cons (Rg) g1 (Nil (Rg))))) (Nil (Sub)))))))
+
+(def-adts $ (C5 : ((Sub) x2) ((Rg) h45 u) ((List (Sub)) q) -> Type)
+  enum
+  (many C5No : (erased (Sub) x2) (erased (Rg) h45) -> (C5 x2 h45 (MkRg 5 9) (Nil (Sub))))
+  (many C5A : (erased (Rg) s s5 h45) -> (C5 (MkSub s s5 (Nil (Rg))) h45 s (Cons (Sub) (MkSub s5 h45 (Nil (Rg))) (Nil (Sub)))))
+  (many C5B : (erased (Rg) s5 s6 s7 h45) -> (C5 (MkSub (MkRg 7 7) s5 (Cons (Rg) s6 (Cons (Rg) s7 (Nil (Rg))))) h45 (MkRg 7 7)
+      (Cons (Sub) (MkSub s5 h45 (Nil (Rg))) (Cons (Sub) (MkSub s6 (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub s7 (MkRg 5 9) (Nil (Rg))) (Nil (Sub))))))))
+
+(def-adts $ (C12 : ((Sub) x3 x4) ((Rg) h23) ((Pc) o) -> Type)
+  enum
+  (many C12No : (erased (Sub) x3 x4) -> (C12 x3 x4 (MkRg 5 9) (PcNil)))
+  (many C12F6 : (erased (Rg) b x0 c d) -> (C12 (MkSub (MkRg 6 6) b (Cons (Rg) x0 (Nil (Rg)))) (MkSub c d (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 6 6) x0 (Cons (Rg) d (Nil (Rg)))) (Nil (Sub)))))))
+  (many C12F7 : (erased (Rg) b x0 x1 c d) -> (C12 (MkSub (MkRg 7 7) b (Cons (Rg) x0 (Cons (Rg) x1 (Nil (Rg))))) (MkSub c d (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 7 7) x0 (Cons (Rg) x1 (Cons (Rg) d (Nil (Rg))))) (Nil (Sub)))))))
+  (many C12P : (erased (Rg) a b c) -> (C12 (MkSub a b (Nil (Rg))) (MkSub c (MkRg 5 9) (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub a (MkRg 5 9) (Nil (Rg))) (Nil (Sub)))))))
+  (many C12P5 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 5 5) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 5 5) d (Nil (Rg))) (Nil (Sub)))))))
+  (many C12P6 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 6 6) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 6 6) (MkRg 5 9) (Cons (Rg) d (Nil (Rg)))) (Nil (Sub)))))))
+  (many C12P7 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 7 7) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+      (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 7 7) (MkRg 5 9) (Cons (Rg) (MkRg 5 9) (Cons (Rg) d (Nil (Rg)))))
+        (Nil (Sub))))))))
+
+(def-adts $ (C3 : ((Rg) h23) ((List (Sub)) rest) ((Pc) o) -> Type)
+  enum
+  (many C3No : (erased (Rg) h23) (erased (List (Sub)) rest) -> (C3 h23 rest (PcNil)))
+  (many C3N0 : (erased (Rg) h23) -> (C3 h23 (Nil (Sub)) (PcPre (Cons (Sub) (MkSub (MkRg 5 5) h23 (Nil (Rg))) (Nil (Sub))))))
+  (many C3N1 : (erased (Rg) h23 s5 h5) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Nil (Sub))) (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h23 (Nil (Rg))) (Nil (Sub))))))
+  (many C3N2a : (erased (Rg) h23 h5 h6) -> (C3 h23 (Cons (Sub) (MkSub (MkRg 5 9) h5 (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 5 9) h6 (Nil (Rg))) (Nil (Sub))))
+      (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h23 (Nil (Rg))) (Nil (Sub))))))
+  (many C3N2b : (erased (Rg) h23 s5 h5 s6 h6) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg))) (Nil (Sub))))
+      (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h23 (Cons (Rg) s5 (Cons (Rg) s6 (Nil (Rg))))) (Nil (Sub))))))
+  (many C3N3 : (erased (Rg) h23 s5 h5 s6 h6 s7 h7) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg)))
+      (Cons (Sub) (MkSub s7 h7 (Nil (Rg))) (Nil (Sub))))) (PcPre (Cons (Sub) (MkSub (MkRg 8 8) h23 (Cons (Rg) s5 (Cons (Rg) s6 (Cons (Rg) s7 (Nil (Rg))))))
+      (Nil (Sub)))))))
+
+(def-adts $ (PcA : ((Pc) c) ((List (Sub)) q r) -> Type)
+  enum
+  (many PcANil : (erased (List (Sub)) q) -> (PcA (PcNil) q (Nil (Sub))))
+  (many PcAPre : (erased (List (Sub)) pre q r) (erased (LApp (Sub) pre q r) a) -> (PcA (PcPre pre) q r)))
+
+(def-adts $ (ConvOk : ((List (Sub)) p) ((Rg) u) ((List (Sub)) r) -> Type)
+  enum
+  (many CvShort : (erased (List (Sub)) p) -> (ConvOk p (MkRg 5 9) (Nil (Sub))))
+  (many CvOk : (erased (Sub) x0 x1 x2 x3 x4) (erased (List (Sub)) rest q5 r4 r3 r) (erased (Rg) h45 h23 u) (erased (Pc) o4 o12 o3)
+      (erased (C4 x0 x1 h45 o4) c4) (erased (C5 x2 h45 u q5) c5) (erased (C12 x3 x4 h23 o12) c12) (erased (C3 h23 rest o3) c3)
+      (erased (PcA o4 q5 r4) a4) (erased (PcA o3 r4 r3) a3) (erased (PcA o12 r3 r) a12)
+      -> (ConvOk (Cons (Sub) x0 (Cons (Sub) x1 (Cons (Sub) x2 (Cons (Sub) x3 (Cons (Sub) x4 rest))))) u r)))
+
+(def-fns _ $ (many rg-is : (many (Rg) r) (many (Nat) a b) -> (many (Bool) ok) (erased (IfT ok (Eq (Rg) r (MkRg a b))) w))
+  (let-match many r (MkRg c dd))
+  (let-match many (nat-eq c a) (Equal _ _ _) (else (values (BFalse) (IfF _))))
+  (let-match many (nat-eq dd b) (Equal _ _ _) (else (values (BFalse) (IfF _))))
+  (values (BTrue) (IfY _ (Refl _ r))))
+
+(def-fns _ $ (many conv4-c : (many (Sub) x0 x1) -> (many (Rg) h45) (many (Pc) o) (erased (C4 x0 x1 h45 o) w))
+  (let-match many x0 (MkSub h34 hx fx))
+  (let-match many x1 (MkSub s4 f41 fb))
+  (let-match many fx (Nil _) (else (values r59 (PcNil) (C4No x0 x1))))
+  (match many fb _
+    ((Cons _ g1 gs)
+      (match many gs _
+        ((Nil _)
+          (let ((many ok) (erased w)) (rg-is s4 6 6))
+          (let-match many ok (BTrue) ((BFalse) (values r59 (PcNil) (C4No x0 x1))))
+          (let-match erased w (IfY _ e1))
+          (let-match erased e1 (Refl _ _))
+          (values g1 (PcPre $ Cons _ (MkSub (MkRg 6 6) h34 (Cons _ f41 (Nil _))) (Nil _)) (C4F6 h34 hx f41 g1)))
+        ((Cons _ g2 gs2)
+          (let-match many gs2 (Nil _) (else (values r59 (PcNil) (C4No x0 x1))))
+          (let ((many ok) (erased w)) (rg-is s4 7 7))
+          (let-match many ok (BTrue) ((BFalse) (values r59 (PcNil) (C4No x0 x1))))
+          (let-match erased w (IfY _ e1))
+          (let-match erased e1 (Refl _ _))
+          (values g2 (PcPre $ Cons _ (MkSub (MkRg 7 7) h34 (Cons _ f41 (Cons _ g1 (Nil _)))) (Nil _)) (C4F7 h34 hx f41 g1 g2)))))
+    ((Nil _)
+      (let ((many ok0) (erased w0)) (rg-is f41 5 9))
+      (match many ok0 _
+        ((BTrue) (let-match erased w0 (IfY _ e0)) (let-match erased e0 (Refl _ _))
+          (values r59 (PcPre $ Cons _ (MkSub s4 h34 (Nil _)) (Nil _)) (C4A h34 hx s4)))
+        ((BFalse)
+          (let ((many ok5) (erased w5)) (rg-is s4 5 5))
+          (let-match many ok5 (BFalse) ((BTrue) (let-match erased w5 (IfY _ e5)) (let-match erased e5 (Refl _ _))
+            (values f41 (PcPre $ Cons _ (MkSub (MkRg 5 5) h34 (Nil _)) (Nil _)) (C4B5 h34 hx f41))))
+          (let ((many ok6) (erased w6)) (rg-is s4 6 6))
+          (let-match many ok6 (BFalse) ((BTrue) (let-match erased w6 (IfY _ e6)) (let-match erased e6 (Refl _ _))
+            (values r59 (PcPre $ Cons _ (MkSub (MkRg 6 6) h34 (Cons _ f41 (Nil _))) (Nil _)) (C4B6 h34 hx f41))))
+          (let ((many ok7) (erased w7)) (rg-is s4 7 7))
+          (let-match many ok7 (BTrue) ((BFalse) (values r59 (PcNil) (C4No x0 x1))))
+          (let-match erased w7 (IfY _ e7))
+          (let-match erased e7 (Refl _ _))
+          (values r59 (PcPre $ Cons _ (MkSub (MkRg 7 7) h34 (Cons _ f41 (Cons _ r59 (Nil _)))) (Nil _)) (C4B7 h34 hx f41)))))))
+
+(def-fns _ $ (many conv5-c : (many (Sub) x2) (many (Rg) h45) -> (many (Rg) u) (many (List (Sub)) q) (erased (C5 x2 h45 u q) w))
+  (let-match many x2 (MkSub s s5 fs))
+  (let-match many fs (Cons _ s6 r1) ((Nil _) (values s (Cons _ (MkSub s5 h45 (Nil _)) (Nil _)) (C5A s s5 h45))))
+  (let-match many r1 (Cons _ s7 r2) ((Nil _) (values r59 (Nil _) (C5No x2 h45))))
+  (let-match many r2 (Nil _) (else (values r59 (Nil _) (C5No x2 h45))))
+  (let ((many ok) (erased w)) (rg-is s 7 7))
+  (let-match many ok (BTrue) ((BFalse) (values r59 (Nil _) (C5No x2 h45))))
+  (let-match erased w (IfY _ e1))
+  (let-match erased e1 (Refl _ _))
+  (values (MkRg 7 7) (Cons _ (MkSub s5 h45 (Nil _)) $ Cons _ (MkSub s6 r59 (Nil _)) $ Cons _ (MkSub s7 r59 (Nil _)) (Nil _)) (C5B s5 s6 s7 h45)))
+
+(def-fns _ $ (many conv12-c : (many (Sub) x3 x4) -> (many (Rg) h23) (many (Pc) o) (erased (C12 x3 x4 h23 o) w))
+  (let-match many x4 (MkSub c dd fy))
+  (let-match many fy (Nil _) (else (values r59 (PcNil) (C12No x3 x4))))
+  (let-match many x3 (MkSub a b fa))
+  (match many fa _
+    ((Cons _ y0 ys)
+      (match many ys _
+        ((Nil _)
+          (let ((many ok) (erased w)) (rg-is a 6 6))
+          (let-match many ok (BTrue) ((BFalse) (values r59 (PcNil) (C12No x3 x4))))
+          (let-match erased w (IfY _ e1))
+          (let-match erased e1 (Refl _ _))
+          (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 6 6) y0 (Cons _ dd (Nil _))) (Nil _)) (C12F6 b y0 c dd)))
+        ((Cons _ y1 ys2)
+          (let-match many ys2 (Nil _) (else (values r59 (PcNil) (C12No x3 x4))))
+          (let ((many ok) (erased w)) (rg-is a 7 7))
+          (let-match many ok (BTrue) ((BFalse) (values r59 (PcNil) (C12No x3 x4))))
+          (let-match erased w (IfY _ e1))
+          (let-match erased e1 (Refl _ _))
+          (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 7 7) y0 (Cons _ y1 (Cons _ dd (Nil _)))) (Nil _)) (C12F7 b y0 y1 c dd)))))
+    ((Nil _)
+      (let ((many ok0) (erased w0)) (rg-is dd 5 9))
+      (match many ok0 _
+        ((BTrue) (let-match erased w0 (IfY _ e0)) (let-match erased e0 (Refl _ _))
+          (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub a r59 (Nil _)) (Nil _)) (C12P a b c)))
+        ((BFalse)
+          (let ((many ok5) (erased w5)) (rg-is a 5 5))
+          (let-match many ok5 (BFalse) ((BTrue) (let-match erased w5 (IfY _ e5)) (let-match erased e5 (Refl _ _))
+            (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 5 5) dd (Nil _)) (Nil _)) (C12P5 b c dd))))
+          (let ((many ok6) (erased w6)) (rg-is a 6 6))
+          (let-match many ok6 (BFalse) ((BTrue) (let-match erased w6 (IfY _ e6)) (let-match erased e6 (Refl _ _))
+            (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 6 6) r59 (Cons _ dd (Nil _))) (Nil _)) (C12P6 b c dd))))
+          (let ((many ok7) (erased w7)) (rg-is a 7 7))
+          (let-match many ok7 (BTrue) ((BFalse) (values r59 (PcNil) (C12No x3 x4))))
+          (let-match erased w7 (IfY _ e7))
+          (let-match erased e7 (Refl _ _))
+          (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 7 7) r59 (Cons _ r59 (Cons _ dd (Nil _)))) (Nil _)) (C12P7 b c dd)))))))
+
+(def-fns _ $ (many conv3-c : (many (Rg) h23) (many (List (Sub)) rest) -> (many (Pc) o) (erased (C3 h23 rest o) w))
+  (let-match many rest (Cons _ x5 r1) ((Nil _) (values (PcPre $ Cons _ (MkSub (MkRg 5 5) h23 (Nil _)) (Nil _)) (C3N0 h23))))
+  (let-match many x5 (MkSub s5 h5 f5))
+  (let-match many f5 (Nil _) (else (values (PcNil) (C3No h23 rest))))
+  (let-match many r1 (Cons _ x6 r2) ((Nil _) (values (PcPre $ Cons _ (MkSub (MkRg 6 6) h23 (Nil _)) (Nil _)) (C3N1 h23 s5 h5))))
+  (let-match many x6 (MkSub s6 h6 f6))
+  (let-match many f6 (Nil _) (else (values (PcNil) (C3No h23 rest))))
+  (match many r2 _
+    ((Nil _)
+      (let ((many oka) (erased wa)) (rg-is s5 5 9))
+      (let ((many okb) (erased wb)) (rg-is s6 5 9))
+      (let ((many b2)) (values (PcPre $ Cons _ (MkSub (MkRg 7 7) h23 (Cons _ s5 (Cons _ s6 (Nil _)))) (Nil _))))
+      (match many oka _
+        ((BTrue)
+          (match many okb _
+            ((BTrue) (let-match erased wa (IfY _ ea)) (let-match erased wb (IfY _ eb)) (let-match erased ea (Refl _ _)) (let-match erased eb (Refl _ _))
+              (values (PcPre $ Cons _ (MkSub (MkRg 7 7) h23 (Nil _)) (Nil _)) (C3N2a h23 h5 h6)))
+            ((BFalse) (values b2 (C3N2b h23 s5 h5 s6 h6)))))
+        ((BFalse) (values b2 (C3N2b h23 s5 h5 s6 h6)))))
+    ((Cons _ x7 r3)
+      (let-match many x7 (MkSub s7 h7 f7))
+      (let-match many f7 (Nil _) (else (values (PcNil) (C3No h23 rest))))
+      (let-match many r3 (Nil _) (else (values (PcNil) (C3No h23 rest))))
+      (values (PcPre $ Cons _ (MkSub (MkRg 8 8) h23 (Cons _ s5 (Cons _ s6 (Cons _ s7 (Nil _))))) (Nil _)) (C3N3 h23 s5 h5 s6 h6 s7 h7)))))
+
+(def-fns _ $ (many pc-ap : (many (Pc) c) (many (List (Sub)) q) -> (many (List (Sub)) r) (erased (PcA c q r) w))
+  (match many c _
+    ((PcNil) (values (Nil _) (PcANil q)))
+    ((PcPre pre) (let ((many r) (erased a)) (app-c _ pre q)) (values r (PcAPre pre q r a)))))
+
+(def-fns _ $ (many conv-c : (many (List (Sub)) p) -> (many (Rg) u) (many (List (Sub)) r) (erased (ConvOk p u r) w))
+  (let-match many p (Cons _ x0 p1) ((Nil _) (values r59 (Nil _) (CvShort p))))
+  (let-match many p1 (Cons _ x1 p2) ((Nil _) (values r59 (Nil _) (CvShort p))))
+  (let-match many p2 (Cons _ x2 p3) ((Nil _) (values r59 (Nil _) (CvShort p))))
+  (let-match many p3 (Cons _ x3 p4) ((Nil _) (values r59 (Nil _) (CvShort p))))
+  (let-match many p4 (Cons _ x4 rest) ((Nil _) (values r59 (Nil _) (CvShort p))))
+  (let ((many h45) (many o4) (erased c4)) (conv4-c x0 x1))
+  (let ((many u) (many q5) (erased c5)) (conv5-c x2 h45))
+  (let ((many h23) (many o12) (erased c12)) (conv12-c x3 x4))
+  (let ((many o3) (erased c3)) (conv3-c h23 rest))
+  (let ((many r4) (erased a4)) (pc-ap o4 q5))
+  (let ((many r3) (erased a3)) (pc-ap o3 r4))
+  (let ((many r) (erased a12)) (pc-ap o12 r3))
+  (values u r (CvOk x0 x1 x2 x3 x4 rest q5 r4 r3 r h45 h23 u o4 o12 o3 c4 c5 c12 c3 a4 a3 a12)))
+
+; Whether a is in a range, decided.
+(def-adts $ (InOut : ((Bool) b) ((Nat) a) ((Rg) r) -> Type)
+  enum
+  (many IOIn : (erased (Nat) a) (erased (Rg) r) (erased (InRg a r) p) -> (InOut (BTrue) a r))
+  (many IOOut : (erased (Nat) a) (erased (Rg) r) (erased (OutRg a r) p) -> (InOut (BFalse) a r)))
+
+(def-fns _ $ (many rg-test : (many (Nat) a) (many (Rg) r) -> (many (Bool) b) (erased (InOut b a r) w))
+  (let-match many r (MkRg lo hi))
+  (let ((many m) (erased c))
+    (match many (nat-cmp a 9) (((Nat) m) ((Clamp a m) c))
+      ((CLt _ _ _ _ p) (values a (ClLo a p)))
+      ((CEq _ _ _) (values 9 (ClHi 9 (lt-succ 8))))
+      ((CGt _ _ _ _ q) (values 9 (ClHi a (lt-trans 8 9 a (lt-succ 8) q))))))
+  (let-match many (le-dec lo m) (LeY _ _ p) ((LeN _ _ p) (values (BFalse) (IOOut a r (OutLo a m lo hi c p)))))
+  (match many (le-dec m hi) _
+    ((LeY _ _ q) (values (BTrue) (IOIn a r (MkInRg a m lo hi c p q))))
+    ((LeN _ _ q) (values (BFalse) (IOOut a r (OutHi a m lo hi c q))))))
+
+(def-adts $ (Tgt : ((Nat) nhub) ((List (List (Sub))) drs rt) -> Type)
+  enum
+  (many TgNil : (erased (Nat) nhub) -> (Tgt nhub (Nil (List (Sub))) (Nil (List (Sub)))))
+  (many TgIn : (erased (Nat) nhub) (erased (List (Sub)) r q) (erased (Rg) u) (erased (List (List (Sub))) drs rt) (erased (ConvOk r u q) cv)
+      (erased (Tgt nhub drs rt) rest) -> (Tgt nhub (Cons (List (Sub)) r drs) (Cons (List (Sub)) q rt)))
+  (many TgOut : (erased (Nat) nhub) (erased (List (Sub)) r q) (erased (Rg) u) (erased (List (List (Sub))) drs rt) (erased (ConvOk r u q) cv)
+      (erased (OutRg nhub u) o) (erased (Tgt nhub drs rt) rest) -> (Tgt nhub (Cons (List (Sub)) r drs) rt)))
+
+(def-fns _ $ (many pick-target-c : (many (Nat) nhub) (subterm many (List (List (Sub))) drs) -> (many (List (List (Sub))) rt) (erased (Tgt nhub drs rt) w))
+  (let-match many drs (Cons _ r rest) ((Nil _) (values (Nil _) (TgNil nhub))))
+  (let ((many u) (many q) (erased cv)) (conv-c r))
+  (let ((many rt1) (erased w1)) (notail $ pick-target-c nhub rest))
+  (let ((many b) (erased io)) (rg-test nhub u))
+  (match many b _
+    ((BTrue) (values (Cons _ q rt1) (TgIn nhub r q u rest rt1 cv w1)))
+    ((BFalse) (let-match erased io (IOOut _ _ o)) (values rt1 (TgOut nhub r q u rest rt1 cv o w1)))))
