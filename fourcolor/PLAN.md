@@ -115,8 +115,13 @@ cubic hypermap of genus 0 that is bridgeless (on `hypermap.sl` and
 A and the cube reduction of part B are done; what is open is Gonthier's
 theorem for plain cubic maps. `inductfc.sl` proves `FourColorFrom`
 from it (`inductgoal.sl` checks it): an `Analysis` (`induct.sl`) gives
-`FourColor`. `fcgoal.sl` proves `FourColor` from the steps of part B
-still open, taken as arguments (its entry below). `reduce.sl` and `reduce2.sl` are the
+`FourColor`. `fcgoal.sl` proves `FourColor` from the four computed
+steps of part B, taken as arguments, and `fcfinal.sl` proves `FourColor`
+itself, with no hypotheses, in one unit with the runs that compute those
+steps (their entries below). That proof relies on the evaluator and on
+the compiled `native-compute` runs being correct (DESIGN.md §29, §72),
+uses no axiom of its own, and has been checked against Coq's statements
+only by reading. `reduce.sl` and `reduce2.sl` are the
 intermediate forms (with `PlaneMap`, and with all bridgeless hypermaps);
 `reduce2-goal.sl`, `cube-goal.sl` and `reduce3-goal.sl` check them alone.
 Checked by both compilers with
@@ -842,7 +847,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   unav/qztproof embed4proof fcfinal` (each `.sl`), with `--goal proved`.
   In one run on a 4-core cloud VM, with the computations of the four
   proof files, it passed with slc in about 1610 s (27 minutes), at most
-  about 3.3 GB resident in one process.
+  about 3.3 GB resident in one process. In test runs on the chain of
+  `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
+  second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check
   them: `patch-open` proves embed5.sl's `PatchOpen`. Without `NodeRing`,
