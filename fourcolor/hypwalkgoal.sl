@@ -1,0 +1,26 @@
+; Every hypermap has a unique genus; the dual and the mirror keep it; WalkupE does not raise it.
+(def-adts $ (HypGenus : -> Type)
+  enum
+  (many MkHypGenus : (erased (Level) L1)
+      (erased (Fn L1 (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Nat) gen) (erased (Genus d e n f gen) r)) even)
+      (erased (Level) L2)
+      (erased (Fn L2 (erased (Nat) d g1 g2) (erased (List (Nat)) e n f) (erased (Genus d e n f g1) p) (erased (Genus d e n f g2) q)
+          -> (erased (Eq (Nat) g1 g2) r)) uniq)
+      (erased (Level) L3)
+      (erased (Fn L3 (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
+          -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn)
+          (erased (Genus d ei fi ni gen) r)) dual)
+      (erased (Level) L4)
+      (erased (Fn L4 (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
+          -> (erased (List (Nat)) fn ni fi) (erased (Hypermap d fn ni fi) h2) (erased (Respects f n fn) rfn) (erased (Perm d n ni) pn)
+          (erased (Perm d f fi) pf) (erased (Genus d fn ni fi gen) r)) mirror)
+      (erased (Level) L5)
+      (erased (Fn L5 (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h) (erased (Genus (Succ d) e n f gen) p)
+          (erased (Lt z (Succ d)) lz)
+          -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s n n2) cn) (erased (Cut d z s f f2) cf)
+          (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le)) walkup)
+      -> (HypGenus)))
+
+(goal erased (HypGenus))
+(qed (MkHypGenus (level-of even-genus) even-genus (level-of genus-unique) genus-unique (level-of genus-dual) genus-dual
+  (level-of genus-mirror) genus-mirror (level-of walkup-e) walkup-e))

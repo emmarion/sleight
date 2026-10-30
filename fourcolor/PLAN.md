@@ -138,7 +138,18 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   is a hypermap (face `nd`, edge `e`, node e∘nd⁻¹) of genus 0 in the
   sense of the Euler equation, and bridgeless; `Colored` is equivalent to
   a Gonthier-style four-colouring. Load after `labels.sl`.
-- Still open: the rest of part B.
+- `hypeuler.sl`, `hypderived.sl`, `hyprelabel.sl`, `hypwalkup.sl`,
+  `hypgeom.sl` (load in that order after `hypplane.sl`):
+  `hypwalkgoal.sl` checks that every hypermap has a unique genus, that
+  the dual and the mirror keep it, and that WalkupE does not raise it.
+  The genus is reached by building the face permutation from the
+  identity one transposition at a time, not by Walkup induction. Also
+  there: permN and permF, renaming darts (`genus-relabel`), WalkupN and
+  WalkupF, and as definitions only, the Jordan property and the special
+  maps and face paths of `geometry.v`.
+- Still open: the rest of part B, including planar <-> Jordan, the
+  equality case of the Walkup genus (`genus_WalkupE_eq`) and the
+  lemmas of `geometry.v`.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
