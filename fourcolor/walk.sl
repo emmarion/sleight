@@ -87,3 +87,23 @@
     (agree-nth nd nd2 m q c gn pn (notin-sub q m s sb out))
     (notin-fresh q n s2 s sf out (pm-edge-bound e nd a q n pm pe l))
     (walk-move e nd e2 nd2 s s2 m c b n w1 pm l sf ge gn sb)))
+
+(def-fns _ $ (erased apart-sym : (erased (Nat) a b) (erased (Apart (Nat) Lt a b) p) -> (erased (Apart (Nat) Lt b a) q))
+  (match erased p _ ((ApLt _ _ _ _ l) (ApGt _ _ b a l)) ((ApGt _ _ _ _ l) (ApLt _ _ b a l))))
+
+(def-fns _ $ (erased notin-head : (erased (Nat) x y) (erased (List (Nat)) s) (erased (NotIn x (Cons (Nat) y s)) p) ->
+    (erased (Apart (Nat) Lt x y) ne) (erased (NotIn x s) rest))
+  (let-match erased p (NotInCons _ _ _ ne rest))
+  (values ne rest))
+
+(def-fns _ $ (erased sub-cons : (erased (Nat) y) (erased (List (Nat)) m s) (subterm erased (Sub m s) sb) -> (erased (Sub m (Cons (Nat) y s)) r))
+  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SubNil _)))
+  (SubCons x m1 (Cons _ y s) (InThere x y s p) (sub-cons y m1 s sb1)))
+
+(def-fns _ $ (erased sub-refl : (subterm erased (List (Nat)) s) -> (erased (Sub s s) r))
+  (let-match erased s (Cons _ x s1) ((Nil _) (SubNil _)))
+  (SubCons x s1 s (InHere x s1) (sub-cons x s1 s1 (sub-refl s1))))
+
+(def-fns _ $ (erased sf-of-sub : (erased (List (Nat)) m s) (erased (Nat) n) (subterm erased (Sub m s) sb) -> (erased (SubFresh m s n) r))
+  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SFNil s n)))
+  (SFOld x n m1 s p (sf-of-sub m1 s n sb1)))

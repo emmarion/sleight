@@ -94,3 +94,22 @@
     ((EBOld _ _ _ _ q) (lt-weaken b (Succ n0) (lt-weaken b n0 (pm-edge-bound e0 nd0 a b n0 (subterm sm) m0 q l0))))
     ((EBLow _ _) (lt-succ (Succ n0)))
     ((EBHigh _ _) (lt-weaken n0 (Succ n0) (lt-succ n0)))))
+
+(def-fns _ $ (erased grow-exists : (erased (List (Nat)) e) (erased (Nat) n) (erased (Length (Nat) e n) l) ->
+    (erased (List (Nat)) e2) (erased (EdgeGrow e n e2) g))
+  (let ((erased e1) (erased s1)) (snoc-exists _ e (Succ n)))
+  (let ((erased e2) (erased s2)) (snoc-exists _ e1 n))
+  (values e2 (MkEdgeGrow e e1 e2 n l s1 s2)))
+
+(def-fns _ $ (erased insert-exists : (erased (List (Nat)) nd) (erased (Nat) d x c) (erased (Nth (Nat) nd d c) p) ->
+    (erased (List (Nat)) nd2) (erased (Insert nd d x nd2) i))
+  (let ((erased k) (erased l)) (length-exists _ nd))
+  (let ((erased nd1) (erased s)) (setnth-exists _ nd k d x l (nth-lt-length _ nd d k c p l)))
+  (let ((erased nd2) (erased q)) (snoc-exists _ nd1 c))
+  (values nd2 (MkInsert nd nd1 nd2 d x c p s q)))
+
+(def-fns _ $ (erased fr-snoc : (erased (List (Nat)) e nd) (erased (Nat) a b q c) (subterm erased (FaceReach e nd a b) r)
+    (erased (Nth (Nat) e b q) pe) (erased (Nth (Nat) nd q c) pn) -> (erased (FaceReach e nd a c) r2))
+  (let-match erased r (FRStep _ _ _ q1 c1 _ pe1 pn1 r1)
+    ((FRHere _ _ _) (FRStep e nd a q c c pe pn (FRHere e nd c))))
+  (FRStep e nd a q1 c1 c pe1 pn1 (fr-snoc e nd c1 b q c r1 pe pn)))
