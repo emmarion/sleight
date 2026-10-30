@@ -1094,7 +1094,7 @@
     (erased (Length (U8) ts cap) q1) (erased (Length (Copy (Nat)) ns cap) q2)
     (many (Mv) d) (many (List (Sy)) l) (many (Nat) i) (erased (List (Sy)) w) (erased (Rg ts ns i e w) rg) (many (Bool) g) (erased (TRun c0 (MkCf d l w) g) tr)
     (many (Rl) rl) (erased (RlOK sk1p rl) k) -> (unique (Ws c0 ts ns cap e) r))
-  (let-match many rl (MkRl d1 lp le rp re d2 lp2 rp2))
+  (let-match many rl (MkRl d1 lp le rp re d2 lp2 rp2 nrp lrp))
   (let-match many (eq-dir d1 d) (Some _ ed) ((None _) (WsNo c0 ts ns cap e tg cn (BFalse))))
   (let-match erased ed (Refl _ _))
   (let-match many re (BFalse) ((BTrue) (WsNo c0 ts ns cap e tg cn (BFalse))))
@@ -1104,7 +1104,7 @@
   (let ((erased ts2) (erased ns2) (unique tg2) (unique cn2) (erased q3) (erased q4) (many wl)) (wr-pre cap ts ns tg1 cn1 q1 q2 i1 e eb x rg1 rp2))
   (let-match many wl (WlOk _ _ _ _ _ p w2 c2 rg2) ((WlNo _ _ _ _ _) (WsDead c0 ts ns cap e)))
   (ws-ts c0 cap e ts ts2 ns ns2 tg2 cn2 q3 q4 d l w g tr d2 l2 p w2 rg2 (BTrue)
-    (TSRl rl _ _ k (MkRApp d d2 lp rp lp2 rp2 l w l2 w2 le (BFalse) sl (MkSde (BFalse) rp rp2 x w w2 (EBV x) c c2)))))
+    (TSRl rl _ _ k (MkRApp d d2 lp rp lp2 rp2 l w l2 w2 le (BFalse) sl (MkSde (BFalse) rp rp2 x w w2 (EBV x) c c2) _ _))))
 
 (def-adts
   ((Tn1 : ((Pk) k) ((Sy) s) -> Type)
