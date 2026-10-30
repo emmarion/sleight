@@ -111,9 +111,12 @@ generated OCaml, which removed `Z.add` calls but not measurable time.
 The job allocates about 7 billion minor-heap words, which may be what
 bounds it more than instruction counts do.
 
-`bb/sk1a.sl` is an experiment that keeps the window in a tag buffer and
-a count array instead of a list (`main-run-a`), still folding before the
-stride and without the skip; in one measurement its job took about 16.0 s
-user, so it is not used. Its stride costs less per symbol than `sw-of` in
-a micro-benchmark, but writing counts, appending and reading cells back
-into lists for the stack took more than that saved.
+`bb/sk1a.sl` is an experiment (`main-run-a`) that keeps the window in a
+tag buffer and a count array, and the stack in one more such pair, with
+an erased relation (`Zr`) tying the arrays to the `Zk` the proofs use; it
+folds after the stride and has the skip. In one measurement its job took
+about 13.6 s user and allocated about 6.0 billion minor-heap words, so it
+is not used. From one profile, most of its allocation seems to be the
+result record each recursive array pass builds per cell, and the per-step
+runner state, rather than tape cells; forcing reads the whole stack back
+into lists and re-entry writes it out again.
