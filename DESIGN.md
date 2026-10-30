@@ -2048,8 +2048,8 @@ A) xs)` is the same memory as the `(Array A ys)` it becomes. Reading an
 be refuted, by a fact or by proof; the one-real-branch rule of §21
 makes this `assume_init` with evidence in place of `unsafe`. Since the
 field of `Copy` is `many`, an element of an `(Array (Copy A) xs)` is
-read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy` and
-`ImmMaybe`; the `-imm` operations take it as evidence. `(ImmSlot s)`
+read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy`,
+`ImmMaybe` and `ImmUSlot`; the `-imm` operations take it as evidence. `(ImmSlot s)`
 says that slot `s` holds an immediate: `ImmVacant` for `vacant-slot`,
 and `ImmPlaced` from an `Immediate` and a `Placed` (§66). Other immediate
 types coerce into `U62`: `U8` and `Char` by unwrapping and rewrapping,
