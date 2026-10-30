@@ -150,7 +150,6 @@
   (let-match erased c (MkCollinear _ _ _ s h1 h2))
   (MkWeak p q r s s h1 h2 (lt-succ s)))
 
-; The shoelace halves of pqr, read off a claim about qpr.
 (def-fns _ $ (erased weak-rev : (erased (Point) p q r) (erased (Weak q p r) w) ->
     (erased (Nat) a b) (erased (Shoelace p q r a) ha) (erased (Shoelace r q p b) hb) (erased (Lt a (Succ b)) l))
   (let-match erased w (MkWeak _ _ _ s1 s2 h1 h2 l))
@@ -175,7 +174,6 @@
   (let-match erased (ring-sound env _ _ s t vert-eq (shoe-ev env _ _ _ _ _ _ _ _ _ s p q r h1) (shoe-ev env _ _ _ _ _ _ _ _ _ t r q p h2)) (Refl _ _))
   (MkCollinear _ _ _ s h1 h2))
 
-; Points s, q, w with x-offsets al and be between them, and a line from u to v rising by ga in x.
 (let ((many a-sx)) (EVar i0))
 (let ((many a-qx)) (EAdd (EVar i0) (EVar i1)))
 (let ((many a-wx)) (EAdd a-qx (EVar i2)))
@@ -233,8 +231,6 @@
   (let-match erased (add-fn sx (Zero) wx sx pw (add-zero-right sx)) (Refl _ _))
   (coll-vert sx sy wy qy))
 
-; For q between s and w in x, and u at or before v: when s and w are weakly left of uv, q weakly right of uv and
-; weakly left of sw, with q strictly right of uv or s and w strictly left of it, the three of s, w, q share an x.
 (def-fns _ $ (erased sq-up : (erased (Point) u v s w q) (erased (XLe u v) xuv) (erased (XLe s q) xsq) (erased (XLe q w) xqw)
     (erased (Weak u v s) ws) (erased (Weak u v w) ww) (erased (Weak s w q) wq) (erased (Weak v u q) wu)
     (erased (Or (Left v u q) (Pair (Left u v s) (Left u v w))) st) -> (erased (Collinear s w q) c))
@@ -265,7 +261,6 @@
               (DomThere _ _ _ _ _ _ la $ DomHere _ _ _ _ _ _ lb (LtZ n1) (LeCons _ _ _ _ (lt-weaken c2 c1 lc) $ LeCons _ _ _ _ le $ LeNil))))
           dl dr)))))
 
-; sq-up with every side reversed.
 (def-fns _ $ (erased sq-down : (erased (Point) u v s w q) (erased (XLe u v) xuv) (erased (XLe s q) xsq) (erased (XLe q w) xqw)
     (erased (Weak v u s) ws) (erased (Weak v u w) ww) (erased (Weak w s q) wq) (erased (Weak u v q) wu)
     (erased (Or (Left u v q) (Pair (Left v u s) (Left v u w))) st) -> (erased (Collinear s w q) c))
@@ -310,7 +305,6 @@
     (sh (EAdd (EVar i0) (EVar i3)) (EVar i4) (EVar i0) (EAdd (EVar i1) (EVar i2)) (EVar i0) (EVar i1)))
   (Some _ vh-eq))
 
-; Nothing at or after t in x is strictly left of a ray from t straight up.
 (def-fns _ $ (erased absurd vh : (erased (Nat) tx ty py qx qy g) (erased (Lt ty py) lt) (erased (Add tx g qx) aq)
     (erased (Left (MkPoint tx ty) (MkPoint tx py) (MkPoint qx qy)) l) -> (erased (False) f))
   (let ((erased d) (erased pd)) (sub py ty (lt-weaken ty py lt)))
@@ -356,7 +350,6 @@
   (let-match erased (ring-sound env _ _ z1 r1 ht-eq vl1 vr1) (Refl _ _))
   (lt-irrefl z1 (dom-dot _ _ _ z1 z1 (DomThere _ _ _ _ _ _ (lt-weaken a2 a1 la) $ DomHere _ _ _ _ _ _ lb (LtZ gp1) (LeCons _ _ _ _ lc $ LeNil)) dl1 dr1)))
 
-; Around t, the order by direction of points lexicographically after t is transitive.
 (def-fns _ $ (erased left-turn : (erased (Point) t p q r) (erased (LexLt t p) lp) (erased (XLe t q) xq) (erased (XLe t r) xr)
     (erased (Left t p q) l1) (erased (Left t q r) l2) -> (erased (Left t p r) l))
   (let-match erased xq (MkXLe tx ty qx qy gq aq))
@@ -399,7 +392,6 @@
 (def-fns _ $ (erased weak-start : (erased (Point) u v) -> (erased (Weak v u u) w))
   (coll-weak v u u (coll-rot u v u (coll-same u v))))
 
-; The cases of the sweep lemmas below; each rules out two segments crossing in its own configuration.
 (def-fns _ $ (erased absurd geo-k1 : (erased (Point) a b c d p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p d) lpd)
     (erased (Left a b c) l1) (erased (Left a b d) l2) (erased (Left b a p) l3) (erased (Left c d p) l4) -> (erased (False) f))
   (collinear-left c d p (sq-up a b c d p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p d lpd)
@@ -453,7 +445,6 @@
   (many BelowR : (erased (Point) a b c d) (erased (LexLt c a) l) (erased (Left d c a) h) -> (Below (MkEdge a b) (MkEdge c d)))
   (many BelowS : (erased (Point) a b d) (erased (Left a b d) h) -> (Below (MkEdge a b) (MkEdge a d))))
 
-; A point p met by the sweep is never below a segment and above a higher one.
 (def-fns _ $ (erased absurd sweep-under-over : (erased (Point) a b c d p) (erased (Below (MkEdge a b) (MkEdge c d)) bl)
     (erased (Compatible a b c d) cp) (erased (LexLt a b) lab) (erased (LexLt c d) lcd) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
     (erased (LexLt c p) lcp) (erased (LexLt p d) lpd) (erased (Left b a p) under) (erased (Left c d p) over) -> (erased (False) f))
@@ -494,7 +485,6 @@
             (absurd (BothRight _ _ _ _ _ lb) (geo-k3 c d a b p lcd lap lpb h lb under over))))))
     (absurd (BelowS _ _ _ h) (geo-k9 a b d p lab lap lpd h under over))))
 
-; A segment ending at a point of the other's span ends above it, when the other is below.
 (def-fns _ $ (erased absurd sweep-end-under : (erased (Point) a b c d) (erased (Below (MkEdge a b) (MkEdge c d)) bl)
     (erased (Compatible a b c d) cp) (erased (LexLt c d) lcd) (erased (LexLt a d) lad) (erased (LexLt d b) ldb)
     (erased (Left b a d) under) -> (erased (False) f))
@@ -529,7 +519,6 @@
             (absurd (BothRight _ _ _ _ la lb) (geo-k5 c d a b lcd lad ldb la lb under))))))
     (absurd (BelowS _ _ _ h) (left-antisym a b d h under))))
 
-; A segment ending at a point of the other's span ends below it, when the other is above.
 (def-fns _ $ (erased absurd sweep-end-over : (erased (Point) a b c d) (erased (Below (MkEdge a b) (MkEdge c d)) bl)
     (erased (Compatible a b c d) cp) (erased (LexLt a b) lab) (erased (LexLt c b) lcb) (erased (LexLt b d) lbd)
     (erased (Left c d b) over) -> (erased (False) f))

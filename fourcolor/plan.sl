@@ -244,7 +244,6 @@
         ((EIFwd _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrR _ _ (Refl _ p)))
         ((EIRev _ _ _ _ n2) (let-match erased (nth-fn _ es m _ _ n1 n2) (Refl _ _)) (OrL _ _ (Refl _ p)))))))
 
-; A drawn point strictly inside the span of a drawn edge is off its line.
 (def-fns _ $ (erased offline-at : (erased (List (Edge)) es) (erased (Drawing es) dr) (erased (Nat) m mp) (erased (Point) a b p q)
     (erased (EdgeIn es m a b) e1) (erased (EdgeIn es mp p q) e2) (erased (LexLt a p) lap) (erased (LexLt p b) lpb) -> (erased (OffLine a b p) o))
   (match erased (cmp-eq _ _ _ _ (nat-cmp m mp)) _
@@ -359,7 +358,6 @@
   (let ((erased r1) (erased q) (erased a) (erased ats) (erased uns)) (split-t es pts k p xs1 hr tus1 pw1 acts1))
   (values (Cons _ x r1) q (LAppCons _ x r1 q xs1 a) (ARCons _ _ _ p x r1 s ats) uns))
 
-; The active edges, bottom to top, are those p is above, then those ending at p, then those p is below.
 (def-fns _ $ (erased split-a : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p)
     (erased (List (Edge)) xs) (erased (Here es pts k p) hr) (subterm erased (PW (Edge) SB xs) pw)
     (erased (AllR (Ctx) (Edge) Act (MkCtx es pts k) xs) acts) ->
@@ -469,7 +467,6 @@
   (ARCons _ _ _ _ y ys (MkSB p q p z (BelowS p q z (left-turn p q r z lq (lex-xle p r lr) (lex-xle p z lz) h (below-fan p r z bl))) cp)
     (allr-turn p q r lq lr h ys sb1 st1 ce1)))
 
-; Inserting an edge from p among edges from p sorted by direction.
 (def-fns _ $ (erased ins-fan : (erased (Point) p q) (erased (LexLt p q) lq) (erased (List (Edge)) xs) (subterm erased (PW (Edge) SB xs) pw)
     (erased (AllR (Point) (Edge) Starts p xs) st) (erased (AllR (Edge) (Edge) CE (MkEdge p q) xs) ce) ->
     (erased (List (Edge)) ys) (erased (Ins (Edge) (MkEdge p q) xs ys) ins) (erased (PW (Edge) SB ys) pw2))
@@ -514,7 +511,6 @@
       ((NcYes _ _ _ _ a b j nm mb) (NcYes pts k n2 e a b j nm (mem-ins _ _ x n1 n2 ins (OrR _ _ mb)))))
     (newc-lift pts k x n1 n2 r1 ins h1)))
 
-; The edges of es2, a suffix of es from position m on, that start at point k, sorted by direction.
 (def-fns _ $ (erased scan-new : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (Point) p) (erased (Here es pts k p) hr)
     (erased (List (Edge)) pre es2) (erased (Nat) m) (erased (LApp (Edge) pre es2 es) ap) (erased (Length (Edge) pre m) lm)
     (subterm erased (AllR (List (Point)) (Edge) Pre pts es2) prs) ->
@@ -881,7 +877,6 @@
   (let-match erased e (Refl _ _))
   (AddSucc a b c1 q1))
 
-; The sweep from point k on, with l the edges active there, bottom to top, and ls their labels.
 (def-fns _ $ (erased sweep : (erased (List (Edge)) es) (erased (Drawing es) dr) (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp)
     (erased (AllR (List (Edge)) (Point) Vert es pts) vs) (erased (AllR (List (Point)) (Edge) Pre pts es) prs)
     (erased (Nat) n) (erased (Length (Point) pts n) len) (erased (Nat) k) (subterm erased (Nat) f) (erased (Add k f n) akf)
@@ -976,7 +971,6 @@
       ((ExtIns _ _ _ i) (ExtIns p s _ (InsT _ p h s1 s3 i))))
     (PWCons _ _ h s3 (allr-ext _ _ h p s1 s3 hh l x3) pw3)))
 
-; The ends of the edges of es2, a suffix of es from position m on, sorted and without repeats.
 (def-fns _ $ (erased pts-of : (erased (List (Edge)) es pre) (subterm erased (List (Edge)) es2) (erased (Nat) m) (erased (LApp (Edge) pre es2 es) ap)
     (erased (Length (Edge) pre m) lm) ->
     (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (AllR (List (Edge)) (Point) Vert es pts) vs)
@@ -1037,7 +1031,6 @@
   (let-match erased pw (PWCons _ _ p ps1 h pw1) ((PWNil _ _) (PANil)))
   (PACons p ps1 (allr-apart p ps1 h) (pts-apart ps1 pw1)))
 
-; The geometric half of part A (SWEEP.md): every drawing has a sweep plan.
 (def-fns _ $ (erased drawing-plan : (erased (List (Edge)) es) (erased (Drawing es) d) -> (erased (SweepPlan es) p))
   (let ((erased pts) (erased sp) (erased vs) (erased en)) (pts-of es (Nil _) es (Zero) (LAppNil _ es) (LengthNil _)))
   (let ((erased n) (erased len)) (length-exists _ pts))
