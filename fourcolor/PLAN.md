@@ -147,11 +147,17 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   in about 4.5 minutes on a 4-core cloud VM. It carries no proofs yet.
 - `red/color.sl` .. `red/check.sl`: a certified Kempe tree and
   `ctree_disjoint` (soundness direction only), over a co-closure stated on
-  partial traces; the initial trees are checked at run time rather than
-  proved, and the link to Coq's `Kempe_coclosure` on complete traces is
-  not proved. `red/run-c.sl` ran all 633 configurations through it in
-  272 s once, with a trivial predicate in place of the ring traces, so
-  that run says nothing yet about the configurations themselves.
+  partial traces whose completions satisfy a predicate on complete traces.
+  `red/init.sl` builds the initial trees together with their
+  certificates. `red/bridge.sl` takes that co-closure to one on complete
+  traces stated after `chromogram.v` (`KCC`), and `KCC` to
+  `Kempe_coclosure` for every set closed by functions at a given level
+  (`kcc-coclosure`, a level factory). Load order: `red.sl configs.sl
+  color.sl ctree.sl gtree.sl grestrict.sl crestrict.sl kempe.sl
+  bridge.sl init.sl check.sl`, then `sanity-c.sl` or `run-c.sl`.
+  `red/run-c.sl` ran all 633 configurations through it in about 270 s in
+  two runs, with a trivial predicate in place of the ring traces, so
+  those runs say nothing yet about the configurations themselves.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
