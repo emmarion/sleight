@@ -57,6 +57,43 @@ The invariant, for every component K of M_t that has active edges:
    adjacent in the sweep order cannot create an interleaving, by a
    short case analysis on positions.
 
+## Refinement: one chain of corner groups
+
+Components can be avoided altogether. When a point v has no edge to an
+earlier point, add a **virtual** edge from v to a corner next to v's
+place in the sweep order. A virtual edge is an edge of the map but not
+of the drawing; a colouring of the map is then proper on a supergraph,
+which is still enough. Start with a virtual point v0 joined to the first
+point. The map is then connected throughout, and the frontier is one
+cyclic list of **groups**: a group is a corner (the corner after a dart
+d) with the active edges whose corner it is, in sweep order. Groups may
+be empty. The invariant:
+
+- the darts of the groups are distinct;
+- for each group and the next one, cyclically, a face walk from nd(d)
+  to e(d') that passes no group's corner (`Walk` in `walk.sl`);
+- each group's items are labelled with the point of its dart.
+
+The step at v, with the list rotated so that the run of closed edges
+starts in the head group (d, B ++ R):
+
+- the first edge is a pendant at d: groups (d, B), (y1, []), (x1, R
+  without its head), the rest; the two new links are empty walks and
+  the third is the old link out of the head group;
+- each further closed edge, at the corner c of the third group, is a
+  chord from the corner after y1 to c: the link from the second group
+  to the third, plus the corner step at c, is the `FaceReach` that
+  `JoinFace` needs; the new third group is (x, ...), and the old link
+  is dropped with the face it closes;
+- an empty third group in the way is dropped by joining the walks on
+  either side of it through its corner, which is no longer in the set
+  of corners to avoid;
+- finally v's new active edges go into the second group (y1, ...).
+
+Inserting y(i+1) right after y1 gives v the rotation y1, y(i+1), y(i),
+.., y2, which is the order that makes each wedge between two of v's
+edges close into its own face.
+
 ## Reading the colouring back
 
 Each point gets one representative dart. Every dart is labelled with its
