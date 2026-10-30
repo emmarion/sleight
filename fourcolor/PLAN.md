@@ -846,8 +846,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c red/bproof
   unav/qztproof embed4proof fcfinal` (each `.sl`), with `--goal proved`.
   In one run on a 4-core cloud VM, with the computations of the four
-  proof files, it passed with slc in about 1610 s (27 minutes), at most
-  about 3.3 GB resident in one process. In test runs on the chain of
+  proof files, it passed with slc in about 1610 s (27 minutes), and in
+  another with the reference compiler (under `ulimit -s unlimited`) in
+  about 3360 s (56 minutes), each at most about 3.3 GB resident in one
+  process. In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
