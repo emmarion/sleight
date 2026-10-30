@@ -401,3 +401,129 @@
     (add-lt-cancel b d2 d s2 s a4 a2 (add-mono-lt dc dr dd s2 s ltd (add-comm dd dc s2 a3) (add-comm dd dr s a1)))
     (bridgeless-patch d2 dd dc e2 n2 f2 ed nd fd ec nc fc hd2 hr2 bd br2 pt2 bld blc)
     (MkSewSide d2 dd dc a e2 n2 f2 ed nd fd ec nc fc bd p1 q hd2 hr2 cp pt2 cmap ra)))
+
+; A side of a ring x0 :: p: its disk map (dd, ed, nd, fd) on bd and remainder map on br, as snip-exists gives them.
+(def-adts $ (BHalf : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) dd) ((List (Nat)) ed nd fd bd) -> Type)
+  enum
+  (many MkBHalf : (erased (Nat) d x0 dd dr) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br zs RV)
+      (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
+      (erased (RevApp (Nat) (Cons (Nat) x0 p) (Nil (Nat)) RV) rv) (erased (Respects hr br RV) rbr) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds)
+      (erased (AppN RV zs hr) ap) -> (BHalf d e n f x0 p dd ed nd fd bd)))
+
+(def-fns _ $ (erased half-of : (erased (Nat) d x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) -> (erased (Nat) dd) (erased (List (Nat)) ed nd fd bd) (erased (BHalf d e n f x0 p dd ed nd fd bd) hf))
+  (let ((erased dd) (erased dr) (erased ed) (erased nd) (erased fd) (erased er) (erased nr) (erased fr) (erased hd) (erased hr) (erased bd) (erased br)
+      (erased zs) (erased RV) (erased pt) (erased rb) (erased rv) (erased rbr) (erased ds) (erased ap)) (snip-exists d x0 e n f p h gen rg))
+  (values dd ed nd fd bd (MkBHalf d x0 dd dr e n f p ed nd fd er nr fr hd hr bd br zs RV pt rb rv rbr ds ap)))
+
+; A nontrivial ring r = x0 :: p with its reversed ring RR = y0 :: Q (rev_ring) and a side of each.
+(def-adts $ (BRing : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) dd1 dd2) ((List (Nat)) ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) -> Type)
+  enum
+  (many MkBRing : (erased (Nat) d x0 y0 dd1 dd2) (erased (List (Nat)) e n f p Q er hdA hdB ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2)
+      (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) (Cons (Nat) y0 Q)) ra)
+      (erased (RevCtx d e n f (Cons (Nat) x0 p) (Cons (Nat) y0 Q) hdA hdB) cx) (erased (BHalf d e n f x0 p dd1 ed1 nd1 fd1 bd1) h1)
+      (erased (BHalf d e n f y0 Q dd2 ed2 nd2 fd2 bd2) h2) -> (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2)))
+
+(def-fns _ $ (erased bring-of : (erased (Nat) d x0 m) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
+    (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt)
+    -> (erased (Nat) dd1 dd2) (erased (List (Nat)) ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br))
+  (let ((erased er) (erased RR) (erased hdA) (erased hdB) (erased rm) (erased ra) (erased cx))
+    (rev-ctx d x0 e n f p h gen pl rg (nontrivial-proper d x0 m e n f p h gen bl pl cn rg nt)))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ _ y0 _ _ _ _ Q _ _ _ _ _ _ _ _ _ _ _ _ _ _ rg2 _ _ _))
+  (let ((erased dd1) (erased ed1) (erased nd1) (erased fd1) (erased bd1) (erased h1)) (half-of d x0 e n f p h gen rg))
+  (let ((erased dd2) (erased ed2) (erased nd2) (erased fd2) (erased bd2) (erased h2)) (half-of d y0 e n f Q h gen rg2))
+  (values dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 (MkBRing d x0 y0 dd1 dd2 e n f p Q er hdA hdB ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 rm ra cx h1 h2)))
+
+(def-fns _ $ (erased half-lbd : (erased (List (Nat)) hd bd r) (erased (Nat) k) (erased (Respects hd bd r) rb) (erased (Length (Nat) r k) lr)
+    -> (erased (Length (Nat) bd k) lb))
+  (let ((erased kb) (erased lb)) (length-exists (Nat) bd))
+  (let-match erased (length-fn (Nat) r kb k (respects-length hd bd r kb rb lb) lr) (Refl _ _))
+  lb)
+
+(def-fns _ $ (erased rr-length : (erased (List (Nat)) e r er RR) (erased (Nat) k) (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
+    (erased (Length (Nat) r k) lr) -> (erased (Length (Nat) RR k) l))
+  (revapp-length er (Nil _) RR k (Zero) k ra (respects-length e r er k rm lr) (LengthNil _) (add-zero-right k)))
+
+; The maps the check needs coloured: d, e, n, f of each.
+(def-adts $ (Mp : -> Type)
+  enum
+  (many MkMp : (erased (Nat) d) (erased (List (Nat)) e n f) -> (Mp)))
+
+(def-adts $ (MpCols : ((List (Mp)) ms) -> Type)
+  enum
+  (many MCNil : -> (MpCols (Nil (Mp))))
+  (many MCCons : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (Mp)) ms) (erased (FourColoring e f ks) c) (erased (MpCols ms) rest)
+      -> (MpCols (Cons (Mp) (MkMp d e n f) ms))))
+
+; For each basis tree t of ts, the map that side-map glues for its program, with what makes it a smaller planar bridgeless
+; plain precubic map than one of d darts.
+(def-adts $ (BNeed : ((Nat) d dd h m) ((List (Nat)) ed nd fd bd) ((List (Ctree)) ts) ((List (Mp)) ms) -> Type)
+  enum
+  (many BNNil : (erased (Nat) d dd h m) (erased (List (Nat)) ed nd fd bd) -> (BNeed d dd h m ed nd fd bd (Nil (Ctree)) (Nil (Mp))))
+  (many BNCons : (erased (Nat) d dd h m d2) (erased (List (Nat)) ed nd fd bd e2 n2 f2) (erased (List (Step)) cp) (erased (Ctree) t)
+      (erased (List (Ctree)) ts) (erased (List (Mp)) ms) (erased (BkProg h m cp t) bp) (erased (Hypermap d2 e2 n2 f2) h2) (erased (Genus d2 e2 n2 f2 (Zero)) g2)
+      (erased (Bridgeless d2 e2 n2 f2) b2) (erased (AllOrder d2 e2 (Succ (Succ (Zero)))) pl2) (erased (Precubic d2 n2) pc2) (erased (Lt d2 d) lt2)
+      (erased (SewSide d2 dd e2 n2 f2 ed nd fd bd cp) ss) (erased (BNeed d dd h m ed nd fd bd ts ms) rest)
+      -> (BNeed d dd h m ed nd fd bd (Cons (Ctree) t ts) (Cons (Mp) (MkMp d2 e2 n2 f2) ms))))
+
+; A ring of fewer than h + 2 darts that is nontrivial for 0 (from a chord, ring_disk_chord).
+(def-adts $ (Shorter : ((Nat) d) ((List (Nat)) e n f) ((Nat) h) -> Type)
+  enum
+  (many MkShorter : (erased (Nat) d h y0 k) (erased (List (Nat)) e n f Q) (erased (Ring e f y0 Q) rq) (erased (NonTrivial d e n f (Cons (Nat) y0 Q) (Zero)) nq)
+      (erased (Length (Nat) (Cons (Nat) y0 Q) k) lq) (erased (Lt k (Succ (Succ h))) lt) -> (Shorter d e n f h)))
+
+(def-adts $ (BMaps : ((Nat) d) ((List (Nat)) e n f) ((Nat) dd h m) ((List (Nat)) ed nd fd bd) ((List (Ctree)) ts) -> Type)
+  enum
+  (many BMShort : (erased (Nat) d dd h m) (erased (List (Nat)) e n f ed nd fd bd) (erased (List (Ctree)) ts) (erased (Shorter d e n f h) sh)
+      -> (BMaps d e n f dd h m ed nd fd bd ts))
+  (many BMNeed : (erased (Nat) d dd h m) (erased (List (Nat)) e n f ed nd fd bd) (erased (List (Ctree)) ts) (erased (List (Mp)) ms)
+      (erased (BNeed d dd h m ed nd fd bd ts ms) bn) -> (BMaps d e n f dd h m ed nd fd bd ts)))
+
+(def-fns _ $ (erased side-maps : (erased (Nat) d h m x0 dd) (erased (List (Nat)) e n f p ed nd fd bd) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts)
+    (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
+    (erased (Length (Nat) (Cons (Nat) x0 p) (Succ (Succ h))) lr) (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt)
+    (erased (BHalf d e n f x0 p dd ed nd fd bd) hf) (subterm erased (BkBasis h m cps ts) bb) -> (erased (BMaps d e n f dd h m ed nd fd bd ts) r))
+  (let-match erased bb (BBCons _ _ cp t cps1 ts1 bp bb1) ((BBNil _ _) (BMNeed d dd h m e n f ed nd fd bd ts (Nil _) (BNNil d dd h m ed nd fd bd))))
+  (let-match erased (side-maps d h m x0 dd e n f p ed nd fd bd cps1 ts1 hm gen bl pl cu cn rg lr nt hf bb1) (BMNeed _ _ _ _ _ _ _ _ _ _ _ _ ms bn)
+    ((BMShort _ _ _ _ _ _ _ _ _ _ _ _ sh) (BMShort d dd h m e n f ed nd fd bd ts sh)))
+  (let-match erased hf (MkBHalf _ _ _ dr _ _ _ _ _ _ _ er nr fr hd hr _ br zs RV pt rb rv rbr ds ap))
+  (let ((erased d2) (erased e2) (erased n2) (erased f2) (erased h2) (erased g2) (erased pl2) (erased pc2) (erased lt2) (erased bo) (erased ss))
+    (side-map d h m x0 dd dr e n f p ed nd fd er nr fr hd hr bd br zs RV cp t hm gen bl pl cu cn rg lr nt pt rb rv rbr ds ap bp))
+  (match erased bo _
+    ((OrL _ _ b2) (BMNeed d dd h m e n f ed nd fd bd ts _ (BNCons d dd h m d2 ed nd fd bd e2 n2 f2 cp t ts1 ms bp h2 g2 b2 pl2 pc2 lt2 ss bn)))
+    ((OrR _ _ ch)
+      (let ((erased y0) (erased k) (erased k2) (erased Q) (erased rq) (erased nq) (erased lq) (erased lr2) (erased lt))
+        (ring-disk-chord d dd dr x0 m e n f p ed nd fd er nr fr hd hr bd br zs hm gen bl pl cn rg nt pt rb ds ch))
+      (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
+      (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))))
+
+; What Birkhoff_valid needs for a ring nontrivial for m in the check for h, m with basis trees ts: a shorter ring nontrivial
+; for 0, or the two sides of the ring and, for each side, the maps to colour.
+(def-adts $ (BkNeed : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) h m) ((List (Ctree)) ts) -> Type)
+  enum
+  (many BKShort : (erased (Nat) d x0 h m) (erased (List (Nat)) e n f p) (erased (List (Ctree)) ts) (erased (Shorter d e n f h) sh)
+      -> (BkNeed d e n f x0 p h m ts))
+  (many BKMaps : (erased (Nat) d x0 h m dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Ctree)) ts)
+      (erased (List (Mp)) ms1 ms2) (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br)
+      (erased (BNeed d dd1 h m ed1 nd1 fd1 bd1 ts ms1) n1) (erased (BNeed d dd2 h m ed2 nd2 fd2 bd2 ts ms2) n2) -> (BkNeed d e n f x0 p h m ts)))
+
+(def-fns _ $ (erased birkhoff-maps : (erased (Nat) d h m x0) (erased (List (Nat)) e n f p) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts)
+    (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
+    (erased (Length (Nat) (Cons (Nat) x0 p) (Succ (Succ h))) lr) (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt) (erased (BkBasis h m cps ts) bb)
+    -> (erased (BkNeed d e n f x0 p h m ts) r))
+  (let ((erased dd1) (erased dd2) (erased ed1) (erased nd1) (erased fd1) (erased bd1) (erased ed2) (erased nd2) (erased fd2) (erased bd2) (erased br))
+    (bring-of d x0 m e n f p hm gen bl pl cn rg nt))
+  (let ((erased br2)) br)
+  (let-match erased br2 (MkBRing _ _ y0 _ _ _ _ _ _ Q er hdA hdB _ _ _ _ _ _ _ _ rm ra cx h1 h2))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rg2 _ _ _))
+  (let-match erased (side-maps d h m x0 dd1 e n f p ed1 nd1 fd1 bd1 cps ts hm gen bl pl cu cn rg lr nt h1 bb) (BMNeed _ _ _ _ _ _ _ _ _ _ _ _ ms1 n1)
+    ((BMShort _ _ _ _ _ _ _ _ _ _ _ _ sh) (BKShort d x0 h m e n f p ts sh)))
+  (let-match erased (side-maps d h m y0 dd2 e n f Q ed2 nd2 fd2 bd2 cps ts hm gen bl pl cu cn rg2 (rr-length e _ er _ _ rm ra lr)
+      (nontrivial-rev d m e n f _ _ hdA hdB cx cn nt) h2 bb) (BMNeed _ _ _ _ _ _ _ _ _ _ _ _ ms2 n2)
+    ((BMShort _ _ _ _ _ _ _ _ _ _ _ _ sh) (BKShort d x0 h m e n f p ts sh)))
+  (BKMaps d x0 h m dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 br n1 n2))
