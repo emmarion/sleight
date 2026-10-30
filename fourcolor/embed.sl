@@ -75,22 +75,22 @@
   (let ((many cfs) (erased p)) (concat-c rest))
   (concat-one cs rest cfs p))
 
-(def-fns _ $ (erased allred-concat : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
-    (erased (AllRedC css) a) -> (erased (AllRed cfs) r))
+(def-fns _ $ (erased allred-concat : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
+    (erased (AllRedC X css) a) -> (erased (AllRed X cfs) r))
   (match erased p _
-    ((CLNil) (ARNil))
-    ((CLSkip css1 _ p1) (let-match erased a (ARCCons _ _ _ a1)) (allred-concat css1 cfs p1 a1))
+    ((CLNil) (ARNil X))
+    ((CLSkip css1 _ p1) (let-match erased a (ARCCons _ _ _ _ a1)) (allred-concat X css1 cfs p1 a1))
     ((CLCons cf cs cfs1 css1 p1)
-      (let-match erased a (ARCCons _ _ ar a1))
-      (let-match erased ar (ARCons _ _ rd ar1))
-      (ARCons cf cfs1 rd (allred-concat (Cons _ cs css1) cfs1 p1 (ARCCons cs css1 ar1 a1))))))
+      (let-match erased a (ARCCons _ _ _ ar a1))
+      (let-match erased ar (ARCons _ _ _ rd ar1))
+      (ARCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))
 
-(def-fns _ $ (erased reducible-mem : (erased (Config) cf) (erased (List (Config)) cfs) (subterm erased (AllRed cfs) a) (erased (Mem (Config) cf cfs) m)
-    -> (erased (Reducible cf) r))
-  (let-match erased a (ARCons _ rest rd a1) (absurd (ARNil) m))
+(def-fns _ $ (erased reducible-mem : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (subterm erased (AllRed X cfs) a)
+    (erased (Mem (Config) cf cfs) m) -> (erased (Reducible X cf) r))
+  (let-match erased a (ARCons _ _ rest rd a1) (absurd (ARNil _) m))
   (match erased m _
     ((MemHere _ _ _) rd)
-    ((MemThere _ _ _ _ m1) (reducible-mem cf rest a1 m1))))
+    ((MemThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))
 
 ; minimal_counter_example_is_plain_cubic_pentagonal of birkhoff.v, with Coq's cubic part from coloring.v's
 ; minimal_counter_example_is_cubic, and minimality as data: a connected planar bridgeless plain precubic map that the search
@@ -103,28 +103,28 @@
       -> (BirkGeo)))
 
 ; not_embed_reducible of embed.v, for the configurations of cfs, with minimality as data: a map as BirkGeo takes it, Geo, in
-; which the kernel of a configuration of cfs, C-reducible with contract cc, preembeds as CfEmbed states it, reduces. Coq's
+; which the kernel of a configuration of cfs, C-reducible at X with contract cc, preembeds as CfEmbed states it, reduces. Coq's
 ; embeddable, which the quiz checks of cfquiz.v establish there, is part of what this leaves open.
-(def-adts $ (NotEmbed : ((List (Config)) cfs) -> Type)
+(def-adts $ (NotEmbed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
-  (many MkNotEmbed : (erased (List (Config)) cfs) (erased (Level) F B)
+  (many MkNotEmbed : (erased (Level) X) (erased (List (Config)) cfs) (erased (Level) F B)
       (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
           (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
           (erased (Pbpp dm em nm fm) p) (erased (NoColoring em fm) ncol) (erased (Geo dm em nm fm ksm) g) (erased (Cpmap cp dc ec fc rc) c)
           (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (KernelList dc fc rc as) kl)
-          (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed cp cc) cr)
+          (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed X cp cc) cr)
           -> (erased (Reduces B dm em nm fm) r)) emb)
-      -> (NotEmbed cfs)))
+      -> (NotEmbed X cfs)))
 
 ; present.v's no_fit_the_redpart and the use of unavoidability in four_color_hypermap, with minimality as data: a map with no
 ; dart is coloured, a disconnected one splits (split-reduces), and a connected one reduces through BirkGeo, or through
 ; unavoidability, a configuration of cfs and NotEmbed, on the map or its mirror.
-(def-fns _ $ (erased embed-analysis : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl) (erased (AllRedC css) ar)
-    (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed cfs) ne) -> (erased (Analysis) an))
+(def-fns _ $ (erased embed-analysis : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl)
+    (erased (AllRedC X css) ar) (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed X cfs) ne) -> (erased (Analysis) an))
   (let-match erased u (MkUnavE _ lv every))
   (let-match erased bg (MkBirkGeo Fg Bg geo))
-  (let-match erased ne (MkNotEmbed _ Fe Be emb))
-  (let ((erased all)) (allred-concat css cfs cl ar))
+  (let-match erased ne (MkNotEmbed _ _ Fe Be emb))
+  (let ((erased all)) (allred-concat X css cfs cl ar))
   (let ((erased Bm) (erased mirror)) (reduces-mirror Be))
   (def-lvl B)
   (let ((erased qg) (erased qe) (erased qm) (erased qs)) (values (prove-predates Bg B) (prove-predates Be B) (prove-predates Bm B) (prove-predates (level-of split-glue) B)))
@@ -144,7 +144,7 @@
         (let-match erased gr (OrL _ _ g) ((OrR _ _ r) (reduces-lift Bg B d e n f r qg)))
         (let-match erased (every d e n f ks g conn gen)
           (MkCfEmbed _ sym cci cp _ dc x0c x0m _ _ _ _ em2 nm2 fm2 ec nc fc rc ksc as hl m c pm ol mo gm kl pe h0 lx))
-        (let-match erased (reducible-mem (MkConfig sym cci cp) cfs all m) (MkReducible _ _ cc _ _ cr))
+        (let-match erased (reducible-mem X (MkConfig sym cci cp) cfs all m) (MkReducible _ _ _ cc _ _ cr))
         (let-match erased mo (MoMirror _ _ _ _ _ _ _ rfn pn pf)
           ((MoSame _ _ _ _) (reduces-lift Be B d e n f (emb sym cci cc cp d dc x0c x0m e n f ks ec nc fc rc ksc as hl m p ncol gm c pm ol kl pe h0 lx cr) qe)))
         (let ((erased p2)) (pbpp-mirror d e n f em2 nm2 fm2 p rfn pn pf))
