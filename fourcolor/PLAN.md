@@ -204,12 +204,21 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   cubic_patch (for any order c), patch_face_r (both directions),
   patch_face_d', cFhd, patch_bridgeless, the orbit counts of edges, nodes,
   faces and glink (`edge-patch`, `node-patch`, `face-patch`,
-  `glink-patch`), genus_patch and planar_patch, and the colourings of the
-  two parts that a colouring of the whole map gives (`patch-coloring`).
+  `glink-patch`), genus_patch and planar_patch, the colourings of the
+  two parts that a colouring of the whole map gives (`patch-coloring`),
+  and colorable_patch in both directions (`colorable-patch` and
+  `patch-colorable`, with `RotRev` for rot 1 (rev et) and `trace-rev`
+  for trace_rev).
   Not done: outer_hd and patch_face_d as stated in Coq, bridgeless_patch,
-  the ring traces of colorable_patch and its converse, patch_gcomp and
-  minimal_counter_example_is_connected. `sew.v`, `snip.v`
-  and `revsnip.v` are not started.
+  patch_gcomp and minimal_counter_example_is_connected.
+- `sew.sl` (load after `patch.sl`): sew_map and sew_map_patch of `sew.v`
+  as one existence statement, `sew-exists`: a disk map with a simple edge
+  cycle bd and a remainder map with a duplicate-free node cycle br of the
+  same length, both lists of their own darts, are patched into a map
+  whose darts are the disk darts followed by the remainder darts off br,
+  numbered in order, with br sent to rev bd. Its edge and node
+  permutations are glued from those of the two maps (`cmap-perm`).
+  `snip.v` and `revsnip.v` are not started.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
