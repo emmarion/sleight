@@ -178,8 +178,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `colalias.sl`, `ringtrace.sl`, `kempemap.sl`, `kempegoal.sl` (load
   `colalias.sl` after `coloring.sl`, then `red/red.sl`, `red/color.sl`,
   `red/ctree.sl`, `red/gtree.sl`, `red/grestrict.sl`,
-  `red/crestrict.sl`, `red/kempe.sl`, `red/bridge.sl`, then the other
-  three; they also check after the whole chain of the `red/` entry
+  `red/crestrict.sl`, `red/kempe.sl`, `red/bridge.sl`, `red/gramrot.sl`,
+  then the other three; they also check after the whole chain of the `red/` entry
   below, `red/cfred.sl` included): ring traces of four-colourings
   (`RingTrace`, on `red/`'s colours), contract colourings and
   `MinimalCounterExample` after `coloring.v`, and `kempe.v`.
@@ -191,9 +191,7 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   a `KClosed` set of `red/bridge.sl` (`kempe-closed`), and a ring trace
   in the co-closure `KCC` of a set Q leads to a ring trace in Q
   (`kcc-kempe`). The induction uses dart-preserving Walkup transforms,
-  the darts taken out kept as dead darts that colourings ignore. Its
-  gram_neg, gram_flip and gram_rot duplicate those of `red/gramrot.sl`,
-  written at the same time.
+  the darts taken out kept as dead darts that colourings ignore.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
@@ -211,8 +209,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   functions at a given level (`kcc-coclosure`, a level factory).
   `red/check.sl`'s `check-reducible-c` builds the Kempe tree of the ring
   traces from `cpcolor-c` and returns its soundness and disjointness
-  evidence. `red/gramrot.sl` ports gram_rot and both directions of
-  match_gram_rot of `kempe.v`. `red/cfred.sl` states C_reducible of
+  evidence. `red/gramrot.sl` ports gram_neg, gram_flip and gram_rot and both
+  directions of their match lemmas from `kempe.v`. `red/cfred.sl` states C_reducible of
   `coloring.v` on the configuration maps (`CRed`) and proves
   check_reducible_valid with what contract_ctreeP would give
   (`ContractOK`) as a hypothesis. Nothing produces a `ContractOK` yet:

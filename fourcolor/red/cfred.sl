@@ -10,7 +10,7 @@
 (def-adts $ (RotR : ((RelC) r) ((List (Col)) ct) ((List (Gsym)) w1) -> Type)
   enum
   (many MkRotR : (erased (RelC) r) (erased (List (Col)) et ct) (erased (Col) e) (erased (List (Gsym)) w w1) (erased (Snoc (Col) et e ct) s)
-      (erased (HoldsR r (Cons (Col) e et) w) h) (erased (MatchG (BS0) (Cons (Col) e et) w) m) (erased (GramRot w w1) g) -> (RotR r ct w1)))
+      (erased (HoldsR r (Cons (Col) e et) w) h) (erased (MatchG (BS0) (Cons (Col) e et) w) m) (erased (GRot w w1) g) -> (RotR r ct w1)))
 
 (def-fns _ $ (erased permt-snoc : (erased (Perm) g) (erased (List (Col)) et ct ct2) (erased (Col) e) (erased (PermT g ct ct2) pt) (subterm erased (Snoc (Col) et e ct) s)
     -> (erased (List (Col)) et2) (erased (Col) e2) (erased (Snoc (Col) et2 e2 ct2) s2) (erased (PermT g et et2) pt2) (erased (PermC g e e2) pc))
@@ -51,14 +51,18 @@
         (let-match erased p (MkHolds _ _ _ _ h))
         (let-match erased h (MkRotP _ et _ e s hp))
         (let ((erased w) (erased mw) (erased rr)) (cgf (Cons _ e et) hp))
-        (let ((erased w1) (erased g) (erased m1)) (rot-match e et ct w mw s))
+        (let ((erased b) (erased bl)) (mg-bal (Cons _ e et) w mw))
+        (let ((erased w1) (erased g)) (grot-exists b w bl))
+        (let ((erased m1)) (rot-fwd b w w1 e et ct g mw s))
         (values w1 m1 (MkHoldsR (RelC) R RotR ct w1 (MkRotR R et ct e w w1 s rr mw g)))))
     (def-fns M
       ((erased cm1 : (erased (List (Col)) ct ct2) (erased (List (Gsym)) w1) (erased (HoldsR R1 ct w1) r) (erased (MatchG (BS0) ct2 w1) m) ->
           (erased (Holds P1 ct2) q))
         (let-match erased r (MkHoldsR _ _ _ _ _ h))
         (let-match erased h (MkRotR _ et _ e w _ s rr mw g))
-        (let ((erased e2) (erased et2) (erased s2) (erased mw2)) (rot-unmatch w w1 ct2 (Cons _ e et) g m mw))
+        (let ((erased et2) (erased e2) (erased s2)) (rot-unsnoc w w1 e et ct2 g mw m))
+        (let ((erased b) (erased bl)) (mg-bal (Cons _ e et) w mw))
+        (let ((erased mw2)) (rot-bwd b w w1 e2 et2 ct2 bl g m s2))
         (MkHolds (PredC) P2 RotP ct2 (MkRotP P2 et2 ct2 e2 s2 (cmf (Cons _ e et) (Cons _ e2 et2) w rr mw2)))))
     (MkKClosed M P1 R1 cp1 cg1 cm1))
   (values M rot-closed))
