@@ -271,3 +271,140 @@
       (MkSomePath fc (Nil _) xs x1 x px1x) pw pv pem)
     (OrL _ _ kr) (absurd (OrR _ _ eq) (let-match erased eq (Refl _ _)) (apart-irrefl y ne)))
   (MkHomBad ec fc em fm as hl q1 hq1 x x2 hx ex2 k2 rq1 wq rh rg lk2 lt2 pex2 kr))
+
+; Every dart of xs has a label in L.
+(def-adts $ (AllLab : ((List (Nat)) lab L xs) -> Type)
+  enum
+  (many ALNil : (erased (List (Nat)) lab L) -> (AllLab lab L (Nil (Nat))))
+  (many ALCons : (erased (List (Nat)) lab L xs) (erased (Nat) x l) (erased (Nth (Nat) lab x l) pl) (erased (In l L) il) (erased (AllLab lab L xs) rest)
+      -> (AllLab lab L (Cons (Nat) x xs))))
+
+(def-adts $ (OffAt : ((List (Nat)) lab L xs) -> Type)
+  enum
+  (many MkOffAt : (erased (List (Nat)) lab L xs) (erased (Nat) y l) (erased (In y xs) iy) (erased (Nth (Nat) lab y l) pl) (erased (NotIn l L) ol) -> (OffAt lab L xs)))
+
+(def-fns _ $ (erased off-dec : (erased (Nat) d) (erased (List (Nat)) lab L) (erased (Length (Nat) lab d) ll) (subterm erased (List (Nat)) xs) (erased (Under xs d) ux)
+    -> (erased (Or (OffAt lab L xs) (AllLab lab L xs)) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (OrR _ _ (ALNil lab L))))
+  (let-match erased ux (UnderCons _ _ _ lx ux1))
+  (let ((erased l) (erased pl)) (nth-exists _ lab d x ll lx))
+  (let-match erased (in-dec l L) (OrL _ _ il) ((OrR _ _ ol) (OrL _ _ (MkOffAt lab L _ x l (InHere x xs1) pl ol))))
+  (match erased (off-dec d lab L ll xs1 ux1) _
+    ((OrL _ _ oa) (let-match erased oa (MkOffAt _ _ _ y l2 iy pl2 ol2)) (OrL _ _ (MkOffAt lab L _ y l2 (InThere y x xs1 iy) pl2 ol2)))
+    ((OrR _ _ al) (OrR _ _ (ALCons lab L xs1 x l pl il al)))))
+
+; m + 1 darts of S on distinct faces, none a face of the ring (labels lr), as Scattered takes them.
+(def-adts $ (Pick : ((List (Nat)) lab lr S) ((Nat) m) -> Type)
+  enum
+  (many MkPick : (erased (List (Nat)) lab lr S xs lx) (erased (Nat) m) (erased (Length (Nat) xs (Succ m)) lk) (erased (WSub xs S) sb) (erased (Respects lab xs lx) rx)
+      (erased (Distinct lx) dx) (erased (Disj lx lr) dj) -> (Pick lab lr S m)))
+
+; Every dart of S is on a face of the ring or, for m = 1, on the face of one dart y of S: S meets at most m faces off the ring.
+(def-adts $ (TrivSide : ((List (Nat)) lab lr S) ((Nat) m) -> Type)
+  enum
+  (many TsZero : (erased (List (Nat)) lab lr S) (erased (Nat) m) (erased (AllLab lab lr S) al) -> (TrivSide lab lr S m))
+  (many TsOne : (erased (List (Nat)) lab lr S) (erased (Nat) y l) (erased (In y S) iy) (erased (Nth (Nat) lab y l) pl) (erased (NotIn l lr) ol)
+      (erased (AllLab lab (Cons (Nat) l lr) S) al) -> (TrivSide lab lr S (Succ (Zero)))))
+
+(def-fns _ $ (erased pick-dec : (erased (Nat) d k m) (erased (List (Nat)) lab lr S) (erased (Length (Nat) lab d) ll) (erased (Under S d) us) (erased (BkMode k m) md)
+    -> (erased (Or (Pick lab lr S m) (TrivSide lab lr S m)) r))
+  (let-match erased (off-dec d lab lr ll S us) (OrL _ _ oa) ((OrR _ _ al) (OrR _ _ (TsZero lab lr S m al))))
+  (let-match erased oa (MkOffAt _ _ _ y l iy pl ol))
+  (match erased md _
+    ((BMLow _ _) (OrL _ _ (MkPick lab lr S (Cons _ y (Nil _)) (Cons _ l (Nil _)) (Zero) (LengthCons _ y (Nil _) (Zero) (LengthNil _)) (HSubCons y (Nil _) S iy (HSubNil S))
+      (RespCons lab (Nil _) (Nil _) y l pl (RespNil lab)) (DistCons l (Nil _) (NotInNil l) (DistNil)) (DisjCons l (Nil _) lr ol (DisjNil lr)))))
+    ((BMFive)
+      (let-match erased (off-dec d lab (Cons _ l lr) ll S us) (OrL _ _ ob) ((OrR _ _ al) (OrR _ _ (TsOne lab lr S y l iy pl ol al))))
+      (let-match erased ob (MkOffAt _ _ _ y2 l2 iy2 pl2 ol2))
+      (let-match erased ol2 (NotInCons _ _ _ n21 ol21))
+      (OrL _ _ (MkPick lab lr S (Cons _ y $ Cons _ y2 $ Nil _) (Cons _ l $ Cons _ l2 $ Nil _) (Succ (Zero)) (LengthCons _ y _ _ $ LengthCons _ y2 _ _ $ LengthNil _)
+        (HSubCons y _ S iy $ HSubCons y2 (Nil _) S iy2 $ HSubNil S) (RespCons lab _ _ y l pl $ RespCons lab (Nil _) (Nil _) y2 l2 pl2 $ RespNil lab)
+        (DistCons l _ (NotInCons l l2 (Nil _) (apart-sym l2 l n21) (NotInNil l)) $ DistCons l2 (Nil _) (NotInNil l2) $ DistNil)
+        (DisjCons l _ lr ol $ DisjCons l2 (Nil _) lr ol21 $ DisjNil lr))))))
+
+(def-fns _ $ (erased ds-under : (erased (Nat) d) (erased (List (Nat)) e n r hd zs S) (erased (DiskSplit d e n r hd zs) ds) (erased (Or (Eq (List (Nat)) S hd) (Eq (List (Nat)) S zs)) w)
+    (subterm erased (List (Nat)) xs) (erased (WSub xs S) sb) -> (erased (Under xs d) u))
+  (let-match erased sb (HSubCons x xs1 _ ix sb1) ((HSubNil _) (UnderNil d)))
+  (let ((erased o)) (match erased w (((Or (In x hd) (In x zs)) o))
+    ((OrL _ _ eq) (let-match erased eq (Refl _ _)) (OrL _ _ ix))
+    ((OrR _ _ eq) (let-match erased eq (Refl _ _)) (OrR _ _ ix))))
+  (UnderCons xs1 x d (ds-lt d x e n r hd zs ds o) (ds-under d e n r hd zs S ds w xs1 sb1)))
+
+; A HomBad whose ring is trivial in the sense of Birkhoff: one side of it meets at most m faces off it, m from BkMode.
+(def-adts $ (HomTrivial : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
+  enum
+  (many MkHomTrivial : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez k m) (erased (RPath ec fc x p z) rp)
+      (erased (Within (Cons (Nat) x p) as) wp) (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg)
+      (erased (Length (Nat) (Cons (Nat) x p) k) lk) (erased (BkMode k m) md) (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr)
+      (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (FaceLab dm fm lab) fl) (erased (Respects lab (Cons (Nat) hx hp) lr) rl)
+      (erased (Or (TrivSide lab lr hd m) (TrivSide lab lr zs m)) ts) -> (HomTrivial dm ec fc em nm fm as hl)))
+
+; Birkhoff on the hom ring: it is nontrivial for the m of BkMode, and the map reduces (birkhoff-reduces), or it is trivial.
+(def-fns _ $ (erased hom-birk : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pbk) (erased (BirkhoffChecks) bks) (erased (Nat) dm)
+    (erased (List (Nat)) ec fc em nm fm as hl lab) (erased (FaceLab dm fm lab) fl) (erased (Hypermap dm em nm fm) hm) (erased (Genus dm em nm fm (Zero)) gen)
+    (erased (Bridgeless dm em nm fm) bl) (erased (AllOrder dm em (Succ (Succ (Zero)))) pl) (erased (AllOrder dm nm (Succ (Succ (Succ (Zero))))) cu)
+    (erased (Connected dm em nm fm) cn) (erased (NoColoring em fm) ncol) (erased (HomBad ec fc em fm as hl) hb)
+    -> (erased (Or (Reduces B dm em nm fm) (HomTrivial dm ec fc em nm fm as hl)) r))
+  (unary 6)
+  (let-match erased hb (MkHomBad _ _ _ _ _ _ p hp x z hx ez k rp wp rh rg lk l6 pez nr))
+  (let ((erased lkm)) (respects-length hl (Cons _ x p) (Cons _ hx hp) k rh lk))
+  (let ((erased five)) (Succ (Succ (Succ (Succ (Succ (Zero)))))))
+  (let ((erased m) (erased md)) (match erased (nat-cmp k five) (((Nat) m) ((BkMode k m) md))
+    ((CLt _ _ _ _ lt) (values (Zero) (BMLow k lt)))
+    ((CEq _ _ _) (values (Succ (Zero)) (BMFive)))
+    (absurd (CGt _ _ _ _ gt) (lt-irrefl five (lt-ls five k five gt l6)))))
+  (let ((erased ur)) (ring-under dm hx em nm fm hp hm rg))
+  (let ((erased hd) (erased zs) (erased ds)) (ds-exists dm em nm fm (Cons _ hx hp) hm ur))
+  (let ((erased fl2)) fl)
+  (let-match erased fl2 (MkFaceLab _ kf _ fi2 _ ids rs gf2 pf2 gr2 io ro cl ll))
+  (let ((erased lr) (erased rl)) (respects-exists lab (Cons _ hx hp) dm ur ll))
+  (let ((erased uh)) (ds-under dm em nm (Cons _ hx hp) hd zs hd ds (OrL _ _ (Refl _ hd)) hd (sub-refl hd)))
+  (let ((erased uz)) (ds-under dm em nm (Cons _ hx hp) hd zs zs ds (OrR _ _ (Refl _ zs)) zs (sub-refl zs)))
+  (let-match erased (pick-dec dm k m lab lr hd ll uh md) (OrL _ _ ph)
+    ((OrR _ _ t) (OrR _ _ (MkHomTrivial dm ec fc em nm fm as hl p hp hd zs lab lr x z hx ez k m rp wp rh rg lk md pez nr ds fl rl (OrL _ _ t)))))
+  (let-match erased (pick-dec dm k m lab lr zs ll uz md) (OrL _ _ pz)
+    ((OrR _ _ t) (OrR _ _ (MkHomTrivial dm ec fc em nm fm as hl p hp hd zs lab lr x z hx ez k m rp wp rh rg lk md pez nr ds fl rl (OrR _ _ t)))))
+  (let-match erased ph (MkPick _ _ _ xs lx _ lkx sx rx dx djx))
+  (let-match erased pz (MkPick _ _ _ ys ly _ lky sy ry dy djy))
+  (let ((erased rf)) (facelab-rf dm fm lab fl))
+  (OrL _ _ (birkhoff-reduces B pbk dm hx k m em nm fm hp bks hm gen bl pl cu cn ncol rg lkm l6 md
+    (MkNonTrivial dm m em nm fm (Cons _ hx hp) hd zs xs ys ds lkx lky sx sy (MkScattered fm _ xs lab lr lx rf rl rx dx djx) (MkScattered fm _ ys lab lr ly rf rl ry dy djy)))))
+
+; The trivial cases of embed_full, taken as a hypothesis: a HomTrivial is refuted (in Coq, trivial_hom_ring, its use on the
+; reversed ring, and for five darts the spoke ring with adj11_edge and adj_kernel_max). Not proved here.
+(def-adts $ (TrivRed : -> Type)
+  enum
+  (many MkTrivRed : (erased (Level) G)
+      (erased (Fn G (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+          (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (False) r)) tr)
+      -> (TrivRed)))
+
+; embed5.sl's FullRed with the radius2 certificate of the configuration as one more argument.
+(def-adts $ (FullRedR : -> Type)
+  enum
+  (many MkFullRedR : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+          (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
+      -> (FullRedR)))
+
+; FullRedR from BirkhoffChecks and TrivRed. A level factory: red is at a level F minted after that of the hypothesis.
+(def-fns _ $ (erased full-red-of : (erased (BirkhoffChecks) bks) (erased (TrivRed) trd) -> (erased (FullRedR) r))
+  (let-match erased trd (MkTrivRed G triv))
+  (def-lvl B)
+  (let ((erased pbk)) (prove-predates (level-of birk-glue) B))
+  (def-lvl F)
+  (let ((erased pg)) (prove-predates G F))
+  (def-fns F $ (erased red : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+      (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+      (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r))
+    (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))
+    (let ((erased pb2)) pb)
+    (let-match erased pb2 (MkPbpp _ _ _ _ hm gen bl pl pc))
+    (let ((erased nfm) (erased nim) (erased fim) (erased rnf) (erased qem) (erased qnm) (erased qfm)) (hyper-core dm em nm fm hm))
+    (let ((erased lab) (erased fl)) (facelab-exists dm fm fim qfm))
+    (match erased (hom-birk B pbk bks dm ec fc em nm fm as hl lab fl hm gen bl pl cnm cn ncol (bad-hom dc dm ec nc fc ksc rc em nm fm ksm as hl lab en ok fu fl bl rd bad)) _
+      ((OrL _ _ r) r)
+      (absurd (OrR _ _ t) (triv (predates pg) dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol cn t))))
+  (MkFullRedR F B red))
