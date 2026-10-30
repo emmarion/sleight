@@ -835,3 +835,60 @@
   (let-match erased (permt-fn g et et3 et2 pe pt) (Refl _ _))
   (MkCpCol cp d e f r ks2 rc2 cs2 et2 cm (MkFourColoring e f ks2 ke2 face2 ce2 (differ-perm g ke ks ke2 ks2 ip edge ne np) (under-perm g ks ks2 np)) rr2 nc2
     (MkTrace c2 cs3 et2 ct3)))
+
+; g2 undoes g.
+(def-adts $ (PermInv : ((Perm) g g2) -> Type)
+  enum
+  (many PI123 : -> (PermInv (MkPerm (C1) (C2) (C3)) (MkPerm (C1) (C2) (C3))))
+  (many PI132 : -> (PermInv (MkPerm (C1) (C3) (C2)) (MkPerm (C1) (C3) (C2))))
+  (many PI213 : -> (PermInv (MkPerm (C2) (C1) (C3)) (MkPerm (C2) (C1) (C3))))
+  (many PI231 : -> (PermInv (MkPerm (C2) (C3) (C1)) (MkPerm (C3) (C1) (C2))))
+  (many PI312 : -> (PermInv (MkPerm (C3) (C1) (C2)) (MkPerm (C2) (C3) (C1))))
+  (many PI321 : -> (PermInv (MkPerm (C3) (C2) (C1)) (MkPerm (C3) (C2) (C1)))))
+
+(def-fns _ $ (erased perminv-ex : (erased (Perm) g) (erased (IsPerm g) ip) -> (erased (Perm) g2) (erased (PermInv g g2) pi) (erased (IsPerm g2) ip2))
+  (match erased ip _
+    ((IP123) (values (MkPerm (C1) (C2) (C3)) (PI123) (IP123)))
+    ((IP132) (values (MkPerm (C1) (C3) (C2)) (PI132) (IP132)))
+    ((IP213) (values (MkPerm (C2) (C1) (C3)) (PI213) (IP213)))
+    ((IP231) (values (MkPerm (C3) (C1) (C2)) (PI231) (IP312)))
+    ((IP312) (values (MkPerm (C2) (C3) (C1)) (PI312) (IP231)))
+    ((IP321) (values (MkPerm (C3) (C2) (C1)) (PI321) (IP321)))))
+
+(def-fns _ $ (erased permc-invert : (erased (Perm) g g2) (erased (Col) c d) (erased (PermInv g g2) pi) (erased (PermC g c d) p) -> (erased (PermC g2 d c) r))
+  (match erased pi _
+    ((PI123) (match erased p _ ((PC0 _) (PC0 (MkPerm (C1) (C2) (C3)))) ((PC1 _ _ _) (PC1 (C1) (C2) (C3))) ((PC2 _ _ _) (PC2 (C1) (C2) (C3))) ((PC3 _ _ _) (PC3 (C1) (C2) (C3)))))
+    ((PI132) (match erased p _ ((PC0 _) (PC0 (MkPerm (C1) (C3) (C2)))) ((PC1 _ _ _) (PC1 (C1) (C3) (C2))) ((PC2 _ _ _) (PC3 (C1) (C3) (C2))) ((PC3 _ _ _) (PC2 (C1) (C3) (C2)))))
+    ((PI213) (match erased p _ ((PC0 _) (PC0 (MkPerm (C2) (C1) (C3)))) ((PC1 _ _ _) (PC2 (C2) (C1) (C3))) ((PC2 _ _ _) (PC1 (C2) (C1) (C3))) ((PC3 _ _ _) (PC3 (C2) (C1) (C3)))))
+    ((PI231) (match erased p _ ((PC0 _) (PC0 (MkPerm (C3) (C1) (C2)))) ((PC1 _ _ _) (PC2 (C3) (C1) (C2))) ((PC2 _ _ _) (PC3 (C3) (C1) (C2))) ((PC3 _ _ _) (PC1 (C3) (C1) (C2)))))
+    ((PI312) (match erased p _ ((PC0 _) (PC0 (MkPerm (C2) (C3) (C1)))) ((PC1 _ _ _) (PC3 (C2) (C3) (C1))) ((PC2 _ _ _) (PC1 (C2) (C3) (C1))) ((PC3 _ _ _) (PC2 (C2) (C3) (C1)))))
+    ((PI321) (match erased p _ ((PC0 _) (PC0 (MkPerm (C3) (C2) (C1)))) ((PC1 _ _ _) (PC3 (C3) (C2) (C1))) ((PC2 _ _ _) (PC2 (C3) (C2) (C1))) ((PC3 _ _ _) (PC1 (C3) (C2) (C1)))))))
+
+; h is p132 after g.
+(def-adts $ (P132Comp : ((Perm) g h) -> Type)
+  enum
+  (many PK123 : -> (P132Comp (MkPerm (C1) (C2) (C3)) (MkPerm (C1) (C3) (C2))))
+  (many PK132 : -> (P132Comp (MkPerm (C1) (C3) (C2)) (MkPerm (C1) (C2) (C3))))
+  (many PK213 : -> (P132Comp (MkPerm (C2) (C1) (C3)) (MkPerm (C3) (C1) (C2))))
+  (many PK231 : -> (P132Comp (MkPerm (C2) (C3) (C1)) (MkPerm (C3) (C2) (C1))))
+  (many PK312 : -> (P132Comp (MkPerm (C3) (C1) (C2)) (MkPerm (C2) (C1) (C3))))
+  (many PK321 : -> (P132Comp (MkPerm (C3) (C2) (C1)) (MkPerm (C2) (C3) (C1)))))
+
+(def-fns _ $ (erased p132-ex : (erased (Perm) g) (erased (IsPerm g) ip) -> (erased (Perm) h) (erased (P132Comp g h) pk) (erased (IsPerm h) ih))
+  (match erased ip _
+    ((IP123) (values (MkPerm (C1) (C3) (C2)) (PK123) (IP132)))
+    ((IP132) (values (MkPerm (C1) (C2) (C3)) (PK132) (IP123)))
+    ((IP213) (values (MkPerm (C3) (C1) (C2)) (PK213) (IP312)))
+    ((IP231) (values (MkPerm (C3) (C2) (C1)) (PK231) (IP321)))
+    ((IP312) (values (MkPerm (C2) (C1) (C3)) (PK312) (IP213)))
+    ((IP321) (values (MkPerm (C2) (C3) (C1)) (PK321) (IP231)))))
+
+(def-fns _ $ (erased permc-p132 : (erased (Perm) g h) (erased (Col) c d e) (erased (P132Comp g h) pk) (erased (PermC g c d) p) (erased (PermC p132 d e) q)
+    -> (erased (PermC h c e) r))
+  (match erased pk _
+    ((PK123) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C1) (C3) (C2)))) ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (PC1 (C1) (C3) (C2))) ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (PC2 (C1) (C3) (C2))) ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (PC3 (C1) (C3) (C2)))))
+    ((PK132) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C1) (C2) (C3)))) ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (PC1 (C1) (C2) (C3))) ((PC2 _ _ _) (let-match erased q (PC3 _ _ _)) (PC2 (C1) (C2) (C3))) ((PC3 _ _ _) (let-match erased q (PC2 _ _ _)) (PC3 (C1) (C2) (C3)))))
+    ((PK213) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C3) (C1) (C2)))) ((PC1 _ _ _) (let-match erased q (PC2 _ _ _)) (PC1 (C3) (C1) (C2))) ((PC2 _ _ _) (let-match erased q (PC1 _ _ _)) (PC2 (C3) (C1) (C2))) ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (PC3 (C3) (C1) (C2)))))
+    ((PK231) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C3) (C2) (C1)))) ((PC1 _ _ _) (let-match erased q (PC2 _ _ _)) (PC1 (C3) (C2) (C1))) ((PC2 _ _ _) (let-match erased q (PC3 _ _ _)) (PC2 (C3) (C2) (C1))) ((PC3 _ _ _) (let-match erased q (PC1 _ _ _)) (PC3 (C3) (C2) (C1)))))
+    ((PK312) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C2) (C1) (C3)))) ((PC1 _ _ _) (let-match erased q (PC3 _ _ _)) (PC1 (C2) (C1) (C3))) ((PC2 _ _ _) (let-match erased q (PC1 _ _ _)) (PC2 (C2) (C1) (C3))) ((PC3 _ _ _) (let-match erased q (PC2 _ _ _)) (PC3 (C2) (C1) (C3)))))
+    ((PK321) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (PC0 (MkPerm (C2) (C3) (C1)))) ((PC1 _ _ _) (let-match erased q (PC3 _ _ _)) (PC1 (C2) (C3) (C1))) ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (PC2 (C2) (C3) (C1))) ((PC3 _ _ _) (let-match erased q (PC1 _ _ _)) (PC3 (C2) (C3) (C1)))))))
