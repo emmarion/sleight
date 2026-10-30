@@ -1,4 +1,4 @@
-; No minimal counterexample, from unavoidability (UnavE), reducibility (AllRedC) and two open steps, each a level factory:
+; An Analysis, from unavoidability (UnavE), reducibility (AllRedC) and two open steps with minimality as data:
 ; minimal_counter_example_is_plain_cubic_pentagonal of birkhoff.v (BirkGeo) and not_embed_reducible of embed.v (NotEmbed).
 ; Load after unav/unave.sl, in the chain that PLAN.md gives.
 
@@ -12,26 +12,48 @@
     (respects-assoc q2 p q1 ids ids q1 d pq2 (respects-id-right d ids q1 io lq1) q1p (iota-length d ids io) lp)
     (respects-id-left d ids q2 io (perm-under d q2 p (perm-sym d p q2 pm2)))))
 
-; minimal_counter_example_mirror of coloring.v, for the mirror (fn, ni, fi) of MapOrMirror.
-(def-fns _ $ (erased mce-mirror : (erased (Level) L1) -> (erased (Level) M1 M2)
-    (erased (Fn M2 (erased (Level) L2) (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (MinimalCounterExample L1 L2 d e n f) mce)
-        (erased (Respects f n fn) rfn) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) -> (erased (MinimalCounterExample M1 L2 d fn ni fi) r)) mm))
-  (def-lvl M1)
-  (def-lvl M2)
-  (def-fns M2 $ (erased mm : (erased (Level) L2) (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (MinimalCounterExample L1 L2 d e n f) mce)
-      (erased (Respects f n fn) rfn) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) -> (erased (MinimalCounterExample M1 L2 d fn ni fi) r))
-    (let-match erased mce (MkMinimalCounterExample _ _ _ _ _ _ h g b pl pc noncol minimal))
-    (let ((erased fn2) (erased ni2) (erased fi2) (erased h2) (erased rfn2) (erased pn2) (erased pf2) (erased g2)) (genus-mirror d (Zero) e n f h g))
-    (let-match erased (respects-fn f n fn2 fn rfn2 rfn) (Refl _ _))
-    (let-match erased (perm-unique d n ni2 ni pn2 pn) (Refl _ _))
-    (let-match erased (perm-unique d f fi2 fi pf2 pf) (Refl _ _))
-    (let-match erased pc (MkPrecubic _ _ ks ol u))
-    (let-match erased ol (MkOrderList _ _ ids _ io os))
-    (def-fns M1 $ (erased noncol2 : (erased (List (Nat)) ks2) (erased (FourColoring fn fi ks2) c) -> (erased (False) r))
-      (noncol ks2 (coloring-mirror d e n f fn fi ks2 h rfn pf c)))
-    (MkMinimalCounterExample M1 L2 d fn ni fi h2 g2 (bridgeless-mirror d e n f fn ni fi h b rfn pf) (plain-mirror d e n f fn h pl rfn)
-      (MkPrecubic d ni ks (MkOrderList d ni ids ks io (orders-inv d n ni ids ks pn os)) u) noncol2 minimal))
-  (values M1 M2 mm))
+; minimal_counter_example_mirror of coloring.v, with minimality as data: the mirror (fn, ni, fi) of MapOrMirror is planar,
+; bridgeless, plain and precubic and is uncolourable, and its reductions give reductions of the map.
+(def-fns _ $ (erased pbpp-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Pbpp d e n f) p) (erased (Respects f n fn) rfn)
+    (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) -> (erased (Pbpp d fn ni fi) r))
+  (let-match erased p (MkPbpp _ _ _ _ h g b pl pc))
+  (let ((erased fn2) (erased ni2) (erased fi2) (erased h2) (erased rfn2) (erased pn2) (erased pf2) (erased g2)) (genus-mirror d (Zero) e n f h g))
+  (let-match erased (respects-fn f n fn2 fn rfn2 rfn) (Refl _ _))
+  (let-match erased (perm-unique d n ni2 ni pn2 pn) (Refl _ _))
+  (let-match erased (perm-unique d f fi2 fi pf2 pf) (Refl _ _))
+  (let-match erased pc (MkPrecubic _ _ ks ol u))
+  (let-match erased ol (MkOrderList _ _ ids _ io os))
+  (MkPbpp d fn ni fi h2 g2 (bridgeless-mirror d e n f fn ni fi h b rfn pf) (plain-mirror d e n f fn h pl rfn)
+    (MkPrecubic d ni ks (MkOrderList d ni ids ks io (orders-inv d n ni ids ks pn os)) u)))
+
+(def-fns _ $ (erased nocol-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Hypermap d e n f) h) (erased (Hypermap d fn ni fi) hm)
+    (erased (Respects f n fn) rfn) (erased (HPerm d f fi) pf) (erased (NoColoring e f) ncol) -> (erased (NoColoring fn fi) r))
+  (let-match erased (decide-colorable d fn ni fi hm) (Uncolorable _ _ ncol2)
+    (absurd (Colorable _ _ ks c) (no-coloring e f ks ncol (coloring-mirror d e n f fn fi ks h rfn pf c))))
+  ncol2)
+
+(def-fns _ $ (erased reduces-mirror : (erased (Level) Lo) -> (erased (Level) Hi)
+    (erased (Fn Hi (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn)
+        (erased (HPerm d f fi) pf) (erased (Reduces Lo d fn ni fi) r) -> (erased (Reduces Hi d e n f) r2)) rm))
+  (def-adts $ (MirrorW : ((Nat) dw) ((List (Nat)) ew nw fw) ((List (SubMap)) mw) -> Type)
+    enum
+    (many MkMirrorW : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (List (SubMap)) ms) (erased (Hypermap d e n f) h)
+        (erased (Respects f n fn) rfn) (erased (HPerm d f fi) pf) (erased (ColorFrom Lo d fn ni fi ms) g) -> (MirrorW d e n f ms)))
+  (def-lvl M)
+  (let ((erased pm)) (prove-predates Lo M))
+  (def-fns M $ (erased mirror-glue : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (List (SubMap)) ms) (erased (MirrorW d e n f ms) w)
+      (erased (Colorings ms) cs) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
+    (let-match erased w (MkMirrorW _ _ _ _ fn ni fi _ h rfn pf g))
+    (let-match erased g (MkColorFrom _ K _ _ _ _ _ W wm pk glue))
+    (let ((erased ks) (erased c)) (glue (predates (predates-trans pk pm)) d fn ni fi ms wm cs))
+    (values ks (coloring-mirror d e n f fn fi ks h rfn pf c)))
+  (def-lvl Hi)
+  (let ((erased ph)) (prove-predates M Hi))
+  (def-fns Hi $ (erased rm : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn)
+      (erased (HPerm d f fi) pf) (erased (Reduces Lo d fn ni fi) r) -> (erased (Reduces Hi d e n f) r2))
+    (let-match erased r (MkReduces _ _ _ _ _ ms sm g))
+    (MkReduces Hi d e n f ms sm (MkColorFrom Hi M d e n f ms MirrorW (MkMirrorW d e n f fn ni fi ms h rfn pf g) ph mirror-glue)))
+  (values Hi rm))
 
 ; css concatenated is cfs.
 (def-adts $ (ConcatL : ((List (List (Config))) css) ((List (Config)) cfs) -> Type)
@@ -71,58 +93,64 @@
     ((MemThere _ _ _ _ m1) (reducible-mem cf rest a1 m1))))
 
 ; minimal_counter_example_is_plain_cubic_pentagonal of birkhoff.v, with Coq's cubic part from coloring.v's
-; minimal_counter_example_is_cubic: a minimal counterexample is plain cubic with every face above four darts.
+; minimal_counter_example_is_cubic, and minimality as data: a connected planar bridgeless plain precubic map that the search
+; finds uncolourable is plain cubic with every face above four darts (Geo), or reduces.
 (def-adts $ (BirkGeo : -> Type)
   enum
-  (many MkBirkGeo : (erased (Level) F)
-      (erased (Fn F (erased (Level) L1 L2) -> (erased (Level) M)
-          (erased (Fn M (erased (Nat) d) (erased (List (Nat)) e n f) (erased (MinimalCounterExample L1 L2 d e n f) mce) -> (erased (List (Nat)) ks)
-              (erased (Geo d e n f ks) g)) r)) fac)
+  (many MkBirkGeo : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (NoColoring e f) ncol) (erased (Connected d e n f) conn)
+          -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r)) geo)
       -> (BirkGeo)))
 
-; not_embed_reducible of embed.v, for the configurations of cfs: a configuration of cfs, C-reducible with contract cc, whose
-; kernel preembeds in a minimal counterexample, as CfEmbed states it, gives False. Coq's embeddable, which the quiz checks of
-; cfquiz.v establish there, is part of what this leaves open.
+; not_embed_reducible of embed.v, for the configurations of cfs, with minimality as data: a map as BirkGeo takes it, Geo, in
+; which the kernel of a configuration of cfs, C-reducible with contract cc, preembeds as CfEmbed states it, reduces. Coq's
+; embeddable, which the quiz checks of cfquiz.v establish there, is part of what this leaves open.
 (def-adts $ (NotEmbed : ((List (Config)) cfs) -> Type)
   enum
-  (many MkNotEmbed : (erased (List (Config)) cfs) (erased (Level) F)
-      (erased (Fn F (erased (Level) L1 L2) -> (erased (Level) M)
-          (erased (Fn M (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
-              (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
-              (erased (MinimalCounterExample L1 L2 dm em nm fm) mce) (erased (Geo dm em nm fm ksm) g) (erased (Cpmap cp dc ec fc rc) c)
-              (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (KernelList dc fc rc as) kl)
-              (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed cp cc) cr)
-              -> (erased (False) r)) r)) fac)
+  (many MkNotEmbed : (erased (List (Config)) cfs) (erased (Level) F B)
+      (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
+          (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
+          (erased (Pbpp dm em nm fm) p) (erased (NoColoring em fm) ncol) (erased (Geo dm em nm fm ksm) g) (erased (Cpmap cp dc ec fc rc) c)
+          (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (KernelList dc fc rc as) kl)
+          (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed cp cc) cr)
+          -> (erased (Reduces B dm em nm fm) r)) emb)
       -> (NotEmbed cfs)))
 
-; present.v's no_fit_the_redpart and the use of unavoidability in four_color_hypermap: no minimal counterexample, for the
-; minimal counterexamples at any levels L1 and L2.
-(def-fns _ $ (erased no-mce : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl) (erased (AllRedC css) ar)
-    (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed cfs) ne) -> (erased (Level) G)
-    (erased (Fn G (erased (Level) L1 L2) -> (erased (Level) M)
-        (erased (Fn M (erased (Nat) d) (erased (List (Nat)) e n f) (erased (MinimalCounterExample L1 L2 d e n f) mce) -> (erased (False) r)) r)) fac))
+; present.v's no_fit_the_redpart and the use of unavoidability in four_color_hypermap, with minimality as data: a map with no
+; dart is coloured, a disconnected one splits (split-reduces), and a connected one reduces through BirkGeo, or through
+; unavoidability, a configuration of cfs and NotEmbed, on the map or its mirror.
+(def-fns _ $ (erased embed-analysis : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl) (erased (AllRedC css) ar)
+    (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed cfs) ne) -> (erased (Analysis) an))
   (let-match erased u (MkUnavE _ lv every))
-  (let-match erased bg (MkBirkGeo Fg geo))
-  (let-match erased ne (MkNotEmbed _ Fe emb))
+  (let-match erased bg (MkBirkGeo Fg Bg geo))
+  (let-match erased ne (MkNotEmbed _ Fe Be emb))
   (let ((erased all)) (allred-concat css cfs cl ar))
-  (def-lvl G)
-  (def-fns G $ (erased fac : (erased (Level) L1 L2) -> (erased (Level) M)
-      (erased (Fn M (erased (Nat) d) (erased (List (Nat)) e n f) (erased (MinimalCounterExample L1 L2 d e n f) mce) -> (erased (False) r)) r))
-    (let ((erased Mc) (erased conn)) (mce-connected L1 L2))
-    (let ((erased Mg) (erased gf)) (geo L1 L2))
-    (let ((erased Ms) (erased same)) (emb L1 L2))
-    (let ((erased M1) (erased M2) (erased mir)) (mce-mirror L1))
-    (let ((erased Mr) (erased flip)) (emb M1 L2))
-    (def-lvl M)
-    (def-fns M $ (erased r : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (MinimalCounterExample L1 L2 d e n f) mce) -> (erased (False) r))
-      (let ((erased ks) (erased g)) (gf d e n f mce))
-      (let-match erased mce (MkMinimalCounterExample _ _ _ _ _ _ _ gen _ _ _ _ _))
-      (let-match erased (every d e n f ks g (conn d e n f mce) gen)
-        (MkCfEmbed _ sym cci cp _ dc x0c x0m _ _ _ _ em2 nm2 fm2 ec nc fc rc ksc as hl m c pm ol mo g2 kl pe h0 lx))
-      (let-match erased (reducible-mem (MkConfig sym cci cp) cfs all m) (MkReducible _ _ cc _ _ cr))
-      (match erased mo _
-        ((MoSame _ _ _ _) (same sym cci cc cp d dc x0c x0m e n f ks ec nc fc rc ksc as hl m mce g2 c pm ol kl pe h0 lx cr))
-        ((MoMirror _ _ _ _ _ _ _ rfn pn pf)
-          (flip sym cci cc cp d dc x0c x0m em2 nm2 fm2 ks ec nc fc rc ksc as hl m (mir L2 d e n f em2 nm2 fm2 mce rfn pn pf) g2 c pm ol kl pe h0 lx cr))))
-    (values M r))
-  (values G fac))
+  (let ((erased Bm) (erased mirror)) (reduces-mirror Be))
+  (def-lvl B)
+  (let ((erased qg) (erased qe) (erased qm) (erased qs)) (values (prove-predates Bg B) (prove-predates Be B) (prove-predates Bm B) (prove-predates (level-of split-glue) B)))
+  (def-fns _ $ (erased analyse : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (NoColoring e f) ncol)
+      -> (erased (Reduces B d e n f) r))
+    (let-match erased p (MkPbpp _ _ _ _ h gen _ _ _))
+    (match erased d _
+      (absurd (Zero)
+        (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+        (let-match erased le (LengthNil _))
+        (let-match erased lf (LengthNil _))
+        (no-coloring (Nil _) (Nil _) (Nil _) ncol
+          (MkFourColoring (Nil _) (Nil _) (Nil _) (Nil _) (RespNil (Nil _)) (RespNil (Nil _)) (DifferNil) (UnderNil _))))
+      ((Succ d1)
+        (let-match erased (split-reduces B qs d e n f p (LtZ d1)) (OrL _ _ conn) ((OrR _ _ r) r))
+        (let ((erased ks) (erased gr)) (geo d e n f p ncol conn))
+        (let-match erased gr (OrL _ _ g) ((OrR _ _ r) (reduces-lift Bg B d e n f r qg)))
+        (let-match erased (every d e n f ks g conn gen)
+          (MkCfEmbed _ sym cci cp _ dc x0c x0m _ _ _ _ em2 nm2 fm2 ec nc fc rc ksc as hl m c pm ol mo gm kl pe h0 lx))
+        (let-match erased (reducible-mem (MkConfig sym cci cp) cfs all m) (MkReducible _ _ cc _ _ cr))
+        (let-match erased mo (MoMirror _ _ _ _ _ _ _ rfn pn pf)
+          ((MoSame _ _ _ _) (reduces-lift Be B d e n f (emb sym cci cc cp d dc x0c x0m e n f ks ec nc fc rc ksc as hl m p ncol gm c pm ol kl pe h0 lx cr) qe)))
+        (let ((erased p2)) (pbpp-mirror d e n f em2 nm2 fm2 p rfn pn pf))
+        (let-match erased p2 (MkPbpp _ _ _ _ h2 _ _ _ _))
+        (let ((erased ncol2)) (nocol-mirror d e n f em2 nm2 fm2 h h2 rfn pf ncol))
+        (reduces-lift Bm B d e n f
+          (mirror d e n f em2 nm2 fm2 h rfn pf (emb sym cci cc cp d dc x0c x0m em2 nm2 fm2 ks ec nc fc rc ksc as hl m p2 ncol2 gm c pm ol kl pe h0 lx cr))
+          qm))))
+  (MkAnalysis (level-of analyse) B analyse))
