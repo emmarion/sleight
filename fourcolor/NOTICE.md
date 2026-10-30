@@ -62,7 +62,8 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   hypotheses), `induct.sl` and `inductgoal.sl` (the induction of
   the Coq proof's four_color_hypermap, and `coloring.v`'s
   minimal_counter_example, restated with minimality as data), `split.sl`
-  (`patch.v`, `coloring.v`) and `birkfit.sl` (`birkhoff.v`).
+  (`patch.v`, `coloring.v`), `birkfit.sl` (`birkhoff.v`) and `embed2.sl`
+  (`embed.v`).
   Where a Sleight file follows a Coq file, its comments or the commit
   that added it usually name the Coq file; this list is reconstructed
   from those and may be incomplete.
