@@ -460,3 +460,150 @@
       (let-match erased (cross B d u2 eu2 u3 eu3 w2 ew2 w3 ew3 t2 t3 lx lh xr kx e n f fe lab Vx lsx m fx pu2 peu2 plu2 pu3 peu3 plu3
         pw2 pew2 plw2 pw3 pew3 plw3 n23 nxh ox a23) (OrL _ _ o23) ((OrR _ _ r) r))
       (match erased (tri-or d xr lx kx u1 u2 u3 e n f fe lab Vx lsx fx fl l4 pu1 o12 o13 o23 a12 a13 a23) _))))
+
+(def-adts $ (SubD : ((List (Nat)) xs ys) -> Type)
+  enum
+  (many SDYes : (erased (List (Nat)) xs ys) (erased (WSub xs ys) sb) -> (SubD xs ys))
+  (many SDNo : (erased (List (Nat)) xs ys) (erased (Nat) l) (erased (In l xs) il) (erased (NotIn l ys) ol) -> (SubD xs ys)))
+
+(def-fns _ $ (erased sub-dec : (subterm erased (List (Nat)) xs) (erased (List (Nat)) ys) -> (erased (SubD xs ys) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (SDYes _ ys (HSubNil ys))))
+  (match erased (sub-dec xs1 ys) _
+    ((SDNo _ _ l il ol) (SDNo xs ys l (InThere l x xs1 il) ol))
+    ((SDYes _ _ sb)
+      (match erased (in-dec x ys) _
+        ((OrL _ _ ix) (SDYes xs ys (HSubCons x xs1 ys ix sb)))
+        ((OrR _ _ ox) (SDNo xs ys x (InHere x xs1) ox))))))
+
+; A dart off the faces of r has a FaceLab label off those of r.
+(def-fns _ $ (erased kernel-fl : (erased (Nat) d x l) (erased (List (Nat)) f lab r lr) (erased (FaceLab d f lab) fl) (erased (Kernel f r x) k)
+    (erased (Respects lab r lr) rr) (erased (Nth (Nat) lab x l) px) -> (erased (NotIn l lr) o))
+  (match erased (in-dec l lr) _
+    ((OrR _ _ o) o)
+    (absurd (OrL _ _ il)
+      (let ((erased j) (erased ij) (erased pj)) (respects-in lab r lr l rr il))
+      (kernel-fband x j f r k (facelab-same d x j l f lab fl px pj) ij))))
+
+; The darts of a list on distinct faces have distinct FaceLab labels.
+(def-fns _ $ (erased simple-go : (erased (Nat) d) (erased (List (Nat)) f lab lab2 r lr ls) (erased (FaceLab d f lab) fl) (erased (Respects lab2 f lab2) rf)
+    (subterm erased (Respects lab r lr) rr) (erased (Respects lab2 r ls) r2) (erased (Distinct ls) dl) -> (erased (Distinct lr) res))
+  (let-match erased rr (RespCons _ r1 lr1 x l px rr1) ((RespNil _) (DistNil)))
+  (let-match erased r2 (RespCons _ _ ls1 _ l2 px2 r21))
+  (let-match erased dl (DistCons _ _ o2 dl1))
+  (DistCons l lr1 (match erased (in-dec l lr1) (((NotIn l lr1) res))
+      ((OrR _ _ o) o)
+      (absurd (OrL _ _ il)
+        (let ((erased j) (erased ij) (erased pj)) (respects-in lab r1 lr1 l rr1 il))
+        (let-match erased (facelab-same d x j l f lab fl px pj) (MkSomePath _ _ ws _ _ w))
+        (apart-irrefl l2 (notin-in l2 l2 ls1 o2 (in-map lab2 r1 ls1 j l2 ij r21 (path-label f lab2 _ ws x j l2 w rf px2))))))
+    (simple-go d f lab lab2 r1 lr1 ls1 fl rf rr1 r21 dl1)))
+
+(def-fns _ $ (erased simple-fl : (erased (Nat) d) (erased (List (Nat)) f lab r lr) (erased (FaceLab d f lab) fl) (erased (Simple f r) s)
+    (erased (Respects lab r lr) rr) -> (erased (Distinct lr) res))
+  (let-match erased s (MkSimple _ _ lab2 ls rf rp dl))
+  (simple-go d f lab lab2 r lr ls fl rf rr rp dl))
+
+(def-adts $ (RLink : ((List (Nat)) f) ((Nat) x) ((List (Nat)) ps) -> Type)
+  enum
+  (many MkRLink : (erased (List (Nat)) f) (erased (Nat) x) (erased (List (Nat)) ps) (erased (Nat) q) (erased (In q ps) iq) (erased (SomePath f (Nil (Nat)) x q) sq)
+      -> (RLink f x ps)))
+
+; The face image of the last dart's edge image of a ring path, and of every other dart, is on the face of a later dart, or
+; the dart is the last.
+(def-fns _ $ (erased rp-succ : (erased (List (Nat)) e f ps) (erased (Nat) x y t et) (subterm erased (RPath e f x ps y) rp) (erased (In t (Cons (Nat) x ps)) it)
+    (erased (Nth (Nat) e t et) pt) -> (erased (HOr (Eq (Nat) t y) (RLink f et ps)) r))
+  (let-match erased rp (RPCons _ _ p1 _ ex z _ pe w rest) ((RPNil _ _ _) (let-match erased it (InHere _ _) (absurd (InThere _ _ _ i) i)) (OrL _ _ (Refl _ t))))
+  (match erased it _
+    ((InHere _ _) (let-match erased (nth-fn _ e x et ex pt pe) (Refl _ _)) (OrR _ _ (MkRLink f et ps z (InHere z p1) w)))
+    ((InThere _ _ _ it1)
+      (match erased (rp-succ e f p1 z y t et rest it1 pt) _
+        ((OrL _ _ eq) (OrL _ _ eq))
+        ((OrR _ _ rl) (let-match erased rl (MkRLink _ _ _ q iq sq)) (OrR _ _ (MkRLink f et ps q (InThere q z p1 iq) sq)))))))
+
+; The edge image of a dart of a ring is on a face of the ring.
+(def-fns _ $ (erased ring-elab : (erased (Nat) d w t et l) (erased (List (Nat)) e f lab Bs lp) (erased (FaceLab d f lab) fl) (erased (Ring e f w Bs) rg)
+    (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In t (Cons (Nat) w Bs)) it) (erased (Nth (Nat) e t et) pt) (erased (Nth (Nat) lab et l) pl)
+    -> (erased (In l lp) r))
+  (let-match erased rg (MkRing _ _ _ _ y ey rp pe sw s))
+  (match erased (rp-succ e f Bs w y t et rp it pt) _
+    ((OrL _ _ eq) (let-match erased eq (Refl _ _)) (let-match erased (nth-fn _ e t et ey pt pe) (Refl _ _))
+      (in-map lab _ lp w l (InHere w Bs) rr (facelab-path d et w l f lab fl sw pl)))
+    ((OrR _ _ rl) (let-match erased rl (MkRLink _ _ _ q iq sq)) (in-map lab _ lp q l (InThere q w Bs iq) rr (facelab-path d et q l f lab fl sq pl)))))
+
+; cx without one dart z, with insertE inside z :: e z :: ins2.
+(def-fns _ $ (erased ie-drop : (erased (List (Nat)) e cx ins) (erased (Nat) z k) (subterm erased (InsertE e cx ins) ie) (erased (In z cx) iz)
+    (erased (Length (Nat) cx (Succ k)) lc) -> (erased (List (Nat)) cx2 ins2) (erased (Nat) ez) (erased (InsertE e cx2 ins2) ie2) (erased (Length (Nat) cx2 k) lc2)
+    (erased (Nth (Nat) e z ez) pz) (erased (WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
+  (let-match erased ie (IECons _ cx1 ins1 x y px ie1) (absurd (IENil _) iz))
+  (let-match erased lc (LengthCons _ _ _ _ lc1))
+  (match erased iz (((List (Nat)) cx2 ins2) ((Nat) ez) ((InsertE e cx2 ins2) ie2) ((Length (Nat) cx2 k) lc2) ((Nth (Nat) e z ez) pz)
+      ((WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
+    ((InHere _ _) (values cx1 ins1 y ie1 lc1 px (sub-refl (Cons _ x (Cons _ y ins1)))))
+    ((InThere _ _ _ iz1)
+      (let-match erased lc1 (LengthCons _ _ _ k2 lc3) (absurd (LengthNil _) iz1))
+      (let ((erased cx3) (erased ins3) (erased ez) (erased ie3) (erased lc4) (erased pz) (erased s3)) (ie-drop e cx1 ins1 z k2 ie1 iz1 lc1))
+      (let ((erased T)) (Cons _ z (Cons _ ez (Cons _ x (Cons _ y ins3)))))
+      (values (Cons _ x cx3) (Cons _ x (Cons _ y ins3)) ez (IECons e cx3 ins3 x y px ie3) (LengthCons _ x cx3 k2 lc4) pz
+        (HSubCons x _ T (InThere x z _ (InThere x ez _ (InHere x _))) (HSubCons y ins1 T (InThere y z _ (InThere y ez _ (InThere y x _ (InHere y ins3))))
+          (sub-trans ins1 (Cons _ z (Cons _ ez ins3)) T s3
+            (HSubCons z _ T (InHere z _) (HSubCons ez ins3 T (InThere ez z _ (InHere ez _))
+              (sub-cons z ins3 _ (sub-cons ez ins3 _ (sub-cons x ins3 _ (sub-cons y ins3 ins3 (sub-refl ins3))))))))))))))
+
+; A dart t of the ring that is z or e z, with z in cx: the dart c of insertE that came from z, on no face of the ring, would be
+; t or its edge image, which are.
+(def-fns _ $ (erased absurd t-ok : (erased (Nat) d w t z ez c lc) (erased (List (Nat)) e n f fe lab Bs lp) (erased (Spk d e n f fe lab) cs) (erased (Ring e f w Bs) rg)
+    (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In t (Cons (Nat) w Bs)) it) (erased (HOr (Eq (Nat) t z) (Eq (Nat) t ez)) ot)
+    (erased (Nth (Nat) e z ez) pz) (erased (HOr (Eq (Nat) c z) (Nth (Nat) e z c)) oc) (erased (Nth (Nat) lab c lc) plc) (erased (NotIn lc lp) o)
+    -> (erased (False) r))
+  (let-match erased cs (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ll)) (respects-length lab f lab d rl lf))
+  (let ((erased lt)) (under-in _ t d (ring-under d w e n f Bs h rg) it))
+  (let ((erased et) (erased pet) (erased lte)) (perm-nth d t e nf pme lt))
+  (let ((erased l1) (erased pl1)) (nth-exists _ lab d t ll lt))
+  (let ((erased l2) (erased pl2)) (nth-exists _ lab d et ll lte))
+  (let ((erased i1) (erased i2)) (values (in-map lab _ lp t l1 it rr pl1) (ring-elab d w t et l2 e f lab Bs lp fl rg rr it pet pl2)))
+  (let ((erased pzz) (erased _)) (plain-eq d z ez e pl (pre-lt d z ez e nf pme pz) pz))
+  (match erased ot _
+    (absurd (OrL _ _ eq) (let-match erased eq (Refl _ _))
+      (match erased oc _
+        (absurd (OrL _ _ eq2) (let-match erased eq2 (Refl _ _)) (let-match erased (nth-fn _ lab t l1 lc pl1 plc) (Refl _ _)) (apart-irrefl lc (notin-in lc lc lp o i1)))
+        (absurd (OrR _ _ pc) (let-match erased (nth-fn _ e t et c pet pc) (Refl _ _)) (let-match erased (nth-fn _ lab et l2 lc pl2 plc) (Refl _ _))
+          (apart-irrefl lc (notin-in lc lc lp o i2)))))
+    (absurd (OrR _ _ eq) (let-match erased eq (Refl _ _))
+      (match erased oc _
+        (absurd (OrL _ _ eq2) (let-match erased eq2 (Refl _ _)) (let-match erased (nth-fn _ e t et c pet pzz) (Refl _ _))
+          (let-match erased (nth-fn _ lab et l2 lc pl2 plc) (Refl _ _)) (apart-irrefl lc (notin-in lc lc lp o i2)))
+        (absurd (OrR _ _ pc) (let-match erased (nth-fn _ e z t c pz pc) (Refl _ _)) (let-match erased (nth-fn _ lab t l1 lc pl1 plc) (Refl _ _))
+          (apart-irrefl lc (notin-in lc lc lp o i1)))))))
+
+(def-fns _ $ (erased bs-sub : (erased (Nat) d w z ez c lc) (erased (List (Nat)) e n f fe lab Bs lp ins ins2) (erased (Spk d e n f fe lab) cs) (erased (Ring e f w Bs) rg)
+    (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (subterm erased (List (Nat)) X) (erased (WSub X Bs) sx) (erased (WSub Bs ins) sb)
+    (erased (WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) s2) (erased (Nth (Nat) e z ez) pz) (erased (HOr (Eq (Nat) c z) (Nth (Nat) e z c)) oc)
+    (erased (Nth (Nat) lab c lc) plc) (erased (NotIn lc lp) o) -> (erased (WSub X ins2) r))
+  (let-match erased sx (HSubCons t X1 _ it sx1) ((HSubNil _) (HSubNil ins2)))
+  (let ((erased itp)) (InThere t w Bs it))
+  (HSubCons t X1 ins2
+    (match erased (sub-in ins _ t s2 (sub-in Bs ins t sb it)) (((In t ins2) r))
+      (absurd (InHere _ _) (t-ok d w t z ez c lc e n f fe lab Bs lp cs rg rr itp (OrL _ _ (Refl _ t)) pz oc plc o))
+      ((InThere _ _ _ i1)
+        (match erased i1 (((In t ins2) r))
+          (absurd (InHere _ _) (t-ok d w t z ez c lc e n f fe lab Bs lp cs rg rr itp (OrR _ _ (Refl _ t)) pz oc plc o))
+          ((InThere _ _ _ i2) i2))))
+    (bs-sub d w z ez c lc e n f fe lab Bs lp ins ins2 cs rg rr X1 sx1 sb s2 pz oc plc o)))
+
+; The faces of insertE are faces of a contract ring w :: Bs of five darts, Bs in insertE of four darts: otherwise the ring is
+; one of the contract without the dart behind one off its faces, of three darts, against contract_ring_max.
+(def-fns _ $ (erased ins-band : (erased (Nat) d w c lc) (erased (List (Nat)) e n f fe lab cx ins Bs lp) (erased (Spk d e n f fe lab) cs)
+    (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
+    (erased (Length (Nat) Bs 4) lb) (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In c ins) ic) (erased (Nth (Nat) lab c lc) plc) -> (erased (In lc lp) r))
+  (unary 4)
+  (match erased (in-dec lc lp) _
+    ((OrL _ _ i) i)
+    (absurd (OrR _ _ o)
+      (let-match erased cs (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+      (let ((erased z) (erased iz) (erased oc)) (ins-pick e cx ins c ie ic))
+      (let ((erased cx2) (erased ins2) (erased ez) (erased ie2) (erased lc2) (erased pz) (erased s2)) (ie-drop e cx ins z (Succ (Succ (Succ (Zero)))) ie iz l))
+      (lt-irrefl 4 (ring-max d w 4 (Succ (Succ (Succ (Zero)))) e n f cx2 ins2 Bs h gen pl rg pr
+        (bs-sub d w z ez c lc e n f fe lab Bs lp ins ins2 cs rg rr Bs (sub-refl Bs) sb s2 pz oc plc o) ie2 lb lc2)))))
