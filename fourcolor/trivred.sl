@@ -51,7 +51,7 @@
   (let-match erased rq (RPCons _ _ _ _ eh _ _ _ _ rq1))
   (resp-end ec fc em fm hl hp1 z y hz w p1 rp1 rq1 rh1))
 
-(def-fns _ $ (erased sub-rot : (erased (List (Nat)) X Y) (erased (Nat) a) (erased (AppN X (Cons (Nat) a (Nil (Nat))) Y) ap)
+(def-fns _ $ (erased rot-sub : (erased (List (Nat)) X Y) (erased (Nat) a) (erased (AppN X (Cons (Nat) a (Nil (Nat))) Y) ap)
     -> (erased (WSub (Cons (Nat) a X) Y) s1) (erased (WSub Y (Cons (Nat) a X)) s2))
   (values (HSubCons a X Y (app-in-r X _ Y a ap (InHere a (Nil _))) (app-sub-l X _ Y X ap (sub-refl X)))
     (app-sub X _ Y (Cons _ a X) ap (sub-cons a X X (sub-refl X)) (HSubCons a (Nil _) (Cons _ a X) (InHere a X) (HSubNil _)))))
@@ -102,7 +102,7 @@
   (MkFEmpty d x0 e n f lab S2 p hd zs lr rg (sub-trans S2 S _ b s1) (sub-trans _ S S2 s2 a) ds rl al))
 
 ; A Chords of the ring x0 :: p read as L = x1 :: A ++ x2 :: B, its labels taken from the ring's.
-(def-fns _ $ (erased mk-chords : (erased (Nat) x0 x1 x2 z ez c ec w ew) (erased (List (Nat)) e n f p A B L) (erased (Ring e f x0 p) rg)
+(def-fns _ $ (erased chords-of : (erased (Nat) x0 x1 x2 z ez c ec w ew) (erased (List (Nat)) e n f p A B L) (erased (Ring e f x0 p) rg)
     (erased (WSub L (Cons (Nat) x0 p)) s1) (erased (WSub (Cons (Nat) x0 p) L) s2) (erased (Distinct L) dL) (erased (AppN (Cons (Nat) x1 A) (Cons (Nat) x2 B) L) ap)
     (erased (RPath e f x1 A c) ra) (erased (Nth (Nat) e c ec) pc) (erased (SomePath f (Nil (Nat)) ec x2) sc)
     (erased (RPath e f x2 B w) rb) (erased (Nth (Nat) e w ew) pw) (erased (SomePath f (Nil (Nat)) ew x1) sw)
@@ -359,9 +359,9 @@
       (let ((erased ehc2) (erased pehc2) (erased shc2)) (step-h dc dm c2 ec2 y hc2 hw ec nc fc ksc rc em nm fm ksm as hl en fu ic2 iya pc2 sc2 phc2 phy))
       (let ((erased hM) (erased ahM) (erased ahM2)) (app-assoc _ hp (Cons _ hz hBp) (Cons _ hw (Nil _)) hA ahp (AppCons hBp _ hB hz ahB)))
       (let ((erased aM)) (AppCons hM _ hp hx ahM2))
-      (let ((erased s1) (erased s2)) (sub-rot (Cons _ hx hM) (Cons _ hx hp) hw aM))
+      (let ((erased s1) (erased s2)) (rot-sub (Cons _ hx hM) (Cons _ hx hp) hw aM))
       (let ((erased pz1) (erased _)) (plain-eq dm nhw heny em pl lnh penh))
-      (let ((erased cc1)) (mk-chords hx hw hz heny nhw hc1 ehc hc2 ehc2 em nm fm hp (Cons _ hx hA) hBp (Cons _ hw (Cons _ hx hM)) rg s1 s2
+      (let ((erased cc1)) (chords-of hx hw hz heny nhw hc1 ehc hc2 ehc2 em nm fm hp (Cons _ hx hA) hBp (Cons _ hw (Cons _ hx hM)) rg s1 s2
         (dist-unrot (Cons _ hx hM) (Cons _ hx hp) hw aM dR) (AppCons (Cons _ hx hA) (Cons _ hz hBp) (Cons _ hx hM) hw (AppCons hA _ hM hx ahM))
         (RPCons em fm hA hw ehw hx hc1 pehw shw rAm) pehc shc rBpm pehc2 shc2 pz1
         (some-sym dm heny hw fm fim qfm (some-step fm heny hw pfw) lenh) snz dhe ohe dnh onh))
@@ -373,7 +373,7 @@
         (chord-proper hx hz hw nhw heny em nm fm hp hBp (Cons _ hx hA) cc2)))
       (let ((erased fe1)) (fe-chord dm hx hw hz heny nhw em nm fm lab hp (Cons _ hx hA) hBp hd0 zs0 hd1 zs1 hd2 zs2 cc1 d0 d1 d2 cn2 fl fm0))
       (let ((erased hq) (erased apq) (erased rgq)) (ring-rot1 em fm hBp heny hz cr1))
-      (let ((erased t1) (erased t2)) (sub-rot (Cons _ hz hBp) (Cons _ hz hq) heny (AppCons hBp _ hq hz apq)))
+      (let ((erased t1) (erased t2)) (rot-sub (Cons _ hz hBp) (Cons _ hz hq) heny (AppCons hBp _ hq hz apq)))
       (let ((erased feq)) (fe-move dm em nm fm lab _ _ fe1 t1 t2))
       (let ((erased q) (erased rqc) (erased apqc)) (rpath-join ec fc (Nil _) Bp z c2 ec2 eny eny rBp pc2 (some-cat fc ec2 y eny sc2 syeny) (RPNil ec fc eny)))
       (let ((erased wq)) (within-app _ q as Bp apqc wBp (WCons as eny (Nil _) ienya (WNil as))))
@@ -431,7 +431,7 @@
       (let ((erased djR)) (app-disj _ _ _ aR dR))
       (let ((erased dL2)) (app-distinct _ _ L2 aL2 dzB2 dxA (disj-sym _ _ djR _ (sub-refl _))))
       (let ((erased pz2) (erased _)) (plain-eq dm n2 en2 em pl ln2 pen2))
-      (let ((erased cc3)) (mk-chords hx hz hx en2 n2 hw ehw hc1 ehc em nm fm hp hB hA L2 rg (app-swap-sub _ _ L2 _ aL2 aR) (app-swap-sub _ _ _ L2 aR aL2) dL2 aL2
+      (let ((erased cc3)) (chords-of hx hz hx en2 n2 hw ehw hc1 ehc em nm fm hp hB hA L2 rg (app-swap-sub _ _ L2 _ aL2 aR) (app-swap-sub _ _ _ L2 aR aL2) dL2 aL2
         rBm pehw shw rAm pehc shc pz2 (some-cat fm hz nhw en2 (some-sym dm nhw hz fm fim qfm snz lnh) sen2) sn2x den oen dn2 on2))
       (let ((erased cc4)) (chords-swap dm hx hz hx en2 n2 em nm fm hp hB hA h pl cc3))
       (let ((erased hd0) (erased zs0) (erased d0)) (rds-make dm hx em nm fm hp h gen pl rg (proper-mid em hB1 hp hx hz hb hA ahp)))
@@ -441,7 +441,7 @@
         (chord-proper hx hx hz n2 en2 em nm fm hp hA hB cc4)))
       (let ((erased fe2)) (fe-chord dm hx hz hx en2 n2 em nm fm lab hp hB hA hd0 zs0 hd1 zs1 hd2 zs2 cc3 d0 d1 d2 cn2 fl fm0))
       (let ((erased hq2) (erased apq2) (erased rgq2)) (ring-rot1 em fm hA en2 hx cr3))
-      (let ((erased t3) (erased t4)) (sub-rot (Cons _ hx hA) (Cons _ hx hq2) en2 (AppCons hA _ hq2 hx apq2)))
+      (let ((erased t3) (erased t4)) (rot-sub (Cons _ hx hA) (Cons _ hx hq2) en2 (AppCons hA _ hq2 hx apq2)))
       (let ((erased feq2)) (fe-move dm em nm fm lab _ _ fe2 t3 t4))
       (let ((erased q2) (erased rq2) (erased apq2c)) (rpath-join ec fc (Nil _) A x c cc enny enny r1 pc (some-cat fc cc z enny spc szenny) (RPNil ec fc enny)))
       (let ((erased wq2)) (within-app _ q2 as A apq2c wA (WCons as enny (Nil _) iennya (WNil as))))
@@ -467,9 +467,9 @@
     (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
 
 ; The edge image of y is on the face of x: rlink y x.
-(def-adts $ (Closes : ((List (Nat)) ec fc) ((Nat) y x) -> Type)
+(def-adts $ (RlClose : ((List (Nat)) ec fc) ((Nat) y x) -> Type)
   enum
-  (many MkCloses : (erased (List (Nat)) ec fc) (erased (Nat) y x ey) (erased (Nth (Nat) ec y ey) pe) (erased (SomePath fc (Nil (Nat)) ey x) sp) -> (Closes ec fc y x)))
+  (many MkRlClose : (erased (List (Nat)) ec fc) (erased (Nat) y x ey) (erased (Nth (Nat) ec y ey) pe) (erased (SomePath fc (Nil (Nat)) ey x) sp) -> (RlClose ec fc y x)))
 
 ; The case of a HomTrivial that trivial_hom_ring does not settle: a hom ring x :: p of five darts that does not close, one side of
 ; which, its diskN part hd, meets exactly one face off the ring, that of y (labels lab).
@@ -486,7 +486,7 @@
     (erased (Nat) x z hx ez k m) (erased (List (Nat)) p hp hd zs lr) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
     (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg) (erased (Length (Nat) (Cons (Nat) x p) k) lk) (erased (BkMode k m) md)
     (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr) (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds)
-    (erased (Respects lab (Cons (Nat) hx hp) lr) rl) (erased (TrivSide lab lr hd m) ts) -> (erased (Or (Closes ec fc z x) (HomFive dm ec fc em nm fm as hl)) r))
+    (erased (Respects lab (Cons (Nat) hx hp) lr) rl) (erased (TrivSide lab lr hd m) ts) -> (erased (Or (RlClose ec fc z x) (HomFive dm ec fc em nm fm as hl)) r))
   (let ((erased h) (erased gen) (erased bl) (erased pl) (erased cu) (erased fl) (erased cn2) (erased nfm) (erased nim) (erased fim) (erased qem) (erased qnm) (erased qfm))
     (tm dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx))
   (match erased ts _
@@ -495,7 +495,7 @@
       (let ((erased sr)) (sub-refl (Cons _ hx hp)))
       (let ((erased ey) (erased pey) (erased sp)) (triv-hom dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx (Succ k1) x z hx k1 p hp rp wp rh rg lk1 (lt-succ k1)
         (MkFEmpty dm hx em nm fm lab _ hp hd zs lr rg sr sr ds rl al)))
-      (OrL _ _ (MkCloses ec fc z x ey pey sp)))
+      (OrL _ _ (MkRlClose ec fc z x ey pey sp)))
     ((TsOne _ _ _ y l iy pl ol al)
       (let-match erased md (BMFive))
       (OrR _ _ (MkHomFive dm ec fc em nm fm as hl p hp hd zs lab lr x z hx ez y l rp wp rh rg lk pez nr ds fl rl iy pl ol al)))))
@@ -511,12 +511,12 @@
   (let ((erased R2) (erased rb) (erased ar)) (revapp-app X1 (Cons _ s acc) R W (Cons _ s acc2) ra1 (AppCons acc W acc2 s ap)))
   (values R2 (RACons _ s X1 acc2 R2 rb) ar))
 
-(def-fns _ $ (erased revapp-snoc : (erased (List (Nat)) Y acc RR) (erased (Nat) a) (subterm erased (List (Nat)) X) (erased (AppN X (Cons (Nat) a (Nil (Nat))) Y) ap)
+(def-fns _ $ (erased revapp-unsnoc : (erased (List (Nat)) Y acc RR) (erased (Nat) a) (subterm erased (List (Nat)) X) (erased (AppN X (Cons (Nat) a (Nil (Nat))) Y) ap)
     (erased (RevApp (Nat) Y acc RR) ra) -> (erased (List (Nat)) R1) (erased (Eq (List (Nat)) RR (Cons (Nat) a R1)) eq) (erased (RevApp (Nat) X acc R1) rb))
   (let-match erased ap (AppCons X1 _ Y1 b ap1)
     ((AppNil _) (let-match erased ra (RACons _ _ _ _ _ ra1)) (let-match erased ra1 (RANil _ _)) (values acc (Refl _ RR) (RANil _ acc))))
   (let-match erased ra (RACons _ _ _ _ _ ra1))
-  (let ((erased R1) (erased eq) (erased rb)) (revapp-snoc Y1 (Cons _ b acc) RR a X1 ap1 ra1))
+  (let ((erased R1) (erased eq) (erased rb)) (revapp-unsnoc Y1 (Cons _ b acc) RR a X1 ap1 ra1))
   (values R1 eq (RACons _ b X1 acc R1 rb)))
 
 (def-fns _ $ (erased rev-cons : (erased (List (Nat)) acc R) (erased (Nat) s) (subterm erased (List (Nat)) X) (erased (RevApp (Nat) X (Cons (Nat) s acc) R) ra)
@@ -718,7 +718,7 @@
   (let ((erased er2) (erased rer2) (erased aE)) (resp-app em _ _ _ (Cons _ hx HX1) aH EH rme (RespCons em (Nil _) (Nil _) hw ehw pehw (RespNil em))))
   (let ((erased er) (erased RRm) (erased hdc) (erased hd2) (erased rm) (erased ra) (erased cxr)) (rev-ctx dm hx em nm fm hp h gen pl rg prR))
   (let-match erased (resp-fn em er er2 _ rm rer2) (Refl _ _))
-  (let ((erased R1) (erased eqR) (erased raR1)) (revapp-snoc er2 (Nil _) RRm ehw EH aE ra))
+  (let ((erased R1) (erased eqR) (erased raR1)) (revapp-unsnoc er2 (Nil _) RRm ehw EH aE ra))
   (let-match erased eqR (Refl _ _))
   (let ((erased y0) (erased Qm) (erased eqm) (erased rg2)) (rev-ring dm hx em nm fm hp er RRm h pl rg rm ra))
   (let-match erased eqm (Refl _ _))
@@ -757,7 +757,7 @@
   (let ((erased fl2)) fl)
   (let-match erased fl2 (MkFaceLab _ kf _ fi2 _ ids rs gf pf gr io ro cl ll))
   (let ((erased lrN) (erased rlN)) (respects-exists lab _ dm urN ll))
-  (let ((erased s1) (erased s2)) (sub-rot (Cons _ q0 Qp) (Cons _ q0 Q2) ehw (AppCons Qp _ Q2 q0 apQ2)))
+  (let ((erased s1) (erased s2)) (rot-sub (Cons _ q0 Qp) (Cons _ q0 Q2) ehw (AppCons Qp _ Q2 q0 apQ2)))
   (let ((erased fa) (erased fb) (erased ur) (erased uR)) (rev-subs dm hx em nm fm hp er RRm h pl rg rm ra))
   (let ((erased subL)) (labs-in dm fm lab _ lr lrN (Cons _ hx hp) fl (facesub-to fm RRm _ _ fb s1) rl rlN))
   (let ((erased subL2)) (labs-in dm fm lab _ lrN lr _ fl (facesub-sub fm RRm _ _ s2 fa) rlN rl))
@@ -786,7 +786,7 @@
     ((OrR _ _ nrN)
       (match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx eb ry q0 ery k m Qc Q2 hdN zsN lrN rqc wRR rhRR rgN lkR md pery nrN dsN rlN tsN) _
         (absurd (OrL _ _ cl0)
-          (let-match erased cl0 (MkCloses _ _ _ _ e3 pe3 sp3))
+          (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
           (let-match erased (nth-fn _ ec ry e3 ery pe3 pery) (Refl _ _))
           (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery (MkFband fc _ ery eb (InHere eb (Nil _)) sp3) sc phz pry pehw pez sxry ixa nr))
         ((OrR _ _ hf) hf)))))
@@ -804,7 +804,7 @@
     ((OrL _ _ t)
       (match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t) _
         (absurd (OrL _ _ cl0)
-          (let-match erased cl0 (MkCloses _ _ _ _ e3 pe3 sp3))
+          (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
           (let-match erased (nth-fn _ ec z e3 ez pe3 pez) (Refl _ _))
           (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _))))
         ((OrR _ _ hf) hf)))

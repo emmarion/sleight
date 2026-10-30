@@ -626,15 +626,35 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `birkhoff-reduces`, or gives a `HomTrivial` (one side of the ring meets
   at most m faces off it, `TrivSide`). `full-red-of` gives a `FullRedR`
   from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
-  taken as a hypothesis: in Coq trivial_hom_ring, its use on the reversed
-  ring, and for five darts the spoke ring with adj11_edge and
-  adj_kernel_max, none ported (adj11_edge is in `evalid.sl` in a form
-  of its own, not through the spoke ring); if those need the ring arities, `TrivRed`
-  as stated may lack a hypothesis (not checked).
+  taken as a hypothesis, which `trivred.sl` gives from a narrower one.
   That these statements match Coq's has been checked only by reading.
   Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
   fullred` (in one run about 66 s with slc and 161 s with the reference
   compiler).
+- `trivred.sl` (load after `fullred.sl`): fullred.sl's `TrivRed` from
+  one hypothesis, `TrivFive`, as far as both compilers check it, with
+  minimality as data. `triv-hom` is trivial_hom_ring: an rlink walk of
+  kernel darts whose image is a ring of the map with an empty diskF
+  (`FEmpty`, read off a ring with the same darts) closes, by Coq's
+  induction through the two chord rings at the node of the last dart
+  (`chords-of` builds revsnip3.sl's `Chords`, `fe-chord` carries `FEmpty`
+  to the chord ring through `Three`). `side-hd` applies it when the diskN
+  side of a `HomTrivial` meets no face off the ring, and `side-zs` when
+  the other side does not, on the reversed ring rot 1 (rev (map edge R)),
+  the image of the edge images of the walk (`edges-h`, `rpath-rev-c`),
+  whose diskN side is the other side of R (`hd-zs`, through revsnip.sl's
+  `rev-disk`); `hom-proper` is hp_ok. What is left of a `HomTrivial`
+  (`ht-five`) is a `HomFive`: a hom ring of five darts that does not
+  close, whose diskN side meets exactly one face off it. `TrivFive`, its
+  refutation, is taken as a hypothesis (`triv-red-of` gives `TrivRed`
+  from it): in Coq the spoke ring of that face with adj11_edge, whose
+  proof goes through chordless_spoke_ring and so through Birkhoff, and
+  adj_kernel_max, from the ring arities of the configuration. Here
+  Birkhoff gives a `Reduces` rather than a contradiction, so `TrivFive`
+  as stated (ending in `False`, as `TrivRed` does) may not be provable by
+  Coq's route; that has not been settled. No ring-arity certificate is
+  taken yet. That these statements match Coq's has been checked only by
+  reading.
 - `notembed.sl` (load after `contract3.sl` and `embed6.sl`, with `iealias.sl` loaded after
   `red/cfred.sl`): not_embed_reducible of embed.v with minimality as data,
   as far as both compilers check it. `not-embed` gives embed.sl's
@@ -706,8 +726,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
   `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
-  their own) and the hypotheses `CfCerts cfs`, `TrivRed` and `TriadFive`, through
-  `embed-analysis`, `birk-geo-of`, `full-red-of`, `embed-valid`, `not-embed` and `four-color-from`. Here css is
+  their own) and the hypotheses `CfCerts cfs`, `TrivFive` and `TriadFive`, through
+  `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `embed-valid`, `not-embed` and `four-color-from`. Here css is
   `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
   computes cfs with `concat-cfs` instead, and that the two agree is not
   proved. Chain (both compilers, with `--goal proved`; about 50 s with slc and 115 s
@@ -723,7 +743,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  contract3 embed6 fullred notembed evalid fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  contract3 embed6 fullred trivred notembed evalid fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check
