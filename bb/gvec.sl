@@ -160,3 +160,118 @@
   (let-match unique v (MkAv _ _ ps n ly a d u))
   (let ((many m) (erased ad)) (sub n k (lay-drop-le A p ys xs ps n k c ly lk)))
   (u A ys ps m (lay-drop A p ys xs ps n k m c ly lk ad) (at) a (at) d))
+
+; Lyb xs ps n: logical element i of xs (0 the top) is at physical index n-1-i of ps.
+(def-adts
+  ((Lyb : ((List (U8)) xs) ((List (U8)) ps) ((Nat) n) -> Type)
+    enum
+    (many LybN : (erased (List (U8)) ps) -> (Lyb (Nil (U8)) ps (Zero)))
+    (many LybC : (erased (U8) x) (erased (List (U8)) xs) (erased (List (U8)) ps) (erased (Nat) n)
+       (erased (Lyb xs ps n) ly) (erased (Nth (U8) ps n x) nt) -> (Lyb (Cons (U8) x xs) ps (Succ n)))))
+
+(def-fns _ $ (erased lyb-length : (erased (List (U8)) xs) (erased (List (U8)) ps) (erased (Nat) n)
+    (subterm erased (Lyb xs ps n) ly) -> (erased (Length (U8) xs n) l))
+  (let-match erased ly (LybC x xs1 _ n1 ly1 _) ((LybN _) (LengthNil _)))
+  (LengthCons _ x xs1 n1 (lyb-length xs1 ps n1 ly1)))
+
+(def-fns _ $ (erased lyb-le : (erased (List (U8)) xs) (erased (List (U8)) ps) (erased (Nat) n len)
+    (erased (Lyb xs ps n) ly) (erased (Length (U8) ps len) l) -> (erased (Lt n (Succ len)) le))
+  (let-match erased ly (LybC _ _ _ n1 _ nt) ((LybN _) (LtZ len)))
+  (LtS n1 len (nth-lt-length _ ps n1 len _ nt l)))
+
+(def-fns _ $ (erased lyb-nth : (erased (List (U8)) xs) (erased (List (U8)) ps) (erased (Nat) n i j) (erased (U8) x)
+    (subterm erased (Lyb xs ps n) ly) (erased (Nth (U8) xs i x) nt) (erased (Add (Succ i) j n) ad) -> (erased (Nth (U8) ps j x) r))
+  (let-match erased ly (LybC _ xs1 _ n1 ly1 nt1) (absurd (LybN _) nt))
+  (let-match erased ad (AddSucc _ _ _ ad1))
+  (let-match erased nt (NthThere _ _ _ i1 _ nt2) ((NthHere _ _ _) (let-match erased ad1 (AddZero _)) nt1))
+  (lyb-nth xs1 ps n1 i1 j x ly1 nt2 ad1))
+
+(def-fns _ $ (erased lyb-agr : (erased (List (U8)) xs) (erased (List (U8)) ps qs) (erased (Nat) n q)
+    (subterm erased (Lyb xs ps n) ly) (erased (Agr (U8) ps qs q) g) (erased (Lt n (Succ q)) le) -> (erased (Lyb xs qs n) r))
+  (let-match erased ly (LybC x xs1 _ n1 ly1 nt) ((LybN _) (LybN qs)))
+  (let-match erased le (LtS _ _ lt))
+  (LybC x xs1 qs n1 (lyb-agr xs1 ps qs n1 q ly1 g (lt-weaken n1 q lt)) (agr-nth _ ps qs q n1 x g nt lt)))
+
+(def-fns _ $ (erased lyb-drop-le : (erased (List (U8)) p ys xs) (erased (List (U8)) ps) (erased (Nat) n k)
+    (subterm erased (Cat (U8) p ys xs) c) (erased (Lyb xs ps n) ly) (erased (Length (U8) p k) lk) -> (erased (Lt k (Succ n)) le))
+  (let-match erased c (CatC _ _ p1 _ xs1 c1) ((CatN _ _) (let-match erased lk (LengthNil _)) (LtZ n)))
+  (let-match erased lk (LengthCons _ _ _ k1 lk1))
+  (let-match erased ly (LybC _ _ _ n1 ly1 _))
+  (LtS k1 n (lyb-drop-le p1 ys xs1 ps n1 k1 c1 ly1 lk1)))
+
+(def-fns _ $ (erased lyb-drop : (erased (List (U8)) p ys xs) (erased (List (U8)) ps) (erased (Nat) n k m)
+    (subterm erased (Cat (U8) p ys xs) c) (erased (Lyb xs ps n) ly) (erased (Length (U8) p k) lk) (erased (Add k m n) ad) -> (erased (Lyb ys ps m) r))
+  (let-match erased c (CatC _ _ p1 _ xs1 c1) ((CatN _ _) (let-match erased lk (LengthNil _)) (let-match erased ad (AddZero _)) ly))
+  (let-match erased lk (LengthCons _ _ _ k1 lk1))
+  (let-match erased ly (LybC _ _ _ n1 ly1 _))
+  (let-match erased ad (AddSucc _ _ _ ad1))
+  (lyb-drop p1 ys xs1 ps n1 k1 m c1 ly1 lk1 ad1))
+
+(def-adts $ (Bv : ((List (U8)) xs) -> Type)
+  enum
+  (many MkBv : (erased (List (U8)) xs) (erased (List (U8)) ps) (many (Nat) n) (erased (Lyb xs ps n) ly)
+     (unique (Bytes ps) a) (many (U8) d) -> (Bv xs)))
+
+(def-fns _ $ (many bv-new : (many (U8) x0) (many (Nat) cap) -> (unique (Bv (Nil (U8))) v))
+  (let ((erased ps) (unique a) (erased _)) (bytes-make cap x0))
+  (MkBv (Nil (U8)) ps (Zero) (LybN ps) a x0))
+
+(def-fns _ $ (many bv-len : (erased (List (U8)) xs) (unique (Bv xs) v) ->
+    (many (Nat) n) (erased (Length (U8) xs n) p) (unique v is v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (values n (lyb-length xs ps n ly) (at unique (u xs ps n ly a d))))
+
+(def-fns _ $ (many bv-get : (erased (List (U8)) xs) (unique (Bv xs) v) (many (Nat) i) (erased (U8) x) (erased (Nth (U8) xs i x) nt) ->
+    (many x is y) (unique v is v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let ((many j) (erased ad)) (sub n (Succ i) (LtS i n (nth-lt-length _ xs i n x nt (lyb-length xs ps n ly)))))
+  (let ((many y) (unique a2)) (bytes-get _ a j x (lyb-nth xs ps n i j x ly nt ad)))
+  (values y (at unique (u xs ps n ly a2 d))))
+
+(def-fns _ $ (many bv-place : (erased (List (U8)) xs) (erased (List (U8)) ps) (many (Nat) n) (erased (Lyb xs ps n) ly)
+    (erased (U8) w) (erased (Nth (U8) ps n w) nt) (unique (Bytes ps) a) (many (U8) x) ->
+    (erased (List (U8)) qs) (erased (Lyb (Cons (U8) x xs) qs (Succ n)) ly2) (unique (Bytes qs) a2 at a))
+  (let ((erased qs) (unique a2) (erased st)) (bytes-set _ a n x w nt))
+  (values qs (LybC x xs qs n (lyb-agr xs ps qs n n ly (setnth-agr _ ps qs n n _ st (lt-succ n)) (lt-succ n)) (setnth-nth _ ps n _ qs st)) a2))
+
+(def-fns _ $ (many bv-push : (erased (List (U8)) xs) (unique (Bv xs) v) (many (U8) x) -> (unique (Bv (Cons (U8) x xs)) v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let ((many len) (erased lc) (unique a1)) (bytes-length _ a))
+  (let-match many (lt-dec n len) (Yes _ _ _ _ lt)
+    ((No _ _ _ _ _)
+      (let ((many c) (erased ad)) (add n n))
+      (let ((erased qs) (unique b) (erased rp)) (bytes-make (Succ c) d))
+      (let ((erased le)) (add-le-left n n c ad))
+      (let ((erased ys) (erased fr)) (splice-range _ ps len lc (Zero) n n (AddZero n) (lyb-le xs ps n len ly lc)))
+      (let ((erased old) (erased to)) (splice-range _ qs (Succ c) (repeat-length _ _ _ _ rp) (Zero) n n (AddZero n) (lt-weaken n (Succ c) le)))
+      (let ((erased zs) (unique b2) (erased sp)) (bytes-blit _ (share a1) (Zero) _ b (Zero) n ys fr old to))
+      (let ((erased w) (erased nt)) (nth-exists _ zs (Succ c) n (splice-length _ qs ys zs (Zero) n (Succ c) sp (repeat-length _ _ _ _ rp)) le))
+      (let ((erased zs2) (erased ly2) (unique b3))
+        (bv-place xs zs n (lyb-agr xs ps zs n n ly (splice-agr _ ps qs ys zs n fr sp) (lt-succ n)) w nt b2 x))
+      (u (Cons (U8) x xs) zs2 (Succ n) ly2 b3 (at) d)))
+  (let ((erased w) (erased nt)) (nth-exists _ ps len n lc lt))
+  (let ((erased ps2) (erased ly2) (unique a2)) (bv-place xs ps n ly w nt a1 x))
+  (u (Cons (U8) x xs) ps2 (Succ n) ly2 (at) a2 (at) d))
+
+(def-fns _ $ (many bv-pop : (erased (U8) x) (erased (List (U8)) xs) (unique (Bv (Cons (U8) x xs)) v) ->
+    (many x is y) (unique (Bv xs) v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let-match erased ly (LybC _ _ _ _ ly1 nt))
+  (let-match many n (Succ m))
+  (let ((many y) (unique a2)) (bytes-get _ a m x nt))
+  (let ((unique v2)) (u xs ps m ly1 (at) a2 (at) d))
+  (values y v2))
+
+(def-fns _ $ (many bv-set-top : (erased (U8) x) (erased (List (U8)) xs) (unique (Bv (Cons (U8) x xs)) v) (many (U8) y) ->
+    (unique (Bv (Cons (U8) y xs)) v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let-match erased ly (LybC _ _ _ _ ly1 nt))
+  (let-match many n (Succ m))
+  (let ((erased qs) (erased ly2) (unique a2)) (bv-place xs ps m ly1 _ nt a y))
+  (at unique (u (Cons (U8) y xs) qs n ly2 a2 d)))
+
+(def-fns _ $ (many bv-drop : (erased (List (U8)) p ys xs) (unique (Bv xs) v) (many (Nat) k)
+    (erased (Cat (U8) p ys xs) c) (erased (Length (U8) p k) lk) -> (unique (Bv ys) v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let ((many m) (erased ad)) (sub n k (lyb-drop-le p ys xs ps n k c ly lk)))
+  (u ys ps m (lyb-drop p ys xs ps n k m c ly lk ad) (at) a (at) d))
