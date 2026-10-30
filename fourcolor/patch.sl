@@ -2325,3 +2325,76 @@
         (color-const-r d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri ks kr gf gfr pt pmf pmfr grf cl lks lhr uhr rkr (graph-fun dr fr gfr grfr))
         (respects-id-right dr idr kr ior lkr))
       ur lkr (perm-under dr er nfr pmer))))
+
+; et2 is rot 1 (rev et).
+(def-adts $ (RotRev : ((List (Col)) et et2) -> Type)
+  enum
+  (many RRNil : -> (RotRev (Nil (Col)) (Nil (Col))))
+  (many RRCons : (erased (List (Col)) et E1 et2) (erased (Col) c) (erased (RevApp (Col) et (Nil (Col)) (Cons (Col) c E1)) ra)
+      (erased (HSnoc (Col) E1 c et2) sn) -> (RotRev et et2)))
+
+(def-fns _ $ (erased snoc-cons : (erased Type A) (erased A a) (erased (List A) xs ys) (erased (HSnoc A xs a ys) sn)
+    -> (erased A y) (erased (List A) ys1) (erased (Eq (List A) ys (Cons A y ys1)) e))
+  (match erased sn _ ((SnocNil _ _) (values a (Nil A) (Refl _ ys))) ((SnocCons _ x _ _ ys1 _) (values x ys1 (Refl _ ys)))))
+
+(def-fns _ $ (erased revapp-cons : (erased Type A) (erased A c) (erased (List A) lc r) (erased (RevApp A (Cons A c lc) (Nil A) r) ra)
+    -> (erased (List A) r0) (erased (HSnoc A r0 c r) sn))
+  (let-match erased ra (RACons _ _ _ _ _ ra1))
+  (let ((erased r0) (erased ra0)) (revapp-exists A lc (Nil A)))
+  (values r0 (revapp-snoc A c lc (Nil A) (Cons A c (Nil A)) r0 r ra0 (SnocNil A c) ra1)))
+
+; rev (pairmap addc p lc) is pairmap addc q R for rev (p :: lc) = q :: R.
+(def-fns _ $ (erased pairfrom-rev : (erased (Col) p q) (erased (List (Col)) lc et R et2) (subterm erased (PairFrom p lc et) pf)
+    (erased (RevApp (Col) (Cons (Col) p lc) (Nil (Col)) (Cons (Col) q R)) ra) (erased (RevApp (Col) et (Nil (Col)) et2) re)
+    -> (erased (PairFrom q R et2) r))
+  (match erased pf _
+    ((PFNil _)
+      (let-match erased ra (RACons _ _ _ _ _ ra1))
+      (let-match erased ra1 (RANil _ _))
+      (let-match erased re (RANil _ _))
+      (PFNil p))
+    ((PFCons _ c s lc1 et1 a pf1)
+      (let ((erased r1) (erased ra1)) (revapp-exists (Col) (Cons _ c lc1) (Nil _)))
+      (let ((erased r0) (erased sn0)) (revapp-cons (Col) c lc1 r1 ra1))
+      (let ((erased q1) (erased R1) (erased e1)) (snoc-cons (Col) c r0 r1 sn0))
+      (let-match erased e1 (Refl _ _))
+      (let-match erased ra (RACons _ _ _ _ _ ra2))
+      (let-match erased (revapp-snoc (Col) p (Cons _ c lc1) (Nil _) (Cons _ p (Nil _)) r1 (Cons _ q R) ra1 (SnocNil _ p) ra2) (SnocCons _ _ _ _ _ sn1))
+      (let ((erased et1r) (erased re1)) (revapp-exists (Col) et1 (Nil _)))
+      (let ((erased et3) (erased se) (erased pf3))
+        (pairfrom-snoc q1 c p s R1 R et1r (pairfrom-rev c q1 lc1 et1 R1 et1r pf1 ra1 re1) (lastfrom-snoc (Col) q1 c R1 r0 sn0) sn1 (addc-comm p c s a)))
+      (let-match erased re (RACons _ _ _ _ _ re2))
+      (let-match erased (hsnoc-fn (Col) et1r et3 et2 s se (revapp-snoc (Col) s et1 (Nil _) (Cons _ s (Nil _)) et1r et2 re1 (SnocNil _ s) re2)) (Refl _ _))
+      pf3)))
+
+; rev (lc ++ [c]) ++ w = c :: rev lc ++ w.
+(def-fns _ $ (erased revapp-snoc-l : (erased Type A) (erased A c) (erased (List A) lc L w r) (subterm erased (HSnoc A lc c L) sn) (erased (RevApp A lc w r) ra)
+    -> (erased (RevApp A L w (Cons A c r)) res))
+  (match erased sn _
+    ((SnocNil _ _) (let-match erased ra (RANil _ _)) (RACons A c (Nil A) w (Cons A c w) (RANil A (Cons A c w))))
+    ((SnocCons _ x _ xs ys sn1)
+      (let-match erased ra (RACons _ _ _ _ _ ra1))
+      (RACons A x ys w (Cons A c r) (revapp-snoc-l A c xs ys (Cons A x w) r sn1 ra1)))))
+
+; trace_rev: trace (rev lc) = rot 1 (rev (trace lc)).
+(def-fns _ $ (erased trace-rev : (erased (List (Col)) lc lc2 et et2) (erased (Trace lc et) t) (erased (RevApp (Col) lc (Nil (Col)) lc2) ra)
+    (erased (RotRev et et2) rr) -> (erased (Trace lc2 et2) r))
+  (match erased t _
+    ((TrNil) (let-match erased ra (RANil _ _)) (let-match erased rr (RRNil) (absurd (RRCons _ _ _ _ ra2 _) ra2)) (TrNil))
+    ((TrCons c lc1 _ t1)
+      (let-match erased rr (RRCons _ E1 _ e ret sn) (absurd (RRNil) t1))
+      (let ((erased L) (erased sl)) (snoc-exists (Col) lc1 c))
+      (let ((erased M) (erased rm)) (revapp-exists (Col) lc1 (Nil _)))
+      (let ((erased M2) (erased rm2)) (revapp-exists (Col) lc1 (Cons _ c (Nil _))))
+      (let ((erased sm)) (revapp-snoc (Col) c lc1 (Nil _) (Cons _ c (Nil _)) M M2 rm (SnocNil _ c) rm2))
+      (let-match erased ra (RACons _ _ _ _ _ ra1))
+      (let-match erased (revapp-fn (Col) lc1 (Cons _ c (Nil _)) lc2 M2 ra1 rm2) (Refl _ _))
+      (let ((erased pf)) (pairfrom-rev c c L et M2 (Cons _ e E1) (tracefrom-pair c c lc1 L et t1 sl)
+        (RACons _ c L (Nil _) (Cons _ c M2) (revapp-snoc-l (Col) c lc1 L (Cons _ c (Nil _)) M2 sl rm2)) ret))
+      (let ((erased u)) (trace-utr c M M2 (Cons _ e E1) (TrCons c M (Cons _ e E1) (pair-tracefrom c c M M2 (Cons _ e E1) sm pf)) sm))
+      (let ((erased m) (erased M1) (erased em)) (snoc-cons (Col) c M M2 sm))
+      (let-match erased em (Refl _ _))
+      (let ((erased L1) (erased sl1)) (snoc-exists (Col) M1 m))
+      (let ((erased et3) (erased se) (erased u2)) (utr-rot m e M1 L1 E1 u sl1))
+      (let-match erased (hsnoc-fn (Col) E1 et3 et2 e se sn) (Refl _ _))
+      (utr-trace m M1 L1 et3 u2 sl1))))
