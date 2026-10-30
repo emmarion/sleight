@@ -595,6 +595,7 @@
         (ErPayload $ PNat d))
       ((ExNatCmp) (ErCtor (cmp-index _ _ _ _ $ nat-cmp na nb) $ Nil _))
       ((ExLtDec) (ErCtor (match many (lt-dec na nb) (((Nat) _)) ((Yes _ _ _ _ _) 0) ((No _ _ _ _ _) 1)) $ Nil _))
+      ((ExNatFitsU62) (ErCtor (match many (nat-fits-u62 na) (((Nat) _)) ((Yes _ _ _ _ _) 0) ((No _ _ _ _ _) 1)) $ Nil _))
       ((ExStrCmp) (ErCtor (cmp-index _ _ _ _ $ str-cmp sa sb) $ Nil _))
       ((ExNatEq) (ErCtor (match many (nat-eq na nb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))
       ((ExStrEq) (ErCtor (match many (str-eq sa sb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))

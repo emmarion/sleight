@@ -101,6 +101,7 @@ let u62_dec a : Z.t = Obj.magic (small a - 1 : int)
 let u62_divmod a b = (u62_div a b, u62_mod a b)
 let u62_cmp a b = order (compare (small a) (small b))
 let u62_lt_dec a b = decide (small a < small b)
+let nat_fits_u62 a = decide (Obj.is_int (Obj.repr a))
 let u62_eq a b = eq_dec (small a = small b)
 let u62_bit_length = bit_length
 let u62_bit_test n k = bit ((small n lsr small k) land 1 = 1)

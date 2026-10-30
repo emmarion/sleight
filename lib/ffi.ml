@@ -168,6 +168,7 @@ let fns : (string * fn_spec) list =
     ("u62-dec", spec 1 (unary (fun a -> int (Ffi_core.u62_dec (z a)))));
     ("u62-cmp", decision "Cmp" z Ffi_core.u62_cmp);
     ("u62-lt-dec", decision "Dec" z Ffi_core.u62_lt_dec);
+    ("nat-fits-u62", spec ~needs:[ "Dec" ] ~decides:"Dec" 1 (unary (fun a -> plain "Dec" (Obj.magic (Ffi_core.nat_fits_u62 (z a)) : int) [])));
     ("u62-eq", decision "EqDec" z Ffi_core.u62_eq);
     ("u62-bit-length", spec 1 (unary (fun a -> int (Ffi_core.u62_bit_length (z a)))));
     ("u62-bit-test", decision "Bit" z Ffi_core.u62_bit_test);

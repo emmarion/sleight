@@ -578,6 +578,9 @@
         ((Yes _ _ _ _ l) (Yes (Nat) Lt n v (double-mono (Succ m) v1 (Succ (Succ d)) v l (DS m d dd) dv)))
         ((No _ _ _ _ q) (No (Nat) Lt n v (le-double v1 (Succ m) v (Succ (Succ d)) q dv (DS m d dd))))))))
 
+(def-fns _ $ (many extern nat-fits-u62 : (many (Nat) n) -> (many (Dec (Nat) Lt n u62-modulus) d))
+  (tail (lt-pow2-dec n (sixty-two-many) u62-modulus u62-modulus-pow2)))
+
 (def-fns _ $ (many extern shl : (many (Nat) n) (many (Nat) k) ->
     (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
   (let ((many v) (erased pk) (erased _)) (pow2 k))
@@ -1495,7 +1498,7 @@
     (subterm unique (Array A xs) a) ->
     (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique a is r at a))
   (let ((many l) (erased p1) (unique a1)) (array-length _ _ a))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) a1))
+  (values l p1 (nat-fits-u62 l) a1))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -1507,7 +1510,7 @@
     (subterm many (Array A xs) a) ->
     (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
   (let ((many l) (erased p1)) (array-length-many _ _ a))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2)))
+  (values l p1 (nat-fits-u62 l)))
 
 (def-fns _ $ (many extern list-to-array : (erased Type A) (subterm many (List (Copy A)) xs) ->
     (unique (Array (Copy A) xs) a))
@@ -1601,7 +1604,7 @@
 (def-fns _ $ (many extern bytes-length-dec : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
     (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique b is r at b))
   (let ((many l) (erased p1) (unique b1)) (bytes-length _ b))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) b1))
+  (values l p1 (nat-fits-u62 l) b1))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
@@ -1612,7 +1615,7 @@
 (def-fns _ $ (many extern bytes-length-dec-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
   (let ((many l) (erased p1)) (bytes-length-many _ b))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2)))
+  (values l p1 (nat-fits-u62 l)))
 
 (def-fns _ $ (many extern str-bytes-copy : (subterm many (String) s) ->
     (erased (List (U8)) xs) (unique (Bytes xs) b) (erased (StrBytes s xs) p))
