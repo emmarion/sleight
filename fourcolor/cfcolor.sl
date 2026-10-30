@@ -499,35 +499,35 @@
 ; zs is xs followed by ys.
 (def-adts $ (App : (Type A) ((List A) xs ys zs) -> Type)
   enum
-  (many AppNil : (erased Type A) (erased (List A) ys) -> (App A (Nil A) ys ys))
-  (many AppCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (App A xs ys zs) p) -> (App A (Cons A x xs) ys (Cons A x zs))))
+  (many CatNil : (erased Type A) (erased (List A) ys) -> (App A (Nil A) ys ys))
+  (many CatCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (App A xs ys zs) p) -> (App A (Cons A x xs) ys (Cons A x zs))))
 
 (def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (App A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
-  (let-match erased p (AppCons _ x xs1 _ zs1 p1) ((AppNil _ _) (Refl _ zs)))
+  (let-match erased p (CatCons _ x xs1 _ zs1 p1) ((CatNil _ _) (Refl _ zs)))
   (let-match erased (app-nil-r A xs1 zs1 p1) (Refl _ _))
   (Refl _ zs))
 
 (def-fns _ $ (erased app-snoc : (erased Type A) (erased (List A) xs ys zs ys2 zs2) (erased A x) (subterm erased (App A xs ys zs) p)
     (erased (Snoc A zs x zs2) s) (erased (Snoc A ys x ys2) t) -> (erased (App A xs ys2 zs2) r))
   (match erased p _
-    ((AppNil _ _) (let-match erased (snoc-fn _ ys zs2 ys2 x s t) (Refl _ _)) (AppNil A zs2))
-    ((AppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ zs3 s1)) (AppCons A y xs1 ys2 zs3 (app-snoc A xs1 ys zs1 ys2 zs3 x p1 s1 t)))))
+    ((CatNil _ _) (let-match erased (snoc-fn _ ys zs2 ys2 x s t) (Refl _ _)) (CatNil A zs2))
+    ((CatCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ zs3 s1)) (CatCons A y xs1 ys2 zs3 (app-snoc A xs1 ys zs1 ys2 zs3 x p1 s1 t)))))
 
 (def-fns _ $ (erased app-snoc-l : (erased Type A) (erased (List A) xs ys zs xs2) (erased A x) (subterm erased (App A xs (Cons A x ys) zs) p)
     (erased (Snoc A xs x xs2) s) -> (erased (App A xs2 ys zs) r))
   (match erased p _
-    ((AppNil _ _) (let-match erased s (SnocNil _ _)) (AppCons A x (Nil A) ys ys (AppNil A ys)))
-    ((AppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (AppCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
+    ((CatNil _ _) (let-match erased s (SnocNil _ _)) (CatCons A x (Nil A) ys ys (CatNil A ys)))
+    ((CatCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (CatCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
 
 (def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) xs zs) (erased A x) (subterm erased (Snoc A xs x zs) s) -> (erased (App A xs (Cons A x (Nil A)) zs) r))
-  (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (AppNil A (Cons A x (Nil A)))))
-  (AppCons A y xs1 (Cons A x (Nil A)) zs1 (snoc-app A xs1 zs1 x s1)))
+  (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (CatNil A (Cons A x (Nil A)))))
+  (CatCons A y xs1 (Cons A x (Nil A)) zs1 (snoc-app A xs1 zs1 x s1)))
 
 ; Rotating p ++ s by the length of p gives s ++ p.
 (def-fns _ $ (erased rots-app : (erased Type A) (erased (Nat) m) (subterm erased (List A) p) (erased (List A) s ps sp) (erased (App A p s ps) a) (erased (App A s p sp) b)
     (erased (Length A p m) l) -> (erased (Rots A m ps sp) r))
-  (let-match erased a (AppCons _ x p1 _ ps1 a1)
-    ((AppNil _ _) (let-match erased l (LengthNil _)) (let-match erased (app-nil-r A s sp b) (Refl _ _)) (RotsZ A ps)))
+  (let-match erased a (CatCons _ x p1 _ ps1 a1)
+    ((CatNil _ _) (let-match erased l (LengthNil _)) (let-match erased (app-nil-r A s sp b) (Refl _ _)) (RotsZ A ps)))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (let ((erased s2) (erased t)) (snoc-exists _ s x))
   (let ((erased ps2) (erased u)) (snoc-exists _ ps1 x))
@@ -535,7 +535,7 @@
 
 (def-fns _ $ (erased rots-last : (erased Type A) (erased (Nat) m) (erased (List A) xs zs) (erased A y) (erased (Snoc A xs y zs) s) (erased (Length A xs m) l)
     -> (erased (Rots A m zs (Cons A y xs)) r))
-  (rots-app A m xs (Cons A y (Nil A)) zs (Cons A y xs) (snoc-app A xs zs y s) (AppCons A y (Nil A) xs xs (AppNil A xs)) l))
+  (rots-app A m xs (Cons A y (Nil A)) zs (Cons A y xs) (snoc-app A xs zs y s) (CatCons A y (Nil A) xs xs (CatNil A xs)) l))
 
 (def-fns _ $ (erased respects-unsnoc : (erased (List (Nat)) lab xs xs2 cs2) (erased (Nat) x) (subterm erased (Snoc (Nat) xs x xs2) s)
     (erased (Respects lab xs2 cs2) rp) -> (erased (List (Nat)) cs) (erased (Nat) c) (erased (Snoc (Nat) cs c cs2) sc) (erased (Respects lab xs cs) r)
