@@ -16,6 +16,3 @@
     -> (erased (FourColor) r))
   (let ((erased L2) (erased colour2)) (cube-reduction L colour))
   (hyp-reduction L2 colour2))
-
-(goal erased (CubicReduction))
-(qed (MkCubicReduction (level-of cubic-reduction) cubic-reduction))

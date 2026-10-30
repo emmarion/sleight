@@ -447,16 +447,6 @@
   (revapp-length er (Nil _) RR k (Zero) k ra (respects-length e r er k rm lr) (LengthNil _) (add-zero-right k)))
 
 ; The maps the check needs coloured: d, e, n, f of each.
-(def-adts $ (Mp : -> Type)
-  enum
-  (many MkMp : (erased (Nat) d) (erased (List (Nat)) e n f) -> (Mp)))
-
-(def-adts $ (MpCols : ((List (Mp)) ms) -> Type)
-  enum
-  (many MCNil : -> (MpCols (Nil (Mp))))
-  (many MCCons : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (Mp)) ms) (erased (FourColoring e f ks) c) (erased (MpCols ms) rest)
-      -> (MpCols (Cons (Mp) (MkMp d e n f) ms))))
-
 ; For each basis tree t of ts, the map that side-map glues for its program, with what makes it a smaller planar bridgeless
 ; plain precubic map than one of d darts.
 (def-adts $ (BNeed : ((Nat) d dd h m) ((List (Nat)) ed nd fd bd) ((List (Ctree)) ts) ((List (Mp)) ms) -> Type)
@@ -533,7 +523,7 @@
     -> (erased (List (Col)) et et2 ct) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtMem t et2) mt) (erased (Ctr (C0) et ct) cr)
     (erased (Holds (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) ct) p))
   (let-match erased bn (BNCons _ _ _ _ d2 _ _ _ _ e2 n2 f2 cp t1 ts1 ms1 bp h2 g2 b2 pl2 pc2 lt2 ss bn1) (absurd (BNNil _ _ _ _ _ _ _ _) el))
-  (let-match erased mc (MCCons _ _ _ _ ks _ c mc1))
+  (let-match erased mc (MpcCons _ _ _ _ ks _ c mc1))
   (match erased el _
     ((ElHere _ _ _) (side-trace h m d2 dd e2 n2 f2 ed nd fd bd ks cp t ss bp lbd c))
     ((ElThere _ _ _ _ el1) (need-hit d dd h m ed nd fd bd ts1 ms1 t bn1 mc1 el1 lbd))))

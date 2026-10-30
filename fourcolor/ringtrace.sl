@@ -334,18 +334,6 @@
   enum
   (many MkCCColorable : (erased (Nat) d) (erased (List (Nat)) e f cc ks) (erased (CCColoring d e f cc ks) c) -> (CCColorable d e f cc)))
 
-; minimal_counter_example: a planar bridgeless plain precubic hypermap with no four-colouring, all of whose smaller such
-; hypermaps have one, with the levels of its two functions as indices.
-(def-adts $ (MinimalCounterExample : ((Level) L1 L2) ((Nat) d) ((List (Nat)) e n f) -> Type)
-  enum
-  (many MkMinimalCounterExample : (erased (Level) L1 L2) (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
-      (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Precubic d n) pc)
-      (erased (Fn L1 (erased (List (Nat)) ks) (erased (FourColoring e f ks) c) -> (erased (False) r)) noncol)
-      (erased (Fn L2 (erased (Nat) d2) (erased (List (Nat)) e2 n2 f2) (erased (Hypermap d2 e2 n2 f2) h2) (erased (Genus d2 e2 n2 f2 (Zero)) g2)
-          (erased (Bridgeless d2 e2 n2 f2) b2) (erased (AllOrder d2 e2 (Succ (Succ (Zero)))) pl2) (erased (Precubic d2 n2) pc2) (erased (Lt d2 d) lt)
-          -> (erased (List (Nat)) ks) (erased (FourColoring e2 f2 ks) c)) minimal)
-      -> (MinimalCounterExample L1 L2 d e n f)))
-
 (def-fns _ $ (erased proper-cc : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (Proper ks g) pr) -> (erased (EdgeCC (Nil (Nat)) ks g) r))
   (let-match erased pr (ProperCons _ g1 x y l1 l2 p1 p2 ne pr1) ((ProperNil _) (ECNil _ ks)))
   (ECOut _ ks g1 x y l1 l2 (NotInNil x) p1 p2 ne (proper-cc ks g1 pr1)))
