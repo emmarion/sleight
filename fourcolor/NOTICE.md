@@ -46,9 +46,10 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   and often its proofs, in Sleight: the `hyp*.sl` files (`hypermap.v`,
   `geometry.v`, `walkup.v`, `jordan.v`), `cube.sl`, `coloring.sl`,
   `ringtrace.sl`, `ringdec.sl`, `kempemap.sl`, `patch.sl`, `snip.sl`,
-  `revsnip.sl`, `revsnip2.sl`, `hypsub.sl` and `geomring.sl` (`cube.v`,
-  `coloring.v`, `kempe.v`, `patch.v`, `snip.v`, `revsnip.v`, `geometry.v`),
-  `cfmap.sl`, `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl` and the certified files in `red/`
+  `revsnip.sl`, `revsnip2.sl`, `hypsub.sl`, `geomring.sl` and `srcycle.sl`
+  (`cube.v`, `coloring.v`, `kempe.v`, `patch.v`, `snip.v`, `revsnip.v`,
+  `geometry.v`), `cfmap.sl`, `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl`,
+  `cpcomp.sl` and the certified files in `red/`
   (`color.v`, `chromogram.v`, `kempe.v`, `ctree.v`, `gtree.v`,
   `cfmap.v`, `cfcolor.v`, `cfcontract.v`, `kempetree.v`, `cfreducible.v`,
   `birkhoff.v`), and the

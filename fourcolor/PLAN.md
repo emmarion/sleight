@@ -167,6 +167,9 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `Jordan`), Euler_tree for genus 0, the equality case of the walkup
   genus, same_cskip_edge, and cubic_Euler; `hypjordangoal.sl` and
   `hypcubicgoal.sl` check them. Jordan implies planar is not proved.
+  `hypcount.sl`'s `orbit-sum`: the orders of a permutation at the roots
+  of its classes sum to the number of darts; `orbit-count` is its case
+  with every order equal.
 - `cfmap.sl`, `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl` (load after
   `hypgeom.sl`, interleaved with `red/` files as below): configuration
   maps built from their programs by a certified function, with ring
@@ -174,9 +177,27 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   ctree_mem_cpcolor, and `ctring-allp` hands its traces, rotated by one
   (`CpColR`), to the certified Kempe tree. `cfmap-run.sl` and
   `cpcolor-run.sl` ran all 633 configurations once, matching `red.sl`'s
-  ring sizes and trees. The A step of the programs, planarity of
-  configuration maps and the completeness direction of `cpcolor-c` are
-  not done; completeness for contract colourings is in `red/ccomp.sl`.
+  ring sizes and trees. `cpcolor-c` also returns how it built its tree
+  (`CpComp`, `CpCov0`, `CpCov`), which `cpcomp.sl` reads for the
+  completeness half. The A step of the programs and planarity of
+  configuration maps are not done; completeness for contract colourings
+  is in `red/ccomp.sl`.
+- `cpcomp.sl` (load after `red/bcheck.sl`): the completeness half of
+  ctree_mem_cpcolor, for cubic programs, as far as both compilers check
+  it. `cpcolor-mem`: for a ring trace e0 :: et of a colouring of the map
+  of a cubic program with et even, et is in the tree of `cpcolor-c`;
+  `cpcolor-etrace` gives the same for the even normal form of any ring
+  trace without its first entry, and `bkprog-hit` for a basis program of
+  the Birkhoff check (the use in chkbP of Birkhoff_valid). The proof
+  goes in two parts. `steps-hit`, on the contract-colouring context of
+  `red/ccomp.sl` with no contract darts, reads a colouring of the whole
+  map as a run of the steps on ring traces (`StepTr`, `StepsTr`) from
+  the trace c c of the first map; `cov-mem`, `cov0-mem` and `comp-mem`
+  show that every trace such a run reaches has its normal form in the
+  tree, using that runs commute with colour permutations (`steps-perm`)
+  for the steps that `cpcolor0-c` normalises. Whether `CpCol` with
+  `EvenT` matches Coq's even_trace and ring_trace has been checked only
+  by reading.
 - `colalias.sl`, `ringtrace.sl`, `kempemap.sl`, `kempegoal.sl` (load
   `colalias.sl` after `coloring.sl`, then `red/red.sl`, `red/color.sl`,
   `red/ctree.sl`, `red/gtree.sl`, `red/grestrict.sl`,
@@ -300,16 +321,28 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   a list of darts, or a function sends every such ring trace to `False`.
   It runs `search-ring` once for each first colour.
 - `geomring.sl` (load after `patch.sl`): simple_cface of `geometry.v`,
-  from which scycle_cface follows (`simple-cface`).
+  from which scycle_cface follows (`simple-cface`), and quasicubic_Euler
+  (`quasicubic-euler`): in a connected map whose edges have two darts,
+  with a duplicate-free node cycle R (`NCyc`) of m + 1 darts off which
+  every dart has node order 3 (`OrdersOff`), and with kf faces,
+  6 kf + 12 genus = d + 2 (m + 1) + 6; `quasicubic-planar` and
+  `planar-quasicubic` are its two directions for genus 0. The node count
+  behind it is `ring-count` (1 + i node orbits and d = m + 1 + 3 i, from
+  `orbit-sum`). Stated for a non-empty R only; Coq's lemma also covers
+  the empty ring.
+- `srcycle.sl` (load after `snip.sl`): srcycleI of `geometry.v`, from
+  srcycle to scycle rlink only (`srcycle-ring`): in a bridgeless map an
+  srcycle, stated as `SRPath` with the darts that srpath keeps off a
+  face told apart by face labellings (`FaceApart`), is a `Ring`.
 - Still open: the rest of part B. Besides what `revsnip2.sl` lists as not done
   and the empty ring of `snip.v`,
-  `birkhoff.v` appears to need, from a reading of its proofs: the
-  completeness direction of ctree_mem_cpcolor; cpmap_planar and
-  cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to be `cpmap.sl`'s
-  `cprsize-proper`); quasicubic_Euler and srcycleI of `geometry.v`
-  (srcycleI is stated on rings, scycle rlink, which `snip.sl`'s `Ring`
-  appears to define); and Birkhoff_valid itself, which would build the two `BSide`s and
-  the `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
+  `birkhoff.v` appears to need, from a reading of its proofs:
+  cpmap_planar and cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to
+  be `cpmap.sl`'s `cprsize-proper`; Coq proves cpmap_planar through
+  quasicubic_Euler, the face counts of the U and N steps and
+  cpmap_connected, none of which is ported for `cpmap.sl` yet); and
+  Birkhoff_valid itself, which would build the two `BSide`s and the
+  `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
@@ -378,8 +411,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   in one run the computation took about 6 s under the reference compiler.
   Whether `BSide` and `BGlue` are what the rest of Birkhoff_valid can
   provide has been checked only by reading; `BkProg` carries
-  `cpcolor-c`'s soundness evidence, while building a `BSide` would need
-  the completeness direction.
+  `cpcolor-c`'s evidence of both halves, and `cpcomp.sl`'s `bkprog-hit`
+  is meant to give the `CtMem` that a `BSide`'s third field asks for.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script

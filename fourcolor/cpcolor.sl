@@ -67,33 +67,63 @@
   (let-match many g (MkPerm p1 p2 p3))
   (match many c _ ((C0) (values c (PC0 g))) ((C1) (values p1 (PC1 p1 p2 p3))) ((C2) (values p2 (PC2 p1 p2 p3))) ((C3) (values p3 (PC3 p1 p2 p3)))))
 
+; l has a C0 entry.
+(def-adts $ (HasC0 : ((List (Col)) l) -> Type)
+  enum
+  (many HZHere : (erased (List (Col)) l) -> (HasC0 (Cons (Col) (C0) l)))
+  (many HZThere : (erased (Col) c) (erased (List (Col)) l) (erased (HasC0 l) p) -> (HasC0 (Cons (Col) c l))))
+
+; p is l with Color2 and Color3 swapped when Color3 comes first (the tail normalisation of etrace of color.v).
+(def-adts $ (ENrm : ((List (Col)) l p) -> Type)
+  enum
+  (many NrEven : (erased (List (Col)) l) (erased (EvenTail l (BTrue)) e) -> (ENrm l l))
+  (many NrOdd : (erased (List (Col)) l p) (erased (EvenTail l (BFalse)) e) (erased (PermT p132 l p) q) -> (ENrm l p)))
+
+; t holds the normalisation of l, unless l has a C0 entry.
+(def-adts $ (NMem : ((Ctree) t) ((List (Col)) l) -> Type)
+  enum
+  (many NMZ : (erased (Ctree) t) (erased (List (Col)) l) (erased (HasC0 l) z) -> (NMem t l))
+  (many NMIn : (erased (Ctree) t) (erased (List (Col)) l p) (erased (ENrm l p) n) (erased (CtMem t p) m) -> (NMem t l)))
+
+(def-fns _ $ (erased zmem-cons : (erased (Col) c) (erased (Ctree) u t) (erased (List (Col)) l) (erased (Or (Eq (Col) c (C0)) (CtSel t c u)) sl)
+    (erased (Or (HasC0 l) (CtMem u l)) zm) -> (erased (Or (HasC0 (Cons (Col) c l)) (CtMem t (Cons (Col) c l))) r))
+  (match erased sl _
+    ((InL _ _ q) (let-match erased q (Refl _ _)) (InL _ _ (HZHere l)))
+    ((InR _ _ s) (match erased zm _ ((InL _ _ z) (InL _ _ (HZThere c l z))) ((InR _ _ m) (InR _ _ (mem-cons t u c l s m)))))))
+
 ; t2 has t below colour c (Gonthier's ctree_cons_e).
 (def-fns _ $ (many ct-cons-e-c : (erased (List (Step)) cp) (erased (List (Col)) pre) (erased (Nat) h) (many (Col) c) (many (Ctree) t) (erased (CtH h t) ht)
-    (erased (CtRing cp t (Cons (Col) c pre)) rt) -> (many (Ctree) t2) (erased (CtH (Succ h) t2) ht2) (erased (CtRing cp t2 pre) rt2))
+    (erased (CtRing cp t (Cons (Col) c pre)) rt) -> (many (Ctree) t2) (erased (CtH (Succ h) t2) ht2) (erased (CtRing cp t2 pre) rt2)
+    (erased (Or (Eq (Col) c (C0)) (CtSel t2 c t)) sl))
   (let ((erased e) (erased he) (erased re2) (erased re3)) (values (CEmpty) (HE h) (CRE cp (Cons (Col) (C2) pre)) (CRE cp (Cons (Col) (C3) pre))))
   (match many c _
-    ((C0) (values (CEmpty) (HE (Succ h)) (CRE cp pre)))
+    ((C0) (values (CEmpty) (HE (Succ h)) (CRE cp pre) (InL _ _ (Refl _ c))))
     ((C1) (let ((many t2) (erased cc)) (ctree-cons t (CEmpty) (CEmpty)))
-      (values t2 (cons-h h t e e t2 cc ht he he) (ctring-cons cp t e e t2 pre cc rt re2 re3)))
+      (values t2 (cons-h h t e e t2 cc ht he he) (ctring-cons cp t e e t2 pre cc rt re2 re3) (InR _ _ (cons-sel-back t e e t2 t c cc (SelN1 t e e)))))
     ((C2) (let ((many t2) (erased cc)) (ctree-cons (CEmpty) t (CEmpty)))
-      (values t2 (cons-h h e t e t2 cc he ht he) (ctring-cons cp e t e t2 pre cc (CRE cp (Cons (Col) (C1) pre)) rt re3)))
+      (values t2 (cons-h h e t e t2 cc he ht he) (ctring-cons cp e t e t2 pre cc (CRE cp (Cons (Col) (C1) pre)) rt re3)
+        (InR _ _ (cons-sel-back e t e t2 t c cc (SelN2 e t e)))))
     ((C3) (let ((many t2) (erased cc)) (ctree-cons (CEmpty) (CEmpty) t))
-      (values t2 (cons-h h e e t t2 cc he he ht) (ctring-cons cp e e t t2 pre cc (CRE cp (Cons (Col) (C1) pre)) re2 rt)))))
+      (values t2 (cons-h h e e t t2 cc he he ht) (ctring-cons cp e e t t2 pre cc (CRE cp (Cons (Col) (C1) pre)) re2 rt)
+        (InR _ _ (cons-sel-back e e t t2 t c cc (SelN3 e e t)))))))
 
 (let ((many simple-leaf-c)) (CLeaf (CEmpty)))
 
 ; The tree of the one trace et under g, after the reversed prefix pre (cfcbr2 of cfcolor.v), given that trace is good.
 (def-fns _ $ (many cfcbr2-c : (erased (List (Step)) cp) (erased (List (Col)) pre get full) (erased (Col) e0) (many (Perm) g) (subterm many (List (Col)) et)
     (erased (PermT g et get) pt) (erased (RevApp (Col) pre get full) ra) (erased (CpCol cp (Cons (Col) e0 full)) cc)
-    -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt))
+    -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt)
+    (erased (Or (HasC0 get) (CtMem t get)) zm))
   (let-match many et (Cons _ e rest)
-    ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CRL cp (CEmpty) pre full e0 ra cc))))
+    ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CRL cp (CEmpty) pre full e0 ra cc)
+      (InR _ _ (leaf-mem (CEmpty))))))
   (let-match erased pt (PTCons _ _ c _ grest pc pt1))
   (let ((many c2) (erased pc2)) (permc-r g e))
   (let-match erased (permc-fn g e c c2 pc pc2) (Refl _ _))
-  (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1)) (notail $ cfcbr2-c cp (Cons (Col) c pre) grest full e0 g rest pt1 (RACons (Col) c pre grest full ra) cc))
-  (let ((many t) (erased ht) (erased rt)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
-  (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt))
+  (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1) (erased zm1))
+    (notail $ cfcbr2-c cp (Cons (Col) c pre) grest full e0 g rest pt1 (RACons (Col) c pre grest full ra) cc))
+  (let ((many t) (erased ht) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
+  (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt (zmem-cons c t1 t grest sl zm1)))
 
 (def-fns _ $ (erased p132-of : (erased (Col) p1 p2 p3 q1 q2 q3) (erased (IsPerm (MkPerm p1 p2 p3)) ip) (erased (PermC p132 p1 q1) c1)
     (erased (PermC p132 p2 q2) c2) (erased (PermC p132 p3 q3) c3) -> (erased (P132Comp (MkPerm p1 p2 p3) (MkPerm q1 q2 q3)) pk)
@@ -127,27 +157,53 @@
   (let-match erased a (AC1Cons pre1 a1) ((AC1Nil) (PTNil p132)))
   (PTCons p132 (C1) (C1) pre1 pre1 (PC1 (C1) (C3) (C2)) (permt-c1 pre1 a1)))
 
+(def-fns _ $ (erased nmem-c1 : (erased (Ctree) u t) (erased (List (Col)) l) (erased (Or (Eq (Col) (C1) (C0)) (CtSel t (C1) u)) sl) (erased (NMem u l) nm)
+    -> (erased (NMem t (Cons (Col) (C1) l)) r))
+  (let-match erased sl (InR _ _ s) (absurd (InL _ _ q) q))
+  (match erased nm _
+    ((NMZ _ _ z) (NMZ t _ (HZThere (C1) l z)))
+    ((NMIn _ _ p n m)
+      (NMIn t _ (Cons (Col) (C1) p)
+        (match erased n _
+          ((NrEven _ e) (NrEven _ (ET1 l (BTrue) e)))
+          ((NrOdd _ _ e q) (NrOdd _ _ (ET1 l (BFalse) e) (PTCons p132 (C1) (C1) l p (PC1 (C1) (C3) (C2)) q))))
+        (mem-cons t u (C1) p s m)))))
+
+(def-fns _ $ (erased hasc0-back : (erased (Perm) g) (erased (List (Col)) l l2) (erased (IsPerm g) ip) (subterm erased (PermT g l l2) p) (erased (HasC0 l2) z)
+    -> (erased (HasC0 l) r))
+  (let-match erased p (PTCons _ c d l1 l3 pc p1) (absurd (PTNil _) z))
+  (match erased z _
+    ((HZHere _) (match erased pc _ ((PC0 _) (HZHere l1)) (absurd (PC1 _ _ _) ip) (absurd (PC2 _ _ _) ip) (absurd (PC3 _ _ _) ip)))
+    ((HZThere _ _ z1) (HZThere c l1 (hasc0-back g l1 l3 ip p1 z1)))))
+
 ; The tree of the one trace et normalised so that its first entry other than C1 under g is C2, after the reversed prefix
 ; pre of C1 entries (cfcbr1 of cfcolor.v), given that the trace under g is good.
 (def-fns _ $ (many cfcbr1-c : (erased (List (Step)) cp) (erased (List (Col)) pre get full) (erased (Col) e0) (many (Perm) g) (subterm many (List (Col)) et)
     (erased (PermT g et get) pt) (erased (RevApp (Col) pre get full) ra) (erased (CpCol cp (Cons (Col) e0 full)) cc) (erased (IsPerm g) ip)
-    (erased (AllC1 pre) a1) -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt))
+    (erased (AllC1 pre) a1) -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt)
+    (erased (NMem t get) nm))
   (let-match many et (Cons _ e rest)
-    ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CRL cp (CEmpty) pre full e0 ra cc))))
+    ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CRL cp (CEmpty) pre full e0 ra cc)
+      (NMIn simple-leaf-c (Nil (Col)) (Nil (Col)) (NrEven _ (ETNil)) (leaf-mem (CEmpty))))))
   (let-match erased pt (PTCons _ _ c _ grest pc pt1))
   (let ((many c2) (erased pc2)) (permc-r g e))
   (let-match erased (permc-fn g e c c2 pc pc2) (Refl _ _))
   (let ((erased ra1)) (RACons (Col) c pre grest full ra))
   (match many c2 _
-    ((C0) (let ((erased h1) (erased l1)) (length-exists _ rest)) (values (CEmpty) (Succ h1) (LengthCons _ e rest h1 l1) (HE (Succ h1)) (CRE cp pre)))
+    ((C0) (let ((erased h1) (erased l1)) (length-exists _ rest))
+      (values (CEmpty) (Succ h1) (LengthCons _ e rest h1 l1) (HE (Succ h1)) (CRE cp pre) (NMZ (CEmpty) _ (HZHere grest))))
     ((C1)
-      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1)) (notail $ cfcbr1-c cp (Cons (Col) c pre) grest full e0 g rest pt1 ra1 cc ip (AC1Cons pre a1)))
-      (let ((many t) (erased ht) (erased rt)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
-      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt))
+      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1) (erased nm1))
+        (notail $ cfcbr1-c cp (Cons (Col) c pre) grest full e0 g rest pt1 ra1 cc ip (AC1Cons pre a1)))
+      (let ((many t) (erased ht) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
+      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt (nmem-c1 t1 t grest sl nm1)))
     ((C2)
-      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1)) (cfcbr2-c cp (Cons (Col) c pre) grest full e0 g rest pt1 ra1 cc))
-      (let ((many t) (erased ht) (erased rt)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
-      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt))
+      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1) (erased zm1)) (cfcbr2-c cp (Cons (Col) c pre) grest full e0 g rest pt1 ra1 cc))
+      (let ((many t) (erased ht) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 c2 t1 ht1 rt1))
+      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt
+        (match erased (zmem-cons c t1 t grest sl zm1) _
+          ((InL _ _ z) (NMZ t _ z))
+          ((InR _ _ m) (NMIn t _ _ (NrEven _ (ET2 grest)) m)))))
     ((C3)
       (let-match many g (MkPerm g1 g2 g3))
       (let ((many q1) (erased c1)) (permc-r p132 g1))
@@ -161,10 +217,13 @@
         (PTCons p132 (C3) (C2) grest hrest (PC3 (C1) (C3) (C2)) ph)))
       (let ((erased e02) (erased pe)) (permc-ex p132 e0 (IP132)))
       (let ((erased cc2)) (cpcol-perm cp (Cons (Col) e0 full) (Cons (Col) e02 full2) p132 cc (IP132) (PTCons p132 e0 e02 full full2 pe pf)))
-      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1)) (cfcbr2-c cp (Cons (Col) (C2) pre) hrest full2 e02 hp rest
+      (let ((many t1) (erased h1) (erased l1) (erased ht1) (erased rt1) (erased zm1)) (cfcbr2-c cp (Cons (Col) (C2) pre) hrest full2 e02 hp rest
         (permt-p132 g hp rest grest hrest pk pt1 ph) (RACons (Col) (C2) pre hrest full2 ra2) cc2))
-      (let ((many t) (erased ht) (erased rt)) (ct-cons-e-c cp pre h1 (C2) t1 ht1 rt1))
-      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt))))
+      (let ((many t) (erased ht) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 (C2) t1 ht1 rt1))
+      (values t (Succ h1) (LengthCons _ e rest h1 l1) ht rt
+        (match erased (zmem-cons (C2) t1 t hrest sl zm1) _
+          ((InL _ _ z) (let-match erased z (HZThere _ _ z1)) (NMZ t _ (HZThere (C3) grest (hasc0-back p132 grest hrest (IP132) ph z1))))
+          ((InR _ _ m) (NMIn t _ _ (NrOdd _ _ (ET3 grest) (PTCons p132 (C3) (C2) grest hrest (PC3 (C1) (C3) (C2)) ph)) m)))))))
 
 (def-fns _ $ (many edge-rot-c : (many (Col) e) (erased (NZ e) nz) -> (many (Perm) g) (erased (IsPerm g) ip) (erased (PermC g e (C1)) p))
   (match many e _
@@ -173,9 +232,16 @@
     ((C3) (values p231 (IP231) (PC3 (C2) (C3) (C1))))
     (absurd (C0) nz)))
 
+; The trace et is e0 :: e1 :: rest, and t holds the normalisation of rest under a colour permutation g taking e1 to C1.
+(def-adts $ (BrMem : ((List (Col)) et) ((Ctree) t) -> Type)
+  enum
+  (many MkBrMem : (erased (Col) e0 e1) (erased (List (Col)) rest grest) (erased (Ctree) t) (erased (Perm) g) (erased (IsPerm g) ip)
+      (erased (PermC g e1 (C1)) pg) (erased (PermT g rest grest) pt) (erased (NMem t grest) nm) -> (BrMem (Cons (Col) e0 (Cons (Col) e1 rest)) t)))
+
 ; The tree of the even normal form of a ring trace with its first two entries dropped, below C1 (cpbranch of cfcolor.v).
 (def-fns _ $ (many cpbranch-c : (erased (List (Step)) cp) (erased (Nat) h) (many (List (Col)) et) (erased (CpCol cp et) cc)
-    (erased (Length (Col) et (Succ (Succ h))) l) -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing cp t (Cons (Col) (C1) (Nil (Col)))) rt))
+    (erased (Length (Col) et (Succ (Succ h))) l) -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing cp t (Cons (Col) (C1) (Nil (Col)))) rt)
+    (erased (BrMem et t) bm))
   (let ((erased nzs)) (cpcol-nz cp et cc))
   (let-match many et (Cons _ e0 r1) (absurd (Nil _) l))
   (let-match many r1 (Cons _ e1 rest) (absurd (Nil _) (let-match erased l (LengthCons _ _ _ _ l1)) l1))
@@ -186,13 +252,13 @@
   (let ((erased e02) (erased pe)) (permc-ex g e0 ip))
   (let ((erased full)) (Cons (Col) (C1) grest))
   (let ((erased cc2)) (cpcol-perm cp et (Cons (Col) e02 full) g cc ip (PTCons g e0 e02 r1 full pe (PTCons g e1 (C1) rest grest pg pt))))
-  (let ((many t) (erased h1) (erased l1) (erased ht) (erased rt))
+  (let ((many t) (erased h1) (erased l1) (erased ht) (erased rt) (erased nm))
     (cfcbr1-c cp (Cons (Col) (C1) (Nil (Col))) grest full e02 g rest pt (RACons (Col) (C1) (Nil (Col)) grest full (RANil (Col) full)) cc2 ip
       (AC1Cons (Nil (Col)) (AC1Nil))))
   (let-match erased l (LengthCons _ _ _ _ l2))
   (let-match erased l2 (LengthCons _ _ _ _ l3))
   (let-match erased (length-fn _ rest h h1 l3 l1) (Refl _ _))
-  (values t ht rt))
+  (values t ht rt (MkBrMem e0 e1 rest grest t g ip pg pt nm)))
 
 (def-adts $ (NZDec : ((Col) c) -> Type)
   enum
@@ -245,24 +311,58 @@
   (let-match erased a (RACons _ s pre1 _ _ a1) ((RANil _ _) na))
   (noa-tail s w (noa-suffix pre1 (Cons (Step) s w) r a1 na)))
 
+; et has fewer than two entries.
+(def-adts $ (Short : ((List (Col)) et) -> Type)
+  enum
+  (many ShortNil : -> (Short (Nil (Col))))
+  (many ShortOne : (erased (Col) e) -> (Short (Cons (Col) e (Nil (Col))))))
+
 ; et is e1 :: e2 :: r2, and sm is e1 + e2.
 (def-adts $ (Two : ((List (Col)) et) -> Type)
   enum
-  (many TwoNo : (erased (List (Col)) et) -> (Two et))
+  (many TwoNo : (erased (List (Col)) et) (erased (Short et) sh) -> (Two et))
   (many TwoYes : (erased (List (Col)) et) (many (Col) e1 e2) (many (List (Col)) r2) (many (Col) sm)
       (erased (Eq (List (Col)) et (Cons (Col) e1 (Cons (Col) e2 r2))) q) (erased (AddC e1 e2 sm) p) -> (Two et)))
 
 (def-fns _ $ (many two-c : (many (List (Col)) et) -> (many (Two et) r))
-  (let-match many et (Cons _ e1 r1) ((Nil _) (TwoNo et)))
-  (let-match many r1 (Cons _ e2 r2) ((Nil _) (TwoNo et)))
+  (let-match many et (Cons _ e1 r1) ((Nil _) (TwoNo et (ShortNil))))
+  (let-match many r1 (Cons _ e2 r2) ((Nil _) (TwoNo et (ShortOne e1))))
   (let ((many sm) (erased p)) (addc-c e1 e2))
   (TwoYes et e1 e2 r2 sm (Refl _ et) p))
+
+; No cubic step s applies to et.
+(def-adts $ (NotTr : ((Step) s) ((List (Col)) et) -> Type)
+  enum
+  (many NTRr : (erased (List (Col)) et) -> (NotTr (SRr) et))
+  (many NTK : (erased (List (Col)) et) -> (NotTr (SK) et))
+  (many NTY : -> (NotTr (SY) (Nil (Col))))
+  (many NTH : (erased (List (Col)) et) (erased (Short et) sh) -> (NotTr (SH) et)))
+
+; How cpcol-c built t from et and the steps cp1: what the completeness half of ctree_mem_cpcolor reads.
+(def-adts $ (CpCov : ((List (Step)) cp1) ((List (Col)) et) ((Ctree) t) -> Type)
+  enum
+  (many CoNil : (erased (List (Col)) et) (erased (Ctree) t) (erased (BrMem et t) bm) -> (CpCov (Nil (Step)) et t))
+  (many CoVoid : (erased (Step) s) (erased (List (Step)) cp1) (erased (List (Col)) et) (erased (Ctree) t) (erased (NotTr s et) nt)
+      -> (CpCov (Cons (Step) s cp1) et t))
+  (many CoR : (erased (Nat) k) (erased (List (Step)) cp1) (erased (List (Col)) et et2) (erased (Ctree) t) (erased (Rot (Col) k et et2) rt)
+      (erased (CpCov cp1 et2 t) c) -> (CpCov (Cons (Step) (SR k) cp1) et t))
+  (many CoU : (erased (List (Step)) cp1) (erased (List (Col)) et) (erased (Ctree) t1 t2 t3 u t) (erased (CtOr t2 t3 u) ou) (erased (CtOr t1 u t) o)
+      (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C1) et)) t1) c1) (erased (CpCov cp1 (Cons (Col) (C2) (Cons (Col) (C2) et)) t2) c2)
+      (erased (CpCov cp1 (Cons (Col) (C3) (Cons (Col) (C3) et)) t3) c3) -> (CpCov (Cons (Step) (SU) cp1) et t))
+  (many CoY : (erased (Col) e1 e2 e3) (erased (List (Col)) r1) (erased (List (Step)) cp1) (erased (Ctree) t1 t2 t) (erased (PermC p231 e1 e2) p2)
+      (erased (PermC p312 e1 e3) p3) (erased (CpCov cp1 (Cons (Col) e2 (Cons (Col) e3 r1)) t1) c1) (erased (CpCov cp1 (Cons (Col) e3 (Cons (Col) e2 r1)) t2) c2)
+      (erased (CtOr t1 t2 t) o) -> (CpCov (Cons (Step) (SY) cp1) (Cons (Col) e1 r1) t))
+  (many CoH0 : (erased (Col) e1 e2 g1 g2) (erased (List (Col)) r2) (erased (List (Step)) cp1) (erased (Ctree) t1 t2 t) (erased (AddC e1 e2 (C0)) p)
+      (erased (PermC p231 e1 g1) p2) (erased (PermC p312 e1 g2) p3) (erased (CpCov cp1 (Cons (Col) g1 (Cons (Col) g1 r2)) t1) c1)
+      (erased (CpCov cp1 (Cons (Col) g2 (Cons (Col) g2 r2)) t2) c2) (erased (CtOr t1 t2 t) o) -> (CpCov (Cons (Step) (SH) cp1) (Cons (Col) e1 (Cons (Col) e2 r2)) t))
+  (many CoH : (erased (Col) e1 e2 sm) (erased (List (Col)) r2) (erased (List (Step)) cp1) (erased (Ctree) t) (erased (AddC e1 e2 sm) p) (erased (NZ sm) nz)
+      (erased (CpCov cp1 (Cons (Col) e2 (Cons (Col) e1 r2)) t) c) -> (CpCov (Cons (Step) (SH) cp1) (Cons (Col) e1 (Cons (Col) e2 r2)) t)))
 
 ; Runs the steps cp1 still to apply (in application order) from a ring trace et of the map of cp2, collecting the
 ; trees of cpbranch (foldr cpcolor1 cpbranch of cfcolor.v, as red.sl's cpcol).
 (def-fns _ $ (many cpcol-c : (erased (List (Step)) cp2 full) (erased (Nat) h) (subterm many (List (Step)) cp1) (many (List (Col)) et)
     (erased (RevApp (Step) cp1 cp2 full) ra) (erased (CpCol cp2 et) cc) (erased (Cprsize full (Succ (Succ h))) cs) (erased (NoA full) na)
-    -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt))
+    -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt) (erased (CpCov cp1 et t) cv))
   (let ((erased pre1)) (Cons (Col) (C1) (Nil (Col))))
   (let ((many no) (erased hno) (erased rno)) (values (CEmpty) (HE h) (CRE full pre1)))
   (let-match many cp1 (Cons _ s rest)
@@ -270,45 +370,57 @@
       (let-match erased ra (RANil _ _))
       (let ((erased k) (erased l) (erased cs2)) (cpcol-length cp2 et cc))
       (let-match erased (cprsize-fn cp2 k (Succ (Succ h)) cs2 cs) (Refl _ _))
-      (cpbranch-c full h et cc l)))
+      (let ((many t) (erased ht) (erased rt) (erased bm)) (cpbranch-c full h et cc l))
+      (values t ht rt (CoNil et t bm))))
   (let-match erased ra (RACons _ _ _ _ _ ra1))
   (let ((erased nzs)) (cpcol-nz cp2 et cc))
   (match many s _
     ((SR k)
       (let ((many et2) (erased rt)) (rot-c _ k et))
-      (tail $ cpcol-c (Cons (Step) s cp2) full h rest et2 ra1 (cpcol-r cp2 k et et2 cc rt) cs na))
+      (let ((many t) (erased ht) (erased rt1) (erased cv)) (tail $ cpcol-c (Cons (Step) s cp2) full h rest et2 ra1 (cpcol-r cp2 k et et2 cc rt) cs na))
+      (values t ht rt1 (CoR k rest et et2 t rt cv)))
     ((SRr)
+      (let ((erased cvn)) (CoVoid s rest et no (NTRr et)))
       (let ((many m1) (erased lm)) (size-c _ et))
-      (let-match many m1 (Succ m) ((Zero) (values no hno rno)))
-      (let-match many m (Succ m2) ((Zero) (values no hno rno)))
+      (let-match many m1 (Succ m) ((Zero) (values no hno rno cvn)))
+      (let-match many m (Succ m2) ((Zero) (values no hno rno cvn)))
       (let ((many et2) (erased rt)) (rot-c _ m et))
-      (tail $ cpcol-c (Cons (Step) s cp2) full h rest et2 ra1 (cpcol-rr cp2 m et et2 cc lm rt) cs na))
+      (let ((many t) (erased ht) (erased rt1) (erased _)) (tail $ cpcol-c (Cons (Step) s cp2) full h rest et2 ra1 (cpcol-rr cp2 m et et2 cc lm rt) cs na))
+      (values t ht rt1 (CoVoid s rest et t (NTRr et))))
     ((SU)
       (let ((erased cp3)) (Cons (Step) s cp2))
-      (let ((many t1) (erased h1) (erased r1)) (notail $ cpcol-c cp3 full h rest (Cons _ (C1) (Cons _ (C1) et)) ra1 (cpcol-u cp2 et (C1) cc (NZ1)) cs na))
-      (let ((many t2) (erased h2) (erased r2)) (notail $ cpcol-c cp3 full h rest (Cons _ (C2) (Cons _ (C2) et)) ra1 (cpcol-u cp2 et (C2) cc (NZ2)) cs na))
-      (let ((many t3) (erased h3) (erased r3)) (notail $ cpcol-c cp3 full h rest (Cons _ (C3) (Cons _ (C3) et)) ra1 (cpcol-u cp2 et (C3) cc (NZ3)) cs na))
+      (let ((many t1) (erased h1) (erased r1) (erased c1))
+        (notail $ cpcol-c cp3 full h rest (Cons _ (C1) (Cons _ (C1) et)) ra1 (cpcol-u cp2 et (C1) cc (NZ1)) cs na))
+      (let ((many t2) (erased h2) (erased r2) (erased c2))
+        (notail $ cpcol-c cp3 full h rest (Cons _ (C2) (Cons _ (C2) et)) ra1 (cpcol-u cp2 et (C2) cc (NZ2)) cs na))
+      (let ((many t3) (erased h3) (erased r3) (erased c3))
+        (notail $ cpcol-c cp3 full h rest (Cons _ (C3) (Cons _ (C3) et)) ra1 (cpcol-u cp2 et (C3) cc (NZ3)) cs na))
       (let ((many u) (erased ou) (erased hu)) (ctree-union h t2 t3 h2 h3))
       (let ((many t) (erased o) (erased ht)) (ctree-union h t1 u h1 hu))
-      (values t ht (ctring-or full t1 u t pre1 o r1 (ctring-or full t2 t3 u pre1 ou r2 r3))))
+      (values t ht (ctring-or full t1 u t pre1 o r1 (ctring-or full t2 t3 u pre1 ou r2 r3)) (CoU rest et t1 t2 t3 u t ou o c1 c2 c3)))
     ((SY)
-      (let-match many et (Cons _ e1 r1) ((Nil _) (values no hno rno)))
+      (let-match many et (Cons _ e1 r1) ((Nil _) (values no hno rno (CoVoid s rest et no (NTY)))))
       (let-match erased nzs (AllNZCons _ _ nz1 _))
       (let ((many e2) (erased p2)) (permc-r p231 e1))
       (let ((many e3) (erased p3)) (permc-r p312 e1))
       (let ((erased a23) (erased a32) (erased n2) (erased n3)) (others e1 e2 e3 nz1 p2 p3))
       (let ((erased cp3)) (Cons (Step) s cp2))
-      (let ((many t1) (erased h1) (erased q1)) (notail $ cpcol-c cp3 full h rest (Cons _ e2 (Cons _ e3 r1)) ra1 (cpcol-y cp2 r1 e1 e2 e3 cc a23 n2 n3) cs na))
-      (let ((many t2) (erased h2) (erased q2)) (notail $ cpcol-c cp3 full h rest (Cons _ e3 (Cons _ e2 r1)) ra1 (cpcol-y cp2 r1 e1 e3 e2 cc a32 n3 n2) cs na))
+      (let ((many t1) (erased h1) (erased q1) (erased c1))
+        (notail $ cpcol-c cp3 full h rest (Cons _ e2 (Cons _ e3 r1)) ra1 (cpcol-y cp2 r1 e1 e2 e3 cc a23 n2 n3) cs na))
+      (let ((many t2) (erased h2) (erased q2) (erased c2))
+        (notail $ cpcol-c cp3 full h rest (Cons _ e3 (Cons _ e2 r1)) ra1 (cpcol-y cp2 r1 e1 e3 e2 cc a32 n3 n2) cs na))
       (let ((many t) (erased o) (erased ht)) (ctree-union h t1 t2 h1 h2))
-      (values t ht (ctring-or full t1 t2 t pre1 o q1 q2)))
+      (values t ht (ctring-or full t1 t2 t pre1 o q1 q2) (CoY e1 e2 e3 r1 rest t1 t2 t p2 p3 c1 c2 o)))
     ((SK)
-      (let-match many (two-c et) (TwoYes _ e1 e2 r2 sm q psm) ((TwoNo _) (values no hno rno)))
+      (let ((erased cvn)) (CoVoid s rest et no (NTK et)))
+      (let-match many (two-c et) (TwoYes _ e1 e2 r2 sm q psm) ((TwoNo _ _) (values no hno rno cvn)))
       (let-match erased q (Refl _ _))
-      (let-match many (nz-dec sm) (NZYes _ nzs2) ((NZZero) (values no hno rno)))
-      (tail $ cpcol-c (Cons (Step) s cp2) full h rest (Cons _ sm r2) ra1 (cpcol-k cp2 r2 e1 e2 sm cc psm nzs2) cs na))
+      (let-match many (nz-dec sm) (NZYes _ nzs2) ((NZZero) (values no hno rno cvn)))
+      (let ((many t) (erased ht) (erased rt1) (erased _))
+        (tail $ cpcol-c (Cons (Step) s cp2) full h rest (Cons _ sm r2) ra1 (cpcol-k cp2 r2 e1 e2 sm cc psm nzs2) cs na))
+      (values t ht rt1 (CoVoid s rest et t (NTK et))))
     ((SH)
-      (let-match many (two-c et) (TwoYes _ e1 e2 r2 sm q psm) ((TwoNo _) (values no hno rno)))
+      (let-match many (two-c et) (TwoYes _ e1 e2 r2 sm q psm) ((TwoNo _ sh) (values no hno rno (CoVoid s rest et no (NTH et sh)))))
       (let-match erased q (Refl _ _))
       (let-match erased nzs (AllNZCons _ _ nz1 nzs1))
       (let-match erased nzs1 (AllNZCons _ _ nz2 _))
@@ -318,15 +430,17 @@
           (let ((many g1) (erased p2)) (permc-r p231 e1))
           (let ((many g2) (erased p3)) (permc-r p312 e1))
           (let ((erased a23) (erased a32) (erased n2) (erased n3)) (others e1 g1 g2 nz1 p2 p3))
-          (let ((many t1) (erased h1) (erased q1)) (notail $ cpcol-c cp3 full h rest (Cons _ g1 (Cons _ g1 r2)) ra1
+          (let ((many t1) (erased h1) (erased q1) (erased c1)) (notail $ cpcol-c cp3 full h rest (Cons _ g1 (Cons _ g1 r2)) ra1
             (cpcol-h cp2 r2 e1 e2 (C0) g1 g2 g1 cc psm a23 (addc-0l g1) n2 n3 n2) cs na))
-          (let ((many t2) (erased h2) (erased q2)) (notail $ cpcol-c cp3 full h rest (Cons _ g2 (Cons _ g2 r2)) ra1
+          (let ((many t2) (erased h2) (erased q2) (erased c2)) (notail $ cpcol-c cp3 full h rest (Cons _ g2 (Cons _ g2 r2)) ra1
             (cpcol-h cp2 r2 e1 e2 (C0) g2 g1 g2 cc psm a32 (addc-0l g2) n3 n2 n3) cs na))
           (let ((many t) (erased o) (erased ht)) (ctree-union h t1 t2 h1 h2))
-          (values t ht (ctring-or full t1 t2 t pre1 o q1 q2)))
+          (values t ht (ctring-or full t1 t2 t pre1 o q1 q2) (CoH0 e1 e2 g1 g2 r2 rest t1 t2 t psm p2 p3 c1 c2 o)))
         ((NZYes _ nzs2)
           (let ((erased pse)) (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm psm))))
-          (tail $ cpcol-c cp3 full h rest (Cons _ e2 (Cons _ e1 r2)) ra1 (cpcol-h cp2 r2 e1 e2 sm e2 sm e1 cc psm psm pse nz2 nzs2 nz1) cs na))))
+          (let ((many t) (erased ht) (erased rt1) (erased c1))
+            (tail $ cpcol-c cp3 full h rest (Cons _ e2 (Cons _ e1 r2)) ra1 (cpcol-h cp2 r2 e1 e2 sm e2 sm e1 cc psm psm pse nz2 nzs2 nz1) cs na))
+          (values t ht rt1 (CoH e1 e2 sm r2 rest t psm nzs2 c1)))))
     (absurd (SA) (noa-suffix rest (Cons (Step) (SA) cp2) full ra1 na))))
 
 (let ((many c11)) (Cons (Col) (C1) (Cons (Col) (C1) (Nil (Col)))))
@@ -344,34 +458,53 @@
     (NCsCons o (C1) l0 (Cons (Col) (C0) (Nil (Col))) (NC1) (NCsCons z (C0) (Nil (Nat)) (Nil (Col)) (NC0) (NCsNil)))
     (MkTrace (C1) (Cons (Col) (C0) (Nil (Col))) c11 (CTStep (C1) (C1) (C0) (C1) (Nil (Col)) (Cons (Col) (C1) (Nil (Col))) (Add10) (CTLast (C1) (C0) (C1) (Add01))))))
 
-(def-fns _ $ (erased rots-c11 : (subterm erased (Nat) k) -> (erased (Rots (Col) k c11 c11) r))
-  (let-match erased k (Succ k1) ((Zero) (RotsZ _ c11)))
-  (RotsS _ k1 (C1) (Cons (Col) (C1) (Nil (Col))) c11 c11 (SnocCons _ (C1) (C1) (Nil (Col)) (Cons (Col) (C1) (Nil (Col))) (SnocNil _ (C1))) (rots-c11 k1)))
+(def-fns _ $ (erased rots-cc : (erased (Col) c) (subterm erased (Nat) k) -> (erased (Rots (Col) k (Cons (Col) c (Cons (Col) c (Nil (Col))))
+    (Cons (Col) c (Cons (Col) c (Nil (Col))))) r))
+  (let ((erased cl) (erased cc2)) (values (Cons (Col) c (Nil (Col))) (Cons (Col) c (Cons (Col) c (Nil (Col))))))
+  (let-match erased k (Succ k1) ((Zero) (RotsZ _ cc2)))
+  (RotsS _ k1 c cl cc2 cc2 (SnocCons _ c c (Nil (Col)) cl (SnocNil _ c)) (rots-cc c k1)))
 
-(def-fns _ $ (erased rot-c11 : (erased (Nat) k) -> (erased (Rot (Col) k c11 c11) r))
-  (let ((erased m) (erased l)) (values (Succ (Succ (Zero))) (LengthCons _ (C1) (Cons (Col) (C1) (Nil (Col))) (Succ (Zero)) (LengthCons _ (C1) (Nil (Col)) (Zero) (LengthNil _)))))
+; Rotating the trace c c leaves it alone.
+(def-fns _ $ (erased rot-cc : (erased (Col) c) (erased (Nat) k) -> (erased (Rot (Col) k (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) c (Cons (Col) c (Nil (Col))))) r))
+  (let ((erased cc2)) (Cons (Col) c (Cons (Col) c (Nil (Col)))))
+  (let ((erased m) (erased l)) (values (Succ (Succ (Zero))) (LengthCons _ c (Cons (Col) c (Nil (Col))) (Succ (Zero)) (LengthCons _ c (Nil (Col)) (Zero) (LengthNil _)))))
   (match erased (nat-cmp k m) _
-    ((CLt _ _ _ _ lt) (RotIn _ k m c11 c11 l (lt-weaken k m lt) (rots-c11 k)))
-    ((CEq _ _ _) (RotIn _ k m c11 c11 l (lt-succ k) (rots-c11 k)))
-    ((CGt _ _ _ _ gt) (RotOver _ k m c11 l gt))))
+    ((CLt _ _ _ _ lt) (RotIn _ k m cc2 cc2 l (lt-weaken k m lt) (rots-cc c k)))
+    ((CEq _ _ _) (RotIn _ k m cc2 cc2 l (lt-succ k) (rots-cc c k)))
+    ((CGt _ _ _ _ gt) (RotOver _ k m cc2 l gt))))
+
+; How cpcolor0-c built t from the steps cp1.
+(def-adts $ (CpCov0 : ((List (Step)) cp1) ((Ctree) t) -> Type)
+  enum
+  (many C0Base : (erased (List (Step)) cp1) (erased (Ctree) t) (erased (CpCov cp1 c11 t) c) -> (CpCov0 cp1 t))
+  (many C0R : (erased (Nat) k) (erased (List (Step)) cp1) (erased (Ctree) t) (erased (CpCov0 cp1 t) c) -> (CpCov0 (Cons (Step) (SR k) cp1) t))
+  (many C0Y : (erased (List (Step)) cp1) (erased (Ctree) t) (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C3) (Nil (Col))))) t) c)
+      -> (CpCov0 (Cons (Step) (SY) cp1) t))
+  (many C0U : (erased (List (Step)) cp1) (erased (Ctree) t1 t2 t)
+      (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C2) (Nil (Col)))))) t1) c1)
+      (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C1) c11)) t2) c2) (erased (CtOr t1 t2 t) o) -> (CpCov0 (Cons (Step) (SU) cp1) t)))
 
 ; The trees cpcol collects from the two-entry trace c11, normalised by the steps that only rotate it or leave it fixed up to
 ; colour permutations (cpcolor0 of red.sl).
 (def-fns _ $ (many cpcolor0-c : (erased (List (Step)) cp2 full) (erased (Nat) h) (subterm many (List (Step)) cp1) (erased (RevApp (Step) cp1 cp2 full) ra)
     (erased (CpCol cp2 c11) cc) (erased (Cprsize full (Succ (Succ h))) cs) (erased (NoA full) na)
-    -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt))
-  (let-match many cp1 (Cons _ s rest) ((Nil _) (cpcol-c cp2 full h cp1 c11 ra cc cs na)))
+    -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt) (erased (CpCov0 cp1 t) cv))
+  (let-match many cp1 (Cons _ s rest)
+    ((Nil _) (let ((many t) (erased ht) (erased rt) (erased cv)) (cpcol-c cp2 full h cp1 c11 ra cc cs na)) (values t ht rt (C0Base cp1 t cv))))
   (let-match erased ra (RACons _ _ _ _ _ ra1))
   (let ((erased cp3)) (Cons (Step) s cp2))
   (let ((erased c1l)) (Cons (Col) (C1) (Nil (Col))))
   (match many s _
-    ((SR k) (tail $ cpcolor0-c cp3 full h rest ra1 (cpcol-r cp2 k c11 c11 cc (rot-c11 k)) cs na))
+    ((SR k)
+      (let ((many t) (erased ht) (erased rt) (erased cv)) (tail $ cpcolor0-c cp3 full h rest ra1 (cpcol-r cp2 k c11 c11 cc (rot-cc (C1) k)) cs na))
+      (values t ht rt (C0R k rest t cv)))
     ((SY)
       (let ((erased g) (erased et) (erased et2)) (values p312 (Cons (Col) (C2) (Cons (Col) (C3) c1l)) (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C3) (Nil (Col)))))))
       (let ((erased pt)) (PTCons g (C2) (C1) (Cons (Col) (C3) c1l) (Cons (Col) (C2) (Cons (Col) (C3) (Nil (Col)))) (PC2 (C3) (C1) (C2))
         (PTCons g (C3) (C2) c1l (Cons (Col) (C3) (Nil (Col))) (PC3 (C3) (C1) (C2)) (PTCons g (C1) (C3) (Nil (Col)) (Nil (Col)) (PC1 (C3) (C1) (C2)) (PTNil g)))))
-      (cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C2) $ Cons _ (C3) $ Nil _) ra1
+      (let ((many t) (erased ht) (erased rt) (erased cv)) (tail $ cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C2) $ Cons _ (C3) $ Nil _) ra1
         (cpcol-perm cp3 et et2 g (cpcol-y cp2 c1l (C1) (C2) (C3) cc (Add12) (NZ2) (NZ3)) (IP312) pt) cs na))
+      (values t ht rt (C0Y rest t cv)))
     ((SU)
       (let ((erased g) (erased c22)) (values (MkPerm (C2) (C1) (C3)) (Cons (Col) (C2) (Cons (Col) (C2) c11))))
       (let ((erased e1122)) (Cons (Col) (C1) (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C2) (Nil (Col)))))))
@@ -379,12 +512,12 @@
       (let ((erased pt)) (PTCons g (C2) (C1) (Cons (Col) (C2) c11) (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C2) (Nil (Col))))) p21
         (PTCons g (C2) (C1) c11 (Cons (Col) (C2) (Cons (Col) (C2) (Nil (Col)))) p21
           (PTCons g (C1) (C2) c1l (Cons (Col) (C2) (Nil (Col))) p12 (PTCons g (C1) (C2) (Nil (Col)) (Nil (Col)) p12 (PTNil g))))))
-      (let ((many t1) (erased h1) (erased r1)) (notail $ cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C1) $ Cons _ (C2) $ Cons _ (C2) $ Nil _) ra1
+      (let ((many t1) (erased h1) (erased r1) (erased c1)) (notail $ cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C1) $ Cons _ (C2) $ Cons _ (C2) $ Nil _) ra1
         (cpcol-perm cp3 c22 e1122 g (cpcol-u cp2 c11 (C2) cc (NZ2)) (IP213) pt) cs na))
-      (let ((many t2) (erased h2) (erased r2)) (notail $ cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C1) c11) ra1 (cpcol-u cp2 c11 (C1) cc (NZ1)) cs na))
+      (let ((many t2) (erased h2) (erased r2) (erased c2)) (notail $ cpcol-c cp3 full h rest (Cons _ (C1) $ Cons _ (C1) c11) ra1 (cpcol-u cp2 c11 (C1) cc (NZ1)) cs na))
       (let ((many t) (erased o) (erased ht)) (ctree-union h t1 t2 h1 h2))
-      (values t ht (ctring-or full t1 t2 t c1l o r1 r2)))
-    (else (cpcol-c cp2 full h cp1 c11 ra cc cs na))))
+      (values t ht (ctring-or full t1 t2 t c1l o r1 r2) (C0U rest t1 t2 t c1 c2 o)))
+    (else (let ((many t) (erased ht) (erased rt) (erased cv)) (cpcol-c cp2 full h cp1 c11 ra cc cs na)) (values t ht rt (C0Base cp1 t cv)))))
 
 (def-fns _ $ (many rev-onto-c : (erased Type A) (subterm many (List A) xs) (many (List A) acc) -> (many (List A) zs) (erased (RevApp A xs acc zs) p))
   (let-match many xs (Cons _ x rest) ((Nil _) (values acc (RANil A acc))))
@@ -396,12 +529,19 @@
   (let-match erased a (RACons _ s pre1 _ _ a1) ((RANil _ _) b))
   (revapp-flip A pre1 (Cons A s w) r t a1 (RACons A s w pre1 t b)))
 
+; t is C1 then t0, with the rotations ta and tb of t0 below C2 and C3, and cp read backwards is rcp, the steps cpcolor0-c ran
+; to build t0.
+(def-adts $ (CpComp : ((List (Step)) cp) ((Ctree) t) -> Type)
+  enum
+  (many MkCpComp : (erased (List (Step)) cp rcp) (erased (Ctree) t0 ta tb t) (erased (RevApp (Step) rcp (Nil (Step)) cp) ra) (erased (CpCov0 rcp t0) cv)
+      (erased (CtCons t0 ta tb t) c) (erased (CtPerm p312 t0 ta) pa) (erased (CtPerm p231 t0 tb) pb) -> (CpComp cp t)))
+
 ; Every trace of the tree red.sl's cpcolor computes is a ring trace of cp's map with its first entry dropped.
 (def-fns _ $ (many cpcolor-c : (erased (Nat) h) (many (List (Step)) cp) (erased (Cprsize cp (Succ (Succ h))) cs) (erased (NoA cp) na)
-    -> (many (Ctree) t) (erased (CtH (Succ h) t) ht) (erased (CtRing cp t (Nil (Col))) rt))
+    -> (many (Ctree) t) (erased (CtH (Succ h) t) ht) (erased (CtRing cp t (Nil (Col))) rt) (erased (CpComp cp t) comp))
   (let ((many rcp) (erased ra)) (rev-onto-c _ cp (Nil _)))
-  (let ((many t0) (erased ht0) (erased rt0))
-    (cpcolor0-c (Nil (Step)) cp h rcp (revapp-flip (Step) cp (Nil (Step)) rcp cp ra (RANil (Step) cp)) (cpcol0) cs na))
+  (let ((erased ra2)) (revapp-flip (Step) cp (Nil (Step)) rcp cp ra (RANil (Step) cp)))
+  (let ((many t0) (erased ht0) (erased rt0) (erased cv)) (cpcolor0-c (Nil (Step)) cp h rcp ra2 (cpcol0) cs na))
   (let ((many ta) (erased pa)) (ctree-rot (BTrue) p312 (RDL) t0))
   (let ((many tb) (erased pb)) (ctree-rot (BFalse) p231 (RDR) t0))
   (let ((many t) (erased c)) (ctree-cons t0 ta tb))
@@ -410,7 +550,8 @@
       (ctring-perm cp p312 p231 t0 ta (Cons (Col) (C1) (Nil (Col))) (Cons (Col) (C2) (Nil (Col))) pa rt0
         (PTCons p312 (C2) (C1) (Nil (Col)) (Nil (Col)) (PC2 (C3) (C1) (C2)) (PTNil p312)) (PI312) (IP231))
       (ctring-perm cp p231 p312 t0 tb (Cons (Col) (C1) (Nil (Col))) (Cons (Col) (C3) (Nil (Col))) pb rt0
-        (PTCons p231 (C3) (C1) (Nil (Col)) (Nil (Col)) (PC3 (C2) (C3) (C1)) (PTNil p231)) (PI231) (IP312)))))
+        (PTCons p231 (C3) (C1) (Nil (Col)) (Nil (Col)) (PC3 (C2) (C3) (C1)) (PTNil p231)) (PI231) (IP312)))
+    (MkCpComp cp rcp t0 ta tb t ra2 cv c pa pb)))
 
 ; ct is a ring trace of cp's map with its first entry moved to the end.
 (def-adts $ (CpColR : ((List (Step)) cp) ((List (Col)) ct) -> Type)

@@ -116,7 +116,8 @@
   enum
   (many MkBkProg : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (Nat) k x y b) (erased (CubicProg cp) cq)
       (erased (NoA cp) na) (erased (Cprsize cp (Succ (Succ h))) cs) (erased (Cpcard cp k) cc) (erased (Mul 6 m x) mx) (erased (Mul 4 (Succ h) y) my)
-      (erased (Add x y b) xy) (erased (Lt (Succ k) b) lt) (erased (CtH (Succ h) t) ht) (erased (CtRing cp t (Nil (Col))) rt) -> (BkProg h m cp t)))
+      (erased (Add x y b) xy) (erased (Lt (Succ k) b) lt) (erased (CtH (Succ h) t) ht) (erased (CtRing cp t (Nil (Col))) rt)
+      (erased (CpComp cp t) cm) -> (BkProg h m cp t)))
 
 (def-adts $ (BkBasis : ((Nat) h) ((Nat) m) ((List (List (Step))) cps) ((List (Ctree)) ts) -> Type)
   enum
@@ -183,8 +184,8 @@
   (let ((many y) (erased my)) (mul 4 (Succ h)))
   (let ((many b) (erased xy)) (add x y))
   (let-match many (lt-dec (Succ k) b) (Yes _ _ _ _ lt) (else (BPNo h m cp)))
-  (let ((many t) (erased ht) (erased rt)) (cpcolor-c h cp cs na))
-  (BPYes h m cp t (MkBkProg h m cp t k x y b cq na cs cc mx my xy lt ht rt)))
+  (let ((many t) (erased ht) (erased rt) (erased cm)) (cpcolor-c h cp cs na))
+  (BPYes h m cp t (MkBkProg h m cp t k x y b cq na cs cc mx my xy lt ht rt cm)))
 
 (def-adts $ (BBD : ((Nat) h) ((Nat) m) ((List (List (Step))) cps) -> Type)
   enum

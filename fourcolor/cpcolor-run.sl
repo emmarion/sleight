@@ -17,7 +17,7 @@
   (let-match erased (length-fn _ r k m lk lm) (Refl _ _))
   (let-match many m (Succ m1) ((Zero) (BFalse)))
   (let-match many m1 (Succ h) ((Zero) (BFalse)))
-  (let ((many t) (erased ht) (erased rt)) (cpcolor-c h cp cs na))
+  (let ((many t) (erased ht) (erased rt) (erased _)) (cpcolor-c h cp cs na))
   (ct-eqb t (cpcolor cp)))
 
 (def-fns _ $ (many all-ok : (subterm many (List (Config)) cfs) -> (many (Bool) b))

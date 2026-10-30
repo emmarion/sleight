@@ -39,6 +39,6 @@
   (let-match many m1 (Succ h) ((Zero) (values (KCNo cp) cache)))
   (let ((many i) (many cache2)) (init-for h cache))
   (let-match many i (IFYes _ ctu gtu ce ge gc hc))
-  (let ((many ctr) (erased ht) (erased rt)) (cpcolor-c h cp cs na))
+  (let ((many ctr) (erased ht) (erased rt) (erased _)) (cpcolor-c h cp cs na))
   (let ((many kt) (erased ks)) (kempe-tree-c (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hc))
   (values (KCYes cp h kt ks cs na) cache2))
