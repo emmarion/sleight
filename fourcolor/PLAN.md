@@ -474,8 +474,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `birkhoff-check-at` reads the check for a ring of 2 to 5 darts off
   `BirkhoffChecks` (with m 1 for five darts and 0 below, `BkMode`), and
   `ring-two` shows a ring of a bridgeless map has two darts; the induction
-  on the ring size that Coq's Birkhoff makes is left to the caller, which
-  can follow a `Shorter` ring down. The cubicity and connectedness of a
+  on the ring size that Coq's Birkhoff makes is in `birkhoff2.sl`. The cubicity and connectedness of a
   minimal counterexample (minimal_counter_example_is_cubic, not ported;
   `split.sl`'s `split-reduces` for connectedness) are hypotheses. That these
   statements match Coq's has been checked only by reading. Load order:
@@ -491,10 +490,27 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   after `birkhoff.sl`; with `split.sl` the chain also checks) turns the
   maps `BNeed` lists into the `Smaller` list of a `Reduces`
   (`bneed-smaller`).
+- `birkhoff2.sl` (load after `birkfit.sl`): the theorem Birkhoff of
+  `birkhoff.v` and two of its corollaries, as far as both compilers check
+  them, with minimality as data. `birkhoff-reduces`: in a planar
+  bridgeless plain cubic connected map that the search finds
+  uncolourable (`NoColoring`), a ring of k darts, k below 6, nontrivial
+  for the m of `BkMode k m`, gives a `Reduces` to the maps of the check.
+  It follows `birkhoff-maps`' `Shorter` rings down (`birkhoff-go`, on a
+  bound that each shorter ring lowers) until `birkhoff-maps` names the
+  maps of the check, so that one `Reduces` names all of them; its glue
+  `birk-glue` reads the fields of `birkhoff-ring` off a `BirkW` and turns
+  its `False` into a colouring. It takes `BirkhoffChecks` as an argument.
+  nontrivial_cycle2 (`nontrivial-cycle2`, a plain lemma: a ring x :: y,
+  y not the edge image of x, is nontrivial for 0 in a planar bridgeless
+  plain cubic map) and double_dart (`double-dart`: two distinct darts on
+  one face whose edge images are on one face give a `Reduces`, through
+  the ring x :: edge y of `srcycle-ring`). That these statements match
+  Coq's has been checked only by reading.
 - Still open: the rest of part B. From a reading of `birkhoff.v`, the
-  corollaries of Birkhoff (nontrivial_cycle2, double_dart, the spoke ring
-  lemmas, min_arity and those after it) are not ported, nor is
-  minimal_counter_example_is_cubic of `coloring.v`.
+  spoke ring lemmas, min_arity and those after them are not ported, nor
+  is minimal_counter_example_is_cubic of `coloring.v`; `embed.sl`'s
+  `BirkGeo` needs the cubicity and min_arity.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
