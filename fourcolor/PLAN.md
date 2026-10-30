@@ -166,6 +166,15 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `Jordan`), Euler_tree for genus 0, the equality case of the walkup
   genus, same_cskip_edge, and cubic_Euler; `hypjordangoal.sl` and
   `hypcubicgoal.sl` check them. Jordan implies planar is not proved.
+- `cfmap.sl`, `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl` (load after
+  `hypgeom.sl`, interleaved with `red/` files as `cpcolor.sl`'s chain
+  needs): configuration maps built from their programs by a certified
+  function, with ring traces `CpCol`; `cpcolor-c` gives the soundness
+  half of ctree_mem_cpcolor. `cfmap-run.sl` and `cpcolor-run.sl` ran all
+  633 configurations once, matching `red.sl`'s ring sizes and trees. The
+  certified Kempe tree does not use `CpCol` yet, and the A step of the
+  programs, planarity of configuration maps and the completeness
+  direction are not done.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
