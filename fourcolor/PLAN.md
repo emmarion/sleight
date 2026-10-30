@@ -547,14 +547,38 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `Reduces`; in Coq this is radius2, the reductions of the path to a
   hom ring of at most five darts, Birkhoff, and trivial_hom_ring, none
   ported) and `PatchOpen` (the construction of embed_disk, embed_rem and
-  embed_patch, with cface_h1, not ported). Also not done: `Disj hr ins`
-  (it appears to follow from the patch's `PatchParts`), cubic_embr
+  embed_patch, with cface_h1; `embed6.sl` builds it under one more
+  hypothesis). Also not done: cubic_embr
   (`rem-kempe` reads quasicubic off any patch), embed_valid_contract and
   adj11_edge of birkhoff.v (no spoke rings are ported), radius2, and the
   ring conditions of `embed-contract-trace`. Chain: that of
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
   only by reading.
+- `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
+  embed_patch and cface_h1 of embed.v, as far as both compilers check
+  them. `PatchOpen` as `embed5.sl` states it is not proved: it does not
+  say that rc is one node cycle on distinct faces (embeddable's
+  sfcycle node rc), and without that the patch it asks for appears not
+  always to exist (for instance, it seems, when rc is the union of two
+  node cycles in different components). `patch-at` takes PatchOpen's hypotheses
+  with that one added (`NodeRing`) and gives an `EmbedPatch6`, an
+  `EmbedPatch` (`ep6-ep`) that also lists the darts embd of the
+  configuration map off rc and the images hdo of those off erc, which the
+  remainder darts miss. The disk map is Coq's embed_disk on embd, with its
+  edge sending each dart of erc to the next one; the remainder map is on
+  rev (h1 . erc) followed by the darts of the map off h1 . embd, with its
+  node sending each dart of that reversed ring to the next one; both are
+  restricted from permutations of the whole maps as in `snip.sl`
+  (`bij-build`, `restrict`), and the patch's simple disk ring is
+  `snip.sl`'s `disk-simple`. cface_h1 goes through the patch's `face-hd`
+  where fc x is on rc. `rem-disj` gives embed2.sl's `Disj hr ins` from the
+  fields of an `EmbedPatch6`, for ie = insertE cc off rc. `embed-main6` is
+  `embed-main` without `PatchOpen`, taking a `NodeRing` and giving an
+  `EmbedOut6` (`out6-out` reads it as an `EmbedOut`). Chain: that of
+  `embed5.sl`, then `embed6` (about 75 s with slc, 150 s with the
+  reference compiler, in one run). That these statements match Coq's has
+  been checked only by reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a

@@ -1,4 +1,5 @@
-; embed_disk, embed_rem, embed_patch and cface_h1 of embed.v, with minimality as data. Load after embed5.sl, in its chain.
+; embed_disk, embed_rem, embed_patch and cface_h1 of embed.v, on the data of embed5.sl's PatchOpen and one more hypothesis
+; on the ring. Load after embed5.sl, in its chain.
 
 ; What the construction reads: embed5.sl's hypotheses of PatchOpen, h1 with its values darts of the map, and the ring
 ; rc = c0 :: cp a node cycle on distinct faces (embeddable's sfcycle node rc), which PatchOpen does not take.
