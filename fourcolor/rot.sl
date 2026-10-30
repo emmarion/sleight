@@ -73,3 +73,102 @@
       (let ((erased vb2) (erased s3) (erased s4)) (lapp-assoc-back _ v b m u g pu q1))
       (let-match erased (lapp-fn _ v b vb vb2 s1 s3) (Refl _ _))
       (MkRot _ g xs m vb s2 s4))))
+
+; fl is the items of gs in order.
+(def-adts $ (GFlat : ((List (Group)) gs) ((List (Nat)) fl) -> Type)
+  enum
+  (many GFlatNil : -> (GFlat (Nil (Group)) (Nil (Nat))))
+  (many GFlatCons : (erased (Nat) d) (erased (List (Nat)) xs fl1 fl) (erased (List (Group)) gs)
+      (erased (LApp (Nat) xs fl1 fl) p) (erased (GFlat gs fl1) rest) -> (GFlat (Cons (Group) (MkGroup d xs) gs) fl)))
+
+(def-adts $ (AllIs : ((List (Nat)) xs) ((Nat) u) -> Type)
+  enum
+  (many AllIsNil : (erased (Nat) u) -> (AllIs (Nil (Nat)) u))
+  (many AllIsCons : (erased (Nat) u) (erased (List (Nat)) xs) (erased (AllIs xs u) rest) -> (AllIs (Cons (Nat) u xs) u)))
+
+; Each group's items are labelled with its dart's label.
+(def-adts $ (GroupLab : ((List (Nat)) pl) ((List (Group)) gs) -> Type)
+  enum
+  (many GLNil : (erased (List (Nat)) pl) -> (GroupLab pl (Nil (Group))))
+  (many GLCons : (erased (List (Nat)) pl xs) (erased (Nat) d u) (erased (List (Group)) gs)
+      (erased (Nth (Nat) pl d u) p) (erased (AllIs xs u) a) (erased (GroupLab pl gs) rest)
+      -> (GroupLab pl (Cons (Group) (MkGroup d xs) gs))))
+
+(def-fns _ $ (erased flat-snoc : (erased (List (Group)) gs gs2) (erased (Nat) d) (erased (List (Nat)) xs fl fl2)
+    (subterm erased (GFlat gs fl) f) (erased (Snoc (Group) gs (MkGroup d xs) gs2) s) (erased (LApp (Nat) fl xs fl2) a)
+    -> (erased (GFlat gs2 fl2) r))
+  (match erased f _
+    ((GFlatNil)
+      (let-match erased s (SnocNil _ _))
+      (let-match erased a (LAppNil _ _))
+      (GFlatCons d xs (Nil _) xs _ (lapp-nil _ xs) (GFlatNil)))
+    ((GFlatCons d1 xs1 fl1 _ gs1 p f1)
+      (let-match erased s (SnocCons _ _ _ _ gs3 s1))
+      (let ((erased fl3) (erased q1) (erased q2)) (lapp-assoc _ xs1 fl1 xs fl fl2 p a))
+      (GFlatCons d1 xs1 fl3 fl2 gs3 q2 (flat-snoc gs1 gs3 d xs fl1 fl3 f1 s1 q1)))))
+
+(def-fns _ $ (erased grouplab-snoc : (erased (List (Nat)) pl xs) (erased (List (Group)) gs gs2) (erased (Nat) d u)
+    (subterm erased (GroupLab pl gs) gl) (erased (Snoc (Group) gs (MkGroup d xs) gs2) s) (erased (Nth (Nat) pl d u) p)
+    (erased (AllIs xs u) a) -> (erased (GroupLab pl gs2) r))
+  (match erased gl _
+    ((GLNil _) (let-match erased s (SnocNil _ _)) (GLCons pl xs d u _ p a (GLNil pl)))
+    ((GLCons _ xs1 d1 u1 gs1 p1 a1 gl1)
+      (let-match erased s (SnocCons _ _ _ _ gs3 s1))
+      (GLCons pl xs1 d1 u1 gs3 p1 a1 (grouplab-snoc pl xs gs1 gs3 d u gl1 s1 p a)))))
+
+(def-fns _ $ (erased chain-snoc : (erased (List (Nat)) e nd s xs) (erased (List (Group)) gs gs2) (erased (Nat) d0 d1)
+    (subterm erased (Chain e nd s gs d0) ch) (erased (Link e nd s d0 d1) k) (erased (Snoc (Group) gs (MkGroup d0 xs) gs2) sn)
+    -> (erased (Chain e nd s gs2 d1) r))
+  (match erased ch _
+    ((ChainOne _ _ _ xs1 d _ k1)
+      (let-match erased sn (SnocCons _ _ _ _ _ sn1))
+      (let-match erased sn1 (SnocNil _ _))
+      (ChainCons e nd s xs1 xs (Nil _) d d0 d1 k1 (ChainOne e nd s xs d0 d1 k)))
+    ((ChainCons _ _ _ xs1 ys gs1 d d2 _ k1 rest)
+      (let-match erased sn (SnocCons _ _ _ _ gs3 sn1))
+      (let-match erased sn1 (SnocCons _ _ _ _ gs4 sn2))
+      (ChainCons e nd s xs1 ys gs4 d d2 d1 k1 (chain-snoc e nd s xs (Cons _ (MkGroup d2 ys) gs1) gs3 d0 d1 rest k sn1)))))
+
+(def-fns _ $ (erased darts-snoc : (erased (List (Group)) gs gs2) (erased (List (Nat)) s s2 xs) (erased (Nat) d)
+    (subterm erased (Darts gs s) ds) (erased (Snoc (Group) gs (MkGroup d xs) gs2) sn) (erased (Snoc (Nat) s d s2) ss)
+    -> (erased (Darts gs2 s2) r))
+  (match erased ds _
+    ((DartsNil) (let-match erased sn (SnocNil _ _)) (let-match erased ss (SnocNil _ _)) (DartsCons d xs _ _ (DartsNil)))
+    ((DartsCons d1 xs1 s1 gs1 ds1)
+      (let-match erased sn (SnocCons _ _ _ _ gs3 sn1))
+      (let-match erased ss (SnocCons _ _ _ _ s3 ss1))
+      (DartsCons d1 xs1 s3 gs3 (darts-snoc gs1 gs3 s1 s3 xs d ds1 sn1 ss1)))))
+
+(def-fns _ $ (erased notin-snoc : (erased (Nat) x d) (erased (List (Nat)) s s2) (subterm erased (NotIn x s) p)
+    (erased (Apart (Nat) Lt x d) ne) (erased (Snoc (Nat) s d s2) sn) -> (erased (NotIn x s2) r))
+  (match erased p _
+    ((NotInNil _) (let-match erased sn (SnocNil _ _)) (NotInCons x d _ ne (NotInNil x)))
+    ((NotInCons _ y s1 n1 p1)
+      (let-match erased sn (SnocCons _ _ _ _ s3 sn1))
+      (NotInCons x y s3 n1 (notin-snoc x d s1 s3 p1 ne sn1)))))
+
+(def-fns _ $ (erased distinct-snoc : (erased (Nat) d) (erased (List (Nat)) s s2) (subterm erased (Distinct s) dist)
+    (erased (NotIn d s) p) (erased (Snoc (Nat) s d s2) sn) -> (erased (Distinct s2) r))
+  (match erased dist _
+    ((DistNil) (let-match erased sn (SnocNil _ _)) (DistCons d _ (NotInNil d) (DistNil)))
+    ((DistCons x s1 nx dist1)
+      (let-match erased sn (SnocCons _ _ _ _ s3 sn1))
+      (let-match erased p (NotInCons _ _ _ dx p1))
+      (DistCons x s3 (notin-snoc x d s1 s3 nx (apart-sym d x dx) sn1) (distinct-snoc d s1 s3 dist1 p1 sn1)))))
+
+(def-fns _ $ (erased in-snoc : (erased (Nat) x d) (erased (List (Nat)) s s2) (subterm erased (In x s) p) (erased (Snoc (Nat) s d s2) sn)
+    -> (erased (In x s2) r))
+  (let-match erased sn (SnocCons _ y _ s1 s3 sn1) (absurd (SnocNil _ _) p))
+  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere x s3)))
+  (InThere x y s3 (in-snoc x d s1 s3 p1 sn1)))
+
+(def-fns _ $ (erased in-snoc-new : (erased (Nat) d) (erased (List (Nat)) s s2) (subterm erased (Snoc (Nat) s d s2) sn) -> (erased (In d s2) r))
+  (match erased sn _
+    ((SnocNil _ _) (InHere d _))
+    ((SnocCons _ y _ s1 s3 sn1) (InThere d y s3 (in-snoc-new d s1 s3 sn1)))))
+
+; Everything in d :: s is in s with d appended.
+(def-fns _ $ (erased sub-rot : (erased (Nat) d) (erased (List (Nat)) s s2 m) (subterm erased (Sub m s) sb) (erased (Snoc (Nat) s d s2) sn)
+    -> (erased (Sub m s2) r))
+  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SubNil s2)))
+  (SubCons x m1 s2 (in-snoc x d s s2 p sn) (sub-rot d s s2 m1 sb1 sn)))
