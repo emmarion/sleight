@@ -58,6 +58,43 @@
     (many Popped : (erased Type A) (erased (List A) xs) (erased (List A) ys) (unique A x) (erased (Snoc A ys x xs) p)
        -> (VecPop A xs ys))))
 
+(def-fns _ $ (many vec--imm-sym : (many (Raw) r) (many (String) want) -> (many (Bool) b))
+  (let-match many r (RawSymbol _ s) (else (BFalse)))
+  (let-match many s (SName t) (else (BFalse)))
+  (match many (str-eq t want) _ ((Equal _ _ _) (BTrue)) (else (BFalse))))
+
+(def-fns _ $ (many vec--imm-suffix : (many (Raw) r) -> (many (Raw) s))
+  (let-match many r (RawSymbol p n) (else r))
+  (let-match many n (SName t) (else r))
+  (RawSymbol p $ SName $ str-append t "-imm"))
+
+(def-fns _
+  ((many vec--twin-raw : (many (Bool) want-imm) (subterm many (Raw) r) -> (many (List $ Raw) out))
+    (let-match many r (RawList p xs) (else (Cons _ r $ Nil _)))
+    (let-match many xs (Cons _ h args) ((Nil _) (Cons _ r $ Nil _)))
+    (let-match many (vec--imm-sym h "vec--imm-name") (BFalse)
+      ((BTrue)
+        (let-match many args (Cons _ f _) ((Nil _) (Nil _)))
+        (match many want-imm _ ((BTrue) (Cons _ (vec--imm-suffix f) $ Nil _)) ((BFalse) (Cons _ f $ Nil _)))))
+    (let-match many (vec--imm-sym h "vec--imm-param") (BFalse)
+      ((BTrue) (match many want-imm _ ((BTrue) (tail $ vec--twin-raws want-imm args)) ((BFalse) (Nil _)))))
+    (let-match many (vec--imm-sym h "vec--imm-call") (BFalse)
+      ((BTrue)
+        (let-match many args (Cons _ call proof) ((Nil _) (Nil _)))
+        (let-match many call (RawList q cs) (else (Nil _)))
+        (let-match many cs (Cons _ f fargs) ((Nil _) (Nil _)))
+        (let ((many fargs2)) (notail $ vec--twin-raws want-imm fargs))
+        (match many want-imm _
+          ((BFalse) (Cons _ (RawList q $ Cons _ f fargs2) $ Nil _))
+          ((BTrue) (Cons _ (RawList q $ Cons _ (vec--imm-suffix f) $ raws-append fargs2 $ notail $ vec--twin-raws want-imm proof) $ Nil _)))))
+    (Cons _ (RawList p $ notail $ vec--twin-raws want-imm xs) $ Nil _))
+  ((many vec--twin-raws : (many (Bool) want-imm) (subterm many (List $ Raw) rs) -> (many (List $ Raw) out))
+    (let-match many rs (Cons _ r rest) ((Nil _) (Nil _)))
+    (raws-append (notail $ vec--twin-raw want-imm r) (notail $ vec--twin-raws want-imm rest))))
+
+(def-macro (vec--imm-twins args)
+  (raws-append (vec--twin-raws (BFalse) args) (vec--twin-raws (BTrue) args)))
+
 (def-fns _ $ (erased vec--snoc-length : (erased Type A) (erased (List A) xs) (erased A x) (erased (List A) ys) (erased (Nat) n)
     (subterm erased (Snoc A xs x ys) s) (erased (Length A xs n) l) -> (erased (Length A ys (Succ n)) l2))
   (let-match erased s (SnocCons _ y xs1 _ ys1 s1)
@@ -195,9 +232,9 @@
   (let ((many c2) (erased le2) (erased _)) (vec--max m (Succ $ Succ $ Succ $ Succ $ Zero)))
   (values c2 (lt-le-trans req (Succ m) (Succ c2) le1 (LtS m (Succ c2) le2))))
 
-(def-fns _ $ (many vec--room : (erased Type A) (erased (List A) xs) (erased (List (MaybeUninit (USlotItem A))) ms)
+(vec--imm-twins (def-fns _ $ (many (vec--imm-name vec--room) : (erased Type A) (erased (List A) xs) (erased (List (MaybeUninit (USlotItem A))) ms)
     (many (Nat) len) (erased (Length A xs len) l) (unique (Array (MaybeUninit (USlotItem A)) ms) buf) (erased (Vec--Filled A xs ms) f)
-    (erased (Slot) sl) (unique (Cell Vec--MkHdr sl (slot-of buf)) u) (many (Nat) req) ->
+    (erased (Slot) sl) (unique (Cell Vec--MkHdr sl (slot-of buf)) u) (many (Nat) req) (vec--imm-param (erased (Immediate A) im)) ->
     (erased (List (MaybeUninit (USlotItem A))) ms2) (erased (Nat) cap) (erased (Length _ ms2 cap) lc)
     (unique (Array (MaybeUninit (USlotItem A)) ms2) buf2) (unique (Cell Vec--MkHdr sl (slot-of buf2)) u2 at u)
     (erased (Vec--Filled A xs ms2) f2) (erased (Lt req (Succ cap)) le))
@@ -213,9 +250,9 @@
   (let ((erased ys) (erased from)) (vec--filled-prefix _ _ _ len l f))
   (let ((erased _) (erased to)) (splice-range _ ds c2 dl (Zero) len len (AddZero len) (lt-weaken len c2 (lt-le-trans len req c2 lr le))))
   (let ((erased zs) (erased _) (erased _) (unique nb2) (unique _) (erased p) (erased _) (erased _))
-    (array-move _ _ _ _ _ buf1 (Zero) nb (Zero) len from to))
+    (vec--imm-call (array-move _ _ _ _ _ buf1 (Zero) nb (Zero) len from to) im))
   (values zs c2 (vec--splice-length _ ds ys zs (Zero) len c2 p dl) nb2 (cell-write unique u (Vec--MkHdr _ (slot-of nb2)))
-          (vec--refill _ _ ms ys ds zs len l f from (vec--repeat-spare _ _ _ rp) p) le))
+          (vec--refill _ _ ms ys ds zs len l f from (vec--repeat-spare _ _ _ rp) p) le)))
 
 (def-fns _ $ (erased vec--lent : (erased Type A) (erased (List A) xs) (erased (List (MaybeUninit (USlotItem A))) ms ms2)
     (erased (Nat) i) (erased A x) (erased (Slot) s) (erased (USlotItem A) w) (erased (Placed s (USlotItem A) w) q)
@@ -275,30 +312,33 @@
   (let ((many cap) (erased _) (unique buf1)) (array-length _ _ buf))
   (values cap (MkVec _ _ _ _ l (at unique (u _ _ len buf1)) f)))
 
-(def-fns _ $ (many vec-reserve : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) n) ->
+(vec--imm-twins (def-fns _ $ (many (vec--imm-name vec-reserve) : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) n)
+    (vec--imm-param (erased (Immediate A) im)) ->
     (unique (Vec A xs) w at v))
   (let-match unique v (MkVec _ _ ms _ l h f))
   (let-match unique h (Vec--MkHdr _ _ len buf u))
   (let ((many req) (erased _)) (add len n))
   (let ((erased _) (erased _) (erased _) (unique buf2) (unique u2) (erased f2) (erased _))
-    (vec--room _ _ ms len l buf f (slot-of len) u req))
-  (MkVec _ _ _ _ l (at unique (u2 _ _ len buf2)) f2))
+    (vec--imm-call (vec--room _ _ ms len l buf f (slot-of len) u req) im))
+  (MkVec _ _ _ _ l (at unique (u2 _ _ len buf2)) f2)))
 
 (def-fns _ $ (erased vec--imm-nat : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (erased (ImmSlot (slot-of n)) s))
   (let ((erased u)) (MkU62 n p))
   (ImmPlaced _ (ImmU62) _ u (place-at-many _ u)))
 
-(def-fns _ $ (many vec-push : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (unique A x) ->
+(vec--imm-twins (def-fns _ $ (many (vec--imm-name vec-push) : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (unique A x)
+    (vec--imm-param (erased (Immediate A) im)) ->
     (erased (List A) ys) (unique (Vec A ys) w at v) (erased (Snoc A xs x ys) p))
   (let-match unique v (MkVec _ _ ms _ l h f))
   (let-match unique h (Vec--MkHdr _ _ len buf u))
   (let ((many n)) (Succ len))
   (let ((erased ms2) (erased cap) (erased lc) (unique buf2) (unique u2) (erased f2) (erased le))
-    (vec--room _ _ ms len l buf f (slot-of len) u n))
+    (vec--imm-call (vec--room _ _ ms len l buf f (slot-of len) u n) im))
   (let-match erased le (LtS _ _ lt))
   (let ((erased m) (erased nth)) (nth-exists _ ms2 cap len lc lt))
   (let ((unique pl)) (place-at _ x))
-  (let ((erased ms3) (unique buf3) (erased set)) (array-place _ _ buf2 len (Init _ (MkUSlotItem _ _ _ pl)) m nth))
+  (let ((erased ms3) (unique buf3) (erased set))
+    (vec--imm-call (array-place _ _ buf2 len (Init _ (MkUSlotItem _ _ _ pl)) m nth) (ImmMaybe _ (ImmUSlot _ im))))
   (let ((erased ys) (erased sn) (erased f3)) (vec--filled-snoc _ _ ms2 ms3 len (slot-of x) x pl f2 l set))
   (let ((erased ln)) (vec--snoc-length _ _ _ _ _ sn l))
   (let ((erased _) (erased lc2) (many d) (unique buf4)) (array-length-dec _ _ buf3))
@@ -306,7 +346,7 @@
   (let-match erased (length-fn _ _ _ _ (setnth-length _ _ _ _ _ _ set lc) lc2) (Refl _ _))
   (values ys (MkVec _ _ _ _ ln (u2 _ _ (imm (vec--imm-nat len (lt-trans len cap u62-modulus lt q))
                                            (vec--imm-nat n (lt-le-trans n (Succ cap) u62-modulus (LtS len cap lt) (LtS cap u62-modulus q))))
-                                    n (at) buf4) f3) sn))
+                                    n (at) buf4) f3) sn)))
 
 (def-fns _ $ (many vec-pop : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) ->
     (erased (List A) ys) (unique (VecPop A xs ys) r) (unique (Vec A ys) w at v))
@@ -338,18 +378,19 @@
   (let-match many it (MkUSlotItem _ _ _ pl))
   (unplace-at-many _ _ _ pl))
 
-(def-fns _ $ (many vec-replace : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) i) (unique A x)
-    (erased A old) (erased (Nth A xs i old) nth) ->
+(vec--imm-twins (def-fns _ $ (many (vec--imm-name vec-replace) : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) i) (unique A x)
+    (erased A old) (erased (Nth A xs i old) nth) (vec--imm-param (erased (Immediate A) im)) ->
     (unique old is y) (erased (List A) ys) (unique (Vec A ys) w at v) (erased (SetNth A xs i x ys) p))
   (let-match unique v (MkVec _ _ ms _ l h f))
   (let-match unique h (Vec--MkHdr _ _ len buf u))
   (let ((erased _) (erased _) (erased mnth)) (vec--filled-nth _ _ _ i old f nth))
   (let ((unique pl)) (place-at _ x))
-  (let ((unique m) (erased ms2) (unique buf2) (erased set)) (array-swap _ _ buf i (Init _ (MkUSlotItem _ _ _ pl)) _ mnth))
+  (let ((unique m) (erased ms2) (unique buf2) (erased set))
+    (vec--imm-call (array-swap _ _ buf i (Init _ (MkUSlotItem _ _ _ pl)) _ mnth) (ImmMaybe _ (ImmUSlot _ im))))
   (let-match unique m (Init _ it))
   (let-match unique it (MkUSlotItem _ _ _ pl0))
   (let ((erased ys) (erased p) (erased f2)) (vec--filled-set _ _ ms ms2 i old (slot-of x) x pl f nth set))
-  (values (unplace-at _ _ _ pl0) ys (MkVec _ _ _ _ (setnth-length _ _ _ _ _ _ p l) (at unique (u _ _ len buf2)) f2) p))
+  (values (unplace-at _ _ _ pl0) ys (MkVec _ _ _ _ (setnth-length _ _ _ _ _ _ p l) (at unique (u _ _ len buf2)) f2) p)))
 
 (def-fns _ $ (many vec-pluck : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) i)
     (erased A x) (erased (Nth A xs i x) nth) ->
@@ -371,7 +412,7 @@
   (let-match unique h (Vec--MkHdr _ _ len buf u))
   (let ((erased w) (erased q) (erased mnth)) (vec--lent-nth _ _ _ _ _ r))
   (let ((unique pl)) (place-at _ y))
-  (let ((unique it)) (MkUSlotItem _ _ _ pl))
-  (let ((erased ms2) (unique buf2) (erased set)) (at erased (array-unpluck _ _ buf i it w q mnth)))
+  (let ((erased ms2) (unique buf2) (erased set)) (at erased (array-unpluck _ _ buf i (MkUSlotItem _ _ _ pl) w q mnth)))
   (let ((erased ys) (erased p) (erased f2)) (vec--unlent _ _ _ _ ms ms2 y pl r set))
   (values ys (MkVec _ _ _ _ (setnth-length _ _ _ _ _ _ p l) (at unique (u _ _ len buf2)) f2) p))
+

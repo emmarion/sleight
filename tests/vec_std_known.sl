@@ -1,4 +1,4 @@
-; needs: ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/vec
 ; expect: (MkPair _ _ 15 42)
 (def-fns _ $ (many known : -> (many (Pair (Nat) (Nat)) r))
   (let ((unique v0)) (vec-new (Nat)))

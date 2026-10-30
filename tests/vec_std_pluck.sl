@@ -1,4 +1,4 @@
-; needs: ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/vec
 ; expect: (MkPair _ _ 10 21)
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 

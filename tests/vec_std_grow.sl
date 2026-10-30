@@ -1,4 +1,4 @@
-; needs: ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/vec
 ; expect: (MkPair _ _ (MkPair _ _ (Cons _ 4 $ Cons _ 4 $ Cons _ 4 $ Cons _ 4 $ Cons _ 8 $ Cons _ 8 $ Cons _ 8 $ Cons _ 8 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 16 $ Cons _ 32 $ Nil _) $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 4 $ Cons _ 5 $ Cons _ 6 $ Cons _ 7 $ Cons _ 8 $ Cons _ 9 $ Cons _ 10 $ Nil _) 10)
 (def-fns _ $ (many fill : (erased (List (Nat)) xs) (unique (Vec (Nat) xs) v) (subterm many (Nat) n) ->
     (erased (List (Nat)) ys) (unique (Vec (Nat) ys) w))

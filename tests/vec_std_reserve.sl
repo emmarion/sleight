@@ -1,4 +1,4 @@
-; needs: ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/vec
 ; expect: (Cons _ 4 $ Cons _ 6 $ Cons _ 10 $ Cons _ 8 $ Cons _ 8 $ Cons _ 4 $ Nil _)
 (def-fns _ $ (many fill : (erased (List (Nat)) xs) (unique (Vec (Nat) xs) v) (subterm many (Nat) n) ->
     (erased (List (Nat)) ys) (unique (Vec (Nat) ys) w))
