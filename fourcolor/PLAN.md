@@ -802,6 +802,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variant (Birkhoff for five darts given the ring nontrivial for 0
   only) was rejected. That these statements match Coq's has been checked
   only by reading.
+- `fcmany.sl` (load after `defs.sl`): sets the open goal `FourColorM`, the
+  four colour theorem as a program: a function, not erased, from the edges
+  `es` of a drawing to a list `ks` of paints, with the `Drawing` certificate
+  and the `Proper` result erased. It has no `qed` yet; both compilers
+  accept it under `--goal open`.
 - `fcgoal.sl` (load after `evalid.sl`, `triad.sl` and `trivfive.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`,
   `BirkhoffChecks` and `CfCerts cfs` (the statements of `unav/qztgoal.sl`,
