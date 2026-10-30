@@ -331,3 +331,55 @@
     (fan-loop t db y1 x3 e3 nd3 pl3 rep b xs1 rest rr1 gsr f3))
   (values e2 nd2 pl2 xs2 c2 gsr2 (AgTrans e e3 e2 (Nil _) ge3 ge2) (AgTrans pl pl3 pl2 (Nil _) gp3 gp2) f2
     (AJCons e2 pl2 rr1 a t (joined-grow e3 pl3 e2 pl2 a t j3 ge2 gp2) j2)))
+
+; The first edge of step t, a pendant at the head group's corner: the head group's items are b ++ yh ++ y3, and yh
+; is the head of the run when there is one.
+(def-fns _ $ (erased fan-pendant : (erased (Nat) t d) (erased (List (Nat)) e nd pl rep by b y yh y3 fl2 f3 xfr rr rest) (erased (List (Group)) gs3)
+    (erased (State t e nd pl rep (Cons (Group) (MkGroup d by) gs3) fl2) st) (erased (LApp (Nat) b y by) pb) (erased (LApp (Nat) yh y3 y) ph)
+    (erased (GFlat gs3 f3) g3) (erased (LApp (Nat) y3 f3 xfr) px) (erased (LApp (Nat) rr rest xfr) pr) ->
+    (erased (List (Nat)) e2 nd2 pl2 rep2) (erased (Nat) n u) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree pl pl2 (Nil (Nat))) gp)
+    (erased (Fan t e2 nd2 pl2 rep2 d b (Succ n) n y3 gs3 rr rest) f) (erased (AllIs y u) ay)
+    (erased (Nth (Nat) e2 n (Succ n)) pe) (erased (Nth (Nat) pl2 n u) pn) (erased (Nth (Nat) pl2 (Succ n) t) pt))
+  (let-match erased st (MkState _ n _ _ _ _ _ s _ _ _ pm le ln lp lr ds dist ch rp al gl gf rs))
+  (let-match erased ds (DartsCons _ _ sr _ ds1))
+  (let-match erased gl (GLCons _ _ _ u _ pu aby gl1))
+  (let ((erased ab) (erased ay)) (allis-app b y by u pb aby))
+  (let ((erased _) (erased ay3)) (allis-app yh y3 y u ph ay))
+  (let ((erased e2) (erased nd1) (erased nd2) (erased g) (erased i1) (erased sn) (erased pm2) (erased ch2))
+    (pendant-step e nd sr by b (Nil _) y3 gs3 n d pm le ln ch ds1 dist))
+  (let ((erased lt-u)) (alllt-nth pl t d u al pu))
+  (let ((erased pl1) (erased sp1)) (snoc-exists _ pl u))
+  (let ((erased pl2) (erased sp2)) (snoc-exists _ pl1 t))
+  (let ((erased lp1)) (snoc-length _ pl pl1 u n sp1 lp))
+  (let ((erased lp2)) (snoc-length _ pl1 pl2 t (Succ n) sp2 lp1))
+  (let ((erased rep2) (erased sr2)) (snoc-exists _ rep (Succ n)))
+  (let ((erased ln1)) (insert-length nd nd1 d n n i1 ln))
+  (let ((erased ln2)) (snoc-length _ nd1 nd2 (Succ n) (Succ n) sn ln1))
+  (let ((erased le0) (erased le2)) (grow-length e e2 n g))
+  (let ((erased gp)) (AgTrans pl pl1 pl2 (Nil _) (AgSnoc pl pl1 (Nil _) u sp1) (AgSnoc pl1 pl2 (Nil _) t sp2)))
+  (let ((erased rp2)) (respects-new pl1 pl2 nd1 nd2 (Succ n) t (respects-insert pl pl1 nd nd1 d n n u rp i1 lp pu sp1) sn lp1 sp2))
+  (let ((erased al2)) (alllt-snoc pl1 pl2 (Succ t) t (alllt-snoc pl pl1 (Succ t) u (alllt-succ pl t al) (lt-weaken u t lt-u) sp1) (lt-succ t) sp2))
+  (let ((erased pt)) (snoc-new _ pl1 pl2 t (Succ n) sp2 lp1))
+  (let ((erased pn)) (agree-nth pl1 pl2 (Nil _) n u (AgSnoc pl1 pl2 (Nil _) t sp2) (snoc-new _ pl pl1 u n sp1 lp) (NotInNil n)))
+  (let ((erased gl4)) (GLCons pl2 b d u _ (agree-nth pl pl2 (Nil _) d u gp pu (NotInNil d)) ab
+    (GLCons pl2 (Nil _) (Succ n) t _ pt (AllIsNil t) (GLCons pl2 y3 n u gs3 pn ay3
+      (grouplab-grow pl1 pl2 gs3 t (grouplab-grow pl pl1 gs3 u gl1 sp1) sp2)))))
+  (let-match erased gf (GFlatCons _ _ f4 _ _ pf gf1))
+  (let-match erased (flat-fn gs3 f4 f3 gf1 g3) (Refl _ _))
+  (let ((erased afl)) (grouplab-lt pl fl2 _ t gl al gf))
+  (let ((erased aby2) (erased af3)) (alllt-app-l by f3 fl2 t pf afl))
+  (let ((erased _) (erased ay2)) (alllt-app-l b y by t pb aby2))
+  (let ((erased _) (erased ay4)) (alllt-app-l yh y3 y t ph ay2))
+  (let ((erased ru) (erased pru) (erased rd)) (reps-at nd rep pl (Zero) d d u rs pu (add-zero-right d)))
+  (let ((erased rs1)) (reps-grow nd1 nd2 rep2 pl (Succ n) (Zero) (reps-insert nd nd1 rep2 pl d n (Zero) (reps-rep nd rep rep2 pl (Succ n) (Zero) rs sr2) i1 ln) sn))
+  (let ((erased rd2)) (nr-snoc nd2 ru d n (nr-grow nd1 nd2 (Succ n) ru d (nr-insert nd nd1 d n ru d rd i1 ln) sn)
+    (snoc-old _ nd1 nd2 (Succ n) n d sn (insert-at nd nd1 d n i1))))
+  (let ((erased rs2)) (reps-snoc nd2 rep2 pl pl1 (Zero) n n u ru rs1 lp (add-zero-right n) sp1 (snoc-old _ rep rep2 (Succ n) ru u sr2 pru) rd2))
+  (let ((erased rs3)) (reps-snoc nd2 rep2 pl1 pl2 (Zero) (Succ n) (Succ n) t (Succ n) rs2 lp1 (add-zero-right (Succ n)) sp2
+    (snoc-new _ rep rep2 (Succ n) t sr2 lr) (NRHere nd2 (Succ n))))
+  (values e2 nd2 pl2 rep2 n u (grow-agree e e2 n g) gp
+    (MkFan t (Succ (Succ n)) d (Succ n) n e2 nd2 pl2 rep2 _ b y3 f3 xfr rr rest gs3 pm2 le2 ln2 lp2 (snoc-length _ rep rep2 (Succ n) t sr2 lr)
+      (DartsCons d b _ _ $ DartsCons (Succ n) (Nil _) _ _ $ DartsCons n y3 sr gs3 ds1)
+      (distinct-pendant d n sr dist (chain-lt e nd s s _ d n ch ds ln)) ch2 rp2 al2 pt (snoc-new _ rep rep2 (Succ n) t sr2 lr) gl4 g3 px pr
+      (alllt-app y3 f3 xfr t px ay4 af3) rs3)
+    ay (edge-low e e2 n g) pn pt))
