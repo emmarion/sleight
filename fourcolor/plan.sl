@@ -140,3 +140,87 @@
   (let-match erased l (LtS _ _ l1))
   (pw-nth A R zs k1 j1 x y p1 nx1 ny1 l1))
 
+
+(def-fns _ $ (erased off-swap : (erased (Point) a b r) (erased (OffLine a b r) o) -> (erased (OffLine b a r) o2))
+  (match erased o _ ((OffLeft _ _ _ l) (OffRight b a r l)) ((OffRight _ _ _ l) (OffLeft b a r l))))
+
+(def-fns _ $ (erased off-rot : (erased (Point) a b r) (erased (OffLine a b r) o) -> (erased (OffLine b r a) o2))
+  (match erased o _
+    ((OffLeft _ _ _ l) (OffLeft b r a (left-rot a b r l)))
+    ((OffRight _ _ _ l) (OffRight b r a (left-rot a r b $ left-rot b a r l)))))
+
+(def-fns _ $ (erased ss-swap : (erased (Point) a b c d) (erased (SameSide a b c d) s) -> (erased (SameSide b a c d) s2))
+  (match erased s _ ((BothLeft _ _ _ _ l m) (BothRight b a c d l m)) ((BothRight _ _ _ _ l m) (BothLeft b a c d l m))))
+
+(def-fns _ $ (erased ss-flip : (erased (Point) a b c d) (erased (SameSide a b c d) s) -> (erased (SameSide a b d c) s2))
+  (match erased s _ ((BothLeft _ _ _ _ l m) (BothLeft a b d c m l)) ((BothRight _ _ _ _ l m) (BothRight a b d c m l))))
+
+(def-fns _ $ (erased ss-off : (erased (Point) a b c d) (erased (SameSide a b c d) s) -> (erased (OffLine a b c) o))
+  (match erased s _ ((BothLeft _ _ _ _ l _) (OffLeft a b c l)) ((BothRight _ _ _ _ l _) (OffRight a b c l))))
+
+(def-fns _ $ (erased compat-flip : (erased (Point) a b c d) (erased (Compatible a b c d) h) -> (erased (Compatible b a c d) r))
+  (match erased h _
+    ((ShareCA _ _ _ o) (ShareCB b a d (off-swap a b d o)))
+    ((ShareCB _ _ _ o) (ShareCA b a d (off-swap a b d o)))
+    ((ShareDA _ _ _ o) (ShareDB b a c (off-swap a b c o)))
+    ((ShareDB _ _ _ o) (ShareDA b a c (off-swap a b c o)))
+    ((SplitByAB _ _ _ _ s oa ob) (SplitByAB b a c d (ss-swap a b c d s) ob oa))
+    ((SplitByCD _ _ _ _ oc od s) (SplitByCD b a c d (off-swap a b c oc) (off-swap a b d od) (ss-flip c d a b s)))))
+
+(def-fns _ $ (erased compat-sym : (erased (Point) a b c d) (erased (Compatible a b c d) h) -> (erased (Compatible c d a b) r))
+  (match erased h _
+    ((ShareCA _ _ _ o) (ShareCA a d b (off-swap d a b $ off-rot b d a $ off-rot a b d o)))
+    ((ShareCB _ _ _ o) (ShareDA b d a (off-rot a b d o)))
+    ((ShareDA _ _ _ o) (ShareCB c a b (off-rot b c a $ off-rot a b c o)))
+    ((ShareDB _ _ _ o) (ShareDB c b a (off-rot a c b $ off-rot b a c $ off-swap a b c o)))
+    ((SplitByAB _ _ _ _ s oa ob) (SplitByCD c d a b oa ob s))
+    ((SplitByCD _ _ _ _ oc od s) (SplitByAB c d a b s oc od))))
+
+(def-fns _ $ (erased compat-off : (erased (Point) a b c d) (erased (Compatible a b c d) h)
+    (erased (Apart (Point) LexLt c a) na) (erased (Apart (Point) LexLt c b) nb) -> (erased (OffLine a b c) o))
+  (match erased h _
+    (absurd (ShareCA _ _ _ _) (apart-pt-irrefl a na))
+    (absurd (ShareCB _ _ _ _) (apart-pt-irrefl b nb))
+    ((ShareDA _ _ _ o) o)
+    ((ShareDB _ _ _ o) o)
+    ((SplitByAB _ _ _ _ s _ _) (ss-off a b c d s))
+    ((SplitByCD _ _ _ _ oc _ _) oc)))
+
+(def-fns _ $ (erased compat-all-nth : (erased (Point) a b c d) (erased (List (Edge)) es) (erased (Nat) j)
+    (subterm erased (CompatibleAll a b es) h) (erased (Nth (Edge) es j (MkEdge c d)) n) -> (erased (Compatible a b c d) r))
+  (let-match erased h (CACons _ _ c1 d1 es1 h1 rest) (absurd (CANil _ _) n))
+  (let-match erased n (NthThere _ _ _ j1 _ n1) ((NthHere _ _ _) h1))
+  (compat-all-nth a b c d es1 j1 rest n1))
+
+(def-fns _ $ (erased compat-at : (erased (Point) a b c d) (erased (List (Edge)) es) (erased (Nat) i j) (subterm erased (Drawing es) dr)
+    (erased (Nth (Edge) es i (MkEdge a b)) ni) (erased (Nth (Edge) es j (MkEdge c d)) nj) (erased (Lt i j) l) -> (erased (Compatible a b c d) r))
+  (let-match erased dr (DrawCons a1 b1 es1 _ ca rest) (absurd (DrawNil) ni))
+  (let-match erased nj (NthThere _ _ _ j1 _ nj1) (absurd (NthHere _ _ _) l))
+  (let-match erased ni (NthThere _ _ _ u2 _ ni1) ((NthHere _ _ _) (compat-all-nth a b c d es1 j1 ca nj1)))
+  (let-match erased l (LtS _ _ l1))
+  (compat-at a b c d es1 u2 j1 rest ni1 nj1 l1))
+
+; The edge at position m of es joins a and b, written either way round.
+(def-adts $ (EdgeIn : ((List (Edge)) es) ((Nat) m) ((Point) a) ((Point) b) -> Type)
+  enum
+  (many EIFwd : (erased (List (Edge)) es) (erased (Nat) m) (erased (Point) a b) (erased (Nth (Edge) es m (MkEdge a b)) n) -> (EdgeIn es m a b))
+  (many EIRev : (erased (List (Edge)) es) (erased (Nat) m) (erased (Point) a b) (erased (Nth (Edge) es m (MkEdge b a)) n) -> (EdgeIn es m a b)))
+
+(def-fns _ $ (erased compat-in-lt : (erased (List (Edge)) es) (erased (Nat) m k) (erased (Point) a b c d) (erased (Drawing es) dr)
+    (erased (EdgeIn es m a b) e1) (erased (EdgeIn es k c d) e2) (erased (Lt m k) l) -> (erased (Compatible a b c d) r))
+  (match erased e1 _
+    ((EIFwd _ _ _ _ n1)
+      (match erased e2 _
+        ((EIFwd _ _ _ _ n2) (compat-at a b c d es m k dr n1 n2 l))
+        ((EIRev _ _ _ _ n2) (compat-sym c d a b $ compat-flip d c a b $ compat-sym a b d c (compat-at a b d c es m k dr n1 n2 l)))))
+    ((EIRev _ _ _ _ n1)
+      (match erased e2 _
+        ((EIFwd _ _ _ _ n2) (compat-flip b a c d (compat-at b a c d es m k dr n1 n2 l)))
+        ((EIRev _ _ _ _ n2)
+          (compat-sym c d a b $ compat-flip d c a b $ compat-sym a b d c $ compat-flip b a d c (compat-at b a d c es m k dr n1 n2 l)))))))
+
+(def-fns _ $ (erased compat-in : (erased (List (Edge)) es) (erased (Nat) m k) (erased (Point) a b c d) (erased (Drawing es) dr)
+    (erased (EdgeIn es m a b) e1) (erased (EdgeIn es k c d) e2) (erased (Apart (Nat) Lt m k) ne) -> (erased (Compatible a b c d) r))
+  (match erased ne _
+    ((ApLt _ _ _ _ l) (compat-in-lt es m k a b c d dr e1 e2 l))
+    ((ApGt _ _ _ _ l) (compat-sym c d a b (compat-in-lt es k m c d a b dr e2 e1 l)))))
