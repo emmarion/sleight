@@ -1,5 +1,5 @@
 ; not_embed_reducible of embed.v with minimality as data: embed.sl's NotEmbed CRX cfs, from embed5.sl's FullRedR,
-; embed6.sl's patch-open and three open steps taken as hypotheses (CfCerts, EmbedValid, ContractLater). Load after embed6.sl,
+; embed6.sl's patch-open and three open steps taken as hypotheses (CfCerts, EmbedValid, TriadFive). Load after contract3.sl and embed6.sl,
 ; with iealias.sl loaded after red/cfred.sl. That these statements match Coq's has been checked only by reading.
 
 (def-fns _ $ (erased ie-conv : (erased (List (Nat)) e cc ie) (subterm erased (CInsertE e cc ie) p) -> (erased (InsertE e cc ie) r))
@@ -236,28 +236,31 @@
       -> (CfCerts cfs)))
 
 ; embed_valid_contract of embed.v, with minimality as data, taken as a hypothesis: the image ccr = map h1 cc of a valid
-; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces.
+; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces, given cface_h1 (h1 sends
+; each face step along fm, as the patch gives it).
 (def-adts $ (EmbedValid : -> Type)
   enum
   (many MkEmbedValid : (erased (Level) F B)
-      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr)
+      (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr h1f)
           (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
           (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh)
           (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (ValidContract ec nc fc rc cc) vc)
-          (erased (Respects h1 cc ccr) rcc) -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
+          (erased (Respects h1 cc ccr) rcc) (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf)
+          -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
       -> (EmbedValid)))
 
-; The case of contract2.sl's contract-go left open, taken as a hypothesis: in a map as embed.v takes it, with a sparse
-; contract cx, a live bridge after the contractions of CGLater gives contract.sl's Contraction, or the map reduces.
-(def-adts $ (ContractLater : -> Type)
+; The case of contract3.sl's contract-all left open (CAFive, triad_valid), taken as a hypothesis: in a map as embed.v takes
+; it, a contract cx of four darts with a triad of its sparse insertE ins and a contract ring w :: Bs of five darts nontrivial
+; for 0 give contract.sl's Contraction, or the map reduces.
+(def-adts $ (TriadFive : -> Type)
   enum
-  (many MkContractLater : (erased (Level) F B)
-      (erased (Fn F (erased (Nat) d m x ex z) (erased (List (Nat)) e n f ks cx ins e1 n1 f1 s p e2 n2 f2) (erased (Pbpp d e n f) pb)
-          (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (InsertE e cx ins) ie) (erased (Simple n ins) sp)
-          (erased (CHist d m e n f e1 n1 f1 (Cons (Nat) z s) p) ch) (erased (LBridgeless d e1 f1 (Cons (Nat) z s)) lb)
-          (erased (CStep d x ex e1 n1 f1 (Cons (Nat) z s) e2 n2 f2) cs) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x (Cons (Nat) z s)))) br)
-          -> (erased (ContractOut B d e n f cx) r)) cl)
-      -> (ContractLater)))
+  (many MkTriadFive : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) d w x) (erased (List (Nat)) e n f ks cx ins Bs) (erased (BirkhoffChecks) bks) (erased (Pbpp d e n f) pb)
+          (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie)
+          (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr)
+          (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb) (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt)
+          -> (erased (ContractOut B d e n f cx) r)) tf)
+      -> (TriadFive)))
 
 ; What the glue of not-embed reads: the contraction, the embedding h1 with the patch, the contract, the rings and CRed.
 (def-adts $ (NeW : ((Nat) dw) ((List (Nat)) ew nw fw) ((List (Mp)) mw) -> Type)
@@ -327,16 +330,16 @@
     ((COReduce _ _ _ _ _ _ rd) (COReduce Hi d e n f cx (reduces-lift Lo Hi d e n f rd p)))))
 
 ; not_embed_reducible: a connected map (split-reduces) is embedded (embed-main) or reduces; the image of the contract is
-; valid (EmbedValid), its contraction (contract-go, ContractLater) reduces the map through ne-glue, or the map reduces.
+; valid (EmbedValid), its contraction (contract-all, TriadFive) reduces the map through ne-glue, or the map reduces.
 (def-fns _ $ (erased not-embed : (erased (List (Config)) cfs) (erased (BirkhoffChecks) bks) (erased (FullRedR) frd) (erased (CfCerts cfs) gf)
-    (erased (EmbedValid) ev) (erased (ContractLater) ctl) -> (erased (NotEmbed CRX cfs) r))
+    (erased (EmbedValid) ev) (erased (TriadFive) tfv) -> (erased (NotEmbed CRX cfs) r))
   (let-match erased gf (MkCfCerts _ Fg gfn))
   (let-match erased ev (MkEmbedValid Fv Bv evf))
-  (let-match erased ctl (MkContractLater Fc Bc clf))
+  (let-match erased tfv (MkTriadFive Ft Bt tff))
   (let ((erased Lr) (erased Br) (erased run)) (embed-main frd (patch-open)))
   (def-lvl B)
   (let ((erased q1) (erased q2) (erased q3) (erased q4) (erased q5) (erased q6))
-    (values (prove-predates Br B) (prove-predates Bv B) (prove-predates Bc B) (prove-predates (level-of split-glue) B) (prove-predates NK B)
+    (values (prove-predates Br B) (prove-predates Bv B) (prove-predates Bt B) (prove-predates (level-of split-glue) B) (prove-predates NK B)
       (prove-predates (level-of birk-glue) B)))
   (def-fns _ $ (erased emb : (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
       (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
@@ -365,7 +368,7 @@
     (let ((erased iec)) (ie-conv ec cc ie pi))
     (let ((erased uc) (erased uie)) (ie-under dc ec cc ie iec le (perm-under dc ec nf pme)))
     (let ((erased ccr) (erased rcc)) (respects-exists h1 cc dc uc lh))
-    (let-match erased (evf dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr en ok fu fa io el lh pb ncol conn v rcc) (OrL _ _ vm)
+    (let-match erased (evf dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr h1f en ok fu fa io el lh pb ncol conn v rcc rf1 rcf) (OrL _ _ vm)
       ((OrR _ _ r) (reduces-lift Bv B dm em nm fm r q2)))
     (let-match erased pb (MkPbpp _ _ _ _ hm gen bl pl pc))
     (let-match erased g (MkGeo _ _ _ _ _ hg pe2 cu olg pag))
@@ -374,14 +377,15 @@
     (let ((erased ins) (erased iem)) (inserte-exists em dm ccr (respects-under-vals h1 cc ccr dm rcc uh) lem2))
     (let-match erased vm (MkValidContract _ _ _ _ _ iev piv offv spv szv))
     (let-match erased (ccins-fn em ccr iev ins (ie-conv em ccr iev piv) iem) (Refl _ _))
-    (unary 4)
-    (let-match erased ccr (Cons _ x0 cr1)
-      (absurd (Nil _) (match erased szv _ (absurd (CsSmall _ _ _ _ _ k lk lo hi) (let-match erased lk (LengthNil _)) lo) (absurd (CsTriad _ _ _ _ _ x lk kx t) lk))))
+    (let ((erased csz)) (match erased szv (((CSize em fm ins ccr) cz))
+      ((CsSmall _ _ _ _ _ k lk lo hi) (CSSmall em fm ins ccr k lk lo hi))
+      ((CsTriad _ _ _ _ _ x lk kx t) (CSTriad em fm ins ccr x lk t))))
     (let ((erased co))
-      (match erased (contract-go B q6 dm x0 em nm fm ccr cr1 ins bks hm gen bl pl cu conn ncol (Refl _ ccr) iem spv) (((ContractOut B dm em nm fm ccr) co))
-        ((CGOut _ _ _ _ _ _ co) co)
-        ((CGLater _ _ m x ex z _ _ _ _ e1 n1 f1 s p1 e2 n2 f2 ch lb cs br)
-          (co-lift Bc B dm em nm fm ccr (clf dm m x ex z em nm fm ksm ccr ins e1 n1 f1 s p1 e2 n2 f2 pb ncol conn g iem spv ch lb cs br) q3))))
+      (match erased (contract-all B q6 dm em nm fm ccr ins bks hm gen bl pl cu conn ncol iem spv csz) (((ContractOut B dm em nm fm ccr) co))
+        ((CAOut _ _ _ _ _ _ co) co)
+        ((CAFive _ _ w x _ _ _ _ ins5 Bs ie5 l t rg pr sb lb nt)
+          (let-match erased (ccins-fn em ccr ins ins5 iem ie5) (Refl _ _))
+          (co-lift Bt B dm em nm fm ccr (tff dm w x em nm fm ksm ccr ins5 Bs bks pb ncol conn g spv ie5 l t rg pr sb lb nt) q3))))
     (let-match erased co (COContract _ _ _ _ _ _ ms ct) ((COReduce _ _ _ _ _ _ rd) rd))
     (let ((erased dj0)) (disj-sym rc ie off ie (sub-refl ie)))
     (let ((erased sd)) (ins-sides dc dm (Zero) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins (Nil _) en ok fu fa io el lh iec rcc iem dj0 uc h1 (AppNil h1)
