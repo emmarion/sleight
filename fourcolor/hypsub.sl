@@ -176,3 +176,13 @@
       (let ((erased j) (erased ij) (erased pj)) (respects-in lab xs1 ls1 l rp1 il1))
       (values j (InThere j j0 xs1 ij) pj))))
 
+
+(def-fns _ $ (erased split-sub-t : (erased (List (Nat)) t xs ys zs) (subterm erased (Split t xs ys zs) sp) -> (erased (Sub ys t) r))
+  (match erased sp _
+    ((SpNil _) (SubNil t))
+    ((SpIn _ xs1 ys1 zs1 x p sp1) (SubCons x ys1 t p (split-sub-t t xs1 ys1 zs1 sp1)))
+    ((SpOut _ xs1 ys1 zs1 x p sp1) (split-sub-t t xs1 ys1 zs1 sp1))))
+
+; Names that red/ctree.sl defines again, kept for the files loaded after it.
+(let ((erased HSubNil)) SubNil)
+(let ((erased HSubCons)) SubCons)
