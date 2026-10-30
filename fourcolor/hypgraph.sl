@@ -517,6 +517,12 @@
   (let-match erased l (LengthCons _ _ _ n1 l1))
   (LengthCons _ v ls1 n1 (respects-length lab xs1 ls1 n1 rp1 l1)))
 
+(def-fns _ $ (erased respects-length-inv : (erased (List (Nat)) lab xs ls) (erased (Nat) n) (subterm erased (Respects lab xs ls) rp)
+    (erased (Length (Nat) ls n) l) -> (erased (Length (Nat) xs n) r))
+  (let-match erased rp (RespCons _ xs1 ls1 j v p rp1) ((RespNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased l (LengthCons _ _ _ n1 l1))
+  (LengthCons _ j xs1 n1 (respects-length-inv lab xs1 ls1 n1 rp1 l1)))
+
 ; The image ims of the darts rs, each below d, under a labelling of length d.
 (def-fns _ $ (erased image-exists : (erased (List (Nat)) lab lab2 rs) (erased (Nat) d) (subterm erased (Respects lab rs rs) fix)
     (erased (Length (Nat) lab d) ll) (erased (Length (Nat) lab2 d) ll2) -> (erased (List (Nat)) ims) (erased (Respects lab2 rs ims) r))
