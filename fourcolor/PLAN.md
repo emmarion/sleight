@@ -525,14 +525,36 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   of edge_perimeter, chordless_perimeter and embed_cases (meant to be
   decided on the concrete maps by a run, which is not written), and
   `FunctorAll`, embed_functor's conclusion (each kernel dart whose edge
-  image is in the kernel is central), not proved. Still open from
-  embed.v: embed_functor, trivial_hom_ring, embed_full (where Birkhoff
-  enters, meant to give a `Reduces` through `birkhoff-reduces`, which
-  needs `birkhoff2.sl` in this chain; no combined load order is checked),
-  pre_embed_inj, embed_inj, the disk and remainder maps and their
-  `Patch` (embed_disk, embed_rem, embed_patch), cubic_embr, cface_h1,
-  embed_valid_contract, and the run deciding `GcOK` and radius2. That
-  these statements match Coq's has been checked only by reading.
+  image is in the kernel is central), not proved. More of embed.v is in
+  `embed5.sl`. That these statements match Coq's has been checked only
+  by reading.
+- `embed5.sl` (load after `embed3.sl`): more of embed.v, as far as both
+  compilers check it, on an `EEnv` with `GcOK` and `FunctorAll` as
+  hypotheses. embed is a function (`hemb-fn`). embed_full is a
+  certificate over the pairs of kernel darts (`FullAll`), and `full-dec`
+  decides it: the certificate, or a pair where it fails (`FullBad`).
+  From the certificate: pre_embed_inj (`pre-embed-inj`), embed_inj off rc
+  (`embed-inj`), and embed2.sl's `InSides` for ie = insertE cc and
+  ins = insertE (map h1 cc) (`ins-sides`, with ie off rc, stated with
+  ringtrace.sl's `InsertE`, which shadows red/cfred.sl's, so a
+  `ValidContract`'s ie is not yet connected to it). embedE at every dart
+  and embedN off rc are given as patch.sl's `MorphOff` lists
+  (`h1-morph-e`, `h1-morph-n`). `embed-main`, a level factory, gives for a
+  connected `Pbpp` map with a `NoColoring` a `Reduces` or an `EmbedOut`
+  (h1, those lists, the certificate and an `EmbedPatch`: the `Patch` and
+  dart maps that `embed-color` and `rem-col` take, hd = h1 . embd, and
+  cface_h1), from two hypotheses: `FullRed` (a `FullBad` pair gives a
+  `Reduces`; in Coq this is radius2, the reductions of the path to a
+  hom ring of at most five darts, Birkhoff, and trivial_hom_ring, none
+  ported) and `PatchOpen` (the construction of embed_disk, embed_rem and
+  embed_patch, with cface_h1, not ported). Also not done: `Disj hr ins`
+  (it appears to follow from the patch's `PatchParts`), cubic_embr
+  (`rem-kempe` reads quasicubic off any patch), embed_valid_contract and
+  adj11_edge of birkhoff.v (no spoke rings are ported), radius2, and the
+  ring conditions of `embed-contract-trace`. Chain: that of
+  `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
+  slc in one run). That these statements match Coq's has been checked
+  only by reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
