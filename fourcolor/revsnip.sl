@@ -280,3 +280,48 @@
           (match erased (graph-adj-inv d u v f gf grf af) _
             ((OrL _ _ p) (values (Cons _ v (Nil _)) (CPFace n f (Nil _) u v v p (CPNil n f v))))
             ((OrR _ _ p) (fback-cpath d u v n f fi pf p))))))))
+
+(def-fns _ $ (erased conn-cpath : (erased (Nat) d x y) (erased (List (Nat)) e n f) (erased (List (Bond)) g) (erased (Hypermap d e n f) h) (erased (Glink d e n f g) gl)
+    (subterm erased (Conn g x y) c) -> (erased (List (Nat)) L) (erased (CPath n f x L y) cp))
+  (let-match erased c (ConnStep _ _ u _ a c1) ((ConnHere _ _) (values (Nil _) (CPNil n f x))))
+  (let ((erased L1) (erased p1)) (glink-cpath d x u e n f g h gl a))
+  (let ((erased L2) (erased p2)) (conn-cpath d u y e n f g h gl c1))
+  (cpath-cat n f L2 L1 x u y p1 p2))
+
+; connected_clink: in a connected map a clink path joins any two darts.
+(def-fns _ $ (erased connected-clink : (erased (Nat) d x y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Connected d e n f) cn)
+    (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (List (Nat)) L) (erased (CPath n f x L y) cp))
+  (let-match erased cn (MkConnected _ _ _ _ g gl cs))
+  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
+  (let ((erased l1) (erased p1)) (nth-exists _ lab d x ll lx))
+  (let ((erased l2) (erased p2)) (nth-exists _ lab d y ll ly))
+  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l1 io ro p1 lx))
+  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs y l2 io ro p2 ly))
+  (let-match erased lr (LengthCons _ r0 rs1 _ lr1))
+  (let-match erased lr1 (LengthNil _))
+  (let-match erased i1 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
+  (let-match erased i2 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
+  (conn-cpath d x y e n f g h gl (conn-cat g x r0 y (conn-sym g r0 x c1) c2)))
+
+; proper_rev_ring.
+(def-fns _ $ (erased proper-rev : (erased (Nat) d) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
+    (erased (Proper e r) pr) (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) -> (erased (Proper e RR) res))
+  (match erased pr _
+    ((ProperBig _ r1 a b c)
+      (let ((erased k) (erased l1)) (length-exists _ r1))
+      (let ((erased l3)) (revapp-length er (Nil _) RR (Succ $ Succ $ Succ k) (Zero) (Succ $ Succ $ Succ k) ra
+        (respects-length e r er _ rm (LengthCons _ a _ _ (LengthCons _ b _ _ (LengthCons _ c r1 k l1)))) (LengthNil _) (add-zero-right _)))
+      (let-match erased l3 (LengthCons _ y1 R1 _ l4))
+      (let-match erased l4 (LengthCons _ y2 R2 _ l5))
+      (let-match erased l5 (LengthCons _ y3 R3 _ l6))
+      (ProperBig e R3 y1 y2 y3))
+    ((ProperTwo _ a b ea pea ne)
+      (let-match erased rm (RespCons _ _ er1 _ ea2 pa rm1))
+      (let-match erased rm1 (RespCons _ _ er2 _ eb pb rm2))
+      (let-match erased rm2 (RespNil _))
+      (let-match erased (nth-fn _ e a ea ea2 pea pa) (Refl _ _))
+      (let-match erased ra (RACons _ _ _ _ _ ra1))
+      (let-match erased ra1 (RACons _ _ _ _ _ ra2))
+      (let-match erased ra2 (RANil _ _))
+      (let ((erased pb2) (erased nb)) (plain-eq d b eb e pl (nth-lt-length _ e b d eb pb le) pb))
+      (ProperTwo e eb ea b pb2 (apart-sym ea b ne)))))
