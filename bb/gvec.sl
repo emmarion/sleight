@@ -113,6 +113,20 @@
   (let ((many y) (unique a2)) (array-get _ _ a j x (lay-nth _ xs ps n i j x ly nt ad)))
   (values y (at unique (u A xs ps n ly a2 d))))
 
+(def-fns _ $ (many av-top : (erased Type A) (erased A x) (erased (List A) xs) (unique (Av A (Cons A x xs)) v) -> (many x is y) (unique v is v2 at v))
+  (let-match unique v (MkAv _ _ ps n ly a d u))
+  (let-match erased ly (LayC _ _ _ _ _ _ nt))
+  (let-match many n (Succ m))
+  (let ((many y) (unique a2)) (array-get _ _ a m x nt))
+  (values y (at unique (u A (Cons A x xs) ps n ly a2 d))))
+
+(def-fns _ $ (many av-getp : (erased Type A) (erased (List A) xs) (unique (Av A xs) v) (many (Nat) p) (erased (Nat) i n) (erased A x) (erased (Nth A xs i x) nt)
+    (erased (Length A xs n) l) (erased (Add (Succ i) p n) ad) -> (many x is y) (unique v is v2 at v))
+  (let-match unique v (MkAv _ _ ps n0 ly a d u))
+  (let-match erased (length-fn A xs n0 n (lay-length _ xs ps n0 ly) l) (Refl _ _))
+  (let ((many y) (unique a2)) (array-get _ _ a p x (lay-nth _ xs ps n0 i p x ly nt ad)))
+  (values y (at unique (u A xs ps n0 ly a2 d))))
+
 (def-fns _ $ (many av-place : (erased Type A) (erased (List A) xs) (erased (List (Copy A)) ps) (many (Nat) n) (erased (Lay A xs ps n) ly)
     (erased (Copy A) w) (erased (Nth (Copy A) ps n w) nt) (unique (Array (Copy A) ps) a) (many A x) ->
     (erased (List (Copy A)) qs) (erased (Lay A (Cons A x xs) qs (Succ n)) ly2) (unique (Array (Copy A) qs) a2 at a))
@@ -227,6 +241,20 @@
   (let ((many j) (erased ad)) (sub n (Succ i) (LtS i n (nth-lt-length _ xs i n x nt (lyb-length xs ps n ly)))))
   (let ((many y) (unique a2)) (bytes-get _ a j x (lyb-nth xs ps n i j x ly nt ad)))
   (values y (at unique (u xs ps n ly a2 d))))
+
+(def-fns _ $ (many bv-top : (erased (U8) x) (erased (List (U8)) xs) (unique (Bv (Cons (U8) x xs)) v) -> (many x is y) (unique v is v2 at v))
+  (let-match unique v (MkBv _ ps n ly a d u))
+  (let-match erased ly (LybC _ _ _ _ _ nt))
+  (let-match many n (Succ m))
+  (let ((many y) (unique a2)) (bytes-get _ a m x nt))
+  (values y (at unique (u (Cons (U8) x xs) ps n ly a2 d))))
+
+(def-fns _ $ (many bv-getp : (erased (List (U8)) xs) (unique (Bv xs) v) (many (Nat) p) (erased (Nat) i n) (erased (U8) x) (erased (Nth (U8) xs i x) nt)
+    (erased (Length (U8) xs n) l) (erased (Add (Succ i) p n) ad) -> (many x is y) (unique v is v2 at v))
+  (let-match unique v (MkBv _ ps n0 ly a d u))
+  (let-match erased (length-fn (U8) xs n0 n (lyb-length xs ps n0 ly) l) (Refl _ _))
+  (let ((many y) (unique a2)) (bytes-get _ a p x (lyb-nth xs ps n0 i p x ly nt ad)))
+  (values y (at unique (u xs ps n0 ly a2 d))))
 
 (def-fns _ $ (many bv-place : (erased (List (U8)) xs) (erased (List (U8)) ps) (many (Nat) n) (erased (Lyb xs ps n) ly)
     (erased (U8) w) (erased (Nth (U8) ps n w) nt) (unique (Bytes ps) a) (many (U8) x) ->
