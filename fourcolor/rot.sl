@@ -289,3 +289,54 @@
       (let-match erased p (LAppCons _ _ _ _ c1 p1))
       (LAppCons _ x a1 (Cons _ h b) c1 (snoc-app _ a1 ah1 b c1 h s1 p1)))))
 
+
+(def-fns _ $ (erased flat-fn : (erased (List (Group)) gs) (erased (List (Nat)) f g) (subterm erased (GFlat gs f) p) (erased (GFlat gs g) q) ->
+    (erased (Eq (List (Nat)) f g) e))
+  (let-match erased p (GFlatCons d xs f1 _ gs1 a p1) ((GFlatNil) (let-match erased q (GFlatNil)) (Refl _ f)))
+  (let-match erased q (GFlatCons _ _ g1 _ _ b q1))
+  (let-match erased (flat-fn gs1 f1 g1 p1 q1) (Refl _ _))
+  (lapp-fn _ xs f1 f g a b))
+
+(def-fns _ $ (erased flat-app : (erased (List (Group)) gs1 gs2 gs3) (erased (List (Nat)) f1 f2) (subterm erased (GFlat gs1 f1) p)
+    (erased (GFlat gs2 f2) q) (erased (LApp (Group) gs1 gs2 gs3) a) -> (erased (List (Nat)) f3) (erased (LApp (Nat) f1 f2 f3) b)
+    (erased (GFlat gs3 f3) r))
+  (let-match erased p (GFlatCons d xs f4 _ gs4 c p1)
+    ((GFlatNil) (let-match erased a (LAppNil _ _)) (values f2 (LAppNil _ f2) q)))
+  (let-match erased a (LAppCons _ _ _ _ gs5 a1))
+  (let ((erased f5) (erased b1) (erased r1)) (flat-app gs4 gs2 gs5 f4 f2 p1 q a1))
+  (let ((erased f3) (erased b)) (lapp-exists _ f1 f2))
+  (let ((erased f6) (erased c1) (erased c2)) (lapp-assoc _ xs f4 f2 f1 f3 c b))
+  (let-match erased (lapp-fn _ f4 f2 f6 f5 c1 b1) (Refl _ _))
+  (values f3 b (GFlatCons d xs f5 f3 gs5 c2 r1)))
+
+(def-fns _ $ (erased allis-app : (erased (List (Nat)) a b c) (erased (Nat) u) (subterm erased (LApp (Nat) a b c) p) (erased (AllIs c u) q) ->
+    (erased (AllIs a u) qa) (erased (AllIs b u) qb))
+  (let-match erased p (LAppCons _ x a1 _ c1 p1) ((LAppNil _ _) (values (AllIsNil u) q)))
+  (let-match erased q (AllIsCons _ _ q1))
+  (let ((erased qa) (erased qb)) (allis-app a1 b c1 u p1 q1))
+  (values (AllIsCons u a1 qa) qb))
+
+(def-fns _ $ (erased in-app-l : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (In x a) q) ->
+    (erased (In x c) r))
+  (let-match erased p (LAppCons _ y a1 _ c1 p1) (absurd (LAppNil _ _) q))
+  (let-match erased q (InThere _ _ _ q1) ((InHere _ _) (InHere x c1)))
+  (InThere x y c1 (in-app-l x a1 b c1 p1 q1)))
+
+(def-fns _ $ (erased in-app-r : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (In x b) q) ->
+    (erased (In x c) r))
+  (let-match erased p (LAppCons _ y a1 _ c1 p1) ((LAppNil _ _) q))
+  (InThere x y c1 (in-app-r x a1 b c1 p1 q)))
+
+(def-fns _ $ (erased notin-app-r : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (NotIn x c) q) ->
+    (erased (NotIn x b) r))
+  (let-match erased p (LAppCons _ y a1 _ c1 p1) ((LAppNil _ _) q))
+  (let-match erased q (NotInCons _ _ _ _ q1))
+  (notin-app-r x a1 b c1 p1 q1))
+
+(def-fns _ $ (erased absurd distinct-app : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p)
+    (erased (Distinct c) d) (erased (In x a) qa) (erased (In x b) qb) -> (erased (False) f))
+  (let-match erased p (LAppCons _ y a1 _ c1 p1) (absurd (LAppNil _ _) qa))
+  (let-match erased d (DistCons _ _ ny d1))
+  (match erased qa _
+    (absurd (InHere _ _) (apart-irrefl x (notin-in x x b (notin-app-r x a1 b c1 p1 ny) qb)))
+    (absurd (InThere _ _ _ qa1) (distinct-app x a1 b c1 p1 d1 qa1 qb))))
