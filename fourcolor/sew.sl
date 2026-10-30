@@ -302,3 +302,55 @@
           ((RAOff _ _ _ _ o) (RAOff br rbd xs1 u o))
           ((RAAt _ _ _ _ x0 i0 o) (let-match erased o (NotInCons _ _ _ _ o1)) (RAAt br rbd xs1 u x0 i0 o1)))
         dr)))))
+
+(def-fns _ $ (erased hrb-distinct : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 dd) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Distinct xs) dx)
+    (erased (Under rbd dd) ur) (erased (Lt dd (Succ c)) ldc) (erased (Distinct rbd) dr) -> (erased (Distinct hs) r))
+  (match erased hb _
+    ((HBNil _ _ _) (DistNil))
+    ((HBRing _ _ xs1 hs1 _ _ x v i rest)
+      (let-match erased dx (DistCons _ _ ox dx1))
+      (let ((erased lv)) (under-in rbd v dd ur (in2-in-left rbd br v x (in2-sym br rbd x v i))))
+      (DistCons v hs1 (hrb-notin br rbd xs1 hs1 c c2 v rest (lt-le-trans v dd c lv ldc) (RAAt br rbd xs1 v x i ox) dr)
+        (hrb-distinct br rbd xs1 hs1 c c2 dd rest dx1 ur ldc dr)))
+    ((HBNew _ _ xs1 hs1 _ _ x out rest)
+      (let-match erased dx (DistCons _ _ ox dx1))
+      (DistCons c hs1 (hrb-notin br rbd xs1 hs1 (Succ c) c2 c rest (lt-succ c) (RAOff br rbd xs1 c (under-notin rbd dd c ur ldc)) dr)
+        (hrb-distinct br rbd xs1 hs1 (Succ c) c2 dd rest dx1 ur (lt-trans dd (Succ c) (Succ (Succ c)) ldc (lt-succ (Succ c))) dr)))))
+
+(def-fns _ $ (erased hrb-under : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 dd) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Under rbd dd) ur)
+    (erased (Lt dd (Succ c)) ldc) -> (erased (Under hs c2) r))
+  (match erased hb _
+    ((HBNil _ _ _) (UnderNil c2))
+    ((HBRing _ _ xs1 hs1 _ _ x v i rest)
+      (UnderCons hs1 v c2 (lt-le-trans v dd c2 (under-in rbd v dd ur (in2-in-left rbd br v x (in2-sym br rbd x v i)))
+          (le-trans dd c c2 ldc (hrb-le br rbd xs1 hs1 c c2 rest)))
+        (hrb-under br rbd xs1 hs1 c c2 dd rest ur ldc)))
+    ((HBNew _ _ xs1 hs1 _ _ x out rest)
+      (UnderCons hs1 c c2 (lt-pred c c2 (hrb-le br rbd xs1 hs1 (Succ c) c2 rest))
+        (hrb-under br rbd xs1 hs1 (Succ c) c2 dd rest ur (lt-trans dd (Succ c) (Succ (Succ c)) ldc (lt-succ (Succ c))))))))
+
+; Each pair at one position of R and S is a pair at one position of A and B.
+(def-adts $ (Sub2 : ((List (Nat)) A B R S) -> Type)
+  enum
+  (many S2Nil : (erased (List (Nat)) A B) -> (Sub2 A B (Nil (Nat)) (Nil (Nat))))
+  (many S2Cons : (erased (List (Nat)) A B R S) (erased (Nat) x y) (erased (In2 A B x y) i) (erased (Sub2 A B R S) rest)
+      -> (Sub2 A B (Cons (Nat) x R) (Cons (Nat) y S))))
+
+(def-fns _ $ (erased sub2-lift : (erased (List (Nat)) A B R S) (erased (Nat) a b) (subterm erased (Sub2 A B R S) s) -> (erased (Sub2 (Cons (Nat) a A) (Cons (Nat) b B) R S) r))
+  (let-match erased s (S2Cons _ _ R1 S1 x y i s1) ((S2Nil _ _) (S2Nil (Cons _ a A) (Cons _ b B))))
+  (S2Cons (Cons _ a A) (Cons _ b B) R1 S1 x y (I2There a b x y A B i) (sub2-lift A B R1 S1 a b s1)))
+
+(def-fns _ $ (erased sub2-self : (erased (List (Nat)) A B) (erased (Nat) n) (subterm erased (Length (Nat) A n) la) (erased (Length (Nat) B n) lb) -> (erased (Sub2 A B A B) r))
+  (let-match erased la (LengthCons _ a A1 n1 la1) ((LengthNil _) (let-match erased lb (LengthNil _)) (S2Nil (Nil _) (Nil _))))
+  (let-match erased lb (LengthCons _ b B1 _ lb1))
+  (S2Cons A B A1 B1 a b (I2Here a b A1 B1) (sub2-lift A1 B1 A1 B1 a b (sub2-self A1 B1 n1 la1 lb1))))
+
+; hs sends br along rbd.
+(def-fns _ $ (erased hrb-resp : (erased (List (Nat)) br rbd idr hs R S) (erased (Nat) c c2 dr) (subterm erased (Sub2 br rbd R S) s) (erased (HrB br rbd c idr hs c2) hb)
+    (erased (Iota dr idr) io) (erased (Under br dr) ub) (erased (Distinct br) db) -> (erased (Respects hs R S) r))
+  (let-match erased s (S2Cons _ _ R1 S1 x v i s1) ((S2Nil _ _) (RespNil hs)))
+  (let ((erased ix)) (in2-in-left br rbd x v i))
+  (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd idr hs c c2 x x hb (iota-nth dr x idr io (under-in br x dr ub ix))))
+  (let-match erased ha (HARing _ _ _ _ _ _ i2) (absurd (HANew _ _ _ _ _ _ out l1 l2) (apart-irrefl x (notin-in x x br out ix))))
+  (let-match erased (in2-fn br rbd x w v db i2 i) (Refl _ _))
+  (RespCons hs R1 S1 x w q (hrb-resp br rbd idr hs R1 S1 c c2 dr s1 hb io ub db)))
