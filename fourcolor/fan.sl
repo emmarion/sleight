@@ -383,3 +383,30 @@
       (distinct-pendant d n sr dist (chain-lt e nd s s _ d n ch ds ln)) ch2 rp2 al2 pt (snoc-new _ rep rep2 (Succ n) t sr2 lr) gl4 g3 px pr
       (alllt-app y3 f3 xfr t px ay4 af3) rs3)
     ay (edge-low e e2 n g) pn pt))
+
+(def-fns _ $ (erased chain-set2 : (erased (List (Nat)) e nd s xb ya yb) (erased (List (Group)) gs) (erased (Nat) d y dn)
+    (erased (Chain e nd s (Cons (Group) (MkGroup d xb) $ Cons (Group) (MkGroup y ya) gs) dn) ch) ->
+    (erased (Chain e nd s (Cons (Group) (MkGroup d xb) $ Cons (Group) (MkGroup y yb) gs) dn) r))
+  (let-match erased ch (ChainCons _ _ _ _ _ _ _ _ _ k0 ch1))
+  (ChainCons e nd s xb yb gs d y dn k0
+    (match erased ch1 _
+      ((ChainOne _ _ _ _ _ _ k1) (ChainOne e nd s yb y dn k1))
+      ((ChainCons _ _ _ _ zs gs2 _ d2 _ k1 rest) (ChainCons e nd s yb zs gs2 y d2 dn k1 rest)))))
+
+(def-fns _ $ (erased fan-finish : (erased (Nat) t db y1 c k) (erased (List (Nat)) e nd pl rep b xs rest ns) (erased (List (Group)) gsr)
+    (erased (Fan t e nd pl rep db b y1 c xs gsr (Nil (Nat)) rest) f) (erased (Repeat (Nat) k t ns) rk) ->
+    (erased (List (Nat)) nr fl) (erased (LApp (Nat) ns rest nr) p1) (erased (LApp (Nat) b nr fl) p2)
+    (erased (State (Succ t) e nd pl rep (Cons (Group) (MkGroup db b) $ Cons (Group) (MkGroup y1 ns) $ Cons (Group) (MkGroup c xs) gsr) fl) st))
+  (let-match erased f (MkFan _ n _ _ _ _ _ _ _ s _ _ fr xfr _ _ _ pm le ln lp lr ds dist ch rp al py ry gl gf px pr ax rs))
+  (let-match erased pr (LAppNil _ _))
+  (let-match erased ds (DartsCons _ _ _ _ ds1))
+  (let-match erased ds1 (DartsCons _ _ s2 _ ds2))
+  (let-match erased gl (GLCons _ _ _ ub _ pub ab gl1))
+  (let-match erased gl1 (GLCons _ _ _ _ _ _ _ gl2))
+  (let ((erased nr) (erased p1)) (lapp-exists _ ns rest))
+  (let ((erased fl) (erased p2)) (lapp-exists _ b nr))
+  (values nr fl p1 p2
+    (MkState (Succ t) n db e nd pl rep s b fl _ pm le ln lp lr (DartsCons db b _ _ $ DartsCons y1 ns s2 _ ds2) dist
+      (chain-set2 e nd s b (Nil _) ns _ db y1 db ch) rp al
+      (GLCons pl b db ub _ pub ab (GLCons pl ns y1 t _ py (repeat-allis k t ns rk) gl2))
+      (GFlatCons db b nr fl _ p2 (GFlatCons y1 ns rest nr _ p1 (GFlatCons c xs fr rest gsr px gf))) rs)))
