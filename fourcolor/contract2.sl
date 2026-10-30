@@ -469,3 +469,86 @@
   (let-match erased (nat-eq b z) (Unequal _ _ _ _ nbz)
     ((Equal _ _ _) (values two (order2 p2 y y1 (skip-keep z y y1 p p2 sk py nyz n1z) (skip-cut-at d z y1 y p q p2 pm sk py1 pb n1z) n1) l2)))
   (values three (mk-order3 p2 y y1 b (skip-keep z y y1 p p2 sk py nyz n1z) (skip-keep z y1 b p p2 sk py1 n1z nbz) (skip-keep z b y p p2 sk pb nbz nyz) n1 nb) l3))
+
+(def-fns _ $ (erased orders-skip : (erased (Nat) d z) (erased (List (Nat)) p q p2 xs ks) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk)
+    (subterm erased (Orders p xs ks) os) (erased (Under ks (Succ (Succ (Succ (Succ (Zero)))))) u)
+    -> (erased (List (Nat)) ks2) (erased (Orders p2 xs ks2) r) (erased (Under ks2 (Succ (Succ (Succ (Succ (Zero)))))) u2))
+  (let-match erased os (OrdCons _ xs1 ks1 y k o os1) ((OrdNil _) (values (Nil _) (OrdNil p2) (UnderNil _))))
+  (let-match erased u (UnderCons _ _ _ lk u1))
+  (let ((erased k2) (erased o2) (erased lk2)) (order-skip d y z k p q p2 pm sk o lk))
+  (let ((erased ks3) (erased os3) (erased u3)) (orders-skip d z p q p2 xs1 ks1 pm sk os1 u1))
+  (values (Cons _ k2 ks3) (OrdCons p2 xs1 ks3 y k2 o2 os3) (UnderCons ks3 k2 _ lk2 u3)))
+
+(def-fns _ $ (erased precubic-skip : (erased (Nat) d z) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk) (erased (Precubic d p) pc)
+    -> (erased (Precubic d p2) r))
+  (let-match erased pc (MkPrecubic _ _ ks ol u))
+  (let-match erased ol (MkOrderList _ _ ids _ io os))
+  (let ((erased ks2) (erased os2) (erased u2)) (orders-skip d z p q p2 ids ks pm sk os u))
+  (MkPrecubic d p2 ks2 (MkOrderList d p2 ids ks2 io os2) u2))
+
+; Each bond x-y of g from a dart x off s has its ends told apart along f.
+(def-adts $ (SepsOff : ((List (Nat)) f s) ((List (Bond)) g) -> Type)
+  enum
+  (many SONil : (erased (List (Nat)) f s) -> (SepsOff f s (Nil (Bond))))
+  (many SODead : (erased (List (Nat)) f s) (erased (List (Bond)) g) (erased (Nat) x y) (erased (In x s) ix) (erased (SepsOff f s g) rest)
+      -> (SepsOff f s (Cons (Bond) (MkBond x y) g)))
+  (many SOLive : (erased (List (Nat)) f s) (erased (List (Bond)) g) (erased (Nat) x y) (erased (Seps f x y) sp) (erased (SepsOff f s g) rest)
+      -> (SepsOff f s (Cons (Bond) (MkBond x y) g))))
+
+; Bridgeless off the dead darts s.
+(def-adts $ (LBridgeless : ((Nat) d) ((List (Nat)) e f s) -> Type)
+  enum
+  (many MkLB : (erased (Nat) d) (erased (List (Nat)) e f s) (erased (List (Bond)) ge) (erased (Graph d e ge) gr) (erased (SepsOff f s ge) so)
+      -> (LBridgeless d e f s)))
+
+; A live dart x on the face of its edge image.
+(def-adts $ (LBridge : ((Nat) d) ((List (Nat)) e f s) -> Type)
+  enum
+  (many MkLBr : (erased (Nat) d x y) (erased (List (Nat)) e f s) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) e x y) pxy)
+      (erased (SomePath f (Nil (Nat)) x y) w) -> (LBridge d e f s)))
+
+(def-fns _ $ (erased lb-go : (erased (Nat) d k) (erased (List (Nat)) e ei f fi s xs ys) (erased (List (Bond)) g) (erased (HPerm d e ei) pe) (erased (HPerm d f fi) pf)
+    (erased (Orbits d f k) of) (subterm erased (Zip xs ys g) z) (erased (Respects e xs ys) rp) (erased (Under xs d) ux)
+    -> (erased (HOr (SepsOff f s g) (LBridge d e f s)) r))
+  (let-match erased z (ZipCons xs1 ys1 g1 x y z1) ((ZipNil) (OrL _ _ (SONil f s))))
+  (let-match erased rp (RespCons _ _ _ _ _ pxy rp1))
+  (let-match erased ux (UnderCons _ _ _ lx ux1))
+  (let-match erased (lb-go d k e ei f fi s xs1 ys1 g1 pe pf of z1 rp1 ux1) (OrL _ _ so) ((OrR _ _ br) (OrR _ _ br)))
+  (let-match erased (in-dec x s) (OrR _ _ out) ((OrL _ _ ix) (OrL _ _ (SODead f s g1 x y ix so))))
+  (let-match erased (orbits-dec d k x y f fi pf of lx (perm-val d x y e ei pe pxy)) (OrR _ _ sp) ((OrL _ _ w) (OrR _ _ (MkLBr d x y e f s lx out pxy w))))
+  (OrL _ _ (SOLive f s g1 x y sp so)))
+
+; A map is bridgeless off s, or has a live bridge.
+(def-fns _ $ (erased lb-dec : (erased (Nat) d) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) -> (erased (HOr (LBridgeless d e f s) (LBridge d e f s)) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased ge) (erased gr)) (perm-graph d e nf pe))
+  (let ((erased k) (erased of)) (orbits-exists d f fi pf))
+  (let ((erased gr2)) gr)
+  (let-match erased gr2 (MkGraph _ _ ids _ io le z))
+  (let-match erased (lb-go d k e nf f fi s ids e ge pe pf of z (respects-id-right d ids e io le) (iota-under d ids io)) (OrL _ _ so) ((OrR _ _ br) (OrR _ _ br)))
+  (OrL _ _ (MkLB d e f s ge gr so)))
+
+(def-fns _ $ (erased seps-sym : (erased (Nat) a b) (erased (List (Nat)) f) (erased (Seps f a b) sp) -> (erased (Seps f b a) r))
+  (let-match erased sp (MkSeps _ lab _ _ se))
+  (let-match erased se (MkSeparates _ _ _ _ l1 l2 rf p1 p2 ne))
+  (MkSeps f lab b a (MkSeparates lab f b a l2 l1 rf p2 p1 (apart-sym l1 l2 ne))))
+
+(def-fns _ $ (erased so-adj : (erased (Nat) x y) (erased (List (Nat)) f s) (erased (List (Bond)) g) (subterm erased (SepsOff f s g) so) (erased (Adj g x y) a)
+    (erased (NotIn x s) ox) (erased (NotIn y s) oy) -> (erased (Seps f x y) r))
+  (match erased so _
+    (absurd (SONil _ _) a)
+    ((SODead _ _ g1 x0 y0 ix so1)
+      (match erased a _
+        (absurd (AdjFwd _ _ _) (apart-irrefl x (notin-in x x s ox ix)))
+        (absurd (AdjBwd _ _ _) (apart-irrefl y (notin-in y y s oy ix)))
+        ((AdjThere _ _ _ _ a1) (so-adj x y f s g1 so1 a1 ox oy))))
+    ((SOLive _ _ g1 x0 y0 sp so1)
+      (match erased a _
+        ((AdjFwd _ _ _) sp)
+        ((AdjBwd _ _ _) (seps-sym y x f sp))
+        ((AdjThere _ _ _ _ a1) (so-adj x y f s g1 so1 a1 ox oy))))))
+
+(def-fns _ $ (erased lb-at : (erased (Nat) d x y) (erased (List (Nat)) e ei f s) (erased (LBridgeless d e f s) lb) (erased (HPerm d e ei) pe) (erased (FixedIn e s) fx)
+    (erased (Nth (Nat) e x y) pxy) (erased (NotIn x s) ox) -> (erased (Seps f x y) r))
+  (let-match erased lb (MkLB _ _ _ _ ge gr so))
+  (so-adj x y f s ge so (graph-adj d x y e ge gr pxy) ox (fixed-out d x y e ei s pe fx pxy ox)))
