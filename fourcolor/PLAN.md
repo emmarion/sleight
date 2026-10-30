@@ -238,7 +238,17 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   numbered in order, with br sent to rev bd. Its edge and node
   permutations are glued from those of the two maps (`cmap-perm`).
   `snip.v` and `revsnip.v` are not started.
-- Still open: the rest of part B.
+- Still open: the rest of part B. Besides `snip.v` and `revsnip.v`,
+  `birkhoff.v` appears to need, from a reading of its proofs:
+  Kempe_valid_init, Kempe_valid_restrict, Kempe_validP and
+  Kempe_tree_closure_correct of `kempetree.v` (whether `red/kempe.sl`'s
+  soundness-only `KV` covers them as `birkhoff.v` uses them is not
+  checked); ctree_of_ttail and ctree_of_ttail_mem of `ctree.v`; the
+  completeness direction of ctree_mem_cpcolor; cpmap_proper, cpmap_planar
+  and cpmap_bridgeless of `cfmap.v`; decide_ring_trace of `coloring.v`;
+  quasicubic_Euler, srcycleI and scycle_cface of `geometry.v`; and the
+  Birkhoff_check computation itself, which Coq runs by vm_compute. None of
+  these is ported.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
