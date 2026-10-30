@@ -743,3 +743,9 @@
       (match erased px _
         (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x o out ix)))
         ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (hitinv-at p t h o xs1 ls1 i1 x z j hv1 dh px1 ix fh pj)))))))
+
+(def-fns _ $ (erased sb-in-key-at : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) y l) (erased (SplitBy lab t xs ys zs) sp) (erased (In y ys) iy)
+    (erased (Nth (Nat) lab y l) py) -> (erased (In l t) r))
+  (let ((erased l2) (erased p2) (erased i2)) (sb-in-key lab t xs ys zs y sp iy))
+  (let-match erased (nth-fn _ lab y l l2 py p2) (Refl _ _))
+  i2)
