@@ -202,3 +202,23 @@
   (let ((erased gfn) (erased grfn)) (graph-exists d fn (respects-length f n fn d rfn ln)))
   (let ((erased gfi) (erased grfi)) (perm-graph d fi f (perm-sym d f fi pf)))
   (MkBridgeless d fn ni fi gfn gfi grfn grfi (allsep-mirror d e n f fi fn ge gf gfi gfn (graph-fun d fn gfn grfn) h rfn pf gre grf grfi sp)))
+
+(def-fns _ $ (erased order-three : (erased (List (Nat)) p) (erased (Nat) x y) (erased (Order p x (Succ (Succ (Succ (Zero))))) o) (erased (Nth (Nat) p x y) px)
+    -> (erased (Nat) z) (erased (Nth (Nat) p y z) py) (erased (Nth (Nat) p z x) pz) (erased (Apart (Nat) Lt y x) ny) (erased (Apart (Nat) Lt z x) nz))
+  (let-match erased o (MkOrder _ xs _ y2 _ py2 w l))
+  (let-match erased (nth-fn _ p x y y2 px py2) (Refl _ _))
+  (let-match erased l (LengthCons _ _ _ _ l1))
+  (let-match erased l1 (LengthCons _ _ _ _ l2))
+  (let-match erased l2 (LengthNil _))
+  (let-match erased w (PathStep _ _ _ _ z _ py out w1))
+  (let-match erased w1 (PathStep _ _ _ _ x3 _ pz out2 w2))
+  (let-match erased w2 (PathHere _ _ _))
+  (let-match erased out (NotInCons _ _ _ ny _))
+  (let-match erased out2 (NotInCons _ _ _ nz _))
+  (values z py pz ny nz))
+
+; In a cubic map n (n (n x)) = x and n x differs from x (cubic_eq, cubic_neq).
+(def-fns _ $ (erased cubic-eq : (erased (Nat) d x y) (erased (List (Nat)) n) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Lt x d) lx)
+    (erased (Nth (Nat) n x y) px) -> (erased (Nat) z) (erased (Nth (Nat) n y z) py) (erased (Nth (Nat) n z x) pz) (erased (Apart (Nat) Lt y x) ny)
+    (erased (Apart (Nat) Lt z x) nz))
+  (order-three n x y (all-order d (Succ (Succ (Succ (Zero)))) x n cu lx) px))
