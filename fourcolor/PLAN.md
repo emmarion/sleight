@@ -237,8 +237,38 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   whose darts are the disk darts followed by the remainder darts off br,
   numbered in order, with br sent to rev bd. Its edge and node
   permutations are glued from those of the two maps (`cmap-perm`).
-  `snip.v` and `revsnip.v` are not started.
-- Still open: the rest of part B. Besides `snip.v` and `revsnip.v`,
+- `snip.sl` (load after `sew.sl`): part of a port of `snip.v`. `Ring e f x p`
+  is a ring x :: p, a cycle of rlink on distinct faces, here not empty;
+  `DiskN` is diskN, reached by dlink paths (`DPath`), and `DiskF` is diskF.
+  Proved, as far as slc and the reference compiler check them: diskN_node
+  both ways (`disk-node`, `disk-pre`), r in diskN (`disk-ring`), diskE_edge
+  for a planar map both ways (`disk-edge`, through a Moebius path and
+  `planar-moebius`, and `disk-edge-inv`), diskF_face both ways
+  (`diskf-face`, `diskf-face-inv`), and snip_disk, snip_rem and snip_patch
+  as one existence statement, `snip-exists`: a planar map is patched from a
+  disk map on the darts hd of diskN, numbered in order, with its ring bd
+  sent to r (map_snipd_ring; scycle_snipd_ring and simple_snipd_ring are
+  part of the patch), and a remainder map on rev r followed by the darts zs
+  off diskN (codom_snipr), with its ring br sent to rev r (map_snipr_ring,
+  ucycle_snipr_ring). `ds-in`, `ds-mem` and `ds-out` relate hd and zs to
+  `DiskN` (codom_snipd); hd is found from the classes of a graph whose
+  classes meeting r appear to make up diskN (`DiskGraph`).
+  `patch-parts-planar` gives planar_snipd and planar_snipr for any patch of
+  a planar map. Not done: cface_snipd as stated in Coq (only its direction
+  from the disk map to the whole map, `face-push`), diskFC_face, the
+  rotation lemmas of SnipRot, and the empty ring.
+- `revsnip.sl` (load after `snip.sl`): the start of a port of `revsnip.v`,
+  for plain maps (every edge orbit of size 2). Proved, as far as both
+  compilers check them: scycle_rev_ring (`rev-ring`: rev (map e r) is a
+  ring), mem_rev_ring (`rev-ring-in`, `ring-rev-in`), proper_rev_ring
+  (`proper-rev`, with `Proper` for proper_ring), diskN_edge_ring
+  (`disk-edge-ring`), connected_clink (`connected-clink`), and
+  diskN_rev_ring for a connected map (`rev-disk`: with `rev-ctx` building
+  the two rings and their disks, each dart is in exactly one of the two
+  diskN, `Two`). Not done: the rest of `revsnip.v`, from fband_rev_ring
+  and the chord rings to ring_disk_closed, colorable_from_ring and
+  ring_disk_chord, which `birkhoff.v` uses.
+- Still open: the rest of part B. Besides the rest of `snip.v` and `revsnip.v`,
   `birkhoff.v` appears to need, from a reading of its proofs:
   Kempe_valid_init, Kempe_valid_restrict, Kempe_validP and
   Kempe_tree_closure_correct of `kempetree.v` (whether `red/kempe.sl`'s
