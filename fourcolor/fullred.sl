@@ -347,14 +347,16 @@
   (OrL _ _ (birkhoff-reduces B pbk dm hx k m em nm fm hp bks hm gen bl pl cu cn ncol rg lkm l6 md
     (MkNonTrivial dm m em nm fm (Cons _ hx hp) hd zs xs ys ds lkx lky sx sy (MkScattered fm _ xs lab lr lx rf rl rx dx djx) (MkScattered fm _ ys lab lr ly rf rl ry dy djy)))))
 
-; The trivial cases of embed_full, taken as a hypothesis: a HomTrivial is refuted (in Coq, trivial_hom_ring, its use on the
-; reversed ring, and for five darts the spoke ring with adj11_edge and adj_kernel_max). Not proved here.
+; The trivial cases of embed_full, taken as a hypothesis: a HomTrivial makes the map reduce, for any bound B above birk-glue
+; (in Coq it is refuted by trivial_hom_ring, its use on the reversed ring, and for five darts the spoke ring with adj11_edge
+; and adj_kernel_max, where the spoke ring rests on Birkhoff). Not proved here.
 (def-adts $ (TrivRed : -> Type)
   enum
   (many MkTrivRed : (erased (Level) G)
-      (erased (Fn G (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
-          (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (False) r)) tr)
+      (erased (Fn G (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pbk) (erased (BirkhoffChecks) bks) (erased (Nat) dc dm)
+          (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)
+          (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (Reduces B dm em nm fm) r)) tr)
       -> (TrivRed)))
 
 ; FullRedR from BirkhoffChecks and TrivRed. A level factory: red is at a level F minted after that of the hypothesis.
@@ -364,8 +366,8 @@
   (let ((erased pbk)) (prove-predates (level-of birk-glue) B))
   (def-lvl F)
   (def-fns F $ (erased red : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-      (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
-      (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r))
+      (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)
+      (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r))
     (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))
     (let ((erased pb2)) pb)
     (let-match erased pb2 (MkPbpp _ _ _ _ hm gen bl pl pcu))
@@ -373,5 +375,5 @@
     (let ((erased lab) (erased fl)) (facelab-exists dm fm fim qfm))
     (match erased (hom-birk B pbk bks dm ec fc em nm fm as hl lab fl hm gen bl pl cnm cn ncol (bad-hom dc dm ec nc fc ksc rc em nm fm ksm as hl lab en ok fu fl bl rd bad)) _
       ((OrL _ _ r) r)
-      (absurd (OrR _ _ t) (triv dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol cn t))))
+      ((OrR _ _ t) (triv B pbk bks dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu km pb ncol cn t))))
   (MkFullRedR F B red))

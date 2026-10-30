@@ -528,14 +528,32 @@
   enum
   (many MkRadius2 : (erased (List (Nat)) ec fc as) (erased (Nat) x0) (erased (In x0 as) jx0) (erased (R2All ec fc as x0 as) ra) -> (Radius2 ec fc as)))
 
+; adj_kernel_max of embed.v, read off good_ring_arity, as a certificate: from each dart w off the kernel, one of w, f w, ...,
+; f^4 w has its edge image off the kernel. KmRun ... j w: one of the first j + 1 face iterates of w does.
+(def-adts $ (KmRun : ((List (Nat)) ec fc as) ((Nat) j w) -> Type)
+  enum
+  (many KrHere : (erased (List (Nat)) ec fc as) (erased (Nat) j w ew) (erased (Nth (Nat) ec w ew) pe) (erased (NotIn ew as) oe) -> (KmRun ec fc as j w))
+  (many KrNext : (erased (List (Nat)) ec fc as) (erased (Nat) j w w1) (erased (Nth (Nat) fc w w1) pf) (erased (KmRun ec fc as j w1) rest)
+      -> (KmRun ec fc as (Succ j) w)))
+
+(def-adts $ (KmAll : ((List (Nat)) ec fc as xs) -> Type)
+  enum
+  (many KmNil : (erased (List (Nat)) ec fc as) -> (KmAll ec fc as (Nil (Nat))))
+  (many KmCons : (erased (List (Nat)) ec fc as xs) (erased (Nat) w) (erased (Or (In w as) (KmRun ec fc as (Succ (Succ (Succ (Succ (Zero))))) w)) p)
+      (erased (KmAll ec fc as xs) rest) -> (KmAll ec fc as (Cons (Nat) w xs))))
+
+(def-adts $ (KerMax : ((Nat) dc) ((List (Nat)) ec fc as) -> Type)
+  enum
+  (many MkKerMax : (erased (Nat) dc) (erased (List (Nat)) ec fc as ids) (erased (Iota dc ids) io) (erased (KmAll ec fc as ids) ka) -> (KerMax dc ec fc as)))
+
 ; The step of embed_full that rests on Birkhoff (fullred.sl's full-red-of): a pair of kernel darts where embed_full fails,
-; in a map as birkhoff-reduces takes it, with the radius2 certificate of the configuration, gives a reduction.
+; in a map as birkhoff-reduces takes it, with the radius2 and KerMax certificates of the configuration, gives a reduction.
 (def-adts $ (FullRedR : -> Type)
   enum
   (many MkFullRedR : (erased (Level) F B)
       (erased (Fn F (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
-          (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)
+          (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
       -> (FullRedR)))
 
 ; What the embedding gives when embed_full holds: embed listed as h1 on the darts ids, embedE at every dart and embedN off
@@ -553,7 +571,7 @@
 (def-fns _ $ (erased embed-main : (erased (FullRedR) frd) (erased (PatchOpen) po) -> (erased (Level) L B)
     (erased (Fn L (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
         (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)
-        (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn)
+        (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn)
         -> (erased (Or (Reduces B dm em nm fm) (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)) r)) run))
   (let-match erased frd (MkFullRedR F B red))
   (let-match erased po (MkPatchOpen G mk))
@@ -561,10 +579,10 @@
   (let ((erased pf) (erased pg)) (values (prove-predates F L) (prove-predates G L)))
   (def-fns L $ (erased run : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
       (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)
-      (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn)
+      (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn)
       -> (erased (Or (Reduces B dm em nm fm) (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)) r))
     (let-match erased (full-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en) (OrR _ _ fa)
-      ((OrL _ _ bad) (OrL _ _ (red (predates pf) dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu rd pb ncol cn bad))))
+      ((OrL _ _ bad) (OrL _ _ (red (predates pf) dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu rd km pb ncol cn bad))))
     (let ((erased ids) (erased io)) (iota-exists dc))
     (let ((erased h1) (erased el) (erased lh) (erased uh)) (h1-list dc dm ec nc fc ksc rc em nm fm ksm as hl ids en ok io))
     (let ((erased uid)) (respects-under ids ids ids dc (respects-id-right dc ids ids io (iota-length dc ids io)) (iota-length dc ids io)))

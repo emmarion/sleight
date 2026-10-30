@@ -419,15 +419,37 @@
   (let-match erased rd (MkRadius2 _ _ _ x0 jx0 ra))
   (MkRadius2 ec fc as x0 (kl-move dc x0 fc rc as0 as lf kl0 kl jx0) (r2all-move dc x0 ec fc rc as0 as lf kl0 kl ra as (ia-self as))))
 
+(def-fns _ $ (erased kr-move : (erased (Nat) dc j w) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (subterm erased (KmRun ec fc as0 j w) kr) -> (erased (KmRun ec fc as j w) r))
+  (match erased kr _
+    ((KrHere _ _ _ _ _ ew pe oe)
+      (KrHere ec fc as j w ew pe (match erased (in-dec ew as) (((NotIn ew as) r))
+        ((OrR _ _ o) o)
+        (absurd (OrL _ _ i) (in-notin ew as0 (kl-move dc ew fc rc as as0 lf kl kl0 i) oe)))))
+    ((KrNext _ _ _ j1 _ w1 pf kr1) (KrNext ec fc as j1 w w1 pf (kr-move dc j1 w1 ec fc rc as0 as lf kl0 kl kr1)))))
+
+(def-fns _ $ (erased kma-move : (erased (Nat) dc) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (subterm erased (List (Nat)) xs) (erased (KmAll ec fc as0 xs) ka) -> (erased (KmAll ec fc as xs) r))
+  (let-match erased ka (KmCons _ _ _ xs1 w p ka1) ((KmNil _ _ _) (KmNil ec fc as)))
+  (KmCons ec fc as xs1 w (match erased p _
+      ((OrL _ _ i) (OrL _ _ (kl-move dc w fc rc as0 as lf kl0 kl i)))
+      ((OrR _ _ kr) (OrR _ _ (kr-move dc (Succ (Succ (Succ (Succ (Zero))))) w ec fc rc as0 as lf kl0 kl kr))))
+    (kma-move dc ec fc rc as0 as lf kl0 kl xs1 ka1)))
+
+(def-fns _ $ (erased kermax-move : (erased (Nat) dc) (erased (List (Nat)) ec fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
+    (erased (KernelList dc fc rc as) kl) (erased (KerMax dc ec fc as0) km) -> (erased (KerMax dc ec fc as) r))
+  (let-match erased km (MkKerMax _ _ _ _ ids io ka))
+  (MkKerMax dc ec fc as ids io (kma-move dc ec fc rc as0 as lf kl0 kl ids ka)))
+
 ; What a run decides of a configuration of red/configs.sl on the map cpmap.sl builds: its kernel as, the conditions GcOK, for
 ; each kernel dart whose edge image is in the kernel a refutation of it not being central (fid labelling the faces), the
-; ring as a node cycle (NodeRing) and radius2.
+; ring as a node cycle (NodeRing), radius2 and KerMax.
 (def-adts $ (CfGc : ((Config) cf) -> Type)
   enum
   (many MkCfGc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc as fid)
       (erased (Cpmap cp dc ec fc rc) cm) (erased (Hypermap dc ec nc fc) hc) (erased (KernelList dc fc rc as) kl) (erased (GcOK dc ec nc rc as) ok)
       (erased (Respects fid fc fid) rf) (erased (FAll ec nc fid as as) fa) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)
-      -> (CfGc (MkConfig sym cci cp))))
+      (erased (KerMax dc ec fc as) km) -> (CfGc (MkConfig sym cci cp))))
 
 (def-adts $ (AllGc : ((List (Config)) cfs) -> Type)
   enum
@@ -441,17 +463,17 @@
 (def-fns _ $ (erased cfgc-at : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc)
     (erased (CfGc (MkConfig sym cci cp)) c) (erased (Cpmap cp dc ec fc rc) cm) (erased (Hypermap dc ec nc fc) h)
     -> (erased (List (Nat)) as0 fid) (erased (KernelList dc fc rc as0) kl0) (erased (GcOK dc ec nc rc as0) ok0) (erased (Respects fid fc fid) rf)
-    (erased (FAll ec nc fid as0 as0) fa) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as0) rd))
-  (let-match erased c (MkCfGc _ _ _ dc0 ec0 nc0 fc0 rc0 as0 fid cm0 hc0 kl0 ok0 rf fa nr rd))
+    (erased (FAll ec nc fid as0 as0) fa) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as0) rd) (erased (KerMax dc ec fc as0) km))
+  (let-match erased c (MkCfGc _ _ _ dc0 ec0 nc0 fc0 rc0 as0 fid cm0 hc0 kl0 ok0 rf fa nr rd km))
   (let-match erased (cpmap-fn cp dc0 dc ec0 fc0 rc0 ec fc rc cm0 cm) (Refl _ _))
   (let-match erased (hyper-node-unique dc ec nc0 fc nc hc0 h) (Refl _ _))
-  (values as0 fid kl0 ok0 rf fa nr rd))
+  (values as0 fid kl0 ok0 rf fa nr rd km))
 
 ; GcOK for any kernel list of a configuration of cfs, on the map cpmap.sl builds.
 (def-fns _ $ (erased cf-gcok : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc)
     (erased (List (Nat)) ec nc fc rc as) (erased (AllGc cfs) ag) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (Hypermap dc ec nc fc) h) (erased (KernelList dc fc rc as) kl) -> (erased (GcOK dc ec nc rc as) r))
-  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm h))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm h))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc h))
   (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0))
 
@@ -461,7 +483,7 @@
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (FunctorAll ec em as hl as) r))
   (let ((erased en2)) en)
   (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
-  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (let ((erased fe)) (MkFEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid en kl0 (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0) rf))
   (functor-list dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid fe fa as (ia-self as)))
@@ -472,14 +494,14 @@
   (def-fns F $ (erased gc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
       (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
       (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
-      (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd))
+      (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km))
     (let ((erased en2)) en)
     (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
-    (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased nr) (erased rd))
+    (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased nr) (erased rd) (erased km))
       (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) c hc))
     (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
     (values (cf-gcok cfs sym cci cp dc ec nc fc rc as ag m c hc kl) (cf-functor cfs sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl ag m c en)
-      nr (radius-move dc ec fc rc as0 as lf kl0 kl rd)))
+      nr (radius-move dc ec fc rc as0 as lf kl0 kl rd) (kermax-move dc ec fc rc as0 as lf kl0 kl km)))
   (MkCfCerts cfs F gc))
 
 ; The run. The kernel is labelled by a face walk to the ring; the refutations are found by a search on the statuses of the
@@ -864,6 +886,21 @@
   (let-match many (r2all-c ec fc fid as d x0 (r2-pairs ec as (face-orbit fc x0 x0 d)) as) (ChkYes _ ra) ((ChkNo _) (tail $ radius-c ec fc fid as d rest)))
   (ChkYes _ (MkRadius2 ec fc as x0 jx0 ra)))
 
+(def-fns _ $ (many kmrun-c : (many (List (Nat)) ec fc as) (subterm many (Nat) j) (many (Nat) w) -> (many (Checked (KmRun ec fc as j w)) r))
+  (let-match many (nth-q (Nat) ec w) (NQYes _ _ _ ew pe) ((NQNo _ _ _) (ChkNo _)))
+  (let-match many (in-q ew as) (IQIn _ _ _) ((IQOut _ _ oe) (ChkYes _ (KrHere ec fc as j w ew pe oe))))
+  (let-match many j (Succ j1) ((Zero) (ChkNo _)))
+  (let-match many (nth-q (Nat) fc w) (NQYes _ _ _ w1 pf) ((NQNo _ _ _) (ChkNo _)))
+  (let-match many (notail $ kmrun-c ec fc as j1 w1) (ChkYes _ kr) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (KrNext ec fc as j1 w w1 pf kr)))
+
+(def-fns _ $ (many kmall-c : (many (List (Nat)) ec fc as) (subterm many (List (Nat)) xs) -> (many (Checked (KmAll ec fc as xs)) r))
+  (let-match many xs (Cons _ w rest) ((Nil _) (ChkYes _ (KmNil ec fc as))))
+  (let-match many (notail $ kmall-c ec fc as rest) (ChkYes _ ka) ((ChkNo _) (ChkNo _)))
+  (let-match many (in-q w as) (IQOut _ _ _) ((IQIn _ _ i) (ChkYes _ (KmCons ec fc as rest w (OrL _ _ i) ka))))
+  (let-match many (kmrun-c ec fc as (Succ (Succ (Succ (Succ (Zero))))) w) (ChkYes _ kr) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (KmCons ec fc as rest w (OrR _ _ kr) ka)))
+
 (def-fns _ $ (many cfgc-c : (many (Config) cf) -> (many (Checked (CfGc cf)) r))
   (let-match many cf (MkConfig sym cci cp))
   (let-match many (noa-dec cp) (NoAYes _ na) ((NoANo _) (ChkNo _)))
@@ -886,7 +923,8 @@
   (let-match many (fall-c e fid as n (refs-c d e fid as n (tris-c e n as as) kes kes) as) (ChkYes _ fa) ((ChkNo _) (ChkNo _)))
   (let-match many (nodering-c n f r fid rsp) (ChkYes _ nr) ((ChkNo _) (ChkNo _)))
   (let-match many (radius-c e f fid as d as) (ChkYes _ rd) ((ChkNo _) (ChkNo _)))
-  (ChkYes _ (MkCfGc sym cci cp d e n f r as fid c hc (MkKernelList d f r as ids io ka kv) (MkGcOK d e n r as ids io ga) rsp fa nr rd)))
+  (let-match many (kmall-c e f as ids) (ChkYes _ km) ((ChkNo _) (ChkNo _)))
+  (ChkYes _ (MkCfGc sym cci cp d e n f r as fid c hc (MkKernelList d f r as ids io ka kv) (MkGcOK d e n r as ids io ga) rsp fa nr rd (MkKerMax d e f as ids io km))))
 
 (def-fns _ $ (many allgc-c : (subterm many (List (Config)) cfs) -> (many (Checked (AllGc cfs)) r))
   (let-match many cfs (Cons _ cf rest) ((Nil _) (ChkYes _ (AgNil))))
