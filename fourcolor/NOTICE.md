@@ -66,6 +66,7 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   (`birkhoff.v`), `birkhoff3.sl` (`coloring.v`, `walkup.v`, `birkhoff.v`),
   `minarity.sl` (`birkhoff.v`),
   `embed2.sl` (`embed.v`), `contract.sl` (`contract.v`, `embed.v`),
+  `contract2.sl` (`contract.v`, `walkup.v`),
   `embed3.sl` and `embed5.sl` (`embed.v`) and `traceconv.sl` (the traces of `cfcolor.v` and
   `coloring.v`).
   Where a Sleight file follows a Coq file, its comments or the commit

@@ -494,16 +494,13 @@
       (let ((erased xr) (erased px)) (in-nth x hr i))
       (PPCons hd hr (Nil _) xs1 x (PtRest hd hr (Nil _) x xr px (notin-of-disj x hd hr (disj-sym hr hd dj hd (sub-refl hd)) i)) rest))))
 
-; patch_gcomp: the darts joined to z by glink, and the others, each with the hypermap they carry, patch the whole map along empty rings.
-(def-fns _ $ (erased patch-gcomp : (erased (Nat) d z) (erased (List (Nat)) e n f ids) (erased (List (Bond)) g) (erased (Hypermap d e n f) hm) (erased (Iota d ids) io)
-    (erased (Glink d e n f g) gl) (erased (Lt z d) lz)
+; The darts labelled l, under a labelling constant along glink, and the others, each with the hypermap they carry, patch the
+; whole map along empty rings.
+(def-fns _ $ (erased patch-lab : (erased (Nat) d l) (erased (List (Nat)) e n f ids lab) (erased (List (Bond)) g) (erased (Hypermap d e n f) hm) (erased (Iota d ids) io)
+    (erased (Glink d e n f g) gl) (erased (Length (Nat) lab d) ll) (erased (Const lab g) cl)
     -> (erased (Nat) dd dr) (erased (List (Nat)) ed nd fd er nr fr hd hr) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt)
-    (erased (CompSplit g z ids hd hr) cs))
+    (erased (SplitBy lab (Cons (Nat) l (Nil (Nat))) ids hd hr) sp))
   (let ((erased bg)) (glink-below d e n f g hm gl))
-  (let ((erased k) (erased csg)) (classes-exists g d bg))
-  (let-match erased csg (MkClasses _ _ _ ids2 lab rs io2 ll lr dr fix cl ro))
-  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
-  (let ((erased l) (erased pl)) (nth-exists _ lab d z ll lz))
   (let ((erased uids)) (perm-under d ids ids (perm-id d ids io)))
   (let ((erased hd) (erased hr) (erased sp)) (sb-exists lab (Cons (Nat) l (Nil (Nat))) d ll ids uids))
   (let ((erased so)) (sb-split lab (Cons (Nat) l (Nil (Nat))) ids hd hr ids hd hr sp sp (sub-refl hd)))
@@ -536,7 +533,20 @@
     (MkPatch d dd dr e n f ed nd fd er nr fr hd hr (Nil _) (Nil _) ids idd idr (Nil _) (Nil _) hm hmd hmr io iod ior lhd lhr dhd dhr uhd uhr
       (NCNil ed) (MkSimple fd (Nil _) zs (Nil _) rz (RespNil zs) (DistNil)) (NCNil nr) (DistNil) (RespNil hd) (RespNil hr) (RANil (Nat) (Nil (Nat)))
       (gcomp-parts hd hr ids ids so (sub-refl ids)) med mnd mer mnr)
-    (comp-of-sb d z l ids lab rs ids hd hr g io ro cl pl lz uids sp)))
+    sp))
+
+; patch_gcomp: the darts joined to z by glink, and the others, each with the hypermap they carry, patch the whole map along empty rings.
+(def-fns _ $ (erased patch-gcomp : (erased (Nat) d z) (erased (List (Nat)) e n f ids) (erased (List (Bond)) g) (erased (Hypermap d e n f) hm) (erased (Iota d ids) io)
+    (erased (Glink d e n f g) gl) (erased (Lt z d) lz)
+    -> (erased (Nat) dd dr) (erased (List (Nat)) ed nd fd er nr fr hd hr) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt)
+    (erased (CompSplit g z ids hd hr) cs))
+  (let ((erased k) (erased csg)) (classes-exists g d (glink-below d e n f g hm gl)))
+  (let-match erased csg (MkClasses _ _ _ ids2 lab rs io2 ll lr dr fix cl ro))
+  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
+  (let ((erased l) (erased pl)) (nth-exists _ lab d z ll lz))
+  (let ((erased dd) (erased dr) (erased ed) (erased nd) (erased fd) (erased er) (erased nr) (erased fr) (erased hd) (erased hr) (erased pt) (erased sp))
+    (patch-lab d l e n f ids lab g hm io gl ll cl))
+  (values dd dr ed nd fd er nr fr hd hr pt (comp-of-sb d z l ids lab rs ids hd hr g io ro cl pl lz (perm-under d ids ids (perm-id d ids io)) sp)))
 
 (def-fns _ $ (erased comp-in-d : (erased (List (Bond)) g) (erased (Nat) z x) (erased (List (Nat)) xs ys zs) (subterm erased (CompSplit g z xs ys zs) cs)
     (erased (In x xs) ix) (erased (Conn g z x) c) -> (erased (In x ys) r))
