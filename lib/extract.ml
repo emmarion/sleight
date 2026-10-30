@@ -185,15 +185,20 @@ let field_match cx c target body =
   Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> %s%s)" target ty k r (body r) rest
 
 let field_write cx c target stores =
-  if stores = [] then "" else
-  field_match cx c target (fun r -> concat "; " (List.map (fun (i, s) -> Printf.sprintf "%s.f%d <- %s" r i s) stores))
+  let imm, barred = List.partition (fun (_, m, _) -> m && !V.use_externs) stores in
+  let offset = match shape c.V.adt with Tagged ns when wide ns -> 1 | _ -> 0 in
+  let raw = List.map (fun (i, _, s) -> Printf.sprintf "Array.unsafe_set (Obj.obj %s : int array) %d (Obj.obj %s : int)" target (i + offset) s) imm in
+  let barred = if barred = [] then [] else [ field_match cx c target (fun r -> concat "; " (List.map (fun (i, _, s) -> Printf.sprintf "%s.f%d <- %s" r i s) barred)) ] in
+  concat "; " (barred @ raw)
 
 let field_read cx c i target = field_match cx c target (fun r -> Printf.sprintf "%s.f%d" r i)
 
-(* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, section 37). *)
-let field_copy cx c target =
+(* A fresh block holding [target]'s fields, [stores] in place of theirs (a `cell-write` or an invocation on a
+   cell at `many`, section 37). *)
+let field_copy cx c target stores =
   if c.V.arity = 0 then build cx c [] else
-  field_match cx c target (fun r -> build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)))
+  let field r i f = match List.find_opt (fun (j, _, _) -> j = i) stores with Some (_, _, s) -> s | None -> r ^ "." ^ f in
+  field_match cx c target (fun r -> build cx c (List.mapi (field r) (fields c)))
 
 let cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
@@ -269,7 +274,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
           Array.iteri (fun i v ->
             let rhs = value cx v in
-            add_fill cx (field_write cx c name [ (i, rhs) ])) vs;
+            add_fill cx (field_write cx c name [ (i, false, rhs) ])) vs;
           name)
   | _ -> (
       let b = bucket cx v in
@@ -420,12 +425,12 @@ and expr cx scope code = match code with
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CCellAlloc (c, ss) -> cell_block cx c (List.map (expr cx scope) ss)
   | V.CCellRead (k, i, c) -> field_read cx k i (expr cx scope c)
-  | V.CCellWrite (k, c, ss) | V.CCellCopy (k, c, ss) ->
+  | V.CCellCopy (k, c, ss) -> field_copy cx k (expr cx scope c) (List.map (fun (i, m, s) -> i, m, expr cx scope s) ss)
+  | V.CCellWrite (k, c, ss) ->
       let name = Printf.sprintf "cell%d" (stamp cx) in
-      let ss = List.map (fun (i,s) -> i, expr cx scope s) ss in
+      let ss = List.map (fun (i, m, s) -> i, m, expr cx scope s) ss in
       let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
-      let source = expr cx scope c in
-      Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
+      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) stores name
   | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
   | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, _, v) = (Obj.obj %s : %s) in v)" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledMult, [ h; e; m; u ]) ->

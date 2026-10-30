@@ -155,6 +155,19 @@ let written ?(noun = "") env pos l what m =
   if pos = Erased && m <> Erased then error_in env l "%s %s%s written `%s` in an erased position; write `erased` here" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun (mult_name m) else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Wild _ -> true | _ -> false
+let mark_name = function `Skip -> "at" | `Imm _ -> "imm" | `Store -> "store"
+let cell_marks env l ~skip args =
+  let mark = function
+    | List (_, [ a ]) when skip && is_special env a Sp.At -> Some `Skip
+    | List (ml, a :: ps) when is_special env a Sp.Imm -> (match ps with [ o; n ] -> Some (`Imm (o, n)) | _ -> error ml "%s" (help env (Sp.misuse Sp.Imm)))
+    | _ -> None in
+  let rec go pending = function
+    | (_, raw) :: rest when Option.is_some (mark raw) ->
+        Option.iter (fun m -> error_in env l "`%s` must precede an argument, not another mark" (mark_name m)) pending;
+        go (mark raw) rest
+    | a :: rest -> (Option.value pending ~default:`Store, a) :: go None rest
+    | [] -> Option.fold ~none:[] ~some:(fun m -> error_in env l "`%s` must precede an argument" (mark_name m)) pending in
+  go None args
 
 (* A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused. *)
 let settle env loc t = if has_meta env t then unsolved loc env t
@@ -1573,9 +1586,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ | Handle _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
       let c = ctor_var env l c in
       let ct, params, _ = cell_shape env l pos c in
-      let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
+      let env, slots, writes, wrap = cell_items env pos l ~stores:false ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
         (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
-      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.vacant)) in
+      let values = List.init ct.arity (fun i -> Option.value (List.find_map (fun (j, _, w) -> if j = i then Some w else None) writes) ~default:(V.CConst V.vacant)) in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
       let hollow = hollow env c in
@@ -1593,7 +1606,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let existing, slots = match canon env r.ty with Cell (Var c, ss) -> c, ss | _ -> error_in env l "`cell-write` needs a `Cell`" in
       check_equal env l (Var c) (Var existing);
       let ct, params, _ = cell_shape env l pos c in
-      let env, slots, writes, wrap = cell_items env pos l ("`cell-write`", il, c, params) slots items in
+      let env, slots, writes, wrap = cell_items env pos l ~stores:true ("`cell-write`", il, c, params) slots items in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a cell and so unique" (type_of env x) (entry env x).mult;
       let place = if shared then None else r.place in
@@ -1940,15 +1953,30 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick ("(" ^ speller env (Sp.name sp) ^ if args = [] then ")" else " ...)")) (help env (Sp.hints (Sp.name sp)))
   | sp, _ -> error l "%s" (help env (Sp.misuse sp))
 
-and cell_items env pos l (what, il, c, params) slots items =
-  if List.length slots <> List.length items then slot_count env il what "slot item" c params (List.length items);
-  let env, slots, writes, bindings = List.fold_left2 (fun (env, ss, ws, bs) (i, old) item ->
-    if wild item then (env, old :: ss, ws, bs) else
+and imm_proofs env l (o, n) old fresh =
+  let t = match prelude_id env "ImmSlot" with Some t -> t | None -> error l "`imm` needs the prelude's `ImmSlot`, which `--no-prelude` leaves out" in
+  List.fold_left (fun env (raw, s) ->
+    let ty = App (Var t, [ s ]) in
+    let env, p, _ = elab_expr1 ~tele:[ { name = None; subterm = false; mult = Erased; place = None; loc = Reader.loc raw; sg = Ty ty } ] env Erased raw in
+    settle_res env (Reader.loc raw) p;
+    check_type env (Reader.loc raw) p.ty ty;
+    env) env [ (o, old); (n, fresh) ]
+
+and cell_items env pos l ~stores (what, il, c, params) slots items =
+  let marked = cell_marks env l ~skip:false (List.map (fun r -> ((), r)) items) in
+  if List.length slots <> List.length marked then slot_count env il what "slot item" c params (List.length marked);
+  let env, slots, writes, bindings = List.fold_left2 (fun (env, ss, ws, bs) (i, old) (mark, ((), item)) ->
+    let imm = match mark with `Imm p -> Some p | _ -> None in
+    if wild item then (if Option.is_some imm then error_in env l "`imm` marks a store, and `_` stores nothing"; (env, old :: ss, ws, bs)) else
     let env, r, code = elab_expr1 env (under pos Many) item in
     (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ | Ill_typed _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
     settle_res env l r;
+    let env = match imm with
+      | Some p when stores -> imm_proofs env l p old r.term
+      | Some _ -> error_in env l "`imm` marks a store into a cell, and %s fills a fresh one" what
+      | None -> env in
     let x = fresh () in
-    (env, r.term :: ss, (i, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) items in
+    (env, r.term :: ss, (i, Option.is_some imm, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) marked in
   (env, List.rev slots, List.rev writes, fun body -> List.fold_left (fun b (x,c) -> V.CLet ([x], c, b)) body bindings)
 
 and elab_cell_invoke ?(full = false) ?(frames = []) env expect l callee h hcode ctor slots args =
@@ -1959,18 +1987,19 @@ and elab_cell_invoke ?(full = false) ?(frames = []) env expect l callee h hcode 
      `unique` (section 37) *)
   let shared = pos = Many in
   let env = match h.term with Var x -> use env l pos x | _ -> env in
-  let rec marks mark args = match args with
-    | (_, List (_, [a])) :: rest when is_special env a Sp.At -> marks true rest
-    | a :: rest -> (mark, a) :: marks false rest
-    | [] -> if mark then error_in env l "`at` must precede an argument" else [] in
-  let marked = marks false (if frames = [] then unframed args else List.combine frames args) in
+  let marked = cell_marks env l ~skip:true (if frames = [] then unframed args else List.combine frames args) in
   let frames, raw = List.split (List.map snd marked) in
   let env, acc, codes = check_args env l ~callee ~bind_args:true ~ctor:true ~result:(ctor_result (Var c)) ~pos ~boundary:false ~frames params raw elab_arg in
-  let _, writes = List.fold_left2 (fun (i, writes) ((e : entry), t) (skip, _) ->
-    if e.mult = Erased then (if skip then error_in env l "`at` cannot mark an erased argument"; (i, writes)) else
+  let env, _, writes = List.fold_left2 (fun (env, i, writes) ((e : entry), t) (mark, _) ->
+    if e.mult = Erased then ((match mark with `Store -> () | m -> error_in env l "`%s` cannot mark an erased argument" (mark_name m)); (env, i, writes)) else
+    let skip = match mark with `Skip -> true | _ -> false in
     let same = same_slot env (List.nth slots i) (SlotOf t) in
     if (full || skip) && not same then error_in env l "`at` argument %d is not in its slot's location class" (i+1);
-    (i+1, if full || skip then writes else (i, List.nth codes i) :: writes)) (0, []) (List.combine params (List.rev acc)) marked in
+    let env, imm = match mark with
+      | `Imm _ when full -> error_in env l "`imm` marks a store, and an `at`-wrapped invocation performs none"
+      | `Imm p -> (imm_proofs env l p (List.nth slots i) (SlotOf t), true)
+      | _ -> (env, false) in
+    (env, i+1, if full || skip then writes else (i, imm, List.nth codes i) :: writes)) (env, 0, []) (List.combine params (List.rev acc)) marked in
   let copies = shared && writes <> [] in
   let code = if pos = Erased then V.CErased else if copies then V.CCellCopy (ct, hcode, List.rev writes) else if writes = [] then hcode else V.CCellWrite (ct, hcode, List.rev writes) in
   (env, [{term = App (Var c, List.rev acc); ty = instantiate acc ret; erasure = pos; place = if copies then None else h.place}], code)

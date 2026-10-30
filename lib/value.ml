@@ -38,8 +38,8 @@ and code =
   | CLetRec of (id * fn) list * code
   | CMatch of matching
   | CCellAlloc of ctor * code list
-  | CCellWrite of ctor * code * (int * code) list
-  | CCellCopy of ctor * code * (int * code) list
+  | CCellWrite of ctor * code * (int * bool * code) list
+  | CCellCopy of ctor * code * (int * bool * code) list
   | CCellRead of ctor * int * code
   | CWorldDo of code
   | CPrim of Special.t * code list
@@ -61,8 +61,8 @@ let map_code f = function
       let branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches in
       CMatch { scrut; shape; branches; default = Option.map f m.default; live = m.live }
   | CCellAlloc (c, ss) -> CCellAlloc (c, List.map f ss)
-  | CCellWrite (k, c, ss) -> CCellWrite (k, f c, List.map (fun (i,s) -> i, f s) ss)
-  | CCellCopy (k, c, ss) -> CCellCopy (k, f c, List.map (fun (i,s) -> i, f s) ss)
+  | CCellWrite (k, c, ss) -> CCellWrite (k, f c, List.map (fun (i,m,s) -> i, m, f s) ss)
+  | CCellCopy (k, c, ss) -> CCellCopy (k, f c, List.map (fun (i,m,s) -> i, m, f s) ss)
   | CCellRead (k, i, c) -> CCellRead (k, i, f c)
   | CWorldDo c -> CWorldDo (f c)
   | CPrim (p, cs) -> CPrim (p, List.map f cs)

@@ -2323,3 +2323,26 @@ silent.
      type are written as a message about that place writes them, even
      when a later binder shadows a name the type mentions.
 
+
+## `imm` marks on cell stores (DESIGN.md section 37)
+
+227. **Where an `imm` mark is refused.** The session's reading is that
+     the mark only describes a store, so both compilers refuse it
+     before `_`, before an erased argument, in a `cell-alloc`, inside
+     an `at`-wrapped invocation, and right after another mark (an
+     `(at)` and an `imm` on one argument included). DESIGN.md does not
+     say which of these the owner wants refused.
+
+228. **The reference keeps the barrier under `--no-extern`.** Extraction
+     under `--no-extern` gives a `U62` its model's representation, a
+     block, so the session reads `(Immediate (U62))` as true of the
+     extern representation only; there an `imm` store is extracted as
+     an ordinary store.
+
+229. **slc spends one unit of `fuel` on the proofs of an `imm` mark and
+     on a `cell-write`'s or `cell-alloc`'s items.** The marks are taken
+     out of the items before the items are elaborated, so the list
+     elaborated is no longer a subterm of the form's arguments, and the
+     proof terms are gathered into a list of their own; spending fuel is
+     how slc's termination order admits both. A run with fuel left at
+     zero there would report "more than 10000 macro expansions".

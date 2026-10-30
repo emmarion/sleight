@@ -50,7 +50,7 @@ let rec eval env code =
       | VCtor (k, fs) as v ->
           let copies = match code with CCellCopy _ -> true | _ -> false in
           let fs = if copies then Array.copy fs else fs in
-          List.iter (fun (i,s) -> fs.(i) <- eval1 env s) ss;
+          List.iter (fun (i,_,s) -> fs.(i) <- eval1 env s) ss;
           [ (if copies then VCtor (k, fs) else v) ]
       | _ -> raise (Runtime "not a cell"))
   | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))

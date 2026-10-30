@@ -1332,6 +1332,13 @@
     (many ImmMaybe : (erased Type A) (erased (Immediate A) p) -> (Immediate (MaybeUninit A)))))
 
 (def-adts
+  ((ImmSlot : ((Slot) s) -> Type)
+    enum
+    (many ImmVacant : -> (ImmSlot vacant-slot))
+    (many ImmPlaced : (erased Type A) (erased (Immediate A) p) (erased (Slot) s) (erased A v) (erased (Placed s A v) q)
+       -> (ImmSlot s))))
+
+(def-adts
   ((AllInit : (Type A) ((List (MaybeUninit A)) xs) ((List A) ys) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Nil (MaybeUninit A)) (Nil A)))

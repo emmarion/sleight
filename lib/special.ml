@@ -1,7 +1,7 @@
 type t =
   | Let | DefLvl | DefFns | DefUnique | DefAdts | ComptimeMatch | LetMatch | OpenAdt | OpenAbsurd
   | Fn | UniqueFn | TyCtor | ValCtor | Matchable
-  | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
+  | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Imm | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
   | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleTag | CoercibleOf | DelegateOf | CoercibleShare | DumpContext | CompileError | CompileWarn | WorldDo | Gensym | GensymUnique | SettledOf | SettledType | SettledErase | SettledEq | Resolve | ReadFile | SettledMult | SettledValue | InternNat | InternChar | InternString | MintSettled | MintSettledErased | SettledTyApply | SettledValApply | DefOpaque | DefPrim | Goal | Qed
   | PlaceAt | PlaceAtMany | UnplaceAt | UnplaceAtMany | PlacedSlot | PlacedEq | SlotEq | CellSame | FnSame | NativeCompute
@@ -11,7 +11,7 @@ let all =
   [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefUnique, "def-unique"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match");
     (OpenAdt, "open-adt"); (OpenAbsurd, "open-absurd");
     (Fn, "Fn"); (UniqueFn, "UniqueFn"); (TyCtor, "TyCtor"); (ValCtor, "ValCtor"); (Matchable, "Matchable");
-    (CellAlloc, "cell-alloc"); (CellWrite, "cell-write"); (CellMatch, "cell-match"); (Cell, "Cell"); (SlotOf, "slot-of"); (SlotSelf, "slot-self"); (AtFnOf, "at-fn-of"); (OpenAtFn, "open-at-fn"); (At, "at"); (Share, "share"); (Match, "match"); (MatchableOf, "matchable-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
+    (CellAlloc, "cell-alloc"); (CellWrite, "cell-write"); (CellMatch, "cell-match"); (Cell, "Cell"); (SlotOf, "slot-of"); (SlotSelf, "slot-self"); (AtFnOf, "at-fn-of"); (OpenAtFn, "open-at-fn"); (At, "at"); (Imm, "imm"); (Share, "share"); (Match, "match"); (MatchableOf, "matchable-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
     (ProvePredates, "prove-predates"); (Values, "values");
     (PredatesTrans, "predates-trans"); (SubtermTrans, "subterm-trans"); (PredatesSubterm, "predates-subterm");
     (Coerce, "coerce"); (CoercibleRefl, "coercible-refl"); (CoercibleSym, "coercible-sym");

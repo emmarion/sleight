@@ -271,7 +271,7 @@
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkUnique : -> (MarkK)) (many MkAt : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
     (many MkArrow : -> (MarkK)) (many MkSubterm : -> (MarkK)) (many MkEnum : -> (MarkK)) (many MkUnion : -> (MarkK))
     (many MkTail : -> (MarkK)) (many MkDelegate : -> (MarkK)) (many MkPredates : -> (MarkK)) (many MkAbsurd : -> (MarkK))
-    (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK))))
+    (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK)) (many MkImm : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
   (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
@@ -291,7 +291,7 @@
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
     ((MkErased) 0) ((MkMany) 1) ((MkColon) 2) ((MkIs) 3) ((MkArrow) 4) ((MkSubterm) 5) ((MkEnum) 6) ((MkUnion) 7)
-    ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13) ((MkElse) 14) ((MkUnique) 15) ((MkAt) 16) ((MkNoTail) 17)))
+    ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13) ((MkElse) 14) ((MkUnique) 15) ((MkAt) 16) ((MkNoTail) 17) ((MkImm) 18)))
 
 (def-fns _ $ (many sp-arity : (many (Sp) sp) -> (many (Maybe $ Nat) n))
   (match many sp _
@@ -326,7 +326,7 @@
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
   sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
   sp-cons "Matchable" (SpFormer $ FoMatchable) $
-  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
+  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "imm" (SpMark $ MkImm) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
   sp-cons "numeral-of" (SpExpr $ ExNumeralOf) $ sp-cons "level-of" (SpExpr $ ExLevelOf) $ sp-cons "prove-subterm" (SpExpr $ ExProveSubterm) $
   sp-cons "prove-predates" (SpExpr $ ExProvePredates) $ sp-cons "values" (SpExpr $ ExValues) $
   sp-cons "predates-trans" (SpExpr $ ExPredatesTrans) $ sp-cons "subterm-trans" (SpExpr $ ExSubtermTrans) $
@@ -593,7 +593,7 @@
     (many CLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (erased (List $ Nat) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Nat)) gids ctx) ns) rest) -> (Code ctx ns))
     (many CMatch : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) dflt) (many (List $ Nat) live) -> (Code ctx ns))
     (many CCellAlloc : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (List $ Code ctx many-one) slots) -> (Code ctx many-one))
-    (many CCellWrite : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
+    (many CCellWrite : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) (many (List $ Nat) imms) -> (Code ctx many-one))
     (many CCellCopy : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
     (many CCellRead : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Nat) index) (many (Code ctx many-one) cell) -> (Code ctx many-one))
     (many CWorldDo : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) req) -> (Code ctx many-one))
@@ -740,7 +740,7 @@
       ((CLet _ ms2 _ ids pk rhs rest) (CLet _ ms2 _ ids pk rhs $ notail $ recast _ ns ms same rest))
       ((CLetRec _ _ _ g rest) (CLetRec _ _ _ g $ notail $ recast _ ns ms same rest))
       ((CCellAlloc _ _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
-      ((CCellWrite _ _ _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
+      ((CCellWrite _ _ _ _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
       ((CCellCopy _ _ _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
       ((CCellRead _ _ _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
       ((CWorldDo _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
