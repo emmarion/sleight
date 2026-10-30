@@ -767,3 +767,86 @@
           (Cons (FU) (MkFU (Succ d0) uu) (Cons (FU) (MkFU d2 v) (Cons (FU) (MkFU d4 w) (Nil (FU)))))
           ls1 (Nil (List (Col))) ls q m0 (CaH d0 a1 a2 uu v w et2 pv pw)
           (AFCons ie (Succ d0) uu _ fl1 (AFCons ie d2 v _ fl2 (AFCons ie d4 w _ fl3 (AFNil ie)))))))))
+
+; Every contract ring trace of the map of cp is in the list.
+(def-fns _ $ (erased cccol-hit : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ie)
+    (erased (List (List (Col))) ls) (erased (Cpmap cp d e f r) c) (erased (InsertE e cc ie) pi) (erased (LRel ie cp d ls) lr) (erased (List (Col)) et)
+    (erased (CcCol cp cc et) col) -> (erased (LMem (List (Col)) et ls) m))
+  (let-match erased col (MkCcCol _ _ d2 e2 f2 r2 ks rc cs _ c2 ccol rr nc tr))
+  (let-match erased (cpmap-fn cp d d2 e f r e2 f2 r2 c c2) (Refl _ _))
+  (let-match erased ccol (MkCcColoring _ _ _ _ ie2 ke pi2 face ce edge four))
+  (let-match erased (inserte-fn e cc ie ie2 pi pi2) (Refl _ _))
+  (let ((erased n) (erased pm)) (cpmap-map cp d e f r c))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f (pointed-hyper d e n f r pm)))
+  (let ((erased ctx)) (MkCtx ie ks e e f ke d (pre-refl e) (MkFC ks f ks face (pre-refl ks)) ce edge four (respects-length ks f ks d face lf) le))
+  (let ((erased rc2) (erased cs2) (erased et2) (erased rr2) (erased nc2) (erased tr2) (erased m)) (lrel-hit cp d e f r ie ks e ls c lr ctx))
+  (let-match erased (respects-fn ks r rc rc2 rr rr2) (Refl _ _))
+  (let-match erased (ncols-fn rc cs cs2 nc nc2) (Refl _ _))
+  (let-match erased (trace-fn cs et et2 tr tr2) (Refl _ _))
+  m)
+
+(def-fns _ $ (many permt-c : (many (Perm) g) (subterm many (List (Col)) et) -> (many (List (Col)) et2) (erased (PermT g et et2) p))
+  (let-match many et (Cons _ c rest) ((Nil _) (values (Nil _) (PTNil g))))
+  (let ((many d) (erased pc)) (permc-r g c))
+  (let ((many et3) (erased p)) (permt-c g rest))
+  (values (Cons _ d et3) (PTCons g c d rest et3 pc p)))
+
+(def-fns _ $ (many eventail-c : (subterm many (List (Col)) l) -> (many (Bool) b) (erased (EvenTail l b) p))
+  (let-match many l (Cons _ c rest) ((Nil _) (values (BTrue) (ETNil))))
+  (match many c _
+    ((C0) (let ((many b) (erased p)) (eventail-c rest)) (values b (ET0 rest b p)))
+    ((C1) (let ((many b) (erased p)) (eventail-c rest)) (values b (ET1 rest b p)))
+    ((C2) (values (BTrue) (ET2 rest)))
+    ((C3) (values (BFalse) (ET3 rest)))))
+
+(def-fns _ $ (many etrace-c : (many (List (Col)) et) -> (many (List (Col)) et2) (erased (ETrace et et2) p))
+  (let ((many (Bool) b) (erased (EvenT et b) ev))
+    (match many et _
+      ((Nil _) (values (BTrue) (EvNil)))
+      ((Cons _ c l)
+        (match many c _
+          ((C0) (values (BTrue) (Ev0 l)))
+          ((C1) (let ((many b) (erased p)) (eventail-c l)) (values b (Ev1 l b p)))
+          ((C2) (let ((many l2) (erased q)) (permt-c p312 l)) (let ((many b) (erased p)) (eventail-c l2)) (values b (Ev2 l l2 b q p)))
+          ((C3) (let ((many l2) (erased q)) (permt-c p231 l)) (let ((many b) (erased p)) (eventail-c l2)) (values b (Ev3 l l2 b q p)))))))
+  (match many b _
+    ((BTrue) (values et (ETrEven et ev)))
+    ((BFalse) (let ((many et2) (erased q)) (permt-c p132 et)) (values et2 (ETrOdd et et2 ev q)))))
+
+; The even normal form of every trace of ls without its first entry is not in kt.
+(def-adts $ (AllOut : ((Ctree) kt) ((List (List (Col))) ls) -> Type)
+  enum
+  (many AONil : (erased (Ctree) kt) -> (AllOut kt (Nil (List (Col)))))
+  (many AOCons : (erased (Ctree) kt) (erased (Col) e0) (erased (List (Col)) et et2) (erased (List (List (Col))) ls) (erased (ETrace et et2) tr)
+      (erased (CtSub kt et2 (Zero)) s) (erased (AllOut kt ls) rest) -> (AllOut kt (Cons (List (Col)) (Cons (Col) e0 et) ls))))
+
+(def-adts $ (AllOutD : ((Ctree) kt) ((List (List (Col))) ls) -> Type)
+  enum
+  (many AOYes : (erased (Ctree) kt) (erased (List (List (Col))) ls) (erased (AllOut kt ls) p) -> (AllOutD kt ls))
+  (many AONo : (erased (Ctree) kt) (erased (List (List (Col))) ls) -> (AllOutD kt ls)))
+
+(def-fns _ $ (many allout-c : (many (Ctree) kt) (subterm many (List (List (Col))) ls) -> (many (AllOutD kt ls) r))
+  (let-match many ls (Cons _ et rest) ((Nil _) (AOYes kt ls (AONil kt))))
+  (let-match many et (Cons _ e0 et1) ((Nil _) (AONo kt ls)))
+  (let ((many et2) (erased tr)) (etrace-c et1))
+  (let ((many k) (erased s)) (sub-exists kt et2))
+  (let-match many k (Zero) ((Succ _) (AONo kt ls)))
+  (let-match many (allout-c kt rest) (AOYes _ _ p) ((AONo _ _) (AONo kt ls)))
+  (AOYes kt ls (AOCons kt e0 et1 et2 rest tr s p)))
+
+(def-fns _ $ (erased allout-mem : (erased (Ctree) kt) (erased (List (Col)) x) (erased (List (List (Col))) ls) (subterm erased (LMem (List (Col)) x ls) m)
+    (erased (AllOut kt ls) ao) -> (erased (Col) e0) (erased (List (Col)) et et2) (erased (Eq (List (Col)) x (Cons (Col) e0 et)) q) (erased (ETrace et et2) tr)
+    (erased (CtSub kt et2 (Zero)) s))
+  (let-match erased ao (AOCons _ e0 et et2 rest tr s ao1) (absurd (AONil _) m))
+  (match erased m _
+    ((LMHere _ _ _) (values e0 et et2 (Refl _ x) tr s))
+    ((LMThere _ _ _ _ m1) (allout-mem kt x rest m1 ao1))))
+
+(def-fns _ $ (erased contract-ok : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (Nat) d) (erased (List (Nat)) e n f r ie)
+    (erased (List (List (Col))) ls) (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v)
+    (erased (InsertE e cc ie) pi) (erased (LRel ie cp d ls) lr) (erased (AllOut kt ls) ao) -> (erased (ContractOK cp cc kt) ok))
+  (def-lvl G)
+  (def-fns G $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
+      (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m))
+    (allout-mem kt et ls (cccol-hit cp cc d e f r ie ls c pi lr et col) ao))
+  (MkContractOK cp cc kt d e n f r c h v G g))
