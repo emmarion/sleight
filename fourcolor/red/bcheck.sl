@@ -125,13 +125,6 @@
   (many BBCons : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts)
       (erased (BkProg h m cp t) p) (erased (BkBasis h m cps ts) q) -> (BkBasis h m (Cons (List (Step)) cp cps) (Cons (Ctree) t ts))))
 
-(def-fns _ $ (erased bb-elem : (erased (Nat) h m) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts) (erased (Ctree) t)
-    (subterm erased (BkBasis h m cps ts) bb) (erased (Elem (Ctree) t ts) el) -> (erased (List (Step)) cp) (erased (BkProg h m cp t) p))
-  (let-match erased bb (BBCons _ _ cp1 _ cps1 ts1 p1 bb1) (absurd (BBNil _ _) el))
-  (match erased el _
-    ((ElHere _ _ _) (values cp1 p1))
-    ((ElThere _ _ _ _ el1) (bb-elem h m cps1 ts1 t bb1 el1))))
-
 (def-fns _ $ (many cubic-c : (subterm many (List (Step)) cp) -> (many (Chk (CubicProg cp)) r))
   (let-match many cp (Cons _ s cp1) ((Nil _) (CkY _ (CubNil))))
   (let-match many (notail $ cubic-c cp1) (CkY _ q) ((CkN _) (CkN _)))
@@ -323,16 +316,16 @@
 
 ; One side of a ring in Birkhoff_valid of birkhoff.v, by functions at level L: T is a Kempe-closed set of complete traces
 ; (there, the ring traces of the map on one side of the ring), NT holds the traces not in T, and every basis tree for ring
-; size h + 2 and kernel size m holds the even normal form of a trace whose completion is in T (chkbP).
-(def-adts $ (BSide : ((Level) L) ((Nat) h m) ((PredC) T NT) -> Type)
+; size h + 2 and kernel size m, the trees ts, holds the even normal form of a trace whose completion is in T (chkbP).
+(def-adts $ (BSide : ((Level) L) ((Nat) h m) ((List (Ctree)) ts) ((PredC) T NT) -> Type)
   enum
-  (many MkBSide : (erased (Level) L) (erased (Nat) h m) (erased Pred T NT) (erased Rel R) (erased (KClosed L T R) cl)
+  (many MkBSide : (erased (Level) L) (erased (Nat) h m) (erased (List (Ctree)) ts) (erased Pred T NT) (erased Rel R) (erased (KClosed L T R) cl)
       (erased (Fn L (erased (List (Col)) ct) -> (erased (Or (Holds T ct) (Holds NT ct)) r)) dec)
       (erased (Fn L (erased (List (Col)) ct) (erased (Holds T ct) p) (erased (Holds NT ct) q) -> (erased (False) f)) ref)
-      (erased (Fn L (erased (List (Step)) cp) (erased (Ctree) t) (erased (BkProg h m cp t) bp) -> (erased (List (Col)) et et2 ct)
+      (erased (Fn L (erased (Ctree) t) (erased (Elem (Ctree) t ts) el) -> (erased (List (Col)) et et2 ct)
           (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtMem t et2) mt) (erased (Ctr (C0) et ct) cr)
           (erased (Holds T ct) p)) hit)
-      -> (BSide L h m T NT)))
+      -> (BSide L h m ts T NT)))
 
 ; No trace c1 is in T1 with its reverse in T2, and the other way round (colorable_from_ring and noncolG in Birkhoff_valid).
 (def-adts $ (BGlue : ((Level) L) ((PredC) T1 T2) -> Type)
@@ -344,29 +337,32 @@
           -> (erased (False) f)) g21)
       -> (BGlue L T1 T2)))
 
-; The part of Birkhoff_valid of birkhoff.v that rests on the check: a successful Birkhoff check leaves no two sides as above.
+; The part of Birkhoff_valid of birkhoff.v that rests on the check: a successful Birkhoff check, given by the fields of a
+; BirkhoffCheck, leaves no two sides as above for its basis trees ts.
 (def-fns _ $ (erased birkhoff-check-sound : (erased (Level) L) -> (erased (Level) N)
-    (erased (Fn N (erased (Nat) h m) (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m T1 NT1) s1) (erased (BSide L h m T2 NT2) s2)
-        (erased (BGlue L T1 T2) g) (erased (BirkhoffCheck h m) bc) -> (erased (False) f)) f))
+    (erased (Fn N (erased (Nat) h m n) (erased (List (Ctree)) ts) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
+        (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
+        (erased (BK h ts ctu gtu n ctu gtu) bk) (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m ts T1 NT1) s1) (erased (BSide L h m ts T2 NT2) s2)
+        (erased (BGlue L T1 T2) g) -> (erased (False) f)) f))
   (let ((erased M) (erased walk)) (kcc-coclosure L))
   (def-fns _
-    ((erased bk-sound : (erased (Nat) h m) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts) (erased (BkBasis h m cps ts) bb)
-        (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m T1 NT1) s1) (erased (BSide L h m T2 NT2) s2) (erased (BGlue L T1 T2) g)
+    ((erased bk-sound : (erased (Nat) h m) (erased (List (Ctree)) ts)
+        (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m ts T1 NT1) s1) (erased (BSide L h m ts T2 NT2) s2) (erased (BGlue L T1 T2) g)
         (erased (Ctree) ctu1 ctu2) (erased (Gtree) gtu1 gtu2) (erased (Nat) n) (subterm erased (BK h ts ctu1 gtu1 n ctu2 gtu2) bk)
         (erased (KV (MkPred (PredC) NT1 PermIn) h ctu1 (GEmpty) gtu1) kv1) (erased (KV (MkPred (PredC) NT2 PermIn) h ctu2 (GEmpty) gtu2) kv2)
         -> (erased (False) f))
       (let-match erased bk (MkBK _ _ _ _ n1 _ _ a1 c1 p c2 cr1 cr2 rv bs1 bs2))
-      (let-match erased s1 (MkBSide _ _ _ _ _ R1 cl1 dec1 ref1 hit1))
-      (let-match erased s2 (MkBSide _ _ _ _ _ R2 cl2 dec2 ref2 hit2))
+      (let-match erased s1 (MkBSide _ _ _ _ _ _ R1 cl1 dec1 ref1 hit1))
+      (let-match erased s2 (MkBSide _ _ _ _ _ _ R2 cl2 dec2 ref2 hit2))
       (let-match erased g (MkBGlue _ _ _ g12 g21))
       (match erased (dec1 c1) _
-        ((InR _ _ nt1) (bks-sound h m cps ts bb T1 NT1 T2 NT2 s1 s2 (MkBGlue L T2 T1 g21 g12) a1 c1 cr1 nt1 ctu1 ctu2 gtu1 gtu2 n1 bs1 kv1 kv2))
+        ((InR _ _ nt1) (bks-sound h m ts T1 NT1 T2 NT2 s1 s2 (MkBGlue L T2 T1 g21 g12) a1 c1 cr1 nt1 ctu1 ctu2 gtu1 gtu2 n1 bs1 kv1 kv2))
         ((InL _ _ t1)
           (match erased (dec2 c2) _
             ((InL _ _ t2) (g12 c1 c2 rv t1 t2))
-            ((InR _ _ nt2) (bks-sound h m cps ts bb T2 NT2 T1 NT1 s2 s1 g p c2 cr2 nt2 ctu2 ctu1 gtu2 gtu1 n1 bs2 kv2 kv1))))))
-    ((erased bks-sound : (erased (Nat) h m) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts) (erased (BkBasis h m cps ts) bb)
-        (erased Pred T NT To NTo) (erased (BSide L h m T NT) s) (erased (BSide L h m To NTo) so) (erased (BGlue L To T) g)
+            ((InR _ _ nt2) (bks-sound h m ts T2 NT2 T1 NT1 s2 s1 g p c2 cr2 nt2 ctu2 ctu1 gtu2 gtu1 n1 bs2 kv2 kv1))))))
+    ((erased bks-sound : (erased (Nat) h m) (erased (List (Ctree)) ts)
+        (erased Pred T NT To NTo) (erased (BSide L h m ts T NT) s) (erased (BSide L h m ts To NTo) so) (erased (BGlue L To T) g)
         (erased (List (Col)) a c) (erased (Ctr (C0) a c) cr) (erased (Holds NT c) nt) (erased (Ctree) ctu cto) (erased (Gtree) gtu gto) (erased (Nat) n)
         (subterm erased (BKS h ts a ctu gtu cto gto n) bks) (erased (KV (MkPred (PredC) NT PermIn) h ctu (GEmpty) gtu) kv)
         (erased (KV (MkPred (PredC) NTo PermIn) h cto (GEmpty) gto) kvo) -> (erased (False) f))
@@ -375,9 +371,8 @@
         ((BKSBasis _ _ _ _ _ _ _ _ ctu3 gtu3 run bd)
           (let ((erased kv3)) (srun-kv NT h a c ctu ctu3 gtu gtu3 cr nt run kv))
           (let-match erased bd (MkBDisj _ _ t el dj))
-          (let ((erased cp) (erased bp)) (bb-elem h m cps ts t bb el))
-          (let-match erased s (MkBSide _ _ _ _ _ R cl dec ref hit))
-          (let ((erased et) (erased et2) (erased ct) (erased len) (erased e) (erased mt) (erased cr1) (erased tc)) (hit cp t bp))
+          (let-match erased s (MkBSide _ _ _ _ _ _ R cl dec ref hit))
+          (let ((erased et) (erased et2) (erased ct) (erased len) (erased e) (erased mt) (erased cr1) (erased tc)) (hit t el))
           (let ((erased k) (erased sb)) (sub-exists ctu3 et2))
           (let-match erased k (Zero) (absurd (Succ k1) (disj-mem ctu3 t et2 dj (MkCtMem ctu3 et2 k1 sb) mt)))
           (let ((erased kc)) (kempe-treeP-c Q h ctu3 (MkKSound Q h ctu3 (GEmpty) gtu3 kv3) et et2 ct len e sb cr1))
@@ -387,10 +382,11 @@
           (let-match erased cl (MkKClosed _ _ _ cpf _ _))
           (ref ct3 (cpf ct2 ct3 g3 ip pt ht) hn))
         ((BKSRec _ _ _ _ _ _ _ _ ctu3 gtu3 run bk)
-          (bk-sound h m cps ts bb To NTo T NT so s g cto ctu3 gto gtu3 n bk kvo (srun-kv NT h a c ctu ctu3 gtu gtu3 cr nt run kv))))))
-  (def-fns _ $ (erased bc-sound : (erased (Nat) h m) (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m T1 NT1) s1) (erased (BSide L h m T2 NT2) s2)
-      (erased (BGlue L T1 T2) g) (erased (BirkhoffCheck h m) bc) -> (erased (False) f))
-    (let-match erased bc (MkBirkhoffCheck _ _ n cps ts ctu gtu ce ge gc bb bk))
-    (bk-sound h m cps ts bb T1 NT1 T2 NT2 s1 s2 g ctu ctu gtu gtu n bk (KVBase (MkPred (PredC) NT1 PermIn) h ctu gtu ce ge gc)
+          (bk-sound h m ts To NTo T NT so s g cto ctu3 gto gtu3 n bk kvo (srun-kv NT h a c ctu ctu3 gtu gtu3 cr nt run kv))))))
+  (def-fns _ $ (erased bc-sound : (erased (Nat) h m n) (erased (List (Ctree)) ts) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
+      (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
+      (erased (BK h ts ctu gtu n ctu gtu) bk) (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m ts T1 NT1) s1) (erased (BSide L h m ts T2 NT2) s2)
+      (erased (BGlue L T1 T2) g) -> (erased (False) f))
+    (bk-sound h m ts T1 NT1 T2 NT2 s1 s2 g ctu ctu gtu gtu n bk (KVBase (MkPred (PredC) NT1 PermIn) h ctu gtu ce ge gc)
       (KVBase (MkPred (PredC) NT2 PermIn) h ctu gtu ce ge gc)))
   (values (level-of bc-sound) bc-sound))
