@@ -1246,6 +1246,20 @@
     (values z (perm-val d y z n ni pn pyz) (NotInCons z y _ nzy (NotInCons z x _ nzx (NotInNil z))))))
   (values y ly (NotInCons y ex _ nye (NotInCons y x _ nyx (NotInNil y)))))
 
+; A live bridge of the first contraction of the map gives a reduction (double-dart).
+(def-fns _ $ (erased bridge-reduces : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x ex) (erased (List (Nat)) e n f e2 n2 f2)
+    (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
+    (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
+    (erased (NoColoring e f) nc) (erased (CStep d x ex e n f (Nil (Nat)) e2 n2 f2) cs) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x (Nil (Nat))))) br)
+    -> (erased (Reduces B d e n f) r))
+  (let ((erased w) (erased y) (erased lw) (erased ow) (erased pwy) (erased bs)) (cs-bridge d x ex e n f (Nil _) e2 n2 f2 cs (lb-start d e n f hm bl) br))
+  (let-match erased ow (NotInCons _ _ _ nwe ow1))
+  (let-match erased ow1 (NotInCons _ _ _ nwx _))
+  (let-match erased cs (MkCStep _ _ _ m m2 u v _ _ _ _ e1 n1 f1 _ _ _ h g dd lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h1 h2 g2 em dd2 pu pv nb))
+  (match erased bs _
+    ((BSX _ _ _ _ _ a b) (double-dart B pb d w x y ex e n f bks hm gen bl pl cu cn nc pwy pex a b nwx))
+    ((BSE _ _ _ _ _ a b) (double-dart B pb d w ex y x e n f bks hm gen bl pl cu cn nc pwy pxe a b nwe))))
+
 ; contract_coloring for a contract of one dart x, with minimality as data: in a planar bridgeless plain cubic connected map
 ; that the search finds uncolourable, the contraction of x, or a reduction from a bridge of the contraction (double-dart).
 (def-fns _ $ (erased contract-one : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x ex) (erased (List (Nat)) e n f)
@@ -1259,20 +1273,128 @@
   (let ((erased y0) (erased ly) (erased oy)) (third-dart d x ex n ni pn cu lx))
   (let ((erased s)) (Cons (Nat) ex (Cons (Nat) x (Nil (Nat)))))
   (let ((erased ins)) (Cons (Nat) x (Cons (Nat) ex (Nil (Nat)))))
-  (match erased (ch-step d d x ex y0 e n f e n f (Nil _) ids ch0 lb0 lx (NotInNil x) pex ly oy) _
-    ((SRGo _ _ _ m2 _ _ _ _ _ _ _ e2 n2 f2 p2 ch2 lb2)
-      (let ((erased ixs)) (InThere x ex _ (InHere x (Nil _))))
-      (let ((erased ies)) (InHere ex (Cons (Nat) x (Nil (Nat)))))
+  (let-match erased (ch-step d d x ex y0 e n f e n f (Nil _) ids ch0 lb0 lx (NotInNil x) pex ly oy) (SRGo _ _ _ m2 _ _ _ _ _ _ _ e2 n2 f2 p2 ch2 lb2)
+    ((SRBridge _ _ _ _ _ _ _ _ _ _ e2 n2 f2 cs br) (COReduce B d e n f _ (bridge-reduces B pb d x ex e n f e2 n2 f2 bks hm gen bl pl cu cn nc cs br))))
+  (let ((erased ixs)) (InThere x ex _ (InHere x (Nil _))))
+  (let ((erased ies)) (InHere ex (Cons (Nat) x (Nil (Nat)))))
+  (let ((erased dl) (erased el) (erased nl) (erased fl) (erased ct))
+    (ch-contraction d m2 x e n f e2 n2 f2 s p2 (Cons _ x (Nil _)) ins ch2 lb2 (IECons e (Nil _) (Nil _) x ex pex (IENil e))
+      (HSubCons x _ s ixs (HSubCons ex _ s ies (HSubNil s))) (HSubCons ex _ ins (InThere ex x _ (InHere ex (Nil _))) (HSubCons x _ ins (InHere x _) (HSubNil ins)))
+      ixs lx))
+  (COContract B d e n f _ _ ct))
+
+; The dead darts are closed under e0.
+(def-fns _ $ (erased ch-closed : (erased (Nat) d m a b) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch)
+    (erased (In a s) ia) (erased (Nth (Nat) e0 a b) pab) -> (erased (In b s) r))
+  (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr) (absurd (CHNil _ _ _ _ ids io h g pl pc) ia))
+  (let ((erased ag) (erased pl) (erased le0)) (ch-agree d m1 e0 n0 f0 e1 n1 f1 s1 p1 ch1))
+  (let-match erased cs (MkCStep _ _ _ m3 m4 _ _ _ _ _ _ e3 n3 f3 _ _ _ h0 g0 dd0 lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h3 h2 g2 em3 dd3 _ _ nb))
+  (let ((erased b0) (erased pb0)) (nth-exists _ e0 d x le0 lx))
+  (let-match erased (nth-fn _ e1 x b0 ex (agree-at d x b0 e0 e1 s1 ag out pb0) pex) (Refl _ _))
+  (let ((erased pxe0) (erased _)) (plain-eq d x ex e0 pl lx pb0))
+  (match erased ia _
+    ((InHere _ _) (let-match erased (nth-fn _ e0 ex b x pab pxe0) (Refl _ _)) (InThere x ex _ (InHere x s1)))
+    ((InThere _ _ _ ia1)
+      (let-match erased ia1 (InThere _ _ _ ia2) ((InHere _ _) (let-match erased (nth-fn _ e0 x b ex pab pb0) (Refl _ _)) (InHere ex _)))
+      (InThere b ex _ (InThere b x s1 (ch-closed d m1 a b e0 n0 f0 e1 n1 f1 s1 p1 ch1 ia2 pab))))))
+
+; Each dart of xs is in a or in b.
+(def-adts $ (CoverIn : ((List (Nat)) xs a b) -> Type)
+  enum
+  (many CINil : (erased (List (Nat)) a b) -> (CoverIn (Nil (Nat)) a b))
+  (many CIA : (erased (List (Nat)) xs a b) (erased (Nat) x) (erased (In x a) ix) (erased (CoverIn xs a b) rest) -> (CoverIn (Cons (Nat) x xs) a b))
+  (many CIB : (erased (List (Nat)) xs a b) (erased (Nat) x) (erased (In x b) ix) (erased (CoverIn xs a b) rest) -> (CoverIn (Cons (Nat) x xs) a b)))
+
+(def-fns _ $ (erased cover-self : (subterm erased (List (Nat)) xs) (erased (List (Nat)) a) (erased (Sub xs a) sb) -> (erased (CoverIn xs (Nil (Nat)) a) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (CINil (Nil _) a)))
+  (let-match erased sb (HSubCons _ _ _ ix sb1))
+  (CIB xs1 (Nil _) a x ix (cover-self xs1 a sb1)))
+
+; Moving x and y, both in a2, from the front of b to a2 keeps a cover, when a is in a2.
+(def-fns _ $ (erased cover-move : (erased (List (Nat)) xs a a2 b) (erased (Nat) x y) (subterm erased (CoverIn xs a (Cons (Nat) x (Cons (Nat) y b))) cv) (erased (Sub a a2) sa)
+    (erased (In x a2) ix) (erased (In y a2) iy) -> (erased (CoverIn xs a2 b) r))
+  (let-match erased cv (CIB xs1 _ _ z iz cv1)
+    ((CINil _ _) (CINil a2 b))
+    ((CIA xs1 _ _ z iz cv1) (CIA xs1 a2 b z (sub-in a a2 z sa iz) (cover-move xs1 a a2 b x y cv1 sa ix iy))))
+  (let ((erased rest)) (cover-move xs1 a a2 b x y cv1 sa ix iy))
+  (let-match erased (nat-eq z x) (Unequal _ _ _ _ nzx) ((Equal _ _ _) (CIA xs1 a2 b z ix rest)))
+  (let-match erased (nat-eq z y) (Unequal _ _ _ _ nzy) ((Equal _ _ _) (CIA xs1 a2 b z iy rest)))
+  (CIB xs1 a2 b z (in-tail z y b (in-tail z x _ iz nzx) nzy) rest))
+
+(def-fns _ $ (erased cover-done : (erased (List (Nat)) xs a) (subterm erased (CoverIn xs a (Nil (Nat))) cv) -> (erased (Sub xs a) r))
+  (let-match erased cv (CIA xs1 _ _ z iz cv1) ((CINil _ _) (HSubNil a)) (absurd (CIB xs1 _ _ z iz cv1) iz))
+  (HSubCons z xs1 a iz (cover-done xs1 a cv1)))
+
+; The contractions of the darts of a contract, in turn, skipping darts already dead: either no live bridge arises, the
+; darts of ins all dead, or one arises at some step.
+(def-adts $ (RunRes : ((Nat) d) ((List (Nat)) e0 n0 f0 ins) -> Type)
+  enum
+  (many RRDone : (erased (Nat) d m) (erased (List (Nat)) e0 n0 f0 ins e n f s p) (erased (CHist d m e0 n0 f0 e n f s p) ch) (erased (LBridgeless d e f s) lb)
+      (erased (Sub ins s) si) (erased (Sub s ins) ss) -> (RunRes d e0 n0 f0 ins))
+  (many RRBridge : (erased (Nat) d m x ex) (erased (List (Nat)) e0 n0 f0 ins e n f s p e2 n2 f2) (erased (CHist d m e0 n0 f0 e n f s p) ch)
+      (erased (LBridgeless d e f s) lb) (erased (CStep d x ex e n f s e2 n2 f2) cs) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x s))) br)
+      -> (RunRes d e0 n0 f0 ins)))
+
+(def-fns _ $ (erased ch-run : (erased (Nat) d m y0) (erased (List (Nat)) e0 n0 f0 e n f s p cr ir ins) (erased (CHist d m e0 n0 f0 e n f s p) ch)
+    (erased (LBridgeless d e f s) lb) (subterm erased (InsertE e0 cr ir) ie) (erased (Sub s ins) ss) (erased (CoverIn ins s ir) cv) (erased (Sub ir ins) si)
+    (erased (Lt y0 d) ly) (erased (NotIn y0 s) oys) (erased (NotIn y0 ir) oyi) -> (erased (RunRes d e0 n0 f0 ins) r))
+  (let-match erased ie (IECons _ cr1 ir1 c ec pc ie1) ((IENil _) (RRDone d m e0 n0 f0 ins e n f s p ch lb (cover-done ins s cv) ss)))
+  (let-match erased si (HSubCons _ _ _ ic si1))
+  (let-match erased si1 (HSubCons _ _ _ iec si2))
+  (let-match erased oyi (NotInCons _ _ _ nyc oyi1))
+  (let-match erased oyi1 (NotInCons _ _ _ nye oyi2))
+  (let ((erased nf0) (erased ni0) (erased fi0) (erased rnf0) (erased pe0) (erased pn0) (erased pf0)) (hyper-core d e0 n0 f0 (ch-base d m e0 n0 f0 e n f s p ch)))
+  (let ((erased lc)) (pre-lt d c ec e0 nf0 pe0 pc))
+  (let-match erased (in-dec c s) (OrR _ _ oc)
+    ((OrL _ _ ics)
+      (let ((erased iecs)) (ch-closed d m c ec e0 n0 f0 e n f s p ch ics pc))
+      (ch-run d m y0 e0 n0 f0 e n f s p cr1 ir1 ins ch lb ie1 ss (cover-move ins s s ir1 c ec cv (sub-refl s) ics iecs) si2 ly oys oyi2)))
+  (let ((erased s2)) (Cons (Nat) ec (Cons (Nat) c s)))
+  (let ((erased oy2)) (NotInCons y0 ec _ nye (NotInCons y0 c s nyc oys)))
+  (let-match erased (ch-step d m c ec y0 e0 n0 f0 e n f s p ch lb lc oc pc ly oy2) (SRGo _ _ _ m2 _ _ _ _ _ _ _ e2 n2 f2 p2 ch2 lb2)
+    ((SRBridge _ _ _ _ _ _ _ _ _ _ e2 n2 f2 cs br) (RRBridge d m c ec e0 n0 f0 ins e n f s p e2 n2 f2 ch lb cs br)))
+  (let ((erased ic2)) (InThere c ec _ (InHere c s)))
+  (let ((erased iec2)) (InHere ec (Cons (Nat) c s)))
+  (ch-run d m2 y0 e0 n0 f0 e2 n2 f2 s2 p2 cr1 ir1 ins ch2 lb2 ie1 (HSubCons ec _ ins iec (HSubCons c _ ins ic ss))
+    (cover-move ins s s2 ir1 c ec cv (sub-cons ec s _ (sub-cons c s s (sub-refl s))) ic2 iec2) si2 ly oy2 oyi2))
+
+; contract_coloring of contract.v, as far as ported, with minimality as data: in a planar bridgeless plain cubic connected map
+; that the search finds uncolourable, a contract cc whose insertE ins is sparse gives the contraction of cc, or a reduction
+; from a bridge of its first contraction (double-dart), or a bridge arising after some contractions, the case Coq turns
+; into a contract ring of the map and refutes through Birkhoff (sparse_contract_ring to triad_valid), not ported here.
+(def-adts $ (ContractGo : ((Level) B) ((Nat) d) ((List (Nat)) e n f cx) -> Type)
+  enum
+  (many CGOut : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f cx) (erased (ContractOut B d e n f cx) co) -> (ContractGo B d e n f cx))
+  (many CGLater : (erased (Level) B) (erased (Nat) d m x ex z) (erased (List (Nat)) e n f cx e1 n1 f1 s p e2 n2 f2)
+      (erased (CHist d m e n f e1 n1 f1 (Cons (Nat) z s) p) ch) (erased (LBridgeless d e1 f1 (Cons (Nat) z s)) lb)
+      (erased (CStep d x ex e1 n1 f1 (Cons (Nat) z s) e2 n2 f2) cs) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x (Cons (Nat) z s)))) br)
+      -> (ContractGo B d e n f cx)))
+
+(def-fns _ $ (erased contract-go : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x0) (erased (List (Nat)) e n f cx cr ins)
+    (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
+    (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
+    (erased (NoColoring e f) nc) (erased (Eq (List (Nat)) cx (Cons (Nat) x0 cr)) ecx) (erased (InsertE e cx ins) ie) (erased (Simple n ins) sp)
+    -> (erased (ContractGo B d e n f cx) r))
+  (let-match erased ecx (Refl _ _))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f hm))
+  (let ((erased ie2)) ie)
+  (let-match erased ie2 (IECons _ _ ir1 _ ex0 pex0 ie3))
+  (let ((erased lx0)) (pre-lt d x0 ex0 e nf pe pex0))
+  (let ((erased y0) (erased pny) (erased ly)) (perm-nth d x0 n ni pn lx0))
+  (let ((erased zq) (erased pyz) (erased pzx) (erased nyx) (erased nzx)) (cubic-eq d x0 y0 n cu lx0 pny))
+  (let-match erased (in-dec y0 ins) (OrR _ _ oyi)
+    (absurd (OrL _ _ iyi) (let-match erased (simple-cface n ins x0 y0 sp (InHere x0 _) iyi (some-step n x0 y0 pny)) (Refl _ _)) (apart-irrefl x0 nyx)))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased lb0)) (lb-start d e n f hm bl))
+  (match erased (ch-run d d y0 e n f e n f (Nil _) ids cx ins ins (CHNil d e n f ids io hm gen pl (cubic-precubic d n cu)) lb0 ie (HSubNil ins)
+      (cover-self ins ins (sub-refl ins)) (sub-refl ins) ly (NotInNil y0) oyi) _
+    ((RRDone _ m _ _ _ _ e1 n1 f1 s p ch lb si ss)
       (let ((erased dl) (erased el) (erased nl) (erased fl) (erased ct))
-        (ch-contraction d m2 x e n f e2 n2 f2 s p2 (Cons _ x (Nil _)) ins ch2 lb2 (IECons e (Nil _) (Nil _) x ex pex (IENil e))
-          (HSubCons x _ s ixs (HSubCons ex _ s ies (HSubNil s))) (HSubCons ex _ ins (InThere ex x _ (InHere ex (Nil _))) (HSubCons x _ ins (InHere x _) (HSubNil ins)))
-          ixs lx))
-      (COContract B d e n f _ _ ct))
-    ((SRBridge _ _ _ _ _ _ _ _ _ _ e2 n2 f2 cs br)
-      (let ((erased w) (erased y) (erased lw) (erased ow) (erased pwy) (erased bs)) (cs-bridge d x ex e n f (Nil _) e2 n2 f2 cs lb0 br))
-      (let-match erased ow (NotInCons _ _ _ nwe ow1))
-      (let-match erased ow1 (NotInCons _ _ _ nwx _))
-      (let ((erased pxe) (erased _)) (plain-eq d x ex e pl lx pex))
-      (match erased bs _
-        ((BSX _ _ _ _ _ a b) (COReduce B d e n f _ (double-dart B pb d w x y ex e n f bks hm gen bl pl cu cn nc pwy pex a b nwx)))
-        ((BSE _ _ _ _ _ a b) (COReduce B d e n f _ (double-dart B pb d w ex y x e n f bks hm gen bl pl cu cn nc pwy pxe a b nwe)))))))
+        (ch-contraction d m x0 e n f e1 n1 f1 s p cx ins ch lb ie si ss (sub-in ins s x0 si (InHere x0 _)) lx0))
+      (CGOut B d e n f cx (COContract B d e n f cx _ ct)))
+    ((RRBridge _ m x ex _ _ _ _ e1 n1 f1 s p e2 n2 f2 ch lb cs br)
+      (let-match erased s (Cons _ z s1)
+        ((Nil _)
+          (let-match erased ch (CHNil _ _ _ _ _ _ _ _ _ _))
+          (CGOut B d e n f cx (COReduce B d e n f cx (bridge-reduces B pb d x ex e n f e2 n2 f2 bks hm gen bl pl cu cn nc cs br)))))
+      (CGLater B d m x ex z e n f cx e1 n1 f1 s1 p e2 n2 f2 ch lb cs br))))
