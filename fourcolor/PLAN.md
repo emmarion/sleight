@@ -238,6 +238,14 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   a planar map. Not done: cface_snipd as stated in Coq (only its direction
   from the disk map to the whole map, `face-push`), diskFC_face, the
   rotation lemmas of SnipRot, and the empty ring.
+- `revsnip.sl` (load after `snip.sl`): the start of a port of `revsnip.v`,
+  for plain maps (every edge orbit of size 2). Proved, as far as both
+  compilers check them: scycle_rev_ring (`rev-ring`: rev (map e r) is a
+  ring), mem_rev_ring (`rev-ring-in`, `ring-rev-in`), and, with `Proper`
+  for proper_ring, diskN_edge_ring (`disk-edge-ring`). Not done: the rest
+  of `revsnip.v`, from diskN_rev_ring and the chord rings to
+  ring_disk_closed, colorable_from_ring and ring_disk_chord, which
+  `birkhoff.v` uses.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with

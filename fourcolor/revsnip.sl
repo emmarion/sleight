@@ -78,8 +78,7 @@
   (let-match erased spa (MkSomePath _ _ wsa _ _ wa))
   (let-match erased spb (MkSomePath _ _ wsb _ _ wb))
   (let-match erased (simple-inj lab _ ls a2 b2 l rl dl (sub-in rr _ a2 srr (in2-in-left rr _ a2 a (in2-sym _ rr a a2 ia2)))
-    (sub-in rr _ b2 srr (in2-in-left rr _ b2 b (in2-sym _ rr b b2 ib2))) (path-label f lab (Nil _) wsa u a2 l wa rf pu) (path-label f lab (Nil _) wsb v b2 l wb rf pv))
-    (Refl _ _))
+    (sub-in rr _ b2 srr (in2-in-left rr _ b2 b (in2-sym _ rr b b2 ib2))) (path-label f lab (Nil _) wsa u a2 l wa rf pu) (path-label f lab (Nil _) wsb v b2 l wb rf pv)) (Refl _ _))
   (let-match erased (in2-fn rr _ a2 a b drr (in2-sym _ rr a a2 ia2) (in2-sym _ rr b a2 ib2)) (Refl _ _))
   (perm-inj d u v a e nf pe pa pb))
 
