@@ -118,7 +118,6 @@
     ((TgHF) (values (YW (KH) (MkAm (BFalse) c)) (EcHF c))) ((TgHT) (values (YW (KH) (MkAm (BTrue) c)) (EcHT c)))
     ((TgR) (values (YR c) (EcR c)))))
 
-; Rg ts ns i j x: cells i to j-1 of a tag buffer indexed by ts and a count array indexed by ns encode the list x.
 (def-adts
   ((Rg : ((List (U8)) ts) ((List (Copy (Nat))) ns) ((Nat) i) ((Nat) j) ((List (Sy)) x) -> Type)
     enum
@@ -203,7 +202,6 @@
   (let-match erased l1 (LtS _ _ la))
   (lt-le-trans q e cap la l2))
 
-; Writes cell q with tag t and count c in front of a range that starts at q+1.
 (def-fns _ $ (many wr-cons : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) q) (erased (Lt q cap) lq) (many (Tg) t) (many (Nat) c)
     (erased (Sy) s) (erased (Ecd s t c) e) (erased (Nat) j) (erased (List (Sy)) x) (erased (Rg ts ns (Succ q) j x) rg)
@@ -219,7 +217,6 @@
     (RgC ts2 ns2 q j s x t u c (setnth-nth _ ts q u ts2 st1) (setnth-nth _ ns q (MkCopy _ c) ns2 st2) cu e
       (rg-frn ts2 ns ns2 (Succ q) j q _ x (rg-frt ts ts2 ns (Succ q) j q u x rg st1 (lt-succ q)) st2 (lt-succ q)))))
 
-; The same for a tag that carries no count, leaving the count array alone.
 (def-fns _ $ (many wr-tag : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) q) (erased (Lt q cap) lq) (many (Tg) t) (erased (NoCnt t) nc)
     (erased (Sy) s) (erased (Nat) c) (erased (Ecd s t c) e) (erased (Nat) j) (erased (List (Sy)) x) (erased (Rg ts ns (Succ q) j x) rg)
@@ -240,7 +237,6 @@
     ((TgQG1) (Some _ (NcQG1))) ((TgQG2) (Some _ (NcQG2))) ((TgC) (Some _ (NcC))) ((TgE) (Some _ (NcE))) ((TgV) (Some _ (NcV)))
     (else (None _))))
 
-; wr-cons, leaving the count array alone for a tag that carries no count.
 (def-fns _ $ (many wr-any : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) q) (erased (Lt q cap) lq) (many (Tg) t) (many (Nat) c)
     (erased (Sy) s) (erased (Ecd s t c) e) (erased (Nat) j) (erased (List (Sy)) x) (erased (Rg ts ns (Succ q) j x) rg)
@@ -369,7 +365,6 @@
     (many XzNo : (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (erased (Nat) i j) (erased (List (Sy)) u) (erased (Nat) xs c)
        -> (XzA ts ns i j u xs c))))
 
-; xz-of over a range: a nonzero X count with no carry, followed by a D.
 (def-fns _ $ (many sw-xd : (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg)
     (many (Nat) i j) (erased (List (Sy)) u) (erased (Rg ts ns i j u) rg) (many (Nat) xs c) -> (unique tg is tg2 at tg) (many (XzA ts ns i j u xs c) r))
   (let-match many xs (Zero) ((Succ _) (values tg (XzNo _ _ _ _ _ _ _))))
@@ -381,7 +376,6 @@
   (let-match erased ec (EcQD _))
   (values tg1 (XzYes _ _ _ _ c1 u1)))
 
-; The stride of sw-of over cells i to j-1 of the a-buffers, written back to front into the b-buffers so that it ends at e.
 (def-fns _ $ (many sw-a : (erased (List (U8)) ats) (erased (List (Copy (Nat))) ans) (unique (Bytes ats) atg) (unique (Array (Copy (Nat)) ans) acn)
     (many (Nat) i j) (erased (List (Sy)) u) (subterm erased (Rg ats ans i j u) rg)
     (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
@@ -506,7 +500,6 @@
        (erased (Cat (Sy) x y z) c) (erased (Rg ts ns p j z) rg) -> (WlR ts ns j x y))
     (many WlNo : (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (erased (Nat) j) (erased (List (Sy)) x y) -> (WlR ts ns j x y))))
 
-; Writes x in front of the range e to j-1, which holds y.
 (def-fns _ $ (many wr-pre : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) e) (erased (Nat) j) (erased (Lt j (Succ cap)) le)
     (erased (List (Sy)) y) (erased (Rg ts ns e j y) rg) (subterm many (List (Sy)) x)
@@ -521,7 +514,6 @@
   (let ((erased ts2) (erased ns2) (unique bt2) (unique bc2) (erased l7) (erased l8) (erased rg2)) (wr-any cap ts1 ns1 bt1 bc1 l5 l6 q lq t c s ec j z0 rg0))
   (values ts2 ns2 bt2 bc2 l7 l8 (WlOk _ _ _ _ _ q _ (CatC (Sy) s x0 y z0 c0) rg2)))
 
-; Copies cells i to j-1 of the a-buffers, holding x, in front of the range e to k-1 of the b-buffers, holding y.
 (def-fns _ $ (many cp-pre : (erased (List (U8)) ats) (erased (List (Copy (Nat))) ans) (unique (Bytes ats) atg) (unique (Array (Copy (Nat)) ans) acn)
     (many (Nat) i j) (erased (List (Sy)) x) (subterm erased (Rg ats ans i j x) rx)
     (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
@@ -559,7 +551,6 @@
   (let-match many d (DaOk _ _ _ _ _ sp u1 t1 c1 r1 r2) ((DaNo _ _ _ _ _) (DaNo _ _ _ _ _)))
   (DaOk _ _ _ _ _ sp (Cons (Sy) s u1) t1 (CatC (Sy) s u1 _ x0 c1) (RgC ts ns i sp s u1 tg u c nt nn cu ec r1) r2))
 
-; dsplit over a range: the first D at or after offset k.
 (def-fns _ $ (many dsplit-a : (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (many (Nat) k i j) (erased (List (Sy)) x)
     (subterm erased (Rg ts ns i j x) rg) -> (unique bt is bt2 at bt) (many (DaR ts ns i j x) r))
   (let-match many (nat-eq i j) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values bt (DaNo _ _ _ _ _))))
@@ -610,12 +601,11 @@
   (many LaNo : (erased (Nat) cap) (unique (Sb cap) s0) (unique (Sb cap) s1) (unique (Sb cap) s2) -> (Lza cap))
   (many LaDead : (erased (Nat) cap) -> (Lza cap)))
 
-; A runner result from a list-side LsGo: the new window is written back into the window buffer.
 (def-fns _ $ (many la-of : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Mv) d9) (many (List (Sy)) l9 w9) (many (Zk) k9) (erased (Lz k9 d9 l9 w9) z9)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (unique (Sb cap) s1) (unique (Sb cap) s2) (many (Lzs) r)
     -> (unique (Lza cap) a))
-  (let-match many r (LsGo d l w k z nx) ((LsForce) (LaForce _ d9 l9 w9 (MkSb _ ts ns tg cn l1 l2) s1 s2 k9 z9)))
+  (let-match many r (LsGo d l w k z nx _) ((LsForce) (LaForce _ d9 l9 w9 (MkSb _ ts ns tg cn l1 l2) s1 s2 k9 z9)))
   (let ((erased ts2) (erased ns2) (unique tg2) (unique cn2) (erased l3) (erased l4) (many wn)) (wr-new cap ts ns tg cn l1 l2 e le w))
   (let-match many wn (WnOk _ _ _ _ p rg) ((WnNo _ _ _ _) (LaForce _ d l w (MkSb _ ts2 ns2 tg2 cn2 l3 l4) s1 s2 k z)))
   (LaGo _ d l ts2 ns2 tg2 cn2 l3 l4 p e le w rg s1 s2 k z nx))
@@ -629,7 +619,6 @@
   (many FdNo : (erased (Nat) cap e) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
      (unique (Sb cap) sc) -> (Fda cap e ts ns)))
 
-; The window is i to j-1; a stride writes its result into another buffer so that it ends at e.
 (def-fns _ $ (many lz-fold-a : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (List (Sy)) l)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) i j) (erased (List (Sy)) w) (erased (Rg ts ns i j w) rg)
@@ -660,7 +649,6 @@
   (let-match erased r2 (RgC _ _ _ _ _ _ _ _ _ _ _ _ _ r4))
   (rg-end ts ts2 ns ns2 (Succ i) j m w1 r3 r4))
 
-; Writes cell q at or above the end of a range, keeping the range.
 (def-fns _ $ (many wr-hi : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) q) (erased (Lt q cap) lq) (many (Tg) t) (many (Nat) c)
     (erased (Sy) s) (erased (Ecd s t c) e) (erased (Nat) i j) (erased (List (Sy)) w) (erased (Rg ts ns i j w) rg) (erased (Lt j (Succ q)) lj)
@@ -684,7 +672,6 @@
     (many WaNo : (erased (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (erased (Nat) i) (erased (List (Sy)) w x)
        (many (Nat) j) (erased (Lt j (Succ cap)) lj) (erased (Rg ts ns i j w) rg) -> (WaR cap ts ns i w x))))
 
-; Appends x after the range i to j-1, which holds w.
 (def-fns _ $ (many wr-app : (many (Nat) cap) (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) bt) (unique (Array (Copy (Nat)) ns) bc)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) j) (erased (Lt j (Succ cap)) lj)
     (erased (Nat) i) (erased (List (Sy)) w) (erased (Rg ts ns i j w) rg) (subterm many (List (Sy)) x)
@@ -731,7 +718,6 @@
   (let-match erased e (Refl _ _))
   (Some _ (Refl _ _)))
 
-; Whether a cell, with tag t and count c, holds the symbol p.
 (def-fns _ $ (many sy-is : (many (Tg) t) (erased (Nat) c) (many c is cv) (erased (Sy) s) (erased (Ecd s t c) e) (many (Sy) p) -> (many (Maybe (Eq (Sy) s p)) r))
   (match many t _
     ((TgQD) (let-match erased e (EcQD _)) (sy-f (QD) p)) ((TgQP) (let-match erased e (EcQP _)) (sy-f (QP) p))
@@ -793,7 +779,6 @@
   (let ((many g3) (erased o)) (orb-of g g2))
   (WsGo c0 ts ns cap e ts2 ns2 tg cn q1 q2 d2 l2 i2 w2 rg g3 (TRS c0 _ _ g g2 g3 tr s o)))
 
-; A rule: left side on the list, right side on the window; nothing is written unless it applies.
 (def-fns _ $ (many rule-w : (erased (Cf) c0) (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) eb)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) q1) (erased (Length (Copy (Nat)) ns cap) q2)
@@ -1088,13 +1073,13 @@
   (let ((unique tg1) (unique cn1) (many wl)) (rd-list ts ns tg cn i e w rg))
   (let-match many op (Succ op1) ((Zero) (LaForce _ d l wl (MkSb _ ts ns tg1 cn1 l1 l2) s1 s2 k z)))
   (let ((many r)) (match many op1 (((Lzs) r))
-    ((Zero) (lz-push d l wl k z nx))
+    ((Zero) (lz-push d l wl k z nx (BFalse)))
     ((Succ _)
       (let ((many c0)) (MkCf d l wl))
       (let ((many ac)) (AcOk c0 c0 (BFalse) (TRZ c0)))
       (match many d _
-        ((DR) (lz-simple d l wl k z nx (simple-r c0 ac l wl)))
-        ((DL) (lz-simple d l wl k z nx (simple-l c0 ac l wl)))))))
+        ((DR) (lz-simple d l wl k z nx (simple-r c0 ac l wl) (BFalse)))
+        ((DL) (lz-simple d l wl k z nx (simple-l c0 ac l wl) (BFalse)))))))
   (la-of cap e le d l wl k z ts ns tg1 cn1 l1 l2 s1 s2 r))
 
 (def-fns _ $ (many lz-push-a : (many (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Mv) d) (many (List (Sy)) l)
@@ -1113,7 +1098,6 @@
   (let-match erased p (NxC _ _ ns p1))
   (NxC a x1 ns (nx-pre x1 y z1 c1 p1)))
 
-; The list-side simple step on the window up to its first D at offset 5 or more, lifted by trun-fr.
 (def-fns _ $ (many pfx-simple : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) eb) (many (Mv) d) (many (List (Sy)) l)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) q1) (erased (Length (Copy (Nat)) ns cap) q2) (many (Nat) i) (erased (List (Sy)) w) (erased (Rg ts ns i e w) rg)
@@ -1152,7 +1136,6 @@
         ((BTrue) (pfx-simple cap e eb d l ts ns tg1 cn1 q1 q2 i w rg s1 s2 k z nx))))
     ((WsDead _ _ _ _ _) (LaDead _))))
 
-; The window is i to j-1; a stride writes its result into a spare buffer so that it ends at e.
 (def-fns _ $ (many lstep-a : (many (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Mv) d) (many (List (Sy)) l)
     (erased (List (U8)) ts) (erased (List (Copy (Nat))) ns) (unique (Bytes ts) tg) (unique (Array (Copy (Nat)) ns) cn)
     (erased (Length (U8) ts cap) l1) (erased (Length (Copy (Nat)) ns cap) l2) (many (Nat) i j) (erased (Lt j (Succ cap)) lj) (erased (List (Sy)) w) (erased (Rg ts ns i j w) rg)
@@ -1181,7 +1164,7 @@
 
 (def-fns _ $ (many lz-enter-a : (erased (Nat) cap) (many (Nat) e) (erased (Lt e (Succ cap)) le) (many (Cf) c) (erased (MRun sk1-blank c) mr)
     (unique (Sb cap) s0) (unique (Sb cap) s1) (unique (Sb cap) s2) -> (unique (Lza cap) a))
-  (let-match many (lz-enter c mr) (LsGo d l w k z nx) ((LsForce) (LaNo _ s0 s1 s2)))
+  (let-match many (lz-enter c mr) (LsGo d l w k z nx _) ((LsForce) (LaNo _ s0 s1 s2)))
   (let-match unique s0 (MkSb _ ts ns tg cn l1 l2))
   (let ((erased ts2) (erased ns2) (unique tg2) (unique cn2) (erased l3) (erased l4) (many wn)) (wr-new cap ts ns tg cn l1 l2 e le w))
   (let-match many wn (WnOk _ _ _ _ p rg) ((WnNo _ _ _ _) (LaNo _ (MkSb _ ts2 ns2 tg2 cn2 l3 l4) s1 s2)))
