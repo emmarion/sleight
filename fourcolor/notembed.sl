@@ -6,16 +6,12 @@
   (let-match erased p (CIECons _ cc1 ie1 y z pz p1) ((CIENil _) (IENil e)))
   (IECons e cc1 ie1 y z pz (ie-conv e cc1 ie1 p1)))
 
-(def-fns _ $ (erased under-nth : (erased (List (Nat)) ks) (erased (Nat) b i k) (subterm erased (Under ks b) u) (erased (Nth (Nat) ks i k) p) -> (erased (Lt k b) r))
-  (let-match erased u (UnderCons ks1 k0 _ l u1) (absurd (UnderNil _) p))
-  (match erased p _ ((NthHere _ _ _) l) ((NthThere _ _ _ i1 _ p1) (under-nth ks1 b i1 k u1 p1))))
-
 (def-fns _ $ (erased ie-under : (erased (Nat) d) (erased (List (Nat)) e cc ie) (subterm erased (InsertE e cc ie) p) (erased (Length (Nat) e d) le)
     (erased (Under e d) ue) -> (erased (Under cc d) u1) (erased (Under ie d) u2))
   (let-match erased p (IECons _ cc1 ie1 y z pz p1) ((IENil _) (values (UnderNil d) (UnderNil d))))
   (let ((erased u1) (erased u2)) (ie-under d e cc1 ie1 p1 le ue))
   (let ((erased ly)) (nth-lt-length _ e y d z pz le))
-  (values (UnderCons cc1 y d ly u1) (UnderCons (Cons _ z ie1) y d ly (UnderCons ie1 z d (under-nth e d y z ue pz) u2))))
+  (values (UnderCons cc1 y d ly u1) (UnderCons (Cons _ z ie1) y d ly (UnderCons ie1 z d (under-nth e y z d ue pz) u2))))
 
 (def-fns _ $ (erased inserte-exists : (erased (List (Nat)) e) (erased (Nat) d) (subterm erased (List (Nat)) cc) (erased (Under cc d) u) (erased (Length (Nat) e d) le)
     -> (erased (List (Nat)) ins) (erased (InsertE e cc ins) r))
@@ -38,12 +34,12 @@
   (ReachCons f ys1 xs1 y x (some-sym d x y f fi pf w lx) (reach-flip d f fi xs1 ys1 pf u1 rc1)))
 
 ; With h1 sending each face step along fm (Reach fm h1 h1f), A = h1 xs and B = h1 (f xs) are paired along fm.
-(def-fns _ $ (erased reach-map : (erased (List (Nat)) fm f h1 h1f xs ys A B) (subterm erased (Respects h1 xs A) ra) (erased (Respects f xs ys) ry)
+(def-fns _ $ (erased reach-step : (erased (List (Nat)) fm f h1 h1f xs ys A B) (subterm erased (Respects h1 xs A) ra) (erased (Respects f xs ys) ry)
     (erased (Respects h1 ys B) rb) (erased (Respects h1 f h1f) rf) (erased (Reach fm h1 h1f) rc) -> (erased (Reach fm A B) r))
   (let-match erased ra (RespCons _ xs1 A1 x u pu ra1) ((RespNil _) (let-match erased ry (RespNil _)) (let-match erased rb (RespNil _)) (ReachNil fm)))
   (let-match erased ry (RespCons _ _ ys1 _ y py ry1))
   (let-match erased rb (RespCons _ _ B1 _ v pv rb1))
-  (ReachCons fm A1 B1 u v (reach-at fm h1 h1f x u v rc pu (respects-at h1 f h1f x y v rf py pv)) (reach-map fm f h1 h1f xs1 ys1 A1 B1 ra1 ry1 rb1 rf rc)))
+  (ReachCons fm A1 B1 u v (reach-at fm h1 h1f x u v rc pu (respects-at h1 f h1f x y v rf py pv)) (reach-step fm f h1 h1f xs1 ys1 A1 B1 ra1 ry1 rb1 rf rc)))
 
 (def-fns _ $ (erased reach-unsnoc : (erased (List (Nat)) f X0 X Y0 Y) (erased (Nat) x y) (subterm erased (HSnoc (Nat) X0 x X) sx) (erased (HSnoc (Nat) Y0 y Y) sy)
     (erased (Reach f X Y) rc) -> (erased (Reach f X0 Y0) r0) (erased (SomePath f (Nil (Nat)) x y) w))
@@ -128,7 +124,7 @@
 
 ; A dart of ins is the image under hd of a disk dart off bd, so it is not in hr.
 (def-fns _ $ (erased ins-off : (erased (Nat) dc dm dd dr y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc h1 ins idc
-    ed nd fd er nr fr hd hr bd br embd)
+      ed nd fd er nr fr hd hr bd br embd)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (InsertE ec cc ie) iec) (erased (Under cc dc) uc)
     (erased (Under ie dc) uie) (erased (Disj ie rc) dj) (erased (Length (Nat) ec dc) le) (erased (Respects ec rc erc0) re)
     (erased (RevApp (Nat) erc0 (Nil (Nat)) erc) rv) (erased (Respects h1 ie ins) rie) (erased (Under h1 dm) uh) (erased (Iota dc idc) ioc)
@@ -138,7 +134,7 @@
   (let ((erased x) (erased ix) (erased px)) (respects-in h1 ie ins y rie iy))
   (let ((erased oe)) (ie-off-erc dc dm x ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc en ok iec uc dj le re rv ix))
   (let ((erased j) (erased pj)) (in-nth x ie ix))
-  (let-match erased (ieither-at rc embd idc x cv (iota-in dc x idc ioc (under-nth ie dc j x uie pj))) (OrR _ _ ie2)
+  (let-match erased (ieither-at rc embd idc x cv (iota-in dc x idc ioc (under-nth ie j x dc uie pj))) (OrR _ _ ie2)
     (absurd (OrL _ _ ir) (in-notin x rc ir (disj-notin x ie rc dj ix))))
   (let ((erased u) (erased pu)) (in-nth x embd ie2))
   (let ((erased ou))
@@ -149,13 +145,13 @@
         (let-match erased (nth-fn _ embd u x x2 pu p2) (Refl _ _))
         (in-notin x erc i2 oe))))
   (let ((erased phu)) (respects-at h1 embd hd u x y rh pu px))
-  (match erased (parts-at hd hr bd ids y pp (iota-in dm y ids io (under-nth h1 dm x y uh px))) _
+  (match erased (parts-at hd hr bd ids y pp (iota-in dm y ids io (under-nth h1 x y dm uh px))) _
     ((PtDisk _ _ _ _ xd px2 out outr) outr)
     (absurd (PtRing _ _ _ _ xd xr px2 pin pr) (let-match erased (distinct-nth hd xd u y dhd px2 phu) (Refl _ _)) (in-notin u bd pin ou))
     (absurd (PtRest _ _ _ _ xr pr outd) (in-notin y hd (nth-in hd u y phu) outd))))
 
 (def-fns _ $ (erased ins-hr : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc h1 ins idc
-    ed nd fd er nr fr hd hr bd br embd)
+      ed nd fd er nr fr hd hr bd br embd)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (InsertE ec cc ie) iec) (erased (Under cc dc) uc)
     (erased (Under ie dc) uie) (erased (Disj ie rc) dj) (erased (Length (Nat) ec dc) le) (erased (Respects ec rc erc0) re)
     (erased (RevApp (Nat) erc0 (Nil (Nat)) erc) rv) (erased (Respects h1 ie ins) rie) (erased (Under h1 dm) uh) (erased (Iota dc idc) ioc)
@@ -249,15 +245,17 @@
           (erased (Respects h1 cc ccr) rcc) -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
       -> (EmbedValid)))
 
-; The contraction step of contract_coloring of contract.v, with minimality as data, taken as a hypothesis: a valid contract
-; cc of a map as embed.v takes it gives contract.sl's Contraction, or the map reduces.
-(def-adts $ (ContractStep : -> Type)
+; The case of contract2.sl's contract-go left open, taken as a hypothesis: in a map as embed.v takes it, with a sparse
+; contract cx, a live bridge after the contractions of CGLater gives contract.sl's Contraction, or the map reduces.
+(def-adts $ (ContractLater : -> Type)
   enum
-  (many MkContractStep : (erased (Level) F B)
-      (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f ks cc) (erased (Pbpp d e n f) pb) (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn)
-          (erased (Geo d e n f ks) g) (erased (ValidContract e n f (Nil (Nat)) cc) vc)
-          -> (erased (List (Mp)) ms) (erased (HOr (Contraction d e n f cc ms) (Reduces B d e n f)) r)) cs)
-      -> (ContractStep)))
+  (many MkContractLater : (erased (Level) F B)
+      (erased (Fn F (erased (Nat) d m x ex z) (erased (List (Nat)) e n f ks cx ins e1 n1 f1 s p e2 n2 f2) (erased (Pbpp d e n f) pb)
+          (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (InsertE e cx ins) ie) (erased (Simple n ins) sp)
+          (erased (CHist d m e n f e1 n1 f1 (Cons (Nat) z s) p) ch) (erased (LBridgeless d e1 f1 (Cons (Nat) z s)) lb)
+          (erased (CStep d x ex e1 n1 f1 (Cons (Nat) z s) e2 n2 f2) cs) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x (Cons (Nat) z s)))) br)
+          -> (erased (ContractOut B d e n f cx) r)) cl)
+      -> (ContractLater)))
 
 ; What the glue of not-embed reads: the contraction, the embedding h1 with the patch, the contract, the rings and CRed.
 (def-adts $ (NeW : ((Nat) dw) ((List (Nat)) ew nw fw) ((List (Mp)) mw) -> Type)
@@ -283,8 +281,8 @@
 (def-lvl NW)
 (def-lvl NY)
 (def-lvl NK)
-(let ((erased pxk) (erased pyk) (erased pkl) (erased lv))
-  (values (prove-predates CRX NK) (prove-predates NY NK) (prove-predates KCA NL)
+(let ((erased pkl) (erased lv))
+  (values (prove-predates KCA NL)
     (MkCoLv NL NR NW NY (prove-predates COB NR) (prove-predates NL NR) (prove-predates NR NW) (prove-predates NW NY))))
 
 ; The glue: the colouring of the contracted map is a contract colouring k of the map (contraction-lift), k . h1 one of the
@@ -308,10 +306,10 @@
     (embed-contract-trace cp dm dc dr a fm k h1 hr ec fc p cc kc er fr R kr A B cm (MkCcColoring ec fc cc kc ie ke pi rf re ce u) cr2 rfk lk rkc rkr lh uh lhr
       ra rb rab))
   (let-match erased cr (MkCRed _ _ _ _ _ _ _ _ _ _ _ g))
-  (let-match erased (g (predates pxk) et ccol NL NY lv) (MkKCoclo _ _ _ _ fk))
+  (let-match erased (g et ccol NL NY lv) (MkKCoclo _ _ _ _ fk))
   (let ((erased ra0)) (MkRArgs dr er nr fr R))
   (let ((erased et2) (erased hq) (erased hp))
-    (fk (predates pyk) (MkPred (RArgs) ra0 RTP) (MkRel (RArgs) ra0 RKP) (kclosed-at NL pkl dr er nr fr R krg) (MkHolds (RArgs) ra0 RTP et (MkRTP dr er nr fr R et rt))))
+    (fk (MkPred (RArgs) ra0 RTP) (MkRel (RArgs) ra0 RKP) (kclosed-at NL pkl dr er nr fr R krg) (MkHolds (RArgs) ra0 RTP et (MkRTP dr er nr fr R et rt))))
   (let-match erased hq (MkHolds _ _ _ _ cpc))
   (let ((erased d3) (erased e3) (erased f3) (erased r3x) (erased cm3) (erased tc)) (cpcol-rt cp et2 cpc))
   (let-match erased (cpmap-fn cp dc d3 ec fc (Cons _ a p) e3 f3 r3x cm cm3) (Refl _ _))
@@ -319,3 +317,104 @@
   (let-match erased hp1 (MkRTP _ _ _ _ _ _ tr))
   (ne-finish dm dd dr dc a l em nm fm ed nd fd er nr fr hd hr bd br ec nc fc p embd q1 q2 q3 erc0 erc rs init et2 pt hc lem uem r1 rc1 r2 r3 rc2 reb rv rfs
     snp sn tc tr))
+
+(def-fns _ $ (erased co-lift : (erased (Level) Lo Hi) (erased (Nat) d) (erased (List (Nat)) e n f cx) (erased (ContractOut Lo d e n f cx) co)
+    (erased (Predates (Level) Lo Hi) p) -> (erased (ContractOut Hi d e n f cx) r))
+  (match erased co _
+    ((COContract _ _ _ _ _ _ ms ct) (COContract Hi d e n f cx ms ct))
+    ((COReduce _ _ _ _ _ _ rd) (COReduce Hi d e n f cx (reduces-lift Lo Hi d e n f rd p)))))
+
+; not_embed_reducible: a connected map (split-reduces) is embedded (embed-main) or reduces; the image of the contract is
+; valid (EmbedValid), its contraction (contract-go, ContractLater) reduces the map through ne-glue, or the map reduces.
+(def-fns _ $ (erased not-embed : (erased (List (Config)) cfs) (erased (BirkhoffChecks) bks) (erased (FullRed) frd) (erased (PatchOpen) po) (erased (GcFun cfs) gf)
+    (erased (EmbedValid) ev) (erased (ContractLater) ctl) -> (erased (NotEmbed CRX cfs) r))
+  (let-match erased gf (MkGcFun _ Fg gfn))
+  (let-match erased ev (MkEmbedValid Fv Bv evf))
+  (let-match erased ctl (MkContractLater Fc Bc clf))
+  (let ((erased Lr) (erased Br) (erased run)) (embed-main frd po))
+  (def-lvl B)
+  (let ((erased q1) (erased q2) (erased q3) (erased q4) (erased q5) (erased q6))
+    (values (prove-predates Br B) (prove-predates Bv B) (prove-predates Bc B) (prove-predates (level-of split-glue) B) (prove-predates NK B)
+      (prove-predates (level-of birk-glue) B)))
+  (def-fns _ $ (erased emb : (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
+      (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
+      (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol) (erased (Geo dm em nm fm ksm) g) (erased (Cpmap cp dc ec fc rc) c)
+      (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (KernelList dc fc rc as) kl)
+      (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed CRX cp cc) cr)
+      -> (erased (Reduces B dm em nm fm) r))
+    (let ((erased d1) (erased edm)) (lt-pos x0m dm lx))
+    (let-match erased edm (Refl _ _))
+    (let-match erased (split-reduces B q4 dm em nm fm pb (LtZ d1)) (OrL _ _ conn) ((OrR _ _ r) r))
+    (let-match erased pm (MkPointedMap _ _ _ _ _ hc cpr))
+    (let-match erased cpr (MkCpring _ p a y rp back dp))
+    (let ((erased en)) (MkEEnv dc ec nc fc ksc rc dm em nm fm ksm as hl hc ol kl g pe))
+    (let ((erased ok) (erased fu)) (gfn sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl m c en))
+    (let-match erased (run dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol conn) (OrR _ _ eo) ((OrL _ _ r) (reduces-lift Br B dm em nm fm r q1)))
+    (let-match erased eo (MkEmbedOut _ _ _ _ _ _ _ _ _ _ _ _ _ ids h1 io el lh uh fa me mn ep))
+    (let-match erased ep (MkEmbedPatch _ _ dd dr _ _ _ _ _ _ _ ed nd fd er nr fr hd hr bd br embd q1e q2e q3e erc0 erc h1f idc pt lem uem r1 rc1 r2 r3 rc2 re rv reb rh
+      rf1 rcf ioc cv))
+    (let ((erased cr0)) cr)
+    (let-match erased cr0 (MkCRed _ _ _ d2 e2 n2 f2 r2x c2 h2 v g2))
+    (let-match erased (cpmap-fn cp dc d2 ec fc rc e2 f2 r2x c c2) (Refl _ _))
+    (let-match erased (hyper-node-unique dc ec nc fc n2 hc h2) (Refl _ _))
+    (let-match erased v (MkValidContract _ _ _ _ _ ie pi off sp sz))
+    (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
+    (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core dc ec nc fc hc))
+    (let ((erased iec)) (ie-conv ec cc ie pi))
+    (let ((erased uc) (erased uie)) (ie-under dc ec cc ie iec le (perm-under dc ec nf pme)))
+    (let ((erased ccr) (erased rcc)) (respects-exists h1 cc dc uc lh))
+    (let-match erased (evf dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ccr en ok fu fa io el lh pb ncol conn v rcc) (OrL _ _ vm)
+      ((OrR _ _ r) (reduces-lift Bv B dm em nm fm r q2)))
+    (let-match erased pb (MkPbpp _ _ _ _ hm gen bl pl pc))
+    (let-match erased g (MkGeo _ _ _ _ _ hg pe2 cu olg pag))
+    (let ((erased lem2) (erased lnm) (erased lfm)) (hyper-lengths dm em nm fm hm))
+    (let ((erased nfm) (erased nim) (erased fim) (erased rnfm) (erased pmem) (erased pmnm) (erased pmfm)) (hyper-core dm em nm fm hm))
+    (let ((erased ins) (erased iem)) (inserte-exists em dm ccr (respects-under-vals h1 cc ccr dm rcc uh) lem2))
+    (let-match erased vm (MkValidContract _ _ _ _ _ iev piv offv spv szv))
+    (let-match erased (ccins-fn em ccr iev ins (ie-conv em ccr iev piv) iem) (Refl _ _))
+    (unary 4)
+    (let-match erased ccr (Cons _ x0 cr1)
+      (absurd (Nil _) (match erased szv _ (absurd (CsSmall _ _ _ _ _ k lk lo hi) (let-match erased lk (LengthNil _)) lo) (absurd (CsTriad _ _ _ _ _ x lk kx t) lk))))
+    (let ((erased co))
+      (match erased (contract-go B q6 dm x0 em nm fm ccr cr1 ins bks hm gen bl pl cu conn ncol (Refl _ ccr) iem spv) (((ContractOut B dm em nm fm ccr) co))
+        ((CGOut _ _ _ _ _ _ co) co)
+        ((CGLater _ _ m x ex z _ _ _ _ e1 n1 f1 s p1 e2 n2 f2 ch lb cs br)
+          (co-lift Bc B dm em nm fm ccr (clf dm m x ex z em nm fm ksm ccr ins e1 n1 f1 s p1 e2 n2 f2 pb ncol conn g iem spv ch lb cs br) q3))))
+    (let-match erased co (COContract _ _ _ _ _ _ ms ct) ((COReduce _ _ _ _ _ _ rd) rd))
+    (let ((erased dj0)) (disj-sym rc ie off ie (sub-refl ie)))
+    (let ((erased sd)) (ins-sides dc dm (Zero) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins (Nil _) en ok fu fa io el lh iec rcc iem dj0 uc h1 (AppNil h1)
+      (LengthNil _)))
+    (let ((erased Px) (erased Hx) (erased q) (erased rpx) (erased rhx) (erased rq1) (erased rq2)) (morph-lists h1 ec em ids me))
+    (let-match erased (respects-fn ec ids Px ec rpx (respects-id-right dc ids ec io le)) (Refl _ _))
+    (let-match erased (respects-fn h1 ids Hx h1 rhx (respects-id-right dc ids h1 io lh)) (Refl _ _))
+    (let ((erased fe) (erased rfe) (erased pmfe)) (hyper-fe dc ec nc fc hc))
+    (let ((erased erc1) (erased rs) (erased re1) (erased snp) (erased rfs)) (ring-fe dc a y a ec nc fc fe p rfe (perm-sym dc fe nc pmfe) le rp back))
+    (let-match erased (respects-fn ec rc erc1 erc0 re1 re) (Refl _ _))
+    (let ((erased pt2)) pt)
+    (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids2 idd idr bG bGr hpm hd2 hr2 iom iod ior lhd lhr dhd dhr uhd uhr cyd sdd cyr dbr rbd rbr rvp pp
+      med mnd mer mnr))
+    (let ((erased yr) (erased ry) (erased rhe0))
+      (respects-revapp h1 erc (Nil _) erc0 bG (Nil _) (resp-comp h1 embd hd bd erc bG rh reb rbd) (RespNil h1) (revapp-flip (Nat) erc0 (Nil _) erc erc0 rv (RANil _ erc0))))
+    (let-match erased (revapp-fn (Nat) bG (Nil _) yr bGr ry rvp) (Refl _ _))
+    (let ((erased Hrs) (erased rhrs)) (respects-exists h1 rs dc (respects-under-vals fc erc0 rs dc rfs (perm-under dc fc fi pmf)) lh))
+    (let ((erased rch)) (reach-step fm fc h1 h1f erc0 rs bGr Hrs rhe0 rfs rhrs rf1 rcf))
+    (let-match erased br (Cons _ b0 B0)
+      (absurd (Nil _) (let-match erased rbr (RespNil _)) (let-match erased rch (ReachNil _)) (let-match erased rhrs (RespNil _)) snp))
+    (let ((erased init) (erased l) (erased sn) (erased krg)) (rem-kempe dm dd dr b0 em nm fm ed nd fd er nr fr hd hr bd B0 pt gen pl cu))
+    (let ((erased Hi) (erased hl1) (erased shi) (erased rhi) (erased phl)) (respects-unsnoc hr init br bGr l sn rbr))
+    (let ((erased Hp) (erased ha) (erased shp) (erased rhp) (erased pha)) (respects-unsnoc h1 p rs Hrs a snp rhrs))
+    (let ((erased r0) (erased w0)) (reach-unsnoc fm Hi bGr Hp Hrs hl1 ha shi shp rch))
+    (let ((erased rab))
+      (reach-flip dm fm fim (Cons _ hl1 Hi) (Cons _ ha Hp) pmfm
+        (respects-under-vals hr (Cons _ l init) (Cons _ hl1 Hi) dm (RespCons hr init Hi l hl1 phl rhi) uhr) (ReachCons fm Hi Hp hl1 ha w0 r0)))
+    (let ((erased rie)) (ins-map dc ec em h1 ids cc ie ccr ins iec rcc iem me io le))
+    (let ((erased dj))
+      (disj-sym ins hr (ins-hr dc dm dd dr ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc h1 ins idc ed nd fd er nr fr hd hr bd br embd en ok iec uc uie dj0 le re
+        rv rie uh ioc cv reb rh pt ins (sub-refl ins)) hr (sub-refl hr)))
+    (MkReduces B dm em nm fm ms (contraction-smaller dm em nm fm ccr ms ct)
+      (MkColorFrom B NK dm em nm fm ms NeW
+        (MkNeW dm dc dd dr a l em nm fm ec nc fc p cc ie ccr ins h1 q h1f ed nd fd er nr fr hd hr bd br embd q1e q2e q3e erc0 erc rs init (Cons _ ha Hp)
+          (Cons _ hl1 Hi) cp ms ct hc iem (perm-under dm em nfm pmem) rq1 rq2 rf1 rcf lh uh sd pi c (RespCons h1 p Hp a ha pha rhp) (RespCons hr init Hi l hl1 phl rhi)
+          rab pt dj cr krg sn lem uem r1 rc1 r2 r3 rc2 reb rv rfs snp)
+        q5 ne-glue)))
+  (MkNotEmbed CRX cfs (level-of emb) B emb))
