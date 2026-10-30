@@ -273,3 +273,19 @@
           (let-match erased (lapp-fn _ x0 (Nil _) u x0 xm (lapp-nil _ x0)) (Refl _ _))
           (cut-head d0 x0 u v (Nil _) fl1 gs1 (lapp-nil _ u) (LAppNil _ fl1) gf1 (LeadNil (Nil _)))))
       (cut-cons d0 x0 u v m gs1 xm (group-split gs2 d1 x1 m v fl1 gf1 mv)))))
+
+(def-fns _ $ (erased app-snoc : (erased Type A) (erased (List A) a b c c2) (erased A h) (subterm erased (LApp A a b c) p)
+    (erased (Snoc A c h c2) s) -> (erased (List A) b2) (erased (Snoc A b h b2) s2) (erased (LApp A a b2 c2) p2))
+  (let-match erased p (LAppCons _ x a1 _ c1 p1) ((LAppNil _ _) (values c2 s (LAppNil _ c2))))
+  (let-match erased s (SnocCons _ _ _ _ c3 s1))
+  (let ((erased b2) (erased s2) (erased p2)) (app-snoc _ a1 b c1 c3 h p1 s1))
+  (values b2 s2 (LAppCons _ x a1 b2 c3 p2)))
+
+(def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) a ah b c) (erased A h) (subterm erased (Snoc A a h ah) s)
+    (erased (LApp A ah b c) p) -> (erased (LApp A a (Cons A h b) c) r))
+  (match erased s _
+    ((SnocNil _ _) (let-match erased p (LAppCons _ _ _ _ c1 p1)) (let-match erased p1 (LAppNil _ _)) (LAppNil _ c))
+    ((SnocCons _ x _ a1 ah1 s1)
+      (let-match erased p (LAppCons _ _ _ _ c1 p1))
+      (LAppCons _ x a1 (Cons _ h b) c1 (snoc-app _ a1 ah1 b c1 h s1 p1)))))
+
