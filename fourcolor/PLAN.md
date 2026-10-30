@@ -316,3 +316,38 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `--goal proved` passed in about a minute. That `redpart` holds of the
   lists in `Unav` rests on that run, not on the type, and `redpart`
   and the quiz tree are unverified.
+- `unav/qfit.sl`, `rdart.sl`, `redc.sl`, `qztgoal.sl` (load after
+  `unav.sl` and `data.sl`, in that order): a certified redpart.
+  `qfit.sl` states fitq and qzt_fit of `quiz.v` and `quiztree.v` on the
+  hypermaps of `hypermap.sl` (`QztFit`, `HasFit`). `rdart.sl` names the
+  darts around a hub by a face (hub, spoke, hat or fan of a sector) and
+  a number of face steps from or back to that face's base dart, and
+  reads edge off a table of base darts or through the identities
+  e = f e f e f and e = f' e f' e f' (f' the inverse of face), which
+  `e-rot-a` and `e-rot-b` prove for plain cubic maps. `redc.sl`'s
+  `redp-c` follows redpart.v's search (the hub, hat and fan nodes of
+  each sector, a leaf of the quiz tree fitting the range tops, then the
+  part narrowed at every tested range) and returns evidence `RedD qt p`;
+  `red-sound` turns it into the contrapositive of no_fit_redpart: a dart
+  fitting p exactly in a plain cubic pentagonal map gives a dart where
+  qt fits. It is a new search on these names, not a port of redpart.v's
+  zippers, and a tested range is narrowed to its top for the rest of the
+  walk. `qztgoal.sl` sets and proves the goal `UnavQ qt` for `qt` the
+  tree `the-quiz-tree` builds from `red/configs.sl`: every plain cubic
+  connected pentagonal map of genus 0 has a dart where `qt` fits. One
+  compiled run does the walks, the cap checks and `redp-c` on all
+  335,058 obligations; in one run on a 4-core cloud VM `--goal proved`
+  passed in about 160 s with slc and in about 180 s with the reference
+  `main.exe`, of which about 25 s seem to be the evaluator building the
+  tree; the reference's native build of the run hit a stack overflow in
+  the OCaml compiler under the default stack limit and passed under
+  `ulimit -s unlimited`, perhaps because the tree is embedded as a
+  constant. Load order: that of `unavgoal.sl` (`std/macro.sl std/nat.sl
+  std/list.sl ring.sl`, `base` to `hypcubic`, `colalias.sl
+  unav/faces.sl red/red.sl red/configs.sl`, then `unav/` `part quiz
+  redpart hubcap present fit dbound hubcapc obsmap dscore dsum posz
+  pwalk hubsound pwsound conv cap unav data`), then `unav/qfit.sl
+  rdart.sl redc.sl qztgoal.sl` with `--goal proved`. `the-quiz-tree` (`quiz.sl`, an unverified
+  port of cfquiz.v and quiztree.v) is trusted only for what tree it
+  builds: nothing yet says that a fit of it means a configuration is
+  there (qzt_fit_cfquiz and the embedding are open).
