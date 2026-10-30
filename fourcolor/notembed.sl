@@ -1,6 +1,6 @@
-; not_embed_reducible of embed.v with minimality as data: embed.sl's NotEmbed CRX cfs, from embed5.sl's FullRed and
-; PatchOpen and three open steps taken as hypotheses (GcFun, EmbedValid, ContractStep). Load after embed5.sl, with
-; iealias.sl loaded after red/cfred.sl. That these statements match Coq's has been checked only by reading.
+; not_embed_reducible of embed.v with minimality as data: embed.sl's NotEmbed CRX cfs, from embed5.sl's FullRedR,
+; embed6.sl's patch-open and three open steps taken as hypotheses (CfCerts, EmbedValid, ContractLater). Load after embed6.sl,
+; with iealias.sl loaded after red/cfred.sl. That these statements match Coq's has been checked only by reading.
 
 (def-fns _ $ (erased ie-conv : (erased (List (Nat)) e cc ie) (subterm erased (CInsertE e cc ie) p) -> (erased (InsertE e cc ie) r))
   (let-match erased p (CIECons _ cc1 ie1 y z pz p1) ((CIENil _) (IENil e)))
@@ -224,14 +224,16 @@
   (embed-color dm dd dr dc em nm fm ed nd fd er nr fr hd hr bd br ec fc kc embd q1 q2 q3 erc lce cse w et3 pt col le (respects-length kc fc kc dc rf lf)
     (perm-under dc ec nf pme) lem uem r1 rc1 r2 r3 rc2 reb rle coe (trace-rev csr cse et3 w t3 rvc rrw) (rotrev-sym et3 w rrw) tr4))
 
-; embed4.sl's GcOK and FunctorAll for a configuration of cfs, taken as a hypothesis: a function at a level F.
-(def-adts $ (GcFun : ((List (Config)) cfs) -> Type)
+; The certificates of a configuration of cfs, taken as a hypothesis: embed4.sl's GcOK and FunctorAll, and embed5.sl's
+; NodeRing and Radius2. A function at a level F.
+(def-adts $ (CfCerts : ((List (Config)) cfs) -> Type)
   enum
-  (many MkGcFun : (erased (List (Config)) cfs) (erased (Level) F)
+  (many MkCfCerts : (erased (List (Config)) cfs) (erased (Level) F)
       (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
           (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
-          (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)) gc)
-      -> (GcFun cfs)))
+          (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
+          (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)) gc)
+      -> (CfCerts cfs)))
 
 ; embed_valid_contract of embed.v, with minimality as data, taken as a hypothesis: the image ccr = map h1 cc of a valid
 ; contract of the configuration is a valid contract of the map (for the empty ring), or the map reduces.
@@ -326,12 +328,12 @@
 
 ; not_embed_reducible: a connected map (split-reduces) is embedded (embed-main) or reduces; the image of the contract is
 ; valid (EmbedValid), its contraction (contract-go, ContractLater) reduces the map through ne-glue, or the map reduces.
-(def-fns _ $ (erased not-embed : (erased (List (Config)) cfs) (erased (BirkhoffChecks) bks) (erased (FullRed) frd) (erased (PatchOpen) po) (erased (GcFun cfs) gf)
+(def-fns _ $ (erased not-embed : (erased (List (Config)) cfs) (erased (BirkhoffChecks) bks) (erased (FullRedR) frd) (erased (CfCerts cfs) gf)
     (erased (EmbedValid) ev) (erased (ContractLater) ctl) -> (erased (NotEmbed CRX cfs) r))
-  (let-match erased gf (MkGcFun _ Fg gfn))
+  (let-match erased gf (MkCfCerts _ Fg gfn))
   (let-match erased ev (MkEmbedValid Fv Bv evf))
   (let-match erased ctl (MkContractLater Fc Bc clf))
-  (let ((erased Lr) (erased Br) (erased run)) (embed-main frd po))
+  (let ((erased Lr) (erased Br) (erased run)) (embed-main frd (patch-open)))
   (def-lvl B)
   (let ((erased q1) (erased q2) (erased q3) (erased q4) (erased q5) (erased q6))
     (values (prove-predates Br B) (prove-predates Bv B) (prove-predates Bc B) (prove-predates (level-of split-glue) B) (prove-predates NK B)
@@ -348,8 +350,8 @@
     (let-match erased pm (MkPointedMap _ _ _ _ _ hc cpr))
     (let-match erased cpr (MkCpring _ p a y rp back dp))
     (let ((erased en)) (MkEEnv dc ec nc fc ksc rc dm em nm fm ksm as hl hc ol kl g pe))
-    (let ((erased ok) (erased fu)) (gfn sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl m c en))
-    (let-match erased (run dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol conn) (OrR _ _ eo) ((OrL _ _ r) (reduces-lift Br B dm em nm fm r q1)))
+    (let ((erased ok) (erased fu) (erased nr) (erased rd)) (gfn sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl m c en))
+    (let-match erased (run dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu nr rd pb ncol conn) (OrR _ _ eo) ((OrL _ _ r) (reduces-lift Br B dm em nm fm r q1)))
     (let-match erased eo (MkEmbedOut _ _ _ _ _ _ _ _ _ _ _ _ _ ids h1 io el lh uh fa me mn ep))
     (let-match erased ep (MkEmbedPatch _ _ dd dr _ _ _ _ _ _ _ ed nd fd er nr fr hd hr bd br embd q1e q2e q3e erc0 erc h1f idc pt lem uem r1 rc1 r2 r3 rc2 re rv reb rh
       rf1 rcf ioc cv))
