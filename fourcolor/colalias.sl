@@ -5,3 +5,5 @@
 (let ((erased HSnoc)) Snoc)
 (let ((erased hsnoc-fn)) snoc-fn)
 (let ((erased hperm-comp)) perm-comp)
+(let ((erased HAppNil)) AppNil)
+(let ((erased HAppCons)) AppCons)

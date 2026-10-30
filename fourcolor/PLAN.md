@@ -380,6 +380,43 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   grestrict crestrict kempe bridge gramrot`, then `ringtrace kempemap patch
   sew patch2 snip revsnip revsnip2 srcycle ringdec geomring revsnip3
   cpgeom` (each `.sl`).
+- `embed.sl`, `embedgoal.sl` (load after `unav/unave.sl`, in the
+  chain below): present.v's use of unavoidability and reducibility,
+  as far as both compilers check it. `no-mce` is a level factory: from
+  `UnavE cfs`, `AllRedC css` with `ConcatL css cfs` (css concatenated;
+  `concat-c` computes it with its evidence), and two open steps, each a
+  level factory taken as a hypothesis, it gives for any levels L1 and
+  L2 a function sending every `MinimalCounterExample L1 L2` to `False`.
+  The open steps: `BirkGeo`, birkhoff.v's
+  minimal_counter_example_is_plain_cubic_pentagonal (a minimal
+  counterexample is a `Geo`; its cubic part is coloring.v's
+  minimal_counter_example_is_cubic, not ported either), and `NotEmbed
+  cfs`, embed.v's not_embed_reducible for the configurations of cfs, in
+  the terms `CfEmbed` uses, with `CRed` for C_reducible; it leaves open
+  all of embed.v, contract.v's contract_coloring, which embed.v uses,
+  and Coq's embeddable for the configuration maps. Proved:
+  minimal_counter_example_mirror (`mce-mirror`, a level factory, for
+  the mirror that `MapOrMirror` names, through `perm-unique` and
+  `unav/qmirror.sl`'s `plain-mirror`), `allred-concat` and
+  `reducible-mem`; the connectedness comes from `patch2.sl`'s
+  `mce-connected`. `embedgoal.sl` sets `no-mce`'s type as a goal. The
+  chain, both compilers (with `--goal proved`, about 1 and 2 minutes in
+  one run each): `std/macro.sl std/nat.sl std/list.sl ring.sl`, `base`
+  to `hypcubic`, `cube coloring cfmap colalias hypsub unav/faces`, the
+  red chain from `red/red` to `red/ccheck` in the order of the `red/`
+  entry above, `realias ringtrace kempemap patch patch2 unav/realias`,
+  then `unav/` `part` to `qmirror` as in the entry above, `unave`, and
+  `embed.sl embedgoal.sl`. `realias.sl` and `unav/realias.sl` put back
+  names that a later file of the chain defines again (hypcount.sl's
+  `AppN` constructors, base.sl's `Or`); `colalias.sl` keeps the former.
+  Not done: the step from `no-mce` to the four-colouring function
+  `CubicReduction` asks for. Coq's four_color_hypermap inducts on the
+  number of darts; here the minimality function of a
+  `MinimalCounterExample` would call the induction, which would call
+  the function `no-mce`'s factory returns at a level created after the
+  minimality function's, so the levels of §17 appear to rule out that
+  shape of proof. How to state minimality so that the induction can be
+  written is an open question.
 - Still open: the rest of part B. `birkhoff.v` appears to need, from a reading of its proofs,
   Birkhoff_valid itself, which would build the two `BSide`s and the
   `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
@@ -538,10 +575,11 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
   dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
-  qmirror.sl qztgoal.sl` with `--goal proved`. Not done: embed.v (from
-  the preembedding to an embedding), the radius and ring-arity checks
-  of embeddable that cfquiz.v also makes, and the contradiction with
-  C-reducibility, which would also need `red/goal-c.sl`'s `AllRedC` on
-  the same configurations and the mirror of a minimal counterexample.
+  qmirror.sl unave.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
+  `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
+  without the goal). Not done: embed.v (from the preembedding to an
+  embedding), the radius and ring-arity checks of embeddable that
+  cfquiz.v also makes, and the contradiction with C-reducibility; how
+  `embed.sl` puts the rest together is in its entry below.
   Whether `Preembedding`, `KernelList` and the mirror match Coq's has
   been checked only by reading.

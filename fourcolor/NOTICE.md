@@ -55,9 +55,11 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   `birkhoff.v`), and the
   certified files in `unav/` (`part.v`, `discharge.v`, `hubcap.v`,
   and for `qfit.sl`, `rdart.sl`, `redc.sl`, `qwalk.sl`, `qembed.sl`,
-  `qcert.sl`, `qtree.sl`, `qmirror.sl` and `qztgoal.sl`, `quiz.v`,
+  `qcert.sl`, `qtree.sl`, `qmirror.sl`, `unave.sl` and `qztgoal.sl`, `quiz.v`,
   `cfquiz.v`, `quiztree.v`, `coloring.v`, `redpart.v` and
-  `unavoidability.v`).
+  `unavoidability.v`), and `embed.sl` (`present.v`, `coloring.v`, and
+  the statements of `birkhoff.v` and `embed.v` that it takes as
+  hypotheses).
   Where a Sleight file follows a Coq file, its comments or the commit
   that added it usually name the Coq file; this list is reconstructed
   from those and may be incomplete.
