@@ -636,3 +636,37 @@
       (glue-ring d x0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 c2 c1 hm cn nce br rv td1 td2)))
   (bcs h m n0 ts ctu gtu ce ge gc bk T1 _ T2 _ (mk-side d x0 dd1 h m e n f p ed1 nd1 fd1 bd1 ts ms1 h1 lr n1 c1 R1 cl1)
     (mk-side d y0 dd2 h m e n f Q ed2 nd2 fd2 bd2 ts ms2 h2 lr2 n2 c2 R2 cl2) (MkBGlue BL T1 T2 g12 g21)))
+
+; A ring of a bridgeless map has at least two darts.
+(def-fns _ $ (erased ring-two : (erased (Nat) d x0 k) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Bridgeless d e n f) bl)
+    (erased (Ring e f x0 p) rg) (erased (Length (Nat) (Cons (Nat) x0 p) k) l) -> (erased (Lt (Succ (Zero)) k) r))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (let-match erased l1 (LengthCons _ _ _ k2 _)
+    (absurd (LengthNil _)
+      (let-match erased rg (MkRing _ _ _ _ y ey rp pe w sm))
+      (let-match erased rp (RPNil _ _ _))
+      (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+      (let-match erased (some-sym d ey x0 f fi pmf w (perm-val d x0 ey e nf pme pe)) (MkSomePath _ _ ws _ _ wb))
+      (bridgeless-face d x0 ey e n f (Nil _) ws bl pe wb)))
+  (LtS (Zero) (Succ k2) (LtZ k2)))
+
+; The m of the Birkhoff theorem for rings of k darts: 1 for k = 5, 0 below.
+(def-adts $ (BkMode : ((Nat) k m) -> Type)
+  enum
+  (many BMLow : (erased (Nat) k) (erased (Lt k (Succ (Succ (Succ (Succ (Succ (Zero))))))) l) -> (BkMode k (Zero)))
+  (many BMFive : -> (BkMode (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Zero)))))
+
+; The Birkhoff theorem of birkhoff.v reads its check for a ring of 2 to 5 darts off the four checks.
+(def-fns _ $ (erased birkhoff-check-at : (erased (Nat) k) (erased (BirkhoffChecks) bcs) (erased (Lt (Succ (Zero)) k) l1) (erased (Lt k 6) l6)
+    -> (erased (Nat) h m) (erased (Eq (Nat) k (Succ (Succ h))) eq) (erased (BirkhoffCheck h m) bc) (erased (BkMode k m) md))
+  (unary 6)
+  (let-match erased bcs (MkBirkhoffChecks b2 b3 b4 b5))
+  (let-match erased l1 (LtS _ k1 l0))
+  (let-match erased l0 (LtZ h))
+  (let-match erased l6 (LtS _ _ l5))
+  (let-match erased l5 (LtS _ _ l4))
+  (let-match erased l4 (LtS _ _ l3) ((LtZ _) (values (Zero) (Zero) (Refl _ k) b2 (BMLow k (LtS _ _ $ LtS _ _ $ LtZ _)))))
+  (let-match erased l3 (LtS _ _ l2) ((LtZ _) (values (Succ (Zero)) (Zero) (Refl _ k) b3 (BMLow k (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)))))
+  (let-match erased l2 (LtS _ _ l7) ((LtZ _) (values (Succ (Succ (Zero))) (Zero) (Refl _ k) b4 (BMLow k (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)))))
+  (let-match erased l7 (LtZ _) (absurd (LtS _ _ l8) l8))
+  (values (Succ (Succ (Succ (Zero)))) (Succ (Zero)) (Refl _ k) b5 (BMFive)))

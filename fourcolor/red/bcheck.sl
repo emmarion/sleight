@@ -390,3 +390,10 @@
     (bk-sound h m ts T1 NT1 T2 NT2 s1 s2 g ctu ctu gtu gtu n bk (KVBase (MkPred (PredC) NT1 PermIn) h ctu gtu ce ge gc)
       (KVBase (MkPred (PredC) NT2 PermIn) h ctu gtu ce ge gc)))
   (values (level-of bc-sound) bc-sound))
+
+; Birkhoff2 to Birkhoff5 of birkhoff.v, which bgoal.sl proves.
+(def-adts $ (BirkhoffChecks : -> Type)
+  enum
+  (many MkBirkhoffChecks : (erased (BirkhoffCheck (Zero) (Zero)) b2) (erased (BirkhoffCheck (Succ (Zero)) (Zero)) b3)
+      (erased (BirkhoffCheck (Succ (Succ (Zero))) (Zero)) b4) (erased (BirkhoffCheck (Succ (Succ (Succ (Zero)))) (Succ (Zero))) b5)
+      -> (BirkhoffChecks)))
