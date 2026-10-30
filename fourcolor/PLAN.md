@@ -310,12 +310,34 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   states it on rotr 1 of that ring instead), through `Ext`, a colouring of
   the disk map extended to the whole map by faces, and `cotrace-back` goes
   back, through `Pull`. colorable_from_ring (`colorable-from-ring`).
-  Not done: ring_disk_closed (it would appear to need the remainder map of
-  RR as a `KempeRing` of `kempemap.sl`, from plain_patch, cubic_patch and
-  planar_snipr, and match_gram_rot of `red/gramrot.sl` to undo the
-  rotation); the chord rings, from chord_ring to nontrivial_chord_ring, and
-  ring_disk_chord; and nontrivial0P, which `birkhoff.v` uses to build a
-  nontrivial ring.
+  More of `revsnip.v` is in `revsnip3.sl`.
+- `revsnip3.sl` (load after `revsnip2.sl` and `geomring.sl`): the rest of `revsnip.v` that
+  `birkhoff.v` appears to use, as far as both compilers check it.
+  nontrivial0P in both directions (`nontrivial-pick`, which also gives a
+  dart of diskF r and one of diskFC r for any m, and `nontrivial0`).
+  ring_disk_closed (`ring-disk-closed`, given cubic G): the ring traces of
+  the disk map of r form a red/bridge.sl `KClosed` set, by functions at a
+  level it returns. It goes through the remainder map of RR, whose ring
+  br2 = init ++ [l] is read as l :: init (`ring-turn` of `kempemap.sl`), so
+  that `kempe-map` applies to the traces `cotrace` rotates, with `rt-rot`
+  and `rt-unrot` moving a ring trace across that rotation and `snoc-inj`
+  (`hypgraph.sl`) matching the two rotations; quasicubic is read off
+  node-order-patch (`oo-qcubic`). The chord rings: `Chords` holds r read
+  from x1 as x1 :: A ++ x2 :: B (`ring-from`), with a dart z of diskN r
+  off r on the face of x1 whose edge image is on the face of x2; it is
+  symmetric (`chords-swap`). `chord-ring` and `chord-proper` give
+  scycle_chord_ring and proper_chord_ring; diskN_chord_ring is read as
+  `Three` (each dart is in diskN r and in exactly one of the diskN of the
+  two chord rings, or in none of the three), proved along a clink path to
+  z (`three-all`); `chord-split` gives the use of diskF_chord_ring that
+  ring_disk_chord makes, and `chord-side` nontrivial_chord_ring, with
+  x2 != next r x1 read as A non-empty. ring_disk_chord (`ring-disk-chord`)
+  takes a `Chord` of the disk ring, as `bridgeless-patch` gives it, and
+  returns a ring nontrivial for 0 with fewer darts. That these statements
+  match Coq's has been checked only by reading. The empty ring of `snip.v`
+  is not ported; from a reading of `birkhoff.v` it appears to be needed
+  only where Coq's nontrivial_ring of an empty ring is false, which a
+  `Ring` here, never empty, does not need.
 - `ringdec.sl` (load after `ringtrace.sl`): decide_ring_trace of
   `coloring.v` (`decide-ring-trace`): a list of colours is a ring trace of
   a list of darts, or a function sends every such ring trace to `False`.
@@ -334,9 +356,7 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   srcycle to scycle rlink only (`srcycle-ring`): in a bridgeless map an
   srcycle, stated as `SRPath` with the darts that srpath keeps off a
   face told apart by face labellings (`FaceApart`), is a `Ring`.
-- Still open: the rest of part B. Besides what `revsnip2.sl` lists as not done
-  and the empty ring of `snip.v`,
-  `birkhoff.v` appears to need, from a reading of its proofs:
+- Still open: the rest of part B. `birkhoff.v` appears to need, from a reading of its proofs:
   cpmap_planar and cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to
   be `cpmap.sl`'s `cprsize-proper`; Coq proves cpmap_planar through
   quasicubic_Euler, the face counts of the U and N steps and

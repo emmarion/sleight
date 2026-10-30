@@ -169,6 +169,15 @@
   (let-match erased (snoc-fn _ xs1 ys1 zs1 a p1 q1) (Refl _ _))
   (Refl _ ys))
 
+(def-fns _ $ (erased snoc-inj : (erased Type A) (erased (List A) xs ys zs) (erased A x y) (subterm erased (Snoc A xs x zs) p) (erased (Snoc A ys y zs) q)
+    -> (erased (Eq (List A) (Cons A x xs) (Cons A y ys)) e))
+  (match erased p _
+    ((SnocNil _ _) (match erased q _ ((SnocNil _ _) (Refl _ (Cons A x xs))) (absurd (SnocCons _ _ _ _ _ q1) q1)))
+    ((SnocCons _ a _ xs1 zs1 p1)
+      (match erased q _
+        (absurd (SnocNil _ _) p1)
+        ((SnocCons _ _ _ ys1 _ q1) (let-match erased (snoc-inj A xs1 ys1 zs1 x y p1 q1) (Refl _ _)) (Refl _ (Cons A x xs)))))))
+
 (def-fns _ $ (erased iota-fn : (erased (Nat) n) (erased (List (Nat)) ids ids2) (subterm erased (Iota n ids) p) (erased (Iota n ids2) q)
     -> (erased (Eq (List (Nat)) ids ids2) e))
   (let-match erased p (IotaS n1 ids1 _ p1 s1) ((IotaZ) (let-match erased q (IotaZ)) (Refl _ ids)))
