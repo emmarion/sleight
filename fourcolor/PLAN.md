@@ -241,11 +241,14 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `revsnip.sl` (load after `snip.sl`): the start of a port of `revsnip.v`,
   for plain maps (every edge orbit of size 2). Proved, as far as both
   compilers check them: scycle_rev_ring (`rev-ring`: rev (map e r) is a
-  ring), mem_rev_ring (`rev-ring-in`, `ring-rev-in`), and, with `Proper`
-  for proper_ring, diskN_edge_ring (`disk-edge-ring`). Not done: the rest
-  of `revsnip.v`, from diskN_rev_ring and the chord rings to
-  ring_disk_closed, colorable_from_ring and ring_disk_chord, which
-  `birkhoff.v` uses.
+  ring), mem_rev_ring (`rev-ring-in`, `ring-rev-in`), proper_rev_ring
+  (`proper-rev`, with `Proper` for proper_ring), diskN_edge_ring
+  (`disk-edge-ring`), connected_clink (`connected-clink`), and
+  diskN_rev_ring for a connected map (`rev-disk`: with `rev-ctx` building
+  the two rings and their disks, each dart is in exactly one of the two
+  diskN, `Two`). Not done: the rest of `revsnip.v`, from fband_rev_ring
+  and the chord rings to ring_disk_closed, colorable_from_ring and
+  ring_disk_chord, which `birkhoff.v` uses.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
