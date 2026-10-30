@@ -147,6 +147,17 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   there: permN and permF, renaming darts (`genus-relabel`), WalkupN and
   WalkupF, and as definitions only, the Jordan property and the special
   maps and face paths of `geometry.v`.
+- `cube.sl`, `cubegoal.sl` (load after `hypgeom.sl`): the cube
+  construction of `cube.v`, its darts laid out as six blocks of d.
+  `cubegoal.sl` checks `CubeReduction`: a function four-colouring every
+  planar bridgeless plain cubic hypermap gives one four-colouring every
+  planar bridgeless hypermap, so with `reduce2.sl` part B appears to
+  come down to plain cubic maps.
+- `coloring.sl`, `colorgoal.sl` (load after `cube.sl`): from
+  `coloring.v`, `colorable_bridgeless`, the colourings of the dual and
+  the mirror, and `decide_colorable`, a search over the colours of each
+  dart in turn whose failure is an erased function from any
+  four-colouring to `False`.
 - Still open: the rest of part B, including planar <-> Jordan, the
   equality case of the Walkup genus (`genus_WalkupE_eq`) and the
   lemmas of `geometry.v`.
