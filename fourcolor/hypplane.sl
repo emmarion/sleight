@@ -658,3 +658,31 @@
       (MkSeparates vl2 nd2 n (Succ n) v1 v2 rv2 (snoc-old _ vl1 vl2 v2 v1 n sv2 (snoc-new _ vl vl1 v1 n sv1 lv))
         (snoc-new _ vl1 vl2 v2 (Succ n) sv2 (snoc-length _ vl vl1 v1 n sv1 lv)) nv)
       sgA sg2)))
+
+(def-fns _ $ (erased plane-inv : (erased (List (Nat)) e nd) (subterm erased (PlaneMap e nd) m) -> (erased (PlaneInv e nd) r))
+  (match erased m _
+    ((PMNil) (plane-nil))
+    ((PMIsolated e0 nd0 _ nd1 _ n m0 g sn1 sn2) (plane-isolated e0 nd0 e nd1 nd n (plane-inv e0 nd0 m0) g sn1 sn2))
+    ((PMPendant e0 nd0 _ nd1 _ n d m0 g bd i1 sn2) (plane-pendant e0 nd0 e nd1 nd n d (plane-inv e0 nd0 m0) g bd i1 sn2))
+    ((PMChord e0 nd0 _ nd1 _ vl n d1 d2 m0 g b1 b2 ll j i1 i2)
+      (plane-chord e0 nd0 e nd1 nd vl n d1 d2 (plane-inv e0 nd0 m0) g b1 b2 ll j i1 i2))))
+
+(def-fns _ $ (erased loop-allsep : (erased (Nat) d) (erased (List (Nat)) nd) (erased (List (Bond)) g gnd) (subterm erased (Loopless nd g) lo)
+    (erased (Graph d nd gnd) gr) -> (erased (AllSep gnd g) r))
+  (let-match erased lo (LoopCons _ lab g1 x y s lo1) ((LoopNil _) (AllSepNil gnd)))
+  (AllSepCons gnd g1 x y (sep-of-separates d x y lab nd gnd gr s) (loop-allsep d nd g1 gnd lo1 gr)))
+
+; Every plane map is a planar bridgeless hypermap, with edge e, face nd and node n.
+(def-fns _ $ (erased plane-hypermap : (erased (List (Nat)) e nd) (erased (PlaneMap e nd) m) ->
+    (erased (Nat) d) (erased (List (Nat)) n) (erased (Hypermap d e n nd) h) (erased (Genus d e n nd (Zero)) pl) (erased (Bridgeless d e n nd) b))
+  (let-match erased (plane-inv e nd m) (MkPlaneInv _ _ ndi nn d ke kn kf kc ge gnd gc pe pn rn oe on of gre grn cg cc eu lo))
+  (let ((erased h)) (hyper-of d e nd ndi nn pe pn rn))
+  (let-match erased on (MkOrbits _ _ _ gnn grnn _))
+  (let ((erased gnf) (erased c1)) (cat-exists gnn gnd))
+  (let ((erased g) (erased c2)) (cat-exists ge gnf))
+  (let ((erased gl)) (MkGlink d e nn nd ge gnn gnd gnf g gre grnn grn c1 c2))
+  (let-match erased eu (MkEuler _ _ _ _ _ c s s1 dc a a1 a2))
+  (values d nn h
+    (MkGenus d (Zero) ke kn kf kc c s s1 s (Zero) e nn nd g oe on of gl (glink-ef d kc e nn nd ge gnd gc g h gre grn cg gl cc)
+      dc a a1 a2 (D0) (AddZero s))
+    (MkBridgeless d e nn nd ge gnd gre grn (loop-allsep d nd ge gnd lo grn))))
