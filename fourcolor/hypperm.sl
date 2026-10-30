@@ -619,10 +619,10 @@
   (let-match erased gr (MkGraph _ _ ids _ io lp z))
   (MkSep g x y lab l1 l2 (resp-const d lab p g (graph-fun d p g gr) rp (respects-length lab p lab d rp lp)) p1 p2 ne))
 
-; Exchanging the images of two darts of one orbit splits it.
+; Exchanging the images of two darts of one orbit, a reached from b, splits it.
 (def-fns _ $ (erased orbits-split : (erased (Nat) d k a b a2 b2) (erased (List (Nat)) p q p2 xs) (erased (Perm d p q) pm)
     (erased (Orbits d p k) ob) (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
-    (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Path p (Nil (Nat)) a b xs) wab) -> (erased (Orbits d p2 (Succ k)) r))
+    (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Path p (Nil (Nat)) b a xs) wba) -> (erased (Orbits d p2 (Succ k)) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased up (MkUpd2 _ _ _ _ _ _ _ ne _ _))
   (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
@@ -632,7 +632,7 @@
   (let ((erased k0) (erased cs0)) (classes-exists g0 d bg0))
   (let ((erased la2)) (perm-val d a a2 p q pm pa))
   (let ((erased lb2)) (perm-val d b b2 p q pm pb))
-  (let ((erased cab)) (path-graph-conn d a b p _ xs g wab gr))
+  (let ((erased cab)) (conn-sym g b a (path-graph-conn d b a p _ xs g wba gr)))
   (let ((erased caa2)) (conn-adj g a a2 (graph-adj d a a2 p g gr pa)))
   (let ((erased cbb2)) (conn-adj g b b2 (graph-adj d b b2 p g gr pb)))
   (let ((erased xa) (erased wa)) (conn-path d a2 b p q g pm gr (conn-cat g a2 a b (conn-sym g a a2 caa2) cab)))
