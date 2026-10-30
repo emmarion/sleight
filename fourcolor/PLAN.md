@@ -700,7 +700,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   cc in place of its image) were rejected. Chain: that of `fcgoal.sl`
   with `evalid.sl` after `notembed.sl` (in one run with `fcgoal.sl` and
   `--goal proved`, about 50 s with slc and 113 s with the reference
-  compiler). `fcgoal.sl` still takes `EmbedValid` as a hypothesis. That
+  compiler). That
   these statements match Coq's has been checked only by reading.
 - `fcgoal.sl` (load after `evalid.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
@@ -851,7 +851,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   of chordless_spoke_ring here: the ring of three darts through that
   chord is nontrivial for 0). `min-arity` gives `MinArity` and
   `birk-geo-of` gives `BirkGeo`, each from a `BirkhoffChecks` argument,
-  which `red/bgoal.sl` proves in a unit of its own. It reads snip.sl's
+  which `red/bproof.sl` proves. It reads snip.sl's
   `DPath` and walk.sl's `Sub`, which `unav/` files define again, as
   `SDPath` and `WSub`, names the end of `birkhoff2.sl` keeps for it. Not
   ported: the rest of the SpokeRing section (fband_spoke_ring,
@@ -907,8 +907,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fixed level built this way from a `CRed CRX` and a `KClosed` checked,
   and three broken variants of it (K or L minted too early, or X a
   parameter) were rejected.
-  `red/goal-c.sl` sets and proves the goal `AllRedC CRX` on the chunks of
-  `red/configs.sl`: every configuration appears to be C-reducible, in the
+  `red/proof-c.sl` proves `AllRedC CRX css` (`all-red-proof`) for css the
+  chunks of `red/configs.sl` (`red/chunks.sl`), and `red/goal-c.sl` sets
+  it as a goal and discharges it with that proof: every configuration appears to be C-reducible, in the
   sense of `CRed`, with its contract. Load order: `std/nat.sl
   std/list.sl`, then `base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
@@ -916,13 +917,13 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
   red/crestrict.sl red/kempe.sl cpcolor.sl red/configs.sl red/bridge.sl
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
-  red/ccheck.sl`, then `red/sanity-c.sl` or `red/goal-c.sl` (with
-  `--goal proved`). `red/goal-c.sl`
-  proved its goal with slc in about 7.4, 9 and 12 minutes of wall time in
+  red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/proof-c.sl
+  red/goal-c.sl` (with `--goal proved`). In that chain the goal was
+  proved with slc in about 7.4, 9 and 12 minutes of wall time in
   three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
-- `red/bcheck.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
+- `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
   Birkhoff check of `birkhoff.v`. `birkhoff-check-c` runs Birkhoff_check2
   from the initial trees, for ring size h + 2, kernel size m, an
   iteration count and a list of basis programs, and returns a certificate
@@ -940,7 +941,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   between T and a set NT disjoint from it, and, for each basis tree of the
   check, a trace in T whose even normal form is in the tree) related by
   `BGlue` (no trace of one side has its reverse in the other), the fields
-  of a `BirkhoffCheck` give `False`. `bgoal.sl` proves `BirkhoffChecks`,
+  of a `BirkhoffCheck` give `False`. `bproof.sl` proves `BirkhoffChecks` (`birkhoff-proof`), which `bgoal.sl` sets as a goal,
   Birkhoff2 to Birkhoff5 with Coq's iteration counts and basis programs;
   in one run the computation took about 6 s under the reference compiler.
   `birkhoff.sl` builds the sides and the glue; `BkProg` carries
@@ -986,7 +987,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   zippers, and a tested range is narrowed to its top for the rest of the
   walk.
 - `unav/qwalk.sl`, `qembed.sl`, `qcert.sl`, `qtree.sl`, `qmirror.sl`,
-  `qztgoal.sl` (load after `redc.sl`, in that order; they also need
+  `qztcfs.sl`, `qztproof.sl`, `qztgoal.sl` (load after `redc.sl`, in that order; they also need
   `cfmap.sl`, loaded after `hypcubic.sl`, and `cpmap.sl`, loaded after
   `red/configs.sl`): the quiz half of the embedding. `qwalk.sl` states
   walkq and fitqz of `quiz.v` as relations (`WalkS`, `FitZ`). `qembed.sl`
@@ -1013,8 +1014,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   with a certificate, or from its mirror image (`QInv`), and proves
   qzt_fit_cfquiz (`qzt-hit`). `qmirror.sl` proves the mirror of a plain
   cubic map plain cubic with the same arities (`geo-mirror`) and
-  fitqz_flip (`fitz-flip`). `qztgoal.sl` sets and proves the goal
-  `UnavE cfs`, for `cfs` the configurations of `red/configs.sl`: every
+  fitqz_flip (`fitz-flip`). `qztproof.sl` proves `UnavE cfs`
+  (`unav-proof`) for the `cfs` in scope, which `qztcfs.sl` binds to the
+  configurations of `red/configs.sl` by `concat-cfs` and `fcopen.sl` by
+  `concat-c`, and `qztgoal.sl` sets it as a goal and discharges it: every
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
@@ -1031,7 +1034,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
   dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
-  qmirror.sl unave.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
+  qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
   without the goal). Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
