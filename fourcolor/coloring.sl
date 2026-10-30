@@ -67,7 +67,8 @@
     (erased (Length (Nat) ks d) lk) -> (erased (Respects ks q ks) r))
   (let ((erased gp) (erased grp)) (perm-graph d p q pm))
   (let ((erased gq) (erased grq)) (perm-graph d q p (perm-sym d p q pm)))
-  (graph-resp d q ks gq grq (const-inv d ks p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp (resp-const d ks p gp (graph-fun d p gp grp) rp lk)) lk))
+  (graph-resp d q ks gq grq
+    (const-inv d ks p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp (resp-const d ks p gp (graph-fun d p gp grp) rp lk)) lk))
 
 ; The edges of a four-colouring are proper.
 (def-fns _ $ (erased coloring-proper : (erased (Nat) d) (erased (List (Nat)) e f ks ids) (erased (List (Bond)) ge) (erased (FourColoring e f ks) c)
@@ -83,7 +84,8 @@
     (differ-sym ks ke (differ-of ids e ks ke ks ge (graph-zip d e ids ge gr io) pr (respects-id-right d ids ks io lk) re)) u))
 
 ; A four-colourable map is bridgeless (colorable_bridgeless).
-(def-fns _ $ (erased colorable-bridgeless : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) c)
+(def-fns _ $ (erased colorable-bridgeless : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h)
+    (erased (FourColoring e f ks) c)
     -> (erased (Bridgeless d e n f) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased ids) (erased io)) (iota-exists d))
@@ -107,8 +109,10 @@
     grei io (resp-inv d ks f fi pf rf lk) u lk (perm-under d ei e (perm-sym d e ei pe))))
 
 ; Each edge x-(e x) gives the mirror edge (f (e x))-(f x), whose ends have the colours of x and e x.
-(def-fns _ $ (erased proper-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fe fn ks ids) (erased (List (Bond)) ge gfn) (subterm erased (Fun e ge) fg)
-    (erased (Respects f e fe) cfe) (erased (Respects n fe ids) ke) (erased (Respects f n fn) rfn) (erased (Respects ks f ks) rf) (erased (Iota d ids) io)
+(def-fns _ $ (erased proper-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fe fn ks ids) (erased (List (Bond)) ge gfn)
+    (subterm erased (Fun e ge) fg)
+    (erased (Respects f e fe) cfe) (erased (Respects n fe ids) ke) (erased (Respects f n fn) rfn) (erased (Respects ks f ks) rf)
+    (erased (Iota d ids) io)
     (erased (Graph d fn gfn) grfn) (erased (Proper ks gfn) pr) (erased (Length (Nat) e d) le) (erased (Length (Nat) f d) lf)
     (erased (Length (Nat) ks d) lk) (erased (Under e d) ue) -> (erased (Proper ks ge) r))
   (let-match erased fg (FunCons _ g1 x y px f1) ((FunNil _) (ProperNil ks)))
@@ -124,7 +128,8 @@
     (proper-mirror d e n f fe fn ks ids g1 gfn f1 cfe ke rfn rf io grfn pr le lf lk ue)))
 
 ; A four-colouring of the mirror (edge f . n, face f inverted) is one of the map (coloring_mirror).
-(def-fns _ $ (erased coloring-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn fi ks) (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn)
+(def-fns _ $ (erased coloring-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn fi ks) (erased (Hypermap d e n f) h)
+    (erased (Respects f n fn) rfn)
     (erased (Perm d f fi) pf) (erased (FourColoring fn fi ks) c) -> (erased (FourColoring e f ks) r))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased nf) (erased pe)) (hyper-perm d e n f h))
@@ -136,7 +141,8 @@
   (let ((erased ge) (erased gre)) (graph-exists d e le))
   (let ((erased ue)) (perm-under d e nf pe))
   (proper-coloring d e f ks ids ge
-    (proper-mirror d e n f fe fn ks ids ge gfn (graph-fun d e ge gre) cfe ke rfn rf io grfn (coloring-proper d fn fi ks ids gfn c grfn io lk) le lf lk ue)
+    (proper-mirror d e n f fe fn ks ids ge gfn (graph-fun d e ge gre) cfe ke rfn rf io grfn (coloring-proper d fn fi ks ids gfn c grfn io lk) le lf lk
+      ue)
     gre io rf u lk ue))
 
 (def-fns _ $ (erased repeat-under : (erased (Nat) m c b) (erased (List (Nat)) ks) (subterm erased (Repeat (Nat) m c ks) rp) (erased (Lt c b) l)
@@ -171,7 +177,8 @@
   (let-match erased (join-nil-r pre1 ks1 j1) (Refl _ _))
   (Refl _ ks))
 
-(def-fns _ $ (erased under-snoc-add : (erased (List (Nat)) pre pre2) (erased (Nat) c b) (subterm erased (Snoc (Nat) pre c pre2) s) (erased (Under pre b) u)
+(def-fns _ $ (erased under-snoc-add : (erased (List (Nat)) pre pre2) (erased (Nat) c b) (subterm erased (Snoc (Nat) pre c pre2) s)
+    (erased (Under pre b) u)
     (erased (Lt c b) l) -> (erased (Under pre2 b) r))
   (let-match erased s (SnocCons _ x _ pre1 pre3 s1) ((SnocNil _ _) (UnderCons (Nil _) c b l (UnderNil b))))
   (let-match erased u (UnderCons _ _ _ lx u1))
