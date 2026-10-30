@@ -2228,3 +2228,48 @@
       (let ((erased cs0) (erased c) (erased sc) (erased co0) (erased pc)) (cols-unsnoc lc0 lcR csR l sl coR))
       (MkRingTrace e f _ ks _ _ et (live-four d e n f ks h lc) (RespCons ks r0 lc0 x l pl rp0) (All2Cons _ _ ColOf l c lc0 cs0 pc co0)
         (utr-trace c cs0 csR et utR sc)))))
+
+; The hypotheses of Kempe_map (ucycle_planar_plain_quasicubic r).
+(def-adts $ (KempeRing : ((Nat) d) ((List (Nat)) e n f r) -> Type)
+  enum
+  (many MkKempeRing : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+      (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (QuasiCubic d n r) qc) (erased (NCyc n r) nc) (erased (Distinct r) ds)
+      -> (KempeRing d e n f r)))
+
+; After kcc-coclosure of red/bridge.sl, for the ring traces of r, which Kempe_map makes Kempe-closed: a trace of the
+; co-closure KCC of Q that is a ring trace of r leads to a trace of Q that is a ring trace of r (the use C_reducible is put to).
+(def-fns _
+  ((erased kcc-ring : (erased Pred Q) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr) (erased (List (Col)) ct)
+      (subterm erased (KCC Q ct) k) (erased (RingTrace e f r ct) p) -> (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (RingTrace e f r ct2) p2))
+    (let-match erased k (KCGram _ _ a)
+      ((KCIn _ _ q) (values ct q p))
+      ((KCPerm _ _ ct2 gp ip pt k2) (kcc-ring Q d e n f r kr ct2 k2 (ring-trace-perm e f r ct ct2 gp ip pt p))))
+    (let-match erased kr (MkKempeRing _ _ _ _ _ h g pl qc nc ds))
+    (let ((erased w) (erased m) (erased kg)) (kempe-map d e n f r ct h g pl qc nc ds p))
+    (amc-ring Q d e n f r kr ct w kg (BS0) ct (Nil _) w a m (RANil _ w)))
+  ((erased amc-ring : (erased Pred Q) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr) (erased (List (Col)) ct0)
+      (erased (List (Gsym)) w0) (erased (KRing d e n f r w0) kg) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u)
+      (subterm erased (AMC Q bs ct pre) a) (erased (MatchG bs ct u) m) (erased (RevApp (Gsym) pre u w0) ra)
+      -> (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (RingTrace e f r ct2) p2))
+    (match erased m _
+      ((MGNil)
+        (let-match erased a (AMCEnd _ _ w2 ra2 wt) (absurd (AMCOpen _ _ _ pp _) pp))
+        (let-match erased (revapp-fn (Gsym) pre u w0 w2 ra ra2) (Refl _ _))
+        (let-match erased wt (MkWitC _ _ ct2 m2 k2))
+        (kcc-ring Q d e n f r kr ct2 k2 (kempe-sound d e n f r w0 ct2 kg m2)))
+      ((MGCons _ bs2 c s ct1 u1 y m1)
+        (let ((erased ra1)) (RACons (Gsym) s pre u1 w0 ra))
+        (match erased (sym-cls s bs bs2 c y) _
+          ((SCSkip _)
+            (let-match erased a (AMC1 _ _ _ _ a1) (absurd (AMC23 _ _ _ _ _ _ y1 _ _) y1))
+            (amc-ring Q d e n f r kr ct0 w0 kg bs ct1 (Cons _ (GSkip) pre) u1 a1 m1 ra1))
+          ((SCPush _ _ _ _)
+            (let-match erased a (AMC23 _ _ bs1 _ _ _ y1 a1 _) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) y))
+            (let-match erased (sym-fn (GPush) bs bs2 bs1 c y y1) (Refl _ _))
+            (amc-ring Q d e n f r kr ct0 w0 kg bs2 ct1 (Cons _ (GPush) pre) u1 a1 m1 ra1))
+          ((SCPop _ _ _ _ pp _)
+            (let-match erased a (AMC23 _ _ _ _ _ _ _ _ ap) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) (let-match erased y (SSkip _)) pp))
+            (let-match erased ap (APCSome _ _ b0 t _ _ _ pp2 z a1) (absurd (APCNone _ _ _ _) pp))
+            (let-match erased (popped-fn bs bs2 b0 pp pp2) (Refl _ _))
+            (let-match erased (pop-fn s t bs bs2 c pp y z) (Refl _ _))
+            (amc-ring Q d e n f r kr ct0 w0 kg bs2 ct1 (Cons _ s pre) u1 a1 m1 ra1)))))))
