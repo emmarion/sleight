@@ -32,8 +32,10 @@ reading code and from one profile, not measurements of this design.
   a blit: `array-blit` and `bytes-blit` take their source at `many`, and
   a shared scratch could not be used at `unique` again (DESIGN.md §15,
   §16).
-- Whether the scratch is a ring or another stack vector (1a) is open
-  (section 3).
+- The scratch is another stack vector (1a). A stride pushes its output
+  onto it near end first; popping it then yields the far end first, so
+  pushing each popped cell onto the right vector leaves the near end on
+  top.
 
 ### 1c. Proofs
 
@@ -93,17 +95,11 @@ force/enter logic. Only their data representation changes.
 
 ## 3. Open questions
 
-1. Whether the scratch is a ring written downward or a second stack
-   vector. A ring was planned so that its contents could be blitted;
-   with a per-cell copy, a stack vector whose pops come out in the right
-   order may serve as well.
-2. If a ring: how hard its modular-index proofs are.
-3. A stride's output appears, from reading `sw-of`, to be at most
-   `3 * (input length) + 1` cells; this is not proven, and matters only
-   if the scratch needs reserving.
-4. Whether doubling copies with a blit, which is possible there because
+1. Whether doubling copies with a blit, which is possible there because
    the old array is discarded, and whether `caml_array_blit` uses
    `memmove` or the write barrier for an array in the major heap.
+2. Whether the scratch's copy back can later use a blit, if a blit that
+   takes its source at `unique` becomes available.
 
 ## 4. Measuring
 
