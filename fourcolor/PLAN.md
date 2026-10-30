@@ -686,7 +686,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
   (the per-configuration certificates: embed4.sl's `GcOK` and
   `FunctorAll` and embed5.sl's `NodeRing`, `Radius2` and `KerMax`, for a
-  configuration of cfs; `embed4goal.sl` proves it), `EmbedValid`
+  configuration of cfs; `embed4proof.sl` proves it), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
   reduces, given cface_h1 as the `EmbedPatch` gives it; `evalid.sl`
