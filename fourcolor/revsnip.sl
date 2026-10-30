@@ -221,3 +221,62 @@
     (absurd (OrR _ _ oex)
       (let ((erased dx) (erased ox)) (disk-edge-inv d x ex x0 e n f p h gen rg dex oex pex))
       (apart-irrefl x (notin-in x x _ ox ix)))))
+
+(def-fns _ $ (erased cpath-cat : (erased (List (Nat)) n f N) (subterm erased (List (Nat)) M) (erased (Nat) x y z) (erased (CPath n f x M y) p) (erased (CPath n f y N z) q)
+    -> (erased (List (Nat)) MN) (erased (CPath n f x MN z) r))
+  (let-match erased M (Cons _ x1 M1) ((Nil _) (let-match erased p (CPNil _ _ _)) (values N q)))
+  (let ((erased MN1) (erased r1)) (cpath-cat n f N M1 x1 y z (cpath-tail n f M1 x x1 y p) q))
+  (values (Cons _ x1 MN1) (cpath-restep n f M1 MN1 x x1 y z p r1)))
+
+; Walks along f, and along the inverse ni of n, are clink paths.
+(def-fns _ $ (erased fwalk-cpath : (erased (List (Nat)) n f s xs) (erased (Nat) a b) (subterm erased (Path f s a b xs) w)
+    -> (erased (List (Nat)) L) (erased (CPath n f a L b) cp))
+  (let-match erased w (PathStep _ _ xs1 _ a1 _ pf _ w1) ((PathHere _ _ _) (values (Nil _) (CPNil n f a))))
+  (let ((erased L1) (erased cp1)) (fwalk-cpath n f s xs1 a1 b w1))
+  (values (Cons _ a1 L1) (CPFace n f L1 a a1 b pf cp1)))
+
+(def-fns _ $ (erased nwalk-cpath : (erased (Nat) d a b) (erased (List (Nat)) n ni f s xs) (erased (HPerm d n ni) pn) (subterm erased (Path ni s a b xs) w)
+    -> (erased (List (Nat)) L) (erased (CPath n f a L b) cp))
+  (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1) ((PathHere _ _ _) (values (Nil _) (CPNil n f a))))
+  (let ((erased L1) (erased cp1)) (nwalk-cpath d a1 b n ni f s xs1 pn w1))
+  (values (Cons _ a1 L1) (CPNode n f L1 a a1 b (perm-inv d a a1 ni n (perm-sym d n ni pn) pa) cp1)))
+
+(def-fns _ $ (erased fback-cpath : (erased (Nat) d u v) (erased (List (Nat)) n f fi) (erased (HPerm d f fi) pf) (erased (Nth (Nat) f v u) pv)
+    -> (erased (List (Nat)) L) (erased (CPath n f u L v) cp))
+  (let ((erased xs) (erased w)) (cycle d v u f fi pf pv (pre-lt d v u f fi pf pv)))
+  (fwalk-cpath n f (Nil _) xs u v w))
+
+(def-fns _ $ (erased nfwd-cpath : (erased (Nat) d u v) (erased (List (Nat)) n ni f) (erased (HPerm d n ni) pn) (erased (Nth (Nat) n u v) pu)
+    -> (erased (List (Nat)) L) (erased (CPath n f u L v) cp))
+  (let ((erased pni)) (perm-sym d n ni pn))
+  (let ((erased pv)) (perm-inv d u v n ni pn pu))
+  (let ((erased xs) (erased w)) (cycle d v u ni n pni pv (pre-lt d v u ni n pni pv)))
+  (nwalk-cpath d u v n ni f (Nil _) xs pn w))
+
+; A bond of glink is joined by a clink path.
+(def-fns _ $ (erased glink-cpath : (erased (Nat) d u v) (erased (List (Nat)) e n f) (erased (List (Bond)) g) (erased (Hypermap d e n f) h) (erased (Glink d e n f g) gl)
+    (erased (Adj g u v) a) -> (erased (List (Nat)) L) (erased (CPath n f u L v) cp))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased gl (MkGlink _ _ _ _ ge gn gf gnf _ gre grn grf c1 c2))
+  (match erased (adj-cat-inv ge gnf g u v c2 a) _
+    ((OrL _ _ ae)
+      (match erased (graph-adj-inv d u v e ge gre ae) _
+        ((OrL _ _ p)
+          (let ((erased w) (erased pw) (erased lw)) (perm-nth d u ni n (perm-sym d n ni pn) (perm-val d v u nf e (perm-sym d e nf pe) (perm-inv d u v e nf pe p))))
+          (let ((erased pnw)) (perm-inv d u w ni n (perm-sym d n ni pn) pw))
+          (let ((erased L) (erased cp)) (fback-cpath d w v n f fi pf (hyper-third d v u w e n f h p pnw)))
+          (values (Cons _ w L) (CPNode n f L u w v pnw cp)))
+        ((OrR _ _ p)
+          (let ((erased w) (erased pw) (erased lw)) (perm-nth d u f fi pf (perm-val d v u e nf pe p)))
+          (let ((erased L) (erased cp)) (nfwd-cpath d w v n ni f pn (hyper-node d w u v e n f h pw p)))
+          (values (Cons _ w L) (CPFace n f L u w v pw cp)))))
+    ((OrR _ _ anf)
+      (match erased (adj-cat-inv gn gf gnf u v c1 anf) _
+        ((OrL _ _ an)
+          (match erased (graph-adj-inv d u v n gn grn an) _
+            ((OrL _ _ p) (nfwd-cpath d u v n ni f pn p))
+            ((OrR _ _ p) (values (Cons _ v (Nil _)) (CPNode n f (Nil _) u v v p (CPNil n f v))))))
+        ((OrR _ _ af)
+          (match erased (graph-adj-inv d u v f gf grf af) _
+            ((OrL _ _ p) (values (Cons _ v (Nil _)) (CPFace n f (Nil _) u v v p (CPNil n f v))))
+            ((OrR _ _ p) (fback-cpath d u v n f fi pf p))))))))
