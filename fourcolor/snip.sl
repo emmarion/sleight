@@ -773,3 +773,59 @@
       (disk-conn d u2 x y x0 e n f p g h gen rg dg dp1 du2
         (ConnStep g u2 w y (adj-cat-l gn ge g u2 w (graph-adj d u2 w n gn grn pw) c0)
           (ConnStep g w u y (adj-cat-r gn ge g w u (graph-adj d w u e2 ge gre pe3) c0) c))))))
+
+; hd lists the darts of diskN r in order and zs the other darts, split by the root labels lab of the classes of the disk graph.
+(def-adts $ (DiskSplit : ((Nat) d) ((List (Nat)) e n r hd zs) -> Type)
+  enum
+  (many MkDiskSplit : (erased (Nat) d) (erased (List (Nat)) e n r ids lab rs lr hd zs) (erased (List (Bond)) g) (erased (DiskGraph d e n r g) dg)
+      (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Const lab g) cl) (erased (Rooted g rs ids lab) ro) (erased (Respects lab r lr) rl)
+      (erased (SplitBy lab lr ids hd zs) sp) -> (DiskSplit d e n r hd zs)))
+
+(def-fns _ $ (erased ds-exists : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Under r d) ur)
+    -> (erased (List (Nat)) hd zs) (erased (DiskSplit d e n r hd zs) ds))
+  (let ((erased g) (erased dg) (erased bg)) (dg-exists d e n f r h ur))
+  (let ((erased k) (erased cs)) (classes-exists g d bg))
+  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
+  (let ((erased lrr) (erased rl)) (respects-exists lab r d ur ll))
+  (let ((erased hd) (erased zs) (erased sp)) (sb-exists lab lrr d ll ids (perm-under d ids ids (perm-id d ids io))))
+  (values hd zs (MkDiskSplit d e n r ids lab rs lrr hd zs g dg io ll cl ro rl sp)))
+
+; The darts 0..d-1 split into hd and zs.
+(def-fns _ $ (erased ds-split : (erased (Nat) d) (erased (List (Nat)) e n r hd zs) (erased (DiskSplit d e n r hd zs) ds)
+    -> (erased (List (Nat)) ids) (erased (Iota d ids) io) (erased (Split hd ids hd zs) sp))
+  (let-match erased ds (MkDiskSplit _ _ _ _ ids lab rs lr _ _ g dg io ll cl ro rl sp))
+  (values ids io (sb-split lab lr ids hd zs ids hd zs sp sp (sub-refl hd))))
+
+(def-fns _ $ (erased ds-in : (erased (Nat) d x x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In x hd) ix)
+    -> (erased (DiskN n f (Cons (Nat) x0 p) x) dx))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ds (MkDiskSplit _ _ _ _ ids lab rs lr _ _ g dg io ll cl ro rl sp))
+  (let ((erased l) (erased pl) (erased il)) (sb-in-key lab lr ids hd zs x sp ix))
+  (let ((erased y) (erased iy) (erased py)) (respects-in lab _ lr l rl il))
+  (let ((erased sa) (erased sb)) (split-sub hd ids hd zs (sb-split lab lr ids hd zs ids hd zs sp sp (sub-refl hd))))
+  (let ((erased ly)) (under-in _ y d ur iy))
+  (conn-disk d y x x0 e n f p g h gen rg dg
+    (conn-sym g x y (same-root g d x y l ids lab rs io ro pl py
+      (under-in ids x d (perm-under d ids ids (perm-id d ids io)) (sub-in hd ids x sa ix)) ly))
+    (disk-ring d y n ni f _ pn iy ly)))
+
+(def-fns _ $ (erased ds-mem : (erased (Nat) d x x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds)
+    (erased (DiskN n f (Cons (Nat) x0 p) x) dx) (erased (Lt x d) lx) -> (erased (In x hd) ix))
+  (let-match erased ds (MkDiskSplit _ _ _ _ ids lab rs lr _ _ g dg io ll cl ro rl sp))
+  (let ((erased dg2)) dg)
+  (let-match erased dg2 (MkDiskGraph _ _ _ _ nf er t ids2 e2 gn ge _ pe re ap io2 ch grn gre c0))
+  (let-match erased dx (MkDiskN _ _ _ _ y y1 iy pn1 dp))
+  (let ((erased c)) (disk-conn d y1 x y x0 e n f p g h gen rg dg dp (MkDiskN n f _ y1 y y1 iy pn1 (DPNil n f _ y1))
+    (ConnStep g y1 y y (adj-cat-l gn ge g y1 y (graph-adj d y1 y n gn grn pn1) c0) (ConnHere g y))))
+  (let ((erased l) (erased py)) (nth-exists _ lab d y ll (under-in _ y d ur iy)))
+  (sb-member lab lr ids hd zs x l sp (iota-in d x ids io lx) (conn-const lab g y x l (conn-sym g x y c) cl py) (in-map lab _ lr y l iy rl py)))
+
+(def-fns _ $ (erased absurd ds-out : (erased (Nat) d x x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In x zs) iz)
+    (erased (DiskN n f (Cons (Nat) x0 p) x) dx) -> (erased (False) fl))
+  (let ((erased ids) (erased io) (erased sp)) (ds-split d e n _ hd zs ds))
+  (let ((erased sa) (erased sb)) (split-sub hd ids hd zs sp))
+  (apart-irrefl x (notin-in x x hd (disj-at hd x zs (split-disj hd ids hd zs sp) iz)
+    (ds-mem d x x0 e n f p hd zs h gen rg ur ds dx (under-in ids x d (perm-under d ids ids (perm-id d ids io)) (sub-in zs ids x sb iz))))))
