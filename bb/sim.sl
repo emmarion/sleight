@@ -568,7 +568,7 @@
       (RNil m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))) z (ExtNil as fa) (ExtNil bs fb) la lb
       N ij NM (AddZero s) bs40 n wf lq0 (D0) b2 db (mapb-len m ft b2 mb (rows-len n n b2 m wf db)) (lt-trans b2 B40 u62-modulus pb2 NM40) ltx))
   (let ((erased old) (erased spo)) (splice-same _ tx ws2 ys lo len sp2))
-  (let ((erased zs) (unique a4) (erased sp)) (bytes-blit _ tmpl lo _ a1 lo len ws0 sp0 old spo))
+  (let ((erased zs) (unique a4) (erased sp)) (bytes-blit-many _ tmpl lo _ a1 lo len ws0 sp0 old spo))
   (let-match erased (splice-restore _ tx ws2 ys ws0 zs lo len sp2 sp sp0) (Refl _ _))
   (let-match many res (SHalt _ _ s2 hh) ((SRun _ _) (values (RFail _) a4)))
   (let-match many (nat-eq s2 s) (Equal _ _ _) ((Unequal _ _ _ _ _) (values (RFail _) a4)))

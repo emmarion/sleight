@@ -418,7 +418,7 @@
     (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
     (many ExBytesLength : -> (Extern 1)) (many ExBytesLengthMany : -> (Extern 1)) (many ExStrBytesCopy : -> (Extern 1)) (many ExBytesStr : -> (Extern 1))
     (many ExBytesCopy : -> (Extern 1)) (many ExArrayCopy : -> (Extern 1))
-    (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5))
+    (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExBytesBlitMany : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5)) (many ExArrayBlitMany : -> (Extern 5))
     (many ExSlotsNew : -> (Extern 0)) (many ExSlotsFind : -> (Extern 2)) (many ExSlotsIntern : -> (Extern 2)) (many ExSlotsLength : -> (Extern 1)))
   ((SomeExtern : -> Type)
     enum
@@ -443,7 +443,7 @@
     ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _))
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
-    ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))
+    ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExBytesBlitMany) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _)) ((ExArrayBlitMany) (None _))
     ((ExSlotsNew) (None _)) ((ExSlotsFind) (Some _ $ Cons _ 1 $ Cons _ 0 $ Nil _)) ((ExSlotsIntern) (Some _ $ Cons _ 1 $ Cons _ 1 $ Nil _)) ((ExSlotsLength) (None _))))
 
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
@@ -455,7 +455,7 @@
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)
     ((ExNatEq) 2) ((ExU62Eq) 2) ((ExStrEq) 2) ((ExBitLength) 1) ((ExU62BitLength) 1) ((ExBitTest) 2) ((ExU62BitTest) 2)
-    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
+    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExBytesBlitMany) 5) ((ExArraySub) 3) ((ExArrayBlit) 5) ((ExArrayBlitMany) 5)
     ((ExSlotsNew) 0) ((ExSlotsFind) 2) ((ExSlotsIntern) 2) ((ExSlotsLength) 1)))
 
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
@@ -463,6 +463,7 @@
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
     ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62And) (ExNatAnd)) ((ExU62Or) (ExNatOr)) ((ExU62Xor) (ExNatXor)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExU62Eq) (ExNatEq)) ((ExU62BitLength) (ExBitLength)) ((ExU62BitTest) (ExBitTest)) ((ExArrayGet) (ExArrayPluck))
     ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesLengthMany) (ExBytesLength))
+    ((ExBytesBlitMany) (ExBytesBlit)) ((ExArrayBlitMany) (ExArrayBlit))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     (else e)))
 
@@ -481,7 +482,7 @@
     ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many")
     ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
     ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str") ((ExBytesCopy) "bytes-copy") ((ExArrayCopy) "array-copy")
-    ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit")
+    ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExBytesBlitMany) "bytes-blit-many") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit") ((ExArrayBlitMany) "array-blit-many")
     ((ExSlotsNew) "slots-new") ((ExSlotsFind) "slots-find") ((ExSlotsIntern) "slots-intern") ((ExSlotsLength) "slots-length")))
 
 (let ((many externs))
@@ -499,7 +500,8 @@
   Cons _ (MkSomeExtern _ $ ExBytesMake) $ Cons _ (MkSomeExtern _ $ ExBytesGet) $ Cons _ (MkSomeExtern _ $ ExBytesGetMany) $ Cons _ (MkSomeExtern _ $ ExBytesSet) $
   Cons _ (MkSomeExtern _ $ ExBytesLength) $ Cons _ (MkSomeExtern _ $ ExBytesLengthMany) $ Cons _ (MkSomeExtern _ $ ExStrBytesCopy) $ Cons _ (MkSomeExtern _ $ ExBytesStr) $
   Cons _ (MkSomeExtern _ $ ExBytesCopy) $ Cons _ (MkSomeExtern _ $ ExArrayCopy) $
-  Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) $
+  Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExBytesBlitMany) $
+  Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) $ Cons _ (MkSomeExtern _ $ ExArrayBlitMany) $
   Cons _ (MkSomeExtern _ $ ExSlotsNew) $ Cons _ (MkSomeExtern _ $ ExSlotsFind) $ Cons _ (MkSomeExtern _ $ ExSlotsIntern) $ Cons _ (MkSomeExtern _ $ ExSlotsLength) (Nil _))
 
 (def-fns _ $ (many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r))

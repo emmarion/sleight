@@ -58,5 +58,7 @@ fn bytes-copy: Obj.repr (Bytes.copy (Obj.obj {a0} : bytes))
 fn array-copy: Obj.repr (Array.copy (Obj.obj {a0} : Ffi_core.word array))
 fn bytes-sub: let {t0} = Bytes.create (Obj.obj {a2} : int) in Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) {t0} 0 (Obj.obj {a2} : int); Obj.repr {t0}
 fn bytes-blit: Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : bytes) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
+fn bytes-blit-many: Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : bytes) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
 fn array-sub: Obj.repr (Ffi_core.array_unsafe_sub (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : int))
 fn array-blit: Ffi_core.array_unsafe_blit (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word array) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
+fn array-blit-many: Ffi_core.array_unsafe_blit (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word array) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
