@@ -294,24 +294,13 @@
       (let-match erased rw (RACons _ _ _ _ _ rw1))
       (closes-gpre d0 d1 b0 b1 pre1 (Cons _ s0 u) fw s p1 (CloCons d1 d b1 b s0 s u st c) rw1))))
 
-(def-adts $ (Snoc : (Type A) ((List A) xs) (A x) ((List A) ys) -> Type)
-  enum
-  (many SnNil : (erased Type A) (erased A x) -> (Snoc A (Nil A) x (Cons A x (Nil A))))
-  (many SnCons : (erased Type A) (erased A a x) (erased (List A) xs ys) (erased (Snoc A xs x ys) p) -> (Snoc A (Cons A a xs) x (Cons A a ys))))
-
-(def-fns _ $ (erased snoc-fn : (erased Type A) (erased A x) (erased (List A) xs ys zs) (subterm erased (Snoc A xs x ys) p) (erased (Snoc A xs x zs) q)
-    -> (erased (Eq (List A) ys zs) e))
-  (match erased p _
-    ((SnNil _ _) (let-match erased q (SnNil _ _)) (Refl _ ys))
-    ((SnCons _ a _ xs1 ys1 p1) (let-match erased q (SnCons _ _ _ _ zs1 q1)) (let-match erased (snoc-fn A x xs1 ys1 zs1 p1 q1) (Refl _ _)) (Refl _ ys))))
-
 (def-fns _ $ (erased revapp-snoc : (erased Type A) (erased A x) (erased (List A) pre u u2 r r2) (subterm erased (RevApp A pre u r) p)
     (erased (Snoc A u x u2) q) (erased (RevApp A pre u2 r2) p2) -> (erased (Snoc A r x r2) res))
   (match erased p _
     ((RANil _ _) (let-match erased p2 (RANil _ _)) q)
     ((RACons _ a pre1 _ _ p1)
       (let-match erased p2 (RACons _ _ _ _ _ q1))
-      (revapp-snoc A x pre1 (Cons A a u) (Cons A a u2) r r2 p1 (SnCons A a x u u2 q) q1))))
+      (revapp-snoc A x pre1 (Cons A a u) (Cons A a u2) r r2 p1 (SnocCons A a x u u2 q) q1))))
 
 ; After matchg of chromogram.v, with the bit stack a Bstack.
 (def-adts $ (MatchG : ((Bstack) bs) ((List (Col)) ct) ((List (Gsym)) cw) -> Type)
@@ -328,13 +317,13 @@
     ((MPNil _)
       (let-match erased cr (CtrNil _))
       (let-match erased cl (CloNil _ _ _ l))
-      (values (Cons _ s (Nil _)) (SnNil _ s) (MGCons bs (BS0) c s (Nil _) (Nil _) (end-sym d b s l bs c x y z si xb cb) (MGNil))))
+      (values (Cons _ s (Nil _)) (SnocNil _ s) (MGCons bs (BS0) c s (Nil _) (Nil _) (end-sym d b s l bs c x y z si xb cb) (MGNil))))
     ((MPCons _ bs2 e s0 et1 w1 sy mt1)
       (let-match erased cr (CtrCons _ _ c2 _ ct1 a cr1))
       (let-match erased cl (CloCons _ d2 _ b2 _ _ _ st cl1))
       (let ((erased x2) (erased y2) (erased z2) (erased si2) (erased xb2) (erased cb2)) (inv-next s0 bs bs2 e d d2 b b2 c c2 x y z sy st a cb si xb))
       (let ((erased cw1) (erased sn) (erased mg)) (pg-g bs2 et1 ct1 w1 s c2 d2 b2 x2 y2 z2 mt1 cr1 cb2 si2 xb2 cl1))
-      (values (Cons _ s0 cw1) (SnCons _ s0 s w1 cw1 sn) (MGCons bs bs2 e s0 ct1 cw1 sy mg)))))
+      (values (Cons _ s0 cw1) (SnocCons _ s0 s w1 cw1 sn) (MGCons bs bs2 e s0 ct1 cw1 sy mg)))))
 
 ; The Kempe co-closure of Q on complete traces (after Kempe_coclosure of chromogram.v), as the least set holding Q, holding each trace
 ; that a colour permutation sends into it, and holding each trace all of whose matching chromograms are matched by a trace in it.
@@ -386,7 +375,7 @@
   (let ((erased cw) (erased sn) (erased mg))
     (pg-g (BS0) et ct w s (C0) (Zero) (BFalse) (BFalse) (BFalse) (BFalse) mt cr (CB0) (SINil) (XFF)
       (closes-gpre (Zero) d (BFalse) b pre (Nil _) w s gp (CloNil d b s l) ra)))
-  (let-match erased (snoc-fn (Gsym) s w full cw (revapp-snoc (Gsym) s pre (Nil _) (Cons _ s (Nil _)) w full ra (SnNil _ s) rf1) sn) (Refl _ _))
+  (let-match erased (snoc-fn (Gsym) w full cw s (revapp-snoc (Gsym) s pre (Nil _) (Cons _ s (Nil _)) w full ra (SnocNil _ s) rf1) sn) (Refl _ _))
   (values full rf (MkWitC P full ct mg k)))
 
 (def-fns _ $ (erased amc-nil : (erased Pred P) (erased (Gsym) s) (erased (Bstack) bs bs2) (erased (Col) c) (erased (Nat) d) (erased (Bool) b x y z)
