@@ -20,6 +20,7 @@
 ; nd2 agrees with nd at every dart outside s.
 (def-adts $ (Agree : ((List (Nat)) nd) ((List (Nat)) nd2) ((List (Nat)) s) -> Type)
   enum
+  (many AgRefl : (erased (List (Nat)) nd s) -> (Agree nd nd s))
   (many AgSnoc : (erased (List (Nat)) nd nd2 s) (erased (Nat) c) (erased (Snoc (Nat) nd c nd2) p) -> (Agree nd nd2 s))
   (many AgInsert : (erased (List (Nat)) nd nd2 s) (erased (Nat) d x) (erased (Insert nd d x nd2) p) (erased (In d s) m)
       -> (Agree nd nd2 s))
@@ -29,6 +30,7 @@
 (def-fns _ $ (erased agree-nth : (erased (List (Nat)) nd nd2 s) (erased (Nat) q c) (subterm erased (Agree nd nd2 s) g)
     (erased (Nth (Nat) nd q c) p) (erased (NotIn q s) out) -> (erased (Nth (Nat) nd2 q c) r))
   (match erased g _
+    ((AgRefl _ _) p)
     ((AgSnoc _ _ _ c1 sn) (snoc-old _ nd nd2 c1 c q sn p))
     ((AgInsert _ _ _ d x i m) (insert-other nd nd2 d x q c i p (notin-in q d s out m)))
     ((AgTrans _ nd1 _ _ g1 g2) (agree-nth nd1 nd2 s q c g2 (agree-nth nd nd1 s q c g1 p out) out))))
