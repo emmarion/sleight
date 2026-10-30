@@ -693,12 +693,12 @@
   (apart-irrefl l2 (notin-in l2 l2 ls2 out (in-map lab2 eos ls2 ew l2 iew rl2 (path-label f lab2 _ ws y ew l2 wy rf2 py2)))))
 
 ; What triad_valid takes, besides the hub.
-(def-adts $ (TCx : ((Level) B) ((Nat) d w x0) ((List (Nat)) e n f fe lab ks cx ins Bs lp) -> Type)
+(def-adts $ (TdCx : ((Level) B) ((Nat) d w x0) ((List (Nat)) e n f fe lab ks cx ins Bs lp) -> Type)
   enum
-  (many MkTCx : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp) (erased (MinCx B d e n f fe lab) m)
+  (many MkTdCx : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp) (erased (MinCx B d e n f fe lab) m)
       (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x0) t)
       (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
-      (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (Distinct lp) dl) (erased (Length (Nat) lp 5) l5) -> (TCx B d w x0 e n f fe lab ks cx ins Bs lp)))
+      (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (Distinct lp) dl) (erased (Length (Nat) lp 5) l5) -> (TdCx B d w x0 e n f fe lab ks cx ins Bs lp)))
 
 ; One of the three faces of the triad, its spoke face on a face of insertE.
 (def-fns _ $ (erased tri-face : (erased (Nat) d w yi lx0) (erased (List (Nat)) e n f fe lab cx ins Bs lp) (erased (Spk d e n f fe lab) c)
@@ -718,9 +718,9 @@
 ; the face of more than four darts) is adjacent to every face of the ring, so to every face of insertE (ins-band); the triad x0
 ; then has three faces adjacent to it and to the hub, against fcard_adj_max, or x0 is on the face of the hub, against NotAdj.
 (def-fns _ $ (erased hub-reduces : (erased (Level) B) (erased (Nat) d w x0 hr lh kh) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp Vh lsh)
-    (erased (TCx B d w x0 e n f fe lab ks cx ins Bs lp) tc) (erased (FRec d e n f fe lab hr lh kh Vh lsh) fh) (erased (WSub lsh lp) shp) (erased (Lt 4 kh) l4h)
+    (erased (TdCx B d w x0 e n f fe lab ks cx ins Bs lp) tc) (erased (FRec d e n f fe lab hr lh kh Vh lsh) fh) (erased (WSub lsh lp) shp) (erased (Lt 4 kh) l4h)
     -> (erased (Reduces B d e n f) r))
-  (let-match erased tc (MkTCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ m ol ab sp ie l t rg pr sb lb rr dlp l5))
+  (let-match erased tc (MkTdCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ m ol ab sp ie l t rg pr sb lb rr dlp l5))
   (let ((erased m2)) m)
   (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
   (let ((erased c2)) c)
@@ -790,7 +790,7 @@
   (let ((erased lp5)) (LengthCons _ w Bs 4 lb))
   (let ((erased rg2)) rg)
   (let-match erased rg2 (MkRing _ _ _ _ yl eyl rp pe sw s))
-  (let ((erased tc)) (MkTCx B d w x0 e n f fe lab ks cx ins Bs lp m ol ab sp ie l t rg pr sb lb rr (simple-fl d f lab p lp fl s rr)
+  (let ((erased tc)) (MkTdCx B d w x0 e n f fe lab ks cx ins Bs lp m ol ab sp ie l t rg pr sb lb rr (simple-fl d f lab p lp fl s rr)
     (respects-length lab p lp 5 rr lp5)))
   (let ((erased hd) (erased zs) (erased ds)) (ds-exists d e n f p h ur))
   (let ((erased y0) (erased y1) (erased dy0) (erased iy1) (erased ky1)) (nontrivial-pick d w (Zero) e n f Bs hd zs h gen rg ds nt))

@@ -225,14 +225,14 @@
     (perm-under dc ec nf pme) lem uem r1 rc1 r2 r3 rc2 reb rle coe (trace-rev csr cse et3 w t3 rvc rrw) (rotrev-sym et3 w rrw) tr4))
 
 ; The certificates of a configuration of cfs, taken as a hypothesis: embed4.sl's GcOK and FunctorAll, and embed5.sl's
-; NodeRing and Radius2. A function at a level F.
+; NodeRing, Radius2 and KerMax. A function at a level F.
 (def-adts $ (CfCerts : ((List (Config)) cfs) -> Type)
   enum
   (many MkCfCerts : (erased (List (Config)) cfs) (erased (Level) F)
       (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
           (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
           (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
-          (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)) gc)
+          (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km)) gc)
       -> (CfCerts cfs)))
 
 ; embed_valid_contract of embed.v, with minimality as data, taken as a hypothesis: the image ccr = map h1 cc of a valid
@@ -353,8 +353,8 @@
     (let-match erased pm (MkPointedMap _ _ _ _ _ hc cpr))
     (let-match erased cpr (MkCpring _ p a y rp back dp))
     (let ((erased en)) (MkEEnv dc ec nc fc ksc rc dm em nm fm ksm as hl hc ol kl g pe))
-    (let ((erased ok) (erased fu) (erased nr) (erased rd)) (gfn sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl m c en))
-    (let-match erased (run dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu nr rd pb ncol conn) (OrR _ _ eo) ((OrL _ _ r) (reduces-lift Br B dm em nm fm r q1)))
+    (let ((erased ok) (erased fu) (erased nr) (erased rd) (erased km)) (gfn sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl m c en))
+    (let-match erased (run dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu nr rd km pb ncol conn) (OrR _ _ eo) ((OrL _ _ r) (reduces-lift Br B dm em nm fm r q1)))
     (let-match erased eo (MkEmbedOut _ _ _ _ _ _ _ _ _ _ _ _ _ ids h1 io el lh uh fa me mn ep))
     (let-match erased ep (MkEmbedPatch _ _ dd dr _ _ _ _ _ _ _ ed nd fd er nr fr hd hr bd br embd q1e q2e q3e erc0 erc h1f idc pt lem uem r1 rc1 r2 r3 rc2 re rv reb rh
       rf1 rcf ioc cv))

@@ -4,7 +4,7 @@
   enum
   (many MkFourColorOpen : (erased (Level) F)
       (erased (Fn F (erased (UnavE cfs) u) (erased (AllRedC CRX css) ar) (erased (BirkhoffChecks) bks) (erased (CfCerts cfs) cc)
-          (erased (TrivFive) t5) -> (erased (FourColor) r)) fc)
+          -> (erased (FourColor) r)) fc)
       -> (FourColorOpen)))
 
 (goal erased (FourColorOpen))
