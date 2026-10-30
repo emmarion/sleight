@@ -17,7 +17,11 @@ for writing macros, [`std/nat.sl`](std/nat.sl)
 holds `NatLe`, the non-strict order on `Nat`, `Ne`, inequality as one of the
 two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
 `add-le-right` and `double-le`, [`std/list.sl`](std/list.sl) holds lemmas
-about the prelude's `Length`, `Nth`, `SetNth`, `Repeat` and `NthLast`, and
+about the prelude's `Length`, `Nth`, `SetNth`, `Repeat` and `NthLast`,
+[`std/buffer.sl`](std/buffer.sl), which needs `std/list.sl` and `std/macro.sl`, holds growable
+arrays and ring buffers indexed by their contents, `Vec` and `Ring` over `(Array (Copy A))` and
+`BytesVec` and `BytesRing` over `Bytes`, written once as a template that its macro `instances`
+instantiates for each buffer type, and
 [`std/tactics.sl`](std/tactics.sl), which needs `std/macro.sl` and `std/nat.sl`, holds proof
 tactics written as macros.
 
