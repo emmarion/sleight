@@ -35,10 +35,10 @@
   enum
   (many CmNil : -> (Cpmap (Nil (Step)) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
       (Cons (Nat) (Zero) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))))
-  (many CmR : (erased (Nat) k d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c) (erased (Rot k r r2) rt)
+  (many CmR : (erased (Nat) k d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c) (erased (Rot (Nat) k r r2) rt)
       -> (Cpmap (Cons (Step) (SR k) cp) d e f r2))
   (many CmRr : (erased (Nat) m d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c)
-      (erased (Length (Nat) r (Succ m)) l) (erased (Rot m r r2) rt) -> (Cpmap (Cons (Step) (SRr) cp) d e f r2))
+      (erased (Length (Nat) r (Succ m)) l) (erased (Rot (Nat) m r r2) rt) -> (Cpmap (Cons (Step) (SRr) cp) d e f r2))
   (many CmU : (erased (Nat) d) (erased (List (Step)) cp) (erased (List (Nat)) e f r e2 f2 r2) (erased (Cpmap cp d e f r) c)
       (erased (EcpU d e f r e2 f2 r2) u) -> (Cpmap (Cons (Step) (SU) cp) (Succ (Succ d)) e2 f2 r2))
   (many CmY : (erased (Nat) d) (erased (List (Step)) cp) (erased (List (Nat)) e f r e1 f1 r1 e2 f2 r2) (erased (Cpmap cp d e f r) c)
@@ -49,7 +49,7 @@
       (erased (EcpN (Succ (Succ (Succ (Succ d)))) e2 f2 r2 e3 f3 r3) nn2)
       -> (Cpmap (Cons (Step) (SH) cp) (Succ (Succ (Succ (Succ (Succ (Succ d)))))) e3 f3 r3))
   (many CmK : (erased (Nat) m d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r1 e2 f2 r2 r3) (erased (Cpmap cp d e f r) c)
-      (erased (Length (Nat) r (Succ m)) l) (erased (Rot m r r1) rt) (erased (EcpN d e f r1 e2 f2 r2) nn) (erased (Rot (Succ (Zero)) r2 r3) rt2)
+      (erased (Length (Nat) r (Succ m)) l) (erased (Rot (Nat) m r r1) rt) (erased (EcpN d e f r1 e2 f2 r2) nn) (erased (Rot (Nat) (Succ (Zero)) r2 r3) rt2)
       -> (Cpmap (Cons (Step) (SK) cp) (Succ (Succ d)) e2 f2 r3)))
 
 (def-fns _ $ (erased cpmap-map : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
@@ -100,7 +100,7 @@
   (let-match many r (Cons _ a1 p1))
   (let ((erased d2) (erased d4)) (values (Succ (Succ d)) (Succ (Succ (Succ (Succ d))))))
   (match many s _
-    ((SR k) (let ((many r2) (erased rt)) (rot-c k r)) (values d e f r2 (CmR k d rest e f r r2 c rt)))
+    ((SR k) (let ((many r2) (erased rt)) (rot-c _ k r)) (values d e f r2 (CmR k d rest e f r r2 c rt)))
     ((SRr) (let ((many r2) (erased m) (erased l) (erased rt)) (rotr1-c a1 p1)) (values d e f r2 (CmRr m d rest e f r r2 c l rt)))
     ((SU)
       (let ((many e2) (many f2) (many r2) (erased u) (erased _) (erased _)) (ecpU-c d e f r n pm))
@@ -117,7 +117,7 @@
     ((SK)
       (let ((many r1) (erased m) (erased l) (erased rt)) (rotr1-c a1 p1))
       (let ((many e2) (many f2) (many r2) (erased nn) (erased _) (erased _)) (ecpN-c d e f r1 n (pointed-rot d m e n f r r1 pm rt)))
-      (let ((many r3) (erased rt2)) (rot-c (Succ (Zero)) r2))
+      (let ((many r3) (erased rt2)) (rot-c _ (Succ (Zero)) r2))
       (values (Succ (Succ d)) e2 f2 r3 (CmK m d rest e f r r1 e2 f2 r2 r3 c l rt nn rt2)))
     (absurd (SA) na)))
 

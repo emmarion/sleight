@@ -18,16 +18,16 @@
   (let ((many ys) (erased p)) (notail $ setnth-c k1 rest i1 y l1 lt1))
   (values (Cons _ x ys) (SetThere _ x rest i1 y ys p)))
 
-(def-fns _ $ (many snoc-c : (subterm many (List (Nat)) xs) (many (Nat) a) -> (many (List (Nat)) ys) (erased (Snoc (Nat) xs a ys) p))
+(def-fns _ $ (many snoc-c : (erased Type A) (subterm many (List A) xs) (many A a) -> (many (List A) ys) (erased (Snoc A xs a ys) p))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Cons _ a (Nil _)) (SnocNil _ a))))
-  (let ((many ys) (erased p)) (notail $ snoc-c rest a))
+  (let ((many ys) (erased p)) (notail $ snoc-c _ rest a))
   (values (Cons _ x ys) (SnocCons _ x a rest ys p)))
 
 (def-fns _ $ (many insert-c : (erased (Nat) k) (many (List (Nat)) xs) (many (Nat) c x) (erased (Length (Nat) xs k) l) (erased (Lt c k) lt)
     -> (many (List (Nat)) ys) (erased (Insert xs c x ys) p))
   (let ((many v) (erased pv)) (nth-c k xs c l lt))
   (let ((many xs1) (erased s1)) (setnth-c k xs c x l lt))
-  (let ((many ys) (erased s2)) (snoc-c xs1 v))
+  (let ((many ys) (erased s2)) (snoc-c _ xs1 v))
   (values ys (MkInsert xs xs1 ys c x v pv s1 s2)))
 
 ; y is the last entry of xs.
@@ -128,39 +128,39 @@
       (DistCons o l0 (NotInCons o z (Nil (Nat)) (ApGt _ _ o z (LtZ (Zero))) (NotInNil o)) (DistCons z (Nil (Nat)) (NotInNil z) (DistNil))))))
 
 ; ys is xs rotated left by one place k times.
-(def-adts $ (Rots : ((Nat) k) ((List (Nat)) xs ys) -> Type)
+(def-adts $ (Rots : (Type A) ((Nat) k) ((List A) xs ys) -> Type)
   enum
-  (many RotsZ : (erased (List (Nat)) xs) -> (Rots (Zero) xs xs))
-  (many RotsS : (erased (Nat) k x) (erased (List (Nat)) xs xs2 ys) (erased (Snoc (Nat) xs x xs2) s) (erased (Rots k xs2 ys) rest)
-      -> (Rots (Succ k) (Cons (Nat) x xs) ys)))
+  (many RotsZ : (erased Type A) (erased (List A) xs) -> (Rots A (Zero) xs xs))
+  (many RotsS : (erased Type A) (erased (Nat) k) (erased A x) (erased (List A) xs xs2 ys) (erased (Snoc A xs x xs2) s) (erased (Rots A k xs2 ys) rest)
+      -> (Rots A (Succ k) (Cons A x xs) ys)))
 
 ; Gonthier's rot k: rotation left by k places, which leaves xs alone when k exceeds its length.
-(def-adts $ (Rot : ((Nat) k) ((List (Nat)) xs ys) -> Type)
+(def-adts $ (Rot : (Type A) ((Nat) k) ((List A) xs ys) -> Type)
   enum
-  (many RotIn : (erased (Nat) k m) (erased (List (Nat)) xs ys) (erased (Length (Nat) xs m) l) (erased (Lt k (Succ m)) le) (erased (Rots k xs ys) rs)
-      -> (Rot k xs ys))
-  (many RotOver : (erased (Nat) k m) (erased (List (Nat)) xs) (erased (Length (Nat) xs m) l) (erased (Lt m k) gt) -> (Rot k xs xs)))
+  (many RotIn : (erased Type A) (erased (Nat) k m) (erased (List A) xs ys) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le) (erased (Rots A k xs ys) rs)
+      -> (Rot A k xs ys))
+  (many RotOver : (erased Type A) (erased (Nat) k m) (erased (List A) xs) (erased (Length A xs m) l) (erased (Lt m k) gt) -> (Rot A k xs xs)))
 
-(def-fns _ $ (many size-c : (subterm many (List (Nat)) xs) -> (many (Nat) m) (erased (Length (Nat) xs m) l))
+(def-fns _ $ (many size-c : (erased Type A) (subterm many (List A) xs) -> (many (Nat) m) (erased (Length A xs m) l))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (LengthNil _))))
-  (let ((many m) (erased l)) (notail $ size-c rest))
+  (let ((many m) (erased l)) (notail $ size-c _ rest))
   (values (Succ m) (LengthCons _ x rest m l)))
 
-(def-fns _ $ (many rots-c : (subterm many (Nat) k) (many (List (Nat)) xs) (erased (Nat) m) (erased (Length (Nat) xs m) l) (erased (Lt k (Succ m)) le)
-    -> (many (List (Nat)) ys) (erased (Rots k xs ys) r))
-  (let-match many k (Succ k1) ((Zero) (values xs (RotsZ xs))))
+(def-fns _ $ (many rots-c : (erased Type A) (subterm many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
+    -> (many (List A) ys) (erased (Rots A k xs ys) r))
+  (let-match many k (Succ k1) ((Zero) (values xs (RotsZ _ xs))))
   (let-match many xs (Cons _ x rest) (absurd (Nil _) (let-match erased l (LengthNil _)) (let-match erased le (LtS _ _ le1)) le1))
   (let-match erased l (LengthCons _ _ _ m1 l1))
-  (let ((many xs2) (erased s)) (snoc-c rest x))
-  (let ((many ys) (erased r)) (tail $ rots-c k1 xs2 m (snoc-length _ rest xs2 x m1 s l1) (lt-succ-left k1 (Succ m) le)))
-  (values ys (RotsS k1 x rest xs2 ys s r)))
+  (let ((many xs2) (erased s)) (snoc-c _ rest x))
+  (let ((many ys) (erased r)) (tail $ rots-c _ k1 xs2 m (snoc-length _ rest xs2 x m1 s l1) (lt-succ-left k1 (Succ m) le)))
+  (values ys (RotsS _ k1 x rest xs2 ys s r)))
 
-(def-fns _ $ (many rot-c : (many (Nat) k) (many (List (Nat)) xs) -> (many (List (Nat)) ys) (erased (Rot k xs ys) r))
-  (let ((many m) (erased l)) (size-c xs))
+(def-fns _ $ (many rot-c : (erased Type A) (many (Nat) k) (many (List A) xs) -> (many (List A) ys) (erased (Rot A k xs ys) r))
+  (let ((many m) (erased l)) (size-c _ xs))
   (match many (nat-cmp k m) _
-    ((CLt _ _ _ _ lt) (let ((many ys) (erased rs)) (rots-c k xs m l (lt-weaken k m lt))) (values ys (RotIn k m xs ys l (lt-weaken k m lt) rs)))
-    ((CEq _ _ _) (let ((many ys) (erased rs)) (rots-c k xs m l (lt-succ k))) (values ys (RotIn k m xs ys l (lt-succ k) rs)))
-    ((CGt _ _ _ _ gt) (values xs (RotOver k m xs l gt)))))
+    ((CLt _ _ _ _ lt) (let ((many ys) (erased rs)) (rots-c _ k xs m l (lt-weaken k m lt))) (values ys (RotIn _ k m xs ys l (lt-weaken k m lt) rs)))
+    ((CEq _ _ _) (let ((many ys) (erased rs)) (rots-c _ k xs m l (lt-succ k))) (values ys (RotIn _ k m xs ys l (lt-succ k) rs)))
+    ((CGt _ _ _ _ gt) (values xs (RotOver _ k m xs l gt)))))
 
 (def-fns _ $ (erased rpath-snoc : (erased (List (Nat)) n p p2) (erased (Nat) x y z) (subterm erased (RPath n x p y) rp) (erased (Nth (Nat) n z y) pz)
     (erased (Snoc (Nat) p z p2) s) -> (erased (RPath n x p2 z) r))
@@ -177,16 +177,16 @@
   (let-match erased s (SnocCons _ _ _ _ q1 s1))
   (MkCpring n q1 b a (rpath-snoc n p1 q1 b y a rp1 back s1) pb (distinct-snoc-cons a p q s dp)))
 
-(def-fns _ $ (erased cpring-rots : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (subterm erased (Rots k xs ys) rs)
+(def-fns _ $ (erased cpring-rots : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (subterm erased (Rots (Nat) k xs ys) rs)
     -> (erased (Cpring n ys) r))
-  (let-match erased rs (RotsS k1 x xs1 xs2 _ s rs1) ((RotsZ _) cr))
+  (let-match erased rs (RotsS _ k1 x xs1 xs2 _ s rs1) ((RotsZ _ _) cr))
   (cpring-rots n xs2 ys k1 (cpring-rot1 n xs1 xs2 x cr s) rs1))
 
-(def-fns _ $ (erased cpring-rot : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (erased (Rot k xs ys) rt)
+(def-fns _ $ (erased cpring-rot : (erased (List (Nat)) n xs ys) (erased (Nat) k) (erased (Cpring n xs) cr) (erased (Rot (Nat) k xs ys) rt)
     -> (erased (Cpring n ys) r))
   (match erased rt _
-    ((RotIn _ m _ _ l le rs) (cpring-rots n xs ys k cr rs))
-    ((RotOver _ m _ l gt) cr)))
+    ((RotIn _ _ m _ _ l le rs) (cpring-rots n xs ys k cr rs))
+    ((RotOver _ _ m _ l gt) cr)))
 
 (def-fns _ $ (erased perm-fix2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Snoc (Nat) p d p2) s)
     -> (erased (List (Nat)) q2) (erased (Perm (Succ d) p2 q2) r))
@@ -358,7 +358,7 @@
       (let ((erased bk)) (node-move d d2 a y e n f e2 n2 f2 s t h h2 ge ag rst back (NotInCons a x0 _ nax (NotInCons a w _ naw (NotInNil a)))))
       (values n2 (MkPointedMap d2 e2 n2 f2 r2 h2 (MkCpring n2 (Cons (Nat) d q) a y (RPCons n2 q a d y nda (RPCons n2 q1 d w y nwd rp4)) bk dist2))))))
 
-(def-fns _ $ (erased pointed-rot : (erased (Nat) d k) (erased (List (Nat)) e n f r r2) (erased (PointedMap d e n f r) pm) (erased (Rot k r r2) rt)
+(def-fns _ $ (erased pointed-rot : (erased (Nat) d k) (erased (List (Nat)) e n f r r2) (erased (PointedMap d e n f r) pm) (erased (Rot (Nat) k r r2) rt)
     -> (erased (PointedMap d e n f r2) res))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (MkPointedMap d e n f r2 h (cpring-rot n r r2 k cr rt)))
@@ -377,9 +377,9 @@
   (let ((many b) (erased lb)) (last-c a1 p1))
   (let-match erased (last-fn r b y lb (rpath-last n p a y rp)) (Refl _ _))
   (let ((many c) (erased pc)) (nth-c d e b le (perm-val d a b n ni pn back)))
-  (let ((many e1) (erased s1)) (snoc-c e (Succ d)))
-  (let ((many e2) (erased s2)) (snoc-c e1 d))
-  (let ((many f0) (erased s0)) (snoc-c f d))
+  (let ((many e1) (erased s1)) (snoc-c _ e (Succ d)))
+  (let ((many e2) (erased s2)) (snoc-c _ e1 d))
+  (let ((many f0) (erased s0)) (snoc-c _ f d))
   (let ((many f2) (erased ins)) (insert-c (Succ d) f0 c (Succ d) (snoc-length _ f f0 d d s0 lf) (lt-weaken c d (perm-val d b c e ei pe pc))))
   (let ((erased st)) (MkEcpU d b c e f r e2 f0 f2 lb pc (MkEdgeGrow e e1 e2 d le s1 s2) s0 ins))
   (let ((erased n2) (erased pm2)) (ecpU-map d e n f r e2 f2 _ pm st))
@@ -399,8 +399,8 @@
   (let ((many z) (erased pz)) (nth-c d f ex lf (perm-val d x0 ex e ei pe pex)))
   (let ((many ea) (erased pea)) (nth-c d e a1 le (nth-lt-length _ n a d y back ln)))
   (let ((many ez) (erased pez)) (nth-c d e z le (perm-val d ex z f fi pf pz)))
-  (let ((many e1) (erased s1)) (snoc-c e (Succ d)))
-  (let ((many e2) (erased s2)) (snoc-c e1 d))
+  (let ((many e1) (erased s1)) (snoc-c _ e (Succ d)))
+  (let ((many e2) (erased s2)) (snoc-c _ e1 d))
   (let ((many f1) (erased i1)) (insert-c d f ea d lf (perm-val d a ea e ei pe pea)))
   (let ((many f2) (erased i2)) (insert-c (Succ d) f1 ez (Succ d) (insert-length f f1 ea d d i1 lf) (lt-weaken ez d (perm-val d z ez e ei pe pez))))
   (let ((erased g)) (MkEdgeGrow e e1 e2 d le s1 s2))
@@ -421,9 +421,9 @@
   (values e2 f2 (Cons _ a1 (Cons _ d q)) st n2 pm2))
 
 (def-fns _ $ (many rotr1-c : (many (Nat) a) (many (List (Nat)) p)
-    -> (many (List (Nat)) r2) (erased (Nat) m) (erased (Length (Nat) (Cons (Nat) a p) (Succ m)) l) (erased (Rot m (Cons (Nat) a p) r2) rt))
-  (let ((many m) (erased l)) (size-c p))
-  (let ((many r2) (erased rt)) (rot-c m (Cons _ a p)))
+    -> (many (List (Nat)) r2) (erased (Nat) m) (erased (Length (Nat) (Cons (Nat) a p) (Succ m)) l) (erased (Rot (Nat) m (Cons (Nat) a p) r2) rt))
+  (let ((many m) (erased l)) (size-c _ p))
+  (let ((many r2) (erased rt)) (rot-c _ m (Cons _ a p)))
   (values r2 m (LengthCons _ a p m l) rt))
 
 ; k2 is Gonthier's k.-2.+1.
@@ -433,17 +433,17 @@
   (many P2One : -> (Pred2S (Succ (Zero)) (Succ (Zero))))
   (many P2Step : (erased (Nat) m) -> (Pred2S (Succ (Succ m)) (Succ m))))
 
-(def-fns _ $ (erased rots-length : (erased (Nat) k m) (erased (List (Nat)) xs ys) (subterm erased (Rots k xs ys) rs) (erased (Length (Nat) xs m) l)
+(def-fns _ $ (erased rots-length : (erased (Nat) k m) (erased (List (Nat)) xs ys) (subterm erased (Rots (Nat) k xs ys) rs) (erased (Length (Nat) xs m) l)
     -> (erased (Length (Nat) ys m) r))
-  (let-match erased rs (RotsS k1 x xs1 xs2 _ s rs1) ((RotsZ _) l))
+  (let-match erased rs (RotsS _ k1 x xs1 xs2 _ s rs1) ((RotsZ _ _) l))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (rots-length k1 m xs2 ys rs1 (snoc-length _ xs1 xs2 x m1 s l1)))
 
-(def-fns _ $ (erased rot-length : (erased (Nat) k m) (erased (List (Nat)) xs ys) (erased (Rot k xs ys) rt) (erased (Length (Nat) xs m) l)
+(def-fns _ $ (erased rot-length : (erased (Nat) k m) (erased (List (Nat)) xs ys) (erased (Rot (Nat) k xs ys) rt) (erased (Length (Nat) xs m) l)
     -> (erased (Length (Nat) ys m) r))
   (match erased rt _
-    ((RotIn _ m2 _ _ l2 _ rs) (rots-length k m xs ys rs l))
-    ((RotOver _ _ _ _ _) l)))
+    ((RotIn _ _ m2 _ _ l2 _ rs) (rots-length k m xs ys rs l))
+    ((RotOver _ _ _ _ _ _) l)))
 
 (def-fns _ $ (erased ecpU-size : (erased (Nat) d k) (erased (List (Nat)) e f r e2 f2 r2) (erased (EcpU d e f r e2 f2 r2) st) (erased (Length (Nat) r k) l)
     -> (erased (Length (Nat) r2 (Succ (Succ k))) res))
@@ -778,19 +778,19 @@
   (let-match erased i (InThere _ _ _ i1) ((InHere _ _) (InHere y ys1)))
   (InThere y z ys1 (snoc-in-old x y xs1 ys1 s1 i1)))
 
-(def-fns _ $ (erased in-rots : (erased (Nat) k y) (erased (List (Nat)) xs ys) (subterm erased (Rots k xs ys) rs) (erased (In y xs) i) -> (erased (In y ys) r))
-  (let-match erased rs (RotsS k1 x xs1 xs2 _ s rs1) ((RotsZ _) i))
+(def-fns _ $ (erased in-rots : (erased (Nat) k y) (erased (List (Nat)) xs ys) (subterm erased (Rots (Nat) k xs ys) rs) (erased (In y xs) i) -> (erased (In y ys) r))
+  (let-match erased rs (RotsS _ k1 x xs1 xs2 _ s rs1) ((RotsZ _ _) i))
   (let ((erased (In y xs2) i2)) (match erased i _ ((InHere _ _) (snoc-in-new x xs1 xs2 s)) ((InThere _ _ _ i1) (snoc-in-old x y xs1 xs2 s i1))))
   (in-rots k1 y xs2 ys rs1 i2))
 
-(def-fns _ $ (erased cubics-rot : (erased (Nat) k) (erased (List (Nat)) n r r2 xs) (subterm erased (Cubics n r xs) cs) (erased (Rot k r r2) rt)
+(def-fns _ $ (erased cubics-rot : (erased (Nat) k) (erased (List (Nat)) n r r2 xs) (subterm erased (Cubics n r xs) cs) (erased (Rot (Nat) k r r2) rt)
     -> (erased (Cubics n r2 xs) res))
   (let-match erased cs (CubsCons _ _ xs1 x c cs1) ((CubsNil _ _) (CubsNil n r2)))
   (let ((erased rest)) (cubics-rot k n r r2 xs1 cs1 rt))
   (let-match erased c (CubOn _ _ _ i) ((CubThree _ _ _ o) (CubsCons n r2 xs1 x (CubThree n r2 x o) rest)))
-  (CubsCons n r2 xs1 x (CubOn n r2 x (match erased rt _ ((RotIn _ _ _ _ _ _ rs) (in-rots k x r r2 rs i)) ((RotOver _ _ _ _ _) i))) rest))
+  (CubsCons n r2 xs1 x (CubOn n r2 x (match erased rt _ ((RotIn _ _ _ _ _ _ _ rs) (in-rots k x r r2 rs i)) ((RotOver _ _ _ _ _ _) i))) rest))
 
-(def-fns _ $ (erased quasicubic-rot : (erased (Nat) d k) (erased (List (Nat)) n r r2) (erased (QuasiCubic d n r) qc) (erased (Rot k r r2) rt)
+(def-fns _ $ (erased quasicubic-rot : (erased (Nat) d k) (erased (List (Nat)) n r r2) (erased (QuasiCubic d n r) qc) (erased (Rot (Nat) k r r2) rt)
     -> (erased (QuasiCubic d n r2) res))
   (let-match erased qc (MkQuasiCubic _ _ _ ids io cs))
   (MkQuasiCubic d n r2 ids io (cubics-rot k n r r2 ids cs rt)))
