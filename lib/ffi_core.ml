@@ -213,6 +213,7 @@ let array_place a i x = Array.unsafe_set (Obj.magic a : word array) (small i) (O
 let array_length a = Z.of_int (Array.length a)
 let array_length_many = array_length
 let array_length_dec (_ : 'a array) = Yes
+let array_length_dec_many = array_length_dec
 let array_swap_imm a i x =
   let a = (Obj.magic a : int array) in
   let old = Array.unsafe_get a (small i) in
@@ -236,6 +237,7 @@ let bytes_set b i x = Bytes.unsafe_set b (small i) (Char.unsafe_chr (small x))
 let bytes_length b = Z.of_int (Bytes.length b)
 let bytes_length_many = bytes_length
 let bytes_length_dec (_ : bytes) = Yes
+let bytes_length_dec_many = bytes_length_dec
 let str_bytes_copy (s, o, l) = let b = Bytes.create l in Bytes.blit_string s o b 0 l; b
 let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)
 let bytes_copy = Bytes.copy
