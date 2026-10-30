@@ -423,8 +423,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   and `NotEmbed cfs`, embed.v's not_embed_reducible for the
   configurations of cfs (such a map that is a `Geo`, with a configuration
   of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed` for
-  C_reducible, has a `Reduces`); it leaves open all of embed.v,
-  contract.v's contract_coloring, which embed.v uses, and Coq's
+  C_reducible, has a `Reduces`); it leaves open embed.v (`embed2.sl`
+  and `contract.sl` have pieces of it), contract.v's contract_coloring,
+  which embed.v uses (`contract.sl` has its colouring half), and Coq's
   embeddable for the configuration maps. The analysis colours a map with
   no dart, splits a disconnected one (`split-reduces`), and otherwise
   follows `BirkGeo`, then `UnavE` and `NotEmbed`, on the map or its
@@ -447,6 +448,64 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `BirkGeo` and `NotEmbed` to `FourColor` is not yet checked in one
   run, and whether a fixed list of smaller maps per reduction suffices
   for the arguments of `birkhoff.v` and `embed.v` is not yet known.
+- `embed2.sl` (load after `embed.sl`, in its chain with `geomring sew
+  snip srcycle revsnip revsnip2 revsnip3` loaded after `split`): first-order
+  pieces of embed.v's not_embed_reducible, as far as both compilers check
+  them, for the patch of the map that embed_patch would build; the
+  embedding itself (embed_functor to embed_patch) is not ported, and
+  of contract.v's contract_coloring only the part in `contract.sl` is. `pull-col`: a four-colouring of a map
+  gives one of a second map through a dart map that sends face and edge
+  images into the faces of the images (`Reach`). `embed-color`: from such
+  a dart map of the disk map into a configuration map, a four-colouring of
+  the configuration map with trace et on the disk ring's image, and a ring
+  trace rot 1 (rev et) of the remainder map, the map is four-coloured
+  (`patch-colorable`). `rem-col`: a contract colouring (`CCColoring`) whose
+  contract darts miss the remainder map four-colours it. `rem-kempe`: the
+  remainder map of a patch of a planar plain cubic map, its ring rotated
+  by one, is a `KempeRing` (embed_closure). `cc-pull`: a contract
+  colouring of the map, through a dart map that commutes with edge, sends
+  faces into faces and sends the contract darts of the configuration, and
+  only those, onto the map's (`InSides`), gives the fields of red/cfred.sl's
+  `CcColoring` on the configuration map (the first half of embed_contract).
+  The trace equations of embed_contract are in `contract.sl`. Not done:
+  the use of `CRed`, and `NotEmbed` itself. As `CRed` is stated, its coclosure function sits at
+  a level minted inside `check-reducible-valid`, and the glue of a
+  `Reduces`, at a level fixed beforehand, cannot call it, since nothing
+  proves that level predates the glue's (a small test of this shape was
+  refused by both compilers). A `CRed` indexed by a level minted at the
+  top level, as the `KClosed` sets of `ring-disk-closed` are, appears to
+  avoid this. That these statements match Coq's has been checked only by
+  reading.
+- `traceconv.sl` (load after `ringtrace.sl`; in the birkhoff chain
+  before `birkhoff.sl`, in the embed chain after `embed2.sl`): the colour
+  numbers and traces of `cfcolor.sl` (`NCols`, `CTr`) read as those of
+  `ringtrace.sl` (`ColOf`, `TraceFrom`) and back, and `CpCol` as a ring
+  trace on the configuration's ring and back (`cpcol-of`, `cpcol-rt`).
+- `contract.sl` (load after `traceconv.sl`, in the embed chain): parts of
+  contract.v's contract_coloring and embed.v's embed_contract, as far as
+  both compilers check them, with minimality as data. `Contraction d e n
+  f cc ms` names the map contract_coloring builds by contracting cc (its
+  G2) as the one map of a list ms, planar, bridgeless, plain, precubic
+  and smaller (`contraction-smaller` gives the `Smaller` a `Reduces`
+  takes), with a dart map p sending faces along faces and edge links as
+  `LiftE` says. `cc-lift` and `contraction-lift` turn a four-colouring of
+  the contracted map into a `CCColoring` of the map (the k0 of
+  contract_coloring). `embed-contract-trace` gives the trace equations of
+  embed_contract: for k constant on faces, kc = k . h1 a contract
+  colouring of a configuration map and kr = k . hr a four-colouring of a
+  remainder map, with the images of the configuration's `Cpmap` ring
+  under h1 reaching along faces those of a ring R under hr, place by
+  place (`Reach`), one trace et is a `CcCol` of the configuration and a
+  `RingTrace` of the remainder map on R. Not done: building a
+  `Contraction` from a valid contract (the double WalkupF per contract
+  edge; its bridgelessness, which Coq takes from the absence of contract
+  rings; and that absence, which Coq takes from Birkhoff through
+  sparse_contract_ring, contract_ring_max, contract3_valid and
+  triad_valid). One shape that appears to keep minimality as data is a
+  static function giving a `Contraction` or a contract ring, the latter
+  turned into a `Reduces` by `birkhoff2.sl`'s `birkhoff-reduces`; that it
+  suffices is not checked. That these statements match Coq's has been
+  checked only by reading.
 - `birkhoff.sl` (load after the chain below): Birkhoff_valid of
   `birkhoff.v`, as far as both compilers check it, with the minimality of
   the map entering as data rather than as a function: `birkhoff-maps`, a
@@ -486,7 +545,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/kempe cpcolor red/configs red/bridge red/init red/check red/gramrot
   red/cfred red/ccomp red/ccheck red/bcheck cpcomp`, then `ringtrace
   kempemap patch patch2 geomring sew snip srcycle revsnip revsnip2
-  revsnip3 cpgeom ringdec birkhoff` (each `.sl`). `birkfit.sl` (load
+  revsnip3 cpgeom ringdec traceconv birkhoff` (each `.sl`). `birkfit.sl` (load
   after `birkhoff.sl`; with `split.sl` the chain also checks) turns the
   maps `BNeed` lists into the `Smaller` list of a `Reduces`
   (`bneed-smaller`).
