@@ -295,3 +295,138 @@
             (PTCons g a (C1) _ _ pa (PTCons g a (C1) _ _ pa (PTCons g c (C2) _ _ pb (PTCons g c (C2) _ _ pb (PTNil g)))))))
           (values g ip pet pt (brmem-or t1 t2 t pet o (InL _ _ (cov-mem cp2 _ pet t1 c1 pst
             (allnz2 (C1) (C1) _ (NZ1) (NZ1) (allnz2 (C2) (C2) nil (NZ2) (NZ2) (AllNZNil))))))))))))
+
+; c is b after a.
+(def-adts $ (PComp : ((Perm) a b c) -> Type)
+  enum
+  (many MkPComp : (erased (Col) a1 a2 a3 c1 c2 c3) (erased (Perm) b) (erased (PermC b a1 c1) p1) (erased (PermC b a2 c2) p2) (erased (PermC b a3 c3) p3)
+      -> (PComp (MkPerm a1 a2 a3) b (MkPerm c1 c2 c3))))
+
+(def-fns _ $ (erased pcomp-ex : (erased (Perm) a b) (erased (IsPerm a) ia) (erased (IsPerm b) ib) -> (erased (Perm) c) (erased (PComp a b c) pc) (erased (IsPerm c) ic))
+  (let-match erased a (MkPerm a1 a2 a3))
+  (let ((erased c1) (erased p1)) (permc-ex b a1 ib))
+  (let ((erased c2) (erased p2)) (permc-ex b a2 ib))
+  (let ((erased c3) (erased p3)) (permc-ex b a3 ib))
+  (values (MkPerm c1 c2 c3) (MkPComp a1 a2 a3 c1 c2 c3 b p1 p2 p3)
+    (third-isperm c1 c2 c3 (third-perm b a1 a2 a3 c1 c2 c3 ib (perm-third a1 a2 a3 ia) p1 p2 p3))))
+
+(def-fns _ $ (erased pcomp-c : (erased (Perm) a b c) (erased (Col) x y z) (erased (PComp a b c) pc) (erased (PermC a x y) pa) (erased (PermC b y z) pb)
+    -> (erased (PermC c x z) r))
+  (let-match erased pc (MkPComp a1 a2 a3 c1 c2 c3 _ q1 q2 q3))
+  (match erased pa _
+    ((PC0 _) (let-match erased pb (PC0 _)) (PC0 c))
+    ((PC1 _ _ _) (let-match erased (permc-fn b a1 z c1 pb q1) (Refl _ _)) (PC1 c1 c2 c3))
+    ((PC2 _ _ _) (let-match erased (permc-fn b a2 z c2 pb q2) (Refl _ _)) (PC2 c1 c2 c3))
+    ((PC3 _ _ _) (let-match erased (permc-fn b a3 z c3 pb q3) (Refl _ _)) (PC3 c1 c2 c3))))
+
+(def-fns _ $ (erased permt-comp : (erased (Perm) a b c) (erased (List (Col)) l l1 l2) (erased (PComp a b c) pc) (subterm erased (PermT a l l1) p) (erased (PermT b l1 l2) q)
+    -> (erased (PermT c l l2) r))
+  (let-match erased p (PTCons _ x y lr l1r px p1) ((PTNil _) (let-match erased q (PTNil _)) (PTNil c)))
+  (let-match erased q (PTCons _ _ z _ l2r qy q1))
+  (PTCons c x z lr l2r (pcomp-c a b c x y z pc px qy) (permt-comp a b c lr l1r l2r pc p1 q1)))
+
+; Two colour permutations taking e to C1 differ by p123 or p132.
+(def-fns _ $ (erased fix-c1 : (erased (Perm) a b) (erased (Col) e) (erased (IsPerm a) ia) (erased (IsPerm b) ib) (erased (PermC a e (C1)) pa)
+    (erased (PermC b e (C1)) pb) -> (erased (Or (PComp a p123 b) (PComp a p132 b)) r))
+  (match erased ia _
+    ((IP123) (let-match erased pa (PC1 _ _ _)) (let-match erased pb (PC1 _ _ _))
+      (match erased ib _
+        ((IP123) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))
+        ((IP132) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))))
+    ((IP132) (let-match erased pa (PC1 _ _ _)) (let-match erased pb (PC1 _ _ _))
+      (match erased ib _
+        ((IP132) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))
+        ((IP123) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))))
+    ((IP213) (let-match erased pa (PC2 _ _ _)) (let-match erased pb (PC2 _ _ _))
+      (match erased ib _
+        ((IP213) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))
+        ((IP312) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))))
+    ((IP231) (let-match erased pa (PC3 _ _ _)) (let-match erased pb (PC3 _ _ _))
+      (match erased ib _
+        ((IP231) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))
+        ((IP321) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))))
+    ((IP312) (let-match erased pa (PC2 _ _ _)) (let-match erased pb (PC2 _ _ _))
+      (match erased ib _
+        ((IP312) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))
+        ((IP213) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))))
+    ((IP321) (let-match erased pa (PC3 _ _ _)) (let-match erased pb (PC3 _ _ _))
+      (match erased ib _
+        ((IP321) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))
+        ((IP231) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))))))
+
+; The traces of the permuted tree tp are those whose image under g is a trace of t (the other direction of perm-mem).
+(def-fns _ $ (erased perm-mem-back : (erased (Perm) g) (erased (Ctree) t tp) (subterm erased (List (Col)) w) (erased (List (Col)) l) (subterm erased (CtPerm g t tp) p)
+    (erased (PermT g w l) pt) (erased (CtMem t l) m) -> (erased (CtMem tp w) r))
+  (match erased p _
+    (absurd (CPE _) (mem-empty l m))
+    ((CPL _ lf) (let-match erased (leaf-mem-nil lf l m) (Refl _ _)) (let-match erased pt (PTNil _)) m)
+    ((CPN g1 g2 g3 t1 t2 t3 u1 u2 u3 a1 a2 a3 _ s1 s2 s3 p1 p2 p3 c)
+      (let-match erased pt (PTCons _ e d w1 l1 pc pt1)
+        (absurd (PTNil _) (let-match erased m (MkCtMem _ _ n s)) (let-match erased s (SubNil _ _ rt)) rt))
+      (let ((erased tt)) (CNode t1 t2 t3))
+      (match erased pc _
+        (absurd (PC0 _) (mem-empty l1 (mem-sel tt (CEmpty) d l1 m (SelN0 t1 t2 t3))))
+        ((PC1 _ _ _) (mem-cons tp a1 e w1 (cons-sel-back a1 a2 a3 tp a1 e c (SelN1 a1 a2 a3)) (perm-mem-back g u1 a1 w1 l1 p1 pt1 (mem-sel tt u1 d l1 m s1))))
+        ((PC2 _ _ _) (mem-cons tp a2 e w1 (cons-sel-back a1 a2 a3 tp a2 e c (SelN2 a1 a2 a3)) (perm-mem-back g u2 a2 w1 l1 p2 pt1 (mem-sel tt u2 d l1 m s2))))
+        ((PC3 _ _ _) (mem-cons tp a3 e w1 (cons-sel-back a1 a2 a3 tp a3 e c (SelN3 a1 a2 a3)) (perm-mem-back g u3 a3 w1 l1 p3 pt1 (mem-sel tt u3 d l1 m s3))))))))
+
+(def-fns _ $ (erased evtail-fn : (erased (List (Col)) l) (erased (Bool) b b2) (subterm erased (EvenTail l b) p) (erased (EvenTail l b2) q) -> (erased (Eq (Bool) b b2) e))
+  (match erased p _
+    ((ETNil) (let-match erased q (ETNil)) (Refl _ b))
+    ((ET0 l1 _ p1) (let-match erased q (ET0 _ _ q1)) (evtail-fn l1 b b2 p1 q1))
+    ((ET1 l1 _ p1) (let-match erased q (ET1 _ _ q1)) (evtail-fn l1 b b2 p1 q1))
+    ((ET2 _) (let-match erased q (ET2 _)) (Refl _ b))
+    ((ET3 _) (let-match erased q (ET3 _)) (Refl _ b))))
+
+; An even tail that stays even under p132 has neither C2 nor C3.
+(def-fns _ $ (erased ev-p132 : (erased (List (Col)) x y) (subterm erased (EvenTail x (BTrue)) ex) (erased (PermT p132 x y) pt) (erased (EvenTail y (BTrue)) ey)
+    -> (erased (Eq (List (Col)) y x) e))
+  (let-match erased pt (PTCons _ c d x1 y1 pc pt1) ((PTNil _) (Refl _ y)))
+  (match erased ex _
+    ((ET0 _ _ ex1) (let-match erased pc (PC0 _)) (let-match erased ey (ET0 _ _ ey1)) (let-match erased (ev-p132 x1 y1 ex1 pt1 ey1) (Refl _ _)) (Refl _ y))
+    ((ET1 _ _ ex1) (let-match erased pc (PC1 _ _ _)) (let-match erased ey (ET1 _ _ ey1)) (let-match erased (ev-p132 x1 y1 ex1 pt1 ey1) (Refl _ _)) (Refl _ y))
+    (absurd (ET2 _) (let-match erased pc (PC2 _ _ _)) ey)))
+
+; The tree t0 of cpcolor0-c holds rest, normalised by any colour permutation taking e1 to C1 to an even tail, for a trace
+; e0 :: e1 :: rest that the steps rcp can give from c c.
+(def-fns _ $ (erased core-mem : (erased (List (Step)) rcp) (erased (Ctree) t0) (erased (Cov0 rcp t0) cv) (erased (Col) c e0 e1) (erased (List (Col)) rest l2)
+    (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
+    (erased (AllNZ (Cons (Col) e0 (Cons (Col) e1 rest))) a) (erased (Perm) rho) (erased (IsPerm rho) irho) (erased (PermC rho e1 (C1)) prho)
+    (erased (PermT rho rest l2) ptr) (erased (EvenTail l2 (BTrue)) evl) -> (erased (CtMem t0 l2) r))
+  (let ((erased p) (erased ip) (erased pet) (erased pt) (erased bm)) (cov0-mem rcp c _ t0 cv st nz))
+  (let-match erased pt (PTCons _ _ x _ pr pc0 pt1))
+  (let-match erased pt1 (PTCons _ _ y _ prest pc1 pt2))
+  (let-match erased bm (MkBrMem _ _ _ grest _ g ig pg pgt nm))
+  (let-match erased a (AllNZCons _ _ _ a1))
+  (let-match erased a1 (AllNZCons _ _ nz1 a2))
+  (let ((erased A) (erased pcA) (erased iA)) (pcomp-ex p g ip ig))
+  (let ((erased ptA)) (permt-comp p g A rest prest grest pcA pt2 pgt))
+  (let-match erased nm (NMIn _ _ q nq mq) (absurd (NMZ _ _ z) (allnz-hasc0 grest (allnz-perm A rest grest iA ptA a2) z)))
+  (match erased (fix-c1 A rho e1 iA irho (pcomp-c p g A e1 y (C1) pcA pc1 pg) prho) _
+    ((InL _ _ k)
+      (let-match erased (permt-fn rho rest l2 grest ptr (permt-comp A p123 rho rest grest grest k ptA (tail-id grest))) (Refl _ _))
+      (match erased nq _
+        ((NrEven _ _) mq)
+        (absurd (NrOdd _ _ e _) (match erased (evtail-fn grest (BTrue) (BFalse) evl e) _))))
+    ((InR _ _ k)
+      (let ((erased z) (erased ptz)) (permt-ex p132 grest (IP132)))
+      (let-match erased (permt-fn rho rest l2 z ptr (permt-comp A p132 rho rest grest z k ptA ptz)) (Refl _ _))
+      (match erased nq _
+        ((NrEven _ e) (let-match erased (ev-p132 grest l2 e ptz evl) (Refl _ _)) mq)
+        ((NrOdd _ _ _ qq) (let-match erased (permt-fn p132 grest q l2 qq ptz) (Refl _ _)) mq)))))
+
+; The tree of cpcolor-c holds every even trace e1 :: rest for which e0 :: e1 :: rest is reached from c c by its steps.
+(def-fns _ $ (erased comp-mem : (erased (List (Step)) rcp) (erased (Ctree) t0 ta tb t) (erased (Cov0 rcp t0) cv) (erased (CtCons t0 ta tb t) cc)
+    (erased (CtPerm p312 t0 ta) pa) (erased (CtPerm p231 t0 tb) pb) (erased (Col) c e0 e1) (erased (List (Col)) rest)
+    (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
+    (erased (AllNZ (Cons (Col) e0 (Cons (Col) e1 rest))) a) (erased (EvenT (Cons (Col) e1 rest) (BTrue)) ev) -> (erased (CtMem t (Cons (Col) e1 rest)) r))
+  (let-match erased a (AllNZCons _ _ _ a1))
+  (let-match erased a1 (AllNZCons _ _ nz1 _))
+  (match erased ev _
+    (absurd (Ev0 _) nz1)
+    ((Ev1 _ _ el) (mem-cons t t0 e1 rest (cons-sel-back t0 ta tb t t0 e1 cc (SelN1 t0 ta tb))
+      (core-mem rcp t0 cv c e0 e1 rest rest st nz a p123 (IP123) (PC1 (C1) (C2) (C3)) (tail-id rest) el)))
+    ((Ev2 _ l2 _ q el) (mem-cons t ta e1 rest (cons-sel-back t0 ta tb t ta e1 cc (SelN2 t0 ta tb))
+      (perm-mem-back p312 t0 ta rest l2 pa q (core-mem rcp t0 cv c e0 e1 rest l2 st nz a p312 (IP312) (PC2 (C3) (C1) (C2)) q el))))
+    ((Ev3 _ l2 _ q el) (mem-cons t tb e1 rest (cons-sel-back t0 ta tb t tb e1 cc (SelN3 t0 ta tb))
+      (perm-mem-back p231 t0 tb rest l2 pb q (core-mem rcp t0 cv c e0 e1 rest l2 st nz a p231 (IP231) (PC3 (C2) (C3) (C1)) q el))))))
