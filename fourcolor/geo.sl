@@ -400,47 +400,47 @@
   (coll-weak v u u (coll-rot u v u (coll-same u v))))
 
 ; The cases of the sweep lemmas below; each rules out two segments crossing in its own configuration.
-(def-fns _ $ (erased absurd k1 : (erased (Point) a b c d p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p d) lpd)
+(def-fns _ $ (erased absurd geo-k1 : (erased (Point) a b c d p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p d) lpd)
     (erased (Left a b c) l1) (erased (Left a b d) l2) (erased (Left b a p) l3) (erased (Left c d p) l4) -> (erased (False) f))
   (collinear-left c d p (sq-up a b c d p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p d lpd)
     (left-weak a b c l1) (left-weak a b d l2) (left-weak c d p l4) (left-weak b a p l3) (OrL _ _ l3)) l4))
 
-(def-fns _ $ (erased absurd k2 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a c) lac) (erased (LexLt c b) lcb)
+(def-fns _ $ (erased absurd geo-k2 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a c) lac) (erased (LexLt c b) lcb)
     (erased (Left c d a) l1) (erased (Left c d b) l2) (erased (Left a b c) l3) -> (erased (False) f))
   (collinear-left a b c (sq-up c d a b c (lex-xle c d lcd) (lex-xle a c lac) (lex-xle c b lcb)
     (left-weak c d a l1) (left-weak c d b l2) (left-weak a b c l3) (weak-start c d) (OrR _ _ (MkPair _ _ l1 l2))) l3))
 
-(def-fns _ $ (erased absurd k3 : (erased (Point) c d a b p) (erased (LexLt c d) lcd) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
+(def-fns _ $ (erased absurd geo-k3 : (erased (Point) c d a b p) (erased (LexLt c d) lcd) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
     (erased (Left d c a) l1) (erased (Left d c b) l2) (erased (Left b a p) l3) (erased (Left c d p) l4) -> (erased (False) f))
   (collinear-left b a p (coll-swap a b p $ sq-down c d a b p (lex-xle c d lcd) (lex-xle a p lap) (lex-xle p b lpb)
     (left-weak d c a l1) (left-weak d c b l2) (left-weak b a p l3) (left-weak c d p l4) (OrL _ _ l4)) l3))
 
-(def-fns _ $ (erased absurd k4 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c a) lca) (erased (LexLt a d) lad)
+(def-fns _ $ (erased absurd geo-k4 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c a) lca) (erased (LexLt a d) lad)
     (erased (Left b a c) l1) (erased (Left b a d) l2) (erased (Left d c a) l3) -> (erased (False) f))
   (collinear-left d c a (coll-swap c d a $ sq-down a b c d a (lex-xle a b lab) (lex-xle c a lca) (lex-xle a d lad)
     (left-weak b a c l1) (left-weak b a d l2) (left-weak d c a l3) (weak-same a b) (OrR _ _ (MkPair _ _ l1 l2))) l3))
 
-(def-fns _ $ (erased absurd k5 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a d) lad) (erased (LexLt d b) ldb)
+(def-fns _ $ (erased absurd geo-k5 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a d) lad) (erased (LexLt d b) ldb)
     (erased (Left d c a) l1) (erased (Left d c b) l2) (erased (Left b a d) l3) -> (erased (False) f))
   (collinear-left b a d (coll-swap a b d $ sq-down c d a b d (lex-xle c d lcd) (lex-xle a d lad) (lex-xle d b ldb)
     (left-weak d c a l1) (left-weak d c b l2) (left-weak b a d l3) (weak-end c d) (OrR _ _ (MkPair _ _ l1 l2))) l3))
 
-(def-fns _ $ (erased absurd k6 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c b) lcb) (erased (LexLt b d) lbd)
+(def-fns _ $ (erased absurd geo-k6 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c b) lcb) (erased (LexLt b d) lbd)
     (erased (Left a b c) l1) (erased (Left a b d) l2) (erased (Left c d b) l3) -> (erased (False) f))
   (collinear-left c d b (sq-up a b c d b (lex-xle a b lab) (lex-xle c b lcb) (lex-xle b d lbd)
     (left-weak a b c l1) (left-weak a b d l2) (left-weak c d b l3) (coll-weak b a b (coll-same b a)) (OrR _ _ (MkPair _ _ l1 l2))) l3))
 
-(def-fns _ $ (erased absurd k7 : (erased (Point) a b c p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p b) lpb)
+(def-fns _ $ (erased absurd geo-k7 : (erased (Point) a b c p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p b) lpb)
     (erased (Left a b c) l1) (erased (Left c b p) l2) (erased (Left b a p) l3) -> (erased (False) f))
   (collinear-left c b p (sq-up a b c b p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p b lpb)
     (left-weak a b c l1) (weak-end a b) (left-weak c b p l2) (left-weak b a p l3) (OrL _ _ l3)) l2))
 
-(def-fns _ $ (erased absurd k8 : (erased (Point) a b c p) (erased (LexLt c b) lcb) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
+(def-fns _ $ (erased absurd geo-k8 : (erased (Point) a b c p) (erased (LexLt c b) lcb) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
     (erased (Left b c a) l1) (erased (Left b a p) l2) (erased (Left c b p) l3) -> (erased (False) f))
   (collinear-left b a p (coll-swap a b p $ sq-down c b a b p (lex-xle c b lcb) (lex-xle a p lap) (lex-xle p b lpb)
     (left-weak b c a l1) (coll-weak b c b (coll-same b c)) (left-weak b a p l2) (left-weak c b p l3) (OrL _ _ l3)) l2))
 
-(def-fns _ $ (erased absurd k9 : (erased (Point) a b d p) (erased (LexLt a b) lab) (erased (LexLt a p) lap) (erased (LexLt p d) lpd)
+(def-fns _ $ (erased absurd geo-k9 : (erased (Point) a b d p) (erased (LexLt a b) lab) (erased (LexLt a p) lap) (erased (LexLt p d) lpd)
     (erased (Left a b d) l1) (erased (Left b a p) l2) (erased (Left a d p) l3) -> (erased (False) f))
   (collinear-left a d p (sq-up a b a d p (lex-xle a b lab) (lex-xle a p lap) (lex-xle p d lpd)
     (weak-same a b) (left-weak a b d l1) (left-weak a d p l3) (left-weak b a p l2) (OrL _ _ l2)) l3))
@@ -463,36 +463,36 @@
         (absurd (ShareCA _ _ _ _) (lex-irrefl a lac))
         (absurd (ShareCB _ _ _ _) (lex-cycle b p lcp lpb))
         (absurd (ShareDA _ _ _ _) (lex-cycle a c lac lcd))
-        (absurd (ShareDB _ _ _ _) (k7 a b c p lab lcp lpb h over under))
+        (absurd (ShareDB _ _ _ _) (geo-k7 a b c p lab lcp lpb h over under))
         (absurd (SplitByAB _ _ _ _ ss _ _)
           (match erased ss _
-            (absurd (BothLeft _ _ _ _ _ ld) (k1 a b c d p lab lcp lpd h ld under over))
+            (absurd (BothLeft _ _ _ _ _ ld) (geo-k1 a b c d p lab lcp lpd h ld under over))
             (absurd (BothRight _ _ _ _ lc _) (left-antisym a b c h lc))))
         (absurd (SplitByCD _ _ _ _ _ od ss)
           (match erased od _
-            (absurd (OffLeft _ _ _ ld) (k1 a b c d p lab lcp lpd h ld under over))
+            (absurd (OffLeft _ _ _ ld) (geo-k1 a b c d p lab lcp lpd h ld under over))
             (absurd (OffRight _ _ _ _)
               (match erased ss _
-                (absurd (BothLeft _ _ _ _ la lb) (k2 c d a b lcd lac (lex-trans c p b lcp lpb) la lb h))
-                (absurd (BothRight _ _ _ _ la lb) (k3 c d a b p lcd lap lpb la lb under over))))))))
+                (absurd (BothLeft _ _ _ _ la lb) (geo-k2 c d a b lcd lac (lex-trans c p b lcp lpb) la lb h))
+                (absurd (BothRight _ _ _ _ la lb) (geo-k3 c d a b p lcd lap lpb la lb under over))))))))
     (absurd (BelowR _ _ _ _ lca h)
       (match erased cp _
         (absurd (ShareCA _ _ _ _) (lex-irrefl a lca))
         (absurd (ShareCB _ _ _ _) (lex-cycle b a lca lab))
         (absurd (ShareDA _ _ _ _) (lex-cycle a p lap lpd))
-        (absurd (ShareDB _ _ _ _) (k8 a b c p lcd lap lpb h under over))
+        (absurd (ShareDB _ _ _ _) (geo-k8 a b c p lcd lap lpb h under over))
         (absurd (SplitByAB _ _ _ _ ss _ ob)
           (match erased ob _
-            (absurd (OffRight _ _ _ lb) (k3 c d a b p lcd lap lpb h lb under over))
+            (absurd (OffRight _ _ _ lb) (geo-k3 c d a b p lcd lap lpb h lb under over))
             (absurd (OffLeft _ _ _ _)
               (match erased ss _
-                (absurd (BothLeft _ _ _ _ lc ld) (k1 a b c d p lab lcp lpd lc ld under over))
-                (absurd (BothRight _ _ _ _ lc ld) (k4 a b c d lab lca (lex-trans a p d lap lpd) lc ld h))))))
+                (absurd (BothLeft _ _ _ _ lc ld) (geo-k1 a b c d p lab lcp lpd lc ld under over))
+                (absurd (BothRight _ _ _ _ lc ld) (geo-k4 a b c d lab lca (lex-trans a p d lap lpd) lc ld h))))))
         (absurd (SplitByCD _ _ _ _ _ _ ss)
           (match erased ss _
             (absurd (BothLeft _ _ _ _ la _) (left-antisym c d a la h))
-            (absurd (BothRight _ _ _ _ _ lb) (k3 c d a b p lcd lap lpb h lb under over))))))
-    (absurd (BelowS _ _ _ h) (k9 a b d p lab lap lpd h under over))))
+            (absurd (BothRight _ _ _ _ _ lb) (geo-k3 c d a b p lcd lap lpb h lb under over))))))
+    (absurd (BelowS _ _ _ h) (geo-k9 a b d p lab lap lpd h under over))))
 
 ; A segment ending at a point of the other's span ends above it, when the other is below.
 (def-fns _ $ (erased absurd sweep-end-under : (erased (Point) a b c d) (erased (Below (MkEdge a b) (MkEdge c d)) bl)
@@ -511,8 +511,8 @@
             (absurd (BothRight _ _ _ _ lc _) (left-antisym a b c h lc))))
         (absurd (SplitByCD _ _ _ _ _ _ ss)
           (match erased ss _
-            (absurd (BothLeft _ _ _ _ la lb) (k2 c d a b lcd lac (lex-trans c d b lcd ldb) la lb h))
-            (absurd (BothRight _ _ _ _ la lb) (k5 c d a b lcd lad ldb la lb under))))))
+            (absurd (BothLeft _ _ _ _ la lb) (geo-k2 c d a b lcd lac (lex-trans c d b lcd ldb) la lb h))
+            (absurd (BothRight _ _ _ _ la lb) (geo-k5 c d a b lcd lad ldb la lb under))))))
     (absurd (BelowR _ _ _ _ lca h)
       (match erased cp _
         (absurd (ShareCA _ _ _ _) (lex-irrefl a lca))
@@ -522,11 +522,11 @@
         (absurd (SplitByAB _ _ _ _ ss _ _)
           (match erased ss _
             (absurd (BothLeft _ _ _ _ _ ld) (left-antisym a b d ld under))
-            (absurd (BothRight _ _ _ _ lc ld) (k4 a b c d (lex-trans a d b lad ldb) lca lad lc ld h))))
+            (absurd (BothRight _ _ _ _ lc ld) (geo-k4 a b c d (lex-trans a d b lad ldb) lca lad lc ld h))))
         (absurd (SplitByCD _ _ _ _ _ _ ss)
           (match erased ss _
             (absurd (BothLeft _ _ _ _ la _) (left-antisym c d a la h))
-            (absurd (BothRight _ _ _ _ la lb) (k5 c d a b lcd lad ldb la lb under))))))
+            (absurd (BothRight _ _ _ _ la lb) (geo-k5 c d a b lcd lad ldb la lb under))))))
     (absurd (BelowS _ _ _ h) (left-antisym a b d h under))))
 
 ; A segment ending at a point of the other's span ends below it, when the other is above.
@@ -542,11 +542,11 @@
         (absurd (ShareDB _ _ _ _) (lex-irrefl b lbd))
         (absurd (SplitByAB _ _ _ _ ss _ _)
           (match erased ss _
-            (absurd (BothLeft _ _ _ _ lc ld) (k6 a b c d lab lcb lbd lc ld over))
+            (absurd (BothLeft _ _ _ _ lc ld) (geo-k6 a b c d lab lcb lbd lc ld over))
             (absurd (BothRight _ _ _ _ lc _) (left-antisym a b c h lc))))
         (absurd (SplitByCD _ _ _ _ _ _ ss)
           (match erased ss _
-            (absurd (BothLeft _ _ _ _ la lb) (k2 c d a b (lex-trans c b d lcb lbd) lac lcb la lb h))
+            (absurd (BothLeft _ _ _ _ la lb) (geo-k2 c d a b (lex-trans c b d lcb lbd) lac lcb la lb h))
             (absurd (BothRight _ _ _ _ _ lb) (left-antisym c d b over lb))))))
     (absurd (BelowR _ _ _ _ lca h)
       (match erased cp _
@@ -556,8 +556,8 @@
         (absurd (ShareDB _ _ _ _) (lex-irrefl b lbd))
         (absurd (SplitByAB _ _ _ _ ss _ _)
           (match erased ss _
-            (absurd (BothLeft _ _ _ _ lc ld) (k6 a b c d lab lcb lbd lc ld over))
-            (absurd (BothRight _ _ _ _ lc ld) (k4 a b c d lab lca (lex-trans a b d lab lbd) lc ld h))))
+            (absurd (BothLeft _ _ _ _ lc ld) (geo-k6 a b c d lab lcb lbd lc ld over))
+            (absurd (BothRight _ _ _ _ lc ld) (geo-k4 a b c d lab lca (lex-trans a b d lab lbd) lc ld h))))
         (absurd (SplitByCD _ _ _ _ _ _ ss)
           (match erased ss _
             (absurd (BothLeft _ _ _ _ la _) (left-antisym c d a la h))
