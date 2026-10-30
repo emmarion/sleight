@@ -1,0 +1,48 @@
+(def-fns _ $ (erased respects-nth : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
+    (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) ls i l) q) -> (erased (Nth (Nat) lab j l) r))
+  (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
+  (let-match erased p (NthThere _ _ _ i1 _ p2)
+    ((NthHere _ _ _) (let-match erased q (NthHere _ _ _)) p1))
+  (let-match erased q (NthThere _ _ _ _ _ q2))
+  (respects-nth lab xs1 ls1 i1 j l rp1 p2 q2))
+
+(def-fns _ $ (erased respects-lab : (erased (List (Nat)) lab lab2 xs ls) (erased (Nat) a) (subterm erased (Respects lab xs ls) rp)
+    (erased (Snoc (Nat) lab a lab2) sn) -> (erased (Respects lab2 xs ls) r))
+  (let-match erased rp (RespCons _ xs1 ls1 j l p rp1) ((RespNil _) (RespNil lab2)))
+  (RespCons lab2 xs1 ls1 j l (snoc-old _ lab lab2 a l j sn p) (respects-lab lab lab2 xs1 ls1 a rp1 sn)))
+
+(def-fns _ $ (erased respects-setnth : (erased (List (Nat)) lab xs xs2 ls) (erased (Nat) i y l) (subterm erased (Respects lab xs ls) rp)
+    (erased (SetNth (Nat) xs i y xs2) s) (erased (Nth (Nat) ls i l) q) (erased (Nth (Nat) lab y l) py) -> (erased (Respects lab xs2 ls) r))
+  (let-match erased rp (RespCons _ xs1 ls1 j l1 p rp1) (absurd (RespNil _) q))
+  (match erased s _
+    ((SetHere _ _ _ _) (let-match erased q (NthHere _ _ _)) (RespCons lab xs1 ls1 y l py rp1))
+    ((SetThere _ _ _ i1 _ xs3 s1)
+      (let-match erased q (NthThere _ _ _ _ _ q1))
+      (RespCons lab xs3 ls1 j l1 p (respects-setnth lab xs1 xs3 ls1 i1 y l rp1 s1 q1 py)))))
+
+(def-fns _ $ (erased respects-snoc : (erased (List (Nat)) lab xs xs2 ls ls2) (erased (Nat) c l) (subterm erased (Respects lab xs ls) rp)
+    (erased (Nth (Nat) lab c l) pc) (erased (Snoc (Nat) xs c xs2) s1) (erased (Snoc (Nat) ls l ls2) s2) -> (erased (Respects lab xs2 ls2) r))
+  (match erased rp _
+    ((RespNil _)
+      (let-match erased s1 (SnocNil _ _))
+      (let-match erased s2 (SnocNil _ _))
+      (RespCons lab _ _ c l pc (RespNil lab)))
+    ((RespCons _ xs1 ls1 j l1 p rp1)
+      (let-match erased s1 (SnocCons _ _ _ _ xs3 s3))
+      (let-match erased s2 (SnocCons _ _ _ _ ls3 s4))
+      (RespCons lab xs3 ls3 j l1 p (respects-snoc lab xs1 xs3 ls1 ls3 c l rp1 pc s3 s4)))))
+
+; A dart inserted after d takes d's label.
+(def-fns _ $ (erased respects-insert : (erased (List (Nat)) lab lab2 nd nd2) (erased (Nat) d x n l)
+    (erased (Respects lab nd lab) rp) (erased (Insert nd d x nd2) i) (erased (Length (Nat) lab x) len)
+    (erased (Nth (Nat) lab d l) pd) (erased (Snoc (Nat) lab l lab2) sn) -> (erased (Respects lab2 nd2 lab2) r))
+  (let-match erased i (MkInsert _ nd1 _ _ _ c pc s q))
+  (let ((erased rp2)) (respects-lab lab lab2 nd lab l rp sn))
+  (let ((erased pc2)) (snoc-old _ lab lab2 l l c sn (respects-nth lab nd lab d c l rp pc pd)))
+  (let ((erased rp3)) (respects-setnth lab2 nd nd1 lab d x l rp2 s pd (snoc-new _ lab lab2 l x sn len)))
+  (respects-snoc lab2 nd1 nd2 lab lab2 c l rp3 pc2 q sn))
+
+(def-fns _ $ (erased respects-new : (erased (List (Nat)) lab lab2 nd nd2) (erased (Nat) x l)
+    (erased (Respects lab nd lab) rp) (erased (Snoc (Nat) nd x nd2) i) (erased (Length (Nat) lab x) len)
+    (erased (Snoc (Nat) lab l lab2) sn) -> (erased (Respects lab2 nd2 lab2) r))
+  (respects-snoc lab2 nd nd2 lab lab2 x l (respects-lab lab lab2 nd lab l rp sn) (snoc-new _ lab lab2 l x sn len) i sn))
