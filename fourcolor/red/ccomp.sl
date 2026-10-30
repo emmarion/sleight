@@ -867,12 +867,13 @@
     ((LMHere _ _ _) (values e0 et et2 (Refl _ x) tr s))
     ((LMThere _ _ _ _ m1) (allout-mem kt x rest m1 ao1))))
 
+(def-lvl CGL)
+
 (def-fns _ $ (erased contract-ok : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (Nat) d) (erased (List (Nat)) e n f r ie)
     (erased (List (List (Col))) ls zs) (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v)
     (erased (InsertE e cc ie) pi) (erased (LRel ie cp d ls) lr) (erased (RevApp (List (Col)) ls (Nil (List (Col))) zs) ra) (erased (AllOut kt zs) ao)
-    -> (erased (ContractOK cp cc kt) ok))
-  (def-lvl G)
-  (def-fns G $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
+    -> (erased (ContractOK CGL cp cc kt) ok))
+  (def-fns CGL $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
       (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m))
     (allout-mem kt et zs (revapp-mem-l (List (Col)) et ls (Nil (List (Col))) zs ra (cccol-hit cp cc d e f r ie ls c pi lr et col)) ao))
-  (MkContractOK cp cc kt d e n f r c h v G g))
+  (MkContractOK CGL cp cc kt d e n f r c h v g))
