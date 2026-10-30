@@ -28,9 +28,8 @@
   (let-match erased os (OrdCons _ xs1 ks1 x k o os1) ((OrdNil _) (OrdNil q)))
   (OrdCons q xs1 ks1 x k (order-inv d x k p q pm o) (orders-inv d p q xs1 ks1 pm os1)))
 
-(def-fns _ $ (erased order-fn2 : (erased (Nat) d x) (erased (List (Nat)) e n f ks fn) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn) (erased (Lt x d) lx)
-    -> (erased (Order fn x (Succ (Succ (Zero)))) r))
-  (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
+(def-fns _ $ (erased order-fn2 : (erased (Nat) d x) (erased (List (Nat)) e n f fn) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (Respects f n fn) rfn) (erased (Lt x d) lx) -> (erased (Order fn x (Succ (Succ (Zero)))) r))
   (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased a) (erased pa) (erased la)) (perm-nth d x n ni pn lx))
   (let ((erased y) (erased py) (erased ly)) (perm-nth d a f fi pf la))
@@ -49,15 +48,22 @@
   (MkOrder fn (Cons _ y (Nil _)) x y (Succ (Zero)) pl1
     (PathStep fn (Cons _ x (Nil _)) (Nil _) y x x pl3 (NotInCons y x (Nil _) nyx (NotInNil y)) (PathHere fn _ x)) (LengthCons _ y (Nil _) (Zero) (LengthNil _))))
 
-(def-fns _ $ (erased orders-fn2 : (erased (Nat) d m) (erased (List (Nat)) e n f ks fn ids) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn)
+(def-fns _ $ (erased orders-fn2 : (erased (Nat) d m) (erased (List (Nat)) e n f fn ids) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (Respects f n fn) rfn)
     (subterm erased (Iota m ids) io) (erased (Lt m (Succ d)) le)
     -> (erased (List (Nat)) ks2) (erased (Orders fn ids ks2) os) (erased (Repeat (Nat) m (Succ (Succ (Zero))) ks2) rk))
   (let-match erased io (IotaS m1 ids1 _ io1 s) ((IotaZ) (values (Nil (Nat)) (OrdNil fn) (RepeatNil _ (Succ (Succ (Zero)))))))
   (let ((erased lm)) (lt-pred m1 d le))
-  (let ((erased ks1) (erased os1) (erased rk1)) (orders-fn2 d m1 e n f ks fn ids1 g rfn io1 (lt-weaken m1 d lm)))
+  (let ((erased ks1) (erased os1) (erased rk1)) (orders-fn2 d m1 e n f fn ids1 h pl rfn io1 (lt-weaken m1 d lm)))
   (let ((erased ks2) (erased sk)) (snoc-exists _ ks1 (Succ (Succ (Zero)))))
-  (values ks2 (orders-snoc fn ids1 ids ks1 ks2 m1 (Succ (Succ (Zero))) os1 (order-fn2 d m1 e n f ks fn g rfn lm) s sk)
+  (values ks2 (orders-snoc fn ids1 ids ks1 ks2 m1 (Succ (Succ (Zero))) os1 (order-fn2 d m1 e n f fn h pl rfn lm) s sk)
     (repeat-snoc m1 (Succ (Succ (Zero))) ks1 ks2 rk1 sk)))
+
+(def-fns _ $ (erased plain-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
+    (erased (Respects f n fn) rfn) -> (erased (AllOrder d fn (Succ (Succ (Zero)))) r))
+  (let-match erased h (MkHypermap _ _ _ _ ids _ _ _ io _ _ _ _ _ _))
+  (let ((erased ks2) (erased os2) (erased rk2)) (orders-fn2 d d e n f fn ids h pl rfn io (lt-succ d)))
+  (MkAllOrder d (Succ (Succ (Zero))) fn ks2 (MkOrderList d fn ids ks2 io os2) rk2))
 
 (def-fns _ $ (erased geo-mirror : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g)
     -> (erased (List (Nat)) fn ni fi) (erased (Geo d fn ni fi ks) g2) (erased (Respects f n fn) rfn) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf))
@@ -66,9 +72,8 @@
   (let-match erased cu (MkAllOrder _ _ _ ks3 ol3 rk3))
   (let-match erased ol3 (MkOrderList _ _ ids3 _ io3 os3))
   (let-match erased ol (MkOrderList _ _ ids _ io os))
-  (let ((erased ks2) (erased os2) (erased rk2)) (orders-fn2 d d e n f ks fn ids g rfn io (lt-succ d)))
   (values fn ni fi
-    (MkGeo d fn ni fi ks h2 (MkAllOrder d (Succ (Succ (Zero))) fn ks2 (MkOrderList d fn ids ks2 io os2) rk2)
+    (MkGeo d fn ni fi ks h2 (plain-mirror d e n f fn h pl rfn)
       (MkAllOrder d (Succ (Succ (Succ (Zero)))) ni ks3 (MkOrderList d ni ids3 ks3 io3 (orders-inv d n ni ids3 ks3 pn os3)) rk3)
       (MkOrderList d fi ids ks io (orders-inv d f fi ids ks pf os)) ab)
     rfn pn pf))
