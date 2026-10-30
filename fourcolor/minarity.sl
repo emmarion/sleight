@@ -317,3 +317,117 @@
     (absurd (DPFace _ _ _ _ w1 _ out pf dp1)
       (let-match erased (nth-fn _ f z w1 sv pf pfz) (Refl _ _))
       (kernel-dp sv y n f _ dp1 isv ky))))
+
+; The other direction of diskF_spoke_ring, at x.
+(def-fns _ $ (erased sr-diskf : (erased (Nat) d x sx lx) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr)
+    -> (erased (DiskF n f (Cons (Nat) sx Q) x) r))
+  (let-match erased sr (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
+  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased rv (RespCons _ _ _ _ _ psx _))
+  (let-match erased dl (DistCons _ _ ol _))
+  (MkDiskF n f _ x (disk-node d sx x n ni f _ pmn (disk-ring d sx n ni f _ pmn (InHere sx Q) (under-nth fe x sx d ufe psx)) (fe-node d x sx e n f fe lab c psx))
+    (MkKernel f _ lab ls x lx rl rls plx ol)))
+
+; Every dart is on the face of x or on a face of its spoke ring, or the map reduces: a dart on neither is in diskFC of the spoke
+; ring (disk-on), which is then nontrivial for 0.
+(def-fns _ $ (erased cover : (erased (Level) B) (erased (Nat) d x sx lx y l) (erased (List (Nat)) e n f fe lab Q ls) (erased (MinCx B d e n f fe lab) m)
+    (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) lab y l) pl) -> (erased (HOr (In l (Cons (Nat) lx ls)) (Reduces B d e n f)) r))
+  (let ((erased sr2)) sr)
+  (let-match erased sr2 (MkSRg _ _ a _ _ k _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
+  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl0 cu rfe kfe io ufe lfe fl rl))
+  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ly)) (nth-lt-length _ lab y d l pl (respects-length lab f lab d rl lf)))
+  (let ((erased gf) (erased grf)) (perm-graph d f fi2 pmf2))
+  (let ((erased ur)) (ring-under d sx e n f Q h rg))
+  (match erased (band-dec d y f fi2 _ gf pmf2 grf ur ly) _
+    ((OrL _ _ fb)
+      (let-match erased fb (MkFband _ _ _ z iz sp))
+      (OrL _ _ (InThere l lx ls (in-map lab _ ls z l iz rls (facelab-path d y z l f lab fl sp pl)))))
+    ((OrR _ _ ky)
+      (let ((erased hd) (erased zs) (erased ds)) (ds-exists d e n f _ h ur))
+      (let ((erased ids2) (erased io2) (erased sp)) (ds-split d e n _ hd zs ds))
+      (match erased (split-cover hd ids2 hd zs y sp (iota-in d y ids2 io2 ly)) _
+        ((OrL _ _ ih)
+          (let-match erased (nth-fn _ lab y l lx pl (disk-on d x sx lx y e n f fe lab Q ls sr (ds-in d y sx e n f Q hd zs h gen rg ur ds ih) ky)) (Refl _ _))
+          (OrL _ _ (InHere l ls)))
+        ((OrR _ _ iz)
+          (OrR _ _ (cx-ring B d sx k e n f fe lab Q m rg lm l5
+            (nontrivial0 d sx x y e n f Q hd zs h gen rg ds (sr-diskf d x sx lx e n f fe lab Q ls sr) iz ky))))))))
+
+; The colours of min_arity, by the position of a face in lx :: ls: 0 for the face of x, then 1, 3, 2 and 3 around the ring.
+(let ((erased col5)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Cons (Nat) (Succ (Succ (Succ (Zero)))) $ Cons (Nat) (Succ (Succ (Zero)))
+  $ Cons (Nat) (Succ (Succ (Succ (Zero)))) $ Nil (Nat)))
+
+(def-fns _ $ (erased col5-len : -> (erased (Length (Nat) col5 five) r))
+  (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))
+
+(def-adts $ (Find : ((List (Nat)) L) ((Nat) l) -> Type)
+  enum
+  (many FHit : (erased (List (Nat)) L) (erased (Nat) l j) (erased (Nth (Nat) L j l) p) -> (Find L l))
+  (many FMiss : (erased (List (Nat)) L) (erased (Nat) l) (erased (NotIn l L) o) -> (Find L l)))
+
+(def-fns _ $ (erased find-in : (erased (Nat) l) (subterm erased (List (Nat)) L) -> (erased (Find L l) r))
+  (let-match erased L (Cons _ l0 L1) ((Nil _) (FMiss _ l (NotInNil l))))
+  (let-match erased (nat-eq l l0) (Unequal _ _ _ _ ne) ((Equal _ _ _) (FHit _ l (Zero) (NthHere _ l L1))))
+  (match erased (find-in l L1) _
+    ((FHit _ _ j p) (FHit _ l (Succ j) (NthThere _ l0 L1 j l p)))
+    ((FMiss _ _ o) (FMiss _ l (NotInCons l l0 L1 ne o)))))
+
+; c is the colour of a face of label l: col5 at the position of l in L, or 0 off L.
+(def-adts $ (TabAt : ((List (Nat)) L) ((Nat) l c) -> Type)
+  enum
+  (many TAHit : (erased (List (Nat)) L) (erased (Nat) l j c) (erased (Nth (Nat) L j l) p) (erased (Nth (Nat) col5 j c) q) -> (TabAt L l c))
+  (many TAMiss : (erased (List (Nat)) L) (erased (Nat) l) (erased (NotIn l L) o) -> (TabAt L l (Zero))))
+
+(def-adts $ (Tab : ((List (Nat)) L xs ks) -> Type)
+  enum
+  (many TabNil : (erased (List (Nat)) L) -> (Tab L (Nil (Nat)) (Nil (Nat))))
+  (many TabCons : (erased (List (Nat)) L xs ks) (erased (Nat) l c) (erased (TabAt L l c) t) (erased (Tab L xs ks) rest)
+      -> (Tab L (Cons (Nat) l xs) (Cons (Nat) c ks))))
+
+(def-fns _ $ (erased tab-exists : (erased (List (Nat)) L) (erased (Nat) m) (erased (Length (Nat) L m) lL) (erased (Lt m (Succ five)) lm) (subterm erased (List (Nat)) xs)
+    -> (erased (List (Nat)) ks) (erased (Tab L xs ks) t))
+  (let-match erased xs (Cons _ l xs1) ((Nil _) (values (Nil _) (TabNil L))))
+  (let ((erased ks1) (erased t1)) (tab-exists L m lL lm xs1))
+  (match erased (find-in l L) _
+    ((FHit _ _ j p)
+      (let ((erased c) (erased q)) (nth-exists _ col5 five j (col5-len) (lt-ls j m five (nth-lt-length _ L j m l p lL) lm)))
+      (values (Cons _ c ks1) (TabCons L xs1 ks1 l c (TAHit L l j c p q) t1)))
+    ((FMiss _ _ o) (values (Cons _ (Zero) ks1) (TabCons L xs1 ks1 l (Zero) (TAMiss L l o) t1)))))
+
+(def-fns _ $ (erased tab-nth : (erased (List (Nat)) L xs ks) (erased (Nat) i l) (subterm erased (Tab L xs ks) t) (erased (Nth (Nat) xs i l) p)
+    -> (erased (Nat) c) (erased (Nth (Nat) ks i c) pc) (erased (TabAt L l c) ta))
+  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) (absurd (TabNil _) p))
+  (match erased p _
+    ((NthHere _ _ _) (values c0 (NthHere _ c0 ks1) ta0))
+    ((NthThere _ _ _ i1 _ p1)
+      (let ((erased c) (erased pc) (erased ta)) (tab-nth L xs1 ks1 i1 l t1 p1))
+      (values c (NthThere _ c0 ks1 i1 c pc) ta))))
+
+(def-fns _ $ (erased tab-length : (erased (List (Nat)) L xs ks) (erased (Nat) k) (subterm erased (Tab L xs ks) t) (erased (Length (Nat) xs k) l)
+    -> (erased (Length (Nat) ks k) r))
+  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) ((TabNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (LengthCons _ c0 ks1 k1 (tab-length L xs1 ks1 k1 t1 l1)))
+
+(def-fns _ $ (erased tab-under : (erased (List (Nat)) L xs ks) (subterm erased (Tab L xs ks) t) -> (erased (Under ks 4) r))
+  (unary 4)
+  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) ((TabNil _) (UnderNil 4)))
+  (let ((erased u5)) (UnderCons _ _ _ (LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)
+    $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) $ UnderNil 4))
+  (UnderCons ks1 c0 4 (match erased ta0 (((Lt c0 4) r)) ((TAHit _ _ j _ _ q) (under-nth col5 j c0 4 u5 q)) ((TAMiss _ _ _) (LtZ _)))
+    (tab-under L xs1 ks1 t1)))
+
+(def-fns _ $ (erased tabat-fn : (erased (List (Nat)) L) (erased (Nat) l c c2) (erased (Distinct L) dl) (erased (TabAt L l c) t1) (erased (TabAt L l c2) t2)
+    -> (erased (Eq (Nat) c c2) r))
+  (match erased t1 _
+    ((TAHit _ _ j _ p q)
+      (match erased t2 _
+        ((TAHit _ _ j2 _ p2 q2) (let-match erased (distinct-nth L j j2 l dl p p2) (Refl _ _)) (nth-fn _ col5 j c c2 q q2))
+        (absurd (TAMiss _ _ o) (apart-irrefl l (notin-in l l L o (nth-in L j l p))))))
+    ((TAMiss _ _ o)
+      (match erased t2 _
+        (absurd (TAHit _ _ j2 _ p2 q2) (apart-irrefl l (notin-in l l L o (nth-in L j2 l p2))))
+        ((TAMiss _ _ _) (Refl _ c))))))
