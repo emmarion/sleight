@@ -479,3 +479,92 @@
       (let-match erased l1 (LengthCons _ _ _ k2 l2))
       (let-match erased l2 (LengthCons _ _ _ k3 l3))
       (values (Succ (Succ k3)) (P2Step (Succ k3)) (LengthCons _ a (Cons (Nat) d q) (Succ k3) (LengthCons _ d q k3 l3))))))
+
+; e is an involution without fixed points (Gonthier's plain).
+(def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)
+  enum
+  (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e ids) (erased (Iota d ids) io) (erased (Perm d e e) pe) (erased (Differ e ids) df)
+      -> (Plain d e)))
+
+(def-fns _ $ (erased differ-snoc : (erased (List (Nat)) xs ys xs2 ys2) (erased (Nat) x y) (subterm erased (Differ xs ys) df)
+    (erased (Snoc (Nat) xs x xs2) sx) (erased (Snoc (Nat) ys y ys2) sy) (erased (Apart (Nat) Lt x y) ne) -> (erased (Differ xs2 ys2) r))
+  (match erased df _
+    ((DifferNil) (let-match erased sx (SnocNil _ _)) (let-match erased sy (SnocNil _ _)) (DifferCons (Nil (Nat)) (Nil (Nat)) x y ne (DifferNil)))
+    ((DifferCons xs1 ys1 u v ne1 df1)
+      (let-match erased sx (SnocCons _ _ _ _ xs3 sx1))
+      (let-match erased sy (SnocCons _ _ _ _ ys3 sy1))
+      (DifferCons xs3 ys3 u v ne1 (differ-snoc xs1 ys1 xs3 ys3 x y df1 sx1 sy1 ne)))))
+
+(def-fns _ $ (erased differ-nth : (erased (List (Nat)) xs ys) (erased (Nat) i x y) (subterm erased (Differ xs ys) df) (erased (Nth (Nat) xs i x) px)
+    (erased (Nth (Nat) ys i y) py) -> (erased (Apart (Nat) Lt x y) r))
+  (let-match erased df (DifferCons xs1 ys1 u v ne df1) (absurd (DifferNil) px))
+  (let-match erased px (NthThere _ _ _ i1 _ px1) ((NthHere _ _ _) (let-match erased py (NthHere _ _ _)) ne))
+  (let-match erased py (NthThere _ _ _ _ _ py1))
+  (differ-nth xs1 ys1 i1 x y df1 px1 py1))
+
+(def-fns _ $ (erased plain-grow : (erased (Nat) d) (erased (List (Nat)) e e2) (erased (Plain d e) pl) (erased (EdgeGrow e d e2) g)
+    -> (erased (Plain (Succ (Succ d)) e2) r))
+  (let-match erased pl (MkPlain _ _ ids io pe df))
+  (let-match erased g (MkEdgeGrow _ e1 _ _ len se1 se2))
+  (let ((erased ids1) (erased s1)) (snoc-exists _ ids d))
+  (let ((erased ids2) (erased s2)) (snoc-exists _ ids1 (Succ d)))
+  (MkPlain (Succ (Succ d)) e2 ids2 (IotaS (Succ d) ids1 ids2 (IotaS d ids ids1 io s1) s2) (perm-grow d e e2 pe g)
+    (differ-snoc e1 ids1 e2 ids2 d (Succ d) (differ-snoc e ids e1 ids1 (Succ d) d df se1 s1 (ApGt _ _ (Succ d) d (lt-succ d))) se2 s2
+      (ApLt _ _ d (Succ d) (lt-succ d)))))
+
+(def-fns _ $ (erased plain-order1 : (erased (Nat) d x) (erased (List (Nat)) e) (erased (Plain d e) pl) (erased (Lt x d) lx)
+    -> (erased (Order e x (Succ (Succ (Zero)))) r))
+  (let-match erased pl (MkPlain _ _ ids io pe df))
+  (let ((erased y) (erased px) (erased ly)) (perm-nth d x e e pe lx))
+  (let ((erased ne)) (differ-nth e ids x y x df px (iota-nth d x ids io lx)))
+  (MkOrder e (Cons (Nat) y (Nil (Nat))) x y (Succ (Zero)) px
+    (PathStep e (Cons (Nat) x (Nil (Nat))) (Nil (Nat)) y x x (perm-inv d x y e e pe px) (NotInCons y x (Nil (Nat)) ne (NotInNil y))
+      (PathHere e (Cons (Nat) x (Nil (Nat))) x))
+    (LengthCons _ y (Nil (Nat)) (Zero) (LengthNil _))))
+
+(def-fns _ $ (erased orders-snoc : (erased (List (Nat)) p xs xs2 ks ks2) (erased (Nat) x k) (subterm erased (Orders p xs ks) os) (erased (Order p x k) o)
+    (erased (Snoc (Nat) xs x xs2) sx) (erased (Snoc (Nat) ks k ks2) sk) -> (erased (Orders p xs2 ks2) r))
+  (match erased os _
+    ((OrdNil _) (let-match erased sx (SnocNil _ _)) (let-match erased sk (SnocNil _ _)) (OrdCons p (Nil (Nat)) (Nil (Nat)) x k o (OrdNil p)))
+    ((OrdCons _ xs1 ks1 y j o1 os1)
+      (let-match erased sx (SnocCons _ _ _ _ xs3 sx1))
+      (let-match erased sk (SnocCons _ _ _ _ ks3 sk1))
+      (OrdCons p xs3 ks3 y j o1 (orders-snoc p xs1 xs3 ks1 ks3 x k os1 o sx1 sk1)))))
+
+(def-fns _ $ (erased repeat-snoc : (erased (Nat) n x) (erased (List (Nat)) xs xs2) (subterm erased (Repeat (Nat) n x xs) rp) (erased (Snoc (Nat) xs x xs2) s)
+    -> (erased (Repeat (Nat) (Succ n) x xs2) r))
+  (match erased rp _
+    ((RepeatNil _ _) (let-match erased s (SnocNil _ _)) (RepeatCons _ (Zero) x (Nil (Nat)) (RepeatNil _ x)))
+    ((RepeatCons _ k _ rest rp1) (let-match erased s (SnocCons _ _ _ _ rest2 s1)) (RepeatCons _ (Succ k) x rest2 (repeat-snoc k x rest rest2 rp1 s1)))))
+
+(def-fns _ $ (erased plain-orders : (erased (Nat) d m) (erased (List (Nat)) e ids) (erased (Plain d e) pl) (subterm erased (Iota m ids) io) (erased (Lt m (Succ d)) le)
+    -> (erased (List (Nat)) ks) (erased (Orders e ids ks) os) (erased (Repeat (Nat) m (Succ (Succ (Zero))) ks) rk))
+  (let-match erased io (IotaS m1 ids1 _ io1 s) ((IotaZ) (values (Nil (Nat)) (OrdNil e) (RepeatNil _ (Succ (Succ (Zero)))))))
+  (let ((erased lm)) (lt-pred m1 d le))
+  (let ((erased ks1) (erased os1) (erased rk1)) (plain-orders d m1 e ids1 pl io1 (lt-weaken m1 d lm)))
+  (let ((erased ks) (erased sk)) (snoc-exists _ ks1 (Succ (Succ (Zero)))))
+  (values ks (orders-snoc e ids1 ids ks1 ks m1 (Succ (Succ (Zero))) os1 (plain-order1 d m1 e pl lm) s sk)
+    (repeat-snoc m1 (Succ (Succ (Zero))) ks1 ks rk1 sk)))
+
+; A plain map has every edge order 2 (in the sense of hypgeom.sl).
+(def-fns _ $ (erased plain-order : (erased (Nat) d) (erased (List (Nat)) e) (erased (Plain d e) pl) -> (erased (AllOrder d e (Succ (Succ (Zero)))) r))
+  (let-match erased pl (MkPlain _ _ ids io pe df))
+  (let ((erased ks) (erased os) (erased rk)) (plain-orders d d e ids pl io (lt-succ d)))
+  (MkAllOrder d (Succ (Succ (Zero))) e ks (MkOrderList d e ids ks io os) rk))
+
+(def-fns _ $ (erased plain0 : -> (erased (Plain (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))) r))
+  (let ((erased z) (erased o) (erased two)) (values (Zero) (Succ (Zero)) (Succ (Succ (Zero)))))
+  (let ((erased l1) (erased l0)) (values (Cons (Nat) o (Nil (Nat))) (Cons (Nat) z (Nil (Nat)))))
+  (let ((erased sw) (erased id)) (values (Cons (Nat) o l0) (Cons (Nat) z l1)))
+  (let ((erased io)) (IotaS o l0 id (IotaS z (Nil (Nat)) l0 (IotaZ) (SnocNil _ z)) (SnocCons _ z o (Nil (Nat)) l1 (SnocNil _ o))))
+  (let ((erased rsw)) (RespCons sw l0 l1 o z (NthThere _ o l0 z z (NthHere _ z (Nil (Nat)))) (RespCons sw (Nil (Nat)) (Nil (Nat)) z o (NthHere _ o l0) (RespNil sw))))
+  (MkPlain two sw id io (MkPerm two sw sw id io (LengthCons _ o _ o (LengthCons _ z _ z (LengthNil _))) rsw rsw)
+    (DifferCons l0 l1 o z (ApGt _ _ o z (LtZ z)) (DifferCons (Nil (Nat)) (Nil (Nat)) z o (ApLt _ _ z o (LtZ z)) (DifferNil)))))
+
+(def-fns _ $ (erased ecpU-grow : (erased (Nat) d) (erased (List (Nat)) e f r e2 f2 r2) (erased (EcpU d e f r e2 f2 r2) st) -> (erased (EdgeGrow e d e2) g))
+  (let-match erased st (MkEcpU _ _ _ _ _ _ _ _ _ _ _ g _ _))
+  g)
+
+(def-fns _ $ (erased ecpN-grow : (erased (Nat) d) (erased (List (Nat)) e f r e2 f2 r2) (erased (EcpN d e f r e2 f2 r2) st) -> (erased (EdgeGrow e d e2) g))
+  (let-match erased st (MkEcpN _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g _ _ _))
+  g)

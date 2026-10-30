@@ -206,3 +206,21 @@
     ((CfgY1) (let-match erased cs (CsY _ _ cs1)) (let-match erased cs1 (CsNil)) (lt-succ (Succ (Succ (Zero)))))
     ((CfgY cp1 cq1) (let-match erased cs (CsY k1 _ cs1)) (lt-weaken (Succ (Succ (Zero))) k1 (cprsize-long cp1 k1 cs1 cq1)))
     ((CfgH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-long cp1 k cs1 cq1))))
+
+; Every map a program without A steps builds is plain (cpmap_plain, which Coq states for cubic programs).
+(def-fns _ $ (erased cpmap-plain : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
+    -> (erased (Plain d e) pl))
+  (match erased c _
+    ((CmNil) (plain0))
+    ((CmR _ _ cp1 _ _ r1 _ c1 _) (cpmap-plain cp1 d e f r1 c1))
+    ((CmRr _ _ cp1 _ _ r1 _ c1 _ _) (cpmap-plain cp1 d e f r1 c1))
+    ((CmU d0 cp1 e0 f0 r0 _ _ _ c1 u) (plain-grow d0 e0 e (cpmap-plain cp1 d0 e0 f0 r0 c1) (ecpU-grow d0 e0 f0 r0 e f r u)))
+    ((CmY d0 cp1 e0 f0 r0 e1 f1 r1 _ _ _ c1 u nn)
+      (plain-grow (Succ (Succ d0)) e1 e (plain-grow d0 e0 e1 (cpmap-plain cp1 d0 e0 f0 r0 c1) (ecpU-grow d0 e0 f0 r0 e1 f1 r1 u))
+        (ecpN-grow (Succ (Succ d0)) e1 f1 r1 e f r nn)))
+    ((CmH d0 cp1 e0 f0 r0 e1 f1 r1 e2 f2 r2 _ _ _ c1 u nn nn2)
+      (plain-grow (Succ (Succ (Succ (Succ d0)))) e2 e
+        (plain-grow (Succ (Succ d0)) e1 e2 (plain-grow d0 e0 e1 (cpmap-plain cp1 d0 e0 f0 r0 c1) (ecpU-grow d0 e0 f0 r0 e1 f1 r1 u))
+          (ecpN-grow (Succ (Succ d0)) e1 f1 r1 e2 f2 r2 nn))
+        (ecpN-grow (Succ (Succ (Succ (Succ d0)))) e2 f2 r2 e f r nn2)))
+    ((CmK _ d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 _ _ nn _) (plain-grow d0 e0 e (cpmap-plain cp1 d0 e0 f0 r0 c1) (ecpN-grow d0 e0 f0 r1 e f r2 nn)))))
