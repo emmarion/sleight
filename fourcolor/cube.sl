@@ -1315,3 +1315,108 @@
   (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
   (genus-make D gen kc K3 K2 kF ce cn cf gC oce ocn ocf glC ccC (es-cube kc d ke kn kf gen D K3 K2 a kF es aD a3 a2 a1 a0)))
 
+
+(def-fns _ $ (erased shf-under : (erased (Nat) d o m D) (erased (List (Nat)) P B) (subterm erased (Shf d o P B) sh) (erased (Under P d) up)
+    (erased (At d m (Zero) D) aD) (erased (Lt o m) lt) -> (erased (Under B D) r))
+  (let-match erased sh (ShfCons _ _ y z P1 Bs1 a sh1) ((ShfNil _ _) (UnderNil D)))
+  (let-match erased up (UnderCons _ _ _ ly up1))
+  (UnderCons Bs1 z D (at-lt d o y z m D a aD ly lt) (shf-under d o m D P1 Bs1 sh1 up1 aD lt)))
+
+; The cube of a bridgeless map is bridgeless: under the face labelling, the two ends of each edge of the cube differ.
+(def-fns _ $ (erased cube-bridgeless : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (Bridgeless d e n f) b) -> (erased (Bridgeless D ce cn cf) r))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf) (MkFacts _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lde _ _ lnf _ _ ue _ _ unf _ uid _))
+  (let ((erased kE) (erased oE)) (orbits-exists d e nf pe))
+  (let-match erased oE (MkOrbits _ _ _ gE grE csE))
+  (let-match erased csE (MkClasses _ _ _ idsE labE rsE ioE llE lrE drE fixE clE roE))
+  (let-match erased (iota-fn d ids idsE io ioE) (Refl _ _))
+  (let ((erased uE)) (rooted-under gE rsE ids labE labE d roE fixE llE))
+  (let ((erased kN) (erased oN)) (orbits-exists d n ni pn))
+  (let-match erased oN (MkOrbits _ _ _ gN grN csN))
+  (let-match erased csN (MkClasses _ _ _ idsN labN rsN ioN llN lrN drN fixN clN roN))
+  (let-match erased (iota-fn d ids idsN io ioN) (Refl _ _))
+  (let ((erased uN)) (rooted-under gN rsN ids labN labN d roN fixN llN))
+  (let ((erased kF) (erased oF)) (orbits-exists d f fi pf))
+  (let-match erased oF (MkOrbits _ _ _ gF grF csF))
+  (let-match erased csF (MkClasses _ _ _ idsF labF rsF ioF llF lrF drF fixF clF roF))
+  (let-match erased (iota-fn d ids idsF io ioF) (Refl _ _))
+  (let ((erased uF)) (rooted-under gF rsF ids labF labF d roF fixF llF))
+  (let-match erased le (MkLaid _ _ _ lye sze))
+  (let-match erased lf (MkLaid _ _ _ lyf szf))
+  (let ((erased gce) (erased grce)) (graph-exists D ce (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD)))
+  (let ((erased gcf) (erased grcf)) (graph-exists D cf (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD)))
+  (let ((erased lab) (erased ll) (erased cl)) (face-lab d D e n f ce cn cf cu labE labN labF gE gN gF gcf grE grN grF clE clN clF llE llN llF grcf))
+  (let-match erased ll (MkLaid _ _ _ lyl szl))
+  (let-match erased b (MkBridgeless _ _ _ _ ge2 gf2 pe2 pf2 sp))
+  (let-match erased (graph-fn d e ge2 gE pe2 grE) (Refl _ _))
+  (let-match erased (graph-fn d f gf2 gF pf2 grF) (Refl _ _))
+  (let ((erased lFe) (erased rFe)) (respects-exists labF e d ue llF))
+  (let ((erased lFnf) (erased rFnf)) (respects-exists labF nf d unf llF))
+  (let ((erased lEnf) (erased rEnf)) (respects-exists labE nf d unf llE))
+  (let ((erased RF)) (respects-id-right d ids labF io llF))
+  (let ((erased gnf) (erased grnf)) (perm-graph d nf e (perm-sym d e nf pe)))
+  (let ((erased dFe)) (allsep-differ d ids e labF lFe ids labF rsF gE gF (graph-zip d e ids gE grE io) sp RF rFe uid ue io roF))
+  (let ((erased dFnf)) (allsep-differ d ids nf labF lFnf ids labF rsF gnf gF (graph-zip d nf ids gnf grnf io)
+    (allsep-inv d e nf gE gnf gF (graph-fun d nf gnf grnf) (perm-sym d e nf pe) grE sp) RF rFnf uid unf io roF))
+  (let ((erased sy)) (Cons _ (MkBlk tg5 labN) $ Cons _ (MkBlk (Zero) lFe) $ Cons _ (MkBlk tg4 lEnf) $ Cons _ (MkBlk (Zero) lFnf) $
+    Cons _ (MkBlk (Zero) lFe) $ Cons _ (MkBlk (Zero) labF) $ Nil (Blk)))
+  (let ((erased LY) (erased lyY)) (lay-exists d sy))
+  (let ((erased rY)) (lay-respects d _ _ _ lab ce LY lyl szl lye lyY
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) (respects-id-right d ids labN io llN) $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) rFe $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) rEnf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) rFnf $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) rFe $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RF $
+      LRNil _)))
+  (let ((erased lFeL) (erased uFe)) (values (respects-length labF e lFe d rFe lde) (respects-under-out labF e lFe d rFe uF)))
+  (let ((erased dif)) (lay-differ d _ _ lab LY lyl lyY
+    (LDCons _ _ _ _ _ _ _ llF llN uF uN (OrL _ _ (ApLt _ _ _ _ (LtZ _))) $
+      LDCons _ _ _ _ _ _ _ llF lFeL uF uFe (OrR _ _ dFe) $
+      LDCons _ _ _ _ _ _ _ llF (respects-length labE nf lEnf d rEnf lnf) uF (respects-under-out labE nf lEnf d rEnf uE) (OrL _ _ (ApLt _ _ _ _ (LtZ _))) $
+      LDCons _ _ _ _ _ _ _ llF (respects-length labF nf lFnf d rFnf lnf) uF (respects-under-out labF nf lFnf d rFnf uF) (OrR _ _ dFnf) $
+      LDCons _ _ _ _ _ _ _ llE lFeL uE uFe (OrL _ _ (ApGt _ _ _ _ (LtZ _))) $
+      LDCons _ _ _ _ _ _ _ llN llF uN uF (OrL _ _ (ApGt _ _ _ _ (LtZ _))) $
+      LDNil d)))
+  (MkBridgeless D ce cn cf gce gcf grce grcf
+    (allsep-of I ce lab LY lab gce gcf (graph-zip D ce I gce grce ioD)
+      (respects-id-right D I lab ioD (lay-length d tg6 D _ lab lyl szl (six _ _ _ _ _ _) aD)) rY dif cl)))
+
+
+; A four-colouring of the cube gives one of the map: each dart takes the colour of its copy in block 3.
+(def-fns _ $ (erased cube-colorable : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (List (Nat)) K) (erased (FourColoring ce cf K) c)
+    -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) r))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf) (MkFacts _ _ _ _ _ _ _ _ RI _ _ _ _ _ _ _ Reid _ _ _ _ _ _ _ Rfid lid _ _ _ _ _ _ ue _ uf _ _ uid _))
+  (let-match erased le (MkLaid _ _ _ lye sze))
+  (let-match erased lf (MkLaid _ _ _ lyf szf))
+  (let-match erased c (MkFourColoring _ _ _ Ke rk rke dk uk))
+  (let ((erased lK)) (respects-length K cf K D rk (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD)))
+  (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
+  (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
+  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased F0) (erased sF0)) (shf-exists d (Zero) f))
+  (let ((erased F1) (erased sF1)) (shf-exists d tg1 f))
+  (let ((erased F2) (erased sF2)) (shf-exists d tg2 f))
+  (let ((erased F3) (erased sF3)) (shf-exists d tg3 f))
+  (let ((erased E3) (erased sE3)) (shf-exists d tg3 e))
+  (let ((erased u1) (erased u3)) (values (shf-under d tg1 tg6 D ids I1 s1 uid aD (LtS _ _ (LtZ _))) (shf-under d tg3 tg6 D ids I3 s3 uid aD (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))
+  (let ((erased lI3)) (shf-length d tg3 d ids I3 s3 lid))
+  (let ((erased ks) (erased rks)) (respects-exists K I3 D u3 lK))
+  (let ((erased lks)) (respects-length K I3 ks d rks lI3))
+  (let ((erased Ridf)) (respects-id-left d ids f io uf))
+  (let ((erased q0)) (const-step K cf I3 F0 ks rk (shf-respects d tg3 (Zero) _ cf _ _ _ _ _ lyf szf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rfid s3 sF0) rks))
+  (let ((erased q1)) (const-step K cf F0 F1 ks rk (shf-respects d (Zero) tg1 _ cf _ _ _ _ _ lyf szf (NthHere _ _ _) Ridf sF0 sF1) q0))
+  (let ((erased q2)) (const-step K cf F1 F2 ks rk (shf-respects d tg1 tg2 _ cf _ _ _ _ _ lyf szf (NthThere _ _ _ _ _ $ NthHere _ _ _) Ridf sF1 sF2) q1))
+  (let ((erased q3)) (const-step K cf F2 F3 ks rk (shf-respects d tg2 tg3 _ cf _ _ _ _ _ lyf szf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ridf sF2 sF3) q2))
+  (let ((erased rf)) (respects-assoc f I3 K F3 ks ks d (shf-compose d tg3 ids f I3 F3 io s3 sF3 uf) q3 rks lks lI3))
+  (let ((erased ke) (erased rke2)) (respects-exists ks e d ue lks))
+  (let ((erased W) (erased rW)) (respects-exists K E3 D (shf-under d tg3 tg6 D e E3 sE3 ue aD (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))) lK))
+  (let-match erased (respects-fn ks e W ke (respects-assoc e I3 K E3 ks W d (shf-compose d tg3 ids e I3 E3 io s3 sE3 ue) rW rks lks lI3) rke2)
+    (Refl _ _))
+  (let ((erased rKe)) (respects-assoc I1 ce K E3 Ke W D (shf-respects d tg1 tg3 _ ce _ _ _ _ _ lye sze (NthThere _ _ _ _ _ $ NthHere _ _ _) Reid s1 sE3) rW rke
+    (respects-length K ce Ke D rke (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD)) (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD)))
+  (let ((erased Y1) (erased rY1)) (respects-exists K I1 D u1 lK))
+  (let-match erased (respects-fn K I3 Y1 ks (const-step K cf I2 I3 Y1 rk (shf-respects d tg2 tg3 _ cf _ _ _ _ _ lyf szf (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI s2 s3) (const-step K cf I1 I2 Y1 rk (shf-respects d tg1 tg2 _ cf _ _ _ _ _ lyf szf (NthThere _ _ _ _ _ $ NthHere _ _ _) RI s1 s2) rY1)) rks) (Refl _ _))
+  (values ks (MkFourColoring e f ks ke rf rke2 (differ-restrict Ke K I1 ke ks dk rKe rY1) (respects-under-out K I3 ks 4 rks uk))))
+
