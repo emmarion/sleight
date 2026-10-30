@@ -3326,10 +3326,10 @@
   (let-match many n (Zero) ((Succ j) (ch-cons s t0 mb (notail $ ch-go j t0 mb))))
   (let-match many s (YF f) (else (ch-cons s t0 mb (notail $ ch-go (Zero) t0 mb))))
   (let-match many f (QD) (else (ch-cons s t0 mb (notail $ ch-go (Zero) t0 mb))))
-  (let ((many ks) (erased ch1)) (ch-close t0 mb (notail $ ch-go 8 t0 mb)))
+  (let ((many ks) (erased ch1)) (ch-close t0 mb (notail $ ch-go 32 t0 mb)))
   (CgS _ mb (Nil (Sy)) t0 ks (CatN (Sy) t) ch1))
 
-(def-fns _ $ (many ch-of : (many (List (Sy)) t) (many (Maybe (Zk)) mb) -> (many (Zk) k) (erased (Chk t mb k) ch)) (ch-close t mb (ch-go 8 t mb)))
+(def-fns _ $ (many ch-of : (many (List (Sy)) t) (many (Maybe (Zk)) mb) -> (many (Zk) k) (erased (Chk t mb k) ch)) (ch-close t mb (ch-go 32 t mb)))
 
 (def-adts $ (MrR : -> Type)
   enum
@@ -3394,8 +3394,8 @@
   (LsGo d l W k2 (LzP d l w s2 W k k2 z lp c) (nx-cat w _ W c nx (NxC iD s2 (NsF (QD)) nx2))))
 
 (def-fns _ $ (many lz-fold : (many (List (Sy)) l w) (many (Zk) k) (erased (Lz k (DR) l w) z) -> (many (Lzs) r))
-  (let-match many (lenge 16 w) (BTrue) ((BFalse) (LsForce)))
-  (let-match many (dsplit 6 w) (DsOk _ w1 w2 c) ((DsNo _) (LsForce)))
+  (let-match many (lenge 32 w) (BTrue) ((BFalse) (LsForce)))
+  (let-match many (dsplit 10 w) (DsOk _ w1 w2 c) ((DsNo _) (LsForce)))
   (let-match many (sw-of (Zero) 1 w1) (SwOk _ _ _ w3 m s) ((SwNo _ _ _) (LsForce)))
   (let ((many k2) (erased ch)) (ch-of w2 (Some _ k)))
   (lz-stride l w1 w3 m k2 (LzF (DR) l w w1 w2 k k2 z c ch) s))
