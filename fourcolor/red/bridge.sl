@@ -476,19 +476,25 @@
       (erased (Fn L (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (HoldsR R ct w) r) (erased (MatchG (BS0) ct2 w) m) -> (erased (Holds P2 ct2) q)) cm)
       -> (KClosed L P2 R)))
 
-; After Kempe_coclosure of chromogram.v: for the sets closed at a level L, the co-closure KCC meets every closed set holding the trace.
-(def-fns _ $ (erased kcc-coclosure : (erased (Level) L) -> (erased (Level) M)
+(def-lvl KCB)
+
+; After Kempe_coclosure of chromogram.v: for the sets closed at a level L, the co-closure KCC meets every closed set holding the
+; trace, by a function at a level M above L and KCB.
+(def-fns _ $ (erased kcc-coclosure : (erased (Level) L M) (erased (Predates (Level) L M) pl) (erased (Predates (Level) KCB M) pb) ->
     (erased (Fn M (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k) (erased (Holds P2 ct) p) ->
         (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2)) f))
-  (def-lvl M)
+  (let ((erased q1) (erased q2) (erased q3) (erased q4) (erased q5))
+    (values (predates-trans (prove-predates (level-of revapp-fn) KCB) pb) (predates-trans (prove-predates (level-of sym-cls) KCB) pb)
+      (predates-trans (prove-predates (level-of sym-fn) KCB) pb) (predates-trans (prove-predates (level-of popped-fn) KCB) pb)
+      (predates-trans (prove-predates (level-of pop-fn) KCB) pb)))
   (def-fns M
     ((erased kcc-walk : (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k)
         (erased (Holds P2 ct) p) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2))
       (let-match erased cl (MkKClosed _ _ _ cp cg _))
       (let-match erased k (KCGram _ _ a)
         ((KCIn _ _ q) (values ct q p))
-        ((KCPerm _ _ ct2 g ip pt k2) (kcc-walk Q P2 R cl ct2 k2 (cp ct ct2 g ip pt p))))
-      (let ((erased w) (erased m) (erased r)) (cg ct p))
+        ((KCPerm _ _ ct2 g ip pt k2) (kcc-walk Q P2 R cl ct2 k2 (cp (predates pl) ct ct2 g ip pt p))))
+      (let ((erased w) (erased m) (erased r)) (cg (predates pl) ct p))
       (amc-walk Q P2 R cl ct w r (BS0) ct (Nil _) w a m (RANil _ w)))
     ((erased amc-walk : (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct0) (erased (List (Gsym)) w0)
         (erased (HoldsR R ct0 w0) r) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u) (subterm erased (AMC Q bs ct pre) a)
@@ -497,23 +503,23 @@
       (match erased m _
         ((MGNil)
           (let-match erased a (AMCEnd _ _ w2 ra2 wt) (absurd (AMCOpen _ _ _ pp _) pp))
-          (let-match erased (revapp-fn (Gsym) pre u w0 w2 ra ra2) (Refl _ _))
+          (let-match erased (revapp-fn (predates q1) (Gsym) pre u w0 w2 ra ra2) (Refl _ _))
           (let-match erased wt (MkWitC _ _ ct2 m2 k2))
-          (kcc-walk Q P2 R cl ct2 k2 (cm ct0 ct2 w0 r m2)))
+          (kcc-walk Q P2 R cl ct2 k2 (cm (predates pl) ct0 ct2 w0 r m2)))
         ((MGCons _ bs2 e s ct1 u1 y m1)
           (let ((erased ra1)) (RACons (Gsym) s pre u1 w0 ra))
-          (match erased (sym-cls s bs bs2 e y) _
+          (match erased (sym-cls (predates q2) s bs bs2 e y) _
             ((SCSkip _)
               (let-match erased a (AMC1 _ _ _ _ a1) (absurd (AMC23 _ _ _ _ _ _ y1 _ _) y1))
               (amc-walk Q P2 R cl ct0 w0 r bs ct1 (Cons _ (GSkip) pre) u1 a1 m1 ra1))
             ((SCPush _ _ _ _)
               (let-match erased a (AMC23 _ _ bs1 _ _ _ y1 a1 _) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) y))
-              (let-match erased (sym-fn (GPush) bs bs2 bs1 e y y1) (Refl _ _))
+              (let-match erased (sym-fn (predates q3) (GPush) bs bs2 bs1 e y y1) (Refl _ _))
               (amc-walk Q P2 R cl ct0 w0 r bs2 ct1 (Cons _ (GPush) pre) u1 a1 m1 ra1))
             ((SCPop _ _ _ _ pp _)
               (let-match erased a (AMC23 _ _ _ _ _ _ _ _ ap) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) (let-match erased y (SSkip _)) pp))
               (let-match erased ap (APCSome _ _ b0 t _ _ _ pp2 z a1) (absurd (APCNone _ _ _ _) pp))
-              (let-match erased (popped-fn bs bs2 b0 pp pp2) (Refl _ _))
-              (let-match erased (pop-fn s t bs bs2 e pp y z) (Refl _ _))
+              (let-match erased (popped-fn (predates q4) bs bs2 b0 pp pp2) (Refl _ _))
+              (let-match erased (pop-fn (predates q5) s t bs bs2 e pp y z) (Refl _ _))
               (amc-walk Q P2 R cl ct0 w0 r bs2 ct1 (Cons _ s pre) u1 a1 m1 ra1)))))))
-  (values M kcc-walk))
+  kcc-walk)

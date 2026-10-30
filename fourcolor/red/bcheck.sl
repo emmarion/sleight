@@ -344,7 +344,8 @@
         (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
         (erased (BK h ts ctu gtu n ctu gtu) bk) (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m ts T1 NT1) s1) (erased (BSide L h m ts T2 NT2) s2)
         (erased (BGlue L T1 T2) g) -> (erased (False) f)) f))
-  (let ((erased M) (erased walk)) (kcc-coclosure L))
+  (def-lvl M)
+  (let ((erased walk)) (kcc-coclosure L M (prove-predates L M) (prove-predates KCB M)))
   (def-fns _
     ((erased bk-sound : (erased (Nat) h m) (erased (List (Ctree)) ts)
         (erased Pred T1 NT1 T2 NT2) (erased (BSide L h m ts T1 NT1) s1) (erased (BSide L h m ts T2 NT2) s2) (erased (BGlue L T1 T2) g)

@@ -413,7 +413,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
 - `embed.sl`, `embedgoal.sl` (load after `unav/unave.sl`, in the
   chain below): present.v's use of unavoidability and reducibility,
   with minimality as data, as far as both compilers check it.
-  `embed-analysis` gives an `Analysis` from `UnavE cfs`, `AllRedC css`
+  `embed-analysis` gives an `Analysis`, for any level X, from `UnavE cfs`, `AllRedC X css`
   with `ConcatL css cfs` (css concatenated; `concat-c` computes it with
   its evidence), and two open steps taken as hypotheses, each a function
   at a level and a bound of its own: `BirkGeo`, birkhoff.v's
@@ -421,9 +421,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   map with a `NoColoring` is a `Geo` or has a `Reduces`; its cubic part
   is coloring.v's minimal_counter_example_is_cubic, which `birkhoff3.sl`
   proves; `birkhoff3.sl` reduces `BirkGeo` to `MinArity`),
-  and `NotEmbed cfs`, embed.v's not_embed_reducible for the
+  and `NotEmbed X cfs`, embed.v's not_embed_reducible for the
   configurations of cfs (such a map that is a `Geo`, with a configuration
-  of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed` for
+  of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed X` for
   C_reducible, has a `Reduces`); it leaves open embed.v (`embed2.sl`
   and `contract.sl` have pieces of it), contract.v's contract_coloring,
   which embed.v uses (`contract.sl` has its colouring half), and Coq's
@@ -634,12 +634,14 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   trees together with their certificates. `red/bridge.sl` takes that
   co-closure to one on complete traces stated after `chromogram.v`
   (`KCC`), and `KCC` to `Kempe_coclosure` for every set closed by
-  functions at a given level (`kcc-coclosure`, a level factory).
+  functions at a given level (`kcc-coclosure`, by a function at a level
+  the caller gives, after that level and after `KCB`).
   `red/check.sl`'s `kempe-tree-chk` builds the Kempe tree of the ring
   traces from `cpcolor-c` with its soundness evidence. `red/gramrot.sl`
   ports gram_rot and both directions of match_gram_rot of `kempe.v`.
   `red/cfred.sl` states C_reducible of `coloring.v` on the configuration
-  maps (`CRed`) and proves check_reducible_valid from a Kempe half
+  maps (`CRed X`, by a function at a level X) and proves
+  check_reducible_valid from a Kempe half
   (`KHalf`) and a contract half (`ContractOK`), both stated against the
   Kempe tree rather than a contract tree. The contract half does not go
   through cfctr: `red/ccomp.sl` computes, for programs of R, Y and H
@@ -651,7 +653,21 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   cfcontract and ctrenum of `cfcontract.v`; written for this numbering,
   not checked against Coq's), decides `ValidContract` on the concrete map
   (`valid-c`), and puts the pieces together (`red-c`, `Reducible`).
-  `red/goal-c.sl` sets and proves the goal `AllRedC` on the chunks of
+  The callers give these functions their levels, so that code at a
+  fixed level can use `CRed`: for a set closed at a level
+  L, `CRed X`'s function gives a `KCoclo L Y`, whose function at a level Y
+  meets the set, from a `CoLv L Y`, levels R and W for the rotation
+  (`kclosed-rot`) and the walk (`kcc-coclosure`) with `COB` and L before
+  R, R before W and W before Y. A caller at a level K mints R, W, Y and
+  then K at the top level after L, and needs X before K. The fixed
+  top-level levels are `KCB` (`red/bridge.sl`), `COB` and `KHL`, that of
+  the Kempe half (`red/cfred.sl`), `CGL`, that of the contract half
+  (`red/ccomp.sl`), and `CRX` (`red/ccheck.sl`), at which `red-c` builds
+  `Reducible CRX`. In a test run with both compilers, a function at a
+  fixed level built this way from a `CRed CRX` and a `KClosed` checked,
+  and three broken variants of it (K or L minted too early, or X a
+  parameter) were rejected.
+  `red/goal-c.sl` sets and proves the goal `AllRedC CRX` on the chunks of
   `red/configs.sl`: every configuration appears to be C-reducible, in the
   sense of `CRed`, with its contract. Load order: `std/nat.sl
   std/list.sl`, then `base map lists planemap walk frontier labels
@@ -662,8 +678,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl` or `red/goal-c.sl` (with
   `--goal proved`). `red/goal-c.sl`
-  proved its goal in about 7.4 and 9 minutes of wall time (15.5 of user time)
-  in two runs on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
+  proved its goal with slc in about 7.4, 9 and 12 minutes of wall time in
+  three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/bcheck.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
