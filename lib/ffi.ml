@@ -85,6 +85,8 @@ let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] |
 let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i)))
 let length = spec ~needs:["Array"] 1 (unary (fun a -> int (Ffi_core.array_length (array a))))
 let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (Ffi_core.bytes_get (bytes b) (z i))))
+let blit = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
+let bytes_blit = spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity)
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:vacant (z n)))));
@@ -102,9 +104,12 @@ let fns : (string * fn_spec) list =
     ("array-length-dec-many", spec ~needs:[ "Array"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des "List" v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
     ("array-sub", spec ~needs:["Array"] 3 (function [ a; i; n ] -> [ arr (Ffi_core.array_sub (array a) (z i) (z n)) ] | _ -> raise arity));
-    ("array-blit", spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity));
+    ("array-blit", blit);
+    ("array-blit-many", blit);
+    ("array-move", blit);
     ("bytes-sub", spec ~needs:["Bytes"] 3 (function [ b; i; n ] -> [ buf (Ffi_core.bytes_sub (bytes b) (z i) (z n)) ] | _ -> raise arity));
-    ("bytes-blit", spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity));
+    ("bytes-blit", bytes_blit);
+    ("bytes-blit-many", bytes_blit);
     ("array-copy", spec ~needs:["Array"] 1 (unary (fun a -> arr (Ffi_core.array_copy (array a)))));
     ("bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun b -> buf (Ffi_core.bytes_copy (bytes b)))));
     ("bytes-make", spec ~needs:["Bytes"] 2 (binary (fun n x -> buf (Ffi_core.bytes_make (z n) (z x)))));

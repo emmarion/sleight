@@ -13,7 +13,7 @@
   (let ((many s) (erased _)) (bytes-str _ (share c)))
   (let ((erased _) (erased from)) (splice-range _ _ _ clp 1 3 e a clt))
   (let ((unique dst)) (bytes-copy _ frozen))
-  (let ((erased _) (unique r) (erased _)) (bytes-blit _ (share caps2) 1 _ dst 1 3 _ from _ range))
+  (let ((erased _) (unique r) (unique _) (erased _)) (bytes-blit _ _ _ _ caps2 1 dst 1 3 from range))
   (let ((many t) (erased _)) (bytes-str _ (share r)))
   (MkPair _ _ s t))
 sub-blit-test
