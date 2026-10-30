@@ -121,7 +121,10 @@ itself, with no hypotheses, in one unit with the runs that compute those
 steps (their entries below). That proof relies on the evaluator and on
 the compiled `native-compute` runs being correct (DESIGN.md §29, §72),
 uses no axiom of its own, and has been checked against Coq's statements
-only by reading. `reduce.sl` and `reduce2.sl` are the
+only by reading. `fcmanyfinal.sl` proves `fcmany.sl`'s `FourColorM`, the
+theorem as a program, in a unit with the same runs: `paint.sl`'s search
+computes the colouring from the coordinates, and the erased proof of
+`FourColor` refutes its failure. `reduce.sl` and `reduce2.sl` are the
 intermediate forms (with `PlaneMap`, and with all bridgeless hypermaps);
 `reduce2-goal.sl`, `cube-goal.sl` and `reduce3-goal.sl` check them alone.
 Checked by both compilers with
@@ -808,11 +811,30 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variant (Birkhoff for five darts given the ring nontrivial for 0
   only) was rejected. That these statements match Coq's has been checked
   only by reading.
-- `fcmany.sl` (load after `defs.sl`): sets the open goal `FourColorM`, the
+- `fcmany.sl` (load after `defs.sl`): sets the goal `FourColorM`, the
   four colour theorem as a program: a function, not erased, from the edges
   `es` of a drawing to a list `ks` of paints, with the `Drawing` certificate
-  and the `Proper` result erased. It has no `qed` yet; both compilers
-  accept it under `--goal open`.
+  and the `Proper` result erased. Both compilers accept it alone under
+  `--goal open`.
+- `paint.sl`, `paint-run.sl` (load after `readback.sl`): `paint-go`
+  searches for a proper four-colouring of the endpoints of a list of
+  edges from their coordinates alone, an edge at a time: it paints each
+  endpoint not yet painted with each colour below 4 in turn, then checks
+  the edge. It returns a colouring with its `Proper`, or a certificate
+  (`NoPaint`) that `nopaint-sound` turns into a refutation of every proper
+  colouring. `four-color-m` gives `FourColorM`'s function from an erased
+  `FourColor`: the search, whose failure branch is refuted by the
+  colouring `FourColor` gives, so that `FourColor` and `Drawing` are used
+  only in erased positions. `paint-run.sl` runs the search on a drawing of
+  K4 (a few seconds with either compiler). In test runs, with `FourColor`
+  as a hypothesis, three broken variants were rejected: a certificate with
+  the child for one colour in place of another's, a refutation recursing
+  into the wrong child, and a function returning the erased colouring.
+- `fcmanyfinal.sl` (load after `fcproof.sl`, `paint.sl` and `fcmany.sl`, in
+  the chain below): proves `FourColorM` by `four-color-m` on `fcproof.sl`'s
+  `four-color-proof`. Chain: that of `fcfinal.sl` with `fcproof paint
+  fcmany fcmanyfinal` in place of `fcproof fcfinal`, with `--goal proved`.
+  TIMING-MANY
 - `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl`, `trivfive.sl` and
   `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
   from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
@@ -839,17 +861,14 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   contract3 embed6 fullred trivred notembed evalid triad trivfive red/chunks
   fcopen fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
-- `fcfinal.sl` (load after `embed4proof.sl`, in the chain below): sets and
-  proves the goal `FourColor` of `defs.sl`, with no hypotheses, by
-  `four-color-open` on `unav-proof`, `all-red-proof`, `birkhoff-proof` and
-  `cfcerts-proof`, all computed in the same unit. Chain: that of
-  `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c red/bproof
-  unav/qztproof embed4proof fcfinal` (each `.sl`), with `--goal proved`.
-  In one run on a 4-core cloud VM, with the computations of the four
-  proof files, it passed with slc in about 1610 s (27 minutes), and in
-  another with the reference compiler (under `ulimit -s unlimited`) in
-  about 3360 s (56 minutes), each at most about 3.3 GB resident in one
-  process. In test runs on the chain of
+- `fcproof.sl`, `fcfinal.sl` (load after `embed4proof.sl`, in the chain
+  below): `fcproof.sl` binds `four-color-proof`, `FourColor` of `defs.sl`
+  with no hypotheses, by `four-color-open` on `unav-proof`,
+  `all-red-proof`, `birkhoff-proof` and `cfcerts-proof`, all computed in
+  the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
+  that of `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c
+  red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
+  `--goal proved`. TIMING-FINAL In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
