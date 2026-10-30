@@ -1752,6 +1752,13 @@ argument at its field's multiplicity and `u` at its position's,
 consuming unique ones, and still creates its value at `u` and its `is`
 fact in the fact table.
 
+`(imm o n)` before an argument, or before a `cell-write` item, marks a
+store whose old and new words are both immediates. `o` and `n` are
+erased `ImmSlot` proofs (§44) for the slot overwritten and the slot
+written. It is refused where nothing is stored: before `_`, before an
+erased argument, after another mark, in a `cell-alloc`, and inside
+`(at m (u ...))`.
+
 ## 38. `Slot` and `cell-match`
 
 `Slot` is an opaque nullary type with no constructors and no
@@ -2016,7 +2023,9 @@ be refuted, by a fact or by proof; the one-real-branch rule of §21
 makes this `assume_init` with evidence in place of `unsafe`. Since the
 field of `Copy` is `many`, an element of an `(Array (Copy A) xs)` is
 read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy` and
-`ImmMaybe`; the `-imm` operations take it as evidence. Other immediate
+`ImmMaybe`; the `-imm` operations take it as evidence. `(ImmSlot s)`
+says that slot `s` holds an immediate: `ImmVacant` for `vacant-slot`,
+and `ImmPlaced` from an `Immediate` and a `Placed` (§66). Other immediate
 types coerce into `U62`: `U8` and `Char` by unwrapping and rewrapping,
 a fieldless enum through `coercible-tag` (§33).
 
@@ -2086,8 +2095,8 @@ array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
 ```
 
 `array-swap-imm` and `array-place-imm` are `array-swap` and
-`array-place` with an extra parameter `(erased (Immediate A) imm)` and
-a `many` index. `array-pluck` leaves the plucked element's word in the
+`array-place` with an extra parameter `(erased (Immediate A) imm)`.
+`array-pluck` leaves the plucked element's word in the
 array under its `Plucked` leftover, at the slot of the value returned.
 So the value may be mutated in place and put back with `array-unpluck`,
 an `extern at` function (§39) whose call costs nothing. This is for a
@@ -2440,6 +2449,7 @@ list:
   invocation, around an invocation or a call, around the annotation
   of a `match` or `cell-match`, before a `def-fns` name, and after one
   (§36, §37, §39, §40, §41).
+- `imm` marks a store (§37).
 
 ## 55. Worked example: `List`
 
