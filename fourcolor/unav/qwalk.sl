@@ -62,7 +62,6 @@
   (let ((erased s) (erased as) (erased w0)) (fitq-walk e n ks u au x q0 f0))
   (values s as (MkWalkZ e n ks s u as au x x1 q0 q1 w0 px w1)))
 
-; Two walks of one question, in any two maps, ask the same arities.
 (def-fns _ $ (erased walk-as : (erased (List (Nat)) e n ks e2 n2 ks2 s t as at s2 t2 as2) (erased (Nat) x x2) (erased (Qn) q)
     (subterm erased (WalkS e n ks x q s t as at) w) (erased (WalkS e2 n2 ks2 x2 q s2 t2 as2 at) w2) -> (erased (Eq (List (Nat)) as as2) r))
   (match erased w _
@@ -90,7 +89,6 @@
       (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))
       (Refl _ as))))
 
-; The walked darts carry the asked arities: map ks s = as when map ks t = at.
 (def-fns _ $ (erased walk-arity : (erased (List (Nat)) e n ks s t as at) (erased (Nat) x) (erased (Qn) q) (subterm erased (WalkS e n ks x q s t as at) w)
     (erased (Respects ks t at) rt) -> (erased (Respects ks s as) r))
   (match erased w _

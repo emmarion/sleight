@@ -100,7 +100,6 @@
   (let ((erased i3)) (qinv-get cfs (Cons _ a2 (Cons _ a1 (Nil _))) a3 t2 t3 i2 g3))
   (values a1 a2 a3 q1 q2 q3 (qinv-leaf cfs _ t3 q1 q2 q3 i3 lf) (MkFit3 e n ks x1 x2 x3 a1 a2 a3 z1 z2 z3 q1 q2 q3 p2 p3 k1 k2 k3 s1 f1 s2 f2 s3 f3)))
 
-; The arity of a dart is that of the next one on its face.
 (def-fns _ $ (erased arity-pre : (erased (Nat) d u v a) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (OrderList d f ks) ol) (erased (Lt u d) lu)
     (erased (Nth (Nat) f u v) pu) (erased (Nth (Nat) ks v a) pa) -> (erased (Nth (Nat) ks u a) r))
   (let ((erased a1) (erased pa1) (erased _)) (arity-at d u f ks ol lu))
@@ -109,7 +108,6 @@
   (let-match erased (nth-fn (Nat) ks v a a1 pa pa2) (Refl _ _))
   pa1)
 
-; The node of x1 seen from x3 and from x2 (cubic).
 (def-fns _ $ (erased fit3-rot1 : (erased (Nat) d x1 a1 a2 a3) (erased (List (Nat)) e n f ks) (erased (Qn) q1 q2 q3) (erased (Geo d e n f ks) g) (erased (Lt x1 d) lx)
     (erased (Fit3 e n ks x1 a2 a3 a1 q2 q3 q1) ft) -> (erased (Nat) y) (erased (Fit3 e n ks y a1 a2 a3 q1 q2 q3) r) (erased (Lt y d) ly))
   (let-match erased ft (MkFit3 _ _ _ _ x2 x3 _ _ _ z1 z2 z3 _ _ _ p2 p3 k1 k2 k3 s1 f1 s2 f2 s3 f3))
@@ -206,7 +204,6 @@
   (let ((erased y) (erased fz) (erased ly)) (triple-fit d x a1 a2 a3 e n f ks q1 q2 q3 qz2 g lx2 tr ft2))
   (MkQzHit cfs d y e n ks cf qz qz2 m c v fz ly))
 
-; The builder, step by step as in quiz.sl, with the invariant.
 
 (def-adts $ (RevA : ((List (Nat)) path ps full) -> Type)
   enum
@@ -346,7 +343,6 @@
           (Refl _ k0) (Refl _ k1) t qi))))
   (store-c cfs cf qz a0 a1 p01 p10 m c (VSame qz) k0 k1 (Refl _ k0) (Refl _ k1) t0 i0))
 
-; ys is a suffix of xs.
 (def-adts $ (Suf : (Type A) ((List A) ys xs) -> Type)
   enum
   (many SfRefl : (erased Type A) (erased (List A) xs) -> (Suf A xs xs))

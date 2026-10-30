@@ -2,7 +2,6 @@
 ; cubic with the same arities, and a mirror-image quiz fitting the map fits the mirror one face step on (fitqz_flip of
 ; quiz.v). Load after qtree.sl.
 
-; Along the inverse permutation, a path from a to b runs back from the dart before b to the dart c before a.
 (def-fns _ $ (erased path-rev : (erased (Nat) d a b c y k) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm) (subterm erased (Path p s a b xs) w)
     (erased (Nth (Nat) p c a) pc) (erased (Nth (Nat) q b y) pb) (erased (Length (Nat) xs k) l) -> (erased (List (Nat)) ys) (erased (Path q s y c ys) r)
     (erased (Length (Nat) ys k) ly))
@@ -17,7 +16,6 @@
       (let ((erased ys) (erased sn) (erased r)) (path-snoc q s ys1 y a c r1 (perm-inv d c a p q pm pc) out))
       (values ys r (snoc-length (Nat) ys1 ys a k1 sn ly1)))))
 
-; A dart has the same order under a permutation and its inverse.
 (def-fns _ $ (erased order-inv : (erased (Nat) d x k) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Order p x k) o) -> (erased (Order q x k) r))
   (let-match erased o (MkOrder _ xs _ y k1 py w l))
   (let-match erased pm (HMkPerm _ _ _ ids io lp qp pq))
@@ -30,7 +28,6 @@
   (let-match erased os (OrdCons _ xs1 ks1 x k o os1) ((OrdNil _) (OrdNil q)))
   (OrdCons q xs1 ks1 x k (order-inv d x k p q pm o) (orders-inv d p q xs1 ks1 pm os1)))
 
-; The mirror edge f . n has order 2.
 (def-fns _ $ (erased order-fn2 : (erased (Nat) d x) (erased (List (Nat)) e n f ks fn) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn) (erased (Lt x d) lx)
     -> (erased (Order fn x (Succ (Succ (Zero)))) r))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))

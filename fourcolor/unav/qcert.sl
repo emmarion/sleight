@@ -62,7 +62,6 @@
   (let-match many p (Cons _ y rest) ((Nil _) i))
   (match many (nat-eqb x y) _ ((BTrue) i) ((BFalse) (tail $ index-of x (Succ i) rest))))
 
-; The inverse of p on the darts x .. x + k - 1.
 (def-fns _ $ (many inv-from : (many (List (Nat)) p) (many (Nat) x) (subterm many (Nat) k) -> (many (List (Nat)) q))
   (let-match many k (Succ k1) ((Zero) (Nil _)))
   (Cons _ (index-of x 0 p) (notail $ inv-from p (Succ x) k1)))
@@ -181,7 +180,6 @@
   (let-match many i (Succ i1) ((Zero) x))
   (tail $ get-at _ rest i1 v))
 
-; The places: the darts of the face of each walk dart, from it on.
 (def-fns _ $ (many mark-face : (many (List (Nat)) f) (many (List (KSt)) st) (many (Nat) i j y) (subterm many (Nat) left) -> (many (List (KSt)) st2))
   (let-match many left (Succ l1) ((Zero) st))
   (tail $ mark-face f (set-at _ st y (StIn i j)) i (Succ j) (get-at _ f y 0) l1))
@@ -325,7 +323,6 @@
 (def-fns _ $ (many cand-face : (many (List (KSt)) st) (many (Nat) p) -> (many (Nat) i))
   (match many (get-at _ st p (StOut)) _ ((StIn i _) i) (else 1000000)))
 
-; One round of a search for paths to every walk face from face 0 (fwd), or from every walk face to face 0.
 (def-fns _ $ (many relax : (many (Bool) fwd) (many (List (Nat)) ec) (many (List (KSt)) st) (many (List (Maybe (List (QCand)))) ps) (subterm many (List (QCand)) cs)
     -> (many (List (Maybe (List (QCand)))) r))
   (let-match many cs (Cons _ cd rest) ((Nil _) ps))
