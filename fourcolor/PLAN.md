@@ -88,14 +88,27 @@ is attached.
 
 ## Status
 
-- `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are positive certificates (labellings), not negations, so that later proofs never have to call a function held in data. `map-triangle.sl`
+Load order for the part A files: `std/nat.sl std/list.sl`, then in
+`fourcolor/`: `base.sl map.sl lists.sl planemap.sl walk.sl frontier.sl
+labels.sl defs.sl sweep.sl rot.sl fan.sl build.sl readback.sl
+parta.sl`. With `--goal proved` the last one checks `PartA`.
+
+- `map.sl`: `PlaneMap`, `Colored`, `FourColorMap`. Side conditions are
+  positive certificates (labellings), not negations, so that later
+  proofs never have to call a function held in data. `map-triangle.sl`
   builds a triangle as a `PlaneMap`, as a check of the definitions.
-- `ring.sl`: `ring-check`, a normaliser of `Expr` to sorted lists of
-  monomials, and `ring-sound`, which turns equal normal forms into
-  `(Eq (Nat) n1 n2)` for any two `Eval` derivations; `ring-test.sl`
-  uses it on (a+b)(a+b). `orient.sl`: Knuth's CC axioms 1, 2, 4 and 5
-  for `Left` (`left-rot`, `left-antisym`, `left-interior`, `left-trans`)
-  and, in place of axiom 3, `left-dec`, which decides between `Left p q r`,
-  `Left q p r` and `Collinear p q r`; `orient-test.sl` states them as a
-  goal. Both test files pass `--goal proved` under slc and the reference
-  in the runs this session made.
+- `sweep.sl`: `SweepPlan`, the interface between the geometric and the
+  combinatorial halves of part A (SWEEP.md).
+- `parta.sl` proves `PartA`: from a function giving every `Drawing` a
+  `SweepPlan` and a function giving every `PlaneMap` a `Colored`
+  colouring, `FourColor` follows. Its combinatorial content is in
+  `frontier.sl` (the sweep's steps on the frontier), `fan.sl` (one step
+  of the sweep), `build.sl` (a whole trace) and `readback.sl`.
+- Still open: `Drawing es -> SweepPlan es` (the geometry of the sweep),
+  and all of part B.
+- `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
+  identities over `Nat`, and Knuth's CC axioms for `Left` proved with
+  it, for the geometry.
+- `red/`: an unverified port of the Coq proof's C-reducibility check.
+  In one run it accepted all 633 configurations under `native-compute`
+  in about 4.5 minutes on a 4-core cloud VM. It carries no proofs yet.
