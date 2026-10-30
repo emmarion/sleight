@@ -840,7 +840,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `cfcerts-proof`, all computed in the same unit. Chain: that of
   `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c red/bproof
   unav/qztproof embed4proof fcfinal` (each `.sl`), with `--goal proved`.
-  TIMINGS
+  In one run on a 4-core cloud VM, with the computations of the four
+  proof files, it passed with slc in about 1610 s (27 minutes), at most
+  about 3.3 GB resident in one process.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check
   them: `patch-open` proves embed5.sl's `PatchOpen`. Without `NodeRing`,
