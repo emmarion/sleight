@@ -435,8 +435,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `--goal proved` passed in about a minute. That `redpart` holds of the
   lists in `Unav` rests on that run, not on the type, and `redpart`
   and the quiz tree are unverified.
-- `unav/qfit.sl`, `rdart.sl`, `redc.sl`, `qztgoal.sl` (load after
-  `unav.sl` and `data.sl`, in that order): a certified redpart.
+- `unav/qfit.sl`, `rdart.sl`, `redc.sl` (load after `unav.sl` and
+  `data.sl`, in that order): a certified redpart.
   `qfit.sl` states fitq and qzt_fit of `quiz.v` and `quiztree.v` on the
   hypermaps of `hypermap.sl` (`QztFit`, `HasFit`). `rdart.sl` names the
   darts around a hub by a face (hub, spoke, hat or fan of a sector) and
@@ -451,22 +451,57 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   fitting p exactly in a plain cubic pentagonal map gives a dart where
   qt fits. It is a new search on these names, not a port of redpart.v's
   zippers, and a tested range is narrowed to its top for the rest of the
-  walk. `qztgoal.sl` sets and proves the goal `UnavQ qt` for `qt` the
-  tree `the-quiz-tree` builds from `red/configs.sl`: every plain cubic
-  connected pentagonal map of genus 0 has a dart where `qt` fits. One
-  compiled run does the walks, the cap checks and `redp-c` on all
-  335,058 obligations; in one run on a 4-core cloud VM `--goal proved`
-  passed in about 160 s with slc and in about 180 s with the reference
-  `main.exe`, of which about 25 s seem to be the evaluator building the
-  tree; the reference's native build of the run hit a stack overflow in
-  the OCaml compiler under the default stack limit and passed under
-  `ulimit -s unlimited`, perhaps because the tree is embedded as a
-  constant. Load order: that of `unavgoal.sl` (`std/macro.sl std/nat.sl
-  std/list.sl ring.sl`, `base` to `hypcubic`, `colalias.sl
-  unav/faces.sl red/red.sl red/configs.sl`, then `unav/` `part quiz
-  redpart hubcap present fit dbound hubcapc obsmap dscore dsum posz
-  pwalk hubsound pwsound conv cap unav data`), then `unav/qfit.sl
-  rdart.sl redc.sl qztgoal.sl` with `--goal proved`. `the-quiz-tree` (`quiz.sl`, an unverified
-  port of cfquiz.v and quiztree.v) is trusted only for what tree it
-  builds: nothing yet says that a fit of it means a configuration is
-  there (qzt_fit_cfquiz and the embedding are open).
+  walk.
+- `unav/qwalk.sl`, `qembed.sl`, `qcert.sl`, `qtree.sl`, `qmirror.sl`,
+  `qztgoal.sl` (load after `redc.sl`, in that order; they also need
+  `cfmap.sl`, loaded after `hypcubic.sl`, and `cpmap.sl`, loaded after
+  `red/configs.sl`): the quiz half of the embedding. `qwalk.sl` states
+  walkq and fitqz of `quiz.v` as relations (`WalkS`, `FitZ`). `qembed.sl`
+  ports the QuizEmbedding section of `quiz.v`: `quiz-preembedding` takes
+  a certificate `QzCert` of a configuration map Gc and a fit at a dart
+  x0m of its quiz in a plain cubic map Gm (`Geo`, which also asks every
+  face to have more than four darts), and gives a dart map
+  `hl` sending x0c to x0m that is a `Preembedding` of the kernel of the
+  ring (`KernelList`). These are list forms written for this port, after
+  coloring.v's preembedding and geometry.v's kernel: at each kernel dart
+  h commutes with face and keeps the arity, the face has an edge-central
+  dart, and node (face x) is joined to every kernel dart by an rlink
+  path of central kernel darts (this asks more than rlink_connected,
+  which appears to ask it only for central darts). Where Coq's
+  valid_quiz asks that the walk be simple and band the kernel, the
+  certificate names the place of every kernel dart (a walk face and a
+  number of face steps) and a path from each walk face to face 0 and
+  back, so the parts of embedqz_central and embedqz_rlinked about Gc
+  are checked on the concrete map; hc_walk, the part about Gm, is proved
+  for any plain cubic map (`hc-walk`). `qcert.sl` decides the
+  certificate on the maps `cpmap-c` builds (`cfqz-c`). `qtree.sl` builds
+  the quiz tree by the steps of `quiz.sl` with evidence that every
+  stored triple is a rotation of one from the quiz of a configuration
+  with a certificate, or from its mirror image (`QInv`), and proves
+  qzt_fit_cfquiz (`qzt-hit`). `qmirror.sl` proves the mirror of a plain
+  cubic map plain cubic with the same arities (`geo-mirror`) and
+  fitqz_flip (`fitz-flip`). `qztgoal.sl` sets and proves the goal
+  `UnavE cfs`, for `cfs` the configurations of `red/configs.sl`: every
+  plain cubic connected pentagonal map of genus 0 has a configuration of
+  `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
+  kernel has a preembedding into the map or into its mirror
+  (`CfEmbed`). One compiled run builds the tree with its evidence and
+  does the walks, the cap checks and `redp-c` on all 335,058
+  obligations; in one run on a 4-core cloud VM `--goal proved` passed
+  in about 525 s with slc and in about 366 s with the reference
+  `main.exe` (under `ulimit -s unlimited`). In a test run the tree built
+  this way was the tree `the-quiz-tree` builds (3361 triples, compared
+  structurally), and every one of the 633 configurations had a
+  certificate. Load order: that of `unavgoal.sl` (`std/macro.sl
+  std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`, `cfmap.sl`,
+  `colalias.sl unav/faces.sl red/red.sl red/configs.sl cpmap.sl`, then
+  `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
+  dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
+  `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
+  qmirror.sl qztgoal.sl` with `--goal proved`. Not done: embed.v (from
+  the preembedding to an embedding), the radius and ring-arity checks
+  of embeddable that cfquiz.v also makes, and the contradiction with
+  C-reducibility, which would also need `red/goal-c.sl`'s `AllRedC` on
+  the same configurations and the mirror of a minimal counterexample.
+  Whether `Preembedding`, `KernelList` and the mirror match Coq's has
+  been checked only by reading.
