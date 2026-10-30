@@ -2326,13 +2326,6 @@ silent.
 
 ## `imm` marks on cell stores (DESIGN.md section 37)
 
-227. **Where an `imm` mark is refused.** The session's reading is that
-     the mark only describes a store, so both compilers refuse it
-     before `_`, before an erased argument, in a `cell-alloc`, inside
-     an `at`-wrapped invocation, and right after another mark (an
-     `(at)` and an `imm` on one argument included). DESIGN.md does not
-     say which of these the owner wants refused.
-
 228. **The reference keeps the barrier under `--no-extern`.** Extraction
      under `--no-extern` gives a `U62` its model's representation, a
      block, so the session reads `(Immediate (U62))` as true of the
