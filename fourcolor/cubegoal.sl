@@ -1,0 +1,31 @@
+; Four-colouring every planar bridgeless plain cubic hypermap four-colours every planar bridgeless hypermap, on
+; hypermap.sl's definitions, through the cube of cube.sl.
+(def-adts $ (CubeReduction : -> Type)
+  enum
+  (many MkCubeReduction : (erased (Level) F)
+      (erased (Fn F (erased (Level) L)
+          (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+              (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pp) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
+              -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour)
+          -> (erased (Level) L2)
+          (erased (Fn L2 (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+              (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour2)) reduce)
+      -> (CubeReduction)))
+
+(def-fns _ $ (erased cube-reduction : (erased (Level) L)
+    (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+        (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pp) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
+        -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour)
+    -> (erased (Level) L2)
+    (erased (Fn L2 (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+        (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour2))
+  (def-fns _ $ (erased cube-colour : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
+      (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
+    (let ((erased D) (erased ce) (erased cn) (erased cf) (erased cu)) (cube-exists d e n f h))
+    (let ((erased K) (erased c)) (colour D ce cn cf (cube-hyper d D e n f ce cn cf cu) (cube-genus d D e n f ce cn cf cu (Zero) pl)
+      (cube-bridgeless d D e n f ce cn cf cu b) (cube-plain d D e n f ce cn cf cu) (cube-cubic d D e n f ce cn cf cu)))
+    (cube-colorable d D e n f ce cn cf cu K c))
+  (values (level-of cube-colour) cube-colour))
+
+(goal erased (CubeReduction))
+(qed (MkCubeReduction (level-of cube-reduction) cube-reduction))
