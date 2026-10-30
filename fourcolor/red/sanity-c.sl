@@ -1,3 +1,5 @@
+; slc std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/red/red.sl fourcolor/red/configs.sl fourcolor/red/{color,ctree,gtree,grestrict,crestrict,kempe,check,sanity-c}.sl
+(let-match many (cf004) (MkConfig sym4 _ p4))
 (def-fns _ $ (many base-ok : (many (Nat) h) -> (many (Bool) r))
   (match many (check-base h (ctree-init (Succ h)) (gtree-init (Succ h))) _ ((BaseYes _ _ _ _ _ _ _) (BTrue)) ((BaseNo _ _ _) (BFalse))))
 

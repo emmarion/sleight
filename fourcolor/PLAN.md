@@ -145,6 +145,13 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `red/`: an unverified port of the Coq proof's C-reducibility check.
   In one run it accepted all 633 configurations under `native-compute`
   in about 4.5 minutes on a 4-core cloud VM. It carries no proofs yet.
+- `red/color.sl` .. `red/check.sl`: a certified Kempe tree and
+  `ctree_disjoint` (soundness direction only), over a co-closure stated on
+  partial traces; the initial trees are checked at run time rather than
+  proved, and the link to Coq's `Kempe_coclosure` on complete traces is
+  not proved. `red/run-c.sl` ran all 633 configurations through it in
+  272 s once, with a trivial predicate in place of the ring traces, so
+  that run says nothing yet about the configurations themselves.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
