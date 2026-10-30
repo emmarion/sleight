@@ -239,3 +239,62 @@
   (let ((erased fa) (erased fb) (erased ur1) (erased uR)) (rev-subs d x0 e n f p er RR h pl rg rm ra))
   (MkNonTrivial d m e n f RR hd2 zs2 ys xs ds2 ly lx (rev-sub-out d e n f r RR hd hd2 hdA zsA hd2 zs2 cx cn dsA ds2 ys sy)
     (rev-sub-in d e n f r RR hd hd2 hdA zsA hd2 zs2 cx cn dsA ds2 xs sx) (scattered-sub f RR r ys d fa uR lf py) (scattered-sub f RR r xs d fa uR lf px)))
+
+(def-fns _ $ (erased kernel-face : (erased (List (Nat)) f r) (erased (Nat) x y) (erased (Kernel f r x) k) (erased (Nth (Nat) f x y) pf) -> (erased (Kernel f r y) res))
+  (let-match erased k (MkKernel _ _ lab ls _ l rf rp px ol))
+  (MkKernel f r lab ls y l rf rp (respects-nth lab f lab x y l rf pf px) ol))
+
+(def-fns _ $ (erased kernel-face-inv : (erased (Nat) d x y) (erased (List (Nat)) f r) (erased (Length (Nat) f d) lf) (erased (Kernel f r y) k) (erased (Nth (Nat) f x y) pf)
+    -> (erased (Kernel f r x) res))
+  (let-match erased k (MkKernel _ _ lab ls _ l rf rp py ol))
+  (let ((erased l2) (erased px)) (nth-exists _ lab d x (respects-length lab f lab d rf lf) (nth-lt-length _ f x d y pf lf)))
+  (let-match erased (nth-fn _ lab y l l2 py (respects-nth lab f lab x y l2 rf pf px)) (Refl _ _))
+  (MkKernel f r lab ls x l rf rp px ol))
+
+; diskFC_face, with diskFC r read as the darts zs off diskN r that are on no face of r: it is closed under face, both ways.
+(def-fns _ $ (erased diskfc-face : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In x zs) iz) (erased (Kernel f (Cons (Nat) x0 p) x) k)
+    (erased (Nth (Nat) f x y) pf) -> (erased (In y zs) iy) (erased (Kernel f (Cons (Nat) x0 p) y) ky))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ur)) (ring-under d x0 e n f p h rg))
+  (let ((erased ky)) (kernel-face f _ x y k pf))
+  (let ((erased ly)) (perm-val d x y f fi pmf pf))
+  (values
+    (match erased (in-dec y hd) (((In y zs) res))
+      (absurd (OrL _ _ i)
+        (let-match erased (diskf-face-inv d x y n f fi _ pmf (MkDiskF n f _ y (ds-in d y x0 e n f p hd zs h gen rg ur ds i) ky) pf) (MkDiskF _ _ _ _ dx _))
+        (ds-out d x x0 e n f p hd zs h gen rg ur ds iz dx))
+      ((OrR _ _ o) (ds-off d y x0 e n f p hd zs hd zs h gen rg ur ds ds o ly)))
+    ky))
+
+(def-fns _ $ (erased diskfc-face-inv : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In y zs) iz) (erased (Kernel f (Cons (Nat) x0 p) y) k)
+    (erased (Nth (Nat) f x y) pf) -> (erased (In x zs) ix) (erased (Kernel f (Cons (Nat) x0 p) x) kx))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ur)) (ring-under d x0 e n f p h rg))
+  (let ((erased kx)) (kernel-face-inv d x y f _ lf k pf))
+  (let ((erased lx)) (nth-lt-length _ f x d y pf lf))
+  (values
+    (match erased (in-dec x hd) (((In x zs) res))
+      (absurd (OrL _ _ i)
+        (let-match erased (diskf-face n f _ x y (MkDiskF n f _ x (ds-in d x x0 e n f p hd zs h gen rg ur ds i) kx) pf) (MkDiskF _ _ _ _ dy _))
+        (ds-out d y x0 e n f p hd zs h gen rg ur ds iz dy))
+      ((OrR _ _ o) (ds-off d x x0 e n f p hd zs hd zs h gen rg ur ds ds o lx)))
+    kx))
+
+; diskN_rot and fband_rot: diskN and fband depend only on the darts of the ring.
+(def-fns _ $ (erased dpath-move : (erased (List (Nat)) n f r s) (erased (Nat) x y) (subterm erased (DPath n f r x y) dp) (erased (Sub s r) sb) -> (erased (DPath n f s x y) res))
+  (match erased dp _
+    ((DPNil _ _ _ _) (DPNil n f s x))
+    ((DPNode _ _ _ _ z _ o pn dp1) (DPNode n f s x z y (notin-sub x s r sb o) pn (dpath-move n f r s z y dp1 sb)))
+    ((DPFace _ _ _ _ z _ o pf dp1) (DPFace n f s x z y (notin-sub x s r sb o) pf (dpath-move n f r s z y dp1 sb)))))
+
+(def-fns _ $ (erased disk-move : (erased (List (Nat)) n f r s) (erased (Nat) x) (erased (DiskN n f r x) dn) (erased (Sub r s) rs) (erased (Sub s r) sr)
+    -> (erased (DiskN n f s x) res))
+  (let-match erased dn (MkDiskN _ _ _ _ y y2 iy pn dp))
+  (MkDiskN n f s x y y2 (sub-in r s y rs iy) pn (dpath-move n f r s y2 x dp sr)))
+
+(def-fns _ $ (erased fband-move : (erased (List (Nat)) f r s) (erased (Nat) x) (erased (Fband f r x) fb) (erased (Sub r s) rs) -> (erased (Fband f s x) res))
+  (let-match erased fb (MkFband _ _ _ y iy w))
+  (MkFband f s x y (sub-in r s y rs iy) w))
