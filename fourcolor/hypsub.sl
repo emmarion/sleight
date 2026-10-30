@@ -662,3 +662,84 @@
       (match erased iz _
         ((InHere _ _) (let-match erased (nth-fn _ lab z l l1 pz px) (Refl _ _)) p)
         ((InThere _ _ _ iz1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz1 pz))))))
+
+(def-fns _ $ (erased sb-member : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) x l) (erased (SplitBy lab t xs ys zs) sp) (erased (In x xs) ix)
+    (erased (Nth (Nat) lab x l) px) (erased (In l t) il) -> (erased (In x ys) r))
+  (match erased (split-cover ys xs ys zs x (sb-split lab t xs ys zs xs ys zs sp sp (sub-refl ys)) ix) _
+    ((OrL _ _ i) i)
+    (absurd (OrR _ _ i) (apart-irrefl l (notin-in l l t (sb-out-key lab t xs ys zs x l sp i px) il)))))
+
+(def-fns _ $ (erased sb-notmember : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) x l) (erased (SplitBy lab t xs ys zs) sp) (erased (Nth (Nat) lab x l) px)
+    (erased (NotIn l t) ol) -> (erased (NotIn x ys) r))
+  (match erased (in-dec x ys) _
+    (absurd (OrL _ _ ix)
+      (let ((erased l2) (erased p2) (erased i2)) (sb-in-key lab t xs ys zs x sp ix))
+      (let-match erased (nth-fn _ lab x l l2 px p2) (Refl _ _))
+      (apart-irrefl l (notin-in l l t ol i2)))
+    ((OrR _ _ o) o)))
+
+; The darts whose labels, under a labelling constant along g, are in t form a set g never leaves.
+(def-fns _ $ (erased sb-shut : (erased (List (Nat)) lab t xs ys zs) (erased (List (Bond)) g) (erased (Nat) k) (erased (SplitBy lab t xs ys zs) sp)
+    (subterm erased (Const lab g) cl) (erased (Below g k) bg) (erased (Iota k xs) io) -> (erased (Shut ys g) r))
+  (let-match erased cl (ConstCons _ g1 x y l px py cl1) ((ConstNil _) (ShutNil ys)))
+  (let-match erased bg (BelowCons _ _ _ _ lx ly bg1))
+  (let ((erased rest)) (sb-shut lab t xs ys zs g1 k sp cl1 bg1 io))
+  (match erased (in-dec l t) _
+    ((OrL _ _ il) (ShutIn ys g1 x y (sb-member lab t xs ys zs x l sp (iota-in k x xs io lx) px il) (sb-member lab t xs ys zs y l sp (iota-in k y xs io ly) py il) rest))
+    ((OrR _ _ ol) (ShutOut ys g1 x y (sb-notmember lab t xs ys zs x l sp px ol) (sb-notmember lab t xs ys zs y l sp py ol) rest))))
+
+(def-fns _ $ (erased label-sepall : (erased (List (Bond)) g) (erased (List (Nat)) lab R ls) (erased (Nat) x l) (erased (Const lab g) cl) (erased (Nth (Nat) lab x l) px)
+    (erased (NotIn l ls) out) (subterm erased (Respects lab R ls) rp) -> (erased (SepAll g x R) r))
+  (let-match erased rp (RespCons _ R1 ls1 y l2 py rp1) ((RespNil _) (SANil g x)))
+  (let-match erased out (NotInCons _ _ _ ne out1))
+  (SACons g x y R1 (MkSep g x y lab l l2 cl px py ne) (label-sepall g lab R1 ls1 x l cl px out1 rp1)))
+
+; Darts with distinct labels under a labelling constant along g are told apart by g.
+(def-fns _ $ (erased labels-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab R ls) (erased (Const lab g) cl) (subterm erased (Respects lab R ls) rp)
+    (erased (Distinct ls) dl) -> (erased (PairSep g R) r))
+  (let-match erased rp (RespCons _ R1 ls1 x l px rp1) ((RespNil _) (PrNil g)))
+  (let-match erased dl (DistCons _ _ out dl1))
+  (PrCons g x R1 (label-sepall g lab R1 ls1 x l cl px out rp1) (labels-pairsep g lab R1 ls1 cl rp1 dl1)))
+
+; With lab the root labelling of the classes of g, the darts whose classes meet R are joined to darts of R.
+(def-fns _ $ (erased label-covers : (erased (List (Bond)) g) (erased (Nat) d) (erased (List (Nat)) ids lab rs R LR ys zs m) (erased (Iota d ids) io)
+    (erased (Rooted g rs ids lab) ro) (erased (Under R d) ur) (erased (Respects lab R LR) rp) (erased (SplitBy lab LR ids ys zs) sp) (erased (Under ys d) uy)
+    (subterm erased (Sub m ys) sb) -> (erased (Covers g R m) r))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g R)))
+  (let ((erased l) (erased px) (erased il)) (sb-in-key lab LR ids ys zs x sp ix))
+  (let ((erased b) (erased ib) (erased pb)) (respects-in lab R LR l rp il))
+  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l io ro px (under-in ys x d uy ix)))
+  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs b l io ro pb (under-in R b d ur ib)))
+  (CovCons g R m1 x b ib (conn-cat g b l x (conn-sym g l b c2) c1) (label-covers g d ids lab rs R LR ys zs m1 io ro ur rp sp uy sb1)))
+
+; Two darts with one root label are joined.
+(def-fns _ $ (erased same-root : (erased (List (Bond)) g) (erased (Nat) d x y l) (erased (List (Nat)) ids lab rs) (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro)
+    (erased (Nth (Nat) lab x l) px) (erased (Nth (Nat) lab y l) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Conn g x y) r))
+  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l io ro px lx))
+  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs y l io ro py ly))
+  (conn-cat g x l y (conn-sym g l x c1) c2))
+
+; ls sends each dart x of xs in o to the position in h of the first dart of t on the walk along p from x, and every other dart to 0.
+(def-adts $ (HitInv : ((List (Nat)) p t h o xs ls) -> Type)
+  enum
+  (many HvNil : (erased (List (Nat)) p t h o) -> (HitInv p t h o (Nil (Nat)) (Nil (Nat))))
+  (many HvIn : (erased (List (Nat)) p t h o xs ls) (erased (Nat) x z j) (erased (FirstHit p t x z) fh) (erased (Nth (Nat) h j z) pj)
+      (erased (HitInv p t h o xs ls) rest) -> (HitInv p t h o (Cons (Nat) x xs) (Cons (Nat) j ls)))
+  (many HvOut : (erased (List (Nat)) p t h o xs ls) (erased (Nat) x) (erased (NotIn x o) out) (erased (HitInv p t h o xs ls) rest)
+      -> (HitInv p t h o (Cons (Nat) x xs) (Cons (Nat) (Zero) ls))))
+
+(def-fns _ $ (erased hitinv-at : (erased (List (Nat)) p t h o xs ls) (erased (Nat) i x z j) (subterm erased (HitInv p t h o xs ls) hv) (erased (Distinct h) dh)
+    (erased (Nth (Nat) xs i x) px) (erased (In x o) ix) (erased (FirstHit p t x z) fh) (erased (Nth (Nat) h j z) pj) -> (erased (Nth (Nat) ls i j) r))
+  (match erased hv _
+    (absurd (HvNil _ _ _ _) px)
+    ((HvIn _ _ _ _ xs1 ls1 y z2 j2 fh2 pj2 hv1)
+      (match erased px _
+        ((NthHere _ _ _)
+          (let-match erased (hit-fn p t x z2 z fh2 fh) (Refl _ _))
+          (let-match erased (distinct-nth h j2 j z dh pj2 pj) (Refl _ _))
+          (NthHere _ j2 ls1))
+        ((NthThere _ _ _ i1 _ px1) (NthThere _ j2 ls1 i1 j (hitinv-at p t h o xs1 ls1 i1 x z j hv1 dh px1 ix fh pj)))))
+    ((HvOut _ _ _ _ xs1 ls1 y out hv1)
+      (match erased px _
+        (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x o out ix)))
+        ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (hitinv-at p t h o xs1 ls1 i1 x z j hv1 dh px1 ix fh pj)))))))
