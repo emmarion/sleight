@@ -203,3 +203,6 @@
   (birkhoff-reduces B pb d x (Succ (Succ (Zero))) (Zero) e n f p bks hm gen bl pl cu cn nc rg
     (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
+
+; snip.sl's DPath and walk.sl's Sub, which unav/qembed.sl and unav/part.sl define again, for minarity.sl.
+(let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub)) (values DPath DPNil DPNode DPFace Sub))

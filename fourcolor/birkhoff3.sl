@@ -1,6 +1,6 @@
 ; minimal_counter_example_is_cubic of coloring.v (cubic-reduces), with minimality as data, and from it embed.sl's BirkGeo
-; (birkhoff.v's minimal_counter_example_is_plain_cubic_pentagonal), with min_arity taken as a hypothesis (MinArity). Load
-; after embed.sl, in the chain that PLAN.md gives.
+; (birkhoff.v's minimal_counter_example_is_plain_cubic_pentagonal), with min_arity taken as a hypothesis (MinArity, which
+; minarity.sl proves). Load after embed.sl, in the chain that PLAN.md gives.
 
 (def-fns _ $ (erased skip-id : (erased (Nat) d z) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk) (erased (Nth (Nat) p z z) pz)
     -> (erased (Eq (List (Nat)) p2 p) r))
@@ -742,7 +742,7 @@
   (let-match erased nt (MkNodeTwo _ x y _ pxy pyx nyx lx))
   (OrR _ _ (cubic-cut B pb d x y e n f p pxy pyx nyx lx)))
 
-; min_arity of birkhoff.v at every dart, with minimality as data, left open here: a planar bridgeless plain cubic connected
+; min_arity of birkhoff.v at every dart, with minimality as data (minarity.sl): a planar bridgeless plain cubic connected
 ; map that the search finds uncolourable has every face above four darts, or reduces.
 (def-adts $ (MinArity : -> Type)
   enum
