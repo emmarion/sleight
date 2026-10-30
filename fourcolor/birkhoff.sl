@@ -231,3 +231,96 @@
     (EvAdd env _ _ z1 dr f7 ez1 v2 a7)) (Refl _ _))
   (let ((erased wd)) (add-cancel-le z1 W dr F f6 aR a7 (mul-mono K kf 6 F f6 lK mF mf)))
   (lt-le-trans kc W dr (lt-le-trans kc b0 W (lt-succ-left kc b0 lt) (add-le-left b0 4 W aW)) wd))
+
+(def-fns _ $ (erased fpath-under : (erased (List (Nat)) n q) (erased (Nat) x y d) (subterm erased (FPath n x q y) fp) (erased (Under n d) un)
+    -> (erased (Under q d) r))
+  (let-match erased fp (FPCons _ q1 _ z _ pz fp1) ((FPNil _ _) (UnderNil d)))
+  (UnderCons q1 z d (under-nth n x z d un pz) (fpath-under n q1 z y d fp1 un)))
+
+(def-fns _ $ (erased ncyc-under : (erased (List (Nat)) n r) (erased (Nat) d) (erased (NCyc n r) nc) (erased (Under n d) un) -> (erased (Under r d) u))
+  (let-match erased nc (NCCons _ q x y fp back) ((NCNil _) (UnderNil d)))
+  (UnderCons q x d (under-nth n y x d un back) (fpath-under n q x y d fp un)))
+
+; The map of a cubic program has cpcard darts (card_cpmap).
+(def-fns _ $ (erased cpcard-of : (erased (List (Step)) cp) (erased (Nat) d k) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
+    (erased (Cpcard cp k) cc) -> (erased (Eq (Nat) d k) q))
+  (match erased c _
+    ((CmNil) (let-match erased cc (CcNil)) (Refl _ d))
+    ((CmR _ _ cp1 _ _ r1 _ c1 _) (let-match erased cc (CcR _ _ _ cc1)) (cpcard-of cp1 d k e f r1 c1 cc1))
+    (absurd (CmRr _ _ _ _ _ _ _ _ _ _) cc)
+    (absurd (CmK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) cc)
+    ((CmU d0 cp1 e0 f0 r0 _ _ _ c1 _)
+      (let-match erased cc (CcU k0 _ cc1))
+      (let-match erased (cpcard-of cp1 d0 k0 e0 f0 r0 c1 cc1) (Refl _ _))
+      (Refl _ d))
+    ((CmY d0 cp1 e0 f0 r0 _ _ _ _ _ _ c1 _ _)
+      (let-match erased cc (CcY k0 _ cc1))
+      (let-match erased (cpcard-of cp1 d0 k0 e0 f0 r0 c1 cc1) (Refl _ _))
+      (Refl _ d))
+    ((CmH d0 cp1 e0 f0 r0 _ _ _ _ _ _ _ _ _ c1 _ _ _)
+      (let-match erased cc (CcH k0 _ cc1))
+      (let-match erased (cpcard-of cp1 d0 k0 e0 f0 r0 c1 cc1) (Refl _ _))
+      (Refl _ d))))
+
+(def-fns _ $ (erased cprsize-fn : (erased (List (Step)) cp) (erased (Nat) k k2) (subterm erased (CubicProg cp) cq) (erased (Cprsize cp k) c1)
+    (erased (Cprsize cp k2) c2) -> (erased (Eq (Nat) k k2) q))
+  (match erased cq _
+    ((CubNil) (let-match erased c1 (CsNil)) (let-match erased c2 (CsNil)) (Refl _ k))
+    ((CubR j cp1 cq1) (let-match erased c1 (CsR _ _ _ d1)) (let-match erased c2 (CsR _ _ _ d2)) (cprsize-fn cp1 k k2 cq1 d1 d2))
+    ((CubH cp1 cq1) (let-match erased c1 (CsH _ _ d1)) (let-match erased c2 (CsH _ _ d2)) (cprsize-fn cp1 k k2 cq1 d1 d2))
+    ((CubY cp1 cq1)
+      (let-match erased c1 (CsY j1 _ d1))
+      (let-match erased c2 (CsY j2 _ d2))
+      (let-match erased (cprsize-fn cp1 j1 j2 cq1 d1 d2) (Refl _ _))
+      (Refl _ k))
+    ((CubU cp1 cq1)
+      (let-match erased c1 (CsU j1 _ d1))
+      (let-match erased c2 (CsU j2 _ d2))
+      (let-match erased (cprsize-fn cp1 j1 j2 cq1 d1 d2) (Refl _ _))
+      (Refl _ k))))
+
+; The darts off diskN of one DiskSplit of a ring are off it in any other.
+(def-fns _ $ (erased sub-ds : (erased (Nat) d x0) (erased (List (Nat)) e n f p hdA zsA hd zs ys) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hdA zsA) dsA) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds)
+    (subterm erased (Sub ys zsA) sy) -> (erased (Sub ys zs) r))
+  (let-match erased sy (HSubCons y ys1 _ iy sy1) ((HSubNil _) (HSubNil zs)))
+  (HSubCons y ys1 zs (ds-off d y x0 e n f p hdA zsA hd zs h gen rg (ring-under d x0 e n f p h rg) dsA ds (ds-notin d y e n _ hdA zsA dsA iy)
+      (ds-lt d y e n _ hdA zsA dsA (OrR _ _ iy)))
+    (sub-ds d x0 e n f p hdA zsA hd zs ys1 h gen rg dsA ds sy1)))
+
+(def-fns _ $ (erased add-lt-cancel : (erased (Nat) b x y s1 s2) (erased (Add b x s1) p) (erased (Add b y s2) q) (erased (Lt s1 s2) l) -> (erased (Lt x y) r))
+  (match erased (lt-dec x y) _
+    ((Yes _ _ _ _ r) r)
+    (absurd (No _ _ _ _ le) (lt-asym s1 s2 l (add-mono-le b y x s2 s1 (le-lt-succ y x le) q p)))))
+
+(def-fns _ $ (erased ctr-snoc : (erased (Col) s) (erased (List (Col)) et1 et) (subterm erased (Ctr s et1 et) c) -> (erased (Col) x) (erased (HSnoc (Col) et1 x et) sn))
+  (match erased c _
+    ((CtrNil _) (values s (SnocNil _ s)))
+    ((CtrCons _ e s2 et2 ct a c1)
+      (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
+      (values x (SnocCons _ e x et2 ct sn)))))
+
+; The map that chkbP of Birkhoff_valid glues from the disk map of a ring, on bd, and the map of a basis program, on its ring
+; a :: p read as the node cycle a :: q.
+(def-adts $ (SewSide : ((Nat) d2 dd) ((List (Nat)) e2 n2 f2 ed nd fd bd) ((List (Step)) cp) -> Type)
+  enum
+  (many MkSewSide : (erased (Nat) d2 dd dc a) (erased (List (Nat)) e2 n2 f2 ed nd fd ec nc fc bd p q hd2 hr2) (erased (List (Step)) cp)
+      (erased (Patch d2 dd dc e2 n2 f2 ed nd fd ec nc fc hd2 hr2 bd (Cons (Nat) a q)) pt2) (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm)
+      (erased (RevApp (Nat) p (Nil (Nat)) q) ra) -> (SewSide d2 dd e2 n2 f2 ed nd fd bd cp)))
+
+; A four-colouring of that map gives the trace that chkbP asks for: a ring trace of the disk map whose even normal form, without
+; its last entry, is in the tree of the basis program.
+(def-fns _ $ (erased side-trace : (erased (Nat) h m d2 dd) (erased (List (Nat)) e2 n2 f2 ed nd fd bd ks) (erased (List (Step)) cp) (erased (Ctree) t)
+    (erased (SewSide d2 dd e2 n2 f2 ed nd fd bd cp) ss) (erased (BkProg h m cp t) bp) (erased (Length (Nat) bd (Succ (Succ h))) lbd)
+    (erased (FourColoring e2 f2 ks) c)
+    -> (erased (List (Col)) et et2 ct) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtMem t et2) mt) (erased (Ctr (C0) et ct) cr)
+    (erased (Holds (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) ct) p))
+  (let-match erased ss (MkSewSide _ _ dc a _ _ _ _ _ _ ec nc fc _ p q hd2 hr2 _ pt2 cm ra))
+  (let ((erased etd) (erased et2) (erased td) (erased rr) (erased tr)) (colorable-patch d2 dd dc e2 n2 f2 ed nd fd ec nc fc hd2 hr2 bd _ ks pt2 c))
+  (let ((erased s) (erased E) (erased se) (erased rtc)) (rt-revtail ec fc p q a etd et2 ra tr rr))
+  (let ((erased ev2) (erased ev)) (etrace-c E))
+  (let ((erased mt)) (bkprog-hit h m cp t bp s E ev2 (cpcol-of cp dc a ec fc p (Cons _ s E) cm rtc) ev))
+  (let ((erased et1) (erased cr) (erased len)) (rt-ctr ed fd bd etd (Succ h) td lbd))
+  (let ((erased x) (erased sn)) (ctr-snoc (C0) et1 etd cr))
+  (let-match erased (snoc-inj (Col) E et1 etd s x se sn) (Refl _ _))
+  (values E ev2 etd len ev mt cr (MkHolds (RArgs) (MkRArgs dd ed nd fd bd) RTP etd (MkRTP dd ed nd fd bd etd td))))
