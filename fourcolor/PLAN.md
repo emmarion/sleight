@@ -167,14 +167,14 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   genus, same_cskip_edge, and cubic_Euler; `hypjordangoal.sl` and
   `hypcubicgoal.sl` check them. Jordan implies planar is not proved.
 - `cfmap.sl`, `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl` (load after
-  `hypgeom.sl`, interleaved with `red/` files as `cpcolor.sl`'s chain
-  needs): configuration maps built from their programs by a certified
-  function, with ring traces `CpCol`; `cpcolor-c` gives the soundness
-  half of ctree_mem_cpcolor. `cfmap-run.sl` and `cpcolor-run.sl` ran all
-  633 configurations once, matching `red.sl`'s ring sizes and trees. The
-  certified Kempe tree does not use `CpCol` yet, and the A step of the
-  programs, planarity of configuration maps and the completeness
-  direction are not done.
+  `hypgeom.sl`, interleaved with `red/` files as below): configuration
+  maps built from their programs by a certified function, with ring
+  traces `CpCol`; `cpcolor-c` gives the soundness half of
+  ctree_mem_cpcolor, and `ctring-allp` hands its traces, rotated by one
+  (`CpColR`), to the certified Kempe tree. `cfmap-run.sl` and
+  `cpcolor-run.sl` ran all 633 configurations once, matching `red.sl`'s
+  ring sizes and trees. The A step of the programs, planarity of
+  configuration maps and the completeness direction are not done.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
@@ -182,19 +182,36 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
 - `red/`: an unverified port of the Coq proof's C-reducibility check.
   In one run it accepted all 633 configurations under `native-compute`
   in about 4.5 minutes on a 4-core cloud VM. It carries no proofs yet.
-- `red/color.sl` .. `red/check.sl`: a certified Kempe tree and
+- `red/color.sl` .. `red/cfred.sl`: a certified Kempe tree and
   `ctree_disjoint` (soundness direction only), over a co-closure stated on
-  partial traces whose completions satisfy a predicate on complete traces.
-  `red/init.sl` builds the initial trees together with their
-  certificates. `red/bridge.sl` takes that co-closure to one on complete
-  traces stated after `chromogram.v` (`KCC`), and `KCC` to
-  `Kempe_coclosure` for every set closed by functions at a given level
-  (`kcc-coclosure`, a level factory). Load order: `red.sl configs.sl
-  color.sl ctree.sl gtree.sl grestrict.sl crestrict.sl kempe.sl
-  bridge.sl init.sl check.sl`, then `sanity-c.sl` or `run-c.sl`.
-  `red/run-c.sl` ran all 633 configurations through it in about 270 s in
-  two runs, with a trivial predicate in place of the ring traces, so
-  those runs say nothing yet about the configurations themselves.
+  partial traces whose completions satisfy a predicate held as data
+  (`PredC`, one parameter of any type). `red/init.sl` builds the initial
+  trees together with their certificates. `red/bridge.sl` takes that
+  co-closure to one on complete traces stated after `chromogram.v`
+  (`KCC`), and `KCC` to `Kempe_coclosure` for every set closed by
+  functions at a given level (`kcc-coclosure`, a level factory).
+  `red/check.sl`'s `check-reducible-c` builds the Kempe tree of the ring
+  traces from `cpcolor-c` and returns its soundness and disjointness
+  evidence. `red/gramrot.sl` ports gram_rot and both directions of
+  match_gram_rot of `kempe.v`. `red/cfred.sl` states C_reducible of
+  `coloring.v` on the configuration maps (`CRed`) and proves
+  check_reducible_valid with what contract_ctreeP would give
+  (`ContractOK`) as a hypothesis. Nothing produces a `ContractOK` yet:
+  cfctr and its correctness, the completeness half of ctree_mem_cpcolor
+  (with A steps) and the validity checks of `cfcontract.v` are not
+  ported, and `check-reducible-c` still takes its contract tree from
+  `red.sl`. Load order: `std/nat.sl std/list.sl`, then `base map lists
+  planemap walk frontier labels hypgraph hypperm hypermap hypplane
+  hypeuler hypderived hyprelabel hypwalkup hypgeom` (each `.sl`), then
+  `cfmap.sl red/red.sl cpmap.sl red/color.sl cfcolor.sl red/ctree.sl
+  red/gtree.sl red/grestrict.sl red/crestrict.sl red/kempe.sl
+  cpcolor.sl red/configs.sl red/bridge.sl red/init.sl red/check.sl
+  red/gramrot.sl red/cfred.sl`, then `red/sanity-c.sl` or `red/run-c.sl`.
+  In two runs (about 5.3 and 6 minutes of wall time, 17 of user time,
+  on a 4-core cloud VM), `red/run-c.sl` accepted all 633 configurations against
+  their ring traces; that says each configuration's Kempe tree is
+  disjoint from `red.sl`'s unverified contract tree, not yet that the
+  configuration is C-reducible.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
