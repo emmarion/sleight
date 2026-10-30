@@ -773,3 +773,24 @@
 (def-fns _ $ (erased gl-f : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) (erased (Adj gf x y) a)
     -> (erased (Adj g x y) r))
   (adj-cat-r ge gnf g x y (adj-cat-r gn gf gnf x y a c1) c2))
+
+(def-fns _ $ (erased nth-adj : (erased (List (Bond)) g) (erased (Nat) j x y) (subterm erased (Nth (Bond) g j (MkBond x y)) p) -> (erased (Adj g x y) r))
+  (let-match erased p (NthThere _ b g1 j1 _ p1) ((NthHere _ _ g1) (AdjFwd g1 x y)))
+  (AdjThere g1 b x y (nth-adj g1 j1 x y p1)))
+
+(def-fns _ $ (erased covers-trans : (erased (List (Bond)) g) (erased (List (Nat)) rs1 rs2 xs) (subterm erased (Covers g rs1 xs) c1) (erased (Covers g rs2 rs1) c2)
+    -> (erased (Covers g rs2 xs) r))
+  (let-match erased c1 (CovCons _ _ xs1 x r pin c cv1) ((CovNil _ _) (CovNil g rs2)))
+  (let ((erased r2) (erased pin2) (erased c3)) (covers-at g rs2 rs1 r c2 pin))
+  (CovCons g rs2 xs1 x r2 pin2 (conn-cat g r2 r x c3 c) (covers-trans g rs1 rs2 xs1 cv1 c2)))
+
+(def-fns _ $ (erased covers-spans : (erased (List (Bond)) g h) (erased (List (Nat)) rs xs) (subterm erased (Covers h rs xs) cv) (erased (Spans g h) sp)
+    -> (erased (Covers g rs xs) r))
+  (let-match erased cv (CovCons _ _ xs1 x r pin c cv1) ((CovNil _ _) (CovNil g rs)))
+  (CovCons g rs xs1 x r pin (spans-conn g h r x c sp) (covers-spans g h rs xs1 cv1 sp)))
+
+(def-fns _ $ (erased covers-none : (erased (List (Bond)) g) (erased (List (Nat)) lab xs ys zs m) (erased (SplitBy lab (Nil (Nat)) xs ys zs) sp) (subterm erased (Sub m ys) sb)
+    -> (erased (Covers g (Nil (Nat)) m) r))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g (Nil _))))
+  (let ((erased l) (erased px) (erased il)) (sb-in-key lab (Nil _) xs ys zs x sp ix))
+  (match erased il _))
