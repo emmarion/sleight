@@ -712,14 +712,13 @@
     -> (erased (Col) s) (erased (AddK c0 c1 s) a) (erased (List (Col)) lc2 et2) (erased (HSnoc (Col) lc c0 lc2) sl) (erased (HSnoc (Col) et s et2) se)
     (erased (TraceFrom c1 c lc2 et2) r))
   (let ((erased s) (erased a)) (addc-total c0 c1))
-  (match erased t _
+  (let-match erased t (TFCons _ _ c2 s0 lc1 et1 a0 t1)
     ((TFEnd _ _ s0 a0)
       (values s a (Cons _ c0 (Nil _)) (Cons _ s0 (Cons _ s (Nil _))) (SnocNil _ c0) (SnocCons _ s0 s (Nil _) (Cons _ s (Nil _)) (SnocNil _ s))
-        (TFCons c1 c c0 s0 (Nil _) (Cons _ s (Nil _)) a0 (TFEnd c1 c0 s a))))
-    ((TFCons _ _ c2 s0 lc1 et1 a0 t1)
-      (let ((erased s1) (erased a1) (erased lc3) (erased et3) (erased sl1) (erased se1) (erased r1)) (tracefrom-shift c0 c2 c1 lc1 et1 t1))
-      (let-match erased (addc-fn c0 c1 s s1 a a1) (Refl _ _))
-      (values s a (Cons _ c2 lc3) (Cons _ s0 et3) (SnocCons _ c2 c0 lc1 lc3 sl1) (SnocCons _ s0 s et1 et3 se1) (TFCons c1 c c2 s0 lc3 et3 a0 r1)))))
+        (TFCons c1 c c0 s0 (Nil _) (Cons _ s (Nil _)) a0 (TFEnd c1 c0 s a)))))
+  (let ((erased s1) (erased a1) (erased lc3) (erased et3) (erased sl1) (erased se1) (erased r1)) (tracefrom-shift c0 c2 c1 lc1 et1 t1))
+  (let-match erased (addc-fn c0 c1 s s1 a a1) (Refl _ _))
+  (values s a (Cons _ c2 lc3) (Cons _ s0 et3) (SnocCons _ c2 c0 lc1 lc3 sl1) (SnocCons _ s0 s et1 et3 se1) (TFCons c1 c c2 s0 lc3 et3 a0 r1)))
 
 ; trace_rot: rotating the colours by one rotates the trace by one.
 (def-fns _ $ (erased trace-rot : (erased (Col) c) (erased (List (Col)) lc lc2 et) (erased (Trace (Cons (Col) c lc) et) t) (erased (HSnoc (Col) lc c lc2) sn)
