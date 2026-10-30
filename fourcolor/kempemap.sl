@@ -525,3 +525,157 @@
           (let-match erased y (SPop12 _) (absurd (SPop13 _) (let-match erased q (Bot0 _ _ _ q1)) q1))
           (let-match erased q (BotT) (absurd (Bot1 _ _ _ q1) q1))
           (MGCons (BS0) (BP0 (BS0)) e (GPush) et1 w1 (SPush2 (BS0)) (mt-mg (BP0 (BS0)) et1 w1 t2)))))))
+
+; The dart-preserving Walkup transforms of hypjordan.sl, with the dead darts s, fixed by e, n and f, named: k of them, and
+; m live darts.
+(def-adts $ (Dead : ((Nat) d) ((List (Nat)) e n f s) ((Nat) m) -> Type)
+  enum
+  (many MkDead : (erased (Nat) d m k) (erased (List (Nat)) e n f s) (erased (FixedIn e s) fe) (erased (FixedIn n s) fn)
+      (erased (FixedIn f s) ff) (erased (Distinct s) ds) (erased (Length (Nat) s k) ls) (erased (Under s d) us) (erased (Add k m d) a)
+      -> (Dead d e n f s m)))
+
+(def-fns _ $ (erased dead-rot : (erased (Nat) d m) (erased (List (Nat)) e n f s) (erased (Dead d e n f s m) dd) -> (erased (Dead d n f e s m) r))
+  (let-match erased dd (MkDead _ _ k _ _ _ _ fe fn ff ds ls us a))
+  (MkDead d m k n f e s fn ff fe ds ls us a))
+
+; WalkupE at the live dart z: z cut out of n and f, and added to the dead darts.
+(def-fns _ $ (erased walk-dead : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
+    -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip n z n2) skn) (erased (Skip f z f2) skf) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Eq (Nat) m (Succ m1)) em) (erased (Dead d e2 n2 f2 (Cons (Nat) z s) m1) dd2))
+  (let-match erased dd (MkDead _ _ k _ _ _ _ fe fn ff ds ls us a))
+  (let ((erased e2) (erased n2) (erased f2) (erased gen2) (erased skn) (erased skf) (erased h2) (erased g2) (erased le)) (walkup-iso d (Zero) z e n f h g lz))
+  (let-match erased (lt-one gen2 le) (Refl _ _))
+  (let ((erased ds2)) (DistCons z s out ds))
+  (let ((erased us2)) (UnderCons s z d lz us))
+  (let ((erased m1) (erased em) (erased a2)) (fuel-step d k m z s a ls ds2 us2))
+  (let ((erased fn2)) (FixCons n2 s z (skip-fixed n n2 z skn) (fixed-skip n n2 s z fn skn out)))
+  (let ((erased ff2)) (FixCons f2 s z (skip-fixed f f2 z skf) (fixed-skip f f2 s z ff skf out)))
+  (values e2 n2 f2 m1 skn skf h2 g2 em
+    (MkDead d m1 (Succ k) e2 n2 f2 (Cons _ z s) (fixed-third d n2 f2 e2 (Cons _ z s) (hyper-rot d e2 n2 f2 h2) fn2 ff2) fn2 ff2 ds2
+      (LengthCons _ z s k ls) us2 a2)))
+
+; WalkupN at the live dart z: z cut out of f and e.
+(def-fns _ $ (erased walk-dead-n : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
+    -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip f z f2) skf) (erased (Skip e z e2) ske) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Eq (Nat) m (Succ m1)) em) (erased (Dead d e2 n2 f2 (Cons (Nat) z s) m1) dd2))
+  (let ((erased n2) (erased f2) (erased e2) (erased m1) (erased skf) (erased ske) (erased h2) (erased g2) (erased em) (erased dd2))
+    (walk-dead d m z n f e s (hyper-rot d e n f h) (genus-rot d (Zero) e n f h g) (dead-rot d m e n f s dd) lz out))
+  (let ((erased h3) (erased g3)) (genus-rot2 d (Zero) n2 f2 e2 h2 g2))
+  (values e2 n2 f2 m1 skf ske h3 g3 em (dead-rot d m1 f2 e2 n2 _ (dead-rot d m1 n2 f2 e2 _ dd2))))
+
+; n is determined by e and f: f b = a and e c = b give n a = c.
+(def-fns _ $ (erased hyper-node : (erased (Nat) d a b c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    (erased (Nth (Nat) f b a) pf) (erased (Nth (Nat) e c b) pe) -> (erased (Nth (Nat) n a c) r))
+  (hyper-third d a b c f e n (hyper-rot d n f e (hyper-rot d e n f h)) pf pe))
+
+; e is determined by n and f: n b = a and f c = b give e a = c.
+(def-fns _ $ (erased hyper-edge : (erased (Nat) d a b c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    (erased (Nth (Nat) n b a) pn) (erased (Nth (Nat) f c b) pf) -> (erased (Nth (Nat) e a c) r))
+  (hyper-third d a b c n f e (hyper-rot d e n f h) pn pf))
+
+; kempe.v's contraction of the edge z, ez = e z: WalkupN at z, then WalkupE at ez, so that e2, n2 and f2 are e, n and f
+; with z and ez fixed and the node cycles of z and ez merged; fz = f z and fez = f ez.
+(def-adts $ (Cut2 : ((Nat) d) ((List (Nat)) e n f) ((Nat) z ez) ((List (Nat)) e2 n2 f2) -> Type)
+  enum
+  (many MkCut2 : (erased (Nat) d z ez fz fez) (erased (List (Nat)) e n f e1 n1 f1 e2 n2 f2) (erased (Hypermap d e1 n1 f1) h1)
+      (erased (Skip e z e1) ske) (erased (Skip f z f1) skf) (erased (Skip n1 ez n2) skn) (erased (Skip f1 ez f2) skf2)
+      (erased (Hypermap d e2 n2 f2) h2) (erased (Nth (Nat) e z ez) pez) (erased (Nth (Nat) e ez z) pze) (erased (Apart (Nat) Lt ez z) ne)
+      (erased (Nth (Nat) f z fz) pfz) (erased (Apart (Nat) Lt fz ez) nfz) (erased (Nth (Nat) f ez fez) pfez) (erased (Apart (Nat) Lt fez z) nfez)
+      -> (Cut2 d e n f z ez e2 n2 f2)))
+
+(def-fns _ $ (erased cut-e1 : (erased (Nat) d z ez x y) (erased (List (Nat)) e n f e1) (erased (Hypermap d e n f) h) (erased (Skip e z e1) ske)
+    (erased (Nth (Nat) e ez z) pze) (erased (Nth (Nat) e x y) px) (erased (Apart (Nat) Lt x ez) nx) (erased (Apart (Nat) Lt x z) nxz)
+    -> (erased (Nth (Nat) e1 x y) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (skip-keep z x y e e1 ske px nxz (img-apart d x ez y z e nf pe px pze nx)))
+
+(def-fns _ $ (erased cut-f2 : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) f x c) px) (erased (Apart (Nat) Lt x z) nxz) (erased (Apart (Nat) Lt x ez) nx)
+    (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) f2 x c) r))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (skip-keep ez x c f1 f2 skf2 (skip-keep z x c f f1 skf px nxz ncz) nx nc))
+
+(def-fns _ $ (erased cut-f2-z : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) f x z) px) (erased (Nth (Nat) f z c) pz) (erased (Apart (Nat) Lt x z) nxz)
+    (erased (Apart (Nat) Lt x ez) nx) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) f2 x c) r))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (skip-keep ez x c f1 f2 skf2 (skip-cut-at d z x c f fi f1 pf skf px pz nxz) nx nc))
+
+(def-fns _ $ (erased cut-f2-ez : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) f x ez) px) (erased (Nth (Nat) f ez c) pz) (erased (Apart (Nat) Lt x z) nxz)
+    (erased (Apart (Nat) Lt x ez) nx) (erased (Apart (Nat) Lt c z) ncz) -> (erased (Nth (Nat) f2 x c) r))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e1 n1 f1 h1))
+  (skip-cut-at d ez x c f1 fi f2 pf skf2 (skip-keep z x ez f f1 skf px nxz ne) (skip-keep z ez c f f1 skf pz ne ncz) nx))
+
+; e c, for c neither z nor ez, is neither of them either.
+(def-fns _ $ (erased cut-img : (erased (Nat) d z ez c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Nth (Nat) e z ez) pez)
+    (erased (Nth (Nat) e ez z) pze) (erased (Lt c d) lc) (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc)
+    -> (erased (Nat) b) (erased (Nth (Nat) e c b) pb) (erased (Apart (Nat) Lt b z) nbz) (erased (Apart (Nat) Lt b ez) nb))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased b) (erased pb) (erased _)) (perm-nth d c e nf pe lc))
+  (values b pb (img-apart d c ez b z e nf pe pb pze nc) (img-apart d c z b ez e nf pe pb pez ncz)))
+
+(def-fns _ $ (erased cut-n1 : (erased (Nat) d z ez x b c) (erased (List (Nat)) e n f e1 n1 f1) (erased (Hypermap d e n f) h)
+    (erased (Hypermap d e1 n1 f1) h1) (erased (Skip e z e1) ske) (erased (Skip f z f1) skf) (erased (Nth (Nat) e ez z) pze)
+    (erased (Nth (Nat) f b x) pb) (erased (Apart (Nat) Lt b z) nbz) (erased (Apart (Nat) Lt x z) nxz)
+    (erased (Nth (Nat) e c b) pc) (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) n1 x c) r))
+  (hyper-node d x b c e1 n1 f1 h1 (skip-keep z b x f f1 skf pb nbz nxz) (cut-e1 d z ez c b e n f e1 h ske pze pc nc ncz)))
+
+(def-fns _ $ (erased cut-n2 : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) n x c) px) (erased (Apart (Nat) Lt x z) nxz) (erased (Apart (Nat) Lt x ez) nx)
+    (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) n2 x c) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased b) (erased pb) (erased nbz) (erased nb)) (cut-img d z ez c e n f h pez pze (perm-val d x c n ni pn px) ncz nc))
+  (skip-keep ez x c n1 n2 skn (cut-n1 d z ez x b c e n f e1 n1 f1 h h1 ske skf pze (hyper-third d b c x e n f h pb px) nbz nxz pb ncz nc) nx nc))
+
+(def-fns _ $ (erased cut-n2-y : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) n x z) px) (erased (Nth (Nat) n ez c) pc) (erased (Apart (Nat) Lt x z) nxz)
+    (erased (Apart (Nat) Lt x ez) nx) (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) n2 x c) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased b) (erased pb) (erased nbz) (erased nb)) (cut-img d z ez c e n f h pez pze (perm-val d ez c n ni pn pc) ncz nc))
+  (let ((erased p1)) (cut-n1 d z ez ez b c e n f e1 n1 f1 h h1 ske skf pze (hyper-third d b c ez e n f h pb pc) nbz ne pb ncz nc))
+  (let ((erased _) (erased ni1) (erased _) (erased _) (erased _) (erased pn1) (erased _)) (hyper-core d e1 n1 f1 h1))
+  (let ((erased e1x)) (skip-cut-at d z ez ez e nf e1 pe ske pze pez ne))
+  (let ((erased q1)) (hyper-node d x ez ez e1 n1 f1 h1 (skip-keep z ez x f f1 skf (hyper-third d ez z x e n f h pez px) ne nxz) e1x))
+  (skip-cut-at d ez x c n1 ni1 n2 pn1 skn q1 p1 nx))
+
+(def-fns _ $ (erased cut-n2-fz : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) n x ez) px) (erased (Nth (Nat) n z c) pc) (erased (Apart (Nat) Lt x z) nxz)
+    (erased (Apart (Nat) Lt x ez) nx) (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc) -> (erased (Nth (Nat) n2 x c) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased b) (erased pb) (erased nbz) (erased nb)) (cut-img d z ez c e n f h pez pze (perm-val d z c n ni pn pc) ncz nc))
+  (let ((erased fb)) (hyper-third d b c z e n f h pb pc))
+  (let ((erased e1c)) (cut-e1 d z ez c b e n f e1 h ske pze pb nc ncz))
+  (let ((erased q1)) (hyper-node d x b c e1 n1 f1 h1 (skip-cut-at d z b x f fi f1 pf skf fb (hyper-third d z ez x e n f h pze px) nbz) e1c))
+  (skip-keep ez x c n1 n2 skn q1 nx nc))
+
+; The edge permutation of the contraction is e away from z and ez.
+(def-fns _ $ (erased cut-e2 : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) e x c) px) (erased (Apart (Nat) Lt x z) nxz) (erased (Apart (Nat) Lt x ez) nx)
+    -> (erased (Nth (Nat) e2 x c) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased ncz)) (img-apart d x ez c z e nf pe px pze nx))
+  (let ((erased nc)) (img-apart d x z c ez e nf pe px pez nxz))
+  (let ((erased b0) (erased pb0) (erased _)) (perm-nth d c f fi pf (perm-val d x c e nf pe px)))
+  (let ((erased nb0)) (hyper-node d b0 c x e n f h pb0 px))
+  (let-match erased (nat-eq b0 z) (Unequal _ _ _ _ nb0z)
+    ((Equal _ _ _)
+      (let ((erased nfzz)) (apart-sym z fz (img-apart d c z z fz f fi pf pb0 pfz ncz)))
+      (hyper-edge d x fz c e2 n2 f2 h2
+        (cut-n2-fz d z ez fz x e n f e2 n2 f2 h ct (hyper-node d fz z ez e n f h pfz pze) nb0 nfzz nfz nxz nx)
+        (cut-f2-z d z ez c fz e n f e2 n2 f2 h ct pb0 pfz ncz nc nfz))))
+  (let-match erased (nat-eq b0 ez) (Unequal _ _ _ _ nb0e)
+    ((Equal _ _ _)
+      (let ((erased nfee)) (apart-sym ez fez (img-apart d c ez ez fez f fi pf pb0 pfez nc)))
+      (hyper-edge d x fez c e2 n2 f2 h2
+        (cut-n2-y d z ez fez x e n f e2 n2 f2 h ct (hyper-node d fez ez z e n f h pfez pez) nb0 nfez nfee nxz nx)
+        (cut-f2-ez d z ez c fez e n f e2 n2 f2 h ct pb0 pfez ncz nc nfez))))
+  (hyper-edge d x b0 c e2 n2 f2 h2 (cut-n2 d z ez b0 x e n f e2 n2 f2 h ct nb0 nb0z nb0e nxz nx) (cut-f2 d z ez c b0 e n f e2 n2 f2 h ct pb0 ncz nc nb0z nb0e)))
