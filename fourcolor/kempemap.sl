@@ -972,3 +972,153 @@
       (graph-resp d f k0 gf grf (lift-const d z ez fz fez cz cez e n f s k1 k0 e2 n2 f2 gf h ct lc1 st pfz pfez hz hez lf (graph-fun d f gf grf)) lk0)
       (lift-edge d z ez cz cez e n f s k1 k0 e2 n2 f2 ge h ct lc1 st nzc le (graph-fun d e ge gre)) u0 lk0)
     st))
+
+(def-fns _ $ (erased addc-comm : (erased (Col) a b c) (erased (AddC a b c) p) -> (erased (AddC b a c) q))
+  (match erased p _ ((AZL _) (AZR c)) ((AZR _) (AZL c)) ((ASame _) (ASame a)) ((AThird _ _ _ t) (AThird b a c (third-12 a b c t)))))
+
+(def-fns _ $ (erased xor-fn : (erased (Bool) a b c c2) (erased (Xor a b c) p) (erased (Xor a b c2) q) -> (erased (Eq (Bool) c c2) e))
+  (match erased p _
+    ((XFF) (let-match erased q (XFF)) (Refl _ c))
+    ((XFT) (let-match erased q (XFT)) (Refl _ c))
+    ((XTF) (let-match erased q (XTF)) (Refl _ c))
+    ((XTT) (let-match erased q (XTT)) (Refl _ c))))
+
+(def-fns _ $ (erased xor-assoc : (erased (Bool) a b c ab abc bc abc2) (erased (Xor a b ab) p1) (erased (Xor ab c abc) p2) (erased (Xor b c bc) p3)
+    (erased (Xor a bc abc2) p4) -> (erased (Eq (Bool) abc abc2) e))
+  (match erased p1 _
+    ((XFF) (match erased p3 _
+      ((XFF) (let-match erased p2 (XFF)) (let-match erased p4 (XFF)) (Refl _ abc))
+      ((XFT) (let-match erased p2 (XFT)) (let-match erased p4 (XFT)) (Refl _ abc))))
+    ((XFT) (match erased p3 _
+      ((XTF) (let-match erased p2 (XTF)) (let-match erased p4 (XFT)) (Refl _ abc))
+      ((XTT) (let-match erased p2 (XTT)) (let-match erased p4 (XFF)) (Refl _ abc))))
+    ((XTF) (match erased p3 _
+      ((XFF) (let-match erased p2 (XTF)) (let-match erased p4 (XTF)) (Refl _ abc))
+      ((XFT) (let-match erased p2 (XTT)) (let-match erased p4 (XTT)) (Refl _ abc))))
+    ((XTT) (match erased p3 _
+      ((XTF) (let-match erased p2 (XFF)) (let-match erased p4 (XTT)) (Refl _ abc))
+      ((XTT) (let-match erased p2 (XFT)) (let-match erased p4 (XTF)) (Refl _ abc))))))
+
+(def-fns _ $ (erased cb-inj : (erased (Col) c c2) (erased (Bool) x y) (erased (CB c x y) p) (erased (CB c2 x y) q) -> (erased (Eq (Col) c c2) e))
+  (match erased p _
+    ((CB0) (let-match erased q (CB0)) (Refl _ c))
+    ((CB1) (let-match erased q (CB1)) (Refl _ c))
+    ((CB2) (let-match erased q (CB2)) (Refl _ c))
+    ((CB3) (let-match erased q (CB3)) (Refl _ c))))
+
+(def-fns _ $ (erased addc-assoc : (erased (Col) a b c ab abc bc abc2) (erased (AddC a b ab) p1) (erased (AddC ab c abc) p2) (erased (AddC b c bc) p3)
+    (erased (AddC a bc abc2) p4) -> (erased (Eq (Col) abc abc2) e))
+  (let ((erased xa) (erased ya) (erased qa)) (cb-exists a))
+  (let ((erased xb) (erased yb) (erased qb)) (cb-exists b))
+  (let ((erased xc) (erased yc) (erased qc)) (cb-exists c))
+  (let ((erased x1) (erased y1) (erased r1) (erased s1) (erased q1)) (addc-bits a b ab xa ya xb yb p1 qa qb))
+  (let ((erased x2) (erased y2) (erased r2) (erased s2) (erased q2)) (addc-bits ab c abc x1 y1 xc yc p2 q1 qc))
+  (let ((erased x3) (erased y3) (erased r3) (erased s3) (erased q3)) (addc-bits b c bc xb yb xc yc p3 qb qc))
+  (let ((erased x4) (erased y4) (erased r4) (erased s4) (erased q4)) (addc-bits a bc abc2 xa ya x3 y3 p4 qa q3))
+  (let-match erased (xor-assoc xa xb xc x1 x2 x3 x4 r1 r2 r3 r4) (Refl _ _))
+  (let-match erased (xor-assoc ya yb yc y1 y2 y3 y4 s1 s2 s3 s4) (Refl _ _))
+  (cb-inj abc abc2 x2 y2 q2 q4))
+
+; (l + b) + (b + a) = l + a.
+(def-fns _ $ (erased addc-tri : (erased (Col) l b a u v t) (erased (AddC l b u) p) (erased (AddC b a v) q) (erased (AddC l a t) r) -> (erased (AddC u v t) s))
+  (let ((erased w) (erased pw)) (addc-total u v))
+  (let ((erased bb) (erased pbb)) (addc-total b b))
+  (let-match erased (addc-fn b b bb (C0) pbb (ASame b)) (Refl _ _))
+  (let ((erased ba) (erased pba)) (addc-total (C0) a))
+  (let-match erased (addc-fn (C0) a ba a pba (AZL a)) (Refl _ _))
+  (let ((erased bba) (erased pbba)) (addc-total b v))
+  (let-match erased (addc-assoc b b a (C0) a v bba pbb pba q pbba) (Refl _ _))
+  (let-match erased (addc-assoc l b v u w a t p pw pbba r) (Refl _ _))
+  pw)
+
+(def-fns _ $ (erased addc-zero : (erased (Col) a b) (erased (AddC a b (C0)) p) -> (erased (Eq (Col) a b) e))
+  (match erased p _ ((AZL _) (Refl _ a)) ((AZR _) (Refl _ a)) ((ASame _) (Refl _ a)) (absurd (AThird _ _ _ t) t)))
+
+; pairmap addc p lc = et.
+(def-adts $ (PairFrom : ((Col) p) ((List (Col)) lc et) -> Type)
+  enum
+  (many PFNil : (erased (Col) p) -> (PairFrom p (Nil (Col)) (Nil (Col))))
+  (many PFCons : (erased (Col) p c s) (erased (List (Col)) lc et) (erased (AddC p c s) a) (erased (PairFrom c lc et) t)
+      -> (PairFrom p (Cons (Col) c lc) (Cons (Col) s et))))
+
+; l is the last of p :: lc.
+(def-adts $ (LastFrom : (Type A) (A p) ((List A) lc) (A l) -> Type)
+  enum
+  (many LFNil : (erased Type A) (erased A p) -> (LastFrom A p (Nil A) p))
+  (many LFCons : (erased Type A) (erased A p c l) (erased (List A) lc) (erased (LastFrom A c lc l) t) -> (LastFrom A p (Cons A c lc) l)))
+
+; Gonthier's urtrace: et lists the sums of consecutive colours of lc, the first with the last.
+(def-adts $ (UTr : ((List (Col)) lc et) -> Type)
+  enum
+  (many UTNil : -> (UTr (Nil (Col)) (Nil (Col))))
+  (many UTCons : (erased (Col) c l) (erased (List (Col)) lc et) (erased (LastFrom (Col) c lc l) lt) (erased (PairFrom l (Cons (Col) c lc) et) pf)
+      -> (UTr (Cons (Col) c lc) et)))
+
+(def-fns _ $ (erased pairfrom-exists : (erased (Col) p) (subterm erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (PairFrom p lc et) r))
+  (let-match erased lc (Cons _ c lc1) ((Nil _) (values (Nil _) (PFNil p))))
+  (let ((erased s) (erased a)) (addc-total p c))
+  (let ((erased et) (erased t)) (pairfrom-exists c lc1))
+  (values (Cons _ s et) (PFCons p c s lc1 et a t)))
+
+(def-fns _ $ (erased pairfrom-fn : (erased (Col) p) (erased (List (Col)) lc et et2) (subterm erased (PairFrom p lc et) a) (erased (PairFrom p lc et2) b)
+    -> (erased (Eq (List (Col)) et et2) e))
+  (let-match erased a (PFCons _ c s lc1 et1 ad a1) ((PFNil _) (let-match erased b (PFNil _)) (Refl _ et)))
+  (let-match erased b (PFCons _ _ s2 _ et3 ad2 b1))
+  (let-match erased (addc-fn p c s s2 ad ad2) (Refl _ _))
+  (let-match erased (pairfrom-fn c lc1 et1 et3 a1 b1) (Refl _ _))
+  (Refl _ et))
+
+(def-fns _ $ (erased lastfrom-exists : (erased Type A) (erased A p) (subterm erased (List A) lc) -> (erased A l) (erased (LastFrom A p lc l) r))
+  (let-match erased lc (Cons _ c lc1) ((Nil _) (values p (LFNil A p))))
+  (let ((erased l) (erased t)) (lastfrom-exists A c lc1))
+  (values l (LFCons A p c l lc1 t)))
+
+(def-fns _ $ (erased lastfrom-fn : (erased Type A) (erased A p l l2) (erased (List A) lc) (subterm erased (LastFrom A p lc l) a) (erased (LastFrom A p lc l2) b)
+    -> (erased (Eq A l l2) e))
+  (let-match erased a (LFCons _ _ c _ lc1 a1) ((LFNil _ _) (let-match erased b (LFNil _ _)) (Refl _ l)))
+  (let-match erased b (LFCons _ _ _ _ _ b1))
+  (lastfrom-fn A c l l2 lc1 a1 b1))
+
+(def-fns _ $ (erased utr-exists : (erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (UTr lc et) r))
+  (let-match erased lc (Cons _ c lc1) ((Nil _) (values (Nil _) (UTNil))))
+  (let ((erased l) (erased lt)) (lastfrom-exists (Col) c lc1))
+  (let ((erased et) (erased pf)) (pairfrom-exists l lc))
+  (values et (UTCons c l lc1 et lt pf)))
+
+(def-fns _ $ (erased utr-fn : (erased (List (Col)) lc et et2) (erased (UTr lc et) a) (erased (UTr lc et2) b) -> (erased (Eq (List (Col)) et et2) e))
+  (let-match erased a (UTCons c l lc1 _ lt pf) ((UTNil) (let-match erased b (UTNil)) (Refl _ et)))
+  (let-match erased b (UTCons _ l2 _ _ lt2 pf2))
+  (let-match erased (lastfrom-fn (Col) c l l2 lc1 lt lt2) (Refl _ _))
+  (pairfrom-fn l lc et et2 pf pf2))
+
+(def-fns _ $ (erased lastfrom-snoc : (erased Type A) (erased A p l) (erased (List A) lc init) (subterm erased (HSnoc A init l (Cons A p lc)) sn)
+    -> (erased (LastFrom A p lc l) r))
+  (match erased sn _
+    ((SnocNil _ _) (LFNil A p))
+    ((SnocCons _ _ _ init1 _ sn1)
+      (let-match erased lc (Cons _ c lc1) (absurd (Nil _) sn1))
+      (LFCons A p c l lc1 (lastfrom-snoc A c l lc1 init1 sn1)))))
+
+(def-fns _ $ (erased pairfrom-snoc : (erased (Col) p l c s) (erased (List (Col)) lc lc2 et) (subterm erased (PairFrom p lc et) pf)
+    (erased (LastFrom (Col) p lc l) lt) (erased (HSnoc (Col) lc c lc2) sn) (erased (AddC l c s) a)
+    -> (erased (List (Col)) et2) (erased (HSnoc (Col) et s et2) se) (erased (PairFrom p lc2 et2) r))
+  (match erased pf _
+    ((PFNil _)
+      (let-match erased lt (LFNil _ _))
+      (let-match erased sn (SnocNil _ _))
+      (values (Cons _ s (Nil _)) (SnocNil _ s) (PFCons p c s (Nil _) (Nil _) a (PFNil c))))
+    ((PFCons _ c1 s1 lc1 et1 a1 pf1)
+      (let-match erased lt (LFCons _ _ _ _ _ lt1))
+      (let-match erased sn (SnocCons _ _ _ _ lc3 sn1))
+      (let ((erased et3) (erased se1) (erased r1)) (pairfrom-snoc c1 l c s lc1 lc3 et1 pf1 lt1 sn1 a))
+      (values (Cons _ s1 et3) (SnocCons _ s1 s et1 et3 se1) (PFCons p c1 s1 lc3 et3 a1 r1)))))
+
+; urtrace_rot: rotating the colours rotates the urtrace.
+(def-fns _ $ (erased utr-rot : (erased (Col) c e) (erased (List (Col)) lc lc2 et1) (erased (UTr (Cons (Col) c lc) (Cons (Col) e et1)) u)
+    (erased (HSnoc (Col) lc c lc2) sn) -> (erased (List (Col)) et2) (erased (HSnoc (Col) et1 e et2) se) (erased (UTr lc2 et2) r))
+  (let-match erased u (UTCons _ l _ _ lt pf))
+  (let-match erased pf (PFCons _ _ _ _ _ a pf1))
+  (let ((erased et2) (erased se) (erased r)) (pairfrom-snoc c l c e lc lc2 et1 pf1 lt sn a))
+  (let-match erased sn (SnocCons _ _ _ _ _ _) ((SnocNil _ _) (values et2 se (UTCons c c (Nil _) et2 (LFNil _ c) r))))
+  (let-match erased lc2 (Cons _ c2 lc3))
+  (values et2 se (UTCons c2 c lc3 et2 (lastfrom-snoc (Col) c2 c lc3 lc sn) r)))
