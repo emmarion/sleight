@@ -572,10 +572,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   dart off rc (`embed-n`) are proved from two certificates taken as
   hypotheses: `GcOK`, per dart of the configuration map, edge an
   involution, node keeping rc and of order 3 off it, and the conclusions
-  of edge_perimeter, chordless_perimeter and embed_cases (meant to be
-  decided on the concrete maps by a run, which is not written), and
+  of edge_perimeter, chordless_perimeter and embed_cases (decided on the
+  configuration maps in `embed4.sl`), and
   `FunctorAll`, embed_functor's conclusion (each kernel dart whose edge
-  image is in the kernel is central), not proved. More of embed.v is in
+  image is in the kernel is central; `embed4.sl` proves it for the
+  configuration maps). More of embed.v is in
   `embed5.sl`. That these statements match Coq's has been checked only
   by reading.
 - `embed5.sl` (load after `embed3.sl`): more of embed.v, as far as both
@@ -641,9 +642,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `NotEmbed CRX cfs` from `BirkhoffChecks`, embed5.sl's `FullRedR`
   (with `embed6.sl`'s `patch-open`), and three hypotheses: `CfCerts cfs`
   (the per-configuration certificates: embed4.sl's `GcOK` and
-  `FunctorAll`, which embed4.sl's `cf-gcok` and `cf-functor` appear to
-  give from its `AllGc`, and embed5.sl's `NodeRing` and `Radius2`, for a
-  configuration of cfs, meant to be decided by a run), `EmbedValid`
+  `FunctorAll` and embed5.sl's `NodeRing` and `Radius2`, for a
+  configuration of cfs; `embed4goal.sl` proves it), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
   reduces, given cface_h1 as the `EmbedPatch` gives it; `evalid.sl`
@@ -671,6 +671,34 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   rejected, and in another a variant passing `CAFive`'s insertE to
   `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
   reading.
+- `embed4.sl`, `embed4goal.sl` (load after `evalid.sl`, in the chain
+  of `fcgoal.sl` below, in place of `fcgoal.sl`):
+  embed.v's embed_functor and the facts of embeddable that the embedding
+  reads, for the configuration maps, as far as both compilers check them.
+  A run decides, per configuration of red/configs.sl on the map cpmap.sl
+  builds, a bundle `CfGc` (listed by `AllGc`): its kernel, embed3.sl's
+  `GcOK`, `NodeRing` (rc read backwards along node, as embed5.sl states
+  it), `Radius2`, and for each kernel dart whose edge image is in the
+  kernel a refutation (`Refut`) of its not being central. `cf-gcok`,
+  `cf-functor` and `cfcerts-of` move these to any `KernelList` and any
+  `EEnv` on the map of a configuration of cfs (through `cpmap-fn` and
+  `hyper-node-unique`), and `embed4goal.sl` sets and proves `CfCerts cfs`
+  (cfs as `fcgoal.sl` computes it). embed_functor is not ported along
+  Coq's induction on disks: a refutation is a case tree on the centrality
+  of kernel darts, closed at each leaf by a clash, by `node-rule` (at a
+  node with every dart and edge image in the kernel, two central darts
+  make the third central, from hF and the cubic map) or by a cut of the
+  kernel faces (`RfCut`, a face labelling) whose crossing darts the branch
+  knows are not central, which the preembedding's rlink paths of central
+  darts refute (`cut-sound`, `path-cross`). The search is unchecked; its
+  tree is checked. On a 4-core cloud VM `--goal proved` passed in about
+  430 s with slc and 440 s with the reference compiler (under `ulimit -s
+  unlimited`), the whole chain and the compiled run, in one run each.
+  In a test run three broken variants were rejected: `node-rule` without
+  its last step (a type error), and the run with no cut leaf or with a
+  flood fill that ignores the darts known not central (the run answers
+  `ChkNo`). Ring arities (good_ring_arity) are not in the bundle. That these
+  statements match Coq's has been checked only by reading.
 - `evalid.sl` (load after `notembed.sl`, in the chain of `fcgoal.sl`
   below; `fcgoal.sl` also checks after it): embed_valid_contract of
   embed.v with minimality as data, as far as both compilers check it.
