@@ -1530,3 +1530,127 @@
   (let ((erased R3) (erased s3)) (snoc-exists _ R1 x))
   (let ((erased Y2) (erased sy)) (snoc-exists _ Y x))
   (km-turn d e n f s ks X1 Y2 R3 R2 (join-snoc-r X1 Y R1 Y2 R3 x j1 sy s3) (join-snoc Y X1 R2 Y2 x j2 sy) (km-rot d x e n f s ks R1 R3 km s3)))
+
+; Each bond x-y of g has e y = x.
+(def-adts $ (InvB : ((List (Nat)) e) ((List (Bond)) g) -> Type)
+  enum
+  (many IBNil : (erased (List (Nat)) e) -> (InvB e (Nil (Bond))))
+  (many IBCons : (erased (List (Nat)) e) (erased (List (Bond)) g) (erased (Nat) x y) (erased (Nth (Nat) e y x) p) (erased (InvB e g) rest)
+      -> (InvB e (Cons (Bond) (MkBond x y) g))))
+
+; e is an involution (plain_eq, with the fixed points of the dead darts allowed).
+(def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)
+  enum
+  (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e) (erased (List (Bond)) g) (erased (Graph d e g) gr) (erased (InvB e g) iv) -> (Plain d e)))
+
+(def-fns _ $ (erased invb-at : (erased (List (Nat)) e xs ys) (erased (List (Bond)) g) (erased (Nat) j x y) (subterm erased (Zip xs ys g) z)
+    (erased (InvB e g) iv) (erased (Nth (Nat) xs j x) px) (erased (Nth (Nat) ys j y) py) -> (erased (Nth (Nat) e y x) r))
+  (let-match erased z (ZipCons xs1 ys1 g1 x0 y0 z1) (absurd (ZipNil) px))
+  (let-match erased iv (IBCons _ _ _ _ q iv1))
+  (match erased px _
+    ((NthHere _ _ _) (let-match erased py (NthHere _ _ _)) q)
+    ((NthThere _ _ _ j1 _ px1) (let-match erased py (NthThere _ _ _ _ _ py1)) (invb-at e xs1 ys1 g1 j1 x y z1 iv1 px1 py1))))
+
+(def-fns _ $ (erased plain-at : (erased (Nat) d x y) (erased (List (Nat)) e) (erased (Plain d e) pl) (erased (Lt x d) lx) (erased (Nth (Nat) e x y) px)
+    -> (erased (Nth (Nat) e y x) r))
+  (let-match erased pl (MkPlain _ _ g gr iv))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (invb-at e ids e g x x y (graph-zip d e ids g gr io) iv (iota-nth d x ids io lx) px))
+
+(def-fns _ $ (erased cut-plain-b : (erased (Nat) d z ez) (erased (List (Nat)) e n f s e2 n2 f2) (erased (List (Bond)) g) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Plain d e) pl) (erased (FixedIn e2 (Cons (Nat) ez (Cons (Nat) z s))) fe2)
+    (erased (Length (Nat) e2 d) le2) (subterm erased (Fun e2 g) fg) -> (erased (InvB e2 g) r))
+  (let-match erased fg (FunCons _ g1 x y px fg1) ((FunNil _) (IBNil e2)))
+  (let ((erased rest)) (cut-plain-b d z ez e n f s e2 n2 f2 g1 h ct pl fe2 le2 fg1))
+  (let ((erased s2)) (Cons (Nat) ez (Cons (Nat) z s)))
+  (let-match erased (nat-eq x z) (Unequal _ _ _ _ nxz)
+    ((Equal _ _ _) (let-match erased (nth-fn _ e2 z y z px (fixed-at e2 s2 z fe2 (InThere z ez _ (InHere z s)))) (Refl _ _)) (IBCons e2 g1 x y px rest)))
+  (let-match erased (nat-eq x ez) (Unequal _ _ _ _ nx)
+    ((Equal _ _ _) (let-match erased (nth-fn _ e2 ez y ez px (fixed-at e2 s2 ez fe2 (InHere ez _))) (Refl _ _)) (IBCons e2 g1 x y px rest)))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased ct (MkCut2 _ _ _ fz fez _ _ _ e1 n1 f1 _ _ _ h1 ske skf skn skf2 h2 pez pze ne pfz nfz pfez nfez))
+  (let ((erased lx)) (nth-lt-length _ e2 x d y px le2))
+  (let ((erased c) (erased pc) (erased _)) (perm-nth d x e nf pe lx))
+  (let-match erased (nth-fn _ e2 x y c px (cut-e2 d z ez x c e n f e2 n2 f2 h ct pc nxz nx)) (Refl _ _))
+  (let ((erased pcx)) (plain-at d x c e pl lx pc))
+  (IBCons e2 g1 x y (cut-e2 d z ez c x e n f e2 n2 f2 h ct pcx (img-apart d x ez c z e nf pe pc pze nx) (img-apart d x z c ez e nf pe pc pez nxz)) rest))
+
+; The contraction is plain.
+(def-fns _ $ (erased cut-plain : (erased (Nat) d z ez) (erased (List (Nat)) e n f s e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Hypermap d e2 n2 f2) h2) (erased (Plain d e) pl)
+    (erased (FixedIn e2 (Cons (Nat) ez (Cons (Nat) z s))) fe2) -> (erased (Plain d e2) r))
+  (let ((erased le2) (erased ln2) (erased lf2)) (hyper-lengths d e2 n2 f2 h2))
+  (let ((erased g) (erased gr)) (graph-exists d e2 le2))
+  (MkPlain d e2 g gr (cut-plain-b d z ez e n f s e2 n2 f2 g h ct pl fe2 le2 (graph-fun d e2 g gr))))
+
+(def-fns _ $ (erased fpath-next : (erased (List (Nat)) n q) (erased (Nat) a b x y) (subterm erased (FPath n a q b) fp) (erased (In x (Cons (Nat) a q)) ix)
+    (erased (Nth (Nat) n x y) px) -> (erased (Or (Eq (Nat) x b) (In y q)) r))
+  (match erased fp _
+    ((FPNil _ _) (let-match erased ix (InHere _ _) (absurd (InThere _ _ _ i) i)) (InL _ _ (Refl _ x)))
+    ((FPCons _ q1 _ a1 _ pa fp1)
+      (match erased ix _
+        ((InHere _ _) (let-match erased (nth-fn _ n x y a1 px pa) (Refl _ _)) (InR _ _ (InHere y q1)))
+        ((InThere _ _ _ ix1) (match erased (fpath-next n q1 a1 b x y fp1 ix1 px) _
+          ((InL _ _ eq) (InL _ _ eq))
+          ((InR _ _ iy) (InR _ _ (InThere y a1 q1 iy)))))))))
+
+; A node cycle is closed under n.
+(def-fns _ $ (erased ncyc-next : (erased (List (Nat)) n R) (erased (Nat) x y) (erased (NCyc n R) nc) (erased (In x R) ix) (erased (Nth (Nat) n x y) px)
+    -> (erased (In y R) r))
+  (let-match erased nc (NCCons _ q x0 yl fp back) (absurd (NCNil _) ix))
+  (match erased (fpath-next n q x0 yl x y fp ix px) _
+    ((InL _ _ eq) (let-match erased eq (Refl _ _)) (let-match erased (nth-fn _ n x y x0 px back) (Refl _ _)) (InHere y q))
+    ((InR _ _ iy) (InThere y x0 q iy))))
+
+(def-fns _ $ (erased fpath-prev : (erased (Nat) d) (erased (List (Nat)) n ni q) (erased (Nat) a b x y) (erased (HPerm d n ni) pm)
+    (subterm erased (FPath n a q b) fp) (erased (In y q) iy) (erased (Nth (Nat) n x y) px) -> (erased (In x (Cons (Nat) a q)) r))
+  (let-match erased fp (FPCons _ q1 _ a1 _ pa fp1) (absurd (FPNil _ _) iy))
+  (match erased iy _
+    ((InHere _ _) (let-match erased (perm-inj d x a y n ni pm px pa) (Refl _ _)) (InHere x q))
+    ((InThere _ _ _ iy1) (InThere x a q (fpath-prev d n ni q1 a1 b x y pm fp1 iy1 px)))))
+
+; ... and under its inverse.
+(def-fns _ $ (erased ncyc-prev : (erased (Nat) d) (erased (List (Nat)) n ni R) (erased (Nat) x y) (erased (HPerm d n ni) pm) (erased (NCyc n R) nc)
+    (erased (In y R) iy) (erased (Nth (Nat) n x y) px) -> (erased (In x R) r))
+  (let-match erased nc (NCCons _ q x0 yl fp back) (absurd (NCNil _) iy))
+  (match erased iy _
+    ((InHere _ _) (let-match erased (perm-inj d x yl y n ni pm px back) (Refl _ _)) (lastfrom-in x0 x q (fpath-last n q x0 x fp)))
+    ((InThere _ _ _ iy1) (fpath-prev d n ni q x0 yl x y pm fp iy1 px))))
+
+(def-fns _ $ (erased fpath-lab : (erased (List (Nat)) n lab q) (erased (Nat) a b l x) (subterm erased (FPath n a q b) fp) (erased (Respects lab n lab) rl)
+    (erased (Nth (Nat) lab a l) pl) (erased (In x (Cons (Nat) a q)) ix) -> (erased (Nth (Nat) lab x l) r))
+  (match erased ix _
+    ((InHere _ _) pl)
+    ((InThere _ _ _ ix1)
+      (let-match erased fp (FPCons _ q1 _ a1 _ pa fp1) (absurd (FPNil _ _) ix1))
+      (fpath-lab n lab q1 a1 b l x fp1 rl (respects-nth lab n lab a a1 l rl pa pl) ix1))))
+
+; Separated from a dart of a node cycle, as LeafCut of euler-tree gives, a dart is off the cycle.
+(def-fns _ $ (erased seps-notin : (erased (Nat) d) (erased (List (Nat)) n ni R) (erased (Nat) z z2) (erased (HPerm d n ni) pm) (erased (NCyc n R) nc)
+    (erased (In z R) iz) (erased (Seps n z z2) sp) -> (erased (NotIn z2 R) r))
+  (let-match erased sp (MkSeps _ lab _ _ sep))
+  (let-match erased sep (MkSeparates _ _ _ _ l1 l2 rl p1 p2 dif))
+  (let-match erased nc (NCCons _ q x0 yl fp back) ((NCNil _) (NotInNil z2)))
+  (let ((erased ll)) (respects-length lab n lab d rl (perm-length d n ni pm)))
+  (let ((erased l0) (erased p0)) (nth-exists _ lab d x0 ll (perm-val d yl x0 n ni pm back)))
+  (let-match erased (nth-fn _ lab z l1 l0 p1 (fpath-lab n lab q x0 yl l0 z fp rl p0 iz)) (Refl _ _))
+  (let-match erased (in-dec z2 (Cons _ x0 q)) (OrR _ _ out)
+    (absurd (OrL _ _ i2) (let-match erased (nth-fn _ lab z2 l2 l1 p2 (fpath-lab n lab q x0 yl l1 z2 fp rl p0 i2)) (Refl _ _)) (apart-irrefl l1 dif)))
+  out)
+
+(def-fns _ $ (erased path-ncyc : (erased (List (Nat)) n R xs) (erased (Nat) x y) (subterm erased (Path n (Nil (Nat)) x y xs) w) (erased (NCyc n R) nc)
+    (erased (In x R) ix) -> (erased (In y R) r))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) ((PathHere _ _ _) ix))
+  (path-ncyc n R xs1 x1 y w1 nc (ncyc-next n R x x1 nc ix px)))
+
+; A node path whose darts avoid z and ez is one of the contraction.
+(def-fns _ $ (erased fpath-n2 : (erased (Nat) d z ez a b) (erased (List (Nat)) e n f e2 n2 f2 q) (erased (Hypermap d e n f) h)
+    (erased (Cut2 d e n f z ez e2 n2 f2) ct) (subterm erased (FPath n a q b) fp) (erased (NotIn z (Cons (Nat) a q)) oz)
+    (erased (NotIn ez (Cons (Nat) a q)) oe) -> (erased (FPath n2 a q b) r))
+  (let-match erased fp (FPCons _ q1 _ a1 _ pa fp1) ((FPNil _ _) (FPNil n2 a)))
+  (let-match erased oz (NotInCons _ _ _ za oz1))
+  (let-match erased oe (NotInCons _ _ _ ea oe1))
+  (let-match erased oz1 (NotInCons _ _ _ za1 _))
+  (let-match erased oe1 (NotInCons _ _ _ ea1 _))
+  (FPCons n2 q1 a a1 b (cut-n2 d z ez a a1 e n f e2 n2 f2 h ct pa (apart-sym z a za) (apart-sym ez a ea) (apart-sym z a1 za1) (apart-sym ez a1 ea1))
+    (fpath-n2 d z ez a1 b e n f e2 n2 f2 q1 h ct fp1 oz1 oe1)))
