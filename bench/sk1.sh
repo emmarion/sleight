@@ -1,24 +1,26 @@
 #!/bin/sh
 # Times the Skelet #1 job (bb/sk1.sl's main-run) alone: elaborates just the files it needs plus a native-compute of
 # main-run, captures the generated OCaml, and reruns the compiled job. Results go to _build/sk1/results.tsv.
-# Usage: bench/sk1.sh [-n runs] [-m main.ml] [-p] [-f] [-s slc] [label]
+# Usage: bench/sk1.sh [-n runs] [-m main.ml] [-p] [-f] [-s slc] [-e entry file] [label]
 #   -m  skip elaboration and time a given (perhaps hand-edited) main.ml   -p  also profile a prefix run under callgrind
 #   -f  also run the full BB(5) check of bb/README.md
 set -u
 cd "$(dirname "$0")/.."
-RUNS=2 ML= PROF= FULL= SLC=_build/release/slc PFUEL=${PFUEL:-10000000}
-while getopts n:m:pfs: opt; do case $opt in n) RUNS=$OPTARG;; m) ML=$(realpath "$OPTARG");; p) PROF=1;; f) FULL=1;; s) SLC=$OPTARG;; *) exit 2;; esac; done
+RUNS=2 ML= PROF= FULL= SLC=_build/release/slc ENTRY=main-run EFILE=bb/sk1.sl PFUEL=${PFUEL:-10000000}
+while getopts n:m:pfs:e: opt; do case $opt in n) RUNS=$OPTARG;; m) ML=$(realpath "$OPTARG");; p) PROF=1;; f) FULL=1;; s) SLC=$OPTARG;; e) ENTRY=$OPTARG;; *) exit 2;; esac; done
 shift $((OPTIND - 1))
+[ "$ENTRY" = main-run ] || { EFILE=$1; shift; }
 LABEL=${1:-}
 B=$(pwd)/_build/sk1
 mkdir -p "$B/wrap"
 DEPS="std/list.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/search.sl bb/far.sl std/macro.sl bb/pat.sl bb/skelet.sl bb/sk1.sl"
+[ "$EFILE" = bb/sk1.sl ] || DEPS="$DEPS $EFILE"
 REV=$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- bb || echo "+$(git diff HEAD -- bb | sha1sum | cut -c1-7)")
 ELAB=-
 if [ -z "$ML" ]; then
-  awk '/^\(def-fns _ \$ \(many main-run :/{p=1} p&&/^$/{exit} p' bb/sk1.sl | sed "s/main-run/main-run-prof/; s/200000000/$PFUEL/" > "$B/prof.sl"
+  awk -v e="$ENTRY" 'index($0, "(def-fns _ $ (many " e " :")==1{p=1} p&&/^$/{exit} p' "$EFILE" | sed "s/$ENTRY/main-run-prof/; s/200000000/$PFUEL/" > "$B/prof.sl"
   grep -q "$PFUEL" "$B/prof.sl" || { echo "could not derive a prefix run from main-run"; exit 1; }
-  printf '(let ((many res) (many pres)) (native-compute main-run main-run-prof))\n(comptime-match many res (ROk _ _))\n' >> "$B/prof.sl"
+  printf '(let ((many res) (many pres)) (native-compute %s main-run-prof))' "$ENTRY" >> "$B/prof.sl"; printf '\n(comptime-match many res (ROk _ _))\n' >> "$B/prof.sl"
   printf '#!/bin/sh\n/usr/bin/ocamlfind "$@"; rc=$?\n[ -f main.ml ] && cp main.ml "%s/main.ml"\nexit $rc\n' "$B" > "$B/wrap/ocamlfind"
   chmod +x "$B/wrap/ocamlfind"
   rm -f "$B/main.ml"
