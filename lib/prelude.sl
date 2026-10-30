@@ -530,6 +530,15 @@
     (absurd P0))
   (match erased (pow2-fn k1 v1 w1 p1 q1) _ ((Refl _ _) (double-fn v1 v2 w2 d1 d2))))
 
+(def-fns _ $ (many u62-modulus-many : -> (many u62-modulus is m))
+  (let ((many s) (erased ps)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
+  (let-match erased (mul-fn _ _ _ _ ps sixty-mul) (Refl _ _))
+  (let ((many t) (erased pt)) (add s (Succ (Succ (Zero)))))
+  (let-match erased (add-fn _ _ _ _ pt sixty-two-add) (Refl _ _))
+  (let ((many v) (erased pv) (erased _)) (pow2 t))
+  (let-match erased (pow2-fn _ _ _ pv u62-modulus-pow2) (Refl _ _))
+  v)
+
 (def-fns _ $ (many extern shl : (many (Nat) n) (many (Nat) k) ->
     (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
   (let ((many v) (erased pk) (erased _)) (pow2 k))
@@ -1375,6 +1384,12 @@
   (let ((many l1) (erased p1) (unique tl2)) (notail $ array-length _ _ tl))
   (values (Succ l1) (LengthCons _ _ _ _ p1) (at unique (u _ _ hd tl2))))
 
+(def-fns _ $ (many extern array-length-dec : (erased Type A) (erased (List A) xs)
+    (subterm unique (Array A xs) a) ->
+    (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique a is r at a))
+  (let ((many l) (erased p1) (unique a1)) (array-length _ _ a))
+  (values l p1 (lt-dec l (u62-modulus-many)) a1))
+
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
   (let-match many a (ACons _ _ _ tl) ((ANil _) (values (Zero) (LengthNil _))))
@@ -1469,6 +1484,11 @@
   (let-match unique b (BCons _ hd tl u) ((BNil u) (values (Zero) (LengthNil _) (at unique (u)))))
   (let ((many l1) (erased p1) (unique tl2)) (notail $ bytes-length _ tl))
   (values (Succ l1) (LengthCons _ _ _ _ p1) (at unique (u _ hd tl2))))
+
+(def-fns _ $ (many extern bytes-length-dec : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
+    (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique b is r at b))
+  (let ((many l) (erased p1) (unique b1)) (bytes-length _ b))
+  (values l p1 (lt-dec l (u62-modulus-many)) b1))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))

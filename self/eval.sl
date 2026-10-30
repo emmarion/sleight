@@ -546,6 +546,8 @@
       ((ExArrayLength)
         (ErPayload $ PNat $ match many (match many a (((Maybe $ Pair (Nat) $ IdMap $ Ref Block hs) _)) ((Some _ x) (array-elems _ hp x)) ((None _) (None _))) (((Nat) _))
           ((Some _ ne) (match many ne _ ((MkPair _ _ len _) len))) ((None _) 0)))
+      ((ExArrayLengthDec) (ErCtor 0 $ Nil _))
+      ((ExBytesLengthDec) (ErCtor 0 $ Nil _))
       ((ExListToArray) (ErListToArray))
       ((ExBytesMake)
         (let-match many (char-of-nat nb) (Some _ c) ((None _) (ErError "bytes-make: a code above 255")))

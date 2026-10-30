@@ -98,6 +98,7 @@ let fns : (string * fn_spec) list =
     ("array-place-imm", spec ~needs:["Array"] 3 place);
     ("array-length", length);
     ("array-length-many", length);
+    ("array-length-dec", spec ~needs:[ "Array"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des "List" v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
     ("array-sub", spec ~needs:["Array"] 3 (function [ a; i; n ] -> [ arr (Ffi_core.array_sub (array a) (z i) (z n)) ] | _ -> raise arity));
     ("array-blit", spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity));
@@ -111,6 +112,7 @@ let fns : (string * fn_spec) list =
     ("bytes-set", spec ~needs:["Bytes"] 3 (function [ b; i; x ] -> Ffi_core.bytes_set (bytes b) (z i) (z x); [] | _ -> raise arity));
     ("bytes-length", bytes_length);
     ("bytes-length-many", bytes_length);
+    ("bytes-length-dec", spec ~needs:[ "Bytes"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
     ("str-bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun s -> buf (Ffi_core.str_bytes_copy (slice s)))));
     ("bytes-str", spec 1 (unary (fun b -> text (Ffi_core.bytes_str (bytes b)))));
     ("slots-new", spec ~needs:[ "Slots" ] 0 (fun _ -> [ VExt (Hashtbl.find registered "Slots", Slots (Ffi_core.slots_new ())) ]));
