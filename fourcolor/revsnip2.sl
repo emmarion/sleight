@@ -190,3 +190,52 @@
           (let ((erased L) (erased cp)) (connected-clink d x0 y0 e n f h cn lx0 (ds-lt d y0 e n r hd zs ds (OrR _ _ iy0))))
           (ds-out d y0 x0 e n f p hd zs h gen rg (ring-under d x0 e n f p h rg) ds iy0
             (pair-disk d x0 y x0 y0 e n f L h pl pex0 cp (disk-ring d x0 n ni f r pn (InHere x0 _) lx0))))))))
+
+; A dart off the diskN part hdX of one DiskSplit is in the other part zsB of any other.
+(def-fns _ $ (erased ds-off : (erased (Nat) d x x0) (erased (List (Nat)) e n f p hdX zsX hdB zsB) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hdX zsX) dsX)
+    (erased (DiskSplit d e n (Cons (Nat) x0 p) hdB zsB) dsB) (erased (NotIn x hdX) o) (erased (Lt x d) lx) -> (erased (In x zsB) iz))
+  (let ((erased ids) (erased io) (erased sp)) (ds-split d e n _ hdB zsB dsB))
+  (match erased (split-cover hdB ids hdB zsB x sp (iota-in d x ids io lx)) _
+    (absurd (OrL _ _ i)
+      (apart-irrefl x (notin-in x x hdX o (ds-mem d x x0 e n f p hdX zsX h gen rg ur dsX (ds-in d x x0 e n f p hdB zsB h gen rg ur dsB i) lx))))
+    ((OrR _ _ i) i)))
+
+; Darts of diskN r are off diskN RR, and darts off diskN r are in diskN RR, whatever DiskSplits name them.
+(def-fns _ $ (erased rev-sub-in : (erased (Nat) d) (erased (List (Nat)) e n f r RR hd hd2 hdA zsA hdB zsB) (erased (RevCtx d e n f r RR hd hd2) cx)
+    (erased (Connected d e n f) cn) (erased (DiskSplit d e n r hdA zsA) dsA) (erased (DiskSplit d e n RR hdB zsB) dsB) (subterm erased (List (Nat)) xs)
+    (erased (Sub xs hdA) sx) -> (erased (Sub xs zsB) res))
+  (let-match erased sx (HSubCons x xs1 _ ix sx1) ((HSubNil _) (HSubNil zsB)))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
+  (let ((erased lx)) (ds-lt d x e n r hdA zsA dsA (OrL _ _ ix)))
+  (let ((erased dn)) (ds-in d x x0 e n f p hdA zsA h gen rg ur dsA ix))
+  (HSubCons x xs1 zsB
+    (match erased (rev-disk d x e n f r RR hd hd2 cx cn lx) (((In x zsB) res))
+      ((TwoR _ _ _ _ _ _ _ _ o) (ds-off d x y0 e n f Q hd2 zs2 hdB zsB h gen rg2 ur2 ds2 dsB o lx))
+      (absurd (TwoRR _ _ _ _ _ _ _ _ o) (apart-irrefl x (notin-in x x hd o (ds-mem d x x0 e n f p hd zs h gen rg ur ds dn lx)))))
+    (rev-sub-in d e n f r RR hd hd2 hdA zsA hdB zsB cx cn dsA dsB xs1 sx1)))
+
+(def-fns _ $ (erased rev-sub-out : (erased (Nat) d) (erased (List (Nat)) e n f r RR hd hd2 hdA zsA hdB zsB) (erased (RevCtx d e n f r RR hd hd2) cx)
+    (erased (Connected d e n f) cn) (erased (DiskSplit d e n r hdA zsA) dsA) (erased (DiskSplit d e n RR hdB zsB) dsB) (subterm erased (List (Nat)) ys)
+    (erased (Sub ys zsA) sy) -> (erased (Sub ys hdB) res))
+  (let-match erased sy (HSubCons y ys1 _ iy sy1) ((HSubNil _) (HSubNil hdB)))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
+  (let ((erased ly)) (ds-lt d y e n r hdA zsA dsA (OrR _ _ iy)))
+  (HSubCons y ys1 hdB
+    (match erased (rev-disk d y e n f r RR hd hd2 cx cn ly) (((In y hdB) res))
+      (absurd (TwoR _ _ _ _ _ _ _ dn _) (ds-out d y x0 e n f p hdA zsA h gen rg ur dsA iy dn))
+      ((TwoRR _ _ _ _ _ _ _ dn _) (ds-mem d y y0 e n f Q hdB zsB h gen rg2 ur2 dsB dn ly)))
+    (rev-sub-out d e n f r RR hd hd2 hdA zsA hdB zsB cx cn dsA dsB ys1 sy1)))
+
+; nontrivial_rev_ring.
+(def-fns _ $ (erased nontrivial-rev : (erased (Nat) d m) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx)
+    (erased (Connected d e n f) cn) (erased (NonTrivial d e n f r m) nt) -> (erased (NonTrivial d e n f RR m) res))
+  (let ((erased cx2)) cx)
+  (let-match erased cx2 (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
+  (let-match erased nt (MkNonTrivial _ _ _ _ _ _ hdA zsA xs ys dsA lx ly sx sy px py))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased fa) (erased fb) (erased ur1) (erased uR)) (rev-subs d x0 e n f p er RR h pl rg rm ra))
+  (MkNonTrivial d m e n f RR hd2 zs2 ys xs ds2 ly lx (rev-sub-out d e n f r RR hd hd2 hdA zsA hd2 zs2 cx cn dsA ds2 ys sy)
+    (rev-sub-in d e n f r RR hd hd2 hdA zsA hd2 zs2 cx cn dsA ds2 xs sx) (scattered-sub f RR r ys d fa uR lf py) (scattered-sub f RR r xs d fa uR lf px)))
