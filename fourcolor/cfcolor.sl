@@ -3,19 +3,6 @@
 
 (unary 4)
 
-; c is a + b, the colours forming the Klein four-group of color.v with C0 its unit.
-(def-adts $ (AddC : ((Col) a b c) -> Type)
-  enum
-  (many AddL : (erased (Col) a) -> (AddC (C0) a a))
-  (many AddR : (erased (Col) a) -> (AddC a (C0) a))
-  (many AddSame : (erased (Col) a) -> (AddC a a (C0)))
-  (many Add12 : -> (AddC (C1) (C2) (C3)))
-  (many Add21 : -> (AddC (C2) (C1) (C3)))
-  (many Add13 : -> (AddC (C1) (C3) (C2)))
-  (many Add31 : -> (AddC (C3) (C1) (C2)))
-  (many Add23 : -> (AddC (C2) (C3) (C1)))
-  (many Add32 : -> (AddC (C3) (C2) (C1))))
-
 ; c is the colour numbered k.
 (def-adts $ (NCol : ((Nat) k) ((Col) c) -> Type)
   enum
@@ -29,18 +16,6 @@
   (many NZ1 : -> (NZ (C1)))
   (many NZ2 : -> (NZ (C2)))
   (many NZ3 : -> (NZ (C3))))
-
-(def-fns _ $ (many addc-c : (many (Col) a b) -> (many (Col) c) (erased (AddC a b c) p))
-  (match many a _
-    ((C0) (values b (AddL b)))
-    ((C1) (match many b _ ((C0) (values a (AddR a))) ((C1) (values (C0) (AddSame a))) ((C2) (values (C3) (Add12))) ((C3) (values (C2) (Add13)))))
-    ((C2) (match many b _ ((C0) (values a (AddR a))) ((C1) (values (C3) (Add21))) ((C2) (values (C0) (AddSame a))) ((C3) (values (C1) (Add23)))))
-    ((C3) (match many b _ ((C0) (values a (AddR a))) ((C1) (values (C2) (Add31))) ((C2) (values (C1) (Add32))) ((C3) (values (C0) (AddSame a)))))))
-
-(def-fns _ $ (erased addc-comm : (erased (Col) a b c) (erased (AddC a b c) p) -> (erased (AddC b a c) q))
-  (match erased p _
-    ((AddL _) (AddR b)) ((AddR _) (AddL a)) ((AddSame _) (AddSame a)) ((Add12) (Add21)) ((Add21) (Add12)) ((Add13) (Add31))
-    ((Add31) (Add13)) ((Add23) (Add32)) ((Add32) (Add23))))
 
 (def-fns _ $ (erased ncol-ex : (erased (Nat) k) (erased (Lt k 4) lk) -> (erased (Col) c) (erased (NCol k c) p))
   (let-match erased k (Succ k1) ((Zero) (values (C0) (NC0))))
@@ -72,25 +47,137 @@
     ((NC2) (let-match erased q (NC2)) (Refl _ k))
     ((NC3) (let-match erased q (NC3)) (Refl _ k))))
 
+; c is a + b, the colours forming the Klein four-group of color.v with C0 its unit.
+(def-adts $ (AddC : ((Col) a b c) -> Type)
+  enum
+  (many Add00 : -> (AddC (C0) (C0) (C0)))
+  (many Add01 : -> (AddC (C0) (C1) (C1)))
+  (many Add02 : -> (AddC (C0) (C2) (C2)))
+  (many Add03 : -> (AddC (C0) (C3) (C3)))
+  (many Add10 : -> (AddC (C1) (C0) (C1)))
+  (many Add11 : -> (AddC (C1) (C1) (C0)))
+  (many Add12 : -> (AddC (C1) (C2) (C3)))
+  (many Add13 : -> (AddC (C1) (C3) (C2)))
+  (many Add20 : -> (AddC (C2) (C0) (C2)))
+  (many Add21 : -> (AddC (C2) (C1) (C3)))
+  (many Add22 : -> (AddC (C2) (C2) (C0)))
+  (many Add23 : -> (AddC (C2) (C3) (C1)))
+  (many Add30 : -> (AddC (C3) (C0) (C3)))
+  (many Add31 : -> (AddC (C3) (C1) (C2)))
+  (many Add32 : -> (AddC (C3) (C2) (C1)))
+  (many Add33 : -> (AddC (C3) (C3) (C0))))
+
+(def-fns _ $ (many addc-c : (many (Col) a b) -> (many (Col) c) (erased (AddC a b c) p))
+  (match many a _
+    ((C0) (match many b _ ((C0) (values (C0) (Add00))) ((C1) (values (C1) (Add01))) ((C2) (values (C2) (Add02))) ((C3) (values (C3) (Add03)))))
+    ((C1) (match many b _ ((C0) (values (C1) (Add10))) ((C1) (values (C0) (Add11))) ((C2) (values (C3) (Add12))) ((C3) (values (C2) (Add13)))))
+    ((C2) (match many b _ ((C0) (values (C2) (Add20))) ((C1) (values (C3) (Add21))) ((C2) (values (C0) (Add22))) ((C3) (values (C1) (Add23)))))
+    ((C3) (match many b _ ((C0) (values (C3) (Add30))) ((C1) (values (C2) (Add31))) ((C2) (values (C1) (Add32))) ((C3) (values (C0) (Add33)))))))
+
+(def-fns _ $ (erased addc-comm : (erased (Col) a b c) (erased (AddC a b c) p) -> (erased (AddC b a c) q))
+  (match erased p _
+    ((Add00) (Add00))
+    ((Add01) (Add10))
+    ((Add02) (Add20))
+    ((Add03) (Add30))
+    ((Add10) (Add01))
+    ((Add11) (Add11))
+    ((Add12) (Add21))
+    ((Add13) (Add31))
+    ((Add20) (Add02))
+    ((Add21) (Add12))
+    ((Add22) (Add22))
+    ((Add23) (Add32))
+    ((Add30) (Add03))
+    ((Add31) (Add13))
+    ((Add32) (Add23))
+    ((Add33) (Add33))))
+
+(def-fns _ $ (erased addc-cancel : (erased (Col) a b c) (erased (AddC a c b) p) -> (erased (AddC a b c) q))
+  (match erased p _
+    ((Add00) (Add00))
+    ((Add01) (Add01))
+    ((Add02) (Add02))
+    ((Add03) (Add03))
+    ((Add10) (Add11))
+    ((Add11) (Add10))
+    ((Add12) (Add13))
+    ((Add13) (Add12))
+    ((Add20) (Add22))
+    ((Add21) (Add23))
+    ((Add22) (Add20))
+    ((Add23) (Add21))
+    ((Add30) (Add33))
+    ((Add31) (Add32))
+    ((Add32) (Add31))
+    ((Add33) (Add30))))
+
+(def-fns _ $ (erased addc-fn : (erased (Col) a b c c2) (erased (AddC a b c) p) (erased (AddC a b c2) q) -> (erased (Eq (Col) c c2) e))
+  (match erased p _
+    ((Add00) (let-match erased q (Add00)) (Refl _ c))
+    ((Add01) (let-match erased q (Add01)) (Refl _ c))
+    ((Add02) (let-match erased q (Add02)) (Refl _ c))
+    ((Add03) (let-match erased q (Add03)) (Refl _ c))
+    ((Add10) (let-match erased q (Add10)) (Refl _ c))
+    ((Add11) (let-match erased q (Add11)) (Refl _ c))
+    ((Add12) (let-match erased q (Add12)) (Refl _ c))
+    ((Add13) (let-match erased q (Add13)) (Refl _ c))
+    ((Add20) (let-match erased q (Add20)) (Refl _ c))
+    ((Add21) (let-match erased q (Add21)) (Refl _ c))
+    ((Add22) (let-match erased q (Add22)) (Refl _ c))
+    ((Add23) (let-match erased q (Add23)) (Refl _ c))
+    ((Add30) (let-match erased q (Add30)) (Refl _ c))
+    ((Add31) (let-match erased q (Add31)) (Refl _ c))
+    ((Add32) (let-match erased q (Add32)) (Refl _ c))
+    ((Add33) (let-match erased q (Add33)) (Refl _ c))))
+
+; (a + b) + c = a + (b + c).
+(def-fns _ $ (erased addc-assoc : (erased (Col) a b c ab bc abc) (erased (AddC a b ab) p) (erased (AddC ab c abc) q) (erased (AddC b c bc) s)
+    -> (erased (AddC a bc abc) r))
+  (match erased p _
+    ((Add00) (match erased c _ ((C0) (let-match erased q (Add00)) (let-match erased s (Add00)) (Add00)) ((C1) (let-match erased q (Add01)) (let-match erased s (Add01)) (Add01)) ((C2) (let-match erased q (Add02)) (let-match erased s (Add02)) (Add02)) ((C3) (let-match erased q (Add03)) (let-match erased s (Add03)) (Add03))))
+    ((Add01) (match erased c _ ((C0) (let-match erased q (Add10)) (let-match erased s (Add10)) (Add01)) ((C1) (let-match erased q (Add11)) (let-match erased s (Add11)) (Add00)) ((C2) (let-match erased q (Add12)) (let-match erased s (Add12)) (Add03)) ((C3) (let-match erased q (Add13)) (let-match erased s (Add13)) (Add02))))
+    ((Add02) (match erased c _ ((C0) (let-match erased q (Add20)) (let-match erased s (Add20)) (Add02)) ((C1) (let-match erased q (Add21)) (let-match erased s (Add21)) (Add03)) ((C2) (let-match erased q (Add22)) (let-match erased s (Add22)) (Add00)) ((C3) (let-match erased q (Add23)) (let-match erased s (Add23)) (Add01))))
+    ((Add03) (match erased c _ ((C0) (let-match erased q (Add30)) (let-match erased s (Add30)) (Add03)) ((C1) (let-match erased q (Add31)) (let-match erased s (Add31)) (Add02)) ((C2) (let-match erased q (Add32)) (let-match erased s (Add32)) (Add01)) ((C3) (let-match erased q (Add33)) (let-match erased s (Add33)) (Add00))))
+    ((Add10) (match erased c _ ((C0) (let-match erased q (Add10)) (let-match erased s (Add00)) (Add10)) ((C1) (let-match erased q (Add11)) (let-match erased s (Add01)) (Add11)) ((C2) (let-match erased q (Add12)) (let-match erased s (Add02)) (Add12)) ((C3) (let-match erased q (Add13)) (let-match erased s (Add03)) (Add13))))
+    ((Add11) (match erased c _ ((C0) (let-match erased q (Add00)) (let-match erased s (Add10)) (Add11)) ((C1) (let-match erased q (Add01)) (let-match erased s (Add11)) (Add10)) ((C2) (let-match erased q (Add02)) (let-match erased s (Add12)) (Add13)) ((C3) (let-match erased q (Add03)) (let-match erased s (Add13)) (Add12))))
+    ((Add12) (match erased c _ ((C0) (let-match erased q (Add30)) (let-match erased s (Add20)) (Add12)) ((C1) (let-match erased q (Add31)) (let-match erased s (Add21)) (Add13)) ((C2) (let-match erased q (Add32)) (let-match erased s (Add22)) (Add10)) ((C3) (let-match erased q (Add33)) (let-match erased s (Add23)) (Add11))))
+    ((Add13) (match erased c _ ((C0) (let-match erased q (Add20)) (let-match erased s (Add30)) (Add13)) ((C1) (let-match erased q (Add21)) (let-match erased s (Add31)) (Add12)) ((C2) (let-match erased q (Add22)) (let-match erased s (Add32)) (Add11)) ((C3) (let-match erased q (Add23)) (let-match erased s (Add33)) (Add10))))
+    ((Add20) (match erased c _ ((C0) (let-match erased q (Add20)) (let-match erased s (Add00)) (Add20)) ((C1) (let-match erased q (Add21)) (let-match erased s (Add01)) (Add21)) ((C2) (let-match erased q (Add22)) (let-match erased s (Add02)) (Add22)) ((C3) (let-match erased q (Add23)) (let-match erased s (Add03)) (Add23))))
+    ((Add21) (match erased c _ ((C0) (let-match erased q (Add30)) (let-match erased s (Add10)) (Add21)) ((C1) (let-match erased q (Add31)) (let-match erased s (Add11)) (Add20)) ((C2) (let-match erased q (Add32)) (let-match erased s (Add12)) (Add23)) ((C3) (let-match erased q (Add33)) (let-match erased s (Add13)) (Add22))))
+    ((Add22) (match erased c _ ((C0) (let-match erased q (Add00)) (let-match erased s (Add20)) (Add22)) ((C1) (let-match erased q (Add01)) (let-match erased s (Add21)) (Add23)) ((C2) (let-match erased q (Add02)) (let-match erased s (Add22)) (Add20)) ((C3) (let-match erased q (Add03)) (let-match erased s (Add23)) (Add21))))
+    ((Add23) (match erased c _ ((C0) (let-match erased q (Add10)) (let-match erased s (Add30)) (Add23)) ((C1) (let-match erased q (Add11)) (let-match erased s (Add31)) (Add22)) ((C2) (let-match erased q (Add12)) (let-match erased s (Add32)) (Add21)) ((C3) (let-match erased q (Add13)) (let-match erased s (Add33)) (Add20))))
+    ((Add30) (match erased c _ ((C0) (let-match erased q (Add30)) (let-match erased s (Add00)) (Add30)) ((C1) (let-match erased q (Add31)) (let-match erased s (Add01)) (Add31)) ((C2) (let-match erased q (Add32)) (let-match erased s (Add02)) (Add32)) ((C3) (let-match erased q (Add33)) (let-match erased s (Add03)) (Add33))))
+    ((Add31) (match erased c _ ((C0) (let-match erased q (Add20)) (let-match erased s (Add10)) (Add31)) ((C1) (let-match erased q (Add21)) (let-match erased s (Add11)) (Add30)) ((C2) (let-match erased q (Add22)) (let-match erased s (Add12)) (Add33)) ((C3) (let-match erased q (Add23)) (let-match erased s (Add13)) (Add32))))
+    ((Add32) (match erased c _ ((C0) (let-match erased q (Add10)) (let-match erased s (Add20)) (Add32)) ((C1) (let-match erased q (Add11)) (let-match erased s (Add21)) (Add33)) ((C2) (let-match erased q (Add12)) (let-match erased s (Add22)) (Add30)) ((C3) (let-match erased q (Add13)) (let-match erased s (Add23)) (Add31))))
+    ((Add33) (match erased c _ ((C0) (let-match erased q (Add00)) (let-match erased s (Add30)) (Add33)) ((C1) (let-match erased q (Add01)) (let-match erased s (Add31)) (Add32)) ((C2) (let-match erased q (Add02)) (let-match erased s (Add32)) (Add31)) ((C3) (let-match erased q (Add03)) (let-match erased s (Add33)) (Add30))))))
+
 ; Colours of different numbers sum to a nonzero colour.
 (def-fns _ $ (erased addc-apart : (erased (Nat) j k) (erased (Col) a b c) (erased (NCol j a) pa) (erased (NCol k b) pb) (erased (AddC a b c) p)
     (erased (Apart (Nat) Lt j k) ne) -> (erased (NZ c) r))
   (match erased p _
-    (absurd (AddSame _) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne))
-    ((AddL _) (match erased b _ (absurd (C0) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne)) ((C1) (NZ1)) ((C2) (NZ2)) ((C3) (NZ3))))
-    ((AddR _) (match erased a _ (absurd (C0) (let-match erased (ncol-inj j k b pa pb) (Refl _ _)) (apart-irrefl j ne)) ((C1) (NZ1)) ((C2) (NZ2)) ((C3) (NZ3))))
-    ((Add12) (NZ3)) ((Add21) (NZ3)) ((Add13) (NZ2)) ((Add31) (NZ2)) ((Add23) (NZ1)) ((Add32) (NZ1))))
-
-(def-fns _ $ (erased addc-cancel : (erased (Col) a b c) (erased (AddC a c b) p) -> (erased (AddC a b c) q))
-  (match erased p _
-    ((AddL _) (AddL c)) ((AddR _) (AddSame a)) ((AddSame _) (AddR a)) ((Add12) (Add13)) ((Add21) (Add23)) ((Add13) (Add12))
-    ((Add31) (Add32)) ((Add23) (Add21)) ((Add32) (Add31))))
+    (absurd (Add00) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne))
+    ((Add01) (NZ1))
+    ((Add02) (NZ2))
+    ((Add03) (NZ3))
+    ((Add10) (NZ1))
+    (absurd (Add11) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne))
+    ((Add12) (NZ3))
+    ((Add13) (NZ2))
+    ((Add20) (NZ2))
+    ((Add21) (NZ3))
+    (absurd (Add22) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne))
+    ((Add23) (NZ1))
+    ((Add30) (NZ3))
+    ((Add31) (NZ2))
+    ((Add32) (NZ1))
+    (absurd (Add33) (let-match erased (ncol-inj j k a pa pb) (Refl _ _)) (apart-irrefl j ne))))
 
 (def-fns _ $ (erased nz-apart : (erased (Nat) j k) (erased (Col) a b c) (erased (NCol j a) pa) (erased (NCol k b) pb) (erased (AddC a b c) p)
     (erased (NZ c) nz) -> (erased (Apart (Nat) Lt j k) r))
   (match erased (nat-eq j k) _
     (absurd (Equal _ _ _) (let-match erased (ncol-fn j a b pa pb) (Refl _ _))
-      (match erased p _ (absurd (AddL _) nz) (absurd (AddR _) nz) (absurd (AddSame _) nz)))
+      (match erased p _ (absurd (Add00) nz) (absurd (Add11) nz) (absurd (Add22) nz) (absurd (Add33) nz)))
     ((Unequal _ _ _ _ ne) ne)))
 
 ; cs are the colours numbered ns.
