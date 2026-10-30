@@ -1,5 +1,5 @@
 ; The Birkhoff theorem of birkhoff.v: Birkhoff_valid, from the certified check of red/bcheck.sl, and its use for rings of
-; at most five faces. Load after cpgeom.sl and ringdec.sl, in the order of PLAN.md.
+; at most five faces. Load after cpgeom.sl, ringdec.sl and traceconv.sl, in the order of PLAN.md.
 
 ; A trace from c0, read up to its last entry, is a ctrace from c0 + c.
 (def-fns _ $ (erased tracefrom-ctr : (erased (Col) c0 c s) (erased (List (Col)) lc et) (subterm erased (TraceFrom c0 c lc et) t) (erased (AddK c0 c s) a)
@@ -101,29 +101,6 @@
   (let-match erased (trace-fn lc2 et5 et t5 t2) (Refl _ _))
   (let-match erased eq (Refl _ _))
   (values s E se (MkRingTrace e f _ ks (Cons _ la lp) (Cons _ ca csp) et4 col (RespCons ks p lp a la pa rpl) (All2Cons _ _ ColOf la ca lp csp pca cop) t4)))
-
-(def-fns _ $ (erased ncols-of : (erased (List (Nat)) lc) (erased (List (Col)) cs) (subterm erased (All2 (Nat) (Col) ColOf lc cs) co) -> (erased (NCols lc cs) r))
-  (let-match erased co (All2Cons _ _ _ k c lc1 cs1 p co1) ((All2Nil _ _ _) (NCsNil)))
-  (NCsCons k c lc1 cs1 (match erased p (((NCol k c) res)) ((CO0) (NC0)) ((CO1) (NC1)) ((CO2) (NC2)) ((CO3) (NC3))) (ncols-of lc1 cs1 co1)))
-
-(def-fns _ $ (erased k-addc : (erased (Col) a b c) (erased (AddK a b c) p) -> (erased (AddC a b c) q))
-  (let ((erased c2) (erased q)) (addc-c a b))
-  (let-match erased (addc-fn a b c c2 p (addc-k a b c2 q)) (Refl _ _))
-  q)
-
-(def-fns _ $ (erased ctr-of-tf : (erased (Col) c0 c) (erased (List (Col)) lc et) (subterm erased (TraceFrom c0 c lc et) t) -> (erased (CTr c0 c lc et) r))
-  (match erased t _
-    ((TFEnd _ _ s a) (CTLast c0 c s (k-addc c c0 s a)))
-    ((TFCons _ _ c2 s lc1 et1 a t1) (CTStep c0 c c2 s lc1 et1 (k-addc c c2 s a) (ctr-of-tf c0 c2 lc1 et1 t1)))))
-
-; A ring trace of the map of cp, on its own ring, is a CpCol of cp.
-(def-fns _ $ (erased cpcol-of : (erased (List (Step)) cp) (erased (Nat) d a) (erased (List (Nat)) e f p) (erased (List (Col)) et)
-    (erased (Cpmap cp d e f (Cons (Nat) a p)) cm) (erased (RingTrace e f (Cons (Nat) a p) et) rt) -> (erased (CpCol cp et) r))
-  (let-match erased rt (MkRingTrace _ _ _ ks lc cs _ col rl co t))
-  (let-match erased rl (RespCons _ _ lp _ la pa rlp))
-  (let-match erased co (All2Cons _ _ _ _ c _ cs1 pc co1))
-  (let-match erased t (TrCons _ _ _ tf))
-  (MkCpCol cp d e f _ ks lc cs et cm col rl (ncols-of lc cs co) (MkTrace c cs1 et (ctr-of-tf c c cs1 et tf))))
 
 (def-fns _ $ (erased band-in : (erased (List (Nat)) f t xs o i) (erased (Nat) x) (subterm erased (BandSplit f t xs o i) bs) (erased (In x xs) ix)
     (erased (Fband f t x) fb) -> (erased (In x o) r))
