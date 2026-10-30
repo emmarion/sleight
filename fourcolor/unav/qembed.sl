@@ -754,27 +754,25 @@
       (erased (Nth (Nat) ec p q) pq) (erased (Nth (KSt) st q (KIn i2 jq)) psq) (erased (CenOK ec s0c p) co) (erased (DPath ec s0c st i2 ps j) rest)
       -> (DPath ec s0c st i (Cons (Nat) p ps) j)))
 
-(def-adts $ (Reach : ((List (Nat)) ec s0c) ((List (KSt)) st) ((Nat) i) ((List (Nat)) js) -> Type)
+; Paths from each walk face i to face 0 and back.
+(def-adts $ (Spokes : ((List (Nat)) ec s0c) ((List (KSt)) st) ((List (Nat)) ixs) -> Type)
   enum
-  (many RNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) (erased (Nat) i) -> (Reach ec s0c st i (Nil (Nat))))
-  (many RCons : (erased (List (Nat)) ec s0c js p) (erased (List (KSt)) st) (erased (Nat) i j) (erased (DPath ec s0c st i p j) dp) (erased (Reach ec s0c st i js) rest)
-      -> (Reach ec s0c st i (Cons (Nat) j js))))
+  (many SpNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) -> (Spokes ec s0c st (Nil (Nat))))
+  (many SpCons : (erased (List (Nat)) ec s0c ixs p p2) (erased (List (KSt)) st) (erased (Nat) i) (erased (DPath ec s0c st i p (Zero)) d1)
+      (erased (DPath ec s0c st (Zero) p2 i) d2) (erased (Spokes ec s0c st ixs) rest) -> (Spokes ec s0c st (Cons (Nat) i ixs))))
 
-(def-adts $ (ReachAll : ((List (Nat)) ec s0c) ((List (KSt)) st) ((List (Nat)) ixs js) -> Type)
-  enum
-  (many RANil : (erased (List (Nat)) ec s0c js) (erased (List (KSt)) st) -> (ReachAll ec s0c st (Nil (Nat)) js))
-  (many RACons : (erased (List (Nat)) ec s0c ixs js) (erased (List (KSt)) st) (erased (Nat) i) (erased (Reach ec s0c st i js) r) (erased (ReachAll ec s0c st ixs js) rest)
-      -> (ReachAll ec s0c st (Cons (Nat) i ixs) js)))
+(def-fns _ $ (erased spoke-get : (erased (List (Nat)) ec s0c ixs) (erased (List (KSt)) st) (erased (Nat) i) (subterm erased (Spokes ec s0c st ixs) sp) (erased (In i ixs) ii)
+    -> (erased (List (Nat)) p p2) (erased (DPath ec s0c st i p (Zero)) d1) (erased (DPath ec s0c st (Zero) p2 i) d2))
+  (let-match erased sp (SpCons _ _ ixs1 p p2 _ _ d1 d2 sp1) (absurd (SpNil _ _ _) ii))
+  (match erased ii _ ((InHere _ _) (values p p2 d1 d2)) ((InThere _ _ _ ii1) (spoke-get ec s0c ixs1 st i sp1 ii1))))
 
-(def-fns _ $ (erased reach-row : (erased (List (Nat)) ec s0c js) (erased (List (KSt)) st) (erased (Nat) i j) (subterm erased (Reach ec s0c st i js) r) (erased (In j js) ij)
-    -> (erased (List (Nat)) p) (erased (DPath ec s0c st i p j) dp))
-  (let-match erased r (RCons _ _ js1 p _ _ j1 dp r1) (absurd (RNil _ _ _ _) ij))
-  (match erased ij _ ((InHere _ _) (values p dp)) ((InThere _ _ _ ij1) (reach-row ec s0c js1 st i j r1 ij1))))
-
-(def-fns _ $ (erased reach-get : (erased (List (Nat)) ec s0c ixs js) (erased (List (KSt)) st) (erased (Nat) i j) (subterm erased (ReachAll ec s0c st ixs js) ra)
-    (erased (In i ixs) ii) (erased (In j js) ij) -> (erased (List (Nat)) p) (erased (DPath ec s0c st i p j) dp))
-  (let-match erased ra (RACons _ _ ixs1 _ _ i1 r ra1) (absurd (RANil _ _ _ _) ii))
-  (match erased ii _ ((InHere _ _) (reach-row ec s0c js st i j r ij)) ((InThere _ _ _ ii1) (reach-get ec s0c ixs1 js st i j ra1 ii1 ij))))
+(def-fns _ $ (erased dp-app : (erased (List (Nat)) ec s0c p p2 ps) (erased (List (KSt)) st) (erased (Nat) i m j) (subterm erased (DPath ec s0c st i p m) d1)
+    (erased (DPath ec s0c st m p2 j) d2) (erased (AppN p p2 ps) ap) -> (erased (DPath ec s0c st i ps j) r))
+  (match erased d1 _
+    ((DPNil _ _ _ _) (let-match erased ap (AppNil _)) d2)
+    ((DPCons _ _ p1 _ _ q _ jp q2 i2 jq psp pq psq co d11)
+      (let-match erased ap (AppCons _ _ ps1 _ ap1))
+      (DPCons ec s0c ps1 st i q j jp q2 i2 jq psp pq psq co (dp-app ec s0c p1 p2 ps1 st i2 m j d11 d2 ap1)))))
 
 (def-fns _ $ (erased cen-ok : (erased (Nat) dc dm p) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
@@ -802,7 +800,7 @@
   enum
   (many MkPEnv : (erased (Nat) dc dm k) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ixs) (erased (List (KSt)) st)
       (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
-      (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (ReachAll ec s0c st ixs ixs) ra)
+      (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (Spokes ec s0c st ixs) ra)
       -> (PEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl as)))
 
 (def-fns _ $ (erased rl-to : (erased (Nat) dc dm z x i jx) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl as ys) (erased (List (KSt)) st)
@@ -815,8 +813,10 @@
   (let-match erased (nth-fn (KSt) st x (KIn i jx) (KIn i1 _) px ps) (Refl _ _))
   (let ((erased j) (erased jy) (erased cy) (erased _) (erased psy) (erased pcy) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _))
     (kin-anchor dc dm y ec nc fc ksc rc s0c em nm fm ksm s0m hl st en ky))
-  (let ((erased p) (erased dp))
-    (reach-get ec s0c ixs ixs st i j ra (iota-in k i ixs iok (nth-lt-length (Nat) s0c i k c pc ls)) (iota-in k j ixs iok (nth-lt-length (Nat) s0c j k cy pcy ls))))
+  (let ((erased p1) (erased _) (erased d1) (erased _)) (spoke-get ec s0c ixs st i ra (iota-in k i ixs iok (nth-lt-length (Nat) s0c i k c pc ls))))
+  (let ((erased _) (erased p2) (erased _) (erased d2)) (spoke-get ec s0c ixs st j ra (iota-in k j ixs iok (nth-lt-length (Nat) s0c j k cy pcy ls))))
+  (let ((erased p) (erased ap)) (app-exists p1 p2))
+  (let ((erased dp)) (dp-app ec s0c p1 p2 p st i (Zero) j d1 d2 ap))
   (RTCons ec fc em hl as ys1 p z y (dp-rl dc dm z x i jx j jy y ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids p st en acd aks kl io dp pzx px psy)
     (rl-to dc dm z x i jx ec nc fc ksc rc s0c em nm fm ksm s0m hl as ys1 st pv ak1 pzx px)))
 
@@ -853,13 +853,13 @@
 
 ; What a run checks of a configuration map Gc with ring rc and a quiz qz of two QaskR questions at x0c: the place of each
 ; dart (DartsOK), the walk s0c of qz with its arities, whose darts are at the places k, 0, and a path between any two walk
-; faces (ReachAll).
+; faces through face 0 (Spokes).
 (def-adts $ (QzCert : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Quiz) qz) ((Nat) x0c) -> Type)
   enum
   (many MkQzCert : (erased (Nat) dc k x0c a0 a1) (erased (List (Nat)) ec nc fc ksc rc s0c asc ids ixs) (erased (List (KSt)) st) (erased (Qn) q01 q10)
       (erased (Hypermap dc ec nc fc) hc) (erased (OrderList dc fc ksc) olc) (erased (Iota dc ids) io) (erased (Length (KSt) st dc) lst)
       (erased (DartsOK ec nc fc ksc rc s0c st ids) dk) (erased (StIx st k) sx) (erased (WalkZ ec nc ksc x0c (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) s0c asc) wz)
-      (erased (WPos st s0c (Zero)) wp) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (ReachAll ec s0c st ixs ixs) ra)
+      (erased (WPos st s0c (Zero)) wp) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (Spokes ec s0c st ixs) ra)
       -> (QzCert dc ec nc fc ksc rc (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) x0c)))
 
 ; quiz_preembedding: h sends x0c to x0m and is a preembedding of the kernel as of rc.
