@@ -1,5 +1,5 @@
-; More of revsnip.v, for plain maps: the faces and disks of the reverse ring, nontrivial rings and the chord rings. Load after
-; revsnip.sl.
+; More of revsnip.v, for plain maps: the faces and disks of the reverse ring, nontrivial rings, cface_snipd, and the colourings of
+; rev_ring_cotrace and colorable_from_ring. Load after revsnip.sl.
 
 (def-fns _ $ (erased some-cat : (erased (List (Nat)) f) (erased (Nat) x y z) (erased (SomePath f (Nil (Nat)) x y) p) (erased (SomePath f (Nil (Nat)) y z) q)
     -> (erased (SomePath f (Nil (Nat)) x z) r))
@@ -20,7 +20,6 @@
   (let-match erased fs (FSCons _ Bt _ b1 a ia sp fs1) (absurd (FSNil _ _) ib))
   (match erased ib _ ((InHere _ _) (values a ia sp)) ((InThere _ _ _ ib1) (facesub-at f Bt A b fs1 ib1))))
 
-; fband B is part of fband A.
 (def-fns _ $ (erased fband-sub : (erased (List (Nat)) f B A) (erased (Nat) x) (erased (FaceSub f B A) fs) (erased (Fband f B x) fb) -> (erased (Fband f A x) r))
   (let-match erased fb (MkFband _ _ _ y iy w))
   (let ((erased a) (erased ia) (erased sp)) (facesub-at f B A y fs iy))
@@ -37,15 +36,12 @@
   (values (Cons _ l lsB1) (RespCons lab Bt lsB1 b l pl rb1)
     (HSubCons l lsB1 lsA (in-map lab A lsA a l ia ra (path-label f lab (Nil _) xs b a l w rf pl)) sb1)))
 
-; kernel A is part of kernel B.
 (def-fns _ $ (erased kernel-sub : (erased (List (Nat)) f B A) (erased (Nat) d x) (erased (FaceSub f B A) fs) (erased (Under B d) ub) (erased (Length (Nat) f d) lf)
     (erased (Kernel f A x) k) -> (erased (Kernel f B x) r))
   (let-match erased k (MkKernel _ _ lab lsA _ l rf ra px ol))
   (let ((erased lsB) (erased rb) (erased sb)) (labs-sub f A lab lsA d B fs rf ra ub (respects-length lab f lab d rf lf)))
   (MkKernel f B lab lsB x l rf rb px (notin-sub l lsB lsA sb ol)))
 
-; A dart u of RR = rev (map e r) is on the face of the dart after e u on r, and a dart a of r on the face of the edge image of the
-; dart before it, which is on RR.
 (def-fns _ $ (erased rev-face : (erased (Nat) d x0 u) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) (erased (In u RR) iu)
     -> (erased (Nat) a2) (erased (In a2 (Cons (Nat) x0 p)) ia) (erased (SomePath f (Nil (Nat)) u a2) sp))
@@ -136,7 +132,6 @@
   (under-in ids x d (perm-under d ids ids (perm-id d ids io))
     (match erased ix (((In x ids) res)) ((OrL _ _ i) (sub-in hd ids x sa i)) ((OrR _ _ i) (sub-in zs ids x sb i)))))
 
-; With e x0 = y on r = x0 :: y, every dart a clink path reaches from diskN r is in diskN r.
 (def-fns _ $ (erased pair-disk : (erased (Nat) d x0 y a b) (erased (List (Nat)) e n f L) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Nth (Nat) e x0 y) pxy) (subterm erased (CPath n f a L b) cp) (erased (DiskN n f (Cons (Nat) x0 (Cons (Nat) y (Nil (Nat)))) a) da)
     -> (erased (DiskN n f (Cons (Nat) x0 (Cons (Nat) y (Nil (Nat)))) b) db))
@@ -191,7 +186,6 @@
           (ds-out d y0 x0 e n f p hd zs h gen rg (ring-under d x0 e n f p h rg) ds iy0
             (pair-disk d x0 y x0 y0 e n f L h pl pex0 cp (disk-ring d x0 n ni f r pn (InHere x0 _) lx0))))))))
 
-; A dart off the diskN part hdX of one DiskSplit is in the other part zsB of any other.
 (def-fns _ $ (erased ds-off : (erased (Nat) d x x0) (erased (List (Nat)) e n f p hdX zsX hdB zsB) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hdX zsX) dsX)
     (erased (DiskSplit d e n (Cons (Nat) x0 p) hdB zsB) dsB) (erased (NotIn x hdX) o) (erased (Lt x d) lx) -> (erased (In x zsB) iz))
@@ -201,7 +195,6 @@
       (apart-irrefl x (notin-in x x hdX o (ds-mem d x x0 e n f p hdX zsX h gen rg ur dsX (ds-in d x x0 e n f p hdB zsB h gen rg ur dsB i) lx))))
     ((OrR _ _ i) i)))
 
-; Darts of diskN r are off diskN RR, and darts off diskN r are in diskN RR, whatever DiskSplits name them.
 (def-fns _ $ (erased rev-sub-in : (erased (Nat) d) (erased (List (Nat)) e n f r RR hd hd2 hdA zsA hdB zsB) (erased (RevCtx d e n f r RR hd hd2) cx)
     (erased (Connected d e n f) cn) (erased (DiskSplit d e n r hdA zsA) dsA) (erased (DiskSplit d e n RR hdB zsB) dsB) (subterm erased (List (Nat)) xs)
     (erased (Sub xs hdA) sx) -> (erased (Sub xs zsB) res))
@@ -308,7 +301,6 @@
 (def-fns _ $ (erased some-step : (erased (List (Nat)) f) (erased (Nat) a b) (erased (Nth (Nat) f a b) pf) -> (erased (SomePath f (Nil (Nat)) a b) r))
   (MkSomePath f (Nil _) (Cons _ a (Nil _)) a b (PathStep f (Nil _) (Nil _) a b b pf (NotInNil a) (PathHere f (Nil _) b))))
 
-; Along a path a :: q of p ending at b, with p b = c, p w = u for w on it: u follows w on q followed by c.
 (def-fns _ $ (erased fpath-in2 : (erased (List (Nat)) p q qc) (erased (Nat) a b c w u) (subterm erased (FPath p a q b) fp) (erased (HSnoc (Nat) q c qc) sn)
     (erased (Nth (Nat) p b c) pb) (erased (In w (Cons (Nat) a q)) iw) (erased (Nth (Nat) p w u) pw) -> (erased (In2 (Cons (Nat) a q) qc w u) r))
   (match erased fp _
@@ -331,7 +323,6 @@
   (let ((erased hx) (erased hy) (erased px) (erased py) (erased r1)) (in2-map h R1 S1 T1 U1 x y j1 rs1 rt1))
   (values hx hy px py (I2There s1 u1 hx hy S1 U1 r1)))
 
-; An edge cycle bd of the disk map sent to the ring r: from the edge image of hd w, the face of hd u is reached, for u = ed w.
 (def-fns _ $ (erased ncyc-link : (erased (Nat) x0 w u) (erased (List (Nat)) e f p ed hd bd) (erased (Ring e f x0 p) rg) (erased (NCyc ed bd) nc)
     (erased (Respects hd bd (Cons (Nat) x0 p)) rb) (erased (In w bd) iw) (erased (Nth (Nat) ed w u) pw)
     -> (erased (Nat) hw ehw hu) (erased (Nth (Nat) hd w hw) phw) (erased (Nth (Nat) e hw ehw) pe) (erased (Nth (Nat) hd u hu) phu)
@@ -383,7 +374,6 @@
     (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hdm hrm io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
   (values h uhd))
 
-; A face path of the whole map leaving from no dart of the ring r is one of the disk map.
 (def-fns _ $ (erased snipd-pull : (erased (Nat) d dd dr a b ad) (erased (List (Nat)) e n f r ed nd fd er nr fr hd hr bd br s xs)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (subterm erased (Path f s a b xs) w) (erased (Off r xs) off)
     (erased (Nth (Nat) hd ad a) pa) -> (erased (Nat) bd2) (erased (Nth (Nat) hd bd2 b) pb) (erased (SomePath fd (Nil (Nat)) ad bd2) sp))
@@ -400,7 +390,6 @@
   (let ((erased bd2) (erased pb) (erased sp)) (snipd-pull d dd dr a1 b a1d e n f r ed nd fd er nr fr hd hr bd br s xs1 pt rb w1 off1 pa1))
   (values bd2 pb (some-cat fd ad a1d bd2 (some-step fd ad a1d pfd) sp)))
 
-; A face path of the whole map from hd ad to a dart z of the ring gives one of the disk map from ad to the dart of bd sent to z.
 (def-fns _ $ (erased snipd-pull-ring : (erased (Nat) d dd dr x0 a z ad) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br xs)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Path f (Nil (Nat)) a z xs) w) (erased (In z (Cons (Nat) x0 p)) iz) (erased (Nth (Nat) hd ad a) pa)
@@ -554,7 +543,6 @@
   (let-match erased (nth-fn _ ks x c c2 pc pc2) (Refl _ _))
   a)
 
-; Two darts of the disk map with images on a face of lab l have one colour under kd.
 (def-fns _ $ (erased ext-two : (erased (Nat) d dd dr x0 j j2 l c c2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br p kd lab ld)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (FaceLab d f lab) fl) (erased (Respects lab hd ld) rl) (erased (FourColoring ed fd kd) cd) (erased (Nth (Nat) ld j l) pj) (erased (Nth (Nat) ld j2 l) pj2)
@@ -568,7 +556,6 @@
   (let-match erased cd (MkFourColoring _ _ _ ke rf re df u))
   (nth-fn _ kd j2 c c2 (path-label fd kd (Nil _) xs j j2 c w rf pc) pc2))
 
-; ks is kd on the images of the disk map ...
 (def-fns _ $ (erased ext-hd : (erased (Nat) d dd zd z c) (erased (List (Nat)) e n f ed nd fd hd bd r kd ks) (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext)
     (erased (Nth (Nat) hd zd z) pz) (erased (Nth (Nat) kd zd c) pc) -> (erased (Nth (Nat) ks z c) res))
   (let-match erased ext (MkExt _ _ dr x0 _ _ _ _ _ _ er nr fr _ hr _ br p _ _ lab ld ids pt rg rb fl rl cd io ex))
@@ -587,7 +574,6 @@
       pc1)
     (absurd (EAOut _ _ _ _ l pl o) (let-match erased (nth-fn _ lab z l l0 pl pl0) (Refl _ _)) (apart-irrefl l (notin-in l l ld o ild)))))
 
-; ... and is constant on faces.
 (def-fns _ $ (erased ext-face : (erased (Nat) d dd x y c c2) (erased (List (Nat)) e n f ed nd fd hd bd r kd ks) (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext)
     (erased (SomePath f (Nil (Nat)) x y) sp) (erased (Nth (Nat) ks x c) px) (erased (Nth (Nat) ks y c2) py) -> (erased (Eq (Nat) c c2) eq))
   (let-match erased ext (MkExt _ _ dr x0 _ _ _ _ _ _ er nr fr _ hr _ br p _ _ lab ld ids pt rg rb fl rl cd io ex))
@@ -630,7 +616,6 @@
   (let-match erased cd (MkFourColoring _ _ _ ke rf re df u))
   (extend-under lab ld kd ids ks ex u))
 
-; An edge step of the disk map of r from u to v: the face of hd v holds the edge image of hd u.
 (def-fns _ $ (erased disk-edge-face : (erased (Nat) d dd dr x0 u v x ex y) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Nth (Nat) ed u v) pu) (erased (Nth (Nat) hd u x) px) (erased (Nth (Nat) e x ex) pe) (erased (Nth (Nat) hd v y) py) -> (erased (SomePath f (Nil (Nat)) ex y) sp))
@@ -650,7 +635,6 @@
       (let-match erased (nth-fn _ hd v y hu py phu) (Refl _ _))
       sp)))
 
-; ks tells apart a dart of the image of the disk map and its edge image.
 (def-fns _ $ (erased ext-edge : (erased (Nat) d dd zd z ez c c2) (erased (List (Nat)) e n f ed nd fd hd bd r kd ks) (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext)
     (erased (Nth (Nat) hd zd z) pz) (erased (Nth (Nat) e z ez) pe) (erased (Nth (Nat) ks z c) pc) (erased (Nth (Nat) ks ez c2) pc2) -> (erased (Apart (Nat) Lt c c2) ne))
   (let ((erased ext2)) ext)
@@ -694,7 +678,6 @@
   (let-match erased rg (MkRing _ _ _ _ y ey rp pe w sm))
   (rpath-links e f rr x0 y ey x0 p rp pe w sn))
 
-; ks colours each e a as the dart of B linked to it.
 (def-fns _ $ (erased ext-links : (erased (Nat) d dd) (erased (List (Nat)) e n f ed nd fd hd bd r kd ks B EA L M) (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext)
     (subterm erased (List (Nat)) A) (erased (Links e f A B) lk) (erased (Respects e A EA) re) (erased (Respects ks EA L) rl) (erased (Respects ks B M) rm)
     -> (erased (Eq (List (Nat)) L M) eq))
@@ -708,7 +691,6 @@
   (let-match erased (ext-links d dd e n f ed nd fd hd bd r kd ks Bt EA1 L1 M1 ext A1 lk1 re1 rl1 rm1) (Refl _ _))
   (Refl _ L))
 
-; ks colours r as kd colours bd.
 (def-fns _ $ (erased ext-ring : (erased (Nat) d dd) (erased (List (Nat)) e n f ed nd fd hd bd r kd ks R lc) (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext)
     (subterm erased (List (Nat)) B) (erased (Respects hd B R) rb) (erased (Respects kd B lc) rk) -> (erased (Respects ks R lc) res))
   (let-match erased rb (RespCons _ Bt R1 b z pz rb1) ((RespNil _) (let-match erased rk (RespNil _)) (RespNil ks)))
@@ -753,7 +735,6 @@
       (erased (DiskSplit d e n r hd zs) ds1) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (AppN RV2 zs2 hr2) ap2)
       -> (CoCtx d dd e n f ed nd fd hd bd kd ks hr2)))
 
-; ks tells apart each dart of hr2 and its edge image.
 (def-fns _ $ (erased rr-apart : (erased (Nat) d dd x ex c c2) (erased (List (Nat)) e n f ed nd fd hd bd kd ks hr2) (erased (CoCtx d dd e n f ed nd fd hd bd kd ks hr2) co)
     (erased (In x hr2) ix) (erased (Nth (Nat) e x ex) pe) (erased (Nth (Nat) ks x c) pc) (erased (Nth (Nat) ks ex c2) pc2) -> (erased (Apart (Nat) Lt c c2) ne))
   (let-match erased co (MkCoCtx _ _ _ _ _ _ _ _ _ _ r RR hdA hdB _ _ zs hd2 zs2 RV2 _ ext cx cn ds1 ds2 rv2 ap2))
@@ -905,7 +886,6 @@
   (let-match erased sl (SnocCons _ _ _ _ Nt sl1))
   (PlCons hr kr rr1 Nt x i c qx qc (pull-snoc hr kr p1 L1 rr1 Nt x0 j l0 pu1 px pc sn1 sl1)))
 
-; kr, a four-colouring of a remainder map, is constant on the darts of hr with images on one face of the whole map.
 (def-fns _ $ (erased rem-face : (erased (Nat) d dd dr a b j j2 c c2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br kr)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (FourColoring er fr kr) ck) (erased (SomePath f (Nil (Nat)) a b) sp)
     (erased (Nth (Nat) hr j a) pa) (erased (Nth (Nat) hr j2 b) pb) (erased (Nth (Nat) kr j c) pc) (erased (Nth (Nat) kr j2 c2) pc2) -> (erased (Eq (Nat) c c2) eq))
@@ -925,7 +905,6 @@
       (resp-const dr kr fr gfr (graph-fun dr fr gfr grfr) rf (respects-length kr fr kr dr rf lfr)) pc)
     pc2))
 
-; The disk colouring kd that a remainder colouring kr gives through Pull is constant on faces ...
 (def-fns _ $ (erased pull-const : (erased (Nat) d dd dr dd2 dr2 x0) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 kr kd)
     (erased (List (Bond)) g) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2) (erased (FourColoring er2 fr2 kr) ck) (erased (Pull hr2 kr hd kd) pu)
@@ -946,7 +925,6 @@
   (ConstCons kd g1 u v c pc pc2 (pull-const d dd dr dd2 dr2 x0 e n f p ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 kr kd g1 pt rg rb pt2 ck pu
     lhd lkd fn1)))
 
-; ... and proper on edges.
 (def-fns _ $ (erased pull-proper : (erased (Nat) d dd dr dd2 dr2 x0) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 kr kd)
     (erased (List (Bond)) g) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2) (erased (FourColoring er2 fr2 kr) ck) (erased (Pull hr2 kr hd kd) pu)
