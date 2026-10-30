@@ -420,7 +420,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   minimal_counter_example_is_plain_cubic_pentagonal (a connected `Pbpp`
   map with a `NoColoring` is a `Geo` or has a `Reduces`; its cubic part
   is coloring.v's minimal_counter_example_is_cubic, which `birkhoff3.sl`
-  proves; `birkhoff3.sl` reduces `BirkGeo` to `MinArity`),
+  proves; `birkhoff3.sl` reduces `BirkGeo` to `MinArity`, and
+  `minarity.sl` gives `BirkGeo` from `BirkhoffChecks`),
   and `NotEmbed cfs`, embed.v's not_embed_reducible for the
   configurations of cfs (such a map that is a `Geo`, with a configuration
   of cfs whose kernel preembeds in the terms `CfEmbed` uses, `CRed` for
@@ -610,17 +611,43 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   faces are x and y alone (`XYCol`). `birk-geo` gives `BirkGeo` from
   `MinArity`, birkhoff.v's min_arity at every dart with minimality as
   data, stated whole-map as `Pentagonal` or a `Reduces` for a planar
-  bridgeless plain cubic connected map with a `NoColoring`; `MinArity` is
-  not proved. That these statements match Coq's has been checked only by
-  reading. Chain (both compilers, about 75 s with slc in one run): that of
+  bridgeless plain cubic connected map with a `NoColoring`, which
+  `minarity.sl` proves. That these statements match Coq's has been checked
+  only by reading. Chain (both compilers, about 75 s with slc in one run): that of
   `embed.sl` below, with `red/bcheck cpcomp` after `red/ccheck`, and
   `cpgeom ringdec traceconv birkhoff birkfit birkhoff2` after `revsnip3`
   (before `unav/realias`), then `embed.sl birkhoff3.sl`.
-- Still open: the rest of part B. From a reading of `birkhoff.v`, the
-  spoke ring lemmas and min_arity (`birkhoff3.sl`'s `MinArity`) are not
-  ported; Coq's min_arity uses scycle_spoke_ring, diskF_spoke_ring,
-  chordless_spoke_ring and size_spoke_ring, and a colouring for the case
-  of an empty diskFC.
+- `minarity.sl` (load after `birkhoff3.sl`, in its chain): min_arity of
+  `birkhoff.v` with minimality as data, through the spoke ring, as far as
+  both compilers check it. `order-list`: every dart has an order under a
+  permutation, so every map has the `OrderList` of its faces that
+  `Pentagonal` asks for. For a dart x whose face has k < 5 darts,
+  `ring-build` gives the spoke ring, the darts face (edge u) for u on the
+  face of x read along the inverse of face from x, as a `Ring` of at most
+  k darts (scycle_spoke_ring, and size_spoke_ring as a bound), or a
+  `Reduces` from `double-dart` when two of them share a face; `sr-in` and
+  `sr-hit` give mem_spoke_ring, and `sr-diskf` and `disk-on` the parts of
+  diskF_spoke_ring that min_arity uses (x is in diskF; a dart of diskN on
+  no face of the ring is on the face of x). `face-small` follows
+  min_arity: a dart on neither the face of x nor a face of the ring is in
+  diskFC, so the ring is nontrivial for 0 and `birkhoff-reduces` applies
+  (`cover`); otherwise the map is four-coloured, which `NoColoring`
+  refutes. The colouring is not Coq's: a face takes `col5` (0, 1, 3, 2, 3)
+  at its position in the list of the face of x followed by the faces of
+  the ring, so the one chord it needs absent is one from the face of the
+  second spoke to that of the fourth, in a ring of four (`chord`, the use
+  of chordless_spoke_ring here: the ring of three darts through that
+  chord is nontrivial for 0). `min-arity` gives `MinArity` and
+  `birk-geo-of` gives `BirkGeo`, each from a `BirkhoffChecks` argument,
+  which `red/bgoal.sl` proves in a unit of its own. It reads snip.sl's
+  `DPath` and walk.sl's `Sub`, which `unav/` files define again, as
+  `SDPath` and `WSub`, names the end of `birkhoff2.sl` keeps for it. Not
+  ported: the rest of the SpokeRing section (fband_spoke_ring and the
+  adjacency lemmas after it). That these statements match Coq's has been
+  checked only by reading. Chain (both compilers, in one run about 72 s
+  with slc and 136 s with the reference compiler): that of `birkhoff3.sl`,
+  then `minarity.sl`.
+- Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
