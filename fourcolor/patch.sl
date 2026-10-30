@@ -1264,3 +1264,111 @@
   (let ((erased bc) (erased q1) (erased q2)) (add-assoc b ks kfr kfd s at a2))
   (let-match erased (add-fn ks kfr bc kt q1 akt) (Refl _ _))
   (values b s lbd (add-comm b bc s q2) a2))
+
+; The images of a disk dart and of its face step are on one face (cFhd).
+(def-fns _ $ (erased face-hd : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Nat) xd yd x y) (erased (Nth (Nat) fd xd yd) pf)
+    (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hd yd y) hy) -> (erased (Conn gf x y) r))
+  (match erased (in-dec xd bd) _
+    ((OrR _ _ out) (conn-adj gf x y (graph-adj d x y f gf grf (patch-face-d d dd dr e n f ed nd fd er nr fr hd hr bd br pt xd yd x y out pf hx hy))))
+    ((OrL _ _ ib)
+      (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+      (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
+      (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dd ed nd fd hd2))
+      (let ((erased lxd)) (pre-lt dd xd yd fd fdi pmfd pf))
+      (let ((erased ws) (erased cw)) (cycle dd xd yd fd fdi pmfd pf lxd))
+      (let ((erased ws1) (erased cw1)) (cut-first fd (Nil _) ws yd xd cw))
+      (let-match erased sd (MkSimple _ _ lab ls rf rp dl))
+      (let ((erased l) (erased pl)) (nth-exists _ lab dd yd (respects-length lab fd lab dd rf lf) (perm-val dd xd yd fd fdi pmfd pf)))
+      (let ((erased off)) (path-off-simple fd lab bd ls ws1 yd xd l cw1 rf rp dl ib pl (path-label fd lab (Cons _ xd (Nil _)) ws1 yd xd l cw1 rf pl)))
+      (let ((erased mo)) (morph-face-d d dd dr e n f ed nd fd er nr fr hd hr bd br fdi idd pt pmfd lhd (perm-under dd idd idd (perm-id dd idd iod))))
+      (let ((erased z2) (erased ws2) (erased hz) (erased cw2) (erased rx))
+        (path-push2 dd yd xd y hd fd fdi f bd idd bd bG ws1 pmfd mo iod dhd rbd (sub-refl bd) (path-reavoid fd (Cons _ xd (Nil _)) bd ws1 yd xd cw1 off) hy))
+      (let-match erased (nth-fn _ hd xd z2 x hz hx) (Refl _ _))
+      (conn-sym gf y x (path-graph-conn d y x f bG ws2 gf cw2 grf)))))
+
+; v2 = hd v is a glink neighbour of u2.
+(def-adts $ (DiskNext : ((List (Nat)) hd) ((List (Bond)) g) ((Nat) u2 v) -> Type)
+  enum
+  (many MkDiskNext : (erased (List (Nat)) hd) (erased (List (Bond)) g) (erased (Nat) u2 v v2) (erased (Nth (Nat) hd v v2) hv) (erased (Adj g u2 v2) a)
+      -> (DiskNext hd g u2 v)))
+
+; u2 is joined in g to the image of a dart of bd.
+(def-adts $ (RingAt : ((List (Nat)) hd bd) ((List (Bond)) g) ((Nat) u2) -> Type)
+  enum
+  (many MkRingAt : (erased (List (Nat)) hd bd) (erased (List (Bond)) g) (erased (Nat) u2 wd w) (erased (In wd bd) iw) (erased (Nth (Nat) hd wd w) hw)
+      (erased (Conn g u2 w) c) -> (RingAt hd bd g u2)))
+
+; A glink step of the disk map off bd is sent to a glink step, or the image of its start is joined to the ring.
+(def-fns _ $ (erased disk-adj : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (List (Bond)) ge gn gf gnf g ged gnd gfd gnfd gd) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
+    (erased (Graph d e ge) pe) (erased (Graph d n gn) pn) (erased (Graph d f gf) pf) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2)
+    (erased (Graph dd ed ged) pde) (erased (Graph dd nd gnd) pdn) (erased (Graph dd fd gfd) pdf) (erased (Cat gnd gfd gnfd) cd1) (erased (Cat ged gnfd gd) cd2)
+    (erased (Nat) u v u2) (erased (Adj gd u v) a) (erased (NotIn u bd) ou) (erased (Nth (Nat) hd u u2) hu)
+    -> (erased (HOr (DiskNext hd g u2 v) (RingAt hd bd g u2)) r))
+  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
+  (let ((erased mfd)) (morph-face-d d dd dr e n f ed nd fd er nr fr hd hr bd br fdi idd pt pmfd lhd (perm-under dd idd idd (perm-id dd idd iod))))
+  (let ((erased sgf)) (spans-lift-r ge gnf g gf (spans-lift-r gn gf gnf gf (spans-self gf) c1) c2))
+  (match erased (adj-cat-inv ged gnfd gd u v cd2 a) _
+    ((OrL _ _ ae)
+      (match erased (graph-adj-inv dd u v ed ged pde ae) _
+        ((OrL _ _ puv)
+          (let ((erased v2) (erased hv) (erased qv)) (morph hd ed e bd idd dd u v u2 med iod (pre-lt dd u v ed nfd pmed puv) ou puv hu))
+          (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-e ge gn gf gnf g u2 v2 c1 c2 (graph-adj d u2 v2 e ge pe qv)))))
+        ((OrR _ _ pvu)
+          (let ((erased ov)) (match erased (in-dec v bd) (((NotIn v bd) r))
+            (absurd (OrL _ _ iv) (apart-irrefl u (notin-in u u bd ou (ncyc-next ed bd v u cyd iv pvu))))
+            ((OrR _ _ o) o)))
+          (let ((erased lv)) (pre-lt dd v u ed nfd pmed pvu))
+          (let ((erased v2) (erased hv)) (nth-exists _ hd dd v lhd lv))
+          (let ((erased u3) (erased hu3) (erased qu)) (morph hd ed e bd idd dd v u v2 med iod lv ov pvu hv))
+          (let-match erased (nth-fn _ hd u u3 u2 hu3 hu) (Refl _ _))
+          (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-e ge gn gf gnf g u2 v2 c1 c2 (adj-sym ge v2 u2 (graph-adj d v2 u2 e ge pe qu))))))))
+    ((OrR _ _ anf)
+      (match erased (adj-cat-inv gnd gfd gnfd u v cd1 anf) _
+        ((OrL _ _ an)
+          (match erased (graph-adj-inv dd u v nd gnd pdn an) _
+            ((OrL _ _ puv)
+              (let ((erased v2) (erased hv) (erased qv)) (morph hd nd n (Nil _) idd dd u v u2 mnd iod (pre-lt dd u v nd ndi pmnd puv) (NotInNil u) puv hu))
+              (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-n ge gn gf gnf g u2 v2 c1 c2 (graph-adj d u2 v2 n gn pn qv)))))
+            ((OrR _ _ pvu)
+              (let ((erased lv)) (pre-lt dd v u nd ndi pmnd pvu))
+              (let ((erased v2) (erased hv)) (nth-exists _ hd dd v lhd lv))
+              (let ((erased u3) (erased hu3) (erased qu)) (morph hd nd n (Nil _) idd dd v u v2 mnd iod lv (NotInNil v) pvu hv))
+              (let-match erased (nth-fn _ hd u u3 u2 hu3 hu) (Refl _ _))
+              (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-n ge gn gf gnf g u2 v2 c1 c2 (adj-sym gn v2 u2 (graph-adj d v2 u2 n gn pn qu))))))))
+        ((OrR _ _ af)
+          (match erased (graph-adj-inv dd u v fd gfd pdf af) _
+            ((OrL _ _ puv)
+              (let ((erased v2) (erased hv) (erased qv)) (morph hd fd f bd idd dd u v u2 mfd iod (pre-lt dd u v fd fdi pmfd puv) ou puv hu))
+              (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-f ge gn gf gnf g u2 v2 c1 c2 (graph-adj d u2 v2 f gf pf qv)))))
+            ((OrR _ _ pvu)
+              (let ((erased lv)) (pre-lt dd v u fd fdi pmfd pvu))
+              (let ((erased v2) (erased hv)) (nth-exists _ hd dd v lhd lv))
+              (match erased (in-dec v bd) _
+                ((OrL _ _ iv)
+                  (OrR _ _ (MkRingAt hd bd g u2 v v2 iv hv
+                    (spans-conn g gf u2 v2 (conn-sym gf v2 u2 (face-hd d dd dr e n f ed nd fd er nr fr hd hr bd br gf pt pf v u v2 u2 pvu hv hu)) sgf))))
+                ((OrR _ _ ov)
+                  (let ((erased u3) (erased hu3) (erased qu)) (morph hd fd f bd idd dd v u v2 mfd iod lv ov pvu hv))
+                  (let-match erased (nth-fn _ hd u u3 u2 hu3 hu) (Refl _ _))
+                  (OrL _ _ (MkDiskNext hd g u2 v v2 hv (gl-f ge gn gf gnf g u2 v2 c1 c2 (adj-sym gf v2 u2 (graph-adj d v2 u2 f gf pf qu))))))))))))))
+
+; A disk dart glink-joined to bd has its image glink-joined to the image of a dart of bd.
+(def-fns _ $ (erased disk-to-ring : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (List (Bond)) ge gn gf gnf g ged gnd gfd gnfd gd) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt)
+    (erased (Graph d e ge) pe) (erased (Graph d n gn) pn) (erased (Graph d f gf) pf) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2)
+    (erased (Graph dd ed ged) pde) (erased (Graph dd nd gnd) pdn) (erased (Graph dd fd gfd) pdf) (erased (Cat gnd gfd gnfd) cd1) (erased (Cat ged gnfd gd) cd2)
+    (erased (Nat) u b u2) (subterm erased (Conn gd u b) cn) (erased (In b bd) ib) (erased (Nth (Nat) hd u u2) hu) -> (erased (RingAt hd bd g u2) r))
+  (match erased (in-dec u bd) _
+    ((OrL _ _ iu) (MkRingAt hd bd g u2 u u2 iu hu (ConnHere g u2)))
+    ((OrR _ _ ou)
+      (let-match erased cn (ConnStep _ _ v _ a cn1) (absurd (ConnHere _ _) (apart-irrefl u (notin-in u u bd ou ib))))
+      (match erased (disk-adj d dd dr e n f ed nd fd er nr fr hd hr bd br ge gn gf gnf g ged gnd gfd gnfd gd pt pe pn pf c1 c2 pde pdn pdf cd1 cd2 u v u2 a ou hu) _
+        ((OrL _ _ dn)
+          (let-match erased dn (MkDiskNext _ _ _ _ v2 hv av))
+          (let-match erased (disk-to-ring d dd dr e n f ed nd fd er nr fr hd hr bd br ge gn gf gnf g ged gnd gfd gnfd gd pt pe pn pf c1 c2 pde pdn pdf cd1 cd2 v b v2 cn1 ib hv)
+            (MkRingAt _ _ _ _ wd w iw hw cw))
+          (MkRingAt hd bd g u2 wd w iw hw (ConnStep g u2 v2 w av cw)))
+        ((OrR _ _ ra) ra)))))

@@ -749,3 +749,27 @@
   (let ((erased l2) (erased p2) (erased i2)) (sb-in-key lab t xs ys zs y sp iy))
   (let-match erased (nth-fn _ lab y l l2 py p2) (Refl _ _))
   i2)
+
+(def-fns _ $ (erased adj-cat-inv : (erased (List (Bond)) g h gh) (erased (Nat) x y) (subterm erased (Cat g h gh) c) (erased (Adj gh x y) a)
+    -> (erased (Or (Adj g x y) (Adj h x y)) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (OrR _ _ a)))
+  (match erased a _
+    ((AdjFwd _ _ _) (OrL _ _ (AdjFwd g1 x y)))
+    ((AdjBwd _ _ _) (OrL _ _ (AdjBwd g1 y x)))
+    ((AdjThere _ _ _ _ a1)
+      (match erased (adj-cat-inv g1 h gh1 x y c1 a1) _
+        ((OrL _ _ a2) (OrL _ _ (AdjThere g1 b x y a2)))
+        ((OrR _ _ a2) (OrR _ _ a2))))))
+
+; The three parts of the glink bonds g = ge . (gn . gf).
+(def-fns _ $ (erased gl-e : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) (erased (Adj ge x y) a)
+    -> (erased (Adj g x y) r))
+  (adj-cat-l ge gnf g x y a c2))
+
+(def-fns _ $ (erased gl-n : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) (erased (Adj gn x y) a)
+    -> (erased (Adj g x y) r))
+  (adj-cat-r ge gnf g x y (adj-cat-l gn gf gnf x y a c1) c2))
+
+(def-fns _ $ (erased gl-f : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) (erased (Adj gf x y) a)
+    -> (erased (Adj g x y) r))
+  (adj-cat-r ge gnf g x y (adj-cat-r gn gf gnf x y a c1) c2))
