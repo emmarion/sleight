@@ -28,11 +28,9 @@
   (let ((erased fl2)) fl)
   (let-match erased fl2 (MkFaceLab _ k _ fi _ ids rs gf pf gr io ro cl ll))
   (let ((erased l) (erased pl)) (nth-exists _ lab d t ll lt))
-  (match erased (in-dec l lr) _
-    ((OrL _ _ il)
-      (let ((erased j) (erased ij) (erased pj)) (respects-in lab R lr l rl il))
-      (OrL _ _ (MkFband f R t j ij (facelab-same d t j l f lab fl pl pj))))
-    ((OrR _ _ ol) (OrR _ _ (MkKernel f R lab lr t l (facelab-rf d f lab fl) rl pl ol)))))
+  (let-match erased (in-dec l lr) (OrL _ _ il) ((OrR _ _ ol) (OrR _ _ (MkKernel f R lab lr t l (facelab-rf d f lab fl) rl pl ol))))
+  (let ((erased j) (erased ij) (erased pj)) (respects-in lab R lr l rl il))
+  (OrL _ _ (MkFband f R t j ij (facelab-same d t j l f lab fl pl pj))))
 
 (def-fns _ $ (erased rp-unsnoc : (erased (List (Nat)) e f P) (erased (Nat) x a y) (subterm erased (RPath e f x (Cons (Nat) a P) y) rp)
     -> (erased (List (Nat)) Q) (erased (Nat) c ec) (erased (RPath e f x Q c) r1) (erased (Nth (Nat) e c ec) pc) (erased (SomePath f (Nil (Nat)) ec y) sc)
@@ -164,13 +162,12 @@
   (let ((erased fl2)) fl)
   (let-match erased fl2 (MkFaceLab _ k _ fi _ ids rs gf pf gr io ro cl ll))
   (let ((erased rest)) (fc-all d x0 x1 x2 z ez e n f lab p A B hd zs hd1 zs1 hd2 zs2 lr1 cc d0 d1 d2 cn fl fm rl1 xs1 sb1))
-  (match erased (lab-dec d t f lab _ lr1 fl rl1 lt) _
-    ((OrL _ _ fb)
-      (let-match erased fb (MkFband _ _ _ w iw sp))
-      (let-match erased sp (MkSomePath _ _ ws _ _ pth))
-      (let ((erased l) (erased pl)) (nth-exists _ lab d t ll lt))
-      (AlCons lab lr1 xs1 t l pl (in-map lab _ lr1 w l iw rl1 (path-label f lab (Nil _) ws t w l pth (facelab-rf d f lab fl) pl)) rest))
-    (absurd (OrR _ _ k) (fc-bad d x0 x1 x2 z ez t e n f lab p A B hd zs hd1 zs1 hd2 zs2 cc d0 d1 d2 cn fl fm it k))))
+  (let-match erased (lab-dec d t f lab _ lr1 fl rl1 lt) (OrL _ _ fb)
+    (absurd (OrR _ _ k) (fc-bad d x0 x1 x2 z ez t e n f lab p A B hd zs hd1 zs1 hd2 zs2 cc d0 d1 d2 cn fl fm it k)))
+  (let-match erased fb (MkFband _ _ _ w iw sp))
+  (let-match erased sp (MkSomePath _ _ ws _ _ pth))
+  (let ((erased l) (erased pl)) (nth-exists _ lab d t ll lt))
+  (AlCons lab lr1 xs1 t l pl (in-map lab _ lr1 w l iw rl1 (path-label f lab (Nil _) ws t w l pth (facelab-rf d f lab fl) pl)) rest))
 
 (def-fns _ $ (erased fe-chord : (erased (Nat) d x0 x1 x2 z ez) (erased (List (Nat)) e n f lab p A B hd zs hd1 zs1 hd2 zs2) (erased (Chords e n f x0 p x1 A x2 B z ez) cc)
     (erased (RingDS d e n f (Cons (Nat) x0 p) hd zs) d0) (erased (RingDS d e n f (Cons (Nat) z (Cons (Nat) x2 B)) hd1 zs1) d1)
@@ -781,15 +778,14 @@
   (let ((erased leb)) (perm-val dc c eb ec nfc qe pc))
   (let ((erased lrc) (erased rlc)) (respects-exists labc (Cons _ eb (Nil _)) dc (UnderCons (Nil _) eb dc leb (UnderNil dc)) llc))
   (let ((erased lery)) (perm-val dc ry ery ec nfc qe pery))
-  (match erased (lab-dec dc ery fc labc _ lrc flc rlc lery) _
-    (absurd (OrL _ _ fbd) (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery fbd sc phz pry pehw pez sxry ixa nr))
-    ((OrR _ _ nrN)
-      (match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx eb ry q0 ery k m Qc Q2 hdN zsN lrN rqc wRR rhRR rgN lkR md pery nrN dsN rlN tsN) _
-        (absurd (OrL _ _ cl0)
-          (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
-          (let-match erased (nth-fn _ ec ry e3 ery pe3 pery) (Refl _ _))
-          (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery (MkFband fc _ ery eb (InHere eb (Nil _)) sp3) sc phz pry pehw pez sxry ixa nr))
-        ((OrR _ _ hf) hf)))))
+  (let-match erased (lab-dec dc ery fc labc _ lrc flc rlc lery) (OrR _ _ nrN)
+    (absurd (OrL _ _ fbd) (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery fbd sc phz pry pehw pez sxry ixa nr)))
+  (let-match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx eb ry q0 ery k m Qc Q2 hdN zsN lrN rqc wRR rhRR rgN lkR md pery nrN dsN rlN tsN) (OrR _ _ hf)
+    (absurd (OrL _ _ cl0)
+      (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
+      (let-match erased (nth-fn _ ec ry e3 ery pe3 pery) (Refl _ _))
+      (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery (MkFband fc _ ery eb (InHere eb (Nil _)) sp3) sc phz pry pehw pez sxry ixa nr)))
+  hf)
 
 ; Every HomTrivial is a HomFive (the cases trivial_hom_ring settles are refuted).
 (def-fns _ $ (erased ht-five : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
@@ -800,15 +796,14 @@
   (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))
   (let ((erased fe) (erased sp)) (spk-of dm em nm fm lab hm gen bl pl cnm fl))
   (let ((erased cx)) (MkTCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab en ok fu sp cn))
-  (match erased ts _
-    ((OrL _ _ t)
-      (match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t) _
-        (absurd (OrL _ _ cl0)
-          (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
-          (let-match erased (nth-fn _ ec z e3 ez pe3 pez) (Refl _ _))
-          (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _))))
-        ((OrR _ _ hf) hf)))
-    ((OrR _ _ t) (side-zs dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t))))
+  (let-match erased ts (OrL _ _ t)
+    ((OrR _ _ t) (side-zs dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t)))
+  (let-match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t) (OrR _ _ hf)
+    (absurd (OrL _ _ cl0)
+      (let-match erased cl0 (MkRlClose _ _ _ _ e3 pe3 sp3))
+      (let-match erased (nth-fn _ ec z e3 ez pe3 pez) (Refl _ _))
+      (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _)))))
+  hf)
 
 ; The five-dart case of embed_full (the spoke ring of the one face, adj11_edge and adj_kernel_max in Coq), taken as a hypothesis.
 (def-adts $ (TrivFive : -> Type)
