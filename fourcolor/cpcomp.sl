@@ -1,5 +1,5 @@
 ; The completeness half of ctree_mem_cpcolor of cfcolor.v: the tree cpcolor-c computes for a cubic program holds the even
-; normal form of every ring trace of a colouring of the program's map. Load after red/ccheck.sl.
+; normal form of every ring trace of a colouring of the program's map. Load after red/bcheck.sl.
 
 ; et2 is et after the cubic step s, as a ring trace of the map before s becomes one of the map after it (cpcolor1 of
 ; cfcolor.v, read as a relation).
@@ -586,3 +586,9 @@
     ((ETrOdd _ _ _ q)
       (let ((erased e2) (erased pe)) (permc-ex p132 e0 (IP132)))
       (cpcolor-mem cp t comp cq e2 et2 (cpcol-perm cp _ _ p132 cc (IP132) (PTCons p132 e0 e2 et et2 pe q)) ev))))
+
+; The same for a basis program of the Birkhoff check (the use of ctree_mem_cpcolor in chkbP of Birkhoff_valid).
+(def-fns _ $ (erased bkprog-hit : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (BkProg h m cp t) bp) (erased (Col) e0)
+    (erased (List (Col)) et et2) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (ETrace et et2) etr) -> (erased (CtMem t et2) r))
+  (let-match erased bp (MkBkProg _ _ _ _ k x y b cq na cs cpc mx my xy lt ht rt cm))
+  (cpcolor-etrace cp t cm cq e0 et et2 cc etr))
