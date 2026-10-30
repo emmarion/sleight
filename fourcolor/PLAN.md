@@ -203,9 +203,11 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   cubic_patch (for any order c), patch_face_r (both directions),
   patch_face_d', cFhd, patch_bridgeless, the orbit counts of edges, nodes,
   faces and glink (`edge-patch`, `node-patch`, `face-patch`,
-  `glink-patch`), genus_patch and planar_patch. Not done: outer_hd and
-  patch_face_d as stated in Coq, bridgeless_patch, colorable_patch,
-  patch_gcomp and minimal_counter_example_is_connected. `sew.v`, `snip.v`
+  `glink-patch`), genus_patch and planar_patch, and the colourings of the
+  two parts that a colouring of the whole map gives (`patch-coloring`).
+  Not done: outer_hd and patch_face_d as stated in Coq, bridgeless_patch,
+  the ring traces of colorable_patch and its converse, patch_gcomp and
+  minimal_counter_example_is_connected. `sew.v`, `snip.v`
   and `revsnip.v` are not started.
 - Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
