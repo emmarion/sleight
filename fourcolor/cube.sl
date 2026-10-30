@@ -500,3 +500,146 @@
   (let-match erased (shf-fn d a L A A2 shA shA2) (Refl _ _))
   (let-match erased (shf-fn d b M B Bs2 shB shB2) (Refl _ _))
   (link-join h A B rx ry X Y l (lay-link d h sa1 sb1 rx ry lx1 ly1 ll1) jx jy))
+
+(def-adts $ (Laid : ((Nat) d) ((List (Blk)) s) ((List (Nat)) xs) -> Type)
+  enum
+  (many MkLaid : (erased (Nat) d) (erased (List (Blk)) s) (erased (List (Nat)) xs) (erased (Lay d s xs) ly) (erased (Sized d s) sz) -> (Laid d s xs)))
+
+(def-fns _ $ (erased laid-exists : (erased (Nat) d) (erased (List (Blk)) s) (erased (Sized d s) sz) -> (erased (List (Nat)) xs) (erased (Laid d s xs) r))
+  (let ((erased xs) (erased ly)) (lay-exists d s))
+  (values xs (MkLaid d s xs ly sz)))
+
+(def-fns _ $ (erased perm-parts : (erased (Nat) d) (erased (List (Nat)) p q ids) (erased (Perm d p q) pm) (erased (Iota d ids) io)
+    -> (erased (Respects q p ids) qp) (erased (Respects p q ids) pq) (erased (Length (Nat) p d) lp) (erased (Length (Nat) q d) lq))
+  (let-match erased pm (MkPerm _ _ _ ids1 io1 lp qp pq))
+  (let-match erased (iota-fn d ids ids1 io io1) (Refl _ _))
+  (values qp pq lp (respects-length-inv p q ids d pq (iota-length d ids io))))
+
+; The cube of the hypermap (e, n, f) on d darts, on D = 6 d darts. Its blocks 0 to 5 are Gonthier's CTn, CTen, CTf,
+; CTnf, CTe and CTfe; nf, ni and fi are the inverses of e, n and f, and I lists the D darts.
+(def-adts $ (Cube : ((Nat) d D) ((List (Nat)) e n f ce cn cf) -> Type)
+  enum
+  (many MkCube : (erased (Nat) d D) (erased (List (Nat)) e n f ids nf ni fi ce cn cf cfi I)
+      (erased (Iota d ids) io) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+      (erased (At d tg6 (Zero) D) aD) (erased (Iota D I) ioD)
+      (erased (Laid d (Cons (Blk) (MkBlk tg5 ids) $ Cons (Blk) (MkBlk tg3 e) $ Cons (Blk) (MkBlk tg4 nf) $ Cons (Blk) (MkBlk tg1 nf) $
+        Cons (Blk) (MkBlk tg2 e) $ Cons (Blk) (MkBlk (Zero) ids) $ Nil (Blk)) ce) le)
+      (erased (Laid d (Cons (Blk) (MkBlk tg1 n) $ Cons (Blk) (MkBlk tg5 ids) $ Cons (Blk) (MkBlk tg3 e) $ Cons (Blk) (MkBlk tg4 nf) $
+        Cons (Blk) (MkBlk tg2 ids) $ Cons (Blk) (MkBlk (Zero) ni) $ Nil (Blk)) cn) ln)
+      (erased (Laid d (Cons (Blk) (MkBlk tg1 ids) $ Cons (Blk) (MkBlk tg2 ids) $ Cons (Blk) (MkBlk tg3 ids) $ Cons (Blk) (MkBlk (Zero) f) $
+        Cons (Blk) (MkBlk tg4 e) $ Cons (Blk) (MkBlk tg5 n) $ Nil (Blk)) cf) lf)
+      (erased (Laid d (Cons (Blk) (MkBlk tg3 fi) $ Cons (Blk) (MkBlk (Zero) ids) $ Cons (Blk) (MkBlk tg1 ids) $ Cons (Blk) (MkBlk tg2 ids) $
+        Cons (Blk) (MkBlk tg4 nf) $ Cons (Blk) (MkBlk tg5 ni) $ Nil (Blk)) cfi) lfi)
+      (erased (Laid d (Cons (Blk) (MkBlk (Zero) ids) $ Cons (Blk) (MkBlk tg1 ids) $ Cons (Blk) (MkBlk tg2 ids) $ Cons (Blk) (MkBlk tg3 ids) $
+        Cons (Blk) (MkBlk tg4 ids) $ Cons (Blk) (MkBlk tg5 ids) $ Nil (Blk)) I) li)
+      -> (Cube d D e n f ce cn cf)))
+
+(def-fns _ $ (erased cube-exists : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    -> (erased (Nat) D) (erased (List (Nat)) ce cn cf) (erased (Cube d D e n f ce cn cf) cu))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased _ec) (erased _ce) (erased lde) (erased ldnf)) (perm-parts d e nf ids pe io))
+  (let ((erased _nc) (erased _cn) (erased ldn) (erased ldni)) (perm-parts d n ni ids pn io))
+  (let ((erased _fc) (erased _cf) (erased ldf) (erased ldfi)) (perm-parts d f fi ids pf io))
+  (let ((erased li)) (iota-length d ids io))
+  (let ((erased D) (erased aD)) (at-exists d tg6 (Zero)))
+  (let ((erased I) (erased ioD)) (iota-exists D))
+  (let ((erased ce) (erased le)) (laid-exists d _ (SizedCons _ tg5 _ _ li $ SizedCons _ tg3 _ _ lde $ SizedCons _ tg4 _ _ ldnf $
+    SizedCons _ tg1 _ _ ldnf $ SizedCons _ tg2 _ _ lde $ SizedCons _ (Zero) _ _ li $ SizedNil d)))
+  (let ((erased cn) (erased ln)) (laid-exists d _ (SizedCons _ tg1 _ _ ldn $ SizedCons _ tg5 _ _ li $ SizedCons _ tg3 _ _ lde $
+    SizedCons _ tg4 _ _ ldnf $ SizedCons _ tg2 _ _ li $ SizedCons _ (Zero) _ _ ldni $ SizedNil d)))
+  (let ((erased cf) (erased lf)) (laid-exists d _ (SizedCons _ tg1 _ _ li $ SizedCons _ tg2 _ _ li $ SizedCons _ tg3 _ _ li $
+    SizedCons _ (Zero) _ _ ldf $ SizedCons _ tg4 _ _ lde $ SizedCons _ tg5 _ _ ldn $ SizedNil d)))
+  (let ((erased cfi) (erased lfi)) (laid-exists d _ (SizedCons _ tg3 _ _ ldfi $ SizedCons _ (Zero) _ _ li $ SizedCons _ tg1 _ _ li $
+    SizedCons _ tg2 _ _ li $ SizedCons _ tg4 _ _ ldnf $ SizedCons _ tg5 _ _ ldni $ SizedNil d)))
+  (let ((erased sid)) (Cons _ (MkBlk (Zero) ids) $ Cons _ (MkBlk tg1 ids) $ Cons _ (MkBlk tg2 ids) $ Cons _ (MkBlk tg3 ids) $
+    Cons _ (MkBlk tg4 ids) $ Cons _ (MkBlk tg5 ids) $ Nil (Blk)))
+  (let ((erased szid)) (SizedCons _ (Zero) _ _ li $ SizedCons _ tg1 _ _ li $ SizedCons _ tg2 _ _ li $ SizedCons _ tg3 _ _ li $ SizedCons _ tg4 _ _ li $
+    SizedCons _ tg5 _ _ li $ SizedNil d))
+  (let ((erased L) (erased lyL)) (lay-exists d sid))
+  (let-match erased (lay-iota d tg6 D ids L I sid lyL szid
+    (IdCons _ _ _ $ IdCons _ _ _ $ IdCons _ _ _ $ IdCons _ _ _ $ IdCons _ _ _ $ IdCons _ _ _ $ IdNil _ _) io
+    (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _) aD ioD) (Refl _ _))
+  (values D ce cn cf (MkCube d D e n f ids nf ni fi ce cn cf cfi I io rnf pe pn pf aD ioD le ln lf lfi (MkLaid d sid I lyL szid))))
+
+; The length of a list of six blocks.
+(def-fns _ $ (erased six : (erased (Blk) b0 b1 b2 b3 b4 b5) ->
+    (erased (Length (Blk) (Cons (Blk) b0 $ Cons (Blk) b1 $ Cons (Blk) b2 $ Cons (Blk) b3 $ Cons (Blk) b4 $ Cons (Blk) b5 $ Nil (Blk)) tg6) l))
+  (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))
+
+; The G-level composites the cube's blocks rest on.
+(def-adts $ (Facts : ((Nat) d) ((List (Nat)) e n f ids nf ni fi) -> Type)
+  enum
+  (many MkFacts : (erased (Nat) d) (erased (List (Nat)) e n f ids nf ni fi)
+      (erased (Respects ids ids ids) RI) (erased (Respects nf e ids) Rne) (erased (Respects e nf ids) Ren) (erased (Respects fi f ids) Rfif)
+      (erased (Respects f fi ids) Rffi) (erased (Respects ni n ids) Rnin) (erased (Respects n ni ids) Rnni) (erased (Respects nf fi n) Rnffin)
+      (erased (Respects e ids e) Reid) (erased (Respects nf ids nf) Rnfid) (erased (Respects ids ni ni) Ridni) (erased (Respects ids n n) Ridn)
+      (erased (Respects ni ids ni) Rniid) (erased (Respects ids nf nf) Ridnf) (erased (Respects ids e e) Ride) (erased (Respects n ids n) Rnid)
+      (erased (Respects f ids f) Rfid)
+      (erased (Length (Nat) ids d) lid) (erased (Length (Nat) e d) le) (erased (Length (Nat) n d) ln) (erased (Length (Nat) f d) lf)
+      (erased (Length (Nat) nf d) lnf) (erased (Length (Nat) ni d) lni) (erased (Length (Nat) fi d) lfi)
+      (erased (Under e d) ue) (erased (Under n d) un) (erased (Under f d) uf) (erased (Under nf d) unf) (erased (Under ni d) uni)
+      -> (Facts d e n f ids nf ni fi)))
+
+(def-fns _ $ (erased facts : (erased (Nat) d) (erased (List (Nat)) e n f ids nf ni fi) (erased (Iota d ids) io) (erased (Respects n f nf) rnf)
+    (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) -> (erased (Facts d e n f ids nf ni fi) r))
+  (let ((erased Rne) (erased Ren) (erased le) (erased lnf)) (perm-parts d e nf ids pe io))
+  (let ((erased Rnin) (erased Rnni) (erased ln) (erased lni)) (perm-parts d n ni ids pn io))
+  (let ((erased Rfif) (erased Rffi) (erased lf) (erased lfi)) (perm-parts d f fi ids pf io))
+  (let ((erased lid)) (iota-length d ids io))
+  (let ((erased ue) (erased unf)) (values (perm-under d e nf pe) (perm-under d nf e (perm-sym d e nf pe))))
+  (let ((erased un) (erased uni)) (values (perm-under d n ni pn) (perm-under d ni n (perm-sym d n ni pn))))
+  (let ((erased Rnid)) (respects-id-right d ids n io ln))
+  (MkFacts d e n f ids nf ni fi (respects-id-right d ids ids io lid) Rne Ren Rfif Rffi Rnin Rnni
+    (respects-assoc fi f n ids nf n d Rffi Rnid rnf lnf lf)
+    (respects-id-right d ids e io le) (respects-id-right d ids nf io lnf) (respects-id-left d ids ni io uni) (respects-id-left d ids n io un)
+    (respects-id-right d ids ni io lni) (respects-id-left d ids nf io unf) (respects-id-left d ids e io ue) Rnid (respects-id-right d ids f io lf)
+    lid le ln lf lnf lni lfi ue un (perm-under d f fi pf) unf uni))
+
+; The cube is a hypermap: its edge permutation is an involution, its face permutation has the inverse cfi, and its node
+; permutation is e . cfi.
+(def-fns _ $ (erased cube-hyper : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
+    -> (erased (Hypermap D ce cn cf) h))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased le (MkLaid _ _ _ lye sze))
+  (let-match erased ln (MkLaid _ _ _ lyn szn))
+  (let-match erased lf (MkLaid _ _ _ lyf szf))
+  (let-match erased lfi (MkLaid _ _ _ lyfi szfi))
+  (let-match erased li (MkLaid _ _ _ lyi szi))
+  (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
+    (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren Rfif Rffi Rnin Rnni Rnffin Reid Rnfid Ridni _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let ((erased ee)) (lay-respects d _ _ _ ce ce I lye sze lye lyi
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rne $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ren $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) Ren $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rne $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RI $
+      LRNil _)))
+  (let ((erased fif)) (lay-respects d _ _ _ cfi cf I lyfi szfi lyf lyi
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) Rfif $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rne $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rnin $
+      LRNil _)))
+  (let ((erased ffi)) (lay-respects d _ _ _ cf cfi I lyf szf lyfi lyi
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rffi $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ren $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rnni $
+      LRNil _)))
+  (let ((erased efn)) (lay-respects d _ _ _ ce cfi cn lye sze lyfi lyn
+    (LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rnffin $
+      LRCons _ _ _ _ _ _ _ _ (NthHere _ _ _) RI $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthHere _ _ _) Reid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Rnfid $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ren $
+      LRCons _ _ _ _ _ _ _ _ (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _) Ridni $
+      LRNil _)))
+  (hyper-of D ce cf cfi cn (MkPerm D ce ce I ioD (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD) ee ee)
+    (MkPerm D cf cfi I ioD (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD) fif ffi) efn))
+
