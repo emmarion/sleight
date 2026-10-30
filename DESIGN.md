@@ -1990,8 +1990,18 @@ cells (§43). `_` is as in §50.
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
-  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
+  (many Vacant : (erased Type A) (many vacant-slot is s) -> (MaybeUninit A))
+  (many Stale : (erased Type A) (many (Slot) s) (erased A v) (erased (Placed s A v) p) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+
+(def-adts $ (Plucked : (Type A) ((Slot) s) ((MaybeUninit A) m) ((MaybeUninit A) left) -> Type)
+  enum
+  (many PluckVacant : (erased Type A) ->
+     (Plucked A vacant-slot (Vacant A vacant-slot) (Vacant A vacant-slot)))
+  (many PluckStale : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p) ->
+     (Plucked A s (Stale A s v p) (Stale A s v p)))
+  (many PluckInit : (erased Type A) (erased (Slot) s) (erased A x) (erased (Placed s A x) p) ->
+     (Plucked A s (Init A x) (Stale A s x p))))
 
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
@@ -1999,16 +2009,16 @@ cells (§43). `_` is as in §50.
 ```
 
 A `(MaybeUninit A)` is one word: the word of `A` under `Init`, and the
-word of its slot under `Uninit`. So an `(Array (MaybeUninit A) xs)` is
-the same memory as the `(Array A ys)` it becomes. Reading an `Init` out
-is a `unique` match whose `Uninit` branch must be refuted, by a fact or
-by proof; the one-real-branch rule of §21 makes this `assume_init`
-with evidence in place of `unsafe`. Since the field of `Copy` is
-`many`, an element of an `(Array (Copy A) xs)` is read in place.
-`Immediate A` is an enum with `ImmU62` and `ImmCopy`; the `-imm`
-operations take it as evidence. Other immediate types coerce into
-`U62`: `U8` and `Char` by unwrapping and rewrapping, a fieldless enum
-through `coercible-tag` (§33).
+word of its slot under `Vacant` and `Stale`. So an `(Array (MaybeUninit
+A) xs)` is the same memory as the `(Array A ys)` it becomes. Reading an
+`Init` out is a `unique` match whose `Vacant` and `Stale` branches must
+be refuted, by a fact or by proof; the one-real-branch rule of §21
+makes this `assume_init` with evidence in place of `unsafe`. Since the
+field of `Copy` is `many`, an element of an `(Array (Copy A) xs)` is
+read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy` and
+`ImmMaybe`; the `-imm` operations take it as evidence. Other immediate
+types coerce into `U62`: `U8` and `Char` by unwrapping and rewrapping,
+a fieldless enum through `coercible-tag` (§33).
 
 The index proofs are generic relations on lists, which the prelude
 declares next to `List` (§42), with every field erased:
@@ -2023,10 +2033,10 @@ declares next to `List` (§42), with every field erased:
 - `(Repeat A n x xs)`: `xs` is `n` copies of `x`. Its constructors are
   `RepeatNil` and `RepeatCons`.
 
-One relation belongs to the arrays themselves. `(AllInit A xs ys)`
+Two relations belong to the arrays themselves. `(AllInit A xs ys)`
 pairs a list `xs` of `(MaybeUninit A)` whose every element is
 `(Init A x)` with the list `ys` of those `x`; its constructors are
-`AINil` and `AICons`.
+`AINil` and `AICons`. `Plucked`, above, is the other.
 
 The functions. Each is `extern` with a source model in
 `lib/prelude.sl`; the FFI's implementation drops the arguments the
@@ -2035,7 +2045,7 @@ model does not use:
 ```scheme
 array-new : (erased Type A) (subterm many (Nat) n) ->
     (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
-    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p)
+    (erased (Repeat (MaybeUninit A) n (Vacant A vacant-slot) xs) p)
 array-swap : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
     (subterm many (Nat) i) (unique A x) (erased A m) (erased (Nth A xs i m) nth) ->
     (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
@@ -2046,12 +2056,13 @@ array-place : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
 array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
-    (unique m is v) (erased (List (MaybeUninit A)) ys)
-    (unique (Array (MaybeUninit A) ys) r at a)
-    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p)
+    (unique m is v) (erased (MaybeUninit A) left) (erased (Plucked A (slot-of v) v left) pl)
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i left ys) p)
 array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
-    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased A w) (erased (Placed (slot-of x) A w) pw)
+    (erased (Nth (MaybeUninit A) xs i (Stale A (slot-of x) w pw)) nth) ->
     (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
     (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p)
 array-get : (erased Type A) (erased (List (Copy A)) xs)
@@ -2077,19 +2088,18 @@ array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
 `array-swap-imm` and `array-place-imm` are `array-swap` and
 `array-place` with an extra parameter `(erased (Immediate A) imm)` and
 a `many` index. `array-pluck` leaves the plucked element's word in the
-array under `Uninit`, and the slot of that `Uninit` is exactly the slot
-of the value returned. So the value may be mutated in place and put
-back with `array-unpluck`, an `extern at` function (§39) whose call
-costs nothing. This is for a unique value kept inside an outer array,
-such as a row of a jagged array: it is plucked, mutated in place, and
-put back at no cost. Until it is put back, the array may keep the plucked
-value alive. Constructing an `ACons` copies its tail, and taking an
-array apart through the model's `ACons` view is O(n). `init-witness`
-is an erased witness, in the shape of §60, that an
-`(Array (MaybeUninit A) xs)` with `(AllInit A xs ys)` coerces to an
-`(Array A ys)`, at `(Unique)` on both sides. The `coerce` is written
-where it is used: a wrapper function would extract to a call, while
-the inline `coerce` extracts to nothing.
+array under its `Plucked` leftover, at the slot of the value returned.
+So the value may be mutated in place and put back with `array-unpluck`,
+an `extern at` function (§39) whose call costs nothing. This is for a
+unique value kept inside an outer array, such as a row of a jagged
+array: it is plucked, mutated in place, and put back at no cost. Until
+it is put back, the array may keep the plucked value alive.
+Constructing an `ACons` copies its tail, and taking an array apart
+through the model's `ACons` view is O(n). `init-witness` is an erased
+witness, in the shape of §60, that an `(Array (MaybeUninit A) xs)` with
+`(AllInit A xs ys)` coerces to an `(Array A ys)`, at `(Unique)` on both
+sides. The `coerce` is written where it is used: a wrapper function
+would extract to a call, while the inline `coerce` extracts to nothing.
 
 ## 45. Literals
 
