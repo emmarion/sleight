@@ -1,0 +1,241 @@
+(def-adts $ (Zl : -> Type)
+  enum
+  (many Znil : -> (Zl))
+  (many Zhub : -> (Zl))
+  (many Zhubl : -> (Zl))
+  (many Zhubr : -> (Zl))
+  (many Zhat : -> (Zl))
+  (many Zhatl : -> (Zl))
+  (many Zhatr : -> (Zl))
+  (many ZfL : (many (Nat) k) -> (Zl))
+  (many ZfR : (many (Nat) k) -> (Zl)))
+
+(def-adts $ (Zp : -> Type)
+  enum
+  (many MkZp : (many (Zl) i) (many (List (Sub)) pl pr) -> (Zp)))
+
+(def-adts $ (Rz : -> Type)
+  enum
+  (many MkRz : (many (Nat) nhub) (many (List (Sub)) p0l p0r) -> (Rz)))
+
+(def-adts $ (Try : -> Type)
+  enum
+  (many MkTry : (many (Zp) z1 z2 z3) (many (Qzt) t) (many (List (Zp)) extra) -> (Try)))
+
+(def-fns _ $ (many shift-part : (many (List (Sub)) p q) -> (many (List (Sub)) r))
+  (cat _ (take _ 1 p) q))
+
+(def-fns _ $ (many zshiftl : (many (Rz) c) (many (Zl) zi) (many (Zp) zp) -> (many (Zp) r))
+  (let-match many c (MkRz _ p0l p0r))
+  (let-match many zp (MkZp _ pl pr))
+  (let-match many pl (Cons _ x pl1) ((Nil _) (MkZp zi (drop _ 1 p0l) (shift-part p0l p0r))))
+  (bif _ (nilp _ pl1) (MkZp zi p0l p0r) (MkZp zi pl1 (Cons _ x pr))))
+
+(def-fns _ $ (many zshiftr : (many (Rz) c) (many (Zl) zi) (many (Zp) zp) -> (many (Zp) r))
+  (let-match many c (MkRz _ p0l p0r))
+  (let-match many zp (MkZp _ pl pr))
+  (let-match many pr (Cons _ x pr1) ((Nil _) (MkZp zi (shift-part p0r p0l) (drop _ 1 p0r))))
+  (bif _ (nilp _ pr1) (MkZp zi p0l p0r) (MkZp zi (Cons _ x pl) pr1)))
+
+(def-fns _ $ (many zfan-k : (many (Bool) top) (many (List (Sub)) p) -> (many (Maybe (Nat)) k))
+  (let-match many p (Cons _ x _) ((Nil _) (None _)))
+  (let-match many x (MkSub s _ fs))
+  (let-match many fs (Nil _) ((Cons _ _ _) (Some _ (size _ fs))))
+  (let ((many h)) (rg-hi s))
+  (bif _ (nat-eqb h 5) (Some _ 0) (bif _ (andb top (nat-eqb h 6)) (Some _ 1) (None _))))
+
+(def-fns _ $ (many zfanl : (many (Bool) top) (many (List (Sub)) p) -> (many (Zl) i))
+  (match many (zfan-k top p) _ ((Some _ k) (ZfL k)) ((None _) (Znil))))
+
+(def-fns _ $ (many zfanr : (many (Bool) top) (many (List (Sub)) p) -> (many (Zl) i))
+  (match many (zfan-k top p) _ ((Some _ k) (ZfR k)) ((None _) (Znil))))
+
+(def-fns _ $ (many zstepl : (many (Rz) c) (many (Bool) top) (many (Zp) zp) -> (many (Zp) r))
+  (let-match many zp (MkZp i pl pr))
+  (match many i _
+    ((Zhub) (zshiftl c (Zhubl) zp))
+    ((Zhubl) (MkZp (Zhat) pl pr))
+    ((Zhubr) (zshiftr c (Zhubr) zp))
+    ((Zhat) (zshiftr c (zfanl (BFalse) pr) zp))
+    ((Zhatl) (MkZp (zfanr top pl) pl pr))
+    ((Zhatr) (MkZp (Zhub) pl pr))
+    ((ZfL k) (MkZp (match many k _ ((Zero) (Zhatr)) ((Succ k1) (ZfL k1))) pl pr))
+    (else (MkZp (Znil) pl pr))))
+
+(def-fns _ $ (many zstepr : (many (Rz) c) (many (Bool) top) (many (Zp) zp) -> (many (Zp) r))
+  (let-match many zp (MkZp i pl pr))
+  (let-match many i (ZfR k)
+    ((Zhub) (zshiftr c (Zhubr) zp))
+    ((Zhubl) (zshiftl c (Zhubl) zp))
+    ((Zhubr) (MkZp (Zhat) pl pr))
+    ((Zhat) (MkZp (zfanr (BFalse) pl) pl pr))
+    ((Zhatl) (MkZp (Zhub) pl pr))
+    ((Zhatr) (zshiftr c (zfanl top pr) zp))
+    (else (MkZp (Znil) pl pr)))
+  (let-match many k (Succ k1) ((Zero) (zshiftl c (Zhatl) zp)))
+  (MkZp (ZfR k1) pl pr))
+
+(def-fns _ $ (many hub-range : (many (Nat) n) -> (many (Rg) r))
+  (bif _ (leb n 8) (MkRg n n) (MkRg 9 9)))
+
+(def-fns _ $ (many zrange : (many (Rz) c) (many (Zp) zp) -> (many (Rg) r))
+  (let-match many c (MkRz nhub _ _))
+  (let-match many zp (MkZp i pl pr))
+  (match many i _
+    ((Znil) r59)
+    ((Zhub) (hub-range nhub))
+    ((Zhubl) (get-spoke pl))
+    ((Zhubr) (get-spoke pr))
+    ((Zhatl) (get-spoke pl))
+    ((Zhat) (get-hat pr))
+    ((Zhatr) (get-spoke pr))
+    ((ZfL k) (match many k _ ((Zero) (get-hat pr)) ((Succ k1) (fan-l k1 pl))))
+    ((ZfR k) (match many k _ ((Zero) (get-hat pl)) ((Succ k1) (fan-r k1 pl))))))
+
+(def-fns _ $ (many fitqa : (many (Rg) r) (many (Nat) qa) -> (many (Bool) b))
+  (let ((many h)) (rg-hi r))
+  (andb (leb h 8) (nat-eqb qa h)))
+
+(def-fns _ $ (many pop-at : (many (Rz) c) (many (Loc) i) (many (List (Sub)) p rest) -> (many (Maybe (List (Sub))) r))
+  (let-match many c (MkRz nhub _ p0r))
+  (let-match many p (Cons _ x _) ((Nil _) (None _)))
+  (let-match many (loc-range (BFalse) i x) (Some _ r) ((None _) (None _)))
+  (let-match many r (MkRg a b))
+  (let-match many (andb (nat-ltb a b) (leb b 8)) (BTrue) ((BFalse) (None _)))
+  (Some _ $ take _ nhub $ Cons _ (loc-set i x (MkRg a (monus b 1))) $ cat _ rest p0r))
+
+(def-fns _ $ (many fan-ix : (many (Nat) k) (many (List (Sub)) p) -> (many (Loc) i))
+  (LFan $ monus (size _ (get-fans p)) k))
+
+(def-fns _ $ (many red-pop : (many (Rz) c) (many (Zp) zp) -> (many (Maybe (List (Sub))) r))
+  (let-match many zp (MkZp i pl pr))
+  (let ((many prt)) (drop _ 1 pr))
+  (match many i _
+    ((Zhubl) (pop-at c (LSpoke) pl pr))
+    ((Zhubr) (pop-at c (LSpoke) pr prt))
+    ((Zhatl) (pop-at c (LSpoke) pl pr))
+    ((Zhat) (pop-at c (LHat) pr prt))
+    ((Zhatr) (pop-at c (LSpoke) pr prt))
+    ((ZfL k) (match many k _
+      ((Zero) (pop-at c (LHat) pr prt))
+      ((Succ _) (bif _ (leb k (size _ (get-fans pl))) (pop-at c (fan-ix k pl) pl pr) (None _)))))
+    ((ZfR k) (match many k _
+      ((Zero) (pop-at c (LHat) pl pr))
+      ((Succ k1) (pop-at c (LFan k1) pl pr))))
+    (else (None _))))
+
+(def-fns _ $ (many fitqzp : (many (Rz) c) (many (Zp) zp) (subterm many (Qn) q) -> (many (Bool) b))
+  (let ((many r)) (zrange c zp))
+  (match many q _
+    ((Qask0) (BTrue))
+    ((Qask1 qa) (fitqa r qa))
+    ((QaskL qa ql) (and (fitqa r qa) (tail $ fitqzp c (zstepl c (BTrue) zp) ql)))
+    ((QaskR qa qr) (and (fitqa r qa) (tail $ fitqzp c (zstepr c (BTrue) zp) qr)))
+    ((QaskLR qa ql qr) (and (fitqa r qa) (notail $ fitqzp c (zstepl c (BFalse) zp) ql) (tail $ fitqzp c (zstepr c (BFalse) zp) qr)))
+    ((QaskLL qa ql)
+      (let ((many zl)) (zstepl c (BFalse) zp))
+      (and (fitqa (zrange c zl) qa) (tail $ fitqzp c (zstepl c (BFalse) zl) ql)))
+    ((QaskRR qa qr)
+      (let ((many zr)) (zstepr c (BFalse) zp))
+      (and (fitqa (zrange c zr) qa) (tail $ fitqzp c (zstepr c (BFalse) zr) qr)))))
+
+(def-fns _ $ (many popzps : (many (Rz) c) (many (Zp) zp) (subterm many (Qn) q) -> (many (List (Zp)) zs))
+  (match many q _
+    ((Qask0) (Nil _))
+    ((Qask1 _) (Cons _ zp $ Nil _))
+    ((QaskL _ ql) (Cons _ zp $ notail $ popzps c (zstepl c (BTrue) zp) ql))
+    ((QaskR _ qr) (Cons _ zp $ notail $ popzps c (zstepr c (BTrue) zp) qr))
+    ((QaskLR _ ql qr) (Cons _ zp $ cat _ (notail $ popzps c (zstepl c (BFalse) zp) ql) (notail $ popzps c (zstepr c (BFalse) zp) qr)))
+    ((QaskLL _ ql)
+      (let ((many zl)) (zstepl c (BFalse) zp))
+      (Cons _ zl $ notail $ popzps c (zstepl c (BFalse) zl) ql))
+    ((QaskRR _ qr)
+      (let ((many zr)) (zstepr c (BFalse) zp))
+      (Cons _ zr $ notail $ popzps c (zstepr c (BFalse) zr) qr))))
+
+(def-fns _ $ (many red-qzt-leaf : (many (Rz) c) (many (Zp) z1 z2 z3) (subterm many (Qzt) t) -> (many (Maybe (List (Zp))) r))
+  (let-match many t (QztLeaf q1 q2 q3 t1) (else (None _)))
+  (match many (and (fitqzp c z3 q3) (fitqzp c z2 q2) (fitqzp c z1 q1)) _
+    ((BTrue) (Some _ $ cat _ (popzps c z1 q1) $ cat _ (popzps c z2 q2) (popzps c z3 q3)))
+    ((BFalse) (tail $ red-qzt-leaf c z1 z2 z3 t1))))
+
+(def-fns _ $ (many qzt-getr : (many (Rg) r) (many (Qzt) t) -> (many (Qzt) s))
+  (let-match many t (QztNode t5 t6 t7 t8) (else (QztNil)))
+  (match many (ix-of (rg-hi r) 5) _ ((I0) t5) ((I1) t6) ((I2) t7) ((I3) t8) ((IX) (QztNil))))
+
+(def-fns _ $ (many qzt-truncate : (many (Qzt) t) -> (many (Qzt) s))
+  (let-match many t (QztHub t58 _ _ _) (else t))
+  (match many t58 _ ((QztNode _ _ _ _) t58) (else t)))
+
+(def-fns _ $ (many first-try : (many (Rz) c) (subterm many (List (Try)) ts) -> (many (Maybe (List (Zp))) r))
+  (let-match many ts (Cons _ x rest) ((Nil _) (None _)))
+  (let-match many x (MkTry z1 z2 z3 t extra))
+  (match many (red-qzt-leaf c z1 z2 z3 t) _
+    ((Some _ obs) (Some _ $ cat _ obs extra))
+    ((None _) (tail $ first-try c rest))))
+
+(def-fns _ $ (many fan-tries : (many (Zp) zp zp1) (many (Qzt) sqt) (many (Nat) n t) (many (Rg) g) (subterm many (List (Rg)) fs) -> (many (List (Try)) ts))
+  (let-match many zp (MkZp _ pl pr))
+  (let-match many zp1 (MkZp _ pl1 pr1))
+  (let ((many first)) (nat-eqb t 0))
+  (let ((many z2)) (bif _ first (MkZp (Zhatl) pl pr) (MkZp (ZfR (monus t 1)) pl1 pr1)))
+  (let ((many e2)) (bif _ first (MkZp (Zhat) pl pr) (MkZp (ZfR t) pl1 pr1)))
+  (let ((many znil)) (MkZp (Znil) pl1 pr1))
+  (let-match many fs (Cons _ f rest)
+    ((Nil _) (Cons _ (MkTry (MkZp (Zhatr) pl1 pr1) z2 znil (qzt-getr (get-hat pr1) (qzt-getr g sqt))
+                       (Cons _ (MkZp (Zhat) pl1 pr1) $ Cons _ e2 $ Nil _)) $ Nil _)))
+  (Cons _ (MkTry (MkZp (ZfL (monus n (Succ t))) pl1 pr1) z2 znil (qzt-getr f (qzt-getr g sqt))
+                 (Cons _ (MkZp (ZfR (Succ t)) pl1 pr1) $ Cons _ e2 $ Nil _))
+    $ notail $ fan-tries zp zp1 sqt n (Succ t) f rest))
+
+(def-fns _ $ (many cons-tries : (many (Zp) zp zp1) (many (Qzt) sqt) -> (many (List (Try)) ts))
+  (let-match many zp (MkZp _ _ pr))
+  (let-match many pr (Cons _ x _) ((Nil _) (Nil _)))
+  (let-match many x (MkSub s h fs))
+  (bif _ (andb (nilp _ fs) (negb (nat-eqb (rg-hi s) 5))) (Nil _) (fan-tries zp zp1 sqt (size _ fs) 0 h fs)))
+
+(def-fns _ $ (many zpart-tries : (many (Rz) c) (many (Qzt) qt) (many (Zp) zp zp1) -> (many (List (Try)) ts))
+  (let-match many c (MkRz nhub _ _))
+  (let-match many zp (MkZp _ pl pr))
+  (let-match many zp1 (MkZp _ pl1 pr1))
+  (let ((many s) (many sl)) (values (get-spoke pr) (get-spoke pl)))
+  (let ((many sqt)) (qzt-getr s (qzt-truncate qt)))
+  (match many sqt _
+    ((QztNil) (Nil _))
+    (else
+      (Cons _ (MkTry (MkZp (Zhubr) pl1 pr1) (zshiftl c (Zhubl) zp) (MkZp (Zhat) pl pr) (qzt-getr s (qzt-getr sl (qzt-get1 nhub qt)))
+                     (Cons _ (MkZp (Zhubr) pl pr) $ Cons _ (MkZp (Zhubl) pl pr) $ Nil _))
+        $ Cons _ (MkTry (MkZp (zfanl (BTrue) pr) pl1 pr1) zp (MkZp (zfanr (BTrue) pl) pl pr) (qzt-getr (get-hat pr) (qzt-getr sl sqt))
+                     (Cons _ (MkZp (Zhat) pl pr) $ Cons _ (MkZp (Zhubl) pl pr) $ Cons _ (MkZp (Zhubr) pl pr) $ Nil _))
+        (cons-tries zp zp1 sqt)))))
+
+(def-fns _ $ (many zp-init : (many (List (Sub)) p) -> (many (Rz) c) (many (Zp) zp))
+  (let ((many p0l)) (rev-onto _ p (Nil _)))
+  (values (MkRz (size _ p) p0l p) (MkZp (Zhub) (drop _ 1 p0l) (shift-part p0l p))))
+
+(def-fns _ $ (many red-go : (subterm many (Nat) d cnt tag) (subterm many (List (Zp)) obs) (many (Rz) c) (many (Qzt) qt) (many (Zp) zp) -> (many (Bool) b))
+  (match many tag _
+    ((Succ t1)
+      (let-match many cnt (Succ cnt1) ((Zero) (BFalse)))
+      (let ((many zp1)) (zshiftr c (Zhub) zp))
+      (let ((many (Bool) found))
+        (match many (first-try c (zpart-tries c qt zp zp1)) _
+          ((Some _ obs1) (notail $ red-go d cnt t1 obs1 c qt zp))
+          ((None _) (BFalse))))
+      (match many found _ ((BTrue) (BTrue)) ((BFalse) (tail $ red-go d cnt1 tag (Nil _) c qt zp1))))
+    ((Zero)
+      (let-match many obs (Cons _ z obs1) ((Nil _) (BTrue)))
+      (let-match many (red-pop c z) (Some _ p) ((None _) (tail $ red-go d cnt tag obs1 c qt zp)))
+      (let-match many d (Succ d1) ((Zero) (BFalse)))
+      (let ((many c1) (many zp2)) (zp-init p))
+      (let-match many c1 (MkRz n _ _))
+      (match many (notail $ red-go d1 n 1 (Nil _) c1 qt zp2) _
+        ((BTrue) (tail $ red-go d cnt tag obs1 c qt zp))
+        ((BFalse) (BFalse))))))
+
+(def-fns _ $ (many redpart : (many (Qzt) qt) (many (List (Sub)) p) -> (many (Bool) b))
+  (let ((many c) (many zp)) (zp-init p))
+  (let-match many c (MkRz n _ _))
+  (let-match many (andb (leb 5 n) (leb n 11)) (BTrue) ((BFalse) (BFalse)))
+  (let-match many (nat-mul n 12) (Succ d1) ((Zero) (BFalse)))
+  (red-go d1 n 1 (Nil _) c qt zp))
