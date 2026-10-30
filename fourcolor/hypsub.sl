@@ -485,3 +485,41 @@
   (let ((erased ims) (erased rp) (erased si)) (lift-image g1 h l s2 s1 rs lf1 sr))
   (MkClassesOn g2 s2 ims k (respects-length h rs ims k rp lr) si (pairsep-map g1 g2 s1 s2 h l rs ims d k2 ps sr rp lf1 mv2 cs us)
     (covers-map g1 g2 s1 s2 h l rs ims s2 cv sr rp lf1 lf2 mv1 (sub-refl s2))))
+
+(def-fns _ $ (erased sub-under : (erased (List (Nat)) m s) (erased (Nat) k) (subterm erased (Sub m s) sb) (erased (Under s k) u) -> (erased (Under m k) r))
+  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (UnderNil k)))
+  (UnderCons m1 x k (under-in s x k u ix) (sub-under m1 s k sb1 u)))
+
+(def-fns _ $ (erased respects-under-vals : (erased (List (Nat)) h xs ys) (erased (Nat) d) (subterm erased (Respects h xs ys) rp) (erased (Under h d) u)
+    -> (erased (Under ys d) r))
+  (let-match erased rp (RespCons _ xs1 ys1 j y p rp1) ((RespNil _) (UnderNil d)))
+  (UnderCons ys1 y d (under-nth h j y d u p) (respects-under-vals h xs1 ys1 d rp1 u)))
+
+; ls sends each dart of xs in h to its position in h, and every other dart to 0.
+(def-adts $ (InvL : ((List (Nat)) h xs ls) -> Type)
+  enum
+  (many IvNil : (erased (List (Nat)) h) -> (InvL h (Nil (Nat)) (Nil (Nat))))
+  (many IvIn : (erased (List (Nat)) h xs ls) (erased (Nat) x j) (erased (Nth (Nat) h j x) p) (erased (InvL h xs ls) rest)
+      -> (InvL h (Cons (Nat) x xs) (Cons (Nat) j ls)))
+  (many IvOut : (erased (List (Nat)) h xs ls) (erased (Nat) x) (erased (NotIn x h) p) (erased (InvL h xs ls) rest)
+      -> (InvL h (Cons (Nat) x xs) (Cons (Nat) (Zero) ls))))
+
+(def-fns _ $ (erased inv-exists : (erased (List (Nat)) h) (subterm erased (List (Nat)) xs) -> (erased (List (Nat)) ls) (erased (InvL h xs ls) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (values (Nil _) (IvNil h))))
+  (let ((erased ls1) (erased r1)) (inv-exists h xs1))
+  (match erased (in-dec x h) _
+    ((OrL _ _ ix) (let ((erased j) (erased p)) (in-nth x h ix)) (values (Cons _ j ls1) (IvIn h xs1 ls1 x j p r1)))
+    ((OrR _ _ o) (values (Cons _ (Zero) ls1) (IvOut h xs1 ls1 x o r1)))))
+
+(def-fns _ $ (erased inv-nth : (erased (List (Nat)) h xs ls) (erased (Nat) i x j) (subterm erased (InvL h xs ls) iv) (erased (Distinct h) dh)
+    (erased (Nth (Nat) xs i x) px) (erased (Nth (Nat) h j x) pj) -> (erased (Nth (Nat) ls i j) r))
+  (match erased iv _
+    (absurd (IvNil _) px)
+    ((IvIn _ xs1 ls1 y j2 p iv1)
+      (match erased px _
+        ((NthHere _ _ _) (let-match erased (distinct-nth h j2 j x dh p pj) (Refl _ _)) (NthHere _ j2 ls1))
+        ((NthThere _ _ _ i1 _ px1) (NthThere _ j2 ls1 i1 j (inv-nth h xs1 ls1 i1 x j iv1 dh px1 pj)))))
+    ((IvOut _ xs1 ls1 y o iv1)
+      (match erased px _
+        (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x h o (nth-in h j x pj))))
+        ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (inv-nth h xs1 ls1 i1 x j iv1 dh px1 pj)))))))
