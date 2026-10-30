@@ -790,3 +790,41 @@
           (let-match erased (nth-fn _ ec ry e3 ery pe3 pery) (Refl _ _))
           (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery (MkFband fc _ ery eb (InHere eb (Nil _)) sp3) sc phz pry pehw pez sxry ixa nr))
         ((OrR _ _ hf) hf)))))
+
+; Every HomTrivial is a HomFive (the cases trivial_hom_ring settles are refuted).
+(def-fns _ $ (erased ht-five : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+    (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (Connected dm em nm fm) cn)
+    (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (HomFive dm ec fc em nm fm as hl) r))
+  (let-match erased ht (MkHomTrivial _ _ _ _ _ _ _ _ p hp hd zs lab lr x z hx ez k m rp wp rh rg lk md pez nr ds fl rl ts))
+  (let-match erased pb (MkPbpp _ _ _ _ hm gen bl pl pcu))
+  (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))
+  (let ((erased fe) (erased sp)) (spk-of dm em nm fm lab hm gen bl pl cnm fl))
+  (let ((erased cx)) (MkTCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab en ok fu sp cn))
+  (match erased ts _
+    ((OrL _ _ t)
+      (match erased (side-hd dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t) _
+        (absurd (OrL _ _ cl0)
+          (let-match erased cl0 (MkCloses _ _ _ _ e3 pe3 sp3))
+          (let-match erased (nth-fn _ ec z e3 ez pe3 pez) (Refl _ _))
+          (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _))))
+        ((OrR _ _ hf) hf)))
+    ((OrR _ _ t) (side-zs dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx x z hx ez k m p hp hd zs lr rp wp rh rg lk md pez nr ds rl t))))
+
+; The five-dart case of embed_full (the spoke ring of the one face, adj11_edge and adj_kernel_max in Coq), taken as a hypothesis.
+(def-adts $ (TrivFive : -> Type)
+  enum
+  (many MkTrivFive : (erased (Level) G)
+      (erased (Fn G (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+          (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+          (erased (Connected dm em nm fm) cn) (erased (HomFive dm ec fc em nm fm as hl) hf) -> (erased (False) r)) tr)
+      -> (TrivFive)))
+
+; fullred.sl's TrivRed from TrivFive. A level factory: tr is at a level minted after that of the hypothesis.
+(def-fns _ $ (erased triv-red-of : (erased (TrivFive) t5) -> (erased (TrivRed) r))
+  (let-match erased t5 (MkTrivFive G five))
+  (def-lvl T)
+  (def-fns T $ (erased tr : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
+      (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (NoColoring em fm) ncol)
+      (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (False) r))
+    (five dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb ncol cn (ht-five dc dm ec nc fc ksc rc em nm fm ksm as hl en ok fu pb cn ht)))
+  (MkTrivRed T tr))
