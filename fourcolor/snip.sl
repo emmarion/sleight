@@ -1490,3 +1490,46 @@
       (morph-relax hd ed sde e r rr bd d sa1 rbd dhd le uhd idd med0) mnd mer
       (morph-relax hr nr snr n RV RVR br d sa3 rbr dhr ln uhr idr mnr0))
     rbd rv rbr ds ap))
+
+; planar_snipd and planar_snipr: the two parts of a patch of a planar map are planar.
+(def-fns _ $ (erased patch-parts-planar : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Genus d e n f (Zero)) g)
+    -> (erased (Genus dd ed nd fd (Zero)) gd) (erased (Genus dr er nr fr (Zero)) gr))
+  (let ((erased pt2)) pt)
+  (let-match erased pt2
+    (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hdm hrm io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+  (let ((erased k1) (erased g1)) (even-genus dd ed nd fd hdm))
+  (let ((erased k2) (erased g2)) (even-genus dr er nr fr hrm))
+  (let ((erased e1) (erased e2)) (planar-patch d dd dr k1 k2 e n f ed nd fd er nr fr hd hr bd br pt g1 g2 g))
+  (let-match erased e1 (Refl _ _))
+  (let-match erased e2 (Refl _ _))
+  (values g1 g2))
+
+; x is in diskF r: in diskN r and on no face of a dart of r.
+(def-adts $ (DiskF : ((List (Nat)) n f r) ((Nat) x) -> Type)
+  enum
+  (many MkDiskF : (erased (List (Nat)) n f r) (erased (Nat) x) (erased (DiskN n f r x) dn) (erased (Kernel f r x) k) -> (DiskF n f r x)))
+
+(def-fns _ $ (erased kernel-off : (erased (List (Nat)) f r) (erased (Nat) x) (erased (Kernel f r x) k) -> (erased (NotIn x r) o))
+  (let-match erased k (MkKernel _ _ lab ls _ l rf rp px ol))
+  (match erased (in-dec x r) _
+    (absurd (OrL _ _ ix) (apart-irrefl l (notin-in l l ls ol (in-map lab r ls x l ix rp px))))
+    ((OrR _ _ o) o)))
+
+; diskF_face: diskF is closed under face, both ways.
+(def-fns _ $ (erased diskf-face : (erased (List (Nat)) n f r) (erased (Nat) x y) (erased (DiskF n f r x) df) (erased (Nth (Nat) f x y) pf)
+    -> (erased (DiskF n f r y) res))
+  (let-match erased df (MkDiskF _ _ _ _ dn k))
+  (let-match erased k (MkKernel _ _ lab ls _ l rf rp px ol))
+  (MkDiskF n f r y (disk-step n f r x y dn (DPFace n f r x y y (kernel-off f r x k) pf (DPNil n f r y)))
+    (MkKernel f r lab ls y l rf rp (respects-nth lab f lab x y l rf pf px) ol)))
+
+(def-fns _ $ (erased diskf-walk : (erased (List (Nat)) n f r s xs) (erased (Nat) x y) (subterm erased (Path f s x y xs) w) (erased (DiskF n f r x) df)
+    -> (erased (DiskF n f r y) res))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ pf _ w1) ((PathHere _ _ _) df))
+  (diskf-walk n f r s xs1 x1 y w1 (diskf-face n f r x x1 df pf)))
+
+(def-fns _ $ (erased diskf-face-inv : (erased (Nat) d x y) (erased (List (Nat)) n f fi r) (erased (HPerm d f fi) pf) (erased (DiskF n f r y) df)
+    (erased (Nth (Nat) f x y) px) -> (erased (DiskF n f r x) res))
+  (let ((erased xs) (erased w)) (cycle d x y f fi pf px (pre-lt d x y f fi pf px)))
+  (diskf-walk n f r (Nil _) xs y x w df))
