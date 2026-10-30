@@ -130,7 +130,12 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   (a whole trace) and `readback.sl`.
 - `geo.sl`, `plan.sl`: `drawing-plan`, every `Drawing` has a
   `SweepPlan`; `plan-test.sl` checks it alone.
-- Still open: all of part B.
+- `hypgraph.sl`, `hypperm.sl`, `hypermap.sl`, `hypplane.sl`: part B's
+  layer 1 begins. `hypgoal.sl` checks `PlaneHypermaps`: each `PlaneMap`
+  is a hypermap (face `nd`, edge `e`, node e∘nd⁻¹) of genus 0 in the
+  sense of the Euler equation, and bridgeless; `Colored` is equivalent to
+  a Gonthier-style four-colouring. Load after `labels.sl`.
+- Still open: the rest of part B.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
