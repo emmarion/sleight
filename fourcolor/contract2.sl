@@ -34,3 +34,182 @@
   (let-match erased em1 (Refl _ _))
   (let-match erased em2 (Refl _ _))
   (values e1 n1 f1 e2 n2 f2 m2 ske1 skn1 ske2 skn2 h1 h2 g2 (Refl _ m) dd2))
+
+; After WalkupF at z, a face step a -> c with neither e^-1 a nor a nor c at z is kept.
+(def-fns _ $ (erased wf-keep : (erased (Nat) d z a b c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b z) nb) (erased (Apart (Nat) Lt a z) na)
+    (erased (Nth (Nat) f a c) pa) (erased (Apart (Nat) Lt c z) nc) -> (erased (Nth (Nat) f2 a c) r))
+  (hyper-third d a b c e2 n2 f2 h2 (skip-keep z b a e e2 ske pb nb na) (skip-keep z c b n n2 skn (hyper-node d c a b e n f h pa pb) nc nb)))
+
+; After WalkupF at z, a face step a -> z continues to f (e z).
+(def-fns _ $ (erased wf-jump : (erased (Nat) d z a b ez w) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b z) nb) (erased (Apart (Nat) Lt a z) na)
+    (erased (Nth (Nat) f a z) pa) (erased (Nth (Nat) e z ez) pz) (erased (Nth (Nat) f ez w) pw) -> (erased (Nth (Nat) f2 a w) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nzb)) (hyper-node d z a b e n f h pa pb))
+  (let ((erased nwz)) (hyper-node d w ez z e n f h pw pz))
+  (let-match erased (nat-eq w z) (Unequal _ _ _ _ nwz2)
+    (absurd (Equal _ _ _) (let-match erased (nth-fn _ n z z b nwz nzb) (Refl _ _)) (apart-irrefl b nb)))
+  (hyper-third d a b w e2 n2 f2 h2 (skip-keep z b a e e2 ske pb nb na) (skip-cut-at d z w b n ni n2 pn skn nwz nzb nwz2)))
+
+; Where ez steps after WalkupF at z: to u = f z, or to v = f ez when f z = z.
+(def-adts $ (Jump1 : ((Nat) z u v j) -> Type)
+  enum
+  (many J1Keep : (erased (Nat) z u v) (erased (Apart (Nat) Lt u z) nu) -> (Jump1 z u v u))
+  (many J1Loop : (erased (Nat) z v) -> (Jump1 z z v v)))
+
+; After WalkupF at z, with ez = e z and z = e ez, ez steps to f z, or to f ez when z is alone on its face.
+(def-fns _ $ (erased wf-partner : (erased (Nat) d z ez u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
+    (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e z ez) pz) (erased (Nth (Nat) e ez z) pez) (erased (Apart (Nat) Lt ez z) nez)
+    (erased (Nth (Nat) f z u) pu) (erased (Nth (Nat) f ez v) pv) -> (erased (Nat) j) (erased (Nth (Nat) f2 ez j) r) (erased (Jump1 z u v j) jp))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased e2z)) (skip-cut-at d z ez ez e nf e2 pe ske pez pz nez))
+  (let-match erased (nat-eq u z) (Unequal _ _ _ _ nuz)
+    ((Equal _ _ _)
+      (let ((erased nvz)) (hyper-node d v ez z e n f h pv pz))
+      (let ((erased nzz)) (hyper-node d z z ez e n f h pu pez))
+      (let-match erased (nat-eq v z) (Unequal _ _ _ _ nvz2)
+        (absurd (Equal _ _ _) (let-match erased (nth-fn _ n z z ez nvz nzz) (Refl _ _)) (apart-irrefl z nez)))
+      (values v (hyper-third d ez ez v e2 n2 f2 h2 e2z (skip-cut-at d z v ez n ni n2 pn skn nvz nzz nvz2)) (J1Loop z v))))
+  (values u (hyper-third d ez ez u e2 n2 f2 h2 e2z (skip-keep z u ez n n2 skn (hyper-node d u z ez e n f h pu pez) nuz nez)) (J1Keep z u v nuz)))
+
+; Where a face step a -> c goes after contracting x, ex (u = f x, v = f ex): it is kept off x and ex, and otherwise jumps
+; to the other face, or stays on its own when the other face is a single dart.
+(def-adts $ (Jump : ((Nat) x ex u v c j) -> Type)
+  enum
+  (many JKeep : (erased (Nat) x ex u v c) (erased (Apart (Nat) Lt c x) nx) (erased (Apart (Nat) Lt c ex) ne) -> (Jump x ex u v c c))
+  (many JX : (erased (Nat) x ex u v) (erased (Apart (Nat) Lt v ex) nv) -> (Jump x ex u v x v))
+  (many JXL : (erased (Nat) x ex u) (erased (Apart (Nat) Lt u x) nu) -> (Jump x ex u ex x u))
+  (many JE : (erased (Nat) x ex u v) (erased (Apart (Nat) Lt u x) nu) -> (Jump x ex u v ex u))
+  (many JEL : (erased (Nat) x ex v) -> (Jump x ex x v ex v)))
+
+(def-fns _ $ (erased cf-face : (erased (Nat) d x ex u v a b c) (erased (List (Nat)) e n f e1 n1 f1 e2 n2 f2) (erased (Hypermap d e n f) h)
+    (erased (Hypermap d e1 n1 f1) h1) (erased (Hypermap d e2 n2 f2) h2) (erased (Skip e x e1) ske1) (erased (Skip n x n1) skn1) (erased (Skip e1 ex e2) ske2)
+    (erased (Skip n1 ex n2) skn2) (erased (Nth (Nat) e x ex) pex) (erased (Nth (Nat) e ex x) pxe) (erased (Apart (Nat) Lt ex x) nex)
+    (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b x) nbx) (erased (Apart (Nat) Lt b ex) nbe)
+    (erased (Apart (Nat) Lt a x) nax) (erased (Apart (Nat) Lt a ex) nae) (erased (Nth (Nat) f a c) pa)
+    -> (erased (Nat) j) (erased (Nth (Nat) f2 a j) r) (erased (Jump x ex u v c j) jp))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased pb1)) (skip-keep x b a e e1 ske1 pb nbx nax))
+  (let ((erased e1x)) (skip-cut-at d x ex ex e nf e1 pe ske1 pxe pex nex))
+  (let ((erased j1) (erased p1) (erased jp1)) (wf-partner d x ex u v e n f e1 n1 f1 h h1 ske1 skn1 pex pxe nex pu pv))
+  (let-match erased (nat-eq c x) (Unequal _ _ _ _ ncx)
+    ((Equal _ _ _)
+      (let-match erased (nat-eq u x) (Unequal _ _ _ _ nux)
+        (absurd (Equal _ _ _) (let-match erased (perm-inj d a x x f fi pf pa pu) (Refl _ _)) (apart-irrefl a nax)))
+      (let ((erased qa)) (wf-jump d x a b ex v e n f e1 n1 f1 h h1 ske1 skn1 pb nbx nax pa pex pv))
+      (let-match erased (nat-eq v ex) (Unequal _ _ _ _ nve)
+        ((Equal _ _ _)
+          (let-match erased jp1 (J1Keep _ _ _ _) (absurd (J1Loop _ _) (apart-irrefl x nux)))
+          (values u (wf-jump d ex a b ex u e1 n1 f1 e2 n2 f2 h1 h2 ske2 skn2 pb1 nbe nae qa e1x p1) (JXL x ex u nux))))
+      (values v (wf-keep d ex a b v e1 n1 f1 e2 n2 f2 h1 h2 ske2 skn2 pb1 nbe nae qa nve) (JX x ex u v nve))))
+  (let ((erased qa)) (wf-keep d x a b c e n f e1 n1 f1 h h1 ske1 skn1 pb nbx nax pa ncx))
+  (let-match erased (nat-eq c ex) (Unequal _ _ _ _ nce)
+    ((Equal _ _ _)
+      (let ((erased r)) (wf-jump d ex a b ex j1 e1 n1 f1 e2 n2 f2 h1 h2 ske2 skn2 pb1 nbe nae qa e1x p1))
+      (match erased jp1 (((Nat) j) ((Nth (Nat) f2 a j) r) ((Jump x ex u v c j) jp))
+        ((J1Keep _ _ _ nux) (values u r (JE x ex u v nux)))
+        ((J1Loop _ _) (values v r (JEL x ex v))))))
+  (values c (wf-keep d ex a b c e1 n1 f1 e2 n2 f2 h1 h2 ske2 skn2 pb1 nbe nae qa nce) (JKeep x ex u v c ncx nce)))
+
+(def-fns _ $ (erased absurd seps-path : (erased (Nat) a b) (erased (List (Nat)) f s xs) (erased (Seps f a b) sp) (erased (Path f s a b xs) w) -> (erased (False) r))
+  (let-match erased sp (MkSeps _ lab _ _ se))
+  (let-match erased se (MkSeparates _ _ _ _ l1 l2 rf p1 p2 ne))
+  (let-match erased (nth-fn _ lab b l1 l2 (path-col lab f s xs a b l1 rf w p1) p2) (Refl _ _))
+  (apart-irrefl l1 ne))
+
+; A walk from a fixed dart stays there.
+(def-fns _ $ (erased fixed-stay : (erased (Nat) c y) (erased (List (Nat)) f s t xs) (erased (FixedIn f s) fx) (erased (In c s) ic)
+    (subterm erased (Path f t c y xs) w) -> (erased (Eq (Nat) c y) r))
+  (let-match erased w (PathStep _ _ xs1 _ z _ pz _ w1) ((PathHere _ _ _) (Refl _ c)))
+  (let-match erased (nth-fn _ f c z c pz (fixed-at f s c fx ic)) (Refl _ _))
+  (fixed-stay c y f s t xs1 fx ic w1))
+
+; q agrees with p off the darts s, each step of the history cutting an edge pair x, y of the current permutation.
+(def-adts $ (Agree : ((Nat) d) ((List (Nat)) p q s) -> Type)
+  enum
+  (many AgNil : (erased (Nat) d) (erased (List (Nat)) p) -> (Agree d p p (Nil (Nat))))
+  (many AgStep : (erased (Nat) d x y) (erased (List (Nat)) p q qi q1 q2 s) (erased (Agree d p q s) ag) (erased (HPerm d q qi) pm) (erased (Skip q x q1) sk1)
+      (erased (Skip q1 y q2) sk2) (erased (Nth (Nat) q x y) pxy) (erased (Nth (Nat) q y x) pyx) -> (Agree d p q2 (Cons (Nat) y (Cons (Nat) x s)))))
+
+(def-fns _ $ (erased agree-at : (erased (Nat) d a b) (erased (List (Nat)) p q s) (subterm erased (Agree d p q s) ag) (erased (NotIn a s) out) (erased (Nth (Nat) p a b) pa)
+    -> (erased (Nth (Nat) q a b) r))
+  (let-match erased ag (AgStep _ x y _ q0 qi q1 _ s1 ag1 pm sk1 sk2 pxy pyx) ((AgNil _ _) pa))
+  (let-match erased out (NotInCons _ _ _ nay out1))
+  (let-match erased out1 (NotInCons _ _ _ nax out2))
+  (let ((erased qa)) (agree-at d a b p q0 s1 ag1 out2 pa))
+  (let-match erased (nat-eq b x) (Unequal _ _ _ _ nbx)
+    (absurd (Equal _ _ _) (let-match erased (perm-inj d a y x q0 qi pm qa pyx) (Refl _ _)) (apart-irrefl a nay)))
+  (let-match erased (nat-eq b y) (Unequal _ _ _ _ nby)
+    (absurd (Equal _ _ _) (let-match erased (perm-inj d a x y q0 qi pm qa pxy) (Refl _ _)) (apart-irrefl a nax)))
+  (skip-keep y a b q1 q sk2 (skip-keep x a b q0 q1 sk1 qa nax nbx) nay nby))
+
+; e is the plain e0 off the dead darts s.
+(def-adts $ (LPlain : ((Nat) d) ((List (Nat)) e s) -> Type)
+  enum
+  (many MkLPlain : (erased (Nat) d) (erased (List (Nat)) e0 e ei s) (erased (AllOrder d e0 (Succ (Succ (Zero)))) pl) (erased (Agree d e0 e s) ag)
+      (erased (HPerm d e ei) pm) (erased (FixedIn e s) fx) (erased (Length (Nat) e0 d) le) -> (LPlain d e s)))
+
+(def-fns _ $ (erased lp-at : (erased (Nat) d a) (erased (List (Nat)) e s) (erased (LPlain d e s) lp) (erased (Lt a d) la) (erased (NotIn a s) out)
+    -> (erased (Nat) b) (erased (Nth (Nat) e a b) pa) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b a) ne) (erased (NotIn b s) ob))
+  (let-match erased lp (MkLPlain _ e0 _ ei _ pl ag pm fx le))
+  (let ((erased b) (erased p0)) (nth-exists _ e0 d a le la))
+  (let ((erased q0) (erased ne)) (plain-eq d a b e0 pl la p0))
+  (let ((erased pa)) (agree-at d a b e0 e s ag out p0))
+  (let ((erased ob)) (fixed-out d a b e ei s pm fx pa out))
+  (values b pa (agree-at d b a e0 e s ag ob q0) ne ob))
+
+(def-fns _ $ (erased absurd seps-back : (erased (Nat) a b) (erased (List (Nat)) f s xs) (erased (Seps f a b) sp) (erased (Path f s b a xs) w) -> (erased (False) r))
+  (let-match erased sp (MkSeps _ lab _ _ se))
+  (let-match erased se (MkSeparates _ _ _ _ l1 l2 rf p1 p2 ne))
+  (let-match erased (nth-fn _ lab a l2 l1 (path-col lab f s xs b a l2 rf w p2) p1) (Refl _ _))
+  (apart-irrefl l1 ne))
+
+; The contraction of the edge x, ex of a map with dead darts s, whose e is plain off s, with u = f x, v = f ex and x and ex
+; told apart along the faces.
+(def-adts $ (CStep : ((Nat) d x ex) ((List (Nat)) e n f s e2 n2 f2) -> Type)
+  enum
+  (many MkCStep : (erased (Nat) d x ex m m2 u v) (erased (List (Nat)) e n f s e1 n1 f1 e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+      (erased (Dead d e n f s m) dd) (erased (LPlain d e s) lp) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) e x ex) pex)
+      (erased (Nth (Nat) e ex x) pxe) (erased (Apart (Nat) Lt ex x) nex) (erased (NotIn ex s) oex) (erased (Skip e x e1) ske1) (erased (Skip n x n1) skn1)
+      (erased (Skip e1 ex e2) ske2) (erased (Skip n1 ex n2) skn2) (erased (Hypermap d e1 n1 f1) h1) (erased (Hypermap d e2 n2 f2) h2)
+      (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Eq (Nat) m (Succ (Succ m2))) em) (erased (Dead d e2 n2 f2 (Cons (Nat) ex (Cons (Nat) x s)) m2) dd2)
+      (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Seps f x ex) nb) -> (CStep d x ex e n f s e2 n2 f2)))
+
+(def-fns _ $ (erased cstep-make : (erased (Nat) d m x) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Dead d e n f s m) dd) (erased (LPlain d e s) lp) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nat) ex) (erased (Nth (Nat) e x ex) pex)
+    (erased (Seps f x ex) nb) -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m2) (erased (Eq (Nat) m (Succ (Succ m2))) em)
+    (erased (Dead d e2 n2 f2 (Cons (Nat) ex (Cons (Nat) x s)) m2) dd2) (erased (CStep d x ex e n f s e2 n2 f2) cs))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased ex2) (erased pex2) (erased pxe) (erased nex) (erased oex)) (lp-at d x e s lp lx out))
+  (let-match erased (nth-fn _ e x ex ex2 pex pex2) (Refl _ _))
+  (let ((erased e1) (erased n1) (erased f1) (erased e2) (erased n2) (erased f2) (erased m2) (erased ske1) (erased skn1) (erased ske2) (erased skn2)
+      (erased h1) (erased h2) (erased g2) (erased em) (erased dd2))
+    (contract-dead d m x ex e n f s h g dd lx out pex nex))
+  (let ((erased u) (erased pu) (erased _)) (perm-nth d x f fi pf lx))
+  (let ((erased v) (erased pv) (erased _)) (perm-nth d ex f fi pf (perm-val d x ex e nf pe pex)))
+  (values e2 n2 f2 m2 em dd2
+    (MkCStep d x ex m m2 u v e n f s e1 n1 f1 e2 n2 f2 h g dd lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h1 h2 g2 em dd2 pu pv nb)))
+
+; Where a live dart's face step goes in the contraction.
+(def-fns _ $ (erased cs-face : (erased (Nat) d x ex a c) (erased (List (Nat)) e n f s e2 n2 f2) (erased (CStep d x ex e n f s e2 n2 f2) cs) (erased (Lt a d) la)
+    (erased (NotIn a (Cons (Nat) ex (Cons (Nat) x s))) oa) (erased (Nth (Nat) f a c) pa)
+    -> (erased (Nat) u v j) (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Nth (Nat) f2 a j) r) (erased (Jump x ex u v c j) jp))
+  (let-match erased cs (MkCStep _ _ _ m m2 u v _ _ _ _ e1 n1 f1 _ _ _ h g dd lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h1 h2 g2 em dd2 pu pv nb))
+  (let-match erased oa (NotInCons _ _ _ nae oa1))
+  (let-match erased oa1 (NotInCons _ _ _ nax oa2))
+  (let ((erased b) (erased pab) (erased pb) (erased _) (erased _)) (lp-at d a e s lp la oa2))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased (nat-eq b x) (Unequal _ _ _ _ nbx)
+    (absurd (Equal _ _ _) (let-match erased (nth-fn _ e x a ex pb pex) (Refl _ _)) (apart-irrefl a nae)))
+  (let-match erased (nat-eq b ex) (Unequal _ _ _ _ nbe)
+    (absurd (Equal _ _ _) (let-match erased (nth-fn _ e ex a x pb pxe) (Refl _ _)) (apart-irrefl a nax)))
+  (let ((erased j) (erased r) (erased jp)) (cf-face d x ex u v a b c e n f e1 n1 f1 e2 n2 f2 h h1 h2 ske1 skn1 ske2 skn2 pex pxe nex pu pv pb nbx nbe nax nae pa))
+  (values u v j pu pv r jp))
+
+(def-fns _ $ (erased cs-live-f : (erased (Nat) d x ex a c) (erased (List (Nat)) e n f s e2 n2 f2) (erased (CStep d x ex e n f s e2 n2 f2) cs)
+    (erased (NotIn a s) oa) (erased (Nth (Nat) f a c) pa) -> (erased (NotIn c s) r) (erased (Lt c d) lc))
+  (let-match erased cs (MkCStep _ _ _ m m2 u v _ _ _ _ e1 n1 f1 _ _ _ h g dd lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h1 h2 g2 em dd2 pu pv nb))
+  (let-match erased dd (MkDead _ _ k _ _ _ _ fe fn ff ds ls us a2))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (values (fixed-out d a c f fi s pf ff pa oa) (perm-val d a c f fi pf pa)))
