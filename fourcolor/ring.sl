@@ -44,6 +44,11 @@
   (let ((erased xc) (erased mx)) (mul x c))
   (MulSucc a1 bc xc abc (mul-assoc a1 b c x xc bc m1 mx o) (mul-distr x b ab c xc bc abc p mx o n)))
 
+(let ((many i0)) (Zero))
+(let ((many i1)) (Succ i0))
+(let ((many i2)) (Succ i1))
+(let ((many i3)) (Succ i2))
+
 (let ((erased Mono)) (List (Nat)))
 (let ((erased Poly)) (List Mono))
 
@@ -378,3 +383,95 @@
     (erased (Eval env e n1) v1) (erased (Eval env e n2) v2) -> (erased (Eq (Nat) n1 n2) r))
   (let ((erased p) (erased m)) (norm e))
   (ring-sound env e e n1 n2 (MkRingEq e e p m m) v1 v2))
+
+(def-fns _ $ (erased ev-add : (erased (List (Nat)) env) (erased (Expr) a b) (erased (Nat) x y) (erased (Eval env a x) ea) (erased (Eval env b y) eb) ->
+    (erased (Nat) n) (erased (Add x y n) p) (erased (Eval env (EAdd a b) n) e))
+  (let ((erased n) (erased p)) (add x y))
+  (values n p (EvAdd env a b x y n ea eb p)))
+
+(def-fns _ $ (erased ev-mul : (erased (List (Nat)) env) (erased (Expr) a b) (erased (Nat) x y) (erased (Eval env a x) ea) (erased (Eval env b y) eb) ->
+    (erased (Nat) n) (erased (Mul x y n) p) (erased (Eval env (EMul a b) n) e))
+  (let ((erased n) (erased p)) (mul x y))
+  (values n p (EvMul env a b x y n ea eb p)))
+
+(def-fns _ $ (erased add-mono-lt : (erased (Nat) a b c x y) (subterm erased (Lt a b) l) (erased (Add a c x) p) (erased (Add b c y) q) ->
+    (erased (Lt x y) r))
+  (let-match erased l (LtS a1 b1 l1)
+    ((LtZ b1) (let-match erased p (AddZero _)) (let-match erased q (AddSucc _ _ y1 q1)) (add-le-right b1 c y1 q1)))
+  (let-match erased p (AddSucc _ _ x1 p1))
+  (let-match erased q (AddSucc _ _ y1 q1))
+  (LtS x1 y1 (add-mono-lt a1 b1 c x1 y1 l1 p1 q1)))
+
+(def-fns _ $ (erased add-mono-le : (erased (Nat) b c d y z) (erased (Lt c (Succ d)) l) (subterm erased (Add b c y) p) (erased (Add b d z) q) ->
+    (erased (Lt y (Succ z)) r))
+  (let-match erased p (AddSucc b1 _ y1 p1) ((AddZero _) (let-match erased q (AddZero _)) l))
+  (let-match erased q (AddSucc _ _ z1 q1))
+  (LtS y1 (Succ z1) (add-mono-le b1 c d y1 z1 l p1 q1)))
+
+(def-fns _ $ (erased add-lt : (erased (Nat) a b c d x y) (erased (Lt a b) l) (erased (Lt c (Succ d)) k) (erased (Add a c x) p) (erased (Add b d y) q) ->
+    (erased (Lt x y) r))
+  (let ((erased w) (erased o)) (add b c))
+  (lt-le-trans x w y (add-mono-lt a b c x w l p o) (add-mono-le b c d w y k o q)))
+
+(def-fns _ $ (erased add-cancel-lt : (erased (Nat) a b c d x) (erased (Add a b x) p) (erased (Add c d x) q) (erased (Lt b d) l) -> (erased (Lt c a) r))
+  (match erased (lt-dec c a) _
+    ((Yes _ _ _ _ r) r)
+    (absurd (No _ _ _ _ le) (lt-irrefl x (add-lt b d a c x x l (le-lt-succ a c le) (add-comm a b x p) (add-comm c d x q))))))
+
+(def-fns _ $ (erased lt-diff : (erased (Nat) b a) (subterm erased (Lt b a) l) -> (erased (Nat) x) (erased (Add b (Succ x) a) p))
+  (let-match erased l (LtS b1 a1 l1) ((LtZ a1) (values a1 (AddZero a))))
+  (let ((erased x) (erased p)) (lt-diff b1 a1 l1))
+  (values x (AddSucc b1 (Succ x) a1 p)))
+
+(let ((many rearr-l)) (EAdd (EAdd (EMul (EAdd (EVar i0) (EVar i1)) (EVar i2)) (EMul (EVar i0) (EAdd (EVar i2) (EVar i3)))) (EMul (EVar i1) (EVar i3))))
+(let ((many rearr-r)) (EAdd (EMul (EAdd (EVar i0) (EVar i1)) (EAdd (EVar i2) (EVar i3))) (EMul (EVar i0) (EVar i2))))
+(comptime-match many (ring-check rearr-l rearr-r) (Some _ rearr-eq))
+
+(def-fns _ $ (erased cross : (erased (List (Nat)) env) (erased (Expr) ea eb ec ed) (erased (Nat) a b c d x y)
+    (erased (Eval env ea a) va) (erased (Eval env eb b) vb) (erased (Eval env ec c) vc) (erased (Eval env ed d) vd)
+    (erased (Add b x a) pa) (erased (Add c y d) pd) ->
+    (erased (Nat) l r) (erased (Eval env (EAdd (EMul ea ec) (EMul eb ed)) l) vl) (erased (Eval env (EAdd (EMul ea ed) (EMul eb ec)) r) vr)
+    (erased (Nat) xy) (erased (Mul x y xy) m) (erased (Add l xy r) p))
+  (let ((erased ac) (erased m1) (erased vac)) (ev-mul env _ _ _ _ va vc))
+  (let ((erased bd) (erased m2) (erased vbd)) (ev-mul env _ _ _ _ vb vd))
+  (let ((erased ad) (erased m3) (erased vad)) (ev-mul env _ _ _ _ va vd))
+  (let ((erased bc) (erased m4) (erased vbc)) (ev-mul env _ _ _ _ vb vc))
+  (let ((erased l) (erased p1) (erased vl)) (ev-add env _ _ _ _ vac vbd))
+  (let ((erased r) (erased p2) (erased vr)) (ev-add env _ _ _ _ vad vbc))
+  (let ((erased e2)) (Cons _ b $ Cons _ x $ Cons _ c $ Cons _ y $ Nil (Nat)))
+  (let ((erased wb)) (EvVar e2 i0 b (NthHere _ b _)))
+  (let ((erased wx)) (EvVar e2 i1 x (NthThere _ b _ _ x $ NthHere _ x _)))
+  (let ((erased wc)) (EvVar e2 i2 c (NthThere _ b _ _ c $ NthThere _ x _ _ c $ NthHere _ c _)))
+  (let ((erased wy)) (EvVar e2 i3 y (NthThere _ b _ _ y $ NthThere _ x _ _ y $ NthThere _ c _ _ y $ NthHere _ y _)))
+  (let ((erased wa)) (EvAdd e2 _ _ b x a wb wx pa))
+  (let ((erased wd)) (EvAdd e2 _ _ c y d wc wy pd))
+  (let ((erased xy) (erased m) (erased wxy)) (ev-mul e2 _ _ x y wx wy))
+  (let ((erased w) (erased p) (erased ww))
+    (ev-add e2 _ _ l xy (EvAdd e2 _ _ ac bd l (EvMul e2 _ _ a c ac wa wc m1) (EvMul e2 _ _ b d bd wb wd m2) p1) wxy))
+  (let-match erased (ring-sound e2 rearr-l rearr-r w r rearr-eq ww
+    (EvAdd e2 _ _ ad bc r (EvMul e2 _ _ a d ad wa wd m3) (EvMul e2 _ _ b c bc wb wc m4) p2)) (Refl _ _))
+  (values l r vl vr xy m p))
+
+(def-fns _ $ (erased cross-lt : (erased (List (Nat)) env) (erased (Expr) ea eb ec ed) (erased (Nat) a b c d)
+    (erased (Eval env ea a) va) (erased (Eval env eb b) vb) (erased (Eval env ec c) vc) (erased (Eval env ed d) vd)
+    (erased (Lt b a) ba) (erased (Lt c d) cd) ->
+    (erased (Nat) l r) (erased (Eval env (EAdd (EMul ea ec) (EMul eb ed)) l) vl) (erased (Eval env (EAdd (EMul ea ed) (EMul eb ec)) r) vr)
+    (erased (Lt l r) o))
+  (let ((erased x) (erased pa)) (lt-diff b a ba))
+  (let ((erased y) (erased pd)) (lt-diff c d cd))
+  (let ((erased l) (erased r) (erased vl) (erased vr) (erased xy) (erased m) (erased p))
+    (cross env ea eb ec ed a b c d (Succ x) (Succ y) va vb vc vd pa pd))
+  (let-match erased m (MulSucc _ _ z _ _ pz))
+  (let ((erased z1) (erased e) (erased _)) (add-succ-right-inv z y xy pz))
+  (let-match erased e (Refl _ _))
+  (values l r vl vr (add-pos-lt l xy r p (LtZ z1))))
+
+(def-fns _ $ (erased cross-le : (erased (List (Nat)) env) (erased (Expr) ea eb ec ed) (erased (Nat) a b c d)
+    (erased (Eval env ea a) va) (erased (Eval env eb b) vb) (erased (Eval env ec c) vc) (erased (Eval env ed d) vd)
+    (erased (Lt b (Succ a)) ba) (erased (Lt c (Succ d)) cd) ->
+    (erased (Nat) l r) (erased (Eval env (EAdd (EMul ea ec) (EMul eb ed)) l) vl) (erased (Eval env (EAdd (EMul ea ed) (EMul eb ec)) r) vr)
+    (erased (Lt l (Succ r)) o))
+  (let ((erased x) (erased pa)) (sub a b ba))
+  (let ((erased y) (erased pd)) (sub d c cd))
+  (let ((erased l) (erased r) (erased vl) (erased vr) (erased xy) (erased _) (erased p)) (cross env ea eb ec ed a b c d x y va vb vc vd pa pd))
+  (values l r vl vr (add-le-left l xy r p)))

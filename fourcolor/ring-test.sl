@@ -1,6 +1,4 @@
 ; slc std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/ring-test.sl --goal proved
-(let ((many i0)) (Zero))
-(let ((many i1)) (Succ i0))
 (let ((many two)) (Succ i1))
 (let ((many lhs)) (EMul (EAdd (EVar i0) (EVar i1)) (EAdd (EVar i0) (EVar i1))))
 (let ((many rhs)) (EAdd (EAdd (EMul (EVar i0) (EVar i0)) (EMul (ENum two) (EMul (EVar i0) (EVar i1)))) (EMul (EVar i1) (EVar i1))))
