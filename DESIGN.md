@@ -376,8 +376,9 @@ one constructor were added to scope with it by one `def-adts`.
 `let-match` and `comptime-match`; the emptiness check of §25 and §51;
 `matchable-of`, which finds only an opened `Matchable`;
 `coercible-wrap`, which reads the `newtype` mark from the opened
-`Matchable` that lists its constructor (§33); and the cell rules of
-§37. `delegate-of` and `at-fn-of` fetch from the ambient scope instead
+`Matchable` that lists its constructor (§33), and `coercible-tag`,
+which reads that `Matchable` too; and the cell rules of §37.
+`delegate-of` and `at-fn-of` fetch from the ambient scope instead
 (§33, §39). The occurs check of §7 and its refutation by signature are
 not gated. A match or `let-match` that dispatches at runtime, meaning
 one at `many` or `unique` on a non-erased scrutinee, uses its
@@ -1437,6 +1438,14 @@ the expected type (§50).
    of the block that follow that of `g`, in every body of the block,
    that of `g` included, and after the block, as the names the block
    defines are.
+9. `(coercible-tag s C arg1 ... argn)`:
+   `(Coercible s (T ...) (C arg1 ... argn) s (Nat) n)`, `n` the numeral
+   of `C`'s position among the fieldless non-phantom constructors of
+   its type. Its arguments are checked as `coercible-wrap`'s are, and
+   the proof is used as `coercible-ctor`'s is. It is refused for a
+   phantom `C`, a `C` with a non-erased field, a `C` no opened
+   `Matchable` lists, a `union` or `extern` `Matchable`, under
+   `--no-extern`, and without the prelude.
 
 **Representation.** Coercion is free only if the representations
 coincide, so the following is a requirement on the implementation.
@@ -1446,14 +1455,16 @@ block holds a `(Meters)` and a `(Nat)` in the same way, and the field
 of a wrapper may be existentially typed. A value is the tuple of its
 constructor's non-erased fields; a single field is stored bare. A
 value carries a tag only when its type is an enum with more than one
-non-phantom constructor. The tag is the constructor's position among
-the non-phantom constructors, and that is all a tag ever
-distinguishes. A phantom constructor takes no discriminant. A type is
+non-phantom constructor. A block's tag counts only the constructors
+with fields. A phantom constructor takes no discriminant. A type is
 **hollow** when it is not marked `extern`, carries no tag, and none of
 its non-phantom constructors has a non-erased field. A value with no
-non-erased field is the tag alone when its type is tagged, the word of
-`vacant-slot` (§35) when its type is hollow, however the value was
-built, and an unspecified word otherwise. A union never carries a tag. A newtype
+non-erased field is the word of the `Nat` of its position among the
+fieldless non-phantom constructors when its type is tagged, the word
+of `vacant-slot` (§35) when its type is hollow, however the value was
+built, and an unspecified word otherwise. `vacant-slot`'s word is that
+of `Nat` 0. With externs on, the extern `Nat`'s FFI must meet this for
+these numbers. A union never carries a tag. A newtype
 value built by a wrapping constructor is represented exactly as that
 constructor's one non-erased field, with no tag and no wrapper. That
 representation is mandatory for a type marked `newtype` and forbidden
@@ -1471,7 +1482,8 @@ field representation. A newtype may wrap a field of an extern type.
 Wherever it runs, a non-erased `coerce` produces neither a value
 headed by a phantom constructor nor an erased function (§14). Item 5
 refuses a phantom constructor for this reason; item 6 cannot produce
-one there; and items 7 and 8 relate only non-erased functions (§19).
+one there; items 7 and 8 relate only non-erased functions (§19), and
+item 9 refuses a phantom constructor.
 
 A proof about a container, for example a proof that every element of a
 list is wrapped, is built by recursion in an `erased` function that
@@ -1498,10 +1510,11 @@ built-in enum `Sharing` (§42):
 ```
 
 There is no erased side (§33).
-`coercible-refl`, `coercible-wrap` and `coercible-ctor` take a
-`(Sharing)` value `s` as their first argument; `_` there is solved
-from the expected type (§50), with no default. `coercible-ctor` and
-`coercible-refl` put `s` on both sides. A field proof taken by
+`coercible-refl`, `coercible-wrap`, `coercible-ctor` and
+`coercible-tag` take a `(Sharing)` value `s` as their first argument;
+`_` there is solved from the expected type (§50), with no default.
+`coercible-ctor`, `coercible-refl` and `coercible-tag` put `s` on both
+sides. A field proof taken by
 `coercible-ctor` has `s` on both sides for a unique-labelled field and
 `(Shared)` for a many-labelled field. `coercible-wrap` puts `s` on its
 target side, and on its source side `s` for a unique-labelled field
@@ -1993,9 +2006,10 @@ is a `unique` match whose `Uninit` branch must be refuted, by a fact or
 by proof; the one-real-branch rule of §21 makes this `assume_init`
 with evidence in place of `unsafe`. Since the field of `Copy` is
 `many`, an element of an `(Array (Copy A) xs)` is read in place.
-`Immediate A` is an enum with `ImmU62`, `ImmU8`, `ImmChar`, `ImmBool`
-and `ImmCopy`, naming the types whose values are immediates; the
-`-imm` operations take it as evidence.
+`Immediate A` is an enum with `ImmU62` and `ImmCopy`; the `-imm`
+operations take it as evidence. Other immediate types coerce into
+`U62`: `U8` and `Char` by unwrapping and rewrapping, a fieldless enum
+through `coercible-tag` (§33).
 
 The index proofs are generic relations on lists, which the prelude
 declares next to `List` (§42), with every field erased:
@@ -2229,9 +2243,10 @@ nothing about `4`.
 
 Together, items 3 and 4 say that a `_` never stands for an argument
 whose slot the signature mentions, so no question arises of what slot
-a `_` argument has. Also as an argument of `coercible-wrap`, as the
-`Sharing` argument of `coercible-refl`, `coercible-wrap` and
-`coercible-ctor` (§34), and in place of any type, including a whole
+a `_` argument has. Also as an argument of `coercible-wrap` or
+`coercible-tag`, as the `Sharing` argument of `coercible-refl`,
+`coercible-wrap`, `coercible-ctor` and `coercible-tag` (§34), and in
+place of any type, including a whole
 binder type or annotation entry. Each such `_` is a fresh unification
 variable, a **meta**. `_` as an item of `cell-alloc` or `cell-write`
 (§37), and `_` as a binder (§1), are separate forms, not metas.
@@ -2383,8 +2398,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
   and `predates-subterm` (§18).
 - `gensym-unique` (§65).
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
-  `coercible-share`, `coercible-wrap`, `coercible-ctor` and
-  `coercible-of` (§33).
+  `coercible-share`, `coercible-wrap`, `coercible-ctor`,
+  `coercible-tag` and `coercible-of` (§33).
 - `placed-slot` and `placed-eq` (§66).
 
 **Fetch forms**, which may also be written inside a type or `is`
