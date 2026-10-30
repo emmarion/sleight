@@ -45,11 +45,13 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
 - Definitions and proofs that follow the Coq development's statements,
   and often its proofs, in Sleight: the `hyp*.sl` files (`hypermap.v`,
   `geometry.v`, `walkup.v`, `jordan.v`), `cube.sl`, `coloring.sl`,
-  `ringtrace.sl`, `kempemap.sl`, `patch.sl` and `hypsub.sl` (`cube.v`,
-  `coloring.v`, `kempe.v`, `patch.v`), `cfmap.sl`, `cpmap.sl`,
+  `ringtrace.sl`, `ringdec.sl`, `kempemap.sl`, `patch.sl`, `hypsub.sl` and
+  `geomring.sl` (`cube.v`, `coloring.v`, `kempe.v`, `patch.v`,
+  `geometry.v`), `cfmap.sl`, `cpmap.sl`,
   `cfcolor.sl`, `cpcolor.sl` and the certified files in `red/`
   (`color.v`, `chromogram.v`, `kempe.v`, `ctree.v`, `gtree.v`,
-  `cfmap.v`, `cfcolor.v`, `cfcontract.v`, `cfreducible.v`), and the
+  `cfmap.v`, `cfcolor.v`, `cfcontract.v`, `kempetree.v`, `cfreducible.v`,
+  `birkhoff.v`), and the
   certified files in `unav/` (`part.v`, `discharge.v`, `hubcap.v`).
   Where a Sleight file follows a Coq file, its comments or the commit
   that added it usually name the Coq file; this list is reconstructed

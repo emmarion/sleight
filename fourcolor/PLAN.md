@@ -159,7 +159,8 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   `coloring.v`, `colorable_bridgeless`, the colourings of the dual and
   the mirror, and `decide_colorable`, a search over the colours of each
   dart in turn whose failure is an erased function from any
-  four-colouring to `False`.
+  four-colouring to `False`. The search also fixes the colours of a list
+  of darts (`search-ring`); `decide_colorable` is its case with no darts.
 - `hypjordan.sl`, `hyptree.sl`, `hypwalkeq.sl`, `hypcount.sl`,
   `hypcubic.sl`: planar maps have no Moebius path (`planar-moebius`, an
   absurd function later proofs can call directly, in place of applying
@@ -238,17 +239,20 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   numbered in order, with br sent to rev bd. Its edge and node
   permutations are glued from those of the two maps (`cmap-perm`).
   `snip.v` and `revsnip.v` are not started.
+- `ringdec.sl` (load after `ringtrace.sl`): decide_ring_trace of
+  `coloring.v` (`decide-ring-trace`): a list of colours is a ring trace of
+  a list of darts, or a function sends every such ring trace to `False`.
+  It runs `search-ring` once for each first colour.
+- `geomring.sl` (load after `patch.sl`): simple_cface of `geometry.v`,
+  from which scycle_cface follows (`simple-cface`).
 - Still open: the rest of part B. Besides `snip.v` and `revsnip.v`,
-  `birkhoff.v` appears to need, from a reading of its proofs:
-  Kempe_valid_init, Kempe_valid_restrict, Kempe_validP and
-  Kempe_tree_closure_correct of `kempetree.v` (whether `red/kempe.sl`'s
-  soundness-only `KV` covers them as `birkhoff.v` uses them is not
-  checked); ctree_of_ttail and ctree_of_ttail_mem of `ctree.v`; the
-  completeness direction of ctree_mem_cpcolor; cpmap_proper, cpmap_planar
-  and cpmap_bridgeless of `cfmap.v`; decide_ring_trace of `coloring.v`;
-  quasicubic_Euler, srcycleI and scycle_cface of `geometry.v`; and the
-  Birkhoff_check computation itself, which Coq runs by vm_compute. None of
-  these appears to be ported, going by a search of the files for them.
+  `birkhoff.v` appears to need, from a reading of its proofs: the
+  completeness direction of ctree_mem_cpcolor; cpmap_planar and
+  cpmap_bridgeless of `cfmap.v` (cpmap_proper appears to be `cpmap.sl`'s
+  `cprsize-proper`); quasicubic_Euler and srcycleI of `geometry.v`
+  (srcycleI is stated on rings, scycle rlink, which no file here defines
+  yet); and Birkhoff_valid itself, which would build the two `BSide`s and
+  the `BGlue` of `red/bcheck.sl` for a ring of a minimal counterexample.
 - `ring.sl`, `orient.sl`: a reflective decision procedure for semiring
   identities over `Nat`, and Knuth's CC axioms for `Left` proved with
   it, for the geometry.
@@ -294,6 +298,31 @@ slc std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/defs.sl four
   in two runs on a 4-core cloud VM. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
+- `red/bcheck.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
+  Birkhoff check of `birkhoff.v`. `birkhoff-check-c` runs Birkhoff_check2
+  from the initial trees, for ring size h + 2, kernel size m, an
+  iteration count and a list of basis programs, and returns a certificate
+  `BirkhoffCheck h m`, which also records Birkhoff_check1 for each program
+  (`BkProg`, with the program's tree from `cpcolor-c`). Its parts are
+  ctree_pick_rev (`pick-c`), ctree_of_ttail (`ttail-c`, with `tt-allp`
+  for the direction of ctree_of_ttail_mem that `birkhoff.v` uses) and the
+  closure loop of `red/kempe.sl`, whose evidence (`KR`, `CR`) names no
+  predicate, so that one run serves every predicate; `kr-kv` turns it into
+  `KV`, the validity half of Kempe_tree_closure_correct. `KVBase` and
+  `CKBase` play the parts of Kempe_valid_init and Kempe_valid_restrict,
+  and `kempe-sound` that of Kempe_validP. `birkhoff-check-sound`, a level
+  factory, proves the part of Birkhoff_valid that rests on the check: for
+  two sides `BSide` (a Kempe-closed set T of complete traces, a decision
+  between T and a set NT disjoint from it, and, for each basis program, a
+  trace in T whose even normal form is in the program's tree) related by
+  `BGlue` (no trace of one side has its reverse in the other), a
+  `BirkhoffCheck` gives `False`. `bgoal.sl` proves `BirkhoffChecks`,
+  Birkhoff2 to Birkhoff5 with Coq's iteration counts and basis programs;
+  in one run the computation took about 6 s under the reference compiler.
+  Whether `BSide` and `BGlue` are what the rest of Birkhoff_valid can
+  provide has been checked only by reading; `BkProg` carries
+  `cpcolor-c`'s soundness evidence, while building a `BSide` would need
+  the completeness direction.
 - `unav/`: an unverified port of the unavoidability check (the
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
