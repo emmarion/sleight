@@ -34,7 +34,7 @@
     ((T321) (let-match erased pa (PC3 _ _ _)) (let-match erased pb (PC2 _ _ _)) (let-match erased pc (PC1 _ _ _))
       (third-12 p2 p3 p1 (third-23 p2 p1 p3 (third-12 p1 p2 p3 u))))))
 
-(def-fns _ $ (erased addc-fn : (erased (Col) a b c d) (erased (AddC a b c) p) (erased (AddC a b d) q) -> (erased (Eq (Col) c d) e))
+(def-fns _ $ (erased addc-fn : (erased (Col) a b c d) (erased (AddK a b c) p) (erased (AddK a b d) q) -> (erased (Eq (Col) c d) e))
   (match erased p _
     ((AZL _) (match erased q _ ((AZL _) (Refl _ c)) ((AZR _) (Refl _ c)) ((ASame _) (Refl _ c)) (absurd (AThird _ _ _ t) t)))
     ((AZR _) (match erased q _ ((AZL _) (Refl _ c)) ((AZR _) (Refl _ c)) ((ASame _) (Refl _ c)) (absurd (AThird _ _ _ t) t)))
@@ -42,7 +42,7 @@
     ((AThird _ _ _ t)
       (match erased q _ (absurd (AZL _) t) (absurd (AZR _) t) (absurd (ASame _) t) ((AThird _ _ _ u) (third-fn a b c d t u))))))
 
-(def-fns _ $ (erased addc-total : (erased (Col) a b) -> (erased (Col) c) (erased (AddC a b c) p))
+(def-fns _ $ (erased addc-total : (erased (Col) a b) -> (erased (Col) c) (erased (AddK a b c) p))
   (match erased a _
     ((C0) (values b (AZL b)))
     ((C1) (match erased b _ ((C0) (values a (AZR a))) ((C1) (values (C0) (ASame a)))
@@ -54,7 +54,7 @@
 
 ; A colour permutation is a group automorphism.
 (def-fns _ $ (erased perm-add : (erased (Perm) g) (erased (Col) a b c a2 b2 c2) (erased (IsPerm g) ip) (erased (PermC g a a2) pa)
-    (erased (PermC g b b2) pb) (erased (AddC a b c) p) (erased (AddC a2 b2 c2) q) -> (erased (PermC g c c2) r))
+    (erased (PermC g b b2) pb) (erased (AddK a b c) p) (erased (AddK a2 b2 c2) q) -> (erased (PermC g c c2) r))
   (match erased p _
     ((AZL _) (let-match erased pa (PC0 _)) (let-match erased (addc-fn a2 b2 c2 b2 q (AZL b2)) (Refl _ _)) pb)
     ((AZR _) (let-match erased pb (PC0 _)) (let-match erased (addc-fn a2 b2 c2 a2 q (AZR a2)) (Refl _ _)) pa)
@@ -156,7 +156,7 @@
     ((XTF) (let-match erased nb (NotT)) (let-match erased nz (NotF)) (XFT))
     ((XTT) (let-match erased nb (NotT)) (let-match erased nz (NotT)) (XFF))))
 
-(def-fns _ $ (erased addc-bits : (erased (Col) s e s2) (erased (Bool) x y xe ye) (erased (AddC s e s2) a) (erased (CB s x y) p) (erased (CB e xe ye) q)
+(def-fns _ $ (erased addc-bits : (erased (Col) s e s2) (erased (Bool) x y xe ye) (erased (AddK s e s2) a) (erased (CB s x y) p) (erased (CB e xe ye) q)
     -> (erased (Bool) x2 y2) (erased (Xor x xe x2) r1) (erased (Xor y ye y2) r2) (erased (CB s2 x2 y2) r3))
   (match erased a _
     ((AZL _) (let-match erased p (CB0)) (values xe ye (xor-fl xe) (xor-fl ye) q))
@@ -232,7 +232,7 @@
       (values z1 si1 (xor-bz b z y b2 z1 xb nb (not-sym z1 z m1))))))
 
 (def-fns _ $ (erased inv-next : (erased (Gsym) s) (erased (Bstack) bs bs2) (erased (Col) e) (erased (Nat) d d2) (erased (Bool) b b2) (erased (Col) c c2)
-    (erased (Bool) x y z) (erased (Sym s bs e bs2) sy) (erased (GStep d b s d2 b2) st) (erased (AddC c e c2) a) (erased (CB c x y) cb)
+    (erased (Bool) x y z) (erased (Sym s bs e bs2) sy) (erased (GStep d b s d2 b2) st) (erased (AddK c e c2) a) (erased (CB c x y) cb)
     (erased (SInv bs d x z) si) (erased (Xor b z y) xb) ->
     (erased (Bool) x2 y2 z2) (erased (SInv bs2 d2 x2 z2) si2) (erased (Xor b2 z2 y2) xb2) (erased (CB c2 x2 y2) cb2))
   (let ((erased xe) (erased ye) (erased ce)) (cb-exists e))
@@ -294,24 +294,13 @@
       (let-match erased rw (RACons _ _ _ _ _ rw1))
       (closes-gpre d0 d1 b0 b1 pre1 (Cons _ s0 u) fw s p1 (CloCons d1 d b1 b s0 s u st c) rw1))))
 
-(def-adts $ (Snoc : (Type A) ((List A) xs) (A x) ((List A) ys) -> Type)
-  enum
-  (many SnNil : (erased Type A) (erased A x) -> (Snoc A (Nil A) x (Cons A x (Nil A))))
-  (many SnCons : (erased Type A) (erased A a x) (erased (List A) xs ys) (erased (Snoc A xs x ys) p) -> (Snoc A (Cons A a xs) x (Cons A a ys))))
-
-(def-fns _ $ (erased snoc-fn : (erased Type A) (erased A x) (erased (List A) xs ys zs) (subterm erased (Snoc A xs x ys) p) (erased (Snoc A xs x zs) q)
-    -> (erased (Eq (List A) ys zs) e))
-  (match erased p _
-    ((SnNil _ _) (let-match erased q (SnNil _ _)) (Refl _ ys))
-    ((SnCons _ a _ xs1 ys1 p1) (let-match erased q (SnCons _ _ _ _ zs1 q1)) (let-match erased (snoc-fn A x xs1 ys1 zs1 p1 q1) (Refl _ _)) (Refl _ ys))))
-
 (def-fns _ $ (erased revapp-snoc : (erased Type A) (erased A x) (erased (List A) pre u u2 r r2) (subterm erased (RevApp A pre u r) p)
     (erased (Snoc A u x u2) q) (erased (RevApp A pre u2 r2) p2) -> (erased (Snoc A r x r2) res))
   (match erased p _
     ((RANil _ _) (let-match erased p2 (RANil _ _)) q)
     ((RACons _ a pre1 _ _ p1)
       (let-match erased p2 (RACons _ _ _ _ _ q1))
-      (revapp-snoc A x pre1 (Cons A a u) (Cons A a u2) r r2 p1 (SnCons A a x u u2 q) q1))))
+      (revapp-snoc A x pre1 (Cons A a u) (Cons A a u2) r r2 p1 (SnocCons A a x u u2 q) q1))))
 
 ; After matchg of chromogram.v, with the bit stack a Bstack.
 (def-adts $ (MatchG : ((Bstack) bs) ((List (Col)) ct) ((List (Gsym)) cw) -> Type)
@@ -328,13 +317,13 @@
     ((MPNil _)
       (let-match erased cr (CtrNil _))
       (let-match erased cl (CloNil _ _ _ l))
-      (values (Cons _ s (Nil _)) (SnNil _ s) (MGCons bs (BS0) c s (Nil _) (Nil _) (end-sym d b s l bs c x y z si xb cb) (MGNil))))
+      (values (Cons _ s (Nil _)) (SnocNil _ s) (MGCons bs (BS0) c s (Nil _) (Nil _) (end-sym d b s l bs c x y z si xb cb) (MGNil))))
     ((MPCons _ bs2 e s0 et1 w1 sy mt1)
       (let-match erased cr (CtrCons _ _ c2 _ ct1 a cr1))
       (let-match erased cl (CloCons _ d2 _ b2 _ _ _ st cl1))
       (let ((erased x2) (erased y2) (erased z2) (erased si2) (erased xb2) (erased cb2)) (inv-next s0 bs bs2 e d d2 b b2 c c2 x y z sy st a cb si xb))
       (let ((erased cw1) (erased sn) (erased mg)) (pg-g bs2 et1 ct1 w1 s c2 d2 b2 x2 y2 z2 mt1 cr1 cb2 si2 xb2 cl1))
-      (values (Cons _ s0 cw1) (SnCons _ s0 s w1 cw1 sn) (MGCons bs bs2 e s0 ct1 cw1 sy mg)))))
+      (values (Cons _ s0 cw1) (SnocCons _ s0 s w1 cw1 sn) (MGCons bs bs2 e s0 ct1 cw1 sy mg)))))
 
 ; The Kempe co-closure of Q on complete traces (after Kempe_coclosure of chromogram.v), as the least set holding Q, holding each trace
 ; that a colour permutation sends into it, and holding each trace all of whose matching chromograms are matched by a trace in it.
@@ -343,7 +332,7 @@
 (def-adts
   ((KCC : (Pred Q) ((List (Col)) ct) -> Type)
     enum
-    (many KCIn : (erased Pred Q) (erased (List (Col)) ct) (erased (Q ct) q) -> (KCC Q ct))
+    (many KCIn : (erased Pred Q) (erased (List (Col)) ct) (erased (Holds Q ct) q) -> (KCC Q ct))
     (many KCPerm : (erased Pred Q) (erased (List (Col)) ct ct2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g ct ct2) pt)
         (erased (KCC Q ct2) k) -> (KCC Q ct))
     (many KCGram : (erased Pred Q) (erased (List (Col)) ct) (erased (AMC Q (BS0) ct (Nil (Gsym))) a) -> (KCC Q ct)))
@@ -386,7 +375,7 @@
   (let ((erased cw) (erased sn) (erased mg))
     (pg-g (BS0) et ct w s (C0) (Zero) (BFalse) (BFalse) (BFalse) (BFalse) mt cr (CB0) (SINil) (XFF)
       (closes-gpre (Zero) d (BFalse) b pre (Nil _) w s gp (CloNil d b s l) ra)))
-  (let-match erased (snoc-fn (Gsym) s w full cw (revapp-snoc (Gsym) s pre (Nil _) (Cons _ s (Nil _)) w full ra (SnNil _ s) rf1) sn) (Refl _ _))
+  (let-match erased (snoc-fn (Gsym) w full cw s (revapp-snoc (Gsym) s pre (Nil _) (Cons _ s (Nil _)) w full ra (SnocNil _ s) rf1) sn) (Refl _ _))
   (values full rf (MkWitC P full ct mg k)))
 
 (def-fns _ $ (erased amc-nil : (erased Pred P) (erased (Gsym) s) (erased (Bstack) bs bs2) (erased (Col) c) (erased (Nat) d) (erased (Bool) b x y z)
@@ -464,27 +453,37 @@
     (erased (Length (Col) et (Succ h)) len) (erased (Ctr (C0) et ctc) cr) -> (erased (KCC P ctc) r))
   (kc-kcc P et ctc (kempe-tree-sound P h kt ct ks dj et m ev len) cr))
 
-(let ((erased Rel)) (TyCtor ((List (Col)) ct) ((List (Gsym)) w) -> Type))
+; A relation between traces and chromograms with one parameter, as data, like PredC.
+(def-adts $ (RelC : -> Type)
+  enum
+  (many MkRel : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) -> (RelC)))
+
+(let ((erased Rel)) (RelC))
+
+(def-adts $ (HoldsR : ((RelC) R) ((List (Col)) ct) ((List (Gsym)) w) -> Type)
+  enum
+  (many MkHoldsR : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) (erased (List (Col)) ct)
+      (erased (List (Gsym)) w) (erased (R x ct w) h) -> (HoldsR (MkRel X x R) ct w)))
 
 ; After Kempe_closed of chromogram.v, by functions at level L, with R naming the chromogram the definition asks for: the colour
 ; permutations of each trace of P2 are in P2, and each trace of P2 matches a chromogram w with R ct w, every trace matching which is in P2.
 (def-adts $ (KClosed : ((Level) L) (Pred P2) (Rel R) -> Type)
   enum
   (many MkKClosed : (erased (Level) L) (erased Pred P2) (erased Rel R)
-      (erased (Fn L (erased (List (Col)) ct ct2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g ct ct2) pt) (erased (P2 ct) p) ->
-          (erased (P2 ct2) q)) cp)
-      (erased (Fn L (erased (List (Col)) ct) (erased (P2 ct) p) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) ct w) m) (erased (R ct w) r)) cg)
-      (erased (Fn L (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (R ct w) r) (erased (MatchG (BS0) ct2 w) m) -> (erased (P2 ct2) q)) cm)
+      (erased (Fn L (erased (List (Col)) ct ct2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g ct ct2) pt) (erased (Holds P2 ct) p) ->
+          (erased (Holds P2 ct2) q)) cp)
+      (erased (Fn L (erased (List (Col)) ct) (erased (Holds P2 ct) p) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) ct w) m) (erased (HoldsR R ct w) r)) cg)
+      (erased (Fn L (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (HoldsR R ct w) r) (erased (MatchG (BS0) ct2 w) m) -> (erased (Holds P2 ct2) q)) cm)
       -> (KClosed L P2 R)))
 
 ; After Kempe_coclosure of chromogram.v: for the sets closed at a level L, the co-closure KCC meets every closed set holding the trace.
 (def-fns _ $ (erased kcc-coclosure : (erased (Level) L) -> (erased (Level) M)
-    (erased (Fn M (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k) (erased (P2 ct) p) ->
-        (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (P2 ct2) p2)) f))
+    (erased (Fn M (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k) (erased (Holds P2 ct) p) ->
+        (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2)) f))
   (def-lvl M)
   (def-fns M
     ((erased kcc-walk : (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k)
-        (erased (P2 ct) p) -> (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (P2 ct2) p2))
+        (erased (Holds P2 ct) p) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2))
       (let-match erased cl (MkKClosed _ _ _ cp cg _))
       (let-match erased k (KCGram _ _ a)
         ((KCIn _ _ q) (values ct q p))
@@ -492,8 +491,8 @@
       (let ((erased w) (erased m) (erased r)) (cg ct p))
       (amc-walk Q P2 R cl ct w r (BS0) ct (Nil _) w a m (RANil _ w)))
     ((erased amc-walk : (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct0) (erased (List (Gsym)) w0)
-        (erased (R ct0 w0) r) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u) (subterm erased (AMC Q bs ct pre) a)
-        (erased (MatchG bs ct u) m) (erased (RevApp (Gsym) pre u w0) ra) -> (erased (List (Col)) ct2) (erased (Q ct2) q) (erased (P2 ct2) p2))
+        (erased (HoldsR R ct0 w0) r) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u) (subterm erased (AMC Q bs ct pre) a)
+        (erased (MatchG bs ct u) m) (erased (RevApp (Gsym) pre u w0) ra) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2))
       (let-match erased cl (MkKClosed _ _ _ _ _ cm))
       (match erased m _
         ((MGNil)

@@ -110,6 +110,8 @@
   (many ASame : (erased (Col) a) -> (AddC a a (C0)))
   (many AThird : (erased (Col) a b c) (erased (Third a b c) t) -> (AddC a b c)))
 
+(let ((erased AddK)) AddC)
+
 ; After ctrace of color.v: ct is et followed by s plus the sum of et.
 (def-adts $ (Ctr : ((Col) s) ((List (Col)) et) ((List (Col)) ct) -> Type)
   enum
