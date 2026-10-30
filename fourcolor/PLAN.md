@@ -580,8 +580,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   to be read here, a node cycle on distinct faces, embeddable's sfcycle
   node; `embed6.sl`'s `patch-open` proves it). `run` takes the
   certificates `NodeRing` and `Radius2` of the configuration as
-  arguments. Also not done: embed_valid_contract and adj11_edge of
-  birkhoff.v (`notembed.sl` takes the first as a hypothesis). Chain: that of
+  arguments. embed_valid_contract is in `evalid.sl`. Chain: that of
   `birkhoff3.sl`, then `embed2 contract embed3 embed5` (about 70 s with
   slc in one run). That these statements match Coq's has been checked
   only by reading.
@@ -604,7 +603,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   from `BirkhoffChecks` and `TrivRed`, the refutation of a `HomTrivial`,
   taken as a hypothesis: in Coq trivial_hom_ring, its use on the reversed
   ring, and for five darts the spoke ring with adj11_edge and
-  adj_kernel_max, none ported; if those need the ring arities, `TrivRed`
+  adj_kernel_max, none ported (adj11_edge is in `evalid.sl` in a form
+  of its own, not through the spoke ring); if those need the ring arities, `TrivRed`
   as stated may lack a hypothesis (not checked).
   That these statements match Coq's has been checked only by reading.
   Chain: that of `minarity.sl`, then `embed2 contract embed3 embed5
@@ -621,7 +621,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   configuration of cfs, meant to be decided by a run), `EmbedValid`
   (embed_valid_contract: the image map h1 cc of the configuration's
   contract is a `ValidContract` of the map for the empty ring, or the map
-  reduces) and `ContractLater` (contract2.sl's `CGLater` case gives a
+  reduces, given cface_h1 as the `EmbedPatch` gives it; `evalid.sl`
+  proves it) and `ContractLater` (contract2.sl's `CGLater` case gives a
   `ContractOut`). A disconnected map splits (`split-reduces`); otherwise
   `embed-main` embeds the kernel or the map reduces, and the contraction
   of map h1 cc (`contract-go`) is the one map of a `Reduces` whose glue,
@@ -642,6 +643,37 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variants (the pairing not flipped, and NK minted before NY) were
   rejected. That these statements match Coq's has been checked only by
   reading.
+- `evalid.sl` (load after `notembed.sl`, in the chain of `fcgoal.sl`
+  below; `fcgoal.sl` also checks after it): embed_valid_contract of
+  embed.v with minimality as data, as far as both compilers check it.
+  `embed-valid` gives `notembed.sl`'s `EmbedValid` from `BirkhoffChecks`.
+  `EmbedValid` takes cface_h1 as the `EmbedPatch` gives it (`Respects h1
+  fc h1f` and `Reach fm h1 h1f`): the triad's bands appear to need it,
+  since the faces of the edge images of the triad's darts may meet rc,
+  where embedE and embedN alone do not seem to fix where h1 sends them.
+  It takes no per-configuration fact beyond what `EmbedValid` already
+  has (the configuration's `ValidContract`, which `CRed` carries, and
+  `GcOK` and `FunctorAll`). Proved: the image of the contract is off the
+  empty ring; embed_sparse (`embed-sparse`, a node path of the map from
+  h1 a pulled back along embedN, `node-back`, then embed_inj); the size;
+  and for four darts the image of the triad: its three darts on the face
+  of h1 x (`img-on`, through the preembedding), distinct by embed_inj,
+  with their bands through cface_h1 (`band-img`), and the dart not
+  adjacent to it (`adj-pick`): of h1 y and h1 (e y), y the dart of the
+  configuration's triad not adjacent to x, one is not adjacent to the
+  face of h1 x, or the node image of one is on that face, which
+  cface_ac_h1 (`face-back`) pulls back to an adjacency of y that the
+  configuration's triad excludes, or the map reduces through adj11_edge.
+  `adj11` proves adj11_edge without the spoke ring: A and e A adjacent to
+  a face through its darts a1 and b1, with neither n A nor n (e A) on it,
+  give the ring a1 :: A :: e b1 of three darts, nontrivial for 0 (n A in
+  its diskF, n (e A) in its diskFC), so `birkhoff-reduces` applies. In a
+  test run two broken variants (the diskF and diskFC darts swapped, and
+  cc in place of its image) were rejected. Chain: that of `fcgoal.sl`
+  with `evalid.sl` after `notembed.sl` (in one run with `fcgoal.sl` and
+  `--goal proved`, about 50 s with slc and 113 s with the reference
+  compiler). `fcgoal.sl` still takes `EmbedValid` as a hypothesis. That
+  these statements match Coq's has been checked only by reading.
 - `fcgoal.sl` (load after `notembed.sl`, in the chain below): sets and
   proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
   and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
@@ -795,8 +827,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   which `red/bgoal.sl` proves in a unit of its own. It reads snip.sl's
   `DPath` and walk.sl's `Sub`, which `unav/` files define again, as
   `SDPath` and `WSub`, names the end of `birkhoff2.sl` keeps for it. Not
-  ported: the rest of the SpokeRing section (fband_spoke_ring and the
-  adjacency lemmas after it). That these statements match Coq's has been
+  ported: the rest of the SpokeRing section (fband_spoke_ring,
+  chordless_spoke_ring in general, and the adjacency lemmas after it;
+  `evalid.sl` proves adj11_edge another way). That these statements match Coq's has been
   checked only by reading. Chain (both compilers, in one run about 72 s
   with slc and 136 s with the reference compiler): that of `birkhoff3.sl`,
   then `minarity.sl`.
