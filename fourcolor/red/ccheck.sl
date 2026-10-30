@@ -48,17 +48,17 @@
   (let-match many cp (Cons _ s rest) ((Nil _) (values (Nil _) (CeNil))))
   (let ((erased na1)) (noa-tail s rest na))
   (match many s _
-    ((SR k) (let ((many xs) (erased p)) (ctrenum-c rest na1)) (values xs (CeR k rest xs p)))
+    ((SR k) (let ((many xs) (erased p)) (tail $ ctrenum-c rest na1)) (values xs (CeR k rest xs p)))
     ((SY)
       (let-match many rest (Cons _ s1 rest1) ((Nil _) (values (Nil _) (CeY1))))
-      (let ((many xs) (erased p)) (ctrenum-c rest na1))
+      (let ((many xs) (erased p)) (notail $ ctrenum-c rest na1))
       (let ((many d) (many e) (many f) (many r) (erased c)) (cpmap-c rest na1))
       (let ((erased _) (erased _) (erased q)) (pointed-cons rest d e f r c))
       (let-match erased q (Refl _ _))
       (let-match many r (Cons _ a p1))
       (values (Cons _ a xs) (CeY s1 rest1 d a e f p1 xs c p)))
     ((SH)
-      (let ((many xs) (erased p)) (ctrenum-c rest na1))
+      (let ((many xs) (erased p)) (notail $ ctrenum-c rest na1))
       (let ((many d) (many e) (many f) (many r) (erased c)) (cpmap-c rest na1))
       (let ((erased _) (erased _) (erased q)) (pointed-cons rest d e f r c))
       (let-match erased q (Refl _ _))
@@ -72,7 +72,7 @@
 
 (def-fns _ $ (many pick-c : (many (List (Nat)) cci) (many (Nat) i) (subterm many (List (Nat)) xs) -> (many (List (Nat)) cc) (erased (Pick cci i xs cc) p))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (PkNil cci i))))
-  (let ((many cc) (erased p)) (pick-c cci (Succ i) rest))
+  (let ((many cc) (erased p)) (notail $ pick-c cci (Succ i) rest))
   (match many (in-dec-c i cci) _
     ((IDIn _ _ q) (values (Cons _ x cc) (PkIn cci rest cc i x q p)))
     ((IDOut _ _ q) (values cc (PkOut cci rest cc i x q p)))))
@@ -85,7 +85,7 @@
 (def-fns _ $ (many nth-d : (subterm many (List (Nat)) xs) (many (Nat) i) -> (many (NthD xs i) r))
   (let-match many xs (Cons _ y rest) ((Nil _) (NthNo xs i)))
   (let-match many i (Succ i1) ((Zero) (NthYes xs i y (NthHere _ y rest))))
-  (match many (nth-d rest i1) _
+  (match many (notail $ nth-d rest i1) _
     ((NthYes _ _ x p) (NthYes xs i x (NthThere _ y rest i1 x p)))
     ((NthNo _ _) (NthNo xs i))))
 
@@ -97,7 +97,7 @@
 (def-fns _ $ (many inserte-c : (many (List (Nat)) e) (subterm many (List (Nat)) cc) -> (many (InsertED e cc) r))
   (let-match many cc (Cons _ y rest) ((Nil _) (IEYes e cc (Nil _) (IENil e))))
   (let-match many (nth-d e y) (NthYes _ _ z pz) ((NthNo _ _) (IENo e cc)))
-  (let-match many (inserte-c e rest) (IEYes _ _ ie p) ((IENo _ _) (IENo e cc)))
+  (let-match many (notail $ inserte-c e rest) (IEYes _ _ ie p) ((IENo _ _) (IENo e cc)))
   (IEYes e cc (Cons _ y (Cons _ z ie)) (IECons e rest ie y z pz p)))
 
 (def-fns _ $ (erased lrel-d : (erased (List (Nat)) ie) (erased (List (Step)) cp) (erased (Nat) d d2) (erased (List (Nat)) e f r) (erased (List (List (Col))) ls)
@@ -127,27 +127,27 @@
 (def-fns _ $ (many respects-c : (many (List (Nat)) lab) (subterm many (List (Nat)) xs) -> (many (RespD lab xs) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (RsYes lab xs (Nil _) (RespNil lab))))
   (let-match many (nth-d lab x) (NthYes _ _ l p) ((NthNo _ _) (RsNo lab xs)))
-  (let-match many (respects-c lab rest) (RsYes _ _ ls q) ((RsNo _ _) (RsNo lab xs)))
+  (let-match many (notail $ respects-c lab rest) (RsYes _ _ ls q) ((RsNo _ _) (RsNo lab xs)))
   (RsYes lab xs (Cons _ l ls) (RespCons lab rest ls x l p q)))
 
 (def-fns _ $ (many leq-c : (subterm many (List (Nat)) xs) (many (List (Nat)) ys) -> (many (Chk (Eq (List (Nat)) xs ys)) r))
   (let-match many xs (Cons _ x xs1) ((Nil _) (match many ys _ ((Nil _) (CkY _ (Refl _ xs))) (else (CkN _)))))
   (let-match many ys (Cons _ y ys1) ((Nil _) (CkN _)))
   (let-match many (nat-eq x y) (Equal _ _ _) (else (CkN _)))
-  (let-match many (leq-c xs1 ys1) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match many (notail $ leq-c xs1 ys1) (CkY _ q) ((CkN _) (CkN _)))
   (let-match erased q (Refl _ _))
   (CkY _ (Refl _ xs)))
 
 (def-fns _ $ (many distinct-c : (subterm many (List (Nat)) s) -> (many (Chk (Distinct s)) r))
   (let-match many s (Cons _ x rest) ((Nil _) (CkY _ (DistNil))))
   (let-match many (in-dec-c x rest) (IDOut _ _ p) ((IDIn _ _ _) (CkN _)))
-  (let-match many (distinct-c rest) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match many (notail $ distinct-c rest) (CkY _ q) ((CkN _) (CkN _)))
   (CkY _ (DistCons x rest p q)))
 
 (def-fns _ $ (many disj-c : (subterm many (List (Nat)) s) (many (List (Nat)) m) -> (many (Chk (Disj s m)) r))
   (let-match many s (Cons _ x rest) ((Nil _) (CkY _ (DisjNil m))))
   (let-match many (in-dec-c x m) (IDOut _ _ p) ((IDIn _ _ _) (CkN _)))
-  (let-match many (disj-c rest m) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match many (notail $ disj-c rest m) (CkY _ q) ((CkN _) (CkN _)))
   (CkY _ (DisjCons x rest m p q)))
 
 (def-fns _ $ (many orbit-min : (many (List (Nat)) p) (many (Nat) x cur lo) (subterm many (Nat) fuel) -> (many (Nat) r))
@@ -158,7 +158,7 @@
 
 (def-fns _ $ (many labels : (many (List (Nat)) p) (many (Nat) d i) (subterm many (Nat) k) -> (many (List (Nat)) lab))
   (let-match many k (Succ k1) ((Zero) (Nil _)))
-  (Cons _ (orbit-min p i i i d) (labels p d (Succ i) k1)))
+  (Cons _ (orbit-min p i i i d) (notail $ labels p d (Succ i) k1)))
 
 ; A labelling of the darts below d constant along p.
 (def-fns _ $ (many flab-c : (many (List (Nat)) p) (many (Nat) d) -> (many (List (Nat)) lab) (many (Chk (Respects lab p lab)) r))
@@ -198,7 +198,7 @@
   (let-match many fuel (Succ fuel1) ((Zero) (WkNo p s x y)))
   (let-match many (in-dec-c x s) (IDOut _ _ out) ((IDIn _ _ _) (WkNo p s x y)))
   (let-match many (nth-d p x) (NthYes _ _ z pz) ((NthNo _ _) (WkNo p s x y)))
-  (let-match many (walk-c p s z y fuel1) (WkYes _ _ _ _ xs w) ((WkNo _ _ _ _) (WkNo p s x y)))
+  (let-match many (notail $ walk-c p s z y fuel1) (WkYes _ _ _ _ xs w) ((WkNo _ _ _ _) (WkNo p s x y)))
   (WkYes p s x y (Cons _ x xs) (PathStep p s xs x z y pz out w)))
 
 (def-adts $ (OrbitD : ((List (Nat)) p) ((Nat) x) -> Type)
@@ -215,7 +215,7 @@
   (let-match many (in-dec-c x p) (IDOut _ _ _) ((IDIn _ _ i) (CkY _ (MkFband f p x x i (MkSomePath f (Nil _) (Nil _) x x (PathHere f (Nil _) x))))))
   (let-match many fuel (Succ fuel1) ((Zero) (CkN _)))
   (let-match many (nth-d f x) (NthYes _ _ z pz) ((NthNo _ _) (CkN _)))
-  (let-match many (fband-c f p z fuel1) (CkY _ fb) ((CkN _) (CkN _)))
+  (let-match many (notail $ fband-c f p z fuel1) (CkY _ fb) ((CkN _) (CkN _)))
   (let-match erased fb (MkFband _ _ _ y iy sp))
   (let-match erased sp (MkSomePath _ _ xs _ _ w))
   (CkY _ (MkFband f p x y iy (MkSomePath f (Nil _) (Cons _ x xs) x y (PathStep f (Nil _) xs x z y pz (NotInNil x) w)))))
@@ -233,7 +233,7 @@
 
 (def-fns _ $ (many ebs-c : (many (List (Nat)) e f p) (subterm many (List (Nat)) os) (many (Nat) d) -> (many (List (Nat)) ys) (erased (EBs e f p os ys) q))
   (let-match many os (Cons _ y rest) ((Nil _) (values (Nil _) (EBNil e f p os))))
-  (let ((many ys) (erased q)) (ebs-c e f p rest d))
+  (let ((many ys) (erased q)) (notail $ ebs-c e f p rest d))
   (let ((erased q1)) (ebs-lift e f p rest ys y q))
   (let-match many (nth-d e y) (NthYes _ _ z pz) ((NthNo _ _) (values ys q1)))
   (let-match many (fband-c f p z d) (CkY _ fb) ((CkN _) (values ys q1)))
@@ -247,7 +247,7 @@
 (def-fns _ $ (many notadj-c : (many (List (Nat)) e f os lab eos ls) (erased (Respects lab f lab) rf) (erased (Respects e os eos) re) (erased (Respects lab eos ls) rl)
     (subterm many (List (Nat)) t) -> (many (AdjD e f os t) r))
   (let-match many t (Cons _ y t1) ((Nil _) (AdNo e f os t)))
-  (let ((many (AdjD e f os t1) r1)) (notadj-c e f os lab eos ls rf re rl t1))
+  (let ((many (AdjD e f os t1) r1)) (notail $ notadj-c e f os lab eos ls rf re rl t1))
   (let ((many (AdjD e f os t) next)) (match many r1 _ ((AdYes _ _ _ _ y1 i na) (AdYes e f os t y1 (InThere y1 y t1 i) na)) ((AdNo _ _ _ _) (AdNo e f os t))))
   (let-match many (nth-d lab y) (NthYes _ _ l py) ((NthNo _ _) next))
   (match many (in-dec-c l ls) _
@@ -277,7 +277,7 @@
 
 (def-fns _ $ (many find-triad : (many (List (Nat)) e f r p lab) (many (Nat) d) (erased (Respects lab f lab) rf) (subterm many (Nat) i) -> (many (TriadD e f r p) res))
   (let-match many i (Succ x) ((Zero) (TrNo e f r p)))
-  (let ((many (TriadD e f r p) next)) (find-triad e f r p lab d rf x))
+  (let ((many (TriadD e f r p) next)) (notail $ find-triad e f r p lab d rf x))
   (let-match many (kernel-c f r lab x rf) (CkY _ kx) ((CkN _) next))
   (let-match many (triad-c e f p lab x d rf) (CkY _ t) ((CkN _) next))
   (TrYes e f r p x kx t))
@@ -342,7 +342,7 @@
   (let-match many cfs (Cons _ cf rest) ((Nil _) (CkY _ (ARNil))))
   (let ((many b) (many cache2)) (red-c cf cache))
   (let-match many b (CkY _ p) ((CkN _) (CkN _)))
-  (let-match many (red-all-c rest cache2) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match many (notail $ red-all-c rest cache2) (CkY _ q) ((CkN _) (CkN _)))
   (CkY _ (ARCons cf rest p q)))
 
 (def-adts $ (AllRedC : ((List (List (Config))) css) -> Type)

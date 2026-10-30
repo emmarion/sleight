@@ -1,5 +1,5 @@
 ; Every configuration of configs.sl is C-reducible with its contract (cfreducible.v), by the certified check of ccheck.sl run
-; under native-compute. Load after ccheck.sl.
+; under native-compute, eight chunks to a run. Load after ccheck.sl.
 
 (let ((many css)) (config-chunks))
 (goal erased (AllRedC css))
@@ -70,8 +70,8 @@
 (def-fns _ $ (many j30 : -> (many (Chk (AllRed c30)) r)) (red-all-c c30 (Nil _)))
 (def-fns _ $ (many j31 : -> (many (Chk (AllRed c31)) r)) (red-all-c c31 (Nil _)))
 
-(let ((many r00) (many r01) (many r02) (many r03) (many r04) (many r05) (many r06) (many r07) (many r08) (many r09) (many r10) (many r11) (many r12) (many r13) (many r14) (many r15) (many r16) (many r17) (many r18) (many r19) (many r20) (many r21) (many r22) (many r23) (many r24) (many r25) (many r26) (many r27) (many r28) (many r29) (many r30) (many r31))
-  (native-compute j00 j01 j02 j03 j04 j05 j06 j07 j08 j09 j10 j11 j12 j13 j14 j15 j16 j17 j18 j19 j20 j21 j22 j23 j24 j25 j26 j27 j28 j29 j30 j31))
+(let ((many r00) (many r01) (many r02) (many r03) (many r04) (many r05) (many r06) (many r07))
+  (native-compute j00 j01 j02 j03 j04 j05 j06 j07))
 (comptime-match many r00 (CkY _ p00))
 (comptime-match many r01 (CkY _ p01))
 (comptime-match many r02 (CkY _ p02))
@@ -80,6 +80,9 @@
 (comptime-match many r05 (CkY _ p05))
 (comptime-match many r06 (CkY _ p06))
 (comptime-match many r07 (CkY _ p07))
+
+(let ((many r08) (many r09) (many r10) (many r11) (many r12) (many r13) (many r14) (many r15))
+  (native-compute j08 j09 j10 j11 j12 j13 j14 j15))
 (comptime-match many r08 (CkY _ p08))
 (comptime-match many r09 (CkY _ p09))
 (comptime-match many r10 (CkY _ p10))
@@ -88,6 +91,9 @@
 (comptime-match many r13 (CkY _ p13))
 (comptime-match many r14 (CkY _ p14))
 (comptime-match many r15 (CkY _ p15))
+
+(let ((many r16) (many r17) (many r18) (many r19) (many r20) (many r21) (many r22) (many r23))
+  (native-compute j16 j17 j18 j19 j20 j21 j22 j23))
 (comptime-match many r16 (CkY _ p16))
 (comptime-match many r17 (CkY _ p17))
 (comptime-match many r18 (CkY _ p18))
@@ -96,6 +102,9 @@
 (comptime-match many r21 (CkY _ p21))
 (comptime-match many r22 (CkY _ p22))
 (comptime-match many r23 (CkY _ p23))
+
+(let ((many r24) (many r25) (many r26) (many r27) (many r28) (many r29) (many r30) (many r31))
+  (native-compute j24 j25 j26 j27 j28 j29 j30 j31))
 (comptime-match many r24 (CkY _ p24))
 (comptime-match many r25 (CkY _ p25))
 (comptime-match many r26 (CkY _ p26))

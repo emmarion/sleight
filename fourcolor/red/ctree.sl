@@ -56,10 +56,9 @@
     ((SelE _) (let-match erased q (SelE _)) (Refl _ u))))
 
 (def-fns _ $ (many root-exists : (subterm many (Ctree) t) -> (many (Nat) n) (erased (CtRoot t n) r))
-  (match many t _
-    ((CNode t1 t2 t3) (values (Zero) (RootN t1 t2 t3)))
-    ((CLeaf lf) (let ((many k) (erased r)) (root-exists lf)) (values (Succ k) (RootL lf k r)))
-    ((CEmpty) (values (Zero) (RootE)))))
+  (let-match many t (CLeaf lf) ((CNode t1 t2 t3) (values (Zero) (RootN t1 t2 t3))) ((CEmpty) (values (Zero) (RootE))))
+  (let ((many k) (erased r)) (notail $ root-exists lf))
+  (values (Succ k) (RootL lf k r)))
 
 (def-fns _ $ (erased root-fn : (erased (Ctree) t) (erased (Nat) n m) (subterm erased (CtRoot t n) p) (erased (CtRoot t m) q) ->
     (erased (Eq (Nat) n m) r))
@@ -73,7 +72,7 @@
     ((Nil _) (let ((many n) (erased r)) (root-exists t)) (values n (SubNil t n r)))
     ((Cons _ e et1)
       (let ((many u) (erased sl)) (sel-exists t e))
-      (let ((many n) (erased s)) (sub-exists u et1))
+      (let ((many n) (erased s)) (tail $ sub-exists u et1))
       (values n (SubCons t u e et1 n sl s)))))
 
 (def-fns _ $ (erased sub-fn : (erased (Ctree) t) (erased (List (Col)) et) (erased (Nat) n m) (subterm erased (CtSub t et n) p)

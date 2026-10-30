@@ -804,14 +804,14 @@
 (def-fns _ $ (many permt-c : (many (Perm) g) (subterm many (List (Col)) et) -> (many (List (Col)) et2) (erased (PermT g et et2) p))
   (let-match many et (Cons _ c rest) ((Nil _) (values (Nil _) (PTNil g))))
   (let ((many d) (erased pc)) (permc-r g c))
-  (let ((many et3) (erased p)) (permt-c g rest))
+  (let ((many et3) (erased p)) (notail $ permt-c g rest))
   (values (Cons _ d et3) (PTCons g c d rest et3 pc p)))
 
 (def-fns _ $ (many eventail-c : (subterm many (List (Col)) l) -> (many (Bool) b) (erased (EvenTail l b) p))
   (let-match many l (Cons _ c rest) ((Nil _) (values (BTrue) (ETNil))))
   (match many c _
-    ((C0) (let ((many b) (erased p)) (eventail-c rest)) (values b (ET0 rest b p)))
-    ((C1) (let ((many b) (erased p)) (eventail-c rest)) (values b (ET1 rest b p)))
+    ((C0) (let ((many b) (erased p)) (tail $ eventail-c rest)) (values b (ET0 rest b p)))
+    ((C1) (let ((many b) (erased p)) (tail $ eventail-c rest)) (values b (ET1 rest b p)))
     ((C2) (values (BTrue) (ET2 rest)))
     ((C3) (values (BFalse) (ET3 rest)))))
 
@@ -825,9 +825,9 @@
           ((C1) (let ((many b) (erased p)) (eventail-c l)) (values b (Ev1 l b p)))
           ((C2) (let ((many l2) (erased q)) (permt-c p312 l)) (let ((many b) (erased p)) (eventail-c l2)) (values b (Ev2 l l2 b q p)))
           ((C3) (let ((many l2) (erased q)) (permt-c p231 l)) (let ((many b) (erased p)) (eventail-c l2)) (values b (Ev3 l l2 b q p)))))))
-  (match many b _
-    ((BTrue) (values et (ETrEven et ev)))
-    ((BFalse) (let ((many et2) (erased q)) (permt-c p132 et)) (values et2 (ETrOdd et et2 ev q)))))
+  (let-match many b (BFalse) ((BTrue) (values et (ETrEven et ev))))
+  (let ((many et2) (erased q)) (permt-c p132 et))
+  (values et2 (ETrOdd et et2 ev q)))
 
 ; The even normal form of every trace of ls without its first entry is not in kt.
 (def-adts $ (AllOut : ((Ctree) kt) ((List (List (Col))) ls) -> Type)
