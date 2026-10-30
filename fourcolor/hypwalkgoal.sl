@@ -5,7 +5,7 @@
       (erased (Fn L1 (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Nat) gen) (erased (Genus d e n f gen) r)) even)
       (erased (Level) L2)
       (erased (Fn L2 (erased (Nat) d g1 g2) (erased (List (Nat)) e n f) (erased (Genus d e n f g1) p) (erased (Genus d e n f g2) q)
-          -> (erased (Eq (Nat) g1 g2) r)) unique)
+          -> (erased (Eq (Nat) g1 g2) r)) uniq)
       (erased (Level) L3)
       (erased (Fn L3 (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
           -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn)

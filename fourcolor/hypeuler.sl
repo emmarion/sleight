@@ -1,5 +1,5 @@
-; Every hypermap has a genus (Gonthier's even_genus), proved by building the face permutation from the identity
-; one transposition at a time rather than by Walkup induction.
+; The Euler sum of a node and a face permutation, reached by building the face permutation from the identity one
+; transposition at a time, and the uniqueness of the genus.
 
 (def-fns _ $ (erased fixed-sub : (erased (List (Nat)) lab rs ids) (erased (Nat) d) (subterm erased (Respects lab rs rs) fix)
     (erased (Length (Nat) lab d) ll) (erased (Iota d ids) io) -> (erased (Sub rs ids) r))
@@ -398,34 +398,6 @@
     (conn-sym g y x (ConnStep g y w x (adj-cat-r gn gf g y w (graph-adj d y w f gf grf pw) cg)
       (conn-adj g w x (adj-cat-l gn gf g w x (graph-adj d w x n gn grn (respects-nth n f nf y w x rc pw (perm-inv d x y e nf pm px))) cg))))
     (spans-edge d e n f nf g1 gn gf g f1 pm rc lf grn grf cg)))
-
-; Every hypermap has a genus: Euler_lhs = 2 genus + Euler_rhs (Gonthier's even_genusP).
-(def-fns _ $ (erased even-genus : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Nat) gen) (erased (Genus d e n f gen) r))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen _ cnf inf))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let ((erased pme)) (MkPerm d e nf ids io le
-    (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d inf (iota-length d ids io)) lf) inf))
-  (let ((erased nfn) (erased pmn)) (hyper-perm d n f e (hyper-rot d e n f h)))
-  (let ((erased efp) (erased pmf)) (hyper-perm d f e n (hyper-rot d n f e (hyper-rot d e n f h))))
-  (let ((erased pmx)) (perm-sym d e nf pme))
-  (let ((erased kn) (erased on)) (orbits-exists d n nfn pmn))
-  (let ((erased kf) (erased of)) (orbits-exists d f efp pmf))
-  (let ((erased kx) (erased ox)) (orbits-exists d nf e pmx))
-  (let-match erased on (MkOrbits _ _ _ gn grn _))
-  (let-match erased of (MkOrbits _ _ _ gf grf _))
-  (let ((erased ge) (erased gre)) (perm-graph d e nf pme))
-  (let ((erased gnf) (erased c1)) (cat-exists gn gf))
-  (let ((erased g) (erased c2)) (cat-exists ge gnf))
-  (let ((erased m) (erased am)) (sub d kf (orbits-bound d kf f of)))
-  (let ((erased kc) (erased gen) (erased cs) (erased es)) (euler-core d kn kf kx n nfn f efp nf gn gf gnf pmn pmf cnf on of ox grn grf c1 m am))
-  (let-match erased es (MkEulerSum _ _ _ _ _ _ c2d lhs s1 rhs g2 dc al a1 ar dg ag))
-  (values gen (MkGenus d gen kx kn kf kc c2d lhs s1 rhs g2 e n f g (orbits-inv d kx nf e pmx ox) on of
-    (MkGlink d e n f ge gn gf gnf g gre grn grf c1 c2)
-    (classes-equiv gnf g d kc cs (spans-lift-r ge gnf g gnf (spans-self gnf) c2)
-      (spans-cat gnf ge gnf g c2 (spans-edge d e n f nf ge gn gf gnf (graph-fun d e ge gre) pme cnf lf grn grf c1) (spans-self gnf))
-      (below-cat ge gnf g d c2 (graph-below d e nf ge (graph-fun d e ge gre) pme)
-        (below-cat gn gf gnf d c1 (graph-below d n nfn gn (graph-fun d n gn grn) pmn) (graph-below d f efp gf (graph-fun d f gf grf) pmf))))
-    dc al a1 ar dg ag)))
 
 (def-fns _ $ (erased add-cancel : (erased (Nat) b a a2 c) (subterm erased (Add b a c) p) (erased (Add b a2 c) q) -> (erased (Eq (Nat) a a2) e))
   (let-match erased p (AddSucc b1 _ c1 p1) ((AddZero _) (let-match erased q (AddZero _)) (Refl _ a)))

@@ -1,4 +1,4 @@
-; The derived hypermaps of hypermap.v (permN, permF, dual), each of the same genus.
+; Every hypermap has a genus, and the derived hypermaps of hypermap.v (permN, permF, dual) keep it.
 
 (def-fns _ $ (erased add-assoc : (erased (Nat) a b c ab abc) (subterm erased (Add a b ab) p) (erased (Add ab c abc) q) ->
     (erased (Nat) bc) (erased (Add b c bc) r) (erased (Add a bc abc) s))
@@ -73,6 +73,65 @@
   (let ((erased gnf) (erased c1)) (cat-exists gn gf))
   (let ((erased g) (erased c2)) (cat-exists ge gnf))
   (values g (MkGlink d e n f ge gn gf gnf g gre grn grf c1 c2)))
+
+(def-fns _ $ (erased hyper-core : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
+    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen _ cnf inf))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ni) (erased pn)) (hyper-perm d n f e (hyper-rot d e n f h)))
+  (let ((erased fi) (erased pf)) (hyper-perm d f e n (hyper-rot d n f e (hyper-rot d e n f h))))
+  (values nf ni fi cnf (MkPerm d e nf ids io le
+    (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d inf (iota-length d ids io)) lf) inf) pn pf))
+
+(def-fns _ $ (erased core-genus : (erased (Nat) d kx kn kf kc gen) (erased (List (Nat)) e n f nf ni fi) (erased (List (Bond)) gn gf g)
+    (erased (Perm d e nf) pe) (erased (Respects n f nf) rnf) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+    (erased (Orbits d nf kx) ox) (erased (Orbits d n kn) on) (erased (Orbits d f kf) of) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf)
+    (erased (Cat gn gf g) cg) (erased (Classes g d kc) cs) (erased (EulerSum kc d kx kn kf gen) es) -> (erased (Genus d e n f gen) r))
+  (let ((erased ge) (erased gre)) (perm-graph d e nf pe))
+  (let ((erased gl0) (erased c2)) (cat-exists ge g))
+  (let ((erased gl)) (MkGlink d e n f ge gn gf g gl0 gre grn grf cg c2))
+  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
+  (genus-make d gen kc kx kn kf e n f gl0 (orbits-inv d kx nf e (perm-sym d e nf pe) ox) on of gl
+    (classes-equiv g gl0 d kc cs (spans-cat gl0 gn gf g cg sn sf)
+      (glink-to d e n f gl0 g ge gn gf gl gre grn grf
+        (spans-edge d e n f nf ge gn gf g (graph-fun d e ge gre) pe rnf (perm-length d f fi pf) grn grf cg)
+        (spans-lift-l gn gf g gn (spans-self gn) cg) (spans-lift-r gn gf g gf (spans-self gf) cg))
+      (below-cat ge g gl0 d c2 (graph-below d e nf ge (graph-fun d e ge gre) pe)
+        (below-cat gn gf g d cg (graph-below d n ni gn (graph-fun d n gn grn) pn) (graph-below d f fi gf (graph-fun d f gf grf) pf))))
+    es))
+
+(def-fns _ $ (erased genus-core : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
+    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+    (erased (Nat) kx kn kf kc) (erased (Orbits d nf kx) ox) (erased (Orbits d n kn) on) (erased (Orbits d f kf) of)
+    (erased (List (Bond)) gn gf g) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Cat gn gf g) cg) (erased (Classes g d kc) cs)
+    (erased (EulerSum kc d kx kn kf gen) es))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased gl0) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
+    (genus-parts d gen e n f p))
+  (let-match erased gl (MkGlink _ _ _ _ ge gn gf _ _ gre grn grf _ _))
+  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
+  (let ((erased g) (erased cg)) (cat-exists gn gf))
+  (values nf ni fi rnf pe pn pf ke kn kf kc (orbits-inv d ke e nf pe oe) on of gn gf g grn grf cg
+    (classes-equiv gl0 g d kc cc
+      (glink-to d e n f gl0 g ge gn gf gl gre grn grf
+        (spans-edge d e n f nf ge gn gf g (graph-fun d e ge gre) pe rnf (perm-length d f fi pf) grn grf cg)
+        (spans-lift-l gn gf g gn (spans-self gn) cg) (spans-lift-r gn gf g gf (spans-self gf) cg))
+      (spans-cat gl0 gn gf g cg sn sf)
+      (below-cat gn gf g d cg (graph-below d n ni gn (graph-fun d n gn grn) pn) (graph-below d f fi gf (graph-fun d f gf grf) pf)))
+    es))
+
+; Every hypermap has a genus: Euler_lhs = 2 genus + Euler_rhs (Gonthier's even_genusP).
+(def-fns _ $ (erased even-genus : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Nat) gen) (erased (Genus d e n f gen) r))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased kn) (erased on)) (orbits-exists d n ni pn))
+  (let ((erased kf) (erased of)) (orbits-exists d f fi pf))
+  (let ((erased kx) (erased ox)) (orbits-exists d nf e (perm-sym d e nf pe)))
+  (let-match erased on (MkOrbits _ _ _ gn grn _))
+  (let-match erased of (MkOrbits _ _ _ gf grf _))
+  (let ((erased g) (erased cg)) (cat-exists gn gf))
+  (let ((erased m) (erased am)) (sub d kf (orbits-bound d kf f of)))
+  (let ((erased kc) (erased gen) (erased cs) (erased es)) (euler-core d kn kf kx n ni f fi nf gn gf g pn pf rnf on of ox grn grf cg m am))
+  (values gen (core-genus d kx kn kf kc gen e n f nf ni fi gn gf g pe rnf pn pf ox on of grn grf cg cs es)))
 
 ; permN keeps the genus.
 (def-fns _ $ (erased genus-rot : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
