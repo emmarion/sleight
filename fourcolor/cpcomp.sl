@@ -158,3 +158,140 @@
           (let-match erased (addc-eq sm e2 h e1 ph (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm p)))) (Refl _ _))
           (cov-mem cp2 et1 et2 t c st1 (allnz2 e2 e1 r2 nz2 nz1 nzr2)))
         (absurd (PkSwap _ _) (addc-self sm h ph nh))))))
+
+(def-fns _ $ (erased third-nz : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (NZ a) na) (erased (NZ b) nb) (erased (NZ c) nc))
+  (match erased t _
+    ((T123) (values (NZ1) (NZ2) (NZ3))) ((T132) (values (NZ1) (NZ3) (NZ2))) ((T213) (values (NZ2) (NZ1) (NZ3)))
+    ((T231) (values (NZ2) (NZ3) (NZ1))) ((T312) (values (NZ3) (NZ1) (NZ2))) ((T321) (values (NZ3) (NZ2) (NZ1)))))
+
+(def-fns _ $ (erased third-isperm : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (IsPerm (MkPerm a b c)) ip))
+  (match erased t _ ((T123) (IP123)) ((T132) (IP132)) ((T213) (IP213)) ((T231) (IP231)) ((T312) (IP312)) ((T321) (IP321))))
+
+(def-fns _ $ (erased nz-perm : (erased (Perm) g) (erased (Col) c d) (erased (IsPerm g) ip) (erased (PermC g c d) pc) (erased (NZ c) nz) -> (erased (NZ d) r))
+  (let-match erased g (MkPerm p1 p2 p3))
+  (let ((erased n1) (erased n2) (erased n3)) (third-nz p1 p2 p3 (perm-third p1 p2 p3 ip)))
+  (match erased pc _ (absurd (PC0 _) nz) ((PC1 _ _ _) n1) ((PC2 _ _ _) n2) ((PC3 _ _ _) n3)))
+
+(def-fns _ $ (erased allnz-perm : (erased (Perm) g) (erased (List (Col)) l l2) (erased (IsPerm g) ip) (subterm erased (PermT g l l2) pt) (erased (AllNZ l) a)
+    -> (erased (AllNZ l2) r))
+  (let-match erased pt (PTCons _ c d l1 l3 pc pt1) ((PTNil _) (AllNZNil)))
+  (let-match erased a (AllNZCons _ _ nc a1))
+  (AllNZCons d l3 (nz-perm g c d ip pc nc) (allnz-perm g l1 l3 ip pt1 a1)))
+
+(def-fns _ $ (erased absurd allnz-hasc0 : (erased (List (Col)) l) (subterm erased (AllNZ l) a) (erased (HasC0 l) z) -> (erased (False) f))
+  (let-match erased a (AllNZCons c l1 nc a1) (absurd (AllNZNil) z))
+  (match erased z _ (absurd (HZHere _) nc) (absurd (HZThere _ _ z1) (allnz-hasc0 l1 a1 z1))))
+
+(def-fns _ $ (erased permt-up : (erased (Perm) g) (erased (List (Col)) xs xs2 pxs) (erased (Col) x px) (subterm erased (Snoc (Col) xs x xs2) s)
+    (erased (PermT g xs pxs) pt) (erased (PermC g x px) pc) -> (erased (List (Col)) pxs2) (erased (Snoc (Col) pxs px pxs2) ps) (erased (PermT g xs2 pxs2) pt2))
+  (match erased s _
+    ((SnocNil _ _) (let-match erased pt (PTNil _)) (values (Cons _ px (Nil _)) (SnocNil _ px) (PTCons g x px _ _ pc (PTNil g))))
+    ((SnocCons _ y _ xs1 ys1 s1)
+      (let-match erased pt (PTCons _ _ py _ pxs1 pcy pt1))
+      (let ((erased pys) (erased ps) (erased pt2)) (permt-up g xs1 ys1 pxs1 x px s1 pt1 pc))
+      (values (Cons _ py pys) (SnocCons _ py px pxs1 pys ps) (PTCons g y py ys1 pys pcy pt2)))))
+
+(def-fns _ $ (erased rots-perm : (erased (Perm) g) (erased (Nat) k) (erased (List (Col)) xs ys pxs) (subterm erased (Rots (Col) k xs ys) rs) (erased (PermT g xs pxs) pt)
+    -> (erased (List (Col)) pys) (erased (Rots (Col) k pxs pys) prs) (erased (PermT g ys pys) pt2))
+  (let-match erased rs (RotsS _ k1 x xs1 xs2 _ s rs1) ((RotsZ _ _) (values pxs (RotsZ _ pxs) pt)))
+  (let-match erased pt (PTCons _ _ px _ pxs1 pc pt1))
+  (let ((erased pxs2) (erased ps) (erased ptx)) (permt-up g xs1 xs2 pxs1 x px s pt1 pc))
+  (let ((erased pys) (erased prs) (erased pt2)) (rots-perm g k1 xs2 ys pxs2 rs1 ptx))
+  (values pys (RotsS _ k1 px pxs1 pxs2 pys ps prs) pt2))
+
+(def-fns _ $ (erased rot-perm : (erased (Perm) g) (erased (Nat) k) (erased (List (Col)) xs ys pxs) (erased (Rot (Col) k xs ys) rt) (erased (PermT g xs pxs) pt)
+    -> (erased (List (Col)) pys) (erased (Rot (Col) k pxs pys) prt) (erased (PermT g ys pys) pt2))
+  (match erased rt _
+    ((RotIn _ _ m _ _ l le rs)
+      (let ((erased pys) (erased prs) (erased pt2)) (rots-perm g k xs ys pxs rs pt))
+      (values pys (RotIn _ k m pxs pys (permt-length g xs pxs m pt l) le prs) pt2))
+    ((RotOver _ _ m _ l gt) (values pxs (RotOver _ k m pxs (permt-length g xs pxs m pt l) gt) pt))))
+
+; A colour permutation of a run of steps is a run of steps.
+(def-fns _ $ (erased step-perm : (erased (Perm) g) (erased (Step) s) (erased (List (Col)) et et1 pet) (erased (IsPerm g) ip) (erased (StepTr s et et1) st)
+    (erased (PermT g et pet) pt) -> (erased (List (Col)) pet1) (erased (StepTr s pet pet1) pst) (erased (PermT g et1 pet1) pt1))
+  (match erased st _
+    ((STR k _ _ rt) (let ((erased py) (erased prt) (erased pt2)) (rot-perm g k et et1 pet rt pt)) (values py (STR k pet py prt) pt2))
+    ((STU c _ nz)
+      (let ((erased d) (erased pc)) (permc-ex g c ip))
+      (values (Cons _ d (Cons _ d pet)) (STU d pet (nz-perm g c d ip pc nz)) (PTCons g c d _ _ pc (PTCons g c d et pet pc pt))))
+    ((STY e1 a b r1 p na nb)
+      (let-match erased pt (PTCons _ _ d1 _ pr1 pc1 ptr))
+      (let ((erased da) (erased pa)) (permc-ex g a ip))
+      (let ((erased db) (erased pb)) (permc-ex g b ip))
+      (values (Cons _ da (Cons _ db pr1)) (STY d1 da db pr1 (permc-add g e1 a b d1 da db ip p pc1 pa pb) (nz-perm g a da ip pa na) (nz-perm g b db ip pb nb))
+        (PTCons g a da _ _ pa (PTCons g b db r1 pr1 pb ptr))))
+    ((STH e1 e2 ee a s1 b r2 pee ps1 ph na ns nb)
+      (let-match erased pt (PTCons _ _ d1 _ pr pc1 ptr))
+      (let-match erased ptr (PTCons _ _ d2 _ pr2 pc2 ptr2))
+      (let ((erased dee) (erased pdee)) (permc-ex g ee ip))
+      (let ((erased da) (erased pa)) (permc-ex g a ip))
+      (let ((erased ds) (erased pds)) (permc-ex g s1 ip))
+      (let ((erased db) (erased pb)) (permc-ex g b ip))
+      (values (Cons _ da (Cons _ db pr2))
+        (STH d1 d2 dee da ds db pr2 (permc-add g e1 e2 ee d1 d2 dee ip pee pc1 pc2 pdee) (permc-add g e1 a s1 d1 da ds ip ps1 pc1 pa pds)
+          (permc-add g ee a b dee da db ip ph pdee pa pb) (nz-perm g a da ip pa na) (nz-perm g s1 ds ip pds ns) (nz-perm g b db ip pb nb))
+        (PTCons g a da _ _ pa (PTCons g b db r2 pr2 pb ptr2))))))
+
+(def-fns _ $ (erased steps-perm : (erased (Perm) g) (erased (List (Step)) cp1) (erased (List (Col)) et et2 pet) (erased (IsPerm g) ip)
+    (subterm erased (StepsTr cp1 et et2) st) (erased (PermT g et pet) pt) -> (erased (List (Col)) pet2) (erased (StepsTr cp1 pet pet2) pst) (erased (PermT g et2 pet2) pt2))
+  (match erased st _
+    ((SNil _) (values pet (SNil pet) pt))
+    ((SCons s cp2 _ et1 _ s1 st1)
+      (let ((erased pet1) (erased ps1) (erased pt1)) (step-perm g s et et1 pet ip s1 pt))
+      (let ((erased pet2) (erased pst) (erased pt2)) (steps-perm g cp2 et1 et2 pet1 ip st1 pt1))
+      (values pet2 (SCons s cp2 pet pet1 pet2 ps1 pst) pt2))))
+
+(def-fns _ $ (erased erot-ex : (erased (Col) c) (erased (NZ c) nz) -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermC g c (C1)) p))
+  (match erased nz _
+    ((NZ1) (values p123 (IP123) (PC1 (C1) (C2) (C3))))
+    ((NZ2) (values p312 (IP312) (PC2 (C3) (C1) (C2))))
+    ((NZ3) (values p231 (IP231) (PC3 (C2) (C3) (C1))))))
+
+; The permutation sending a b c to 1 2 3.
+(def-fns _ $ (erased third-inv : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermC g a (C1)) pa)
+    (erased (PermC g b (C2)) pb) (erased (PermC g c (C3)) pc))
+  (let ((erased g) (erased pi) (erased ip)) (perminv-ex (MkPerm a b c) (third-isperm a b c t)))
+  (values g ip (permc-invert (MkPerm a b c) g (C1) a pi (PC1 a b c)) (permc-invert (MkPerm a b c) g (C2) b pi (PC2 a b c))
+    (permc-invert (MkPerm a b c) g (C3) c pi (PC3 a b c))))
+
+; Up to a colour permutation, every trace that the steps cp1 can give from c c has its normalisation in t.
+(def-fns _ $ (erased cov0-mem : (erased (List (Step)) cp1) (erased (Col) c) (erased (List (Col)) et2) (erased (Ctree) t) (subterm erased (Cov0 cp1 t) cv)
+    (erased (StepsTr cp1 (Cons (Col) c (Cons (Col) c (Nil (Col)))) et2) st) (erased (NZ c) nz)
+    -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Col)) pet) (erased (PermT g et2 pet) pt) (erased (BrMem pet t) bm))
+  (let ((erased cc2) (erased nil)) (values (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Nil (Col))))
+  (let ((erased n1) (erased n11)) (values (AllNZCons (C1) nil (NZ1) (AllNZNil)) (allnz2 (C1) (C1) nil (NZ1) (NZ1) (AllNZNil))))
+  (match erased cv _
+    ((C0Base _ _ c0)
+      (let ((erased g) (erased ip) (erased pg)) (erot-ex c nz))
+      (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp1 cc2 et2 c11 ip st (PTCons g c (C1) _ _ pg (PTCons g c (C1) nil nil pg (PTNil g)))))
+      (values g ip pet pt (cov-mem cp1 c11 pet t c0 pst n11)))
+    ((C0R k cp2 _ c0)
+      (let-match erased st (SCons _ _ _ et1 _ s1 st1))
+      (let-match erased s1 (STR _ _ _ rt))
+      (let-match erased (rot-fn (Col) k cc2 et1 cc2 rt (rot-cc c k)) (Refl _ _))
+      (cov0-mem cp2 c et2 t c0 st1 nz))
+    ((C0Y cp2 _ c0)
+      (let-match erased st (SCons _ _ _ et1 _ s1 st1))
+      (let-match erased s1 (STY _ a b _ pab na nb))
+      (let ((erased g) (erased ip) (erased pa) (erased pb) (erased pc)) (third-inv a b c (third-23 a c b (third-12 c a b (third-of c a b pab nz na nb)))))
+      (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp2 et1 et2 _ ip st1 (PTCons g a (C1) _ _ pa (PTCons g b (C2) _ _ pb (PTCons g c (C3) _ _ pc (PTNil g))))))
+      (values g ip pet pt (cov-mem cp2 _ pet t c0 pst (allnz2 (C1) (C2) (Cons (Col) (C3) nil) (NZ1) (NZ2) (AllNZCons (C3) nil (NZ3) (AllNZNil))))))
+    ((C0U cp2 t1 t2 _ c1 c2 o)
+      (let-match erased st (SCons _ _ _ et1 _ s1 st1))
+      (let-match erased s1 (STU a _ na))
+      (let ((erased x) (erased pax)) (addc-total a c))
+      (match erased pax _
+        (absurd (AZL _) na)
+        (absurd (AZR _) nz)
+        ((ASame _)
+          (let ((erased g) (erased ip) (erased pg)) (erot-ex c nz))
+          (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp2 et1 et2 _ ip st1
+            (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTNil g)))))))
+          (values g ip pet pt (brmem-or t1 t2 t pet o (InR _ _ (cov-mem cp2 _ pet t2 c2 pst (allnz2 (C1) (C1) _ (NZ1) (NZ1) n11))))))
+        ((AThird _ _ _ th)
+          (let ((erased g) (erased ip) (erased pa) (erased pb) (erased _)) (third-inv a c x th))
+          (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp2 et1 et2 _ ip st1
+            (PTCons g a (C1) _ _ pa (PTCons g a (C1) _ _ pa (PTCons g c (C2) _ _ pb (PTCons g c (C2) _ _ pb (PTNil g)))))))
+          (values g ip pet pt (brmem-or t1 t2 t pet o (InL _ _ (cov-mem cp2 _ pet t1 c1 pst
+            (allnz2 (C1) (C1) _ (NZ1) (NZ1) (allnz2 (C2) (C2) nil (NZ2) (NZ2) (AllNZNil))))))))))))
