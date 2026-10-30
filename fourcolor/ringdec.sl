@@ -21,12 +21,10 @@
   (match erased u _
     ((UFEnd _ s) (match erased v _ ((UFEnd _ _) (Refl _ lc)) (absurd (UFCons _ _ _ _ _ _ v1) v1)))
     ((UFCons _ c2 s et1 lc1 a u1)
-      (match erased v _
-        (absurd (UFEnd _ _) u1)
-        ((UFCons _ c3 _ _ lc3 b v1)
-          (let-match erased (addc-fn c s c2 c3 (addk-swap c c2 s a) (addk-swap c c3 s b)) (Refl _ _))
-          (let-match erased (uf-fn c2 et1 lc1 lc3 u1 v1) (Refl _ _))
-          (Refl _ lc))))))
+      (let-match erased v (UFCons _ c3 _ _ lc3 b v1) (absurd (UFEnd _ _) u1))
+      (let-match erased (addc-fn c s c2 c3 (addk-swap c c2 s a) (addk-swap c c3 s b)) (Refl _ _))
+      (let-match erased (uf-fn c2 et1 lc1 lc3 u1 v1) (Refl _ _))
+      (Refl _ lc))))
 
 (def-fns _ $ (erased uf-exists : (erased (Col) c s) (subterm erased (List (Col)) et) -> (erased (List (Col)) lc) (erased (UF c (Cons (Col) s et) lc) u))
   (let-match erased et (Cons _ s2 et1) ((Nil _) (values (Nil _) (UFEnd c s))))
@@ -56,15 +54,14 @@
     ((Cons _ x xs1)
       (let-match erased ys (Cons _ y ys1) ((Nil _) (InR _ _ (CNL x xs1))))
       (let ((erased z) (erased a)) (addc-total x y))
-      (match erased z _
-        ((C0)
-          (let-match erased (addk-zero x y a) (Refl _ _))
-          (match erased (cl-dec xs1 ys1) _
-            ((InL _ _ q) (let-match erased q (Refl _ _)) (InL _ _ (Refl _ xs)))
-            ((InR _ _ p) (InR _ _ (CNTail x y xs1 ys1 p)))))
+      (let-match erased z (C0)
         ((C1) (InR _ _ (CNHead x y z xs1 ys1 a (NZ1))))
         ((C2) (InR _ _ (CNHead x y z xs1 ys1 a (NZ2))))
-        ((C3) (InR _ _ (CNHead x y z xs1 ys1 a (NZ3))))))))
+        ((C3) (InR _ _ (CNHead x y z xs1 ys1 a (NZ3)))))
+      (let-match erased (addk-zero x y a) (Refl _ _))
+      (let-match erased (cl-dec xs1 ys1) (InL _ _ q) ((InR _ _ p) (InR _ _ (CNTail x y xs1 ys1 p))))
+      (let-match erased q (Refl _ _))
+      (InL _ _ (Refl _ xs)))))
 
 (def-fns _ $ (erased nats-exists : (subterm erased (List (Col)) cs) -> (erased (List (Nat)) ks) (erased (All2 (Nat) (Col) ColOf ks cs) a))
   (let-match erased cs (Cons _ c cs1) ((Nil _) (values (Nil _) (All2Nil (Nat) (Col) ColOf))))
