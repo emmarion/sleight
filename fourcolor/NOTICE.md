@@ -45,12 +45,13 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
 - Definitions and proofs that follow the Coq development's statements,
   and often its proofs, in Sleight: the `hyp*.sl` files (`hypermap.v`,
   `geometry.v`, `walkup.v`, `jordan.v`), `cube.sl`, `coloring.sl`,
-  `ringtrace.sl`, `kempemap.sl`, `patch.sl`, `snip.sl`, `revsnip.sl` and
-  `hypsub.sl` (`cube.v`, `coloring.v`, `kempe.v`, `patch.v`, `snip.v`,
-  `revsnip.v`), `cfmap.sl`, `cpmap.sl`,
-  `cfcolor.sl`, `cpcolor.sl` and the certified files in `red/`
+  `ringtrace.sl`, `ringdec.sl`, `kempemap.sl`, `patch.sl`, `snip.sl`,
+  `revsnip.sl`, `hypsub.sl` and `geomring.sl` (`cube.v`, `coloring.v`,
+  `kempe.v`, `patch.v`, `snip.v`, `revsnip.v`, `geometry.v`), `cfmap.sl`,
+  `cpmap.sl`, `cfcolor.sl`, `cpcolor.sl` and the certified files in `red/`
   (`color.v`, `chromogram.v`, `kempe.v`, `ctree.v`, `gtree.v`,
-  `cfmap.v`, `cfcolor.v`, `cfcontract.v`, `cfreducible.v`), and the
+  `cfmap.v`, `cfcolor.v`, `cfcontract.v`, `kempetree.v`, `cfreducible.v`,
+  `birkhoff.v`), and the
   certified files in `unav/` (`part.v`, `discharge.v`, `hubcap.v`,
   and for `qfit.sl`, `rdart.sl`, `redc.sl` and `qztgoal.sl`, `quiz.v`,
   `quiztree.v`, `redpart.v` and `unavoidability.v`).
