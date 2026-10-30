@@ -448,7 +448,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `embed.sl embedgoal.sl`. `realias.sl` and `unav/realias.sl` put back
   names that a later file of the chain defines again (hypcount.sl's
   `AppN` constructors, base.sl's `Or`); `colalias.sl` keeps the former.
-  `fcgoal.sl` chains `embed-analysis` with `inductfc.sl` in one run.
+  `fcopen.sl` chains `embed-analysis` with `inductfc.sl` in one run.
 - `embed2.sl` (load after `embed.sl`, in its chain with `geomring sew
   snip srcycle revsnip revsnip2 revsnip3` loaded after `split`): first-order
   pieces of embed.v's not_embed_reducible, as far as both compilers check
@@ -690,7 +690,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   rejected, and in another a variant passing `CAFive`'s insertE to
   `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
   reading.
-- `embed4.sl`, `embed4goal.sl` (load after `evalid.sl`, in the chain
+- `embed4.sl`, `embed4proof.sl`, `embed4goal.sl` (load after `fcopen.sl`, in the chain
   of `fcgoal.sl` below, in place of `fcgoal.sl`):
   embed.v's embed_functor and the facts of embeddable that the embedding
   reads, for the configuration maps, as far as both compilers check them.
@@ -701,8 +701,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   kernel a refutation (`Refut`) of its not being central. `cf-gcok`,
   `cf-functor` and `cfcerts-of` move these to any `KernelList` and any
   `EEnv` on the map of a configuration of cfs (through `cpmap-fn` and
-  `hyper-node-unique`), and `embed4goal.sl` sets and proves `CfCerts cfs`
-  (cfs as `fcgoal.sl` computes it). embed_functor is not ported along
+  `hyper-node-unique`), `embed4proof.sl` proves `CfCerts cfs`
+  (`cfcerts-proof`, cfs that of `fcopen.sl`), and `embed4goal.sl` sets it
+  as a goal and discharges it. embed_functor is not ported along
   Coq's induction on disks: a refutation is a case tree on the centrality
   of kernel darts, closed at each leaf by a clash, by `node-rule` (at a
   node with every dart and edge image in the kernel, two central darts
@@ -778,15 +779,17 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   broken variant (Birkhoff for five darts given the ring nontrivial for 0
   only) was rejected. That these statements match Coq's has been checked
   only by reading.
-- `fcgoal.sl` (load after `evalid.sl` and `triad.sl`, in the chain below): sets and
-  proves `FourColorOpen`: `FourColor` from `UnavE cfs`, `AllRedC CRX css`
-  and `BirkhoffChecks` (the statements of `unav/qztgoal.sl`,
-  `red/goal-c.sl` and `red/bgoal.sl`, whose computed proofs run in units of
-  their own) and the hypotheses `CfCerts cfs` and `TrivFive`, through
-  `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`. Here css is
-  `config-chunks` and cfs its concatenation by `concat-c`; `qztgoal.sl`
-  computes cfs with `concat-cfs` instead, and that the two agree is not
-  proved. Chain (both compilers, with `--goal proved`; about 50 s with slc and 115 s
+- `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl` and
+  `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
+  from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
+  (whose computed proofs are in `unav/qztproof.sl`, `red/proof-c.sl`,
+  `red/bproof.sl` and `embed4proof.sl`) and the hypothesis `TrivFive`, through
+  `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`,
+  and `fcgoal.sl` sets and proves it as the goal `FourColorOpen`. Here css
+  is `config-chunks` (`red/chunks.sl`) and cfs its concatenation by
+  `concat-c` (`fcopen.sl`); the proof files read both from scope, so in
+  one unit they are about the same entries (a variant passing a `UnavE`
+  of a cfs computed again by `concat-cfs` was rejected). Chain (both compilers, with `--goal proved`; about 50 s with slc and 115 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
   std/list.sl ring.sl`, then `defs
   orient base sweep geo plan map lists planemap walk frontier labels rot
@@ -799,8 +802,16 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   revsnip2 revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2
   embed2 contract contract2 unav/realias`, `unav/` `part` to `unave` as in
   the `embed.sl` entry, and `embed birkhoff3 minarity embed3 embed5
-  contract3 embed6 fullred trivred notembed evalid triad fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
+  contract3 embed6 fullred trivred notembed evalid triad red/chunks fcopen
+  fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
+- `fcfinal.sl` (load after `embed4proof.sl`, in the chain below): sets and
+  proves `FourColorRest`: `FourColor` from `TrivFive` alone, by
+  `four-color-open` on `unav-proof`, `all-red-proof`, `birkhoff-proof` and
+  `cfcerts-proof`, all computed in the same unit. Chain: that of
+  `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c red/bproof
+  unav/qztproof embed4proof fcfinal` (each `.sl`), with `--goal proved`.
+  TIMINGS
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
   embed_patch and cface_h1 of embed.v, as far as both compilers check
   them: `patch-open` proves embed5.sl's `PatchOpen`. Without `NodeRing`,

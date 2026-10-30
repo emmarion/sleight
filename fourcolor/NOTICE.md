@@ -55,7 +55,7 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   `birkhoff.v`), and the
   certified files in `unav/` (`part.v`, `discharge.v`, `hubcap.v`,
   and for `qfit.sl`, `rdart.sl`, `redc.sl`, `qwalk.sl`, `qembed.sl`,
-  `qcert.sl`, `qtree.sl`, `qmirror.sl`, `unave.sl` and `qztgoal.sl`, `quiz.v`,
+  `qcert.sl`, `qtree.sl`, `qmirror.sl`, `unave.sl`, `qztproof.sl` and `qztgoal.sl`, `quiz.v`,
   `cfquiz.v`, `quiztree.v`, `coloring.v`, `redpart.v` and
   `unavoidability.v`), and `embed.sl` (`present.v`, `coloring.v`, and
   the statements of `birkhoff.v` and `embed.v` that it takes as
@@ -67,7 +67,7 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   `minarity.sl` (`birkhoff.v`),
   `embed2.sl` (`embed.v`), `contract.sl` (`contract.v`, `embed.v`),
   `contract2.sl` (`contract.v`, `walkup.v`), `contract3.sl` (`contract.v`, `revsnip.v`),
-  `embed3.sl`, `embed4.sl`, `embed4goal.sl` (`embed.v`, `coloring.v`), `embed5.sl`, `embed6.sl`, `fullred.sl` and `notembed.sl` (`embed.v`, `contract.v`), `trivred.sl` (`embed.v`, `revsnip.v`), `evalid.sl` (`embed.v`, `birkhoff.v`), `triad.sl` (`contract.v`, `birkhoff.v`), `fcgoal.sl` (the assembly of `present.v` and the four_color_hypermap induction) and `traceconv.sl` (the traces of `cfcolor.v` and
+  `embed3.sl`, `embed4.sl`, `embed4proof.sl`, `embed4goal.sl` (`embed.v`, `coloring.v`), `embed5.sl`, `embed6.sl`, `fullred.sl` and `notembed.sl` (`embed.v`, `contract.v`), `trivred.sl` (`embed.v`, `revsnip.v`), `evalid.sl` (`embed.v`, `birkhoff.v`), `triad.sl` (`contract.v`, `birkhoff.v`), `fcopen.sl`, `fcgoal.sl` and `fcfinal.sl` (the assembly of `present.v` and the four_color_hypermap induction) and `traceconv.sl` (the traces of `cfcolor.v` and
   `coloring.v`).
   Where a Sleight file follows a Coq file, its comments or the commit
   that added it usually name the Coq file; this list is reconstructed
