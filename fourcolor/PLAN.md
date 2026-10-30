@@ -519,19 +519,43 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (`bridge-reduces`). `contract-one`, for a contract of one dart, gives a
   `Contraction` or a `Reduces` (`ContractOut`). `contract-go`, for any
   nonempty contract whose insertE is sparse, gives the same or a live
-  bridge arising after at least one contraction (`CGLater`). Not done:
-  that last case, which Coq turns into a contract ring of the original
-  map (the ring lifting in contract_coloring's proof of the bridgeless
-  part) and refutes through Birkhoff (sparse_contract_ring,
-  contract_ring_max, contract3_valid, triad_valid). `notembed.sl` reads
-  the contract off red/cfred.sl's `ValidContract`, whose `InsertE` is a
-  type of the same shape that ringtrace.sl defines again, through
-  `iealias.sl`. The combined load order,
+  bridge arising after at least one contraction (`CGLater`), which
+  `contract3.sl` handles. `notembed.sl` reads the contract off
+  red/cfred.sl's `ValidContract`, whose `InsertE` is a type of the same
+  shape that ringtrace.sl defines again, through `iealias.sl`. The
+  combined load order,
   checked by both compilers (about 25 and 60 s in one run each): the
   birkhoff chain of the `birkhoff.sl` entry with `birkfit.sl`, then
   `birkhoff2.sl embed2.sl contract.sl contract2.sl` (`embed2.sl` does not
   appear to need `embed.sl`; `traceconv.sl` is already in that chain).
   That these statements match Coq's has been checked only by reading.
+- `contract3.sl` (load after `contract2.sl`, in the chain of
+  `embed5.sl` below: that chain, then `minarity embed2 contract
+  contract2 embed3 embed5 contract3`): the bridgeless part of
+  contract_coloring, as far as both compilers check it, with
+  minimality as data. A `CGLater` bridge is read on the original map,
+  where the dead darts keep the dart map the identity: each face step
+  after a contraction is a walk before it that jumps along contracted
+  edges (`cstep-xp`, `xp-lift1`, `xp-hist`), which gives a cyclic
+  chain of contracted darts from the bridge's dart w back to it, cut
+  by shortcuts to darts on distinct faces (`chain-simp`), so a proper
+  ring w :: B with B in insertE (`bridge-ring`, a contract ring).
+  sparse_contract_ring (`ring-nt`): the node images of the exceptional
+  dart give a dart of diskF, a smaller chord ring (`node-step`,
+  `mk-chords`, `chord-len`, and diskF_chord_ring as `chord-diskf`), or
+  two darts of one node orbit in insertE, which sparsity refutes
+  (`two-steps`, `disk-f`); diskFC comes from diskF of the reverse ring.
+  contract_ring_max (`ring-max`, by `pigeonhole` on the contract darts
+  the ring's darts come from). `contract-all` takes valid_contract's
+  size conditions read on the map (`CSize`: one to three darts, or
+  four with red/cfred.sl's `Triad`) and gives a `ContractOut`
+  (contract3_valid through `birkhoff-reduces`), or, for four darts, a
+  contract ring of five darts nontrivial for 0 (`CAFive`): that case is
+  triad_valid, not ported (it needs fcard_adj_max and the rest of
+  birkhoff.v's SpokeRing section). `contract2.sl` and `birkhoff2.sl`
+  keep walk.sl's `Sub` and hypsub.sl's `split-cover` as `WSub` and
+  `hsplit-cover`, which the `unav/` files define again. That these
+  statements match Coq's has been checked only by reading.
 - `embed3.sl` (load after `contract.sl`, in the embed chain): the first
   part of embed.v's embedding construction, as far as both compilers
   check it, on an `EEnv` (the configuration map with its ring, arities

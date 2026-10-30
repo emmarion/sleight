@@ -204,5 +204,7 @@
     (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
 
-; snip.sl's DPath and walk.sl's Sub, which unav/qembed.sl and unav/part.sl define again, for minarity.sl.
-(let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub)) (values DPath DPNil DPNode DPFace Sub))
+; snip.sl's DPath, walk.sl's Sub and hypsub.sl's split-cover, which unav/qembed.sl, unav/part.sl and unav/fit.sl define again,
+; for minarity.sl and contract2.sl.
+(let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub) (erased hsplit-cover))
+  (values DPath DPNil DPNode DPFace Sub split-cover))
