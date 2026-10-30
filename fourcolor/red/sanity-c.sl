@@ -1,9 +1,6 @@
-; slc std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/red/red.sl fourcolor/red/configs.sl fourcolor/red/{color,ctree,gtree,grestrict,crestrict,kempe,check,sanity-c}.sl
+; slc std/nat.sl std/list.sl fourcolor/ring.sl fourcolor/red/red.sl fourcolor/red/configs.sl fourcolor/red/{color,ctree,gtree,grestrict,crestrict,kempe,bridge,init,check,sanity-c}.sl
 (let-match many (cf004) (MkConfig sym4 _ p4))
-(def-fns _ $ (many base-ok : (many (Nat) h) -> (many (Bool) r))
-  (match many (check-base h (ctree-init (Succ h)) (gtree-init (Succ h))) _ ((BaseYes _ _ _ _ _ _ _) (BTrue)) ((BaseNo _ _ _) (BFalse))))
-
-(def-fns _ $ (many c1 : -> (many (Bool) r)) (andb (base-ok 4) $ andb (base-ok 5) (base-ok 6)))
+(def-fns _ $ (many c1 : -> (many (Bool) r)) (let ((many b) (many _)) (check-reducible-c (cf002) (Nil _))) b)
 (def-fns _ $ (many c2 : -> (many (Bool) r)) (let ((many b) (many _)) (check-reducible-c (cf004) (Nil _))) b)
 (def-fns _ $ (many c3 : -> (many (Bool) r)) (let ((many b) (many _)) (check-reducible-c (cf001) (Nil _))) b)
 (def-fns _ $ (many c4 : -> (many (Bool) r)) (let ((many b) (many _)) (check-reducible-c (MkConfig sym4 (Nil _) p4) (Nil _))) b)

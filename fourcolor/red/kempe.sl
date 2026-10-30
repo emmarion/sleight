@@ -18,7 +18,7 @@
   (many PPar0 : (erased (Bool) b) -> (PopPar (GPop0) b b))
   (many PPar1 : (erased (Bool) b c) (erased (Not b c) n) -> (PopPar (GPop1) b c)))
 
-; The Kempe co-closure of P (after Kempe_coclosure of chromogram.v), as the least set of partial traces holding P, holding
+; The Kempe co-closure of P (after Kempe_coclosure of chromogram.v), as the least set of partial traces holding those whose completion satisfies P, holding
 ; each trace that a colour permutation sends into it, and holding each trace all of whose balanced matching
 ; chromograms are matched by a trace in it. AM P bs d b et pre: every chromogram w matching et from the stack bs, whose
 ; completion from d open chords and parity b is balanced, has its whole chromogram (the reverse of pre, then w)
@@ -26,7 +26,7 @@
 (def-adts
   ((KC : (Pred P) ((List (Col)) et) -> Type)
     enum
-    (many KIn : (erased Pred P) (erased (List (Col)) et) (erased (P et) p) -> (KC P et))
+    (many KIn : (erased Pred P) (erased (List (Col)) et ct) (erased (Ctr (C0) et ct) c) (erased (P ct) p) -> (KC P et))
     (many KPerm : (erased Pred P) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermT g et et2) pt)
         (erased (KC P et2) k) -> (KC P et))
     (many KGram : (erased Pred P) (erased (List (Col)) et) (erased (AM P (BS0) (Zero) (BFalse) et (Nil (Gsym))) a) -> (KC P et)))
@@ -452,39 +452,41 @@
       (let-match erased p (AddZero _))
       (Refl _ n))))
 
-; For every even trace et, read from the evenness state st, the multiplicity of et in t bounds the matches of ps.
+; For every even trace et of length k, read from the evenness state st, the multiplicity of et in t bounds the matches of ps.
 (def-adts
-  ((GE : ((Ctree) t) ((List RS) ps) ((ES) st) -> Type)
+  ((GE : ((Ctree) t) ((List RS) ps) ((ES) st) ((Nat) k) -> Type)
     enum
-    (many GEDead : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (PZero ps) z) -> (GE t ps st))
-    (many GEOdd : (erased (Ctree) t) (erased (List RS) ps) -> (GE t ps (ESOdd)))
-    (many GES : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (Nat) n k) (erased (CtRoot t n) rt) (erased (PCnt ps (Nil (Col)) k) pk)
-        (erased (Lt k (Succ n)) le) (erased (GEAt t ps st (C0)) a0) (erased (GEAt t ps st (C1)) a1) (erased (GEAt t ps st (C2)) a2)
-        (erased (GEAt t ps st (C3)) a3) -> (GE t ps st)))
-  ((GEAt : ((Ctree) t) ((List RS) ps) ((ES) st) ((Col) e) -> Type)
+    (many GEDead : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (Nat) k) (erased (PZero ps) z) -> (GE t ps st k))
+    (many GEOdd : (erased (Ctree) t) (erased (List RS) ps) (erased (Nat) k) -> (GE t ps (ESOdd) k))
+    (many GENil : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (Nat) n c) (erased (CtRoot t n) rt)
+        (erased (PCnt ps (Nil (Col)) c) pc) (erased (Lt c (Succ n)) le) -> (GE t ps st (Zero)))
+    (many GES : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (Nat) k) (erased (GEAt t ps st k (C0)) a0)
+        (erased (GEAt t ps st k (C1)) a1) (erased (GEAt t ps st k (C2)) a2) (erased (GEAt t ps st k (C3)) a3) -> (GE t ps st (Succ k))))
+  ((GEAt : ((Ctree) t) ((List RS) ps) ((ES) st) ((Nat) k) ((Col) e) -> Type)
     enum
-    (many MkGEAt : (erased (Ctree) t u) (erased (List RS) ps ps2) (erased (ES) st st2) (erased (Col) e) (erased (CtSel t e u) s)
-        (erased (PSplitE e (Nil RS) ps ps2) sp) (erased (ESStep st e st2) p) (erased (GE u ps2 st2) g) -> (GEAt t ps st e))))
+    (many MkGEAt : (erased (Ctree) t u) (erased (List RS) ps ps2) (erased (ES) st st2) (erased (Nat) k) (erased (Col) e) (erased (CtSel t e u) s)
+        (erased (PSplitE e (Nil RS) ps ps2) sp) (erased (ESStep st e st2) p) (erased (GE u ps2 st2 k) g) -> (GEAt t ps st k e))))
 
-(def-fns _ $ (erased ge-cnt : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (subterm erased (List (Col)) et) (erased (Nat) n k)
-    (erased (GE t ps st) g) (erased (ERun st et (BTrue)) run) (erased (CtSub t et n) s) (erased (PCnt ps et k) c) -> (erased (Lt k (Succ n)) r))
+(def-fns _ $ (erased ge-cnt : (erased (Ctree) t) (erased (List RS) ps) (erased (ES) st) (erased (Nat) k) (subterm erased (List (Col)) et) (erased (Nat) n c)
+    (erased (GE t ps st k) g) (erased (Length (Col) et k) len) (erased (ERun st et (BTrue)) run) (erased (CtSub t et n) s) (erased (PCnt ps et c) pc)
+    -> (erased (Lt c (Succ n)) r))
   (match erased g _
-    ((GEDead _ _ _ z) (let-match erased (pzero-cnt ps et k z c) (Refl _ _)) (LtZ n))
-    (absurd (GEOdd _ _) (erun-fn (ESOdd) et (BFalse) (BTrue) (run-odd et) run))
-    ((GES _ _ _ n0 k0 rt pk le a0 a1 a2 a3)
-      (match erased et _
-        ((Nil _)
-          (let-match erased s (SubNil _ _ rt2))
-          (let-match erased (root-fn t n n0 rt2 rt) (Refl _ _))
-          (let-match erased (pcnt-fn ps et k k0 c pk) (Refl _ _))
-          le)
-        ((Cons _ e et1)
-          (let-match erased (match erased e (((GEAt t ps st e) q)) ((C0) a0) ((C1) a1) ((C2) a2) ((C3) a3)) (MkGEAt _ u _ ps2 _ st2 _ sl sp p g1))
-          (let-match erased run (ERCons _ st3 _ _ _ p3 run1))
-          (let-match erased (esstep-fn st st2 st3 e p p3) (Refl _ _))
-          (let ((erased k2) (erased c2)) (pcnt-exists ps2 et1))
-          (let-match erased (add-fn k (Zero) k2 k (psplit-cnt e (Nil RS) ps ps2 et1 (Zero) k k2 sp (PCNil et1) c2 c) (add-zero-right k)) (Refl _ _))
-          (ge-cnt u ps2 st2 et1 n k g1 run1 (sub-sel t u e et1 n s sl) c2))))))
+    ((GEDead _ _ _ _ z) (let-match erased (pzero-cnt ps et c z pc) (Refl _ _)) (LtZ n))
+    (absurd (GEOdd _ _ _) (erun-fn (ESOdd) et (BFalse) (BTrue) (run-odd et) run))
+    ((GENil _ _ _ n0 c0 rt pc0 le)
+      (let-match erased len (LengthNil _))
+      (let-match erased s (SubNil _ _ rt2))
+      (let-match erased (root-fn t n n0 rt2 rt) (Refl _ _))
+      (let-match erased (pcnt-fn ps et c c0 pc pc0) (Refl _ _))
+      le)
+    ((GES _ _ _ k1 a0 a1 a2 a3)
+      (let-match erased len (LengthCons _ e et1 _ len1))
+      (let-match erased (match erased e (((GEAt t ps st k1 e) q)) ((C0) a0) ((C1) a1) ((C2) a2) ((C3) a3)) (MkGEAt _ u _ ps2 _ st2 _ _ sl sp p g1))
+      (let-match erased run (ERCons _ st3 _ _ _ p3 run1))
+      (let-match erased (esstep-fn st st2 st3 e p p3) (Refl _ _))
+      (let ((erased c2) (erased pc2)) (pcnt-exists ps2 et1))
+      (let-match erased (add-fn c (Zero) c2 c (psplit-cnt e (Nil RS) ps ps2 et1 (Zero) c c2 sp (PCNil et1) pc2 pc) (add-zero-right c)) (Refl _ _))
+      (ge-cnt u ps2 st2 k1 et1 n c g1 len1 run1 (sub-sel t u e et1 n s sl) pc2))))
 
 ; The reversed trace prefix etc matches the reversed chromogram prefix pre, from stack bs0 to bs.
 (def-adts $ (MPre : ((Bstack) bs0) ((List (Col)) etc) ((List (Gsym)) pre) ((Bstack) bs) -> Type)
@@ -544,20 +546,22 @@
     ((Zero) (match erased b _ ((BTrue) (InL _ _ (GBEnd0))) ((BFalse) (InR _ _ (EB0)))))
     ((Succ d1) (match erased d1 _ ((Zero) (InL _ _ (GBEnd1 b))) ((Succ d2) (InR _ _ (EB2 d2 b)))))))
 
-; Every trace of t, after the reversed prefix pre, satisfies P.
+; Every trace of t, after the reversed prefix pre, has a completion satisfying P.
 (def-adts $ (CtAllP : (Pred P) ((Ctree) t) ((List (Col)) pre) -> Type)
   enum
   (many CAPE : (erased Pred P) (erased (List (Col)) pre) -> (CtAllP P (CEmpty) pre))
-  (many CAPL : (erased Pred P) (erased (Ctree) lf) (erased (List (Col)) pre et) (erased (RevApp (Col) pre (Nil (Col)) et) r) (erased (P et) p)
-      -> (CtAllP P (CLeaf lf) pre))
+  (many CAPL : (erased Pred P) (erased (Ctree) lf) (erased (List (Col)) pre et ct) (erased (RevApp (Col) pre (Nil (Col)) et) r)
+      (erased (Ctr (C0) et ct) c) (erased (P ct) p) -> (CtAllP P (CLeaf lf) pre))
   (many CAPN : (erased Pred P) (erased (Ctree) t1 t2 t3) (erased (List (Col)) pre) (erased (CtAllP P t1 (Cons (Col) (C1) pre)) a1)
       (erased (CtAllP P t2 (Cons (Col) (C2) pre)) a2) (erased (CtAllP P t3 (Cons (Col) (C3) pre)) a3) -> (CtAllP P (CNode t1 t2 t3) pre)))
 
 (def-fns _ $ (erased capp-mem : (erased Pred P) (erased (Ctree) t) (erased (List (Col)) pre full) (subterm erased (List (Col)) et)
-    (erased (CtAllP P t pre) a) (erased (CtMem t et) m) (erased (RevApp (Col) pre et full) r) -> (erased (P full) res))
+    (erased (CtAllP P t pre) a) (erased (CtMem t et) m) (erased (RevApp (Col) pre et full) r) ->
+    (erased (List (Col)) ct) (erased (Ctr (C0) full ct) c) (erased (P ct) res))
   (match erased a _
     (absurd (CAPE _ _) (mem-empty et m))
-    ((CAPL _ lf _ et2 r2 p) (let-match erased (leaf-mem-nil lf et m) (Refl _ _)) (let-match erased (revapp-fn (Col) pre et full et2 r r2) (Refl _ _)) p)
+    ((CAPL _ lf _ et2 ct r2 c p) (let-match erased (leaf-mem-nil lf et m) (Refl _ _)) (let-match erased (revapp-fn (Col) pre et full et2 r r2) (Refl _ _))
+      (values ct c p))
     ((CAPN _ t1 t2 t3 _ a1 a2 a3)
       (let ((erased e) (erased et1) (erased q) (erased u) (erased s) (erased m1)) (cons-mem t1 t2 t3 t et (CCNode t1 t2 t3) m))
       (let-match erased q (Refl _ _))
@@ -607,7 +611,7 @@
   ((KV : (Pred P) ((Nat) h) ((Ctree) ctu) ((Gtree) gtr) ((Gtree) gtu) -> Type)
     enum
     (many KVBase : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
-        (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
+        (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
         -> (KV P h ctu (GEmpty) gtu))
     (many KVSplit : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu ctr) (erased (Gtree) gtu hit miss) (erased (KV P h ctu (GEmpty) gtu) kv)
         (erased (CtKC P h ctr) ck) (erased (GPart (GSG gtu) (GSG hit) (GSG miss)) pt)
@@ -660,7 +664,7 @@
       (let-match erased (mc-zero (BS0) et a ma) (Refl _ _))
       (let ((erased ps)) (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)))
       (let ((erased pc)) (PCCons (BS0) (GSG gtu) (Nil RS) et b (Zero) b mb (PCNil et) (add-zero-right b)))
-      (values b (AddZero b) (ge-cnt ctu ps (ESStart) et n b ge ev s pc)))
+      (values b (AddZero b) (ge-cnt ctu ps (ESStart) (Succ h) et n b ge len ev s pc)))
     ((KVSplit _ _ _ _ gtu0 _ _ kv0 _ pt _)
       (let ((erased b0) (erased mb0)) (mc-exists (GSG gtu0) (BS0) et))
       (let ((erased ab0) (erased p0) (erased l0)) (kv-count P h ctu (GEmpty) gtu0 kv0 et n (Zero) b0 ev len s (mc-zero-mk (BS0) et) mb0))
@@ -711,7 +715,7 @@
   ((erased ck-mem : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctr) (subterm erased (CtKC P h ctr) ck) (erased (List (Col)) et)
       (erased (CtMem ctr et) m) -> (erased (KC P et) r))
     (match erased ck _
-      ((CKBase _ _ _ a) (KIn P et (capp-mem P ctr (Nil _) et et a m (RANil (Col) et))))
+      ((CKBase _ _ _ a) (let ((erased ct) (erased c) (erased p)) (capp-mem P ctr (Nil _) et et a m (RANil (Col) et))) (KIn P et ct c p))
       ((CKGone _ _ ctu keep gone _ gtr gtu kw hc hg cr rl)
         (let ((erased g) (erased ip) (erased et2) (erased pt) (erased m2)) (rlr-pick gone ctr et rl m))
         (let-match erased kw (MkKVWrap _ _ _ _ _ kv0))
@@ -833,7 +837,7 @@
       -> (KSound P h ct)))
 
 (def-fns _ $ (many kempe-tree-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
-    (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart)) ge)
+    (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge)
     (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (CtAllP P ctr (Nil (Col))) ca) (erased (CtH (Succ h) ctu) hc) ->
     (many (Ctree) ct) (erased (KSound P h ct) ks))
   (let ((many ct) (many gtr) (many gtu2) (erased kv) (erased _))

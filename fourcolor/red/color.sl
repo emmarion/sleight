@@ -92,3 +92,27 @@
   enum
   (many MkInitG : (erased (Nat) n) (erased (List (Gsym)) w) (erased (Length (Gsym) w n) l) (erased (GBal (Zero) (BFalse) w) b)
       -> (InitG n w)))
+
+(def-adts $ (Third : ((Col) a) ((Col) b) ((Col) c) -> Type)
+  enum
+  (many T123 : -> (Third (C1) (C2) (C3)))
+  (many T132 : -> (Third (C1) (C3) (C2)))
+  (many T213 : -> (Third (C2) (C1) (C3)))
+  (many T231 : -> (Third (C2) (C3) (C1)))
+  (many T312 : -> (Third (C3) (C1) (C2)))
+  (many T321 : -> (Third (C3) (C2) (C1))))
+
+; After addc of color.v: the Klein group on colours.
+(def-adts $ (AddC : ((Col) a) ((Col) b) ((Col) c) -> Type)
+  enum
+  (many AZL : (erased (Col) b) -> (AddC (C0) b b))
+  (many AZR : (erased (Col) a) -> (AddC a (C0) a))
+  (many ASame : (erased (Col) a) -> (AddC a a (C0)))
+  (many AThird : (erased (Col) a b c) (erased (Third a b c) t) -> (AddC a b c)))
+
+; After ctrace of color.v: ct is et followed by s plus the sum of et.
+(def-adts $ (Ctr : ((Col) s) ((List (Col)) et) ((List (Col)) ct) -> Type)
+  enum
+  (many CtrNil : (erased (Col) s) -> (Ctr s (Nil (Col)) (Cons (Col) s (Nil (Col)))))
+  (many CtrCons : (erased (Col) s e s2) (erased (List (Col)) et ct) (erased (AddC s e s2) a) (erased (Ctr s2 et ct) c)
+      -> (Ctr s (Cons (Col) e et) (Cons (Col) e ct))))
