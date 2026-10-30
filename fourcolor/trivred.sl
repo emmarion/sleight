@@ -453,3 +453,49 @@
       (let-match erased (nth-fn _ ec enny e2 nny pe2 (gc-ee dc dm nny enny ec nc fc ksc rc em nm fm ksm as hl fe lab cx penny)) (Refl _ _))
       se2)))
   (values ey pey (some-cat fc ey nny x (some-step fc ey nny (hyper-third dc ey y nny ec nc fc hc pey pnny2)) snx)))
+
+(def-fns _ $ (erased spk-of : (erased (Nat) d) (erased (List (Nat)) e n f lab) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
+    (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (FaceLab d f lab) fl)
+    -> (erased (List (Nat)) fe) (erased (Spk d e n f fe lab) c))
+  (let ((erased h2)) h)
+  (let-match erased h2 (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let ((erased nf2) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased fl2)) fl)
+  (let-match erased fl2 (MkFaceLab _ k _ fi2 _ ids2 rs gf pf gr io2 ro cl ll))
+  (values fe (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-vals f e fe d cfe (perm-under d f fi pmf))
+    (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
+
+; The edge image of y is on the face of x: rlink y x.
+(def-adts $ (Closes : ((List (Nat)) ec fc) ((Nat) y x) -> Type)
+  enum
+  (many MkCloses : (erased (List (Nat)) ec fc) (erased (Nat) y x ey) (erased (Nth (Nat) ec y ey) pe) (erased (SomePath fc (Nil (Nat)) ey x) sp) -> (Closes ec fc y x)))
+
+; The case of a HomTrivial that trivial_hom_ring does not settle: a hom ring x :: p of five darts that does not close, one side of
+; which, its diskN part hd, meets exactly one face off the ring, that of y (labels lab).
+(def-adts $ (HomFive : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
+  enum
+  (many MkHomFive : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez y l) (erased (RPath ec fc x p z) rp)
+      (erased (Within (Cons (Nat) x p) as) wp) (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg)
+      (erased (Length (Nat) (Cons (Nat) x p) (Succ (Succ (Succ (Succ (Succ (Zero))))))) lk) (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr)
+      (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (FaceLab dm fm lab) fl) (erased (Respects lab (Cons (Nat) hx hp) lr) rl)
+      (erased (In y hd) iy) (erased (Nth (Nat) lab y l) pl) (erased (NotIn l lr) ol) (erased (AllLab lab (Cons (Nat) l lr) hd) al) -> (HomFive dm ec fc em nm fm as hl)))
+
+; A hom ring whose diskN side is trivial in the sense of TrivSide closes (trivial_hom_ring), or it is a HomFive.
+(def-fns _ $ (erased side-hd : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
+    (erased (Nat) x z hx ez k m) (erased (List (Nat)) p hp hd zs lr) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
+    (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg) (erased (Length (Nat) (Cons (Nat) x p) k) lk) (erased (BkMode k m) md)
+    (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr) (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds)
+    (erased (Respects lab (Cons (Nat) hx hp) lr) rl) (erased (TrivSide lab lr hd m) ts) -> (erased (Or (Closes ec fc z x) (HomFive dm ec fc em nm fm as hl)) r))
+  (let ((erased h) (erased gen) (erased bl) (erased pl) (erased cu) (erased fl) (erased cn2) (erased nfm) (erased nim) (erased fim) (erased qem) (erased qnm) (erased qfm))
+    (tm dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx))
+  (match erased ts _
+    ((TsZero _ _ _ _ al)
+      (let-match erased lk (LengthCons _ _ _ k1 lk1))
+      (let ((erased sr)) (sub-refl (Cons _ hx hp)))
+      (let ((erased ey) (erased pey) (erased sp)) (triv-hom dc dm ec nc fc ksc rc em nm fm ksm as hl fe lab cx (Succ k1) x z hx k1 p hp rp wp rh rg lk1 (lt-succ k1)
+        (MkFEmpty dm hx em nm fm lab _ hp hd zs lr rg sr sr ds rl al)))
+      (OrL _ _ (MkCloses ec fc z x ey pey sp)))
+    ((TsOne _ _ _ y l iy pl ol al)
+      (let-match erased md (BMFive))
+      (OrR _ _ (MkHomFive dm ec fc em nm fm as hl p hp hd zs lab lr x z hx ez y l rp wp rh rg lk pez nr ds fl rl iy pl ol al)))))
