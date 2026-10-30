@@ -26,6 +26,7 @@ usage cell-match: (cell-match unique <cell> <annotation> (<constructor> <slot bi
 usage Cell: (Cell <constructor> <slot> ...)
 usage slot-of: (slot-of <name>)
 usage slot-self: (slot-self <name>)
+usage slot-tag: (slot-tag <name>)
 usage at-fn-of: (at-fn-of <function>)
 usage open-at-fn: (open-at-fn <proof>)
 usage at: (at (<cell> <argument> ...))

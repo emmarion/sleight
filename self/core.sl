@@ -249,7 +249,7 @@
     enum
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK)) (many StDefUnique : -> (StmtK))
     (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK))
-    (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
+    (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StSlotTag : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
     (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)) (many StQed : -> (StmtK)))
   ((FormerK : -> Type)
     enum
@@ -274,7 +274,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK)) (many MkImm : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17) ((StSlotTag) 18)))
 
 (def-fns _ $ (many former-code : (many (FormerK) k) -> (many (Nat) n))
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoUniqueFn) 4) ((FoCell) 5)))
@@ -326,7 +326,7 @@
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
   sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
   sp-cons "Matchable" (SpFormer $ FoMatchable) $
-  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "imm" (SpMark $ MkImm) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
+  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "slot-tag" (SpStmt $ StSlotTag) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "imm" (SpMark $ MkImm) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
   sp-cons "numeral-of" (SpExpr $ ExNumeralOf) $ sp-cons "level-of" (SpExpr $ ExLevelOf) $ sp-cons "prove-subterm" (SpExpr $ ExProveSubterm) $
   sp-cons "prove-predates" (SpExpr $ ExProvePredates) $ sp-cons "values" (SpExpr $ ExValues) $
   sp-cons "predates-trans" (SpExpr $ ExPredatesTrans) $ sp-cons "subterm-trans" (SpExpr $ ExSubtermTrans) $
@@ -602,7 +602,7 @@
     (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (String) msg) -> (Code ctx ms)))
   ((CC : -> Type)
     enum
-    (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCNoTail : -> (CC))
+    (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCTag : -> (CC)) (many CCNoTail : -> (CC))
     ; a same-level call in a non-erased position carrying no mark, where the tail-position check warns
     (many CCSame : (many (Loc) site) (many (String) callee) -> (CC)))
   ((Shape : ((List $ List $ Nat) ctx) -> Type)
@@ -2262,7 +2262,7 @@
 (def-adts
   ((LitFact : -> Type)
     enum
-    (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) -> (LitFact)))
+    (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) (many (Maybe $ Term) slot-rule) -> (LitFact)))
   ((LitEntry : -> Type)
     enum
     (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (Maybe $ Syn) lit) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
@@ -2829,11 +2829,25 @@
 
 (def-fns _ $ (many reenter-facts : (subterm many (List $ LitFact) facts) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many facts (Cons _ fact rest) ((Nil _) (values n f tb)))
-  (let-match many fact (MkLitFact x ty rule))
+  (let-match many fact (MkLitFact x ty rule srule))
   (let-match many (nat-cmp x bnd) (CLt _ _ _ _ p) (else (tail $ reenter-facts rest _ _ bnd tb)))
   (let ((erased _) (erased _) (many tb1)) $ table-reenter _ _ _ tb x (lt-weaken x bnd p) ty rule)
-  (let ((erased _) (erased _) (many tb2)) $ table-reenter _ _ _ tb1 (Succ x) (LtS x bnd p) slot-term (None _))
+  (let ((erased _) (erased _) (many tb2)) $ table-reenter _ _ _ tb1 (Succ x) (LtS x bnd p) slot-term srule)
   (tail $ reenter-facts rest _ _ bnd $ table-add-slot _ _ _ tb2 x))
+
+(def-fns _ $ (many env-rule-fresh : (many (Env) env) (many (Nat) s) (many (Term) p) -> (many (Env) r))
+  (let ((erased _) (erased _) (many bnd) (many tb)) $ env-table env)
+  (let-match many tb (MkTable _ f0 _ _ _ _ _ _ c1 _ _ _))
+  (let-match many (facts-lookup s _ f0 _ _ (WNil s) _ c1) (LFree _ _ _ _ _ _ ps) (else env))
+  (let ((many t) (erased _)) $ canon-in _ _ bnd tb p)
+  (let-match many (rule-out-refresh _ _ bnd tb s ps t) (Some _ added) ((None _) env))
+  (match many added _ ((MkAdded _ _ _ _ tb2) (env-set-table env _ _ bnd tb2))))
+
+(def-fns _ $ (many env-enter-facts : (many (Env) env) (subterm many (List $ LitFact) facts) -> (many (Env) r))
+  (let-match many facts (Cons _ fact rest) ((Nil _) env))
+  (let-match many fact (MkLitFact x _ _ srule))
+  (let-match many srule (Some _ p) ((None _) (tail $ env-enter-facts env rest)))
+  (tail $ env-enter-facts (env-rule-fresh env (Succ x) p) rest))
 
 (def-fns _ $ (many reenter-lits : (subterm many (List $ LitEntry) lits) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many lits (Cons _ l rest) ((Nil _) (values n f tb)))

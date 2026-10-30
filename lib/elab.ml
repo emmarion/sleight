@@ -282,13 +282,35 @@ let wrappers disc shapes =
   let cs = non_phantom shapes in
   if tagged disc shapes || List.exists (fun (_, n) -> n <> 1) cs then [] else List.map fst cs
 
-let hollow env c =
-  match matchables env (tid_of env Reader.nowhere c) with
-  | (mid, d, cs) :: _ when List.exists (fun (_, c') -> c' = Var c) cs ->
+let listing env c = List.find_opt (fun (_, _, cs) -> List.exists (fun (_, c') -> c' = Var c) cs) (matchables env (tid_of env Reader.nowhere c))
+
+let fieldless shapes = List.filter_map (fun (c, n) -> if n = 0 then Some c else None) (non_phantom shapes)
+let hollow d shapes = not (tagged d shapes) && List.length (fieldless shapes) = List.length (non_phantom shapes)
+
+let tag_of env c =
+  match listing env c with
+  | Some (mid, d, cs) -> (
       let shapes = shapes env Reader.nowhere cs in
-      (match type_of env mid with Matchable (_, _, ext, _, _) -> not ext | _ -> false)
-      && not (tagged d shapes) && List.for_all (fun (_, n) -> n = 0) (non_phantom shapes)
-  | _ -> false
+      match type_of env mid with
+      | Matchable (_, false, false, _, _) when hollow d shapes -> Some 0
+      | Matchable (_, false, false, _, _) when tagged d shapes -> find_index (( = ) c) (fieldless shapes)
+      | _ -> None)
+  | None -> None
+
+let tag_slot env k =
+  if Z.equal k Z.zero then (env, Prelude.null)
+  else match Hashtbl.find_opt tag_slots k with
+    | Some t -> (enter_row env t, t)
+    | None ->
+        let t, env = bind env ~literal:true None Many (Settled (V.VWord k)) Prelude.slot_term in
+        let env = place env t (Var t) in
+        record_minted t (List.map (fun i -> (i, entry env i, fact env i)) [ t; (entry env t).slot ]);
+        Hashtbl.replace tag_slots k t;
+        (env, t)
+
+let tagged_at env c = match tag_of env c with
+  | Some k -> let env, t = tag_slot env (Z.of_int k) in (env, Some ((match (entry env t).state with Settled w -> w | Hypothetical -> assert false), slot_of t))
+  | None -> (env, None)
 
 let newtype_of env c =
   List.find_map (fun o -> if not (names_var c o.Env.names) then None else match type_of env o.Env.obj with
@@ -504,7 +526,8 @@ let rec intern env loc lit =
         | Literal.Numeral z ->
             let x, env = value env (nat_value env z) (papp env "Nat" []) in
             let p, env = token env (papp env "Numeral" [ bin_term env z; Var x ]) in
-            (env, x, Some p, [ x; p ])
+            if not (Z.equal z Z.zero || !V.use_externs) then (env, x, Some p, [ x; p ])
+            else let env, t = tag_slot env z in (place env x (Var t), x, Some p, x :: p :: List.filter (( <> ) Prelude.null) [ t ])
         | Literal.Char c ->
             let code = Hashtbl.find literal_rows (Z.to_string (Z.of_int c)) in
             let p, env = token env (papp env "Lt" [ Var code.lit_id; Var (Option.get (prelude_id env "u8-modulus")) ]) in
@@ -1374,9 +1397,9 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~ctor:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false ~frames tele args elab_arg in
               let ctor = match canon env h.term with Var c -> c | _ -> -1 in
-              let hollow = ctor >= 0 && hollow env ctor in
-              let code = if pos = Erased then V.CErased else if hollow then V.CConst V.vacant else if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
-              let place = if hollow then Some (slot_of Prelude.null) else term_place env (App (h.term, List.rev acc)) in
+              let env, tag = if ctor >= 0 then tagged_at env ctor else (env, None) in
+              let code = if pos = Erased then V.CErased else match tag with Some (w, _) -> V.CConst w | None -> if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
+              let place = match tag with Some (_, s) -> Some s | None -> term_place env (App (h.term, List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
           | Cell (c, slots) -> elab_cell_invoke ~frames env expect l (callee pos) h hcode c slots args
           | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand ~frames cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
@@ -1591,9 +1614,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let values = List.init ct.arity (fun i -> Option.value (List.find_map (fun (j, _, w) -> if j = i then Some w else None) writes) ~default:(V.CConst V.vacant)) in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
-      let hollow = hollow env c in
-      let env, place = if hollow then (place env x (slot_of Prelude.null), Some (slot_of Prelude.null)) else (env, None) in
-      (env, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else if hollow then V.CConst V.vacant else wrap (V.CCellAlloc (ct, values)))
+      let env, tag = tagged_at env c in
+      let env, place = match tag with Some (_, s) -> (place env x s, Some s) | None -> (env, None) in
+      (env, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else match tag with Some (w, _) -> V.CConst w | None -> wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ m; u; List (il, c :: items) ] ->
       (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
       let mode = written env pos l "cell-write" (mult_or env l m) in
@@ -1939,8 +1962,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let callee = { subject = lazy (sprintf_in env "%s of %s" (name ()) (qname env c)); apposed = false; notes = lazy (declared_as env c); used = (fun _ -> Erased); marks = true } in
       let env, acc = elab_term_args env l ~callee ~what:"more argument" params (Var c) args in
       List.iter (settle env l) acc;
-      let fieldless = List.filter_map (fun (c', n) -> if n = 0 then Some c' else None) (non_phantom shapes) in
-      let lit = Literal.Numeral (Z.of_int (Option.get (find_index (( = ) c) fieldless))) in
+      let lit = Literal.Numeral (Z.of_int (Option.get (find_index (( = ) c) (fieldless shapes)))) in
       let env = intern env l lit in
       mint env (proof_type Prelude.coercible [ s; instantiate acc ret; App (Var c, List.rev acc); s; App (Var nat, []); Var (Hashtbl.find literal_rows (Literal.key lit)).lit_id ])
   | Sp.CoercibleOf, [ d ] -> (
@@ -2357,6 +2379,32 @@ and elab_stmt_unsettled ?(within = "item of a body") ?branch_frames spos env raw
           let x = reference env (loc a) a "a variable" in
           check_type env (loc a) (type_of env x) Prelude.slot_term;
           ((try place env x (Var x) with Contradiction msg -> error_in env l "`slot-self`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
+      | Some Sp.SlotTag, [ a ] ->
+          let env = admitted env a in
+          let x = reference env (loc a) a "a variable" in
+          let ty = type_of env x in
+          let cell, ctor = match ty, canon env (Var x) with
+            | Cell (c, _), _ -> (true, match canon env c with Var c -> Some c | _ -> None)
+            | _, App (Var c, _) -> (false, Some c)
+            | _ -> (false, None) in
+          let tid = match cell, ctor with
+            | true, Some c -> tid_of env l c
+            | _ -> (match type_head env ty with Some t -> t | None -> error_in env l "`slot-tag`: %s : %s is neither a value of a data type nor a cell" (qname env x) (qshow env ty)) in
+          let mid, d, cs = match matchables env tid with m :: _ -> m | [] -> error_in env l "`slot-tag`: %s has no `Matchable` open" (qname env tid) in
+          (match type_of env mid with
+           | Matchable (_, _, true, _, _) -> error_in env l "`slot-tag`: %s is an extern type, whose representation is the FFI's" (qname env tid)
+           | Matchable (_, true, _, _, _) -> error_in env l "`slot-tag`: %s is a newtype, which has no tag slot" (qname env tid)
+           | _ -> ());
+          let shapes = shapes env l cs in
+          let k = if hollow d shapes && not cell then 0 else match ctor with
+            | None -> error_in env l "`slot-tag`: the constructor of %s is not known here" (qname env x)
+            | Some c ->
+                if not (List.exists (fun (_, c', _) -> c' = c) shapes) then error_in env l "`slot-tag`: %s is not listed by the `Matchable` open for %s" (qname env c) (qname env tid);
+                if List.exists (fun (m, c', _) -> c' = c && m = Erased) shapes then error_in env l "`slot-tag`: %s is phantom, so it has no tag slot" (qname env c);
+                if runtime (fst (ctor_type env l c)) <> [] then error_in env l "`slot-tag`: %s has a non-erased field, so it has no tag slot" (qname env c);
+                match tag_of env c with Some k -> k | None -> error_in env l "`slot-tag`: %s is neither tagged nor hollow, so the word of %s is unspecified" (qname env tid) (qname env c) in
+          let env, t = tag_slot env (Z.of_int k) in
+          ((try place env x (slot_of t) with Contradiction msg -> error_in env l "`slot-tag`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
       | Some Sp.OpenAtFn, [ e ] ->
           let env', p, _ = elab_expr1 env Erased e in
           settle_res env' l p;

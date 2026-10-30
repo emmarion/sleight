@@ -4,4 +4,4 @@
   (many Other : -> (Two)))
 
 (def-fns _ $ (many one : -> (many (Two) r at vacant-slot))
-  (One))
+  (Other))
