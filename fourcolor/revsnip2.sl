@@ -858,9 +858,9 @@
 (def-fns _ $ (erased pull-nth : (erased (List (Nat)) hr kr xs ks) (erased (Nat) i x c) (subterm erased (Pull hr kr xs ks) pu) (erased (Nth (Nat) xs i x) px)
     (erased (Nth (Nat) ks i c) pc) -> (erased (Nat) j) (erased (Nth (Nat) hr j x) pj) (erased (Nth (Nat) kr j c) qc))
   (let-match erased pu (PlCons _ _ xs1 ks1 y j c0 py pc0 pu1) (absurd (PlNil _ _) px))
-  (let-match erased px (NthThere _ _ _ i0 _ px1) ((NthHere _ _ _) (let-match erased pc (NthHere _ _ _)) (values j py pc0)))
+  (let-match erased px (NthThere _ _ _ ia _ px1) ((NthHere _ _ _) (let-match erased pc (NthHere _ _ _)) (values j py pc0)))
   (let-match erased pc (NthThere _ _ _ _ _ pc1))
-  (pull-nth hr kr xs1 ks1 i0 x c pu1 px1 pc1))
+  (pull-nth hr kr xs1 ks1 ia x c pu1 px1 pc1))
 
 (def-fns _ $ (erased pull-length : (erased (List (Nat)) hr kr xs ks) (erased (Nat) k) (subterm erased (Pull hr kr xs ks) pu) (erased (Length (Nat) xs k) l)
     -> (erased (Length (Nat) ks k) r))
