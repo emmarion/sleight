@@ -62,3 +62,71 @@
     (path-snoc f (Cons _ y1 (Nil _)) xs1 z y y1 (path-respect f _ xs1 z y y1 w1 n1) py (NotInCons y y1 (Nil _) (apart-sym y1 y ne1) (NotInNil y))))
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (MkOrder f xs2 y1 z (Succ k1) pz w2 (snoc-length _ xs1 xs2 y k1 sn l1)))
+
+(def-fns _ $ (erased absurd path-iter-short : (erased (List (Nat)) p xs) (erased (Nat) x y k j) (subterm erased (Path p (Cons (Nat) y (Nil (Nat))) x y xs) w)
+    (erased (Length (Nat) xs k) l) (erased (Iter p j x y) it) (erased (Lt j k) lt) -> (erased (False) r))
+  (let-match erased w (PathStep _ _ xs1 _ z _ pz out w1) (absurd (PathHere _ _ _) (let-match erased l (LengthNil _)) lt))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (match erased it _
+    (absurd (ItZ _ _) (let-match erased out (NotInCons _ _ _ ne _)) (apart-irrefl y ne))
+    (absurd (ItS _ j1 _ z2 _ pz2 it1)
+      (let-match erased (nth-fn _ p x z z2 pz pz2) (Refl _ _))
+      (let-match erased lt (LtS _ _ lt1))
+      (path-iter-short p xs1 z y k1 j1 w1 l1 it1 lt1))))
+
+(def-fns _ $ (erased order-fn : (erased (List (Nat)) f) (erased (Nat) y a b) (erased (Order f y a) o1) (erased (Order f y b) o2) -> (erased (Eq (Nat) a b) e))
+  (let-match erased o1 (MkOrder _ xs1 _ y1 k1 p1 w1 l1))
+  (let-match erased o2 (MkOrder _ xs2 _ y2 k2 p2 w2 l2))
+  (let-match erased (nth-fn _ f y y1 y2 p1 p2) (Refl _ _))
+  (match erased (nat-cmp k1 k2) _
+    (absurd (CLt _ _ _ _ lt) (path-iter-short f xs2 y1 y k2 k1 w2 l2 (path-iter f _ xs1 y1 y k1 w1 l1) lt))
+    ((CEq _ _ _) (Refl _ a))
+    (absurd (CGt _ _ _ _ gt) (path-iter-short f xs1 y1 y k1 k2 w1 l1 (path-iter f _ xs2 y1 y k2 w2 l2) gt))))
+
+(def-fns _ $ (erased orders-len : (erased (List (Nat)) p xs ks) (erased (Nat) n) (subterm erased (Orders p xs ks) os) (erased (Length (Nat) xs n) l)
+    -> (erased (Length (Nat) ks n) r))
+  (let-match erased os (OrdCons _ xs1 ks1 x k _ os1) ((OrdNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased l (LengthCons _ _ _ n1 l1))
+  (LengthCons _ k ks1 n1 (orders-len p xs1 ks1 n1 os1 l1)))
+
+; The arity list ks of the face permutation, read at a dart.
+(def-fns _ $ (erased arity-at : (erased (Nat) d y) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol) (erased (Lt y d) ly)
+    -> (erased (Nat) a) (erased (Nth (Nat) ks y a) pa) (erased (Order f y a) o))
+  (let-match erased ol (MkOrderList _ _ ids _ io os))
+  (let ((erased a) (erased pa)) (nth-exists _ ks d y (orders-len f ids ks d os (iota-length d ids io)) ly))
+  (values a pa (orders-nth f ids ks y y a os (iota-nth d y ids io ly) pa)))
+
+; A step along the face keeps the arity.
+(def-fns _ $ (erased face-step : (erased (Nat) d y a) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (OrderList d f ks) ol)
+    (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) -> (erased (Nat) y1) (erased (Nth (Nat) f y y1) py) (erased (Lt y1 d) ly1) (erased (Nth (Nat) ks y1 a) pa1))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased a0) (erased pa0) (erased o)) (arity-at d y f ks ol ly))
+  (let-match erased (nth-fn _ ks y a a0 pa pa0) (Refl _ _))
+  (let ((erased y1) (erased py) (erased ly1)) (perm-nth d y f fi pf ly))
+  (let ((erased a1) (erased pa1) (erased o1)) (arity-at d y1 f ks ol ly1))
+  (let-match erased (order-fn f y1 a a1 (order-next d y y1 a f fi pf o py) o1) (Refl _ _))
+  (values y1 py ly1 pa1))
+
+(def-fns _ $ (erased face-walk : (erased (Nat) d y a) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (OrderList d f ks) ol)
+    (subterm erased (Nat) k) (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) -> (erased (Nat) z) (erased (Iter f k y z) it) (erased (Lt z d) lz)
+    (erased (Nth (Nat) ks z a) pz))
+  (let-match erased k (Succ k1) ((Zero) (values y (ItZ f y) ly pa)))
+  (let ((erased y1) (erased py) (erased ly1) (erased pa1)) (face-step d y a e n f ks h ol ly pa))
+  (let ((erased z) (erased it) (erased lz) (erased pz)) (face-walk d y1 a e n f ks h ol k1 ly1 pa1))
+  (values z (ItS f k1 y y1 z py it) lz pz))
+
+(def-fns _ $ (erased face-cycle : (erased (Nat) d y a) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol) (erased (Lt y d) ly)
+    (erased (Nth (Nat) ks y a) pa) -> (erased (Iter f a y y) it))
+  (let ((erased a0) (erased pa0) (erased o)) (arity-at d y f ks ol ly))
+  (let-match erased (nth-fn _ ks y a a0 pa pa0) (Refl _ _))
+  (order-iter f y a o))
+
+; The image of a dart under any of the three permutations is a dart.
+(def-fns _ $ (erased hyper-step : (erased (Nat) d y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt y d) ly)
+    -> (erased (Nat) ye yn yf) (erased (Nth (Nat) e y ye) pe) (erased (Lt ye d) le) (erased (Nth (Nat) n y yn) pn) (erased (Lt yn d) ln)
+    (erased (Nth (Nat) f y yf) pf) (erased (Lt yf d) lf))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
+  (let ((erased ye) (erased pe) (erased le)) (perm-nth d y e nf qe ly))
+  (let ((erased yn) (erased pn) (erased ln)) (perm-nth d y n ni qn ly))
+  (let ((erased yf) (erased pf) (erased lf)) (perm-nth d y f fi qf ly))
+  (values ye yn yf pe le pn ln pf lf))
