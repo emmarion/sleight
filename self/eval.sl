@@ -28,10 +28,32 @@
 
 ; ---- Extern values (section 42; lib/ffi_core.ml): payload blocks, read and made through the store
 
+(def-fns _ $ (many zeros-before : (subterm many (List $ Nat) shape) (many (Nat) index) -> (many (Nat) n))
+  (let-match many shape (Cons _ a rest) ((Nil _) 0))
+  (let-match many index (Succ i) ((Zero) 0))
+  (let ((many n)) $ notail $ zeros-before rest i)
+  (let-match many a (Zero) (else n))
+  (Succ n))
+
+(def-fns _ $ (many fieldless-index : (subterm many (List $ Nat) shape) (many (Nat) k) -> (many (Nat) i))
+  (let-match many shape (Cons _ a rest) ((Nil _) 0))
+  (let-match many a (Zero) (else (Succ $ notail $ fieldless-index rest k)))
+  (let-match many k (Succ j) ((Zero) 0))
+  (Succ $ notail $ fieldless-index rest j))
+
+(def-fns _ $ (many word-of-block : (erased Type R) (many (Block R) b) -> (many (Maybe $ Nat) w))
+  (match many b _
+    ((BExt _ p) (match many p _ ((PNat n) (Some _ n)) (else (None _))))
+    ((BTag _ ct fs)
+      (let-match many fs (Nil _) (else (None _)))
+      (let-match many ct (MkCtor _ _ index _ tagged _ shape _))
+      (Some _ $ match many tagged (((Nat) _)) ((BTrue) (zeros-before shape index)) ((BFalse) 0)))
+    ((BToken _) (Some _ 0))
+    (else (None _))))
+
 (def-fns _ $ (many heap-nat : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (Nat) n))
   (let ((erased _) (many b) (erased _)) (hread _ hp a))
-  (let-match many b (BExt _ p) (else 0))
-  (match many p _ ((PNat n) n) (else 0)))
+  (match many (word-of-block _ b) _ ((Some _ n) n) ((None _) 0)))
 
 (def-fns _ $ (many heap-str : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (String) n))
   (let ((erased _) (many b) (erased _)) (hread _ hp a))
@@ -362,8 +384,19 @@
 
 ; A value's discriminant and many fields where the FFI holds the type or a tag says (section 33); None
 ; otherwise, the value then being its fields as they stand.
-(def-fns _ $ (many dispatch : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Pair (Nat) $ List $ Ref Block hs2) r))
+(def-fns _ $ (many dispatch : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (List $ Nat) shape) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Pair (Nat) $ List $ Ref Block hs2) r))
   (let ((erased _) (many b) (erased lt)) (hread _ hp v))
+  (let ((many as-word)) $ match many ext (((Maybe $ Nat) _)) ((Some _ _) (word-of-block _ b)) ((None _) (match many b (((Maybe $ Nat) _)) ((BTag _ _ _) (None _)) (else (word-of-block _ b)))))
+  (let-match many as-word (None _)
+    ((Some _ w)
+      (match many ext _
+        ((Some _ e)
+          (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ ext-destruct _ hp e $ PNat w)
+          (values hs2 hp2 le $ Some _ $ MkPair _ _ i fs))
+        ((None _)
+          (match many tagged _
+            ((BTrue) (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ (fieldless-index shape w) $ Nil _))
+            ((BFalse) (values hs hp (le-refl hs) $ None _)))))))
   (match many b _
     ((BExt _ p)
       (let-match many ext (Some _ e) ((None _) (values hs hp (le-refl hs) $ None _)))
@@ -388,7 +421,7 @@
 
 (def-fns _ $ (many destruct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) c) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Nat) i) (many (List $ Ref Block hs2) fields))
   (let-match many c (MkCtor _ _ index arity tagged ext shape newtype2))
-  (let ((erased hs2) (many hp2) (erased le) (many read)) $ dispatch _ hp ext tagged v)
+  (let ((erased hs2) (many hp2) (erased le) (many read)) $ dispatch _ hp ext tagged shape v)
   (let-match many read (None _) ((Some _ p) (match many p _ ((MkPair _ _ i fs) (values hs2 hp2 le (Some _ i) fs)))))
   (let ((erased _) (erased p4)) (ref-widen _ _ _ le v))
   (let ((many sole)) $ and (not $ is-some _ ext) $ and (not tagged) $ nat-eqb 1 $ list-length _ shape)

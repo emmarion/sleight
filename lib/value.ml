@@ -19,10 +19,10 @@ and value =
   | VMatchable of adt
   | VFn of closure
   | VToken
-  | VVacant
+  | VWord of Z.t
   | VHandle of id * Ffi_core.reading * mult * value
 
-and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw | Slots of Ffi_core.slots
+and payload = Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw | Slots of Ffi_core.slots
 
 and fn = { fname : string; params : id list; body : code; impl : (value list -> value list) option }
 and closure = { fn : fn; env : venv Lazy.t }
@@ -84,26 +84,30 @@ let use_externs = ref true
 let tuple = function [ v ] -> v | [] -> VToken | vs -> VTuple vs
 let untuple n v = match (n, v) with 1, v -> [ v ] | 0, _ -> [] | _, VTuple vs -> vs | _ -> assert false
 
-let hollow adt = adt.ext = None && not adt.tagged && not adt.newtype && List.for_all (fun c -> c.arity = 0) adt.ctors
+let vacant = VWord Z.zero
+let fieldless adt = List.filter (fun c -> c.arity = 0) adt.ctors
+let word c = if c.adt.tagged then VWord (Z.of_int (List.length (List.filter (fun k -> k.index < c.index) (fieldless c.adt)))) else vacant
 
 let construct c args =
   match c.adt.ext with
   | Some e when !use_externs -> e.construct c.index args
-  | _ -> if c.adt.newtype then tuple args else if hollow c.adt then VVacant else VCtor (c, Array.of_list args)
+  | _ -> if c.adt.newtype then tuple args else if c.arity = 0 then word c else VCtor (c, Array.of_list args)
 
-let fields = function VCtor (_, fs) -> Array.to_list fs | VVacant -> [] | _ -> assert false
+let fields = function VCtor (_, fs) -> Array.to_list fs | VWord _ -> [] | _ -> assert false
 
 let ctor_at adt i = List.nth adt.ctors i
 
-(* A value's discriminant and many fields; [None] where neither the FFI nor a tag says, the value then being its
-   fields as they stand. *)
-let dispatch ext tagged v =
+(* A value's discriminant and many fields, [adt] giving its type's constructors; [None] where neither the FFI nor
+   a tag says, the value then being its fields as they stand. *)
+let dispatch ext adt v =
   match (ext, v) with
-  | Some e, VExt _ -> Some (e.destruct v)
-  | _ when not tagged -> None
-  | _ -> (match v with VCtor (c, fs) -> Some (c.index, Array.to_list fs) | _ -> assert false)
+  | Some e, _ when !use_externs -> Some (e.destruct v)
+  | _ when not adt.tagged -> None
+  | _, VCtor (c, fs) -> Some (c.index, Array.to_list fs)
+  | _, VWord k -> Some ((List.nth (fieldless adt) (Z.to_int k)).index, [])
+  | _ -> assert false
 
-let destruct c v = match dispatch c.adt.ext c.adt.tagged v with
+let destruct c v = match dispatch c.adt.ext c.adt v with
   | Some r -> r
   | None -> (c.index, if c.adt.newtype then untuple c.arity v else fields v)
 
@@ -116,7 +120,8 @@ let rec show ?(seen = []) v =
   | VExt (adt, _) ->
       let i, fs = (Option.get adt.ext).destruct v in
       if adt.tagged then show (VCtor (ctor_at adt i, Array.of_list fs)) else show (tuple fs)
+  | VWord n -> Z.to_string n
   | VCtorFn c -> "<constructor " ^ c.cname ^ ">"
   | VMatchable adt -> "<matchable " ^ adt.tname ^ ">"
   | VFn cl -> "<function " ^ cl.fn.fname ^ ">"
-  | VToken | VVacant | VHandle _ -> "_"
+  | VToken | VHandle _ -> "_"

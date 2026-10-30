@@ -1247,15 +1247,10 @@
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
 
-; A closed list: every enum whose constructors carry no non-erased field is immediate too in extracted
-; code, which a form reading its Matchable could in principle prove in general.
 (def-adts
   ((Immediate : (Type A) -> Type)
     enum
     (many ImmU62 : -> (Immediate (U62)))
-    (many ImmU8 : -> (Immediate (U8)))
-    (many ImmChar : -> (Immediate (Char)))
-    (many ImmBool : -> (Immediate (Bool)))
     (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))))
 
 (def-adts

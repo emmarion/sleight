@@ -47,7 +47,7 @@ let driver env =
   let str_of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
   let str_to_slice = if slice then Some Ffi.slice else None in
   let ffi_nat = !V.use_externs && Hashtbl.mem Ffi.registered "Nat" in
-  let nat_to_z = if ffi_nat then Some Ffi.z else None and nat_of_z = if ffi_nat then Some (Ffi.int "Nat") else None in
+  let nat_to_z = if ffi_nat then Some Ffi.z else None and nat_of_z = if ffi_nat then Some Ffi.int else None in
   make ?str_of_host ?str_to_slice ?nat_to_z ?nat_of_z
     { zero = build "Zero" []; succ = (fun n -> build "Succ" [ n ]); pred = (fun v -> match des "Zero" v with 1, [ p ] -> Some p | _ -> None);
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";

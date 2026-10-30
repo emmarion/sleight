@@ -4,7 +4,7 @@
   (let-match erased p (RepeatCons _ _ _ _ p1))
   (let-match erased p1 (RepeatCons _ _ _ _ _))
   (let ((erased _) (unique b) (erased q))
-    (array-place-imm _ _ a (Succ (Zero)) (MkCopy _ #\z) _ (NthThere _ _ _ _ _ (NthHere _ _ _)) (ImmCopy _ (ImmChar))))
+    (array-place _ _ a (Succ (Zero)) (MkCopy _ #\z) _ (NthThere _ _ _ _ _ (NthHere _ _ _))))
   (let-match erased q (SetThere _ _ _ _ _ _ q1))
   (let-match erased q1 (SetHere _ _ _ _))
   (let ((many x) (unique c)) (array-get _ _ b (Zero) _ (NthHere _ _ _)))

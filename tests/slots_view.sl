@@ -17,6 +17,6 @@
 run
 ; expect: (Cons _ 0 $ Cons _ 2 $ Nil _)
 ; warns: tests/slots_view.sl:10:23: warning: application of `MkSlots`: builds a `Slots` through its model, O(n); start one with `slots-new`
-; warns: lib/prelude.sl:1764:1: note: `;! warn` for `MkSlots` is here
+; warns: lib/prelude.sl:1759:1: note: `;! warn` for `MkSlots` is here
 ; warns: tests/slots_view.sl:14:3: warning: match on `Slots`: copies the whole table out, O(n); use `slots-find`, `slots-intern` or `slots-length`
-; warns: lib/prelude.sl:1765:1: note: `;! warn` for `Slots` is here
+; warns: lib/prelude.sl:1760:1: note: `;! warn` for `Slots` is here

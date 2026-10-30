@@ -28,9 +28,9 @@ let rec eval env code =
       let v = eval1 env scrut in
       let read =
         match shape with
-        | Known adt -> dispatch adt.ext adt.tagged v
+        | Known adt -> dispatch adt.ext adt v
         | Held (code, held) -> (
-            match eval1 env code with VMatchable a -> dispatch a.ext held.tagged v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
+            match eval1 env code with VMatchable a -> dispatch a.ext held v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
       in
       let enter (_, ids, body) fields = eval (bind ids fields env) body in
       match (read, branches, default) with
@@ -42,10 +42,11 @@ let rec eval env code =
       | None, [ ((_, ids, _) as branch) ], _ -> enter branch (let a = match shape with Known a | Held (_, a) -> a in if a.newtype then untuple (List.length ids) v else fields v)
       | None, [], Some d -> eval env d
       | None, _, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
+  | CCellAlloc (c, []) -> [ construct c [] ]
   | CCellAlloc (c, ss) -> [ VCtor (c, Array.of_list (List.map (eval1 env) ss)) ]
   | CCellWrite (_, c, ss) | CCellCopy (_, c, ss) -> (
       match eval1 env c with
-      | VVacant -> [ VVacant ]
+      | VWord _ as v -> [ v ]
       | VCtor (k, fs) as v ->
           let copies = match code with CCellCopy _ -> true | _ -> false in
           let fs = if copies then Array.copy fs else fs in

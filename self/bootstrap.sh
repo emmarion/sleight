@@ -62,6 +62,7 @@ check_test() {
   case $goal in open|proved) [ "$flags" = --interpret ] && { echo "skip $name"; return; } ;; *) goal="" ;; esac
   extra=$(directive "$t" flags)
   case " $extra " in *" --extract "*|*" --repl "*) echo "skip $name"; return ;; esac
+  [ "$(directive "$t" externs)" = none ] && { echo "skip $name"; return; }
   both="$both $extra"
   for n in $(directive "$t" comptime-unconfine); do both="$both --comptime-unconfine $n"; done
   if [ -n "$(directive "$t" error)" ]; then

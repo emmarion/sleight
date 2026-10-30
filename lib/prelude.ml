@@ -39,7 +39,7 @@ let sharing_ctors, env =
   let x, env = Env.bind env None Many (Env.Settled (V.VMatchable adt))
     (Matchable (Enum, false, false, Var sharing, List.map (fun c -> Many, Var c.V.cid) cs)) in
   (cs, Env.merge_opens (Env.forcing (Env.opens_add env x)))
-let env = Env.set_state env null (Env.Settled V.VVacant)
+let env = Env.set_state env null (Env.Settled V.vacant)
 let unique_term = App (Var (List.nth sharing_ctors 0).V.cid, [])
 let shared_term = App (Var (List.nth sharing_ctors 1).V.cid, [])
 let coercible, env = Env.bind env (Some (Reader.Src "Coercible")) Erased token
@@ -70,5 +70,5 @@ let specials, env =
   ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,
     List.fold_left
       (fun env (_, n, c, ctor) ->
-        snd (Env.bind env ~rule:(App (Var c, [])) (Some (Reader.Src n)) Many (Env.Settled (V.VCtor (ctor, [||]))) special_term))
+        snd (Env.bind env ~rule:(App (Var c, [])) (Some (Reader.Src n)) Many (Env.Settled (V.construct ctor [])) special_term))
       env ctors )

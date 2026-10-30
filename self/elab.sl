@@ -129,12 +129,13 @@
 (def-fns _ $ (many special-of-entry : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Sp) r))
   (let ((erased _) (many blk)) $ env-block env x)
   (let-match many blk (Some _ b2) ((None _) (None _)))
-  (let-match many b2 (BTag _ ct _) (else (None $ Sp)))
+  (let ((many index)) $ match many b2 (((Maybe $ Nat) _)) ((BTag _ ct _) (Some _ $ ctor-index ct)) (else (word-of-block _ b2)))
+  (let-match many index (Some _ i) ((None _) (None $ Sp)))
   (let ((erased _) (many s)) $ entry-state env x)
   (let-match many s (SSettled _ _ m) ((SHypothetical _) (None _)))
   (let-match many (and (mult-is-many $ entry-mult-of env x) $ term-eq (minted-type env m) special-term) (BTrue)
     ((BFalse) (None _)))
-  (sp-of-index $ ctor-index ct))
+  (sp-of-index i))
 
 (def-fns _ $ (many special-of-atom : (many (Env) env) (many (Syn) raw) -> (many (Maybe $ Sp) r))
   (let-match many (raw-atom raw) (Some _ n) ((None _) (None _)))
@@ -586,7 +587,7 @@
 (def-adts $ (Callee : -> Type)
   enum
   (many CalleeHead : (many (Env) env) (many (Syn) head) (many (Term) h) (many (Term) ty) -> (Callee))
-  (many CalleeWrap : (many (Env) env) (many (Nat) c) -> (Callee))
+  (many CalleeWrap : (many (Env) env) (many (String) form) (many (Nat) c) -> (Callee))
   (many CalleeForm : (many (Env) env) (many (String) name) -> (Callee)))
 
 (def-adts $ (Invoke : ((List $ List $ Nat) ctx) -> Type)
@@ -657,7 +658,7 @@
 (def-fns _ $ (many callee-view : (many (Callee) c) ->
     (many (String) subject) (many (Bool) apposed) (many (List $ Pair (Loc) $ String) notes) (many (Bool) marked) (many (Bool) fields) (many (String) noun))
   (let-match many c (CalleeHead env head h hty)
-    ((CalleeWrap env cid) (values (str-cat (say env "`coercible-wrap` of ") $ qshown env cid) (BFalse) (declared-as env cid) (BTrue) (BTrue) "more argument"))
+    ((CalleeWrap env form cid) (values (str-cat (say env $ str-cat3 "`" form "` of ") $ qshown env cid) (BFalse) (declared-as env cid) (BTrue) (BTrue) "more argument"))
     ((CalleeForm env name) (values (tick $ spell env name) (BFalse) (Nil _) (BTrue) (BFalse) "argument")))
   (let ((many ty)) $ canon-env env hty)
   (let ((many kind)) $ kind-name env ty)
@@ -1551,6 +1552,27 @@
   (let-match many (find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env) (Some _ info) ((None _) (BFalse)))
   (let-match many info (MkMatchInfo _ _ cs _))
   (mult-eq (marker cs c) $ Erased))
+
+(def-fns _ $ (many fieldless-pos : (subterm many (List $ CShape) ss) (many (Nat) c) (many (Nat) i) -> (many (Nat) r))
+  (let-match many ss (Cons _ s rest) ((Nil _) i))
+  (let-match many s (MkCShape _ c2 n))
+  (match many (nat-cmp c c2) _ ((CEq _ _ _) i) (else (tail $ fieldless-pos rest c $ match many n (((Nat) _)) ((Zero) (Succ i)) (else i)))))
+
+(def-fns _ $ (many tag-refused : (many (Env) env) (many (Nat) c) (many (String) why) -> (many (Env) r) (many (Nat) pos))
+  (values (env-error env $ str-cat (qshown env c) $ say env why) 0))
+
+(def-fns _ $ (many tag-checks : (many (Env) env) (many (Nat) c) (many (List $ Entry) tele) -> (many (Env) r) (many (Nat) pos))
+  (let ((many tid)) $ tid-of env c)
+  (let-match many (find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env) (Some _ info)
+    ((None _) (tag-refused env c " has no opened `Matchable` that lists it")))
+  (let-match many info (MkMatchInfo mid disc cs _))
+  (let-match many (list-mem-bin (mctor-ids cs) c) (BTrue) ((BFalse) (tag-refused env c " has no opened `Matchable` that lists it")))
+  (let-match many (mult-eq (marker cs c) $ Erased) (BFalse) ((BTrue) (tag-refused env c " is phantom, so it has no tag")))
+  (let-match many (stored-count tele) (Zero) (else (tag-refused env c " has a non-erased field, so its value is not a tag")))
+  (let-match many disc (DEnum) ((DUnion) (tag-refused env c " is a constructor of a union, which carries no tag")))
+  (let-match many (type-of env mid) (TMatchable _ _ ext _ _) (else (values env 0)))
+  (let-match many ext (BFalse) ((BTrue) (tag-refused env c " is a constructor of an extern type, whose representation is the FFI's")))
+  (values env $ fieldless-pos (non-phantom $ shapes cs env) c 0))
 
 (def-fns _ $ (many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (many (List $ Ctor) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
@@ -4429,7 +4451,8 @@
 ; Nat (section 33), so neither is unwrapped first. None where the type is not one of the three, or the block does
 ; not carry the payload it would need.
 (def-fns _ $ (many lit-rope : (erased (Hist Block) hs) (many (Env) env) (many (Term) ty) (many (Block (Ref Block hs)) blk) -> (many (Maybe $ Rope) r))
-  (let-match many blk (BExt _ p) (else (None $ Rope)))
+  (let ((many payload)) $ match many blk (((Maybe $ Payload) _)) ((BExt _ p) (Some _ p)) (else (match many (word-of-block _ blk) (((Maybe $ Payload) _)) ((Some _ w) (Some _ $ PNat w)) ((None _) (None _)))))
+  (let-match many payload (Some _ p) ((None _) (None $ Rope)))
   (match many p (((Maybe $ Rope) _))
     ((PNat n)
       (let-match many (prelude-nullary env ty "Nat") (BFalse) ((BTrue) (Some _ $ RStr $ nat-str n)))
@@ -4543,7 +4566,7 @@
         (let ((erased _) (many blk) (erased _)) $ hread hs hp r)
         (let-match many (lit-rope _ env ty blk) (None _) ((Some _ text) (values text (BFalse))))
         (let-match many (type-adt env ty) (Some _ adt) ((None _) (values (RStr "_") (BFalse))))
-        (let ((erased _) (many hp2) (erased _) (many read)) $ dispatch _ hp (adt-ext adt) (adt-tagged adt) r)
+        (let ((erased _) (many hp2) (erased _) (many read)) $ dispatch _ hp (adt-ext adt) (adt-tagged adt) (ctor-arities $ adt-ctors adt) r)
         (match many read (((Rope) _) ((Bool) b5))
           ((Some _ pair)
             (let-match many pair (MkPair _ _ index fields))

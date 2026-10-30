@@ -296,8 +296,8 @@ and named_buffer cx key init fill =
 and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
-  | V.VExt (_, Int n) when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
-  | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
+  | V.VWord n when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
+  | V.VWord n -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, (Array _ | Bytes _ | Slots _)) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw (value cx) r ^ ")"
@@ -308,7 +308,7 @@ and plain cx = function
           "(Obj.repr (fun held -> " ^ dispatch cx adt (List.init (List.length adt.ctors) Fun.id) "held" arms None ^ "))"
       | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
-  | V.VToken | V.VVacant -> "(Obj.repr ())"
+  | V.VToken -> "(Obj.repr ())"
   | V.VHandle (x, r, m, v) -> Printf.sprintf "(Obj.repr (%s, %s))" (handle x r m) (value cx v)
 
 and closure cx cl =
@@ -457,7 +457,7 @@ let collect env items =
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
     | V.VHandle (_, _, _, v) -> value v
-    | V.VFn _ | V.VToken | V.VVacant -> ())
+    | V.VFn _ | V.VToken | V.VWord _ -> ())
   and handles = function Ffi_core.Handle (_, _, _, _, v) -> value (Obj.obj v) | List (_, rs) -> List.iter handles rs | _ -> ()
   and code c =
     (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());

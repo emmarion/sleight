@@ -18,7 +18,8 @@
    compilation runs the host's tools;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
-   "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
+   "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run, and
+   "; externs: none" with the models alone;
    "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;
    "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself;
    "; goal: mode" runs it under --goal mode, extracting nothing when the mode is open or proved;
@@ -77,7 +78,7 @@ let rec run_test name =
   let flags = List.filter (String.starts_with ~prefix:"--") (List.concat_map (String.split_on_char ' ') (directive src "flags")) in
   if List.exists (fun f -> not (List.mem f (Program.valued @ Program.switches))) flags then None else
   let modes = [ (true, "with externs"); (false, "without externs") ] in
-  let modes = if directive src "externs" = [ "only" ] then [ List.hd modes ] else modes in
+  let modes = match directive src "externs" with [ "only" ] -> [ List.hd modes ] | [ "none" ] -> List.tl modes | _ -> modes in
   List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src flags)) modes
 
 and run_mode name externs src flags =

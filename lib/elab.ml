@@ -55,7 +55,7 @@ let minted_is env x = Var (entry env x).minted
 let settled_value env x ty = let env = enter_mentioned env (Var x) in match entry env x with
   | { state = Settled v; mult = (Many | Unique); _ } when equal (minted_type env x) ty -> Some v
   | _ -> None
-let special_value env x = match settled_value env x Prelude.special_term with Some (V.VCtor (c, [||])) -> List.assoc_opt c.cid Prelude.specials | _ -> None
+let special_value env x = match settled_value env x Prelude.special_term with Some (V.VWord k) -> Option.map snd (List.nth_opt Prelude.specials (Z.to_int k)) | _ -> None
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
 
 let rec special_of env raw =
@@ -420,7 +420,7 @@ let nat_z env loc v =
   let c = ctor_of env loc (Option.get (prelude_id env "Zero")) in
   let rec go acc v =
     match v with
-    | V.VExt (_, V.Int n) -> Z.add acc n
+    | V.VWord n -> Z.add acc n
     | v -> ( match V.destruct c v with 0, _ -> acc | _, [ p ] -> go (Z.succ acc) p | _ -> raise Not_found)
   in
   go Z.zero v
@@ -462,7 +462,7 @@ let peano env k =
     ladder := a);
   (!ladder).(k)
 
-let nat_value env z = match ext_adt env "Zero" with Some adt -> V.VExt (adt, V.Int z) | None -> peano env (Z.to_int z)
+let nat_value env z = match ext_adt env "Zero" with Some _ -> V.VWord z | None -> peano env (Z.to_int z)
 
 let str_value env s =
   match ext_adt env "SNil" with
@@ -718,7 +718,7 @@ let shown_ctor env loc ty v =
   | [] -> None
   | (_, first) :: _ ->
       let adt = first.V.adt in
-      let ct = if adt.V.tagged then match V.dispatch adt.V.ext adt.V.tagged v with Some (i, _) -> List.nth_opt adt.V.ctors i | None -> None
+      let ct = if adt.V.tagged then match V.dispatch adt.V.ext adt v with Some (i, _) -> List.nth_opt adt.V.ctors i | None -> None
         else ( match adt.V.ctors with [ c ] -> Some c | _ -> None) in
       Option.bind ct (fun ct -> Option.map (fun c -> (c, ct)) (entry_of ct))
 
@@ -1362,7 +1362,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~ctor:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false ~frames tele args elab_arg in
               let ctor = match canon env h.term with Var c -> c | _ -> -1 in
               let hollow = ctor >= 0 && hollow env ctor in
-              let code = if pos = Erased then V.CErased else if hollow then V.CConst V.VVacant else if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
+              let code = if pos = Erased then V.CErased else if hollow then V.CConst V.vacant else if newtype_of env ctor <> None then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
               let place = if hollow then Some (slot_of Prelude.null) else term_place env (App (h.term, List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
           | Cell (c, slots) -> elab_cell_invoke ~frames env expect l (callee pos) h hcode c slots args
@@ -1575,12 +1575,12 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let ct, params, _ = cell_shape env l pos c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
         (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
-      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.VVacant)) in
+      let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.vacant)) in
       let x, env = bind env None (under pos Unique) Hypothetical (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
       let hollow = hollow env c in
       let env, place = if hollow then (place env x (slot_of Prelude.null), Some (slot_of Prelude.null)) else (env, None) in
-      (env, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else if hollow then V.CConst V.VVacant else wrap (V.CCellAlloc (ct, values)))
+      (env, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else if hollow then V.CConst V.vacant else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ m; u; List (il, c :: items) ] ->
       (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
       let mode = written env pos l "cell-write" (mult_or env l m) in
@@ -1908,6 +1908,28 @@ and elab_special ?sink ?final demand tele env expect l sp args =
         | _ -> assert false in
       let env, src, tgt = go env [] [] params args in
       mint env (proof_type Prelude.coercible [ s; instantiate src ret; App (Var c, List.rev src); s; instantiate tgt ret; App (Var c, List.rev tgt) ])
+  | Sp.CoercibleTag, s :: c :: args ->
+      let name () = tick (speller env (Sp.name sp)) in
+      let nat = match prelude_id env "Nat" with Some t -> t | None -> error l "%s needs the prelude's `Nat`, which `--no-prelude` leaves out" (name ()) in
+      if not !V.use_externs then error l "%s needs the extern `Nat`, which `--no-extern` replaces with its model" (name ());
+      let env, s = side env s in
+      let c = ctor_var env l c in
+      let params, ret = ctor_type env l c in
+      let mid, disc, cs = match List.find_opt (fun (_, _, cs) -> List.mem_assoc (Var c) (List.map (fun (m, c') -> (c', m)) cs)) (matchables env (tid_of env l c)) with
+        | Some m -> m
+        | None -> error_in env l "%s has no opened `Matchable` that lists it" (qname env c) in
+      let shapes = shapes env l cs in
+      if List.mem (Erased, c) (List.map (fun (m, c', _) -> (m, c')) shapes) then error_in env l "%s is phantom, so it has no tag" (qname env c);
+      if runtime params <> [] then error_in env l "%s has a non-erased field, so its value is not a tag" (qname env c);
+      if disc = Union then error_in env l "%s is a constructor of a union, which carries no tag" (qname env c);
+      (match type_of env mid with Matchable (_, _, true, _, _) -> error_in env l "%s is a constructor of an extern type, whose representation is the FFI's" (qname env c) | _ -> ());
+      let callee = { subject = lazy (sprintf_in env "%s of %s" (name ()) (qname env c)); apposed = false; notes = lazy (declared_as env c); used = (fun _ -> Erased); marks = true } in
+      let env, acc = elab_term_args env l ~callee ~what:"more argument" params (Var c) args in
+      List.iter (settle env l) acc;
+      let fieldless = List.filter_map (fun (c', n) -> if n = 0 then Some c' else None) (non_phantom shapes) in
+      let lit = Literal.Numeral (Z.of_int (Option.get (find_index (( = ) c) fieldless))) in
+      let env = intern env l lit in
+      mint env (proof_type Prelude.coercible [ s; instantiate acc ret; App (Var c, List.rev acc); s; App (Var nat, []); Var (Hashtbl.find literal_rows (Literal.key lit)).lit_id ])
   | Sp.CoercibleOf, [ d ] -> (
       let env, d = proof ?sides:(expected_sides env) env Prelude.delegate d in
       match d with
