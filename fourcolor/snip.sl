@@ -628,3 +628,148 @@
         (MkMoebius n f M2 x1 z z2 v
           (app-distinct (Cons _ x1 M3) (Cons _ z2 L) (Cons _ x1 M2) (AppCons M3 _ M2 x1 ap2) d3 dL (disj-sub S (Cons _ z2 L) (Cons _ x1 M3) dj3 (snoc-sub SC (Cons _ z2 L) z snL)))
           cp2 pnz pv (mem2-app M3 (Cons _ z2 L) M2 z2 v ap2 (M2Here L z2 v (in-snoc v z SC (Cons _ z2 L) snL iv))))))))
+
+(def-fns _ $ (erased disk-walk-e : (erased (Nat) d a b x0) (erased (List (Nat)) e n f p s xs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Ring e f x0 p) rg) (subterm erased (Path e s a b xs) w) (erased (DiskN n f (Cons (Nat) x0 p) a) da) (erased (NotIn a (Cons (Nat) x0 p)) oa)
+    -> (erased (DiskN n f (Cons (Nat) x0 p) b) db) (erased (NotIn b (Cons (Nat) x0 p)) ob))
+  (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1) ((PathHere _ _ _) (values da oa)))
+  (let ((erased da1) (erased oa1)) (disk-edge d a a1 x0 e n f p h g rg da oa pa))
+  (disk-walk-e d a1 b x0 e n f p s xs1 h g rg w1 da1 oa1))
+
+; The converse of diskE_edge.
+(def-fns _ $ (erased disk-edge-inv : (erased (Nat) d x ex x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
+    (erased (Ring e f x0 p) rg) (erased (DiskN n f (Cons (Nat) x0 p) ex) dn) (erased (NotIn ex (Cons (Nat) x0 p)) oex) (erased (Nth (Nat) e x ex) pex)
+    -> (erased (DiskN n f (Cons (Nat) x0 p) x) dx) (erased (NotIn x (Cons (Nat) x0 p)) ox))
+  (let ((erased nf) (erased pe)) (hyper-perm d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased xs) (erased w)) (cycle d x ex e nf pe pex (nth-lt-length _ e x d ex pex le)))
+  (disk-walk-e d ex x x0 e n f p (Nil _) xs h g rg w dn oex))
+
+(def-fns _ $ (erased choose-under : (erased (List (Nat)) t a b xs) (erased (Nat) d) (erased (Under a d) ua) (erased (Under b d) ub) (subterm erased (List (Nat)) cs)
+    (erased (Choose t a b xs cs) ch) -> (erased (Under cs d) r))
+  (let-match erased ch (ChCons _ _ _ xs1 cs1 x y ca ch1) ((ChNil _ _ _) (UnderNil d)))
+  (UnderCons cs1 y d
+    (match erased ca _ ((CAIn _ _ _ _ _ _ pa) (under-nth a x y d ua pa)) ((CAOut _ _ _ _ _ _ pb) (under-nth b x y d ub pb)))
+    (choose-under t a b xs1 d ua ub cs1 ch1)))
+
+(def-fns _ $ (erased choose-length : (erased (List (Nat)) t a b xs cs) (erased (Nat) k) (subterm erased (Choose t a b xs cs) ch) (erased (Length (Nat) xs k) l)
+    -> (erased (Length (Nat) cs k) r))
+  (let-match erased ch (ChCons _ _ _ xs1 cs1 x y ca ch1) ((ChNil _ _ _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased l (LengthCons _ _ _ k1 l1))
+  (LengthCons _ y cs1 k1 (choose-length t a b xs1 cs1 k1 ch1 l1)))
+
+(def-fns _ $ (erased zip-below : (erased (List (Nat)) xs ys) (erased (Nat) d) (subterm erased (List (Bond)) g) (erased (Zip xs ys g) z) (erased (Under xs d) ux)
+    (erased (Under ys d) uy) -> (erased (Below g d) r))
+  (let-match erased z (ZipCons xs1 ys1 g1 x y z1) ((ZipNil) (BelowNil d)))
+  (let-match erased ux (UnderCons _ _ _ lx ux1))
+  (let-match erased uy (UnderCons _ _ _ ly uy1))
+  (BelowCons g1 x y d lx ly (zip-below xs1 ys1 d g1 z1 ux1 uy1)))
+
+(def-fns _ $ (erased resp-under : (erased (List (Nat)) lab ls) (erased (Nat) d) (subterm erased (List (Nat)) xs) (erased (Respects lab xs ls) rp)
+    (erased (Length (Nat) lab d) ll) -> (erased (Under xs d) r))
+  (let-match erased rp (RespCons _ xs1 ls1 j l pj rp1) ((RespNil _) (UnderNil d)))
+  (UnderCons xs1 j d (nth-lt-length _ lab j d l pj ll) (resp-under lab ls1 d xs1 rp1 ll)))
+
+; The bonds x - n x for every dart, and x - e x for x and e x off r: e2 fixes the darts of t, r followed by their edge preimages er.
+(def-adts $ (DiskGraph : ((Nat) d) ((List (Nat)) e n r) ((List (Bond)) g) -> Type)
+  enum
+  (many MkDiskGraph : (erased (Nat) d) (erased (List (Nat)) e n r nf er t ids e2) (erased (List (Bond)) gn ge g)
+      (erased (HPerm d e nf) pe) (erased (Respects nf r er) re) (erased (AppN r er t) ap) (erased (Iota d ids) io)
+      (erased (Choose t ids e ids e2) ch) (erased (Graph d n gn) grn) (erased (Graph d e2 ge) gre) (erased (Cat gn ge g) c) -> (DiskGraph d e n r g)))
+
+(def-fns _ $ (erased dg-exists : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Under r d) ur)
+    -> (erased (List (Bond)) g) (erased (DiskGraph d e n r g) dg) (erased (Below g d) bg))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ids) (erased io)) (iota-exists d))
+  (let ((erased uids)) (perm-under d ids ids (perm-id d ids io)))
+  (let ((erased er) (erased re)) (respects-exists nf r d ur (perm-length d nf e (perm-sym d e nf pe))))
+  (let ((erased t) (erased ap)) (app-exists r er))
+  (let ((erased e2) (erased ch)) (choose-exists t ids e d (iota-length d ids io) le ids uids))
+  (let ((erased le2)) (choose-length t ids e ids e2 d ch (iota-length d ids io)))
+  (let ((erased gn) (erased grn)) (perm-graph d n ni pn))
+  (let ((erased ge) (erased gre)) (graph-exists d e2 le2))
+  (let ((erased g) (erased c)) (cat-exists gn ge))
+  (let-match erased gre (MkGraph _ _ ids2 _ io2 _ z))
+  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
+  (values g (MkDiskGraph d e n r nf er t ids e2 gn ge g pe re ap io ch grn gre c)
+    (below-cat gn ge g d c (graph-below d n ni gn (graph-fun d n gn grn) pn)
+      (zip-below ids e2 d ge z uids (choose-under t ids e ids d uids (perm-under d e nf pe) e2 ch)))))
+
+; A bond of the disk graph.
+(def-adts $ (DGStep : ((List (Nat)) e n r) ((Nat) u v) -> Type)
+  enum
+  (many DGNode : (erased (List (Nat)) e n r) (erased (Nat) u v) (erased (Nth (Nat) n u v) pn) -> (DGStep e n r u v))
+  (many DGNodeBack : (erased (List (Nat)) e n r) (erased (Nat) u v) (erased (Nth (Nat) n v u) pn) -> (DGStep e n r u v))
+  (many DGEdge : (erased (List (Nat)) e n r) (erased (Nat) u v) (erased (NotIn u r) ou) (erased (Nth (Nat) e u v) pe) -> (DGStep e n r u v))
+  (many DGEdgeBack : (erased (List (Nat)) e n r) (erased (Nat) u v) (erased (NotIn v r) ov) (erased (NotIn u r) ou) (erased (Nth (Nat) e v u) pe)
+      -> (DGStep e n r u v))
+  (many DGSame : (erased (List (Nat)) e n r) (erased (Nat) u) -> (DGStep e n r u u)))
+
+; x - e x with x off t: neither end is on r.
+(def-fns _ $ (erased dg-edge : (erased (Nat) d u v) (erased (List (Nat)) e r nf er t) (erased (HPerm d e nf) pe) (erased (Respects nf r er) re)
+    (erased (AppN r er t) ap) (erased (NotIn u t) ou) (erased (Nth (Nat) e u v) pv) -> (erased (NotIn u r) ou2) (erased (NotIn v r) ov))
+  (values (notin-sub u r t (app-sub-l r er t r ap (sub-refl r)) ou)
+    (match erased (in-dec v r) _
+      (absurd (OrL _ _ iv) (apart-irrefl u (notin-in u u t ou (app-in-r r er t u ap (in-map nf r er v u iv re (perm-inv d u v e nf pe pv))))))
+      ((OrR _ _ o) o))))
+
+(def-fns _ $ (erased dg-adj : (erased (Nat) d u v) (erased (List (Nat)) e n r) (erased (List (Bond)) g) (erased (DiskGraph d e n r g) dg) (erased (Adj g u v) a)
+    -> (erased (DGStep e n r u v) s))
+  (let-match erased dg (MkDiskGraph _ _ _ _ nf er t ids e2 gn ge _ pe re ap io ch grn gre c))
+  (let-match erased gre (MkGraph _ _ ids2 _ io2 le2 z))
+  (match erased (adj-cat-inv gn ge g u v c a) _
+    ((OrL _ _ an) (match erased (graph-adj-inv d u v n gn grn an) _ ((OrL _ _ p) (DGNode e n r u v p)) ((OrR _ _ p) (DGNodeBack e n r u v p))))
+    ((OrR _ _ ae)
+      (match erased (graph-adj-inv d u v e2 ge gre ae) _
+        ((OrL _ _ p)
+          (match erased (choose-at t ids e ids e2 d u v ch io (nth-lt-length _ e2 u d v p le2) p) _
+            ((CAIn _ _ _ _ _ _ pi) (let-match erased (nth-fn _ ids u v u pi (iota-nth d u ids io (nth-lt-length _ e2 u d v p le2))) (Refl _ _)) (DGSame e n r u))
+            ((CAOut _ _ _ _ _ ou pb) (let ((erased o1) (erased o2)) (dg-edge d u v e r nf er t pe re ap ou pb)) (DGEdge e n r u v o1 pb))))
+        ((OrR _ _ p)
+          (match erased (choose-at t ids e ids e2 d v u ch io (nth-lt-length _ e2 v d u p le2) p) _
+            ((CAIn _ _ _ _ _ _ pi) (let-match erased (nth-fn _ ids v u v pi (iota-nth d v ids io (nth-lt-length _ e2 v d u p le2))) (Refl _ _)) (DGSame e n r u))
+            ((CAOut _ _ _ _ _ ov pb) (let ((erased o1) (erased o2)) (dg-edge d v u e r nf er t pe re ap ov pb)) (DGEdgeBack e n r u v o1 o2 pb))))))))
+
+; diskN is a union of classes of the disk graph ...
+(def-fns _ $ (erased conn-disk : (erased (Nat) d a b x0) (erased (List (Nat)) e n f p) (erased (List (Bond)) g) (erased (Hypermap d e n f) h)
+    (erased (Genus d e n f (Zero)) gen) (erased (Ring e f x0 p) rg) (erased (DiskGraph d e n (Cons (Nat) x0 p) g) dg) (subterm erased (Conn g a b) c)
+    (erased (DiskN n f (Cons (Nat) x0 p) a) da) -> (erased (DiskN n f (Cons (Nat) x0 p) b) db))
+  (let-match erased c (ConnStep _ _ a1 _ ad c1) ((ConnHere _ _) da))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (conn-disk d a1 b x0 e n f p g h gen rg dg c1
+    (match erased (dg-adj d a a1 e n (Cons _ x0 p) g dg ad) _
+      ((DGNode _ _ _ _ _ pn1) (disk-node d a a1 n ni f _ pn da pn1))
+      ((DGNodeBack _ _ _ _ _ pn1) (disk-pre n f _ a a1 da pn1))
+      ((DGEdge _ _ _ _ _ ou pe1) (let ((erased d1) (erased o1)) (disk-edge d a a1 x0 e n f p h gen rg da ou pe1)) d1)
+      ((DGEdgeBack _ _ _ _ _ ov ou pe1) (let ((erased d1) (erased o1)) (disk-edge-inv d a1 a x0 e n f p h gen rg da ou pe1)) d1)
+      ((DGSame _ _ _ _) da))))
+
+; ... and its darts are joined to r.
+(def-fns _ $ (erased disk-conn : (erased (Nat) d u x y x0) (erased (List (Nat)) e n f p) (erased (List (Bond)) g) (erased (Hypermap d e n f) h)
+    (erased (Genus d e n f (Zero)) gen) (erased (Ring e f x0 p) rg) (erased (DiskGraph d e n (Cons (Nat) x0 p) g) dg)
+    (subterm erased (DPath n f (Cons (Nat) x0 p) u x) dp) (erased (DiskN n f (Cons (Nat) x0 p) u) du) (erased (Conn g u y) c) -> (erased (Conn g x y) res))
+  (let ((erased r)) (Cons _ x0 p))
+  (let-match erased dg (MkDiskGraph _ _ _ _ nf er t ids e2 gn ge _ pe re ap io ch grn gre c0))
+  (let ((erased nf2) (erased ni) (erased fi) (erased rnf) (erased pe2) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (match erased dp _
+    ((DPNil _ _ _ _) c)
+    ((DPNode _ _ _ _ u2 _ out pn1 dp1)
+      (disk-conn d u2 x y x0 e n f p g h gen rg dg dp1 (disk-pre n f r u u2 du pn1)
+        (ConnStep g u2 u y (adj-cat-l gn ge g u2 u (graph-adj d u2 u n gn grn pn1) c0) c)))
+    ((DPFace _ _ _ _ u2 _ out pf1 dp1)
+      (let ((erased du2)) (disk-step n f r u u2 du (DPFace n f r u u2 u2 out pf1 (DPNil n f r u2))))
+      (let ((erased w) (erased pw) (erased lw)) (perm-nth d u2 n ni pn (perm-val d u u2 f fi pf pf1)))
+      (let ((erased pew)) (hyper-edge d w u2 u e n f h pw pf1))
+      (let ((erased dw) (erased ow)) (disk-edge-inv d w u x0 e n f p h gen rg du out pew))
+      (let ((erased owe)) (match erased (in-dec w er) (((NotIn w er) res))
+        (absurd (OrL _ _ iw)
+          (let ((erased y2) (erased iy2) (erased py2)) (respects-in nf r er w re iw))
+          (let-match erased (nth-fn _ e w u y2 pew (perm-inv d y2 w nf e (perm-sym d e nf pe) py2)) (Refl _ _))
+          (apart-irrefl u (notin-in u u r out iy2)))
+        ((OrR _ _ o) o)))
+      (let ((erased pe3)) (choose-out t ids e ids e2 d w u ch io le (notin-app r er t w ap ow owe) pew))
+      (disk-conn d u2 x y x0 e n f p g h gen rg dg dp1 du2
+        (ConnStep g u2 w y (adj-cat-l gn ge g u2 w (graph-adj d u2 w n gn grn pw) c0)
+          (ConnStep g w u y (adj-cat-r gn ge g w u (graph-adj d w u e2 ge gre pe3) c0) c))))))
