@@ -11,9 +11,9 @@
 (def-fns _ $ (erased all2-nth : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) i)
     (erased A x) (subterm erased (Nth A xs i x) p) (erased (All2 A B R xs ys) al) -> (erased B y) (erased (Nth B ys i y) q) (erased (R x y) r))
   (let-match erased al (All2Cons _ _ _ x1 y1 xs1 ys1 r1 al1) (absurd (All2Nil _ _ _) p))
-  (let-match erased p (NthThere _ _ _ i1x _ p1) ((NthHere _ _ _) (values y1 (NthHere B y1 ys1) r1)))
-  (let ((erased y) (erased q) (erased r)) (all2-nth A B R xs1 ys1 i1x x p1 al1))
-  (values y (NthThere B y1 ys1 i1x y q) r))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values y1 (NthHere B y1 ys1) r1)))
+  (let ((erased y) (erased q) (erased r)) (all2-nth A B R xs1 ys1 i1 x p1 al1))
+  (values y (NthThere B y1 ys1 i1 y q) r))
 
 (def-fns _ $ (erased all2-length : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) n)
     (subterm erased (All2 A B R xs ys) al) (erased (Length A xs n) l) -> (erased (Length B ys n) r))
@@ -178,9 +178,9 @@
 (def-fns _ $ (erased permns-nth : (erased (Perm) g) (erased (List (Nat)) xs ys) (erased (Nat) i x) (subterm erased (Nth (Nat) xs i x) p)
     (erased (PermNs g xs ys) al) -> (erased (Nat) y) (erased (Nth (Nat) ys i y) q) (erased (PermN g x y) r))
   (let-match erased al (PNCons _ x1 y1 xs1 ys1 r1 al1) (absurd (PNNil _) p))
-  (let-match erased p (NthThere _ _ _ i1x _ p1) ((NthHere _ _ _) (values y1 (NthHere _ y1 ys1) r1)))
-  (let ((erased y) (erased q) (erased r)) (permns-nth g xs1 ys1 i1x x p1 al1))
-  (values y (NthThere _ y1 ys1 i1x y q) r))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values y1 (NthHere _ y1 ys1) r1)))
+  (let ((erased y) (erased q) (erased r)) (permns-nth g xs1 ys1 i1 x p1 al1))
+  (values y (NthThere _ y1 ys1 i1 y q) r))
 
 (def-fns _ $ (erased permn-exists : (erased (Perm) g) (erased (Nat) k) (erased (Lt k 4) l) -> (erased (Nat) k2) (erased (PermN g k k2) r))
   (let ((erased c) (erased p)) (colof-exists k l))
@@ -301,11 +301,11 @@
   (MkRingTrace e f r ks2 lc2 cs2 et2 c2 rl2 co2 t2))
 
 ; ins lists each dart x of cc followed by e x (Gonthier's insertE cc).
-(def-adts $ (InsertE : ((List (Nat)) e ccx ins) -> Type)
+(def-adts $ (InsertE : ((List (Nat)) e cc ins) -> Type)
   enum
   (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
-  (many IECons : (erased (List (Nat)) e ccx ins) (erased (Nat) x y) (erased (Nth (Nat) e x y) px) (erased (InsertE e ccx ins) rest)
-      -> (InsertE e (Cons (Nat) x ccx) (Cons (Nat) x (Cons (Nat) y ins)))))
+  (many IECons : (erased (List (Nat)) e cc ins) (erased (Nat) x y) (erased (Nth (Nat) e x y) px) (erased (InsertE e cc ins) rest)
+      -> (InsertE e (Cons (Nat) x cc) (Cons (Nat) x (Cons (Nat) y ins)))))
 
 ; ks gives the two ends of each bond x-y of g the same colour when x is in ins, and different colours otherwise.
 (def-adts $ (EdgeCC : ((List (Nat)) ins ks) ((List (Bond)) g) -> Type)
@@ -317,22 +317,22 @@
       (erased (Nth (Nat) ks y l2) p2) (erased (Apart (Nat) Lt l1 l2) ne) (erased (EdgeCC ins ks g) rest) -> (EdgeCC ins ks (Cons (Bond) (MkBond x y) g))))
 
 ; cc_coloring cc ks: a colouring constant on faces and on the edges of insertE cc, and proper on the other edges.
-(def-adts $ (CCColoring : ((Nat) d) ((List (Nat)) e f ccx ks) -> Type)
+(def-adts $ (CCColoring : ((Nat) d) ((List (Nat)) e f cc ks) -> Type)
   enum
-  (many MkCCColoring : (erased (Nat) d) (erased (List (Nat)) e f ccx ks ins) (erased (List (Bond)) ge) (erased (InsertE e ccx ins) ie)
+  (many MkCCColoring : (erased (Nat) d) (erased (List (Nat)) e f cc ks ins) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)
       (erased (Graph d e ge) gr) (erased (Respects ks f ks) rf) (erased (EdgeCC ins ks ge) ec) (erased (Under ks 4) u) (erased (Length (Nat) ks d) lk)
-      -> (CCColoring d e f ccx ks)))
+      -> (CCColoring d e f cc ks)))
 
 ; cc_ring_trace cc r et.
-(def-adts $ (CCRingTrace : ((Nat) d) ((List (Nat)) e f ccx r) ((List (Col)) et) -> Type)
+(def-adts $ (CCRingTrace : ((Nat) d) ((List (Nat)) e f cc r) ((List (Col)) et) -> Type)
   enum
-  (many MkCCRingTrace : (erased (Nat) d) (erased (List (Nat)) e f ccx r ks lc) (erased (List (Col)) cs et) (erased (CCColoring d e f ccx ks) c)
-      (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (CCRingTrace d e f ccx r et)))
+  (many MkCCRingTrace : (erased (Nat) d) (erased (List (Nat)) e f cc r ks lc) (erased (List (Col)) cs et) (erased (CCColoring d e f cc ks) c)
+      (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (CCRingTrace d e f cc r et)))
 
 ; cc_colorable cc.
-(def-adts $ (CCColorable : ((Nat) d) ((List (Nat)) e f ccx) -> Type)
+(def-adts $ (CCColorable : ((Nat) d) ((List (Nat)) e f cc) -> Type)
   enum
-  (many MkCCColorable : (erased (Nat) d) (erased (List (Nat)) e f ccx ks) (erased (CCColoring d e f ccx ks) c) -> (CCColorable d e f ccx)))
+  (many MkCCColorable : (erased (Nat) d) (erased (List (Nat)) e f cc ks) (erased (CCColoring d e f cc ks) c) -> (CCColorable d e f cc)))
 
 (def-fns _ $ (erased proper-cc : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (Proper ks g) pr) -> (erased (EdgeCC (Nil (Nat)) ks g) r))
   (let-match erased pr (ProperCons _ g1 x y l1 l2 p1 p2 ne pr1) ((ProperNil _) (ECNil _ ks)))

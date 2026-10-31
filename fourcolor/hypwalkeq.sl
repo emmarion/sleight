@@ -12,11 +12,11 @@
   (ShutOut _ g1 x y (NotInCons x z _ nxz (NotInNil x)) (NotInCons y z _ nyz (NotInNil y)) rest))
 
 (def-fns _ $ (erased shut-cat : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s g) sg)
-    (erased (Shut s h) shx) -> (erased (Shut s gh) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) shx))
+    (erased (Shut s h) sh) -> (erased (Shut s gh) r))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
   (match erased sg _
-    ((ShutIn _ _ x y px py rest) (ShutIn s gh1 x y px py (shut-cat s g1 h gh1 c1 rest shx)))
-    ((ShutOut _ _ x y px py rest) (ShutOut s gh1 x y px py (shut-cat s g1 h gh1 c1 rest shx)))))
+    ((ShutIn _ _ x y px py rest) (ShutIn s gh1 x y px py (shut-cat s g1 h gh1 c1 rest sh)))
+    ((ShutOut _ _ x y px py rest) (ShutOut s gh1 x y px py (shut-cat s g1 h gh1 c1 rest sh)))))
 
 (def-fns _ $ (erased fixed-walk : (erased (List (Nat)) p s xs) (erased (Nat) z y) (erased (Nth (Nat) p z z) pz) (subterm erased (Path p s z y xs) w)
     -> (erased (Eq (Nat) y z) r))

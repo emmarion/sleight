@@ -1,17 +1,17 @@
 (def-fns _ $ (erased colored-at-nd : (erased (List (Nat)) ks e nd cs) (erased (Nat) i b) (subterm erased (Colored ks e nd cs) col)
     (erased (Nth (Nat) nd i b) p) -> (erased (Nat) c) (erased (Nth (Nat) cs i c) pc) (erased (Nth (Nat) ks b c) pb))
   (let-match erased col (ColoredCons _ e1 nd1 cs1 a b0 c0 c2 _ pn _ _ rest) (absurd (ColoredNil _) p))
-  (let-match erased p (NthThere _ _ _ i1x _ p1) ((NthHere _ _ _) (values c0 (NthHere _ c0 cs1) pn)))
-  (let ((erased c) (erased pc) (erased pb)) (colored-at-nd ks e1 nd1 cs1 i1x b rest p1))
-  (values c (NthThere _ c0 cs1 i1x c pc) pb))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values c0 (NthHere _ c0 cs1) pn)))
+  (let ((erased c) (erased pc) (erased pb)) (colored-at-nd ks e1 nd1 cs1 i1 b rest p1))
+  (values c (NthThere _ c0 cs1 i1 c pc) pb))
 
 (def-fns _ $ (erased colored-at-e : (erased (List (Nat)) ks e nd cs) (erased (Nat) i a) (subterm erased (Colored ks e nd cs) col)
     (erased (Nth (Nat) e i a) p) -> (erased (Nat) c c2) (erased (Nth (Nat) cs i c) pc) (erased (Nth (Nat) ks a c2) pa)
     (erased (Apart (Nat) Lt c c2) d) (erased (Lt c 4) bd))
   (let-match erased col (ColoredCons _ e1 nd1 cs1 a0 b0 c0 c3 bd0 _ pe d0 rest) (absurd (ColoredNil _) p))
-  (let-match erased p (NthThere _ _ _ i1x _ p1) ((NthHere _ _ _) (values c0 c3 (NthHere _ c0 cs1) pe d0 bd0)))
-  (let ((erased c) (erased c2) (erased pc) (erased pa) (erased d) (erased bd)) (colored-at-e ks e1 nd1 cs1 i1x a rest p1))
-  (values c c2 (NthThere _ c0 cs1 i1x c pc) pa d bd))
+  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values c0 c3 (NthHere _ c0 cs1) pe d0 bd0)))
+  (let ((erased c) (erased c2) (erased pc) (erased pa) (erased d) (erased bd)) (colored-at-e ks e1 nd1 cs1 i1 a rest p1))
+  (values c c2 (NthThere _ c0 cs1 i1 c pc) pa d bd))
 
 (def-fns _ $ (erased nr-color : (erased (List (Nat)) ks e nd) (erased (Nat) r x c) (erased (Colored ks e nd ks) col)
     (subterm erased (NodeReach nd r x) reach) (erased (Nth (Nat) ks x c) px) -> (erased (Nth (Nat) ks r c) pr))
@@ -28,10 +28,10 @@
 
 (def-fns _ $ (erased nth-dec : (subterm erased (List (Nat)) xs) (erased (Nat) i) -> (erased (NthDec xs i) r))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (NDShort xs i (Zero) (LengthNil _) (LtZ i))))
-  (let-match erased i (Succ i1x) ((Zero) (NDHas xs i x (NthHere _ x xs1))))
-  (match erased (nth-dec xs1 i1x) _
-    ((NDHas _ _ y p) (NDHas xs i y (NthThere _ x xs1 i1x y p)))
-    ((NDShort _ _ m l s) (NDShort xs i (Succ m) (LengthCons _ x xs1 m l) (LtS m (Succ i1x) s)))))
+  (let-match erased i (Succ i1) ((Zero) (NDHas xs i x (NthHere _ x xs1))))
+  (match erased (nth-dec xs1 i1) _
+    ((NDHas _ _ y p) (NDHas xs i y (NthThere _ x xs1 i1 y p)))
+    ((NDShort _ _ m l s) (NDShort xs i (Succ m) (LengthCons _ x xs1 m l) (LtS m (Succ i1) s)))))
 
 (def-fns _ $ (erased absurd nth-short : (erased (List (Nat)) xs) (erased (Nat) i m x) (erased (Nth (Nat) xs i x) p)
     (erased (Length (Nat) xs m) l) (erased (Lt m (Succ i)) s) -> (erased (False) f))
@@ -87,8 +87,8 @@
 (def-fns _ $ (erased allapart-nth : (erased (Point) p a) (erased (List (Point)) ps) (erased (Nat) i) (subterm erased (AllApart p ps) aa)
     (erased (Nth (Point) ps i a) q) -> (erased (PointApart p a) r))
   (let-match erased aa (AACons _ b ps1 d aa1) (absurd (AANil _) q))
-  (let-match erased q (NthThere _ _ _ i1x _ q1) ((NthHere _ _ _) d))
-  (allapart-nth p a ps1 i1x aa1 q1))
+  (let-match erased q (NthThere _ _ _ i1 _ q1) ((NthHere _ _ _) d))
+  (allapart-nth p a ps1 i1 aa1 q1))
 
 ; Point i of pts is painted with the colour of label i + l.
 (def-fns _ $ (erased paints-colorof : (erased (List (Nat)) rep ks) (erased (List (Point)) pts) (erased (List (Paint)) kp) (erased (Point) a)
@@ -96,11 +96,11 @@
     (erased (Add i l j) s) -> (erased (Nat) c) (erased (ColorOf kp a c) co) (erased (ColorFor rep ks j c) cf))
   (let-match erased pa (PaintsCons _ _ p pts1 _ c0 kp1 cf0 pa1) (absurd (PaintsNil _ _ _) q))
   (let-match erased ap (PACons _ _ aa ap1))
-  (let-match erased q (NthThere _ _ _ i1x _ q1)
+  (let-match erased q (NthThere _ _ _ i1 _ q1)
     ((NthHere _ _ _) (let-match erased s (AddZero _)) (values c0 (ColorHere kp1 a c0) cf0)))
   (let-match erased s (AddSucc _ _ j1 s1))
-  (let ((erased c) (erased co) (erased cf)) (paints-colorof rep ks pts1 kp1 a i1x (Succ l) j pa1 ap1 q1 (add-succ-right i1x l j1 s1)))
-  (values c (ColorThere kp1 a p c c0 (apart-point-sym p a (allapart-nth p a pts1 i1x aa q1)) co) cf))
+  (let ((erased c) (erased co) (erased cf)) (paints-colorof rep ks pts1 kp1 a i1 (Succ l) j pa1 ap1 q1 (add-succ-right i1 l j1 s1)))
+  (values c (ColorThere kp1 a p c c0 (apart-point-sym p a (allapart-nth p a pts1 i1 aa q1)) co) cf))
 
 (def-fns _ $ (erased alljoined-in : (erased (List (Nat)) e pl r) (erased (Nat) s t) (subterm erased (AllJoined e pl r t) j) (erased (In s r) p) ->
     (erased (Joined e pl s t) q))

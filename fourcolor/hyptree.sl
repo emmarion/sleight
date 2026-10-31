@@ -23,9 +23,9 @@
 (def-fns _ $ (erased walks-meet : (erased (Nat) d x x2 y) (erased (List (Nat)) p q s s2 xs ys) (erased (Perm d p q) pm)
     (subterm erased (Path p s x y xs) w) (erased (Path p s2 x2 y ys) v) -> (erased (Or (In x2 (Cons (Nat) y xs)) (In x (Cons (Nat) y ys))) r))
   (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) ((PathHere _ _ _) (OrR _ _ (InHere x ys))))
-  (let-match erased (walks-meet d x1 x2 y p q s s2 xs1 ys pm w1 v) (OrR _ _ i1x) ((OrL _ _ i2x) (OrL _ _ (in-skip x2 y x xs1 i2x))))
+  (let-match erased (walks-meet d x1 x2 y p q s s2 xs1 ys pm w1 v) (OrR _ _ i1) ((OrL _ _ i2) (OrL _ _ (in-skip x2 y x xs1 i2))))
   (let-match erased (nat-eq x1 x2) (Unequal _ _ _ _ ne) ((Equal _ _ _) (OrL _ _ (in-skip x2 y x xs1 (path-start-in p s xs1 x1 y w1)))))
-  (let ((erased u) (erased pu) (erased pn)) (path-prev p s2 ys x2 y x1 v i1x ne))
+  (let ((erased u) (erased pu) (erased pn)) (path-prev p s2 ys x2 y x1 v i1 ne))
   (let-match erased (perm-inj d u x x1 p q pm pn px) (Refl _ _))
   (OrR _ _ (InThere u y ys pu)))
 
@@ -175,9 +175,9 @@
   (let ((erased ys) (erased j2) (erased wv) (erased lys) (erased lt2)) (path-upto c _ xs2 a2 w v j1 wb2 (in-tail v a1 xs2 iv nva1) lxs2))
   (let ((erased outa)) (fresh-start d a2 v z a1 c ci _ ys pc wv (InThere z v _ (InHere z _)) pza1 pa12 (notin-in a1 z _ outa1 (InHere z _))))
   (let ((erased wv2)) (path-add c _ ys a2 v a1 (path-add c _ ys a2 v v (path-forget c _ ys a2 v wv) (path-avoid c _ ys a2 v v wv (InHere v _))) outa))
-  (let-match erased N (Succ N1x) (absurd (Zero) ljn))
-  (tree-go N1x d j2 a1 v a2 x0 y0 e n f c cs ys h g rc p0 cy gd ia1 (orbit-prev d x0 y0 v b c ci cs pc p0 cy ib pcv) pa12 wv2 lys
-    (lt-trans j2 j1 N1x lt2 (lt-pred j1 N1x ljn)) pfv))
+  (let-match erased N (Succ N1) (absurd (Zero) ljn))
+  (tree-go N1 d j2 a1 v a2 x0 y0 e n f c cs ys h g rc p0 cy gd ia1 (orbit-prev d x0 y0 v b c ci cs pc p0 cy ib pcv) pa12 wv2 lys
+    (lt-trans j2 j1 N1 lt2 (lt-pred j1 N1 ljn)) pfv))
 
 ; A dart z on the edge cycle of x that is fixed by n or f, or not on the edge cycle of n z (clink z z || ~~ cross_edge z).
 (def-adts $ (Leaf : ((List (Nat)) e n f) ((Nat) x) -> Type)

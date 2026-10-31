@@ -822,16 +822,16 @@
 ; colorable_from_ring: a ring trace et of the disk map of r whose reverse is a ring trace of the disk map of RR gives a four-colouring.
 (def-fns _ $ (erased colorable-from-ring : (erased (Nat) d dd dr dd2 dr2)
     (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
-    (erased (List (Col)) et evx) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
+    (erased (List (Col)) et ev) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)
     (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (AppN RV2 zs2 hr2) ap2)
-    (erased (RingTrace ed fd bd et) td) (erased (RevApp (Col) et (Nil (Col)) evx) re) (erased (RingTrace ed2 fd2 bd2 evx) td2)
+    (erased (RingTrace ed fd bd et) td) (erased (RevApp (Col) et (Nil (Col)) ev) re) (erased (RingTrace ed2 fd2 bd2 ev) td2)
     -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
   (let ((erased s) (erased E) (erased et2) (erased eq) (erased se) (erased tr))
     (cotrace d dd dr dd2 dr2 e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2 et pt rb ds1 cx cn pt2 rv2 rbr2 ds2 ap2 td))
   (let-match erased eq (Refl _ _))
-  (patch-colorable d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 evx et2 pt2 td2
-    (RRCons evx E et2 s (revapp-flip (Col) et (Nil _) evx et re (RANil (Col) et)) se) tr))
+  (patch-colorable d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 ev et2 pt2 td2
+    (RRCons ev E et2 s (revapp-flip (Col) et (Nil _) ev et re (RANil (Col) et)) se) tr))
 
 ; ks lists, for each dart x of xs, the colour under kr of a dart of hr sent to x.
 (def-adts $ (Pull : ((List (Nat)) hr kr xs ks) -> Type)

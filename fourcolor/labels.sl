@@ -1,10 +1,10 @@
 (def-fns _ $ (erased respects-nth : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) ls i l) q) -> (erased (Nth (Nat) lab j l) r))
   (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
-  (let-match erased p (NthThere _ _ _ i1x _ p2)
+  (let-match erased p (NthThere _ _ _ i1 _ p2)
     ((NthHere _ _ _) (let-match erased q (NthHere _ _ _)) p1))
   (let-match erased q (NthThere _ _ _ _ _ q2))
-  (respects-nth lab xs1 ls1 i1x j l rp1 p2 q2))
+  (respects-nth lab xs1 ls1 i1 j l rp1 p2 q2))
 
 (def-fns _ $ (erased respects-lab : (erased (List (Nat)) lab lab2 xs ls) (erased (Nat) a) (subterm erased (Respects lab xs ls) rp)
     (erased (Snoc (Nat) lab a lab2) sn) -> (erased (Respects lab2 xs ls) r))
@@ -16,9 +16,9 @@
   (let-match erased rp (RespCons _ xs1 ls1 j l1 p rp1) (absurd (RespNil _) q))
   (match erased s _
     ((SetHere _ _ _ _) (let-match erased q (NthHere _ _ _)) (RespCons lab xs1 ls1 y l py rp1))
-    ((SetThere _ _ _ i1x _ xs3 s1)
+    ((SetThere _ _ _ i1 _ xs3 s1)
       (let-match erased q (NthThere _ _ _ _ _ q1))
-      (RespCons lab xs3 ls1 j l1 p (respects-setnth lab xs1 xs3 ls1 i1x y l rp1 s1 q1 py)))))
+      (RespCons lab xs3 ls1 j l1 p (respects-setnth lab xs1 xs3 ls1 i1 y l rp1 s1 q1 py)))))
 
 (def-fns _ $ (erased respects-snoc : (erased (List (Nat)) lab xs xs2 ls ls2) (erased (Nat) c l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) lab c l) pc) (erased (Snoc (Nat) xs c xs2) s1) (erased (Snoc (Nat) ls l ls2) s2) -> (erased (Respects lab xs2 ls2) r))

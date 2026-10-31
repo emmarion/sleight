@@ -19,6 +19,6 @@
   (let ((many c) (erased cl1)) (concat-c d))
   (values c (ChkYes _ (concat-fn css c cfs cl1 cl))))
 
-(def-fns _ $ (erased four-color-open : (erased (UnavE cfs) u) (erased (AllRedC CRX css) ar) (erased (BirkhoffChecks) bks) (erased (CfCerts cfs) ccx)
+(def-fns _ $ (erased four-color-open : (erased (UnavE cfs) u) (erased (AllRedC CRX css) ar) (erased (BirkhoffChecks) bks) (erased (CfCerts cfs) cc)
     -> (erased (FourColor) r))
-  (four-color-from (embed-analysis CRX css cfs cl ar u (birk-geo-of bks) (not-embed cfs bks (full-red-of bks (triv-red-of triv-five)) ccx (embed-valid bks) triad-five))))
+  (four-color-from (embed-analysis CRX css cfs cl ar u (birk-geo-of bks) (not-embed cfs bks (full-red-of bks (triv-red-of triv-five)) cc (embed-valid bks) triad-five))))

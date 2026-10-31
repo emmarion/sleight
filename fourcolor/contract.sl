@@ -36,52 +36,52 @@
 
 ; The colouring k0 = k . h of contract_coloring: a four-colouring kc of (e2, f2) gives the contract colouring kc . p of
 ; (d, e, f) for cc when p sends each face along faces (pf is p . f) and the edge links as LiftE says.
-(def-fns _ $ (erased cc-lift : (erased (Nat) d d2) (erased (List (Nat)) e f ccx ins e2 f2 kc p pf) (erased (List (Bond)) ge) (erased (InsertE e ccx ins) ie)
+(def-fns _ $ (erased cc-lift : (erased (Nat) d d2) (erased (List (Nat)) e f cc ins e2 f2 kc p pf) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)
     (erased (Graph d e ge) gr) (erased (FourColoring e2 f2 kc) c) (erased (Length (Nat) kc d2) lk) (erased (Length (Nat) p d) lp) (erased (Under p d2) up)
     (erased (Respects p f pf) rpf) (erased (Reach f2 p pf) rc) (erased (LiftE ins p e2 f2 ge) le)
-    -> (erased (List (Nat)) ks) (erased (Respects kc p ks) rk) (erased (CCColoring d e f ccx ks) r))
+    -> (erased (List (Nat)) ks) (erased (Respects kc p ks) rk) (erased (CCColoring d e f cc ks) r))
   (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
   (let ((erased ks) (erased rk)) (respects-exists kc p d2 up lk))
   (let ((erased lks)) (respects-length kc p ks d rk lp))
   (values ks rk
-    (MkCCColoring d e f ccx ks ins ge ie gr (respects-assoc f p kc pf ks ks d rpf (reach-resp kc f2 p pf ks rf rc rk) rk lks lp)
+    (MkCCColoring d e f cc ks ins ge ie gr (respects-assoc f p kc pf ks ks d rpf (reach-resp kc f2 p pf ks rf rc rk) rk lks lp)
       (lift-ecc ins p e2 f2 kc ke ks ge le rf re df rk) (respects-under-vals kc p ks 4 rk u) lks)))
 
 ; The map of (d, e, n, f) contracted along cc (contract_coloring's G2): the one map of ms, smaller, planar, bridgeless, plain
 ; and precubic, with a dart map p from (d, e, n, f) for cc-lift.
-(def-adts $ (Contraction : ((Nat) d) ((List (Nat)) e n f ccx) ((List (Mp)) ms) -> Type)
+(def-adts $ (Contraction : ((Nat) d) ((List (Nat)) e n f cc) ((List (Mp)) ms) -> Type)
   enum
-  (many MkContraction : (erased (Nat) d d2) (erased (List (Nat)) e n f ccx e2 n2 f2 ins p pf) (erased (List (Bond)) ge) (erased (Pbpp d2 e2 n2 f2) pb)
-      (erased (Lt d2 d) lt) (erased (InsertE e ccx ins) ie) (erased (Graph d e ge) gr) (erased (Length (Nat) p d) lp) (erased (Under p d2) up)
+  (many MkContraction : (erased (Nat) d d2) (erased (List (Nat)) e n f cc e2 n2 f2 ins p pf) (erased (List (Bond)) ge) (erased (Pbpp d2 e2 n2 f2) pb)
+      (erased (Lt d2 d) lt) (erased (InsertE e cc ins) ie) (erased (Graph d e ge) gr) (erased (Length (Nat) p d) lp) (erased (Under p d2) up)
       (erased (Respects p f pf) rpf) (erased (Reach f2 p pf) rc) (erased (LiftE ins p e2 f2 ge) le)
-      -> (Contraction d e n f ccx (Cons (Mp) (MkMp d2 e2 n2 f2) (Nil (Mp))))))
+      -> (Contraction d e n f cc (Cons (Mp) (MkMp d2 e2 n2 f2) (Nil (Mp))))))
 
-(def-fns _ $ (erased contraction-smaller : (erased (Nat) d) (erased (List (Nat)) e n f ccx) (erased (List (Mp)) ms) (erased (Contraction d e n f ccx ms) ct)
+(def-fns _ $ (erased contraction-smaller : (erased (Nat) d) (erased (List (Nat)) e n f cc) (erased (List (Mp)) ms) (erased (Contraction d e n f cc ms) ct)
     -> (erased (Smaller d ms) r))
   (let-match erased ct (MkContraction _ d2 _ _ _ _ e2 n2 f2 ins p pf ge pb lt ie gr lp up rpf rc le))
   (SmallerCons d d2 e2 n2 f2 (Nil _) pb lt (SmallerNil d)))
 
 ; contract_coloring, given the contracted map: a four-colouring of it gives a contract colouring for cc.
-(def-fns _ $ (erased contraction-lift : (erased (Nat) d) (erased (List (Nat)) e n f ccx) (erased (List (Mp)) ms) (erased (Contraction d e n f ccx ms) ct)
-    (erased (MpCols ms) cs) -> (erased (List (Nat)) ks) (erased (CCColoring d e f ccx ks) r))
+(def-fns _ $ (erased contraction-lift : (erased (Nat) d) (erased (List (Nat)) e n f cc) (erased (List (Mp)) ms) (erased (Contraction d e n f cc ms) ct)
+    (erased (MpCols ms) cs) -> (erased (List (Nat)) ks) (erased (CCColoring d e f cc ks) r))
   (let-match erased ct (MkContraction _ d2 _ _ _ _ e2 n2 f2 ins p pf ge pb lt ie gr lp up rpf rc le))
   (let-match erased cs (MpcCons _ _ _ _ kc _ col _))
   (let-match erased pb (MkPbpp _ _ _ _ h _ _ _ _))
   (let ((erased le2) (erased ln2) (erased lf2)) (hyper-lengths d2 e2 n2 f2 h))
   (let-match erased col (MkFourColoring _ _ _ _ rf _ _ _))
-  (let ((erased ks) (erased rk) (erased r)) (cc-lift d d2 e f ccx ins e2 f2 kc p pf ge ie gr col (respects-length kc f2 kc d2 rf lf2) lp up rpf rc le))
+  (let ((erased ks) (erased rk) (erased r)) (cc-lift d d2 e f cc ins e2 f2 kc p pf ge ie gr col (respects-length kc f2 kc d2 rf lf2) lp up rpf rc le))
   (values ks r))
 
 ; The trace equations of embed_contract: with k constant on the faces fm, kc = k . h1 a contract colouring of a configuration
 ; map and kr = k . hr a four-colouring of a remainder map, and the images under h1 of the configuration's ring a :: p each
 ; reaching along fm the image under hr of the dart of R at its place, the colours of kc on a :: p and of kr on R have one
 ; trace et: a contract ring trace (CcCol) of the configuration and a ring trace of the remainder map on R.
-(def-fns _ $ (erased embed-contract-trace : (erased (List (Step)) cp) (erased (Nat) dm dc dr a) (erased (List (Nat)) fm k h1 hr ec fc p ccx kc er fr R kr A B)
-    (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm) (erased (CcColoring ec fc ccx kc) c) (erased (FourColoring er fr kr) cr)
+(def-fns _ $ (erased embed-contract-trace : (erased (List (Step)) cp) (erased (Nat) dm dc dr a) (erased (List (Nat)) fm k h1 hr ec fc p cc kc er fr R kr A B)
+    (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm) (erased (CcColoring ec fc cc kc) c) (erased (FourColoring er fr kr) cr)
     (erased (Respects k fm k) rf) (erased (Length (Nat) k dm) lk) (erased (Respects k h1 kc) rk1) (erased (Respects k hr kr) rk2)
     (erased (Length (Nat) h1 dc) l1) (erased (Under h1 dm) u1) (erased (Length (Nat) hr dr) l2)
     (erased (Respects h1 (Cons (Nat) a p) A) ra) (erased (Respects hr R B) rb) (erased (Reach fm A B) rc)
-    -> (erased (List (Col)) et) (erased (CcCol cp ccx et) cc1) (erased (RingTrace er fr R et) rt))
+    -> (erased (List (Col)) et) (erased (CcCol cp cc et) cc1) (erased (RingTrace er fr R et) rt))
   (let ((erased L) (erased rl)) (respects-exists k A dm (respects-under-vals h1 (Cons _ a p) A dm ra u1) lk))
   (let ((erased rr)) (respects-assoc R hr k B kr L dr rb (reach-resp k fm A B L rf rc rl) rk2 (respects-length k hr kr dr rk2 l2) l2))
   (let ((erased rr1)) (respects-assoc (Cons _ a p) h1 k A kc L dc ra rl rk1 (respects-length k h1 kc dc rk1 l1) l1))
@@ -91,5 +91,5 @@
   (let-match erased co (All2Cons _ _ _ _ c0 _ cs1 pc0 co1))
   (let ((erased et) (erased t)) (trace-exists cs))
   (let-match erased t (TrCons _ _ _ tf))
-  (values et (MkCcCol cp ccx dc ec fc (Cons _ a p) kc L cs et cm c rr1 (ncols-of L cs co) (MkTrace c0 cs1 et (ctr-of-tf c0 c0 cs1 et tf)))
+  (values et (MkCcCol cp cc dc ec fc (Cons _ a p) kc L cs et cm c rr1 (ncols-of L cs co) (MkTrace c0 cs1 et (ctr-of-tf c0 c0 cs1 et tf)))
     (MkRingTrace er fr R kr L cs et cr rr co t)))

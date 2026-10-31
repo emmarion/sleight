@@ -86,7 +86,7 @@
   (DifferCons A1 Bt a b (apart-sym b a (ecc-zip ids e ins ks ge x x y b a z ec (iota-nth d x ids io lx) py o pb pa))
     (diff-cc d e ids ins ks h1 eh1 A1 Bt ge z io ec re1 ra1 rb1 dj1 uh1)))
 
-(def-fns _ $ (erased ccins-fn : (erased (List (Nat)) e ccx a b) (subterm erased (InsertE e ccx a) ia) (erased (InsertE e ccx b) ib) -> (erased (Eq (List (Nat)) a b) r))
+(def-fns _ $ (erased ccins-fn : (erased (List (Nat)) e cc a b) (subterm erased (InsertE e cc a) ia) (erased (InsertE e cc b) ib) -> (erased (Eq (List (Nat)) a b) r))
   (let-match erased ia (IECons _ cc1 a1 x y px ia1) ((IENil _) (let-match erased ib (IENil _)) (Refl _ a)))
   (let-match erased ib (IECons _ _ b1 _ y2 px2 ib1))
   (let-match erased (nth-fn _ e x y y2 px px2) (Refl _ _))
@@ -105,13 +105,13 @@
 
 ; A contract colouring ks of the map whose contract darts ins miss the remainder map gives the four-colouring ks . hr of the
 ; remainder map (the colouring k . embr of embed_contract).
-(def-fns _ $ (erased rem-col : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ccx ks ins)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (CCColoring d e f ccx ks) c) (erased (InsertE e ccx ins) ie0)
+(def-fns _ $ (erased rem-col : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br cc ks ins)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (CCColoring d e f cc ks) c) (erased (InsertE e cc ins) ie0)
     (erased (Disj hr ins) dj) -> (erased (List (Nat)) kr) (erased (Respects ks hr kr) rkr) (erased (FourColoring er fr kr) r))
   (let ((erased pt2)) pt)
   (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
   (let-match erased c (MkCCColoring _ _ _ _ _ ins2 ge ie gr rf ec u lks))
-  (let-match erased (ccins-fn e ccx ins2 ins ie ie0) (Refl _ _))
+  (let-match erased (ccins-fn e cc ins2 ins ie ie0) (Refl _ _))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
   (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
   (let ((erased ler) (erased lnr) (erased lfr)) (hyper-lengths dr er nr fr hr2))

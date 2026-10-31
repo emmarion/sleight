@@ -63,14 +63,14 @@
   ; An edge from the corner after d to a new vertex.
   (many PMPendant : (erased (List (Nat)) e nd e2 nd1 nd2) (erased (Nat) n d)
       (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d n) bd)
-      (erased (Insert nd d n nd1) i1x) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
+      (erased (Insert nd d n nd1) i1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
   ; An edge from the corner after d1 to the corner after d2, at another vertex: a labelling constant along nd separates them.
   (many PMChord : (erased (List (Nat)) e nd e2 nd1 nd2 vl) (erased (Nat) n d1 d2)
       (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
       (erased (Separates vl nd d1 d2) loopless)
       (erased (Joinable e nd d1 d2) j)
-      (erased (Insert nd d1 n nd1) i1x) (erased (Insert nd1 d2 (Succ n) nd2) i2x)
+      (erased (Insert nd d1 n nd1) i1) (erased (Insert nd1 d2 (Succ n) nd2) i2)
       -> (PlaneMap e2 nd2)))
 
 ; cs is the suffix of the colouring ks for the darts whose edge and node images are listed by e and nd:

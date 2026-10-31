@@ -50,10 +50,10 @@
   (let ((erased y) (erased ey) (erased rp1) (erased pe) (erased w) (erased ls1) (erased rl1) (erased dl1))
     (sr-walk d x0 y1 e ei f p1 lab rs ids gf ge gre as io ll ro rf le pm sp1))
   (let-match erased rl1 (RespCons _ _ ls2 _ ly py rl2))
-  (let ((erased lexx) (erased plex)) (nth-exists _ lab d ex ll (perm-val d x ex e ei pm pex)))
+  (let ((erased lex) (erased plex)) (nth-exists _ lab d ex ll (perm-val d x ex e ei pm pex)))
   (let-match erased wy (MkSomePath _ _ xs _ _ pth))
-  (let-match erased (nth-fn _ lab y1 ly lexx py (path-label f lab (Nil _) xs ex y1 lexx pth rf plex)) (Refl _ _))
-  (let ((erased ne)) (sep-lab d x ex lx lexx lab rs ids gf io ro (allsep-adj gf ge x ex (graph-adj d x ex e ge gre pex) as) plx plex ll))
+  (let-match erased (nth-fn _ lab y1 ly lex py (path-label f lab (Nil _) xs ex y1 lex pth rf plex)) (Refl _ _))
+  (let ((erased ne)) (sep-lab d x ex lx lex lab rs ids gf io ro (allsep-adj gf ge x ex (graph-adj d x ex e ge gre pex) as) plx plex ll))
   (values y ey (RPCons e f p1 x ex y1 y pex wy rp1) pe w (Cons (Nat) lx ls1) (RespCons lab (Cons (Nat) y1 p1) ls1 x lx plx rl1)
     (DistCons lx ls1 (NotInCons lx ly ls2 ne (seps-notin d x lx lab rs ids p1 ls2 gf io ro ll plx sa rl2)) dl1)))
 
