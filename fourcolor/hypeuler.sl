@@ -1,6 +1,3 @@
-; The Euler sum of a node and a face permutation, reached by building the face permutation from the identity one
-; transposition at a time, and the uniqueness of the genus.
-
 (def-fns _ $ (erased fixed-sub : (erased (List (Nat)) lab rs ids) (erased (Nat) d) (subterm erased (Respects lab rs rs) fix)
     (erased (Length (Nat) lab d) ll) (erased (Iota d ids) io) -> (erased (Sub rs ids) r))
   (let-match erased fix (RespCons _ rs1 _ j _ p fix1) ((RespNil _) (SubNil ids)))
@@ -68,7 +65,6 @@
   (let-match erased f (FunCons _ g1 x y py f1) ((FunNil _) (SpansNil gp)))
   (SpansCons gp g1 x y (conn-adj gp x y (adj-sym gp y x (graph-adj d y x p gp gr (perm-inv d x y q p pm py)))) (spans-inv d p q gp g1 f1 pm gr)))
 
-; A permutation and its inverse have the same orbits.
 (def-fns _ $ (erased orbits-inv : (erased (Nat) d k) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob) -> (erased (Orbits d q k) r))
   (let-match erased ob (MkOrbits _ _ _ gp grp cs))
   (let ((erased qm)) (perm-sym d p q pm))
@@ -76,7 +72,6 @@
   (MkOrbits d k q gq grq (classes-equiv gp gq d k cs (spans-inv d q p gq gp (graph-fun d p gp grp) pm grq) (spans-inv d p q gp gq (graph-fun d q gq grq) qm grp)
     (graph-below d q p gq (graph-fun d q gq grq) qm))))
 
-; n . f is a permutation, with inverse fi . ni.
 (def-fns _ $ (erased perm-comp : (erased (Nat) d) (erased (List (Nat)) n ni f fi c) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
     (erased (Respects n f c) rc) -> (erased (List (Nat)) ci) (erased (Respects fi ni ci) rci) (erased (Perm d c ci) r))
   (let-match erased pn (MkPerm _ _ _ ids io _ nin nni))
@@ -111,7 +106,6 @@
       (InvCons q2 g1 x y (upd2-other q q2 b2 a a2 b y x uq (perm-inv d x y p q pm q1)
         (img-apart d x b y b2 p q pm q1 pb nb) (img-apart d x a y a2 p q pm q1 pa na)) rest))))
 
-; Exchanging the images of two darts keeps a permutation.
 (def-fns _ $ (erased perm-swap : (erased (Nat) d a b a2 b2) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm)
     (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
     -> (erased (List (Nat)) q2) (erased (Upd2 q b2 a a2 b q2) uq) (erased (Perm d p2 q2) r))
@@ -130,7 +124,6 @@
     (inv-respects ids q2 p2 h2 w2 (inv-swap d b2 a2 b a q p q2 p2 h2 (graph-fun d q2 h2 (MkGraph d q2 ids h2 io lq2 w2)) (perm-sym d p q pm) uq up
       (perm-inv d b b2 p q pm pb) (perm-inv d a a2 p q pm pa))))))
 
-; Undoing an update of two entries is an update of the same two entries.
 (def-fns _ $ (erased upd2-restore : (erased (List (Nat)) p p2) (erased (Nat) a u b v x y d) (erased (Upd2 p a u b v p2) up)
     (erased (Nth (Nat) p a x) pa) (erased (Nth (Nat) p b y) pb) (erased (Length (Nat) p d) lp) -> (erased (Upd2 p2 a x b y p) r))
   (let-match erased up (MkUpd2 _ p1 _ _ _ _ _ ne s1 s2))
@@ -153,7 +146,6 @@
   (let ((erased c2) (erased t2) (erased r2)) (respects-setnth2 lab f1 f2 c1 b v v2 r1 s2 pv))
   (values c2 (MkUpd2 c c1 c2 a u2 b v2 ne t1 t2) r2))
 
-; h joins the graph of an update of p if it joins the graph of p and the two new links.
 (def-fns _ $ (erased spans-upd : (erased (Nat) d a u b v) (erased (List (Nat)) p p2) (erased (List (Bond)) g g2 h) (subterm erased (Fun p2 g2) f)
     (erased (Upd2 p a u b v p2) up) (erased (Graph d p g) gr) (erased (Spans h g) sp) (erased (Conn h a u) ca) (erased (Conn h b v) cb)
     -> (erased (Spans h g2) r))
@@ -164,7 +156,6 @@
     ((UCb _ _ _ _ _) (SpansCons h g1 b v cb rest))
     ((UCo _ _ _ _ _ _ _ _ _ q1) (SpansCons h g1 x y (spans-adj h g x y (graph-adj d x y p g gr q1) sp) rest))))
 
-; A walk along n . f that never leaves a or b is joined by n and the update f2 of f at a and b.
 (def-fns _ $ (erased path-conn-comp : (erased (Nat) d x y a u b v) (erased (List (Nat)) n f f2 c s xs) (erased (List (Bond)) gn gf2 g)
     (subterm erased (Path c s x y xs) w) (erased (In a s) pa) (erased (In b s) pb) (erased (Respects n f c) rc) (erased (Upd2 f a u b v f2) up)
     (erased (Length (Nat) f d) lf) (erased (Graph d n gn) grn) (erased (Graph d f2 gf2) grf) (erased (Cat gn gf2 g) cg) -> (erased (Conn g x y) r))
@@ -188,7 +179,6 @@
   (let-match erased (nth-fn _ lab x l l0 px p0) (Refl _ _))
   (RespCons lab ys1 ls1 y l py (const-respects lab xs1 ys1 ls1 g1 z1 cl1 rp1)))
 
-; Two darts are on one orbit or told apart by a labelling constant along p.
 (def-fns _ $ (erased orbits-dec : (erased (Nat) d k x y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob)
     (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Or (SomePath p (Nil (Nat)) x y) (Seps p x y)) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
@@ -206,7 +196,6 @@
   (let ((erased xs) (erased w)) (conn-path d x y p q g pm gr (conn-cat g x rx y (conn-sym g rx x cx) cy)))
   (OrL _ _ (MkSomePath p _ xs x y w)))
 
-; Splitting a off its orbit: f2 is f with a sent to f (f a) and f a fixed.
 (def-fns _ $ (erased split-fixed : (erased (Nat) d k a a2) (erased (List (Nat)) f fi) (erased (Perm d f fi) pf) (erased (Orbits d f k) of)
     (erased (Nth (Nat) f a a2) pa) (erased (Apart (Nat) Lt a a2) ne) (erased (Lt a d) la)
     -> (erased (Nat) b2) (erased (List (Nat)) f2 fi2) (erased (Nth (Nat) f a2 b2) pb) (erased (Upd2 f a b2 a2 a2 f2) up)
@@ -218,7 +207,7 @@
   (let ((erased fi2) (erased _) (erased pf2)) (perm-swap d a a2 a2 b2 f fi f2 pf pa pb up))
   (values b2 f2 fi2 pb up pf2 (orbits-split d k a a2 a2 b2 f fi f2 xs pf of pa pb up la la2 w)))
 
-; 2 kc + d = k1 + k2 + k3 + 2 gen, in the shape of Genus.
+; 2 kc + d = k1 + k2 + k3 + 2 gen.
 (def-adts $ (EulerSum : ((Nat) kc d k1 k2 k3 gen) -> Type)
   enum
   (many MkEulerSum : (erased (Nat) kc d k1 k2 k3 gen c2 lhs s1 rhs g2) (erased (Double kc c2) dc) (erased (Add c2 d lhs) al)
@@ -262,7 +251,6 @@
   (let-match erased e0 (Refl _ _))
   (MkEulerSum kc d k1 k2 k3 g c0 l0 s0 r1 g2 dc0 al0 a0 ar0 dg ag0))
 
-; The links of n and f join what the links of n, of f2 (f with f a fixed) and a-(f a) join.
 (def-fns _ $ (erased classes-unswap : (erased (Nat) d k a a2 b2) (erased (List (Nat)) n ni f fi f2 fi2) (erased (List (Bond)) gn gf gf2 g g2)
     (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) (erased (Perm d f2 fi2) _pf2) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf)
     (erased (Graph d f2 gf2) grf2) (erased (Cat gn gf g) cg) (erased (Cat gn gf2 g2) cg2) (erased (Nth (Nat) f a a2) pa) (erased (Nth (Nat) f a2 b2) pb)
@@ -290,8 +278,6 @@
   (let ((erased k) (erased cs)) (classes-exists g d (graph-below d p q g (graph-fun d p g gr) pm)))
   (values k (MkOrbits d k p g gr cs)))
 
-; One transposition: from the Euler sum of n and f2, which is f with a2 = f a fixed, that of n and f, of the same genus or
-; one more.
 (def-fns _ $ (erased euler-step : (erased (Nat) d kn kf kx kx2 kc2 gen2 a a2 b2) (erased (List (Nat)) n ni f fi c f2 fi2 c2)
     (erased (List (Bond)) gn gf g gf2 g2) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) (erased (Perm d f2 fi2) pf2)
     (erased (Respects n f c) rc) (erased (Respects n f2 c2) rc2) (erased (Orbits d c kx) oc) (erased (Orbits d c2 kx2) oc2)
@@ -344,7 +330,6 @@
       (classes-link-same g2 d kc2 a a2 cs2 (conn-sym g2 a2 a cn) la la2))
     (es-join kc2 d k1 kn kf gen2 es2) (OrL _ _ (Refl _ gen2))))
 
-; With c = n . f: 2 kc + d = kx + kn + kf + 2 gen, kc the classes of the links of n and f and kx the orbits of c.
 (def-fns _ $ (erased euler-core : (erased (Nat) d kn kf kx) (erased (List (Nat)) n ni f fi c) (erased (List (Bond)) gn gf g)
     (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) (erased (Respects n f c) rc)
     (erased (Orbits d n kn) on) (erased (Orbits d f kf) of) (erased (Orbits d c kx) oc)
@@ -386,7 +371,6 @@
     (euler-step d kn kf kx kx2 kc2 gen2 a a2 b2 n ni f fi c f2 fi2 c2 gn gf g gf2 g2 pn pf pf2 rc rc2 oc oc2 grn grf grf2 cg cg2 pa pb up cs2 es2))
   (values kc gen cs es))
 
-; The edge links are joined by the node and face links.
 (def-fns _ $ (erased spans-edge : (erased (Nat) d) (erased (List (Nat)) e n f nf) (erased (List (Bond)) ge gn gf g) (subterm erased (Fun e ge) fe)
     (erased (Perm d e nf) pm) (erased (Respects n f nf) rc) (erased (Length (Nat) f d) lf) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf)
     (erased (Cat gn gf g) cg) -> (erased (Spans g ge) r))
@@ -418,7 +402,6 @@
   (let-match erased (cat-fn gn gf gnf hnf c1 d1) (Refl _ _))
   (cat-fn ge gnf g h c2 d2))
 
-; The genus is determined by the hypermap.
 (def-fns _ $ (erased genus-unique : (erased (Nat) d g1 g2) (erased (List (Nat)) e n f) (erased (Genus d e n f g1) p) (erased (Genus d e n f g2) q)
     -> (erased (Eq (Nat) g1 g2) r))
   (let-match erased p (MkGenus _ _ ke kn kf kc c2 lhs s1 rhs h2 _ _ _ g oe on of gl cc dc al a1 ar dg ag))

@@ -1,9 +1,3 @@
-; Euler_tree of jordan.v for planar hypermaps: every edge cycle has a dart z that is fixed by n or f, or not on the edge
-; cycle of n z. The proof is not Gonthier's: with c = n . f, whose cycles are the edge cycles, cutting z out of its face
-; cycle would lower the genus unless the darts from c z on to the one before z in its face come back to themselves
-; under n, and then c z is a dart with a shorter such run.
-
-; The walk up to the first time it reaches u, a dart it leaves; it never leaves u.
 (def-fns _ $ (erased path-upto : (erased (List (Nat)) p s xs) (erased (Nat) x y u j) (subterm erased (Path p s x y xs) w) (erased (In u xs) pu)
     (erased (Length (Nat) xs j) l) -> (erased (List (Nat)) ys) (erased (Nat) j2) (erased (Path p (Cons (Nat) u s) x u ys) r)
     (erased (Length (Nat) ys j2) l2) (erased (Lt j2 j) lt))
@@ -19,7 +13,6 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (PathStep p _ xs1 x x1 y px (NotInCons x a s (apart-sym a x ne) ox) (path-add p s xs1 x1 y a w1 out1)))
 
-; Two walks to y: the start of each is on the other.
 (def-fns _ $ (erased walks-meet : (erased (Nat) d x x2 y) (erased (List (Nat)) p q s s2 xs ys) (erased (Perm d p q) pm)
     (subterm erased (Path p s x y xs) w) (erased (Path p s2 x2 y ys) v) -> (erased (Or (In x2 (Cons (Nat) y xs)) (In x (Cons (Nat) y ys))) r))
   (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) ((PathHere _ _ _) (OrR _ _ (InHere x ys))))
@@ -29,7 +22,6 @@
   (let-match erased (perm-inj d u x x1 p q pm pn px) (Refl _ _))
   (OrR _ _ (InThere u y ys pu)))
 
-; A walk that never leaves z, from the dart after a = c z, never leaves a.
 (def-fns _ $ (erased fresh-start : (erased (Nat) d x y z a) (erased (List (Nat)) c ci s ys) (erased (Perm d c ci) pc) (erased (Path c s x y ys) w)
     (erased (In z s) iz) (erased (Nth (Nat) c z a) pza) (erased (Nth (Nat) c a x) pax) (erased (Apart (Nat) Lt a z) ne) -> (erased (NotIn a ys) r))
   (let-match erased (in-dec a ys) (OrR _ _ out)
@@ -53,7 +45,6 @@
   (let-match erased (nat-eq u x) (Unequal _ _ _ _ ne) ((Equal _ _ _) (MkSomePath p s _ u y w)))
   (path-from p s xs1 x1 y u w1 (in-tail u x xs1 pu ne)))
 
-; The cycle of c through x0: the walk cs from y0 = c x0 back to x0, its darts x0 :: cs.
 (def-fns _ $ (erased orbit-step : (erased (Nat) d x0 y0 a b) (erased (List (Nat)) c ci cs) (erased (Perm d c ci) _pc) (erased (Nth (Nat) c x0 y0) p0)
     (erased (Path c (Nil (Nat)) y0 x0 cs) cy) (erased (In a (Cons (Nat) x0 cs)) ia) (erased (Nth (Nat) c a b) pab) -> (erased (In b (Cons (Nat) x0 cs)) r))
   (let-match erased ia (InThere _ _ _ ia1)
@@ -128,8 +119,6 @@
     ((OrL _ _ bd) (OrL _ _ (bad-cons n f o s1 a bd)))
     ((OrR _ _ gd) (OrR _ _ (GoodCons n f o s1 a b a2 pb nb pa2 na2 ib gd)))))
 
-; The descent: z on the cycle o of c, w the dart before z in its face, a1 = c z, and a walk from a1 to w that leaves
-; neither z nor w, j < N steps long.
 (def-fns _ $ (erased tree-go : (subterm erased (Nat) N) (erased (Nat) d j z w a1 x0 y0) (erased (List (Nat)) e n f c cs xs) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) g) (erased (Respects n f c) rc) (erased (Nth (Nat) c x0 y0) p0) (erased (Path c (Nil (Nat)) y0 x0 cs) cy)
     (erased (Good n f (Cons (Nat) x0 cs) (Cons (Nat) x0 cs)) gd) (erased (In z (Cons (Nat) x0 cs)) iz) (erased (In w (Cons (Nat) x0 cs)) iw)
@@ -177,7 +166,6 @@
   (tree-go N1 d j2 a1 v a2 x0 y0 e n f c cs ys h g rc p0 cy gd ia1 (orbit-prev d x0 y0 v b c ci cs pc p0 cy ib pcv) pa12 wv2 lys
     (lt-trans j2 j1 N1 lt2 (lt-pred j1 N1 ljn)) pfv))
 
-; A dart z on the edge cycle of x that is fixed by n or f, or not on the edge cycle of n z (clink z z || ~~ cross_edge z).
 (def-adts $ (Leaf : ((List (Nat)) e n f) ((Nat) x) -> Type)
   enum
   (many LeafNode : (erased (List (Nat)) e n f) (erased (Nat) x z) (erased (SomePath e (Nil (Nat)) x z) w) (erased (Nth (Nat) n z z) pz)
@@ -219,7 +207,6 @@
       (apart-irrefl b (notin-in b b _ out (orbit-walk-in d x0 y0 a b c e cs _ zs pc p0 cy ia wc)))))
   (LeafCut e n f x0 a b (orbit-e-walk d x0 y0 a e c cs pe cy ia) pab sp))
 
-; Euler_tree, for a hypermap of genus 0.
 (def-fns _ $ (erased euler-tree : (erased (Nat) d x0) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Lt x0 d) lx0) -> (erased (Leaf e n f x0) r))
   (let ((erased c) (erased ni) (erased fi) (erased rc) (erased pe) (erased pmn) (erased pmf)) (hyper-core d e n f h))

@@ -1,7 +1,3 @@
-; four_color_hypermap's induction on the number of darts, with minimality as data: a map the search finds uncolourable is
-; reduced (Reduces) to strictly smaller maps, whose four-colourings a function at a fixed level turns into one of the map.
-; Load after coloring.sl.
-
 (def-adts $ (Mp : -> Type)
   enum
   (many MkMp : (erased (Nat) d) (erased (List (Nat)) e n f) -> (Mp)))
@@ -12,7 +8,7 @@
   (many MpcCons : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (Mp)) ms) (erased (FourColoring e f ks) c) (erased (MpCols ms) rest)
       -> (MpCols (Cons (Mp) (MkMp d e n f) ms))))
 
-; No four-colouring of (e, f): the search's certificate for no ring, on d darts.
+; A certificate that (e, f) on d darts has no four-colouring.
 (def-adts $ (NoColoring : ((List (Nat)) e f) -> Type)
   enum
   (many MkNoColoring : (erased (Nat) d) (erased (List (Nat)) e f) (erased (NoExt d e f (Nil (Nat)) (Nil (Nat)) (Nil (Nat))) ne)
@@ -23,7 +19,6 @@
   (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
   (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
 
-; A map has a four-colouring, or a certificate that it has none.
 (def-adts $ (Decided : ((List (Nat)) e f) -> Type)
   enum
   (many Colors : (erased (List (Nat)) e f ks) (erased (FourColoring e f ks) c) -> (Decided e f))
@@ -35,7 +30,6 @@
     (NotFound _ _ _ _ _ _ ne) ((Found _ _ _ _ _ _ ks c _) (Colors e f ks c)))
   (NoColors e f (MkNoColoring d e f ne lf)))
 
-; planar_bridgeless_plain_precubic, with genus 0 for planar.
 (def-adts $ (Pbpp : ((Nat) d) ((List (Nat)) e n f) -> Type)
   enum
   (many MkPbpp : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
@@ -48,8 +42,8 @@
   (many SmallerCons : (erased (Nat) d d2) (erased (List (Nat)) e n f) (erased (List (Mp)) ms) (erased (Pbpp d2 e n f) p) (erased (Lt d2 d) lt)
       (erased (Smaller d ms) rest) -> (Smaller d (Cons (Mp) (MkMp d2 e n f) ms))))
 
-; How four-colourings of the maps ms give one of the map: w, of a type W the reduction chooses, is what glue, a function at
-; a level K below B, needs.
+; w, of a type W the reduction chooses, is what glue, at a level K below B, needs to colour the map from
+; colourings of ms.
 (def-adts $ (ColorFrom : ((Level) B) ((Nat) d) ((List (Nat)) e n f) ((List (Mp)) ms) -> Type)
   enum
   (many MkColorFrom : (erased (Level) B K) (erased (Nat) d) (erased (List (Nat)) e n f) (erased (List (Mp)) ms)
@@ -76,8 +70,7 @@
   (let-match erased sm (SmallerCons _ d2 e n f ms1 p lt sm1) ((SmallerNil _) (SmallerNil b)))
   (SmallerCons b d2 e n f ms1 p (lt-le-trans d2 d b lt l) (smaller-below d b ms1 sm1 l)))
 
-; The step of four_color_hypermap left open: every planar bridgeless plain precubic map the search finds uncolourable
-; reduces, with the level of the analysis and the bound of its reductions as fields.
+; A is the level of the analysis and B the bound of its reductions.
 (def-adts $ (Analysis : -> Type)
   enum
   (many MkAnalysis : (erased (Level) A B)
@@ -85,8 +78,6 @@
         analyse)
       -> (Analysis)))
 
-; With an analysis, every planar bridgeless plain precubic map is four-colourable. col-all colours the maps of a list below
-; a bound b, each found by the search or glued from the colourings of the maps of its reduction, below a smaller bound.
 (def-fns _ $ (erased four-color-induct : (erased (Analysis) an) -> (erased (Level) D)
     (erased (Fn D (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
       col))

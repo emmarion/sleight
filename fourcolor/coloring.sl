@@ -1,6 +1,3 @@
-; Colourings of hypermaps, after the parts of Gonthier's coloring.v that need no Kempe chains: a four-colouring makes a
-; map bridgeless, and the four-colourings of the dual and the mirror.
-
 ; ks gives the two ends of each bond of g different colours.
 (def-adts $ (Proper : ((List (Nat)) ks) ((List (Bond)) g) -> Type)
   enum
@@ -47,7 +44,6 @@
   (let-match erased df (DifferCons xs1 ys1 x y ne df1) ((DifferNil) (DifferNil)))
   (DifferCons ys1 xs1 y x (apart-sym x y ne) (differ-sym xs1 ys1 df1)))
 
-; A labelling constant along p is constant along its inverse q.
 (def-fns _ $ (erased resp-inv : (erased (Nat) d) (erased (List (Nat)) ks p q) (erased (Perm d p q) pm) (erased (Respects ks p ks) rp)
     (erased (Length (Nat) ks d) lk) -> (erased (Respects ks q ks) r))
   (let ((erased gp) (erased grp)) (perm-graph d p q pm))
@@ -55,7 +51,6 @@
   (graph-resp d q ks gq grq
     (const-inv d ks p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp (resp-const d ks p gp (graph-fun d p gp grp) rp lk)) lk))
 
-; The edges of a four-colouring are proper.
 (def-fns _ $ (erased coloring-proper : (erased (Nat) d) (erased (List (Nat)) e f ks ids) (erased (List (Bond)) ge) (erased (FourColoring e f ks) c)
     (erased (Graph d e ge) gr) (erased (Iota d ids) io) (erased (Length (Nat) ks d) lk) -> (erased (Proper ks ge) r))
   (let-match erased c (MkFourColoring _ _ _ ke _ re df _))
@@ -68,7 +63,6 @@
   (MkFourColoring e f ks ke rf re
     (differ-sym ks ke (differ-of ids e ks ke ks ge (graph-zip d e ids ge gr io) pr (respects-id-right d ids ks io lk) re)) u))
 
-; Each edge x-(e x) gives the mirror edge (f (e x))-(f x), whose ends have the colours of x and e x.
 (def-fns _ $ (erased proper-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fe fn ks ids) (erased (List (Bond)) ge gfn)
     (subterm erased (Fun e ge) fg)
     (erased (Respects f e fe) cfe) (erased (Respects n fe ids) ke) (erased (Respects f n fn) rfn) (erased (Respects ks f ks) rf)
@@ -87,7 +81,6 @@
       (respects-nth ks f ks y z ky rf pz pky) (respects-nth ks f ks x w kx rf pw pkx)))
     (proper-mirror d e n f fe fn ks ids g1 gfn f1 cfe ke rfn rf io grfn pr le lf lk ue)))
 
-; A four-colouring of the mirror (edge f . n, face f inverted) is one of the map (coloring_mirror).
 (def-fns _ $ (erased coloring-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn fi ks) (erased (Hypermap d e n f) h)
     (erased (Respects f n fn) rfn)
     (erased (Perm d f fi) pf) (erased (FourColoring fn fi ks) c) -> (erased (FourColoring e f ks) r))
@@ -110,7 +103,6 @@
   (let-match erased rp (RepeatCons _ m1 _ ks1 rp1) ((RepeatNil _ _) (UnderNil b)))
   (UnderCons ks1 c b l (repeat-under m1 c b ks1 rp1 l)))
 
-; A cubic map is precubic.
 (def-fns _ $ (erased cubic-precubic : (erased (Nat) d) (erased (List (Nat)) n) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
     -> (erased (Precubic d n) r))
   (let-match erased cu (MkAllOrder _ _ _ ks ol rk))
@@ -159,8 +151,7 @@
   (let-match erased sa (MkSameAt _ _ j z px py))
   (OrR _ _ (MkSameAt xs ys (Succ j) z (NthThere _ x xs1 j z px) (NthThere _ y ys1 j z py))))
 
-; Why no four-colouring of (e, f) on d darts extends pre and gives the darts of r the colours lc: on a full pre, one of the
-; three checks fails; otherwise each colour of the next dart fails.
+; No four-colouring of (e, f) on d darts extends pre and gives the darts of r the colours lc.
 (def-adts $ (NoExt : ((Nat) d) ((List (Nat)) e f r lc pre) -> Type)
   enum
   (many NEFace : (erased (Nat) d) (erased (List (Nat)) e f r lc pre X) (erased (Length (Nat) pre d) lp) (erased (Respects pre f X) rX)
@@ -174,8 +165,7 @@
       (erased (Snoc (Nat) pre (Succ (Succ (Succ (Zero)))) p3) s3) (erased (NoExt d e f r lc p0) n0) (erased (NoExt d e f r lc p1) n1)
       (erased (NoExt d e f r lc p2) n2) (erased (NoExt d e f r lc p3) n3) -> (NoExt d e f r lc pre)))
 
-; The search for a four-colouring of (e, f) on d darts extending pre that gives the darts of r the colours lc: one is found, or
-; none extends pre.
+; A four-colouring of (e, f) on d darts extending pre that gives the darts of r the colours lc, or none extends pre.
 (def-adts $ (Search : ((Nat) d) ((List (Nat)) e f r lc pre) -> Type)
   enum
   (many Found : (erased (Nat) d) (erased (List (Nat)) e f r lc pre ks) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
@@ -227,8 +217,6 @@
       (let-match erased (snoc-fn _ pre q p3 c0 sq s3) (Refl _ _))
       (noext-sound d e f r lc p3 ks rest1 n3 jq l c rl))))
 
-; A list of d colours is checked: f-invariance by comparing it with its composite with f, the edges by comparing it with
-; its composite with e, and the ring by comparing its composite with r with lc.
 (def-fns _ $ (erased search-full : (erased (Nat) d k) (erased (List (Nat)) e f r lc pre) (erased (Under e d) ue) (erased (Under f d) uf)
     (erased (Under r d) ur) (erased (Length (Nat) e d) le) (erased (Length (Nat) f d) lf) (erased (Length (Nat) r k) lr) (erased (Length (Nat) lc k) llc)
     (erased (Length (Nat) pre d) lp) (erased (Under pre 4) up) -> (erased (Search d e f r lc pre) res))
@@ -245,7 +233,6 @@
     ((OrL _ _ df) (Found d e f r lc pre pre (MkFourColoring e f pre ke rX rke df up) rR)))
   (NotFound d e f r lc pre (NEEdge d e f r lc pre ke lp rke sa)))
 
-; The search tries each colour below 4 for the next dart.
 (def-fns _ $ (erased search : (erased (Nat) d k) (erased (List (Nat)) e f r lc) (erased (Under e d) ue) (erased (Under f d) uf) (erased (Under r d) ur)
     (erased (Length (Nat) e d) le) (erased (Length (Nat) f d) lf) (erased (Length (Nat) r k) lr) (erased (Length (Nat) lc k) llc)
     (subterm erased (Nat) m) (erased (List (Nat)) pre) (erased (Nat) i) (erased (Length (Nat) pre i) lp) (erased (Add i m d) a) (erased (Under pre 4) up)
@@ -271,7 +258,6 @@
     (NotFound _ _ _ _ _ _ n3) ((Found _ _ _ _ _ _ ks c rl) (Found d e f r lc pre ks c rl)))
   (NotFound d e f r lc pre (NEStep d i m1 e f r lc pre p0 p1 p2 p3 lp a s0 s1 s2 s3 n0 n1 n2 n3)))
 
-; A map has a four-colouring that gives the darts of r the colours lc, or none.
 (def-fns _ $ (erased search-ring : (erased (Nat) d k) (erased (List (Nat)) e n f r lc) (erased (Hypermap d e n f) h) (erased (Under r d) ur)
     (erased (Length (Nat) r k) lr) (erased (Length (Nat) lc k) llc) -> (erased (Search d e f r lc (Nil (Nat))) res))
   (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))

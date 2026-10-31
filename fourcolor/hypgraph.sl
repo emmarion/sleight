@@ -1,5 +1,3 @@
-; Undirected graphs on darts, as lists of bonds, and the count of their connected classes.
-
 (def-adts $ (Bond : -> Type)
   enum
   (many MkBond : (many (Nat) x y) -> (Bond)))
@@ -128,8 +126,7 @@
   (many IotaS : (erased (Nat) n) (erased (List (Nat)) ids ids2) (erased (Iota n ids) p) (erased (Snoc (Nat) ids n ids2) s)
       -> (Iota (Succ n) ids2)))
 
-; The darts 0..d-1 fall into k classes of g: lab sends each dart to the root of its class, and rs lists the roots,
-; each its own label.
+; lab sends each dart below d to the root of its class of g, and rs lists the k roots, each its own label.
 (def-adts $ (Classes : ((List (Bond)) g) ((Nat) d) ((Nat) k) -> Type)
   enum
   (many MkClasses : (erased (List (Bond)) g) (erased (Nat) d k) (erased (List (Nat)) ids lab rs)
@@ -237,7 +234,6 @@
   (let-match erased pr (NthThere _ _ _ _ _ pr1))
   (rooted-nth g rs xs1 ls1 j1 x r ro1 px1 pr1))
 
-; The root of dart x is joined to it.
 (def-fns _ $ (erased classes-root : (erased (List (Bond)) g) (erased (Nat) d) (erased (List (Nat)) ids lab rs) (erased (Nat) x r)
     (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro) (erased (Nth (Nat) lab x r) p) (erased (Lt x d) lt)
     -> (erased (In r rs) pin) (erased (Conn g r x) c))
@@ -277,7 +273,6 @@
   (let-match erased pin (InThere _ _ _ pin1) ((InHere _ _) p0))
   (fixed-in lab rs1 r fix1 pin1))
 
-; A new dart with no bonds is a class of its own.
 (def-fns _ $ (erased classes-grow : (erased (List (Bond)) g) (erased (Nat) d k) (erased (Classes g d k) cs) -> (erased (Classes g (Succ d) (Succ k)) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
   (let ((erased ids2) (erased si)) (snoc-exists _ ids d))
@@ -293,7 +288,6 @@
     ((Zero) (MkClasses _ _ _ _ _ _ (IotaZ) (LengthNil _) (LengthNil _) (DistNil) (RespNil _) (ConstNil _) (RootedNil _ _))))
   (classes-grow _ d1 d1 (classes-nil d1)))
 
-; The classes depend only on which darts g joins.
 (def-fns _ $ (erased classes-equiv : (erased (List (Bond)) g h) (erased (Nat) d k) (erased (Classes g d k) cs)
     (erased (Spans h g) shg) (erased (Spans g h) sgh) (erased (Below h d) bh) -> (erased (Classes h d k) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
@@ -303,7 +297,6 @@
   (let-match erased cs (MkClasses _ _ _ _ lab _ _ ll _ _ _ cl _))
   (const-below lab g d cl ll))
 
-; Two darts are joined or told apart.
 (def-fns _ $ (erased classes-dec : (erased (List (Bond)) g) (erased (Nat) d k x y) (erased (Classes g d k) cs)
     (erased (Lt x d) px) (erased (Lt y d) py) -> (erased (Or (Conn g x y) (Sep g x y)) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll _ _ _ cl ro))
@@ -446,7 +439,6 @@
       (RespCons lab2 rs3 rs3 y y (redirect-miss a b y y lab lab2 rd p (notin-in y a rs1 out (remove-src a rs1 rs3 rm1)))
         (fixed-remove a b lab lab2 rs1 rs3 rm1 fix1 dr1 rd)))))
 
-; Merging the class rooted at a into the one rooted at b, which h joins to it.
 (def-fns _ $ (erased rooted-merge : (erased (List (Bond)) g h) (erased (List (Nat)) rs rs2 xs ls ls2) (erased (Nat) a b)
     (subterm erased (Rooted g rs xs ls) ro) (erased (Redirect a b ls ls2) rd) (erased (Remove a rs rs2) rm)
     (erased (In b rs2) pb) (erased (Conn h b a) cba) (erased (Spans h g) sp) -> (erased (Rooted h rs2 xs ls2) res))
@@ -465,7 +457,6 @@
     (absurd (CEq _ _ _) (sep-conn g x y s (conn-cat g x rx y (conn-sym g rx x cx) cy)))
     ((CGt _ _ _ _ l) (ApGt _ _ rx ry l))))
 
-; A bond between two classes merges them.
 (def-fns _ $ (erased classes-link-merge : (erased (List (Bond)) g) (erased (Nat) d k x y) (erased (Classes g d k) cs)
     (erased (Sep g x y) s) (erased (Lt x d) px) (erased (Lt y d) py)
     -> (erased (Nat) k1) (erased (Eq (Nat) k (Succ k1)) e) (erased (Classes (Cons (Bond) (MkBond x y) g) d k1) r))
@@ -489,7 +480,6 @@
         (conn-cat h rx x ry (spans-conn h g rx x cx sp) (conn-cat h x y ry cxy (conn-sym h ry y (spans-conn h g ry y cy sp))))
         sp))))
 
-; Every graph has a count of classes.
 (def-fns _ $ (erased classes-exists : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (Below g d) bg) -> (erased (Nat) k) (erased (Classes g d k) r))
   (let-match erased bg (BelowCons g1 x y _ px py bg1) ((BelowNil _) (values d (classes-nil d))))
   (let ((erased k1) (erased cs1)) (classes-exists g1 d bg1))
@@ -504,7 +494,6 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (SubCons z m1 ys1 (remove-keep x z ys ys1 rm p (apart-sym x z ne)) (sub-remove x m1 ys ys1 sb1 out1 rm)))
 
-; A list of distinct darts, all in ys, is no longer than ys.
 (def-fns _ $ (erased pigeonhole : (erased (List (Nat)) xs ys) (erased (Nat) a b) (subterm erased (Distinct xs) dx) (erased (Sub xs ys) sb)
     (erased (Length (Nat) xs a) la) (erased (Length (Nat) ys b) lb) -> (erased (Lt a (Succ b)) r))
   (let-match erased dx (DistCons x xs1 out dx1) ((DistNil) (let-match erased la (LengthNil _)) (LtZ b)))
@@ -527,7 +516,6 @@
   (let-match erased l (LengthCons _ _ _ n1 l1))
   (LengthCons _ j xs1 n1 (respects-length-inv lab xs1 ls1 n1 rp1 l1)))
 
-; The image ims of the darts rs, each below d, under a labelling of length d.
 (def-fns _ $ (erased image-exists : (erased (List (Nat)) lab lab2 rs) (erased (Nat) d) (subterm erased (Respects lab rs rs) fix)
     (erased (Length (Nat) lab d) ll) (erased (Length (Nat) lab2 d) ll2) -> (erased (List (Nat)) ims) (erased (Respects lab2 rs ims) r))
   (let-match erased fix (RespCons _ rs1 _ j _ p fix1) ((RespNil _) (values (Nil _) (RespNil lab2))))
@@ -542,7 +530,6 @@
   (let ((erased pin) (erased _)) (classes-root g d ids lab2 rs2 j s io ro q (nth-lt-length _ lab2 j d s q ll)))
   (SubCons s ims1 rs2 pin (image-sub g lab2 rs1 rs2 ims1 ids d rp1 io ro ll)))
 
-; Distinct roots of lab have distinct roots under lab2, for two root labellings of g.
 (def-fns _ $ (erased image-notin : (erased (List (Bond)) g) (erased (List (Nat)) lab lab2 rs rs2 ims ids) (erased (Nat) d r s)
     (subterm erased (Respects lab2 rs ims) rp) (erased (Respects lab rs rs) fix) (erased (NotIn r rs) out)
     (erased (Nth (Nat) lab r r) pr) (erased (Conn g s r) cs) (erased (Const lab g) cl)
@@ -578,7 +565,6 @@
   (pigeonhole ims rs2 k1 k2 (image-distinct g lab lab2 rs rs2 ims ids d rp fix dr cl io ro2 ll2)
     (image-sub g lab2 rs rs2 ims ids d rp io ro2 ll2) (respects-length lab2 rs ims k1 rp lr) lr2))
 
-; The count of classes is determined by the graph.
 (def-fns _ $ (erased classes-unique : (erased (List (Bond)) g) (erased (Nat) d k1 k2) (erased (Classes g d k1) c1) (erased (Classes g d k2) c2)
     -> (erased (Eq (Nat) k1 k2) e))
   (let ((erased l12)) (classes-le g d k1 k2 c1 c2))

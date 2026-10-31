@@ -1,6 +1,3 @@
-; cubic_Euler of geometry.v: in a connected map whose edges have two darts and nodes three, 6 kf + 12 genus = d + 12 for
-; the number kf of faces, so the genus is 0 exactly when 6 kf = d + 12. Needs ring.sl for the products.
-
 (def-fns _ $ (erased double-mul : (erased (Nat) a b) (subterm erased (Double a b) db) -> (erased (Mul a (Succ (Succ (Zero))) b) r))
   (let-match erased db (DS a1 b1 db1) ((D0) (MulZero _)))
   (MulSucc a1 _ b1 _ (double-mul a1 b1 db1) (add-succ-right b1 _ _ (add-succ-right b1 _ _ (add-zero-right b1)))))
@@ -61,7 +58,6 @@
   (let-match erased (add-cancel s6 gf dt l6 p4 p8) (Refl _ _))
   (values f6 g6 gf pf6 gw (add-comm g6 f6 gf p3) p7))
 
-; The genus is 0 exactly when 6 kf = d + 12.
 (def-fns _ $ (erased cubic-planar : (erased (Nat) d kf) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (AllOrder d e (Succ (Succ (Zero)))) plain) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cubic) (erased (Connected d e n f) cc)
     (erased (Genus d e n f (Zero)) p) (erased (Orbits d f kf) of)

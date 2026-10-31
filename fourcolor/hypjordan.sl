@@ -1,7 +1,3 @@
-; A planar hypermap has no Moebius path (planar_Jordan of jordan.v), by dart-preserving Walkup transforms: the dart z
-; removed stays as a dart fixed by all three permutations.
-
-; f is determined by e and n: e b = a and n c = b give f a = c.
 (def-fns _ $ (erased hyper-third : (erased (Nat) d a b c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (Nth (Nat) e b a) pe) (erased (Nth (Nat) n c b) pn) -> (erased (Nth (Nat) f a c) r))
   (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pmn) (erased _)) (hyper-core d e n f h))
@@ -93,7 +89,6 @@
     (absurd (Zero) (let-match erased (add-fn k (Zero) d k a (add-zero-right k)) (Refl _ _)) (lt-irrefl (Succ d) lt)))
   (values m1 (Refl _ m) (add-succ-left k m1 d a)))
 
-; WalkupE at a dart z that p sends some other dart to: z is cut out of n and f, and the fuel drops by one.
 (def-fns _ $ (erased walk-fuel : (erased (Nat) d m z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Fuel d e n f m) fu) (erased (Or (Moved n z) (Moved f z)) mv)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip n z n2) skn) (erased (Skip f z f2) skf) (erased (Hypermap d e2 n2 f2) h2)
@@ -115,7 +110,6 @@
     (MkFuel d m1 (Succ k) e2 n2 f2 (Cons _ z s) (fixed-third d n2 f2 e2 (Cons _ z s) (hyper-rot d e2 n2 f2 h2) fn2 ff2) fn2 ff2 ds2
       (LengthCons _ z s k ls) us2 a2)))
 
-; WalkupF: z cut out of e and n.
 (def-fns _ $ (erased walk-fuel-f : (erased (Nat) d m z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Fuel d e n f m) fu) (erased (Or (Moved e z) (Moved n z)) mv)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Hypermap d e2 n2 f2) h2)
@@ -125,7 +119,6 @@
     (walk-fuel d m z f e n hr gr (fuel-rot d m n f e (fuel-rot d m e n f fu)) mv))
   (values e2 n2 f2 m1 ske skn (hyper-rot d f2 e2 n2 h2) (genus-rot d (Zero) f2 e2 n2 h2 g2) em (fuel-rot d m1 f2 e2 n2 fu2)))
 
-; WalkupN: z cut out of f and e.
 (def-fns _ $ (erased walk-fuel-n : (erased (Nat) d m z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Fuel d e n f m) fu) (erased (Or (Moved f z) (Moved e z)) mv)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip f z f2) skf) (erased (Skip e z e2) ske) (erased (Hypermap d e2 n2 f2) h2)
@@ -135,7 +128,6 @@
   (let ((erased h3) (erased g3)) (genus-rot2 d (Zero) n2 f2 e2 h2 g2))
   (values e2 n2 f2 m1 skf ske h3 g3 em (fuel-rot d m1 f2 e2 n2 (fuel-rot d m1 n2 f2 e2 fu2))))
 
-; A clink path that avoids z is one of WalkupE z.
 (def-fns _ $ (erased lift-e : (erased (Nat) z a b) (erased (List (Nat)) n f n2 f2 q) (subterm erased (CPath n f a q b) cp)
     (erased (Skip n z n2) skn) (erased (Skip f z f2) skf) (erased (NotIn z (Cons (Nat) a q)) out) -> (erased (CPath n2 f2 a q b) r))
   (match erased cp _
@@ -149,7 +141,6 @@
       (let-match erased out1 (NotInCons _ _ _ ny _))
       (CPFace n2 f2 q1 a y b (skip-keep z a y f f2 skf pf (apart-sym z a na) (apart-sym z y ny)) (lift-e z y b n f n2 f2 q1 rest skn skf out1)))))
 
-; A clink path that avoids z, and the face step after the edge image w of z, is one of WalkupF z.
 (def-fns _ $ (erased lift-f : (erased (Nat) d z a b w w2) (erased (List (Nat)) e n f e2 n2 f2 q) (erased (Hypermap d e n f) h)
     (erased (Hypermap d e2 n2 f2) h2) (subterm erased (CPath n f a q b) cp) (erased (Skip e z e2) ske) (erased (Skip n z n2) skn)
     (erased (NotIn z (Cons (Nat) a q)) out) (erased (Nth (Nat) e z w) pw) (erased (Nth (Nat) f w w2) pw2) (erased (NotIn w2 q) out2)
@@ -178,7 +169,6 @@
         (hyper-third d a c y e2 n2 f2 h2 (skip-keep z c a e e2 ske ec ncz (apart-sym z a na)) (skip-keep z y c n n2 skn pc (apart-sym z y ny) ncz))
         (lift-f d z y b w w2 e n f e2 n2 f2 q1 h h2 rest ske skn out1 pw pw2 out3)))))
 
-; A clink path that avoids z and its face image w is one of WalkupN z.
 (def-fns _ $ (erased lift-n : (erased (Nat) d z a b w) (erased (List (Nat)) e n f e2 n2 f2 q) (erased (Hypermap d e n f) h)
     (erased (Hypermap d e2 n2 f2) h2) (subterm erased (CPath n f a q b) cp) (erased (Skip f z f2) skf) (erased (Skip e z e2) ske)
     (erased (NotIn z (Cons (Nat) a q)) out) (erased (Nth (Nat) f z w) pw) (erased (NotIn w q) out2)
@@ -205,7 +195,6 @@
           (skip-keep z c y f f2 skf fc ncz (apart-sym z y ny)) (skip-keep z a c e e2 ske pc (apart-sym z a na) ncz))
         (lift-n d z y b w e n f e2 n2 f2 q1 h h2 rest skf ske out1 pw out3)))))
 
-; The three cases of euler-step, f2 being f with a2 = f a cut out, and c, c2 the composites n . f and n . f2.
 (def-fns _ $ (erased euler-setup : (erased (Nat) d a a2 b2) (erased (List (Nat)) n ni f fi c f2 c2) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
     (erased (Respects n f c) rc) (erased (Respects n f2 c2) rc2) (erased (Nth (Nat) f a a2) pa) (erased (Nth (Nat) f a2 b2) pb)
     (erased (Upd2 f a b2 a2 a2 f2) up)
@@ -223,7 +212,6 @@
   (let ((erased ci) (erased _) (erased pc)) (perm-comp d n ni f fi c pn pf rc))
   (values la la2 ca ca2 pca pca2 pna2 uc ci pc))
 
-; The genus drops: a2 reaches a along c, and the links of n and f2 still join a and a2.
 (def-fns _ $ (erased euler-drop : (erased (Nat) d kn kf kx kx2 kc2 gen2 a a2 b2) (erased (List (Nat)) n ni f fi c f2 fi2 c2 xs)
     (erased (List (Bond)) gn gf g gf2 g2) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) (erased (Perm d f2 fi2) pf2)
     (erased (Respects n f c) rc) (erased (Respects n f2 c2) rc2) (erased (Orbits d c kx) oc) (erased (Orbits d c2 kx2) oc2)
@@ -238,7 +226,6 @@
       (classes-link-same g2 d kc2 a a2 cs2 cn la la2))
     (es-conn kc2 d kx kn kf gen2 es2)))
 
-; Cutting z, which f sends w to, out of its face cycle: the data of euler-step before and after.
 (def-fns _ $ (erased face-frame : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
     -> (erased (List (Nat)) c ni fi) (erased (Respects n f c) rc) (erased (Perm d e c) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
@@ -262,9 +249,6 @@
   (let-match erased (orbits-unique d kf2 (Succ kf) f2 of3 of2) (Refl _ _))
   (values c ni fi rc pe pn pf kx kn kf kc ox on of gn gf g grn grf cg b2 f2 fi2 e2 c2 pb up pf2 h2 gen2 kx2 kc2 p2 rc2 ox2 gf2 g2 grf2 cg2 cs2 es2))
 
-; Cutting z out of its face cycle, with w the dart before it, lowers the genus when z reaches w along c = n . f and the
-; links of n and the cut face permutation still join w and z: walks along c from x1 to w and from x2 to z that leave
-; neither, with n x1 = x2.
 (def-fns _ $ (erased absurd face-drop : (erased (Nat) d w z x1 x2) (erased (List (Nat)) e n f c s xs ys1 ys2) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) p) (erased (Respects n f c) rc) (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne)
     (erased (Lt w d) lw) (erased (Path c (Nil (Nat)) z w xs) cw) (erased (In w s) iw) (erased (In z s) iz) (erased (Nth (Nat) n x1 x2) px)
@@ -283,7 +267,6 @@
     (euler-drop d kn kf kx kx2 kc2 gen2 w z b2 n ni f fi c f2 fi2 c2 xs gn gf g gf2 g2 pn pf pf2 rc rc2 ox ox2 grn grf grf2 cg cg2 pw pb up cs2 es2 cw cn))
   (genus-unique d (Zero) (Succ gen2) e n f p (core-genus d kx kn kf kc2 (Succ gen2) e n f c ni fi gn gf g pe rc pn pf ox on of grn grf cg cs3 es3)))
 
-; Three darts w, z, b with f w = z, f z = b, n b = w and n w = z make the genus positive.
 (def-fns _ $ (erased absurd planar-torus : (erased (Nat) d w z b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) p) (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
     (erased (Nth (Nat) f z b) pz) (erased (Nth (Nat) n b w) pb) (erased (Nth (Nat) n w z) pnw) -> (erased (False) r))
@@ -323,7 +306,6 @@
   (let-match erased p (NotInCons _ _ _ ne out))
   (NotInCons a b s ne (notin-skip a c s out)))
 
-; A Moebius path that avoids w is one of WalkupE w.
 (def-fns _ $ (erased moebius-lift-e : (erased (Nat) w x) (erased (List (Nat)) n f n2 f2 p) (erased (Moebius n f x p) mb)
     (erased (Skip n w n2) skn) (erased (Skip f w f2) skf) (erased (NotIn w (Cons (Nat) x p)) out) -> (erased (Moebius n2 f2 x p) r))
   (let-match erased mb (MkMoebius _ _ _ _ l u v dp cp pu pv m2))
@@ -333,7 +315,6 @@
   (let ((erased xw)) (apart-sym w x (notin-in w x _ out (InHere x p))))
   (MkMoebius n2 f2 p x l u v dp (lift-e w x l n f n2 f2 p cp skn skf out) (skip-keep w u l n n2 skn pu uw lw) (skip-keep w x v n n2 skn pv xw vw) m2))
 
-; p x = y and p y = z: p z is x or not one of x, y, z.
 (def-fns _ $ (erased close-dec : (erased (Nat) d x y z w) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
     (erased (Nth (Nat) p y z) py) (erased (Nth (Nat) p z w) pz) (erased (Apart (Nat) Lt x z) xz) (erased (Apart (Nat) Lt y z) yz)
     -> (erased (Or (NotIn w (Cons (Nat) x (Cons (Nat) y (Cons (Nat) z (Nil (Nat)))))) (Eq (Nat) w x)) r))
@@ -344,7 +325,6 @@
     (absurd (Equal _ _ _) (let-match erased (perm-inj d z y w p q pm pz py) (Refl _ _)) (apart-irrefl y yz)))
   (OrL _ _ (NotInCons w x _ wx (NotInCons w y _ wy (NotInCons w z _ wz (NotInNil w))))))
 
-; The minimal counterexample argument of planar_Jordan, on the first darts x, y, z of the path, with fuel m.
 (def-fns _ $ (erased pm-go : (subterm erased (Nat) m) (erased (Nat) d x) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) g) (erased (Fuel d e n f m) fu) (erased (Moebius n f x p) mb) -> (erased (False) r))
   (let-match erased mb (MkMoebius _ _ _ _ l u v dp cp pu pv m2))
@@ -484,7 +464,6 @@
         (CPFace n2 f2 r1 y t l (skip-cut-at d z y t f fi f2 pmf skf pfy pfz yz) (lift-e z t l n f n2 f2 r1 ct skn skf outz)))
       (skip-keep z y l n n2 skn pu yz lz) (skip-keep z x y n n2 skn pv xz yz) (M2Here _ y y (InHere y _)))))
 
-; planar_Jordan: a hypermap of genus 0 has no Moebius path.
 (def-fns _ $ (erased absurd planar-moebius : (erased (Nat) d x) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) g) (erased (Moebius n f x p) mb) -> (erased (False) r))
   (pm-go d d x e n f p h g (MkFuel d d (Zero) e n f (Nil _) (FixNil e) (FixNil n) (FixNil f) (DistNil) (LengthNil _) (UnderNil d) (AddZero d)) mb))

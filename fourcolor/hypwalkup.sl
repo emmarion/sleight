@@ -1,6 +1,3 @@
-; The Walkup transforms of walkup.v: a dart z is cut out of the node and face cycles, and the edge permutation follows.
-
-; A hypermap from its node and face permutations.
 (def-fns _ $ (erased hyper-mk : (erased (Nat) d) (erased (List (Nat)) n ni f fi) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
     -> (erased (List (Nat)) e) (erased (Hypermap d e n f) h))
   (let ((erased c) (erased rc)) (respects-exists n f d (perm-under d f fi pf) (perm-length d n ni pn)))
@@ -18,7 +15,7 @@
       (respects-length fi ni ci d rci lni) lni)
     ffi rc cic)))
 
-; p2 is p with z cut out of its cycle and fixed (Gonthier's skip, read on the whole dart set).
+; p2 is p with z cut out of its cycle and fixed.
 (def-adts $ (Skip : ((List (Nat)) p) ((Nat) z) ((List (Nat)) p2) -> Type)
   enum
   (many SkipFixed : (erased (List (Nat)) p) (erased (Nat) z) (erased (Nth (Nat) p z z) pz) -> (Skip p z p))
@@ -33,7 +30,6 @@
 (def-fns _ $ (erased le-trans : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
 
-; Cutting z out of a face cycle: the genus is kept or drops by one.
 (def-fns _ $ (erased walkup-face : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
     -> (erased (Nat) b2) (erased (List (Nat)) f2 e2) (erased (Nat) gen2) (erased (Nth (Nat) f z b2) pb) (erased (Upd2 f w b2 z z f2) up)
@@ -66,7 +62,6 @@
     (respects-assoc q2 p q1 ids ids q1 d pq2 (respects-id-right d ids q1 io (respects-length-inv p q1 ids d pq1 li)) q1p li lp)
     (respects-id-left d ids q2 io (perm-under d q2 p (perm-sym d p q2 pm2)))))
 
-; Cutting z out of a node cycle, through the dual.
 (def-fns _ $ (erased walkup-node : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Nth (Nat) n w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) _lw)
     -> (erased (Nat) b2) (erased (List (Nat)) n2 e2) (erased (Nat) gen2) (erased (Nth (Nat) n z b2) pb) (erased (Upd2 n w b2 z z n2) up)
@@ -106,7 +101,6 @@
     (walkup-node d gen w z e n f h p pw ne lw))
   (values n2 e2 gen2 (SkipCut n n2 z w b2 pw pb ne up) h2 p2 (step-le gen gen2 st)))
 
-; WalkupE with z kept as a dart fixed by all three permutations: the genus does not grow (le_genus_WalkupE).
 (def-fns _ $ (erased walkup-iso : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Lt z d) lz) -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) gen2) (erased (Skip n z n2) skn) (erased (Skip f z f2) skf)
     (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
@@ -126,7 +120,6 @@
   (let ((erased ys0) (erased x) (erased s) (erased l0)) (snoc-split _ ys k1 l1))
   (values (Cons _ y ys0) x (SnocCons _ y x ys0 ys s) (LengthCons _ y ys0 k1 l0)))
 
-; Dropping the last entry of lab, xs and ls keeps a composite, when xs stays below the shorter length.
 (def-fns _ $ (erased unsnoc-respects : (erased (List (Nat)) lab lab0 xs xs0 ls ls0) (erased (Nat) a x l k) (erased (Respects lab xs ls) rp)
     (erased (Snoc (Nat) lab0 a lab) sl) (subterm erased (Snoc (Nat) xs0 x xs) sx) (erased (Snoc (Nat) ls0 l ls) ss) (erased (Length (Nat) lab0 k) ll)
     (erased (Under xs0 k) u) -> (erased (Respects lab0 xs0 ls0) r))
@@ -169,7 +162,6 @@
       (lt-irrefl j (nth-lt-length _ p0 j j j pj lp0))))
   (under-tighten p0 d (under-snoc p p0 d (Succ d) (perm-under (Succ d) p q pm) sp) out))
 
-; A permutation fixing its last dart d is one on 0..d-1 with d added.
 (def-fns _ $ (erased unsnoc-perm : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm (Succ d) p q) pm) (erased (Nth (Nat) p d d) pd)
     -> (erased (List (Nat)) p0 q0) (erased (Snoc (Nat) p0 d p) sp) (erased (Snoc (Nat) q0 d q) sq) (erased (Perm d p0 q0) r))
   (let ((erased qd)) (perm-inv (Succ d) d d p q pm pd))
@@ -212,7 +204,6 @@
   (let-match erased f0 (Refl _ _))
   (MkEulerSum kc d k1 k2 k3 g c0 l0 s0 t1 g2 dc0 al0 b0 b1 dg ag0))
 
-; A hypermap whose last dart d is fixed by all three permutations is one on 0..d-1 with d added, of the same genus.
 (def-fns _ $ (erased drop-last : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h) (erased (Genus (Succ d) e n f gen) p)
     (erased (Nth (Nat) n d d) pnd) (erased (Nth (Nat) f d d) pfd)
     -> (erased (List (Nat)) e0 n0 f0) (erased (Snoc (Nat) e0 d e) se) (erased (Snoc (Nat) n0 d n) sn) (erased (Snoc (Nat) f0 d f) sf)
@@ -305,7 +296,6 @@
   (many MkCut : (erased (Nat) d z) (erased (List (Nat)) s p p1 pb p2) (erased (Skip p z p1) sk) (erased (Conj s s p1 pb) cj)
       (erased (Snoc (Nat) p2 d pb) sn) -> (Cut d z s p p2)))
 
-; WalkupE: the dart z removed, node and face cut, on d darts, of genus at most that of the map.
 (def-fns _ $ (erased walkup-e : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h)
     (erased (Genus (Succ d) e n f gen) p) (erased (Lt z (Succ d)) lz)
     -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s n n2) cn) (erased (Cut d z s f f2) cf)

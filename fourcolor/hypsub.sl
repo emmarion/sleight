@@ -1,5 +1,3 @@
-; Lists of darts as sets, and the classes of a graph counted among the darts of a list. Load after colalias.sl.
-
 ; ys lists the darts of xs in t, and zs those not in t.
 (def-adts $ (Split : ((List (Nat)) t xs ys zs) -> Type)
   enum
@@ -112,12 +110,10 @@
   (let-match erased sb (SubCons _ _ _ ix sb1))
   (DisjCons x m3 s (notin-of-disj x s m dj ix) (disj-sym s m dj m3 sb1)))
 
-; Two duplicate-free lists with the same darts have the same length.
 (def-fns _ $ (erased same-size : (erased (List (Nat)) xs ys) (erased (Nat) a b) (erased (Distinct xs) dx) (erased (Distinct ys) dy)
     (erased (Sub xs ys) sxy) (erased (Sub ys xs) syx) (erased (Length (Nat) xs a) la) (erased (Length (Nat) ys b) lb) -> (erased (Eq (Nat) a b) e))
   (le-antisym a b (pigeonhole xs ys a b dx sxy la lb) (pigeonhole ys xs b a dy syx lb la)))
 
-; A duplicate-free list is injective.
 (def-fns _ $ (erased distinct-nth : (erased (List (Nat)) h) (erased (Nat) i j x) (subterm erased (Distinct h) dh) (erased (Nth (Nat) h i x) pi)
     (erased (Nth (Nat) h j x) pj) -> (erased (Eq (Nat) i j) e))
   (let-match erased dh (DistCons _ h1 out dh1) (absurd (DistNil) pi))
@@ -142,7 +138,6 @@
       ((CGt _ _ _ _ q) (ApGt _ _ y l q)))
     (notin-respects h xs1 ys1 x y dh out1 px rp1)))
 
-; The image of a duplicate-free list under an injective one.
 (def-fns _ $ (erased respects-distinct : (erased (List (Nat)) h xs ys) (erased (Distinct h) dh) (subterm erased (Distinct xs) dx) (erased (Respects h xs ys) rp)
     -> (erased (Distinct ys) r))
   (let-match erased rp (RespCons _ xs1 ys1 j l pj rp1) ((RespNil _) (DistNil)))
@@ -160,13 +155,11 @@
       ((CGt _ _ _ _ q) (ApGt _ _ x j q)))
     (notin-respects-back lab xs1 ls1 x l out1 px rp1)))
 
-; Darts with distinct labels are distinct.
 (def-fns _ $ (erased distinct-back : (erased (List (Nat)) lab xs ls) (subterm erased (Distinct ls) dl) (erased (Respects lab xs ls) rp) -> (erased (Distinct xs) r))
   (let-match erased rp (RespCons _ xs1 ls1 j l pj rp1) ((RespNil _) (DistNil)))
   (let-match erased dl (DistCons _ _ out dl1))
   (DistCons j xs1 (notin-respects-back lab xs1 ls1 j l out pj rp1) (distinct-back lab xs1 ls1 dl1 rp1)))
 
-; An entry of ls = lab . xs is the label of a dart of xs.
 (def-fns _ $ (erased respects-in : (erased (List (Nat)) lab xs ls) (erased (Nat) l) (subterm erased (Respects lab xs ls) rp) (erased (In l ls) il)
     -> (erased (Nat) j) (erased (In j xs) ij) (erased (Nth (Nat) lab j l) pj))
   (let-match erased rp (RespCons _ xs1 ls1 j0 _ p0 rp1) (absurd (RespNil _) il))
@@ -175,14 +168,12 @@
   (let ((erased j) (erased ij) (erased pj)) (respects-in lab xs1 ls1 l rp1 il1))
   (values j (InThere j j0 xs1 ij) pj))
 
-
 (def-fns _ $ (erased split-sub-t : (erased (List (Nat)) t xs ys zs) (subterm erased (Split t xs ys zs) sp) -> (erased (Sub ys t) r))
   (match erased sp _
     ((SpNil _) (SubNil t))
     ((SpIn _ xs1 ys1 zs1 x p sp1) (SubCons x ys1 t p (split-sub-t t xs1 ys1 zs1 sp1)))
     ((SpOut _ xs1 ys1 zs1 _ _ sp1) (split-sub-t t xs1 ys1 zs1 sp1))))
 
-; Names that red/ctree.sl defines again, kept for the files loaded after it.
 (let ((erased HSubNil)) SubNil)
 (let ((erased HSubCons)) SubCons)
 
@@ -265,7 +256,6 @@
   (let ((erased ims) (erased si) (erased jn)) (covers-image g rs2 xs rs1 cv2 sr1))
   (pigeonhole ims rs2 k1 k2 (joined-distinct g rs1 ims ps1 jn) si (joined-length g rs1 ims k1 jn lr1) lr2))
 
-; The count of classes among the darts of xs is determined.
 (def-fns _ $ (erased co-unique : (erased (List (Bond)) g) (erased (List (Nat)) xs) (erased (Nat) k1 k2) (erased (ClassesOn g xs k1) c1)
     (erased (ClassesOn g xs k2) c2) -> (erased (Eq (Nat) k1 k2) e))
   (le-antisym k1 k2 (co-le g xs k1 k2 c1 c2) (co-le g xs k2 k1 c2 c1)))
@@ -280,7 +270,6 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (SACons g x y m1 (MkSep g x y lab x y cl (fixed-in lab rs x fix ix) (fixed-in lab rs y fix iy) ne) (fixed-sepall g lab rs m1 x cl fix ix sb1 out1)))
 
-; Distinct darts fixed by a labelling constant along g are told apart by g.
 (def-fns _ $ (erased fixed-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab rs m) (erased (Const lab g) cl) (erased (Respects lab rs rs) fix)
     (subterm erased (Sub m rs) sb) (erased (Distinct m) dm) -> (erased (PairSep g m) r))
   (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (PrNil g)))
@@ -294,7 +283,6 @@
   (MkClassesOn g ids rs k lr (under-sub d rs ids (respects-under lab rs rs d fix ll) io) (fixed-pairsep g lab rs rs cl fix (sub-refl rs) dr)
     (rooted-covers g rs ids lab ro)))
 
-; A set g never leaves holds every dart joined to one of its darts.
 (def-fns _ $ (erased shut-conn : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Conn g x y) c) (erased (In x s) ix) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (In y s) r))
   (match erased (in-dec y s) _
@@ -315,7 +303,6 @@
       (absurd (OrR _ _ i) (apart-irrefl r (notin-in r r s (split-out s rs ys zs r sp i) ir))))
     c (co-cover g d s ids lab rs ys zs m1 io ll fix ro sh bg sp us sb1)))
 
-; A set of darts that g never leaves lies in some number of classes.
 (def-fns _ $ (erased co-exists : (erased (List (Bond)) g) (erased (Nat) d k) (erased (List (Nat)) s) (erased (Classes g d k) cs) (erased (Shut s g) sh)
     (erased (Under s d) us) -> (erased (Nat) k1) (erased (ClassesOn g s k1) r))
   (let ((erased bg)) (classes-below g d k cs))
@@ -356,7 +343,6 @@
     ((OrL _ _ i) (let ((erased r) (erased pin) (erased c)) (covers-at g rs1 s x c1 i)) (CovCons g rs u1 x r (app-in-l rs1 rs2 rs r ar pin) c rest))
     ((OrR _ _ i) (let ((erased r) (erased pin) (erased c)) (covers-at g rs2 t x c2 i)) (CovCons g rs u1 x r (app-in-r rs1 rs2 rs r ar pin) c rest))))
 
-; The classes of two disjoint sets of darts, the first one never left by g, add up.
 (def-fns _ $ (erased co-union : (erased (List (Bond)) g) (erased (Nat) d k1 k2 k) (erased (List (Nat)) s t st u) (erased (ClassesOn g s k1) c1)
     (erased (ClassesOn g t k2) c2) (erased (AppN s t st) ap) (erased (Sub u st) su) (erased (Sub st u) us) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Disj t s) dj) (erased (Under s d) uds) (erased (Under t d) udt) (erased (Add k1 k2 k) a) -> (erased (ClassesOn g u k) r))
@@ -425,7 +411,6 @@
   (let ((erased ims1) (erased rp1) (erased si1)) (lift-image g f1 f2 t xs m1 lf sb1))
   (values (Cons _ y ims1) (RespCons f1 m1 ims1 x y p1 rp1) (SubCons y ims1 t iy si1)))
 
-; Darts told apart in g1 have images told apart in g2.
 (def-fns _ $ (erased sep-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) d k2 a b a2 b2) (erased (Sep g1 a b) sp)
     (erased (In a s1) ia) (erased (In b s1) ib) (erased (Nth (Nat) h a a2) pa) (erased (Nth (Nat) h b b2) pb) (erased (Lift g1 h l s2 s1) lf)
     (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (Sep g2 a2 b2) r))
@@ -471,8 +456,6 @@
   (CovCons g2 ims m1 x r2 (in-map h rs ims r r2 pin rp q1) (conn-cat g2 r2 z x c3 (conn-sym g2 x z cxz))
     (covers-map g1 g2 s1 s2 h l rs ims m1 cv sr rp lf1 lf2 mv sb1)))
 
-; The classes of g1 on s1 and of g2 on s2 correspond through h and l, which send darts of one to darts of the other joined to
-; them (Gonthier's adjunction_n_comp).
 (def-fns _ $ (erased co-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) k d k2) (erased (ClassesOn g1 s1 k) co)
     (erased (Lift g1 h l s2 s1) lf1) (erased (Lift g2 l h s1 s2) lf2) (erased (Moves g1 s1 h g2) mv1) (erased (Moves g2 s2 l g1) mv2)
     (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (ClassesOn g2 s2 k) r))
@@ -673,7 +656,6 @@
       (apart-irrefl l (notin-in l l t ol i2)))
     ((OrR _ _ o) o)))
 
-; The darts whose labels, under a labelling constant along g, are in t form a set g never leaves.
 (def-fns _ $ (erased sb-shut : (erased (List (Nat)) lab t xs ys zs) (erased (List (Bond)) g) (erased (Nat) k) (erased (SplitBy lab t xs ys zs) sp)
     (subterm erased (Const lab g) cl) (erased (Below g k) bg) (erased (Iota k xs) io) -> (erased (Shut ys g) r))
   (let-match erased cl (ConstCons _ g1 x y l px py cl1) ((ConstNil _) (ShutNil ys)))
@@ -689,14 +671,12 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (SACons g x y R1 (MkSep g x y lab l l2 cl px py ne) (label-sepall g lab R1 ls1 x l cl px out1 rp1)))
 
-; Darts with distinct labels under a labelling constant along g are told apart by g.
 (def-fns _ $ (erased labels-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab R ls) (erased (Const lab g) cl) (subterm erased (Respects lab R ls) rp)
     (erased (Distinct ls) dl) -> (erased (PairSep g R) r))
   (let-match erased rp (RespCons _ R1 ls1 x l px rp1) ((RespNil _) (PrNil g)))
   (let-match erased dl (DistCons _ _ out dl1))
   (PrCons g x R1 (label-sepall g lab R1 ls1 x l cl px out rp1) (labels-pairsep g lab R1 ls1 cl rp1 dl1)))
 
-; With lab the root labelling of the classes of g, the darts whose classes meet R are joined to darts of R.
 (def-fns _ $ (erased label-covers : (erased (List (Bond)) g) (erased (Nat) d) (erased (List (Nat)) ids lab rs R LR ys zs m) (erased (Iota d ids) io)
     (erased (Rooted g rs ids lab) ro) (erased (Under R d) ur) (erased (Respects lab R LR) rp) (erased (SplitBy lab LR ids ys zs) sp) (erased (Under ys d) uy)
     (subterm erased (Sub m ys) sb) -> (erased (Covers g R m) r))
@@ -707,7 +687,6 @@
   (let ((erased _) (erased c2)) (classes-root g d ids lab rs b l io ro pb (under-in R b d ur ib)))
   (CovCons g R m1 x b ib (conn-cat g b l x (conn-sym g l b c2) c1) (label-covers g d ids lab rs R LR ys zs m1 io ro ur rp sp uy sb1)))
 
-; Two darts with one root label are joined.
 (def-fns _ $ (erased same-root : (erased (List (Bond)) g) (erased (Nat) d x y l) (erased (List (Nat)) ids lab rs) (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro)
     (erased (Nth (Nat) lab x l) px) (erased (Nth (Nat) lab y l) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Conn g x y) r))
   (let ((erased _) (erased c1)) (classes-root g d ids lab rs x l io ro px lx))
@@ -754,7 +733,6 @@
     ((OrL _ _ a2) (OrL _ _ (AdjThere g1 b x y a2)))
     ((OrR _ _ a2) (OrR _ _ a2))))
 
-; The three parts of the glink bonds g = ge . (gn . gf).
 (def-fns _ $ (erased gl-e : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) _c1) (erased (Cat ge gnf g) c2) (erased (Adj ge x y) a)
     -> (erased (Adj g x y) r))
   (adj-cat-l ge gnf g x y a c2))

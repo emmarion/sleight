@@ -1,5 +1,3 @@
-; FourColor from an Analysis, through CubicReduction. Load after reduce3.sl and induct.sl.
-
 (def-fns _ $ (erased four-color-from : (erased (Analysis) an) -> (erased (FourColor) r))
   (let ((erased _) (erased col)) (four-color-induct an))
   (def-fns _ $ (erased cubic-colour : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
