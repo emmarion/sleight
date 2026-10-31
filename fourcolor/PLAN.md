@@ -1133,7 +1133,15 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `AllRedC CRX css`. The sizes were chosen offline (not in the repository)
   from one run's measured time per configuration, so that each of the 100 pieces
   takes at most about 10 s by that measure; any sizes give a correct proof, only the
-  balance depends on them. `red/proof-c.sl` proves `AllRedC CRX css`
+  balance depends on them. Run outside `native-compute`, as separate
+  processes one at a time on a 4-core cloud VM shared with other runs, the
+  100 pieces took about 705 to 730 s of user CPU in three runs, against
+  about 850 s in one run of the code before the in-place closure trees
+  (ring-14 configurations about 490 to 510 s against about 600 s); in
+  one run each, about 625 s with `OCAMLRUNPARAM=o=400` (which the jobs
+  of `native-compute` appear to inherit with the rest of slc's
+  environment) and about 640 s with the program compiled with
+  `-inline 200` (`--inline`, MANUAL.md). `red/proof-c.sl` proves `AllRedC CRX css`
   (`all-red-proof`) for css the chunks of `red/configs.sl`
   (`red/chunks.sl`), with one `native.sl` job per piece, and
   `red/goal-c.sl` runs the jobs and sets and discharges the goal: every
