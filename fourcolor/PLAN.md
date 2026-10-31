@@ -1107,9 +1107,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   script were rejected. It carries no proofs yet. `data.sl`, which
   `gen.py` writes from the Coq sources, spells each presentation script
   as a string of numbers that `present.sl`'s `script-of` reads at run
-  time; as nested constructor applications the scripts appeared to make
-  most of the OCaml that `native-compute` compiles, and most of its
-  compile time.
+  time; as nested constructor applications the scripts made about 13 MB
+  of the 21 MB of OCaml that `native-compute` wrote for `qztgoal.sl` in
+  one run.
 
 - `unav/fit.sl`, `dbound.sl`, `hubcapc.sl`, `faces.sl`, `obsmap.sl`,
   `dscore.sl`, `runc.sl`: the part operations, dbound checks and hubcap
