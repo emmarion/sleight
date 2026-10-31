@@ -70,3 +70,9 @@
 (def-fns _ $ (erased allredc-pieces : (erased (Level) X) (erased (List (List (Config))) pcs kss) (erased (List (Config)) cfs) (erased (CfCat pcs cfs) qp)
     (erased (CfCat kss cfs) qk) (erased (AllRedC X pcs) ev) -> (erased (AllRedC X kss) r))
   (allredc-uncat X kss cfs qk (allred-cat X pcs cfs qp ev)))
+
+(def-fns _ $ (many piece-sizes : -> (many (List (Nat)) ns))
+  (Cons _ 109 $ Cons _ 53 $ Cons _ 21 $ Cons _ 16 $ Cons _ 13 $ Cons _ 7 $ Cons _ 6 $ Cons _ 5 $ Cons _ 6 $ Cons _ 18 $ Cons _ 18 $ Cons _ 8 $ Cons _ 5 $ Cons _ 5 $ Cons _ 5 $ Cons _ 5 $ Cons _ 6 $ Cons _ 6 $ Cons _ 7 $ Cons _ 53 $ Cons _ 25 $ Cons _ 41 $ Cons _ 30 $ Cons _ 19 $ Cons _ 7 $ Cons _ 5 $ Cons _ 5 $ Cons _ 6 $ Cons _ 8 $ Cons _ 14 $ Cons _ 8 $ Cons _ 6 $ Cons _ 7 $ Cons _ 10 $ Cons _ 33 $ Cons _ 17 $ Cons _ 6 $ Nil _))
+
+(let ((many cfs-all) (erased cfs-cat)) (cf-concat css))
+(let ((many pcs) (erased pcs-cat)) (cf-cut (piece-sizes) cfs-all))
