@@ -485,9 +485,6 @@
   (many GKEmpty : -> (GKeep (GEmpty)))
   (many GKLive : (erased (Gtree) g) -> (GKeep g)))
 
-(def-fns _ $ (many gkeep : (many (Gtree) g) -> (many (GKeep g) k))
-  (match many g _ ((GEmpty) (GKEmpty)) (else (GKLive g))))
-
 (def-fns _ $ (many gkeep4 : (erased (Gtree) a b c d) (many (GKeep a) w) (many (GKeep b) x) (many (GKeep c) y) (many (GKeep d) z) ->
     (many (Empty4 a b c d) r))
   (let-match many w (GKEmpty) (else (E4No a b c d)))
