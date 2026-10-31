@@ -56,21 +56,46 @@ def script(n):
             lab, loc, j, op, k = m.group(1, 2, 3, 4, 5)
             left = goal(env)
             right = goal(env + [lab] if lab else env)
-            return [0, LOC[loc], int(j) - 1, int(k), int(op == '<='), int(bool(lab))] + left + right
+            return ([0, LOC[loc], int(j) - 1, int(k), int(op == '<='), int(bool(lab))], left, right)
         if m.group(6):
-            return [1]
+            return ([1],)
         if m.group(7) is not None:
-            return hubcap(m.group(7))
+            return (hubcap(m.group(7)),)
         mir, lab, k = m.group(8, 9, 10)
-        return [3, env[::-1].index(lab), int(mir == '*'), int(k)]
-    nums = goal([])
+        return ([3, env[::-1].index(lab), int(mir == '*'), int(k)],)
+    tree = goal([])
     assert pos[0] == len(toks)
-    return nums
+    return tree
+
+CUT, CUT_SMALL, CUT_BIG = ([4],), 100, 800
+
+def leaves(t):
+    return leaves(t[1]) + leaves(t[2]) if len(t) == 3 else int(t[0][0] in (1, 2))
+
+def flat(t):
+    return t[0] + flat(t[1]) + flat(t[2]) if len(t) == 3 else t[0]
+
+def cut(t):
+    if CUT_SMALL <= leaves(t) <= CUT_BIG:
+        return CUT, [t]
+    if len(t) != 3:
+        return t, []
+    (sl, cl), (sr, cr) = cut(t[1]), cut(t[2])
+    return (t[0], sl, sr), cl + cr
+
+def walk_cut(t):
+    return (t, []) if leaves(t) <= CUT_BIG else cut(t)
 
 def spell(nums):
     assert all(0 <= x <= 61 for x in nums)
     return ''.join('\\x5c' if x == 27 else chr(65 + x) for x in nums)
 
+srcs = []
 for n in range(5, 12):
-    lines.append('(def-fns _ $ (many script%d : -> (many (Script) s)) (script-of "%s"))' % (n, spell(script(n))))
+    skel, regions = walk_cut(script(n))
+    srcs.append('(values "%s" (%s))' % (spell(flat(skel)), seq('"%s"' % spell(flat(r)) for r in regions)))
+lines.append('(def-fns _ $ (many script-src : (many (Nat) a) -> (many (String) skel) (many (List (String)) cuts))\n%s\n  %s)'
+             % (''.join('  (let-match many (nat-eqb a %d) (BFalse) ((BTrue) %s))\n' % (n, x) for n, x in zip(range(5, 11), srcs)), srcs[-1]))
+lines.append('(def-fns _ $ (many script-by : (many (Nat) a) -> (many (Script) s)) (let ((many skel) (many cuts)) (script-src a)) (script-from skel cuts))')
+lines += ['(def-fns _ $ (many script%d : -> (many (Script) s)) (script-by %d))' % (n, n) for n in range(5, 12)]
 open(out, 'w').write('\n'.join(lines) + '\n')

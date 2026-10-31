@@ -52,6 +52,8 @@
     ((BFalse)
       (let-match many (nat-eqb tag 1) (BFalse)
         ((BTrue) (values (SRed) s1)))
+      (let-match many (nat-eqb tag 4) (BFalse)
+        ((BTrue) (values (SCut) s1)))
       (let ((many a) (many s2)) (sc-num s1))
       (match many (nat-eqb tag 2) _
         ((BTrue) (let ((many hc) (many s3)) (sc-hcs a s2)) (values (SHub hc) s3))
@@ -62,6 +64,19 @@
 
 (def-fns _ $ (many script-of : (many (String) s) -> (many (Script) t))
   (let ((many t) (many _)) (sc-script 1000000 s))
+  t)
+
+(def-fns _ $ (many script-graft : (subterm many (Script) s) (many (List (String)) cuts) -> (many (Script) t) (many (List (String)) rest))
+  (match many s _
+    ((SCut) (let-match many cuts (Cons _ c rest) ((Nil _) (values s cuts))) (values (script-of c) rest))
+    ((SSplit i j k lo lab l r)
+      (let ((many l2) (many c1)) (notail $ script-graft l cuts))
+      (let ((many r2) (many c2)) (notail $ script-graft r c1))
+      (values (SSplit i j k lo lab l2 r2) c2))
+    (else (values s cuts))))
+
+(def-fns _ $ (many script-from : (many (String) skel) (many (List (String)) cuts) -> (many (Script) t))
+  (let ((many t) (many _)) (script-graft (script-of skel) cuts))
   t)
 
 (def-fns _ $ (many nth-part : (subterm many (Nat) i) (many (List (List (Sub))) xs) -> (many (List (Sub)) x))

@@ -233,33 +233,11 @@
   (let ((erased fr1)) (FRight nhub k rt rs ct o1 o1 mp0 mp mql mqh mpl mpr (forced-ext nhub rt rs ct acc o1 mp0 mp f1 e1) w1 s1 dl1 (ExtRefl o1)))
   (tail $ ctx-c nhub rt rs ct o1 env2 ee2 p0 pr mp0 mpr fr0 fr1 rest r))
 
-(def-fns _ $ (many sc-leaves : (subterm many (Script) s) -> (many (Nat) n))
-  (match many s _ ((SSplit _ _ _ _ _ l r) (nat-add (notail $ sc-leaves l) (notail $ sc-leaves r))) ((SRed) 1) ((SHub _) 1) (else 0)))
-
 (def-adts $ (Cut : -> Type)
   enum
   (many MkCut : (many (List (Bool)) path) -> (Cut)))
 
-; s with each largest subtree of small to big leaves cut out (SCut), and the paths of those subtrees, in walk order.
-(def-fns _ $ (many cut-script : (many (Nat) small big) (many (List (Bool)) rpath) (subterm many (Script) s) -> (many (Script) skel) (many (List (Cut)) cuts))
-  (let ((many n)) (sc-leaves s))
-  (let-match many (andb (leb small n) (leb n big)) (BFalse) ((BTrue) (values (SCut) (Cons _ (MkCut (rev-onto _ rpath (Nil _))) (Nil _)))))
-  (let-match many s (SSplit i j k lo lab l r) (else (values s (Nil _))))
-  (let ((many sl) (many cl)) (notail $ cut-script small big (Cons _ (BFalse) rpath) l))
-  (let ((many sr) (many cr)) (notail $ cut-script small big (Cons _ (BTrue) rpath) r))
-  (values (SSplit i j k lo lab sl sr) (cat _ cl cr)))
-
 (let ((many drs)) (symmetrize (base-drules)))
-(let ((many cut-small) (many cut-big)) (values 100 800))
-
-(def-fns _ $ (many script-by : (many (Nat) a) -> (many (Script) s))
-  (let-match many (nat-eqb a 5) (BFalse) ((BTrue) (script5)))
-  (let-match many (nat-eqb a 6) (BFalse) ((BTrue) (script6)))
-  (let-match many (nat-eqb a 7) (BFalse) ((BTrue) (script7)))
-  (let-match many (nat-eqb a 8) (BFalse) ((BTrue) (script8)))
-  (let-match many (nat-eqb a 9) (BFalse) ((BTrue) (script9)))
-  (let-match many (nat-eqb a 10) (BFalse) ((BTrue) (script10)))
-  (script11))
 
 (def-fns _ $ (many sub-at : (subterm many (List (Bool)) path) (many (Script) s) -> (many (Script) r))
   (let-match many path (Cons _ right rest) ((Nil _) s))
@@ -273,12 +251,17 @@
     ((BTrue) (SSplit i j k lo lab (SRed) (notail $ prune-left rest r)))
     ((BFalse) (SSplit i j k lo lab (notail $ prune-left rest l) r))))
 
-; The walk of arity a, its skeleton with the regions cut out, and the paths of those regions.
-(def-fns _ $ (many walk-cut : (many (Nat) a) -> (many (Script) full skel) (many (List (Cut)) cuts))
-  (let ((many full)) (script-by a))
-  (let ((many skel) (many cuts))
-    (match many (leb (sc-leaves full) cut-big) (((Script) skel) ((List (Cut)) cuts)) ((BTrue) (values full (Nil _))) ((BFalse) (cut-script cut-small cut-big (Nil _) full))))
-  (values full skel cuts))
+(def-fns _ $ (many cut-paths : (many (List (Bool)) rpath) (subterm many (Script) s) -> (many (List (Cut)) cuts))
+  (match many s _
+    ((SCut) (Cons _ (MkCut (rev-onto _ rpath (Nil _))) (Nil _)))
+    ((SSplit _ _ _ _ _ l r) (cat _ (notail $ cut-paths (Cons _ (BFalse) rpath) l) (notail $ cut-paths (Cons _ (BTrue) rpath) r)))
+    (else (Nil _))))
+
+; The skeleton of the walk of arity a, with its regions cut out (SCut), and the paths of those regions, in walk order.
+(def-fns _ $ (many walk-skel : (many (Nat) a) -> (many (Script) skel) (many (List (Cut)) cuts))
+  (let ((many k) (many _)) (script-src a))
+  (let ((many skel)) (script-of k))
+  (values skel (cut-paths (Nil _) skel)))
 
 ; The context of the walk of arity a, by drs, at path.
 (def-fns _ $ (many walk-ctx : (many (Nat) a) (many (List (List (Sub))) ct) (many (List (Bool)) path) (many (Script) skel)
@@ -289,10 +272,13 @@
   (let ((erased e0) (erased f0)) (values (EENil a rt rs ct (Nil _)) (FRoot a rt rs ct (Nil _) p)))
   (values rt rs sz tg (ctx-c a rt rs ct (Nil _) (Nil _) e0 p p p p f0 f0 path skel)))
 
+(def-fns _ $ (many root-reg : (many (Nat) a) (many (List (List (Sub))) ct) (many (List (Region)) xs) -> (many (List (Region)) xs2))
+  (let ((many p) (erased _)) (nseq-c _ a sub59))
+  (Cons _ (MkRegion a ct p p (Nil _) (BTrue)) xs))
+
 (def-fns _ $ (many push-regs : (many (Nat) a) (many (Script) skel) (many (List (List (Sub))) ct) (many (List (Region)) xs) (subterm many (List (Cut)) cs)
     -> (many (List (Region)) xs2))
-  (let ((many p) (erased _)) (nseq-c _ a sub59))
-  (let-match many cs (Cons _ c rest) ((Nil _) (Cons _ (MkRegion a ct p p (Nil _) (BTrue)) xs)))
+  (let-match many cs (Cons _ c rest) ((Nil _) (root-reg a ct xs)))
   (let-match many c (MkCut path))
   (let ((many _) (many _) (erased _) (erased _) (many cx)) (walk-ctx a ct path (prune-left path skel)))
   (let-match many cx (MkRCtx _ _ _ _ _ _ _ q _ mq _ _ _))
@@ -301,8 +287,11 @@
 ; The regions of the walks of arities a to 11, pushed onto xs in walk order, each walk's root region last.
 (def-fns _ $ (many all-regs : (subterm many (Nat) n) (many (Nat) a) (many (List (Region)) xs) -> (many (List (Region)) xs2))
   (let-match many n (Succ n1) ((Zero) xs))
-  (let ((many _) (many skel) (many cuts)) (walk-cut a))
-  (tail $ all-regs n1 (Succ a) (push-regs a skel (Nil _) xs cuts)))
+  (let ((many _) (many cs)) (script-src a))
+  (let ((many xs1)) (match many cs (((List (Region)) xs1))
+    ((Nil _) (root-reg a (Nil _) xs))
+    (else (let ((many skel) (many cuts)) (walk-skel a)) (push-regs a skel (Nil _) xs cuts))))
+  (tail $ all-regs n1 (Succ a) xs1))
 
 ; The quiz tree of cfs, built from the cfs that cfs-run gives a native job (qztcfs.sl or fcopen.sl).
 (def-fns _ $ (many cfs-tree : -> (many (Qzt) qt) (many (Checked (QInv cfs (Nil (Nat)) qt)) qc))
@@ -314,10 +303,10 @@
 ; One job per region.
 (def-fns _ $ (many reg-c : (many (Region) x) (many (List (Region)) t) -> (many (Checked (RegOK cfs drs x t)) r))
   (let-match many x (MkRegion nhub ct p mp path root))
-  (let ((many full) (many skel) (many _)) (walk-cut nhub))
+  (let ((many skel) (many _)) (walk-skel nhub))
   (let ((many rt) (many rs) (erased sz) (erased tg) (many cx)) (walk-ctx nhub ct path skel))
   (let-match many cx (MkRCtx _ _ _ _ acc env q0 q mq0 mq ee f0 f1))
-  (let ((many s)) (bif _ root skel (sub-at path full)))
+  (let ((many s)) (bif _ root skel (sub-at path (script-by nhub))))
   (let ((many ok) (many out) (erased w)) (check2-c nhub rt rs ct acc env ee q0 q mq0 mq f0 f1 s))
   (let-match many ok (BTrue) ((BFalse) (ChkNo _)))
   (let ((many okp) (erased wp)) (part-in p q))
