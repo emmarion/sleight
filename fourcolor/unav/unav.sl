@@ -7,7 +7,7 @@
   enum
   (many WLNil : (erased (List (List (Sub))) drs) (erased (Nat) m) -> (WalkL drs (Nil (List (List (Sub)))) m m))
   (many WLCons : (erased (List (List (Sub))) drs rs rt out) (erased (List (List (List (Sub)))) wobl) (erased (Nat) m hi) (erased (List (Sub)) p)
-      (erased (OfSize m drs rs) sz) (erased (Tgt m drs rt) tg) (erased (Repeat (Sub) m sub59 p) rp) (erased (Pres m rt rs p out) pr)
+      (erased (OfSize m drs rs) sz) (erased (Tgt m drs rt) tg) (erased (Repeat (Sub) m sub59 p) rp) (erased (Pres m rt rs (Nil (List (Sub))) p out) pr)
       (erased (WalkL drs wobl (Succ m) hi) rest) -> (WalkL drs (Cons (List (List (Sub))) out wobl) m hi)))
 
 (def-fns _ $ (many walk-c : (many (List (List (Sub))) drs) (many (Nat) m hi) (subterm many (List (Script)) ss)
@@ -18,17 +18,17 @@
   (let ((many rt) (erased tg)) (pick-target-c m drs))
   (let ((many p) (erased rp)) (nseq-c _ m sub59))
   (let ((many ok1) (many out) (erased w1))
-    (check2-c m rt rs (Nil _) (Nil _) (EENil m rt rs (Nil _)) p p p p (FRoot m rt rs (Nil _) p) (FRoot m rt rs (Nil _) p) s))
+    (check2-c m rt rs (Nil (List (Sub))) (Nil _) (Nil _) (EENil m rt rs (Nil (List (Sub))) (Nil _)) p p p p (FRoot m rt rs (Nil (List (Sub))) (Nil _) p) (FRoot m rt rs (Nil (List (Sub))) (Nil _) p) s))
   (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) (Nil _) (IfF _))))
   (let-match erased w1 (IfY _ w3))
-  (let-match erased w3 (MkW3 _ _ _ _ _ _ _ pr _ _))
+  (let-match erased w3 (MkW3 _ _ _ _ _ _ _ _ pr _ _))
   (let ((many ok) (many wobl) (erased w)) (notail $ walk-c drs (Succ m) hi ss1))
   (values ok (Cons _ out wobl) (match erased w _ ((IfY _ wl) (IfY _ (WLCons drs rs rt out wobl m hi p sz tg rp pr wl))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased walk-look : (erased (List (List (Sub))) drs) (erased (List (List (List (Sub)))) wobl) (erased (Nat) a m hi)
     (subterm erased (WalkL drs wobl m hi) wl) (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up)
     -> (erased (Nat) i) (erased (List (List (Sub))) rs rt out) (erased (List (Sub)) p) (erased (Nth (List (List (Sub))) wobl i out) pn) (erased (Add i m a) ad)
-    (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (erased (Repeat (Sub) a sub59 p) rp) (erased (Pres a rt rs p out) pr))
+    (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (erased (Repeat (Sub) a sub59 p) rp) (erased (Pres a rt rs (Nil (List (Sub))) p out) pr))
   (let-match erased wl (WLCons _ rs rt out wobl1 _ _ p sz tg rp pr rest) (absurd (WLNil _ _) (lt-le-absurd a m up lo)))
   (match erased (nat-eq a m) _
     ((Equal _ _ _) (values (Zero) rs rt out p (NthHere _ out wobl1) (AddZero a) sz tg rp pr))
@@ -66,7 +66,7 @@
       (let ((erased os) (erased ob)) (obs-exists d x e n f ks g a lx))
       (let ((erased xa)) (MkExactAt e f ks x a os p pa ob (root-exact d x a e n f ks os p g ob rp)))
       (UWalk d x a i e f ks wobl cobl out pa ad pn
-        (pres-sound d a e n f ks ws drs rt rs g sz iw (tgt-all d d a e n f ks ws drs rt g tg iw (lt-succ d)) x pos neg out p lx dsc lt xa pr)))))
+        (preshit-map d e n f ks drs out (pres-sound d a e n f ks ws drs rt rs (Nil (List (Sub))) g sz iw (tgt-all d d a e n f ks ws drs rt g tg iw (lt-succ d)) x pos neg out p lx dsc lt xa pr))))))
 
 ; The statement for the rules drs: the certified walks and cap checks succeed with obligation lists wobl and cobl, some
 ; dart of a plain cubic connected pentagonal map of genus 0 has positive dscore, and on a plain cubic pentagonal map,

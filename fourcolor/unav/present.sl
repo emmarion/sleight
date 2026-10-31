@@ -2,8 +2,68 @@
   enum
   (many SSplit : (many (Loc) i) (many (Nat) j k) (many (Bool) lo lab) (many (Script) l r) -> (Script))
   (many SRed : -> (Script))
+  (many SCut : -> (Script))
   (many SHub : (many (List (Hc)) hc) -> (Script))
   (many SSim : (many (Nat) idx) (many (Bool) mir) (many (Nat) n) -> (Script)))
+
+; A script spelt one number per character (the character's code less 65), in prefix order, as gen.py writes it.
+(def-fns _ $ (many sc-num : (many (String) s) -> (many (Nat) n) (many (String) rest))
+  (let-match many s (SCons c rest) ((SNil) (values 0 s)))
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 n _))
+  (values (monus n 65) rest))
+
+(def-fns _ $ (many sc-bool : (many (String) s) -> (many (Bool) b) (many (String) rest))
+  (let ((many n) (many rest)) (sc-num s))
+  (values (nat-eqb n 1) rest))
+
+(def-fns _ $ (many sc-z : (many (String) s) -> (many (Z) z) (many (String) rest))
+  (let ((many a) (many s1)) (sc-num s))
+  (let ((many b) (many s2)) (sc-num s1))
+  (values (MkZ a b) s2))
+
+(def-fns _ $ (many sc-hcs : (subterm many (Nat) cnt) (many (String) s) -> (many (List (Hc)) hc) (many (String) rest))
+  (let-match many cnt (Succ c1) ((Zero) (values (Nil _) s)))
+  (let ((many t) (many s1)) (sc-num s))
+  (let ((many i) (many s2)) (sc-num s1))
+  (let ((many h) (many s4))
+    (match many (nat-eqb t 1) (((Hc) h) ((String) s4))
+      ((BTrue) (let ((many z) (many s3)) (sc-z s2)) (values (HC1 i z) s3))
+      ((BFalse) (let ((many j) (many s3)) (sc-num s2)) (let ((many z) (many s5)) (sc-z s3)) (values (HC2 i j z) s5))))
+  (let ((many hs) (many s6)) (notail $ sc-hcs c1 s4))
+  (values (Cons _ h hs) s6))
+
+(def-fns _ $ (many sc-loc : (many (Nat) n) -> (many (Loc) i))
+  (bif _ (nat-eqb n 0) (LSpoke) (bif _ (nat-eqb n 1) (LHat) (LFan (monus n 2)))))
+
+(def-fns _ $ (many sc-script : (subterm many (Nat) fuel) (many (String) s) -> (many (Script) t) (many (String) rest))
+  (let-match many fuel (Succ f1) ((Zero) (values (SRed) s)))
+  (let ((many tag) (many s1)) (sc-num s))
+  (match many (nat-eqb tag 0) _
+    ((BTrue)
+      (let ((many li) (many s2)) (sc-num s1))
+      (let ((many j) (many s3)) (sc-num s2))
+      (let ((many k) (many s4)) (sc-num s3))
+      (let ((many lo) (many s5)) (sc-bool s4))
+      (let ((many lab) (many s6)) (sc-bool s5))
+      (let ((many l) (many s7)) (notail $ sc-script f1 s6))
+      (let ((many r) (many s8)) (notail $ sc-script f1 s7))
+      (values (SSplit (sc-loc li) j k lo lab l r) s8))
+    ((BFalse)
+      (match many (nat-eqb tag 1) _
+        ((BTrue) (values (SRed) s1))
+        ((BFalse)
+          (let ((many a) (many s2)) (sc-num s1))
+          (match many (nat-eqb tag 2) _
+            ((BTrue) (let ((many hc) (many s3)) (sc-hcs a s2)) (values (SHub hc) s3))
+            ((BFalse)
+              (let ((many mir) (many s3)) (sc-bool s2))
+              (let ((many n) (many s4)) (sc-num s3))
+              (values (SSim a mir n) s4))))))))
+
+(def-fns _ $ (many script-of : (many (String) s) -> (many (Script) t))
+  (let ((many t) (many _)) (sc-script 1000000 s))
+  t)
 
 (def-fns _ $ (many nth-part : (subterm many (Nat) i) (many (List (List (Sub))) xs) -> (many (List (Sub)) x))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
@@ -17,6 +77,7 @@
       (let ((many p0l)) (bif _ (good-split i j k p0) (split-part i j k lo p0) pl))
       (and (good-split i j k p) (notail $ check c env p0l pl l) (tail $ check c (bif _ lab (Cons _ p0l env) env) p0 pr r)))
     ((SRed) (redp c p))
+    ((SCut) (BFalse))
     ((SHub hc) (and (hubcap-cover c hc) (hubcap-fit c p hc)))
     ((SSim idx mir n)
       (let ((many ps)) (nth-part idx env))
