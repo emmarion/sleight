@@ -152,12 +152,11 @@
       ((POP _ m _ _ _ _ _ _ sb lh lp) (values q (exact-in e f ks y p q (exact-sub-at e f ks y m h p xh sb lh lp) ip) d0))
       ((POM _ m _ _ _ _ _ _ sb lh lp) (values mq (exact-in e f ks y mp mq (exact-sub-at e f ks y m h mp xh sb lh lp) im) d1))))
   (let ((erased ws) (erased iw)) (iota-exists d))
-  (match erased (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw (tgt-all d d nhub e n f ks ws drs rt g tg iw (lt-succ d)) y pos neg out u ly ds lt xu du) _
+  (let-match erased (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw (tgt-all d d nhub e n f ks ws drs rt g tg iw (lt-succ d)) y pos neg out u ly ds lt xu du) (PHCut _ z pos2 neg2 _ _ _ _ _ _ _ h2 lz ds2 lt2 x2 m2)
     ((PHMap _ _ _ _ _ _ _ _ mh) (hit-red cfs d e n f ks out g mh (MkRedE cfs out qt qi ar)))
-    ((PHPos _ z _ _ _ _ _ _ _ _ _ q2 lz _ _ x2 m2) (hit-red cfs d e n f ks out g (MkMapHit d z e f ks q2 out lz m2 x2) (MkRedE cfs out qt qi ar)))
-    ((PHCut _ z pos2 neg2 _ _ _ _ _ _ _ h2 lz ds2 lt2 x2 m2)
-      (let-match erased (cutsin-at ct h2 t ci m2) (MkInRegs _ _ x3 m3 po3))
-      (reg-claim cfs drs t rest x3 m3 h2 po3 d z pos2 neg2 e n f ks g lz ds2 lt2 x2))))
+    ((PHPos _ z _ _ _ _ _ _ _ _ _ q2 lz _ _ x2 m2) (hit-red cfs d e n f ks out g (MkMapHit d z e f ks q2 out lz m2 x2) (MkRedE cfs out qt qi ar))))
+  (let-match erased (cutsin-at ct h2 t ci m2) (MkInRegs _ _ x3 m3 po3))
+  (reg-claim cfs drs t rest x3 m3 h2 po3 d z pos2 neg2 e n f ks g lz ds2 lt2 x2))
 
 ; The root regions of arities m to hi - 1 in xs.
 (def-adts $ (RootsL : ((List (Region)) xs) ((Nat) m hi) -> Type)
@@ -169,12 +168,11 @@
 (def-fns _ $ (erased roots-look : (erased (List (Region)) xs) (erased (Nat) a m hi) (subterm erased (RootsL xs m hi) rl) (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up)
     -> (erased (Region) x) (erased (Mem (Region) x xs) mx) (erased (List (Sub)) p) (erased (Repeat (Sub) a sub59 p) rp) (erased (PartOf x p) po))
   (let-match erased rl (RLCons _ _ _ x p mx rp po rest) (absurd (RLNil _ _) (lt-le-absurd a m up lo)))
-  (match erased (nat-eq a m) _
-    ((Equal _ _ _) (values x mx p rp po))
-    ((Unequal _ _ _ _ ap)
-      (match erased ap _
-        (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
-        ((ApGt _ _ _ _ l) (roots-look xs a (Succ m) hi rest (LtS m a l) up))))))
+  (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
+    ((Equal _ _ _) (values x mx p rp po)))
+  (match erased ap _
+    (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
+    ((ApGt _ _ _ _ l) (roots-look xs a (Succ m) hi rest (LtS m a l) up))))
 
 (def-fns _ $ (many roots-c : (many (List (Region)) xs) (many (Nat) m hi) (subterm many (Nat) fuel) -> (many (Checked (RootsL xs m hi)) r))
   (let-match many (nat-eq m hi) (Unequal _ _ _ _ _) ((Equal _ _ _) (ChkYes _ (RLNil xs m))))
@@ -268,6 +266,13 @@
   (let-match many s (SSplit _ _ _ _ _ l r) (else s))
   (tail $ sub-at rest (bif _ right r l)))
 
+(def-fns _ $ (many prune-left : (subterm many (List (Bool)) path) (many (Script) s) -> (many (Script) r))
+  (let-match many path (Cons _ right rest) ((Nil _) s))
+  (let-match many s (SSplit i j k lo lab l r) (else s))
+  (match many right _
+    ((BTrue) (SSplit i j k lo lab (SRed) (notail $ prune-left rest r)))
+    ((BFalse) (SSplit i j k lo lab (notail $ prune-left rest l) r))))
+
 ; The walk of arity a, its skeleton with the regions cut out, and the paths of those regions.
 (def-fns _ $ (many walk-cut : (many (Nat) a) -> (many (Script) full skel) (many (List (Cut)) cuts))
   (let ((many full)) (script-by a))
@@ -289,7 +294,7 @@
   (let ((many p) (erased _)) (nseq-c _ a sub59))
   (let-match many cs (Cons _ c rest) ((Nil _) (Cons _ (MkRegion a ct p p (Nil _) (BTrue)) xs)))
   (let-match many c (MkCut path))
-  (let ((many _) (many _) (erased _) (erased _) (many cx)) (walk-ctx a ct path skel))
+  (let ((many _) (many _) (erased _) (erased _) (many cx)) (walk-ctx a ct path (prune-left path skel)))
   (let-match many cx (MkRCtx _ _ _ _ _ _ _ q _ mq _ _ _))
   (tail $ push-regs a skel (Cons _ q $ Cons _ mq ct) (Cons _ (MkRegion a ct q mq path (BFalse)) xs) rest))
 
