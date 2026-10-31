@@ -100,22 +100,6 @@
   (let-match many (notail $ inserte-c e rest) (IEYes _ _ ie p) ((IENo _ _) (IENo e cc)))
   (IEYes e cc (Cons _ y (Cons _ z ie)) (IECons e rest ie y z pz p)))
 
-(def-fns _ $ (erased lrel-d : (erased (List (Nat)) ie) (erased (List (Step)) cp) (erased (Nat) d d2) (erased (List (Nat)) e f r) (erased (List (List (Col))) ls)
-    (subterm erased (Cpmap cp d e f r) c) (erased (LRel ie cp d2 ls) lr) -> (erased (Eq (Nat) d d2) q))
-  (match erased c _
-    ((CmNil) (let-match erased lr (LrNil _ _ _)) (Refl _ d))
-    ((CmR _ _ cp1 _ _ r1 _ c1 _) (let-match erased lr (LrR _ _ _ _ ls1 _ lr1 _)) (lrel-d ie cp1 d d2 e f r1 ls1 c1 lr1))
-    (absurd (CmRr _ _ _ _ _ _ _ _ _ _) lr)
-    (absurd (CmU _ _ _ _ _ _ _ _ _ _) lr)
-    (absurd (CmK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) lr)
-    ((CmY d0 cp1 e0 f0 r0 _ _ _ _ _ _ c1 _ _)
-      (let-match erased lr (LrY _ d3 _ ls1 _ lr1 _))
-      (let-match erased (lrel-d ie cp1 d0 d3 e0 f0 r0 ls1 c1 lr1) (Refl _ _))
-      (Refl _ d))
-    ((CmH d0 cp1 e0 f0 r0 _ _ _ _ _ _ _ _ _ c1 _ _ _)
-      (let-match erased lr (LrH _ d3 _ ls1 _ lr1 _))
-      (let-match erased (lrel-d ie cp1 d0 d3 e0 f0 r0 ls1 c1 lr1) (Refl _ _))
-      (Refl _ d))))
 
 ; The validity of a contract, decided on the concrete map.
 
@@ -328,13 +312,12 @@
   (let-match many (valid-c d e f r cc ie n h pi) (CkY _ v) ((CkN _) (values (CkN _) cache)))
   (let ((many kc) (many cache2)) (kempe-tree-chk cp cache))
   (let-match many kc (KCYes _ h0 kt ks cs na2) ((KCNo _) (values (CkN _) cache2)))
-  (let-match many (lrel-c ie cp) (LRYes _ _ d2 ls lr) ((LRNo _ _) (values (CkN _) cache2)))
-  (let-match erased (lrel-d ie cp d d2 e f r ls c lr) (Refl _ _))
-  (let ((erased zs) (erased ra)) (revapp-exists (List (Col)) ls (Nil (List (Col)))))
-  (let-match many (allout-c kt ls (Nil _) zs ra (AONil kt)) (CkY _ ao) ((CkN _) (values (CkN _) cache2)))
+  (let-match many (ryh-c cp) (CkY _ ry) ((CkN _) (values (CkN _) cache2)))
+  (let ((many rp) (erased rs)) (revs-c cp))
+  (let-match many (dfs-c kt ie (Cons _ (SU) rp) all-cols (Zero) (Nil _)) (CkY _ df) ((CkN _) (values (CkN _) cache2)))
   (values (CkY _ (MkReducible CRX sym cci cc cp (MkCfContract cp cci xs cc pce pk)
     (check-reducible-valid CRX CGL (prove-predates KHL CRX) (prove-predates CGL CRX) cp cc kt
-      (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie ls zs c h v pi lr ra ao)))) cache2))
+      (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie rp c h v pi ry rs (dfe-good kt ie (Cons _ (SU) rp) (Zero) (Nil _) df))))) cache2))
 
 (def-adts $ (AllRed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
