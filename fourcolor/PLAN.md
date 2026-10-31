@@ -891,7 +891,18 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `--goal proved`. In one run on a 4-core cloud VM, sharing it with two
   other runs of this size, it passed with slc in about 2190 s (36
   minutes), at most about 3.3 GB resident; the reference compiler has
-  checked the same computations in `fcmanyfinal.sl`'s unit (above). In test runs on the chain of
+  checked the same computations in `fcmanyfinal.sl`'s unit (above).
+  With the configurations given to the jobs as chunk strings (the
+  `red/configs.sl` entry), in single measurements that should be read as
+  approximate: the OCaml `native-compute` writes for this unit shrank
+  from about 22.0 MB with about 53,800 top-level `let`s to about 14.3 MB
+  with about 4,300, most of what is left being `unav/data.sl`'s scripts;
+  for the red and `AllGc` jobs alone, from about 8.0 MB and 49,900 `let`s
+  to about 0.4 MB and 970, which ocamlopt compiled in about 1 s; and the
+  elaboration before `native-run` took about 160 s in place of 195 s.
+  With that change, and `native.sl` before `embed4.sl`, one run with slc
+  passed in about 420 s of wall time (about 940 s of CPU) on a 4-core
+  cloud VM running other jobs, at most about 1.4 GB resident. In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
