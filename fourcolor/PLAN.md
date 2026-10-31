@@ -928,7 +928,17 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `--goal proved`. In one run each on a 4-core cloud VM shared with other
   runs it passed with slc in about 1510 s and with the reference compiler
   (under `ulimit -s unlimited`) in about 970 s, at most about 3.3 GB
-  resident. In test runs on the chain of
+  resident. That was with the configurations built into the program
+  `native-compute` writes; with the jobs given strings instead (the
+  `red/configs.sl` entry), in single measurements on a 4-core cloud VM
+  running other jobs, which should be read as approximate: the program
+  shrank from about 20.7 MB with about 44,500 top-level `let`s to about
+  14.6 MB with about 6,500, and ocamlopt (under `ulimit -s unlimited`)
+  compiled it in about 22 s in place of about 1260 s, or about 17 s in
+  place of about 300 s with `OCAMLRUNPARAM=o=1000`; the unit passed with
+  slc in about 430 to 450 s of wall time (about 1000 s of CPU, at most
+  about 1.4 GB resident) in two runs, and with the reference compiler in
+  about 730 s in one. In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
