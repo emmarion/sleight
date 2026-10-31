@@ -86,10 +86,10 @@
   (let-match erased (length-fn (U8) tps len cap lp l1) (Refl _ _))
   (values (match many d _ ((Yes _ _ _ _ b) (BdY cap b)) ((No _ _ _ _ _) (BdN cap))) tb1))
 
-(def-fns _ $ (erased imm-nat : (many (Nat) n) (erased (Lt n u62-modulus) q) -> (erased (ImmSlot (slot-of n)) r))
-  (ImmPlaced _ (ImmU62) _ _ (place-at-many _ (coerce n (coercible-wrap (Shared) MkU62 n q)))))
+(def-fns _ $ (erased imm-nat : (many (Nat) n) (erased (Lt n u62-modulus) q) -> (erased (Imm (Slot) (slot-of n)) r))
+  (ImmPlaced (Nat) n (ImmNat n q) _ (place-at-many _ n)))
 
-(def-fns _ $ (erased imm-le : (many (Nat) n) (erased (Nat) cap) (erased (Lt n (Succ cap)) b) (erased (Lt cap u62-modulus) q) -> (erased (ImmSlot (slot-of n)) r))
+(def-fns _ $ (erased imm-le : (many (Nat) n) (erased (Nat) cap) (erased (Lt n (Succ cap)) b) (erased (Lt cap u62-modulus) q) -> (erased (Imm (Slot) (slot-of n)) r))
   (imm-nat n (lt-le-trans n (Succ cap) u62-modulus b (LtS cap u62-modulus q))))
 
 (def-fns _ $ (erased le-bd : (erased (Nat) a n) (erased (Lt a (Succ n)) le) (erased (Lt n u62-modulus) bd) -> (erased (Lt a u62-modulus) r))
