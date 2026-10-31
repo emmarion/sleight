@@ -890,14 +890,21 @@
     ((KDoneC _ _ _ _ a ca ea b gb vb eb k ua ub) (values a ca ea b gb vb eb k ua ub))
     ((KGoC _ _ _ _ a ca ea b gb vb eb k cr2 ua ub) (tail $ ktc-u c0 r0 g0 d1 h a ca ea b gb vb eb k cr2 ua ub))))
 
-(def-fns _ $ (many ktc-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
+(def-fns _ $ (many ktc-run : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
     (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (CtH (Succ h) ctu) hc) ->
-    (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2) (erased (CtH (Succ h) ctu2) hc2))
+    (many (Ctree) ctu2) (many (Gtree) gtr2) (unique (UGtree) gu2) (erased (Gtree) gtu2) (erased (UG gu2 gtu2) ug2)
+    (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2) (erased (CtH (Succ h) ctu2) hc2))
   (let ((unique u) (erased ut) (many e)) (ut-of h ctu hc))
   (let ((unique gu) (erased ug) (many ge)) (ug-of gtu))
   (let ((unique u2) (erased c2) (many _) (many g2) (unique gu2) (erased v2) (many _) (erased kr2) (erased ut2) (erased ug2))
     (ktc-u c0 r0 g0 d h u ctu e ctr gu gtu ge kr cr ut ug))
-  (values (ct-of h u2 c2 ut2) g2 (gt-of gu2 v2 ug2) kr2 (ut-h h u2 c2 ut2)))
+  (values (ct-of h u2 c2 ut2) g2 gu2 v2 ug2 kr2 (ut-h h u2 c2 ut2)))
+
+(def-fns _ $ (many ktc-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
+    (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (CtH (Succ h) ctu) hc) ->
+    (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2) (erased (CtH (Succ h) ctu2) hc2))
+  (let ((many c2) (many g2) (unique gu2) (erased v2) (erased ug2) (erased kr2) (erased hc2)) (ktc-run c0 r0 g0 d h ctu ctr gtu kr cr hc))
+  (values c2 g2 (gt-of gu2 v2 ug2) kr2 hc2))
 
 (def-adts $ (KSound : (Pred P) ((Nat) h) ((Ctree) ct) -> Type)
   enum
@@ -908,8 +915,8 @@
     (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge)
     (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (CtAllP P ctr (Nil (Col))) ca) (erased (CtH (Succ h) ctu) hc) ->
     (many (Ctree) ct) (erased (KSound P h ct) ks))
-  (let ((many ct) (many gtr) (many gtu2) (erased kr) (erased _))
-    (ktc-c ctu ctr gtu (Succ $ Succ h) h ctu ctr gtu (KRBase h ctu ctr gtu) (CRBase h ctu ctr gtu) hc))
+  (let ((many ct) (erased gtr) (unique _) (erased gtu2) (erased _) (erased kr) (erased _))
+    (ktc-run ctu ctr gtu (Succ $ Succ h) h ctu ctr gtu (KRBase h ctu ctr gtu) (CRBase h ctu ctr gtu) hc))
   (values ct (MkKSound P h ct gtr gtu2 (kr-kv P h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr ca) ct gtr gtu2 kr))))
 
 (def-fns _ $ (erased kempe-tree-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound P h kt) ks)
