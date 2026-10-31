@@ -1,9 +1,12 @@
-# An all-array Skelet #1 runner: plan
+# The array Skelet #1 runner
 
-This is the plan for replacing the lists of the Skelet #1 runner
-(`bb/sk1.sl`, `bb/sk1a.sl`) with arrays. It changes neither the language
-nor the prelude. The claims about cost below are expectations from
-reading code and from one profile, not measurements of this design.
+This describes the array runner, `main-run-v` in `bb/sk1o.sl`, which
+sits beside the list runner of `bb/sk1.sl` rather than replacing it
+([README.md](README.md) lists both). It changes neither the language nor
+the prelude. Parts of the design below are not built: the left tape is a
+list and the chunk metadata is a chain of linked `Zm` records. The
+claims about cost below are expectations from reading code and from
+profiles, not measurements of this design.
 
 ## 1. Generic infrastructure
 
@@ -57,11 +60,13 @@ reading code and from one profile, not measurements of this design.
 
 ### 2a. State
 
-- Left vector: the left tape, nearest cell on top.
+- Left vector: the left tape, nearest cell on top. Not built; the
+  left tape is a list.
 - Right vector: the tape right of the head, far end at index 0, reading
   up: deepest chunk, ..., `D`, top chunk, `D`, window.
 - Chunk metadata vector: per chunk its boundary, pending strides and
-  capacity, mirroring the erased `Zk`.
+  capacity, mirroring the erased `Zk`. Not built; the runner keeps this
+  in a chain of linked `Zm` records.
 - Scratch (1b).
 
 ### 2b. Operations
@@ -105,6 +110,6 @@ force/enter logic. Only their data representation changes.
 
 ## 4. Measuring
 
-Compare against the list runner (about 10.5 s user for the job in one
-measurement) with `bench/sk1.sh`, always at `--inline 25`, and run the
+Compare against the list runner with `bench/sk1.sh` ([README.md](README.md)
+gives both commands), always at `--inline 25`, and run the
 full BB(5) check (`bench/sk1.sh -f`) before relying on a result.
