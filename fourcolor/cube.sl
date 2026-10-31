@@ -832,16 +832,6 @@
   (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (NotInNil n)))
   (NotInCons n x xs1 (ApGt _ _ n x l) (under-notin xs1 n u1)))
 
-(def-fns _ $ (erased iota-distinct : (erased (Nat) d) (erased (List (Nat)) ids) (subterm erased (Iota d ids) io) -> (erased (Distinct ids) r))
-  (let-match erased io (IotaS n ids1 _ io1 sn) ((IotaZ) (DistNil)))
-  (distinct-snoc-cons n ids1 ids sn
-    (DistCons n ids1 (under-notin ids1 n (perm-under n ids1 ids1 (perm-id n ids1 io1))) (iota-distinct n ids1 io1))))
-
-(def-fns _ $ (erased under-sub : (erased (Nat) d) (erased (List (Nat)) xs ids) (subterm erased (Under xs d) u) (erased (Iota d ids) io)
-    -> (erased (Sub xs ids) r))
-  (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (SubNil ids)))
-  (SubCons x xs1 ids (iota-in d x ids io l) (under-sub d xs1 ids u1 io)))
-
 ; A labelling constant along the graph of p is constant along p.
 (def-fns _ $ (erased graph-resp : (erased (Nat) d) (erased (List (Nat)) p lab) (erased (List (Bond)) g) (erased (Graph d p g) gr)
     (erased (Const lab g) cl) (erased (Length (Nat) lab d) ll) -> (erased (Respects lab p lab) r))

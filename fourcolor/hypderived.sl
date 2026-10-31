@@ -1,12 +1,5 @@
 ; Every hypermap has a genus, and the derived hypermaps of hypermap.v (permN, permF, dual) keep it.
 
-(def-fns _ $ (erased add-assoc : (erased (Nat) a b c ab abc) (subterm erased (Add a b ab) p) (erased (Add ab c abc) q) ->
-    (erased (Nat) bc) (erased (Add b c bc) r) (erased (Add a bc abc) s))
-  (let-match erased p (AddSucc a1 _ ab1 p1) ((AddZero _) (values abc q (AddZero abc))))
-  (let-match erased q (AddSucc _ _ abc1 q1))
-  (let ((erased bc) (erased r) (erased s)) (add-assoc a1 b c ab1 abc1 p1 q1))
-  (values bc r (AddSucc a1 bc abc1 s)))
-
 (def-fns _ $ (erased add-assoc-inv : (erased (Nat) a b c bc abc) (erased (Add b c bc) p) (subterm erased (Add a bc abc) q) ->
     (erased (Nat) ab) (erased (Add a b ab) r) (erased (Add ab c abc) s))
   (let-match erased q (AddSucc a1 _ abc1 q1) ((AddZero _) (values b (AddZero b) p)))
