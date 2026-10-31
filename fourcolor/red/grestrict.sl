@@ -246,44 +246,46 @@
   (match many t _ ((GEmpty) (BFalse)) (else (BTrue))))
 
 (def-fns _ $ (many rx-cons : (many (Bool) w) (erased (Gsym) s) (erased (List RC) rr) (erased (Bstack) bs) (erased (Ctree) t) (erased (Col) e)
-    (many (Bstack) bs2) (many (Ctree) t2) (many (List RC) acc)
+    (many (Bstack) bs2) (many (Ctree) t2) (erased (List RC) acc) (many (RxL (Ctree) acc) al)
     (erased (Elem RC (MkRx (Ctree) bs t) rr) el) (erased (Sym s bs e bs2) y) (erased (CtSel t e t2) sl) (erased (RJust s rr acc) j) ->
-    (many (List RC) acc2) (erased (RJust s rr acc2) k))
-  (let-match many w (BTrue) ((BFalse) (values acc j)))
+    (erased (List RC) acc2) (many (RxL (Ctree) acc2) al2) (erased (RJust s rr acc2) k))
+  (let-match many w (BTrue) ((BFalse) (values acc al j)))
   (match many t2 _
-    ((CEmpty) (values acc j))
-    (else (values (Cons _ (MkRx _ bs2 t2) acc) (RJCons s rr acc bs bs2 t t2 e el y sl j)))))
+    ((CEmpty) (values acc al j))
+    (else (values (Cons _ (MkRx _ bs2 t2) acc) (RxCons _ bs2 t2 acc al) (RJCons s rr acc bs bs2 t t2 e el y sl j)))))
 
-(def-fns _ $ (many grpop : (many (Bool) w2 w3) (erased (List RC) rr) (many (Bstack) bs) (erased (Ctree) t1) (many (Ctree) t2 t3) (many (List RC) r2 r3)
+(def-fns _ $ (many grpop : (many (Bool) w2 w3) (erased (List RC) rr) (many (Bstack) bs) (erased (Ctree) t1) (many (Ctree) t2 t3) (erased (List RC) r2 r3)
+    (many (RxL (Ctree) r2) l2) (many (RxL (Ctree) r3) l3)
     (erased (Elem RC (MkRx (Ctree) bs (CNode t1 t2 t3)) rr) el) (erased (RJust (GPop0) rr r2) j2) (erased (RJust (GPop1) rr r3) j3) ->
-    (many (List RC) a2 a3) (erased (RJust (GPop0) rr a2) k2) (erased (RJust (GPop1) rr a3) k3))
+    (erased (List RC) a2 a3) (many (RxL (Ctree) a2) m2) (many (RxL (Ctree) a3) m3) (erased (RJust (GPop0) rr a2) k2) (erased (RJust (GPop1) rr a3) k3))
   (let ((erased t)) (CNode t1 t2 t3))
   (match many bs _
-    ((BS0) (values r2 r3 j2 j3))
+    ((BS0) (values r2 r3 l2 l3 j2 j3))
     ((BP0 b)
-      (let ((many a2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C2) b t2 r2 el (SPop02 b) (SelN2 t1 t2 t3) j2))
-      (let ((many a3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C3) b t3 r3 el (SPop13 b) (SelN3 t1 t2 t3) j3))
-      (values a2 a3 k2 k3))
+      (let ((erased a2) (many m2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C2) b t2 r2 l2 el (SPop02 b) (SelN2 t1 t2 t3) j2))
+      (let ((erased a3) (many m3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C3) b t3 r3 l3 el (SPop13 b) (SelN3 t1 t2 t3) j3))
+      (values a2 a3 m2 m3 k2 k3))
     ((BP1 b)
-      (let ((many a2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C3) b t3 r2 el (SPop03 b) (SelN3 t1 t2 t3) j2))
-      (let ((many a3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C2) b t2 r3 el (SPop12 b) (SelN2 t1 t2 t3) j3))
-      (values a2 a3 k2 k3))))
+      (let ((erased a2) (many m2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C3) b t3 r2 l2 el (SPop03 b) (SelN3 t1 t2 t3) j2))
+      (let ((erased a3) (many m3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C2) b t2 r3 l3 el (SPop12 b) (SelN2 t1 t2 t3) j3))
+      (values a2 a3 m2 m3 k2 k3))))
 
-(def-fns _ $ (many gtr-split-c : (many (Bool) w0 w1 w2 w3) (erased (List RC) rr) (many (List RC) r0 r1 r2 r3) (subterm many (List RC) r)
+(def-fns _ $ (many gtr-split-c : (many (Bool) w0 w1 w2 w3) (erased (List RC) rr) (erased (List RC) r0 r1 r2 r3) (many (RxL (Ctree) r0) l0)
+    (many (RxL (Ctree) r1) l1) (many (RxL (Ctree) r2) l2) (many (RxL (Ctree) r3) l3) (erased (List RC) r) (subterm many (RxL (Ctree) r) rl)
     (erased (Suffix RC r rr) sf) (erased (RJust (GPush) rr r0) j0) (erased (RJust (GSkip) rr r1) j1) (erased (RJust (GPop0) rr r2) j2)
     (erased (RJust (GPop1) rr r3) j3) ->
-    (many (List RC) s0 s1 s2 s3) (erased (RJust (GPush) rr s0) k0) (erased (RJust (GSkip) rr s1) k1) (erased (RJust (GPop0) rr s2) k2)
-    (erased (RJust (GPop1) rr s3) k3))
-  (let-match many r (Cons _ x rest) ((Nil _) (values r0 r1 r2 r3 j0 j1 j2 j3)))
+    (erased (List RC) s0 s1 s2 s3) (many (RxL (Ctree) s0) m0) (many (RxL (Ctree) s1) m1) (many (RxL (Ctree) s2) m2) (many (RxL (Ctree) s3) m3)
+    (erased (RJust (GPush) rr s0) k0) (erased (RJust (GSkip) rr s1) k1) (erased (RJust (GPop0) rr s2) k2) (erased (RJust (GPop1) rr s3) k3))
+  (let-match many rl (RxCons _ bs t rest tl) ((RxNil _) (values r0 r1 r2 r3 l0 l1 l2 l3 j0 j1 j2 j3)))
+  (let ((erased x)) (MkRx (Ctree) bs t))
   (let ((erased sf1)) (SufNext RC x rest rr sf))
-  (let-match many x (MkRx _ bs t))
-  (let-match many t (CNode t1 t2 t3) (else (tail $ gtr-split-c w0 w1 w2 w3 rr r0 r1 r2 r3 rest sf1 j0 j1 j2 j3)))
+  (let-match many t (CNode t1 t2 t3) (else (tail $ gtr-split-c w0 w1 w2 w3 rr r0 r1 r2 r3 l0 l1 l2 l3 rest tl sf1 j0 j1 j2 j3)))
   (let ((erased el)) (suffix-elem RC x r rr sf (ElHere RC x rest)))
-  (let ((many a2) (many a3) (erased k2) (erased k3)) (grpop w2 w3 rr bs t1 t2 t3 r2 r3 el j2 j3))
-  (let ((many c0) (erased q0)) (rx-cons w0 (GPush) rr bs t (C3) (BP1 bs) t3 r0 el (SPush3 bs) (SelN3 t1 t2 t3) j0))
-  (let ((many d0) (erased l0)) (rx-cons w0 (GPush) rr bs t (C2) (BP0 bs) t2 c0 el (SPush2 bs) (SelN2 t1 t2 t3) q0))
-  (let ((many d1) (erased l1)) (rx-cons w1 (GSkip) rr bs t (C1) bs t1 r1 el (SSkip bs) (SelN1 t1 t2 t3) j1))
-  (tail $ gtr-split-c w0 w1 w2 w3 rr d0 d1 a2 a3 rest sf1 l0 l1 k2 k3))
+  (let ((erased a2) (erased a3) (many n2) (many n3) (erased k2) (erased k3)) (grpop w2 w3 rr bs t1 t2 t3 r2 r3 l2 l3 el j2 j3))
+  (let ((erased c0) (many o0) (erased q0)) (rx-cons w0 (GPush) rr bs t (C3) (BP1 bs) t3 r0 l0 el (SPush3 bs) (SelN3 t1 t2 t3) j0))
+  (let ((erased d0) (many p0) (erased e0)) (rx-cons w0 (GPush) rr bs t (C2) (BP0 bs) t2 c0 o0 el (SPush2 bs) (SelN2 t1 t2 t3) q0))
+  (let ((erased d1) (many p1) (erased e1)) (rx-cons w1 (GSkip) rr bs t (C1) bs t1 r1 l1 el (SSkip bs) (SelN1 t1 t2 t3) j1))
+  (tail $ gtr-split-c w0 w1 w2 w3 rr d0 d1 a2 a3 p0 p1 n2 n3 rest tl sf1 e0 e1 k2 k3))
 
 (def-adts $ (Hit1 : ((Bstack) bs) ((Ctree) t) ((Gsym) s) -> Type)
   enum
@@ -320,12 +322,13 @@
   (many HYes : (erased (List RC) r) (erased (Gsym) s) (erased (Hits r (Cons (Gsym) s (Nil (Gsym)))) h) -> (HitRes r s))
   (many HNo : (erased (List RC) r) (erased (Gsym) s) -> (HitRes r s)))
 
-(def-fns _ $ (many gtr-match-c : (many (Gsym) s) (erased (List RC) rr) (subterm many (List RC) r) (erased (Suffix RC r rr) sf) -> (many (HitRes rr s) res))
-  (let-match many r (Cons _ x rest) ((Nil _) (HNo rr s)))
-  (let-match many x (MkRx _ bs t))
+(def-fns _ $ (many gtr-match-c : (many (Gsym) s) (erased (List RC) rr r) (subterm many (RxL (Ctree) r) rl) (erased (Suffix RC r rr) sf) ->
+    (many (HitRes rr s) res))
+  (let-match many rl (RxCons _ bs t rest tl) ((RxNil _) (HNo rr s)))
+  (let ((erased x)) (MkRx (Ctree) bs t))
   (match many (sym-hit-c s bs t) _
     ((H1Yes _ _ _ et m mt) (HYes rr s (MkHits rr (Cons _ s (Nil _)) bs t et (suffix-elem RC x r rr sf (ElHere RC x rest)) m mt)))
-    ((H1No _ _ _) (tail $ gtr-match-c s rr rest (SufNext RC x rest rr sf)))))
+    ((H1No _ _ _) (tail $ gtr-match-c s rr rest tl (SufNext RC x rest rr sf)))))
 
 
 (def-adts $ (Empty4 : ((Gtree) a) ((Gtree) b) ((Gtree) c) ((Gtree) d) -> Type)
@@ -351,90 +354,91 @@
     (MkGHitAt x (GSG x2) r r2 (GPop0) (GSelN x0 x1 x2 x3 x2 (GPop0) (PkPop0 _ x0 x1 x2 x3)) j2 h2)
     (MkGHitAt x (GSG x3) r r3 (GPop1) (GSelN x0 x1 x2 x3 x3 (GPop1) (PkPop1 _ x0 x1 x2 x3)) j3 h3)))
 
-(def-fns _ $ (many gleaf-restrict-c : (many (Gtree) t) (many (List RC) r) ->
+(def-fns _ $ (many gleaf-restrict-c : (many (Gtree) t) (erased (List RC) r) (many (RxL (Ctree) r) rl) ->
     (many (Gtree) hit miss) (erased (GPart (GSG t) (GSG hit) (GSG miss)) p) (erased (GHit (GSG hit) r) h))
   (let ((erased sf)) (SufHere RC r))
   (match many t _
-    ((GL0) (match many (gtr-match-c (GPush) r r sf) _
+    ((GL0) (match many (gtr-match-c (GPush) r r rl sf) _
       ((HYes _ _ h0) (values t (GEmpty) (part-l t) (leaf-hit t (BTrue) (BFalse) (BFalse) (BFalse) r (LS0) (BHT r (GPush) h0) (BHF r (GSkip)) (BHF r (GPop0)) (BHF r (GPop1)))))
       ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))
-    ((GL1) (match many (gtr-match-c (GSkip) r r sf) _
+    ((GL1) (match many (gtr-match-c (GSkip) r r rl sf) _
       ((HYes _ _ h1) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BTrue) (BFalse) (BFalse) r (LS1) (BHF r (GPush)) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHF r (GPop1)))))
       ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))
-    ((GL2) (match many (gtr-match-c (GPop0) r r sf) _
+    ((GL2) (match many (gtr-match-c (GPop0) r r rl sf) _
       ((HYes _ _ h2) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BFalse) (BTrue) (BFalse) r (LS2) (BHF r (GPush)) (BHF r (GSkip)) (BHT r (GPop0) h2) (BHF r (GPop1)))))
       ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))
-    ((GL3) (match many (gtr-match-c (GPop1) r r sf) _
+    ((GL3) (match many (gtr-match-c (GPop1) r r rl sf) _
       ((HYes _ _ h3) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BFalse) (BFalse) (BTrue) r (LS3) (BHF r (GPush)) (BHF r (GSkip)) (BHF r (GPop0)) (BHT r (GPop1) h3))))
       ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))
     ((GL01)
-      (match many (gtr-match-c (GPush) r r sf) _
+      (match many (gtr-match-c (GPush) r r rl sf) _
         ((HYes _ _ h0)
-          (match many (gtr-match-c (GSkip) r r sf) _
+          (match many (gtr-match-c (GSkip) r r rl sf) _
             ((HYes _ _ h1) (values t (GEmpty) (part-l t) (leaf-hit t (BTrue) (BTrue) (BFalse) (BFalse) r (LS01) (BHT r (GPush) h0) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHF r (GPop1)))))
             ((HNo _ _) (values (GL0) (GL1)
               (leaf-part t (GL0) (GL1) (BTrue) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (LS01) (LS0) (LS1) (BPL) (BPR) (BPN) (BPN))
               (leaf-hit (GL0) (BTrue) (BFalse) (BFalse) (BFalse) r (LS0) (BHT r (GPush) h0) (BHF r (GSkip)) (BHF r (GPop0)) (BHF r (GPop1)))))))
         ((HNo _ _)
-          (match many (gtr-match-c (GSkip) r r sf) _
+          (match many (gtr-match-c (GSkip) r r rl sf) _
             ((HYes _ _ h1) (values (GL1) (GL0)
               (leaf-part t (GL1) (GL0) (BTrue) (BTrue) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (LS01) (LS1) (LS0) (BPR) (BPL) (BPN) (BPN))
               (leaf-hit (GL1) (BFalse) (BTrue) (BFalse) (BFalse) r (LS1) (BHF r (GPush)) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHF r (GPop1)))))
             ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))))
     ((GL12)
-      (match many (gtr-match-c (GSkip) r r sf) _
+      (match many (gtr-match-c (GSkip) r r rl sf) _
         ((HYes _ _ h1)
-          (match many (gtr-match-c (GPop0) r r sf) _
+          (match many (gtr-match-c (GPop0) r r rl sf) _
             ((HYes _ _ h2) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BTrue) (BTrue) (BFalse) r (LS12) (BHF r (GPush)) (BHT r (GSkip) h1) (BHT r (GPop0) h2) (BHF r (GPop1)))))
             ((HNo _ _) (values (GL1) (GL2)
               (leaf-part t (GL1) (GL2) (BFalse) (BTrue) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (LS12) (LS1) (LS2) (BPN) (BPL) (BPR) (BPN))
               (leaf-hit (GL1) (BFalse) (BTrue) (BFalse) (BFalse) r (LS1) (BHF r (GPush)) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHF r (GPop1)))))))
         ((HNo _ _)
-          (match many (gtr-match-c (GPop0) r r sf) _
+          (match many (gtr-match-c (GPop0) r r rl sf) _
             ((HYes _ _ h2) (values (GL2) (GL1)
               (leaf-part t (GL2) (GL1) (BFalse) (BTrue) (BTrue) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (LS12) (LS2) (LS1) (BPN) (BPR) (BPL) (BPN))
               (leaf-hit (GL2) (BFalse) (BFalse) (BTrue) (BFalse) r (LS2) (BHF r (GPush)) (BHF r (GSkip)) (BHT r (GPop0) h2) (BHF r (GPop1)))))
             ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))))
     ((GL13)
-      (match many (gtr-match-c (GSkip) r r sf) _
+      (match many (gtr-match-c (GSkip) r r rl sf) _
         ((HYes _ _ h1)
-          (match many (gtr-match-c (GPop1) r r sf) _
+          (match many (gtr-match-c (GPop1) r r rl sf) _
             ((HYes _ _ h3) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BTrue) (BFalse) (BTrue) r (LS13) (BHF r (GPush)) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHT r (GPop1) h3))))
             ((HNo _ _) (values (GL1) (GL3)
               (leaf-part t (GL1) (GL3) (BFalse) (BTrue) (BFalse) (BTrue) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (BFalse) (BFalse) (BTrue) (LS13) (LS1) (LS3) (BPN) (BPL) (BPN) (BPR))
               (leaf-hit (GL1) (BFalse) (BTrue) (BFalse) (BFalse) r (LS1) (BHF r (GPush)) (BHT r (GSkip) h1) (BHF r (GPop0)) (BHF r (GPop1)))))))
         ((HNo _ _)
-          (match many (gtr-match-c (GPop1) r r sf) _
+          (match many (gtr-match-c (GPop1) r r rl sf) _
             ((HYes _ _ h3) (values (GL3) (GL1)
               (leaf-part t (GL3) (GL1) (BFalse) (BTrue) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (BTrue) (BFalse) (BFalse) (LS13) (LS3) (LS1) (BPN) (BPR) (BPN) (BPL))
               (leaf-hit (GL3) (BFalse) (BFalse) (BFalse) (BTrue) r (LS3) (BHF r (GPush)) (BHF r (GSkip)) (BHF r (GPop0)) (BHT r (GPop1) h3))))
             ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))))
     ((GL23)
-      (match many (gtr-match-c (GPop0) r r sf) _
+      (match many (gtr-match-c (GPop0) r r rl sf) _
         ((HYes _ _ h2)
-          (match many (gtr-match-c (GPop1) r r sf) _
+          (match many (gtr-match-c (GPop1) r r rl sf) _
             ((HYes _ _ h3) (values t (GEmpty) (part-l t) (leaf-hit t (BFalse) (BFalse) (BTrue) (BTrue) r (LS23) (BHF r (GPush)) (BHF r (GSkip)) (BHT r (GPop0) h2) (BHT r (GPop1) h3))))
             ((HNo _ _) (values (GL2) (GL3)
               (leaf-part t (GL2) (GL3) (BFalse) (BFalse) (BTrue) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BFalse) (BFalse) (BTrue) (LS23) (LS2) (LS3) (BPN) (BPN) (BPL) (BPR))
               (leaf-hit (GL2) (BFalse) (BFalse) (BTrue) (BFalse) r (LS2) (BHF r (GPush)) (BHF r (GSkip)) (BHT r (GPop0) h2) (BHF r (GPop1)))))))
         ((HNo _ _)
-          (match many (gtr-match-c (GPop1) r r sf) _
+          (match many (gtr-match-c (GPop1) r r rl sf) _
             ((HYes _ _ h3) (values (GL3) (GL2)
               (leaf-part t (GL3) (GL2) (BFalse) (BFalse) (BTrue) (BTrue) (BFalse) (BFalse) (BFalse) (BTrue) (BFalse) (BFalse) (BTrue) (BFalse) (LS23) (LS3) (LS2) (BPN) (BPN) (BPR) (BPL))
               (leaf-hit (GL3) (BFalse) (BFalse) (BFalse) (BTrue) r (LS3) (BHF r (GPush)) (BHF r (GSkip)) (BHF r (GPop0)) (BHT r (GPop1) h3))))
             ((HNo _ _) (values (GEmpty) t (part-r t) (GHE r)))))))
     (else (values (GEmpty) t (part-r t) (GHE r)))))
 
-(def-fns _ $ (many gtree-restrict-c : (subterm many (Gtree) t) (many (List RC) r) ->
+(def-fns _ $ (many gtree-restrict-c : (subterm many (Gtree) t) (erased (List RC) r) (many (RxL (Ctree) r) rl) ->
     (many (Gtree) hit miss) (erased (GPart (GSG t) (GSG hit) (GSG miss)) p) (erased (GHit (GSG hit) r) h))
-  (let-match many r (Cons _ _ _) ((Nil _) (values (GEmpty) t (part-r t) (GHE r))))
-  (let-match many t (GNode t0 t1 t2 t3) (else (gleaf-restrict-c t r)))
-  (let ((many r0) (many r1) (many r2) (many r3) (erased j0) (erased j1) (erased j2) (erased j3))
-    (gtr-split-c (gtree-live t0) (gtree-live t1) (gtree-live t2) (gtree-live t3) r (Nil _) (Nil _) (Nil _) (Nil _) r (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
-  (let ((many a0) (many b0) (erased p0) (erased h0)) (notail $ gtree-restrict-c t0 r0))
-  (let ((many a1) (many b1) (erased p1) (erased h1)) (notail $ gtree-restrict-c t1 r1))
-  (let ((many a2) (many b2) (erased p2) (erased h2)) (notail $ gtree-restrict-c t2 r2))
-  (let ((many a3) (many b3) (erased p3) (erased h3)) (notail $ gtree-restrict-c t3 r3))
+  (let-match many rl (RxCons _ _ _ _ _) ((RxNil _) (values (GEmpty) t (part-r t) (GHE r))))
+  (let-match many t (GNode t0 t1 t2 t3) (else (gleaf-restrict-c t r rl)))
+  (let ((erased r0) (erased r1) (erased r2) (erased r3) (many l0) (many l1) (many l2) (many l3) (erased j0) (erased j1) (erased j2) (erased j3))
+    (gtr-split-c (gtree-live t0) (gtree-live t1) (gtree-live t2) (gtree-live t3) r (Nil _) (Nil _) (Nil _) (Nil _) (RxNil _) (RxNil _) (RxNil _) (RxNil _)
+      r rl (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
+  (let ((many a0) (many b0) (erased p0) (erased h0)) (notail $ gtree-restrict-c t0 r0 l0))
+  (let ((many a1) (many b1) (erased p1) (erased h1)) (notail $ gtree-restrict-c t1 r1 l1))
+  (let ((many a2) (many b2) (erased p2) (erased h2)) (notail $ gtree-restrict-c t2 r2 l2))
+  (let ((many a3) (many b3) (erased p3) (erased h3)) (notail $ gtree-restrict-c t3 r3 l3))
   (let-match many (gtree-empty4 a0 a1 a2 a3) (E4No _ _ _ _) ((E4Yes) (values (GEmpty) t (part-r t) (GHE r))))
   (let-match many (gtree-empty4 b0 b1 b2 b3) (E4No _ _ _ _)
     ((E4Yes) (values t (GEmpty) (part-l t)
@@ -518,28 +522,29 @@
     ((UGLeaf g cell) (values (at unique (cell g)) (gtree-live g)))
     ((UGNode x0 x1 x2 x3 cell) (values (at unique (cell x0 x1 x2 x3)) (BTrue)))))
 
-(def-fns _ $ (many gtree-restrict-u : (subterm unique (UGtree) u) (erased (Gtree) t) (erased (UG u t) ut) (many (List RC) r) ->
+(def-fns _ $ (many gtree-restrict-u : (subterm unique (UGtree) u) (erased (Gtree) t) (erased (UG u t) ut) (erased (List RC) r) (many (RxL (Ctree) r) rl) ->
     (many (Gtree) hit) (unique (UGtree) mu) (erased (Gtree) miss) (erased (UG mu miss) um) (erased (GPart (GSG t) (GSG hit) (GSG miss)) p)
     (erased (GHit (GSG hit) r) h) (many (GKeep miss) e))
   (match unique u _
     ((UGEmpty) (let-match erased ut (UGE)) (values (GEmpty) (UGEmpty) (GEmpty) (UGE) (part-r t) (GHE r) (GKEmpty)))
     ((UGLeaf g cell)
       (let-match erased ut (UGL _))
-      (let ((many a) (many b) (erased p) (erased h)) (gtree-restrict-c g r))
+      (let ((many a) (many b) (erased p) (erased h)) (gtree-restrict-c g r rl))
       (values a (cell b) b (UGL b) p h (gkeep b)))
     ((UGNode x0 x1 x2 x3 cell)
       (let-match erased ut (UGN _ _ _ _ t0 t1 t2 t3 q0 q1 q2 q3))
-      (let-match many r (Cons _ _ _) ((Nil _) (values (GEmpty) (at unique (cell x0 x1 x2 x3)) t ut (part-r t) (GHE r) (GKLive t))))
+      (let-match many rl (RxCons _ _ _ _ _) ((RxNil _) (values (GEmpty) (at unique (cell x0 x1 x2 x3)) t ut (part-r t) (GHE r) (GKLive t))))
       (let ((unique y0) (many w0)) (ug-live x0))
       (let ((unique y1) (many w1)) (ug-live x1))
       (let ((unique y2) (many w2)) (ug-live x2))
       (let ((unique y3) (many w3)) (ug-live x3))
-      (let ((many r0) (many r1) (many r2) (many r3) (erased j0) (erased j1) (erased j2) (erased j3))
-        (gtr-split-c w0 w1 w2 w3 r (Nil _) (Nil _) (Nil _) (Nil _) r (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
-      (let ((many a0) (unique z0) (erased b0) (erased m0) (erased p0) (erased h0) (many e0)) (notail $ gtree-restrict-u y0 t0 q0 r0))
-      (let ((many a1) (unique z1) (erased b1) (erased m1) (erased p1) (erased h1) (many e1)) (notail $ gtree-restrict-u y1 t1 q1 r1))
-      (let ((many a2) (unique z2) (erased b2) (erased m2) (erased p2) (erased h2) (many e2)) (notail $ gtree-restrict-u y2 t2 q2 r2))
-      (let ((many a3) (unique z3) (erased b3) (erased m3) (erased p3) (erased h3) (many e3)) (notail $ gtree-restrict-u y3 t3 q3 r3))
+      (let ((erased r0) (erased r1) (erased r2) (erased r3) (many l0) (many l1) (many l2) (many l3) (erased j0) (erased j1) (erased j2) (erased j3))
+        (gtr-split-c w0 w1 w2 w3 r (Nil _) (Nil _) (Nil _) (Nil _) (RxNil _) (RxNil _) (RxNil _) (RxNil _) r rl (SufHere RC r) (RJNil (GPush) r)
+          (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
+      (let ((many a0) (unique z0) (erased b0) (erased m0) (erased p0) (erased h0) (many e0)) (notail $ gtree-restrict-u y0 t0 q0 r0 l0))
+      (let ((many a1) (unique z1) (erased b1) (erased m1) (erased p1) (erased h1) (many e1)) (notail $ gtree-restrict-u y1 t1 q1 r1 l1))
+      (let ((many a2) (unique z2) (erased b2) (erased m2) (erased p2) (erased h2) (many e2)) (notail $ gtree-restrict-u y2 t2 q2 r2 l2))
+      (let ((many a3) (unique z3) (erased b3) (erased m3) (erased p3) (erased h3) (many e3)) (notail $ gtree-restrict-u y3 t3 q3 r3 l3))
       (let ((erased pt)) (node-part t0 t1 t2 t3 a0 a1 a2 a3 b0 b1 b2 b3 p0 p1 p2 p3))
       (let ((erased mg)) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))
       (let-match many (gtree-empty4 a0 a1 a2 a3) (E4No _ _ _ _)

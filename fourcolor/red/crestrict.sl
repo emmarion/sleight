@@ -47,8 +47,9 @@
   (many RCE : (erased (Bstack) bs) (erased (List RG) a) -> (RCons bs (GEmpty) a a))
   (many RCC : (erased (Bstack) bs) (erased (Gtree) t) (erased (List RG) a) -> (RCons bs t a (Cons RG (MkRx (Gtree) bs t) a))))
 
-(def-fns _ $ (many rg-cons : (many (Bstack) bs) (many (Gtree) t) (many (List RG) a) -> (many (List RG) b) (erased (RCons bs t a b) p))
-  (match many t _ ((GEmpty) (values a (RCE bs a))) (else (values (Cons _ (MkRx _ bs t) a) (RCC bs t a)))))
+(def-fns _ $ (many rg-cons : (many (Bstack) bs) (many (Gtree) t) (erased (List RG) a) (many (RxL (Gtree) a) al) ->
+    (erased (List RG) b) (many (RxL (Gtree) b) bl) (erased (RCons bs t a b) p))
+  (match many t _ ((GEmpty) (values a al (RCE bs a))) (else (values (Cons _ (MkRx _ bs t) a) (RxCons _ bs t a al) (RCC bs t a)))))
 
 ; c is a with the restriction popping the stack bs against e, if any, out of the node t0 t1 t2 t3.
 (def-adts $ (PopRC : ((Bstack) bs) ((Col) e) ((Gtree) t0) ((Gtree) t1) ((Gtree) t2) ((Gtree) t3) ((List RG) a) ((List RG) c) -> Type)
@@ -75,20 +76,21 @@
   (many CSCons : (erased (Col) e) (erased RG x) (erased (List RG) a b rest s) (erased (CStepE x e a b) p) (erased (CSplitE e b rest s) q)
       -> (CSplitE e a (Cons RG x rest) s)))
 
-(def-fns _ $ (many ctr-pop : (many (Bstack) bs) (erased (Gtree) t0 t1) (many (Gtree) t2 t3) (many (List RG) r2 r3) ->
-    (many (List RG) a2 a3) (erased (PopRC bs (C2) t0 t1 t2 t3 r2 a2) k2) (erased (PopRC bs (C3) t0 t1 t2 t3 r3 a3) k3))
+(def-fns _ $ (many ctr-pop : (many (Bstack) bs) (erased (Gtree) t0 t1) (many (Gtree) t2 t3) (erased (List RG) r2 r3) (many (RxL (Gtree) r2) l2)
+    (many (RxL (Gtree) r3) l3) -> (erased (List RG) a2 a3) (many (RxL (Gtree) a2) m2) (many (RxL (Gtree) a3) m3)
+    (erased (PopRC bs (C2) t0 t1 t2 t3 r2 a2) k2) (erased (PopRC bs (C3) t0 t1 t2 t3 r3 a3) k3))
   (match many bs _
-    ((BS0) (values r2 r3 (PRNone (C2) t0 t1 t2 t3 r2) (PRNone (C3) t0 t1 t2 t3 r3)))
+    ((BS0) (values r2 r3 l2 l3 (PRNone (C2) t0 t1 t2 t3 r2) (PRNone (C3) t0 t1 t2 t3 r3)))
     ((BP0 b)
-      (let ((many a2) (erased p2)) (rg-cons b t2 r2))
-      (let ((many a3) (erased p3)) (rg-cons b t3 r3))
-      (values a2 a3
+      (let ((erased a2) (many m2) (erased p2)) (rg-cons b t2 r2 l2))
+      (let ((erased a3) (many m3) (erased p3)) (rg-cons b t3 r3 l3))
+      (values a2 a3 m2 m3
         (PRSome bs b (GPop0) (C2) t0 t1 t2 t3 t2 r2 a2 (Popped0 b) (SPop02 b) (PkPop0 _ t0 t1 t2 t3) p2)
         (PRSome bs b (GPop1) (C3) t0 t1 t2 t3 t3 r3 a3 (Popped0 b) (SPop13 b) (PkPop1 _ t0 t1 t2 t3) p3)))
     ((BP1 b)
-      (let ((many a2) (erased p2)) (rg-cons b t3 r2))
-      (let ((many a3) (erased p3)) (rg-cons b t2 r3))
-      (values a2 a3
+      (let ((erased a2) (many m2) (erased p2)) (rg-cons b t3 r2 l2))
+      (let ((erased a3) (many m3) (erased p3)) (rg-cons b t2 r3 l3))
+      (values a2 a3 m2 m3
         (PRSome bs b (GPop1) (C2) t0 t1 t2 t3 t3 r2 a2 (Popped1 b) (SPop12 b) (PkPop1 _ t0 t1 t2 t3) p2)
         (PRSome bs b (GPop0) (C3) t0 t1 t2 t3 t2 r3 a3 (Popped1 b) (SPop03 b) (PkPop0 _ t0 t1 t2 t3) p3)))))
 
@@ -115,24 +117,28 @@
     ((GL23) (GKLeaf g _ (LS23)))
     ((GEmpty) (GKLeaf g _ (LSE)))))
 
-(def-fns _ $ (many ctr-split-c : (many (List RG) r1 r2 r3) (subterm many (List RG) r) ->
-    (many (List RG) s1 s2 s3) (erased (CSplitE (C1) r1 r s1) p1) (erased (CSplitE (C2) r2 r s2) p2) (erased (CSplitE (C3) r3 r s3) p3))
-  (let-match many r (Cons _ x rest) ((Nil _) (values r1 r2 r3 (CSNil (C1) r1) (CSNil (C2) r2) (CSNil (C3) r3))))
-  (let-match many x (MkRx _ bs g))
+(def-fns _ $ (many ctr-split-c : (erased (List RG) r1 r2 r3) (many (RxL (Gtree) r1) l1) (many (RxL (Gtree) r2) l2) (many (RxL (Gtree) r3) l3)
+    (erased (List RG) r) (subterm many (RxL (Gtree) r) rl) ->
+    (erased (List RG) s1 s2 s3) (many (RxL (Gtree) s1) m1) (many (RxL (Gtree) s2) m2) (many (RxL (Gtree) s3) m3)
+    (erased (CSplitE (C1) r1 r s1) p1) (erased (CSplitE (C2) r2 r s2) p2) (erased (CSplitE (C3) r3 r s3) p3))
+  (let-match many rl (RxCons _ bs g rest tl) ((RxNil _) (values r1 r2 r3 l1 l2 l3 (CSNil (C1) r1) (CSNil (C2) r2) (CSNil (C3) r3))))
+  (let ((erased x)) (MkRx (Gtree) bs g))
   (match many (gtree-kind g) _
     ((GKLeaf _ q l)
-      (let ((many s1) (many s2) (many s3) (erased p1) (erased p2) (erased p3)) (tail $ ctr-split-c r1 r2 r3 rest))
-      (values s1 s2 s3 (CSCons (C1) x r1 r1 rest s1 (SENone bs g q (C1) r1 l) p1) (CSCons (C2) x r2 r2 rest s2 (SENone bs g q (C2) r2 l) p2)
+      (let ((erased s1) (erased s2) (erased s3) (many m1) (many m2) (many m3) (erased p1) (erased p2) (erased p3))
+        (tail $ ctr-split-c r1 r2 r3 l1 l2 l3 rest tl))
+      (values s1 s2 s3 m1 m2 m3 (CSCons (C1) x r1 r1 rest s1 (SENone bs g q (C1) r1 l) p1) (CSCons (C2) x r2 r2 rest s2 (SENone bs g q (C2) r2 l) p2)
         (CSCons (C3) x r3 r3 rest s3 (SENone bs g q (C3) r3 l) p3)))
     ((GKNode _ u0 u1 u2 u3 eq)
       (let-match erased eq (Refl _ _))
       (let-match many g (GNode t0 t1 t2 t3))
-      (let ((many a2) (many a3) (erased k2) (erased k3)) (ctr-pop bs t0 t1 t2 t3 r2 r3))
-      (let ((many b1) (erased q1)) (rg-cons bs t1 r1))
-      (let ((many b2) (erased q2)) (rg-cons (BP0 bs) t0 a2))
-      (let ((many b3) (erased q3)) (rg-cons (BP1 bs) t0 a3))
-      (let ((many s1) (many s2) (many s3) (erased p1) (erased p2) (erased p3)) (tail $ ctr-split-c b1 b2 b3 rest))
-      (values s1 s2 s3 (CSCons (C1) x r1 b1 rest s1 (SESkip bs t0 t1 t2 t3 r1 b1 q1) p1)
+      (let ((erased a2) (erased a3) (many n2) (many n3) (erased k2) (erased k3)) (ctr-pop bs t0 t1 t2 t3 r2 r3 l2 l3))
+      (let ((erased b1) (many o1) (erased q1)) (rg-cons bs t1 r1 l1))
+      (let ((erased b2) (many o2) (erased q2)) (rg-cons (BP0 bs) t0 a2 n2))
+      (let ((erased b3) (many o3) (erased q3)) (rg-cons (BP1 bs) t0 a3 n3))
+      (let ((erased s1) (erased s2) (erased s3) (many m1) (many m2) (many m3) (erased p1) (erased p2) (erased p3))
+        (tail $ ctr-split-c b1 b2 b3 o1 o2 o3 rest tl))
+      (values s1 s2 s3 m1 m2 m3 (CSCons (C1) x r1 b1 rest s1 (SESkip bs t0 t1 t2 t3 r1 b1 q1) p1)
         (CSCons (C2) x r2 b2 rest s2 (SEP bs (BP0 bs) (C2) t0 t1 t2 t3 r2 a2 b2 (SPush2 bs) k2 q2) p2)
         (CSCons (C3) x r3 b3 rest s3 (SEP bs (BP1 bs) (C3) t0 t1 t2 t3 r3 a3 b3 (SPush3 bs) k3 q3) p3)))))
 
@@ -385,19 +391,19 @@
   (let ((erased k) (erased a)) (add k1 k2))
   (MkDecrAll (Cons RG x rest) e n c2 k m q2 h2 (RCCons bs g rest (Cons _ e (Nil _)) k1 k2 k mc m2 a) (monus-add n k1 c1 k2 c2 k o1 o2 a)))
 
-(def-fns _ $ (many ctr-decr-c : (many (Ctree) lf1 lf2 lf3) (subterm many (List RG) r) (erased (Nat) n1 n2 n3)
+(def-fns _ $ (many ctr-decr-c : (many (Ctree) lf1 lf2 lf3) (erased (List RG) r) (subterm many (RxL (Gtree) r) rl) (erased (Nat) n1 n2 n3)
     (erased (CtRoot lf1 n1) p1) (erased (CtRoot lf2 n2) p2) (erased (CtRoot lf3 n3) p3)
     (erased (CtH (Zero) lf1) h1) (erased (CtH (Zero) lf2) h2) (erased (CtH (Zero) lf3) h3) ->
     (many (Ctree) m1 m2 m3) (erased (DecrAll r (C1) n1 m1) d1) (erased (DecrAll r (C2) n2 m2) d2) (erased (DecrAll r (C3) n3 m3) d3))
-  (let-match many r (Cons _ x rest)
-    ((Nil _) (values lf1 lf2 lf3 (MkDecrAll r (C1) n1 n1 (Zero) lf1 p1 h1 (RCNil _) (MoZ n1)) (MkDecrAll r (C2) n2 n2 (Zero) lf2 p2 h2 (RCNil _) (MoZ n2))
+  (let-match many rl (RxCons _ bs g rest tl)
+    ((RxNil _) (values lf1 lf2 lf3 (MkDecrAll r (C1) n1 n1 (Zero) lf1 p1 h1 (RCNil _) (MoZ n1)) (MkDecrAll r (C2) n2 n2 (Zero) lf2 p2 h2 (RCNil _) (MoZ n2))
       (MkDecrAll r (C3) n3 n3 (Zero) lf3 p3 h3 (RCNil _) (MoZ n3)))))
-  (let-match many x (MkRx _ bs g))
+  (let ((erased x)) (MkRx (Gtree) bs g))
   (let ((many l1) (many l2) (many l3) (erased e1) (erased e2) (erased e3)) (decr-step bs g lf1 lf2 lf3 n1 n2 n3 p1 p2 p3 h1 h2 h3))
   (let-match erased e1 (MkDecrRes _ _ _ c1 _ _ q1 k1 _ _))
   (let-match erased e2 (MkDecrRes _ _ _ c2 _ _ q2 k2 _ _))
   (let-match erased e3 (MkDecrRes _ _ _ c3 _ _ q3 k3 _ _))
-  (let ((many m1) (many m2) (many m3) (erased d1) (erased d2) (erased d3)) (tail $ ctr-decr-c l1 l2 l3 rest c1 c2 c3 q1 q2 q3 k1 k2 k3))
+  (let ((many m1) (many m2) (many m3) (erased d1) (erased d2) (erased d3)) (tail $ ctr-decr-c l1 l2 l3 rest tl c1 c2 c3 q1 q2 q3 k1 k2 k3))
   (values m1 m2 m3 (decr-cons x rest (C1) n1 c1 l1 m1 e1 q1 d1) (decr-cons x rest (C2) n2 c2 l2 m2 e2 q2 d2) (decr-cons x rest (C3) n3 c3 l3 m3 e3 q3 d3)))
 
 (def-adts $ (IfE : ((Ctree) t) ((Ctree) l) ((Ctree) g) -> Type)
@@ -491,18 +497,19 @@
       (let ((many c3)) (notail $ ct-of h1 u3 t3 p3))
       (CNode c1 c2 c3))))
 
-(def-fns _ $ (many ctree-restrict-u : (subterm many (Nat) h) (unique (UTree) u) (erased (Ctree) t) (erased (UT h u t) ut) (many (List RG) r) ->
+(def-fns _ $ (many ctree-restrict-u : (subterm many (Nat) h) (unique (UTree) u) (erased (Ctree) t) (erased (UT h u t) ut) (erased (List RG) r)
+    (many (RxL (Gtree) r) rl) ->
     (unique (UTree) ku) (many (Ctree) gone) (erased (Ctree) keep) (erased (UT h ku keep) uk) (erased (CRes h t r keep gone) c)
     (erased (CtH (Succ h) gone) hg) (many (KeepE keep) e))
   (match unique u _
     ((UEmpty) (let-match erased ut (UTE _)) (values (UEmpty) (CEmpty) (CEmpty) (UTE h) (CRE h r) (HE (Succ h)) (KEmpty)))
     ((UBot l1 l2 l3 cell)
       (let-match erased ut (UTB _ _ _ k1 k2 k3))
-      (let-match many r (Cons _ _ _) ((Nil _) (values (at unique (cell l1 l2 l3)) (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KLive t))))
+      (let-match many rl (RxCons _ _ _ _ _) ((RxNil _) (values (at unique (cell l1 l2 l3)) (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KLive t))))
       (let ((erased n1) (erased p1)) (root-exists l1))
       (let ((erased n2) (erased p2)) (root-exists l2))
       (let ((erased n3) (erased p3)) (root-exists l3))
-      (let ((many m1) (many m2) (many m3) (erased d1) (erased d2) (erased d3)) (ctr-decr-c l1 l2 l3 r n1 n2 n3 p1 p2 p3 k1 k2 k3))
+      (let ((many m1) (many m2) (many m3) (erased d1) (erased d2) (erased d3)) (ctr-decr-c l1 l2 l3 r rl n1 n2 n3 p1 p2 p3 k1 k2 k3))
       (let-match erased d1 (MkDecrAll _ _ _ _ _ _ _ hl1 _ _))
       (let-match erased d2 (MkDecrAll _ _ _ _ _ _ _ hl2 _ _))
       (let-match erased d3 (MkDecrAll _ _ _ _ _ _ _ hl3 _ _))
@@ -519,11 +526,12 @@
     ((UNode u1 u2 u3 cell)
       (let-match erased ut (UTN h0 _ _ _ t1 t2 t3 q1 q2 q3))
       (let-match many h (Succ h1))
-      (let-match many r (Cons _ _ _) ((Nil _) (values (at unique (cell u1 u2 u3)) (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KLive t))))
-      (let ((many r1) (many r2) (many r3) (erased s1) (erased s2) (erased s3)) (ctr-split-c (Nil _) (Nil _) (Nil _) r))
-      (let ((unique k1) (many b1) (erased a1) (erased w1) (erased c1) (erased kb1) (many e1)) (notail $ ctree-restrict-u h1 u1 t1 q1 r1))
-      (let ((unique k2) (many b2) (erased a2) (erased w2) (erased c2) (erased kb2) (many e2)) (notail $ ctree-restrict-u h1 u2 t2 q2 r2))
-      (let ((unique k3) (many b3) (erased a3) (erased w3) (erased c3) (erased kb3) (many e3)) (notail $ ctree-restrict-u h1 u3 t3 q3 r3))
+      (let-match many rl (RxCons _ _ _ _ _) ((RxNil _) (values (at unique (cell u1 u2 u3)) (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KLive t))))
+      (let ((erased r1) (erased r2) (erased r3) (many l1) (many l2) (many l3) (erased s1) (erased s2) (erased s3))
+        (ctr-split-c (Nil _) (Nil _) (Nil _) (RxNil _) (RxNil _) (RxNil _) r rl))
+      (let ((unique k1) (many b1) (erased a1) (erased w1) (erased c1) (erased kb1) (many e1)) (notail $ ctree-restrict-u h1 u1 t1 q1 r1 l1))
+      (let ((unique k2) (many b2) (erased a2) (erased w2) (erased c2) (erased kb2) (many e2)) (notail $ ctree-restrict-u h1 u2 t2 q2 r2 l2))
+      (let ((unique k3) (many b3) (erased a3) (erased w3) (erased c3) (erased kb3) (many e3)) (notail $ ctree-restrict-u h1 u3 t3 q3 r3 l3))
       (let ((unique (UTree) ku) (erased (Ctree) keep) (erased (UT h ku keep) uk) (erased (CtCons a1 a2 a3 keep) ck) (many (KeepE keep) e))
         (match many (keep3 a1 a2 a3 e1 e2 e3) _
           ((CKE) (values (UEmpty) (CEmpty) (UTE h) (CCEmpty) (KEmpty)))

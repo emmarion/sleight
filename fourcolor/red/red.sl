@@ -59,6 +59,13 @@
   enum
   (many MkRx : (erased Type T) (many (Bstack) bs) (many T t) -> (Rx T)))
 
+; xs is the list of restrictions that the cells hold.
+(def-adts $ (RxL : (Type T) ((List (Rx T)) xs) -> Type)
+  enum
+  (many RxNil : (erased Type T) -> (RxL T (Nil (Rx T))))
+  (many RxCons : (erased Type T) (many (Bstack) bs) (many T t) (erased (List (Rx T)) rest) (many (RxL T rest) tl)
+      -> (RxL T (Cons (Rx T) (MkRx T bs t) rest))))
+
 (def-adts $ (Kr : -> Type)
   enum
   (many KDone : (many (Ctree) ctu) (many (Gtree) gtr gtu) -> (Kr))
