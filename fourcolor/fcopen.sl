@@ -1,6 +1,6 @@
 ; four-color-open: FourColor of defs.sl from the steps whose proofs are computed: UnavE cfs (unav/qztproof.sl), AllRedC
 ; CRX css (red/proof-c.sl), BirkhoffChecks (red/bproof.sl) and CfCerts cfs (embed4proof.sl), for the css of red/chunks.sl.
-; cfs-run decodes cfs again from config-srcs, for a native job. Load after evalid.sl, triad.sl, trivfive.sl, inductfc.sl
+; cfs-run decodes cfs again from chunk-srcs, for a native job. Load after evalid.sl, triad.sl, trivfive.sl, inductfc.sl
 ; and red/chunks.sl, in the chain PLAN.md gives.
 
 (let ((many cfs) (erased cl)) (concat-c css))
@@ -14,8 +14,8 @@
       (Refl _ a))))
 
 (def-fns _ $ (many cfs-run : -> (many (List (Config)) c) (many (Checked (Eq (List (Config)) c cfs)) e))
-  (let-match many (decode-all config-srcs) (POk _ _ _ _ d _ da) (else (values (Nil _) (ChkNo _))))
-  (let-match erased (decall-fn config-srcs _ _ d css da css-dec) (Refl _ _))
+  (let-match many (decode-all chunk-srcs) (POk _ _ _ _ d _ da) (else (values (Nil _) (ChkNo _))))
+  (let-match erased (decall-fn chunk-srcs _ _ d css da css-dec) (Refl _ _))
   (let ((many c) (erased cl1)) (concat-c d))
   (values c (ChkYes _ (concat-fn css c cfs cl1 cl))))
 

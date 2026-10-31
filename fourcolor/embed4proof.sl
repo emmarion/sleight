@@ -1,5 +1,5 @@
 ; cfcerts-proof: notembed.sl's CfCerts for the cfs of fcopen.sl, from embed4.sl's AllGc, decided by one native.sl job per
-; chunk string of config-srcs, after native-run. Load after embed4.sl, fcopen.sl and native.sl.
+; chunk of chunk-srcs, given the chunk's strings, after native-run. Load after embed4.sl, fcopen.sl and native.sl.
 
 (def-fns _ $ (erased allgc-concat : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
     (erased (OnChunks AllGc css) a) -> (erased (AllGc cfs) r))
@@ -11,10 +11,10 @@
       (let-match erased ag (AgCons _ _ c ag1))
       (AgCons cfs1 cf c (allgc-concat (Cons _ cs css1) cfs1 p1 (OnCons AllGc cs css1 ag1 a1))))))
 
-(def-fns _ $ (many gc-of : (many (String) s) -> (many (Checked (Decoded AllGc s)) r))
-  (let-match many (dec-chunk s) (POk _ _ _ _ cs _ d) (else (ChkNo _)))
+(def-fns _ $ (many gc-of : (many (List (String)) ss) -> (many (Checked (Decoded AllGc ss)) r))
+  (let-match many (dec-list ss) (POk _ _ _ _ cs _ d) (else (ChkNo _)))
   (let-match many (allgc-c cs) (ChkYes _ a) ((ChkNo _) (ChkNo _)))
-  (ChkYes _ (MkDecoded AllGc s _ cs d a)))
+  (ChkYes _ (MkDecoded AllGc ss _ cs d a)))
 
-(native-each allgc-srcs config-srcs (s t r) (Checked (Decoded AllGc s)) (gc-of s) (ChkYes _ a) (SrcCons AllGc s t a r) (SrcNil AllGc))
-(native-then (let ((erased cfcerts-proof)) (cfcerts-of cfs (allgc-concat css cfs cl (on-chunks AllGc config-srcs _ css css-dec allgc-srcs)))))
+(native-each allgc-srcs chunk-srcs (ss t r) (Checked (Decoded AllGc ss)) (gc-of ss) (ChkYes _ a) (SrcCons AllGc ss t a r) (SrcNil AllGc))
+(native-then (let ((erased cfcerts-proof)) (cfcerts-of cfs (allgc-concat css cfs cl (on-chunks AllGc chunk-srcs _ css css-dec allgc-srcs)))))

@@ -14,6 +14,4 @@ def config(star, body):
 def literal(bs):
     return '"%s"' % ''.join(chr(b) if 32 <= b < 127 and chr(b) not in '"\\' else '\\x%02x' % b for b in bs)
 
-codes = [config(star, body) for _, star, body in defs]
-chunks = [sum(codes[i:i + 20], []) for i in range(0, len(codes), 20)]
-print('(let ((many config-srcs)) $ %sNil _)' % ''.join('Cons _ %s\n  $ ' % literal(c) for c in chunks))
+print('(let ((many config-srcs)) $ %sNil _)' % ''.join('Cons _ %s\n  $ ' % literal(config(star, body)) for _, star, body in defs))
