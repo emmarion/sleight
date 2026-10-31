@@ -24,8 +24,8 @@
 (def-fns _ $ (erased cpcol-of : (erased (List (Step)) cp) (erased (Nat) d a) (erased (List (Nat)) e f p) (erased (List (Col)) et)
     (erased (Cpmap cp d e f (Cons (Nat) a p)) cm) (erased (RingTrace e f (Cons (Nat) a p) et) rt) -> (erased (CpCol cp et) r))
   (let-match erased rt (MkRingTrace _ _ _ ks lc cs _ col rl co t))
-  (let-match erased rl (RespCons _ _ lp _ la pa rlp))
-  (let-match erased co (All2Cons _ _ _ _ c _ cs1 pc co1))
+  (let-match erased rl (RespCons _ _ _ _ _ _ _))
+  (let-match erased co (All2Cons _ _ _ _ c _ cs1 _ _))
   (let-match erased t (TrCons _ _ _ tf))
   (MkCpCol cp d e f _ ks lc cs et cm col rl (ncols-of lc cs co) (MkTrace c cs1 et (ctr-of-tf c c cs1 et tf))))
 

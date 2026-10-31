@@ -7,7 +7,7 @@
 
 (def-fns _ $ (erased all2-length : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) n)
     (subterm erased (All2 A B R xs ys) al) (erased (Length A xs n) l) -> (erased (Length B ys n) r))
-  (let-match erased al (All2Cons _ _ _ x y xs1 ys1 _ al1) ((All2Nil _ _ _) (let-match erased l (LengthNil _)) (LengthNil B)))
+  (let-match erased al (All2Cons _ _ _ _ y xs1 ys1 _ al1) ((All2Nil _ _ _) (let-match erased l (LengthNil _)) (LengthNil B)))
   (let-match erased l (LengthCons _ _ _ n1 l1))
   (LengthCons B y ys1 n1 (all2-length A B R xs1 ys1 n1 al1 l1)))
 
@@ -165,7 +165,7 @@
 
 (def-fns _ $ (erased permns-nth : (erased (Perm) g) (erased (List (Nat)) xs ys) (erased (Nat) i x) (subterm erased (Nth (Nat) xs i x) p)
     (erased (PermNs g xs ys) al) -> (erased (Nat) y) (erased (Nth (Nat) ys i y) q) (erased (PermN g x y) r))
-  (let-match erased al (PNCons _ x1 y1 xs1 ys1 r1 al1) (absurd (PNNil _) p))
+  (let-match erased al (PNCons _ _ y1 xs1 ys1 r1 al1) (absurd (PNNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values y1 (NthHere _ y1 ys1) r1)))
   (let ((erased y) (erased q) (erased r)) (permns-nth g xs1 ys1 i1 x p1 al1))
   (values y (NthThere _ y1 ys1 i1 y q) r))
@@ -195,7 +195,7 @@
   r)
 
 (def-fns _ $ (erased permn-lt : (erased (Perm) g) (erased (Nat) k k2) (erased (PermN g k k2) p) -> (erased (Lt k2 4) l))
-  (let-match erased p (MkPermN _ _ _ c c2 _ _ r))
+  (let-match erased p (MkPermN _ _ _ _ c2 _ _ r))
   (colof-lt k2 c2 r))
 
 (def-fns _ $ (erased permns-exists : (erased (Perm) g) (erased (List (Nat)) ks) (subterm erased (Under ks 4) u)
