@@ -1,7 +1,7 @@
 ; The ring traces of the colourings of a configuration's map, after Gonthier and Werner's cfcolor.v. Load after
 ; cpmap.sl and red/color.sl.
 
-(let-match erased (unary-4) (Refl _ _))
+(unary 4)
 
 ; c is the colour numbered k.
 (def-adts $ (NCol : ((Nat) k) ((Col) c) -> Type)
