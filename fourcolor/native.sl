@@ -170,7 +170,7 @@
   (values mw4 $ raws-append cms out))
 
 (def-macro (native-each args here mw)
-  (let-match many args (Cons _ name r1) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
+  (let-match many args (Cons _ _ r1) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
   (let-match many r1 (Cons _ xs _) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
   (let ((unique mw1) (many n)) (fresh-raw mw here "n"))
   (values mw1 $ qq (let ((many (~ n))) (nq-length _ (~ xs))) (native-each-at (~ n) (~@ args))))

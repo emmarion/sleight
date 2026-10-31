@@ -1,9 +1,9 @@
 (def-fns _ $ (erased allgc-concat : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
     (erased (OnChunks AllGc css) a) -> (erased (AllGc cfs) r))
   (match erased p _
-    ((CLNil) (AgNil))
-    ((CLSkip css1 _ p1) (let-match erased a (OnCons _ _ _ _ a1)) (allgc-concat css1 cfs p1 a1))
-    ((CLCons cf cs cfs1 css1 p1)
+    ((ConcatNil) (AgNil))
+    ((ConcatSkip css1 _ p1) (let-match erased a (OnCons _ _ _ _ a1)) (allgc-concat css1 cfs p1 a1))
+    ((ConcatCons cf cs cfs1 css1 p1)
       (let-match erased a (OnCons _ _ _ ag a1))
       (let-match erased ag (AgCons _ _ c ag1))
       (AgCons cfs1 cf c (allgc-concat (Cons _ cs css1) cfs1 p1 (OnCons AllGc cs css1 ag1 a1))))))
