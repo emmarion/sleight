@@ -2,8 +2,6 @@
 ; (Decoded P s), and on-chunks turns one for each string into P of each chunk of css, so that a native job need hold only
 ; the chunk's string. Load after configs.sl.
 
-(comptime-match many (decode-all config-srcs) (POk _ _ _ _ css _ css-dec))
-
 (def-adts $ (Decoded : ((TyCtor ((List (Config)) cs) -> Type) P) ((String) s) -> Type)
   enum
   (many MkDecoded : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (String) s e) (erased (List (Config)) cs) (erased (DCfgs s cs e) d)
@@ -23,11 +21,11 @@
 
 (def-fns _ $ (erased on-chunks : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (List (String)) ss r) (erased (List (List (Config))) css)
     (subterm erased (DecAll ss css r) da) (erased (OnSrcs P ss) o) -> (erased (OnChunks P css) c))
-  (match erased da _
-    ((DANil) (OCNil P))
-    ((DACons s ss1 _ cs css1 _ d da1)
-      (let-match erased o (OSCons _ _ _ a o1))
-      (let-match erased a (MkDecoded _ _ _ cs2 d2 pa))
-      (let ((erased ec) (erased _)) (dcfgs-fn s _ _ cs2 cs d2 d))
-      (let-match erased ec (Refl _ _))
-      (OCCons P cs css1 pa (on-chunks P ss1 r css1 da1 o1)))))
+  (let-match erased da (DACons s ss1 _ cs css1 _ d da1) ((DANil) (OCNil P)))
+  (let-match erased o (OSCons _ _ _ a o1))
+  (let-match erased a (MkDecoded _ _ _ cs2 d2 pa))
+  (let ((erased ec) (erased _)) (dcfgs-fn s _ _ cs2 cs d2 d))
+  (let-match erased ec (Refl _ _))
+  (OCCons P cs css1 pa (on-chunks P ss1 r css1 da1 o1)))
+
+(comptime-match many (decode-all config-srcs) (POk _ _ _ _ css _ css-dec))

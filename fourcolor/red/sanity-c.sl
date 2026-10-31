@@ -1,5 +1,8 @@
 ; Load after ccheck.sl, in the order of PLAN.md.
-(let ((many k1) (many k2) (many k4)) (values (cf001) (cf002) (cf004)))
+(comptime-match many (config-chunks) (Cons _ chunk0 _))
+(comptime-match many chunk0 (Cons _ k1 _))
+(comptime-match many (drop _ 1 chunk0) (Cons _ k2 _))
+(comptime-match many (drop _ 3 chunk0) (Cons _ k4 _))
 (let-match many k4 (MkConfig sym4 _ p4))
 (let ((many k5) (many k6)) (values (MkConfig sym4 (Nil _) p4) (MkConfig sym4 (Cons _ 0 (Nil _)) p4)))
 (def-fns _ $ (many c1 : -> (many (Chk (Reducible CRX k2)) r)) (let ((many b) (many _)) (red-c k2 (Nil _))) b)

@@ -13,7 +13,7 @@
   (many NEnd : -> (Next (SNil)))
   (many NByte : (many (Nat) n) (erased (Lt n u8-modulus) p) (many (String) r) -> (Next (SCons (MkChar (MkU8 n p)) r))))
 
-(def-fns _ $ (many next : (many (String) s) -> (many (Next s) x))
+(def-fns _ $ (many next-byte : (many (String) s) -> (many (Next s) x))
   (let-match many s (SCons c r) ((SNil) (NEnd)))
   (let-match many c (MkChar u))
   (let-match many u (MkU8 n p))
@@ -111,19 +111,19 @@
       (Refl _ a))))
 
 (def-fns _ $ (many dec-bool : (many (String) s) -> (many (Parse (String) (Bool) DBool s) o))
-  (let-match many (next s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
+  (let-match many (next-byte s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
   (let-match many n (Succ k) ((Zero) (POk _ _ _ _ (BFalse) r (DBF p r))))
   (let-match many k (Zero) (else (PNo _ _ _ _)))
   (POk _ _ _ _ (BTrue) r (DBT p r)))
 
 (def-fns _ $ (many dec-nums : (subterm many (String) s) -> (many (Parse (String) (List (Nat)) DNums s) o))
-  (let-match many (next s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
+  (let-match many (next-byte s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
   (let-match many n (Succ k) ((Zero) (POk _ _ _ _ (Nil _) r (DNEnd p r))))
   (let-match many (notail $ dec-nums r) (POk _ _ _ _ ns r2 d) (else (PNo _ _ _ _)))
   (POk _ _ _ _ (Cons _ k ns) r2 (DNCons k p r r2 ns d)))
 
 (def-fns _ $ (many dec-steps : (subterm many (String) s) -> (many (Parse (String) (List (Step)) DSteps s) o))
-  (let-match many (next s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
+  (let-match many (next-byte s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
   (let-match many n (Succ n1) ((Zero) (POk _ _ _ _ (Nil _) r (DSEnd p r))))
   (let-match many (notail $ dec-steps r) (POk _ _ _ _ ps r2 d) (else (PNo _ _ _ _)))
   (let-match many n1 (Succ n2) ((Zero) (POk _ _ _ _ (Cons _ (SH) ps) r2 (DSH p r r2 ps d))))
@@ -131,7 +131,7 @@
   (POk _ _ _ _ (Cons _ (SR k) ps) r2 (DSR k p r r2 ps d)))
 
 (def-fns _ $ (many dec-cfgs : (subterm many (Nat) fuel) (many (String) s) -> (many (Parse (String) (List (Config)) DCfgs s) o))
-  (let-match many (next s) (NByte _ _ _) ((NEnd) (POk _ _ _ _ (Nil _) (SNil) (DCNil))))
+  (let-match many (next-byte s) (NByte _ _ _) ((NEnd) (POk _ _ _ _ (Nil _) (SNil) (DCNil))))
   (let-match many fuel (Succ f) ((Zero) (PNo _ _ _ _)))
   (let-match many (dec-bool s) (POk _ _ _ _ b s1 db) (else (PNo _ _ _ _)))
   (let-match many (dec-nums s1) (POk _ _ _ _ ns s2 dn) (else (PNo _ _ _ _)))
