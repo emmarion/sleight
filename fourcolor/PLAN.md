@@ -1245,7 +1245,16 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   regions of its walk, which `SCut` and `PCut` refer to) is made of parts
   of the regions after it in `regs`; `reg-claim` follows a dart of
   positive dscore from the region of its walk's root through those
-  parts to the region whose obligations cover it. In a test run the tree built
+  parts to the region whose obligations cover it. In one run each on a
+  4-core cloud VM shared with other runs, `--goal proved` passed in about
+  1520 s with slc, about 1490 s of it compiling 8.7 MB of OCaml; in about
+  485 s with slc and `OCAMLRUNPARAM=o=200` in its environment, which
+  ocamlopt inherits (about 454 s compiling, peak RSS about 1.9 GB); and in
+  about 793 s with the reference `main.exe` under `ulimit -s unlimited`
+  (about 742 s compiling 12.5 MB). The 22 jobs, run one at a time, took
+  about 37 s of CPU together, the longest about 4.4 s. A run with one
+  reducible leaf of the arity-7 script replaced by an empty hubcap was
+  rejected (a job answered `ChkNo`). In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
   certificate. Load order: that of `unavgoal.sl` with `native.sl`
