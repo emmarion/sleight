@@ -52,7 +52,10 @@
 (let ((many drs)) (symmetrize (base-drules)))
 
 (def-fns _ $ (many unave-run : -> (many (Checked (UnavE cfs)) r))
-  (let ((many qt) (many qc)) (quiz-tree-c cfs))
+  (let ((many c) (many ce)) (cfs-run))
+  (let-match many ce (ChkYes _ e) ((ChkNo _) (ChkNo _)))
+  (let-match erased e (Refl _ _))
+  (let ((many qt) (many qc)) (quiz-tree-c c))
   (let-match many qc (ChkYes _ qi) ((ChkNo _) (ChkNo _)))
   (let ((many sok) (erased sw)) (small-c drs))
   (let-match many sok (BTrue) ((BFalse) (ChkNo _)))
