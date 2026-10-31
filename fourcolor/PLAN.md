@@ -870,7 +870,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   with no hypotheses, by `four-color-open` on `unav-proof`,
   `all-red-proof`, `birkhoff-proof` and `cfcerts-proof`, all computed in
   the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
-  that of `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c
+  that of `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/pieces red/proof-c
   red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
   `--goal proved`. In one run on a 4-core cloud VM, sharing it with two
   other runs of this size, it passed with slc in about 2190 s (36
@@ -1060,20 +1060,28 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fixed level built this way from a `CRed CRX` and a `KClosed` checked,
   and three broken variants of it (K or L minted too early, or X a
   parameter) were rejected.
-  `red/proof-c.sl` proves `AllRedC CRX css` (`all-red-proof`) for css the
-  chunks of `red/configs.sl` (`red/chunks.sl`), and `red/goal-c.sl` sets
-  it as a goal and discharges it with that proof: every configuration appears to be C-reducible, in the
-  sense of `CRed`, with its contract. Load order: `std/nat.sl
+  `red/pieces.sl` (load after `red/chunks.sl`) cuts the concatenation of
+  css (`cf-concat`) into the pieces `pcs` (`cf-cut`, by the sizes
+  `piece-sizes`), and `allredc-pieces` turns `AllRedC CRX pcs` into
+  `AllRedC CRX css`. The sizes were chosen offline (not in the repository)
+  from one run's measured time per configuration, so that each of the 100 pieces
+  takes at most about 10 s by that measure; any sizes give a correct proof, only the
+  balance depends on them. `red/proof-c.sl` proves `AllRedC CRX css`
+  (`all-red-proof`) for css the chunks of `red/configs.sl`
+  (`red/chunks.sl`), with one `native.sl` job per piece, and
+  `red/goal-c.sl` runs the jobs and sets and discharges the goal: every
+  configuration appears to be C-reducible, in the sense of `CRed`, with
+  its contract. Load order: `std/macro.sl native.sl std/nat.sl
   std/list.sl`, then `base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
   hypwalkup hypgeom` (each `.sl`), then `cfmap.sl red/red.sl cpmap.sl
   red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
   red/crestrict.sl red/kempe.sl cpcolor.sl red/configs.sl red/bridge.sl
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
-  red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/proof-c.sl
-  red/goal-c.sl` (with `--goal proved`). In that chain the goal was
-  proved with slc in about 7.4, 9 and 12 minutes of wall time in
-  three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
+  red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/pieces.sl
+  red/proof-c.sl red/goal-c.sl` (with `--goal proved`). In that chain the
+  goal was proved with slc in one run on a 4-core cloud VM shared with
+  other runs. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
