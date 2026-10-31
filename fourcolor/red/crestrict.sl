@@ -1,6 +1,6 @@
 (let ((erased RG)) (Rx (Gtree)))
 
-; After ctr_sub of ctreerestrict.v: n matches of et in the restriction list r.
+; n matches of et in the restriction list r.
 (def-adts $ (RCnt : ((List RG) r) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many RCNil : (erased (List (Col)) et) -> (RCnt (Nil RG) et (Zero)))
@@ -59,7 +59,7 @@
       (erased (Popped bs b) pp) (erased (Sym s bs e b) z) (erased (Pick4 (Gtree) s t0 t1 t2 t3 ts) pk) (erased (RCons b ts a c) p)
       -> (PopRC bs e t0 t1 t2 t3 a c)))
 
-; b is a with the matches that the restriction x has on traces beginning with e, shifted past e (after ctr_split of ctreerestrict.v).
+; b is a with the matches that the restriction x has on traces beginning with e, shifted past e.
 (def-adts $ (CStepE : (RG x) ((Col) e) ((List RG) a) ((List RG) b) -> Type)
   enum
   (many SENone : (erased (Bstack) bs) (erased (Gtree) g) (erased (Bits) q) (erased (Col) e) (erased (List RG) a) (erased (LeafSet g q) l)
@@ -417,7 +417,7 @@
 (def-fns _ $ (erased ife-h : (erased (Ctree) t l g) (erased (IfE t l g) p) (erased (CtH (Zero) t) h) -> (erased (CtH (Zero) g) r))
   (match erased p _ ((IEY _) h) ((IEN _ _) (HE (Zero)))))
 
-; After ctree_restrict of ctreerestrict.v: keep holds the traces of t less their matches in r, gone those of t that keep lost.
+; keep holds the traces of t less their matches in r, gone those of t that keep lost.
 (def-adts $ (CRes : ((Nat) h) ((Ctree) t) ((List RG) r) ((Ctree) keep) ((Ctree) gone) -> Type)
   enum
   (many CRNil : (erased (Nat) h) (erased (Ctree) t) -> (CRes h t (Nil RG) t (CEmpty)))
@@ -432,7 +432,6 @@
       (erased (IfE t1 l1 g1) f1) (erased (IfE t2 l2 g2) f2) (erased (IfE t3 l3 g3) f3) (erased (CtCons g1 g2 g3 gone) cg)
       -> (CRes (Zero) (CNode t1 t2 t3) r keep gone)))
 
-; A ctree whose nodes are held unique, so that ctree-restrict-u rewrites them in place; UBot holds a node of leaves.
 (def-adts $ (UTree : -> Type)
   enum
   (many UNode : (unique (UTree) u1 u2 u3) -> (UTree))

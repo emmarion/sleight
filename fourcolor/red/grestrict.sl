@@ -1,4 +1,3 @@
-
 (def-adts $ (Elem : (Type A) (A x) ((List A) xs) -> Type)
   enum
   (many ElHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Elem A x (Cons A x rest)))
@@ -330,7 +329,6 @@
     ((H1Yes _ _ _ et m mt) (HYes rr s (MkHits rr (Cons _ s (Nil _)) bs t et (suffix-elem RC x r rr sf (ElHere RC x rest)) m mt)))
     ((H1No _ _ _) (tail $ gtr-match-c s rr rest tl (SufNext RC x rest rr sf)))))
 
-
 (def-adts $ (Empty4 : ((Gtree) a) ((Gtree) b) ((Gtree) c) ((Gtree) d) -> Type)
   enum
   (many E4Yes : -> (Empty4 (GEmpty) (GEmpty) (GEmpty) (GEmpty)))
@@ -465,7 +463,6 @@
   (GPS gs (GSG (GEmpty)) b n x y rg (GRG (GEmpty)) rb s (pat-hit-e gs b (GPush) p0) (pat-hit-e gs b (GSkip) p1) (pat-hit-e gs b (GPop0) p2)
     (pat-hit-e gs b (GPop1) p3)))
 
-; A gtree whose nodes are held unique, so that gtree-restrict-u rewrites them in place; UGLeaf holds any gtree as it is.
 (def-adts $ (UGtree : -> Type)
   enum
   (many UGNode : (unique (UGtree) x0 x1 x2 x3) -> (UGtree))

@@ -1,7 +1,3 @@
-; pcs, the configurations of chunks.sl's css cut afresh into pieces of roughly equal checking time, one native-compute thunk
-; each, decoded from piece-srcs, config-srcs cut alike (pcs-dec its DecAll); cfs-all, every configuration in order; and
-; AllRedC over the pieces turned into AllRedC over css (allredc-pieces). Load after chunks.sl.
-
 (def-fns _ $ (erased allred-cat : (erased (Level) X) (erased (List (List (Config))) kss) (erased (List (Config)) cfs) (subterm erased (Flatten (Config) kss cfs) q)
     (erased (AllRedC X kss) ev) -> (erased (AllRed X cfs) r))
   (match erased q _

@@ -1,5 +1,3 @@
-; The certified reducibility check, over the initial trees of init.sl.
-
 (def-adts $ (InitFor : ((Nat) h) -> Type)
   enum
   (many IFYes : (erased (Nat) h) (many (Ctree) ctu) (many (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)

@@ -1,5 +1,3 @@
-; Certified initial trees, in place of ctree-init and gtree-init of red.sl, and the runtime helpers they use.
-
 (def-fns _ $ (many pick4-c : (erased Type A) (many (Gsym) s) (many A x0 x1 x2 x3) -> (many A x) (erased (Pick4 A s x0 x1 x2 x3 x) p))
   (match many s _
     ((GPush) (values x0 (PkPush A x0 x1 x2 x3)))
@@ -24,7 +22,6 @@
         ((BTrue) (values (GSOne) (GSelL g b0 b1 b2 b3 b s (GSOne) l pk (BSetT))))
         ((BFalse) (values (GSG (GEmpty)) (GSelL g b0 b1 b2 b3 b s (GSG (GEmpty)) l pk (BSetF))))))))
 
-
 (def-fns _ $ (many permc-c : (many (Perm) g) (many (Col) c) -> (many (Col) d) (erased (PermC g c d) p))
   (let-match many g (MkPerm p1 p2 p3))
   (match many c _ ((C0) (values c (PC0 g))) ((C1) (values p1 (PC1 p1 p2 p3))) ((C2) (values p2 (PC2 p1 p2 p3))) ((C3) (values p3 (PC3 p1 p2 p3)))))
@@ -46,7 +43,6 @@
         ((C3) (values (ESOdd) (EStT3 g c p)))))
     ((ESEven) (values st (EStE c)))
     ((ESOdd) (values st (EStO c)))))
-
 
 (def-fns _ $ (many pieces-root-c : (erased (List RS) ps) (subterm many (RxL (GSet) ps) pl) -> (many (Nat) k) (erased (PCnt ps (Nil (Col)) k) p))
   (let-match many pl (RxCons _ bs gs rest tl) ((RxNil _) (values (Zero) (PCNil (Nil _)))))
@@ -103,8 +99,7 @@
 (def-fns _ $ (erased sel-c0 : (erased (Ctree) t) -> (erased (CtSel t (C0) (CEmpty)) s))
   (match erased t _ ((CNode t1 t2 t3) (SelN0 t1 t2 t3)) ((CLeaf lf) (SelL lf (C0))) ((CEmpty) (SelE (C0)))))
 
-
-; The covered sets of a row of the initial gtree, for one open-chord count d and each parity (after gtree_table of initgtree.v).
+; The covered sets of a row of the initial gtree, for one open-chord count d and each parity.
 (def-adts $ (GEnt : ((Nat) n) ((Nat) d) -> Type)
   enum
   (many MkGEnt : (erased (Nat) n d) (many (Gtree) tt tf) (erased (GCov (GSG tt) d (BTrue) n) ct) (erased (GCov (GSG tf) d (BFalse) n) cf)
@@ -216,7 +211,6 @@
     ((Zero) (grow1))
     ((Succ k1) (gstep (Succ k1) (Zero) (PNo (Succ k1)) (notail $ grow-to k1)))))
 
-; After gtree_mem_init_tree of initgtree.v, one direction: every balanced partial chromogram of h + 1 symbols is in gtu.
 (def-fns _ $ (many gtree-full : (many (Nat) h) -> (many (Gtree) gtu) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc))
   (let-match many (row-head (Succ h) (Zero) (grow-to h)) (MkGEnt _ _ _ tf _ cf))
   (values tf cf))
@@ -363,8 +357,6 @@
     (cons-cev t1 t2 t3 t st s0 s1 s2 s3 tc e0 e1 e2 e3 c1 c2 c3)
     (cons-h k1 t1 t2 t3 t tc h1 h2 h3)))
 
-; After ctree_sub_init_tree of initctree.v, one direction: the multiplicity of each even trace of length k in t is its number of
-; matches in ps, read from the evenness state st.
 (def-fns _ $ (many ct-build : (many (List (LeafC)) tbl) (subterm many (Nat) k) (erased (List RS) ps) (many (RxL (GSet) ps) pl) (many (ES) st) ->
     (many (Ctree) t) (erased (GE t ps st k) g) (erased (CEv t st) c) (erased (CtH k t) hk))
   (let-match many pl (RxCons _ _ _ _ _) ((RxNil _) (values (CEmpty) (GEDead (CEmpty) ps st k (PZNil)) (CEvE st) (HE k))))

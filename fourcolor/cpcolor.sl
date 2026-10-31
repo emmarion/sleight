@@ -1,6 +1,3 @@
-; A certified cpcolor: every trace of the tree it computes is a ring trace of a colouring of the configuration's map
-; (the soundness half of ctree_mem_cpcolor of cfcolor.v). Load after cfcolor.sl and red/kempe.sl.
-
 ; Every trace of t, after the reversed prefix pre, is a ring trace of cp's map with its first entry dropped.
 (def-adts $ (CtRing : ((List (Step)) cp) ((Ctree) t) ((List (Col)) pre) -> Type)
   enum
@@ -44,7 +41,6 @@
   (let-match erased r (CRN _ _ _ _ _ r1 r2 r3))
   (match erased s _ ((SelN0 _ _ _) (CRE cp _)) ((SelN1 _ _ _) r1) ((SelN2 _ _ _) r2) ((SelN3 _ _ _) r3)))
 
-; The traces of a permuted tree t2 are those whose image under g is a trace of t.
 (def-fns _ $ (erased ctring-perm : (erased (List (Step)) cp) (erased (Perm) g gi) (erased (Ctree) t t2) (erased (List (Col)) pre pre2) (subterm erased (CtPerm g t t2) p)
     (erased (CtRing cp t pre) r) (erased (PermT g pre2 pre) pp) (erased (PermInv g gi) pi) (erased (IsPerm gi) ip) -> (erased (CtRing cp t2 pre2) res))
   (let-match erased p (CPL _ lf)
@@ -73,7 +69,7 @@
   (many HZHere : (erased (List (Col)) l) -> (HasC0 (Cons (Col) (C0) l)))
   (many HZThere : (erased (Col) c) (erased (List (Col)) l) (erased (HasC0 l) p) -> (HasC0 (Cons (Col) c l))))
 
-; p is l with Color2 and Color3 swapped when Color3 comes first (the tail normalisation of etrace of color.v).
+; p is l with Color2 and Color3 swapped when Color3 comes first.
 (def-adts $ (ENrm : ((List (Col)) l p) -> Type)
   enum
   (many NrEven : (erased (List (Col)) l) (erased (EvenTail l (BTrue)) e) -> (ENrm l l))
@@ -91,7 +87,6 @@
     ((InL _ _ q) (let-match erased q (Refl _ _)) (InL _ _ (HZHere l)))
     ((InR _ _ s) (match erased zm _ ((InL _ _ z) (InL _ _ (HZThere c l z))) ((InR _ _ m) (InR _ _ (mem-cons t u c l s m)))))))
 
-; t2 has t below colour c (Gonthier's ctree_cons_e).
 (def-fns _ $ (many ct-cons-e-c : (erased (List (Step)) cp) (erased (List (Col)) pre) (erased (Nat) h) (many (Col) c) (many (Ctree) t) (erased (CtH h t) ht)
     (erased (CtRing cp t (Cons (Col) c pre)) rt) -> (many (Ctree) t2) (erased (CtH (Succ h) t2) ht2) (erased (CtRing cp t2 pre) rt2)
     (erased (Or (Eq (Col) c (C0)) (CtSel t2 c t)) sl))
@@ -109,7 +104,6 @@
 
 (let ((many simple-leaf-c)) (CLeaf (CEmpty)))
 
-; The tree of the one trace et under g, after the reversed prefix pre (cfcbr2 of cfcolor.v), given that trace is good.
 (def-fns _ $ (many cfcbr2-c : (erased (List (Step)) cp) (erased (List (Col)) pre get full) (erased (Col) e0) (many (Perm) g) (subterm many (List (Col)) et)
     (erased (PermT g et get) pt) (erased (RevApp (Col) pre get full) ra) (erased (CpCol cp (Cons (Col) e0 full)) cc)
     -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt)
@@ -176,8 +170,6 @@
     ((HZThere _ _ z1) (HZThere c l1 (hasc0-back g l1 l3 ip p1 z1))))
   (match erased pc _ ((PC0 _) (HZHere l1)) (absurd (PC1 _ _ _) ip) (absurd (PC2 _ _ _) ip) (absurd (PC3 _ _ _) ip)))
 
-; The tree of the one trace et normalised so that its first entry other than C1 under g is C2, after the reversed prefix
-; pre of C1 entries (cfcbr1 of cfcolor.v), given that the trace under g is good.
 (def-fns _ $ (many cfcbr1-c : (erased (List (Step)) cp) (erased (List (Col)) pre get full) (erased (Col) e0) (many (Perm) g) (subterm many (List (Col)) et)
     (erased (PermT g et get) pt) (erased (RevApp (Col) pre get full) ra) (erased (CpCol cp (Cons (Col) e0 full)) cc) (erased (IsPerm g) ip)
     (erased (AllC1 pre) a1) -> (many (Ctree) t) (erased (Nat) h) (erased (Length (Col) et h) l) (erased (CtH h t) ht) (erased (CtRing cp t pre) rt)
@@ -238,7 +230,6 @@
   (many MkBrMem : (erased (Col) e0 e1) (erased (List (Col)) rest grest) (erased (Ctree) t) (erased (Perm) g) (erased (IsPerm g) ip)
       (erased (PermC g e1 (C1)) pg) (erased (PermT g rest grest) pt) (erased (NMem t grest) nm) -> (BrMem (Cons (Col) e0 (Cons (Col) e1 rest)) t)))
 
-; The tree of the even normal form of a ring trace with its first two entries dropped, below C1 (cpbranch of cfcolor.v).
 (def-fns _ $ (many cpbranch-c : (erased (List (Step)) cp) (erased (Nat) h) (many (List (Col)) et) (erased (CpCol cp et) cc)
     (erased (Length (Col) et (Succ (Succ h))) l) -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing cp t (Cons (Col) (C1) (Nil (Col)))) rt)
     (erased (BrMem et t) bm))
@@ -268,7 +259,6 @@
 (def-fns _ $ (many nz-dec : (many (Col) c) -> (many (NZDec c) r))
   (match many c _ ((C0) (NZZero)) ((C1) (NZYes c (NZ1))) ((C2) (NZYes c (NZ2))) ((C3) (NZYes c (NZ3)))))
 
-; The other two nonzero colours e2 = p231 e1 and e3 = p312 e1 of a nonzero e1.
 (def-fns _ $ (erased others : (erased (Col) e1 e2 e3) (erased (NZ e1) nz) (erased (PermC p231 e1 e2) p2) (erased (PermC p312 e1 e3) p3)
     -> (erased (AddC e1 e2 e3) a) (erased (AddC e1 e3 e2) b) (erased (NZ e2) n2) (erased (NZ e3) n3))
   (match erased nz _
@@ -300,7 +290,6 @@
     ((CsK a1 _ cp1 p1 pa) (let-match erased q (CsK b1 _ _ q1 pb)) (let-match erased (cprsize-fn cp1 a1 b1 p1 q1) (Refl _ _)) (pred2s-fn a1 a b pa pb))
     ((CsA a1 _ cp1 p1 pa) (let-match erased q (CsA b1 _ _ q1 pb)) (let-match erased (cprsize-fn cp1 a1 b1 p1 q1) (Refl _ _)) (sub2gt2-fn a1 a b pa pb))))
 
-; A ring trace has cprsize entries.
 (def-fns _ $ (erased cpcol-length : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) cc) -> (erased (Nat) k) (erased (Length (Col) et k) l)
     (erased (Cprsize cp k) cs))
   (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
@@ -358,8 +347,6 @@
   (many CoH : (erased (Col) e1 e2 sm) (erased (List (Col)) r2) (erased (List (Step)) cp1) (erased (Ctree) t) (erased (AddC e1 e2 sm) p) (erased (NZ sm) nz)
       (erased (CpCov cp1 (Cons (Col) e2 (Cons (Col) e1 r2)) t) c) -> (CpCov (Cons (Step) (SH) cp1) (Cons (Col) e1 (Cons (Col) e2 r2)) t)))
 
-; Runs the steps cp1 still to apply (in application order) from a ring trace et of the map of cp2, collecting the
-; trees of cpbranch (foldr cpcolor1 cpbranch of cfcolor.v, as red.sl's cpcol).
 (def-fns _ $ (many cpcol-c : (erased (List (Step)) cp2 full) (erased (Nat) h) (subterm many (List (Step)) cp1) (many (List (Col)) et)
     (erased (RevApp (Step) cp1 cp2 full) ra) (erased (CpCol cp2 et) cc) (erased (Cprsize full (Succ (Succ h))) cs) (erased (NoA full) na)
     -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt) (erased (CpCov cp1 et t) cv))
@@ -464,7 +451,6 @@
   (let-match erased k (Succ k1) ((Zero) (RotsZ _ cc2)))
   (RotsS _ k1 c cl cc2 cc2 (SnocCons _ c c (Nil (Col)) cl (SnocNil _ c)) (rots-cc c k1)))
 
-; Rotating the trace c c leaves it alone.
 (def-fns _ $ (erased rot-cc : (erased (Col) c) (erased (Nat) k) -> (erased (Rot (Col) k (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) c (Cons (Col) c (Nil (Col))))) r))
   (let ((erased cc2)) (Cons (Col) c (Cons (Col) c (Nil (Col)))))
   (let ((erased m) (erased l)) (values (Succ (Succ (Zero))) (LengthCons _ c (Cons (Col) c (Nil (Col))) (Succ (Zero)) (LengthCons _ c (Nil (Col)) (Zero) (LengthNil _)))))
@@ -484,8 +470,6 @@
       (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C1) (Cons (Col) (C2) (Cons (Col) (C2) (Nil (Col)))))) t1) c1)
       (erased (CpCov cp1 (Cons (Col) (C1) (Cons (Col) (C1) c11)) t2) c2) (erased (CtOr t1 t2 t) o) -> (CpCov0 (Cons (Step) (SU) cp1) t)))
 
-; The trees cpcol collects from the two-entry trace c11, normalised by the steps that only rotate it or leave it fixed up to
-; colour permutations (cpcolor0 of red.sl).
 (def-fns _ $ (many cpcolor0-c : (erased (List (Step)) cp2 full) (erased (Nat) h) (subterm many (List (Step)) cp1) (erased (RevApp (Step) cp1 cp2 full) ra)
     (erased (CpCol cp2 c11) cc) (erased (Cprsize full (Succ (Succ h))) cs) (erased (NoA full) na)
     -> (many (Ctree) t) (erased (CtH h t) ht) (erased (CtRing full t (Cons (Col) (C1) (Nil (Col)))) rt) (erased (CpCov0 cp1 t) cv))
@@ -536,7 +520,6 @@
   (many MkCpComp : (erased (List (Step)) cp rcp) (erased (Ctree) t0 ta tb t) (erased (RevApp (Step) rcp (Nil (Step)) cp) ra) (erased (CpCov0 rcp t0) cv)
       (erased (CtCons t0 ta tb t) c) (erased (CtPerm p312 t0 ta) pa) (erased (CtPerm p231 t0 tb) pb) -> (CpComp cp t)))
 
-; Every trace of the tree red.sl's cpcolor computes is a ring trace of cp's map with its first entry dropped.
 (def-fns _ $ (many cpcolor-c : (erased (Nat) h) (many (List (Step)) cp) (erased (Cprsize cp (Succ (Succ h))) cs) (erased (NoA cp) na)
     -> (many (Ctree) t) (erased (CtH (Succ h) t) ht) (erased (CtRing cp t (Nil (Col))) rt) (erased (CpComp cp t) comp))
   (let ((many rcp) (erased ra)) (rev-onto-c _ cp (Nil _)))
@@ -559,7 +542,6 @@
   (many MkCpColR : (erased (List (Step)) cp) (erased (List (Col)) et ct) (erased (Col) e0) (erased (Snoc (Col) et e0 ct) s)
       (erased (CpCol cp (Cons (Col) e0 et)) c) -> (CpColR cp ct)))
 
-; The completion from s of et, where CTr c0 x cs et, ends with s + x + c0.
 (def-fns _ $ (erased ctr-ctrace : (erased (Col) s c0 x sx t) (erased (List (Col)) cs et) (subterm erased (CTr c0 x cs et) p) (erased (AddC s x sx) a)
     (erased (AddC sx c0 t) b) -> (erased (List (Col)) ct) (erased (Ctr s et ct) cr) (erased (Snoc (Col) et t ct) sn))
   (let-match erased p (CTStep _ _ y t1 cs1 et1 p1 rest)
@@ -571,7 +553,6 @@
     (ctr-ctrace s2 c0 y sx t cs1 et1 rest (addc-comm y s2 sx (addc-cancel y s2 sx (addc-comm sx y s2 q))) b))
   (values (Cons _ t1 ct1) (CtrCons s t1 s2 et1 ct1 (addc-k s t1 s2 (addc-assoc s x y sx t1 s2 a q p1)) cr1) (SnocCons _ t1 t et1 ct1 sn1)))
 
-; The completion of a trace without its first entry is the trace rotated by one (Gonthier's rot 1 et = ctrace (behead et)).
 (def-fns _ $ (erased trace-ctr : (erased (List (Col)) cs et) (erased (Col) e0) (erased (Trace cs (Cons (Col) e0 et)) tr) ->
     (erased (List (Col)) ct) (erased (Ctr (C0) et ct) cr) (erased (Snoc (Col) et e0 ct) sn))
   (let-match erased tr (MkTrace c _ _ p))

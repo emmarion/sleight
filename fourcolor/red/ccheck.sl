@@ -1,6 +1,3 @@
-; The contract of a configuration (cfcontract.v on these dart numbers) and the certified check that it is C-reducible.
-; Load after ccomp.sl.
-
 (def-adts $ (OtherStep : ((Step) s) -> Type)
   enum
   (many OsRr : -> (OtherStep (SRr)))
@@ -8,9 +5,9 @@
   (many OsK : -> (OtherStep (SK)))
   (many OsA : -> (OtherStep (SA))))
 
-; xs lists the darts of a transversal of the kernel edges of the map of cp, the newest first (Gonthier's ctrenum, on these
-; dart numbers): the foot a of each Y step but the first, and for each H step its crossbar d + 2 and its feet a and x0, the
-; map before the step having d darts and its ring starting a, x0.
+; xs lists the darts of a transversal of the kernel edges of the map of cp, the newest first: the foot a of each Y step but the
+; first, and for each H step its crossbar d + 2 and its feet a and x0, the map before the step having d darts and its ring
+; starting a, x0.
 (def-adts $ (Ctrenum : ((List (Step)) cp) ((List (Nat)) xs) -> Type)
   enum
   (many CeNil : -> (Ctrenum (Nil (Step)) (Nil (Nat))))
@@ -24,7 +21,7 @@
       -> (Ctrenum (Cons (Step) (SH) cp) (Cons (Nat) (Succ (Succ d)) (Cons (Nat) a (Cons (Nat) x0 xs)))))
   (many CeOther : (erased (Step) s) (erased (List (Step)) cp) (erased (OtherStep s) o) -> (Ctrenum (Cons (Step) s cp) (Nil (Nat)))))
 
-; cc lists the darts of xs at the positions i, i + 1, ... that cci lists (Gonthier's mask of ctrmask).
+; cc lists the darts of xs at the positions i, i + 1, ... that cci lists.
 (def-adts $ (Pick : ((List (Nat)) cci) ((Nat) i) ((List (Nat)) xs cc) -> Type)
   enum
   (many PkNil : (erased (List (Nat)) cci) (erased (Nat) i) -> (Pick cci i (Nil (Nat)) (Nil (Nat))))
@@ -33,7 +30,7 @@
   (many PkOut : (erased (List (Nat)) cci xs cc) (erased (Nat) i x) (erased (NotIn i cci) p) (erased (Pick cci (Succ i) xs cc) rest)
       -> (Pick cci i (Cons (Nat) x xs) cc)))
 
-; cc is the contract of the configuration with program cp and contract indices cci (Gonthier's cfcontract).
+; cc is the contract of the configuration with program cp and contract indices cci.
 (def-adts $ (CfContract : ((List (Step)) cp) ((List (Nat)) cci cc) -> Type)
   enum
   (many MkCfContract : (erased (List (Step)) cp) (erased (List (Nat)) cci xs cc) (erased (Ctrenum cp xs) ce) (erased (Pick cci (Zero) xs cc) pk)
@@ -100,9 +97,6 @@
   (let-match many (notail $ inserte-c e rest) (IEYes _ _ ie p) ((IENo _ _) (IENo e cc)))
   (IEYes e cc (Cons _ y (Cons _ z ie)) (IECons e rest ie y z pz p)))
 
-
-; The validity of a contract, decided on the concrete map.
-
 (def-adts $ (RespD : ((List (Nat)) lab xs) -> Type)
   enum
   (many RsYes : (erased (List (Nat)) lab xs) (many (List (Nat)) ls) (erased (Respects lab xs ls) p) -> (RespD lab xs))
@@ -144,7 +138,6 @@
   (let-match many k (Succ k1) ((Zero) (Nil _)))
   (Cons _ (orbit-min p i i i d) (notail $ labels p d (Succ i) k1)))
 
-; A labelling of the darts below d constant along p.
 (def-fns _ $ (many flab-c : (many (List (Nat)) p) (many (Nat) d) -> (many (List (Nat)) lab) (many (Chk (Respects lab p lab)) r))
   (let ((many lab)) (labels p d 0 d))
   (let-match many (respects-c lab p) (RsYes _ _ ls q) ((RsNo _ _) (values lab (CkN _))))
@@ -152,7 +145,6 @@
   (let-match erased eq (Refl _ _))
   (values lab (CkY _ q)))
 
-; A labelling constant along f . e is constant along node.
 (def-fns _ $ (erased node-labels : (erased (Nat) d) (erased (List (Nat)) e n f fe lab) (erased (Hypermap d e n f) h) (erased (Respects f e fe) rfe)
     (erased (Respects lab fe lab) rl) -> (erased (Respects lab n lab) r))
   (let-match erased h (MkHypermap _ _ _ _ ids fe0 en nf io cfe ke cen kn cnf kf))
@@ -279,7 +271,6 @@
   (let-match many (find-triad e f r ie lab d rf d) (TrYes _ _ _ _ x kx t) ((TrNo _ _ _ _) (CkN _)))
   (CkY _ (CsTriad e f r ie cc x l kx t)))
 
-; Decides whether cc is a valid contract for the ring r of the map (e, n, f), n given as a proof.
 (def-fns _ $ (many valid-c : (many (Nat) d) (many (List (Nat)) e f r cc ie) (erased (List (Nat)) n) (erased (Hypermap d e n f) h) (erased (InsertE e cc ie) pi)
     -> (many (Chk (ValidContract e n f r cc)) res))
   (let-match many (disj-c r ie) (CkY _ off) ((CkN _) (CkN _)))

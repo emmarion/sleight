@@ -1,6 +1,3 @@
-; The chromogram operations gram_neg, gram_flip and gram_rot of kempe.v, with matchg read as bridge.sl's MatchG.
-; Load after bridge.sl.
-
 ; bs has n entries.
 (def-adts $ (Depth : ((Bstack) bs) ((Nat) n) -> Type)
   enum
@@ -191,7 +188,6 @@
     ((GStPop0 _ _) (NUPop d2 s (GPop1) w1 (NP01) (bal-nounder d2 b2 w1 p1)))
     ((GStPop1 _ _ _ _) (NUPop d2 s (GPop0) w1 (NP10) (bal-nounder d2 b2 w1 p1)))))
 
-; After matchg_balanced: a chromogram that matches is balanced.
 (def-fns _ $ (erased mt-bal : (erased (Bstack) bs) (erased (Nat) n) (erased (List (Col)) et) (erased (List (Gsym)) w)
     (subterm erased (MatchTo bs et w (BS0)) m) (erased (Depth bs n) dp) -> (erased (Bool) b) (erased (Bal n b w) r))
   (match erased m _
@@ -256,7 +252,6 @@
     ((GNPop n1 s t w1 w3 np g1) (GNPop n1 s t w3 w1 np (gneg-sym n1 w1 w3 g1)))
     ((GNHere s t w1 np) (GNHere t s w1 (negpop-sym s t np)))))
 
-; One step from the stacks with bottoms b and c, at a step that does not pop past them.
 (def-fns _ $ (erased sym-rebot : (erased (Gsym) s) (erased (Bstack) sb B Bb1 C) (erased (Col) e) (erased (Bool) b c) (erased (Sym s B e Bb1) y)
     (erased (Bot sb b B) pb) (erased (Bot sb c C) pc) (erased (Unbot s sb) ub)
     -> (erased (Bstack) sb1 Cc1) (erased (Sym s sb e sb1) y0) (erased (Bot sb1 b Bb1) pb1) (erased (Bot sb1 c Cc1) pc1) (erased (Sym s C e Cc1) r))
@@ -264,7 +259,6 @@
   (let ((erased Cc1) (erased pc1)) (bot-exists sb1 c))
   (values sb1 Cc1 y0 pb1 pc1 (sym-bot s sb sb1 C Cc1 e c y0 pc pc1)))
 
-; match_gram_neg: a match of gram_neg w from a stack with bottom bit b is a match of w from the stack with the other bottom bit.
 (def-fns _ $ (erased mg-neg : (erased (Bstack) sb B C) (erased (Nat) n) (erased (Bool) b c) (erased (List (Gsym)) w w2) (erased (List (Col)) et)
     (erased (Depth sb n) dp) (subterm erased (GNeg n w w2) g) (erased (Bot sb b B) pb) (erased (Bot sb c C) pc) (erased (Not b c) nt)
     (erased (MatchG B et w2) m) -> (erased (MatchG C et w) r))
@@ -339,7 +333,6 @@
   (let ((erased bs1) (erased y0) (erased q1)) (sym-unbot s Y Y1 bs e x y1 p1 ub))
   (values bs1 y0 (MkBot2 bs1 Y1 X1 x y q1 q2)))
 
-; The two halves of match_gram_flip: a match of gram_flip w from sb is a match of w from sb with the bits 1, 0 or 0, 1 below.
 (def-fns _ $ (erased flip-fwd : (erased (Bstack) sb A B) (erased (Nat) n) (erased (List (Gsym)) w w2) (erased (List (Col)) et) (erased (Depth sb n) dp)
     (subterm erased (Flip n w w2) fl) (erased (Bot2 sb (BTrue) (BFalse) A) pa) (erased (Bot2 sb (BFalse) (BTrue) B) pb) (erased (MatchG sb et w2) m)
     -> (erased (Or (MatchG A et w) (MatchG B et w)) r))
@@ -470,7 +463,6 @@
       (values w2 (GRPush w1 u w2 sn fl)))
     ((GStSkip _ _ _ _) (let ((erased w2) (erased sn)) (snoc-exists _ w1 (GSkip))) (values w2 (GRSkip w1 w2 sn)))))
 
-; The two halves of match_gram_rot: et1 :: [e] matches gram_rot w exactly when e :: et1 matches w.
 (def-fns _ $ (erased rot-fwd : (erased (Bool) b) (erased (List (Gsym)) w w2) (erased (Col) e) (erased (List (Col)) et1 et2) (erased (GRot w w2) gr)
     (erased (MatchG (BS0) (Cons (Col) e et1) w) m) (erased (Snoc (Col) et1 e et2) se) -> (erased (MatchG (BS0) et2 w2) r))
   (match erased gr _
@@ -534,7 +526,6 @@
   (let ((erased init) (erased l) (erased r)) (unsnoc-exists A b xs1))
   (values (Cons _ a init) l (SnocCons A a l init (Cons A b xs1) r)))
 
-; A trace matching the rotation of a chromogram that matches a non-empty trace has a last entry.
 (def-fns _ $ (erased rot-unsnoc : (erased (List (Gsym)) w w2) (erased (Col) e) (erased (List (Col)) et ct) (erased (GRot w w2) gr)
     (erased (MatchG (BS0) (Cons (Col) e et) w) m0) (erased (MatchG (BS0) ct w2) m) -> (erased (List (Col)) et1) (erased (Col) e1) (erased (Snoc (Col) et1 e1 ct) r))
   (match erased gr _

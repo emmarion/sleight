@@ -1,6 +1,3 @@
-; Every ring trace of a contract colouring of a configuration's map is in a computed list (the completeness half of
-; ctree_mem_cpcolor of cfcolor.v, for contract colourings, after the contract steps of cfcontract.v). Load after cfred.sl.
-
 (def-fns _ $ (erased respects-at : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) lab j l) q) -> (erased (Nth (Nat) ls i l) r))
   (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
@@ -57,7 +54,6 @@
   (let ((erased k) (erased c) (erased sc) (erased rf) (erased _)) (respects-unsnoc ks f f2 k2 a s rf2))
   (MkFC ks f k rf (pre-unsnoc k k2 ks c pk2 sc)))
 
-; Through an insertion of the new dart x after c.
 (def-fns _ $ (erased fc-uninsert : (erased (List (Nat)) ks f f2) (erased (Nat) c x) (erased (FC ks f2) fc) (erased (Insert f c x f2) ins)
     (erased (Length (Nat) f x) lf) -> (erased (FC ks f) r))
   (let-match erased ins (MkInsert _ f1 _ _ _ v pv s1 s2))
@@ -107,7 +103,6 @@
   (many MkCtx : (erased (List (Nat)) ie ks big e f ke) (erased (Nat) m) (erased (Pre e big) pe) (erased (FC ks f) fc) (erased (Respects ks big ke) rk)
       (erased (CcEdge ie (Zero) ke ks) ce) (erased (Under ks 4) four) (erased (Length (Nat) ks m) lk) (erased (Length (Nat) big m) lb) -> (Ctx ie ks big e f)))
 
-; The colour of a dart x of e, below 4.
 (def-fns _ $ (erased ctx-col : (erased (List (Nat)) ie ks big e f) (erased (Nat) x y) (erased (Ctx ie ks big e f) cx) (erased (Nth (Nat) e x y) p)
     -> (erased (Nat) k) (erased (Nth (Nat) ks x k) pk) (erased (Col) c) (erased (NCol k c) pc))
   (let-match erased cx (MkCtx _ _ _ _ _ ke m pe fc rk ce four lk lb))
@@ -115,7 +110,6 @@
   (let ((erased c) (erased pc)) (ncol-ex k (under-nth ks x k 4 four pk)))
   (values k pk c pc))
 
-; The edge colour of a dart x of e, whose edge image z has y after it on its face.
 (def-fns _ $ (erased flag-of : (erased (List (Nat)) ie ks big e f) (erased (Nat) x z y kx ky) (erased (Col) cx cy u) (erased (Ctx ie ks big e f) ctx)
     (erased (Nth (Nat) e x z) pe) (erased (Nth (Nat) f z y) pf) (erased (Nth (Nat) ks x kx) px) (erased (Nth (Nat) ks y ky) py) (erased (NCol kx cx) qx)
     (erased (NCol ky cy) qy) (erased (AddC cx cy u) pu) -> (erased (Flag ie x u) r))
@@ -130,7 +124,6 @@
   (let-match erased (addc-same cx cx u (C0) pu (addc-ii cx)) (Refl _ _))
   (FlIn ie x p))
 
-; A U step at d puts u = colour of d+1 plus colour of d twice in front of the trace, u the edge colour of d+1.
 (def-fns _ $ (erased u-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (PointedMap d e n f r) pm)
     (erased (EcpU d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
     -> (erased (Col) u) (erased (List (Nat)) rc2) (erased (List (Col)) cs2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2)
@@ -172,7 +165,6 @@
       (erased (Nth (Nat) ks w kw) pw) (erased (NCol kw cw) qw) (erased (AddC cz cw e3) p) (erased (CTr ca cw csq et) ct)
       -> (Next ks (Cons (Nat) w q) (Cons (Nat) kw rcq) a w ka ca cz e3 (Cons (Col) cw csq) et)))
 
-; An N step at d replaces the second and third entries e2, e3 of the trace by their sum s, the edge colour of d.
 (def-fns _ $ (erased n-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (Col) t1 t2 t3)
     (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr)
     (erased (NCols rc cs) nc) (erased (Trace cs (Cons (Col) t1 (Cons (Col) t2 (Cons (Col) t3 et)))) tr)
@@ -274,8 +266,6 @@
   (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc2 rk ce four lk lbg))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-uninsert ks f f1 ea d (fc-uninsert ks f1 f2 ez (Succ d) fc2 i2 (insert-length f f1 ea d d i1 lf)) i1 lf)))
 
-; The computation of the ring traces of the contract colourings, one step at a time.
-
 (def-adts $ (Chk : (Type P) -> Type)
   enum
   (many CkY : (erased Type P) (erased P p) -> (Chk P))
@@ -372,7 +362,7 @@
   (many KH : -> (CK)))
 
 ; The trace o that a U, Y or H step at d makes of et when the new dart d+1 has edge colour u, and the darts whose edge colours
-; that fixes (the steps of cpcolor1 of cfcolor.v, with the contract darts' edges coloured C0).
+; that fixes, with the contract darts' edges coloured C0.
 (def-adts $ (Cand : ((CK) k) ((Nat) d) ((List (Col)) et) ((Col) u) ((List (FU)) cks) ((List (Col)) o) -> Type)
   enum
   (many CaU : (erased (Nat) d) (erased (List (Col)) et) (erased (Col) u)
@@ -478,8 +468,6 @@
         -> (GOptU kt ie k rp d d2 et u))
     (many GuNone : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         (erased (Col) u) (erased (NoCand k et) n) -> (GOptU kt ie k rp d d2 et u))))
-
-; The construction is a function of the program.
 
 (def-adts $ (Cpm : -> Type)
   enum
@@ -656,7 +644,6 @@
       (let-match erased sn (SnocCons _ _ _ _ r2 sn1))
       (FRCons ie t r2 d0 e1 d2 b z x st1 (freach-snoc ie rp1 r2 s e1 d1 d2 z y x fr1 st sn1)))))
 
-; The ring trace of the map of cp under a contract colouring ks, seen from the map of cp, is one that the steps of cp, from its end, make of a candidate of the empty trace.
 (def-fns _ $ (erased trace-reach : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r ie ks big)
     (subterm erased (Cpmap cp d e f r) c) (erased (RYH cp) ry) (erased (Ctx ie ks big e f) ctx)
     -> (erased (List (Nat)) rc) (erased (List (Col)) cs et) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
@@ -742,7 +729,6 @@
             (CaH d0 a1 a2 uu v w et2 pv pw) (AFCons ie (Succ d0) uu _ fl1 (AFCons ie d2 v _ fl2 (AFCons ie d4 w _ fl3 (AFNil ie)))))
           (SnocCons _ (SU) (SH) rp1 rp sn))))))
 
-; Every contract ring trace of the map of cp is one that FR reaches.
 (def-fns _ $ (erased cccol-hit : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ie)
     (erased (Cpmap cp d e f r) c) (erased (InsertE e cc ie) pi) (erased (RYH cp) ry) (erased (List (Col)) et)
     (erased (CcCol cp cc et) col) -> (erased (List (Step)) rp) (erased (RevS cp rp) rs) (erased (FR ie (Cons (Step) (SU) rp) (Zero) (Nil (Col)) d et) fr))
@@ -824,7 +810,6 @@
     ((DFR _ _ _ _ _ _ _ g) g)
     ((DFK _ _ s k _ d2 rp1 _ _ sk g) (GdK kt ie s k d d2 rp1 et sk g))))
 
-; Depth first, every trace the steps of rp make of et is checked against kt.
 (def-fns _ $ (many dfs-c : (many (Ctree) kt) (many (List (Nat)) ie) (subterm many (List (Step)) rp) (subterm many (List (Col)) us) (many (Nat) d)
     (many (List (Col)) et) -> (many (Chk (DFE kt ie rp us d et)) r))
   (let-match many rp (Cons _ s rest)

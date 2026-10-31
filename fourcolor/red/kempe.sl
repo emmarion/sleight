@@ -28,11 +28,10 @@
   (many PPar0 : (erased (Bool) b) -> (PopPar (GPop0) b b))
   (many PPar1 : (erased (Bool) b c) (erased (Not b c) n) -> (PopPar (GPop1) b c)))
 
-; The Kempe co-closure of P (after Kempe_coclosure of chromogram.v), as the least set of partial traces holding those whose completion satisfies P, holding
-; each trace that a colour permutation sends into it, and holding each trace all of whose balanced matching
-; chromograms are matched by a trace in it. AM P bs d b et pre: every chromogram w matching et from the stack bs, whose
-; completion from d open chords and parity b is balanced, has its whole chromogram (the reverse of pre, then w)
-; matched by a trace of the set.
+; The Kempe co-closure of P, as the least set of partial traces holding those whose completion satisfies P, holding each trace
+; that a colour permutation sends into it, and holding each trace all of whose balanced matching chromograms are matched by a
+; trace in it. AM P bs d b et pre: every chromogram w matching et from the stack bs, whose completion from d open chords and
+; parity b is balanced, has its whole chromogram matched by a trace of the set.
 (def-adts
   ((KC : (Pred P) ((List (Col)) et) -> Type)
     enum
@@ -80,7 +79,6 @@
 (def-fns _ $ (erased absurd endbad-bal : (erased (Nat) d) (erased (Bool) b) (erased (EndBad d b) e) (erased (GBal d b (Nil (Gsym))) g) -> (erased (False) f))
   (match erased e _ (absurd (EB0) g) (absurd (EB2 _ _) g)))
 
-; After even_trace of color.v as an automaton over the trace.
 (def-adts $ (ES : -> Type)
   enum
   (many ESStart : -> (ES))
@@ -570,14 +568,13 @@
   (let-match erased m (MkCtMem _ _ n1 s1))
   (values n1 (sub-fn t et n (Succ n1) s s1)))
 
-
 (def-fns _ $ (erased mc-zero-mk : (erased (Bstack) bs) (erased (List (Col)) et) -> (erased (MC (GSG (GEmpty)) bs et (Zero)) m))
   (let ((erased n) (erased m)) (mc-exists (GSG (GEmpty)) bs et))
   (let-match erased (mc-zero bs et n m) (Refl _ _))
   m)
 
-; After Kempe_valid of kempetree.v, for soundness only: a history of the Kempe_tree_closure state (ctu, gtr, gtu), from
-; initial trees satisfying the three certificates above. ctr holds traces of the co-closure, of length h + 1.
+; A history of the Kempe_tree_closure state (ctu, gtr, gtu), from initial trees satisfying the three certificates above. ctr holds
+; traces of the co-closure, of length h + 1.
 (def-adts
   ((KV : (Pred P) ((Nat) h) ((Ctree) ctu) ((Gtree) gtr) ((Gtree) gtu) -> Type)
     enum
@@ -786,8 +783,6 @@
         (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (CtH (Succ h) ctu) hc) (erased (CtH (Succ h) gone) hg)
         (erased (CRes h ctu (Cons RG (MkRx (Gtree) (BS0) gtr) (Nil RG)) keep gone) cres) (erased (CtRLR gone gone ctr) rl) -> (CR h c0 r0 g0 ctr))))
 
-; After Kempe_tree_closure_correct of kempetree.v, the validity half: from a valid state and removed traces in the co-closure,
-; every state the loop reaches is valid.
 (def-fns _
   ((erased kr-kv : (erased Pred P) (erased (Nat) h) (erased (Ctree) c0 r0) (erased (Gtree) g0) (erased (KV P h c0 (GEmpty) g0) kv0)
       (erased (CtKC P h r0) ck0) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KR h c0 r0 g0 ctu gtr gtu) kr)
@@ -909,7 +904,6 @@
   (let-match erased g (MkPerm p1 p2 p3))
   (match erased c _ ((C0) (values c (PC0 g))) ((C1) (values p1 (PC1 p1 p2 p3))) ((C2) (values p2 (PC2 p1 p2 p3))) ((C3) (values p3 (PC3 p1 p2 p3)))))
 
-; A tail read as odd by g reads as even by the flipped g2 once Color2 and Color3 are swapped.
 (def-fns _ $ (erased flip-run : (erased (Perm) g g2) (erased (List (Col)) l l2) (erased (FlipPair g g2) fp) (subterm erased (PermT p132 l l2) pt)
     (erased (ERun (ESTail g) l (BFalse)) run) -> (erased (ERun (ESTail g2) l2 (BTrue)) r))
   (match erased pt _
@@ -948,8 +942,6 @@
     ((PTNil _) l)
     ((PTCons _ c d et1 et3 _ p1) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ d et3 n1 (permt-length g et1 et3 n1 p1 l1)))))
 
-; Soundness half of Kempe_treeP of kempetree.v, on partial traces: a trace of length h + 1 whose even normal form has
-; multiplicity zero in the Kempe tree is in the co-closure of P.
 (def-fns _ $ (erased kempe-treeP : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt) (erased (KSound P h kt) ks)
     (erased (List (Col)) et et2) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) s) ->
     (erased (KC P et) r))

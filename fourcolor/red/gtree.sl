@@ -1,4 +1,3 @@
-; A set of partial chromograms: those of a gtree, or the set holding only the empty one.
 (def-adts $ (GSet : -> Type)
   enum
   (many GSG : (many (Gtree) g) -> (GSet))
@@ -11,7 +10,6 @@
   (many PkPop0 : (erased Type A) (erased A x0 x1 x2 x3) -> (Pick4 A (GPop0) x0 x1 x2 x3 x2))
   (many PkPop1 : (erased Type A) (erased A x0 x1 x2 x3) -> (Pick4 A (GPop1) x0 x1 x2 x3 x3)))
 
-; The one-symbol chromograms a gtree leaf holds, flagged in the order GPush GSkip GPop0 GPop1.
 (def-adts $ (Bits : -> Type)
   enum
   (many MkBits : (many (Bool) b0 b1 b2 b3) -> (Bits)))
@@ -59,7 +57,7 @@
   (many Popped0 : (erased (Bstack) b) -> (Popped (BP0 b) b))
   (many Popped1 : (erased (Bstack) b) -> (Popped (BP1 b) b)))
 
-; After match_count of gtree.v: n chromograms of gs match et from the stack bs.
+; n chromograms of gs match et from the stack bs.
 (def-adts $ (MC : ((GSet) gs) ((Bstack) bs) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many MCNil : (erased (GSet) gs) (erased (Bstack) bs) (erased (Nat) n) (erased (GRoot gs n) p) -> (MC gs bs (Nil (Col)) n))
@@ -74,7 +72,7 @@
       (erased (MC g1 bs1 et n1) q1) (erased (Sym s bs e b) y2) (erased (GSel gs s g2) p2) (erased (MC g2 b et n2) q2)
       (erased (Add n1 n2 n) a) -> (MC gs bs (Cons (Col) e et) n)))
 
-; a and b partition gs (after sgtree_partition of gtree.v).
+; a and b partition gs.
 (def-adts
   ((GPart : ((GSet) gs) ((GSet) a) ((GSet) b) -> Type)
     enum

@@ -1,5 +1,3 @@
-; The Kempe half of check_reducible_valid of cfreducible.v. Load after check.sl and gramrot.sl.
-
 ; P holds of ct with its last entry moved to the front (P o rotr 1).
 (def-adts $ (RotP : ((PredC) p) ((List (Col)) ct) -> Type)
   enum
@@ -29,7 +27,6 @@
   (many MkCoLv : (erased (Level) L R W Y) (erased (Predates (Level) COB R) pb) (erased (Predates (Level) L R) p1) (erased (Predates (Level) R W) p2)
       (erased (Predates (Level) W Y) p3) -> (CoLv L Y)))
 
-; The rotation P o rotr 1 of a Kempe-closed P is Kempe-closed (closedP1 in check_reducible_valid), at a level M above P's and COB.
 (def-fns _ $ (erased kclosed-rot : (erased (Level) L M) (erased (Predates (Level) L M) pl) (erased (Predates (Level) COB M) pb) ->
     (erased (Fn M (erased Pred P2) (erased Rel R) (erased (KClosed L P2 R) cl) -> (erased (KClosed M (MkPred (PredC) P2 RotP) (MkRel (RelC) R RotR)) c2)) f))
   (let ((erased q1) (erased q2) (erased q3) (erased q4) (erased q5) (erased q6))
@@ -69,8 +66,8 @@
     (MkKClosed M P1 R1 cp1 cg1 cm1))
   rot-closed)
 
-; After Kempe_coclosure of chromogram.v, for the Kempe-closed sets whose closure functions are at level L, by a function at
-; level Y: every such set holding et holds a trace of P.
+; For the Kempe-closed sets whose closure functions are at level L, by a function at level Y: every such set
+; holding et holds a trace of P.
 (def-adts $ (KCoclo : ((Level) L Y) ((PredC) P) ((List (Col)) et) -> Type)
   enum
   (many MkKCoclo : (erased (Level) L Y) (erased (PredC) P) (erased (List (Col)) et)
@@ -78,7 +75,6 @@
           (erased (List (Col)) et2) (erased (Holds P et2) q) (erased (Holds P2 et2) p2)) f)
       -> (KCoclo L Y P et)))
 
-; From the co-closure of the rotated ring traces at the rotation ct of e0 :: et, the co-closure of the ring traces at e0 :: et.
 (def-fns _ $ (erased kcc-ring : (erased (List (Step)) cp) (erased (List (Col)) et ct) (erased (Col) e0) (erased (KCC (MkPred (List (Step)) cp CpColR) ct) k)
     (erased (Snoc (Col) et e0 ct) s) (erased (Level) L Y) (erased (CoLv L Y) lv) -> (erased (KCoclo L Y (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r))
   (let-match erased lv (MkCoLv _ M1 M2 _ pb p1 p2 p3))
@@ -100,10 +96,6 @@
 
 (def-lvl KHL)
 
-; The Kempe half of check_reducible_valid, by a function at level KHL: every trace e0 :: et of cprsize cp entries whose even
-; normal form of et is not in the Kempe tree kt is in the co-closure of the ring traces of cp's map, for the closed sets at any
-; level L with levels CoLv L Y.
-
 (def-adts $ (KHalf : ((List (Step)) cp) ((Ctree) kt) -> Type)
   enum
   (many MkKHalf : (erased (List (Step)) cp) (erased (Ctree) kt)
@@ -123,9 +115,7 @@
     (kcc-ring cp et ct2 e0 (kempe-treeP-c (MkPred (List (Step)) cp CpColR) h kt ks et et2 ct2 l1 e m cr) s L Y lv))
   (MkKHalf cp kt f))
 
-; C-reducibility of coloring.v, on the maps of cpmap.sl.
-
-; ie lists each dart of cc followed by its edge image (Gonthier's insertE).
+; ie lists each dart of cc followed by its edge image.
 (def-adts $ (InsertE : ((List (Nat)) e cc ie) -> Type)
   enum
   (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
@@ -141,13 +131,13 @@
   (many CEOut : (erased (List (Nat)) ie ke ks) (erased (Nat) x a b) (erased (NotIn x ie) p) (erased (Apart (Nat) Lt a b) ne) (erased (CcEdge ie (Succ x) ke ks) rest)
       -> (CcEdge ie x (Cons (Nat) a ke) (Cons (Nat) b ks))))
 
-; ks is a colouring of the map (e, f) for the contract cc (Gonthier's cc_coloring), with colours below 4.
+; ks is a colouring of the map (e, f) for the contract cc, with colours below 4.
 (def-adts $ (CcColoring : ((List (Nat)) e f cc ks) -> Type)
   enum
   (many MkCcColoring : (erased (List (Nat)) e f cc ks ie ke) (erased (InsertE e cc ie) pi) (erased (Respects ks f ks) face) (erased (Respects ks e ke) ce)
       (erased (CcEdge ie (Zero) ke ks) edge) (erased (Under ks 4) four) -> (CcColoring e f cc ks)))
 
-; et is the ring trace of a colouring of the map of cp for the contract cc (cc_ring_trace of coloring.v, on the ring of CpCol).
+; et is the ring trace of a colouring of the map of cp for the contract cc.
 (def-adts $ (CcCol : ((List (Step)) cp) ((List (Nat)) cc) ((List (Col)) et) -> Type)
   enum
   (many MkCcCol : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ks rc) (erased (List (Col)) cs et)
@@ -171,8 +161,7 @@
   enum
   (many MkEBand : (erased (List (Nat)) e f p) (erased (Nat) y z) (erased (Nth (Nat) e y z) pz) (erased (Fband f p z) b) -> (EBand e f p y)))
 
-; x is a triad for p (Gonthier's triad): three darts of its face have their edge images on faces of p, and some dart of p
-; is not adjacent to x.
+; x is a triad for p: three darts of its face have their edge images on faces of p, and some dart of p is not adjacent to x.
 (def-adts $ (Triad : ((List (Nat)) e f p) ((Nat) x) -> Type)
   enum
   (many MkTriad : (erased (List (Nat)) e f p os) (erased (Nat) x y1 y2 y3 y) (erased (Orbit f x os) o) (erased (In y1 os) i1) (erased (In y2 os) i2)
@@ -187,14 +176,14 @@
   (many CsTriad : (erased (List (Nat)) e f r ie cc) (erased (Nat) x) (erased (Length (Nat) cc 4) l) (erased (Kernel f r x) kx) (erased (Triad e f ie x) t)
       -> (CcSize e f r ie cc)))
 
-; cc is a valid contract for the ring r (Gonthier's valid_contract).
+; cc is a valid contract for the ring r.
 (def-adts $ (ValidContract : ((List (Nat)) e n f r cc) -> Type)
   enum
   (many MkValidContract : (erased (List (Nat)) e n f r cc ie) (erased (InsertE e cc ie) pi) (erased (Disj r ie) off) (erased (Simple n ie) sp)
       (erased (CcSize e f r ie cc) sz) -> (ValidContract e n f r cc)))
 
-; The map of cp is C-reducible with contract cc (C_reducible of coloring.v, for the ring of cfring of cfmap.v), by a function
-; at level X, for the Kempe-closed sets at every level L with levels CoLv L Y.
+; The map of cp is C-reducible with contract cc, by a function at level X, for the Kempe-closed sets at every level L with levels
+; CoLv L Y.
 (def-adts $ (CRed : ((Level) X) ((List (Step)) cp) ((List (Nat)) cc) -> Type)
   enum
   (many MkCRed : (erased (Level) X) (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Cpmap cp d e f r) c)
@@ -213,7 +202,6 @@
           (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m)) g)
       -> (ContractOK G cp cc kt)))
 
-; check_reducible_valid, with the contract half stated against the Kempe tree, for a level X above KHL and G.
 (def-fns _ $ (erased check-reducible-valid : (erased (Level) X G) (erased (Predates (Level) KHL X) pk) (erased (Predates (Level) G X) pg)
     (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (KHalf cp kt) kh) (erased (ContractOK G cp cc kt) ok) -> (erased (CRed X cp cc) r))
   (let-match erased kh (MkKHalf _ _ kf))

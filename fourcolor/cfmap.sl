@@ -1,5 +1,3 @@
-; The maps of configuration construction programs, after Gonthier and Werner's cfmap.v, on the hypermaps of hypermap.sl.
-
 (def-fns _ $ (many nth-c : (erased (Nat) k) (subterm many (List (Nat)) xs) (many (Nat) i) (erased (Length (Nat) xs k) l) (erased (Lt i k) lt)
     -> (many (Nat) x) (erased (Nth (Nat) xs i x) p))
   (let-match many xs (Cons _ y rest) (absurd (Nil _) (let-match erased l (LengthNil _)) lt))
@@ -48,7 +46,7 @@
   (many RPCons : (erased (List (Nat)) n p) (erased (Nat) x z y) (erased (Nth (Nat) n z x) pz) (erased (RPath n z p y) rest)
       -> (RPath n x (Cons (Nat) z p) y)))
 
-; r is a whole node cycle read backwards, without repeats, from its head (Gonthier's cpring of the dart after the head).
+; r is a whole node cycle read backwards, without repeats, from its head.
 (def-adts $ (Cpring : ((List (Nat)) n r) -> Type)
   enum
   (many MkCpring : (erased (List (Nat)) n p) (erased (Nat) a y) (erased (RPath n a p y) rp) (erased (Nth (Nat) n a y) back)
@@ -60,7 +58,7 @@
   (many PtrOne : (erased (Nat) x) -> (Ptr (Cons (Nat) x (Nil (Nat))) x))
   (many PtrTwo : (erased (Nat) a x) (erased (List (Nat)) p) -> (Ptr (Cons (Nat) a (Cons (Nat) x p)) x)))
 
-; A hypermap with its ring (Gonthier's pointed_map, with cpring of the pointer).
+; A hypermap with its ring.
 (def-adts $ (PointedMap : ((Nat) d) ((List (Nat)) e n f r) -> Type)
   enum
   (many MkPointedMap : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Cpring n r) cr)
@@ -75,7 +73,6 @@
     ((LastOne _) (let-match erased q (LastOne _) (absurd (LastCons _ _ _ q1) q1)) (Refl _ y))
     ((LastCons _ _ xs1 p1) (let-match erased q (LastCons _ _ _ q1) (absurd (LastOne _) p1)) (last-fn xs1 y z p1 q1))))
 
-; The cancellation laws of a hypermap, read as lookups.
 (def-fns _ $ (erased hyper-node : (erased (Nat) d x y z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (Nth (Nat) e x y) px) (erased (Nth (Nat) f y z) py) -> (erased (Nth (Nat) n z x) r))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
@@ -93,13 +90,11 @@
   (let ((erased y) (erased py0)) (nth-exists _ en d z (respects-length e n en d cen ln) lz))
   (values y (respects-nth e n en z x y cen pz py0) (respects-nth f en ids z y z kn py0 (iota-nth d z ids io lz))))
 
-; A hypermap from its edge and face permutations.
 (def-fns _ $ (erased hyper-ef : (erased (Nat) d) (erased (List (Nat)) e ei f fi) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf)
     -> (erased (List (Nat)) n) (erased (Hypermap d e n f) h))
   (let ((erased n) (erased h)) (hyper-mk d f fi e ei pf pe))
   (values n (hyper-rot d f e n (hyper-rot d n f e h))))
 
-; Gonthier's cpmap0: two darts, edge and node exchanging them, face fixing them, and the ring [1, 0].
 (def-fns _ $ (erased cpmap0 : -> (erased (PointedMap (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
     (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Zero) (Cons (Nat) (Succ (Zero)) (Nil (Nat))))
     (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))) r))
@@ -134,7 +129,7 @@
   (many RotsS : (erased Type A) (erased (Nat) k) (erased A x) (erased (List A) xs xs2 ys) (erased (Snoc A xs x xs2) s) (erased (Rots A k xs2 ys) rest)
       -> (Rots A (Succ k) (Cons A x xs) ys)))
 
-; Gonthier's rot k: rotation left by k places, which leaves xs alone when k exceeds its length.
+; ys is xs rotated left by k places, which leaves xs alone when k exceeds its length.
 (def-adts $ (Rot : (Type A) ((Nat) k) ((List A) xs ys) -> Type)
   enum
   (many RotIn : (erased Type A) (erased (Nat) k m) (erased (List A) xs ys) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le) (erased (Rots A k xs ys) rs)
@@ -205,7 +200,6 @@
   (let ((erased q0) (erased pm0)) (perm-fix2 d p q p0 pm s))
   (perm-insert2 (Succ d) d d p0 q0 p2 pm0 ins (snoc-new _ p p0 d d s len)))
 
-; Outside the faces t of the darts s at which f2 differs from f, and with e2 extending e, node agrees.
 (def-fns _ $ (erased node-move : (erased (Nat) d d2 z u) (erased (List (Nat)) e n f e2 n2 f2 s t) (erased (Hypermap d e n f) h)
     (erased (Hypermap d2 e2 n2 f2) h2) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) st)
     (erased (Nth (Nat) n z u) pz) (erased (NotIn z t) out) -> (erased (Nth (Nat) n2 z u) r))
@@ -225,13 +219,12 @@
   (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (ALNil d)))
   (ALCons z d p1 (nth-lt-length _ n z d a pz l) (rpath-alllt d z y n p1 rp1 l)))
 
-; The darts of a ring are below d.
 (def-fns _ $ (erased cpring-alllt : (erased (Nat) d) (erased (List (Nat)) n r) (erased (Cpring n r) cr) (erased (Length (Nat) n d) l) -> (erased (AllLt r d) res))
   (let-match erased cr (MkCpring _ p a y rp back dp))
   (ALCons a d p (nth-lt-length _ n a d y back l) (rpath-alllt d a y n p rp l)))
 
-; The U step: a new edge d-(d+1), d a face of its own and d+1 put into the face before the head a of the ring, after
-; c = e (n a); both new darts go in front of the ring (Gonthier's ecpU).
+; The U step: a new edge d-(d+1), d a face of its own and d+1 put into the face before the head a of the ring, after c = e (n a);
+; both new darts go in front of the ring.
 (def-adts $ (EcpU : ((Nat) d) ((List (Nat)) e f r e2 f2 r2) -> Type)
   enum
   (many MkEcpU : (erased (Nat) d b c) (erased (List (Nat)) e f r e2 f0 f2) (erased (Last r b) lb) (erased (Nth (Nat) e b c) pc)
@@ -284,9 +277,9 @@
   (many NRLong : (erased (Nat) a z d x0 z2) (erased (List (Nat)) q) (erased (Apart (Nat) Lt z a) ne)
       -> (NRing a z d (Cons (Nat) x0 (Cons (Nat) z2 q)) (Cons (Nat) a (Cons (Nat) d q)))))
 
-; The N step at the reference dart x0, with a = n x0 at the head of the ring and z = f (e x0): a new edge d-(d+1), d put
-; into the face after e a and d+1 into the face after e z, so that x0, d+1 and z make a node of their own and d takes
-; their place on the ring (Gonthier's ecpN).
+; The N step at the reference dart x0, with a = n x0 at the head of the ring and z = f (e x0): a new edge d-(d+1), d put into the
+; face after e a and d+1 into the face after e z, so that x0, d+1 and z make a node of their own and d takes their place on the
+; ring.
 (def-adts $ (EcpN : ((Nat) d) ((List (Nat)) e f r e2 f2 r2) -> Type)
   enum
   (many MkEcpN : (erased (Nat) d x0 a ex z ea ez) (erased (List (Nat)) e f p e2 f1 f2 r2) (erased (Ptr (Cons (Nat) a p) x0) px)
@@ -480,7 +473,7 @@
       (let-match erased l2 (LengthCons _ _ _ k3 l3))
       (values (Succ (Succ k3)) (P2Step (Succ k3)) (LengthCons _ a (Cons (Nat) d q) (Succ k3) (LengthCons _ d q k3 l3))))))
 
-; e is an involution without fixed points (Gonthier's plain).
+; e is an involution without fixed points.
 (def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)
   enum
   (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e ids) (erased (Iota d ids) io) (erased (Perm d e e) pe) (erased (Differ e ids) df)
@@ -546,7 +539,6 @@
   (values ks (orders-snoc e ids1 ids ks1 ks m1 (Succ (Succ (Zero))) os1 (plain-order1 d m1 e pl lm) s sk)
     (repeat-snoc m1 (Succ (Succ (Zero))) ks1 ks rk1 sk)))
 
-; A plain map has every edge order 2 (in the sense of hypgeom.sl).
 (def-fns _ $ (erased plain-order : (erased (Nat) d) (erased (List (Nat)) e) (erased (Plain d e) pl) -> (erased (AllOrder d e (Succ (Succ (Zero)))) r))
   (let-match erased pl (MkPlain _ _ ids io pe df))
   (let ((erased ks) (erased os) (erased rk)) (plain-orders d d e ids pl io (lt-succ d)))
@@ -580,7 +572,7 @@
   (many CubsNil : (erased (List (Nat)) n r) -> (Cubics n r (Nil (Nat))))
   (many CubsCons : (erased (List (Nat)) n r xs) (erased (Nat) x) (erased (Cub n r x) c) (erased (Cubics n r xs) rest) -> (Cubics n r (Cons (Nat) x xs))))
 
-; Every dart off r has node order 3 (Gonthier's quasicubic r).
+; Every dart off r has node order 3.
 (def-adts $ (QuasiCubic : ((Nat) d) ((List (Nat)) n r) -> Type)
   enum
   (many MkQuasiCubic : (erased (Nat) d) (erased (List (Nat)) n r ids) (erased (Iota d ids) io) (erased (Cubics n r ids) cs) -> (QuasiCubic d n r)))
@@ -615,7 +607,6 @@
       (let-match erased (rpath-prev n p1 z y w rp1 i1) (PrevIn _ _ _ _ u iu pu) ((PrevLast _ _ _) (PrevLast n p y)))
       (PrevIn n p y w u (InThere u z p1 iu) pu))))
 
-; A ring is shut under the inverse of node.
 (def-fns _ $ (erased ring-pre : (erased (Nat) d x w) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Cpring n r) cr)
     (erased (Nth (Nat) n x w) px) (erased (In w r) i) -> (erased (In x r) res))
   (let ((erased ei) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
@@ -637,7 +628,6 @@
       (PathStep p s (Nil (Nat)) z x x pz (NotInCons z x (Nil (Nat)) nz (NotInNil z)) (PathHere p s x)))
     (LengthCons _ y _ (Succ (Zero)) (LengthCons _ z _ (Zero) (LengthNil _)))))
 
-; A node of order 3 off the ring keeps its order when node changes only at the faces t, on the ring.
 (def-fns _ $ (erased order3-move : (erased (Nat) d d2 x) (erased (List (Nat)) e n f e2 n2 f2 s t r) (erased (Hypermap d e n f) h)
     (erased (Hypermap d2 e2 n2 f2) h2) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) st)
     (erased (Sub t r) tr) (erased (Cpring n r) cr) (erased (Order n x (Succ (Succ (Succ (Zero))))) o) (erased (NotIn x r) out)
@@ -659,7 +649,6 @@
   (let-match erased c (CubThree _ _ _ o) (absurd (CubOn _ _ _ i) (apart-irrefl x (notin-in x x r out i))))
   (CubsCons n2 r2 xs1 x (CubThree n2 r2 x (order3-move d d2 x e n f e2 n2 f2 s t r h h2 ge gf st tr cr o out)) rest))
 
-; Where the U step changes face, and the faces t it changes node at.
 (def-fns _ $ (erased ecpU-facts : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2) (erased (PointedMap d e n f r) pm) (erased (EcpU d e f r e2 f2 r2) st)
     -> (erased (List (Nat)) s t) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) rs) (erased (Sub t r) tr))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
@@ -753,7 +742,6 @@
     (cubics-snoc n2 r2 ids1 ids2 d1 (cubics-snoc n2 r2 ids ids1 d (cubics-move d d2 e n f e2 n2 f2 s t r r2 ids h h2 (grow-agree e e2 d g) ag rs tr cr cr2 cs)
       (CubOn n2 r2 d ind) s1) (CubThree n2 r2 d1 od) s2)))
 
-; Edge and face fix node.
 (def-fns _ $ (erased hyper-fe : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     -> (erased (List (Nat)) fe) (erased (Respects f e fe) rfe) (erased (Perm d fe n) pm))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
@@ -813,8 +801,6 @@
     ((UnderNil _) (let-match erased s (SnocNil _ _)) (UnderCons (Nil (Nat)) x b lx (UnderNil b)))
     ((UnderCons xs1 y _ ly u1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (UnderCons xs3 y b ly (under-grow xs1 xs3 x b u1 lx s1)))))
 
-; A colouring extended over a new edge d-(d+1) whose darts take the colours cd and cd1, given those keep the face
-; colours of f2 (Snoc'd or Insert'ed from f) and differ.
 (def-fns _ $ (erased color-grow : (erased (Nat) d cd cd1) (erased (List (Nat)) e f e2 f2 ks ks1 ks2) (erased (FourColoring e f ks) col)
     (erased (Length (Nat) ks d) lk) (erased (EdgeGrow e d e2) g) (erased (Snoc (Nat) ks cd ks1) s1) (erased (Snoc (Nat) ks1 cd1 ks2) s2)
     (erased (Respects ks2 f2 ks2) face) (erased (Lt cd 4) l1) (erased (Lt cd1 4) l2)
@@ -831,8 +817,6 @@
     (differ-snoc ke1 ks1 ke2 ks2 cd cd1 (differ-snoc ke ks ke1 ks1 cd1 cd edge sk1 s1 (apart-sym cd cd1 ne)) sk2 s2 ne)
     (under-grow ks1 ks2 cd1 _ (under-grow ks ks1 cd _ four l1 s1) l2 s2)))
 
-; A colouring of the map before a U step, with c for the new face, colours the map after it; the ring colours gain c and
-; the colour of the head.
 (def-fns _ $ (erased ecpU-color : (erased (Nat) d c ka) (erased (List (Nat)) e n f r e2 f2 r2 ks rc) (erased (PointedMap d e n f r) pm)
     (erased (EcpU d e f r e2 f2 r2) st) (erased (FourColoring e f ks) col) (erased (Respects ks r (Cons (Nat) ka rc)) rr)
     (erased (Lt c 4) lc) (erased (Apart (Nat) Lt c ka) ne)
@@ -867,8 +851,6 @@
   (many R3Three : (erased (Nat) ka kx kz)
       -> (Ring3 (Cons (Nat) ka (Cons (Nat) kx (Cons (Nat) kz (Nil (Nat))))) kx ka (Cons (Nat) ka (Cons (Nat) kx (Nil (Nat)))))))
 
-; A colouring of the map before an N step colours the map after it, d taking the colour of x0 and d+1 that of the fourth
-; dart of the ring, when those differ.
 (def-fns _ $ (erased ecpN-color : (erased (Nat) d kx kw) (erased (List (Nat)) e n f r e2 f2 r2 ks rc rc2) (erased (PointedMap d e n f r) pm)
     (erased (EcpN d e f r e2 f2 r2) st) (erased (FourColoring e f ks) col) (erased (Respects ks r rc) rr) (erased (Ring3 rc kx kw rc2) r3)
     (erased (Apart (Nat) Lt kx kw) ne) -> (erased (List (Nat)) ks2) (erased (FourColoring e2 f2 ks2) col2) (erased (Respects ks2 r2 rc2) rr2))

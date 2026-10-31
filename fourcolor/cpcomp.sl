@@ -1,8 +1,4 @@
-; The completeness half of ctree_mem_cpcolor of cfcolor.v: the tree cpcolor-c computes for a cubic program holds the even
-; normal form of every ring trace of a colouring of the program's map. Load after red/bcheck.sl.
-
-; et2 is et after the cubic step s, as a ring trace of the map before s becomes one of the map after it (cpcolor1 of
-; cfcolor.v, read as a relation).
+; et2 is et after the cubic step s, as a ring trace of the map before s becomes one of the map after it.
 (def-adts $ (StepTr : ((Step) s) ((List (Col)) et et2) -> Type)
   enum
   (many STR : (erased (Nat) k) (erased (List (Col)) et et2) (erased (Rot (Col) k et et2) rt) -> (StepTr (SR k) et et2))
@@ -108,7 +104,6 @@
     -> (erased (AllNZ (Cons (Col) g (Cons (Col) h r))) res))
   (AllNZCons g (Cons (Col) h r) ng (AllNZCons h r nh a)))
 
-; Every trace that the steps cp1 can give from et has its normalisation in t.
 (def-fns _ $ (erased cov-mem : (erased (List (Step)) cp1) (erased (List (Col)) et et2) (erased (Ctree) t) (subterm erased (CpCov cp1 et t) cv)
     (erased (StepsTr cp1 et et2) st) (erased (AllNZ et) nz) -> (erased (BrMem et2 t) r))
   (match erased cv _
@@ -206,7 +201,6 @@
   (let ((erased pys) (erased prs) (erased pt2)) (rots-perm g k xs ys pxs rs pt))
   (values pys (RotIn _ k m pxs pys (permt-length g xs pxs m pt l) le prs) pt2))
 
-; A colour permutation of a run of steps is a run of steps.
 (def-fns _ $ (erased step-perm : (erased (Perm) g) (erased (Step) s) (erased (List (Col)) et et1 pet) (erased (IsPerm g) ip) (erased (StepTr s et et1) st)
     (erased (PermT g et pet) pt) -> (erased (List (Col)) pet1) (erased (StepTr s pet pet1) pst) (erased (PermT g et1 pet1) pt1))
   (match erased st _
@@ -246,14 +240,12 @@
     ((NZ2) (values p312 (IP312) (PC2 (C3) (C1) (C2))))
     ((NZ3) (values p231 (IP231) (PC3 (C2) (C3) (C1))))))
 
-; The permutation sending a b c to 1 2 3.
 (def-fns _ $ (erased third-inv : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermC g a (C1)) pa)
     (erased (PermC g b (C2)) pb) (erased (PermC g c (C3)) pc))
   (let ((erased g) (erased pi) (erased ip)) (perminv-ex (MkPerm a b c) (third-isperm a b c t)))
   (values g ip (permc-invert (MkPerm a b c) g (C1) a pi (PC1 a b c)) (permc-invert (MkPerm a b c) g (C2) b pi (PC2 a b c))
     (permc-invert (MkPerm a b c) g (C3) c pi (PC3 a b c))))
 
-; Up to a colour permutation, every trace that the steps cp1 can give from c c has its normalisation in t.
 (def-fns _ $ (erased cov0-mem : (erased (List (Step)) cp1) (erased (Col) c) (erased (List (Col)) et2) (erased (Ctree) t) (subterm erased (CpCov0 cp1 t) cv)
     (erased (StepsTr cp1 (Cons (Col) c (Cons (Col) c (Nil (Col)))) et2) st) (erased (NZ c) nz)
     -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Col)) pet) (erased (PermT g et2 pet) pt) (erased (BrMem pet t) bm))
@@ -323,7 +315,6 @@
   (let-match erased q (PTCons _ _ z _ l2r qy q1))
   (PTCons c x z lr l2r (pcomp-c a b c x y z pc px qy) (permt-comp a b c lr l1r l2r pc p1 q1)))
 
-; Two colour permutations taking e to C1 differ by p123 or p132.
 (def-fns _ $ (erased fix-c1 : (erased (Perm) a b) (erased (Col) e) (erased (IsPerm a) ia) (erased (IsPerm b) ib) (erased (PermC a e (C1)) pa)
     (erased (PermC b e (C1)) pb) -> (erased (Or (PComp a p123 b) (PComp a p132 b)) r))
   (match erased ia _
@@ -352,7 +343,6 @@
         ((IP321) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))
         ((IP231) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))))))
 
-; The traces of the permuted tree tp are those whose image under g is a trace of t (the other direction of perm-mem).
 (def-fns _ $ (erased perm-mem-back : (erased (Perm) g) (erased (Ctree) t tp) (subterm erased (List (Col)) w) (erased (List (Col)) l) (subterm erased (CtPerm g t tp) p)
     (erased (PermT g w l) pt) (erased (CtMem t l) m) -> (erased (CtMem tp w) r))
   (match erased p _
@@ -376,7 +366,6 @@
     ((ET2 _) (let-match erased q (ET2 _)) (Refl _ b))
     ((ET3 _) (let-match erased q (ET3 _)) (Refl _ b))))
 
-; An even tail that stays even under p132 has neither C2 nor C3.
 (def-fns _ $ (erased ev-p132 : (erased (List (Col)) x y) (subterm erased (EvenTail x (BTrue)) ex) (erased (PermT p132 x y) pt) (erased (EvenTail y (BTrue)) ey)
     -> (erased (Eq (List (Col)) y x) e))
   (let-match erased pt (PTCons _ c d x1 y1 pc pt1) ((PTNil _) (Refl _ y)))
@@ -385,8 +374,6 @@
     ((ET1 _ _ ex1) (let-match erased pc (PC1 _ _ _)) (let-match erased ey (ET1 _ _ ey1)) (let-match erased (ev-p132 x1 y1 ex1 pt1 ey1) (Refl _ _)) (Refl _ y))
     (absurd (ET2 _) (let-match erased pc (PC2 _ _ _)) ey)))
 
-; The tree t0 of cpcolor0-c holds rest, normalised by any colour permutation taking e1 to C1 to an even tail, for a trace
-; e0 :: e1 :: rest that the steps rcp can give from c c.
 (def-fns _ $ (erased core-mem : (erased (List (Step)) rcp) (erased (Ctree) t0) (erased (CpCov0 rcp t0) cv) (erased (Col) c e0 e1) (erased (List (Col)) rest l2)
     (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
     (erased (AllNZ (Cons (Col) e0 (Cons (Col) e1 rest))) a) (erased (Perm) rho) (erased (IsPerm rho) irho) (erased (PermC rho e1 (C1)) prho)
@@ -413,7 +400,6 @@
         ((NrEven _ e) (let-match erased (ev-p132 grest l2 e ptz evl) (Refl _ _)) mq)
         ((NrOdd _ _ _ qq) (let-match erased (permt-fn p132 grest q l2 qq ptz) (Refl _ _)) mq)))))
 
-; The tree of cpcolor-c holds every even trace e1 :: rest for which e0 :: e1 :: rest is reached from c c by its steps.
 (def-fns _ $ (erased comp-mem : (erased (List (Step)) rcp) (erased (Ctree) t0 ta tb t) (erased (CpCov0 rcp t0) cv) (erased (CtCons t0 ta tb t) cc)
     (erased (CtPerm p312 t0 ta) pa) (erased (CtPerm p231 t0 tb) pb) (erased (Col) c e0 e1) (erased (List (Col)) rest)
     (erased (StepsTr rcp (Cons (Col) c (Cons (Col) c (Nil (Col)))) (Cons (Col) e0 (Cons (Col) e1 rest))) st) (erased (NZ c) nz)
@@ -444,8 +430,6 @@
 (def-fns _ $ (erased flag-nz : (erased (Nat) x) (erased (Col) u) (erased (Flag (Nil (Nat)) x u) fl) -> (erased (NZ u) r))
   (match erased fl _ (absurd (FlIn _ _ p) p) ((FlOut _ _ _ _ nz) nz)))
 
-; The ring trace et that a colouring ks of a map, seen from the map of the cubic program cp, gives that map, with the run
-; of the steps of cp, read backwards as rcp, that makes it from the trace c c of the first map.
 (def-fns _ $ (erased steps-hit : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r ks big) (subterm erased (Cpmap cp d e f r) cm)
     (erased (CubicProg cp) cq) (erased (Ctx (Nil (Nat)) ks big e f) ctx)
     -> (erased (List (Nat)) rc) (erased (List (Col)) cs et) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
@@ -538,8 +522,6 @@
         (steps-snoc sh rcp1 rcp _ et0 _ (revapp-snoc (Step) sh cp1 (Nil (Step)) _ rcp1 rcp ra1 (SnocNil _ sh) ra) st1
           (STH a1 a2 ee uu v w et2 pee pv2 (addc-swap a1 uu a2 v w ee pv2 pw pee) (flag-nz (Succ d0) uu fl1) (flag-nz d2 v fl2) (flag-nz d4 w fl3)))))))
 
-; The completeness half of ctree_mem_cpcolor of cfcolor.v: the tree cpcolor-c computes for a cubic program holds every
-; even trace et with e0 :: et a ring trace of a colouring of the program's map.
 (def-fns _ $ (erased cpcolor-mem : (erased (List (Step)) cp) (erased (Ctree) t) (erased (CpComp cp t) comp) (erased (CubicProg cp) cq) (erased (Col) e0)
     (erased (List (Col)) et) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (EvenT et (BTrue)) ev) -> (erased (CtMem t et) r))
   (let ((erased a)) (cpcol-nz cp _ cc))
@@ -572,8 +554,6 @@
     ((C2) (let ((erased l2) (erased q)) (permt-c p312 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev2 l l2 b q p)))
     ((C3) (let ((erased l2) (erased q)) (permt-c p231 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev3 l l2 b q p)))))
 
-; The even normal form of the trace, without its first entry, of every colouring of the map of a cubic program is in the tree
-; cpcolor-c computes for it.
 (def-fns _ $ (erased cpcolor-etrace : (erased (List (Step)) cp) (erased (Ctree) t) (erased (CpComp cp t) comp) (erased (CubicProg cp) cq) (erased (Col) e0)
     (erased (List (Col)) et et2) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (ETrace et et2) etr) -> (erased (CtMem t et2) r))
   (let ((erased b) (erased ev)) (even-ex et2))
@@ -583,7 +563,6 @@
   (let ((erased e2) (erased pe)) (permc-ex p132 e0 (IP132)))
   (cpcolor-mem cp t comp cq e2 et2 (cpcol-perm cp _ _ p132 cc (IP132) (PTCons p132 e0 e2 et et2 pe q)) ev))
 
-; The same for a basis program of the Birkhoff check (the use of ctree_mem_cpcolor in chkbP of Birkhoff_valid).
 (def-fns _ $ (erased bkprog-hit : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (BkProg h m cp t) bp) (erased (Col) e0)
     (erased (List (Col)) et et2) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (ETrace et et2) etr) -> (erased (CtMem t et2) r))
   (let-match erased bp (MkBkProg _ _ _ _ k x y b cq na cs cpc mx my xy lt ht rt cm))

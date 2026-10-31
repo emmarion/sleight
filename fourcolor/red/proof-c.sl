@@ -1,6 +1,3 @@
-; all-red-proof: every configuration of configs.sl is C-reducible with its contract (cfreducible.v), by the certified check
-; of ccheck.sl, one native.sl job per piece of pieces.sl, given the piece's strings, run by native-run. Load after pieces.sl and native.sl.
-
 (def-adts $ (RedC : ((List (Config)) cs) -> Type)
   enum
   (many MkRedC : (erased (List (Config)) cs) (erased (AllRed CRX cs) p) -> (RedC cs)))
