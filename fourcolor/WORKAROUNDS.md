@@ -38,7 +38,7 @@ language behind them may be wrong. Numbers are not reused.
    function has to be callable from glue code at a fixed level, so it is
    indexed by levels minted at the top level of the `red/` files (`KCB`,
    `COB`, `KHL`, `CGL`, `CRX`). Callers build `CoLv` evidence to reach it,
-   as described in `red/cfred.sl`'s section of PLAN.md. This is the same
+   as PLAN.md's section on C-reducibility and levels describes. This is the same
    issue as item 1.
 
 ## One goal per unit, one long unit
@@ -47,9 +47,9 @@ language behind them may be wrong. Numbers are not reused.
    check is split into a proof file, which leaves its proof as a
    top-level value (`red/proof-c.sl`, `red/bproof.sl`,
    `unav/qztproof.sl`, `embed4proof.sl`, `fcproof.sl`), and a goal file
-   of two lines.
+   of two or three lines.
 
-5. **Names collide across the ~120 files of one unit.** All files share
+5. **Names collide across the ~140 files of one unit.** All files share
    one namespace, so a later file's `Perm`, `Sub`, `Or`, `SNil`, `AppNil`
    or `InsertE` hides an earlier one for every file after it. The proof
    works around this with:
@@ -57,12 +57,13 @@ language behind them may be wrong. Numbers are not reused.
      `iealias.sl`;
    - aliases appended to the ends of files: `CRPath` in `cpmap.sl`;
      `SDPath`, `WSub` and `hsplit-cover` in `birkhoff2.sl`;
-   - renames: `cpcomp.sl`'s `StNil`/`StCons`, and `cfcolor.sl`'s
-     `CatNil`/`CatCons`;
+   - renames: `cpcomp.sl`'s `StNil`/`StCons`, `cfcolor.sl`'s
+     `CatNil`/`CatCons`, `ring.sl`'s `Ins` and `PMulNil`/`PMulCons`, and
+     `unav/pwalk.sl`'s `InCut`;
    - load-order constraints: `contract2.sl` must load before the `unav/`
      files; `paint.sl` and `fcmany.sl` must load before `coloring.sl`.
 
-   Some of these collisions showed up only in the combined unit, as
+   Some of these collisions show up only in the combined unit, as
    errors far from their cause.
    *Wish:* module-qualified names, or a warning when a type or constructor
    name is redefined across files.
@@ -107,8 +108,8 @@ language behind them may be wrong. Numbers are not reused.
 9. **Run settings.** `fourcolor/check.sh` passes `--inline 200` and sets
    `OCAMLRUNPARAM=o=400`, which the native jobs inherit from the compiler.
    In one pair of runs the two together cut the CPU time by about a
-   quarter. The reference compiler is run under `ulimit -s unlimited`,
-   which it needed for the larger programs of earlier versions.
+   quarter. The reference compiler is run under `ulimit -s unlimited`;
+   slc passes with the default 8 MB stack.
    *Wish:* a documented way to pass GC settings to the native jobs alone.
 
 ## Run-time shape of the checks
@@ -123,8 +124,8 @@ language behind them may be wrong. Numbers are not reused.
     trees are `unique` (`UTree`, `UGtree` in `red/crestrict.sl`,
     `red/grestrict.sl`) and are rewritten in place. A rewrite skips the
     store when a child is unchanged (DESIGN.md §37). Rebuilding the trees
-    each iteration had made garbage collection about a third of the time,
-    mostly through promotion.
+    each iteration appears to make garbage collection about a third of
+    the time, mostly through promotion.
 
 12. **Arrays for lookups.** `embed4.sl`'s `Tab` holds a dart permutation
     as an `Array (Copy Nat)`, for constant-time lookups in place of `Nth`
@@ -150,11 +151,11 @@ language behind them may be wrong. Numbers are not reused.
     the scope on each `let`. Neither can be changed from the proof.
 
 16. **No unused-definition check.** `--warn-unused` checks local binders,
-    not top-level definitions, so dead code across files was found with a
+    not top-level definitions, so dead code across files is found with a
     script.
     *Wish:* an unused top-level definition report for a unit.
 
-17. **No phase timings.** Elaboration, compile and job times were measured
+17. **No phase timings.** Elaboration, compile and job times are measured
     with strace markers and a shim around ocamlfind.
     *Wish:* a flag that reports the time of each file, each
     `native-compute` compile and each job.

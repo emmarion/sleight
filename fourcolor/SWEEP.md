@@ -2,7 +2,7 @@
 
 Written by a Claude session working without the owner. This is the idea
 behind part A's proof, which needs no Jordan curve theorem; the proof
-itself is the code PLAN.md's Status lists, and where this sketch and the
+itself is the code PLAN.md describes, and where this sketch and the
 code differ, the code is what the compilers checked. The section on one
 chain of corner groups is the version the code follows.
 

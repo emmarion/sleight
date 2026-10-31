@@ -3,7 +3,8 @@
 This directory holds a proof of the four colour theorem, for straight-line
 drawings, written in Sleight by Claude sessions working without the owner.
 Its combinatorial part follows Gonthier and Werner's Coq proof (see
-NOTICE.md). PLAN.md describes every file; this page says how to check it.
+NOTICE.md). PLAN.md describes the proof's structure and each file's
+role; this page says how to check it.
 
 ## What is proved
 
@@ -27,7 +28,11 @@ That proof appears to rest on:
 - the compiled runs of `native-compute` (DESIGN.md §29, §72), which check
   the 633 configurations, the unavoidability walks, the Birkhoff checks
   and per-configuration certificates;
-- the statements matching Coq's, which has been checked only by reading.
+- `defs.sl` stating the theorem intended (the owner's statement).
+
+The intermediate statements are meant to follow Coq's; that they match
+has been checked only by reading, which appears to bear on NOTICE.md's
+attribution rather than on what is proved.
 
 ## Running the check
 
@@ -50,15 +55,16 @@ fourcolor/check.sh many slc     # FourColorM with slc
 Each prints `--goal proved: PASS` on standard output on success, with the
 goal and where it is discharged as notes on standard error.
 
-The script passes the files in the order the unit needs, with
+The script passes the unit's files (for `FourColor`, three from `std/`
+and 139 from this directory) in the order the unit needs, with
 `--goal proved` and `--inline 200` (passed on to ocamlopt), and, for the
-reference compiler only, under `ulimit -s unlimited`, which it needed in
-earlier runs (slc passes with the default 8 MB stack). It sets `OCAMLRUNPARAM=o=400` unless the variable is
-already set; the native jobs inherit it from the compiler. In one pair of
+reference compiler only, under `ulimit -s unlimited` (slc passes with
+the default 8 MB stack). It sets `OCAMLRUNPARAM=o=400` unless the variable is already
+set; the native jobs inherit it from the compiler. In one pair of
 runs these two settings cut CPU time by about a quarter.
 
 All the checks run inside one `native-compute` (`native.sl`). It writes
-one OCaml program of about 2 MB, compiles it once, and runs about 160 jobs
+one OCaml program of about 2 MB, compiles it once, and runs its 154 jobs
 as separate processes, as many at a time as there are cores.
 
 ## Time and memory
