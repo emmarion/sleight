@@ -15,8 +15,8 @@
   (let ((many zlen) (erased zlp) (unique zero2)) (array-length _ _ zero))
   (let-match many (lt-dec e (Succ zlen)) (Yes _ _ _ _ zlt) ((No _ _ _ _ _) (MkPair _ _ (Nil _) (Nil _))))
   (let ((erased _) (erased to)) (splice-range _ _ _ zlp 1 2 e ad zlt))
-  (let ((erased _) (unique r) (erased _)) (array-blit _ _ frozen 1 _ zero2 1 2 _ range _ to))
+  (let ((erased _) (unique r) (erased _)) (array-blit-many _ _ _ _ _ frozen 1 zero2 1 2 range to))
   (MkPair _ _ (to-list _ (share part)) (to-list _ (share r))))
 sub-blit-test
 ; warns: tests/array_sub_blit.sl:3:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1239:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here

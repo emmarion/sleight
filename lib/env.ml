@@ -180,8 +180,9 @@ let literal_rows : (string, literal) Hashtbl.t = Hashtbl.create 64
 let literal_of : (id, literal) Hashtbl.t = Hashtbl.create 64
 let minted_rows : (id, (id * entry * fact) list) Hashtbl.t = Hashtbl.create 16
 let ladder : Value.value array ref = ref [||]
+let tag_slots : (Z.t, id) Hashtbl.t = Hashtbl.create 8
 let () = Reader.handle_name := fun x -> match Hashtbl.find_opt literal_of x, Hashtbl.find_opt names x with Some r, _ -> Literal.spell r.lit | None, Some n -> Literal.name n | None, None -> "_"
-let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset minted_rows; Hashtbl.reset Value.literal_values; ladder := [||]
+let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset minted_rows; Hashtbl.reset Value.literal_values; Hashtbl.reset tag_slots; ladder := [||]
 
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string | Native of int * Value.value * Value.adt
 

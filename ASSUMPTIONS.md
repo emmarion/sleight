@@ -2063,9 +2063,9 @@ reading that may be mistaken.
      check then covers.
 
 209. **`array-pluck` and `array-unpluck` (section 44).** `array-pluck`'s
-     one store, of `(Uninit A (slot-of hd))` into the slot already
-     holding `hd`, is written full-at, so the model stores nothing, as
-     the FFI's implementation does. The lemma from `SetNth` to `Nth`
+     one store, of the `Plucked` leftover that an at-match on `hd`
+     builds, into the slot already holding `hd`, is written full-at, so
+     the model stores nothing, as the FFI's implementation does. The lemma from `SetNth` to `Nth`
      that a caller of `array-unpluck` needs is not in the prelude;
      `std/list.sl` has it as `setnth-nth`, and
      `tests/array_unpluck.sl` proves its own.
@@ -2323,3 +2323,19 @@ silent.
      type are written as a message about that place writes them, even
      when a later binder shadows a name the type mentions.
 
+
+## `imm` marks on cell stores (DESIGN.md section 37)
+
+228. **The reference keeps the barrier under `--no-extern`.** Extraction
+     under `--no-extern` gives a `U62` its model's representation, a
+     block, so the session reads `(Immediate (U62))` as true of the
+     extern representation only; there an `imm` store is extracted as
+     an ordinary store.
+
+229. **slc spends one unit of `fuel` on the proofs of an `imm` mark and
+     on a `cell-write`'s or `cell-alloc`'s items.** The marks are taken
+     out of the items before the items are elaborated, so the list
+     elaborated is no longer a subterm of the form's arguments, and the
+     proof terms are gathered into a list of their own; spending fuel is
+     how slc's termination order admits both. A run with fuel left at
+     zero there would report "more than 10000 macro expansions".

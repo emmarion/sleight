@@ -640,7 +640,7 @@ ways. The second and third are uses:
   binder can only stand there inside a `share` (§16);
 - a **use at unique**, in a non-erased position at `unique`; this
   consumes the binder;
-- a **direct variable reference**, the argument of `slot-of` (§35).
+- a **direct variable reference**, the argument of `slot-of` or `slot-tag` (§35).
   This is the variable itself, never a telescope binder. It is not a
   use: it neither degrades nor consumes, and it may follow the
   consumption.
@@ -1106,8 +1106,8 @@ also binds outward: its names, and the facts it creates, enter the
 expression that contains it, are visible to the rest of that
 expression, and are gone when it ends. A statement produces no values.
 The statements are `let`, `def-lvl`, `def-fns`, `def-unique` (§32),
-`def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`
-and `open-at-fn` (§35, §39), `dump-context`
+`def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`,
+`slot-tag` and `open-at-fn` (§35, §39), `dump-context`
 (MANUAL.md), `compile-error` and `compile-warn` (§4), and `goal` and `qed` (§71). All of them
 except `comptime-match`, `goal` and `qed` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
 define outward and each definition's parameters inward.
@@ -1462,7 +1462,8 @@ its non-phantom constructors has a non-erased field. A value with no
 non-erased field is the word of the `Nat` of its position among the
 fieldless non-phantom constructors when its type is tagged, the word
 of `vacant-slot` (§35) when its type is hollow, however the value was
-built, and an unspecified word otherwise. `vacant-slot`'s word is that
+built, and an unspecified word otherwise. In the first two cases this
+is the word of its constructor's tag slot (§35). `vacant-slot`'s word is that
 of `Nat` 0. With externs on, the extern `Nat`'s FFI must meet this for
 these numbers. A union never carries a tag. A newtype
 value built by a wrapping constructor is represented exactly as that
@@ -1577,6 +1578,29 @@ its own slot. That makes a cell type that names it the type of a fresh
 cell. Its runtime word is what `cell-alloc` puts in a vacant slot, and
 the word of every value of a hollow type (§33).
 
+A non-phantom constructor `C` with no non-erased field, of a tagged or
+hollow type (§33) not marked `extern` or `newtype`, has a tag slot when
+an opened `Matchable` lists it. That slot is a built-in slot per
+position among the fieldless non-phantom constructors for a tagged
+type, and `vacant-slot` for a hollow one. Tag slot 0 is `vacant-slot`,
+and each tag slot is its own slot. With the prelude, `(slot-of 0)` is
+`vacant-slot`; with externs too, `(slot-of k)` is tag slot `k`.
+
+`(slot-tag x)` is a statement (§27). It forces, outward, `(slot-of x)`
+to equal a tag slot. That is `C`'s slot when `x` canonicalizes to
+`(C ...)`, or `x` is a cell of type `(Cell C ...)`. It is `vacant-slot`
+when `x` is any value of a hollow type. `x` may have any multiplicity,
+and is a direct variable reference (§15), not a use. A contradiction is
+an error. It is refused without an open `Matchable`, for an `extern` or
+`newtype` type, for an unknown constructor, and for a phantom `C` or
+one with a non-erased field.
+
+Matching on `x` adds no tag-slot fact of its own. Entering `C`'s branch
+gives only the slot facts listed in §36. Inside the branch, `x` is at
+`C`'s tag slot only if those facts, or facts already in force, say so.
+For example, an `x` built by applying `C` is already at that slot.
+Otherwise the branch must write `(slot-tag x)`.
+
 ## 36. `at`
 
 The parameters and return entries of a function, and the entries of
@@ -1651,10 +1675,11 @@ a cell invocation (the value with its cell) and a `cell-write` on a
 result with the source); a forwarding `let` (§19); a `let` of
 `(slot-of x)` (with `x`); the `at` return and `at` parameter of a call
 and the `at` entry of a match (with their targets); the delegate annotation (`g` with `f`, §41);
-an application of a constructor of a hollow type, and a `cell-alloc`
-of one, where an opened `Matchable` lists the constructor (the value
-or cell with `vacant-slot`, §33);
-`slot-self` (§35);
+an application of a constructor that has a tag slot or is of a hollow
+type, and a `cell-alloc` of one, where an opened `Matchable` lists the
+constructor (the value or cell with its tag slot, or with `vacant-slot`,
+§35);
+`slot-self` and `slot-tag` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
 slot is an atom of the fact table. A forced rule between two ordinary
@@ -1698,8 +1723,9 @@ its non-erased argument.
 
 **Obtaining a cell.** `(cell-alloc C)` is an expression that yields a
 fresh cell at unique, at no slot, with every slot `vacant-slot` (§35).
-When the opened `Matchable` that lists `C` is that of a hollow type,
-the cell is instead at `vacant-slot` (§36).
+When `C` has a tag slot, or the opened `Matchable` that lists `C` is
+that of a hollow type, the cell is instead at that tag slot, or at
+`vacant-slot` (§35, §36).
 `(cell-alloc (C i1 ... in))` lists every non-erased field; each item is
 a `(Slot)` expression at many, or `_` for `vacant-slot`. A partial list
 is not allowed. A destructure in any mode yields, through its cell
@@ -1752,6 +1778,13 @@ argument at its field's multiplicity and `u` at its position's,
 consuming unique ones, and still creates its value at `u` and its `is`
 fact in the fact table.
 
+`(imm o n)` before an argument, or before a `cell-write` item, marks a
+store whose old and new words are both immediates. `o` and `n` are
+erased `ImmSlot` proofs (§44) for the slot overwritten and the slot
+written. It is refused where nothing is stored: before `_`, before an
+erased argument, after another mark, in a `cell-alloc`, and inside
+`(at m (u ...))`.
+
 ## 38. `Slot` and `cell-match`
 
 `Slot` is an opaque nullary type with no constructors and no
@@ -1763,9 +1796,8 @@ copy of its word aliases nothing that matters (§13). A signature that
 speaks of a slot abstracts over it as a `(Slot)` parameter; for
 example, `(erased (Slot) s) (unique (Cell Pair2 s s) u)` says that the
 two slots hold one thing. Two slots are equal exactly when they
-canonicalize to one atom (§35). Forcing never refutes on two slots,
-because `Slot` has no constructors, and nothing relies on two slots
-being distinct. A slot says nothing about contents: the content of a
+canonicalize to one atom (§35). Nothing relies on two slots being
+distinct. A slot says nothing about contents: the content of a
 slot is not a subterm of the slot, and only `is` speaks about contents.
 
 `cell-match` reads the words of a cell out. It is an expression with
@@ -1797,8 +1829,8 @@ no store and no copy. Renames, constants, loads from a block, a
 `values`, a match whose every branch erases to nothing (including its
 dispatch), a nested definition whose remainder erases, and absurd code
 all count as nothing. So does an application of a constructor `C`, or
-a `cell-alloc` of `C`, when the opened `Matchable` that lists `C` is
-that of a hollow type (§33). Calling an at-function skips its runtime; its
+a `cell-alloc` of `C`, when `C` has a tag slot or the opened
+`Matchable` that lists `C` is that of a hollow type (§33, §35). Calling an at-function skips its runtime; its
 arguments are still evaluated, as §15 binds them. A
 function marked `erased` may not be marked `at`: it is only ever called
 where nothing runs, so the mark would claim nothing. The body of an
@@ -1991,8 +2023,18 @@ cells (§43). `_` is as in §50.
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
-  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
+  (many Vacant : (erased Type A) (many vacant-slot is s) -> (MaybeUninit A))
+  (many Stale : (erased Type A) (many (Slot) s) (erased A v) (erased (Placed s A v) p) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+
+(def-adts $ (Plucked : (Type A) ((Slot) s) ((MaybeUninit A) m) ((MaybeUninit A) left) -> Type)
+  enum
+  (many PluckVacant : (erased Type A) ->
+     (Plucked A vacant-slot (Vacant A vacant-slot) (Vacant A vacant-slot)))
+  (many PluckStale : (erased Type A) (erased (Slot) s) (erased A v) (erased (Placed s A v) p) ->
+     (Plucked A s (Stale A s v p) (Stale A s v p)))
+  (many PluckInit : (erased Type A) (erased (Slot) s) (erased A x) (erased (Placed s A x) p) ->
+     (Plucked A s (Init A x) (Stale A s x p))))
 
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
@@ -2000,16 +2042,18 @@ cells (§43). `_` is as in §50.
 ```
 
 A `(MaybeUninit A)` is one word: the word of `A` under `Init`, and the
-word of its slot under `Uninit`. So an `(Array (MaybeUninit A) xs)` is
-the same memory as the `(Array A ys)` it becomes. Reading an `Init` out
-is a `unique` match whose `Uninit` branch must be refuted, by a fact or
-by proof; the one-real-branch rule of §21 makes this `assume_init`
-with evidence in place of `unsafe`. Since the field of `Copy` is
-`many`, an element of an `(Array (Copy A) xs)` is read in place.
-`Immediate A` is an enum with `ImmU62` and `ImmCopy`; the `-imm`
-operations take it as evidence. Other immediate types coerce into
-`U62`: `U8` and `Char` by unwrapping and rewrapping, a fieldless enum
-through `coercible-tag` (§33).
+word of its slot under `Vacant` and `Stale`. So an `(Array (MaybeUninit
+A) xs)` is the same memory as the `(Array A ys)` it becomes. Reading an
+`Init` out is a `unique` match whose `Vacant` and `Stale` branches must
+be refuted, by a fact or by proof; the one-real-branch rule of §21
+makes this `assume_init` with evidence in place of `unsafe`. Since the
+field of `Copy` is `many`, an element of an `(Array (Copy A) xs)` is
+read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy`,
+`ImmMaybe` and `ImmUSlot`; the `-imm` operations take it as evidence. `(ImmSlot s)`
+says that slot `s` holds an immediate: `ImmVacant` for `vacant-slot`,
+and `ImmPlaced` from an `Immediate` and a `Placed` (§66). Other immediate
+types coerce into `U62`: `U8` and `Char` by unwrapping and rewrapping,
+a fieldless enum through `coercible-tag` (§33).
 
 The index proofs are generic relations on lists, which the prelude
 declares next to `List` (§42), with every field erased:
@@ -2024,10 +2068,10 @@ declares next to `List` (§42), with every field erased:
 - `(Repeat A n x xs)`: `xs` is `n` copies of `x`. Its constructors are
   `RepeatNil` and `RepeatCons`.
 
-One relation belongs to the arrays themselves. `(AllInit A xs ys)`
+Two relations belong to the arrays themselves. `(AllInit A xs ys)`
 pairs a list `xs` of `(MaybeUninit A)` whose every element is
 `(Init A x)` with the list `ys` of those `x`; its constructors are
-`AINil` and `AICons`.
+`AINil` and `AICons`. `Plucked`, above, is the other.
 
 The functions. Each is `extern` with a source model in
 `lib/prelude.sl`; the FFI's implementation drops the arguments the
@@ -2036,7 +2080,7 @@ model does not use:
 ```scheme
 array-new : (erased Type A) (subterm many (Nat) n) ->
     (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
-    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p)
+    (erased (Repeat (MaybeUninit A) n (Vacant A vacant-slot) xs) p)
 array-swap : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
     (subterm many (Nat) i) (unique A x) (erased A m) (erased (Nth A xs i m) nth) ->
     (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
@@ -2047,12 +2091,13 @@ array-place : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
 array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
-    (unique m is v) (erased (List (MaybeUninit A)) ys)
-    (unique (Array (MaybeUninit A) ys) r at a)
-    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p)
+    (unique m is v) (erased (MaybeUninit A) left) (erased (Plucked A (slot-of v) v left) pl)
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i left ys) p)
 array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
-    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased A w) (erased (Placed (slot-of x) A w) pw)
+    (erased (Nth (MaybeUninit A) xs i (Stale A (slot-of x) w pw)) nth) ->
     (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
     (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p)
 array-get : (erased Type A) (erased (List (Copy A)) xs)
@@ -2076,21 +2121,20 @@ array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
 ```
 
 `array-swap-imm` and `array-place-imm` are `array-swap` and
-`array-place` with an extra parameter `(erased (Immediate A) imm)` and
-a `many` index. `array-pluck` leaves the plucked element's word in the
-array under `Uninit`, and the slot of that `Uninit` is exactly the slot
-of the value returned. So the value may be mutated in place and put
-back with `array-unpluck`, an `extern at` function (§39) whose call
-costs nothing. This is for a unique value kept inside an outer array,
-such as a row of a jagged array: it is plucked, mutated in place, and
-put back at no cost. Until it is put back, the array may keep the plucked
-value alive. Constructing an `ACons` copies its tail, and taking an
-array apart through the model's `ACons` view is O(n). `init-witness`
-is an erased witness, in the shape of §60, that an
-`(Array (MaybeUninit A) xs)` with `(AllInit A xs ys)` coerces to an
-`(Array A ys)`, at `(Unique)` on both sides. The `coerce` is written
-where it is used: a wrapper function would extract to a call, while
-the inline `coerce` extracts to nothing.
+`array-place` with an extra parameter `(erased (Immediate A) imm)`.
+`array-pluck` leaves the plucked element's word in the
+array under its `Plucked` leftover, at the slot of the value returned.
+So the value may be mutated in place and put back with `array-unpluck`,
+an `extern at` function (§39) whose call costs nothing. This is for a
+unique value kept inside an outer array, such as a row of a jagged
+array: it is plucked, mutated in place, and put back at no cost. Until
+it is put back, the array may keep the plucked value alive.
+Constructing an `ACons` copies its tail, and taking an array apart
+through the model's `ACons` view is O(n). `init-witness` is an erased
+witness, in the shape of §60, that an `(Array (MaybeUninit A) xs)` with
+`(AllInit A xs ys)` coerces to an `(Array A ys)`, at `(Unique)` on both
+sides. The `coerce` is written where it is used: a wrapper function
+would extract to a call, while the inline `coerce` extracts to nothing.
 
 ## 45. Literals
 
@@ -2359,6 +2403,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   constructor survives refutation, binding outward (§27, §52).
 - `open-adt`: opens a `Matchable` (§8).
 - `slot-self`: makes a `(Slot)` variable its own slot (§35).
+- `slot-tag`: puts a variable at its constructor's tag slot (§35).
 - `open-at-fn`: opens an `AtFn` proof (§39).
 - `dump-context`: stops elaboration with a report of the context
   (MANUAL.md). Also usable as an expression and as a type.
@@ -2431,6 +2476,7 @@ list:
   invocation, around an invocation or a call, around the annotation
   of a `match` or `cell-match`, before a `def-fns` name, and after one
   (§36, §37, §39, §40, §41).
+- `imm` marks a store (§37).
 
 ## 55. Worked example: `List`
 

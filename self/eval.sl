@@ -386,7 +386,7 @@
 ; otherwise, the value then being its fields as they stand.
 (def-fns _ $ (many dispatch : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (List $ Nat) shape) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Pair (Nat) $ List $ Ref Block hs2) r))
   (let ((erased _) (many b) (erased lt)) (hread _ hp v))
-  (let ((many as-word)) $ match many ext (((Maybe $ Nat) _)) ((Some _ _) (word-of-block _ b)) ((None _) (match many b (((Maybe $ Nat) _)) ((BTag _ _ _) (None _)) (else (word-of-block _ b)))))
+  (let ((many as-word)) $ word-of-block _ b)
   (let-match many as-word (None _)
     ((Some _ w)
       (match many ext _
@@ -546,6 +546,8 @@
       ((ExArrayLength)
         (ErPayload $ PNat $ match many (match many a (((Maybe $ Pair (Nat) $ IdMap $ Ref Block hs) _)) ((Some _ x) (array-elems _ hp x)) ((None _) (None _))) (((Nat) _))
           ((Some _ ne) (match many ne _ ((MkPair _ _ len _) len))) ((None _) 0)))
+      ((ExArrayLengthDec) (ErCtor 0 $ Nil _))
+      ((ExBytesLengthDec) (ErCtor 0 $ Nil _))
       ((ExListToArray) (ErListToArray))
       ((ExBytesMake)
         (let-match many (char-of-nat nb) (Some _ c) ((None _) (ErError "bytes-make: a code above 255")))
@@ -593,6 +595,7 @@
         (ErPayload $ PNat d))
       ((ExNatCmp) (ErCtor (cmp-index _ _ _ _ $ nat-cmp na nb) $ Nil _))
       ((ExLtDec) (ErCtor (match many (lt-dec na nb) (((Nat) _)) ((Yes _ _ _ _ _) 0) ((No _ _ _ _ _) 1)) $ Nil _))
+      ((ExNatFitsU62) (ErCtor (match many (nat-fits-u62 na) (((Nat) _)) ((Yes _ _ _ _ _) 0) ((No _ _ _ _ _) 1)) $ Nil _))
       ((ExStrCmp) (ErCtor (cmp-index _ _ _ _ $ str-cmp sa sb) $ Nil _))
       ((ExNatEq) (ErCtor (match many (nat-eq na nb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))
       ((ExStrEq) (ErCtor (match many (str-eq sa sb) (((Nat) _)) ((Equal _ _ _) 0) ((Unequal _ _ _ _ _) 1)) $ Nil _))
@@ -1188,6 +1191,17 @@
   (let ((many (NameMap $ Nat) m) (many (String) k)) $ match many key _ ((LKSpelled k) (values sp k)) ((LKString k) (values st k)))
   (match many (nm-get _ k m) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
 
+(def-fns _ $ (many tag-slot : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) k) ->
+    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) t))
+  (let-match many k (Succ _) ((Zero) (values env hs h (le-refl hs) null-id)))
+  (let ((many key)) $ str-cat "slot " $ nat-str k)
+  (let-match many (lit-lookup env $ LKSpelled key) (None _) ((Some _ t) (values env hs h (le-refl hs) t)))
+  (let ((many env2) (erased hs2) (many h2) (erased sf) (many t)) $ bind-lit env _ h (Many) (BToken _) slot-term (None _))
+  (let ((many facts)) $ Cons _ (MkLitFact t slot-term (None _) $ Some _ $ TVar t) $ Nil _)
+  (let ((many env3)) $ env-enter-facts env2 facts)
+  (let-match many (env-literals env3) (MkLitTable sp st))
+  (values (env-push-lit (env-set-literals env3 $ MkLitTable (nm-set _ key t sp) st) t (None _) (None _) facts) hs2 h2 sf t))
+
 ; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
 ; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
@@ -1200,8 +1214,10 @@
   (let ((many env2b) (many numeral)) $ prelude-id env2 "Numeral")
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
-  (let ((many env3) (erased h2) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 (LKSpelled key) x (Some _ p) (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
+  (let ((many env3) (erased _) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
+  (let ((many env4) (erased h3) (many hp3) (erased s3) (many t)) $ tag-slot env3 _ hp2 n)
+  (let ((many facts)) $ Cons _ (MkLitFact x nat-ty (None _) $ Some _ $ slot-atom t) $ Cons _ (MkLitFact p pty (None _) $ None _) $ Nil _)
+  (values (record-literal (env-enter-facts env4 facts) (LKSpelled key) x (Some _ p) (RNat (PosSpot $ NoPos) n) facts) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
@@ -1236,14 +1252,14 @@
   (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
   (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
   (let ((many env4) (erased h3) (many hp3) (erased s3) (many x)) $ bind-lit env3d _ hp2 (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
-  (values (record-literal env4 (LKSpelled $ char-key c) x (Some _ np) (RChr (PosSpot $ NoPos) c) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
+  (values (record-literal env4 (LKSpelled $ char-key c) x (Some _ np) (RChr (PosSpot $ NoPos) c) $ Cons _ (MkLitFact lt lt-ty (None _) $ None _) $ Cons _ (MkLitFact x char-ty (Some _ rule) $ None _) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
 (def-fns _ $ (many intern-string-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) body) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (erased h1) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PStr body) str-ty (None _))
-  (values (record-literal env2 (LKString body) x (None _) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
+  (values (record-literal env2 (LKString body) x (None _) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty (None _) $ None _) $ Nil _) h1 hp1 s1))
 
 (def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ LitKey) k))
   (match many raw _
@@ -1331,7 +1347,7 @@
     ((None _) (halloc _ hp1 $ BToken _)))
   (let ((many hp3)) $ heap-with-entries _ hp2 $ entries-set-state _ (heap-entries _ hp2) x $ SSettled _ a x)
   (let ((erased hs4) (many hp4) (erased s4) (many hv)) $ alloc-ext _ hp3 $ PHandle x (MintedIs) mult $ ShText "_")
-  (values (env-push-lit e2 x (None _) (None _) $ Cons _ (MkLitFact x ty rule) $ Nil _) hs4 hp4 (hist-le-trans _ _ _ s1 s4) hv))
+  (values (env-push-lit e2 x (None _) (None _) $ Cons _ (MkLitFact x ty rule $ None _) $ Nil _) hs4 hp4 (hist-le-trans _ _ _ s1 s4) hv))
 
 (def-fns _ $ (many mint-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Multiplicity) mult) (many (List $ Ref Block hs) args) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))

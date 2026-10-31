@@ -13,16 +13,17 @@
   (u (Succ n)))
 (def-fns _ $ (many go : -> (many (Nat) result))
   (let ((unique a)) (ACons _ _ (Init _ (MkBox 1)) (ACons _ _ (Init _ (MkBox 6)) (ANil (MaybeUninit (Box))))))
-  (let ((unique item) (erased _) (unique b) (erased cleared)) (array-pluck _ _ a (Succ (Zero)) _ (NthThere _ _ _ _ _ (NthHere _ _ _))))
+  (let ((unique item) (erased _) (erased pl) (erased _) (unique b) (erased cleared)) (array-pluck _ _ a (Succ (Zero)) _ (NthThere _ _ _ _ _ (NthHere _ _ _))))
   (let-match unique item (Init _ box))
+  (let-match erased pl (PluckInit _ _ _ _))
   (let ((unique box2)) (bump box))
-  (let ((erased _) (unique c) (erased restored)) (at erased (array-unpluck _ _ b (Succ (Zero)) box2 (set-nth _ _ _ _ _ cleared))))
-  (let ((unique item2) (erased _) (unique _) (erased _)) (array-pluck _ _ c (Succ (Zero)) _ (set-nth _ _ _ _ _ restored)))
+  (let ((erased _) (unique c) (erased restored)) (at erased (array-unpluck _ _ b (Succ (Zero)) box2 _ _ (set-nth _ _ _ _ _ cleared))))
+  (let ((unique item2) (erased _) (erased _) (erased _) (unique _) (erased _)) (array-pluck _ _ c (Succ (Zero)) _ (set-nth _ _ _ _ _ restored)))
   (let-match unique item2 (Init _ box3))
   (let-match unique box3 (MkBox m))
   m)
 (go)
 ; warns: tests/array_unpluck.sl:15:22: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1238:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_unpluck.sl:15:52: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1238:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here

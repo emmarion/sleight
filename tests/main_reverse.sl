@@ -18,12 +18,12 @@
 
 main
 ; warns: tests/main_reverse.sl:10:56: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:959:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:1010:1: note: `;! warn` for `SCons` is here
 ; warns: tests/main_reverse.sl:10:38: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/main_reverse.sl:16:29: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/main_reverse.sl:17:38: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/main_reverse.sl:17:59: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:959:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:1010:1: note: `;! warn` for `SCons` is here
 ; warns: tests/main_reverse.sl:17:70: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:959:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:1010:1: note: `;! warn` for `SCons` is here
 ; warns: tests/main_reverse.sl:17:15: warning: unnecessary `(predates _)`; drop it

@@ -101,6 +101,7 @@ let u62_dec a : Z.t = Obj.magic (small a - 1 : int)
 let u62_divmod a b = (u62_div a b, u62_mod a b)
 let u62_cmp a b = order (compare (small a) (small b))
 let u62_lt_dec a b = decide (small a < small b)
+let nat_fits_u62 a = decide (Obj.is_int (Obj.repr a))
 let u62_eq a b = eq_dec (small a = small b)
 let u62_bit_length = bit_length
 let u62_bit_test n k = bit ((small n lsr small k) land 1 = 1)
@@ -212,6 +213,8 @@ let array_get_many = array_pluck
 let array_place a i x = Array.unsafe_set (Obj.magic a : word array) (small i) (Obj.magic x : word)
 let array_length a = Z.of_int (Array.length a)
 let array_length_many = array_length
+let array_length_dec (_ : 'a array) = Yes
+let array_length_dec_many = array_length_dec
 let array_swap_imm a i x =
   let a = (Obj.magic a : int array) in
   let old = Array.unsafe_get a (small i) in
@@ -234,6 +237,8 @@ let bytes_get_many = bytes_get
 let bytes_set b i x = Bytes.unsafe_set b (small i) (Char.unsafe_chr (small x))
 let bytes_length b = Z.of_int (Bytes.length b)
 let bytes_length_many = bytes_length
+let bytes_length_dec (_ : bytes) = Yes
+let bytes_length_dec_many = bytes_length_dec
 let str_bytes_copy (s, o, l) = let b = Bytes.create l in Bytes.blit_string s o b 0 l; b
 let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)
 let bytes_copy = Bytes.copy
@@ -242,8 +247,18 @@ external array_unsafe_sub : 'a array -> int -> int -> 'a array = "caml_array_sub
 external array_unsafe_blit : 'a array -> int -> 'a array -> int -> int -> unit = "caml_array_blit"
 let bytes_sub b i n = let r = Bytes.create (small n) in Bytes.unsafe_blit b (small i) r 0 (small n); r
 let bytes_blit src i dst j n = Bytes.unsafe_blit src (small i) dst (small j) (small n)
+let bytes_blit_many = bytes_blit
 let array_sub a i n = array_unsafe_sub a (small i) (small n)
 let array_blit src i dst j n = array_unsafe_blit src (small i) dst (small j) (small n)
+let array_blit_many = array_blit
+let array_move = array_blit
+(* Array.blit calls caml_modify per element when the destination is in the major heap, immediates included
+   (runtime/array.c, 4.14 through 5.5). caml_blit_bytes is a plain memmove there; on 4.14.1 it measured
+   4-18x faster than Array.blit on an old destination and about even on a young one. *)
+external blit_words : Obj.t -> int -> Obj.t -> int -> int -> unit = "caml_blit_bytes" [@@noalloc]
+let array_blit_imm src i dst j n = let w = Sys.word_size / 8 in blit_words (Obj.repr src) (small i * w) (Obj.repr dst) (small j * w) (small n * w)
+let array_blit_many_imm = array_blit_imm
+let array_move_imm = array_blit_imm
 
 type slot_find = SlotFound of int | SlotMissing
 type slot_intern = SlotExisting of int | SlotAdded of int

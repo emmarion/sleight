@@ -85,6 +85,9 @@ let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] |
 let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i)))
 let length = spec ~needs:["Array"] 1 (unary (fun a -> int (Ffi_core.array_length (array a))))
 let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (Ffi_core.bytes_get (bytes b) (z i))))
+let blit = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
+let blit_imm = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit_imm (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
+let bytes_blit = spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity)
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:vacant (z n)))));
@@ -98,11 +101,19 @@ let fns : (string * fn_spec) list =
     ("array-place-imm", spec ~needs:["Array"] 3 place);
     ("array-length", length);
     ("array-length-many", length);
+    ("array-length-dec", spec ~needs:[ "Array"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
+    ("array-length-dec-many", spec ~needs:[ "Array"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des "List" v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
     ("array-sub", spec ~needs:["Array"] 3 (function [ a; i; n ] -> [ arr (Ffi_core.array_sub (array a) (z i) (z n)) ] | _ -> raise arity));
-    ("array-blit", spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity));
+    ("array-blit", blit);
+    ("array-blit-many", blit);
+    ("array-move", blit);
+    ("array-blit-imm", blit_imm);
+    ("array-blit-many-imm", blit_imm);
+    ("array-move-imm", blit_imm);
     ("bytes-sub", spec ~needs:["Bytes"] 3 (function [ b; i; n ] -> [ buf (Ffi_core.bytes_sub (bytes b) (z i) (z n)) ] | _ -> raise arity));
-    ("bytes-blit", spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity));
+    ("bytes-blit", bytes_blit);
+    ("bytes-blit-many", bytes_blit);
     ("array-copy", spec ~needs:["Array"] 1 (unary (fun a -> arr (Ffi_core.array_copy (array a)))));
     ("bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun b -> buf (Ffi_core.bytes_copy (bytes b)))));
     ("bytes-make", spec ~needs:["Bytes"] 2 (binary (fun n x -> buf (Ffi_core.bytes_make (z n) (z x)))));
@@ -111,6 +122,8 @@ let fns : (string * fn_spec) list =
     ("bytes-set", spec ~needs:["Bytes"] 3 (function [ b; i; x ] -> Ffi_core.bytes_set (bytes b) (z i) (z x); [] | _ -> raise arity));
     ("bytes-length", bytes_length);
     ("bytes-length-many", bytes_length);
+    ("bytes-length-dec", spec ~needs:[ "Bytes"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
+    ("bytes-length-dec-many", spec ~needs:[ "Bytes"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));
     ("str-bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun s -> buf (Ffi_core.str_bytes_copy (slice s)))));
     ("bytes-str", spec 1 (unary (fun b -> text (Ffi_core.bytes_str (bytes b)))));
     ("slots-new", spec ~needs:[ "Slots" ] 0 (fun _ -> [ VExt (Hashtbl.find registered "Slots", Slots (Ffi_core.slots_new ())) ]));
@@ -155,6 +168,7 @@ let fns : (string * fn_spec) list =
     ("u62-dec", spec 1 (unary (fun a -> int (Ffi_core.u62_dec (z a)))));
     ("u62-cmp", decision "Cmp" z Ffi_core.u62_cmp);
     ("u62-lt-dec", decision "Dec" z Ffi_core.u62_lt_dec);
+    ("nat-fits-u62", spec ~needs:[ "Dec" ] ~decides:"Dec" 1 (unary (fun a -> plain "Dec" (Obj.magic (Ffi_core.nat_fits_u62 (z a)) : int) [])));
     ("u62-eq", decision "EqDec" z Ffi_core.u62_eq);
     ("u62-bit-length", spec 1 (unary (fun a -> int (Ffi_core.u62_bit_length (z a)))));
     ("u62-bit-test", decision "Bit" z Ffi_core.u62_bit_test);
