@@ -1087,7 +1087,16 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `ctree_disjoint` (soundness direction only), over a co-closure stated on
   partial traces whose completions satisfy a predicate held as data
   (`PredC`, one parameter of any type). `red/init.sl` builds the initial
-  trees together with their certificates. `red/bridge.sl` takes that
+  trees together with their certificates; the last level of its
+  `ct-build` counts the matches of all three colours in one pass over
+  the parent's list (`pcnt3-c`) rather than splitting the list. The
+  closure loop of `red/kempe.sl` (`ktc-u`, which `ktc-c` wraps) holds
+  ctu and gtu as a `UTree` and a `UGtree`, trees whose nodes have unique
+  fields, so that `ctree-restrict-u` and `gtree-restrict-u` rewrite the
+  nodes in place instead of building new trees; `UT` and `UG` relate
+  them to the ctree and gtree that `KR` is stated on, and `ktc-c`
+  converts at both ends (`ut-of`, `ug-of`, `ct-of`, `gt-of`), so that
+  its signature is that of the loop on ctrees and gtrees. `red/bridge.sl` takes that
   co-closure to one on complete traces stated after `chromogram.v`
   (`KCC`), and `KCC` to `Kempe_coclosure` for every set closed by
   functions at a given level (`kcc-coclosure`, by a function at a level
