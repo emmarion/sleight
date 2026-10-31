@@ -1258,10 +1258,14 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   parts to the region whose obligations cover it. In one run each on a
   4-core cloud VM shared with other runs, `--goal proved` passed in about
   1520 s with slc, about 1490 s of it compiling 8.7 MB of OCaml; in about
-  485 s with slc and `OCAMLRUNPARAM=o=200` in its environment, which
-  ocamlopt inherits (about 454 s compiling, peak RSS about 1.9 GB); and in
-  about 793 s with the reference `main.exe` under `ulimit -s unlimited`
-  (about 742 s compiling 12.5 MB). The 22 jobs, run one at a time, took
+  485 s and, after a later merge (7.3 MB), about 994 s with slc and
+  `OCAMLRUNPARAM=o=200` in its environment, which ocamlopt inherits (about
+  454 s and 970 s compiling); and in about 793 s with the reference
+  `main.exe` under `ulimit -s unlimited` (about 742 s compiling 12.5 MB).
+  ocamlopt's time appears to depend much on its own GC: on the first
+  3.4 MB of that OCaml (its 50,000 top-level constants) it took about
+  1000 s by default (peak RSS 0.8 GB), 980 s with `o=200`, 330 s with
+  `o=1000` (2.5 GB) and 210 s with `s=8M,o=200` (1.1 GB), one run each. The 22 jobs, run one at a time, took
   about 37 s of CPU together, the longest about 4.4 s. A run with one
   reducible leaf of the arity-7 script replaced by an empty hubcap was
   rejected (a job answered `ChkNo`). In a test run the tree built
