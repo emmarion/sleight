@@ -931,3 +931,19 @@
   (let-match many (cfgc-c cf) (ChkYes _ c) ((ChkNo _) (ChkNo _)))
   (let-match many (notail $ allgc-c rest) (ChkYes _ a) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (AgCons rest cf c a)))
+
+(def-adts $ (AllGcC : ((List (List (Config))) css) -> Type)
+  enum
+  (many AgcNil : -> (AllGcC (Nil (List (Config)))))
+  (many AgcCons : (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (AllGc cs) a) (erased (AllGcC css) rest)
+      -> (AllGcC (Cons (List (Config)) cs css))))
+
+(def-fns _ $ (erased allgc-concat : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
+    (erased (AllGcC css) a) -> (erased (AllGc cfs) r))
+  (match erased p _
+    ((CLNil) (AgNil))
+    ((CLSkip css1 _ p1) (let-match erased a (AgcCons _ _ _ a1)) (allgc-concat css1 cfs p1 a1))
+    ((CLCons cf cs cfs1 css1 p1)
+      (let-match erased a (AgcCons _ _ ag a1))
+      (let-match erased ag (AgCons _ _ c ag1))
+      (AgCons cfs1 cf c (allgc-concat (Cons _ cs css1) cfs1 p1 (AgcCons cs css1 ag1 a1))))))
