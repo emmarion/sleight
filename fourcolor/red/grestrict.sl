@@ -516,24 +516,48 @@
       (let ((many c3)) (notail $ gt-of x3 g3 p3))
       (GNode c0 c1 c2 c3))))
 
-(def-fns _ $ (many ug-live : (unique (UGtree) u) -> (unique u is u2) (many (Bool) w))
+(def-adts $ (SameSlot : ((Slot) a) ((Slot) b) -> Type)
+  enum
+  (many SameY : (erased (Slot) a) -> (SameSlot a a))
+  (many SameN : (erased (Slot) a b) -> (SameSlot a b)))
+
+; Whether a tree is empty, and whether the tree holding it is at slot b: only GKAGone may not be.
+(def-adts $ (GKeepAt : ((Gtree) g) ((Slot) a) ((Slot) b) -> Type)
+  enum
+  (many GKAGone : (erased (Slot) a b) -> (GKeepAt (GEmpty) a b))
+  (many GKAEmpty : (erased (Slot) a) -> (GKeepAt (GEmpty) a a))
+  (many GKALive : (erased (Gtree) g) (erased (Slot) a) -> (GKeepAt g a a)))
+
+(def-fns _ $ (many gk-at : (many (Gtree) g) (erased (Slot) a) -> (many (GKeepAt g a a) k))
+  (match many g _ ((GEmpty) (GKAEmpty a)) (else (GKALive g a))))
+
+(def-fns _ $ (many gk-drop : (erased (Gtree) g) (erased (Slot) a b) (many (GKeepAt g a b) k) -> (many (GKeep g) e))
+  (match many k _ ((GKAGone _ _) (GKEmpty)) ((GKAEmpty _) (GKEmpty)) ((GKALive _ _) (GKLive g))))
+
+(def-fns _ $ (many gk-in : (erased (Gtree) g) (erased (Slot) a b) (many (GKeepAt g a b) k) -> (many (SameSlot a b) s))
+  (match many k _ ((GKAGone _ _) (SameN a b)) ((GKAEmpty _) (SameY a)) ((GKALive _ _) (SameY a))))
+
+(def-fns _ $ (many ug-live : (unique (UGtree) u) -> (unique u is u2 at u) (many (Bool) w))
   (match unique u _
-    ((UGEmpty) (values (UGEmpty) (BFalse)))
+    ((UGEmpty cell) (values (at unique (cell)) (BFalse)))
     ((UGLeaf g cell) (values (at unique (cell g)) (gtree-live g)))
     ((UGNode x0 x1 x2 x3 cell) (values (at unique (cell x0 x1 x2 x3)) (BTrue)))))
 
 (def-fns _ $ (many gtree-restrict-u : (subterm unique (UGtree) u) (erased (Gtree) t) (erased (UG u t) ut) (erased (List RC) r) (many (RxL (Ctree) r) rl) ->
     (many (Gtree) hit) (unique (UGtree) mu) (erased (Gtree) miss) (erased (UG mu miss) um) (erased (GPart (GSG t) (GSG hit) (GSG miss)) p)
-    (erased (GHit (GSG hit) r) h) (many (GKeep miss) e))
+    (erased (GHit (GSG hit) r) h) (many (GKeepAt miss (slot-of mu) (slot-of u)) e))
   (match unique u _
-    ((UGEmpty) (let-match erased ut (UGE)) (values (GEmpty) (UGEmpty) (GEmpty) (UGE) (part-r t) (GHE r) (GKEmpty)))
+    ((UGEmpty cell) (let-match erased ut (UGE)) (let ((unique mu)) (at unique (cell)))
+      (values (GEmpty) mu (GEmpty) (UGE) (part-r t) (GHE r) (GKAEmpty (slot-of mu))))
     ((UGLeaf g cell)
       (let-match erased ut (UGL _))
       (let ((many a) (many b) (erased p) (erased h)) (gtree-restrict-c g r rl))
-      (values a (cell b) b (UGL b) p h (gkeep b)))
+      (let ((unique mu)) (cell b))
+      (values a mu b (UGL b) p h (gk-at b (slot-of mu))))
     ((UGNode x0 x1 x2 x3 cell)
       (let-match erased ut (UGN _ _ _ _ t0 t1 t2 t3 q0 q1 q2 q3))
-      (let-match many rl (RxCons _ _ _ _ _) ((RxNil _) (values (GEmpty) (at unique (cell x0 x1 x2 x3)) t ut (part-r t) (GHE r) (GKLive t))))
+      (let-match many rl (RxCons _ _ _ _ _)
+        ((RxNil _) (let ((unique mu)) (at unique (cell x0 x1 x2 x3))) (values (GEmpty) mu t ut (part-r t) (GHE r) (GKALive t (slot-of mu)))))
       (let ((unique y0) (many w0)) (ug-live x0))
       (let ((unique y1) (many w1)) (ug-live x1))
       (let ((unique y2) (many w2)) (ug-live x2))
@@ -546,10 +570,20 @@
       (let ((many a2) (unique z2) (erased b2) (erased m2) (erased p2) (erased h2) (many e2)) (notail $ gtree-restrict-u y2 t2 q2 r2 l2))
       (let ((many a3) (unique z3) (erased b3) (erased m3) (erased p3) (erased h3) (many e3)) (notail $ gtree-restrict-u y3 t3 q3 r3 l3))
       (let ((erased pt)) (node-part t0 t1 t2 t3 a0 a1 a2 a3 b0 b1 b2 b3 p0 p1 p2 p3))
-      (let ((erased mg)) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))
+      (let ((erased g)) (GNode b0 b1 b2 b3))
+      (let ((unique nu) (erased mg))
+        (match many (gk-in b0 _ _ e0) (((UGtree) nu at u) ((UG nu g) mg))
+          ((SameN _ _) (values (cell z0 z1 z2 z3) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3)))
+          ((SameY _)
+            (let-match many (gk-in b1 _ _ e1) (SameY _) ((SameN _ _) (values (cell z0 z1 z2 z3) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))))
+            (let-match many (gk-in b2 _ _ e2) (SameY _) ((SameN _ _) (values (cell z0 z1 z2 z3) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))))
+            (let-match many (gk-in b3 _ _ e3) (SameY _) ((SameN _ _) (values (cell z0 z1 z2 z3) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))))
+            (values (at unique (cell z0 z1 z2 z3)) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3)))))
       (let-match many (gtree-empty4 a0 a1 a2 a3) (E4No _ _ _ _)
-        ((E4Yes) (values (GEmpty) (cell z0 z1 z2 z3) (GNode b0 b1 b2 b3) mg (part-hit-e (GSG t) _ pt) (GHE r) (GKLive (GNode b0 b1 b2 b3)))))
+        ((E4Yes) (values (GEmpty) nu g mg (part-hit-e (GSG t) _ pt) (GHE r) (GKALive g (slot-of nu)))))
       (let ((erased hs)) (node-ghit a0 a1 a2 a3 r r0 r1 r2 r3 j0 j1 j2 j3 h0 h1 h2 h3))
-      (let-match many (gkeep4 b0 b1 b2 b3 e0 e1 e2 e3) (E4No _ _ _ _)
-        ((E4Yes) (values (GNode a0 a1 a2 a3) (UGEmpty) (GEmpty) (UGE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ pt))) hs (GKEmpty))))
-      (values (GNode a0 a1 a2 a3) (cell z0 z1 z2 z3) (GNode b0 b1 b2 b3) mg pt hs (GKLive (GNode b0 b1 b2 b3))))))
+      (let-match many (gkeep4 b0 b1 b2 b3 (gk-drop b0 _ _ e0) (gk-drop b1 _ _ e1) (gk-drop b2 _ _ e2) (gk-drop b3 _ _ e3)) (E4No _ _ _ _)
+        ((E4Yes) (let ((unique ue)) (UGEmpty))
+          (values (GNode a0 a1 a2 a3) ue (GEmpty) (UGE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ pt))) hs
+            (GKAGone (slot-of ue) (slot-of u)))))
+      (values (GNode a0 a1 a2 a3) nu g mg pt hs (GKALive g (slot-of nu))))))

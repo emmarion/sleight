@@ -865,7 +865,7 @@
       (ctree-restrict-u h u ctu ut (Cons _ (MkRx _ (BS0) gtr) $ Nil _) (RxCons _ (BS0) gtr _ (RxNil _))))
     (let ((many ctr) (erased rl) (erased _)) (ctree-union-rotlr (Succ h) gone gone hg hg))
     (let ((erased hc) (erased hk)) (values (ut-h h u ctu ut) (ut-h h ku keep uk)))
-    (KGoC h c0 r0 g0 ku keep e2 ctr gu gtu ge (KRRestr h c0 r0 g0 ctu keep gone gtr gtu kr hc hk cres)
+    (KGoC h c0 r0 g0 ku keep (k-drop keep _ _ e2) ctr gu gtu ge (KRRestr h c0 r0 g0 ctu keep gone gtr gtu kr hc hk cres)
       (CRGone h c0 r0 g0 ctu keep gone ctr gtr gtu kr hc hg cres rl) uk ug)))
   (KDoneC h c0 r0 g0 u ctu e gtr gu gtu ge kr ut ug))
 
@@ -878,7 +878,7 @@
     ((Zero)
       (let ((many hit) (unique mu) (erased miss) (erased um) (erased pt) (erased hs) (many me))
         (gtree-restrict-u gu gtu ug (Cons _ (MkRx _ (BS0) ctr) $ Nil _) (RxCons _ (BS0) ctr _ (RxNil _))))
-      (values u ctu e hit mu miss me (KRSplit h c0 r0 g0 ctu ctr gtu hit miss kr cr pt hs) ut um)))
+      (values u ctu e hit mu miss (gk-drop miss _ _ me) (KRSplit h c0 r0 g0 ctu ctr gtu hit miss kr cr pt hs) ut um)))
   (let ((unique u1) (erased c1) (many e1) (many g1) (unique gu1) (erased v1) (many ge1) (erased kr1) (erased ut1) (erased ug1))
     (notail $ ktc-u c0 r0 g0 d1 h u ctu e ctr gu gtu ge kr cr ut ug))
   (let ((unique (UTree) u2) (erased (Ctree) c2) (many (KeepE c2) e2) (many (Gtree) g2) (unique (UGtree) gu2) (erased (Gtree) v2) (many (GKeep v2) ge2)
