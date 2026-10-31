@@ -12,7 +12,7 @@ From the repository root, with `T=agent/tasks/edit-distance-fast` and
 `O=agent/solutions/edit-distance-fast/sol`:
 
 ```
-F="std/nat.sl std/list.sl std/macro.sl std/tactics.sl $T/spec.sl $(cat $O/files.txt)"
+F="std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl $T/spec.sl $(cat $O/files.txt)"
 _build/release/slc --goal proved $F > /dev/null
 _build/release/slc $F $T/perf.sl --build agent/solutions/sol_perf && agent/solutions/sol_perf
 ```

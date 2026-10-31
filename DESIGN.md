@@ -1780,7 +1780,7 @@ fact in the fact table.
 
 `(imm o n)` before an argument, or before a `cell-write` item, marks a
 store whose old and new words are both immediates. `o` and `n` are
-erased `ImmSlot` proofs (§44) for the slot overwritten and the slot
+erased proofs `(Imm (Slot) s)` (§44) for the slot overwritten and the slot
 written. It is refused where nothing is stored: before `_`, before an
 erased argument, after another mark, in a `cell-alloc`, and inside
 `(at m (u ...))`.
@@ -2048,12 +2048,14 @@ A) xs)` is the same memory as the `(Array A ys)` it becomes. Reading an
 be refuted, by a fact or by proof; the one-real-branch rule of §21
 makes this `assume_init` with evidence in place of `unsafe`. Since the
 field of `Copy` is `many`, an element of an `(Array (Copy A) xs)` is
-read in place. `Immediate A` is an enum with `ImmU62`, `ImmCopy`,
-`ImmMaybe` and `ImmUSlot`; the `-imm` operations take it as evidence. `(ImmSlot s)`
-says that slot `s` holds an immediate: `ImmVacant` for `vacant-slot`,
-and `ImmPlaced` from an `Immediate` and a `Placed` (§66). Other immediate
-types coerce into `U62`: `U8` and `Char` by unwrapping and rewrapping,
-a fieldless enum through `coercible-tag` (§33).
+read in place. `(Imm A v)` says that `v` is an immediate however it is
+built, and the `-imm` operations take it as evidence. `ImmNat` gives it
+for a `Nat` below `u62-modulus`, and `ImmCoerce` carries it across a
+`Coercible` (§33). For a `(Slot)` it says that the slot holds an
+immediate: `ImmVacant` gives it for `vacant-slot`, and `ImmPlaced` gives
+it for the slot `s` of a `(Placed s A v)` (§66) from an `Imm` of `v`.
+`ImmFromSlot` gives it back for the `Placed` value. `(ImmAll A xs)`
+holds an `Imm` for each element of `xs`.
 
 The index proofs are generic relations on lists, which the prelude
 declares next to `List` (§42), with every field erased:
@@ -2121,7 +2123,8 @@ array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
 ```
 
 `array-swap-imm` and `array-place-imm` are `array-swap` and
-`array-place` with an extra parameter `(erased (Immediate A) imm)`.
+`array-place` with two extra parameters, `(erased (Imm A m) im)` for the
+element overwritten and `(erased (Imm A x) ix)` for the element written.
 `array-pluck` leaves the plucked element's word in the
 array under its `Plucked` leftover, at the slot of the value returned.
 So the value may be mutated in place and put back with `array-unpluck`,

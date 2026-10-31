@@ -110,11 +110,6 @@
 (def-fns _ $ (many raw-is-literal : (many (Syn) r) -> (many (Bool) b))
   (match many r _ ((RNat _ _) (BTrue)) ((RChr _ _) (BTrue)) ((RString _ _) (BTrue)) (else (BFalse))))
 
-(def-fns _ $ (many atoms-only : (subterm many (List $ Syn) rs) -> (many (Bool) r))
-  (let-match many rs (Cons _ r rest)
-    ((Nil _) (BTrue)))
-  (match many (raw-binder r) _ ((None _) (BFalse)) ((Some _ _) (tail $ atoms-only rest))))
-
 (def-fns _ $ (many first-atom : (subterm many (List $ Syn) rs) -> (many (Maybe $ Syn) r))
   (let-match many rs (Cons _ r rest) ((Nil _) (None _)))
   (match many r _ ((RList _ _) (tail $ first-atom rest)) (else (Some _ r))))
@@ -3046,18 +3041,29 @@
 (def-fns _ $ (many slot-entries : (subterm many (List $ Term) slots) -> (many (List $ Entry) r))
   (match many slots _ ((Nil _) (Nil _)) ((Cons _ t rest) (Cons _ (is-entry (Many) t $ None _) $ notail $ slot-entries rest))))
 
+(def-fns _ $ (many binder-at : (many (Env) env) (many (Spot) pos) (many (Syn) raw) (many (String) what) -> (many (Env) r))
+  (let-match many (raw-binder raw) (None _) ((Some _ _) env))
+  (let ((many env2) (many _)) $ name-checked (env-at env pos) raw what)
+  (env-back env env2))
+
+(def-fns _ $ (many field-names-checked : (many (Env) env) (subterm many (List $ Syn) rs) -> (many (Env) r))
+  (let-match many rs (Cons _ r rest) ((Nil _) env))
+  (match many (raw-binder r) _
+    ((Some _ _) (tail $ field-names-checked env rest))
+    ((None _) (binder-at env (raw-pos r) r "a field name"))))
+
 (def-fns _ $ (many pattern-fields : (many (Env) env) (many (Spot) ppos) (many (String) what) (many (Multiplicity) mode) (many (Res) scrut) (many (Nat) c) (many (List $ Entry) tele) (many (List $ Multiplicity) mults) (many (List $ Syn) fields) (many (Bool) extra) ->
     (many (Env) out) (many (List $ Syn) ordinary) (many (Maybe $ Syn) braw))
-  (let ((many env14)) (error-unless env (atoms-only fields) "pattern binders must be names or `_`"))
   (let ((many n)) $ list-length _ tele)
   (let ((many got)) $ list-length _ fields)
   (let ((many shown)) $ tele-with-mults tele mults)
   (let ((many has-cell)) $ and extra $ nat-eqb got $ Succ n)
   (let-match many (or (nat-eqb got n) has-cell) (BTrue)
-    ((BFalse) (values (binder-count env14 ppos what c mode extra got $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
-  (let-match many has-cell (BTrue) ((BFalse) (values env14 fields (None _))))
+    ((BFalse) (values (binder-count env ppos what c mode extra got $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
+  (let-match many has-cell (BTrue) ((BFalse) (values (field-names-checked env fields) fields (None _))))
   (let ((many ordinary) (many rest)) (split-pattern-fields tele fields))
-  (values env14 ordinary (match many rest (((Maybe $ Syn) _)) ((Nil _) (None _)) ((Cons _ r _) (Some _ r)))))
+  (let ((many env2)) $ match many rest (((Env) _)) ((Nil _) env) ((Cons _ r _) (binder-at env ppos r "a cell binder")))
+  (values (field-names-checked env2 ordinary) ordinary (match many rest (((Maybe $ Syn) _)) ((Nil _) (None _)) ((Cons _ r _) (Some _ r)))))
 
 (def-fns _ $ (many pattern-cell-option : (many (Env) env) (many (Multiplicity) mult) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Bool) extra) (many (Maybe $ Syn) name) -> (many (Env) out) (many (Maybe $ Nat) cell))
   (let-match many extra (BTrue) ((BFalse) (values env (None _))))
@@ -3249,9 +3255,7 @@
   (let-match many rest (Cons _ pat more) ((Nil _) (None _)))
   (let-match many more (Nil _) ((Cons _ _ _) (None _)))
   (let-match many (raw-items pat) (Cons _ craw fields) ((Nil _) (None _)))
-  (match many (atoms-only fields) _
-    ((BTrue) (Some _ $ MkPair _ _ x $ MkPair _ _ craw fields))
-    ((BFalse) (None _))))
+  (Some _ $ MkPair _ _ x $ MkPair _ _ craw fields))
 
 ; numeral-of (section 45): a numeral or character literal by its own spelling, never an expression.
 (def-fns _ $ (many numeral-of-term : (many (Env) env) (many (Syn) arg0) -> (many (Env) r) (many (Maybe $ Term) t))
@@ -3295,7 +3299,7 @@
   (let-match many pat (RList _ items) ((RAtom _ _) (Some _ $ MkPair _ _ pat $ Nil _)) (else (None _)))
   (let-match many items (Cons _ c fs)
     ((Nil _) (None _)))
-  (match many (atoms-only fs) _ ((BTrue) (Some _ $ MkPair _ _ c fs)) ((BFalse) (None _))))
+  (Some _ $ MkPair _ _ c fs))
 
 (def-fns _ $ (many branch-parts : (many (Env) env) (many (Syn) braw) -> (many (Maybe $ BranchParts braw) r))
   (let-match many braw (RList _ items) (else (None $ BranchParts braw)))
