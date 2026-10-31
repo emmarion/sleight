@@ -1,3 +1,4 @@
+; needs: ../std/immediate
 ; expect: (MkPair _ _ (MkPair _ _ (MkU62 122 _) $ MkU62 97 _) $ MkPair _ _ (MkU62 98 _) $ MkU62 98 _)
 (def-fns _ $ (many char-u62 : (many (Char) c) -> (many (Copy (U62)) u))
   (let-match erased c (MkChar b))
@@ -19,7 +20,7 @@
     (array-blit-imm _ _ _ _ _ s (Zero) d (Succ (Zero)) (Succ (Succ (Zero)))
       (SpliceHere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
       (SpliceThere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
-      (ImmU62)))
+      (imm-all-of _ (ImmCopy _ (ImmU62)) _) (imm-all-of _ (ImmCopy _ (ImmU62)) _)))
   (let-match erased p (SpliceThere _ _ _ _ _ _ _ p1))
   (let-match erased p1 (SpliceHere _ _ _ _ _ _ _ p2))
   (let-match erased p2 (SpliceHere _ _ _ _ _ _ _ p3))
@@ -30,7 +31,7 @@
     (array-blit-many-imm _ _ _ _ _ src (Succ (Zero)) e (Zero) (Succ (Zero))
       (SpliceThere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
       (SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
-      (ImmU62)))
+      (imm-all-of _ (ImmCopy _ (ImmU62)) _) (imm-all-of _ (ImmCopy _ (ImmU62)) _)))
   (let-match erased q (SpliceHere _ _ _ _ _ _ _ q1))
   (let-match erased q1 (SpliceNil _ _))
   (let ((many dst)) (share r))

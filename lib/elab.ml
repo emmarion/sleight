@@ -1976,9 +1976,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | sp, _ -> error l "%s" (help env (Sp.misuse sp))
 
 and imm_proofs env l (o, n) old fresh =
-  let t = match prelude_id env "ImmSlot" with Some t -> t | None -> error l "`imm` needs the prelude's `ImmSlot`, which `--no-prelude` leaves out" in
+  let t = match prelude_id env "Imm" with Some t -> t | None -> error l "`imm` needs the prelude's `Imm`, which `--no-prelude` leaves out" in
   List.fold_left (fun env (raw, s) ->
-    let ty = App (Var t, [ s ]) in
+    let ty = App (Var t, [ Prelude.slot_term; s ]) in
     let env, p, _ = elab_expr1 ~tele:[ { name = None; subterm = false; mult = Erased; place = None; loc = Reader.loc raw; sg = Ty ty } ] env Erased raw in
     settle_res env (Reader.loc raw) p;
     check_type env (Reader.loc raw) p.ty ty;
