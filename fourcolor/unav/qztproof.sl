@@ -1,9 +1,9 @@
 ; Unavoidability in the shape of unavoidability.v, with the embedding of quiz.v: in every plain cubic connected pentagonal
 ; map of genus 0, a configuration of red/configs.sl has a preembedding of its kernel into the map or its mirror (CfEmbed).
-; The computed part is split into independent thunks, one per hub arity 5 to 11 (the certified walk of that arity and the
-; certified redpart of redc.sl on each of its obligations) and one for the cap checks; each builds the quiz tree with its
-; evidence (qtree.sl) for itself. unav-from puts their evidence together; unav-proof runs them in one native-compute. The
-; cfs in scope are those of qztcfs.sl or fcopen.sl. Load after unave.sl and data.sl.
+; The computed part is split into independent jobs for native.sl, one per hub arity 5 to 11 (the certified walk of that
+; arity and the certified redpart of redc.sl on each of its obligations) and one for the cap checks; each builds the quiz
+; tree with its evidence (qtree.sl) for itself. Once (native-run) has run them, unav-from puts their evidence together into
+; unav-proof. The cfs in scope are those of qztcfs.sl or fcopen.sl. Load after unave.sl and data.sl.
 
 (def-adts $ (AllRed : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
   enum
@@ -135,16 +135,8 @@
 (unary 10 9)
 (unary 11 10)
 (unary 12 11)
-(let ((many r5) (many r6) (many r7) (many r8) (many r9) (many r10) (many r11) (many rc))
-  (native-compute arity5-run arity6-run arity7-run arity8-run arity9-run arity10-run arity11-run cap-run))
-(comptime-match many r5 (ChkYes _ a5))
-(comptime-match many r6 (ChkYes _ a6))
-(comptime-match many r7 (ChkYes _ a7))
-(comptime-match many r8 (ChkYes _ a8))
-(comptime-match many r9 (ChkYes _ a9))
-(comptime-match many r10 (ChkYes _ a10))
-(comptime-match many r11 (ChkYes _ a11))
-(comptime-match many rc (ChkYes _ ac))
-(let ((erased unav-proof))
+(native-jobs unav-proof
   (unav-from cfs drs (ALCons cfs drs 5 12 a5 $ ALCons cfs drs 6 12 a6 $ ALCons cfs drs 7 12 a7 $ ALCons cfs drs 8 12 a8 $ ALCons cfs drs 9 12 a9 $
-    ALCons cfs drs 10 12 a10 $ ALCons cfs drs 11 12 a11 $ ALNil cfs drs 12) ac))
+    ALCons cfs drs 10 12 a10 $ ALCons cfs drs 11 12 a11 $ ALNil cfs drs 12) ac)
+  (arity5-run (ChkYes _ a5)) (arity6-run (ChkYes _ a6)) (arity7-run (ChkYes _ a7)) (arity8-run (ChkYes _ a8)) (arity9-run (ChkYes _ a9))
+  (arity10-run (ChkYes _ a10)) (arity11-run (ChkYes _ a11)) (cap-run (ChkYes _ ac)))
