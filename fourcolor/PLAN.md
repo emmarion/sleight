@@ -1080,8 +1080,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/pieces.sl
   red/proof-c.sl red/goal-c.sl` (with `--goal proved`). In that chain the
-  goal was proved with slc in one run on a 4-core cloud VM shared with
-  other runs. What `CRed` and `ValidContract` state has not
+  goal was proved with slc (about 740 s of wall time) and with the
+  reference compiler under `ulimit -s unlimited` (about 480 s) in one run
+  each on a 4-core cloud VM shared with other runs, so the times say
+  little about either compiler. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
