@@ -1091,7 +1091,16 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   nodes in place instead of building new trees; `UT` and `UG` relate
   them to the ctree and gtree that `KR` is stated on, and `ktc-c`
   converts at both ends (`ut-of`, `ug-of`, `ct-of`, `gt-of`), so that
-  its signature is that of the loop on ctrees and gtrees. `red/bridge.sl` takes that
+  its signature is that of the loop on ctrees and gtrees; `kempe-tree-c`
+  calls `ktc-run`, which does not convert the gtree back. Both
+  restrictions return, with whether the tree they leave is empty,
+  whether it is the tree they were given, at its slot (`KeepAt`,
+  `GKeepAt`), and a node whose children all stay in place is rebuilt
+  with every store skipped (DESIGN.md §37). The runtime functions of the two
+  restrictions and of `ct-build` take a list of restrictions as an
+  erased `List (Rx T)` together with an `RxL T` of it, a list whose
+  cells hold each restriction's stack and tree, so that the relations
+  stay stated on the `List (Rx T)`. `red/bridge.sl` takes that
   co-closure to one on complete traces stated after `chromogram.v`
   (`KCC`), and `KCC` to `Kempe_coclosure` for every set closed by
   functions at a given level (`kcc-coclosure`, by a function at a level
@@ -1104,11 +1113,22 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   check_reducible_valid from a Kempe half
   (`KHalf`) and a contract half (`ContractOK`), both stated against the
   Kempe tree rather than a contract tree. The contract half does not go
-  through cfctr: `red/ccomp.sl` computes, for programs of R, Y and H
-  steps, a list holding the ring trace of every contract colouring (its
-  completeness is `lrel-hit` and `cccol-hit`), and checks that the even
-  normal form of each, without its first entry, has multiplicity zero in
-  the Kempe tree (`contract-ok`). `red/ccheck.sl` defines the contract
+  through cfctr: `red/ccomp.sl` follows, for programs of R, Y and H
+  steps (`RYH`), the traces that the steps, from the end of the program
+  (`revs-c`), make of each candidate of the empty trace, depth first,
+  and checks as it reaches each ring trace that its even normal form,
+  without its first entry, has multiplicity zero in the Kempe tree
+  (`dfs-c`, with the evidence `Good`); no list of traces is built.
+  `good-out` gives that check for every trace the steps reach (`FR`),
+  and `trace-reach` and `cccol-hit` show that the ring trace of every
+  contract colouring is one (`contract-ok`). In test runs, ten broken
+  variants were rejected: a restriction claiming that a tree it replaced
+  stays at its slot (three ways), a node rebuilt with every store
+  skipped when a child moved, a restriction consing onto another
+  child's list, `dfs-c` accepting a trace of nonzero multiplicity,
+  starting from no candidate or following a child's candidates for fewer
+  colours, `good-out` without the equation of the two candidates, and
+  `cccol-hit` with another reversed program. `red/ccheck.sl` defines the contract
   of a configuration on these dart numbers (`CfContract`, after
   cfcontract and ctrenum of `cfcontract.v`; written for this numbering,
   not checked against Coq's), decides `ValidContract` on the concrete map
@@ -1134,20 +1154,23 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   from one run's measured time per configuration, so that each of the 100 pieces
   takes at most about 10 s by that measure; any sizes give a correct proof, only the
   balance depends on them. Run outside `native-compute`, as separate
-  processes one at a time on a 4-core cloud VM shared with other runs, the
-  100 pieces took about 705 to 730 s of user CPU in three runs, against
-  about 850 s in one run of the code before the in-place closure trees
-  (ring-14 configurations about 490 to 510 s against about 600 s); in
+  processes one at a time on a 4-core cloud VM shared with other runs,
+  the 100 pieces took about 665 s of user CPU in one run, against about
+  800 s in a run side by side with it of the code before the `RxL`
+  lists, the skipped stores and `dfs-c` (about 770 and 795 s in two more
+  runs of that code; ring-14 configurations about 470 s against about
+  565 s). In earlier runs, that code took about 705 to 730 s, and, in
   one run each, about 625 s with `OCAMLRUNPARAM=o=400` (which the jobs
   of `native-compute` appear to inherit with the rest of slc's
   environment) and about 640 s with the program compiled with
-  `-inline 200` (`--inline`, MANUAL.md). `red/proof-c.sl` proves `AllRedC CRX css`
+  `-inline 200` (`--inline`, MANUAL.md); the code before the in-place
+  closure trees took about 850 s in one run. `red/proof-c.sl` proves `AllRedC CRX css`
   (`all-red-proof`) for css the chunks of `red/configs.sl`
   (`red/chunks.sl`), with one `native.sl` job per piece, and
   `red/goal-c.sl` runs the jobs and sets and discharges the goal: every
   configuration appears to be C-reducible, in the sense of `CRed`, with
   its contract. Load order: `std/macro.sl native.sl std/nat.sl
-  std/list.sl`, then `base map lists planemap walk frontier labels
+  std/list.sl ring.sl`, then `base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
   hypwalkup hypgeom` (each `.sl`), then `cfmap.sl red/red.sl cpmap.sl
   red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
@@ -1155,10 +1178,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/pieces.sl
   red/proof-c.sl red/goal-c.sl` (with `--goal proved`). In that chain the
-  goal was proved with slc (about 740 s of wall time) and with the
-  reference compiler under `ulimit -s unlimited` (about 480 s) in one run
-  each on a 4-core cloud VM shared with other runs, so the times say
-  little about either compiler. What `CRed` and `ValidContract` state has not
+  goal was proved with slc (about 385 s of wall time) and with the
+  reference compiler under `ulimit -s unlimited` (about 395 s) in one run
+  each, side by side, on a 4-core cloud VM shared with other runs, so the
+  times say little about either compiler. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/configs.sl`, `red/chunks.sl`: the 633 configurations as one string
