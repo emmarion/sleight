@@ -969,6 +969,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the jobs, which share the machine, appeared to outweigh the difference.
   With the reference compiler (under `ulimit -s unlimited`, with
   `s=8M,o=200`) it passed in about 874 s (about 109 s of elaboration).
+  In later runs, one each, with `s=8M,o=200` on that VM (load average
+  about 2 to 7), it passed with
+  slc in about 397 s and with the reference compiler in about 597 s, and
+  `fcmanyfinal.sl` with slc in about 483 s.
   In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
