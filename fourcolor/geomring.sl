@@ -102,9 +102,9 @@
       (values (Cons _ 3 os1) s (OrdCons n rs1 os1 r 3 (oo-at n R ids 3 r oo (iota-in d r ids io lr) orr) ob1)
         (match erased q1 _
           ((QSOut _ _ k1 _ _ o1 l1 ms) (QSOut r0 m (Succ k1) s _ (NotInCons r0 r rs1 ne o1) (LengthCons _ r rs1 k1 l1) (MulSucc k1 3 s1 s ms a2)))
-          ((QSIn _ _ k1 _ t1 _ i1 l1 mt at)
+          ((QSIn _ _ k1 _ t1 _ i1 l1 mt amt)
             (let ((erased t) (erased a3)) (add-ex t1 3))
-            (let ((erased a4) (erased a5) (erased a6)) (add-assoc m t1 3 s1 s at a2))
+            (let ((erased a4) (erased a5) (erased a6)) (add-assoc m t1 3 s1 s amt a2))
             (let-match erased (add-fn t1 3 a4 t a5 a3) (Refl _ _))
             (QSIn r0 m (Succ k1) s t _ (InThere r0 r rs1 i1) (LengthCons _ r rs1 (Succ k1) l1) (MulSucc k1 3 t1 t mt a3) a6)))
         (NSCons 3 s1 s os1 sm1 a)))))
