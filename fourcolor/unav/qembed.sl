@@ -1,10 +1,4 @@
-; The QuizEmbedding section of quiz.v: a quiz that tests for a configuration map Gc and fits a plain cubic map Gm at
-; x0m gives a preembedding of the kernel of Gc into Gm (quiz_preembedding). Gc is described by a certificate QzCert, which
-; a run decides on the concrete map; the darts of its kernel are named by a face of the walk of the quiz and a number of
-; face steps from that walk dart, and the map h of embedqz sends such a dart to as many face steps from the matching walk
-; dart of Gm. Load after qwalk.sl.
-
-; A dart of Gc off the kernel, or in it at j face steps from the walk dart i.
+; In the kernel at j face steps from the walk dart i.
 (def-adts $ (KSt : -> Type)
   enum
   (many StOut : -> (KSt))
@@ -15,8 +9,7 @@
   (many NxStep : (erased (Nat) j a) -> (NextIx j a (Succ j)))
   (many NxWrap : (erased (Nat) j) -> (NextIx j (Succ j) (Zero))))
 
-; What the certificate says of a dart x: off the kernel, on the face band of the ring, as is face x; or in it, with its
-; place i, j, its arity, the place of face x, and edge and node of order 2 and 3 at x.
+; x is off the kernel, on the face band of rc, as is face x; or in it, with its place, its arity, the place of face x, and edge and node of order 2 and 3 at x.
 (def-adts $ (DartOK : ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) x) -> Type)
   enum
   (many DOut : (erased (List (Nat)) ec nc fc ksc rc s0c) (erased (List (KSt)) st) (erased (Nat) x x1) (erased (Nth (KSt) st x (StOut)) ps)
@@ -43,7 +36,7 @@
   (many HRIn : (erased (List (KSt)) st) (erased (List (Nat)) s0m fm hl) (erased (Nat) i j v w) (erased (Nth (Nat) s0m i v) pv)
       (erased (Iter fm j v w) it) (erased (HlRel st s0m fm hl) rest) -> (HlRel (Cons (KSt) (StIn i j) st) s0m fm (Cons (Nat) w hl))))
 
-; Everything the proof reads off Gc, Gm and h; the walks of the quiz in both maps ask the arities as0.
+; as0: the arities the walks of the quiz ask in both maps.
 (def-adts $ (QEnv : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) dm) ((List (Nat)) em nm fm ksm s0m hl) -> Type)
   enum
   (many MkQEnv : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl ids as0) (erased (List (KSt)) st)
@@ -61,7 +54,7 @@
   (many AKCons : (erased (List (KSt)) st) (erased (Nat) x) (erased (List (Nat)) xs) (erased (Kin st x) k) (erased (AllKin st xs) rest)
       -> (AllKin st (Cons (Nat) x xs))))
 
-; h (edge x) = edge (h x), hl listing h (after Gonthier's edge_central).
+; hl lists h.
 (def-adts $ (Central : ((List (Nat)) ec em hl) ((Nat) x) -> Type)
   enum
   (many MkCentral : (erased (List (Nat)) ec em hl) (erased (Nat) x y w v) (erased (Nth (Nat) ec x y) py) (erased (Nth (Nat) hl x w) pw)
@@ -147,7 +140,6 @@
   (let-match erased en (MkQEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids _ _ hc olc io lst dk g hr uh us rac ram))
   (values hc g uh us))
 
-; h (face x) = face (h x) on the kernel, which face keeps.
 (def-fns _ $ (erased kin-face : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k)
     -> (erased (Nat) w x1 w1) (erased (Nth (Nat) hl x w) pw) (erased (Nth (Nat) fc x x1) px) (erased (Kin st x1) k1) (erased (Nth (Nat) hl x1 w1) pw1)
@@ -223,7 +215,6 @@
   (let-match erased (perm-inj dm w0 um w fm mfi mpf pf pm) (Refl _ _))
   (values ku pw0))
 
-; If h (node x) = node (h x) then node x is central (hc_nx of quiz.v).
 (def-fns _ $ (erased cen-node : (erased (Nat) dc dm x y w ym) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k) (erased (Nth (Nat) nc x y) py) (erased (Nth (Nat) hl x w) pw)
     (erased (Nth (Nat) nm w ym) pym) (erased (Nth (Nat) hl y ym) hy) -> (erased (Central ec em hl y) r))
@@ -272,8 +263,6 @@
   (let-match erased (perm-inj dm am w1 pm nm mni mpn pz3 (nfe dm pm pem w1 em nm fm hm lpm p4 fz)) (Refl _ _))
   (values kz hz pz))
 
-; The walk of q from node p, with p and edge p in the kernel and p central, matched dart by dart with that from node (h p) in
-; Gm, visits central darts (hc_walk in embedqz_central of quiz.v).
 (def-fns _ $ (erased hc-walk : (erased (Nat) dc dm p pe pm y ym) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl sc tc asc atc sm tm asm atm)
     (erased (List (KSt)) st) (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Qn) q) (erased (Kin st p) kp) (erased (Kin st pe) kpe)
     (erased (Nth (Nat) ec p pe) ppe) (erased (Central ec em hl p) cp) (erased (Nth (Nat) hl p pm) hp) (erased (Nth (Nat) nc p y) py) (erased (Nth (Nat) nm pm ym) pym)
@@ -444,7 +433,6 @@
       (let-match erased ak (AKCons _ _ _ _ ak1))
       (walk-drop e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 at2 hl st y y2 q1 w1 w3 rs1 ak1))))
 
-; Every dart of the walk of a QaskR quiz is central (embedqz_central).
 (def-fns _ $ (erased walk-central : (erased (Nat) dc dm x0c x0m a0 a1) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl asc asm) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Qn) q01 q10)
     (erased (WalkZ ec nc ksc x0c (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) s0c asc) wc) (erased (WalkZ em nm ksm x0m (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) s0m asm) wm)
@@ -511,7 +499,6 @@
   (let-match erased (nth-fn (Nat) f v z y1 pz py) (Refl _ _))
   (iter-arity d j1 z w a e n f ks h ol it1 ly1 pa1))
 
-; The place of a kernel dart: j face steps from the walk dart c, itself at place i, 0, on a face of a darts.
 (def-fns _ $ (erased kin-anchor : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc s0c em nm fm ksm s0m hl) (erased (List (KSt)) st)
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (Kin st x) k)
     -> (erased (Nat) i j c a) (erased (Nth (KSt) st x (StIn i j)) ps) (erased (Nth (Nat) s0c i c) pc) (erased (Iter fc j c x) it) (erased (Nth (Nat) ksc c a) pa)
@@ -540,7 +527,7 @@
   (let ((erased xs) (erased w)) (iter-path fc t x y (iter-add fc m k t x c y itm it2 pt)))
   (MkSomePath fc (Nil _) xs x y w))
 
-; The walk darts at places i, 0, matched with the walk of Gm: map h s0c = s0m.
+; s: the darts at the places k, k + 1, ..., each 0 face steps on.
 (def-adts $ (WPos : ((List (KSt)) st) ((List (Nat)) s) ((Nat) k) -> Type)
   enum
   (many WPNil : (erased (List (KSt)) st) (erased (Nat) k) -> (WPos st (Nil (Nat)) k))
@@ -635,12 +622,12 @@
   (walk-under d x e n ks s u as au ei ni q0 pe pn w0 lx
     (walk-under d x1 e n ks u (Nil _) au (Nil _) ei ni q1 pe pn w1 (img-lt d x x1 e ei pe lx px) (UnderNil d))))
 
-; cface (edge x) y (after Gonthier's rlink).
+; y is on the face of edge x.
 (def-adts $ (Rlink : ((List (Nat)) e f) ((Nat) x y) -> Type)
   enum
   (many MkRlink : (erased (List (Nat)) e f) (erased (Nat) x y z) (erased (Nth (Nat) e x z) pz) (erased (SomePath f (Nil (Nat)) z y) w) -> (Rlink e f x y)))
 
-; path rlink x (rcons p y), with the darts of p in as and central.
+; A path of rlink steps from x through p to y, the darts of p in as and central.
 (def-adts $ (RlPath : ((List (Nat)) ec fc em hl as) ((Nat) x) ((List (Nat)) p) ((Nat) y) -> Type)
   enum
   (many RPLast : (erased (List (Nat)) ec fc em hl as) (erased (Nat) x y) (erased (Rlink ec fc x y) l) -> (RlPath ec fc em hl as x (Nil (Nat)) y))
@@ -653,9 +640,7 @@
   (many RTCons : (erased (List (Nat)) ec fc em hl as ys p) (erased (Nat) x y) (erased (RlPath ec fc em hl as x p y) rp) (erased (RlTo ec fc em hl as x ys) rest)
       -> (RlTo ec fc em hl as x (Cons (Nat) y ys))))
 
-; After Gonthier's preembedding: of the darts as of (ec, nc, fc) into (em, fm), hl listing h, at a dart x of as: h (face x) = face (h x),
-; h keeps the arity, some dart of the face of x is central, and node (face x) is joined to every dart of as by a path of
-; central darts of as (rlink_connected appears to ask this only of central darts).
+; At x: h (face x) = face (h x), h keeps the arity, some dart of the face of x is central, and node (face x) is joined to every dart of as by a path of central darts of as.
 (def-adts $ (PeAt : ((List (Nat)) ec nc fc ksc em fm ksm as hl) ((Nat) x) -> Type)
   enum
   (many MkPeAt : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) (erased (Nat) x x1 w w1 a y z)
@@ -674,8 +659,7 @@
   (many MkPreembedding : (erased (List (Nat)) ec nc fc ksc em fm ksm as hl) (erased (PeAll ec nc fc ksc em fm ksm as hl as) pa)
       -> (Preembedding ec nc fc ksc em fm ksm as hl)))
 
-; as lists the kernel of the ring r among the darts below d (after Gonthier's kernel r): each of its darts is in it, and every
-; other dart is on the face band of r.
+; as: the kernel of the ring r.
 (def-adts $ (KerAll : ((List (Nat)) f r as) -> Type)
   enum
   (many KANil : (erased (List (Nat)) f r) -> (KerAll f r (Nil (Nat))))
@@ -727,13 +711,13 @@
         (absurd (InHere _ _) (nth-fn (KSt) st y (StIn i j) (StOut) py px))
         ((InThere _ _ _ iy1) (kl-in st xs1 as y i j kl1 iy1 py))))))
 
-; The darts a path of the certificate may use: walk darts and their edge images, which are central.
+; p: a walk dart or its edge image.
 (def-adts $ (CenOK : ((List (Nat)) ec s0c) ((Nat) p) -> Type)
   enum
   (many COWalk : (erased (List (Nat)) ec s0c) (erased (Nat) k p) (erased (Nth (Nat) s0c k p) pk) -> (CenOK ec s0c p))
   (many COEdge : (erased (List (Nat)) ec s0c) (erased (Nat) k c p) (erased (Nth (Nat) s0c k c) pk) (erased (Nth (Nat) ec c p) pe) -> (CenOK ec s0c p)))
 
-; A path from the walk face i to the walk face j: a dart p on face i whose edge image is on the face the rest leaves from.
+; p: a path from the walk face i to the walk face j.
 (def-adts $ (DPath : ((List (Nat)) ec s0c) ((List (KSt)) st) ((Nat) i) ((List (Nat)) p) ((Nat) j) -> Type)
   enum
   (many DPNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) (erased (Nat) i) -> (DPath ec s0c st i (Nil (Nat)) i))
@@ -741,7 +725,7 @@
       (erased (Nth (Nat) ec p q) pq) (erased (Nth (KSt) st q (StIn i2 jq)) psq) (erased (CenOK ec s0c p) co) (erased (DPath ec s0c st i2 ps j) rest)
       -> (DPath ec s0c st i (Cons (Nat) p ps) j)))
 
-; Paths from each walk face i to face 0 and back.
+; Paths from each walk face of ixs to face 0 and back.
 (def-adts $ (Spokes : ((List (Nat)) ec s0c) ((List (KSt)) st) ((List (Nat)) ixs) -> Type)
   enum
   (many SpkNil : (erased (List (Nat)) ec s0c) (erased (List (KSt)) st) -> (Spokes ec s0c st (Nil (Nat))))
@@ -835,9 +819,7 @@
   (PeCons ec nc fc ksc em fm ksm as hl xs1 x (pe-at dc dm x ec nc fc ksc rc s0c em nm fm ksm s0m hl as st pv aka kx)
     (pe-all dc dm ec nc fc ksc rc s0c em nm fm ksm s0m hl as xs1 st pv aka ak1)))
 
-; What a run checks of a configuration map Gc with ring rc and a quiz qz of two QaskR questions at x0c: the place of each
-; dart (DartsOK), the walk s0c of qz with its arities, whose darts are at the places k, 0, and a path between any two walk
-; faces through face 0 (Spokes).
+; The place of each dart, the walk of qz at x0c with its arities, and paths between the walk faces through face 0.
 (def-adts $ (QzCert : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Quiz) qz) ((Nat) x0c) -> Type)
   enum
   (many MkQzCert : (erased (Nat) dc k x0c a0 a1) (erased (List (Nat)) ec nc fc ksc rc s0c asc ids ixs) (erased (List (KSt)) st) (erased (Qn) q01 q10)
@@ -846,7 +828,6 @@
       (erased (WPos st s0c (Zero)) wp) (erased (Length (Nat) s0c k) ls) (erased (Iota k ixs) iok) (erased (Spokes ec s0c st ixs) ra)
       -> (QzCert dc ec nc fc ksc rc (MkQuiz (QaskR a0 q01) (QaskR a1 q10)) x0c)))
 
-; quiz_preembedding: h sends x0c to x0m and is a preembedding of the kernel as of rc.
 (def-fns _ $ (erased quiz-preembedding : (erased (Nat) dc x0c dm x0m) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm) (erased (Quiz) qz)
     (erased (QzCert dc ec nc fc ksc rc qz x0c) cert) (erased (Geo dm em nm fm ksm) g) (erased (Lt x0m dm) lx0) (erased (FitZ em nm ksm x0m qz) fz)
     -> (erased (List (Nat)) as hl) (erased (KernelList dc fc rc as) kls) (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0))

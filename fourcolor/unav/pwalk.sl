@@ -1,9 +1,3 @@
-; A certified presentation walk, run on a script and on its mirror image at once: the mirrored side splits at the
-; mirrored locations and checks the mirrored hubcaps, and a similarity step in either side is checked against the
-; side the script names, so no step needs the mirror map. Obligations are returned in place of calling redp; the
-; evidence (Pres) says that every dart whose hub fits the part exactly, and whose dscore is positive, has some
-; obligation fitting exactly at some dart (walksound.sl). Load after posz.sl.
-
 (def-adts $ (Mem : (Type A) (A x) ((List A) xs) -> Type)
   enum
   (many MemHere : (erased Type A) (erased A x) (erased (List A) xs) -> (Mem A x (Cons A x xs)))
@@ -23,7 +17,7 @@
   (many HITwo : (erased (Nat) nhub j1 j2) (erased (Z) b) (erased (List (Hc)) hc) (erased (Lt j1 nhub) l1) (erased (Lt j2 nhub) l2)
       (erased (HcIdx nhub hc) rest) -> (HcIdx nhub (Cons (Hc) (HC2 j1 j2 b) hc))))
 
-; A part of the cut list ct containing p, both of length m.
+; h: a part of ct containing p, both of length m.
 (def-adts $ (CutAt : ((List (Sub)) p) ((List (List (Sub))) ct) -> Type)
   enum
   (many MkCutAt : (erased (List (Sub)) p h) (erased (List (List (Sub))) ct) (erased (Nat) m) (erased (Mem (List (Sub)) h ct) mh)
@@ -48,8 +42,7 @@
           (IfY _ (MkCutAt p h2 ct m3 (MemThere _ h2 h rest mh) sb2 lp2 lh2)))
         ((IfF _) (IfF _)))))))
 
-; Pres: every valid hub that fits p exactly has an obligation of out fitting exactly somewhere, or fits a part of the cut
-; list ct exactly (PCut). Forced p0 p o: every valid hub that fits p0 exactly fits p exactly, unless that holds of o.
+; ct: the cut list; out: the obligations; Forced p0 p o: a valid hub fitting p0 exactly fits p exactly, unless o holds of it.
 (def-adts
   ((Pres : ((Nat) nhub) ((List (List (Sub))) rt rs ct) ((List (Sub)) p) ((List (List (Sub))) out) -> Type)
     enum
@@ -82,7 +75,7 @@
   enum
   (many MkPr2 : (many (List (Sub)) a b) -> (Pr2)))
 
-; The labelled parts of the walk so far, each side with its Forced and Pres evidence, all reaching acc.
+; env: the labelled parts of the walk so far, all reaching acc.
 (def-adts $ (EnvE : ((Nat) nhub) ((List (List (Sub))) rt rs ct acc) ((List (Pr2)) env) -> Type)
   enum
   (many EENil : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc) -> (EnvE nhub rt rs ct acc (Nil (Pr2))))
@@ -96,13 +89,13 @@
   (many MkW3 : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc out) (erased (List (Sub)) p mp) (erased (Pres nhub rt rs ct p out) d0)
       (erased (Pres nhub rt rs ct mp out) d1) (erased (Ext acc out) e) -> (W3 nhub rt rs ct p mp acc out)))
 
-; The evidence of one side's similarity step.
+; q and r: the parts of one side of a similarity step.
 (def-adts $ (SimOk : ((List (Sub)) q r) -> Type)
   enum
   (many MkSimOk : (erased (List (Sub)) q r p2) (erased (Nat) m k) (erased (Length (Sub) q m) lq) (erased (Length (Sub) r m) lr)
       (erased (Rot (Sub) k q p2) ro) (erased (Lt k (Succ m)) lk) (erased (Pw (Sub) (Sub) SubSub p2 r) sb) -> (SimOk q r)))
 
-; One side's labelled entry, read off an EnvE.
+; p0: one side's labelled part, read off an EnvE.
 (def-adts $ (Entry : ((Nat) nhub) ((List (List (Sub))) rt rs ct acc) ((List (Sub)) p0) -> Type)
   enum
   (many MkEntry : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc o d) (erased (List (Sub)) p0 p) (erased (Forced nhub rt rs ct p0 p o) f)
@@ -185,7 +178,6 @@
   (let-match erased a (AnsSub _ _ sb))
   (values (BTrue) (IfY _ (MkSimOk q r p2 m t lq lr ro lt sb))))
 
-; The mirrored location of a split and the mirrored hubcap, for the second side; only completeness depends on them.
 (def-fns _ $ (many mloc : (many (Loc) i) (many (Nat) j) (many (List (Sub)) mp) -> (many (Loc) i2) (many (Nat) j2))
   (let ((many n)) (size _ mp))
   (let-match many i (LFan k)
@@ -208,7 +200,6 @@
   (let-match many (nat-eq m2 m) (Equal _ _ _) (else (values (BFalse) (IfF _))))
   (sim-rec q r m lq lr m (lt-succ m)))
 
-; The part kept in the context of the lo half of a split: cand when it implies p0 and excludes the other half.
 (def-fns _ $ (many keep-c : (erased (Nat) nhub k) (erased (List (List (Sub))) rt rs ct o) (erased (List (Sub)) p ql qh) (many (List (Sub)) pl other)
     (many (List (Sub)) p0 cand) (many (Bool) good) (erased (Forced nhub rt rs ct p0 p o) f) (erased (PartSplit k p ql qh) w) (erased (Sel ql qh pl other) s)
     -> (many (List (Sub)) p0l) (erased (Forced nhub rt rs ct p0l pl o) r))
@@ -224,7 +215,6 @@
   (let-match erased a2 (AnsDis _ _ dj))
   (values cand (FLeft nhub k m rt rs ct o p0 p ql qh pl other cand f w s sb dj lc l0)))
 
-; One side of a split: the two halves in the script's order, and the context part of the first.
 (def-fns _ $ (many side-split : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct o) (many (Loc) i) (many (Nat) j k) (many (Bool) lo)
     (many (List (Sub)) p0 p) (erased (Forced nhub rt rs ct p0 p o) f)
     -> (many (List (Sub)) pl pr p0l) (erased (List (Sub)) ql qh) (erased (PartSplit k p ql qh) w) (erased (Sel ql qh pl pr) s)

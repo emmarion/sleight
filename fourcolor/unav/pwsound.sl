@@ -1,6 +1,3 @@
-; Soundness of pwalk.sl's evidence: a dart with positive dscore whose face fits a part of the walk exactly has an
-; obligation of the walk fitting exactly at some dart. Load after hubsound.sl.
-
 (def-fns _ $ (erased map-hit-ext : (erased (Nat) d) (erased (List (Nat)) e f ks) (erased (List (List (Sub))) o o2) (erased (MapHit d e f ks o) h)
     (erased (Ext o o2) x) -> (erased (MapHit d e f ks o2) r))
   (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
@@ -58,7 +55,6 @@
   (let-match erased (add-fn c s1 s2 s (add-comm s1 c s2 a2) ad) (Refl _ _))
   r)
 
-; dscore_cface: the dscore is the same along a face.
 (def-fns _ $ (erased dscore-step : (erased (Nat) d x x1 pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs) (erased (Geo d e n f ks) g)
     (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) ds) (erased (Nth (Nat) f x x1) px)
     -> (erased (Lt x1 d) lx1) (erased (DScore d e n f ks drs x1 pos neg) r))
@@ -77,9 +73,7 @@
   (let ((erased ly) (erased ds1)) (dscore-step d x y pos neg e n f ks drs g lx ds py))
   (dscore-iter d y z k1 pos neg e n f ks drs g ly ds1 it1))
 
-; What the walk's evidence gives a dart y of positive dscore fitting its part exactly: an obligation fitting exactly at
-; some dart, or, from a PRed, a dart of positive dscore fitting the obligation exactly, or, from a PCut, one fitting a part
-; of the cut list exactly.
+; An obligation of out fitting exactly at some dart, a dart of positive dscore fitting one exactly, or one fitting a part of ct exactly.
 (def-adts $ (PresHit : ((Nat) d) ((List (Nat)) e n f ks) ((List (List (Sub))) drs ct out) -> Type)
   enum
   (many PHMap : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (MapHit d e f ks out) h)

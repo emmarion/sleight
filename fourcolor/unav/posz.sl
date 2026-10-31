@@ -1,6 +1,3 @@
-; dscore of discharge.v on the hypermaps of hypermap.sl, for a rule list drs, and posz_dscore: in a plain cubic connected
-; pentagonal map of genus 0, some dart has positive dscore. Load after dsum.sl, with fourcolor/colalias.sl loaded before red/red.sl.
-
 (let-match erased (unary-10-9) (Refl _ _))
 (let-match erased (unary-12-10) (Refl _ _))
 
@@ -83,8 +80,7 @@
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ c cs1 k1 (dslist-length e n f ks xs1 cs1 drs k1 dl1 l1)))
 
-; dscore of discharge.v at x, as pos - neg: 60 plus dscore1 of edge y for each dart y of the face of x, against 10 times
-; the arity plus dscore1 of each such y. cs lists dscore1 at the darts 0..d-1, cse at their edges.
+; The dscore at x is pos - neg; cs lists dscore1 at the darts 0..d-1, cse at their edges.
 (def-adts $ (DScore : ((Nat) d) ((List (Nat)) e n f ks) ((List (List (Sub))) drs) ((Nat) x pos neg) -> Type)
   enum
   (many MkDScore : (erased (Nat) d x a t c60 sp sn pos neg) (erased (List (Nat)) e n f ks ids cs cse) (erased (List (List (Sub))) drs)
@@ -150,8 +146,6 @@
     (DTCons d r pos neg p1 q1 p q e n f ks rs1 drs (MkDScore d r a tr c60 tp tn pos neg e n f ks ids cs cse drs io dl rc pa fp fn m60 mtr apos aneg) dt1 ap aq)
     (MulSucc k1 c60 m1 m mm1 am) mt e3 f3))
 
-; posz_dscore of discharge.v: some dart of a plain cubic connected pentagonal map of genus 0 has dscore pos - neg > 0, whatever
-; the rule list. The face scores add up to 6 * 10 * kf - 10 * d = 120 by cubic_Euler, since the transfers cancel out.
 (def-fns _ $ (erased posz-dscore : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs) (erased (Geo d e n f ks) g)
     (erased (Connected d e n f) cc) (erased (Genus d e n f (Zero)) gen)
     -> (erased (Nat) x pos neg) (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) ds) (erased (Lt neg pos) lt))

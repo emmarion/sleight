@@ -1,7 +1,3 @@
-; hubcap_fit_bound of hubcap.v at a dart of a hypermap: the sector lists of hubcapc.sl's Fam and Counts read off the
-; face of a hub dart y, and the hub's bound set against its dscore. The transfers into the hub are bounded through
-; TgtAll, a hypothesis over the darts that conv.sl is meant to discharge. Load after pwalk.sl.
-
 (def-fns _ $ (erased iter-inj : (erased (Nat) d k a b z) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Iter f k a z) p)
     (erased (Iter f k b z) q) -> (erased (Eq (Nat) a b) e))
   (let-match erased p (ItS _ k1 _ a1 _ pa p1) ((ItZ _ _) (let-match erased q (ItZ _ _)) (Refl _ a)))
@@ -18,7 +14,6 @@
     -> (erased (Iter f (Succ j) y z1) r))
   (iter-add f j (Succ (Zero)) (Succ j) y z z1 p (ItS f (Zero) z z1 z1 pz (ItZ f z1)) (add-succ-right j (Zero) j (add-zero-right j))))
 
-; Along a cycle of length n through y, f^a y = f^b y when a = b + n.
 (def-fns _ $ (erased iter-mod : (erased (List (Nat)) f) (erased (Nat) n a b y u v) (erased (Iter f n y y) cy) (erased (Iter f a y u) p)
     (erased (Iter f b y v) q) (erased (Add b n a) e) -> (erased (Eq (Nat) u v) r))
   (let ((erased m) (erased p1) (erased p2)) (iter-split f n b a y u (add-comm b n a e) p))
@@ -28,7 +23,6 @@
 (def-fns _ $ (erased monus-add : (erased (Nat) a b r) (erased (Monus a b r) mo) (erased (Lt b (Succ a)) le) -> (erased (Add b r a) e))
   (match erased mo _ ((MoAdd _ _ _ p) p) (absurd (MoNeg _ _ l) (lt-le-absurd a b l le))))
 
-; The dart w that the j-th constraint is read at (f^k y, k = j - 2 mod nhub) has f^2 w = f^j y.
 (def-fns _ $ (erased shift-f2 : (erased (List (Nat)) f) (erased (Nat) nhub j k y w v z) (erased (Shift nhub j k) sh) (erased (Lt 1 nhub) ln)
     (erased (Iter f nhub y y) cy) (erased (Iter f k y w) pk) (erased (Iter f 2 w v) p2) (erased (Iter f j y z) pj) -> (erased (Eq (Nat) v z) r))
   (match erased sh _
@@ -54,7 +48,7 @@
       (let-match erased (add-fn nhub 1 t1 (Succ nhub) a1 (add-succ-right nhub (Zero) nhub (add-zero-right nhub))) (Refl _ _))
       (lt-weaken k nhub (lt-pred k nhub (lt-le-trans (Succ k) t (Succ nhub) l1 l2))))))
 
-; oss lists, for j = j0 .. j0 + m - 1, the sector list os rotated by j - 2 mod nhub.
+; oss lists, for j = j0 .. j0 + m - 1, os rotated by j - 2 mod nhub.
 (def-adts $ (OssFrom : ((Nat) nhub) ((List (Sec)) os) ((Nat) j m) ((List (List (Sec))) oss) -> Type)
   enum
   (many OFNil : (erased (Nat) nhub) (erased (List (Sec)) os) (erased (Nat) j) -> (OssFrom nhub os j (Zero) (Nil (List (Sec)))))
@@ -81,7 +75,6 @@
   (let ((erased c) (erased k) (erased a) (erased sh) (erased ro)) (oss-nth nhub (Succ j) m1 i1 os o oss1 w1 no1))
   (values c k (add-shift i1 j c a) sh ro))
 
-; The dart w the sector list o of index j is read at, and z = f^j y = f^2 w.
 (def-fns _ $ (erased oss-dart : (erased (Nat) d y nhub j k) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os o) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (Nth (Nat) ks y nhub) pa) (erased (ObsAt e f ks y nhub os) ob) (erased (Lt 1 nhub) ln) (erased (Lt j nhub) lj)
     (erased (Shift nhub j k) sh) (erased (Rot (Sec) k os o) ro)
@@ -98,7 +91,6 @@
   (let-match erased (shift-f2 f nhub j k y w v z sh ln cy pk p2 pj) (Refl _ _))
   (values w z pk lw pw ow pj p2))
 
-; Two such darts: f^i w1 = w2 when j1 + i = j2 mod nhub.
 (def-fns _ $ (erased dart-step : (erased (Nat) d y nhub j1 j2 i c w1 w2 z1 z2) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf)
     (erased (Iter f nhub y y) cy) (erased (Lt w1 d) lw) (erased (Iter f 2 w1 z1) q1) (erased (Iter f j1 y z1) r1) (erased (Iter f 2 w2 z2) q2)
     (erased (Iter f j2 y z2) r2) (erased (Add j1 i c) a) (erased (Or (Eq (Nat) c j2) (Add j2 nhub c)) md) -> (erased (Iter f i w1 w2) r))
@@ -198,8 +190,7 @@
   (many MkMapHit : (erased (Nat) d z) (erased (List (Nat)) e f ks) (erased (List (Sub)) q) (erased (List (List (Sub))) obl) (erased (Lt z d) lz)
       (erased (Mem (List (Sub)) q obl) m) (erased (ExactAt e f ks z q) x) -> (MapHit d e f ks obl)))
 
-; The bound on the transfers into the face of a dart w of arity nhub: dscore1 (edge (face^2 w)) is at most the number
-; of target rules rt that fit w.
+; dscore1 (edge (face^2 w)) is at most the number of the rules rt that fit w.
 (def-adts $ (TgtAt : ((List (Nat)) e n f ks) ((List (List (Sub))) drs rt) ((Nat) nhub w) -> Type)
   enum
   (many MkTgtAt : (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt) (erased (Nat) nhub w u v c t) (erased (List (Sec)) os)
@@ -283,8 +274,6 @@
   (let ((erased q) (erased m) (erased x)) (hit-mem o obl h))
   (MkMapHit d wd e f ks q obl lw m (MkExactAt e f ks wd nhub o q pw ow x)))
 
-; Along the face of y from z = f^j y: the source counts are the dscore1 values of the face darts, and the target
-; counts bound those of their edges.
 (def-fns _ $ (erased face-bound : (erased (Nat) d y nhub j m z) (erased (List (Nat)) e n f ks ids csl csel ws) (erased (List (List (Sub))) drs rt rs)
     (erased (List (Sec)) os) (erased (List (List (Sec))) oss) (erased (List (Nat)) ct cs)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (Nth (Nat) ks y nhub) pa) (erased (ObsAt e f ks y nhub os) ob) (erased (Lt 1 nhub) ln)
@@ -331,7 +320,6 @@
   (let-match erased q (AddSucc _ _ v1 q1))
   (add-lt-cancel a1 x y u1 v1 p1 q1 (lt-pred u1 v1 l)))
 
-; A positive dscore, 60 + sp > 10 a + sn, against the hub's bound kp + st <= kn + sn with K = kp - kn = 60 - 10 a and sp <= st.
 (def-fns _ $ (erased absurd hub-arith : (erased (Nat) a c60 t sp sn pos neg kp kn st l r)
     (erased (Mul 6 10 c60) m60) (erased (Mul a 10 t) mt) (erased (Add c60 sp pos) ap) (erased (Add t sn neg) an) (erased (Lt neg pos) lt)
     (erased (DbK a kp kn) dk) (erased (Add kp st l) al) (erased (Add kn sn r) ar) (erased (Lt l (Succ r)) le) (erased (Lt sp (Succ st)) lst)
@@ -355,7 +343,6 @@
       (let-match erased (add-fn m sn r bc ar q1) (Refl _ _))
       (lt-le-absurd bc l (lt-le-trans bc sp l l1 lst) le))))
 
-; hubcap_fit_bound at a hub dart y of arity nhub with positive dscore: some obligation of out fits exactly somewhere.
 (def-fns _ $ (erased hub-sound : (erased (Nat) d y nhub pos neg) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs acc out)
     (erased (List (Sub)) p) (erased (List (Hc)) hc) (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) dsc)
     (erased (Lt neg pos) lt) (erased (ExactAt e f ks y p) x) (erased (Length (Sub) p nhub) lp) (erased (OfSize nhub drs rs) sz) (erased (Iota d ws) iw)

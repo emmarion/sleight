@@ -1,8 +1,3 @@
-; The sector lists of fit.sl read off a hypermap of hypermap.sl, after fitp of part.v: the sector of a dart y has the
-; arity of the spoke edge y, of the hat edge (face^2 (edge y)) and of the fans edge (face^(3+k) (edge y)) for k below the
-; spoke arity minus 5; the sector list of y has one sector per dart of its face, from y on. ks is an OrderList of the face
-; permutation. Load after faces.sl, the unav files and fit.sl, dbound.sl, hubcapc.sl.
-
 (def-adts $ (Geo : ((Nat) d) ((List (Nat)) e n f ks) -> Type)
   enum
   (many MkGeo : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pe)
@@ -26,7 +21,7 @@
   (many OACons : (erased (List (Nat)) e f ks) (erased (Nat) y y1 n) (erased (Sec) o) (erased (List (Sec)) os) (erased (SecAt e f ks y o) so)
       (erased (Nth (Nat) f y y1) py) (erased (ObsAt e f ks y1 n os) rest) -> (ObsAt e f ks y (Succ n) (Cons (Sec) o os))))
 
-; y fits p exactly (exact_fitp of part.v): p has one subpart per dart of the face of y, and the sectors fit them.
+; y fits p exactly: p has one subpart per dart of the face of y, and the sectors fit them.
 (def-adts $ (ExactAt : ((List (Nat)) e f ks) ((Nat) y) ((List (Sub)) p) -> Type)
   enum
   (many MkExactAt : (erased (List (Nat)) e f ks) (erased (Nat) y n) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Nth (Nat) ks y n) pn)
@@ -88,7 +83,6 @@
   (let-match erased (iter-fn f k y z z2 it it2) (Refl _ _))
   (values z it (obs-app e f ks z y m k n post pre os2 o2 it3 o1 ap (add-comm k m n a))))
 
-; exact_fitp is kept by rotating the part and stepping along the face (fitp_rot of part.v).
 (def-fns _ $ (erased exact-rot-at : (erased (Nat) d y a k) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p p2) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) (erased (Lt k (Succ a)) lk) (erased (ExactAt e f ks y p) x) (erased (Rot (Sub) k p p2) rp)
     -> (erased (Nat) z) (erased (Iter f k y z) it) (erased (Lt z d) lz) (erased (ExactAt e f ks z p2) r))
@@ -111,7 +105,6 @@
       (let ((erased r1) (erased r2)) (split-len k m1 p1 ql1 qh1 w1 l1))
       (values (LengthCons _ x ql1 m1 r1) (LengthCons _ x qh1 m1 r2)))))
 
-; A dart that fits p exactly fits one of the two halves of a split of p (fitp_split of part.v, read as a cover).
 (def-fns _ $ (erased exact-split-at : (erased (Nat) d y k) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p ql qh) (erased (Geo d e n f ks) g)
     (erased (ExactAt e f ks y p) x) (erased (PartSplit k p ql qh) w) -> (erased (Or (ExactAt e f ks y ql) (ExactAt e f ks y qh)) r))
   (let-match erased g (MkGeo _ _ _ _ _ _ _ _ _ ab))

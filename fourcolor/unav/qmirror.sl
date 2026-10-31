@@ -1,7 +1,3 @@
-; The mirror of a plain cubic map (edge f . n, node and face inverted, after hyper-mirror of hyprelabel.sl) is plain
-; cubic with the same arities, and a mirror-image quiz fitting the map fits the mirror one face step on (fitqz_flip of
-; quiz.v). Load after qtree.sl.
-
 (def-fns _ $ (erased path-rev : (erased (Nat) d a b c y k) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm) (subterm erased (Path p s a b xs) w)
     (erased (Nth (Nat) p c a) pc) (erased (Nth (Nat) q b y) pb) (erased (Length (Nat) xs k) l) -> (erased (List (Nat)) ys) (erased (Path q s y c ys) r)
     (erased (Length (Nat) ys k) ly))
@@ -78,7 +74,6 @@
       (MkOrderList d fi ids ks io (orders-inv d f fi ids ks pf os)) ab)
     rfn pn pf))
 
-; qstepR in the map is qstepL in the mirror, and the other way round.
 (def-fns _ $ (erased step-rl : (erased (Nat) d x y) (erased (List (Nat)) e n f ks fn ni) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (Lt x d) lx) (erased (QStepR e n x y) sp) -> (erased (QStepL fn ni x y) r))
   (let-match erased sp (MkQStepR _ _ _ u _ pu py))
@@ -159,7 +154,6 @@
       (FQRR fn ni ks x a xl y q1 (step-lr d x xl e n f ks fn ni g rfn pn lx s1) pa1 (step-lr d xl y e n f ks fn ni g rfn pn lxl s2)
         (fit-flip d y e n f ks fn ni q1 r1 g rfn pn (stepl-lt d xl y e n f ks g lxl s2) p f1)))))
 
-; fitqz_flip: the mirror image of qz fitting at x gives qz fitting the mirror at face x.
 (def-fns _ $ (erased fitz-flip : (erased (Nat) d x) (erased (List (Nat)) e n f ks fn ni) (erased (Quiz) qz qz2) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (Lt x d) lx) (erased (FlipQz qz qz2) fl) (erased (FitZ e n ks x qz2) fz)
     -> (erased (Nat) w) (erased (FitZ fn ni ks w qz) r) (erased (Lt w d) lw))

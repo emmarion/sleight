@@ -1,8 +1,3 @@
-; Darts around a hub named by their face and their place on it, for the certified redpart of redc.sl. The face of a
-; name is the hub, a spoke, a hat or a fan face of a sector; a place counts steps of face from that face's base dart
-; (DF) or back to it (DB). Edge is read off a table of base darts, or through e = f e f e f and e = f' e f' e f' with
-; f' the inverse of face, which plain cubic maps appear to satisfy. Load after qfit.sl.
-
 (def-fns _ $ (erased f-pre : (erased (Nat) d y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt y d) ly)
     -> (erased (Nat) u) (erased (Nth (Nat) f u y) pu) (erased (Lt u d) lu))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))

@@ -1,15 +1,11 @@
-; The statement of unavoidability.v with the embedding of quiz.v (UnavE), set as a goal in qztgoal.sl. Load after
-; qmirror.sl.
-
-; The map itself, or its mirror (hyper-mirror of hyprelabel.sl).
+; (e2, n2, f2): (e, n, f) or its mirror.
 (def-adts $ (MapOrMirror : ((Nat) d) ((List (Nat)) e n f e2 n2 f2) -> Type)
   enum
   (many MoSame : (erased (Nat) d) (erased (List (Nat)) e n f) -> (MapOrMirror d e n f e n f))
   (many MoMirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Respects f n fn) rfn) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
       -> (MapOrMirror d e n f fn ni fi)))
 
-; A configuration of cfs, with its map (ec, nc, fc), ring rc and arities ksc as cpmap.sl builds them, has a preembedding
-; h of its kernel as into the map (em, nm, fm) or its mirror, sending x0c to x0m.
+; A configuration of cfs whose kernel has a preembedding into (em, nm, fm) or its mirror.
 (def-adts $ (CfEmbed : ((List (Config)) cfs) ((Nat) dm) ((List (Nat)) em nm fm ksm) -> Type)
   enum
   (many MkCfEmbed : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)

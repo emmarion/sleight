@@ -1,7 +1,4 @@
-; walkq, flatq and fitqz of quiz.v as relations on the hypermaps of hypermap.sl, over the types of quiz.sl and qfit.sl.
-; Load after qfit.sl.
-
-; Testing q at x visits the darts s before t and asks the arities as before at, each read in ks.
+; s before t: the darts visited; as before at: the arities asked, each read in ks.
 (def-adts $ (WalkS : ((List (Nat)) e n ks) ((Nat) x) ((Qn) q) ((List (Nat)) s t as at) -> Type)
   enum
   (many WS0 : (erased (List (Nat)) e n ks t at) (erased (Nat) x) -> (WalkS e n ks x (Qask0) t t at at))
@@ -21,13 +18,13 @@
       (erased (Nth (Nat) ks xr qa) pa) (erased (QStepR e n xr y) s2) (erased (WalkS e n ks y q s t as at) w)
       -> (WalkS e n ks x (QaskRR qa q) (Cons (Nat) xr s) t (Cons (Nat) qa as) at)))
 
-; walkqz: the walk of q0 at x then that of q1 at edge x.
+; s, as: the walk of q0 at x, then that of q1 at edge x.
 (def-adts $ (WalkZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) ((List (Nat)) s as) -> Type)
   enum
   (many MkWalkZ : (erased (List (Nat)) e n ks s u as au) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (WalkS e n ks x q0 s u as au) w0)
       (erased (Nth (Nat) e x x1) px) (erased (WalkS e n ks x1 q1 u (Nil (Nat)) au (Nil (Nat))) w1) -> (WalkZ e n ks x (MkQuiz q0 q1) s as)))
 
-; fitqz qz x.
+; qz fits at x.
 (def-adts $ (FitZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) -> Type)
   enum
   (many MkFitZ : (erased (List (Nat)) e n ks) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (FitQ e n ks x q0) f0) (erased (Nth (Nat) e x x1) px)

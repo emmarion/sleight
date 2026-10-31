@@ -1,7 +1,3 @@
-; Certified part semantics after part.v, over the types of part.sl. A part is read against Obs, the arities seen around
-; a hub dart: per sector the spoke arity a, the hat arity h and the fan arities, so that everything here is about lists
-; and numbers; map.sl ties Obs to a hypermap. A range MkRg lo hi holds an arity whose value clamped at 9 lies in [lo, hi].
-
 (let-match erased (unary-4) (Refl _ _))
 (let-match erased (unary-5-4) (Refl _ _))
 (let-match erased (unary-6-5) (Refl _ _))
@@ -144,14 +140,14 @@
       (let-match erased y (AnsDis _ _ n2))
       (values (PDis) (AnsDis _ _ (OrR _ _ n2))))))
 
-; Generic lists matched entry by entry: ys is no longer than xs and each y is related to the x at its position (Pw), or
-; some y is (Ex), or (Bad) some y is or ys is longer than xs.
+; ys is no longer than xs, and each y is related by R to the x at its position.
 (def-adts $ (Pw : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
   (many PwNil : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased (List A) xs) -> (Pw A B R xs (Nil B)))
   (many PwCons : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
       (erased (List B) ys) (erased (R x y) p) (erased (Pw A B R xs ys) rest) -> (Pw A B R (Cons A x xs) (Cons B y ys))))
 
+; Some y is related by R to the x at its position.
 (def-adts $ (Ex : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
   (many ExHere : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
@@ -159,6 +155,7 @@
   (many ExThere : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
       (erased (List B) ys) (erased (Ex A B R xs ys) rest) -> (Ex A B R (Cons A x xs) (Cons B y ys))))
 
+; Some y is related by R to the x at its position, or ys is longer than xs.
 (def-adts $ (Bad : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
   (many BadHere : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
@@ -376,7 +373,7 @@
   enum
   (many MkPent : (erased (Nat) a) (erased (Lt 4 a) p) -> (Pent a)))
 
-; A sector as a pentagonal map has it: arities at least 5, and one fan per spoke dart past the fifth.
+; o has arities at least 5 and one fan per spoke dart past the fifth.
 (def-adts $ (SecOk : ((Sec) o) -> Type)
   enum
   (many MkSecOk : (erased (Nat) a h n) (erased (List (Nat)) as) (erased (Lt 4 a) pa) (erased (Lt 4 h) ph) (erased (All (Nat) Pent as) pv)
@@ -585,7 +582,6 @@
   (many PSThere : (erased (Nat) k) (erased (Sub) x) (erased (List (Sub)) p ql qh) (erased (PartSplit k p ql qh) w)
       -> (PartSplit k (Cons (Sub) x p) (Cons (Sub) x ql) (Cons (Sub) x qh))))
 
-; Both halves of split_part at once: ql takes the arities up to k at location i of sector j, qh the others.
 (def-fns _ $ (many split-both : (many (Loc) i) (subterm many (Nat) j) (many (Nat) k) (many (List (Sub)) p)
     -> (many (List (Sub)) ql qh) (erased (PartSplit k p ql qh) w))
   (let-match many p (Cons _ x rest) ((Nil _) (values p p (PSKeep k p))))

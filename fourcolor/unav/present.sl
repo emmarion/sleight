@@ -6,7 +6,6 @@
   (many SHub : (many (List (Hc)) hc) -> (Script))
   (many SSim : (many (Nat) idx) (many (Bool) mir) (many (Nat) n) -> (Script)))
 
-; A script spelt one number per character (the character's code less 65), in prefix order, as gen.py writes it.
 (def-fns _ $ (many sc-num : (many (String) s) -> (many (Nat) n) (many (String) rest))
   (let-match many s (SCons c rest) ((SNil) (values 0 s)))
   (let-match many c (MkChar u))

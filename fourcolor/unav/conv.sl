@@ -1,10 +1,5 @@
-; converse_part of part.v certified, and fitp_converse: a rule fitting exactly at a dart y makes its converse fit the
-; dart t with face^2 t = edge (face^2 y), the hub across the third spoke; from it the target bound TgtAll of
-; hubsound.sl. Load after pwsound.sl.
-
 (let-match erased (unary-3-2) (Refl _ _))
 
-; Through a composite: h (g (p x)) = x when gp = g . p and h . gp is the identity.
 (def-fns _ $ (erased resp3 : (erased (Nat) d x a b) (erased (List (Nat)) g p h gp ids) (erased (Respects g p gp) r1) (erased (Respects h gp ids) r2)
     (erased (Iota d ids) io) (erased (Length (Nat) p d) lp) (erased (Lt x d) lx) (erased (Nth (Nat) p x a) pa) (erased (Nth (Nat) g a b) pb)
     -> (erased (Nth (Nat) h b x) r))
@@ -40,8 +35,6 @@
     -> (erased (Lt u d) r))
   (img-lt d s u q p (perm-sym d p q pm) ls (perm-inv d u s p q pm pu)))
 
-; The one local fact of plain cubic maps used here: for a hub dart x with spokes s = edge x and s1 = edge (face x),
-; the dart u before s along its face has edge u = face s1.
 (def-fns _ $ (erased g2 : (erased (Nat) d x x1 s s1 u) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f u s) pu)
     -> (erased (Nat) v) (erased (Nth (Nat) e u v) r1) (erased (Nth (Nat) f s1 v) r2))
@@ -62,7 +55,6 @@
   (let-match erased (perm-inj d gg c2 x1 n ni pn (nfe d x1 s1 gg e n f h lx1 ps1 pg) pc3) (Refl _ _))
   (values c2 pu2 pg))
 
-; Two steps back from the spoke s: edge t = face (edge (face^2 s1)).
 (def-fns _ $ (erased g1 : (erased (Nat) d x x1 s s1 t u0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f t u0) pt) (erased (Nth (Nat) f u0 s) pu)
     -> (erased (Nat) a w v vv) (erased (Nth (Nat) f s1 a) r1) (erased (Nth (Nat) f a w) r2) (erased (Nth (Nat) e w v) r3) (erased (Nth (Nat) e t vv) r4)
@@ -79,7 +71,6 @@
   (let ((erased vv) (erased q4) (erased q5)) (g2 d a w u0 v t e n f ks g la pw q3 pv pt))
   (values a w v vv q2 pw pv q4 q5))
 
-; One step on from the spoke s = edge x: face (edge (face s)) = edge v for the hub dart v before x.
 (def-fns _ $ (erased g3 : (erased (Nat) d x s v0 w0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) f v0 x) pv) (erased (Nth (Nat) e v0 w0) pw)
     -> (erased (Nat) a c) (erased (Nth (Nat) f s a) r1) (erased (Nth (Nat) e a c) r2) (erased (Nth (Nat) f c w0) r3))
@@ -116,7 +107,7 @@
   (let-match erased it (ItS _ k1 _ y _ py it1) ((ItZ _ _) lx))
   (iter-lt d k1 y z f fi pf (img-lt d x y f fi pf lx py) it1))
 
-; A sector with its darts: spoke z = edge y, w = face^2 z, hat dart u = edge w, and z3 = face^3 z.
+; Spoke z = edge y, w = face^2 z, hat dart u = edge w, z3 = face^3 z.
 (def-adts $ (SecD : ((List (Nat)) e f ks) ((Nat) y z w u z3) ((Sec) o) -> Type)
   enum
   (many MkSecD : (erased (List (Nat)) e f ks) (erased (Nat) y z a w u h z3 m) (erased (List (Nat)) fs) (erased (Nth (Nat) e y z) pz)
@@ -131,7 +122,6 @@
 (def-fns _ $ (erased iter3 : (erased (List (Nat)) f) (erased (Nat) x a c) (erased (Nth (Nat) f x a) p) (erased (Iter f 2 a c) q) -> (erased (Iter f 3 x c) r))
   (ItS f 2 x a c p q))
 
-; face^3 z is the image of face^2 z.
 (def-fns _ $ (erased f3-next : (erased (List (Nat)) f) (erased (Nat) z w z3) (erased (Iter f 2 z w) pw) (erased (Iter f 3 z z3) p3) -> (erased (Nth (Nat) f w z3) r))
   (let-match erased pw (ItS _ _ _ b1 _ pb1 pw1))
   (let-match erased pw1 (ItS _ _ _ b2 _ pb2 pw2))
@@ -144,7 +134,6 @@
   (let-match erased p33 (ItZ _ _))
   pc3)
 
-; The target's first spoke: the hat face of the rule's fourth sector.
 (def-fns _ $ (erased tsec0 : (erased (Nat) d y2 y3 s2 t t1 sg wt ut zt sp w3 hd z3 a0 h0 aa hh) (erased (List (Nat)) e n f ks fs0 ff) (erased (Geo d e n f ks) g)
     (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f t t1) pt) (erased (Nth (Nat) f t1 s2) pt1)
     (erased (SecD e f ks t sg wt ut zt (MkSec a0 h0 fs0)) st) (erased (SecD e f ks y3 sp w3 hd z3 (MkSec aa hh ff)) s3) -> (erased (Eq (Nat) hh a0) r))
@@ -160,8 +149,6 @@
   (let ((erased lhd)) (img-lt d w v e nf pe (iter-lt d 2 sp w f fi pf lsp pw3) q3))
   (arity-same d v vv 1 hh a0 e n f ks g lhd ph3 (one-step f v vv q5) pa0))
 
-; The target's second sector: its spoke face is the rule's fourth spoke face, entered one dart on; so its w is the
-; rule's z3 there.
 (def-fns _ $ (erased tsec1 : (erased (Nat) d y2 y3 s2 t1 sg wt ut zt sp w3 hd z3 a1 h1 aa hh) (erased (List (Nat)) e n f ks fs1 ff) (erased (Geo d e n f ks) g)
     (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f t1 s2) pt1)
     (erased (SecD e f ks t1 sg wt ut zt (MkSec a1 h1 fs1)) st) (erased (SecD e f ks y3 sp w3 hd z3 (MkSec aa hh ff)) s3)
@@ -178,8 +165,6 @@
   (let ((erased q3)) (f3-next f sg wt zt pwt pzt))
   (values e1 q2 (Refl _ wt) q3))
 
-; Two steps back from the rule's fourth spoke, in its face of k = j + 2 darts, edge (face^j sp) is next to the rule's
-; fifth hat face.
 (def-fns _ $ (erased back2 : (erased (Nat) d y3 y4 sp z q k j a4 h4 hq) (erased (List (Nat)) e n f ks fs4) (erased (Nat) sp4 w4 hd4 z34)
     (erased (Geo d e n f ks) g) (erased (Lt y3 d) ly) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) e y3 sp) psp) (erased (Nth (Nat) ks sp k) pk)
     (erased (Iter f j sp z) pz) (erased (Add j 2 k) a) (erased (Nth (Nat) e z q) pq) (erased (Nth (Nat) ks q hq) ph)
@@ -200,7 +185,7 @@
   (let ((erased lhd)) (img-lt d w v e nf pe (iter-lt d 2 sp4 w f fi pf lsp4 pw4) q3))
   (arity-same d v vv 1 h4 hq e n f ks g lhd ph4 (one-step f v vv q5) ph))
 
-; The spoke arities of a sector list.
+; fs: the spoke arities of os.
 (def-adts $ (SpkL : ((List (Sec)) os) ((List (Nat)) fs) -> Type)
   enum
   (many SpkNil : -> (SpkL (Nil (Sec)) (Nil (Nat))))
@@ -217,7 +202,6 @@
   (let-match erased (nth-fn _ ks u a _ pa pa2) (Refl _ _))
   (SpkCons a h hf fs1 os1 (fans-spk e f ks fs1 z1 m1 os1 ob1 fa1)))
 
-; The target's third sector is the rule's hub: arity n, hat the rule's fifth spoke, fans the rule's spokes from the sixth.
 (def-fns _ $ (erased tsec2 : (erased (Nat) d y2 y3 y4 y5 s2 sg wt ut zt sp4 w4 hd4 z34 nn a2 h2 a4 h4 m5) (erased (List (Nat)) e n f ks fs2 fs4)
     (erased (List (Sec)) os5) (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) ks y2 nn) pnn)
     (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) f y4 y5) p45) (erased (Nth (Nat) e y2 s2) ps2)
@@ -238,8 +222,6 @@
   (let-match erased (monus-fn nn 5 m m5 mo mo5) (Refl _ _))
   (values (Refl _ a2) (Refl _ h2) (fans-spk e f ks fs2 y5 m os5 ob5 pfs)))
 
-; The target's fourth sector: the rule's second spoke face, its hat the rule's first spoke face; its z3 is the rule's
-; w of the second sector.
 (def-fns _ $ (erased tsec3 : (erased (Nat) d y0 y1 y2 s2 t3 sg wt ut zt sp1 w1 hd1 z31 sp0 w0 hd0 z30 a3 h3 a1 h1 a0 h0) (erased (List (Nat)) e n f ks fs3 fs1 fs0)
     (erased (Geo d e n f ks) g) (erased (Lt y0 d) ly) (erased (Nth (Nat) f y0 y1) p01) (erased (Nth (Nat) f y1 y2) p12) (erased (Nth (Nat) e y2 s2) ps2)
     (erased (Nth (Nat) f s2 t3) pt3) (erased (SecD e f ks t3 sg wt ut zt (MkSec a3 h3 fs3)) st) (erased (SecD e f ks y1 sp1 w1 hd1 z31 (MkSec a1 h1 fs1)) s1)
@@ -269,8 +251,6 @@
   (let ((erased e2)) (arity-same d ut sp0 1 h3 a0 e n f ks g lut ph3 (one-step f ut sp0 q6) pa0))
   (values e1 e2 q3 (iter-fn f 3 sg zt w1 pzt (iter3 f sg sp1 w1 q3 pw1))))
 
-; The target's fifth sector: the rule's third hat face; its hat dart lies just after edge v, where face^3 v is the rule's
-; second spoke.
 (def-fns _ $ (erased tsec4 : (erased (Nat) d y2 s2 t3 t4 sg3 sg wt ut zt w2 hd2 z32 sp1 a4 h4 a2 h2) (erased (List (Nat)) e n f ks fs4 fs2)
     (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f s2 t3) pt3) (erased (Nth (Nat) f t3 t4) pt4)
     (erased (Nth (Nat) e t3 sg3) ps3) (erased (Nth (Nat) f sg3 sp1) pq) (erased (SecD e f ks t4 sg wt ut zt (MkSec a4 h4 fs4)) st)
@@ -304,7 +284,7 @@
   (let-match erased (nth-fn _ e wt c2 ut q6 put) (Refl _ _))
   (values (Refl _ a4) v ev (ItS f 2 v be sp1 pv2 (two-step f be sg3 sp1 q3 pq)) pev q7 (Refl _ t4)))
 
-; converse_part's four pieces, case by case, over a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12) and 5 on (C3).
+; The converse's pieces for a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12), and 5 on (C3).
 (def-adts $ (C4 : ((Sub) x0 x1) ((Rg) h45) ((Pc) o) -> Type)
   enum
   (many C4No : (erased (Sub) x0 x1) -> (C4 x0 x1 (MkRg 5 9) (PcNil)))
@@ -512,7 +492,7 @@
   (let ((many r) (erased a12)) (pc-ap o12 r3))
   (values u r (CvOk x0 x1 x2 x3 x4 rest q5 r4 r3 r h45 h23 u o4 o12 o3 c4 c5 c12 c3 a4 a3 a12)))
 
-; Whether a is in a range, decided.
+; b: whether a is in r.
 (def-adts $ (InOut : ((Bool) b) ((Nat) a) ((Rg) r) -> Type)
   enum
   (many IOIn : (erased (Nat) a) (erased (Rg) r) (erased (InRg a r) p) -> (InOut (BTrue) a r))
@@ -583,7 +563,6 @@
   (many F2Two : (erased (Sec) o0 o1) (erased (Sub) x0 x1) (erased (FitSec o0 x0) p0) (erased (FitSec o1 x1) p1)
       -> (Fit2 o0 o1 (PcPre (Cons (Sub) x0 (Cons (Sub) x1 (Nil (Sub))))))))
 
-; The first fan of a fans list, read at a dart u = edge z with arity x.
 (def-fns _ $ (erased fan1 : (erased (List (Nat)) e f ks fs) (erased (Nat) z m u x) (erased (FansAt e f ks z (Succ m) fs) fa) (erased (Nth (Nat) e z u) pu)
     (erased (Nth (Nat) ks u x) px) -> (erased (Nat) z1) (erased (List (Nat)) fs1) (erased (Eq (List (Nat)) fs (Cons (Nat) x fs1)) r) (erased (Nth (Nat) f z z1) pz)
     (erased (FansAt e f ks z1 m fs1) rest))
@@ -604,7 +583,6 @@
 (def-fns _ $ (erased add33 : -> (erased (Add 3 3 6) r)) (add-succ-right 3 2 5 (add2 3)))
 (def-fns _ $ (erased add34 : -> (erased (Add 3 4 7) r)) (add-succ-right 3 3 6 (add33)))
 
-; The target's fourth sector, and the hat of its fifth, against conv_part4's cases.
 (def-fns _ $ (erased c4-sound : (erased (Nat) d y0 y1 y2 s2 t3 t4 sp0 w0 hd0 z30 sp1 w1 hd1 z31 w2 hd2 z32 sg3 wt3 ut3 zt3 sg4 wt4 ut4 zt4)
     (erased (Nat) a0 h0 a1 h1 a2 h2 a3 h3 a4 h4) (erased (List (Nat)) e n f ks fs0 fs1 fs2 fs3 fs4) (erased (Sub) x0 x1) (erased (Rg) h45) (erased (Pc) o)
     (erased (Geo d e n f ks) g) (erased (Lt y0 d) ly) (erased (Nth (Nat) f y0 y1) p01) (erased (Nth (Nat) f y1 y2) p12) (erased (Nth (Nat) e y2 s2) ps2)
@@ -723,7 +701,6 @@
   (let-match erased ap2 (LAppNil _ _))
   (PwCons _ _ FitSec o0 x0 (Cons _ o1 os) (Cons _ x1 q) fx0 (PwCons _ _ FitSec o1 x1 os q fx1 w)))
 
-; The target's fifth sector and, when the rule's third spoke has two fans, its sixth and seventh, against conv_part5.
 (def-fns _ $ (erased c5-sound : (erased (Nat) d y2 s2 w2 hd2 z32 t4 t5 m5 sg4 wt4 ut4 zt4 a2 h2 a4 h4) (erased (List (Nat)) e n f ks fs2 fs4) (erased (List (Sec)) os5)
     (erased (Sub) x2) (erased (Rg) h45 u) (erased (List (Sub)) q) (erased (Geo d e n f ks) g)
     (erased (SecD e f ks y2 s2 w2 hd2 z32 (MkSec a2 h2 fs2)) sd2) (erased (FitSec (MkSec a2 h2 fs2) x2) f2) (erased (Eq (Nat) t4 w2) e4t)
@@ -767,7 +744,6 @@
 
 (def-fns _ $ (erased add53 : -> (erased (Add 5 3 8) r)) (add-succ-right 5 2 7 (add2 5)))
 
-; The target's third sector, the rule's hub, against conv_part3.
 (def-fns _ $ (erased c3-sound : (erased (Nat) nn k a2 h2 a4) (erased (List (Nat)) fs2) (erased (List (Sec)) osr) (erased (List (Sub)) rest) (erased (Rg) h23)
     (erased (Pc) o) (erased (Eq (Nat) a2 nn) e2a) (erased (Eq (Nat) h2 a4) e2h) (erased (InRg a4 h23) i4) (erased (SpkL osr fs2) sk)
     (erased (Pw (Sec) (Sub) FitSec osr rest) fr) (erased (Length (Sec) osr k) lo) (erased (Length (Sub) rest k) lr) (erased (Add 5 k nn) ak)
@@ -832,7 +808,6 @@
       (F1One _ _ (MkFitSec 8 a4 fs2 (MkRg 8 8) h23 (Cons _ s5 (Cons _ s6 (Cons _ s7 (Nil _)))) (mk-exact 8 (lit-lt-8-9)) i4
         (PwCons _ _ InRg a5 s5 _ _ i5 (PwCons _ _ InRg a6 s6 _ _ i6 (PwCons _ _ InRg a7 s7 _ _ i7 (PwNil _ _ InRg _)))))))))
 
-; The target's first two sectors against conv_part12.
 (def-fns _ $ (erased c12-sound : (erased (Nat) d y2 y3 y4 s2 t t1 sp3 w3 hd3 z33 sp4 w4 hd4 z34 sg0 wt0 ut0 zt0 sg1 wt1 ut1 zt1)
     (erased (Nat) a3 h3 a4 h4 a0 h0 a1 h1) (erased (List (Nat)) e n f ks fs3 fs4 fs0 fs1) (erased (Sub) x3 x4) (erased (Rg) h23) (erased (Pc) o)
     (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) e y2 s2) ps2)
@@ -934,8 +909,6 @@
   (AddSucc 4 k (Succ (Succ (Succ (Succ k)))) (AddSucc 3 k (Succ (Succ (Succ k))) (AddSucc 2 k (Succ (Succ k)) (AddSucc 1 k (Succ k)
     (AddSucc (Zero) k k (AddZero k)))))))
 
-; fitp_converse of part.v: a rule p fitting y exactly makes its converse q fit the dart t with face^2 t = edge (face^2 y), and t's
-; arity lies in u.
 (def-fns _ $ (erased conv-sound : (erased (Nat) d y y2 s2 t) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p q) (erased (Rg) u) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (ExactAt e f ks y p) x) (erased (Iter f 2 y y2) iy) (erased (Nth (Nat) e y2 s2) ps2) (erased (Iter f 2 t s2) it)
     (erased (ConvOk p u q) cv)
@@ -1032,7 +1005,7 @@
   (let ((erased w3)) (pc-step (MkSec ta2 th2 tf2) o3 _ r4 r3 fit2 pa3 w4))
   (values a lt pa iu os ob (pc-step2 (MkSec ta0 th0 tf0) (MkSec ta1 th1 tf1) o12 _ r3 q fit01 pa12 w3)))
 
-; How one rule r of drs moves the source count c of a dart: c drops to c1 past r, by one when r fits.
+; c drops to c1 past the rule r, by one when r fits.
 (def-adts $ (SrcStep : ((Nat) a) ((List (Sec)) os) ((List (Sub)) r) ((Nat) c c1) -> Type)
   enum
   (many SSkip : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) -> (SrcStep a os r c c))
@@ -1054,7 +1027,6 @@
     ((CYes _ _ _ t1 _ k1) (values t1 k1 (lt-weaken t1 (Succ t1) (lt-succ t1))))
     ((CNo _ _ _ _ _ k1) (values t k1 (lt-succ t)))))
 
-; A rule fitting z exactly, read through its converse at w.
 (def-fns _ $ (erased conv-fit : (erased (Nat) d z w nhub a y2 s2) (erased (List (Nat)) e n f ks) (erased (List (Sub)) r q) (erased (Rg) u)
     (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
     (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)
@@ -1066,7 +1038,6 @@
   (let-match erased (obs-fn e f ks w nhub os2 osw ob2 obw) (Refl _ _))
   (values iu fw))
 
-; Each rule of drs fitting z exactly has its converse in rt fitting w, so dscore1 at face^2 z is at most the count at w.
 (def-fns _ $ (erased tgt-le : (erased (Nat) d z w nhub a c t y2 s2) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt qs)
     (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
     (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)

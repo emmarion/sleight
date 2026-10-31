@@ -1,7 +1,3 @@
-; Deciding the certificate QzCert of qembed.sl on the concrete map of a configuration of red/configs.sl, built by
-; cpmap.sl, for a quiz of quiz.sl. The places of the darts and the paths between walk faces are found by an unchecked
-; search; the certificate is then checked. Load after qembed.sl, with cfmap.sl and cpmap.sl loaded.
-
 (def-adts $ (NthQ : (Type A) ((List A) xs) ((Nat) i) -> Type)
   enum
   (many NQYes : (erased Type A) (erased (List A) xs) (erased (Nat) i) (many A x) (erased (Nth A xs i x) p) -> (NthQ A xs i))
@@ -287,7 +283,7 @@
   (let-match many (notail $ wpos-c st rest (Succ k)) (ChkYes _ wr) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (WPCons st rest c k pc wr)))
 
-; A dart a path may use: the walk dart k, or its edge image.
+; The walk dart k, or its edge image when edge.
 (def-adts $ (QCand : -> Type)
   enum
   (many MkQCand : (many (Nat) p k) (many (Bool) edge) -> (QCand)))
@@ -378,7 +374,7 @@
   (let-match many (spokes-c ec s0c st fw bw ixs) (ChkYes _ ra) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (MkQzCert dc k x0c a0 a1 ec nc fc ksc rc s0c asc ids ixs st q01 q10 hc olc io lst dk sx wz wp ls iok ra)))
 
-; cf has a map and ring, given by cpmap.sl, for which qz has a certificate at some dart.
+; cf has a map and ring for which qz has a certificate at some dart.
 (def-adts $ (CfQz : ((Config) cf) ((Quiz) qz) -> Type)
   enum
   (many MkCfQz : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) d x0c) (erased (List (Nat)) e n f r ks) (erased (Quiz) qz)

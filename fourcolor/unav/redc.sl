@@ -1,7 +1,3 @@
-; A certified redpart after redpart.v, on the named darts of rdart.sl: RedD qt p is evidence that every dart fitting
-; the part p exactly makes the quiz tree qt fit at some dart (red-sound), the contrapositive of no_fit_redpart. Load
-; after rdart.sl.
-
 (def-adts $ (RNs : ((List (Sub)) p) ((RDart) t u) -> Type)
   enum
   (many MkRNs : (erased (List (Sub)) p) (erased (RDart) t t1 u) (erased (RFi t t1) s) (erased (REst p t1 u) r) -> (RNs p t u)))
@@ -733,7 +729,7 @@
       (let ((many hi)) (rg-hi r))
       (values (nat-ltb hi 9) hi))))
 
-; Where the walk of a quiz from x on p starts (qr-c), and the top there (top-c).
+; Where the walk of a quiz from x on p starts, and the top there.
 (def-adts $ (RStart : ((List (Sub)) p) ((RDart) x) -> Type)
   enum
   (many MkRStart : (erased (List (Sub)) p) (erased (RDart) x) (many (Bool) okr) (many (RDart) z) (erased (IfT okr (RQr p x z)) wr) (many (Bool) otz)
@@ -744,7 +740,6 @@
   (let ((many otz) (many tz)) (top-c p z))
   (MkRStart p x okr z wr otz tz))
 
-; The start on p1 from the one on p when the two parts are one.
 (def-fns _ $ (many start-at : (many (List (Sub)) p p1) (many (Bool) sm) (erased (IfT sm (Eq (List (Sub)) p p1)) se) (many (RDart) x) (many (RStart p x) st)
     -> (many (RStart p1 x) r))
   (let-match many sm (BTrue) ((BFalse) (start-c p1 x)))
@@ -752,8 +747,6 @@
   (let-match erased e (Refl _ _))
   st)
 
-; The first walk of a quiz q starts with a test of question qa at z unless q is Qask0, QaskLL or QaskRR; a quiz whose qa
-; is not the top tz there cannot pass, so it is not walked.
 (def-fns _ $ (many walk-hope : (many (Qn) q) (erased (List (Sub)) p) (erased (RDart) x) (many (RStart p x) st) -> (many (Bool) b))
   (let-match many st (MkRStart _ _ okr _ _ otz tz))
   (match many q _
