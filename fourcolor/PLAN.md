@@ -1204,7 +1204,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
   passed, in about 4.4 s of compute; five broken variants of the arity-5
-  script were rejected. It carries no proofs yet.
+  script were rejected. It carries no proofs yet. `data.sl`, which
+  `gen.py` writes from the Coq sources, spells each presentation script
+  as a string of numbers that `present.sl`'s `script-of` reads at run
+  time; as nested constructor applications the scripts made about 13 MB
+  of the 21 MB of OCaml that `native-compute` wrote for `qztgoal.sl` in
+  one run.
 
 - `unav/fit.sl`, `dbound.sl`, `hubcapc.sl`, `faces.sl`, `obsmap.sl`,
   `dscore.sl`, `runc.sl`: the part operations, dbound checks and hubcap
@@ -1238,7 +1243,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fitting p exactly in a plain cubic pentagonal map gives a dart where
   qt fits. It is a new search on these names, not a port of redpart.v's
   zippers, and a tested range is narrowed to its top for the rest of the
-  walk.
+  walk. For each triple of darts `tri-c` works out once where the walks
+  of the leaves' quizzes start (`start-c`), and a leaf's walk reuses that
+  start while the part is unchanged (`test-c` and `qwalk-c` report
+  whether it is); a leaf whose first question cannot pass there is not
+  walked (`walk-hope`).
 - `unav/qwalk.sl`, `qembed.sl`, `qcert.sl`, `qtree.sl`, `qmirror.sl`,
   `qztcfs.sl`, `qztproof.sl`, `qztgoal.sl` (load after `redc.sl`, in that order; they also need
   `cfmap.sl`, loaded after `hypcubic.sl`, and `cpmap.sl`, loaded after
@@ -1275,14 +1284,34 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
-  (`CfEmbed`). One compiled run builds the tree with its evidence and
-  does the walks, the cap checks and `redp-c` on all 335,058
-  obligations; in one run on a 4-core cloud VM `--goal proved` passed
-  in about 525 s with slc and in about 366 s with the reference
-  `main.exe` (under `ulimit -s unlimited`). In a test run the tree built
+  (`CfEmbed`). The walk of each arity is cut into regions
+  (`cut-script`: the largest subtrees of 100 to 800 leaves, and the rest
+  of the walk with those left as `SCut`), and `qztproof.sl` queues one
+  `native.sl` job per region (`reg-c`) and one for the cap checks
+  (`cap-run`); each job builds its own quiz tree. A region's job walks
+  its subtree from the context check2-c reaches there, runs `redp-c` on
+  its obligations, and checks that its cut list (the parts of the earlier
+  regions of its walk, which `SCut` and `PCut` refer to) is made of parts
+  of the regions after it in `regs`; `reg-claim` follows a dart of
+  positive dscore from the region of its walk's root through those
+  parts to the region whose obligations cover it. In one run each on a
+  4-core cloud VM shared with other runs, `--goal proved` passed in about
+  1520 s with slc, about 1490 s of it compiling 8.7 MB of OCaml; in about
+  485 s and, after a later merge (7.3 MB), about 994 s with slc and
+  `OCAMLRUNPARAM=o=200` in its environment, which ocamlopt inherits (about
+  454 s and 970 s compiling); and in about 793 s with the reference
+  `main.exe` under `ulimit -s unlimited` (about 742 s compiling 12.5 MB).
+  ocamlopt's time appears to depend much on its own GC: on the first
+  3.4 MB of that OCaml (its 50,000 top-level constants) it took about
+  1000 s by default (peak RSS 0.8 GB), 980 s with `o=200`, 330 s with
+  `o=1000` (2.5 GB) and 210 s with `s=8M,o=200` (1.1 GB), one run each. The 22 jobs, run one at a time, took
+  about 37 s of CPU together, the longest about 4.4 s. A run with one
+  reducible leaf of the arity-7 script replaced by an empty hubcap was
+  rejected (a job answered `ChkNo`). In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
-  certificate. Load order: that of `unavgoal.sl` (`std/macro.sl
+  certificate. Load order: that of `unavgoal.sl` with `native.sl`
+  after `std/macro.sl` (`std/macro.sl native.sl
   std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`, `cfmap.sl`,
   `colalias.sl unav/faces.sl red/red.sl red/configs.sl cpmap.sl`, then
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap

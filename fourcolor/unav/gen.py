@@ -33,15 +33,15 @@ names = re.search(r'@seqn part 38(.*?)\.', dis, re.S).group(1).split()
 lines = ['(def-fns _ $ (many base-drules : -> (many (List (List (Sub))) rs)) (%s))' % seq(part(rules[n]) for n in names)]
 
 TAC = re.compile(r"Pcase\s*(\w*)\s*:\s*(s|h|f1|f2|f3)\[(\d+)\]\s*(<=|>)\s*(\d+)\.|(Reducible)\.|Hubcap\s+(.*?)\$\.|Similar to (\*?)(\w+)\[(\d+)\]\.", re.S)
-LOC = {'s': '(LSpoke)', 'h': '(LHat)', 'f1': '(LFan 0)', 'f2': '(LFan 1)', 'f3': '(LFan 2)'}
-B = {True: '(BTrue)', False: '(BFalse)'}
+LOC = {'s': 0, 'h': 1, 'f1': 2, 'f2': 3, 'f3': 4}
 
 def hubcap(text):
-    cs = []
-    for i, j, b in re.findall(r'\$\[(\d+)(?:,(\d+))?\]<=\(?(-?\d+)\)?', text):
-        z = '(MkZ %d %d)' % (max(int(b), 0), max(-int(b), 0))
-        cs.append('(HC2 %d %d %s)' % (int(i) - 1, int(j) - 1, z) if j else '(HC1 %d %s)' % (int(i) - 1, z))
-    return '(SHub (%s))' % seq(cs)
+    out = []
+    cs = re.findall(r'\$\[(\d+)(?:,(\d+))?\]<=\(?(-?\d+)\)?', text)
+    for i, j, b in cs:
+        z = [max(int(b), 0), max(-int(b), 0)]
+        out += ([2, int(i) - 1, int(j) - 1] if j else [1, int(i) - 1]) + z
+    return [2, len(cs)] + out
 
 def script(n):
     src = open('%s/present%d.v' % (coq, n)).read()
@@ -56,37 +56,21 @@ def script(n):
             lab, loc, j, op, k = m.group(1, 2, 3, 4, 5)
             left = goal(env)
             right = goal(env + [lab] if lab else env)
-            return ('(SSplit %s %d %s %s %s' % (LOC[loc], int(j) - 1, k, B[op == '<='], B[bool(lab)]), [left, right])
+            return [0, LOC[loc], int(j) - 1, int(k), int(op == '<='), int(bool(lab))] + left + right
         if m.group(6):
-            return ('(SRed', [])
+            return [1]
         if m.group(7) is not None:
-            return (hubcap(m.group(7))[:-1], [])
+            return hubcap(m.group(7))
         mir, lab, k = m.group(8, 9, 10)
-        return ('(SSim %d %s %s' % (env[::-1].index(lab), B[mir == '*'], k), [])
-    tree = goal([])
+        return [3, env[::-1].index(lab), int(mir == '*'), int(k)]
+    nums = goal([])
     assert pos[0] == len(toks)
-    return tree
+    return nums
 
-def emit(n, tree):
-    defs, count = [], [0]
-    def go(node):
-        head, kids = node
-        parts, size = [], 1
-        for k in kids:
-            s, z = go(k)
-            parts.append(s)
-            size += z
-        text = ' '.join([head] + parts) + ')'
-        if size > 40:
-            count[0] += 1
-            name = 's%d-%d' % (n, count[0])
-            defs.append('(def-fns _ $ (many %s : -> (many (Script) s)) %s)' % (name, text))
-            return '(%s)' % name, 1
-        return text, size
-    top, _ = go(tree)
-    defs.append('(def-fns _ $ (many script%d : -> (many (Script) s)) %s)' % (n, top))
-    return defs
+def spell(nums):
+    assert all(0 <= x <= 61 for x in nums)
+    return ''.join('\\x5c' if x == 27 else chr(65 + x) for x in nums)
 
 for n in range(5, 12):
-    lines += emit(n, script(n))
+    lines.append('(def-fns _ $ (many script%d : -> (many (Script) s)) (script-of "%s"))' % (n, spell(script(n))))
 open(out, 'w').write('\n'.join(lines) + '\n')
