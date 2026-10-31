@@ -1,8 +1,3 @@
-; One native-compute for many checks. `(native-jobs name ev job ...)` queues jobs and the erased evidence `ev` built from
-; their results; `(native-each name xs (x t r) T e pat step nil)` queues one job per element of the Settled list xs and
-; folds their evidence; `(native-then stmt ...)` queues statements to follow them; `(native-run)` runs every queued job
-; in one native-compute, then the rest in order. See PLAN.md's native.sl entry. Load after std/macro.sl.
-
 (def-adts $ (NativeQueue : -> Type)
   enum
   (many MkNativeQueue : (many (List $ Raw) binders thunks after) -> (NativeQueue)))

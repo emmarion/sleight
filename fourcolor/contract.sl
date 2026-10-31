@@ -1,13 +1,8 @@
-; contract_coloring of contract.v with minimality as data, and the trace equations of embed_contract of embed.v. Load after
-; embed2.sl and traceconv.sl.
-
 (def-fns _ $ (erased resp-pt : (erased (List (Nat)) kc p ks) (erased (Nat) x u) (erased (Respects kc p ks) rk) (erased (Nth (Nat) p x u) pu)
     -> (erased (Nat) a) (erased (Nth (Nat) kc u a) pa) (erased (Nth (Nat) ks x a) pk))
   (let ((erased a) (erased pa) (erased ia)) (respects-val kc p ks u rk (nth-in p x u pu)))
   (values a pa (respects-at kc p ks x u a rk pu pa)))
 
-; Over the bonds x-y of g, with p a dart map into (e2, f2): the images of x and y are on one face when x is in ins, and the
-; image of y is the edge image of that of x otherwise.
 (def-adts $ (LiftE : ((List (Nat)) ins p e2 f2) ((List (Bond)) g) -> Type)
   enum
   (many LENil : (erased (List (Nat)) ins p e2 f2) -> (LiftE ins p e2 f2 (Nil (Bond))))
@@ -34,8 +29,6 @@
       (ECOut ins ks g1 x y a b o px py (apart-sym b a (differ-nth ke kc u b a df (respects-at kc e2 ke u v b re pe pb) pa))
         (lift-ecc ins p e2 f2 kc ke ks g1 lf1 rf re df rk)))))
 
-; The colouring k0 = k . h of contract_coloring: a four-colouring kc of (e2, f2) gives the contract colouring kc . p of
-; (d, e, f) for cc when p sends each face along faces (pf is p . f) and the edge links as LiftE says.
 (def-fns _ $ (erased cc-lift : (erased (Nat) d d2) (erased (List (Nat)) e f cc ins e2 f2 kc p pf) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)
     (erased (Graph d e ge) gr) (erased (FourColoring e2 f2 kc) c) (erased (Length (Nat) kc d2) lk) (erased (Length (Nat) p d) lp) (erased (Under p d2) up)
     (erased (Respects p f pf) rpf) (erased (Reach f2 p pf) rc) (erased (LiftE ins p e2 f2 ge) le)
@@ -47,8 +40,6 @@
     (MkCCColoring d e f cc ks ins ge ie gr (respects-assoc f p kc pf ks ks d rpf (reach-resp kc f2 p pf ks rf rc rk) rk lks lp)
       (lift-ecc ins p e2 f2 kc ke ks ge le rf re df rk) (respects-under-vals kc p ks 4 rk u) lks)))
 
-; The map of (d, e, n, f) contracted along cc (contract_coloring's G2): the one map of ms, smaller, planar, bridgeless, plain
-; and precubic, with a dart map p from (d, e, n, f) for cc-lift.
 (def-adts $ (Contraction : ((Nat) d) ((List (Nat)) e n f cc) ((List (Mp)) ms) -> Type)
   enum
   (many MkContraction : (erased (Nat) d d2) (erased (List (Nat)) e n f cc e2 n2 f2 ins p pf) (erased (List (Bond)) ge) (erased (Pbpp d2 e2 n2 f2) pb)
@@ -61,7 +52,6 @@
   (let-match erased ct (MkContraction _ d2 _ _ _ _ e2 n2 f2 ins p pf ge pb lt ie gr lp up rpf rc le))
   (SmallerCons d d2 e2 n2 f2 (Nil _) pb lt (SmallerNil d)))
 
-; contract_coloring, given the contracted map: a four-colouring of it gives a contract colouring for cc.
 (def-fns _ $ (erased contraction-lift : (erased (Nat) d) (erased (List (Nat)) e n f cc) (erased (List (Mp)) ms) (erased (Contraction d e n f cc ms) ct)
     (erased (MpCols ms) cs) -> (erased (List (Nat)) ks) (erased (CCColoring d e f cc ks) r))
   (let-match erased ct (MkContraction _ d2 _ _ _ _ e2 n2 f2 ins p pf ge pb lt ie gr lp up rpf rc le))
@@ -72,10 +62,6 @@
   (let ((erased ks) (erased rk) (erased r)) (cc-lift d d2 e f cc ins e2 f2 kc p pf ge ie gr col (respects-length kc f2 kc d2 rf lf2) lp up rpf rc le))
   (values ks r))
 
-; The trace equations of embed_contract: with k constant on the faces fm, kc = k . h1 a contract colouring of a configuration
-; map and kr = k . hr a four-colouring of a remainder map, and the images under h1 of the configuration's ring a :: p each
-; reaching along fm the image under hr of the dart of R at its place, the colours of kc on a :: p and of kr on R have one
-; trace et: a contract ring trace (CcCol) of the configuration and a ring trace of the remainder map on R.
 (def-fns _ $ (erased embed-contract-trace : (erased (List (Step)) cp) (erased (Nat) dm dc dr a) (erased (List (Nat)) fm k h1 hr ec fc p cc kc er fr R kr A B)
     (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm) (erased (CcColoring ec fc cc kc) c) (erased (FourColoring er fr kr) cr)
     (erased (Respects k fm k) rf) (erased (Length (Nat) k dm) lk) (erased (Respects k h1 kc) rk1) (erased (Respects k hr kr) rk2)

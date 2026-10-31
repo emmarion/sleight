@@ -1,21 +1,14 @@
-; embed5.sl's FullRedR, after embed_full of embed.v, with minimality as data. Load after embed5.sl, in its chain. That
-; these statements match Coq's has been checked only by reading.
-
 (def-fns _ $ (erased r2-at : (erased (List (Nat)) ec fc as xs) (erased (Nat) x0 x) (subterm erased (R2All ec fc as x0 xs) ra) (erased (In x xs) ix)
     -> (erased (R2At ec fc as x0 x) r))
   (let-match erased ra (R2Cons _ _ _ xs1 _ y p ra1) (absurd (R2Nil _ _ _ _) ix))
   (match erased ix _ ((InHere _ _) p) ((InThere _ _ _ ix1) (r2-at ec fc as xs1 x0 x ra1 ix1))))
 
-; A walk x0 :: p along rlink of the configuration map ending at z, p in the kernel: the hom ring of embed_full, before it is
-; made simple, and a simple one, its images on distinct faces of the map (labelled by lab).
 (def-adts $ (ShortP : ((List (Nat)) ec fc hl lab as) ((Nat) x0 z k) -> Type)
   enum
   (many MkShortP : (erased (List (Nat)) ec fc hl lab as q hq lq) (erased (Nat) x0 z k k2) (erased (RPath ec fc x0 q z) rq) (erased (Within q as) wq)
       (erased (Respects hl q hq) rh) (erased (Respects lab hq lq) rl) (erased (Distinct lq) dl) (erased (Length (Nat) q k2) lk) (erased (Lt k2 (Succ k)) lt)
       -> (ShortP ec fc hl lab as x0 z k)))
 
-; pre_hom_ring x p with ~~ rlink (last x p) x and at most five darts: x :: p an rlink walk of kernel darts of the configuration
-; map whose image is a ring of the map, and the edge image ez of its last dart z on another face than x.
 (def-adts $ (HomBad : ((List (Nat)) ec fc em fm as hl) -> Type)
   enum
   (many MkHomBad : (erased (List (Nat)) ec fc em fm as hl p hp) (erased (Nat) x z hx ez k) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
@@ -52,7 +45,6 @@
   (let ((erased lz1) (erased rz1) (erased al1)) (resp-app lab Y Z1 ly X1 ap1 lx1 rx1 ry))
   (values (Cons _ l lz1) (RespCons lab Z1 lz1 a l pl rz1) (AppCons lx1 ly lz1 l al1)))
 
-; The images of an rlink walk of kernel darts are an rlink walk of the map (cface_ac_h with embed_functor).
 (def-fns _ $ (erased rpath-h : (erased (Nat) dc dm a b wa) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl P hP) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In a as) ia) (subterm erased (RPath ec fc a P b) rp) (erased (Within P as) wp) (erased (Respects hl P hP) rh)
     (erased (Nth (Nat) hl a wa) pa) -> (erased (Nat) wb) (erased (Nth (Nat) hl b wb) pb) (erased (RPath em fm wa hP wb) r))
@@ -67,8 +59,6 @@
   (let ((erased wb) (erased pb) (erased r1)) (rpath-h dc dm z b wz ec nc fc ksc rc em nm fm ksm as hl P1 hP1 en fu iz rp1 wp1 rh1 pz))
   (values wb pb (RPCons em fm hP1 wa v wz wb pm spm r1)))
 
-
-; ~~ rlink z x, or z = t, where edge t = s, s ~ x and h (edge z) = h s (through cface_inj_embed).
 (def-fns _ $ (erased nrl : (erased (Nat) dc dm z ez x s t u wz) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In z as) iz) (erased (In x as) ix) (erased (Nth (Nat) ec z ez) pez)
     (erased (Nth (Nat) ec t s) pts) (erased (SomePath fc (Nil (Nat)) s x) sx) (erased (Nth (Nat) hl s u) pu) (erased (Nth (Nat) hl z wz) pz) (erased (Nth (Nat) em wz u) pm)
@@ -116,8 +106,6 @@
   (let-match erased o (NotInCons _ x xs1 ne o1) ((NotInNil _) (DisjNil _)))
   (DisjCons x xs1 _ (NotInCons x l (Nil _) (apart-sym l x ne) (NotInNil x)) (disj-one l xs1 o1)))
 
-; Coq's shortening of the walk in embed_full: a walk x0 :: p of k darts after x0, k < 6, p in the kernel, is shortened to one
-; whose images are on distinct faces, or gives a hom ring of at most five darts that does not close (IHf5).
 (def-fns _ $ (erased shorten : (erased (Nat) dc dm x0 z k) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl lab) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (FaceLab dm fm lab) fl) (erased (Bridgeless dm em nm fm) bl) (subterm erased (List (Nat)) p)
     (erased (RPath ec fc x0 p z) rp) (erased (Within p as) wp) (erased (Length (Nat) p k) lk) (erased (Lt k 6) l6)
@@ -203,7 +191,6 @@
   (OrL _ _ (MkHomBad ec fc em fm as hl PQ hPQ x x3 hx ex3 m rR (WCons as x PQ ix wPQ) (RespCons hl PQ hPQ x hx phx rPQ) rg lm
     (lt-ls m (Succ k1) 6 (lt-ls m (Succ k2) (Succ k1) ltm (LtS k2 (Succ k1) lt2)) (LtS k1 6 l61)) pex3 kr)))
 
-; From a pair of kernel darts where embed_full fails, through radius2, a hom ring of at most five darts that does not close.
 (def-fns _ $ (erased bad-hom : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl lab) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FaceLab dm fm lab) fl) (erased (Bridgeless dm em nm fm) bl)
     (erased (Radius2 ec fc as) rd) (erased (FullBad ec em as hl) bad) -> (erased (HomBad ec fc em fm as hl) r))
@@ -251,7 +238,6 @@
     (OrL _ _ kr) (absurd (OrR _ _ eq) (let-match erased eq (Refl _ _)) (apart-irrefl y ne)))
   (MkHomBad ec fc em fm as hl q1 hq1 x x2 hx ex2 k2 rq1 wq rh rg lk2 lt2 pex2 kr))
 
-; Every dart of xs has a label in L.
 (def-adts $ (AllLab : ((List (Nat)) lab L xs) -> Type)
   enum
   (many AlNil : (erased (List (Nat)) lab L) -> (AllLab lab L (Nil (Nat))))
@@ -278,7 +264,6 @@
   (many MkPicked : (erased (List (Nat)) lab lr S xs lx) (erased (Nat) m) (erased (Length (Nat) xs (Succ m)) lk) (erased (WSub xs S) sb) (erased (Respects lab xs lx) rx)
       (erased (Distinct lx) dx) (erased (Disj lx lr) dj) -> (Picked lab lr S m)))
 
-; Every dart of S is on a face of the ring or, for m = 1, on the face of one dart y of S: S meets at most m faces off the ring.
 (def-adts $ (TrivSide : ((List (Nat)) lab lr S) ((Nat) m) -> Type)
   enum
   (many TsZero : (erased (List (Nat)) lab lr S) (erased (Nat) m) (erased (AllLab lab lr S) al) -> (TrivSide lab lr S m))
@@ -308,7 +293,6 @@
     ((OrR _ _ eq) (let-match erased eq (Refl _ _)) (OrR _ _ ix))))
   (UnderCons xs1 x d (ds-lt d x e n r hd zs ds o) (ds-under d e n r hd zs S ds w xs1 sb1)))
 
-; A HomBad whose ring is trivial in the sense of Birkhoff: one side of it meets at most m faces off it, m from BkMode.
 (def-adts $ (HomTrivial : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
   enum
   (many MkHomTrivial : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez k m) (erased (RPath ec fc x p z) rp)
@@ -317,7 +301,6 @@
       (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (FaceLab dm fm lab) fl) (erased (Respects lab (Cons (Nat) hx hp) lr) rl)
       (erased (Or (TrivSide lab lr hd m) (TrivSide lab lr zs m)) ts) -> (HomTrivial dm ec fc em nm fm as hl)))
 
-; Birkhoff on the hom ring: it is nontrivial for the m of BkMode, and the map reduces (birkhoff-reduces), or it is trivial.
 (def-fns _ $ (erased hom-birk : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pbk) (erased (BirkhoffChecks) bks) (erased (Nat) dm)
     (erased (List (Nat)) ec fc em nm fm as hl lab) (erased (FaceLab dm fm lab) fl) (erased (Hypermap dm em nm fm) hm) (erased (Genus dm em nm fm (Zero)) gen)
     (erased (Bridgeless dm em nm fm) bl) (erased (AllOrder dm em (Succ (Succ (Zero)))) pl) (erased (AllOrder dm nm (Succ (Succ (Succ (Zero))))) cu)
@@ -347,9 +330,6 @@
   (OrL _ _ (birkhoff-reduces B pbk dm hx k m em nm fm hp bks hm gen bl pl cu cn ncol rg lkm l6 md
     (MkNonTrivial dm m em nm fm (Cons _ hx hp) hd zs xs ys ds lkx lky sx sy (MkScattered fm _ xs lab lr lx rf rl rx dx djx) (MkScattered fm _ ys lab lr ly rf rl ry dy djy)))))
 
-; The trivial cases of embed_full, taken as a hypothesis: a HomTrivial makes the map reduce, for any bound B above birk-glue
-; (in Coq it is refuted by trivial_hom_ring, its use on the reversed ring, and for five darts the spoke ring with adj11_edge
-; and adj_kernel_max, where the spoke ring rests on Birkhoff). Not proved here.
 (def-adts $ (TrivRed : -> Type)
   enum
   (many MkTrivRed : (erased (Level) G)
@@ -359,7 +339,6 @@
           (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (Reduces B dm em nm fm) r)) tr)
       -> (TrivRed)))
 
-; FullRedR from BirkhoffChecks and TrivRed. A level factory: red is at a level F minted after that of the hypothesis.
 (def-fns _ $ (erased full-red-of : (erased (BirkhoffChecks) bks) (erased (TrivRed) trd) -> (erased (FullRedR) r))
   (let-match erased trd (MkTrivRed G triv))
   (def-lvl B)

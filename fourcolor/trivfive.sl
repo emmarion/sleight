@@ -1,6 +1,3 @@
-; trivred.sl's TrivFive, the five-dart case of embed_full of embed.v, with minimality as data. Load after triad.sl, in the
-; chain of fcgoal.sl. That these statements match Coq's has been checked only by reading.
-
 (def-fns _ $ (erased ffe-node : (erased (Nat) d a ea c1 c2 ec1 na nna) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) hm) (erased (Nth (Nat) e a ea) pa)
     (erased (Nth (Nat) f ea c1) p1) (erased (Nth (Nat) f c1 c2) p2) (erased (Nth (Nat) n a na) pn1) (erased (Nth (Nat) n na nna) pn2) (erased (Nth (Nat) n nna a) pn3)
     (erased (Nth (Nat) e c1 ec1) pe1) (erased (Nth (Nat) e ec1 c1) pe2) -> (erased (Nth (Nat) n c2 ec1) r) (erased (Nth (Nat) f ec1 na) q))
@@ -21,7 +18,6 @@
   (let ((erased t) (erased pt) (erased _)) (perm-nth dc x nc ni qn (kernel-lt dc x fc rc lf (ker-of dc x fc rc as kl ix))))
   (values t pt))
 
-; e (n x) is on the face of x, so in the kernel with x.
 (def-fns _ $ (erased en-in : (erased (Nat) dc dm x t) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (In x as) ix) (erased (Nth (Nat) nc x t) pt) -> (erased (Nat) et) (erased (Nth (Nat) ec t et) pe) (erased (Nth (Nat) fc et x) pf) (erased (In et as) ie))
   (let ((erased en2)) en)
@@ -31,7 +27,6 @@
   (let ((erased pf)) (hyper-third dc et t x ec nc fc hc pe pt))
   (values et pe pf (ker-face-inv dc dm et x ec nc fc ksc rc em nm fm ksm as hl en ix pf)))
 
-; At a kernel dart a off rc: n (f (f (e a))) = t with f t = n a.
 (def-fns _ $ (erased cfg-node : (erased (Nat) dc dm a ea c1 c2) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (In a as) ia) (erased (Nth (Nat) ec a ea) pa) (erased (Nth (Nat) fc ea c1) p1) (erased (Nth (Nat) fc c1 c2) p2)
     -> (erased (Nat) na t) (erased (Nth (Nat) nc a na) pn) (erased (Nth (Nat) nc c2 t) pt) (erased (Nth (Nat) fc t na) pf))
@@ -47,8 +42,6 @@
   (let ((erased r) (erased q)) (ffe-node dc a ea c1 c2 ec1 nx nnx ec nc fc hc pa p1 p2 pn q1 q2 pc pc2))
   (values nx ec1 pn r q))
 
-; Consecutive darts a, b of an rlink walk of kernel darts whose images satisfy h b = f (f (e (h a))) satisfy b = f (f (e a)),
-; so f (n b) = n a.
 (def-fns _ $ (erased cfg-step : (erased (Nat) dc dm a b ea ha hb eha w1 na nb) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
     (erased (In a as) ia) (erased (In b as) ib) (erased (Nth (Nat) ec a ea) pa) (erased (SomePath fc (Nil (Nat)) ea b) sp) (erased (Nth (Nat) hl a ha) pha)
@@ -79,7 +72,6 @@
   (let-match erased (nth-fn _ nc b nb t pnb pt) (Refl _ _))
   pf)
 
-; At kernel darts w and t = n w: h t = n (h w).
 (def-fns _ $ (erased h-node : (erased (Nat) dc dm w t hw) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In w as) iw) (erased (Nth (Nat) nc w t) pt) (erased (In t as) it) (erased (Nth (Nat) hl w hw) phw)
     -> (erased (Nat) ht) (erased (Nth (Nat) hl t ht) pht) (erased (Nth (Nat) nm hw ht) pn))
@@ -98,7 +90,6 @@
   (let-match erased ka (KmCons _ _ _ xs1 w1 p ka1) (absurd (KmNil _ _ _) iw))
   (match erased iw _ ((InHere _ _) p) ((InThere _ _ _ iw1) (km-at ec fc as xs1 w ka1 iw1))))
 
-; A KmRun along face iterates w :: P whose edge images E are all in the kernel is impossible.
 (def-fns _ $ (erased kr-dead : (erased (List (Nat)) ec fc as P E) (erased (Nat) j w u) (subterm erased (KmRun ec fc as j w) kr) (erased (FPath fc w P u) fp)
     (erased (Length (Nat) P j) lp) (erased (Respects ec (Cons (Nat) w P) E) re) (erased (Within E as) we) -> (erased (False) r))
   (let-match erased re (RespCons _ _ E1 _ ew pe re1))
@@ -120,7 +111,6 @@
       (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (Respects lab (Cons (Nat) hx hp) lr) rl) (erased (In y hd) iy) (erased (Nth (Nat) lab y l) pl)
       (erased (NotIn l lr) ol) (erased (FRec dm em nm fm fe lab y l k Vs ls) fr) (erased (WSub lr ls) sl) -> (FCx B dm em nm fm fe lab hx hp hd zs lr y l Vs ls)))
 
-; Each spoke label of the face of y, a face of diskF, is a label of the ring: the spoke's node image is on that face.
 (def-fns _ $ (erased spk-sub : (erased (Nat) dm hx y l k) (erased (List (Nat)) em nm fm fe lab hp hd zs lr Vs ls) (erased (Spk dm em nm fm fe lab) c)
     (erased (Ring em fm hx hp) rg) (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (DiskF nm fm (Cons (Nat) hx hp) y) dfy)
     (erased (AllLab lab (Cons (Nat) l lr) hd) al) (erased (FRec dm em nm fm fe lab y l k Vs ls) fr) (subterm erased (List (Nat)) qs) (erased (WSub qs ls) sq)
@@ -145,8 +135,6 @@
       (absurd (InHere _ _) (apart-irrefl l (edge-apart dm u eu l l em nm fm fe lab c pe pu pl1))))
     (spk-sub dm hx y l k em nm fm fe lab hp hd zs lr Vs ls c rg ds dfy al fr qs1 sq1)))
 
-; A ring dart v, its edge image on the face of the ring dart v2: n v is on the face of y, or the map reduces (adj11); n (e v)
-; on it would put e v in diskN, against diskN_edge_ring.
 (def-fns _ $ (erased ring-adj : (erased (Level) B) (erased (Nat) dm hx y l v ev v2) (erased (List (Nat)) em nm fm fe lab hp hd zs lr Vs ls)
     (erased (FCx B dm em nm fm fe lab hx hp hd zs lr y l Vs ls) cx) (erased (In v (Cons (Nat) hx hp)) iv) (erased (Nth (Nat) em v ev) pe)
     (erased (In v2 (Cons (Nat) hx hp)) iv2) (erased (SomePath fm (Nil (Nat)) ev v2) sp)
@@ -179,8 +167,6 @@
       (match erased (disk-edge-ring dm v ev hx em nm fm hp h gen pl0 rg pr iv pe (disk-pre nm fm _ nB ev dnb pnb)) _)))
   (values nA pna (OrR _ _ (adj11 B dm v ev a1 ea1 b1 eb1 nA nB l lvv lv2 la lb em nm fm fe lab m pe plv ple pe1 pa1 pm1 pe2 pb1 pm2 pna pla nal pnb plb nbl))))
 
-; Consecutive ring darts v, v2 whose node images a, a2 are on the face of y: v2 = f (f (e v)) (two spokes of that face on one
-; face are one), so f a2 = a.
 (def-fns _ $ (erased ring-step : (erased (Level) B) (erased (Nat) dm hx y l v ev v2 a a2) (erased (List (Nat)) em nm fm fe lab hp hd zs lr Vs ls)
     (erased (FCx B dm em nm fm fe lab hx hp hd zs lr y l Vs ls) cx) (erased (Nth (Nat) em v ev) pe) (erased (SomePath fm (Nil (Nat)) ev v2) sp)
     (erased (Nth (Nat) nm v a) pa) (erased (Nth (Nat) lab a l) pla) (erased (Nth (Nat) nm v2 a2) pa2) (erased (Nth (Nat) lab a2 l) pla2)
@@ -217,8 +203,6 @@
   (let-match erased (nth-fn _ nm v2 ec1 a2 pn3 pa2) (Refl _ _))
   (values c1 p1 p3 pf3))
 
-; With t4 = n z in the kernel, n (f (f (e z))) and n x would be one dart (cface_inj_embed, their images both a0), so the hom
-; ring would close.
 (def-fns _ $ (erased absurd close : (erased (Nat) dc dm x z ez t0 t1 t2 t3 t4 hx hz a0 a4) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
     (erased (In x as) ix) (erased (In z as) iz) (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr)
@@ -254,8 +238,6 @@
   (let-match erased (perm-inj dc s x t0 nc ni qn pt5 pt0) (Refl _ _))
   (kernel-fband ez x fc _ nr (some-cons fc ez c1 x p1 (some-cons fc c1 x x p2 (MkSomePath fc (Nil _) (Nil _) x x (PathHere fc (Nil _) x)))) (InHere x (Nil _))))
 
-; TrivFive: the node images of the walk x, x1, x2, x3, z are five darts t0 .. t4 with f t(i+1) = t i whose edge images are in
-; the kernel; KerMax at t4 refutes that unless t4 is in the kernel, which close refutes.
 (def-fns _ $ (erased five-red : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pbk) (erased (BirkhoffChecks) bks) (erased (Nat) dc dm)
     (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)

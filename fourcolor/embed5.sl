@@ -1,7 +1,3 @@
-; More of embed.v's embedding construction, on embed3.sl's EEnv, with minimality as data. Load after embed3.sl, in the chain
-; of birkhoff3.sl, embed2.sl, contract.sl and embed3.sl.
-
-; embed is a function: a dart has one image.
 (def-fns _ $ (erased hemb-fn : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u v) (erased (HEmb ec nc em nm fm as hl x u) hu)
     (erased (HEmb ec nc em nm fm as hl x v) hv) -> (erased (Eq (Nat) u v) r))
   (match erased hu _
@@ -46,7 +42,6 @@
       (let-match erased (nth-fn _ nm w1 w2 w5 p2 p4) (Refl _ _))
       (nth-fn _ em w2 u v pu pv))))
 
-; The kernel is closed along face paths, both ways.
 (def-fns _ $ (erased ker-path : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl s xs)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (In x as) ix) (subterm erased (Path fc s x y xs) p) -> (erased (In y as) r))
   (let-match erased p (PathStep _ _ xs1 _ z _ pz _ p1) ((PathHere _ _ _) ix))
@@ -57,7 +52,6 @@
   (let-match erased p (PathStep _ _ xs1 _ z _ pz _ p1) ((PathHere _ _ _) iy))
   (ker-face-inv dc dm x z ec nc fc ksc rc em nm fm ksm as hl en (ker-path-inv dc dm z y ec nc fc ksc rc em nm fm ksm as hl s xs1 en iy p1) pz))
 
-; embed_full at the kernel darts x1, x2: edge x1 = x2, or h x2 is not edge (h x1).
 (def-adts $ (FullPair : ((List (Nat)) ec em hl) ((Nat) x1 x2) -> Type)
   enum
   (many FpEdge : (erased (List (Nat)) ec em hl) (erased (Nat) x1 x2) (erased (Nth (Nat) ec x1 x2) p) -> (FullPair ec em hl x1 x2))
@@ -88,7 +82,6 @@
       (apart-irrefl u ne)))
   q)
 
-; embed_full read off the certificate: for kernel darts x1, x2 with h x2 = edge (h x1), edge x1 = x2.
 (def-fns _ $ (erased full-at : (erased (List (Nat)) ec em hl as xs) (erased (Nat) x1 x2 w u) (subterm erased (FullAll ec em hl as xs) fa) (erased (In x1 xs) i1)
     (erased (In x2 as) i2) (erased (Nth (Nat) hl x1 w) pw) (erased (Nth (Nat) em w u) pu) (erased (Nth (Nat) hl x2 u) pv) -> (erased (Nth (Nat) ec x1 x2) r))
   (let-match erased fa (FuCons _ _ _ _ xs1 _ fr fa1) (absurd (FuNil _ _ _ _) i1))
@@ -110,7 +103,6 @@
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (kernel-lt dc x fc rc lf (ker-of dc x fc rc as kl ix)))
 
-; edge (node (face x)) = x.
 (def-fns _ $ (erased edge-nf : (erased (Nat) d x x1 z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Nth (Nat) f x x1) px)
     (erased (Nth (Nat) n x1 z) pz) -> (erased (Nth (Nat) e z x) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
@@ -135,7 +127,6 @@
   (let-match erased iy (InHere _ _) ((InThere _ _ _ iy1) (rlto-at ec fc em hl as ys1 x y rt1 iy1)))
   (values p rp))
 
-; pre_embed_inj: h is injective on the kernel.
 (def-fns _ $ (erased pre-embed-inj : (erased (Nat) dc dm x y w) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (FullAll ec em hl as as) fa) (erased (In x as) ix) (erased (In y as) iy)
     (erased (Nth (Nat) hl x w) pw) (erased (Nth (Nat) hl y w) pw2) -> (erased (Eq (Nat) x y) r))
@@ -168,13 +159,11 @@
   (let-match erased w3 (MkSomePath _ _ xs _ _ pxy))
   (cface-inj dc dm x y w ec nc fc ksc rc em nm fm ksm as hl (Nil _) xs en ix pxy pw pw2))
 
-; A pair of kernel darts where embed_full fails: h x2 = edge (h x1) and edge x1 = y is not x2.
 (def-adts $ (FullBad : ((List (Nat)) ec em as hl) -> Type)
   enum
   (many MkFullBad : (erased (List (Nat)) ec em as hl) (erased (Nat) x1 x2 w u y) (erased (In x1 as) i1) (erased (In x2 as) i2) (erased (Nth (Nat) hl x1 w) pw)
       (erased (Nth (Nat) em w u) pu) (erased (Nth (Nat) hl x2 u) pv) (erased (Nth (Nat) ec x1 y) py) (erased (Apart (Nat) Lt y x2) ne) -> (FullBad ec em as hl)))
 
-; Every dart of xs is in as.
 (def-adts $ (Within : ((List (Nat)) xs as) -> Type)
   enum
   (many WNil : (erased (List (Nat)) as) -> (Within (Nil (Nat)) as))
@@ -216,7 +205,6 @@
   (let-match erased (all-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en ys1 sy1) (OrR _ _ fa) ((OrL _ _ b) (OrL _ _ b)))
   (OrR _ _ (FuCons ec em hl as ys1 x1 fr fa)))
 
-; embed_full as a finite decision over the pairs of kernel darts: the certificate, or a pair where it fails.
 (def-fns _ $ (erased full-dec : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     -> (erased (Or (FullBad ec em as hl) (FullAll ec em hl as as)) r))
   (all-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en as (within-refl as)))
@@ -229,7 +217,6 @@
   (let ((erased nfm) (erased nim) (erased fim) (erased _) (erased qem) (erased qnm) (erased qfm)) (hyper-core dm em nm fm (gm-hyper dm em nm fm ksm g)))
   (values nfc nic fic nfm nim fim qe qn qf qem qnm qfm))
 
-; A dart y off rc whose edge image and node image are off the kernel, with node (edge y) in the kernel, is excluded by GcOK.
 (def-fns _ $ (erased absurd no-heen : (erased (Nat) dc dm y y2 t) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (Lt y dc) ly) (erased (NotIn y rc) oyr) (erased (Nth (Nat) ec y y2) py) (erased (NotIn y as) oy) (erased (NotIn y2 as) oy2)
     (erased (Nth (Nat) nc y2 t) pt) (erased (In t as) it) -> (erased (False) r))
@@ -239,7 +226,6 @@
   (chord-cases dc dm y y2 ec nc fc ksc rc em nm fm ksm as hl en (gc-at dc y ec nc rc as ok ly) py oyr
     (node-off-ring dc dm y2 t ec nc fc ksc rc em nm fm ksm as hl en gy2 pt it) oy oy2))
 
-; embed_inj with x in the kernel: h x = embed y, y off rc, gives x = y.
 (def-fns _ $ (erased inj-ker : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FullAll ec em hl as as) fa) (erased (In x as) ix) (erased (Lt y dc) ly) (erased (NotIn y rc) oyr)
     (erased (Nth (Nat) hl x u) pu) (erased (HEmb ec nc em nm fm as hl y u) hy) -> (erased (Eq (Nat) x y) r))
@@ -271,7 +257,6 @@
   (let-match erased e (Refl _ _))
   (Refl _ x))
 
-; embed_inj with node x in the kernel.
 (def-fns _ $ (erased inj-node : (erased (Nat) dc dm x y m u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa) (erased (NotIn x rc) oxr)
     (erased (Lt y dc) ly) (erased (NotIn y rc) oyr) (erased (Nth (Nat) nc x m) pm) (erased (In m as) im) (erased (HEmb ec nc em nm fm as hl x u) hx)
@@ -289,7 +274,6 @@
   (let-match erased (inj-ker dc dm m m2 wm ec nc fc ksc rc em nm fm ksm as hl en ok fa im lm2 om2 pwm hv) (Refl _ _))
   (perm-inj dc x y m nc nic qn pm pm2))
 
-; embed_inj: embed is injective off rc.
 (def-fns _ $ (erased embed-inj : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa) (erased (Lt x dc) lx) (erased (NotIn x rc) oxr)
     (erased (Lt y dc) ly) (erased (NotIn y rc) oyr) (erased (HEmb ec nc em nm fm as hl x u) hx) (erased (HEmb ec nc em nm fm as hl y u) hy) -> (erased (Eq (Nat) x y) r))
@@ -315,7 +299,6 @@
   (let-match erased en (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
   g)
 
-; embedE and embedN over the darts xs, as patch.sl's MorphOff: h1 (edge x) = edge (h1 x), and h1 (node x) = node (h1 x) off rc.
 (def-fns _ $ (erased h1-morph-e : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el)
     (erased (Length (Nat) h1 dc) lh) (subterm erased (List (Nat)) xs) (erased (Under xs dc) ux) -> (erased (MorphOff h1 ec em (Nil (Nat)) xs) r))
@@ -346,7 +329,6 @@
       (embl-at dc y w ec nc em nm fm as hl ids h1 io el lh pw))
     rest))
 
-; ie = insertE cc is shut under edge in the configuration map, and ins = insertE ccr in the map.
 (def-fns _ $ (erased gc-img : (erased (Nat) dc dm y z) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl cc ie) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (subterm erased (InsertE ec cc ie) iec) (erased (Under cc dc) uc) (erased (In y ie) iy) (erased (Nth (Nat) ec y z) pz)
     -> (erased (In z ie) r))
@@ -373,7 +355,6 @@
       (let-match erased (nth-fn _ em c2 c z (gm-ee dm c c2 em nm fm ksm g pc) pz) (Refl _ _))
       (InHere c _))))
 
-; h1 x is in ins when x is in ie.
 (def-fns _ $ (erased ins-in : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Iota dc ids) io)
     (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (subterm erased (InsertE ec cc ie) iec) (erased (Respects h1 cc ccr) rcc)
@@ -391,7 +372,6 @@
           (embl-at dc c l ec nc em nm fm as hl ids h1 io el lh pl) (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu))) (Refl _ _))
       (InThere u l _ (InHere u ins1)))))
 
-; Off rc, h1 x is in ins only when x is in ie (embed_inj).
 (def-fns _ $ (erased ins-apart : (erased (Nat) dc dm x c u l) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
     (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (Lt x dc) lx) (erased (NotIn x rc) oxr)
@@ -426,7 +406,6 @@
     (NotInCons u l2 _ (ins-apart dc dm x c2 u l2 ec nc fc ksc rc em nm fm ksm as hl ids h1 en ok fu fa io el lh lx oxr oc2 nx2 pu pv)
       (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc1 ie1 ccr1 ins1 en ok fu fa io el lh iec1 rcc1 iem1 dj1 lx oxr ox1 pu))))
 
-; On rc, h1 x is in ins only when x is in ie: through edge x, off rc.
 (def-fns _ $ (erased ins-ring : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
     (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
@@ -447,7 +426,6 @@
     (absurd (OrL _ _ iu) (in-notin v ins (gm-img dm u v em nm fm ksm ccr ins (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) iem iu puv) ov))
     ((OrR _ _ o) o)))
 
-; embed2.sl's InSides: the darts of h1 from place x on are in ins = insertE (map h1 cc) exactly when their place is in ie = insertE cc.
 (def-fns _ $ (erased ins-sides : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins pre)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
     (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
@@ -468,17 +446,12 @@
           ((OrR _ _ oxr) (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lx oxr ox pu)))
         rest))))
 
-; Each dart of xs is in r or in s.
 (def-adts $ (InEither : ((List (Nat)) r s xs) -> Type)
   enum
   (many IeNil : (erased (List (Nat)) r s) -> (InEither r s (Nil (Nat))))
   (many IeCons : (erased (List (Nat)) r s xs) (erased (Nat) x) (erased (Or (In x r) (In x s)) p) (erased (InEither r s xs) rest)
       -> (InEither r s (Cons (Nat) x xs))))
 
-; What embed_disk, embed_rem and embed_patch give embed2.sl and contract.sl: a patch of the map (em, nm, fm) from a disk map,
-; whose darts embd sends into the configuration map as pull-col asks, onto the darts off rc, with its ring bd sent to erc =
-; rev (map edge rc) (Coq's map edge of its ring, which is rev rc here), and hd = h1 . embd, and a remainder map; with
-; cface_h1 (h1 sends faces into faces). Built by embed6.sl.
 (def-adts $ (EmbedPatch : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
   (many MkEmbedPatch : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc0 erc h1f idc)
@@ -489,15 +462,11 @@
       (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) (erased (Iota dc idc) ioc)
       (erased (InEither rc embd idc) cv) -> (EmbedPatch dc ec fc rc dm em nm fm h1)))
 
-; rev rc = c0 :: cp is a node cycle on distinct faces of the configuration map: embeddable's sfcycle node of Coq's ring,
-; which appears to be rev rc here, as Cpring reads it.
 (def-adts $ (NodeRing : ((List (Nat)) nc fc rc) -> Type)
   enum
   (many MkNodeRing : (erased (List (Nat)) nc fc rc cp) (erased (Nat) c0) (erased (RevApp (Nat) rc (Nil (Nat)) (Cons (Nat) c0 cp)) rv)
       (erased (SCycle nc fc c0 cp) sc) -> (NodeRing nc fc rc)))
 
-; The construction of embed_disk, embed_rem and embed_patch (embed6.sl's patch-open): a function at a level F giving the
-; EmbedPatch of an embedding h1 listed on the darts ids of the configuration map, for a ring rc that is a NodeRing.
 (def-adts $ (PatchOpen : -> Type)
   enum
   (many MkPatchOpen : (erased (Level) F)
@@ -507,8 +476,6 @@
           -> (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep)) mk)
       -> (PatchOpen)))
 
-; radius2 of embeddable as a certificate over the kernel as: from the face of x0, each kernel dart x is two edge steps away,
-; x0 ~ a, edge a = ea in as, ea ~ eb = edge b, b ~ x (~ the faces of the configuration map).
 (def-adts $ (R2At : ((List (Nat)) ec fc as) ((Nat) x0 x) -> Type)
   enum
   (many MkR2At : (erased (List (Nat)) ec fc as) (erased (Nat) x0 x a ea b eb) (erased (SomePath fc (Nil (Nat)) x0 a) pa) (erased (Nth (Nat) ec a ea) pea)
@@ -525,8 +492,7 @@
   enum
   (many MkRadius2 : (erased (List (Nat)) ec fc as) (erased (Nat) x0) (erased (In x0 as) jx0) (erased (R2All ec fc as x0 as) ra) -> (Radius2 ec fc as)))
 
-; After adj_kernel_max of embed.v (which Coq reads off good_ring_arity), as a certificate: from each dart w off the kernel,
-; one of w, f w, ..., f^4 w has its edge image off the kernel. KmRun ... j w: one of the first j + 1 face iterates of w does.
+; KmRun ... j w: one of the first j + 1 face iterates of w has its edge image off the kernel.
 (def-adts $ (KmRun : ((List (Nat)) ec fc as) ((Nat) j w) -> Type)
   enum
   (many KrHere : (erased (List (Nat)) ec fc as) (erased (Nat) j w ew) (erased (Nth (Nat) ec w ew) pe) (erased (NotIn ew as) oe) -> (KmRun ec fc as j w))
@@ -543,8 +509,6 @@
   enum
   (many MkKerMax : (erased (Nat) dc) (erased (List (Nat)) ec fc as ids) (erased (Iota dc ids) io) (erased (KmAll ec fc as ids) ka) -> (KerMax dc ec fc as)))
 
-; The step of embed_full that rests on Birkhoff (fullred.sl's full-red-of): a pair of kernel darts where embed_full fails,
-; in a map as birkhoff-reduces takes it, with the radius2 and KerMax certificates of the configuration, gives a reduction.
 (def-adts $ (FullRedR : -> Type)
   enum
   (many MkFullRedR : (erased (Level) F B)
@@ -553,8 +517,6 @@
           (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
       -> (FullRedR)))
 
-; What the embedding gives when embed_full holds: embed listed as h1 on the darts ids, embedE at every dart and embedN off
-; rc as MorphOff lists, the certificate of embed_full (for pre-embed-inj, embed-inj and ins-sides), and the patch.
 (def-adts $ (EmbedOut : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl) -> Type)
   enum
   (many MkEmbedOut : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (Iota dc ids) io)
@@ -562,9 +524,6 @@
       (erased (MorphOff h1 ec em (Nil (Nat)) ids) me) (erased (MorphOff h1 nc nm rc ids) mn) (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep)
       -> (EmbedOut dc ec nc fc ksc rc dm em nm fm ksm as hl)))
 
-; The embedding of embed.v from a preembedding, with minimality as data: in a connected Pbpp map with no four-colouring, the
-; EEnv of a configuration whose kernel preembeds gives a reduction (where embed_full fails) or an EmbedOut. A level factory:
-; run is at a level L minted after those of the two hypotheses.
 (def-fns _ $ (erased embed-main : (erased (FullRedR) frd) (erased (PatchOpen) po) -> (erased (Level) L B)
     (erased (Fn L (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
         (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)

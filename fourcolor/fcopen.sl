@@ -1,8 +1,3 @@
-; four-color-open: FourColor of defs.sl from the steps whose proofs are computed: UnavE cfs (unav/qztproof.sl), AllRedC
-; CRX css (red/proof-c.sl), BirkhoffChecks (red/bproof.sl) and CfCerts cfs (embed4proof.sl), for the css of red/chunks.sl.
-; cfs-run decodes cfs again from chunk-srcs, for a native job. Load after evalid.sl, triad.sl, trivfive.sl, inductfc.sl
-; and red/chunks.sl, in the chain PLAN.md gives.
-
 (let ((many cfs) (erased cl)) (concat-c css))
 
 (def-fns _ $ (erased concat-fn : (erased (List (List (Config))) ks) (erased (List (Config)) a b) (subterm erased (ConcatL ks a) p)

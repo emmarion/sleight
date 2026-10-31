@@ -1,6 +1,3 @@
-; cfcerts-proof: notembed.sl's CfCerts for the cfs of fcopen.sl, from embed4.sl's AllGc, decided by one native.sl job per
-; chunk of chunk-srcs, given the chunk's strings, after native-run. Load after embed4.sl, fcopen.sl and native.sl.
-
 (def-fns _ $ (erased allgc-concat : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
     (erased (OnChunks AllGc css) a) -> (erased (AllGc cfs) r))
   (match erased p _

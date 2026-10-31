@@ -1,7 +1,3 @@
-; An Analysis, from unavoidability (UnavE), reducibility (AllRedC) and two open steps with minimality as data:
-; minimal_counter_example_is_plain_cubic_pentagonal of birkhoff.v (BirkGeo) and not_embed_reducible of embed.v (NotEmbed).
-; Load after unav/unave.sl, in the chain that PLAN.md gives.
-
 (def-fns _ $ (erased perm-unique : (erased (Nat) d) (erased (List (Nat)) p q1 q2) (erased (HPerm d p q1) pm1) (erased (HPerm d p q2) pm2)
     -> (erased (Eq (List (Nat)) q1 q2) r))
   (let-match erased pm1 (HMkPerm _ _ _ ids io lp q1p pq1))
@@ -12,8 +8,6 @@
     (respects-assoc q2 p q1 ids ids q1 d pq2 (respects-id-right d ids q1 io lq1) q1p (iota-length d ids io) lp)
     (respects-id-left d ids q2 io (perm-under d q2 p (perm-sym d p q2 pm2)))))
 
-; minimal_counter_example_mirror of coloring.v, with minimality as data: the mirror (fn, ni, fi) of MapOrMirror is planar,
-; bridgeless, plain and precubic and is uncolourable, and its reductions give reductions of the map.
 (def-fns _ $ (erased pbpp-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Pbpp d e n f) p) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) -> (erased (Pbpp d fn ni fi) r))
   (let-match erased p (MkPbpp _ _ _ _ h g b pl pc))
@@ -55,7 +49,6 @@
     (MkReduces Hi d e n f ms sm (MkColorFrom Hi M d e n f ms MirrorW (MkMirrorW d e n f fn ni fi ms h rfn pf g) ph mirror-glue)))
   (values Hi rm))
 
-; css concatenated is cfs.
 (def-adts $ (ConcatL : ((List (List (Config))) css) ((List (Config)) cfs) -> Type)
   enum
   (many CLNil : -> (ConcatL (Nil (List (Config))) (Nil (Config))))
@@ -92,9 +85,6 @@
     ((MemHere _ _ _) rd)
     ((MemThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))
 
-; minimal_counter_example_is_plain_cubic_pentagonal of birkhoff.v, with Coq's cubic part from coloring.v's
-; minimal_counter_example_is_cubic, and minimality as data: a connected planar bridgeless plain precubic map that the search
-; finds uncolourable is plain cubic with every face above four darts (Geo), or reduces.
 (def-adts $ (BirkGeo : -> Type)
   enum
   (many MkBirkGeo : (erased (Level) F B)
@@ -102,9 +92,6 @@
           -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r)) geo)
       -> (BirkGeo)))
 
-; not_embed_reducible of embed.v, for the configurations of cfs, with minimality as data: a map as BirkGeo takes it, Geo, in
-; which the kernel of a configuration of cfs, C-reducible at X with contract cc, preembeds as CfEmbed states it, reduces. Coq's
-; embeddable, which the quiz checks of cfquiz.v establish there, is part of what this leaves open.
 (def-adts $ (NotEmbed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
   (many MkNotEmbed : (erased (Level) X) (erased (List (Config)) cfs) (erased (Level) F B)
@@ -116,9 +103,6 @@
           -> (erased (Reduces B dm em nm fm) r)) emb)
       -> (NotEmbed X cfs)))
 
-; present.v's no_fit_the_redpart and the use of unavoidability in four_color_hypermap, with minimality as data: a map with no
-; dart is coloured, a disconnected one splits (split-reduces), and a connected one reduces through BirkGeo, or through
-; unavoidability, a configuration of cfs and NotEmbed, on the map or its mirror.
 (def-fns _ $ (erased embed-analysis : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl)
     (erased (AllRedC X css) ar) (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed X cfs) ne) -> (erased (Analysis) an))
   (let-match erased u (MkUnavE _ lv every))

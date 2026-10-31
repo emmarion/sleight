@@ -1,6 +1,3 @@
-; embed_functor of embed.v (embed3.sl's FunctorAll) and embed3.sl's GcOK on the configuration maps that cpmap.sl builds,
-; from certificates that a run decides (embed4goal.sl). Load after embed3.sl.
-
 (def-adts $ (NonCen : ((List (Nat)) ec em hl) ((Nat) x) -> Type)
   enum
   (many MkNonCen : (erased (List (Nat)) ec em hl) (erased (Nat) x y w v u) (erased (Nth (Nat) ec x y) py) (erased (Nth (Nat) hl x w) pw)
@@ -97,7 +94,6 @@
   (let ((erased k)) (ker-of d x f r as kl ix))
   (ker-in d x f r as2 kl2 k (kernel-lt d x f r lf k)))
 
-; Centrality is decided at a kernel dart whose edge image is in the kernel.
 (def-fns _ $ (erased cstat-dec : (erased (Nat) dc dm z y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (In z as) iz) (erased (Nth (Nat) ec z y) py) (erased (In y as) iy)
     -> (erased (Or (CStat ec em hl (BTrue) z) (CStat ec em hl (BFalse) z)) r))
@@ -111,7 +107,6 @@
     ((Equal _ _ _) (OrL _ _ (CsCen ec em hl z (MkCentral ec em hl z y w v py pw pv pu))))
     ((Unequal _ _ _ _ ne) (OrR _ _ (CsNon ec em hl z (MkNonCen ec em hl z y w v u py pw pv pu ne))))))
 
-; The status of y is that of its edge image x.
 (def-fns _ $ (erased cstat-edge : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid) (erased (Bool) b)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (In x as) ix) (erased (Nth (Nat) ec x y) py) (erased (CStat ec em hl b y) s)
     -> (erased (CStat ec em hl b x) r))
@@ -163,7 +158,6 @@
   (let-match erased (nth-fn _ em w v u pm pu) (Refl _ _))
   (apart-irrefl v ne))
 
-; For z central with edge image y in the kernel, and n z1 = z: n (h z1) = h z.
 (def-fns _ $ (erased cen-pred : (erased (Nat) dc dm z z1 y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (Central ec em hl z) c) (erased (Nth (Nat) nc z1 z) pn)
     (erased (Nth (Nat) ec z y) py) (erased (In y as) iy)
@@ -176,7 +170,6 @@
   (let ((erased w1) (erased pw1) (erased pfv)) (h-face dc dm y z1 v ec nc fc ksc rc em nm fm ksm as hl en iy (hyper-third dc y z z1 ec nc fc hc py pn) pv))
   (values w1 w pw1 pw (gm-nfe dm w v w1 em nm fm ksm g pm pfv)))
 
-; At a node a, b = n a, c = n b of the kernel with every edge image in it, a is central when b and c are.
 (def-fns _ $ (erased node-rule : (erased (Nat) dc dm a b c) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (Tri ec nc as0 a b c) t) (erased (Central ec em hl b) cb)
     (erased (Central ec em hl c) cec) -> (erased (Central ec em hl a) r))
@@ -231,7 +224,6 @@
   (let-match erased p (PathStep _ _ xs1 _ z _ pz _ p1) ((PathHere _ _ _) ib))
   (ker-face-inv dc dm a z ec nc fc ksc rc em nm fm ksm as hl en (ker-back dc dm z b ec nc fc ksc rc em nm fm ksm as hl s xs1 en p1 ib) pz))
 
-; The edge image of the start of a path of rlinks to a kernel dart is in the kernel.
 (def-fns _ $ (erased rl-edge-in : (erased (Nat) dc dm t y te) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl p) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (RlPath ec fc em hl as t p y) rp) (erased (In y as) iy) (erased (Nth (Nat) ec t te) pte) -> (erased (In te as) r))
   (match erased rp _
@@ -251,8 +243,6 @@
   (let-match erased ca (CaCons _ _ _ _ _ xs1 y c ca1) (absurd (CaNil _ _ _ _ _) iz))
   (match erased iz _ ((InHere _ _) c) ((InThere _ _ _ iz1) (crossall-at ec as fid lab ns xs1 z ca1 iz1))))
 
-; A path of rlinks from the face of a dart labelled 1 to one labelled 0 leaves a face labelled 1 by the edge of a central
-; dart to a face labelled 0, which the cut says is not central.
 (def-fns _ $ (erased absurd path-cross : (erased (Nat) dc dm z q y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid lab ns p)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (CrossAll ec as0 fid lab ns as0) ca) (erased (AllCStat ec em hl (BFalse) ns) an)
     (subterm erased (RlPath ec fc em hl as z p y) rp) (erased (In y as) iy) (erased (Nth (Nat) ec z q) pq) (erased (LabAt fid lab q (Succ (Zero))) lq)
@@ -279,8 +269,6 @@
         (absurd (CxNon _ _ _ _ _ _ i)
           (cstat-clash ec em hl t (CsCen ec em hl t ct) (cstat-of dc dm t ec nc fc ksc rc em nm fm ksm as hl as0 fid ns (BFalse) fe it i an)))))))
 
-; A cut of the kernel faces, labelled 1 and 0, with x and y on its two sides: the rlink path of the preembedding from the face
-; of x to y crosses it.
 (def-fns _ $ (erased absurd cut-sound : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl as0 fid lab ns)
     (erased (FEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid) fe) (erased (In x as0) ix) (erased (LabAt fid lab x (Succ (Zero))) lx)
     (erased (In y as0) iy) (erased (LabAt fid lab y (Zero)) ly) (erased (CrossAll ec as0 fid lab ns as0) ca) (erased (AllCStat ec em hl (BFalse) ns) an)
@@ -441,9 +429,6 @@
   (let-match erased km (MkKerMax _ _ _ _ ids io ka))
   (MkKerMax dc ec fc as ids io (kma-move dc ec fc rc as0 as lf kl0 kl ids ka)))
 
-; What a run decides of a configuration of red/configs.sl on the map cpmap.sl builds: its kernel as, the conditions GcOK, for
-; each kernel dart whose edge image is in the kernel a refutation of it not being central (fid labelling the faces), the
-; ring as a node cycle (NodeRing), radius2 and KerMax.
 (def-adts $ (CfGc : ((Config) cf) -> Type)
   enum
   (many MkCfGc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc as fid)
@@ -469,7 +454,6 @@
   (let-match erased (hyper-node-unique dc ec nc0 fc nc hc0 h) (Refl _ _))
   (values as0 fid kl0 ok0 rf fa nr rd km))
 
-; GcOK for any kernel list of a configuration of cfs, on the map cpmap.sl builds.
 (def-fns _ $ (erased cf-gcok : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc)
     (erased (List (Nat)) ec nc fc rc as) (erased (AllGc cfs) ag) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (Hypermap dc ec nc fc) h) (erased (KernelList dc fc rc as) kl) -> (erased (GcOK dc ec nc rc as) r))
@@ -477,7 +461,6 @@
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc h))
   (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0))
 
-; embed_functor: FunctorAll for an EEnv on the map cpmap.sl builds of a configuration of cfs.
 (def-fns _ $ (erased cf-functor : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
     (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (AllGc cfs) ag) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (FunctorAll ec em as hl as) r))
@@ -488,7 +471,6 @@
   (let ((erased fe)) (MkFEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid en kl0 (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0) rf))
   (functor-list dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid fe fa as (ia-self as)))
 
-; notembed.sl's CfCerts from AllGc. A level factory: gc is at a level minted after those of cf-gcok and cf-functor.
 (def-fns _ $ (erased cfcerts-of : (erased (List (Config)) cfs) (erased (AllGc cfs) ag) -> (erased (CfCerts cfs) r))
   (def-lvl F)
   (def-fns F $ (erased gc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
@@ -504,17 +486,12 @@
       nr (radius-move dc ec fc rc as0 as lf kl0 kl rd) (kermax-move dc ec fc rc as0 as lf kl0 kl km)))
   (MkCfCerts cfs F gc))
 
-; The run. The kernel is labelled by a face walk to the ring; the refutations are found by a search on the statuses of the
-; kernel darts (unknown, not central, central) that applies node-rule, splits on a dart, or closes with a cut of the kernel
-; faces whose crossing darts are all not central, found by a flood fill over the other kernel edges.
-
 (def-adts $ (CopyL : ((List (Nat)) xs) ((List (Copy (Nat))) ws) -> Type)
   enum
   (many CpNil : -> (CopyL (Nil (Nat)) (Nil (Copy (Nat)))))
   (many CpCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) p)
       -> (CopyL (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) ws))))
 
-; xs as an array, for lookups in constant time.
 (def-adts $ (Tab : ((List (Nat)) xs) -> Type)
   enum
   (many MkTab : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) cp) (many (Nat) len)
@@ -660,7 +637,6 @@
       (erased (Nth (Nat) ec b eb) pb) (erased (Nth (Nat) ec c ecc) pcc) (erased (In a as) ia) (erased (In b as) ib) (erased (In c as) ic)
       (erased (In ea as) iea) (erased (In eb as) ieb) (erased (In ecc as) iec) -> (TriD ec nc as)))
 
-; The three rotations of the node of a, when a is its least dart and the node and its edge images are in the kernel.
 (def-fns _ $ (many tri3-c : (erased (List (Nat)) ec nc) (many (Tab ec) te) (many (Tab nc) tn) (many (List (Nat)) as) (many (Nat) a) -> (many (List (TriD ec nc as)) ts))
   (let ((many (List (TriD ec nc as)) no)) (Nil _))
   (let-match many (tab-q nc tn a) (NQYes _ _ _ b pab) ((NQNo _ _ _) no))
@@ -708,8 +684,6 @@
 (def-fns _ $ (many st-c : (many (Nat) z y) (many (List (Nat)) ns cs) -> (many (Nat) s))
   (bif _ (orb (mem-nat z ns) (mem-nat y ns)) 1 (bif _ (orb (mem-nat z cs) (mem-nat y cs)) 2 0)))
 
-; Mode 0: a not central-known, b and c central; 1: a not central, b central, c unknown; 3: a not central, b unknown, c central;
-; 2: a not central, b and c unknown.
 (def-fns _ $ (many fits : (many (Nat) mode sa sb sc) -> (many (Bool) r))
   (match many (nat-eqb mode 0) _
     ((BTrue) (andb (negb (nat-eqb sa 2)) (andb (nat-eqb sb 2) (nat-eqb sc 2))))
@@ -718,7 +692,6 @@
 (def-fns _ $ (many hit : (erased (List (Nat)) ec nc as) (many (Maybe (TriD ec nc as)) h) (many (Bool) ok) (many (TriD ec nc as) td) -> (many (Maybe (TriD ec nc as)) r))
   (match many h _ ((None _) (bif _ ok (Some _ td) h)) ((Some _ _) h)))
 
-; The first rotation fitting each mode, 0, 1, 3 and 2, in one pass.
 (def-fns _ $ (many scan-c : (erased (List (Nat)) ec nc as) (many (List (Nat)) ns cs) (many (Maybe (TriD ec nc as)) h0 h1 h3 h2)
     (subterm many (List (TriD ec nc as)) ts) -> (many (Maybe (TriD ec nc as)) r0 r1 r3 r2))
   (let-match many ts (Cons _ td rest) ((Nil _) (values h0 h1 h3 h2)))
@@ -841,7 +814,6 @@
   (many RqYes : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) (erased (Refut ec nc fid as (Cons (Nat) z (Nil (Nat))) (Nil (Nat))) r) -> (RefQ ec nc fid as z))
   (many RqNo : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) -> (RefQ ec nc fid as z)))
 
-; A refutation for each kernel dart below its edge image in the kernel.
 (def-fns _ $ (many refs-c : (many (Nat) d) (erased (List (Nat)) ec fid) (many (Tab ec) te) (many (Tab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
     (subterm many (List (KEdge)) ks) -> (many (List (RefD ec nc fid as)) r))
   (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))

@@ -1,6 +1,3 @@
-; The contraction of contract_coloring of contract.v, with minimality as data. Load after contract.sl and birkhoff2.sl.
-
-; WalkupF at the live dart z: z cut out of e and n, and added to the dead darts.
 (def-fns _ $ (erased walk-dead-f : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Hypermap d e2 n2 f2) h2)
@@ -18,7 +15,6 @@
       (apart-irrefl x (notin-in x x s out iy))))
   r)
 
-; The contraction of the edge x, ex: WalkupF at x, then at ex, both kept as dead darts. The faces of x and ex merge.
 (def-fns _ $ (erased contract-dead : (erased (Nat) d m x ex) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Dead d e n f s m) dd) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) e x ex) pex) (erased (Apart (Nat) Lt ex x) nex)
     -> (erased (List (Nat)) e1 n1 f1 e2 n2 f2) (erased (Nat) m2) (erased (Skip e x e1) ske1) (erased (Skip n x n1) skn1) (erased (Skip e1 ex e2) ske2)
@@ -35,13 +31,11 @@
   (let-match erased em2 (Refl _ _))
   (values e1 n1 f1 e2 n2 f2 m2 ske1 skn1 ske2 skn2 h1 h2 g2 (Refl _ m) dd2))
 
-; After WalkupF at z, a face step a -> c with neither e^-1 a nor a nor c at z is kept.
 (def-fns _ $ (erased wf-keep : (erased (Nat) d z a b c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
     (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b z) nb) (erased (Apart (Nat) Lt a z) na)
     (erased (Nth (Nat) f a c) pa) (erased (Apart (Nat) Lt c z) nc) -> (erased (Nth (Nat) f2 a c) r))
   (hyper-third d a b c e2 n2 f2 h2 (skip-keep z b a e e2 ske pb nb na) (skip-keep z c b n n2 skn (hyper-node d c a b e n f h pa pb) nc nb)))
 
-; After WalkupF at z, a face step a -> z continues to f (e z).
 (def-fns _ $ (erased wf-jump : (erased (Nat) d z a b ez w) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
     (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e b a) pb) (erased (Apart (Nat) Lt b z) nb) (erased (Apart (Nat) Lt a z) na)
     (erased (Nth (Nat) f a z) pa) (erased (Nth (Nat) e z ez) pz) (erased (Nth (Nat) f ez w) pw) -> (erased (Nth (Nat) f2 a w) r))
@@ -52,13 +46,12 @@
     (absurd (Equal _ _ _) (let-match erased (nth-fn _ n z z b nwz nzb) (Refl _ _)) (apart-irrefl b nb)))
   (hyper-third d a b w e2 n2 f2 h2 (skip-keep z b a e e2 ske pb nb na) (skip-cut-at d z w b n ni n2 pn skn nwz nzb nwz2)))
 
-; Where ez steps after WalkupF at z: to u = f z, or to v = f ez when f z = z.
+; u = f z and v = f ez; j is where ez steps after WalkupF at z.
 (def-adts $ (Jump1 : ((Nat) z u v j) -> Type)
   enum
   (many J1Keep : (erased (Nat) z u v) (erased (Apart (Nat) Lt u z) nu) -> (Jump1 z u v u))
   (many J1Loop : (erased (Nat) z v) -> (Jump1 z z v v)))
 
-; After WalkupF at z, with ez = e z and z = e ez, ez steps to f z, or to f ez when z is alone on its face.
 (def-fns _ $ (erased wf-partner : (erased (Nat) d z ez u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e2 n2 f2) h2)
     (erased (Skip e z e2) ske) (erased (Skip n z n2) skn) (erased (Nth (Nat) e z ez) pz) (erased (Nth (Nat) e ez z) pez) (erased (Apart (Nat) Lt ez z) nez)
     (erased (Nth (Nat) f z u) pu) (erased (Nth (Nat) f ez v) pv) -> (erased (Nat) j) (erased (Nth (Nat) f2 ez j) r) (erased (Jump1 z u v j) jp))
@@ -73,8 +66,7 @@
       (values v (hyper-third d ez ez v e2 n2 f2 h2 e2z (skip-cut-at d z v ez n ni n2 pn skn nvz nzz nvz2)) (J1Loop z v))))
   (values u (hyper-third d ez ez u e2 n2 f2 h2 e2z (skip-keep z u ez n n2 skn (hyper-node d u z ez e n f h pu pez) nuz nez)) (J1Keep z u v nuz)))
 
-; Where a face step a -> c goes after contracting x, ex (u = f x, v = f ex): it is kept off x and ex, and otherwise jumps
-; to the other face, or stays on its own when the other face is a single dart.
+; u = f x and v = f ex; j is where a face step a -> c goes after contracting x, ex.
 (def-adts $ (Jump : ((Nat) x ex u v c j) -> Type)
   enum
   (many JKeep : (erased (Nat) x ex u v c) (erased (Apart (Nat) Lt c x) nx) (erased (Apart (Nat) Lt c ex) ne) -> (Jump x ex u v c c))
@@ -118,7 +110,6 @@
   (let-match erased (nth-fn _ lab b l1 l2 (path-col lab f s xs a b l1 rf w p1) p2) (Refl _ _))
   (apart-irrefl l1 ne))
 
-; q agrees with p off the darts s, each step of the history cutting an edge pair x, y of the current permutation.
 (def-adts $ (EAgree : ((Nat) d) ((List (Nat)) p q s) -> Type)
   enum
   (many EAgNil : (erased (Nat) d) (erased (List (Nat)) p) -> (EAgree d p p (Nil (Nat))))
@@ -158,8 +149,6 @@
   (let-match erased (nth-fn _ lab a l2 l1 (path-col lab f s xs b a l2 rf w p2) p1) (Refl _ _))
   (apart-irrefl l1 ne))
 
-; The contraction of the edge x, ex of a map with dead darts s, whose e is plain off s, with u = f x, v = f ex and x and ex
-; told apart along the faces.
 (def-adts $ (CStep : ((Nat) d x ex) ((List (Nat)) e n f s e2 n2 f2) -> Type)
   enum
   (many MkCStep : (erased (Nat) d x ex m m2 u v) (erased (List (Nat)) e n f s e1 n1 f1 e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
@@ -184,7 +173,6 @@
   (values e2 n2 f2 m2 em dd2
     (MkCStep d x ex m m2 u v e n f s e1 n1 f1 e2 n2 f2 h g dd lp lx out pex pxe nex oex ske1 skn1 ske2 skn2 h1 h2 g2 em dd2 pu pv nb)))
 
-; Where a live dart's face step goes in the contraction.
 (def-fns _ $ (erased cs-face : (erased (Nat) d x ex a c) (erased (List (Nat)) e n f s e2 n2 f2) (erased (CStep d x ex e n f s e2 n2 f2) cs) (erased (Lt a d) la)
     (erased (NotIn a (Cons (Nat) ex (Cons (Nat) x s))) oa) (erased (Nth (Nat) f a c) pa)
     -> (erased (Nat) u v j) (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Nth (Nat) f2 a j) r) (erased (Jump x ex u v c j) jp))
@@ -207,7 +195,6 @@
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (values (fixed-out d a c f fi s pf ff pa oa) (perm-val d a c f fi pf pa)))
 
-; Along the face of ex from a live dart c, the contraction reaches u = f x (when f x is not x).
 (def-fns _ $ (erased walk-ex : (erased (Nat) d x ex c u) (erased (List (Nat)) e n f s e2 n2 f2 xs) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (subterm erased (Path f (Cons (Nat) ex (Nil (Nat))) c ex xs) w) (erased (Lt c d) lc) (erased (NotIn c (Cons (Nat) ex (Cons (Nat) x s))) oc)
     (erased (Nth (Nat) f x u) pu) (erased (Apart (Nat) Lt u x) nux) -> (erased (SomePath f2 (Nil (Nat)) c u) r))
@@ -226,7 +213,6 @@
   (let ((erased os) (erased lc1)) (cs-live-f d x ex c c1 e n f s e2 n2 f2 cs oc2 pc))
   (some-cat f2 c c1 u (some-step f2 c c1 r) (walk-ex d x ex c1 u e n f s e2 n2 f2 xs1 cs w1 lc1 (NotInCons c1 ex _ nce (NotInCons c1 x s ncx os)) pu nux)))
 
-; Along the face of x from a live dart c, the contraction reaches v = f ex (when f ex is not ex).
 (def-fns _ $ (erased walk-x : (erased (Nat) d x ex c v) (erased (List (Nat)) e n f s e2 n2 f2 xs) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (subterm erased (Path f (Cons (Nat) x (Nil (Nat))) c x xs) w) (erased (Lt c d) lc) (erased (NotIn c (Cons (Nat) ex (Cons (Nat) x s))) oc)
     (erased (Nth (Nat) f ex v) pv) (erased (Apart (Nat) Lt v ex) nve) -> (erased (SomePath f2 (Nil (Nat)) c v) r))
@@ -245,7 +231,6 @@
   (let ((erased os) (erased lc1)) (cs-live-f d x ex c c1 e n f s e2 n2 f2 cs oc2 pc))
   (some-cat f2 c c1 v (some-step f2 c c1 r) (walk-x d x ex c1 v e n f s e2 n2 f2 xs1 cs w1 lc1 (NotInCons c1 ex _ nce (NotInCons c1 x s ncx os)) pv nve)))
 
-; q sends x and ex to r and fixes every other dart below d.
 (def-adts $ (QMap : ((Nat) d x ex r) ((List (Nat)) q) -> Type)
   enum
   (many MkQMap : (erased (Nat) d x ex r) (erased (List (Nat)) ids q) (erased (Iota d ids) io) (erased (Upd2 ids x r ex r q) up) -> (QMap d x ex r q)))
@@ -269,7 +254,7 @@
   (let-match erased qm (MkQMap _ _ _ _ ids _ io up))
   (upd2-length ids q x r ex r d up (iota-length d ids io)))
 
-; The dart of the merged face that x and ex are sent to: u = f x, or v = f ex when f x = x, or any live y when both are alone.
+; u = f x and v = f ex; r is the dart of the merged face that x and ex are sent to.
 (def-adts $ (Rep : ((Nat) x ex u v r) -> Type)
   enum
   (many RepU : (erased (Nat) x ex u v) (erased (Apart (Nat) Lt u x) nu) -> (Rep x ex u v u))
@@ -292,13 +277,11 @@
   (let-match erased (perm-inj d a b c p q pm pa pb) (Refl _ _))
   ne)
 
-; A walk along f from a's image back to a, leaving a only at the end.
 (def-fns _ $ (erased back-walk : (erased (Nat) d a b) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (erased (Nth (Nat) f a b) pa) (erased (Lt a d) la)
     -> (erased (List (Nat)) xs) (erased (Path f (Cons (Nat) a (Nil (Nat))) b a xs) r))
   (let ((erased xs) (erased w)) (cycle d a b f fi pf pa la))
   (cut-first f (Nil _) xs b a w))
 
-; The contraction sends each face step a -> f a, read through q, along a face.
 (def-fns _ $ (erased qreach-at : (erased (Nat) d x ex r a c qa qc u v) (erased (List (Nat)) e n f s e2 n2 f2 q) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Rep x ex u v r) rp) (erased (QMap d x ex r q) qm) (erased (Lt a d) la)
     (erased (Nth (Nat) f a c) pa) (erased (Nth (Nat) q a qa) pqa) (erased (Nth (Nat) q c qc) pqc) -> (erased (SomePath f2 (Nil (Nat)) qa qc) res))
@@ -378,7 +361,6 @@
   (ReachCons f2 A1 Bt qa qc (qreach-at d x ex r a c qa qc u v e n f s e2 n2 f2 q cs pu pv rp qm la pc pqa pqc)
     (qreach-go d x ex r u v e n f s e2 n2 f2 q qf xs1 A1 Bt cs pu pv rp qm rqf lf uf ux1 ra1 rb1)))
 
-; Every face step a -> f a of the map, read through q, is a walk along the faces of the contraction.
 (def-fns _ $ (erased cs-qreach : (erased (Nat) d x ex r u v) (erased (List (Nat)) e n f s e2 n2 f2 q) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Rep x ex u v r) rp) (erased (QMap d x ex r q) qm)
     -> (erased (List (Nat)) qf) (erased (Respects q f qf) rqf) (erased (Reach f2 q qf) rc))
@@ -398,7 +380,6 @@
   (let-match erased pb (NthThere _ _ _ _ _ pb1))
   (reach-nth j1 a b f A1 Bs rc1 pa1 pb1))
 
-; A walk along f, read through q, is a walk along f2, when q sends each face step along f2.
 (def-fns _ $ (erased path-map : (erased (Nat) d a b qa qb) (erased (List (Nat)) f f2 q qf t xs) (erased (Reach f2 q qf) rq) (erased (Respects q f qf) rqf)
     (erased (Length (Nat) q d) lq) (erased (Under f d) uf) (subterm erased (Path f t a b xs) w) (erased (Lt a d) la) (erased (Nth (Nat) q a qa) pqa)
     (erased (Nth (Nat) q b qb) pqb) -> (erased (SomePath f2 (Nil (Nat)) qa qb) r))
@@ -408,7 +389,6 @@
   (some-cat f2 qa qa1 qb (reach-nth a qa qa1 f2 q qf rq pqa (respects-at q f qf a a1 qa1 rqf pa pqa1))
     (path-map d a1 b qa1 qb f f2 q qf t xs1 rq rqf lq uf w1 la1 pqa1 pqb)))
 
-; Pairs along faces of f stay so through q.
 (def-fns _ $ (erased reach-map : (erased (Nat) d) (erased (List (Nat)) f f2 q qf X Y X2 Y2) (erased (Reach f2 q qf) rq) (erased (Respects q f qf) rqf)
     (erased (Length (Nat) q d) lq) (erased (Under f d) uf) (subterm erased (Reach f X Y) rc) (erased (Under X d) ux) (erased (Respects q X X2) rx)
     (erased (Respects q Y Y2) ry) -> (erased (Reach f2 X2 Y2) r))
@@ -427,7 +407,6 @@
   (MkOrder p (Cons _ a (Nil _)) y a (Succ (Zero)) py (PathStep p _ (Nil _) a y y pa (NotInCons a y (Nil _) ne (NotInNil a)) (PathHere p _ y))
     (LengthCons _ a (Nil _) (Zero) (LengthNil _))))
 
-; Cutting z out of p keeps an order below 4 below 4.
 (def-fns _ $ (erased order-skip : (erased (Nat) d y z k) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk)
     (erased (Order p y k) o) (erased (Lt k (Succ (Succ (Succ (Succ (Zero)))))) lk) -> (erased (Nat) k2) (erased (Order p2 y k2) r)
     (erased (Lt k2 (Succ (Succ (Succ (Succ (Zero)))))) lk2))
@@ -473,7 +452,6 @@
   (let ((erased ks2) (erased os2) (erased u2)) (orders-skip d z p q p2 ids ks pm sk os u))
   (MkPrecubic d p2 ks2 (MkOrderList d p2 ids ks2 io os2) u2))
 
-; Each bond x-y of g from a dart x off s has its ends told apart along f.
 (def-adts $ (SepsOff : ((List (Nat)) f s) ((List (Bond)) g) -> Type)
   enum
   (many SONil : (erased (List (Nat)) f s) -> (SepsOff f s (Nil (Bond))))
@@ -482,13 +460,11 @@
   (many SOLive : (erased (List (Nat)) f s) (erased (List (Bond)) g) (erased (Nat) x y) (erased (Seps f x y) sp) (erased (SepsOff f s g) rest)
       -> (SepsOff f s (Cons (Bond) (MkBond x y) g))))
 
-; Bridgeless off the dead darts s.
 (def-adts $ (LBridgeless : ((Nat) d) ((List (Nat)) e f s) -> Type)
   enum
   (many MkLB : (erased (Nat) d) (erased (List (Nat)) e f s) (erased (List (Bond)) ge) (erased (Graph d e ge) gr) (erased (SepsOff f s ge) so)
       -> (LBridgeless d e f s)))
 
-; A live dart x on the face of its edge image.
 (def-adts $ (LBridge : ((Nat) d) ((List (Nat)) e f s) -> Type)
   enum
   (many MkLBr : (erased (Nat) d x y) (erased (List (Nat)) e f s) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) e x y) pxy)
@@ -505,7 +481,6 @@
   (let-match erased (orbits-dec d k x y f fi pf of lx (perm-val d x y e ei pe pxy)) (OrR _ _ sp) ((OrL _ _ w) (OrR _ _ (MkLBr d x y e f s lx out pxy w))))
   (OrL _ _ (SOLive f s g1 x y sp so)))
 
-; A map is bridgeless off s, or has a live bridge.
 (def-fns _ $ (erased lb-dec : (erased (Nat) d) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) -> (erased (HOr (LBridgeless d e f s) (LBridge d e f s)) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased ge) (erased gr)) (perm-graph d e nf pe))
@@ -591,7 +566,6 @@
     ((MVHit _ _) (values b qi (merge-hit lab L a b k m pk)))
     ((MVMiss _ _ _ ne) (values l qi (merge-miss lab L a b k l m pk ne)))))
 
-; The merged labels of the faces of x and ex are constant along each face step of the contraction from a live dart.
 (def-fns _ $ (erased cs-lstep : (erased (Nat) d x ex a j kx kex) (erased (List (Nat)) e n f s e2 n2 f2 lab L) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (erased (FaceLab d f lab) fl) (erased (Nth (Nat) lab x kx) plx) (erased (Nth (Nat) lab ex kex) plex) (erased (MergeL lab kex kx L) m) (erased (Lt a d) la)
     (erased (NotIn a (Cons (Nat) ex (Cons (Nat) x s))) oa) (erased (Nth (Nat) f2 a j) pj) -> (erased (Nat) l) (erased (Nth (Nat) L a l) ra) (erased (Nth (Nat) L j l) rj))
@@ -627,7 +601,6 @@
   (let ((erased nf2) (erased ni2) (erased fi2) (erased rnf2) (erased pe2) (erased pn2) (erased pf2)) (hyper-core d e2 n2 f2 h2))
   (cs-lpath d x ex a1 y l kx kex e n f s e2 n2 f2 lab L t xs1 cs fl plx plex m (perm-val d a a1 f2 fi2 pf2 pa1) (fixed-out d a a1 f2 fi2 _ pf2 ff pa1 oa) w1 ra1))
 
-; The two sides of a bridge w -> y of the contraction: w on the face of x and y on that of ex, or the other way round.
 (def-adts $ (BSides : ((List (Nat)) f) ((Nat) w y x ex) -> Type)
   enum
   (many BSX : (erased (List (Nat)) f) (erased (Nat) w y x ex) (erased (SomePath f (Nil (Nat)) w x) a) (erased (SomePath f (Nil (Nat)) y ex) b)
@@ -635,7 +608,6 @@
   (many BSE : (erased (List (Nat)) f) (erased (Nat) w y x ex) (erased (SomePath f (Nil (Nat)) w ex) a) (erased (SomePath f (Nil (Nat)) y x) b)
       -> (BSides f w y x ex)))
 
-; A live bridge of the contraction of a map bridgeless off s joins the faces of x and ex.
 (def-fns _ $ (erased cs-bridge : (erased (Nat) d x ex) (erased (List (Nat)) e n f s e2 n2 f2) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (erased (LBridgeless d e f s) lb) (erased (LBridge d e2 f2 (Cons (Nat) ex (Cons (Nat) x s))) br)
     -> (erased (Nat) w y) (erased (Lt w d) lw) (erased (NotIn w (Cons (Nat) ex (Cons (Nat) x s))) ow) (erased (Nth (Nat) e w y) pwy) (erased (BSides f w y x ex) bs))
@@ -725,7 +697,6 @@
     ((CHNil _ _ _ _ ids io h g pl pc) (iota-length d ids io)))
   (respects-length q p1 p d rq (ch-plength d m1 e0 n0 f0 e1 n1 f1 s1 p1 ch1)))
 
-; p fixes the live darts.
 (def-fns _ $ (erased ch-pfix : (erased (Nat) d m a) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch) (erased (Lt a d) la)
     (erased (NotIn a s) oa) -> (erased (Nth (Nat) p a a) r))
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr)
@@ -734,7 +705,6 @@
   (let-match erased oa1 (NotInCons _ _ _ nax oa2))
   (respects-at q p1 p a a a rq (ch-pfix d m1 a e0 n0 f0 e1 n1 f1 s1 p1 ch1 la oa2) (qmap-other d x ex r a q qm la nax nae)))
 
-; p sends every dart to a live one.
 (def-fns _ $ (erased ch-out : (erased (Nat) d m a b) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch) (erased (Lt a d) la)
     (erased (Nth (Nat) p a b) pb) -> (erased (Lt b d) lb) (erased (NotIn b s) ob))
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr)
@@ -764,7 +734,6 @@
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr) ((CHNil _ _ _ _ ids io h g pl pc) h))
   (ch-base d m1 e0 n0 f0 e1 n1 f1 s1 p1 ch1))
 
-; p is constant on each edge pair of dead darts.
 (def-fns _ $ (erased ch-pair : (erased (Nat) d m a b c c2) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch)
     (erased (In a s) ia) (erased (Nth (Nat) e0 a b) pab) (erased (Nth (Nat) p a c) pc) (erased (Nth (Nat) p b c2) pc2) -> (erased (Eq (Nat) c c2) r))
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr) (absurd (CHNil _ _ _ _ ids io h g pl pcb) ia))
@@ -806,7 +775,6 @@
   (let-match erased rp (RespCons _ xs1 ys1 a b pa rp1) ((RespNil _) (ReachNil f)))
   (ReachCons f xs1 ys1 a b (some-step f a b pa) (reach-self f xs1 ys1 rp1)))
 
-; p sends each face step of the original map along a face of the contraction.
 (def-fns _ $ (erased ch-reach : (erased (Nat) d m) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch)
     -> (erased (List (Nat)) pf) (erased (Respects p f0 pf) rpf) (erased (Reach f p pf) rc))
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr)
@@ -841,7 +809,6 @@
     ((IndIn _ xs1 ls1 x p id1) (let-match erased l (LengthCons _ _ _ k1 l1)) (LengthCons _ _ ls1 k1 (ind-length s xs1 ls1 k1 id1 l1)))
     ((IndOut _ xs1 ls1 x p id1) (let-match erased l (LengthCons _ _ _ k1 l1)) (LengthCons _ _ ls1 k1 (ind-length s xs1 ls1 k1 id1 l1)))))
 
-; The live darts hd and the dead ones, each with the hypermap they carry, patch the map along empty rings.
 (def-fns _ $ (erased dead-patch : (erased (Nat) d m) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) hm) (erased (Dead d e n f s m) dd)
     -> (erased (Nat) dl dr) (erased (List (Nat)) el nl fl er nr fr hd hr ids lab) (erased (Patch d dl dr e n f el nl fl er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt)
     (erased (Iota d ids) io) (erased (Ind s ids lab) id) (erased (SplitBy lab (Cons (Nat) (Zero) (Nil (Nat))) ids hd hr) sp))
@@ -960,14 +927,12 @@
   (let ((erased ks1) (erased os1) (erased rk1)) (part-orders d dl k1 e n f s el nl fl hd xs1 lp lpl u1 l1))
   (values (Cons _ (Succ (Succ (Zero))) ks1) (OrdCons el xs1 ks1 i _ (part-order d dl i e n f s el nl fl hd lp lpl li) os1) (RepeatCons _ k1 _ ks1 rk1)))
 
-; The live part is plain.
 (def-fns _ $ (erased part-plain : (erased (Nat) d dl) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
     (erased (LPlain d e s) lpl) -> (erased (AllOrder dl el (Succ (Succ (Zero)))) r))
   (let ((erased idd) (erased iod)) (iota-exists dl))
   (let ((erased ks) (erased os) (erased rk)) (part-orders d dl dl e n f s el nl fl hd idd lp lpl (iota-under dl idd iod) (iota-length dl idd iod)))
   (MkAllOrder dl (Succ (Succ (Zero))) el ks (MkOrderList dl el idd ks iod os) rk))
 
-; lab . hd is constant along the faces of the live part when lab is along those of the map.
 (def-fns _ $ (erased part-const : (erased (Nat) d dl) (erased (List (Nat)) e n f s el nl fl hd lab labl) (erased (List (Bond)) g)
     (erased (LivePart d dl e n f s el nl fl hd) lp) (erased (Respects lab f lab) rf) (erased (Respects lab hd labl) rl) (erased (Length (Nat) hd dl) lh)
     (subterm erased (Fun fl g) fn) -> (erased (Const labl g) r))
@@ -1007,8 +972,6 @@
   (AllSepCons gfl g1 i j (MkSep gfl i j labl k1 k2 (part-const d dl e n f s el nl fl hd lab labl gfl lp rf rl lh (graph-fun dl fl gfl grf)) q1 q2 ne)
     (part-seps d dl e n f s el nl fl hd g1 gfl lp lpl lb grf fn1)))
 
-; The live part of a planar map with a dead dart z, bridgeless and plain off the dead darts, is planar, bridgeless, plain and
-; precubic, and smaller.
 (def-fns _ $ (erased part-pbpp : (erased (Nat) d dl z) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
     (erased (Genus d e n f (Zero)) gen) (erased (LPlain d e s) lpl) (erased (LBridgeless d e f s) lb) (erased (Precubic d n) pc) (erased (In z s) iz)
     (erased (Lt z d) lz) -> (erased (Pbpp dl el nl fl) pb) (erased (Lt dl d) lt))
@@ -1036,7 +999,6 @@
       (part-plain d dl e n f s el nl fl hd lp lpl) (precubic-part d dl n hd ids nl nil idd pnl mnd iod io dhd lhd uhd pc))
     (add-le-right dr1 dl d1 a3)))
 
-; pos numbers each live dart by its place in hd.
 (def-fns _ $ (erased lp-pos : (erased (Nat) d dl) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
     -> (erased (List (Nat)) ids pos) (erased (Iota d ids) io) (erased (InvL hd ids pos) iv) (erased (Length (Nat) pos d) lpos))
   (let-match erased lp (MkLivePart _ _ dr _ _ _ _ _ _ _ er nr fr _ hr ids lab pt io id sp))
@@ -1058,7 +1020,6 @@
     ((IvIn _ xs1 ls1 x j p iv1) (UnderCons ls1 j k (nth-lt-length _ h j k x p lh) (invl-under h xs1 ls1 k iv1 lh lk)))
     ((IvOut _ xs1 ls1 x p iv1) (UnderCons ls1 (Zero) k lk (invl-under h xs1 ls1 k iv1 lh lk)))))
 
-; pos sends each face step of the map along a face of the live part.
 (def-fns _ $ (erased pos-reach-go : (erased (Nat) d dl m) (erased (List (Nat)) e n f s el nl fl hd ids pos posf xs A B) (erased (LivePart d dl e n f s el nl fl hd) lp)
     (erased (Iota d ids) io) (erased (InvL hd ids pos) iv) (erased (Dead d e n f s m) dd) (erased (Respects pos f posf) rpf) (erased (Length (Nat) pos d) lpos)
     (erased (Under xs d) ux) (subterm erased (Respects pos xs A) ra) (erased (Respects posf xs B) rb) -> (erased (Reach fl A B) res))
@@ -1093,8 +1054,6 @@
 (def-fns _ $ (erased lt-zero-of : (erased (Nat) i k) (erased (Lt i k) l) -> (erased (Lt (Zero) k) r))
   (match erased l _ ((LtZ b) (LtZ b)) ((LtS a b _) (LtZ b))))
 
-; The edge links of the original map through the renumbered dart map pC: those of contracted darts land on one face, the
-; others on edge links of the live part.
 (def-fns _ $ (erased lift-go : (erased (Nat) d m dl) (erased (List (Nat)) e0 n0 f0 e n f s p el nl fl hd ids pos pC ins ei e0i) (erased (List (Bond)) g)
     (erased (CHist d m e0 n0 f0 e n f s p) ch) (erased (LivePart d dl e n f s el nl fl hd) lp) (erased (Iota d ids) io) (erased (InvL hd ids pos) iv)
     (erased (Respects pos p pC) rpc) (erased (Length (Nat) pC d) lpc) (erased (Length (Nat) p d) lpp) (erased (WSub ins s) si) (erased (WSub s ins) ss)
@@ -1130,7 +1089,6 @@
   (let-match erased (lp-inj d dl j ib c e n f s el nl fl hd lp hj hib) (Refl _ _))
   (LEOut ins pC el fl g1 a b i ib oa pca pcb pij rest))
 
-; After the contractions recorded by ch, with the darts of ins dead and no live bridge, the live part is the contraction of cc.
 (def-fns _ $ (erased ch-contraction : (erased (Nat) d m z) (erased (List (Nat)) e0 n0 f0 e n f s p ct ins) (erased (CHist d m e0 n0 f0 e n f s p) ch)
     (erased (LBridgeless d e f s) lb) (erased (InsertE e0 ct ins) ie) (erased (WSub ins s) si) (erased (WSub s ins) ss) (erased (In z s) iz) (erased (Lt z d) lz)
     -> (erased (Nat) dl) (erased (List (Nat)) el nl fl) (erased (Contraction d e0 n0 f0 ct (Cons (Mp) (MkMp dl el nl fl) (Nil (Mp)))) r))
@@ -1166,7 +1124,6 @@
       (reach-map d f fl pos posf p pf pC pfC rq rposf lpos (perm-under d f fi pmf) rc up rpc rpfc)
       (lift-go d m dl e0 n0 f0 e n f s p el nl fl hd ids pos pC ins nf nf0 ge ch lp io iv rpc lpc lpp si ss ag pe fe pe0 (graph-fun d e0 ge gre)))))
 
-; The dart of the merged face, alive after the contraction, y0 standing in when both faces are single darts.
 (def-fns _ $ (erased rep-live : (erased (Nat) d x ex u v y0) (erased (List (Nat)) e n f s e2 n2 f2) (erased (CStep d x ex e n f s e2 n2 f2) cs)
     (erased (Nth (Nat) f x u) pu) (erased (Nth (Nat) f ex v) pv) (erased (Lt y0 d) ly) (erased (NotIn y0 (Cons (Nat) ex (Cons (Nat) x s))) oy)
     -> (erased (Nat) r) (erased (Rep x ex u v r) rp) (erased (Lt r d) lr) (erased (NotIn r (Cons (Nat) ex (Cons (Nat) x s))) orr))
@@ -1184,7 +1141,6 @@
     (absurd (Equal _ _ _) (seps-path x ex f _ _ nb (PathStep f _ _ x ex ex pu (NotInNil x) (PathHere f _ ex)))))
   (values u (RepU x ex u v nu) lu (NotInCons u ex _ nue (NotInCons u x s nu ou))))
 
-; One more contraction, of the edge x, ex: a history without live bridges, or the contraction step with a live bridge.
 (def-adts $ (StepRes : ((Nat) d x ex) ((List (Nat)) e0 n0 f0 e n f s) -> Type)
   enum
   (many SRGo : (erased (Nat) d x ex m2) (erased (List (Nat)) e0 n0 f0 e n f s e2 n2 f2 p2)
@@ -1215,7 +1171,6 @@
     ((OrL _ _ lb2) (SRGo d x ex m2 e0 n0 f0 e n f s e2 n2 f2 p2 ch2 lb2))
     ((OrR _ _ br) (SRBridge d x ex e0 n0 f0 e n f s e2 n2 f2 cs br))))
 
-; What contract_coloring gives with minimality as data: the contraction of cx, or a reduction of the map.
 (def-adts $ (ContractOut : ((Level) B) ((Nat) d) ((List (Nat)) e n f cx) -> Type)
   enum
   (many COContract : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f cx) (erased (List (Mp)) ms) (erased (Contraction d e n f cx ms) ct)
@@ -1228,7 +1183,6 @@
     (absurd (OrR _ _ br) (let-match erased br (MkLBr _ w y _ _ _ lw ow pwy sp)) (let-match erased sp (MkSomePath _ _ xs _ _ pth)) (bridgeless-face d w y e n f _ xs bl pwy pth)))
   lb)
 
-; A live bridge of the first contraction of the map gives a reduction (double-dart).
 (def-fns _ $ (erased bridge-reduces : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x ex) (erased (List (Nat)) e n f e2 n2 f2)
     (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
@@ -1242,7 +1196,6 @@
     ((BSX _ _ _ _ _ a b) (double-dart B pb d w x y ex e n f bks hm gen bl pl cu cn nc pwy pex a b nwx))
     ((BSE _ _ _ _ _ a b) (double-dart B pb d w ex y x e n f bks hm gen bl pl cu cn nc pwy pxe a b nwe))))
 
-; The dead darts are closed under e0.
 (def-fns _ $ (erased ch-closed : (erased (Nat) d m a b) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch)
     (erased (In a s) ia) (erased (Nth (Nat) e0 a b) pab) -> (erased (In b s) r))
   (let-match erased ch (CHStep _ m1 _ x ex u v r _ _ _ e1 n1 f1 s1 p1 _ _ _ q _ ch1 cs em dd2 pu pv rp qm rq lr orr) (absurd (CHNil _ _ _ _ ids io h g pl pc) ia))
@@ -1257,7 +1210,6 @@
       (let-match erased ia1 (InThere _ _ _ ia2) ((InHere _ _) (let-match erased (nth-fn _ e0 x b ex pab pb0) (Refl _ _)) (InHere ex _)))
       (InThere b ex _ (InThere b x s1 (ch-closed d m1 a b e0 n0 f0 e1 n1 f1 s1 p1 ch1 ia2 pab))))))
 
-; Each dart of xs is in a or in b.
 (def-adts $ (CoverIn : ((List (Nat)) xs a b) -> Type)
   enum
   (many CINil : (erased (List (Nat)) a b) -> (CoverIn (Nil (Nat)) a b))
@@ -1269,7 +1221,6 @@
   (let-match erased sb (HSubCons _ _ _ ix sb1))
   (CIB xs1 (Nil _) a x ix (cover-self xs1 a sb1)))
 
-; Moving x and y, both in a2, from the front of b to a2 keeps a cover, when a is in a2.
 (def-fns _ $ (erased cover-move : (erased (List (Nat)) xs a a2 b) (erased (Nat) x y) (subterm erased (CoverIn xs a (Cons (Nat) x (Cons (Nat) y b))) cv) (erased (WSub a a2) sa)
     (erased (In x a2) ix) (erased (In y a2) iy) -> (erased (CoverIn xs a2 b) r))
   (let-match erased cv (CIB xs1 _ _ z iz cv1)
@@ -1284,8 +1235,6 @@
   (let-match erased cv (CIA xs1 _ _ z iz cv1) ((CINil _ _) (HSubNil a)) (absurd (CIB xs1 _ _ z iz cv1) iz))
   (HSubCons z xs1 a iz (cover-done xs1 a cv1)))
 
-; The contractions of the darts of a contract, in turn, skipping darts already dead: either no live bridge arises, the
-; darts of ins all dead, or one arises at some step.
 (def-adts $ (RunRes : ((Nat) d) ((List (Nat)) e0 n0 f0 ins) -> Type)
   enum
   (many RRDone : (erased (Nat) d m) (erased (List (Nat)) e0 n0 f0 ins e n f s p) (erased (CHist d m e0 n0 f0 e n f s p) ch) (erased (LBridgeless d e f s) lb)
@@ -1317,10 +1266,6 @@
   (ch-run d m2 y0 e0 n0 f0 e2 n2 f2 s2 p2 cr1 ir1 ins ch2 lb2 ie1 (HSubCons ec _ ins iec (HSubCons c _ ins ic ss))
     (cover-move ins s s2 ir1 c ec cv (sub-cons ec s _ (sub-cons c s s (sub-refl s))) ic2 iec2) si2 ly oy2 oyi2))
 
-; contract_coloring of contract.v, as far as ported, with minimality as data: in a planar bridgeless plain cubic connected map
-; that the search finds uncolourable, a contract cc whose insertE ins is sparse gives the contraction of cc, or a reduction
-; from a bridge of its first contraction (double-dart), or a bridge arising after some contractions, the case Coq turns
-; into a contract ring of the map and refutes through Birkhoff (sparse_contract_ring to triad_valid), not ported here.
 (def-adts $ (ContractGo : ((Level) B) ((Nat) d) ((List (Nat)) e n f cx ins) -> Type)
   enum
   (many CGOut : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f cx ins) (erased (ContractOut B d e n f cx) co) -> (ContractGo B d e n f cx ins))

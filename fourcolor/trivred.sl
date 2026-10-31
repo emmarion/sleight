@@ -1,7 +1,3 @@
-; fullred.sl's TrivRed: trivial_hom_ring of embed.v, its use on the reversed ring, and the five-dart case. Load after fullred.sl,
-; in its chain. That these statements match Coq's has been checked only by reading.
-
-; What the lemmas here read off the two maps: embed3.sl's EEnv with GcOK and FunctorAll, and the map as Spk of minarity.sl.
 (def-adts $ (TCx : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl fe lab) -> Type)
   enum
   (many MkTCx : (erased (Nat) dc) (erased (List (Nat)) ec nc fc ksc rc) (erased (Nat) dm) (erased (List (Nat)) em nm fm ksm as hl fe lab)
@@ -22,7 +18,6 @@
   (let-match erased al (AlCons _ _ xs1 y l pl il al1) (absurd (AlNil _ _) ix))
   (match erased ix _ ((InHere _ _) (values l pl il)) ((InThere _ _ _ ix1) (allab-in lab L x xs1 al1 ix1))))
 
-; t is on a face of R or on none, told apart by the labels.
 (def-fns _ $ (erased lab-dec : (erased (Nat) d t) (erased (List (Nat)) f lab R lr) (erased (FaceLab d f lab) fl) (erased (Respects lab R lr) rl) (erased (Lt t d) lt)
     -> (erased (Or (Fband f R t) (Kernel f R t)) r))
   (let ((erased fl2)) fl)
@@ -65,7 +60,6 @@
   (let-match erased da (DistCons _ _ oa dx))
   (app-distinct X _ Y ap dx (DistCons a (Nil _) (NotInNil a) (DistNil)) (disj-one a X oa)))
 
-; A ring a :: b :: P read from b.
 (def-fns _ $ (erased ring-rot1 : (erased (List (Nat)) e f P) (erased (Nat) a b) (erased (Ring e f a (Cons (Nat) b P)) rg)
     -> (erased (List (Nat)) Q) (erased (AppN P (Cons (Nat) a (Nil (Nat))) Q) ap) (erased (Ring e f b Q) r))
   (let-match erased rg (MkRing _ _ _ _ w ew rp pw sw sm))
@@ -78,7 +72,6 @@
   (values Q ap (MkRing e f Q b a ea rq pa sa (MkSimple f (Cons _ b Q) lab (Cons _ lb LQ) rf (RespCons lab Q LQ b lb plb rLQ)
     (dist-rot (Cons _ lb lP) (Cons _ lb LQ) la (AppCons lP _ LQ lb al) dl)))))
 
-; diskF S is empty: every dart of diskN S is on a face of S, read off a ring S0 with the darts of S.
 (def-adts $ (FEmpty : ((Nat) d) ((List (Nat)) e n f lab S) -> Type)
   enum
   (many MkFEmpty : (erased (Nat) d x0) (erased (List (Nat)) e n f lab S p hd zs lr) (erased (Ring e f x0 p) rg) (erased (WSub S (Cons (Nat) x0 p)) s1)
@@ -99,7 +92,6 @@
   (let-match erased fm (MkFEmpty _ x0 _ _ _ _ _ p hd zs lr rg s1 s2 ds rl al))
   (MkFEmpty d x0 e n f lab S2 p hd zs lr rg (sub-trans S2 S _ b s1) (sub-trans _ S S2 s2 a) ds rl al))
 
-; A Chords of the ring x0 :: p read as L = x1 :: A ++ x2 :: B, its labels taken from the ring's.
 (def-fns _ $ (erased chords-of : (erased (Nat) x0 x1 x2 z ez c ec w ew) (erased (List (Nat)) e n f p A B L) (erased (Ring e f x0 p) rg)
     (erased (WSub L (Cons (Nat) x0 p)) s1) (erased (WSub (Cons (Nat) x0 p) L) s2) (erased (Distinct L) dL) (erased (AppN (Cons (Nat) x1 A) (Cons (Nat) x2 B) L) ap)
     (erased (RPath e f x1 A c) ra) (erased (Nth (Nat) e c ec) pc) (erased (SomePath f (Nil (Nat)) ec x2) sc)
@@ -125,7 +117,6 @@
   (let-match erased rd (MkRingDS _ x0 _ _ _ p _ _ h gen pl rg pr ds))
   (ds-mem d x x0 e n f p hd zs h gen rg (ring-under d x0 e n f p h rg) ds dx lx))
 
-; diskF_chord_ring, the direction trivial_hom_ring uses: a dart of diskN of the chord ring on none of its faces is in diskF R.
 (def-fns _ $ (erased absurd fc-bad : (erased (Nat) d x0 x1 x2 z ez t) (erased (List (Nat)) e n f lab p A B hd zs hd1 zs1 hd2 zs2) (erased (Chords e n f x0 p x1 A x2 B z ez) cc)
     (erased (RingDS d e n f (Cons (Nat) x0 p) hd zs) d0) (erased (RingDS d e n f (Cons (Nat) z (Cons (Nat) x2 B)) hd1 zs1) d1)
     (erased (RingDS d e n f (Cons (Nat) ez (Cons (Nat) x1 A)) hd2 zs2) d2) (erased (Connected d e n f) cn) (erased (FaceLab d f lab) fl)
@@ -215,7 +206,6 @@
   (let-match erased ap1 (AppCons _ _ Z2 c2 _) ((AppNil _) (ProperBig e (Cons _ b Y) x c a)))
   (ProperBig e Z2 x c c2))
 
-; No dart of a bridgeless cubic map shares a face with its node image.
 (def-fns _ $ (erased absurd nbridge : (erased (Nat) d u nu) (erased (List (Nat)) e n f nf fi) (erased (Hypermap d e n f) h) (erased (HPerm d e nf) pe) (erased (HPerm d f fi) pf)
     (erased (Bridgeless d e n f) bl) (erased (Nth (Nat) n u nu) pn) (erased (Lt nu d) lnu) (erased (SomePath f (Nil (Nat)) nu u) sp) -> (erased (False) r))
   (let ((erased a) (erased pa) (erased la)) (perm-nth d nu e nf pe lnu))
@@ -229,7 +219,6 @@
   (let-match erased (nth-fn _ ec a b ex p pe) (Refl _ _))
   pe2)
 
-; The node orbit of a kernel dart, of order 3 since it is off the ring.
 (def-fns _ $ (erased gc-cub : (erased (Nat) dc dm x) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (In x as) ix) -> (erased (Nat) ex nx nnx) (erased (Nth (Nat) ec x ex) pe) (erased (Nth (Nat) nc x nx) pn) (erased (Nth (Nat) nc nx nnx) p1) (erased (Nth (Nat) nc nnx x) p2))
   (let-match erased cx (MkTCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ en ok fu sp cn))
@@ -237,7 +226,6 @@
   (let-match erased rs (RsOff _ _ _ _ nnx ox onx p1 p2) (absurd (RsOn _ _ _ _ i _) (in-notin x rc i (ker-off-ring dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix))))
   (values ex nx nnx pe pn p1 p2))
 
-; An rlink step between kernel darts, sent along h.
 (def-fns _ $ (erased step-h : (erased (Nat) dc dm a ea b wa wb) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In a as) ia) (erased (In b as) ib) (erased (Nth (Nat) ec a ea) pe) (erased (SomePath fc (Nil (Nat)) ea b) sp)
     (erased (Nth (Nat) hl a wa) pa) (erased (Nth (Nat) hl b wb) pb) -> (erased (Nat) ewa) (erased (Nth (Nat) em wa ewa) pw) (erased (SomePath fm (Nil (Nat)) ewa wb) r))
@@ -246,8 +234,6 @@
   (let-match erased r1 (RPCons _ _ _ _ ewa _ _ pw sw _))
   (values ewa pw sw))
 
-; trivial_hom_ring: an rlink walk x :: p of kernel darts whose image under h is a ring of the map with an empty diskF closes: the
-; edge image of its last dart y is on the face of x. bd bounds the length of p.
 (def-fns _ $ (erased triv-hom : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (subterm erased (Nat) bd) (erased (Nat) x y hx k) (erased (List (Nat)) p hp) (erased (RPath ec fc x p y) rp) (erased (Within (Cons (Nat) x p) as) wp)
     (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg) (erased (Length (Nat) p k) lk) (erased (Lt k bd) lb)
@@ -463,13 +449,10 @@
   (values fe (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-vals f e fe d cfe (perm-under d f fi pmf))
     (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
 
-; The edge image of y is on the face of x: rlink y x.
 (def-adts $ (RlClose : ((List (Nat)) ec fc) ((Nat) y x) -> Type)
   enum
   (many MkRlClose : (erased (List (Nat)) ec fc) (erased (Nat) y x ey) (erased (Nth (Nat) ec y ey) pe) (erased (SomePath fc (Nil (Nat)) ey x) sp) -> (RlClose ec fc y x)))
 
-; The case of a HomTrivial that trivial_hom_ring does not settle: a hom ring x :: p of five darts that does not close, one side of
-; which, its diskN part hd, meets exactly one face off the ring, that of y (labels lab).
 (def-adts $ (HomFive : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
   enum
   (many MkHomFive : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez y l) (erased (RPath ec fc x p z) rp)
@@ -478,7 +461,6 @@
       (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (FaceLab dm fm lab) fl) (erased (Respects lab (Cons (Nat) hx hp) lr) rl)
       (erased (In y hd) iy) (erased (Nth (Nat) lab y l) pl) (erased (NotIn l lr) ol) (erased (AllLab lab (Cons (Nat) l lr) hd) al) -> (HomFive dm ec fc em nm fm as hl)))
 
-; A hom ring whose diskN side is trivial in the sense of TrivSide closes (trivial_hom_ring), or it is a HomFive.
 (def-fns _ $ (erased side-hd : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (Nat) x z hx ez k m) (erased (List (Nat)) p hp hd zs lr) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
     (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg) (erased (Length (Nat) (Cons (Nat) x p) k) lk) (erased (BkMode k m) md)
@@ -542,7 +524,6 @@
   (let-match erased (resp-fn lab ls1 ls3 xs1 a1 b1) (Refl _ _))
   (Refl _ ls))
 
-; The edge images E of the darts of an rlink walk of kernel darts whose last step leads into the kernel, with their images EH.
 (def-fns _ $ (erased edges-h : (erased (Nat) dc dm a b eb t ha) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab H) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (subterm erased (List (Nat)) P) (erased (RPath ec fc a P b) rp) (erased (Within (Cons (Nat) a P) as) wp) (erased (Nth (Nat) ec b eb) pb) (erased (SomePath fc (Nil (Nat)) eb t) sp)
     (erased (In t as) it) (erased (Respects hl (Cons (Nat) a P) (Cons (Nat) ha H)) rh)
@@ -566,7 +547,6 @@
   (let ((erased E1) (erased EH1) (erased re) (erased we) (erased rhe) (erased rme)) (edges-h dc dm a2 b eb t ha2 ec nc fc ksc rc em nm fm ksm as hl fe lab H1 cx P1 rp1 wp1 pb sp it rh1))
   (values (Cons _ ea E1) (Cons _ v EH1) (RespCons ec _ E1 a ea pea re) (WCons as ea E1 iea we) (RespCons hl E1 EH1 ea v pv rhe) (RespCons em _ EH1 ha v pmv rme)))
 
-; rpath-rev of revsnip.sl on the configuration map, with its edge an involution read off GcOK.
 (def-fns _ $ (erased rpath-rev-c : (erased (Nat) dc dm c b ec0 ea) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab mP Acc RR) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (subterm erased (List (Nat)) P) (erased (RPath ec fc c P b) rp) (erased (Respects ec P mP) rm) (erased (Nth (Nat) ec c ec0) pc)
     (erased (RevApp (Nat) (Cons (Nat) ec0 mP) Acc RR) ra) (erased (RPath ec fc ec0 Acc ea) racc)
@@ -593,7 +573,6 @@
   (let-match erased fs (FSCons _ A1 _ a b ib sp fs1) ((FSNil _ _) (FSNil f C)))
   (FSCons f A1 C a b (sub-in B C b s ib) sp (facesub-to f B C A1 fs1 s)))
 
-; The labels of A are labels of B when each dart of A is on a face of B.
 (def-fns _ $ (erased labs-in : (erased (Nat) d) (erased (List (Nat)) f lab B la lb) (subterm erased (List (Nat)) A) (erased (FaceLab d f lab) fl) (erased (FaceSub f A B) fs)
     (erased (Respects lab A la) ra) (erased (Respects lab B lb) rb) -> (erased (WSub la lb) r))
   (let-match erased ra (RespCons _ A1 la1 a l pl ra1) ((RespNil _) (HSubNil lb)))
@@ -601,7 +580,6 @@
   (let-match erased sp (MkSomePath _ _ ws _ _ pth))
   (HSubCons l la1 lb (in-map lab B lb b l ib rb (path-label f lab (Nil _) ws a b l pth (facelab-rf d f lab fl) pl)) (labs-in d f lab B la1 lb A1 fl fs1 ra1 rb)))
 
-; The image of a hom ring that does not close is a proper ring (hp_ok of embed_full).
 (def-fns _ $ (erased hom-proper : (erased (Nat) dc dm x z hx ez) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab p hp) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp) (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg)
     (erased (Nth (Nat) ec z ez) pez) (erased (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) nr) -> (erased (Proper em (Cons (Nat) hx hp)) r))
@@ -636,7 +614,6 @@
   (let ((erased c) (erased ic) (erased sp)) (facesub-at f B C a fs ia))
   (FSCons f A1 C a c ic sp (facesub-sub f B C A1 s1 fs)))
 
-; Every dart of diskN of the reversed ring R2 (read from q0) is off diskN R, so in its other part zs.
 (def-fns _ $ (erased hd-zs : (erased (Nat) dm x0 q0) (erased (List (Nat)) em nm fm p RR hdc hd2 hd zs Q2 hdN zsN) (erased (Hypermap dm em nm fm) h) (erased (Genus dm em nm fm (Zero)) gen)
     (erased (Connected dm em nm fm) cn) (erased (RevCtx dm em nm fm (Cons (Nat) x0 p) RR hdc hd2) cxr) (erased (DiskSplit dm em nm (Cons (Nat) x0 p) hd zs) ds)
     (erased (Ring em fm q0 Q2) rgN) (erased (DiskSplit dm em nm (Cons (Nat) q0 Q2) hdN zsN) dsN) (erased (WSub (Cons (Nat) q0 Q2) RR) s2) (erased (WSub RR (Cons (Nat) q0 Q2)) s1)
@@ -652,7 +629,6 @@
     ((TwoRR _ _ _ _ _ _ _ dn o) (ds-off dm t x0 em nm fm p hdc zsc hd zs h gen rg ur dsc ds o lt))))
   (HSubCons t xs1 zs izs (hd-zs dm x0 q0 em nm fm p RR hdc hd2 hd zs Q2 hdN zsN h gen cn cxr ds rgN dsN s2 s1 xs1 sb1)))
 
-; A reversed hom ring that closed would make the hom ring close.
 (def-fns _ $ (erased absurd zs-bad : (erased (Nat) dc dm x z ez ry ery eb hz ehz) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (In z as) iza) (erased (In ry as) iry) (erased (Nth (Nat) ec ry ery) pery) (erased (Fband fc (Cons (Nat) eb (Nil (Nat))) ery) fb)
     (erased (SomePath fc (Nil (Nat)) eb z) sc) (erased (Nth (Nat) hl z hz) phz) (erased (Nth (Nat) hl ry ehz) pry) (erased (Nth (Nat) em hz ehz) pehz)
@@ -671,8 +647,6 @@
   (let-match erased (nth-fn _ ec ery ry ez (gc-ee dc dm ry ery ec nc fc ksc rc em nm fm ksm as hl fe lab cx pery) pez) (Refl _ _))
   (kernel-fband ez x fc _ nr (some-sym dc x ez fc fic qf sxry (ker-lt dc dm x ec nc fc ksc rc em nm fm ksm as hl en ixa)) (InHere x (Nil _))))
 
-; A hom ring that does not close whose other side zs is trivial: its reversed ring rot 1 (rev (map edge R)), from the edge images of
-; the walk, is a hom ring whose diskN side is trivial; it does not close, so side-hd makes it a HomFive.
 (def-fns _ $ (erased side-zs : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (Nat) x z hx ez k m) (erased (List (Nat)) p hp hd zs lr) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
     (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg) (erased (Length (Nat) (Cons (Nat) x p) k) lk) (erased (BkMode k m) md)
@@ -782,7 +756,6 @@
       (zs-bad dc dm x z ez ry ery eb hw ehw ec nc fc ksc rc em nm fm ksm as hl fe lab cx iza iry pery (MkFband fc _ ery eb (InHere eb (Nil _)) sp3) sc phz pry pehw pez sxry ixa nr)))
   hf)
 
-; Every HomTrivial is a HomFive (the cases trivial_hom_ring settles are refuted).
 (def-fns _ $ (erased ht-five : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Pbpp dm em nm fm) pb) (erased (Connected dm em nm fm) cn)
     (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (HomFive dm ec fc em nm fm as hl) r))
@@ -800,8 +773,6 @@
       (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _)))))
   hf)
 
-; The five-dart case of embed_full (the spoke ring of the one face, adj11_edge and adj_kernel_max in Coq), taken as a hypothesis:
-; a HomFive makes the map reduce, for any bound B above birk-glue. trivfive.sl proves it.
 (def-adts $ (TrivFive : -> Type)
   enum
   (many MkTrivFive : (erased (Level) G)
@@ -812,7 +783,6 @@
           -> (erased (Reduces B dm em nm fm) r)) tr)
       -> (TrivFive)))
 
-; fullred.sl's TrivRed from TrivFive. A level factory: tr is at a level minted after that of the hypothesis.
 (def-fns _ $ (erased triv-red-of : (erased (TrivFive) t5) -> (erased (TrivRed) r))
   (let-match erased t5 (MkTrivFive G five))
   (def-lvl T)

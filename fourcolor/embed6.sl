@@ -1,8 +1,4 @@
-; embed_disk, embed_rem, embed_patch and cface_h1 of embed.v: embed5.sl's PatchOpen (patch-open). Load after embed5.sl, in its
-; chain.
-
-; What the construction reads: embed5.sl's hypotheses of PatchOpen, h1 with its values darts of the map, and a ring
-; rc = c0 :: cp that is a node cycle on distinct faces (the reverse of the ring of a NodeRing).
+; h1 with its values darts of the map, and a ring rc = c0 :: cp that is a node cycle on distinct faces.
 (def-adts $ (ECx : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl ids h1) -> Type)
   enum
   (many MkECx : (erased (Nat) dc dm c0) (erased (List (Nat)) ec nc fc ksc cp em nm fm ksm as hl ids h1)
@@ -25,7 +21,6 @@
   (let-match erased (embl-fn ec nc em nm fm as hl xs1 h11 h21 e11 e21) (Refl _ _))
   (Refl _ _))
 
-; The configuration map at a dart x: edge is an involution, node keeps rc and the darts off it, and x or edge x is off rc.
 (def-fns _ $ (erased c-ee : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx)
     (erased (Nth (Nat) ec x y) py) -> (erased (Nth (Nat) ec y x) r))
   (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
@@ -50,7 +45,6 @@
   (let-match erased (nth-fn _ nc x y nx py pn) (Refl _ _))
   (match erased rs _ (absurd (RsOn _ _ _ _ _ iy) (in-notin y rc iy oy)) ((RsOff _ _ _ _ _ ox _ _ _) ox)))
 
-; embedE, embedN off rc and embed_inj off rc, read at a dart.
 (def-fns _ $ (erased x-e : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (Nth (Nat) ec x y) py) (erased (Nth (Nat) h1 x u) pu) -> (erased (Nat) v) (erased (Nth (Nat) h1 y v) pv) (erased (Nth (Nat) em u v) pm))
   (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
@@ -75,7 +69,6 @@
   (embed-inj dc dm x y u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa (nth-lt-length _ h1 x dc u px lh) ox (nth-lt-length _ h1 y dc u py lh) oy
     (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh px) (embl-at dc y u ec nc em nm fm as hl ids h1 io el lh py)))
 
-; A cycle of q from a, read as q sending each dart of a :: P to the next one, the last to a.
 (def-fns _ $ (erased fpath-hits : (erased (List (Nat)) q PP) (erased (Nat) a y c) (subterm erased (List (Nat)) P) (erased (FPath q a P y) fp) (erased (Nth (Nat) q y c) py)
     (erased (HSnoc (Nat) P c PP) sn) -> (erased (Hits q (Cons (Nat) a P) PP) r))
   (let-match erased fp (FPCons _ P1 _ z _ pz fp1)
@@ -98,7 +91,6 @@
       (let-match erased (nth-fn _ h x m m2 pm pm2) (Refl _ _))
       (SnocCons _ m l Q1 QQ1 (resp-snoc h P1 PP1 Q1 QQ1 c l sn1 rp1 pl rq1)))))
 
-; f sends each dart of ys to the dart of xs at its place, so a labelling constant along f gives ys the labels of xs.
 (def-fns _ $ (erased face-labs : (erased (Nat) d) (erased (List (Nat)) f lab xs ls) (subterm erased (List (Nat)) ys) (erased (Respects f ys xs) ry)
     (erased (Respects lab f lab) rf) (erased (Length (Nat) lab d) ll) (erased (Under ys d) uy) (erased (Respects lab xs ls) rx) -> (erased (Respects lab ys ls) r))
   (let-match erased ys (Cons _ y ys1) ((Nil _) (let-match erased ry (RespNil _)) (let-match erased rx (RespNil _)) (RespNil lab)))
@@ -109,7 +101,6 @@
   (let-match erased (nth-fn _ lab x l2 l (respects-nth lab f lab y x l2 rf px pl2) pl) (Refl _ _))
   (RespCons lab ys1 ls1 y l pl2 (face-labs d f lab xs1 ls1 ys1 ry1 rf ll uy1 rx1)))
 
-; With crr the node images of rc and err their edge images, face sends err back onto rc.
 (def-fns _ $ (erased face-back : (erased (Nat) d) (erased (List (Nat)) e n f rc crr err) (erased (Hypermap d e n f) h) (subterm erased (Hits n rc crr) hs)
     (erased (Respects e crr err) re) -> (erased (Respects f err rc) r))
   (let-match erased hs (HitsCons _ rc1 crr1 a b pb hs1) ((HitsNil _) (let-match erased re (RespNil _)) (RespNil f)))
@@ -125,8 +116,6 @@
     -> (erased (Distinct (Cons (Nat) a xs)) r))
   (DistCons a xs (snoc-out a xs ys sn dy) (distinct-unsnoc a xs ys sn dy)))
 
-; x :: P is an rlink path, ending at y, when e sends each of its darts to the place of T at which f sends the next one of P
-; followed by z (Y): the edge image t of y reaches z along f.
 (def-fns _ $ (erased rp-build : (erased (Nat) d x z) (erased (List (Nat)) e f fi Y T) (erased (HPerm d f fi) pf) (subterm erased (List (Nat)) P)
     (erased (Respects e (Cons (Nat) x P) T) re) (erased (Respects f Y T) rf) (erased (HSnoc (Nat) P z Y) sn) (erased (Under Y d) uy)
     -> (erased (Nat) y t) (erased (RPath e f x P y) rp) (erased (Nth (Nat) e y t) pt) (erased (SomePath f (Nil (Nat)) t z) sp))
@@ -146,7 +135,6 @@
   (let ((erased y) (erased ty) (erased rp1) (erased pty) (erased sp1)) (rp-build d p1 z e f fi Y1 T1 pf P1 re1 rf1 sn1 uy1))
   (values y ty (RPCons e f P1 x t p1 y pt (MkSomePath f (Nil _) ws t p1 w) rp1) pty sp1))
 
-; A walk along p from a to the image c of b gives a walk from a to b.
 (def-fns _ $ (erased path-unstep : (erased (Nat) d a b c) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm) (subterm erased (Path p s a c xs) w)
     (erased (Nth (Nat) p b c) pb) (erased (Lt b d) lb) -> (erased (SomePath p (Nil (Nat)) a b) r))
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1)
@@ -166,7 +154,6 @@
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (SpNil s)))
   (SpIn s xs1 xs1 (Nil _) x ix (within-split s xs1 wi1)))
 
-; The darts of the configuration map off rc, listed as bcl, and the edge images erc of rc.
 (def-fns _ $ (erased bcl-in : (erased (Nat) dc y) (erased (List (Nat)) rc ids zr bcl) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
     (erased (Lt y dc) ly) (erased (NotIn y rc) oy) -> (erased (In y bcl) r))
   (split-off rc ids zr bcl y sp (iota-in dc y ids io ly) oy))
@@ -192,8 +179,6 @@
   (WCons bcl w ws1 (bcl-in dc w rc ids zr bcl io sp (under-in erc w dc ue iw) (erc-off dc w ec nc rc as erc ok re ur iw))
     (erc-bcl dc ec nc rc as erc ids zr bcl ok re ur ue io sp ws1 wi1)))
 
-; With crr the node images of rc and err the edge images of crr, the ring step of the disk edge from w in erc to x in err:
-; w and x are the edge images of a dart t of rc and of its node image s.
 (def-fns _ $ (erased in2-ring : (erased (List (Nat)) ec nc rc crr erc err) (erased (Nat) w x) (erased (Respects ec rc erc) re) (erased (Hits nc rc crr) hs)
     (erased (Respects ec crr err) rer) (subterm erased (In2 erc err w x) i2) -> (erased (Nat) t s) (erased (Nth (Nat) ec t w) pt) (erased (Nth (Nat) nc t s) ps)
     (erased (Nth (Nat) ec s x) px))
@@ -204,7 +189,6 @@
     ((I2Here _ _ _ _) (values t s pt ps px))
     ((I2There _ _ _ _ _ _ i3) (in2-ring ec nc rc1 crr1 erc1 err1 w x re1 hs1 rer1 i3))))
 
-; The sides of the edge and node permutations of the configuration map, with erc sent along err, on bcl.
 (def-fns _ $ (erased dsides-e : (erased (Nat) dc e0) (erased (List (Nat)) ec nc rc as ep err ids zr bcl nfc) (erased (GcOK dc ec nc rc as) ok) (erased (HPerm dc ec nfc) qe)
     (erased (Respects ec rc (Cons (Nat) e0 ep)) re) (erased (Under rc dc) ur) (erased (HSnoc (Nat) ep e0 err) snr) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
     (erased (Under bcl dc) ub) (subterm erased (List (Nat)) xs) (erased (Within xs bcl) wi) -> (erased (Sides ec nfc (Cons (Nat) e0 ep) err bcl xs) r))
@@ -247,7 +231,7 @@
       pz (bcl-in dc z rc ids zr bcl io sp lz (c-nback dc z x ec nc rc as ok lz pzx ox)) pzx)
     (dbij-n dc ec nc rc as ids zr bcl nic ok qn io sp ub xs1 wi1)))
 
-; The lists of the remainder side: hd = h1 . bcl, the reverse RV of rG = h1 . erc, the darts zs of the map off hd, and hr = RV ++ zs.
+; hd = h1 . bcl, the reverse RV of rG = h1 . erc, the darts zs of the map off hd, and hr = RV ++ zs.
 (def-adts $ (RCx : ((Nat) dc) ((List (Nat)) ec rc erc bcl) ((Nat) dm) ((List (Nat)) h1 hd RV zs hr) -> Type)
   enum
   (many MkRCx : (erased (Nat) dc dm) (erased (List (Nat)) ec rc erc bcl h1 hd RV zs hr ids zr idm zh rG) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
@@ -255,7 +239,6 @@
       (erased (Respects h1 erc rG) rg) (erased (RevApp (Nat) rG (Nil (Nat)) RV) rv) (erased (Iota dm idm) iom) (erased (Split hd idm zh zs) spm) (erased (AppN RV zs hr) ap)
       -> (RCx dc ec rc erc bcl dm h1 hd RV zs hr)))
 
-; A dart of hr that is h1 b, b in bcl, has b in erc.
 (def-fns _ $ (erased hr-img : (erased (Nat) dc dm x b) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (In x hr) ix) (erased (Nth (Nat) h1 b x) pb)
     (erased (In b bcl) ib) -> (erased (In b erc) r))
@@ -289,7 +272,6 @@
   (WCons hd v vs1 (in-map h1 bcl hd w v (bcl-in dc w rc ids zr bcl io sp (under-in erc w dc ue iw) (erc-off dc w ec nc rc as erc ok re ur iw)) rhd pw)
     (rv-hd dc dm ec nc rc as erc bcl h1 hd RV zs hr ok rx vs1 wi1)))
 
-; hr is shut under the edge permutation of the map.
 (def-fns _ $ (erased hr-edge : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (In x hr) ix) (erased (Nth (Nat) em x y) py)
     -> (erased (In y hr) r))
@@ -331,7 +313,6 @@
   (BijCons em nfm hr xs1 x (MkBijAt em nfm hr x y y py iy (perm-inv dm x y em nfm qem py) pz iy pzx)
     (rbij-e dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr nfm cx rx qem uhr g xs1 wi1)))
 
-; Off RV, hr is shut under the node permutation of the map, both ways, and stays off RV.
 (def-fns _ $ (erased rsides-n : (erased (Nat) dc dm v0) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd V zs hr nim RVR)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd (Cons (Nat) v0 V) zs hr) rx) (erased (HPerm dm nm nim) qnm)
     (erased (Under hr dm) uhr) (erased (HSnoc (Nat) V v0 RVR) sn) (erased (Within (Cons (Nat) v0 V) hd) wrh) (subterm erased (List (Nat)) xs) (erased (Within xs hr) wi)
@@ -381,7 +362,6 @@
       (notin-sub y RVR RV srv (notin-sub y RV hd srh oyh)) pz (hr-out dc dm z ec rc erc bcl h1 hd RV zs hr rx lz ozh) (notin-sub z RV hd srh ozh))
     rest))
 
-; h1 keeps the darts off rc apart.
 (def-fns _ $ (erased map-inj : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 hs) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (subterm erased (List (Nat)) xs) (erased (Distinct xs) dx) (erased (Disj xs rc) dj) (erased (Respects h1 xs hs) rh) -> (erased (Distinct hs) r))
   (let-match erased rh (RespCons _ xs1 hs1 x u pu rh1) ((RespNil _) (DistNil)))
@@ -396,7 +376,6 @@
       ((OrR _ _ o) o))
     (map-inj dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 hs1 cx xs1 dx1 dj1 rh1)))
 
-; h (a (P x)) = r (h (a x)) for x off B, from a (P x) = q (a x) off B and h (q y) = r (h y) for y off C, the values of a being off C.
 (def-fns _ $ (erased morph-chain : (erased (List (Nat)) a P q B h r C ids ha) (erased (Nat) k) (subterm erased (List (Nat)) xs) (erased (MorphOff a P q B xs) ma)
     (erased (MorphOff h q r C ids) mh) (erased (Iota k ids) io) (erased (Under a k) ua) (erased (Disj a C) dj) (erased (Respects h a ha) rh) (erased (Length (Nat) h k) lh)
     -> (erased (MorphOff ha P r B xs) res))
@@ -410,7 +389,6 @@
   (MOAt ha P r B xs1 x y u v px (respects-at h a ha x z u rh hx pu) (respects-at h a ha y w v rh hy pv) rv
     (morph-chain a P q B h r C ids ha k xs1 ma1 mh io ua dj rh lh)))
 
-; The remainder of the patch: each dart of the map is h1 of a dart of bcl off erc, of a dart of erc, or off hd.
 (def-fns _ $ (erased parts6 : (erased (Nat) dc dm dd) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr bd)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (Respects bcl bd erc) rbd)
     (erased (Distinct bcl) db) (subterm erased (List (Nat)) xs) (erased (Under xs dm) ux) -> (erased (PatchParts hd hr bd xs) r))
@@ -440,7 +418,6 @@
       (let ((erased xr) (erased pxr)) (in-nth x hr (hr-out dc dm x ec rc erc bcl h1 hd RV zs hr rx lx oxh)))
       (PPCons hd hr bd xs1 x (PtRest hd hr bd x xr pxr oxh) rest))))
 
-
 ; The disk map (ed, nd, fd) on the darts bcl of the configuration map, its edge sde sending erc along err.
 (def-adts $ (DkCx : ((Nat) dc) ((List (Nat)) ec nc fc rc as erc err) ((Nat) dd) ((List (Nat)) bcl ed nd fd sde idd) -> Type)
   enum
@@ -451,7 +428,6 @@
       (erased (Length (Nat) bcl dd) lb) (erased (Under bcl dc) ub)
       -> (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd)))
 
-; sde w = x: x = ec w off erc, and on erc w = ec t and x = ec s, s = nc t.
 (def-adts $ (SdeAt : ((List (Nat)) ec nc erc) ((Nat) w x) -> Type)
   enum
   (many SdOff : (erased (List (Nat)) ec nc erc) (erased (Nat) w x) (erased (NotIn w erc) ow) (erased (Nth (Nat) ec w x) px) -> (SdeAt ec nc erc w x))
@@ -473,7 +449,6 @@
       (let ((erased t) (erased s) (erased pt) (erased ps) (erased px2)) (in2-ring ec nc rc crr erc err w x2 re hs rer i2))
       (SdRing ec nc erc w x t s iw pt ps px2))))
 
-; The face step of the disk map from u, x = bcl u, is fc x, or fc t for t = fc x on rc.
 (def-fns _ $ (erased dface-at : (erased (Nat) dc dd u a x y) (erased (List (Nat)) ec nc fc rc as erc err bcl ed nd fd sde idd)
     (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk) (erased (Nth (Nat) fd u a) pf) (erased (Nth (Nat) bcl u x) px) (erased (Nth (Nat) bcl a y) py)
     -> (erased (Nat) t) (erased (Nth (Nat) fc x t) pt) (erased (Or (Eq (Nat) t y) (Nth (Nat) fc t y)) r))
@@ -499,7 +474,6 @@
       ((OrL _ _ e) (let-match erased e (Refl _ _)) (MkSomePath f (Nil _) (Nil _) t t (PathHere f (Nil _) t)))
       ((OrR _ _ p) (some-cons f t y y p (MkSomePath f (Nil _) (Nil _) y y (PathHere f (Nil _) y)))))))
 
-; The edge step of the disk map from u, x = bcl u, is on the face of ec x.
 (def-fns _ $ (erased dedge-at : (erased (Nat) dc dd u v x z t) (erased (List (Nat)) ec nc fc rc as erc err bcl ed nd fd sde idd)
     (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk) (erased (Lt u dd) lu) (erased (Nth (Nat) ed u v) pv) (erased (Nth (Nat) bcl u x) px)
     (erased (Nth (Nat) bcl v z) pz) (erased (Nth (Nat) ec x t) pt) -> (erased (SomePath fc (Nil (Nat)) t z) r))
@@ -552,7 +526,6 @@
   (values (Cons _ x A1) (Cons _ t E1) (Cons _ v F1) (Cons _ z B1) (RespCons bcl us1 A1 u x px ra1) (RespCons ec A1 E1 x t pt re1) (RespCons ed us1 F1 u v pv rf1)
     (RespCons bcl F1 B1 v z pz rb1) (ReachCons fc E1 B1 t z (dedge-at dc dd u v x z t ec nc fc rc as erc err bcl ed nd fd sde idd dk lu pv px pz pt) rc1)))
 
-; h1 (fc x) = fm (h1 x) when fc x is off rc.
 (def-fns _ $ (erased h1-face : (erased (Nat) dc dm x y u v) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (Nth (Nat) fc x y) py) (erased (NotIn y rc) oy) (erased (Nth (Nat) h1 x u) pu) (erased (Nth (Nat) h1 y v) pv) -> (erased (Nth (Nat) fm u v) r))
   (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
@@ -566,7 +539,6 @@
   (let-match erased (nth-fn _ h1 x u2 u pu2 pu) (Refl _ _))
   (hyper-third dm u v2 v em nm fm hm pe2 pm))
 
-; cface_h1: h1 sends each dart x and fc x onto one face of the map; when fc x is on rc, through the face step of the disk map.
 (def-fns _ $ (erased cface-reach : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc err ed nd fd er nr fr hd hr bd br bcl sde idd zr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk)
     (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (erased (Respects h1 bcl hd) rhd) (erased (Split rc ids zr bcl) sp)
@@ -625,8 +597,6 @@
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (DisjNil m)))
   (DisjCons x xs1 m (disj-notin x s m dj ix) (within-disj s m xs1 wi1 dj)))
 
-; embed5.sl's EmbedPatch for a node cycle rc: the disk ring sent to erc = map edge rc, and the darts embd of the
-; configuration map off rc split from those on it.
 (def-adts $ (EmbedPatch6 : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
   (many MkEmbedPatch6 : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f idc zr)
@@ -636,9 +606,6 @@
       (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) (erased (Iota dc idc) io) (erased (Split rc idc zr embd) sp)
       -> (EmbedPatch6 dc ec fc rc dm em nm fm h1)))
 
-; embed_disk, embed_rem, embed_patch and cface_h1: the disk map on the darts bcl of the configuration map off rc, with its edge
-; sending each dart of erc to the next one, and the remainder map on the darts of the map off h1 . (bcl off erc), with its
-; node sending each dart of RV = rev (h1 . erc) to the next one.
 (def-fns _ $ (erased embed-patch6 : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     -> (erased (EmbedPatch6 dc ec fc rc dm em nm fm h1) ep))
   (let ((erased cx2)) cx)
@@ -784,15 +751,12 @@
   (MkEmbedPatch6 dc dm dd dr ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br bcl q1 q2 q3 erc h1f ids zr pt lbcl ub r1 rc1 r2 r3 rc2 re rbd rhd rf rcf
     io sp))
 
-
-; What a membership in r says of the reverse rr of r.
 (def-fns _ $ (erased rv-in : (erased (List (Nat)) r rr) (erased (Nat) x) (erased (RevApp (Nat) r (Nil (Nat)) rr) rv) (erased (In x r) ix) -> (erased (In x rr) res))
   (revapp-in r (Nil _) rr x rv (OrL _ _ ix)))
 
 (def-fns _ $ (erased rv-out : (erased (List (Nat)) r rr) (erased (Nat) x) (erased (RevApp (Nat) r (Nil (Nat)) rr) rv) (erased (NotIn x r) ox) -> (erased (NotIn x rr) res))
   (notin-revapp x r (Nil _) rr rv ox (NotInNil x)))
 
-; GcOK and EEnv read only which darts are on the ring, so they hold for its reverse.
 (def-fns _ $ (erased gcall-rev : (erased (List (Nat)) ec nc rc rr as xs) (erased (RevApp (Nat) rc (Nil (Nat)) rr) rv) (subterm erased (GcAll ec nc rc as xs) ga)
     -> (erased (GcAll ec nc rr as xs) r))
   (let-match erased ga (GcCons _ _ _ _ xs1 x g ga1) ((GcNil _ _ _ _) (GcNil ec nc rr as)))
@@ -836,7 +800,6 @@
   (values (MkEEnv dc ec nc fc ksc rr dm em nm fm ksm as hl hc olc (MkKernelList dc fc rr as kids kio (kall-rev fc rc rr as rv ka) (kcov-rev fc rc rr as kids rv kv)) g pe)
     (MkGcOK dc ec nc rr as gids gio (gcall-rev ec nc rc rr as gids rv ga))))
 
-; The darts xs of idc are each on r or off its reverse t.
 (def-fns _ $ (erased either-rev : (erased (List (Nat)) r t idc zr embd) (erased (RevApp (Nat) r (Nil (Nat)) t) rv) (erased (Split t idc zr embd) sp)
     (subterm erased (List (Nat)) xs) (erased (Within xs idc) wi) -> (erased (InEither r embd xs) res))
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (IeNil r embd)))
@@ -847,7 +810,6 @@
       ((OrR _ _ ot) (OrR _ _ (split-off t idc zr embd x sp ix ot))))
     (either-rev r t idc zr embd rv sp xs1 wi1)))
 
-; embed_disk, embed_rem, embed_patch and cface_h1, on the node cycle rev rc that a NodeRing names.
 (def-fns _ $ (erased patch-at : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io)
     (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (NodeRing nc fc rc) nr) -> (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep))
