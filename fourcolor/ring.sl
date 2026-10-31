@@ -208,16 +208,17 @@
   (many EvMul : (erased (List (Nat)) env) (erased (Expr) a b) (erased (Nat) x y n)
      (erased (Eval env a x) ea) (erased (Eval env b y) eb) (erased (Mul x y n) p) -> (Eval env (EMul a b) n)))
 
-(def-adts $ (Insert : (Type A) (A x) ((List A) ys) ((List A) zs) -> Type)
+; zs is ys with x put somewhere.
+(def-adts $ (Ins :(Type A) (A x) ((List A) ys) ((List A) zs) -> Type)
   enum
-  (many InsHere : (erased Type A) (erased A x) (erased (List A) ys) -> (Insert A x ys (Cons A x ys)))
-  (many InsThere : (erased Type A) (erased A x y) (erased (List A) ys zs) (erased (Insert A x ys zs) p)
-     -> (Insert A x (Cons A y ys) (Cons A y zs))))
+  (many InsH : (erased Type A) (erased A x) (erased (List A) ys) -> (Ins A x ys (Cons A x ys)))
+  (many InsT : (erased Type A) (erased A x y) (erased (List A) ys zs) (erased (Ins A x ys zs) p)
+     -> (Ins A x (Cons A y ys) (Cons A y zs))))
 
 (def-adts $ (InsAll : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
   enum
   (many IANil : (erased Type A) (erased (List A) ys) -> (InsAll A (Nil A) ys ys))
-  (many IACons : (erased Type A) (erased A x) (erased (List A) xs ys ws zs) (erased (InsAll A xs ys ws) p) (erased (Insert A x ws zs) q)
+  (many IACons : (erased Type A) (erased A x) (erased (List A) xs ys ws zs) (erased (InsAll A xs ys ws) p) (erased (Ins A x ws zs) q)
      -> (InsAll A (Cons A x xs) ys zs)))
 
 (def-adts $ (Scale : (Mono m) (Poly q) (Poly s) -> Type)
@@ -228,8 +229,8 @@
 
 (def-adts $ (PMul : (Poly p) (Poly q) (Poly r) -> Type)
   enum
-  (many PMNil : (erased Poly q) -> (PMul (Nil Mono) q (Nil Mono)))
-  (many PMCons : (erased Mono m) (erased Poly p q s r t) (erased (Scale m q s) a) (erased (PMul p q r) b) (erased (InsAll Mono s r t) c)
+  (many PMulNil : (erased Poly q) -> (PMul (Nil Mono) q (Nil Mono)))
+  (many PMulCons : (erased Mono m) (erased Poly p q s r t) (erased (Scale m q s) a) (erased (PMul p q r) b) (erased (InsAll Mono s r t) c)
      -> (PMul (Cons Mono m p) q t)))
 
 (def-adts $ (Norm : ((Expr) e) (Poly p) -> Type)
@@ -271,11 +272,11 @@
   (match many o _ ((After _ _ _) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ (many insert : (erased Type A) (many (Layer A) l) (many A x) (subterm many (List A) ys) ->
-    (many (List A) zs) (erased (Insert A x ys zs) p))
-  (let-match many ys (Cons _ y ys1) ((Nil _) (values (Cons _ x ys) (InsHere _ x ys))))
-  (let-match many (after _ l x y) (BTrue) ((BFalse) (values (Cons _ x ys) (InsHere _ x ys))))
+    (many (List A) zs) (erased (Ins A x ys zs) p))
+  (let-match many ys (Cons _ y ys1) ((Nil _) (values (Cons _ x ys) (InsH _ x ys))))
+  (let-match many (after _ l x y) (BTrue) ((BFalse) (values (Cons _ x ys) (InsH _ x ys))))
   (let ((many zs1) (erased p)) (notail $ insert _ l x ys1))
-  (values (Cons _ y zs1) (InsThere _ x y ys1 zs1 p)))
+  (values (Cons _ y zs1) (InsT _ x y ys1 zs1 p)))
 
 (def-fns _ $ (many insall : (erased Type A) (many (Layer A) l) (subterm many (List A) xs) (many (List A) ys) ->
     (many (List A) zs) (erased (InsAll A xs ys zs) p))
@@ -291,11 +292,11 @@
   (values (Cons _ mn s) (ScCons m n mn q1 s p r)))
 
 (def-fns _ $ (many pmul : (subterm many Poly p) (many Poly q) -> (many Poly t) (erased (PMul p q t) r))
-  (let-match many p (Cons _ m p1) ((Nil _) (values (Nil Mono) (PMNil q))))
+  (let-match many p (Cons _ m p1) ((Nil _) (values (Nil Mono) (PMulNil q))))
   (let ((many s) (erased a)) (scale m q))
   (let ((many r) (erased b)) (notail $ pmul p1 q))
   (let ((many t) (erased c)) (insall _ (Terms) s r))
-  (values t (PMCons m p1 q s r t a b c)))
+  (values t (PMulCons m p1 q s r t a b c)))
 
 (def-fns _ $ (many repeat : (erased Type A) (subterm many (Nat) k) (many A x) -> (many (List A) xs) (erased (Repeat A k x xs) r))
   (let-match many k (Succ k1) ((Zero) (values (Nil A) (RepeatNil A x))))
@@ -345,9 +346,9 @@
     ((Terms) (FoldCons env A l x (Nil A) n (Zero) n v (FoldNil env A l _ (NeutralAdd)) (OpAdd n (Zero) n (add-zero-right n))))))
 
 (def-fns _ $ (erased insert-sound : (erased (List (Nat)) env) (erased Type A) (erased (Layer A) l) (erased A x) (erased (List A) ys zs) (erased (Nat) a b c)
-    (subterm erased (Insert A x ys zs) p) (erased (Val env A l x a) v) (erased (Fold env A l ys b) f) (erased (Op A l a b c) o) ->
+    (subterm erased (Ins A x ys zs) p) (erased (Val env A l x a) v) (erased (Fold env A l ys b) f) (erased (Op A l a b c) o) ->
     (erased (Fold env A l zs c) g))
-  (let-match erased p (InsThere _ _ y ys1 zs1 p1) ((InsHere _ _ _) (FoldCons env A l x ys a b c v f o)))
+  (let-match erased p (InsT _ _ y ys1 zs1 p1) ((InsH _ _ _) (FoldCons env A l x ys a b c v f o)))
   (let-match erased f (FoldCons _ _ _ _ _ vy bt _ fy ft oy))
   (let ((erased d) (erased od)) (op-total A l a bt))
   (FoldCons env A l y zs1 vy d c fy (insert-sound env A l x ys1 zs1 a bt d p1 v ft od) (op-swap A l vy bt b a c d oy o od)))
@@ -387,8 +388,8 @@
 (def-fns _ $ (erased pmul-sound : (erased (List (Nat)) env) (erased Poly p q r) (erased (Nat) x y n)
     (subterm erased (PMul p q r) pm) (erased (Fold env Mono (Terms) p x) fp) (erased (Fold env Mono (Terms) q y) fq) (erased (Mul x y n) mn)
     -> (erased (Fold env Mono (Terms) r n) g))
-  (let-match erased pm (PMCons m p1 _ s r1 _ sc pm1 ia)
-    ((PMNil _)
+  (let-match erased pm (PMulCons m p1 _ s r1 _ sc pm1 ia)
+    ((PMulNil _)
       (let-match erased fp (FoldNil _ _ _ _ u))
       (let-match erased u (NeutralAdd))
       (let-match erased mn (MulZero _))

@@ -24,12 +24,6 @@
   (many CrCons : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A x) (erased (List A) xs ys)
       (erased (AllR A A R x ys) h) (erased (Cross A R xs ys) rest) -> (Cross A R (Cons A x xs) ys)))
 
-; zs is ys with x put somewhere.
-(def-adts $ (Ins : (Type A) (A x) ((List A) ys) ((List A) zs) -> Type)
-  enum
-  (many InsH : (erased Type A) (erased A x) (erased (List A) ys) -> (Ins A x ys (Cons A x ys)))
-  (many InsT : (erased Type A) (erased A x y) (erased (List A) ys zs) (erased (Ins A x ys zs) p) -> (Ins A x (Cons A y ys) (Cons A y zs))))
-
 (def-fns _ $ (erased allr-mem : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List B) ys)
     (subterm erased (AllR A B R x ys) h) (erased (Mem B ys y) m) -> (erased (R x y) r))
   (let-match erased h (ARCons _ _ _ _ _ zs hz h1) (absurd (ARNil _ _ _ _) m))
