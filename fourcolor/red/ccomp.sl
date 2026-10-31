@@ -1,9 +1,6 @@
-; Every ring trace of a contract colouring of a configuration's map is in a computed list (the completeness half of
-; ctree_mem_cpcolor of cfcolor.v, for contract colourings, after the contract steps of cfcontract.v). Load after cfred.sl.
-
 (def-fns _ $ (erased respects-at : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) lab j l) q) -> (erased (Nth (Nat) ls i l) r))
-  (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
+  (let-match erased rp (RespCons _ xs1 ls1 _ l1 p1 rp1) (absurd (RespNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p2)
     ((NthHere _ _ _) (let-match erased (nth-fn _ lab j l1 l p1 q) (Refl _ _)) (NthHere _ l1 ls1)))
   (NthThere _ l1 ls1 i1 l (respects-at lab xs1 ls1 i1 j l rp1 p2 q)))
@@ -57,7 +54,6 @@
   (let ((erased k) (erased c) (erased sc) (erased rf) (erased _)) (respects-unsnoc ks f f2 k2 a s rf2))
   (MkFC ks f k rf (pre-unsnoc k k2 ks c pk2 sc)))
 
-; Through an insertion of the new dart x after c.
 (def-fns _ $ (erased fc-uninsert : (erased (List (Nat)) ks f f2) (erased (Nat) c x) (erased (FC ks f2) fc) (erased (Insert f c x f2) ins)
     (erased (Length (Nat) f x) lf) -> (erased (FC ks f) r))
   (let-match erased ins (MkInsert _ f1 _ _ _ v pv s1 s2))
@@ -90,12 +86,12 @@
     (erased (Nth (Nat) ks j b) pb) (erased (Add j x y) ad) -> (erased (EdgeAt ie y a b) r))
   (match erased ce _
     (absurd (CENil _ _) pa)
-    ((CEIn _ ke1 ks1 _ a1 p rest)
+    ((CEIn _ ke1 ks1 _ _ p rest)
       (match erased pa _
         ((NthHere _ _ _) (let-match erased pb (NthHere _ _ _)) (let-match erased ad (AddZero _)) (EAIn ie x a p))
         ((NthThere _ _ _ j1 _ pa1) (let-match erased pb (NthThere _ _ _ _ _ pb1)) (let-match erased ad (AddSucc _ _ y1 ad1))
           (ccedge-nth ie ke1 ks1 (Succ x) j1 y a b rest pa1 pb1 (add-succ-right j1 x y1 ad1)))))
-    ((CEOut _ ke1 ks1 _ a1 b1 p ne rest)
+    ((CEOut _ ke1 ks1 _ _ _ p ne rest)
       (match erased pa _
         ((NthHere _ _ _) (let-match erased pb (NthHere _ _ _)) (let-match erased ad (AddZero _)) (EAOut ie x a b p ne))
         ((NthThere _ _ _ j1 _ pa1) (let-match erased pb (NthThere _ _ _ _ _ pb1)) (let-match erased ad (AddSucc _ _ y1 ad1))
@@ -107,19 +103,17 @@
   (many MkCtx : (erased (List (Nat)) ie ks big e f ke) (erased (Nat) m) (erased (Pre e big) pe) (erased (FC ks f) fc) (erased (Respects ks big ke) rk)
       (erased (CcEdge ie (Zero) ke ks) ce) (erased (Under ks 4) four) (erased (Length (Nat) ks m) lk) (erased (Length (Nat) big m) lb) -> (Ctx ie ks big e f)))
 
-; The colour of a dart x of e, below 4.
 (def-fns _ $ (erased ctx-col : (erased (List (Nat)) ie ks big e f) (erased (Nat) x y) (erased (Ctx ie ks big e f) cx) (erased (Nth (Nat) e x y) p)
     -> (erased (Nat) k) (erased (Nth (Nat) ks x k) pk) (erased (Col) c) (erased (NCol k c) pc))
-  (let-match erased cx (MkCtx _ _ _ _ _ ke m pe fc rk ce four lk lb))
+  (let-match erased cx (MkCtx _ _ _ _ _ _ m pe _ _ _ four lk lb))
   (let ((erased k) (erased pk)) (nth-exists _ ks m x lk (nth-lt-length _ big x m y (pre-nth e big x y pe p) lb)))
   (let ((erased c) (erased pc)) (ncol-ex k (under-nth ks x k 4 four pk)))
   (values k pk c pc))
 
-; The edge colour of a dart x of e, whose edge image z has y after it on its face.
 (def-fns _ $ (erased flag-of : (erased (List (Nat)) ie ks big e f) (erased (Nat) x z y kx ky) (erased (Col) cx cy u) (erased (Ctx ie ks big e f) ctx)
     (erased (Nth (Nat) e x z) pe) (erased (Nth (Nat) f z y) pf) (erased (Nth (Nat) ks x kx) px) (erased (Nth (Nat) ks y ky) py) (erased (NCol kx cx) qx)
     (erased (NCol ky cy) qy) (erased (AddC cx cy u) pu) -> (erased (Flag ie x u) r))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc rk ce four lk lb))
+  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc rk ce _ _ lb))
   (let ((erased pz)) (pre-nth e big x z pre pe))
   (let ((erased kz) (erased pkz)) (nth-exists _ ke m x (respects-length ks big ke m rk lb) (nth-lt-length _ big x m z pz lb)))
   (let ((erased qz)) (respects-nth ks big ke x z kz rk pz pkz))
@@ -130,19 +124,18 @@
   (let-match erased (addc-same cx cx u (C0) pu (addc-ii cx)) (Refl _ _))
   (FlIn ie x p))
 
-; A U step at d puts u = colour of d+1 plus colour of d twice in front of the trace, u the edge colour of d+1.
 (def-fns _ $ (erased u-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (PointedMap d e n f r) pm)
     (erased (EcpU d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
     -> (erased (Col) u) (erased (List (Nat)) rc2) (erased (List (Col)) cs2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2)
     (erased (Trace cs2 (Cons (Col) u (Cons (Col) u et))) tr2) (erased (Flag ie (Succ d) u) fl))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (let-match erased st (MkEcpU _ b c _ _ _ _ f0 _ lb pc g s ins))
-  (let-match erased cr (MkCpring _ p a y rp back dp))
+  (let-match erased cr (MkCpring _ p a y rp back _))
   (let-match erased (last-fn r b y lb (rpath-last n p a y rp)) (Refl _ _))
   (let ((erased v) (erased pv) (erased pfa)) (hyper-back d b a e n f h back))
   (let-match erased (nth-fn _ e b c v pc pv) (Refl _ _))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let ((erased ei) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased ei) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core d e n f h))
   (let ((erased lc)) (perm-val d b c e ei pe pc))
   (let ((erased lf0)) (snoc-length _ f f0 d d s lf))
   (let ((erased fa)) (insert-new f0 f2 c (Succ d) (Succ d) a ins lf0 (snoc-old _ f f0 d a c s pfa)))
@@ -150,10 +143,10 @@
   (let ((erased ed1)) (edge-high e e2 d g))
   (let ((erased k1) (erased pk1) (erased c1) (erased q1)) (ctx-col ie ks big e2 f2 (Succ d) d ctx ed1))
   (let ((erased kd) (erased pkd) (erased cd) (erased qd)) (ctx-col ie ks big e2 f2 d (Succ d) ctx (edge-low e e2 d g)))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc rk ce four lk lbg))
-  (let-match erased rr (RespCons _ _ rc1 _ ka pka rr1))
+  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
+  (let-match erased rr (RespCons _ _ _ _ ka pka _))
   (let-match erased (nth-fn _ ks a k1 ka (fc-at ks f2 (Succ d) a k1 fc fa pk1) pka) (Refl _ _))
-  (let-match erased nc (NCsCons _ ca _ cs1 pca nc1))
+  (let-match erased nc (NCsCons _ ca _ _ pca _))
   (let-match erased (ncol-fn ka c1 ca q1 pca) (Refl _ _))
   (let-match erased tr (MkTrace _ _ _ ct))
   (let ((erased u) (erased pu)) (addc-c ca cd))
@@ -172,7 +165,6 @@
       (erased (Nth (Nat) ks w kw) pw) (erased (NCol kw cw) qw) (erased (AddC cz cw e3) p) (erased (CTr ca cw csq et) ct)
       -> (Next ks (Cons (Nat) w q) (Cons (Nat) kw rcq) a w ka ca cz e3 (Cons (Col) cw csq) et)))
 
-; An N step at d replaces the second and third entries e2, e3 of the trace by their sum s, the edge colour of d.
 (def-fns _ $ (erased n-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (Col) t1 t2 t3)
     (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr)
     (erased (NCols rc cs) nc) (erased (Trace cs (Cons (Col) t1 (Cons (Col) t2 (Cons (Col) t3 et)))) tr)
@@ -180,23 +172,23 @@
     (erased (Trace cs2 (Cons (Col) t1 (Cons (Col) s et))) tr2) (erased (Flag ie d s) fl))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (let-match erased st (MkEcpN _ x0 a ex z ea ez _ _ p _ f1 _ _ px pex pz pea pez g i1 i2 nr))
-  (let ((erased ei) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let-match erased tr (MkTrace ca cs1 _ ct))
-  (let-match erased ct (CTStep _ _ cx _ cs2 _ pax ct1))
+  (let ((erased ei) (erased ni) (erased _) (erased _) (erased pe) (erased pn) (erased _)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased tr (MkTrace ca _ _ ct))
+  (let-match erased ct (CTStep _ _ cx _ _ _ pax ct1))
   (let-match erased ct1 (CTStep _ _ cz _ cs3 _ pxz ct2))
-  (let-match erased nc (NCsCons ka _ rc1 _ pca nc1))
-  (let-match erased nc1 (NCsCons kx _ rc3 _ pcx nc2))
-  (let-match erased nc2 (NCsCons kz _ rcq _ pcz ncq))
+  (let-match erased nc (NCsCons ka _ _ _ pca nc1))
+  (let-match erased nc1 (NCsCons kx _ _ _ pcx nc2))
+  (let-match erased nc2 (NCsCons _ _ rcq _ _ ncq))
   (let-match erased rr (RespCons _ _ _ _ _ pka rr1))
-  (let-match erased rr1 (RespCons _ p1 _ x1 _ pkx rr3))
-  (let-match erased rr3 (RespCons _ q _ z2 _ pkz rrq))
+  (let-match erased rr1 (RespCons _ _ _ _ _ pkx rr3))
+  (let-match erased rr3 (RespCons _ q _ z2 _ _ rrq))
   (let-match erased px (PtrTwo _ _ _))
   (let ((erased nxa)) (ptr-node a x0 n p cr px))
   (let ((erased v) (erased pv) (erased pfx)) (hyper-back d a x0 e n f h nxa))
   (let-match erased (nth-fn _ e a ea v pea pv) (Refl _ _))
   (let ((erased nzx)) (hyper-node d x0 ex z e n f h pex pz))
-  (let-match erased cr (MkCpring _ _ _ y rp back dp))
+  (let-match erased cr (MkCpring _ _ _ _ rp back dp))
   (let-match erased rp (RPCons _ _ _ _ _ _ rp1))
   (let-match erased rp1 (RPCons _ _ _ _ _ pz2 rp2))
   (let-match erased (perm-inj d z2 z x0 n ni pn pz2 nzx) (Refl _ _))
@@ -214,8 +206,8 @@
   (let ((erased fx)) (insert-other f1 f2 ez (Succ d) d x0 i2 (insert-new f f1 ea d d x0 i1 lf pfx) (ApGt _ _ d ez lez)))
   (let ((erased ed)) (edge-low e e2 d g))
   (let ((erased kd) (erased pkd) (erased cd) (erased qd)) (ctx-col ie ks big e2 f2 d (Succ d) ctx ed))
-  (let ((erased kw) (erased pkw1) (erased cw) (erased qw)) (ctx-col ie ks big e2 f2 (Succ d) d ctx (edge-high e e2 d g)))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc rk ce four lk lbg))
+  (let ((erased kw) (erased pkw1) (erased _) (erased _)) (ctx-col ie ks big e2 f2 (Succ d) d ctx (edge-high e e2 d g)))
+  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
   (let ((erased pkw)) (fc-at ks f2 (Succ d) w kw fc fw pkw1))
   (let-match erased (nth-fn _ ks x0 kd kx (fc-at ks f2 d x0 kd fc fx pkd) pkx) (Refl _ _))
   (let-match erased (ncol-fn kx cd cx qd pcx) (Refl _ _))
@@ -254,27 +246,25 @@
 
 (def-fns _ $ (erased ctx-grow : (erased (List (Nat)) ie ks big e e2 f f2) (erased (Nat) d) (erased (Ctx ie ks big e2 f2) ctx) (erased (EdgeGrow e d e2) g)
     (erased (FC ks f) fc) -> (erased (Ctx ie ks big e f) r))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc2 rk ce four lk lb))
-  (let-match erased g (MkEdgeGrow _ e1 _ _ len s1 s2))
+  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre _ rk ce four lk lb))
+  (let-match erased g (MkEdgeGrow _ e1 _ _ _ s1 s2))
   (MkCtx ie ks big e f ke m (pre-unsnoc e e1 big (Succ d) (pre-unsnoc e1 e2 big d pre s2) s1) fc rk ce four lk lb))
 
 (def-fns _ $ (erased ctx-unu : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big) (erased (PointedMap d e n f r) pm) (erased (EcpU d e f r e2 f2 r2) st)
     (erased (Ctx ie ks big e2 f2) ctx) -> (erased (Ctx ie ks big e f) res))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h _))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let-match erased st (MkEcpU _ b c _ _ _ _ f0 _ lb pc g s ins))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc2 rk ce four lk lbg))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased st (MkEcpU _ _ c _ _ _ _ f0 _ _ _ g s ins))
+  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-unsnoc ks f f0 d (fc-uninsert ks f0 f2 c (Succ d) fc2 ins (snoc-length _ f f0 d d s lf)) s)))
 
 (def-fns _ $ (erased ctx-unn : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big) (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st)
     (erased (Ctx ie ks big e2 f2) ctx) -> (erased (Ctx ie ks big e f) res))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h _))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let-match erased st (MkEcpN _ x0 a ex z ea ez _ _ p _ f1 _ _ px pex pz pea pez g i1 i2 nr))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc2 rk ce four lk lbg))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased st (MkEcpN _ _ _ _ _ ea ez _ _ _ _ f1 _ _ _ _ _ _ _ g i1 i2 _))
+  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-uninsert ks f f1 ea d (fc-uninsert ks f1 f2 ez (Succ d) fc2 i2 (insert-length f f1 ea d d i1 lf)) i1 lf)))
-
-; The computation of the ring traces of the contract colourings, one step at a time.
 
 (def-adts $ (Chk : (Type P) -> Type)
   enum
@@ -372,7 +362,7 @@
   (many KH : -> (CK)))
 
 ; The trace o that a U, Y or H step at d makes of et when the new dart d+1 has edge colour u, and the darts whose edge colours
-; that fixes (the steps of cpcolor1 of cfcolor.v, with the contract darts' edges coloured C0).
+; that fixes, with the contract darts' edges coloured C0.
 (def-adts $ (Cand : ((CK) k) ((Nat) d) ((List (Col)) et) ((Col) u) ((List (FU)) cks) ((List (Col)) o) -> Type)
   enum
   (many CaU : (erased (Nat) d) (erased (List (Col)) et) (erased (Col) u)
@@ -478,8 +468,6 @@
         -> (GOptU kt ie k rp d d2 et u))
     (many GuNone : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         (erased (Col) u) (erased (NoCand k et) n) -> (GOptU kt ie k rp d d2 et u))))
-
-; The construction is a function of the program.
 
 (def-adts $ (Cpm : -> Type)
   enum
@@ -656,7 +644,6 @@
       (let-match erased sn (SnocCons _ _ _ _ r2 sn1))
       (FRCons ie t r2 d0 e1 d2 b z x st1 (freach-snoc ie rp1 r2 s e1 d1 d2 z y x fr1 st sn1)))))
 
-; The ring trace of the map of cp under a contract colouring ks, seen from the map of cp, is one that the steps of cp, from its end, make of a candidate of the empty trace.
 (def-fns _ $ (erased trace-reach : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r ie ks big)
     (subterm erased (Cpmap cp d e f r) c) (erased (RYH cp) ry) (erased (Ctx ie ks big e f) ctx)
     -> (erased (List (Nat)) rc) (erased (List (Col)) cs et) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
@@ -699,7 +686,7 @@
       (let ((erased rc0) (erased cs0) (erased et0) (erased rr0) (erased nc0) (erased tr0) (erased rp1) (erased rs1) (erased fr0))
         (trace-reach cp1 d0 e0 f0 r0 ie ks big c1 ry1 ctx0))
       (let ((erased k) (erased lk) (erased csz)) (cpmap-size cp1 d0 e0 f0 r0 c1))
-      (let-match erased (ryh-size cp1 k ry1 csz) (LtS _ k1 _))
+      (let-match erased (ryh-size cp1 k ry1 csz) (LtS _ _ _))
       (let-match erased (trace-length cs0 et0 k tr0 (ncols-length rc0 cs0 k nc0 (respects-length ks r0 rc0 k rr0 lk))) (LengthCons _ a1 et2 _ _))
       (let ((erased uu) (erased rc1) (erased cs1) (erased rr1) (erased nc1) (erased tr1) (erased fl1))
         (u-trace d0 e0 n0 f0 r0 e1 f1 r1 ie ks big rc0 cs0 et0 pm0 u ctx1 rr0 nc0 tr0))
@@ -724,8 +711,8 @@
       (let ((erased rc0) (erased cs0) (erased et0) (erased rr0) (erased nc0) (erased tr0) (erased rp1) (erased rs1) (erased fr0))
         (trace-reach cp1 d0 e0 f0 r0 ie ks big c1 ry1 ctx0))
       (let ((erased k) (erased lk) (erased csz)) (cpmap-size cp1 d0 e0 f0 r0 c1))
-      (let-match erased (ryh-size cp1 k ry1 csz) (LtS _ k1 lk1))
-      (let-match erased lk1 (LtZ k2))
+      (let-match erased (ryh-size cp1 k ry1 csz) (LtS _ _ lk1))
+      (let-match erased lk1 (LtZ _))
       (let-match erased (trace-length cs0 et0 k tr0 (ncols-length rc0 cs0 k nc0 (respects-length ks r0 rc0 k rr0 lk))) (LengthCons _ a1 et1 _ l1))
       (let-match erased l1 (LengthCons _ a2 et2 _ _))
       (let ((erased uu) (erased rc1) (erased cs1) (erased rr1) (erased nc1) (erased tr1) (erased fl1))
@@ -742,7 +729,6 @@
             (CaH d0 a1 a2 uu v w et2 pv pw) (AFCons ie (Succ d0) uu _ fl1 (AFCons ie d2 v _ fl2 (AFCons ie d4 w _ fl3 (AFNil ie)))))
           (SnocCons _ (SU) (SH) rp1 rp sn))))))
 
-; Every contract ring trace of the map of cp is one that FR reaches.
 (def-fns _ $ (erased cccol-hit : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ie)
     (erased (Cpmap cp d e f r) c) (erased (InsertE e cc ie) pi) (erased (RYH cp) ry) (erased (List (Col)) et)
     (erased (CcCol cp cc et) col) -> (erased (List (Step)) rp) (erased (RevS cp rp) rs) (erased (FR ie (Cons (Step) (SU) rp) (Zero) (Nil (Col)) d et) fr))
@@ -751,7 +737,7 @@
   (let-match erased ccol (MkCcColoring _ _ _ _ ie2 ke pi2 face ce edge four))
   (let-match erased (inserte-fn e cc ie ie2 pi pi2) (Refl _ _))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r c))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f (pointed-hyper d e n f r pm)))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f (pointed-hyper d e n f r pm)))
   (let ((erased ctx)) (MkCtx ie ks e e f ke d (pre-refl e) (MkFC ks f ks face (pre-refl ks)) ce edge four (respects-length ks f ks d face lf) le))
   (let ((erased rc2) (erased cs2) (erased et2) (erased rr2) (erased nc2) (erased tr2) (erased rp) (erased rs) (erased fr))
     (trace-reach cp d e f r ie ks e c ry ctx))
@@ -824,7 +810,6 @@
     ((DFR _ _ _ _ _ _ _ g) g)
     ((DFK _ _ s k _ d2 rp1 _ _ sk g) (GdK kt ie s k d d2 rp1 et sk g))))
 
-; Depth first, every trace the steps of rp make of et is checked against kt.
 (def-fns _ $ (many dfs-c : (many (Ctree) kt) (many (List (Nat)) ie) (subterm many (List (Step)) rp) (subterm many (List (Col)) us) (many (Nat) d)
     (many (List (Col)) et) -> (many (Chk (DFE kt ie rp us d et)) r))
   (let-match many rp (Cons _ s rest)
@@ -889,12 +874,12 @@
           (let-match erased e1 (Refl _ _))
           (let-match erased e2 (Refl _ _))
           (match erased (gl-sel kt ie k rp1 d d1 et u all-cols gl (all-cols-mem u)) _
-            ((GuYes _ _ _ _ _ _ _ _ cks2 o2 c2 af2 g2)
-              (let ((erased q1) (erased q2)) (cand-fn k d et u cks cks2 y o2 c c2))
+            ((GuYes _ _ _ _ _ _ _ _ cks2 o2 c2 _ g2)
+              (let ((erased _) (erased q2)) (cand-fn k d et u cks cks2 y o2 c c2))
               (let-match erased q2 (Refl _ _))
               (good-out kt ie rp1 d1 dx y x fr1 g2))
             (absurd (GuFail _ _ _ _ _ _ _ _ cks2 o2 c2 sn)
-              (let ((erased q1) (erased q2)) (cand-fn k d et u cks cks2 y o2 c c2))
+              (let ((erased q1) (erased _)) (cand-fn k d et u cks cks2 y o2 c c2))
               (let-match erased q1 (Refl _ _))
               (all-some ie cks af sn))
             (absurd (GuNone _ _ _ _ _ _ _ _ n) (cand-no k d et u cks y c n))))))))

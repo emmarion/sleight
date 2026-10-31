@@ -1,6 +1,3 @@
-; The maps of the construction programs of red.sl (Gonthier's cpmap), on the pointed maps of cfmap.sl. Load after
-; cfmap.sl and red/red.sl.
-
 ; cp has no A step (the steps cpmap builds here).
 (def-adts $ (NoA : ((List (Step)) cp) -> Type)
   enum
@@ -12,7 +9,7 @@
   (many NoAU : (erased (List (Step)) cp) (erased (NoA cp) p) -> (NoA (Cons (Step) (SU) cp)))
   (many NoAK : (erased (List (Step)) cp) (erased (NoA cp) p) -> (NoA (Cons (Step) (SK) cp))))
 
-; Gonthier's cubic_prog: only R, U, Y and H steps.
+; cp has only R, U, Y and H steps.
 (def-adts $ (CubicProg : ((List (Step)) cp) -> Type)
   enum
   (many CubNil : -> (CubicProg (Nil (Step))))
@@ -21,8 +18,8 @@
   (many CubH : (erased (List (Step)) cp) (erased (CubicProg cp) p) -> (CubicProg (Cons (Step) (SH) cp)))
   (many CubU : (erased (List (Step)) cp) (erased (CubicProg cp) p) -> (CubicProg (Cons (Step) (SU) cp))))
 
-; The map (d, e, f) and ring r that cp builds, its steps applied from the end of cp (Gonthier's cpmap): K is R' then N then
-; R 1, Y is U then N, and H is U then N twice.
+; The map (d, e, f) and ring r that cp builds, its steps applied from the end of cp: K is R' then N then R 1, Y is U then N, and H
+; is U then N twice.
 (def-adts $ (Cpmap : ((List (Step)) cp) ((Nat) d) ((List (Nat)) e f r) -> Type)
   enum
   (many CmNil : -> (Cpmap (Nil (Step)) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
@@ -51,7 +48,7 @@
     ((CmR k _ cp1 _ _ r1 _ c1 rt)
       (let ((erased n) (erased pm)) (cpmap-map cp1 d e f r1 c1))
       (values n (pointed-rot d k e n f r1 r pm rt)))
-    ((CmRr m _ cp1 _ _ r1 _ c1 l rt)
+    ((CmRr m _ cp1 _ _ r1 _ c1 _ rt)
       (let ((erased n) (erased pm)) (cpmap-map cp1 d e f r1 c1))
       (values n (pointed-rot d m e n f r1 r pm rt)))
     ((CmU d0 cp1 e0 f0 r0 _ _ _ c1 u)
@@ -66,7 +63,7 @@
       (let ((erased n1) (erased pm1)) (ecpU-map d0 e0 n0 f0 r0 e1 f1 r1 pm0 u))
       (let ((erased n2) (erased pm2)) (ecpN-map (Succ (Succ d0)) e1 n1 f1 r1 e2 f2 r2 pm1 nn))
       (ecpN-map (Succ (Succ (Succ (Succ d0)))) e2 n2 f2 r2 e f r pm2 nn2))
-    ((CmK m d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 l rt nn rt2)
+    ((CmK m d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 _ rt nn rt2)
       (let ((erased n0) (erased pm0)) (cpmap-map cp1 d0 e0 f0 r0 c1))
       (let ((erased n2) (erased pm2)) (ecpN-map d0 e0 n0 f0 r1 e f r2 (pointed-rot d0 m e0 n0 f0 r0 r1 pm0 rt) nn))
       (values n2 (pointed-rot d (Succ (Zero)) e n2 f r2 r pm2 rt2)))))
@@ -76,21 +73,19 @@
 
 (def-fns _ $ (erased pointed-ring : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (PointedMap d e n f r) pm)
     -> (erased (Nat) a) (erased (List (Nat)) p) (erased (Eq (List (Nat)) r (Cons (Nat) a p)) q))
-  (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
+  (let-match erased pm (MkPointedMap _ _ _ _ _ _ cr))
   (let-match erased cr (MkCpring _ p a _ _ _ _))
   (values a p (Refl _ r)))
 
-; Runs cp, building its map and ring with a certificate of the construction.
 (def-fns _ $ (many cpmap-c : (subterm many (List (Step)) cp) (erased (NoA cp) na) -> (many (Nat) d) (many (List (Nat)) e f r) (erased (Cpmap cp d e f r) c))
   (let-match many cp (Cons _ s rest)
     ((Nil _) (values (Succ (Succ (Zero))) (Cons _ (Succ (Zero)) (Cons _ (Zero) (Nil _))) (Cons _ (Zero) (Cons _ (Succ (Zero)) (Nil _)))
       (Cons _ (Succ (Zero)) (Cons _ (Zero) (Nil _))) (CmNil))))
   (let ((many d) (many e) (many f) (many r) (erased c)) (notail $ cpmap-c rest (noa-tail s rest na)))
   (let ((erased n) (erased pm)) (cpmap-map rest d e f r c))
-  (let ((erased a) (erased p) (erased q)) (pointed-ring d e n f r pm))
+  (let ((erased _) (erased _) (erased q)) (pointed-ring d e n f r pm))
   (let-match erased q (Refl _ _))
   (let-match many r (Cons _ a1 p1))
-  (let ((erased d2) (erased d4)) (values (Succ (Succ d)) (Succ (Succ (Succ (Succ d))))))
   (match many s _
     ((SR k) (let ((many r2) (erased rt)) (rot-c _ k r)) (values d e f r2 (CmR k d rest e f r r2 c rt)))
     ((SRr) (let ((many r2) (erased m) (erased l) (erased rt)) (rotr1-c a1 p1)) (values d e f r2 (CmRr m d rest e f r r2 c l rt)))
@@ -113,13 +108,13 @@
       (values (Succ (Succ d)) e2 f2 r3 (CmK m d rest e f r r1 e2 f2 r2 r3 c l rt nn rt2)))
     (absurd (SA) na)))
 
-; k2 is Gonthier's sub2ifgt2 k.
+; k2 is k - 2 when k exceeds 2, and k otherwise.
 (def-adts $ (Sub2gt2 : ((Nat) k k2) -> Type)
   enum
   (many S2Big : (erased (Nat) m) -> (Sub2gt2 (Succ (Succ (Succ m))) (Succ m)))
   (many S2Small : (erased (Nat) k) (erased (Lt k (Succ (Succ (Succ (Zero))))) lt) -> (Sub2gt2 k k)))
 
-; Gonthier's cprsize: the size of the ring of cp's map, computed from cp alone.
+; k is the size of the ring of cp's map, computed from cp alone.
 (def-adts $ (Cprsize : ((List (Step)) cp) ((Nat) k) -> Type)
   enum
   (many CsNil : -> (Cprsize (Nil (Step)) (Succ (Succ (Zero)))))
@@ -135,12 +130,11 @@
 
 (def-fns _ $ (erased ring-pos : (erased (Nat) d k) (erased (List (Nat)) e n f r) (erased (PointedMap d e n f r) pm) (erased (Length (Nat) r k) l)
     -> (erased (Nat) k1) (erased (Eq (Nat) k (Succ k1)) q))
-  (let ((erased a) (erased p) (erased q)) (pointed-ring d e n f r pm))
+  (let ((erased _) (erased _) (erased q)) (pointed-ring d e n f r pm))
   (let-match erased q (Refl _ _))
   (let-match erased l (LengthCons _ _ _ k1 _))
   (values k1 (Refl _ k)))
 
-; The ring of cp's map has cprsize cp darts (size_ring_cpmap).
 (def-fns _ $ (erased cpmap-size : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
     -> (erased (Nat) k) (erased (Length (Nat) r k) l) (erased (Cprsize cp k) cs))
   (match erased c _
@@ -148,7 +142,7 @@
     ((CmR j _ cp1 _ _ r1 _ c1 rt)
       (let ((erased k) (erased l) (erased cs)) (cpmap-size cp1 d e f r1 c1))
       (values k (rot-length j k r1 r rt l) (CsR j k cp1 cs)))
-    ((CmRr m _ cp1 _ _ r1 _ c1 l1 rt)
+    ((CmRr m _ cp1 _ _ r1 _ c1 _ rt)
       (let ((erased k) (erased l) (erased cs)) (cpmap-size cp1 d e f r1 c1))
       (values k (rot-length m k r1 r rt l) (CsRr k cp1 cs)))
     ((CmU d0 cp1 e0 f0 r0 _ _ _ c1 u)
@@ -158,40 +152,37 @@
       (let ((erased k) (erased l) (erased cs)) (cpmap-size cp1 d0 e0 f0 r0 c1))
       (let ((erased n0) (erased pm0)) (cpmap-map cp1 d0 e0 f0 r0 c1))
       (let ((erased n1) (erased pm1)) (ecpU-map d0 e0 n0 f0 r0 e1 f1 r1 pm0 u))
-      (let ((erased k2) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k)) e1 n1 f1 r1 e f r pm1 nn (ecpU-size d0 k e0 f0 r0 e1 f1 r1 u l)))
+      (let ((erased _) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k)) e1 n1 f1 r1 e f r pm1 nn (ecpU-size d0 k e0 f0 r0 e1 f1 r1 u l)))
       (let-match erased ps (P2Step _))
       (values (Succ k) l2 (CsY k cp1 cs)))
     ((CmH d0 cp1 e0 f0 r0 e1 f1 r1 e2 f2 r2 _ _ _ c1 u nn nn2)
       (let ((erased k) (erased l) (erased cs)) (cpmap-size cp1 d0 e0 f0 r0 c1))
       (let ((erased n0) (erased pm0)) (cpmap-map cp1 d0 e0 f0 r0 c1))
-      (let ((erased k1) (erased q)) (ring-pos d0 k e0 n0 f0 r0 pm0 l))
+      (let ((erased _) (erased q)) (ring-pos d0 k e0 n0 f0 r0 pm0 l))
       (let-match erased q (Refl _ _))
       (let ((erased n1) (erased pm1)) (ecpU-map d0 e0 n0 f0 r0 e1 f1 r1 pm0 u))
-      (let ((erased k2) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k)) e1 n1 f1 r1 e2 f2 r2 pm1 nn (ecpU-size d0 k e0 f0 r0 e1 f1 r1 u l)))
+      (let ((erased _) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k)) e1 n1 f1 r1 e2 f2 r2 pm1 nn (ecpU-size d0 k e0 f0 r0 e1 f1 r1 u l)))
       (let-match erased ps (P2Step _))
       (let ((erased n2) (erased pm2)) (ecpN-map (Succ (Succ d0)) e1 n1 f1 r1 e2 f2 r2 pm1 nn))
-      (let ((erased k3) (erased ps2) (erased l3)) (ecpN-size (Succ (Succ (Succ (Succ d0)))) (Succ k) e2 n2 f2 r2 e f r pm2 nn2 l2))
+      (let ((erased _) (erased ps2) (erased l3)) (ecpN-size (Succ (Succ (Succ (Succ d0)))) (Succ k) e2 n2 f2 r2 e f r pm2 nn2 l2))
       (let-match erased ps2 (P2Step _))
       (values k l3 (CsH k cp1 cs)))
-    ((CmK m d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 l1 rt nn rt2)
+    ((CmK m d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 _ rt nn rt2)
       (let ((erased k) (erased l) (erased cs)) (cpmap-size cp1 d0 e0 f0 r0 c1))
       (let ((erased n0) (erased pm0)) (cpmap-map cp1 d0 e0 f0 r0 c1))
       (let ((erased k2) (erased ps) (erased l2)) (ecpN-size d0 k e0 n0 f0 r1 e f r2 (pointed-rot d0 m e0 n0 f0 r0 r1 pm0 rt) nn (rot-length m k r0 r1 rt l)))
       (values k2 (rot-length (Succ (Zero)) k2 r2 r rt2 l2) (CsK k k2 cp1 cs ps)))))
 
-; The ring of a cubic program's map has more than one dart (cpmap_proper), and that of a configuration program's map
-; more than two (cfmap_long).
 (def-fns _ $ (erased cprsize-proper : (erased (List (Step)) cp) (erased (Nat) k) (erased (Cprsize cp k) cs) (subterm erased (CubicProg cp) cq)
     -> (erased (Lt (Succ (Zero)) k) r))
   (match erased cq _
     ((CubNil) (let-match erased cs (CsNil)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero))))
-    ((CubR j cp1 cq1) (let-match erased cs (CsR _ _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
+    ((CubR _ cp1 cq1) (let-match erased cs (CsR _ _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
     ((CubY cp1 cq1) (let-match erased cs (CsY k1 _ cs1)) (lt-weaken (Succ (Zero)) k1 (cprsize-proper cp1 k1 cs1 cq1)))
     ((CubH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
     ((CubU cp1 cq1) (let-match erased cs (CsU k1 _ cs1))
       (lt-weaken (Succ (Zero)) (Succ k1) (lt-weaken (Succ (Zero)) k1 (cprsize-proper cp1 k1 cs1 cq1))))))
 
-; Every map a program without A steps builds is plain (cpmap_plain, which Coq states for cubic programs).
 (def-fns _ $ (erased cpmap-plain : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
     -> (erased (Plain d e) pl))
   (match erased c _
@@ -209,7 +200,6 @@
         (ecpN-grow (Succ (Succ (Succ (Succ d0)))) e2 f2 r2 e f r nn2)))
     ((CmK _ d0 cp1 e0 f0 r0 r1 _ _ r2 _ c1 _ _ nn _) (plain-grow d0 e0 e (cpmap-plain cp1 d0 e0 f0 r0 c1) (ecpN-grow d0 e0 f0 r1 e f r2 nn)))))
 
-; The map of a cubic program has node order 3 off its ring (cpmap_cubic).
 (def-fns _ $ (erased cpmap-cubic : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
     (erased (CubicProg cp) cq) -> (erased (List (Nat)) n) (erased (PointedMap d e n f r) pm) (erased (QuasiCubic d n r) qc))
   (match erased c _
@@ -246,13 +236,12 @@
       (let ((erased n2) (erased pm2)) (ecpN-map (Succ (Succ d0)) e1 n1 f1 r1 e2 f2 r2 pm1 nn))
       (let ((erased qc2)) (ecpN-cubic (Succ (Succ d0)) (Succ (Succ k0)) e1 n1 f1 r1 e2 n2 f2 r2 pm1 nn (pointed-hyper (Succ (Succ (Succ (Succ d0)))) e2 n2 f2 r2 pm2)
         qc1 l1 (LtS (Zero) (Succ k0) (LtZ k0))))
-      (let ((erased k2) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k0)) e1 n1 f1 r1 e2 f2 r2 pm1 nn l1))
+      (let ((erased _) (erased ps) (erased l2)) (ecpN-size (Succ (Succ d0)) (Succ (Succ k0)) e1 n1 f1 r1 e2 f2 r2 pm1 nn l1))
       (let-match erased ps (P2Step _))
       (let ((erased n) (erased pm)) (ecpN-map (Succ (Succ (Succ (Succ d0)))) e2 n2 f2 r2 e f r pm2 nn2))
       (values n pm (ecpN-cubic (Succ (Succ (Succ (Succ d0)))) (Succ k0) e2 n2 f2 r2 e n f r pm2 nn2 (pointed-hyper d e n f r pm) qc2 l2
         (LtS (Zero) (Succ k1) (LtZ k1)))))))
 
-; Decides whether cp has no A step.
 (def-adts $ (NoADec : ((List (Step)) cp) -> Type)
   enum
   (many NoAYes : (erased (List (Step)) cp) (erased (NoA cp) p) -> (NoADec cp))
@@ -270,7 +259,6 @@
     ((SK) (NoAYes cp (NoAK rest p)))
     ((SA) (NoANo cp))))
 
-; Names of cfmap.sl that later files of the hypermap layer define again, kept for the files loaded after them.
 (let ((erased CRPath)) RPath)
 (let ((erased CRPNil)) RPNil)
 (let ((erased CRPCons)) RPCons)

@@ -1,4 +1,3 @@
-; A set of partial chromograms: those of a gtree, or the set holding only the empty one.
 (def-adts $ (GSet : -> Type)
   enum
   (many GSG : (many (Gtree) g) -> (GSet))
@@ -11,7 +10,6 @@
   (many PkPop0 : (erased Type A) (erased A x0 x1 x2 x3) -> (Pick4 A (GPop0) x0 x1 x2 x3 x2))
   (many PkPop1 : (erased Type A) (erased A x0 x1 x2 x3) -> (Pick4 A (GPop1) x0 x1 x2 x3 x3)))
 
-; The one-symbol chromograms a gtree leaf holds, flagged in the order GPush GSkip GPop0 GPop1.
 (def-adts $ (Bits : -> Type)
   enum
   (many MkBits : (many (Bool) b0 b1 b2 b3) -> (Bits)))
@@ -59,7 +57,7 @@
   (many Popped0 : (erased (Bstack) b) -> (Popped (BP0 b) b))
   (many Popped1 : (erased (Bstack) b) -> (Popped (BP1 b) b)))
 
-; After match_count of gtree.v: n chromograms of gs match et from the stack bs.
+; n chromograms of gs match et from the stack bs.
 (def-adts $ (MC : ((GSet) gs) ((Bstack) bs) ((List (Col)) et) ((Nat) n) -> Type)
   enum
   (many MCNil : (erased (GSet) gs) (erased (Bstack) bs) (erased (Nat) n) (erased (GRoot gs n) p) -> (MC gs bs (Nil (Col)) n))
@@ -74,7 +72,7 @@
       (erased (MC g1 bs1 et n1) q1) (erased (Sym s bs e b) y2) (erased (GSel gs s g2) p2) (erased (MC g2 b et n2) q2)
       (erased (Add n1 n2 n) a) -> (MC gs bs (Cons (Col) e et) n)))
 
-; a and b partition gs (after sgtree_partition of gtree.v).
+; a and b partition gs.
 (def-adts
   ((GPart : ((GSet) gs) ((GSet) a) ((GSet) b) -> Type)
     enum
@@ -118,8 +116,7 @@
 
 (def-fns _ $ (erased gsel-exists : (erased (GSet) gs) (erased (Gsym) s) -> (erased (GSet) gs2) (erased (GSel gs s gs2) p))
   (let-match erased gs (GSG g) ((GSOne) (values (GSG (GEmpty)) (GSelOne s))))
-  (match erased g _
-    ((GNode t0 t1 t2 t3) (let ((erased u) (erased p)) (pick4-exists (Gtree) s t0 t1 t2 t3)) (values (GSG u) (GSelN t0 t1 t2 t3 u s p)))
+  (let-match erased g (GNode t0 t1 t2 t3)
     ((GL0) (leaf-sel g (BTrue) (BFalse) (BFalse) (BFalse) s (LS0)))
     ((GL1) (leaf-sel g (BFalse) (BTrue) (BFalse) (BFalse) s (LS1)))
     ((GL2) (leaf-sel g (BFalse) (BFalse) (BTrue) (BFalse) s (LS2)))
@@ -128,7 +125,9 @@
     ((GL12) (leaf-sel g (BFalse) (BTrue) (BTrue) (BFalse) s (LS12)))
     ((GL13) (leaf-sel g (BFalse) (BTrue) (BFalse) (BTrue) s (LS13)))
     ((GL23) (leaf-sel g (BFalse) (BFalse) (BTrue) (BTrue) s (LS23)))
-    ((GEmpty) (leaf-sel g (BFalse) (BFalse) (BFalse) (BFalse) s (LSE)))))
+    ((GEmpty) (leaf-sel g (BFalse) (BFalse) (BFalse) (BFalse) s (LSE))))
+  (let ((erased u) (erased p)) (pick4-exists (Gtree) s t0 t1 t2 t3))
+  (values (GSG u) (GSelN t0 t1 t2 t3 u s p)))
 
 (def-fns _ $ (erased leafset-fn : (erased (Gtree) g) (erased (Bits) q r) (erased (LeafSet g q) la) (erased (LeafSet g r) lb) ->
     (erased (Eq (Bits) q r) e))
@@ -147,7 +146,7 @@
     (erased (Eq (GSet) u v) e))
   (match erased p _
     ((GSelN t0 t1 t2 t3 a _ pa)
-      (let-match erased q (GSelN _ _ _ _ b _ pb) (absurd (GSelL _ c0 c1 c2 c3 c _ _ lb pb bb) lb))
+      (let-match erased q (GSelN _ _ _ _ b _ pb) (absurd (GSelL _ _ _ _ _ _ _ _ lb _ _) lb))
       (let-match erased (pick4-fn (Gtree) s t0 t1 t2 t3 a b pa pb) (Refl _ _))
       (Refl _ u))
     ((GSelL g b0 b1 b2 b3 b _ _ la pa ba)
@@ -254,26 +253,26 @@
 (def-fns _ $ (erased mc-inv-push : (erased (GSet) gs) (erased (Bstack) bs1) (erased (Col) e) (erased (List (Col)) et) (erased (Nat) n)
     (erased (Sym (GPush) (BS0) e bs1) y) (erased (MC gs (BS0) (Cons (Col) e et) n) m) ->
     (erased (GSet) g1) (erased (GSel gs (GPush) g1) p) (erased (MC g1 bs1 et n) q))
-  (match erased m _
+  (let-match erased m (MCPush _ g1 c1 _ _ _ y1 p q)
     (absurd (MC0 _ _ _) y)
     (absurd (MCSkip _ _ _ _ _ _ _) y)
-    ((MCPush _ g1 c1 _ _ _ y1 p q) (let-match erased (sym-fn (GPush) (BS0) bs1 c1 e y y1) (Refl _ _)) (values g1 p q))
-    (absurd (MCPP _ _ _ _ _ _ _ _ _ _ _ _ pp _ _ _ _ _ _ _) pp)))
+    (absurd (MCPP _ _ _ _ _ _ _ _ _ _ _ _ pp _ _ _ _ _ _ _) pp))
+  (let-match erased (sym-fn (GPush) (BS0) bs1 c1 e y y1) (Refl _ _))
+  (values g1 p q))
 
 (def-fns _ $ (erased mc-inv-pp : (erased (GSet) gs) (erased (Bstack) bs b bs1) (erased (Gsym) s) (erased (Col) e) (erased (List (Col)) et)
     (erased (Nat) n) (erased (Sym (GPush) bs e bs1) y) (erased (Popped bs b) pp) (erased (Sym s bs e b) z)
     (erased (MC gs bs (Cons (Col) e et) n) m) ->
     (erased (Nat) n1 n2) (erased (GSet) g1 g2) (erased (GSel gs (GPush) g1) p1) (erased (MC g1 bs1 et n1) q1)
     (erased (GSel gs s g2) p2) (erased (MC g2 b et n2) q2) (erased (Add n1 n2 n) a))
-  (match erased m _
+  (let-match erased m (MCPP _ g1 g2 _ c c1 t _ _ n1 n2 _ pp1 y1 p1 q1 z1 p2 q2 a)
     (absurd (MC0 _ _ _) y)
     (absurd (MCSkip _ _ _ _ _ _ _) y)
-    (absurd (MCPush _ _ _ _ _ _ _ _ _) pp)
-    ((MCPP _ g1 g2 _ c c1 t _ _ n1 n2 _ pp1 y1 p1 q1 z1 p2 q2 a)
-      (let-match erased (sym-fn (GPush) bs bs1 c1 e y y1) (Refl _ _))
-      (let-match erased (popped-fn bs b c pp pp1) (Refl _ _))
-      (let-match erased (pop-fn s t bs b e pp z z1) (Refl _ _))
-      (values n1 n2 g1 g2 p1 q1 p2 q2 a))))
+    (absurd (MCPush _ _ _ _ _ _ _ _ _) pp))
+  (let-match erased (sym-fn (GPush) bs bs1 c1 e y y1) (Refl _ _))
+  (let-match erased (popped-fn bs b c pp pp1) (Refl _ _))
+  (let-match erased (pop-fn s t bs b e pp z z1) (Refl _ _))
+  (values n1 n2 g1 g2 p1 q1 p2 q2 a))
 
 (def-fns _ $ (erased mc-exists : (erased (GSet) gs) (erased (Bstack) bs) (subterm erased (List (Col)) et) -> (erased (Nat) n) (erased (MC gs bs et n) m))
   (let-match erased et (Cons _ e et1) ((Nil _) (let ((erased n) (erased r)) (groot-exists gs)) (values n (MCNil gs bs n r))))
@@ -286,13 +285,12 @@
     ((K23 _ _ bs1 y po)
       (let ((erased g1) (erased p1)) (gsel-exists gs (GPush)))
       (let ((erased n1) (erased q1)) (mc-exists g1 bs1 et1))
-      (match erased po _
-        ((PNone _) (values n1 (MCPush gs g1 bs1 e et1 n1 y p1 q1)))
-        ((PSome _ b _ s pp z)
-          (let ((erased g2) (erased p2)) (gsel-exists gs s))
-          (let ((erased n2) (erased q2)) (mc-exists g2 b et1))
-          (let ((erased n) (erased a)) (add n1 n2))
-          (values n (MCPP gs g1 g2 bs b bs1 s e et1 n1 n2 n pp y p1 q1 z p2 q2 a)))))))
+      (let-match erased po (PSome _ b _ s pp z)
+        ((PNone _) (values n1 (MCPush gs g1 bs1 e et1 n1 y p1 q1))))
+      (let ((erased g2) (erased p2)) (gsel-exists gs s))
+      (let ((erased n2) (erased q2)) (mc-exists g2 b et1))
+      (let ((erased n) (erased a)) (add n1 n2))
+      (values n (MCPP gs g1 g2 bs b bs1 s e et1 n1 n2 n pp y p1 q1 z p2 q2 a)))))
 
 (def-fns _ $ (erased mc-fn : (erased (GSet) gs) (erased (Bstack) bs) (subterm erased (List (Col)) et) (erased (Nat) n m)
     (erased (MC gs bs et n) p) (erased (MC gs bs et m) q) -> (erased (Eq (Nat) n m) r))
@@ -324,7 +322,7 @@
           (add-fn n1 n2 n m a a2))))))
 
 (def-fns _ $ (erased sel-gempty : (erased (Gsym) s) (erased (GSet) u) (erased (GSel (GSG (GEmpty)) s u) p) -> (erased (Eq (GSet) u (GSG (GEmpty))) e))
-  (let-match erased p (GSelL _ b0 b1 b2 b3 b _ _ la pa ba))
+  (let-match erased p (GSelL _ _ _ _ _ _ _ _ la pa ba))
   (let-match erased la (LSE))
   (match erased pa _
     ((PkPush _ _ _ _ _) (let-match erased ba (BSetF)) (Refl _ u))
@@ -348,7 +346,7 @@
       (Refl _ n))))
 
 (def-fns _ $ (erased add-pos-r : (erased (Nat) a b c) (subterm erased (Add a b c) p) (erased (Lt (Zero) b) l) -> (erased (Lt (Zero) c) r))
-  (match erased p _ ((AddZero _) l) ((AddSucc a1 _ c1 _) (LtZ c1))))
+  (match erased p _ ((AddZero _) l) ((AddSucc _ _ c1 _) (LtZ c1))))
 
 (def-fns _ $ (erased add-pos-l : (erased (Nat) a b c) (erased (Add a b c) p) (erased (Lt (Zero) a) l) -> (erased (Lt (Zero) c) r))
   (add-pos-r b a c (add-comm a b c p) l))
@@ -365,35 +363,33 @@
           (let-match erased (gsel-fn gs gs2 u s sl p) (Refl _ _))
           (mc-pos gs2 bs et1 w1 n g1 mt1 q))
         ((SCPush _ _ _ _)
-          (match erased (col-kind e bs) _
+          (let-match erased (col-kind e bs) (K23 _ _ bs1 y1 po)
             (absurd (K0 _) y)
-            (absurd (K1 _) y)
-            ((K23 _ _ bs1 y1 po)
-              (let-match erased (sym-fn (GPush) bs bs2 bs1 e y y1) (Refl _ _))
-              (match erased po _
-                ((PNone _)
-                  (let ((erased u) (erased p) (erased q)) (mc-inv-push gs bs2 e et1 n y m))
-                  (let-match erased (gsel-fn gs gs2 u s sl p) (Refl _ _))
-                  (mc-pos gs2 bs2 et1 w1 n g1 mt1 q))
-                ((PSome _ b _ t pp z)
-                  (let ((erased n1) (erased n2) (erased u1) (erased u2) (erased p1) (erased q1) (erased p2) (erased q2) (erased a))
-                    (mc-inv-pp gs bs b bs2 t e et1 n y pp z m))
-                  (let-match erased (gsel-fn gs gs2 u1 s sl p1) (Refl _ _))
-                  (add-pos-l n1 n2 n a (mc-pos gs2 bs2 et1 w1 n1 g1 mt1 q1)))))))
+            (absurd (K1 _) y))
+          (let-match erased (sym-fn (GPush) bs bs2 bs1 e y y1) (Refl _ _))
+          (match erased po _
+            ((PNone _)
+              (let ((erased u) (erased p) (erased q)) (mc-inv-push gs bs2 e et1 n y m))
+              (let-match erased (gsel-fn gs gs2 u s sl p) (Refl _ _))
+              (mc-pos gs2 bs2 et1 w1 n g1 mt1 q))
+            ((PSome _ b _ t pp z)
+              (let ((erased n1) (erased n2) (erased u1) (erased _) (erased p1) (erased q1) (erased _) (erased _) (erased a))
+                (mc-inv-pp gs bs b bs2 t e et1 n y pp z m))
+              (let-match erased (gsel-fn gs gs2 u1 s sl p1) (Refl _ _))
+              (add-pos-l n1 n2 n a (mc-pos gs2 bs2 et1 w1 n1 g1 mt1 q1)))))
         ((SCPop _ _ _ _ pp _)
           (match erased (col-kind e bs) _
             (absurd (K0 _) y)
             (absurd (K1 _) (let-match erased y (SSkip _)) pp)
             ((K23 _ _ bs1 y1 po)
-              (match erased po _
-                (absurd (PNone _) pp)
-                ((PSome _ b _ t pp2 z)
-                  (let-match erased (popped-fn bs bs2 b pp pp2) (Refl _ _))
-                  (let-match erased (pop-fn s t bs bs2 e pp y z) (Refl _ _))
-                  (let ((erased n1) (erased n2) (erased u1) (erased u2) (erased p1) (erased q1) (erased p2) (erased q2) (erased a))
-                    (mc-inv-pp gs bs bs2 bs1 s e et1 n y1 pp z m))
-                  (let-match erased (gsel-fn gs gs2 u2 s sl p2) (Refl _ _))
-                  (add-pos-r n1 n2 n a (mc-pos gs2 bs2 et1 w1 n2 g1 mt1 q2)))))))))))
+              (let-match erased po (PSome _ b _ t pp2 z)
+                (absurd (PNone _) pp))
+              (let-match erased (popped-fn bs bs2 b pp pp2) (Refl _ _))
+              (let-match erased (pop-fn s t bs bs2 e pp y z) (Refl _ _))
+              (let ((erased n1) (erased n2) (erased _) (erased u2) (erased _) (erased _) (erased p2) (erased q2) (erased a))
+                (mc-inv-pp gs bs bs2 bs1 s e et1 n y1 pp z m))
+              (let-match erased (gsel-fn gs gs2 u2 s sl p2) (Refl _ _))
+              (add-pos-r n1 n2 n a (mc-pos gs2 bs2 et1 w1 n2 g1 mt1 q2)))))))))
 
 (def-fns _ $ (erased add-assoc-back : (erased (Nat) a b c bc abc) (subterm erased (Add a bc abc) p) (erased (Add b c bc) q) ->
     (erased (Nat) ab) (erased (Add a b ab) r) (erased (Add ab c abc) s))
@@ -422,7 +418,7 @@
 
 (def-fns _ $ (erased part-step : (erased (GSet) gs a b g1 a1 b1) (erased (Gsym) s) (erased (GPart gs a b) p)
     (erased (GSel gs s g1) sg) (erased (GSel a s a1) sa) (erased (GSel b s b1) sb) -> (erased (GPart g1 a1 b1) r))
-  (let ((erased e) (erased pa))
+  (let ((erased _) (erased pa))
     (match erased p (((GSet) e) ((GPartAt gs a b s) pa))
       ((GPE) (let ((erased e) (erased m)) (values (GSG (GEmpty)) (sel-gempty-mk s)))
         (values (GSG (GEmpty)) (MkGPartAt gs a b e e e s m m m (GPE))))
@@ -482,11 +478,13 @@
     (erased (Or (GMem a w) (GMem b w)) r))
   (match erased m _
     ((GMNil)
-      (let-match erased p (GPS _ _ _ n0 x0 y0 rg ra rb s _ _ _ _))
+      (let-match erased p (GPS _ _ _ _ _ _ rg ra rb s _ _ _ _))
       (let-match erased rg (GROne))
-      (match erased ra _
-        ((GROne) (InL _ _ (GMNil)))
-        ((GRG _) (let-match erased s (AddZero _)) (let-match erased rb (GROne)) (InR _ _ (GMNil)))))
+      (let-match erased ra (GRG _)
+        ((GROne) (InL _ _ (GMNil))))
+      (let-match erased s (AddZero _))
+      (let-match erased rb (GROne))
+      (InR _ _ (GMNil)))
     ((GMCons _ g1 s w1 sg m1)
       (let ((erased a1) (erased sa)) (gsel-exists a s))
       (let ((erased b1) (erased sb)) (gsel-exists b s))

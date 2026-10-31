@@ -1,7 +1,3 @@
-; Birkhoff2 to Birkhoff5 of birkhoff.v: the Birkhoff checks for rings of 2 to 5 faces, with Coq's iteration counts and basis
-; programs, by the certified check of bcheck.sl as native.sl jobs, giving birkhoff-proof after native-run. Load after bcheck.sl and
-; native.sl.
-
 (def-fns _ $ (many j2 : -> (many (Chk (BirkhoffCheck (Zero) (Zero))) r))
   (birkhoff-check-c (Zero) (Zero) (Succ (Zero)) (Cons _ (Nil _) $ Nil _)))
 

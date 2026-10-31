@@ -1,7 +1,3 @@
-; css, the configurations of configs.sl in chunks of 20, decoded from chunk-srcs, config-srcs cut alike (css-dec its
-; DecAll). A check P of a group of strings gives a (Decoded P ss), and on-chunks turns one for each group of a cut into P
-; of each list its DecAll gives, so that a native job need hold only its strings. Load after configs.sl.
-
 (def-adts $ (Decoded : ((TyCtor ((List (Config)) cs) -> Type) P) ((List (String)) ss) -> Type)
   enum
   (many MkDecoded : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (List (String)) ss e) (erased (List (Config)) cs) (erased (DecList ss cs e) d)

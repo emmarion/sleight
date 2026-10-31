@@ -1,8 +1,3 @@
-; The 633 configurations of Coq's configurations.v, one string per configuration (config-srcs, by gen.py), and DCfgs,
-; which reads a string's bytes as configurations: per configuration its symmetry (0 or 1), its contract (n + 1 each,
-; then 0) and its program (1 for H, 2 for Y, n + 3 for R n, then 0). DecList reads a list of strings as the list of
-; their configurations and DecAll a list of such lists, which declist-fn and decall-fn show determine them; flat-dec
-; carries a cut of config-srcs (cut-at, with its Flatten) over to the configurations. Load after red.sl and cfcolor.sl.
 (def-adts $ (Parse : (Type I) (Type A) ((TyCtor (I s) (A x) (I r) -> Type) R) (I s) -> Type)
   enum
   (many POk : (erased Type I A) (erased (TyCtor (I s) (A x) (I r) -> Type) R) (erased I s) (many A x) (many I r) (erased (R s x r) d) -> (Parse I A R s))

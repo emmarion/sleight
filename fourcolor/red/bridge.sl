@@ -1,6 +1,3 @@
-; From the co-closure KC on partial traces of kempe.sl to one on complete traces stated after chromogram.v, and from that
-; to Kempe_coclosure itself, for every Kempe-closed set.
-
 (def-fns _ $ (erased third-fn : (erased (Col) a b c d) (erased (Third a b c) p) (erased (Third a b d) q) -> (erased (Eq (Col) c d) e))
   (match erased p _
     ((T123) (let-match erased q (T123)) (Refl _ c))
@@ -52,7 +49,6 @@
     ((C3) (match erased b _ ((C0) (values a (AZR a))) ((C1) (values (C2) (AThird a b (C2) (T312))))
       ((C2) (values (C1) (AThird a b (C1) (T321)))) ((C3) (values (C0) (ASame a)))))))
 
-; A colour permutation is a group automorphism.
 (def-fns _ $ (erased perm-add : (erased (Perm) g) (erased (Col) a b c a2 b2 c2) (erased (IsPerm g) ip) (erased (PermC g a a2) pa)
     (erased (PermC g b b2) pb) (erased (AddK a b c) p) (erased (AddK a2 b2 c2) q) -> (erased (PermC g c c2) r))
   (match erased p _
@@ -83,7 +79,6 @@
       (let-match erased (ctr-fn s2 et1 ct1 ct3 p1 q1) (Refl _ _))
       (Refl _ ct))))
 
-; After permt and ctrace of color.v: permuting a trace permutes its completion.
 (def-fns _ $ (erased perm-ctr : (erased (Perm) g) (erased (IsPerm g) ip) (erased (Col) s s2) (erased (List (Col)) et et2 ct ct2)
     (subterm erased (PermT g et et2) pt) (erased (PermC g s s2) ps) (erased (Ctr s et ct) c) (erased (Ctr s2 et2 ct2) c2) -> (erased (PermT g ct ct2) r))
   (match erased pt _
@@ -176,7 +171,7 @@
         ((T321) (let-match erased p (CB3)) (let-match erased q (CB2)) (values (BFalse) (BTrue) (XTT) (XTF) (CB1)))))))
 
 ; bs has d entries, x is the parity of d and z that of the Color3 pushes in bs. Along a matching, the bits (x, y) of the trace sum
-; satisfy y = b xor z, b the parity of gram_balanced.
+; satisfy y = b xor z, b the parity of Bal.
 (def-adts $ (SInv : ((Bstack) bs) ((Nat) d) ((Bool) x) ((Bool) z) -> Type)
   enum
   (many SINil : -> (SInv (BS0) (Zero) (BFalse) (BFalse)))
@@ -240,14 +235,13 @@
   (let ((erased z2) (erased si2) (erased xb2)) (inv-step s bs bs2 e d d2 b b2 x y z xe ye x2 y2 sy st ce rx ry si xb))
   (values x2 y2 z2 si2 xb2 cb2))
 
-; The last symbol of cgram of chromogram.v, after a chromogram leaving d open chords and parity b.
+; s ends the completion of a chromogram leaving d open chords and parity b.
 (def-adts $ (Last : ((Nat) d) ((Bool) b) ((Gsym) s) -> Type)
   enum
   (many LastSkip : -> (Last (Zero) (BTrue) (GSkip)))
   (many LastPop0 : -> (Last (Succ (Zero)) (BFalse) (GPop0)))
   (many LastPop1 : -> (Last (Succ (Zero)) (BTrue) (GPop1))))
 
-; A last step that empties the stack ends a balanced chromogram with the symbol cgram restores.
 (def-fns _ $ (erased end-inv : (erased (Gsym) s) (erased (Bstack) bs) (erased (Col) c) (erased (Nat) d) (erased (Bool) b x y z)
     (erased (Sym s bs c (BS0)) sy) (erased (SInv bs d x z) si) (erased (Xor b z y) xb) (erased (CB c x y) cb) ->
     (erased (GBal d b (Nil (Gsym))) g) (erased (Last d b s) l))
@@ -279,7 +273,7 @@
         ((SI1 _ _ _ _ _ _ si1 n m) (let-match erased si1 (SINil)) (let-match erased n (NotF)) (let-match erased m (NotF)) (let-match erased xb (XTT))
           (let-match erased cb (CB2)) (SPop12 (BS0)))))))
 
-; cgram of chromogram.v appends s to w, from d open chords and parity b.
+; w then s is the completion of w, from d open chords and parity b.
 (def-adts $ (Closes : ((Nat) d) ((Bool) b) ((List (Gsym)) w) ((Gsym) s) -> Type)
   enum
   (many CloNil : (erased (Nat) d) (erased (Bool) b) (erased (Gsym) s) (erased (Last d b s) l) -> (Closes d b (Nil (Gsym)) s))
@@ -302,14 +296,12 @@
       (let-match erased p2 (RACons _ _ _ _ _ q1))
       (revapp-snoc A x pre1 (Cons A a u) (Cons A a u2) r r2 p1 (SnocCons A a x u u2 q) q1))))
 
-; After matchg of chromogram.v, with the bit stack a Bstack.
 (def-adts $ (MatchG : ((Bstack) bs) ((List (Col)) ct) ((List (Gsym)) cw) -> Type)
   enum
   (many MGNil : -> (MatchG (BS0) (Nil (Col)) (Nil (Gsym))))
   (many MGCons : (erased (Bstack) bs bs2) (erased (Col) e) (erased (Gsym) s) (erased (List (Col)) ct) (erased (List (Gsym)) cw)
       (erased (Sym s bs e bs2) p) (erased (MatchG bs2 ct cw) q) -> (MatchG bs (Cons (Col) e ct) (Cons (Gsym) s cw))))
 
-; After matchg_pg of chromogram.v: a partial match whose completion is balanced completes to a match of the trace completion.
 (def-fns _ $ (erased pg-g : (erased (Bstack) bs) (erased (List (Col)) et ct) (erased (List (Gsym)) w) (erased (Gsym) s) (erased (Col) c) (erased (Nat) d)
     (erased (Bool) b x y z) (subterm erased (MatchPG bs et w) mt) (erased (Ctr c et ct) cr) (erased (CB c x y) cb) (erased (SInv bs d x z) si)
     (erased (Xor b z y) xb) (erased (Closes d b w s) cl) -> (erased (List (Gsym)) cw) (erased (Snoc (Gsym) w s cw) sn) (erased (MatchG bs ct cw) mg))
@@ -325,10 +317,9 @@
       (let ((erased cw1) (erased sn) (erased mg)) (pg-g bs2 et1 ct1 w1 s c2 d2 b2 x2 y2 z2 mt1 cr1 cb2 si2 xb2 cl1))
       (values (Cons _ s0 cw1) (SnocCons _ s0 s w1 cw1 sn) (MGCons bs bs2 e s0 ct1 cw1 sy mg)))))
 
-; The Kempe co-closure of Q on complete traces (after Kempe_coclosure of chromogram.v), as the least set holding Q, holding each trace
-; that a colour permutation sends into it, and holding each trace all of whose matching chromograms are matched by a trace in it.
-; AMC Q bs ct pre: every chromogram w matching ct from the stack bs has its whole chromogram (the reverse of pre, then w) matched by
-; a trace of the set.
+; The Kempe co-closure of Q on complete traces, as the least set holding Q, holding each trace that a colour permutation sends
+; into it, and holding each trace all of whose matching chromograms are matched by a trace in it. AMC Q bs ct pre: every
+; chromogram w matching ct from the stack bs has its whole chromogram matched by a trace of the set.
 (def-adts
   ((KCC : (Pred Q) ((List (Col)) ct) -> Type)
     enum
@@ -400,7 +391,6 @@
           ((PNone _) (APCNone P c nil pre))
           ((PSome _ b0 _ s pp z1) (APCSome P bs b0 s c nil pre pp z1 (amc-nil P s bs b0 c d b x y z pre z1 si xb cb ew))))))))
 
-; Every trace of the co-closure on partial traces has its completion in the co-closure on complete traces.
 (def-fns _
   ((erased kc-kcc : (erased Pred P) (erased (List (Col)) et ct) (subterm erased (KC P et) k) (erased (Ctr (C0) et ct) cr) -> (erased (KCC P ct) r))
     (match erased k _
@@ -441,8 +431,6 @@
               (APCSome P bs b0 s e ct1 pre pp zs
                 (am-amc P b0 d1 b3 et1 (Cons _ s pre) a2 x3 y3 z3 c2 ct1 si3 xb3 cb3 cr1 (GPreCons (Zero) d d1 (BFalse) b b3 pre s gp st2))))))))))
 
-; Soundness half of Kempe_treeP of kempetree.v, on complete traces: the completion of a trace of length h + 1 whose even normal form has
-; multiplicity zero in the Kempe tree is in the co-closure of P.
 (def-fns _ $ (erased kempe-treeP-c : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt) (erased (KSound P h kt) ks)
     (erased (List (Col)) et et2 ct) (erased (Length (Col) et (Succ h)) len) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) s)
     (erased (Ctr (C0) et ct) cr) -> (erased (KCC P ct) r))
@@ -460,8 +448,9 @@
   (many MkHoldsR : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) (erased (List (Col)) ct)
       (erased (List (Gsym)) w) (erased (R x ct w) h) -> (HoldsR (MkRel X x R) ct w)))
 
-; After Kempe_closed of chromogram.v, by functions at level L, with R naming the chromogram the definition asks for: the colour
-; permutations of each trace of P2 are in P2, and each trace of P2 matches a chromogram w with R ct w, every trace matching which is in P2.
+; By functions at level L, with R naming the chromogram the definition asks for: the colour permutations of
+; each trace of P2 are in P2, and each trace of P2 matches a chromogram w with R ct w, every trace
+; matching which is in P2.
 (def-adts $ (KClosed : ((Level) L) (Pred P2) (Rel R) -> Type)
   enum
   (many MkKClosed : (erased (Level) L) (erased Pred P2) (erased Rel R)
@@ -473,8 +462,6 @@
 
 (def-lvl KCB)
 
-; After Kempe_coclosure of chromogram.v: for the sets closed at a level L, the co-closure KCC meets every closed set holding the
-; trace, by a function at a level M above L and KCB.
 (def-fns _ $ (erased kcc-coclosure : (erased (Level) L M) (erased (Predates (Level) L M) pl) (erased (Predates (Level) KCB M) pb) ->
     (erased (Fn M (erased Pred Q P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (List (Col)) ct) (subterm erased (KCC Q ct) k) (erased (Holds P2 ct) p) ->
         (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (Holds P2 ct2) p2)) f))

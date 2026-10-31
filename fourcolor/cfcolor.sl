@@ -1,6 +1,3 @@
-; The ring traces of the colourings of a configuration's map, after Gonthier and Werner's cfcolor.v. Load after
-; cpmap.sl and red/color.sl.
-
 (unary 4)
 
 ; c is the colour numbered k.
@@ -22,7 +19,7 @@
   (let-match erased k1 (Succ k2) ((Zero) (values (C1) (NC1))))
   (let-match erased k2 (Succ k3) ((Zero) (values (C2) (NC2))))
   (let-match erased k3 (Zero)
-    (absurd (Succ k4) (let-match erased lk (LtS _ _ l1)) (let-match erased l1 (LtS _ _ l2)) (let-match erased l2 (LtS _ _ l3))
+    (absurd (Succ _) (let-match erased lk (LtS _ _ l1)) (let-match erased l1 (LtS _ _ l2)) (let-match erased l2 (LtS _ _ l3))
       (let-match erased l3 (LtS _ _ l4)) l4))
   (values (C3) (NC3)))
 
@@ -47,7 +44,7 @@
     ((NC2) (let-match erased q (NC2)) (Refl _ k))
     ((NC3) (let-match erased q (NC3)) (Refl _ k))))
 
-; c is a + b, the colours forming the Klein four-group of color.v with C0 its unit.
+; c is a + b, the colours forming the Klein four-group with C0 its unit.
 (def-adts $ (AddC : ((Col) a b c) -> Type)
   enum
   (many Add00 : -> (AddC (C0) (C0) (C0)))
@@ -138,7 +135,6 @@
     ((Add32) (let-match erased q (Add32)) (Refl _ c))
     ((Add33) (let-match erased q (Add33)) (Refl _ c))))
 
-; (a + b) + c = a + (b + c).
 (def-fns _ $ (erased addc-assoc : (erased (Col) a b c ab bc abc) (erased (AddC a b ab) p) (erased (AddC ab c abc) q) (erased (AddC b c bc) s)
     -> (erased (AddC a bc abc) r))
   (match erased p _
@@ -159,7 +155,6 @@
     ((Add32) (match erased c _ ((C0) (let-match erased q (Add10)) (let-match erased s (Add20)) (Add32)) ((C1) (let-match erased q (Add11)) (let-match erased s (Add21)) (Add33)) ((C2) (let-match erased q (Add12)) (let-match erased s (Add22)) (Add30)) ((C3) (let-match erased q (Add13)) (let-match erased s (Add23)) (Add31))))
     ((Add33) (match erased c _ ((C0) (let-match erased q (Add00)) (let-match erased s (Add30)) (Add33)) ((C1) (let-match erased q (Add01)) (let-match erased s (Add31)) (Add32)) ((C2) (let-match erased q (Add02)) (let-match erased s (Add32)) (Add31)) ((C3) (let-match erased q (Add03)) (let-match erased s (Add33)) (Add30))))))
 
-; Colours of different numbers sum to a nonzero colour.
 (def-fns _ $ (erased addc-apart : (erased (Nat) j k) (erased (Col) a b c) (erased (NCol j a) pa) (erased (NCol k b) pb) (erased (AddC a b c) p)
     (erased (Apart (Nat) Lt j k) ne) -> (erased (NZ c) r))
   (match erased p _
@@ -201,25 +196,24 @@
   (many CTStep : (erased (Col) c0 x y t) (erased (List (Col)) cs et) (erased (AddC x y t) p) (erased (CTr c0 y cs et) rest)
       -> (CTr c0 x (Cons (Col) y cs) (Cons (Col) t et))))
 
-; Gonthier's trace of the colours of a ring.
+; et is the trace of the ring colours cs.
 (def-adts $ (Trace : ((List (Col)) cs et) -> Type)
   enum
   (many MkTrace : (erased (Col) c) (erased (List (Col)) cs et) (erased (CTr c c cs et) p) -> (Trace (Cons (Col) c cs) et)))
 
-; et is the ring trace of a colouring of the map of cp (ring_trace of cfcolor.v).
+; et is the ring trace of a colouring of the map of cp.
 (def-adts $ (CpCol : ((List (Step)) cp) ((List (Col)) et) -> Type)
   enum
   (many MkCpCol : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r ks rc) (erased (List (Col)) cs et) (erased (Cpmap cp d e f r) c)
       (erased (FourColoring e f ks) col) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr) -> (CpCol cp et)))
 
-; A U step adds two entries c, for any nonzero c, in front of a ring trace.
 (def-fns _ $ (erased cpcol-u : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (Col) c) (erased (CpCol cp et) cc) (erased (NZ c) nz)
     -> (erased (CpCol (Cons (Step) (SU) cp) (Cons (Col) c (Cons (Col) c et))) r))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks _ _ _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
-  (let ((erased e2) (erased f2) (erased r2) (erased st) (erased n2) (erased pm2)) (ecpU-c d e f r n pm))
+  (let ((erased e2) (erased f2) (erased r2) (erased st) (erased _) (erased _)) (ecpU-c d e f r n pm))
   (let-match erased tr (MkTrace a cs1 _ ctr))
-  (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
+  (let-match erased nc (NCsCons ka _ rc1 _ pa _))
   (let ((erased b) (erased pb)) (addc-c a c))
   (let ((erased kb) (erased lb) (erased pkb)) (ncol-num b))
   (let ((erased ab)) (addc-cancel a b c pb))
@@ -234,12 +228,11 @@
   (many AllNZNil : -> (AllNZ (Nil (Col))))
   (many AllNZCons : (erased (Col) c) (erased (List (Col)) et) (erased (NZ c) p) (erased (AllNZ et) rest) -> (AllNZ (Cons (Col) c et))))
 
-; Darts a node apart have different colours.
 (def-fns _ $ (erased node-color : (erased (Nat) d u v ku kv) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) col)
     (erased (Nth (Nat) n v u) pn) (erased (Nth (Nat) ks u ku) pu) (erased (Nth (Nat) ks v kv) pv) -> (erased (Apart (Nat) Lt ku kv) r))
   (let ((erased w) (erased pw) (erased pf)) (hyper-back d u v e n f h pn))
   (let-match erased col (MkFourColoring _ _ _ ke face ce edge _))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
   (let ((erased lu)) (nth-lt-length _ e u d w pw le))
   (let ((erased l) (erased pl)) (nth-exists _ ke d u (respects-length ks e ke d ce le) lu))
   (let ((erased pwl)) (respects-nth ks e ke u w l ce pw pl))
@@ -264,26 +257,24 @@
       (AllNZCons t et1 (addc-apart ku kz x cz t px pcz pt (node-color d u z ku kz e n f ks h col pz pu pkz))
         (trace-nz d z y kz ky k0 e n f ks p1 rc1 cz c0 cs1 et1 h col rp1 pkz pcz rr1 nc1 ct1 p0 py last)))))
 
-; A ring trace has no zero (memc0_trace_cpring).
 (def-fns _ $ (erased cpcol-nz : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) cc) -> (erased (AllNZ et) r))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks _ _ _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
-  (let-match erased cr (MkCpring _ p a y rp back dp))
+  (let-match erased cr (MkCpring _ p a y rp back _))
   (let-match erased tr (MkTrace c cs1 _ ctr))
   (let-match erased rr (RespCons _ _ rc1 _ ka pka rr1))
   (let-match erased nc (NCsCons _ _ _ _ pc nc1))
-  (let-match erased col (MkFourColoring _ _ _ ke face ce edge four))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased col (MkFourColoring _ _ _ _ face _ _ _))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased lk)) (respects-length ks f ks d face lf))
-  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pn) (erased _)) (hyper-core d e n f h))
   (let ((erased ky) (erased py)) (nth-exists _ ks d y lk (perm-val d a y n ni pn back)))
   (trace-nz d a y ka ky ka e n f ks p rc1 c c cs1 et h col rp pka pc rr1 nc1 ctr pc py (node-color d y a ky ka e n f ks h col back py pka)))
 
 (def-fns _ $ (erased absurd addc-self : (erased (Col) a t) (erased (AddC a a t) p) (erased (NZ t) nz) -> (erased (False) r))
   (match erased p _ (absurd (Add00) nz) (absurd (Add11) nz) (absurd (Add22) nz) (absurd (Add33) nz)))
 
-; (a + g) + x = (a + x) + g.
 (def-fns _ $ (erased addc-mid : (erased (Col) a g c x e1 h) (erased (AddC a g c) pc) (erased (AddC a x e1) px) (erased (AddC e1 g h) ph)
     -> (erased (AddC c x h) r))
   (let ((erased t) (erased pt)) (addc-c c x))
@@ -291,13 +282,12 @@
   (let-match erased (addc-fn a gx t h (addc-assoc a g x c gx t pc pt pgx) (addc-assoc a x g e1 gx h px ph (addc-comm g x gx pgx))) (Refl _ _))
   pt)
 
-; A Y step replaces the first entry e1 of a ring trace by g and h, for nonzero g and h with e1 + g = h.
 (def-fns _ $ (erased cpcol-y : (erased (List (Step)) cp) (erased (List (Col)) r1) (erased (Col) e1 g h) (erased (CpCol cp (Cons (Col) e1 r1)) cc)
     (erased (AddC e1 g h) p) (erased (NZ g) ng) (erased (NZ h) nh) -> (erased (CpCol (Cons (Step) (SY) cp) (Cons (Col) g (Cons (Col) h r1))) res))
   (let ((erased nzs)) (cpcol-nz cp _ cc))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks _ _ _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
-  (let-match erased tr (MkTrace a cs1 _ ctr))
+  (let-match erased tr (MkTrace a _ _ ctr))
   (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
   (let-match erased ctr (CTStep _ _ x _ cs2 _ pax ctr1)
     (absurd (CTLast _ _ _ paa) (let-match erased nzs (AllNZCons _ _ nz0 _)) (addc-self a e1 paa nz0)))
@@ -308,7 +298,7 @@
   (let ((erased e1m) (erased f1m) (erased r1m) (erased stu) (erased n1) (erased pm1)) (ecpU-c d e f r n pm))
   (let ((erased ks1) (erased col1) (erased rr1)) (ecpU-color d kc ka e n f r e1m f1m r1m ks rc1 pm stu col rr lc
     (apart-sym ka kc (nz-apart ka kc a c g pa pkc acg ng))))
-  (let ((erased e2) (erased f2) (erased r2) (erased stn) (erased n2) (erased pm2)) (ecpN-c (Succ (Succ d)) e1m f1m r1m n1 pm1))
+  (let ((erased e2) (erased f2) (erased r2) (erased stn) (erased _) (erased _)) (ecpN-c (Succ (Succ d)) e1m f1m r1m n1 pm1))
   (let ((erased cxh)) (addc-mid a g c x e1 h pc pax p))
   (let ((erased ks2) (erased col2) (erased rr2)) (ecpN-color (Succ (Succ d)) kc kx e1m n1 f1m r1m e2 f2 r2 ks1 _ _ pm1 stn col1 rr1
     (R3Four ka kc ka kx rc2) (nz-apart kc kx c x h pkc px1 cxh nh)))
@@ -323,7 +313,6 @@
 (def-fns _ $ (erased addc-ii : (erased (Col) c) -> (erased (AddC c c (C0)) r))
   (match erased c _ ((C0) (Add00)) ((C1) (Add11)) ((C2) (Add22)) ((C3) (Add33))))
 
-; (a + b) + c = (a + c) + b.
 (def-fns _ $ (erased addc-swap : (erased (Col) a b c ab abc ac) (erased (AddC a b ab) p) (erased (AddC ab c abc) q) (erased (AddC a c ac) s)
     -> (erased (AddC ac b abc) r))
   (let ((erased bc) (erased pbc)) (addc-c b c))
@@ -331,21 +320,18 @@
   (let-match erased (addc-fn a bc abc t (addc-assoc a b c ab bc abc p q pbc) (addc-assoc a c b ac bc t s pt (addc-comm b c bc pbc))) (Refl _ _))
   pt)
 
-; (a + x) + (x + z) = a + z.
 (def-fns _ $ (erased addc-link : (erased (Col) a x z e1 e2 ee az) (erased (AddC a x e1) p) (erased (AddC x z e2) q) (erased (AddC e1 e2 ee) s)
     (erased (AddC a z az) t) -> (erased (Eq (Col) ee az) r))
   (addc-fn a z ee az (addc-assoc a x e2 e1 z ee p s (addc-cancel x e2 z q)) t))
 
-; An H step replaces the first two entries e1, e2 of a ring trace by g and h = (e1 + e2) + g, for g, e1 + g and h nonzero.
 (def-fns _ $ (erased cpcol-h : (erased (List (Step)) cp) (erased (List (Col)) r2) (erased (Col) e1 e2 ee g s1 h)
     (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) cc) (erased (AddC e1 e2 ee) pee) (erased (AddC e1 g s1) ps1) (erased (AddC ee g h) ph)
     (erased (NZ g) ng) (erased (NZ s1) ns1) (erased (NZ h) nh) -> (erased (CpCol (Cons (Step) (SH) cp) (Cons (Col) g (Cons (Col) h r2))) res))
-  (let ((erased nzs)) (cpcol-nz cp _ cc))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks _ _ _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
-  (let-match erased tr (MkTrace a cs1 _ ctr))
+  (let-match erased tr (MkTrace a _ _ ctr))
   (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
-  (let-match erased ctr (CTStep _ _ x _ cs2 _ pax ctr1))
+  (let-match erased ctr (CTStep _ _ x _ _ _ pax ctr1))
   (let-match erased nc1 (NCsCons kx _ rc2 _ px1 nc2))
   (let ((erased c) (erased pc)) (addc-c a g))
   (let ((erased kc) (erased lc) (erased pkc)) (ncol-num c))
@@ -356,7 +342,7 @@
   (let ((erased e2m) (erased f2m) (erased r2m) (erased stn) (erased n2) (erased pm2)) (ecpN-c (Succ (Succ d)) e1m f1m r1m n1 pm1))
   (let ((erased ks2) (erased col2) (erased rr2)) (ecpN-color (Succ (Succ d)) kc kx e1m n1 f1m r1m e2m f2m r2m ks1 _ _ pm1 stn col1 rr1
     (R3Four ka kc ka kx rc2) (nz-apart kc kx c x s1 pkc px1 (addc-mid a g c x e1 s1 pc pax ps1) ns1)))
-  (let ((erased e3) (erased f3) (erased r3) (erased stn2) (erased n3) (erased pm3)) (ecpN-c (Succ (Succ (Succ (Succ d)))) e2m f2m r2m n2 pm2))
+  (let ((erased e3) (erased f3) (erased r3) (erased stn2) (erased _) (erased _)) (ecpN-c (Succ (Succ (Succ (Succ d)))) e2m f2m r2m n2 pm2))
   (let ((erased d6)) (Succ (Succ (Succ (Succ (Succ (Succ d)))))))
   (match erased ctr1 _
     ((CTLast _ _ _ pxa)
@@ -393,12 +379,11 @@
       (let-match erased s2 (SnocCons _ _ _ _ et3 s3))
       (CTStep y x z u cs3 et3 pu (ctr-snoc c0 z y t cs1 cs3 et1 et3 ct1 s1 p s3)))))
 
-; Rotating a ring's colours by one rotates its trace by one.
 (def-fns _ $ (erased trace-rot1 : (erased (Col) c) (erased (List (Col)) cs cs2 et) (erased (Trace (Cons (Col) c cs) et) tr) (erased (Snoc (Col) cs c cs2) s)
     -> (erased (List (Col)) et2) (erased (Trace cs2 et2) tr2) (erased (Rots (Col) (Succ (Zero)) et et2) rt))
   (let-match erased tr (MkTrace _ _ _ ct))
   (let-match erased ct (CTStep _ _ y t cs1 et1 p ct1)
-    ((CTLast _ _ t p) (let-match erased s (SnocNil _ _)) (values et tr (RotsS _ (Zero) t (Nil (Col)) et et (SnocNil _ t) (RotsZ _ et)))))
+    ((CTLast _ _ t _) (let-match erased s (SnocNil _ _)) (values et tr (RotsS _ (Zero) t (Nil (Col)) et et (SnocNil _ t) (RotsZ _ et)))))
   (let-match erased s (SnocCons _ _ _ _ cs3 s1))
   (let ((erased et2) (erased s2)) (snoc-exists _ et1 t))
   (values et2 (MkTrace y cs3 et2 (ctr-snoc c y y t cs1 cs3 et1 et2 ct1 s1 p s2)) (RotsS _ (Zero) t et1 et2 et2 s2 (RotsZ _ et2))))
@@ -412,7 +397,6 @@
       (let-match erased s2 (SnocCons _ _ _ _ cs3 t2))
       (NCsCons j b ns3 cs3 pb (ncols-snoc ns1 ns3 cs1 cs3 k c nc1 p t1 t2)))))
 
-; The colours and trace of a rotated ring are rotated alike (trace_rot).
 (def-fns _ $ (erased ring-rots : (erased (Nat) k) (erased (List (Nat)) ks r r2 rc) (erased (List (Col)) cs et) (subterm erased (Rots (Nat) k r r2) rs)
     (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
     -> (erased (List (Nat)) rc2) (erased (List (Col)) cs2 et2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2) (erased (Trace cs2 et2) tr2)
@@ -431,7 +415,7 @@
 
 (def-fns _ $ (erased ncols-length : (erased (List (Nat)) ns) (erased (List (Col)) cs) (erased (Nat) m) (subterm erased (NCols ns cs) nc)
     (erased (Length (Nat) ns m) l) -> (erased (Length (Col) cs m) r))
-  (let-match erased nc (NCsCons k c ns1 cs1 p nc1) ((NCsNil) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased nc (NCsCons _ c ns1 cs1 _ nc1) ((NCsNil) (let-match erased l (LengthNil _)) (LengthNil _)))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (LengthCons _ c cs1 m1 (ncols-length ns1 cs1 m1 nc1 l1)))
 
@@ -458,12 +442,12 @@
     -> (erased (Eq (List A) ys zs) e))
   (match erased p _
     ((RotIn _ _ m _ _ l le rs)
-      (let-match erased q (RotIn _ _ m2 _ _ l2 le2 rs2)
+      (let-match erased q (RotIn _ _ _ _ _ _ _ rs2)
         (absurd (RotOver _ _ m2 _ l2 gt) (let-match erased (length-fn _ xs m m2 l l2) (Refl _ _)) (lt-asym m k gt le)))
       (rots-fn A k xs ys zs rs rs2))
     ((RotOver _ _ m _ l gt)
       (let-match erased q (RotOver _ _ _ _ _ _)
-        (absurd (RotIn _ _ m2 _ _ l2 le2 rs2) (let-match erased (length-fn _ xs m m2 l l2) (Refl _ _)) (lt-asym m k gt le2)))
+        (absurd (RotIn _ _ m2 _ _ l2 le2 _) (let-match erased (length-fn _ xs m m2 l l2) (Refl _ _)) (lt-asym m k gt le2)))
       (Refl _ xs))))
 
 (def-fns _ $ (erased ring-rot : (erased (Nat) k) (erased (List (Nat)) ks r r2 rc) (erased (List (Col)) cs et) (erased (Rot (Nat) k r r2) rt)
@@ -476,7 +460,6 @@
   (let ((erased le2)) (trace-length cs et m tr (ncols-length rc cs m nc (respects-length ks r rc m rr l))))
   (values rc2 cs2 et2 rr2 nc2 tr2 (RotIn _ k m et et2 le2 le rts)))
 
-; An R step rotates a ring trace.
 (def-fns _ $ (erased cpcol-r : (erased (List (Step)) cp) (erased (Nat) k) (erased (List (Col)) et et2) (erased (CpCol cp et) cc) (erased (Rot (Col) k et et2) rt)
     -> (erased (CpCol (Cons (Step) (SR k) cp) et2) res))
   (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
@@ -485,7 +468,6 @@
   (let-match erased (rot-fn _ k et et3 et2 rt3 rt) (Refl _ _))
   (MkCpCol (Cons (Step) (SR k) cp) d e f r2 ks rc2 cs2 et2 (CmR k d cp e f r r2 cm rtr) col rr2 nc2 tr2))
 
-; An R' step rotates a ring trace of m + 1 entries by m.
 (def-fns _ $ (erased cpcol-rr : (erased (List (Step)) cp) (erased (Nat) m) (erased (List (Col)) et et2) (erased (CpCol cp et) cc)
     (erased (Length (Col) et (Succ m)) l) (erased (Rot (Col) m et et2) rt) -> (erased (CpCol (Cons (Step) (SRr) cp) et2) res))
   (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
@@ -503,7 +485,7 @@
   (many CatCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (App A xs ys zs) p) -> (App A (Cons A x xs) ys (Cons A x zs))))
 
 (def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (App A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
-  (let-match erased p (CatCons _ x xs1 _ zs1 p1) ((CatNil _ _) (Refl _ zs)))
+  (let-match erased p (CatCons _ _ xs1 _ zs1 p1) ((CatNil _ _) (Refl _ zs)))
   (let-match erased (app-nil-r A xs1 zs1 p1) (Refl _ _))
   (Refl _ zs))
 
@@ -523,7 +505,6 @@
   (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (CatNil A (Cons A x (Nil A)))))
   (CatCons A y xs1 (Cons A x (Nil A)) zs1 (snoc-app A xs1 zs1 x s1)))
 
-; Rotating p ++ s by the length of p gives s ++ p.
 (def-fns _ $ (erased rots-app : (erased Type A) (erased (Nat) m) (subterm erased (List A) p) (erased (List A) s ps sp) (erased (App A p s ps) a) (erased (App A s p sp) b)
     (erased (Length A p m) l) -> (erased (Rots A m ps sp) r))
   (let-match erased a (CatCons _ x p1 _ ps1 a1)
@@ -569,7 +550,7 @@
     (erased (Nth (Nat) lab x c) px))
   (match erased s _
     ((SnocNil _ _)
-      (let-match erased rp (RespCons _ _ cs3 _ c1 p1 rp1))
+      (let-match erased rp (RespCons _ _ _ _ c1 p1 rp1))
       (let-match erased rp1 (RespNil _))
       (values (Nil (Nat)) c1 (SnocNil _ c1) (RespNil lab) p1))
     ((SnocCons _ y _ xs1 xs3 s1)
@@ -577,20 +558,19 @@
       (let ((erased cs) (erased c) (erased sc) (erased r) (erased px)) (respects-unsnoc lab xs1 xs3 cs3 x s1 rp1))
       (values (Cons (Nat) c1 cs) c (SnocCons _ c1 c cs cs3 sc) (RespCons lab xs1 cs y c1 p1 r) px))))
 
-; A K step replaces the first two entries e1, e2 of a ring trace by their sum, when that is nonzero.
 (def-fns _ $ (erased cpcol-k : (erased (List (Step)) cp) (erased (List (Col)) r2) (erased (Col) e1 e2 ee)
     (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) cc) (erased (AddC e1 e2 ee) pee) (erased (NZ ee) nz)
     -> (erased (CpCol (Cons (Step) (SK) cp) (Cons (Col) ee r2)) res))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks rc _ _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
-  (let-match erased tr (MkTrace a cs1 _ ctr))
-  (let-match erased ctr (CTStep _ _ x _ cs2 _ pax ctr1))
+  (let-match erased tr (MkTrace a _ _ ctr))
+  (let-match erased ctr (CTStep _ _ x _ _ _ pax ctr1))
   (let-match erased ctr1 (CTStep _ _ z _ cs3 _ pxz ctr2)
     (absurd (CTLast _ _ _ pxa) (let-match erased (addc-fn a x e1 e2 pax (addc-comm x a e2 pxa)) (Refl _ _)) (addc-self e1 ee pee nz)))
   (let ((erased az) (erased paz)) (addc-c a z))
   (let-match erased (addc-link a x z e1 e2 ee az pax pxz pee paz) (Refl _ _))
-  (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
-  (let-match erased nc1 (NCsCons kx _ rc2 _ px nc2))
+  (let-match erased nc (NCsCons ka _ _ _ pa nc1))
+  (let-match erased nc1 (NCsCons kx _ _ _ _ nc2))
   (let-match erased nc2 (NCsCons kz _ rc3 _ pz nc3))
   (let ((erased k) (erased lr)) (length-exists _ r))
   (let-match erased (respects-length ks r rc k rr lr) (LengthCons _ _ _ m _))
@@ -598,21 +578,21 @@
   (let ((erased r1) (erased rt)) (rot-c _ m r))
   (let-match erased (rot-fn _ m r r1 (Cons (Nat) y r0) rt (RotIn _ m (Succ m) r _ lr (lt-weaken m (Succ m) (lt-succ m)) (rots-last _ m r0 r y sr lr0))) (Refl _ _))
   (let ((erased rc0) (erased ky) (erased sc) (erased rr0) (erased py)) (respects-unsnoc ks r0 r rc y sr rr))
-  (let-match erased sc (SnocCons _ _ _ rc4 _ sc1))
+  (let-match erased sc (SnocCons _ _ _ _ _ sc1))
   (let-match erased sc1 (SnocCons _ _ _ m1 _ sm))
   (let ((erased (List (Nat)) rest2) (erased (Ring3 (Cons (Nat) ky (Cons (Nat) ka (Cons (Nat) kx m1))) ka kz (Cons (Nat) ky (Cons (Nat) ka rest2))) r3w)
       (erased (Snoc (Nat) rest2 ky (Cons (Nat) kz rc3)) snr))
     (match erased m1 _
       ((Nil _) (let-match erased sm (SnocNil _ _)) (values (Nil (Nat)) (R3Three ky ka kx) (SnocNil _ ky)))
-      ((Cons _ kz2 m2) (let-match erased sm (SnocCons _ _ _ _ _ sm1)) (values (Cons (Nat) kz m2) (R3Four ky ka kx kz m2) (SnocCons _ kz ky m2 rc3 sm1)))))
+      ((Cons _ _ m2) (let-match erased sm (SnocCons _ _ _ _ _ sm1)) (values (Cons (Nat) kz m2) (R3Four ky ka kx kz m2) (SnocCons _ kz ky m2 rc3 sm1)))))
   (let ((erased pm1)) (pointed-rot d m e n f r r1 pm rt))
-  (let ((erased e2m) (erased f2m) (erased r2m) (erased stn) (erased n2) (erased pm2)) (ecpN-c d e f r1 n pm1))
+  (let ((erased e2m) (erased f2m) (erased r2m) (erased stn) (erased _) (erased _)) (ecpN-c d e f r1 n pm1))
   (let ((erased ks2) (erased col2) (erased rr2)) (ecpN-color d ka kz e n f r1 e2m f2m r2m ks _ _ pm1 stn col (RespCons ks r0 rc0 y ky py rr0) r3w
     (nz-apart ka kz a z ee pa pz paz nz)))
   (let ((erased r3) (erased rt2)) (rot-c _ (Succ (Zero)) r2m))
   (let-match erased rr2 (RespCons _ tl _ hd _ phd rr3))
-  (let-match erased rt2 (RotIn _ _ m3 _ _ l3 le3 rs3)
-    (absurd (RotOver _ _ m3 _ l3 gt) (let-match erased l3 (LengthCons _ _ _ _ _)) (let-match erased gt (LtS _ _ gt1)) gt1))
+  (let-match erased rt2 (RotIn _ _ _ _ _ _ _ rs3)
+    (absurd (RotOver _ _ _ _ l3 gt) (let-match erased l3 (LengthCons _ _ _ _ _)) (let-match erased gt (LtS _ _ gt1)) gt1))
   (let-match erased rs3 (RotsS _ _ _ _ _ _ s3 rz))
   (let-match erased rz (RotsZ _ _))
   (MkCpCol (Cons (Step) (SK) cp) (Succ (Succ d)) e2m f2m r3 ks2 _ (Cons (Col) a (Cons (Col) z cs3)) _ (CmK m d cp e f r r1 e2m f2m r2m r3 cm lr rt stn rt2)
@@ -628,7 +608,6 @@
     ((IP312) (match erased c _ ((C0) (values (C0) (PC0 (MkPerm (C3) (C1) (C2))))) ((C1) (values (C3) (PC1 (C3) (C1) (C2)))) ((C2) (values (C1) (PC2 (C3) (C1) (C2)))) ((C3) (values (C2) (PC3 (C3) (C1) (C2))))))
     ((IP321) (match erased c _ ((C0) (values (C0) (PC0 (MkPerm (C3) (C2) (C1))))) ((C1) (values (C3) (PC1 (C3) (C2) (C1)))) ((C2) (values (C2) (PC2 (C3) (C2) (C1)))) ((C3) (values (C1) (PC3 (C3) (C2) (C1))))))))
 
-; A colour permutation is an automorphism of the colour sums.
 (def-fns _ $ (erased permc-add : (erased (Perm) g) (erased (Col) a b c a2 b2 c2) (erased (IsPerm g) ip) (erased (AddC a b c) p)
     (erased (PermC g a a2) pa) (erased (PermC g b b2) pb) (erased (PermC g c c2) pc) -> (erased (AddC a2 b2 c2) r))
   (match erased ip _
@@ -790,7 +769,7 @@
 
 (def-fns _ $ (erased npl-nth : (erased (Perm) g) (erased (List (Nat)) ks ks2) (erased (Nat) j l) (subterm erased (NPermL g ks ks2) np) (erased (Nth (Nat) ks j l) p)
     -> (erased (Nat) l2) (erased (Nth (Nat) ks2 j l2) q) (erased (NPerm g l l2) r))
-  (let-match erased np (NPLCons _ k k2 ks1 ks3 pk np1) (absurd (NPLNil _) p))
+  (let-match erased np (NPLCons _ _ k2 ks1 ks3 pk np1) (absurd (NPLNil _) p))
   (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) (values k2 (NthHere _ k2 ks3) pk)))
   (let ((erased l2) (erased q) (erased r)) (npl-nth g ks1 ks3 j1 l np1 p1))
   (values l2 (NthThere _ k2 ks3 j1 l2 q) r))
@@ -852,7 +831,6 @@
   (let-match erased (permt-fn g et1 et4 et5 p1 q1) (Refl _ _))
   (Refl _ et2))
 
-; A colour permutation of a ring trace is a ring trace (gcol_perm).
 (def-fns _ $ (erased cpcol-perm : (erased (List (Step)) cp) (erased (List (Col)) et et2) (erased (Perm) g) (erased (CpCol cp et) cc) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) -> (erased (CpCol cp et2) res))
   (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
