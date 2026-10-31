@@ -898,6 +898,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   21.6 MB for `UnavE` (about 505 s) and 7.8 MB for `CfCerts` (about
   520 s). In test runs, a `BirkhoffChecks` built from the proofs in the
   wrong order and a failing job were rejected.
+  Compiling that 22.0 MB alone with ocamlopt took about 595 s with
+  `-inline 0` and about 605 s with `-inline 25` (`--inline`, MANUAL.md),
+  much as without it; three of its thunks ran about 10 to 20% faster
+  with `-inline 25` than with `-inline 0`, in one run each.
 - `fcproof.sl`, `fcfinal.sl` (load after `embed4proof.sl`, in the chain
   below): `fcproof.sl` binds `four-color-proof`, `FourColor` of `defs.sl`
   with no hypotheses, by `four-color-open` on `unav-proof`,
