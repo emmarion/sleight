@@ -1,12 +1,3 @@
-; Every hypermap has a genus, and the derived hypermaps of hypermap.v (permN, permF, dual) keep it.
-
-(def-fns _ $ (erased add-assoc : (erased (Nat) a b c ab abc) (subterm erased (Add a b ab) p) (erased (Add ab c abc) q) ->
-    (erased (Nat) bc) (erased (Add b c bc) r) (erased (Add a bc abc) s))
-  (let-match erased p (AddSucc a1 _ ab1 p1) ((AddZero _) (values abc q (AddZero abc))))
-  (let-match erased q (AddSucc _ _ abc1 q1))
-  (let ((erased bc) (erased r) (erased s)) (add-assoc a1 b c ab1 abc1 p1 q1))
-  (values bc r (AddSucc a1 bc abc1 s)))
-
 (def-fns _ $ (erased add-assoc-inv : (erased (Nat) a b c bc abc) (erased (Add b c bc) p) (subterm erased (Add a bc abc) q) ->
     (erased (Nat) ab) (erased (Add a b ab) r) (erased (Add ab c abc) s))
   (let-match erased q (AddSucc a1 _ abc1 q1) ((AddZero _) (values b (AddZero b) p)))
@@ -64,7 +55,7 @@
   (below-cat ge gnf g d c2 (graph-below d e nfe ge (graph-fun d e ge pe) pme)
     (below-cat gn gf gnf d c1 (graph-below d n nfn gn (graph-fun d n gn pn) pmn) (graph-below d f nfp gf (graph-fun d f gf pf) pmf))))
 
-(def-fns _ $ (erased glink-classes : (erased (Nat) d k) (erased (List (Nat)) e n f e2 n2 f2) (erased (List (Bond)) g g2) (erased (Hypermap d e2 n2 f2) h2)
+(def-fns _ $ (erased glink-classes : (erased (Nat) d k) (erased (List (Nat)) _e _n _f e2 n2 f2) (erased (List (Bond)) g g2) (erased (Hypermap d e2 n2 f2) h2)
     (erased (Glink d e2 n2 f2 g2) gl2) (erased (Classes g d k) cs) (erased (Spans g2 g) s1) (erased (Spans g g2) s2) -> (erased (Classes g2 d k) r))
   (classes-equiv g g2 d k cs s1 s2 (glink-below d e2 n2 f2 g2 h2 gl2)))
 
@@ -76,8 +67,8 @@
 
 (def-fns _ $ (erased hyper-core : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen _ cnf inf))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke _ _ cnf inf))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ni) (erased pn)) (hyper-perm d n f e (hyper-rot d e n f h)))
   (let ((erased fi) (erased pf)) (hyper-perm d f e n (hyper-rot d n f e (hyper-rot d e n f h))))
   (values nf ni fi cnf (MkPerm d e nf ids io le
@@ -90,7 +81,7 @@
   (let ((erased ge) (erased gre)) (perm-graph d e nf pe))
   (let ((erased gl0) (erased c2)) (cat-exists ge g))
   (let ((erased gl)) (MkGlink d e n f ge gn gf g gl0 gre grn grf cg c2))
-  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
+  (let ((erased _) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
   (genus-make d gen kc kx kn kf e n f gl0 (orbits-inv d kx nf e (perm-sym d e nf pe) ox) on of gl
     (classes-equiv g gl0 d kc cs (spans-cat gl0 gn gf g cg sn sf)
       (glink-to d e n f gl0 g ge gn gf gl gre grn grf
@@ -109,7 +100,7 @@
   (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased gl0) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
     (genus-parts d gen e n f p))
   (let-match erased gl (MkGlink _ _ _ _ ge gn gf _ _ gre grn grf _ _))
-  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
+  (let ((erased _) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf gl0 gl gre grn grf))
   (let ((erased g) (erased cg)) (cat-exists gn gf))
   (values nf ni fi rnf pe pn pf ke kn kf kc (orbits-inv d ke e nf pe oe) on of gn gf g grn grf cg
     (classes-equiv gl0 g d kc cc
@@ -120,7 +111,6 @@
       (below-cat gn gf g d cg (graph-below d n ni gn (graph-fun d n gn grn) pn) (graph-below d f fi gf (graph-fun d f gf grf) pf)))
     es))
 
-; Every hypermap has a genus: Euler_lhs = 2 genus + Euler_rhs (Gonthier's even_genusP).
 (def-fns _ $ (erased even-genus : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Nat) gen) (erased (Genus d e n f gen) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased kn) (erased on)) (orbits-exists d n ni pn))
@@ -133,7 +123,6 @@
   (let ((erased kc) (erased gen) (erased cs) (erased es)) (euler-core d kn kf kx n ni f fi nf gn gf g pn pf rnf on of ox grn grf cg m am))
   (values gen (core-genus d kx kn kf kc gen e n f nf ni fi gn gf g pe rnf pn pf ox on of grn grf cg cs es)))
 
-; permN keeps the genus.
 (def-fns _ $ (erased genus-rot : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     -> (erased (Genus d n f e gen) r))
   (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased g) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
@@ -147,13 +136,11 @@
       (glink-to d n f e g2 g gn gf ge gl2 pn pf pe sn sf se))
     (es-rot kc d ke kn kf gen es)))
 
-; permF is permN applied twice.
 (def-fns _ $ (erased genus-rot2 : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     -> (erased (Hypermap d f e n) h2) (erased (Genus d f e n gen) r))
   (let ((erased h1)) (hyper-rot d e n f h))
   (values (hyper-rot d n f e h1) (genus-rot d gen n f e h1 (genus-rot d gen e n f h p))))
 
-; The dual: e, n and f inverted, with node and face exchanged. Its permutations are the composites n . f, e . n and f . e.
 (def-fns _ $ (erased hyper-dual : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
@@ -174,7 +161,6 @@
     (erased (Perm d p q) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Spans h gq) r))
   (spans-trans h gp gq (spans-inv d p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp) sh))
 
-; The dual keeps the genus.
 (def-fns _ $ (erased genus-dual : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn)
     (erased (Genus d ei fi ni gen) r))

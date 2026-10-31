@@ -1,6 +1,3 @@
-; cubic_Euler of geometry.v: in a connected map whose edges have two darts and nodes three, 6 kf + 12 genus = d + 12 for
-; the number kf of faces, so the genus is 0 exactly when 6 kf = d + 12. Needs ring.sl for the products.
-
 (def-fns _ $ (erased double-mul : (erased (Nat) a b) (subterm erased (Double a b) db) -> (erased (Mul a (Succ (Succ (Zero))) b) r))
   (let-match erased db (DS a1 b1 db1) ((D0) (MulZero _)))
   (MulSucc a1 _ b1 _ (double-mul a1 b1 db1) (add-succ-right b1 _ _ (add-succ-right b1 _ _ (add-zero-right b1)))))
@@ -24,8 +21,8 @@
       (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero six)))))))))
   (let ((erased (Add three three six) a33)) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero three)))))
   (let ((erased (Add two one three) a21)) (AddSucc _ _ _ (AddSucc _ _ _ (AddZero one))))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let-match erased p (MkGenus _ _ ke kn kf2 kc c2 lhs s1 rhs g2 _ _ _ g oe on of2 gl cs dc al a1 ar dg ag))
+  (let ((erased nf) (erased ni) (erased _) (erased _) (erased pe) (erased pn) (erased _)) (hyper-core d e n f h))
+  (let-match erased p (MkGenus _ _ ke kn kf2 kc _ lhs s1 rhs g2 _ _ _ g oe on of2 gl cs dc al a1 ar dg ag))
   (let-match erased (orbits-unique d kf2 kf f of2 of) (Refl _ _))
   (let-match erased cc (MkConnected _ _ _ _ g3 gl3 cs3))
   (let-match erased (glink-fn d e n f g g3 gl gl3) (Refl _ _))
@@ -61,13 +58,12 @@
   (let-match erased (add-cancel s6 gf dt l6 p4 p8) (Refl _ _))
   (values f6 g6 gf pf6 gw (add-comm g6 f6 gf p3) p7))
 
-; The genus is 0 exactly when 6 kf = d + 12.
 (def-fns _ $ (erased cubic-planar : (erased (Nat) d kf) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (AllOrder d e (Succ (Succ (Zero)))) plain) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cubic) (erased (Connected d e n f) cc)
     (erased (Genus d e n f (Zero)) p) (erased (Orbits d f kf) of)
     -> (erased (Nat) s) (erased (Mul kf (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) s) ma)
     (erased (Add d (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) s) ds))
-  (let ((erased a) (erased b) (erased s) (erased ma) (erased mb) (erased ab) (erased ds)) (cubic-euler d (Zero) kf e n f h plain cubic cc p of))
+  (let ((erased a) (erased _) (erased s) (erased ma) (erased mb) (erased ab) (erased ds)) (cubic-euler d (Zero) kf e n f h plain cubic cc p of))
   (let-match erased mb (MulZero _))
   (let-match erased (add-fn a (Zero) s a ab (add-zero-right a)) (Refl _ _))
   (values a ma ds))

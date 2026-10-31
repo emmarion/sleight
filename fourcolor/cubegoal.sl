@@ -1,6 +1,3 @@
-; Four-colouring every planar bridgeless plain cubic hypermap four-colours every planar bridgeless hypermap, on
-; hypermap.sl's definitions, through the cube of cube.sl.
-
 (def-fns _ $ (erased cube-reduction : (erased (Level) L)
     (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
         (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pp) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)

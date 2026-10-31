@@ -1,14 +1,11 @@
-; The Walkup transforms of walkup.v: a dart z is cut out of the node and face cycles, and the edge permutation follows.
-
-; A hypermap from its node and face permutations.
 (def-fns _ $ (erased hyper-mk : (erased (Nat) d) (erased (List (Nat)) n ni f fi) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
     -> (erased (List (Nat)) e) (erased (Hypermap d e n f) h))
   (let ((erased c) (erased rc)) (respects-exists n f d (perm-under d f fi pf) (perm-length d n ni pn)))
   (let ((erased ci) (erased rci) (erased pc)) (perm-comp d n ni f fi c pn pf rc))
-  (let-match erased pc (MkPerm _ _ _ ids io lc cic cci))
-  (let-match erased pn (MkPerm _ _ _ ids2 io2 ln nin nni))
+  (let-match erased pc (MkPerm _ _ _ ids io _ cic _))
+  (let-match erased pn (MkPerm _ _ _ ids2 io2 _ nin nni))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
-  (let-match erased pf (MkPerm _ _ _ ids3 io3 lf fif ffi))
+  (let-match erased pf (MkPerm _ _ _ ids3 io3 _ _ ffi))
   (let-match erased (iota-fn d ids ids3 io io3) (Refl _ _))
   (let ((erased li)) (iota-length d ids io))
   (let ((erased lni)) (respects-length-inv n ni ids d nni li))
@@ -18,7 +15,7 @@
       (respects-length fi ni ci d rci lni) lni)
     ffi rc cic)))
 
-; p2 is p with z cut out of its cycle and fixed (Gonthier's skip, read on the whole dart set).
+; p2 is p with z cut out of its cycle and fixed.
 (def-adts $ (Skip : ((List (Nat)) p) ((Nat) z) ((List (Nat)) p2) -> Type)
   enum
   (many SkipFixed : (erased (List (Nat)) p) (erased (Nat) z) (erased (Nth (Nat) p z z) pz) -> (Skip p z p))
@@ -33,13 +30,12 @@
 (def-fns _ $ (erased le-trans : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
 
-; Cutting z out of a face cycle: the genus is kept or drops by one.
 (def-fns _ $ (erased walkup-face : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
     -> (erased (Nat) b2) (erased (List (Nat)) f2 e2) (erased (Nat) gen2) (erased (Nth (Nat) f z b2) pb) (erased (Upd2 f w b2 z z f2) up)
     (erased (Hypermap d e2 n f2) h2) (erased (Genus d e2 n f2 gen2) p2) (erased (Or (Eq (Nat) gen gen2) (Eq (Nat) gen (Succ gen2))) st))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf) (erased kx) (erased kn) (erased kf) (erased kc)
-      (erased ox) (erased on) (erased of) (erased gn) (erased gf) (erased g) (erased grn) (erased grf) (erased cg) (erased cs) (erased es))
+  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf) (erased kx) (erased kn) (erased kf) (erased _)
+      (erased ox) (erased on) (erased of) (erased gn) (erased gf) (erased g) (erased grn) (erased grf) (erased cg) (erased _) (erased _))
     (genus-core d gen e n f h p))
   (let ((erased b2) (erased f2) (erased fi2) (erased pb) (erased up) (erased pf2) (erased of2)) (split-fixed d kf w z f fi pf of pw ne lw))
   (let ((erased e2) (erased h2)) (hyper-mk d n ni f2 fi2 pn pf2))
@@ -59,19 +55,18 @@
 (def-fns _ $ (erased perm-inv-unique : (erased (Nat) d) (erased (List (Nat)) p q1 q2) (erased (Perm d p q1) pm1) (erased (Perm d p q2) pm2)
     -> (erased (Eq (List (Nat)) q1 q2) r))
   (let-match erased pm1 (MkPerm _ _ _ ids io lp q1p pq1))
-  (let-match erased pm2 (MkPerm _ _ _ ids2 io2 _ q2p pq2))
+  (let-match erased pm2 (MkPerm _ _ _ ids2 io2 _ _ pq2))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased li)) (iota-length d ids io))
   (respects-fn ids q2 q1 q2
     (respects-assoc q2 p q1 ids ids q1 d pq2 (respects-id-right d ids q1 io (respects-length-inv p q1 ids d pq1 li)) q1p li lp)
     (respects-id-left d ids q2 io (perm-under d q2 p (perm-sym d p q2 pm2)))))
 
-; Cutting z out of a node cycle, through the dual.
 (def-fns _ $ (erased walkup-node : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
-    (erased (Nth (Nat) n w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
+    (erased (Nth (Nat) n w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) _lw)
     -> (erased (Nat) b2) (erased (List (Nat)) n2 e2) (erased (Nat) gen2) (erased (Nth (Nat) n z b2) pb) (erased (Upd2 n w b2 z z n2) up)
     (erased (Hypermap d e2 n2 f) h2) (erased (Genus d e2 n2 f gen2) p2) (erased (Or (Eq (Nat) gen gen2) (Eq (Nat) gen (Succ gen2))) st))
-  (let ((erased ei) (erased fi) (erased ni) (erased hd) (erased pe) (erased pf) (erased pn) (erased pd)) (genus-dual d gen e n f h p))
+  (let ((erased ei) (erased fi) (erased ni) (erased hd) (erased _) (erased pf) (erased pn) (erased pd)) (genus-dual d gen e n f h p))
   (let ((erased lz)) (perm-val d w z n ni pn pw))
   (let ((erased b2) (erased pb) (erased lb2)) (perm-nth d z n ni pn lz))
   (let ((erased pbi)) (perm-inv d z b2 n ni pn pb))
@@ -87,7 +82,7 @@
 (def-fns _ $ (erased skip-face : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Lt z d) lz) -> (erased (List (Nat)) f2 e2) (erased (Nat) gen2) (erased (Skip f z f2) sk) (erased (Hypermap d e2 n f2) h2)
     (erased (Genus d e2 n f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased w) (erased pwi) (erased lw)) (perm-nth d z fi f (perm-sym d f fi pf) lz))
   (let ((erased pw)) (perm-inv d z w fi f (perm-sym d f fi pf) pwi))
   (let-match erased (nat-eq w z) (Unequal _ _ _ _ ne) ((Equal _ _ _) (values f e gen (SkipFixed f z pw) h p (lt-succ gen))))
@@ -98,7 +93,7 @@
 (def-fns _ $ (erased skip-node : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Lt z d) lz) -> (erased (List (Nat)) n2 e2) (erased (Nat) gen2) (erased (Skip n z n2) sk) (erased (Hypermap d e2 n2 f) h2)
     (erased (Genus d e2 n2 f gen2) p2) (erased (Lt gen2 (Succ gen)) le))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pn) (erased _)) (hyper-core d e n f h))
   (let ((erased w) (erased pwi) (erased lw)) (perm-nth d z ni n (perm-sym d n ni pn) lz))
   (let ((erased pw)) (perm-inv d z w ni n (perm-sym d n ni pn) pwi))
   (let-match erased (nat-eq w z) (Unequal _ _ _ _ ne) ((Equal _ _ _) (values n e gen (SkipFixed n z pw) h p (lt-succ gen))))
@@ -106,7 +101,6 @@
     (walkup-node d gen w z e n f h p pw ne lw))
   (values n2 e2 gen2 (SkipCut n n2 z w b2 pw pb ne up) h2 p2 (step-le gen gen2 st)))
 
-; WalkupE with z kept as a dart fixed by all three permutations: the genus does not grow (le_genus_WalkupE).
 (def-fns _ $ (erased walkup-iso : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Lt z d) lz) -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) gen2) (erased (Skip n z n2) skn) (erased (Skip f z f2) skf)
     (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
@@ -126,7 +120,6 @@
   (let ((erased ys0) (erased x) (erased s) (erased l0)) (snoc-split _ ys k1 l1))
   (values (Cons _ y ys0) x (SnocCons _ y x ys0 ys s) (LengthCons _ y ys0 k1 l0)))
 
-; Dropping the last entry of lab, xs and ls keeps a composite, when xs stays below the shorter length.
 (def-fns _ $ (erased unsnoc-respects : (erased (List (Nat)) lab lab0 xs xs0 ls ls0) (erased (Nat) a x l k) (erased (Respects lab xs ls) rp)
     (erased (Snoc (Nat) lab0 a lab) sl) (subterm erased (Snoc (Nat) xs0 x xs) sx) (erased (Snoc (Nat) ls0 l ls) ss) (erased (Length (Nat) lab0 k) ll)
     (erased (Under xs0 k) u) -> (erased (Respects lab0 xs0 ls0) r))
@@ -169,7 +162,6 @@
       (lt-irrefl j (nth-lt-length _ p0 j j j pj lp0))))
   (under-tighten p0 d (under-snoc p p0 d (Succ d) (perm-under (Succ d) p q pm) sp) out))
 
-; A permutation fixing its last dart d is one on 0..d-1 with d added.
 (def-fns _ $ (erased unsnoc-perm : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm (Succ d) p q) pm) (erased (Nth (Nat) p d d) pd)
     -> (erased (List (Nat)) p0 q0) (erased (Snoc (Nat) p0 d p) sp) (erased (Snoc (Nat) q0 d q) sq) (erased (Perm d p0 q0) r))
   (let ((erased qd)) (perm-inv (Succ d) d d p q pm pd))
@@ -194,25 +186,24 @@
 
 (def-fns _ $ (erased es-drop : (erased (Nat) kc d k1 k2 k3 g) (erased (EulerSum (Succ kc) (Succ d) (Succ k1) (Succ k2) (Succ k3) g) es)
     -> (erased (EulerSum kc d k1 k2 k3 g) r))
-  (let ((erased r0) (erased lhs) (erased a0) (erased r1) (erased a1) (erased c2) (erased g2) (erased dc) (erased al) (erased dg) (erased ag))
+  (let ((erased r0) (erased _) (erased a0) (erased _) (erased a1) (erased _) (erased g2) (erased dc) (erased al) (erased dg) (erased ag))
     (es-split (Succ kc) (Succ d) k1 (Succ k2) k3 g es))
   (let ((erased s0) (erased e0) (erased b0)) (add-succ-right-inv k1 k2 r0 a0))
   (let-match erased e0 (Refl _ _))
   (let-match erased a1 (AddSucc _ _ t1 b1))
   (let-match erased dc (DS _ c0 dc0))
-  (let-match erased al (AddSucc _ _ l1 al1))
+  (let-match erased al (AddSucc _ _ _ al1))
   (let-match erased al1 (AddSucc _ _ l2 al2))
   (let ((erased l0) (erased e1) (erased al0)) (add-succ-right-inv c0 d l2 al2))
   (let-match erased e1 (Refl _ _))
-  (let ((erased m2) (erased f2) (erased ag2)) (add-succ-right-inv g2 (Succ (Succ t1)) (Succ (Succ (Succ l0))) ag))
+  (let ((erased _) (erased f2) (erased ag2)) (add-succ-right-inv g2 (Succ (Succ t1)) (Succ (Succ (Succ l0))) ag))
   (let-match erased f2 (Refl _ _))
-  (let ((erased m1) (erased f1) (erased ag1)) (add-succ-right-inv g2 (Succ t1) (Succ (Succ l0)) ag2))
+  (let ((erased _) (erased f1) (erased ag1)) (add-succ-right-inv g2 (Succ t1) (Succ (Succ l0)) ag2))
   (let-match erased f1 (Refl _ _))
-  (let ((erased m0) (erased f0) (erased ag0)) (add-succ-right-inv g2 t1 (Succ l0) ag1))
+  (let ((erased _) (erased f0) (erased ag0)) (add-succ-right-inv g2 t1 (Succ l0) ag1))
   (let-match erased f0 (Refl _ _))
   (MkEulerSum kc d k1 k2 k3 g c0 l0 s0 t1 g2 dc0 al0 b0 b1 dg ag0))
 
-; A hypermap whose last dart d is fixed by all three permutations is one on 0..d-1 with d added, of the same genus.
 (def-fns _ $ (erased drop-last : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h) (erased (Genus (Succ d) e n f gen) p)
     (erased (Nth (Nat) n d d) pnd) (erased (Nth (Nat) f d d) pfd)
     -> (erased (List (Nat)) e0 n0 f0) (erased (Snoc (Nat) e0 d e) se) (erased (Snoc (Nat) n0 d n) sn) (erased (Snoc (Nat) f0 d f) sf)
@@ -305,7 +296,6 @@
   (many MkCut : (erased (Nat) d z) (erased (List (Nat)) s p p1 pb p2) (erased (Skip p z p1) sk) (erased (Conj s s p1 pb) cj)
       (erased (Snoc (Nat) p2 d pb) sn) -> (Cut d z s p p2)))
 
-; WalkupE: the dart z removed, node and face cut, on d darts, of genus at most that of the map.
 (def-fns _ $ (erased walkup-e : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h)
     (erased (Genus (Succ d) e n f gen) p) (erased (Lt z (Succ d)) lz)
     -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s n n2) cn) (erased (Cut d z s f f2) cf)
@@ -313,8 +303,8 @@
   (let ((erased e1) (erased n1) (erased f1) (erased gen1) (erased skn) (erased skf) (erased h1) (erased p1) (erased le)) (walkup-iso (Succ d) gen z e n f h p lz))
   (let ((erased s) (erased sw)) (swap-exists (Succ d) z d lz (lt-succ d)))
   (let-match erased sw (MkSwap _ _ _ _ ps psz psd))
-  (let ((erased eb) (erased nb) (erased fb) (erased ce) (erased cnb) (erased cfb) (erased hb) (erased pb)) (genus-relabel (Succ d) gen1 e1 n1 f1 s s h1 p1 ps))
-  (let ((erased e2) (erased n2) (erased f2) (erased se) (erased sn) (erased sf) (erased h2) (erased p2))
+  (let ((erased eb) (erased nb) (erased fb) (erased _) (erased cnb) (erased cfb) (erased hb) (erased pb)) (genus-relabel (Succ d) gen1 e1 n1 f1 s s h1 p1 ps))
+  (let ((erased e2) (erased n2) (erased f2) (erased _) (erased sn) (erased sf) (erased h2) (erased p2))
     (drop-last d gen1 eb nb fb hb pb (conj-fix (Succ d) d z s s n1 nb cnb ps psd (skip-fixed n n1 z skn) psz)
       (conj-fix (Succ d) d z s s f1 fb cfb ps psd (skip-fixed f f1 z skf) psz)))
   (values s e2 n2 f2 gen1 sw (MkCut d z s n n1 nb n2 skn cnb sn) (MkCut d z s f f1 fb f2 skf cfb sf) h2 p2 le))
@@ -324,6 +314,6 @@
 
 (def-fns _ $ (erased skip-conn-back : (erased (Nat) d x y z) (erased (List (Nat)) p p2) (erased (List (Bond)) g g2) (erased (Skip p z p2) sk)
     (erased (Graph d p g) gr) (erased (Graph d p2 g2) gr2) (erased (Conn g2 x y) c) -> (erased (Conn g x y) r))
-  (let-match erased sk (SkipCut _ _ _ w u pw pz nwz up) ((SkipFixed _ _ _) (let-match erased (graph-fn d p g g2 gr gr2) (Refl _ _)) c))
+  (let-match erased sk (SkipCut _ _ _ w u pw pz _ up) ((SkipFixed _ _ _) (let-match erased (graph-fn d p g g2 gr gr2) (Refl _ _)) c))
   (spans-conn g g2 x y c (spans-upd d w u z z p p2 g g2 g (graph-fun d p2 g2 gr2) up gr (spans-self g)
     (conn-cat g w z u (conn-adj g w z (graph-adj d w z p g gr pw)) (conn-adj g z u (graph-adj d z u p g gr pz))) (ConnHere g z))))

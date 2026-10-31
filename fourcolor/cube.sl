@@ -1,7 +1,3 @@
-; The cube construction of Gonthier's cube.v: from a hypermap on d darts, a plain cubic hypermap on 6 d darts, laid out
-; as six blocks of d darts, of the same genus, bridgeless when the map is, and whose four-colourings give four-colourings
-; of the map.
-
 (let ((erased tg1)) (Succ (Zero)))
 (let ((erased tg2)) (Succ tg1))
 (let ((erased tg3)) (Succ tg2))
@@ -66,7 +62,6 @@
   (let ((erased z) (erased a)) (add d z1))
   (values z (AtS d t1 x z1 z p1 a)))
 
-; A dart of block t lies below the first dart of any later block.
 (def-fns _ $ (erased at-lt : (erased (Nat) d t x z t2 w) (erased (At d t x z) p) (subterm erased (At d t2 (Zero) w) q) (erased (Lt x d) lx)
     (erased (Lt t t2) lt) -> (erased (Lt z w) r))
   (let-match erased q (AtS _ t3 _ w3 _ q1 b) (absurd (AtZ _ _) lt))
@@ -74,7 +69,6 @@
   (let-match erased lt (LtS _ _ lt1))
   (add-mono d z1 z w3 w a b (at-lt d t1 x z1 t3 w3 p1 q1 lx lt1)))
 
-; The block and the position of a dart are determined.
 (def-fns _ $ (erased at-inj : (erased (Nat) d t x z t2 x2) (subterm erased (At d t x z) p) (erased (At d t2 x2 z) q) (erased (Lt x d) lx)
     (erased (Lt x2 d) lx2) -> (erased (Eq (Nat) t t2) e1) (erased (Eq (Nat) x x2) e2))
   (let-match erased p (AtS _ t1 _ z1 _ p1 a)
@@ -86,7 +80,6 @@
   (let ((erased e1) (erased e2)) (at-inj d t1 x z1 t3 x2 p1 q1 lx lx2))
   (values (eq-cong-succ t1 t3 e1) e2))
 
-; Darts of different blocks, or at different positions, differ.
 (def-fns _ $ (erased at-apart : (erased (Nat) d t x z t2 x2 z2) (erased (At d t x z) p) (erased (At d t2 x2 z2) q) (erased (Lt x d) lx)
     (erased (Lt x2 d) lx2) (erased (Or (Apart (Nat) Lt t t2) (Apart (Nat) Lt x x2)) o) -> (erased (Apart (Nat) Lt z z2) r))
   (let-match erased (nat-eq z z2) (Unequal _ _ _ _ ne)
@@ -141,21 +134,21 @@
 
 (def-fns _ $ (erased shf-nth : (erased (Nat) d o x y w) (erased (List (Nat)) p b) (subterm erased (Shf d o p b) sh) (erased (Nth (Nat) p x y) px)
     (erased (At d o y w) a) -> (erased (Nth (Nat) b x w) r))
-  (let-match erased sh (ShfCons _ _ y1 z p1 b1 a1 sh1) (absurd (ShfNil _ _) px))
+  (let-match erased sh (ShfCons _ _ _ z p1 b1 a1 sh1) (absurd (ShfNil _ _) px))
   (let-match erased px (NthThere _ _ _ x1 _ px1)
     ((NthHere _ _ _) (let-match erased (at-fn d o y z w a1 a) (Refl _ _)) (NthHere _ z b1)))
   (NthThere _ z b1 x1 w (shf-nth d o x1 y w p1 b1 sh1 px1 a)))
 
 (def-fns _ $ (erased shf-nth-inv : (erased (Nat) d o x w) (erased (List (Nat)) p b) (subterm erased (Shf d o p b) sh) (erased (Nth (Nat) b x w) pb)
     -> (erased (Nat) y) (erased (Nth (Nat) p x y) px) (erased (At d o y w) a))
-  (let-match erased sh (ShfCons _ _ y1 z p1 b1 a1 sh1) (absurd (ShfNil _ _) pb))
+  (let-match erased sh (ShfCons _ _ y1 _ p1 b1 a1 sh1) (absurd (ShfNil _ _) pb))
   (let-match erased pb (NthThere _ _ _ x1 _ pb1) ((NthHere _ _ _) (values y1 (NthHere _ y1 p1) a1)))
   (let ((erased y) (erased px) (erased a)) (shf-nth-inv d o x1 w p1 b1 sh1 pb1))
   (values y (NthThere _ y1 p1 x1 y px) a))
 
 (def-fns _ $ (erased shf-length : (erased (Nat) d o k) (erased (List (Nat)) p b) (subterm erased (Shf d o p b) sh) (erased (Length (Nat) p k) lp)
     -> (erased (Length (Nat) b k) r))
-  (let-match erased sh (ShfCons _ _ y z p1 b1 a sh1) ((ShfNil _ _) (let-match erased lp (LengthNil _)) (LengthNil _)))
+  (let-match erased sh (ShfCons _ _ _ z p1 b1 _ sh1) ((ShfNil _ _) (let-match erased lp (LengthNil _)) (LengthNil _)))
   (let-match erased lp (LengthCons _ _ _ k1 lp1))
   (LengthCons _ z b1 k1 (shf-length d o k1 p1 b1 sh1 lp1)))
 
@@ -183,7 +176,6 @@
   (let-match erased az (AtS _ _ _ z1 _ az1 a))
   (join-nth-r b rest xs d z1 z w ap (shf-length d o0 d p0 b sh lp) a (lay-nth d t1 o x y z1 w s1 p rest ly1 sz1 ps1 px az1 aw)))
 
-; Every entry of a laid-out list is dart (p x) of block o for the block t and position x it is at.
 (def-fns _ $ (erased lay-nth-inv : (erased (Nat) d z w) (erased (List (Blk)) s) (erased (List (Nat)) xs) (subterm erased (Lay d s xs) ly)
     (erased (Sized d s) sz) (erased (Nth (Nat) xs z w) pz)
     -> (erased (Nat) t o) (erased (List (Nat)) p) (erased (Nat) x y) (erased (Nth (Blk) s t (MkBlk o p)) ps) (erased (Nth (Nat) p x y) px)
@@ -270,7 +262,6 @@
   (let-match erased l (LinkCons _ xs1 ys1 x y c l1) ((LinkNil _) (LinkNil h)))
   (LinkCons h xs1 ys1 x y (spans-conn h g x y c sp) (link-spans g h xs1 ys1 l1 sp)))
 
-; A step along p links each dart of xs to its image.
 (def-fns _ $ (erased link-step : (erased (Nat) D) (erased (List (Nat)) p xs ys) (erased (List (Bond)) g) (erased (Graph D p g) gr)
     (subterm erased (Respects p xs ys) rp) -> (erased (Linked g xs ys) r))
   (let-match erased rp (RespCons _ xs1 ys1 x y px rp1) ((RespNil _) (LinkNil g)))
@@ -324,7 +315,7 @@
 
 (def-fns _ $ (erased lift-cat : (erased (List (Bond)) g1 g2 g h) (erased (Nat) d t) (subterm erased (Cat g1 g2 g) c) (erased (Lift h d t g1) l1)
     (erased (Lift h d t g2) l2) -> (erased (Lift h d t g) r))
-  (let-match erased c (CatCons g11 _ gg b c1) ((CatNil _) l2))
+  (let-match erased c (CatCons g11 _ gg _ c1) ((CatNil _) l2))
   (let-match erased l1 (LiftCons _ _ _ _ x y x2 y2 px py cn l11))
   (LiftCons h gg d t x y x2 y2 px py cn (lift-cat g11 g2 gg h d t c1 l11 l2)))
 
@@ -370,7 +361,6 @@
   (let ((erased a) (erased e)) (ident-nth (Succ t0) j1 o ids p s1 id1 q1))
   (values (add-succ-left j1 t0 o a) e))
 
-; The identity laid out in blocks is the identity.
 (def-fns _ $ (erased lay-iota : (erased (Nat) d m D) (erased (List (Nat)) ids L I) (erased (List (Blk)) s) (erased (Lay d s L) ly)
     (erased (Sized d s) sz)
     (erased (Ident (Zero) ids s) id) (erased (Iota d ids) io) (erased (Length (Blk) s m) ls) (erased (At d m (Zero) D) aD) (erased (Iota D I) ioD)
@@ -380,7 +370,7 @@
     (absurd (OrR _ _ ne)
       (let-match erased ne (MkNeAt _ _ j a b pa pb ab))
       (let-match erased (iota-at D j b I ioD pb) (Refl _ _))
-      (let ((erased t) (erased o) (erased p) (erased x) (erased y) (erased ps) (erased px) (erased az) (erased aw) (erased lx))
+      (let ((erased t) (erased o) (erased p) (erased x) (erased y) (erased ps) (erased px) (erased az) (erased aw) (erased _))
         (lay-nth-inv d j a s L ly sz pa))
       (let ((erased ad) (erased ep)) (ident-nth (Zero) t o ids p s id ps))
       (let-match erased ep (Refl _ _))
@@ -422,7 +412,7 @@
     (erased (Spread d s) sp)
     (erased (Avoid o s) av) (erased (At d o y z) a) (erased (Lt y d) l) -> (erased (NotIn z r) res))
   (let-match erased ly (LayCons _ o2 p b rest _ s1 sh j ly1) ((LayNil _) (NotInNil z)))
-  (let-match erased sp (SpreadCons _ _ _ _ dp up _ sp1))
+  (let-match erased sp (SpreadCons _ _ _ _ _ up _ sp1))
   (let-match erased av (AvCons _ _ _ _ ne av1))
   (notin-join z b rest r j (shf-notin d o o2 y z p b sh up a l (OrL _ _ ne)) (lay-avoid d o y z s1 rest ly1 sp1 av1 a l)))
 
@@ -458,14 +448,14 @@
 (def-fns _ $ (erased shf-in : (erased (Nat) d o y z) (erased (List (Nat)) p b) (subterm erased (Shf d o p b) sh) (erased (In y p) pin)
     (erased (At d o y z) a)
     -> (erased (In z b) r))
-  (let-match erased sh (ShfCons _ _ y2 z2 p1 b1 a2 sh1) (absurd (ShfNil _ _) pin))
+  (let-match erased sh (ShfCons _ _ _ z2 p1 b1 a2 sh1) (absurd (ShfNil _ _) pin))
   (let-match erased pin (InThere _ _ _ pin1)
     ((InHere _ _) (let-match erased (at-fn d o y z2 z a2 a) (Refl _ _)) (InHere z2 b1)))
   (InThere z z2 b1 (shf-in d o y z p1 b1 sh1 pin1 a)))
 
 (def-fns _ $ (erased lay-in : (erased (Nat) d j a y z) (erased (List (Nat)) R rs) (erased (List (Blk)) s) (erased (Lay d s rs) ly)
     (subterm erased (Nth (Blk) s j (MkBlk a R)) pr) (erased (In y R) pin) (erased (At d a y z) az) -> (erased (In z rs) r))
-  (let-match erased ly (LayCons _ o p b rest _ s1 sh jn ly1) (absurd (LayNil _) pr))
+  (let-match erased ly (LayCons _ _ _ b rest _ s1 sh jn ly1) (absurd (LayNil _) pr))
   (let-match erased pr (NthThere _ _ _ j1 _ pr1) ((NthHere _ _ _) (in-join-l z b rest rs jn (shf-in d a y z R b sh pin az))))
   (in-join-r z b rest rs jn (lay-in d j1 a y z R rest s1 ly1 pr1 pin az)))
 
@@ -528,8 +518,8 @@
   (let-match erased (iota-fn d ids ids1 io io1) (Refl _ _))
   (values qp pq lp (respects-length-inv p q ids d pq (iota-length d ids io))))
 
-; The cube of the hypermap (e, n, f) on d darts, on D = 6 d darts. Its blocks 0 to 5 are Gonthier's CTn, CTen, CTf,
-; CTnf, CTe and CTfe; nf, ni and fi are the inverses of e, n and f, and I lists the D darts.
+; The cube of (e, n, f) on d darts, on D = 6 d darts: nf, ni and fi are the inverses of e, n and f, and I lists
+; the D darts.
 (def-adts $ (Cube : ((Nat) d D) ((List (Nat)) e n f ce cn cf) -> Type)
   enum
   (many MkCube : (erased (Nat) d D) (erased (List (Nat)) e n f ids nf ni fi ce cn cf cfi I)
@@ -576,7 +566,6 @@
     ioD) (Refl _ _))
   (values D ce cn cf (MkCube d D e n f ids nf ni fi ce cn cf cfi I io rnf pe pn pf aD ioD le ln lf lfi (MkLaid d sid I lyL szid))))
 
-; Entry k of a list, for k from 1 to 5.
 (def-fns _ $ (erased pos1 : (erased Type A) (erased A a0 x) (erased (List A) r) -> (erased (Nth A (Cons A a0 $ Cons A x r) tg1 x) p))
   (NthThere _ a0 _ (Zero) x (NthHere _ x r)))
 (def-fns _ $ (erased pos2 : (erased Type A) (erased A a0 a1 x) (erased (List A) r) -> (erased (Nth A (Cons A a0 $ Cons A a1 $ Cons A x r) tg2 x) p))
@@ -591,12 +580,10 @@
     (erased (Nth A (Cons A a0 $ Cons A a1 $ Cons A a2 $ Cons A a3 $ Cons A a4 $ Cons A x r) tg5 x) p))
   (NthThere _ a0 _ tg4 x (pos4 _ a1 a2 a3 a4 x r)))
 
-; The length of a list of six blocks.
 (def-fns _ $ (erased six : (erased (Blk) b0 b1 b2 b3 b4 b5) ->
     (erased (Length (Blk) (Cons (Blk) b0 $ Cons (Blk) b1 $ Cons (Blk) b2 $ Cons (Blk) b3 $ Cons (Blk) b4 $ Cons (Blk) b5 $ Nil (Blk)) tg6) l))
   (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))
 
-; The G-level composites the cube's blocks rest on.
 (def-adts $ (Facts : ((Nat) d) ((List (Nat)) e n f ids nf ni fi) -> Type)
   enum
   (many MkFacts : (erased (Nat) d) (erased (List (Nat)) e n f ids nf ni fi)
@@ -626,16 +613,14 @@
     (respects-id-right d ids ni io lni) (respects-id-left d ids nf io unf) (respects-id-left d ids e io ue) Rnid (respects-id-right d ids f io lf)
     lid le ln lf lnf lni lfi ue un (perm-under d f fi pf) unf uni (perm-under d ids ids (perm-id d ids io)) (perm-under d fi f (perm-sym d f fi pf))))
 
-; The cube is a hypermap: its edge permutation is an involution, its face permutation has the inverse cfi, and its node
-; permutation is e . cfi.
 (def-fns _ $ (erased cube-hyper : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     -> (erased (Hypermap D ce cn cf) h))
   (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
   (let-match erased le (MkLaid _ _ _ lye sze))
-  (let-match erased ln (MkLaid _ _ _ lyn szn))
+  (let-match erased ln (MkLaid _ _ _ lyn _))
   (let-match erased lf (MkLaid _ _ _ lyf szf))
   (let-match erased lfi (MkLaid _ _ _ lyfi szfi))
-  (let-match erased li (MkLaid _ _ _ lyi szi))
+  (let-match erased li (MkLaid _ _ _ lyi _))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren Rfif Rffi Rnin Rnni Rnffin Reid Rnfid Ridni _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let ((erased ee)) (lay-respects d _ _ _ ce ce I lye sze lye lyi
@@ -673,10 +658,9 @@
   (hyper-of D ce cf cfi cn (MkPerm D ce ce I ioD (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD) ee ee)
     (MkPerm D cf cfi I ioD (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD) fif ffi) efn))
 
-
 (def-fns _ $ (erased respects-at : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) lab j l) q) -> (erased (Nth (Nat) ls i l) r))
-  (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
+  (let-match erased rp (RespCons _ xs1 ls1 _ l1 p1 rp1) (absurd (RespNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p2)
     ((NthHere _ _ _) (let-match erased (nth-fn _ lab j l1 l p1 q) (Refl _ _)) (NthHere _ l1 ls1)))
   (NthThere _ l1 ls1 i1 l (respects-at lab xs1 ls1 i1 j l rp1 p2 q)))
@@ -696,7 +680,6 @@
   (let-match erased a (AddSucc _ _ k1 a1))
   (nofix-nth d (Succ t0) j1 o k p s1 nf1 q1 (add-succ-right j1 t0 k1 a1)))
 
-; A list laid out without fixed blocks moves every dart.
 (def-fns _ $ (erased lay-apart : (erased (Nat) d z w) (erased (List (Blk)) s) (erased (List (Nat)) xs) (erased (Lay d s xs) ly)
     (erased (Sized d s) sz)
     (erased (NoFix d (Zero) s) nf) (erased (Nth (Nat) xs z w) pz) -> (erased (Apart (Nat) Lt w z) r))
@@ -719,7 +702,6 @@
       (PathStep p zs (Nil _) u z z pu (NotInCons u z (Nil _) nu (NotInNil u)) (PathHere p zs z)))
     (LengthCons _ w _ _ (LengthCons _ u (Nil _) (Zero) (LengthNil _)))))
 
-; Every dart of an involution laid out without fixed blocks has order 2.
 (def-fns _ $ (erased orders-two : (erased (Nat) d D n) (erased (List (Nat)) p q I xs) (erased (List (Blk)) s) (erased (Lay d s p) ly)
     (erased (Sized d s) sz)
     (erased (NoFix d (Zero) s) nf) (erased (Perm D p q) pm) (erased (Respects p p I) pp) (erased (Iota D I) io)
@@ -727,13 +709,11 @@
     (erased (Repeat (Nat) n tg2 ks) rk))
   (let-match erased lx (LengthCons _ z xs1 n1 lx1) ((LengthNil _) (values (Nil _) (OrdNil p) (RepeatNil _ tg2))))
   (let-match erased ux (UnderCons _ _ _ lz ux1))
-  (let ((erased w) (erased pz) (erased lw)) (perm-nth D z p q pm lz))
+  (let ((erased w) (erased pz) (erased _)) (perm-nth D z p q pm lz))
   (let ((erased pw)) (respects-nth p p I z w z pp pz (iota-nth D z I io lz)))
   (let ((erased ks) (erased os) (erased rk)) (orders-two d D n1 p q I xs1 s ly sz nf pm pp io lx1 ux1))
   (values (Cons _ tg2 ks) (OrdCons p xs1 ks z tg2 (order-of-two p z w pz pw (lay-apart d z w s p ly sz nf pz)) os) (RepeatCons _ n1 tg2 ks rk)))
 
-; Every dart of a permutation p laid out without fixed blocks, with p . p = p2 and p . p2 the identity, and p2 laid out
-; without fixed blocks, has order 3.
 (def-fns _ $ (erased orders-three : (erased (Nat) d D n) (erased (List (Nat)) p q p2 I xs) (erased (List (Blk)) s s2) (erased (Lay d s p) ly)
     (erased (Sized d s) sz) (erased (NoFix d (Zero) s) nf) (erased (Lay d s2 p2) ly2) (erased (Sized d s2) sz2) (erased (NoFix d (Zero) s2) nf2)
     (erased (Perm D p q) pm) (erased (Respects p p p2) r2) (erased (Respects p p2 I) r3) (erased (Iota D I) io)
@@ -742,7 +722,7 @@
   (let-match erased lx (LengthCons _ z xs1 n1 lx1) ((LengthNil _) (values (Nil _) (OrdNil p) (RepeatNil _ tg3))))
   (let-match erased ux (UnderCons _ _ _ lz ux1))
   (let ((erased w) (erased pz) (erased lw)) (perm-nth D z p q pm lz))
-  (let ((erased u) (erased pw) (erased lu)) (perm-nth D w p q pm lw))
+  (let ((erased u) (erased pw) (erased _)) (perm-nth D w p q pm lw))
   (let ((erased p2z)) (respects-at p p p2 z w u r2 pz pw))
   (let ((erased pu)) (respects-nth p p2 I z u z r3 p2z (iota-nth D z I io lz)))
   (let ((erased ks) (erased os) (erased rk)) (orders-three d D n1 p q p2 I xs1 s s2 ly sz nf ly2 sz2 nf2 pm r2 r3 io lx1 ux1))
@@ -750,14 +730,13 @@
     (OrdCons p xs1 ks z tg3 (order-of-three p z w u pz pw pu (lay-apart d z w s p ly sz nf pz) (lay-apart d z u s2 p2 ly2 sz2 nf2 p2z)) os)
     (RepeatCons _ n1 tg3 ks rk)))
 
-; The cube is plain.
 (def-fns _ $ (erased cube-plain : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     -> (erased (AllOrder D ce tg2) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ I io rnf pe pn pf aD ioD le _ _ _ li))
   (let-match erased le (MkLaid _ _ _ lye sze))
-  (let-match erased li (MkLaid _ _ _ lyi szi))
+  (let-match erased li (MkLaid _ _ _ lyi _))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
-    (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren _ _ _ _ _ _ _ _ _ _ _ _ _ _ lid _ _ _ _ _ _ ue un _ unf uni uid _))
+    (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ue _ _ unf _ uid _))
   (let ((erased ee)) (lay-respects d _ _ _ ce ce I lye sze lye lyi
     (LRCons _ _ _ _ _ _ _ _ (pos5 _ _ _ _ _ _ _ _) RI $
       LRCons _ _ _ _ _ _ _ _ (pos3 _ _ _ _ _ _) Rne $
@@ -778,13 +757,12 @@
     (MkPerm D ce ce I ioD (lay-length d tg6 D _ ce lye sze (six _ _ _ _ _ _) aD) ee ee) ee ioD lD (perm-under D I I (perm-id D I ioD))))
   (MkAllOrder D tg2 ce ks (MkOrderList D ce I ks ioD os) rk))
 
-; The cube is cubic.
 (def-fns _ $ (erased cube-cubic : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     -> (erased (AllOrder D cn tg3) r))
   (let ((erased q) (erased pm)) (hyper-perm D cn cf ce (hyper-rot D ce cn cf (cube-hyper d D e n f ce cn cf cu))))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ I io rnf pe pn pf _ ioD _ ln _ _ li))
   (let-match erased ln (MkLaid _ _ _ lyn szn))
-  (let-match erased li (MkLaid _ _ _ lyi szi))
+  (let-match erased li (MkLaid _ _ _ lyi _))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren _ _ Rnin Rnni _ Reid _ _ Ridn Rniid Ridnf _ _ _ lid lde ldn _ lnf lni _ ue un _ unf uni uid _))
   (let ((erased s2)) (Cons _ (MkBlk tg5 n) $ Cons _ (MkBlk (Zero) ni) $ Cons _ (MkBlk tg4 ids) $ Cons _ (MkBlk tg2 nf) $ Cons _ (MkBlk tg3 e) $
@@ -827,25 +805,13 @@
     pm r2 r3 ioD (iota-length D I ioD) (perm-under D I I (perm-id D I ioD))))
   (MkAllOrder D tg3 cn ks (MkOrderList D cn I ks ioD os) rk))
 
-
 (def-fns _ $ (erased under-notin : (erased (List (Nat)) xs) (erased (Nat) n) (subterm erased (Under xs n) u) -> (erased (NotIn n xs) r))
   (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (NotInNil n)))
   (NotInCons n x xs1 (ApGt _ _ n x l) (under-notin xs1 n u1)))
 
-(def-fns _ $ (erased iota-distinct : (erased (Nat) d) (erased (List (Nat)) ids) (subterm erased (Iota d ids) io) -> (erased (Distinct ids) r))
-  (let-match erased io (IotaS n ids1 _ io1 sn) ((IotaZ) (DistNil)))
-  (distinct-snoc-cons n ids1 ids sn
-    (DistCons n ids1 (under-notin ids1 n (perm-under n ids1 ids1 (perm-id n ids1 io1))) (iota-distinct n ids1 io1))))
-
-(def-fns _ $ (erased under-sub : (erased (Nat) d) (erased (List (Nat)) xs ids) (subterm erased (Under xs d) u) (erased (Iota d ids) io)
-    -> (erased (Sub xs ids) r))
-  (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (SubNil ids)))
-  (SubCons x xs1 ids (iota-in d x ids io l) (under-sub d xs1 ids u1 io)))
-
-; A labelling constant along the graph of p is constant along p.
 (def-fns _ $ (erased graph-resp : (erased (Nat) d) (erased (List (Nat)) p lab) (erased (List (Bond)) g) (erased (Graph d p g) gr)
     (erased (Const lab g) cl) (erased (Length (Nat) lab d) ll) -> (erased (Respects lab p lab) r))
-  (let-match erased gr (MkGraph _ _ ids _ io lp z))
+  (let-match erased gr (MkGraph _ _ ids _ io _ z))
   (const-respects lab ids p lab g z cl (respects-id-right d ids lab io ll)))
 
 ; Each block of s has k_i darts, and k is their sum.
@@ -862,18 +828,16 @@
   (let-match erased bl (BLenCons _ _ k1 k2 _ _ lp bl1 a))
   (join-length b rest xs k1 k2 k j (shf-length d o k1 p b sh lp) (lay-len d k2 s1 rest ly1 bl1) a))
 
-; A count of classes from a laid-out labelling lab and laid-out roots rs.
 (def-fns _ $ (erased lay-classes : (erased (Nat) d D m k) (erased (List (Blk)) sl sr sid) (erased (List (Nat)) lab rs I) (erased (List (Bond)) g)
     (erased (Laid d sl lab) ll) (erased (Length (Blk) sl m) lsl) (erased (At d m (Zero) D) aD) (erased (Lay d sr rs) lr) (erased (Spread d sr) sp)
     (erased (BLens sr k) bl) (erased (Laid d sid I) li) (erased (Iota D I) io) (erased (LResp sl sr sr) fix) (erased (Const lab g) cl)
     (erased (LSub sl sr) ls) (erased (LLink d g sl sid) lk) -> (erased (Classes g D k) r))
   (let-match erased ll (MkLaid _ _ _ lyl szl))
-  (let-match erased li (MkLaid _ _ _ lyi szi))
+  (let-match erased li (MkLaid _ _ _ lyi _))
   (MkClasses g D k I lab rs io (lay-length d m D sl lab lyl szl lsl aD) (lay-len d k sr rs lr bl) (lay-distinct d sr rs lr sp)
     (lay-respects d sl sr sr lab rs rs lyl szl lr lr fix) cl
     (rooted-of g rs I lab (lay-link d g sl sid lab I lyl lyi lk) (lay-sub d sl sr lab rs lyl lr ls))))
 
-; One step along the laid-out permutation p links block a of P to block b of Q.
 (def-fns _ $ (erased blk-step : (erased (Nat) d D a b) (erased (List (Blk)) sp) (erased (List (Nat)) p R P Q A B) (erased (List (Bond)) g)
     (erased (Laid d sp p) lp) (erased (Graph D p g) gr) (erased (Nth (Blk) sp a (MkBlk b R)) pa) (erased (Respects R P Q) rp)
     (erased (Shf d a P A) sa) (erased (Shf d b Q B) sb) -> (erased (Linked g A B) r))
@@ -890,7 +854,6 @@
       (sep-conn h x y s (conn-cat h x l1 y (conn-sym h l1 x c1) c2))))
   ne)
 
-; The labels of the two ends of each bond of g, told apart in h, differ.
 (def-fns _ $ (erased allsep-differ : (erased (Nat) d) (erased (List (Nat)) X Y LX LY ids lab rs) (erased (List (Bond)) g h)
     (subterm erased (Zip X Y g) z)
     (erased (AllSep h g) sp) (erased (Respects lab X LX) rx) (erased (Respects lab Y LY) ry) (erased (Under X d) ux) (erased (Under Y d) uy)
@@ -904,14 +867,12 @@
   (DifferCons LX1 LY1 l1 l2 (sep-apart d x y l1 l2 ids lab rs h s io ro p1 p2 lx ly)
     (allsep-differ d X1 Y1 LX1 LY1 ids lab rs g1 h z1 sp1 rx1 ry1 ux1 uy1 io ro)))
 
-; Each bond of the inverse q of p is told apart if each bond of p is.
 (def-fns _ $ (erased allsep-inv : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) gp gq h) (subterm erased (Fun q gq) fq)
     (erased (Perm d q p) pm) (erased (Graph d p gp) gr) (erased (AllSep h gp) sp) -> (erased (AllSep h gq) r))
   (let-match erased fq (FunCons _ g1 x y py f1) ((FunNil _) (AllSepNil h)))
   (AllSepCons h g1 x y (sep-sym h y x (allsep-adj h gp y x (graph-adj d y x p gp gr (perm-inv d x y q p pm py)) sp))
     (allsep-inv d p q gp g1 h f1 pm gr sp)))
 
-; Bonds whose ends have different labels under a labelling constant along h are told apart in h.
 (def-fns _ $ (erased allsep-of : (erased (List (Nat)) X Y LX LY lab) (erased (List (Bond)) g h) (subterm erased (Zip X Y g) z)
     (erased (Respects lab X LX) rx) (erased (Respects lab Y LY) ry) (erased (Differ LX LY) df) (erased (Const lab h) cl) -> (erased (AllSep h g) r))
   (let-match erased z (ZipCons X1 Y1 g1 x y z1) ((ZipNil) (AllSepNil h)))
@@ -964,7 +925,7 @@
 
 (def-fns _ $ (erased differ-nth : (erased (List (Nat)) X Y) (erased (Nat) a u v) (subterm erased (Differ X Y) df) (erased (Nth (Nat) X a u) pu)
     (erased (Nth (Nat) Y a v) pv) -> (erased (Apart (Nat) Lt u v) r))
-  (let-match erased df (DifferCons X1 Y1 x y ne df1) (absurd (DifferNil) pu))
+  (let-match erased df (DifferCons X1 Y1 _ _ ne df1) (absurd (DifferNil) pu))
   (let-match erased pu (NthThere _ _ _ a1 _ pu1) ((NthHere _ _ _) (let-match erased pv (NthHere _ _ _)) ne))
   (let-match erased pv (NthThere _ _ _ _ _ pv1))
   (differ-nth X1 Y1 a1 u v df1 pu1 pv1))
@@ -975,14 +936,12 @@
   (let-match erased ry (RespCons _ _ YAs1 _ v pv ry1))
   (DifferCons XAs1 YAs1 u v (differ-nth X Y a u v df pu pv) (differ-restrict X Y As1 XAs1 YAs1 df rx1 ry1)))
 
-; K is constant along p, so K . (p . A) = K . A.
 (def-fns _ $ (erased const-step : (erased (List (Nat)) K p A B Y) (erased (Respects K p K) kp) (subterm erased (Respects p A B) rp)
     (erased (Respects K A Y) ry) -> (erased (Respects K B Y) r))
   (let-match erased rp (RespCons _ As1 Bs1 a b pab rp1) ((RespNil _) (let-match erased ry (RespNil _)) (RespNil K)))
   (let-match erased ry (RespCons _ _ Y1 _ k pk ry1))
   (RespCons K Bs1 Y1 b k (respects-nth K p K a b k kp pab pk) (const-step K p As1 Bs1 Y1 kp rp1 ry1)))
 
-; Block o of ids, then P, is block o of P.
 (def-fns _ $ (erased shf-compose : (erased (Nat) d o) (erased (List (Nat)) ids P B C) (erased (Iota d ids) io) (erased (Shf d o ids B) sb)
     (subterm erased (Shf d o P C) sc) (erased (Under P d) up) -> (erased (Respects B P C) r))
   (let-match erased sc (ShfCons _ _ y z P1 C1 a sc1) ((ShfNil _ _) (RespNil B)))
@@ -999,7 +958,6 @@
   (let-match erased (add-fn d As1 ab A dab ad) (Refl _ _))
   (values C abc (AtS d v1 (Zero) C1 C pc1 dc)))
 
-; The Euler sum of the cube, from that of the map: 2 kc + 6 d = 3 d + 2 d + (ke + (kn + kf)) + 2 gen.
 (def-fns _ $ (erased es-cube : (erased (Nat) kc d ke kn kf gen D K3 K2 a kF) (erased (EulerSum kc d ke kn kf gen) es) (erased (At d tg6 (Zero) D) aD)
     (erased (At d tg3 (Zero) K3) a3) (erased (At d tg2 (Zero) K2) a2) (erased (Add kn kf a) a1) (erased (Add ke a kF) a0)
     -> (erased (EulerSum kc D K3 K2 kF gen) r))
@@ -1018,7 +976,6 @@
   (let-match erased (add-fn rhs K5 bc rhs2 p2 (add-comm K5 rhs rhs2 ar2)) (Refl _ _))
   (MkEulerSum kc D K3 K2 rhs gen c2 lhs2 K5 rhs2 g2 dc al2 a35 ar2 dg q2))
 
-
 (def-fns _ $ (erased sized-blens : (erased (Nat) d m K) (erased (List (Blk)) s) (subterm erased (Sized d s) sz) (erased (Length (Blk) s m) ls)
     (erased (At d m (Zero) K) a) -> (erased (BLens s K) r))
   (let-match erased sz (SizedCons _ o p s1 lp sz1) ((SizedNil _) (let-match erased ls (LengthNil _)) (let-match erased a (AtZ _ _)) (BLenNil)))
@@ -1026,11 +983,9 @@
   (let-match erased a (AtS _ _ _ K1 _ a1 ad))
   (BLenCons s1 o d K1 K p lp (sized-blens d m1 K1 s1 sz1 ls1 a1) ad))
 
-
-; The cube has 3 d edges.
 (def-fns _ $ (erased cube-edges : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     -> (erased (Nat) K) (erased (At d tg3 (Zero) K) aK) (erased (Orbits D ce K) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ _ io rnf pe pn pf aD ioD le _ _ _ li))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren _ _ _ _ _ _ _ _ _ _ Ridnf Ride _ _ lid lde _ _ lnf _ _ ue _ _ unf _ uid _))
   (let ((erased K) (erased aK)) (at-exists d tg3 (Zero)))
@@ -1041,15 +996,15 @@
                        SizedCons _ tg2 _ _ lde $ SizedCons _ (Zero) _ _ lid $ SizedNil d)))
   (let-match erased ll (MkLaid _ _ _ lyl szl))
   (let ((erased sr)) (Cons _ (MkBlk (Zero) ids) $ Cons _ (MkBlk tg1 ids) $ Cons _ (MkBlk tg2 ids) $ Nil (Blk)))
-  (let ((erased rs) (erased lr)) (lay-exists d sr))
+  (let ((erased _) (erased lr)) (lay-exists d sr))
   (let ((erased I0) (erased s0)) (shf-exists d (Zero) ids))
   (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
   (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
-  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
-  (let ((erased I4) (erased s4)) (shf-exists d tg4 ids))
-  (let ((erased I5) (erased s5)) (shf-exists d tg5 ids))
-  (let ((erased X) (erased sX)) (shf-exists d tg1 nf))
-  (let ((erased Y) (erased sY)) (shf-exists d tg2 e))
+  (let ((erased _) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased _) (erased s4)) (shf-exists d tg4 ids))
+  (let ((erased _) (erased s5)) (shf-exists d tg5 ids))
+  (let ((erased _) (erased sX)) (shf-exists d tg1 nf))
+  (let ((erased _) (erased sY)) (shf-exists d tg2 e))
   (let ((erased lk0)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le gr (pos1 _ _ _ _) Ren sX s3))
   (let ((erased lk1)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le gr (pos2 _ _ _ _ _) Rne sY s4))
   (let ((erased lk2)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ le gr (NthHere _ _ _) RI s0 s5))
@@ -1090,11 +1045,9 @@
       LLCons _ _ _ _ _ _ _ _ _ _ s0 s5 lk2 $
       LLNil d gp)))))
 
-
-; The cube has 2 d nodes.
 (def-fns _ $ (erased cube-nodes : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     -> (erased (Nat) K) (erased (At d tg2 (Zero) K) aK) (erased (Orbits D cn K) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ _ io rnf pe pn pf aD ioD _ ln _ _ li))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI Rne Ren _ _ Rnin Rnni _ Reid _ Ridni _ Rniid Ridnf _ _ _ lid _ _ _ lnf lni _ _ _ _ unf uni uid _))
   (let ((erased K) (erased aK)) (at-exists d tg2 (Zero)))
@@ -1105,16 +1058,16 @@
                        SizedCons _ tg2 _ _ lid $ SizedCons _ (Zero) _ _ lni $ SizedNil d)))
   (let-match erased ll (MkLaid _ _ _ lyl szl))
   (let ((erased sr)) (Cons _ (MkBlk (Zero) ids) $ Cons _ (MkBlk tg2 ids) $ Nil (Blk)))
-  (let ((erased rs) (erased lr)) (lay-exists d sr))
+  (let ((erased _) (erased lr)) (lay-exists d sr))
   (let ((erased I0) (erased s0)) (shf-exists d (Zero) ids))
-  (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
+  (let ((erased _) (erased s1)) (shf-exists d tg1 ids))
   (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
-  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
-  (let ((erased I4) (erased s4)) (shf-exists d tg4 ids))
-  (let ((erased I5) (erased s5)) (shf-exists d tg5 ids))
-  (let ((erased X) (erased sX)) (shf-exists d (Zero) ni))
-  (let ((erased Y) (erased sY)) (shf-exists d tg2 nf))
-  (let ((erased Z) (erased sZ)) (shf-exists d tg3 e))
+  (let ((erased _) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased _) (erased s4)) (shf-exists d tg4 ids))
+  (let ((erased _) (erased s5)) (shf-exists d tg5 ids))
+  (let ((erased _) (erased sX)) (shf-exists d (Zero) ni))
+  (let ((erased _) (erased sY)) (shf-exists d tg2 nf))
+  (let ((erased _) (erased sZ)) (shf-exists d tg3 e))
   (let ((erased lk0)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ ln gr (NthHere _ _ _) Rnni sX s1))
   (let ((erased lk1)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ ln gr (pos2 _ _ _ _ _) Ren sY s3))
   (let ((erased lk2)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ ln gr (pos2 _ _ _ _ _) Reid s2 sZ))
@@ -1157,16 +1110,13 @@
       LLCons _ _ _ _ _ _ _ _ _ _ sX s5 lk6 $
       LLNil d gp)))))
 
-
 (def-fns _ $ (erased graph-zip : (erased (Nat) d) (erased (List (Nat)) p ids) (erased (List (Bond)) g) (erased (Graph d p g) gr)
     (erased (Iota d ids) io)
     -> (erased (Zip ids p g) z))
-  (let-match erased gr (MkGraph _ _ ids2 _ io2 lp z))
+  (let-match erased gr (MkGraph _ _ ids2 _ io2 _ z))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   z)
 
-; The face labelling of the cube: blocks 0 to 3 of a dart x take the face label of x, block 4 its edge label and block 5
-; its node label. It is constant along the cube's faces.
 (def-fns _ $ (erased face-lab : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     (erased (List (Nat)) labE labN labF) (erased (List (Bond)) ge gn gf gcf)
     (erased (Graph d e ge) gre) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Const labE ge) clE) (erased (Const labN gn) clN)
@@ -1175,8 +1125,8 @@
     (erased (Laid d (Cons (Blk) (MkBlk (Zero) labF) $ Cons (Blk) (MkBlk (Zero) labF) $ Cons (Blk) (MkBlk (Zero) labF) $
       Cons (Blk) (MkBlk (Zero) labF) $ Cons (Blk) (MkBlk tg4 labE) $ Cons (Blk) (MkBlk tg5 labN) $ Nil (Blk)) lab) ll)
     (erased (Const lab gcf) cl))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
-  (let-match erased lf (MkLaid _ _ _ lyf szf))
+  (let-match erased cu (MkCube _ _ _ _ _ ids _ _ _ _ _ _ _ _ io _ _ _ _ aD _ _ _ lf _ _))
+  (let-match erased lf (MkLaid _ _ _ lyf _))
   (let ((erased lab) (erased ll))
     (laid-exists d _ (SizedCons _ (Zero) _ _ llF $ SizedCons _ (Zero) _ _ llF $ SizedCons _ (Zero) _ _ llF $ SizedCons _ (Zero) _ _ llF $
                        SizedCons _ tg4 _ _ llE $ SizedCons _ tg5 _ _ llN $ SizedNil d)))
@@ -1192,12 +1142,10 @@
       LRNil _)))
   (values lab ll (resp-const D lab cf gcf (graph-fun D cf gcf grc) kp (lay-length d tg6 D _ lab lyl szl (six _ _ _ _ _ _) aD))))
 
-
-; The faces of the cube are those of the map, then its edges, then its nodes.
 (def-fns _ $ (erased cube-faces : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     (erased (Nat) ke kn kf) (erased (Orbits d e ke) oE) (erased (Orbits d n kn) oN)
     (erased (Orbits d f kf) oF) -> (erased (Nat) a kF) (erased (Add kn kf a) a1) (erased (Add ke a kF) a0) (erased (Orbits D cf kF) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ _ io rnf pe pn pf aD ioD _ _ lf _ li))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI _ _ _ _ _ _ _ Reid _ _ _ _ _ _ Rnid Rfid _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let-match erased oE (MkOrbits _ _ _ gE grE csE))
@@ -1211,16 +1159,16 @@
   (let-match erased (iota-fn d ids idsF io ioF) (Refl _ _))
   (let-match erased lf (MkLaid _ _ _ lyf szf))
   (let ((erased gc) (erased grc)) (graph-exists D cf (lay-length d tg6 D _ cf lyf szf (six _ _ _ _ _ _) aD)))
-  (let ((erased lab) (erased ll) (erased cl))
+  (let ((erased _) (erased ll) (erased cl))
     (face-lab d D e n f ce cn cf cu labE labN labF gE gN gF gc grE grN grF clE clN clF llE llN llF grc))
   (let ((erased a) (erased a1)) (add kn kf))
   (let ((erased kF) (erased a0)) (add ke a))
   (let ((erased sr)) (Cons _ (MkBlk tg4 rsE) $ Cons _ (MkBlk tg5 rsN) $ Cons _ (MkBlk (Zero) rsF) $ Nil (Blk)))
-  (let ((erased rs) (erased lr)) (lay-exists d sr))
+  (let ((erased _) (erased lr)) (lay-exists d sr))
   (let ((erased I0) (erased s0)) (shf-exists d (Zero) ids))
-  (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
-  (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
-  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased _) (erased s1)) (shf-exists d tg1 ids))
+  (let ((erased _) (erased s2)) (shf-exists d tg2 ids))
+  (let ((erased _) (erased s3)) (shf-exists d tg3 ids))
   (let ((erased I4) (erased s4)) (shf-exists d tg4 ids))
   (let ((erased I5) (erased s5)) (shf-exists d tg5 ids))
   (let ((erased LF0) (erased sLF)) (shf-exists d (Zero) labF))
@@ -1281,12 +1229,10 @@
       LLCons _ _ _ _ _ _ _ _ _ _ sLN s5 lk11 $
       LLNil d gc)))))
 
-
-; The cube's glink classes are those of the map: every dart of the cube is joined to block 0 of its dart of the map.
 (def-fns _ $ (erased cube-glink : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (Nat) kc)
     (erased (List (Bond)) gG) (erased (Glink d e n f gG) glG) (erased (Classes gG d kc) csG)
     -> (erased (List (Bond)) gC) (erased (Glink D ce cn cf gC) glC) (erased (Classes gC D kc) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ _ io rnf pe pn pf aD ioD le ln lf _ li))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI _ _ _ _ _ _ _ Reid _ _ Ridn _ _ Ride Rnid Rfid _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let-match erased le (MkLaid _ _ _ lye sze))
@@ -1342,20 +1288,20 @@
       LRNil _)) lD))
   (let ((erased cl)) (const-cat lab gce gcnf gC cat cle (const-cat lab gcn gcf gcnf catnf cln clf)))
   (let ((erased sr)) (Cons _ (MkBlk (Zero) rsG) $ Nil (Blk)))
-  (let ((erased rs) (erased lr)) (lay-exists d sr))
+  (let ((erased _) (erased lr)) (lay-exists d sr))
   (let ((erased I0) (erased s0)) (shf-exists d (Zero) ids))
-  (let ((erased I1) (erased s1)) (shf-exists d tg1 ids))
-  (let ((erased I2) (erased s2)) (shf-exists d tg2 ids))
-  (let ((erased I3) (erased s3)) (shf-exists d tg3 ids))
-  (let ((erased I4) (erased s4)) (shf-exists d tg4 ids))
-  (let ((erased I5) (erased s5)) (shf-exists d tg5 ids))
+  (let ((erased _) (erased s1)) (shf-exists d tg1 ids))
+  (let ((erased _) (erased s2)) (shf-exists d tg2 ids))
+  (let ((erased _) (erased s3)) (shf-exists d tg3 ids))
+  (let ((erased _) (erased s4)) (shf-exists d tg4 ids))
+  (let ((erased _) (erased s5)) (shf-exists d tg5 ids))
   (let ((erased LG0) (erased sLG)) (shf-exists d (Zero) labG))
   (let ((erased E0) (erased sE0)) (shf-exists d (Zero) e))
-  (let ((erased E1) (erased sE1)) (shf-exists d tg1 e))
-  (let ((erased E2) (erased sE2)) (shf-exists d tg2 e))
-  (let ((erased E3) (erased sE3)) (shf-exists d tg3 e))
+  (let ((erased _) (erased sE1)) (shf-exists d tg1 e))
+  (let ((erased _) (erased sE2)) (shf-exists d tg2 e))
+  (let ((erased _) (erased sE3)) (shf-exists d tg3 e))
   (let ((erased Nb0) (erased sN0)) (shf-exists d (Zero) n))
-  (let ((erased Nb1) (erased sN1)) (shf-exists d tg1 n))
+  (let ((erased _) (erased sN1)) (shf-exists d tg1 n))
   (let ((erased F0) (erased sF0)) (shf-exists d (Zero) f))
   (let ((erased LkG) (erased SG)) (rooted-link gG rsG ids labG roG))
   (let ((erased lk0)) (blk-step _ _ _ _ _ _ _ _ _ _ _ _ lf grcf (NthHere _ _ _) RI s0 s1))
@@ -1431,8 +1377,6 @@
       LLCons _ _ _ _ _ _ _ _ _ _ sLG s5 lk46 $
       LLNil d gC))))
 
-
-; The cube has the genus of the map.
 (def-fns _ $ (erased cube-genus : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu) (erased (Nat) gen)
     (erased (Genus d e n f gen) g)
     -> (erased (Genus D ce cn cf gen) r))
@@ -1442,9 +1386,8 @@
   (let ((erased K2) (erased a2) (erased ocn)) (cube-nodes d D e n f ce cn cf cu))
   (let ((erased a) (erased kF) (erased a1) (erased a0) (erased ocf)) (cube-faces d D e n f ce cn cf cu ke kn kf oe on of))
   (let ((erased gC) (erased glC) (erased ccC)) (cube-glink d D e n f ce cn cf cu kc gG gl cc))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ aD _ _ _ _ _ _))
   (genus-make D gen kc K3 K2 kF ce cn cf gC oce ocn ocf glC ccC (es-cube kc d ke kn kf gen D K3 K2 a kF es aD a3 a2 a1 a0)))
-
 
 (def-fns _ $ (erased shf-under : (erased (Nat) d o m D) (erased (List (Nat)) P B) (subterm erased (Shf d o P B) sh) (erased (Under P d) up)
     (erased (At d m (Zero) D) aD) (erased (Lt o m) lt) -> (erased (Under B D) r))
@@ -1452,25 +1395,24 @@
   (let-match erased up (UnderCons _ _ _ ly up1))
   (UnderCons Bs1 z D (at-lt d o y z m D a aD ly lt) (shf-under d o m D P1 Bs1 sh1 up1 aD lt)))
 
-; The cube of a bridgeless map is bridgeless: under the face labelling, the two ends of each edge of the cube differ.
 (def-fns _ $ (erased cube-bridgeless : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     (erased (Bridgeless d e n f) b) -> (erased (Bridgeless D ce cn cf) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ I io rnf pe pn pf aD ioD le _ lf _ _))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lde _ _ lnf _ _ ue _ _ unf _ uid _))
-  (let ((erased kE) (erased oE)) (orbits-exists d e nf pe))
+  (let ((erased _) (erased oE)) (orbits-exists d e nf pe))
   (let-match erased oE (MkOrbits _ _ _ gE grE csE))
-  (let-match erased csE (MkClasses _ _ _ idsE labE rsE ioE llE lrE drE fixE clE roE))
+  (let-match erased csE (MkClasses _ _ _ idsE labE rsE ioE llE _ _ fixE clE roE))
   (let-match erased (iota-fn d ids idsE io ioE) (Refl _ _))
   (let ((erased uE)) (rooted-under gE rsE ids labE labE d roE fixE llE))
-  (let ((erased kN) (erased oN)) (orbits-exists d n ni pn))
+  (let ((erased _) (erased oN)) (orbits-exists d n ni pn))
   (let-match erased oN (MkOrbits _ _ _ gN grN csN))
-  (let-match erased csN (MkClasses _ _ _ idsN labN rsN ioN llN lrN drN fixN clN roN))
+  (let-match erased csN (MkClasses _ _ _ idsN labN rsN ioN llN _ _ fixN clN roN))
   (let-match erased (iota-fn d ids idsN io ioN) (Refl _ _))
   (let ((erased uN)) (rooted-under gN rsN ids labN labN d roN fixN llN))
-  (let ((erased kF) (erased oF)) (orbits-exists d f fi pf))
+  (let ((erased _) (erased oF)) (orbits-exists d f fi pf))
   (let-match erased oF (MkOrbits _ _ _ gF grF csF))
-  (let-match erased csF (MkClasses _ _ _ idsF labF rsF ioF llF lrF drF fixF clF roF))
+  (let-match erased csF (MkClasses _ _ _ idsF labF rsF ioF llF _ _ fixF clF roF))
   (let-match erased (iota-fn d ids idsF io ioF) (Refl _ _))
   (let ((erased uF)) (rooted-under gF rsF ids labF labF d roF fixF llF))
   (let-match erased le (MkLaid _ _ _ lye sze))
@@ -1515,12 +1457,10 @@
     (allsep-of I ce lab LY lab gce gcf (graph-zip D ce I gce grce ioD)
       (respects-id-right D I lab ioD (lay-length d tg6 D _ lab lyl szl (six _ _ _ _ _ _) aD)) rY dif cl)))
 
-
-; A four-colouring of the cube gives one of the map: each dart takes the colour of its copy in block 3.
 (def-fns _ $ (erased cube-colorable : (erased (Nat) d D) (erased (List (Nat)) e n f ce cn cf) (erased (Cube d D e n f ce cn cf) cu)
     (erased (List (Nat)) K) (erased (FourColoring ce cf K) c)
     -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) r))
-  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ cfi I io rnf pe pn pf aD ioD le ln lf lfi li))
+  (let-match erased cu (MkCube _ _ _ _ _ ids nf ni fi _ _ _ _ _ io rnf pe pn pf aD _ le _ lf _ _))
   (let-match erased (facts d e n f ids nf ni fi io rnf pe pn pf)
     (MkFacts _ _ _ _ _ _ _ _ RI _ _ _ _ _ _ _ Reid _ _ _ _ _ _ _ Rfid lid _ _ _ _ _ _ ue _ uf _ _ uid _))
   (let-match erased le (MkLaid _ _ _ lye sze))

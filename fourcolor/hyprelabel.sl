@@ -1,5 +1,3 @@
-; Renaming darts by a permutation s: classes and orbit counts are kept, and the mirror keeps the genus.
-
 ; g2 is g with both ends of every bond renamed by s.
 (def-adts $ (MapB : ((List (Nat)) s) ((List (Bond)) g g2) -> Type)
   enum
@@ -18,7 +16,7 @@
 
 (def-fns _ $ (erased adj-map : (erased (List (Nat)) s) (erased (List (Bond)) g g2) (erased (Nat) x y x2 y2) (subterm erased (Adj g x y) a)
     (erased (MapB s g g2) mb) (erased (Nth (Nat) s x x2) px) (erased (Nth (Nat) s y y2) py) -> (erased (Adj g2 x2 y2) r))
-  (let-match erased mb (MapCons _ g1 g3 u v u2 v2 pu pv mb1) (absurd (MapNil _) a))
+  (let-match erased mb (MapCons _ g1 g3 _ _ u2 v2 pu pv mb1) (absurd (MapNil _) a))
   (match erased a _
     ((AdjFwd _ _ _)
       (let-match erased (nth-fn _ s x x2 u2 px pu) (Refl _ _))
@@ -39,7 +37,7 @@
 
 (def-fns _ $ (erased in-map : (erased (List (Nat)) s rs rs2) (erased (Nat) r r2) (subterm erased (In r rs) pin) (erased (Respects s rs rs2) rp)
     (erased (Nth (Nat) s r r2) pr) -> (erased (In r2 rs2) res))
-  (let-match erased rp (RespCons _ rs1 rs3 j l pj rp1) (absurd (RespNil _) pin))
+  (let-match erased rp (RespCons _ rs1 rs3 _ l pj rp1) (absurd (RespNil _) pin))
   (let-match erased pin (InThere _ _ _ pin1) ((InHere _ _) (let-match erased (nth-fn _ s r r2 l pr pj) (Refl _ _)) (InHere r2 rs3)))
   (InThere r2 l rs3 (in-map s rs1 rs3 r r2 pin1 rp1 pr)))
 
@@ -57,7 +55,7 @@
 
 (def-fns _ $ (erased under-nth : (erased (List (Nat)) xs) (erased (Nat) j x d) (erased (Under xs d) u) (subterm erased (Nth (Nat) xs j x) p)
     -> (erased (Lt x d) r))
-  (let-match erased u (UnderCons xs1 y _ ly u1) (absurd (UnderNil _) p))
+  (let-match erased u (UnderCons xs1 _ _ ly u1) (absurd (UnderNil _) p))
   (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) ly))
   (under-nth xs1 j1 x d u1 p1))
 
@@ -68,7 +66,7 @@
 
 (def-fns _ $ (erased rooted-under : (erased (List (Bond)) g) (erased (List (Nat)) rs xs ls lab) (erased (Nat) d) (subterm erased (Rooted g rs xs ls) ro)
     (erased (Respects lab rs rs) fix) (erased (Length (Nat) lab d) ll) -> (erased (Under ls d) r))
-  (let-match erased ro (RootedCons _ _ xs1 ls1 x r pin c ro1) ((RootedNil _ _) (UnderNil d)))
+  (let-match erased ro (RootedCons _ _ xs1 ls1 _ r pin _ ro1) ((RootedNil _ _) (UnderNil d)))
   (UnderCons ls1 r d (nth-lt-length _ lab r d r (fixed-in lab rs r fix pin) ll) (rooted-under g rs xs1 ls1 lab d ro1 fix ll)))
 
 ; lab2 = s . lab . si.
@@ -101,7 +99,6 @@
   (ConstCons lab2 g3 x2 y2 l2 (relab-at d x x2 l l2 s lab lab2 rl px lx pl) (relab-at d y y2 l l2 s lab lab2 rl py ly pl)
     (const-map d s si lab lab2 g1 g3 mb1 cl1 rl pm ul)))
 
-; The positions xs, with us = si . xs, ls1 = lab . us and ls2 = s . ls1, are rooted in the renamed graph.
 (def-fns _ $ (erased rooted-map : (erased (Nat) d) (erased (List (Nat)) s si lab ids rs rs2 xs us ls1 ls2) (erased (List (Bond)) g g2)
     (subterm erased (Respects si xs us) rx) (erased (Respects lab us ls1) ru) (erased (Respects s ls1 ls2) rv)
     (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro) (erased (Respects s rs rs2) rrs) (erased (MapB s g g2) mb) (erased (Below g d) bg)
@@ -116,11 +113,10 @@
     (conn-map d s si g g2 r u r2 x c mb bg pm pr2 (perm-inv d x u si s qm pu))
     (rooted-map d s si lab ids rs rs2 xs1 us1 ls3 ls4 g g2 rx1 ru1 rv1 io ro rrs mb bg pm)))
 
-; Renaming the darts keeps the count of classes.
 (def-fns _ $ (erased classes-map : (erased (Nat) d k) (erased (List (Nat)) s si) (erased (List (Bond)) g g2) (erased (Perm d s si) pm)
     (erased (MapB s g g2) mb) (erased (Classes g d k) cs) -> (erased (Classes g2 d k) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
-  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls _ ssi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased lsi)) (respects-length-inv s si ids d ssi (iota-length d ids io)))
   (let ((erased ul)) (rooted-under g rs ids lab lab d ro fix ll))
@@ -138,7 +134,6 @@
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
   (BelowCons g1 x y d (nth-lt-length _ p x d y px lp) (under-nth p x y d up px) (fun-below d p g1 f1 lp up)))
 
-; p2 = s . p . si, with t = p . si.
 (def-fns _ $ (erased spans-conj-in : (erased (Nat) d) (erased (List (Nat)) s si p t p2) (erased (List (Bond)) gp gm gp2) (subterm erased (Fun p2 gp2) f)
     (erased (Perm d s si) pm) (erased (Respects p si t) rt) (erased (Respects s t p2) rp2) (erased (Graph d p gp) grp) (erased (MapB s gp gm) mb)
     -> (erased (Spans gm gp2) r))
@@ -166,7 +161,6 @@
   (let-match erased (nth-fn _ s y y2 z py2 (respects-nth s t p2 x2 y z rp2 pv pz)) (Refl _ _))
   (SpansCons gp2 gm1 x2 y2 (conn-adj gp2 x2 y2 (graph-adj d x2 y2 p2 gp2 grp2 pz)) (spans-conj-out d s si p t p2 gp g3 gm1 gp2 mb1 f1 pm rt rp2 grp2)))
 
-; A conjugate s . p . si of p has as many orbits as p.
 (def-fns _ $ (erased orbits-conj : (erased (Nat) d k) (erased (List (Nat)) s si p t p2) (erased (Perm d s si) pm) (erased (Orbits d p k) ob)
     (erased (Respects p si t) rt) (erased (Respects s t p2) rp2) -> (erased (Orbits d p2 k) r))
   (let-match erased ob (MkOrbits _ _ _ gp grp cs))
@@ -189,7 +183,6 @@
       (spans-adj h gf y z (graph-adj d y z f gf grf (respects-nth f n c x y z rc py pz)) sf))
     (spans-comp d n f c gn gf g1 h f1 rc ln grn grf sn sf)))
 
-; The mirror: edge f . n, node and face inverted.
 (def-fns _ $ (erased hyper-mirror : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     -> (erased (List (Nat)) fn ni fi) (erased (Hypermap d fn ni fi) h2) (erased (Respects f n fn) rfn) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf))
   (let ((erased ni) (erased pn)) (hyper-perm d n f e (hyper-rot d e n f h)))
@@ -209,15 +202,14 @@
       (respects-assoc-inv fi ni fn nf2 f ids rnf ffi en2))
     rfn pn pf))
 
-; The mirror keeps the genus.
 (def-fns _ $ (erased genus-mirror : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     -> (erased (List (Nat)) fn ni fi) (erased (Hypermap d fn ni fi) h2) (erased (Respects f n fn) rfn) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
     (erased (Genus d fn ni fi gen) r))
   (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased g) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
     (genus-parts d gen e n f p))
   (let ((erased fn) (erased ni) (erased fi) (erased h2) (erased rfn) (erased pn) (erased pf)) (hyper-mirror d e n f h))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke0 cen kn0 cnf kf0))
-  (let-match erased pf (MkPerm _ _ _ ids2 io2 lf2 fif ffi))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke0 _ _ cnf kf0))
+  (let-match erased pf (MkPerm _ _ _ ids2 io2 _ _ ffi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased lnf)) (respects-length n f nf d cnf lf))
@@ -232,8 +224,8 @@
   (let ((erased gni) (erased grni)) (perm-graph d ni n qn))
   (let ((erased gfi) (erased grfi)) (perm-graph d fi f qf))
   (let ((erased g2) (erased gl2)) (glink-exists d fn ni fi gfn gni gfi grfn grni grfi))
-  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf g gl gre grn grf))
-  (let ((erased tfn) (erased tni) (erased tfi)) (glink-spans d fn ni fi gfn gni gfi g2 gl2 grfn grni grfi))
+  (let ((erased _) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf g gl gre grn grf))
+  (let ((erased _) (erased tni) (erased tfi)) (glink-spans d fn ni fi gfn gni gfi g2 gl2 grfn grni grfi))
   (let ((erased un) (erased uf)) (values (spans-to-inv d ni n g2 gni gn tni qn grni grn) (spans-to-inv d fi f g2 gfi gf tfi qf grfi grf)))
   (let ((erased gnf) (erased cgnf)) (cat-exists gn gf))
   (values fn ni fi h2 rfn pn pf
@@ -257,7 +249,6 @@
   (let ((erased p2) (erased rp2)) (respects-exists s t d (respects-under-out p si t d rt up) (perm-length d s si pm)))
   (values p2 (MkConj s si p t p2 rt rp2)))
 
-; p2 . s = s . p = v.
 (def-fns _ $ (erased conj-v : (erased (Nat) d) (erased (List (Nat)) s si p p2) (erased (Perm d s si) pm) (erased (Conj s si p p2) cj)
     (erased (Under p d) up) (erased (Length (Nat) p d) lp) -> (erased (List (Nat)) v) (erased (Respects p2 s v) r1) (erased (Respects s p v) r2))
   (let-match erased cj (MkConj _ _ _ t _ rt rp2))
@@ -268,10 +259,9 @@
   (values v (respects-assoc s t s p p2 v d (respects-assoc s si p ids t p d sis (respects-id-right d ids p io lp) rt lt lsi) rv rp2
     (respects-length s t p2 d rp2 lt) lt) rv))
 
-; Composing with a permutation s on the right is injective.
 (def-fns _ $ (erased respects-cancel : (erased (Nat) d) (erased (List (Nat)) s si a b v) (erased (Perm d s si) pm) (erased (Respects a s v) ra)
     (erased (Respects b s v) rb) (erased (Length (Nat) a d) la) (erased (Length (Nat) b d) lb) -> (erased (Eq (List (Nat)) a b) e))
-  (let-match erased pm (MkPerm _ _ _ ids io ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids io ls _ ssi))
   (let ((erased u) (erased ru)) (respects-exists v si d (perm-under d si s (perm-sym d s si pm)) (respects-length a s v d ra ls)))
   (let-match erased (respects-fn a ids u a (respects-assoc-inv si s a ids v u ssi ru ra) (respects-id-right d ids a io la)) (Refl _ _))
   (respects-fn b ids u b (respects-assoc-inv si s b ids v u ssi ru rb) (respects-id-right d ids b io lb)))
@@ -282,7 +272,6 @@
   (values (respects-length s t p2 d rp2 (respects-length p si t d rt (perm-length d si s (perm-sym d s si pm))))
     (respects-under-out s t p2 d rp2 (perm-under d s si pm))))
 
-; Conjugating by s keeps composites.
 (def-fns _ $ (erased conj-respects : (erased (Nat) d) (erased (List (Nat)) s si p q r p2 q2 r2) (erased (Perm d s si) pm)
     (erased (Conj s si p p2) cp) (erased (Conj s si q q2) cq) (erased (Conj s si r r2) cr) (erased (Respects p q r) rpq)
     (erased (Under p d) up) (erased (Under q d) uq) (erased (Under r d) ur) (erased (Length (Nat) p d) lp) (erased (Length (Nat) q d) lq)
@@ -304,12 +293,11 @@
   (let-match erased (respects-cancel d s si a r2 vr pm (respects-assoc s q2 p2 vq a z1 d rq1 rz ra la lq2) rr1 la lr2) (Refl _ _))
   ra)
 
-; Renaming the darts of a hypermap by s.
 (def-fns _ $ (erased hyper-relabel : (erased (Nat) d) (erased (List (Nat)) e n f s si) (erased (Hypermap d e n f) h) (erased (Perm d s si) pm)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Conj s si e e2) ce) (erased (Conj s si n n2) cn) (erased (Conj s si f f2) cf)
     (erased (Hypermap d e2 n2 f2) h2))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
-  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids2 io2 _ _ ssi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased nfe) (erased pme)) (hyper-perm d e n f h))
@@ -343,12 +331,11 @@
 
 (def-fns _ $ (erased map-cat : (erased (List (Nat)) s) (erased (List (Bond)) g h gh x) (subterm erased (Cat g h gh) c) (erased (MapB s gh x) mb)
     -> (erased (List (Bond)) y z) (erased (MapB s g y) my) (erased (MapB s h z) mz) (erased (Cat y z x) cyz))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (values (Nil _) x (MapNil s) mb (CatNil x))))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) (values (Nil _) x (MapNil s) mb (CatNil x))))
   (let-match erased mb (MapCons _ _ x1 u v u2 v2 pu pv mb1))
   (let ((erased y1) (erased z) (erased my1) (erased mz) (erased c2)) (map-cat s g1 h gh1 x1 c1 mb1))
   (values (Cons _ (MkBond u2 v2) y1) z (MapCons s g1 y1 u v u2 v2 pu pv my1) mz (CatCons y1 z x1 (MkBond u2 v2) c2)))
 
-; Renaming the darts keeps the genus.
 (def-fns _ $ (erased genus-relabel : (erased (Nat) d gen) (erased (List (Nat)) e n f s si) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Perm d s si) pm)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Conj s si e e2) ce) (erased (Conj s si n n2) cn) (erased (Conj s si f f2) cf)

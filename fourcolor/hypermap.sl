@@ -1,7 +1,5 @@
-; Hypermaps on the darts 0..d-1, after Gonthier and Werner's hypermap.v and geometry.v.
-
-; The edge, node and face permutations e, n and f, with n (f (e x)) = x, f (e (n x)) = x and e (n (f x)) = x for every
-; dart x (cancel3 edge node face, and its two rotations). fe, en and nf are the composites.
+; e, n and f are the edge, node and face permutations, with n . f . e, f . e . n and e . n . f the identity;
+; fe, en and nf are the composites.
 (def-adts $ (Hypermap : ((Nat) d) ((List (Nat)) e n f) -> Type)
   enum
   (many MkHypermap : (erased (Nat) d) (erased (List (Nat)) e n f ids fe en nf) (erased (Iota d ids) io)
@@ -17,15 +15,14 @@
   (many CatCons : (erased (List (Bond)) g h gh) (erased (Bond) b) (erased (Cat g h gh) rest)
       -> (Cat (Cons (Bond) b g) h (Cons (Bond) b gh))))
 
-; The bonds of glink: g lists those of the graphs of e, n and f.
+; g lists the bonds of the graphs of e, n and f.
 (def-adts $ (Glink : ((Nat) d) ((List (Nat)) e n f) ((List (Bond)) g) -> Type)
   enum
   (many MkGlink : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (List (Bond)) ge gn gf gnf g)
       (erased (Graph d e ge) pe) (erased (Graph d n gn) pn) (erased (Graph d f gf) pf)
       (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) -> (Glink d e n f g)))
 
-; Euler_lhs = genus.*2 + Euler_rhs, with Euler_lhs = 2 * (number of glink components) + d and Euler_rhs the sum of the
-; numbers of orbits of e, n and f (Gonthier's even_genus, read as the definition of the genus).
+; lhs = 2 kc + d, kc the glink classes, rhs = ke + kn + kf, the orbit counts of e, n and f, and lhs = 2 gen + rhs.
 (def-adts $ (Genus : ((Nat) d) ((List (Nat)) e n f) ((Nat) gen) -> Type)
   enum
   (many MkGenus : (erased (Nat) d gen ke kn kf kc c2 lhs s1 rhs g2) (erased (List (Nat)) e n f) (erased (List (Bond)) g)
@@ -61,14 +58,12 @@
   (many UnderCons : (erased (List (Nat)) ks) (erased (Nat) k b) (erased (Lt k b) p) (erased (Under ks b) rest)
       -> (Under (Cons (Nat) k ks) b)))
 
-; ks colours the darts so that each face has one colour and the two ends of each edge link differ (Gonthier's
-; coloring of edge and face), with colours below 4.
+; ks colours the darts below 4 so that each face has one colour and the two ends of each edge link differ.
 (def-adts $ (FourColoring : ((List (Nat)) e f ks) -> Type)
   enum
   (many MkFourColoring : (erased (List (Nat)) e f ks ke) (erased (Respects ks f ks) face) (erased (Respects ks e ke) ce)
       (erased (Differ ke ks) edge) (erased (Under ks 4) four) -> (FourColoring e f ks)))
 
-; (c . b) . a = c . (b . a).
 (def-fns _ $ (erased respects-assoc : (erased (List (Nat)) a b c ba cb ls) (erased (Nat) d) (subterm erased (Respects b a ba) r1)
     (erased (Respects c ba ls) r2) (erased (Respects c b cb) r3) (erased (Length (Nat) cb d) lcb) (erased (Length (Nat) b d) lb)
     -> (erased (Respects cb a ls) r))
@@ -93,16 +88,14 @@
     (respects-length-inv e n en d cen (respects-length-inv f en ids d kn li))
     (respects-length-inv n f nf d cnf (respects-length-inv e nf ids d kf li))))
 
-; The rotation (edge, node, face) to (node, face, edge): Gonthier's permN.
 (def-fns _ $ (erased hyper-rot : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) -> (erased (Hypermap d n f e) r))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
   (MkHypermap d n f e ids en nf fe io cen kn cnf kf cfe ke))
 
-; The edge permutation has inverse n . f.
 (def-fns _ $ (erased hyper-perm : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     -> (erased (List (Nat)) nf) (erased (Perm d e nf) pm))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke _ _ cnf kf))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (values nf (MkPerm d e nf ids io le
     (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d kf (iota-length d ids io)) lf) kf)))
 
@@ -126,7 +119,6 @@
     ((AdjBwd _ _ _) (let-match erased s (AllSepCons _ _ _ _ s1 _)) (sep-sym h y x s1))
     ((AdjThere g1 _ _ _ a1) (let-match erased s (AllSepCons _ _ _ _ _ s2)) (allsep-adj h g1 x y a1 s2))))
 
-; In a bridgeless hypermap no walk along the faces leads from a dart to its edge image.
 (def-fns _ $ (erased absurd bridgeless-face : (erased (Nat) d x y) (erased (List (Nat)) e n f s xs) (erased (Bridgeless d e n f) b)
     (erased (Nth (Nat) e x y) px) (erased (Path f s x y xs) w) -> (erased (False) r))
   (let-match erased b (MkBridgeless _ _ _ _ ge gf pe pf sp))
@@ -147,7 +139,7 @@
 
 (def-fns _ $ (erased spans-cat : (erased (List (Bond)) k g h gh) (subterm erased (Cat g h gh) c) (erased (Spans k g) sg) (erased (Spans k h) sh)
     -> (erased (Spans k gh) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) sh))
   (let-match erased sg (SpansCons _ _ x y cx sg1))
   (SpansCons k gh1 x y cx (spans-cat k g1 h gh1 c1 sg1 sh)))
 
@@ -163,7 +155,7 @@
 
 (def-fns _ $ (erased below-cat : (erased (List (Bond)) g h gh) (erased (Nat) d) (subterm erased (Cat g h gh) c) (erased (Below g d) bg)
     (erased (Below h d) bh) -> (erased (Below gh d) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) bh))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) bh))
   (let-match erased bg (BelowCons _ x y _ lx ly bg1))
   (BelowCons gh1 x y d lx ly (below-cat g1 h gh1 d c1 bg1 bh)))
 
@@ -175,10 +167,9 @@
 (def-fns _ $ (erased graph-below : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (subterm erased (Fun p g) f)
     (erased (Perm d p q) pm) -> (erased (Below g d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
   (BelowCons g1 x y d (nth-lt-length _ p x d y px lp) (perm-val d x y p q pm px) (graph-below d p q g1 f1 pm)))
 
-; Each node link x-(n x) is the face link back from the edge image of n x.
 (def-fns _ $ (erased spans-node : (erased (Nat) d) (erased (List (Nat)) e n f ids en) (erased (List (Bond)) gn ge gf gef)
     (subterm erased (Fun n gn) fn) (erased (Iota d ids) io) (erased (Respects e n en) cen) (erased (Respects f en ids) kn)
     (erased (Graph d e ge) pe) (erased (Graph d f gf) pf) (erased (Cat ge gf gef) c) -> (erased (Spans gef gn) r))
@@ -202,26 +193,25 @@
 
 (def-fns _ $ (erased zip-fn : (erased (List (Nat)) xs ys) (erased (List (Bond)) g h) (subterm erased (Zip xs ys g) z) (erased (Zip xs ys h) w)
     -> (erased (Eq (List (Bond)) g h) e))
-  (let-match erased z (ZipCons xs1 ys1 g1 x y z1) ((ZipNil) (let-match erased w (ZipNil)) (Refl _ g)))
+  (let-match erased z (ZipCons xs1 ys1 g1 _ _ z1) ((ZipNil) (let-match erased w (ZipNil)) (Refl _ g)))
   (let-match erased w (ZipCons _ _ h1 _ _ w1))
   (let-match erased (zip-fn xs1 ys1 g1 h1 z1 w1) (Refl _ _))
   (Refl _ g))
 
 (def-fns _ $ (erased graph-fn : (erased (Nat) d) (erased (List (Nat)) p) (erased (List (Bond)) g h) (erased (Graph d p g) gr) (erased (Graph d p h) hr)
     -> (erased (Eq (List (Bond)) g h) e))
-  (let-match erased gr (MkGraph _ _ ids _ io lp z))
-  (let-match erased hr (MkGraph _ _ ids2 _ io2 lp2 w))
+  (let-match erased gr (MkGraph _ _ ids _ io _ z))
+  (let-match erased hr (MkGraph _ _ ids2 _ io2 _ w))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (zip-fn ids p g h z w))
 
-; The glink components are those of the edge and face links alone.
 (def-fns _ $ (erased glink-ef : (erased (Nat) d k) (erased (List (Nat)) e n f) (erased (List (Bond)) ge gf gef g) (erased (Hypermap d e n f) h)
     (erased (Graph d e ge) pe) (erased (Graph d f gf) pf) (erased (Cat ge gf gef) c) (erased (Glink d e n f g) gl)
     (erased (Classes gef d k) cs) -> (erased (Classes g d k) r))
   (let-match erased gl (MkGlink _ _ _ _ ge2 gn gf2 gnf _ pe2 pn pf2 c1 c2))
   (let-match erased (graph-fn d e ge ge2 pe pe2) (Refl _ _))
   (let-match erased (graph-fn d f gf gf2 pf pf2) (Refl _ _))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let-match erased h (MkHypermap _ _ _ _ ids _ en _ io _ _ cen kn _ _))
   (let ((erased nfe) (erased pme)) (hyper-perm d e n f h))
   (let ((erased nfn) (erased pmn)) (hyper-perm d n f e (hyper-rot d e n f h)))
   (let ((erased nfp) (erased pmf)) (hyper-perm d f e n (hyper-rot d n f e (hyper-rot d e n f h))))

@@ -1,6 +1,3 @@
-; Every plane map of map.sl is a planar bridgeless hypermap, with edge e, face nd and node e . nd^-1.
-
-; c . (b . a) = (c . b) . a.
 (def-fns _ $ (erased respects-assoc-inv : (erased (List (Nat)) a b c ba cb ls) (subterm erased (Respects b a ba) r1)
     (erased (Respects cb a ls) r2) (erased (Respects c b cb) r3) -> (erased (Respects c ba ls) r))
   (let-match erased r1 (RespCons _ a1 ba1 j w p r11) ((RespNil _) (let-match erased r2 (RespNil _)) (RespNil c)))
@@ -29,10 +26,9 @@
   (UnderCons xs1 j d (nth-lt-length _ lab j d v p ll) (respects-under lab xs1 ls1 d rp1 ll)))
 
 (def-fns _ $ (erased perm-under : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Under p d) r))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (MkPerm _ _ _ ids io _ qp pq))
   (respects-under q p ids d qp (respects-length-inv p q ids d pq (iota-length d ids io))))
 
-; With e an involution and ndi the inverse of nd, e, e . ndi and nd form a hypermap.
 (def-fns _ $ (erased hyper-of : (erased (Nat) d) (erased (List (Nat)) e nd ndi nn) (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn)
     (erased (Respects e ndi nn) rn) -> (erased (Hypermap d e nn nd) h))
   (let-match erased pe (MkPerm _ _ _ ids io le ee _))
@@ -77,13 +73,13 @@
     (add-succ-right c2 (Succ d) (Succ s) (add-succ-right c2 d s a)) (add-succ2 ke kn s1 a1) (AddSucc (Succ s1) kf (Succ s) (AddSucc s1 kf s a2))))
 
 (def-fns _ $ (erased add-succ-left2 : (erased (Nat) a b c) (erased (Add (Succ (Succ a)) b c) p) -> (erased (Add a (Succ (Succ b)) c) r))
-  (let-match erased p (AddSucc _ _ c1 p1))
+  (let-match erased p (AddSucc _ _ _ p1))
   (let-match erased p1 (AddSucc _ _ c2 p2))
   (add-succ-right a (Succ b) (Succ c2) (add-succ-right a b c2 p2)))
 
 (def-fns _ $ (erased euler-apart : (erased (Nat) kc d ke kn kf) (erased (Euler (Succ kc) d ke (Succ kn) kf) eu)
     -> (erased (Euler kc (Succ (Succ d)) (Succ ke) kn kf) r))
-  (let-match erased eu (MkEuler _ _ _ _ _ c2 s s1 dc a a1 a2))
+  (let-match erased eu (MkEuler _ _ _ _ _ _ s s1 dc a a1 a2))
   (let-match erased dc (DS _ c0 dc0))
   (let ((erased s0) (erased e1) (erased a0)) (add-succ-right-inv ke kn s1 a1))
   (let-match erased e1 (Refl _ _))
@@ -91,7 +87,7 @@
 
 (def-fns _ $ (erased setnth-over : (erased (List (Nat)) xs ys zs) (erased (Nat) i y z) (subterm erased (SetNth (Nat) xs i y ys) p)
     (erased (SetNth (Nat) xs i z zs) q) -> (erased (SetNth (Nat) ys i z zs) r))
-  (let-match erased p (SetThere _ x rest i1 _ rest2 p1) ((SetHere _ x _ rest) (let-match erased q (SetHere _ _ _ _)) (SetHere _ y z rest)))
+  (let-match erased p (SetThere _ x rest i1 _ rest2 p1) ((SetHere _ _ _ rest) (let-match erased q (SetHere _ _ _ _)) (SetHere _ y z rest)))
   (let-match erased q (SetThere _ _ _ _ _ rest3 q1))
   (SetThere _ x rest2 i1 z rest3 (setnth-over rest rest2 rest3 i1 y z p1 q1)))
 
@@ -116,7 +112,6 @@
   (let-match erased (setnth-fn _ xs j z vs ws s2 s) (Refl _ _))
   t)
 
-; Composing with lab after changing xs at i changes the composite at i.
 (def-fns _ $ (erased respects-setnth2 : (erased (List (Nat)) lab xs xs2 ls) (erased (Nat) i y l) (erased (Respects lab xs ls) rp)
     (subterm erased (SetNth (Nat) xs i y xs2) s) (erased (Nth (Nat) lab y l) py)
     -> (erased (List (Nat)) ls2) (erased (SetNth (Nat) ls i l ls2) s2) (erased (Respects lab xs2 ls2) r))
@@ -126,7 +121,6 @@
   (let ((erased ls3) (erased s3) (erased r3)) (respects-setnth2 lab xs1 xs3 ls1 i1 y l rp1 s1 py))
   (values (Cons _ v ls3) (SetThere _ v ls1 i1 l ls3 s3) (RespCons lab xs3 ls3 j v p r3)))
 
-; Composing with lab after an insertion into xs.
 (def-fns _ $ (erased respects-insert2 : (erased (List (Nat)) lab xs xs2 ls) (erased (Nat) c x lx d) (erased (Respects lab xs ls) rp)
     (erased (Insert xs c x xs2) ins) (erased (Nth (Nat) lab x lx) px) (erased (Length (Nat) xs d) lxs)
     -> (erased (Nat) lc) (erased (Nth (Nat) ls c lc) pc) (erased (List (Nat)) ls1 ls2) (erased (SetNth (Nat) ls c lx ls1) s1)
@@ -139,7 +133,7 @@
   (values lc pc ls1 ls2 s1 s2 (respects-snoc lab xs1 xs2 ls1 ls2 w lc r1 (respects-nth lab xs ls c w lc rp pw pc) qx s2)))
 
 (def-fns _ $ (erased perm-length : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Length (Nat) p d) l))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
   lp)
 
 (def-fns _ $ (erased graph-exists : (erased (Nat) d) (erased (List (Nat)) p) (erased (Length (Nat) p d) lp)
@@ -194,7 +188,7 @@
 
 (def-fns _ $ (erased loop-snoc : (erased (List (Nat)) nd lab) (erased (List (Bond)) g g2) (erased (Nat) x y) (subterm erased (Loopless nd g) lo)
     (erased (Separates lab nd x y) s) (erased (Snoc (Bond) g (MkBond x y) g2) sg) -> (erased (Loopless nd g2) r))
-  (let-match erased sg (SnocCons _ b0 _ g1 g3 sg1) ((SnocNil _ _) (LoopCons nd lab _ x y s (LoopNil nd))))
+  (let-match erased sg (SnocCons _ _ _ g1 g3 sg1) ((SnocNil _ _) (LoopCons nd lab _ x y s (LoopNil nd))))
   (let-match erased lo (LoopCons _ lab1 _ x1 y1 s1 lo1))
   (LoopCons nd lab1 g3 x1 y1 s1 (loop-snoc nd lab g1 g3 x y lo1 s sg1)))
 
@@ -202,7 +196,6 @@
   (let-match erased s (MkSeparates _ _ _ _ l1 l2 rp p1 p2 ne))
   (MkSeparates lab nd y x l2 l1 rp p2 p1 (apart-sym l1 l2 ne)))
 
-; The two new bonds of a new edge n-(n+1), told apart by lab.
 (def-fns _ $ (erased loop-grow : (erased (List (Nat)) nd lab) (erased (List (Bond)) g g1 g2) (erased (Nat) n) (erased (Loopless nd g) lo)
     (erased (Separates lab nd n (Succ n)) s) (erased (Snoc (Bond) g (MkBond n (Succ n)) g1) s1) (erased (Snoc (Bond) g1 (MkBond (Succ n) n) g2) s2)
     -> (erased (Loopless nd g2) r))
@@ -215,7 +208,6 @@
   (let ((erased ws1) (erased rw1) (erased r1)) (zeros-resp zs xs1 n m1 rz u1 lx1))
   (values (Cons _ (Zero) ws1) (RepeatCons _ m1 (Zero) ws1 rw1) (RespCons zs xs1 ws1 x (Zero) (repeat-nth _ n x (Zero) zs rz lt) r1)))
 
-; A labelling with every dart 0, constant along a permutation.
 (def-fns _ $ (erased zeros-perm : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm)
     -> (erased (List (Nat)) zs) (erased (Respects zs p zs) r) (erased (Length (Nat) zs d) lz) (erased (Repeat (Nat) d (Zero) zs) rz))
   (let ((erased zs) (erased rz)) (repeat-exists _ d (Zero)))
@@ -223,7 +215,6 @@
   (let-match erased (repeat-fn _ d (Zero) ws zs rw rz) (Refl _ _))
   (values zs r (repeat-length _ d (Zero) zs rz) rz))
 
-; The classes of the edge and face links of a grown map, from those of the old links and some new bonds ex.
 (def-fns _ $ (erased comps-equiv : (erased (Nat) d k) (erased (List (Bond)) ge gnd gc ge2 gnd2 gc2 ex x) (erased (Classes x d k) cs)
     (erased (Cat ex gc x) cx) (erased (Cat ge gnd gc) cg) (erased (Cat ge2 gnd2 gc2) cg2) (erased (Spans ge2 ge) se) (erased (Spans gnd2 gnd) sn)
     (erased (Spans gc2 ex) sx) (erased (Spans x ge2) te) (erased (Spans x gnd2) tn) (erased (Below gc2 d) bg) -> (erased (Classes gc2 d k) r))
@@ -236,7 +227,6 @@
   (values (spans-lift-r ex gc x ge (spans-lift-l ge gnd gc ge (spans-self ge) cg) cx)
     (spans-lift-r ex gc x gnd (spans-lift-r ge gnd gc gnd (spans-self gnd) cg) cx)))
 
-; A face walk of map.sl from a to b is a walk back along e . ndi from b to a.
 (def-fns _ $ (erased fr-path : (erased (Nat) d a b) (erased (List (Nat)) e nd ndi nn) (subterm erased (FaceReach e nd a b) fr)
     (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn) (erased (Respects e ndi nn) rn) -> (erased (List (Nat)) xs) (erased (Path nn (Nil (Nat)) b a xs) r))
   (let-match erased fr (FRStep _ _ _ q c _ pq pc fr1) ((FRHere _ _ _) (values (Nil _) (PathHere nn _ a))))
@@ -245,7 +235,7 @@
   (let ((erased lnn)) (respects-length e ndi nn d rn (perm-length d ndi nd (perm-sym d nd ndi pn))))
   (let ((erased w) (erased pw)) (nth-exists _ nn d c lnn lc))
   (let-match erased (nth-fn _ e q w a (respects-nth e ndi nn c q w rn (perm-inv d q c nd ndi pn pc) pw) (perm-inv d a q e e pe pq)) (Refl _ _))
-  (let ((erased xs2) (erased sn) (erased w2)) (path-snoc nn _ xs1 b c a w1 pw (NotInNil c)))
+  (let ((erased xs2) (erased _) (erased w2)) (path-snoc nn _ xs1 b c a w1 pw (NotInNil c)))
   (values xs2 w2))
 
 (def-fns _ $ (erased fr-conn : (erased (Nat) d a b) (erased (List (Nat)) e nd) (erased (List (Bond)) ge gnd gc) (subterm erased (FaceReach e nd a b) fr)
@@ -256,7 +246,7 @@
 
 (def-fns _ $ (erased path-insert : (erased (List (Nat)) p p2 s xs) (erased (Nat) x y a d) (subterm erased (Path p s x y xs) w)
     (erased (Insert p a d p2) ins) (erased (Length (Nat) p d) lp) -> (erased (List (Nat)) ys) (erased (Path p2 (Nil (Nat)) x y ys) r))
-  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px _ w1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
   (let ((erased ys1) (erased v1)) (path-insert p p2 s xs1 z y a d w1 ins lp))
   (match erased (nat-eq x a) _
     ((Equal _ _ _)
@@ -264,7 +254,6 @@
         (PathStep p2 _ ys1 d z y (insert-new p p2 x d d z ins lp px) (NotInNil d) v1))))
     ((Unequal _ _ _ _ ne) (values (Cons _ x ys1) (PathStep p2 _ ys1 x z y (insert-other p p2 a d x z ins px ne) (NotInNil x) v1)))))
 
-; A labelling constant along e and nd is constant along e . ndi.
 (def-fns _ $ (erased const-nn : (erased (List (Nat)) lab e nd ids lab0 nn0 ndi0) (erased (Nat) d) (subterm erased (Respects e ndi0 nn0) rn)
     (erased (Respects nd ndi0 ids) rd) (erased (Respects lab ids lab0) rl) (erased (Respects lab e lab) le) (erased (Respects lab nd lab) ln)
     (erased (Length (Nat) lab d) ll) -> (erased (Respects lab nn0 lab0) r))
@@ -277,12 +266,12 @@
 
 (def-fns _ $ (erased const-cat : (erased (List (Nat)) lab) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Const lab g) cl)
     (erased (Const lab h) ch) -> (erased (Const lab gh) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) ch))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) ch))
   (let-match erased cl (ConstCons _ _ x y l px py cl1))
   (ConstCons lab gh1 x y l px py (const-cat lab g1 h gh1 c1 cl1 ch)))
 
-; What PlaneMap keeps: e an involution, nd a permutation with inverse ndi, nn = e . ndi, the orbit counts of the three,
-; the count of classes of the edge and face links, Euler's equation, and every edge link told apart along nd.
+; e is an involution, nd a permutation with inverse ndi, and nn = e . ndi; ke, kn and kf count the orbits of
+; e, nn and nd, and kc the classes of the edge and face links.
 (def-adts $ (PlaneInv : ((List (Nat)) e nd) -> Type)
   enum
   (many MkPlaneInv : (erased (List (Nat)) e nd ndi nn) (erased (Nat) d ke kn kf kc) (erased (List (Bond)) ge gnd gc)
@@ -299,17 +288,15 @@
     (MkEuler (Zero) (Zero) (Zero) (Zero) (Zero) (Zero) (Zero) (Zero) (D0) (AddZero (Zero)) (AddZero (Zero)) (AddZero (Zero)))
     (LoopNil _)))
 
-; The new edge n-(n+1) of a growth: its graph, Euler-free facts about nn's growth, and spans of the edge links.
 (def-fns _ $ (erased edge-graphs : (erased (Nat) n) (erased (List (Nat)) e0 e2) (erased (List (Bond)) ge) (erased (Graph n e0 ge) gre)
     (erased (EdgeGrow e0 n e2) gw)
     -> (erased (List (Bond)) geA ge2) (erased (Snoc (Bond) ge (MkBond n (Succ n)) geA) sA) (erased (Snoc (Bond) geA (MkBond (Succ n) n) ge2) s2)
     (erased (Graph (Succ (Succ n)) e2 ge2) gre2) (erased (Spans ge2 ge) old))
-  (let-match erased gw (MkEdgeGrow _ e1 _ _ len s1 s2))
+  (let-match erased gw (MkEdgeGrow _ e1 _ _ _ s1 s2))
   (let ((erased geA) (erased sgA) (erased greA)) (graph-snoc n (Succ n) e0 e1 ge gre s1))
   (let ((erased ge2) (erased sg2) (erased gre2)) (graph-snoc (Succ n) n e1 e2 geA greA s2))
   (values geA ge2 sgA sg2 gre2 (spans-snoc geA ge2 ge _ (spans-snoc ge geA ge _ (spans-self ge) sgA) sg2)))
 
-; Every new edge link is joined in any graph that joins n and n+1 and spans the old ones.
 (def-fns _ $ (erased edge-new : (erased (Nat) n) (erased (List (Bond)) x ge geA ge2) (erased (Snoc (Bond) ge (MkBond n (Succ n)) geA) sA)
     (erased (Snoc (Bond) geA (MkBond (Succ n) n) ge2) s2) (erased (Spans x ge) sp) (erased (Conn x n (Succ n)) c) -> (erased (Spans x ge2) r))
   (spans-snoc-inv x geA ge2 (Succ n) n s2 (spans-snoc-inv x ge geA n (Succ n) sA sp c) (conn-sym x n (Succ n) c)))
@@ -337,7 +324,7 @@
   (let ((erased bc)) (classes-below gc n kc cc))
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
-  (let ((erased k1) (erased e1q) (erased csx)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) n (Succ n)
+  (let ((erased _) (erased e1q) (erased csx)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) n (Succ n)
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) gc (below-shut gc (Succ n) (below-succ gc n bc))
       (below-succ gc (Succ n) (below-succ gc n bc)) (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
@@ -347,7 +334,7 @@
   (let ((erased cx)) (CatCons (Nil (Bond)) gc gc (MkBond n (Succ n)) (CatNil gc)))
   (let ((erased sxe) (erased sxn)) (spans-old ge gnd gc _ x cg cx))
   (let ((erased cxn)) (conn-adj x n (Succ n) (AdjFwd gc n (Succ n))))
-  (let ((erased zs) (erased rz) (erased lz) (erased rpz)) (zeros-perm n nd0 ndi pn))
+  (let ((erased zs) (erased rz) (erased lz) (erased _)) (zeros-perm n nd0 ndi pn))
   (let ((erased lab1) (erased sl1)) (snoc-exists _ zs (Zero)))
   (let ((erased lab2) (erased sl2)) (snoc-exists _ lab1 (Succ (Zero))))
   (let ((erased rl2)) (respects-new lab1 lab2 nd1 nd2 (Succ n) (Succ (Zero)) (respects-new zs lab1 nd0 nd1 n (Zero) rz sn1 lz sl1) sn2
@@ -369,7 +356,6 @@
         (snoc-new _ lab1 lab2 (Succ (Zero)) (Succ n) sl2 (snoc-length _ zs lab1 (Zero) n sl1 lz)) (ApLt _ _ (Zero) (Succ (Zero)) (LtZ (Zero))))
       sgA sg2)))
 
-; nn after inserting n after c into ndi: two insertions after c into nn, first of n and then of n+1.
 (def-fns _ $ (erased nn-inserts : (erased (List (Nat)) nn nnA nnB P1) (erased (Nat) n c lc) (erased (Length (Nat) nn n) lnn) (erased (Lt c n) lcn)
     (erased (Nth (Nat) nn c lc) pc) (erased (SetNth (Nat) nn c (Succ n) P1) sP1) (erased (Snoc (Nat) P1 lc nnA) sA) (erased (Snoc (Nat) nnA n nnB) sB)
     -> (erased (List (Nat)) X2) (erased (Insert nn c n X2) i1) (erased (Insert X2 c (Succ n) nnB) i2))
@@ -409,7 +395,7 @@
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
   (let ((erased ld)) (lt-weaken d (Succ n) (lt-weaken d n bd)))
-  (let ((erased k1) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d n
+  (let ((erased _) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d n
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) d n (Cons _ n (Nil _)) gc (below-shut gc n bc) (below-succ gc (Succ n) (below-succ gc n bc))
       (NotInCons d n _ (ApLt _ _ d n bd) (NotInNil d)) (InHere n _) ld l0)
@@ -417,7 +403,7 @@
   (let-match erased e1q (Refl _ _))
   (let ((erased g1)) (Cons (Bond) (MkBond d n) gc))
   (let ((erased bg1)) (BelowCons gc d n (Succ n) (lt-weaken d n bd) (lt-succ n) (below-succ gc n bc)))
-  (let ((erased k2) (erased e2q) (erased csx)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
+  (let ((erased _) (erased e2q) (erased csx)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) g1 (below-shut g1 (Succ n) bg1) (below-succ g1 (Succ n) bg1)
       (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
     l0 l1))
@@ -454,7 +440,7 @@
       sgA sg2)))
 
 (def-fns _ $ (erased separates-apart : (erased (List (Nat)) lab p) (erased (Nat) x y) (erased (Separates lab p x y) s) -> (erased (Apart (Nat) Lt x y) r))
-  (let-match erased s (MkSeparates _ _ _ _ l1 l2 rp p1 p2 ne))
+  (let-match erased s (MkSeparates _ _ _ _ l1 l2 _ p1 p2 ne))
   (match erased (nat-eq x y) _
     (absurd (Equal _ _ _) (let-match erased (nth-fn _ lab x l1 l2 p1 p2) (Refl _ _)) (apart-irrefl l1 ne))
     ((Unequal _ _ _ _ r) r)))
@@ -465,7 +451,6 @@
     (absurd (Equal _ _ _) (let-match erased (perm-inj d x y u p q pm px py) (Refl _ _)) (apart-irrefl x ne))
     ((Unequal _ _ _ _ r) r)))
 
-; nn after inserting n after c1 and n+1 after c2 into ndi: two insertions into nn, then an exchange of the images of c1 and c2.
 (def-fns _ $ (erased nn-chord : (erased (List (Nat)) nn P1 P2 P3 nnF) (erased (Nat) n c1 c2 lc1 lc2) (erased (Length (Nat) nn n) lnn)
     (erased (Lt c1 n) l1) (erased (Lt c2 n) l2) (erased (Apart (Nat) Lt c1 c2) nc) (erased (Nth (Nat) nn c1 lc1) pc1)
     (erased (SetNth (Nat) nn c1 (Succ n) P1) sP1) (erased (Snoc (Nat) P1 lc1 P2) sP2) (erased (Nth (Nat) P2 c2 lc2) pc2)
@@ -491,13 +476,12 @@
       (setnth-snoc Q P3 Y nnF c2 n w (setnth-over P2 Q P3 c2 (Succ n) n sQ sP3) sY sF))
     pA2 (snoc-old _ A3 B w n c1 sB (setnth-keep A2 A3 c2 c1 (Succ n) n sA3 (snoc-old _ A1 A2 lc1 n c1 sA2 (setnth-nth _ nn c1 n A1 sA1)) nc))))
 
-; The chord step: its count of components and of orbits of nn, by the case of Joinable.
 (def-fns _ $ (erased chord-counts : (erased (List (Nat)) e0 nd0 ndi nn A2 B mB nnF) (erased (Nat) n d1 d2 c1 c2 ke kn kf kc)
     (erased (List (Bond)) ge gnd gc) (erased (Joinable e0 nd0 d1 d2) jn) (erased (Perm n e0 e0) pe) (erased (Perm n nd0 ndi) pn)
     (erased (Respects e0 ndi nn) rn) (erased (Graph n e0 ge) gre) (erased (Graph n nd0 gnd) grn) (erased (Cat ge gnd gc) cg)
     (erased (Nth (Nat) nd0 d1 c1) pc1) (erased (Nth (Nat) nd0 d2 c2) pc2) (erased (Insert nn c1 n A2) iA) (erased (Insert A2 c2 (Succ n) B) iB)
     (erased (Perm (Succ (Succ n)) B mB) pmB) (erased (Orbits (Succ (Succ n)) B kn) onB) (erased (Nth (Nat) B c1 n) pb1)
-    (erased (Nth (Nat) B c2 (Succ n)) pb2) (erased (Upd2 B c1 (Succ n) c2 n nnF) up) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
+    (erased (Nth (Nat) B c2 (Succ n)) pb2) (erased (Upd2 B c1 (Succ n) c2 n nnF) up) (erased (Lt d1 n) _b1) (erased (Lt d2 n) b2)
     (erased (Lt c1 n) lc1n) (erased (Lt c2 n) lc2n)
     (erased (Classes (Cons (Bond) (MkBond n (Succ n)) (Cons (Bond) (MkBond d1 n) gc)) (Succ (Succ n)) kc) csx1) (erased (Euler kc n ke kn kf) eu)
     -> (erased (Nat) kc2) (erased (Classes (Cons (Bond) (MkBond d2 (Succ n)) (Cons (Bond) (MkBond n (Succ n)) (Cons (Bond) (MkBond d1 n) gc)))
@@ -530,7 +514,7 @@
         (euler-face kc n ke kn kf eu)))
     ((JoinApart _ _ lab _ _ se sn)
       (let-match erased se (MkSeparates _ _ _ _ l1e l2e re q1e q2e nee))
-      (let-match erased sn (MkSeparates _ _ _ _ l1n l2n rnd q1n q2n nen))
+      (let-match erased sn (MkSeparates _ _ _ _ l1n l2n rnd q1n q2n _))
       (let-match erased (nth-fn _ lab d1 l1e l1n q1e q1n) (Refl _ _))
       (let-match erased (nth-fn _ lab d2 l2e l2n q2e q2n) (Refl _ _))
       (let ((erased ll)) (respects-length lab nd0 lab n rnd ln))
@@ -607,7 +591,7 @@
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
   (let ((erased ld1)) (lt-weaken d1 (Succ n) (lt-weaken d1 n b1)))
-  (let ((erased k1) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d1 n
+  (let ((erased _) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d1 n
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) d1 n (Cons _ n (Nil _)) gc (below-shut gc n bc) (below-succ gc (Succ n) (below-succ gc n bc))
       (NotInCons d1 n _ (ApLt _ _ d1 n b1) (NotInNil d1)) (InHere n _) ld1 l0)
@@ -615,7 +599,7 @@
   (let-match erased e1q (Refl _ _))
   (let ((erased g1)) (Cons (Bond) (MkBond d1 n) gc))
   (let ((erased bg1)) (BelowCons gc d1 n (Succ n) (lt-weaken d1 n b1) (lt-succ n) (below-succ gc n bc)))
-  (let ((erased k2) (erased e2q) (erased csx1)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
+  (let ((erased _) (erased e2q) (erased csx1)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) g1 (below-shut g1 (Succ n) bg1) (below-succ g1 (Succ n) bg1)
       (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
     l0 l1))
@@ -672,7 +656,6 @@
   (let-match erased lo (LoopCons _ lab g1 x y s lo1) ((LoopNil _) (AllSepNil gnd)))
   (AllSepCons gnd g1 x y (sep-of-separates d x y lab nd gnd gr s) (loop-allsep d nd g1 gnd lo1 gr)))
 
-; Every plane map is a planar bridgeless hypermap, with edge e, face nd and node n.
 (def-fns _ $ (erased plane-hypermap : (erased (List (Nat)) e nd) (erased (PlaneMap e nd) m) ->
     (erased (Nat) d) (erased (List (Nat)) n) (erased (Hypermap d e n nd) h) (erased (Genus d e n nd (Zero)) pl) (erased (Bridgeless d e n nd) b))
   (let-match erased (plane-inv e nd m) (MkPlaneInv _ _ ndi nn d ke kn kf kc ge gnd gc pe pn rn oe on of gre grn cg cc eu lo))

@@ -1,5 +1,3 @@
-; Lists of darts as sets, and the classes of a graph counted among the darts of a list. Load after colalias.sl.
-
 ; ys lists the darts of xs in t, and zs those not in t.
 (def-adts $ (Split : ((List (Nat)) t xs ys zs) -> Type)
   enum
@@ -20,11 +18,11 @@
     -> (erased (Nat) a b) (erased (Length (Nat) ys a) la) (erased (Length (Nat) zs b) lb) (erased (Add a b n) ab))
   (match erased sp _
     ((SpNil _) (let-match erased ln (LengthNil _)) (values (Zero) (Zero) (LengthNil _) (LengthNil _) (AddZero (Zero))))
-    ((SpIn _ xs1 ys1 zs1 x p sp1)
+    ((SpIn _ xs1 ys1 zs1 x _ sp1)
       (let-match erased ln (LengthCons _ _ _ n1 ln1))
       (let ((erased a) (erased b) (erased la) (erased lb) (erased ab)) (split-length t xs1 ys1 zs1 n1 sp1 ln1))
       (values (Succ a) b (LengthCons _ x ys1 a la) lb (AddSucc a b n1 ab)))
-    ((SpOut _ xs1 ys1 zs1 x p sp1)
+    ((SpOut _ xs1 ys1 zs1 x _ sp1)
       (let-match erased ln (LengthCons _ _ _ n1 ln1))
       (let ((erased a) (erased b) (erased la) (erased lb) (erased ab)) (split-length t xs1 ys1 zs1 n1 sp1 ln1))
       (values a (Succ b) la (LengthCons _ x zs1 b lb) (add-succ-right a b n1 ab)))))
@@ -32,37 +30,37 @@
 (def-fns _ $ (erased split-sub : (erased (List (Nat)) t xs ys zs) (subterm erased (Split t xs ys zs) sp) -> (erased (Sub ys xs) a) (erased (Sub zs xs) b))
   (match erased sp _
     ((SpNil _) (values (SubNil _) (SubNil _)))
-    ((SpIn _ xs1 ys1 zs1 x p sp1)
+    ((SpIn _ xs1 ys1 zs1 x _ sp1)
       (let ((erased a) (erased b)) (split-sub t xs1 ys1 zs1 sp1))
       (values (SubCons x ys1 _ (InHere x xs1) (sub-cons x ys1 xs1 a)) (sub-cons x zs1 xs1 b)))
-    ((SpOut _ xs1 ys1 zs1 x p sp1)
+    ((SpOut _ xs1 ys1 zs1 x _ sp1)
       (let ((erased a) (erased b)) (split-sub t xs1 ys1 zs1 sp1))
       (values (sub-cons x ys1 xs1 a) (SubCons x zs1 _ (InHere x xs1) (sub-cons x zs1 xs1 b))))))
 
 (def-fns _ $ (erased split-in : (erased (List (Nat)) t xs ys zs) (erased (Nat) y) (subterm erased (Split t xs ys zs) sp) (erased (In y ys) iy)
     -> (erased (In y t) r))
-  (let-match erased sp (SpIn _ xs1 ys1 zs1 x p sp1)
+  (let-match erased sp (SpIn _ xs1 ys1 zs1 _ p sp1)
     (absurd (SpNil _) iy)
-    ((SpOut _ xs1 ys1 zs1 x p sp1) (split-in t xs1 ys1 zs1 y sp1 iy)))
+    ((SpOut _ xs1 ys1 zs1 _ _ sp1) (split-in t xs1 ys1 zs1 y sp1 iy)))
   (match erased iy _ ((InHere _ _) p) ((InThere _ _ _ iy1) (split-in t xs1 ys1 zs1 y sp1 iy1))))
 
 (def-fns _ $ (erased split-out : (erased (List (Nat)) t xs ys zs) (erased (Nat) y) (subterm erased (Split t xs ys zs) sp) (erased (In y zs) iy)
     -> (erased (NotIn y t) r))
-  (let-match erased sp (SpOut _ xs1 ys1 zs1 x p sp1)
+  (let-match erased sp (SpOut _ xs1 ys1 zs1 _ p sp1)
     (absurd (SpNil _) iy)
-    ((SpIn _ xs1 ys1 zs1 x p sp1) (split-out t xs1 ys1 zs1 y sp1 iy)))
+    ((SpIn _ xs1 ys1 zs1 _ _ sp1) (split-out t xs1 ys1 zs1 y sp1 iy)))
   (match erased iy _ ((InHere _ _) p) ((InThere _ _ _ iy1) (split-out t xs1 ys1 zs1 y sp1 iy1))))
 
 (def-fns _ $ (erased split-cover : (erased (List (Nat)) t xs ys zs) (erased (Nat) y) (subterm erased (Split t xs ys zs) sp) (erased (In y xs) iy)
     -> (erased (Or (In y ys) (In y zs)) r))
   (match erased sp _
     (absurd (SpNil _) iy)
-    ((SpIn _ xs1 ys1 zs1 x p sp1)
+    ((SpIn _ xs1 ys1 zs1 x _ sp1)
       (let-match erased iy (InThere _ _ _ iy1)
         ((InHere _ _) (OrL _ _ (InHere y ys1))))
       (match erased (split-cover t xs1 ys1 zs1 y sp1 iy1) _
         ((OrL _ _ i) (OrL _ _ (InThere y x ys1 i))) ((OrR _ _ i) (OrR _ _ i))))
-    ((SpOut _ xs1 ys1 zs1 x p sp1)
+    ((SpOut _ xs1 ys1 zs1 x _ sp1)
       (let-match erased iy (InThere _ _ _ iy1)
         ((InHere _ _) (OrR _ _ (InHere y zs1))))
       (match erased (split-cover t xs1 ys1 zs1 y sp1 iy1) _
@@ -72,19 +70,19 @@
     -> (erased (Distinct ys) a) (erased (Distinct zs) b))
   (match erased sp _
     ((SpNil _) (values (DistNil) (DistNil)))
-    ((SpIn _ xs1 ys1 zs1 x p sp1)
+    ((SpIn _ xs1 ys1 zs1 x _ sp1)
       (let-match erased dx (DistCons _ _ out dx1))
       (let ((erased a) (erased b)) (split-distinct t xs1 ys1 zs1 sp1 dx1))
-      (let ((erased s1) (erased s2)) (split-sub t xs1 ys1 zs1 sp1))
+      (let ((erased s1) (erased _)) (split-sub t xs1 ys1 zs1 sp1))
       (values (DistCons x ys1 (notin-sub x ys1 xs1 s1 out) a) b))
-    ((SpOut _ xs1 ys1 zs1 x p sp1)
+    ((SpOut _ xs1 ys1 zs1 x _ sp1)
       (let-match erased dx (DistCons _ _ out dx1))
       (let ((erased a) (erased b)) (split-distinct t xs1 ys1 zs1 sp1 dx1))
-      (let ((erased s1) (erased s2)) (split-sub t xs1 ys1 zs1 sp1))
+      (let ((erased _) (erased s2)) (split-sub t xs1 ys1 zs1 sp1))
       (values a (DistCons x zs1 (notin-sub x zs1 xs1 s2 out) b)))))
 
 (def-fns _ $ (erased sub-in : (erased (List (Nat)) m s) (erased (Nat) x) (subterm erased (Sub m s) sb) (erased (In x m) ix) -> (erased (In x s) r))
-  (let-match erased sb (SubCons y m1 _ p sb1) (absurd (SubNil _) ix))
+  (let-match erased sb (SubCons _ m1 _ p sb1) (absurd (SubNil _) ix))
   (match erased ix _ ((InHere _ _) p) ((InThere _ _ _ ix1) (sub-in m1 s x sb1 ix1))))
 
 (def-fns _ $ (erased sub-trans : (erased (List (Nat)) a b c) (subterm erased (Sub a b) p) (erased (Sub b c) q) -> (erased (Sub a c) r))
@@ -100,7 +98,7 @@
 (def-fns _ $ (erased split-disj : (erased (List (Nat)) t xs ys zs) (subterm erased (Split t xs ys zs) sp) -> (erased (Disj zs t) r))
   (match erased sp _
     ((SpNil _) (DisjNil t))
-    ((SpIn _ xs1 ys1 zs1 x p sp1) (split-disj t xs1 ys1 zs1 sp1))
+    ((SpIn _ xs1 ys1 zs1 _ _ sp1) (split-disj t xs1 ys1 zs1 sp1))
     ((SpOut _ xs1 ys1 zs1 x p sp1) (DisjCons x zs1 t p (split-disj t xs1 ys1 zs1 sp1)))))
 
 (def-fns _ $ (erased notin-of-disj : (erased (Nat) x) (erased (List (Nat)) s m) (subterm erased (Disj s m) dj) (erased (In x m) ix) -> (erased (NotIn x s) r))
@@ -112,15 +110,13 @@
   (let-match erased sb (SubCons _ _ _ ix sb1))
   (DisjCons x m3 s (notin-of-disj x s m dj ix) (disj-sym s m dj m3 sb1)))
 
-; Two duplicate-free lists with the same darts have the same length.
 (def-fns _ $ (erased same-size : (erased (List (Nat)) xs ys) (erased (Nat) a b) (erased (Distinct xs) dx) (erased (Distinct ys) dy)
     (erased (Sub xs ys) sxy) (erased (Sub ys xs) syx) (erased (Length (Nat) xs a) la) (erased (Length (Nat) ys b) lb) -> (erased (Eq (Nat) a b) e))
   (le-antisym a b (pigeonhole xs ys a b dx sxy la lb) (pigeonhole ys xs b a dy syx lb la)))
 
-; A duplicate-free list is injective.
 (def-fns _ $ (erased distinct-nth : (erased (List (Nat)) h) (erased (Nat) i j x) (subterm erased (Distinct h) dh) (erased (Nth (Nat) h i x) pi)
     (erased (Nth (Nat) h j x) pj) -> (erased (Eq (Nat) i j) e))
-  (let-match erased dh (DistCons y h1 out dh1) (absurd (DistNil) pi))
+  (let-match erased dh (DistCons _ h1 out dh1) (absurd (DistNil) pi))
   (match erased pi _
     ((NthHere _ _ _)
       (match erased pj _
@@ -142,7 +138,6 @@
       ((CGt _ _ _ _ q) (ApGt _ _ y l q)))
     (notin-respects h xs1 ys1 x y dh out1 px rp1)))
 
-; The image of a duplicate-free list under an injective one.
 (def-fns _ $ (erased respects-distinct : (erased (List (Nat)) h xs ys) (erased (Distinct h) dh) (subterm erased (Distinct xs) dx) (erased (Respects h xs ys) rp)
     -> (erased (Distinct ys) r))
   (let-match erased rp (RespCons _ xs1 ys1 j l pj rp1) ((RespNil _) (DistNil)))
@@ -160,29 +155,25 @@
       ((CGt _ _ _ _ q) (ApGt _ _ x j q)))
     (notin-respects-back lab xs1 ls1 x l out1 px rp1)))
 
-; Darts with distinct labels are distinct.
 (def-fns _ $ (erased distinct-back : (erased (List (Nat)) lab xs ls) (subterm erased (Distinct ls) dl) (erased (Respects lab xs ls) rp) -> (erased (Distinct xs) r))
   (let-match erased rp (RespCons _ xs1 ls1 j l pj rp1) ((RespNil _) (DistNil)))
   (let-match erased dl (DistCons _ _ out dl1))
   (DistCons j xs1 (notin-respects-back lab xs1 ls1 j l out pj rp1) (distinct-back lab xs1 ls1 dl1 rp1)))
 
-; An entry of ls = lab . xs is the label of a dart of xs.
 (def-fns _ $ (erased respects-in : (erased (List (Nat)) lab xs ls) (erased (Nat) l) (subterm erased (Respects lab xs ls) rp) (erased (In l ls) il)
     -> (erased (Nat) j) (erased (In j xs) ij) (erased (Nth (Nat) lab j l) pj))
-  (let-match erased rp (RespCons _ xs1 ls1 j0 l0 p0 rp1) (absurd (RespNil _) il))
+  (let-match erased rp (RespCons _ xs1 ls1 j0 _ p0 rp1) (absurd (RespNil _) il))
   (let-match erased il (InThere _ _ _ il1)
     ((InHere _ _) (values j0 (InHere j0 xs1) p0)))
   (let ((erased j) (erased ij) (erased pj)) (respects-in lab xs1 ls1 l rp1 il1))
   (values j (InThere j j0 xs1 ij) pj))
 
-
 (def-fns _ $ (erased split-sub-t : (erased (List (Nat)) t xs ys zs) (subterm erased (Split t xs ys zs) sp) -> (erased (Sub ys t) r))
   (match erased sp _
     ((SpNil _) (SubNil t))
     ((SpIn _ xs1 ys1 zs1 x p sp1) (SubCons x ys1 t p (split-sub-t t xs1 ys1 zs1 sp1)))
-    ((SpOut _ xs1 ys1 zs1 x p sp1) (split-sub-t t xs1 ys1 zs1 sp1))))
+    ((SpOut _ xs1 ys1 zs1 _ _ sp1) (split-sub-t t xs1 ys1 zs1 sp1))))
 
-; Names that red/ctree.sl defines again, kept for the files loaded after it.
 (let ((erased HSubNil)) SubNil)
 (let ((erased HSubCons)) SubCons)
 
@@ -223,7 +214,7 @@
 
 (def-fns _ $ (erased covers-at : (erased (List (Bond)) g) (erased (List (Nat)) rs xs) (erased (Nat) x) (subterm erased (Covers g rs xs) cv) (erased (In x xs) ix)
     -> (erased (Nat) r) (erased (In r rs) pin) (erased (Conn g r x) c))
-  (let-match erased cv (CovCons _ _ xs1 y r pin c cv1) (absurd (CovNil _ _) ix))
+  (let-match erased cv (CovCons _ _ xs1 _ r pin c cv1) (absurd (CovNil _ _) ix))
   (match erased ix _ ((InHere _ _) (values r pin c)) ((InThere _ _ _ ix1) (covers-at g rs xs1 x cv1 ix1))))
 
 ; ys pairs each dart of xs with a dart joined to it in g.
@@ -254,18 +245,17 @@
 
 (def-fns _ $ (erased joined-length : (erased (List (Bond)) g) (erased (List (Nat)) m ims) (erased (Nat) k) (subterm erased (Joined g m ims) jn)
     (erased (Length (Nat) m k) l) -> (erased (Length (Nat) ims k) r))
-  (let-match erased jn (JCons _ m1 ims1 x i c jn1) ((JNil _) l))
+  (let-match erased jn (JCons _ m1 ims1 _ i _ jn1) ((JNil _) l))
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ i ims1 k1 (joined-length g m1 ims1 k1 jn1 l1)))
 
 (def-fns _ $ (erased co-le : (erased (List (Bond)) g) (erased (List (Nat)) xs) (erased (Nat) k1 k2) (erased (ClassesOn g xs k1) c1) (erased (ClassesOn g xs k2) c2)
     -> (erased (Lt k1 (Succ k2)) r))
-  (let-match erased c1 (MkClassesOn _ _ rs1 _ lr1 sr1 ps1 cv1))
-  (let-match erased c2 (MkClassesOn _ _ rs2 _ lr2 sr2 ps2 cv2))
+  (let-match erased c1 (MkClassesOn _ _ rs1 _ lr1 sr1 ps1 _))
+  (let-match erased c2 (MkClassesOn _ _ rs2 _ lr2 _ _ cv2))
   (let ((erased ims) (erased si) (erased jn)) (covers-image g rs2 xs rs1 cv2 sr1))
   (pigeonhole ims rs2 k1 k2 (joined-distinct g rs1 ims ps1 jn) si (joined-length g rs1 ims k1 jn lr1) lr2))
 
-; The count of classes among the darts of xs is determined.
 (def-fns _ $ (erased co-unique : (erased (List (Bond)) g) (erased (List (Nat)) xs) (erased (Nat) k1 k2) (erased (ClassesOn g xs k1) c1)
     (erased (ClassesOn g xs k2) c2) -> (erased (Eq (Nat) k1 k2) e))
   (le-antisym k1 k2 (co-le g xs k1 k2 c1 c2) (co-le g xs k2 k1 c2 c1)))
@@ -280,7 +270,6 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (SACons g x y m1 (MkSep g x y lab x y cl (fixed-in lab rs x fix ix) (fixed-in lab rs y fix iy) ne) (fixed-sepall g lab rs m1 x cl fix ix sb1 out1)))
 
-; Distinct darts fixed by a labelling constant along g are told apart by g.
 (def-fns _ $ (erased fixed-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab rs m) (erased (Const lab g) cl) (erased (Respects lab rs rs) fix)
     (subterm erased (Sub m rs) sb) (erased (Distinct m) dm) -> (erased (PairSep g m) r))
   (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (PrNil g)))
@@ -294,7 +283,6 @@
   (MkClassesOn g ids rs k lr (under-sub d rs ids (respects-under lab rs rs d fix ll) io) (fixed-pairsep g lab rs rs cl fix (sub-refl rs) dr)
     (rooted-covers g rs ids lab ro)))
 
-; A set g never leaves holds every dart joined to one of its darts.
 (def-fns _ $ (erased shut-conn : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Conn g x y) c) (erased (In x s) ix) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (In y s) r))
   (match erased (in-dec y s) _
@@ -315,15 +303,14 @@
       (absurd (OrR _ _ i) (apart-irrefl r (notin-in r r s (split-out s rs ys zs r sp i) ir))))
     c (co-cover g d s ids lab rs ys zs m1 io ll fix ro sh bg sp us sb1)))
 
-; A set of darts that g never leaves lies in some number of classes.
 (def-fns _ $ (erased co-exists : (erased (List (Bond)) g) (erased (Nat) d k) (erased (List (Nat)) s) (erased (Classes g d k) cs) (erased (Shut s g) sh)
     (erased (Under s d) us) -> (erased (Nat) k1) (erased (ClassesOn g s k1) r))
   (let ((erased bg)) (classes-below g d k cs))
-  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
+  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll _ dr fix cl ro))
   (let ((erased ys) (erased zs) (erased sp)) (split-exists s rs))
   (let ((erased k1) (erased l1)) (length-exists _ ys))
-  (let ((erased dy) (erased dz)) (split-distinct s rs ys zs sp dr))
-  (let ((erased sy) (erased sz)) (split-sub s rs ys zs sp))
+  (let ((erased dy) (erased _)) (split-distinct s rs ys zs sp dr))
+  (let ((erased sy) (erased _)) (split-sub s rs ys zs sp))
   (values k1 (MkClassesOn g s ys k1 l1 (split-sub-t s rs ys zs sp) (fixed-pairsep g lab rs ys cl fix sy dy)
     (co-cover g d s ids lab rs ys zs s io ll fix ro sh bg sp us (sub-refl s)))))
 
@@ -356,7 +343,6 @@
     ((OrL _ _ i) (let ((erased r) (erased pin) (erased c)) (covers-at g rs1 s x c1 i)) (CovCons g rs u1 x r (app-in-l rs1 rs2 rs r ar pin) c rest))
     ((OrR _ _ i) (let ((erased r) (erased pin) (erased c)) (covers-at g rs2 t x c2 i)) (CovCons g rs u1 x r (app-in-r rs1 rs2 rs r ar pin) c rest))))
 
-; The classes of two disjoint sets of darts, the first one never left by g, add up.
 (def-fns _ $ (erased co-union : (erased (List (Bond)) g) (erased (Nat) d k1 k2 k) (erased (List (Nat)) s t st u) (erased (ClassesOn g s k1) c1)
     (erased (ClassesOn g t k2) c2) (erased (AppN s t st) ap) (erased (Sub u st) su) (erased (Sub st u) us) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Disj t s) dj) (erased (Under s d) uds) (erased (Under t d) udt) (erased (Add k1 k2 k) a) -> (erased (ClassesOn g u k) r))
@@ -387,24 +373,24 @@
 
 (def-fns _ $ (erased lift-at : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t xs) (erased (Nat) x) (subterm erased (Lift g f1 f2 t xs) lf) (erased (In x xs) ix)
     -> (erased (Nat) y z) (erased (Nth (Nat) f1 x y) p1) (erased (In y t) iy) (erased (Nth (Nat) f2 y z) p2) (erased (Conn g x z) c))
-  (let-match erased lf (LiftCons _ _ _ _ xs1 x0 y z p1 iy p2 c lf1) (absurd (LiftNil _ _ _ _) ix))
+  (let-match erased lf (LiftCons _ _ _ _ xs1 _ y z p1 iy p2 c lf1) (absurd (LiftNil _ _ _ _) ix))
   (match erased ix _ ((InHere _ _) (values y z p1 iy p2 c)) ((InThere _ _ _ ix1) (lift-at g f1 f2 t xs1 x lf1 ix1))))
 
 (def-fns _ $ (erased moves-tail : (erased (List (Bond)) g g2) (erased (Bond) b) (erased (List (Nat)) xs f) (erased (Moves (Cons (Bond) b g) xs f g2) mv)
     -> (erased (Moves g xs f g2) r))
   (match erased mv _
-    ((MvIn _ _ _ _ x y x2 y2 ix iy px py c rest) rest)
-    ((MvOut _ _ _ _ x y ox oy rest) rest)))
+    ((MvIn _ _ _ _ _ _ _ _ _ _ _ _ _ rest) rest)
+    ((MvOut _ _ _ _ _ _ _ _ rest) rest)))
 
 (def-fns _ $ (erased adj-move : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (erased (Nat) x y x2) (subterm erased (Adj g x y) a) (erased (Moves g xs f g2) mv)
     (erased (In x xs) ix) (erased (Nth (Nat) f x x2) px) -> (erased (Nat) y2) (erased (Nth (Nat) f y y2) py) (erased (Conn g2 x2 y2) c) (erased (In y xs) iy))
   (match erased a _
-    ((AdjFwd g1 _ _)
+    ((AdjFwd _ _ _)
       (let-match erased mv (MvIn _ _ _ _ _ _ x3 y3 _ iy px3 py3 c3 _)
         (absurd (MvOut _ _ _ _ _ _ ox _ _) (apart-irrefl x (notin-in x x xs ox ix))))
       (let-match erased (nth-fn _ f x x3 x2 px3 px) (Refl _ _))
       (values y3 py3 c3 iy))
-    ((AdjBwd g1 _ _)
+    ((AdjBwd _ _ _)
       (let-match erased mv (MvIn _ _ _ _ _ _ x3 y3 iy _ px3 py3 c3 _)
         (absurd (MvOut _ _ _ _ _ _ _ oy _) (apart-irrefl x (notin-in x x xs oy ix))))
       (let-match erased (nth-fn _ f x y3 x2 py3 px) (Refl _ _))
@@ -421,11 +407,10 @@
 (def-fns _ $ (erased lift-image : (erased (List (Bond)) g) (erased (List (Nat)) f1 f2 t xs m) (erased (Lift g f1 f2 t xs) lf) (subterm erased (Sub m xs) sb)
     -> (erased (List (Nat)) ims) (erased (Respects f1 m ims) rp) (erased (Sub ims t) si))
   (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (values (Nil _) (RespNil f1) (SubNil t))))
-  (let ((erased y) (erased z) (erased p1) (erased iy) (erased p2) (erased c)) (lift-at g f1 f2 t xs x lf ix))
+  (let ((erased y) (erased _) (erased p1) (erased iy) (erased _) (erased _)) (lift-at g f1 f2 t xs x lf ix))
   (let ((erased ims1) (erased rp1) (erased si1)) (lift-image g f1 f2 t xs m1 lf sb1))
   (values (Cons _ y ims1) (RespCons f1 m1 ims1 x y p1 rp1) (SubCons y ims1 t iy si1)))
 
-; Darts told apart in g1 have images told apart in g2.
 (def-fns _ $ (erased sep-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) d k2 a b a2 b2) (erased (Sep g1 a b) sp)
     (erased (In a s1) ia) (erased (In b s1) ib) (erased (Nth (Nat) h a a2) pa) (erased (Nth (Nat) h b b2) pb) (erased (Lift g1 h l s2 s1) lf)
     (erased (Moves g2 s2 l g1) mv) (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (Sep g2 a2 b2) r))
@@ -435,7 +420,7 @@
   (let-match erased (nth-fn _ h b b3 b2 qb pb) (Refl _ _))
   (match erased (classes-dec g2 d k2 a2 b2 cs (under-in s2 a2 d us ja) (under-in s2 b2 d us jb)) _
     (absurd (OrL _ _ c)
-      (let ((erased b5) (erased q5) (erased c5) (erased i5)) (conn-move g2 g1 s2 l a2 b2 a4 c mv ja la))
+      (let ((erased b5) (erased q5) (erased c5) (erased _)) (conn-move g2 g1 s2 l a2 b2 a4 c mv ja la))
       (let-match erased (nth-fn _ l b2 b5 b4 q5 lb) (Refl _ _))
       (sep-conn g1 a b sp (conn-cat g1 a a4 b ca (conn-cat g1 a4 b4 b c5 (conn-sym g1 b b4 cb)))))
     ((OrR _ _ s) s)))
@@ -462,17 +447,15 @@
     (erased (Respects h rs ims) rp) (erased (Lift g1 h l s2 s1) lf1) (erased (Lift g2 l h s1 s2) lf2) (erased (Moves g1 s1 h g2) mv)
     (subterm erased (Sub m s2) sb) -> (erased (Covers g2 ims m) r))
   (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g2 ims)))
-  (let ((erased y) (erased z) (erased p1) (erased iy) (erased p2) (erased cxz)) (lift-at g2 l h s1 s2 x lf2 ix))
+  (let ((erased y) (erased z) (erased _) (erased iy) (erased p2) (erased cxz)) (lift-at g2 l h s1 s2 x lf2 ix))
   (let ((erased r) (erased pin) (erased cry)) (covers-at g1 rs s1 y cv iy))
   (let ((erased ir)) (sub-in rs s1 r sr pin))
-  (let ((erased r2) (erased z2) (erased q1) (erased ir2) (erased q2) (erased crz)) (lift-at g1 h l s2 s1 r lf1 ir))
-  (let ((erased z3) (erased q3) (erased c3) (erased i3)) (conn-move g1 g2 s1 h r y r2 cry mv ir q1))
+  (let ((erased r2) (erased _) (erased q1) (erased _) (erased _) (erased _)) (lift-at g1 h l s2 s1 r lf1 ir))
+  (let ((erased z3) (erased q3) (erased c3) (erased _)) (conn-move g1 g2 s1 h r y r2 cry mv ir q1))
   (let-match erased (nth-fn _ h y z3 z q3 p2) (Refl _ _))
   (CovCons g2 ims m1 x r2 (in-map h rs ims r r2 pin rp q1) (conn-cat g2 r2 z x c3 (conn-sym g2 x z cxz))
     (covers-map g1 g2 s1 s2 h l rs ims m1 cv sr rp lf1 lf2 mv sb1)))
 
-; The classes of g1 on s1 and of g2 on s2 correspond through h and l, which send darts of one to darts of the other joined to
-; them (Gonthier's adjunction_n_comp).
 (def-fns _ $ (erased co-map : (erased (List (Bond)) g1 g2) (erased (List (Nat)) s1 s2 h l) (erased (Nat) k d k2) (erased (ClassesOn g1 s1 k) co)
     (erased (Lift g1 h l s2 s1) lf1) (erased (Lift g2 l h s1 s2) lf2) (erased (Moves g1 s1 h g2) mv1) (erased (Moves g2 s2 l g1) mv2)
     (erased (Classes g2 d k2) cs) (erased (Under s2 d) us) -> (erased (ClassesOn g2 s2 k) r))
@@ -511,48 +494,48 @@
     (erased (Nth (Nat) xs i x) px) (erased (Nth (Nat) h j x) pj) -> (erased (Nth (Nat) ls i j) r))
   (match erased iv _
     (absurd (IvNil _) px)
-    ((IvIn _ xs1 ls1 y j2 p iv1)
+    ((IvIn _ xs1 ls1 _ j2 p iv1)
       (let-match erased px (NthHere _ _ _)
         ((NthThere _ _ _ i1 _ px1) (NthThere _ j2 ls1 i1 j (inv-nth h xs1 ls1 i1 x j iv1 dh px1 pj))))
       (let-match erased (distinct-nth h j2 j x dh p pj) (Refl _ _))
       (NthHere _ j2 ls1))
-    ((IvOut _ xs1 ls1 y o iv1)
+    ((IvOut _ xs1 ls1 _ o iv1)
       (match erased px _
         (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x h o (nth-in h j x pj))))
         ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (inv-nth h xs1 ls1 i1 x j iv1 dh px1 pj)))))))
 
 (def-fns _ $ (erased shut-tail : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Bond) b) (erased (Shut c (Cons (Bond) b g)) sh) -> (erased (Shut c g) r))
-  (match erased sh _ ((ShutIn _ _ _ _ px py rest) rest) ((ShutOut _ _ _ _ px py rest) rest)))
+  (match erased sh _ ((ShutIn _ _ _ _ _ _ rest) rest) ((ShutOut _ _ _ _ _ _ rest) rest)))
 
 (def-fns _ $ (erased shut-adj-in : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Nat) x y) (subterm erased (Adj g x y) a) (erased (Shut c g) sh)
     (erased (In x c) ix) -> (erased (In y c) r))
   (match erased a _
-    ((AdjFwd g1 _ _) (match erased sh _ ((ShutIn _ _ _ _ px py _) py) (absurd (ShutOut _ _ _ _ px py _) (apart-irrefl x (notin-in x x c px ix)))))
-    ((AdjBwd g1 _ _) (match erased sh _ ((ShutIn _ _ _ _ px py _) px) (absurd (ShutOut _ _ _ _ px py _) (apart-irrefl x (notin-in x x c py ix)))))
+    ((AdjFwd _ _ _) (match erased sh _ ((ShutIn _ _ _ _ _ py _) py) (absurd (ShutOut _ _ _ _ px _ _) (apart-irrefl x (notin-in x x c px ix)))))
+    ((AdjBwd _ _ _) (match erased sh _ ((ShutIn _ _ _ _ px _ _) px) (absurd (ShutOut _ _ _ _ _ py _) (apart-irrefl x (notin-in x x c py ix)))))
     ((AdjThere g1 b _ _ a1) (shut-adj-in c g1 x y a1 (shut-tail c g1 b sh) ix))))
 
 (def-fns _ $ (erased shut-adj-out : (erased (List (Nat)) c) (erased (List (Bond)) g) (erased (Nat) x y) (subterm erased (Adj g x y) a) (erased (Shut c g) sh)
     (erased (NotIn x c) ox) -> (erased (NotIn y c) r))
   (match erased a _
-    ((AdjFwd g1 _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ px py _) (apart-irrefl x (notin-in x x c ox px))) ((ShutOut _ _ _ _ px py _) py)))
-    ((AdjBwd g1 _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ px py _) (apart-irrefl x (notin-in x x c ox py))) ((ShutOut _ _ _ _ px py _) px)))
+    ((AdjFwd _ _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ px _ _) (apart-irrefl x (notin-in x x c ox px))) ((ShutOut _ _ _ _ _ py _) py)))
+    ((AdjBwd _ _ _) (match erased sh _ (absurd (ShutIn _ _ _ _ _ py _) (apart-irrefl x (notin-in x x c ox py))) ((ShutOut _ _ _ _ px _ _) px)))
     ((AdjThere g1 b _ _ a1) (shut-adj-out c g1 x y a1 (shut-tail c g1 b sh) ox))))
 
 (def-fns _ $ (erased moves-shut : (erased (List (Bond)) g g2) (erased (List (Nat)) xs f) (subterm erased (Moves g xs f g2) mv) -> (erased (Shut xs g) r))
   (match erased mv _
     ((MvNil _ _ _) (ShutNil xs))
-    ((MvIn g1 _ _ _ x y x2 y2 ix iy px py c rest) (ShutIn xs g1 x y ix iy (moves-shut g1 g2 xs f rest)))
+    ((MvIn g1 _ _ _ x y _ _ ix iy _ _ _ rest) (ShutIn xs g1 x y ix iy (moves-shut g1 g2 xs f rest)))
     ((MvOut g1 _ _ _ x y ox oy rest) (ShutOut xs g1 x y ox oy (moves-shut g1 g2 xs f rest)))))
 
 (def-fns _ $ (erased moves-cat : (erased (List (Bond)) g h gh g2) (erased (List (Nat)) xs f) (subterm erased (Cat g h gh) c) (erased (Moves g xs f g2) mg)
     (erased (Moves h xs f g2) mh) -> (erased (Moves gh xs f g2) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) mh))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) mh))
   (match erased mg _
     ((MvIn _ _ _ _ x y x2 y2 ix iy px py cn rest) (MvIn gh1 g2 xs f x y x2 y2 ix iy px py cn (moves-cat g1 h gh1 g2 xs f c1 rest mh)))
     ((MvOut _ _ _ _ x y ox oy rest) (MvOut gh1 g2 xs f x y ox oy (moves-cat g1 h gh1 g2 xs f c1 rest mh)))))
 
 (def-fns _ $ (erased shut-cat-l : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s gh) sh) -> (erased (Shut s g) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (ShutNil s)))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) (ShutNil s)))
   (match erased sh _
     ((ShutIn _ _ x y px py rest) (ShutIn s g1 x y px py (shut-cat-l s g1 h gh1 c1 rest)))
     ((ShutOut _ _ x y px py rest) (ShutOut s g1 x y px py (shut-cat-l s g1 h gh1 c1 rest)))))
@@ -579,7 +562,7 @@
     -> (erased (Nat) z) (erased (FirstHit p t x z) r))
   (let-match erased (in-dec x t) (OrR _ _ ox)
     ((OrL _ _ ix) (values x (MkFirstHit p t (Nil _) x x (PathHere p t x) ix))))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t ox iy))))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t ox iy))))
   (let ((erased z) (erased fh)) (first-hit p s t xs1 x1 y w1 iy))
   (let-match erased fh (MkFirstHit _ _ ws _ _ w2 iz))
   (values z (MkFirstHit p t (Cons _ x ws) x z (PathStep p t ws x x1 z px ox w2) iz)))
@@ -602,7 +585,7 @@
 
 (def-fns _ $ (erased hit-next : (erased (List (Nat)) p t) (erased (Nat) x x1 z) (erased (FirstHit p t x z) fh) (erased (NotIn x t) ox) (erased (Nth (Nat) p x x1) px)
     -> (erased (FirstHit p t x1 z) r))
-  (let-match erased fh (MkFirstHit _ _ xs _ _ w iz))
+  (let-match erased fh (MkFirstHit _ _ _ _ _ w iz))
   (let-match erased w (PathStep _ _ xs1 _ a _ pa _ w1) (absurd (PathHere _ _ _) (apart-irrefl x (notin-in x x t ox iz))))
   (let-match erased (nth-fn _ p x a x1 pa px) (Refl _ _))
   (MkFirstHit p t xs1 x1 z w1 iz))
@@ -627,14 +610,14 @@
 
 (def-fns _ $ (erased sb-in-key : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) y) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (In y ys) iy)
     -> (erased (Nat) l) (erased (Nth (Nat) lab y l) py) (erased (In l t) il))
-  (let-match erased sp (SBIn _ _ xs1 ys1 zs1 x l px p sp1)
+  (let-match erased sp (SBIn _ _ xs1 ys1 zs1 _ l px p sp1)
     (absurd (SBNil _ _) iy)
-    ((SBOut _ _ xs1 ys1 zs1 x l px p sp1) (sb-in-key lab t xs1 ys1 zs1 y sp1 iy)))
+    ((SBOut _ _ xs1 ys1 zs1 _ _ _ _ sp1) (sb-in-key lab t xs1 ys1 zs1 y sp1 iy)))
   (match erased iy _ ((InHere _ _) (values l px p)) ((InThere _ _ _ iy1) (sb-in-key lab t xs1 ys1 zs1 y sp1 iy1))))
 
 (def-fns _ $ (erased sb-split : (erased (List (Nat)) lab t xs ys zs X T Z) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (SplitBy lab t X T Z) spT)
     (erased (Sub ys T) sb) -> (erased (Split T xs ys zs) r))
-  (let-match erased sp (SBIn _ _ xs1 ys1 zs1 x l px p sp1)
+  (let-match erased sp (SBIn _ _ xs1 ys1 zs1 x _ _ _ sp1)
     ((SBNil _ _) (SpNil T))
     ((SBOut _ _ xs1 ys1 zs1 x l px p sp1)
       (SpOut T xs1 ys1 zs1 x
@@ -650,9 +633,9 @@
 
 (def-fns _ $ (erased sb-out-key : (erased (List (Nat)) lab t xs ys zs) (erased (Nat) z l) (subterm erased (SplitBy lab t xs ys zs) sp) (erased (In z zs) iz)
     (erased (Nth (Nat) lab z l) pz) -> (erased (NotIn l t) r))
-  (let-match erased sp (SBOut _ _ xs1 ys1 zs1 x l1 px p sp1)
+  (let-match erased sp (SBOut _ _ xs1 ys1 zs1 _ l1 px p sp1)
     (absurd (SBNil _ _) iz)
-    ((SBIn _ _ xs1 ys1 zs1 x l1 px p sp1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz pz)))
+    ((SBIn _ _ xs1 ys1 zs1 _ _ _ _ sp1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz pz)))
   (let-match erased iz (InHere _ _)
     ((InThere _ _ _ iz1) (sb-out-key lab t xs1 ys1 zs1 z l sp1 iz1 pz)))
   (let-match erased (nth-fn _ lab z l l1 pz px) (Refl _ _))
@@ -673,7 +656,6 @@
       (apart-irrefl l (notin-in l l t ol i2)))
     ((OrR _ _ o) o)))
 
-; The darts whose labels, under a labelling constant along g, are in t form a set g never leaves.
 (def-fns _ $ (erased sb-shut : (erased (List (Nat)) lab t xs ys zs) (erased (List (Bond)) g) (erased (Nat) k) (erased (SplitBy lab t xs ys zs) sp)
     (subterm erased (Const lab g) cl) (erased (Below g k) bg) (erased (Iota k xs) io) -> (erased (Shut ys g) r))
   (let-match erased cl (ConstCons _ g1 x y l px py cl1) ((ConstNil _) (ShutNil ys)))
@@ -689,29 +671,26 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (SACons g x y R1 (MkSep g x y lab l l2 cl px py ne) (label-sepall g lab R1 ls1 x l cl px out1 rp1)))
 
-; Darts with distinct labels under a labelling constant along g are told apart by g.
 (def-fns _ $ (erased labels-pairsep : (erased (List (Bond)) g) (erased (List (Nat)) lab R ls) (erased (Const lab g) cl) (subterm erased (Respects lab R ls) rp)
     (erased (Distinct ls) dl) -> (erased (PairSep g R) r))
   (let-match erased rp (RespCons _ R1 ls1 x l px rp1) ((RespNil _) (PrNil g)))
   (let-match erased dl (DistCons _ _ out dl1))
   (PrCons g x R1 (label-sepall g lab R1 ls1 x l cl px out rp1) (labels-pairsep g lab R1 ls1 cl rp1 dl1)))
 
-; With lab the root labelling of the classes of g, the darts whose classes meet R are joined to darts of R.
 (def-fns _ $ (erased label-covers : (erased (List (Bond)) g) (erased (Nat) d) (erased (List (Nat)) ids lab rs R LR ys zs m) (erased (Iota d ids) io)
     (erased (Rooted g rs ids lab) ro) (erased (Under R d) ur) (erased (Respects lab R LR) rp) (erased (SplitBy lab LR ids ys zs) sp) (erased (Under ys d) uy)
     (subterm erased (Sub m ys) sb) -> (erased (Covers g R m) r))
   (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g R)))
   (let ((erased l) (erased px) (erased il)) (sb-in-key lab LR ids ys zs x sp ix))
   (let ((erased b) (erased ib) (erased pb)) (respects-in lab R LR l rp il))
-  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l io ro px (under-in ys x d uy ix)))
-  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs b l io ro pb (under-in R b d ur ib)))
+  (let ((erased _) (erased c1)) (classes-root g d ids lab rs x l io ro px (under-in ys x d uy ix)))
+  (let ((erased _) (erased c2)) (classes-root g d ids lab rs b l io ro pb (under-in R b d ur ib)))
   (CovCons g R m1 x b ib (conn-cat g b l x (conn-sym g l b c2) c1) (label-covers g d ids lab rs R LR ys zs m1 io ro ur rp sp uy sb1)))
 
-; Two darts with one root label are joined.
 (def-fns _ $ (erased same-root : (erased (List (Bond)) g) (erased (Nat) d x y l) (erased (List (Nat)) ids lab rs) (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro)
     (erased (Nth (Nat) lab x l) px) (erased (Nth (Nat) lab y l) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Conn g x y) r))
-  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l io ro px lx))
-  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs y l io ro py ly))
+  (let ((erased _) (erased c1)) (classes-root g d ids lab rs x l io ro px lx))
+  (let ((erased _) (erased c2)) (classes-root g d ids lab rs y l io ro py ly))
   (conn-cat g x l y (conn-sym g l x c1) c2))
 
 ; ls sends each dart x of xs in o to the position in h of the first dart of t on the walk along p from x, and every other dart to 0.
@@ -727,13 +706,13 @@
     (erased (Nth (Nat) xs i x) px) (erased (In x o) ix) (erased (FirstHit p t x z) fh) (erased (Nth (Nat) h j z) pj) -> (erased (Nth (Nat) ls i j) r))
   (match erased hv _
     (absurd (HvNil _ _ _ _) px)
-    ((HvIn _ _ _ _ xs1 ls1 y z2 j2 fh2 pj2 hv1)
+    ((HvIn _ _ _ _ xs1 ls1 _ z2 j2 fh2 pj2 hv1)
       (let-match erased px (NthHere _ _ _)
         ((NthThere _ _ _ i1 _ px1) (NthThere _ j2 ls1 i1 j (hitinv-at p t h o xs1 ls1 i1 x z j hv1 dh px1 ix fh pj))))
       (let-match erased (hit-fn p t x z2 z fh2 fh) (Refl _ _))
       (let-match erased (distinct-nth h j2 j z dh pj2 pj) (Refl _ _))
       (NthHere _ j2 ls1))
-    ((HvOut _ _ _ _ xs1 ls1 y out hv1)
+    ((HvOut _ _ _ _ xs1 ls1 _ out hv1)
       (match erased px _
         (absurd (NthHere _ _ _) (apart-irrefl x (notin-in x x o out ix)))
         ((NthThere _ _ _ i1 _ px1) (NthThere _ (Zero) ls1 i1 j (hitinv-at p t h o xs1 ls1 i1 x z j hv1 dh px1 ix fh pj)))))))
@@ -754,8 +733,7 @@
     ((OrL _ _ a2) (OrL _ _ (AdjThere g1 b x y a2)))
     ((OrR _ _ a2) (OrR _ _ a2))))
 
-; The three parts of the glink bonds g = ge . (gn . gf).
-(def-fns _ $ (erased gl-e : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) c1) (erased (Cat ge gnf g) c2) (erased (Adj ge x y) a)
+(def-fns _ $ (erased gl-e : (erased (List (Bond)) ge gn gf gnf g) (erased (Nat) x y) (erased (Cat gn gf gnf) _c1) (erased (Cat ge gnf g) c2) (erased (Adj ge x y) a)
     -> (erased (Adj g x y) r))
   (adj-cat-l ge gnf g x y a c2))
 
@@ -784,6 +762,6 @@
 
 (def-fns _ $ (erased covers-none : (erased (List (Bond)) g) (erased (List (Nat)) lab xs ys zs m) (erased (SplitBy lab (Nil (Nat)) xs ys zs) sp) (subterm erased (Sub m ys) sb)
     -> (erased (Covers g (Nil (Nat)) m) r))
-  (let-match erased sb (SubCons x m1 _ ix sb1) ((SubNil _) (CovNil g (Nil _))))
-  (let ((erased l) (erased px) (erased il)) (sb-in-key lab (Nil _) xs ys zs x sp ix))
+  (let-match erased sb (SubCons x _ _ ix _) ((SubNil _) (CovNil g (Nil _))))
+  (let ((erased _) (erased _) (erased il)) (sb-in-key lab (Nil _) xs ys zs x sp ix))
   (match erased il _))

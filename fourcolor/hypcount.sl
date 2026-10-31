@@ -1,6 +1,3 @@
-; Counting darts by orbits: when every orbit of p has c darts and there are k orbits, there are k * c darts. The darts
-; are listed orbit by orbit, from the roots of the orbit classes, and that list is compared with 0..d-1.
-
 ; zs is xs followed by ys.
 (def-adts $ (AppN : ((List (Nat)) xs ys zs) -> Type)
   enum
@@ -56,7 +53,6 @@
   (let-match erased dj (DisjCons _ _ _ oy dj1))
   (DistCons x zs1 (notin-app xs1 ys zs1 x ap1 ox oy) (app-distinct xs1 ys zs1 ap1 dx1 dy dj1)))
 
-; Two walks from x to y that never leave y are the same.
 (def-fns _ $ (erased walk-uniq : (erased (List (Nat)) p s s2 xs ys) (erased (Nat) x y) (subterm erased (Path p (Cons (Nat) y s) x y xs) w)
     (erased (Path p (Cons (Nat) y s2) x y ys) v) -> (erased (Eq (List (Nat)) xs ys) e))
   (match erased w _
@@ -72,16 +68,15 @@
 (def-fns _ $ (erased path-suffix : (erased (List (Nat)) p s xs) (erased (Nat) x y u j) (subterm erased (Path p s x y xs) w) (erased (In u xs) pu)
     (erased (Length (Nat) xs j) l) -> (erased (List (Nat)) zs) (erased (Nat) j2) (erased (Path p s u y zs) r) (erased (Length (Nat) zs j2) l2)
     (erased (Lt j2 (Succ j)) lt))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) (absurd (PathHere _ _ _) pu))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ _ _ w1) (absurd (PathHere _ _ _) pu))
   (let-match erased l (LengthCons _ _ _ j1 l1))
   (let-match erased (nat-eq u x) (Unequal _ _ _ _ ne) ((Equal _ _ _) (values xs j w l (lt-succ j))))
   (let ((erased zs) (erased j2) (erased r) (erased l2) (erased lt)) (path-suffix p s xs1 x1 y u j1 w1 (in-tail u x xs1 pu ne) l1))
   (values zs j2 r l2 (lt-weaken j2 (Succ j1) lt)))
 
-; A walk that never leaves its end visits no dart twice.
 (def-fns _ $ (erased walk-distinct : (erased (List (Nat)) p s xs) (erased (Nat) x y) (subterm erased (Path p (Cons (Nat) y s) x y xs) w)
     -> (erased (Distinct xs) r))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) ((PathHere _ _ _) (DistNil)))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ _ _ w1) ((PathHere _ _ _) (DistNil)))
   (let-match erased (in-dec x xs1) (OrR _ _ ox)
     (absurd (OrL _ _ ix)
       (let ((erased j) (erased lj)) (length-exists _ xs1))
@@ -127,7 +122,6 @@
   (let-match erased (nsum-fn ns1 s1 s2 p1 q1) (Refl _ _))
   (add-fn c s1 a b a1 a2))
 
-; The cycles through the darts rs, whose orders are os, laid end to end.
 (def-fns _ $ (erased orbcat-sum : (erased (List (Nat)) p rs os) (subterm erased (Orders p rs os) ob)
     -> (erased (List (Nat)) ls) (erased (Nat) len) (erased (OrbCat p rs ls) oc) (erased (Length (Nat) ls len) l) (erased (NSum os len) sm))
   (let-match erased ob (OrdCons _ rs1 os1 r c o ob1) ((OrdNil _) (values (Nil _) (Zero) (OCNil p) (LengthNil _) (NSNil))))
@@ -157,14 +151,13 @@
 (def-fns _ $ (erased orbcat-label : (erased (Nat) d x) (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (List (Nat)) lab rs0 rs ls) (erased (Graph d p g) gr) (erased (Const lab g) cl)
     (erased (Respects lab rs0 rs0) fix) (erased (Sub rs rs0) sb) (subterm erased (OrbCat p rs ls) oc) (erased (In x ls) ix)
     -> (erased (Nat) l) (erased (Nth (Nat) lab x l) pl) (erased (In l rs) il))
-  (let-match erased oc (OCCons _ rs1 xs ls1 _ r y py w ap oc1) (absurd (OCNil _) ix))
+  (let-match erased oc (OCCons _ rs1 xs ls1 _ r y _ w ap oc1) (absurd (OCNil _) ix))
   (let-match erased sb (SubCons _ _ _ ir sb1))
   (let-match erased (app-in-inv (Cons _ r xs) ls1 ls x ap ix) (OrR _ _ i)
     ((OrL _ _ i) (values r (orbit-label d r y x p g lab xs gr cl w (fixed-in lab rs0 r fix ir) i) (InHere r rs1))))
   (let ((erased l) (erased pl) (erased il)) (orbcat-label d x p g lab rs0 rs1 ls1 gr cl fix sb1 oc1 i))
   (values l pl (InThere l r rs1 il)))
 
-; No dart of m, part of the cycle through r, is in ls, whose darts have their roots in rs, which does not hold r.
 (def-fns _ $ (erased orb-disj : (erased (Nat) d r y) (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (List (Nat)) lab rs0 rs xs ls m) (erased (Graph d p g) gr) (erased (Const lab g) cl)
     (erased (Respects lab rs0 rs0) fix) (erased (Sub rs rs0) sb) (erased (OrbCat p rs ls) oc) (erased (Path p (Cons (Nat) r (Nil (Nat))) y r xs) w)
     (erased (Nth (Nat) lab r r) prr) (erased (NotIn r rs) out) (subterm erased (Sub m (Cons (Nat) r xs)) sm) -> (erased (Disj m ls) res))
@@ -178,7 +171,7 @@
 
 (def-fns _ $ (erased orbcat-distinct : (erased (Nat) d) (erased (List (Nat)) p) (erased (List (Bond)) g) (erased (List (Nat)) lab rs0 rs ls) (erased (Graph d p g) gr) (erased (Const lab g) cl)
     (erased (Respects lab rs0 rs0) fix) (erased (Sub rs rs0) sb) (erased (Distinct rs) dr) (subterm erased (OrbCat p rs ls) oc) -> (erased (Distinct ls) r))
-  (let-match erased oc (OCCons _ rs1 xs ls1 _ r y py w ap oc1) ((OCNil _) (DistNil)))
+  (let-match erased oc (OCCons _ rs1 xs ls1 _ r y _ w ap oc1) ((OCNil _) (DistNil)))
   (let-match erased sb (SubCons _ _ _ ir sb1))
   (let-match erased dr (DistCons _ _ out dr1))
   (app-distinct (Cons _ r xs) ls1 ls ap (DistCons r xs (path-avoid p _ xs y r r w (InHere r _)) (walk-distinct p _ xs y r w))
@@ -210,7 +203,6 @@
   (let ((erased irt) (erased cn)) (classes-root g d ids lab rs x rt io ro prt lx))
   (SubCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (cover-sub d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
-; The orders os of p at the roots rs of its classes sum to d.
 (def-fns _ $ (erased orbit-sum : (erased (Nat) d) (erased (List (Nat)) p q ids lab rs os) (erased (List (Bond)) g) (erased (Perm d p q) pm) (erased (Graph d p g) gr)
     (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Distinct rs) dr) (erased (Respects lab rs rs) fix) (erased (Const lab g) cl)
     (erased (Rooted g rs ids lab) ro) (erased (Orders p rs os) ob) -> (erased (NSum os d) r))
@@ -222,7 +214,6 @@
   (let-match erased (le-antisym len d p1 p2) (Refl _ _))
   m)
 
-; If every dart has order c under p, and p has k orbits, then k * c = d.
 (def-fns _ $ (erased orbit-count : (erased (Nat) d k c) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob)
     (erased (AllOrder d p c) ao) -> (erased (Mul k c d) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
