@@ -238,11 +238,11 @@
   enum
   (many MkLeafC : (many (Nat) n) (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) k) -> (LeafC)))
 
-(def-fns _ $ (many leaf-table : (subterm many (Nat) k) (many (Nat) n) (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) h)
+(def-fns _ $ (many leaf-chains : (subterm many (Nat) k) (many (Nat) n) (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) h)
     -> (many (List (LeafC)) tbl))
   (let ((many e)) (MkLeafC n t r h))
   (let-match many k (Succ k1) ((Zero) (Cons _ e (Nil _))))
-  (Cons _ e (notail $ leaf-table k1 (Succ n) (CLeaf t) (RootL t n r) (HL t h))))
+  (Cons _ e (notail $ leaf-chains k1 (Succ n) (CLeaf t) (RootL t n r) (HL t h))))
 
 (def-fns _ $ (erased leaf-cev : (erased (ES) st) (erased (NotOdd st) no) (erased (Ctree) t) (erased (CtH (Zero) t) h) -> (erased (CEv t st) c))
   (match erased h _ ((HE _) (CEvE st)) ((HL lf _) (CEvL lf st no))))
@@ -303,4 +303,4 @@
 (def-fns _ $ (many ctree-full : (many (Nat) h) (many (Gtree) gtu) ->
     (many (Ctree) ctu) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (CEv ctu (ESStart)) ce)
     (erased (CtH (Succ h) ctu) hc))
-  (ct-build (leaf-table 1500 (Zero) (CEmpty) (RootE) (HE (Zero))) (Succ h) (Cons _ (MkRx _ (BS0) (GSG gtu)) $ Nil _) (ESStart)))
+  (ct-build (leaf-chains 1500 (Zero) (CEmpty) (RootE) (HE (Zero))) (Succ h) (Cons _ (MkRx _ (BS0) (GSG gtu)) $ Nil _) (ESStart)))

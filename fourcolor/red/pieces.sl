@@ -3,8 +3,8 @@
 
 (def-adts $ (CfApp : ((List (Config)) a b c) -> Type)
   enum
-  (many CANil : (erased (List (Config)) b) -> (CfApp (Nil (Config)) b b))
-  (many CACons : (erased (Config) x) (erased (List (Config)) a b c) (erased (CfApp a b c) p)
+  (many CfANil : (erased (List (Config)) b) -> (CfApp (Nil (Config)) b b))
+  (many CfACons : (erased (Config) x) (erased (List (Config)) a b c) (erased (CfApp a b c) p)
       -> (CfApp (Cons (Config) x a) b (Cons (Config) x c))))
 
 (def-adts $ (CfCat : ((List (List (Config))) kss) ((List (Config)) cfs) -> Type)
@@ -36,17 +36,17 @@
 
 (def-fns _ $ (erased cat-front : (erased (List (Config)) a b c) (subterm erased (CfApp a b c) q) (erased (List (List (Config))) kss)
     (erased (CfCat kss b) p) -> (erased (CfCat (Cons (List (Config)) a kss) c) r))
-  (let-match erased q (CACons x a1 _ c1 q1) ((CANil _) (FSkip kss b p)))
+  (let-match erased q (CfACons x a1 _ c1 q1) ((CfANil _) (FSkip kss b p)))
   (FCons x a1 c1 kss (cat-front a1 b c1 q1 kss p)))
 
-(def-fns _ $ (erased app-nil : (subterm erased (List (Config)) a) -> (erased (CfApp a (Nil (Config)) a) q))
-  (let-match erased a (Cons _ x a1) ((Nil _) (CANil (Nil _))))
-  (CACons x a1 (Nil _) a1 (app-nil a1)))
+(def-fns _ $ (erased cf-app-nil : (subterm erased (List (Config)) a) -> (erased (CfApp a (Nil (Config)) a) q))
+  (let-match erased a (Cons _ x a1) ((Nil _) (CfANil (Nil _))))
+  (CfACons x a1 (Nil _) a1 (cf-app-nil a1)))
 
 (def-fns _ $ (many cf-append : (subterm many (List (Config)) a) (many (List (Config)) b) -> (many (List (Config)) c) (erased (CfApp a b c) q))
-  (let-match many a (Cons _ x a1) ((Nil _) (values b (CANil b))))
+  (let-match many a (Cons _ x a1) ((Nil _) (values b (CfANil b))))
   (let ((many c) (erased q)) (notail $ cf-append a1 b))
-  (values (Cons _ x c) (CACons x a1 b c q)))
+  (values (Cons _ x c) (CfACons x a1 b c q)))
 
 (def-fns _ $ (many cf-concat : (subterm many (List (List (Config))) kss) -> (many (List (Config)) cfs) (erased (CfCat kss cfs) q))
   (let-match many kss (Cons _ cs rest) ((Nil _) (values (Nil _) (FNil))))
@@ -55,14 +55,14 @@
   (values c (cat-front cs b c q rest p)))
 
 (def-fns _ $ (many cf-take : (subterm many (Nat) n) (many (List (Config)) cs) -> (many (List (Config)) a b) (erased (CfApp a b cs) q))
-  (let-match many n (Succ n1) ((Zero) (values (Nil _) cs (CANil cs))))
-  (let-match many cs (Cons _ x rest) ((Nil _) (values (Nil _) cs (CANil cs))))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) cs (CfANil cs))))
+  (let-match many cs (Cons _ x rest) ((Nil _) (values (Nil _) cs (CfANil cs))))
   (let ((many a) (many b) (erased q)) (notail $ cf-take n1 rest))
-  (values (Cons _ x a) b (CACons x a b rest q)))
+  (values (Cons _ x a) b (CfACons x a b rest q)))
 
 (def-fns _ $ (many cf-cut : (subterm many (List (Nat)) ns) (many (List (Config)) cfs) -> (many (List (List (Config))) pcs) (erased (CfCat pcs cfs) q))
   (let-match many ns (Cons _ n rest)
-    ((Nil _) (values (Cons _ cfs (Nil _)) (cat-front cfs (Nil _) cfs (app-nil cfs) (Nil _) (FNil)))))
+    ((Nil _) (values (Cons _ cfs (Nil _)) (cat-front cfs (Nil _) cfs (cf-app-nil cfs) (Nil _) (FNil)))))
   (let ((many a) (many b) (erased q)) (cf-take n cfs))
   (let ((many pcs) (erased p)) (notail $ cf-cut rest b))
   (values (Cons _ a pcs) (cat-front a b cfs q pcs p)))

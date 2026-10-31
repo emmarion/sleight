@@ -546,15 +546,15 @@
   (let ((many p) (many s) (erased a) (erased lp)) (notail $ take-app-c _ k1 rest m1 l1 le1))
   (values (Cons _ x p) s (CatCons A x p s rest a) (LengthCons A x p k1 lp)))
 
-(def-fns _ $ (many app-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (App A xs ys zs) a))
+(def-fns _ $ (many lapp-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (App A xs ys zs) a))
   (let-match many xs (Cons _ x rest) ((Nil _) (values ys (CatNil A ys))))
-  (let ((many zs) (erased a)) (notail $ app-c _ rest ys))
+  (let ((many zs) (erased a)) (notail $ lapp-c _ rest ys))
   (values (Cons _ x zs) (CatCons A x rest ys zs a)))
 
 (def-fns _ $ (many rot-in-c : (erased Type A) (many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
     -> (many (List A) ys) (erased (Rot A k xs ys) r))
   (let ((many p) (many s) (erased a) (erased lp)) (take-app-c _ k xs m l le))
-  (let ((many ys) (erased b)) (app-c _ s p))
+  (let ((many ys) (erased b)) (lapp-c _ s p))
   (values ys (RotIn _ k m xs ys l le (rots-app A k p s xs ys a b lp))))
 
 (def-fns _ $ (many rot-app-c : (erased Type A) (many (Nat) k) (many (List A) xs) -> (many (List A) ys) (erased (Rot A k xs ys) r))
