@@ -534,6 +534,13 @@
     ((MvIn _ _ _ _ x y x2 y2 ix iy px py cn rest) (MvIn gh1 g2 xs f x y x2 y2 ix iy px py cn (moves-cat g1 h gh1 g2 xs f c1 rest mh)))
     ((MvOut _ _ _ _ x y ox oy rest) (MvOut gh1 g2 xs f x y ox oy (moves-cat g1 h gh1 g2 xs f c1 rest mh)))))
 
+(def-fns _ $ (erased shut-cat : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s g) sg)
+    (erased (Shut s h) sh) -> (erased (Shut s gh) r))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) sh))
+  (match erased sg _
+    ((ShutIn _ _ x y px py rest) (ShutIn s gh1 x y px py (shut-cat s g1 h gh1 c1 rest sh)))
+    ((ShutOut _ _ x y px py rest) (ShutOut s gh1 x y px py (shut-cat s g1 h gh1 c1 rest sh)))))
+
 (def-fns _ $ (erased shut-cat-l : (erased (List (Nat)) s) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Shut s gh) sh) -> (erased (Shut s g) r))
   (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) (ShutNil s)))
   (match erased sh _

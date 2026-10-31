@@ -57,7 +57,7 @@ Each prints `--goal proved: PASS` on standard output on success, with the
 goal and where it is discharged as notes on standard error.
 
 The script passes the unit's files (for `FourColor`, three from `std/`
-and 139 from this directory) in the order the unit needs, with
+and 137 from this directory) in the order the unit needs, with
 `--goal proved` and `--inline 200` (passed on to ocamlopt), and, for the
 reference compiler only, under `ulimit -s unlimited` (slc passes with
 the default 8 MB stack). It sets `OCAMLRUNPARAM=o=400` unless the variable is already

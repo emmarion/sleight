@@ -44,7 +44,7 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
   `quiz.v`, `cfquiz.v`, `hubcap.v`, `discharge.v` and `present.v`).
 - Definitions and proofs that follow the Coq development's statements,
   and often its proofs, in Sleight: the `hyp*.sl` files (`hypermap.v`,
-  `geometry.v`, `walkup.v`, `jordan.v`), `cube.sl`, `cubegoal.sl`, `coloring.sl`,
+  `geometry.v`, `walkup.v`, `jordan.v`), `cube.sl`, `coloring.sl`,
   `ringtrace.sl`, `ringdec.sl`, `kempemap.sl`, `patch.sl`, `patch2.sl`,
   `sew.sl`, `snip.sl`,
   `revsnip.sl`, `revsnip2.sl`, `revsnip3.sl`, `hypsub.sl`, `geomring.sl`, `srcycle.sl` and `birkhoff.sl`

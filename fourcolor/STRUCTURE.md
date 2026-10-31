@@ -24,7 +24,7 @@ maps:
   proof (NOTICE.md), restated in Sleight. A `PlaneMap` is a hypermap of
   genus 0 that is bridgeless (`hypplane.sl`'s `plane-hypermap`), so
   `reduce2.sl` needs a four-colouring of every planar bridgeless hypermap;
-  `cubegoal.sl`'s cube construction reduces that to plain cubic maps
+  `cube.sl`'s cube construction reduces that to plain cubic maps
   (`reduce3.sl`), and `inductfc.sl` gets those from an `Analysis` by
   induction on the number of darts. `embed.sl`'s `embed-analysis` builds
   the `Analysis` from unavoidability, reducibility and the Birkhoff
@@ -144,10 +144,10 @@ The unit is these files in this order (`check.sh`), written without
   and the genus, dual and mirror, renaming darts, Walkup transforms.
 - `hypgeom`: definitions of `geometry.v` (`Moebius`, `Connected`,
   `Precubic`, `AllOrder`, `SCycle`, `Fband`, `Kernel`, ...).
-- `hypjordan`, `hyptree`, `hypwalkeq`, `hypcount`, `hypcubic`:
+- `hypjordan`, `hyptree`, `hypcount`, `hypcubic`:
   `planar-moebius`, Euler for trees, the equality case of Walkup,
   `orbit-sum`, cubic Euler.
-- `cube`, `cubegoal`: the cube construction; `cube-reduction`.
+- `cube`: the cube construction; `cube-reduction`.
 - `reduce3`: `cubic-reduction`.
 - `coloring`: the colouring search (`search-ring`, `NoExt`,
   `noext-sound`); colourings of the dual and mirror.
@@ -253,7 +253,7 @@ its files named as in the load order:
   std/list.sl ring defs orient base sweep geo plan map lists planemap walk
   frontier labels rot fan build readback parta reduce hypgraph hypperm
   hypermap hypplane reduce2 hypeuler hypderived hyprelabel hypwalkup
-  hypgeom hypjordan hyptree hypwalkeq hypcount hypcubic cfmap colalias
+  hypgeom hypjordan hyptree hypcount hypcubic cfmap colalias
   unav/faces red/red cpmap red/color cfcolor red/configs unav/realias`,
   then `unav/` `part quiz hubcap present fit dbound hubcapc obsmap dscore
   dsum posz pwalk hubsound pwsound conv cap unav data qfit rdart redc

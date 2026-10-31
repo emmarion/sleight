@@ -17,7 +17,7 @@ esac
 F="std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl"
 for x in defs orient base sweep geo plan map lists planemap walk frontier labels rot fan build readback $mid \
   parta reduce hypgraph hypperm hypermap hypplane reduce2 hypeuler hypderived hyprelabel hypwalkup hypgeom \
-  hypjordan hyptree hypwalkeq hypcount hypcubic cube cubegoal reduce3 coloring induct inductfc cfmap colalias \
+  hypjordan hyptree hypcount hypcubic cube reduce3 coloring induct inductfc cfmap colalias \
   hypsub unav/faces red/red cpmap red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict red/kempe \
   cpcolor red/configs red/bridge red/init red/check red/gramrot red/cfred red/ccomp red/ccheck red/bcheck \
   cpcomp iealias realias ringtrace kempemap patch patch2 split geomring sew snip srcycle revsnip revsnip2 \
