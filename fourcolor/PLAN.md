@@ -136,15 +136,16 @@ as before, and the reference compiler about 129 s and 133 s. What is
 left appears to be mostly the checkers' own work per entry; in stack
 samples of the reference compiler about a quarter of the time was in
 `Env.opens_ruled`, which walks every opened `Matchable` (about 1100 in
-this chain) for each rule. The largest single form left is
-`unav/qztproof.sl`'s run-position `all-regs` (about 5 s with slc and 16 s
-with the reference compiler, one run each). Timed in parts, nearly all
-of it appeared to be the decoding of the seven presentation scripts from
-their strings (`script-by`, roughly 20 µs a character with slc and 80 µs
-with the reference compiler, for about 200,000 characters); the walk to
-each region runs on the skeleton with the left subtrees along its path
-replaced by `SRed` (`prune-left`), so that it runs no `check2-c`, and
-appeared to take about half a second. Lopsided matches remain in `red/`, and shadow
+this chain) for each rule. `unav/qztproof.sl`'s run-position `all-regs`
+decodes only the skeletons of the three walks that are cut into regions
+(about 1,600 characters, which `data.sl` gives apart from the regions'
+own strings), and walks to each region on its skeleton with the left
+subtrees along the path replaced by `SRed` (`prune-left`), so that it
+runs no `check2-c`. Timed between marks on the qztgoal chain, it took
+about 0.08 s with slc and 0.2 s with the reference compiler, where
+decoding the whole scripts first (about 200,000 characters, roughly 20 µs
+a character with slc and 90 µs with the reference compiler) took about
+4.3 s and 19 s (one run each). Lopsided matches remain in `red/`, and shadow
 warnings mostly in `unav/` and at `red/red.sl`'s `cc` and
 `unav/part.sl`'s `pc` and `pf`. In a later paired run to
 `embed4proof.sl`, slc took about 32 s and the reference compiler about
@@ -1271,8 +1272,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   passed, in about 4.4 s of compute; five broken variants of the arity-5
   script were rejected. It carries no proofs yet. `data.sl`, which
   `gen.py` writes from the Coq sources, spells each presentation script
-  as a string of numbers that `present.sl`'s `script-of` reads at run
-  time; as nested constructor applications the scripts made about 13 MB
+  as strings of numbers that `present.sl`'s `script-from` reads at run
+  time (`script-src`): a walk of more than 800 leaves as its skeleton,
+  with each largest subtree of 100 to 800 leaves left as `SCut`, and one
+  string per such subtree, in walk order, which `script-from` puts back
+  in place; any other walk as a skeleton with no `SCut`. As nested
+  constructor applications the scripts made about 13 MB
   of the 21 MB of OCaml that `native-compute` wrote for `qztgoal.sl` in
   one run.
 
@@ -1349,9 +1354,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
-  (`CfEmbed`). The walk of each arity is cut into regions
-  (`cut-script`: the largest subtrees of 100 to 800 leaves, and the rest
-  of the walk with those left as `SCut`), and `qztproof.sl` queues one
+  (`CfEmbed`). The walk of each arity is cut into regions (the
+  subtrees that `data.sl` spells apart, and the skeleton of the walk with
+  those left as `SCut`; `walk-skel` reads their paths off the skeleton), and `qztproof.sl` queues one
   `native.sl` job per region (`reg-c`) and one for the cap checks
   (`cap-run`); each job builds its own quiz tree from the cfs that
   `cfs-run` gives it (`cfs-tree`), so no job refers to cfs but through `cfs-run`. A region's job walks
@@ -1386,10 +1391,13 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
   qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal
   proved`. On that chain, with `OCAMLRUNPARAM=o=400` and `--inline 200`,
-  it passed with slc in about 27 s of wall time (46 s of CPU) in one run on a 4-core cloud VM shared with
-  other runs, and with the reference compiler in about 59 s (79 s of CPU); there, with
-  the two parts of each region but the roots swapped in `push-regs`, it was rejected (a
-  job answered `ChkNo`). `unave.sl` holds
+  it passed with slc in about 28 s of wall time (50 s of CPU) in one run on a 4-core cloud VM shared with
+  other runs, and with the reference compiler in about 43 s (68 s of CPU); there, with
+  the two parts of each region but the roots swapped in `push-regs`, it was rejected, as
+  it was with the first two region strings of the arity-7 walk swapped in `data.sl` (in each a
+  job answered `ChkNo`). `RegOK` and `AllReg` do not mention a script, so the skeletons
+  and region strings appear to be data the jobs check against, and a wrong one to cost
+  only completeness. `unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
   without the goal. Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
