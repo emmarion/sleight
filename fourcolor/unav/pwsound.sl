@@ -100,7 +100,7 @@
     (match erased dp _
       ((PRed _ _ _ _ _ _ m) (PHPos d y pos neg e n f ks drs ct out p ly ds lt x m))
       ((PCut _ _ _ _ _ _ c)
-        (let-match erased c (MkCutAt _ h _ m mh sb lp lh))
+        (let-match erased c (MkInCut _ h _ m mh sb lp lh))
         (PHCut d y pos neg e n f ks drs ct out h ly ds lt (exact-sub-at e f ks y m p h x sb lp lh) mh))
       ((PHub _ _ _ _ acc o _ _ hc l cv ix w e1)
         (PHMap d e n f ks drs ct out (map-hit-ext d e f ks o out (hub-sound d y nhub pos neg e n f ks ws drs rt rs acc o p hc g ly ds lt x l sz iw ta cv ix w) e1)))

@@ -18,12 +18,12 @@
       (erased (HcIdx nhub hc) rest) -> (HcIdx nhub (Cons (Hc) (HC2 j1 j2 b) hc))))
 
 ; h: a part of ct containing p, both of length m.
-(def-adts $ (CutAt : ((List (Sub)) p) ((List (List (Sub))) ct) -> Type)
+(def-adts $ (InCut : ((List (Sub)) p) ((List (List (Sub))) ct) -> Type)
   enum
-  (many MkCutAt : (erased (List (Sub)) p h) (erased (List (List (Sub))) ct) (erased (Nat) m) (erased (Mem (List (Sub)) h ct) mh)
-      (erased (Pw (Sub) (Sub) SubSub p h) sb) (erased (Length (Sub) p m) lp) (erased (Length (Sub) h m) lh) -> (CutAt p ct)))
+  (many MkInCut : (erased (List (Sub)) p h) (erased (List (List (Sub))) ct) (erased (Nat) m) (erased (Mem (List (Sub)) h ct) mh)
+      (erased (Pw (Sub) (Sub) SubSub p h) sb) (erased (Length (Sub) p m) lp) (erased (Length (Sub) h m) lh) -> (InCut p ct)))
 
-(def-fns _ $ (many cut-find : (many (List (Sub)) p) (subterm many (List (List (Sub))) ct) -> (many (Bool) ok) (erased (IfT ok (CutAt p ct)) w))
+(def-fns _ $ (many cut-find : (many (List (Sub)) p) (subterm many (List (List (Sub))) ct) -> (many (Bool) ok) (erased (IfT ok (InCut p ct)) w))
   (let-match many ct (Cons _ h rest) ((Nil _) (values (BFalse) (IfF _))))
   (let ((many m) (erased lp)) (list-count _ p))
   (let ((many m2) (erased lh)) (list-count _ h))
@@ -33,13 +33,13 @@
       (let-match many (nat-eq m m2) (Equal _ _ _) (else (values (BFalse) (IfF _))))
       (let-match many c (PSub) (else (values (BFalse) (IfF _))))
       (let-match erased a (AnsSub _ _ sb))
-      (values (BTrue) (IfY _ (MkCutAt p h ct m (MemHere _ h rest) sb lp lh))))
+      (values (BTrue) (IfY _ (MkInCut p h ct m (MemHere _ h rest) sb lp lh))))
     ((BFalse)
       (let ((many ok) (erased w)) (tail $ cut-find p rest))
       (values ok (match erased w _
         ((IfY _ ca)
-          (let-match erased ca (MkCutAt _ h2 _ m3 mh sb2 lp2 lh2))
-          (IfY _ (MkCutAt p h2 ct m3 (MemThere _ h2 h rest mh) sb2 lp2 lh2)))
+          (let-match erased ca (MkInCut _ h2 _ m3 mh sb2 lp2 lh2))
+          (IfY _ (MkInCut p h2 ct m3 (MemThere _ h2 h rest mh) sb2 lp2 lh2)))
         ((IfF _) (IfF _)))))))
 
 ; ct: the cut list; out: the obligations; Forced p0 p o: a valid hub fitting p0 exactly fits p exactly, unless o holds of it.
@@ -48,7 +48,7 @@
     enum
     (many PRed : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (Mem (List (Sub)) p out) m)
         -> (Pres nhub rt rs ct p out))
-    (many PCut : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (CutAt p ct) c)
+    (many PCut : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (InCut p ct) c)
         -> (Pres nhub rt rs ct p out))
     (many PHub : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc o out) (erased (List (Sub)) p) (erased (List (Hc)) hc)
         (erased (Length (Sub) p nhub) l) (erased (CoverOk nhub hc) cv) (erased (HcIdx nhub hc) ix) (erased (HFit nhub p rt rs hc acc o) w)
