@@ -249,7 +249,7 @@
     enum
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK)) (many StDefUnique : -> (StmtK))
     (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK))
-    (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
+    (many StOpenAdt : -> (StmtK)) (many StDumpContext : -> (StmtK)) (many StSlotSelf : -> (StmtK)) (many StSlotTag : -> (StmtK)) (many StOpenAtFn : -> (StmtK))
     (many StCompileError : -> (StmtK)) (many StCompileWarn : -> (StmtK)) (many StDefOpaque : -> (StmtK)) (many StDefPrim : -> (StmtK)) (many StGoal : -> (StmtK)) (many StQed : -> (StmtK)))
   ((FormerK : -> Type)
     enum
@@ -274,7 +274,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK)) (many MkNoTail : -> (MarkK)) (many MkImm : -> (MarkK))))
 
 (def-fns _ $ (many stmt-code : (many (StmtK) k) -> (many (Nat) n))
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StOpenAdt) 7) ((StDefUnique) 8) ((StDumpContext) 9) ((StSlotSelf) 10) ((StOpenAtFn) 11) ((StCompileError) 12) ((StCompileWarn) 13) ((StDefOpaque) 14) ((StDefPrim) 15) ((StGoal) 16) ((StQed) 17) ((StSlotTag) 18)))
 
 (def-fns _ $ (many former-code : (many (FormerK) k) -> (many (Nat) n))
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoUniqueFn) 4) ((FoCell) 5)))
@@ -326,7 +326,7 @@
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
   sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
   sp-cons "Matchable" (SpFormer $ FoMatchable) $
-  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "imm" (SpMark $ MkImm) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
+  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "slot-of" (SpExpr $ ExSlotOf) $ sp-cons "slot-self" (SpStmt $ StSlotSelf) $ sp-cons "slot-tag" (SpStmt $ StSlotTag) $ sp-cons "at-fn-of" (SpExpr $ ExAtFnOf) $ sp-cons "open-at-fn" (SpStmt $ StOpenAtFn) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "imm" (SpMark $ MkImm) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
   sp-cons "numeral-of" (SpExpr $ ExNumeralOf) $ sp-cons "level-of" (SpExpr $ ExLevelOf) $ sp-cons "prove-subterm" (SpExpr $ ExProveSubterm) $
   sp-cons "prove-predates" (SpExpr $ ExProvePredates) $ sp-cons "values" (SpExpr $ ExValues) $
   sp-cons "predates-trans" (SpExpr $ ExPredatesTrans) $ sp-cons "subterm-trans" (SpExpr $ ExSubtermTrans) $
@@ -412,7 +412,7 @@
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExStrGet : -> (Extern 2)) (many ExNatStr : -> (Extern 1)) (many ExStrNat : -> (Extern 1))
     (many ExU62Add : -> (Extern 2)) (many ExU62Sub : -> (Extern 2)) (many ExU62Mul : -> (Extern 2)) (many ExU62Div : -> (Extern 2)) (many ExU62Divmod : -> (Extern 2)) (many ExU62Mod : -> (Extern 2)) (many ExU62Cmp : -> (Extern 2))
-    (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExNatEq : -> (Extern 2)) (many ExU62Eq : -> (Extern 2)) (many ExStrEq : -> (Extern 2))
+    (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExNatFitsU62 : -> (Extern 1)) (many ExNatEq : -> (Extern 2)) (many ExU62Eq : -> (Extern 2)) (many ExStrEq : -> (Extern 2))
     (many ExBitLength : -> (Extern 1)) (many ExU62BitLength : -> (Extern 1)) (many ExBitTest : -> (Extern 2)) (many ExU62BitTest : -> (Extern 2)) (many ExArrayGet : -> (Extern 2))
     (many ExArrayGetMany : -> (Extern 2)) (many ExArrayLengthMany : -> (Extern 1)) (many ExArrayLengthDec : -> (Extern 1)) (many ExBytesLengthDec : -> (Extern 1)) (many ExArrayLengthDecMany : -> (Extern 1)) (many ExBytesLengthDecMany : -> (Extern 1))
     (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
@@ -420,6 +420,7 @@
     (many ExBytesCopy : -> (Extern 1)) (many ExArrayCopy : -> (Extern 1))
     (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5))
     (many ExBytesBlitMany : -> (Extern 5)) (many ExArrayBlitMany : -> (Extern 5)) (many ExArrayMove : -> (Extern 5))
+    (many ExArrayBlitImm : -> (Extern 5)) (many ExArrayBlitManyImm : -> (Extern 5)) (many ExArrayMoveImm : -> (Extern 5))
     (many ExSlotsNew : -> (Extern 0)) (many ExSlotsFind : -> (Extern 2)) (many ExSlotsIntern : -> (Extern 2)) (many ExSlotsLength : -> (Extern 1)))
   ((SomeExtern : -> Type)
     enum
@@ -439,13 +440,14 @@
     ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExShl) (None _)) ((ExShr) (None _)) ((ExU62Shl) (None _)) ((ExU62Shr) (None _)) ((ExNatAnd) (None _)) ((ExNatOr) (None _)) ((ExNatXor) (None _)) ((ExU62And) (None _)) ((ExU62Or) (None _)) ((ExU62Xor) (None _)) ((ExU62Inc) (None _)) ((ExU62Dec) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
     ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExStrGet) (None _)) ((ExNatStr) (None _)) ((ExStrNat) (Some _ $ Cons _ 0 $ Cons _ 1 $ Nil _))
     ((ExU62Add) (None _)) ((ExU62Sub) (None _)) ((ExU62Mul) (None _)) ((ExU62Div) (None _)) ((ExU62Divmod) (None _)) ((ExU62Mod) (None _)) ((ExU62Cmp) (Some _ cmp))
-    ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExArrayGet) (None _))
+    ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExNatFitsU62) (Some _ dec)) ((ExArrayGet) (None _))
     ((ExNatEq) (Some _ dec)) ((ExU62Eq) (Some _ dec)) ((ExStrEq) (Some _ dec)) ((ExBitLength) (None _)) ((ExU62BitLength) (None _)) ((ExBitTest) (Some _ dec)) ((ExU62BitTest) (Some _ dec))
     ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _)) ((ExArrayLengthDec) (Some _ dec)) ((ExBytesLengthDec) (Some _ dec)) ((ExArrayLengthDecMany) (Some _ dec)) ((ExBytesLengthDecMany) (Some _ dec))
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
     ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))
     ((ExBytesBlitMany) (None _)) ((ExArrayBlitMany) (None _)) ((ExArrayMove) (None _))
+    ((ExArrayBlitImm) (None _)) ((ExArrayBlitManyImm) (None _)) ((ExArrayMoveImm) (None _))
     ((ExSlotsNew) (None _)) ((ExSlotsFind) (Some _ $ Cons _ 1 $ Cons _ 0 $ Nil _)) ((ExSlotsIntern) (Some _ $ Cons _ 1 $ Cons _ 1 $ Nil _)) ((ExSlotsLength) (None _))))
 
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
@@ -455,10 +457,11 @@
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2) ((ExShl) 2) ((ExShr) 2) ((ExU62Shl) 2) ((ExU62Shr) 2) ((ExNatAnd) 2) ((ExNatOr) 2) ((ExNatXor) 2) ((ExU62And) 2) ((ExU62Or) 2) ((ExU62Xor) 2) ((ExU62Inc) 1) ((ExU62Dec) 1)
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExStrGet) 2) ((ExNatStr) 1) ((ExStrNat) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
-    ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1) ((ExArrayLengthDec) 1) ((ExBytesLengthDec) 1) ((ExArrayLengthDecMany) 1) ((ExBytesLengthDecMany) 1)
+    ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExNatFitsU62) 1) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1) ((ExArrayLengthDec) 1) ((ExBytesLengthDec) 1) ((ExArrayLengthDecMany) 1) ((ExBytesLengthDecMany) 1)
     ((ExNatEq) 2) ((ExU62Eq) 2) ((ExStrEq) 2) ((ExBitLength) 1) ((ExU62BitLength) 1) ((ExBitTest) 2) ((ExU62BitTest) 2)
     ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
     ((ExBytesBlitMany) 5) ((ExArrayBlitMany) 5) ((ExArrayMove) 5)
+    ((ExArrayBlitImm) 5) ((ExArrayBlitManyImm) 5) ((ExArrayMoveImm) 5)
     ((ExSlotsNew) 0) ((ExSlotsFind) 2) ((ExSlotsIntern) 2) ((ExSlotsLength) 1)))
 
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
@@ -468,6 +471,7 @@
     ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesLengthMany) (ExBytesLength)) ((ExArrayLengthDecMany) (ExArrayLengthDec)) ((ExBytesLengthDecMany) (ExBytesLengthDec))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     ((ExBytesBlitMany) (ExBytesBlit)) ((ExArrayBlitMany) (ExArrayBlit)) ((ExArrayMove) (ExArrayBlit))
+    ((ExArrayBlitImm) (ExArrayBlit)) ((ExArrayBlitManyImm) (ExArrayBlit)) ((ExArrayMoveImm) (ExArrayBlit))
     (else e)))
 
 (def-fns _ $ (many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s))
@@ -480,13 +484,14 @@
     ((ExNatHalve) "nat-halve") ((ExTrim) "trim") ((ExFlatten) "flatten")
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExStrGet) "str-get") ((ExNatStr) "nat-str") ((ExStrNat) "str-nat")
     ((ExU62Add) "u62-add") ((ExU62Sub) "u62-sub") ((ExU62Mul) "u62-mul") ((ExU62Div) "u62-div") ((ExU62Divmod) "u62-divmod") ((ExU62Mod) "u62-mod") ((ExU62Cmp) "u62-cmp")
-    ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExArrayGet) "array-get")
+    ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExNatFitsU62) "nat-fits-u62") ((ExArrayGet) "array-get")
     ((ExNatEq) "nat-eq") ((ExU62Eq) "u62-eq") ((ExStrEq) "str-eq") ((ExBitLength) "bit-length") ((ExU62BitLength) "u62-bit-length") ((ExBitTest) "bit-test") ((ExU62BitTest) "u62-bit-test")
     ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many") ((ExArrayLengthDec) "array-length-dec") ((ExBytesLengthDec) "bytes-length-dec") ((ExArrayLengthDecMany) "array-length-dec-many") ((ExBytesLengthDecMany) "bytes-length-dec-many")
     ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
     ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str") ((ExBytesCopy) "bytes-copy") ((ExArrayCopy) "array-copy")
     ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit")
     ((ExBytesBlitMany) "bytes-blit-many") ((ExArrayBlitMany) "array-blit-many") ((ExArrayMove) "array-move")
+    ((ExArrayBlitImm) "array-blit-imm") ((ExArrayBlitManyImm) "array-blit-many-imm") ((ExArrayMoveImm) "array-move-imm")
     ((ExSlotsNew) "slots-new") ((ExSlotsFind) "slots-find") ((ExSlotsIntern) "slots-intern") ((ExSlotsLength) "slots-length")))
 
 (let ((many externs))
@@ -497,7 +502,7 @@
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExStrGet) $ Cons _ (MkSomeExtern _ $ ExNatStr) $ Cons _ (MkSomeExtern _ $ ExStrNat) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $
-  Cons _ (MkSomeExtern _ $ ExLtDec) $ Cons _ (MkSomeExtern _ $ ExU62LtDec) $ Cons _ (MkSomeExtern _ $ ExArrayGet) $
+  Cons _ (MkSomeExtern _ $ ExLtDec) $ Cons _ (MkSomeExtern _ $ ExU62LtDec) $ Cons _ (MkSomeExtern _ $ ExNatFitsU62) $ Cons _ (MkSomeExtern _ $ ExArrayGet) $
   Cons _ (MkSomeExtern _ $ ExNatEq) $ Cons _ (MkSomeExtern _ $ ExU62Eq) $ Cons _ (MkSomeExtern _ $ ExStrEq) $
   Cons _ (MkSomeExtern _ $ ExBitLength) $ Cons _ (MkSomeExtern _ $ ExU62BitLength) $ Cons _ (MkSomeExtern _ $ ExBitTest) $ Cons _ (MkSomeExtern _ $ ExU62BitTest) $
   Cons _ (MkSomeExtern _ $ ExArrayGetMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthDec) $ Cons _ (MkSomeExtern _ $ ExBytesLengthDec) $ Cons _ (MkSomeExtern _ $ ExArrayLengthDecMany) $ Cons _ (MkSomeExtern _ $ ExBytesLengthDecMany) $
@@ -506,6 +511,7 @@
   Cons _ (MkSomeExtern _ $ ExBytesCopy) $ Cons _ (MkSomeExtern _ $ ExArrayCopy) $
   Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) $
   Cons _ (MkSomeExtern _ $ ExBytesBlitMany) $ Cons _ (MkSomeExtern _ $ ExArrayBlitMany) $ Cons _ (MkSomeExtern _ $ ExArrayMove) $
+  Cons _ (MkSomeExtern _ $ ExArrayBlitImm) $ Cons _ (MkSomeExtern _ $ ExArrayBlitManyImm) $ Cons _ (MkSomeExtern _ $ ExArrayMoveImm) $
   Cons _ (MkSomeExtern _ $ ExSlotsNew) $ Cons _ (MkSomeExtern _ $ ExSlotsFind) $ Cons _ (MkSomeExtern _ $ ExSlotsIntern) $ Cons _ (MkSomeExtern _ $ ExSlotsLength) (Nil _))
 
 (def-fns _ $ (many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r))
@@ -602,7 +608,7 @@
     (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (String) msg) -> (Code ctx ms)))
   ((CC : -> Type)
     enum
-    (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCNoTail : -> (CC))
+    (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCTag : -> (CC)) (many CCNoTail : -> (CC))
     ; a same-level call in a non-erased position carrying no mark, where the tail-position check warns
     (many CCSame : (many (Loc) site) (many (String) callee) -> (CC)))
   ((Shape : ((List $ List $ Nat) ctx) -> Type)
@@ -2262,7 +2268,7 @@
 (def-adts
   ((LitFact : -> Type)
     enum
-    (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) -> (LitFact)))
+    (many MkLitFact : (many (Nat) id) (many (Term) ty) (many (Maybe $ Term) rule) (many (Maybe $ Term) slot-rule) -> (LitFact)))
   ((LitEntry : -> Type)
     enum
     (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (Maybe $ Syn) lit) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
@@ -2829,11 +2835,25 @@
 
 (def-fns _ $ (many reenter-facts : (subterm many (List $ LitFact) facts) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many facts (Cons _ fact rest) ((Nil _) (values n f tb)))
-  (let-match many fact (MkLitFact x ty rule))
+  (let-match many fact (MkLitFact x ty rule srule))
   (let-match many (nat-cmp x bnd) (CLt _ _ _ _ p) (else (tail $ reenter-facts rest _ _ bnd tb)))
   (let ((erased _) (erased _) (many tb1)) $ table-reenter _ _ _ tb x (lt-weaken x bnd p) ty rule)
-  (let ((erased _) (erased _) (many tb2)) $ table-reenter _ _ _ tb1 (Succ x) (LtS x bnd p) slot-term (None _))
+  (let ((erased _) (erased _) (many tb2)) $ table-reenter _ _ _ tb1 (Succ x) (LtS x bnd p) slot-term srule)
   (tail $ reenter-facts rest _ _ bnd $ table-add-slot _ _ _ tb2 x))
+
+(def-fns _ $ (many env-rule-fresh : (many (Env) env) (many (Nat) s) (many (Term) p) -> (many (Env) r))
+  (let ((erased _) (erased _) (many bnd) (many tb)) $ env-table env)
+  (let-match many tb (MkTable _ f0 _ _ _ _ _ _ c1 _ _ _))
+  (let-match many (facts-lookup s _ f0 _ _ (WNil s) _ c1) (LFree _ _ _ _ _ _ ps) (else env))
+  (let ((many t) (erased _)) $ canon-in _ _ bnd tb p)
+  (let-match many (rule-out-refresh _ _ bnd tb s ps t) (Some _ added) ((None _) env))
+  (match many added _ ((MkAdded _ _ _ _ tb2) (env-set-table env _ _ bnd tb2))))
+
+(def-fns _ $ (many env-enter-facts : (many (Env) env) (subterm many (List $ LitFact) facts) -> (many (Env) r))
+  (let-match many facts (Cons _ fact rest) ((Nil _) env))
+  (let-match many fact (MkLitFact x _ _ srule))
+  (let-match many srule (Some _ p) ((None _) (tail $ env-enter-facts env rest)))
+  (tail $ env-enter-facts (env-rule-fresh env (Succ x) p) rest))
 
 (def-fns _ $ (many reenter-lits : (subterm many (List $ LitEntry) lits) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many lits (Cons _ l rest) ((Nil _) (values n f tb)))

@@ -27,5 +27,5 @@
 ; error: = 5
 ; error: xs : (List (Nat))  [many, Settled, value, shadowed by a newer binder of the same name, bound at tests/dump_context_top.sl:4:7]
 ; error: L : (Level)  [erased, Settled, level minted by `def-lvl`, bound at tests/dump_context_top.sl:3:10]
-; error: slots, the entries at one slot: {5, n} {u, s}
+; error: slots, the entries at one slot: {vacant-slot, <**>, __1, xs} {5, n} {u, s}
 ; error: numerals with rules: 5 is (Succ (Succ 3))

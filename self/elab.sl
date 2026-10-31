@@ -110,11 +110,6 @@
 (def-fns _ $ (many raw-is-literal : (many (Syn) r) -> (many (Bool) b))
   (match many r _ ((RNat _ _) (BTrue)) ((RChr _ _) (BTrue)) ((RString _ _) (BTrue)) (else (BFalse))))
 
-(def-fns _ $ (many atoms-only : (subterm many (List $ Syn) rs) -> (many (Bool) r))
-  (let-match many rs (Cons _ r rest)
-    ((Nil _) (BTrue)))
-  (match many (raw-binder r) _ ((None _) (BFalse)) ((Some _ _) (tail $ atoms-only rest))))
-
 (def-fns _ $ (many first-atom : (subterm many (List $ Syn) rs) -> (many (Maybe $ Syn) r))
   (let-match many rs (Cons _ r rest) ((Nil _) (None _)))
   (match many r _ ((RList _ _) (tail $ first-atom rest)) (else (Some _ r))))
@@ -1574,6 +1569,57 @@
   (let-match many ext (BFalse) ((BTrue) (tag-refused env c " is a constructor of an extern type, whose representation is the FFI's")))
   (values env $ fieldless-pos (non-phantom $ shapes cs env) c 0))
 
+(def-fns _ $ (many tag-of : (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r))
+  (let ((many tid)) $ tid-of env c)
+  (let-match many (find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env) (Some _ info) ((None _) (None _)))
+  (let-match many info (MkMatchInfo mid disc cs _))
+  (let-match many (list-mem-bin (mctor-ids cs) c) (BTrue) ((BFalse) (None _)))
+  (let-match many (type-of env mid) (TMatchable _ nt ext _ _) (else (None _)))
+  (let-match many (or nt ext) (BFalse) ((BTrue) (None _)))
+  (let ((many ss)) $ shapes cs env)
+  (let ((many tagged)) $ tagged-of disc ss)
+  (let-match many (hollow-shape tagged $ cshape-arities $ non-phantom ss) (BFalse) ((BTrue) (Some _ 0)))
+  (let-match many tagged (BTrue) ((BFalse) (None _)))
+  (let-match many (mult-eq (marker cs c) $ Erased) (BFalse) ((BTrue) (None _)))
+  (let ((many tele) (many _)) $ ctor-type env c)
+  (let-match many (stored-count tele) (Zero) (else (None _)))
+  (Some _ $ fieldless-pos (non-phantom ss) c 0))
+
+(def-fns _ $ (many tag-slot-entry : (many (Env) env) (many (Nat) k) -> (many (Env) r) (many (Nat) t))
+  (let ((erased _) (many h)) $ env-heap env)
+  (let ((many env2) (erased _) (many h2) (erased _) (many t)) $ tag-slot env _ h k)
+  (values (env-with-heap env2 _ h2) t))
+
+(def-fns _ $ (many tag-place : (many (Env) env) (many (Nat) c) -> (many (Env) r) (many (Maybe $ Term) p))
+  (let-match many (tag-of env c) (Some _ k) ((None _) (values env $ None _)))
+  (let ((many env2) (many t)) $ tag-slot-entry env k)
+  (values env2 $ Some _ $ slot-atom t))
+
+(def-fns _ $ (many slot-tag-refused : (many (Env) env) (many (String) msg) -> (many (Env) r) (many (Maybe $ Nat) k))
+  (values (env-error env $ str-cat (say env "`slot-tag`: ") msg) $ None _))
+
+(def-fns _ $ (many slot-tag-of : (many (Env) env) (many (Nat) x) -> (many (Env) r) (many (Maybe $ Nat) k))
+  (let ((many ty)) $ type-of env x)
+  (let ((many (Bool) cell) (many (Maybe $ Nat) ctor)) $ match many ty _
+    ((TCell h _) (values (BTrue) $ match many (canon-env env h) (((Maybe $ Nat) _)) ((TVar c) (Some _ c)) (else (None _))))
+    (else (values (BFalse) $ match many (canon-env env $ TVar x) (((Maybe $ Nat) _)) ((TApp h _) (match many h (((Maybe $ Nat) _)) ((TVar c) (Some _ c)) (else (None _)))) (else (None _)))))
+  (let ((many mtid)) $ match many cell (((Maybe $ Nat) _)) ((BTrue) (match many ctor (((Maybe $ Nat) _)) ((Some _ c) (Some _ $ tid-of env c)) ((None _) (None _)))) ((BFalse) (type-head env ty)))
+  (let-match many mtid (Some _ tid) ((None _) (slot-tag-refused env $ str-cat3 (qshown env x) " : " $ str-cat (qshow env ty) " is neither a value of a data type nor a cell")))
+  (let-match many (find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env) (Some _ info) ((None _) (slot-tag-refused env $ str-cat (qshown env tid) $ say env " has no `Matchable` open")))
+  (let-match many info (MkMatchInfo mid disc cs _))
+  (let-match many (type-of env mid) (TMatchable _ nt ext _ _) (else (slot-tag-refused env "internal: not a `Matchable`")))
+  (let-match many ext (BFalse) ((BTrue) (slot-tag-refused env $ str-cat (qshown env tid) " is an extern type, whose representation is the FFI's")))
+  (let-match many nt (BFalse) ((BTrue) (slot-tag-refused env $ str-cat (qshown env tid) " is a newtype, which has no tag slot")))
+  (let ((many ss)) $ shapes cs env)
+  (let-match many (and (not cell) $ hollow-shape (tagged-of disc ss) $ cshape-arities $ non-phantom ss) (BFalse) ((BTrue) (values env $ Some _ 0)))
+  (let-match many ctor (Some _ c) ((None _) (slot-tag-refused env $ str-cat3 "the constructor of " (qshown env x) " is not known here")))
+  (let-match many (list-mem-bin (mctor-ids cs) c) (BTrue) ((BFalse) (slot-tag-refused env $ str-cat3 (qshown env c) (say env " is not listed by the `Matchable` open for ") (qshown env tid))))
+  (let-match many (mult-eq (marker cs c) $ Erased) (BFalse) ((BTrue) (slot-tag-refused env $ str-cat (qshown env c) " is phantom, so it has no tag slot")))
+  (let ((many tele) (many _)) $ ctor-type env c)
+  (let-match many (stored-count tele) (Zero) (else (slot-tag-refused env $ str-cat (qshown env c) " has a non-erased field, so it has no tag slot")))
+  (let-match many (tag-of env c) (Some _ k) ((None _) (slot-tag-refused env $ str-cat3 (qshown env tid) " is neither tagged nor hollow, so the word of " $ str-cat (qshown env c) " is unspecified")))
+  (values env $ Some _ k))
+
 (def-fns _ $ (many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (many (List $ Ctor) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
   (match many s _
@@ -2995,18 +3041,29 @@
 (def-fns _ $ (many slot-entries : (subterm many (List $ Term) slots) -> (many (List $ Entry) r))
   (match many slots _ ((Nil _) (Nil _)) ((Cons _ t rest) (Cons _ (is-entry (Many) t $ None _) $ notail $ slot-entries rest))))
 
+(def-fns _ $ (many binder-at : (many (Env) env) (many (Spot) pos) (many (Syn) raw) (many (String) what) -> (many (Env) r))
+  (let-match many (raw-binder raw) (None _) ((Some _ _) env))
+  (let ((many env2) (many _)) $ name-checked (env-at env pos) raw what)
+  (env-back env env2))
+
+(def-fns _ $ (many field-names-checked : (many (Env) env) (subterm many (List $ Syn) rs) -> (many (Env) r))
+  (let-match many rs (Cons _ r rest) ((Nil _) env))
+  (match many (raw-binder r) _
+    ((Some _ _) (tail $ field-names-checked env rest))
+    ((None _) (binder-at env (raw-pos r) r "a field name"))))
+
 (def-fns _ $ (many pattern-fields : (many (Env) env) (many (Spot) ppos) (many (String) what) (many (Multiplicity) mode) (many (Res) scrut) (many (Nat) c) (many (List $ Entry) tele) (many (List $ Multiplicity) mults) (many (List $ Syn) fields) (many (Bool) extra) ->
     (many (Env) out) (many (List $ Syn) ordinary) (many (Maybe $ Syn) braw))
-  (let ((many env14)) (error-unless env (atoms-only fields) "pattern binders must be names or `_`"))
   (let ((many n)) $ list-length _ tele)
   (let ((many got)) $ list-length _ fields)
   (let ((many shown)) $ tele-with-mults tele mults)
   (let ((many has-cell)) $ and extra $ nat-eqb got $ Succ n)
   (let-match many (or (nat-eqb got n) has-cell) (BTrue)
-    ((BFalse) (values (binder-count env14 ppos what c mode extra got $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
-  (let-match many has-cell (BTrue) ((BFalse) (values env14 fields (None _))))
+    ((BFalse) (values (binder-count env ppos what c mode extra got $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
+  (let-match many has-cell (BTrue) ((BFalse) (values (field-names-checked env fields) fields (None _))))
   (let ((many ordinary) (many rest)) (split-pattern-fields tele fields))
-  (values env14 ordinary (match many rest (((Maybe $ Syn) _)) ((Nil _) (None _)) ((Cons _ r _) (Some _ r)))))
+  (let ((many env2)) $ match many rest (((Env) _)) ((Nil _) env) ((Cons _ r _) (binder-at env ppos r "a cell binder")))
+  (values (field-names-checked env2 ordinary) ordinary (match many rest (((Maybe $ Syn) _)) ((Nil _) (None _)) ((Cons _ r _) (Some _ r)))))
 
 (def-fns _ $ (many pattern-cell-option : (many (Env) env) (many (Multiplicity) mult) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Bool) extra) (many (Maybe $ Syn) name) -> (many (Env) out) (many (Maybe $ Nat) cell))
   (let-match many extra (BTrue) ((BFalse) (values env (None _))))
@@ -3060,12 +3117,14 @@
     (many (Env) env2) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
   (let ((many env1) (many x)) (bind env (None _) (None _) (BFalse) (under (pos-mult expect) (Once)) (TCell (TVar c) slots) (None _) delegate-id))
   (let ((many hollow)) $ hollow-ctor env1 c)
-  (let ((many place)) $ match many hollow (((Maybe $ Term) _)) ((BTrue) (Some _ $ slot-atom null-id)) ((BFalse) (None _)))
-  (let ((many env2)) $ placed-at env1 x place)
+  (let ((many env1b) (many place)) $ tag-place env1 c)
+  (let ((many env2)) $ placed-at env1b x place)
   (cell-result-hoisted ew ctx expect env2 (res-with-place (res-of env2 x) place)
     (MkHoisted _ _ ctx2 pre $ match many hollow (((Code ctx2 many-one) _))
       ((BTrue) (var-code env2 ctx2 null-id))
-      ((BFalse) (CCellAlloc _ ct (cell-slot-codes env2 ctx2 slotids))))))
+      ((BFalse) (match many place (((Code ctx2 many-one) _))
+        ((Some _ _) (CApp _ many-one (var-code env2 ctx2 c) (Nil _) (CCTag)))
+        ((None _) (CCellAlloc _ ct (cell-slot-codes env2 ctx2 slotids))))))))
 
 (def-adts $ (CellMark : -> Type)
   enum
@@ -3196,9 +3255,7 @@
   (let-match many rest (Cons _ pat more) ((Nil _) (None _)))
   (let-match many more (Nil _) ((Cons _ _ _) (None _)))
   (let-match many (raw-items pat) (Cons _ craw fields) ((Nil _) (None _)))
-  (match many (atoms-only fields) _
-    ((BTrue) (Some _ $ MkPair _ _ x $ MkPair _ _ craw fields))
-    ((BFalse) (None _))))
+  (Some _ $ MkPair _ _ x $ MkPair _ _ craw fields))
 
 ; numeral-of (section 45): a numeral or character literal by its own spelling, never an expression.
 (def-fns _ $ (many numeral-of-term : (many (Env) env) (many (Syn) arg0) -> (many (Env) r) (many (Maybe $ Term) t))
@@ -3227,6 +3284,7 @@
     ((CCTail) (match many b _ ((CCTail) (BTrue)) (else (BFalse))))
     ((CCDelegate) (match many b _ ((CCDelegate) (BTrue)) (else (BFalse))))
     ((CCCtor) (match many b _ ((CCCtor) (BTrue)) (else (BFalse))))
+    ((CCTag) (match many b _ ((CCTag) (BTrue)) (else (BFalse))))
     ((CCNoTail) (match many b _ ((CCNoTail) (BTrue)) (else (BFalse))))
     ((CCSame _ _) (BFalse))))
 
@@ -3241,7 +3299,7 @@
   (let-match many pat (RList _ items) ((RAtom _ _) (Some _ $ MkPair _ _ pat $ Nil _)) (else (None _)))
   (let-match many items (Cons _ c fs)
     ((Nil _) (None _)))
-  (match many (atoms-only fs) _ ((BTrue) (Some _ $ MkPair _ _ c fs)) ((BFalse) (None _))))
+  (Some _ $ MkPair _ _ c fs))
 
 (def-fns _ $ (many branch-parts : (many (Env) env) (many (Syn) braw) -> (many (Maybe $ BranchParts braw) r))
   (let-match many braw (RList _ items) (else (None $ BranchParts braw)))
@@ -3957,7 +4015,7 @@
 (def-fns _
   ((many erases-to-nothing : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) c) -> (many (Bool) r))
     (match many c _
-      ((CApp _ _ _ _ _) (BFalse))
+      ((CApp _ _ _ _ cc) (cc-eq cc $ CCTag))
       ((CCellAlloc _ _ _) (BFalse))
       ((CCellWrite _ _ _ _ _) (BFalse))
       ((CCellCopy _ _ _ _) (BFalse))

@@ -578,6 +578,9 @@
         ((Yes _ _ _ _ l) (Yes (Nat) Lt n v (double-mono (Succ m) v1 (Succ (Succ d)) v l (DS m d dd) dv)))
         ((No _ _ _ _ q) (No (Nat) Lt n v (le-double v1 (Succ m) v (Succ (Succ d)) q dv (DS m d dd))))))))
 
+(def-fns _ $ (many extern nat-fits-u62 : (many (Nat) n) -> (many (Dec (Nat) Lt n u62-modulus) d))
+  (tail (lt-pow2-dec n (sixty-two-many) u62-modulus u62-modulus-pow2)))
+
 (def-fns _ $ (many extern shl : (many (Nat) n) (many (Nat) k) ->
     (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
   (let ((many v) (erased pk) (erased _)) (pow2 k))
@@ -1324,12 +1327,21 @@
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
 
+(def-adts $ (SlotItem : (Type A) -> Type)
+  enum newtype
+  (many MkSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (many (Placed s A v) p) -> (SlotItem A)))
+
+(def-adts $ (USlotItem : (Type A) -> Type)
+  enum newtype
+  (many MkUSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (unique (Placed s A v) p) -> (USlotItem A)))
+
 (def-adts
   ((Immediate : (Type A) -> Type)
     enum
     (many ImmU62 : -> (Immediate (U62)))
     (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))
-    (many ImmMaybe : (erased Type A) (erased (Immediate A) p) -> (Immediate (MaybeUninit A)))))
+    (many ImmMaybe : (erased Type A) (erased (Immediate A) p) -> (Immediate (MaybeUninit A)))
+    (many ImmUSlot : (erased Type A) (erased (Immediate A) p) -> (Immediate (USlotItem A)))))
 
 (def-adts
   ((ImmSlot : ((Slot) s) -> Type)
@@ -1486,7 +1498,7 @@
     (subterm unique (Array A xs) a) ->
     (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique a is r at a))
   (let ((many l) (erased p1) (unique a1)) (array-length _ _ a))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) a1))
+  (values l p1 (nat-fits-u62 l) a1))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -1498,7 +1510,7 @@
     (subterm many (Array A xs) a) ->
     (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
   (let ((many l) (erased p1)) (array-length-many _ _ a))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2)))
+  (values l p1 (nat-fits-u62 l)))
 
 (def-fns _ $ (many extern list-to-array : (erased Type A) (subterm many (List (Copy A)) xs) ->
     (unique (Array (Copy A) xs) a))
@@ -1592,7 +1604,7 @@
 (def-fns _ $ (many extern bytes-length-dec : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
     (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique b is r at b))
   (let ((many l) (erased p1) (unique b1)) (bytes-length _ b))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2) b1))
+  (values l p1 (nat-fits-u62 l) b1))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
@@ -1603,7 +1615,7 @@
 (def-fns _ $ (many extern bytes-length-dec-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
   (let ((many l) (erased p1)) (bytes-length-many _ b))
-  (values l p1 (lt-pow2-dec l (sixty-two-many) u62-modulus u62-modulus-pow2)))
+  (values l p1 (nat-fits-u62 l)))
 
 (def-fns _ $ (many extern str-bytes-copy : (subterm many (String) s) ->
     (erased (List (U8)) xs) (unique (Bytes xs) b) (erased (StrBytes s xs) p))
@@ -1764,6 +1776,36 @@
   (values (Cons (Copy A) (MkCopy A v) zs1) (du _ _ (MkCopy _ v) (at) dtl3) (at unique (su _ _ (MkCopy _ v) stl3))
           (SpliceHere _ _ _ _ _ _ _ p1)))
 
+(def-fns _ $ (many extern array-blit-imm : (erased Type A) (erased (List (Copy A)) xs ds ys old)
+    (subterm unique (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
+    (erased (Splice _ xs i n ys xs) from) (erased (Splice _ ds j n old ds) to) (erased (Immediate A) im) ->
+    (erased (List (Copy A)) zs) (unique (Array _ zs) r at dst) (unique src is s at src) (erased (Splice _ ds j n ys zs) p))
+  (let-match many i (Zero)
+    ((Succ i1)
+      (let-match erased from (SpliceThere _ _ _ _ _ _ _ q) (absurd SpliceNil) (absurd SpliceHere))
+      (let-match unique src (ACons _ _ h stl su) (absurd ANil))
+      (let ((erased zs1) (unique dst3) (unique stl3) (erased p1)) (tail $ array-blit-imm _ _ _ _ _ stl i1 dst j n q to im))
+      (values zs1 dst3 (at unique (su _ _ h stl3)) p1)))
+  (let-match many j (Zero)
+    ((Succ j1)
+      (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+      (let-match erased to (SpliceThere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceHere))
+      (let ((erased zs1) (unique dtl3) (unique src3) (erased p1)) (tail $ array-blit-imm _ _ _ _ _ src (Zero) dtl j1 n from q2 im))
+      (values (Cons (Copy A) dh zs1) (at unique (du _ _ dh dtl3)) src3 (SpliceThere _ _ _ _ _ _ _ p1))))
+  (let-match many n (Succ n1)
+    ((Zero)
+      (let-match erased from (SpliceNil _ _) (absurd SpliceHere) (absurd SpliceThere))
+      (values ds dst src (SpliceNil _ _))))
+  (let-match erased from (SpliceHere _ _ _ _ _ _ _ q) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+  (let-match erased to (SpliceHere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match unique src (ACons _ _ h stl su) (absurd ANil))
+  (let-match unique h (MkCopy _ v))
+  (let ((unique c)) (MkCopy _ v))
+  (let ((erased zs1) (unique dtl3) (unique stl3) (erased p1)) (notail $ array-blit-imm _ _ _ _ _ stl (Zero) dtl (Zero) n1 q q2 im))
+  (values (Cons (Copy A) (MkCopy A v) zs1) (du _ _ (imm (ImmPlaced _ (ImmCopy _ im) _ dh (place-at _ dh)) (ImmPlaced _ (ImmCopy _ im) _ c (place-at _ c))) c (at) dtl3) (at unique (su _ _ (MkCopy _ v) stl3))
+          (SpliceHere _ _ _ _ _ _ _ p1)))
+
 (def-fns _ $ (many extern array-blit-many : (erased Type A) (erased (List (Copy A)) xs ds ys old)
     (subterm many (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
     (erased (Splice _ xs i n ys xs) from) (erased (Splice _ ds j n old ds) to) ->
@@ -1790,6 +1832,34 @@
   (let-match many h (MkCopy _ v))
   (let ((erased zs1) (unique dtl3) (erased p1)) (notail $ array-blit-many _ _ _ _ _ stl (Zero) dtl (Zero) n1 q q2))
   (values (Cons (Copy A) (MkCopy A v) zs1) (du _ _ (MkCopy _ v) (at) dtl3) (SpliceHere _ _ _ _ _ _ _ p1)))
+
+(def-fns _ $ (many extern array-blit-many-imm : (erased Type A) (erased (List (Copy A)) xs ds ys old)
+    (subterm many (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
+    (erased (Splice _ xs i n ys xs) from) (erased (Splice _ ds j n old ds) to) (erased (Immediate A) im) ->
+    (erased (List (Copy A)) zs) (unique (Array _ zs) r at dst) (erased (Splice _ ds j n ys zs) p))
+  (let-match many i (Zero)
+    ((Succ i1)
+      (let-match erased from (SpliceThere _ _ _ _ _ _ _ q) (absurd SpliceNil) (absurd SpliceHere))
+      (let-match many src (ACons _ _ _ stl) (absurd ANil))
+      (tail $ array-blit-many-imm _ _ _ _ _ stl i1 dst j n q to im)))
+  (let-match many j (Zero)
+    ((Succ j1)
+      (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+      (let-match erased to (SpliceThere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceHere))
+      (let ((erased zs1) (unique dtl3) (erased p1)) (tail $ array-blit-many-imm _ _ _ _ _ src (Zero) dtl j1 n from q2 im))
+      (values (Cons (Copy A) dh zs1) (at unique (du _ _ dh dtl3)) (SpliceThere _ _ _ _ _ _ _ p1))))
+  (let-match many n (Succ n1)
+    ((Zero)
+      (let-match erased from (SpliceNil _ _) (absurd SpliceHere) (absurd SpliceThere))
+      (values ds dst (SpliceNil _ _))))
+  (let-match erased from (SpliceHere _ _ _ _ _ _ _ q) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+  (let-match erased to (SpliceHere _ _ _ _ _ _ _ q2) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match many src (ACons _ _ h stl) (absurd ANil))
+  (let-match many h (MkCopy _ v))
+  (let ((unique c)) (MkCopy _ v))
+  (let ((erased zs1) (unique dtl3) (erased p1)) (notail $ array-blit-many-imm _ _ _ _ _ stl (Zero) dtl (Zero) n1 q q2 im))
+  (values (Cons (Copy A) (MkCopy A v) zs1) (du _ _ (imm (ImmPlaced _ (ImmCopy _ im) _ dh (place-at _ dh)) (ImmPlaced _ (ImmCopy _ im) _ c (place-at _ c))) c (at) dtl3) (SpliceHere _ _ _ _ _ _ _ p1)))
 
 (def-adts $ (Pos : -> Type)
   enum
@@ -1879,14 +1949,6 @@
   (many NthLastThere : (erased Type A) (erased A y) (erased (List A) xs) (erased (Nat) i) (erased A x)
      (erased (NthLast A xs i x) p) -> (NthLast A (Cons A y xs) i x)))
 
-(def-adts $ (SlotItem : (Type A) -> Type)
-  enum newtype
-  (many MkSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (many (Placed s A v) p) -> (SlotItem A)))
-
-(def-adts $ (USlotItem : (Type A) -> Type)
-  enum newtype
-  (many MkUSlotItem : (erased Type A) (erased (Slot) s) (erased A v) (unique (Placed s A v) p) -> (USlotItem A)))
-
 (def-adts $ (Vacated : (Type A) ((List (MaybeUninit (USlotItem A))) ys) ((List (MaybeUninit (USlotItem A))) us) -> Type)
   enum
   (many VacatedNil : (erased Type A) -> (Vacated A (Nil (MaybeUninit (USlotItem A))) (Nil (MaybeUninit (USlotItem A)))))
@@ -1945,6 +2007,49 @@
       ((PluckStale _ s w q) (VacatedStale _ s w q _ _ v1))))
   (values (Cons _ h2 zs1) (Cons _ left us1) (Cons _ left ws1)
           (du _ _ h2 (at) dtl3) (at unique (su _ _ left stl3))
+          (SpliceHere _ _ _ _ _ _ _ p1) (SpliceHere _ _ _ _ _ _ _ q1) v))
+
+(def-fns _ $ (many extern array-move-imm : (erased Type A) (erased (List (MaybeUninit (USlotItem A))) xs ds ys old)
+    (subterm unique (Array _ xs) src) (many (Nat) i) (subterm unique (Array _ ds) dst) (many (Nat) j n)
+    (erased (Splice _ xs i n ys xs) from) (erased (Splice _ ds j n old ds) to) (erased (Immediate A) im) ->
+    (erased (List (MaybeUninit (USlotItem A))) zs us ws) (unique (Array _ zs) r at dst) (unique (Array _ ws) s at src)
+    (erased (Splice _ ds j n ys zs) p) (erased (Splice _ xs i n us ws) q) (erased (Vacated _ ys us) v))
+  (let-match many i (Zero)
+    ((Succ i1)
+      (let-match erased from (SpliceThere _ _ _ _ _ _ _ f1) (absurd SpliceNil) (absurd SpliceHere))
+      (let-match unique src (ACons _ _ h stl su) (absurd ANil))
+      (let ((erased zs1) (erased us1) (erased ws1) (unique dst3) (unique stl3) (erased p1) (erased q1) (erased v1))
+        (tail $ array-move-imm _ _ _ _ _ stl i1 dst j n f1 to im))
+      (values zs1 us1 (Cons _ h ws1) dst3 (at unique (su _ _ h stl3)) p1 (SpliceThere _ _ _ _ _ _ _ q1) v1)))
+  (let-match many j (Zero)
+    ((Succ j1)
+      (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+      (let-match erased to (SpliceThere _ _ _ _ _ _ _ t1) (absurd SpliceNil) (absurd SpliceHere))
+      (let ((erased zs1) (erased us1) (erased ws1) (unique dtl3) (unique src3) (erased p1) (erased q1) (erased v1))
+        (tail $ array-move-imm _ _ _ _ _ src (Zero) dtl j1 n from t1 im))
+      (values (Cons _ dh zs1) us1 ws1 (at unique (du _ _ dh dtl3)) src3 (SpliceThere _ _ _ _ _ _ _ p1) q1 v1)))
+  (let-match many n (Succ n1)
+    ((Zero)
+      (let-match erased from (SpliceNil _ _) (absurd SpliceHere) (absurd SpliceThere))
+      (values ds (Nil _) xs dst src (SpliceNil _ _) (SpliceNil _ _) (VacatedNil _))))
+  (let-match erased from (SpliceHere _ _ _ _ _ ys1 _ f1) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match unique dst (ACons _ _ dh dtl du) (absurd (ANil _) to))
+  (let-match erased to (SpliceHere _ _ _ _ _ _ _ t1) (absurd SpliceNil) (absurd SpliceThere))
+  (let-match unique src (ACons _ _ h stl su) (absurd ANil))
+  (let ((erased zs1) (erased us1) (erased ws1) (unique dtl3) (unique stl3) (erased p1) (erased q1) (erased v1))
+    (notail $ array-move-imm _ _ _ _ _ stl (Zero) dtl (Zero) n1 f1 t1 im))
+  (let ((unique h2) (unique left) (erased pl)) (pluck-split _ h))
+  (let ((erased (Vacated A (Cons _ h ys1) (Cons _ left us1)) v))
+    (match erased pl _
+      ((PluckInit _ _ _ q)
+        (let-match erased h2 (Init _ it))
+        (let-match erased it (MkUSlotItem _ _ _ pi))
+        (let-match erased (placed-slot _ _ _ pi) (Refl _ _))
+        (VacatedInit _ _ _ pi q _ _ v1))
+      ((PluckVacant _) (VacatedVacant _ _ _ v1))
+      ((PluckStale _ s w q) (VacatedStale _ s w q _ _ v1))))
+  (values (Cons _ h2 zs1) (Cons _ left us1) (Cons _ left ws1)
+          (du _ _ (imm (ImmPlaced _ (ImmMaybe _ (ImmUSlot _ im)) _ dh (place-at _ dh)) (ImmPlaced _ (ImmMaybe _ (ImmUSlot _ im)) _ h2 (place-at _ h2))) h2 (at) dtl3) (at unique (su _ _ left stl3))
           (SpliceHere _ _ _ _ _ _ _ p1) (SpliceHere _ _ _ _ _ _ _ q1) v))
 
 (def-adts $ (SlotFind : (Type A) ((List (SlotItem A)) xs) ((Slot) s) (Type U) (U u) -> Type)

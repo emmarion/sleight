@@ -86,6 +86,7 @@ let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array 
 let length = spec ~needs:["Array"] 1 (unary (fun a -> int (Ffi_core.array_length (array a))))
 let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (Ffi_core.bytes_get (bytes b) (z i))))
 let blit = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
+let blit_imm = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit_imm (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
 let bytes_blit = spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity)
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
@@ -107,6 +108,9 @@ let fns : (string * fn_spec) list =
     ("array-blit", blit);
     ("array-blit-many", blit);
     ("array-move", blit);
+    ("array-blit-imm", blit_imm);
+    ("array-blit-many-imm", blit_imm);
+    ("array-move-imm", blit_imm);
     ("bytes-sub", spec ~needs:["Bytes"] 3 (function [ b; i; n ] -> [ buf (Ffi_core.bytes_sub (bytes b) (z i) (z n)) ] | _ -> raise arity));
     ("bytes-blit", bytes_blit);
     ("bytes-blit-many", bytes_blit);
@@ -164,6 +168,7 @@ let fns : (string * fn_spec) list =
     ("u62-dec", spec 1 (unary (fun a -> int (Ffi_core.u62_dec (z a)))));
     ("u62-cmp", decision "Cmp" z Ffi_core.u62_cmp);
     ("u62-lt-dec", decision "Dec" z Ffi_core.u62_lt_dec);
+    ("nat-fits-u62", spec ~needs:[ "Dec" ] ~decides:"Dec" 1 (unary (fun a -> plain "Dec" (Obj.magic (Ffi_core.nat_fits_u62 (z a)) : int) [])));
     ("u62-eq", decision "EqDec" z Ffi_core.u62_eq);
     ("u62-bit-length", spec 1 (unary (fun a -> int (Ffi_core.u62_bit_length (z a)))));
     ("u62-bit-test", decision "Bit" z Ffi_core.u62_bit_test);
