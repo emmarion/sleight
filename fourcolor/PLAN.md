@@ -137,11 +137,18 @@ left appears to be mostly the checkers' own work per entry; in stack
 samples of the reference compiler about a quarter of the time was in
 `Env.opens_ruled`, which walks every opened `Matchable` (about 1100 in
 this chain) for each rule. The largest single form left is
-`unav/qztproof.sl`'s run-position `all-regs` (about 4 s with slc in one
-run), which walks the skeleton from the root again for each region.
-Lopsided matches remain in `cpcomp.sl`, `unav/redc.sl`, `unav/unav.sl`
-and `unav/pwsound.sl`, and shadow warnings mostly in `unav/` and at
-`red/red.sl`'s `cc` and `unav/part.sl`'s `pc` and `pf`.
+`unav/qztproof.sl`'s run-position `all-regs` (about 5 s with slc and 16 s
+with the reference compiler, one run each). Timed in parts, nearly all
+of it appeared to be the decoding of the seven presentation scripts from
+their strings (`script-by`, roughly 20 µs a character with slc and 80 µs
+with the reference compiler, for about 200,000 characters); the walk to
+each region runs on the skeleton with the left subtrees along its path
+replaced by `SRed` (`prune-left`), so that it runs no `check2-c`, and
+appeared to take about half a second. Lopsided matches remain in `red/`, and shadow
+warnings mostly in `unav/` and at `red/red.sl`'s `cc` and
+`unav/part.sl`'s `pc` and `pf`. In a later paired run to
+`embed4proof.sl`, slc took about 32 s and the reference compiler about
+108 s.
 
 ## Status
 
@@ -1336,9 +1343,9 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   cubic map plain cubic with the same arities (`geo-mirror`) and
   fitqz_flip (`fitz-flip`). `qztproof.sl` proves `UnavE cfs`
   (`unav-proof`) for the `cfs` in scope, which `qztcfs.sl` binds to the
-  configurations of `red/configs.sl` by `concat-cfs` and `fcopen.sl` by
+  configurations of `red/configs.sl` by `dec-list` on `config-srcs` and `fcopen.sl` by
   `concat-c`; its jobs read cfs through the `cfs-run` in scope (in
-  `fcopen.sl`, a decoding of `config-srcs`), and `qztgoal.sl` sets it as a goal and discharges it: every
+  either file a decoding of `config-srcs` with an `Eq` to cfs), and `qztgoal.sl` sets it as a goal and discharges it: every
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
@@ -1378,10 +1385,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   dscore dsum posz pwalk hubsound pwsound conv cap unav data`, then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
   qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal
-  proved`. On that chain it passed with slc in about 1770 s in one run,
-  most of it, it seemed, ocamlopt (with `OCAMLRUNPARAM=s=8M,o=200`) on
-  the 9.2 MB program that the jobs make there, where `qztcfs.sl`'s
-  `cfs-run` gives them cfs as a built value. `unave.sl` holds
+  proved`. On that chain, with `OCAMLRUNPARAM=o=400` and `--inline 200`,
+  it passed with slc in about 27 s of wall time (46 s of CPU) in one run on a 4-core cloud VM shared with
+  other runs, and with the reference compiler in about 59 s (79 s of CPU); there, with
+  the two parts of each region but the roots swapped in `push-regs`, it was rejected (a
+  job answered `ChkNo`). `unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
   without the goal. Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
