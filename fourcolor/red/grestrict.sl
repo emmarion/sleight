@@ -242,30 +242,34 @@
   (GHS l r (leaf-hit-at l l0 l1 l2 l3 l0 r (GPush) ll (PkPush _ l0 l1 l2 l3) h0) (leaf-hit-at l l0 l1 l2 l3 l1 r (GSkip) ll (PkSkip _ l0 l1 l2 l3) h1)
     (leaf-hit-at l l0 l1 l2 l3 l2 r (GPop0) ll (PkPop0 _ l0 l1 l2 l3) h2) (leaf-hit-at l l0 l1 l2 l3 l3 r (GPop1) ll (PkPop1 _ l0 l1 l2 l3) h3)))
 
-(def-fns _ $ (many rx-cons : (erased (Gsym) s) (erased (List RC) rr) (erased (Bstack) bs) (erased (Ctree) t) (erased (Col) e)
+(def-fns _ $ (many gtree-live : (many (Gtree) t) -> (many (Bool) b))
+  (match many t _ ((GEmpty) (BFalse)) (else (BTrue))))
+
+(def-fns _ $ (many rx-cons : (many (Bool) w) (erased (Gsym) s) (erased (List RC) rr) (erased (Bstack) bs) (erased (Ctree) t) (erased (Col) e)
     (many (Bstack) bs2) (many (Ctree) t2) (many (List RC) acc)
     (erased (Elem RC (MkRx (Ctree) bs t) rr) el) (erased (Sym s bs e bs2) y) (erased (CtSel t e t2) sl) (erased (RJust s rr acc) j) ->
     (many (List RC) acc2) (erased (RJust s rr acc2) k))
+  (let-match many w (BTrue) ((BFalse) (values acc j)))
   (match many t2 _
     ((CEmpty) (values acc j))
     (else (values (Cons _ (MkRx _ bs2 t2) acc) (RJCons s rr acc bs bs2 t t2 e el y sl j)))))
 
-(def-fns _ $ (many grpop : (erased (List RC) rr) (many (Bstack) bs) (erased (Ctree) t1) (many (Ctree) t2 t3) (many (List RC) r2 r3)
+(def-fns _ $ (many grpop : (many (Bool) w2 w3) (erased (List RC) rr) (many (Bstack) bs) (erased (Ctree) t1) (many (Ctree) t2 t3) (many (List RC) r2 r3)
     (erased (Elem RC (MkRx (Ctree) bs (CNode t1 t2 t3)) rr) el) (erased (RJust (GPop0) rr r2) j2) (erased (RJust (GPop1) rr r3) j3) ->
     (many (List RC) a2 a3) (erased (RJust (GPop0) rr a2) k2) (erased (RJust (GPop1) rr a3) k3))
   (let ((erased t)) (CNode t1 t2 t3))
   (match many bs _
     ((BS0) (values r2 r3 j2 j3))
     ((BP0 b)
-      (let ((many a2) (erased k2)) (rx-cons (GPop0) rr bs t (C2) b t2 r2 el (SPop02 b) (SelN2 t1 t2 t3) j2))
-      (let ((many a3) (erased k3)) (rx-cons (GPop1) rr bs t (C3) b t3 r3 el (SPop13 b) (SelN3 t1 t2 t3) j3))
+      (let ((many a2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C2) b t2 r2 el (SPop02 b) (SelN2 t1 t2 t3) j2))
+      (let ((many a3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C3) b t3 r3 el (SPop13 b) (SelN3 t1 t2 t3) j3))
       (values a2 a3 k2 k3))
     ((BP1 b)
-      (let ((many a2) (erased k2)) (rx-cons (GPop0) rr bs t (C3) b t3 r2 el (SPop03 b) (SelN3 t1 t2 t3) j2))
-      (let ((many a3) (erased k3)) (rx-cons (GPop1) rr bs t (C2) b t2 r3 el (SPop12 b) (SelN2 t1 t2 t3) j3))
+      (let ((many a2) (erased k2)) (rx-cons w2 (GPop0) rr bs t (C3) b t3 r2 el (SPop03 b) (SelN3 t1 t2 t3) j2))
+      (let ((many a3) (erased k3)) (rx-cons w3 (GPop1) rr bs t (C2) b t2 r3 el (SPop12 b) (SelN2 t1 t2 t3) j3))
       (values a2 a3 k2 k3))))
 
-(def-fns _ $ (many gtr-split-c : (erased (List RC) rr) (many (List RC) r0 r1 r2 r3) (subterm many (List RC) r)
+(def-fns _ $ (many gtr-split-c : (many (Bool) w0 w1 w2 w3) (erased (List RC) rr) (many (List RC) r0 r1 r2 r3) (subterm many (List RC) r)
     (erased (Suffix RC r rr) sf) (erased (RJust (GPush) rr r0) j0) (erased (RJust (GSkip) rr r1) j1) (erased (RJust (GPop0) rr r2) j2)
     (erased (RJust (GPop1) rr r3) j3) ->
     (many (List RC) s0 s1 s2 s3) (erased (RJust (GPush) rr s0) k0) (erased (RJust (GSkip) rr s1) k1) (erased (RJust (GPop0) rr s2) k2)
@@ -273,13 +277,13 @@
   (let-match many r (Cons _ x rest) ((Nil _) (values r0 r1 r2 r3 j0 j1 j2 j3)))
   (let ((erased sf1)) (SufNext RC x rest rr sf))
   (let-match many x (MkRx _ bs t))
-  (let-match many t (CNode t1 t2 t3) (else (tail $ gtr-split-c rr r0 r1 r2 r3 rest sf1 j0 j1 j2 j3)))
+  (let-match many t (CNode t1 t2 t3) (else (tail $ gtr-split-c w0 w1 w2 w3 rr r0 r1 r2 r3 rest sf1 j0 j1 j2 j3)))
   (let ((erased el)) (suffix-elem RC x r rr sf (ElHere RC x rest)))
-  (let ((many a2) (many a3) (erased k2) (erased k3)) (grpop rr bs t1 t2 t3 r2 r3 el j2 j3))
-  (let ((many c0) (erased q0)) (rx-cons (GPush) rr bs t (C3) (BP1 bs) t3 r0 el (SPush3 bs) (SelN3 t1 t2 t3) j0))
-  (let ((many d0) (erased l0)) (rx-cons (GPush) rr bs t (C2) (BP0 bs) t2 c0 el (SPush2 bs) (SelN2 t1 t2 t3) q0))
-  (let ((many d1) (erased l1)) (rx-cons (GSkip) rr bs t (C1) bs t1 r1 el (SSkip bs) (SelN1 t1 t2 t3) j1))
-  (tail $ gtr-split-c rr d0 d1 a2 a3 rest sf1 l0 l1 k2 k3))
+  (let ((many a2) (many a3) (erased k2) (erased k3)) (grpop w2 w3 rr bs t1 t2 t3 r2 r3 el j2 j3))
+  (let ((many c0) (erased q0)) (rx-cons w0 (GPush) rr bs t (C3) (BP1 bs) t3 r0 el (SPush3 bs) (SelN3 t1 t2 t3) j0))
+  (let ((many d0) (erased l0)) (rx-cons w0 (GPush) rr bs t (C2) (BP0 bs) t2 c0 el (SPush2 bs) (SelN2 t1 t2 t3) q0))
+  (let ((many d1) (erased l1)) (rx-cons w1 (GSkip) rr bs t (C1) bs t1 r1 el (SSkip bs) (SelN1 t1 t2 t3) j1))
+  (tail $ gtr-split-c w0 w1 w2 w3 rr d0 d1 a2 a3 rest sf1 l0 l1 k2 k3))
 
 (def-adts $ (Hit1 : ((Bstack) bs) ((Ctree) t) ((Gsym) s) -> Type)
   enum
@@ -426,7 +430,7 @@
   (let-match many r (Cons _ _ _) ((Nil _) (values (GEmpty) t (part-r t) (GHE r))))
   (let-match many t (GNode t0 t1 t2 t3) (else (gleaf-restrict-c t r)))
   (let ((many r0) (many r1) (many r2) (many r3) (erased j0) (erased j1) (erased j2) (erased j3))
-    (gtr-split-c r (Nil _) (Nil _) (Nil _) (Nil _) r (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
+    (gtr-split-c (gtree-live t0) (gtree-live t1) (gtree-live t2) (gtree-live t3) r (Nil _) (Nil _) (Nil _) (Nil _) r (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
   (let ((many a0) (many b0) (erased p0) (erased h0)) (notail $ gtree-restrict-c t0 r0))
   (let ((many a1) (many b1) (erased p1) (erased h1)) (notail $ gtree-restrict-c t1 r1))
   (let ((many a2) (many b2) (erased p2) (erased h2)) (notail $ gtree-restrict-c t2 r2))
