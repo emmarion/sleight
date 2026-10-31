@@ -3955,8 +3955,9 @@
       ((CLet _ first _ ids pk rhs rest)
         (let ((many rest2)) $ notail $ distribute (Cons _ ids ctx) ms rest)
         (let-match many (rhs-atoms _ _ rest2) (None _) ((Some _ _) (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) rest2)))
-        (let-match many rhs (CLet _ inner _ frame fpk value body) (else (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) rest2)))
-        (CLet _ inner _ frame fpk (notail $ distribute ctx inner value) $ bind-through (Cons _ frame ctx) first ms ids pk (notail $ distribute (Cons _ frame ctx) first body) $ bind-lift ctx ms ids frame rest2))
+        (match many rhs _
+          ((CLet _ _ _ _ _ _ _) (tail $ float-out ctx first ms ids pk rhs rest2))
+          (else (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) rest2))))
       ((CLetRec _ _ _ group rest)
         (let-match many group (MkGroup _ ids fns lk))
         (let ((many fs) (erased lk2)) $ notail $ distribute-fns ctx ids fns)
@@ -3983,6 +3984,13 @@
         (let ((many as) (erased _)) $ notail $ distribute-list ctx args)
         (CPrim _ ms p as))
       (else code)))
+  ((many float-out : (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) first) (many (List $ Multiplicity) ms) (many (List $ Nat) ids) (erased (Picked (Nat) first ids) pk)
+      (subterm many (Code ctx first) rhs) (many (Code (Cons (List (Nat)) ids ctx) ms) rest) -> (many (Code ctx ms) r))
+    (let-match many rhs (CLet _ inner _ frame fpk value body) (else (CLet _ first _ ids pk rhs rest)))
+    (let ((many lifted)) $ bind-lift ctx ms ids frame rest)
+    (CLet _ inner _ frame fpk (notail $ distribute ctx inner value) $ match many body _
+      ((CLet _ _ _ _ _ _ _) (notail $ float-out (Cons _ frame ctx) first ms ids pk body lifted))
+      (else (bind-through (Cons _ frame ctx) first ms ids pk (notail $ distribute (Cons _ frame ctx) first body) lifted))))
   ((many distribute-list : (many (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) codes) ->
       (many (List $ Code ctx many-one) r) (erased (Lockstep (Code ctx many-one) (Code ctx many-one) codes r) lk))
     (let-match many codes (Cons _ code rest) ((Nil _) (values (Nil _) $ LsNil _ _)))
