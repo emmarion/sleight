@@ -148,8 +148,12 @@ a character with slc and 90 µs with the reference compiler) took about
 4.3 s and 19 s (one run each). Lopsided matches remain in `red/`, and shadow
 warnings mostly in `unav/` and at `red/red.sl`'s `cc` and
 `unav/part.sl`'s `pc` and `pf`. In a later paired run to
-`embed4proof.sl`, slc took about 32 s and the reference compiler about
-108 s.
+`embed4proof.sl`, slc took about 32 s (35 s with `data.sl` giving whole
+scripts and `all-regs` decoding them) and the reference compiler about
+110 s (124 s); there `qztproof.sl` took about 0.4 s and 1.5 s, and
+`red/chunks.sl` and `red/pieces.sl`, which decode the 633 configurations
+at elaboration (`pieces.sl` twice), about 0.1 s and 0.5 s with slc and
+0.2 s and 0.5 s with the reference compiler.
 
 ## Status
 
