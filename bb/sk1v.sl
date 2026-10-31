@@ -243,6 +243,18 @@
   (let-match erased p (NthThere _ a rest k b p1) ((NthHere _ _ rest) (SetHere _ x x rest)))
   (SetThere _ a rest k b rest (nth-set _ rest k b p1)))
 
+(def-fns _ $ (erased imm-cn : (erased (Nat) n) (erased (Lt n u62-modulus) q) -> (erased (Imm (Copy (Nat)) (MkCopy (Nat) n)) r))
+  (ImmCoerce _ _ _ _ _ _ (coercible-wrap (Shared) MkCopy (Nat) n) (ImmNat n q)))
+
+(def-fns _ $ (many cnt-place : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (many (Nat) i c)
+    (erased (Copy (Nat)) m) (erased (Nth (Copy (Nat)) xs i m) nt)
+    -> (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) r at a) (erased (SetNth (Copy (Nat)) xs i (MkCopy (Nat) c) ys) p))
+  (let-match many (nat-fits-u62 c) (Yes _ _ _ _ fc) ((No _ _ _ _ _) (array-place _ _ a i (MkCopy _ c) m nt)))
+  (let-match erased m (MkCopy _ c0))
+  (let ((many y) (unique a1)) (array-get _ _ a i c0 nt))
+  (let-match many (nat-fits-u62 y) (Yes _ _ _ _ fy) ((No _ _ _ _ _) (array-place _ _ a1 i (MkCopy _ c) m nt)))
+  (array-place-imm _ _ a1 i (MkCopy _ c) m nt (imm-cn y fy) (imm-cn c fc)))
+
 (def-fns _ $ (many vput : (erased (List (U8)) tps) (erased (List (Copy (Nat))) cps) (many (Nat) i) (erased (Nat) cap)
     (erased (Length (U8) tps cap) l1) (erased (Length (Copy (Nat)) cps cap) l2) (erased (Lt i cap) lt)
     (unique (Bytes tps) tb) (unique (Array (Copy (Nat)) cps) ca) (many (Tg) t) (many (Nat) c) (erased (Sy) s) (erased (Ecd s t c) e) (many (Ncd t) nk)
@@ -258,7 +270,7 @@
     ((NcdY _ nc)
       (let-match erased m2 (MkCopy _ c0))
       (values w cu tps2 cps c0 (ecd-sw s t c c0 nc e) st1 (nth-set _ cps i _ nt2) l3 l2 tb2 ca)))
-  (let ((erased cps2) (unique ca2) (erased st2)) (array-place _ _ ca i (MkCopy _ c) m2 nt2))
+  (let ((erased cps2) (unique ca2) (erased st2)) (cnt-place cps ca i c m2 nt2))
   (values w cu tps2 cps2 c e st1 st2 l3 (setnth-length _ cps i cap (MkCopy _ c) cps2 st2 l2) tb2 ca2))
 
 (def-fns _ $ (many sv-put : (erased (List (Sy)) r) (erased (List (U8)) tps) (erased (List (Copy (Nat))) cps) (many (Nat) n) (erased (Nat) cap)
