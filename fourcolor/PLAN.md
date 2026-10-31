@@ -850,9 +850,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   after `readback` and `fcmanyfinal` in place of `fcfinal`, with `--goal
   proved`.
   In one run on a 4-core cloud VM shared with other runs it passed with
-  slc in about 1060 s, and in one with the reference compiler (under
-  `ulimit -s unlimited`) in about 1050 s, each at most about 3.3 GB
-  resident.
+  slc in about 578 s, at most about 0.8 GB resident.
 - `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl`, `trivfive.sl` and
   `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
   from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
@@ -901,23 +899,14 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `red/bproof.sl`, `unav/qztproof.sl` and `embed4proof.sl` queue their
   checks (one job per chunk of css for `AllRedC` and, through
   `allgc-concat`, for `AllGc`), and `fcproof.sl` and each check's goal
-  file call `native-run`. In one run of the `fcfinal.sl` chain with slc on
-  a 4-core cloud VM shared with other runs (wall times appear inflated
-  about twofold), elaboration took about 70 s before `native-run`, whose
-  one `native-compute` compiled 22.0 MB of OCaml in about 640 s and ran
-  its 69 thunks in about 780 s (about 1110 s of CPU; the longest, a chunk
-  of `AllRedC`, about 100 s), and about 10 s followed; in later runs on a
-  less loaded VM the compile took about 410 to 600 s and the thunks about
-  350 to 380 s;
-  most of that OCaml, about 13 MB, appeared to be the scripts of
-  `unav/data.sl`. Before, the unit compiled seven programs, among them
-  21.6 MB for `UnavE` (about 505 s) and 7.8 MB for `CfCerts` (about
-  520 s). In test runs, a `BirkhoffChecks` built from the proofs in the
-  wrong order and a failing job were rejected.
-  Compiling that 22.0 MB alone with ocamlopt took about 595 s with
-  `-inline 0` and about 605 s with `-inline 25` (`--inline`, MANUAL.md),
-  much as without it; three of its thunks ran about 10 to 20% faster
-  with `-inline 25` than with `-inline 0`, in one run each.
+  file call `native-run`; the `fcproof.sl` entry gives the size and
+  times of the `fcfinal.sl` chain's one `native-compute`. In test runs, a
+  `BirkhoffChecks` built from the proofs in the wrong order and a failing
+  job were rejected. On an earlier 22.0 MB program of that chain,
+  ocamlopt took about 595 s with `-inline 0` and about 605 s with
+  `-inline 25` (`--inline`, MANUAL.md), much as without it; three of its
+  thunks ran about 10 to 20% faster with `-inline 25` than with
+  `-inline 0`, in one run each.
 - `fcproof.sl`, `fcfinal.sl` (load after `embed4proof.sl`, in the chain
   below): `fcproof.sl` binds `four-color-proof`, `FourColor` of `defs.sl`
   with no hypotheses, by `four-color-open` on `unav-proof`,
@@ -925,20 +914,26 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
   that of `fcgoal.sl` up to `fcopen.sl`, then `native embed4 red/pieces red/proof-c
   red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
-  `--goal proved`. In one run each on a 4-core cloud VM shared with other
-  runs it passed with slc in about 1510 s and with the reference compiler
-  (under `ulimit -s unlimited`) in about 970 s, at most about 3.3 GB
-  resident. That was with the configurations built into the program
-  `native-compute` writes; with the jobs given strings instead (the
-  `red/configs.sl` entry), in single measurements on a 4-core cloud VM
-  running other jobs, which should be read as approximate: the program
-  shrank from about 20.7 MB with about 44,500 top-level `let`s to about
-  14.6 MB with about 6,500, and ocamlopt (under `ulimit -s unlimited`)
-  compiled it in about 22 s in place of about 1260 s, or about 17 s in
-  place of about 300 s with `OCAMLRUNPARAM=o=1000`; the unit passed with
-  slc in about 430 to 450 s of wall time (about 1000 s of CPU, at most
-  about 1.4 GB resident) in two runs, and with the reference compiler in
-  about 730 s in one. In test runs on the chain of
+  `--goal proved`. The jobs reach the configurations only through strings
+  (the `red/configs.sl` entry, and `cfs-run` for `unav/qztproof.sl`'s
+  region and cap jobs) and the presentation scripts are strings
+  (`unav/data.sl`), so `native-compute` writes about 1.9 MB of OCaml with
+  slc (about 3.0 MB with the reference compiler) for its 158 jobs. In
+  runs on a 4-core cloud VM with a load average of about 5 to 8 from
+  other runs, which should be read as approximate, the unit passed with
+  slc in about 640 to 730 s of wall time (about 1050 s of CPU, at most
+  about 0.75 GB resident): about 34 to 41 s of elaboration, 8 to 10 s of
+  ocamlopt and 590 to 680 s running the jobs (about 1000 s of CPU
+  together, the longest about 13 s of CPU); with
+  `OCAMLRUNPARAM=s=8M,o=200` in about 640 and 716 s, and without it in
+  about 733 s. With the scripts written as constructor applications in
+  place of strings the program was about 14.8 MB, elaboration about 52
+  to 79 s and ocamlopt about 25 to 27 s (at most about 1.5 GB resident),
+  and the unit took about 590 to 760 s, much as with strings: the time of
+  the jobs, which share the machine, appeared to outweigh the difference.
+  With the reference compiler (under `ulimit -s unlimited`, with
+  `s=8M,o=200`) it passed in about 874 s (about 109 s of elaboration).
+  In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
@@ -1279,7 +1274,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fitqz_flip (`fitz-flip`). `qztproof.sl` proves `UnavE cfs`
   (`unav-proof`) for the `cfs` in scope, which `qztcfs.sl` binds to the
   configurations of `red/configs.sl` by `concat-cfs` and `fcopen.sl` by
-  `concat-c`; its job reads cfs through the `cfs-run` in scope (in
+  `concat-c`; its jobs read cfs through the `cfs-run` in scope (in
   `fcopen.sl`, a decoding of `config-srcs`), and `qztgoal.sl` sets it as a goal and discharges it: every
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
@@ -1288,26 +1283,29 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (`cut-script`: the largest subtrees of 100 to 800 leaves, and the rest
   of the walk with those left as `SCut`), and `qztproof.sl` queues one
   `native.sl` job per region (`reg-c`) and one for the cap checks
-  (`cap-run`); each job builds its own quiz tree. A region's job walks
+  (`cap-run`); each job builds its own quiz tree from the cfs that
+  `cfs-run` gives it (`cfs-tree`), so no job refers to cfs but through `cfs-run`. A region's job walks
   its subtree from the context check2-c reaches there, runs `redp-c` on
   its obligations, and checks that its cut list (the parts of the earlier
   regions of its walk, which `SCut` and `PCut` refer to) is made of parts
   of the regions after it in `regs`; `reg-claim` follows a dart of
   positive dscore from the region of its walk's root through those
-  parts to the region whose obligations cover it. In one run each on a
-  4-core cloud VM shared with other runs, `--goal proved` passed in about
-  1520 s with slc, about 1490 s of it compiling 8.7 MB of OCaml; in about
-  485 s and, after a later merge (7.3 MB), about 994 s with slc and
-  `OCAMLRUNPARAM=o=200` in its environment, which ocamlopt inherits (about
-  454 s and 970 s compiling); and in about 793 s with the reference
-  `main.exe` under `ulimit -s unlimited` (about 742 s compiling 12.5 MB).
-  ocamlopt's time appears to depend much on its own GC: on the first
-  3.4 MB of that OCaml (its 50,000 top-level constants) it took about
-  1000 s by default (peak RSS 0.8 GB), 980 s with `o=200`, 330 s with
-  `o=1000` (2.5 GB) and 210 s with `s=8M,o=200` (1.1 GB), one run each. The 22 jobs, run one at a time, took
-  about 37 s of CPU together, the longest about 4.4 s. A run with one
-  reducible leaf of the arity-7 script replaced by an empty hubcap was
-  rejected (a job answered `ChkNo`). In a test run the tree built
+  parts to the region whose obligations cover it. The load order below
+  appears not to elaborate any more: `red/configs.sl`'s `take-app` reads
+  the `CatNil` of `cfcolor.sl`, which it does not load (an open question
+  which chain to give instead). On the chain of `fcfinal.sl` up to
+  `fcopen.sl` followed by `native unav/qztproof unav/qztgoal` (each
+  `.sl`), `--goal proved` passed with slc in about 54 s in one run on a
+  4-core cloud VM shared with other runs (1.5 MB of OCaml, compiled in
+  about 6 s; the 22 jobs about 40 s of CPU together, the longest about
+  4.2 s). ocamlopt's time appears to depend much on its own GC: on the
+  first 3.4 MB of an earlier, larger program for these jobs (its 50,000
+  top-level constants) it took about 1000 s by default (peak RSS 0.8 GB),
+  980 s with `o=200`, 330 s with `o=1000` (2.5 GB) and 210 s with
+  `s=8M,o=200` (1.1 GB), one run each. A run with one reducible leaf of
+  the arity-7 script replaced by an empty hubcap was rejected, and on the
+  chain above one with each region's first part replaced by its second
+  (`p` by `mp` in `regs`) was rejected (in each a job answered `ChkNo`). In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
   certificate. Load order: that of `unavgoal.sl` with `native.sl`
