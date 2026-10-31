@@ -641,7 +641,7 @@
       (let-match many dd2 (BdY _ bd) ((BdN _) (FvNo)))
       (let ((unique rv4) (erased zs1) (erased o1) (unique zv1) (erased c1) (erased rz1)) (cp-win R rvb 0 wl w s1 (Nil (Sy)) (Nil (Sy)) zv (RvN) n lb bd))
       (let-match erased c1 (CatN _ _))
-      (let ((unique zv2)) (qv-push zs1 zv1 (TgQD) 0 iD (EcQD 0)))
+      (let ((unique zv2)) (qv-push zs1 zv1 (TgQD) 0 iD (EcQD 0) (NcdY _ (NcQD))))
       (let ((erased o2) (erased c2) (erased rz2)) (rv-snoc zs1 w iD rz1))
       (let ((erased W) (erased cW) (unique zv3) (unique ov4)) (sv-append _ o2 tz zv2 rz2 ov3))
       (FvOk d l W ov4 (lz-force k tz l w W d lz (DnB (PnP q) t tz c (ZaP q t tz st2)) (cat-one-l w o2 tz W iD c2 cW)) zv3 (sv-clear R rv4)))))
