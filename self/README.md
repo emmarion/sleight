@@ -63,7 +63,7 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
 - `base.sl` — booleans, `Nat`/`Char`/`String` helpers over the
   prelude's externs, a trie map over `Nat` identifiers walked by the
   prelude's `Half`, a radix trie keyed by names, list helpers, and helpers
-  over the prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
+  over the prelude's `Rope` (ASSUMPTIONS 122). Its deciders and lookups return evidence (ASSUMPTIONS 121): the
   orders on `Nat` and `String` are relations decided into the prelude's
   `Cmp`, so a match on `CEq` forces the two equal; a trie lookup returns
   `Hit` with a `MapsTo` proof or `Miss` with an `Absent` one; `list-nth`
@@ -120,7 +120,7 @@ a `U8` or a `Char`, both newtypes, is its `Nat` (section 33).
   function threads a world of a type it is generic in, with the
   `Performer` that answers a `world-do` (ASSUMPTIONS 188).
 - `elab.sl` and `elab-main.sl` — the elaborator and checker: head dispatch, calls with
-  their proofs, matches with refutation and `else`, the seven statements, literals
+  their proofs, matches with refutation and `else`, the statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
   expansion of a `let-match` with branches, and the top level. `elab.sl` holds
@@ -195,11 +195,7 @@ every test again under `slc --interpret` and compares it the same way.
 And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 151 runnable tests
-match, all 98 error tests are refused with the expected text, and the
-fixpoint holds; the whole script took under half a minute on the
-machine the last session measured it on, most of it the bytecode
-compiles of the tests' output.
+self-hosting fixpoint.
 
 ## Choices, and where they differ from the reference
 
@@ -221,7 +217,7 @@ the entry says otherwise, and recorded so it can be revisited.
   which the FFI unwraps one level into the shape its model's
   constructors describe and wraps back (`lib/ffi_core.ml`'s views,
   laid out as the model's own type, which the reference checks at the
-  `extern` claim), so it is matched and built like any tagged type; since ASSUMPTIONS 133 an extern type with a template in `lib/ffi_templates.txt` is matched and built through the template instead, the view kept for held values, and `slc --no-templates ...` strips the templates. A constructor
+  `extern` claim), so it is matched and built like any tagged type; an extern type with a template in `lib/ffi_templates.txt` is matched and built through the template instead (ASSUMPTIONS 133), the view kept for held values, and `slc --no-templates ...` strips the templates. A constructor
   application whose head the elaborator sees is the direct build; a
   call whose head is a named function is a direct OCaml call; a match
   on a tagged type is a direct `match` on the shape, and when the
@@ -244,16 +240,17 @@ the entry says otherwise, and recorded so it can be revisited.
 - **Identifiers are `Nat`s**: comparing two is `nat-cmp`, a fresh one
   is `Succ`, and the environment's maps and the store are tries over
   their halves (the prelude's `Half`, whose `nat-halve` is the identity
-  under the FFI), with `Double` in the evidence where the digits used
-  to be; the bijective spelling (`Bin`, a plain type now) appears only
+  under the FFI), with `Double` in the evidence; the bijective spelling
+  (`Bin`, a plain type) appears only
   where a numeral literal is spelled into its `Numeral` proof. OCaml
   names carry the id in decimal: `v1234_length`.
 - **Termination is structural except in the interpreter and the
   generated printer.** Those two take a `Nat` that decreases along the
-  call stack (not a step count), so a fuel of 1000000 or 100000 bounds
-  depth, not work; running out returns an error value, never a wrong
+  call stack (not a step count), so a fuel (1000000000 for the
+  interpreter unless `--eval-fuel` says otherwise, 100000 for the
+  printer) bounds depth, not work; running out returns an error value, never a wrong
   answer silently. The fuel decreases on a tail call too, so it, rather
-  than the host stack, is what a long compile-time loop now meets
+  than the host stack, is what a long compile-time loop meets
   (ASSUMPTIONS 150). Everything else recurses on a constructor argument
   by the ordinary `subterm` decrease the reference checks: the reader on
   its tokens and frames, maps and term traversals on their structure,
@@ -290,8 +287,8 @@ the entry says otherwise, and recorded so it can be revisited.
   re-canonicalized at the smaller count. The table is also indexed by
   a bound on its keys, kept equal to the environment's id counter, so
   binding a fresh id refutes the position being taken (ASSUMPTIONS 97).
-  All of it is erased, so the compiled compiler runs the same code as
-  before.
+  All of it is erased, so it costs the compiled compiler nothing at
+  run time.
 - **Errors are values.** The language has no exceptions, so an
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where
@@ -344,9 +341,7 @@ the entry says otherwise, and recorded so it can be revisited.
   before reading (the reference's `Env.forced` is the same shape). What the
   index does not prove is that a cached name is canonical: `MkOpens` can
   be applied anywhere, so the discipline is that it appears only in the
-  transports and the table functions of core.sl. The session that made
-  this measured the compiler compiling itself going from about 66
-  seconds to under 3; `bench/bench.sh` repeats the measurement.
+  transports and the table functions of core.sl.
 - **Sharing is the store's.** `lib/extract.ml` names a block met twice
   by physical identity, which Sleight lacks; here every value the compile-time
   interpreter makes is a block in `heap.sl`'s store, and the emitter
@@ -365,9 +360,9 @@ the entry says otherwise, and recorded so it can be revisited.
   `String` prints as the literal it reads back from, the emitted OCaml
   spelling it through `Ffi_core` and `elab.sl`'s compile-time printer in
   the language (ASSUMPTIONS 154); that printer takes an extern value
-  apart with one case per extern implementation and no `else`, so a
-  fourth extern type is refused there rather than printing through the
-  untyped spelling.
+  apart with one case per extern implementation and no `else`, so an
+  extern type with no case is refused there rather than printing
+  through the untyped spelling.
 - **Output is a rope written chunk by chunk.** Consing a `String`
   copies under the FFI, so the compiler never builds a long string; the
   OCaml text is a tree of small chunks flushed through one `WriteOut`
@@ -415,8 +410,7 @@ the entry says otherwise, and recorded so it can be revisited.
   included, always sits under a frame. The elaborator decides each
   variable's place when it emits it (ASSUMPTIONS 127); the invariant
   that every non-erased entry in scope has one is not yet a proof, so
-  a miss there is an internal error at elaboration, no longer a value
-  at runtime.
+  a miss there is an internal error at elaboration.
 - **Code is built at the expectation.** Each case of the expression
   elaborator returns `Code ctx expect` (ASSUMPTIONS 129): a one-value
   case builds at its position and `single` identifies that shape with
@@ -443,8 +437,8 @@ the entry says otherwise, and recorded so it can be revisited.
 - **`nat-cmp` is extern** (ASSUMPTIONS 120, 123), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; `Cmp` itself is plain source, built by the FFI
-  through its constructor, which since ASSUMPTIONS 151 the compile-time
-  interpreter builds too, finding the constructors on the model's own
+  through its constructor, which the compile-time interpreter builds
+  too (ASSUMPTIONS 151), finding the constructors on the model's own
   return type rather than running the model.
 - **The FFI's names are decided once.** An `extern` mark is looked up
   in the FFI's table where it is read and kept as an `Extern` or
@@ -458,7 +452,6 @@ the entry says otherwise, and recorded so it can be revisited.
   elaborator counted against its model. `apply-extern` is total
   (ASSUMPTIONS 151), so a claimed extern always runs.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
-  always runs the FFI's externs, and the output always uses them), and
-  macros, which the reference does not implement either. A string
+  always runs the FFI's externs, and the output always uses them). A string
   literal is not `is`-transparent to its characters as the reference's
   is (ASSUMPTIONS 60); `numeral-of` on one is refused as there.

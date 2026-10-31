@@ -14,9 +14,9 @@ file: the full language stands, and this is a fragment of it.
    `def-fns` lines and `def-adts` constructors; phantom constructors;
    `union` and the `enum` token, every type now carrying a tag; the
    one-real-branch counting rules; `coerce`, `Coercible`, the
-   `coercible-*` forms, `newtype` and `Newtype`; `tail` and `delegate`.
+   `coercible-*` forms and `newtype`; `tail` and `delegate`.
 2. **`Matchable`** (sections 8, 24): `open-adt`, `open-absurd`,
-   `matchable-of`, `newtype-of` and the opening invariant. A `match`
+   `matchable-of` and the opening invariant. A `match`
    instead requires its scrutinee's type to canonicalize to an
    application of a type constructor declared by a `def-adts`;
    constructor disjointness (section 7's failure mode 2) reads that

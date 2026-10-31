@@ -40,6 +40,8 @@ claim in this file that the tests do not make is a mistake in this file.
   helpers, each judgment total with an `Ok` or `Err` outcome; `Fails` is
   the `Err` outcome of a program.
 - `elabfn.sl` — the deriving functions for `elab.sl`.
+- `raw.sl` — helpers that build `elab.sl`'s raw syntax by hand, for the
+  tests, and the environment a program is evaluated in.
 - `preserve.sl` — groundwork for the open preservation argument below:
   canonicalization is a function of the rules, and `ElabTerm` forms only
   what `TypeOfTerm` types. Not needed by the elaborator.
@@ -60,22 +62,21 @@ claim in this file that the tests do not make is a mistake in this file.
   it for the context it produces. Results are ADTs holding the derived
   data and the erased derivation, or a `Stuck` constructor, which the
   functions reach only on a malformed shape. Two shapes of the grammar
-  had no derivation until the owner closed them. A `Bound` outside its
-  binder, until every scoping invariant took the depth it holds at:
+  are closed by the owner's decisions. A `Bound` outside its binder:
+  every scoping invariant takes the depth it holds at:
   `Scoped ents d t` says a term under `d` binders mentions only entries
   of the context and binders below `d`, the walk of unification and the
   telescope-threading functions of the elaborator carry that depth, and
   `subst` requires its term closed under the substitution's length (the
-  owner's decision, reversing a `SubBeyond` rule an earlier session had
-  added to `Subst` to make it total on a binder past the list, which
-  stated a dangling index rather than a substitution). So `Subst`
+  owner's decision; `Subst` has no rule for a binder past the list,
+  which would state a dangling index rather than a substitution). So `Subst`
   derives nothing for such a term, and `type-of-term` refutes the
   `Bound` case from `Assignable` at an assignment and from the
   closedness of a substituted `is` entry. And the type of a closed term
   (`type-of-term` in `unify.sl`, which `UAssign` and `MintTele`'s `is`
   entries need) for an application whose head's canonical type is not a
-  former of the application's arity, until `Term` took `TyApp` and
-  `ValApp` in place of one `App`, after DESIGN.md section 9's
+  former of the application's arity: `Term` has `TyApp` and `ValApp`
+  in place of one `App`, after DESIGN.md section 9's
   productions 2 and 3 (the owner's decision): `(TyApp head params args)`
   and `(ValApp head params ret args)` record the former they apply, so
   `TypeOfTerm` reads an application's type off the node, `Univ` or the
@@ -93,19 +94,16 @@ claim in this file that the tests do not make is a mistake in this file.
   metatheory in the session's reading: that under the rules in force the
   recorded former agrees with the head's canonical type, without which
   `TypeOfTerm` types a `ValApp` by a return its head does not have.
-  History: one session found a program that reached the head-type
-  stuck while `ETValCtor` accepted any type as a `ValCtor` former's
-  return and `UAssign` related a variable to a term with no check on
-  their types (`tests/mini_untyped_rule.sl`). The owner then restored
-  DESIGN.md section 11's rule (the return canonicalizes to an application of a type
-  constructor not among the former's own binders), which refuses that
-  program, and had `UAssign` equate the variable's type with the term's
-  next, as `UAlias` already did, so that every rule unification mints
-  relates terms whose types it has unified; `Refine` then forces one
-  equation, the type equation following from it. One relation change
-  from the fuel removal is still flagged for the owner: `Unify`'s twin
-  left/right rules for a variable against a non-variable were merged
-  through `Sided`.
+  `ETValCtor` requires DESIGN.md section 11's rule (the return
+  canonicalizes to an application of a type constructor not among the
+  former's own binders), and `UAssign` equates the variable's type with
+  the term's, as `UAlias` does, so that every rule unification mints
+  relates terms whose types it has unified (both the owner's decisions;
+  `tests/mini_untyped_rule.sl` is a program they refuse); `Refine` then
+  forces one equation, the type equation following from it. One
+  relation shape is flagged for the owner: `Unify` has one rule, through
+  `Sided`, for a variable against a non-variable on either side, where
+  twin left and right rules would also do.
 - **`Univ` is a term.** Section 10 makes the universe a nullary type
   constructor with `Type` an entry rewriting to it; here `Univ` is a
   constructor of `Term`, `Type` an entry whose rule is `Univ`, and

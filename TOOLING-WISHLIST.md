@@ -16,12 +16,15 @@ Nothing here is a design decision; it is a log of friction, in the order met.
    enclosing `def-fns` (e.g. `expected 3 arguments, got 2` on a 20-line
    function). The offending sub-expression, or at least its line, would cut
    most of the guesswork.
+   Closed: both compilers' messages give the `line:col` of the offending
+   sub-expression, e.g. a short call's own position.
 
 3. **Shadowing report.** `Canonical` exists in both `mini/canon.sl` (two
    arguments) and `mini/elab.sl` (three); after loading both, the first is
    unreachable by name and a use of it fails with an arity error far from
    the cause. A warning on redefinition, or a way to qualify names, would
    have caught this immediately.
+   Closed by WARNINGS 1, which both compilers emit on a redefinition.
 
 4. **`let-match` on GADT-refined evidence.** `let-match` insists on a
    single-constructor type, so evidence types with two constructors (one
@@ -29,7 +32,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
    what makes these functions 20 levels deep. Accepting a `let-match` when
    the index leaves one constructor possible would flatten most of
    `elabfn.sl`.
-   Implemented in DESIGN.md §27: `let-match` now accepts the unique
+   Implemented in DESIGN.md §27: `let-match` accepts the unique
    structurally unrefuted constructor, including a phantom at `erased`.
 
 5. **`else` does not refine.** After `(else ...)` the scrutinee is not known
@@ -71,6 +74,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     defined by both `mini/unify.sl` and `mini/elab.sl`. The symptom is an
     arity error at the use site. A one-line `uniq -d` over constructor
     names found all of them at once; the checker could do the same.
+    Closed by WARNINGS 1, which covers constructor names.
 
 12. **Branch misalignment reads as a type error.** When a branch closes one
     paren too few, the next branch lands in the enclosing `match`, and the
@@ -98,10 +102,9 @@ Nothing here is a design decision; it is a log of friction, in the order met.
 
 15. **A stack overflow says nothing about where it came from.** Three
     of the `mini/` end-to-end programs overflowed the OCaml stack inside
-    `slc` under the default 8MB limit. This item used to read that the
-    overflow was in the compile-time interpreter and wanted a
-    heap-allocated continuation for it; both were wrong. The overflow
-    was in the emitter, in two walks over the compile-time store that
+    `slc` under the default 8MB limit. The first guess put the overflow
+    in the compile-time interpreter, wanting a heap-allocated
+    continuation for it. It was in the emitter, in two walks over the compile-time store that
     recursed once per allocated block, and an accumulator in each was
     the whole fix (ASSUMPTIONS 148). Finding that took a debugger,
     because `Fatal error: exception Stack overflow` names neither the
@@ -139,6 +142,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     mismatch on a later use of `a`, three lines away. A warning on a
     pattern variable that shadows a binding of the enclosing function
     would name the problem at its source.
+    Closed by WARNINGS 1, which covers pattern variables.
 
 19. **No forward references between `def-adts` groups.** A relation may
     mention one declared later in the same group but not in a later
@@ -205,10 +209,8 @@ files are not in this tree; they are at commit `cb1d7c5`
     file` says what each run of `)` closes, and a diff of two runs reduces a
     stray paren to one hunk. It found all four imbalances the originating
     session met, including the branch-nested-in-a-branch case of item 12,
-    from the `--closers` view. It now reads the checker's own lexer, so the
-    comment and string caveat recorded here is gone; on this session's check
-    the text-scanning version it replaced had been reporting `final depth 6`
-    for the balanced `self/emit.sl`. One caveat stands: a surplus `)` at the
+    from the `--closers` view. It reads the checker's own lexer, so comments
+    and strings do not confuse it. One caveat stands: a surplus `)` at the
     top level pops an empty stack silently, so for that case the checker's
     `line N: unexpected )` is the sharper report.
 
@@ -278,10 +280,10 @@ files are not in this tree; they are at commit `cb1d7c5`
     compiles itself, so an edit or a `git stash` in between feeds the two
     steps different sources and the fixpoint compares the wrong things.
     Copying the sources into the build directory at the start would make
-    a run answer for one tree. `bench/bench.sh` had the complementary
-    problem with a hard-coded pinned commit; it now takes the commit as a
-    required argument and stops when that commit is unreachable, which
-    leaves choosing sources the measured `slc` still accepts to the caller.
+    a run answer for one tree. `bench/bench.sh` avoids the complementary
+    problem by taking the pinned commit as a required argument and stopping
+    when that commit is unreachable, which leaves choosing sources the
+    measured `slc` still accepts to the caller.
 
 35. **Profiles and growth.** Extraction keeps function names, so
     `callgrind` on a `-g` build of `slc.ml` reads directly in terms of
@@ -301,6 +303,8 @@ files are not in this tree; they are at commit `cb1d7c5`
     temporaries list even below its bound. A short-circuiting form
     (a nested `match` today, a macro once macros land) is the idiom, and
     the base helpers' names invite the mistake.
+    Closed by `std/macro.sl`'s short-circuiting `and` and `or` macros,
+    which slc takes.
 
 37. **Backwards references and helpers.** A helper defined later in the
     file is unusable earlier (`atoms-of` at line 2241 of `self/elab.sl`
@@ -363,6 +367,10 @@ files are not in this tree; they are at commit `cb1d7c5`
     were visible only by running the reference on the chain by hand. A
     test, or a `dune` alias, that elaborates each such chain once and
     requires no warnings would catch them where they appear.
+    Closed: `test/runtest.ml` checks a needed file from outside `tests/`
+    as `--warn-unused` does and fails the test on any warning, and
+    `self/bootstrap.sh` builds slc under `--warnings-as-errors
+    --warn-unused`.
 
 43. **`dune test` when it thinks nothing changed.** One run after
     editing `.sl` sources printed no summary at all, and `dune test
@@ -381,6 +389,9 @@ files are not in this tree; they are at commit `cb1d7c5`
     The bootstrap compares where the two put a first error (ASSUMPTIONS
     194) and not what they say; a check of a shared substring for each
     refusing test is what item 42's alias could also run.
+    Closed for this example: DESIGN.md §23 makes the cell binder optional
+    ("a pattern may add one binder after the fields"), and both compilers
+    accept the pattern. A shared-substring check remains unbuilt.
 
 45. **Calibration.** Both compilers took the roughly 2,400 added
     `let-match` expansions without a failure; slc compiled itself in
@@ -399,6 +410,8 @@ files are not in this tree; they are at commit `cb1d7c5`
     and found it only by reading the `ocaml` output. A warning on a
     `many` binder that no running code reads, suggesting `erased`, would
     have caught it at the binder.
+    Closed by WARNINGS 10 under `--warn-unused`: "`d` is referenced only
+    in erased positions; declare it `erased`".
 
 47. **Locations of two errors that point away from their cause.** ``no
     telescope to reuse for `_` `` points at the `match` whose annotation is
