@@ -1341,16 +1341,22 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (`p` by `mp` in `regs`) was rejected (in each a job answered `ChkNo`). In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
-  certificate. Load order: that of `unavgoal.sl` with `native.sl`
-  after `std/macro.sl` (`std/macro.sl native.sl
-  std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`, `cfmap.sl`,
-  `colalias.sl unav/faces.sl red/red.sl red/configs.sl cpmap.sl`, then
+  certificate. Load order: `std/macro.sl native.sl
+  std/nat.sl std/list.sl ring.sl`, `defs` to `hypcubic` as in the
+  `fcgoal.sl` entry, `cfmap.sl colalias.sl unav/faces.sl red/red.sl
+  cpmap.sl red/color.sl cfcolor.sl red/configs.sl unav/realias.sl`
+  (`red/configs.sl` reads the `App` of `cfcolor.sl`, and `unav/realias.sl`
+  puts back the `Or` that `red/color.sl` defines again), then
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
-  dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
+  dscore dsum posz pwalk hubsound pwsound conv cap unav data`, then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
-  qmirror.sl unave.sl qztcfs.sl native.sl qztproof.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
+  qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal
+  proved`. On that chain it passed with slc in about 1770 s in one run,
+  most of it, it seemed, ocamlopt (with `OCAMLRUNPARAM=s=8M,o=200`) on
+  the 9.2 MB program that the jobs make there, where `qztcfs.sl`'s
+  `cfs-run` gives them cfs as a built value. `unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
-  without the goal). Not done: embed.v (from the preembedding to an
+  without the goal. Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
   cfquiz.v also makes, and the contradiction with C-reducibility; how
   `embed.sl` puts the rest together is in its entry below.
