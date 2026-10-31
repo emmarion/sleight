@@ -531,7 +531,7 @@
 (def-fns _ $ (many rotl-c : (many (Nat) k) (subterm many (List (List (Col))) ls) (many (List (List (Col))) acc) -> (many (List (List (Col))) ls2)
     (erased (RotL k ls acc ls2) p))
   (let-match many ls (Cons _ et rest) ((Nil _) (values acc (RLNil k acc))))
-  (let ((many et2) (erased rt)) (rot-c _ k et))
+  (let ((many et2) (erased rt)) (rot-app-c _ k et))
   (let ((many ls2) (erased p)) (tail $ rotl-c k rest (Cons _ et2 acc)))
   (values ls2 (RLCons k et et2 rest acc ls2 rt p)))
 

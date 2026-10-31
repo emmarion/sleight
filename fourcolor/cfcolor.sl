@@ -537,6 +537,33 @@
     -> (erased (Rots A m zs (Cons A y xs)) r))
   (rots-app A m xs (Cons A y (Nil A)) zs (Cons A y xs) (snoc-app A xs zs y s) (CatCons A y (Nil A) xs xs (CatNil A xs)) l))
 
+(def-fns _ $ (many take-app-c : (erased Type A) (subterm many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
+    -> (many (List A) p s) (erased (App A p s xs) a) (erased (Length A p k) lp))
+  (let-match many k (Succ k1) ((Zero) (values (Nil _) xs (CatNil A xs) (LengthNil A))))
+  (let-match many xs (Cons _ x rest) (absurd (Nil _) (let-match erased l (LengthNil _)) (let-match erased le (LtS _ _ le1)) le1))
+  (let-match erased l (LengthCons _ _ _ m1 l1))
+  (let-match erased le (LtS _ _ le1))
+  (let ((many p) (many s) (erased a) (erased lp)) (notail $ take-app-c _ k1 rest m1 l1 le1))
+  (values (Cons _ x p) s (CatCons A x p s rest a) (LengthCons A x p k1 lp)))
+
+(def-fns _ $ (many lapp-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (App A xs ys zs) a))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values ys (CatNil A ys))))
+  (let ((many zs) (erased a)) (notail $ lapp-c _ rest ys))
+  (values (Cons _ x zs) (CatCons A x rest ys zs a)))
+
+(def-fns _ $ (many rot-in-c : (erased Type A) (many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
+    -> (many (List A) ys) (erased (Rot A k xs ys) r))
+  (let ((many p) (many s) (erased a) (erased lp)) (take-app-c _ k xs m l le))
+  (let ((many ys) (erased b)) (lapp-c _ s p))
+  (values ys (RotIn _ k m xs ys l le (rots-app A k p s xs ys a b lp))))
+
+(def-fns _ $ (many rot-app-c : (erased Type A) (many (Nat) k) (many (List A) xs) -> (many (List A) ys) (erased (Rot A k xs ys) r))
+  (let ((many m) (erased l)) (size-c _ xs))
+  (match many (nat-cmp k m) _
+    ((CLt _ _ _ _ lt) (rot-in-c _ k xs m l (lt-weaken k m lt)))
+    ((CEq _ _ _) (rot-in-c _ k xs m l (lt-succ k)))
+    ((CGt _ _ _ _ gt) (values xs (RotOver _ k m xs l gt)))))
+
 (def-fns _ $ (erased respects-unsnoc : (erased (List (Nat)) lab xs xs2 cs2) (erased (Nat) x) (subterm erased (Snoc (Nat) xs x xs2) s)
     (erased (Respects lab xs2 cs2) rp) -> (erased (List (Nat)) cs) (erased (Nat) c) (erased (Snoc (Nat) cs c cs2) sc) (erased (Respects lab xs cs) r)
     (erased (Nth (Nat) lab x c) px))
