@@ -847,39 +847,51 @@
 
 (def-adts $ (KrC : ((Nat) h) ((Ctree) c0 r0) ((Gtree) g0) -> Type)
   enum
-  (many KDoneC : (erased (Nat) h) (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Ctree) ctu) (many (Gtree) gtr gtu)
-      (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (CtH (Succ h) ctu) hc) -> (KrC h c0 r0 g0))
-  (many KGoC : (erased (Nat) h) (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Ctree) ctu ctr) (many (Gtree) gtu)
-      (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (CtH (Succ h) ctu) hc) -> (KrC h c0 r0 g0)))
+  (many KDoneC : (erased (Nat) h) (erased (Ctree) c0 r0) (erased (Gtree) g0) (unique (UTree) u) (erased (Ctree) ctu) (many (KeepE ctu) e)
+      (many (Gtree) gtr gtu) (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (UT h u ctu) ut) -> (KrC h c0 r0 g0))
+  (many KGoC : (erased (Nat) h) (erased (Ctree) c0 r0) (erased (Gtree) g0) (unique (UTree) u) (erased (Ctree) ctu) (many (KeepE ctu) e)
+      (many (Ctree) ctr) (many (Gtree) gtu) (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (UT h u ctu) ut)
+      -> (KrC h c0 r0 g0)))
 
-(def-fns _ $ (many ktc-step-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) h) (many (Ctree) ctu) (many (Gtree) gtr gtu)
-    (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (CtH (Succ h) ctu) hc) -> (many (KrC h c0 r0 g0) k))
-  (let-match many ctu (CEmpty) (else
-    (let-match many gtr (GEmpty) (else
-      (let-match many gtu (GEmpty) (else
-        (let ((many keep) (many gone) (erased cres) (erased hk) (erased hg)) (ctree-restrict-c h ctu (Cons _ (MkRx _ (BS0) gtr) $ Nil _) hc))
-        (let ((many ctr) (erased rl) (erased _)) (ctree-union-rotlr (Succ h) gone gone hg hg))
-        (KGoC h c0 r0 g0 keep ctr gtu (KRRestr h c0 r0 g0 ctu keep gone gtr gtu kr hc hk cres)
-          (CRGone h c0 r0 g0 ctu keep gone ctr gtr gtu kr hc hg cres rl) hk)))
-      (KDoneC h c0 r0 g0 (CEmpty) (GEmpty) (GEmpty) (KREmpty h c0 r0 g0 ctu gtr kr) (HE (Succ h)))))
-    (KDoneC h c0 r0 g0 ctu gtr gtu kr hc)))
-  (KDoneC h c0 r0 g0 ctu gtr gtu kr hc))
+(def-fns _ $ (many ktc-step-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) h) (unique (UTree) u) (erased (Ctree) ctu) (many (KeepE ctu) e)
+    (many (Gtree) gtr gtu) (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (UT h u ctu) ut) -> (unique (KrC h c0 r0 g0) k))
+  (let-match many e (KLive _) ((KEmpty) (KDoneC h c0 r0 g0 u ctu e gtr gtu kr ut)))
+  (let-match many gtr (GEmpty) (else
+    (let-match many gtu (GEmpty) (else
+      (let ((unique ku) (many gone) (erased keep) (erased uk) (erased cres) (erased hg) (many e2))
+        (ctree-restrict-u h u ctu ut (Cons _ (MkRx _ (BS0) gtr) $ Nil _)))
+      (let ((many ctr) (erased rl) (erased _)) (ctree-union-rotlr (Succ h) gone gone hg hg))
+      (let ((erased hc) (erased hk)) (values (ut-h h u ctu ut) (ut-h h ku keep uk)))
+      (KGoC h c0 r0 g0 ku keep e2 ctr gtu (KRRestr h c0 r0 g0 ctu keep gone gtr gtu kr hc hk cres)
+        (CRGone h c0 r0 g0 ctu keep gone ctr gtr gtu kr hc hg cres rl) uk)))
+    (KDoneC h c0 r0 g0 (UEmpty) (CEmpty) (KEmpty) (GEmpty) (GEmpty) (KREmpty h c0 r0 g0 ctu gtr kr) (UTE h))))
+  (KDoneC h c0 r0 g0 u ctu e gtr gtu kr ut))
 
-(def-fns _ $ (many ktc-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (subterm many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
-    (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (CtH (Succ h) ctu) hc) ->
-    (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2) (erased (CtH (Succ h) ctu2) hc2))
+(def-fns _ $ (many ktc-u : (erased (Ctree) c0 r0) (erased (Gtree) g0) (subterm many (Nat) d) (many (Nat) h) (unique (UTree) u) (erased (Ctree) ctu)
+    (many (KeepE ctu) e) (many (Ctree) ctr) (many (Gtree) gtu) (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr)
+    (erased (UT h u ctu) ut) ->
+    (unique (UTree) u2) (erased (Ctree) ctu2) (many (KeepE ctu2) e2) (many (Gtree) gtr2 gtu2) (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2)
+    (erased (UT h u2 ctu2) ut2))
   (let-match many d (Succ d1)
     ((Zero)
       (let ((many hit) (many miss) (erased pt) (erased hs)) (gtree-restrict-c gtu (Cons _ (MkRx _ (BS0) ctr) $ Nil _)))
-      (values ctu hit miss (KRSplit h c0 r0 g0 ctu ctr gtu hit miss kr cr pt hs) hc)))
-  (let ((many c1) (many g1) (many u1) (erased kr1) (erased hc1)) (notail $ ktc-c c0 r0 g0 d1 h ctu ctr gtu kr cr hc))
-  (let ((many (Ctree) c2) (many (Gtree) g2) (many (Gtree) u2) (erased (KR h c0 r0 g0 c2 g2 u2) kr2) (erased (CtH (Succ h) c2) hc2))
-    (match many (ktc-step-c c0 r0 g0 h c1 g1 u1 kr1 hc1) _
-      ((KDoneC _ _ _ _ a b c k hk) (values a b c k hk))
-      ((KGoC _ _ _ _ a b c k cr2 hk) (notail $ ktc-c c0 r0 g0 d1 h a b c k cr2 hk))))
-  (match many (ktc-step-c c0 r0 g0 h c2 g2 u2 kr2 hc2) _
-    ((KDoneC _ _ _ _ a b c k hk) (values a b c k hk))
-    ((KGoC _ _ _ _ a b c k cr2 hk) (tail $ ktc-c c0 r0 g0 d1 h a b c k cr2 hk))))
+      (values u ctu e hit miss (KRSplit h c0 r0 g0 ctu ctr gtu hit miss kr cr pt hs) ut)))
+  (let ((unique u1) (erased c1) (many e1) (many g1) (many v1) (erased kr1) (erased ut1)) (notail $ ktc-u c0 r0 g0 d1 h u ctu e ctr gtu kr cr ut))
+  (let ((unique (UTree) u2) (erased (Ctree) c2) (many (KeepE c2) e2) (many (Gtree) g2) (many (Gtree) v2) (erased (KR h c0 r0 g0 c2 g2 v2) kr2)
+      (erased (UT h u2 c2) ut2))
+    (match unique (ktc-step-c c0 r0 g0 h u1 c1 e1 g1 v1 kr1 ut1) _
+      ((KDoneC _ _ _ _ a ca ea b c k ua) (values a ca ea b c k ua))
+      ((KGoC _ _ _ _ a ca ea b c k cr2 ua) (notail $ ktc-u c0 r0 g0 d1 h a ca ea b c k cr2 ua))))
+  (match unique (ktc-step-c c0 r0 g0 h u2 c2 e2 g2 v2 kr2 ut2) _
+    ((KDoneC _ _ _ _ a ca ea b c k ua) (values a ca ea b c k ua))
+    ((KGoC _ _ _ _ a ca ea b c k cr2 ua) (tail $ ktc-u c0 r0 g0 d1 h a ca ea b c k cr2 ua))))
+
+(def-fns _ $ (many ktc-c : (erased (Ctree) c0 r0) (erased (Gtree) g0) (many (Nat) d) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
+    (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (CtH (Succ h) ctu) hc) ->
+    (many (Ctree) ctu2) (many (Gtree) gtr2 gtu2) (erased (KR h c0 r0 g0 ctu2 gtr2 gtu2) kr2) (erased (CtH (Succ h) ctu2) hc2))
+  (let ((unique u) (erased ut) (many e)) (ut-of h ctu hc))
+  (let ((unique u2) (erased c2) (many _) (many g2) (many v2) (erased kr2) (erased ut2)) (ktc-u c0 r0 g0 d h u ctu e ctr gtu kr cr ut))
+  (values (ct-of h u2 c2 ut2) g2 v2 kr2 (ut-h h u2 c2 ut2)))
 
 (def-adts $ (KSound : (Pred P) ((Nat) h) ((Ctree) ct) -> Type)
   enum
