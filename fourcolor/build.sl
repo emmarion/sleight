@@ -5,6 +5,7 @@
   (many ACCons : (erased (List (Nat)) e pl r) (erased (List (Closed)) cs) (erased (Nat) t) (erased (AllJoined e pl r t) j)
       (erased (AllClosed e pl cs) rest) -> (AllClosed e pl (Cons (Closed) (MkClosed t r) cs))))
 
+; A plane map e nd with labels pl and representatives rep, joining the labels cs asks for.
 (def-adts $ (Built : ((List (Closed)) cs) -> Type)
   enum
   (many MkBuilt : (erased (List (Closed)) cs) (erased (List (Nat)) e nd pl rep) (erased (PlaneMap e nd) pm)

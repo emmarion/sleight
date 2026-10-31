@@ -4,6 +4,7 @@
   (many LAppCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (LApp A xs ys zs) p)
       -> (LApp A (Cons A x xs) ys (Cons A x zs))))
 
+; Step t closes the active items that start at the labels r.
 (def-adts $ (Closed : -> Type)
   enum
   (many MkClosed : (many (Nat) t) (many (List (Nat)) r) -> (Closed)))

@@ -1,3 +1,4 @@
+; The active items at the corner after dart d, in sweep order.
 (def-adts $ (Group : -> Type)
   enum
   (many MkGroup : (many (Nat) d) (many (List (Nat)) items) -> (Group)))

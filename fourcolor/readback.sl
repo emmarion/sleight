@@ -144,6 +144,7 @@
       (let ((erased lb) (erased la) (erased d)) (joined-colors e nd pl rep ks (Succ j) (Succ i) cb ca pm (closes-joined e pl cs (Succ j) (Succ i) ac cl) rs col fb fa))
       (ProperCons kp a b ca cb es1 coa cob la lb (apart-sym cb ca d) rest))))
 
+; e nd is the plane map built for es, with its labels pl, representatives rep, points pts and trace cs.
 (def-adts $ (MapFor : ((List (Edge)) es) ((List (Nat)) e) ((List (Nat)) nd) -> Type)
   enum
   (many MkMapFor : (erased (List (Edge)) es) (erased (List (Nat)) e nd pl rep) (erased (List (Point)) pts) (erased (List (Closed)) cs)

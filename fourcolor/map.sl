@@ -27,8 +27,7 @@
       (erased (Respects lab xs lab) r) (erased (Nth (Nat) lab d1 l1) p1) (erased (Nth (Nat) lab d2 l2) p2)
       (erased (Apart (Nat) Lt l1 l2) differ) -> (Separates lab xs d1 d2)))
 
-; The corner after d1 and the corner after d2 may be joined by an edge without changing the genus:
-; they lie on one face, or in different components (a labelling constant along e and nd separates them).
+; The corners after d1 and d2 lie on one face, or a labelling constant along e and nd separates them.
 (def-adts $ (Joinable : ((List (Nat)) e) ((List (Nat)) nd) ((Nat) d1) ((Nat) d2) -> Type)
   enum
   (many JoinFace : (erased (List (Nat)) e nd) (erased (Nat) d1 d2 c1 c2)
@@ -51,7 +50,7 @@
   (many MkEdgeGrow : (erased (List (Nat)) e e1 e2) (erased (Nat) n) (erased (Length (Nat) e n) len)
       (erased (Snoc (Nat) e (Succ n) e1) s1) (erased (Snoc (Nat) e1 n e2) s2) -> (EdgeGrow e n e2)))
 
-; Maps of genus 0 without loops, built one edge at a time. Each edge adds the darts n and n+1.
+; e and nd form a loopless map of genus 0. Each edge adds the darts n and n+1.
 (def-adts $ (PlaneMap : ((List (Nat)) e) ((List (Nat)) nd) -> Type)
   enum
   (many PMNil : -> (PlaneMap (Nil (Nat)) (Nil (Nat))))
