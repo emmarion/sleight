@@ -36,3 +36,29 @@ in parallel jobs, one per core. `--inline 25` is passed on to ocamlopt.
 In one set of measurements on a 12-core Mac with OCaml 4.14, higher
 levels made the jobs no faster but the compile slower, and lower ones
 made the jobs slower. The check took about 36 s there.
+
+## The Skelet #1 runners
+
+Two runners for the Skelet #1 job sit side by side and run the same
+lazy-stride algorithm:
+
+- The list runner, `main-run` in `bb/sk1.sl`, keeps the tape in lists.
+  The BB(5) checks above use it. [SK1-LAZY.md](SK1-LAZY.md) describes
+  its lazy strides.
+- The array runner, `main-run-v` in `bb/sk1o.sl`, with `bb/sk1v.sl`,
+  `bb/sk1z.sl`, `bb/gvec.sl` and `bb/sk1a.sl`, keeps the tape right of
+  the head and the stride's scratch in byte and count vectors.
+  [SK1-ARRAY.md](SK1-ARRAY.md) describes it. The BB(5) checks do not use
+  it.
+
+`bench/sk1.sh` times either one alone, from the repository root:
+
+```sh
+bench/sk1.sh                                                                       # list runner
+bench/sk1.sh -x "bb/sk1a.sl bb/sk1z.sl bb/gvec.sl bb/sk1v.sl" -e main-run-v bb/sk1o.sl  # array runner
+```
+
+In one set of alternating measurements (8 runs of each, OCaml 4.14,
+about 12 s per run on that machine) the two took about the same time.
+The array runner allocated about 58% fewer minor-heap words and executed
+about 16% more instructions on a 3M-step prefix.
