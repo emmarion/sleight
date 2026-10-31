@@ -835,10 +835,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `four-color-proof`. Chain: that of `fcfinal.sl` with `paint fcmany`
   after `readback` and `fcmanyfinal` in place of `fcfinal`, with `--goal
   proved`.
-  In one run on a 4-core cloud VM it passed with slc in about 1670 s
-  (28 minutes), and in one with the reference compiler (under `ulimit -s
-  unlimited`) in about 3520 s (59 minutes), the two runs sharing the VM,
-  each at most about 3.3 GB resident.
+  In one run on a 4-core cloud VM shared with other runs it passed with
+  slc in about 1060 s, and in one with the reference compiler (under
+  `ulimit -s unlimited`) in about 1050 s, each at most about 3.3 GB
+  resident.
 - `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl`, `trivfive.sl` and
   `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
   from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
@@ -887,8 +887,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `allgc-concat`, for `AllGc`), and `fcproof.sl` and each check's goal
   file call `native-run`. In one run of the `fcfinal.sl` chain with slc on
   a 4-core cloud VM shared with other runs (wall times appear inflated
-  about twofold), the one `native-compute` compiled 22.0 MB of OCaml in
-  about 640 s and ran its 69 thunks in about 780 s (about 1110 s of CPU);
+  about twofold), elaboration took about 70 s before `native-run`, whose
+  one `native-compute` compiled 22.0 MB of OCaml in about 640 s and ran
+  its 69 thunks in about 780 s (about 1110 s of CPU; the longest, a chunk
+  of `AllRedC`, about 100 s), and about 10 s followed; in later runs on a
+  less loaded VM the compile took about 410 to 600 s and the thunks about
+  350 to 380 s;
   most of that OCaml, about 13 MB, appeared to be the scripts of
   `unav/data.sl`. Before, the unit compiled seven programs, among them
   21.6 MB for `UnavE` (about 505 s) and 7.8 MB for `CfCerts` (about
@@ -901,10 +905,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
   that of `fcgoal.sl` up to `fcopen.sl`, then `native embed4 red/proof-c
   red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
-  `--goal proved`. In one run on a 4-core cloud VM, sharing it with two
-  other runs of this size, it passed with slc in about 2190 s (36
-  minutes), at most about 3.3 GB resident; the reference compiler has
-  checked the same computations in `fcmanyfinal.sl`'s unit (above). In test runs on the chain of
+  `--goal proved`. In one run each on a 4-core cloud VM shared with other
+  runs it passed with slc in about 1510 s and with the reference compiler
+  (under `ulimit -s unlimited`) in about 970 s, at most about 3.3 GB
+  resident. In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
