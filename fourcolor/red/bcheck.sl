@@ -106,7 +106,7 @@
   (many CcH : (erased (Nat) k) (erased (List (Step)) cp) (erased (Cpcard cp k) c)
       -> (Cpcard (Cons (Step) (SH) cp) (Succ (Succ (Succ (Succ (Succ (Succ k)))))))))
 
-; Birkhoff_check1 for ring size h + 2 and kernel size m, with t the tree cpcolor-c computes for cp.
+; cp is a basis program for ring size h + 2 and kernel size m, and t the tree cpcolor-c computes for it.
 (def-adts $ (BkProg : ((Nat) h) ((Nat) m) ((List (Step)) cp) ((Ctree) t) -> Type)
   enum
   (many MkBkProg : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (Nat) k x y b) (erased (CubicProg cp) cq)
@@ -198,7 +198,7 @@
   (let-match erased b (MkBDisj _ _ t2 el dj))
   (CkY _ (MkBDisj ts ct t2 (ElThere _ t2 t rest el) dj)))
 
-; One side of do_Birkhoff_check2: from the trace a, the Kempe closure of ctu and gtu with the even normal form of a removed
+; From the trace a, the Kempe closure of ctu and gtu with the even normal form of a removed
 ; reaches ctu3, gtu3 and no chromograms left to remove.
 (def-adts $ (SRun : ((Nat) h) ((List (Col)) a) ((Ctree) ctu) ((Gtree) gtu) ((Ctree) ctu3) ((Gtree) gtu3) -> Type)
   enum
@@ -220,8 +220,8 @@
   (let-match many gtr3 (GEmpty) (else (SdNo h ts a ctu gtu)))
   (SdGo h ts a ctu gtu ctu3 gtu3 (MkSRun h a etr ctu ctr ctu3 gtu gtu3 et tt kr) hc3 (bdisj-c ctu3 ts)))
 
-; Birkhoff_check2 for ring size h + 2 and the basis trees ts, as a certificate: BK for the call with ctu1, gtu1, n, ctu2 and gtu2,
-; and BKS for one side of it, with the other side's trees cto and gto.
+; A run of the Birkhoff check for ring size h + 2 and the basis trees ts: BK from ctu1, gtu1 and n to ctu2 and gtu2, and BKS
+; for one side of it, with the other side's trees cto and gto.
 (def-adts
   ((BK : ((Nat) h) ((List (Ctree)) ts) ((Ctree) ctu1) ((Gtree) gtu1) ((Nat) n) ((Ctree) ctu2) ((Gtree) gtu2) -> Type)
     enum
@@ -266,8 +266,8 @@
   (let-match many k2 (CkY _ s2) ((CkN _) (CkN _)))
   (CkY _ (MkBK h ts ctu1 gtu1 n1 ctu2 gtu2 a1 c1 p c2 cr1 cr2 rv s1 s2)))
 
-; Birkhoff_check for ring size h + 2 and kernel size m: the basis programs cps, whose trees are ts, and the certificate of a run
-; of Birkhoff_check2 from the initial trees ctu and gtu.
+; A Birkhoff check for ring size h + 2 and kernel size m: the basis programs cps, whose trees are ts, and a run from the
+; initial trees ctu and gtu.
 (def-adts $ (BirkhoffCheck : ((Nat) h) ((Nat) m) -> Type)
   enum
   (many MkBirkhoffCheck : (erased (Nat) h m n) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts) (erased (Ctree) ctu) (erased (Gtree) gtu)
@@ -307,9 +307,8 @@
   (kr-kv Q h ctu ctr gtu kv (CKBase Q h ctr (tt-allp Q etr (Nil _) etr ct ctr tt (RANil (Col) etr) cr2 (etrace-permin NT a etr c ct et cr cr2 nt)))
     ctu3 (GEmpty) gtu3 kr))
 
-; One side of a ring in Birkhoff_valid, by functions at level L: T is a Kempe-closed set of complete traces (there, the ring
-; traces of the map on one side of the ring), NT holds the traces not in T, and every basis tree for ring size h + 2 and kernel
-; size m, the trees ts, holds the even normal form of a trace whose completion is in T (chkbP).
+; By functions at level L: T is a Kempe-closed set of complete traces, NT holds the traces not in T, and every basis tree
+; for ring size h + 2 and kernel size m, the trees ts, holds the even normal form of a trace whose completion is in T.
 (def-adts $ (BSide : ((Level) L) ((Nat) h m) ((List (Ctree)) ts) ((PredC) T NT) -> Type)
   enum
   (many MkBSide : (erased (Level) L) (erased (Nat) h m) (erased (List (Ctree)) ts) (erased Pred T NT) (erased Rel R) (erased (KClosed L T R) cl)
@@ -320,7 +319,7 @@
           (erased (Holds T ct) p)) hit)
       -> (BSide L h m ts T NT)))
 
-; No trace c1 is in T1 with its reverse in T2, and the other way round (colorable_from_ring and noncolG in Birkhoff_valid).
+; No trace c1 is in T1 with its reverse in T2, and the other way round.
 (def-adts $ (BGlue : ((Level) L) ((PredC) T1 T2) -> Type)
   enum
   (many MkBGlue : (erased (Level) L) (erased Pred T1 T2)

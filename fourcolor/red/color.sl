@@ -73,7 +73,7 @@
   (many MPCons : (erased (Bstack) bs bs2) (erased (Col) e) (erased (Gsym) s) (erased (List (Col)) et) (erased (List (Gsym)) w)
       (erased (Sym s bs e bs2) p) (erased (MatchPG bs2 et w) q) -> (MatchPG bs (Cons (Col) e et) (Cons (Gsym) s w))))
 
-; The completion cgram of w, from d open chords and parity b, is balanced.
+; The completion of w, from d open chords and parity b, is balanced.
 (def-adts $ (GBal : ((Nat) d) ((Bool) b) ((List (Gsym)) w) -> Type)
   enum
   (many GBEnd0 : -> (GBal (Zero) (BTrue) (Nil (Gsym))))

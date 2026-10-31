@@ -171,7 +171,7 @@
         ((T321) (let-match erased p (CB3)) (let-match erased q (CB2)) (values (BFalse) (BTrue) (XTT) (XTF) (CB1)))))))
 
 ; bs has d entries, x is the parity of d and z that of the Color3 pushes in bs. Along a matching, the bits (x, y) of the trace sum
-; satisfy y = b xor z, b the parity of gram_balanced.
+; satisfy y = b xor z, b the parity of Bal.
 (def-adts $ (SInv : ((Bstack) bs) ((Nat) d) ((Bool) x) ((Bool) z) -> Type)
   enum
   (many SINil : -> (SInv (BS0) (Zero) (BFalse) (BFalse)))
@@ -235,7 +235,7 @@
   (let ((erased z2) (erased si2) (erased xb2)) (inv-step s bs bs2 e d d2 b b2 x y z xe ye x2 y2 sy st ce rx ry si xb))
   (values x2 y2 z2 si2 xb2 cb2))
 
-; The last symbol of cgram, after a chromogram leaving d open chords and parity b.
+; s ends the completion of a chromogram leaving d open chords and parity b.
 (def-adts $ (Last : ((Nat) d) ((Bool) b) ((Gsym) s) -> Type)
   enum
   (many LastSkip : -> (Last (Zero) (BTrue) (GSkip)))
@@ -273,7 +273,7 @@
         ((SI1 _ _ _ _ _ _ si1 n m) (let-match erased si1 (SINil)) (let-match erased n (NotF)) (let-match erased m (NotF)) (let-match erased xb (XTT))
           (let-match erased cb (CB2)) (SPop12 (BS0)))))))
 
-; cgram appends s to w, from d open chords and parity b.
+; w then s is the completion of w, from d open chords and parity b.
 (def-adts $ (Closes : ((Nat) d) ((Bool) b) ((List (Gsym)) w) ((Gsym) s) -> Type)
   enum
   (many CloNil : (erased (Nat) d) (erased (Bool) b) (erased (Gsym) s) (erased (Last d b s) l) -> (Closes d b (Nil (Gsym)) s))

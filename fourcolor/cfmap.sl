@@ -419,7 +419,7 @@
   (let ((many r2) (erased rt)) (rot-c _ m (Cons _ a p)))
   (values r2 m (LengthCons _ a p m l) rt))
 
-; k2 is Gonthier's k.-2.+1.
+; k2 is k - 2 + 1, with k - 2 truncated at zero.
 (def-adts $ (Pred2S : ((Nat) k k2) -> Type)
   enum
   (many P2Zero : -> (Pred2S (Zero) (Succ (Zero))))

@@ -327,7 +327,7 @@
   (many NTY : -> (NotTr (SY) (Nil (Col))))
   (many NTH : (erased (List (Col)) et) (erased (Short et) sh) -> (NotTr (SH) et)))
 
-; How cpcol-c built t from et and the steps cp1: what the completeness half of ctree_mem_cpcolor reads.
+; How cpcol-c built t from et and the steps cp1.
 (def-adts $ (CpCov : ((List (Step)) cp1) ((List (Col)) et) ((Ctree) t) -> Type)
   enum
   (many CoNil : (erased (List (Col)) et) (erased (Ctree) t) (erased (BrMem et t) bm) -> (CpCov (Nil (Step)) et t))

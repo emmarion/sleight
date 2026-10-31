@@ -573,7 +573,7 @@
   (let-match erased (mc-zero bs et n m) (Refl _ _))
   m)
 
-; A history of the Kempe_tree_closure state (ctu, gtr, gtu), from initial trees satisfying the three certificates above. ctr holds
+; A history of the Kempe closure state (ctu, gtr, gtu), from initial trees satisfying the three certificates above. ctr holds
 ; traces of the co-closure, of length h + 1.
 (def-adts
   ((KV : (Pred P) ((Nat) h) ((Ctree) ctu) ((Gtree) gtr) ((Gtree) gtu) -> Type)

@@ -196,7 +196,7 @@
   (many CTStep : (erased (Col) c0 x y t) (erased (List (Col)) cs et) (erased (AddC x y t) p) (erased (CTr c0 y cs et) rest)
       -> (CTr c0 x (Cons (Col) y cs) (Cons (Col) t et))))
 
-; Gonthier's trace of the colours of a ring.
+; et is the trace of the ring colours cs.
 (def-adts $ (Trace : ((List (Col)) cs et) -> Type)
   enum
   (many MkTrace : (erased (Col) c) (erased (List (Col)) cs et) (erased (CTr c c cs et) p) -> (Trace (Cons (Col) c cs) et)))

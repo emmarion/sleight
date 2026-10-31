@@ -109,7 +109,7 @@
       (values (Succ (Succ d)) e2 f2 r3 (CmK m d rest e f r r1 e2 f2 r2 r3 c l rt nn rt2)))
     (absurd (SA) na)))
 
-; k2 is Gonthier's sub2ifgt2 k.
+; k2 is k - 2 when k exceeds 2, and k otherwise.
 (def-adts $ (Sub2gt2 : ((Nat) k k2) -> Type)
   enum
   (many S2Big : (erased (Nat) m) -> (Sub2gt2 (Succ (Succ (Succ m))) (Succ m)))

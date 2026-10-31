@@ -192,7 +192,7 @@
           -> (erased (KCoclo L Y (MkPred (List (Step)) cp CpCol) et) k)) g)
       -> (CRed X cp cc)))
 
-; The contract half of check_reducible_valid for the Kempe tree kt: cc is valid, and the even normal form of every contract ring
+; cc is valid, and the even normal form of every contract ring
 ; trace without its first entry is not in kt, by a function at level G.
 (def-adts $ (ContractOK : ((Level) G) ((List (Step)) cp) ((List (Nat)) cc) ((Ctree) kt) -> Type)
   enum

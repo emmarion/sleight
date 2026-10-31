@@ -173,7 +173,7 @@
           (let ((erased bs2) (erased r) (erased q)) (mt-unbot n1 w1 bs1 X1 X2 x et1 nu1 (pop-depth s t bs bs1 e n1 np y1 dp) p1 m1))
           (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))))))
 
-; Gonthier's gram_balanced d b w, by the steps GStep of red/kempe.sl.
+; w, from d open chords and parity b, is balanced, by the steps GStep.
 (def-adts $ (Bal : ((Nat) d) ((Bool) b) ((List (Gsym)) w) -> Type)
   enum
   (many BalNil : -> (Bal (Zero) (BFalse) (Nil (Gsym))))
@@ -219,7 +219,6 @@
           (let ((erased b) (erased nb)) (not-pre b1))
           (values b (BalCons n n1 b b1 s w1 (GStPop1 n1 b b1 nb) p1)))))))
 
-; gram_neg_rec n w = w2.
 (def-adts $ (GNeg : ((Nat) n) ((List (Gsym)) w w2) -> Type)
   enum
   (many GNNil : (erased (Nat) n) -> (GNeg n (Nil (Gsym)) (Nil (Gsym))))
@@ -288,7 +287,6 @@
           ((NotT) (let-match erased pb (BotT)) (let-match erased pc (BotF)) (let-match erased y (SPop03 _)) (MGCons C Bb1 e s et1 w1 (SPop13 Bb1) m1))
           ((NotF) (let-match erased pb (BotF)) (let-match erased pc (BotT)) (let-match erased y (SPop02 _)) (MGCons C Bb1 e s et1 w1 (SPop12 Bb1) m1))))))))
 
-; gram_flip_rec n w = w2.
 (def-adts $ (Flip : ((Nat) n) ((List (Gsym)) w w2) -> Type)
   enum
   (many FlNil : (erased (Nat) n) -> (Flip n (Nil (Gsym)) (Cons (Gsym) (GPush) (Nil (Gsym)))))
@@ -446,7 +444,6 @@
           (let-match erased sy (SPop13 _))
           (MGCons (BS0) (BP1 (BS0)) e (GPush) et1 w1 (SPush3 (BS0)) m1))))))
 
-; gram_rot w = w2, for a balanced w.
 (def-adts $ (GRot : ((List (Gsym)) w w2) -> Type)
   enum
   (many GRNil : -> (GRot (Nil (Gsym)) (Nil (Gsym))))
