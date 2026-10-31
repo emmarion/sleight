@@ -94,7 +94,7 @@
 
 (def-fns _ $ (erased rg-weak : (erased (Nat) x) (erased (Rg) r q z) (erased (InRg x r) p) (erased (InRg x q) p2) (erased (Weak r q z) w)
     -> (erased (InRg x z) t))
-  (let-match erased w (WkM a b c d e g se sg) ((WkL _ _) p) ((WkR _ _) p2))
+  (let-match erased w (WkM _ _ _ _ e g se sg) ((WkL _ _) p) ((WkR _ _) p2))
   (let-match erased p (MkInRg _ m _ _ cl la ua))
   (let-match erased p2 (MkInRg _ k _ _ cl2 lc uc))
   (let-match erased (clamp-fn x m k cl cl2) (Refl _ _))
@@ -353,7 +353,7 @@
 
 (def-fns _ $ (erased fit-meet : (erased (List (Sec)) os) (erased (List (Sub)) p q m) (erased (Pw (Sec) (Sub) FitSec os p) f)
     (erased (Pw (Sec) (Sub) FitSec os q) g) (subterm erased (PartMeet p q m) w) -> (erased (Pw (Sec) (Sub) FitSec os m) r))
-  (let-match erased w (PMCons x y z p1 q1 m1 wz w1) ((PMKeep _ _) f))
+  (let-match erased w (PMCons _ _ z p1 q1 m1 wz w1) ((PMKeep _ _) f))
   (let-match erased f (PwCons _ _ _ o _ os1 _ fo f1))
   (let-match erased g (PwCons _ _ _ _ _ _ _ go g1))
   (let-match erased fo (MkFitSec a h as s hr fp ps ph pfa))
@@ -498,7 +498,7 @@
 
 (def-fns _ $ (erased expand-fit : (erased (Nat) a h) (erased (List (Nat)) as) (erased (Sub) x) (erased (List (Rg)) gs)
     (erased (FitSec (MkSec a h as) x) f) (erased (SecOk (MkSec a h as)) ok) (erased (Expand x gs) w) -> (erased (Pw (Nat) (Rg) InRg as gs) r))
-  (let-match erased f (MkFitSec _ _ _ s hr fs ps ph pfs))
+  (let-match erased f (MkFitSec _ _ _ _ _ _ ps _ pfs))
   (let-match erased w (ExpFill b n _ _ u mo rp) ((ExpKeep _ _ _) pfs))
   (let-match erased ok (MkSecOk _ _ n2 _ pa _ pfv l e))
   (let-match erased ps (MkInRg _ m _ _ c l1 u1))

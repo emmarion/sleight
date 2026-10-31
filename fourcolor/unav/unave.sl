@@ -16,7 +16,7 @@
 
 (def-fns _ $ (erased hit-embed : (erased (List (Config)) cfs) (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g)
     (erased (QzHit cfs d e n ks) hit) -> (erased (CfEmbed cfs d e n f ks) r))
-  (let-match erased hit (MkQzHit _ _ y _ _ _ cf qz qz2 m c v fz ly))
+  (let-match erased hit (MkQzHit _ _ y _ _ _ _ qz qz2 m c v fz ly))
   (let-match erased c (MkCfQz sym cci cp dc x0c ec nc fc rc ksc _ cm pm qc))
   (let-match erased qc (MkQzCert _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ olc _ _ _ _ _ _ _ _ _))
   (match erased v _

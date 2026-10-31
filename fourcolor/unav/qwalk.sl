@@ -63,7 +63,7 @@
     (subterm erased (WalkS e n ks x q s t as at) w) (erased (WalkS e2 n2 ks2 x2 q s2 t2 as2 at) w2) -> (erased (Eq (List (Nat)) as as2) r))
   (match erased w _
     ((WS0 _ _ _ _ _ _) (let-match erased w2 (WS0 _ _ _ _ _ _)) (Refl _ as))
-    ((WS1 _ _ _ _ _ _ qa _) (let-match erased w2 (WS1 _ _ _ _ _ _ _ _)) (Refl _ as))
+    ((WS1 _ _ _ _ _ _ _ _) (let-match erased w2 (WS1 _ _ _ _ _ _ _ _)) (Refl _ as))
     ((WSL _ _ _ s1 _ as1 _ _ _ y q1 _ _ w1)
       (let-match erased w2 (WSL _ _ _ s3 _ as3 _ _ _ y2 _ _ _ w3))
       (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))

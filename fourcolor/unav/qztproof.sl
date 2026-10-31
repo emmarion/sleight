@@ -14,7 +14,7 @@
 
 (def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRed qt obl) a)
     (erased (Mem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
-  (let-match erased a (ARCons _ q1 rest dd a1) (absurd (ARNil _) m))
+  (let-match erased a (ARCons _ _ rest dd a1) (absurd (ARNil _) m))
   (match erased m _
     ((MemHere _ _ _) dd)
     ((MemThere _ _ _ _ m1) (allred-mem qt rest q a1 m1))))
@@ -62,7 +62,7 @@
 
 (def-fns _ $ (erased cutsin-at : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (subterm erased (CutsIn ct t) c)
     (erased (Mem (List (Sub)) h ct) m) -> (erased (InRegs h t) r))
-  (let-match erased c (CICons ct1 h1 _ i rest) (absurd (CINil _) m))
+  (let-match erased c (CICons ct1 _ _ i rest) (absurd (CINil _) m))
   (match erased m _ ((MemHere _ _ _) i) ((MemThere _ _ _ _ m1) (cutsin-at ct1 h t rest m1))))
 
 (def-adts $ (PartIn : ((List (Sub)) h q) -> Type)
@@ -133,9 +133,9 @@
     (erased (Region) x) (erased (Mem (Region) x xs) mx) (erased (List (Sub)) h) (erased (PartOf x h) po) (erased (Nat) d y pos neg) (erased (List (Nat)) e n f ks)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks y h) xh)
     -> (erased (CfEmbed cfs d e n f ks) r))
-  (let-match erased al (ARgCons _ _ x1 t ok rest) (absurd (ARgNil _ _) mx))
+  (let-match erased al (ARgCons _ _ _ t ok rest) (absurd (ARgNil _ _) mx))
   (let-match erased mx (MemHere _ _ _) ((MemThere _ _ _ _ m1) (reg-claim cfs drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
-  (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq path root sz tg qt qi ip im d0 d1 ar _ ci))
+  (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq _ _ sz tg qt qi ip im d0 d1 ar _ ci))
   (let ((erased u) (erased xu) (erased du))
     (match erased po (((List (Sub)) u) ((ExactAt e f ks y u) xu) ((Pres nhub rt rs ct u out) du))
       ((POP _ m _ _ _ _ _ _ sb lh lp) (values q (exact-in e f ks y p q (exact-sub-at e f ks y m h p xh sb lh lp) ip) d0))

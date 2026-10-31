@@ -130,7 +130,7 @@
 (def-fns _ $ (erased cap-sound : (erased (Nat) d y a pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs acc cobl) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) dsc) (erased (Lt neg pos) lt) (erased (Nth (Nat) ks y a) pa) (erased (Lt 11 a) l11)
     (erased (Small drs) sm) (erased (CapL drs acc cobl 5 9) cl) -> (erased (MapHit d e f ks cobl) r))
-  (let-match erased dsc (MkDScore _ _ a2 t c60 sp sn _ _ _ _ _ _ ids cs cse _ io dl rc pa2 fp fn m60 mt ap an))
+  (let-match erased dsc (MkDScore _ _ a2 t c60 sp sn _ _ _ _ _ _ ids cs cse _ io dl rc pa2 fp _ m60 mt ap an))
   (let-match erased (nth-fn _ ks y a a2 pa pa2) (Refl _ _))
   (let ((erased t5) (erased m5) (erased o)) (cap-face d y a sp e n f ks ids cs cse drs acc cobl g io dl rc sm cl ly fp))
   (match erased o _ ((OrR _ _ hh) hh) (absurd (OrL _ _ lst) (cap-arith a c60 t t5 sp sn pos neg m60 mt ap an lt m5 lst l11))))

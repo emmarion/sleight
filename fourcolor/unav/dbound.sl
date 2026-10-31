@@ -260,7 +260,7 @@
 
 (def-fns _ $ (erased db1-ext : (erased (List (Sub)) p) (erased (List (List (Sub))) rs) (erased (Nat) ns) (erased (List (List (Sub))) acc out)
     (subterm erased (Db1 p rs ns acc out) d) -> (erased (Ext acc out) e))
-  (let-match erased d (D1Step _ p1 _ rs1 rs2 _ dns _ acc1 _ _ _ di dt) ((D1Nil _ _ _) (ExtRefl acc)) ((D1Small _ _ _ _ _ _ _ _) (ExtRefl acc)))
+  (let-match erased d (D1Step _ p1 _ rs1 rs2 _ _ _ acc1 _ _ _ di dt) ((D1Nil _ _ _) (ExtRefl acc)) ((D1Small _ _ _ _ _ _ _ _) (ExtRefl acc)))
   (let ((erased (Ext acc acc1) e1))
     (match erased di _
       ((I1Rec _ _ _ _ ns1 _ _ _ d1) (db1-ext p1 rs2 ns1 acc acc1 d1))
@@ -622,7 +622,7 @@
     (subterm erased (Db22 nhub p1 p2 rt1 rs1 ru1 rt2 rs2 ru2 i nt acc out) d) -> (erased (Ext acc out) e))
   (let-match erased d (E2Step _ _ _ _ _ r q1 q2 rt3 _ _ _ _ _ _ acc1 _ _ _ di dt)
     ((E2Done _ _ _ _ _ _ _ _ _ _) (ExtRefl acc))
-    ((E2Swap _ _ j _ _ _ r rt4 _ _ _ _ _ _ _ d1) (e2-ext nhub j nt p2 p1 rt2 rs2 ru2 (Nil _) rs1 ru1 acc out d1))
+    ((E2Swap _ _ j _ _ _ _ _ _ _ _ _ _ _ _ d1) (e2-ext nhub j nt p2 p1 rt2 rs2 ru2 (Nil _) rs1 ru1 acc out d1))
     ((E2Small _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtRefl acc)))
   (let ((erased (Ext acc acc1) e1))
     (match erased di _
@@ -648,7 +648,7 @@
   (let ((erased bc2) (erased r8) (erased r9)) (plus-assoc dns1 dns2 nt dD ab r1 r6))
   (let-match erased (add-eq dns2 nt bc2 u3 r8 a3) (Refl _ _))
   (let-match erased (add-eq dns1 u3 ab u r9 a4) (Refl _ _))
-  (let ((erased e1) (erased r10) (erased r11)) (plus-assoc dd (Succ nt1) s2 u w ad r7))
+  (let ((erased _) (erased r10) (erased r11)) (plus-assoc dd (Succ nt1) s2 u w ad r7))
   (let-match erased r10 (AddSucc _ _ e2 r12))
   (let-match erased (add-eq nt1 s2 e2 w2 r12 (add-comm s2 nt1 w2 aw2)) (Refl _ _))
   (let ((erased y) (erased py)) (add dd w2))
@@ -669,7 +669,7 @@
       (let-match erased kt2 (CNil _))
       (let-match erased ats (AddZero _))
       (OrL _ _ (LtZ w)))
-    ((E2Swap _ _ j2 _ _ _ r rt4 _ _ _ _ _ _ mo d1)
+    ((E2Swap _ _ j2 _ _ _ _ _ _ _ _ _ _ _ mo d1)
       (let-match erased mo (MoAdd _ _ _ a2) (absurd (MoNeg _ _ l) (lt-le-absurd nhub i l (add-le-left i j nhub aij))))
       (let-match erased (add-inj i j2 nhub j a2 aij) (Refl _ _))
       (match erased (e2-sound os2 os1 nhub j i nt ct2 cs2 ct1 cs1 ts sc w p2 p1 rt2 rs2 ru2 rt1 rs1 ru1 acc out ro21 ro12
