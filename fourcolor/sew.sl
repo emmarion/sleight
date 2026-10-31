@@ -1,6 +1,3 @@
-; Sewing a disk map and a remainder map along their rings into a map that they patch, after sew.v. The disk darts keep their
-; numbers, and the remainder darts off the ring follow them. Load after patch.sl.
-
 ; x is the image under h1 of a dart moved by p1 to the dart whose image is y, or the same under h2 and p2 from a dart off b2.
 (def-adts $ (CMapAt : ((List (Nat)) h1 p1 h2 p2 b2) ((Nat) x y) -> Type)
   enum
@@ -27,11 +24,11 @@
     (erased (Nth (Nat) h1 x1 x) p1) (erased (Nth (Nat) h2 x2 x) p2) (erased (NotIn x2 b2) out) -> (erased (False) r))
   (match erased dj _
     (absurd (DjNil _ _ _) ix)
-    (absurd (DjIn _ _ _ xs1 y ib dj1)
+    (absurd (DjIn _ _ _ xs1 _ ib dj1)
       (match erased ix _
         (absurd (InHere _ _) (apart-irrefl x2 (notin-in x2 x2 b2 out ib)))
         (absurd (InThere _ _ _ ix1) (disj-at h1 h2 b2 xs1 x x1 x2 dj1 ix1 p1 p2 out))))
-    (absurd (DjOut _ _ _ xs1 y z hz o dj1)
+    (absurd (DjOut _ _ _ xs1 _ z hz o dj1)
       (match erased ix _
         (absurd (InHere _ _) (let-match erased (nth-fn _ h2 x2 z x hz p2) (Refl _ _)) (apart-irrefl x (notin-in x x h1 o (nth-in h1 x1 x p1))))
         (absurd (InThere _ _ _ ix1) (disj-at h1 h2 b2 xs1 x x1 x2 dj1 ix1 p1 p2 out))))))
@@ -54,14 +51,14 @@
 
 (def-fns _ $ (erased cmap-nth : (erased (List (Nat)) h1 p1 h2 p2 b2 xs ys) (erased (Nat) i x) (subterm erased (CMap h1 p1 h2 p2 b2 xs ys) cm)
     (erased (Nth (Nat) xs i x) p) -> (erased (Nat) y) (erased (Nth (Nat) ys i y) q) (erased (CMapAt h1 p1 h2 p2 b2 x y) ca))
-  (let-match erased cm (CMCons _ _ _ _ _ xs1 ys1 x1 y1 ca1 cm1) (absurd (CMNil _ _ _ _ _) p))
+  (let-match erased cm (CMCons _ _ _ _ _ xs1 ys1 _ y1 ca1 cm1) (absurd (CMNil _ _ _ _ _) p))
   (let-match erased p (NthThere _ _ _ i1 _ pn) ((NthHere _ _ _) (values y1 (NthHere _ y1 ys1) ca1)))
   (let ((erased y) (erased q) (erased ca)) (cmap-nth h1 p1 h2 p2 b2 xs1 ys1 i1 x cm1 pn))
   (values y (NthThere _ y1 ys1 i1 y q) ca))
 
 (def-fns _ $ (erased cmap-length : (erased (List (Nat)) h1 p1 h2 p2 b2 xs ys) (erased (Nat) k) (subterm erased (CMap h1 p1 h2 p2 b2 xs ys) cm)
     (erased (Length (Nat) xs k) l) -> (erased (Length (Nat) ys k) r))
-  (let-match erased cm (CMCons _ _ _ _ _ xs1 ys1 x y ca cm1) ((CMNil _ _ _ _ _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased cm (CMCons _ _ _ _ _ xs1 ys1 _ y _ cm1) ((CMNil _ _ _ _ _) (let-match erased l (LengthNil _)) (LengthNil _)))
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ y ys1 k1 (cmap-length h1 p1 h2 p2 b2 xs1 ys1 k1 cm1 l1)))
 
@@ -78,7 +75,6 @@
     (absurd (OrL _ _ iz) (apart-irrefl x (notin-in x x b out (ncyc-next q b z x nc iz (perm-inv k x z p q pm px))))))
   oz)
 
-; The map ys sends back what the map xs to zs sends, for q1 and q2 inverse to p1 and p2: zs . ys = xs.
 (def-fns _ $ (erased cmap-inv : (erased (Nat) d k1 k2) (erased (List (Nat)) h1 p1 q1 h2 p2 q2 b2 ids id1 id2 xs ys zs)
     (subterm erased (CMap h1 p1 h2 p2 b2 xs ys) cp) (erased (CMap h1 q1 h2 q2 b2 ids zs) cq) (erased (Iota d ids) io)
     (erased (HPerm k1 p1 q1) pm1) (erased (Iota k1 id1) io1) (erased (Respects q1 p1 id1) qp1) (erased (HPerm k2 p2 q2) pm2) (erased (Iota k2 id2) io2)
@@ -90,9 +86,8 @@
   (match erased ca _
     ((CML _ _ _ _ _ _ _ x1 y1 hx px hy)
       (let ((erased z) (erased pz) (erased cz)) (cmap-nth h1 q1 h2 q2 b2 ids zs y y cq (iota-nth d y ids io (under-nth h1 y1 y d uh1 hy))))
-      (let ((erased ly1)) (nth-lt-length _ h1 y1 k1 y hy lh1))
       (let-match erased cz (CML _ _ _ _ _ _ _ y3 z1 hy3 qy hz)
-        (absurd (CMR _ _ _ _ _ _ _ y2 z2 hy2 out2 qy hz)
+        (absurd (CMR _ _ _ _ _ _ _ y2 _ hy2 out2 _ _)
           (disj-at h1 h2 b2 id2 y y1 y2 dj (iota-in k2 y2 id2 io2 (nth-lt-length _ h2 y2 k2 y hy2 lh2)) hy hy2 out2)))
       (let-match erased (distinct-nth h1 y3 y1 y dh1 hy3 hy) (Refl _ _))
       (let-match erased (nth-fn _ q1 y1 z1 x1 qy
@@ -102,8 +97,8 @@
     ((CMR _ _ _ _ _ _ _ x2 y2 hx out px hy)
       (let ((erased oy)) (cyc-off k2 x2 y2 p2 q2 b2 pm2 cy out px))
       (let ((erased z) (erased pz) (erased cz)) (cmap-nth h1 q1 h2 q2 b2 ids zs y y cq (iota-nth d y ids io (under-nth h2 y2 y d uh2 hy))))
-      (let-match erased cz (CMR _ _ _ _ _ _ _ y3 z2 hy3 out3 qy hz)
-        (absurd (CML _ _ _ _ _ _ _ y1 z1 hy1 qy hz)
+      (let-match erased cz (CMR _ _ _ _ _ _ _ y3 z2 hy3 _ qy hz)
+        (absurd (CML _ _ _ _ _ _ _ y1 _ hy1 _ _)
           (disj-at h1 h2 b2 id2 y y1 y2 dj (iota-in k2 y2 id2 io2 (nth-lt-length _ h2 y2 k2 y hy lh2)) hy1 hy oy)))
       (let-match erased (distinct-nth h2 y3 y2 y dh2 hy3 hy) (Refl _ _))
       (let-match erased (nth-fn _ q2 y2 z2 x2 qy
@@ -111,7 +106,6 @@
       (let-match erased (nth-fn _ h2 x2 z x hz hx) (Refl _ _))
       (RespCons zs ys1 xs1 y x pz rest))))
 
-; The map built from p1 and p2 extends p1 along h1 ...
 (def-fns _ $ (erased cmap-morph1 : (erased (Nat) d k1 k2) (erased (List (Nat)) h1 p1 q1 h2 p2 b2 ids id2 ps m) (erased (CMap h1 p1 h2 p2 b2 ids ps) cm)
     (erased (Iota d ids) io) (erased (HPerm k1 p1 q1) pm1) (erased (CDisj h1 h2 b2 id2) dj) (erased (Iota k2 id2) io2) (erased (Distinct h1) dh1)
     (erased (Length (Nat) h1 k1) lh1) (erased (Length (Nat) h2 k2) lh2) (erased (Under h1 d) uh1) (subterm erased (Under m k1) u)
@@ -122,14 +116,13 @@
   (let ((erased y) (erased hy)) (nth-exists _ h1 k1 y1 lh1 ly1))
   (let ((erased z) (erased pz) (erased ca)) (cmap-nth h1 p1 h2 p2 b2 ids ps x x cm (iota-nth d x ids io (under-nth h1 x1 x d uh1 hx))))
   (let-match erased ca (CML _ _ _ _ _ _ _ x3 y3 hx3 px3 hy3)
-    (absurd (CMR _ _ _ _ _ _ _ x2 y2 hx2 out2 px2 hy2)
+    (absurd (CMR _ _ _ _ _ _ _ x2 _ hx2 out2 _ _)
       (disj-at h1 h2 b2 id2 x x1 x2 dj (iota-in k2 x2 id2 io2 (nth-lt-length _ h2 x2 k2 x hx2 lh2)) hx hx2 out2)))
   (let-match erased (distinct-nth h1 x3 x1 x dh1 hx3 hx) (Refl _ _))
   (let-match erased (nth-fn _ p1 x1 y3 y1 px3 py1) (Refl _ _))
   (let-match erased (nth-fn _ h1 y1 z y hy3 hy) (Refl _ _))
   (MOAt h1 p1 ps (Nil _) m1 x1 y1 x y py1 hx hy pz (cmap-morph1 d k1 k2 h1 p1 q1 h2 p2 b2 ids id2 ps m1 cm io pm1 dj io2 dh1 lh1 lh2 uh1 u1)))
 
-; ... and p2 along h2 off b2.
 (def-fns _ $ (erased cmap-morph2 : (erased (Nat) d k1 k2) (erased (List (Nat)) h1 p1 h2 p2 q2 b2 ids id2 ps m) (erased (CMap h1 p1 h2 p2 b2 ids ps) cm)
     (erased (Iota d ids) io) (erased (HPerm k2 p2 q2) pm2) (erased (CDisj h1 h2 b2 id2) dj) (erased (Iota k2 id2) io2) (erased (Distinct h2) dh2)
     (erased (Length (Nat) h2 k2) lh2) (erased (Under h2 d) uh2) (subterm erased (Under m k2) u)
@@ -141,15 +134,13 @@
   (let ((erased y2) (erased py2) (erased ly2)) (perm-nth k2 x2 p2 q2 pm2 lx2))
   (let ((erased y) (erased hy)) (nth-exists _ h2 k2 y2 lh2 ly2))
   (let ((erased z) (erased pz) (erased ca)) (cmap-nth h1 p1 h2 p2 b2 ids ps x x cm (iota-nth d x ids io (under-nth h2 x2 x d uh2 hx))))
-  (let-match erased ca (CMR _ _ _ _ _ _ _ x3 y3 hx3 out3 px3 hy3)
-    (absurd (CML _ _ _ _ _ _ _ x1 y1 hx1 px1 hy1) (disj-at h1 h2 b2 id2 x x1 x2 dj (iota-in k2 x2 id2 io2 lx2) hx1 hx out)))
+  (let-match erased ca (CMR _ _ _ _ _ _ _ x3 y3 hx3 _ px3 hy3)
+    (absurd (CML _ _ _ _ _ _ _ x1 _ hx1 _ _) (disj-at h1 h2 b2 id2 x x1 x2 dj (iota-in k2 x2 id2 io2 lx2) hx1 hx out)))
   (let-match erased (distinct-nth h2 x3 x2 x dh2 hx3 hx) (Refl _ _))
   (let-match erased (nth-fn _ p2 x2 y3 y2 px3 py2) (Refl _ _))
   (let-match erased (nth-fn _ h2 y2 z y hy3 hy) (Refl _ _))
   (MOAt h2 p2 ps b2 m1 x2 y2 x y py2 hx hy pz rest))
 
-; A permutation of the whole map, h1 a morphism from p1 to it and h2 one from p2 off its cycle b2, when every dart is an image
-; under h1 or under h2 off b2, and not both.
 (def-fns _ $ (erased cmap-perm : (erased (Nat) d k1 k2) (erased (List (Nat)) h1 p1 q1 h2 p2 q2 b2 ids id1 id2) (erased (Cover h1 h2 b2 ids) cv)
     (erased (HPerm k1 p1 q1) pm1) (erased (HPerm k2 p2 q2) pm2) (erased (NCyc p2 b2) nc) (erased (CDisj h1 h2 b2 id2) dj) (erased (Iota d ids) io)
     (erased (Iota k1 id1) io1) (erased (Iota k2 id2) io2) (erased (Distinct h1) dh1) (erased (Distinct h2) dh2) (erased (Length (Nat) h1 k1) lh1)
@@ -158,10 +149,10 @@
   (let ((erased ps) (erased cp)) (cmap-exists k1 k2 h1 p1 q1 h2 p2 q2 b2 ids cv pm1 pm2 lh1 lh2))
   (let ((erased qs) (erased cq)) (cmap-exists k1 k2 h1 q1 p1 h2 q2 p2 b2 ids cv (perm-sym k1 p1 q1 pm1) (perm-sym k2 p2 q2 pm2) lh1 lh2))
   (let ((erased pm1b)) pm1)
-  (let-match erased pm1b (HMkPerm _ _ _ i1 j1 l1 qp1 pq1))
+  (let-match erased pm1b (HMkPerm _ _ _ i1 j1 _ qp1 pq1))
   (let-match erased (iota-fn k1 id1 i1 io1 j1) (Refl _ _))
   (let ((erased pm2b)) pm2)
-  (let-match erased pm2b (HMkPerm _ _ _ i2 j2 l2 qp2 pq2))
+  (let-match erased pm2b (HMkPerm _ _ _ i2 j2 _ qp2 pq2))
   (let-match erased (iota-fn k2 id2 i2 io2 j2) (Refl _ _))
   (values ps qs
     (HMkPerm d ps qs ids io (cmap-length h1 p1 h2 p2 b2 ids ps d cp (iota-length d ids io))
@@ -190,7 +181,7 @@
     ((I2Here _ _ _ ys1)
       (let-match erased q (I2Here _ _ _ _) (absurd (I2There _ _ _ _ _ _ q1) (apart-irrefl x (notin-in x x xs1 out (in2-in-left xs1 ys1 x w q1)))))
       (Refl _ v))
-    ((I2There a b _ _ _ ys1 p1)
+    ((I2There _ _ _ _ _ ys1 p1)
       (let-match erased q (I2There _ _ _ _ _ _ q1) (absurd (I2Here _ _ _ _) (apart-irrefl x (notin-in x x xs1 out (in2-in-left xs1 ys1 x v p1)))))
       (in2-fn xs1 ys1 x v w dx1 p1 q1))))
 
@@ -235,25 +226,25 @@
 (def-fns _ $ (erased hrb-le : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2) (subterm erased (HrB br rbd c xs hs c2) hb) -> (erased (Lt c (Succ c2)) r))
   (match erased hb _
     ((HBNil _ _ _) (lt-succ c))
-    ((HBRing _ _ xs1 hs1 _ _ x v i rest) (hrb-le br rbd xs1 hs1 c c2 rest))
-    ((HBNew _ _ xs1 hs1 _ _ x out rest) (lt-succ-left c (Succ c2) (hrb-le br rbd xs1 hs1 (Succ c) c2 rest)))))
+    ((HBRing _ _ xs1 hs1 _ _ _ _ _ rest) (hrb-le br rbd xs1 hs1 c c2 rest))
+    ((HBNew _ _ xs1 hs1 _ _ _ _ rest) (lt-succ-left c (Succ c2) (hrb-le br rbd xs1 hs1 (Succ c) c2 rest)))))
 
 (def-fns _ $ (erased hrb-length : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 n) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Length (Nat) xs n) l)
     -> (erased (Length (Nat) hs n) r))
   (match erased hb _
     ((HBNil _ _ _) (let-match erased l (LengthNil _)) (LengthNil _))
-    ((HBRing _ _ xs1 hs1 _ _ x v i rest) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ v hs1 n1 (hrb-length br rbd xs1 hs1 c c2 n1 rest l1)))
-    ((HBNew _ _ xs1 hs1 _ _ x out rest) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ c hs1 n1 (hrb-length br rbd xs1 hs1 (Succ c) c2 n1 rest l1)))))
+    ((HBRing _ _ xs1 hs1 _ _ _ v _ rest) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ v hs1 n1 (hrb-length br rbd xs1 hs1 c c2 n1 rest l1)))
+    ((HBNew _ _ xs1 hs1 _ _ _ _ rest) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ c hs1 n1 (hrb-length br rbd xs1 hs1 (Succ c) c2 n1 rest l1)))))
 
 (def-fns _ $ (erased hrb-nth : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 i x) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Nth (Nat) xs i x) p)
     -> (erased (Nat) v) (erased (Nth (Nat) hs i v) q) (erased (HrAt br rbd c c2 x v) ha))
   (match erased hb _
     (absurd (HBNil _ _ _) p)
-    ((HBRing _ _ xs1 hs1 _ _ y v i1 rest)
+    ((HBRing _ _ xs1 hs1 _ _ _ v i1 rest)
       (let-match erased p (NthThere _ _ _ j _ p1) ((NthHere _ _ _) (values v (NthHere _ v hs1) (HARing br rbd c c2 x v i1))))
       (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd xs1 hs1 c c2 j x rest p1))
       (values w (NthThere _ v hs1 j w q) ha))
-    ((HBNew _ _ xs1 hs1 _ _ y out rest)
+    ((HBNew _ _ xs1 hs1 _ _ _ out rest)
       (let-match erased p (NthThere _ _ _ j _ p1)
         ((NthHere _ _ _) (values c (NthHere _ c hs1) (HANew br rbd c c2 x c out (lt-succ c) (lt-pred c c2 (hrb-le br rbd xs1 hs1 (Succ c) c2 rest))))))
       (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd xs1 hs1 (Succ c) c2 j x rest p1))
@@ -262,12 +253,11 @@
           ((HARing _ _ _ _ _ _ i2) (HARing br rbd c c2 x w i2))
           ((HANew _ _ _ _ _ _ o l1 l2) (HANew br rbd c c2 x w o (lt-succ-left c (Succ w) l1) l2)))))))
 
-; Every number from c up to c2 is a new dart.
 (def-fns _ $ (erased hrb-hit : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 v) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Lt c (Succ v)) l1)
     (erased (Lt v c2) l2) -> (erased (In v hs) r))
-  (let-match erased hb (HBNew _ _ xs1 hs1 _ _ y out rest)
+  (let-match erased hb (HBNew _ _ xs1 hs1 _ _ _ _ rest)
     (absurd (HBNil _ _ _) (lt-irrefl v (lt-le-trans v c v l2 l1)))
-    ((HBRing _ _ xs1 hs1 _ _ y w i rest) (InThere v w hs1 (hrb-hit br rbd xs1 hs1 c c2 v rest l1 l2))))
+    ((HBRing _ _ xs1 hs1 _ _ _ w _ rest) (InThere v w hs1 (hrb-hit br rbd xs1 hs1 c c2 v rest l1 l2))))
   (let-match erased (nat-eq v c) (Unequal _ _ _ _ ne) ((Equal _ _ _) (InHere v hs1)))
   (let-match erased ne (ApGt _ _ _ _ lt) (absurd (ApLt _ _ _ _ gt) (lt-irrefl v (lt-le-trans v c v gt l1))))
   (InThere v c hs1 (hrb-hit br rbd xs1 hs1 (Succ c) c2 v rest (LtS c v lt) l2)))
@@ -282,7 +272,7 @@
     (erased (RingAvoid br rbd xs u) ra) (erased (Distinct rbd) dr) -> (erased (NotIn u hs) r))
   (let-match erased hb (HBRing _ _ xs1 hs1 _ _ x v i rest)
     ((HBNil _ _ _) (NotInNil u))
-    ((HBNew _ _ xs1 hs1 _ _ x out rest)
+    ((HBNew _ _ xs1 hs1 _ _ _ _ rest)
       (NotInCons u c hs1 (ApLt (Nat) Lt u c lu) (hrb-notin br rbd xs1 hs1 (Succ c) c2 u rest (lt-trans u c (Succ c) lu (lt-succ c))
         (match erased ra _
           ((RAOff _ _ _ _ o) (RAOff br rbd xs1 u o))
@@ -310,8 +300,8 @@
       (let ((erased lv)) (under-in rbd v dd ur (in2-in-left rbd br v x (in2-sym br rbd x v i))))
       (DistCons v hs1 (hrb-notin br rbd xs1 hs1 c c2 v rest (lt-le-trans v dd c lv ldc) (RAAt br rbd xs1 v x i ox) dr)
         (hrb-distinct br rbd xs1 hs1 c c2 dd rest dx1 ur ldc dr)))
-    ((HBNew _ _ xs1 hs1 _ _ x out rest)
-      (let-match erased dx (DistCons _ _ ox dx1))
+    ((HBNew _ _ xs1 hs1 _ _ _ _ rest)
+      (let-match erased dx (DistCons _ _ _ dx1))
       (DistCons c hs1 (hrb-notin br rbd xs1 hs1 (Succ c) c2 c rest (lt-succ c) (RAOff br rbd xs1 c (under-notin-le rbd dd c ur ldc)) dr)
         (hrb-distinct br rbd xs1 hs1 (Succ c) c2 dd rest dx1 ur (lt-trans dd (Succ c) (Succ (Succ c)) ldc (lt-succ (Succ c))) dr)))))
 
@@ -323,7 +313,7 @@
       (UnderCons hs1 v c2 (lt-le-trans v dd c2 (under-in rbd v dd ur (in2-in-left rbd br v x (in2-sym br rbd x v i)))
           (le-trans dd c c2 ldc (hrb-le br rbd xs1 hs1 c c2 rest)))
         (hrb-under br rbd xs1 hs1 c c2 dd rest ur ldc)))
-    ((HBNew _ _ xs1 hs1 _ _ x out rest)
+    ((HBNew _ _ xs1 hs1 _ _ _ _ rest)
       (UnderCons hs1 c c2 (lt-pred c c2 (hrb-le br rbd xs1 hs1 (Succ c) c2 rest))
         (hrb-under br rbd xs1 hs1 (Succ c) c2 dd rest ur (lt-trans dd (Succ c) (Succ (Succ c)) ldc (lt-succ (Succ c))))))))
 
@@ -343,13 +333,12 @@
   (let-match erased lb (LengthCons _ b B1 _ lb1))
   (S2Cons A B A1 B1 a b (I2Here a b A1 B1) (sub2-lift A1 B1 A1 B1 a b (sub2-self A1 B1 n1 la1 lb1))))
 
-; hs sends br along rbd.
 (def-fns _ $ (erased hrb-resp : (erased (List (Nat)) br rbd idr hs R S) (erased (Nat) c c2 dr) (subterm erased (Sub2 br rbd R S) s) (erased (HrB br rbd c idr hs c2) hb)
     (erased (Iota dr idr) io) (erased (Under br dr) ub) (erased (Distinct br) db) -> (erased (Respects hs R S) r))
   (let-match erased s (S2Cons _ _ R1 S1 x v i s1) ((S2Nil _ _) (RespNil hs)))
   (let ((erased ix)) (in2-in-left br rbd x v i))
   (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd idr hs c c2 x x hb (iota-nth dr x idr io (under-in br x dr ub ix))))
-  (let-match erased ha (HARing _ _ _ _ _ _ i2) (absurd (HANew _ _ _ _ _ _ out l1 l2) (apart-irrefl x (notin-in x x br out ix))))
+  (let-match erased ha (HARing _ _ _ _ _ _ i2) (absurd (HANew _ _ _ _ _ _ out _ _) (apart-irrefl x (notin-in x x br out ix))))
   (let-match erased (in2-fn br rbd x w v db i2 i) (Refl _ _))
   (RespCons hs R1 S1 x w q (hrb-resp br rbd idr hs R1 S1 c c2 dr s1 hb io ub db)))
 
@@ -381,7 +370,6 @@
   (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (UnderNil b)))
   (UnderCons xs1 x b (lt-le-trans x a b lx l) (under-le xs1 a b u1 l)))
 
-; A disk dart off bd is no image of a remainder dart.
 (def-fns _ $ (erased low-notin : (erased (List (Nat)) br rbd bd idr hr) (erased (Nat) dd d x) (erased (HrB br rbd dd idr hr d) hb) (erased (RevApp (Nat) bd (Nil (Nat)) rbd) rv)
     (erased (Distinct rbd) dr) (erased (Lt x dd) lx) (erased (NotIn x bd) out) -> (erased (NotIn x hr) r))
   (let-match erased (in-dec x rbd) (OrR _ _ o)
@@ -390,7 +378,7 @@
       (apart-irrefl x (notin-in x x bd out ib))))
   (hrb-notin br rbd idr hr dd d x hb lx (RAOff br rbd idr x o) dr))
 
-(def-fns _ $ (erased sew-rest-part : (erased (List (Nat)) br rbd bd idd idr hr) (erased (Nat) dd dr d x) (erased (HrB br rbd dd idr hr d) hb) (erased (Iota dd idd) iod)
+(def-fns _ $ (erased sew-rest-part : (erased (List (Nat)) br rbd bd idd idr hr) (erased (Nat) dd _dr d x) (erased (HrB br rbd dd idr hr d) hb) (erased (Iota dd idd) iod)
     (erased (Lt dd (Succ x)) le) (erased (Lt x d) lx) -> (erased (PatchPart idd hr bd x) r))
   (let ((erased i) (erased pi)) (in-nth x hr (hrb-hit br rbd idr hr dd d x hb le lx)))
   (PtRest idd hr bd x i pi (under-notin-le idd dd x (perm-under dd idd idd (perm-id dd idd iod)) le)))
@@ -409,7 +397,7 @@
         (let ((erased i3)) (in2-sym rbd br x xr i2))
         (let ((erased ixr)) (in2-in-left br rbd xr x i3))
         (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd idr hr dd d xr xr hb (iota-nth dr xr idr ior (under-in br xr dr ub ixr))))
-        (let-match erased ha (HARing _ _ _ _ _ _ i4) (absurd (HANew _ _ _ _ _ _ out l1 l2) (apart-irrefl xr (notin-in xr xr br out ixr))))
+        (let-match erased ha (HARing _ _ _ _ _ _ i4) (absurd (HANew _ _ _ _ _ _ out _ _) (apart-irrefl xr (notin-in xr xr br out ixr))))
         (let-match erased (in2-fn br rbd xr w x db i4 i3) (Refl _ _))
         (PtRing idd hr bd x x xr (iota-nth dd x idd iod lxd) ixb q))
       ((CEq _ _ _) (sew-rest-part br rbd bd idd idr hr dd dr d x hb iod (lt-succ dd) lx))
@@ -422,7 +410,7 @@
   (let ((erased rest)) (sew-disj-n br rbd idd idr hr xs1 dd d hb iod dr ior u1))
   (let-match erased (in-dec x br) (OrR _ _ out) ((OrL _ _ ix) (DjIn idd hr br xs1 x ix rest)))
   (let ((erased v) (erased q) (erased ha)) (hrb-nth br rbd idr hr dd d x x hb (iota-nth dr x idr ior lx)))
-  (let-match erased ha (HANew _ _ _ _ _ _ o l1 l2) (absurd (HARing _ _ _ _ _ _ i) (apart-irrefl x (notin-in x x br out (in2-in-left br rbd x v i)))))
+  (let-match erased ha (HANew _ _ _ _ _ _ _ l1 _) (absurd (HARing _ _ _ _ _ _ i) (apart-irrefl x (notin-in x x br out (in2-in-left br rbd x v i)))))
   (DjOut idd hr br xs1 x v q (under-notin-le idd dd v (perm-under dd idd idd (perm-id dd idd iod)) l1) rest))
 
 (def-fns _ $ (erased sew-disj-e : (erased (List (Nat)) br rbd bd idd idr hr xs) (erased (Nat) dd d) (erased (HrB br rbd dd idr hr d) hb) (erased (Iota dd idd) iod)
@@ -432,22 +420,20 @@
   (let-match erased (in-dec x bd) (OrR _ _ out) ((OrL _ _ ix) (DjIn hr idd bd xs1 x ix rest)))
   (DjOut hr idd bd xs1 x x (iota-nth dd x idd iod lx) (low-notin br rbd bd idr hr dd d x hb rv dr lx out) rest))
 
-; sew_map and sew_map_patch: a disk map with a simple edge cycle bd and a remainder map with a duplicate-free node cycle br of the
-; same length are patched into a map on d darts, the disk darts kept and br sent to rev bd.
 (def-fns _ $ (erased sew-exists : (erased (Nat) dd dr k) (erased (List (Nat)) ed nd fd er nr fr bd br) (erased (Hypermap dd ed nd fd) hdm)
     (erased (Hypermap dr er nr fr) hrm) (erased (NCyc ed bd) cyd) (erased (Simple fd bd) sd) (erased (NCyc nr br) cyr) (erased (Distinct br) dbr)
     (erased (Under bd dd) ubd) (erased (Under br dr) ubr) (erased (Length (Nat) bd k) lbd) (erased (Length (Nat) br k) lbr)
     -> (erased (Nat) d) (erased (List (Nat)) e n f hd hr) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt))
-  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
-  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hrm))
+  (let ((erased nfd) (erased ndi) (erased _) (erased _) (erased pmed) (erased pmnd) (erased _)) (hyper-core dd ed nd fd hdm))
+  (let ((erased nfr) (erased nri) (erased _) (erased _) (erased pmer) (erased pmnr) (erased _)) (hyper-core dr er nr fr hrm))
   (let ((erased hdm2)) hdm)
   (let ((erased hrm2)) hrm)
-  (let-match erased hdm2 (MkHypermap _ _ _ _ idd fe1 en1 nf1 iod c1 k1 c2 k2 c3 k3))
-  (let-match erased hrm2 (MkHypermap _ _ _ _ idr fe2 en2 nf2 ior c4 k4 c5 k5 c6 k6))
+  (let-match erased hdm2 (MkHypermap _ _ _ _ idd _ _ _ iod _ _ _ _ _ _))
+  (let-match erased hrm2 (MkHypermap _ _ _ _ idr _ _ _ ior _ _ _ _ _ _))
   (let ((erased rbd) (erased rv)) (revapp-exists (Nat) bd (Nil _)))
   (let ((erased lrbd)) (revapp-length bd (Nil _) rbd k (Zero) k rv lbd (LengthNil _) (add-zero-right k)))
   (let ((erased sd2)) sd)
-  (let-match erased sd2 (MkSimple _ _ lab ls rf rp dl))
+  (let-match erased sd2 (MkSimple _ _ lab ls _ rp dl))
   (let ((erased drbd)) (revapp-distinct bd (Nil _) rbd rv (labels-distinct lab bd ls rp dl) (DistNil) (off-nil bd)))
   (let ((erased urbd)) (revapp-under bd (Nil _) rbd dd rv ubd (UnderNil dd)))
   (let ((erased hr) (erased d) (erased hb)) (hrb-exists br rbd dd k idr lbr lrbd))

@@ -1,6 +1,3 @@
-; The uses of minimality in birkhoff.v and coloring.v, with minimality as data: each step that Coq proves by colouring
-; smaller maps gives here a Reduces (induct.sl) to the smaller maps it names. Load after birkfit.sl.
-
 (def-fns _ $ (erased mp-app : (subterm erased (List (Mp)) xs) (erased (List (Mp)) ys) -> (erased (List (Mp)) zs) (erased (App (Mp) xs ys zs) r))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (CatNil _ ys))))
   (let ((erased zs1) (erased r1)) (mp-app xs1 ys))
@@ -8,18 +5,18 @@
 
 (def-fns _ $ (erased mpcols-split : (erased (List (Mp)) xs ys zs) (subterm erased (App (Mp) xs ys zs) ap) (erased (MpCols zs) c)
     -> (erased (MpCols xs) cx) (erased (MpCols ys) cy))
-  (let-match erased ap (CatCons _ x xs1 _ zs1 ap1) ((CatNil _ _) (values (MpcNil) c)))
+  (let-match erased ap (CatCons _ _ xs1 _ zs1 ap1) ((CatNil _ _) (values (MpcNil) c)))
   (let-match erased c (MpcCons d e n f ks _ cl c1))
   (let ((erased cx) (erased cy)) (mpcols-split xs1 ys zs1 ap1 c1))
   (values (MpcCons d e n f ks xs1 cl cx) cy))
 
 (def-fns _ $ (erased smaller-app : (erased (Nat) d) (erased (List (Mp)) xs ys zs) (subterm erased (App (Mp) xs ys zs) ap) (erased (Smaller d xs) sx)
     (erased (Smaller d ys) sy) -> (erased (Smaller d zs) r))
-  (let-match erased ap (CatCons _ x xs1 _ zs1 ap1) ((CatNil _ _) sy))
+  (let-match erased ap (CatCons _ _ xs1 _ zs1 ap1) ((CatNil _ _) sy))
   (let-match erased sx (SmallerCons _ d2 e2 n2 f2 _ pb lt2 sx1))
   (SmallerCons d d2 e2 n2 f2 zs1 pb lt2 (smaller-app d xs1 ys zs1 ap1 sx1 sy)))
 
-; What birkhoff-ring needs, besides the colourings of the maps ms the check names for a ring of h + 2 darts nontrivial for m.
+; ms are the maps the check names for a ring of h + 2 darts nontrivial for m.
 (def-adts $ (BirkW : ((Nat) d) ((List (Nat)) e n f) ((List (Mp)) ms) -> Type)
   enum
   (many MkBirkW : (erased (Nat) d x0 h m n0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Ctree)) ts)
@@ -35,7 +32,7 @@
     (erased (MpCols ms) cs) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
   (let-match erased w (MkBirkW _ x0 h m n0 dd1 dd2 _ _ _ p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 _ ctu gtu hm gen pl cu cn nc lr ce ge gc bk br n1 n2 ap))
   (let-match erased nc (MkNoColoring d2 _ _ nce lf2))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f hm))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f hm))
   (let-match erased (length-fn (Nat) f d2 d lf2 lf) (Refl _ _))
   (let ((erased c1) (erased c2)) (mpcols-split ms1 ms2 ms ap cs))
   (match erased (birkhoff-ring d x0 h m n0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 ctu gtu hm gen pl cu cn nce lr ce ge gc bk br n1 n2 c1 c2)
@@ -67,10 +64,6 @@
     ((BMLow _ l1) (match erased b2 _ ((BMLow _ _) (Refl _ m1)) (absurd (BMFive) (lt-irrefl k l1))))
     ((BMFive) (match erased b2 _ (absurd (BMLow _ l2) (lt-irrefl k l2)) ((BMFive) (Refl _ m1))))))
 
-; The theorem Birkhoff of birkhoff.v, with minimality as data: in a planar bridgeless plain cubic connected map that the search
-; finds uncolourable, a ring of k darts, k below 6, nontrivial for the m of BkMode k m, gives a reduction. The induction on
-; the ring size follows birkhoff-maps' Shorter rings until birkhoff-maps names the maps of the check, so the one Reduces
-; names every map needed.
 (def-fns _ $ (erased birkhoff-go : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x0 k m)
     (erased (List (Nat)) e n f p) (subterm erased (Nat) b) (erased (Lt k b) lb)
     (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
@@ -85,7 +78,7 @@
   (match erased (birkhoff-maps d h m x0 e n f p cps ts hm gen bl pl cu cn rg lr nt bb) _
     ((BKShort _ _ _ _ _ _ _ _ _ sh)
       (let-match erased sh (MkShorter _ _ y0 k2 _ _ _ Q rq nq lq lt))
-      (let-match erased lb (LtS _ b1 lb1))
+      (let-match erased lb (LtS _ b1 _))
       (birkhoff-go B pb d y0 k2 (Zero) e n f Q b1 (lt-ls k2 k b1 lt lb) bks hm gen bl pl cu cn nc rq lq (lt-tr k2 k 6 lt l6)
         (BMLow k2 (lt-ls k2 k (Succ (Succ (Succ (Succ (Succ (Zero)))))) lt l6)) nq))
     ((BKMaps _ _ _ _ dd1 dd2 _ _ _ _ ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 _ ms1 ms2 br n1 n2)
@@ -112,31 +105,29 @@
   (let-match erased w (MkSomePath _ _ xs _ _ p))
   (bridgeless-face d z ez e n f (Nil _) xs bl pe p))
 
-; nontrivial_cycle2 of birkhoff.v: in a planar bridgeless plain cubic map, a ring x :: y with y not the edge image of x is
-; nontrivial for 0: node x is in diskF r, and node (edge x) in diskFC r.
 (def-fns _ $ (erased nontrivial-cycle2 : (erased (Nat) d x y ex) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
     (erased (Ring e f x (Cons (Nat) y (Nil (Nat)))) rg) (erased (Nth (Nat) e x ex) pex) (erased (Apart (Nat) Lt ex y) ney)
     -> (erased (NonTrivial d e n f (Cons (Nat) x (Cons (Nat) y (Nil (Nat)))) (Zero)) nt))
   (let ((erased p)) (Cons (Nat) y (Nil (Nat))))
   (let ((erased r)) (Cons (Nat) x p))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f hm))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f hm))
   (let ((erased gf) (erased grf)) (perm-graph d f fi pmf))
   (let ((erased ur)) (ring-under d x e n f p hm rg))
   (let ((erased ur2)) ur)
   (let-match erased ur2 (UnderCons _ _ _ lx _))
   (let ((erased rg2)) rg)
-  (let-match erased rg2 (MkRing _ _ _ _ y0 ey rp pey wb sm))
+  (let-match erased rg2 (MkRing _ _ _ _ _ _ rp _ _ _))
   (let-match erased rp (RPCons _ _ _ _ ex2 _ _ pe2 wxy rp1))
   (let-match erased rp1 (RPNil _ _ _))
   (let-match erased (nth-fn _ e x ex ex2 pex pe2) (Refl _ _))
   (let ((erased lex)) (perm-val d x ex e nf pme pex))
   (let ((erased nx) (erased pnx) (erased lnx)) (perm-nth d x n ni pmn lx))
-  (let ((erased nnx) (erased pnnx) (erased pnnnx) (erased a1) (erased a2)) (cubic-eq d x nx n cu lx pnx))
+  (let ((erased nnx) (erased pnnx) (erased pnnnx) (erased _) (erased _)) (cubic-eq d x nx n cu lx pnx))
   (let ((erased lnnx)) (perm-val d nx nnx n ni pmn pnnx))
   (let-match erased (band-dec d nx f fi r gf pmf grf ur lnx) (OrR _ _ knx)
       (absurd (OrL _ _ fb)
-        (let-match erased fb (MkFband _ _ _ z iz w))
+        (let-match erased fb (MkFband _ _ _ _ iz w))
         (match erased iz _
           (absurd (InHere _ _)
             (let ((erased enx) (erased penx) (erased lenx)) (perm-nth d nx e nf pme lnx))
@@ -150,12 +141,12 @@
                   (some-back d enn nx f fi pmf (hyper-third d enn nnx nx e n f hm penn pnnx) lenn)))))))))
   (let ((erased dfx)) (MkDiskF n f r nx (disk-node d x nx n ni f r pmn (disk-ring d x n ni f r pmn (InHere x p) lx) pnx) knx))
   (let ((erased nex) (erased pnex) (erased lnex)) (perm-nth d ex n ni pmn lex))
-  (let ((erased w) (erased pnw) (erased pwex) (erased a3) (erased a4)) (cubic-eq d ex nex n cu lex pnex))
+  (let ((erased w) (erased pnw) (erased pwex) (erased _) (erased _)) (cubic-eq d ex nex n cu lex pnex))
   (let ((erased lw)) (perm-val d nex w n ni pmn pnw))
   (let ((erased pex2) (erased aex)) (plain-eq d x ex e pl lx pex))
   (let-match erased (band-dec d nex f fi r gf pmf grf ur lnex) (OrR _ _ knex)
       (absurd (OrL _ _ fb)
-        (let-match erased fb (MkFband _ _ _ z iz w2))
+        (let-match erased fb (MkFband _ _ _ _ iz w2))
         (match erased iz _
           (absurd (InHere _ _)
             (let ((erased ew) (erased pew) (erased lew)) (perm-nth d w e nf pme lw))
@@ -173,12 +164,10 @@
   (let-match erased (split-cover hd ids hd zs nex sp (iota-in d nex ids io lnex)) (OrR _ _ izs)
     (absurd (OrL _ _ ihd)
       (let ((erased dn)) (disk-node d w ex n ni f r pmn (disk-node d nex w n ni f r pmn (ds-in d nex x e n f p hd zs hm gen rg ur ds ihd) pnw) pwex))
-      (let ((erased dx) (erased ox)) (disk-edge-inv d x ex x e n f p hm gen rg dn (NotInCons ex x p aex (NotInCons ex y (Nil _) ney (NotInNil ex))) pex))
+      (let ((erased _) (erased ox)) (disk-edge-inv d x ex x e n f p hm gen rg dn (NotInCons ex x p aex (NotInCons ex y (Nil _) ney (NotInNil ex))) pex))
       (apart-irrefl x (notin-in x x r ox (InHere x p)))))
   (nontrivial0 d x nx nex e n f p hd zs hm gen rg ds dfx izs knex))
 
-; double_dart of birkhoff.v: two distinct darts x and y on one face, with their edge images on one face, give the ring
-; x :: edge y, nontrivial for 0 (nontrivial-cycle2), so the map reduces.
 (def-fns _ $ (erased double-dart : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x y ex ey)
     (erased (List (Nat)) e n f) (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
@@ -186,7 +175,7 @@
     (erased (SomePath f (Nil (Nat)) x y) wxy) (erased (SomePath f (Nil (Nat)) ex ey) wex) (erased (Apart (Nat) Lt x y) nxy)
     -> (erased (Reduces B d e n f) r))
   (let-match erased (unary-6) (Refl _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f hm))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pme) (erased _) (erased pmf)) (hyper-core d e n f hm))
   (let ((erased gf) (erased grf)) (perm-graph d f fi pmf))
   (let ((erased lx) (erased ly)) (values (perm-val d ex x nf e (perm-sym d e nf pme) (perm-inv d x ex e nf pme pex))
     (perm-val d ey y nf e (perm-sym d e nf pme) (perm-inv d y ey e nf pme pey))))
@@ -204,7 +193,5 @@
     (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
 
-; snip.sl's DPath, walk.sl's Sub and hypsub.sl's split-cover, which unav/qembed.sl, unav/part.sl and unav/fit.sl define again,
-; for minarity.sl and contract2.sl.
 (let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub) (erased hsplit-cover))
   (values DPath DPNil DPNode DPFace Sub split-cover))

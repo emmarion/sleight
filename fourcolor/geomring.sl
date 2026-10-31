@@ -1,11 +1,8 @@
-; Lemmas of geometry.v about lists of darts on distinct faces. Load after patch.sl.
-
 (def-fns _ $ (erased in-label : (erased (List (Nat)) lab xs ls) (erased (Nat) x) (subterm erased (Respects lab xs ls) rp) (erased (In x xs) ix)
     -> (erased (Nat) l) (erased (Nth (Nat) lab x l) r))
-  (let-match erased rp (RespCons _ xs1 ls1 j l pj rp1) (absurd (RespNil _) ix))
+  (let-match erased rp (RespCons _ xs1 ls1 _ l pj rp1) (absurd (RespNil _) ix))
   (match erased ix _ ((InHere _ _) (values l pj)) ((InThere _ _ _ ix1) (in-label lab xs1 ls1 x rp1 ix1))))
 
-; Two darts of a simple list on one face are one dart (simple_cface, and so scycle_cface).
 (def-fns _ $ (erased simple-cface : (erased (List (Nat)) f p) (erased (Nat) a b) (erased (Simple f p) s) (erased (In a p) ia) (erased (In b p) ib)
     (erased (SomePath f (Nil (Nat)) a b) w) -> (erased (Eq (Nat) a b) e))
   (let-match erased s (MkSimple _ _ lab ls rf rp dl))
@@ -19,9 +16,8 @@
   (let-match erased dj (DisjCons _ _ _ out dj1))
   (PathStep p s2 xs1 a z b pz out (path-reset p s s2 xs1 z b w1 dj1)))
 
-; Orders are constant along cycles.
 (def-fns _ $ (erased order-step : (erased (List (Nat)) p) (erased (Nat) x y k) (erased (Order p x k) o) (erased (Nth (Nat) p x y) py) -> (erased (Order p y k) r))
-  (let-match erased o (MkOrder _ xs _ y1 k1 px w l))
+  (let-match erased o (MkOrder _ xs _ y1 _ px w l))
   (let-match erased (nth-fn _ p x y y1 py px) (Refl _ _))
   (let-match erased w (PathStep _ _ xs1 _ z _ pz out w1)
     ((PathHere _ _ _) o))
@@ -51,7 +47,6 @@
   (let ((erased xs) (erased w)) (fpath-reach n q1 z b r fp1 ir1))
   (values (Cons _ a xs) (PathStep n _ xs a z r pz (NotInNil a) w)))
 
-; A duplicate-free node cycle of m darts is the orbit of its first dart.
 (def-fns _ $ (erased ring-order : (erased (List (Nat)) n q) (erased (Nat) x0 m) (erased (NCyc n (Cons (Nat) x0 q)) nc) (erased (Distinct (Cons (Nat) x0 q)) dr)
     (erased (Length (Nat) q m) lq) -> (erased (Order n x0 (Succ m)) r))
   (let-match erased nc (NCCons _ _ _ y fp back))
@@ -73,7 +68,7 @@
   (let-match erased w (PathStep _ _ xs1 _ z _ pz _ w1) ((PathHere _ _ _) ia))
   (path-in-ring n R s xs1 z b nc (ncyc-next n R a z nc ia pz) w1))
 
-; s sums the node orders at the roots rs: m at r0, the root of the ring's class, when r0 is in rs, and 3 at the others.
+; s sums the node orders at the roots rs: m at r0 when r0 is in rs, and 3 at the others.
 (def-adts $ (QSum : ((Nat) r0 m) ((List (Nat)) rs) ((Nat) s) -> Type)
   enum
   (many QSOut : (erased (Nat) r0 m k s) (erased (List (Nat)) rs) (erased (NotIn r0 rs) o) (erased (Length (Nat) rs k) l) (erased (Mul k 3 s) ms)
@@ -107,23 +102,22 @@
       (values (Cons _ 3 os1) s (OrdCons n rs1 os1 r 3 (oo-at n R ids 3 r oo (iota-in d r ids io lr) orr) ob1)
         (match erased q1 _
           ((QSOut _ _ k1 _ _ o1 l1 ms) (QSOut r0 m (Succ k1) s _ (NotInCons r0 r rs1 ne o1) (LengthCons _ r rs1 k1 l1) (MulSucc k1 3 s1 s ms a2)))
-          ((QSIn _ _ k1 _ t1 _ i1 l1 mt at)
+          ((QSIn _ _ k1 _ t1 _ i1 l1 mt amt)
             (let ((erased t) (erased a3)) (add-ex t1 3))
-            (let ((erased a4) (erased a5) (erased a6)) (add-assoc m t1 3 s1 s at a2))
+            (let ((erased a4) (erased a5) (erased a6)) (add-assoc m t1 3 s1 s amt a2))
             (let-match erased (add-fn t1 3 a4 t a5 a3) (Refl _ _))
             (QSIn r0 m (Succ k1) s t _ (InThere r0 r rs1 i1) (LengthCons _ r rs1 (Succ k1) l1) (MulSucc k1 3 t1 t mt a3) a6)))
         (NSCons 3 s1 s os1 sm1 a)))))
 
-; A duplicate-free node cycle R of m darts off which every dart has node order 3: there are 1 + i node orbits and d = m + 3i darts.
 (def-fns _ $ (erased ring-count : (erased (Nat) d kn m x0) (erased (List (Nat)) e n f q ids) (erased (Hypermap d e n f) h) (erased (NCyc n (Cons (Nat) x0 q)) nc)
     (erased (Distinct (Cons (Nat) x0 q)) dq) (erased (Length (Nat) q m) lq) (erased (OrdersOff n 3 (Cons (Nat) x0 q) ids) oo) (erased (Iota d ids) io0)
     (erased (Orbits d n kn) ob) -> (erased (Nat) i t) (erased (Eq (Nat) kn (Succ i)) ek) (erased (Mul i 3 t) mt) (erased (Add (Succ m) t d) ad))
   (let ((erased R)) (Cons (Nat) x0 q))
-  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pn) (erased _)) (hyper-core d e n f h))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased cs (MkClasses _ _ _ ids1 lab rs io ll lr dr fix cl ro))
   (let-match erased (iota-fn d ids ids1 io0 io) (Refl _ _))
-  (let-match erased nc (NCCons _ _ _ y fp back))
+  (let-match erased nc (NCCons _ _ _ y _ back))
   (let ((erased i0)) (InHere x0 q))
   (let ((erased lx0)) (perm-val d y x0 n ni pn back))
   (let ((erased r0) (erased p0)) (nth-exists _ lab d x0 ll lx0))
@@ -138,8 +132,6 @@
   (let-match erased (length-fn _ rs kn (Succ k) lr lk) (Refl _ _))
   (values k t (Refl _ kn) mt ad))
 
-; quasicubic_Euler of geometry.v: in a connected plain map with a duplicate-free node cycle R of m + 1 darts, off which
-; every dart has node order 3, and with kf faces, 6 kf + 12 gen = d + 2 (m + 1) + 6.
 (def-fns _ $ (erased quasicubic-euler : (erased (Nat) d m x0 kf gen) (erased (List (Nat)) e n f q ids) (erased (Hypermap d e n f) h)
     (erased (AllOrder d e (Succ (Succ (Zero)))) plain) (erased (NCyc n (Cons (Nat) x0 q)) nc) (erased (Distinct (Cons (Nat) x0 q)) dq) (erased (Length (Nat) q m) lq)
     (erased (OrdersOff n 3 (Cons (Nat) x0 q) ids) oo) (erased (Iota d ids) io) (erased (Connected d e n f) cc) (erased (Genus d e n f gen) gn)
@@ -155,8 +147,8 @@
       (AddSucc _ _ _ (AddSucc _ _ _ (AddZero two)))) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero two)))))))
   (let ((erased (Add three three six) a33)) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero three)))))
   (let ((erased (Add two one three) a21)) (AddSucc _ _ _ (AddSucc _ _ _ (AddZero one))))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let-match erased gn (MkGenus _ _ ke kn kf2 kc c2 lhs s1 rhs g2 _ _ _ g oe on of2 gl cs dc al a1 ar dg ag))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core d e n f h))
+  (let-match erased gn (MkGenus _ _ ke kn kf2 kc _ _ s1 _ g2 _ _ _ g oe on of2 gl cs dc al a1 ar dg ag))
   (let-match erased (orbits-unique d kf2 kf f of2 of) (Refl _ _))
   (let-match erased cc (MkConnected _ _ _ _ g3 gl3 cs3))
   (let-match erased (glink-fn d e n f g g3 gl gl3) (Refl _ _))
@@ -208,18 +200,16 @@
   (let-match erased (add-cancel d2 f6b y v pv2 py2) (Refl _ _))
   (values f6 g6 f6b m2 u pf6 (mul-assoc gen two six g2 g6 12 (double-mul gen g2 dg) pg6 m26) pf1 pm2 pu1 py1))
 
-; For genus 0, 6 kf = d + 2 (m + 1) + 6.
 (def-fns _ $ (erased quasicubic-planar : (erased (Nat) d m x0 kf) (erased (List (Nat)) e n f q ids) (erased (Hypermap d e n f) h)
     (erased (AllOrder d e (Succ (Succ (Zero)))) plain) (erased (NCyc n (Cons (Nat) x0 q)) nc) (erased (Distinct (Cons (Nat) x0 q)) dq) (erased (Length (Nat) q m) lq)
     (erased (OrdersOff n 3 (Cons (Nat) x0 q) ids) oo) (erased (Iota d ids) io) (erased (Connected d e n f) cc) (erased (Genus d e n f (Zero)) gn)
     (erased (Orbits d f kf) of) -> (erased (Nat) f6 m2 u) (erased (Mul kf 6 f6) mf) (erased (Mul (Succ m) 2 m2) mm) (erased (Add d 6 u) du) (erased (Add m2 u f6) r))
-  (let ((erased f6) (erased g12) (erased x) (erased m2) (erased u) (erased mf) (erased mg) (erased ax) (erased mm) (erased du) (erased r))
+  (let ((erased f6) (erased _) (erased x) (erased m2) (erased u) (erased mf) (erased mg) (erased ax) (erased mm) (erased du) (erased r))
     (quasicubic-euler d m x0 kf (Zero) e n f q ids h plain nc dq lq oo io cc gn of))
   (let-match erased mg (MulZero _))
   (let-match erased (add-fn f6 (Zero) x f6 ax (add-zero-right f6)) (Refl _ _))
   (values f6 m2 u mf mm du r))
 
-; And the other way: when 6 kf = d + 2 (m + 1) + 6, the genus is 0.
 (def-fns _ $ (erased planar-quasicubic : (erased (Nat) d m x0 kf gen f6 m2 u) (erased (List (Nat)) e n f q ids) (erased (Hypermap d e n f) h)
     (erased (AllOrder d e (Succ (Succ (Zero)))) plain) (erased (NCyc n (Cons (Nat) x0 q)) nc) (erased (Distinct (Cons (Nat) x0 q)) dq) (erased (Length (Nat) q m) lq)
     (erased (OrdersOff n 3 (Cons (Nat) x0 q) ids) oo) (erased (Iota d ids) io) (erased (Connected d e n f) cc) (erased (Genus d e n f gen) gn)

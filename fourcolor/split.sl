@@ -1,6 +1,3 @@
-; minimal_counter_example_is_connected with minimality as data: a planar bridgeless plain precubic map with a dart is
-; connected or reduces to the two parts gcomp-split patches it from. Load after patch2.sl and induct.sl.
-
 (def-adts $ (SplitW : ((Nat) d) ((List (Nat)) e n f) ((List (Mp)) ms) -> Type)
   enum
   (many MkSplitW : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr)
@@ -21,7 +18,7 @@
   (let-match erased sp (MkGcompSplit _ dd dr _ _ _ ed nd fd er nr fr hd hr pt gd bd pld pcd ltd gr br plr pcr ltr))
   (let ((erased pt2)) pt)
   (let-match erased pt2
-    (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hmd hmr io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
+    (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmd hmr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let ((erased ms)) (Cons (Mp) (MkMp dd ed nd fd) $ Cons (Mp) (MkMp dr er nr fr) $ Nil (Mp)))
   (OrR _ _ (MkReduces B d e n f ms
     (SmallerCons d dd ed nd fd _ (MkPbpp dd ed nd fd hmd gd bd pld pcd) ltd $ SmallerCons d dr er nr fr _ (MkPbpp dr er nr fr hmr gr br plr pcr) ltr $ SmallerNil d)

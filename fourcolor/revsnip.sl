@@ -1,7 +1,4 @@
-; Rings of plain planar maps, after revsnip.v: the reverse ring rev (map e r), and the edges out of a proper ring. Load after
-; snip.sl.
-
-; r is a proper ring: it has more than two darts, or two darts x and y with e x other than y (proper_ring).
+; r has more than two darts, or two darts x and y with e x other than y.
 (def-adts $ (Proper : ((List (Nat)) e r) -> Type)
   enum
   (many ProperBig : (erased (List (Nat)) e r1) (erased (Nat) x y z) -> (Proper e (Cons (Nat) x (Cons (Nat) y (Cons (Nat) z r1)))))
@@ -26,8 +23,6 @@
   (let-match erased sp (MkSomePath _ _ ws _ _ w))
   (walk-back d a b f fi (Nil _) ws pf w la))
 
-; The ring path from c through P to b, read backwards along e from e b, after the reverse Acc of what came before c, as the tail
-; of RR = rev (e c :: map e P) ++ Acc.
 (def-fns _ $ (erased rpath-rev : (erased (Nat) d c b ec ea) (erased (List (Nat)) e f fi mP Acc RR) (subterm erased (List (Nat)) P) (erased (HPerm d f fi) pf)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le) (erased (RPath e f c P b) rp) (erased (Respects e P mP) rm)
     (erased (Nth (Nat) e c ec) pc) (erased (RevApp (Nat) (Cons (Nat) ec mP) Acc RR) ra) (erased (RPath e f ec Acc ea) racc)
@@ -39,26 +34,24 @@
   (let-match erased rm (RespCons _ _ mP1 _ ez pz rm1))
   (let-match erased ra (RACons _ _ _ _ _ ra1))
   (let ((erased lz)) (nth-lt-length _ e z d ez pz le))
-  (let ((erased pec) (erased nec)) (plain-eq d c ec e pl (nth-lt-length _ e c d ec pc le) pc))
-  (let ((erased pez) (erased nez)) (plain-eq d z ez e pl lz pz))
+  (let ((erased pec) (erased _)) (plain-eq d c ec e pl (nth-lt-length _ e c d ec pc le) pc))
+  (let ((erased pez) (erased _)) (plain-eq d z ez e pl lz pz))
   (rpath-rev d z b ez ea e f fi mP1 (Cons _ ec Acc) RR P1 pf pl le rp1 rm1 pz ra1
     (RPCons e f Acc ez z ec ea pez (some-sym d ec z f fi pf sp (nth-lt-length _ e ec d c pec le)) racc)))
 
-; x is on RR = rev (map e r) exactly when e x is on r (mem_rev_ring).
 (def-fns _ $ (erased rev-ring-in : (erased (Nat) d x) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
     (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) (erased (In x RR) ix)
     -> (erased (Nat) ex) (erased (Nth (Nat) e x ex) pe) (erased (In ex r) ir))
   (let ((erased ixe)) (match erased (revapp-out er (Nil _) RR x ra ix) (((In x er) res)) ((OrL _ _ i) i) (absurd (OrR _ _ i) (match erased i _))))
   (let ((erased y) (erased iy) (erased py)) (respects-in e r er x rm ixe))
-  (let ((erased py2) (erased ne)) (plain-eq d y x e pl (nth-lt-length _ e y d x py le) py))
+  (let ((erased py2) (erased _)) (plain-eq d y x e pl (nth-lt-length _ e y d x py le) py))
   (values y py2 iy))
 
 (def-fns _ $ (erased ring-rev-in : (erased (Nat) d x ex) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
     (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) (erased (Nth (Nat) e x ex) pe) (erased (In ex r) ir) -> (erased (In x RR) res))
-  (let ((erased pe2) (erased ne)) (plain-eq d x ex e pl (nth-lt-length _ e x d ex pe le) pe))
+  (let ((erased pe2) (erased _)) (plain-eq d x ex e pl (nth-lt-length _ e x d ex pe le) pe))
   (revapp-in er (Nil _) RR x ra (OrL _ _ (in-map e r er ex x ir rm pe2))))
 
-; Two darts of RR on one face are one dart: each is the edge image of a dart of r, whose successor on r is on that face.
 (def-fns _ $ (erased rev-lab-inj : (erased (Nat) d x0 u v l m) (erased (List (Nat)) e nf f p rr er RR lab ls) (erased (HPerm d e nf) pe)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le) (erased (Ring e f x0 p) rg) (erased (HSnoc (Nat) p x0 rr) sn)
     (erased (Length (Nat) (Cons (Nat) x0 p) m) lr) (erased (Length (Nat) rr m) lrr) (erased (Distinct rr) drr) (erased (Sub rr (Cons (Nat) x0 p)) srr)
@@ -71,8 +64,8 @@
   (let ((erased b2) (erased ib2)) (in2-exists _ rr b m ib lr lrr))
   (let ((erased ea) (erased pea) (erased spa)) (ring-link e f p rr x0 a a2 rg sn ia2))
   (let ((erased eb) (erased peb) (erased spb)) (ring-link e f p rr x0 b b2 rg sn ib2))
-  (let ((erased pa2) (erased na)) (plain-eq d u a e pl (nth-lt-length _ e u d a pa le) pa))
-  (let ((erased pb2) (erased nb)) (plain-eq d v b e pl (nth-lt-length _ e v d b pb le) pb))
+  (let ((erased pa2) (erased _)) (plain-eq d u a e pl (nth-lt-length _ e u d a pa le) pa))
+  (let ((erased pb2) (erased _)) (plain-eq d v b e pl (nth-lt-length _ e v d b pb le) pb))
   (let-match erased (nth-fn _ e a u ea pa2 pea) (Refl _ _))
   (let-match erased (nth-fn _ e b v eb pb2 peb) (Refl _ _))
   (let-match erased spa (MkSomePath _ _ wsa _ _ wa))
@@ -101,13 +94,12 @@
       ((OrR _ _ o) o))
     (rev-labs d x0 m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra B1 sb1 db1 ls1 rp1)))
 
-; scycle_rev_ring: in a plain map, RR = rev (map e r) is a ring, read from its first dart y.
 (def-fns _ $ (erased rev-ring : (erased (Nat) d x0) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
     -> (erased (Nat) y) (erased (List (Nat)) Q) (erased (Eq (List (Nat)) RR (Cons (Nat) y Q)) eq) (erased (Ring e f y Q) rg2))
   (let ((erased r)) (Cons _ x0 p))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased rg1)) rg)
   (let-match erased rg1 (MkRing _ _ _ _ w ew rp pw sw sm))
   (let-match erased sm (MkSimple _ _ lab ls rf rl dl))
@@ -115,7 +107,7 @@
   (let-match erased rm2 (RespCons _ _ mp _ ex0 px0 rm1))
   (let ((erased y) (erased Q) (erased py) (erased eq) (erased rq)) (rpath-rev d x0 w ex0 ex0 e f fi mp (Nil _) RR p pf pl le rp rm1 px0 ra (RPNil e f ex0)))
   (let-match erased (nth-fn _ e w y ew py pw) (Refl _ _))
-  (let ((erased px1) (erased nx)) (plain-eq d x0 ex0 e pl (nth-lt-length _ e x0 d ex0 px0 le) px0))
+  (let ((erased px1) (erased _)) (plain-eq d x0 ex0 e pl (nth-lt-length _ e x0 d ex0 px0 le) px0))
   (let ((erased ll)) (respects-length lab f lab d rf lf))
   (let ((erased dsr)) (distinct-back lab r ls dl rl))
   (let ((erased m) (erased lr)) (length-exists _ r))
@@ -173,20 +165,19 @@
         (absurd (InHere _ _) (apart-irrefl b ne))
         (absurd (InThere _ _ _ ib1) (let-match erased ib1 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _))) (apart-irrefl a nab))))))
 
-; A proper ring does not hold both x and e x: they would be the whole ring.
 (def-fns _ $ (erased absurd ring-pair : (erased (Nat) d x ex x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Proper e (Cons (Nat) x0 p)) pr) (erased (In x (Cons (Nat) x0 p)) ix) (erased (Nth (Nat) e x ex) pex)
     (erased (In ex (Cons (Nat) x0 p)) iex) -> (erased (False) fl))
   (let ((erased r)) (Cons _ x0 p))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased rg1)) rg)
-  (let-match erased rg1 (MkRing _ _ _ _ w ew rp pw sw sm))
+  (let-match erased rg1 (MkRing _ _ _ _ _ _ _ _ _ sm))
   (let-match erased sm (MkSimple _ _ lab ls rf rl dl))
   (let ((erased ll)) (respects-length lab f lab d rf lf))
   (let ((erased dsr)) (distinct-back lab r ls dl rl))
   (let ((erased pex2) (erased nex)) (plain-eq d x ex e pl (nth-lt-length _ e x d ex pex le) pex))
-  (let ((erased q) (erased z) (erased ez) (erased rq) (erased pez) (erased spz) (erased oxq) (erased s1) (erased s2)) (ring-rot e f p x0 x rg ix))
-  (let-match erased rq (RPCons _ _ q1 _ ea q0 _ pea spq rq1)
+  (let ((erased _) (erased _) (erased _) (erased rq) (erased _) (erased _) (erased oxq) (erased s1) (erased s2)) (ring-rot e f p x0 x rg ix))
+  (let-match erased rq (RPCons _ _ _ _ ea q0 _ pea spq rq1)
     (absurd (RPNil _ _ _)
       (let-match erased (sub-in r _ ex s1 iex) (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
       (apart-irrefl ex nex)))
@@ -197,7 +188,7 @@
   (let ((erased l) (erased pl0)) (nth-exists _ lab d ex ll (nth-lt-length _ e ex d x pex2 le)))
   (let-match erased (simple-inj lab r ls ex q0 l rl dl iex iq0 pl0 (path-label f lab (Nil _) wq ex q0 l w0 rf pl0)) (Refl _ _))
   (let-match erased rq1 (RPNil _ _ _)
-    (absurd (RPCons _ _ q3 _ eex q2 _ peex spq2 rq2)
+    (absurd (RPCons _ _ q3 _ eex q2 _ peex spq2 _)
       (let-match erased (nth-fn _ e ex x eex pex2 peex) (Refl _ _))
       (let-match erased s4 (HSubCons _ _ _ iq2 _))
       (let-match erased spq2 (MkSomePath _ _ wq2 _ _ w2))
@@ -212,14 +203,13 @@
       (let-match erased oa (NotInCons _ _ _ nab _))
       (pair-in-two a b x ex ea2 e pex pex2 pa2 ne2 nab (sub-in r _ a s1 (InHere a _)) (sub-in r _ b s1 (InThere b a _ (InHere b _)))))))
 
-; diskN_edge_ring: in a plain planar map, the edge image of a dart of a proper ring is off diskN.
 (def-fns _ $ (erased absurd disk-edge-ring : (erased (Nat) d x ex x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Ring e f x0 p) rg) (erased (Proper e (Cons (Nat) x0 p)) pr) (erased (In x (Cons (Nat) x0 p)) ix)
     (erased (Nth (Nat) e x ex) pex) (erased (DiskN n f (Cons (Nat) x0 p) ex) dex) -> (erased (False) fl))
   (match erased (in-dec ex (Cons _ x0 p)) _
     (absurd (OrL _ _ iex) (ring-pair d x ex x0 e n f p h pl rg pr ix pex iex))
     (absurd (OrR _ _ oex)
-      (let ((erased dx) (erased ox)) (disk-edge-inv d x ex x0 e n f p h gen rg dex oex pex))
+      (let ((erased _) (erased ox)) (disk-edge-inv d x ex x0 e n f p h gen rg dex oex pex))
       (apart-irrefl x (notin-in x x _ ox ix)))))
 
 (def-fns _ $ (erased cpath-cat : (erased (List (Nat)) n f N) (subterm erased (List (Nat)) M) (erased (Nat) x y z) (erased (CPath n f x M y) p) (erased (CPath n f y N z) q)
@@ -228,7 +218,6 @@
   (let ((erased MN1) (erased r1)) (cpath-cat n f N M1 x1 y z (cpath-tail n f M1 x x1 y p) q))
   (values (Cons _ x1 MN1) (cpath-restep n f M1 MN1 x x1 y z p r1)))
 
-; Walks along f, and along the inverse ni of n, are clink paths.
 (def-fns _ $ (erased fwalk-cpath : (erased (List (Nat)) n f s xs) (erased (Nat) a b) (subterm erased (Path f s a b xs) w)
     -> (erased (List (Nat)) L) (erased (CPath n f a L b) cp))
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pf _ w1) ((PathHere _ _ _) (values (Nil _) (CPNil n f a))))
@@ -253,21 +242,20 @@
   (let ((erased xs) (erased w)) (cycle d v u ni n pni pv (pre-lt d v u ni n pni pv)))
   (nwalk-cpath d u v n ni f (Nil _) xs pn w))
 
-; A bond of glink is joined by a clink path.
 (def-fns _ $ (erased glink-cpath : (erased (Nat) d u v) (erased (List (Nat)) e n f) (erased (List (Bond)) g) (erased (Hypermap d e n f) h) (erased (Glink d e n f g) gl)
     (erased (Adj g u v) a) -> (erased (List (Nat)) L) (erased (CPath n f u L v) cp))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let-match erased gl (MkGlink _ _ _ _ ge gn gf gnf _ gre grn grf c1 c2))
   (match erased (adj-cat-inv ge gnf g u v c2 a) _
     ((OrL _ _ ae)
       (match erased (graph-adj-inv d u v e ge gre ae) _
         ((OrL _ _ p)
-          (let ((erased w) (erased pw) (erased lw)) (perm-nth d u ni n (perm-sym d n ni pn) (perm-val d v u nf e (perm-sym d e nf pe) (perm-inv d u v e nf pe p))))
+          (let ((erased w) (erased pw) (erased _)) (perm-nth d u ni n (perm-sym d n ni pn) (perm-val d v u nf e (perm-sym d e nf pe) (perm-inv d u v e nf pe p))))
           (let ((erased pnw)) (perm-inv d u w ni n (perm-sym d n ni pn) pw))
           (let ((erased L) (erased cp)) (fback-cpath d w v n f fi pf (hyper-third d v u w e n f h p pnw)))
           (values (Cons _ w L) (CPNode n f L u w v pnw cp)))
         ((OrR _ _ p)
-          (let ((erased w) (erased pw) (erased lw)) (perm-nth d u f fi pf (perm-val d v u e nf pe p)))
+          (let ((erased w) (erased pw) (erased _)) (perm-nth d u f fi pf (perm-val d v u e nf pe p)))
           (let ((erased L) (erased cp)) (nfwd-cpath d w v n ni f pn (hyper-node d w u v e n f h pw p)))
           (values (Cons _ w L) (CPFace n f L u w v pw cp)))))
     ((OrR _ _ anf)
@@ -288,22 +276,20 @@
   (let ((erased L2) (erased p2)) (conn-cpath d u y e n f g h gl c1))
   (cpath-cat n f L2 L1 x u y p1 p2))
 
-; connected_clink: in a connected map a clink path joins any two darts.
 (def-fns _ $ (erased connected-clink : (erased (Nat) d x y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Connected d e n f) cn)
     (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (List (Nat)) L) (erased (CPath n f x L y) cp))
   (let-match erased cn (MkConnected _ _ _ _ g gl cs))
-  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
+  (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr _ _ _ ro))
   (let ((erased l1) (erased p1)) (nth-exists _ lab d x ll lx))
   (let ((erased l2) (erased p2)) (nth-exists _ lab d y ll ly))
   (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l1 io ro p1 lx))
   (let ((erased i2) (erased c2)) (classes-root g d ids lab rs y l2 io ro p2 ly))
-  (let-match erased lr (LengthCons _ r0 rs1 _ lr1))
+  (let-match erased lr (LengthCons _ r0 _ _ lr1))
   (let-match erased lr1 (LengthNil _))
   (let-match erased i1 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
   (let-match erased i2 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
   (conn-cpath d x y e n f g h gl (conn-cat g x r0 y (conn-sym g r0 x c1) c2)))
 
-; proper_rev_ring.
 (def-fns _ $ (erased proper-rev : (erased (Nat) d) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
     (erased (Proper e r) pr) (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) -> (erased (Proper e RR) res))
   (match erased pr _
@@ -311,47 +297,46 @@
       (let ((erased k) (erased l1)) (length-exists _ r1))
       (let ((erased l3)) (revapp-length er (Nil _) RR (Succ $ Succ $ Succ k) (Zero) (Succ $ Succ $ Succ k) ra
         (respects-length e r er _ rm (LengthCons _ a _ _ (LengthCons _ b _ _ (LengthCons _ c r1 k l1)))) (LengthNil _) (add-zero-right _)))
-      (let-match erased l3 (LengthCons _ y1 R1 _ l4))
-      (let-match erased l4 (LengthCons _ y2 R2 _ l5))
-      (let-match erased l5 (LengthCons _ y3 R3 _ l6))
+      (let-match erased l3 (LengthCons _ y1 _ _ l4))
+      (let-match erased l4 (LengthCons _ y2 _ _ l5))
+      (let-match erased l5 (LengthCons _ y3 R3 _ _))
       (ProperBig e R3 y1 y2 y3))
     ((ProperTwo _ a b ea pea ne)
-      (let-match erased rm (RespCons _ _ er1 _ ea2 pa rm1))
-      (let-match erased rm1 (RespCons _ _ er2 _ eb pb rm2))
+      (let-match erased rm (RespCons _ _ _ _ ea2 pa rm1))
+      (let-match erased rm1 (RespCons _ _ _ _ eb pb rm2))
       (let-match erased rm2 (RespNil _))
       (let-match erased (nth-fn _ e a ea ea2 pea pa) (Refl _ _))
       (let-match erased ra (RACons _ _ _ _ _ ra1))
       (let-match erased ra1 (RACons _ _ _ _ _ ra2))
       (let-match erased ra2 (RANil _ _))
-      (let ((erased pb2) (erased nb)) (plain-eq d b eb e pl (nth-lt-length _ e b d eb pb le) pb))
+      (let ((erased pb2) (erased _)) (plain-eq d b eb e pl (nth-lt-length _ e b d eb pb le) pb))
       (ProperTwo e eb ea b pb2 (apart-sym ea b ne)))))
 
 (def-fns _ $ (erased off-disk-node : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (Nth (Nat) n y x) pn)
     (erased (NotIn y hd) oy) -> (erased (NotIn x hd) res))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased _) (erased ln) (erased _)) (hyper-lengths d e n f h))
   (match erased (in-dec x hd) _
     (absurd (OrL _ _ ix)
       (apart-irrefl y (notin-in y y hd oy (ds-mem d y x0 e n f p hd zs h gen rg ur ds (disk-pre n f _ x y (ds-in d x x0 e n f p hd zs h gen rg ur ds ix) pn)
         (nth-lt-length _ n y d x pn ln)))))
     ((OrR _ _ o) o)))
 
-; With e x = w = n x1 and x, w off S: x is in diskN S when x1 is, and off it when x1 is.
 (def-fns _ $ (erased off-disk-face : (erased (Nat) d x x1 w x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (Nth (Nat) n x1 w) pn)
     (erased (Nth (Nat) e x w) pe) (erased (NotIn x (Cons (Nat) x0 p)) ox) (erased (NotIn x1 hd) o1) -> (erased (NotIn x hd) res))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased _) (erased ln) (erased _)) (hyper-lengths d e n f h))
   (match erased (in-dec x hd) _
     (absurd (OrL _ _ ix)
-      (let ((erased dw) (erased ow)) (disk-edge d x w x0 e n f p h gen rg (ds-in d x x0 e n f p hd zs h gen rg ur ds ix) ox pe))
+      (let ((erased dw) (erased _)) (disk-edge d x w x0 e n f p h gen rg (ds-in d x x0 e n f p hd zs h gen rg ur ds ix) ox pe))
       (apart-irrefl x1 (notin-in x1 x1 hd o1 (ds-mem d x1 x0 e n f p hd zs h gen rg ur ds (disk-pre n f _ w x1 dw pn) (nth-lt-length _ n x1 d w pn ln)))))
     ((OrR _ _ o) o)))
 
 (def-fns _ $ (erased in-disk-face : (erased (Nat) d x x1 w x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Nth (Nat) n x1 w) pn) (erased (Nth (Nat) e x w) pe) (erased (NotIn w (Cons (Nat) x0 p)) ow)
     (erased (DiskN n f (Cons (Nat) x0 p) x1) d1) -> (erased (DiskN n f (Cons (Nat) x0 p) x) res))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe2) (erased pnn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased dx) (erased ox)) (disk-edge-inv d x w x0 e n f p h gen rg (disk-node d x1 w n ni f _ pnn d1 pn) ow pe))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pnn) (erased _)) (hyper-core d e n f h))
+  (let ((erased dx) (erased _)) (disk-edge-inv d x w x0 e n f p h gen rg (disk-node d x1 w n ni f _ pnn d1 pn) ow pe))
   dx)
 
 ; A ring r of a plain planar map and its reverse RR, with the darts hd of diskN r and hd2 of diskN RR.
@@ -371,8 +356,8 @@
 
 (def-fns _ $ (erased two-node : (erased (Nat) d x y) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx) (erased (Nth (Nat) n y x) pn)
     (erased (Two n f r RR hd hd2 y) t) -> (erased (Two n f r RR hd hd2 x) res))
-  (let-match erased cx (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pnn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased cx (MkRevCtx _ x0 y0 _ _ _ p Q _ _ zs _ zs2 h gen _ rg _ ur ds _ _ rg2 _ ur2 ds2))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pnn) (erased _)) (hyper-core d e n f h))
   (match erased t _
     ((TwoR _ _ _ _ _ _ _ dn o)
       (TwoR n f r RR hd hd2 x (disk-node d y x n ni f r pnn dn pn) (off-disk-node d x y y0 e n f Q hd2 zs2 h gen rg2 ur2 ds2 pn o)))
@@ -382,11 +367,11 @@
 (def-fns _ $ (erased two-face : (erased (Nat) d x x1) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx) (erased (Nth (Nat) f x x1) pf1)
     (erased (Two n f r RR hd hd2 x1) t) -> (erased (Two n f r RR hd hd2 x) res))
   (let-match erased cx (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pnn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pnn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased lx)) (nth-lt-length _ f x d x1 pf1 lf))
-  (let ((erased w) (erased pw) (erased lw)) (perm-nth d x e nf pe lx))
-  (let ((erased pw2) (erased nw)) (plain-eq d x w e pl lx pw))
+  (let ((erased w) (erased pw) (erased _)) (perm-nth d x e nf pe lx))
+  (let ((erased pw2) (erased _)) (plain-eq d x w e pl lx pw))
   (let-match erased (in-dec w r) (OrR _ _ ow)
     ((OrL _ _ iw)
       (TwoRR n f r RR hd hd2 x (disk-ring d x n ni f RR pnn (ring-rev-in d x w e r er RR pl le rm ra pw iw) lx)
@@ -414,7 +399,7 @@
       (apart-irrefl x (notin-in x x r oxr ix2)))
     ((OrR _ _ o) o)))
   (let ((erased w0) (erased pw0) (erased lw0)) (perm-nth d x1 n ni pnn (perm-val d x x1 f fi pf pf1)))
-  (let ((erased pew0) (erased nw0)) (plain-eq d w0 x e pl lw0 (hyper-edge d w0 x1 x e n f h pw0 pf1)))
+  (let ((erased pew0) (erased _)) (plain-eq d w0 x e pl lw0 (hyper-edge d w0 x1 x e n f h pw0 pf1)))
   (let-match erased (nth-fn _ e x w w0 pw pew0) (Refl _ _))
   (match erased t _
     ((TwoR _ _ _ _ _ _ _ dn o)
@@ -431,17 +416,16 @@
     ((CPNode _ _ L1 _ y _ pn cp1) (two-node d x y e n f r RR hd hd2 cx pn (two-path d y t e n f r RR hd hd2 L1 cx cp1 tt)))
     ((CPFace _ _ L1 _ y _ pf cp1) (two-face d x y e n f r RR hd hd2 cx pf (two-path d y t e n f r RR hd hd2 L1 cx cp1 tt)))))
 
-; diskN_rev_ring: in a plain connected planar map each dart is in exactly one of diskN r and diskN RR, for a proper ring r.
 (def-fns _ $ (erased rev-disk : (erased (Nat) d x) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx) (erased (Connected d e n f) cn)
     (erased (Lt x d) lx) -> (erased (Two n f r RR hd hd2 x) res))
   (let ((erased cx2)) cx)
-  (let-match erased cx2 (MkRevCtx _ x0 y0 _ _ _ p Q er _ zs _ zs2 h gen pl rg pr ur ds rm ra rg2 pr2 ur2 ds2))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pnn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased cx2 (MkRevCtx _ x0 _ _ _ _ p _ er _ zs _ _ h gen pl rg pr ur ds rm ra _ _ _ _))
+  (let ((erased nf) (erased ni) (erased _) (erased _) (erased pe) (erased pnn) (erased _)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
   (let ((erased ix0)) (InHere x0 p))
   (let ((erased lx0)) (under-in r x0 d ur ix0))
   (let ((erased ex0) (erased pex0) (erased lex0)) (perm-nth d x0 e nf pe lx0))
-  (let ((erased pex1) (erased ne)) (plain-eq d x0 ex0 e pl lx0 pex0))
+  (let ((erased pex1) (erased _)) (plain-eq d x0 ex0 e pl lx0 pex0))
   (let ((erased L) (erased cp)) (connected-clink d x ex0 e n f h cn lx lex0))
   (two-path d x ex0 e n f r RR hd hd2 L cx cp
     (TwoRR n f r RR hd hd2 ex0 (disk-ring d ex0 n ni f RR pnn (ring-rev-in d ex0 x0 e r er RR pl le rm ra pex1 ix0) lex0)
@@ -454,11 +438,11 @@
     -> (erased (List (Nat)) er RR hd hd2) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
     (erased (RevCtx d e n f (Cons (Nat) x0 p) RR hd hd2) cx))
   (let ((erased r)) (Cons _ x0 p))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased rg1)) rg)
-  (let-match erased rg1 (MkRing _ _ _ _ w ew rp pw sw sm))
-  (let-match erased sm (MkSimple _ _ lab ls rf rl dl))
+  (let-match erased rg1 (MkRing _ _ _ _ _ _ _ _ _ sm))
+  (let-match erased sm (MkSimple _ _ lab ls rf rl _))
   (let ((erased ur)) (resp-under lab ls d r rl (respects-length lab f lab d rf lf)))
   (let ((erased er) (erased rm)) (respects-exists e r d ur le))
   (let ((erased RR) (erased ra)) (revapp-exists (Nat) er (Nil _)))

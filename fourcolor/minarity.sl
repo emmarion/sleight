@@ -1,10 +1,6 @@
-; min_arity of birkhoff.v with minimality as data, through its spoke ring, and from it birkhoff3.sl's MinArity and embed.sl's
-; BirkGeo. Load after birkhoff3.sl, in the chain PLAN.md gives; it reads snip.sl's DPath and walk.sl's Sub through the names
-; birkhoff2.sl keeps for them. That these statements match Coq's has been checked only by reading.
-
 (def-fns _ $ (erased order-at : (erased (Nat) d x) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Lt x d) lx)
     -> (erased (Nat) k) (erased (Order p x k) o))
-  (let ((erased y) (erased py) (erased ly)) (perm-nth d x p q pm lx))
+  (let ((erased y) (erased py) (erased _)) (perm-nth d x p q pm lx))
   (let ((erased xs) (erased w)) (cycle d x y p q pm py lx))
   (let ((erased ys) (erased w2)) (walk-to p xs y x w))
   (let ((erased k) (erased l)) (length-exists _ ys))
@@ -17,13 +13,12 @@
   (let ((erased ks) (erased os)) (orders-on d p q xs1 pm u1))
   (values (Cons _ k ks) (OrdCons p xs1 ks x k o os)))
 
-; Every dart has an order under a permutation.
 (def-fns _ $ (erased order-list : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) -> (erased (List (Nat)) ks) (erased (OrderList d p ks) ol))
   (let ((erased ids) (erased io)) (iota-exists d))
   (let ((erased ks) (erased os)) (orders-on d p q ids pm (perm-under d ids ids (perm-id d ids io))))
   (values ks (MkOrderList d p ids ks io os)))
 
-; A planar bridgeless plain cubic map, with fe = face . edge, undone by node, and a labelling lab of its faces.
+; fe = face . edge, undone by node, and lab labels the faces.
 (def-adts $ (Spk : ((Nat) d) ((List (Nat)) e n f fe lab) -> Type)
   enum
   (many MkSpk : (erased (Nat) d) (erased (List (Nat)) e n f fe lab ids) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
@@ -35,55 +30,51 @@
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
     -> (erased (List (Nat)) fe lab) (erased (Spk d e n f fe lab) c))
   (let ((erased h2)) h)
-  (let-match erased h2 (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
-  (let ((erased nf2) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased h2 (MkHypermap _ _ _ _ ids fe _ _ io cfe ke _ _ _ _))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
   (let ((erased lab) (erased fl)) (facelab-exists d f fi pmf))
   (let ((erased fl2)) fl)
-  (let-match erased fl2 (MkFaceLab _ k _ fi2 _ ids2 rs gf pf gr io2 ro cl ll))
+  (let-match erased fl2 (MkFaceLab _ _ _ _ _ _ _ gf _ gr _ _ cl ll))
   (values fe lab (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-vals f e fe d cfe (perm-under d f fi pmf))
     (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
 
 (def-fns _ $ (erased fe-node : (erased (Nat) d u s) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) fe u s) ps)
     -> (erased (Nth (Nat) n s u) r))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased c (MkSpk _ _ _ _ _ _ ids _ _ _ _ _ _ kfe io _ lfe _ _))
   (respects-nth n fe ids u s u kfe ps (iota-nth d u ids io (nth-lt-length _ fe u d s ps lfe))))
 
 (def-fns _ $ (erased fe-split : (erased (Nat) d u s) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) fe u s) ps)
     -> (erased (Nat) eu) (erased (Nth (Nat) e u eu) pe) (erased (Nth (Nat) f eu s) pf))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ rfe _ _ _ lfe _ _))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pme) (erased _) (erased pmf)) (hyper-core d e n f h))
   (let ((erased eu) (erased pe) (erased leu)) (perm-nth d u e nf pme (nth-lt-length _ fe u d s ps lfe)))
   (let ((erased s2) (erased pf) (erased _)) (perm-nth d eu f fi pmf leu))
   (let-match erased (nth-fn _ fe u s s2 ps (respects-at f e fe u eu s2 rfe pe pf)) (Refl _ _))
   (values eu pe pf))
 
-; n (f v) = e v.
 (def-fns _ $ (erased node-face : (erased (Nat) d v u) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) f v u) pf)
     -> (erased (Nat) ev) (erased (Nth (Nat) e v ev) pe) (erased (Nth (Nat) n u ev) pn))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ pl _ _ _ _ _ _ _ _))
+  (let ((erased nf) (erased _) (erased fi) (erased rnf) (erased pme) (erased _) (erased pmf)) (hyper-core d e n f h))
   (let ((erased lv)) (pre-lt d v u f fi pmf pf))
   (let ((erased w) (erased pw) (erased lw)) (perm-nth d v nf e (perm-sym d e nf pme) lv))
   (let ((erased pew) (erased _)) (plain-eq d w v e pl lw (perm-inv d v w nf e (perm-sym d e nf pme) pw)))
   (values w pew (respects-nth n f nf v u w rnf pf pw)))
 
-; n (e u) = fe (f u).
 (def-fns _ $ (erased node-edge : (erased (Nat) d u eu w sw) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) f u w) pf)
     (erased (Nth (Nat) e u eu) pe) (erased (Nth (Nat) fe w sw) ps) -> (erased (Nth (Nat) n eu sw) r))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ _ _ _ _ cu _ _ _ ufe _ _ _))
   (let ((erased ev) (erased pev) (erased pnw)) (node-face d u w e n f fe lab c pf))
   (let-match erased (nth-fn _ e u eu ev pe pev) (Refl _ _))
   (let ((erased z) (erased pz) (erased pzs) (erased _) (erased _)) (cubic-eq d sw w n cu (under-nth fe w sw d ufe ps) (fe-node d w sw e n f fe lab c ps)))
   (let-match erased (nth-fn _ n w z eu pz pnw) (Refl _ _))
   pzs)
 
-; The spoke of the face image of v, one face step after the edge image of the spoke of v, is reached along f: the step of
-; the spoke ring.
 (def-fns _ $ (erased spoke-step : (erased (Nat) d v u su sv esu) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c)
     (erased (Nth (Nat) f v u) pf) (erased (Nth (Nat) fe u su) psu) (erased (Nth (Nat) fe v sv) psv) (erased (Nth (Nat) e su esu) pe)
     -> (erased (SomePath f (Nil (Nat)) esu sv) r))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ cu _ _ _ ufe _ _ _))
   (let ((erased ev) (erased pev) (erased pnu)) (node-face d v u e n f fe lab c pf))
   (let ((erased z) (erased pz) (erased pzs) (erased _) (erased _)) (cubic-eq d su u n cu (under-nth fe u su d ufe psu) (fe-node d u su e n f fe lab c psu)))
   (let-match erased (nth-fn _ n u z ev pz pnu) (Refl _ _))
@@ -93,7 +84,6 @@
 
 (let ((erased five)) (Succ (Succ (Succ (Succ (Succ (Zero)))))))
 
-; What the steps of min_arity take: a map as min_arity has it, and BirkhoffChecks.
 (def-adts $ (MinCx : ((Level) B) ((Nat) d) ((List (Nat)) e n f fe lab) -> Type)
   enum
   (many MkMinCx : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab) (erased (Predates (Level) (level-of birk-glue) B) pb)
@@ -104,14 +94,14 @@
     -> (erased (Reduces B d e n f) r))
   (let-match erased (unary-6) (Refl _ _))
   (let-match erased m (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h gen bl pl cu _ _ _ _ _ _ _))
   (birkhoff-reduces B pb d x0 k (Zero) e n f p bks h gen bl pl cu cn nc rg lr (lt-weaken k five l5) (BMLow k l5) nt))
 
 (def-fns _ $ (erased cx-dd : (erased (Level) B) (erased (Nat) d u u2 eu eu2 l l2) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
     (erased (Nth (Nat) e u eu) pe) (erased (Nth (Nat) e u2 eu2) pe2) (erased (Nth (Nat) lab u l) pl1) (erased (Nth (Nat) lab u2 l) pl2)
     (erased (Nth (Nat) lab eu l2) pm1) (erased (Nth (Nat) lab eu2 l2) pm2) (erased (Apart (Nat) Lt u u2) ne) -> (erased (Reduces B d e n f) r))
   (let-match erased m (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h gen bl pl cu _ _ _ _ _ fl _))
   (double-dart B pb d u u2 eu eu2 e n f bks h gen bl pl cu cn nc pe pe2 (facelab-same d u u2 l f lab fl pl1 pl2) (facelab-same d eu eu2 l2 f lab fl pm1 pm2) ne))
 
 ; Every dart of xs has the label l.
@@ -121,7 +111,7 @@
   (many LabCons : (erased (List (Nat)) lab xs) (erased (Nat) l x) (erased (Nth (Nat) lab x l) px) (erased (LabAll lab l xs) rest) -> (LabAll lab l (Cons (Nat) x xs))))
 
 (def-fns _ $ (erased laball-in : (erased (Nat) l u) (erased (List (Nat)) lab xs) (subterm erased (LabAll lab l xs) al) (erased (In u xs) iu) -> (erased (Nth (Nat) lab u l) r))
-  (let-match erased al (LabCons _ xs1 _ x px al1) (absurd (LabNil _ _) iu))
+  (let-match erased al (LabCons _ xs1 _ _ px al1) (absurd (LabNil _ _) iu))
   (match erased iu _ ((InHere _ _) px) ((InThere _ _ _ iu1) (laball-in l u lab xs1 al1 iu1))))
 
 (def-fns _ $ (erased walk-laball : (erased (Nat) a b l) (erased (List (Nat)) p lab s xs) (subterm erased (Path p s a b xs) w) (erased (Respects lab p lab) rf)
@@ -129,7 +119,6 @@
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1) ((PathHere _ _ _) (LabNil lab l)))
   (LabCons lab xs1 l a pl (walk-laball a1 b l p lab s xs1 w1 rf (respects-nth lab p lab a a1 l rf pa pl))))
 
-; z :: ys, with c z the start of a walk along c to z, is closed under the inverse q of c.
 (def-fns _ $ (erased cyc-inv : (erased (Nat) d z z2 t u) (erased (List (Nat)) c q s ys) (erased (HPerm d c q) pm) (erased (Path c s z2 z ys) cy)
     (erased (Nth (Nat) c z z2) pz) (erased (In t (Cons (Nat) z ys)) it) (erased (Nth (Nat) q t u) pt) -> (erased (In u (Cons (Nat) z ys)) r))
   (let-match erased (nat-eq t z2) (Unequal _ _ _ _ ne)
@@ -149,13 +138,12 @@
     (erased (Nth (Nat) lab u l) pu) (erased (Nth (Nat) lab s l2) pl) -> (erased (Apart (Nat) Lt l l2) r))
   (let-match erased (nat-eq l l2) (Unequal _ _ _ _ ne)
     (absurd (Equal _ _ _)
-      (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl0 cu rfe kfe io ufe lfe fl rl))
+      (let-match erased c (MkSpk _ _ _ _ _ _ _ _ _ bl _ _ _ _ _ _ _ fl rl))
       (let ((erased eu) (erased pe) (erased pf)) (fe-split d u s e n f fe lab c ps))
       (let-match erased (facelab-same d u eu l f lab fl pu (respects-at lab f lab eu s l rl pf pl)) (MkSomePath _ _ ws _ _ wp))
       (bridgeless-face d u eu e n f (Nil _) ws bl pe wp)))
   ne)
 
-; No spoke of a dart of label l has the label l.
 (def-fns _ $ (erased spokes-off : (erased (Nat) d lx) (erased (List (Nat)) e n f fe lab Vs Rs ls) (erased (Spk d e n f fe lab) c)
     (subterm erased (Respects fe Vs Rs) rv) (erased (Respects lab Rs ls) rl) (erased (LabAll lab lx Vs) al) -> (erased (NotIn lx ls) r))
   (let-match erased rv (RespCons _ Vs1 Rs1 u s pus rv1) ((RespNil _) (let-match erased rl (RespNil _)) (NotInNil lx)))
@@ -163,7 +151,6 @@
   (let-match erased al (LabCons _ _ _ _ plu al1))
   (NotInCons lx l ls1 (spoke-apart d u s lx l e n f fe lab c pus plu pl) (spokes-off d lx e n f fe lab Vs1 Rs1 ls1 c rv1 rl1 al1)))
 
-; The spokes of distinct darts of one face lie on distinct faces, or the map reduces (double-dart).
 (def-fns _ $ (erased spokes-simple : (erased (Level) B) (erased (Nat) d lx) (erased (List (Nat)) e n f fe lab Vs Rs ls) (erased (MinCx B d e n f fe lab) m)
     (subterm erased (Respects fe Vs Rs) rv) (erased (Respects lab Rs ls) rl) (erased (Distinct Vs) dv) (erased (LabAll lab lx Vs) al)
     -> (erased (HOr (Distinct ls) (Reduces B d e n f)) r))
@@ -173,8 +160,8 @@
   (let-match erased al (LabCons _ _ _ _ plu al1))
   (let-match erased (spokes-simple B d lx e n f fe lab Vs1 Rs1 ls1 m rv1 rl1 dv1 al1) (OrL _ _ dl1) ((OrR _ _ r) (OrR _ _ r)))
   (let-match erased (in-dec l ls1) (OrL _ _ il) ((OrR _ _ o) (OrL _ _ (DistCons l ls1 o dl1))))
-  (let-match erased m (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl0 cu rfe kfe io ufe lfe fl rlf))
+  (let-match erased m (MkMinCx _ _ _ _ _ _ _ _ _ c _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rlf))
   (let ((erased s2) (erased is2) (erased ps2)) (respects-in lab Rs1 ls1 l rl1 il))
   (let ((erased u2) (erased iu2) (erased pu2)) (respects-in fe Vs1 Rs1 s2 rv1 is2))
   (let ((erased eu) (erased pe) (erased pf)) (fe-split d u s e n f fe lab c pus))
@@ -182,7 +169,6 @@
   (OrR _ _ (cx-dd B d u u2 eu eu2 lx l e n f fe lab m pe pe2 plu (laball-in lx u2 lab Vs1 al1 iu2)
     (respects-at lab f lab eu s l rlf pf pl) (respects-at lab f lab eu2 s2 l rlf pf2 ps2) (notin-in u u2 Vs1 ou iu2))))
 
-; Spokes along a walk of fi from a, the fi image of c, form a ring path from the spoke of c to the spoke of the last dart z left.
 (def-fns _ $ (erased spoke-rpath : (erased (Nat) d c a b sc) (erased (List (Nat)) e n f fe lab fi S ws Q) (erased (Spk d e n f fe lab) cb) (erased (HPerm d f fi) pmf)
     (subterm erased (Path fi S a b ws) w) (erased (Nth (Nat) fi c a) pc) (erased (Nth (Nat) fe c sc) psc) (erased (Respects fe ws Q) rq)
     -> (erased (Nat) z sz) (erased (Nth (Nat) fi z b) pz) (erased (Nth (Nat) fe z sz) psz) (erased (RPath e f sc Q sz) rp))
@@ -190,13 +176,12 @@
   (let-match erased rq (RespCons _ _ Q1 _ sa psa rq1))
   (let ((erased z) (erased sz) (erased pz) (erased psz) (erased rp1)) (spoke-rpath d a a1 b sa e n f fe lab fi S ws1 Q1 cb pmf w1 pa psa rq1))
   (let ((erased cb2)) cb)
-  (let-match erased cb2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased cb2 (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ ufe _ _ _))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pme) (erased _) (erased _)) (hyper-core d e n f h))
   (let ((erased esc) (erased pesc) (erased _)) (perm-nth d sc e nf pme (under-nth fe c sc d ufe psc)))
   (values z sz pz psz (RPCons e f Q1 sc esc sa sz pesc (spoke-step d a c sc sa esc e n f fe lab cb (perm-inv d c a fi f (perm-sym d f fi pmf) pc) psc psa pesc) rp1)))
 
-; The spoke ring sx :: Q of the face of x, read along fi from x as the spokes of V = x :: ys, with the labels ls of its faces,
-; lx that of the face of x, and m < 5 darts.
+; sx :: Q are the spokes of V = x :: ys, the face of x read along fi; ls the labels of their faces, lx that of x, m < 5.
 (def-adts $ (SRg : ((Nat) d) ((List (Nat)) e n f fe lab) ((Nat) x sx) ((List (Nat)) Q) ((Nat) lx) ((List (Nat)) ls) -> Type)
   enum
   (many MkSRg : (erased (Nat) d x a sx lx m) (erased (List (Nat)) e n f fe lab fi ys Q ls) (erased (Spk d e n f fe lab) c)
@@ -205,15 +190,14 @@
       (erased (LabAll lab lx (Cons (Nat) x ys)) al) (erased (Respects lab (Cons (Nat) sx Q) ls) rls) (erased (Distinct (Cons (Nat) lx ls)) dl)
       (erased (Length (Nat) (Cons (Nat) sx Q) m) lm) (erased (Lt m five) l5) -> (SRg d e n f fe lab x sx Q lx ls)))
 
-; The spoke ring of a face of k darts, k < 5 (scycle_spoke_ring and size_spoke_ring), or a reduction from double-dart.
 (def-fns _ $ (erased ring-build : (erased (Level) B) (erased (Nat) d x k) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
     (erased (Order f x k) o) (erased (Lt k five) lk)
     -> (erased (Nat) sx lx) (erased (List (Nat)) Q ls) (erased (HOr (SRg d e n f fe lab x sx Q lx ls) (Reduces B d e n f)) r))
-  (let-match erased m (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
+  (let-match erased m (MkMinCx _ _ _ _ _ _ _ _ _ c _ _))
   (let ((erased c2)) c)
-  (let-match erased c2 (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased c2 (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ ufe lfe _ rl))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pme) (erased _) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ll)) (respects-length lab f lab d rl lf))
   (let ((erased pfi)) (perm-sym d f fi pmf))
   (let-match erased o (MkOrder _ xs _ y k1 py wf lxs))
@@ -241,20 +225,18 @@
   (values sx lxl Q ls (OrL _ _ (MkSRg d x a sx lxl mv e n f fe lab fi ys Q ls c pmf pa w rv rg plx al rls
     (DistCons lxl ls (spokes-off d lxl e n f fe lab _ _ ls c rv rls al) dls) (respects-length fe _ _ mv rv lv) (lt-ls mv (Succ k) five le5 (LtS k five lk))))))
 
-; A dart of the spoke ring is the spoke of a dart of the face.
 (def-fns _ $ (erased sr-in : (erased (Nat) d x sx lx s) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (In s (Cons (Nat) sx Q)) ins)
     -> (erased (Nat) u) (erased (Nth (Nat) fe u s) pu) (erased (Nth (Nat) lab u lx) plu))
-  (let-match erased sr (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
+  (let-match erased sr (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rv _ _ al _ _ _ _))
   (let ((erased u) (erased iu) (erased pu)) (respects-in fe _ _ s rv ins))
   (values u pu (laball-in lx u lab _ al iu)))
 
-; The spoke of each dart of the face is on the spoke ring (mem_spoke_ring).
 (def-fns _ $ (erased sr-hit : (erased (Nat) d x sx lx w) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) lab w lx) pw)
     -> (erased (Nat) s) (erased (Nth (Nat) fe w s) ps) (erased (In s (Cons (Nat) sx Q)) ins))
-  (let-match erased sr (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w0 rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
+  (let-match erased sr (MkSRg _ _ a _ _ _ _ _ _ _ _ fi ys _ _ c pmf pa w0 rv _ plx _ _ _ _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ fl _))
   (let-match erased (facelab-same d x w lx f lab fl plx pw) (MkSomePath _ _ xs _ _ wf))
-  (let ((erased sb) (erased iw)) (walk-cyc-inv d x a x w fi f _ _ ys xs (perm-sym d f fi pmf) w0 pa wf (InHere x ys)))
+  (let ((erased _) (erased iw)) (walk-cyc-inv d x a x w fi f _ _ ys xs (perm-sym d f fi pmf) w0 pa wf (InHere x ys)))
   (let ((erased s) (erased ps) (erased ins)) (respects-val fe _ _ w rv iw))
   (values s ps ins))
 
@@ -274,24 +256,23 @@
 (def-fns _ $ (erased dp-on : (erased (Nat) d x sx lx w y) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr)
     (subterm erased (SDPath n f (Cons (Nat) sx Q) w y) dp) (erased (Nth (Nat) lab w lx) pw) (erased (Kernel f (Cons (Nat) sx Q) y) ky) -> (erased (Nth (Nat) lab y lx) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w0 rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ _ _ _ rl))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pmn) (erased _)) (hyper-core d e n f h))
   (match erased dp _
     ((SDPNil _ _ _ _) pw)
-    ((SDPFace _ _ _ _ w1 _ out pf dp1) (dp-on d x sx lx w1 y e n f fe lab Q ls sr dp1 (respects-nth lab f lab w w1 lx rl pf pw) ky))
-    (absurd (SDPNode _ _ _ _ w1 _ out pn dp1)
+    ((SDPFace _ _ _ _ w1 _ _ pf dp1) (dp-on d x sx lx w1 y e n f fe lab Q ls sr dp1 (respects-nth lab f lab w w1 lx rl pf pw) ky))
+    (absurd (SDPNode _ _ _ _ w1 _ _ pn dp1)
       (let ((erased s) (erased ps) (erased ins)) (sr-hit d x sx lx w e n f fe lab Q ls sr pw))
       (let-match erased (perm-inj d w1 s w n ni pmn pn (fe-node d w s e n f fe lab c ps)) (Refl _ _))
       (kernel-dp s y n f _ dp1 ins ky))))
 
-; diskF_spoke_ring, the direction min_arity's colouring uses: a dart of diskN of the spoke ring on none of its faces is on the face.
 (def-fns _ $ (erased disk-on : (erased (Nat) d x sx lx y) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr)
     (erased (DiskN n f (Cons (Nat) sx Q) y) dn) (erased (Kernel f (Cons (Nat) sx Q) y) ky) -> (erased (Nth (Nat) lab y lx) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w0 rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ cu _ _ _ ufe lfe _ rl))
+  (let ((erased _) (erased ni) (erased fi2) (erased _) (erased _) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
   (let-match erased dn (MkDiskN _ _ _ _ y0 y2 iy0 pn dp))
   (let ((erased u) (erased pu) (erased plu)) (sr-in d x sx lx y0 e n f fe lab Q ls sr iy0))
   (let ((erased lu)) (nth-lt-length _ fe u d y0 pu lfe))
@@ -305,34 +286,31 @@
   (let ((erased ev2) (erased pev2) (erased pfz)) (fe-split d v sv e n f fe lab c psv))
   (let-match erased (nth-fn _ e v ev ev2 pev pev2) (Refl _ _))
   (match erased dp (((Nth (Nat) lab y lx) r))
-    ((SDPNode _ _ _ _ w1 _ out pn2 dp1)
+    ((SDPNode _ _ _ _ w1 _ _ pn2 dp1)
       (let-match erased (perm-inj d w1 u z n ni pmn pn2 pnu) (Refl _ _))
       (dp-on d x sx lx u y e n f fe lab Q ls sr dp1 plu ky))
     (absurd (SDPNil _ _ _ _) (kernel-fband z sv f _ ky (some-step f z sv pfz) isv))
-    (absurd (SDPFace _ _ _ _ w1 _ out pf dp1)
+    (absurd (SDPFace _ _ _ _ w1 _ _ pf dp1)
       (let-match erased (nth-fn _ f z w1 sv pf pfz) (Refl _ _))
       (kernel-dp sv y n f _ dp1 isv ky))))
 
-; The other direction of diskF_spoke_ring, at x.
 (def-fns _ $ (erased sr-diskf : (erased (Nat) d x sx lx) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr)
     -> (erased (DiskF n f (Cons (Nat) sx Q) x) r))
-  (let-match erased sr (MkSRg _ _ a _ _ m _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased sr (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ rv _ plx _ rls dl _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ ufe _ _ rl))
+  (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pmn) (erased _)) (hyper-core d e n f h))
   (let-match erased rv (RespCons _ _ _ _ _ psx _))
   (let-match erased dl (DistCons _ _ ol _))
   (MkDiskF n f _ x (disk-node d sx x n ni f _ pmn (disk-ring d sx n ni f _ pmn (InHere sx Q) (under-nth fe x sx d ufe psx)) (fe-node d x sx e n f fe lab c psx))
     (MkKernel f _ lab ls x lx rl rls plx ol)))
 
-; Every dart is on the face of x or on a face of its spoke ring, or the map reduces: a dart on neither is in diskFC of the spoke
-; ring (disk-on), which is then nontrivial for 0.
 (def-fns _ $ (erased cover : (erased (Level) B) (erased (Nat) d x sx lx y l) (erased (List (Nat)) e n f fe lab Q ls) (erased (MinCx B d e n f fe lab) m)
     (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) lab y l) pl) -> (erased (HOr (In l (Cons (Nat) lx ls)) (Reduces B d e n f)) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ k _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl0 cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ k _ _ _ _ _ _ _ _ _ c _ _ _ _ rg _ _ rls _ lm l5))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h gen _ _ _ _ _ _ _ _ fl rl))
+  (let ((erased _) (erased _) (erased fi2) (erased _) (erased _) (erased _) (erased pmf2)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ly)) (nth-lt-length _ lab y d l pl (respects-length lab f lab d rl lf)))
   (let ((erased gf) (erased grf)) (perm-graph d f fi2 pmf2))
   (let ((erased ur)) (ring-under d sx e n f Q h rg))
@@ -349,7 +327,6 @@
       (let-match erased (nth-fn _ lab y l lx pl (disk-on d x sx lx y e n f fe lab Q ls sr (ds-in d y sx e n f Q hd zs h gen rg ur ds ih) ky)) (Refl _ _))
       (OrL _ _ (InHere l ls)))))
 
-; The colours of min_arity, by the position of a face in lx :: ls: 0 for the face of x, then 1, 3, 2 and 3 around the ring.
 (let ((erased col5)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Cons (Nat) (Succ (Succ (Succ (Zero)))) $ Cons (Nat) (Succ (Succ (Zero)))
   $ Cons (Nat) (Succ (Succ (Succ (Zero)))) $ Nil (Nat)))
 
@@ -390,20 +367,20 @@
 
 (def-fns _ $ (erased tab-nth : (erased (List (Nat)) L xs ks) (erased (Nat) i l) (subterm erased (Tab L xs ks) t) (erased (Nth (Nat) xs i l) p)
     -> (erased (Nat) c) (erased (Nth (Nat) ks i c) pc) (erased (TabAt L l c) ta))
-  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) (absurd (TabNil _) p))
+  (let-match erased t (TabCons _ xs1 ks1 _ c0 ta0 t1) (absurd (TabNil _) p))
   (let-match erased p (NthThere _ _ _ ip _ p1) ((NthHere _ _ _) (values c0 (NthHere _ c0 ks1) ta0)))
   (let ((erased c) (erased pc) (erased ta)) (tab-nth L xs1 ks1 ip l t1 p1))
   (values c (NthThere _ c0 ks1 ip c pc) ta))
 
 (def-fns _ $ (erased tab-length : (erased (List (Nat)) L xs ks) (erased (Nat) k) (subterm erased (Tab L xs ks) t) (erased (Length (Nat) xs k) l)
     -> (erased (Length (Nat) ks k) r))
-  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) ((TabNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased t (TabCons _ xs1 ks1 _ c0 _ t1) ((TabNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ c0 ks1 k1 (tab-length L xs1 ks1 k1 t1 l1)))
 
 (def-fns _ $ (erased tab-under : (erased (List (Nat)) L xs ks) (subterm erased (Tab L xs ks) t) -> (erased (Under ks 4) r))
   (let-match erased (unary-4) (Refl _ _))
-  (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) ((TabNil _) (UnderNil 4)))
+  (let-match erased t (TabCons _ xs1 ks1 _ c0 ta0 t1) ((TabNil _) (UnderNil 4)))
   (let ((erased u5)) (UnderCons _ _ _ (LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)
     $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) $ UnderNil 4))
   (UnderCons ks1 c0 4 (match erased ta0 (((Lt c0 4) r)) ((TAHit _ _ j _ _ q) (under-nth col5 j c0 4 u5 q)) ((TAMiss _ _ _) (LtZ _)))
@@ -412,7 +389,7 @@
 (def-fns _ $ (erased tabat-fn : (erased (List (Nat)) L) (erased (Nat) l c c2) (erased (Distinct L) dl) (erased (TabAt L l c) t1) (erased (TabAt L l c2) t2)
     -> (erased (Eq (Nat) c c2) r))
   (let-match erased t1 (TAHit _ _ j _ p q)
-    ((TAMiss _ _ o) (let-match erased t2 (TAMiss _ _ _) (absurd (TAHit _ _ j2 _ p2 q2) (apart-irrefl l (notin-in l l L o (nth-in L j2 l p2))))) (Refl _ c)))
+    ((TAMiss _ _ o) (let-match erased t2 (TAMiss _ _ _) (absurd (TAHit _ _ j2 _ p2 _) (apart-irrefl l (notin-in l l L o (nth-in L j2 l p2))))) (Refl _ c)))
   (let-match erased t2 (TAHit _ _ j2 _ p2 q2) (absurd (TAMiss _ _ o) (apart-irrefl l (notin-in l l L o (nth-in L j l p)))))
   (let-match erased (distinct-nth L j j2 l dl p p2) (Refl _ _))
   (nth-fn _ col5 j c c2 q q2))
@@ -443,7 +420,6 @@
   (many P24 : -> (Pair24 (Succ (Succ (Zero))) (Succ (Succ (Succ (Succ (Zero)))))))
   (many P42 : -> (Pair24 (Succ (Succ (Succ (Succ (Zero))))) (Succ (Succ (Zero))))))
 
-; Two positions of col5 with one colour are 2 and 4.
 (def-fns _ $ (erased c5-pos : (erased (Nat) i j c) (erased (Nth (Nat) col5 i c) pi) (erased (Nth (Nat) col5 j c) pj) (erased (Apart (Nat) Lt i j) ne)
     -> (erased (Pair24 i j) r))
   (let ((erased ci) (erased cj)) (values (c5-at i c pi) (c5-at j c pj)))
@@ -456,43 +432,40 @@
 
 (def-fns _ $ (erased absurd five-long : (erased (Nat) k a b c d g) (erased (List (Nat)) r)
     (erased (Length (Nat) (Cons (Nat) a (Cons (Nat) b (Cons (Nat) c (Cons (Nat) d (Cons (Nat) g r))))) k) l) (erased (Lt k five) lt) -> (erased (False) fl))
-  (let-match erased l (LengthCons _ _ _ k1 l1))
-  (let-match erased l1 (LengthCons _ _ _ k2 l2))
-  (let-match erased l2 (LengthCons _ _ _ k3 l3))
-  (let-match erased l3 (LengthCons _ _ _ k4 l4))
-  (let-match erased l4 (LengthCons _ _ _ k5 l5))
+  (let-match erased l (LengthCons _ _ _ _ l1))
+  (let-match erased l1 (LengthCons _ _ _ _ l2))
+  (let-match erased l2 (LengthCons _ _ _ _ l3))
+  (let-match erased l3 (LengthCons _ _ _ _ l4))
+  (let-match erased l4 (LengthCons _ _ _ _ _))
   (lt-pred _ _ (lt-pred _ _ (lt-pred _ _ (lt-pred _ _ (lt-pred _ _ lt))))))
 
-; chordless_spoke_ring, where min_arity's colouring needs it: a dart y on the face of the second spoke whose edge image is on the
-; face of the fourth gives the ring v3 :: e y :: e v1 of three darts, v1 and v3 the second and fourth darts of the face, nontrivial
-; for 0, with the spoke of x in its diskF and e v2 in its diskFC.
 (def-fns _ $ (erased chord : (erased (Level) B) (erased (Nat) d x sx lx l1 l3 y ey) (erased (List (Nat)) e n f fe lab Q ls) (erased (MinCx B d e n f fe lab) m)
     (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) ls (Succ (Zero)) l1) p1) (erased (Nth (Nat) ls (Succ (Succ (Succ (Zero)))) l3) p3)
     (erased (Nth (Nat) lab y l1) py) (erased (Nth (Nat) e y ey) pe) (erased (Nth (Nat) lab ey l3) pey) -> (erased (Reduces B d e n f) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ k _ _ _ _ _ fi ys _ _ c pmf pa w rv rg0 plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ k _ _ _ _ _ fi _ _ _ c pmf pa w rv _ _ al rls dl lm l5))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h gen _ pl cu _ _ _ ufe _ fl rl))
+  (let ((erased nf) (erased ni) (erased _) (erased _) (erased pme) (erased pmn) (erased _)) (hyper-core d e n f h))
   (let ((erased pfi)) (perm-sym d f fi pmf))
-  (let-match erased p3 (NthThere _ l0 ls1 _ _ p3a))
-  (let-match erased p3a (NthThere _ l1b ls2 _ _ p3b))
-  (let-match erased p3b (NthThere _ l2 ls3 _ _ p3c))
-  (let-match erased p3c (NthHere _ _ ls4))
+  (let-match erased p3 (NthThere _ l0 _ _ _ p3a))
+  (let-match erased p3a (NthThere _ _ _ _ _ p3b))
+  (let-match erased p3b (NthThere _ l2 _ _ _ p3c))
+  (let-match erased p3c (NthHere _ _ _))
   (let-match erased p1 (NthThere _ _ _ _ _ p1a))
   (let-match erased p1a (NthHere _ _ _))
   (let-match erased rls (RespCons _ _ _ _ _ pl0 rls1))
-  (let-match erased rls1 (RespCons _ Q2 _ s1 _ pl1 rls2))
-  (let-match erased rls2 (RespCons _ Q3 _ s2 _ pl2 rls3))
-  (let-match erased rls3 (RespCons _ Q4 _ s3 _ pl3 rls4))
+  (let-match erased rls1 (RespCons _ _ _ s1 _ pl1 rls2))
+  (let-match erased rls2 (RespCons _ _ _ s2 _ pl2 rls3))
+  (let-match erased rls3 (RespCons _ Q4 _ s3 _ pl3 _))
   (let-match erased Q4 (Nil _) (absurd (Cons _ s4 Q5) (five-long k sx s1 s2 s3 s4 Q5 lm l5)))
   (let-match erased rv (RespCons _ _ _ _ _ psx rv1))
-  (let-match erased rv1 (RespCons _ ys2 _ v1 _ ps1 rv2))
-  (let-match erased rv2 (RespCons _ ys3 _ v2 _ ps2 rv3))
-  (let-match erased rv3 (RespCons _ ys4 _ v3 _ ps3 rv4))
+  (let-match erased rv1 (RespCons _ _ _ v1 _ ps1 rv2))
+  (let-match erased rv2 (RespCons _ _ _ v2 _ ps2 rv3))
+  (let-match erased rv3 (RespCons _ _ _ v3 _ ps3 rv4))
   (let-match erased rv4 (RespNil _))
-  (let-match erased w (PathStep _ _ _ _ z1 _ pv1 _ w1))
-  (let-match erased w1 (PathStep _ _ _ _ z2 _ pv2 _ w2))
-  (let-match erased w2 (PathStep _ _ _ _ z3 _ pv3 _ w3))
+  (let-match erased w (PathStep _ _ _ _ _ _ pv1 _ w1))
+  (let-match erased w1 (PathStep _ _ _ _ _ _ _ _ w2))
+  (let-match erased w2 (PathStep _ _ _ _ _ _ _ _ _))
   (let-match erased dl (DistCons _ _ ox dls))
   (let-match erased ox (NotInCons _ _ _ nx0 ox1))
   (let-match erased ox1 (NotInCons _ _ _ nx1 ox2))
@@ -500,7 +473,7 @@
   (let-match erased ox3 (NotInCons _ _ _ nx3 _))
   (let-match erased dls (DistCons _ _ o0 dls1))
   (let-match erased o0 (NotInCons _ _ _ n01 o01))
-  (let-match erased o01 (NotInCons _ _ _ n02 o02))
+  (let-match erased o01 (NotInCons _ _ _ _ o02))
   (let-match erased o02 (NotInCons _ _ _ n03 _))
   (let-match erased dls1 (DistCons _ _ o1 dls2))
   (let-match erased o1 (NotInCons _ _ _ n12 o11))
@@ -547,15 +520,14 @@
   (cx-ring B d v3 (Succ (Succ (Succ (Zero)))) e n f fe lab _ m rg (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _)
     (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (nontrivial0 d v3 sx ev e n f _ hd zs h gen rg ds dx izs ky)))
 
-; The colours of the two ends of an edge differ, or the map reduces.
 (def-fns _ $ (erased spoke-col-edge : (erased (Level) B) (erased (Nat) d x sx lx u v) (erased (List (Nat)) e n f fe lab Q ls ks) (erased (MinCx B d e n f fe lab) m)
     (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Tab (Cons (Nat) lx ls) lab ks) t) (erased (Nth (Nat) e u v) puv)
     -> (erased (Nat) c1 c2) (erased (Nth (Nat) ks u c1) pc1) (erased (Nth (Nat) ks v c2) pc2) (erased (HOr (Apart (Nat) Lt c1 c2) (Reduces B d e n f)) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ k _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ bl pl _ _ _ _ _ _ fl rl))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pme) (erased _) (erased _)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ll)) (respects-length lab f lab d rl lf))
   (let ((erased l1) (erased pl1)) (nth-exists _ lab d u ll (pre-lt d u v e nf pme puv)))
   (let ((erased l2) (erased pl2)) (nth-exists _ lab d v ll (perm-val d u v e nf pme puv)))
@@ -598,10 +570,10 @@
     (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Tab (Cons (Nat) lx ls) lab ks) t) (subterm erased (Fun f g) fn) -> (erased (Const ks g) r))
   (let-match erased fn (FunCons _ g1 u v puv fn1) ((FunNil _) (ConstNil ks)))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ k _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ _ dl _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ _ _ _ rl))
+  (let ((erased _) (erased _) (erased fi2) (erased _) (erased _) (erased _) (erased pmf2)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased l) (erased plv)) (nth-exists _ lab d v (respects-length lab f lab d rl lf) (perm-val d u v f fi2 pmf2 puv)))
   (let ((erased plu)) (respects-at lab f lab u v l rl puv plv))
   (let ((erased c1) (erased pc1) (erased t1)) (tab-nth _ lab ks u l t plu))
@@ -609,19 +581,17 @@
   (let-match erased (tabat-fn _ l c1 c2 dl t1 t2) (Refl _ _))
   (ConstCons ks g1 u v c1 pc1 pc2 (spoke-col-const d x sx lx e n f fe lab Q ls ks g1 sr t fn1)))
 
-; min_arity at one dart: a face of fewer than five darts makes the map reduce, through Birkhoff on its spoke ring, double-dart and
-; the chord rings, or be four-coloured, which contradicts NoColoring.
 (def-fns _ $ (erased face-small : (erased (Level) B) (erased (Nat) d x k) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
     (erased (Order f x k) o) (erased (Lt k five) lk) -> (erased (Reduces B d e n f) r))
   (let ((erased sx) (erased lx) (erased Q) (erased ls) (erased ro)) (ring-build B d x k e n f fe lab m o lk))
   (let-match erased ro (OrL _ _ sr) ((OrR _ _ r) r))
   (let ((erased sr2)) sr)
-  (let-match erased sr2 (MkSRg _ _ a _ _ mm _ _ _ _ _ fi ys _ _ c pmf pa w rv rg plx al rls dl lm l5))
+  (let-match erased sr2 (MkSRg _ _ _ _ _ mm _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ rls _ lm l5))
   (let ((erased m2)) m)
-  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c2 cn nc))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi2) (erased rnf) (erased pme) (erased pmn) (erased pmf2)) (hyper-core d e n f h))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ _ _ _ _ nc))
+  (let-match erased c (MkSpk _ _ _ _ _ _ ids h _ _ _ _ _ _ io _ _ _ rl))
+  (let ((erased nf) (erased _) (erased fi2) (erased _) (erased pme) (erased _) (erased pmf2)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ll)) (respects-length lab f lab d rl lf))
   (let ((erased ks) (erased t)) (tab-exists _ (Succ mm) (LengthCons _ lx ls mm (respects-length lab _ ls mm rls lm)) (LtS mm five l5) lab))
   (let ((erased ge) (erased gre)) (perm-graph d e nf pme))
@@ -641,30 +611,27 @@
     ((CEq _ _ _) (OrR _ _ (face-small B d x k e n f fe lab m o (lt-succ k))))
     ((CGt _ _ _ _ q) (OrR _ _ (face-small B d x k e n f fe lab m o (lt-weaken k four q))))))
 
-; min_arity at every dart, as MinArity states it, for one map.
 (def-fns _ $ (erased min-arity-at : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
     -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r))
   (let ((erased m2)) m)
-  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
-  (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ _ _ c _ _))
+  (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ _ _ _ _))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pmf)) (hyper-core d e n f h))
   (let ((erased ks) (erased ol)) (order-list d f fi pmf))
   (let ((erased ol2)) ol)
-  (let-match erased ol2 (MkOrderList _ _ ids2 _ io2 os))
+  (let-match erased ol2 (MkOrderList _ _ ids2 _ _ os))
   (let-match erased (arity-go B d e n f fe lab ids2 ks m os) (OrL _ _ ab) ((OrR _ _ r) (OrR _ _ r)))
   (OrL _ _ (MkPentagonal d f ks ol ab)))
 
-; birkhoff3.sl's MinArity, given BirkhoffChecks.
 (def-fns _ $ (erased min-arity : (erased (BirkhoffChecks) bks) -> (erased (MinArity) r))
   (def-lvl B)
   (let ((erased pb)) (prove-predates (level-of birk-glue) B))
   (def-fns _ $ (erased ma : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
       (erased (Connected d e n f) cn) (erased (NoColoring e f) nc) -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r))
-    (let-match erased p (MkPbpp _ _ _ _ h g bl pl pc))
+    (let-match erased p (MkPbpp _ _ _ _ h g bl pl _))
     (let ((erased fe) (erased lab) (erased c)) (spk-make d e n f h g bl pl cu))
     (min-arity-at B d e n f fe lab (MkMinCx B d e n f fe lab pb bks c cn nc)))
   (MkMinArity (level-of ma) B ma))
 
-; embed.sl's BirkGeo, given BirkhoffChecks.
 (def-fns _ $ (erased birk-geo-of : (erased (BirkhoffChecks) bks) -> (erased (BirkGeo) r))
   (birk-geo (min-arity bks)))
