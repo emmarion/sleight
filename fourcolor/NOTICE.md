@@ -33,7 +33,7 @@ and R. Thomas, "The four-colour theorem", J. Combin. Theory Ser. B 70
 ## What is based on it
 
 - Data, generated from the Coq files by scripts in this directory:
-  `red/configs.sl` from `configurations.v` (by `red/gen.py`), and
+  `config-srcs` of `red/configs.sl` from `configurations.v` (by `red/gen.py`), and
   `unav/data.sl` from `discharge.v` and `present5.v` to `present11.v`
   (by `unav/gen.py`).
 - Ports of its algorithms, function by function: `red/red.sl` (the

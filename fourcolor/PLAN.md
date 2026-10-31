@@ -860,8 +860,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `red/bproof.sl` and `embed4proof.sl`), through
   `embed-analysis`, `birk-geo-of`, `full-red-of`, `triv-red-of`, `triv-five`, `embed-valid`, `triad-five`, `not-embed` and `four-color-from`,
   and `fcgoal.sl` sets and proves it as the goal `FourColorOpen`. Here css
-  is `config-chunks` (`red/chunks.sl`) and cfs its concatenation by
-  `concat-c` (`fcopen.sl`); the proof files read both from scope, so in
+  is the chunks of `red/configs.sl` as `red/chunks.sl` decodes them, and cfs
+  their concatenation by `concat-c` (`fcopen.sl`), which `cfs-run` decodes
+  and concatenates again at run time, with an `Eq` to cfs from `decall-fn`
+  and `concat-fn`; the proof files read both from scope, so in
   one unit they are about the same entries (a variant passing a `UnavE`
   of a cfs computed again by `concat-cfs` was rejected). Chain (both compilers, with `--goal proved`; about 54 s with slc and 124 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
@@ -1090,6 +1092,24 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
+- `red/configs.sl`, `red/chunks.sl`: the 633 configurations as one string
+  literal per chunk of 20 (`config-srcs`, written by `red/gen.py` from
+  `configurations.v`), and `DCfgs`, a relation reading a chunk's bytes as
+  its configurations, with `dcfgs-fn` and `decall-fn` showing that it
+  determines them. `red/chunks.sl` binds css to the chunks `decode-all`
+  gives at elaboration, with their `DecAll` (`css-dec`). A native job is
+  given a chunk's string, not the chunk: it decodes the string and checks
+  the result, answering a `Decoded P s` (a list decoded from `s` by
+  `DCfgs`, with `P` of it), and `on-chunks` turns one for each string of
+  `config-srcs` into `P` of each chunk of css (`OnChunks`). So the program
+  `native-compute` compiles holds the strings (about 100 KB of source)
+  rather than the configurations as built values; see the `fcproof.sl`
+  entry for what that seems to change. `config-chunks` decodes the chunks
+  for the runs that do not need the proof. In test runs, three broken
+  variants were rejected: a job claiming the tail of the list it decoded,
+  `on-chunks` without `dcfgs-fn`, and a decoder reading byte 2 as `SH`
+  with the proof of `SY`. Decoding at elaboration and printing gave the
+  same chunks as the configurations written out as terms did.
 - `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
   Birkhoff check of `birkhoff.v`. `birkhoff-check-c` runs Birkhoff_check2
   from the initial trees, for ring size h + 2, kernel size m, an
@@ -1184,7 +1204,8 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fitqz_flip (`fitz-flip`). `qztproof.sl` proves `UnavE cfs`
   (`unav-proof`) for the `cfs` in scope, which `qztcfs.sl` binds to the
   configurations of `red/configs.sl` by `concat-cfs` and `fcopen.sl` by
-  `concat-c`, and `qztgoal.sl` sets it as a goal and discharges it: every
+  `concat-c`; its job reads cfs through the `cfs-run` in scope (in
+  `fcopen.sl`, a decoding of `config-srcs`), and `qztgoal.sl` sets it as a goal and discharges it: every
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
