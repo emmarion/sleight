@@ -94,8 +94,14 @@ force/enter logic. Only their data representation changes.
 
 ## 3. Open questions
 
-1. Whether `caml_array_blit` uses `memmove` or the write barrier for an
-   array in the major heap.
+1. Copying counts without the write barrier. In callgrind profiles of
+   this job, `caml_array_blit` on the counts arrays appears to call
+   `caml_modify` per element. The `-imm` blits avoid that but need
+   `ImmAll` evidence for both runs, and counts at or above 2^62 occur in
+   this job, so an array-wide all-immediate flag (branch
+   `claude/sk1-immflag`) is cleared too early to help. Open: a
+   per-element copy that skips the barrier where both words are
+   immediates.
 
 ## 4. Measuring
 
