@@ -442,3 +442,109 @@
         (ghit-part (GSG t2) (GSG a2) r2 p2 h2) (ghit-part (GSG t3) (GSG a3) r3 p3 h3)))))
   (values (GNode a0 a1 a2 a3) (GNode b0 b1 b2 b3) (node-part t0 t1 t2 t3 a0 a1 a2 a3 b0 b1 b2 b3 p0 p1 p2 p3)
     (node-ghit a0 a1 a2 a3 r r0 r1 r2 r3 j0 j1 j2 j3 h0 h1 h2 h3)))
+
+(def-fns _ $ (erased pat-hit-e : (erased (GSet) gs b) (erased (Gsym) s)
+    (erased (GPartAt gs (GSG (GNode (GEmpty) (GEmpty) (GEmpty) (GEmpty))) b s) p) -> (erased (GPartAt gs (GSG (GEmpty)) b s) q))
+  (let-match erased p (MkGPartAt _ _ _ g2 a2 b2 _ sg sa sb t))
+  (let-match erased sa (GSelN _ _ _ _ u _ pk) (absurd (GSelL _ _ _ _ _ _ _ _ l _ _) l))
+  (let ((erased e)) (sel-gempty-mk s))
+  (match erased pk _
+    ((PkPush _ _ _ _ _) (MkGPartAt gs (GSG (GEmpty)) b g2 a2 b2 s sg e sb t))
+    ((PkSkip _ _ _ _ _) (MkGPartAt gs (GSG (GEmpty)) b g2 a2 b2 s sg e sb t))
+    ((PkPop0 _ _ _ _ _) (MkGPartAt gs (GSG (GEmpty)) b g2 a2 b2 s sg e sb t))
+    ((PkPop1 _ _ _ _ _) (MkGPartAt gs (GSG (GEmpty)) b g2 a2 b2 s sg e sb t))))
+
+(def-fns _ $ (erased part-hit-e : (erased (GSet) gs b) (erased (GPart gs (GSG (GNode (GEmpty) (GEmpty) (GEmpty) (GEmpty))) b) p) ->
+    (erased (GPart gs (GSG (GEmpty)) b) q))
+  (let-match erased p (GPS _ _ _ n x y rg ra rb s p0 p1 p2 p3))
+  (let-match erased ra (GRG _))
+  (GPS gs (GSG (GEmpty)) b n x y rg (GRG (GEmpty)) rb s (pat-hit-e gs b (GPush) p0) (pat-hit-e gs b (GSkip) p1) (pat-hit-e gs b (GPop0) p2)
+    (pat-hit-e gs b (GPop1) p3)))
+
+; A gtree whose nodes are held unique, so that gtree-restrict-u rewrites them in place; UGLeaf holds any gtree as it is.
+(def-adts $ (UGtree : -> Type)
+  enum
+  (many UGNode : (unique (UGtree) x0 x1 x2 x3) -> (UGtree))
+  (many UGLeaf : (many (Gtree) g) -> (UGtree))
+  (many UGEmpty : -> (UGtree)))
+
+; u holds g.
+(def-adts $ (UG : ((UGtree) u) ((Gtree) g) -> Type)
+  enum
+  (many UGE : -> (UG (UGEmpty) (GEmpty)))
+  (many UGL : (erased (Gtree) g) -> (UG (UGLeaf g) g))
+  (many UGN : (erased (UGtree) x0 x1 x2 x3) (erased (Gtree) g0 g1 g2 g3) (erased (UG x0 g0) p0) (erased (UG x1 g1) p1) (erased (UG x2 g2) p2)
+      (erased (UG x3 g3) p3) -> (UG (UGNode x0 x1 x2 x3) (GNode g0 g1 g2 g3))))
+
+(def-adts $ (GKeep : ((Gtree) g) -> Type)
+  enum
+  (many GKEmpty : -> (GKeep (GEmpty)))
+  (many GKLive : (erased (Gtree) g) -> (GKeep g)))
+
+(def-fns _ $ (many gkeep : (many (Gtree) g) -> (many (GKeep g) k))
+  (match many g _ ((GEmpty) (GKEmpty)) (else (GKLive g))))
+
+(def-fns _ $ (many gkeep4 : (erased (Gtree) a b c d) (many (GKeep a) w) (many (GKeep b) x) (many (GKeep c) y) (many (GKeep d) z) ->
+    (many (Empty4 a b c d) r))
+  (let-match many w (GKEmpty) (else (E4No a b c d)))
+  (let-match many x (GKEmpty) (else (E4No a b c d)))
+  (let-match many y (GKEmpty) (else (E4No a b c d)))
+  (let-match many z (GKEmpty) (else (E4No a b c d)))
+  (E4Yes))
+
+(def-fns _ $ (many ug-of : (subterm many (Gtree) g) -> (unique (UGtree) u) (erased (UG u g) p) (many (GKeep g) e))
+  (let-match many g (GNode t0 t1 t2 t3) ((GEmpty) (values (UGEmpty) (UGE) (GKEmpty))) (else (values (UGLeaf g) (UGL g) (GKLive g))))
+  (let ((unique x0) (erased p0) (many _)) (notail $ ug-of t0))
+  (let ((unique x1) (erased p1) (many _)) (notail $ ug-of t1))
+  (let ((unique x2) (erased p2) (many _)) (notail $ ug-of t2))
+  (let ((unique x3) (erased p3) (many _)) (notail $ ug-of t3))
+  (values (UGNode x0 x1 x2 x3) (UGN x0 x1 x2 x3 t0 t1 t2 t3 p0 p1 p2 p3) (GKLive g)))
+
+(def-fns _ $ (many gt-of : (subterm unique (UGtree) u) (erased (Gtree) g) (erased (UG u g) p) -> (many g is c))
+  (match unique u _
+    ((UGEmpty) (let-match erased p (UGE)) (GEmpty))
+    ((UGLeaf g1) (let-match erased p (UGL _)) g1)
+    ((UGNode x0 x1 x2 x3)
+      (let-match erased p (UGN _ _ _ _ g0 g1 g2 g3 p0 p1 p2 p3))
+      (let ((many c0)) (notail $ gt-of x0 g0 p0))
+      (let ((many c1)) (notail $ gt-of x1 g1 p1))
+      (let ((many c2)) (notail $ gt-of x2 g2 p2))
+      (let ((many c3)) (notail $ gt-of x3 g3 p3))
+      (GNode c0 c1 c2 c3))))
+
+(def-fns _ $ (many ug-live : (unique (UGtree) u) -> (unique u is u2) (many (Bool) w))
+  (match unique u _
+    ((UGEmpty) (values (UGEmpty) (BFalse)))
+    ((UGLeaf g cell) (values (at unique (cell g)) (gtree-live g)))
+    ((UGNode x0 x1 x2 x3 cell) (values (at unique (cell x0 x1 x2 x3)) (BTrue)))))
+
+(def-fns _ $ (many gtree-restrict-u : (subterm unique (UGtree) u) (erased (Gtree) t) (erased (UG u t) ut) (many (List RC) r) ->
+    (many (Gtree) hit) (unique (UGtree) mu) (erased (Gtree) miss) (erased (UG mu miss) um) (erased (GPart (GSG t) (GSG hit) (GSG miss)) p)
+    (erased (GHit (GSG hit) r) h) (many (GKeep miss) e))
+  (match unique u _
+    ((UGEmpty) (let-match erased ut (UGE)) (values (GEmpty) (UGEmpty) (GEmpty) (UGE) (part-r t) (GHE r) (GKEmpty)))
+    ((UGLeaf g cell)
+      (let-match erased ut (UGL _))
+      (let ((many a) (many b) (erased p) (erased h)) (gtree-restrict-c g r))
+      (values a (cell b) b (UGL b) p h (gkeep b)))
+    ((UGNode x0 x1 x2 x3 cell)
+      (let-match erased ut (UGN _ _ _ _ t0 t1 t2 t3 q0 q1 q2 q3))
+      (let-match many r (Cons _ _ _) ((Nil _) (values (GEmpty) (at unique (cell x0 x1 x2 x3)) t ut (part-r t) (GHE r) (GKLive t))))
+      (let ((unique y0) (many w0)) (ug-live x0))
+      (let ((unique y1) (many w1)) (ug-live x1))
+      (let ((unique y2) (many w2)) (ug-live x2))
+      (let ((unique y3) (many w3)) (ug-live x3))
+      (let ((many r0) (many r1) (many r2) (many r3) (erased j0) (erased j1) (erased j2) (erased j3))
+        (gtr-split-c w0 w1 w2 w3 r (Nil _) (Nil _) (Nil _) (Nil _) r (SufHere RC r) (RJNil (GPush) r) (RJNil (GSkip) r) (RJNil (GPop0) r) (RJNil (GPop1) r)))
+      (let ((many a0) (unique z0) (erased b0) (erased m0) (erased p0) (erased h0) (many e0)) (notail $ gtree-restrict-u y0 t0 q0 r0))
+      (let ((many a1) (unique z1) (erased b1) (erased m1) (erased p1) (erased h1) (many e1)) (notail $ gtree-restrict-u y1 t1 q1 r1))
+      (let ((many a2) (unique z2) (erased b2) (erased m2) (erased p2) (erased h2) (many e2)) (notail $ gtree-restrict-u y2 t2 q2 r2))
+      (let ((many a3) (unique z3) (erased b3) (erased m3) (erased p3) (erased h3) (many e3)) (notail $ gtree-restrict-u y3 t3 q3 r3))
+      (let ((erased pt)) (node-part t0 t1 t2 t3 a0 a1 a2 a3 b0 b1 b2 b3 p0 p1 p2 p3))
+      (let ((erased mg)) (UGN z0 z1 z2 z3 b0 b1 b2 b3 m0 m1 m2 m3))
+      (let-match many (gtree-empty4 a0 a1 a2 a3) (E4No _ _ _ _)
+        ((E4Yes) (values (GEmpty) (cell z0 z1 z2 z3) (GNode b0 b1 b2 b3) mg (part-hit-e (GSG t) _ pt) (GHE r) (GKLive (GNode b0 b1 b2 b3)))))
+      (let ((erased hs)) (node-ghit a0 a1 a2 a3 r r0 r1 r2 r3 j0 j1 j2 j3 h0 h1 h2 h3))
+      (let-match many (gkeep4 b0 b1 b2 b3 e0 e1 e2 e3) (E4No _ _ _ _)
+        ((E4Yes) (values (GNode a0 a1 a2 a3) (UGEmpty) (GEmpty) (UGE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ pt))) hs (GKEmpty))))
+      (values (GNode a0 a1 a2 a3) (cell z0 z1 z2 z3) (GNode b0 b1 b2 b3) mg pt hs (GKLive (GNode b0 b1 b2 b3))))))
