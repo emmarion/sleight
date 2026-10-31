@@ -1183,14 +1183,21 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   plain cubic connected pentagonal map of genus 0 has a configuration of
   `cfs`, with its map, ring and arities as `cpmap.sl` builds them, whose
   kernel has a preembedding into the map or into its mirror
-  (`CfEmbed`). One compiled run builds the tree with its evidence and
-  does the walks, the cap checks and `redp-c` on all 335,058
-  obligations; in one run on a 4-core cloud VM `--goal proved` passed
-  in about 525 s with slc and in about 366 s with the reference
-  `main.exe` (under `ulimit -s unlimited`). In a test run the tree built
+  (`CfEmbed`). The walk of each arity is cut into regions
+  (`cut-script`: the largest subtrees of 100 to 800 leaves, and the rest
+  of the walk with those left as `SCut`), and `qztproof.sl` queues one
+  `native.sl` job per region (`reg-c`) and one for the cap checks
+  (`cap-run`); each job builds its own quiz tree. A region's job walks
+  its subtree from the context check2-c reaches there, runs `redp-c` on
+  its obligations, and checks that its cut list (the parts of the earlier
+  regions of its walk, which `SCut` and `PCut` refer to) is made of parts
+  of the regions after it in `regs`; `reg-claim` follows a dart of
+  positive dscore from the region of its walk's root through those
+  parts to the region whose obligations cover it. In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
-  certificate. Load order: that of `unavgoal.sl` (`std/macro.sl
+  certificate. Load order: that of `unavgoal.sl` with `native.sl`
+  after `std/macro.sl` (`std/macro.sl native.sl
   std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`, `cfmap.sl`,
   `colalias.sl unav/faces.sl red/red.sl red/configs.sl cpmap.sl`, then
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
