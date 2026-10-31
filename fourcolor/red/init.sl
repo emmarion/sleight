@@ -234,6 +234,26 @@
   (let ((many t) (erased r) (erased k) (erased _)) (notail $ leaf-of st no n1))
   (values (CLeaf t) (RootL t n1 r) (HL t k) (CEvL t st no)))
 
+(def-adts $ (LeafC : -> Type)
+  enum
+  (many MkLeafC : (many (Nat) n) (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) k) -> (LeafC)))
+
+(def-fns _ $ (many leaf-chains : (subterm many (Nat) k) (many (Nat) n) (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) h)
+    -> (many (List (LeafC)) tbl))
+  (let ((many e)) (MkLeafC n t r h))
+  (let-match many k (Succ k1) ((Zero) (Cons _ e (Nil _))))
+  (Cons _ e (notail $ leaf-chains k1 (Succ n) (CLeaf t) (RootL t n r) (HL t h))))
+
+(def-fns _ $ (erased leaf-cev : (erased (ES) st) (erased (NotOdd st) no) (erased (Ctree) t) (erased (CtH (Zero) t) h) -> (erased (CEv t st) c))
+  (match erased h _ ((HE _) (CEvE st)) ((HL lf _) (CEvL lf st no))))
+
+(def-fns _ $ (many leaf-get : (erased (ES) st) (erased (NotOdd st) no) (many (Nat) n) (subterm many (List (LeafC)) tbl) ->
+    (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) k) (erased (CEv t st) c))
+  (let-match many tbl (Cons _ e rest) ((Nil _) (leaf-of st no n)))
+  (let-match many e (MkLeafC m t r h))
+  (let-match many (nat-eq m n) (Equal _ _ _) (else (tail $ leaf-get st no n rest)))
+  (values t r h (leaf-cev st no t h)))
+
 (def-fns _ $ (erased psplit-c0 : (erased (List RS) a ps s) (subterm erased (PSplitE (C0) a ps s) sp) -> (erased (Eq (List RS) s a) e))
   (let-match erased sp (PSCons _ x _ b rest _ st q) ((PSNil _ _) (Refl _ s)))
   (let-match erased st (PSE0 _ _) (absurd (PSE23 _ _ _ _ _ _ _ _ y _ _ _) y))
@@ -250,27 +270,27 @@
 
 ; After ctree_sub_init_tree of initctree.v, one direction: the multiplicity of each even trace of length k in t is its number of
 ; matches in ps, read from the evenness state st.
-(def-fns _ $ (many ct-build : (subterm many (Nat) k) (many (List RS) ps) (many (ES) st) ->
+(def-fns _ $ (many ct-build : (many (List (LeafC)) tbl) (subterm many (Nat) k) (many (List RS) ps) (many (ES) st) ->
     (many (Ctree) t) (erased (GE t ps st k) g) (erased (CEv t st) c) (erased (CtH k t) hk))
   (let-match many ps (Cons _ _ _) ((Nil _) (values (CEmpty) (GEDead (CEmpty) ps st k (PZNil)) (CEvE st) (HE k))))
   (let-match many (odd-kind st) (OKNot _ no) ((OKOdd) (values (CEmpty) (GEOdd (CEmpty) ps k) (CEvE st) (HE k))))
   (let-match many k (Succ k1)
     ((Zero)
       (let ((many c) (erased pc)) (pieces-root-c ps))
-      (let ((many t) (erased rt) (erased hz) (erased ce)) (leaf-of st no c))
+      (let ((many t) (erased rt) (erased hz) (erased ce)) (leaf-get st no c tbl))
       (values t (GENil t ps st c c rt pc (lt-succ c)) ce hz)))
   (let ((erased p0) (erased sp0)) (psplit-c (C0) (Nil _) ps))
   (let-match erased (psplit-c0 (Nil RS) ps p0 sp0) (Refl _ _))
   (let ((erased s0) (erased e0)) (esstep-c st (C0)))
   (let ((many p1) (erased sp1)) (psplit-c (C1) (Nil _) ps))
   (let ((many s1) (erased e1)) (esstep-c st (C1)))
-  (let ((many t1) (erased g1) (erased c1) (erased h1)) (notail $ ct-build k1 p1 s1))
+  (let ((many t1) (erased g1) (erased c1) (erased h1)) (notail $ ct-build tbl k1 p1 s1))
   (let ((many p2) (erased sp2)) (psplit-c (C2) (Nil _) ps))
   (let ((many s2) (erased e2)) (esstep-c st (C2)))
-  (let ((many t2) (erased g2) (erased c2) (erased h2)) (notail $ ct-build k1 p2 s2))
+  (let ((many t2) (erased g2) (erased c2) (erased h2)) (notail $ ct-build tbl k1 p2 s2))
   (let ((many p3) (erased sp3)) (psplit-c (C3) (Nil _) ps))
   (let ((many s3) (erased e3)) (esstep-c st (C3)))
-  (let ((many t3) (erased g3) (erased c3) (erased h3)) (notail $ ct-build k1 p3 s3))
+  (let ((many t3) (erased g3) (erased c3) (erased h3)) (notail $ ct-build tbl k1 p3 s3))
   (let ((many t) (erased tc)) (ctree-cons t1 t2 t3))
   (values t
     (GES t ps st k1 (MkGEAt t (CEmpty) ps p0 st s0 k1 (C0) (sel-c0 t) sp0 e0 (GEDead (CEmpty) p0 s0 k1 (PZNil)))
@@ -283,4 +303,4 @@
 (def-fns _ $ (many ctree-full : (many (Nat) h) (many (Gtree) gtu) ->
     (many (Ctree) ctu) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (CEv ctu (ESStart)) ce)
     (erased (CtH (Succ h) ctu) hc))
-  (ct-build (Succ h) (Cons _ (MkRx _ (BS0) (GSG gtu)) $ Nil _) (ESStart)))
+  (ct-build (leaf-chains 1500 (Zero) (CEmpty) (RootE) (HE (Zero))) (Succ h) (Cons _ (MkRx _ (BS0) (GSG gtu)) $ Nil _) (ESStart)))
