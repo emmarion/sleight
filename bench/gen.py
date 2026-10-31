@@ -78,8 +78,8 @@ for f in range(fns):
         out.append(f"  (let ((unique u{i})) (Zero))\n  (let ((many _)) (share u{i}))")
     out.append("  n)")
 out.append("(def-fns _ $ (many body : (many (Wide) w) -> (many (Wide) r))")
-branches = " ".join(f"((W{i}) (values))" for i in range(c))
-out += [f"  (let () (match many w () {branches}))"] * m
+branches = " ".join(f"((W{i}) 0)" for i in range(c))
+out += [f"  (let ((many _)) (match many w (((Nat) k)) {branches}))"] * m
 out.append("  w)\n(body (W0))")
 write("uses_join.sl", "\n".join(out) + "\n")
 print("written")

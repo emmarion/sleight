@@ -542,6 +542,15 @@
   (let-match erased (pow2-fn _ _ _ pv u62-modulus-pow2) (Refl _ _))
   v)
 
+(let ((many fifty-four) (erased _)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ eight)))
+(let ((many fifty-seven) (erased _)) (add fifty-four (Succ (Succ (Succ (Zero))))))
+(let ((erased array-limit) (erased array-limit-pow2) (erased _)) (pow2 fifty-four))
+(let ((erased bytes-limit) (erased bytes-limit-pow2) (erased _)) (pow2 fifty-seven))
+(comptime-match many (lt-dec fifty-four (sixty-two-many)) (Yes _ _ _ _ fifty-four-lt))
+(comptime-match many (lt-dec fifty-seven (sixty-two-many)) (Yes _ _ _ _ fifty-seven-lt))
+(let ((erased array-limit-below-u62)) (pow2-lt _ _ _ _ fifty-four-lt array-limit-pow2 u62-modulus-pow2))
+(let ((erased bytes-limit-below-u62)) (pow2-lt _ _ _ _ fifty-seven-lt bytes-limit-pow2 u62-modulus-pow2))
+
 (def-fns _ $ (erased lt-double-succ : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d)
     (subterm erased (Lt a b) l) (erased (Double a c) p) (erased (Double b d) q) -> (erased (Lt (Succ c) d) r))
   (match erased l _
@@ -1500,9 +1509,9 @@
 
 (def-fns _ $ (many extern array-length-dec : (erased Type A) (erased (List A) xs)
     (subterm unique (Array A xs) a) ->
-    (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique a is r at a))
+    (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len array-limit) d) (unique a is r at a))
   (let ((many l) (erased p1) (unique a1)) (array-length _ _ a))
-  (values l p1 (nat-fits-u62 l) a1))
+  (values l p1 (lt-pow2-dec l fifty-four array-limit array-limit-pow2) a1))
 
 (def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
@@ -1512,9 +1521,9 @@
 
 (def-fns _ $ (many extern array-length-dec-many : (erased Type A) (erased (List A) xs)
     (subterm many (Array A xs) a) ->
-    (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
+    (erased (Nat) len) (erased (Length A xs len) p) (many (Dec (Nat) Lt len array-limit) d))
   (let ((many l) (erased p1)) (array-length-many _ _ a))
-  (values l p1 (nat-fits-u62 l)))
+  (values l p1 (lt-pow2-dec l fifty-four array-limit array-limit-pow2)))
 
 (def-fns _ $ (many extern list-to-array : (erased Type A) (subterm many (List (Copy A)) xs) ->
     (unique (Array (Copy A) xs) a))
@@ -1606,9 +1615,9 @@
   (values (Succ l1) (LengthCons _ _ _ _ p1) (at unique (u _ hd tl2))))
 
 (def-fns _ $ (many extern bytes-length-dec : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
-    (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d) (unique b is r at b))
+    (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len bytes-limit) d) (unique b is r at b))
   (let ((many l) (erased p1) (unique b1)) (bytes-length _ b))
-  (values l p1 (nat-fits-u62 l) b1))
+  (values l p1 (lt-pow2-dec l fifty-seven bytes-limit bytes-limit-pow2) b1))
 
 (def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
     (many (Nat) len) (erased (Length (U8) xs len) p))
@@ -1617,9 +1626,9 @@
   (values (Succ l1) (LengthCons _ _ _ _ p1)))
 
 (def-fns _ $ (many extern bytes-length-dec-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
-    (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len u62-modulus) d))
+    (erased (Nat) len) (erased (Length (U8) xs len) p) (many (Dec (Nat) Lt len bytes-limit) d))
   (let ((many l) (erased p1)) (bytes-length-many _ b))
-  (values l p1 (nat-fits-u62 l)))
+  (values l p1 (lt-pow2-dec l fifty-seven bytes-limit bytes-limit-pow2)))
 
 (def-fns _ $ (many extern str-bytes-copy : (subterm many (String) s) ->
     (erased (List (U8)) xs) (unique (Bytes xs) b) (erased (StrBytes s xs) p))
