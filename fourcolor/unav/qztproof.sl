@@ -1,8 +1,8 @@
 ; Unavoidability in the shape of unavoidability.v, with the embedding of quiz.v: in every plain cubic connected pentagonal
 ; map of genus 0, a configuration of red/configs.sl has a preembedding of its kernel into the map or its mirror (CfEmbed).
-; One compiled run builds the quiz tree with its evidence (qtree.sl), and does the certified walks and cap checks of
+; One native.sl job builds the quiz tree with its evidence (qtree.sl), and does the certified walks and cap checks of
 ; unavgoal.sl and the certified redpart of redc.sl on every obligation, giving unav-proof for the cfs in scope (qztcfs.sl or
-; fcopen.sl). Load after unave.sl and data.sl.
+; fcopen.sl) after native-run. Load after unave.sl, data.sl and native.sl.
 
 (def-adts $ (AllRed : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
   enum
@@ -85,5 +85,4 @@
     (hit-embed cfs d e n f ks g (qzt-hit cfs d e n f ks qt qi g hf)))
   (ChkYes _ (MkUnavE cfs (level-of every) every)))
 
-(let ((many res)) (native-compute unave-run))
-(comptime-match many res (ChkYes _ unav-proof))
+(native-jobs unav-proof u (unave-run (ChkYes _ u)))
