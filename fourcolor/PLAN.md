@@ -966,7 +966,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (the `red/configs.sl` entry, and `cfs-run` for `unav/qztproof.sl`'s
   region and cap jobs) and the presentation scripts are strings
   (`unav/data.sl`), so `native-compute` writes about 1.9 MB of OCaml with
-  slc (about 3.0 MB with the reference compiler) for its 158 jobs. In
+  slc (about 3.0 MB with the reference compiler) for its 154 jobs. In
   runs on a 4-core cloud VM with a load average of about 5 to 8 from
   other runs, which should be read as approximate, the unit passed with
   slc in about 640 to 730 s of wall time (about 1050 s of CPU, at most
@@ -985,12 +985,28 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   about 2 to 7), it passed with
   slc in about 397 s and with the reference compiler in about 597 s, and
   `fcmanyfinal.sl` with slc in about 483 s.
-  With the in-place Kempe closure of `red/kempe.sl`, in one pair of slc
-  runs on that VM at a load average of about 5, the unit took about 390 s
-  of wall time (about 980 s of CPU, at most about 0.72 GB resident) as
-  above, and about 314 s (about 720 s of CPU, at most about 1.2 GB) with
-  `OCAMLRUNPARAM=o=400` in slc's environment, which the jobs inherit,
-  and `--inline 200`.
+  With `OCAMLRUNPARAM=o=400` in the compiler's environment, which the
+  jobs inherit, and `--inline 200`, in one run each on that VM at a load
+  average of about 1 to 2, the unit passed with slc in about 186 s (about
+  28 s of elaboration, 14 s of ocamlopt and 144 s running the jobs, at
+  most about 1.2 GB resident) and with the reference compiler in about
+  291 s (about 114 s of elaboration, 31 s of ocamlopt and 146 s running
+  the jobs). Run one at a time, the jobs took about 525 to 575 s of CPU together in two runs:
+  the pieces of `red/pieces.sl` about 485 to 535 s, the longest of them about 7
+  to 8 s; the region jobs of `unav/qztproof.sl` about 34 s, the longest
+  about 3.4 s, and its cap job about 0.7 s; the chunks of
+  `embed4proof.sl` about 4 s, each at most about 0.5 s; and the four
+  Birkhoff jobs of `red/bproof.sl` under 0.01 s each. Run four at a time
+  in queue order, as `native-compute` runs them on that VM, they took
+  about 142 to 147 s in three runs. `native-compute` appears to start its
+  jobs in the order of its arguments, as many at once as the host has
+  processors (`exec_all` in `lib/driver_core.ml`), so the jobs run in
+  queue order, which here puts the pieces first and ends with about 60
+  jobs of under 3.5 s. In a simulation from the measured times of the
+  jobs run one at a time, running them longest first finished no sooner
+  on 4 processors (both at about a quarter of their total) and about 1 to
+  2 s sooner on 16 to 64; with more processors than jobs the longest job
+  bounds the run.
   In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
@@ -1209,20 +1225,31 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   into the pieces `pcs` (`cut-at` on `config-srcs`, by the sizes
   `piece-sizes`, then `decode-all`), and `allredc-pieces` turns `AllRedC CRX pcs` into
   `AllRedC CRX css`. The sizes were chosen offline (not in the repository)
-  from one run's measured time per configuration, so that each of the 100 pieces
-  takes at most about 10 s by that measure; any sizes give a correct proof, only the
-  balance depends on them. Run outside `native-compute`, as separate
-  processes one at a time on a 4-core cloud VM shared with other runs,
-  the 100 pieces took about 630 and 665 s of user CPU in two runs,
-  against about 800 s in a run side by side with the second of the code
-  before the `RxL` lists, the skipped stores and `dfs-c` (about 770 and
-  795 s in two more runs of that code; ring-14 configurations about 435
-  and 470 s against about 545 to 565 s). In earlier runs, that code took about 705 to 730 s, and, in
-  one run each, about 625 s with `OCAMLRUNPARAM=o=400` (which the jobs
-  of `native-compute` appear to inherit with the rest of slc's
-  environment) and about 640 s with the program compiled with
-  `-inline 200` (`--inline`, MANUAL.md); the code before the in-place
-  closure trees took about 850 s in one run. `red/proof-c.sl` proves `AllRedC CRX css`
+  from a model of each piece's time: the time of each configuration, the
+  mean of two runs of one process over all 633 with one cache (about 455
+  to 460 s of CPU each, with `OCAMLRUNPARAM=o=400` and `-inline 200`; the
+  137 ring-14 configurations about 320 s, the longest about 3.2 to 4.4 s,
+  and runs differing by about 10% per configuration), plus about 0.6 s for
+  a piece holding a ring-14 configuration and 0.15 s for one holding a
+  ring-13 one, for the initial trees it builds (`init-for`), and 0.3 s per
+  job. The 96 pieces are the cut, in order, with the least total time by
+  that model in which no piece exceeds 6.5 s, so most ring-14
+  configurations go in twos. As jobs run one at a time, the pieces took
+  about 0.97 times their configurations' time plus about 0.3 s, 0.4 s
+  more with a ring-14 and 0.4 s more with a ring-13 configuration (a
+  least-squares fit over 357 pieces of three cuts, off by about 0.35 s
+  rms), and the longest of the 96 about 7.3 and 7.8 s in two runs. Any sizes give a correct proof; only the
+  balance depends on them, and with sizes summing to more than 633, one of
+  them 0, the goal of `red/goal-c.sl` was proved in a test run (`cut-at`
+  leaves the pieces past the end empty). The configurations of one ring
+  size are not contiguous in `config-srcs`, so a piece may build two or
+  three initial trees; by the model, a cut of the configurations sorted
+  by ring size would save about 9 s of CPU at the same bound. In single
+  runs on a 4-core cloud VM, a cut in which no piece exceeds 4.7 s by the
+  model (161 pieces, most ring-14 configurations alone) gave a longest
+  job of about 5.6 s, but about 25 s more CPU, and about 5 to 14 s more
+  wall time running the jobs of `fcfinal.sl` on that VM, with its
+  elaboration and ocamlopt each a second or two longer. `red/proof-c.sl` proves `AllRedC CRX css`
   (`all-red-proof`) for css the chunks of `red/configs.sl`
   (`red/chunks.sl`), with one `native.sl` job per piece, and
   `red/goal-c.sl` runs the jobs and sets and discharges the goal: every
@@ -1236,10 +1263,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
   red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/pieces.sl
   red/proof-c.sl red/goal-c.sl` (with `--goal proved`). In that chain the
-  goal was proved with slc (about 385 s of wall time) and with the
-  reference compiler under `ulimit -s unlimited` (about 395 s) in one run
-  each, side by side, on a 4-core cloud VM shared with other runs, so the
-  times say little about either compiler. What `CRed` and `ValidContract` state has not
+  goal was proved with slc (about 140 s of wall time) and with the
+  reference compiler under `ulimit -s unlimited` (about 156 s) in one run
+  each, one after the other, with `OCAMLRUNPARAM=o=400` and `--inline
+  200`, on a 4-core cloud VM shared with other runs. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
 - `red/configs.sl`, `red/chunks.sl`: the 633 configurations as one string
