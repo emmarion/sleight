@@ -15,11 +15,9 @@
   (let-match many obl (Cons _ q rest) ((Nil _) (values (BTrue) (IfY _ (ARNil qt)))))
   (let ((many ok1) (erased w1)) (redp-c qt q))
   (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
-  (let ((many ok2) (erased w2)) (notail $ allred-c qt rest))
-  (let-match many ok2 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
   (let-match erased w1 (IfY _ dd))
-  (let-match erased w2 (IfY _ a))
-  (values (BTrue) (IfY _ (ARCons qt q rest dd a))))
+  (let ((many ok2) (erased w2)) (tail $ allred-c qt rest))
+  (values ok2 (match erased w2 _ ((IfY _ a) (IfY _ (ARCons qt q rest dd a))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRed qt obl) a)
     (erased (Mem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
