@@ -163,6 +163,9 @@
   (let-match erased (nth-fn _ fm a b z2 pb (hyper-third dm a z z2 em nm fm hm pa p3)) (Refl _ _))
   (values z1 p1 p2))
 
+; At a dart x of the configuration map: edge is an involution, node keeps rc and has order 3 off it, x or edge x is off
+; rc, two darts off rc joined by an edge are not both off the kernel, and x, edge x, node x or node (edge x) is in the
+; kernel.
 (def-adts $ (RingSide : ((List (Nat)) nc rc) ((Nat) x nx) -> Type)
   enum
   (many RsOn : (erased (List (Nat)) nc rc) (erased (Nat) x nx) (erased (In x rc) ix) (erased (In nx rc) inx) -> (RingSide nc rc x nx))
@@ -199,6 +202,7 @@
   (let-match erased ok (MkGcOK _ _ _ _ _ ids io ga))
   (gcall-at ec nc rc as ids x ga (iota-in dc x ids io lx)))
 
+; Each kernel dart whose edge image is in the kernel is central.
 (def-adts $ (EdgeOut : ((List (Nat)) ec as) ((Nat) x) -> Type)
   enum
   (many MkEdgeOut : (erased (List (Nat)) ec as) (erased (Nat) x y) (erased (Nth (Nat) ec x y) py) (erased (NotIn y as) oy) -> (EdgeOut ec as x)))
@@ -220,6 +224,7 @@
   (let-match erased (nth-fn _ hl x w w3 pw pw3) (Refl _ _))
   (values v3 pv3 pm3))
 
+; u = h x on the kernel, and otherwise read off edge x, node x or node (edge x), the first in it.
 (def-adts $ (HEmb : ((List (Nat)) ec nc em nm fm as hl) ((Nat) x u) -> Type)
   enum
   (many HeK : (erased (List (Nat)) ec nc em nm fm as hl) (erased (Nat) x u) (erased (In x as) ix) (erased (Nth (Nat) hl x u) pu) -> (HEmb ec nc em nm fm as hl x u))

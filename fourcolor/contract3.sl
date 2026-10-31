@@ -1,3 +1,4 @@
+; A walk from a to b along f, and along e0 from the darts of s.
 (def-adts $ (XP : ((List (Nat)) e0 f s) ((Nat) a b) -> Type)
   enum
   (many XPNil : (erased (List (Nat)) e0 f s) (erased (Nat) a) -> (XP e0 f s a a))
@@ -209,6 +210,7 @@
       (values w B rg (ProperTwo e w b y pwy nyb) sb)))
   (values w B rg (ProperBig e B2 w b c) sb))
 
+; Each dart of xs is v or a dart of ins.
 (def-adts $ (InsBut : ((List (Nat)) ins) ((Nat) v) ((List (Nat)) xs) -> Type)
   enum
   (many IBNil : (erased (List (Nat)) ins) (erased (Nat) v) -> (InsBut ins v (Nil (Nat))))
@@ -323,6 +325,8 @@
             (absurd (Th0 _ _ _ _ _ _ _ _ _ _ c _) (apart-irrefl y (notin-in y y hd1 c iy1))))))))
   (MkDiskF n f r t a kr))
 
+; A dart of diskF of x0 :: p, or a chord ring z :: x2 :: B with fewer darts, its darts but z in ins, and the diskN of
+; it, of the ring and of the other chord ring ez :: x1 :: A.
 (def-adts $ (NStep : ((Nat) d k) ((List (Nat)) e n f ins) ((Nat) x0) ((List (Nat)) p) -> Type)
   enum
   (many NSKer : (erased (Nat) d k x0 y) (erased (List (Nat)) e n f ins p) (erased (DiskF n f (Cons (Nat) x0 p) y) dy) -> (NStep d k e n f ins x0 p))
@@ -463,6 +467,7 @@
     ((TwoRR _ _ _ _ _ _ _ _ o)
       (nontrivial0 d w t1 t2 e n f B hd zs h gen rg ds dt1 (ds-off d t2 w e n f B hd zs hd zs h gen rg ur ds ds o lt2) (kernel-sub f r RR d t2 fb ur lf k2t)))))
 
+; bs read through insertE as the darts cs of the contract: each b is c or e c.
 (def-adts $ (ImgL : ((List (Nat)) e cx bs cs) -> Type)
   enum
   (many ILNil : (erased (List (Nat)) e cx) -> (ImgL e cx (Nil (Nat)) (Nil (Nat))))
@@ -556,12 +561,15 @@
     ((ApLt _ _ _ _ lt) lt)
     (absurd (ApGt _ _ _ _ gt) (lt-irrefl b (lt-le-trans b a b gt l)))))
 
+; One to three darts, or four with a triad of insertE (red/cfred.sl's Triad).
 (def-adts $ (CSize : ((List (Nat)) e f ins cx) -> Type)
   enum
   (many CSSmall : (erased (List (Nat)) e f ins cx) (erased (Nat) k) (erased (Length (Nat) cx k) l) (erased (Lt (Zero) k) lo) (erased (Lt k 4) hi)
       -> (CSize e f ins cx))
   (many CSTriad : (erased (List (Nat)) e f ins cx) (erased (Nat) x) (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) -> (CSize e f ins cx)))
 
+; The contraction of cx or a reduction of the map, or, for four darts, a contract ring w :: Bs of five darts
+; nontrivial for 0.
 (def-adts $ (ContractAll : ((Level) B) ((Nat) d) ((List (Nat)) e n f cx) -> Type)
   enum
   (many CAOut : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f cx) (erased (ContractOut B d e n f cx) co) -> (ContractAll B d e n f cx))

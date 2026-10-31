@@ -52,6 +52,7 @@
   (let-match erased p (PathStep _ _ xs1 _ z _ pz _ p1) ((PathHere _ _ _) iy))
   (ker-face-inv dc dm x z ec nc fc ksc rc em nm fm ksm as hl en (ker-path-inv dc dm z y ec nc fc ksc rc em nm fm ksm as hl s xs1 en iy p1) pz))
 
+; At the kernel darts x1, x2: edge x1 = x2, or h x2 is not edge (h x1).
 (def-adts $ (FullPair : ((List (Nat)) ec em hl) ((Nat) x1 x2) -> Type)
   enum
   (many FpEdge : (erased (List (Nat)) ec em hl) (erased (Nat) x1 x2) (erased (Nth (Nat) ec x1 x2) p) -> (FullPair ec em hl x1 x2))
@@ -159,11 +160,13 @@
   (let-match erased w3 (MkSomePath _ _ xs _ _ pxy))
   (cface-inj dc dm x y w ec nc fc ksc rc em nm fm ksm as hl (Nil _) xs en ix pxy pw pw2))
 
+; A pair of kernel darts with h x2 = edge (h x1) and edge x1 = y not x2.
 (def-adts $ (FullBad : ((List (Nat)) ec em as hl) -> Type)
   enum
   (many MkFullBad : (erased (List (Nat)) ec em as hl) (erased (Nat) x1 x2 w u y) (erased (In x1 as) i1) (erased (In x2 as) i2) (erased (Nth (Nat) hl x1 w) pw)
       (erased (Nth (Nat) em w u) pu) (erased (Nth (Nat) hl x2 u) pv) (erased (Nth (Nat) ec x1 y) py) (erased (Apart (Nat) Lt y x2) ne) -> (FullBad ec em as hl)))
 
+; Every dart of xs is in as.
 (def-adts $ (Within : ((List (Nat)) xs as) -> Type)
   enum
   (many WNil : (erased (List (Nat)) as) -> (Within (Nil (Nat)) as))
@@ -445,12 +448,16 @@
           ((OrR _ _ oxr) (ins-out dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lx oxr ox pu)))
         rest))))
 
+; Each dart of xs is in r or in s.
 (def-adts $ (InEither : ((List (Nat)) r s xs) -> Type)
   enum
   (many IeNil : (erased (List (Nat)) r s) -> (InEither r s (Nil (Nat))))
   (many IeCons : (erased (List (Nat)) r s xs) (erased (Nat) x) (erased (Or (In x r) (In x s)) p) (erased (InEither r s xs) rest)
       -> (InEither r s (Cons (Nat) x xs))))
 
+; A patch of the map (em, nm, fm) from a disk map, whose darts embd sends into the configuration map as pull-col asks,
+; onto the darts off rc, with its ring bd sent to erc = rev (map edge rc), hd = h1 . embd, and a remainder map; h1
+; sends faces into faces.
 (def-adts $ (EmbedPatch : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
   (many MkEmbedPatch : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc0 erc h1f idc)
@@ -461,11 +468,14 @@
       (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) (erased (Iota dc idc) ioc)
       (erased (InEither rc embd idc) cv) -> (EmbedPatch dc ec fc rc dm em nm fm h1)))
 
+; rev rc = c0 :: cp is a node cycle on distinct faces of the configuration map.
 (def-adts $ (NodeRing : ((List (Nat)) nc fc rc) -> Type)
   enum
   (many MkNodeRing : (erased (List (Nat)) nc fc rc cp) (erased (Nat) c0) (erased (RevApp (Nat) rc (Nil (Nat)) (Cons (Nat) c0 cp)) rv)
       (erased (SCycle nc fc c0 cp) sc) -> (NodeRing nc fc rc)))
 
+; A function at a level F giving the EmbedPatch of an embedding h1 listed on the darts ids of the configuration map,
+; for a ring rc that is a NodeRing.
 (def-adts $ (PatchOpen : -> Type)
   enum
   (many MkPatchOpen : (erased (Level) F)
@@ -475,6 +485,8 @@
           -> (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep)) mk)
       -> (PatchOpen)))
 
+; From the face of x0, the kernel dart x is two edge steps away: x0 ~ a, edge a = ea in as, ea ~ eb = edge b, b ~ x
+; (~ the faces of the configuration map).
 (def-adts $ (R2At : ((List (Nat)) ec fc as) ((Nat) x0 x) -> Type)
   enum
   (many MkR2At : (erased (List (Nat)) ec fc as) (erased (Nat) x0 x a ea b eb) (erased (SomePath fc (Nil (Nat)) x0 a) pa) (erased (Nth (Nat) ec a ea) pea)
@@ -508,6 +520,8 @@
   enum
   (many MkKerMax : (erased (Nat) dc) (erased (List (Nat)) ec fc as ids) (erased (Iota dc ids) io) (erased (KmAll ec fc as ids) ka) -> (KerMax dc ec fc as)))
 
+; A FullBad, in a map as birkhoff-reduces takes it, with the Radius2 and KerMax certificates of the configuration,
+; gives a reduction.
 (def-adts $ (FullRedR : -> Type)
   enum
   (many MkFullRedR : (erased (Level) F B)
@@ -516,6 +530,8 @@
           (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r)) red)
       -> (FullRedR)))
 
+; embed listed as h1 on the darts ids, h1 commuting with edge at every dart and with node off rc as MorphOff lists,
+; the certificate that the embedding is full, and the patch.
 (def-adts $ (EmbedOut : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl) -> Type)
   enum
   (many MkEmbedOut : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (Iota dc ids) io)

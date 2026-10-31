@@ -49,6 +49,7 @@
     (MkReduces Hi d e n f ms sm (MkColorFrom Hi M d e n f ms MirrorW (MkMirrorW d e n f fn ni fi ms h rfn pf g) ph mirror-glue)))
   (values Hi rm))
 
+; css concatenated is cfs.
 (def-adts $ (ConcatL : ((List (List (Config))) css) ((List (Config)) cfs) -> Type)
   enum
   (many ConcatNil : -> (ConcatL (Nil (List (Config))) (Nil (Config))))
@@ -85,6 +86,8 @@
     ((MemHere _ _ _) rd)
     ((MemThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))
 
+; A connected planar bridgeless plain precubic map that the search finds uncolourable is plain cubic with every face
+; above four darts (Geo), or reduces.
 (def-adts $ (BirkGeo : -> Type)
   enum
   (many MkBirkGeo : (erased (Level) F B)
@@ -92,6 +95,8 @@
           -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r)) geo)
       -> (BirkGeo)))
 
+; In a map as BirkGeo takes it, Geo, a configuration of cfs, C-reducible at X with contract cc, whose kernel preembeds
+; as CfEmbed states, makes the map reduce.
 (def-adts $ (NotEmbed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
   (many MkNotEmbed : (erased (Level) X) (erased (List (Config)) cfs) (erased (Level) F B)

@@ -208,6 +208,7 @@
   (embed-color dm dd dr dc em nm fm ed nd fd er nr fr hd hr bd br ec fc kc embd q1 q2 q3 erc lce cse w et3 pt col le (respects-length kc fc kc dc rf lf)
     (perm-under dc ec nf pme) lem uem r1 rc1 r2 r3 rc2 reb rle coe (trace-rev csr cse et3 w t3 rvc rrw) (rotrev-sym et3 w rrw) tr4))
 
+; A function at a level F giving, for a configuration of cfs, GcOK, FunctorAll, NodeRing, Radius2 and KerMax.
 (def-adts $ (CfCerts : ((List (Config)) cfs) -> Type)
   enum
   (many MkCfCerts : (erased (List (Config)) cfs) (erased (Level) F)
@@ -217,6 +218,8 @@
           (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km)) gc)
       -> (CfCerts cfs)))
 
+; The image ccr = map h1 cc of a valid contract of the configuration is a valid contract of the map (for the empty
+; ring), or the map reduces, given that h1 sends each face step along fm.
 (def-adts $ (EmbedValid : -> Type)
   enum
   (many MkEmbedValid : (erased (Level) F B)
@@ -228,6 +231,8 @@
           -> (erased (HOr (ValidContract em nm fm (Nil (Nat)) ccr) (Reduces B dm em nm fm)) r)) ev)
       -> (EmbedValid)))
 
+; A contract cx of four darts with a triad of its sparse insertE ins and a contract ring w :: Bs of five darts
+; nontrivial for 0 give a Contraction, or the map reduces.
 (def-adts $ (TriadFive : -> Type)
   enum
   (many MkTriadFive : (erased (Level) F B)
@@ -238,6 +243,7 @@
           -> (erased (ContractOut B d e n f cx) r)) tf)
       -> (TriadFive)))
 
+; The contraction, the embedding h1 with the patch, the contract, the rings and CRed.
 (def-adts $ (NeW : ((Nat) dw) ((List (Nat)) ew nw fw) ((List (Mp)) mw) -> Type)
   enum
   (many MkNeW : (erased (Nat) dm dc dd dr a l)

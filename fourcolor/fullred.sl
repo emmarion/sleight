@@ -3,12 +3,16 @@
   (let-match erased ra (R2Cons _ _ _ xs1 _ _ p ra1) (absurd (R2Nil _ _ _ _) ix))
   (match erased ix _ ((InHere _ _) p) ((InThere _ _ _ ix1) (r2-at ec fc as xs1 x0 x ra1 ix1))))
 
+; A walk x0 :: p along rlink of the configuration map ending at z, p in the kernel, and a simple one, its images on
+; distinct faces of the map (labelled by lab).
 (def-adts $ (ShortP : ((List (Nat)) ec fc hl lab as) ((Nat) x0 z k) -> Type)
   enum
   (many MkShortP : (erased (List (Nat)) ec fc hl lab as q hq lq) (erased (Nat) x0 z k k2) (erased (RPath ec fc x0 q z) rq) (erased (Within q as) wq)
       (erased (Respects hl q hq) rh) (erased (Respects lab hq lq) rl) (erased (Distinct lq) dl) (erased (Length (Nat) q k2) lk) (erased (Lt k2 (Succ k)) lt)
       -> (ShortP ec fc hl lab as x0 z k)))
 
+; x :: p of at most five darts, an rlink walk of kernel darts of the configuration map whose image is a ring of the
+; map, and the edge image ez of its last dart z on another face than x.
 (def-adts $ (HomBad : ((List (Nat)) ec fc em fm as hl) -> Type)
   enum
   (many MkHomBad : (erased (List (Nat)) ec fc em fm as hl p hp) (erased (Nat) x z hx ez k) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
@@ -238,6 +242,7 @@
     (OrL _ _ kr) (absurd (OrR _ _ eq) (let-match erased eq (Refl _ _)) (apart-irrefl y ne)))
   (MkHomBad ec fc em fm as hl q1 hq1 x x2 hx ex2 k2 rq1 wq rh rg lk2 lt2 pex2 kr))
 
+; Every dart of xs has a label in L.
 (def-adts $ (AllLab : ((List (Nat)) lab L xs) -> Type)
   enum
   (many AlNil : (erased (List (Nat)) lab L) -> (AllLab lab L (Nil (Nat))))
@@ -264,6 +269,8 @@
   (many MkPicked : (erased (List (Nat)) lab lr S xs lx) (erased (Nat) m) (erased (Length (Nat) xs (Succ m)) lk) (erased (WSub xs S) sb) (erased (Respects lab xs lx) rx)
       (erased (Distinct lx) dx) (erased (Disj lx lr) dj) -> (Picked lab lr S m)))
 
+; Every dart of S is on a face of the ring or, for m = 1, on the face of one dart y of S: S meets at most m faces off
+; the ring.
 (def-adts $ (TrivSide : ((List (Nat)) lab lr S) ((Nat) m) -> Type)
   enum
   (many TsZero : (erased (List (Nat)) lab lr S) (erased (Nat) m) (erased (AllLab lab lr S) al) -> (TrivSide lab lr S m))
@@ -293,6 +300,7 @@
     ((OrR _ _ eq) (let-match erased eq (Refl _ _)) (OrR _ _ ix))))
   (UnderCons xs1 x d (ds-lt d x e n r hd zs ds o) (ds-under d e n r hd zs S ds w xs1 sb1)))
 
+; A HomBad one side of whose ring meets at most m faces off it, m from BkMode.
 (def-adts $ (HomTrivial : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
   enum
   (many MkHomTrivial : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez k m) (erased (RPath ec fc x p z) rp)
@@ -330,6 +338,7 @@
   (OrL _ _ (birkhoff-reduces B pbk dm hx k m em nm fm hp bks hm gen bl pl cu cn ncol rg lkm l6 md
     (MkNonTrivial dm m em nm fm (Cons _ hx hp) hd zs xs ys ds lkx lky sx sy (MkScattered fm _ xs lab lr lx rf rl rx dx djx) (MkScattered fm _ ys lab lr ly rf rl ry dy djy)))))
 
+; A HomTrivial makes the map reduce, for any bound B above birk-glue.
 (def-adts $ (TrivRed : -> Type)
   enum
   (many MkTrivRed : (erased (Level) G)

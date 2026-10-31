@@ -428,6 +428,7 @@
       (erased (Length (Nat) bcl dd) lb) (erased (Under bcl dc) ub)
       -> (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd)))
 
+; sde w = x: x = ec w off erc, and on erc w = ec t and x = ec s, s = nc t.
 (def-adts $ (SdeAt : ((List (Nat)) ec nc erc) ((Nat) w x) -> Type)
   enum
   (many SdOff : (erased (List (Nat)) ec nc erc) (erased (Nat) w x) (erased (NotIn w erc) ow) (erased (Nth (Nat) ec w x) px) -> (SdeAt ec nc erc w x))
@@ -597,6 +598,8 @@
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (DisjNil m)))
   (DisjCons x xs1 m (disj-notin x s m dj ix) (within-disj s m xs1 wi1 dj)))
 
+; EmbedPatch for a node cycle rc: the disk ring sent to erc = map edge rc, and the darts embd of the configuration
+; map off rc split from those on it.
 (def-adts $ (EmbedPatch6 : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
   (many MkEmbedPatch6 : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f idc zr)

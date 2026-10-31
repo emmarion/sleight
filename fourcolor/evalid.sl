@@ -291,6 +291,7 @@
     (erased (Nth (Nat) labc ez l) pl) (erased (Respects ec os eos) re) (erased (Respects labc eos ls) rl) (erased (NotIn l ls) out) -> (erased (False) r))
   (in-notin l ls (in-map labc eos ls ez l (in-map ec os eos z ez iz re pez) rl pl) out))
 
+; A dart of ins not adjacent to the face of os2.
 (def-adts $ (NaPick : ((List (Nat)) em fm ins os2) -> Type)
   enum
   (many MkNaPick : (erased (List (Nat)) em fm ins os2) (erased (Nat) y) (erased (In y ins) iy) (erased (NotAdj em fm os2 y) na) -> (NaPick em fm ins os2)))

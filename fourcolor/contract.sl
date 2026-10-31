@@ -3,6 +3,8 @@
   (let ((erased a) (erased pa) (erased _)) (respects-val kc p ks u rk (nth-in p x u pu)))
   (values a pa (respects-at kc p ks x u a rk pu pa)))
 
+; Over the bonds x-y of g, with p a dart map into (e2, f2): the images of x and y are on one face when x is in ins,
+; and the image of y is the edge image of that of x otherwise.
 (def-adts $ (LiftE : ((List (Nat)) ins p e2 f2) ((List (Bond)) g) -> Type)
   enum
   (many LENil : (erased (List (Nat)) ins p e2 f2) -> (LiftE ins p e2 f2 (Nil (Bond))))
@@ -40,6 +42,8 @@
     (MkCCColoring d e f cc ks ins ge ie gr (respects-assoc f p kc pf ks ks d rpf (reach-resp kc f2 p pf ks rf rc rk) rk lks lp)
       (lift-ecc ins p e2 f2 kc ke ks ge le rf re df rk) (respects-under-vals kc p ks 4 rk u) lks)))
 
+; The map of (d, e, n, f) contracted along cc: the one map of ms, smaller, planar, bridgeless, plain and precubic,
+; with a dart map p from (d, e, n, f) for cc-lift.
 (def-adts $ (Contraction : ((Nat) d) ((List (Nat)) e n f cc) ((List (Mp)) ms) -> Type)
   enum
   (many MkContraction : (erased (Nat) d d2) (erased (List (Nat)) e n f cc e2 n2 f2 ins p pf) (erased (List (Bond)) ge) (erased (Pbpp d2 e2 n2 f2) pb)

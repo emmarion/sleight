@@ -429,6 +429,8 @@
   (let-match erased km (MkKerMax _ _ _ _ ids io ka))
   (MkKerMax dc ec fc as ids io (kma-move dc ec fc rc as0 as lf kl0 kl ids ka)))
 
+; Of a configuration on the map cpmap.sl builds: its kernel as, GcOK, for each kernel dart whose edge image is in the
+; kernel a refutation of it not being central (fid labelling the faces), NodeRing, Radius2 and KerMax.
 (def-adts $ (CfGc : ((Config) cf) -> Type)
   enum
   (many MkCfGc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc) (erased (List (Nat)) ec nc fc rc as fid)
@@ -492,6 +494,7 @@
   (many CpCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) p)
       -> (CopyL (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) ws))))
 
+; xs as an array.
 (def-adts $ (Tab : ((List (Nat)) xs) -> Type)
   enum
   (many MkTab : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) cp) (many (Nat) len)

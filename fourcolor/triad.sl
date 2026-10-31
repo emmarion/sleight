@@ -555,6 +555,8 @@
       (lt-irrefl 4 (ring-max d w 4 (Succ (Succ (Succ (Zero)))) e n f cx2 ins2 Bs h gen pl rg pr
         (bs-sub d w z ez c lc e n f fe lab Bs lp ins ins2 cs rg rr Bs (sub-refl Bs) sb s2 pz oc plc o) ie2 lb lc2)))))
 
+; A dart y of more than four darts on its face: every spoke of its face on a face of lp, or a dart u of the face whose
+; edge image is on none, or a reduction.
 (def-adts $ (HubD : ((Level) B) ((Nat) d) ((List (Nat)) e n f fe lab lp) ((Nat) y ly) -> Type)
   enum
   (many HDHub : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab lp) (erased (Nat) y ly k) (erased (List (Nat)) Vs ls)
@@ -649,6 +651,7 @@
   (let-match erased (facelab-same d y ew ly f lab fl py pl) (MkSomePath _ _ ws _ _ wy))
   (apart-irrefl l2 (notin-in l2 l2 ls2 out (in-map lab2 eos ls2 ew l2 iew rl2 (path-label f lab2 _ ws y ew l2 wy rf2 py2)))))
 
+; What the triad case takes, besides the hub.
 (def-adts $ (TdCx : ((Level) B) ((Nat) d w x0) ((List (Nat)) e n f fe lab ks cx ins Bs lp) -> Type)
   enum
   (many MkTdCx : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp) (erased (MinCx B d e n f fe lab) m)

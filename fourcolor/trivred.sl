@@ -1,3 +1,4 @@
+; EEnv with GcOK and FunctorAll, and the map as Spk of minarity.sl.
 (def-adts $ (TCx : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl fe lab) -> Type)
   enum
   (many MkTCx : (erased (Nat) dc) (erased (List (Nat)) ec nc fc ksc rc) (erased (Nat) dm) (erased (List (Nat)) em nm fm ksm as hl fe lab)
@@ -72,6 +73,7 @@
   (values Q ap (MkRing e f Q b a ea rq pa sa (MkSimple f (Cons _ b Q) lab (Cons _ lb LQ) rf (RespCons lab Q LQ b lb plb rLQ)
     (dist-rot (Cons _ lb lP) (Cons _ lb LQ) la (AppCons lP _ LQ lb al) dl)))))
 
+; Every dart of diskN S is on a face of S, read off a ring S0 with the darts of S.
 (def-adts $ (FEmpty : ((Nat) d) ((List (Nat)) e n f lab S) -> Type)
   enum
   (many MkFEmpty : (erased (Nat) d x0) (erased (List (Nat)) e n f lab S p hd zs lr) (erased (Ring e f x0 p) rg) (erased (WSub S (Cons (Nat) x0 p)) s1)
@@ -449,10 +451,13 @@
   (values fe (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-vals f e fe d cfe (perm-under d f fi pmf))
     (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
 
+; The edge image of y is on the face of x.
 (def-adts $ (RlClose : ((List (Nat)) ec fc) ((Nat) y x) -> Type)
   enum
   (many MkRlClose : (erased (List (Nat)) ec fc) (erased (Nat) y x ey) (erased (Nth (Nat) ec y ey) pe) (erased (SomePath fc (Nil (Nat)) ey x) sp) -> (RlClose ec fc y x)))
 
+; A hom ring x :: p of five darts that does not close, one side of which, its diskN part hd, meets exactly one face
+; off the ring, that of y (labels lab).
 (def-adts $ (HomFive : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
   enum
   (many MkHomFive : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez y l) (erased (RPath ec fc x p z) rp)
@@ -773,6 +778,7 @@
       (kernel-fband ez x fc _ nr sp3 (InHere x (Nil _)))))
   hf)
 
+; A HomFive makes the map reduce, for any bound B above birk-glue.
 (def-adts $ (TrivFive : -> Type)
   enum
   (many MkTrivFive : (erased (Level) G)

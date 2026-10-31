@@ -1,3 +1,4 @@
+; Each dart of ys is reached along f from the dart of xs at the same position.
 (def-adts $ (Reach : ((List (Nat)) f xs ys) -> Type)
   enum
   (many ReachNil : (erased (List (Nat)) f) -> (Reach f (Nil (Nat)) (Nil (Nat))))
@@ -155,6 +156,7 @@
       (let-match erased py (NthThere _ _ _ _ _ py1))
       (ecc-same xs1 ys1 ins ks gz j1 x y a b z1 (ecc-rest ins ks gz (MkBond x0 y0) ec) px1 py1 ix pa pb))))
 
+; From dart x on, the darts hs are each in ins exactly when their dart is in ie.
 (def-adts $ (InSides : ((List (Nat)) ie ins) ((Nat) x) ((List (Nat)) hs) -> Type)
   enum
   (many SdNil : (erased (List (Nat)) ie ins) (erased (Nat) x) -> (InSides ie ins x (Nil (Nat))))
