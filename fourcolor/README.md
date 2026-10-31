@@ -51,8 +51,9 @@ Each prints `--goal proved: PASS` on standard output on success, with the
 goal and where it is discharged as notes on standard error.
 
 The script passes the files in the order the unit needs, with
-`--goal proved` and `--inline 200` (passed on to ocamlopt), under
-`ulimit -s unlimited`. It sets `OCAMLRUNPARAM=o=400` unless the variable is
+`--goal proved` and `--inline 200` (passed on to ocamlopt), and, for the
+reference compiler only, under `ulimit -s unlimited`, which it needed in
+earlier runs (slc passes with the default 8 MB stack). It sets `OCAMLRUNPARAM=o=400` unless the variable is
 already set; the native jobs inherit it from the compiler. In one pair of
 runs these two settings cut CPU time by about a quarter.
 

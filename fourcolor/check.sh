@@ -32,6 +32,6 @@ for x in embed birkhoff3 minarity embed3 embed5 contract3 embed6 fullred trivred
   red/chunks fcopen native embed4 red/pieces red/proof-c red/bproof unav/qztproof embed4proof fcproof $last; do
   F="$F fourcolor/$x.sl"
 done
-ulimit -s unlimited
+[ "$comp" = ref ] && ulimit -s unlimited
 export OCAMLRUNPARAM="${OCAMLRUNPARAM:-o=400}"
 exec $C $F --goal proved --inline 200 "$@"
