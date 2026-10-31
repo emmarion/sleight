@@ -2125,6 +2125,12 @@ array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
 `array-swap-imm` and `array-place-imm` are `array-swap` and
 `array-place` with two extra parameters, `(erased (Imm A m) im)` for the
 element overwritten and `(erased (Imm A x) ix)` for the element written.
+
+`array-length-dec` and `bytes-length-dec`, and their `-many` forms, also
+decide whether the length is below `array-limit`, 2^54, or
+`bytes-limit`, 2^57. The FFI always answers `Yes`, since it cannot build
+anything longer (§31). An erased array or byte string may be longer.
+
 `array-pluck` leaves the plucked element's word in the
 array under its `Plucked` leftover, at the slot of the value returned.
 So the value may be mutated in place and put back with `array-unpluck`,

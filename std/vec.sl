@@ -345,8 +345,8 @@
   (let ((erased _) (erased lc2) (many d) (unique buf4)) (array-length-dec _ _ buf3))
   (let-match many d (Yes _ _ _ _ q) ((No _ _ _ _ _) (values ys (MkVec _ _ _ _ ln (u2 _ _ n (at) buf4) f3) sn)))
   (let-match erased (length-fn _ _ _ _ (setnth-length _ _ _ _ _ _ set lc) lc2) (Refl _ _))
-  (values ys (MkVec _ _ _ _ ln (u2 _ _ (imm (vec--imm-nat len (lt-trans len cap u62-modulus lt q))
-                                           (vec--imm-nat n (lt-le-trans n (Succ cap) u62-modulus (LtS len cap lt) (LtS cap u62-modulus q))))
+  (values ys (MkVec _ _ _ _ ln (u2 _ _ (imm (vec--imm-nat len (lt-trans len cap u62-modulus lt (lt-trans cap array-limit u62-modulus q array-limit-below-u62)))
+                                           (vec--imm-nat n (lt-le-trans n (Succ cap) u62-modulus (LtS len cap lt) (LtS cap u62-modulus (lt-trans cap array-limit u62-modulus q array-limit-below-u62)))))
                                     n (at) buf4) f3) sn)))
 
 (def-fns _ $ (many vec-pop : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) ->
@@ -365,7 +365,7 @@
   (let ((unique r)) (Popped _ _ _ (unplace-at _ _ _ pl) sn))
   (let ((erased f2)) (vec--filled-unsnoc _ _ _ x ms ms2 k s w q f sn lk set))
   (let-match many d (Yes _ _ _ _ cq) ((No _ _ _ _ _) (values ys r (MkVec _ _ _ _ lk (u _ _ k (at) buf2) f2))))
-  (let ((erased old)) (lt-le-trans len (Succ c) u62-modulus (vec--filled-le _ _ _ len c f l lc) (LtS c u62-modulus cq)))
+  (let ((erased old)) (lt-le-trans len (Succ c) u62-modulus (vec--filled-le _ _ _ len c f l lc) (LtS c u62-modulus (lt-trans c array-limit u62-modulus cq array-limit-below-u62))))
   (values ys r (MkVec _ _ _ _ lk (u _ _ (imm (vec--imm-nat len old) (vec--imm-nat k (lt-trans k len u62-modulus (lt-succ k) old)))
                                        k (at) buf2) f2)))
 

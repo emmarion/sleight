@@ -18,6 +18,7 @@ type eq_dec = Equal | Unequal
 type bit = Bit0 | Bit1
 
 let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
+let () = if Sys.max_array_length >= 1 lsl 54 || Sys.max_string_length >= 1 lsl 57 then failwith "this runtime needs arrays shorter than 2^54 and byte strings shorter than 2^57"
 
 let nat_view ~z ~nat v = let n = z v in if Z.equal n Z.zero then Zero else Succ (nat (Z.pred n))
 let nat_of ~z ~nat = function Zero -> nat Z.zero | Succ p -> nat (Z.succ (z p))
