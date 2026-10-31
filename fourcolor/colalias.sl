@@ -1,0 +1,7 @@
+(let ((erased HPerm)) Perm)
+(let ((erased HMkPerm)) MkPerm)
+(let ((erased HOr)) Or)
+(let ((erased HSnoc)) Snoc)
+(let ((erased hsnoc-fn)) snoc-fn)
+(let ((erased HAppNil)) AppNil)
+(let ((erased HAppCons)) AppCons)
