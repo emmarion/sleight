@@ -1,21 +1,18 @@
-; embed5.sl's FullRedR, after embed_full of embed.v, with minimality as data. Load after embed5.sl, in its chain. That
-; these statements match Coq's has been checked only by reading.
-
 (def-fns _ $ (erased r2-at : (erased (List (Nat)) ec fc as xs) (erased (Nat) x0 x) (subterm erased (R2All ec fc as x0 xs) ra) (erased (In x xs) ix)
     -> (erased (R2At ec fc as x0 x) r))
-  (let-match erased ra (R2Cons _ _ _ xs1 _ y p ra1) (absurd (R2Nil _ _ _ _) ix))
+  (let-match erased ra (R2Cons _ _ _ xs1 _ _ p ra1) (absurd (R2Nil _ _ _ _) ix))
   (match erased ix _ ((InHere _ _) p) ((InThere _ _ _ ix1) (r2-at ec fc as xs1 x0 x ra1 ix1))))
 
-; A walk x0 :: p along rlink of the configuration map ending at z, p in the kernel: the hom ring of embed_full, before it is
-; made simple, and a simple one, its images on distinct faces of the map (labelled by lab).
+; A walk x0 :: p along rlink of the configuration map ending at z, p in the kernel, and a simple one, its images on
+; distinct faces of the map (labelled by lab).
 (def-adts $ (ShortP : ((List (Nat)) ec fc hl lab as) ((Nat) x0 z k) -> Type)
   enum
   (many MkShortP : (erased (List (Nat)) ec fc hl lab as q hq lq) (erased (Nat) x0 z k k2) (erased (RPath ec fc x0 q z) rq) (erased (Within q as) wq)
       (erased (Respects hl q hq) rh) (erased (Respects lab hq lq) rl) (erased (Distinct lq) dl) (erased (Length (Nat) q k2) lk) (erased (Lt k2 (Succ k)) lt)
       -> (ShortP ec fc hl lab as x0 z k)))
 
-; pre_hom_ring x p with ~~ rlink (last x p) x and at most five darts: x :: p an rlink walk of kernel darts of the configuration
-; map whose image is a ring of the map, and the edge image ez of its last dart z on another face than x.
+; x :: p of at most five darts, an rlink walk of kernel darts of the configuration map whose image is a ring of the
+; map, and the edge image ez of its last dart z on another face than x.
 (def-adts $ (HomBad : ((List (Nat)) ec fc em fm as hl) -> Type)
   enum
   (many MkHomBad : (erased (List (Nat)) ec fc em fm as hl p hp) (erased (Nat) x z hx ez k) (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp)
@@ -24,12 +21,12 @@
 
 (def-fns _ $ (erased gc-inv : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Length (Nat) ec dc) le)
     (erased (Nth (Nat) ec x y) py) -> (erased (Nth (Nat) ec y x) r))
-  (let-match erased (gc-at dc x ec nc rc as ok (nth-lt-length _ ec x dc y py le)) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased (gc-at dc x ec nc rc as ok (nth-lt-length _ ec x dc y py le)) (MkGcAt _ _ _ _ _ ex _ pe pe2 _ _ _ _ _))
   (let-match erased (nth-fn _ ec x y ex py pe) (Refl _ _))
   pe2)
 
 (def-fns _ $ (erased facelab-rf : (erased (Nat) d) (erased (List (Nat)) f lab) (erased (FaceLab d f lab) fl) -> (erased (Respects lab f lab) r))
-  (let-match erased fl (MkFaceLab _ k _ fi _ ids rs gf pfl gr io ro cl ll))
+  (let-match erased fl (MkFaceLab _ _ _ _ _ ids _ gf _ gr io _ cl ll))
   (const-respects lab ids f lab gf (graph-zip d f ids gf gr io) cl (respects-id-right d ids lab io ll)))
 
 (def-fns _ $ (erased within-split : (erased (List (Nat)) B q as) (subterm erased (List (Nat)) A) (erased (AppN A B q) ap) (erased (Within q as) w)
@@ -52,7 +49,6 @@
   (let ((erased lz1) (erased rz1) (erased al1)) (resp-app lab Y Z1 ly X1 ap1 lx1 rx1 ry))
   (values (Cons _ l lz1) (RespCons lab Z1 lz1 a l pl rz1) (AppCons lx1 ly lz1 l al1)))
 
-; The images of an rlink walk of kernel darts are an rlink walk of the map (cface_ac_h with embed_functor).
 (def-fns _ $ (erased rpath-h : (erased (Nat) dc dm a b wa) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl P hP) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In a as) ia) (subterm erased (RPath ec fc a P b) rp) (erased (Within P as) wp) (erased (Respects hl P hP) rh)
     (erased (Nth (Nat) hl a wa) pa) -> (erased (Nat) wb) (erased (Nth (Nat) hl b wb) pb) (erased (RPath em fm wa hP wb) r))
@@ -67,19 +63,17 @@
   (let ((erased wb) (erased pb) (erased r1)) (rpath-h dc dm z b wz ec nc fc ksc rc em nm fm ksm as hl P1 hP1 en fu iz rp1 wp1 rh1 pz))
   (values wb pb (RPCons em fm hP1 wa v wz wb pm spm r1)))
 
-
-; ~~ rlink z x, or z = t, where edge t = s, s ~ x and h (edge z) = h s (through cface_inj_embed).
 (def-fns _ $ (erased nrl : (erased (Nat) dc dm z ez x s t u wz) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (In z as) iz) (erased (In x as) ix) (erased (Nth (Nat) ec z ez) pez)
     (erased (Nth (Nat) ec t s) pts) (erased (SomePath fc (Nil (Nat)) s x) sx) (erased (Nth (Nat) hl s u) pu) (erased (Nth (Nat) hl z wz) pz) (erased (Nth (Nat) em wz u) pm)
     -> (erased (Or (Kernel fc (Cons (Nat) x (Nil (Nat))) ez) (Eq (Nat) z t)) r))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased nfc) (erased _) (erased fic) (erased _) (erased _) (erased _) (erased qe) (erased _) (erased qf) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased gf) (erased gr)) (perm-graph dc fc fic qf))
   (let ((erased lx)) (ker-lt dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix))
   (let ((erased lez)) (perm-val dc z ez ec nfc qe pez))
   (let-match erased (band-dec dc ez fc fic (Cons _ x (Nil _)) gf qf gr (UnderCons (Nil _) x dc lx (UnderNil dc)) lez) (OrL _ _ fb) ((OrR _ _ k) (OrL _ _ k)))
-  (let-match erased fb (MkFband _ _ _ x2 ix2 spz))
+  (let-match erased fb (MkFband _ _ _ _ ix2 spz))
   (let-match erased ix2 (InHere _ _) (absurd (InThere _ _ _ i) i))
   (let-match erased sx (MkSomePath _ _ ws _ _ pw))
   (let ((erased isx)) (ker-path-inv dc dm s x ec nc fc ksc rc em nm fm ksm as hl (Nil _) ws en ix pw))
@@ -92,12 +86,12 @@
   (OrR _ _ (perm-inj dc z t ez ec nfc qe pez pts)))
 
 (def-fns _ $ (erased within-in : (erased (List (Nat)) as) (erased (Nat) x) (subterm erased (List (Nat)) xs) (erased (Within xs as) w) (erased (In x xs) ix) -> (erased (In x as) r))
-  (let-match erased w (WCons _ y xs1 iy w1) (absurd (WNil _) ix))
+  (let-match erased w (WCons _ _ xs1 iy w1) (absurd (WNil _) ix))
   (match erased ix _ ((InHere _ _) iy) ((InThere _ _ _ ix1) (within-in as x xs1 w1 ix1))))
 
 (def-fns _ $ (erased suffix-le : (erased (List (Nat)) Y Zl) (erased (Nat) n) (subterm erased (List (Nat)) X) (erased (AppN X Y Zl) ap) (erased (Length (Nat) Zl n) lz)
     -> (erased (Nat) m) (erased (Length (Nat) Y m) ly) (erased (Lt m (Succ n)) lt))
-  (let-match erased ap (AppCons X1 _ Z1 a ap1) ((AppNil _) (values n lz (lt-succ n))))
+  (let-match erased ap (AppCons X1 _ Z1 _ ap1) ((AppNil _) (values n lz (lt-succ n))))
   (let-match erased lz (LengthCons _ _ _ n1 lz1))
   (let ((erased m) (erased ly) (erased lt)) (suffix-le Y Z1 n1 X1 ap1 lz1))
   (values m ly (lt-weaken m (Succ n1) lt)))
@@ -116,8 +110,6 @@
   (let-match erased o (NotInCons _ x xs1 ne o1) ((NotInNil _) (DisjNil _)))
   (DisjCons x xs1 _ (NotInCons x l (Nil _) (apart-sym l x ne) (NotInNil x)) (disj-one l xs1 o1)))
 
-; Coq's shortening of the walk in embed_full: a walk x0 :: p of k darts after x0, k < 6, p in the kernel, is shortened to one
-; whose images are on distinct faces, or gives a hom ring of at most five darts that does not close (IHf5).
 (def-fns _ $ (erased shorten : (erased (Nat) dc dm x0 z k) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl lab) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (FunctorAll ec em as hl as) fu) (erased (FaceLab dm fm lab) fl) (erased (Bridgeless dm em nm fm) bl) (subterm erased (List (Nat)) p)
     (erased (RPath ec fc x0 p z) rp) (erased (Within p as) wp) (erased (Length (Nat) p k) lk) (erased (Lt k 6) l6)
@@ -130,10 +122,10 @@
   (let ((erased l61)) (lt-succ-left k1 6 l6))
   (let-match erased (shorten dc dm x1 z k1 ec nc fc ksc rc em nm fm ksm as hl lab en fu fl bl p1 rp1 wp1 lk1 l61) (OrR _ _ sh) ((OrL _ _ hb) (OrL _ _ hb)))
   (let-match erased sh (MkShortP _ _ _ _ _ q hq lq _ _ _ k2 rq wq rh rl dl lk2 lt2))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased nfc) (erased _) (erased fic) (erased nfm) (erased _) (erased fim) (erased qe) (erased _) (erased qf) (erased qem) (erased _) (erased qfm))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased fl2)) fl)
-  (let-match erased fl2 (MkFaceLab _ kf _ fi2 _ ids rs gf2 pf2 gr2 io ro cl ll))
+  (let-match erased fl2 (MkFaceLab _ _ _ _ _ _ _ _ _ _ _ _ _ ll))
   (let ((erased w1) (erased pw1) (erased lw1)) (h-val dc dm x1 ec nc fc ksc rc em nm fm ksm as hl en ix1))
   (let ((erased l1) (erased pl1)) (nth-exists _ lab dm w1 ll lw1))
   (let-match erased (in-dec l1 lq) (OrL _ _ il)
@@ -156,7 +148,7 @@
     ((Equal _ _ _)
       (let ((erased s0)) (some-cat fc ex0 x1 x2 sp0 (some-sym dc x2 x1 fc fic qf (MkSomePath fc (Nil _) ws23 x2 x1 p23)
         (ker-lt dc dm x2 ec nc fc ksc rc em nm fm ksm as hl en ix2))))
-      (let ((erased dA) (erased dB)) (app-parts lB lq lA al dl))
+      (let ((erased _) (erased dB)) (app-parts lB lq lA al dl))
       (let ((erased kb) (erased lb) (erased ltb)) (suffix-le (Cons _ x2 B) q k2 A ap lk2))
       (OrR _ _ (MkShortP ec fc hl lab as (Cons _ x2 B) hB lB x0 z k kb (RPCons ec fc B x0 ex0 x2 z pe0 s0 r2) wB rB rlB dB lb
         (lt-tr kb (Succ k2) (Succ k) ltb (LtS k2 k lt2))))))
@@ -183,12 +175,12 @@
   (let ((erased vx) (erased pvx) (erased smx)) (face-h dc dm e1 x ve ec nc fc ksc rc em nm fm ksm as hl (Nil _) es en ie1 pex pve))
   (let-match erased (nth-fn _ hl x vx hx pvx phx) (Refl _ _))
   (let-match erased rlA (RespCons _ _ lA1 _ lx plx rlA1))
-  (let-match erased rB (RespCons _ _ hB1 _ v4 pv4 rB1))
+  (let-match erased rB (RespCons _ _ _ _ v4 pv4 _))
   (let-match erased (nth-fn _ hl x2 v4 v pv4 px2) (Refl _ _))
-  (let-match erased rlB (RespCons _ _ lB1 _ lv plv2 rlB1))
+  (let-match erased rlB (RespCons _ _ lB1 _ lv plv2 _))
   (let-match erased (nth-fn _ lab v lv l1 plv2 plv) (Refl _ _))
-  (let ((erased oA) (erased oB)) (app-mid-notin lB1 lq lA l1 al dl))
-  (let ((erased dA) (erased dB)) (app-parts lB lq lA al dl))
+  (let ((erased oA) (erased _)) (app-mid-notin lB1 lq lA l1 al dl))
+  (let ((erased dA) (erased _)) (app-parts lB lq lA al dl))
   (let-match erased dA (DistCons _ _ oxA dA1))
   (let-match erased oA (NotInCons _ _ _ n1x oA1))
   (let ((erased lPQ) (erased rlPQ) (erased alPQ)) (resp-app lab (Cons _ w1 (Nil _)) hPQ (Cons _ l1 (Nil _)) hA1 ahPQ lA1 rlA1 (RespCons lab (Nil _) (Nil _) w1 l1 pl1 (RespNil lab))))
@@ -203,7 +195,6 @@
   (OrL _ _ (MkHomBad ec fc em fm as hl PQ hPQ x x3 hx ex3 m rR (WCons as x PQ ix wPQ) (RespCons hl PQ hPQ x hx phx rPQ) rg lm
     (lt-ls m (Succ k1) 6 (lt-ls m (Succ k2) (Succ k1) ltm (LtS k2 (Succ k1) lt2)) (LtS k1 6 l61)) pex3 kr)))
 
-; From a pair of kernel darts where embed_full fails, through radius2, a hom ring of at most five darts that does not close.
 (def-fns _ $ (erased bad-hom : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl lab) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FaceLab dm fm lab) fl) (erased (Bridgeless dm em nm fm) bl)
     (erased (Radius2 ec fc as) rd) (erased (FullBad ec em as hl) bad) -> (erased (HomBad ec fc em fm as hl) r))
@@ -213,8 +204,8 @@
   (let-match erased (r2-at ec fc as as x0 x1 ra jx1) (MkR2At _ _ _ _ _ a1 ea1 b1 eb1 pa1 pea1 iea1 pab1 peb1 pb1))
   (let-match erased (r2-at ec fc as as x0 x2 ra jx2) (MkR2At _ _ _ _ _ a2 ea2 b2 eb2 pa2 pea2 iea2 pab2 peb2 pb2))
   (let ((erased hc)) (gc-hyper dc dm ec nc fc ksc rc em nm fm ksm as hl en))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths dc ec nc fc hc))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased le) (erased _) (erased _)) (hyper-lengths dc ec nc fc hc))
+  (let ((erased nfc) (erased _) (erased fic) (erased _) (erased _) (erased _) (erased qe) (erased _) (erased qf) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased g)) (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let-match erased pb1 (MkSomePath _ _ ws1 _ _ wb1))
@@ -233,7 +224,7 @@
   (let ((erased wP)) (WCons as b1 _ ib1 $ WCons as ea1 _ iea1 $ WCons as a2 _ ia2 $ WCons as eb2 _ ieb2 $ WCons as x2 _ jx2 $ WNil as))
   (let ((erased lP)) (LengthCons _ b1 _ _ $ LengthCons _ ea1 _ _ $ LengthCons _ a2 _ _ $ LengthCons _ eb2 _ _ $ LengthCons _ x2 _ _ $ LengthNil _))
   (let-match erased (shorten dc dm y x2 five ec nc fc ksc rc em nm fm ksm as hl lab en fu fl bl P rp wP lP (lt-succ five)) (OrR _ _ sh) ((OrL _ _ hb) hb))
-  (let-match erased sh (MkShortP _ _ _ _ _ q hq lq _ _ _ k2 rq wq rh rl dl lk2 lt2))
+  (let-match erased sh (MkShortP _ _ _ _ _ _ _ lq _ _ _ k2 rq wq rh rl dl lk2 lt2))
   (let-match erased rq (RPCons _ _ q1 _ ey x _ pey sx rq1) (absurd (RPNil _ _ _) (apart-irrefl y ne)))
   (let-match erased (nth-fn _ ec y ey x1 pey (gc-inv dc x1 y ec nc rc as ok le py)) (Refl _ _))
   (let-match erased wq (WCons _ _ _ ix wq1))
@@ -278,7 +269,8 @@
   (many MkPicked : (erased (List (Nat)) lab lr S xs lx) (erased (Nat) m) (erased (Length (Nat) xs (Succ m)) lk) (erased (WSub xs S) sb) (erased (Respects lab xs lx) rx)
       (erased (Distinct lx) dx) (erased (Disj lx lr) dj) -> (Picked lab lr S m)))
 
-; Every dart of S is on a face of the ring or, for m = 1, on the face of one dart y of S: S meets at most m faces off the ring.
+; Every dart of S is on a face of the ring or, for m = 1, on the face of one dart y of S: S meets at most m faces off
+; the ring.
 (def-adts $ (TrivSide : ((List (Nat)) lab lr S) ((Nat) m) -> Type)
   enum
   (many TsZero : (erased (List (Nat)) lab lr S) (erased (Nat) m) (erased (AllLab lab lr S) al) -> (TrivSide lab lr S m))
@@ -308,7 +300,7 @@
     ((OrR _ _ eq) (let-match erased eq (Refl _ _)) (OrR _ _ ix))))
   (UnderCons xs1 x d (ds-lt d x e n r hd zs ds o) (ds-under d e n r hd zs S ds w xs1 sb1)))
 
-; A HomBad whose ring is trivial in the sense of Birkhoff: one side of it meets at most m faces off it, m from BkMode.
+; A HomBad one side of whose ring meets at most m faces off it, m from BkMode.
 (def-adts $ (HomTrivial : ((Nat) dm) ((List (Nat)) ec fc em nm fm as hl) -> Type)
   enum
   (many MkHomTrivial : (erased (Nat) dm) (erased (List (Nat)) ec fc em nm fm as hl p hp hd zs lab lr) (erased (Nat) x z hx ez k m) (erased (RPath ec fc x p z) rp)
@@ -317,7 +309,6 @@
       (erased (DiskSplit dm em nm (Cons (Nat) hx hp) hd zs) ds) (erased (FaceLab dm fm lab) fl) (erased (Respects lab (Cons (Nat) hx hp) lr) rl)
       (erased (Or (TrivSide lab lr hd m) (TrivSide lab lr zs m)) ts) -> (HomTrivial dm ec fc em nm fm as hl)))
 
-; Birkhoff on the hom ring: it is nontrivial for the m of BkMode, and the map reduces (birkhoff-reduces), or it is trivial.
 (def-fns _ $ (erased hom-birk : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pbk) (erased (BirkhoffChecks) bks) (erased (Nat) dm)
     (erased (List (Nat)) ec fc em nm fm as hl lab) (erased (FaceLab dm fm lab) fl) (erased (Hypermap dm em nm fm) hm) (erased (Genus dm em nm fm (Zero)) gen)
     (erased (Bridgeless dm em nm fm) bl) (erased (AllOrder dm em (Succ (Succ (Zero)))) pl) (erased (AllOrder dm nm (Succ (Succ (Succ (Zero))))) cu)
@@ -333,7 +324,7 @@
   (let ((erased ur)) (ring-under dm hx em nm fm hp hm rg))
   (let ((erased hd) (erased zs) (erased ds)) (ds-exists dm em nm fm (Cons _ hx hp) hm ur))
   (let ((erased fl2)) fl)
-  (let-match erased fl2 (MkFaceLab _ kf _ fi2 _ ids rs gf2 pf2 gr2 io ro cl ll))
+  (let-match erased fl2 (MkFaceLab _ _ _ _ _ _ _ _ _ _ _ _ _ ll))
   (let ((erased lr) (erased rl)) (respects-exists lab (Cons _ hx hp) dm ur ll))
   (let ((erased uh)) (ds-under dm em nm (Cons _ hx hp) hd zs hd ds (OrL _ _ (Refl _ hd)) hd (sub-refl hd)))
   (let ((erased uz)) (ds-under dm em nm (Cons _ hx hp) hd zs zs ds (OrR _ _ (Refl _ zs)) zs (sub-refl zs)))
@@ -347,9 +338,7 @@
   (OrL _ _ (birkhoff-reduces B pbk dm hx k m em nm fm hp bks hm gen bl pl cu cn ncol rg lkm l6 md
     (MkNonTrivial dm m em nm fm (Cons _ hx hp) hd zs xs ys ds lkx lky sx sy (MkScattered fm _ xs lab lr lx rf rl rx dx djx) (MkScattered fm _ ys lab lr ly rf rl ry dy djy)))))
 
-; The trivial cases of embed_full, taken as a hypothesis: a HomTrivial makes the map reduce, for any bound B above birk-glue
-; (in Coq it is refuted by trivial_hom_ring, its use on the reversed ring, and for five darts the spoke ring with adj11_edge
-; and adj_kernel_max, where the spoke ring rests on Birkhoff). Not proved here.
+; A HomTrivial makes the map reduce, for any bound B above birk-glue.
 (def-adts $ (TrivRed : -> Type)
   enum
   (many MkTrivRed : (erased (Level) G)
@@ -359,19 +348,18 @@
           (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (HomTrivial dm ec fc em nm fm as hl) ht) -> (erased (Reduces B dm em nm fm) r)) tr)
       -> (TrivRed)))
 
-; FullRedR from BirkhoffChecks and TrivRed. A level factory: red is at a level F minted after that of the hypothesis.
 (def-fns _ $ (erased full-red-of : (erased (BirkhoffChecks) bks) (erased (TrivRed) trd) -> (erased (FullRedR) r))
-  (let-match erased trd (MkTrivRed G triv))
+  (let-match erased trd (MkTrivRed _ triv))
   (def-lvl B)
   (let ((erased pbk)) (prove-predates (level-of birk-glue) B))
   (def-lvl F)
   (def-fns F $ (erased red : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
       (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)
       (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (FullBad ec em as hl) bad) -> (erased (Reduces B dm em nm fm) r))
-    (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))
+    (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ _ _ cnm _ _))
     (let ((erased pb2)) pb)
-    (let-match erased pb2 (MkPbpp _ _ _ _ hm gen bl pl pcu))
-    (let ((erased nfm) (erased nim) (erased fim) (erased rnf) (erased qem) (erased qnm) (erased qfm)) (hyper-core dm em nm fm hm))
+    (let-match erased pb2 (MkPbpp _ _ _ _ hm gen bl pl _))
+    (let ((erased _) (erased _) (erased fim) (erased _) (erased _) (erased _) (erased qfm)) (hyper-core dm em nm fm hm))
     (let ((erased lab) (erased fl)) (facelab-exists dm fm fim qfm))
     (match erased (hom-birk B pbk bks dm ec fc em nm fm as hl lab fl hm gen bl pl cnm cn ncol (bad-hom dc dm ec nc fc ksc rc em nm fm ksm as hl lab en ok fu fl bl rd bad)) _
       ((OrL _ _ r) r)

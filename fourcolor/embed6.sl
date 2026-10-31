@@ -1,8 +1,4 @@
-; embed_disk, embed_rem, embed_patch and cface_h1 of embed.v: embed5.sl's PatchOpen (patch-open). Load after embed5.sl, in its
-; chain.
-
-; What the construction reads: embed5.sl's hypotheses of PatchOpen, h1 with its values darts of the map, and a ring
-; rc = c0 :: cp that is a node cycle on distinct faces (the reverse of the ring of a NodeRing).
+; h1 with its values darts of the map, and a ring rc = c0 :: cp that is a node cycle on distinct faces.
 (def-adts $ (ECx : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc) ((Nat) dm) ((List (Nat)) em nm fm ksm as hl ids h1) -> Type)
   enum
   (many MkECx : (erased (Nat) dc dm c0) (erased (List (Nat)) ec nc fc ksc cp em nm fm ksm as hl ids h1)
@@ -14,7 +10,7 @@
 (def-fns _ $ (erased cx-parts : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     -> (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
     (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (Under h1 dm) uh))
-  (let-match erased cx (MkECx _ _ c0 _ _ _ _ cp _ _ _ _ _ _ _ _ en ok fu fa io el lh uh sc))
+  (let-match erased cx (MkECx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ en ok fu fa io el lh uh _))
   (values en ok fu fa io el lh uh))
 
 (def-fns _ $ (erased embl-fn : (erased (List (Nat)) ec nc em nm fm as hl xs h1 h2) (subterm erased (EmbL ec nc em nm fm as hl xs h1) e1)
@@ -25,36 +21,34 @@
   (let-match erased (embl-fn ec nc em nm fm as hl xs1 h11 h21 e11 e21) (Refl _ _))
   (Refl _ _))
 
-; The configuration map at a dart x: edge is an involution, node keeps rc and the darts off it, and x or edge x is off rc.
 (def-fns _ $ (erased c-ee : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx)
     (erased (Nth (Nat) ec x y) py) -> (erased (Nth (Nat) ec y x) r))
-  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex _ pe pe2 _ _ _ _ _))
   (let-match erased (nth-fn _ ec x y ex py pe) (Refl _ _))
   pe2)
 
 (def-fns _ $ (erased c-ep : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx)
     (erased (Nth (Nat) ec x y) py) (erased (In x rc) ix) -> (erased (NotIn y rc) r))
-  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex _ pe _ _ _ ep _ _))
   (let-match erased (nth-fn _ ec x y ex py pe) (Refl _ _))
   (match erased ep _ (absurd (OrL _ _ ox) (in-notin x rc ix ox)) ((OrR _ _ oy) oy)))
 
 (def-fns _ $ (erased c-nout : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx)
     (erased (Nth (Nat) nc x y) py) (erased (NotIn x rc) ox) -> (erased (NotIn y rc) r))
-  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ _ nx _ _ pn rs _ _ _))
   (let-match erased (nth-fn _ nc x y nx py pn) (Refl _ _))
   (match erased rs _ (absurd (RsOn _ _ _ _ ix _) (in-notin x rc ix ox)) ((RsOff _ _ _ _ _ _ oy _ _) oy)))
 
 (def-fns _ $ (erased c-nback : (erased (Nat) dc x y) (erased (List (Nat)) ec nc rc as) (erased (GcOK dc ec nc rc as) ok) (erased (Lt x dc) lx)
     (erased (Nth (Nat) nc x y) py) (erased (NotIn y rc) oy) -> (erased (NotIn x rc) r))
-  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased (gc-at dc x ec nc rc as ok lx) (MkGcAt _ _ _ _ _ _ nx _ _ pn rs _ _ _))
   (let-match erased (nth-fn _ nc x y nx py pn) (Refl _ _))
   (match erased rs _ (absurd (RsOn _ _ _ _ _ iy) (in-notin y rc iy oy)) ((RsOff _ _ _ _ _ ox _ _ _) ox)))
 
-; embedE, embedN off rc and embed_inj off rc, read at a dart.
 (def-fns _ $ (erased x-e : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (Nth (Nat) ec x y) py) (erased (Nth (Nat) h1 x u) pu) -> (erased (Nat) v) (erased (Nth (Nat) h1 y v) pv) (erased (Nth (Nat) em u v) pm))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased en) (erased ok) (erased fu) (erased _) (erased io) (erased el) (erased lh) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased nfc) (erased _) (erased _) (erased _) (erased _) (erased _) (erased qe) (erased _) (erased _) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased v) (erased pv)) (nth-exists _ h1 dc y lh (perm-val dc x y ec nfc qe py)))
   (values v pv (embed-e dc dm x y u v ec nc fc ksc rc em nm fm ksm as hl en ok fu py (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu)
@@ -62,8 +56,8 @@
 
 (def-fns _ $ (erased x-n : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (NotIn x rc) ox) (erased (Nth (Nat) nc x y) py) (erased (Nth (Nat) h1 x u) pu) -> (erased (Nat) v) (erased (Nth (Nat) h1 y v) pv) (erased (Nth (Nat) nm u v) pm))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased en) (erased ok) (erased fu) (erased _) (erased io) (erased el) (erased lh) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased _) (erased nic) (erased _) (erased _) (erased _) (erased _) (erased _) (erased qn) (erased _) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased v) (erased pv)) (nth-exists _ h1 dc y lh (perm-val dc x y nc nic qn py)))
   (values v pv (embed-n dc dm x y u v ec nc fc ksc rc em nm fm ksm as hl en ok fu ox py (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu)
@@ -71,11 +65,10 @@
 
 (def-fns _ $ (erased x-inj : (erased (Nat) dc dm x y u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (NotIn x rc) ox) (erased (NotIn y rc) oy) (erased (Nth (Nat) h1 x u) px) (erased (Nth (Nat) h1 y u) py) -> (erased (Eq (Nat) x y) r))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
   (embed-inj dc dm x y u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa (nth-lt-length _ h1 x dc u px lh) ox (nth-lt-length _ h1 y dc u py lh) oy
     (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh px) (embl-at dc y u ec nc em nm fm as hl ids h1 io el lh py)))
 
-; A cycle of q from a, read as q sending each dart of a :: P to the next one, the last to a.
 (def-fns _ $ (erased fpath-hits : (erased (List (Nat)) q PP) (erased (Nat) a y c) (subterm erased (List (Nat)) P) (erased (FPath q a P y) fp) (erased (Nth (Nat) q y c) py)
     (erased (HSnoc (Nat) P c PP) sn) -> (erased (Hits q (Cons (Nat) a P) PP) r))
   (let-match erased fp (FPCons _ P1 _ z _ pz fp1)
@@ -88,7 +81,7 @@
   (match erased sn _
     ((SnocNil _ _)
       (let-match erased rp (RespNil _))
-      (let-match erased rq (RespCons _ _ QQ1 _ l2 pl2 rq1))
+      (let-match erased rq (RespCons _ _ _ _ l2 pl2 rq1))
       (let-match erased rq1 (RespNil _))
       (let-match erased (nth-fn _ h c l l2 pl pl2) (Refl _ _))
       (SnocNil _ l))
@@ -98,7 +91,6 @@
       (let-match erased (nth-fn _ h x m m2 pm pm2) (Refl _ _))
       (SnocCons _ m l Q1 QQ1 (resp-snoc h P1 PP1 Q1 QQ1 c l sn1 rp1 pl rq1)))))
 
-; f sends each dart of ys to the dart of xs at its place, so a labelling constant along f gives ys the labels of xs.
 (def-fns _ $ (erased face-labs : (erased (Nat) d) (erased (List (Nat)) f lab xs ls) (subterm erased (List (Nat)) ys) (erased (Respects f ys xs) ry)
     (erased (Respects lab f lab) rf) (erased (Length (Nat) lab d) ll) (erased (Under ys d) uy) (erased (Respects lab xs ls) rx) -> (erased (Respects lab ys ls) r))
   (let-match erased ys (Cons _ y ys1) ((Nil _) (let-match erased ry (RespNil _)) (let-match erased rx (RespNil _)) (RespNil lab)))
@@ -109,7 +101,6 @@
   (let-match erased (nth-fn _ lab x l2 l (respects-nth lab f lab y x l2 rf px pl2) pl) (Refl _ _))
   (RespCons lab ys1 ls1 y l pl2 (face-labs d f lab xs1 ls1 ys1 ry1 rf ll uy1 rx1)))
 
-; With crr the node images of rc and err their edge images, face sends err back onto rc.
 (def-fns _ $ (erased face-back : (erased (Nat) d) (erased (List (Nat)) e n f rc crr err) (erased (Hypermap d e n f) h) (subterm erased (Hits n rc crr) hs)
     (erased (Respects e crr err) re) -> (erased (Respects f err rc) r))
   (let-match erased hs (HitsCons _ rc1 crr1 a b pb hs1) ((HitsNil _) (let-match erased re (RespNil _)) (RespNil f)))
@@ -125,8 +116,6 @@
     -> (erased (Distinct (Cons (Nat) a xs)) r))
   (DistCons a xs (snoc-out a xs ys sn dy) (distinct-unsnoc a xs ys sn dy)))
 
-; x :: P is an rlink path, ending at y, when e sends each of its darts to the place of T at which f sends the next one of P
-; followed by z (Y): the edge image t of y reaches z along f.
 (def-fns _ $ (erased rp-build : (erased (Nat) d x z) (erased (List (Nat)) e f fi Y T) (erased (HPerm d f fi) pf) (subterm erased (List (Nat)) P)
     (erased (Respects e (Cons (Nat) x P) T) re) (erased (Respects f Y T) rf) (erased (HSnoc (Nat) P z Y) sn) (erased (Under Y d) uy)
     -> (erased (Nat) y t) (erased (RPath e f x P y) rp) (erased (Nth (Nat) e y t) pt) (erased (SomePath f (Nil (Nat)) t z) sp))
@@ -146,7 +135,6 @@
   (let ((erased y) (erased ty) (erased rp1) (erased pty) (erased sp1)) (rp-build d p1 z e f fi Y1 T1 pf P1 re1 rf1 sn1 uy1))
   (values y ty (RPCons e f P1 x t p1 y pt (MkSomePath f (Nil _) ws t p1 w) rp1) pty sp1))
 
-; A walk along p from a to the image c of b gives a walk from a to b.
 (def-fns _ $ (erased path-unstep : (erased (Nat) d a b c) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm) (subterm erased (Path p s a c xs) w)
     (erased (Nth (Nat) p b c) pb) (erased (Lt b d) lb) -> (erased (SomePath p (Nil (Nat)) a b) r))
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1)
@@ -157,16 +145,15 @@
     -> (erased (In y zs) r))
   (match erased sp _
     (absurd (SpNil _) iy)
-    ((SpIn _ xs1 ys1 zs1 x p sp1)
+    ((SpIn _ xs1 ys1 zs1 _ p sp1)
       (match erased iy _ (absurd (InHere _ _) (in-notin y t p oy)) ((InThere _ _ _ iy1) (split-off t xs1 ys1 zs1 y sp1 iy1 oy))))
-    ((SpOut _ xs1 ys1 zs1 x p sp1)
+    ((SpOut _ xs1 ys1 zs1 x _ sp1)
       (match erased iy _ ((InHere _ _) (InHere y zs1)) ((InThere _ _ _ iy1) (InThere y x zs1 (split-off t xs1 ys1 zs1 y sp1 iy1 oy)))))))
 
 (def-fns _ $ (erased within-split : (erased (List (Nat)) s) (subterm erased (List (Nat)) xs) (erased (Within xs s) wi) -> (erased (Split s xs xs (Nil (Nat))) r))
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (SpNil s)))
   (SpIn s xs1 xs1 (Nil _) x ix (within-split s xs1 wi1)))
 
-; The darts of the configuration map off rc, listed as bcl, and the edge images erc of rc.
 (def-fns _ $ (erased bcl-in : (erased (Nat) dc y) (erased (List (Nat)) rc ids zr bcl) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
     (erased (Lt y dc) ly) (erased (NotIn y rc) oy) -> (erased (In y bcl) r))
   (split-off rc ids zr bcl y sp (iota-in dc y ids io ly) oy))
@@ -182,7 +169,7 @@
 
 (def-fns _ $ (erased erc-off : (erased (Nat) dc x) (erased (List (Nat)) ec nc rc as erc) (erased (GcOK dc ec nc rc as) ok) (erased (Respects ec rc erc) re)
     (erased (Under rc dc) ur) (erased (In x erc) ix) -> (erased (NotIn x rc) r))
-  (let ((erased w) (erased iw) (erased pwx) (erased pxw)) (erc-in dc x ec nc rc as erc ok re ur ix))
+  (let ((erased w) (erased iw) (erased pwx) (erased _)) (erc-in dc x ec nc rc as erc ok re ur ix))
   (c-ep dc w x ec nc rc as ok (under-in rc w dc ur iw) pwx iw))
 
 (def-fns _ $ (erased erc-bcl : (erased (Nat) dc) (erased (List (Nat)) ec nc rc as erc ids zr bcl) (erased (GcOK dc ec nc rc as) ok) (erased (Respects ec rc erc) re)
@@ -192,19 +179,16 @@
   (WCons bcl w ws1 (bcl-in dc w rc ids zr bcl io sp (under-in erc w dc ue iw) (erc-off dc w ec nc rc as erc ok re ur iw))
     (erc-bcl dc ec nc rc as erc ids zr bcl ok re ur ue io sp ws1 wi1)))
 
-; With crr the node images of rc and err the edge images of crr, the ring step of the disk edge from w in erc to x in err:
-; w and x are the edge images of a dart t of rc and of its node image s.
 (def-fns _ $ (erased in2-ring : (erased (List (Nat)) ec nc rc crr erc err) (erased (Nat) w x) (erased (Respects ec rc erc) re) (erased (Hits nc rc crr) hs)
     (erased (Respects ec crr err) rer) (subterm erased (In2 erc err w x) i2) -> (erased (Nat) t s) (erased (Nth (Nat) ec t w) pt) (erased (Nth (Nat) nc t s) ps)
     (erased (Nth (Nat) ec s x) px))
-  (let-match erased re (RespCons _ rc1 erc1 t w0 pt re1) (absurd (RespNil _) i2))
+  (let-match erased re (RespCons _ rc1 erc1 t _ pt re1) (absurd (RespNil _) i2))
   (let-match erased hs (HitsCons _ _ crr1 _ s ps hs1))
-  (let-match erased rer (RespCons _ _ err1 _ x0 px rer1))
+  (let-match erased rer (RespCons _ _ err1 _ _ px rer1))
   (match erased i2 _
     ((I2Here _ _ _ _) (values t s pt ps px))
     ((I2There _ _ _ _ _ _ i3) (in2-ring ec nc rc1 crr1 erc1 err1 w x re1 hs1 rer1 i3))))
 
-; The sides of the edge and node permutations of the configuration map, with erc sent along err, on bcl.
 (def-fns _ $ (erased dsides-e : (erased (Nat) dc e0) (erased (List (Nat)) ec nc rc as ep err ids zr bcl nfc) (erased (GcOK dc ec nc rc as) ok) (erased (HPerm dc ec nfc) qe)
     (erased (Respects ec rc (Cons (Nat) e0 ep)) re) (erased (Under rc dc) ur) (erased (HSnoc (Nat) ep e0 err) snr) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
     (erased (Under bcl dc) ub) (subterm erased (List (Nat)) xs) (erased (Within xs bcl) wi) -> (erased (Sides ec nfc (Cons (Nat) e0 ep) err bcl xs) r))
@@ -225,7 +209,7 @@
   (let ((erased iy)) (bcl-in dc y rc ids zr bcl io sp ly oyr))
   (let ((erased oye)) (match erased (in-dec y erc) (((NotIn y erc) o))
     (absurd (OrL _ _ iye)
-      (let ((erased w) (erased iw) (erased pwy) (erased pyw)) (erc-in dc y ec nc rc as erc ok re ur iye))
+      (let ((erased w) (erased iw) (erased _) (erased pyw)) (erc-in dc y ec nc rc as erc ok re ur iye))
       (let-match erased (nth-fn _ ec y w x pyw (c-ee dc x y ec nc rc as ok lx py)) (Refl _ _))
       (in-notin x rc iw ox))
     ((OrR _ _ o) o)))
@@ -247,7 +231,7 @@
       pz (bcl-in dc z rc ids zr bcl io sp lz (c-nback dc z x ec nc rc as ok lz pzx ox)) pzx)
     (dbij-n dc ec nc rc as ids zr bcl nic ok qn io sp ub xs1 wi1)))
 
-; The lists of the remainder side: hd = h1 . bcl, the reverse RV of rG = h1 . erc, the darts zs of the map off hd, and hr = RV ++ zs.
+; hd = h1 . bcl, the reverse RV of rG = h1 . erc, the darts zs of the map off hd, and hr = RV ++ zs.
 (def-adts $ (RCx : ((Nat) dc) ((List (Nat)) ec rc erc bcl) ((Nat) dm) ((List (Nat)) h1 hd RV zs hr) -> Type)
   enum
   (many MkRCx : (erased (Nat) dc dm) (erased (List (Nat)) ec rc erc bcl h1 hd RV zs hr ids zr idm zh rG) (erased (Iota dc ids) io) (erased (Split rc ids zr bcl) sp)
@@ -255,12 +239,11 @@
       (erased (Respects h1 erc rG) rg) (erased (RevApp (Nat) rG (Nil (Nat)) RV) rv) (erased (Iota dm idm) iom) (erased (Split hd idm zh zs) spm) (erased (AppN RV zs hr) ap)
       -> (RCx dc ec rc erc bcl dm h1 hd RV zs hr)))
 
-; A dart of hr that is h1 b, b in bcl, has b in erc.
 (def-fns _ $ (erased hr-img : (erased (Nat) dc dm x b) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (In x hr) ix) (erased (Nth (Nat) h1 b x) pb)
     (erased (In b bcl) ib) -> (erased (In b erc) r))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io0) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
-  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
+  (let ((erased _) (erased ok) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh rG _ sp _ re ur _ rhd rg rv _ spm ap))
   (let-match erased (app-in-inv RV zs hr x ap ix) (OrL _ _ iv)
     (absurd (OrR _ _ iz) (in-notin x hd (in-map h1 bcl hd b x ib rhd pb) (split-out hd idm zh zs x spm iz))))
   (let-match erased (revapp-out rG (Nil _) RV x rv iv) (OrL _ _ ig) (absurd (OrR _ _ i0) (match erased i0 _)))
@@ -271,32 +254,31 @@
 
 (def-fns _ $ (erased hr-out : (erased (Nat) dc dm x) (erased (List (Nat)) ec rc erc bcl h1 hd RV zs hr) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx)
     (erased (Lt x dm) lx) (erased (NotIn x hd) ox) -> (erased (In x hr) r))
-  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
+  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ _ _ idm zh _ _ _ _ _ _ _ _ _ _ iom spm ap))
   (app-in-r RV zs hr x ap (split-off hd idm zh zs x spm (iota-in dm x idm iom lx) ox)))
 
 (def-fns _ $ (erased hr-ring : (erased (Nat) dc dm x b) (erased (List (Nat)) ec rc erc bcl h1 hd RV zs hr) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx)
     (erased (In b erc) ib) (erased (Nth (Nat) h1 b x) pb) -> (erased (In x hr) r))
-  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
+  (let-match erased rx (MkRCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rG _ _ _ _ _ _ _ rg rv _ _ ap))
   (app-in-l RV zs hr x ap (revapp-in rG (Nil _) RV x rv (OrL _ _ (in-map h1 erc rG b x ib rg pb)))))
 
 (def-fns _ $ (erased rv-hd : (erased (Nat) dc dm) (erased (List (Nat)) ec nc rc as erc bcl h1 hd RV zs hr) (erased (GcOK dc ec nc rc as) ok)
     (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (subterm erased (List (Nat)) vs) (erased (Within vs RV) wi) -> (erased (Within vs hd) r))
   (let-match erased wi (WCons _ v vs1 iv wi1) ((WNil _) (WNil hd)))
   (let ((erased rx2)) rx)
-  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
+  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids zr _ _ rG io sp _ re ur ue rhd rg rv _ _ _))
   (let-match erased (revapp-out rG (Nil _) RV v rv iv) (OrL _ _ ig) (absurd (OrR _ _ i0) (match erased i0 _)))
   (let ((erased w) (erased iw) (erased pw)) (respects-in h1 erc rG v rg ig))
   (WCons hd v vs1 (in-map h1 bcl hd w v (bcl-in dc w rc ids zr bcl io sp (under-in erc w dc ue iw) (erc-off dc w ec nc rc as erc ok re ur iw)) rhd pw)
     (rv-hd dc dm ec nc rc as erc bcl h1 hd RV zs hr ok rx vs1 wi1)))
 
-; hr is shut under the edge permutation of the map.
 (def-fns _ $ (erased hr-edge : (erased (Nat) dc dm x y) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (In x hr) ix) (erased (Nth (Nat) em x y) py)
     -> (erased (In y hr) r))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io0) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased en) (erased ok) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
   (let ((erased rx2)) rx)
-  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr _ _ _ io sp ub re ur _ rhd _ _ _ _ _))
+  (let ((erased nfc) (erased _) (erased _) (erased nfm) (erased _) (erased _) (erased qe) (erased _) (erased _) (erased qem) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased g)) (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let-match erased (in-dec y hd) (OrL _ _ iy) ((OrR _ _ oy) (hr-out dc dm y ec rc erc bcl h1 hd RV zs hr rx (perm-val dm x y em nfm qem py) oy)))
@@ -313,7 +295,7 @@
         (absurd (OrL _ _ icr) (in-notin b erc (erc-of dc b c ec nc rc as erc ok re icr pc lb) obe))
         ((OrR _ _ o) o)))
       (let ((erased ice)) (hr-img dc dm x c ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr cx rx ix pv (bcl-in dc c rc ids2 zr bcl io sp lc ocr)))
-      (let ((erased w) (erased iw) (erased pwc) (erased pcw)) (erc-in dc c ec nc rc as erc ok re ur ice))
+      (let ((erased w) (erased iw) (erased _) (erased pcw)) (erc-in dc c ec nc rc as erc ok re ur ice))
       (let-match erased (nth-fn _ ec c w b pcw (c-ee dc b c ec nc rc as ok lb pc)) (Refl _ _))
       (in-notin b rc iw obr))))
 
@@ -323,15 +305,14 @@
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (BijNil em nfm hr)))
   (let ((erased lx)) (under-in hr x dm uhr ix))
   (let ((erased qemi)) (perm-sym dm em nfm qem))
-  (let ((erased y) (erased py) (erased ly)) (perm-nth dm x em nfm qem lx))
-  (let ((erased z) (erased pz) (erased lz)) (perm-nth dm x nfm em qemi lx))
+  (let ((erased y) (erased py) (erased _)) (perm-nth dm x em nfm qem lx))
+  (let ((erased z) (erased pz) (erased _)) (perm-nth dm x nfm em qemi lx))
   (let ((erased pzx)) (perm-inv dm x z nfm em qemi pz))
   (let-match erased (nth-fn _ em x y z py (gm-ee dm z x em nm fm ksm g pzx)) (Refl _ _))
   (let ((erased iy)) (hr-edge dc dm x y ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr cx rx ix py))
   (BijCons em nfm hr xs1 x (MkBijAt em nfm hr x y y py iy (perm-inv dm x y em nfm qem py) pz iy pzx)
     (rbij-e dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr nfm cx rx qem uhr g xs1 wi1)))
 
-; Off RV, hr is shut under the node permutation of the map, both ways, and stays off RV.
 (def-fns _ $ (erased rsides-n : (erased (Nat) dc dm v0) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd V zs hr nim RVR)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd (Cons (Nat) v0 V) zs hr) rx) (erased (HPerm dm nm nim) qnm)
     (erased (Under hr dm) uhr) (erased (HSnoc (Nat) V v0 RVR) sn) (erased (Within (Cons (Nat) v0 V) hd) wrh) (subterm erased (List (Nat)) xs) (erased (Within xs hr) wi)
@@ -339,10 +320,10 @@
   (let ((erased RV)) (Cons _ v0 V))
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (SidesNil nm nim RV RVR hr)))
   (let ((erased rest)) (rsides-n dc dm v0 ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd V zs hr nim RVR cx rx qnm uhr sn wrh xs1 wi1))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io0) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased en) (erased ok) (erased _) (erased _) (erased _) (erased _) (erased lh) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
   (let ((erased rx2)) rx)
-  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim2) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm2) (erased qfm))
+  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh _ io sp ub _ _ _ rhd _ _ _ spm ap))
+  (let ((erased _) (erased nic) (erased _) (erased _) (erased _) (erased _) (erased _) (erased qn) (erased _) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let-match erased (in-dec x RV) (OrR _ _ oxv) ((OrL _ _ ixv) (SidesCons nm nim RV RVR hr xs1 x (SideRing nm nim RV RVR hr x ixv) rest)))
   (let ((erased srh)) (split-sub-t hd RV RV (Nil _) (within-split hd RV wrh)))
@@ -381,7 +362,6 @@
       (notin-sub y RVR RV srv (notin-sub y RV hd srh oyh)) pz (hr-out dc dm z ec rc erc bcl h1 hd RV zs hr rx lz ozh) (notin-sub z RV hd srh ozh))
     rest))
 
-; h1 keeps the darts off rc apart.
 (def-fns _ $ (erased map-inj : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 hs) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (subterm erased (List (Nat)) xs) (erased (Distinct xs) dx) (erased (Disj xs rc) dj) (erased (Respects h1 xs hs) rh) -> (erased (Distinct hs) r))
   (let-match erased rh (RespCons _ xs1 hs1 x u pu rh1) ((RespNil _) (DistNil)))
@@ -396,7 +376,6 @@
       ((OrR _ _ o) o))
     (map-inj dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 hs1 cx xs1 dx1 dj1 rh1)))
 
-; h (a (P x)) = r (h (a x)) for x off B, from a (P x) = q (a x) off B and h (q y) = r (h y) for y off C, the values of a being off C.
 (def-fns _ $ (erased morph-chain : (erased (List (Nat)) a P q B h r C ids ha) (erased (Nat) k) (subterm erased (List (Nat)) xs) (erased (MorphOff a P q B xs) ma)
     (erased (MorphOff h q r C ids) mh) (erased (Iota k ids) io) (erased (Under a k) ua) (erased (Disj a C) dj) (erased (Respects h a ha) rh) (erased (Length (Nat) h k) lh)
     -> (erased (MorphOff ha P r B xs) res))
@@ -410,14 +389,13 @@
   (MOAt ha P r B xs1 x y u v px (respects-at h a ha x z u rh hx pu) (respects-at h a ha y w v rh hy pv) rv
     (morph-chain a P q B h r C ids ha k xs1 ma1 mh io ua dj rh lh)))
 
-; The remainder of the patch: each dart of the map is h1 of a dart of bcl off erc, of a dart of erc, or off hd.
 (def-fns _ $ (erased parts6 : (erased (Nat) dc dm dd) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr bd)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (RCx dc ec rc erc bcl dm h1 hd RV zs hr) rx) (erased (Respects bcl bd erc) rbd)
     (erased (Distinct bcl) db) (subterm erased (List (Nat)) xs) (erased (Under xs dm) ux) -> (erased (PatchParts hd hr bd xs) r))
   (let-match erased ux (UnderCons xs1 x _ lx ux1) ((UnderNil _) (PPNil hd hr bd)))
   (let ((erased rest)) (parts6 dc dm dd ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr bd cx rx rbd db xs1 ux1))
   (let ((erased rx2)) rx)
-  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ ids2 zr idm zh rG io sp ub re ur ue rhd rg rv iom spm ap))
+  (let-match erased rx2 (MkRCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rhd _ _ _ _ _))
   (match erased (in-dec x hd) _
     ((OrL _ _ ixh)
       (let ((erased b) (erased ib) (erased pb)) (respects-in h1 bcl hd x rhd ixh))
@@ -440,7 +418,6 @@
       (let ((erased xr) (erased pxr)) (in-nth x hr (hr-out dc dm x ec rc erc bcl h1 hd RV zs hr rx lx oxh)))
       (PPCons hd hr bd xs1 x (PtRest hd hr bd x xr pxr oxh) rest))))
 
-
 ; The disk map (ed, nd, fd) on the darts bcl of the configuration map, its edge sde sending erc along err.
 (def-adts $ (DkCx : ((Nat) dc) ((List (Nat)) ec nc fc rc as erc err) ((Nat) dd) ((List (Nat)) bcl ed nd fd sde idd) -> Type)
   enum
@@ -460,11 +437,11 @@
 
 (def-fns _ $ (erased sde-at : (erased (Nat) dc dd w x) (erased (List (Nat)) ec nc fc rc as erc err bcl ed nd fd sde idd)
     (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk) (erased (Lt w dc) lw) (erased (Nth (Nat) sde w x) px) -> (erased (SdeAt ec nc erc w x) r))
-  (let-match erased dk (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc ok re hs rer sa hsd le lr hdm med mnd iod lb ub))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core dc ec nc fc hc))
+  (let-match erased dk (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc _ re hs rer sa hsd le lr _ _ _ _ _ _))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core dc ec nc fc hc))
   (match erased (in-dec w erc) _
     ((OrR _ _ ow)
-      (let ((erased y) (erased py) (erased ly)) (perm-nth dc w ec nf pe lw))
+      (let ((erased y) (erased py) (erased _)) (perm-nth dc w ec nf pe lw))
       (let-match erased (nth-fn _ sde w y x (setall-miss ec erc err sde w y sa ow py) px) (Refl _ _))
       (SdOff ec nc erc w x ow py))
     ((OrL _ _ iw)
@@ -473,21 +450,20 @@
       (let ((erased t) (erased s) (erased pt) (erased ps) (erased px2)) (in2-ring ec nc rc crr erc err w x2 re hs rer i2))
       (SdRing ec nc erc w x t s iw pt ps px2))))
 
-; The face step of the disk map from u, x = bcl u, is fc x, or fc t for t = fc x on rc.
 (def-fns _ $ (erased dface-at : (erased (Nat) dc dd u a x y) (erased (List (Nat)) ec nc fc rc as erc err bcl ed nd fd sde idd)
     (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk) (erased (Nth (Nat) fd u a) pf) (erased (Nth (Nat) bcl u x) px) (erased (Nth (Nat) bcl a y) py)
     -> (erased (Nat) t) (erased (Nth (Nat) fc x t) pt) (erased (Or (Eq (Nat) t y) (Nth (Nat) fc t y)) r))
   (let ((erased dk2)) dk)
-  (let-match erased dk2 (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc ok re hs rer sa hsd le lr hdm med mnd iod lb ub))
-  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
+  (let-match erased dk2 (MkDkCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc ok _ _ _ _ _ _ _ hdm med mnd iod _ ub))
+  (let ((erased _) (erased ndi) (erased fdi) (erased _) (erased _) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
   (let ((erased la)) (perm-val dd u a fd fdi pmfd pf))
   (let ((erased b) (erased pb) (erased lb2)) (perm-nth dd a nd ndi pmnd la))
   (let ((erased w) (erased pw) (erased pnw)) (morph bcl nd nc (Nil _) idd dd a b y mnd iod la (NotInNil a) pb py))
   (let ((erased x2) (erased px2) (erased psw)) (morph bcl ed sde (Nil _) idd dd b u w med iod lb2 (NotInNil b) (hyper-edge dd b a u ed nd fd hdm pb pf) pw))
   (let-match erased (nth-fn _ bcl u x2 x px2 px) (Refl _ _))
-  (let-match erased (sde-at dc dd w x ec nc fc rc as erc err bcl ed nd fd sde idd dk (under-in bcl w dc ub (nth-in bcl b w pw)) psw) (SdRing _ _ _ _ _ t s iw pt ps pex)
-    ((SdOff _ _ _ _ _ ow pex) (values y (hyper-third dc x w y ec nc fc hc pex pnw) (OrL _ _ (Refl _ y)))))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pfc)) (hyper-core dc ec nc fc hc))
+  (let-match erased (sde-at dc dd w x ec nc fc rc as erc err bcl ed nd fd sde idd dk (under-in bcl w dc ub (nth-in bcl b w pw)) psw) (SdRing _ _ _ _ _ t s _ pt ps pex)
+    ((SdOff _ _ _ _ _ _ pex) (values y (hyper-third dc x w y ec nc fc hc pex pnw) (OrL _ _ (Refl _ y)))))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core dc ec nc fc hc))
   (let ((erased lt)) (perm-val dc w t nf ec (perm-sym dc ec nf pe) (perm-inv dc t w ec nf pe pt)))
   (values t (hyper-third dc x s t ec nc fc hc pex ps)
     (OrR _ _ (hyper-third dc t w y ec nc fc hc (c-ee dc t w ec nc rc as ok lt pt) pnw))))
@@ -499,19 +475,18 @@
       ((OrL _ _ e) (let-match erased e (Refl _ _)) (MkSomePath f (Nil _) (Nil _) t t (PathHere f (Nil _) t)))
       ((OrR _ _ p) (some-cons f t y y p (MkSomePath f (Nil _) (Nil _) y y (PathHere f (Nil _) y)))))))
 
-; The edge step of the disk map from u, x = bcl u, is on the face of ec x.
 (def-fns _ $ (erased dedge-at : (erased (Nat) dc dd u v x z t) (erased (List (Nat)) ec nc fc rc as erc err bcl ed nd fd sde idd)
     (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk) (erased (Lt u dd) lu) (erased (Nth (Nat) ed u v) pv) (erased (Nth (Nat) bcl u x) px)
     (erased (Nth (Nat) bcl v z) pz) (erased (Nth (Nat) ec x t) pt) -> (erased (SomePath fc (Nil (Nat)) t z) r))
   (let ((erased dk2)) dk)
-  (let-match erased dk2 (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc ok re hs rer sa hsd le lr hdm med mnd iod lb ub))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core dc ec nc fc hc))
+  (let-match erased dk2 (MkDkCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc ok _ _ _ _ _ _ _ _ med _ iod _ ub))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core dc ec nc fc hc))
   (let ((erased z2) (erased pz2) (erased psx)) (morph bcl ed sde (Nil _) idd dd u v x med iod lu (NotInNil u) pv px))
   (let-match erased (nth-fn _ bcl v z2 z pz2 pz) (Refl _ _))
   (let ((erased lx)) (under-in bcl x dc ub (nth-in bcl u x px)))
   (match erased (sde-at dc dd x z ec nc fc rc as erc err bcl ed nd fd sde idd dk lx psx) _
-    ((SdOff _ _ _ _ _ ox pez) (let-match erased (nth-fn _ ec x z t pez pt) (Refl _ _)) (MkSomePath fc (Nil _) (Nil _) z z (PathHere fc (Nil _) z)))
-    ((SdRing _ _ _ _ _ t0 s ix pt0 ps pes)
+    ((SdOff _ _ _ _ _ _ pez) (let-match erased (nth-fn _ ec x z t pez pt) (Refl _ _)) (MkSomePath fc (Nil _) (Nil _) z z (PathHere fc (Nil _) z)))
+    ((SdRing _ _ _ _ _ t0 s _ pt0 ps pes)
       (let ((erased lt0)) (perm-val dc x t0 nf ec (perm-sym dc ec nf pe) (perm-inv dc t0 x ec nf pe pt0)))
       (let-match erased (nth-fn _ ec x t0 t (c-ee dc t0 x ec nc rc as ok lt0 pt0) pt) (Refl _ _))
       (let ((erased ws) (erased w)) (cycle dc z t fc fi pf (hyper-third dc z s t ec nc fc hc pes ps) (perm-val dc s z ec nf pe pes)))
@@ -524,8 +499,8 @@
     ((UnderNil _) (values (Nil _) (Nil _) (Nil _) (RespNil bcl) (RespNil fd) (RespNil bcl) (ReachNil fc))))
   (let ((erased A1) (erased F1) (erased B1) (erased ra1) (erased rf1) (erased rb1) (erased rc1)) (dface-reach dc dd ec nc fc rc as erc err bcl ed nd fd sde idd dk us1 uu1))
   (let ((erased dk2)) dk)
-  (let-match erased dk2 (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc ok re hs rer sa hsd le lr hdm med mnd iod lb ub))
-  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
+  (let-match erased dk2 (MkDkCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hdm _ _ _ lb _))
+  (let ((erased _) (erased _) (erased fdi) (erased _) (erased _) (erased _) (erased pmfd)) (hyper-core dd ed nd fd hdm))
   (let ((erased a) (erased pa) (erased la)) (perm-nth dd u fd fdi pmfd lu))
   (let ((erased x) (erased px)) (nth-exists _ bcl dd u lb lu))
   (let ((erased y) (erased py)) (nth-exists _ bcl dd a lb la))
@@ -542,31 +517,29 @@
   (let ((erased A1) (erased E1) (erased F1) (erased B1) (erased ra1) (erased re1) (erased rf1) (erased rb1) (erased rc1))
     (dedge-reach dc dd ec nc fc rc as erc err bcl ed nd fd sde idd dk us1 uu1))
   (let ((erased dk2)) dk)
-  (let-match erased dk2 (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc ok re0 hs rer sa hsd le lr hdm med mnd iod lb ub))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core dc ec nc fc hc))
-  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
+  (let-match erased dk2 (MkDkCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ _ _ _ _ _ _ _ hdm _ _ _ lb ub))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core dc ec nc fc hc))
+  (let ((erased nfd) (erased _) (erased _) (erased _) (erased pmed) (erased _) (erased _)) (hyper-core dd ed nd fd hdm))
   (let ((erased v) (erased pv) (erased lv)) (perm-nth dd u ed nfd pmed lu))
   (let ((erased x) (erased px)) (nth-exists _ bcl dd u lb lu))
   (let ((erased z) (erased pz)) (nth-exists _ bcl dd v lb lv))
-  (let ((erased t) (erased pt) (erased lt)) (perm-nth dc x ec nf pe (under-in bcl x dc ub (nth-in bcl u x px))))
+  (let ((erased t) (erased pt) (erased _)) (perm-nth dc x ec nf pe (under-in bcl x dc ub (nth-in bcl u x px))))
   (values (Cons _ x A1) (Cons _ t E1) (Cons _ v F1) (Cons _ z B1) (RespCons bcl us1 A1 u x px ra1) (RespCons ec A1 E1 x t pt re1) (RespCons ed us1 F1 u v pv rf1)
     (RespCons bcl F1 B1 v z pz rb1) (ReachCons fc E1 B1 t z (dedge-at dc dd u v x z t ec nc fc rc as erc err bcl ed nd fd sde idd dk lu pv px pz pt) rc1)))
 
-; h1 (fc x) = fm (h1 x) when fc x is off rc.
 (def-fns _ $ (erased h1-face : (erased (Nat) dc dm x y u v) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     (erased (Nth (Nat) fc x y) py) (erased (NotIn y rc) oy) (erased (Nth (Nat) h1 x u) pu) (erased (Nth (Nat) h1 y v) pv) -> (erased (Nth (Nat) fm u v) r))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased en) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased _)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
   (let ((erased en2)) en)
-  (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
-  (let-match erased g (MkGeo _ _ _ _ _ hm pem cnm olm pam))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core dc ec nc fc hc))
-  (let ((erased w) (erased pw) (erased lw)) (perm-nth dc y nc ni qn (perm-val dc x y fc fi qf py)))
+  (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ _ g _))
+  (let-match erased g (MkGeo _ _ _ _ _ hm _ _ _ _))
+  (let ((erased _) (erased ni) (erased fi) (erased _) (erased _) (erased qn) (erased qf)) (hyper-core dc ec nc fc hc))
+  (let ((erased w) (erased pw) (erased _)) (perm-nth dc y nc ni qn (perm-val dc x y fc fi qf py)))
   (let ((erased v2) (erased pv2) (erased pm)) (x-n dc dm y w v ec nc fc ksc rc em nm fm ksm as hl ids h1 cx oy pw pv))
   (let ((erased u2) (erased pu2) (erased pe2)) (x-e dc dm w x v2 ec nc fc ksc rc em nm fm ksm as hl ids h1 cx (hyper-edge dc w y x ec nc fc hc pw py) pv2))
   (let-match erased (nth-fn _ h1 x u2 u pu2 pu) (Refl _ _))
   (hyper-third dm u v2 v em nm fm hm pe2 pm))
 
-; cface_h1: h1 sends each dart x and fc x onto one face of the map; when fc x is on rc, through the face step of the disk map.
 (def-fns _ $ (erased cface-reach : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 erc err ed nd fd er nr fr hd hr bd br bcl sde idd zr)
     (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx) (erased (DkCx dc ec nc fc rc as erc err dd bcl ed nd fd sde idd) dk)
     (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (erased (Respects h1 bcl hd) rhd) (erased (Split rc ids zr bcl) sp)
@@ -576,8 +549,8 @@
     ((UnderNil _) (values (Nil _) (Nil _) (Nil _) (RespNil h1) (RespNil fc) (RespNil h1) (ReachNil fm))))
   (let ((erased H1) (erased F1) (erased HF1) (erased rh1) (erased rf1) (erased rhf1) (erased rc1))
     (cface-reach dc dm dd dr ec nc fc ksc rc em nm fm ksm as hl ids h1 erc err ed nd fd er nr fr hd hr bd br bcl sde idd zr cx dk pt rhd sp xs1 ux1))
-  (let ((erased en) (erased ok) (erased fu) (erased fa) (erased io) (erased el) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let ((erased en) (erased ok) (erased _) (erased _) (erased io) (erased _) (erased lh) (erased uh)) (cx-parts dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 cx))
+  (let ((erased _) (erased nic) (erased fic) (erased _) (erased _) (erased fim) (erased _) (erased qn) (erased qf) (erased _) (erased _) (erased qfm))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased y) (erased py) (erased ly)) (perm-nth dc x fc fic qf lx))
   (let ((erased u0) (erased pu0)) (nth-exists _ h1 dc x lh lx))
@@ -587,10 +560,10 @@
       (MkSomePath fm (Nil _) (Nil _) u1 u1 (PathHere fm (Nil _) u1))))
     ((OrL _ _ iyr)
       (let ((erased en2)) en)
-      (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
+      (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ _ _ _))
       (let ((erased dk2)) dk)
-      (let-match erased dk2 (MkDkCx _ _ m _ _ _ _ _ _ _ _ _ _ _ _ _ crr hc2 ok2 re hs rer sa hsd le lr hdm med mnd iod lb ub))
-      (let ((erased nfd) (erased ndi) (erased fdi) (erased rnfd) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hdm))
+      (let-match erased dk2 (MkDkCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hdm _ _ _ lb ub))
+      (let ((erased _) (erased _) (erased fdi) (erased _) (erased _) (erased _) (erased pmfd)) (hyper-core dd ed nd fd hdm))
       (let ((erased w) (erased pw) (erased lw)) (perm-nth dc y nc nic qn ly))
       (let ((erased pwx)) (hyper-edge dc w y x ec nc fc hc pw py))
       (let-match erased (in-dec w rc) (OrL _ _ iw) (absurd (OrR _ _ ow) (in-notin y rc iyr (c-nback dc y w ec nc rc as ok ly pw ow))))
@@ -625,8 +598,8 @@
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (DisjNil m)))
   (DisjCons x xs1 m (disj-notin x s m dj ix) (within-disj s m xs1 wi1 dj)))
 
-; embed5.sl's EmbedPatch for a node cycle rc: the disk ring sent to erc = map edge rc, and the darts embd of the
-; configuration map off rc split from those on it.
+; EmbedPatch for a node cycle rc: the disk ring sent to erc = map edge rc, and the darts embd of the configuration
+; map off rc split from those on it.
 (def-adts $ (EmbedPatch6 : ((Nat) dc) ((List (Nat)) ec fc rc) ((Nat) dm) ((List (Nat)) em nm fm h1) -> Type)
   enum
   (many MkEmbedPatch6 : (erased (Nat) dc dm dd dr) (erased (List (Nat)) ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f idc zr)
@@ -636,21 +609,18 @@
       (erased (Respects h1 fc h1f) rf) (erased (Reach fm h1 h1f) rcf) (erased (Iota dc idc) io) (erased (Split rc idc zr embd) sp)
       -> (EmbedPatch6 dc ec fc rc dm em nm fm h1)))
 
-; embed_disk, embed_rem, embed_patch and cface_h1: the disk map on the darts bcl of the configuration map off rc, with its edge
-; sending each dart of erc to the next one, and the remainder map on the darts of the map off h1 . (bcl off erc), with its
-; node sending each dart of RV = rev (h1 . erc) to the next one.
 (def-fns _ $ (erased embed-patch6 : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (ECx dc ec nc fc ksc rc dm em nm fm ksm as hl ids h1) cx)
     -> (erased (EmbedPatch6 dc ec fc rc dm em nm fm h1) ep))
   (let ((erased cx2)) cx)
-  (let-match erased cx2 (MkECx _ _ c0 _ _ _ _ cp _ _ _ _ _ _ _ _ en ok fu fa io el lh uh sc))
+  (let-match erased cx2 (MkECx _ _ c0 _ _ _ _ cp _ _ _ _ _ _ _ _ en ok fu _ io el lh uh sc))
   (let ((erased en2)) en)
-  (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc olc kl g pe))
+  (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ _ g _))
   (let ((erased g2)) g)
-  (let-match erased g2 (MkGeo _ _ _ _ _ hm pem cnm olm pam))
-  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
+  (let-match erased g2 (MkGeo _ _ _ _ _ hm _ _ _ _))
+  (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased _) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
-  (let ((erased lec) (erased lnc) (erased lfc)) (hyper-lengths dc ec nc fc hc))
-  (let ((erased lem) (erased lnm) (erased lfm)) (hyper-lengths dm em nm fm hm))
+  (let ((erased lec) (erased _) (erased lfc)) (hyper-lengths dc ec nc fc hc))
+  (let ((erased _) (erased lnm) (erased _)) (hyper-lengths dm em nm fm hm))
   (let-match erased sc (MkSCycle _ _ _ _ yc fpc backc sm))
   (let-match erased sm (MkSimple _ _ lab lsr rfl rl dl))
   (let ((erased ur)) (resp-under lab lsr dc rc rl (respects-length lab fc lab dc rfl lfc)))
@@ -682,8 +652,8 @@
   (let ((erased hs2)) (setall-hits nfc err erc sdei sa2 (distinct-snoc-cons e0 ep err snr derc)))
   (let ((erased zr) (erased bcl) (erased sp)) (split-exists rc ids))
   (let ((erased uids)) (perm-under dc ids ids (perm-id dc ids io)))
-  (let ((erased dzr) (erased dbcl)) (split-distinct rc ids zr bcl sp (iota-distinct dc ids io)))
-  (let ((erased szr) (erased sbcl)) (split-sub rc ids zr bcl sp))
+  (let ((erased _) (erased dbcl)) (split-distinct rc ids zr bcl sp (iota-distinct dc ids io)))
+  (let ((erased _) (erased sbcl)) (split-sub rc ids zr bcl sp))
   (let ((erased ub)) (sub-under bcl ids dc sbcl uids))
   (let ((erased dd) (erased lbcl)) (length-exists _ bcl))
   (let ((erased web)) (erc-bcl dc ec nc rc as erc ids zr bcl ok re ur uerc io sp erc (within-refl erc)))
@@ -694,8 +664,8 @@
   (let ((erased bj1)) (bij-build dc m ec nfc erc err bcl sde sdei qe sa1 sa2 hs1 hs2 lerc lerr seb see ser bcl
     (dsides-e dc e0 ec nc rc as ep err ids zr bcl nfc ok qe re ur snr io sp ub bcl wb)))
   (let ((erased bj2)) (dbij-n dc ec nc rc as ids zr bcl nic ok qn io sp ub bcl wb))
-  (let ((erased idd) (erased ed) (erased edi) (erased iod) (erased pmed) (erased med0) (erased med1)) (restrict dd sde sdei bcl bj1 dbcl lbcl))
-  (let ((erased idd2) (erased nd) (erased ndi) (erased iod2) (erased pmnd) (erased mnd) (erased mnd1)) (restrict dd nc nic bcl bj2 dbcl lbcl))
+  (let ((erased idd) (erased ed) (erased edi) (erased iod) (erased pmed) (erased med0) (erased _)) (restrict dd sde sdei bcl bj1 dbcl lbcl))
+  (let ((erased idd2) (erased nd) (erased ndi) (erased iod2) (erased pmnd) (erased mnd) (erased _)) (restrict dd nc nic bcl bj2 dbcl lbcl))
   (let-match erased (iota-fn dd idd idd2 iod iod2) (Refl _ _))
   (let ((erased fd) (erased hdm0)) (hyper-mk dd ed edi nd ndi pmed pmnd))
   (let ((erased hdm)) (hyper-rot dd fd ed nd hdm0))
@@ -716,7 +686,7 @@
   (let ((erased hr) (erased ap)) (app-exists RV zs))
   (let ((erased rx)) (MkRCx dc dm ec rc erc bcl h1 hd RV zs hr ids zr idm zh rG io sp ub re ur uerc rhd rrg rv iom spm ap))
   (let ((erased rrg2)) rrg)
-  (let-match erased rrg2 (RespCons _ _ G _ g0 pg0 rrg1))
+  (let-match erased rrg2 (RespCons _ _ G _ g0 _ _))
   (let-match erased RV (Cons _ v0 V) (absurd (Nil _) (match erased (revapp-in rG (Nil _) RV g0 rv (OrL _ _ (InHere g0 G))) _)))
   (let ((erased RVR) (erased sn2)) (snoc-exists _ V v0))
   (let ((erased djb)) (split-disj rc ids zr bcl sp))
@@ -733,8 +703,8 @@
   (let ((erased dRVR)) (distinct-snoc-cons v0 V RVR sn2 dRV))
   (let ((erased wrh)) (rv-hd dc dm ec nc rc as erc bcl h1 hd RV zs hr ok rx RV (within-refl RV)))
   (let ((erased srh)) (split-sub-t hd RV RV (Nil _) (within-split hd RV wrh)))
-  (let ((erased dzh) (erased dzs)) (split-distinct hd idm zh zs spm (iota-distinct dm idm iom)))
-  (let ((erased szh) (erased szs)) (split-sub hd idm zh zs spm))
+  (let ((erased _) (erased dzs)) (split-distinct hd idm zh zs spm (iota-distinct dm idm iom)))
+  (let ((erased _) (erased szs)) (split-sub hd idm zh zs spm))
   (let ((erased dhr)) (app-distinct RV zs hr ap dRV dzs (disj-sym zs hd (split-disj hd idm zh zs spm) RV srh)))
   (let ((erased uidm)) (perm-under dm idm idm (perm-id dm idm iom)))
   (let ((erased uRV)) (sub-under RV hd dm srh uhd))
@@ -751,8 +721,8 @@
   (let ((erased bj3)) (rbij-e dc dm ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr nfm cx rx qem uhr g hr whr))
   (let ((erased bj4)) (bij-build dm m nm nim RV RVR hr snm snmi qnm sa3 sa4 hs3 hs4 lRV lRVR shr (sub-of-snoc V RVR v0 sn2 RV (sub-refl RV)) srv hr
     (rsides-n dc dm v0 ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd V zs hr nim RVR cx rx qnm uhr sn2 wrh hr whr)))
-  (let ((erased idr) (erased er) (erased eri) (erased ior) (erased pmer) (erased mer) (erased mer1)) (restrict dr em nfm hr bj3 dhr lhr))
-  (let ((erased idr2) (erased nr) (erased nri) (erased ior2) (erased pmnr) (erased mnr0) (erased mnr1)) (restrict dr snm snmi hr bj4 dhr lhr))
+  (let ((erased idr) (erased er) (erased eri) (erased ior) (erased pmer) (erased mer) (erased _)) (restrict dr em nfm hr bj3 dhr lhr))
+  (let ((erased idr2) (erased nr) (erased nri) (erased ior2) (erased pmnr) (erased mnr0) (erased _)) (restrict dr snm snmi hr bj4 dhr lhr))
   (let-match erased (iota-fn dr idr idr2 ior ior2) (Refl _ _))
   (let ((erased fr) (erased hrm0)) (hyper-mk dr er eri nr nri pmer pmnr))
   (let ((erased hrm)) (hyper-rot dr fr er nr hrm0))
@@ -769,7 +739,7 @@
     (distinct-back hr br RV dRV rbr) (respects-assoc bd bcl h1 erc hd rG dd rbd rrg rhd lhd lbcl) rbr rv
     (parts6 dc dm dd ec nc fc ksc rc em nm fm ksm as hl ids h1 erc bcl hd RV zs hr bd cx rx rbd dbcl idm uidm)
     mde mdn mer (morph-relax hr nr snm nm RV RVR br dm sa3 rbr dhr lnm uhr idr mnr0)))
-  (let ((erased led2) (erased lnd) (erased lfd)) (hyper-lengths dd ed nd fd hdm))
+  (let ((erased led2) (erased _) (erased lfd)) (hyper-lengths dd ed nd fd hdm))
   (let ((erased A1) (erased F1) (erased q1) (erased ra1) (erased rf1) (erased r1) (erased rc1)) (dface-reach dc dd ec nc fc rc as erc err bcl ed nd fd sde idd dk idd udd))
   (let-match erased (respects-fn bcl idd A1 bcl ra1 (respects-id-right dd idd bcl iod lbcl)) (Refl _ _))
   (let-match erased (respects-fn fd idd F1 fd rf1 (respects-id-right dd idd fd iod lfd)) (Refl _ _))
@@ -784,15 +754,12 @@
   (MkEmbedPatch6 dc dm dd dr ec fc rc em nm fm h1 ed nd fd er nr fr hd hr bd br bcl q1 q2 q3 erc h1f ids zr pt lbcl ub r1 rc1 r2 r3 rc2 re rbd rhd rf rcf
     io sp))
 
-
-; What a membership in r says of the reverse rr of r.
 (def-fns _ $ (erased rv-in : (erased (List (Nat)) r rr) (erased (Nat) x) (erased (RevApp (Nat) r (Nil (Nat)) rr) rv) (erased (In x r) ix) -> (erased (In x rr) res))
   (revapp-in r (Nil _) rr x rv (OrL _ _ ix)))
 
 (def-fns _ $ (erased rv-out : (erased (List (Nat)) r rr) (erased (Nat) x) (erased (RevApp (Nat) r (Nil (Nat)) rr) rv) (erased (NotIn x r) ox) -> (erased (NotIn x rr) res))
   (notin-revapp x r (Nil _) rr rv ox (NotInNil x)))
 
-; GcOK and EEnv read only which darts are on the ring, so they hold for its reverse.
 (def-fns _ $ (erased gcall-rev : (erased (List (Nat)) ec nc rc rr as xs) (erased (RevApp (Nat) rc (Nil (Nat)) rr) rv) (subterm erased (GcAll ec nc rc as xs) ga)
     -> (erased (GcAll ec nc rr as xs) r))
   (let-match erased ga (GcCons _ _ _ _ xs1 x g ga1) ((GcNil _ _ _ _) (GcNil ec nc rr as)))
@@ -836,7 +803,6 @@
   (values (MkEEnv dc ec nc fc ksc rr dm em nm fm ksm as hl hc olc (MkKernelList dc fc rr as kids kio (kall-rev fc rc rr as rv ka) (kcov-rev fc rc rr as kids rv kv)) g pe)
     (MkGcOK dc ec nc rr as gids gio (gcall-rev ec nc rc rr as gids rv ga))))
 
-; The darts xs of idc are each on r or off its reverse t.
 (def-fns _ $ (erased either-rev : (erased (List (Nat)) r t idc zr embd) (erased (RevApp (Nat) r (Nil (Nat)) t) rv) (erased (Split t idc zr embd) sp)
     (subterm erased (List (Nat)) xs) (erased (Within xs idc) wi) -> (erased (InEither r embd xs) res))
   (let-match erased wi (WCons _ x xs1 ix wi1) ((WNil _) (IeNil r embd)))
@@ -847,13 +813,12 @@
       ((OrR _ _ ot) (OrR _ _ (split-off t idc zr embd x sp ix ot))))
     (either-rev r t idc zr embd rv sp xs1 wi1)))
 
-; embed_disk, embed_rem, embed_patch and cface_h1, on the node cycle rev rc that a NodeRing names.
 (def-fns _ $ (erased patch-at : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa) (erased (Iota dc ids) io)
     (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (NodeRing nc fc rc) nr) -> (erased (EmbedPatch dc ec fc rc dm em nm fm h1) ep))
   (let-match erased nr (MkNodeRing _ _ _ cp c0 rv sc))
   (let ((erased en2) (erased ok2)) (env-rev dc dm ec nc fc ksc rc (Cons _ c0 cp) em nm fm ksm as hl rv en ok))
-  (let ((erased h2) (erased el2) (erased lh2) (erased uh)) (h1-list dc dm ec nc fc ksc (Cons _ c0 cp) em nm fm ksm as hl ids en2 ok2 io))
+  (let ((erased h2) (erased el2) (erased _) (erased uh)) (h1-list dc dm ec nc fc ksc (Cons _ c0 cp) em nm fm ksm as hl ids en2 ok2 io))
   (let-match erased (embl-fn ec nc em nm fm as hl ids h1 h2 el el2) (Refl _ _))
   (let-match erased (embed-patch6 dc dm ec nc fc ksc (Cons _ c0 cp) em nm fm ksm as hl ids h1 (MkECx dc dm c0 ec nc fc ksc cp em nm fm ksm as hl ids h1 en2 ok2 fu fa io el lh uh sc))
     (MkEmbedPatch6 _ _ dd dr _ _ _ _ _ _ _ ed nd fd er nr fr hd hr bd br embd q1 q2 q3 erc h1f idc zr pt le ue r1 rc1 r2 r3 rc2 re rb rh rf rcf ioc sp))

@@ -1,8 +1,3 @@
-; One native-compute for many checks. `(native-jobs name ev job ...)` queues jobs and the erased evidence `ev` built from
-; their results; `(native-each name xs (x t r) T e pat step nil)` queues one job per element of the Settled list xs and
-; folds their evidence; `(native-then stmt ...)` queues statements to follow them; `(native-run)` runs every queued job
-; in one native-compute, then the rest in order. See PLAN.md's native.sl entry. Load after std/macro.sl.
-
 (def-adts $ (NativeQueue : -> Type)
   enum
   (many MkNativeQueue : (many (List $ Raw) binders thunks after) -> (NativeQueue)))
@@ -175,7 +170,7 @@
   (values mw4 $ raws-append cms out))
 
 (def-macro (native-each args here mw)
-  (let-match many args (Cons _ name r1) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
+  (let-match many args (Cons _ _ r1) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
   (let-match many r1 (Cons _ xs _) ((Nil _) (macro-fail mw here "`native-each` takes a name and a Settled list first")))
   (let ((unique mw1) (many n)) (fresh-raw mw here "n"))
   (values mw1 $ qq (let ((many (~ n))) (nq-length _ (~ xs))) (native-each-at (~ n) (~@ args))))
