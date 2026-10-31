@@ -342,3 +342,42 @@
     (erased (Splice A xs i n ys xs) sp) (erased (Splice A ds j n ys zs) sq) (erased (Nth A xs p x) nt) (erased (Add i t p) ad) (erased (Add i n e) ae)
     (erased (Lt p e) lt) (erased (Add j t m) aj) -> (erased (Nth A zs m x) r))
   (splice-nth-in A ds ys zs j n t m x sq (splice-nth-src A xs ys i n t p e x sp nt ad ae lt) aj))
+
+(def-fns _ $ (erased imm-all-nth : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A x) (erased (ImmAll A xs) ia) (subterm erased (Nth A xs i x) nt)
+    -> (erased (Imm A x) r))
+  (match erased nt _
+    ((NthHere _ _ _) (let-match erased ia (ImmAllCons _ _ _ ih _)) ih)
+    ((NthThere _ _ rest k _ p) (let-match erased ia (ImmAllCons _ _ _ _ it)) (imm-all-nth A rest k x it p))))
+
+(def-fns _ $ (erased imm-all-set : (erased Type A) (erased (List A) xs ys) (erased (Nat) i) (erased A y) (erased (ImmAll A xs) ia) (erased (Imm A y) iy)
+    (subterm erased (SetNth A xs i y ys) st) -> (erased (ImmAll A ys) r))
+  (match erased st _
+    ((SetHere _ _ _ rest) (let-match erased ia (ImmAllCons _ _ _ _ it)) (ImmAllCons A y rest iy it))
+    ((SetThere _ x rest k _ rest2 p) (let-match erased ia (ImmAllCons _ _ _ ih it)) (ImmAllCons A x rest2 ih (imm-all-set A rest rest2 k y it iy p)))))
+
+(def-fns _ $ (erased imm-all-splice : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (erased (ImmAll A xs) ix) (erased (ImmAll A ys) iy)
+    (subterm erased (Splice A xs i n ys zs) sp) -> (erased (ImmAll A zs) r))
+  (match erased sp _
+    ((SpliceNil _ _) ix)
+    ((SpliceHere _ _ y xs1 n1 ys1 zs1 p)
+      (let-match erased ix (ImmAllCons _ _ _ _ ix1))
+      (let-match erased iy (ImmAllCons _ _ _ ih iy1))
+      (ImmAllCons A y zs1 ih (imm-all-splice A xs1 ys1 zs1 (Zero) n1 ix1 iy1 p)))
+    ((SpliceThere _ x xs1 i1 _ _ zs1 p)
+      (let-match erased ix (ImmAllCons _ _ _ ih ix1))
+      (ImmAllCons A x zs1 ih (imm-all-splice A xs1 ys zs1 i1 n ix1 iy p)))))
+
+(def-fns _ $ (erased imm-all-sub : (erased Type A) (erased (List A) xs ys) (erased (Nat) i n) (erased (ImmAll A xs) ix)
+    (subterm erased (Splice A xs i n ys xs) sp) -> (erased (ImmAll A ys) r))
+  (match erased sp _
+    ((SpliceNil _ _) (ImmAllNil A))
+    ((SpliceHere _ _ y xs1 n1 ys1 _ p)
+      (let-match erased ix (ImmAllCons _ _ _ ih ix1))
+      (ImmAllCons A y ys1 ih (imm-all-sub A xs1 ys1 (Zero) n1 ix1 p)))
+    ((SpliceThere _ _ xs1 i1 _ _ _ p)
+      (let-match erased ix (ImmAllCons _ _ _ _ ix1))
+      (imm-all-sub A xs1 ys i1 n ix1 p))))
+
+(def-fns _ $ (erased imm-all-repeat : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs) (erased (Imm A x) im) (subterm erased (Repeat A n x xs) rp)
+    -> (erased (ImmAll A xs) r))
+  (match erased rp _ ((RepeatNil _ _) (ImmAllNil A)) ((RepeatCons _ n1 _ xs1 p) (ImmAllCons A x xs1 im (imm-all-repeat A n1 x xs1 im p)))))
