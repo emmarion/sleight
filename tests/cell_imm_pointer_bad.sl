@@ -1,3 +1,4 @@
+; needs: ../std/immediate
 ; error: type mismatch
 (def-adts $ (Box : -> Type)
   enum
@@ -5,4 +6,4 @@
 
 (def-fns _ $ (many f : (unique (Box) b) (many (List (Nat)) ys) -> (unique (Box) r at b))
   (let-match unique b (MkBox xs u))
-  (u (imm (ImmPlaced _ (ImmU62) _ xs (place-at-many _ xs)) (ImmPlaced _ (ImmU62) _ ys (place-at-many _ ys))) ys))
+  (u (imm (ImmPlaced _ _ (imm-of _ (ImmU62) xs) _ (place-at-many _ xs)) (ImmPlaced _ _ (imm-of _ (ImmU62) ys) _ (place-at-many _ ys))) ys))

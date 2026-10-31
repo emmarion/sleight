@@ -63,5 +63,5 @@
   (let ((erased old) (erased prev)) (ed-suffix-prev (Copy (U62)) cells j rest suffix))
   (let ((erased updated) (unique out) (erased set))
     (array-place-imm (Copy (U62)) cells a j (MkCopy (U62) (MkU62 d pd)) old
-      (ed-suffix-nth (Copy (U62)) cells j old rest prev) (ImmCopy (U62) (ImmU62))))
+      (ed-suffix-nth (Copy (U62)) cells j old rest prev) (imm-of _ (ImmCopy _ (ImmU62)) _) (imm-of _ (ImmCopy _ (ImmU62)) _)))
   (values updated out (ed-suffix-set-before (Copy (U62)) cells j rest suffix (MkCopy (U62) (MkU62 d pd)) updated set)))

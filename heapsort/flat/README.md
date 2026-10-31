@@ -6,7 +6,7 @@ files in order. From the repository root:
 
 ```
 T=agent/tasks/heapsort-fast
-dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.sl std/tactics.sl $T/spec.sl \
+dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl $T/spec.sl \
   $(cat heapsort/flat/files.txt) $T/perf.sl --build flat_perf && ./flat_perf
 ```
 

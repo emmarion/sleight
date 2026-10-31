@@ -2327,10 +2327,10 @@ silent.
 ## `imm` marks on cell stores (DESIGN.md section 37)
 
 228. **The reference keeps the barrier under `--no-extern`.** Extraction
-     under `--no-extern` gives a `U62` its model's representation, a
-     block, so the session reads `(Immediate (U62))` as true of the
-     extern representation only; there an `imm` store is extracted as
-     an ordinary store.
+     under `--no-extern` gives a `Nat` its model's representation, where
+     a `Succ` is a block, so the session reads `ImmNat`, and every `Imm`
+     built from it, as true of the extern representation only; there an
+     `imm` store is extracted as an ordinary store.
 
 229. **slc spends one unit of `fuel` on the proofs of an `imm` mark and
      on a `cell-write`'s or `cell-alloc`'s items.** The marks are taken
