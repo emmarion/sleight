@@ -29,7 +29,7 @@
   (UnderCons xs1 j d (nth-lt-length _ lab j d v p ll) (respects-under lab xs1 ls1 d rp1 ll)))
 
 (def-fns _ $ (erased perm-under : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Under p d) r))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (MkPerm _ _ _ ids io _ qp pq))
   (respects-under q p ids d qp (respects-length-inv p q ids d pq (iota-length d ids io))))
 
 ; With e an involution and ndi the inverse of nd, e, e . ndi and nd form a hypermap.
@@ -77,13 +77,13 @@
     (add-succ-right c2 (Succ d) (Succ s) (add-succ-right c2 d s a)) (add-succ2 ke kn s1 a1) (AddSucc (Succ s1) kf (Succ s) (AddSucc s1 kf s a2))))
 
 (def-fns _ $ (erased add-succ-left2 : (erased (Nat) a b c) (erased (Add (Succ (Succ a)) b c) p) -> (erased (Add a (Succ (Succ b)) c) r))
-  (let-match erased p (AddSucc _ _ c1 p1))
+  (let-match erased p (AddSucc _ _ _ p1))
   (let-match erased p1 (AddSucc _ _ c2 p2))
   (add-succ-right a (Succ b) (Succ c2) (add-succ-right a b c2 p2)))
 
 (def-fns _ $ (erased euler-apart : (erased (Nat) kc d ke kn kf) (erased (Euler (Succ kc) d ke (Succ kn) kf) eu)
     -> (erased (Euler kc (Succ (Succ d)) (Succ ke) kn kf) r))
-  (let-match erased eu (MkEuler _ _ _ _ _ c2 s s1 dc a a1 a2))
+  (let-match erased eu (MkEuler _ _ _ _ _ _ s s1 dc a a1 a2))
   (let-match erased dc (DS _ c0 dc0))
   (let ((erased s0) (erased e1) (erased a0)) (add-succ-right-inv ke kn s1 a1))
   (let-match erased e1 (Refl _ _))
@@ -91,7 +91,7 @@
 
 (def-fns _ $ (erased setnth-over : (erased (List (Nat)) xs ys zs) (erased (Nat) i y z) (subterm erased (SetNth (Nat) xs i y ys) p)
     (erased (SetNth (Nat) xs i z zs) q) -> (erased (SetNth (Nat) ys i z zs) r))
-  (let-match erased p (SetThere _ x rest i1 _ rest2 p1) ((SetHere _ x _ rest) (let-match erased q (SetHere _ _ _ _)) (SetHere _ y z rest)))
+  (let-match erased p (SetThere _ x rest i1 _ rest2 p1) ((SetHere _ _ _ rest) (let-match erased q (SetHere _ _ _ _)) (SetHere _ y z rest)))
   (let-match erased q (SetThere _ _ _ _ _ rest3 q1))
   (SetThere _ x rest2 i1 z rest3 (setnth-over rest rest2 rest3 i1 y z p1 q1)))
 
@@ -139,7 +139,7 @@
   (values lc pc ls1 ls2 s1 s2 (respects-snoc lab xs1 xs2 ls1 ls2 w lc r1 (respects-nth lab xs ls c w lc rp pw pc) qx s2)))
 
 (def-fns _ $ (erased perm-length : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Length (Nat) p d) l))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
   lp)
 
 (def-fns _ $ (erased graph-exists : (erased (Nat) d) (erased (List (Nat)) p) (erased (Length (Nat) p d) lp)
@@ -194,7 +194,7 @@
 
 (def-fns _ $ (erased loop-snoc : (erased (List (Nat)) nd lab) (erased (List (Bond)) g g2) (erased (Nat) x y) (subterm erased (Loopless nd g) lo)
     (erased (Separates lab nd x y) s) (erased (Snoc (Bond) g (MkBond x y) g2) sg) -> (erased (Loopless nd g2) r))
-  (let-match erased sg (SnocCons _ b0 _ g1 g3 sg1) ((SnocNil _ _) (LoopCons nd lab _ x y s (LoopNil nd))))
+  (let-match erased sg (SnocCons _ _ _ g1 g3 sg1) ((SnocNil _ _) (LoopCons nd lab _ x y s (LoopNil nd))))
   (let-match erased lo (LoopCons _ lab1 _ x1 y1 s1 lo1))
   (LoopCons nd lab1 g3 x1 y1 s1 (loop-snoc nd lab g1 g3 x y lo1 s sg1)))
 
@@ -245,7 +245,7 @@
   (let ((erased lnn)) (respects-length e ndi nn d rn (perm-length d ndi nd (perm-sym d nd ndi pn))))
   (let ((erased w) (erased pw)) (nth-exists _ nn d c lnn lc))
   (let-match erased (nth-fn _ e q w a (respects-nth e ndi nn c q w rn (perm-inv d q c nd ndi pn pc) pw) (perm-inv d a q e e pe pq)) (Refl _ _))
-  (let ((erased xs2) (erased sn) (erased w2)) (path-snoc nn _ xs1 b c a w1 pw (NotInNil c)))
+  (let ((erased xs2) (erased _) (erased w2)) (path-snoc nn _ xs1 b c a w1 pw (NotInNil c)))
   (values xs2 w2))
 
 (def-fns _ $ (erased fr-conn : (erased (Nat) d a b) (erased (List (Nat)) e nd) (erased (List (Bond)) ge gnd gc) (subterm erased (FaceReach e nd a b) fr)
@@ -256,7 +256,7 @@
 
 (def-fns _ $ (erased path-insert : (erased (List (Nat)) p p2 s xs) (erased (Nat) x y a d) (subterm erased (Path p s x y xs) w)
     (erased (Insert p a d p2) ins) (erased (Length (Nat) p d) lp) -> (erased (List (Nat)) ys) (erased (Path p2 (Nil (Nat)) x y ys) r))
-  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px _ w1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
   (let ((erased ys1) (erased v1)) (path-insert p p2 s xs1 z y a d w1 ins lp))
   (match erased (nat-eq x a) _
     ((Equal _ _ _)
@@ -277,7 +277,7 @@
 
 (def-fns _ $ (erased const-cat : (erased (List (Nat)) lab) (erased (List (Bond)) g h gh) (subterm erased (Cat g h gh) c) (erased (Const lab g) cl)
     (erased (Const lab h) ch) -> (erased (Const lab gh) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) ch))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) ch))
   (let-match erased cl (ConstCons _ _ x y l px py cl1))
   (ConstCons lab gh1 x y l px py (const-cat lab g1 h gh1 c1 cl1 ch)))
 
@@ -304,7 +304,7 @@
     (erased (EdgeGrow e0 n e2) gw)
     -> (erased (List (Bond)) geA ge2) (erased (Snoc (Bond) ge (MkBond n (Succ n)) geA) sA) (erased (Snoc (Bond) geA (MkBond (Succ n) n) ge2) s2)
     (erased (Graph (Succ (Succ n)) e2 ge2) gre2) (erased (Spans ge2 ge) old))
-  (let-match erased gw (MkEdgeGrow _ e1 _ _ len s1 s2))
+  (let-match erased gw (MkEdgeGrow _ e1 _ _ _ s1 s2))
   (let ((erased geA) (erased sgA) (erased greA)) (graph-snoc n (Succ n) e0 e1 ge gre s1))
   (let ((erased ge2) (erased sg2) (erased gre2)) (graph-snoc (Succ n) n e1 e2 geA greA s2))
   (values geA ge2 sgA sg2 gre2 (spans-snoc geA ge2 ge _ (spans-snoc ge geA ge _ (spans-self ge) sgA) sg2)))
@@ -337,7 +337,7 @@
   (let ((erased bc)) (classes-below gc n kc cc))
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
-  (let ((erased k1) (erased e1q) (erased csx)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) n (Succ n)
+  (let ((erased _) (erased e1q) (erased csx)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) n (Succ n)
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) gc (below-shut gc (Succ n) (below-succ gc n bc))
       (below-succ gc (Succ n) (below-succ gc n bc)) (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
@@ -347,7 +347,7 @@
   (let ((erased cx)) (CatCons (Nil (Bond)) gc gc (MkBond n (Succ n)) (CatNil gc)))
   (let ((erased sxe) (erased sxn)) (spans-old ge gnd gc _ x cg cx))
   (let ((erased cxn)) (conn-adj x n (Succ n) (AdjFwd gc n (Succ n))))
-  (let ((erased zs) (erased rz) (erased lz) (erased rpz)) (zeros-perm n nd0 ndi pn))
+  (let ((erased zs) (erased rz) (erased lz) (erased _)) (zeros-perm n nd0 ndi pn))
   (let ((erased lab1) (erased sl1)) (snoc-exists _ zs (Zero)))
   (let ((erased lab2) (erased sl2)) (snoc-exists _ lab1 (Succ (Zero))))
   (let ((erased rl2)) (respects-new lab1 lab2 nd1 nd2 (Succ n) (Succ (Zero)) (respects-new zs lab1 nd0 nd1 n (Zero) rz sn1 lz sl1) sn2
@@ -409,7 +409,7 @@
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
   (let ((erased ld)) (lt-weaken d (Succ n) (lt-weaken d n bd)))
-  (let ((erased k1) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d n
+  (let ((erased _) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d n
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) d n (Cons _ n (Nil _)) gc (below-shut gc n bc) (below-succ gc (Succ n) (below-succ gc n bc))
       (NotInCons d n _ (ApLt _ _ d n bd) (NotInNil d)) (InHere n _) ld l0)
@@ -417,7 +417,7 @@
   (let-match erased e1q (Refl _ _))
   (let ((erased g1)) (Cons (Bond) (MkBond d n) gc))
   (let ((erased bg1)) (BelowCons gc d n (Succ n) (lt-weaken d n bd) (lt-succ n) (below-succ gc n bc)))
-  (let ((erased k2) (erased e2q) (erased csx)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
+  (let ((erased _) (erased e2q) (erased csx)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) g1 (below-shut g1 (Succ n) bg1) (below-succ g1 (Succ n) bg1)
       (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
     l0 l1))
@@ -454,7 +454,7 @@
       sgA sg2)))
 
 (def-fns _ $ (erased separates-apart : (erased (List (Nat)) lab p) (erased (Nat) x y) (erased (Separates lab p x y) s) -> (erased (Apart (Nat) Lt x y) r))
-  (let-match erased s (MkSeparates _ _ _ _ l1 l2 rp p1 p2 ne))
+  (let-match erased s (MkSeparates _ _ _ _ l1 l2 _ p1 p2 ne))
   (match erased (nat-eq x y) _
     (absurd (Equal _ _ _) (let-match erased (nth-fn _ lab x l1 l2 p1 p2) (Refl _ _)) (apart-irrefl l1 ne))
     ((Unequal _ _ _ _ r) r)))
@@ -497,7 +497,7 @@
     (erased (Respects e0 ndi nn) rn) (erased (Graph n e0 ge) gre) (erased (Graph n nd0 gnd) grn) (erased (Cat ge gnd gc) cg)
     (erased (Nth (Nat) nd0 d1 c1) pc1) (erased (Nth (Nat) nd0 d2 c2) pc2) (erased (Insert nn c1 n A2) iA) (erased (Insert A2 c2 (Succ n) B) iB)
     (erased (Perm (Succ (Succ n)) B mB) pmB) (erased (Orbits (Succ (Succ n)) B kn) onB) (erased (Nth (Nat) B c1 n) pb1)
-    (erased (Nth (Nat) B c2 (Succ n)) pb2) (erased (Upd2 B c1 (Succ n) c2 n nnF) up) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
+    (erased (Nth (Nat) B c2 (Succ n)) pb2) (erased (Upd2 B c1 (Succ n) c2 n nnF) up) (erased (Lt d1 n) _b1) (erased (Lt d2 n) b2)
     (erased (Lt c1 n) lc1n) (erased (Lt c2 n) lc2n)
     (erased (Classes (Cons (Bond) (MkBond n (Succ n)) (Cons (Bond) (MkBond d1 n) gc)) (Succ (Succ n)) kc) csx1) (erased (Euler kc n ke kn kf) eu)
     -> (erased (Nat) kc2) (erased (Classes (Cons (Bond) (MkBond d2 (Succ n)) (Cons (Bond) (MkBond n (Succ n)) (Cons (Bond) (MkBond d1 n) gc)))
@@ -530,7 +530,7 @@
         (euler-face kc n ke kn kf eu)))
     ((JoinApart _ _ lab _ _ se sn)
       (let-match erased se (MkSeparates _ _ _ _ l1e l2e re q1e q2e nee))
-      (let-match erased sn (MkSeparates _ _ _ _ l1n l2n rnd q1n q2n nen))
+      (let-match erased sn (MkSeparates _ _ _ _ l1n l2n rnd q1n q2n _))
       (let-match erased (nth-fn _ lab d1 l1e l1n q1e q1n) (Refl _ _))
       (let-match erased (nth-fn _ lab d2 l2e l2n q2e q2n) (Refl _ _))
       (let ((erased ll)) (respects-length lab nd0 lab n rnd ln))
@@ -607,7 +607,7 @@
   (let ((erased l0)) (lt-weaken n (Succ n) (lt-succ n)))
   (let ((erased l1)) (lt-succ (Succ n)))
   (let ((erased ld1)) (lt-weaken d1 (Succ n) (lt-weaken d1 n b1)))
-  (let ((erased k1) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d1 n
+  (let ((erased _) (erased e1q) (erased cs3)) (classes-link-merge gc (Succ (Succ n)) (Succ (Succ kc)) d1 n
     (classes-grow gc (Succ n) (Succ kc) (classes-grow gc n kc cc))
     (shut-sep (Succ (Succ n)) d1 n (Cons _ n (Nil _)) gc (below-shut gc n bc) (below-succ gc (Succ n) (below-succ gc n bc))
       (NotInCons d1 n _ (ApLt _ _ d1 n b1) (NotInNil d1)) (InHere n _) ld1 l0)
@@ -615,7 +615,7 @@
   (let-match erased e1q (Refl _ _))
   (let ((erased g1)) (Cons (Bond) (MkBond d1 n) gc))
   (let ((erased bg1)) (BelowCons gc d1 n (Succ n) (lt-weaken d1 n b1) (lt-succ n) (below-succ gc n bc)))
-  (let ((erased k2) (erased e2q) (erased csx1)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
+  (let ((erased _) (erased e2q) (erased csx1)) (classes-link-merge g1 (Succ (Succ n)) (Succ kc) n (Succ n) cs3
     (shut-sep (Succ (Succ n)) n (Succ n) (Cons _ (Succ n) (Nil _)) g1 (below-shut g1 (Succ n) bg1) (below-succ g1 (Succ n) bg1)
       (NotInCons n (Succ n) _ (ApLt _ _ n (Succ n) (lt-succ n)) (NotInNil n)) (InHere (Succ n) _) l0 l1)
     l0 l1))

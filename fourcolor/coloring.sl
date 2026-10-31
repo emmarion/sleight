@@ -58,7 +58,7 @@
 ; The edges of a four-colouring are proper.
 (def-fns _ $ (erased coloring-proper : (erased (Nat) d) (erased (List (Nat)) e f ks ids) (erased (List (Bond)) ge) (erased (FourColoring e f ks) c)
     (erased (Graph d e ge) gr) (erased (Iota d ids) io) (erased (Length (Nat) ks d) lk) -> (erased (Proper ks ge) r))
-  (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
+  (let-match erased c (MkFourColoring _ _ _ ke _ re df _))
   (proper-of ids e ks ke ks ge (graph-zip d e ids ge gr io) (respects-id-right d ids ks io lk) re (differ-sym ke ks df)))
 
 (def-fns _ $ (erased proper-coloring : (erased (Nat) d) (erased (List (Nat)) e f ks ids) (erased (List (Bond)) ge) (erased (Proper ks ge) pr)
@@ -93,8 +93,8 @@
     (erased (Perm d f fi) pf) (erased (FourColoring fn fi ks) c) -> (erased (FourColoring e f ks) r))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased nf) (erased pe)) (hyper-perm d e n f h))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf2 io cfe ke cen kn cnf kf))
-  (let-match erased c (MkFourColoring _ _ _ kfn rfi rfn2 dfn u))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ _ io cfe ke _ _ _ _))
+  (let-match erased c (MkFourColoring _ _ _ _ rfi _ _ u))
   (let ((erased lk)) (respects-length ks fi ks d rfi (perm-length d fi f (perm-sym d f fi pf))))
   (let ((erased rf)) (resp-inv d ks fi f (perm-sym d f fi pf) rfi lk))
   (let ((erased gfn) (erased grfn)) (graph-exists d fn (respects-length f n fn d rfn ln)))
@@ -118,7 +118,7 @@
 
 (def-fns _ $ (erased join-length-inv : (erased (List (Nat)) pre rest ks) (erased (Nat) i r k) (subterm erased (Join pre rest ks) j)
     (erased (Length (Nat) pre i) lp) (erased (Length (Nat) ks k) lk) (erased (Add i r k) a) -> (erased (Length (Nat) rest r) res))
-  (let-match erased j (JoinCons pre1 _ ks1 x j1)
+  (let-match erased j (JoinCons pre1 _ ks1 _ j1)
     ((JoinNil _) (let-match erased lp (LengthNil _)) (let-match erased a (AddZero _)) lk))
   (let-match erased lp (LengthCons _ _ _ i1 lp1))
   (let-match erased lk (LengthCons _ _ _ k1 lk1))
@@ -133,7 +133,7 @@
   (JoinCons pre3 rest ks1 x (join-snoc pre1 rest ks1 pre3 c j1 s1)))
 
 (def-fns _ $ (erased join-nil-r : (erased (List (Nat)) pre ks) (subterm erased (Join pre (Nil (Nat)) ks) j) -> (erased (Eq (List (Nat)) ks pre) e))
-  (let-match erased j (JoinCons pre1 _ ks1 x j1) ((JoinNil _) (Refl _ ks)))
+  (let-match erased j (JoinCons pre1 _ ks1 _ j1) ((JoinNil _) (Refl _ ks)))
   (let-match erased (join-nil-r pre1 ks1 j1) (Refl _ _))
   (Refl _ ks))
 
@@ -197,7 +197,7 @@
   (match erased ne _
     ((NEFace _ _ _ _ _ _ X lp rX nq)
       (let-match erased (join-all pre rest ks d j lp l) (Refl _ _))
-      (let-match erased c (MkFourColoring _ _ _ ke2 rf re df u))
+      (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
       (let-match erased (respects-fn pre f X pre rX rf) (Refl _ _))
       (neat-irrefl X nq))
     ((NERing _ _ _ _ _ _ R lp rR nq)
@@ -206,7 +206,7 @@
       (neat-irrefl R nq))
     ((NEEdge _ _ _ _ _ _ ke lp rke sa)
       (let-match erased (join-all pre rest ks d j lp l) (Refl _ _))
-      (let-match erased c (MkFourColoring _ _ _ ke2 rf re df u))
+      (let-match erased c (MkFourColoring _ _ _ ke2 _ re df _))
       (let-match erased (respects-fn pre e ke ke2 rke re) (Refl _ _))
       (let-match erased sa (MkSameAt _ _ j2 x px py))
       (apart-irrefl x (differ-nth ke pre j2 x x df px py)))
@@ -274,6 +274,6 @@
 ; A map has a four-colouring that gives the darts of r the colours lc, or none.
 (def-fns _ $ (erased search-ring : (erased (Nat) d k) (erased (List (Nat)) e n f r lc) (erased (Hypermap d e n f) h) (erased (Under r d) ur)
     (erased (Length (Nat) r k) lr) (erased (Length (Nat) lc k) llc) -> (erased (Search d e f r lc (Nil (Nat))) res))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (search d k e f r lc (perm-under d e nf pe) (perm-under d f fi pf) ur le lf lr llc d (Nil _) (Zero) (LengthNil _) (AddZero d) (UnderNil 4)))

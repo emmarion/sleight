@@ -18,7 +18,7 @@
 
 (def-fns _ $ (erased adj-map : (erased (List (Nat)) s) (erased (List (Bond)) g g2) (erased (Nat) x y x2 y2) (subterm erased (Adj g x y) a)
     (erased (MapB s g g2) mb) (erased (Nth (Nat) s x x2) px) (erased (Nth (Nat) s y y2) py) -> (erased (Adj g2 x2 y2) r))
-  (let-match erased mb (MapCons _ g1 g3 u v u2 v2 pu pv mb1) (absurd (MapNil _) a))
+  (let-match erased mb (MapCons _ g1 g3 _ _ u2 v2 pu pv mb1) (absurd (MapNil _) a))
   (match erased a _
     ((AdjFwd _ _ _)
       (let-match erased (nth-fn _ s x x2 u2 px pu) (Refl _ _))
@@ -39,7 +39,7 @@
 
 (def-fns _ $ (erased in-map : (erased (List (Nat)) s rs rs2) (erased (Nat) r r2) (subterm erased (In r rs) pin) (erased (Respects s rs rs2) rp)
     (erased (Nth (Nat) s r r2) pr) -> (erased (In r2 rs2) res))
-  (let-match erased rp (RespCons _ rs1 rs3 j l pj rp1) (absurd (RespNil _) pin))
+  (let-match erased rp (RespCons _ rs1 rs3 _ l pj rp1) (absurd (RespNil _) pin))
   (let-match erased pin (InThere _ _ _ pin1) ((InHere _ _) (let-match erased (nth-fn _ s r r2 l pr pj) (Refl _ _)) (InHere r2 rs3)))
   (InThere r2 l rs3 (in-map s rs1 rs3 r r2 pin1 rp1 pr)))
 
@@ -57,7 +57,7 @@
 
 (def-fns _ $ (erased under-nth : (erased (List (Nat)) xs) (erased (Nat) j x d) (erased (Under xs d) u) (subterm erased (Nth (Nat) xs j x) p)
     -> (erased (Lt x d) r))
-  (let-match erased u (UnderCons xs1 y _ ly u1) (absurd (UnderNil _) p))
+  (let-match erased u (UnderCons xs1 _ _ ly u1) (absurd (UnderNil _) p))
   (let-match erased p (NthThere _ _ _ j1 _ p1) ((NthHere _ _ _) ly))
   (under-nth xs1 j1 x d u1 p1))
 
@@ -68,7 +68,7 @@
 
 (def-fns _ $ (erased rooted-under : (erased (List (Bond)) g) (erased (List (Nat)) rs xs ls lab) (erased (Nat) d) (subterm erased (Rooted g rs xs ls) ro)
     (erased (Respects lab rs rs) fix) (erased (Length (Nat) lab d) ll) -> (erased (Under ls d) r))
-  (let-match erased ro (RootedCons _ _ xs1 ls1 x r pin c ro1) ((RootedNil _ _) (UnderNil d)))
+  (let-match erased ro (RootedCons _ _ xs1 ls1 _ r pin _ ro1) ((RootedNil _ _) (UnderNil d)))
   (UnderCons ls1 r d (nth-lt-length _ lab r d r (fixed-in lab rs r fix pin) ll) (rooted-under g rs xs1 ls1 lab d ro1 fix ll)))
 
 ; lab2 = s . lab . si.
@@ -120,7 +120,7 @@
 (def-fns _ $ (erased classes-map : (erased (Nat) d k) (erased (List (Nat)) s si) (erased (List (Bond)) g g2) (erased (Perm d s si) pm)
     (erased (MapB s g g2) mb) (erased (Classes g d k) cs) -> (erased (Classes g2 d k) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
-  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls _ ssi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased lsi)) (respects-length-inv s si ids d ssi (iota-length d ids io)))
   (let ((erased ul)) (rooted-under g rs ids lab lab d ro fix ll))
@@ -216,8 +216,8 @@
   (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased g) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
     (genus-parts d gen e n f p))
   (let ((erased fn) (erased ni) (erased fi) (erased h2) (erased rfn) (erased pn) (erased pf)) (hyper-mirror d e n f h))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke0 cen kn0 cnf kf0))
-  (let-match erased pf (MkPerm _ _ _ ids2 io2 lf2 fif ffi))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke0 _ _ cnf kf0))
+  (let-match erased pf (MkPerm _ _ _ ids2 io2 _ _ ffi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased lnf)) (respects-length n f nf d cnf lf))
@@ -232,8 +232,8 @@
   (let ((erased gni) (erased grni)) (perm-graph d ni n qn))
   (let ((erased gfi) (erased grfi)) (perm-graph d fi f qf))
   (let ((erased g2) (erased gl2)) (glink-exists d fn ni fi gfn gni gfi grfn grni grfi))
-  (let ((erased se) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf g gl gre grn grf))
-  (let ((erased tfn) (erased tni) (erased tfi)) (glink-spans d fn ni fi gfn gni gfi g2 gl2 grfn grni grfi))
+  (let ((erased _) (erased sn) (erased sf)) (glink-spans d e n f ge gn gf g gl gre grn grf))
+  (let ((erased _) (erased tni) (erased tfi)) (glink-spans d fn ni fi gfn gni gfi g2 gl2 grfn grni grfi))
   (let ((erased un) (erased uf)) (values (spans-to-inv d ni n g2 gni gn tni qn grni grn) (spans-to-inv d fi f g2 gfi gf tfi qf grfi grf)))
   (let ((erased gnf) (erased cgnf)) (cat-exists gn gf))
   (values fn ni fi h2 rfn pn pf
@@ -271,7 +271,7 @@
 ; Composing with a permutation s on the right is injective.
 (def-fns _ $ (erased respects-cancel : (erased (Nat) d) (erased (List (Nat)) s si a b v) (erased (Perm d s si) pm) (erased (Respects a s v) ra)
     (erased (Respects b s v) rb) (erased (Length (Nat) a d) la) (erased (Length (Nat) b d) lb) -> (erased (Eq (List (Nat)) a b) e))
-  (let-match erased pm (MkPerm _ _ _ ids io ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids io ls _ ssi))
   (let ((erased u) (erased ru)) (respects-exists v si d (perm-under d si s (perm-sym d s si pm)) (respects-length a s v d ra ls)))
   (let-match erased (respects-fn a ids u a (respects-assoc-inv si s a ids v u ssi ru ra) (respects-id-right d ids a io la)) (Refl _ _))
   (respects-fn b ids u b (respects-assoc-inv si s b ids v u ssi ru rb) (respects-id-right d ids b io lb)))
@@ -309,7 +309,7 @@
     -> (erased (List (Nat)) e2 n2 f2) (erased (Conj s si e e2) ce) (erased (Conj s si n n2) cn) (erased (Conj s si f f2) cf)
     (erased (Hypermap d e2 n2 f2) h2))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
-  (let-match erased pm (MkPerm _ _ _ ids2 io2 ls sis ssi))
+  (let-match erased pm (MkPerm _ _ _ ids2 io2 _ _ ssi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased nfe) (erased pme)) (hyper-perm d e n f h))
@@ -343,7 +343,7 @@
 
 (def-fns _ $ (erased map-cat : (erased (List (Nat)) s) (erased (List (Bond)) g h gh x) (subterm erased (Cat g h gh) c) (erased (MapB s gh x) mb)
     -> (erased (List (Bond)) y z) (erased (MapB s g y) my) (erased (MapB s h z) mz) (erased (Cat y z x) cyz))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (values (Nil _) x (MapNil s) mb (CatNil x))))
+  (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) (values (Nil _) x (MapNil s) mb (CatNil x))))
   (let-match erased mb (MapCons _ _ x1 u v u2 v2 pu pv mb1))
   (let ((erased y1) (erased z) (erased my1) (erased mz) (erased c2)) (map-cat s g1 h gh1 x1 c1 mb1))
   (values (Cons _ (MkBond u2 v2) y1) z (MapCons s g1 y1 u v u2 v2 pu pv my1) mz (CatCons y1 z x1 (MkBond u2 v2) c2)))

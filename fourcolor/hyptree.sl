@@ -22,7 +22,7 @@
 ; Two walks to y: the start of each is on the other.
 (def-fns _ $ (erased walks-meet : (erased (Nat) d x x2 y) (erased (List (Nat)) p q s s2 xs ys) (erased (Perm d p q) pm)
     (subterm erased (Path p s x y xs) w) (erased (Path p s2 x2 y ys) v) -> (erased (Or (In x2 (Cons (Nat) y xs)) (In x (Cons (Nat) y ys))) r))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) ((PathHere _ _ _) (OrR _ _ (InHere x ys))))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) ((PathHere _ _ _) (OrR _ _ (InHere x ys))))
   (let-match erased (walks-meet d x1 x2 y p q s s2 xs1 ys pm w1 v) (OrR _ _ i1) ((OrL _ _ i2) (OrL _ _ (in-skip x2 y x xs1 i2))))
   (let-match erased (nat-eq x1 x2) (Unequal _ _ _ _ ne) ((Equal _ _ _) (OrL _ _ (in-skip x2 y x xs1 (path-start-in p s xs1 x1 y w1)))))
   (let ((erased u) (erased pu) (erased pn)) (path-prev p s2 ys x2 y x1 v i1 ne))
@@ -43,18 +43,18 @@
 
 (def-fns _ $ (erased path-under : (erased (Nat) d x y) (erased (List (Nat)) p q s xs) (erased (Perm d p q) pm) (subterm erased (Path p s x y xs) w)
     (erased (Lt x d) lx) -> (erased (Under xs d) u) (erased (Lt y d) ly))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) ((PathHere _ _ _) (values (UnderNil d) lx)))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) ((PathHere _ _ _) (values (UnderNil d) lx)))
   (let ((erased u1) (erased ly)) (path-under d x1 y p q s xs1 pm w1 (perm-val d x x1 p q pm px)))
   (values (UnderCons xs1 x d lx u1) ly))
 
 (def-fns _ $ (erased path-from : (erased (List (Nat)) p s xs) (erased (Nat) x y u) (subterm erased (Path p s x y xs) w) (erased (In u xs) pu)
     -> (erased (SomePath p s u y) r))
-  (let-match erased w (PathStep _ _ xs1 _ x1 _ px out w1) (absurd (PathHere _ _ _) pu))
+  (let-match erased w (PathStep _ _ xs1 _ x1 _ _ _ w1) (absurd (PathHere _ _ _) pu))
   (let-match erased (nat-eq u x) (Unequal _ _ _ _ ne) ((Equal _ _ _) (MkSomePath p s _ u y w)))
   (path-from p s xs1 x1 y u w1 (in-tail u x xs1 pu ne)))
 
 ; The cycle of c through x0: the walk cs from y0 = c x0 back to x0, its darts x0 :: cs.
-(def-fns _ $ (erased orbit-step : (erased (Nat) d x0 y0 a b) (erased (List (Nat)) c ci cs) (erased (Perm d c ci) pc) (erased (Nth (Nat) c x0 y0) p0)
+(def-fns _ $ (erased orbit-step : (erased (Nat) d x0 y0 a b) (erased (List (Nat)) c ci cs) (erased (Perm d c ci) _pc) (erased (Nth (Nat) c x0 y0) p0)
     (erased (Path c (Nil (Nat)) y0 x0 cs) cy) (erased (In a (Cons (Nat) x0 cs)) ia) (erased (Nth (Nat) c a b) pab) -> (erased (In b (Cons (Nat) x0 cs)) r))
   (let-match erased ia (InThere _ _ _ ia1)
     ((InHere _ _) (let-match erased (nth-fn _ c x0 b y0 pab p0) (Refl _ _)) (path-start-in c _ cs y0 x0 cy)))
@@ -70,10 +70,10 @@
 
 (def-fns _ $ (erased orbit-walk-in : (erased (Nat) d x0 y0 a y) (erased (List (Nat)) c ci cs s ys) (erased (Perm d c ci) pc) (erased (Nth (Nat) c x0 y0) p0)
     (erased (Path c (Nil (Nat)) y0 x0 cs) cy) (erased (In a (Cons (Nat) x0 cs)) ia) (subterm erased (Path c s a y ys) w) -> (erased (In y (Cons (Nat) x0 cs)) r))
-  (let-match erased w (PathStep _ _ ys1 _ a1 _ pa out w1) ((PathHere _ _ _) ia))
+  (let-match erased w (PathStep _ _ ys1 _ a1 _ pa _ w1) ((PathHere _ _ _) ia))
   (orbit-walk-in d x0 y0 a1 y c ci cs s ys1 pc p0 cy (orbit-step d x0 y0 a a1 c ci cs pc p0 cy ia pa) w1))
 
-(def-fns _ $ (erased orbit-root : (erased (Nat) d x0 y0 a) (erased (List (Nat)) c cs) (erased (Path c (Nil (Nat)) y0 x0 cs) cy)
+(def-fns _ $ (erased orbit-root : (erased (Nat) _d x0 y0 a) (erased (List (Nat)) c cs) (erased (Path c (Nil (Nat)) y0 x0 cs) cy)
     (erased (In a (Cons (Nat) x0 cs)) ia) -> (erased (SomePath c (Nil (Nat)) a x0) r))
   (let-match erased ia (InThere _ _ _ ia1) ((InHere _ _) (MkSomePath c _ _ x0 x0 (PathHere c _ x0))))
   (path-from c _ cs y0 x0 a cy ia1))
@@ -102,7 +102,7 @@
 
 (def-fns _ $ (erased good-at : (erased (List (Nat)) n f o s) (erased (Nat) a b a2) (subterm erased (Good n f o s) gd) (erased (In a s) ia)
     (erased (Nth (Nat) n a b) pb) (erased (Nth (Nat) f a a2) pa2) -> (erased (Apart (Nat) Lt b a) nb) (erased (Apart (Nat) Lt a2 a) na2) (erased (In b o) ib))
-  (let-match erased gd (GoodCons _ _ _ s1 a1 b1 c1 pb1 nb1 pc1 nc1 ib1 gd1) (absurd (GoodNil _ _ _) ia))
+  (let-match erased gd (GoodCons _ _ _ s1 _ b1 c1 pb1 nb1 pc1 nc1 ib1 gd1) (absurd (GoodNil _ _ _) ia))
   (let-match erased ia (InThere _ _ _ ia1)
     ((InHere _ _)
       (let-match erased (nth-fn _ n a b b1 pb pb1) (Refl _ _))
@@ -135,10 +135,8 @@
     (erased (Good n f (Cons (Nat) x0 cs) (Cons (Nat) x0 cs)) gd) (erased (In z (Cons (Nat) x0 cs)) iz) (erased (In w (Cons (Nat) x0 cs)) iw)
     (erased (Nth (Nat) c z a1) pza1) (erased (Path c (Cons (Nat) z (Cons (Nat) w (Nil (Nat)))) a1 w xs) wb) (erased (Length (Nat) xs j) lxs)
     (erased (Lt j N) ljn) (erased (Nth (Nat) f w z) pfw) -> (erased (False) r))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
-  (let ((erased ci) (erased rci) (erased pc)) (perm-comp d n ni f fi c pmn pmf rc))
-  (let ((erased uo) (erased lx0)) (path-under d y0 x0 c ci _ cs pc cy (perm-val d x0 y0 c ci pc p0)))
-  (let ((erased uO)) (UnderCons cs x0 d lx0 uo))
+  (let ((erased _) (erased ni) (erased fi) (erased _) (erased _) (erased pmn) (erased pmf)) (hyper-core d e n f h))
+  (let ((erased ci) (erased _) (erased pc)) (perm-comp d n ni f fi c pmn pmf rc))
   (let ((erased ia1)) (orbit-step d x0 y0 z a1 c ci cs pc p0 cy iz pza1))
   (let ((erased la1)) (perm-val d z a1 c ci pc pza1))
   (let ((erased b) (erased pb) (erased _)) (perm-nth d a1 n ni pmn la1))
@@ -190,7 +188,7 @@
       (erased (Seps e z z2) sp) -> (Leaf e n f x)))
 
 (def-fns _ $ (erased under-in : (erased (List (Nat)) xs) (erased (Nat) x d) (subterm erased (Under xs d) u) (erased (In x xs) ix) -> (erased (Lt x d) r))
-  (let-match erased u (UnderCons xs1 y _ ly u1) (absurd (UnderNil _) ix))
+  (let-match erased u (UnderCons xs1 _ _ ly u1) (absurd (UnderNil _) ix))
   (let-match erased ix (InThere _ _ _ ix1) ((InHere _ _) ly))
   (under-in xs1 x d u1 ix1))
 
