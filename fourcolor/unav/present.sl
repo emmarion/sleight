@@ -2,6 +2,7 @@
   enum
   (many SSplit : (many (Loc) i) (many (Nat) j k) (many (Bool) lo lab) (many (Script) l r) -> (Script))
   (many SRed : -> (Script))
+  (many SCut : -> (Script))
   (many SHub : (many (List (Hc)) hc) -> (Script))
   (many SSim : (many (Nat) idx) (many (Bool) mir) (many (Nat) n) -> (Script)))
 
@@ -76,6 +77,7 @@
       (let ((many p0l)) (bif _ (good-split i j k p0) (split-part i j k lo p0) pl))
       (and (good-split i j k p) (notail $ check c env p0l pl l) (tail $ check c (bif _ lab (Cons _ p0l env) env) p0 pr r)))
     ((SRed) (redp c p))
+    ((SCut) (BFalse))
     ((SHub hc) (and (hubcap-cover c hc) (hubcap-fit c p hc)))
     ((SSim idx mir n)
       (let ((many ps)) (nth-part idx env))

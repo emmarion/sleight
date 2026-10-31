@@ -77,26 +77,57 @@
   (let ((erased ly) (erased ds1)) (dscore-step d x y pos neg e n f ks drs g lx ds py))
   (dscore-iter d y z k1 pos neg e n f ks drs g ly ds1 it1))
 
+; What the walk's evidence gives a dart y of positive dscore fitting its part exactly: an obligation fitting exactly at
+; some dart, or, from a PRed, a dart of positive dscore fitting the obligation exactly, or, from a PCut, one fitting a part
+; of the cut list exactly.
+(def-adts $ (PresHit : ((Nat) d) ((List (Nat)) e n f ks) ((List (List (Sub))) drs ct out) -> Type)
+  enum
+  (many PHMap : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (MapHit d e f ks out) h)
+      -> (PresHit d e n f ks drs ct out))
+  (many PHPos : (erased (Nat) d z pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (List (Sub)) q) (erased (Lt z d) lz)
+      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Mem (List (Sub)) q out) m)
+      -> (PresHit d e n f ks drs ct out))
+  (many PHCut : (erased (Nat) d z pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (List (Sub)) q) (erased (Lt z d) lz)
+      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Mem (List (Sub)) q ct) m)
+      -> (PresHit d e n f ks drs ct out)))
+
+(def-fns _ $ (erased preshit-ext : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct o o2) (erased (PresHit d e n f ks drs ct o) h)
+    (erased (Ext o o2) x) -> (erased (PresHit d e n f ks drs ct o2) r))
+  (match erased h _
+    ((PHMap _ _ _ _ _ _ _ _ mh) (PHMap d e n f ks drs ct o2 (map-hit-ext d e f ks o o2 mh x)))
+    ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHPos d z pos neg e n f ks drs ct o2 q lz ds lt ex (mem-ext q o o2 m x)))
+    ((PHCut _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHCut d z pos neg e n f ks drs ct o2 q lz ds lt ex m))))
+
+(def-fns _ $ (erased preshit-map : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs o) (erased (PresHit d e n f ks drs (Nil (List (Sub))) o) h)
+    -> (erased (MapHit d e f ks o) r))
+  (match erased h _
+    ((PHMap _ _ _ _ _ _ _ _ mh) mh)
+    ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (MkMapHit d z e f ks q o lz m ex))
+    (absurd (PHCut _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) m)))
+
 (def-fns _
-  ((erased pres-sound : (erased (Nat) d nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs) (erased (Geo d e n f ks) g)
+  ((erased pres-sound : (erased (Nat) d nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs ct) (erased (Geo d e n f ks) g)
       (erased (OfSize nhub drs rs) sz) (erased (Iota d ws) iw) (erased (TgtAll e n f ks drs rt nhub ws) ta) (erased (Nat) y pos neg)
       (erased (List (List (Sub))) out) (erased (List (Sub)) p) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt)
-      (erased (ExactAt e f ks y p) x) (subterm erased (Pres nhub rt rs p out) dp) -> (erased (MapHit d e f ks out) r))
+      (erased (ExactAt e f ks y p) x) (subterm erased (Pres nhub rt rs ct p out) dp) -> (erased (PresHit d e n f ks drs ct out) r))
     (match erased dp _
-      ((PRed _ _ _ _ _ m) (MkMapHit d y e f ks p out ly m x))
-      ((PHub _ _ _ acc o _ _ hc l cv ix w e1)
-        (map-hit-ext d e f ks o out (hub-sound d y nhub pos neg e n f ks ws drs rt rs acc o p hc g ly ds lt x l sz iw ta cv ix w) e1))
-      ((PSplit _ k _ _ o1 o2 _ _ ql qh pl pr w s dl dr e1 e2)
+      ((PRed _ _ _ _ _ _ m) (PHPos d y pos neg e n f ks drs ct out p ly ds lt x m))
+      ((PCut _ _ _ _ _ _ c)
+        (let-match erased c (MkCutAt _ h _ m mh sb lp lh))
+        (PHCut d y pos neg e n f ks drs ct out h ly ds lt (exact-sub-at e f ks y m p h x sb lp lh) mh))
+      ((PHub _ _ _ _ acc o _ _ hc l cv ix w e1)
+        (PHMap d e n f ks drs ct out (map-hit-ext d e f ks o out (hub-sound d y nhub pos neg e n f ks ws drs rt rs acc o p hc g ly ds lt x l sz iw ta cv ix w) e1)))
+      ((PSplit _ k _ _ _ o1 o2 _ _ ql qh pl pr w s dl dr e1 e2)
         (match erased (exact-split-at d y k e n f ks p ql qh g x w) _
           ((OrL _ _ xl)
             (match erased s _
-              ((SelL _ _) (map-hit-ext d e f ks o1 out (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o1 ql ly ds lt xl dl) e1))
-              ((SelR _ _) (map-hit-ext d e f ks o2 out (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o2 ql ly ds lt xl dr) e2))))
+              ((SelL _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 ql ly ds lt xl dl) e1))
+              ((SelR _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 ql ly ds lt xl dr) e2))))
           ((OrR _ _ xh)
             (match erased s _
-              ((SelL _ _) (map-hit-ext d e f ks o2 out (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o2 qh ly ds lt xh dr) e2))
-              ((SelR _ _) (map-hit-ext d e f ks o1 out (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o1 qh ly ds lt xh dl) e1))))))
-      ((PSim _ k m _ _ o1 o2 _ _ p2 pe0 pe ro lk lp le sb fe de e1 e2)
+              ((SelL _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 qh ly ds lt xh dr) e2))
+              ((SelR _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 qh ly ds lt xh dl) e1))))))
+      ((PSim _ k m _ _ _ o1 o2 _ _ p2 pe0 pe ro lk lp le sb fe de e1 e2)
         (let ((erased a) (erased pa) (erased la)) (exact-len e f ks y p x))
         (let-match erased (length-fn _ p a m la lp) (Refl _ _))
         (let ((erased z) (erased it) (erased lz) (erased x2)) (exact-rot-at d y a k e n f ks p p2 g ly pa lk x ro))
@@ -107,33 +138,33 @@
         (let-match erased (nth-fn _ ks z a2 a pa2 pa3) (Refl _ _))
         (let ((erased x3)) (exact-sub-at e f ks z a p2 pe0 x2 sb la2 le))
         (let ((erased ds2)) (dscore-iter d y z k pos neg e n f ks drs g ly ds it))
-        (match erased (forced-sound d nhub e n f ks ws drs rt rs g sz iw ta z pos neg o1 pe0 pe lz ds2 lt x3 fe) _
-          ((OrL _ _ hh) (map-hit-ext d e f ks o1 out hh e1))
-          ((OrR _ _ x4) (map-hit-ext d e f ks o2 out (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta z pos neg o2 pe lz ds2 lt x4 de) e2))))))
-  ((erased forced-sound : (erased (Nat) d nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs) (erased (Geo d e n f ks) g)
+        (match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta z pos neg o1 pe0 pe lz ds2 lt x3 fe) _
+          ((OrL _ _ hh) (preshit-ext d e n f ks drs ct o1 out hh e1))
+          ((OrR _ _ x4) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta z pos neg o2 pe lz ds2 lt x4 de) e2))))))
+  ((erased forced-sound : (erased (Nat) d nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs ct) (erased (Geo d e n f ks) g)
       (erased (OfSize nhub drs rs) sz) (erased (Iota d ws) iw) (erased (TgtAll e n f ks drs rt nhub ws) ta) (erased (Nat) y pos neg)
       (erased (List (List (Sub))) o) (erased (List (Sub)) p0 p) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt)
-      (erased (ExactAt e f ks y p0) x) (subterm erased (Forced nhub rt rs p0 p o) fd) -> (erased (Or (MapHit d e f ks o) (ExactAt e f ks y p)) r))
+      (erased (ExactAt e f ks y p0) x) (subterm erased (Forced nhub rt rs ct p0 p o) fd) -> (erased (Or (PresHit d e n f ks drs ct o) (ExactAt e f ks y p)) r))
     (match erased fd _
-      ((FRoot _ _ _ _ _) (OrR _ _ x))
-      ((FLeft _ k m _ _ _ q0 q ql qh _ other _ f1 w s sb dj lc l0)
+      ((FRoot _ _ _ _ _ _) (OrR _ _ x))
+      ((FLeft _ k m _ _ _ _ q0 q ql qh _ other _ f1 w s sb dj lc l0)
         (let ((erased x0)) (exact-sub-at e f ks y m p0 q0 x sb lc l0))
-        (match erased (forced-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o q0 q ly ds lt x0 f1) _
+        (match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o q0 q ly ds lt x0 f1) _
           ((OrL _ _ hh) (OrL _ _ hh))
           ((OrR _ _ xq)
             (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
               ((OrL _ _ xl) (match erased s _ ((SelL _ _) (OrR _ _ xl)) (absurd (SelR _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
               ((OrR _ _ xh) (match erased s _ (absurd (SelL _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelR _ _) (OrR _ _ xh))))))))
-      ((FRight _ k _ _ _ ol q0 q ql qh pl _ f1 w s dl e1)
-        (match erased (forced-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg o p0 q ly ds lt x f1) _
+      ((FRight _ k _ _ _ _ ol q0 q ql qh pl _ f1 w s dl e1)
+        (match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o p0 q ly ds lt x f1) _
           ((OrL _ _ hh) (OrL _ _ hh))
           ((OrR _ _ xq)
             (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
               ((OrL _ _ xl)
                 (match erased s _
-                  ((SelL _ _) (OrL _ _ (map-hit-ext d e f ks ol o (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
+                  ((SelL _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
                   ((SelR _ _) (OrR _ _ xl))))
               ((OrR _ _ xh)
                 (match erased s _
                   ((SelL _ _) (OrR _ _ xh))
-                  ((SelR _ _) (OrL _ _ (map-hit-ext d e f ks ol o (pres-sound d nhub e n f ks ws drs rt rs g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))))
+                  ((SelR _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))))

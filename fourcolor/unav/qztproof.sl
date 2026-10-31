@@ -48,7 +48,7 @@
 (def-adts $ (ArityOK : ((List (Config)) cfs) ((List (List (Sub))) drs) ((Nat) a) -> Type)
   enum
   (many MkArityOK : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs rs rt out) (erased (Nat) a) (erased (List (Sub)) p)
-      (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (erased (Repeat (Sub) a sub59 p) rp) (erased (Pres a rt rs p out) pr)
+      (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (erased (Repeat (Sub) a sub59 p) rp) (erased (Pres a rt rs (Nil (List (Sub))) p out) pr)
       (erased (RedE cfs out) re) -> (ArityOK cfs drs a)))
 
 (def-adts $ (ArityL : ((List (Config)) cfs) ((List (List (Sub))) drs) ((Nat) m hi) -> Type)
@@ -97,12 +97,12 @@
   (let ((many rt) (erased tg)) (pick-target-c a drs))
   (let ((many p) (erased rp)) (nseq-c _ a sub59))
   (let ((many ok1) (many out) (erased w1))
-    (check2-c a rt rs (Nil _) (Nil _) (EENil a rt rs (Nil _)) p p p p (FRoot a rt rs (Nil _) p) (FRoot a rt rs (Nil _) p) s))
+    (check2-c a rt rs (Nil (List (Sub))) (Nil _) (Nil _) (EENil a rt rs (Nil (List (Sub))) (Nil _)) p p p p (FRoot a rt rs (Nil (List (Sub))) (Nil _) p) (FRoot a rt rs (Nil (List (Sub))) (Nil _) p) s))
   (let-match many ok1 (BTrue) ((BFalse) (ChkNo _)))
   (let ((many rok) (erased rw)) (allred-c qt out))
   (let-match many rok (BTrue) ((BFalse) (ChkNo _)))
   (let-match erased w1 (IfY _ w3))
-  (let-match erased w3 (MkW3 _ _ _ _ _ _ _ pr _ _))
+  (let-match erased w3 (MkW3 _ _ _ _ _ _ _ _ pr _ _))
   (let-match erased rw (IfY _ ar))
   (ChkYes _ (MkArityOK cfs drs rs rt out a p sz tg rp pr (MkRedE cfs out qt qi ar))))
 
