@@ -9,7 +9,7 @@ against the other heap sorts in `heapsort/`.
 `mimo/` was written by the mimo-v2.6-pro agent. From the repository root:
 
 ```
-dune exec bin/main.exe -- std/nat.sl std/list.sl agent/tasks/heapsort-fast/spec.sl \
+dune exec bin/main.exe -- std/nat.sl std/list.sl std/immediate.sl agent/tasks/heapsort-fast/spec.sl \
   $(cat agent/solutions/heapsort-fast/mimo/files.txt) agent/tasks/heapsort-fast/perf.sl \
   --build agent/solutions/mimo_perf && agent/solutions/mimo_perf
 ```

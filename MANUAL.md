@@ -18,7 +18,9 @@ holds `NatLe`, the non-strict order on `Nat`, `Ne`, inequality as one of the
 two strict orders, and the lemmas `lt-pred`, `lt-succ-left`, `lt-irrefl`,
 `add-le-right` and `double-le`, [`std/list.sl`](std/list.sl) holds lemmas
 about the prelude's `Length`, `Nth`, `SetNth`, `Repeat` and `NthLast`,
-[`std/vec.sl`](std/vec.sl), which needs `std/macro.sl` and `std/list.sl`, holds `Vec`, a growable array indexed
+[`std/immediate.sl`](std/immediate.sl) holds `Immediate`, a code for types whose every value is an
+immediate, and `imm-of` and `imm-all-of`, which derive the prelude's `Imm` and `ImmAll` from it,
+[`std/vec.sl`](std/vec.sl), which needs `std/macro.sl`, `std/list.sl` and `std/immediate.sl`, holds `Vec`, a growable array indexed
 by its contents, and
 [`std/tactics.sl`](std/tactics.sl), which needs `std/macro.sl` and `std/nat.sl`, holds proof
 tactics written as macros.

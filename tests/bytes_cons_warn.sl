@@ -6,4 +6,4 @@
   s)
 cons-test
 ; warns: tests/bytes_cons_warn.sl:4:22: warning: application of `BCons`: copies the whole buffer, O(n); allocate with `bytes-make` and fill with `bytes-set`
-; warns: lib/prelude.sl:1548:1: note: `;! warn` for `BCons` is here
+; warns: lib/prelude.sl:1552:1: note: `;! warn` for `BCons` is here
