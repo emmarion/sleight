@@ -119,18 +119,19 @@
 
 (def-fns _ $ (erased cons-sel : (erased (Ctree) t1 t2 t3 t u) (erased (Col) e) (erased (CtCons t1 t2 t3 t) c)
     (erased (CtSel t e u) s) -> (erased (CtSel (CNode t1 t2 t3) e u) r))
-  (match erased c _
-    ((CCNode _ _ _) s)
-    ((CCEmpty) (let-match erased s (SelE _)) (let ((erased v) (erased r)) (sel-node (CEmpty) (CEmpty) (CEmpty) e))
-      (match erased r _
-        ((SelN0 _ _ _) r) ((SelN1 _ _ _) r) ((SelN2 _ _ _) r) ((SelN3 _ _ _) r)))))
+  (let-match erased c (CCEmpty)
+    ((CCNode _ _ _) s))
+  (let-match erased s (SelE _))
+  (let ((erased v) (erased r)) (sel-node (CEmpty) (CEmpty) (CEmpty) e))
+  (match erased r _
+    ((SelN0 _ _ _) r) ((SelN1 _ _ _) r) ((SelN2 _ _ _) r) ((SelN3 _ _ _) r)))
 
 (def-fns _ $ (erased cons-sel-back : (erased (Ctree) t1 t2 t3 t u) (erased (Col) e) (erased (CtCons t1 t2 t3 t) c)
     (erased (CtSel (CNode t1 t2 t3) e u) s) -> (erased (CtSel t e u) r))
-  (match erased c _
-    ((CCNode _ _ _) s)
-    ((CCEmpty) (match erased s _
-      ((SelN0 _ _ _) (SelE e)) ((SelN1 _ _ _) (SelE e)) ((SelN2 _ _ _) (SelE e)) ((SelN3 _ _ _) (SelE e))))))
+  (let-match erased c (CCEmpty)
+    ((CCNode _ _ _) s))
+  (match erased s _
+    ((SelN0 _ _ _) (SelE e)) ((SelN1 _ _ _) (SelE e)) ((SelN2 _ _ _) (SelE e)) ((SelN3 _ _ _) (SelE e))))
 
 (def-fns _ $ (erased cons-root : (erased (Ctree) t1 t2 t3 t) (erased (CtCons t1 t2 t3 t) c) -> (erased (CtRoot t (Zero)) r))
   (match erased c _ ((CCNode _ _ _) (RootN t1 t2 t3)) ((CCEmpty) (RootE))))
@@ -182,16 +183,15 @@
         (absurd (CNode l1 l2 l3) hl)))
     ((CNode r1 r2 r3)
       (let-match erased hr (HN h1 _ _ _ q1 q2 q3))
-      (match many tl _
+      (let-match many tl (CNode l1 l2 l3)
         ((CEmpty) (values tr (OrEL tr) hr))
-        (absurd (CLeaf a) hl)
-        ((CNode l1 l2 l3)
-          (let-match erased hl (HN _ _ _ _ p1 p2 p3))
-          (let ((many u1) (erased o1) (erased k1)) (notail $ ctree-union h1 l1 r1 p1 q1))
-          (let ((many u2) (erased o2) (erased k2)) (notail $ ctree-union h1 l2 r2 p2 q2))
-          (let ((many u3) (erased o3) (erased k3)) (notail $ ctree-union h1 l3 r3 p3 q3))
-          (let ((many t) (erased c)) (ctree-cons u1 u2 u3))
-          (values t (OrNN l1 l2 l3 r1 r2 r3 u1 u2 u3 t o1 o2 o3 c) (cons-h h1 u1 u2 u3 t c k1 k2 k3)))))))
+        (absurd (CLeaf a) hl))
+      (let-match erased hl (HN _ _ _ _ p1 p2 p3))
+      (let ((many u1) (erased o1) (erased k1)) (notail $ ctree-union h1 l1 r1 p1 q1))
+      (let ((many u2) (erased o2) (erased k2)) (notail $ ctree-union h1 l2 r2 p2 q2))
+      (let ((many u3) (erased o3) (erased k3)) (notail $ ctree-union h1 l3 r3 p3 q3))
+      (let ((many t) (erased c)) (ctree-cons u1 u2 u3))
+      (values t (OrNN l1 l2 l3 r1 r2 r3 u1 u2 u3 t o1 o2 o3 c) (cons-h h1 u1 u2 u3 t c k1 k2 k3)))))
 
 (def-fns _ $ (erased or-lift : (erased (Ctree) tl tr l r) (erased (Col) e) (erased (List (Col)) et) (erased (CtSel tl e l) sl)
     (erased (CtSel tr e r) sr) (erased (Or (CtMem l et) (CtMem r et)) o) ->
@@ -235,28 +235,26 @@
 
 (def-fns _ $ (many ctree-rot : (many (Bool) left) (erased (Perm) g) (erased (RotDir left g) d) (subterm many (Ctree) t) ->
     (many (Ctree) r) (erased (CtPerm g t r) p))
-  (match many t _
+  (let-match many t (CNode t1 t2 t3)
     ((CEmpty) (values t (CPE g)))
-    ((CLeaf lf) (values t (CPL g lf)))
-    ((CNode t1 t2 t3)
-      (let ((many a1) (erased p1)) (notail $ ctree-rot left g d t1))
-      (let ((many a2) (erased p2)) (notail $ ctree-rot left g d t2))
-      (let ((many a3) (erased p3)) (notail $ ctree-rot left g d t3))
-      (match many left _
-        ((BTrue) (let-match erased d (RDL)) (let ((many r) (erased c)) (ctree-cons a3 a1 a2))
-          (values r (CPN (C3) (C1) (C2) t1 t2 t3 t3 t1 t2 a3 a1 a2 r (SelN3 t1 t2 t3) (SelN1 t1 t2 t3) (SelN2 t1 t2 t3) p3 p1 p2 c)))
-        ((BFalse) (let-match erased d (RDR)) (let ((many r) (erased c)) (ctree-cons a2 a3 a1))
-          (values r (CPN (C2) (C3) (C1) t1 t2 t3 t2 t3 t1 a2 a3 a1 r (SelN2 t1 t2 t3) (SelN3 t1 t2 t3) (SelN1 t1 t2 t3) p2 p3 p1 c)))))))
+    ((CLeaf lf) (values t (CPL g lf))))
+  (let ((many a1) (erased p1)) (notail $ ctree-rot left g d t1))
+  (let ((many a2) (erased p2)) (notail $ ctree-rot left g d t2))
+  (let ((many a3) (erased p3)) (notail $ ctree-rot left g d t3))
+  (match many left _
+    ((BTrue) (let-match erased d (RDL)) (let ((many r) (erased c)) (ctree-cons a3 a1 a2))
+      (values r (CPN (C3) (C1) (C2) t1 t2 t3 t3 t1 t2 a3 a1 a2 r (SelN3 t1 t2 t3) (SelN1 t1 t2 t3) (SelN2 t1 t2 t3) p3 p1 p2 c)))
+    ((BFalse) (let-match erased d (RDR)) (let ((many r) (erased c)) (ctree-cons a2 a3 a1))
+      (values r (CPN (C2) (C3) (C1) t1 t2 t3 t2 t3 t1 a2 a3 a1 r (SelN2 t1 t2 t3) (SelN3 t1 t2 t3) (SelN1 t1 t2 t3) p2 p3 p1 c)))))
 
 (def-fns _ $ (erased perm-h : (erased (Perm) g) (erased (Nat) h) (erased (Ctree) t tp) (subterm erased (CtPerm g t tp) p) (erased (CtH h t) k) ->
     (erased (CtH h tp) r))
-  (match erased p _
+  (let-match erased p (CPN g1 g2 g3 t1 t2 t3 u1 u2 u3 a1 a2 a3 _ s1 s2 s3 p1 p2 p3 c)
     ((CPE _) k)
-    ((CPL _ _) k)
-    ((CPN g1 g2 g3 t1 t2 t3 u1 u2 u3 a1 a2 a3 _ s1 s2 s3 p1 p2 p3 c)
-      (let-match erased k (HN h1 _ _ _ _ _ _))
-      (cons-h h1 a1 a2 a3 tp c (perm-h g h1 u1 a1 p1 (sel-h h1 t1 t2 t3 u1 g1 k s1)) (perm-h g h1 u2 a2 p2 (sel-h h1 t1 t2 t3 u2 g2 k s2))
-        (perm-h g h1 u3 a3 p3 (sel-h h1 t1 t2 t3 u3 g3 k s3))))))
+    ((CPL _ _) k))
+  (let-match erased k (HN h1 _ _ _ _ _ _))
+  (cons-h h1 a1 a2 a3 tp c (perm-h g h1 u1 a1 p1 (sel-h h1 t1 t2 t3 u1 g1 k s1)) (perm-h g h1 u2 a2 p2 (sel-h h1 t1 t2 t3 u2 g2 k s2))
+    (perm-h g h1 u3 a3 p3 (sel-h h1 t1 t2 t3 u3 g3 k s3))))
 
 (def-adts $ (PermMem : ((Perm) g) ((Ctree) t) ((List (Col)) et) -> Type)
   enum
@@ -388,17 +386,16 @@
         ((CEmpty) (DjYes tl tr (DjEL tr)))
         ((CNode l1 l2 l3) (DjYes tl tr (DjNL l1 l2 l3 a)))))
     ((CNode r1 r2 r3)
-      (match many tl _
+      (let-match many tl (CNode l1 l2 l3)
         ((CEmpty) (DjYes tl tr (DjEL tr)))
-        ((CLeaf b) (DjYes tl tr (DjLN b r1 r2 r3)))
-        ((CNode l1 l2 l3)
-          (let-match many (notail $ ctree-disjoint l1 r1) (DjYes _ _ d1)
-            ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l1 r1 (C1) (SelN1 l1 l2 l3) (SelN1 r1 r2 r3) b))))
-          (let-match many (notail $ ctree-disjoint l2 r2) (DjYes _ _ d2)
-            ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l2 r2 (C2) (SelN2 l1 l2 l3) (SelN2 r1 r2 r3) b))))
-          (let-match many (notail $ ctree-disjoint l3 r3) (DjYes _ _ d3)
-            ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l3 r3 (C3) (SelN3 l1 l2 l3) (SelN3 r1 r2 r3) b))))
-          (DjYes tl tr (DjN l1 l2 l3 r1 r2 r3 d1 d2 d3)))))))
+        ((CLeaf b) (DjYes tl tr (DjLN b r1 r2 r3))))
+      (let-match many (notail $ ctree-disjoint l1 r1) (DjYes _ _ d1)
+        ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l1 r1 (C1) (SelN1 l1 l2 l3) (SelN1 r1 r2 r3) b))))
+      (let-match many (notail $ ctree-disjoint l2 r2) (DjYes _ _ d2)
+        ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l2 r2 (C2) (SelN2 l1 l2 l3) (SelN2 r1 r2 r3) b))))
+      (let-match many (notail $ ctree-disjoint l3 r3) (DjYes _ _ d3)
+        ((DjNo _ _ b) (DjNo tl tr (both-lift tl tr l3 r3 (C3) (SelN3 l1 l2 l3) (SelN3 r1 r2 r3) b))))
+      (DjYes tl tr (DjN l1 l2 l3 r1 r2 r3 d1 d2 d3)))))
 
 (def-fns _ $ (erased absurd disj-mem : (erased (Ctree) tl tr) (subterm erased (List (Col)) et) (erased (CtDisj tl tr) d)
     (erased (CtMem tl et) ml) (erased (CtMem tr et) mr) -> (erased (False) f))

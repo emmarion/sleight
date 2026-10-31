@@ -262,13 +262,12 @@
 (def-fns _ $ (many decr-if-c : (many (Bool) b) (many (Ctree) lf) (erased (Nat) n) (erased (CtRoot lf n) p) (erased (CtH (Zero) lf) hh) ->
     (many (Ctree) r) (erased (Nat) m k) (erased (CtRoot r m) q) (erased (CtH (Zero) r) hr) (erased (B2N b k) bk) (erased (Monus n k m) o))
   (let ((erased one)) (Succ (Zero)))
-  (match many b _
-    ((BFalse) (values lf n (Zero) p hh (B2NF) (MoZ n)))
-    ((BTrue)
-      (match many lf _
-        ((CLeaf l) (let-match erased p (RootL _ n1 p1)) (let-match erased hh (HL _ h1)) (values l n1 one p1 h1 (B2NT) (MoS n1 (Zero) n1 (MoZ n1))))
-        ((CEmpty) (let-match erased p (RootE)) (values lf n one p hh (B2NT) (MoE (Zero))))
-        ((CNode _ _ _) (let-match erased p (RootN _ _ _)) (values lf n one p hh (B2NT) (MoE (Zero))))))))
+  (let-match many b (BTrue)
+    ((BFalse) (values lf n (Zero) p hh (B2NF) (MoZ n))))
+  (match many lf _
+    ((CLeaf l) (let-match erased p (RootL _ n1 p1)) (let-match erased hh (HL _ h1)) (values l n1 one p1 h1 (B2NT) (MoS n1 (Zero) n1 (MoZ n1))))
+    ((CEmpty) (let-match erased p (RootE)) (values lf n one p hh (B2NT) (MoE (Zero))))
+    ((CNode _ _ _) (let-match erased p (RootN _ _ _)) (values lf n one p hh (B2NT) (MoE (Zero))))))
 
 ; The symbols in a gtree as a set of one-symbol chromograms: those of a leaf, none for a node.
 (def-adts $ (GBitsOf : ((Gtree) g) ((Bits) q) -> Type)
@@ -491,10 +490,7 @@
       (let-match erased len (LengthCons _ e et1 _ len1))
       (let-match erased len1 (LengthCons _ e2 et2 _ _))
       (let-match erased s (SubCons _ u _ _ _ sl s4))
-      (match erased sl _
-        ((SelN0 _ _ _)
-          (let-match erased (sub-fn u et1 n (Zero) s4 (empty-sub et1)) (Refl _ _))
-          (MkKeepSub keep et n k (Zero) (monus-zero k) (keep-sel a1 a2 a3 keep (CEmpty) e et1 (Zero) ck (SelN0 a1 a2 a3) (empty-sub et1))))
+      (let-match erased sl (SelN0 _ _ _)
         ((SelN1 _ _ _)
           (keep-lift a1 a2 a3 keep a1 e et1 n k ck (SelN1 a1 a2 a3)
             (cres-sub h1 t1 a1 b1 r1 et1 n k c1 q1 len1 s4 (split-cnt0 e e2 r r1 et2 k s1 rk))))
@@ -503,7 +499,9 @@
             (cres-sub h1 t2 a2 b2 r2 et1 n k c2 q2 len1 s4 (split-cnt0 e e2 r r2 et2 k s2 rk))))
         ((SelN3 _ _ _)
           (keep-lift a1 a2 a3 keep a3 e et1 n k ck (SelN3 a1 a2 a3)
-            (cres-sub h1 t3 a3 b3 r3 et1 n k c3 q3 len1 s4 (split-cnt0 e e2 r r3 et2 k s3 rk))))))
+            (cres-sub h1 t3 a3 b3 r3 et1 n k c3 q3 len1 s4 (split-cnt0 e e2 r r3 et2 k s3 rk)))))
+      (let-match erased (sub-fn u et1 n (Zero) s4 (empty-sub et1)) (Refl _ _))
+      (MkKeepSub keep et n k (Zero) (monus-zero k) (keep-sel a1 a2 a3 keep (CEmpty) e et1 (Zero) ck (SelN0 a1 a2 a3) (empty-sub et1))))
     ((CRZ t1 t2 t3 l1 l2 l3 g1 g2 g3 _ _ _ n1 n2 n3 p1 p2 p3 d1 d2 d3 ck _ _ _ _)
       (let-match erased len (LengthCons _ e et1 _ len1))
       (let-match erased len1 (LengthNil _))
