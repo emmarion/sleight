@@ -9,23 +9,23 @@
 
 (def-adts $ (OnSrcs : ((TyCtor ((List (Config)) cs) -> Type) P) ((List (String)) ss) -> Type)
   enum
-  (many OSNil : (erased (TyCtor ((List (Config)) cs) -> Type) P) -> (OnSrcs P (Nil (String))))
-  (many OSCons : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (String) s) (erased (List (String)) ss) (erased (Decoded P s) a)
+  (many SrcNil : (erased (TyCtor ((List (Config)) cs) -> Type) P) -> (OnSrcs P (Nil (String))))
+  (many SrcCons : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (String) s) (erased (List (String)) ss) (erased (Decoded P s) a)
       (erased (OnSrcs P ss) r) -> (OnSrcs P (Cons (String) s ss))))
 
 (def-adts $ (OnChunks : ((TyCtor ((List (Config)) cs) -> Type) P) ((List (List (Config))) css) -> Type)
   enum
-  (many OCNil : (erased (TyCtor ((List (Config)) cs) -> Type) P) -> (OnChunks P (Nil (List (Config)))))
-  (many OCCons : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (P cs) a)
+  (many OnNil : (erased (TyCtor ((List (Config)) cs) -> Type) P) -> (OnChunks P (Nil (List (Config)))))
+  (many OnCons : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (P cs) a)
       (erased (OnChunks P css) r) -> (OnChunks P (Cons (List (Config)) cs css))))
 
 (def-fns _ $ (erased on-chunks : (erased (TyCtor ((List (Config)) cs) -> Type) P) (erased (List (String)) ss r) (erased (List (List (Config))) css)
     (subterm erased (DecAll ss css r) da) (erased (OnSrcs P ss) o) -> (erased (OnChunks P css) c))
-  (let-match erased da (DACons s ss1 _ cs css1 _ d da1) ((DANil) (OCNil P)))
-  (let-match erased o (OSCons _ _ _ a o1))
+  (let-match erased da (DACons s ss1 _ cs css1 _ d da1) ((DANil) (OnNil P)))
+  (let-match erased o (SrcCons _ _ _ a o1))
   (let-match erased a (MkDecoded _ _ _ cs2 d2 pa))
   (let ((erased ec) (erased _)) (dcfgs-fn s _ _ cs2 cs d2 d))
   (let-match erased ec (Refl _ _))
-  (OCCons P cs css1 pa (on-chunks P ss1 r css1 da1 o1)))
+  (OnCons P cs css1 pa (on-chunks P ss1 r css1 da1 o1)))
 
 (comptime-match many (decode-all config-srcs) (POk _ _ _ _ css _ css-dec))
