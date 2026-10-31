@@ -1,3 +1,4 @@
+; needs: ../std/immediate
 ; expect: (MkPair _ _ (MkU62 99 _) $ MkU62 100 _)
 (def-fns _ $ (many char-u62 : (many (Char) c) -> (many (U62) u))
   (let-match erased c (MkChar b))
@@ -24,7 +25,7 @@
     (array-move-imm _ _ _ _ _ src (Zero) dst (Succ (Zero)) (Succ (Succ (Zero)))
       (SpliceHere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
       (SpliceThere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _)
-      (ImmU62)))
+      (imm-all-of _ (ImmMaybe _ (ImmUSlot _ (ImmU62))) _) (imm-all-of _ (ImmMaybe _ (ImmUSlot _ (ImmU62))) _)))
   (let-match erased p (SpliceThere _ _ _ _ _ _ _ p1))
   (let-match erased p1 (SpliceHere _ _ _ _ _ _ _ p2))
   (let-match erased p2 (SpliceHere _ _ _ _ _ _ _ p3))
@@ -49,23 +50,23 @@
   (let-match unique i2 (MkUSlotItem _ _ _ pb))
   (MkPair _ _ (share (unplace-at _ _ _ pa)) (share (unplace-at _ _ _ pb))))
 move-test
-; warns: tests/array_move_imm.sl:18:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: tests/array_move_imm.sl:19:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_move_imm.sl:19:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: tests/array_move_imm.sl:20:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_move_imm.sl:21:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: tests/array_move_imm.sl:22:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_move_imm.sl:21:40: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: tests/array_move_imm.sl:22:40: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_move_imm.sl:22:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: tests/array_move_imm.sl:23:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:1289:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_move_imm.sl:37:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_move_imm.sl:38:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here
-; warns: tests/array_move_imm.sl:43:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
+; warns: tests/array_move_imm.sl:39:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_move_imm.sl:44:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_move_imm.sl:45:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
+; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here
+; warns: tests/array_move_imm.sl:46:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:1290:1: note: `;! warn` for `Array` is here

@@ -1,3 +1,4 @@
+; needs: ../std/immediate
 ; expect: (MkPair _ _ (MkTwo (MkU62 2 _) $ MkU62 1 _) $ MkTwo (MkU62 2 _) $ MkU62 2 _)
 (def-adts $ (Two : -> Type)
   enum
@@ -5,19 +6,19 @@
 
 (def-fns _ $ (many swap-in : (unique (Two) t) (many (U62) z) -> (unique (Two) r at t))
   (let-match unique t (MkTwo x y u))
-  (u (imm (ImmPlaced _ (ImmU62) _ x (place-at-many _ x)) (ImmPlaced _ (ImmU62) _ y (place-at-many _ y))) y
-     (imm (ImmPlaced _ (ImmU62) _ y (place-at-many _ y)) (ImmPlaced _ (ImmU62) _ z (place-at-many _ z))) z))
+  (u (imm (ImmPlaced _ _ (imm-of _ (ImmU62) x) _ (place-at-many _ x)) (ImmPlaced _ _ (imm-of _ (ImmU62) y) _ (place-at-many _ y))) y
+     (imm (ImmPlaced _ _ (imm-of _ (ImmU62) y) _ (place-at-many _ y)) (ImmPlaced _ _ (imm-of _ (ImmU62) z) _ (place-at-many _ z))) z))
 
 (def-fns _ $ (many write-in : (unique (Two) t) (many (U62) z) -> (unique (Two) r at t))
   (let-match unique t (MkTwo x y u))
   (let ((unique u2))
-    (cell-write unique u (MkTwo (imm (ImmPlaced _ (ImmU62) _ x (place-at-many _ x)) (ImmPlaced _ (ImmU62) _ z (place-at-many _ z))) (slot-of z) _)))
+    (cell-write unique u (MkTwo (imm (ImmPlaced _ _ (imm-of _ (ImmU62) x) _ (place-at-many _ x)) (ImmPlaced _ _ (imm-of _ (ImmU62) z) _ (place-at-many _ z))) (slot-of z) _)))
   (at unique (u2 z y)))
 
 (def-fns _ $ (many fresh-in : (many (U62) z) -> (many (Two) r))
   (let ((unique u)) (cell-alloc MkTwo))
-  (share (u (imm (ImmVacant) (ImmPlaced _ (ImmU62) _ z (place-at-many _ z))) z
-            (imm (ImmVacant) (ImmPlaced _ (ImmU62) _ z (place-at-many _ z))) z)))
+  (share (u (imm (ImmVacant) (ImmPlaced _ _ (imm-of _ (ImmU62) z) _ (place-at-many _ z))) z
+            (imm (ImmVacant) (ImmPlaced _ _ (imm-of _ (ImmU62) z) _ (place-at-many _ z))) z)))
 
 (def-fns _ $ (many char-u62 : (many (Char) c) -> (many (U62) u))
   (let-match erased c (MkChar b))

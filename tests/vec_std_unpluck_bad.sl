@@ -1,4 +1,4 @@
-; needs: ../std/macro ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/immediate ../std/vec
 ; error: type mismatch
 ; A Vec lent by vec-pluck takes back only a value at the plucked element's slot.
 (def-fns _ $ (many go : -> (many (Nat) r))
