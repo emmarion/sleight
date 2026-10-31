@@ -145,8 +145,7 @@ The unit is these files in this order (`check.sh`), written without
 - `hypgeom`: definitions of `geometry.v` (`Moebius`, `Connected`,
   `Precubic`, `AllOrder`, `SCycle`, `Fband`, `Kernel`, ...).
 - `hypjordan`, `hyptree`, `hypcount`, `hypcubic`:
-  `planar-moebius`, Euler for trees, the equality case of Walkup,
-  `orbit-sum`, cubic Euler.
+  `planar-moebius`, Euler for trees, `orbit-sum`, cubic Euler.
 - `cube`: the cube construction; `cube-reduction`.
 - `reduce3`: `cubic-reduction`.
 - `coloring`: the colouring search (`search-ring`, `NoExt`,
@@ -284,8 +283,8 @@ wrong data appears able only to make a check fail.
 
 ## Trust
 
-The theorem `fcfinal.sl` discharges is `defs.sl`'s `FourColor`, the
-owner's statement. Its proof appears to rest on:
+The theorem `fcfinal.sl` discharges is `defs.sl`'s `FourColor`, a file
+the proof's files did not write. Its proof appears to rest on:
 
 - the compilers' type checking and the elaborator's evaluator;
 - the compiled `native-compute` runs (DESIGN.md §29, §72) and the OCaml
