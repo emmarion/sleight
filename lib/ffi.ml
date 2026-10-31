@@ -137,6 +137,7 @@ let fns : (string * fn_spec) list =
     ("divmod", spec 2 (quotient Ffi_core.divmod));
     ("nat-cmp", decision "Cmp" z Ffi_core.nat_cmp);
     ("lt-dec", decision "Dec" z Ffi_core.lt_dec);
+    ("nat-zero-dec", spec ~needs:[ "ZeroOrSucc" ] ~decides:"ZeroOrSucc" 1 (unary (fun a -> plain "ZeroOrSucc" (Obj.magic (Ffi_core.nat_zero_dec (z a)) : int) [])));
     ("nat-eq", decision "EqDec" z Ffi_core.nat_eq);
     ("bit-length", spec 1 (unary (fun a -> int (Ffi_core.bit_length (z a)))));
     ("bit-test", decision "Bit" z Ffi_core.bit_test);
@@ -180,7 +181,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("EqDec", [ 0; 0 ]); ("Bit", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
+let plain_shapes = [ ("SlotFind", [ 1; 0 ]); ("SlotIntern", [ 1; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("ZeroOrSucc", [ 0; 0 ]); ("EqDec", [ 0; 0 ]); ("Bit", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]); ("Maybe", [ 0; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let shape_of name = match List.assoc_opt name types with Some t -> t.shape | None -> List.assoc name plain_shapes
 let check_shape loc name adt =

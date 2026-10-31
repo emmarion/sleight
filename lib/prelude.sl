@@ -190,6 +190,16 @@
     ((LeLt _ _ _ _ r) (lt-weaken a b r))
     ((LeEq _ _ _) (lt-succ a))))
 
+(def-adts $ (ZeroOrSucc : ((Nat) n) -> Type)
+  enum
+  (many IsZero : -> (ZeroOrSucc (Zero)))
+  (many IsSucc : (erased (Nat) m) -> (ZeroOrSucc (Succ m))))
+
+(def-fns _ $ (many extern nat-zero-dec : (many (Nat) n) -> (many (ZeroOrSucc n) z))
+  (match many n _
+    ((Zero) (IsZero))
+    ((Succ m) (IsSucc m))))
+
 (def-fns _ $ (many extern nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c))
   (match many a _
     ((Zero)

@@ -73,6 +73,7 @@ let order c = if c < 0 then CLt else if c = 0 then CEq else CGt
 let nat_cmp a b = order (Z.compare a b)
 let decide b = if b then Yes else No
 let lt_dec a b = decide (Z.lt a b)
+let nat_zero_dec a = decide (Z.equal a Z.zero)
 let eq_dec b = if b then Equal else Unequal
 let bit b = if b then Bit1 else Bit0
 let nat_eq a b = eq_dec (Z.equal a b)
