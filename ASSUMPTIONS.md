@@ -1,7 +1,7 @@
 # Implementation assumptions log
 
-A running log of the assumptions the prototype interpreter (`lib/`,
-`bin/`) makes where DESIGN.md is silent, ambiguous, or where the
+A log of the assumptions the implementations (the reference in `lib/`
+and `bin/`, and `slc` in `self/`) make where DESIGN.md is silent, ambiguous, or where the
 implementation takes a shortcut. Written by a Claude session working
 autonomously at the owner's request; nothing here is a design decision.
 Every item is a candidate question for the owner, and the owner's answer
@@ -71,8 +71,9 @@ ground.
     `lib/prelude.sl`, embedded into the binary by a dune rule so the
     interpreter needs no path to it at runtime.
 43. **Extern payloads.** A value of an extern type is a `Value.payload`
-    (a zarith integer, a byte-string slice as in item 48, an array,
-    bytes or a `Raw`) carrying its type's runtime record; an extern
+    (a byte-string slice as in item 48, an array, bytes, a `Raw` or a
+    slot table) carrying its type's runtime record, except a `Nat`,
+    which is a `VWord` holding a zarith integer; an extern
     type's implementation is a pair construct/destruct over constructor
     indices, so matching, `comptime-match` and printing all go through
     destruct and see the model's constructors.
@@ -547,11 +548,9 @@ assumed. As elsewhere here, each is the session's reading, checked by
     index rather than reported, and each descent supplies a fresh budget
     of a size the code's shape fixes. The session's reading is that this
     is not a fuel: no path reports exhaustion, and the checker rejects a
-    budget too small for the hops below it. The numeral spelling counts
-    up in `Bin` from zero and the decimal printer counts up a digit
-    list, both linear in the number (a numeral in the millions costs
-    that many steps, which the session judged acceptable for the
-    sources and tests at hand), and the reader closes `$` frames by
+    budget too small for the hops below it. The numeral spelling reads
+    the number bit by bit (`spell-bits`, `nat-bit-test`), the decimal
+    printer is the `nat-str` extern, and the reader closes `$` frames by
     recursion on the frames below the one closed. A function or type
     header, or a constructor, with no signature after its name is
     reported and then skipped rather than elaborated as an empty
@@ -589,8 +588,7 @@ assumed. As elsewhere here, each is the session's reading, checked by
     produced. Left unproved, all reachable only after an error was
     already recorded or by the interpreter's own failure: `bind-let` and
     `first-res` on a result list whose length a reported count error
-    already disagreed with, `spread` on values the interpreter failed
-    to produce, and the interpreter's dynamic checks, which belong with
+    already disagreed with, and the interpreter's dynamic checks, which belong with
     its fuel. Informal by the session's reading: the `comptime-match`
     contradiction after a value was verified, and the places that read
     an id out of a term expected to be a variable and default to id
@@ -605,14 +603,13 @@ assumed. As elsewhere here, each is the session's reading, checked by
     reading is that a slot holding anything but a variable is an
     invariant of well-formed terms of the same kind as `infer`'s.
 
-98. **A proof's arguments are read by arity, not by position.** Reading a
-    proof of `Predates`, `Subterm` or `Coercible` (`expect-proof3`,
-    `expect-proof4`) takes the relation's argument count apart and
-    reports "expected a ... proof" on any other shape; `nth-term` is
-    used only for a call's arguments, reached after an arity error was
-    already reported. The session also weighed intrinsically typed
-    terms for the remaining well-formedness invariants and set them
-    aside: the reference (`lib/env.ml`) adds a rule with no type check
+98. **A proof's arguments are read after its arity is checked.** Reading
+    a proof of `Predates`, `Subterm` or `Coercible` (`expect-proof3`,
+    `expect-proof4`, `expect-proof6`, through `proof-terms`) compares
+    the relation's argument count with the one expected and reports
+    "expected a ... proof" on any other, then reads the arguments by
+    position with `nth-term`. Intrinsically typed terms are not used for
+    the remaining well-formedness invariants: the reference (`lib/env.ml`) adds a rule with no type check
     and makes the types agree by a second unification, as `refine`
     does, so between the two the rewritten terms are ill-typed from an
     intrinsic view, and slc must keep that order to accept and refuse
@@ -676,11 +673,10 @@ check, and none of it is design.
     (DESIGN.md section 42) the compiler's value model has no `U8`
     payload: a character literal's value and the `String` FFI's
     per-character value are `Nat`s, as `lib/ffi.ml` builds them.
-    `char-of-code`, which the compiler uses to turn a code from the FFI
-    into a `Char`, matches `lt-dec` against the modulus and maps a code
-    the modulus does not bound to the character with code 0; the
-    reference's `Char.chr` would raise there instead, and no program
-    reaching either is typed. The compiler's own exit codes are built as
+    `char-of-nat`, which the compiler uses to turn a code from the FFI
+    into a `Char`, matches `lt-dec` against the modulus and returns
+    `None` for a code the modulus does not bound, which its callers
+    report as an error. The compiler's own exit codes are built as
     the tests' are, by reflection at top level.
 
 113. **A call with no decrease annotation gets one inferred** (DESIGN.md
@@ -772,14 +768,10 @@ choices below are the implementing sessions', not the owner's;
     `(Succ (Zero))` under an untyped erased `let` that only the bound
     proof's later use fixes, and a pair of occurrences of one index in a
     call that determine each other and nothing else mentions, so one of
-    the two must be written. Each subform that is the last item of its
-    parent and sits on one line, `(f a (g b c))`, is written
-    `(f a $ g b c)` (DESIGN.md §2), where the parent is headed by a name
-    rather than a multiplicity, a type former, `match`, `def-fns` or
-    `def-adts`, and the subform by a name. Multi-line last items (a
-    body's final `match`, a `let`'s right-hand side over several lines)
-    are left as they are, a `$` at the start of a continuation line
-    being a style the owner has not written.
+    the two must be written. A subform that is the last item of its
+    parent, `(f a (g b c))`, is mostly written `(f a $ g b c)` (DESIGN.md
+    §2), in headers (`(def-fns _ $ ...`, `(List $ Term)`) as in calls,
+    and sometimes at the start of a continuation line.
 
 117. **Pure terms stay open; boundaries settle** (`Elab.check_args
     ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,
@@ -823,8 +815,9 @@ below are the session's.
      `mod-succ-wrap` the two cases of the successor step decided by
      `nat-cmp`, whose `CEq` forces `c is (Succ r)`; `lt-asym` refutes
      the third. `tests/prelude_proofs.sl` is the evidence.
-119. **Levels in the prelude are anonymous** (`_`, DESIGN.md sections 42
-     and 46) and its calls bare (DESIGN.md section 48). Two things the
+119. **Levels in the prelude are mostly anonymous** (`_`; `nat-lvl`,
+     `char-lvl`, `str-lvl` and `thunk-lvl` are named) and its calls bare
+     (DESIGN.md section 48). Two things the
      session learned writing the lemmas, recorded as its reading: a
      lemma cannot recurse on a proof another lemma's call produced,
      since that is not a subterm of anything, so `add-diag-double`
@@ -855,9 +848,10 @@ and names below are the session's.
 
 121. **Deciders decide into the prelude's `Cmp`; lookups return
      `Hit`/`Miss` with proofs.** `nat-cmp`, `char-cmp` and `str-cmp`
-     are the prelude's. A direct equality test in `self/` matches
-     `(X-cmp a b)` on `CEq`, so the equal branch runs with `b is a`
-     forced; `nat-eq`, `str-eq`, `char-eq` and `nat-lt` are `Bool`
+     are the prelude's, as are `nat-eq`, `str-eq` and `char-eq`, which
+     decide into `EqDec`. A direct equality test in `self/` matches one
+     of these on `CEq` or `Equal`, so the equal branch runs with `b is a`
+     forced; `nat-eqb`, `str-eqb`, `char-eqb` and `nat-lt` are `Bool`
      wrappers for the `and`/`or` chains. `idmap-get` returns
      `(Lookup V k m)`: `Hit` carries the value and a `MapsTo` proof,
      `Miss` an `Absent` proof; `mapsto-subterm` derives the subterm
@@ -878,8 +872,7 @@ and names below are the session's.
 
 ## `Rope`, and strings built in one pass
 
-The owner asked for `Rope` without length caching for now (DESIGN.md
-section 42 describes it); an `SCons` copies its tail, so building a
+The owner asked for `Rope` without length caching for now; an `SCons` copies its tail, so building a
 string by `append` is quadratic even under the FFI. Shapes are the
 session's.
 
@@ -1159,14 +1152,13 @@ of that agreement and of what the code does.
      proofs with `lt-dec`. `tests/nat_arith.sl` runs each once at
      elaboration and once inside a thunk, so the extracted program
      exercises the implementations.
-     Beside the lemmas section 42 names, the prelude has `lt-le-trans`,
+     The prelude has `lt-le-trans`,
      `add-lt-left`, `mul-lt` and `divmod-lt` (the quotient of a
      positive dividend by a divisor above one is below the dividend);
      `lt-subterm` decides `a` against the predecessor of `b` with
      `nat-cmp` in an erased position and chains `prove-subterm` through
-     `subterm-trans`. In `slc`, `nat-sub` is `sub` under `lt-dec`, and
-     `bin-of-nat` divides by two under `divmod-lt` and `lt-subterm`, so
-     a numeral's cost does not grow with its value.
+     `subterm-trans`. In `slc`, `nat-sub` is `sub` under `lt-dec`,
+     truncating at zero.
 133. **An extern type's extraction goes through templates; its view stays
      for held values** (the owner's decision, after this session proposed
      it, with the owner's hole discipline: every hole but a branch body
@@ -1206,7 +1198,7 @@ of that agreement and of what the code does.
 134. **The driver converts a `String` held as the FFI's slice to and from
      the host's string directly** (the owner's request, after a
      performance audit). `Driver_core.make` takes optional
-     `str_of_host` and `str_to_host`; `lib/program.ml` supplies them
+     `str_of_host` and `str_to_slice` (beside `nat_to_z` and `nat_of_z`); `lib/program.ml` supplies them
      when `String` is the FFI's slice, `lib/extract.ml` emits them when
      `String` extracts as an extern, and `self/emit.sl` always does,
      `slc`'s `String` being the slice; without them `of_string` and
@@ -1228,7 +1220,7 @@ of that agreement and of what the code does.
      decision: every use of `Bin` erased in `slc`, the conversion through
      `Half`). The FFI holds no `Bin`, and `lib/literal.ml` spells a
      numeral through `Half`'s view. In `slc` an id is a `Nat`:
-     `nat-cmp` compares, `Succ` mints, `nat-eq-dec` decides equality,
+     `nat-cmp` compares, `Succ` mints, `nat-eq` decides equality,
      and every trie (`base.sl`'s `IdMap`, `heap.sl`'s store, `core.sl`'s
      fact table) walks the id's halves by `nat-halve`. In the evidence,
      a one-digit step is `(Succ d)` with an erased `Double k d` field
@@ -1236,17 +1228,19 @@ of that agreement and of what the code does.
      the prelude's `Lt`. A branch the digits refute by shape is refuted
      by `double-parity`, and two keys under one digit meet through
      `double-inj`/`double-fn`. `Bin` spells numerals into their
-     `Numeral` proofs in `elab.sl`. The emitted OCaml names ids in
+     `Numeral` proofs in `eval.sl`. The emitted OCaml names ids in
      decimal (`v1234_length`).
-137. **Four string externs: `str-cmp`, `str-length`, `str-split` and
-     `nat-str`.** `str-cmp` decides `StrLt`, the lexicographic order by
+137. **String externs: `str-cmp`, `str-eq`, `str-get`, `str-length`,
+     `str-split` and `nat-str`.** `str-eq` decides `EqDec` over `StrLt`
+     and `str-get` reads the character at an index below the length, with
+     the strings before and after it. `str-cmp` decides `StrLt`, the lexicographic order by
      character code, into `Cmp` as `nat-cmp` does, its model the
      structural comparison; `str-length` returns the length with a
      `StrLength s n` relation; `str-split` takes the string, a count
      `k`, and erased `StrLength s len` and `Lt k (Succ len)`, returning
      the first `k` characters and the rest with `Append a b s` and
      `StrLength a k`; `nat-str`'s model divides by ten. The
-     implementations are a byte comparison of the two slices, the
+     implementations of those four are a byte comparison of the two slices, the
      slice's stored length, two sub-slices, and `Z.to_string`.
 
 
@@ -1254,16 +1248,6 @@ of that agreement and of what the code does.
 
 The owner decided the points marked so; everything else is the
 session's reading, with the tests as the evidence.
-
-138. **A `let`'s right-hand side statements are statements of the
-     enclosing expression.** The entries keep their ids in scope with
-     their names dropped (`Env.hide`; in `self/`, `env-hide` keeps the
-     inner objects and clears the added entries' names), and the
-     statements before the right-hand side's final expression wrap the
-     `let`'s own binding (`Elab.elab_stmts`; in `self/`, `elab-stmts`
-     and the `SSeq` code a `let` returns).
-     `tests/let_nested_scope.sl` refuses the name; the entry's survival
-     is what `tests/open_adt_let.sl` reads.
 
 139. **Nothing consults a `Matchable` until it is opened** (`Env.opens`,
      `Elab.open_adt`, `Env.merge_opens`; in `self/`, the fact table's
@@ -1476,7 +1460,8 @@ The shapes and the messages below are the session's.
      being bound by the test's first declaration already.
 153. **A test may ask for the FFI alone.** `; externs: only` runs a test
      with the implementations and not again with them stripped, for one
-     whose source model is too slow to run. The session's reading is
+     whose source model is too slow to run; `; externs: none` runs it
+     with the models alone. The session's reading is
      that this is a hole in section 42's requirement that `dune test`
      run every test both ways, and should stay rare.
      `self/bootstrap.sh` needs no directive of its own, running the
@@ -1729,8 +1714,8 @@ OCaml. The shapes below are the session's, made without the owner.
     (`perform-request` in `self/eval.sl`) performs the request with
     `world-do` and allocates the answer into the compile-time store -- a
     `String` as the FFI's payload, a `Maybe`, `Result`, `List`, `Pair`,
-    `Unit`, `EntryKind`, `Change` or `Usage` through the prelude's
-    constructors, looked up by name in a list the interpreter hands it.
+    `Unit`, `EntryKind`, `Change`, `Usage`, `Exited`, `ExecJob`,
+    `ExecResults` or `Stopwatch` through the prelude's constructors, looked up by name in a list the interpreter hands it.
     The performer and the helpers it calls sit ahead of the evaluator's
     own level, so the closure the interpreter builds over them at
     `perform-lvl` can be called from inside evaluation. `Measure` answers
@@ -1812,8 +1797,8 @@ OCaml. The shapes below are the session's, made without the owner.
     nesting every line after it is read against, which also lets
     `self/reader.sl` hold the depth in a `Nat`. A line is the line a
     token's first character sits on, read from the token's offset
-    rather than from the line `Reader.scan_upto` records for it, the
-    two differing for a literal spanning lines; the tab a line is
+    rather than from the line the lexer records for it, the two
+    differing for a literal spanning lines; the tab a line is
     warned for is any tab in the source between that line's start and
     its first token, a literal's own text included, which is what
     reading the offsets amounts to. Where the lexer cannot finish, the
@@ -2056,12 +2041,6 @@ reading that may be mistaken.
      later entry's `at` can name the slot it sits in (section 15,
      section 36's return at an earlier return).
 
-207. **At-functions and at-matches (sections 39, 40).** Erasing to
-     nothing is checked on the code after `Elab.normalize`, with `at`
-     entries projected away. A match annotated `_` inside an
-     at-function is not an at-match and keeps its code, which the body
-     check then covers.
-
 209. **`array-pluck` and `array-unpluck` (section 44).** `array-pluck`'s
      one store, of the `Plucked` leftover that an at-match on `hd`
      builds, into the slot already holding `hd`, is written full-at, so
@@ -2302,18 +2281,17 @@ silent.
 221. **An extern type with one constructor, where DESIGN.md section 42
      says nothing of its tag.** `Slots` is the first extern type with a
      single constructor, so it is untagged (section 33), and the FFI's
-     shape check in both compilers, which had required every extern
-     type's shape to be tagged, now accepts an untagged one of one
-     constructor. Extraction and slc's output still lay its view out as
+     shape check in both compilers accepts an untagged extern type of
+     one constructor. Extraction and slc's output still lay its view out as
      a one-constructor variant, which the session reads as representing
      it the same way.
 
 222. **The result type of an extern function, read in slc from its first
      stored return.** slc finds the plain type an extern implementation
      builds, whose shape it checks, by reading one return of the model.
-     It read the first return, which for `slots-intern` is the erased
-     list; it now reads the first return that is neither erased nor
-     written `at`, which for every earlier extern is the same return.
+     It reads the first return that is neither erased nor written `at`;
+     the first return outright would be the erased list for
+     `slots-intern`.
      The reference checks such types by name and reads no return.
 
 ## The `goal` and `qed` forms and `--goal`

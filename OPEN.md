@@ -111,7 +111,7 @@ references are to DESIGN.md.
     annotated `_` is not an at-match, even in the body of an
     at-function or the branch of an at-match. As the implementations
     stand, such a match keeps its code and the enclosing body check
-    covers it (ASSUMPTIONS 207). So, for example, it cannot have the
+    covers it (§39, §40). So, for example, it cannot have the
     several real branches on a union that §40 allows an at-match.
     Two forms have been considered. One is `(at _)`, which would reuse
     the expected telescope as `_` does and make an at-match wherever

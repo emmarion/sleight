@@ -4020,8 +4020,7 @@
 (def-fns _ $ (many normalize : (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r))
   (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ RId ctx) $ RId ctx))
 
-; Normalized code that erases to nothing, or to a reordering of variables (sections 39, 40; ASSUMPTIONS
-; 207): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store,
+; Normalized code that erases to nothing, or to a reordering of variables (sections 39, 40): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store,
 ; an allocation, a copy or a call that was not skipped.
 (def-fns _
   ((many erases-to-nothing : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) c) -> (many (Bool) r))
