@@ -13,7 +13,7 @@
 (def-fns _ $ (erased permt-snoc : (erased (Perm) g) (erased (List (Col)) et ct ct2) (erased (Col) e) (erased (PermT g ct ct2) pt) (subterm erased (Snoc (Col) et e ct) s)
     -> (erased (List (Col)) et2) (erased (Col) e2) (erased (Snoc (Col) et2 e2 ct2) s2) (erased (PermT g et et2) pt2) (erased (PermC g e e2) pc))
   (match erased s _
-    ((SnocNil _ _) (let-match erased pt (PTCons _ _ e2 _ et3 pc pt1)) (let-match erased pt1 (PTNil _)) (values (Nil _) e2 (SnocNil _ e2) (PTNil g) pc))
+    ((SnocNil _ _) (let-match erased pt (PTCons _ _ e2 _ _ pc pt1)) (let-match erased pt1 (PTNil _)) (values (Nil _) e2 (SnocNil _ e2) (PTNil g) pc))
     ((SnocCons _ x _ et1 ct1 s1)
       (let-match erased pt (PTCons _ _ x2 _ ct3 px pt1))
       (let ((erased et2) (erased e2) (erased s2) (erased pt2) (erased pc)) (permt-snoc g et1 ct1 ct3 e pt1 s1))
@@ -58,7 +58,7 @@
       ((erased cm1 : (erased (List (Col)) ct ct2) (erased (List (Gsym)) w1) (erased (HoldsR R1 ct w1) r) (erased (MatchG (BS0) ct2 w1) m) ->
           (erased (Holds P1 ct2) q))
         (let-match erased r (MkHoldsR _ _ _ _ _ h))
-        (let-match erased h (MkRotR _ et _ e w _ s rr mw g))
+        (let-match erased h (MkRotR _ et _ e w _ _ rr mw g))
         (let ((erased et2) (erased e2) (erased s2)) (rot-unsnoc (predates q5) w w1 e et ct2 g mw m))
         (let ((erased b) (erased bl)) (mg-bal (predates q2) (Cons _ e et) w mw))
         (let ((erased mw2)) (rot-bwd (predates q6) b w w1 e2 et2 ct2 bl g m s2))

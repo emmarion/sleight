@@ -17,7 +17,7 @@
   (match erased o _
     ((OrEL _) rr)
     ((OrER _) rl)
-    ((OrLL a b) (let-match erased rl (CRL _ _ _ et e0 ra c)) (CRL cp (CEmpty) pre et e0 ra c))
+    ((OrLL _ _) (let-match erased rl (CRL _ _ _ et e0 ra c)) (CRL cp (CEmpty) pre et e0 ra c))
     ((OrNN l1 l2 l3 r1 r2 r3 u1 u2 u3 _ o1 o2 o3 c)
       (let-match erased rl (CRN _ _ _ _ _ a1 a2 a3))
       (let-match erased rr (CRN _ _ _ _ _ b1 b2 b3))
@@ -165,7 +165,7 @@
 
 (def-fns _ $ (erased hasc0-back : (erased (Perm) g) (erased (List (Col)) l l2) (erased (IsPerm g) ip) (subterm erased (PermT g l l2) p) (erased (HasC0 l2) z)
     -> (erased (HasC0 l) r))
-  (let-match erased p (PTCons _ c d l1 l3 pc p1) (absurd (PTNil _) z))
+  (let-match erased p (PTCons _ c _ l1 l3 pc p1) (absurd (PTNil _) z))
   (let-match erased z (HZHere _)
     ((HZThere _ _ z1) (HZThere c l1 (hasc0-back g l1 l3 ip p1 z1))))
   (match erased pc _ ((PC0 _) (HZHere l1)) (absurd (PC1 _ _ _) ip) (absurd (PC2 _ _ _) ip) (absurd (PC3 _ _ _) ip)))
@@ -201,7 +201,7 @@
       (let ((many q1) (erased c1)) (permc-r p132 g1))
       (let ((many q2) (erased c2p)) (permc-r p132 g2))
       (let ((many q3) (erased c3)) (permc-r p132 g3))
-      (let ((erased pk) (erased iq)) (p132-of g1 g2 g3 q1 q2 q3 ip c1 c2p c3))
+      (let ((erased pk) (erased _)) (p132-of g1 g2 g3 q1 q2 q3 ip c1 c2p c3))
       (let ((many hp)) (MkPerm q1 q2 q3))
       (let ((erased hrest) (erased ph)) (permt-ex p132 grest (IP132)))
       (let ((erased full2) (erased ra2)) (revapp-exists (Col) pre (Cons (Col) (C2) hrest)))
@@ -268,10 +268,10 @@
 
 (def-fns _ $ (erased sub2gt2-fn : (erased (Nat) k a b) (erased (Sub2gt2 k a) p) (erased (Sub2gt2 k b) q) -> (erased (Eq (Nat) a b) e))
   (match erased p _
-    ((S2Big m) (let-match erased q (S2Big _)
+    ((S2Big _) (let-match erased q (S2Big _)
       (absurd (S2Small _ lt) (let-match erased lt (LtS _ _ l1)) (let-match erased l1 (LtS _ _ l2)) (let-match erased l2 (LtS _ _ l3)) l3)) (Refl _ a))
     ((S2Small _ lt) (let-match erased q (S2Small _ _)
-      (absurd (S2Big m) (let-match erased lt (LtS _ _ l1)) (let-match erased l1 (LtS _ _ l2)) (let-match erased l2 (LtS _ _ l3)) l3)) (Refl _ a))))
+      (absurd (S2Big _) (let-match erased lt (LtS _ _ l1)) (let-match erased l1 (LtS _ _ l2)) (let-match erased l2 (LtS _ _ l3)) l3)) (Refl _ a))))
 
 (def-fns _ $ (erased pred2s-fn : (erased (Nat) k a b) (erased (Pred2S k a) p) (erased (Pred2S k b) q) -> (erased (Eq (Nat) a b) e))
   (match erased p _
@@ -282,7 +282,7 @@
 (def-fns _ $ (erased cprsize-fn : (erased (List (Step)) cp) (erased (Nat) a b) (subterm erased (Cprsize cp a) p) (erased (Cprsize cp b) q) -> (erased (Eq (Nat) a b) e))
   (match erased p _
     ((CsNil) (let-match erased q (CsNil)) (Refl _ a))
-    ((CsR j _ cp1 p1) (let-match erased q (CsR _ _ _ q1)) (cprsize-fn cp1 a b p1 q1))
+    ((CsR _ _ cp1 p1) (let-match erased q (CsR _ _ _ q1)) (cprsize-fn cp1 a b p1 q1))
     ((CsRr _ cp1 p1) (let-match erased q (CsRr _ _ q1)) (cprsize-fn cp1 a b p1 q1))
     ((CsH _ cp1 p1) (let-match erased q (CsH _ _ q1)) (cprsize-fn cp1 a b p1 q1))
     ((CsY a1 cp1 p1) (let-match erased q (CsY b1 _ q1)) (let-match erased (cprsize-fn cp1 a1 b1 p1 q1) (Refl _ _)) (Refl _ a))
@@ -292,7 +292,7 @@
 
 (def-fns _ $ (erased cpcol-length : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) cc) -> (erased (Nat) k) (erased (Length (Col) et k) l)
     (erased (Cprsize cp k) cs))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm _ rr nc tr))
   (let ((erased k) (erased l) (erased c)) (cpmap-size cp d e f r cm))
   (values k (trace-length cs et k tr (ncols-length rc cs k nc (respects-length ks r rc k rr l))) c))
 
@@ -370,7 +370,7 @@
       (let ((erased cvn)) (CoVoid s rest et no (NTRr et)))
       (let ((many m1) (erased lm)) (size-c _ et))
       (let-match many m1 (Succ m) ((Zero) (values no hno rno cvn)))
-      (let-match many m (Succ m2) ((Zero) (values no hno rno cvn)))
+      (let-match many m (Succ _) ((Zero) (values no hno rno cvn)))
       (let ((many et2) (erased rt)) (rot-c _ m et))
       (let ((many t) (erased ht) (erased rt1) (erased _)) (tail $ cpcol-c (Cons (Step) s cp2) full h rest et2 ra1 (cpcol-rr cp2 m et et2 cc lm rt) cs na))
       (values t ht rt1 (CoVoid s rest et t (NTRr et))))

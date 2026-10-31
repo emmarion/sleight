@@ -39,7 +39,7 @@
     (erased (Monus n ab m2) r))
   (match erased p _
     ((MoZ _) (let-match erased s (AddZero _)) q)
-    ((MoE a1) (let-match erased s (AddSucc _ _ ab1 _)) (match erased q _ ((MoZ _) (MoE ab1)) ((MoE _) (MoE ab1))))
+    ((MoE _) (let-match erased s (AddSucc _ _ ab1 _)) (match erased q _ ((MoZ _) (MoE ab1)) ((MoE _) (MoE ab1))))
     ((MoS n1 a1 _ p1) (let-match erased s (AddSucc _ _ ab1 s1)) (MoS n1 ab1 m2 (monus-add n1 a1 m b m2 ab1 p1 q s1)))))
 
 (def-adts $ (RCons : ((Bstack) bs) ((Gtree) t) ((List RG) a) ((List RG) b) -> Type)
@@ -129,7 +129,7 @@
         (tail $ ctr-split-c r1 r2 r3 l1 l2 l3 rest tl))
       (values s1 s2 s3 m1 m2 m3 (CSCons (C1) x r1 r1 rest s1 (SENone bs g q (C1) r1 l) p1) (CSCons (C2) x r2 r2 rest s2 (SENone bs g q (C2) r2 l) p2)
         (CSCons (C3) x r3 r3 rest s3 (SENone bs g q (C3) r3 l) p3)))
-    ((GKNode _ u0 u1 u2 u3 eq)
+    ((GKNode _ _ _ _ _ eq)
       (let-match erased eq (Refl _ _))
       (let-match many g (GNode t0 t1 t2 t3))
       (let ((erased a2) (erased a3) (many n2) (many n3) (erased k2) (erased k3)) (ctr-pop bs t0 t1 t2 t3 r2 r3 l2 l3))
@@ -157,17 +157,17 @@
   (match erased (col-kind e bs) _
     ((K0 _) (mc-inv-0 (GSOne) bs et n m))
     ((K1 _)
-      (let ((erased g1) (erased p) (erased q)) (mc-inv-skip (GSOne) bs et n m))
+      (let ((erased _) (erased p) (erased q)) (mc-inv-skip (GSOne) bs et n m))
       (let-match erased p (GSelOne _))
       (mc-zero bs et n q))
     ((K23 _ _ bs1 y po)
       (match erased po _
         ((PNone _)
-          (let ((erased g1) (erased p) (erased q)) (mc-inv-push (GSOne) bs1 e et n y m))
+          (let ((erased _) (erased p) (erased q)) (mc-inv-push (GSOne) bs1 e et n y m))
           (let-match erased p (GSelOne _))
           (mc-zero bs1 et n q))
         ((PSome _ b _ s pp z)
-          (let ((erased n1) (erased n2) (erased g1) (erased g2) (erased p1) (erased q1) (erased p2) (erased q2) (erased a))
+          (let ((erased n1) (erased n2) (erased _) (erased _) (erased p1) (erased q1) (erased p2) (erased q2) (erased a))
             (mc-inv-pp (GSOne) bs b bs1 s e et n y pp z m))
           (let-match erased p1 (GSelOne _))
           (let-match erased p2 (GSelOne _))
@@ -185,7 +185,7 @@
 (def-fns _ $ (erased leaf-sel-long : (erased (Gtree) g) (erased (Bits) q) (erased (Gsym) s) (erased (GSet) gs) (erased (Bstack) bs) (erased (Col) e)
     (erased (List (Col)) et) (erased (Nat) n) (erased (LeafSet g q) l) (erased (GSel (GSG g) s gs) p) (erased (MC gs bs (Cons (Col) e et) n) m) ->
     (erased (Eq (Nat) n (Zero)) r))
-  (let-match erased p (GSelL _ b0 b1 b2 b3 b _ _ l2 pk bsp) (absurd (GSelN _ _ _ _ _ _ _) l))
+  (let-match erased p (GSelL _ _ _ _ _ b _ _ _ _ bsp) (absurd (GSelN _ _ _ _ _ _ _) l))
   (mc-bset-long b gs bs e et n bsp m))
 
 (def-fns _ $ (erased mc-leaf-long : (erased (Gtree) g) (erased (Bits) q) (erased (Bstack) bs) (erased (Col) e e2) (erased (List (Col)) et)
@@ -268,13 +268,12 @@
 (def-fns _ $ (many decr-if-c : (many (Bool) b) (many (Ctree) lf) (erased (Nat) n) (erased (CtRoot lf n) p) (erased (CtH (Zero) lf) hh) ->
     (many (Ctree) r) (erased (Nat) m k) (erased (CtRoot r m) q) (erased (CtH (Zero) r) hr) (erased (B2N b k) bk) (erased (Monus n k m) o))
   (let ((erased one)) (Succ (Zero)))
-  (match many b _
-    ((BFalse) (values lf n (Zero) p hh (B2NF) (MoZ n)))
-    ((BTrue)
-      (match many lf _
-        ((CLeaf l) (let-match erased p (RootL _ n1 p1)) (let-match erased hh (HL _ h1)) (values l n1 one p1 h1 (B2NT) (MoS n1 (Zero) n1 (MoZ n1))))
-        ((CEmpty) (let-match erased p (RootE)) (values lf n one p hh (B2NT) (MoE (Zero))))
-        ((CNode _ _ _) (let-match erased p (RootN _ _ _)) (values lf n one p hh (B2NT) (MoE (Zero))))))))
+  (let-match many b (BTrue)
+    ((BFalse) (values lf n (Zero) p hh (B2NF) (MoZ n))))
+  (match many lf _
+    ((CLeaf l) (let-match erased p (RootL _ n1 p1)) (let-match erased hh (HL _ h1)) (values l n1 one p1 h1 (B2NT) (MoS n1 (Zero) n1 (MoZ n1))))
+    ((CEmpty) (let-match erased p (RootE)) (values lf n one p hh (B2NT) (MoE (Zero))))
+    ((CNode _ _ _) (let-match erased p (RootN _ _ _)) (values lf n one p hh (B2NT) (MoE (Zero))))))
 
 ; The symbols in a gtree as a set of one-symbol chromograms: those of a leaf, none for a node.
 (def-adts $ (GBitsOf : ((Gtree) g) ((Bits) q) -> Type)
@@ -490,7 +489,7 @@
 
 (def-fns _ $ (many ut-of : (subterm many (Nat) h) (many (Ctree) t) (erased (CtH (Succ h) t) k) ->
     (unique (UTree) u) (erased (UT h u t) p) (many (KeepE t) e))
-  (let-match many t (CNode t1 t2 t3) ((CEmpty) (values (UEmpty) (UTE h) (KEmpty))) (absurd (CLeaf lf) k))
+  (let-match many t (CNode t1 t2 t3) ((CEmpty) (values (UEmpty) (UTE h) (KEmpty))) (absurd (CLeaf _) k))
   (let-match erased k (HN _ _ _ _ k1 k2 k3))
   (let-match many h (Succ h1) ((Zero) (values (UBot t1 t2 t3) (UTB t1 t2 t3 k1 k2 k3) (KLive t))))
   (let ((unique u1) (erased p1) (many _)) (notail $ ut-of h1 t1 k1))
@@ -540,7 +539,7 @@
       (values ku gone keep uk (CRZ l1 l2 l3 m1 m2 m3 g1 g2 g3 keep gone r n1 n2 n3 p1 p2 p3 d1 d2 d3 ck f1 f2 f3 cg)
         (cons-h (Zero) g1 g2 g3 gone cg (ife-h l1 m1 g1 f1 k1) (ife-h l2 m2 g2 f2 k2) (ife-h l3 m3 g3 f3 k3)) e))
     ((UNode u1 u2 u3 cell)
-      (let-match erased ut (UTN h0 _ _ _ t1 t2 t3 q1 q2 q3))
+      (let-match erased ut (UTN _ _ _ _ t1 t2 t3 q1 q2 q3))
       (let-match many h (Succ h1))
       (let-match many rl (RxCons _ _ _ _ _)
         ((RxNil _) (let ((unique ku)) (at unique (cell u1 u2 u3))) (values ku (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KALive t (slot-of ku)))))
@@ -595,15 +594,12 @@
   (match erased c _
     ((CRNil _ _) (let-match erased rk (RCNil _)) (MkKeepSub keep et n k n (MoZ n) s))
     ((CRE _ _) (let-match erased (sub-fn t et n (Zero) s (empty-sub et)) (Refl _ _)) (MkKeepSub keep et n k (Zero) (monus-zero k) (empty-sub et)))
-    ((CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 _ _ _ r1 r2 r3 s1 s2 s3 c1 c2 c3 ck cg)
+    ((CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 _ _ _ r1 r2 r3 s1 s2 s3 c1 c2 c3 ck _)
       (let-match erased ht (HN _ _ _ _ q1 q2 q3))
       (let-match erased len (LengthCons _ e et1 _ len1))
       (let-match erased len1 (LengthCons _ e2 et2 _ _))
       (let-match erased s (SubCons _ u _ _ _ sl s4))
-      (match erased sl _
-        ((SelN0 _ _ _)
-          (let-match erased (sub-fn u et1 n (Zero) s4 (empty-sub et1)) (Refl _ _))
-          (MkKeepSub keep et n k (Zero) (monus-zero k) (keep-sel a1 a2 a3 keep (CEmpty) e et1 (Zero) ck (SelN0 a1 a2 a3) (empty-sub et1))))
+      (let-match erased sl (SelN0 _ _ _)
         ((SelN1 _ _ _)
           (keep-lift a1 a2 a3 keep a1 e et1 n k ck (SelN1 a1 a2 a3)
             (cres-sub h1 t1 a1 b1 r1 et1 n k c1 q1 len1 s4 (split-cnt0 e e2 r r1 et2 k s1 rk))))
@@ -612,11 +608,13 @@
             (cres-sub h1 t2 a2 b2 r2 et1 n k c2 q2 len1 s4 (split-cnt0 e e2 r r2 et2 k s2 rk))))
         ((SelN3 _ _ _)
           (keep-lift a1 a2 a3 keep a3 e et1 n k ck (SelN3 a1 a2 a3)
-            (cres-sub h1 t3 a3 b3 r3 et1 n k c3 q3 len1 s4 (split-cnt0 e e2 r r3 et2 k s3 rk))))))
-    ((CRZ t1 t2 t3 l1 l2 l3 g1 g2 g3 _ _ _ n1 n2 n3 p1 p2 p3 d1 d2 d3 ck _ _ _ _)
+            (cres-sub h1 t3 a3 b3 r3 et1 n k c3 q3 len1 s4 (split-cnt0 e e2 r r3 et2 k s3 rk)))))
+      (let-match erased (sub-fn u et1 n (Zero) s4 (empty-sub et1)) (Refl _ _))
+      (MkKeepSub keep et n k (Zero) (monus-zero k) (keep-sel a1 a2 a3 keep (CEmpty) e et1 (Zero) ck (SelN0 a1 a2 a3) (empty-sub et1))))
+    ((CRZ t1 t2 t3 l1 l2 l3 _ _ _ _ _ _ n1 n2 n3 p1 p2 p3 d1 d2 d3 ck _ _ _ _)
       (let-match erased len (LengthCons _ e et1 _ len1))
       (let-match erased len1 (LengthNil _))
-      (let-match erased s (SubCons _ u _ _ _ sl s4))
+      (let-match erased s (SubCons _ _ _ _ _ sl s4))
       (let-match erased s4 (SubNil _ _ ru))
       (match erased sl _
         ((SelN0 _ _ _)
@@ -661,8 +659,8 @@
   (match erased c _
     (absurd (CRNil _ _) (mem-empty et mg))
     (absurd (CRE _ _) (mem-empty et mg))
-    ((CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 _ _ _ r1 r2 r3 s1 s2 s3 c1 c2 c3 ck cg)
-      (let ((erased e) (erased et1) (erased q) (erased u) (erased sl) (erased m1)) (cons-mem b1 b2 b3 gone et cg mg))
+    ((CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 _ _ _ r1 r2 r3 _ _ _ c1 c2 c3 ck cg)
+      (let ((erased e) (erased et1) (erased q) (erased _) (erased sl) (erased m1)) (cons-mem b1 b2 b3 gone et cg mg))
       (let-match erased q (Refl _ _))
       (let-match erased len (LengthCons _ _ _ _ len1))
       (match erased sl _
@@ -670,8 +668,8 @@
         ((SelN1 _ _ _) (gone-lift t1 t2 t3 a1 a2 a3 keep t1 a1 e et1 ck (SelN1 t1 t2 t3) (SelN1 a1 a2 a3) (cres-gone h1 t1 a1 b1 r1 et1 c1 len1 m1)))
         ((SelN2 _ _ _) (gone-lift t1 t2 t3 a1 a2 a3 keep t2 a2 e et1 ck (SelN2 t1 t2 t3) (SelN2 a1 a2 a3) (cres-gone h1 t2 a2 b2 r2 et1 c2 len1 m1)))
         ((SelN3 _ _ _) (gone-lift t1 t2 t3 a1 a2 a3 keep t3 a3 e et1 ck (SelN3 t1 t2 t3) (SelN3 a1 a2 a3) (cres-gone h1 t3 a3 b3 r3 et1 c3 len1 m1)))))
-    ((CRZ t1 t2 t3 l1 l2 l3 g1 g2 g3 _ _ _ n1 n2 n3 p1 p2 p3 d1 d2 d3 ck f1 f2 f3 cg)
-      (let ((erased e) (erased et1) (erased q) (erased u) (erased sl) (erased m1)) (cons-mem g1 g2 g3 gone et cg mg))
+    ((CRZ t1 t2 t3 l1 l2 l3 g1 g2 g3 _ _ _ _ _ _ _ _ _ _ _ _ ck f1 f2 f3 cg)
+      (let ((erased e) (erased et1) (erased q) (erased _) (erased sl) (erased m1)) (cons-mem g1 g2 g3 gone et cg mg))
       (let-match erased q (Refl _ _))
       (let-match erased len (LengthCons _ _ _ _ len1))
       (let-match erased len1 (LengthNil _))
