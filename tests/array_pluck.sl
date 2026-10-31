@@ -21,10 +21,10 @@
   (nat-add (share x) (share y)))
 pluck-test
 ; warns: tests/array_pluck.sl:4:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_pluck.sl:5:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_pluck.sl:19:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1299:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:1309:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_pluck.sl:20:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1299:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:1309:1: note: `;! warn` for `Array` is here

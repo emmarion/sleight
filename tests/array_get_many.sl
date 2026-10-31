@@ -6,6 +6,6 @@
   (nat-add x y))
 get-many-test
 ; warns: tests/array_get_many.sl:3:20: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_get_many.sl:3:33: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here

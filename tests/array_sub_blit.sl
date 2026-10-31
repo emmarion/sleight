@@ -19,4 +19,4 @@
   (MkPair _ _ (to-list _ (share part)) (to-list _ (share r))))
 sub-blit-test
 ; warns: tests/array_sub_blit.sl:3:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:1299:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:1309:1: note: `;! warn` for `Array` is here

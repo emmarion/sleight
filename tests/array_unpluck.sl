@@ -24,6 +24,6 @@
   m)
 (go)
 ; warns: tests/array_unpluck.sl:15:22: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_unpluck.sl:15:52: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:1298:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:1308:1: note: `;! warn` for `ACons` is here
