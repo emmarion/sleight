@@ -109,14 +109,23 @@
 
 (let ((many u62-max) (erased u62-max-add) (erased u62-max-lt)) (u62-max-of))
 
-(def-fns _ $ (many add-fast : (many (Nat) a b) -> (many (Nat) c) (erased (Add a b c) p))
-  (let-match many (nat-fits-u62 a) (Yes _ _ _ _ fa) ((No _ _ _ _ _) (add a b)))
-  (let-match many (nat-fits-u62 b) (Yes _ _ _ _ fb) ((No _ _ _ _ _) (add a b)))
+(def-adts
+  ((Af : ((Nat) a b) -> Type)
+    enum
+    (many AfY : (erased (Nat) a b s) (erased (Add a b s) ad) (erased (Lt s u62-modulus) bs) -> (Af a b))
+    (many AfN : (erased (Nat) a b) -> (Af a b))))
+
+(def-fns _ $ (many add-fits : (many (Nat) a b) -> (many (Af a b) r))
+  (let-match many (nat-fits-u62 a) (Yes _ _ _ _ fa) ((No _ _ _ _ _) (AfN a b)))
+  (let-match many (nat-fits-u62 b) (Yes _ _ _ _ fb) ((No _ _ _ _ _) (AfN a b)))
   (let ((many r) (erased ar) (erased rm)) (u62-sub u62-max a u62-max-lt (lt-pred-bound a u62-max u62-modulus u62-max-add fa)))
-  (let-match many (u62-lt-dec r b rm fb) (No _ _ _ _ br) ((Yes _ _ _ _ _) (add a b)))
+  (let-match many (u62-lt-dec r b rm fb) (No _ _ _ _ br) ((Yes _ _ _ _ _) (AfN a b)))
   (let ((erased s) (erased ab)) (add-ex a b))
-  (let ((many c)) (u62-add a b s ab (le-bd s u62-max (add-mono b r a s u62-max (add-comm a b s ab) (add-comm a r u62-max ar) (le-lt-succ b r br)) u62-max-lt)))
-  (values c ab))
+  (AfY a b s ab (le-bd s u62-max (add-mono b r a s u62-max (add-comm a b s ab) (add-comm a r u62-max ar) (le-lt-succ b r br)) u62-max-lt)))
+
+(def-fns _ $ (many add-fast : (many (Nat) a b) -> (many (Nat) c) (erased (Add a b c) p))
+  (let-match many (add-fits a b) (AfY _ _ s ab bs) ((AfN _ _) (add a b)))
+  (values (u62-add a b s ab bs) ab))
 
 (def-fns _ $ (many sub-fast : (many (Nat) a b) (erased (Lt b (Succ a)) le) -> (many (Nat) c) (erased (Add b c a) p))
   (let-match many (nat-fits-u62 a) (Yes _ _ _ _ fa) ((No _ _ _ _ _) (sub a b le)))
@@ -775,8 +784,11 @@
   (let-match erased e (EcXF _))
   (let ((many cv) (erased t2) (erased e2) (unique rv2)) (sv-cntp r rv1 p i nr x nt lr ap1))
   (let-match erased e2 (EcXF _))
-  (let ((many xs2) (erased a)) (add-fast xs cv))
-  (tail $ sw-p r rv2 i1 j u1 sb1 p nr lr ap1 jn bd zs zv xs2 n o0 u0 o xs0 n0 pc pk (FwX o0 u0 o u1 xs0 n0 pc xs n cv xs2 pk f a) sc))
+  (let-match many (add-fits xs cv) (AfY _ _ xs2 a bs)
+    ((AfN _ _)
+      (let ((many xs2) (erased a)) (add xs cv))
+      (tail $ sw-p r rv2 i1 j u1 sb1 p nr lr ap1 jn bd zs zv xs2 n o0 u0 o xs0 n0 pc pk (FwX o0 u0 o u1 xs0 n0 pc xs n cv xs2 pk f a) sc)))
+  (tail $ sw-p r rv2 i1 j u1 sb1 p nr lr ap1 jn bd zs zv (u62-add xs cv xs2 a bs) n o0 u0 o xs0 n0 pc pk (FwX o0 u0 o u1 xs0 n0 pc xs n cv xs2 pk f a) sc))
 
 (def-fns _ $ (many sw-f : (erased (List (Sy)) r) (unique (Sv r) rv) (many (Nat) i j) (erased (List (Sy)) u) (subterm erased (Sub r i j u) sb)
     (many (Nat) q) (erased (Nat) nr) (erased (Length (Sy) r nr) lr) (erased (Add i q nr) aq)
