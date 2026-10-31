@@ -37,15 +37,15 @@
         (absurd (Nil _) (match erased m _
           (absurd (InL _ _ m1) (let-match erased m1 (MkCtMem _ _ n p)) (let-match erased p (SubNil _ _ rt)) rt)
           (absurd (InR _ _ m1) (let-match erased m1 (MkCtMem _ _ n p)) (let-match erased p (SubNil _ _ rt)) rt))))
-      (match erased e _
-        ((C0) (match erased (or-sel tl tr (CEmpty) (CEmpty) e w1 m (SelN0 l1 l2 l3) (SelN0 r1 r2 r3)) _
-          (absurd (InL _ _ m1) (mem-empty w1 m1)) (absurd (InR _ _ m1) (mem-empty w1 m1))))
+      (let-match erased e (C0)
         ((C1) (mem-cons t u1 e w1 (cons-sel-back u1 u2 u3 t u1 e c (SelN1 u1 u2 u3))
           (or-in l1 r1 u1 w1 o1 (or-sel tl tr l1 r1 e w1 m (SelN1 l1 l2 l3) (SelN1 r1 r2 r3)))))
         ((C2) (mem-cons t u2 e w1 (cons-sel-back u1 u2 u3 t u2 e c (SelN2 u1 u2 u3))
           (or-in l2 r2 u2 w1 o2 (or-sel tl tr l2 r2 e w1 m (SelN2 l1 l2 l3) (SelN2 r1 r2 r3)))))
         ((C3) (mem-cons t u3 e w1 (cons-sel-back u1 u2 u3 t u3 e c (SelN3 u1 u2 u3))
-          (or-in l3 r3 u3 w1 o3 (or-sel tl tr l3 r3 e w1 m (SelN3 l1 l2 l3) (SelN3 r1 r2 r3)))))))))
+          (or-in l3 r3 u3 w1 o3 (or-sel tl tr l3 r3 e w1 m (SelN3 l1 l2 l3) (SelN3 r1 r2 r3))))))
+      (match erased (or-sel tl tr (CEmpty) (CEmpty) e w1 m (SelN0 l1 l2 l3) (SelN0 r1 r2 r3)) _
+        (absurd (InL _ _ m1) (mem-empty w1 m1)) (absurd (InR _ _ m1) (mem-empty w1 m1))))))
 
 (def-fns _ $ (erased nmem-or : (erased (Ctree) tl tr t) (erased (List (Col)) l) (erased (CtOr tl tr t) o) (erased (Or (NMem tl l) (NMem tr l)) b)
     -> (erased (NMem t l) r))
@@ -63,9 +63,10 @@
 
 (def-fns _ $ (erased allnz-snoc : (erased (List (Col)) xs ys) (erased (Col) x) (subterm erased (Snoc (Col) xs x ys) s) (erased (AllNZ xs) a) (erased (NZ x) nx)
     -> (erased (AllNZ ys) r))
-  (match erased s _
-    ((SnocNil _ _) (AllNZCons x (Nil (Col)) nx (AllNZNil)))
-    ((SnocCons _ y _ xs1 ys1 s1) (let-match erased a (AllNZCons _ _ ny a1)) (AllNZCons y ys1 ny (allnz-snoc xs1 ys1 x s1 a1 nx)))))
+  (let-match erased s (SnocCons _ y _ xs1 ys1 s1)
+    ((SnocNil _ _) (AllNZCons x (Nil (Col)) nx (AllNZNil))))
+  (let-match erased a (AllNZCons _ _ ny a1))
+  (AllNZCons y ys1 ny (allnz-snoc xs1 ys1 x s1 a1 nx)))
 
 (def-fns _ $ (erased allnz-rots : (erased (Nat) k) (erased (List (Col)) xs ys) (subterm erased (Rots (Col) k xs ys) rs) (erased (AllNZ xs) a) -> (erased (AllNZ ys) r))
   (let-match erased rs (RotsS _ k1 x xs1 xs2 _ s rs1) ((RotsZ _ _) a))
@@ -153,11 +154,10 @@
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
       (let-match erased nzr (AllNZCons _ _ nz2 nzr2))
       (let-match erased (addc-eq e1 e2 ee sm pee p) (Refl _ _))
-      (match erased (third-pick e1 e2 sm g s (third-of e1 e2 sm p nz1 nz2 nzs) (third-of e1 g s ps nz1 ng ns)) _
-        ((PkSame _ _)
-          (let-match erased (addc-eq sm e2 h e1 ph (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm p)))) (Refl _ _))
-          (cov-mem cp2 et1 et2 t c st1 (allnz2 e2 e1 r2 nz2 nz1 nzr2)))
-        (absurd (PkSwap _ _) (addc-self sm h ph nh))))))
+      (let-match erased (third-pick e1 e2 sm g s (third-of e1 e2 sm p nz1 nz2 nzs) (third-of e1 g s ps nz1 ng ns)) (PkSame _ _)
+        (absurd (PkSwap _ _) (addc-self sm h ph nh)))
+      (let-match erased (addc-eq sm e2 h e1 ph (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm p)))) (Refl _ _))
+      (cov-mem cp2 et1 et2 t c st1 (allnz2 e2 e1 r2 nz2 nz1 nzr2)))))
 
 (def-fns _ $ (erased third-nz : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (NZ a) na) (erased (NZ b) nb) (erased (NZ c) nc))
   (match erased t _
@@ -201,11 +201,10 @@
 
 (def-fns _ $ (erased rot-perm : (erased (Perm) g) (erased (Nat) k) (erased (List (Col)) xs ys pxs) (erased (Rot (Col) k xs ys) rt) (erased (PermT g xs pxs) pt)
     -> (erased (List (Col)) pys) (erased (Rot (Col) k pxs pys) prt) (erased (PermT g ys pys) pt2))
-  (match erased rt _
-    ((RotIn _ _ m _ _ l le rs)
-      (let ((erased pys) (erased prs) (erased pt2)) (rots-perm g k xs ys pxs rs pt))
-      (values pys (RotIn _ k m pxs pys (permt-length g xs pxs m pt l) le prs) pt2))
-    ((RotOver _ _ m _ l gt) (values pxs (RotOver _ k m pxs (permt-length g xs pxs m pt l) gt) pt))))
+  (let-match erased rt (RotIn _ _ m _ _ l le rs)
+    ((RotOver _ _ m _ l gt) (values pxs (RotOver _ k m pxs (permt-length g xs pxs m pt l) gt) pt)))
+  (let ((erased pys) (erased prs) (erased pt2)) (rots-perm g k xs ys pxs rs pt))
+  (values pys (RotIn _ k m pxs pys (permt-length g xs pxs m pt l) le prs) pt2))
 
 ; A colour permutation of a run of steps is a run of steps.
 (def-fns _ $ (erased step-perm : (erased (Perm) g) (erased (Step) s) (erased (List (Col)) et et1 pet) (erased (IsPerm g) ip) (erased (StepTr s et et1) st)
@@ -235,12 +234,11 @@
 
 (def-fns _ $ (erased steps-perm : (erased (Perm) g) (erased (List (Step)) cp1) (erased (List (Col)) et et2 pet) (erased (IsPerm g) ip)
     (subterm erased (StepsTr cp1 et et2) st) (erased (PermT g et pet) pt) -> (erased (List (Col)) pet2) (erased (StepsTr cp1 pet pet2) pst) (erased (PermT g et2 pet2) pt2))
-  (match erased st _
-    ((StNil _) (values pet (StNil pet) pt))
-    ((StCons s cp2 _ et1 _ s1 st1)
-      (let ((erased pet1) (erased ps1) (erased pt1)) (step-perm g s et et1 pet ip s1 pt))
-      (let ((erased pet2) (erased pst) (erased pt2)) (steps-perm g cp2 et1 et2 pet1 ip st1 pt1))
-      (values pet2 (StCons s cp2 pet pet1 pet2 ps1 pst) pt2))))
+  (let-match erased st (StCons s cp2 _ et1 _ s1 st1)
+    ((StNil _) (values pet (StNil pet) pt)))
+  (let ((erased pet1) (erased ps1) (erased pt1)) (step-perm g s et et1 pet ip s1 pt))
+  (let ((erased pet2) (erased pst) (erased pt2)) (steps-perm g cp2 et1 et2 pet1 ip st1 pt1))
+  (values pet2 (StCons s cp2 pet pet1 pet2 ps1 pst) pt2))
 
 (def-fns _ $ (erased erot-ex : (erased (Col) c) (erased (NZ c) nz) -> (erased (Perm) g) (erased (IsPerm g) ip) (erased (PermC g c (C1)) p))
   (match erased nz _
@@ -566,14 +564,13 @@
   (comp-mem rcp t0 ta tb t cv c pa pb c0 e0 e1 rest st nzc a ev))
 
 (def-fns _ $ (erased even-ex : (erased (List (Col)) et) -> (erased (Bool) b) (erased (EvenT et b) ev))
-  (match erased et _
-    ((Nil _) (values (BTrue) (EvNil)))
-    ((Cons _ c l)
-      (match erased c _
-        ((C0) (values (BTrue) (Ev0 l)))
-        ((C1) (let ((erased b) (erased p)) (eventail-c l)) (values b (Ev1 l b p)))
-        ((C2) (let ((erased l2) (erased q)) (permt-c p312 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev2 l l2 b q p)))
-        ((C3) (let ((erased l2) (erased q)) (permt-c p231 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev3 l l2 b q p)))))))
+  (let-match erased et (Cons _ c l)
+    ((Nil _) (values (BTrue) (EvNil))))
+  (match erased c _
+    ((C0) (values (BTrue) (Ev0 l)))
+    ((C1) (let ((erased b) (erased p)) (eventail-c l)) (values b (Ev1 l b p)))
+    ((C2) (let ((erased l2) (erased q)) (permt-c p312 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev2 l l2 b q p)))
+    ((C3) (let ((erased l2) (erased q)) (permt-c p231 l)) (let ((erased b) (erased p)) (eventail-c l2)) (values b (Ev3 l l2 b q p)))))
 
 ; The even normal form of the trace, without its first entry, of every colouring of the map of a cubic program is in the tree
 ; cpcolor-c computes for it.
@@ -581,11 +578,10 @@
     (erased (List (Col)) et et2) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (ETrace et et2) etr) -> (erased (CtMem t et2) r))
   (let ((erased b) (erased ev)) (even-ex et2))
   (let-match erased (erun-fn (ESStart) et2 b (BTrue) (even-run et2 b ev) (etrace-run et et2 etr)) (Refl _ _))
-  (match erased etr _
-    ((ETrEven _ _) (cpcolor-mem cp t comp cq e0 et cc ev))
-    ((ETrOdd _ _ _ q)
-      (let ((erased e2) (erased pe)) (permc-ex p132 e0 (IP132)))
-      (cpcolor-mem cp t comp cq e2 et2 (cpcol-perm cp _ _ p132 cc (IP132) (PTCons p132 e0 e2 et et2 pe q)) ev))))
+  (let-match erased etr (ETrOdd _ _ _ q)
+    ((ETrEven _ _) (cpcolor-mem cp t comp cq e0 et cc ev)))
+  (let ((erased e2) (erased pe)) (permc-ex p132 e0 (IP132)))
+  (cpcolor-mem cp t comp cq e2 et2 (cpcol-perm cp _ _ p132 cc (IP132) (PTCons p132 e0 e2 et et2 pe q)) ev))
 
 ; The same for a basis program of the Birkhoff check (the use of ctree_mem_cpcolor in chkbP of Birkhoff_valid).
 (def-fns _ $ (erased bkprog-hit : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (BkProg h m cp t) bp) (erased (Col) e0)

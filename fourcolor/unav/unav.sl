@@ -30,15 +30,13 @@
     -> (erased (Nat) i) (erased (List (List (Sub))) rs rt out) (erased (List (Sub)) p) (erased (Nth (List (List (Sub))) wobl i out) pn) (erased (Add i m a) ad)
     (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (erased (Repeat (Sub) a sub59 p) rp) (erased (Pres a rt rs (Nil (List (Sub))) p out) pr))
   (let-match erased wl (WLCons _ rs rt out wobl1 _ _ p sz tg rp pr rest) (absurd (WLNil _ _) (lt-le-absurd a m up lo)))
-  (match erased (nat-eq a m) _
-    ((Equal _ _ _) (values (Zero) rs rt out p (NthHere _ out wobl1) (AddZero a) sz tg rp pr))
-    ((Unequal _ _ _ _ ap)
-      (match erased ap _
-        (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
-        ((ApGt _ _ _ _ l)
-          (let ((erased i) (erased rs1) (erased rt1) (erased out1) (erased p1) (erased pn) (erased ad) (erased sz1) (erased tg1) (erased rp1) (erased pr1))
-            (walk-look drs wobl1 a (Succ m) hi rest (LtS m a l) up))
-          (values (Succ i) rs1 rt1 out1 p1 (NthThere _ out wobl1 i out1 pn) (add-shift i m a ad) sz1 tg1 rp1 pr1))))))
+  (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
+    ((Equal _ _ _) (values (Zero) rs rt out p (NthHere _ out wobl1) (AddZero a) sz tg rp pr)))
+  (let-match erased ap (ApGt _ _ _ _ l)
+    (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo)))
+  (let ((erased i) (erased rs1) (erased rt1) (erased out1) (erased p1) (erased pn) (erased ad) (erased sz1) (erased tg1) (erased rp1) (erased pr1))
+    (walk-look drs wobl1 a (Succ m) hi rest (LtS m a l) up))
+  (values (Succ i) rs1 rt1 out1 p1 (NthThere _ out wobl1 i out1 pn) (add-shift i m a ad) sz1 tg1 rp1 pr1))
 
 ; Which obligations fit exactly for a dart x of positive dscore: those of the walk of its arity a = 5 + i, or the cap ones.
 (def-adts $ (UnavAt : ((Nat) d) ((List (Nat)) e f ks) ((List (List (List (Sub)))) wobl) ((List (List (Sub))) cobl) ((Nat) x) -> Type)

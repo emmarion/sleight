@@ -50,16 +50,15 @@
       (let ((many r) (many s8)) (notail $ sc-script f1 s7))
       (values (SSplit (sc-loc li) j k lo lab l r) s8))
     ((BFalse)
-      (match many (nat-eqb tag 1) _
-        ((BTrue) (values (SRed) s1))
+      (let-match many (nat-eqb tag 1) (BFalse)
+        ((BTrue) (values (SRed) s1)))
+      (let ((many a) (many s2)) (sc-num s1))
+      (match many (nat-eqb tag 2) _
+        ((BTrue) (let ((many hc) (many s3)) (sc-hcs a s2)) (values (SHub hc) s3))
         ((BFalse)
-          (let ((many a) (many s2)) (sc-num s1))
-          (match many (nat-eqb tag 2) _
-            ((BTrue) (let ((many hc) (many s3)) (sc-hcs a s2)) (values (SHub hc) s3))
-            ((BFalse)
-              (let ((many mir) (many s3)) (sc-bool s2))
-              (let ((many n) (many s4)) (sc-num s3))
-              (values (SSim a mir n) s4))))))))
+          (let ((many mir) (many s3)) (sc-bool s2))
+          (let ((many n) (many s4)) (sc-num s3))
+          (values (SSim a mir n) s4))))))
 
 (def-fns _ $ (many script-of : (many (String) s) -> (many (Script) t))
   (let ((many t) (many _)) (sc-script 1000000 s))

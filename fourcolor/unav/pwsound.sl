@@ -149,22 +149,20 @@
       ((FRoot _ _ _ _ _ _) (OrR _ _ x))
       ((FLeft _ k m _ _ _ _ q0 q ql qh _ other _ f1 w s sb dj lc l0)
         (let ((erased x0)) (exact-sub-at e f ks y m p0 q0 x sb lc l0))
-        (match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o q0 q ly ds lt x0 f1) _
-          ((OrL _ _ hh) (OrL _ _ hh))
-          ((OrR _ _ xq)
-            (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
-              ((OrL _ _ xl) (match erased s _ ((SelL _ _) (OrR _ _ xl)) (absurd (SelR _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
-              ((OrR _ _ xh) (match erased s _ (absurd (SelL _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelR _ _) (OrR _ _ xh))))))))
+        (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o q0 q ly ds lt x0 f1) (OrR _ _ xq)
+          ((OrL _ _ hh) (OrL _ _ hh)))
+        (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
+          ((OrL _ _ xl) (match erased s _ ((SelL _ _) (OrR _ _ xl)) (absurd (SelR _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
+          ((OrR _ _ xh) (match erased s _ (absurd (SelL _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelR _ _) (OrR _ _ xh))))))
       ((FRight _ k _ _ _ _ ol q0 q ql qh pl _ f1 w s dl e1)
-        (match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o p0 q ly ds lt x f1) _
-          ((OrL _ _ hh) (OrL _ _ hh))
-          ((OrR _ _ xq)
-            (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
-              ((OrL _ _ xl)
-                (match erased s _
-                  ((SelL _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
-                  ((SelR _ _) (OrR _ _ xl))))
-              ((OrR _ _ xh)
-                (match erased s _
-                  ((SelL _ _) (OrR _ _ xh))
-                  ((SelR _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))))
+        (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o p0 q ly ds lt x f1) (OrR _ _ xq)
+          ((OrL _ _ hh) (OrL _ _ hh)))
+        (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
+          ((OrL _ _ xl)
+            (match erased s _
+              ((SelL _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
+              ((SelR _ _) (OrR _ _ xl))))
+          ((OrR _ _ xh)
+            (match erased s _
+              ((SelL _ _) (OrR _ _ xh))
+              ((SelR _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))
