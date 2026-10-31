@@ -3,7 +3,7 @@
 This directory holds a proof of the four colour theorem, for straight-line
 drawings, written in Sleight by Claude sessions working without the owner.
 Its combinatorial part follows Gonthier and Werner's Coq proof (see
-NOTICE.md). PLAN.md describes the proof's structure and each file's
+NOTICE.md). STRUCTURE.md describes the proof's structure and each file's
 role; this page says how to check it.
 
 ## What is proved
@@ -28,7 +28,8 @@ That proof appears to rest on:
 - the compiled runs of `native-compute` (DESIGN.md §29, §72), which check
   the 633 configurations, the unavoidability walks, the Birkhoff checks
   and per-configuration certificates;
-- `defs.sl` stating the theorem intended (the owner's statement).
+- `defs.sl`, which this proof's files did not write, stating the theorem
+  intended.
 
 The intermediate statements are meant to follow Coq's; that they match
 has been checked only by reading, which appears to bear on NOTICE.md's
@@ -82,5 +83,5 @@ the rest is the jobs, most of it the C-reducibility check of `red/`. On a
 machine with many more cores, the wall time would appear to approach the
 elaboration, the compile and the longest job, about a minute with slc.
 
-Each check also has a unit of its own, listed in PLAN.md (for example
+Each check also has a unit of its own, listed in STRUCTURE.md (for example
 `red/goal-c.sl` for the 633 configurations alone).

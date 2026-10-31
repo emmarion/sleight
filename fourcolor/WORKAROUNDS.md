@@ -38,7 +38,7 @@ language behind them may be wrong. Numbers are not reused.
    function has to be callable from glue code at a fixed level, so it is
    indexed by levels minted at the top level of the `red/` files (`KCB`,
    `COB`, `KHL`, `CGL`, `CRX`). Callers build `CoLv` evidence to reach it,
-   as PLAN.md's section on C-reducibility and levels describes. This is the same
+   as STRUCTURE.md's section on C-reducibility and levels describes. This is the same
    issue as item 1.
 
 ## One goal per unit, one long unit

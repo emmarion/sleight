@@ -5,7 +5,7 @@ advice, and what the licenses require should be checked by the owner.
 
 The statement in `defs.sl` and `spec.sl` is the owner's. The proof
 around it is written in Sleight for this repository, but much of part B
-(PLAN.md) is based on the Coq proof of the four colour theorem by
+(STRUCTURE.md) is based on the Coq proof of the four colour theorem by
 Georges Gonthier and Benjamin Werner, and some of its data is taken from
 it. That proof is distributed under the CeCILL-B license, whose
 Article 5.3.4 asks that a modified version say it is based on the
