@@ -12,7 +12,13 @@ against the other heap sorts in `heapsort/`.
 dune exec bin/main.exe -- std/nat.sl std/list.sl std/immediate.sl agent/tasks/heapsort-fast/spec.sl \
   $(cat agent/solutions/heapsort-fast/mimo/files.txt) agent/tasks/heapsort-fast/perf.sl \
   --build agent/solutions/mimo_perf && agent/solutions/mimo_perf
+dune exec bin/main.exe -- --goal proved std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl \
+  agent/tasks/heapsort-fast/spec.sl $(cat agent/solutions/heapsort-fast/mimo/files.txt)
 ```
+
+Each directory's last file, `qed.sl`, was added after the agents' runs: it
+discharges the spec's goal with the agent's `heapsort-fast`, which the
+second command checks.
 
 `opus/` was written by the claude-opus-5-5 agent in the first session of run
 `20261012-1220-claude-opus-5-5-heapsort-fast`; of the runs in

@@ -8,6 +8,8 @@ files in order. From the repository root:
 T=agent/tasks/heapsort-fast
 dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl $T/spec.sl \
   $(cat heapsort/flat/files.txt) $T/perf.sl --build flat_perf && ./flat_perf
+dune exec bin/main.exe -- --goal proved std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl $T/spec.sl \
+  $(cat heapsort/flat/files.txt)
 ```
 
 - `arith.sl`: order (`lt-lemma` from `std/tactics.sl`, and `Ne` from `std/nat.sl`), `Child` (the children of p are 2p+1 and 2p+2), halving
@@ -25,3 +27,4 @@ dune exec bin/main.exe -- --warnings-as-errors std/nat.sl std/list.sl std/macro.
   Lemmas these functions call precede `(def-lvl Inv)`.
 - `loops.sl`: `sift` and `sift-to`, `heapify` and `sortdown`.
 - `sort.sl`: `heapsort-fast`, which `perf.sl` calls.
+- `qed.sl`: the spec's goal, discharged by `heapsort-fast`.

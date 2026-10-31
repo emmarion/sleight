@@ -8,3 +8,4 @@ agent/solutions/heapsort-fast/mimo/heap3.sl
 agent/solutions/heapsort-fast/mimo/heap4.sl
 agent/solutions/heapsort-fast/mimo/loops.sl
 agent/solutions/heapsort-fast/mimo/sort.sl
+agent/solutions/heapsort-fast/mimo/qed.sl

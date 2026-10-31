@@ -4,3 +4,4 @@ agent/solutions/heapsort-fast/opus/hs-sift.sl
 agent/solutions/heapsort-fast/opus/hs-phase.sl
 agent/solutions/heapsort-fast/opus/hs-bounds.sl
 agent/solutions/heapsort-fast/opus/hs-hole.sl
+agent/solutions/heapsort-fast/opus/qed.sl
