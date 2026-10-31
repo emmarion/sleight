@@ -84,7 +84,7 @@
     -> (many (Bd cap) d) (unique tb is tb2 at tb))
   (let ((erased len) (erased lp) (many d) (unique tb1)) (bytes-length-dec _ tb))
   (let-match erased (length-fn (U8) tps len cap lp l1) (Refl _ _))
-  (values (match many d _ ((Yes _ _ _ _ b) (BdY cap b)) ((No _ _ _ _ _) (BdN cap))) tb1))
+  (values (match many d _ ((Yes _ _ _ _ b) (BdY cap (lt-trans cap bytes-limit u62-modulus b bytes-limit-below-u62))) ((No _ _ _ _ _) (BdN cap))) tb1))
 
 (def-fns _ $ (erased imm-nat : (many (Nat) n) (erased (Lt n u62-modulus) q) -> (erased (Imm (Slot) (slot-of n)) r))
   (ImmPlaced (Nat) n (ImmNat n q) _ (place-at-many _ n)))
