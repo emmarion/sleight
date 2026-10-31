@@ -1,8 +1,4 @@
-; Sums of a list g of numbers, one per dart: at a list of darts, along a face, and over the faces of a hypermap, where
-; they add up to the sum over all darts (the partition of the darts into faces that dscore_roots of discharge.v uses).
-; Load after dscore.sl.
-
-; s is the sum of g at the darts xs.
+; s: the sum of g at the darts xs.
 (def-adts $ (SumAt : ((List (Nat)) g xs) ((Nat) s) -> Type)
   enum
   (many SANil : (erased (List (Nat)) g) -> (SumAt g (Nil (Nat)) (Zero)))
@@ -16,7 +12,7 @@
   (many InclCons : (erased (Nat) x) (erased (List (Nat)) xs ys) (erased (In x ys) p) (erased (Incl xs ys) rest) -> (Incl (Cons (Nat) x xs) ys)))
 
 (def-fns _ $ (erased incl-in : (erased (List (Nat)) xs ys) (erased (Nat) u) (subterm erased (Incl xs ys) i) (erased (In u xs) p) -> (erased (In u ys) r))
-  (let-match erased i (InclCons x xs1 _ px i1) (absurd (InclNil _) p))
+  (let-match erased i (InclCons _ xs1 _ px i1) (absurd (InclNil _) p))
   (let-match erased p (InThere _ _ _ p1) ((InHere _ _) px))
   (incl-in xs1 ys u i1 p1))
 
@@ -62,11 +58,10 @@
   (let ((erased z) (erased r1) (erased r2)) (plus-lcomm c cy t1 s1 s ay a))
   (SACons g ys2 y cy z s py (sumat-remove g ys2 ys3 x c t1 z rm1 p k1 r1) r2))
 
-; Two duplicate-free lists of the same darts have the same sum.
 (def-fns _ $ (erased perm-sum : (erased (List (Nat)) g xs ys) (erased (Nat) s) (subterm erased (SumAt g xs s) k) (erased (Distinct xs) dx)
     (erased (Distinct ys) dy) (erased (Incl xs ys) i1) (erased (Incl ys xs) i2) -> (erased (SumAt g ys s) r))
   (match erased k _
-    ((SANil _) (match erased ys _ ((Nil _) (SANil g)) (absurd (Cons _ y ys1) (let-match erased i2 (InclCons _ _ _ iy _)) iy)))
+    ((SANil _) (match erased ys _ ((Nil _) (SANil g)) (absurd (Cons _ _ _) (let-match erased i2 (InclCons _ _ _ iy _)) iy)))
     ((SACons _ xs1 x c s1 _ p k1 a)
       (let-match erased dx (DistCons _ _ nx dx1))
       (let-match erased i1 (InclCons _ _ _ ix i11))
@@ -92,7 +87,6 @@
   (let ((erased u) (erased e1) (erased e2)) (plus-assoc-r cx s1 s2 t s ax e))
   (values u s2 (SACons g a1 x cx s1 u px k1 e1) k2 e2))
 
-; Reading g through p: the sum of g . p at xs is the sum of g at the images ys of xs.
 (def-fns _ $ (erased sumat-map : (erased (List (Nat)) g p gp xs ys) (erased (Nat) s) (erased (Respects g p gp) rg) (subterm erased (Respects p xs ys) rp)
     (erased (SumAt gp xs s) k) -> (erased (SumAt g ys s) r))
   (let-match erased rp (RespCons _ xs1 ys1 x y pxy rp1) ((RespNil _) (let-match erased k (SANil _)) (SANil g)))
@@ -121,28 +115,27 @@
 (def-fns _ $ (erased perm-cover : (erased (Nat) d) (erased (List (Nat)) p q ids zs) (erased (HPerm d p q) pm) (subterm erased (Under zs d) u)
     -> (erased (Incl zs p) r))
   (let-match erased u (UnderCons zs1 x _ lx u1) ((UnderNil _) (InclNil p)))
-  (let-match erased pm (HMkPerm _ _ _ ids2 io lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids2 io _ _ pq))
   (let ((erased y) (erased py) (erased _)) (perm-nth d x q p (perm-sym d p q pm) lx))
   (InclCons x zs1 p (nth-in p y x (respects-nth p q ids2 x y x pq py (iota-nth d x ids2 io lx))) (perm-cover d p q ids zs1 pm u1)))
 
-; Summing g at the images of all darts under a permutation p is summing g at all darts.
 (def-fns _ $ (erased perm-total : (erased (Nat) d s) (erased (List (Nat)) g p q gp ids) (erased (HPerm d p q) pm) (erased (Iota d ids) io)
     (erased (Respects g p gp) rg) (erased (SumAt gp ids s) k) -> (erased (SumAt g ids s) r))
-  (let-match erased pm (HMkPerm _ _ _ ids2 io2 lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids2 io2 lp qp _))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased rid)) (respects-id-right d ids p io lp))
   (let ((erased uid)) (respects-under p ids p d rid lp))
   (perm-sum g p ids s (sumat-map g p gp ids p s rg rid k) (resp-distinct q p ids qp (iota-distinct d ids io)) (iota-distinct d ids io)
     (under-incl d p ids (perm-under d p q pm) io) (perm-cover d p q ids ids pm uid)))
 
-; s is the sum of g at the k darts x, f x, ..., f^(k-1) x.
+; s: the sum of g at the k darts x, f x, ..., f^(k-1) x.
 (def-adts $ (FSum : ((List (Nat)) f g) ((Nat) x k s) -> Type)
   enum
   (many FSZ : (erased (List (Nat)) f g) (erased (Nat) x) -> (FSum f g x (Zero) (Zero)))
   (many FSS : (erased (List (Nat)) f g) (erased (Nat) x y k c s1 s) (erased (Nth (Nat) g x c) p) (erased (Nth (Nat) f x y) py)
       (erased (FSum f g y k s1) rest) (erased (Add c s1 s) a) -> (FSum f g x (Succ k) s)))
 
-; s is the sum, over the roots rs, of g along the face of each root (ks the arities).
+; s: the sum, over the roots rs, of g along the face of each root; ks the arities.
 (def-adts $ (RSum : ((List (Nat)) f g ks rs) ((Nat) s) -> Type)
   enum
   (many RSNil : (erased (List (Nat)) f g ks) -> (RSum f g ks (Nil (Nat)) (Zero)))
@@ -151,7 +144,7 @@
 
 (def-fns _ $ (erased path-fsum : (erased (List (Nat)) f g s0 xs) (erased (Nat) x y s) (subterm erased (Path f s0 x y xs) w) (erased (SumAt g xs s) k)
     -> (erased (Nat) m) (erased (Length (Nat) xs m) l) (erased (FSum f g x m s) r))
-  (let-match erased w (PathStep _ _ xs1 _ z _ px out w1) ((PathHere _ _ _) (let-match erased k (SANil _)) (values (Zero) (LengthNil _) (FSZ f g x))))
+  (let-match erased w (PathStep _ _ xs1 _ z _ px _ w1) ((PathHere _ _ _) (let-match erased k (SANil _)) (values (Zero) (LengthNil _) (FSZ f g x))))
   (let-match erased k (SACons _ _ _ c s1 _ pc k1 a))
   (let ((erased m) (erased l) (erased r)) (path-fsum f g s0 xs1 z y s1 w1 k1))
   (values (Succ m) (LengthCons _ x xs1 m l) (FSS f g x z m c s1 s pc px r a)))
@@ -173,10 +166,9 @@
   (let ((erased s) (erased a)) (add c s1))
   (values s (SACons g xs1 x c s1 s pc k1 a)))
 
-; Along a face, a list of ones sums to the number of darts.
 (def-fns _ $ (erased fsum-ones : (erased (Nat) d x k s) (erased (List (Nat)) f os) (erased (Repeat (Nat) d (Succ (Zero)) os) ro)
     (subterm erased (FSum f os x k s) p) -> (erased (Eq (Nat) k s) e))
-  (let-match erased p (FSS _ _ _ y k1 c s1 _ pc py p1 a) ((FSZ _ _ _) (Refl _ (Zero))))
+  (let-match erased p (FSS _ _ _ y k1 c s1 _ pc _ p1 a) ((FSZ _ _ _) (Refl _ (Zero))))
   (let-match erased (nth-fn _ os x c _ pc (repeat-nth _ d x _ os ro (nth-lt-length _ os x d c pc (repeat-length _ d _ os ro)))) (Refl _ _))
   (let-match erased (fsum-ones d y k1 s1 f os ro p1) (Refl _ _))
   (let-match erased a (AddSucc _ _ _ a1))
@@ -200,8 +192,8 @@
 (def-fns _ $ (erased ocat : (erased (Nat) d) (erased (List (Nat)) f ks rs) (erased (OrderList d f ks) ol) (subterm erased (Under rs d) u)
     -> (erased (List (Nat)) ls) (erased (OrbCat f rs ls) oc))
   (let-match erased u (UnderCons rs1 r _ lr u1) ((UnderNil _) (values (Nil _) (OCNil f))))
-  (let ((erased a) (erased pa) (erased o)) (arity-at d r f ks ol lr))
-  (let-match erased o (MkOrder _ xs _ y k py w l))
+  (let ((erased _) (erased _) (erased o)) (arity-at d r f ks ol lr))
+  (let-match erased o (MkOrder _ xs _ y _ py w _))
   (let ((erased ls1) (erased oc1)) (ocat d f ks rs1 ol u1))
   (let ((erased ls2) (erased ap)) (app-exists (Cons _ r xs) ls1))
   (values ls2 (OCCons f rs1 xs ls1 ls2 r y py w ap oc1)))
@@ -226,7 +218,6 @@
   (let ((erased irt) (erased cn)) (classes-root g d ids lab rs x rt io ro prt lx))
   (InclCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (roots-cover d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
-; The roots rs of the faces, and the darts ls listed face by face from them: every dart once.
 (def-fns _ $ (erased face-roots : (erased (Nat) d kf) (erased (List (Nat)) f fi ks ids) (erased (HPerm d f fi) pf) (erased (Orbits d f kf) ob)
     (erased (OrderList d f ks) ol) (erased (Iota d ids) io)
     -> (erased (List (Nat)) rs ls) (erased (Length (Nat) rs kf) lr) (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl)
@@ -251,7 +242,6 @@
   (let-match erased (order-fn f r a (Succ m) o (MkOrder f xs r y m py w l)) (Refl _ _))
   (RSCons f g ks rs1 r a s1 s2 s pa (FSS f g r y m c t s1 pc py ft at) (orbcat-rsum d s2 f g ks rs1 ls1 ol u1 oc1 k2) e))
 
-; Summing g face by face gives the sum of g over all darts.
 (def-fns _ $ (erased faces-sum : (erased (Nat) d s) (erased (List (Nat)) f g ks rs ls ids) (erased (OrderList d f ks) ol) (erased (Iota d ids) io)
     (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl) (erased (Incl ls ids) i1) (erased (Incl ids ls) i2)
     (erased (SumAt g ids s) k) -> (erased (RSum f g ks rs s) r))

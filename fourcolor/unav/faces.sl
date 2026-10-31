@@ -1,5 +1,3 @@
-; Face cycles of hypermap.sl: iterating a permutation, and the order of a dart along its face.
-
 (def-adts $ (Iter : ((List (Nat)) f) ((Nat) k x y) -> Type)
   enum
   (many ItZ : (erased (List (Nat)) f) (erased (Nat) x) -> (Iter f (Zero) x x))
@@ -37,14 +35,13 @@
   (let-match erased nu (NotInCons _ _ _ ne nu1))
   (PathStep p _ xs1 x z y px (NotInCons x u (Nil _) (apart-sym u x ne) (NotInNil x)) (path-respect p s xs1 z y u w1 nu1)))
 
-; The face of y has a darts: f^a y = y, and the order of the next dart is a too.
 (def-fns _ $ (erased order-iter : (erased (List (Nat)) f) (erased (Nat) y a) (erased (Order f y a) o) -> (erased (Iter f a y y) r))
   (let-match erased o (MkOrder _ xs _ y1 k py w l))
   (ItS f k y y1 y py (path-iter f _ xs y1 y k w l)))
 
 (def-fns _ $ (erased order-next : (erased (Nat) d y y1 a) (erased (List (Nat)) f fi) (erased (Perm d f fi) pm) (erased (Order f y a) o)
     (erased (Nth (Nat) f y y1) py) -> (erased (Order f y1 a) r))
-  (let-match erased o (MkOrder _ xs _ y2 k py2 w l))
+  (let-match erased o (MkOrder _ _ _ y2 _ py2 w l))
   (let-match erased (nth-fn _ f y y1 y2 py py2) (Refl _ _))
   (let-match erased w (PathStep _ _ xs1 _ z _ pz out w1) ((PathHere _ _ _) o))
   (let-match erased out (NotInCons _ _ _ ne1 _))
@@ -85,21 +82,19 @@
 
 (def-fns _ $ (erased orders-len : (erased (List (Nat)) p xs ks) (erased (Nat) n) (subterm erased (Orders p xs ks) os) (erased (Length (Nat) xs n) l)
     -> (erased (Length (Nat) ks n) r))
-  (let-match erased os (OrdCons _ xs1 ks1 x k _ os1) ((OrdNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased os (OrdCons _ xs1 ks1 _ k _ os1) ((OrdNil _) (let-match erased l (LengthNil _)) (LengthNil _)))
   (let-match erased l (LengthCons _ _ _ n1 l1))
   (LengthCons _ k ks1 n1 (orders-len p xs1 ks1 n1 os1 l1)))
 
-; The arity list ks of the face permutation, read at a dart.
 (def-fns _ $ (erased arity-at : (erased (Nat) d y) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol) (erased (Lt y d) ly)
     -> (erased (Nat) a) (erased (Nth (Nat) ks y a) pa) (erased (Order f y a) o))
   (let-match erased ol (MkOrderList _ _ ids _ io os))
   (let ((erased a) (erased pa)) (nth-exists _ ks d y (orders-len f ids ks d os (iota-length d ids io)) ly))
   (values a pa (orders-nth f ids ks y y a os (iota-nth d y ids io ly) pa)))
 
-; A step along the face keeps the arity.
 (def-fns _ $ (erased face-step : (erased (Nat) d y a) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (OrderList d f ks) ol)
     (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) -> (erased (Nat) y1) (erased (Nth (Nat) f y y1) py) (erased (Lt y1 d) ly1) (erased (Nth (Nat) ks y1 a) pa1))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased a0) (erased pa0) (erased o)) (arity-at d y f ks ol ly))
   (let-match erased (nth-fn _ ks y a a0 pa pa0) (Refl _ _))
   (let ((erased y1) (erased py) (erased ly1)) (perm-nth d y f fi pf ly))
@@ -121,11 +116,10 @@
   (let-match erased (nth-fn _ ks y a a0 pa pa0) (Refl _ _))
   (order-iter f y a o))
 
-; The image of a dart under any of the three permutations is a dart.
 (def-fns _ $ (erased hyper-step : (erased (Nat) d y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt y d) ly)
     -> (erased (Nat) ye yn yf) (erased (Nth (Nat) e y ye) pe) (erased (Lt ye d) le) (erased (Nth (Nat) n y yn) pn) (erased (Lt yn d) ln)
     (erased (Nth (Nat) f y yf) pf) (erased (Lt yf d) lf))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
   (let ((erased ye) (erased pe) (erased le)) (perm-nth d y e nf qe ly))
   (let ((erased yn) (erased pn) (erased ln)) (perm-nth d y n ni qn ly))
   (let ((erased yf) (erased pf) (erased lf)) (perm-nth d y f fi qf ly))

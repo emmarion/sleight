@@ -1,10 +1,3 @@
-; Unavoidability in the shape of unavoidability.v, with the embedding of quiz.v: in every plain cubic connected pentagonal
-; map of genus 0, a configuration of red/configs.sl has a preembedding of its kernel into the map or its mirror (CfEmbed).
-; The computed part is split into independent jobs for native.sl: the certified walk of each hub arity 5 to 11 is cut into
-; regions (regs), each walked from its context with the certified redpart of redc.sl on its obligations, and one job does
-; the cap checks; each job builds the quiz tree with its evidence (qtree.sl) for itself. Once (native-run) has run them,
-; unav-from puts their evidence together into unav-proof. The cfs in scope are those of qztcfs.sl or fcopen.sl. Load after unave.sl and data.sl.
-
 (def-adts $ (AllRed : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
   enum
   (many ARNil : (erased (Qzt) qt) -> (AllRed qt (Nil (List (Sub)))))
@@ -21,18 +14,18 @@
 
 (def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRed qt obl) a)
     (erased (Mem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
-  (let-match erased a (ARCons _ q1 rest dd a1) (absurd (ARNil _) m))
+  (let-match erased a (ARCons _ _ rest dd a1) (absurd (ARNil _) m))
   (match erased m _
     ((MemHere _ _ _) dd)
     ((MemThere _ _ _ _ m1) (allred-mem qt rest q a1 m1))))
 
-; The obligations obl all pass redpart against some quiz tree built from cfs.
+; The obligations obl pass redpart against a quiz tree built from cfs.
 (def-adts $ (RedE : ((List (Config)) cfs) ((List (List (Sub))) obl) -> Type)
   enum
   (many MkRedE : (erased (List (Config)) cfs) (erased (List (List (Sub))) obl) (erased (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi)
       (erased (AllRed qt obl) a) -> (RedE cfs obl)))
 
-; The cap checks of cap.sl, with their obligations passing redpart.
+; The cap checks for drs, their obligations passing redpart.
 (def-adts $ (CapOK : ((List (Config)) cfs) ((List (List (Sub))) drs) -> Type)
   enum
   (many MkCapOK : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs cobl) (erased (Small drs) sm) (erased (CapL drs (Nil (List (Sub))) cobl 5 9) cl)
@@ -44,14 +37,12 @@
   (let-match erased re (MkRedE _ _ qt qi ar))
   (hit-embed cfs d e n f ks g (qzt-hit cfs d e n f ks qt qi g (red-sound d z e n f ks qt q (allred-mem qt obl q ar m) g lz ex))))
 
-; A region of the walk of arity nhub: the subtree of the script at path (true for a right branch), or the script with the
-; other regions of its walk cut out (SCut) when root; ct holds the parts of the regions of this walk before it, and p, mp
-; are the parts check2-c reaches at path on either side.
+; path: true for a right branch; root: the script with the other regions cut out; ct: the parts of the earlier regions of the walk; p, mp: the parts reached at path on either side.
 (def-adts $ (Region : -> Type)
   enum
   (many MkRegion : (many (Nat) nhub) (many (List (List (Sub))) ct) (many (List (Sub)) p mp) (many (List (Bool)) path) (many (Bool) root) -> (Region)))
 
-; h is contained in the part p or mp of a region, of the same length.
+; h is contained in the part p or mp of x, of the same length.
 (def-adts $ (PartOf : ((Region) x) ((List (Sub)) h) -> Type)
   enum
   (many POP : (erased (Nat) nhub m) (erased (List (List (Sub))) ct) (erased (List (Sub)) p mp h) (erased (List (Bool)) path) (erased (Bool) root)
@@ -71,7 +62,7 @@
 
 (def-fns _ $ (erased cutsin-at : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (subterm erased (CutsIn ct t) c)
     (erased (Mem (List (Sub)) h ct) m) -> (erased (InRegs h t) r))
-  (let-match erased c (CICons ct1 h1 _ i rest) (absurd (CINil _) m))
+  (let-match erased c (CICons ct1 _ _ i rest) (absurd (CINil _) m))
   (match erased m _ ((MemHere _ _ _) i) ((MemThere _ _ _ _ m1) (cutsin-at ct1 h t rest m1))))
 
 (def-adts $ (PartIn : ((List (Sub)) h q) -> Type)
@@ -123,8 +114,7 @@
   (let ((many ok2) (erased w2)) (tail $ cuts-in-c rest t))
   (values ok2 (match erased w2 _ ((IfY _ c) (IfY _ (CICons rest h t i c))) ((IfF _) (IfF _)))))
 
-; The walk of a region from the context it reaches passes (on the parts q and mq it reaches there, which contain the
-; region's p and mp), its obligations pass redpart, and its cut list holds parts of the regions in t.
+; The walk of x from its context passes, its obligations pass redpart, and its cut list holds parts of the regions in t.
 (def-adts $ (RegOK : ((List (Config)) cfs) ((List (List (Sub))) drs) ((Region) x) ((List (Region)) t) -> Type)
   enum
   (many MkRegOK : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs rt rs ct out) (erased (Nat) nhub) (erased (List (Sub)) p mp q mq)
@@ -139,14 +129,13 @@
   (many ARgCons : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (Region) x) (erased (List (Region)) t) (erased (RegOK cfs drs x t) a)
       (erased (AllReg cfs drs t) r) -> (AllReg cfs drs (Cons (Region) x t))))
 
-; A dart of positive dscore fitting a part of a region exactly has its CfEmbed.
 (def-fns _ $ (erased reg-claim : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (subterm erased (AllReg cfs drs xs) al)
     (erased (Region) x) (erased (Mem (Region) x xs) mx) (erased (List (Sub)) h) (erased (PartOf x h) po) (erased (Nat) d y pos neg) (erased (List (Nat)) e n f ks)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks y h) xh)
     -> (erased (CfEmbed cfs d e n f ks) r))
-  (let-match erased al (ARgCons _ _ x1 t ok rest) (absurd (ARgNil _ _) mx))
+  (let-match erased al (ARgCons _ _ _ t ok rest) (absurd (ARgNil _ _) mx))
   (let-match erased mx (MemHere _ _ _) ((MemThere _ _ _ _ m1) (reg-claim cfs drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
-  (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq path root sz tg qt qi ip im d0 d1 ar _ ci))
+  (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq _ _ sz tg qt qi ip im d0 d1 ar _ ci))
   (let ((erased u) (erased xu) (erased du))
     (match erased po (((List (Sub)) u) ((ExactAt e f ks y u) xu) ((Pres nhub rt rs ct u out) du))
       ((POP _ m _ _ _ _ _ _ sb lh lp) (values q (exact-in e f ks y p q (exact-sub-at e f ks y m h p xh sb lh lp) ip) d0))
@@ -158,7 +147,7 @@
   (let-match erased (cutsin-at ct h2 t ci m2) (MkInRegs _ _ x3 m3 po3))
   (reg-claim cfs drs t rest x3 m3 h2 po3 d z pos2 neg2 e n f ks g lz ds2 lt2 x2))
 
-; The root regions of arities m to hi - 1 in xs.
+; xs holds the root regions of arities m to hi - 1.
 (def-adts $ (RootsL : ((List (Region)) xs) ((Nat) m hi) -> Type)
   enum
   (many RLNil : (erased (List (Region)) xs) (erased (Nat) m) -> (RootsL xs m m))
@@ -203,7 +192,7 @@
         (reg-claim cfs drs xs al rg mr p po d x pos neg e n f ks g lx dsc lt (MkExactAt e f ks x a os p pa ob (root-exact d x a e n f ks os p g ob rp))))))
   (MkUnavE cfs (level-of every) every))
 
-; The context check2-c reaches at the end of path (true for a right branch) from the one given.
+; The context reached at the end of a path.
 (def-adts $ (RCtx : ((Nat) nhub) ((List (List (Sub))) rt rs ct) -> Type)
   enum
   (many MkRCtx : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct) (many (List (List (Sub))) acc) (many (List (Pr2)) env) (many (List (Sub)) p0 p mp0 mp)
@@ -257,13 +246,11 @@
     ((SSplit _ _ _ _ _ l r) (cat _ (notail $ cut-paths (Cons _ (BFalse) rpath) l) (notail $ cut-paths (Cons _ (BTrue) rpath) r)))
     (else (Nil _))))
 
-; The skeleton of the walk of arity a, with its regions cut out (SCut), and the paths of those regions, in walk order.
 (def-fns _ $ (many walk-skel : (many (Nat) a) -> (many (Script) skel) (many (List (Cut)) cuts))
   (let ((many k) (many _)) (script-src a))
   (let ((many skel)) (script-of k))
   (values skel (cut-paths (Nil _) skel)))
 
-; The context of the walk of arity a, by drs, at path.
 (def-fns _ $ (many walk-ctx : (many (Nat) a) (many (List (List (Sub))) ct) (many (List (Bool)) path) (many (Script) skel)
     -> (many (List (List (Sub))) rt rs) (erased (OfSize a drs rs) sz) (erased (Tgt a drs rt) tg) (many (RCtx a rt rs ct) c))
   (let ((many rs) (erased sz)) (of-size-c a drs))
@@ -284,7 +271,6 @@
   (let-match many cx (MkRCtx _ _ _ _ _ _ _ q _ mq _ _ _))
   (tail $ push-regs a skel (Cons _ q $ Cons _ mq ct) (Cons _ (MkRegion a ct q mq path (BFalse)) xs) rest))
 
-; The regions of the walks of arities a to 11, pushed onto xs in walk order, each walk's root region last.
 (def-fns _ $ (many all-regs : (subterm many (Nat) n) (many (Nat) a) (many (List (Region)) xs) -> (many (List (Region)) xs2))
   (let-match many n (Succ n1) ((Zero) xs))
   (let ((many _) (many cs)) (script-src a))
@@ -293,14 +279,12 @@
     (else (let ((many skel) (many cuts)) (walk-skel a)) (push-regs a skel (Nil _) xs cuts))))
   (tail $ all-regs n1 (Succ a) xs1))
 
-; The quiz tree of cfs, built from the cfs that cfs-run gives a native job (qztcfs.sl or fcopen.sl).
 (def-fns _ $ (many cfs-tree : -> (many (Qzt) qt) (many (Checked (QInv cfs (Nil (Nat)) qt)) qc))
   (let ((many c) (many ce)) (cfs-run))
   (let-match many ce (ChkYes _ e) ((ChkNo _) (values (QztNil) (ChkNo _))))
   (let-match erased e (Refl _ _))
   (quiz-tree-c c))
 
-; One job per region.
 (def-fns _ $ (many reg-c : (many (Region) x) (many (List (Region)) t) -> (many (Checked (RegOK cfs drs x t)) r))
   (let-match many x (MkRegion nhub ct p mp path root))
   (let ((many skel) (many _)) (walk-skel nhub))

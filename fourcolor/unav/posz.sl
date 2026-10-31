@@ -1,6 +1,3 @@
-; dscore of discharge.v on the hypermaps of hypermap.sl, for a rule list drs, and posz_dscore: in a plain cubic connected
-; pentagonal map of genus 0, some dart has positive dscore. Load after dsum.sl, with fourcolor/colalias.sl loaded before red/red.sl.
-
 (let-match erased (unary-10-9) (Refl _ _))
 (let-match erased (unary-12-10) (Refl _ _))
 
@@ -23,7 +20,7 @@
 (def-fns _ $ (erased sec-exists : (erased (Nat) d y) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt y d) ly)
     -> (erased (Sec) o) (erased (SecAt e f ks y o) r))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased z) (erased pz) (erased lz)) (perm-nth d y e nf pe ly))
   (let ((erased a) (erased pa) (erased _)) (arity-at d z f ks ol lz))
   (let ((erased w) (erased pw) (erased lw)) (iter-exists d z f fi pf 2 lz))
@@ -72,19 +69,18 @@
 
 (def-fns _ $ (erased dslist-nth : (erased (List (Nat)) e n f ks xs cs) (erased (List (List (Sub))) drs) (erased (Nat) j y c)
     (subterm erased (DsList e n f ks drs xs cs) dl) (erased (Nth (Nat) xs j y) py) (erased (Nth (Nat) cs j c) pc) -> (erased (DScore1 e n f ks drs y c) r))
-  (let-match erased dl (DLCons _ _ _ _ xs1 cs1 _ x c1 p dl1) (absurd (DLNil _ _ _ _ _) py))
+  (let-match erased dl (DLCons _ _ _ _ xs1 cs1 _ _ _ p dl1) (absurd (DLNil _ _ _ _ _) py))
   (let-match erased py (NthThere _ _ _ j1 _ py1) ((NthHere _ _ _) (let-match erased pc (NthHere _ _ _)) p))
   (let-match erased pc (NthThere _ _ _ _ _ pc1))
   (dslist-nth e n f ks xs1 cs1 drs j1 y c dl1 py1 pc1))
 
 (def-fns _ $ (erased dslist-length : (erased (List (Nat)) e n f ks xs cs) (erased (List (List (Sub))) drs) (erased (Nat) k)
     (subterm erased (DsList e n f ks drs xs cs) dl) (erased (Length (Nat) xs k) l) -> (erased (Length (Nat) cs k) r))
-  (let-match erased dl (DLCons _ _ _ _ xs1 cs1 _ x c p dl1) ((DLNil _ _ _ _ _) (let-match erased l (LengthNil _)) (LengthNil _)))
+  (let-match erased dl (DLCons _ _ _ _ xs1 cs1 _ _ c _ dl1) ((DLNil _ _ _ _ _) (let-match erased l (LengthNil _)) (LengthNil _)))
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ c cs1 k1 (dslist-length e n f ks xs1 cs1 drs k1 dl1 l1)))
 
-; dscore of discharge.v at x, as pos - neg: 60 plus dscore1 of edge y for each dart y of the face of x, against 10 times
-; the arity plus dscore1 of each such y. cs lists dscore1 at the darts 0..d-1, cse at their edges.
+; The dscore at x is pos - neg; cs lists dscore1 at the darts 0..d-1, cse at their edges.
 (def-adts $ (DScore : ((Nat) d) ((List (Nat)) e n f ks) ((List (List (Sub))) drs) ((Nat) x pos neg) -> Type)
   enum
   (many MkDScore : (erased (Nat) d x a t c60 sp sn pos neg) (erased (List (Nat)) e n f ks ids cs cse) (erased (List (List (Sub))) drs)
@@ -150,13 +146,11 @@
     (DTCons d r pos neg p1 q1 p q e n f ks rs1 drs (MkDScore d r a tr c60 tp tn pos neg e n f ks ids cs cse drs io dl rc pa fp fn m60 mtr apos aneg) dt1 ap aq)
     (MulSucc k1 c60 m1 m mm1 am) mt e3 f3))
 
-; posz_dscore of discharge.v: some dart of a plain cubic connected pentagonal map of genus 0 has dscore pos - neg > 0, whatever
-; the rule list. The face scores add up to 6 * 10 * kf - 10 * d = 120 by cubic_Euler, since the transfers cancel out.
 (def-fns _ $ (erased posz-dscore : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs) (erased (Geo d e n f ks) g)
     (erased (Connected d e n f) cc) (erased (Genus d e n f (Zero)) gen)
     -> (erased (Nat) x pos neg) (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) ds) (erased (Lt neg pos) lt))
   (let-match erased g (MkGeo _ _ _ _ _ h pe2 cn ol _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased _) (erased _) (erased _) (erased kf) (erased _) (erased _) (erased _) (erased of) (erased _) (erased _) (erased _)) (genus-parts d (Zero) e n f gen))
   (let ((erased s6) (erased m6) (erased a12)) (cubic-planar d kf e n f h pe2 cn cc gen of))
   (let ((erased ids) (erased io)) (iota-exists d))

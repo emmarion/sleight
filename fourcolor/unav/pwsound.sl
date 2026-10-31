@@ -1,6 +1,3 @@
-; Soundness of pwalk.sl's evidence: a dart with positive dscore whose face fits a part of the walk exactly has an
-; obligation of the walk fitting exactly at some dart. Load after hubsound.sl.
-
 (def-fns _ $ (erased map-hit-ext : (erased (Nat) d) (erased (List (Nat)) e f ks) (erased (List (List (Sub))) o o2) (erased (MapHit d e f ks o) h)
     (erased (Ext o o2) x) -> (erased (MapHit d e f ks o2) r))
   (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
@@ -26,7 +23,7 @@
 (def-fns _ $ (erased exact-len : (erased (List (Nat)) e f ks) (erased (Nat) y) (erased (List (Sub)) p) (erased (ExactAt e f ks y p) x)
     -> (erased (Nat) a) (erased (Nth (Nat) ks y a) pa) (erased (Length (Sub) p a) l))
   (let-match erased x (MkExactAt _ _ _ _ a os _ pa ob ex))
-  (let-match erased ex (MkExact _ _ m fo lo lp))
+  (let-match erased ex (MkExact _ _ m _ lo lp))
   (let-match erased (length-fn _ os a m (obs-len e f ks y a os ob) lo) (Refl _ _))
   (values a pa lp))
 
@@ -58,13 +55,12 @@
   (let-match erased (add-fn c s1 s2 s (add-comm s1 c s2 a2) ad) (Refl _ _))
   r)
 
-; dscore_cface: the dscore is the same along a face.
 (def-fns _ $ (erased dscore-step : (erased (Nat) d x x1 pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs) (erased (Geo d e n f ks) g)
     (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) ds) (erased (Nth (Nat) f x x1) px)
     -> (erased (Lt x1 d) lx1) (erased (DScore d e n f ks drs x1 pos neg) r))
   (let-match erased ds (MkDScore _ _ a t c60 sp sn _ _ _ _ _ _ ids cs cse _ io dl rc pa fp fn m60 mt ap an))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased y1) (erased py1) (erased ly1) (erased pa1)) (face-step d x a e n f ks h ol lx pa))
   (let-match erased (nth-fn _ f x y1 x1 py1 px) (Refl _ _))
   (let ((erased cy)) (face-cycle d x a f ks ol lx pa))
@@ -77,9 +73,7 @@
   (let ((erased ly) (erased ds1)) (dscore-step d x y pos neg e n f ks drs g lx ds py))
   (dscore-iter d y z k1 pos neg e n f ks drs g ly ds1 it1))
 
-; What the walk's evidence gives a dart y of positive dscore fitting its part exactly: an obligation fitting exactly at
-; some dart, or, from a PRed, a dart of positive dscore fitting the obligation exactly, or, from a PCut, one fitting a part
-; of the cut list exactly.
+; An obligation of out fitting exactly at some dart, a dart of positive dscore fitting one exactly, or one fitting a part of ct exactly.
 (def-adts $ (PresHit : ((Nat) d) ((List (Nat)) e n f ks) ((List (List (Sub))) drs ct out) -> Type)
   enum
   (many PHMap : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (MapHit d e f ks out) h)
@@ -106,11 +100,11 @@
     (match erased dp _
       ((PRed _ _ _ _ _ _ m) (PHPos d y pos neg e n f ks drs ct out p ly ds lt x m))
       ((PCut _ _ _ _ _ _ c)
-        (let-match erased c (MkCutAt _ h _ m mh sb lp lh))
+        (let-match erased c (MkInCut _ h _ m mh sb lp lh))
         (PHCut d y pos neg e n f ks drs ct out h ly ds lt (exact-sub-at e f ks y m p h x sb lp lh) mh))
       ((PHub _ _ _ _ acc o _ _ hc l cv ix w e1)
         (PHMap d e n f ks drs ct out (map-hit-ext d e f ks o out (hub-sound d y nhub pos neg e n f ks ws drs rt rs acc o p hc g ly ds lt x l sz iw ta cv ix w) e1)))
-      ((PSplit _ k _ _ _ o1 o2 _ _ ql qh pl pr w s dl dr e1 e2)
+      ((PSplit _ k _ _ _ o1 o2 _ _ ql qh _ _ w s dl dr e1 e2)
         (match erased (exact-split-at d y k e n f ks p ql qh g x w) _
           ((OrL _ _ xl)
             (match erased s _
@@ -140,14 +134,14 @@
       (erased (ExactAt e f ks y p0) x) (subterm erased (Forced nhub rt rs ct p0 p o) fd) -> (erased (Or (PresHit d e n f ks drs ct o) (ExactAt e f ks y p)) r))
     (match erased fd _
       ((FRoot _ _ _ _ _ _) (OrR _ _ x))
-      ((FLeft _ k m _ _ _ _ q0 q ql qh _ other _ f1 w s sb dj lc l0)
+      ((FLeft _ k m _ _ _ _ q0 q ql qh _ _ _ f1 w s sb dj lc l0)
         (let ((erased x0)) (exact-sub-at e f ks y m p0 q0 x sb lc l0))
         (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o q0 q ly ds lt x0 f1) (OrR _ _ xq)
           ((OrL _ _ hh) (OrL _ _ hh)))
         (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
           ((OrL _ _ xl) (match erased s _ ((SelL _ _) (OrR _ _ xl)) (absurd (SelR _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
           ((OrR _ _ xh) (match erased s _ (absurd (SelL _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelR _ _) (OrR _ _ xh))))))
-      ((FRight _ k _ _ _ _ ol q0 q ql qh pl _ f1 w s dl e1)
+      ((FRight _ k _ _ _ _ ol _ q ql qh _ _ f1 w s dl e1)
         (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o p0 q ly ds lt x f1) (OrR _ _ xq)
           ((OrL _ _ hh) (OrL _ _ hh)))
         (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _

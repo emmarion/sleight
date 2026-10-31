@@ -1,7 +1,3 @@
-; hubcap_fit_bound of hubcap.v at a dart of a hypermap: the sector lists of hubcapc.sl's Fam and Counts read off the
-; face of a hub dart y, and the hub's bound set against its dscore. The transfers into the hub are bounded through
-; TgtAll, a hypothesis over the darts that conv.sl is meant to discharge. Load after pwalk.sl.
-
 (def-fns _ $ (erased iter-inj : (erased (Nat) d k a b z) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Iter f k a z) p)
     (erased (Iter f k b z) q) -> (erased (Eq (Nat) a b) e))
   (let-match erased p (ItS _ k1 _ a1 _ pa p1) ((ItZ _ _) (let-match erased q (ItZ _ _)) (Refl _ a)))
@@ -18,7 +14,6 @@
     -> (erased (Iter f (Succ j) y z1) r))
   (iter-add f j (Succ (Zero)) (Succ j) y z z1 p (ItS f (Zero) z z1 z1 pz (ItZ f z1)) (add-succ-right j (Zero) j (add-zero-right j))))
 
-; Along a cycle of length n through y, f^a y = f^b y when a = b + n.
 (def-fns _ $ (erased iter-mod : (erased (List (Nat)) f) (erased (Nat) n a b y u v) (erased (Iter f n y y) cy) (erased (Iter f a y u) p)
     (erased (Iter f b y v) q) (erased (Add b n a) e) -> (erased (Eq (Nat) u v) r))
   (let ((erased m) (erased p1) (erased p2)) (iter-split f n b a y u (add-comm b n a e) p))
@@ -28,14 +23,13 @@
 (def-fns _ $ (erased monus-add : (erased (Nat) a b r) (erased (Monus a b r) mo) (erased (Lt b (Succ a)) le) -> (erased (Add b r a) e))
   (match erased mo _ ((MoAdd _ _ _ p) p) (absurd (MoNeg _ _ l) (lt-le-absurd a b l le))))
 
-; The dart w that the j-th constraint is read at (f^k y, k = j - 2 mod nhub) has f^2 w = f^j y.
 (def-fns _ $ (erased shift-f2 : (erased (List (Nat)) f) (erased (Nat) nhub j k y w v z) (erased (Shift nhub j k) sh) (erased (Lt 1 nhub) ln)
     (erased (Iter f nhub y y) cy) (erased (Iter f k y w) pk) (erased (Iter f 2 w v) p2) (erased (Iter f j y z) pj) -> (erased (Eq (Nat) v z) r))
   (match erased sh _
     ((ShLo _ _ _ l mo)
       (let ((erased a)) (monus-add j 2 k mo (LtS 1 j l)))
       (iter-fn f j y v z (iter-add f k 2 j y w v pk p2 (add-comm 2 k j a)) pj))
-    ((ShHi _ _ t _ l at mo)
+    ((ShHi _ _ t _ _ at mo)
       (let ((erased le)) (le-tr 2 nhub t (LtS 1 nhub ln) (add-le-left nhub j t at)))
       (let ((erased a)) (monus-add t 2 k mo le))
       (iter-mod f nhub t j y v z cy (iter-add f k 2 t y w v pk p2 (add-comm 2 k t a)) pj (add-comm nhub j t at)))))
@@ -54,7 +48,7 @@
       (let-match erased (add-fn nhub 1 t1 (Succ nhub) a1 (add-succ-right nhub (Zero) nhub (add-zero-right nhub))) (Refl _ _))
       (lt-weaken k nhub (lt-pred k nhub (lt-le-trans (Succ k) t (Succ nhub) l1 l2))))))
 
-; oss lists, for j = j0 .. j0 + m - 1, the sector list os rotated by j - 2 mod nhub.
+; oss lists, for j = j0 .. j0 + m - 1, os rotated by j - 2 mod nhub.
 (def-adts $ (OssFrom : ((Nat) nhub) ((List (Sec)) os) ((Nat) j m) ((List (List (Sec))) oss) -> Type)
   enum
   (many OFNil : (erased (Nat) nhub) (erased (List (Sec)) os) (erased (Nat) j) -> (OssFrom nhub os j (Zero) (Nil (List (Sec)))))
@@ -76,19 +70,18 @@
 
 (def-fns _ $ (erased oss-nth : (erased (Nat) nhub j m i) (erased (List (Sec)) os o) (erased (List (List (Sec))) oss) (subterm erased (OssFrom nhub os j m oss) w)
     (erased (Nth (List (Sec)) oss i o) no) -> (erased (Nat) c k) (erased (Add i j c) a) (erased (Shift nhub c k) sh) (erased (Rot (Sec) k os o) ro))
-  (let-match erased w (OFCons _ _ m1 k0 _ o0 oss1 sh0 ro0 w1) (absurd (OFNil _ _ _) no))
+  (let-match erased w (OFCons _ _ m1 k0 _ _ oss1 sh0 ro0 w1) (absurd (OFNil _ _ _) no))
   (let-match erased no (NthThere _ _ _ i1 _ no1) ((NthHere _ _ _) (values j k0 (AddZero j) sh0 ro0)))
   (let ((erased c) (erased k) (erased a) (erased sh) (erased ro)) (oss-nth nhub (Succ j) m1 i1 os o oss1 w1 no1))
   (values c k (add-shift i1 j c a) sh ro))
 
-; The dart w the sector list o of index j is read at, and z = f^j y = f^2 w.
 (def-fns _ $ (erased oss-dart : (erased (Nat) d y nhub j k) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os o) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (Nth (Nat) ks y nhub) pa) (erased (ObsAt e f ks y nhub os) ob) (erased (Lt 1 nhub) ln) (erased (Lt j nhub) lj)
     (erased (Shift nhub j k) sh) (erased (Rot (Sec) k os o) ro)
     -> (erased (Nat) w z) (erased (Iter f k y w) pk) (erased (Lt w d) lw) (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub o) ow)
     (erased (Iter f j y z) pj) (erased (Iter f 2 w z) p2))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased cy)) (face-cycle d y nhub f ks ol ly pa))
   (let ((erased w) (erased pk) (erased ow)) (obs-rot e f ks y nhub k os o ob cy ro (shift-le nhub j k sh ln lj)))
   (let ((erased w2) (erased pk2) (erased lw) (erased pw)) (face-walk d y nhub e n f ks h ol k ly pa))
@@ -98,7 +91,6 @@
   (let-match erased (shift-f2 f nhub j k y w v z sh ln cy pk p2 pj) (Refl _ _))
   (values w z pk lw pw ow pj p2))
 
-; Two such darts: f^i w1 = w2 when j1 + i = j2 mod nhub.
 (def-fns _ $ (erased dart-step : (erased (Nat) d y nhub j1 j2 i c w1 w2 z1 z2) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf)
     (erased (Iter f nhub y y) cy) (erased (Lt w1 d) lw) (erased (Iter f 2 w1 z1) q1) (erased (Iter f j1 y z1) r1) (erased (Iter f 2 w2 z2) q2)
     (erased (Iter f j2 y z2) r2) (erased (Add j1 i c) a) (erased (Or (Eq (Nat) c j2) (Add j2 nhub c)) md) -> (erased (Iter f i w1 w2) r))
@@ -118,7 +110,7 @@
 (def-fns _ $ (erased rot-at : (erased (Nat) d w1 w2 nhub i) (erased (List (Nat)) e n f ks) (erased (List (Sec)) o1 o2) (erased (Geo d e n f ks) g)
     (erased (Lt w1 d) lw) (erased (Nth (Nat) ks w1 nhub) pw) (erased (ObsAt e f ks w1 nhub o1) ob1) (erased (ObsAt e f ks w2 nhub o2) ob2)
     (erased (Iter f i w1 w2) it) (erased (Lt i (Succ nhub)) li) -> (erased (Rot (Sec) i o1 o2) r))
-  (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
+  (let-match erased g (MkGeo _ _ _ _ _ _ _ _ ol _))
   (let ((erased o3) (erased ro)) (rot-c _ i o1))
   (let ((erased z) (erased pz) (erased ob3)) (obs-rot e f ks w1 nhub i o1 o3 ob1 (face-cycle d w1 nhub f ks ol lw pw) ro li))
   (let-match erased (iter-fn f i w1 z w2 pz it) (Refl _ _))
@@ -129,7 +121,7 @@
     -> (erased (Nat) c) (erased (Add j1 i c) a) (erased (Or (Eq (Nat) c j2) (Add j2 nhub c)) md))
   (match erased hs _
     ((HSLe _ _ _ _ l mo) (values j2 (monus-add j2 j1 i mo l) (OrL _ _ (Refl _ j2))))
-    ((HSGt _ _ _ t _ l at mo)
+    ((HSGt _ _ _ t _ _ at mo)
       (values t (monus-add t j1 i mo (lt-weaken j1 t (lt-le-trans j1 nhub t l1 (add-le-right j2 nhub t at)))) (OrR _ _ at)))))
 
 (def-fns _ $ (erased subn-le : (erased (Nat) nhub j1 j2 i) (erased (HubSubn nhub j2 j1 i) hs) (erased (Lt j1 nhub) l1) (erased (Lt j2 nhub) l2)
@@ -149,7 +141,7 @@
       (let ((erased bc) (erased b1) (erased b2)) (plus-assoc j1 i i2 j2 c (monus-add j2 j1 i mo l) a))
       (let-match erased (add-fn i i2 bc nhub b1 ai) (Refl _ _))
       (values c a (OrR _ _ b2)))
-    ((HSGt _ _ _ t _ l at mo)
+    ((HSGt _ _ _ t _ _ at mo)
       (let ((erased a)) (monus-add t j1 i mo (lt-weaken j1 t (lt-le-trans j1 nhub t l1 (add-le-right j2 nhub t at)))))
       (let ((erased ab) (erased b1) (erased b2)) (plus-assoc-r j2 i2 i nhub t at (add-comm i i2 nhub ai)))
       (let-match erased (add-inj i ab t j1 (add-comm ab i t b2) (add-comm j1 i t a)) (Refl _ _))
@@ -168,7 +160,7 @@
       (FamOne os o nhub j k b oss hc1 sh ro no (fam-build d y nhub e n f ks os oss hc1 g ly pa ob ln w ix1)))
     ((HITwo _ j1 j2 b hc1 l1 l2 ix1)
       (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
-      (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+      (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
       (let ((erased cy)) (face-cycle d y nhub f ks ol ly pa))
       (let ((erased o1) (erased no1)) (nth-exists _ oss nhub j1 lo l1))
       (let ((erased c1) (erased k1) (erased a1) (erased sh1) (erased ro1)) (oss-nth nhub (Zero) nhub j1 os o1 oss w no1))
@@ -198,8 +190,7 @@
   (many MkMapHit : (erased (Nat) d z) (erased (List (Nat)) e f ks) (erased (List (Sub)) q) (erased (List (List (Sub))) obl) (erased (Lt z d) lz)
       (erased (Mem (List (Sub)) q obl) m) (erased (ExactAt e f ks z q) x) -> (MapHit d e f ks obl)))
 
-; The bound on the transfers into the face of a dart w of arity nhub: dscore1 (edge (face^2 w)) is at most the number
-; of target rules rt that fit w.
+; dscore1 (edge (face^2 w)) is at most the number of the rules rt that fit w.
 (def-adts $ (TgtAt : ((List (Nat)) e n f ks) ((List (List (Sub))) drs rt) ((Nat) nhub w) -> Type)
   enum
   (many MkTgtAt : (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt) (erased (Nat) nhub w u v c t) (erased (List (Sec)) os)
@@ -215,7 +206,7 @@
 
 (def-fns _ $ (erased tgt-at : (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt) (erased (Nat) nhub i w)
     (subterm erased (TgtAll e n f ks drs rt nhub ws) ta) (erased (Nth (Nat) ws i w) pw) (erased (Nth (Nat) ks w nhub) pa) -> (erased (TgtAt e n f ks drs rt nhub w) r))
-  (let-match erased ta (TACons _ _ _ _ ws1 _ _ _ w0 a pa0 t rest) (absurd (TANil _ _ _ _ _ _ _) pw))
+  (let-match erased ta (TACons _ _ _ _ ws1 _ _ _ _ a pa0 t rest) (absurd (TANil _ _ _ _ _ _ _) pw))
   (let-match erased pw (NthThere _ _ _ i1 _ pw1)
     ((NthHere _ _ _)
       (let-match erased (nth-fn _ ks w a nhub pa0 pa) (Refl _ _))
@@ -239,7 +230,7 @@
 
 (def-fns _ $ (erased counts-len : (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (List (Nat)) ct cs) (erased (Nat) m)
     (subterm erased (Counts oss rt rs ct cs) k) (erased (Length (List (Sec)) oss m) l) -> (erased (Length (Nat) ct m) lt) (erased (Length (Nat) cs m) ls))
-  (let-match erased k (CsCons o oss1 _ _ t s ct1 cs1 _ _ k1) ((CsNil _ _) (let-match erased l (LengthNil _)) (values (LengthNil _) (LengthNil _))))
+  (let-match erased k (CsCons _ oss1 _ _ t s ct1 cs1 _ _ k1) ((CsNil _ _) (let-match erased l (LengthNil _)) (values (LengthNil _) (LengthNil _))))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (let ((erased lt) (erased ls)) (counts-len oss1 rt rs ct1 cs1 m1 k1 l1))
   (values (LengthCons _ t ct1 m1 lt) (LengthCons _ s cs1 m1 ls)))
@@ -283,8 +274,6 @@
   (let ((erased q) (erased m) (erased x)) (hit-mem o obl h))
   (MkMapHit d wd e f ks q obl lw m (MkExactAt e f ks wd nhub o q pw ow x)))
 
-; Along the face of y from z = f^j y: the source counts are the dscore1 values of the face darts, and the target
-; counts bound those of their edges.
 (def-fns _ $ (erased face-bound : (erased (Nat) d y nhub j m z) (erased (List (Nat)) e n f ks ids csl csel ws) (erased (List (List (Sub))) drs rt rs)
     (erased (List (Sec)) os) (erased (List (List (Sec))) oss) (erased (List (Nat)) ct cs)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (Nth (Nat) ks y nhub) pa) (erased (ObsAt e f ks y nhub os) ob) (erased (Lt 1 nhub) ln)
@@ -331,7 +320,6 @@
   (let-match erased q (AddSucc _ _ v1 q1))
   (add-lt-cancel a1 x y u1 v1 p1 q1 (lt-pred u1 v1 l)))
 
-; A positive dscore, 60 + sp > 10 a + sn, against the hub's bound kp + st <= kn + sn with K = kp - kn = 60 - 10 a and sp <= st.
 (def-fns _ $ (erased absurd hub-arith : (erased (Nat) a c60 t sp sn pos neg kp kn st l r)
     (erased (Mul 6 10 c60) m60) (erased (Mul a 10 t) mt) (erased (Add c60 sp pos) ap) (erased (Add t sn neg) an) (erased (Lt neg pos) lt)
     (erased (DbK a kp kn) dk) (erased (Add kp st l) al) (erased (Add kn sn r) ar) (erased (Lt l (Succ r)) le) (erased (Lt sp (Succ st)) lst)
@@ -355,17 +343,16 @@
       (let-match erased (add-fn m sn r bc ar q1) (Refl _ _))
       (lt-le-absurd bc l (lt-le-trans bc sp l l1 lst) le))))
 
-; hubcap_fit_bound at a hub dart y of arity nhub with positive dscore: some obligation of out fits exactly somewhere.
 (def-fns _ $ (erased hub-sound : (erased (Nat) d y nhub pos neg) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs acc out)
     (erased (List (Sub)) p) (erased (List (Hc)) hc) (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) dsc)
     (erased (Lt neg pos) lt) (erased (ExactAt e f ks y p) x) (erased (Length (Sub) p nhub) lp) (erased (OfSize nhub drs rs) sz) (erased (Iota d ws) iw)
     (erased (TgtAll e n f ks drs rt nhub ws) ta) (erased (CoverOk nhub hc) cov) (erased (HcIdx nhub hc) ix) (erased (HFit nhub p rt rs hc acc out) hf)
     -> (erased (MapHit d e f ks out) r))
   (let-match erased x (MkExactAt _ _ _ _ a os _ pa ob ex))
-  (let-match erased ex (MkExact _ _ m fo lo lp2))
+  (let-match erased ex (MkExact _ _ m _ lo lp2))
   (let-match erased (length-fn _ p m nhub lp2 lp) (Refl _ _))
   (let-match erased (length-fn _ os a m (obs-len e f ks y a os ob) lo) (Refl _ _))
-  (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol ab))
+  (let-match erased g (MkGeo _ _ _ _ _ _ _ _ _ ab))
   (let ((erased l4)) (above-nth ks 4 y a ab pa))
   (let ((erased ln)) (lt-trans 1 4 a (lit-lt-1-4) l4))
   (let ((erased oss) (erased w)) (oss-exists a (Zero) os a))

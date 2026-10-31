@@ -1,7 +1,4 @@
-; walkq, flatq and fitqz of quiz.v as relations on the hypermaps of hypermap.sl, over the types of quiz.sl and qfit.sl.
-; Load after qfit.sl.
-
-; Testing q at x visits the darts s before t and asks the arities as before at, each read in ks.
+; s before t: the darts visited; as before at: the arities asked, each read in ks.
 (def-adts $ (WalkS : ((List (Nat)) e n ks) ((Nat) x) ((Qn) q) ((List (Nat)) s t as at) -> Type)
   enum
   (many WS0 : (erased (List (Nat)) e n ks t at) (erased (Nat) x) -> (WalkS e n ks x (Qask0) t t at at))
@@ -21,13 +18,13 @@
       (erased (Nth (Nat) ks xr qa) pa) (erased (QStepR e n xr y) s2) (erased (WalkS e n ks y q s t as at) w)
       -> (WalkS e n ks x (QaskRR qa q) (Cons (Nat) xr s) t (Cons (Nat) qa as) at)))
 
-; walkqz: the walk of q0 at x then that of q1 at edge x.
+; s, as: the walk of q0 at x, then that of q1 at edge x.
 (def-adts $ (WalkZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) ((List (Nat)) s as) -> Type)
   enum
   (many MkWalkZ : (erased (List (Nat)) e n ks s u as au) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (WalkS e n ks x q0 s u as au) w0)
       (erased (Nth (Nat) e x x1) px) (erased (WalkS e n ks x1 q1 u (Nil (Nat)) au (Nil (Nat))) w1) -> (WalkZ e n ks x (MkQuiz q0 q1) s as)))
 
-; fitqz qz x.
+; qz fits at x.
 (def-adts $ (FitZ : ((List (Nat)) e n ks) ((Nat) x) ((Quiz) qz) -> Type)
   enum
   (many MkFitZ : (erased (List (Nat)) e n ks) (erased (Nat) x x1) (erased (Qn) q0 q1) (erased (FitQ e n ks x q0) f0) (erased (Nth (Nat) e x x1) px)
@@ -66,7 +63,7 @@
     (subterm erased (WalkS e n ks x q s t as at) w) (erased (WalkS e2 n2 ks2 x2 q s2 t2 as2 at) w2) -> (erased (Eq (List (Nat)) as as2) r))
   (match erased w _
     ((WS0 _ _ _ _ _ _) (let-match erased w2 (WS0 _ _ _ _ _ _)) (Refl _ as))
-    ((WS1 _ _ _ _ _ _ qa _) (let-match erased w2 (WS1 _ _ _ _ _ _ _ _)) (Refl _ as))
+    ((WS1 _ _ _ _ _ _ _ _) (let-match erased w2 (WS1 _ _ _ _ _ _ _ _)) (Refl _ as))
     ((WSL _ _ _ s1 _ as1 _ _ _ y q1 _ _ w1)
       (let-match erased w2 (WSL _ _ _ s3 _ as3 _ _ _ y2 _ _ _ w3))
       (let-match erased (walk-as e n ks e2 n2 ks2 s1 t as1 at s3 t2 as3 y y2 q1 w1 w3) (Refl _ _))

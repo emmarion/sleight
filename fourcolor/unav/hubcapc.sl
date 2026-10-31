@@ -1,6 +1,3 @@
-; Certified hubcap_cover of hubcap.v. hubcap-cover-c also checks that its weights put 2 on every sector, which the
-; checks of hubcap_cover appear to imply; cover-sound then turns one bound per constraint into the bound on the hub.
-
 (let-match erased (unary-1) (Refl _ _))
 (let-match erased (unary-2-1) (Refl _ _))
 
@@ -48,14 +45,12 @@
   (let-match erased q (AddSucc _ _ rr1 q1))
   (add-le-cancel-l l m1 ll1 r rr1 p1 q1 (lt-pred ll1 (Succ rr1) le)))
 
-; l <= r from l + mr <= r + ml and ml <= mr.
 (def-fns _ $ (erased finish : (erased (Nat) l mr l2 r ml r2) (erased (Add l mr l2) p) (erased (Add r ml r2) q) (erased (Lt l2 (Succ r2)) le)
     (erased (Lt ml (Succ mr)) lm) -> (erased (Lt l (Succ r)) o))
   (let ((erased r3) (erased q3)) (add r mr))
   (let ((erased le2)) (le-tr l2 r2 r3 le (add-le-r r ml r2 mr r3 q q3 lm)))
   (add-le-cancel-l l mr l2 r r3 (add-comm l mr l2 p) (add-comm r mr r3 q3) le2))
 
-; ((d + m) + (p + x)) + s = (((d + p) + s) + (m + x)).
 (def-fns _ $ (erased mix : (erased (Nat) d m d2 p x p2 s a l a2 l2 mm) (erased (Add d m d2) e1) (erased (Add p x p2) e2) (erased (Add m x mm) e3)
     (erased (Add d p a) pa) (erased (Add a s l) pl) (erased (Add d2 p2 a2) pa2) (erased (Add a2 s l2) pl2) -> (erased (Add l mm l2) o))
   (let ((erased ac) (erased bd) (erased q1) (erased q2) (erased q3)) (add-mid d m p x d2 p2 a2 e1 e2 pa2))
@@ -70,7 +65,7 @@
   (many SumNil : -> (Sum (Nil (Nat)) (Zero)))
   (many SumCons : (erased (Nat) x s1 s) (erased (List (Nat)) xs) (erased (Sum xs s1) p) (erased (Add x s1 s) a) -> (Sum (Cons (Nat) x xs) s)))
 
-; d is the sum of the products of acc and ts, entry by entry.
+; d: the sum of the products of acc and ts, entry by entry.
 (def-adts $ (Dot : ((List (Nat)) acc ts) ((Nat) d) -> Type)
   enum
   (many DotNil : -> (Dot (Nil (Nat)) (Nil (Nat)) (Zero)))
@@ -115,11 +110,11 @@
 
 (def-fns _ $ (erased dot-two : (erased (List (Nat)) acc ts) (erased (Nat) d s) (subterm erased (Dot acc ts d) dt) (erased (All (Nat) IsTwo acc) two)
     (erased (Sum ts s) ps) -> (erased (Add s s d) r))
-  (let-match erased dt (DotCons a t m d1 _ acc1 ts1 pm dt1 pa) ((DotNil) (let-match erased ps (SumNil)) (AddZero (Zero))))
+  (let-match erased dt (DotCons _ t m d1 _ acc1 ts1 pm dt1 pa) ((DotNil) (let-match erased ps (SumNil)) (AddZero (Zero))))
   (let-match erased two (AllCons _ _ _ _ i2 two1))
   (let-match erased i2 (MkIsTwo))
-  (let-match erased pm (MulSucc _ _ c1 _ pm1 p1))
-  (let-match erased pm1 (MulSucc _ _ c0 _ pm0 p0))
+  (let-match erased pm (MulSucc _ _ _ _ pm1 p1))
+  (let-match erased pm1 (MulSucc _ _ _ _ pm0 p0))
   (let-match erased pm0 (MulZero _))
   (let-match erased p0 (AddZero _))
   (let-match erased ps (SumCons _ s1 _ _ ps1 as))
@@ -128,7 +123,7 @@
   (let-match erased (add-eq t s1 bd s q2 as) (Refl _ _))
   q3)
 
-; One bound per constraint: ct and cs are the counts of target and source rules at each sector.
+; ct, cs: the counts of target and source rules at each sector.
 (def-adts $ (Sat : ((List (Hc)) hc) ((List (Nat)) ct cs) -> Type)
   enum
   (many SatNil : (erased (List (Nat)) ct cs) -> (Sat (Nil (Hc)) ct cs))
@@ -140,7 +135,7 @@
       (erased (Nth (Nat) cs j s2) ns2) (erased (Add s1 s2 s) as) (erased (Add t bn l) al) (erased (Add s bp r) ar) (erased (Lt l (Succ r)) le)
       (erased (Sat hc ct cs) rest) -> (Sat (Cons (Hc) (HC2 i j (MkZ bp bn)) hc) ct cs)))
 
-; A successful cover pass: weights acc on the sectors, and bp - bn the running bound.
+; acc: the weights on the sectors; bp - bn: the running bound.
 (def-adts $ (Cov : ((List (Nat)) acc) ((Nat) bp bn) ((List (Hc)) hc) -> Type)
   enum
   (many CvNil : (erased (List (Nat)) acc) (erased (Nat) bp bn) (erased (All (Nat) IsTwo acc) two) (erased (Lt bp (Succ bn)) le)
@@ -236,7 +231,6 @@
   (let ((many ok) (erased w)) (cover-rec-c v acc0 bp0 (Succ bn1) hc))
   (values ok (match erased w _ ((IfY _ cv) (IfY _ (MkCoverOk nhub hc kp kn acc0 bp0 bn1 dk rp a1 a2 cv))) ((IfF _) (IfF _)))))
 
-; One constraint in the induction of cover-ind: from the bound after it, the bound before it.
 (def-fns _ $ (erased cover-step : (erased (Nat) w t s hp hn l1 r1 m1 m2 x y dt dt2 ds ds2 bp bn bp2 bn2 st2 ss2 a l b r a2 l2 b2 r2)
     (erased (Add t hn l1) al) (erased (Add s hp r1) ar) (erased (Lt l1 (Succ r1)) le) (erased (Mul w t m1) pm1) (erased (Mul w s m2) pm2)
     (erased (Mul w hp x) mx) (erased (Mul w hn y) my) (erased (Add dt m1 dt2) edt) (erased (Add ds m2 ds2) eds)
@@ -308,8 +302,6 @@
       (lt-le-absurd ll (Succ (Succ rr)) le
         (le-sum (Succ r) l (Succ r) l (Succ (Succ rr)) ll (LtS r l k) (LtS r l k) (AddSucc r (Succ r) (Succ rr) (add-succ-right r r rr q)) p)))))
 
-; The cover check with one bound per constraint gives kp + st <= kn + ss, the hub's bound with K = kp - kn and st, ss the
-; sums of ct and cs.
 (def-fns _ $ (erased cover-sound : (erased (Nat) nhub st ss) (erased (List (Hc)) hc) (erased (List (Nat)) ct cs) (erased (CoverOk nhub hc) ok)
     (erased (Sat hc ct cs) sat) (erased (Length (Nat) ct nhub) lct) (erased (Length (Nat) cs nhub) lcs) (erased (Sum ct st) pst) (erased (Sum cs ss) pss)
     -> (erased (Nat) kp kn l r) (erased (DbK nhub kp kn) dk) (erased (Add kp st l) al) (erased (Add kn ss r) ar) (erased (Lt l (Succ r)) le))
@@ -331,7 +323,7 @@
   (let-match erased (add-eq kn ss c4 r q5 ar) (Refl _ _))
   (values kp kn l r dk al ar (half-le l r l2 r3 q3 q6 le2)))
 
-; The rotation hubcap_rot uses at constraint index j, and hub_subn i j.
+; k: the rotation hubcap_rot uses at constraint index j.
 (def-adts $ (Shift : ((Nat) nhub j k) -> Type)
   enum
   (many ShLo : (erased (Nat) nhub j k) (erased (Lt 1 j) l) (erased (Monus j 2 k) mo) -> (Shift nhub j k))
@@ -356,7 +348,7 @@
     ((LeY _ _ l) (let ((many k) (erased mo)) (monus-c i j)) (values k (HSLe nhub i j k l mo)))
     ((LeN _ _ l) (let ((many t) (erased a)) (add i nhub)) (let ((many k) (erased mo)) (monus-c t j)) (values k (HSGt nhub i j t k l a mo)))))
 
-; A successful hubcap_fit: per constraint, the check of dbound.sl on p rotated as hubcap_rot does.
+; acc to out: the obligations of the checks on p, per constraint of hc.
 (def-adts $ (HFit : ((Nat) nhub) ((List (Sub)) p) ((List (List (Sub))) rt rs) ((List (Hc)) hc) ((List (List (Sub))) acc out) -> Type)
   enum
   (many HFNil : (erased (Nat) nhub) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc) -> (HFit nhub p rt rs (Nil (Hc)) acc acc))
@@ -422,8 +414,7 @@
       (let-match erased (add-eq i nhub t t2 a a2) (Refl _ _))
       (monus-fn t j k1 k2 mo mo2))))
 
-; The sector lists oss of the hub's sectors as hubcap_fit reads them: per constraint, the rotation of os it fits at
-; and, for a pair, the two rotations between its sector lists.
+; oss: per constraint, the rotation of os it fits at, and for a pair the two rotations between its sector lists.
 (def-adts $ (Fam : ((List (Sec)) os) ((Nat) nhub) ((List (List (Sec))) oss) ((List (Hc)) hc) -> Type)
   enum
   (many FamNil : (erased (List (Sec)) os) (erased (Nat) nhub) (erased (List (List (Sec))) oss) -> (Fam os nhub oss (Nil (Hc))))
@@ -452,7 +443,7 @@
 (def-fns _ $ (erased counts-nth : (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (List (Nat)) ct cs) (erased (Nat) j)
     (erased (List (Sec)) o) (subterm erased (Counts oss rt rs ct cs) k) (erased (Nth (List (Sec)) oss j o) no)
     -> (erased (Nat) t s) (erased (Nth (Nat) ct j t) nt) (erased (Nth (Nat) cs j s) ns) (erased (Count o rt t) kt) (erased (Count o rs s) ks))
-  (let-match erased k (CsCons o1 oss1 _ _ t1 s1 ct1 cs1 kt1 ks1 k1) (absurd (CsNil _ _) no))
+  (let-match erased k (CsCons _ oss1 _ _ t1 s1 ct1 cs1 kt1 ks1 k1) (absurd (CsNil _ _) no))
   (let-match erased no (NthThere _ _ _ j1 _ no1) ((NthHere _ _ _) (values t1 s1 (NthHere _ t1 ct1) (NthHere _ s1 cs1) kt1 ks1)))
   (let ((erased t) (erased s) (erased nt) (erased ns) (erased kt) (erased ks)) (counts-nth oss1 rt rs ct1 cs1 j1 o k1 no1))
   (values t s (NthThere _ t1 ct1 j1 t nt) (NthThere _ s1 cs1 j1 s ns) kt ks))
@@ -473,10 +464,10 @@
     (subterm erased (HFit nhub p rt rs hc acc out) w) -> (erased (Ext acc out) e))
   (match erased w _
     ((HFNil _ _ _ _ _) (ExtRefl acc))
-    ((HFOne _ j k b _ pj _ _ _ acc1 _ hc1 _ _ d w1)
+    ((HFOne _ _ _ _ _ pj _ _ _ acc1 _ hc1 _ _ d w1)
       (let-match erased d (MkDb2Top _ _ _ rt1 rs1 _ _ _ _ _ _ _ _ nt _ _ _ _ _ d1))
       (ext-trans acc acc1 out (db2-ext pj rt1 rs1 (Nil _) nt acc acc1 d1) (hfit-ext nhub p rt rs acc1 out hc1 w1)))
-    ((HFTwo _ j1 j2 k i b _ pj _ _ _ acc1 _ hc1 _ _ _ d w1)
+    ((HFTwo _ _ _ _ i _ _ pj _ _ _ acc1 _ hc1 _ _ _ d w1)
       (let-match erased d (MkE2Top _ _ _ _ _ _ _ _ _ _ _ _ nt _ p2 _ _ rt1 rs1 rt2 rs2 _ _ _ _ _ _ _ _ _ _ _ _ d1))
       (ext-trans acc acc1 out (e2-ext nhub i nt pj p2 rt1 rs1 (Nil _) rt2 rs2 (Nil _) acc acc1 d1) (hfit-ext nhub p rt rs acc1 out hc1 w1)))))
 
@@ -486,7 +477,7 @@
     -> (erased (Or (Sat hc ct cs) (HitSome oss out)) r))
   (match erased w _
     ((HFNil _ _ _ _ _) (OrL _ _ (SatNil ct cs)))
-    ((HFOne _ j k b _ pj _ _ _ acc1 _ hc1 sh ro d w1)
+    ((HFOne _ j k _ _ pj _ _ _ acc1 _ hc1 sh ro d w1)
       (let-match erased fam (FamOne _ oj _ _ k2 _ _ _ sh2 ro2 no fam1))
       (let-match erased (shift-fn nhub j k2 k sh2 sh) (Refl _ _))
       (let-match erased d (MkDb2Top _ _ _ _ _ _ _ _ _ bp bn _ _ _ _ _ _ _ _ _))
@@ -499,7 +490,7 @@
       (match erased (hfit-sound nhub os p rt rs acc1 out hc1 oss ct cs x w1 fam1 cnt) _
         ((OrL _ _ sat) (OrL _ _ (SatOne j t s bp bn l r hc1 ct cs nt ns al ar le sat)))
         ((OrR _ _ h) (OrR _ _ h))))
-    ((HFTwo _ j1 j2 k i b _ pj _ _ _ acc1 _ hc1 sh ro hs d w1)
+    ((HFTwo _ j1 j2 k i _ _ pj _ _ _ acc1 _ hc1 sh ro hs d w1)
       (let-match erased fam (FamTwo _ o1 o2 _ _ _ k2 i3 i2 _ _ _ sh2 ro2 n1 n2 hs2 r12 r21 ai fam1))
       (let-match erased (shift-fn nhub j1 k2 k sh2 sh) (Refl _ _))
       (let-match erased (hubsubn-fn nhub j2 j1 i3 i hs2 hs) (Refl _ _))

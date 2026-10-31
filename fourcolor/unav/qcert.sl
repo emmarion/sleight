@@ -1,7 +1,3 @@
-; Deciding the certificate QzCert of qembed.sl on the concrete map of a configuration of red/configs.sl, built by
-; cpmap.sl, for a quiz of quiz.sl. The places of the darts and the paths between walk faces are found by an unchecked
-; search; the certificate is then checked. Load after qembed.sl, with cfmap.sl and cpmap.sl loaded.
-
 (def-adts $ (NthQ : (Type A) ((List A) xs) ((Nat) i) -> Type)
   enum
   (many NQYes : (erased Type A) (erased (List A) xs) (erased (Nat) i) (many A x) (erased (Nth A xs i x) p) -> (NthQ A xs i))
@@ -49,7 +45,7 @@
   (let ((many ids) (erased s)) (snoc-c _ ids1 n1))
   (values ids (IotaS n1 ids1 ids io1 s)))
 
-(def-fns _ $ (many hyper-c : (many (Nat) d) (many (List (Nat)) e n f ids) (erased (Iota d ids) io) -> (many (Checked (Hypermap d e n f)) r))
+(def-fns _ $ (many hyper-c : (erased (Nat) d) (many (List (Nat)) e n f ids) (erased (Iota d ids) io) -> (many (Checked (Hypermap d e n f)) r))
   (let-match many (resp-q f e) (RQYes _ _ fe cfe) ((RQNo _ _) (ChkNo _)))
   (let-match many (resp-to n fe ids) (ChkYes _ ke) ((ChkNo _) (ChkNo _)))
   (let-match many (resp-q e n) (RQYes _ _ en cen) ((RQNo _ _) (ChkNo _)))
@@ -225,7 +221,7 @@
   (let-match many (notail $ iter-c f k1 z) (ItYes _ _ _ y it) ((ItNo _ _ _) (ItNo f k x)))
   (ItYes f k x y (ItS f k1 x z y pz it)))
 
-(def-fns _ $ (many dart-c : (many (Nat) d) (many (List (Nat)) ec nc fc ksc rc s0c lab lr) (many (List (KSt)) st) (erased (Respects lab fc lab) rf)
+(def-fns _ $ (many dart-c : (many (Nat) d) (many (List (Nat)) ec nc fc ksc rc s0c lab) (erased (List (Nat)) lr) (many (List (KSt)) st) (erased (Respects lab fc lab) rf)
     (erased (Respects lab rc lr) rp) (erased (NotIn (Succ (Zero)) lr) out) (many (Nat) x) -> (many (Checked (DartOK ec nc fc ksc rc s0c st x)) r))
   (let-match many (nth-q (Nat) fc x) (NQYes _ _ _ x1 px) ((NQNo _ _ _) (ChkNo _)))
   (let-match many (nth-q (KSt) st x) (NQYes _ _ _ sx ps) ((NQNo _ _ _) (ChkNo _)))
@@ -287,7 +283,7 @@
   (let-match many (notail $ wpos-c st rest (Succ k)) (ChkYes _ wr) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (WPCons st rest c k pc wr)))
 
-; A dart a path may use: the walk dart k, or its edge image.
+; The walk dart k, or its edge image when edge.
 (def-adts $ (QCand : -> Type)
   enum
   (many MkQCand : (many (Nat) p k) (many (Bool) edge) -> (QCand)))
@@ -347,9 +343,9 @@
   (let-match many ixs (Cons _ i rest) ((Nil _) (ChkYes _ (SpkNil ec s0c st))))
   (let-match many (get-at _ bw i (None _)) (Some _ cb) (else (ChkNo _)))
   (let-match many (get-at _ fw i (None _)) (Some _ cf) (else (ChkNo _)))
-  (let ((many p) (many c1)) (dpath-c ec s0c st i (Zero) cb))
+  (let ((erased p) (many c1)) (dpath-c ec s0c st i (Zero) cb))
   (let-match many c1 (ChkYes _ d1) ((ChkNo _) (ChkNo _)))
-  (let ((many p2) (many c2)) (dpath-c ec s0c st (Zero) i cf))
+  (let ((erased p2) (many c2)) (dpath-c ec s0c st (Zero) i cf))
   (let-match many c2 (ChkYes _ d2) ((ChkNo _) (ChkNo _)))
   (let-match many (notail $ spokes-c ec s0c st fw bw rest) (ChkYes _ sr) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (SpkCons ec s0c rest p p2 st i d1 d2 sr)))
@@ -378,7 +374,7 @@
   (let-match many (spokes-c ec s0c st fw bw ixs) (ChkYes _ ra) ((ChkNo _) (ChkNo _)))
   (ChkYes _ (MkQzCert dc k x0c a0 a1 ec nc fc ksc rc s0c asc ids ixs st q01 q10 hc olc io lst dk sx wz wp ls iok ra)))
 
-; cf has a map and ring, given by cpmap.sl, for which qz has a certificate at some dart.
+; cf has a map and ring for which qz has a certificate at some dart.
 (def-adts $ (CfQz : ((Config) cf) ((Quiz) qz) -> Type)
   enum
   (many MkCfQz : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) d x0c) (erased (List (Nat)) e n f r ks) (erased (Quiz) qz)
@@ -403,7 +399,7 @@
   (let ((many ks) (many co)) (orders-c f ids d))
   (let-match many co (ChkYes _ os) ((ChkNo _) (ChkNo _)))
   (let ((erased olc)) (MkOrderList d f ids ks io os))
-  (let ((many x0c) (many cq)) (find-x0 d e n f ks r ids hc olc io qz 0 d))
+  (let ((erased x0c) (many cq)) (find-x0 d e n f ks r ids hc olc io qz 0 d))
   (let-match many cq (ChkYes _ qc) ((ChkNo _) (ChkNo _)))
   (let-match erased (hyper-node-unique d e n0 f n (pointed-hyper d e n0 f r pm0) hc) (Refl _ _))
   (ChkYes _ (MkCfQz sym cci cp d x0c e n f r ks qz c pm0 qc)))

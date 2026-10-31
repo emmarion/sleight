@@ -1,8 +1,4 @@
-; The quiz tree of quiztree.v built with evidence: every triple it stores comes from the quiz of a configuration that
-; has a certificate (CfQz of qcert.sl), or from its mirror image, rotated, and a fit of the tree at a dart gives a fit
-; of such a quiz (qzt_fit_cfquiz). The tree is that of quiz.sl's cfquiz-tree-rec, by the same steps. Load after qcert.sl.
-
-; normq of quiztree.v, on the questions it turns into a QaskLR.
+; r: normq of q.
 (def-adts $ (NormQ : ((Qn) q r) -> Type)
   enum
   (many NQ1 : (erased (Nat) a) -> (NormQ (Qask1 a) (QaskLR a (Qask0) (Qask0))))
@@ -10,7 +6,7 @@
   (many NQR : (erased (Nat) a) (erased (Qn) r) -> (NormQ (QaskR a r) (QaskLR a (Qask0) r)))
   (many NQLR : (erased (Nat) a) (erased (Qn) l r) -> (NormQ (QaskLR a l r) (QaskLR a l r))))
 
-; flipq and flipqz of quiz.v.
+; r: the flip of q.
 (def-adts $ (FlipQ : ((Qn) q r) -> Type)
   enum
   (many FlQ0 : -> (FlipQ (Qask0) (Qask0)))
@@ -31,7 +27,7 @@
   (many VSame : (erased (Quiz) qz) -> (Variant qz qz))
   (many VFlip : (erased (Quiz) qz qz2) (erased (FlipQz qz qz2) p) -> (Variant qz qz2)))
 
-; The triple store_qz puts under the arities a1 a2 a3, before rotation.
+; q1 q2 q3: what store_qz puts for qz under a1 a2 a3, before rotation.
 (def-adts $ (QzTriple : ((Quiz) qz) ((Nat) a1 a2 a3) ((Qn) q1 q2 q3) -> Type)
   enum
   (many QT1 : (erased (Nat) a1 a2 a3) (erased (Qn) r1 q1 q2 q3) (erased (NormQ r1 (QaskLR a3 q1 q3)) p)
@@ -45,14 +41,14 @@
   (many Rt1 : (erased (Nat) a1 a2 a3) (erased (Qn) q1 q2 q3) -> (Rot3 a1 a2 a3 q1 q2 q3 a2 a3 a1 q2 q3 q1))
   (many Rt2 : (erased (Nat) a1 a2 a3) (erased (Qn) q1 q2 q3) -> (Rot3 a1 a2 a3 q1 q2 q3 a3 a1 a2 q3 q1 q2)))
 
-; A triple stored under the arities b1 b2 b3, listed backwards in ps.
+; ps: the arities b1 b2 b3, listed backwards.
 (def-adts $ (QEntry : ((List (Config)) cfs) ((List (Nat)) ps) ((Qn) r1 r2 r3) -> Type)
   enum
   (many MkQEntry : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (erased (Nat) a1 a2 a3 b1 b2 b3) (erased (Qn) q1 q2 q3 r1 r2 r3)
       (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) t)
       (erased (Rot3 a1 a2 a3 q1 q2 q3 b1 b2 b3 r1 r2 r3) rt) -> (QEntry cfs (Cons (Nat) b3 (Cons (Nat) b2 (Cons (Nat) b1 (Nil (Nat))))) r1 r2 r3)))
 
-; Every leaf triple of t below the arities ps, listed backwards, is an entry.
+; ps: the arities above t, listed backwards.
 (def-adts $ (QInv : ((List (Config)) cfs) ((List (Nat)) ps) ((Qzt) t) -> Type)
   enum
   (many QINil : (erased (List (Config)) cfs) (erased (List (Nat)) ps) -> (QInv cfs ps (QztNil)))
@@ -83,7 +79,7 @@
     ((QLHere _ _ _ _) (let-match erased qi (QILeaf _ _ _ _ _ _ en _)) en)
     ((QLThere _ _ _ _ _ _ t1 l1) (let-match erased qi (QILeaf _ _ _ _ _ _ _ qi1)) (qinv-leaf cfs ps t1 q1 q2 q3 qi1 l1))))
 
-; The three darts of the node of x1 have arities a1 a2 a3 and fit q1 q2 q3 one qstepR away (qzt_fitl at a leaf).
+; The darts of the node of x1 have arities a1 a2 a3 and fit q1 q2 q3 one qstepR away.
 (def-adts $ (Fit3 : ((List (Nat)) e n ks) ((Nat) x1 a1 a2 a3) ((Qn) q1 q2 q3) -> Type)
   enum
   (many MkFit3 : (erased (List (Nat)) e n ks) (erased (Nat) x1 x2 x3 a1 a2 a3 z1 z2 z3) (erased (Qn) q1 q2 q3) (erased (Nth (Nat) n x1 x2) p2)
@@ -126,7 +122,6 @@
   (let-match erased (nth-fn (Nat) n x2 x3 z p3 pz) (Refl _ _))
   (values x2 (MkFit3 e n ks x2 x3 x1 a1 a2 a3 z2 z3 z1 q1 q2 q3 p3 pz2 k2 k3 k1 s2 f2 s3 f3 s1 f1) (img-lt d x1 x2 n ni pn lx p2)))
 
-; quiz3 of quiztree.v fits at edge x2, and its swap of fitqz_swap at x1.
 (def-fns _ $ (erased fit3-a : (erased (Nat) d x1 a1 a2 a3) (erased (List (Nat)) e n f ks) (erased (Qn) q1 q2 q3) (erased (Geo d e n f ks) g) (erased (Lt x1 d) lx)
     (erased (Fit3 e n ks x1 a1 a2 a3 q1 q2 q3) ft) -> (erased (Nat) y) (erased (FitZ e n ks y (MkQuiz (QaskR a1 (QaskLR a3 q1 q3)) (QaskR a2 q2))) r) (erased (Lt y d) ly))
   (let-match erased ft (MkFit3 _ _ _ _ x2 x3 _ _ _ z1 z2 z3 _ _ _ p2 p3 k1 k2 k3 s1 f1 s2 f2 s3 f3))
@@ -149,7 +144,7 @@
   (let-match erased ft (MkFit3 _ _ _ _ x2 x3 _ _ _ z1 z2 z3 _ _ _ p2 p3 k1 k2 k3 s1 f1 s2 f2 s3 f3))
   (let-match erased g (MkGeo _ _ _ _ _ h pl cu ol _))
   (let ((erased nf) (erased ni) (erased _) (erased _) (erased pe) (erased pn) (erased _)) (hyper-core d e n f h))
-  (let-match erased s1 (MkQStepR _ _ _ u _ pu pz1))
+  (let-match erased s1 (MkQStepR _ _ _ u _ pu _))
   (let-match erased s3 (MkQStepR _ _ _ u3 _ pu3 pz3))
   (let ((erased z) (erased pz) (erased pz2) (erased _) (erased _)) (cubic-eq d x1 x2 n cu lx p2))
   (let-match erased (nth-fn (Nat) n x2 x3 z p3 pz) (Refl _ _))
@@ -169,7 +164,6 @@
     ((NQR a r) (let-match erased fq (FQLR _ _ _ _ _ _ yr _ _ pa _ _ sr fr)) (FQR e n ks x a yr r pa sr fr))
     ((NQLR _ _ _) fq)))
 
-; A stored triple fitting at the node of x1 gives a fit of its quiz.
 (def-fns _ $ (erased triple-fit : (erased (Nat) d x1 a1 a2 a3) (erased (List (Nat)) e n f ks) (erased (Qn) q1 q2 q3) (erased (Quiz) qz) (erased (Geo d e n f ks) g)
     (erased (Lt x1 d) lx) (erased (QzTriple qz a1 a2 a3 q1 q2 q3) tr) (erased (Fit3 e n ks x1 a1 a2 a3 q1 q2 q3) ft)
     -> (erased (Nat) y) (erased (FitZ e n ks y qz) r) (erased (Lt y d) ly))
@@ -184,7 +178,7 @@
       (let-match erased f1 (FQR _ _ _ _ _ x2 _ ku su fx2))
       (values x1 (MkFitZ e n ks x1 u (QaskR a1 q1) (QaskR a3 r2) f0 pu (FQR e n ks u a3 x2 r2 ku su (normq-fit e n ks x2 r2 (QaskLR a2 q3 q2) nq fx2))) lx))))
 
-; What a fit of the tree at a dart gives: a configuration with a certified quiz qz, and a fit of qz or of its mirror image.
+; A configuration of cfs with a certified quiz that, or whose mirror image, fits some dart.
 (def-adts $ (QzHit : ((List (Config)) cfs) ((Nat) d) ((List (Nat)) e n ks) -> Type)
   enum
   (many MkQzHit : (erased (List (Config)) cfs) (erased (Nat) d y) (erased (List (Nat)) e n ks) (erased (Config) cf) (erased (Quiz) qz qz2)
@@ -194,7 +188,7 @@
 (def-fns _ $ (erased qzt-hit : (erased (List (Config)) cfs) (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi)
     (erased (Geo d e n f ks) g) (erased (HasFit d e n ks qt) hf) -> (erased (QzHit cfs d e n ks) r))
   (let-match erased hf (MkHasFit _ x1 _ _ _ _ lx fit))
-  (let ((erased b1) (erased b2) (erased b3) (erased r1) (erased r2) (erased r3) (erased en) (erased ft)) (qzt-entry cfs e n ks qt x1 qi fit))
+  (let ((erased _) (erased _) (erased _) (erased _) (erased _) (erased _) (erased en) (erased ft)) (qzt-entry cfs e n ks qt x1 qi fit))
   (let-match erased en (MkQEntry _ cf qz qz2 a1 a2 a3 _ _ _ q1 q2 q3 _ _ _ m c v tr rt))
   (let ((erased x) (erased ft2) (erased lx2))
     (match erased rt (((Nat) x) ((Fit3 e n ks x a1 a2 a3 q1 q2 q3) ft2) ((Lt x d) lx2))
@@ -203,7 +197,6 @@
       ((Rt2 _ _ _ _ _ _) (fit3-rot2 d x1 a1 a2 a3 e n f ks q1 q2 q3 g lx ft))))
   (let ((erased y) (erased fz) (erased ly)) (triple-fit d x a1 a2 a3 e n f ks q1 q2 q3 qz2 g lx2 tr ft2))
   (MkQzHit cfs d y e n ks cf qz qz2 m c v fz ly))
-
 
 (def-adts $ (RevA : ((List (Nat)) path ps full) -> Type)
   enum
@@ -252,7 +245,6 @@
               (values (QztHub r58 t9 t10 t11) (QIHub cfs ps r58 t9 t10 t11 j58 i9 i10 i11)))))))))
     (else (values t qi))))
 
-; qzt_put3 with an entry made from a certified quiz, rotated by rt.
 (def-fns _ $ (many put3-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (erased (Nat) a1 a2 a3) (erased (Qn) q1 q2 q3)
     (many (Nat) b1 b2 b3) (many (Qn) r1 r2 r3) (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v)
     (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (erased (Rot3 a1 a2 a3 q1 q2 q3 b1 b2 b3 r1 r2 r3) rt) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi)
@@ -284,7 +276,6 @@
     ((QaskLR a l r) (NLR q a l r (NQLR a l r)))
     (else (NOther q))))
 
-; store_qz of quiztree.v on a quiz of two QaskR questions.
 (def-fns _ $ (many store-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz) (erased (Nat) qa1 qa2) (many (Qn) p1 p2)
     (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz (MkQuiz (QaskR qa1 p1) (QaskR qa2 p2))) v) (many (Nat) ka1 ka2)
     (erased (Eq (Nat) ka1 qa1) e1) (erased (Eq (Nat) ka2 qa2) e2) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
@@ -322,11 +313,10 @@
     ((QaskLL a l) (let-match many (notail $ flipq-c l) (MkFlipD _ l2 p)) (MkFlipD q (QaskRR a l2) (FlQLL a l l2 p)))
     ((QaskRR a r) (let-match many (notail $ flipq-c r) (MkFlipD _ r2 p)) (MkFlipD q (QaskLL a r2) (FlQRR a r r2 p)))))
 
-; store_cf_qz: the quiz of a configuration, and its mirror image unless the configuration is symmetric.
-(def-fns _ $ (many store-cf-c : (erased (List (Config)) cfs) (many (Config) cf) (many (Quiz) qz) (many (Bool) sym) (erased (Mem (Config) cf cfs) m)
+(def-fns _ $ (many store-cf-c : (erased (List (Config)) cfs) (erased (Config) cf) (many (Quiz) qz) (many (Bool) sym) (erased (Mem (Config) cf cfs) m)
     (erased (CfQz cf qz) c) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let-match erased c (MkCfQz _ _ _ _ _ _ _ _ _ _ _ _ _ qc))
-  (let-match erased qc (MkQzCert _ _ _ a0 a1 _ _ _ _ _ _ _ _ _ _ q01 q10 _ _ _ _ _ _ _ _ _ _ _))
+  (let-match erased qc (MkQzCert _ _ _ a0 a1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (let-match many qz (MkQuiz b0 b1))
   (let-match many b0 (QaskR k0 p01))
   (let-match many b1 (QaskR k1 p10))
@@ -369,7 +359,6 @@
   (let-match erased e (Refl _ _))
   (QINode cfs ps n1 n1 n1 n1 (qinv-n1 cfs _) (qinv-n1 cfs _) (qinv-n1 cfs _) (qinv-n1 cfs _)))
 
-; The tree of cfquiz-tree-rec on cfs, from qzt-empty.
 (def-fns _ $ (many quiz-tree-c : (many (List (Config)) cfs) -> (many (Qzt) r) (many (Checked (QInv cfs (Nil (Nat)) r)) c))
   (let ((many n1)) (QztNode (QztNil) (QztNil) (QztNil) (QztNil)))
   (let ((many n2)) (QztNode n1 n1 n1 n1))

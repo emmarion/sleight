@@ -1,8 +1,3 @@
-; The sector lists of fit.sl read off a hypermap of hypermap.sl, after fitp of part.v: the sector of a dart y has the
-; arity of the spoke edge y, of the hat edge (face^2 (edge y)) and of the fans edge (face^(3+k) (edge y)) for k below the
-; spoke arity minus 5; the sector list of y has one sector per dart of its face, from y on. ks is an OrderList of the face
-; permutation. Load after faces.sl, the unav files and fit.sl, dbound.sl, hubcapc.sl.
-
 (def-adts $ (Geo : ((Nat) d) ((List (Nat)) e n f ks) -> Type)
   enum
   (many MkGeo : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pe)
@@ -26,7 +21,7 @@
   (many OACons : (erased (List (Nat)) e f ks) (erased (Nat) y y1 n) (erased (Sec) o) (erased (List (Sec)) os) (erased (SecAt e f ks y o) so)
       (erased (Nth (Nat) f y y1) py) (erased (ObsAt e f ks y1 n os) rest) -> (ObsAt e f ks y (Succ n) (Cons (Sec) o os))))
 
-; y fits p exactly (exact_fitp of part.v): p has one subpart per dart of the face of y, and the sectors fit them.
+; y fits p exactly: p has one subpart per dart of the face of y, and the sectors fit them.
 (def-adts $ (ExactAt : ((List (Nat)) e f ks) ((Nat) y) ((List (Sub)) p) -> Type)
   enum
   (many MkExactAt : (erased (List (Nat)) e f ks) (erased (Nat) y n) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Nth (Nat) ks y n) pn)
@@ -34,19 +29,19 @@
 
 (def-fns _ $ (erased above-nth : (erased (List (Nat)) ks) (erased (Nat) b i k) (erased (Above ks b) ab) (subterm erased (Nth (Nat) ks i k) p)
     -> (erased (Lt b k) r))
-  (let-match erased ab (AboveCons ks1 k0 _ l ab1) (absurd (AboveNil _) p))
+  (let-match erased ab (AboveCons ks1 _ _ l ab1) (absurd (AboveNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) l))
   (above-nth ks1 b i1 k ab1 p1))
 
 (def-fns _ $ (erased fans-ok : (erased (List (Nat)) e f ks fs) (erased (Nat) z m) (erased (Above ks 4) ab) (subterm erased (FansAt e f ks z m fs) fa)
     -> (erased (All (Nat) Pent fs) r) (erased (Length (Nat) fs m) l))
-  (let-match erased fa (FAS _ _ _ _ u a z1 m1 fs1 pu pa pz fa1) ((FAZ _ _ _ _) (values (AllNil _ Pent) (LengthNil _))))
+  (let-match erased fa (FAS _ _ _ _ u a z1 m1 fs1 _ pa _ fa1) ((FAZ _ _ _ _) (values (AllNil _ Pent) (LengthNil _))))
   (let ((erased r1) (erased l1)) (fans-ok e f ks fs1 z1 m1 ab fa1))
   (values (AllCons _ Pent a fs1 (MkPent a (above-nth ks 4 u a ab pa)) r1) (LengthCons _ a fs1 m1 l1)))
 
 (def-fns _ $ (erased sec-ok : (erased (List (Nat)) e f ks) (erased (Nat) y) (erased (Sec) o) (erased (Above ks 4) ab) (erased (SecAt e f ks y o) so)
     -> (erased (SecOk o) r))
-  (let-match erased so (MkSecAt _ _ _ _ z a w u h z3 m fs pz pa pw pu ph p3 mo pfs))
+  (let-match erased so (MkSecAt _ _ _ _ z a _ u h z3 m fs _ pa _ _ ph _ mo pfs))
   (let ((erased la)) (above-nth ks 4 z a ab pa))
   (let-match erased mo (MoAdd _ _ _ am) (absurd (MoNeg _ _ l) (lt-le-absurd 4 a la l)))
   (let ((erased r1) (erased l1)) (fans-ok e f ks fs z3 m ab pfs))
@@ -54,7 +49,7 @@
 
 (def-fns _ $ (erased obs-ok : (erased (List (Nat)) e f ks) (erased (Nat) y n) (erased (List (Sec)) os) (erased (Above ks 4) ab)
     (subterm erased (ObsAt e f ks y n os) ob) -> (erased (All (Sec) SecOk os) r))
-  (let-match erased ob (OACons _ _ _ _ y1 n1 o os1 so py ob1) ((OANil _ _ _ _) (AllNil _ SecOk)))
+  (let-match erased ob (OACons _ _ _ _ y1 n1 o os1 so _ ob1) ((OANil _ _ _ _) (AllNil _ SecOk)))
   (AllCons _ SecOk o os1 (sec-ok e f ks y o ab so) (obs-ok e f ks y1 n1 os1 ab ob1)))
 
 (def-fns _ $ (erased obs-cut : (erased (List (Nat)) e f ks) (erased (Nat) y n k) (erased (List (Sec)) os pre post) (subterm erased (ObsAt e f ks y n os) ob)
@@ -62,7 +57,7 @@
     -> (erased (Nat) z m) (erased (Iter f k y z) it) (erased (ObsAt e f ks y k pre) o1) (erased (ObsAt e f ks z m post) o2) (erased (Add k m n) a))
   (match erased c _
     ((CutAtZ _ _) (values y n (ItZ f y) (OANil e f ks y) ob (AddZero n)))
-    (absurd (CutAtNil _ k1) (let-match erased ob (OANil _ _ _ _)) (let-match erased lk (LtS _ _ l0)) l0)
+    (absurd (CutAtNil _ _) (let-match erased ob (OANil _ _ _ _)) (let-match erased lk (LtS _ _ l0)) l0)
     ((CutAtS _ k1 o os1 pre1 _ c1)
       (let-match erased ob (OACons _ _ _ _ y1 n1 _ _ so py ob1))
       (let-match erased lk (LtS _ _ lk1))
@@ -88,11 +83,10 @@
   (let-match erased (iter-fn f k y z z2 it it2) (Refl _ _))
   (values z it (obs-app e f ks z y m k n post pre os2 o2 it3 o1 ap (add-comm k m n a))))
 
-; exact_fitp is kept by rotating the part and stepping along the face (fitp_rot of part.v).
 (def-fns _ $ (erased exact-rot-at : (erased (Nat) d y a k) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p p2) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) (erased (Lt k (Succ a)) lk) (erased (ExactAt e f ks y p) x) (erased (Rot (Sub) k p p2) rp)
     -> (erased (Nat) z) (erased (Iter f k y z) it) (erased (Lt z d) lz) (erased (ExactAt e f ks z p2) r))
-  (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol ab))
+  (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
   (let-match erased x (MkExactAt _ _ _ _ a2 os _ pa2 ob ex))
   (let-match erased (nth-fn _ ks y a a2 pa pa2) (Refl _ _))
   (let ((erased os2) (erased ro)) (rot-c _ k os))
@@ -105,13 +99,12 @@
     -> (erased (Length (Sub) ql m) rl) (erased (Length (Sub) qh m) rh))
   (match erased w _
     ((PSKeep _ _) (values l l))
-    ((PSHere _ x zl zh p1 _) (let-match erased l (LengthCons _ _ _ m1 l1)) (values (LengthCons _ zl p1 m1 l1) (LengthCons _ zh p1 m1 l1)))
+    ((PSHere _ _ zl zh p1 _) (let-match erased l (LengthCons _ _ _ m1 l1)) (values (LengthCons _ zl p1 m1 l1) (LengthCons _ zh p1 m1 l1)))
     ((PSThere _ x p1 ql1 qh1 w1)
       (let-match erased l (LengthCons _ _ _ m1 l1))
       (let ((erased r1) (erased r2)) (split-len k m1 p1 ql1 qh1 w1 l1))
       (values (LengthCons _ x ql1 m1 r1) (LengthCons _ x qh1 m1 r2)))))
 
-; A dart that fits p exactly fits one of the two halves of a split of p (fitp_split of part.v, read as a cover).
 (def-fns _ $ (erased exact-split-at : (erased (Nat) d y k) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p ql qh) (erased (Geo d e n f ks) g)
     (erased (ExactAt e f ks y p) x) (erased (PartSplit k p ql qh) w) -> (erased (Or (ExactAt e f ks y ql) (ExactAt e f ks y qh)) r))
   (let-match erased g (MkGeo _ _ _ _ _ _ _ _ _ ab))

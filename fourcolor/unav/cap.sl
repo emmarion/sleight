@@ -1,12 +1,8 @@
-; dscore_cap1 of discharge.v: a dart of arity 12 or more with positive dscore has an obligation of the dbound1 checks of
-; arities 5 to 8 fitting exactly somewhere, when every rule has fewer than 9 subparts. Load after conv.sl.
-
 (let-match erased (unary-11-10) (Refl _ _))
 
 (def-fns _ $ (erased mul-dbl : (erased (Nat) k x y) (erased (Mul k 5 x) m5) (erased (Mul k 10 y) m10) -> (erased (Add x x y) r))
   (mul-distr 5 5 10 k x x y (add5 5) (mul-comm k 5 x m5) (mul-comm k 5 x m5) (mul-comm k 10 y m10)))
 
-; A positive dscore 60 + sp > 10 a + sn with sp <= 5 a needs a < 12.
 (def-fns _ $ (erased absurd cap-arith : (erased (Nat) a c60 t t5 sp sn pos neg) (erased (Mul 6 10 c60) m60) (erased (Mul a 10 t) mt)
     (erased (Add c60 sp pos) ap) (erased (Add t sn neg) an) (erased (Lt neg pos) lt) (erased (Mul a 5 t5) m5) (erased (Lt sp (Succ t5)) lst)
     (erased (Lt 11 a) l11) -> (erased (False) r))
@@ -43,7 +39,7 @@
 
 (let ((many sub59)) (MkSub (MkRg 5 9) (MkRg 5 9) (Nil (Rg))))
 
-; The dbound1 checks of arities m to hi - 1 with bound 5, each from the obligations of the one before, from acc to cobl.
+; acc to cobl: the obligations of the dbound1 checks of arities m to hi - 1, bound 5.
 (def-adts $ (CapL : ((List (List (Sub))) drs acc cobl) ((Nat) m hi) -> Type)
   enum
   (many CLNil : (erased (List (List (Sub))) drs acc) (erased (Nat) m) -> (CapL drs acc acc m m))
@@ -86,13 +82,11 @@
   (values (PwCons _ _ FitSec o sub59 os1 p1 (MkFitSec a h fs (MkRg 5 9) (MkRg 5 9) (Nil _) (pent d z a e n f ks g pa) (pent d u h e n f ks g ph) (PwNil _ _ InRg fs)) fo)
     (LengthCons _ sub59 p1 k1 l)))
 
-; Every dart fits the part with k sectors 5..9 exactly.
 (def-fns _ $ (erased root-exact : (erased (Nat) d y k) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Geo d e n f ks) g)
     (erased (ObsAt e f ks y k os) ob) (erased (Repeat (Sub) k sub59 p) rp) -> (erased (Exact os p) x))
   (let ((erased fo) (erased l)) (rep-fit d y k e n f ks os p g ob rp))
   (MkExact os p k fo (obs-len e f ks y k os ob) l))
 
-; dscore1 at a dart is at most 5, unless a cap obligation fits exactly somewhere.
 (def-fns _ $ (erased cap-dart : (erased (Nat) d v c) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs acc cobl) (erased (Geo d e n f ks) g)
     (erased (Lt v d) lv) (erased (DScore1 e n f ks drs v c) ds) (erased (Small drs) sm) (erased (CapL drs acc cobl 5 9) cl)
     -> (erased (Or (Lt c 6) (MapHit d e f ks cobl)) r))
@@ -114,7 +108,6 @@
       (let ((erased q) (erased m) (erased xq)) (hit-mem os out hit))
       (OrR _ _ (MkMapHit d z e f ks q cobl lz (mem-ext q out cobl m ex) (MkExactAt e f ks z a os q pa ob xq))))))
 
-; Along k darts of a face from x, the dscore1 values of their edges sum to at most 5 k, unless a cap obligation fits.
 (def-fns _ $ (erased cap-face : (erased (Nat) d x k sp) (erased (List (Nat)) e n f ks ids cs cse) (erased (List (List (Sub))) drs acc cobl)
     (erased (Geo d e n f ks) g) (erased (Iota d ids) io) (erased (DsList e n f ks drs ids cs) dl) (erased (Respects cs e cse) rc) (erased (Small drs) sm)
     (erased (CapL drs acc cobl 5 9) cl) (erased (Lt x d) lx) (subterm erased (FSum f cse x k sp) fs)
@@ -137,7 +130,7 @@
 (def-fns _ $ (erased cap-sound : (erased (Nat) d y a pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs acc cobl) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) dsc) (erased (Lt neg pos) lt) (erased (Nth (Nat) ks y a) pa) (erased (Lt 11 a) l11)
     (erased (Small drs) sm) (erased (CapL drs acc cobl 5 9) cl) -> (erased (MapHit d e f ks cobl) r))
-  (let-match erased dsc (MkDScore _ _ a2 t c60 sp sn _ _ _ _ _ _ ids cs cse _ io dl rc pa2 fp fn m60 mt ap an))
+  (let-match erased dsc (MkDScore _ _ a2 t c60 sp sn _ _ _ _ _ _ ids cs cse _ io dl rc pa2 fp _ m60 mt ap an))
   (let-match erased (nth-fn _ ks y a a2 pa pa2) (Refl _ _))
   (let ((erased t5) (erased m5) (erased o)) (cap-face d y a sp e n f ks ids cs cse drs acc cobl g io dl rc sm cl ly fp))
   (match erased o _ ((OrR _ _ hh) hh) (absurd (OrL _ _ lst) (cap-arith a c60 t t5 sp sn pos neg m60 mt ap an lt m5 lst l11))))

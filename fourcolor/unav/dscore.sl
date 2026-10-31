@@ -1,13 +1,10 @@
-; dscore1 of discharge.v on the hypermaps of hypermap.sl, and dbound1_eq: the source count at a hub dart y is dscore1 of
-; face^2 y. Load after obsmap.sl.
-
-; z is inv_face2 y = edge (node (edge (node y))).
+; z = edge (node (edge (node y))).
 (def-adts $ (InvF2 : ((List (Nat)) e n) ((Nat) y z) -> Type)
   enum
   (many MkInvF2 : (erased (List (Nat)) e n) (erased (Nat) y a1 a2 a3 z) (erased (Nth (Nat) n y a1) p1) (erased (Nth (Nat) e a1 a2) p2)
       (erased (Nth (Nat) n a2 a3) p3) (erased (Nth (Nat) e a3 z) p4) -> (InvF2 e n y z)))
 
-; qs is the list of the rules of rs with m subparts (pick_source_drules m rs).
+; qs: the rules of rs with m subparts.
 (def-adts $ (OfSize : ((Nat) m) ((List (List (Sub))) rs qs) -> Type)
   enum
   (many OSNil : (erased (Nat) m) -> (OfSize m (Nil (List (Sub))) (Nil (List (Sub)))))
@@ -16,7 +13,7 @@
   (many OSOut : (erased (Nat) m l) (erased (List (Sub)) r) (erased (List (List (Sub))) rs qs) (erased (Length (Sub) r l) pl) (erased (Apart (Nat) Lt l m) ne)
       (erased (OfSize m rs qs) rest) -> (OfSize m (Cons (List (Sub)) r rs) qs)))
 
-; c rules of drs fit exactly at inv_face2 y (dscore1 of discharge.v, for the rule list drs).
+; c rules of drs fit exactly at inv_face2 y.
 (def-adts $ (DScore1 : ((List (Nat)) e n f ks) ((List (List (Sub))) drs) ((Nat) y c) -> Type)
   enum
   (many MkDScore1 : (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs qs) (erased (Nat) y z a c) (erased (List (Sec)) os)
@@ -101,26 +98,23 @@
   (let-match erased (nth-fn _ n a2 a3 b3 p3 q3) (Refl _ _))
   (nth-fn _ e a3 z z2 p4 q4))
 
-; edge (node (face w)) = w.
 (def-fns _ $ (erased enf-cancel : (erased (Nat) d w w1) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt w d) lw) (erased (Nth (Nat) f w w1) pw)
     -> (erased (Nat) v) (erased (Nth (Nat) n w1 v) pn) (erased (Nth (Nat) e v w) pe))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let-match erased h (MkHypermap _ _ _ _ ids _ _ nf io _ _ _ _ cnf kf))
   (let ((erased v) (erased pv)) (nth-exists _ nf d w (respects-length-inv e nf ids d kf (iota-length d ids io)) lw))
   (values v (respects-nth n f nf w w1 v cnf pw pv) (respects-nth e nf ids w v w kf pv (iota-nth d w ids io lw))))
 
 (def-fns _ $ (erased invf2-face2 : (erased (Nat) d y z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt y d) ly) (erased (Iter f 2 y z) it)
     -> (erased (InvF2 e n z y) r))
   (let-match erased it (ItS _ _ _ y1 _ p1 it1))
-  (let-match erased it1 (ItS _ _ _ z1 _ p2 it2))
+  (let-match erased it1 (ItS _ _ _ _ _ p2 it2))
   (let-match erased it2 (ItZ _ _))
-  (let ((erased ye) (erased yn) (erased yf) (erased _) (erased _) (erased _) (erased _) (erased pyf) (erased lf)) (hyper-step d y e n f h ly))
+  (let ((erased _) (erased _) (erased yf) (erased _) (erased _) (erased _) (erased _) (erased pyf) (erased lf)) (hyper-step d y e n f h ly))
   (let-match erased (nth-fn _ f y yf y1 pyf p1) (Refl _ _))
   (let ((erased v1) (erased q1) (erased q2)) (enf-cancel d y1 z e n f h lf p2))
   (let ((erased v0) (erased q3) (erased q4)) (enf-cancel d y y1 e n f h ly p1))
   (MkInvF2 e n z v1 y1 v0 y q1 q2 q3 q4))
 
-; dbound1_eq of discharge.v: at a hub dart y of arity a with sector list os, dscore1 of face^2 y is the number of rules
-; of size a that fit os.
 (def-fns _ $ (erased dbound1-eq : (erased (Nat) d y a z c c2) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs qs) (erased (List (Sec)) os)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) (erased (ObsAt e f ks y a os) ob) (erased (Iter f 2 y z) it)
     (erased (DScore1 e n f ks drs z c) ds) (erased (OfSize a drs qs) sz) (erased (Count os qs c2) k) -> (erased (Eq (Nat) c c2) r))

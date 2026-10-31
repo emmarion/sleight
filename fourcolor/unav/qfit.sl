@@ -1,5 +1,3 @@
-; fitq of quiz.v and qzt_get1, qzt_fit of quiztree.v on the hypermaps of hypermap.sl, over the types of quiz.sl.
-
 (def-adts $ (QStepL : ((List (Nat)) e n) ((Nat) x y) -> Type)
   enum
   (many MkQStepL : (erased (List (Nat)) e n) (erased (Nat) x a b y) (erased (Nth (Nat) n x a) pa) (erased (Nth (Nat) e a b) pb)

@@ -1,7 +1,3 @@
-; Certified rule counting and the dbound checks of discharge.v and hubcap.v, over the sector lists of fit.sl. In place
-; of calling redp, a check returns the parts it would have handed to redp (its obligations); its evidence then gives
-; either the bound or an obligation that fits the hub exactly.
-
 (def-adts $ (IfT : ((Bool) b) (Type P) -> Type)
   enum
   (many IfY : (erased Type P) (erased P p) -> (IfT (BTrue) P))
@@ -54,7 +50,6 @@
 (def-fns _ $ (erased add-eq : (erased (Nat) a b c d) (erased (Add a b c) p) (erased (Add a b d) q) -> (erased (Eq (Nat) c d) e))
   (add-fn a b c d p q))
 
-; Deciding a fit.
 (def-fns _ $ (erased rg-dec : (erased (Nat) a) (erased (Rg) r) -> (erased (Or (InRg a r) (OutRg a r)) o))
   (let-match erased r (MkRg lo hi))
   (let ((erased m) (erased c)) (clamp-exists a))
@@ -90,7 +85,7 @@
     ((OrL _ _ f) (OrL _ _ (PwCons _ _ FitSec o x os1 p1 i f)))
     ((OrR _ _ b) (OrR _ _ (BadThere _ _ OutSec o x os1 p1 b)))))
 
-; c of the parts rs fit the sector list os.
+; c of the parts rs fit os.
 (def-adts $ (Count : ((List (Sec)) os) ((List (List (Sub))) rs) ((Nat) c) -> Type)
   enum
   (many CNil : (erased (List (Sec)) os) -> (Count os (Nil (List (Sub))) (Zero)))
@@ -113,8 +108,7 @@
     ((CYes _ _ _ c1 _ k1) (LtS c1 (Succ l1) (count-le os rs1 c1 l1 k1 pl1)))
     ((CNo _ _ _ _ _ k1) (lt-weaken c (Succ l1) (count-le os rs1 c l1 k1 pl1)))))
 
-; sort_drules from the accumulators n and acc: m is n plus the rules of rs that p implies, and out is acc with the
-; rules of rs that straddle p consed on in order.
+; m is n plus the rules of rs that p implies; out is acc with the rules of rs that straddle p consed on in order.
 (def-adts $ (Sr : ((List (Sub)) p) ((Nat) n) ((List (List (Sub))) acc rs) ((Nat) m) ((List (List (Sub))) out) -> Type)
   enum
   (many SrNil : (erased (List (Sub)) p) (erased (Nat) n) (erased (List (List (Sub))) acc) -> (Sr p n acc (Nil (List (Sub))) n acc))
@@ -189,7 +183,7 @@
     (absurd (ImHere _ r _ s) (let-match erased k (CNo _ _ _ _ b _)) (fit-bad os r (fit-sub os p r f s) b))
     (absurd (ImThere _ _ ru1 i1) (let-match erased k (CNo _ _ _ _ _ k1)) (unfit-sound os p ru1 i1 f k1))))
 
-; An exact fit, and an obligation that fits exactly.
+; os fits p exactly.
 (def-adts $ (Exact : ((List (Sec)) os) ((List (Sub)) p) -> Type)
   enum
   (many MkExact : (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Nat) n) (erased (Pw (Sec) (Sub) FitSec os p) f)
@@ -227,7 +221,7 @@
   (let-match erased x (MkExact _ _ n f lo lp))
   (MkExact os m n (fit-meet os p r m f fr w) lo (meet-len p r m n w lp)))
 
-; A successful check_dbound1_rec from obligations acc to out.
+; acc to out: the obligations.
 (def-adts
   ((Db1 : ((List (Sub)) p) ((List (List (Sub))) rs) ((Nat) ns) ((List (List (Sub))) acc out) -> Type)
     enum
@@ -266,7 +260,7 @@
 
 (def-fns _ $ (erased db1-ext : (erased (List (Sub)) p) (erased (List (List (Sub))) rs) (erased (Nat) ns) (erased (List (List (Sub))) acc out)
     (subterm erased (Db1 p rs ns acc out) d) -> (erased (Ext acc out) e))
-  (let-match erased d (D1Step _ p1 _ rs1 rs2 _ dns _ acc1 _ _ _ di dt) ((D1Nil _ _ _) (ExtRefl acc)) ((D1Small _ _ _ _ _ _ _ _) (ExtRefl acc)))
+  (let-match erased d (D1Step _ p1 _ rs1 rs2 _ _ _ acc1 _ _ _ di dt) ((D1Nil _ _ _) (ExtRefl acc)) ((D1Small _ _ _ _ _ _ _ _) (ExtRefl acc)))
   (let ((erased (Ext acc acc1) e1))
     (match erased di _
       ((I1Rec _ _ _ _ ns1 _ _ _ d1) (db1-ext p1 rs2 ns1 acc acc1 d1))
@@ -297,7 +291,7 @@
   (let ((many l) (erased _)) (list-count _ rs))
   (cdb1-c p rs ns acc (Succ l)))
 
-; A successful check_dbound2_rec from obligations acc to out.
+; acc to out: the obligations.
 (def-adts
   ((Db2 : ((List (Sub)) p) ((List (List (Sub))) rt rs ru) ((Nat) nt) ((List (List (Sub))) acc out) -> Type)
     enum
@@ -355,7 +349,6 @@
       ((I2Red _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtCons acc acc p1 (ExtRefl acc)))))
   (ext-trans acc acc1 out e1 (db2-ext p rt1 rs (Cons _ r ru) nt acc1 out dt)))
 
-; The arithmetic of a refined step: 1 + (dnt + c2) <= (dns + s2) + nt when dns + nt = dnt + (1 + nt1) and c2 <= s2 + nt1.
 (def-fns _ $ (erased step-bound : (erased (Nat) dnt c2 c1 dns s2 cs nt u nt1 v w) (erased (Add dnt c2 c1) pa) (erased (Add dns s2 cs) pb)
     (erased (Add dns nt u) pcc) (erased (Add dnt (Succ nt1) u) pd) (erased (Add s2 nt1 v) pv) (erased (Lt c2 (Succ v)) le) (erased (Add cs nt w) pw)
     -> (erased (Lt (Succ c1) (Succ w)) r))
@@ -395,8 +388,6 @@
     ((OrL _ _ le) (OrL _ _ (step-bound dnt c2 c1 dns s2 cs nt u nt1 v w e1 e2 au ad av le aw)))
     ((OrR _ _ h) (OrR _ _ (hit-ext os acc1 out h et)))))
 
-; The arithmetic shared by the top-level checks: from c1 <= s1 + nt, with c = dn + c1, s = ds + s1 and dn + bn + nt = ds + bp,
-; c + bn <= s + bp.
 (def-fns _ $ (erased top-bound : (erased (Nat) dn c1 c ds s1 s bp bn x y nt w0 l r) (erased (Add dn c1 c) pcn) (erased (Add ds s1 s) ps)
     (erased (Add ds bp x) ax) (erased (Add dn bn y) ay) (erased (Add y nt x) an) (erased (Add s1 nt w0) aw) (erased (Lt c1 (Succ w0)) le)
     (erased (Add c bn l) al) (erased (Add s bp r) ar) -> (erased (Lt l (Succ r)) o))
@@ -438,7 +429,6 @@
     ((IfY _ d) (IfY _ (MkDb2Top p rt rs rt1 rs1 acc out dnt dns bp bn x y nt wt ws ax ay an d)))
     ((IfF _) (IfF _)))))
 
-; The net transfer bound dbound2 <= b, read as ct + bn <= cs + bp for b = bp - bn.
 (def-fns _ $ (erased db2-top-sound : (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc out)
     (erased (Nat) bp bn ct cs l r) (erased (Exact os p) x) (erased (Db2Top p rt rs (MkZ bp bn) acc out) d) (erased (Count os rt ct) kt)
     (erased (Count os rs cs) ks) (erased (Add ct bn l) al) (erased (Add cs bp r) ar) -> (erased (Or (Lt l (Succ r)) (Hit os out)) o))
@@ -450,7 +440,6 @@
   (let-match erased (db2-sound os p rt1 rs1 (Nil _) acc out nt ct1 cs1 w0 x d1 kt1 ks1 (CNil os) aw) (OrL _ _ le) ((OrR _ _ h) (OrR _ _ h)))
   (OrL _ _ (top-bound dnt ct1 ct dns cs1 cs bp bn sx y nt w0 l r et es ax ay an aw le al ar)))
 
-; (a + b) + (c + d) = (a + c) + (b + d).
 (def-fns _ $ (erased add-mid : (erased (Nat) a b c d x y z) (erased (Add a b x) px) (erased (Add c d y) py) (erased (Add x y z) pz)
     -> (erased (Nat) ac bd) (erased (Add a c ac) p1) (erased (Add b d bd) p2) (erased (Add ac bd z) p3))
   (let ((erased by) (erased q1) (erased q2)) (plus-assoc a b y x z px pz))
@@ -458,7 +447,7 @@
   (let ((erased ac) (erased q5) (erased q6)) (plus-assoc-r a c bd by z q2 q4))
   (values ac bd q5 q3 q6))
 
-; Lists cut after n entries, appended, and rotated by n as rot of part.sl does.
+; pre and post: xs cut after n entries.
 (def-adts $ (CutAt : (Type A) ((Nat) n) ((List A) xs pre post) -> Type)
   enum
   (many CutAtZ : (erased Type A) (erased (List A) xs) -> (CutAt A (Zero) xs (Nil A) xs))
@@ -492,7 +481,7 @@
   (let ((many ys) (erased a)) (app-c _ post pre))
   (values ys (MkRot _ n xs ys pre post c a)))
 
-; Lists of one length matched entry by entry.
+; xs and ys of one length, related by R entry by entry.
 (def-adts $ (PwE : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
   (many PwENil : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) -> (PwE A B R (Nil A) (Nil B)))
@@ -545,7 +534,7 @@
   (let-match erased x (MkExact _ _ n f lo lp))
   (pwe-exact os2 p2 (pwe-rot _ _ FitSec i os os2 p p2 (exact-pwe os p n f lo lp) ro rp)))
 
-; A successful check_2dbound2_rec: p2 is rotated by i from p1, and on a swap the index becomes nhub - i.
+; p2 is p1 rotated by i; on a swap the index becomes nhub - i.
 (def-adts
   ((Db22 : ((Nat) nhub) ((List (Sub)) p1 p2) ((List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2) ((Nat) i nt) ((List (List (Sub))) acc out) -> Type)
     enum
@@ -633,7 +622,7 @@
     (subterm erased (Db22 nhub p1 p2 rt1 rs1 ru1 rt2 rs2 ru2 i nt acc out) d) -> (erased (Ext acc out) e))
   (let-match erased d (E2Step _ _ _ _ _ r q1 q2 rt3 _ _ _ _ _ _ acc1 _ _ _ di dt)
     ((E2Done _ _ _ _ _ _ _ _ _ _) (ExtRefl acc))
-    ((E2Swap _ _ j _ _ _ r rt4 _ _ _ _ _ _ _ d1) (e2-ext nhub j nt p2 p1 rt2 rs2 ru2 (Nil _) rs1 ru1 acc out d1))
+    ((E2Swap _ _ j _ _ _ _ _ _ _ _ _ _ _ _ d1) (e2-ext nhub j nt p2 p1 rt2 rs2 ru2 (Nil _) rs1 ru1 acc out d1))
     ((E2Small _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtRefl acc)))
   (let ((erased (Ext acc acc1) e1))
     (match erased di _
@@ -644,7 +633,6 @@
       ((J2Red _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtCons acc acc q1 (ExtRefl acc)))))
   (ext-trans acc acc1 out e1 (e2-ext nhub i nt p1 p2 rt3 rs1 (Cons _ r ru1) rt2 rs2 ru2 acc1 out dt)))
 
-; The arithmetic of a refined step of the dual check.
 (def-fns _ $ (erased step2-bound : (erased (Nat) c1 ct2 t0 dnt1 c4 dnt2 c5 dd t2 dns1 s3 cs1 dns2 s4 cs2 sc nt w u3 u nt1 s2 w2)
     (erased (Add c1 ct2 t0) at0) (erased (Add dnt1 c4 c1) b1) (erased (Add dnt2 c5 ct2) b2) (erased (Add dnt1 dnt2 dd) a5) (erased (Add c4 c5 t2) at2)
     (erased (Add dns1 s3 cs1) b3) (erased (Add dns2 s4 cs2) b4) (erased (Add cs1 cs2 sc) asc) (erased (Add sc nt w) aw)
@@ -660,7 +648,7 @@
   (let ((erased bc2) (erased r8) (erased r9)) (plus-assoc dns1 dns2 nt dD ab r1 r6))
   (let-match erased (add-eq dns2 nt bc2 u3 r8 a3) (Refl _ _))
   (let-match erased (add-eq dns1 u3 ab u r9 a4) (Refl _ _))
-  (let ((erased e1) (erased r10) (erased r11)) (plus-assoc dd (Succ nt1) s2 u w ad r7))
+  (let ((erased _) (erased r10) (erased r11)) (plus-assoc dd (Succ nt1) s2 u w ad r7))
   (let-match erased r10 (AddSucc _ _ e2 r12))
   (let-match erased (add-eq nt1 s2 e2 w2 r12 (add-comm s2 nt1 w2 aw2)) (Refl _ _))
   (let ((erased y) (erased py)) (add dd w2))
@@ -681,7 +669,7 @@
       (let-match erased kt2 (CNil _))
       (let-match erased ats (AddZero _))
       (OrL _ _ (LtZ w)))
-    ((E2Swap _ _ j2 _ _ _ r rt4 _ _ _ _ _ _ mo d1)
+    ((E2Swap _ _ j2 _ _ _ _ _ _ _ _ _ _ _ mo d1)
       (let-match erased mo (MoAdd _ _ _ a2) (absurd (MoNeg _ _ l) (lt-le-absurd nhub i l (add-le-left i j nhub aij))))
       (let-match erased (add-inj i j2 nhub j a2 aij) (Refl _ _))
       (match erased (e2-sound os2 os1 nhub j i nt ct2 cs2 ct1 cs1 ts sc w p2 p1 rt2 rs2 ru2 rt1 rs1 ru1 acc out ro21 ro12
@@ -758,7 +746,6 @@
     ((IfY _ d) (IfY _ (MkE2Top nhub i dnt1 dns1 dnt2 dns2 ds dn bp bn x y nt p1 p2 rt rs rt1 rs1 rt2 rs2 acc out wr w1 w2 w3 w4 a1 a2 ax ay an d)))
     ((IfF _) (IfF _)))))
 
-; The bound on the sum of two net transfers, read as ct1 + ct2 + bn <= cs1 + cs2 + bp for b = bp - bn.
 (def-fns _ $ (erased e2-top-sound : (erased (List (Sec)) os1 os2) (erased (Nat) nhub i j bp bn ct1 cs1 ct2 cs2 ts ss l r) (erased (List (Sub)) p1)
     (erased (List (List (Sub))) rt rs acc out) (erased (Rot (Sec) i os1 os2) ro12) (erased (Rot (Sec) j os2 os1) ro21) (erased (Add i j nhub) aij)
     (erased (Exact os1 p1) x1) (erased (E2Top nhub p1 rt rs i (MkZ bp bn) acc out) d)

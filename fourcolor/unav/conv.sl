@@ -1,10 +1,5 @@
-; converse_part of part.v certified, and fitp_converse: a rule fitting exactly at a dart y makes its converse fit the
-; dart t with face^2 t = edge (face^2 y), the hub across the third spoke; from it the target bound TgtAll of
-; hubsound.sl. Load after pwsound.sl.
-
 (let-match erased (unary-3-2) (Refl _ _))
 
-; Through a composite: h (g (p x)) = x when gp = g . p and h . gp is the identity.
 (def-fns _ $ (erased resp3 : (erased (Nat) d x a b) (erased (List (Nat)) g p h gp ids) (erased (Respects g p gp) r1) (erased (Respects h gp ids) r2)
     (erased (Iota d ids) io) (erased (Length (Nat) p d) lp) (erased (Lt x d) lx) (erased (Nth (Nat) p x a) pa) (erased (Nth (Nat) g a b) pb)
     -> (erased (Nth (Nat) h b x) r))
@@ -14,19 +9,19 @@
 
 (def-fns _ $ (erased nfe : (erased (Nat) d x a b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt x d) lx)
     (erased (Nth (Nat) e x a) pa) (erased (Nth (Nat) f a b) pb) -> (erased (Nth (Nat) n b x) r))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let-match erased h (MkHypermap _ _ _ _ ids fe _ _ io cfe ke _ _ _ _))
   (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
   (resp3 d x a b f e n fe ids cfe ke io le lx pa pb))
 
 (def-fns _ $ (erased fen : (erased (Nat) d x a b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt x d) lx)
     (erased (Nth (Nat) n x a) pa) (erased (Nth (Nat) e a b) pb) -> (erased (Nth (Nat) f b x) r))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let-match erased h (MkHypermap _ _ _ _ ids _ en _ io _ _ cen kn _ _))
   (let ((erased _) (erased ln) (erased _)) (hyper-lengths d e n f h))
   (resp3 d x a b e n f en ids cen kn io ln lx pa pb))
 
 (def-fns _ $ (erased enf : (erased (Nat) d x a b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x a) pa) (erased (Nth (Nat) n a b) pb) -> (erased (Nth (Nat) e b x) r))
-  (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
+  (let-match erased h (MkHypermap _ _ _ _ ids _ _ nf io _ _ _ _ cnf kf))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (resp3 d x a b n f e nf ids cnf kf io lf lx pa pb))
 
@@ -40,13 +35,11 @@
     -> (erased (Lt u d) r))
   (img-lt d s u q p (perm-sym d p q pm) ls (perm-inv d u s p q pm pu)))
 
-; The one local fact of plain cubic maps used here: for a hub dart x with spokes s = edge x and s1 = edge (face x),
-; the dart u before s along its face has edge u = face s1.
 (def-fns _ $ (erased g2 : (erased (Nat) d x x1 s s1 u) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f u s) pu)
     -> (erased (Nat) v) (erased (Nth (Nat) e u v) r1) (erased (Nth (Nat) f s1 v) r2))
   (let-match erased g (MkGeo _ _ _ _ _ h pl cu _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased lx1)) (img-lt d x x1 f fi pf lx p1))
   (let ((erased c) (erased pc) (erased lc)) (perm-nth d x1 n ni pn lx1))
   (let ((erased pc1) (erased _)) (plain-eq d c x e pl lc (enf d x x1 c e n f h lx p1 pc)))
@@ -62,13 +55,12 @@
   (let-match erased (perm-inj d gg c2 x1 n ni pn (nfe d x1 s1 gg e n f h lx1 ps1 pg) pc3) (Refl _ _))
   (values c2 pu2 pg))
 
-; Two steps back from the spoke s: edge t = face (edge (face^2 s1)).
 (def-fns _ $ (erased g1 : (erased (Nat) d x x1 s s1 t u0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f t u0) pt) (erased (Nth (Nat) f u0 s) pu)
     -> (erased (Nat) a w v vv) (erased (Nth (Nat) f s1 a) r1) (erased (Nth (Nat) f a w) r2) (erased (Nth (Nat) e w v) r3) (erased (Nth (Nat) e t vv) r4)
     (erased (Nth (Nat) f v vv) r5))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased a) (erased q1) (erased q2)) (g2 d x x1 s s1 u0 e n f ks g lx p1 ps ps1 pu))
   (let ((erased lx1)) (img-lt d x x1 f fi pf lx p1))
   (let ((erased ls1)) (img-lt d x1 s1 e nf pe lx1 ps1))
@@ -79,12 +71,11 @@
   (let ((erased vv) (erased q4) (erased q5)) (g2 d a w u0 v t e n f ks g la pw q3 pv pt))
   (values a w v vv q2 pw pv q4 q5))
 
-; One step on from the spoke s = edge x: face (edge (face s)) = edge v for the hub dart v before x.
 (def-fns _ $ (erased g3 : (erased (Nat) d x s v0 w0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) f v0 x) pv) (erased (Nth (Nat) e v0 w0) pw)
     -> (erased (Nat) a c) (erased (Nth (Nat) f s a) r1) (erased (Nth (Nat) e a c) r2) (erased (Nth (Nat) f c w0) r3))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased lv)) (img-lt-inv d v0 x f fi pf lx pv))
   (let ((erased lw)) (img-lt d v0 w0 e nf pe lv pw))
   (let ((erased u) (erased pu) (erased lu)) (perm-nth d w0 fi f (perm-sym d f fi pf) lw))
@@ -116,7 +107,7 @@
   (let-match erased it (ItS _ k1 _ y _ py it1) ((ItZ _ _) lx))
   (iter-lt d k1 y z f fi pf (img-lt d x y f fi pf lx py) it1))
 
-; A sector with its darts: spoke z = edge y, w = face^2 z, hat dart u = edge w, and z3 = face^3 z.
+; Spoke z = edge y, w = face^2 z, hat dart u = edge w, z3 = face^3 z.
 (def-adts $ (SecD : ((List (Nat)) e f ks) ((Nat) y z w u z3) ((Sec) o) -> Type)
   enum
   (many MkSecD : (erased (List (Nat)) e f ks) (erased (Nat) y z a w u h z3 m) (erased (List (Nat)) fs) (erased (Nth (Nat) e y z) pz)
@@ -131,7 +122,6 @@
 (def-fns _ $ (erased iter3 : (erased (List (Nat)) f) (erased (Nat) x a c) (erased (Nth (Nat) f x a) p) (erased (Iter f 2 a c) q) -> (erased (Iter f 3 x c) r))
   (ItS f 2 x a c p q))
 
-; face^3 z is the image of face^2 z.
 (def-fns _ $ (erased f3-next : (erased (List (Nat)) f) (erased (Nat) z w z3) (erased (Iter f 2 z w) pw) (erased (Iter f 3 z z3) p3) -> (erased (Nth (Nat) f w z3) r))
   (let-match erased pw (ItS _ _ _ b1 _ pb1 pw1))
   (let-match erased pw1 (ItS _ _ _ b2 _ pb2 pw2))
@@ -140,11 +130,10 @@
   (let-match erased (nth-fn _ f z b1 c1 pb1 pc1) (Refl _ _))
   (let-match erased p31 (ItS _ _ _ c2 _ pc2 p32))
   (let-match erased (nth-fn _ f b1 b2 c2 pb2 pc2) (Refl _ _))
-  (let-match erased p32 (ItS _ _ _ c3 _ pc3 p33))
+  (let-match erased p32 (ItS _ _ _ _ _ pc3 p33))
   (let-match erased p33 (ItZ _ _))
   pc3)
 
-; The target's first spoke: the hat face of the rule's fourth sector.
 (def-fns _ $ (erased tsec0 : (erased (Nat) d y2 y3 s2 t t1 sg wt ut zt sp w3 hd z3 a0 h0 aa hh) (erased (List (Nat)) e n f ks fs0 ff) (erased (Geo d e n f ks) g)
     (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f t t1) pt) (erased (Nth (Nat) f t1 s2) pt1)
     (erased (SecD e f ks t sg wt ut zt (MkSec a0 h0 fs0)) st) (erased (SecD e f ks y3 sp w3 hd z3 (MkSec aa hh ff)) s3) -> (erased (Eq (Nat) hh a0) r))
@@ -155,13 +144,11 @@
   (let-match erased (nth-fn _ e w v hd q3 phd) (Refl _ _))
   (let-match erased (nth-fn _ e t vv sg q4 psg) (Refl _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased lsp)) (img-lt d y3 sp e nf pe (img-lt d y2 y3 f fi pf ly p23) psp))
   (let ((erased lhd)) (img-lt d w v e nf pe (iter-lt d 2 sp w f fi pf lsp pw3) q3))
   (arity-same d v vv 1 hh a0 e n f ks g lhd ph3 (one-step f v vv q5) pa0))
 
-; The target's second sector: its spoke face is the rule's fourth spoke face, entered one dart on; so its w is the
-; rule's z3 there.
 (def-fns _ $ (erased tsec1 : (erased (Nat) d y2 y3 s2 t1 sg wt ut zt sp w3 hd z3 a1 h1 aa hh) (erased (List (Nat)) e n f ks fs1 ff) (erased (Geo d e n f ks) g)
     (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f t1 s2) pt1)
     (erased (SecD e f ks t1 sg wt ut zt (MkSec a1 h1 fs1)) st) (erased (SecD e f ks y3 sp w3 hd z3 (MkSec aa hh ff)) s3)
@@ -171,22 +158,20 @@
   (let ((erased v) (erased q1) (erased q2)) (g2 d y2 y3 s2 sp t1 e n f ks g ly p23 ps2 psp pt1))
   (let-match erased (nth-fn _ e t1 v sg q1 psg) (Refl _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased lsp)) (img-lt d y3 sp e nf pe (img-lt d y2 y3 f fi pf ly p23) psp))
   (let ((erased e1)) (arity-same d sp sg 1 aa a1 e n f ks g lsp pa (one-step f sp sg q2) pa1))
   (let-match erased (iter-fn f 3 sp wt z3 (iter3 f sp sg wt q2 pwt) p3r) (Refl _ _))
   (let ((erased q3)) (f3-next f sg wt zt pwt pzt))
   (values e1 q2 (Refl _ wt) q3))
 
-; Two steps back from the rule's fourth spoke, in its face of k = j + 2 darts, edge (face^j sp) is next to the rule's
-; fifth hat face.
 (def-fns _ $ (erased back2 : (erased (Nat) d y3 y4 sp z q k j a4 h4 hq) (erased (List (Nat)) e n f ks fs4) (erased (Nat) sp4 w4 hd4 z34)
     (erased (Geo d e n f ks) g) (erased (Lt y3 d) ly) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) e y3 sp) psp) (erased (Nth (Nat) ks sp k) pk)
     (erased (Iter f j sp z) pz) (erased (Add j 2 k) a) (erased (Nth (Nat) e z q) pq) (erased (Nth (Nat) ks q hq) ph)
     (erased (SecD e f ks y4 sp4 w4 hd4 z34 (MkSec a4 h4 fs4)) s4) -> (erased (Eq (Nat) h4 hq) r))
   (let-match erased s4 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp4 _ pw4 phd4 ph4 _ _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased lsp)) (img-lt d y3 sp e nf pe ly psp))
   (let ((erased lz)) (iter-lt d j sp z f fi pf lsp pz))
   (let ((erased z1) (erased p1) (erased l1)) (perm-nth d z f fi pf lz))
@@ -200,7 +185,7 @@
   (let ((erased lhd)) (img-lt d w v e nf pe (iter-lt d 2 sp4 w f fi pf lsp4 pw4) q3))
   (arity-same d v vv 1 h4 hq e n f ks g lhd ph4 (one-step f v vv q5) ph))
 
-; The spoke arities of a sector list.
+; fs: the spoke arities of os.
 (def-adts $ (SpkL : ((List (Sec)) os) ((List (Nat)) fs) -> Type)
   enum
   (many SpkNil : -> (SpkL (Nil (Sec)) (Nil (Nat))))
@@ -209,7 +194,7 @@
 
 (def-fns _ $ (erased fans-spk : (erased (List (Nat)) e f ks fs) (erased (Nat) z m) (erased (List (Sec)) os) (subterm erased (ObsAt e f ks z m os) ob)
     (erased (FansAt e f ks z m fs) fa) -> (erased (SpkL os fs) r))
-  (let-match erased ob (OACons _ _ _ _ z1 m1 o os1 so pz ob1) ((OANil _ _ _ _) (let-match erased fa (FAZ _ _ _ _)) (SpkNil)))
+  (let-match erased ob (OACons _ _ _ _ z1 m1 _ os1 so pz ob1) ((OANil _ _ _ _) (let-match erased fa (FAZ _ _ _ _)) (SpkNil)))
   (let-match erased fa (FAS _ _ _ _ u a z2 _ fs1 pu pa pz2 fa1))
   (let-match erased (nth-fn _ f z z1 z2 pz pz2) (Refl _ _))
   (let-match erased so (MkSecAt _ _ _ _ u2 _ _ _ h _ _ hf pu2 pa2 _ _ _ _ _ _))
@@ -217,7 +202,6 @@
   (let-match erased (nth-fn _ ks u a _ pa pa2) (Refl _ _))
   (SpkCons a h hf fs1 os1 (fans-spk e f ks fs1 z1 m1 os1 ob1 fa1)))
 
-; The target's third sector is the rule's hub: arity n, hat the rule's fifth spoke, fans the rule's spokes from the sixth.
 (def-fns _ $ (erased tsec2 : (erased (Nat) d y2 y3 y4 y5 s2 sg wt ut zt sp4 w4 hd4 z34 nn a2 h2 a4 h4 m5) (erased (List (Nat)) e n f ks fs2 fs4)
     (erased (List (Sec)) os5) (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) ks y2 nn) pnn)
     (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) f y4 y5) p45) (erased (Nth (Nat) e y2 s2) ps2)
@@ -226,8 +210,7 @@
     -> (erased (Eq (Nat) a2 nn) r1) (erased (Eq (Nat) h2 a4) r2) (erased (SpkL os5 fs2) r3))
   (let-match erased st (MkSecD _ _ _ _ _ _ _ _ _ _ m _ psg pa2 pwt put ph2 pzt mo pfs))
   (let-match erased s4 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp4 pa4 _ _ _ _ _ _))
-  (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let-match erased g (MkGeo _ _ _ _ _ _ pl _ _ _))
   (let ((erased q1) (erased _)) (plain-eq d y2 s2 e pl ly ps2))
   (let-match erased (nth-fn _ e s2 sg y2 psg q1) (Refl _ _))
   (let-match erased (nth-fn _ ks y2 a2 nn pa2 pnn) (Refl _ _))
@@ -238,8 +221,6 @@
   (let-match erased (monus-fn nn 5 m m5 mo mo5) (Refl _ _))
   (values (Refl _ a2) (Refl _ h2) (fans-spk e f ks fs2 y5 m os5 ob5 pfs)))
 
-; The target's fourth sector: the rule's second spoke face, its hat the rule's first spoke face; its z3 is the rule's
-; w of the second sector.
 (def-fns _ $ (erased tsec3 : (erased (Nat) d y0 y1 y2 s2 t3 sg wt ut zt sp1 w1 hd1 z31 sp0 w0 hd0 z30 a3 h3 a1 h1 a0 h0) (erased (List (Nat)) e n f ks fs3 fs1 fs0)
     (erased (Geo d e n f ks) g) (erased (Lt y0 d) ly) (erased (Nth (Nat) f y0 y1) p01) (erased (Nth (Nat) f y1 y2) p12) (erased (Nth (Nat) e y2 s2) ps2)
     (erased (Nth (Nat) f s2 t3) pt3) (erased (SecD e f ks t3 sg wt ut zt (MkSec a3 h3 fs3)) st) (erased (SecD e f ks y1 sp1 w1 hd1 z31 (MkSec a1 h1 fs1)) s1)
@@ -249,7 +230,7 @@
   (let-match erased s1 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp1 pa1 pw1 _ _ _ _ _))
   (let-match erased s0 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp0 pa0 _ _ _ _ _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly1)) (img-lt d y0 y1 f fi pf ly p01))
   (let ((erased ly2)) (img-lt d y1 y2 f fi pf ly1 p12))
   (let ((erased a) (erased c) (erased q1) (erased q2) (erased q3)) (g3 d y2 s2 y1 sp1 e n f ks g ly2 ps2 p12 psp1))
@@ -259,7 +240,7 @@
   (let ((erased e1)) (arity-same d sg sp1 1 a3 a1 e n f ks g lsg pa3 (one-step f sg sp1 q3) pa1))
   (let-match erased pwt (ItS _ _ _ b1 _ pb1 pwt1))
   (let-match erased (nth-fn _ f sg b1 sp1 pb1 q3) (Refl _ _))
-  (let-match erased pwt1 (ItS _ _ _ b2 _ pb2 pwt2))
+  (let-match erased pwt1 (ItS _ _ _ _ _ pb2 pwt2))
   (let-match erased pwt2 (ItZ _ _))
   (let ((erased a') (erased c') (erased q4) (erased q5) (erased q6)) (g3 d y1 sp1 y0 sp0 e n f ks g ly1 psp1 p01 psp0))
   (let-match erased (nth-fn _ f sp1 a' wt q4 pb2) (Refl _ _))
@@ -269,8 +250,6 @@
   (let ((erased e2)) (arity-same d ut sp0 1 h3 a0 e n f ks g lut ph3 (one-step f ut sp0 q6) pa0))
   (values e1 e2 q3 (iter-fn f 3 sg zt w1 pzt (iter3 f sg sp1 w1 q3 pw1))))
 
-; The target's fifth sector: the rule's third hat face; its hat dart lies just after edge v, where face^3 v is the rule's
-; second spoke.
 (def-fns _ $ (erased tsec4 : (erased (Nat) d y2 s2 t3 t4 sg3 sg wt ut zt w2 hd2 z32 sp1 a4 h4 a2 h2) (erased (List (Nat)) e n f ks fs4 fs2)
     (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) e y2 s2) ps2) (erased (Nth (Nat) f s2 t3) pt3) (erased (Nth (Nat) f t3 t4) pt4)
     (erased (Nth (Nat) e t3 sg3) ps3) (erased (Nth (Nat) f sg3 sp1) pq) (erased (SecD e f ks t4 sg wt ut zt (MkSec a4 h4 fs4)) st)
@@ -280,7 +259,7 @@
   (let-match erased st (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psg pa4 pwt put _ _ _ _))
   (let-match erased s2d (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ _ _ pw2 phd2 ph2 _ _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let-match erased (iter-fn f 2 s2 t4 w2 (two-step f s2 t3 t4 pt3 pt4) pw2) (Refl _ _))
   (let-match erased (nth-fn _ e t4 sg hd2 psg phd2) (Refl _ _))
   (let-match erased (nth-fn _ ks hd2 a4 h2 pa4 ph2) (Refl _ _))
@@ -290,7 +269,7 @@
   (let ((erased al) (erased be) (erased q1) (erased q2) (erased q3)) (g3 d t4 sg t3 sg3 e n f ks g lt4 psg pt4 ps3))
   (let-match erased pwt (ItS _ _ _ b1 _ pb1 pwt1))
   (let-match erased (nth-fn _ f sg b1 al pb1 q1) (Refl _ _))
-  (let-match erased pwt1 (ItS _ _ _ b2 _ pb2 pwt2))
+  (let-match erased pwt1 (ItS _ _ _ _ _ pb2 pwt2))
   (let-match erased pwt2 (ItZ _ _))
   (let ((erased lsg)) (img-lt d t4 sg e nf pe lt4 psg))
   (let ((erased lal)) (img-lt d sg al f fi pf lsg q1))
@@ -304,7 +283,7 @@
   (let-match erased (nth-fn _ e wt c2 ut q6 put) (Refl _ _))
   (values (Refl _ a4) v ev (ItS f 2 v be sp1 pv2 (two-step f be sg3 sp1 q3 pq)) pev q7 (Refl _ t4)))
 
-; converse_part's four pieces, case by case, over a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12) and 5 on (C3).
+; The converse's pieces for a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12), and 5 on (C3).
 (def-adts $ (C4 : ((Sub) x0 x1) ((Rg) h45) ((Pc) o) -> Type)
   enum
   (many C4No : (erased (Sub) x0 x1) -> (C4 x0 x1 (MkRg 5 9) (PcNil)))
@@ -512,7 +491,7 @@
   (let ((many r) (erased a12)) (pc-ap o12 r3))
   (values u r (CvOk x0 x1 x2 x3 x4 rest q5 r4 r3 r h45 h23 u o4 o12 o3 c4 c5 c12 c3 a4 a3 a12)))
 
-; Whether a is in a range, decided.
+; b: whether a is in r.
 (def-adts $ (InOut : ((Bool) b) ((Nat) a) ((Rg) r) -> Type)
   enum
   (many IOIn : (erased (Nat) a) (erased (Rg) r) (erased (InRg a r) p) -> (InOut (BTrue) a r))
@@ -583,7 +562,6 @@
   (many F2Two : (erased (Sec) o0 o1) (erased (Sub) x0 x1) (erased (FitSec o0 x0) p0) (erased (FitSec o1 x1) p1)
       -> (Fit2 o0 o1 (PcPre (Cons (Sub) x0 (Cons (Sub) x1 (Nil (Sub))))))))
 
-; The first fan of a fans list, read at a dart u = edge z with arity x.
 (def-fns _ $ (erased fan1 : (erased (List (Nat)) e f ks fs) (erased (Nat) z m u x) (erased (FansAt e f ks z (Succ m) fs) fa) (erased (Nth (Nat) e z u) pu)
     (erased (Nth (Nat) ks u x) px) -> (erased (Nat) z1) (erased (List (Nat)) fs1) (erased (Eq (List (Nat)) fs (Cons (Nat) x fs1)) r) (erased (Nth (Nat) f z z1) pz)
     (erased (FansAt e f ks z1 m fs1) rest))
@@ -604,7 +582,6 @@
 (def-fns _ $ (erased add33 : -> (erased (Add 3 3 6) r)) (add-succ-right 3 2 5 (add2 3)))
 (def-fns _ $ (erased add34 : -> (erased (Add 3 4 7) r)) (add-succ-right 3 3 6 (add33)))
 
-; The target's fourth sector, and the hat of its fifth, against conv_part4's cases.
 (def-fns _ $ (erased c4-sound : (erased (Nat) d y0 y1 y2 s2 t3 t4 sp0 w0 hd0 z30 sp1 w1 hd1 z31 w2 hd2 z32 sg3 wt3 ut3 zt3 sg4 wt4 ut4 zt4)
     (erased (Nat) a0 h0 a1 h1 a2 h2 a3 h3 a4 h4) (erased (List (Nat)) e n f ks fs0 fs1 fs2 fs3 fs4) (erased (Sub) x0 x1) (erased (Rg) h45) (erased (Pc) o)
     (erased (Geo d e n f ks) g) (erased (Lt y0 d) ly) (erased (Nth (Nat) f y0 y1) p01) (erased (Nth (Nat) f y1 y2) p12) (erased (Nth (Nat) e y2 s2) ps2)
@@ -614,7 +591,7 @@
     (erased (SecD e f ks t4 sg4 wt4 ut4 zt4 (MkSec a4 h4 fs4)) st4) (erased (FitSec (MkSec a0 h0 fs0) x0) f0) (erased (FitSec (MkSec a1 h1 fs1) x1) f1)
     (erased (C4 x0 x1 h45 o) c4) -> (erased (Fit1 (MkSec a3 h3 fs3) o) r1) (erased (InRg h4 h45) r2))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly1)) (img-lt d y0 y1 f fi pf ly p01))
   (let ((erased ly2)) (img-lt d y1 y2 f fi pf ly1 p12))
   (let ((erased e3a) (erased e3h) (erased q3) (erased e3z)) (tsec3 d y0 y1 y2 s2 t3 sg3 wt3 ut3 zt3 sp1 w1 hd1 z31 sp0 w0 hd0 z30 a3 h3 a1 h1 a0 h0
@@ -623,12 +600,12 @@
   (let-match erased e3h (Refl _ _))
   (let-match erased e3z (Refl _ _))
   (let-match erased st3 (MkSecD _ _ _ _ _ _ _ _ _ _ m3 _ psg3 _ _ _ _ _ mo3 pfs3))
-  (let ((erased e4a) (erased v) (erased ev) (erased iv) (erased pev) (erased pfv) (erased e4t))
+  (let ((erased _) (erased v) (erased ev) (erased iv) (erased pev) (erased pfv) (erased _))
     (tsec4 d y2 s2 t3 t4 sg3 sg4 wt4 ut4 zt4 w2 hd2 z32 sp1 a4 h4 a2 h2 e n f ks fs4 fs2 g ly2 ps2 pt3 pt4 psg3 q3 st4 sd2))
   (let-match erased st4 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ph4 _ _ _))
   (let-match erased s1 (MkSecD _ _ _ _ _ _ _ _ _ _ m1 _ psp1 pa1 pw1 phd1 ph1 p31 mo1 pfs1))
-  (let-match erased f0 (MkFitSec _ _ _ r0s r0h r0f i0s i0h i0f))
-  (let-match erased f1 (MkFitSec _ _ _ r1s r1h r1f i1s i1h i1f))
+  (let-match erased f0 (MkFitSec _ _ _ _ _ _ i0s _ _))
+  (let-match erased f1 (MkFitSec _ _ _ _ _ _ i1s i1h i1f))
   (let ((erased lsp1)) (img-lt d y1 sp1 e nf pe ly1 psp1))
   (let ((erased lv)) (iter-lt-inv d 3 v sp1 f fi pf lsp1 iv))
   (let ((erased av) (erased pav) (erased _)) (arity-at d v f ks ol lv))
@@ -637,49 +614,49 @@
   (let ((erased lut4)) (img-lt-inv d ut4 ev f fi pf lev pfv))
   (match erased c4 _
     ((C4No _ _) (values (F1Nil _) (pent d ut4 h4 e n f ks g ph4)))
-    ((C4A h34 hx s4) (values (F1One _ _ (MkFitSec a1 a0 fs3 s4 h34 (Nil _) i1s i0s (PwNil _ _ InRg fs3))) (pent d ut4 h4 e n f ks g ph4)))
-    ((C4B5 h34 hx f41)
+    ((C4A h34 _ s4) (values (F1One _ _ (MkFitSec a1 a0 fs3 s4 h34 (Nil _) i1s i0s (PwNil _ _ InRg fs3))) (pent d ut4 h4 e n f ks g ph4)))
+    ((C4B5 h34 _ _)
       (let-match erased (in-exact a1 5 i1s (lit-lt-5-9)) (Refl _ _))
       (let-match erased (cyc-back d v sp1 w1 3 2 5 e n f ks g lv pav iv pw1 (add2 3)) (Refl _ _))
       (let-match erased (nth-fn _ e v ev hd1 pev phd1) (Refl _ _))
       (let-match erased (arity-same d ut4 ev 1 h4 h1 e n f ks g lut4 ph4 (one-step f ut4 ev pfv) ph1) (Refl _ _))
       (values (F1One _ _ (MkFitSec a1 a0 fs3 (MkRg 5 5) h34 (Nil _) i1s i0s (PwNil _ _ InRg fs3))) i1h))
-    ((C4B6 h34 hx f41)
+    ((C4B6 h34 _ f41)
       (let-match erased (in-exact a1 6 i1s (lit-lt-6-9)) (Refl _ _))
       (let-match erased (monus-five a1 m3 1 mo3 (add1 5)) (Refl _ _))
-      (let ((erased z1) (erased fsr) (erased efs) (erased _) (erased fz)) (fan1 e f ks fs3 w1 (Zero) hd1 h1 pfs3 phd1 ph1))
+      (let ((erased _) (erased _) (erased efs) (erased _) (erased fz)) (fan1 e f ks fs3 w1 (Zero) hd1 h1 pfs3 phd1 ph1))
       (let-match erased efs (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (values (F1One _ _ (MkFitSec a1 a0 fs3 (MkRg 6 6) h34 (Cons _ f41 (Nil _)) i1s i0s (PwCons _ _ InRg h1 f41 (Nil _) (Nil _) i1h (PwNil _ _ InRg (Nil _)))))
         (pent d ut4 h4 e n f ks g ph4)))
-    ((C4B7 h34 hx f41)
+    ((C4B7 h34 _ f41)
       (let-match erased (in-exact a1 7 i1s (lit-lt-7-9)) (Refl _ _))
       (let-match erased (monus-five a1 m3 2 mo3 (add2 5)) (Refl _ _))
       (let ((erased z1) (erased fsr) (erased efs) (erased _) (erased fz)) (fan1 e f ks fs3 w1 1 hd1 h1 pfs3 phd1 ph1))
       (let-match erased efs (Refl _ _))
-      (let ((erased u') (erased x') (erased _) (erased fsr2) (erased efs2) (erased _) (erased px') (erased _) (erased fz2)) (fan-head e f ks fsr z1 (Zero) fz))
+      (let ((erased u') (erased x') (erased _) (erased _) (erased efs2) (erased _) (erased px') (erased _) (erased fz2)) (fan-head e f ks fsr z1 (Zero) fz))
       (let-match erased efs2 (Refl _ _))
       (let-match erased fz2 (FAZ _ _ _ _))
       (values (F1One _ _ (MkFitSec a1 a0 fs3 (MkRg 7 7) h34 (Cons _ f41 (Cons _ r59 (Nil _))) i1s i0s
           (PwCons _ _ InRg h1 f41 (Cons _ x' (Nil _)) (Cons _ r59 (Nil _)) i1h
             (PwCons _ _ InRg x' r59 (Nil _) (Nil _) (pent d u' x' e n f ks g px') (PwNil _ _ InRg (Nil _))))))
         (pent d ut4 h4 e n f ks g ph4)))
-    ((C4F6 h34 hx f41 g1)
+    ((C4F6 h34 _ f41 _)
       (let-match erased (in-exact a1 6 i1s (lit-lt-6-9)) (Refl _ _))
       (let-match erased (monus-five a1 m3 1 mo3 (add1 5)) (Refl _ _))
-      (let ((erased z1) (erased fsr) (erased efs) (erased _) (erased fz)) (fan1 e f ks fs3 w1 (Zero) hd1 h1 pfs3 phd1 ph1))
+      (let ((erased _) (erased _) (erased efs) (erased _) (erased fz)) (fan1 e f ks fs3 w1 (Zero) hd1 h1 pfs3 phd1 ph1))
       (let-match erased efs (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (let-match erased (cyc-back d v sp1 z31 3 3 6 e n f ks g lv pav iv p31 (add33)) (Refl _ _))
       (let-match erased (monus-five a1 m1 1 mo1 (add1 5)) (Refl _ _))
-      (let ((erased u0) (erased x0') (erased _) (erased fs1r) (erased efs1) (erased pu0) (erased px0) (erased _) (erased _)) (fan-head e f ks fs1 z31 (Zero) pfs1))
+      (let ((erased u0) (erased x0') (erased _) (erased _) (erased efs1) (erased pu0) (erased px0) (erased _) (erased _)) (fan-head e f ks fs1 z31 (Zero) pfs1))
       (let-match erased efs1 (Refl _ _))
       (let-match erased (nth-fn _ e v ev u0 pev pu0) (Refl _ _))
       (let-match erased (arity-same d ut4 ev 1 h4 x0' e n f ks g lut4 ph4 (one-step f ut4 ev pfv) px0) (Refl _ _))
       (let-match erased i1f (PwCons _ _ _ _ _ _ _ ig1 _))
       (values (F1One _ _ (MkFitSec a1 a0 fs3 (MkRg 6 6) h34 (Cons _ f41 (Nil _)) i1s i0s (PwCons _ _ InRg h1 f41 (Nil _) (Nil _) i1h (PwNil _ _ InRg (Nil _)))))
         ig1))
-    ((C4F7 h34 hx f41 g1 g2)
+    ((C4F7 h34 _ f41 g1 _)
       (let-match erased (in-exact a1 7 i1s (lit-lt-7-9)) (Refl _ _))
       (let-match erased (monus-five a1 m3 2 mo3 (add2 5)) (Refl _ _))
       (let ((erased z1) (erased fsr) (erased efs) (erased pz1) (erased fz)) (fan1 e f ks fs3 w1 1 hd1 h1 pfs3 phd1 ph1))
@@ -688,9 +665,9 @@
       (let-match erased (monus-five a1 m1 2 mo1 (add2 5)) (Refl _ _))
       (let ((erased u0) (erased x0') (erased z31b) (erased fs1r) (erased efs1) (erased pu0) (erased px0) (erased pzb) (erased fr1)) (fan-head e f ks fs1 z31 1 pfs1))
       (let-match erased efs1 (Refl _ _))
-      (let ((erased u1) (erased x1') (erased _) (erased fs1s) (erased efs2) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fs1r z31b (Zero) fr1))
+      (let ((erased u1) (erased x1') (erased _) (erased _) (erased efs2) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fs1r z31b (Zero) fr1))
       (let-match erased efs2 (Refl _ _))
-      (let ((erased u') (erased x') (erased _) (erased fsr2) (erased efs3) (erased pu') (erased px') (erased _) (erased fz2)) (fan-head e f ks fsr z31 (Zero) fz))
+      (let ((erased u') (erased x') (erased _) (erased _) (erased efs3) (erased pu') (erased px') (erased _) (erased fz2)) (fan-head e f ks fsr z31 (Zero) fz))
       (let-match erased efs3 (Refl _ _))
       (let-match erased fz2 (FAZ _ _ _ _))
       (let-match erased (nth-fn _ e z31 u' u0 pu' pu0) (Refl _ _))
@@ -706,7 +683,7 @@
 
 (def-fns _ $ (erased pc-step : (erased (Sec) o) (erased (Pc) c) (erased (List (Sec)) os) (erased (List (Sub)) q r) (erased (Fit1 o c) fc) (erased (PcA c q r) a)
     (erased (Pw (Sec) (Sub) FitSec os q) w) -> (erased (Pw (Sec) (Sub) FitSec (Cons (Sec) o os) r) res))
-  (let-match erased a (PcAPre pre _ _ ap)
+  (let-match erased a (PcAPre _ _ _ ap)
     ((PcANil _) (PwNil _ _ FitSec (Cons _ o os))))
   (let-match erased fc (F1One _ x fx))
   (let-match erased ap (LAppCons _ _ _ _ _ ap1))
@@ -715,7 +692,7 @@
 
 (def-fns _ $ (erased pc-step2 : (erased (Sec) o0 o1) (erased (Pc) c) (erased (List (Sec)) os) (erased (List (Sub)) q r) (erased (Fit2 o0 o1 c) fc) (erased (PcA c q r) a)
     (erased (Pw (Sec) (Sub) FitSec os q) w) -> (erased (Pw (Sec) (Sub) FitSec (Cons (Sec) o0 (Cons (Sec) o1 os)) r) res))
-  (let-match erased a (PcAPre pre _ _ ap)
+  (let-match erased a (PcAPre _ _ _ ap)
     ((PcANil _) (PwNil _ _ FitSec (Cons _ o0 (Cons _ o1 os)))))
   (let-match erased fc (F2Two _ _ x0 x1 fx0 fx1))
   (let-match erased ap (LAppCons _ _ _ _ _ ap1))
@@ -723,20 +700,19 @@
   (let-match erased ap2 (LAppNil _ _))
   (PwCons _ _ FitSec o0 x0 (Cons _ o1 os) (Cons _ x1 q) fx0 (PwCons _ _ FitSec o1 x1 os q fx1 w)))
 
-; The target's fifth sector and, when the rule's third spoke has two fans, its sixth and seventh, against conv_part5.
 (def-fns _ $ (erased c5-sound : (erased (Nat) d y2 s2 w2 hd2 z32 t4 t5 m5 sg4 wt4 ut4 zt4 a2 h2 a4 h4) (erased (List (Nat)) e n f ks fs2 fs4) (erased (List (Sec)) os5)
     (erased (Sub) x2) (erased (Rg) h45 u) (erased (List (Sub)) q) (erased (Geo d e n f ks) g)
     (erased (SecD e f ks y2 s2 w2 hd2 z32 (MkSec a2 h2 fs2)) sd2) (erased (FitSec (MkSec a2 h2 fs2) x2) f2) (erased (Eq (Nat) t4 w2) e4t)
-    (erased (SecD e f ks t4 sg4 wt4 ut4 zt4 (MkSec a4 h4 fs4)) st4) (erased (Eq (Nat) a4 h2) e4a) (erased (InRg h4 h45) ih4) (erased (Nth (Nat) f t4 t5) pt5)
+    (erased (SecD e f ks t4 sg4 wt4 ut4 zt4 (MkSec a4 h4 fs4)) _st4) (erased (Eq (Nat) a4 h2) e4a) (erased (InRg h4 h45) ih4) (erased (Nth (Nat) f t4 t5) pt5)
     (erased (ObsAt e f ks t5 m5 os5) ob5) (erased (Add 5 m5 a2) am) (erased (C5 x2 h45 u q) c5)
     -> (erased (InRg a2 u) r1) (erased (Pw (Sec) (Sub) FitSec (Cons (Sec) (MkSec a4 h4 fs4) os5) q) r2))
   (let-match erased sd2 (MkSecD _ _ _ _ _ _ _ _ _ _ m2 _ _ pa2 pw2 _ _ p32 mo2 pfs2))
-  (let-match erased f2 (MkFitSec _ _ _ r2s r2h r2f i2s i2h i2f))
+  (let-match erased f2 (MkFitSec _ _ _ _ _ _ i2s i2h i2f))
   (let-match erased e4a (Refl _ _))
   (let-match erased e4t (Refl _ _))
   (let-match erased c5 (C5B s5 s6 s7 _)
     ((C5No _ _) (values (pent d s2 a2 e n f ks g pa2) (PwNil _ _ FitSec _)))
-    ((C5A s s5 _) (values i2s (PwCons _ _ FitSec (MkSec h2 h4 fs4) (MkSub s5 h45 (Nil _)) os5 (Nil _) (MkFitSec h2 h4 fs4 s5 h45 (Nil _) i2h ih4 (PwNil _ _ InRg fs4))
+    ((C5A _ s5 _) (values i2s (PwCons _ _ FitSec (MkSec h2 h4 fs4) (MkSub s5 h45 (Nil _)) os5 (Nil _) (MkFitSec h2 h4 fs4 s5 h45 (Nil _) i2h ih4 (PwNil _ _ InRg fs4))
       (PwNil _ _ FitSec os5)))))
   (let-match erased (in-exact a2 7 i2s (lit-lt-7-9)) (Refl _ _))
   (let-match erased (add-inj 5 m5 7 2 am (add2 5)) (Refl _ _))
@@ -744,12 +720,12 @@
   (let-match erased (nth-fn _ f w2 t5 z32 pt5 (f3-next f s2 w2 z32 pw2 p32)) (Refl _ _))
   (let ((erased u0) (erased x0) (erased z32b) (erased fsr) (erased efs) (erased pu0) (erased px0) (erased pzb) (erased fr)) (fan-head e f ks fs2 z32 1 pfs2))
   (let-match erased efs (Refl _ _))
-  (let ((erased u1) (erased x1) (erased _) (erased fsr2) (erased efs2) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fsr z32b (Zero) fr))
+  (let ((erased u1) (erased x1) (erased _) (erased _) (erased efs2) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fsr z32b (Zero) fr))
   (let-match erased efs2 (Refl _ _))
   (let-match erased i2f (PwCons _ _ _ _ _ _ _ ig6 i2f2))
   (let-match erased i2f2 (PwCons _ _ _ _ _ _ _ ig7 _))
-  (let-match erased ob5 (OACons _ _ _ _ t6 _ o5 os6 so5 p56 ob6))
-  (let-match erased ob6 (OACons _ _ _ _ _ _ o6 os7 so6 p67 _))
+  (let-match erased ob5 (OACons _ _ _ _ t6 _ _ os6 so5 p56 ob6))
+  (let-match erased ob6 (OACons _ _ _ _ _ _ _ os7 so6 _ _))
   (let-match erased (nth-fn _ f z32 t6 z32b p56 pzb) (Refl _ _))
   (let-match erased so5 (MkSecAt _ _ _ _ sg5 a5 _ ut5 h5 _ _ fs5 psg5 pa5 _ _ ph5 _ _ _))
   (let-match erased so6 (MkSecAt _ _ _ _ sg6 a6 _ ut6 h6 _ _ fs6 psg6 pa6 _ _ ph6 _ _ _))
@@ -767,7 +743,6 @@
 
 (def-fns _ $ (erased add53 : -> (erased (Add 5 3 8) r)) (add-succ-right 5 2 7 (add2 5)))
 
-; The target's third sector, the rule's hub, against conv_part3.
 (def-fns _ $ (erased c3-sound : (erased (Nat) nn k a2 h2 a4) (erased (List (Nat)) fs2) (erased (List (Sec)) osr) (erased (List (Sub)) rest) (erased (Rg) h23)
     (erased (Pc) o) (erased (Eq (Nat) a2 nn) e2a) (erased (Eq (Nat) h2 a4) e2h) (erased (InRg a4 h23) i4) (erased (SpkL osr fs2) sk)
     (erased (Pw (Sec) (Sub) FitSec osr rest) fr) (erased (Length (Sec) osr k) lo) (erased (Length (Sub) rest k) lr) (erased (Add 5 k nn) ak)
@@ -781,18 +756,18 @@
       (let-match erased lo (LengthNil _))
       (let-match erased (add-fn 5 (Zero) nn 5 ak (add-zero-right 5)) (Refl _ _))
       (F1One _ _ (MkFitSec 5 a4 fs2 (MkRg 5 5) h23 (Nil _) (mk-exact 5 (lit-lt-5-9)) i4 (PwNil _ _ InRg fs2))))
-    ((C3N1 _ s5 h5)
+    ((C3N1 _ _ _)
       (let-match erased lr (LengthCons _ _ _ _ lr1))
       (let-match erased lr1 (LengthNil _))
       (let-match erased (add-fn 5 1 nn 6 ak (add1 5)) (Refl _ _))
       (F1One _ _ (MkFitSec 6 a4 fs2 (MkRg 6 6) h23 (Nil _) (mk-exact 6 (lit-lt-6-9)) i4 (PwNil _ _ InRg fs2))))
-    ((C3N2a _ h5 h6)
+    ((C3N2a _ _ _)
       (let-match erased lr (LengthCons _ _ _ _ lr1))
       (let-match erased lr1 (LengthCons _ _ _ _ lr2))
       (let-match erased lr2 (LengthNil _))
       (let-match erased (add-fn 5 2 nn 7 ak (add2 5)) (Refl _ _))
       (F1One _ _ (MkFitSec 7 a4 fs2 (MkRg 7 7) h23 (Nil _) (mk-exact 7 (lit-lt-7-9)) i4 (PwNil _ _ InRg fs2))))
-    ((C3N2b _ s5 h5 s6 h6)
+    ((C3N2b _ s5 _ s6 _)
       (let-match erased lr (LengthCons _ _ _ _ lr1))
       (let-match erased lr1 (LengthCons _ _ _ _ lr2))
       (let-match erased lr2 (LengthNil _))
@@ -800,7 +775,7 @@
       (let-match erased lo (LengthCons _ _ _ _ lo1))
       (let-match erased lo1 (LengthCons _ _ _ _ lo2))
       (let-match erased lo2 (LengthNil _))
-      (let-match erased sk (SpkCons a5 _ _ fs3 _ sk1))
+      (let-match erased sk (SpkCons a5 _ _ _ _ sk1))
       (let-match erased sk1 (SpkCons a6 _ _ _ _ sk2))
       (let-match erased sk2 (SpkNil))
       (let-match erased fr (PwCons _ _ _ _ _ _ _ g5 fr1))
@@ -809,7 +784,7 @@
       (let-match erased g6 (MkFitSec _ _ _ _ _ _ i6 _ _))
       (F1One _ _ (MkFitSec 7 a4 fs2 (MkRg 7 7) h23 (Cons _ s5 (Cons _ s6 (Nil _))) (mk-exact 7 (lit-lt-7-9)) i4
         (PwCons _ _ InRg a5 s5 _ _ i5 (PwCons _ _ InRg a6 s6 _ _ i6 (PwNil _ _ InRg _))))))
-    ((C3N3 _ s5 h5 s6 h6 s7 h7)
+    ((C3N3 _ s5 _ s6 _ s7 _)
       (let-match erased lr (LengthCons _ _ _ _ lr1))
       (let-match erased lr1 (LengthCons _ _ _ _ lr2))
       (let-match erased lr2 (LengthCons _ _ _ _ lr3))
@@ -832,7 +807,6 @@
       (F1One _ _ (MkFitSec 8 a4 fs2 (MkRg 8 8) h23 (Cons _ s5 (Cons _ s6 (Cons _ s7 (Nil _)))) (mk-exact 8 (lit-lt-8-9)) i4
         (PwCons _ _ InRg a5 s5 _ _ i5 (PwCons _ _ InRg a6 s6 _ _ i6 (PwCons _ _ InRg a7 s7 _ _ i7 (PwNil _ _ InRg _)))))))))
 
-; The target's first two sectors against conv_part12.
 (def-fns _ $ (erased c12-sound : (erased (Nat) d y2 y3 y4 s2 t t1 sp3 w3 hd3 z33 sp4 w4 hd4 z34 sg0 wt0 ut0 zt0 sg1 wt1 ut1 zt1)
     (erased (Nat) a3 h3 a4 h4 a0 h0 a1 h1) (erased (List (Nat)) e n f ks fs3 fs4 fs0 fs1) (erased (Sub) x3 x4) (erased (Rg) h23) (erased (Pc) o)
     (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) e y2 s2) ps2)
@@ -842,45 +816,45 @@
     (erased (FitSec (MkSec a3 h3 fs3) x3) f3) (erased (FitSec (MkSec a4 h4 fs4) x4) f4) (erased (C12 x3 x4 h23 o) c12)
     -> (erased (InRg a4 h23) r1) (erased (Fit2 (MkSec a0 h0 fs0) (MkSec a1 h1 fs1) o) r2))
   (let-match erased (tsec0 d y2 y3 s2 t t1 sg0 wt0 ut0 zt0 sp3 w3 hd3 z33 a0 h0 a3 h3 e n f ks fs0 fs3 g ly p23 ps2 pt pt1 st0 s3) (Refl _ _))
-  (let ((erased e1) (erased q0) (erased ez) (erased nz)) (tsec1 d y2 y3 s2 t1 sg1 wt1 ut1 zt1 sp3 w3 hd3 z33 a1 h1 a3 h3 e n f ks fs1 fs3 g ly p23 ps2 pt1 st1 s3))
+  (let ((erased e1) (erased _) (erased ez) (erased nz)) (tsec1 d y2 y3 s2 t1 sg1 wt1 ut1 zt1 sp3 w3 hd3 z33 a1 h1 a3 h3 e n f ks fs1 fs3 g ly p23 ps2 pt1 st1 s3))
   (let-match erased e1 (Refl _ _))
   (let-match erased ez (Refl _ _))
   (let-match erased st0 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ph0 _ _ _))
   (let-match erased st1 (MkSecD _ _ _ _ _ _ _ _ _ _ m1 _ _ _ _ put1 ph1 _ mo1 pfs1))
   (let-match erased s3 (MkSecD _ _ _ _ _ _ _ _ _ _ m3 _ psp3 pa3 _ _ _ p33 mo3 pfs3))
   (let-match erased s4 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ _ pa4 _ _ _ _ _ _))
-  (let-match erased f3 (MkFitSec _ _ _ r3s r3h r3f i3s i3h i3f))
-  (let-match erased f4 (MkFitSec _ _ _ r4s r4h r4f i4s i4h i4f))
+  (let-match erased f3 (MkFitSec _ _ _ _ _ _ i3s i3h i3f))
+  (let-match erased f4 (MkFitSec _ _ _ _ _ _ i4s i4h _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased _) (erased _) (erased fi) (erased _) (erased _) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly3)) (img-lt d y2 y3 f fi pf ly p23))
   (let ((erased p34z)) (iter-snoc f 3 sp3 z33 zt1 p33 nz))
   (match erased c12 _
     ((C12No _ _) (values (pent d sp4 a4 e n f ks g pa4) (F2Nil _ _)))
-    ((C12P a b c)
+    ((C12P a b _)
       (values i4s (F2Two _ _ (MkSub b r59 (Nil _)) (MkSub a r59 (Nil _)) (MkFitSec a0 h0 fs0 b r59 (Nil _) i3h (pent d ut0 h0 e n f ks g ph0) (PwNil _ _ InRg fs0))
         (MkFitSec a1 h1 fs1 a r59 (Nil _) i3s (pent d ut1 h1 e n f ks g ph1) (PwNil _ _ InRg fs1)))))
-    ((C12P5 b c dd)
+    ((C12P5 b _ dd)
       (let-match erased (in-exact a1 5 i3s (lit-lt-5-9)) (Refl _ _))
       (let-match erased (back2 d y3 y4 sp3 z33 ut1 5 3 a4 h4 h1 e n f ks fs4 sp4 w4 hd4 z34 g ly3 p34 psp3 pa3 p33 (add2 3) put1 ph1 s4) (Refl _ _))
       (values i4s (F2Two _ _ (MkSub b r59 (Nil _)) (MkSub (MkRg 5 5) dd (Nil _)) (MkFitSec a0 h0 fs0 b r59 (Nil _) i3h (pent d ut0 h0 e n f ks g ph0) (PwNil _ _ InRg fs0))
         (MkFitSec a1 h1 fs1 (MkRg 5 5) dd (Nil _) i3s i4h (PwNil _ _ InRg fs1)))))
-    ((C12P6 b c dd)
+    ((C12P6 b _ dd)
       (let-match erased (in-exact a1 6 i3s (lit-lt-6-9)) (Refl _ _))
       (let-match erased (monus-five a1 m1 1 mo1 (add1 5)) (Refl _ _))
-      (let ((erased u') (erased x') (erased _) (erased fsr) (erased efs) (erased pu') (erased px') (erased _) (erased fz)) (fan-head e f ks fs1 zt1 (Zero) pfs1))
+      (let ((erased u') (erased x') (erased _) (erased _) (erased efs) (erased pu') (erased px') (erased _) (erased fz)) (fan-head e f ks fs1 zt1 (Zero) pfs1))
       (let-match erased efs (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (let-match erased (back2 d y3 y4 sp3 zt1 u' 6 4 a4 h4 x' e n f ks fs4 sp4 w4 hd4 z34 g ly3 p34 psp3 pa3 p34z (add2 4) pu' px' s4) (Refl _ _))
       (values i4s (F2Two _ _ (MkSub b r59 (Nil _)) (MkSub (MkRg 6 6) r59 (Cons _ dd (Nil _)))
         (MkFitSec a0 h0 fs0 b r59 (Nil _) i3h (pent d ut0 h0 e n f ks g ph0) (PwNil _ _ InRg fs0))
         (MkFitSec a1 h1 fs1 (MkRg 6 6) r59 (Cons _ dd (Nil _)) i3s (pent d ut1 h1 e n f ks g ph1) (PwCons _ _ InRg h4 dd (Nil _) (Nil _) i4h (PwNil _ _ InRg (Nil _)))))))
-    ((C12P7 b c dd)
+    ((C12P7 b _ dd)
       (let-match erased (in-exact a1 7 i3s (lit-lt-7-9)) (Refl _ _))
       (let-match erased (monus-five a1 m1 2 mo1 (add2 5)) (Refl _ _))
-      (let ((erased u') (erased x') (erased z1b) (erased fsr) (erased efs) (erased pu') (erased px') (erased pzb) (erased fr)) (fan-head e f ks fs1 zt1 1 pfs1))
+      (let ((erased u') (erased x') (erased z1b) (erased fsr) (erased efs) (erased _) (erased px') (erased pzb) (erased fr)) (fan-head e f ks fs1 zt1 1 pfs1))
       (let-match erased efs (Refl _ _))
-      (let ((erased u2) (erased x2) (erased _) (erased fsr2) (erased efs2) (erased pu2) (erased px2) (erased _) (erased fz)) (fan-head e f ks fsr z1b (Zero) fr))
+      (let ((erased u2) (erased x2) (erased _) (erased _) (erased efs2) (erased pu2) (erased px2) (erased _) (erased fz)) (fan-head e f ks fsr z1b (Zero) fr))
       (let-match erased efs2 (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (let-match erased (back2 d y3 y4 sp3 z1b u2 7 5 a4 h4 x2 e n f ks fs4 sp4 w4 hd4 z34 g ly3 p34 psp3 pa3 (iter-snoc f 4 sp3 zt1 z1b p34z pzb) (add2 5) pu2 px2 s4) (Refl _ _))
@@ -888,29 +862,29 @@
         (MkFitSec a0 h0 fs0 b r59 (Nil _) i3h (pent d ut0 h0 e n f ks g ph0) (PwNil _ _ InRg fs0))
         (MkFitSec a1 h1 fs1 (MkRg 7 7) r59 (Cons _ r59 (Cons _ dd (Nil _))) i3s (pent d ut1 h1 e n f ks g ph1)
           (PwCons _ _ InRg x' r59 (Cons _ h4 (Nil _)) (Cons _ dd (Nil _)) (pent d u' x' e n f ks g px') (PwCons _ _ InRg h4 dd (Nil _) (Nil _) i4h (PwNil _ _ InRg (Nil _))))))))
-    ((C12F6 b y0 c dd)
+    ((C12F6 b y0 _ dd)
       (let-match erased (in-exact a1 6 i3s (lit-lt-6-9)) (Refl _ _))
       (let-match erased (monus-five a1 m1 1 mo1 (add1 5)) (Refl _ _))
       (let-match erased (monus-five a1 m3 1 mo3 (add1 5)) (Refl _ _))
-      (let ((erased u0) (erased x0) (erased _) (erased fs3r) (erased efs3) (erased pu0) (erased px0) (erased _) (erased _)) (fan-head e f ks fs3 z33 (Zero) pfs3))
+      (let ((erased u0) (erased x0) (erased _) (erased _) (erased efs3) (erased pu0) (erased px0) (erased _) (erased _)) (fan-head e f ks fs3 z33 (Zero) pfs3))
       (let-match erased efs3 (Refl _ _))
       (let-match erased (nth-fn _ e z33 ut1 u0 put1 pu0) (Refl _ _))
       (let-match erased (nth-fn _ ks ut1 h1 x0 ph1 px0) (Refl _ _))
       (let-match erased i3f (PwCons _ _ _ _ _ _ _ ig0 _))
-      (let ((erased u') (erased x') (erased _) (erased fsr) (erased efs) (erased pu') (erased px') (erased _) (erased fz)) (fan-head e f ks fs1 zt1 (Zero) pfs1))
+      (let ((erased u') (erased x') (erased _) (erased _) (erased efs) (erased pu') (erased px') (erased _) (erased fz)) (fan-head e f ks fs1 zt1 (Zero) pfs1))
       (let-match erased efs (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (let-match erased (back2 d y3 y4 sp3 zt1 u' 6 4 a4 h4 x' e n f ks fs4 sp4 w4 hd4 z34 g ly3 p34 psp3 pa3 p34z (add2 4) pu' px' s4) (Refl _ _))
       (values i4s (F2Two _ _ (MkSub b r59 (Nil _)) (MkSub (MkRg 6 6) y0 (Cons _ dd (Nil _)))
         (MkFitSec a0 h0 fs0 b r59 (Nil _) i3h (pent d ut0 h0 e n f ks g ph0) (PwNil _ _ InRg fs0))
         (MkFitSec a1 h1 fs1 (MkRg 6 6) y0 (Cons _ dd (Nil _)) i3s ig0 (PwCons _ _ InRg h4 dd (Nil _) (Nil _) i4h (PwNil _ _ InRg (Nil _)))))))
-    ((C12F7 b y0 y1 c dd)
+    ((C12F7 b y0 y1 _ dd)
       (let-match erased (in-exact a1 7 i3s (lit-lt-7-9)) (Refl _ _))
       (let-match erased (monus-five a1 m1 2 mo1 (add2 5)) (Refl _ _))
       (let-match erased (monus-five a1 m3 2 mo3 (add2 5)) (Refl _ _))
       (let ((erased u0) (erased x0) (erased z33b) (erased fs3r) (erased efs3) (erased pu0) (erased px0) (erased pz3b) (erased fr3)) (fan-head e f ks fs3 z33 1 pfs3))
       (let-match erased efs3 (Refl _ _))
-      (let ((erased u1) (erased x1) (erased _) (erased fs3s) (erased efs4) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fs3r z33b (Zero) fr3))
+      (let ((erased u1) (erased x1) (erased _) (erased _) (erased efs4) (erased pu1) (erased px1) (erased _) (erased _)) (fan-head e f ks fs3r z33b (Zero) fr3))
       (let-match erased efs4 (Refl _ _))
       (let-match erased (nth-fn _ e z33 ut1 u0 put1 pu0) (Refl _ _))
       (let-match erased (nth-fn _ ks ut1 h1 x0 ph1 px0) (Refl _ _))
@@ -921,7 +895,7 @@
       (let-match erased efs (Refl _ _))
       (let-match erased (nth-fn _ e zt1 u' u1 pu' pu1) (Refl _ _))
       (let-match erased (nth-fn _ ks u' x' x1 px' px1) (Refl _ _))
-      (let ((erased u2) (erased x2) (erased _) (erased fsr2) (erased efs2) (erased pu2) (erased px2) (erased _) (erased fz)) (fan-head e f ks fsr z1b (Zero) fr))
+      (let ((erased u2) (erased x2) (erased _) (erased _) (erased efs2) (erased pu2) (erased px2) (erased _) (erased fz)) (fan-head e f ks fsr z1b (Zero) fr))
       (let-match erased efs2 (Refl _ _))
       (let-match erased fz (FAZ _ _ _ _))
       (let-match erased (back2 d y3 y4 sp3 z1b u2 7 5 a4 h4 x2 e n f ks fs4 sp4 w4 hd4 z34 g ly3 p34 psp3 pa3 (iter-snoc f 4 sp3 zt1 z1b p34z pzb) (add2 5) pu2 px2 s4) (Refl _ _))
@@ -934,15 +908,13 @@
   (AddSucc 4 k (Succ (Succ (Succ (Succ k)))) (AddSucc 3 k (Succ (Succ (Succ k))) (AddSucc 2 k (Succ (Succ k)) (AddSucc 1 k (Succ k)
     (AddSucc (Zero) k k (AddZero k)))))))
 
-; fitp_converse of part.v: a rule p fitting y exactly makes its converse q fit the dart t with face^2 t = edge (face^2 y), and t's
-; arity lies in u.
 (def-fns _ $ (erased conv-sound : (erased (Nat) d y y2 s2 t) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p q) (erased (Rg) u) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (ExactAt e f ks y p) x) (erased (Iter f 2 y y2) iy) (erased (Nth (Nat) e y2 s2) ps2) (erased (Iter f 2 t s2) it)
     (erased (ConvOk p u q) cv)
     -> (erased (Nat) a) (erased (Lt t d) lt) (erased (Nth (Nat) ks t a) pa) (erased (InRg a u) iu) (erased (List (Sec)) os) (erased (ObsAt e f ks t a os) ob)
     (erased (Pw (Sec) (Sub) FitSec os q) w))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol ab))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly2)) (iter-lt d 2 y y2 f fi pf ly iy))
   (let ((erased ls2)) (img-lt d y2 s2 e nf pe ly2 ps2))
   (let ((erased lt)) (iter-lt-inv d 2 t s2 f fi pf ls2 it))
@@ -950,12 +922,12 @@
   (let ((erased os) (erased ob)) (obs-exists d t e n f ks g a lt))
   (let-match erased cv (CvOk x0 x1 x2 x3 x4 rest q5 r4 r3 _ h45 h23 _ o4 o12 o3 c4 c5 c12 c3 pa4 pa3 pa12)
     ((CvShort _) (values a lt pa (pent d t a e n f ks g pa) os ob (PwNil _ _ FitSec os))))
-  (let-match erased x (MkExactAt _ _ _ _ nn osy _ pnn oby exy))
-  (let-match erased exy (MkExact _ _ m fo lo lp))
-  (let-match erased fo (PwCons _ _ _ o0 _ osy1 _ f0 fo1))
-  (let-match erased fo1 (PwCons _ _ _ o1 _ osy2 _ f1 fo2))
-  (let-match erased fo2 (PwCons _ _ _ o2 _ osy3 _ f2 fo3))
-  (let-match erased fo3 (PwCons _ _ _ o3s _ osy4 _ f3 fo4))
+  (let-match erased x (MkExactAt _ _ _ _ nn _ _ pnn oby exy))
+  (let-match erased exy (MkExact _ _ _ fo lo lp))
+  (let-match erased fo (PwCons _ _ _ o0 _ _ _ f0 fo1))
+  (let-match erased fo1 (PwCons _ _ _ o1 _ _ _ f1 fo2))
+  (let-match erased fo2 (PwCons _ _ _ o2 _ _ _ f2 fo3))
+  (let-match erased fo3 (PwCons _ _ _ o3s _ _ _ f3 fo4))
   (let-match erased fo4 (PwCons _ _ _ o4s _ osr _ f4 for))
   (let-match erased lp (LengthCons _ _ _ _ lp1))
   (let-match erased lp1 (LengthCons _ _ _ _ lp2))
@@ -1032,7 +1004,7 @@
   (let ((erased w3)) (pc-step (MkSec ta2 th2 tf2) o3 _ r4 r3 fit2 pa3 w4))
   (values a lt pa iu os ob (pc-step2 (MkSec ta0 th0 tf0) (MkSec ta1 th1 tf1) o12 _ r3 q fit01 pa12 w3)))
 
-; How one rule r of drs moves the source count c of a dart: c drops to c1 past r, by one when r fits.
+; c drops to c1 past the rule r, by one when r fits.
 (def-adts $ (SrcStep : ((Nat) a) ((List (Sec)) os) ((List (Sub)) r) ((Nat) c c1) -> Type)
   enum
   (many SSkip : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) -> (SrcStep a os r c c))
@@ -1054,7 +1026,6 @@
     ((CYes _ _ _ t1 _ k1) (values t1 k1 (lt-weaken t1 (Succ t1) (lt-succ t1))))
     ((CNo _ _ _ _ _ k1) (values t k1 (lt-succ t)))))
 
-; A rule fitting z exactly, read through its converse at w.
 (def-fns _ $ (erased conv-fit : (erased (Nat) d z w nhub a y2 s2) (erased (List (Nat)) e n f ks) (erased (List (Sub)) r q) (erased (Rg) u)
     (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
     (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)
@@ -1066,7 +1037,6 @@
   (let-match erased (obs-fn e f ks w nhub os2 osw ob2 obw) (Refl _ _))
   (values iu fw))
 
-; Each rule of drs fitting z exactly has its converse in rt fitting w, so dscore1 at face^2 z is at most the count at w.
 (def-fns _ $ (erased tgt-le : (erased (Nat) d z w nhub a c t y2 s2) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs rt qs)
     (erased (List (Sec)) osz osw) (erased (Geo d e n f ks) g) (erased (Lt z d) lz) (erased (Nth (Nat) ks z a) pz) (erased (ObsAt e f ks z a osz) obz)
     (erased (Nth (Nat) ks w nhub) pw) (erased (ObsAt e f ks w nhub osw) obw) (erased (Iter f 2 z y2) iy) (erased (Nth (Nat) e y2 s2) ps2)
@@ -1086,7 +1056,7 @@
           (let-match erased kw (CYes _ _ _ t1 _ kw1) (absurd (CNo _ _ _ _ b _) (fit-bad osw q fw b)))
           (LtS c1 (Succ t1) (tgt-le d z w nhub a c1 t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw1)))))
     ((TgOut _ r q u drs1 _ cv o tg1)
-      (let ((erased qs1) (erased c1) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
+      (let ((erased qs1) (erased _) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
       (match erased st _
         ((SSkip _ _ _ _) (tgt-le d z w nhub a c t y2 s2 e n f ks drs1 rt qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw))
         (absurd (SFit _ _ _ _ l fz)

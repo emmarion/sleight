@@ -1,7 +1,3 @@
-; The mirror of a plain cubic map (edge f . n, node and face inverted, after hyper-mirror of hyprelabel.sl) is plain
-; cubic with the same arities, and a mirror-image quiz fitting the map fits the mirror one face step on (fitqz_flip of
-; quiz.v). Load after qtree.sl.
-
 (def-fns _ $ (erased path-rev : (erased (Nat) d a b c y k) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm) (subterm erased (Path p s a b xs) w)
     (erased (Nth (Nat) p c a) pc) (erased (Nth (Nat) q b y) pb) (erased (Length (Nat) xs k) l) -> (erased (List (Nat)) ys) (erased (Path q s y c ys) r)
     (erased (Length (Nat) ys k) ly))
@@ -18,7 +14,7 @@
 
 (def-fns _ $ (erased order-inv : (erased (Nat) d x k) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Order p x k) o) -> (erased (Order q x k) r))
   (let-match erased o (MkOrder _ xs _ y k1 py w l))
-  (let-match erased pm (HMkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (let ((erased y0) (erased py0) (erased _)) (perm-nth d x q p (perm-sym d p q pm) (nth-lt-length (Nat) p x d y py lp)))
   (let ((erased ys) (erased r) (erased ly)) (path-rev d y x x y0 k1 p q (Cons _ x (Nil _)) xs pm w py py0 l))
   (MkOrder q ys x y0 k1 py0 r ly))
@@ -32,7 +28,7 @@
     (erased (Respects f n fn) rfn) (erased (Lt x d) lx) -> (erased (Order fn x (Succ (Succ (Zero)))) r))
   (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased a) (erased pa) (erased la)) (perm-nth d x n ni pn lx))
-  (let ((erased y) (erased py) (erased ly)) (perm-nth d a f fi pf la))
+  (let ((erased y) (erased py) (erased _)) (perm-nth d a f fi pf la))
   (let ((erased l) (erased pl1) (erased pl2)) (resp-at f n fn x a rfn pa))
   (let-match erased (nth-fn (Nat) f a y l py pl2) (Refl _ _))
   (let ((erased w) (erased pw) (erased lw)) (perm-nth d a e nf pe la))
@@ -78,12 +74,11 @@
       (MkOrderList d fi ids ks io (orders-inv d f fi ids ks pf os)) ab)
     rfn pn pf))
 
-; qstepR in the map is qstepL in the mirror, and the other way round.
 (def-fns _ $ (erased step-rl : (erased (Nat) d x y) (erased (List (Nat)) e n f ks fn ni) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (Lt x d) lx) (erased (QStepR e n x y) sp) -> (erased (QStepL fn ni x y) r))
   (let-match erased sp (MkQStepR _ _ _ u _ pu py))
   (let-match erased g (MkGeo _ _ _ _ _ h pl cu _ _))
-  (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
+  (let ((erased nf) (erased _) (erased _) (erased _) (erased pe) (erased _) (erased _)) (hyper-core d e n f h))
   (let ((erased lu)) (img-lt d x u e nf pe lx pu))
   (let ((erased a) (erased pa) (erased _)) (perm-nth d x ni n (perm-sym d n ni pn) lx))
   (let ((erased nax)) (perm-inv d x a ni n (perm-sym d n ni pn) pa))
@@ -142,7 +137,6 @@
     ((FlQLL a q1 r1 p)
       (let-match erased fr (FQRR _ _ _ _ _ xr y _ s1 pa s2 f1))
       (let ((erased lxr)) (step-lt d x xr e n f ks g lx s1))
-      (let ((erased _) (erased ni2) (erased _) (erased _) (erased _) (erased pn2) (erased _)) (hyper-core d e n f h))
       (let ((erased c) (erased pc) (erased _)) (perm-nth d xr ni n (perm-sym d n ni pn) lxr))
       (let ((erased c2) (erased pc2) (erased pc3)) (resp-at f n fn c xr rfn (perm-inv d xr c ni n (perm-sym d n ni pn) pc)))
       (let ((erased y1) (erased py1) (erased _) (erased pa1)) (face-step d xr a e n f ks h ol lxr pa))
@@ -159,7 +153,6 @@
       (FQRR fn ni ks x a xl y q1 (step-lr d x xl e n f ks fn ni g rfn pn lx s1) pa1 (step-lr d xl y e n f ks fn ni g rfn pn lxl s2)
         (fit-flip d y e n f ks fn ni q1 r1 g rfn pn (stepl-lt d xl y e n f ks g lxl s2) p f1)))))
 
-; fitqz_flip: the mirror image of qz fitting at x gives qz fitting the mirror at face x.
 (def-fns _ $ (erased fitz-flip : (erased (Nat) d x) (erased (List (Nat)) e n f ks fn ni) (erased (Quiz) qz qz2) (erased (Geo d e n f ks) g) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (Lt x d) lx) (erased (FlipQz qz qz2) fl) (erased (FitZ e n ks x qz2) fz)
     -> (erased (Nat) w) (erased (FitZ fn ni ks w qz) r) (erased (Lt w d) lw))
@@ -176,7 +169,7 @@
   (let ((erased px1) (erased _)) (plain-eq d x x1 e pl lx px))
   (let-match erased (nth-fn (Nat) e x1 x t1 px1 pt1) (Refl _ _))
   (let ((erased w) (erased pw) (erased _) (erased kw)) (face-step d x a0 e n f ks h ol lx k0))
-  (let ((erased w1) (erased pw1) (erased lw1) (erased kw1)) (face-step d x1 a1 e n f ks h ol lx1 k1))
+  (let ((erased w1) (erased pw1) (erased _) (erased kw1)) (face-step d x1 a1 e n f ks h ol lx1 k1))
   (let ((erased lw)) (img-lt d x w f fi pf lx pw))
   (let ((erased nwx1)) (nfe d x1 x w e n f h lx1 px1 pw))
   (let ((erased nw1x)) (nfe d x x1 w1 e n f h lx px pw1))
@@ -192,5 +185,4 @@
   (let ((erased ly0)) (img-lt d x1 y0 n _ pn lx1 py0))
   (values w (MkFitZ fn ni ks w w1 (QaskR a0 q01) (QaskR a1 q10)
     (FQR fn ni ks w a0 y1 q01 kw (MkQStepR fn ni w w1 y1 pfw (perm-inv d y1 w1 n ni pn pz)) (fit-flip d y1 e n f ks fn ni q01 r01 g rfn pn ly1 p1 g1))
-    pfw (FQR fn ni ks w1 a1 y0 q10 kw1 (MkQStepR fn ni w1 w y0 pfw1 (perm-inv d y0 w n ni pn pz3)) (fit-flip d y0 e n f ks fn ni q10 r10 g rfn pn ly0 p2 g0)))
-    lw))
+    pfw (FQR fn ni ks w1 a1 y0 q10 kw1 (MkQStepR fn ni w1 w y0 pfw1 (perm-inv d y0 w n ni pn pz3)) (fit-flip d y0 e n f ks fn ni q10 r10 g rfn pn ly0 p2 g0))) lw))
