@@ -48,8 +48,8 @@
           (IfY _ (MkCutAt p h2 ct m3 (MemThere _ h2 h rest mh) sb2 lp2 lh2)))
         ((IfF _) (IfF _)))))))
 
-; Pres: every valid hub that fits p exactly has an obligation of out fitting exactly somewhere. Forced p0 p o: every
-; valid hub that fits p0 exactly fits p exactly, unless an obligation of o fits exactly somewhere.
+; Pres: every valid hub that fits p exactly has an obligation of out fitting exactly somewhere, or fits a part of the cut
+; list ct exactly (PCut). Forced p0 p o: every valid hub that fits p0 exactly fits p exactly, unless that holds of o.
 (def-adts
   ((Pres : ((Nat) nhub) ((List (List (Sub))) rt rs ct) ((List (Sub)) p) ((List (List (Sub))) out) -> Type)
     enum

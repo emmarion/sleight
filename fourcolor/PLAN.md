@@ -1104,7 +1104,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   presentations of hub arities 5 to 11, hubcaps, `redpart` through the
   quiz tree, and the bound for larger hubs). In one run every script
   passed, in about 4.4 s of compute; five broken variants of the arity-5
-  script were rejected. It carries no proofs yet.
+  script were rejected. It carries no proofs yet. `data.sl`, which
+  `gen.py` writes from the Coq sources, spells each presentation script
+  as a string of numbers that `present.sl`'s `script-of` reads at run
+  time; as nested constructor applications the scripts appeared to make
+  most of the OCaml that `native-compute` compiles, and most of its
+  compile time.
 
 - `unav/fit.sl`, `dbound.sl`, `hubcapc.sl`, `faces.sl`, `obsmap.sl`,
   `dscore.sl`, `runc.sl`: the part operations, dbound checks and hubcap
@@ -1138,7 +1143,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   fitting p exactly in a plain cubic pentagonal map gives a dart where
   qt fits. It is a new search on these names, not a port of redpart.v's
   zippers, and a tested range is narrowed to its top for the rest of the
-  walk.
+  walk. For each triple of darts `tri-c` works out once where the walks
+  of the leaves' quizzes start (`start-c`), and a leaf's walk reuses that
+  start while the part is unchanged (`test-c` and `qwalk-c` report
+  whether it is); a leaf whose first question cannot pass there is not
+  walked (`walk-hope`).
 - `unav/qwalk.sl`, `qembed.sl`, `qcert.sl`, `qtree.sl`, `qmirror.sl`,
   `qztcfs.sl`, `qztproof.sl`, `qztgoal.sl` (load after `redc.sl`, in that order; they also need
   `cfmap.sl`, loaded after `hypcubic.sl`, and `cpmap.sl`, loaded after
