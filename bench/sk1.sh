@@ -13,7 +13,7 @@ shift $((OPTIND - 1))
 LABEL=${1:-}
 B=$(pwd)/_build/sk1
 mkdir -p "$B/wrap"
-DEPS="std/list.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/search.sl bb/far.sl std/macro.sl bb/pat.sl bb/skelet.sl bb/sk1.sl"
+DEPS="std/list.sl std/immediate.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/search.sl bb/far.sl std/macro.sl bb/pat.sl bb/skelet.sl bb/sk1.sl"
 [ "$EFILE" = bb/sk1.sl ] || DEPS="$DEPS $XDEPS $EFILE"
 REV=$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- bb || echo "+$(git diff HEAD -- bb | sha1sum | cut -c1-7)")
 ELAB=-
@@ -52,7 +52,7 @@ fi
 FULLT=-
 if [ -n "$FULL" ]; then
   T0=$(date +%s.%N)
-  "$SLC" std/nat.sl std/list.sl std/macro.sl std/tactics.sl agent/tasks/bb5/defs.sl agent/tasks/bb5/spec.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/sym.sl bb/vec.sl bb/search.sl bb/far.sl bb/wfar.sl bb/pat.sl bb/skelet.sl bb/sk17.sl bb/sk1.sl bb/holes.sl bb/par.sl bb/bb5.sl bb/spec.sl bb/spec5.sl --goal proved --inline 25 > "$B/full.out" 2> "$B/full.err"
+  "$SLC" std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl agent/tasks/bb5/defs.sl agent/tasks/bb5/spec.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/sym.sl bb/vec.sl bb/search.sl bb/far.sl bb/wfar.sl bb/pat.sl bb/skelet.sl bb/sk17.sl bb/sk1.sl bb/holes.sl bb/par.sl bb/bb5.sl bb/spec.sl bb/spec5.sl --goal proved --inline 25 > "$B/full.out" 2> "$B/full.err"
   FULLT=$(echo "$(date +%s.%N) - $T0" | bc | xargs printf '%.1f')$(grep -q "proved: PASS" "$B/full.out" && echo "" || echo "FAIL")
 fi
 [ -f "$B/results.tsv" ] || printf 'date\trev\tlabel\telab+job_s\tjob_user_s\tminor_words\tmajor_words\tmaxrss_kb\tprefix_instr\tfull_s\n' > "$B/results.tsv"
