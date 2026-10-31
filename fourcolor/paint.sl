@@ -1,7 +1,3 @@
-; A search for a proper four-colouring of the points of a list of edges, on coordinates alone, and FourColorM's function
-; from FourColor: the search's failure is refuted by the erased colouring FourColor gives. Load after readback.sl and before
-; coloring.sl, whose Proper shadows defs.sl's.
-
 (def-adts $ (PointDec : ((Point) p) ((Point) q) -> Type)
   enum
   (many PtSame : (erased (Point) p) -> (PointDec p p))
@@ -136,8 +132,6 @@
       (erased (Proper ks todo) p) -> (PaintSearch todo pre))
   (many PaintNone : (erased (List (Edge)) todo) (erased (List (Paint)) pre) (erased (NoPaint todo pre) n) -> (PaintSearch todo pre)))
 
-; The search paints the endpoints of the first edge in turn, each unpainted one with each colour below 4, checks that
-; edge, and goes on with the rest.
 (def-fns _ $ (many paint-go : (subterm many (List (Edge)) todo) (subterm many (List (Point)) qs) (many (List (Paint)) pre) (erased (Below4 pre) bl)
     (erased (Pending todo qs pre) pd) -> (many (PaintSearch todo pre) r))
   (let-match erased (unary-4) (Refl _ _))
@@ -217,7 +211,6 @@
       (let-match erased l3 (LtZ _) (absurd (LtS _ _ l4) l4))
       (nopaint-sound todo _ ks n3 g2 pr))))
 
-; FourColorM's function: the search on es, whose failure the colouring h gives refutes.
 (def-fns _ $ (many four-color-m : (erased (FourColor) h) -> (erased (Level) L)
     (many (Fn L (many (List (Edge)) es) (erased (Drawing es) drawn) -> (many (List (Paint)) ks) (erased (Proper ks es) proper)) thm))
   (let-match erased h (MkFourColor L0 t))

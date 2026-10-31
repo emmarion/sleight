@@ -1,5 +1,3 @@
-; Part A as one statement: a sweep plan for every drawing and a colouring for every plane map give FourColor.
-
 (def-fns _ $ (erased part-a : (erased (Level) L1)
     (erased (Fn L1 (erased (List (Edge)) es) (erased (Drawing es) d) -> (erased (SweepPlan es) p)) plan)
     (erased (Level) L2)

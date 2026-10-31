@@ -90,7 +90,6 @@
   (let-match erased q (NthThere _ _ _ i1 _ q1) ((NthHere _ _ _) d))
   (allapart-nth p a ps1 i1 aa1 q1))
 
-; Point i of pts is painted with the colour of label i + l.
 (def-fns _ $ (erased paints-colorof : (erased (List (Nat)) rep ks) (erased (List (Point)) pts) (erased (List (Paint)) kp) (erased (Point) a)
     (erased (Nat) i l j) (subterm erased (Paints rep ks pts l kp) pa) (erased (PtsApart pts) ap) (erased (Nth (Point) pts i a) q)
     (erased (Add i l j) s) -> (erased (Nat) c) (erased (ColorOf kp a c) co) (erased (ColorFor rep ks j c) cf))
@@ -145,7 +144,6 @@
       (let ((erased lb) (erased la) (erased d)) (joined-colors e nd pl rep ks (Succ j) (Succ i) cb ca pm (closes-joined e pl cs (Succ j) (Succ i) ac cl) rs col fb fa))
       (ProperCons kp a b ca cb es1 coa cob la lb (apart-sym cb ca d) rest))))
 
-; What part A keeps between building the map and reading a colouring back.
 (def-adts $ (MapFor : ((List (Edge)) es) ((List (Nat)) e) ((List (Nat)) nd) -> Type)
   enum
   (many MkMapFor : (erased (List (Edge)) es) (erased (List (Nat)) e nd pl rep) (erased (List (Point)) pts) (erased (List (Closed)) cs)

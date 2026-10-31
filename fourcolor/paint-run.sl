@@ -1,5 +1,3 @@
-; Runs paint.sl's search on a straight-line drawing of K4 and checks the colours it finds. Load after paint.sl.
-
 (def-fns _ $ (many paints-of : (many (List (Edge)) es) -> (many (List (Paint)) ks))
   (let ((many qs) (erased pd)) (paint-ends (Nil (Paint)) es))
   (match many (paint-go es qs (Nil (Paint)) (B4Nil) pd) _

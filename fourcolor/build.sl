@@ -5,7 +5,6 @@
   (many ACCons : (erased (List (Nat)) e pl r) (erased (List (Closed)) cs) (erased (Nat) t) (erased (AllJoined e pl r t) j)
       (erased (AllClosed e pl cs) rest) -> (AllClosed e pl (Cons (Closed) (MkClosed t r) cs))))
 
-; The end of the sweep: a plane map, its labels, and the joins the trace asks for.
 (def-adts $ (Built : ((List (Closed)) cs) -> Type)
   enum
   (many MkBuilt : (erased (List (Closed)) cs) (erased (List (Nat)) e nd pl rep) (erased (PlaneMap e nd) pm)
@@ -27,7 +26,6 @@
       (values e3 nd3 pl3 rep3 pm rp rs (ACCons e3 pl3 r cs1 t (alljoined-grow e2 pl2 e3 pl3 r t j ge3 gp3) ac)
         (AgTrans e e2 e3 (Nil _) ge ge3) (AgTrans pl pl2 pl3 (Nil _) gp gp3)))))
 
-; Step 1 joins point 1 to the virtual point 0: darts 0 at 0 and 1 at 1, and the frontier is the corner after dart 1.
 (def-fns _ $ (erased first-state : (erased (Nat) k) (erased (List (Nat)) ns) (erased (Repeat (Nat) k (Succ (Zero)) ns) rk) ->
     (erased (State (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) $ Cons (Nat) (Zero) $ Nil (Nat)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat))
       (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat))

@@ -120,7 +120,6 @@
 (let ((erased Mono)) (List (Nat)))
 (let ((erased Poly)) (List Mono))
 
-; Factors are the variables of a monomial, multiplied; Terms are the monomials of a polynomial, added.
 (def-adts $ (Layer : (Type A) -> Type)
   enum
   (many Factors : -> (Layer (Nat)))

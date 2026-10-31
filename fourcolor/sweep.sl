@@ -1,13 +1,9 @@
-; The interface between the geometric part of the proof and the combinatorial one. A point is labelled by its
-; position in a list of points plus 1; label 0 is left for a virtual point.
-
 (def-adts $ (LApp : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
   enum
   (many LAppNil : (erased Type A) (erased (List A) ys) -> (LApp A (Nil A) ys ys))
   (many LAppCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (LApp A xs ys zs) p)
       -> (LApp A (Cons A x xs) ys (Cons A x zs))))
 
-; At step t the active items r close at t; r is the list of their starting labels.
 (def-adts $ (Closed : -> Type)
   enum
   (many MkClosed : (many (Nat) t) (many (List (Nat)) r) -> (Closed)))

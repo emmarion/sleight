@@ -15,7 +15,6 @@
   (let-match erased xs (Cons _ x xs1) ((Nil _) (LAppNil _ (Nil _))))
   (LAppCons _ x xs1 (Nil _) xs1 (lapp-nil _ xs1)))
 
-; (a ++ b) ++ c is a ++ (b ++ c).
 (def-fns _ $ (erased lapp-assoc : (erased Type A) (erased (List A) a b c ab abc) (subterm erased (LApp A a b ab) p)
     (erased (LApp A ab c abc) q) -> (erased (List A) bc) (erased (LApp A b c bc) r) (erased (LApp A a bc abc) s))
   (let-match erased p (LAppCons _ x a1 _ ab1 p1)
@@ -31,7 +30,6 @@
   (let ((erased ab1) (erased r) (erased s)) (lapp-assoc-back _ a1 b c bc abc1 p q1))
   (values (Cons _ x ab1) (LAppCons _ x a1 b ab1 r) (LAppCons _ x ab1 c abc1 s)))
 
-; Two splits of one list: one cut is before the other.
 (def-adts $ (Split2 : (Type A) ((List A) u) ((List A) v) ((List A) b) ((List A) a) -> Type)
   enum
   (many SplitLeft : (erased Type A) (erased (List A) u v b a m) (erased (LApp A u m b) p) (erased (LApp A m a v) q)
@@ -57,7 +55,6 @@
 (def-fns _ $ (erased rot-refl : (erased Type A) (erased (List A) xs) -> (erased (Rot A xs xs) r))
   (MkRot _ xs xs (Nil _) xs (LAppNil _ xs) (lapp-nil _ xs)))
 
-; A rotation of a rotation is a rotation.
 (def-fns _ $ (erased rot-trans : (erased Type A) (erased (List A) g f xs) (erased (Rot A g f) r1) (erased (Rot A f xs) r2) ->
     (erased (Rot A g xs) r))
   (let-match erased r1 (MkRot _ _ _ u v p1 q1))

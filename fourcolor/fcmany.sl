@@ -1,5 +1,3 @@
-; The four colour theorem as a program: from the edges of a drawing, a proper four-colouring of its points. The
-; drawing's certificate and the colouring's properness are erased. Load after defs.sl and before coloring.sl, whose Proper shadows defs.sl's.
 (def-adts $ (FourColorM : -> Type)
   enum
   (many MkFourColorM : (erased (Level) L)

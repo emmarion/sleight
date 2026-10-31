@@ -28,7 +28,6 @@
       (let-match erased l (LengthCons _ _ _ n1 l1))
       (NthThere _ x ys1 n1 a (snoc-new _ xs1 ys1 a n1 s1 l1)))))
 
-; An entry of the extended list is an old entry or the new one.
 (def-fns _ $ (erased snoc-back : (erased Type A) (erased (List A) xs ys) (erased A a x) (erased (Nat) i n)
     (subterm erased (Snoc A xs a ys) s) (erased (Length A xs n) l) (erased (Nth A ys i x) p) ->
     (erased (Or (Nth A xs i x) (Eq (Nat) i n)) r))

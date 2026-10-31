@@ -1,4 +1,3 @@
-; The corner after dart d, with the active items there, in sweep order.
 (def-adts $ (Group : -> Type)
   enum
   (many MkGroup : (many (Nat) d) (many (List (Nat)) items) -> (Group)))
@@ -73,7 +72,6 @@
   (MkLink e2 nd2 s2 x d2 c p new (agree-nth e e2 (Nil (Nat)) d2 p ge pp (NotInNil d2))
     (walk-move e nd e2 nd2 s s2 m c p n w pm l sf ge gn sb)))
 
-; The head group's corner moves from the corner after d to the corner after x.
 (def-fns _ $ (erased chain-rehead : (erased (List (Nat)) e nd e2 nd2 s s2 m sg xs xs2) (erased (List (Group)) gs) (erased (Nat) d x dn n c0)
     (erased (Chain e nd s (Cons (Group) (MkGroup d xs) gs) dn) ch) (erased (Darts gs sg) ds) (erased (Disj sg m) dj)
     (erased (Nth (Nat) nd d c0) old) (erased (Nth (Nat) nd2 x c0) new)
@@ -103,7 +101,6 @@
     ((ChainOne _ _ _ _ _ _ k) (let-match erased k (MkLink _ _ _ _ _ c _ pc _ _)) (values c pc))
     ((ChainCons _ _ _ _ _ _ _ _ _ k _) (let-match erased k (MkLink _ _ _ _ _ c _ pc _ _)) (values c pc))))
 
-; One more edge from v: the corner after y1 at v is joined to the corner after c, where the next closed item sits.
 (def-fns _ $ (erased chord-step : (erased (List (Nat)) e nd sr pl xb ya xc yb xc2) (erased (List (Group)) rest) (erased (Nat) n db y1 c v u)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (Length (Nat) nd n) ln)
     (erased (Chain e nd (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c sr)
@@ -155,7 +152,6 @@
   (let-match erased pa (NotInCons _ x s1 na pa1) ((NotInNil _) (DisjNil _)))
   (DisjCons x s1 _ (NotInCons x a _ (apart-sym a x na) $ NotInNil x) (notin-disj1 a s1 pa1)))
 
-; The first edge from v: a pendant at the corner after d, the head group's dart; v's only dart is n+1.
 (def-fns _ $ (erased pendant-step : (erased (List (Nat)) e nd sr xs xb ys xc) (erased (List (Group)) rest) (erased (Nat) n d)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (Length (Nat) nd n) ln)
     (erased (Chain e nd (Cons (Nat) d sr) (Cons (Group) (MkGroup d xs) rest) d) ch)
@@ -200,7 +196,6 @@
     ((ChainCons _ _ _ xs ys gs1 d d2 _ k rest)
       (ChainCons e nd s2 xs ys gs1 d d2 dn (link-weaken e nd s s2 d d2 k sb) (chain-weaken e nd s s2 _ dn rest sb)))))
 
-; An empty group c after the second one leaves the frontier; the walks on either side of it join through its corner.
 (def-fns _ $ (erased drop-step : (erased (List (Nat)) e nd sr xb ya z) (erased (List (Group)) rest) (erased (Nat) db y1 c c2)
     (erased (PlaneMap e nd) pm)
     (erased (Chain e nd (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c $ Cons (Nat) c2 sr)

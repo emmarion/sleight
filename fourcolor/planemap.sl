@@ -47,7 +47,6 @@
 
 
 
-; Every non-empty plane map is a smaller one with one more edge.
 (def-fns _ $ (erased pm-last : (erased (List (Nat)) e nd) (erased (Nat) a b) (erased (PlaneMap e nd) m) (erased (Nth (Nat) e a b) p) ->
     (erased (List (Nat)) e0 nd0) (erased (Nat) n) (erased (EdgeGrow e0 n e) g) (erased (PlaneMap e0 nd0) m0)
     (erased (Subterm (PlaneMap e0 nd0) m0 (PlaneMap e nd) m) sm))

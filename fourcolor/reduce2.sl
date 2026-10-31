@@ -1,5 +1,3 @@
-; The four colour theorem for drawings, from Gonthier's four colour theorem for hypermaps, on these definitions.
-
 (def-fns _ $ (erased hyp-reduction : (erased (Level) L)
     (erased (Fn L (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) pl)
         (erased (Bridgeless d e n f) b) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c)) colour)

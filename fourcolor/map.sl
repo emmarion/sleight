@@ -1,12 +1,11 @@
-; A map on darts 0..n-1: e and nd are the edge and node permutations, as lists indexed by dart.
-
 (def-adts $ (Snoc : (Type A) ((List A) xs) (A a) ((List A) ys) -> Type)
   enum
   (many SnocNil : (erased Type A) (erased A a) -> (Snoc A (Nil A) a (Cons A a (Nil A))))
   (many SnocCons : (erased Type A) (erased A x a) (erased (List A) xs ys) (erased (Snoc A xs a ys) p)
       -> (Snoc A (Cons A x xs) a (Cons A x ys))))
 
-; b is reached from a by steps of the face permutation, nd after e.
+; e and nd are the edge and node permutations, as lists indexed by dart. b is reached from a by steps of the
+; face permutation, nd after e.
 (def-adts $ (FaceReach : ((List (Nat)) e) ((List (Nat)) nd) ((Nat) a) ((Nat) b) -> Type)
   enum
   (many FRHere : (erased (List (Nat)) e nd) (erased (Nat) a) -> (FaceReach e nd a a))
@@ -56,16 +55,13 @@
 (def-adts $ (PlaneMap : ((List (Nat)) e) ((List (Nat)) nd) -> Type)
   enum
   (many PMNil : -> (PlaneMap (Nil (Nat)) (Nil (Nat))))
-  ; An edge with two new vertices.
   (many PMIsolated : (erased (List (Nat)) e nd e2 nd1 nd2) (erased (Nat) n)
       (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Snoc (Nat) nd n nd1) sn1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
-  ; An edge from the corner after d to a new vertex.
   (many PMPendant : (erased (List (Nat)) e nd e2 nd1 nd2) (erased (Nat) n d)
       (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d n) bd)
       (erased (Insert nd d n nd1) i1) (erased (Snoc (Nat) nd1 (Succ n) nd2) sn2)
       -> (PlaneMap e2 nd2))
-  ; An edge from the corner after d1 to the corner after d2, at another vertex: a labelling constant along nd separates them.
   (many PMChord : (erased (List (Nat)) e nd e2 nd1 nd2 vl) (erased (Nat) n d1 d2)
       (erased (PlaneMap e nd) m) (erased (EdgeGrow e n e2) g) (erased (Lt d1 n) b1) (erased (Lt d2 n) b2)
       (erased (Separates vl nd d1 d2) loopless)

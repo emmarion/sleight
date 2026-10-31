@@ -32,7 +32,6 @@
       (let-match erased s2 (SnocCons _ _ _ _ ls3 s4))
       (RespCons lab xs3 ls3 j l1 p (respects-snoc lab xs1 xs3 ls1 ls3 c l rp1 pc s3 s4)))))
 
-; A dart inserted after d takes d's label.
 (def-fns _ $ (erased respects-insert : (erased (List (Nat)) lab lab2 nd nd2) (erased (Nat) d x n l)
     (erased (Respects lab nd lab) rp) (erased (Insert nd d x nd2) i) (erased (Length (Nat) lab x) len)
     (erased (Nth (Nat) lab d l) pd) (erased (Snoc (Nat) lab l lab2) sn) -> (erased (Respects lab2 nd2 lab2) r))
@@ -58,7 +57,6 @@
   (let-match erased r (NRStep _ _ b1 _ p1 r1) ((NRHere _ _) (NRStep nd a c c p (NRHere nd c))))
   (NRStep nd a b1 c p1 (nr-snoc nd b1 b c r1 p)))
 
-; An insertion after d turns the step out of d into two steps.
 (def-fns _ $ (erased nr-insert : (erased (List (Nat)) nd nd2) (erased (Nat) d x a b) (subterm erased (NodeReach nd a b) r)
     (erased (Insert nd d x nd2) i) (erased (Length (Nat) nd x) len) -> (erased (NodeReach nd2 a b) r2))
   (let-match erased r (NRStep _ _ b1 _ p1 r1) ((NRHere _ _) (NRHere nd2 a)))
@@ -96,7 +94,6 @@
   (let-match erased rs (RepsCons _ _ ls1 _ l r pr reach rs1) ((RepsNil _ _ _) (RepsNil nd rep2 i)))
   (RepsCons nd rep2 ls1 i l r (snoc-old _ rep rep2 a r l s pr) reach (reps-rep nd rep rep2 ls1 a (Succ i) rs1 s)))
 
-; Dart j = i + k, the next one after the k darts of ls, joins with label l.
 (def-fns _ $ (erased reps-snoc : (erased (List (Nat)) nd rep ls ls2) (erased (Nat) i k j l r) (subterm erased (Reps nd rep i ls) rs)
     (erased (Length (Nat) ls k) len) (erased (Add k i j) a) (erased (Snoc (Nat) ls l ls2) s)
     (erased (Nth (Nat) rep l r) pr) (erased (NodeReach nd r j) reach) -> (erased (Reps nd rep i ls2) res))

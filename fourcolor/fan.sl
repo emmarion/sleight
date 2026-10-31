@@ -100,7 +100,6 @@
       (let-match erased sn (SnocCons _ _ _ _ m3 sn1))
       (SubCons x m3 s q (sub-snoc d m1 m3 s sb1 p sn1)))))
 
-; The head group moves to the end.
 (def-fns _ $ (erased state-rot : (erased (Nat) t d0 d1) (erased (List (Nat)) e nd pl rep xs0 xs1 fl) (erased (List (Group)) gsr)
     (erased (State t e nd pl rep (Cons (Group) (MkGroup d0 xs0) $ Cons (Group) (MkGroup d1 xs1) gsr) fl) st) ->
     (erased (List (Group)) gs2) (erased (List (Nat)) fl2) (erased (Snoc (Group) (Cons (Group) (MkGroup d1 xs1) gsr) (MkGroup d0 xs0) gs2) sg)
@@ -123,7 +122,6 @@
       (chain-weaken e nd s s2 gs2 d1 ch2 sb) rp al (grouplab-snoc pl xs0 gs1 gs2 d0 u0 gl1 sg pu0 a0) (flat-snoc gs1 gs2 d0 xs0 fl1 fl2 gf1 sg a2) rs)
     (MkRot _ fl2 fl xs0 fl1 p a2)))
 
-; The groups gs1 before g move to the end.
 (def-fns _ $ (erased state-rot-n : (erased (Nat) t) (erased (List (Nat)) e nd pl rep fl) (subterm erased (List (Group)) gs1)
     (erased (Group) g) (erased (List (Group)) gs2 gs) (erased (LApp (Group) gs1 (Cons (Group) g gs2) gs) p)
     (erased (State t e nd pl rep gs fl) st) ->
@@ -332,8 +330,6 @@
   (values e2 nd2 pl2 xs2 c2 gsr2 (AgTrans e e3 e2 (Nil _) ge3 ge2) (AgTrans pl pl3 pl2 (Nil _) gp3 gp2) f2
     (AJCons e2 pl2 rr1 a t (joined-grow e3 pl3 e2 pl2 a t j3 ge2 gp2) j2)))
 
-; The first edge of step t, a pendant at the head group's corner: the head group's items are b ++ yh ++ y3, and yh
-; is the head of the run when there is one.
 (def-fns _ $ (erased fan-pendant : (erased (Nat) t d) (erased (List (Nat)) e nd pl rep by b y yh y3 fl2 f3 xfr rr rest) (erased (List (Group)) gs3)
     (erased (State t e nd pl rep (Cons (Group) (MkGroup d by) gs3) fl2) st) (erased (LApp (Nat) b y by) pb) (erased (LApp (Nat) yh y3 y) ph)
     (erased (GFlat gs3 f3) g3) (erased (LApp (Nat) y3 f3 xfr) px) (erased (LApp (Nat) rr rest xfr) pr) ->
@@ -411,7 +407,6 @@
       (GLCons pl b db ub _ pub ab (GLCons pl ns y1 t _ py (repeat-allis k t ns rk) gl2))
       (GFlatCons db b nr fl _ p2 (GFlatCons y1 ns rest nr _ p1 (GFlatCons c xs fr rest gsr px gf))) rs)))
 
-; After the step, the frontier's items b ++ (ns ++ rest) are a rotation of p ++ ns ++ q, given that rest ++ b is q ++ p.
 (def-fns _ $ (erased step-rot : (erased (List (Nat)) b ns rest nr fl qp p q pn ys) (erased (LApp (Nat) ns rest nr) p1) (erased (LApp (Nat) b nr fl) p2)
     (erased (LApp (Nat) rest b qp) pq) (erased (LApp (Nat) q p qp) a3) (erased (LApp (Nat) p ns pn) a4) (erased (LApp (Nat) pn q ys) a5)
     -> (erased (Rot (Nat) fl ys) r))

@@ -62,8 +62,6 @@
     ((SFOld x _ s3 _ p sf1) (NotInCons q x s3 (notin-in q x s out p) (notin-fresh q n s3 s sf1 out bq)))
     ((SFNew x _ s3 _ p sf1) (NotInCons q x s3 (ApLt _ _ q x (lt-le-trans q n x bq p)) (notin-fresh q n s3 s sf1 out bq)))))
 
-; A walk in a plane map of size n survives a growth that changes nd only at corners it avoids, and may then
-; avoid any set of old avoided corners and new darts.
 (def-fns _ $ (erased walk-move : (erased (List (Nat)) e nd e2 nd2 s s2 m) (erased (Nat) a b n) (subterm erased (Walk e nd s a b) w)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
     (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb) -> (erased (Walk e2 nd2 s2 a b) r))
