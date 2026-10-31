@@ -720,7 +720,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   rejected, and in another a variant passing `CAFive`'s insertE to
   `TriadFive` without equating it to that of the `ValidContract`. That these statements match Coq's has been checked only by
   reading.
-- `embed4.sl`, `embed4proof.sl`, `embed4goal.sl` (load after `fcopen.sl`, in the chain
+- `embed4.sl`, `embed4proof.sl`, `embed4goal.sl` (load after `fcopen.sl` and `native.sl`, in the chain
   of `fcgoal.sl` below, in place of `fcgoal.sl`):
   embed.v's embed_functor and the facts of embeddable that the embedding
   reads, for the configuration maps, as far as both compilers check them.
@@ -849,10 +849,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `four-color-proof`. Chain: that of `fcfinal.sl` with `paint fcmany`
   after `readback` and `fcmanyfinal` in place of `fcfinal`, with `--goal
   proved`.
-  In one run on a 4-core cloud VM it passed with slc in about 1670 s
-  (28 minutes), and in one with the reference compiler (under `ulimit -s
-  unlimited`) in about 3520 s (59 minutes), the two runs sharing the VM,
-  each at most about 3.3 GB resident.
+  In one run on a 4-core cloud VM shared with other runs it passed with
+  slc in about 1060 s, and in one with the reference compiler (under
+  `ulimit -s unlimited`) in about 1050 s, each at most about 3.3 GB
+  resident.
 - `fcopen.sl`, `fcgoal.sl` (load after `evalid.sl`, `triad.sl`, `trivfive.sl` and
   `red/chunks.sl`, in the chain below): `four-color-open` gives `FourColor`
   from `UnavE cfs`, `AllRedC CRX css`, `BirkhoffChecks` and `CfCerts cfs`
@@ -879,17 +879,54 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   contract3 embed6 fullred trivred notembed evalid triad trivfive red/chunks
   fcopen fcgoal` (each `.sl`). `contract2.sl` loads before `unav/`,
   whose `Sub` it would otherwise read.
+- `native.sl` (load after `std/macro.sl`, before the files that use it):
+  macros that put the computed checks of a unit in one `native-compute`.
+  `(native-jobs name ev job ...)` queues jobs, each `(f pat)` for a
+  `Settled` thunk `f` or `(T e pat)` for a thunk `-> (many T _)` with body
+  `e` that the macro defines, and the erased `ev`, which may name the
+  binders of the jobs' patterns. `(native-each name xs (x t r) T e pat
+  step nil)` comptime-matches the `Settled` list `xs` into its elements
+  and queues the job `(T e pat)` for each, with `x` the element and `t`
+  its tail, and the fold of `step` (with `r` the fold of the rest) ending
+  in `nil` as its evidence. `(native-then stmt ...)` queues statements.
+  `(native-run)` runs every queued thunk in one `native-compute`, then
+  matches each result against its pattern, binds each `name` erased to
+  its evidence and runs the queued statements, in the order queued.
+  Names in patterns, evidence and statements resolve where they are
+  queued; the patterns' binders are renamed apart. The queue is the
+  `Settled` value of the last of `native-queue-0`, `native-queue-1`, ...
+  in scope, each macro binding the next. `red/proof-c.sl`,
+  `red/bproof.sl`, `unav/qztproof.sl` and `embed4proof.sl` queue their
+  checks (one job per chunk of css for `AllRedC` and, through
+  `allgc-concat`, for `AllGc`), and `fcproof.sl` and each check's goal
+  file call `native-run`. In one run of the `fcfinal.sl` chain with slc on
+  a 4-core cloud VM shared with other runs (wall times appear inflated
+  about twofold), elaboration took about 70 s before `native-run`, whose
+  one `native-compute` compiled 22.0 MB of OCaml in about 640 s and ran
+  its 69 thunks in about 780 s (about 1110 s of CPU; the longest, a chunk
+  of `AllRedC`, about 100 s), and about 10 s followed; in later runs on a
+  less loaded VM the compile took about 410 to 600 s and the thunks about
+  350 to 380 s;
+  most of that OCaml, about 13 MB, appeared to be the scripts of
+  `unav/data.sl`. Before, the unit compiled seven programs, among them
+  21.6 MB for `UnavE` (about 505 s) and 7.8 MB for `CfCerts` (about
+  520 s). In test runs, a `BirkhoffChecks` built from the proofs in the
+  wrong order and a failing job were rejected.
+  Compiling that 22.0 MB alone with ocamlopt took about 595 s with
+  `-inline 0` and about 605 s with `-inline 25` (`--inline`, MANUAL.md),
+  much as without it; three of its thunks ran about 10 to 20% faster
+  with `-inline 25` than with `-inline 0`, in one run each.
 - `fcproof.sl`, `fcfinal.sl` (load after `embed4proof.sl`, in the chain
   below): `fcproof.sl` binds `four-color-proof`, `FourColor` of `defs.sl`
   with no hypotheses, by `four-color-open` on `unav-proof`,
   `all-red-proof`, `birkhoff-proof` and `cfcerts-proof`, all computed in
   the same unit, and `fcfinal.sl` sets and proves it as the goal. Chain:
-  that of `fcgoal.sl` up to `fcopen.sl`, then `embed4 red/proof-c
+  that of `fcgoal.sl` up to `fcopen.sl`, then `native embed4 red/proof-c
   red/bproof unav/qztproof embed4proof fcproof fcfinal` (each `.sl`), with
-  `--goal proved`. In one run on a 4-core cloud VM, sharing it with two
-  other runs of this size, it passed with slc in about 2190 s (36
-  minutes), at most about 3.3 GB resident; the reference compiler has
-  checked the same computations in `fcmanyfinal.sl`'s unit (above). In test runs on the chain of
+  `--goal proved`. In one run each on a 4-core cloud VM shared with other
+  runs it passed with slc in about 1510 s and with the reference compiler
+  (under `ulimit -s unlimited`) in about 970 s, at most about 3.3 GB
+  resident. In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
 - `embed6.sl` (load after `embed5.sl`): embed_disk, embed_rem,
@@ -1077,20 +1114,21 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `red/proof-c.sl` proves `AllRedC CRX css` (`all-red-proof`) for css the
   chunks of `red/configs.sl` (`red/chunks.sl`), and `red/goal-c.sl` sets
   it as a goal and discharges it with that proof: every configuration appears to be C-reducible, in the
-  sense of `CRed`, with its contract. Load order: `std/nat.sl
+  sense of `CRed`, with its contract. Load order: `std/macro.sl std/nat.sl
   std/list.sl`, then `base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
   hypwalkup hypgeom` (each `.sl`), then `cfmap.sl red/red.sl cpmap.sl
   red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
   red/crestrict.sl red/kempe.sl cpcolor.sl red/configs.sl red/bridge.sl
   red/init.sl red/check.sl red/gramrot.sl red/cfred.sl red/ccomp.sl
-  red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl red/proof-c.sl
+  red/ccheck.sl`, then `red/sanity-c.sl`, or `red/chunks.sl native.sl red/proof-c.sl
   red/goal-c.sl` (with `--goal proved`). In that chain the goal was
   proved with slc in about 7.4, 9 and 12 minutes of wall time in
   three runs on a 4-core cloud VM, the last sharing it with other checks. What `CRed` and `ValidContract` state has not
   been checked against Coq's C_reducible and valid_contract beyond
   reading them.
-- `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`): the
+- `red/bcheck.sl`, `red/bproof.sl`, `red/bgoal.sl` (load after `red/ccheck.sl`, with `native.sl`
+  before `red/bproof.sl` and `std/macro.sl` first): the
   Birkhoff check of `birkhoff.v`. `birkhoff-check-c` runs Birkhoff_check2
   from the initial trees, for ring size h + 2, kernel size m, an
   iteration count and a list of basis programs, and returns a certificate
@@ -1201,7 +1239,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
   dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
-  qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
+  qmirror.sl unave.sl qztcfs.sl native.sl qztproof.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
   without the goal). Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
