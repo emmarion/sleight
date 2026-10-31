@@ -1,14 +1,12 @@
-; srcycleI of geometry.v, on the rings of snip.sl. Load after snip.sl.
-
-; No dart of zs is on the face of x, each told apart from x by a labelling constant on the faces (the bonds gf).
+; No dart of zs is on the face of x; gf holds the bonds of the face permutation.
 (def-adts $ (FaceApart : ((List (Bond)) gf) ((Nat) x) ((List (Nat)) zs) -> Type)
   enum
   (many FANil : (erased (List (Bond)) gf) (erased (Nat) x) -> (FaceApart gf x (Nil (Nat))))
   (many FACons : (erased (List (Bond)) gf) (erased (Nat) x z) (erased (List (Nat)) zs) (erased (Sep gf x z) s) (erased (FaceApart gf x zs) rest)
       -> (FaceApart gf x (Cons (Nat) z zs))))
 
-; srpath of geometry.v: from x the darts p, each on the face of the edge image of the one before and on no face of the
-; darts before that one, the edge image of the last on the face of x0; gf holds the bonds of the face permutation.
+; From x the darts p, each on the face of the edge image of the one before and on no earlier face, the edge image of the
+; last on the face of x0; gf holds the bonds of the face permutation.
 (def-adts $ (SRPath : ((List (Nat)) e f) ((List (Bond)) gf) ((Nat) x0 x) ((List (Nat)) p) -> Type)
   enum
   (many SRNil : (erased (List (Nat)) e f) (erased (List (Bond)) gf) (erased (Nat) x0 x ex) (erased (Nth (Nat) e x ex) pe) (erased (SomePath f (Nil (Nat)) ex x0) w)
@@ -16,7 +14,6 @@
   (many SRCons : (erased (List (Nat)) e f p) (erased (List (Bond)) gf) (erased (Nat) x0 x ex y) (erased (Nth (Nat) e x ex) pe)
       (erased (SomePath f (Nil (Nat)) ex y) w) (erased (FaceApart gf x p) sa) (erased (SRPath e f gf x0 y p) rest) -> (SRPath e f gf x0 x (Cons (Nat) y p))))
 
-; The class labels of darts told apart are apart.
 (def-fns _ $ (erased sep-lab : (erased (Nat) d a b la lb) (erased (List (Nat)) lab rs ids) (erased (List (Bond)) g) (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro)
     (erased (Sep g a b) s) (erased (Nth (Nat) lab a la) pa) (erased (Nth (Nat) lab b lb) pb) (erased (Length (Nat) lab d) ll) -> (erased (Apart (Nat) Lt la lb) r))
   (match erased (nat-cmp la lb) _
@@ -57,7 +54,6 @@
   (values y ey (RPCons e f p1 x ex y1 y pex wy rp1) pe w (Cons (Nat) lx ls1) (RespCons lab (Cons (Nat) y1 p1) ls1 x lx plx rl1)
     (DistCons lx ls1 (NotInCons lx ly ls2 ne (seps-notin d x lx lab rs ids p1 ls2 gf io ro ll plx sa rl2)) dl1)))
 
-; srcycleI of geometry.v, from srcycle to scycle rlink: in a bridgeless map an srcycle x0 :: p is a ring.
 (def-fns _ $ (erased srcycle-ring : (erased (Nat) d x0) (erased (List (Nat)) e n f p) (erased (List (Bond)) gf) (erased (Hypermap d e n f) h)
     (erased (Bridgeless d e n f) br) (erased (Graph d f gf) gr) (erased (SRPath e f gf x0 x0 p) sp) -> (erased (Ring e f x0 p) r))
   (let-match erased br (MkBridgeless _ _ _ _ ge gf2 gre grf as))

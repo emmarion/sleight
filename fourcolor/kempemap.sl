@@ -1,8 +1,4 @@
-; Kempe_map of kempe.v, by its induction with the dart-preserving Walkup transforms of hypjordan.sl in place of the
-; darts of the smaller map, on the chromogram operations of red/gramrot.sl.
-
-; The dart-preserving Walkup transforms of hypjordan.sl, with the dead darts s, fixed by e, n and f, named: k of them, and
-; m live darts.
+; s are the k dead darts, fixed by e, n and f, and m the number of live darts.
 (def-adts $ (Dead : ((Nat) d) ((List (Nat)) e n f s) ((Nat) m) -> Type)
   enum
   (many MkDead : (erased (Nat) d m k) (erased (List (Nat)) e n f s) (erased (FixedIn e s) fe) (erased (FixedIn n s) fn)
@@ -13,7 +9,6 @@
   (let-match erased dd (MkDead _ _ k _ _ _ _ fe fn ff ds ls us a))
   (MkDead d m k n f e s fn ff fe ds ls us a))
 
-; WalkupE at the live dart z: z cut out of n and f, and added to the dead darts.
 (def-fns _ $ (erased walk-dead : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip n z n2) skn) (erased (Skip f z f2) skf) (erased (Hypermap d e2 n2 f2) h2)
@@ -30,7 +25,6 @@
     (MkDead d m1 (Succ k) e2 n2 f2 (Cons _ z s) (fixed-third d n2 f2 e2 (Cons _ z s) (hyper-rot d e2 n2 f2 h2) fn2 ff2) fn2 ff2 ds2
       (LengthCons _ z s k ls) us2 a2)))
 
-; WalkupN at the live dart z: z cut out of f and e.
 (def-fns _ $ (erased walk-dead-n : (erased (Nat) d m z) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Dead d e n f s m) dd) (erased (Lt z d) lz) (erased (NotIn z s) out)
     -> (erased (List (Nat)) e2 n2 f2) (erased (Nat) m1) (erased (Skip f z f2) skf) (erased (Skip e z e2) ske) (erased (Hypermap d e2 n2 f2) h2)
@@ -40,18 +34,15 @@
   (let ((erased h3) (erased g3)) (genus-rot2 d (Zero) n2 f2 e2 h2 g2))
   (values e2 n2 f2 m1 skf ske h3 g3 em (dead-rot d m1 f2 e2 n2 _ (dead-rot d m1 n2 f2 e2 _ dd2))))
 
-; n is determined by e and f: f b = a and e c = b give n a = c.
 (def-fns _ $ (erased hyper-node : (erased (Nat) d a b c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (Nth (Nat) f b a) pf) (erased (Nth (Nat) e c b) pe) -> (erased (Nth (Nat) n a c) r))
   (hyper-third d a b c f e n (hyper-rot d n f e (hyper-rot d e n f h)) pf pe))
 
-; e is determined by n and f: n b = a and f c = b give e a = c.
 (def-fns _ $ (erased hyper-edge : (erased (Nat) d a b c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
     (erased (Nth (Nat) n b a) pn) (erased (Nth (Nat) f c b) pf) -> (erased (Nth (Nat) e a c) r))
   (hyper-third d a b c n f e (hyper-rot d e n f h) pn pf))
 
-; kempe.v's contraction of the edge z, ez = e z: WalkupN at z, then WalkupE at ez, so that e2, n2 and f2 are e, n and f
-; with z and ez fixed and the node cycles of z and ez merged; fz = f z and fez = f ez.
+; e2, n2 and f2 are e, n and f with z and ez = e z fixed and the node cycles of z and ez merged; fz = f z and fez = f ez.
 (def-adts $ (Cut2 : ((Nat) d) ((List (Nat)) e n f) ((Nat) z ez) ((List (Nat)) e2 n2 f2) -> Type)
   enum
   (many MkCut2 : (erased (Nat) d z ez fz fez) (erased (List (Nat)) e n f e1 n1 f1 e2 n2 f2) (erased (Hypermap d e1 n1 f1) h1)
@@ -86,7 +77,6 @@
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e1 n1 f1 h1))
   (skip-cut-at d ez x c f1 fi f2 pf skf2 (skip-keep z x ez f f1 skf px nxz ne) (skip-keep z ez c f f1 skf pz ne ncz) nx))
 
-; e c, for c neither z nor ez, is neither of them either.
 (def-fns _ $ (erased cut-img : (erased (Nat) d z ez c) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Nth (Nat) e z ez) pez)
     (erased (Nth (Nat) e ez z) pze) (erased (Lt c d) lc) (erased (Apart (Nat) Lt c z) ncz) (erased (Apart (Nat) Lt c ez) nc)
     -> (erased (Nat) b) (erased (Nth (Nat) e c b) pb) (erased (Apart (Nat) Lt b z) nbz) (erased (Apart (Nat) Lt b ez) nb))
@@ -131,7 +121,6 @@
   (let ((erased q1)) (hyper-node d x b c e1 n1 f1 h1 (skip-cut-at d z b x f fi f1 pf skf fb (hyper-third d z ez x e n f h pze px) nbz) e1c))
   (skip-keep ez x c n1 n2 skn q1 nx nc))
 
-; The edge permutation of the contraction is e away from z and ez.
 (def-fns _ $ (erased cut-e2 : (erased (Nat) d z ez x c) (erased (List (Nat)) e n f e2 n2 f2) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Nth (Nat) e x c) px) (erased (Apart (Nat) Lt x z) nxz) (erased (Apart (Nat) Lt x ez) nx)
     -> (erased (Nth (Nat) e2 x c) r))
@@ -165,7 +154,7 @@
       (erased (Nth (Nat) ks y l2) p2) (erased (Apart (Nat) Lt l1 l2) ne) (erased (EdgeLive s ks g) rest)
       -> (EdgeLive s ks (Cons (Bond) (MkBond x y) g))))
 
-; A four-colouring of the live darts, those not in s: Gonthier's coloring with the edges at dead darts left out.
+; ks four-colours the darts not in s.
 (def-adts $ (LiveColoring : ((Nat) d) ((List (Nat)) s e f ks) -> Type)
   enum
   (many MkLC : (erased (Nat) d) (erased (List (Nat)) s e f ks) (erased (List (Bond)) ge) (erased (Graph d e ge) gr) (erased (Respects ks f ks) rf)
@@ -204,7 +193,6 @@
   (let-match erased lc (MkLC _ _ _ _ _ ge gr rf el u lk))
   (nth-exists _ ks d x lk lx))
 
-; A live dart is moved by n (n'id of kempe.v).
 (def-fns _ $ (erased absurd lc-node : (erased (Nat) d x) (erased (List (Nat)) s e n f ks) (erased (Hypermap d e n f) h)
     (erased (LiveColoring d s e f ks) lc) (erased (Lt x d) lx) (erased (NotIn x s) out) (erased (Nth (Nat) n x x) px) -> (erased (False) r))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
@@ -293,7 +281,6 @@
   (let ((erased b) (erased pb)) (lc-col d y s e f ks lc lc2))
   (ELLive s2 ks g1 x y a b out pa pb (lc-edge d x y a b s e f ks lc lx out2 pc pa pb) rest))
 
-; The colouring k of the map is one of the contraction (coloring (k \o h) in Kempe_map).
 (def-fns _ $ (erased cut-proj : (erased (Nat) d z ez) (erased (List (Nat)) e n f s ks e2 n2 f2) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Hypermap d e2 n2 f2) h2) (erased (FixedIn f2 (Cons (Nat) ez (Cons (Nat) z s))) ff2)
     (erased (LiveColoring d s e f ks) lc) -> (erased (LiveColoring d (Cons (Nat) ez (Cons (Nat) z s)) e2 f2 ks) r))
@@ -422,8 +409,6 @@
   (ELLive s k0 g1 x y a b out (set2-other k1 k0 z cz ez cez x a st pa nxz nx) (set2-other k1 k0 z cz ez cez y b st pb nyz ny)
     (lc-edge d x y a b s2 e2 f2 k1 lc1 lx (NotInCons x ez _ nx (NotInCons x z s nxz out)) (cut-e2 d z ez x y e n f e2 n2 f2 h ct px nxz nx) pa pb) rest))
 
-; invh_col_s of Kempe_map: a colouring k1 of the contraction gives one of the map, with z coloured cz and ez the colour of
-; its face.
 (def-fns _ $ (erased cut-lift : (erased (Nat) d z ez fz fez cz cez) (erased (List (Nat)) e n f s k1 e2 n2 f2) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (LiveColoring d (Cons (Nat) ez (Cons (Nat) z s)) e2 f2 k1) lc1)
     (erased (Nth (Nat) f z fz) pfz) (erased (Nth (Nat) f ez fez) pfez) (erased (Or (Eq (Nat) fz z) (Nth (Nat) k1 fz cz)) hz)
@@ -486,7 +471,6 @@
   (let-match erased (xor-assoc ya yb yc y1 y2 y3 y4 s1 s2 s3 s4) (Refl _ _))
   (cb-inj abc abc2 x2 y2 q2 q4))
 
-; (l + b) + (b + a) = l + a.
 (def-fns _ $ (erased addc-tri : (erased (Col) l b a u v t) (erased (AddK l b u) p) (erased (AddK b a v) q) (erased (AddK l a t) r) -> (erased (AddK u v t) s))
   (let ((erased w) (erased pw)) (addc-total u v))
   (let ((erased bb) (erased pbb)) (addc-total b b))
@@ -514,7 +498,7 @@
   (many LFNil : (erased Type A) (erased A p) -> (LastFrom A p (Nil A) p))
   (many LFCons : (erased Type A) (erased A p c l) (erased (List A) lc) (erased (LastFrom A c lc l) t) -> (LastFrom A p (Cons A c lc) l)))
 
-; Gonthier's urtrace: et lists the sums of consecutive colours of lc, the first with the last.
+; et lists the sums of consecutive colours of lc, the first with the last.
 (def-adts $ (UTr : ((List (Col)) lc et) -> Type)
   enum
   (many UTNil : -> (UTr (Nil (Col)) (Nil (Col))))
@@ -562,7 +546,6 @@
       (let ((erased et3) (erased se1) (erased r1)) (pairfrom-snoc c1 l c s lc1 lc3 et1 pf1 lt1 sn1 a))
       (values (Cons _ s1 et3) (SnocCons _ s1 s et1 et3 se1) (PFCons p c1 s1 lc3 et3 a1 r1)))))
 
-; urtrace_rot: rotating the colours rotates the urtrace.
 (def-fns _ $ (erased utr-rot : (erased (Col) c e) (erased (List (Col)) lc lc2 et1) (erased (UTr (Cons (Col) c lc) (Cons (Col) e et1)) u)
     (erased (HSnoc (Col) lc c lc2) sn) -> (erased (List (Col)) et2) (erased (HSnoc (Col) et1 e et2) se) (erased (UTr lc2 et2) r))
   (let-match erased u (UTCons _ l _ _ lt pf))
@@ -634,7 +617,7 @@
   (let ((erased cs3) (erased sc1) (erased r1)) (cols-snoc lc1 lc3 cs1 l c al1 sn1 pc))
   (values (Cons _ b cs3) (SnocCons _ b c cs1 cs3 sc1) (All2Cons _ _ ColOf a b lc3 cs3 p r1)))
 
-; et is the urtrace of the colours of the darts R under a live colouring (ring_trace of kempe.v, on rot 1 r).
+; et is the UTr of the colours of the darts R under a live colouring.
 (def-adts $ (LRT : ((Nat) d) ((List (Nat)) s e f R) ((List (Col)) et) -> Type)
   enum
   (many MkLRT : (erased (Nat) d) (erased (List (Nat)) s e f R ks lc) (erased (List (Col)) cs et) (erased (LiveColoring d s e f ks) lc0)
@@ -736,8 +719,7 @@
   (let ((erased c) (erased pc)) (colof-exists a (under-nth ks x a 4 u pa)))
   (values a pa c pc))
 
-; A certificate, built with a chromogram w by Kempe_map's induction, that every trace matching w is a ring trace on R:
-; the empty ring, a rotation by gram_rot, or one of the two contractions of the edge z, e z.
+; Every trace matching w is a ring trace on R.
 (def-adts $ (KGood : ((Nat) d) ((List (Nat)) e n f s R) ((List (Gsym)) w) -> Type)
   enum
   (many KGNil : (erased (Nat) d) (erased (List (Nat)) e n f s ks) (erased (LiveColoring d s e f ks) lc) -> (KGood d e n f s (Nil (Nat)) (Nil (Gsym))))
@@ -755,7 +737,6 @@
       (erased (KGood d e2 n2 f2 (Cons (Nat) ez (Cons (Nat) z s)) (Cons (Nat) nez (Cons (Nat) fz p)) wH) k) (erased (BStep wH w) st)
       -> (KGood d e n f s (Cons (Nat) z p) w)))
 
-; The second half of Kempe_closed (ring_trace r): every trace matching the chromogram of a certificate is a ring trace.
 (def-fns _ $ (erased kgood-sound : (erased (Nat) d) (erased (List (Nat)) e n f s R) (erased (List (Gsym)) w) (erased (List (Col)) et)
     (subterm erased (KGood d e n f s R w) k) (erased (MatchG (BS0) et w) m) -> (erased (LRT d s e f R et) r))
   (match erased k _
@@ -842,7 +823,7 @@
       (let-match erased (addc-cancel c0 e0 v t ad (addc-tri Cez Cnez Cfz c0 v t a1 a2 ats)) (Refl _ _))
       (MkLRT d s e f _ k0 _ _ _ lc0 rp0 co0 (UTCons Cfz Cez csp _ ltc (PFCons Cez Cfz e0 csp X ats pfp))))))
 
-; R is a cycle of n (Gonthier's fcycle node), or empty.
+; R is a cycle of n, or empty.
 (def-adts $ (NCyc : ((List (Nat)) n R) -> Type)
   enum
   (many NCNil : (erased (List (Nat)) n) -> (NCyc n (Nil (Nat))))
@@ -854,7 +835,7 @@
   (many OffNil : (erased (List (Nat)) s) -> (Off s (Nil (Nat))))
   (many OffCons : (erased (List (Nat)) s R) (erased (Nat) x) (erased (NotIn x s) px) (erased (Off s R) rest) -> (Off s (Cons (Nat) x R))))
 
-; Every dart of xs is in R or on a cycle of n of at most three darts (quasicubic r, read on the darts xs).
+; Every dart of xs is in R or on a cycle of n of at most three darts.
 (def-adts $ (QCubic : ((List (Nat)) n R xs) -> Type)
   enum
   (many QCNil : (erased (List (Nat)) n R) -> (QCubic n R (Nil (Nat))))
@@ -876,7 +857,6 @@
       (let-match erased ix (InThere _ _ _ ix1) ((InHere _ _) (InR _ _ (MkCyc3 n x a b pa pb px))))
       (qc-at n R xs1 x q1 ix1))))
 
-; The ring data kempe.v keeps along its induction: a duplicate-free node cycle of live darts, off which the map is cubic.
 (def-adts $ (RingOK : ((List (Nat)) n s R ids) -> Type)
   enum
   (many MkRingOK : (erased (List (Nat)) n s R ids) (erased (NCyc n R) nc) (erased (Distinct R) ds) (erased (Off s R) av) (erased (QCubic n R ids) qc)
@@ -935,7 +915,6 @@
   (let-match erased sab (SnocCons _ _ _ _ ab3 sab1))
   (JoinCons a1 b2 ab3 x (join-snoc-r a1 b ab1 b2 ab3 c j1 sb sab1)))
 
-; Rotating R = X ++ Y left by the length of X, to Y ++ X, keeps the ring data.
 (def-fns _ $ (erased ring-turn : (erased (List (Nat)) n s) (subterm erased (List (Nat)) X) (erased (List (Nat)) Y R R2 ids) (erased (Join X Y R) j) (erased (Join Y X R2) j2)
     (erased (RingOK n s R ids) ro) -> (erased (RingOK n s R2 ids) r))
   (let-match erased j (JoinCons X1 _ R1 x j1)
@@ -981,7 +960,7 @@
   (many IBCons : (erased (List (Nat)) e) (erased (List (Bond)) g) (erased (Nat) x y) (erased (Nth (Nat) e y x) p) (erased (InvB e g) rest)
       -> (InvB e (Cons (Bond) (MkBond x y) g))))
 
-; e is an involution (plain_eq, with the fixed points of the dead darts allowed).
+; e is an involution, fixed points allowed.
 (def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)
   enum
   (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e) (erased (List (Bond)) g) (erased (Graph d e g) gr) (erased (InvB e g) iv) -> (Plain d e)))
@@ -1018,7 +997,6 @@
   (let ((erased pcx)) (plain-at d x c e pl lx pc))
   (IBCons e2 g1 x y (cut-e2 d z ez c x e n f e2 n2 f2 h ct pcx (img-apart d x ez c z e nf pe pc pze nx) (img-apart d x z c ez e nf pe pc pez nxz)) rest))
 
-; The contraction is plain.
 (def-fns _ $ (erased cut-plain : (erased (Nat) d z ez) (erased (List (Nat)) e n f s e2 n2 f2) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (Hypermap d e2 n2 f2) h2) (erased (Plain d e) pl)
     (erased (FixedIn e2 (Cons (Nat) ez (Cons (Nat) z s))) fe2) -> (erased (Plain d e2) r))
@@ -1037,7 +1015,6 @@
           ((InL _ _ eq) (InL _ _ eq))
           ((InR _ _ iy) (InR _ _ (InThere y a1 q1 iy)))))))))
 
-; A node cycle is closed under n.
 (def-fns _ $ (erased ncyc-next : (erased (List (Nat)) n R) (erased (Nat) x y) (erased (NCyc n R) nc) (erased (In x R) ix) (erased (Nth (Nat) n x y) px)
     -> (erased (In y R) r))
   (let-match erased nc (NCCons _ q x0 yl fp back) (absurd (NCNil _) ix))
@@ -1055,7 +1032,6 @@
   (let-match erased (perm-inj d x a y n ni pm px pa) (Refl _ _))
   (InHere x q))
 
-; ... and under its inverse.
 (def-fns _ $ (erased ncyc-prev : (erased (Nat) d) (erased (List (Nat)) n ni R) (erased (Nat) x y) (erased (HPerm d n ni) pm) (erased (NCyc n R) nc)
     (erased (In y R) iy) (erased (Nth (Nat) n x y) px) -> (erased (In x R) r))
   (let-match erased nc (NCCons _ q x0 yl fp back) (absurd (NCNil _) iy))
@@ -1071,7 +1047,6 @@
   (let-match erased fp (FPCons _ q1 _ a1 _ pa fp1) (absurd (FPNil _ _) ix1))
   (fpath-lab n lab q1 a1 b l x fp1 rl (respects-nth lab n lab a a1 l rl pa pl) ix1))
 
-; Separated from a dart of a node cycle, as LeafCut of euler-tree gives, a dart is off the cycle.
 (def-fns _ $ (erased seps-notin : (erased (Nat) d) (erased (List (Nat)) n ni R) (erased (Nat) z z2) (erased (HPerm d n ni) pm) (erased (NCyc n R) nc)
     (erased (In z R) iz) (erased (Seps n z z2) sp) -> (erased (NotIn z2 R) r))
   (let-match erased sp (MkSeps _ lab _ _ sep))
@@ -1089,7 +1064,6 @@
   (let-match erased w (PathStep _ _ xs1 _ x1 _ px _ w1) ((PathHere _ _ _) ix))
   (path-ncyc n R xs1 x1 y w1 nc (ncyc-next n R x x1 nc ix px)))
 
-; A node path whose darts avoid z and ez is one of the contraction.
 (def-fns _ $ (erased fpath-n2 : (erased (Nat) d z ez a b) (erased (List (Nat)) e n f e2 n2 f2 q) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (subterm erased (FPath n a q b) fp) (erased (NotIn z (Cons (Nat) a q)) oz)
     (erased (NotIn ez (Cons (Nat) a q)) oe) -> (erased (FPath n2 a q b) r))
@@ -1112,7 +1086,6 @@
   (let ((erased p)) (fixed-at n s x fx ix))
   (MkCyc3 n x x x p p p))
 
-; The node cycle of a dart off a node cycle R avoids R.
 (def-fns _ $ (erased cyc3-off : (erased (Nat) d x a b) (erased (List (Nat)) n ni R) (erased (HPerm d n ni) pm) (erased (NCyc n R) nc) (erased (NotIn x R) ox)
     (erased (Nth (Nat) n x a) pa) (erased (Nth (Nat) n a b) pb) -> (erased (NotIn a R) oa) (erased (NotIn b R) ob))
   (let-match erased (in-dec a R) (OrR _ _ oa)
@@ -1196,7 +1169,6 @@
   (let-match erased cy (MkCyc3 _ _ a b pa pb px))
   (QCOut n2 sH xs1 x a b pa pb px rest))
 
-; The ring of the contraction when f z = z: the rest p1 of z :: ez :: p1.
 (def-fns _ $ (erased ringok-a : (erased (Nat) d z ez) (erased (List (Nat)) e n f s e2 n2 f2 p1 ids) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (FixedIn n2 (Cons (Nat) ez (Cons (Nat) z s))) fn2)
     (erased (RingOK n s (Cons (Nat) z (Cons (Nat) ez p1)) ids) ro) (erased (Iota d ids) io)
@@ -1221,7 +1193,6 @@
   (MkRingOK n2 _ p1 ids nc2 ds2 (off-extend s p1 z ez av2 oz oe)
     (qcA d z ez e n f s e2 n2 f2 p1 ids ni ids h ct pm fn2 nc qc io (perm-under d ids ids (perm-id d ids io)))))
 
-; The ring of the contraction when f z is off the ring z :: p: n (e z) :: f z :: p.
 (def-fns _ $ (erased ringok-b : (erased (Nat) d m z ez fz nez) (erased (List (Nat)) e n f s ks e2 n2 f2 p ids) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (FixedIn n2 (Cons (Nat) ez (Cons (Nat) z s))) fn2) (erased (Dead d e n f s m) dd)
     (erased (LiveColoring d s e f ks) lc) (erased (RingOK n s (Cons (Nat) z p) ids) ro) (erased (Iota d ids) io) (erased (Nth (Nat) f z fz) pfz)
@@ -1334,7 +1305,6 @@
         (let-match erased ad (AThird _ _ _ t)) (let-match erased t (T312))
         (values (Cons (Gsym) (GSkip) w1) (BPQ w1) (MGCons (BS0) (BS0) e1 (GSkip) X w1 (SSkip (BS0)) m2)))))))
 
-; The sum of the colours of the two ends of a live edge is not Color0.
 (def-fns _ $ (erased edge-nz : (erased (Nat) ka kb) (erased (Col) a b c) (erased (AddK a b c) ad) (erased (ColOf ka a) pa) (erased (ColOf kb b) pb)
     (erased (Apart (Nat) Lt ka kb) ne) -> (erased (NonZero c) r))
   (match erased c _
@@ -1350,7 +1320,6 @@
   (let-match erased (lastfrom-fn (Col) c l1 l cs1 lt1 ltb) (Refl _ _))
   pf1)
 
-; The step of Kempe_map when f z = z: the chromogram of the contraction, with Gskip :: Gskip or Gpush :: Gpop0 in front.
 (def-fns _ $ (erased step-a : (erased (Nat) d z ez fez) (erased (List (Nat)) e n f s ks e2 n2 f2 p1) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (LiveColoring d s e f ks) lc) (erased (Lt z d) lz) (erased (NotIn z s) zs)
     (erased (Nth (Nat) e z ez) pez) (erased (Nth (Nat) f z z) pfz) (erased (Nth (Nat) f ez fez) pfez) (erased (Apart (Nat) Lt fez z) nfez)
@@ -1371,7 +1340,6 @@
     (UTCons Cz Cez (Cons _ Cez cs1) _ ltc (PFCons Cez Cz E _ _ aE (PFCons Cz Cez E cs1 etH (addc-comm Cez Cz E aE) (lastfrom-tail Cz Cez Cez cs1 etH ltc ut1))))
     m (KGA d z ez fez e n f s p1 e2 n2 f2 wH w h ct pfz pfez nfez lt oz oe kgH st)))
 
-; The step of Kempe_map when f z is off the ring z :: p.
 (def-fns _ $ (erased step-b : (erased (Nat) d z ez fz fez nez) (erased (List (Nat)) e n f s ks e2 n2 f2 p) (erased (Hypermap d e n f) h)
     (erased (Cut2 d e n f z ez e2 n2 f2) ct) (erased (LiveColoring d s e f ks) lc) (erased (Lt z d) lz) (erased (NotIn z s) zs)
     (erased (Nth (Nat) e z ez) pez) (erased (Nth (Nat) f z fz) pfz) (erased (Nth (Nat) f ez fez) pfez) (erased (Apart (Nat) Lt fez z) nfez)
@@ -1414,7 +1382,7 @@
   (let ((erased A) (erased B) (erased j)) (in-split z R1 iz1))
   (values (Cons _ y A) B (JoinCons A _ R1 y j)))
 
-; A dart z of the ring, with f z = z or f z off the ring (Euler_tree, on permN).
+; A dart z of R with f z = z or f z off R.
 (def-adts $ (KLeaf : ((List (Nat)) f R) -> Type)
   enum
   (many KLA : (erased (List (Nat)) f R) (erased (Nat) z) (erased (In z R) iz) (erased (Nth (Nat) f z z) pz) -> (KLeaf f R))
@@ -1454,7 +1422,6 @@
   (let ((erased oa) (erased oc)) (notin-join-inv x A1 C R1 j1 ox1))
   (values (NotInCons x y A1 ne oa) oc))
 
-; What the two steps of Kempe_map share: the contraction of the edge z, e z of the ring z :: p, and its colouring.
 (def-fns _ $ (erased kprep : (erased (Nat) N1 d m z) (erased (List (Nat)) e n f s ks p ids) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Dead d e n f s m) dd) (erased (Lt m (Succ N1)) lm) (erased (Plain d e) pl) (erased (RingOK n s (Cons (Nat) z p) ids) ro)
     (erased (LiveColoring d s e f ks) lc) (erased (Lt z d) lz)
@@ -1481,8 +1448,6 @@
   (values ez fez m2 e2 n2 f2 ct h2 g2 dd2 lm2 (cut-plain d z ez e n f s e2 n2 f2 h ct h2 pl fe2) (cut-proj d z ez e n f s ks e2 n2 f2 h ct h2 ff2 lc)
     fn2 zs oute pez pze pfez nfez (fpath-last n p z fez fp) oz))
 
-; Kempe_map's induction, on the number of live darts: a chromogram matching the trace of a colouring on the ring, and a
-; certificate for it.
 (def-fns _ $ (erased kempe-build : (subterm erased (Nat) N) (erased (Nat) d m) (erased (List (Nat)) e n f s ks R ids)
     (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g) (erased (Dead d e n f s m) dd) (erased (Lt m N) lm)
     (erased (Plain d e) pl) (erased (Iota d ids) io) (erased (RingOK n s R ids) ro) (erased (LiveColoring d s e f ks) lc)
@@ -1572,7 +1537,6 @@
   (let ((erased g) (erased gr)) (graph-exists d e le))
   (MkPlain d e g gr (invb-order d e g pl le (graph-fun d e g gr))))
 
-; trace (c0 :: lc) is urtrace (lc ++ [c0]).
 (def-fns _ $ (erased tracefrom-pair : (erased (Col) c0 c) (erased (List (Col)) lc lc2 et) (subterm erased (TraceFrom c0 c lc et) t) (erased (HSnoc (Col) lc c0 lc2) sn)
     -> (erased (PairFrom c lc2 et) r))
   (match erased t _
@@ -1627,20 +1591,18 @@
       (let ((erased cs0) (erased c) (erased sc) (erased r) (erased pc)) (cols-unsnoc lc1 lc2 cs1 l sn1 co1))
       (values (Cons _ b cs0) c (SnocCons _ b c cs0 cs1 sc) (All2Cons _ _ ColOf a b lc1 cs0 pb r) pc))))
 
-; The ring of Kempe_map is cubic off r: every dart of 0..d-1 not in r has n (n (n x)) = x.
+; Every dart of 0..d-1 not in r has n (n (n x)) = x.
 (def-adts $ (QuasiCubic : ((Nat) d) ((List (Nat)) n r) -> Type)
   enum
   (many MkQuasiCubic : (erased (Nat) d) (erased (List (Nat)) n r ids) (erased (Iota d ids) io) (erased (QCubic n r ids) qc) -> (QuasiCubic d n r)))
 
-; The certificate of Kempe_map for the ring r and the chromogram w, on the rotation of r that urtrace reads.
+; A certificate for r and w, on the rotation of r that UTr reads.
 (def-adts $ (KRing : ((Nat) d) ((List (Nat)) e n f r) ((List (Gsym)) w) -> Type)
   enum
   (many KRNil : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (FourColoring e f ks) c) -> (KRing d e n f (Nil (Nat)) (Nil (Gsym))))
   (many KRCons : (erased (Nat) d x) (erased (List (Nat)) e n f r0 R) (erased (List (Gsym)) w) (erased (Hypermap d e n f) h)
       (erased (HSnoc (Nat) r0 x R) sn) (erased (KGood d e n f (Nil (Nat)) R w) kg) -> (KRing d e n f (Cons (Nat) x r0) w)))
 
-; Kempe_map, the second half of Kempe_closed (ring_trace r) for a ring r of a planar plain map cubic off r: each ring trace
-; matches a chromogram w with a certificate ...
 (def-fns _ $ (erased kempe-map : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (Hypermap d e n f) h)
     (erased (Genus d e n f (Zero)) g) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (QuasiCubic d n r) qc) (erased (NCyc n r) nc)
     (erased (Distinct r) ds) (erased (RingTrace e f r et) rt) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) et w) m) (erased (KRing d e n f r w) kr))
@@ -1663,7 +1625,6 @@
   (let-match erased (utr-fn csR etR et utR (trace-utr c0 cs1 csR et t sc)) (Refl _ _))
   (values w m (KRCons d x e n f r0 R w h sn kg)))
 
-; ... every trace matching which is a ring trace.
 (def-fns _ $ (erased kempe-map-sound : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Gsym)) w) (erased (List (Col)) et)
     (erased (KRing d e n f r w) kr) (erased (MatchG (BS0) et w) m) -> (erased (RingTrace e f r et) rt))
   (match erased kr _
@@ -1675,7 +1636,6 @@
       (MkRingTrace e f _ ks _ _ et (live-four d e n f ks h lc) (RespCons ks r0 lc0 x l pl rp0) (All2Cons _ _ ColOf l c lc0 cs0 pc co0)
         (utr-trace c cs0 csR et utR sc)))))
 
-; The hypotheses of Kempe_map (ucycle_planar_plain_quasicubic r).
 (def-adts $ (KempeRing : ((Nat) d) ((List (Nat)) e n f r) -> Type)
   enum
   (many MkKempeRing : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
@@ -1686,7 +1646,7 @@
   enum
   (many MkRArgs : (erased (Nat) d) (erased (List (Nat)) e n f r) -> (RArgs)))
 
-; The ring traces of r, and the chromograms of Kempe_map's certificates, as red/'s predicates with a parameter.
+; et is a ring trace of the ring a names.
 (def-adts $ (RTP : ((RArgs) a) ((List (Col)) et) -> Type)
   enum
   (many MkRTP : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (RingTrace e f r et) p) -> (RTP (MkRArgs d e n f r) et)))

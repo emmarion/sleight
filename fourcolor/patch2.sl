@@ -1,7 +1,3 @@
-; More of patch.v: outer_hd, patch_face_d, bridgeless_patch, patch_connected_r, patch_fcard_face_r, patch_gcomp and
-; minimal_counter_example_is_connected. Load after patch.sl.
-
-; A dart below dd is on the face of a dart of bd, or on no such face.
 (def-fns _ $ (erased band-dec : (erased (Nat) dd xd) (erased (List (Nat)) fd fdi bd) (erased (List (Bond)) gfd) (erased (HPerm dd fd fdi) pm)
     (erased (Graph dd fd gfd) gr) (erased (Under bd dd) ub) (erased (Lt xd dd) lx) -> (erased (HOr (Fband fd bd xd) (Kernel fd bd xd)) r))
   (let ((erased k) (erased cs)) (classes-exists gfd dd (graph-below dd fd fdi gfd (graph-fun dd fd gfd gr) pm)))
@@ -15,8 +11,6 @@
   (let ((erased ws) (erased w)) (conn-path dd xd b fd fdi gfd pm gr (same-root gfd dd xd b l idd lab rs io ro pl pb lx (under-in bd b dd ub ib))))
   (OrL _ _ (MkFband fd bd xd b ib (MkSomePath fd (Nil _) ws xd b w))))
 
-; A face walk of the whole map from the image of a disk dart labelled off the labels of bd, under a labelling constant along fd, is
-; the image of a face walk of the disk map, ending at a dart of that label.
 (def-fns _ $ (erased kernel-lift : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br lab ls s xs)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects lab fd lab) rf) (erased (Respects lab bd ls) rp) (erased (Nat) x y xd l)
     (subterm erased (Path f s x y xs) w) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) lab xd l) pl) (erased (NotIn l ls) out)
@@ -35,8 +29,6 @@
     (kernel-lift d dd dr e n f ed nd fd er nr fr hd hr bd br lab ls s xs1 pt rf rp z y zd l w1 hz2 (respects-nth lab fd lab xd zd l rf pzd pl) out))
   (values yd (Cons _ xd ys) hy py (PathStep fd _ ys xd zd yd pzd (NotInNil xd) w2)))
 
-; patch_face_d, the direction patch_face_d' leaves: off the outer faces, darts of the disk map whose images are on one face are on one
-; face. The hypothesis is read through outer_hd: the face of xd misses bd.
 (def-fns _ $ (erased patch-face-d-pull : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf gfd)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Graph dd fd gfd) grfd) (erased (Nat) xd yd x y)
     (erased (Kernel fd bd xd) kx) (erased (Conn gf x y) c) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hd yd y) hy) -> (erased (Conn gfd xd yd) r))
@@ -49,7 +41,6 @@
   (let-match erased (distinct-nth hd yd2 yd y dhd hy2 hy) (Refl _ _))
   (path-graph-conn dd xd yd fd (Nil _) ys gfd w2 grfd))
 
-; outer_hd, one direction: the image of a disk dart on the face of a dart of bd is on the face of an image of the remainder map.
 (def-fns _ $ (erased outer-hd-in : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Nat) xd x) (erased (Fband fd bd xd) fb)
     (erased (Nth (Nat) hd xd x) hx) -> (erased (Nat) y yr) (erased (Nth (Nat) hr yr y) hy) (erased (Conn gf x y) r))
@@ -65,7 +56,6 @@
   (let ((erased jr) (erased ijr) (erased pjr)) (respects-in hr br bGr z2 rbr (revapp-in bG (Nil _) bGr z2 rv (OrL _ _ (in-map hd bd bG zd z2 izd rbd hz)))))
   (values z2 jr pjr (path-graph-conn d x z2 f bG ws3 gf w3 grf)))
 
-; outer_hd, the other direction: a disk dart whose image is on the face of an image of the remainder map is on the face of a dart of bd.
 (def-fns _ $ (erased outer-hd-out : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Nat) xd x y yr) (erased (Conn gf x y) c)
     (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) hr yr y) hy) -> (erased (Fband fd bd xd) r))
@@ -85,8 +75,7 @@
       (apart-irrefl y (notin-in y y hr (disk-notin-r d yd y hd hr bd ids pp io dhd uhd hyd oyd) (nth-in hr yr y hy)))))
   fb)
 
-; x and y on the edge cycle r are not neighbours on it (y is not e x and x is not e y), and from a dart on the face of x an edge step
-; reaches the face of y: a chord of r (Gonthier's ~~ chordless r, for r an edge cycle, where next r x is e x).
+; x and y on the edge cycle r are not neighbours on it, and an edge step from the face of x reaches the face of y.
 (def-adts $ (Chord : ((List (Nat)) e f r) -> Type)
   enum
   (many MkChord : (erased (List (Nat)) e f r) (erased (Nat) x y z w ex ey) (erased (In x r) ix) (erased (In y r) iy)
@@ -94,8 +83,6 @@
       (erased (Nth (Nat) e x ex) px) (erased (Nth (Nat) e y ey) py) (erased (Apart (Nat) Lt y ex) n1) (erased (Apart (Nat) Lt x ey) n2)
       -> (Chord e f r)))
 
-; No dart of the remainder map is on the face of its edge image when the remainder map is bridgeless: an edge step from an image of
-; hr does not stay on its face.
 (def-fns _ $ (erased absurd r-nobridge : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Bridgeless dr er nr fr) blr) (erased (Graph d f gf) grf) (erased (Nat) xr x y)
     (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) e x y) pe) (erased (Conn gf x y) c) -> (erased (False) r))
@@ -110,8 +97,6 @@
   (sep-conn gfr xr exr (allsep-adj gfr ger xr exr (graph-adj dr xr exr er ger per pexr) spr)
     (patch-face-r-pull d dd dr e n f ed nd fd er nr fr hd hr bd br gf gfr pt grf pfr xr exr x y c hx hw)))
 
-; Two consecutive darts a, e a = b of bd have their images on different faces when the remainder map is bridgeless: with hd b = hr u
-; and hd a = hr (n u), u and its node step are on one face of the remainder map, so n u is on the face of its edge image.
 (def-fns _ $ (erased absurd ring-nobridge : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Bridgeless dr er nr fr) blr) (erased (Graph d f gf) grf) (erased (Nat) a b va vb)
     (erased (In b bd) ib) (erased (Nth (Nat) ed a b) pab) (erased (Nth (Nat) hd a va) ha) (erased (Nth (Nat) hd b vb) hb) (erased (Conn gf va vb) c)
@@ -133,7 +118,6 @@
     (conn-cat gfr u ur eu (patch-face-r-pull d dd dr e n f ed nd fd er nr fr hd hr bd br gf gfr pt grf pfr u ur va vb c hv pur)
       (conn-sym gfr eu ur (conn-adj gfr eu ur (graph-adj dr eu ur fr gfr pfr (hyper-third dr eu u ur er nr fr hr2 peu pu)))))))
 
-; An edge step x, y of the whole map that stays on its face gives a chord of bd, when both parts are bridgeless.
 (def-fns _ $ (erased bridge-chord : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Bridgeless dd ed nd fd) bld) (erased (Bridgeless dr er nr fr) blr)
     (erased (Graph d f gf) grf) (erased (Nat) x y) (erased (Lt x d) lx) (erased (Nth (Nat) e x y) pe) (erased (Conn gf x y) c) -> (erased (Chord ed fd bd) r))
@@ -185,7 +169,6 @@
     ((OrL _ _ c) (OrR _ _ (bridge-chord d dd dr e n f ed nd fd er nr fr hd hr bd br gf pt bld blr grf x y lx px c))))
   (OrL _ _ (AllSepCons gf g1 x y s sp1)))
 
-; bridgeless_patch, read constructively: when both parts are bridgeless, the whole map is bridgeless or bd has a chord.
 (def-fns _ $ (erased bridgeless-patch : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Bridgeless dd ed nd fd) bld) (erased (Bridgeless dr er nr fr) blr)
     -> (erased (HOr (Bridgeless d e n f) (Chord ed fd bd)) r))
@@ -199,7 +182,6 @@
     ((OrR _ _ ch) (OrR _ _ ch)))
   (OrL _ _ (MkBridgeless d e n f ge gf pe grf sp)))
 
-; A map with a dart has a class.
 (def-fns _ $ (erased classes-pos : (erased (List (Bond)) g) (erased (Nat) d k) (erased (Classes g (Succ d) k) cs) -> (erased (Nat) k1) (erased (Eq (Nat) k (Succ k1)) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
   (let-match erased io (IotaS _ ids1 _ io1 s))
@@ -209,7 +191,6 @@
   (let-match erased lr (LengthCons _ _ _ k1 _) (absurd (LengthNil _) pin))
   (values k1 (Refl _ k)))
 
-; patch_connected_r: the remainder map of a connected map is connected, if it has a dart.
 (def-fns _ $ (erased patch-connected-r : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Connected d e n f) cc) (erased (Lt (Zero) dr) lr0) -> (erased (Connected dr er nr fr) r))
   (let ((erased pt2)) pt)
@@ -249,7 +230,7 @@
       (let-match erased a3 (AddZero _) (absurd (AddSucc _ _ _ a4) (match erased a4 _)))
       (MkConnected dr er nr fr gr glr csr))))
 
-; o and i list, in order, the darts of xs on the face of a dart of t and the others (Gonthier's fband t and its complement, on xs).
+; o and i list, in order, the darts of xs on the face of a dart of t and the others.
 (def-adts $ (BandSplit : ((List (Nat)) f t xs o i) -> Type)
   enum
   (many BSNil : (erased (List (Nat)) f t) -> (BandSplit f t (Nil (Nat)) (Nil (Nat)) (Nil (Nat))))
@@ -258,14 +239,12 @@
   (many BSOut : (erased (List (Nat)) f t xs o i) (erased (Nat) x) (erased (Kernel f t x) p) (erased (BandSplit f t xs o i) rest)
       -> (BandSplit f t (Cons (Nat) x xs) o (Cons (Nat) x i))))
 
-; No dart is both on the face of a dart of t and on no such face.
 (def-fns _ $ (erased absurd fband-kernel : (erased (List (Nat)) f t) (erased (Nat) x) (erased (Fband f t x) fb) (erased (Kernel f t x) kx) -> (erased (False) r))
   (let-match erased fb (MkFband _ _ _ y iy sp))
   (let-match erased sp (MkSomePath _ _ ws _ _ w))
   (let-match erased kx (MkKernel _ _ lab ls _ l rf rp pl out))
   (apart-irrefl l (notin-in l l ls out (in-map lab t ls y l iy rp (path-label f lab (Nil _) ws x y l w rf pl)))))
 
-; A split by face classes labelled lab, by whether the class meets t, is a BandSplit.
 (def-fns _ $ (erased band-of-sb : (erased (Nat) d) (erased (List (Nat)) f fi t lab rs ids LT xs o i) (erased (List (Bond)) gf) (erased (HPerm d f fi) pm)
     (erased (Graph d f gf) gr) (erased (Iota d ids) io) (erased (Rooted gf rs ids lab) ro) (erased (Respects lab f lab) rf) (erased (Under t d) ut)
     (erased (Respects lab t LT) rt) (erased (Under xs d) ux) (subterm erased (SplitBy lab LT xs o i) sp) -> (erased (BandSplit f t xs o i) r))
@@ -280,8 +259,6 @@
       (let-match erased ux (UnderCons _ _ _ lx ux1))
       (BSOut f t xs1 o1 i1 x (MkKernel f t lab LT x l rf rt px o) (band-of-sb d f fi t lab rs ids LT xs1 o1 i1 gf pm gr io ro rf ut rt ux1 sp1)))))
 
-; patch_fcard_face_r: the faces of the remainder map are the faces of the whole map that meet the image of hr, outer, which lists the
-; darts 0..d-1 on such faces.
 (def-fns _ $ (erased patch-fcard-face-r : (erased (Nat) d dd dr kfr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ids) (erased (List (Bond)) gf)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Iota d ids) io) (erased (Graph d f gf) grf) (erased (Orbits dr fr kfr) orr)
     -> (erased (List (Nat)) outer inner) (erased (BandSplit f hr ids outer inner) bs) (erased (ClassesOn gf outer kfr) r))
@@ -312,9 +289,6 @@
         (graph-fun d f gf grf))
       (MkClasses gf d kf ids labf rsf io llf lrf drf fixf clf rof) uo)))
 
-; patch_gcomp: a map is patched, along empty rings, from the darts h of a set closed under its permutations and the others, each
-; renumbered by its position in its list.
-
 (def-fns _ $ (erased app-nth : (erased (List (Nat)) pre ys zs) (erased (Nat) y j) (subterm erased (AppN pre (Cons (Nat) y ys) zs) ap) (erased (Length (Nat) pre j) l)
     -> (erased (Nth (Nat) zs j y) r))
   (let-match erased ap (AppCons pre1 _ zs1 a ap1) ((AppNil _) (let-match erased l (LengthNil _)) (NthHere _ y ys)))
@@ -327,7 +301,6 @@
   (let ((erased pre3) (erased s1) (erased r1)) (app-step pre1 ys zs1 y ap1))
   (values (Cons _ a pre3) (SnocCons _ a y pre1 pre3 s1) (AppCons pre3 ys zs1 a r1)))
 
-; pos sends the darts of h to their positions in h: pos . h = 0..k-1, read from the position j of the suffix rest of h.
 (def-fns _ $ (erased inv-iota : (erased (Nat) d k j m) (erased (List (Nat)) h ids pos idk pre rest P S) (erased (InvL h ids pos) iv) (erased (Distinct h) dh)
     (erased (Iota d ids) io) (erased (Under h d) uh) (erased (Iota k idk) iok) (erased (AppN pre rest h) ap) (erased (Length (Nat) pre j) lp)
     (erased (AppN P S idk) aq) (erased (Length (Nat) P j) lq) (subterm erased (Length (Nat) rest m) lr) (erased (Length (Nat) S m) ls)
@@ -341,7 +314,6 @@
   (RespCons pos rest1 S1 x j (inv-nth h ids pos x x j iv dh (iota-nth d x ids io (under-nth h j x d uh px)) px)
     (inv-iota d k (Succ j) m1 h ids pos idk pre2 rest1 P2 S1 iv dh io uh iok ap2 (snoc-length _ pre pre2 x j sp lp) aq2 (snoc-length _ P P2 j j sq lq) lr1 ls1)))
 
-; h . pos is the identity on the darts of h.
 (def-fns _ $ (erased inv-back : (erased (Nat) d) (erased (List (Nat)) h ids pos xs ys) (erased (InvL h ids pos) iv) (erased (Distinct h) dh) (erased (Iota d ids) io)
     (erased (Under h d) uh) (erased (Sub xs h) sx) (subterm erased (Respects pos xs ys) rp) -> (erased (Respects h ys xs) r))
   (let-match erased rp (RespCons _ xs1 ys1 w j pw rp1) ((RespNil _) (RespNil h)))
@@ -350,14 +322,12 @@
   (let-match erased (nth-fn _ pos w j j2 pw (inv-nth h ids pos w w j2 iv dh (iota-nth d w ids io (under-nth h j2 w d uh hw)) hw)) (Refl _ _))
   (RespCons h ys1 xs1 j w hw (inv-back d h ids pos xs1 ys1 iv dh io uh sx1 rp1)))
 
-; p sends the darts of xs, in h, into h when h is shut under the bonds of p.
 (def-fns _ $ (erased resp-shut : (erased (Nat) d) (erased (List (Nat)) p h xs ys) (erased (List (Bond)) gp) (erased (Graph d p gp) gr) (erased (Shut h gp) sh)
     (erased (Sub xs h) sx) (subterm erased (Respects p xs ys) rp) -> (erased (Sub ys h) r))
   (let-match erased rp (RespCons _ xs1 ys1 x y px rp1) ((RespNil _) (HSubNil h)))
   (let-match erased sx (HSubCons _ _ _ ix sx1))
   (HSubCons y ys1 h (shut-adj-in h gp x y (graph-adj d x y p gp gr px) sh ix) (resp-shut d p h xs1 ys1 gp gr sh sx1 rp1)))
 
-; A set shut under the bonds of a permutation is shut under those of its inverse.
 (def-fns _ $ (erased shut-inv : (erased (Nat) d) (erased (List (Nat)) p q h) (erased (List (Bond)) gp g) (erased (HPerm d p q) pm) (erased (Graph d p gp) gr)
     (erased (Shut h gp) sh) (subterm erased (Fun q g) fn) -> (erased (Shut h g) r))
   (let-match erased fn (FunCons _ g1 x y qx fn1) ((FunNil _) (ShutNil h)))
@@ -376,8 +346,6 @@
   (MOAt h pk p (Nil _) m1 i j z w pj hz (respects-nth h pk ph i j w rk pj (respects-at p h ph i z w rph hz pz)) pz
     (morph-of d k h p q pk ph m1 pm lh lk uh rph rk u1)))
 
-; The restriction pk of a permutation p of 0..d-1 to the darts h, shut under p, renumbered by their positions pos in h, is a
-; permutation of 0..k-1 with h (pk i) = p (h i).
 (def-fns _ $ (erased sub-perm : (erased (Nat) d k) (erased (List (Nat)) p q h ids pos idk) (erased (List (Bond)) gp gq) (erased (HPerm d p q) pm)
     (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) (erased (Shut h gp) shp) (erased (Shut h gq) shq) (erased (Iota d ids) io) (erased (Iota k idk) iok)
     (erased (Distinct h) dh) (erased (Length (Nat) h k) lh) (erased (Under h d) uh) (erased (InvL h ids pos) iv) (erased (Length (Nat) pos d) lpos)
@@ -419,8 +387,6 @@
   (MOAt h ek e (Nil _) m1 i y w2 hy pey hw2 hhy (hyper-edge d w2 w hy e n f hm pnw pfw)
     (morph-e d k e n f h ek nk fk nfk fki idk m1 hm hk pmek pmfk iok lh mn mf u1)))
 
-; The darts h of a set shut under the node and face permutations, renumbered by their positions in h, carry a hypermap whose
-; permutations h sends to those of the whole map.
 (def-fns _ $ (erased sub-map : (erased (Nat) d k) (erased (List (Nat)) e n f h ids pos idk) (erased (List (Bond)) gn gf) (erased (Hypermap d e n f) hm)
     (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Shut h gn) shn) (erased (Shut h gf) shf) (erased (Iota d ids) io) (erased (Iota k idk) iok)
     (erased (Distinct h) dh) (erased (Length (Nat) h k) lh) (erased (Under h d) uh) (erased (InvL h ids pos) iv) (erased (Length (Nat) pos d) lpos)
@@ -442,7 +408,7 @@
     ((IvIn _ xs1 ls1 x j p rest) (let-match erased l (LengthCons _ _ _ m1 l1)) (LengthCons _ j ls1 m1 (invl-length h xs1 ls1 m1 rest l1)))
     ((IvOut _ xs1 ls1 x p rest) (let-match erased l (LengthCons _ _ _ m1 l1)) (LengthCons _ (Zero) ls1 m1 (invl-length h xs1 ls1 m1 rest l1)))))
 
-; ys and zs list, in order, the darts of xs joined to z in g and the others (Gonthier's gcomp z and its complement, on xs).
+; ys and zs list, in order, the darts of xs joined to z in g and the others.
 (def-adts $ (CompSplit : ((List (Bond)) g) ((Nat) z) ((List (Nat)) xs ys zs) -> Type)
   enum
   (many CSNil : (erased (List (Bond)) g) (erased (Nat) z) -> (CompSplit g z (Nil (Nat)) (Nil (Nat)) (Nil (Nat))))
@@ -465,7 +431,6 @@
       (let-match erased o (NotInCons _ _ _ ne _))
       (CSOut g z xs1 ys1 zs1 x (MkSep g z x lab l l2 cl pl px (apart-sym l2 l ne)) (comp-of-sb d z l ids lab rs xs1 ys1 zs1 g io ro cl pl lz ux1 sp1)))))
 
-; Every dart is an image of the disk part or of the remainder part, of one only.
 (def-fns _ $ (erased gcomp-parts : (erased (List (Nat)) hd hr ids xs) (erased (Split hd ids hd hr) sp) (subterm erased (Sub xs ids) sx) -> (erased (PatchParts hd hr (Nil (Nat)) xs) r))
   (let-match erased sx (HSubCons x xs1 _ ix sx1) ((HSubNil _) (PPNil hd hr (Nil _))))
   (let ((erased rest)) (gcomp-parts hd hr ids xs1 sp sx1))
@@ -478,8 +443,6 @@
       (let ((erased xr) (erased px)) (in-nth x hr i))
       (PPCons hd hr (Nil _) xs1 x (PtRest hd hr (Nil _) x xr px (notin-of-disj x hd hr (disj-sym hr hd dj hd (sub-refl hd)) i)) rest))))
 
-; The darts labelled l, under a labelling constant along glink, and the others, each with the hypermap they carry, patch the
-; whole map along empty rings.
 (def-fns _ $ (erased patch-lab : (erased (Nat) d l) (erased (List (Nat)) e n f ids lab) (erased (List (Bond)) g) (erased (Hypermap d e n f) hm) (erased (Iota d ids) io)
     (erased (Glink d e n f g) gl) (erased (Length (Nat) lab d) ll) (erased (Const lab g) cl)
     -> (erased (Nat) dd dr) (erased (List (Nat)) ed nd fd er nr fr hd hr) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt)
@@ -519,7 +482,6 @@
       (gcomp-parts hd hr ids ids so (sub-refl ids)) med mnd mer mnr)
     sp))
 
-; patch_gcomp: the darts joined to z by glink, and the others, each with the hypermap they carry, patch the whole map along empty rings.
 (def-fns _ $ (erased patch-gcomp : (erased (Nat) d z) (erased (List (Nat)) e n f ids) (erased (List (Bond)) g) (erased (Hypermap d e n f) hm) (erased (Iota d ids) io)
     (erased (Glink d e n f g) gl) (erased (Lt z d) lz)
     -> (erased (Nat) dd dr) (erased (List (Nat)) ed nd fd er nr fr hd hr) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt)
@@ -550,7 +512,6 @@
     ((CSOut _ _ xs1 ys1 zs1 y p rest)
       (match erased ix _ ((InHere _ _) (InHere x zs1)) ((InThere _ _ _ ix1) (InThere x y zs1 (comp-in-r g z x xs1 ys1 zs1 rest ix1 s)))))))
 
-; The orders under p of the darts m, h sending p to q and the orders under q being below 4, are below 4.
 (def-fns _ $ (erased precubic-side : (erased (Nat) d k) (erased (List (Nat)) h p pi q ids idk ks m) (erased (HPerm k p pi) pm) (erased (MorphOff h p q (Nil (Nat)) idk) mo)
     (erased (Iota k idk) iok) (erased (Iota d ids) io) (erased (Distinct h) dh) (erased (Length (Nat) h k) lh) (erased (Under h d) uh) (erased (Orders q ids ks) os)
     (erased (Length (Nat) ks d) lks) (erased (Under ks (Succ (Succ (Succ (Succ (Zero)))))) uk) (subterm erased (Under m k) u)
@@ -564,7 +525,6 @@
     (OrdCons p m1 ks1 x c (order-pull k x x2 c h p pi q (Nil _) idk pm (NCNil p) mo iok dh (orders-nth q ids ks x2 x2 c os (iota-nth d x2 ids io lx2) pc) lx (NotInNil x) hx) os1)
     (UnderCons ks1 c _ (under-nth ks x2 c _ uk pc) uk1)))
 
-; A map patched along empty rings is four-colourable when both parts are.
 (def-fns _ $ (erased patch-colorable-nil : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr kd kr)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr (Nil (Nat)) (Nil (Nat))) pt) (erased (FourColoring ed fd kd) cd) (erased (FourColoring er fr kr) cr)
     -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
@@ -573,7 +533,6 @@
     (MkRingTrace ed fd (Nil _) kd (Nil _) (Nil _) (Nil _) cd (RespNil kd) (All2Nil (Nat) (Col) ColOf) t0) (RRNil)
     (MkRingTrace er fr (Nil _) kr (Nil _) (Nil _) (Nil _) cr (RespNil kr) (All2Nil (Nat) (Col) ColOf) t0)))
 
-; The map is patched, along empty rings, from two strictly smaller maps that are each planar, bridgeless, plain and precubic.
 (def-adts $ (GcompSplit : ((Nat) d) ((List (Nat)) e n f) -> Type)
   enum
   (many MkGcompSplit : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr)
@@ -600,8 +559,6 @@
     (precubic-side d k h nk nki n ids idk ks idk pm mo iok io dh lh uh os (orders-length n ids ks d os (iota-length d ids io)) uk (perm-under k idk idk (perm-id k idk iok))))
   (MkPrecubic k nk ks2 (MkOrderList k nk idk ks2 iok os2) uk2))
 
-; minimal_counter_example_is_connected, without the minimality: a planar bridgeless plain precubic map with a dart is connected, or
-; patched along empty rings from two smaller such maps, whose four-colourings glue into one of the map (patch-colorable-nil).
 (def-fns _ $ (erased gcomp-split : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Precubic d n) pc) (erased (Lt (Zero) d) ld)
     -> (erased (HOr (Connected d e n f) (GcompSplit d e n f)) r))

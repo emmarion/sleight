@@ -1,6 +1,3 @@
-; The uses of minimality in birkhoff.v and coloring.v, with minimality as data: each step that Coq proves by colouring
-; smaller maps gives here a Reduces (induct.sl) to the smaller maps it names. Load after birkfit.sl.
-
 (def-fns _ $ (erased mp-app : (subterm erased (List (Mp)) xs) (erased (List (Mp)) ys) -> (erased (List (Mp)) zs) (erased (App (Mp) xs ys zs) r))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (CatNil _ ys))))
   (let ((erased zs1) (erased r1)) (mp-app xs1 ys))
@@ -19,7 +16,7 @@
   (let-match erased sx (SmallerCons _ d2 e2 n2 f2 _ pb lt2 sx1))
   (SmallerCons d d2 e2 n2 f2 zs1 pb lt2 (smaller-app d xs1 ys zs1 ap1 sx1 sy)))
 
-; What birkhoff-ring needs, besides the colourings of the maps ms the check names for a ring of h + 2 darts nontrivial for m.
+; ms are the maps the check names for a ring of h + 2 darts nontrivial for m.
 (def-adts $ (BirkW : ((Nat) d) ((List (Nat)) e n f) ((List (Mp)) ms) -> Type)
   enum
   (many MkBirkW : (erased (Nat) d x0 h m n0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Ctree)) ts)
@@ -67,10 +64,6 @@
     ((BMLow _ l1) (match erased b2 _ ((BMLow _ _) (Refl _ m1)) (absurd (BMFive) (lt-irrefl k l1))))
     ((BMFive) (match erased b2 _ (absurd (BMLow _ l2) (lt-irrefl k l2)) ((BMFive) (Refl _ m1))))))
 
-; The theorem Birkhoff of birkhoff.v, with minimality as data: in a planar bridgeless plain cubic connected map that the search
-; finds uncolourable, a ring of k darts, k below 6, nontrivial for the m of BkMode k m, gives a reduction. The induction on
-; the ring size follows birkhoff-maps' Shorter rings until birkhoff-maps names the maps of the check, so the one Reduces
-; names every map needed.
 (def-fns _ $ (erased birkhoff-go : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x0 k m)
     (erased (List (Nat)) e n f p) (subterm erased (Nat) b) (erased (Lt k b) lb)
     (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
@@ -112,8 +105,6 @@
   (let-match erased w (MkSomePath _ _ xs _ _ p))
   (bridgeless-face d z ez e n f (Nil _) xs bl pe p))
 
-; nontrivial_cycle2 of birkhoff.v: in a planar bridgeless plain cubic map, a ring x :: y with y not the edge image of x is
-; nontrivial for 0: node x is in diskF r, and node (edge x) in diskFC r.
 (def-fns _ $ (erased nontrivial-cycle2 : (erased (Nat) d x y ex) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
     (erased (Ring e f x (Cons (Nat) y (Nil (Nat)))) rg) (erased (Nth (Nat) e x ex) pex) (erased (Apart (Nat) Lt ex y) ney)
@@ -177,8 +168,6 @@
       (apart-irrefl x (notin-in x x r ox (InHere x p)))))
   (nontrivial0 d x nx nex e n f p hd zs hm gen rg ds dfx izs knex))
 
-; double_dart of birkhoff.v: two distinct darts x and y on one face, with their edge images on one face, give the ring
-; x :: edge y, nontrivial for 0 (nontrivial-cycle2), so the map reduces.
 (def-fns _ $ (erased double-dart : (erased (Level) B) (erased (Predates (Level) (level-of birk-glue) B) pb) (erased (Nat) d x y ex ey)
     (erased (List (Nat)) e n f) (erased (BirkhoffChecks) bks) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) bl) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
@@ -204,7 +193,5 @@
     (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
 
-; snip.sl's DPath, walk.sl's Sub and hypsub.sl's split-cover, which unav/qembed.sl, unav/part.sl and unav/fit.sl define again,
-; for minarity.sl and contract2.sl.
 (let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub) (erased hsplit-cover))
   (values DPath DPNil DPNode DPFace Sub split-cover))

@@ -1,6 +1,3 @@
-; More of revsnip.v, for plain maps: the faces and disks of the reverse ring, nontrivial rings, cface_snipd, and the colourings of
-; rev_ring_cotrace and colorable_from_ring. Load after revsnip.sl.
-
 (def-fns _ $ (erased some-cat : (erased (List (Nat)) f) (erased (Nat) x y z) (erased (SomePath f (Nil (Nat)) x y) p) (erased (SomePath f (Nil (Nat)) y z) q)
     -> (erased (SomePath f (Nil (Nat)) x z) r))
   (let-match erased p (MkSomePath _ _ xs _ _ w))
@@ -90,7 +87,6 @@
   (let-match erased sm (MkSimple _ _ lab ls rf rl dl))
   (resp-under lab ls d (Cons _ x0 p) rl (respects-length lab f lab d rf lf)))
 
-; fband_rev_ring and its kernel form: RR and r are each on the faces of the other.
 (def-fns _ $ (erased rev-subs : (erased (Nat) d x0) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
     -> (erased (FaceSub f RR (Cons (Nat) x0 p)) a) (erased (FaceSub f (Cons (Nat) x0 p) RR) b) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (Under RR d) uR))
@@ -99,8 +95,7 @@
   (values (facesub-rev d x0 e n f p er RR h pl rg rm ra RR (sub-refl RR)) (facesub-ring d x0 e n f p er RR h pl rg rm ra r (sub-refl r))
     (ring-under d x0 e n f p h rg) (revapp-under er (Nil _) RR d ra (respects-under-vals e r er d rm (perm-under d e nf pe)) (UnderNil d))))
 
-; The darts of xs lie on distinct faces, none of them the face of a dart of r: a labelling constant along f gives them distinct
-; labels, none of them that of a dart of r.
+; The darts of xs lie on distinct faces, none of them the face of a dart of r.
 (def-adts $ (Scattered : ((List (Nat)) f r xs) -> Type)
   enum
   (many MkScattered : (erased (List (Nat)) f r xs lab lr lx) (erased (Respects lab f lab) rf) (erased (Respects lab r lr) rr) (erased (Respects lab xs lx) rx)
@@ -112,8 +107,7 @@
   (let ((erased lB) (erased rb) (erased sb)) (labs-sub f A lab lA d B fs rf ra ub (respects-length lab f lab d rf lf)))
   (MkScattered f B xs lab lB lx rf rb rx dx (disj-sub lA lB lx dj sb)))
 
-; nontrivial_ring m r: m < fcard face (diskF r) and m < fcard face (diskFC r), read as m + 1 darts of each on distinct faces, the
-; darts of diskN r and those off it given by a DiskSplit. That this matches Coq's fcard has been checked only by reading.
+; m + 1 darts on distinct faces of diskF r and of diskFC r, the darts of diskN r and those off it given by a DiskSplit.
 (def-adts $ (NonTrivial : ((Nat) d) ((List (Nat)) e n f r) ((Nat) m) -> Type)
   enum
   (many MkNonTrivial : (erased (Nat) d m) (erased (List (Nat)) e n f r hd zs xs ys) (erased (DiskSplit d e n r hd zs) ds)
@@ -153,7 +147,6 @@
                 (InHere ea _))))
             (MkDiskN n f r c ea c iea (hyper-node d c a ea e n f h pf pea2) (DPNil n f r c))))))))
 
-; nontrivial_ring_proper.
 (def-fns _ $ (erased nontrivial-proper : (erased (Nat) d x0 m) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
     (erased (NonTrivial d e n f (Cons (Nat) x0 p) m) nt) -> (erased (Proper e (Cons (Nat) x0 p)) pr))
@@ -217,7 +210,6 @@
       ((TwoRR _ _ _ _ _ _ _ dn _) (ds-mem d y y0 e n f Q hdB zsB h gen rg2 ur2 dsB dn ly)))
     (rev-sub-out d e n f r RR hd hd2 hdA zsA hdB zsB cx cn dsA dsB ys1 sy1)))
 
-; nontrivial_rev_ring.
 (def-fns _ $ (erased nontrivial-rev : (erased (Nat) d m) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx)
     (erased (Connected d e n f) cn) (erased (NonTrivial d e n f r m) nt) -> (erased (NonTrivial d e n f RR m) res))
   (let ((erased cx2)) cx)
@@ -239,7 +231,6 @@
   (let-match erased (nth-fn _ lab y l l2 py (respects-nth lab f lab x y l2 rf pf px)) (Refl _ _))
   (MkKernel f r lab ls x l rf rp px ol))
 
-; diskFC_face, with diskFC r read as the darts zs off diskN r that are on no face of r: it is closed under face, both ways.
 (def-fns _ $ (erased diskfc-face : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In x zs) iz) (erased (Kernel f (Cons (Nat) x0 p) x) k)
     (erased (Nth (Nat) f x y) pf) -> (erased (In y zs) iy) (erased (Kernel f (Cons (Nat) x0 p) y) ky))
@@ -256,7 +247,6 @@
       ((OrR _ _ o) (ds-off d y x0 e n f p hd zs hd zs h gen rg ur ds ds o ly)))
     ky))
 
-; diskN_rot and fband_rot: diskN and fband depend only on the darts of the ring.
 (def-fns _ $ (erased dpath-move : (erased (List (Nat)) n f r s) (erased (Nat) x y) (subterm erased (DPath n f r x y) dp) (erased (Sub s r) sb) -> (erased (DPath n f s x y) res))
   (match erased dp _
     ((DPNil _ _ _ _) (DPNil n f s x))
@@ -317,7 +307,6 @@
   (let ((erased ehw) (erased pe) (erased sp)) (ring-link e f p rr x0 hw hu rg sn2 k3))
   (values hw ehw hu phw pe phu sp))
 
-; The homomorphic half of cface_snipd: a face step of the disk map of a ring r stays on a face of the whole map.
 (def-fns _ $ (erased snipd-step : (erased (Nat) d dd dr x0 u v x y) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Nth (Nat) fd u v) pf) (erased (Nth (Nat) hd u x) hx) (erased (Nth (Nat) hd v y) hy) -> (erased (SomePath f (Nil (Nat)) x y) sp))
@@ -385,7 +374,6 @@
   (snipd-pull d dd dr a z ad e n f _ ed nd fd er nr fr hd hr bd br (Cons _ z (Nil _)) ys pt rb w2
     (path-off-simple f lab _ ls ys a z l w2 rf rl dl iz pl (path-label f lab (Nil _) xs a z l w rf pl)) pa))
 
-; The other half of cface_snipd: darts of the disk map whose images share a face of the whole map share a face of the disk map.
 (def-fns _ $ (erased snipd-face-inv : (erased (Nat) d dd dr x0 u v x y) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Ring e f x0 p) rg) (erased (Respects hd bd (Cons (Nat) x0 p)) rb)
     (erased (Nth (Nat) hd u x) hx) (erased (Nth (Nat) hd v y) hy) (erased (SomePath f (Nil (Nat)) x y) sp) -> (erased (SomePath fd (Nil (Nat)) u v) res))
@@ -490,8 +478,7 @@
   (let-match erased l (LengthCons _ _ _ k1 l1))
   (LengthCons _ c cs1 k1 (extend-length lab ld kd xs1 cs1 k1 ex1 l1)))
 
-; A four-colouring kd of the disk map of a ring r extended to the whole map by faces (the colouring kr of rev_ring_cotrace, read on
-; the whole map).
+; The four-colouring kd of the disk map of r, extended to the whole map by faces.
 (def-adts $ (Ext : ((Nat) d dd) ((List (Nat)) e n f ed nd fd hd bd r kd ks) -> Type)
   enum
   (many MkExt : (erased (Nat) d dd dr x0) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br p kd ks lab ld ids)
@@ -694,7 +681,6 @@
   (let-match erased (addc-fn c0 c1 s s1 a a1) (Refl _ _))
   (values s a (Cons _ c2 lc3) (Cons _ s0 et3) (SnocCons _ c2 c0 lc1 lc3 sl1) (SnocCons _ s0 s et1 et3 se1) (TFCons c1 c c2 s0 lc3 et3 a0 r1)))
 
-; trace_rot: rotating the colours by one rotates the trace by one.
 (def-fns _ $ (erased trace-rot : (erased (Col) c) (erased (List (Col)) lc lc2 et) (erased (Trace (Cons (Col) c lc) et) t) (erased (HSnoc (Col) lc c lc2) sn)
     -> (erased (Col) s) (erased (List (Col)) E et2) (erased (Eq (List (Col)) et (Cons (Col) s E)) eq) (erased (HSnoc (Col) E s et2) se) (erased (Trace lc2 et2) r))
   (let-match erased t (TrCons _ _ _ tf))
@@ -753,7 +739,6 @@
     (rr-apart d dd x y l1 l2 e n f ed nd fd hd bd kd ks hr co (nth-in hr u x hx) qy p1 p2)
     (color-proper-rr d dd dr e n f ed nd fd hd bd kd ks hr er nfr idr kr g1 co pmer mer ior lks lhr uhr rkr fn1)))
 
-; rev_ring_cotrace, from the disk map of r to the remainder map of RR: a ring trace et of bd gives the ring trace rot 1 et of br2.
 (def-fns _ $ (erased cotrace : (erased (Nat) d dd dr dd2 dr2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)
@@ -799,7 +784,6 @@
   (values s E et2 eq se
     (MkRingTrace er2 fr2 br2 kr L cs2 et2 ckr (respects-assoc br2 hr2 ks RV2 kr L dr2 rbr2 rL rkr lkr lhr) co2 t2)))
 
-; colorable_from_ring: a ring trace et of the disk map of r whose reverse is a ring trace of the disk map of RR gives a four-colouring.
 (def-fns _ $ (erased colorable-from-ring : (erased (Nat) d dd dr dd2 dr2)
     (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et ev) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
@@ -947,8 +931,6 @@
   (let-match erased (pull-links d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 kr Bt EA1 L1 M1 pt2 ck A1 lk1 re1 pl1 pm1) (Refl _ _))
   (Refl _ L))
 
-; rev_ring_cotrace, from the remainder map of RR back to the disk map of r: a ring trace rot 1 et of br2 gives the ring trace et
-; of bd.
 (def-fns _ $ (erased cotrace-back : (erased (Nat) d dd dr dd2 dr2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et2) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)

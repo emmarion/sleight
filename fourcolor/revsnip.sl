@@ -1,7 +1,4 @@
-; Rings of plain planar maps, after revsnip.v: the reverse ring rev (map e r), and the edges out of a proper ring. Load after
-; snip.sl.
-
-; r is a proper ring: it has more than two darts, or two darts x and y with e x other than y (proper_ring).
+; r has more than two darts, or two darts x and y with e x other than y.
 (def-adts $ (Proper : ((List (Nat)) e r) -> Type)
   enum
   (many ProperBig : (erased (List (Nat)) e r1) (erased (Nat) x y z) -> (Proper e (Cons (Nat) x (Cons (Nat) y (Cons (Nat) z r1)))))
@@ -26,8 +23,6 @@
   (let-match erased sp (MkSomePath _ _ ws _ _ w))
   (walk-back d a b f fi (Nil _) ws pf w la))
 
-; The ring path from c through P to b, read backwards along e from e b, after the reverse Acc of what came before c, as the tail
-; of RR = rev (e c :: map e P) ++ Acc.
 (def-fns _ $ (erased rpath-rev : (erased (Nat) d c b ec ea) (erased (List (Nat)) e f fi mP Acc RR) (subterm erased (List (Nat)) P) (erased (HPerm d f fi) pf)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le) (erased (RPath e f c P b) rp) (erased (Respects e P mP) rm)
     (erased (Nth (Nat) e c ec) pc) (erased (RevApp (Nat) (Cons (Nat) ec mP) Acc RR) ra) (erased (RPath e f ec Acc ea) racc)
@@ -44,7 +39,6 @@
   (rpath-rev d z b ez ea e f fi mP1 (Cons _ ec Acc) RR P1 pf pl le rp1 rm1 pz ra1
     (RPCons e f Acc ez z ec ea pez (some-sym d ec z f fi pf sp (nth-lt-length _ e ec d c pec le)) racc)))
 
-; x is on RR = rev (map e r) exactly when e x is on r (mem_rev_ring).
 (def-fns _ $ (erased rev-ring-in : (erased (Nat) d x) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
     (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) (erased (In x RR) ix)
     -> (erased (Nat) ex) (erased (Nth (Nat) e x ex) pe) (erased (In ex r) ir))
@@ -58,7 +52,6 @@
   (let ((erased pe2) (erased ne)) (plain-eq d x ex e pl (nth-lt-length _ e x d ex pe le) pe))
   (revapp-in er (Nil _) RR x ra (OrL _ _ (in-map e r er ex x ir rm pe2))))
 
-; Two darts of RR on one face are one dart: each is the edge image of a dart of r, whose successor on r is on that face.
 (def-fns _ $ (erased rev-lab-inj : (erased (Nat) d x0 u v l m) (erased (List (Nat)) e nf f p rr er RR lab ls) (erased (HPerm d e nf) pe)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le) (erased (Ring e f x0 p) rg) (erased (HSnoc (Nat) p x0 rr) sn)
     (erased (Length (Nat) (Cons (Nat) x0 p) m) lr) (erased (Length (Nat) rr m) lrr) (erased (Distinct rr) drr) (erased (Sub rr (Cons (Nat) x0 p)) srr)
@@ -101,7 +94,6 @@
       ((OrR _ _ o) o))
     (rev-labs d x0 m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra B1 sb1 db1 ls1 rp1)))
 
-; scycle_rev_ring: in a plain map, RR = rev (map e r) is a ring, read from its first dart y.
 (def-fns _ $ (erased rev-ring : (erased (Nat) d x0) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
     -> (erased (Nat) y) (erased (List (Nat)) Q) (erased (Eq (List (Nat)) RR (Cons (Nat) y Q)) eq) (erased (Ring e f y Q) rg2))
@@ -173,7 +165,6 @@
         (absurd (InHere _ _) (apart-irrefl b ne))
         (absurd (InThere _ _ _ ib1) (let-match erased ib1 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _))) (apart-irrefl a nab))))))
 
-; A proper ring does not hold both x and e x: they would be the whole ring.
 (def-fns _ $ (erased absurd ring-pair : (erased (Nat) d x ex x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Proper e (Cons (Nat) x0 p)) pr) (erased (In x (Cons (Nat) x0 p)) ix) (erased (Nth (Nat) e x ex) pex)
     (erased (In ex (Cons (Nat) x0 p)) iex) -> (erased (False) fl))
@@ -212,7 +203,6 @@
       (let-match erased oa (NotInCons _ _ _ nab _))
       (pair-in-two a b x ex ea2 e pex pex2 pa2 ne2 nab (sub-in r _ a s1 (InHere a _)) (sub-in r _ b s1 (InThere b a _ (InHere b _)))))))
 
-; diskN_edge_ring: in a plain planar map, the edge image of a dart of a proper ring is off diskN.
 (def-fns _ $ (erased absurd disk-edge-ring : (erased (Nat) d x ex x0) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Ring e f x0 p) rg) (erased (Proper e (Cons (Nat) x0 p)) pr) (erased (In x (Cons (Nat) x0 p)) ix)
     (erased (Nth (Nat) e x ex) pex) (erased (DiskN n f (Cons (Nat) x0 p) ex) dex) -> (erased (False) fl))
@@ -228,7 +218,6 @@
   (let ((erased MN1) (erased r1)) (cpath-cat n f N M1 x1 y z (cpath-tail n f M1 x x1 y p) q))
   (values (Cons _ x1 MN1) (cpath-restep n f M1 MN1 x x1 y z p r1)))
 
-; Walks along f, and along the inverse ni of n, are clink paths.
 (def-fns _ $ (erased fwalk-cpath : (erased (List (Nat)) n f s xs) (erased (Nat) a b) (subterm erased (Path f s a b xs) w)
     -> (erased (List (Nat)) L) (erased (CPath n f a L b) cp))
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pf _ w1) ((PathHere _ _ _) (values (Nil _) (CPNil n f a))))
@@ -253,7 +242,6 @@
   (let ((erased xs) (erased w)) (cycle d v u ni n pni pv (pre-lt d v u ni n pni pv)))
   (nwalk-cpath d u v n ni f (Nil _) xs pn w))
 
-; A bond of glink is joined by a clink path.
 (def-fns _ $ (erased glink-cpath : (erased (Nat) d u v) (erased (List (Nat)) e n f) (erased (List (Bond)) g) (erased (Hypermap d e n f) h) (erased (Glink d e n f g) gl)
     (erased (Adj g u v) a) -> (erased (List (Nat)) L) (erased (CPath n f u L v) cp))
   (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
@@ -288,7 +276,6 @@
   (let ((erased L2) (erased p2)) (conn-cpath d u y e n f g h gl c1))
   (cpath-cat n f L2 L1 x u y p1 p2))
 
-; connected_clink: in a connected map a clink path joins any two darts.
 (def-fns _ $ (erased connected-clink : (erased (Nat) d x y) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Connected d e n f) cn)
     (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (List (Nat)) L) (erased (CPath n f x L y) cp))
   (let-match erased cn (MkConnected _ _ _ _ g gl cs))
@@ -303,7 +290,6 @@
   (let-match erased i2 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
   (conn-cpath d x y e n f g h gl (conn-cat g x r0 y (conn-sym g r0 x c1) c2)))
 
-; proper_rev_ring.
 (def-fns _ $ (erased proper-rev : (erased (Nat) d) (erased (List (Nat)) e r er RR) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Length (Nat) e d) le)
     (erased (Proper e r) pr) (erased (Respects e r er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) -> (erased (Proper e RR) res))
   (match erased pr _
@@ -336,7 +322,6 @@
         (nth-lt-length _ n y d x pn ln)))))
     ((OrR _ _ o) o)))
 
-; With e x = w = n x1 and x, w off S: x is in diskN S when x1 is, and off it when x1 is.
 (def-fns _ $ (erased off-disk-face : (erased (Nat) d x x1 w x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (Nth (Nat) n x1 w) pn)
     (erased (Nth (Nat) e x w) pe) (erased (NotIn x (Cons (Nat) x0 p)) ox) (erased (NotIn x1 hd) o1) -> (erased (NotIn x hd) res))
@@ -431,7 +416,6 @@
     ((CPNode _ _ L1 _ y _ pn cp1) (two-node d x y e n f r RR hd hd2 cx pn (two-path d y t e n f r RR hd hd2 L1 cx cp1 tt)))
     ((CPFace _ _ L1 _ y _ pf cp1) (two-face d x y e n f r RR hd hd2 cx pf (two-path d y t e n f r RR hd hd2 L1 cx cp1 tt)))))
 
-; diskN_rev_ring: in a plain connected planar map each dart is in exactly one of diskN r and diskN RR, for a proper ring r.
 (def-fns _ $ (erased rev-disk : (erased (Nat) d x) (erased (List (Nat)) e n f r RR hd hd2) (erased (RevCtx d e n f r RR hd hd2) cx) (erased (Connected d e n f) cn)
     (erased (Lt x d) lx) -> (erased (Two n f r RR hd hd2 x) res))
   (let ((erased cx2)) cx)

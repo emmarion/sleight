@@ -1,6 +1,3 @@
-; decide_ring_trace of coloring.v: whether et is a ring trace of r is decided, by the search of coloring.sl for each
-; colouring of r that a first colour and et allow. Load after ringtrace.sl.
-
 ; The colours lc after c that a trace et from c determines, its last entry left unchecked.
 (def-adts $ (UF : ((Col) c) ((List (Col)) et lc) -> Type)
   enum
@@ -32,7 +29,6 @@
   (let ((erased lc) (erased u)) (uf-exists c2 s2 et1))
   (values (Cons _ c2 lc) (UFCons c c2 s et lc (addk-swap c s c2 a) u)))
 
-; Two lists of colours differ somewhere.
 (def-adts $ (CLNe : ((List (Col)) xs ys) -> Type)
   enum
   (many CNHead : (erased (Col) x y z) (erased (List (Col)) xs ys) (erased (AddK x y z) a) (erased (NonZero z) nz) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
@@ -168,7 +164,6 @@
       (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
       (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c rl))))
 
-; decide_ring_trace.
 (def-adts $ (RingDec : ((List (Nat)) e f r) ((List (Col)) et) -> Type)
   enum
   (many RDYes : (erased (List (Nat)) e f r) (erased (List (Col)) et) (erased (RingTrace e f r et) rt) -> (RingDec e f r et))

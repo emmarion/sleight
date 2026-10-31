@@ -1,6 +1,3 @@
-; Ring traces of four-colourings, after coloring.v and the traces of color.v: the colours below 4 of FourColoring read as
-; the colours of red/red.sl, and the trace of the colours of the darts of a ring.
-
 ; R relates the entries of xs and ys at each position.
 (def-adts $ (All2 : (Type A) (Type B) ((TyCtor (A a) (B b) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
@@ -78,14 +75,13 @@
   (let-match erased (cols-fn ks1 cs1 cs3 r1 r2) (Refl _ _))
   (Refl _ cs))
 
-; et lists the sums of consecutive colours of c :: lc, the last with c0: Gonthier's trace (c0 :: lc) is TraceFrom c0 c0 lc.
+; et lists the sums of consecutive colours of c :: lc, the last with c0.
 (def-adts $ (TraceFrom : ((Col) c0 c) ((List (Col)) lc et) -> Type)
   enum
   (many TFEnd : (erased (Col) c0 c s) (erased (AddK c c0 s) a) -> (TraceFrom c0 c (Nil (Col)) (Cons (Col) s (Nil (Col)))))
   (many TFCons : (erased (Col) c0 c c2 s) (erased (List (Col)) lc et) (erased (AddK c c2 s) a) (erased (TraceFrom c0 c2 lc et) t)
       -> (TraceFrom c0 c (Cons (Col) c2 lc) (Cons (Col) s et))))
 
-; Gonthier's trace.
 (def-adts $ (Trace : ((List (Col)) lc et) -> Type)
   enum
   (many TrNil : -> (Trace (Nil (Col)) (Nil (Col))))
@@ -117,7 +113,6 @@
     ((TrNil) (let-match erased q (TrNil)) (Refl _ et))
     ((TrCons c lc1 _ t) (let-match erased q (TrCons _ _ _ t2)) (tracefrom-fn c c lc1 et et2 t t2))))
 
-; trace_permt: permuting the colours permutes the trace.
 (def-fns _ $ (erased tracefrom-perm : (erased (Perm) g) (erased (IsPerm g) ip) (erased (Col) c0 c d0 d) (erased (List (Col)) lc lc2 et et2)
     (erased (PermC g c0 d0) p0) (erased (PermC g c d) pc) (subterm erased (PermT g lc lc2) pt) (erased (TraceFrom c0 c lc et) t)
     (erased (TraceFrom d0 d lc2 et2) t2) -> (erased (PermT g et et2) r))
@@ -156,7 +151,7 @@
     ((IP321) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (Refl _ c)) ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (Refl _ c))
       ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (Refl _ c)) ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (Refl _ c))))))
 
-; The colour permutation g on the colours below 4.
+; g sends k to k2, both below 4.
 (def-adts $ (PermN : ((Perm) g) ((Nat) k k2) -> Type)
   enum
   (many MkPermN : (erased (Perm) g) (erased (Nat) k k2) (erased (Col) c c2) (erased (ColOf k c) p) (erased (PermC g c c2) q)
@@ -237,7 +232,6 @@
   (let ((erased ls3) (erased r1) (erased a1)) (respects-permn g lab lab2 xs1 ls1 rp1 al))
   (values (Cons _ l2 ls3) (RespCons lab2 xs1 ls3 j l2 q r1) (PNCons g l l2 ls1 ls3 pl a1)))
 
-; coloring_inj for a colour permutation.
 (def-fns _ $ (erased coloring-perm : (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Nat)) e f ks) (erased (FourColoring e f ks) c)
     -> (erased (List (Nat)) ks2) (erased (FourColoring e f ks2) c2) (erased (PermNs g ks ks2) a))
   (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
@@ -267,13 +261,12 @@
   (let-match erased (permt-fn g et1 a1 b1 r1 r2) (Refl _ _))
   (Refl _ a))
 
-; ring_trace: et is the trace of the colours of the darts r under a four-colouring.
+; et is the trace of the colours of the darts r under a four-colouring.
 (def-adts $ (RingTrace : ((List (Nat)) e f r) ((List (Col)) et) -> Type)
   enum
   (many MkRingTrace : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) cs et) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
       (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (RingTrace e f r et)))
 
-; The first half of Kempe_closed (ring_trace r): ring traces are closed under colour permutations.
 (def-fns _ $ (erased ring-trace-perm : (erased (List (Nat)) e f r) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) (erased (RingTrace e f r et) rt) -> (erased (RingTrace e f r et2) r2))
   (let-match erased rt (MkRingTrace _ _ _ ks lc cs _ c rl co t))
@@ -286,7 +279,7 @@
   (let-match erased (permt-fn g et et2 et3 pt pt2) (Refl _ _))
   (MkRingTrace e f r ks2 lc2 cs2 et2 c2 rl2 co2 t2))
 
-; ins lists each dart x of cc followed by e x (Gonthier's insertE cc).
+; ins lists each dart x of cc followed by e x.
 (def-adts $ (InsertE : ((List (Nat)) e cc ins) -> Type)
   enum
   (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
@@ -302,7 +295,7 @@
   (many ECOut : (erased (List (Nat)) ins ks) (erased (List (Bond)) g) (erased (Nat) x y l1 l2) (erased (NotIn x ins) px) (erased (Nth (Nat) ks x l1) p1)
       (erased (Nth (Nat) ks y l2) p2) (erased (Apart (Nat) Lt l1 l2) ne) (erased (EdgeCC ins ks g) rest) -> (EdgeCC ins ks (Cons (Bond) (MkBond x y) g))))
 
-; cc_coloring cc ks: a colouring constant on faces and on the edges of insertE cc, and proper on the other edges.
+; ks is constant on faces and on the edges of ins, and proper on the other edges.
 (def-adts $ (CCColoring : ((Nat) d) ((List (Nat)) e f cc ks) -> Type)
   enum
   (many MkCCColoring : (erased (Nat) d) (erased (List (Nat)) e f cc ks ins) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)

@@ -1,5 +1,3 @@
-; More of revsnip.v, for plain maps: nontrivial0P, ring_disk_closed, the chord rings and ring_disk_chord. Load after revsnip2.sl.
-
 (def-fns _ $ (erased scattered-kernel : (erased (List (Nat)) f r xs) (erased (Nat) x) (erased (Scattered f r xs) sc) (erased (In x xs) ix)
     -> (erased (Kernel f r x) k))
   (let-match erased sc (MkScattered _ _ _ lab lr lx rf rr rx dx dj))
@@ -325,7 +323,7 @@
   (let-match erased rd (MkRingDS _ x0 _ _ _ p _ _ h gen pl rg pr ds))
   (off-disk-node d x y x0 e n f p hd zs h gen rg (ring-under d x0 e n f p h rg) ds pn oy))
 
-; y is in diskN R and in exactly one of diskN C1 and diskN C2, or in none of the three (diskN_chord_ring).
+; y is in diskN R and in exactly one of diskN C1 and diskN C2, or in none of the three.
 (def-adts $ (Three : ((List (Nat)) n f R C1 C2 hd hd1 hd2) ((Nat) y) -> Type)
   enum
   (many Th1 : (erased (List (Nat)) n f R C1 C2 hd hd1 hd2) (erased (Nat) y) (erased (DiskN n f R y) a) (erased (DiskN n f C1 y) b) (erased (NotIn y hd2) c)

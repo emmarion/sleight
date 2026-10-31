@@ -1,7 +1,3 @@
-; Geometry of the maps cpmap.sl builds for cubic programs, after cfmap.v: rev cpring as a node cycle (ring-cycle), and
-; cpmap_connected, cpmap_bridgeless and cpmap_planar as cpmap-geom. Load after revsnip3.sl, with cfmap.sl loaded after
-; hypcubic.sl and cpmap.sl after red/red.sl.
-
 (def-fns _ $ (erased rpath-fpath : (erased (List (Nat)) n p A) (erased (Nat) x y z) (subterm erased (CRPath n x p y) rp) (erased (FPath n x A z) fp)
     -> (erased (List (Nat)) B) (erased (FPath n y B z) r) (erased (RevApp (Nat) (Cons (Nat) x p) A (Cons (Nat) y B)) ra))
   (let-match erased rp (CRPCons _ p1 _ w _ pw rp1)
@@ -25,7 +21,7 @@
     ((CubOn _ _ _ i) (OOSkip n R xs1 3 x (revapp-in r (Nil (Nat)) R x ra (OrL _ _ i)) rest))
     ((CubThree _ _ _ o) (OOAt n R xs1 3 x o rest))))
 
-; What quasicubic_Euler takes of a map: plain, connected, and a node cycle of m + 1 darts off which node has order 3.
+; Plain, connected, and a node cycle of m + 1 darts off which node has order 3.
 (def-adts $ (QGeo : ((Nat) d m) ((List (Nat)) e n f) -> Type)
   enum
   (many MkQGeo : (erased (Nat) d m x0) (erased (List (Nat)) e n f q ids) (erased (Hypermap d e n f) h)
@@ -77,7 +73,7 @@
   (let-match erased a0 (AddZero _))
   (MkQEuler _ _ _ f6 M (Succ (Succ u)) mf mk (add-ss d 6 u du) (add-succ-left2 M u f6 r)))
 
-; Where face changes in a U or N step: d is fixed (U) or inserted after a (N); then d + 1 is inserted after c.
+; d is fixed (U) or inserted after a (N) in f0, then d + 1 is inserted after c.
 (def-adts $ (FStep : ((List (Nat)) f) ((Nat) d) ((List (Nat)) f0) -> Type)
   enum
   (many FSFix : (erased (List (Nat)) f f0) (erased (Nat) d) (erased (HSnoc (Nat) f d f0) s) -> (FStep f d f0))

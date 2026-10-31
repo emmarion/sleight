@@ -1,7 +1,3 @@
-; The Birkhoff theorem of birkhoff.v: Birkhoff_valid, from the certified check of red/bcheck.sl, and its use for rings of
-; at most five faces. Load after cpgeom.sl, ringdec.sl and traceconv.sl, in the order of PLAN.md.
-
-; A trace from c0, read up to its last entry, is a ctrace from c0 + c.
 (def-fns _ $ (erased tracefrom-ctr : (erased (Col) c0 c s) (erased (List (Col)) lc et) (subterm erased (TraceFrom c0 c lc et) t) (erased (AddK c0 c s) a)
     -> (erased (List (Col)) et1) (erased (Ctr s et1 et) r))
   (match erased t _
@@ -28,7 +24,6 @@
       (let-match erased l (LengthCons _ _ _ k1 l1))
       (LengthCons _ s et1 k (tracefrom-length c0 c2 lc1 et1 k1 t1 l1)))))
 
-; The ring trace of a ring of k + 1 darts is the ctrace of k colours.
 (def-fns _ $ (erased rt-ctr : (erased (List (Nat)) e f r) (erased (List (Col)) et) (erased (Nat) k) (erased (RingTrace e f r et) rt)
     (erased (Length (Nat) r (Succ k)) lr) -> (erased (List (Col)) et1) (erased (Ctr (C0) et1 et) c) (erased (Length (Col) et1 k) l))
   (let-match erased rt (MkRingTrace _ _ _ ks lc cs _ col rl co t))
@@ -50,7 +45,6 @@
   (let ((erased B) (erased fp) (erased ra1)) (rpath-fpath n p1 (Nil _) z1 y z1 rp1 (FPNil n z1)))
   (values (Cons _ y B) ra1 (NCCons n (Cons _ y B) a z1 (FPCons n B a y z1 back fp) pz)))
 
-; The ring a :: p of a configuration map, read as the node cycle a :: rev p (Coq's rotr 1 (rev (cpring G))).
 (def-fns _ $ (erased cpring-br : (erased (List (Nat)) n r) (erased (Cpring n r) cr)
     -> (erased (Nat) a) (erased (List (Nat)) p q) (erased (Eq (List (Nat)) r (Cons (Nat) a p)) eq) (erased (RevApp (Nat) p (Nil (Nat)) q) ra)
     (erased (NCyc n (Cons (Nat) a q)) nc) (erased (Distinct (Cons (Nat) a q)) dq))
@@ -60,7 +54,6 @@
   (values a p q (Refl _ r) ra nc
     (DistCons a q (notin-revapp a p (Nil _) q ra o (NotInNil a)) (revapp-distinct p (Nil _) q ra dp1 (DistNil) (off-nil p)))))
 
-; Node order 3 off the ring a :: p, read off the node cycle a :: rev p.
 (def-fns _ $ (erased cubics-turn : (erased (List (Nat)) n p q xs) (erased (Nat) a) (subterm erased (Cubics n (Cons (Nat) a p) xs) cs)
     (erased (RevApp (Nat) p (Nil (Nat)) q) ra) -> (erased (OrdersOff n 3 (Cons (Nat) a q) xs) res))
   (let-match erased (unary-3) (Refl _ _))
@@ -83,7 +76,6 @@
   (let-match erased (revapp-fn (Col) E1 (Cons _ c (Nil _)) a A2 ra3 ra4) (Refl _ _))
   (RRCons b R1 a c rb (revapp-snoc (Col) c E1 (Nil _) (Cons _ c (Nil _)) R1 a r1 (SnocNil _ c) ra4)))
 
-; From a ring trace et2 = rot 1 (rev et) of a :: rev p to the ring trace rotr 1 et of a :: p.
 (def-fns _ $ (erased rt-revtail : (erased (List (Nat)) e f p q) (erased (Nat) a) (erased (List (Col)) et et2) (erased (RevApp (Nat) p (Nil (Nat)) q) ra)
     (erased (RingTrace e f (Cons (Nat) a q) et2) rt) (erased (RotRev et et2) rr)
     -> (erased (Col) s) (erased (List (Col)) E) (erased (HSnoc (Col) E s et) se) (erased (RingTrace e f (Cons (Nat) a p) (Cons (Col) s E)) r))
@@ -121,7 +113,6 @@
   (let-match erased sb (HSubCons x m1 _ ix sb1) ((HSubNil _) (HSubNil r)))
   (HSubCons x m1 r (revapp-in pre w r x ra (OrL _ _ ix)) (sub-revapp pre w r m1 ra sb1)))
 
-; The darts ys, on distinct faces off r, then r, on distinct faces, are told apart by g.
 (def-fns _ $ (erased ps-scatter : (erased (List (Bond)) g) (erased (List (Nat)) lab ys lx r lr) (erased (Const lab g) cl) (subterm erased (Respects lab ys lx) rx)
     (erased (Distinct lx) dx) (erased (Disj lx lr) dj) (erased (Respects lab r lr) rr) (erased (PairSep g r) pr)
     -> (erased (List (Nat)) L) (erased (AppN ys r L) ap) (erased (PairSep g L) ps))
@@ -132,7 +123,6 @@
   (values (Cons _ y L1) (AppCons ys1 r L1 y ap1)
     (PrCons g y L1 (sepall-app g y ys1 r L1 ap1 (label-sepall g lab ys1 lx1 y ly cl py o rx1) (label-sepall g lab r lr y ly cl py out rr)) ps1)))
 
-; The faces that meet hr number at least k + m + 1: those of the k darts of the ring r and of m + 1 darts ys off its faces.
 (def-fns _ $ (erased outer-count : (erased (Nat) d k m kf x0) (erased (List (Nat)) e f p ys zs RV hr ids outer inner) (erased (List (Bond)) gf)
     (erased (Graph d f gf) grf) (erased (Length (Nat) f d) lf) (erased (Ring e f x0 p) rg) (erased (Length (Nat) (Cons (Nat) x0 p) k) lk)
     (erased (Scattered f (Cons (Nat) x0 p) ys) sc) (erased (Length (Nat) ys (Succ m)) ly) (erased (Sub ys zs) sy)
@@ -178,8 +168,6 @@
 (let ((many bk-fr)) (EAdd (EAdd (EMul (EAdd (EVar (Zero)) (ENum 2)) (ENum 2)) (ENum 6)) (EVar (Succ (Succ (Zero))))))
 (comptime-match many (ring-check bk-fl bk-fr) (Some _ bk-eq2))
 
-; The size bound of Birkhoff_valid: with k + m + 1 faces meeting the remainder of a ring of h + 2 darts, which has dr darts,
-; quasicubic_Euler leaves dr above the size bound of a basis program, whose map has kc darts.
 (def-fns _ $ (erased birkhoff-size : (erased (Nat) h m kc dr kf K f6 m2 u x y b0) (erased (Add (Succ m) (Succ (Succ h)) K) aK)
     (erased (Lt K (Succ kf)) lK) (erased (Mul kf 6 f6) mf) (erased (Mul (Succ (Succ h)) 2 m2) mm) (erased (Add dr 6 u) du) (erased (Add m2 u f6) af)
     (erased (Mul 6 m x) mx) (erased (Mul 4 (Succ h) y) my) (erased (Add x y b0) xy) (erased (Lt (Succ kc) b0) lt) -> (erased (Lt kc dr) r))
@@ -218,7 +206,6 @@
   (let-match erased nc (NCCons _ q x y fp back) ((NCNil _) (UnderNil d)))
   (UnderCons q x d (under-nth n y x d un back) (fpath-under n q x y d fp un)))
 
-; The map of a cubic program has cpcard darts (card_cpmap).
 (def-fns _ $ (erased cpcard-of : (erased (List (Step)) cp) (erased (Nat) d k) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
     (erased (Cpcard cp k) cc) -> (erased (Eq (Nat) d k) q))
   (match erased c _
@@ -256,7 +243,6 @@
       (let-match erased (cprsize-fn cp1 j1 j2 cq1 d1 d2) (Refl _ _))
       (Refl _ k))))
 
-; The darts off diskN of one DiskSplit of a ring are off it in any other.
 (def-fns _ $ (erased sub-ds : (erased (Nat) d x0) (erased (List (Nat)) e n f p hdA zsA hd zs ys) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hdA zsA) dsA) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds)
     (subterm erased (Sub ys zsA) sy) -> (erased (Sub ys zs) r))
@@ -276,16 +262,13 @@
   (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
   (values x (SnocCons _ e x et2 ct sn)))
 
-; The map that chkbP of Birkhoff_valid glues from the disk map of a ring, on bd, and the map of a basis program, on its ring
-; a :: p read as the node cycle a :: q.
+; The map glued from a disk map on its ring bd and the map of a basis program on its ring a :: p, read as the node cycle a :: q.
 (def-adts $ (SewSide : ((Nat) d2 dd) ((List (Nat)) e2 n2 f2 ed nd fd bd) ((List (Step)) cp) -> Type)
   enum
   (many MkSewSide : (erased (Nat) d2 dd dc a) (erased (List (Nat)) e2 n2 f2 ed nd fd ec nc fc bd p q hd2 hr2) (erased (List (Step)) cp)
       (erased (Patch d2 dd dc e2 n2 f2 ed nd fd ec nc fc hd2 hr2 bd (Cons (Nat) a q)) pt2) (erased (Cpmap cp dc ec fc (Cons (Nat) a p)) cm)
       (erased (RevApp (Nat) p (Nil (Nat)) q) ra) -> (SewSide d2 dd e2 n2 f2 ed nd fd bd cp)))
 
-; A four-colouring of that map gives the trace that chkbP asks for: a ring trace of the disk map whose even normal form, without
-; its last entry, is in the tree of the basis program.
 (def-fns _ $ (erased side-trace : (erased (Nat) h m d2 dd) (erased (List (Nat)) e2 n2 f2 ed nd fd bd ks) (erased (List (Step)) cp) (erased (Ctree) t)
     (erased (SewSide d2 dd e2 n2 f2 ed nd fd bd cp) ss) (erased (BkProg h m cp t) bp) (erased (Length (Nat) bd (Succ (Succ h))) lbd)
     (erased (FourColoring e2 f2 ks) c)
@@ -301,8 +284,6 @@
   (let-match erased (snoc-inj (Col) E et1 etd s x se sn) (Refl _ _))
   (values E ev2 etd len ev mt cr (MkHolds (RArgs) (MkRArgs dd ed nd fd bd) RTP etd (MkRTP dd ed nd fd bd etd td))))
 
-; The map of chkbP for one side of a ring r of a planar bridgeless plain cubic connected map, with the disk map patch pt, and a
-; basis program cp of the check: planar, plain, precubic and smaller than the map, and bridgeless unless bd has a chord.
 (def-fns _ $ (erased side-map : (erased (Nat) d h m x0 dd dr) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br zs RV) (erased (List (Step)) cp)
     (erased (Ctree) t) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen) (erased (Bridgeless d e n f) bl)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
@@ -378,7 +359,7 @@
     (bridgeless-patch d2 dd dc e2 n2 f2 ed nd fd ec nc fc hd2 hr2 bd br2 pt2 bld blc)
     (MkSewSide d2 dd dc a e2 n2 f2 ed nd fd ec nc fc bd p1 q hd2 hr2 cp pt2 cmap ra)))
 
-; A side of a ring x0 :: p: its disk map (dd, ed, nd, fd) on bd and remainder map on br, as snip-exists gives them.
+; A side of the ring x0 :: p: its disk map (dd, ed, nd, fd) on bd and remainder map on br.
 (def-adts $ (BHalf : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) dd) ((List (Nat)) ed nd fd bd) -> Type)
   enum
   (many MkBHalf : (erased (Nat) d x0 dd dr) (erased (List (Nat)) e n f p ed nd fd er nr fr hd hr bd br zs RV)
@@ -392,7 +373,7 @@
       (erased zs) (erased RV) (erased pt) (erased rb) (erased rv) (erased rbr) (erased ds) (erased ap)) (snip-exists d x0 e n f p h gen rg))
   (values dd ed nd fd bd (MkBHalf d x0 dd dr e n f p ed nd fd er nr fr hd hr bd br zs RV pt rb rv rbr ds ap)))
 
-; A nontrivial ring r = x0 :: p with its reversed ring RR = y0 :: Q (rev_ring) and a side of each.
+; A nontrivial ring r = x0 :: p, its reversed ring RR = y0 :: Q, and a side of each.
 (def-adts $ (BRing : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) dd1 dd2) ((List (Nat)) ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) -> Type)
   enum
   (many MkBRing : (erased (Nat) d x0 y0 dd1 dd2) (erased (List (Nat)) e n f p Q er hdA hdB ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2)
@@ -422,9 +403,7 @@
     (erased (Length (Nat) r k) lr) -> (erased (Length (Nat) RR k) l))
   (revapp-length er (Nil _) RR k (Zero) k ra (respects-length e r er k rm lr) (LengthNil _) (add-zero-right k)))
 
-; The maps the check needs coloured: d, e, n, f of each.
-; For each basis tree t of ts, the map that side-map glues for its program, with what makes it a smaller planar bridgeless
-; plain precubic map than one of d darts.
+; ms: for each basis tree of ts, the map side-map glues for its program, smaller than d darts.
 (def-adts $ (BNeed : ((Nat) d dd h m) ((List (Nat)) ed nd fd bd) ((List (Ctree)) ts) ((List (Mp)) ms) -> Type)
   enum
   (many BNNil : (erased (Nat) d dd h m) (erased (List (Nat)) ed nd fd bd) -> (BNeed d dd h m ed nd fd bd (Nil (Ctree)) (Nil (Mp))))
@@ -434,7 +413,7 @@
       (erased (SewSide d2 dd e2 n2 f2 ed nd fd bd cp) ss) (erased (BNeed d dd h m ed nd fd bd ts ms) rest)
       -> (BNeed d dd h m ed nd fd bd (Cons (Ctree) t ts) (Cons (Mp) (MkMp d2 e2 n2 f2) ms))))
 
-; A ring of fewer than h + 2 darts that is nontrivial for 0 (from a chord, ring_disk_chord).
+; A ring of fewer than h + 2 darts, nontrivial for 0.
 (def-adts $ (Shorter : ((Nat) d) ((List (Nat)) e n f) ((Nat) h) -> Type)
   enum
   (many MkShorter : (erased (Nat) d h y0 k) (erased (List (Nat)) e n f Q) (erased (Ring e f y0 Q) rq) (erased (NonTrivial d e n f (Cons (Nat) y0 Q) (Zero)) nq)
@@ -465,8 +444,8 @@
   (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
   (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))
 
-; What Birkhoff_valid needs for a ring nontrivial for m in the check for h, m with basis trees ts: a shorter ring nontrivial
-; for 0, or the two sides of the ring and, for each side, the maps to colour.
+; For a ring nontrivial for m, checked for h and m with basis trees ts: a shorter ring nontrivial for 0, or the two sides
+; and the maps ms to colour.
 (def-adts $ (BkNeed : ((Nat) d) ((List (Nat)) e n f) ((Nat) x0) ((List (Nat)) p) ((Nat) h m) ((List (Ctree)) ts) -> Type)
   enum
   (many BKShort : (erased (Nat) d x0 h m) (erased (List (Nat)) e n f p) (erased (List (Ctree)) ts) (erased (Shorter d e n f h) sh)
@@ -503,12 +482,10 @@
     ((ElHere _ _ _) (side-trace h m d2 dd e2 n2 f2 ed nd fd bd ks cp t ss bp lbd c))
     ((ElThere _ _ _ _ el1) (need-hit d dd h m ed nd fd bd ts1 ms1 t bn1 mc1 el1 lbd))))
 
-; The traces that are not ring traces of a map, with a certificate (decide_ring_trace).
 (def-adts $ (NRT : ((RArgs) a) ((List (Col)) et) -> Type)
   enum
   (many MkNRT : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (RTNo e f r et) no) -> (NRT (MkRArgs d e n f r) et)))
 
-; colorable_from_ring for a map with no four-colouring: no ring trace of one side has its reverse on the other.
 (def-fns _ $ (erased glue-ring : (erased (Nat) d x0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Col)) c1 c2)
     (erased (Hypermap d e n f) hm) (erased (Connected d e n f) cn) (erased (NoExt d e f (Nil (Nat)) (Nil (Nat)) (Nil (Nat))) nce)
     (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br) (erased (RevApp (Col) c1 (Nil (Col)) c2) re)
@@ -526,8 +503,6 @@
 (let ((erased prdc)) (prove-predates RDC BL))
 (let ((erased BN) (erased bcs)) (birkhoff-check-sound BL))
 
-; A side of the check for a side of a ring: its ring traces, the traces that are not, and the maps of the basis programs
-; coloured.
 (def-fns _ $ (erased mk-side : (erased (Nat) d x0 dd h m) (erased (List (Nat)) e n f p ed nd fd bd) (erased (List (Ctree)) ts) (erased (List (Mp)) ms)
     (erased (BHalf d e n f x0 p dd ed nd fd bd) hf) (erased (Length (Nat) (Cons (Nat) x0 p) (Succ (Succ h))) lr)
     (erased (BNeed d dd h m ed nd fd bd ts ms) bn) (erased (MpCols ms) mc) (erased (RelC) R) (erased (KClosed BL (MkPred (RArgs) (MkRArgs dd ed nd fd bd) RTP) R) cl)
@@ -553,9 +528,6 @@
       (need-hit d dd h m ed nd fd bd ts ms t bn mc el lbd)))
   (MkBSide BL h m ts _ _ R cl dec ref hit))
 
-; Birkhoff_valid of birkhoff.v, with the minimality of the map entering as data: a planar bridgeless plain cubic connected map
-; with no four-colouring (a search certificate) has no ring of h + 2 darts nontrivial for m, given the fields of a
-; BirkhoffCheck h m and four-colourings of the maps birkhoff-maps names for the ring.
 (def-fns _ $ (erased birkhoff-ring : (erased (Nat) d x0 h m n0 dd1 dd2) (erased (List (Nat)) e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) (erased (List (Ctree)) ts)
     (erased (List (Mp)) ms1 ms2) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (Hypermap d e n f) hm) (erased (Genus d e n f (Zero)) gen)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu) (erased (Connected d e n f) cn)
@@ -602,7 +574,6 @@
   (bcs h m n0 ts ctu gtu ce ge gc bk T1 _ T2 _ (mk-side d x0 dd1 h m e n f p ed1 nd1 fd1 bd1 ts ms1 h1 lr n1 c1 R1 cl1)
     (mk-side d y0 dd2 h m e n f Q ed2 nd2 fd2 bd2 ts ms2 h2 lr2 n2 c2 R2 cl2) (MkBGlue BL T1 T2 g12 g21)))
 
-; A ring of a bridgeless map has at least two darts.
 (def-fns _ $ (erased ring-two : (erased (Nat) d x0 k) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Bridgeless d e n f) bl)
     (erased (Ring e f x0 p) rg) (erased (Length (Nat) (Cons (Nat) x0 p) k) l) -> (erased (Lt (Succ (Zero)) k) r))
   (let-match erased l (LengthCons _ _ _ k1 l1))
@@ -615,13 +586,12 @@
       (bridgeless-face d x0 ey e n f (Nil _) ws bl pe wb)))
   (LtS (Zero) (Succ k2) (LtZ k2)))
 
-; The m of the Birkhoff theorem for rings of k darts: 1 for k = 5, 0 below.
+; m is 1 for k = 5 and 0 below.
 (def-adts $ (BkMode : ((Nat) k m) -> Type)
   enum
   (many BMLow : (erased (Nat) k) (erased (Lt k (Succ (Succ (Succ (Succ (Succ (Zero))))))) l) -> (BkMode k (Zero)))
   (many BMFive : -> (BkMode (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Zero)))))
 
-; The Birkhoff theorem of birkhoff.v reads its check for a ring of 2 to 5 darts off the four checks.
 (def-fns _ $ (erased birkhoff-check-at : (erased (Nat) k) (erased (BirkhoffChecks) bcs) (erased (Lt (Succ (Zero)) k) l1) (erased (Lt k 6) l6)
     -> (erased (Nat) h m) (erased (Eq (Nat) k (Succ (Succ h))) eq) (erased (BirkhoffCheck h m) bc) (erased (BkMode k m) md))
   (let-match erased (unary-6) (Refl _ _))

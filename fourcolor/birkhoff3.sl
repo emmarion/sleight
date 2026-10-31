@@ -1,14 +1,9 @@
-; minimal_counter_example_is_cubic of coloring.v (cubic-reduces), with minimality as data, and from it embed.sl's BirkGeo
-; (birkhoff.v's minimal_counter_example_is_plain_cubic_pentagonal), with min_arity taken as a hypothesis (MinArity, which
-; minarity.sl proves). Load after embed.sl, in the chain that PLAN.md gives.
-
 (def-fns _ $ (erased skip-id : (erased (Nat) d z) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk) (erased (Nth (Nat) p z z) pz)
     -> (erased (Eq (List (Nat)) p2 p) r))
   (match erased sk _
     ((SkipFixed _ _ _) (Refl _ p))
     (absurd (SkipCut _ _ _ w u pw _ ne _) (let-match erased (perm-inj d w z z p q pm pw pz) (Refl _ _)) (apart-irrefl w ne))))
 
-; A WalkupE at a dart z that p fixes: p2 i = s (p (s i)) below d, so s0, the swap s without its last entry, sends p2 to p.
 (def-fns _ $ (erased cut-morph : (erased (Nat) d z) (erased (List (Nat)) p q s s0 p2 m) (erased (HPerm (Succ d) p q) pm) (erased (Swap (Succ d) z d s) sw)
     (erased (Snoc (Nat) s0 z s) sn) (erased (Length (Nat) s0 d) l0) (erased (Length (Nat) p2 d) lp2) (erased (Cut d z s p p2) ct) (erased (Nth (Nat) p z z) pz)
     (subterm erased (Under m d) u) -> (erased (MorphOff s0 p2 p (Nil (Nat)) m) r))
@@ -43,7 +38,6 @@
   (MOAt hh pc pa (Nil _) ms i y a b pcy (respects-at h1 h2 hh i z a rh hz pa1) (respects-at h1 h2 hh y w b rh hy hb) pab
     (morph-comp ka h1 h2 hh pa pb pc ia ms m1 io l1 u2 rh rest)))
 
-; WalkupE at a dart z fixed by n and f: the map on d darts, with s0 sending its node and face permutations to those of the map.
 (def-fns _ $ (erased drop-dead : (erased (Nat) d z) (erased (List (Nat)) e n f idd) (erased (Hypermap (Succ d) e n f) h) (erased (Genus (Succ d) e n f (Zero)) g)
     (erased (Lt z (Succ d)) lz) (erased (Nth (Nat) n z z) pnz) (erased (Nth (Nat) f z z) pfz) (erased (Iota d idd) io)
     -> (erased (List (Nat)) e2 n2 f2 s s0) (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 (Zero)) g2) (erased (Swap (Succ d) z d s) sw)
@@ -81,8 +75,7 @@
   (let ((erased ids) (erased io)) (iota-exists d))
   (distinct-map d s si ids s (iota-distinct d ids io) (respects-id-right d ids s io (perm-length d s si pm)) pm))
 
-; Two WalkupEs at darts x and y fixed by n and f, as Drop2 records them: H sends the darts 0..d0-1 of the smaller map to the
-; darts of the map other than x and y, and t sends them back.
+; H sends the darts 0..d0-1 of the smaller map to the darts other than x and y, and t sends them back.
 (def-adts $ (Drop2 : ((Nat) d0 x y) ((List (Nat)) H t) -> Type)
   enum
   (many MkDrop2 : (erased (Nat) d0 x y y1) (erased (List (Nat)) H t s1 s10 s2 s20 s2x) (erased (Swap (Succ (Succ d0)) x (Succ d0) s1) sw1)
@@ -122,7 +115,6 @@
     (absurd (OrR _ _ e) (let-match erased e (Refl _ _)) (lt-irrefl a la1)))
   (values i (respects-at s2x s1 t u a i rt pa (snoc-old _ s2 s2x (Zero) i a sx pi)) li (respects-at s10 s20 H i a u rh p20 p10)))
 
-; The two WalkupEs, from a map on d0 + 2 darts with x and y fixed by n and f.
 (def-fns _ $ (erased drop-two : (erased (Nat) d0 x y) (erased (List (Nat)) e n f) (erased (Hypermap (Succ (Succ d0)) e n f) h)
     (erased (Genus (Succ (Succ d0)) e n f (Zero)) g) (erased (Lt x (Succ (Succ d0))) lx) (erased (Lt y (Succ (Succ d0))) ly) (erased (Apart (Nat) Lt y x) nyx)
     (erased (Nth (Nat) n x x) pnx) (erased (Nth (Nat) f x x) pfx) (erased (Nth (Nat) n y y) pny) (erased (Nth (Nat) f y y) pfy) (erased (List (Nat)) idk)
@@ -162,7 +154,7 @@
     (respects-length s10 s20 H d0 rh l20) (respects-under-vals s10 s20 H _ rh u10)
     (respects-distinct s10 s20 H (distinct-unsnoc x s10 s1 sn1 (perm-distinct _ s1 s1 ps1)) (distinct-unsnoc y1 s20 s2 sn2 (perm-distinct (Succ d0) s2 s2 ps2)) rh)))
 
-; WalkupE at x and then at y, darts kept: the node cycle x, y cut out, and x and y cut out of their faces.
+; The node cycle x, y cut out, and x and y cut out of their faces, darts kept.
 (def-adts $ (Walk2 : ((Nat) d x y) ((List (Nat)) e n f e2 n2 f2) -> Type)
   enum
   (many MkWalk2 : (erased (Nat) d x y) (erased (List (Nat)) e n f e1 n1 f1 e2 n2 f2) (erased (Hypermap d e n f) h) (erased (Hypermap d e1 n1 f1) h1)
@@ -190,7 +182,6 @@
     (erased (Apart (Nat) Lt c x) ncx) (erased (Apart (Nat) Lt c y) ncy) (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy) -> (erased (Nth (Nat) p2 c v) r))
   (skip-keep y c v p1 p2 s2 (skip-keep x c v p p1 s1 pc ncx nvx) ncy nvy))
 
-; Off x and y, n2 is n.
 (def-fns _ $ (erased w2-node : (erased (Nat) d x y u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy) (erased (Nth (Nat) n u v) pu)
     -> (erased (Nth (Nat) n2 u v) r) (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy))
@@ -199,7 +190,6 @@
   (let ((erased nvx) (erased nvy)) (values (img-apart d u y v x n ni pmn pu pyx nuy) (img-apart d u x v y n ni pmn pu pxy nux)))
   (values (skip2 x y u v n n1 n2 sn1 sn2 pu nux nuy nvx nvy) nvx nvy))
 
-; The node preimage of a dart other than x and y is not x or y.
 (def-fns _ $ (erased w2-pre : (erased (Nat) d x y u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy) (erased (Nth (Nat) n u v) pu) -> (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy))
   (let-match erased w (MkWalk2 _ _ _ _ _ _ e1 n1 f1 _ _ _ h h1 h2 sn1 sf1 sn2 sf2 pxy pyx nyx lx ly))
@@ -213,7 +203,6 @@
   (let-match erased w (MkWalk2 _ _ _ _ _ _ e1 n1 f1 _ _ _ h h1 h2 sn1 sf1 sn2 sf2 pxy pyx nyx lx ly))
   (skip2 x y c v f f1 f2 sf1 sf2 pc ncx ncy nvx nvy))
 
-; f c = x and f x = w give f2 c = w, and f c = y and f y = w do too.
 (def-fns _ $ (erased w2-face-x : (erased (Nat) d x y c w0) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt c x) ncx) (erased (Apart (Nat) Lt c y) ncy) (erased (Apart (Nat) Lt w0 y) nwy) (erased (Nth (Nat) f c x) pc) (erased (Nth (Nat) f x w0) px)
     -> (erased (Nth (Nat) f2 c w0) r))
@@ -228,14 +217,12 @@
   (let ((erased nf1) (erased ni1) (erased fi1) (erased rnf1) (erased pme1) (erased pmn1) (erased pmf1)) (hyper-core d e1 n1 f1 h1))
   (skip-cut-at d y c w0 f1 fi1 f2 pmf1 sf2 (skip-keep x c y f f1 sf1 pc ncx nyx) (skip-keep x y w0 f f1 sf1 py nyx nwx) ncy))
 
-; e2 a = b from n w = a and f2 b = w, with w other than x and y.
 (def-fns _ $ (erased w2-edge : (erased (Nat) d x y a b w0) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt w0 x) nwx) (erased (Apart (Nat) Lt w0 y) nwy) (erased (Nth (Nat) n w0 a) pw) (erased (Nth (Nat) f2 b w0) pb) -> (erased (Nth (Nat) e2 a b) r))
   (let ((erased pn2) (erased _) (erased _)) (w2-node d x y w0 a e n f e2 n2 f2 w nwx nwy pw))
   (let-match erased w (MkWalk2 _ _ _ _ _ _ e1 n1 f1 _ _ _ h h1 h2 sn1 sf1 sn2 sf2 pxy pyx nyx lx ly))
   (hyper-edge d a w0 b e2 n2 f2 h2 pn2 pb))
 
-; Off x, y and their edge images, e2 is e.
 (def-fns _ $ (erased e2-gen : (erased (Nat) d x y u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy) (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy)
     (erased (Nth (Nat) e u v) pe) -> (erased (Nth (Nat) e2 u v) r))
@@ -246,7 +233,6 @@
   (let ((erased ncx) (erased ncy)) (w2-pre d x y c u e n f e2 n2 f2 w nux nuy pn))
   (w2-edge d x y u v c e n f e2 n2 f2 w ncx ncy pn (w2-face d x y v c e n f e2 n2 f2 w nvx nvy ncx ncy pc)))
 
-; In a plain map, with a = e x other than y and b = e y: f b = x, w = f x has n w = a, and w, a and b are other than x and y.
 (def-fns _ $ (erased swap-geo : (erased (Nat) d x y a b) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Nth (Nat) n x y) pxy) (erased (Nth (Nat) n y x) pyx) (erased (Apart (Nat) Lt y x) nyx) (erased (Lt x d) lx) (erased (Lt y d) ly)
     (erased (Nth (Nat) e x a) pa) (erased (Nth (Nat) e y b) pb) (erased (Apart (Nat) Lt a y) nay)
@@ -285,7 +271,6 @@
   (MkOrder p (Cons _ v (Nil _)) u v (Succ (Zero)) puv
     (PathStep p (Cons _ u (Nil _)) (Nil _) v u u pvu (NotInCons v u (Nil _) ne (NotInNil v)) (PathHere p _ u)) (LengthCons _ v (Nil _) (Zero) (LengthNil _))))
 
-; Off x and y, e2 has order 2.
 (def-fns _ $ (erased e2-order : (erased (Nat) d x y u) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Lt u d) lu) (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy)
     -> (erased (Order e2 u (Succ (Succ (Zero)))) r))
@@ -314,7 +299,6 @@
   (OOAt e4 (Nil _) m1 _ i (order-pull d0 i b _ H e4 e4i e2 (Nil _) idk pm (NCNil e4) mo io dh (e2-order _ x y b e n f e2 n2 f2 w pl lb nx ny) li (NotInNil i) pb)
     (oo-pull d0 x y e n f e2 n2 f2 e4 e4i H t idk m1 w pl dr pm mo io dh u1)))
 
-; The node permutation of the smaller map is sent to that of the map.
 (def-fns _ $ (erased morph-node : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 H t p m) (erased (Walk2 (Succ (Succ d0)) x y e n f e2 n2 f2) w)
     (erased (Drop2 d0 x y H t) dr) (erased (Under m d0) u) (subterm erased (MorphOff H p n2 (Nil (Nat)) m) mo) -> (erased (MorphOff H p n (Nil (Nat)) m) r))
   (let-match erased mo (MOAt _ _ _ _ ms i j z v pij hz hv qz rest) ((MONil _ _ _ _) (MONil H p n (Nil _))) (absurd (MOSkip _ _ _ _ _ _ ib _) ib))
@@ -328,7 +312,6 @@
   (let-match erased (nth-fn _ n2 z v2 v q2 qz) (Refl _ _))
   (MOAt H p n (Nil _) ms i j z v pij hz hv pv2 (morph-node d0 x y e n f e2 n2 f2 H t p ms w dr u1 rest)))
 
-; A face walk of the cut map is joined to its end in the map.
 (def-fns _ $ (erased w2-face-back : (erased (Nat) d x y a b) (erased (List (Nat)) e n f e2 n2 f2 xs) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Path f2 (Nil (Nat)) a b xs) pa) -> (erased (SomePath f (Nil (Nat)) a b) r))
   (let-match erased w (MkWalk2 _ _ _ _ _ _ e1 n1 f1 _ _ _ h h1 h2 sn1 sf1 sn2 sf2 pxy pyx nyx lx ly))
@@ -342,7 +325,6 @@
     (skip-conn-back d a b x f f1 g g1 sf1 gr gr1 (skip-conn-back d a b y f1 f2 g1 g2 sf2 gr1 gr2 (path-graph-conn d a b f2 (Nil _) xs g2 pa gr2)))))
   (MkSomePath f (Nil _) ys a b p))
 
-; The smaller map is bridgeless: a face walk from a dart to its edge image there gives one in the map.
 (def-fns _ $ (erased allsep-pull : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 e4 e4i f4 f4i lab H t idk) (erased (List (Bond)) gf g)
     (erased (Walk2 (Succ (Succ d0)) x y e n f e2 n2 f2) w) (erased (Bridgeless (Succ (Succ d0)) e n f) bl) (erased (Drop2 d0 x y H t) dr)
     (erased (HPerm d0 e4 e4i) pe4) (erased (HPerm d0 f4 f4i) pf4) (erased (MorphOff H f4 f2 (Nil (Nat)) idk) mf) (erased (MorphOff H e4 e2 (Nil (Nat)) idk) me)
@@ -377,7 +359,6 @@
   (AllSepCons gf g1 i j (MkSep gf i j lab l1 l2 cl p1 p2 ne)
     (allsep-pull d0 x y e n f e2 n2 f2 e4 e4i f4 f4i lab H t idk gf g1 w bl dr pe4 pf4 mf me io dh fl cl ll fe1)))
 
-; The cut map is bridgeless, plain and precubic.
 (def-fns _ $ (erased cut-pbpp : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 e4 n4 f4 H t idk) (erased (Pbpp (Succ (Succ d0)) e n f) p)
     (erased (Walk2 (Succ (Succ d0)) x y e n f e2 n2 f2) w) (erased (Drop2 d0 x y H t) dr) (erased (Hypermap d0 e4 n4 f4) h4)
     (erased (Iota d0 idk) io) (erased (MorphOff H n4 n2 (Nil (Nat)) idk) mn) (erased (MorphOff H f4 f2 (Nil (Nat)) idk) mf) (erased (MorphOff H e4 e2 (Nil (Nat)) idk) me)
@@ -404,7 +385,7 @@
   (values (respects-under-vals s2x s1 t (Succ d0) rt (under-snoc-add s2 s2x (Zero) (Succ d0) sx (perm-under (Succ d0) s2 s2 ps2) (LtZ d0)))
     (respects-length s2x s1 t _ rt (perm-length _ s1 s1 ps1))))
 
-; A four-colouring k4 of the cut map read on the darts of the map other than x and y: ks0 = (k4 ++ [0]) . t.
+; ks0 = (k4 ++ [0]) . t.
 (def-adts $ (Lift : ((Nat) d0 x y) ((List (Nat)) e n f e2 n2 f2 ks0) -> Type)
   enum
   (many MkLift : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 e4 n4 f4 H t idk k4 ke k4x ks0)
@@ -453,8 +434,7 @@
   (let-match erased (nth-fn _ ks0 v c2 cj p2 (respects-at k4x t ks0 v j cj rt tb (snoc-old _ k4 k4x (Zero) cj j sk pcj))) (Refl _ _))
   (apart-sym c2 c1 (differ-nth ke k4 i c2 c1 df (respects-at k4 e4 ke i j c2 re pj pcj) pci)))
 
-; The colours cx of x and cy of y: those of the faces of x and y when e x is not y, and 0 and 1 when it is (then the
-; faces of x and y are x and y alone).
+; cx and cy are the colours of the faces of x and y when e x is not y, and 0 and 1 when it is.
 (def-adts $ (XYCol : ((List (Nat)) e f ks0) ((Nat) x y cx cy) -> Type)
   enum
   (many XYA : (erased (List (Nat)) e f ks0) (erased (Nat) x y a b wx wy cx cy) (erased (Nth (Nat) e x a) pa) (erased (Nth (Nat) e y b) pb)
@@ -488,7 +468,6 @@
   (let ((erased cy) (erased cyp) (erased lcy)) (lift-live d0 x y wy e n f e2 n2 f2 ks0 lf (perm-val _ y wy f fi pmf pwy) nyx2 nyy))
   (values cx cy (XYA e f ks0 x y a b wx wy cx cy pa pb pfb pfa pwx pwy nax nay nbx nby nxx nxy nyx2 nyy cxp cyp) lcx lcy))
 
-; When e x is not y: a = e x has the colour cy and b = e y the colour cx, and these differ.
 (def-fns _ $ (erased xy-apart : (erased (Nat) d0 x y a b wx wy cx cy) (erased (List (Nat)) e n f e2 n2 f2 ks0) (erased (Lift d0 x y e n f e2 n2 f2 ks0) lf)
     (erased (Nth (Nat) e x a) pa) (erased (Nth (Nat) e y b) pb) (erased (Nth (Nat) f b x) pfb) (erased (Nth (Nat) f a y) pfa) (erased (Nth (Nat) f x wx) pwx)
     (erased (Nth (Nat) f y wy) pwy) (erased (Apart (Nat) Lt a x) nax) (erased (Apart (Nat) Lt a y) nay) (erased (Apart (Nat) Lt b x) nbx) (erased (Apart (Nat) Lt b y) nby)
@@ -507,7 +486,6 @@
       (lift-face d0 x y a wy ca e n f e2 n2 f2 ks0 lf la nax nay (w2-face-y _ x y a wy e n f e2 n2 f2 w nax nay nyx pfa pwy) pca)) (Refl _ _))
   (values pca pcb (lift-edge d0 x y a b ca cb e n f e2 n2 f2 ks0 lf la nax nay (e2-x _ x y a b e n f e2 n2 f2 w pl pa pb nay) pca pcb)))
 
-; Each face step of the map keeps the lifted colour.
 (def-fns _ $ (erased col-face : (erased (Nat) d0 x y u v cx cy) (erased (List (Nat)) e n f e2 n2 f2 ks0 ks) (erased (Lift d0 x y e n f e2 n2 f2 ks0) lf)
     (erased (XYCol e f ks0 x y cx cy) xc) (erased (Set2 ks0 x cx y cy ks) st) (erased (Lt u (Succ (Succ d0))) lu) (erased (Nth (Nat) f u v) puv)
     -> (erased (Nat) c) (erased (Nth (Nat) ks u c) pu) (erased (Nth (Nat) ks v c) pv))
@@ -555,7 +533,6 @@
   (values c0 pu (set2-other ks0 ks x cx y cy v c0 st
     (lift-face d0 x y u v c0 e n f e2 n2 f2 ks0 lf lu nux nuy (w2-face _ x y u v e n f e2 n2 f2 w nux nuy nvx nvy puv) pc0) nvx nvy)))
 
-; The two ends of each edge of the map get different lifted colours.
 (def-fns _ $ (erased col-edge : (erased (Nat) d0 x y u v cx cy) (erased (List (Nat)) e n f e2 n2 f2 ks0 ks) (erased (Lift d0 x y e n f e2 n2 f2 ks0) lf)
     (erased (XYCol e f ks0 x y cx cy) xc) (erased (Set2 ks0 x cx y cy ks) st) (erased (Lt u (Succ (Succ d0))) lu) (erased (Nth (Nat) e u v) puv)
     -> (erased (Nat) c1 c2) (erased (Nth (Nat) ks u c1) pu) (erased (Nth (Nat) ks v c2) pv) (erased (Apart (Nat) Lt c1 c2) ne))
@@ -624,7 +601,6 @@
   (let ((erased c1) (erased c2) (erased pu) (erased pv) (erased ne)) (col-edge d0 x y u v cx cy e n f e2 n2 f2 ks0 ks lf xc st (nth-lt-length _ e u _ v puv le0) puv))
   (ProperCons ks g1 u v c1 c2 pu pv ne (lift-proper d0 x y cx cy e n f e2 n2 f2 ks0 ks g1 lf xc st le0 fn1)))
 
-; The colouring extension of minimal_counter_example_is_cubic: a four-colouring of the cut map gives one of the map.
 (def-fns _ $ (erased lift-color : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 e4 n4 f4 H t idk k4) (erased (Walk2 (Succ (Succ d0)) x y e n f e2 n2 f2) w)
     (erased (AllOrder (Succ (Succ d0)) e (Succ (Succ (Zero)))) pl) (erased (Drop2 d0 x y H t) dr) (erased (Hypermap d0 e4 n4 f4) h4) (erased (Iota d0 idk) io)
     (erased (MorphOff H f4 f2 (Nil (Nat)) idk) mf) (erased (MorphOff H e4 e2 (Nil (Nat)) idk) me) (erased (FourColoring e4 f4 k4) c4)
@@ -676,8 +652,6 @@
   (let-match erased e0 (Refl _ _))
   (values d0 (Refl _ d)))
 
-; A node cycle x, y of a planar bridgeless plain precubic map: the map reduces to the map with x and y removed, through
-; cubic-glue.
 (def-fns _ $ (erased cubic-cut : (erased (Level) B) (erased (Predates (Level) (level-of cubic-glue) B) pb) (erased (Nat) d x y) (erased (List (Nat)) e n f)
     (erased (Pbpp d e n f) p) (erased (Nth (Nat) n x y) pxy) (erased (Nth (Nat) n y x) pyx) (erased (Apart (Nat) Lt y x) nyx) (erased (Lt x d) lx)
     -> (erased (Reduces B d e n f) r))
@@ -706,7 +680,6 @@
   (many MkNodeTwo : (erased (Nat) d x y) (erased (List (Nat)) n) (erased (Nth (Nat) n x y) pxy) (erased (Nth (Nat) n y x) pyx) (erased (Apart (Nat) Lt y x) nyx)
       (erased (Lt x d) lx) -> (NodeTwo d n)))
 
-; In a bridgeless map each node order below 4 is 3, or 2 on a node cycle.
 (def-fns _ $ (erased orders-three : (erased (Nat) d m) (erased (List (Nat)) e n f xs ks) (erased (Hypermap d e n f) h) (erased (Bridgeless d e n f) bl)
     (subterm erased (Orders n xs ks) os) (erased (Under ks (Succ (Succ (Succ (Succ (Zero)))))) uk) (erased (Under xs d) ux) (erased (Length (Nat) xs m) l)
     -> (erased (HOr (Repeat (Nat) m (Succ (Succ (Succ (Zero)))) ks) (NodeTwo d n)) r))
@@ -730,7 +703,6 @@
     ((OrL _ _ rk) (OrL _ _ (RepeatCons _ m1 _ ks1 rk)))
     ((OrR _ _ nt) (OrR _ _ nt))))
 
-; minimal_counter_example_is_cubic, with minimality as data: a planar bridgeless plain precubic map is cubic or reduces.
 (def-fns _ $ (erased cubic-reduces : (erased (Level) B) (erased (Predates (Level) (level-of cubic-glue) B) pb) (erased (Nat) d) (erased (List (Nat)) e n f)
     (erased (Pbpp d e n f) p) -> (erased (HOr (AllOrder d n (Succ (Succ (Succ (Zero))))) (Reduces B d e n f)) r))
   (let-match erased p (MkPbpp _ _ _ _ h g bl pl pc))
@@ -742,8 +714,6 @@
   (let-match erased nt (MkNodeTwo _ x y _ pxy pyx nyx lx))
   (OrR _ _ (cubic-cut B pb d x y e n f p pxy pyx nyx lx)))
 
-; min_arity of birkhoff.v at every dart, with minimality as data (minarity.sl): a planar bridgeless plain cubic connected
-; map that the search finds uncolourable has every face above four darts, or reduces.
 (def-adts $ (MinArity : -> Type)
   enum
   (many MkMinArity : (erased (Level) F B)
@@ -751,7 +721,6 @@
           (erased (Connected d e n f) conn) (erased (NoColoring e f) ncol) -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r)) ma)
       -> (MinArity)))
 
-; embed.sl's BirkGeo, from MinArity: the map is cubic or reduces (cubic-reduces), and then pentagonal or reduces.
 (def-fns _ $ (erased birk-geo : (erased (MinArity) mh) -> (erased (BirkGeo) r))
   (let-match erased mh (MkMinArity Fm Bm ma))
   (def-lvl B)
