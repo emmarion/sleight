@@ -3953,7 +3953,10 @@
   ((many distribute : (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) -> (many (Code ctx ms) r))
     (match many code _
       ((CLet _ first _ ids pk rhs rest)
-        (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) $ notail $ distribute (Cons _ ids ctx) ms rest))
+        (let ((many rest2)) $ notail $ distribute (Cons _ ids ctx) ms rest)
+        (let-match many (rhs-atoms _ _ rest2) (None _) ((Some _ _) (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) rest2)))
+        (let-match many rhs (CLet _ inner _ frame fpk value body) (else (bind-through ctx first ms ids pk (notail $ distribute ctx first rhs) rest2)))
+        (CLet _ inner _ frame fpk (notail $ distribute ctx inner value) $ bind-through (Cons _ frame ctx) first ms ids pk (notail $ distribute (Cons _ frame ctx) first body) $ bind-lift ctx ms ids frame rest2))
       ((CLetRec _ _ _ group rest)
         (let-match many group (MkGroup _ ids fns lk))
         (let ((many fs) (erased lk2)) $ notail $ distribute-fns ctx ids fns)
