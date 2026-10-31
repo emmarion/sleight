@@ -741,9 +741,20 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   kernel faces (`RfCut`, a face labelling) whose crossing darts the branch
   knows are not central, which the preembedding's rlink paths of central
   darts refute (`cut-sound`, `path-cross`). The search is unchecked; its
-  tree is checked. On a 4-core cloud VM `--goal proved` passed in about
+  tree is checked. The run reads the map's permutations, the face labels
+  and each cut's labelling through `Tab`, the list held as an array, each
+  read checked by `tab-q` against the list it stands for; `embed4proof.sl`
+  queues one native.sl job per chunk of css (chain: `native.sl` before
+  `embed4.sl`). In single measurements on a 4-core cloud VM, which
+  should be read as approximate: the compiled run of all 633
+  configurations took about 9.5 s on one core before `Tab`, and on the
+  last 33 configurations 0.52 s before and 0.22 s after; compiling the
+  generated OCaml (about 7.8 MB, nearly all of it the embedded
+  configurations, with about 90 KB of functions) took far longer than
+  the run, about 1460 s on a loaded machine. On a 4-core cloud VM `--goal proved` passed in about
   400 s with slc and 430 s with the reference compiler (under `ulimit -s
-  unlimited`), the whole chain and the compiled run, in one run each.
+  unlimited`), the whole chain and the compiled run, in one run each,
+  before the jobs and `Tab`.
   In a test run three broken variants were rejected: `node-rule` without
   its last step (a type error), and the run with no cut leaf or with a
   flood fill that ignores the darts known not central (the run answers
