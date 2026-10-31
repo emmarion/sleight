@@ -1,6 +1,6 @@
 (def-fns _ $ (erased respects-nth : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
     (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) ls i l) q) -> (erased (Nth (Nat) lab j l) r))
-  (let-match erased rp (RespCons _ xs1 ls1 j1 l1 p1 rp1) (absurd (RespNil _) p))
+  (let-match erased rp (RespCons _ xs1 ls1 _ _ p1 rp1) (absurd (RespNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p2)
     ((NthHere _ _ _) (let-match erased q (NthHere _ _ _)) p1))
   (let-match erased q (NthThere _ _ _ _ _ q2))
@@ -32,7 +32,7 @@
       (let-match erased s2 (SnocCons _ _ _ _ ls3 s4))
       (RespCons lab xs3 ls3 j l1 p (respects-snoc lab xs1 xs3 ls1 ls3 c l rp1 pc s3 s4)))))
 
-(def-fns _ $ (erased respects-insert : (erased (List (Nat)) lab lab2 nd nd2) (erased (Nat) d x n l)
+(def-fns _ $ (erased respects-insert : (erased (List (Nat)) lab lab2 nd nd2) (erased (Nat) d x _n l)
     (erased (Respects lab nd lab) rp) (erased (Insert nd d x nd2) i) (erased (Length (Nat) lab x) len)
     (erased (Nth (Nat) lab d l) pd) (erased (Snoc (Nat) lab l lab2) sn) -> (erased (Respects lab2 nd2 lab2) r))
   (let-match erased i (MkInsert _ nd1 _ _ _ c pc s q))

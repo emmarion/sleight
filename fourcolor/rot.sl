@@ -6,7 +6,7 @@
 
 (def-fns _ $ (erased lapp-fn : (erased Type A) (erased (List A) xs ys zs zs2) (subterm erased (LApp A xs ys zs) p)
     (erased (LApp A xs ys zs2) q) -> (erased (Eq (List A) zs zs2) e))
-  (let-match erased p (LAppCons _ x xs1 _ zs1 p1) ((LAppNil _ _) (let-match erased q (LAppNil _ _)) (Refl _ zs)))
+  (let-match erased p (LAppCons _ _ xs1 _ zs1 p1) ((LAppNil _ _) (let-match erased q (LAppNil _ _)) (Refl _ zs)))
   (let-match erased q (LAppCons _ _ _ _ zs3 q1))
   (let-match erased (lapp-fn _ xs1 ys zs1 zs3 p1 q1) (Refl _ _))
   (Refl _ zs))
@@ -123,7 +123,7 @@
       (ChainCons e nd s xs1 xs (Nil _) d d0 d1 k1 (ChainOne e nd s xs d0 d1 k)))
     ((ChainCons _ _ _ xs1 ys gs1 d d2 _ k1 rest)
       (let-match erased sn (SnocCons _ _ _ _ gs3 sn1))
-      (let-match erased sn1 (SnocCons _ _ _ _ gs4 sn2))
+      (let-match erased sn1 (SnocCons _ _ _ _ gs4 _))
       (ChainCons e nd s xs1 ys gs4 d d2 d1 k1 (chain-snoc e nd s xs (Cons _ (MkGroup d2 ys) gs1) gs3 d0 d1 rest k sn1)))))
 
 (def-fns _ $ (erased darts-snoc : (erased (List (Group)) gs gs2) (erased (List (Nat)) s s2 xs) (erased (Nat) d)
@@ -242,7 +242,7 @@
     ((SplitLeft _ _ _ _ _ m um mv)
       (let-match erased m (Nil _) ((Cons _ y ys) (cut-head d0 x0 u v m fl1 gs1 um mv gf1 (LeadCons v ys y))))
       (let-match erased mv (LAppNil _ _))
-      (let-match erased v (Cons _ y ys) ((Nil _) (cut-head d0 x0 u v m fl1 gs1 um mv gf1 (LeadNil m))))
+      (let-match erased v (Cons _ _ _) ((Nil _) (cut-head d0 x0 u v m fl1 gs1 um mv gf1 (LeadNil m))))
       (let-match erased gf1 (GFlatCons d1 x1 _ _ gs2 _ _))
       (let-match erased (lapp-fn _ u (Nil _) x0 u um (lapp-nil _ u)) (Refl _ _))
       (cut-cons d0 x0 u v (Nil _) gs1 (lapp-nil _ u) (group-split gs2 d1 x1 (Nil _) v fl1 gf1 (LAppNil _ v))))
@@ -264,7 +264,7 @@
 (def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) a ah b c) (erased A h) (subterm erased (Snoc A a h ah) s)
     (erased (LApp A ah b c) p) -> (erased (LApp A a (Cons A h b) c) r))
   (match erased s _
-    ((SnocNil _ _) (let-match erased p (LAppCons _ _ _ _ c1 p1)) (let-match erased p1 (LAppNil _ _)) (LAppNil _ c))
+    ((SnocNil _ _) (let-match erased p (LAppCons _ _ _ _ _ p1)) (let-match erased p1 (LAppNil _ _)) (LAppNil _ c))
     ((SnocCons _ x _ a1 ah1 s1)
       (let-match erased p (LAppCons _ _ _ _ c1 p1))
       (LAppCons _ x a1 (Cons _ h b) c1 (snoc-app _ a1 ah1 b c1 h s1 p1)))))
@@ -272,7 +272,7 @@
 
 (def-fns _ $ (erased flat-fn : (erased (List (Group)) gs) (erased (List (Nat)) f g) (subterm erased (GFlat gs f) p) (erased (GFlat gs g) q) ->
     (erased (Eq (List (Nat)) f g) e))
-  (let-match erased p (GFlatCons d xs f1 _ gs1 a p1) ((GFlatNil) (let-match erased q (GFlatNil)) (Refl _ f)))
+  (let-match erased p (GFlatCons _ xs f1 _ gs1 a p1) ((GFlatNil) (let-match erased q (GFlatNil)) (Refl _ f)))
   (let-match erased q (GFlatCons _ _ g1 _ _ b q1))
   (let-match erased (flat-fn gs1 f1 g1 p1 q1) (Refl _ _))
   (lapp-fn _ xs f1 f g a b))
@@ -291,7 +291,7 @@
 
 (def-fns _ $ (erased allis-app : (erased (List (Nat)) a b c) (erased (Nat) u) (subterm erased (LApp (Nat) a b c) p) (erased (AllIs c u) q) ->
     (erased (AllIs a u) qa) (erased (AllIs b u) qb))
-  (let-match erased p (LAppCons _ x a1 _ c1 p1) ((LAppNil _ _) (values (AllIsNil u) q)))
+  (let-match erased p (LAppCons _ _ a1 _ c1 p1) ((LAppNil _ _) (values (AllIsNil u) q)))
   (let-match erased q (AllIsCons _ _ q1))
   (let ((erased qa) (erased qb)) (allis-app a1 b c1 u p1 q1))
   (values (AllIsCons u a1 qa) qb))
@@ -303,13 +303,13 @@
 
 (def-fns _ $ (erased notin-app-r : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (NotIn x c) q) ->
     (erased (NotIn x b) r))
-  (let-match erased p (LAppCons _ y a1 _ c1 p1) ((LAppNil _ _) q))
+  (let-match erased p (LAppCons _ _ a1 _ c1 p1) ((LAppNil _ _) q))
   (let-match erased q (NotInCons _ _ _ _ q1))
   (notin-app-r x a1 b c1 p1 q1))
 
 (def-fns _ $ (erased absurd distinct-app : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p)
     (erased (Distinct c) d) (erased (In x a) qa) (erased (In x b) qb) -> (erased (False) f))
-  (let-match erased p (LAppCons _ y a1 _ c1 p1) (absurd (LAppNil _ _) qa))
+  (let-match erased p (LAppCons _ _ a1 _ c1 p1) (absurd (LAppNil _ _) qa))
   (let-match erased d (DistCons _ _ ny d1))
   (match erased qa _
     (absurd (InHere _ _) (apart-irrefl x (notin-in x x b (notin-app-r x a1 b c1 p1 ny) qb)))

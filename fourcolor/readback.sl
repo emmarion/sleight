@@ -1,6 +1,6 @@
 (def-fns _ $ (erased colored-at-nd : (erased (List (Nat)) ks e nd cs) (erased (Nat) i b) (subterm erased (Colored ks e nd cs) col)
     (erased (Nth (Nat) nd i b) p) -> (erased (Nat) c) (erased (Nth (Nat) cs i c) pc) (erased (Nth (Nat) ks b c) pb))
-  (let-match erased col (ColoredCons _ e1 nd1 cs1 a b0 c0 c2 _ pn _ _ rest) (absurd (ColoredNil _) p))
+  (let-match erased col (ColoredCons _ e1 nd1 cs1 _ _ c0 _ _ pn _ _ rest) (absurd (ColoredNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values c0 (NthHere _ c0 cs1) pn)))
   (let ((erased c) (erased pc) (erased pb)) (colored-at-nd ks e1 nd1 cs1 i1 b rest p1))
   (values c (NthThere _ c0 cs1 i1 c pc) pb))
@@ -8,7 +8,7 @@
 (def-fns _ $ (erased colored-at-e : (erased (List (Nat)) ks e nd cs) (erased (Nat) i a) (subterm erased (Colored ks e nd cs) col)
     (erased (Nth (Nat) e i a) p) -> (erased (Nat) c c2) (erased (Nth (Nat) cs i c) pc) (erased (Nth (Nat) ks a c2) pa)
     (erased (Apart (Nat) Lt c c2) d) (erased (Lt c 4) bd))
-  (let-match erased col (ColoredCons _ e1 nd1 cs1 a0 b0 c0 c3 bd0 _ pe d0 rest) (absurd (ColoredNil _) p))
+  (let-match erased col (ColoredCons _ e1 nd1 cs1 _ _ c0 c3 bd0 _ pe d0 rest) (absurd (ColoredNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values c0 c3 (NthHere _ c0 cs1) pe d0 bd0)))
   (let ((erased c) (erased c2) (erased pc) (erased pa) (erased d) (erased bd)) (colored-at-e ks e1 nd1 cs1 i1 a rest p1))
   (values c c2 (NthThere _ c0 cs1 i1 c pc) pa d bd))
@@ -86,7 +86,7 @@
 
 (def-fns _ $ (erased allapart-nth : (erased (Point) p a) (erased (List (Point)) ps) (erased (Nat) i) (subterm erased (AllApart p ps) aa)
     (erased (Nth (Point) ps i a) q) -> (erased (PointApart p a) r))
-  (let-match erased aa (AACons _ b ps1 d aa1) (absurd (AANil _) q))
+  (let-match erased aa (AACons _ _ ps1 d aa1) (absurd (AANil _) q))
   (let-match erased q (NthThere _ _ _ i1 _ q1) ((NthHere _ _ _) d))
   (allapart-nth p a ps1 i1 aa1 q1))
 
@@ -103,13 +103,13 @@
 
 (def-fns _ $ (erased alljoined-in : (erased (List (Nat)) e pl r) (erased (Nat) s t) (subterm erased (AllJoined e pl r t) j) (erased (In s r) p) ->
     (erased (Joined e pl s t) q))
-  (let-match erased j (AJCons _ _ r1 s0 _ j0 j1) (absurd (AJNil _ _ _) p))
+  (let-match erased j (AJCons _ _ r1 _ _ j0 j1) (absurd (AJNil _ _ _) p))
   (let-match erased p (InThere _ _ _ p1) ((InHere _ _) j0))
   (alljoined-in e pl r1 s t j1 p1))
 
 (def-fns _ $ (erased closes-joined : (erased (List (Nat)) e pl) (erased (List (Closed)) cs) (erased (Nat) s t) (subterm erased (AllClosed e pl cs) ac)
     (erased (Closes cs s t) c) -> (erased (Joined e pl s t) q))
-  (let-match erased ac (ACCons _ _ r cs1 t0 j ac1) (absurd (ACNil _ _) c))
+  (let-match erased ac (ACCons _ _ r cs1 _ j ac1) (absurd (ACNil _ _) c))
   (match erased c _
     ((ClosesHere _ _ _ _ p) (alljoined-in e pl r s t j p))
     ((ClosesThere _ _ _ _ c1) (closes-joined e pl cs1 s t ac1 c1))))

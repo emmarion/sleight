@@ -22,7 +22,7 @@
 
 (def-fns _ $ (erased edge-old : (erased (List (Nat)) e e2) (erased (Nat) n a b) (erased (EdgeGrow e n e2) g)
     (erased (Nth (Nat) e a b) p) -> (erased (Nth (Nat) e2 a b) r))
-  (let-match erased g (MkEdgeGrow _ e1 _ _ len s1 s2))
+  (let-match erased g (MkEdgeGrow _ e1 _ _ _ s1 s2))
   (snoc-old _ e1 e2 n b a s2 (snoc-old _ e e1 (Succ n) b a s1 p)))
 
 (def-fns _ $ (erased edge-low : (erased (List (Nat)) e e2) (erased (Nat) n) (erased (EdgeGrow e n e2) g) ->

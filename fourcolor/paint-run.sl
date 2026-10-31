@@ -8,9 +8,9 @@
 (let ((many k4)) (Cons (Edge) (MkEdge o p) $ Cons (Edge) (MkEdge o q) $ Cons (Edge) (MkEdge o r) $
   Cons (Edge) (MkEdge p q) $ Cons (Edge) (MkEdge p r) $ Cons (Edge) (MkEdge q r) $ Nil (Edge)))
 (let ((many ks)) (paints-of k4))
-(comptime-match many ks (Cons _ k1 ks1))
-(comptime-match many ks1 (Cons _ k2 ks2))
-(comptime-match many ks2 (Cons _ k3 ks3))
-(comptime-match many ks3 (Cons _ k4 ks4))
+(comptime-match many ks (Cons _ _ ks1))
+(comptime-match many ks1 (Cons _ _ ks2))
+(comptime-match many ks2 (Cons _ _ ks3))
+(comptime-match many ks3 (Cons _ _ ks4))
 (comptime-match many ks4 (Nil _))
 ks

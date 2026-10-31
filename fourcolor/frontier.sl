@@ -33,7 +33,7 @@
 
 (def-fns _ $ (erased disj-notin : (erased (Nat) x) (erased (List (Nat)) s m) (subterm erased (Disj s m) dj) (erased (In x s) p) ->
     (erased (NotIn x m) r))
-  (let-match erased dj (DisjCons y s1 _ q dj1) (absurd (DisjNil _) p))
+  (let-match erased dj (DisjCons _ s1 _ q dj1) (absurd (DisjNil _) p))
   (let-match erased p (InThere _ _ _ p1) ((InHere _ _) q))
   (disj-notin x s1 m dj1 p1))
 
@@ -238,7 +238,7 @@
       (let-match erased ds1 (DartsNil))
       (let-match erased k (MkLink _ _ _ _ _ c _ pc _ _))
       (ALCons d n _ (nth-lt-length _ nd d n c pc ln) (ALNil n)))
-    ((ChainCons _ _ _ _ _ gs1 d _ _ k rest)
+    ((ChainCons _ _ _ _ _ _ d _ _ k rest)
       (let-match erased ds (DartsCons _ _ sg1 _ ds1))
       (let-match erased k (MkLink _ _ _ _ _ c _ pc _ _))
       (ALCons d n sg1 (nth-lt-length _ nd d n c pc ln) (chain-lt e nd s sg1 _ dn n rest ds1 ln)))))

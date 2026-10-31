@@ -15,7 +15,7 @@
 (def-fns _ $ (erased snoc-old : (erased Type A) (erased (List A) xs ys) (erased A a x) (erased (Nat) i)
     (erased (Snoc A xs a ys) s) (subterm erased (Nth A xs i x) p) -> (erased (Nth A ys i x) q))
   (match erased p _
-    ((NthHere _ _ rest) (let-match erased s (SnocCons _ _ _ _ ys1 _)) (NthHere _ x ys1))
+    ((NthHere _ _ _) (let-match erased s (SnocCons _ _ _ _ ys1 _)) (NthHere _ x ys1))
     ((NthThere _ y rest i1 _ p1)
       (let-match erased s (SnocCons _ _ _ _ ys1 s1))
       (NthThere _ y ys1 i1 x (snoc-old _ rest ys1 a x i1 s1 p1)))))

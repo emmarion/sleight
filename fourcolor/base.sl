@@ -16,7 +16,7 @@
 
 (def-fns _ $ (erased notin-in : (erased (Nat) x y) (erased (List (Nat)) s) (subterm erased (NotIn x s) p) (erased (In y s) q) ->
     (erased (Apart (Nat) Lt x y) ne))
-  (let-match erased p (NotInCons _ z s1 ne1 p1) (absurd (NotInNil _) q))
+  (let-match erased p (NotInCons _ _ s1 ne1 p1) (absurd (NotInNil _) q))
   (let-match erased q (InThere _ _ _ q1) ((InHere _ _) ne1))
   (notin-in x y s1 p1 q1))
 
