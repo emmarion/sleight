@@ -933,6 +933,12 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the jobs, which share the machine, appeared to outweigh the difference.
   With the reference compiler (under `ulimit -s unlimited`, with
   `s=8M,o=200`) it passed in about 874 s (about 109 s of elaboration).
+  With the in-place Kempe closure of `red/kempe.sl`, in one pair of slc
+  runs on that VM at a load average of about 5, the unit took about 390 s
+  of wall time (about 980 s of CPU, at most about 0.72 GB resident) as
+  above, and about 314 s (about 720 s of CPU, at most about 1.2 GB) with
+  `OCAMLRUNPARAM=o=400` in slc's environment, which the jobs inherit,
+  and `--inline 200`.
   In test runs on the chain of
   `fcgoal.sl` up to `fcopen.sl`, a use of `four-color-open` with its
   second and third arguments swapped was rejected.
