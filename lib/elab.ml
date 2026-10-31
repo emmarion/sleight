@@ -1287,6 +1287,7 @@ let normalize code =
   in
   let rec norm sub = function
     | V.CVar x -> V.CVar (resolve sub x)
+    | V.CLet (ids, V.CLet (xs, a, b), rest) -> norm sub (V.CLet (xs, a, V.CLet (ids, b, rest)))
     | V.CLet (ids, rhs, rest) -> (
         match norm sub rhs with
         | V.CLet (xs, a, b) -> norm sub (V.CLet (xs, a, V.CLet (ids, b, rest)))
