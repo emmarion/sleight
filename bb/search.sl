@@ -368,7 +368,7 @@
   (let-match many j (MkU62 i pi))
   (let-match many (u62-lt-dec i cap pi pc) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (at unique (u xs cap pc l a))))
   (let ((erased c) (erased nt)) (lt-nth _ xs cap i l lt))
-  (let ((erased ys) (unique a2) (erased st)) (array-place-imm _ _ a i (MkCopy _ x) c nt (ImmCopy _ (ImmU62))))
+  (let ((erased ys) (unique a2) (erased st)) (array-place-imm _ _ a i (MkCopy _ x) c nt (imm-of _ (ImmCopy _ (ImmU62)) _) (imm-of _ (ImmCopy _ (ImmU62)) _)))
   (at unique (u ys cap pc (setnth-len _ xs ys i cap _ st l) a2)))
 
 (def-fns _ $ (many bfill : (unique (Buf) s) (many (U62) a x) (subterm many (Nat) n) -> (unique (Buf) s2 at s))
