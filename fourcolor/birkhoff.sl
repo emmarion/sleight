@@ -271,11 +271,10 @@
     (absurd (No _ _ _ _ le) (lt-asym s1 s2 l (add-mono-le b y x s2 s1 (le-lt-succ y x le) q p)))))
 
 (def-fns _ $ (erased ctr-snoc : (erased (Col) s) (erased (List (Col)) et1 et) (subterm erased (Ctr s et1 et) c) -> (erased (Col) x) (erased (HSnoc (Col) et1 x et) sn))
-  (match erased c _
-    ((CtrNil _) (values s (SnocNil _ s)))
-    ((CtrCons _ e s2 et2 ct a c1)
-      (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
-      (values x (SnocCons _ e x et2 ct sn)))))
+  (let-match erased c (CtrCons _ e s2 et2 ct a c1)
+    ((CtrNil _) (values s (SnocNil _ s))))
+  (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
+  (values x (SnocCons _ e x et2 ct sn)))
 
 ; The map that chkbP of Birkhoff_valid glues from the disk map of a ring, on bd, and the map of a basis program, on its ring
 ; a :: p read as the node cycle a :: q.
@@ -459,13 +458,12 @@
   (let-match erased hf (MkBHalf _ _ _ dr _ _ _ _ _ _ _ er nr fr hd hr _ br zs RV pt rb rv rbr ds ap))
   (let ((erased d2) (erased e2) (erased n2) (erased f2) (erased h2) (erased g2) (erased pl2) (erased pc2) (erased lt2) (erased bo) (erased ss))
     (side-map d h m x0 dd dr e n f p ed nd fd er nr fr hd hr bd br zs RV cp t hm gen bl pl cu cn rg lr nt pt rb rv rbr ds ap bp))
-  (match erased bo _
-    ((OrL _ _ b2) (BMNeed d dd h m e n f ed nd fd bd ts _ (BNCons d dd h m d2 ed nd fd bd e2 n2 f2 cp t ts1 ms bp h2 g2 b2 pl2 pc2 lt2 ss bn)))
-    ((OrR _ _ ch)
-      (let ((erased y0) (erased k) (erased k2) (erased Q) (erased rq) (erased nq) (erased lq) (erased lr2) (erased lt))
-        (ring-disk-chord d dd dr x0 m e n f p ed nd fd er nr fr hd hr bd br zs hm gen bl pl cn rg nt pt rb ds ch))
-      (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
-      (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))))
+  (let-match erased bo (OrR _ _ ch)
+    ((OrL _ _ b2) (BMNeed d dd h m e n f ed nd fd bd ts _ (BNCons d dd h m d2 ed nd fd bd e2 n2 f2 cp t ts1 ms bp h2 g2 b2 pl2 pc2 lt2 ss bn))))
+  (let ((erased y0) (erased k) (erased k2) (erased Q) (erased rq) (erased nq) (erased lq) (erased lr2) (erased lt))
+    (ring-disk-chord d dd dr x0 m e n f p ed nd fd er nr fr hd hr bd br zs hm gen bl pl cn rg nt pt rb ds ch))
+  (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
+  (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))
 
 ; What Birkhoff_valid needs for a ring nontrivial for m in the check for h, m with basis trees ts: a shorter ring nontrivial
 ; for 0, or the two sides of the ring and, for each side, the maps to colour.

@@ -265,13 +265,12 @@
 ; Every number from c up to c2 is a new dart.
 (def-fns _ $ (erased hrb-hit : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 v) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Lt c (Succ v)) l1)
     (erased (Lt v c2) l2) -> (erased (In v hs) r))
-  (match erased hb _
+  (let-match erased hb (HBNew _ _ xs1 hs1 _ _ y out rest)
     (absurd (HBNil _ _ _) (lt-irrefl v (lt-le-trans v c v l2 l1)))
-    ((HBRing _ _ xs1 hs1 _ _ y w i rest) (InThere v w hs1 (hrb-hit br rbd xs1 hs1 c c2 v rest l1 l2)))
-    ((HBNew _ _ xs1 hs1 _ _ y out rest)
-      (let-match erased (nat-eq v c) (Unequal _ _ _ _ ne) ((Equal _ _ _) (InHere v hs1)))
-      (let-match erased ne (ApGt _ _ _ _ lt) (absurd (ApLt _ _ _ _ gt) (lt-irrefl v (lt-le-trans v c v gt l1))))
-      (InThere v c hs1 (hrb-hit br rbd xs1 hs1 (Succ c) c2 v rest (LtS c v lt) l2)))))
+    ((HBRing _ _ xs1 hs1 _ _ y w i rest) (InThere v w hs1 (hrb-hit br rbd xs1 hs1 c c2 v rest l1 l2))))
+  (let-match erased (nat-eq v c) (Unequal _ _ _ _ ne) ((Equal _ _ _) (InHere v hs1)))
+  (let-match erased ne (ApGt _ _ _ _ lt) (absurd (ApLt _ _ _ _ gt) (lt-irrefl v (lt-le-trans v c v gt l1))))
+  (InThere v c hs1 (hrb-hit br rbd xs1 hs1 (Succ c) c2 v rest (LtS c v lt) l2)))
 
 ; u is off rbd, or the image under rbd of a dart off xs.
 (def-adts $ (RingAvoid : ((List (Nat)) br rbd xs) ((Nat) u) -> Type)
@@ -281,27 +280,26 @@
 
 (def-fns _ $ (erased hrb-notin : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 u) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Lt u c) lu)
     (erased (RingAvoid br rbd xs u) ra) (erased (Distinct rbd) dr) -> (erased (NotIn u hs) r))
-  (match erased hb _
+  (let-match erased hb (HBRing _ _ xs1 hs1 _ _ x v i rest)
     ((HBNil _ _ _) (NotInNil u))
-    ((HBRing _ _ xs1 hs1 _ _ x v i rest)
-      (let-match erased (nat-eq u v) (Unequal _ _ _ _ ne)
-        (absurd (Equal _ _ _)
-          (match erased ra _
-            (absurd (RAOff _ _ _ _ o) (apart-irrefl u (notin-in u u rbd o (in2-in-left rbd br u x (in2-sym br rbd x u i)))))
-            (absurd (RAAt _ _ _ _ x0 i0 o)
-              (let-match erased (in2-fn rbd br u x0 x dr (in2-sym br rbd x0 u i0) (in2-sym br rbd x u i)) (Refl _ _))
-              (apart-irrefl x0 (notin-in x0 x0 (Cons _ x xs1) o (InHere x0 xs1)))))))
-      (NotInCons u v hs1 ne (hrb-notin br rbd xs1 hs1 c c2 u rest lu
-        (match erased ra _
-          ((RAOff _ _ _ _ o) (RAOff br rbd xs1 u o))
-          ((RAAt _ _ _ _ x0 i0 o) (let-match erased o (NotInCons _ _ _ _ o1)) (RAAt br rbd xs1 u x0 i0 o1)))
-        dr)))
     ((HBNew _ _ xs1 hs1 _ _ x out rest)
       (NotInCons u c hs1 (ApLt (Nat) Lt u c lu) (hrb-notin br rbd xs1 hs1 (Succ c) c2 u rest (lt-trans u c (Succ c) lu (lt-succ c))
         (match erased ra _
           ((RAOff _ _ _ _ o) (RAOff br rbd xs1 u o))
           ((RAAt _ _ _ _ x0 i0 o) (let-match erased o (NotInCons _ _ _ _ o1)) (RAAt br rbd xs1 u x0 i0 o1)))
-        dr)))))
+        dr))))
+  (let-match erased (nat-eq u v) (Unequal _ _ _ _ ne)
+    (absurd (Equal _ _ _)
+      (match erased ra _
+        (absurd (RAOff _ _ _ _ o) (apart-irrefl u (notin-in u u rbd o (in2-in-left rbd br u x (in2-sym br rbd x u i)))))
+        (absurd (RAAt _ _ _ _ x0 i0 o)
+          (let-match erased (in2-fn rbd br u x0 x dr (in2-sym br rbd x0 u i0) (in2-sym br rbd x u i)) (Refl _ _))
+          (apart-irrefl x0 (notin-in x0 x0 (Cons _ x xs1) o (InHere x0 xs1)))))))
+  (NotInCons u v hs1 ne (hrb-notin br rbd xs1 hs1 c c2 u rest lu
+    (match erased ra _
+      ((RAOff _ _ _ _ o) (RAOff br rbd xs1 u o))
+      ((RAAt _ _ _ _ x0 i0 o) (let-match erased o (NotInCons _ _ _ _ o1)) (RAAt br rbd xs1 u x0 i0 o1)))
+    dr)))
 
 (def-fns _ $ (erased hrb-distinct : (erased (List (Nat)) br rbd xs hs) (erased (Nat) c c2 dd) (subterm erased (HrB br rbd c xs hs c2) hb) (erased (Distinct xs) dx)
     (erased (Under rbd dd) ur) (erased (Lt dd (Succ c)) ldc) (erased (Distinct rbd) dr) -> (erased (Distinct hs) r))
@@ -405,16 +403,15 @@
   (PPCons idd hr bd xs1 x
     (match erased (nat-cmp x dd) (((PatchPart idd hr bd x) p))
       ((CLt _ _ _ _ lxd)
-        (match erased (in-dec x bd) (((PatchPart idd hr bd x) p))
-          ((OrL _ _ ixb)
-            (let ((erased xr) (erased i2)) (in2-exists rbd br x k (revapp-in bd (Nil _) rbd x rv (OrL _ _ ixb)) lr lb))
-            (let ((erased i3)) (in2-sym rbd br x xr i2))
-            (let ((erased ixr)) (in2-in-left br rbd xr x i3))
-            (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd idr hr dd d xr xr hb (iota-nth dr xr idr ior (under-in br xr dr ub ixr))))
-            (let-match erased ha (HARing _ _ _ _ _ _ i4) (absurd (HANew _ _ _ _ _ _ out l1 l2) (apart-irrefl xr (notin-in xr xr br out ixr))))
-            (let-match erased (in2-fn br rbd xr w x db i4 i3) (Refl _ _))
-            (PtRing idd hr bd x x xr (iota-nth dd x idd iod lxd) ixb q))
-          ((OrR _ _ out) (PtDisk idd hr bd x x (iota-nth dd x idd iod lxd) out (low-notin br rbd bd idr hr dd d x hb rv dr2 lxd out)))))
+        (let-match erased (in-dec x bd) (OrL _ _ ixb)
+          ((OrR _ _ out) (PtDisk idd hr bd x x (iota-nth dd x idd iod lxd) out (low-notin br rbd bd idr hr dd d x hb rv dr2 lxd out))))
+        (let ((erased xr) (erased i2)) (in2-exists rbd br x k (revapp-in bd (Nil _) rbd x rv (OrL _ _ ixb)) lr lb))
+        (let ((erased i3)) (in2-sym rbd br x xr i2))
+        (let ((erased ixr)) (in2-in-left br rbd xr x i3))
+        (let ((erased w) (erased q) (erased ha)) (hrb-nth br rbd idr hr dd d xr xr hb (iota-nth dr xr idr ior (under-in br xr dr ub ixr))))
+        (let-match erased ha (HARing _ _ _ _ _ _ i4) (absurd (HANew _ _ _ _ _ _ out l1 l2) (apart-irrefl xr (notin-in xr xr br out ixr))))
+        (let-match erased (in2-fn br rbd xr w x db i4 i3) (Refl _ _))
+        (PtRing idd hr bd x x xr (iota-nth dd x idd iod lxd) ixb q))
       ((CEq _ _ _) (sew-rest-part br rbd bd idd idr hr dd dr d x hb iod (lt-succ dd) lx))
       ((CGt _ _ _ _ gt) (sew-rest-part br rbd bd idd idr hr dd dr d x hb iod (lt-trans dd x (Succ x) gt (lt-succ x)) lx)))
     (sew-parts br rbd bd idd idr hr xs1 dd dr d k hb iod ior rv lb lr db dr2 ub u1)))

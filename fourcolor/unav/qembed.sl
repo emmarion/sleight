@@ -773,13 +773,12 @@
     (erased (QEnv dc ec nc fc ksc rc s0c st dm em nm fm ksm s0m hl) en) (erased (AllCenD ec em hl s0c (Nil (Nat))) acd) (erased (AllKin st s0c) aks)
     (erased (KinList st ids as) kl) (erased (Iota dc ids) io) (subterm erased (DPath ec s0c st i p j) dp) (erased (Nth (Nat) ec z w) pzw)
     (erased (Nth (KSt) st w (StIn i jw)) pw) (erased (Nth (KSt) st y (StIn j jy)) py) -> (erased (RlPath ec fc em hl as z p y) r))
-  (match erased dp _
-    ((DPNil _ _ _ _) (RPLast ec fc em hl as z y (MkRlink ec fc z y w pzw (coord-path dc dm w y i jw jy ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw py))))
-    ((DPCons _ _ ps _ _ q _ jp q2 i2 jq psp pq psq co dp1)
-      (let ((erased lq)) (kin-lt dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st q i jp psp)))
-      (RPStep ec fc em hl as ps z q y (MkRlink ec fc z q w pzw (coord-path dc dm w q i jw jp ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw psp))
-        (kl-in st ids as q i jp kl (iota-in dc q ids io lq) psp) (cen-ok dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en acd aks co)
-        (dp-rl dc dm q q2 i2 jq j jy y ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ps st en acd aks kl io dp1 pq psq py)))))
+  (let-match erased dp (DPCons _ _ ps _ _ q _ jp q2 i2 jq psp pq psq co dp1)
+    ((DPNil _ _ _ _) (RPLast ec fc em hl as z y (MkRlink ec fc z y w pzw (coord-path dc dm w y i jw jy ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw py)))))
+  (let ((erased lq)) (kin-lt dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en (MkKin st q i jp psp)))
+  (RPStep ec fc em hl as ps z q y (MkRlink ec fc z q w pzw (coord-path dc dm w q i jw jp ec nc fc ksc rc s0c em nm fm ksm s0m hl st en pw psp))
+    (kl-in st ids as q i jp kl (iota-in dc q ids io lq) psp) (cen-ok dc dm q ec nc fc ksc rc s0c em nm fm ksm s0m hl st en acd aks co)
+    (dp-rl dc dm q q2 i2 jq j jy y ec nc fc ksc rc s0c em nm fm ksm s0m hl as ids ps st en acd aks kl io dp1 pq psq py)))
 
 (def-adts $ (PEnv : ((Nat) dc) ((List (Nat)) ec nc fc ksc rc s0c) ((List (KSt)) st) ((Nat) dm) ((List (Nat)) em nm fm ksm s0m hl as) -> Type)
   enum

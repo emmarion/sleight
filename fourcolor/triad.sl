@@ -451,12 +451,11 @@
 
 (def-fns _ $ (erased sub-dec : (subterm erased (List (Nat)) xs) (erased (List (Nat)) ys) -> (erased (SubD xs ys) r))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (SDYes _ ys (HSubNil ys))))
-  (match erased (sub-dec xs1 ys) _
-    ((SDNo _ _ l il ol) (SDNo xs ys l (InThere l x xs1 il) ol))
-    ((SDYes _ _ sb)
-      (match erased (in-dec x ys) _
-        ((OrL _ _ ix) (SDYes xs ys (HSubCons x xs1 ys ix sb)))
-        ((OrR _ _ ox) (SDNo xs ys x (InHere x xs1) ox))))))
+  (let-match erased (sub-dec xs1 ys) (SDYes _ _ sb)
+    ((SDNo _ _ l il ol) (SDNo xs ys l (InThere l x xs1 il) ol)))
+  (match erased (in-dec x ys) _
+    ((OrL _ _ ix) (SDYes xs ys (HSubCons x xs1 ys ix sb)))
+    ((OrR _ _ ox) (SDNo xs ys x (InHere x xs1) ox))))
 
 ; A dart off the faces of r has a FaceLab label off those of r.
 (def-fns _ $ (erased kernel-fl : (erased (Nat) d x l) (erased (List (Nat)) f lab r lr) (erased (FaceLab d f lab) fl) (erased (Kernel f r x) k)
@@ -499,9 +498,10 @@
   (match erased it _
     ((InHere _ _) (let-match erased (nth-fn _ e x et ex pt pe) (Refl _ _)) (OrR _ _ (MkRLink f et ps z (InHere z p1) w)))
     ((InThere _ _ _ it1)
-      (match erased (rp-succ e f p1 z y t et rest it1 pt) _
-        ((OrL _ _ eq) (OrL _ _ eq))
-        ((OrR _ _ rl) (let-match erased rl (MkRLink _ _ _ q iq sq)) (OrR _ _ (MkRLink f et ps q (InThere q z p1 iq) sq)))))))
+      (let-match erased (rp-succ e f p1 z y t et rest it1 pt) (OrR _ _ rl)
+        ((OrL _ _ eq) (OrL _ _ eq)))
+      (let-match erased rl (MkRLink _ _ _ q iq sq))
+      (OrR _ _ (MkRLink f et ps q (InThere q z p1 iq) sq)))))
 
 ; The edge image of a dart of a ring is on a face of the ring.
 (def-fns _ $ (erased ring-elab : (erased (Nat) d w t et l) (erased (List (Nat)) e f lab Bs lp) (erased (FaceLab d f lab) fl) (erased (Ring e f w Bs) rg)
@@ -519,18 +519,16 @@
     (erased (Nth (Nat) e z ez) pz) (erased (WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
   (let-match erased ie (IECons _ cx1 ins1 x y px ie1) (absurd (IENil _) iz))
   (let-match erased lc (LengthCons _ _ _ _ lc1))
-  (match erased iz (((List (Nat)) cx2 ins2) ((Nat) ez) ((InsertE e cx2 ins2) ie2) ((Length (Nat) cx2 k) lc2) ((Nth (Nat) e z ez) pz)
-      ((WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
-    ((InHere _ _) (values cx1 ins1 y ie1 lc1 px (sub-refl (Cons _ x (Cons _ y ins1)))))
-    ((InThere _ _ _ iz1)
-      (let-match erased lc1 (LengthCons _ _ _ k2 lc3) (absurd (LengthNil _) iz1))
-      (let ((erased cx3) (erased ins3) (erased ez) (erased ie3) (erased lc4) (erased pz) (erased s3)) (ie-drop e cx1 ins1 z k2 ie1 iz1 lc1))
-      (let ((erased T)) (Cons _ z (Cons _ ez (Cons _ x (Cons _ y ins3)))))
-      (values (Cons _ x cx3) (Cons _ x (Cons _ y ins3)) ez (IECons e cx3 ins3 x y px ie3) (LengthCons _ x cx3 k2 lc4) pz
-        (HSubCons x _ T (InThere x z _ (InThere x ez _ (InHere x _))) (HSubCons y ins1 T (InThere y z _ (InThere y ez _ (InThere y x _ (InHere y ins3))))
-          (sub-trans ins1 (Cons _ z (Cons _ ez ins3)) T s3
-            (HSubCons z _ T (InHere z _) (HSubCons ez ins3 T (InThere ez z _ (InHere ez _))
-              (sub-cons z ins3 _ (sub-cons ez ins3 _ (sub-cons x ins3 _ (sub-cons y ins3 ins3 (sub-refl ins3))))))))))))))
+  (let-match erased iz (InThere _ _ _ iz1)
+    ((InHere _ _) (values cx1 ins1 y ie1 lc1 px (sub-refl (Cons _ x (Cons _ y ins1))))))
+  (let-match erased lc1 (LengthCons _ _ _ k2 lc3) (absurd (LengthNil _) iz1))
+  (let ((erased cx3) (erased ins3) (erased ez) (erased ie3) (erased lc4) (erased pz) (erased s3)) (ie-drop e cx1 ins1 z k2 ie1 iz1 lc1))
+  (let ((erased T)) (Cons _ z (Cons _ ez (Cons _ x (Cons _ y ins3)))))
+  (values (Cons _ x cx3) (Cons _ x (Cons _ y ins3)) ez (IECons e cx3 ins3 x y px ie3) (LengthCons _ x cx3 k2 lc4) pz
+    (HSubCons x _ T (InThere x z _ (InThere x ez _ (InHere x _))) (HSubCons y ins1 T (InThere y z _ (InThere y ez _ (InThere y x _ (InHere y ins3))))
+      (sub-trans ins1 (Cons _ z (Cons _ ez ins3)) T s3
+        (HSubCons z _ T (InHere z _) (HSubCons ez ins3 T (InThere ez z _ (InHere ez _))
+          (sub-cons z ins3 _ (sub-cons ez ins3 _ (sub-cons x ins3 _ (sub-cons y ins3 ins3 (sub-refl ins3))))))))))))
 
 ; A dart t of the ring that is z or e z, with z in cx: the dart c of insertE that came from z, on no face of the ring, would be
 ; t or its edge image, which are.
@@ -611,11 +609,10 @@
   (let-match erased fo (OrL _ _ fr) ((OrR _ _ r) (values ly (HDRed B d e n f fe lab lp y ly r))))
   (let ((erased fr2)) fr)
   (let-match erased fr2 (MkFRec _ _ _ _ _ _ _ _ _ _ Rs _ ob lv dv al rv rl dl plx))
-  (match erased (sub-dec ls lp) _
-    ((SDYes _ _ sb) (values ly (HDHub B d e n f fe lab lp y ly k Vs ls fr sb l4)))
-    ((SDNo _ _ l il ol2)
-      (let ((erased u) (erased eu) (erased _) (erased pu) (erased pe) (erased pl)) (fr-wit d y ly k l e n f fe lab Vs ls fr c il))
-      (values ly (HDOut B d e n f fe lab lp y ly u eu l plx pu pe pl ol2)))))
+  (let-match erased (sub-dec ls lp) (SDNo _ _ l il ol2)
+    ((SDYes _ _ sb) (values ly (HDHub B d e n f fe lab lp y ly k Vs ls fr sb l4))))
+  (let ((erased u) (erased eu) (erased _) (erased pu) (erased pe) (erased pl)) (fr-wit d y ly k l e n f fe lab Vs ls fr c il))
+  (values ly (HDOut B d e n f fe lab lp y ly u eu l plx pu pe pl ol2)))
 
 (def-fns _ $ (erased zs-walk : (erased (Nat) d w a b) (erased (List (Nat)) e n f Bs hd zs s xs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f w Bs) rg) (erased (DiskSplit d e n (Cons (Nat) w Bs) hd zs) ds) (subterm erased (Path f s a b xs) pw) (erased (In a zs) ia)
@@ -797,17 +794,16 @@
   (let ((erased dy2)) dy0)
   (let-match erased dy2 (MkDiskF _ _ _ _ dn0 k0))
   (let ((erased ly0) (erased hb0)) (hub-dec B d y0 e n f fe lab ks lp m ol ab (kernel-lt d y0 f p lf k0)))
-  (match erased hb0 _
+  (let-match erased hb0 (HDOut _ _ _ _ _ _ _ _ _ _ u0 eu0 l0 py0 pu0 pe0 pl0 o0)
     ((HDRed _ _ _ _ _ _ _ _ _ _ r) r)
-    ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y0 ly0 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4))
-    ((HDOut _ _ _ _ _ _ _ _ _ _ u0 eu0 l0 py0 pu0 pe0 pl0 o0)
-      (let ((erased ly1) (erased hb1)) (hub-dec B d y1 e n f fe lab ks lp m ol ab (kernel-lt d y1 f p lf ky1)))
-      (match erased hb1 _
-        ((HDRed _ _ _ _ _ _ _ _ _ _ r) r)
-        ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y1 ly1 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4))
-        ((HDOut _ _ _ _ _ _ _ _ _ _ u1 eu1 l1 py1 pu1 pe1 pl1 o1)
-          (birkhoff-reduces B pb d w 5 (Succ (Zero)) e n f Bs bks h gen bl pl cu cn nc rg lp5 (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (BMFive)
-            (nt1 d w y0 ly0 u0 eu0 l0 y1 ly1 u1 eu1 l1 e n f fe lab Bs lp hd zs c rg ds rr dy0 py0 pu0 pe0 pl0 o0 iy1 ky1 py1 pu1 pe1 pl1 o1)))))))
+    ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y0 ly0 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4)))
+  (let ((erased ly1) (erased hb1)) (hub-dec B d y1 e n f fe lab ks lp m ol ab (kernel-lt d y1 f p lf ky1)))
+  (match erased hb1 _
+    ((HDRed _ _ _ _ _ _ _ _ _ _ r) r)
+    ((HDHub _ _ _ _ _ _ _ _ _ _ k Vs ls fr sh l4) (hub-reduces B d w x0 y1 ly1 k e n f fe lab ks cx ins Bs lp Vs ls tc fr sh l4))
+    ((HDOut _ _ _ _ _ _ _ _ _ _ u1 eu1 l1 py1 pu1 pe1 pl1 o1)
+      (birkhoff-reduces B pb d w 5 (Succ (Zero)) e n f Bs bks h gen bl pl cu cn nc rg lp5 (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) (BMFive)
+        (nt1 d w y0 ly0 u0 eu0 l0 y1 ly1 u1 eu1 l1 e n f fe lab Bs lp hd zs c rg ds rr dy0 py0 pu0 pe0 pl0 o0 iy1 ky1 py1 pu1 pe1 pl1 o1)))))
 
 ; notembed.sl's TriadFive.
 (def-lvl TB)

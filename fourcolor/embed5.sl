@@ -295,22 +295,20 @@
     (erased (Lt y dc) ly) (erased (NotIn y rc) oyr) (erased (HEmb ec nc em nm fm as hl x u) hx) (erased (HEmb ec nc em nm fm as hl y u) hy) -> (erased (Eq (Nat) x y) r))
   (let ((erased nfc) (erased nic) (erased fic) (erased nfm) (erased nim) (erased fim) (erased qe) (erased qn) (erased qf) (erased qem) (erased qnm) (erased qfm))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
-  (match erased hx _
+  (let-match erased hx (HeE _ _ _ _ _ _ _ _ _ x2 w ox px ix2 pw pu)
     ((HeK _ _ _ _ _ _ _ _ _ ix pu) (inj-ker dc dm x y u ec nc fc ksc rc em nm fm ksm as hl en ok fa ix ly oyr pu hy))
-    ((HeE _ _ _ _ _ _ _ _ _ x2 w ox px ix2 pw pu)
-      (match erased hy _
-        ((HeK _ _ _ _ _ _ _ _ _ iy pv) (eq-sym y x (inj-ker dc dm y x u ec nc fc ksc rc em nm fm ksm as hl en ok fa iy lx oxr pv hx)))
-        ((HeE _ _ _ _ _ _ _ _ _ y2 w2 oy py iy2 pw2 pv)
-          (let-match erased (perm-inj dm w w2 u em nfm qem pu pv) (Refl _ _))
-          (let-match erased (pre-embed-inj dc dm x2 y2 w ec nc fc ksc rc em nm fm ksm as hl en fa ix2 iy2 pw pw2) (Refl _ _))
-          (perm-inj dc x y x2 ec nfc qe px py))
-        ((HeN _ _ _ _ _ _ _ _ _ y2 z w2 a oy py oy2 pz iz pw2 pa pv)
-          (eq-sym y x (inj-node dc dm y x z u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa oyr lx oxr pz iz hy hx)))
-        (absurd (HeEN _ _ _ _ _ _ _ _ _ y2 z t w2 w3 w4 oy py oy2 pz oz pt it pw2 p1 p2 pv)
-          (no-heen dc dm y y2 t ec nc fc ksc rc em nm fm ksm as hl en ok ly oyr py oy oy2 pt it))))
     ((HeN _ _ _ _ _ _ _ _ _ x2 z w a ox px ox2 pz iz pw pa pu) (inj-node dc dm x y z u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa oxr ly oyr pz iz hx hy))
     (absurd (HeEN _ _ _ _ _ _ _ _ _ x2 z t w w1 w2 ox px ox2 pz oz pt it pw p1 p2 pu)
-      (no-heen dc dm x x2 t ec nc fc ksc rc em nm fm ksm as hl en ok lx oxr px ox ox2 pt it))))
+      (no-heen dc dm x x2 t ec nc fc ksc rc em nm fm ksm as hl en ok lx oxr px ox ox2 pt it)))
+  (let-match erased hy (HeE _ _ _ _ _ _ _ _ _ y2 w2 oy py iy2 pw2 pv)
+    ((HeK _ _ _ _ _ _ _ _ _ iy pv) (eq-sym y x (inj-ker dc dm y x u ec nc fc ksc rc em nm fm ksm as hl en ok fa iy lx oxr pv hx)))
+    ((HeN _ _ _ _ _ _ _ _ _ y2 z w2 a oy py oy2 pz iz pw2 pa pv)
+      (eq-sym y x (inj-node dc dm y x z u ec nc fc ksc rc em nm fm ksm as hl en ok fu fa oyr lx oxr pz iz hy hx)))
+    (absurd (HeEN _ _ _ _ _ _ _ _ _ y2 z t w2 w3 w4 oy py oy2 pz oz pt it pw2 p1 p2 pv)
+      (no-heen dc dm y y2 t ec nc fc ksc rc em nm fm ksm as hl en ok ly oyr py oy oy2 pt it)))
+  (let-match erased (perm-inj dm w w2 u em nfm qem pu pv) (Refl _ _))
+  (let-match erased (pre-embed-inj dc dm x2 y2 w ec nc fc ksc rc em nm fm ksm as hl en fa ix2 iy2 pw pw2) (Refl _ _))
+  (perm-inj dc x y x2 ec nfc qe px py))
 
 (def-fns _ $ (erased gm-geo : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     -> (erased (Geo dm em nm fm ksm) g))
@@ -357,13 +355,12 @@
   (match erased iy _
     ((InHere _ _) (let-match erased (nth-fn _ ec c c2 z pc pz) (Refl _ _)) (InThere z c _ (InHere z ie1)))
     ((InThere _ _ _ iy1)
-      (match erased iy1 _
-        ((InHere _ _)
-          (let-match erased (gc-at dc c ec nc rc as ok lc) (MkGcAt _ _ _ _ _ ex nx pex pxe pnx rs ep cl cs))
-          (let-match erased (nth-fn _ ec c c2 ex pc pex) (Refl _ _))
-          (let-match erased (nth-fn _ ec c2 c z pxe pz) (Refl _ _))
-          (InHere c _))
-        ((InThere _ _ _ iy2) (InThere z c _ (InThere z c2 _ (gc-img dc dm y z ec nc fc ksc rc em nm fm ksm as hl cc1 ie1 en ok iec1 uc1 iy2 pz))))))))
+      (let-match erased iy1 (InHere _ _)
+        ((InThere _ _ _ iy2) (InThere z c _ (InThere z c2 _ (gc-img dc dm y z ec nc fc ksc rc em nm fm ksm as hl cc1 ie1 en ok iec1 uc1 iy2 pz)))))
+      (let-match erased (gc-at dc c ec nc rc as ok lc) (MkGcAt _ _ _ _ _ ex nx pex pxe pnx rs ep cl cs))
+      (let-match erased (nth-fn _ ec c c2 ex pc pex) (Refl _ _))
+      (let-match erased (nth-fn _ ec c2 c z pxe pz) (Refl _ _))
+      (InHere c _))))
 
 (def-fns _ $ (erased gm-img : (erased (Nat) dm u z) (erased (List (Nat)) em nm fm ksm ccr ins) (erased (Geo dm em nm fm ksm) g) (subterm erased (InsertE em ccr ins) iem)
     (erased (In u ins) iu) (erased (Nth (Nat) em u z) pz) -> (erased (In z ins) r))
@@ -371,9 +368,10 @@
   (match erased iu _
     ((InHere _ _) (let-match erased (nth-fn _ em c c2 z pc pz) (Refl _ _)) (InThere z c _ (InHere z ins1)))
     ((InThere _ _ _ iu1)
-      (match erased iu1 _
-        ((InHere _ _) (let-match erased (nth-fn _ em c2 c z (gm-ee dm c c2 em nm fm ksm g pc) pz) (Refl _ _)) (InHere c _))
-        ((InThere _ _ _ iu2) (InThere z c _ (InThere z c2 _ (gm-img dm u z em nm fm ksm cc1 ins1 g iem1 iu2 pz))))))))
+      (let-match erased iu1 (InHere _ _)
+        ((InThere _ _ _ iu2) (InThere z c _ (InThere z c2 _ (gm-img dm u z em nm fm ksm cc1 ins1 g iem1 iu2 pz)))))
+      (let-match erased (nth-fn _ em c2 c z (gm-ee dm c c2 em nm fm ksm g pc) pz) (Refl _ _))
+      (InHere c _))))
 
 ; h1 x is in ins when x is in ie.
 (def-fns _ $ (erased ins-in : (erased (Nat) dc dm x u) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins)
@@ -386,13 +384,12 @@
   (match erased ix _
     ((InHere _ _) (let-match erased (nth-fn _ h1 x u l pu pl) (Refl _ _)) (InHere u _))
     ((InThere _ _ _ ix1)
-      (match erased ix1 _
-        ((InHere _ _)
-          (let-match erased (nth-fn _ em l l2 u pl2 (embed-e dc dm c x l u ec nc fc ksc rc em nm fm ksm as hl en ok fu pc
-              (embl-at dc c l ec nc em nm fm as hl ids h1 io el lh pl) (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu))) (Refl _ _))
-          (InThere u l _ (InHere u ins1)))
+      (let-match erased ix1 (InHere _ _)
         ((InThere _ _ _ ix2)
-          (InThere u l _ (InThere u l2 _ (ins-in dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc1 ie1 ccr1 ins1 en ok fu io el lh iec1 rcc1 iem1 ix2 pu))))))))
+          (InThere u l _ (InThere u l2 _ (ins-in dc dm x u ec nc fc ksc rc em nm fm ksm as hl ids h1 cc1 ie1 ccr1 ins1 en ok fu io el lh iec1 rcc1 iem1 ix2 pu)))))
+      (let-match erased (nth-fn _ em l l2 u pl2 (embed-e dc dm c x l u ec nc fc ksc rc em nm fm ksm as hl en ok fu pc
+          (embl-at dc c l ec nc em nm fm as hl ids h1 io el lh pl) (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu))) (Refl _ _))
+      (InThere u l _ (InHere u ins1)))))
 
 ; Off rc, h1 x is in ins only when x is in ie (embed_inj).
 (def-fns _ $ (erased ins-apart : (erased (Nat) dc dm x c u l) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl ids h1)

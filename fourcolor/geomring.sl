@@ -23,16 +23,15 @@
 (def-fns _ $ (erased order-step : (erased (List (Nat)) p) (erased (Nat) x y k) (erased (Order p x k) o) (erased (Nth (Nat) p x y) py) -> (erased (Order p y k) r))
   (let-match erased o (MkOrder _ xs _ y1 k1 px w l))
   (let-match erased (nth-fn _ p x y y1 py px) (Refl _ _))
-  (match erased w _
-    ((PathHere _ _ _) o)
-    ((PathStep _ _ xs1 _ z _ pz out w1)
-      (let-match erased (walk-distinct p (Nil (Nat)) xs y x w) (DistCons _ _ oy _))
-      (let-match erased out (NotInCons _ _ _ nyx _))
-      (let-match erased l (LengthCons _ _ _ j l1))
-      (let ((erased xs2) (erased sn) (erased w2))
-        (path-snoc p (Cons (Nat) y (Nil (Nat))) xs1 z x y (path-reset p _ _ xs1 z x w1 (notin-disj1 y xs1 oy)) px
-          (NotInCons x y (Nil (Nat)) (apart-sym y x nyx) (NotInNil x))))
-      (MkOrder p xs2 y z (Succ j) pz w2 (snoc-length _ xs1 xs2 x j sn l1)))))
+  (let-match erased w (PathStep _ _ xs1 _ z _ pz out w1)
+    ((PathHere _ _ _) o))
+  (let-match erased (walk-distinct p (Nil (Nat)) xs y x w) (DistCons _ _ oy _))
+  (let-match erased out (NotInCons _ _ _ nyx _))
+  (let-match erased l (LengthCons _ _ _ j l1))
+  (let ((erased xs2) (erased sn) (erased w2))
+    (path-snoc p (Cons (Nat) y (Nil (Nat))) xs1 z x y (path-reset p _ _ xs1 z x w1 (notin-disj1 y xs1 oy)) px
+      (NotInCons x y (Nil (Nat)) (apart-sym y x nyx) (NotInNil x))))
+  (MkOrder p xs2 y z (Succ j) pz w2 (snoc-length _ xs1 xs2 x j sn l1)))
 
 (def-fns _ $ (erased order-path : (erased (List (Nat)) p s xs) (erased (Nat) a b k) (subterm erased (Path p s a b xs) w) (erased (Order p a k) o) -> (erased (Order p b k) r))
   (let-match erased w (PathStep _ _ xs1 _ z _ pz _ w1) ((PathHere _ _ _) o))
@@ -57,9 +56,10 @@
     (erased (Length (Nat) q m) lq) -> (erased (Order n x0 (Succ m)) r))
   (let-match erased nc (NCCons _ _ _ y fp back))
   (let-match erased dr (DistCons _ _ ox _))
-  (match erased fp _
-    ((FPNil _ _) (let-match erased lq (LengthNil _)) (MkOrder n (Nil (Nat)) x0 x0 (Zero) back (PathHere n _ x0) (LengthNil _)))
-    ((FPCons _ q1 _ z _ pz fp1) (MkOrder n q x0 z m pz (fpath-path n (Cons (Nat) x0 (Nil (Nat))) q1 z y x0 fp1 back (notin-disj1 x0 q ox)) lq))))
+  (let-match erased fp (FPNil _ _)
+    ((FPCons _ q1 _ z _ pz fp1) (MkOrder n q x0 z m pz (fpath-path n (Cons (Nat) x0 (Nil (Nat))) q1 z y x0 fp1 back (notin-disj1 x0 q ox)) lq)))
+  (let-match erased lq (LengthNil _))
+  (MkOrder n (Nil (Nat)) x0 x0 (Zero) back (PathHere n _ x0) (LengthNil _)))
 
 (def-fns _ $ (erased ncyc-conn : (erased (Nat) d x y) (erased (List (Nat)) n R) (erased (List (Bond)) g) (erased (Graph d n g) gr) (erased (NCyc n R) nc)
     (erased (In x R) ix) (erased (In y R) iy) -> (erased (Conn g x y) r))

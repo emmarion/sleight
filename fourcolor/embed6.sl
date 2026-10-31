@@ -821,12 +821,11 @@
 
 (def-fns _ $ (erased kcov-rev : (erased (List (Nat)) f r rr as xs) (erased (RevApp (Nat) r (Nil (Nat)) rr) rv) (subterm erased (KerCover f r as xs) kv)
     -> (erased (KerCover f rr as xs) res))
-  (match erased kv (((KerCover f rr as xs) res))
+  (let-match erased kv (KvBand _ _ _ xs1 x b kv1)
     ((KvNil _ _ _) (KvNil f rr as))
-    ((KvIn _ _ _ xs1 x i kv1) (KvIn f rr as xs1 x i (kcov-rev f r rr as xs1 rv kv1)))
-    ((KvBand _ _ _ xs1 x b kv1)
-      (let-match erased b (MkFband _ _ _ y py w))
-      (KvBand f rr as xs1 x (MkFband f rr x y (rv-in r rr y rv py) w) (kcov-rev f r rr as xs1 rv kv1)))))
+    ((KvIn _ _ _ xs1 x i kv1) (KvIn f rr as xs1 x i (kcov-rev f r rr as xs1 rv kv1))))
+  (let-match erased b (MkFband _ _ _ y py w))
+  (KvBand f rr as xs1 x (MkFband f rr x y (rv-in r rr y rv py) w) (kcov-rev f r rr as xs1 rv kv1)))
 
 (def-fns _ $ (erased env-rev : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc rr em nm fm ksm as hl) (erased (RevApp (Nat) rc (Nil (Nat)) rr) rv)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok)

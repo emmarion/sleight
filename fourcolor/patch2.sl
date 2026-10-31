@@ -9,12 +9,11 @@
   (let ((erased rf)) (const-respects lab idd fd lab gfd (graph-zip dd fd idd gfd gr io) cl (respects-id-right dd idd lab io ll)))
   (let ((erased ls) (erased rp)) (respects-exists lab bd dd ub ll))
   (let ((erased l) (erased pl)) (nth-exists _ lab dd xd ll lx))
-  (match erased (in-dec l ls) _
-    ((OrL _ _ il)
-      (let ((erased b) (erased ib) (erased pb)) (respects-in lab bd ls l rp il))
-      (let ((erased ws) (erased w)) (conn-path dd xd b fd fdi gfd pm gr (same-root gfd dd xd b l idd lab rs io ro pl pb lx (under-in bd b dd ub ib))))
-      (OrL _ _ (MkFband fd bd xd b ib (MkSomePath fd (Nil _) ws xd b w))))
-    ((OrR _ _ o) (OrR _ _ (MkKernel fd bd lab ls xd l rf rp pl o)))))
+  (let-match erased (in-dec l ls) (OrL _ _ il)
+    ((OrR _ _ o) (OrR _ _ (MkKernel fd bd lab ls xd l rf rp pl o))))
+  (let ((erased b) (erased ib) (erased pb)) (respects-in lab bd ls l rp il))
+  (let ((erased ws) (erased w)) (conn-path dd xd b fd fdi gfd pm gr (same-root gfd dd xd b l idd lab rs io ro pl pb lx (under-in bd b dd ub ib))))
+  (OrL _ _ (MkFband fd bd xd b ib (MkSomePath fd (Nil _) ws xd b w))))
 
 ; A face walk of the whole map from the image of a disk dart labelled off the labels of bd, under a labelling constant along fd, is
 ; the image of a face walk of the disk map, ending at a dart of that label.
