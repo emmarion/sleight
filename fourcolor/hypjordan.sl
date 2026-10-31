@@ -413,7 +413,7 @@
   (let-match erased cq (CPFace _ _ r _ z _ pfy cr)
     (absurd (CPNil _ _ _)
       (let-match erased m2 (M2Here _ _ _ iv) (absurd (M2There _ _ _ _ m3) m3))
-      (let-match erased iv (InHere _ _) (absurd (InThere _ _ _ i2) i2))
+      (let-match erased iv (InHere _ _) (absurd (InThere _ _ _ i2x) i2x))
       (let-match erased (perm-inj d x y y n ni pmn pv pu) (Refl _ _))
       (apart-irrefl x xy))
     ((CPNode _ _ r _ z _ pnz cr)

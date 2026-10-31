@@ -160,10 +160,10 @@
     (erased (Length (Nat) pre i) lp) (erased (Length (Nat) ks k) lk) (erased (Add i r k) a) -> (erased (Length (Nat) rest r) res))
   (let-match erased j (JoinCons pre1 _ ks1 x j1)
     ((JoinNil _) (let-match erased lp (LengthNil _)) (let-match erased a (AddZero _)) lk))
-  (let-match erased lp (LengthCons _ _ _ i1 lp1))
+  (let-match erased lp (LengthCons _ _ _ i1x lp1))
   (let-match erased lk (LengthCons _ _ _ k1 lk1))
   (let-match erased a (AddSucc _ _ _ a1))
-  (join-length-inv pre1 rest ks1 i1 r k1 j1 lp1 lk1 a1))
+  (join-length-inv pre1 rest ks1 i1x r k1 j1 lp1 lk1 a1))
 
 (def-fns _ $ (erased join-snoc : (erased (List (Nat)) pre rest ks pre2) (erased (Nat) c) (subterm erased (Join pre (Cons (Nat) c rest) ks) j)
     (erased (Snoc (Nat) pre c pre2) s) -> (erased (Join pre2 rest ks) r))

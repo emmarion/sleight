@@ -189,8 +189,8 @@
     (distinct-snoc-cons w ps1 ps3 sn1 (DistCons w ps1 out1 d1))))
 
 (def-fns _ $ (erased nth-in : (erased (List (Nat)) xs) (erased (Nat) i x) (subterm erased (Nth (Nat) xs i x) p) -> (erased (In x xs) r))
-  (let-match erased p (NthThere _ y rest i1 _ p1) ((NthHere _ _ rest) (InHere x rest)))
-  (InThere x y rest (nth-in rest i1 x p1)))
+  (let-match erased p (NthThere _ y rest i1x _ p1) ((NthHere _ _ rest) (InHere x rest)))
+  (InThere x y rest (nth-in rest i1x x p1)))
 
 (def-fns _ $ (erased iota-in : (erased (Nat) d x) (erased (List (Nat)) ids) (erased (Iota d ids) io) (erased (Lt x d) lt) -> (erased (In x ids) r))
   (nth-in ids x x (iota-nth d x ids io lt)))
@@ -530,9 +530,9 @@
       (let-match erased px (NthThere _ _ _ j1 _ px1) ((NthHere _ _ _) (NthHere _ _ ls1)))
       (NthThere _ _ ls1 j1 _ (ind-out s xs1 ls1 j1 x id1 px1 out)))))
 
-(def-fns _ $ (erased shut-const : (erased (Nat) d) (erased (List (Nat)) s ids lab) (erased (List (Bond)) g) (subterm erased (Shut s g) sh)
+(def-fns _ $ (erased shut-const : (erased (Nat) d) (erased (List (Nat)) s ids lab) (erased (List (Bond)) g) (subterm erased (Shut s g) shx)
     (erased (Ind s ids lab) id) (erased (Iota d ids) io) (erased (Below g d) bg) -> (erased (Const lab g) r))
-  (match erased sh _
+  (match erased shx _
     ((ShutNil _) (ConstNil lab))
     ((ShutIn _ g1 x y px py sh1)
       (let-match erased bg (BelowCons _ _ _ _ lx ly bg1))
@@ -544,11 +544,11 @@
         (shut-const d s ids lab g1 sh1 id io bg1)))))
 
 ; No path of g leaves a set that g never leaves.
-(def-fns _ $ (erased shut-sep : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) sh)
+(def-fns _ $ (erased shut-sep : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) shx)
     (erased (Below g d) bg) (erased (NotIn x s) px) (erased (In y s) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Sep g x y) r))
   (let ((erased ids) (erased io)) (iota-exists d))
   (let ((erased lab) (erased id)) (ind-exists s ids))
-  (MkSep g x y lab (Zero) (Succ (Zero)) (shut-const d s ids lab g sh id io bg) (ind-out s ids lab x x id (iota-nth d x ids io lx) px)
+  (MkSep g x y lab (Zero) (Succ (Zero)) (shut-const d s ids lab g shx id io bg) (ind-out s ids lab x x id (iota-nth d x ids io lx) px)
     (ind-in s ids lab y y id (iota-nth d y ids io ly) py) (ApLt _ _ (Zero) (Succ (Zero)) (LtZ (Zero)))))
 
 (def-fns _ $ (erased sep-sym : (erased (List (Bond)) g) (erased (Nat) x y) (erased (Sep g x y) s) -> (erased (Sep g y x) r))

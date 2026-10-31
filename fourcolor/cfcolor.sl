@@ -213,9 +213,9 @@
       (erased (FourColoring e f ks) col) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr) -> (CpCol cp et)))
 
 ; A U step adds two entries c, for any nonzero c, in front of a ring trace.
-(def-fns _ $ (erased cpcol-u : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (Col) c) (erased (CpCol cp et) cc) (erased (NZ c) nz)
+(def-fns _ $ (erased cpcol-u : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (Col) c) (erased (CpCol cp et) ccx) (erased (NZ c) nz)
     -> (erased (CpCol (Cons (Step) (SU) cp) (Cons (Col) c (Cons (Col) c et))) r))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let ((erased e2) (erased f2) (erased r2) (erased st) (erased n2) (erased pm2)) (ecpU-c d e f r n pm))
   (let-match erased tr (MkTrace a cs1 _ ctr))
@@ -265,8 +265,8 @@
         (trace-nz d z y kz ky k0 e n f ks p1 rc1 cz c0 cs1 et1 h col rp1 pkz pcz rr1 nc1 ct1 p0 py last)))))
 
 ; A ring trace has no zero (memc0_trace_cpring).
-(def-fns _ $ (erased cpcol-nz : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) cc) -> (erased (AllNZ et) r))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+(def-fns _ $ (erased cpcol-nz : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) ccx) -> (erased (AllNZ et) r))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (let-match erased cr (MkCpring _ p a y rp back dp))
@@ -292,10 +292,10 @@
   pt)
 
 ; A Y step replaces the first entry e1 of a ring trace by g and h, for nonzero g and h with e1 + g = h.
-(def-fns _ $ (erased cpcol-y : (erased (List (Step)) cp) (erased (List (Col)) r1) (erased (Col) e1 g h) (erased (CpCol cp (Cons (Col) e1 r1)) cc)
+(def-fns _ $ (erased cpcol-y : (erased (List (Step)) cp) (erased (List (Col)) r1) (erased (Col) e1 g h) (erased (CpCol cp (Cons (Col) e1 r1)) ccx)
     (erased (AddC e1 g h) p) (erased (NZ g) ng) (erased (NZ h) nh) -> (erased (CpCol (Cons (Step) (SY) cp) (Cons (Col) g (Cons (Col) h r1))) res))
-  (let ((erased nzs)) (cpcol-nz cp _ cc))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let ((erased nzs)) (cpcol-nz cp _ ccx))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let-match erased tr (MkTrace a cs1 _ ctr))
   (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
@@ -338,10 +338,10 @@
 
 ; An H step replaces the first two entries e1, e2 of a ring trace by g and h = (e1 + e2) + g, for g, e1 + g and h nonzero.
 (def-fns _ $ (erased cpcol-h : (erased (List (Step)) cp) (erased (List (Col)) r2) (erased (Col) e1 e2 ee g s1 h)
-    (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) cc) (erased (AddC e1 e2 ee) pee) (erased (AddC e1 g s1) ps1) (erased (AddC ee g h) ph)
+    (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) ccx) (erased (AddC e1 e2 ee) pee) (erased (AddC e1 g s1) ps1) (erased (AddC ee g h) ph)
     (erased (NZ g) ng) (erased (NZ s1) ns1) (erased (NZ h) nh) -> (erased (CpCol (Cons (Step) (SH) cp) (Cons (Col) g (Cons (Col) h r2))) res))
-  (let ((erased nzs)) (cpcol-nz cp _ cc))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let ((erased nzs)) (cpcol-nz cp _ ccx))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let-match erased tr (MkTrace a cs1 _ ctr))
   (let-match erased nc (NCsCons ka _ rc1 _ pa nc1))
@@ -477,18 +477,18 @@
   (values rc2 cs2 et2 rr2 nc2 tr2 (RotIn _ k m et et2 le2 le rts)))
 
 ; An R step rotates a ring trace.
-(def-fns _ $ (erased cpcol-r : (erased (List (Step)) cp) (erased (Nat) k) (erased (List (Col)) et et2) (erased (CpCol cp et) cc) (erased (Rot (Col) k et et2) rt)
+(def-fns _ $ (erased cpcol-r : (erased (List (Step)) cp) (erased (Nat) k) (erased (List (Col)) et et2) (erased (CpCol cp et) ccx) (erased (Rot (Col) k et et2) rt)
     -> (erased (CpCol (Cons (Step) (SR k) cp) et2) res))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased r2) (erased rtr)) (rot-c _ k r))
   (let ((erased rc2) (erased cs2) (erased et3) (erased rr2) (erased nc2) (erased tr2) (erased rt3)) (ring-rot k ks r r2 rc cs et rtr rr nc tr))
   (let-match erased (rot-fn _ k et et3 et2 rt3 rt) (Refl _ _))
   (MkCpCol (Cons (Step) (SR k) cp) d e f r2 ks rc2 cs2 et2 (CmR k d cp e f r r2 cm rtr) col rr2 nc2 tr2))
 
 ; An R' step rotates a ring trace of m + 1 entries by m.
-(def-fns _ $ (erased cpcol-rr : (erased (List (Step)) cp) (erased (Nat) m) (erased (List (Col)) et et2) (erased (CpCol cp et) cc)
+(def-fns _ $ (erased cpcol-rr : (erased (List (Step)) cp) (erased (Nat) m) (erased (List (Col)) et et2) (erased (CpCol cp et) ccx)
     (erased (Length (Col) et (Succ m)) l) (erased (Rot (Col) m et et2) rt) -> (erased (CpCol (Cons (Step) (SRr) cp) et2) res))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased k) (erased lr)) (length-exists _ r))
   (let-match erased (length-fn _ et k (Succ m) (trace-length cs et k tr (ncols-length rc cs k nc (respects-length ks r rc k rr lr))) l) (Refl _ _))
   (let ((erased r2) (erased rtr)) (rot-c _ m r))
@@ -579,9 +579,9 @@
 
 ; A K step replaces the first two entries e1, e2 of a ring trace by their sum, when that is nonzero.
 (def-fns _ $ (erased cpcol-k : (erased (List (Step)) cp) (erased (List (Col)) r2) (erased (Col) e1 e2 ee)
-    (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) cc) (erased (AddC e1 e2 ee) pee) (erased (NZ ee) nz)
+    (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) ccx) (erased (AddC e1 e2 ee) pee) (erased (NZ ee) nz)
     -> (erased (CpCol (Cons (Step) (SK) cp) (Cons (Col) ee r2)) res))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r cm))
   (let-match erased tr (MkTrace a cs1 _ ctr))
   (let-match erased ctr (CTStep _ _ x _ cs2 _ pax ctr1))
@@ -853,9 +853,9 @@
   (Refl _ et2))
 
 ; A colour permutation of a ring trace is a ring trace (gcol_perm).
-(def-fns _ $ (erased cpcol-perm : (erased (List (Step)) cp) (erased (List (Col)) et et2) (erased (Perm) g) (erased (CpCol cp et) cc) (erased (IsPerm g) ip)
+(def-fns _ $ (erased cpcol-perm : (erased (List (Step)) cp) (erased (List (Col)) et et2) (erased (Perm) g) (erased (CpCol cp et) ccx) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) -> (erased (CpCol cp et2) res))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let-match erased col (MkFourColoring _ _ _ ke face ce edge four))
   (let ((erased ks2) (erased np)) (npl-ex g ks ip four))
   (let ((erased ks3) (erased face2) (erased nf)) (respects-perm g ks ks2 f ks face np))

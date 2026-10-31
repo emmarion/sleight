@@ -88,18 +88,18 @@
     (erased (Respects lab f lab) rf) (erased (Respects lab (Cons (Nat) x0 p) ls) rl) (erased (Distinct ls) dl)
     (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra) (subterm erased (List (Nat)) B) (erased (Sub B RR) sb)
     (erased (Distinct B) db) (erased (List (Nat)) lsB) (erased (Respects lab B lsB) rp) -> (erased (Distinct lsB) res))
-  (let-match erased rp (RespCons _ B1 ls1 b l pb rp1) ((RespNil _) (DistNil)))
+  (let-match erased rp (RespCons _ B1x ls1 b l pb rp1) ((RespNil _) (DistNil)))
   (let-match erased sb (HSubCons _ _ _ ibr sb1))
   (let-match erased db (DistCons _ _ ob db1))
   (DistCons l ls1
     (match erased (in-dec l ls1) _
       (absurd (OrL _ _ il)
-        (let ((erased b2) (erased ib2) (erased pb2)) (respects-in lab B1 ls1 l rp1 il))
-        (let-match erased (rev-lab-inj d x0 b b2 l m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra ibr (sub-in B1 RR b2 sb1 ib2) pb pb2)
+        (let ((erased b2) (erased ib2) (erased pb2)) (respects-in lab B1x ls1 l rp1 il))
+        (let-match erased (rev-lab-inj d x0 b b2 l m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra ibr (sub-in B1x RR b2 sb1 ib2) pb pb2)
           (Refl _ _))
-        (apart-irrefl b (notin-in b b B1 ob ib2)))
+        (apart-irrefl b (notin-in b b B1x ob ib2)))
       ((OrR _ _ o) o))
-    (rev-labs d x0 m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra B1 sb1 db1 ls1 rp1)))
+    (rev-labs d x0 m e nf f p rr er RR lab ls pe pl le rg sn lr lrr drr srr rf rl dl rm ra B1x sb1 db1 ls1 rp1)))
 
 ; scycle_rev_ring: in a plain map, RR = rev (map e r) is a ring, read from its first dart y.
 (def-fns _ $ (erased rev-ring : (erased (Nat) d x0) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
@@ -295,12 +295,12 @@
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
   (let ((erased l1) (erased p1)) (nth-exists _ lab d x ll lx))
   (let ((erased l2) (erased p2)) (nth-exists _ lab d y ll ly))
-  (let ((erased i1) (erased c1)) (classes-root g d ids lab rs x l1 io ro p1 lx))
-  (let ((erased i2) (erased c2)) (classes-root g d ids lab rs y l2 io ro p2 ly))
+  (let ((erased i1x) (erased c1)) (classes-root g d ids lab rs x l1 io ro p1 lx))
+  (let ((erased i2x) (erased c2)) (classes-root g d ids lab rs y l2 io ro p2 ly))
   (let-match erased lr (LengthCons _ r0 rs1 _ lr1))
   (let-match erased lr1 (LengthNil _))
-  (let-match erased i1 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
-  (let-match erased i2 (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
+  (let-match erased i1x (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
+  (let-match erased i2x (InHere _ _) (absurd (InThere _ _ _ i) (match erased i _)))
   (conn-cpath d x y e n f g h gl (conn-cat g x r0 y (conn-sym g r0 x c1) c2)))
 
 ; proper_rev_ring.

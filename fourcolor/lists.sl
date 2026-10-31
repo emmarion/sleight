@@ -16,9 +16,9 @@
     (erased (Snoc A xs a ys) s) (subterm erased (Nth A xs i x) p) -> (erased (Nth A ys i x) q))
   (match erased p _
     ((NthHere _ _ rest) (let-match erased s (SnocCons _ _ _ _ ys1 _)) (NthHere _ x ys1))
-    ((NthThere _ y rest i1 _ p1)
+    ((NthThere _ y rest i1x _ p1)
       (let-match erased s (SnocCons _ _ _ _ ys1 s1))
-      (NthThere _ y ys1 i1 x (snoc-old _ rest ys1 a x i1 s1 p1)))))
+      (NthThere _ y ys1 i1x x (snoc-old _ rest ys1 a x i1x s1 p1)))))
 
 (def-fns _ $ (erased snoc-new : (erased Type A) (erased (List A) xs ys) (erased A a) (erased (Nat) n)
     (subterm erased (Snoc A xs a ys) s) (erased (Length A xs n) l) -> (erased (Nth A ys n a) q))
@@ -39,8 +39,8 @@
       (OrR _ _ (Refl _ (Zero))))
     ((SnocCons _ y _ xs1 ys1 s1)
       (let-match erased l (LengthCons _ _ _ n1 l1))
-      (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (OrL _ _ (NthHere _ y xs1))))
-      (let-match erased (snoc-back _ xs1 ys1 a x i1 n1 s1 l1 p1) (OrR _ _ e) ((OrL _ _ q) (OrL _ _ (NthThere _ y xs1 i1 x q))))
+      (let-match erased p (NthThere _ _ _ i1x _ p1) ((NthHere _ _ _) (OrL _ _ (NthHere _ y xs1))))
+      (let-match erased (snoc-back _ xs1 ys1 a x i1x n1 s1 l1 p1) (OrR _ _ e) ((OrL _ _ q) (OrL _ _ (NthThere _ y xs1 i1x x q))))
       (let-match erased e (Refl _ _))
       (OrR _ _ (Refl _ i)))))
 

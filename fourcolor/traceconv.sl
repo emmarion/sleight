@@ -34,8 +34,8 @@
   (MkCpCol cp d e f _ ks lc cs et cm col rl (ncols-of lc cs co) (MkTrace c cs1 et (ctr-of-tf c c cs1 et tf))))
 
 ; A CpCol of cp is a ring trace of the map of cp on its ring.
-(def-fns _ $ (erased cpcol-rt : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) cc)
+(def-fns _ $ (erased cpcol-rt : (erased (List (Step)) cp) (erased (List (Col)) et) (erased (CpCol cp et) ccx)
     -> (erased (Nat) d) (erased (List (Nat)) e f r) (erased (Cpmap cp d e f r) cm) (erased (RingTrace e f r et) rt))
-  (let-match erased cc (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
+  (let-match erased ccx (MkCpCol _ d e f r ks rc cs _ cm col rr nc tr))
   (let-match erased tr (MkTrace c cs1 _ ct))
   (values d e f r cm (MkRingTrace e f r ks rc cs et col rr (colof-of rc cs nc) (TrCons c cs1 et (tf-of-ctr c c cs1 et ct)))))

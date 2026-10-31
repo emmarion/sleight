@@ -159,14 +159,14 @@
   (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) a))
   (AdjThere gh1 b x y (adj-cat-r g1 h gh1 x y a c1)))
 
-(def-fns _ $ (erased spans-cat : (erased (List (Bond)) k g h gh) (subterm erased (Cat g h gh) c) (erased (Spans k g) sg) (erased (Spans k h) sh)
+(def-fns _ $ (erased spans-cat : (erased (List (Bond)) k g h gh) (subterm erased (Cat g h gh) c) (erased (Spans k g) sg) (erased (Spans k h) shx)
     -> (erased (Spans k gh) r))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
+  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) shx))
   (let-match erased sg (SpansCons _ _ x y cx sg1))
-  (SpansCons k gh1 x y cx (spans-cat k g1 h gh1 c1 sg1 sh)))
+  (SpansCons k gh1 x y cx (spans-cat k g1 h gh1 c1 sg1 shx)))
 
 (def-fns _ $ (erased spans-sub-cat : (erased (List (Bond)) k g h gh) (subterm erased (Cat g h gh) c) (erased (Spans k gh) sp)
-    -> (erased (Spans k g) sg) (erased (Spans k h) sh))
+    -> (erased (Spans k g) sg) (erased (Spans k h) shx))
   (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (values (SpansNil k) sp)))
   (let-match erased sp (SpansCons _ _ x y cx sp1))
   (let ((erased sg1) (erased sh1)) (spans-sub-cat k g1 h gh1 c1 sp1))

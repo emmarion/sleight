@@ -170,9 +170,9 @@
       (respects-assoc fe n e ids en e d ke (respects-id-right d ids e io le) cen len ln) kf2)
     (MkPerm d e nf ids io le kf2 kf) (MkPerm d f en ids io lf ke2 kn) (MkPerm d n fe ids io ln kn2 ke)))
 
-(def-fns _ $ (erased spans-to-inv : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) h gp gq) (erased (Spans h gp) sh)
+(def-fns _ $ (erased spans-to-inv : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) h gp gq) (erased (Spans h gp) shx)
     (erased (Perm d p q) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Spans h gq) r))
-  (spans-trans h gp gq (spans-inv d p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp) sh))
+  (spans-trans h gp gq (spans-inv d p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp) shx))
 
 ; The dual keeps the genus.
 (def-fns _ $ (erased genus-dual : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
