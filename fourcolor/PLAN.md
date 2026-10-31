@@ -107,6 +107,42 @@ in one run. The reducibility check is expected to be the heaviest step;
 `red/` is a prototype of it, written to measure that before any proof
 is attached.
 
+The `fcfinal.sl` unit is elaborated serially before its one
+`native-compute`, so with many cores elaboration may bound its time.
+Timings of that chain per file and per top-level form (a macro that
+reads a missing file, put between them, its reads timed with strace)
+suggest that the cost is spread over the proofs, about three quarters
+of it in `erased` functions, and that a few things cost far more than
+their size, which the files avoid:
+
+- a lopsided-match warning (WARNINGS.md 5) appeared to cost each
+  compiler about 40 ms late in the chain, where its text is built from
+  the whole scope; such matches are written as `let-match`es with
+  branches;
+- `unary` and `prove-literal-lt` appeared to cost slc about 0.1 s each
+  late in the chain (each `settled-val-apply` there re-enters the
+  literals), against about 5 ms with the reference compiler; their facts
+  are lemmas in `ring.sl` (`unary-4`, `unary-9-8`, `lit-lt-7-9`, ...),
+  matched against `Refl` or called where the macros were;
+- slc keeps every warning of a run and walks them at each body, and a
+  shadow warning scans the scope; local binders that shadowed an earlier
+  binder have an `x` appended, outside `red/`, `unav/` and the files
+  after `fcopen.sl`.
+
+In paired runs (both versions elaborated at once to `embed4proof.sl` on
+a 4-core cloud VM loaded by other runs, one run each), slc took about
+35 s of CPU with the files as they are and about 46 s with these written
+as before, and the reference compiler about 129 s and 133 s. What is
+left appears to be mostly the checkers' own work per entry; in stack
+samples of the reference compiler about a quarter of the time was in
+`Env.opens_ruled`, which walks every opened `Matchable` (about 1100 in
+this chain) for each rule. The largest single form left is
+`unav/qztproof.sl`'s run-position `all-regs` (about 4 s with slc in one
+run), which walks the skeleton from the root again for each region.
+Lopsided matches remain in `cpcomp.sl`, `unav/redc.sl`, `unav/unav.sl`
+and `unav/pwsound.sl`, and shadow warnings mostly in `unav/` and at
+`red/red.sl`'s `cc` and `unav/part.sl`'s `pc` and `pf`.
+
 ## Status
 
 `reduce3.sl` proves `CubicReduction`: a function giving every plain
@@ -863,7 +899,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   and concatenates again at run time, with an `Eq` to cfs from `decall-fn`
   and `concat-fn`; the proof files read both from scope, so in
   one unit they are about the same entries (a variant passing a `UnavE`
-  of a cfs computed again by `concat-cfs` was rejected). Chain (both compilers, with `--goal proved`; about 54 s with slc and 124 s
+  of a cfs computed again by `concat-cfs` was rejected). Chain (both compilers, with `--goal proved`; about 26 s with slc and 86 s
   with the reference compiler in one run each): `std/macro.sl std/nat.sl
   std/list.sl ring.sl`, then `defs
   orient base sweep geo plan map lists planemap walk frontier labels rot
@@ -933,6 +969,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the jobs, which share the machine, appeared to outweigh the difference.
   With the reference compiler (under `ulimit -s unlimited`, with
   `s=8M,o=200`) it passed in about 874 s (about 109 s of elaboration).
+  In later runs, one each, with `s=8M,o=200` on that VM (load average
+  about 2 to 7), it passed with
+  slc in about 397 s and with the reference compiler in about 597 s, and
+  `fcmanyfinal.sl` with slc in about 483 s.
   With the in-place Kempe closure of `red/kempe.sl`, in one pair of slc
   runs on that VM at a load average of about 5, the unit took about 390 s
   of wall time (about 980 s of CPU, at most about 0.72 GB resident) as
@@ -1153,7 +1193,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `red/goal-c.sl` runs the jobs and sets and discharges the goal: every
   configuration appears to be C-reducible, in the sense of `CRed`, with
   its contract. Load order: `std/macro.sl native.sl std/nat.sl
-  std/list.sl`, then `base map lists planemap walk frontier labels
+  std/list.sl ring.sl` (`red/configs.sl` reads ring.sl's `repeat`), then `base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
   hypwalkup hypgeom` (each `.sl`), then `cfmap.sl red/red.sl cpmap.sl
   red/color.sl cfcolor.sl red/ctree.sl red/gtree.sl red/grestrict.sl
@@ -1313,10 +1353,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   regions of its walk, which `SCut` and `PCut` refer to) is made of parts
   of the regions after it in `regs`; `reg-claim` follows a dart of
   positive dscore from the region of its walk's root through those
-  parts to the region whose obligations cover it. The load order below
-  appears not to elaborate any more: `red/configs.sl`'s `take-app` reads
-  the `CatNil` of `cfcolor.sl`, which it does not load (an open question
-  which chain to give instead). On the chain of `fcfinal.sl` up to
+  parts to the region whose obligations cover it. On the chain of `fcfinal.sl` up to
   `fcopen.sl` followed by `native unav/qztproof unav/qztgoal` (each
   `.sl`), `--goal proved` passed with slc in about 54 s in one run on a
   4-core cloud VM shared with other runs (1.5 MB of OCaml, compiled in
@@ -1331,16 +1368,22 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   (`p` by `mp` in `regs`) was rejected (in each a job answered `ChkNo`). In a test run the tree built
   this way was the tree `the-quiz-tree` builds (3361 triples, compared
   structurally), and every one of the 633 configurations had a
-  certificate. Load order: that of `unavgoal.sl` with `native.sl`
-  after `std/macro.sl` (`std/macro.sl native.sl
-  std/nat.sl std/list.sl ring.sl`, `base` to `hypcubic`, `cfmap.sl`,
-  `colalias.sl unav/faces.sl red/red.sl red/configs.sl cpmap.sl`, then
+  certificate. Load order: `std/macro.sl native.sl
+  std/nat.sl std/list.sl ring.sl`, `defs` to `hypcubic` as in the
+  `fcgoal.sl` entry, `cfmap.sl colalias.sl unav/faces.sl red/red.sl
+  cpmap.sl red/color.sl cfcolor.sl red/configs.sl unav/realias.sl`
+  (`red/configs.sl` reads the `App` of `cfcolor.sl`, and `unav/realias.sl`
+  puts back the `Or` that `red/color.sl` defines again), then
   `unav/` `part quiz redpart hubcap present fit dbound hubcapc obsmap
-  dscore dsum posz pwalk hubsound pwsound conv cap unav data`), then
+  dscore dsum posz pwalk hubsound pwsound conv cap unav data`, then
   `unav/qfit.sl rdart.sl redc.sl qwalk.sl qembed.sl qcert.sl qtree.sl
-  qmirror.sl unave.sl qztcfs.sl native.sl qztproof.sl qztgoal.sl` with `--goal proved` (`unave.sl` holds
+  qmirror.sl unave.sl qztcfs.sl qztproof.sl qztgoal.sl` with `--goal
+  proved`. On that chain it passed with slc in about 1770 s in one run,
+  most of it, it seemed, ocamlopt (with `OCAMLRUNPARAM=s=8M,o=200`) on
+  the 9.2 MB program that the jobs make there, where `qztcfs.sl`'s
+  `cfs-run` gives them cfs as a built value. `unave.sl` holds
   `UnavE`, `CfEmbed` and `MapOrMirror`, so that `embed.sl` can load
-  without the goal). Not done: embed.v (from the preembedding to an
+  without the goal. Not done: embed.v (from the preembedding to an
   embedding), the radius and ring-arity checks of embeddable that
   cfquiz.v also makes, and the contradiction with C-reducibility; how
   `embed.sl` puts the rest together is in its entry below.

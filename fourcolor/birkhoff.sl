@@ -63,7 +63,7 @@
 ; Node order 3 off the ring a :: p, read off the node cycle a :: rev p.
 (def-fns _ $ (erased cubics-turn : (erased (List (Nat)) n p q xs) (erased (Nat) a) (subterm erased (Cubics n (Cons (Nat) a p) xs) cs)
     (erased (RevApp (Nat) p (Nil (Nat)) q) ra) -> (erased (OrdersOff n 3 (Cons (Nat) a q) xs) res))
-  (unary 3)
+  (let-match erased (unary-3) (Refl _ _))
   (let-match erased cs (CubsCons _ _ xs1 x c cs1) ((CubsNil _ _) (OONil n _ 3)))
   (let ((erased rest)) (cubics-turn n p q xs1 a cs1 ra))
   (match erased c _
@@ -183,8 +183,8 @@
 (def-fns _ $ (erased birkhoff-size : (erased (Nat) h m kc dr kf K f6 m2 u x y b0) (erased (Add (Succ m) (Succ (Succ h)) K) aK)
     (erased (Lt K (Succ kf)) lK) (erased (Mul kf 6 f6) mf) (erased (Mul (Succ (Succ h)) 2 m2) mm) (erased (Add dr 6 u) du) (erased (Add m2 u f6) af)
     (erased (Mul 6 m x) mx) (erased (Mul 4 (Succ h) y) my) (erased (Add x y b0) xy) (erased (Lt (Succ kc) b0) lt) -> (erased (Lt kc dr) r))
-  (unary 1)
-  (unary 2)
+  (let-match erased (unary-1) (Refl _ _))
+  (let-match erased (unary-2) (Refl _ _))
   (let ((erased env)) (Cons (Nat) h $ Cons (Nat) m $ Cons (Nat) dr $ Nil (Nat)))
   (let ((erased v0)) (EvVar env (Zero) h (NthHere _ h _)))
   (let ((erased v1)) (EvVar env (Succ (Zero)) m (NthThere _ h _ _ m $ NthHere _ m _)))
@@ -271,11 +271,10 @@
     (absurd (No _ _ _ _ le) (lt-asym s1 s2 l (add-mono-le b y x s2 s1 (le-lt-succ y x le) q p)))))
 
 (def-fns _ $ (erased ctr-snoc : (erased (Col) s) (erased (List (Col)) et1 et) (subterm erased (Ctr s et1 et) c) -> (erased (Col) x) (erased (HSnoc (Col) et1 x et) sn))
-  (match erased c _
-    ((CtrNil _) (values s (SnocNil _ s)))
-    ((CtrCons _ e s2 et2 ct a c1)
-      (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
-      (values x (SnocCons _ e x et2 ct sn)))))
+  (let-match erased c (CtrCons _ e s2 et2 ct a c1)
+    ((CtrNil _) (values s (SnocNil _ s))))
+  (let ((erased x) (erased sn)) (ctr-snoc s2 et2 ct c1))
+  (values x (SnocCons _ e x et2 ct sn)))
 
 ; The map that chkbP of Birkhoff_valid glues from the disk map of a ring, on bd, and the map of a basis program, on its ring
 ; a :: p read as the node cycle a :: q.
@@ -314,7 +313,7 @@
     -> (erased (Nat) d2) (erased (List (Nat)) e2 n2 f2) (erased (Hypermap d2 e2 n2 f2) h2) (erased (Genus d2 e2 n2 f2 (Zero)) g2)
     (erased (AllOrder d2 e2 (Succ (Succ (Zero)))) pl2) (erased (Precubic d2 n2) pc2) (erased (Lt d2 d) lt2)
     (erased (HOr (Bridgeless d2 e2 n2 f2) (Chord ed fd bd)) bo) (erased (SewSide d2 dd e2 n2 f2 ed nd fd bd cp) ss))
-  (unary 3)
+  (let-match erased (unary-3) (Refl _ _))
   (let ((erased r0)) (Cons (Nat) x0 p))
   (let ((erased pt0)) pt)
   (let-match erased pt0
@@ -459,13 +458,12 @@
   (let-match erased hf (MkBHalf _ _ _ dr _ _ _ _ _ _ _ er nr fr hd hr _ br zs RV pt rb rv rbr ds ap))
   (let ((erased d2) (erased e2) (erased n2) (erased f2) (erased h2) (erased g2) (erased pl2) (erased pc2) (erased lt2) (erased bo) (erased ss))
     (side-map d h m x0 dd dr e n f p ed nd fd er nr fr hd hr bd br zs RV cp t hm gen bl pl cu cn rg lr nt pt rb rv rbr ds ap bp))
-  (match erased bo _
-    ((OrL _ _ b2) (BMNeed d dd h m e n f ed nd fd bd ts _ (BNCons d dd h m d2 ed nd fd bd e2 n2 f2 cp t ts1 ms bp h2 g2 b2 pl2 pc2 lt2 ss bn)))
-    ((OrR _ _ ch)
-      (let ((erased y0) (erased k) (erased k2) (erased Q) (erased rq) (erased nq) (erased lq) (erased lr2) (erased lt))
-        (ring-disk-chord d dd dr x0 m e n f p ed nd fd er nr fr hd hr bd br zs hm gen bl pl cn rg nt pt rb ds ch))
-      (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
-      (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))))
+  (let-match erased bo (OrR _ _ ch)
+    ((OrL _ _ b2) (BMNeed d dd h m e n f ed nd fd bd ts _ (BNCons d dd h m d2 ed nd fd bd e2 n2 f2 cp t ts1 ms bp h2 g2 b2 pl2 pc2 lt2 ss bn))))
+  (let ((erased y0) (erased k) (erased k2) (erased Q) (erased rq) (erased nq) (erased lq) (erased lr2) (erased lt))
+    (ring-disk-chord d dd dr x0 m e n f p ed nd fd er nr fr hd hr bd br zs hm gen bl pl cn rg nt pt rb ds ch))
+  (let-match erased (length-fn (Nat) _ k2 (Succ (Succ h)) lr2 lr) (Refl _ _))
+  (BMShort d dd h m e n f ed nd fd bd ts (MkShorter d h y0 k e n f Q rq nq lq lt)))
 
 ; What Birkhoff_valid needs for a ring nontrivial for m in the check for h, m with basis trees ts: a shorter ring nontrivial
 ; for 0, or the two sides of the ring and, for each side, the maps to colour.
@@ -626,7 +624,7 @@
 ; The Birkhoff theorem of birkhoff.v reads its check for a ring of 2 to 5 darts off the four checks.
 (def-fns _ $ (erased birkhoff-check-at : (erased (Nat) k) (erased (BirkhoffChecks) bcs) (erased (Lt (Succ (Zero)) k) l1) (erased (Lt k 6) l6)
     -> (erased (Nat) h m) (erased (Eq (Nat) k (Succ (Succ h))) eq) (erased (BirkhoffCheck h m) bc) (erased (BkMode k m) md))
-  (unary 6)
+  (let-match erased (unary-6) (Refl _ _))
   (let-match erased bcs (MkBirkhoffChecks b2 b3 b4 b5))
   (let-match erased l1 (LtS _ k1 l0))
   (let-match erased l0 (LtZ h))

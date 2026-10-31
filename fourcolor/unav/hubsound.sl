@@ -140,13 +140,12 @@
 
 (def-fns _ $ (erased subn-le : (erased (Nat) nhub j1 j2 i) (erased (HubSubn nhub j2 j1 i) hs) (erased (Lt j1 nhub) l1) (erased (Lt j2 nhub) l2)
     -> (erased (Lt i (Succ nhub)) r))
-  (match erased hs _
-    ((HSLe _ _ _ _ l mo) (lt-weaken i nhub (lt-le-trans i (Succ j2) nhub (add-le-right j1 i j2 (monus-add j2 j1 i mo l)) (LtS j2 nhub l2))))
-    ((HSGt _ _ _ t _ l at mo)
-      (let ((erased a)) (monus-add t j1 i mo (lt-weaken j1 t (lt-le-trans j1 nhub t l1 (add-le-right j2 nhub t at)))))
-      (match erased (le-dec i nhub) _
-        ((LeY _ _ k) k)
-        (absurd (LeN _ _ k) (lt-asym j2 j1 l (lt-weaken j1 j2 (add-cancel-lt j2 nhub j1 i t at a k))))))))
+  (let-match erased hs (HSGt _ _ _ t _ l at mo)
+    ((HSLe _ _ _ _ l mo) (lt-weaken i nhub (lt-le-trans i (Succ j2) nhub (add-le-right j1 i j2 (monus-add j2 j1 i mo l)) (LtS j2 nhub l2)))))
+  (let ((erased a)) (monus-add t j1 i mo (lt-weaken j1 t (lt-le-trans j1 nhub t l1 (add-le-right j2 nhub t at)))))
+  (match erased (le-dec i nhub) _
+    ((LeY _ _ k) k)
+    (absurd (LeN _ _ k) (lt-asym j2 j1 l (lt-weaken j1 j2 (add-cancel-lt j2 nhub j1 i t at a k))))))
 
 (def-fns _ $ (erased subn-back : (erased (Nat) nhub j1 j2 i i2) (erased (HubSubn nhub j2 j1 i) hs) (erased (Lt j1 nhub) l1) (erased (Add i i2 nhub) ai)
     -> (erased (Nat) c) (erased (Add j2 i2 c) a) (erased (Or (Eq (Nat) c j1) (Add j1 nhub c)) md))
@@ -231,9 +230,10 @@
 
 (def-fns _ $ (erased hit-mem : (erased (List (Sec)) os) (erased (List (List (Sub))) obl) (subterm erased (Hit os obl) h)
     -> (erased (List (Sub)) q) (erased (Mem (List (Sub)) q obl) m) (erased (Exact os q) x))
-  (match erased h _
-    ((HitHere _ q obl1 x) (values q (MemHere _ q obl1) x))
-    ((HitThere _ q0 obl1 h1) (let ((erased q) (erased m) (erased x)) (hit-mem os obl1 h1)) (values q (MemThere _ q q0 obl1 m) x))))
+  (let-match erased h (HitThere _ q0 obl1 h1)
+    ((HitHere _ q obl1 x) (values q (MemHere _ q obl1) x)))
+  (let ((erased q) (erased m) (erased x)) (hit-mem os obl1 h1))
+  (values q (MemThere _ q q0 obl1 m) x))
 
 (def-fns _ $ (erased counts-exists : (erased (List (List (Sub))) rt rs) (subterm erased (List (List (Sec))) oss)
     -> (erased (List (Nat)) ct cs) (erased (Counts oss rt rs ct cs) r))
@@ -283,12 +283,11 @@
     -> (erased (MapHit d e f ks obl) r))
   (let-match erased w (OFCons _ _ m1 k _ o oss1 sh ro w1) (absurd (OFNil _ _ _) hs))
   (let ((erased lj)) (add-pos-lt j (Succ m1) nhub jm (LtZ m1)))
-  (match erased hs _
-    ((HSHere _ _ _ h)
-      (let ((erased wd) (erased _) (erased _) (erased lw) (erased pw) (erased ow) (erased _) (erased _)) (oss-dart d y nhub j k e n f ks os o g ly pa ob ln lj sh ro))
-      (let ((erased q) (erased m) (erased x)) (hit-mem o obl h))
-      (MkMapHit d wd e f ks q obl lw m (MkExactAt e f ks wd nhub o q pw ow x)))
-    ((HSThere _ _ _ h1) (hitsome-map d y nhub (Succ j) m1 e n f ks os oss1 obl g ly pa ob ln (add-shift j m1 nhub jm) w1 h1))))
+  (let-match erased hs (HSHere _ _ _ h)
+    ((HSThere _ _ _ h1) (hitsome-map d y nhub (Succ j) m1 e n f ks os oss1 obl g ly pa ob ln (add-shift j m1 nhub jm) w1 h1)))
+  (let ((erased wd) (erased _) (erased _) (erased lw) (erased pw) (erased ow) (erased _) (erased _)) (oss-dart d y nhub j k e n f ks os o g ly pa ob ln lj sh ro))
+  (let ((erased q) (erased m) (erased x)) (hit-mem o obl h))
+  (MkMapHit d wd e f ks q obl lw m (MkExactAt e f ks wd nhub o q pw ow x)))
 
 ; Along the face of y from z = f^j y: the source counts are the dscore1 values of the face darts, and the target
 ; counts bound those of their edges.
@@ -374,7 +373,7 @@
   (let-match erased (length-fn _ os a m (obs-len e f ks y a os ob) lo) (Refl _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol ab))
   (let ((erased l4)) (above-nth ks 4 y a ab pa))
-  (let ((erased ln)) (lt-trans 1 4 a (prove-literal-lt 1 4) l4))
+  (let ((erased ln)) (lt-trans 1 4 a (lit-lt-1-4) l4))
   (let ((erased oss) (erased w)) (oss-exists a (Zero) os a))
   (let ((erased fam)) (fam-build d y a e n f ks os oss hc g ly pa ob ln w ix))
   (let ((erased ct) (erased cs) (erased k)) (counts-exists rt rs oss))

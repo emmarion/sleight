@@ -1,7 +1,7 @@
 ; dscore_cap1 of discharge.v: a dart of arity 12 or more with positive dscore has an obligation of the dbound1 checks of
 ; arities 5 to 8 fitting exactly somewhere, when every rule has fewer than 9 subparts. Load after conv.sl.
 
-(unary 11 10)
+(let-match erased (unary-11-10) (Refl _ _))
 
 (def-fns _ $ (erased mul-dbl : (erased (Nat) k x y) (erased (Mul k 5 x) m5) (erased (Mul k 10 y) m10) -> (erased (Add x x y) r))
   (mul-distr 5 5 10 k x x y (add5 5) (mul-comm k 5 x m5) (mul-comm k 5 x m5) (mul-comm k 10 y m10)))
@@ -71,12 +71,11 @@
     (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up) -> (erased (List (List (Sub))) rs acc1 out) (erased (List (Sub)) p) (erased (OfSize a drs rs) sz)
     (erased (Repeat (Sub) a sub59 p) rp) (erased (Db1 p rs 5 acc1 out) db) (erased (Ext out cobl) e))
   (let-match erased c (CLCons _ _ out _ rs _ _ p sz rp db rest) (absurd (CLNil _ _ _) (lt-le-absurd a m up lo)))
-  (match erased (nat-eq a m) _
-    ((Equal _ _ _) (values rs acc out p sz rp db (cap-ext drs out cobl (Succ m) hi rest)))
-    ((Unequal _ _ _ _ ap)
-      (match erased ap _
-        (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
-        ((ApGt _ _ _ _ l) (cap-look drs out cobl a (Succ m) hi rest (LtS m a l) up))))))
+  (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
+    ((Equal _ _ _) (values rs acc out p sz rp db (cap-ext drs out cobl (Succ m) hi rest))))
+  (match erased ap _
+    (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
+    ((ApGt _ _ _ _ l) (cap-look drs out cobl a (Succ m) hi rest (LtS m a l) up))))
 
 (def-fns _ $ (erased rep-fit : (erased (Nat) d y k) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Geo d e n f ks) g)
     (subterm erased (ObsAt e f ks y k os) ob) (erased (Repeat (Sub) k sub59 p) rp) -> (erased (Pw (Sec) (Sub) FitSec os p) fo) (erased (Length (Sub) p k) l))
@@ -110,11 +109,10 @@
       (let ((erased rs) (erased acc1) (erased out) (erased p) (erased sz2) (erased rp) (erased db) (erased ex))
         (cap-look drs acc cobl a 5 9 cl (LtS 4 a (above-nth ks 4 z a ab pa)) la))
       (let-match erased (of-size-fn a drs qs rs sz sz2) (Refl _ _))
-      (match erased (db1-sound os p rs 5 c acc1 out (root-exact d z a e n f ks os p g ob rp) db k) _
-        ((OrL _ _ l) (OrL _ _ l))
-        ((OrR _ _ hit)
-          (let ((erased q) (erased m) (erased xq)) (hit-mem os out hit))
-          (OrR _ _ (MkMapHit d z e f ks q cobl lz (mem-ext q out cobl m ex) (MkExactAt e f ks z a os q pa ob xq))))))))
+      (let-match erased (db1-sound os p rs 5 c acc1 out (root-exact d z a e n f ks os p g ob rp) db k) (OrR _ _ hit)
+        ((OrL _ _ l) (OrL _ _ l)))
+      (let ((erased q) (erased m) (erased xq)) (hit-mem os out hit))
+      (OrR _ _ (MkMapHit d z e f ks q cobl lz (mem-ext q out cobl m ex) (MkExactAt e f ks z a os q pa ob xq))))))
 
 ; Along k darts of a face from x, the dscore1 values of their edges sum to at most 5 k, unless a cap obligation fits.
 (def-fns _ $ (erased cap-face : (erased (Nat) d x k sp) (erased (List (Nat)) e n f ks ids cs cse) (erased (List (List (Sub))) drs acc cobl)

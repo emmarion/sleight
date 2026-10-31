@@ -1,8 +1,8 @@
 ; dscore of discharge.v on the hypermaps of hypermap.sl, for a rule list drs, and posz_dscore: in a plain cubic connected
 ; pentagonal map of genus 0, some dart has positive dscore. Load after dsum.sl, with fourcolor/colalias.sl loaded before red/red.sl.
 
-(unary 10 9)
-(unary 12 10)
+(let-match erased (unary-10-9) (Refl _ _))
+(let-match erased (unary-12-10) (Refl _ _))
 
 (def-fns _ $ (erased iter-exists : (erased (Nat) d x) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Nat) k) (erased (Lt x d) lx)
     -> (erased (Nat) z) (erased (Iter f k x z) it) (erased (Lt z d) lz))
@@ -104,14 +104,13 @@
     -> (erased (Nat) x pos neg) (erased (Lt x d) lx) (erased (DScore d e n f ks drs x pos neg) ds) (erased (Lt neg pos) r))
   (let-match erased t (DTCons _ r pos neg p1 q1 _ _ _ _ _ _ rs1 _ ds t1 ap aq) (absurd (DTNil _ _ _ _ _ _ _) lt))
   (let-match erased u (UnderCons _ _ _ lr u1))
-  (match erased (le-dec pos neg) _
-    ((LeN _ _ l) (values r pos neg lr ds l))
-    ((LeY _ _ l)
-      (let ((erased l1))
-        (match erased (le-dec p1 q1) (((Lt q1 p1) l1))
-          ((LeN _ _ k) k)
-          (absurd (LeY _ _ k) (lt-le-absurd q p lt (le-sum pos neg p1 q1 p q l k ap aq)))))
-      (find-pos d p1 q1 e n f ks rs1 drs u1 t1 l1))))
+  (let-match erased (le-dec pos neg) (LeY _ _ l)
+    ((LeN _ _ l) (values r pos neg lr ds l)))
+  (let ((erased l1))
+    (match erased (le-dec p1 q1) (((Lt q1 p1) l1))
+      ((LeN _ _ k) k)
+      (absurd (LeY _ _ k) (lt-le-absurd q p lt (le-sum pos neg p1 q1 p q l k ap aq)))))
+  (find-pos d p1 q1 e n f ks rs1 drs u1 t1 l1))
 
 (def-fns _ $ (erased dtot-build : (erased (Nat) d k c60 sp sn sa) (erased (List (Nat)) e n f ks ids cs cse os rs) (erased (List (List (Sub))) drs)
     (erased (Iota d ids) io) (erased (DsList e n f ks drs ids cs) dl) (erased (Respects cs e cse) rc) (erased (Repeat (Nat) d (Succ (Zero)) os) ro)

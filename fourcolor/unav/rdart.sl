@@ -144,16 +144,15 @@
   (many FiB : (erased (RFace) i) (erased (Nat) k) -> (RFi (DB i k) (DB i (Succ k)))))
 
 (def-fns _ $ (many dfs : (many (RDart) t) -> (many (RDart) u) (erased (RFs t u) w))
-  (match many t _
-    ((DF i k) (values (DF i (Succ k)) (FsF i k)))
-    ((DB i k)
-      (let-match many k (Succ k1) ((Zero) (values (DF i 1) (FsZ i))))
-      (match many k1 _ ((Zero) (values (DF i (Zero)) (FsOne i))) ((Succ k2) (values (DB i k1) (FsB i k2)))))))
+  (let-match many t (DB i k)
+    ((DF i k) (values (DF i (Succ k)) (FsF i k))))
+  (let-match many k (Succ k1) ((Zero) (values (DF i 1) (FsZ i))))
+  (match many k1 _ ((Zero) (values (DF i (Zero)) (FsOne i))) ((Succ k2) (values (DB i k1) (FsB i k2)))))
 
 (def-fns _ $ (many dfi : (many (RDart) t) -> (many (RDart) u) (erased (RFi t u) w))
-  (match many t _
-    ((DF i k) (match many k _ ((Zero) (values (DB i 1) (FiZ i))) ((Succ k1) (values (DF i k1) (FiF i k1)))))
-    ((DB i k) (values (DB i (Succ k)) (FiB i k)))))
+  (let-match many t (DF i k)
+    ((DB i k) (values (DB i (Succ k)) (FiB i k))))
+  (match many k _ ((Zero) (values (DB i 1) (FiZ i))) ((Succ k1) (values (DF i k1) (FiF i k1)))))
 
 (def-fns _ $ (erased rfs-sound : (erased (List (Nat)) e f) (erased (Nat) x0 y y1) (erased (RDart) t u) (erased (RSem e f x0 t y) s)
     (erased (Nth (Nat) f y y1) py) (erased (RFs t u) r) -> (erased (RSem e f x0 u y1) q))
@@ -298,11 +297,10 @@
 
 (def-fns _ $ (erased setnth-old : (erased Type A) (erased (List A) xs ys) (erased (Nat) i) (erased A y) (subterm erased (SetNth A xs i y ys) p)
     -> (erased A x) (erased (Nth A xs i x) q))
-  (match erased p _
-    ((SetHere _ x _ rest) (values x (NthHere A x rest)))
-    ((SetThere _ x0 rest i1 _ rest2 p1)
-      (let ((erased x) (erased q)) (setnth-old A rest rest2 i1 y p1))
-      (values x (NthThere A x0 rest i1 x q)))))
+  (let-match erased p (SetThere _ x0 rest i1 _ rest2 p1)
+    ((SetHere _ x _ rest) (values x (NthHere A x rest))))
+  (let ((erased x) (erased q)) (setnth-old A rest rest2 i1 y p1))
+  (values x (NthThere A x0 rest i1 x q)))
 
 (def-fns _ $ (erased obs-nth : (erased (List (Nat)) e f ks) (erased (Nat) y na j) (erased (List (Sec)) os) (erased (Sec) o)
     (subterm erased (ObsAt e f ks y na os) ob) (erased (Nth (Sec) os j o) po) -> (erased (Nat) z) (erased (Iter f j y z) it) (erased (SecAt e f ks z o) so))
@@ -378,12 +376,11 @@
       (MkFitSec a h as s hr fs2 p1 p2 (pw-set (Nat) (Rg) InRg as fs fs2 k c r p3 sp pck ic)))))
 
 (def-fns _ $ (erased subset-at : (erased (Sub) x y) (erased (Rg) r) (erased (RFace) i) (erased (SubSet i x r y) ss) -> (erased (Rg) r0) (erased (SubAt i x r0) sa))
-  (match erased ss _
+  (let-match erased ss (SSF j k s h _ fs fs2 sp)
     ((SSS j s h _ fs) (values s (SAS j s h fs)))
-    ((SST j s h _ fs) (values h (SAT j s h fs)))
-    ((SSF j k s h _ fs fs2 sp)
-      (let ((erased r0) (erased p0)) (setnth-old (Rg) fs fs2 k r sp))
-      (values r0 (SAF j k s h r0 fs p0)))))
+    ((SST j s h _ fs) (values h (SAT j s h fs))))
+  (let ((erased r0) (erased p0)) (setnth-old (Rg) fs fs2 k r sp))
+  (values r0 (SAF j k s h r0 fs p0)))
 
 (def-fns _ $ (erased face-fit : (erased (Nat) x0 j b c) (erased (List (Nat)) e f ks) (erased (List (Sub)) p) (erased (ExactAt e f ks x0 p) ex)
     (erased (RFace) i) (erased (Sub) x) (erased (Rg) r) (erased (SecOf i j) so) (erased (Nth (Sub) p j x) px) (erased (SubAt i x r) sa)

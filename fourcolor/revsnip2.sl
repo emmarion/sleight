@@ -500,7 +500,7 @@
     -> (erased (Under cs 4) r))
   (let-match erased cs (Cons _ c cs1) ((Nil _) (UnderNil 4)))
   (let-match erased ex (ExCons _ _ _ xs1 _ x _ a ex1))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (UnderCons cs1 c 4 (match erased a (((Lt c 4) res)) ((EAIn _ _ _ _ l j _ px pj pc) (under-nth kd j c 4 u pc)) ((EAOut _ _ _ _ l px o) (LtZ _)))
     (extend-under lab ld kd xs1 cs1 ex1 u)))
 

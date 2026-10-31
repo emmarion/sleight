@@ -2,12 +2,12 @@
 ; a hub dart: per sector the spoke arity a, the hat arity h and the fan arities, so that everything here is about lists
 ; and numbers; map.sl ties Obs to a hypermap. A range MkRg lo hi holds an arity whose value clamped at 9 lies in [lo, hi].
 
-(unary 4)
-(unary 5 4)
-(unary 6 5)
-(unary 7 6)
-(unary 8 7)
-(unary 9 8)
+(let-match erased (unary-4) (Refl _ _))
+(let-match erased (unary-5-4) (Refl _ _))
+(let-match erased (unary-6-5) (Refl _ _))
+(let-match erased (unary-7-6) (Refl _ _))
+(let-match erased (unary-8-7) (Refl _ _))
+(let-match erased (unary-9-8) (Refl _ _))
 
 (def-adts $ (Both : (Type P) (Type Q) -> Type)
   enum
@@ -413,7 +413,7 @@
   (match erased c _ ((ClLo _ p) (lt-weaken a 9 p)) ((ClHi _ _) (lt-succ 9))))
 
 (def-fns _ $ (erased clamp-ge5 : (erased (Nat) a m) (erased (Clamp a m) c) (erased (Lt 4 a) pa) -> (erased (Lt 4 m) r))
-  (match erased c _ ((ClLo _ _) pa) ((ClHi _ _) (lt-trans 4 8 9 (prove-literal-lt 4 8) (lt-succ 8)))))
+  (match erased c _ ((ClLo _ _) pa) ((ClHi _ _) (lt-trans 4 8 9 (lit-lt-4-8) (lt-succ 8)))))
 
 (def-fns _ $ (erased in59 : (erased (Nat) a) (erased (Lt 4 a) pa) -> (erased (InRg a (MkRg 5 9)) r))
   (let ((erased m) (erased c)) (clamp-exists a))

@@ -199,12 +199,11 @@
 
 (def-fns _ $ (many in-q : (many (Nat) x) (subterm many (List (Nat)) s) -> (many (InQ x s) r))
   (let-match many s (Cons _ y rest) ((Nil _) (IQOut x s (NotInNil x))))
-  (match many (nat-eq x y) _
-    ((Equal _ _ _) (IQIn x s (InHere x rest)))
-    ((Unequal _ _ _ _ ne)
-      (match many (notail $ in-q x rest) _
-        ((IQIn _ _ p) (IQIn x s (InThere x y rest p)))
-        ((IQOut _ _ p) (IQOut x s (NotInCons x y rest ne p)))))))
+  (let-match many (nat-eq x y) (Unequal _ _ _ _ ne)
+    ((Equal _ _ _) (IQIn x s (InHere x rest))))
+  (match many (notail $ in-q x rest) _
+    ((IQIn _ _ p) (IQIn x s (InThere x y rest p)))
+    ((IQOut _ _ p) (IQOut x s (NotInCons x y rest ne p)))))
 
 (def-fns _ $ (many fband-q : (many (List (Nat)) f p) (many (Nat) x) (subterm many (Nat) fuel) -> (many (Checked (Fband f p x)) r))
   (let-match many (in-q x p) (IQOut _ _ _) ((IQIn _ _ i) (ChkYes _ (MkFband f p x x i (MkSomePath f (Nil _) (Nil _) x x (PathHere f (Nil _) x))))))
@@ -248,9 +247,9 @@
       (let ((many (Checked (NextIx j a j1)) nxc))
         (match many (nat-eq j1 (Succ j)) _
           ((Equal _ _ _) (ChkYes _ (NxStep j a)))
-          (else (match many j1 _
-            ((Zero) (match many (nat-eq a (Succ j)) _ ((Equal _ _ _) (ChkYes _ (NxWrap j))) (else (ChkNo _))))
-            (else (ChkNo _))))))
+          (else
+            (let-match many j1 (Zero) (else (ChkNo _)))
+            (match many (nat-eq a (Succ j)) _ ((Equal _ _ _) (ChkYes _ (NxWrap j))) (else (ChkNo _))))))
       (let-match many nxc (ChkYes _ nx) ((ChkNo _) (ChkNo _)))
       (let-match many (nth-q (Nat) ec x) (NQYes _ _ _ ye pe) ((NQNo _ _ _) (ChkNo _)))
       (let-match many (nat-at ec ye x) (ChkYes _ pe2) ((ChkNo _) (ChkNo _)))
@@ -275,9 +274,9 @@
 (def-fns _ $ (many stix-c : (subterm many (List (KSt)) st) (many (Nat) k) -> (many (Checked (StIx st k)) r))
   (let-match many st (Cons _ s rest) ((Nil _) (ChkYes _ (StxNil k))))
   (let-match many (notail $ stix-c rest k) (ChkYes _ sr) ((ChkNo _) (ChkNo _)))
-  (match many s _
-    ((StOut) (ChkYes _ (StxOut rest k sr)))
-    ((StIn i j) (match many (lt-dec i k) _ ((Yes _ _ _ _ li) (ChkYes _ (StxIn rest i j k li sr))) (else (ChkNo _))))))
+  (let-match many s (StIn i j)
+    ((StOut) (ChkYes _ (StxOut rest k sr))))
+  (match many (lt-dec i k) _ ((Yes _ _ _ _ li) (ChkYes _ (StxIn rest i j k li sr))) (else (ChkNo _))))
 
 (def-fns _ $ (many wpos-c : (many (List (KSt)) st) (subterm many (List (Nat)) s) (many (Nat) k) -> (many (Checked (WPos st s k)) r))
   (let-match many s (Cons _ c rest) ((Nil _) (ChkYes _ (WPNil st k))))
@@ -308,9 +307,9 @@
     (match many edge _
       ((BFalse) (match many (nat-at s0c k p) _ ((ChkYes _ pk) (ChkYes _ (COWalk ec s0c k p pk))) ((ChkNo _) (ChkNo _))))
       ((BTrue)
-        (match many (nth-q (Nat) s0c k) _
-          ((NQYes _ _ _ c pk) (match many (nat-at ec c p) _ ((ChkYes _ pe) (ChkYes _ (COEdge ec s0c k c p pk pe))) ((ChkNo _) (ChkNo _))))
-          ((NQNo _ _ _) (ChkNo _))))))
+        (let-match many (nth-q (Nat) s0c k) (NQYes _ _ _ c pk)
+          ((NQNo _ _ _) (ChkNo _)))
+        (match many (nat-at ec c p) _ ((ChkYes _ pe) (ChkYes _ (COEdge ec s0c k c p pk pe))) ((ChkNo _) (ChkNo _))))))
   (let-match many coc (ChkYes _ co) ((ChkNo _) (values (Nil _) (ChkNo _))))
   (let ((many ps) (many cr)) (notail $ dpath-c ec s0c st i2 j rest))
   (let-match many cr (ChkYes _ dp) ((ChkNo _) (values (Nil _) (ChkNo _))))

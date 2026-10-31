@@ -1,8 +1,8 @@
 ; Certified hubcap_cover of hubcap.v. hubcap-cover-c also checks that its weights put 2 on every sector, which the
 ; checks of hubcap_cover appear to imply; cover-sound then turns one bound per constraint into the bound on the hub.
 
-(unary 1)
-(unary 2 1)
+(let-match erased (unary-1) (Refl _ _))
+(let-match erased (unary-2-1) (Refl _ _))
 
 (def-fns _ $ (erased add-rcomm : (erased (Nat) a b c x y) (erased (Add a b x) p) (erased (Add x c y) q)
     -> (erased (Nat) z) (erased (Add a c z) r) (erased (Add z b y) s))

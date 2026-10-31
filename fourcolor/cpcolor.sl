@@ -172,9 +172,9 @@
 (def-fns _ $ (erased hasc0-back : (erased (Perm) g) (erased (List (Col)) l l2) (erased (IsPerm g) ip) (subterm erased (PermT g l l2) p) (erased (HasC0 l2) z)
     -> (erased (HasC0 l) r))
   (let-match erased p (PTCons _ c d l1 l3 pc p1) (absurd (PTNil _) z))
-  (match erased z _
-    ((HZHere _) (match erased pc _ ((PC0 _) (HZHere l1)) (absurd (PC1 _ _ _) ip) (absurd (PC2 _ _ _) ip) (absurd (PC3 _ _ _) ip)))
-    ((HZThere _ _ z1) (HZThere c l1 (hasc0-back g l1 l3 ip p1 z1)))))
+  (let-match erased z (HZHere _)
+    ((HZThere _ _ z1) (HZThere c l1 (hasc0-back g l1 l3 ip p1 z1))))
+  (match erased pc _ ((PC0 _) (HZHere l1)) (absurd (PC1 _ _ _) ip) (absurd (PC2 _ _ _) ip) (absurd (PC3 _ _ _) ip)))
 
 ; The tree of the one trace et normalised so that its first entry other than C1 under g is C2, after the reversed prefix
 ; pre of C1 entries (cfcbr1 of cfcolor.v), given that the trace under g is good.
@@ -562,31 +562,30 @@
 ; The completion from s of et, where CTr c0 x cs et, ends with s + x + c0.
 (def-fns _ $ (erased ctr-ctrace : (erased (Col) s c0 x sx t) (erased (List (Col)) cs et) (subterm erased (CTr c0 x cs et) p) (erased (AddC s x sx) a)
     (erased (AddC sx c0 t) b) -> (erased (List (Col)) ct) (erased (Ctr s et ct) cr) (erased (Snoc (Col) et t ct) sn))
-  (match erased p _
+  (let-match erased p (CTStep _ _ y t1 cs1 et1 p1 rest)
     ((CTLast _ _ t1 p1)
       (values (Cons _ t1 (Cons _ t (Nil _))) (CtrCons s t1 t (Nil _) (Cons _ t (Nil _)) (addc-k s t1 t (addc-assoc s x c0 sx t1 t a b p1)) (CtrNil t))
-        (SnocCons _ t1 t (Nil _) (Cons _ t (Nil _)) (SnocNil _ t))))
-    ((CTStep _ _ y t1 cs1 et1 p1 rest)
-      (let ((erased s2) (erased q)) (addc-c sx y))
-      (let ((erased ct1) (erased cr1) (erased sn1))
-        (ctr-ctrace s2 c0 y sx t cs1 et1 rest (addc-comm y s2 sx (addc-cancel y s2 sx (addc-comm sx y s2 q))) b))
-      (values (Cons _ t1 ct1) (CtrCons s t1 s2 et1 ct1 (addc-k s t1 s2 (addc-assoc s x y sx t1 s2 a q p1)) cr1) (SnocCons _ t1 t et1 ct1 sn1)))))
+        (SnocCons _ t1 t (Nil _) (Cons _ t (Nil _)) (SnocNil _ t)))))
+  (let ((erased s2) (erased q)) (addc-c sx y))
+  (let ((erased ct1) (erased cr1) (erased sn1))
+    (ctr-ctrace s2 c0 y sx t cs1 et1 rest (addc-comm y s2 sx (addc-cancel y s2 sx (addc-comm sx y s2 q))) b))
+  (values (Cons _ t1 ct1) (CtrCons s t1 s2 et1 ct1 (addc-k s t1 s2 (addc-assoc s x y sx t1 s2 a q p1)) cr1) (SnocCons _ t1 t et1 ct1 sn1)))
 
 ; The completion of a trace without its first entry is the trace rotated by one (Gonthier's rot 1 et = ctrace (behead et)).
 (def-fns _ $ (erased trace-ctr : (erased (List (Col)) cs et) (erased (Col) e0) (erased (Trace cs (Cons (Col) e0 et)) tr) ->
     (erased (List (Col)) ct) (erased (Ctr (C0) et ct) cr) (erased (Snoc (Col) et e0 ct) sn))
   (let-match erased tr (MkTrace c _ _ p))
-  (match erased p _
-    ((CTLast _ _ _ p1) (let-match erased (addc-fn c c e0 (C0) p1 (addc-ii c)) (Refl _ _)) (values (Cons _ e0 (Nil _)) (CtrNil (C0)) (SnocNil _ e0)))
-    ((CTStep _ _ y _ cs1 _ p1 rest) (ctr-ctrace (C0) c y y e0 cs1 et rest (addc-0l y) (addc-comm c y e0 p1)))))
+  (let-match erased p (CTLast _ _ _ p1)
+    ((CTStep _ _ y _ cs1 _ p1 rest) (ctr-ctrace (C0) c y y e0 cs1 et rest (addc-0l y) (addc-comm c y e0 p1))))
+  (let-match erased (addc-fn c c e0 (C0) p1 (addc-ii c)) (Refl _ _))
+  (values (Cons _ e0 (Nil _)) (CtrNil (C0)) (SnocNil _ e0)))
 
 (def-fns _ $ (erased ctring-allp : (erased (List (Step)) cp) (erased (Ctree) t) (erased (List (Col)) pre) (subterm erased (CtRing cp t pre) r)
     -> (erased (CtAllP (MkPred (List (Step)) cp CpColR) t pre) a))
-  (match erased r _
+  (let-match erased r (CRL _ lf _ et e0 ra c)
     ((CRE _ _) (CAPE _ pre))
-    ((CRL _ lf _ et e0 ra c)
-      (let-match erased c (MkCpCol _ _ _ _ _ _ _ cs _ _ _ _ _ tr))
-      (let ((erased ct) (erased cr) (erased sn)) (trace-ctr cs et e0 tr))
-      (CAPL _ lf pre et ct ra cr (MkHolds (List (Step)) cp CpColR ct (MkCpColR cp et ct e0 sn c))))
     ((CRN _ t1 t2 t3 _ r1 r2 r3)
-      (CAPN _ t1 t2 t3 pre (ctring-allp cp t1 (Cons _ (C1) pre) r1) (ctring-allp cp t2 (Cons _ (C2) pre) r2) (ctring-allp cp t3 (Cons _ (C3) pre) r3)))))
+      (CAPN _ t1 t2 t3 pre (ctring-allp cp t1 (Cons _ (C1) pre) r1) (ctring-allp cp t2 (Cons _ (C2) pre) r2) (ctring-allp cp t3 (Cons _ (C3) pre) r3))))
+  (let-match erased c (MkCpCol _ _ _ _ _ _ _ cs _ _ _ _ _ tr))
+  (let ((erased ct) (erased cr) (erased sn)) (trace-ctr cs et e0 tr))
+  (CAPL _ lf pre et ct ra cr (MkHolds (List (Step)) cp CpColR ct (MkCpColR cp et ct e0 sn c))))

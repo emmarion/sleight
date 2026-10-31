@@ -102,7 +102,7 @@
 (def-fns _ $ (erased cx-ring : (erased (Level) B) (erased (Nat) d x0 k) (erased (List (Nat)) e n f fe lab p) (erased (MinCx B d e n f fe lab) m)
     (erased (Ring e f x0 p) rg) (erased (Length (Nat) (Cons (Nat) x0 p) k) lr) (erased (Lt k five) l5) (erased (NonTrivial d e n f (Cons (Nat) x0 p) (Zero)) nt)
     -> (erased (Reduces B d e n f) r))
-  (unary 6)
+  (let-match erased (unary-6) (Refl _ _))
   (let-match erased m (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
   (let-match erased c (MkSpk _ _ _ _ _ _ ids h gen bl pl cu rfe kfe io ufe lfe fl rl))
   (birkhoff-reduces B pb d x0 k (Zero) e n f p bks h gen bl pl cu cn nc rg lr (lt-weaken k five l5) (BMLow k l5) nt))
@@ -402,7 +402,7 @@
   (LengthCons _ c0 ks1 k1 (tab-length L xs1 ks1 k1 t1 l1)))
 
 (def-fns _ $ (erased tab-under : (erased (List (Nat)) L xs ks) (subterm erased (Tab L xs ks) t) -> (erased (Under ks 4) r))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (let-match erased t (TabCons _ xs1 ks1 l0 c0 ta0 t1) ((TabNil _) (UnderNil 4)))
   (let ((erased u5)) (UnderCons _ _ _ (LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _)
     $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtZ _) $ UnderCons _ _ _ (LtS _ _ $ LtS _ _ $ LtS _ _ $ LtZ _) $ UnderNil 4))

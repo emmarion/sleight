@@ -229,11 +229,10 @@
             ((Equal _ _ _)
               (let ((many r7) (erased j7)) (notail $ put-c cfs (Cons _ 7 ps) full rest t7 q1 q2 q3 en ra1 i7))
               (values (QztNode t5 t6 r7 t8) (QINode cfs ps t5 t6 r7 t8 i5 i6 j7 i8)))
-            (else (match many (nat-eq a 8) _
-              ((Equal _ _ _)
-                (let ((many r8) (erased j8)) (notail $ put-c cfs (Cons _ 8 ps) full rest t8 q1 q2 q3 en ra1 i8))
-                (values (QztNode t5 t6 t7 r8) (QINode cfs ps t5 t6 t7 r8 i5 i6 i7 j8)))
-              (else (values t qi))))))))))
+            (else
+              (let-match many (nat-eq a 8) (Equal _ _ _) (else (values t qi)))
+              (let ((many r8) (erased j8)) (notail $ put-c cfs (Cons _ 8 ps) full rest t8 q1 q2 q3 en ra1 i8))
+              (values (QztNode t5 t6 t7 r8) (QINode cfs ps t5 t6 t7 r8 i5 i6 i7 j8)))))))))
     ((QztHub t58 t9 t10 t11)
       (let-match erased qi (QIHub _ _ _ _ _ _ i58 i9 i10 i11))
       (match many (nat-eq a 9) _
@@ -266,12 +265,11 @@
     (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (many (Qzt) t)
     (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let ((erased (Rot3 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3) r0)) (Rt0 a1 a2 a3 q1 q2 q3))
-  (match many (nat-ltb 8 a1) _
-    ((BTrue) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3 m c v tr r0 t qi))
-    ((BFalse)
-      (let ((many t2) (erased i2)) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a3 a1 a2 q3 q1 q2 m c v tr (Rt2 a1 a2 a3 q1 q2 q3) t qi))
-      (let ((many t1) (erased i1)) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a2 a3 a1 q2 q3 q1 m c v tr (Rt1 a1 a2 a3 q1 q2 q3) t2 i2))
-      (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3 m c v tr r0 t1 i1))))
+  (let-match many (nat-ltb 8 a1) (BFalse)
+    ((BTrue) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3 m c v tr r0 t qi)))
+  (let ((many t2) (erased i2)) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a3 a1 a2 q3 q1 q2 m c v tr (Rt2 a1 a2 a3 q1 q2 q3) t qi))
+  (let ((many t1) (erased i1)) (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a2 a3 a1 q2 q3 q1 m c v tr (Rt1 a1 a2 a3 q1 q2 q3) t2 i2))
+  (put3-c cfs cf qz qz2 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3 m c v tr r0 t1 i1))
 
 (def-adts $ (NormD : ((Qn) q) -> Type)
   enum
@@ -297,12 +295,11 @@
     ((NLR _ qa1r q1l q1r n1)
       (let ((many (Qzt) t1) (erased (QInv cfs (Nil (Nat)) t1) i1))
         (put-rot-c cfs cf qz qz2 ka1 ka2 qa1r q1l p2 q1r m c v (QT1 qa1 qa2 qa1r p1 q1l p2 q1r n1) t qi))
-      (match many (normq-c p2) _
-        ((NLR _ qa2r q2l q2r n2)
-          (match many (nat-ltb qa1r qa2r) _
-            ((BTrue) (values t1 i1))
-            ((BFalse) (put-rot-c cfs cf qz qz2 ka1 qa2r ka2 p1 q2r q2l m c v (QT2 qa1 qa2r qa2 p2 p1 q2r q2l n2) t qi))))
-        (else (values t1 i1))))
+      (let-match many (normq-c p2) (NLR _ qa2r q2l q2r n2)
+        (else (values t1 i1)))
+      (match many (nat-ltb qa1r qa2r) _
+        ((BTrue) (values t1 i1))
+        ((BFalse) (put-rot-c cfs cf qz qz2 ka1 qa2r ka2 p1 q2r q2l m c v (QT2 qa1 qa2r qa2 p2 p1 q2r q2l n2) t qi))))
     (else
       (match many (normq-c p2) _
         ((NLR _ qa2r q2l q2r n2) (put-rot-c cfs cf qz qz2 ka1 qa2r ka2 p1 q2r q2l m c v (QT2 qa1 qa2r qa2 p2 p1 q2r q2l n2) t qi))
