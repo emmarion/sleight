@@ -260,7 +260,7 @@
     (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (KerMax dc ec fc as) km) (erased (Pbpp dm em nm fm) pb)
     (erased (NoColoring em fm) ncol) (erased (Connected dm em nm fm) cn) (erased (HomFive dm ec fc em nm fm as hl) hf) -> (erased (Reduces B dm em nm fm) r))
-  (unary 5)
+  (let-match erased (unary-5) (Refl _ _))
   (let-match erased hf (MkHomFive _ _ _ _ _ _ _ _ p hp hd zs lab lr x z hx ez y l rp wp rh rg lk pez nr ds fl rl iy pl ol al))
   (let-match erased pb (MkPbpp _ _ _ _ hm gen bl pl0 pcu))
   (let-match erased (gm-geo dc dm ec nc fc ksc rc em nm fm ksm as hl en) (MkGeo _ _ _ _ _ hm2 pem cnm olm pam))

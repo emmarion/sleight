@@ -140,7 +140,7 @@
 ; edge, and goes on with the rest.
 (def-fns _ $ (many paint-go : (subterm many (List (Edge)) todo) (subterm many (List (Point)) qs) (many (List (Paint)) pre) (erased (Below4 pre) bl)
     (erased (Pending todo qs pre) pd) -> (many (PaintSearch todo pre) r))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (let-match many todo (Cons _ e t) ((Nil _) (PaintFound todo pre pre (ExtSelf pre) (ProperNil pre))))
   (match many qs _
     ((Cons _ q qs1)
@@ -194,7 +194,7 @@
 
 (def-fns _ $ (erased nopaint-sound : (erased (List (Edge)) todo) (erased (List (Paint)) pre ks) (subterm erased (NoPaint todo pre) n)
     (erased (Agrees pre ks) g) (erased (Proper ks todo) pr) -> (erased (False) f))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (match erased n _
     ((NPClash a b t _ c ka kb)
       (let-match erased pr (ProperCons _ _ _ ca cb _ ka2 kb2 _ _ d _))

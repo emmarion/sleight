@@ -1,7 +1,7 @@
 ; dscore_cap1 of discharge.v: a dart of arity 12 or more with positive dscore has an obligation of the dbound1 checks of
 ; arities 5 to 8 fitting exactly somewhere, when every rule has fewer than 9 subparts. Load after conv.sl.
 
-(unary 11 10)
+(let-match erased (unary-11-10) (Refl _ _))
 
 (def-fns _ $ (erased mul-dbl : (erased (Nat) k x y) (erased (Mul k 5 x) m5) (erased (Mul k 10 y) m10) -> (erased (Add x x y) r))
   (mul-distr 5 5 10 k x x y (add5 5) (mul-comm k 5 x m5) (mul-comm k 5 x m5) (mul-comm k 10 y m10)))

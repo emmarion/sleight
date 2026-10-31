@@ -2489,7 +2489,7 @@
   (values k2 (MkShiftN s c c2 k k2 p a q)))
 
 (def-fns _ $ (erased shifttab-exists : (erased (Col) s) -> (erased (List (Nat)) g) (erased (ShiftTab s g) t) (erased (Length (Nat) g 4) l))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (let ((erased a0) (erased p0)) (shiftn-exists s (C0) (Zero) (CO0)))
   (let ((erased a1) (erased p1)) (shiftn-exists s (C1) (Succ (Zero)) (CO1)))
   (let ((erased a2) (erased p2)) (shiftn-exists s (C2) (Succ (Succ (Zero))) (CO2)))

@@ -373,7 +373,7 @@
   (let-match erased (length-fn _ os a m (obs-len e f ks y a os ob) lo) (Refl _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol ab))
   (let ((erased l4)) (above-nth ks 4 y a ab pa))
-  (let ((erased ln)) (lt-trans 1 4 a (prove-literal-lt 1 4) l4))
+  (let ((erased ln)) (lt-trans 1 4 a (lit-lt-1-4) l4))
   (let ((erased oss) (erased w)) (oss-exists a (Zero) os a))
   (let ((erased fam)) (fam-build d y a e n f ks os oss hc g ly pa ob ln w ix))
   (let ((erased ct) (erased cs) (erased k)) (counts-exists rt rs oss))

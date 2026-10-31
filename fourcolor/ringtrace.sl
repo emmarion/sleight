@@ -30,7 +30,7 @@
   (many CO3 : -> (ColOf (Succ (Succ (Succ (Zero)))) (C3))))
 
 (def-fns _ $ (erased colof-exists : (erased (Nat) k) (erased (Lt k 4) l) -> (erased (Col) c) (erased (ColOf k c) p))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (let-match erased l (LtS _ _ l1) ((LtZ _) (values (C0) (CO0))))
   (let-match erased l1 (LtS _ _ l2) ((LtZ _) (values (C1) (CO1))))
   (let-match erased l2 (LtS _ _ l3) ((LtZ _) (values (C2) (CO2))))
@@ -45,7 +45,7 @@
     ((C3) (values (Succ (Succ (Succ (Zero)))) (CO3)))))
 
 (def-fns _ $ (erased colof-lt : (erased (Nat) k) (erased (Col) c) (erased (ColOf k c) p) -> (erased (Lt k 4) l))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (match erased p _
     ((CO0) (LtZ _))
     ((CO1) (LtS _ _ (LtZ _)))

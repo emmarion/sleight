@@ -18,7 +18,7 @@
 
 (def-fns _ $ (erased cubics-off : (erased (List (Nat)) n r R xs) (subterm erased (Cubics n r xs) cs) (erased (RevApp (Nat) r (Nil (Nat)) R) ra)
     -> (erased (OrdersOff n 3 R xs) res))
-  (unary 3)
+  (let-match erased (unary-3) (Refl _ _))
   (let-match erased cs (CubsCons _ _ xs1 x c cs1) ((CubsNil _ _) (OONil n R 3)))
   (let ((erased rest)) (cubics-off n r R xs1 cs1 ra))
   (match erased c _
@@ -66,8 +66,8 @@
   (AddSucc _ _ _ (AddSucc _ _ _ p)))
 
 (def-fns _ $ (erased euler-u : (erased (Nat) d k kf) (erased (QEuler d k kf) qe) -> (erased (QEuler (Succ (Succ d)) (Succ (Succ k)) (Succ kf)) res))
-  (unary 2)
-  (unary 6)
+  (let-match erased (unary-2) (Refl _ _))
+  (let-match erased (unary-6) (Refl _ _))
   (let-match erased qe (MkQEuler _ _ _ f6 m2 u mf mm du r))
   (let ((erased F)) (Succ (Succ (Succ (Succ (Succ (Succ f6)))))))
   (let ((erased M1) (erased M)) (values (Succ (Succ m2)) (Succ (Succ (Succ (Succ m2))))))
@@ -76,7 +76,7 @@
     (add-ss d 6 u du) (add-succ-left2 _ u F (add-ss _ _ _ (add-ss _ _ _ (add-ss _ _ _ r))))))
 
 (def-fns _ $ (erased euler-n : (erased (Nat) d k kf) (erased (QEuler d (Succ k) kf) qe) -> (erased (QEuler (Succ (Succ d)) k kf) res))
-  (unary 2)
+  (let-match erased (unary-2) (Refl _ _))
   (let-match erased qe (MkQEuler _ _ _ f6 m2 u mf mm du r))
   (let-match erased mm (MulSucc _ _ M _ mk a2))
   (let-match erased (add-comm M 2 m2 a2) (AddSucc _ _ _ a1))
@@ -392,11 +392,11 @@
   (let ((erased h)) (pointed-hyper d e n f r pm))
   (match erased c _
     ((CmNil)
-      (unary 2)
-      (unary 4)
-      (unary 6)
-      (unary 8)
-      (unary 12)
+      (let-match erased (unary-2) (Refl _ _))
+      (let-match erased (unary-4) (Refl _ _))
+      (let-match erased (unary-6) (Refl _ _))
+      (let-match erased (unary-8) (Refl _ _))
+      (let-match erased (unary-12) (Refl _ _))
       (let ((erased z) (erased o)) (values (Zero) (Succ (Zero))))
       (let ((erased l1) (erased l0)) (values (Cons (Nat) o (Nil (Nat))) (Cons (Nat) z (Nil (Nat)))))
       (let ((erased io)) (IotaS o l0 f (IotaS z (Nil (Nat)) l0 (IotaZ) (SnocNil _ z)) (SnocCons _ z o (Nil (Nat)) l1 (SnocNil _ o))))

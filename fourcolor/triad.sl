@@ -334,7 +334,7 @@
   (let ((erased ob)) (MkOrbit f (Cons _ b (Cons _ c (Nil _))) a b pab
     (PathStep f _ (Cons _ c (Nil _)) b c a pbc (NotInCons b a _ nba (NotInNil b))
       (PathStep f _ (Nil _) c a a pca (NotInCons c a _ nca (NotInNil c)) (PathHere f _ a)))))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (lt-irrefl 4 (lt-le-trans 4 k 4 l4 (lt-weaken k 4 (pigeonhole Vs os k 3 dv (lab-sub d a lx f lab os fl ob pa Vs al) lv
     (LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthCons _ _ _ _ $ LengthNil _))))))
 
@@ -579,7 +579,7 @@
 (def-fns _ $ (erased ins-band : (erased (Nat) d w c lc) (erased (List (Nat)) e n f fe lab cx ins Bs lp) (erased (Spk d e n f fe lab) cs)
     (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
     (erased (Length (Nat) Bs 4) lb) (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In c ins) ic) (erased (Nth (Nat) lab c lc) plc) -> (erased (In lc lp) r))
-  (unary 4)
+  (let-match erased (unary-4) (Refl _ _))
   (match erased (in-dec lc lp) _
     ((OrL _ _ i) i)
     (absurd (OrR _ _ o)
@@ -670,7 +670,7 @@
 ; k > 4 distinct labels among the five of lp are all of them.
 (def-fns _ $ (erased cover : (erased (Nat) k) (erased (List (Nat)) ls lp) (subterm erased (List (Nat)) qs) (erased (WSub qs lp) sq) (erased (Distinct ls) dl)
     (erased (WSub ls lp) sl) (erased (Length (Nat) ls k) lk) (erased (Length (Nat) lp 5) l5) (erased (Lt 4 k) l4) -> (erased (WSub qs ls) r))
-  (unary 5)
+  (let-match erased (unary-5) (Refl _ _))
   (let-match erased sq (HSubCons q qs1 _ iq sq1) ((HSubNil _) (HSubNil ls)))
   (HSubCons q qs1 ls (match erased (in-dec q ls) (((In q ls) r))
       ((OrL _ _ i) i)
@@ -773,8 +773,8 @@
     (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
     (erased (Triad e f ins x0) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
     (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt) -> (erased (Reduces B d e n f) r))
-  (unary 5)
-  (unary 6)
+  (let-match erased (unary-5) (Refl _ _))
+  (let-match erased (unary-6) (Refl _ _))
   (let ((erased m2)) m)
   (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ pb bks c cn nc))
   (let ((erased c2)) c)
