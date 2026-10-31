@@ -754,7 +754,10 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   the run, about 1460 s on a loaded machine. On a 4-core cloud VM `--goal proved` passed in about
   400 s with slc and 430 s with the reference compiler (under `ulimit -s
   unlimited`), the whole chain and the compiled run, in one run each,
-  before the jobs and `Tab`.
+  before the jobs and `Tab`; with them, in one run each on a machine
+  running other jobs, about 580 s with slc and 530 s with the reference
+  compiler, most of it the OCaml compile. A variant whose refutation
+  search had one step of fuel was rejected (a job answered `ChkNo`).
   In a test run three broken variants were rejected: `node-rule` without
   its last step (a type error), and the run with no cut leaf or with a
   flood fill that ignores the darts known not central (the run answers
