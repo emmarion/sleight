@@ -450,13 +450,6 @@
 (def-fns _ $ (erased addc-comm : (erased (Col) a b c) (erased (AddK a b c) p) -> (erased (AddK b a c) q))
   (match erased p _ ((AZL _) (AZR c)) ((AZR _) (AZL c)) ((ASame _) (ASame a)) ((AThird _ _ _ t) (AThird b a c (third-12 a b c t)))))
 
-(def-fns _ $ (erased xor-fn : (erased (Bool) a b c c2) (erased (Xor a b c) p) (erased (Xor a b c2) q) -> (erased (Eq (Bool) c c2) e))
-  (match erased p _
-    ((XFF) (let-match erased q (XFF)) (Refl _ c))
-    ((XFT) (let-match erased q (XFT)) (Refl _ c))
-    ((XTF) (let-match erased q (XTF)) (Refl _ c))
-    ((XTT) (let-match erased q (XTT)) (Refl _ c))))
-
 (def-fns _ $ (erased xor-assoc : (erased (Bool) a b c ab abc bc abc2) (erased (Xor a b ab) p1) (erased (Xor ab c abc) p2) (erased (Xor b c bc) p3)
     (erased (Xor a bc abc2) p4) -> (erased (Eq (Bool) abc abc2) e))
   (match erased p1 _
@@ -528,12 +521,6 @@
   (many UTCons : (erased (Col) c l) (erased (List (Col)) lc et) (erased (LastFrom (Col) c lc l) lt) (erased (PairFrom l (Cons (Col) c lc) et) pf)
       -> (UTr (Cons (Col) c lc) et)))
 
-(def-fns _ $ (erased pairfrom-exists : (erased (Col) p) (subterm erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (PairFrom p lc et) r))
-  (let-match erased lc (Cons _ c lc1) ((Nil _) (values (Nil _) (PFNil p))))
-  (let ((erased s) (erased a)) (addc-total p c))
-  (let ((erased et) (erased t)) (pairfrom-exists c lc1))
-  (values (Cons _ s et) (PFCons p c s lc1 et a t)))
-
 (def-fns _ $ (erased pairfrom-fn : (erased (Col) p) (erased (List (Col)) lc et et2) (subterm erased (PairFrom p lc et) a) (erased (PairFrom p lc et2) b)
     -> (erased (Eq (List (Col)) et et2) e))
   (let-match erased a (PFCons _ c s lc1 et1 ad a1) ((PFNil _) (let-match erased b (PFNil _)) (Refl _ et)))
@@ -542,22 +529,11 @@
   (let-match erased (pairfrom-fn c lc1 et1 et3 a1 b1) (Refl _ _))
   (Refl _ et))
 
-(def-fns _ $ (erased lastfrom-exists : (erased Type A) (erased A p) (subterm erased (List A) lc) -> (erased A l) (erased (LastFrom A p lc l) r))
-  (let-match erased lc (Cons _ c lc1) ((Nil _) (values p (LFNil A p))))
-  (let ((erased l) (erased t)) (lastfrom-exists A c lc1))
-  (values l (LFCons A p c l lc1 t)))
-
 (def-fns _ $ (erased lastfrom-fn : (erased Type A) (erased A p l l2) (erased (List A) lc) (subterm erased (LastFrom A p lc l) a) (erased (LastFrom A p lc l2) b)
     -> (erased (Eq A l l2) e))
   (let-match erased a (LFCons _ _ c _ lc1 a1) ((LFNil _ _) (let-match erased b (LFNil _ _)) (Refl _ l)))
   (let-match erased b (LFCons _ _ _ _ _ b1))
   (lastfrom-fn A c l l2 lc1 a1 b1))
-
-(def-fns _ $ (erased utr-exists : (erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (UTr lc et) r))
-  (let-match erased lc (Cons _ c lc1) ((Nil _) (values (Nil _) (UTNil))))
-  (let ((erased l) (erased lt)) (lastfrom-exists (Col) c lc1))
-  (let ((erased et) (erased pf)) (pairfrom-exists l lc))
-  (values et (UTCons c l lc1 et lt pf)))
 
 (def-fns _ $ (erased utr-fn : (erased (List (Col)) lc et et2) (erased (UTr lc et) a) (erased (UTr lc et2) b) -> (erased (Eq (List (Col)) et et2) e))
   (let-match erased a (UTCons c l lc1 _ lt pf) ((UTNil) (let-match erased b (UTNil)) (Refl _ et)))
@@ -1706,45 +1682,6 @@
       (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (QuasiCubic d n r) qc) (erased (NCyc n r) nc) (erased (Distinct r) ds)
       -> (KempeRing d e n f r)))
 
-; After kcc-coclosure of red/bridge.sl, for the ring traces of r, which Kempe_map makes Kempe-closed, with its certificates
-; in place of KClosed's functions: a trace of the co-closure KCC of Q that is a ring trace of r leads to a trace of Q that
-; is a ring trace of r.
-(def-fns _
-  ((erased kcc-kempe : (erased Pred Q) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr) (erased (List (Col)) ct)
-      (subterm erased (KCC Q ct) k) (erased (RingTrace e f r ct) p) -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (RingTrace e f r ct2) p2))
-    (let-match erased k (KCGram _ _ a)
-      ((KCIn _ _ q) (values ct q p))
-      ((KCPerm _ _ ct2 gp ip pt k2) (kcc-kempe Q d e n f r kr ct2 k2 (ring-trace-perm e f r ct ct2 gp ip pt p))))
-    (let-match erased kr (MkKempeRing _ _ _ _ _ h g pl qc nc ds))
-    (let ((erased w) (erased m) (erased kg)) (kempe-map d e n f r ct h g pl qc nc ds p))
-    (amc-kempe Q d e n f r kr ct w kg (BS0) ct (Nil _) w a m (RANil _ w)))
-  ((erased amc-kempe : (erased Pred Q) (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr) (erased (List (Col)) ct0)
-      (erased (List (Gsym)) w0) (erased (KRing d e n f r w0) kg) (erased (Bstack) bs) (erased (List (Col)) ct) (erased (List (Gsym)) pre u)
-      (subterm erased (AMC Q bs ct pre) a) (erased (MatchG bs ct u) m) (erased (RevApp (Gsym) pre u w0) ra)
-      -> (erased (List (Col)) ct2) (erased (Holds Q ct2) q) (erased (RingTrace e f r ct2) p2))
-    (match erased m _
-      ((MGNil)
-        (let-match erased a (AMCEnd _ _ w2 ra2 wt) (absurd (AMCOpen _ _ _ pp _) pp))
-        (let-match erased (revapp-fn (Gsym) pre u w0 w2 ra ra2) (Refl _ _))
-        (let-match erased wt (MkWitC _ _ ct2 m2 k2))
-        (kcc-kempe Q d e n f r kr ct2 k2 (kempe-map-sound d e n f r w0 ct2 kg m2)))
-      ((MGCons _ bs2 c s ct1 u1 y m1)
-        (let ((erased ra1)) (RACons (Gsym) s pre u1 w0 ra))
-        (match erased (sym-cls s bs bs2 c y) _
-          ((SCSkip _)
-            (let-match erased a (AMC1 _ _ _ _ a1) (absurd (AMC23 _ _ _ _ _ _ y1 _ _) y1))
-            (amc-kempe Q d e n f r kr ct0 w0 kg bs ct1 (Cons _ (GSkip) pre) u1 a1 m1 ra1))
-          ((SCPush _ _ _ _)
-            (let-match erased a (AMC23 _ _ bs1 _ _ _ y1 a1 _) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) y))
-            (let-match erased (sym-fn (GPush) bs bs2 bs1 c y y1) (Refl _ _))
-            (amc-kempe Q d e n f r kr ct0 w0 kg bs2 ct1 (Cons _ (GPush) pre) u1 a1 m1 ra1))
-          ((SCPop _ _ _ _ pp _)
-            (let-match erased a (AMC23 _ _ _ _ _ _ _ _ ap) (absurd (AMC0 _ _ _ _) y) (absurd (AMC1 _ _ _ _ _) (let-match erased y (SSkip _)) pp))
-            (let-match erased ap (APCSome _ _ b0 t _ _ _ pp2 z a1) (absurd (APCNone _ _ _ _) pp))
-            (let-match erased (popped-fn bs bs2 b0 pp pp2) (Refl _ _))
-            (let-match erased (pop-fn s t bs bs2 c pp y z) (Refl _ _))
-            (amc-kempe Q d e n f r kr ct0 w0 kg bs2 ct1 (Cons _ s pre) u1 a1 m1 ra1)))))))
-
 (def-adts $ (RArgs : -> Type)
   enum
   (many MkRArgs : (erased (Nat) d) (erased (List (Nat)) e n f r) -> (RArgs)))
@@ -1758,27 +1695,3 @@
   enum
   (many MkRKP : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (List (Col)) et) (erased (List (Gsym)) w) (erased (KRing d e n f r w) p)
       -> (RKP (MkRArgs d e n f r) et w)))
-
-; Kempe_map as red/bridge.sl's KClosed: the ring traces of r are Kempe-closed, by functions at a level L it returns.
-(def-fns _ $ (erased kempe-closed : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (KempeRing d e n f r) kr)
-    -> (erased (Level) L) (erased (KClosed L (MkPred (RArgs) (MkRArgs d e n f r) RTP) (MkRel (RArgs) (MkRArgs d e n f r) RKP)) cl))
-  (let ((erased a)) (MkRArgs d e n f r))
-  (let ((erased P2)) (MkPred (RArgs) a RTP))
-  (let ((erased R)) (MkRel (RArgs) a RKP))
-  (let-match erased kr (MkKempeRing _ _ _ _ _ h g pl qc nc ds))
-  (def-fns _
-    ((erased cp : (erased (List (Col)) ct ct2) (erased (Perm) gp) (erased (IsPerm gp) ip) (erased (PermT gp ct ct2) pt) (erased (Holds P2 ct) p)
-        -> (erased (Holds P2 ct2) q))
-      (let-match erased p (MkHolds _ _ _ _ h0))
-      (let-match erased h0 (MkRTP _ _ _ _ _ _ rt))
-      (MkHolds (RArgs) a RTP ct2 (MkRTP d e n f r ct2 (ring-trace-perm e f r ct ct2 gp ip pt rt))))
-    ((erased cg : (erased (List (Col)) ct) (erased (Holds P2 ct) p) -> (erased (List (Gsym)) w) (erased (MatchG (BS0) ct w) m) (erased (HoldsR R ct w) q))
-      (let-match erased p (MkHolds _ _ _ _ h0))
-      (let-match erased h0 (MkRTP _ _ _ _ _ _ rt))
-      (let ((erased w) (erased m) (erased kg)) (kempe-map d e n f r ct h g pl qc nc ds rt))
-      (values w m (MkHoldsR (RArgs) a RKP ct w (MkRKP d e n f r ct w kg))))
-    ((erased cm : (erased (List (Col)) ct ct2) (erased (List (Gsym)) w) (erased (HoldsR R ct w) q) (erased (MatchG (BS0) ct2 w) m) -> (erased (Holds P2 ct2) p))
-      (let-match erased q (MkHoldsR _ _ _ _ _ h0))
-      (let-match erased h0 (MkRKP _ _ _ _ _ _ _ kg))
-      (MkHolds (RArgs) a RTP ct2 (MkRTP d e n f r ct2 (kempe-map-sound d e n f r w ct2 kg m)))))
-  (values (level-of cp) (MkKClosed (level-of cp) P2 R cp cg cm)))

@@ -8,13 +8,6 @@
   (many All2Cons : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys)
       (erased (R x y) p) (erased (All2 A B R xs ys) rest) -> (All2 A B R (Cons A x xs) (Cons B y ys))))
 
-(def-fns _ $ (erased all2-nth : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) i)
-    (erased A x) (subterm erased (Nth A xs i x) p) (erased (All2 A B R xs ys) al) -> (erased B y) (erased (Nth B ys i y) q) (erased (R x y) r))
-  (let-match erased al (All2Cons _ _ _ x1 y1 xs1 ys1 r1 al1) (absurd (All2Nil _ _ _) p))
-  (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values y1 (NthHere B y1 ys1) r1)))
-  (let ((erased y) (erased q) (erased r)) (all2-nth A B R xs1 ys1 i1 x p1 al1))
-  (values y (NthThere B y1 ys1 i1 y q) r))
-
 (def-fns _ $ (erased all2-length : (erased Type A B) (erased (TyCtor (A a) (B b) -> Type) R) (erased (List A) xs) (erased (List B) ys) (erased (Nat) n)
     (subterm erased (All2 A B R xs ys) al) (erased (Length A xs n) l) -> (erased (Length B ys n) r))
   (let-match erased al (All2Cons _ _ _ x y xs1 ys1 _ al1) ((All2Nil _ _ _) (let-match erased l (LengthNil _)) (LengthNil B)))
@@ -280,13 +273,6 @@
   (many MkRingTrace : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) cs et) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
       (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (RingTrace e f r et)))
 
-(def-fns _ $ (erased ring-trace-of : (erased (List (Nat)) e f r ks lc) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
-    -> (erased (List (Col)) et) (erased (RingTrace e f r et) rt))
-  (let-match erased c (MkFourColoring _ _ _ _ _ _ _ u))
-  (let ((erased cs) (erased co)) (cols-exists lc (respects-under-out ks r lc 4 rl u)))
-  (let ((erased et) (erased t)) (trace-exists cs))
-  (values et (MkRingTrace e f r ks lc cs et c rl co t)))
-
 ; The first half of Kempe_closed (ring_trace r): ring traces are closed under colour permutations.
 (def-fns _ $ (erased ring-trace-perm : (erased (List (Nat)) e f r) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) (erased (RingTrace e f r et) rt) -> (erased (RingTrace e f r et2) r2))
@@ -322,42 +308,3 @@
   (many MkCCColoring : (erased (Nat) d) (erased (List (Nat)) e f cc ks ins) (erased (List (Bond)) ge) (erased (InsertE e cc ins) ie)
       (erased (Graph d e ge) gr) (erased (Respects ks f ks) rf) (erased (EdgeCC ins ks ge) ec) (erased (Under ks 4) u) (erased (Length (Nat) ks d) lk)
       -> (CCColoring d e f cc ks)))
-
-; cc_ring_trace cc r et.
-(def-adts $ (CCRingTrace : ((Nat) d) ((List (Nat)) e f cc r) ((List (Col)) et) -> Type)
-  enum
-  (many MkCCRingTrace : (erased (Nat) d) (erased (List (Nat)) e f cc r ks lc) (erased (List (Col)) cs et) (erased (CCColoring d e f cc ks) c)
-      (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (CCRingTrace d e f cc r et)))
-
-; cc_colorable cc.
-(def-adts $ (CCColorable : ((Nat) d) ((List (Nat)) e f cc) -> Type)
-  enum
-  (many MkCCColorable : (erased (Nat) d) (erased (List (Nat)) e f cc ks) (erased (CCColoring d e f cc ks) c) -> (CCColorable d e f cc)))
-
-(def-fns _ $ (erased proper-cc : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (Proper ks g) pr) -> (erased (EdgeCC (Nil (Nat)) ks g) r))
-  (let-match erased pr (ProperCons _ g1 x y l1 l2 p1 p2 ne pr1) ((ProperNil _) (ECNil _ ks)))
-  (ECOut _ ks g1 x y l1 l2 (NotInNil x) p1 p2 ne (proper-cc ks g1 pr1)))
-
-(def-fns _ $ (erased cc-proper : (erased (List (Nat)) ks) (erased (List (Bond)) g) (subterm erased (EdgeCC (Nil (Nat)) ks g) ec) -> (erased (Proper ks g) r))
-  (match erased ec _
-    ((ECNil _ _) (ProperNil ks))
-    (absurd (ECIn _ _ _ _ _ _ ix _ _ _) ix)
-    ((ECOut _ _ g1 x y l1 l2 _ p1 p2 ne ec1) (ProperCons ks g1 x y l1 l2 p1 p2 ne (cc-proper ks g1 ec1)))))
-
-; With no contract edge, a contract colouring is a four-colouring.
-(def-fns _ $ (erased four-cc : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) c)
-    -> (erased (CCColoring d e f (Nil (Nat)) ks) r))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let ((erased ids) (erased io)) (iota-exists d))
-  (let ((erased ge) (erased gr)) (graph-exists d e le))
-  (let-match erased c (MkFourColoring _ _ _ ke rf re df u))
-  (let ((erased lk)) (respects-length ks f ks d rf lf))
-  (MkCCColoring d e f _ ks _ ge (IENil e) gr rf (proper-cc ks ge (coloring-proper d e f ks ids ge c gr io lk)) u lk))
-
-(def-fns _ $ (erased cc-four : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Hypermap d e n f) h) (erased (CCColoring d e f (Nil (Nat)) ks) c)
-    -> (erased (FourColoring e f ks) r))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
-  (let ((erased ids) (erased io)) (iota-exists d))
-  (let-match erased c (MkCCColoring _ _ _ _ _ ins ge ie gr rf ec u lk))
-  (let-match erased ie (IENil _))
-  (proper-coloring d e f ks ids ge (cc-proper ks ge ec) gr io rf u lk (perm-under d e nf pe)))

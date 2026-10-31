@@ -5,11 +5,6 @@
   (many ACCons : (erased (List (Nat)) e pl r) (erased (List (Closed)) cs) (erased (Nat) t) (erased (AllJoined e pl r t) j)
       (erased (AllClosed e pl cs) rest) -> (AllClosed e pl (Cons (Closed) (MkClosed t r) cs))))
 
-(def-fns _ $ (erased allclosed-grow : (erased (List (Nat)) e pl e2 pl2) (erased (List (Closed)) cs) (subterm erased (AllClosed e pl cs) ac)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree pl pl2 (Nil (Nat))) gp) -> (erased (AllClosed e2 pl2 cs) r))
-  (let-match erased ac (ACCons _ _ r cs1 t j rest) ((ACNil _ _) (ACNil e2 pl2)))
-  (ACCons e2 pl2 r cs1 t (alljoined-grow e pl e2 pl2 r t j ge gp) (allclosed-grow e pl e2 pl2 cs1 rest ge gp)))
-
 ; The end of the sweep: a plane map, its labels, and the joins the trace asks for.
 (def-adts $ (Built : ((List (Closed)) cs) -> Type)
   enum

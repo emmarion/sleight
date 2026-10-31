@@ -80,45 +80,6 @@
 (def-fns _ $ (erased absurd endbad-bal : (erased (Nat) d) (erased (Bool) b) (erased (EndBad d b) e) (erased (GBal d b (Nil (Gsym))) g) -> (erased (False) f))
   (match erased e _ (absurd (EB0) g) (absurd (EB2 _ _) g)))
 
-(def-fns _ $ (erased am-sound : (erased Pred P) (erased (Bstack) bs) (erased (Nat) d) (erased (Bool) b) (erased (List (Col)) et)
-    (erased (List (Gsym)) pre w full) (subterm erased (MatchPG bs et w) mt) (erased (AM P bs d b et pre) a) (erased (GBal d b w) g)
-    (erased (RevApp (Gsym) pre w full) ra) -> (erased (Wit P full) r))
-  (match erased mt _
-    ((MPNil _)
-      (match erased a _
-        ((AMEndOk _ _ _ _ _ w2 _ ra2 wt) (let-match erased (revapp-fn (Gsym) pre w full w2 ra ra2) (Refl _ _)) wt)
-        (absurd (AMEndBad _ _ _ _ _ eb) (endbad-bal d b eb g))))
-    ((MPCons _ bs2 e s et1 w1 y mt1)
-      (let ((erased ra1)) (RACons (Gsym) s pre w1 full ra))
-      (match erased (sym-cls s bs bs2 e y) _
-        ((SCSkip _)
-          (let-match erased a (AM1 _ _ _ _ c _ _ n a1) (absurd (AM23 _ _ _ _ _ _ _ _ y1 _ _) y1))
-          (let-match erased g (GBSkip _ _ c2 _ n2 g1))
-          (let-match erased (not-fn b c c2 n n2) (Refl _ _))
-          (am-sound P bs d c et1 (Cons _ (GSkip) pre) w1 full mt1 a1 g1 ra1))
-        ((SCPush _ _ _ _)
-          (let-match erased a (AM23 _ _ bs1 _ _ _ _ _ y1 a1 _) (absurd (AM0 _ _ _ _ _ _) y) (absurd (AM1 _ _ _ _ _ _ _ _ _) y))
-          (let-match erased (sym-fn (GPush) bs bs2 bs1 e y y1) (Refl _ _))
-          (let-match erased g (GBPush _ _ _ g1))
-          (am-sound P bs2 (Succ d) b et1 (Cons _ (GPush) pre) w1 full mt1 a1 g1 ra1))
-        ((SCPop _ _ _ _ pp _)
-          (let-match erased a (AM23 _ _ bs1 _ _ _ _ _ y1 _ ap) (absurd (AM0 _ _ _ _ _ _) y) (absurd (AM1 _ _ _ _ _ _ _ _ _) (let-match erased y (SSkip _)) pp))
-          (match erased ap _
-            (absurd (APNone _ _ _ _ _ _) pp)
-            (absurd (APZero _ _ _ _ _ _)
-              (match erased g _
-                (absurd (GBSkip _ _ _ _ _ _) (let-match erased y (SSkip _)) pp)
-                (absurd (GBPush _ _ _ _) (match erased y _ (absurd (SPush2 _) pp) (absurd (SPush3 _) pp)))))
-            ((APSome _ _ b0 d1 _ c t _ _ _ pp2 z par a1)
-              (let-match erased (popped-fn bs bs2 b0 pp pp2) (Refl _ _))
-              (let-match erased (pop-fn s t bs bs2 e pp y z) (Refl _ _))
-              (match erased par _
-                ((PPar0 _) (let-match erased g (GBPop0 _ _ _ g1)) (am-sound P bs2 d1 b et1 (Cons _ s pre) w1 full mt1 a1 g1 ra1))
-                ((PPar1 _ _ n)
-                  (let-match erased g (GBPop1 _ _ c2 _ n2 g1))
-                  (let-match erased (not-fn b c c2 n n2) (Refl _ _))
-                  (am-sound P bs2 d1 c et1 (Cons _ s pre) w1 full mt1 a1 g1 ra1))))))))))
-
 ; After even_trace of color.v as an automaton over the trace.
 (def-adts $ (ES : -> Type)
   enum
@@ -918,15 +879,6 @@
   (let ((many ct) (erased gtr) (unique _) (erased gtu2) (erased _) (erased kr) (erased _))
     (ktc-run ctu ctr gtu (Succ $ Succ h) h ctu ctr gtu (KRBase h ctu ctr gtu) (CRBase h ctu ctr gtu) hc))
   (values ct (MkKSound P h ct gtr gtu2 (kr-kv P h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr ca) ct gtr gtu2 kr))))
-
-(def-fns _ $ (erased kempe-tree-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound P h kt) ks)
-    (erased (CtDisj kt ct) dj) (erased (List (Col)) et) (erased (CtMem ct et) m) (erased (EvenT et (BTrue)) ev)
-    (erased (Length (Col) et (Succ h)) len) -> (erased (KC P et) r))
-  (let-match erased ks (MkKSound _ _ _ gtr gtu kv))
-  (let ((erased n) (erased s)) (sub-exists kt et))
-  (match erased n _
-    ((Zero) (kempe-sound P h kt gtr gtu kv et (even-run et (BTrue) ev) len s))
-    (absurd (Succ n1) (disj-mem kt ct et dj (MkCtMem kt et n1 s) m))))
 
 (def-adts $ (FlipPair : ((Perm) g) ((Perm) g2) -> Type)
   enum

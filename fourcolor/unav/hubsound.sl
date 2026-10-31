@@ -28,12 +28,6 @@
 (def-fns _ $ (erased monus-add : (erased (Nat) a b r) (erased (Monus a b r) mo) (erased (Lt b (Succ a)) le) -> (erased (Add b r a) e))
   (match erased mo _ ((MoAdd _ _ _ p) p) (absurd (MoNeg _ _ l) (lt-le-absurd a b l le))))
 
-(def-fns _ $ (erased lt-two : (erased (Nat) j) (erased (Lt j 2) l) -> (erased (Or (Eq (Nat) j (Zero)) (Eq (Nat) j 1)) r))
-  (let-match erased j (Succ j1) ((Zero) (OrL _ _ (Refl _ (Zero)))))
-  (let-match erased l (LtS _ _ l1))
-  (let-match erased j1 (Zero) (absurd (Succ j2) (let-match erased l1 (LtS _ _ l2)) l2))
-  (OrR _ _ (Refl _ 1)))
-
 ; The dart w that the j-th constraint is read at (f^k y, k = j - 2 mod nhub) has f^2 w = f^j y.
 (def-fns _ $ (erased shift-f2 : (erased (List (Nat)) f) (erased (Nat) nhub j k y w v z) (erased (Shift nhub j k) sh) (erased (Lt 1 nhub) ln)
     (erased (Iter f nhub y y) cy) (erased (Iter f k y w) pk) (erased (Iter f 2 w v) p2) (erased (Iter f j y z) pj) -> (erased (Eq (Nat) v z) r))

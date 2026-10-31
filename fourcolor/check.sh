@@ -24,7 +24,7 @@ for x in defs orient base sweep geo plan map lists planemap walk frontier labels
   revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2 embed2 contract contract2 unav/realias; do
   F="$F fourcolor/$x.sl"
 done
-for x in part quiz redpart hubcap present fit dbound hubcapc obsmap dscore dsum posz pwalk hubsound pwsound \
+for x in part quiz hubcap present fit dbound hubcapc obsmap dscore dsum posz pwalk hubsound pwsound \
   conv cap unav data qfit rdart redc qwalk qembed qcert qtree qmirror unave; do
   F="$F fourcolor/unav/$x.sl"
 done

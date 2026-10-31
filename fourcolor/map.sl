@@ -82,11 +82,3 @@
       (erased (Lt c 4) bound) (erased (Nth (Nat) ks b c) node) (erased (Nth (Nat) ks a c2) edge)
       (erased (Apart (Nat) Lt c c2) differ) (erased (Colored ks e nd cs) rest)
       -> (Colored ks (Cons (Nat) a e) (Cons (Nat) b nd) (Cons (Nat) c cs))))
-
-; Every plane map has a proper vertex colouring with 4 colours.
-(def-adts $ (FourColorMap : -> Type)
-  enum
-  (many MkFourColorMap : (erased (Level) L)
-      (erased (Fn L (erased (List (Nat)) e nd) (erased (PlaneMap e nd) m) ->
-          (erased (List (Nat)) ks) (erased (Colored ks e nd ks) c)) thm)
-      -> (FourColorMap)))

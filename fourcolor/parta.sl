@@ -1,13 +1,4 @@
 ; Part A as one statement: a sweep plan for every drawing and a colouring for every plane map give FourColor.
-(def-adts $ (PartA : -> Type)
-  enum
-  (many MkPartA : (erased (Level) F)
-      (erased (Fn F (erased (Level) L1)
-          (erased (Fn L1 (erased (List (Edge)) es) (erased (Drawing es) d) -> (erased (SweepPlan es) p)) plan)
-          (erased (Level) L2)
-          (erased (Fn L2 (erased (List (Nat)) e nd) (erased (PlaneMap e nd) m) -> (erased (List (Nat)) ks) (erased (Colored ks e nd ks) c)) colour)
-          -> (erased (FourColor) r)) reduce)
-      -> (PartA)))
 
 (def-fns _ $ (erased part-a : (erased (Level) L1)
     (erased (Fn L1 (erased (List (Edge)) es) (erased (Drawing es) d) -> (erased (SweepPlan es) p)) plan)
@@ -20,6 +11,3 @@
     (let ((erased ks) (erased col)) (colour e nd pm))
     (plan-paint es e nd ks pm mf col))
   (MkFourColor M thm))
-
-
-

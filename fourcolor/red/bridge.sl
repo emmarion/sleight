@@ -448,11 +448,6 @@
     (erased (Ctr (C0) et ct) cr) -> (erased (KCC P ct) r))
   (kc-kcc P et ct (kempe-treeP P h kt ks et et2 len e s) cr))
 
-(def-fns _ $ (erased kempe-tree-sound-c : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt ct) (erased (KSound P h kt) ks)
-    (erased (CtDisj kt ct) dj) (erased (List (Col)) et ctc) (erased (CtMem ct et) m) (erased (EvenT et (BTrue)) ev)
-    (erased (Length (Col) et (Succ h)) len) (erased (Ctr (C0) et ctc) cr) -> (erased (KCC P ctc) r))
-  (kc-kcc P et ctc (kempe-tree-sound P h kt ct ks dj et m ev len) cr))
-
 ; A relation between traces and chromograms with one parameter, as data, like PredC.
 (def-adts $ (RelC : -> Type)
   enum

@@ -47,13 +47,6 @@
   (many MkQEuler : (erased (Nat) d k kf f6 m2 u) (erased (Mul kf 6 f6) mf) (erased (Mul k 2 m2) mm) (erased (Add d 6 u) du) (erased (Add m2 u f6) r)
       -> (QEuler d k kf)))
 
-(def-fns _ $ (erased qgeo-euler : (erased (Nat) d m kf) (erased (List (Nat)) e n f) (erased (QGeo d m e n f) qg) (erased (Genus d e n f (Zero)) gn)
-    (erased (Orbits d f kf) of) -> (erased (QEuler d (Succ m) kf) res))
-  (let-match erased qg (MkQGeo _ _ x0 _ _ _ q ids h pl nc dq lq oo io cc))
-  (let ((erased f6) (erased m2) (erased u) (erased mf) (erased mm) (erased du) (erased r))
-    (quasicubic-planar d m x0 kf e n f q ids h pl nc dq lq oo io cc gn of))
-  (MkQEuler d (Succ m) kf f6 m2 u mf mm du r))
-
 (def-fns _ $ (erased euler-qgeo : (erased (Nat) d m kf) (erased (List (Nat)) e n f) (erased (QGeo d m e n f) qg) (erased (Orbits d f kf) of)
     (erased (QEuler d (Succ m) kf) qe) -> (erased (Genus d e n f (Zero)) res))
   (let-match erased qg (MkQGeo _ _ x0 _ _ _ q ids h pl nc dq lq oo io cc))

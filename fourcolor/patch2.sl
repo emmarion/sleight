@@ -265,21 +265,6 @@
   (let-match erased kx (MkKernel _ _ lab ls _ l rf rp pl out))
   (apart-irrefl l (notin-in l l ls out (in-map lab t ls y l iy rp (path-label f lab (Nil _) ws x y l w rf pl)))))
 
-(def-fns _ $ (erased band-split-fn : (erased (List (Nat)) f t xs o i o2 i2) (subterm erased (BandSplit f t xs o i) b) (erased (BandSplit f t xs o2 i2) b2)
-    -> (erased (Eq (List (Nat)) o o2) eo) (erased (Eq (List (Nat)) i i2) ei))
-  (match erased b _
-    ((BSNil _ _) (let-match erased b2 (BSNil _ _)) (values (Refl _ o) (Refl _ i)))
-    ((BSIn _ _ xs1 o1 i1 x p rest)
-      (let-match erased b2 (BSIn _ _ _ o3 _ _ p2 rest2) (absurd (BSOut _ _ _ _ i3 _ k2 rest2) (fband-kernel f t x p k2)))
-      (let ((erased eo) (erased ei)) (band-split-fn f t xs1 o1 i1 o3 i2 rest rest2))
-      (let-match erased eo (Refl _ _))
-      (values (Refl _ o) ei))
-    ((BSOut _ _ xs1 o1 i1 x p rest)
-      (let-match erased b2 (BSOut _ _ _ _ i3 _ p2 rest2) (absurd (BSIn _ _ _ o3 _ _ f2 rest2) (fband-kernel f t x f2 p)))
-      (let ((erased eo) (erased ei)) (band-split-fn f t xs1 o1 i1 o2 i3 rest rest2))
-      (let-match erased ei (Refl _ _))
-      (values eo (Refl _ i)))))
-
 ; A split by face classes labelled lab, by whether the class meets t, is a BandSplit.
 (def-fns _ $ (erased band-of-sb : (erased (Nat) d) (erased (List (Nat)) f fi t lab rs ids LT xs o i) (erased (List (Bond)) gf) (erased (HPerm d f fi) pm)
     (erased (Graph d f gf) gr) (erased (Iota d ids) io) (erased (Rooted gf rs ids lab) ro) (erased (Respects lab f lab) rf) (erased (Under t d) ut)

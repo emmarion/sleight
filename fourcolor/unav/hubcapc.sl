@@ -449,11 +449,6 @@
   (many HSThere : (erased (List (Sec)) o) (erased (List (List (Sec))) oss) (erased (List (List (Sub))) obl) (erased (HitSome oss obl) h)
       -> (HitSome (Cons (List (Sec)) o oss) obl)))
 
-(def-adts $ (HubBound : ((Nat) nhub st ss) -> Type)
-  enum
-  (many MkHubBound : (erased (Nat) nhub st ss kp kn l r) (erased (DbK nhub kp kn) dk) (erased (Add kp st l) al) (erased (Add kn ss r) ar)
-      (erased (Lt l (Succ r)) le) -> (HubBound nhub st ss)))
-
 (def-fns _ $ (erased counts-nth : (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (List (Nat)) ct cs) (erased (Nat) j)
     (erased (List (Sec)) o) (subterm erased (Counts oss rt rs ct cs) k) (erased (Nth (List (Sec)) oss j o) no)
     -> (erased (Nat) t s) (erased (Nth (Nat) ct j t) nt) (erased (Nth (Nat) cs j s) ns) (erased (Count o rt t) kt) (erased (Count o rs s) ks))
@@ -525,15 +520,3 @@
       (match erased (hfit-sound nhub os p rt rs acc1 out hc1 oss ct cs x w1 fam1 cnt) _
         ((OrL _ _ sat) (OrL _ _ (SatTwo j1 j2 t1 t2 t s1 s2 s bp bn l r hc1 ct cs nt1 nt2 atw ns1 ns2 as al ar le sat)))
         ((OrR _ _ h) (OrR _ _ h))))))
-
-; hubcap_fit_bound of hubcap.v over sector lists: a hub fitting p whose sector lists are related as Fam says, with the
-; target and source counts ct and cs at them, has K + (sum of ct) - (sum of cs) <= 0, unless an obligation of
-; hubcap-fit-c fits one of its sector lists exactly.
-(def-fns _ $ (erased hubcap-sound : (erased (Nat) nhub st ss) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs out)
-    (erased (List (Hc)) hc) (erased (List (List (Sec))) oss) (erased (List (Nat)) ct cs) (erased (CoverOk nhub hc) cov)
-    (erased (HFit nhub p rt rs hc (Nil (List (Sub))) out) w) (erased (Exact os p) x) (erased (Fam os nhub oss hc) fam)
-    (erased (Counts oss rt rs ct cs) cnt) (erased (Length (Nat) ct nhub) lct) (erased (Length (Nat) cs nhub) lcs) (erased (Sum ct st) pst)
-    (erased (Sum cs ss) pss) -> (erased (Or (HubBound nhub st ss) (HitSome oss out)) r))
-  (let-match erased (hfit-sound nhub os p rt rs (Nil _) out hc oss ct cs x w fam cnt) (OrL _ _ sat) ((OrR _ _ h) (OrR _ _ h)))
-  (let ((erased kp) (erased kn) (erased l) (erased r) (erased dk) (erased al) (erased ar) (erased le)) (cover-sound nhub st ss hc ct cs cov sat lct lcs pst pss))
-  (OrL _ _ (MkHubBound nhub st ss kp kn l r dk al ar le)))

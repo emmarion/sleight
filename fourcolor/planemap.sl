@@ -45,26 +45,6 @@
   (let-match erased p (MkInsert _ nd1 _ _ _ c _ s q))
   (snoc-length _ nd1 nd2 c n q (setnth-length _ nd d n x nd1 s l)))
 
-(def-fns _ $ (erased pm-length : (erased (List (Nat)) e nd) (subterm erased (PlaneMap e nd) m) ->
-    (erased (Nat) n) (erased (Length (Nat) e n) le) (erased (Length (Nat) nd n) ln))
-  (match erased m _
-    ((PMNil) (values (Zero) (LengthNil _) (LengthNil _)))
-    ((PMIsolated e0 nd0 _ nd1 _ n0 m0 g sn1 sn2)
-      (let ((erased k) (erased le0) (erased ln0)) (pm-length e0 nd0 m0))
-      (let ((erased le1) (erased le2)) (grow-length e0 e n0 g))
-      (let-match erased (length-fn _ e0 n0 k le1 le0) (Refl _ _))
-      (values (Succ (Succ n0)) le2 (snoc-length _ nd1 nd (Succ n0) (Succ n0) sn2 (snoc-length _ nd0 nd1 n0 n0 sn1 ln0))))
-    ((PMPendant e0 nd0 _ nd1 _ n0 d m0 g bd i1 sn2)
-      (let ((erased k) (erased le0) (erased ln0)) (pm-length e0 nd0 m0))
-      (let ((erased le1) (erased le2)) (grow-length e0 e n0 g))
-      (let-match erased (length-fn _ e0 n0 k le1 le0) (Refl _ _))
-      (values (Succ (Succ n0)) le2 (snoc-length _ nd1 nd (Succ n0) (Succ n0) sn2 (insert-length nd0 nd1 d n0 n0 i1 ln0))))
-    ((PMChord e0 nd0 _ nd1 _ vl n0 d1 d2 m0 g b1 b2 ll j i1 i2)
-      (let ((erased k) (erased le0) (erased ln0)) (pm-length e0 nd0 m0))
-      (let ((erased le1) (erased le2)) (grow-length e0 e n0 g))
-      (let-match erased (length-fn _ e0 n0 k le1 le0) (Refl _ _))
-      (values (Succ (Succ n0)) le2 (insert-length nd1 nd d2 (Succ n0) (Succ n0) i2 (insert-length nd0 nd1 d1 n0 n0 i1 ln0))))))
-
 
 
 ; Every non-empty plane map is a smaller one with one more edge.

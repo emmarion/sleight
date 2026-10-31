@@ -20,11 +20,6 @@
   (let-match erased fs (FSCons _ Bt _ b1 a ia sp fs1) (absurd (FSNil _ _) ib))
   (match erased ib _ ((InHere _ _) (values a ia sp)) ((InThere _ _ _ ib1) (facesub-at f Bt A b fs1 ib1))))
 
-(def-fns _ $ (erased fband-sub : (erased (List (Nat)) f B A) (erased (Nat) x) (erased (FaceSub f B A) fs) (erased (Fband f B x) fb) -> (erased (Fband f A x) r))
-  (let-match erased fb (MkFband _ _ _ y iy w))
-  (let ((erased a) (erased ia) (erased sp)) (facesub-at f B A y fs iy))
-  (MkFband f A x a ia (some-cat f x y a w sp)))
-
 (def-fns _ $ (erased labs-sub : (erased (List (Nat)) f A lab lsA) (erased (Nat) d) (subterm erased (List (Nat)) B) (erased (FaceSub f B A) fs)
     (erased (Respects lab f lab) rf) (erased (Respects lab A lsA) ra) (erased (Under B d) ub) (erased (Length (Nat) lab d) ll)
     -> (erased (List (Nat)) lsB) (erased (Respects lab B lsB) rb) (erased (Sub lsB lsA) sb))
@@ -260,21 +255,6 @@
         (ds-out d x x0 e n f p hd zs h gen rg ur ds iz dx))
       ((OrR _ _ o) (ds-off d y x0 e n f p hd zs hd zs h gen rg ur ds ds o ly)))
     ky))
-
-(def-fns _ $ (erased diskfc-face-inv : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
-    (erased (Ring e f x0 p) rg) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In y zs) iz) (erased (Kernel f (Cons (Nat) x0 p) y) k)
-    (erased (Nth (Nat) f x y) pf) -> (erased (In x zs) ix) (erased (Kernel f (Cons (Nat) x0 p) x) kx))
-  (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
-  (let ((erased ur)) (ring-under d x0 e n f p h rg))
-  (let ((erased kx)) (kernel-face-inv d x y f _ lf k pf))
-  (let ((erased lx)) (nth-lt-length _ f x d y pf lf))
-  (values
-    (match erased (in-dec x hd) (((In x zs) res))
-      (absurd (OrL _ _ i)
-        (let-match erased (diskf-face n f _ x y (MkDiskF n f _ x (ds-in d x x0 e n f p hd zs h gen rg ur ds i) kx) pf) (MkDiskF _ _ _ _ dy _))
-        (ds-out d y x0 e n f p hd zs h gen rg ur ds iz dy))
-      ((OrR _ _ o) (ds-off d x x0 e n f p hd zs hd zs h gen rg ur ds ds o lx)))
-    kx))
 
 ; diskN_rot and fband_rot: diskN and fband depend only on the darts of the ring.
 (def-fns _ $ (erased dpath-move : (erased (List (Nat)) n f r s) (erased (Nat) x y) (subterm erased (DPath n f r x y) dp) (erased (Sub s r) sb) -> (erased (DPath n f s x y) res))

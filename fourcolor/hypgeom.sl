@@ -21,12 +21,6 @@
   (many MkMoebius : (erased (List (Nat)) n f p) (erased (Nat) x y u v) (erased (Distinct (Cons (Nat) x p)) dp) (erased (CPath n f x p y) cp)
       (erased (Nth (Nat) n u y) pu) (erased (Nth (Nat) n x v) pv) (erased (Mem2 p u v) m) -> (Moebius n f x p)))
 
-; No Moebius path.
-(def-adts $ (Jordan : ((List (Nat)) n f) -> Type)
-  enum
-  (many MkJordan : (erased (List (Nat)) n f) (erased (Level) L)
-      (erased (Fn L (erased (Nat) x) (erased (List (Nat)) p) (erased (Moebius n f x p) m) -> (erased (False) r)) thm) -> (Jordan n f)))
-
 ; The glink graph has one class.
 (def-adts $ (Connected : ((Nat) d) ((List (Nat)) e n f) -> Type)
   enum
@@ -74,12 +68,6 @@
   enum
   (many MkPentagonal : (erased (Nat) d) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol)
       (erased (Above ks (Succ (Succ (Succ (Succ (Zero)))))) a) -> (Pentagonal d f)))
-
-; No dart is on the node cycle of its edge image.
-(def-adts $ (Loopfree : ((Nat) d) ((List (Nat)) e n) -> Type)
-  enum
-  (many MkLoopfree : (erased (Nat) d) (erased (List (Nat)) e n) (erased (List (Bond)) ge gn)
-      (erased (Graph d e ge) pe) (erased (Graph d n gn) pn) (erased (AllSep gn ge) s) -> (Loopfree d e n)))
 
 ; The darts of p lie on distinct faces: a labelling constant along f gives them distinct labels.
 (def-adts $ (Simple : ((List (Nat)) f p) -> Type)
@@ -159,23 +147,6 @@
     (erased (Perm d q p) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Sep gq x y) r))
   (let-match erased s (MkSep _ _ _ lab l1 l2 cl p1 p2 ne))
   (MkSep gq x y lab l1 l2 (const-inv d lab p q gp gq (graph-fun d q gq grq) pm grp cl) p1 p2 ne))
-
-(def-fns _ $ (erased allsep-dual : (erased (Nat) d) (erased (List (Nat)) e ei n ni) (erased (List (Bond)) ge gei gn gni) (subterm erased (Fun ei gei) fe)
-    (erased (Perm d e ei) pe) (erased (Perm d n ni) pn) (erased (Graph d e ge) gre) (erased (Graph d n gn) grn) (erased (Graph d ni gni) grni)
-    (erased (AllSep gn ge) sp) -> (erased (AllSep gni gei) r))
-  (let-match erased fe (FunCons _ g1 x y py f1) ((FunNil _) (AllSepNil gni)))
-  (AllSepCons gni g1 x y
-    (sep-inv d x y n ni gn gni (sep-sym gn y x (allsep-adj gn ge y x (graph-adj d y x e ge gre (perm-inv d x y ei e (perm-sym d e ei pe) py)) sp))
-      (perm-sym d n ni pn) grn grni)
-    (allsep-dual d e ei n ni ge g1 gn gni f1 pe pn gre grn grni sp)))
-
-; A loopless map has a bridgeless dual (one direction of bridgeless_dual).
-(def-fns _ $ (erased loopfree-dual : (erased (Nat) d) (erased (List (Nat)) e n f ei fi ni) (erased (Loopfree d e n) lf)
-    (erased (Perm d e ei) pe) (erased (Perm d n ni) pn) -> (erased (Bridgeless d ei fi ni) r))
-  (let-match erased lf (MkLoopfree _ _ _ ge gn gre grn sp))
-  (let ((erased gei) (erased grei)) (perm-graph d ei e (perm-sym d e ei pe)))
-  (let ((erased gni) (erased grni)) (perm-graph d ni n (perm-sym d n ni pn)))
-  (MkBridgeless d ei fi ni gei gni grei grni (allsep-dual d e ei n ni ge gei gn gni (graph-fun d ei gei grei) pe pn gre grn grni sp)))
 
 (def-fns _ $ (erased allsep-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fi fn) (erased (List (Bond)) ge gf gfi gfn) (subterm erased (Fun fn gfn) ff)
     (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn) (erased (Perm d f fi) pf) (erased (Graph d e ge) gre) (erased (Graph d f gf) grf)

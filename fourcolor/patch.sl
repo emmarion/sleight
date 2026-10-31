@@ -105,29 +105,6 @@
   (let-match erased (nth-fn (Nat) hr xr w2 x hx2 hx) (Refl _ _))
   (hyper-third d x w y e n f h pew pny))
 
-; The image of hr is closed under e (closed_Gr).
-(def-fns _ $ (erased closed-gr : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Nat) xr x y) (erased (Nth (Nat) hr xr x) hx) (erased (Nth (Nat) e x y) pe)
-    -> (erased (Nat) yr) (erased (Nth (Nat) hr yr y) hy))
-  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
-  (let ((erased nfr) (erased nri) (erased fri) (erased rnf) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
-  (let ((erased lx)) (nth-lt-length _ hr xr dr x hx lhr))
-  (let ((erased yr) (erased pyr) (erased ly)) (perm-nth dr xr er nfr pmer lx))
-  (let ((erased w) (erased hy) (erased pew)) (morph hr er e (Nil (Nat)) idr dr xr yr x mer ior lx (NotInNil xr) pyr hx))
-  (let-match erased (nth-fn (Nat) e x w y pew pe) (Refl _ _))
-  (values yr hy))
-
-; The image of hd is closed under n (closed_Gd).
-(def-fns _ $ (erased closed-gd : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Nat) xd x y) (erased (Nth (Nat) hd xd x) hx) (erased (Nth (Nat) n x y) pn)
-    -> (erased (Nat) yd) (erased (Nth (Nat) hd yd y) hy))
-  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
-  (let ((erased nfd) (erased ndi) (erased fdi) (erased rnf) (erased pmed) (erased pmnd) (erased pmfd)) (hyper-core dd ed nd fd hd2))
-  (let ((erased lx)) (nth-lt-length _ hd xd dd x hx lhd))
-  (let ((erased yd) (erased pyd) (erased ly)) (perm-nth dd xd nd ndi pmnd lx))
-  (let ((erased w) (erased hy) (erased pnw)) (morph hd nd n (Nil (Nat)) idd dd xd yd x mnd iod lx (NotInNil xd) pyd hx))
-  (let-match erased (nth-fn (Nat) n x w y pnw pn) (Refl _ _))
-  (values yd hy))
 (def-fns _ $ (erased revapp-in : (erased (List (Nat)) pre w r) (erased (Nat) x) (subterm erased (RevApp (Nat) pre w r) ra)
     (erased (HOr (In x pre) (In x w)) ix) -> (erased (In x r) res))
   (let-match erased ra (RACons _ s pre1 _ _ ra1)
@@ -540,13 +517,6 @@
     -> (erased (ClassesOn gG s c) r))
   (co-map gD gG sd s h l c d kq co (side-lift-d k d h l ids sd s sd gD iv iod dh lh uh rp usd (sub-refl sd))
     (side-lift-g d h l ids sd s s gG iv iod dh uh rp (sub-refl s)) mv1 mv2 cs (respects-under-vals h sd s d rp uh)))
-
-(def-fns _ $ (erased side-co-back : (erased (Nat) k d c kp) (erased (List (Nat)) h l ids sd s) (erased (List (Bond)) gD gG) (erased (InvL h ids l) iv)
-    (erased (Iota d ids) iod) (erased (Distinct h) dh) (erased (Length (Nat) h k) lh) (erased (Under h d) uh) (erased (Respects h sd s) rp)
-    (erased (Under sd k) usd) (erased (Moves gD sd h gG) mv1) (erased (Moves gG s l gD) mv2) (erased (Classes gD k kp) cs) (erased (ClassesOn gG s c) co)
-    -> (erased (ClassesOn gD sd c) r))
-  (co-map gG gD s sd l h c k kp co (side-lift-g d h l ids sd s s gG iv iod dh uh rp (sub-refl s))
-    (side-lift-d k d h l ids sd s sd gD iv iod dh lh uh rp usd (sub-refl sd)) mv2 mv1 cs usd))
 
 ; e is 0 for an empty list and 1 otherwise.
 (def-adts $ (NonNil : ((List (Nat)) xs) ((Nat) e) -> Type)
@@ -2064,12 +2034,6 @@
   (let-match erased (genus-patch d dd dr (Zero) gd gr e n f ed nd fd er nr fr hd hr bd br pt p pd pr) (AddZero _))
   (values (Refl _ gd) (Refl _ gr)))
 
-(def-fns _ $ (erased patch-planar : (erased (Nat) d dd dr gen) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Genus dd ed nd fd (Zero)) pd) (erased (Genus dr er nr fr (Zero)) pr)
-    (erased (Genus d e n f gen) p) -> (erased (Eq (Nat) gen (Zero)) e0))
-  (let-match erased (genus-patch d dd dr gen (Zero) (Zero) e n f ed nd fd er nr fr hd hr bd br pt p pd pr) (AddZero _))
-  (Refl _ gen))
-
 ; A face walk of the disk map is sent to one of the whole map (patch_face_d').
 (def-fns _ $ (erased face-push-d : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br fdi) (erased (List (Bond)) gf gfd)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (HPerm dd fd fdi) pmfd) (erased (Graph d f gf) grf) (erased (Graph dd fd gfd) grfd)
@@ -2154,18 +2118,6 @@
       (allsep-r d dd dr kfr e n f ed nd fd er nr fr hd hr bd br fi fri nfr idr ge gf gfr ger pt pmf pmfr pmer pe grf sp csr
         (outer-moves-r d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri idr gfr gf pt pmf pmfr grf ior lhr uhr (graph-fun dr fr gfr pfr))
         mer ior lhr (graph-fun dr er ger per)))))
-
-; Darts of the remainder map are on one face exactly when their images are (patch_face_r), with gf and gfr the graphs of f and fr.
-(def-fns _ $ (erased patch-face-r-push : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf gfr)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Graph dr fr gfr) grfr) (erased (Nat) xr yr x)
-    (erased (Conn gfr xr yr) c) (erased (Nth (Nat) hr xr x) hx) -> (erased (Nat) y) (erased (Nth (Nat) hr yr y) hy) (erased (Conn gf x y) r))
-  (let-match erased pt (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ids idd idr bG bGr h hd2 hr2 io iod ior lhd lhr dhd dhr uhd uhr cyd sd cyr dbr rbd rbr rv pp med mnd mer mnr))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pme) (erased pmn) (erased pmf)) (hyper-core d e n f h))
-  (let ((erased nfr) (erased nri) (erased fri) (erased rnfr) (erased pmer) (erased pmnr) (erased pmfr)) (hyper-core dr er nr fr hr2))
-  (let ((erased y) (erased hy) (erased cy) (erased iy))
-    (conn-move gfr gf idr hr xr yr x c (outer-moves-r d dd dr e n f ed nd fd er nr fr hd hr bd br fi fri idr gfr gf pt pmf pmfr grf ior lhr uhr (graph-fun dr fr gfr grfr))
-      (iota-in dr xr idr ior (nth-lt-length _ hr xr dr x hx lhr)) hx))
-  (values y hy cy))
 
 (def-fns _ $ (erased patch-face-r-pull : (erased (Nat) d dd dr) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br) (erased (List (Bond)) gf gfr)
     (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Graph d f gf) grf) (erased (Graph dr fr gfr) grfr) (erased (Nat) xr yr x y)

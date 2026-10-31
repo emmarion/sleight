@@ -97,5 +97,4 @@ for n in range(5, 12):
 lines.append('(def-fns _ $ (many script-src : (many (Nat) a) -> (many (String) skel) (many (List (String)) cuts))\n%s\n  %s)'
              % (''.join('  (let-match many (nat-eqb a %d) (BFalse) ((BTrue) %s))\n' % (n, x) for n, x in zip(range(5, 11), srcs)), srcs[-1]))
 lines.append('(def-fns _ $ (many script-by : (many (Nat) a) -> (many (Script) s)) (let ((many skel) (many cuts)) (script-src a)) (script-from skel cuts))')
-lines += ['(def-fns _ $ (many script%d : -> (many (Script) s)) (script-by %d))' % (n, n) for n in range(5, 12)]
 open(out, 'w').write('\n'.join(lines) + '\n')

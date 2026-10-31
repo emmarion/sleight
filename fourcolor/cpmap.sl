@@ -21,14 +21,6 @@
   (many CubH : (erased (List (Step)) cp) (erased (CubicProg cp) p) -> (CubicProg (Cons (Step) (SH) cp)))
   (many CubU : (erased (List (Step)) cp) (erased (CubicProg cp) p) -> (CubicProg (Cons (Step) (SU) cp))))
 
-; Gonthier's config_prog: only R, Y and H steps, ending with a Y step.
-(def-adts $ (ConfigProg : ((List (Step)) cp) -> Type)
-  enum
-  (many CfgR : (erased (Nat) k) (erased (List (Step)) cp) (erased (ConfigProg cp) p) -> (ConfigProg (Cons (Step) (SR k) cp)))
-  (many CfgY1 : -> (ConfigProg (Cons (Step) (SY) (Nil (Step)))))
-  (many CfgY : (erased (List (Step)) cp) (erased (ConfigProg cp) p) -> (ConfigProg (Cons (Step) (SY) cp)))
-  (many CfgH : (erased (List (Step)) cp) (erased (ConfigProg cp) p) -> (ConfigProg (Cons (Step) (SH) cp))))
-
 ; The map (d, e, f) and ring r that cp builds, its steps applied from the end of cp (Gonthier's cpmap): K is R' then N then
 ; R 1, Y is U then N, and H is U then N twice.
 (def-adts $ (Cpmap : ((List (Step)) cp) ((Nat) d) ((List (Nat)) e f r) -> Type)
@@ -198,14 +190,6 @@
     ((CubH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-proper cp1 k cs1 cq1))
     ((CubU cp1 cq1) (let-match erased cs (CsU k1 _ cs1))
       (lt-weaken (Succ (Zero)) (Succ k1) (lt-weaken (Succ (Zero)) k1 (cprsize-proper cp1 k1 cs1 cq1))))))
-
-(def-fns _ $ (erased cprsize-long : (erased (List (Step)) cp) (erased (Nat) k) (erased (Cprsize cp k) cs) (subterm erased (ConfigProg cp) cq)
-    -> (erased (Lt (Succ (Succ (Zero))) k) r))
-  (match erased cq _
-    ((CfgR j cp1 cq1) (let-match erased cs (CsR _ _ _ cs1)) (cprsize-long cp1 k cs1 cq1))
-    ((CfgY1) (let-match erased cs (CsY _ _ cs1)) (let-match erased cs1 (CsNil)) (lt-succ (Succ (Succ (Zero)))))
-    ((CfgY cp1 cq1) (let-match erased cs (CsY k1 _ cs1)) (lt-weaken (Succ (Succ (Zero))) k1 (cprsize-long cp1 k1 cs1 cq1)))
-    ((CfgH cp1 cq1) (let-match erased cs (CsH _ _ cs1)) (cprsize-long cp1 k cs1 cq1))))
 
 ; Every map a program without A steps builds is plain (cpmap_plain, which Coq states for cubic programs).
 (def-fns _ $ (erased cpmap-plain : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)

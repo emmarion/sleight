@@ -322,51 +322,6 @@
 (def-fns _ $ (erased lt-one : (erased (Nat) a) (erased (Lt a (Succ (Zero))) l) -> (erased (Eq (Nat) a (Zero)) e))
   (match erased l _ ((LtZ _) (Refl _ (Zero))) (absurd (LtS _ _ l1) l1)))
 
-; WalkupN: edge and face cut, through permN and permF.
-(def-fns _ $ (erased walkup-n : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h)
-    (erased (Genus (Succ d) e n f gen) p) (erased (Lt z (Succ d)) lz)
-    -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s e e2) ce) (erased (Cut d z s f f2) cf)
-    (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
-  (let ((erased s) (erased x2) (erased y2) (erased z2) (erased gen2) (erased sw) (erased cy) (erased cz) (erased h2) (erased p2) (erased le))
-    (walkup-e d gen z n f e (hyper-rot (Succ d) e n f h) (genus-rot (Succ d) gen e n f h p) lz))
-  (let ((erased h3) (erased p3)) (genus-rot2 d gen2 x2 y2 z2 h2 p2))
-  (values s z2 x2 y2 gen2 sw cz cy h3 p3 le))
-
-; WalkupF: edge and node cut, through permF and permN.
-(def-fns _ $ (erased walkup-f : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h)
-    (erased (Genus (Succ d) e n f gen) p) (erased (Lt z (Succ d)) lz)
-    -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s e e2) ce) (erased (Cut d z s n n2) cn)
-    (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
-  (let ((erased hr) (erased pr)) (genus-rot2 (Succ d) gen e n f h p))
-  (let ((erased s) (erased x2) (erased y2) (erased z2) (erased gen2) (erased sw) (erased cy) (erased cz) (erased h2) (erased p2) (erased le))
-    (walkup-e d gen z f e n hr pr lz))
-  (values s y2 z2 x2 gen2 sw cy cz (hyper-rot d x2 y2 z2 h2) (genus-rot d gen2 x2 y2 z2 h2 p2) le))
-
-; A walk along p between darts other than z gives a walk along p2, p with z cut out.
-(def-fns _ $ (erased skip-path : (erased (Nat) d x y z w u) (erased (List (Nat)) p q p2 s xs) (subterm erased (Path p s x y xs) pa)
-    (erased (Perm d p q) pm) (erased (Nth (Nat) p w z) pw) (erased (Nth (Nat) p z u) pz) (erased (Apart (Nat) Lt w z) nwz)
-    (erased (Upd2 p w u z z p2) up) (erased (Apart (Nat) Lt x z) nx) (erased (Apart (Nat) Lt y z) ny)
-    -> (erased (List (Nat)) ys) (erased (Path p2 (Nil (Nat)) x y ys) r))
-  (let-match erased pa (PathStep _ _ xs1 _ x1 _ px out pa1) ((PathHere _ _ _) (values (Nil _) (PathHere p2 _ x))))
-  (let-match erased (nat-eq x w) (Unequal _ _ _ _ nxw)
-    ((Equal _ _ _)
-      (let-match erased (nth-fn _ p x x1 z px pw) (Refl _ _))
-      (let-match erased pa1 (PathStep _ _ xs2 _ x2 _ px2 _ pa2) (absurd (PathHere _ _ _) (apart-irrefl y ny)))
-      (let-match erased (nth-fn _ p z x2 u px2 pz) (Refl _ _))
-      (let ((erased ys) (erased v)) (skip-path d u y z w u p q p2 s xs2 pa2 pm pw pz nwz up (img-apart d z w u z p q pm pz pw (apart-sym w z nwz)) ny))
-      (values (Cons _ x ys) (PathStep p2 _ ys x u y (upd2-a p p2 x u z z up) (NotInNil x) v))))
-  (let ((erased ys) (erased v)) (skip-path d x1 y z w u p q p2 s xs1 pa1 pm pw pz nwz up (img-apart d x w x1 z p q pm px pw nxw) ny))
-  (values (Cons _ x ys) (PathStep p2 _ ys x x1 y (upd2-other p p2 w u z z x x1 up px nxw nx) (NotInNil x) v)))
-
-; Darts other than z are on one cycle of p2 exactly when they are on one cycle of p (Gonthier's fconnect_skip).
-(def-fns _ $ (erased skip-conn : (erased (Nat) d x y z) (erased (List (Nat)) p q p2) (erased (List (Bond)) g g2) (erased (Perm d p q) pm)
-    (erased (Skip p z p2) sk) (erased (Graph d p g) gr) (erased (Graph d p2 g2) gr2) (erased (Conn g x y) c) (erased (Apart (Nat) Lt x z) nx)
-    (erased (Apart (Nat) Lt y z) ny) -> (erased (Conn g2 x y) r))
-  (let-match erased sk (SkipCut _ _ _ w u pw pz nwz up) ((SkipFixed _ _ _) (let-match erased (graph-fn d p g g2 gr gr2) (Refl _ _)) c))
-  (let ((erased xs) (erased pa)) (conn-path d x y p q g pm gr c))
-  (let ((erased ys) (erased v)) (skip-path d x y z w u p q p2 (Nil (Nat)) xs pa pm pw pz nwz up nx ny))
-  (path-graph-conn d x y p2 _ ys g2 v gr2))
-
 (def-fns _ $ (erased skip-conn-back : (erased (Nat) d x y z) (erased (List (Nat)) p p2) (erased (List (Bond)) g g2) (erased (Skip p z p2) sk)
     (erased (Graph d p g) gr) (erased (Graph d p2 g2) gr2) (erased (Conn g2 x y) c) -> (erased (Conn g x y) r))
   (let-match erased sk (SkipCut _ _ _ w u pw pz nwz up) ((SkipFixed _ _ _) (let-match erased (graph-fn d p g g2 gr gr2) (Refl _ _)) c))

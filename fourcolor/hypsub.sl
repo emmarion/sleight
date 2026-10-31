@@ -294,12 +294,6 @@
   (MkClassesOn g ids rs k lr (under-sub d rs ids (respects-under lab rs rs d fix ll) io) (fixed-pairsep g lab rs rs cl fix (sub-refl rs) dr)
     (rooted-covers g rs ids lab ro)))
 
-(def-fns _ $ (erased classes-of-co : (erased (List (Bond)) g) (erased (Nat) d k) (erased (List (Nat)) ids) (erased (ClassesOn g ids k) co) (erased (Iota d ids) io)
-    (erased (Below g d) bg) -> (erased (Classes g d k) r))
-  (let ((erased k2) (erased cs)) (classes-exists g d bg))
-  (let-match erased (co-unique g ids k k2 co (co-of-classes g d k2 ids cs io)) (Refl _ _))
-  cs)
-
 ; A set g never leaves holds every dart joined to one of its darts.
 (def-fns _ $ (erased shut-conn : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) sh) (erased (Below g d) bg)
     (erased (Conn g x y) c) (erased (In x s) ix) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (In y s) r))

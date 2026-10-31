@@ -908,15 +908,6 @@
   (many PK312 : -> (P132Comp (MkPerm (C3) (C1) (C2)) (MkPerm (C2) (C1) (C3))))
   (many PK321 : -> (P132Comp (MkPerm (C3) (C2) (C1)) (MkPerm (C2) (C3) (C1)))))
 
-(def-fns _ $ (erased p132-ex : (erased (Perm) g) (erased (IsPerm g) ip) -> (erased (Perm) h) (erased (P132Comp g h) pk) (erased (IsPerm h) ih))
-  (match erased ip _
-    ((IP123) (values (MkPerm (C1) (C3) (C2)) (PK123) (IP132)))
-    ((IP132) (values (MkPerm (C1) (C2) (C3)) (PK132) (IP123)))
-    ((IP213) (values (MkPerm (C3) (C1) (C2)) (PK213) (IP312)))
-    ((IP231) (values (MkPerm (C3) (C2) (C1)) (PK231) (IP321)))
-    ((IP312) (values (MkPerm (C2) (C1) (C3)) (PK312) (IP213)))
-    ((IP321) (values (MkPerm (C2) (C3) (C1)) (PK321) (IP231)))))
-
 (def-fns _ $ (erased permc-p132 : (erased (Perm) g h) (erased (Col) c d e) (erased (P132Comp g h) pk) (erased (PermC g c d) p) (erased (PermC p132 d e) q)
     -> (erased (PermC h c e) r))
   (match erased pk _

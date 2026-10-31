@@ -405,12 +405,6 @@
       (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere z ys1)))
       (InThere z y ys1 (remove-keep x z xs1 ys1 rm1 p1 ne)))))
 
-(def-fns _ $ (erased remove-in : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (In z ys) p)
-    -> (erased (In z xs) r))
-  (let-match erased rm (RmThere _ y xs1 ys1 rm1) ((RmHere _ _) (InThere z x ys p)))
-  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere z xs1)))
-  (InThere z y xs1 (remove-in x z xs1 ys1 rm1 p1)))
-
 (def-fns _ $ (erased notin-remove : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (NotIn z xs) p)
     -> (erased (NotIn z ys) r))
   (match erased rm _

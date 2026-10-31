@@ -472,17 +472,6 @@
     (spans-upd2-in d a u b v p p0 p2 g0 g2 (graph-fun d p2 g2 gr2) up up0 gr0)
     (below-upd2 d a u b v p q p2 g2 (graph-fun d p2 g2 gr2) up pm la lu lb lv)))
 
-(def-fns _ $ (erased classes-upd2-back : (erased (Nat) d k a u b v) (erased (List (Nat)) p q p0 p2) (erased (List (Bond)) g0 g2)
-    (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p0 g0) gr0) (erased (Graph d p2 g2) gr2)
-    (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
-    (erased (Classes g2 d k) cs) -> (erased (Classes (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)) d k) r))
-  (classes-equiv g2 _ d k cs
-    (spans-upd2-in d a u b v p p0 p2 g0 g2 (graph-fun d p2 g2 gr2) up up0 gr0)
-    (SpansCons g2 _ a u (conn-adj g2 a u (graph-adj d a u p2 g2 gr2 (upd2-a p p2 a u b v up)))
-      (SpansCons g2 _ b v (conn-adj g2 b v (graph-adj d b v p2 g2 gr2 (upd2-b p p2 a u b v up)))
-        (spans-upd2-out d a u b v p p0 p2 g0 g2 (graph-fun d p0 g0 gr0) up up0 gr2)))
-    (BelowCons _ a u d la lu (BelowCons _ b v d lb lv (below-upd2 d a a b b p q p0 g0 (graph-fun d p0 g0 gr0) up0 pm la la lb lb)))))
-
 ; Every bond of g has both ends in s or both outside it.
 (def-adts $ (Shut : ((List (Nat)) s) ((List (Bond)) g) -> Type)
   enum

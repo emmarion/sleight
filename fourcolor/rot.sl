@@ -156,23 +156,6 @@
       (let-match erased p (NotInCons _ _ _ dx p1))
       (DistCons x s3 (notin-snoc x d s1 s3 nx (apart-sym d x dx) sn1) (distinct-snoc d s1 s3 dist1 p1 sn1)))))
 
-(def-fns _ $ (erased in-snoc : (erased (Nat) x d) (erased (List (Nat)) s s2) (subterm erased (In x s) p) (erased (Snoc (Nat) s d s2) sn)
-    -> (erased (In x s2) r))
-  (let-match erased sn (SnocCons _ y _ s1 s3 sn1) (absurd (SnocNil _ _) p))
-  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere x s3)))
-  (InThere x y s3 (in-snoc x d s1 s3 p1 sn1)))
-
-(def-fns _ $ (erased in-snoc-new : (erased (Nat) d) (erased (List (Nat)) s s2) (subterm erased (Snoc (Nat) s d s2) sn) -> (erased (In d s2) r))
-  (match erased sn _
-    ((SnocNil _ _) (InHere d _))
-    ((SnocCons _ y _ s1 s3 sn1) (InThere d y s3 (in-snoc-new d s1 s3 sn1)))))
-
-; Everything in d :: s is in s with d appended.
-(def-fns _ $ (erased sub-rot : (erased (Nat) d) (erased (List (Nat)) s s2 m) (subterm erased (Sub m s) sb) (erased (Snoc (Nat) s d s2) sn)
-    -> (erased (Sub m s2) r))
-  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SubNil s2)))
-  (SubCons x m1 s2 (in-snoc x d s s2 p sn) (sub-rot d s s2 m1 sb1 sn)))
-
 ; A cyclic run r of xs, seen in its rotation fl: either fl is u ++ r ++ w, with w ++ u the rest of xs read from
 ; after r, or r = r1 ++ r2 wraps round the end of fl, with both parts non-empty.
 (def-adts $ (CycRun : (Type A) ((List A) fl) ((List A) r) ((List A) qp) -> Type)
@@ -315,12 +298,6 @@
   (let-match erased q (AllIsCons _ _ q1))
   (let ((erased qa) (erased qb)) (allis-app a1 b c1 u p1 q1))
   (values (AllIsCons u a1 qa) qb))
-
-(def-fns _ $ (erased in-app-l : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (In x a) q) ->
-    (erased (In x c) r))
-  (let-match erased p (LAppCons _ y a1 _ c1 p1) (absurd (LAppNil _ _) q))
-  (let-match erased q (InThere _ _ _ q1) ((InHere _ _) (InHere x c1)))
-  (InThere x y c1 (in-app-l x a1 b c1 p1 q1)))
 
 (def-fns _ $ (erased in-app-r : (erased (Nat) x) (erased (List (Nat)) a b c) (subterm erased (LApp (Nat) a b c) p) (erased (In x b) q) ->
     (erased (In x c) r))

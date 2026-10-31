@@ -106,15 +106,6 @@
   (values nf (MkPerm d e nf ids io le
     (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d kf (iota-length d ids io)) lf) kf)))
 
-(def-fns _ $ (erased colored-four : (erased (List (Nat)) ks e nd cs) (subterm erased (Colored ks e nd cs) c)
-    -> (erased (List (Nat)) ke) (erased (Respects ks nd cs) rn) (erased (Respects ks e ke) re) (erased (Differ ke cs) df)
-    (erased (Under cs 4) u))
-  (let-match erased c (ColoredCons _ e1 nd1 cs1 a b k k2 bound node edge differ c1)
-    ((ColoredNil _) (values (Nil _) (RespNil ks) (RespNil ks) (DifferNil) (UnderNil _))))
-  (let ((erased ke1) (erased rn1) (erased re1) (erased df1) (erased u1)) (colored-four ks e1 nd1 cs1 c1))
-  (values (Cons _ k2 ke1) (RespCons ks nd1 cs1 b k node rn1) (RespCons ks e1 ke1 a k2 edge re1)
-    (DifferCons ke1 cs1 k2 k (apart-sym k k2 differ) df1) (UnderCons cs1 k _ bound u1)))
-
 (def-fns _ $ (erased four-colored : (erased (List (Nat)) ks e nd cs ke) (subterm erased (Respects ks nd cs) rn) (erased (Respects ks e ke) re)
     (erased (Differ ke cs) df) (erased (Under cs 4) u) -> (erased (Colored ks e nd cs) c))
   (let-match erased rn (RespCons _ nd1 cs1 b k node rn1)
@@ -123,11 +114,6 @@
   (let-match erased re (RespCons _ e1 ke1 a k2 edge re1))
   (let-match erased u (UnderCons _ _ _ bound u1))
   (ColoredCons ks e1 nd1 cs1 a b k k2 bound node edge (apart-sym k2 k ne) (four-colored ks e1 nd1 cs1 ke1 rn1 re1 df1 u1)))
-
-; Colored of map.sl is a four-colouring of the hypermap with face nd.
-(def-fns _ $ (erased colored-coloring : (erased (List (Nat)) ks e nd) (erased (Colored ks e nd ks) c) -> (erased (FourColoring e nd ks) r))
-  (let ((erased ke) (erased rn) (erased re) (erased df) (erased u)) (colored-four ks e nd ks c))
-  (MkFourColoring e nd ks ke rn re df u))
 
 (def-fns _ $ (erased coloring-colored : (erased (List (Nat)) ks e nd) (erased (FourColoring e nd ks) c) -> (erased (Colored ks e nd ks) r))
   (let-match erased c (MkFourColoring _ _ _ ke rn re df u))
@@ -164,13 +150,6 @@
   (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) sh))
   (let-match erased sg (SpansCons _ _ x y cx sg1))
   (SpansCons k gh1 x y cx (spans-cat k g1 h gh1 c1 sg1 sh)))
-
-(def-fns _ $ (erased spans-sub-cat : (erased (List (Bond)) k g h gh) (subterm erased (Cat g h gh) c) (erased (Spans k gh) sp)
-    -> (erased (Spans k g) sg) (erased (Spans k h) sh))
-  (let-match erased c (CatCons g1 _ gh1 b c1) ((CatNil _) (values (SpansNil k) sp)))
-  (let-match erased sp (SpansCons _ _ x y cx sp1))
-  (let ((erased sg1) (erased sh1)) (spans-sub-cat k g1 h gh1 c1 sp1))
-  (values (SpansCons k g1 x y cx sg1) sh1))
 
 (def-fns _ $ (erased conn-lift-l : (erased (List (Bond)) g h gh) (erased (Nat) x y) (subterm erased (Conn g x y) cn) (erased (Cat g h gh) c)
     -> (erased (Conn gh x y) r))

@@ -1,7 +1,4 @@
 ; FourColor from an Analysis, through CubicReduction. Load after reduce3.sl and induct.sl.
-(def-adts $ (FourColorFrom : -> Type)
-  enum
-  (many MkFourColorFrom : (erased (Level) F) (erased (Fn F (erased (Analysis) an) -> (erased (FourColor) r)) fc) -> (FourColorFrom)))
 
 (def-fns _ $ (erased four-color-from : (erased (Analysis) an) -> (erased (FourColor) r))
   (let ((erased D) (erased col)) (four-color-induct an))

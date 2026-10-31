@@ -10,10 +10,6 @@
 (let ((erased native-queue-type)) (NativeQueue))
 (let ((many native-queue-0)) (MkNativeQueue (Nil _) (Nil _) (Nil _)))
 
-(def-fns _ $ (many nq-one : (many (Pos) here) (many (List $ Raw) rs) -> (many (Raw) r))
-  (let-match many rs (Cons _ r _) ((Nil _) (RawWild here)))
-  r)
-
 (def-fns _ $ (many nq-length : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n))
   (match many xs _ ((Nil _) (Zero)) ((Cons _ _ rest) (Succ $ notail $ nq-length A rest))))
 

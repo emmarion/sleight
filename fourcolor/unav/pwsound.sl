@@ -98,13 +98,6 @@
     ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHPos d z pos neg e n f ks drs ct o2 q lz ds lt ex (mem-ext q o o2 m x)))
     ((PHCut _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHCut d z pos neg e n f ks drs ct o2 q lz ds lt ex m))))
 
-(def-fns _ $ (erased preshit-map : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs o) (erased (PresHit d e n f ks drs (Nil (List (Sub))) o) h)
-    -> (erased (MapHit d e f ks o) r))
-  (match erased h _
-    ((PHMap _ _ _ _ _ _ _ _ mh) mh)
-    ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (MkMapHit d z e f ks q o lz m ex))
-    (absurd (PHCut _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) m)))
-
 (def-fns _
   ((erased pres-sound : (erased (Nat) d nhub) (erased (List (Nat)) e n f ks ws) (erased (List (List (Sub))) drs rt rs ct) (erased (Geo d e n f ks) g)
       (erased (OfSize nhub drs rs) sz) (erased (Iota d ws) iw) (erased (TgtAll e n f ks drs rt nhub ws) ta) (erased (Nat) y pos neg)

@@ -173,15 +173,6 @@
   (let ((erased s) (erased a)) (add c s1))
   (values s (SACons g xs1 x c s1 s pc k1 a)))
 
-(def-fns _ $ (erased fsum-exists : (erased (Nat) d x) (erased (List (Nat)) f fi g) (erased (HPerm d f fi) pf) (erased (Length (Nat) g d) lg)
-    (subterm erased (Nat) k) (erased (Lt x d) lx) -> (erased (Nat) s) (erased (FSum f g x k s) r))
-  (let-match erased k (Succ k1) ((Zero) (values (Zero) (FSZ f g x))))
-  (let ((erased y) (erased py) (erased ly)) (perm-nth d x f fi pf lx))
-  (let ((erased c) (erased pc)) (nth-exists _ g d x lg lx))
-  (let ((erased s1) (erased r1)) (fsum-exists d y f fi g pf lg k1 ly))
-  (let ((erased s) (erased a)) (add c s1))
-  (values s (FSS f g x y k1 c s1 s pc py r1 a)))
-
 ; Along a face, a list of ones sums to the number of darts.
 (def-fns _ $ (erased fsum-ones : (erased (Nat) d x k s) (erased (List (Nat)) f os) (erased (Repeat (Nat) d (Succ (Zero)) os) ro)
     (subterm erased (FSum f os x k s) p) -> (erased (Eq (Nat) k s) e))

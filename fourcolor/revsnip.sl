@@ -336,16 +336,6 @@
         (nth-lt-length _ n y d x pn ln)))))
     ((OrR _ _ o) o)))
 
-(def-fns _ $ (erased off-disk-node-inv : (erased (Nat) d x y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
-    (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (Nth (Nat) n y x) pn)
-    (erased (NotIn x hd) ox) -> (erased (NotIn y hd) res))
-  (let ((erased nf) (erased ni) (erased fi) (erased rnf) (erased pe) (erased pnn) (erased pf)) (hyper-core d e n f h))
-  (match erased (in-dec y hd) _
-    (absurd (OrL _ _ iy)
-      (apart-irrefl x (notin-in x x hd ox (ds-mem d x x0 e n f p hd zs h gen rg ur ds (disk-node d y x n ni f _ pnn (ds-in d y x0 e n f p hd zs h gen rg ur ds iy) pn)
-        (perm-val d y x n ni pnn pn)))))
-    ((OrR _ _ o) o)))
-
 ; With e x = w = n x1 and x, w off S: x is in diskN S when x1 is, and off it when x1 is.
 (def-fns _ $ (erased off-disk-face : (erased (Nat) d x x1 w x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (Nth (Nat) n x1 w) pn)

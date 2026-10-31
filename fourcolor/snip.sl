@@ -847,12 +847,6 @@
   (let ((erased p2) (erased r)) (setall-exists p1 Bs1 d k1 (setnth-length _ p a d b p1 sn lp) As1 ua1 la1 lb1))
   (values p2 (SACons p p1 As1 Bs1 p2 a b sn r)))
 
-(def-fns _ $ (erased setall-length : (erased (List (Nat)) p As Bs p2) (erased (Nat) d) (subterm erased (SetAll p As Bs p2) sa) (erased (Length (Nat) p d) lp)
-    -> (erased (Length (Nat) p2 d) r))
-  (match erased sa _
-    ((SANil _) lp)
-    ((SACons _ p1 As1 Bs1 _ a b sn sa1) (setall-length p1 As1 Bs1 p2 d sa1 (setnth-length _ p a d b p1 sn lp)))))
-
 (def-fns _ $ (erased setall-miss : (erased (List (Nat)) p As Bs p2) (erased (Nat) t v) (subterm erased (SetAll p As Bs p2) sa) (erased (NotIn t As) ot)
     (erased (Nth (Nat) p t v) pt) -> (erased (Nth (Nat) p2 t v) r))
   (let-match erased sa (SACons _ p1 As1 Bs1 _ a b sn sa1)
@@ -1077,11 +1071,6 @@
     -> (erased (Sub m r) res))
   (let-match erased sb (HSubCons x m1 _ ix sb1) ((HSubNil _) (HSubNil r)))
   (HSubCons x m1 r (match erased (revapp-out r (Nil _) RV x rv ix) _ ((OrL _ _ i) i) (absurd (OrR _ _ i) (match erased i _))) (revapp-sub r RV rv m1 sb1)))
-
-(def-fns _ $ (erased revapp-sup : (erased (List (Nat)) r RV) (erased (RevApp (Nat) r (Nil (Nat)) RV) rv) (subterm erased (List (Nat)) m) (erased (Sub m r) sb)
-    -> (erased (Sub m RV) res))
-  (let-match erased sb (HSubCons x m1 _ ix sb1) ((HSubNil _) (HSubNil RV)))
-  (HSubCons x m1 RV (revapp-in r (Nil _) RV x rv (OrL _ _ ix)) (revapp-sup r RV rv m1 sb1)))
 
 (def-fns _ $ (erased ring-hd : (erased (Nat) d y x0) (erased (List (Nat)) e n f p hd zs) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hd zs) ds) (erased (In y (Cons (Nat) x0 p)) iy)

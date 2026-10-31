@@ -601,11 +601,6 @@
   (let-match erased sp (MkSomePath _ _ ws _ _ pth))
   (HSubCons l la1 lb (in-map lab B lb b l ib rb (path-label f lab (Nil _) ws a b l pth (facelab-rf d f lab fl) pl)) (labs-in d f lab B la1 lb A1 fl fs1 ra1 rb)))
 
-(def-fns _ $ (erased within-under : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-    (subterm erased (List (Nat)) xs) (erased (Within xs as) w) -> (erased (Under xs dc) r))
-  (let-match erased w (WCons _ x xs1 ix w1) ((WNil _) (UnderNil dc)))
-  (UnderCons xs1 x dc (ker-lt dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix) (within-under dc dm ec nc fc ksc rc em nm fm ksm as hl en xs1 w1)))
-
 ; The image of a hom ring that does not close is a proper ring (hp_ok of embed_full).
 (def-fns _ $ (erased hom-proper : (erased (Nat) dc dm x z hx ez) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl fe lab p hp) (erased (TCx dc ec nc fc ksc rc dm em nm fm ksm as hl fe lab) cx)
     (erased (RPath ec fc x p z) rp) (erased (Within (Cons (Nat) x p) as) wp) (erased (Respects hl (Cons (Nat) x p) (Cons (Nat) hx hp)) rh) (erased (Ring em fm hx hp) rg)
