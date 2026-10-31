@@ -1,4 +1,4 @@
-; needs: ../std/macro ../std/list ../std/vec
+; needs: ../std/macro ../std/list ../std/immediate ../std/vec
 ; expect: (MkPair _ _ (Cons _ 4 $ Cons _ 4 $ Cons _ 4 $ Cons _ 4 $ Cons _ 8 $ Cons _ 8 $ Cons _ 8 $ Cons _ 8 $ Cons _ 16 $ Nil _) $ MkPair _ _ (MkU62 0 _) $ MkPair _ _ (MkU62 7 _) 32)
 (let ((erased lt7)) (lt-trans 7 u8-modulus u62-modulus (prove-literal-lt 7 u8-modulus) u8-below-u62))
 

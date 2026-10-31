@@ -69,10 +69,10 @@
   (let ((erased pi) (erased nui)) (rel-nth _ _ rel _ _ nx))
   (let ((erased pj) (erased nuj)) (rel-nth _ _ rel _ _ ny))
   (let ((erased us1) (unique a1) (erased t1))
-    (array-place-imm _ _ a i (MkCopy (U62) (MkU62 y pj)) _ nui (ImmCopy (U62) (ImmU62))))
+    (array-place-imm _ _ a i (MkCopy (U62) (MkU62 y pj)) _ nui (imm-of _ (ImmCopy _ (ImmU62)) _) (imm-of _ (ImmCopy _ (ImmU62)) _)))
   (let ((erased zs) (erased s1) (erased rel1)) (rel-set _ _ rel _ _ _ _ t1))
   (let ((erased us2) (unique a2) (erased t2))
-    (array-place-imm _ _ a1 j (MkCopy (U62) (MkU62 x pi)) _ (setnth-nth-gt _ _ _ _ _ _ _ t1 nuj ij) (ImmCopy (U62) (ImmU62))))
+    (array-place-imm _ _ a1 j (MkCopy (U62) (MkU62 x pi)) _ (setnth-nth-gt _ _ _ _ _ _ _ t1 nuj ij) (imm-of _ (ImmCopy _ (ImmU62)) _) (imm-of _ (ImmCopy _ (ImmU62)) _)))
   (let ((erased ys) (erased s2) (erased rel2)) (rel-set _ _ rel1 _ _ _ _ t2))
   (values ys us2 (MkSwap _ i j x y zs ys nx ny s1 s2) rel2
     (setnth-length _ _ _ _ _ _ s2 (setnth-length _ _ _ _ _ _ s1 len)) a2))
