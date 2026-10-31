@@ -1,7 +1,7 @@
 ; One native-compute for many checks. `(native-jobs name ev job ...)` queues jobs and the erased evidence `ev` built from
 ; their results; `(native-each name xs (x t r) T e pat step nil)` queues one job per element of the Settled list xs and
-; folds their evidence; `(native-run)` runs every queued job in one native-compute and binds each name. See PLAN.md's
-; native.sl entry. Load after std/macro.sl.
+; folds their evidence; `(native-then stmt ...)` queues statements to follow them; `(native-run)` runs every queued job
+; in one native-compute, then the rest in order. See PLAN.md's native.sl entry. Load after std/macro.sl.
 
 (def-adts $ (NativeQueue : -> Type)
   enum
@@ -115,23 +115,30 @@
   (let ((unique mw2) (many c2) (many env2)) (nq-pattern mw1 c env1))
   (values mw2 (Cons _ (RawList p $ Cons _ a $ Cons _ b $ Cons _ c2 $ Nil _) rest2) env2))
 
-(def-fns _ $ (many nq-queue : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (Raw) name ev) (many (List $ Raw) jobs) ->
+(def-fns _ $ (many nq-queue : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) defs binders thunks after) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many next) (many q)) (nq-read mw))
   (let-match many q (Some _ nq) ((None _) (macro-fail mw1 here "no `native-queue-0` in scope: load native.sl")))
   (let-match many nq (MkNativeQueue bs ts as))
-  (let ((unique mw2) (many defs) (many b1) (many t1) (many a1)) (nq-jobs mw1 here jobs))
-  (let ((unique mw3) (many ev2)) (nq-close mw2 ev))
-  (let ((many a2)) (raws-append a1 $ qq (let ((erased (~ name))) (~ ev2))))
-  (let ((unique mw4) (many h)) (mint-settled mw3 _ (settled-of erased native-queue-type)
-    (MkNativeQueue (raws-append bs b1) (raws-append ts t1) (raws-append as a2))))
-  (values mw4 $ raws-append defs $ qq (let ((many (~ next))) (~ (RawSettled here _ _ _ h)))))
+  (let ((unique mw2) (many h)) (mint-settled mw1 _ (settled-of erased native-queue-type)
+    (MkNativeQueue (raws-append bs binders) (raws-append ts thunks) (raws-append as after))))
+  (values mw2 $ raws-append defs $ qq (let ((many (~ next))) (~ (RawSettled here _ _ _ h)))))
+
+(def-fns _ $ (many nq-queue-jobs : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (Raw) name ev) (many (List $ Raw) jobs) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many defs) (many b1) (many t1) (many a1)) (nq-jobs mw here jobs))
+  (let ((unique mw2) (many ev2)) (nq-close mw1 ev))
+  (nq-queue mw2 here defs b1 t1 (raws-append a1 $ qq (let ((erased (~ name))) (~ ev2)))))
+
+(def-macro (native-then args here mw)
+  (let ((unique mw1) (many after)) (nq-closes mw args))
+  (nq-queue mw1 here (Nil _) (Nil _) (Nil _) after))
 
 (def-macro (native-jobs args here mw)
   (let-match many args (Cons _ name r1) ((Nil _) (macro-fail mw here "`native-jobs` takes a name, its evidence and jobs")))
   (let-match many r1 (Cons _ ev jobs) ((Nil _) (macro-fail mw here "`native-jobs` takes a name, its evidence and jobs")))
   (let ((unique mw1) (many jobs2) (many env)) (nq-patterns mw jobs (Nil _)))
-  (nq-queue mw1 here name (nq-subst env ev) jobs2))
+  (nq-queue-jobs mw1 here name (nq-subst env ev) jobs2))
 
 (def-fns _ $ (many nq-each : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (subterm many (Nat) n) (many (Raw) xs) (many (Symbol) x t r)
     (many (Raw) ty e pat step nil) -> (unique (MacroWorld) mw2 at mw) (many (List $ Raw) cms jobs) (many (Raw) ev))
@@ -168,7 +175,7 @@
   (let ((unique mw2) (many mn)) (arg-nat mw1 (RawSettled here _ _ _ c)))
   (let-match many mn (Some _ n) ((None _) (macro-fail mw2 here usage)))
   (let ((unique mw3) (many cms) (many jobs) (many ev)) (nq-each mw2 here n xs x t r ty e pat step nil))
-  (let ((unique mw4) (many out)) (nq-queue mw3 here name ev jobs))
+  (let ((unique mw4) (many out)) (nq-queue-jobs mw3 here name ev jobs))
   (values mw4 $ raws-append cms out))
 
 (def-macro (native-each args here mw)
