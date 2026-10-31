@@ -85,10 +85,9 @@
     (erased (RevApp (Gsym) pre w full) ra) -> (erased (Wit P full) r))
   (match erased mt _
     ((MPNil _)
-      (let-match erased a (AMEndOk _ _ _ _ _ w2 _ ra2 wt)
-        (absurd (AMEndBad _ _ _ _ _ eb) (endbad-bal d b eb g)))
-      (let-match erased (revapp-fn (Gsym) pre w full w2 ra ra2) (Refl _ _))
-      wt)
+      (match erased a _
+        ((AMEndOk _ _ _ _ _ w2 _ ra2 wt) (let-match erased (revapp-fn (Gsym) pre w full w2 ra ra2) (Refl _ _)) wt)
+        (absurd (AMEndBad _ _ _ _ _ eb) (endbad-bal d b eb g))))
     ((MPCons _ bs2 e s et1 w1 y mt1)
       (let ((erased ra1)) (RACons (Gsym) s pre w1 full ra))
       (match erased (sym-cls s bs bs2 e y) _
@@ -334,13 +333,14 @@
     ((GCCons _ _ n1 _ c0 c1 c2 c3)
       (let-match erased l (LengthCons _ s w1 _ l1))
       (let ((erased d2) (erased b2) (erased st) (erased g1)) (gbal-step d b s w1 g))
-      (let-match erased (match erased s (((GCovAt gs d b n1 s) k)) ((GPush) c0) ((GSkip) c1) ((GPop0) c2) ((GPop1) c3)) (GCAOk _ gs2 _ d3 _ _ b3 _ st2 p c4)
+      (match erased (match erased s (((GCovAt gs d b n1 s) k)) ((GPush) c0) ((GSkip) c1) ((GPop0) c2) ((GPop1) c3)) _
+        ((GCAOk _ gs2 _ d3 _ _ b3 _ st2 p c4)
+          (let ((erased e1) (erased e2)) (gstep-fn d d2 d3 b b2 b3 s st st2))
+          (let-match erased e1 (Refl _ _))
+          (let-match erased e2 (Refl _ _))
+          (GMCons gs gs2 s w1 p (gcov-mem gs2 d2 n1 b2 w1 c4 l1 g1)))
         (absurd (GCAPop0 _ _ _) st)
-        (absurd (GCAPop1 _ _ _) st))
-      (let ((erased e1) (erased e2)) (gstep-fn d d2 d3 b b2 b3 s st st2))
-      (let-match erased e1 (Refl _ _))
-      (let-match erased e2 (Refl _ _))
-      (GMCons gs gs2 s w1 p (gcov-mem gs2 d2 n1 b2 w1 c4 l1 g1)))))
+        (absurd (GCAPop1 _ _ _) st)))))
 
 (let ((erased RS)) (Rx (GSet)))
 
@@ -544,10 +544,9 @@
     ((MPCons _ bs2 e s et1 w1 _ m1) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ s w1 n1 (matchpg-length bs2 et1 w1 n1 m1 l1)))))
 
 (def-fns _ $ (erased revapp-exists : (erased Type A) (subterm erased (List A) pre) (erased (List A) w) -> (erased (List A) r) (erased (RevApp A pre w r) p))
-  (let-match erased pre (Cons _ s pre1)
-    ((Nil _) (values w (RANil A w))))
-  (let ((erased r) (erased p)) (revapp-exists A pre1 (Cons A s w)))
-  (values r (RACons A s pre1 w r p)))
+  (match erased pre _
+    ((Nil _) (values w (RANil A w)))
+    ((Cons _ s pre1) (let ((erased r) (erased p)) (revapp-exists A pre1 (Cons A s w))) (values r (RACons A s pre1 w r p)))))
 
 (def-fns _ $ (erased not-exists : (erased (Bool) b) -> (erased (Bool) c) (erased (Not b c) n))
   (match erased b _ ((BTrue) (values (BFalse) (NotT))) ((BFalse) (values (BTrue) (NotF)))))
@@ -652,18 +651,19 @@
 
 (def-fns _ $ (erased kv-even : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KV P h ctu gtr gtu) kv)
     (erased (List (Col)) et) (erased (CtMem ctu et) m) -> (erased (ERun (ESStart) et (BTrue)) r))
-  (let-match erased kv (KVRestr _ _ ctu0 _ gone gtr0 _ kv0 hc hk cr)
+  (match erased kv _
     ((KVBase _ _ _ _ ce _ _) (cev-mem ctu (ESStart) et ce m))
     ((KVSplit _ _ _ _ gtu0 _ _ kv0 _ _ _) (kv-even P h ctu (GEmpty) gtu0 kv0 et m))
-    (absurd (KVEmpty _ _ _ _ _) (mem-empty et m)))
-  (let ((erased len)) (mem-length (Succ h) ctu et hk m))
-  (let ((erased n) (erased s)) (sub-exists ctu0 et))
-  (let ((erased k) (erased c)) (rcnt-exists (Cons RG (MkRx (Gtree) (BS0) gtr0) (Nil RG)) et))
-  (let-match erased (cres-sub h ctu0 ctu gone _ et n k cr hc len s c) (MkKeepSub _ _ _ _ m2 o s2))
-  (let ((erased m1) (erased q)) (mem-sub ctu et m2 m s2))
-  (let-match erased q (Refl _ _))
-  (let-match erased (monus-pos n k m1 o) (LtZ n1))
-  (kv-even P h ctu0 gtr0 gtu kv0 et (MkCtMem ctu0 et n1 s)))
+    ((KVRestr _ _ ctu0 _ gone gtr0 _ kv0 hc hk cr)
+      (let ((erased len)) (mem-length (Succ h) ctu et hk m))
+      (let ((erased n) (erased s)) (sub-exists ctu0 et))
+      (let ((erased k) (erased c)) (rcnt-exists (Cons RG (MkRx (Gtree) (BS0) gtr0) (Nil RG)) et))
+      (let-match erased (cres-sub h ctu0 ctu gone _ et n k cr hc len s c) (MkKeepSub _ _ _ _ m2 o s2))
+      (let ((erased m1) (erased q)) (mem-sub ctu et m2 m s2))
+      (let-match erased q (Refl _ _))
+      (let-match erased (monus-pos n k m1 o) (LtZ n1))
+      (kv-even P h ctu0 gtr0 gtu kv0 et (MkCtMem ctu0 et n1 s)))
+    (absurd (KVEmpty _ _ _ _ _) (mem-empty et m))))
 
 (def-fns _ $ (erased kv-count : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KV P h ctu gtr gtu) kv)
     (erased (List (Col)) et) (erased (Nat) n a b) (erased (ERun (ESStart) et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len)
@@ -708,13 +708,15 @@
     (match erased kv _
       ((KVBase _ _ _ _ _ _ gc) (let-match erased ig (MkInitG _ _ l bl)) (InL _ _ (gcov-mem (GSG gtu) (Zero) (Succ h) (BFalse) w gc l bl)))
       ((KVSplit _ _ _ ctr gtu0 _ _ kv0 ck pt hs)
-        (let-match erased (kv-closed P h ctu (GEmpty) gtu0 kv0 w ig) (InL _ _ g0)
-          ((InR _ _ wt) (InR _ _ wt)))
-        (let-match erased (part-mem (GSG gtu0) (GSG gtr) (GSG gtu) w pt g0) (InL _ _ gh)
-          ((InR _ _ gm) (InL _ _ gm)))
-        (let-match erased (ghit-mem (GSG gtr) (Cons RC (MkRx (Ctree) (BS0) ctr) (Nil RC)) w hs gh) (MkHits _ _ bs t et el m mt))
-        (let-match erased el (ElHere _ _ _) (absurd (ElThere _ _ _ _ el2) el2))
-        (InR _ _ (MkWit P w et mt (ck-mem P h ctr ck et m))))
+        (match erased (kv-closed P h ctu (GEmpty) gtu0 kv0 w ig) _
+          ((InL _ _ g0)
+            (match erased (part-mem (GSG gtu0) (GSG gtr) (GSG gtu) w pt g0) _
+              ((InL _ _ gh)
+                (let-match erased (ghit-mem (GSG gtr) (Cons RC (MkRx (Ctree) (BS0) ctr) (Nil RC)) w hs gh) (MkHits _ _ bs t et el m mt))
+                (let-match erased el (ElHere _ _ _) (absurd (ElThere _ _ _ _ el2) el2))
+                (InR _ _ (MkWit P w et mt (ck-mem P h ctr ck et m))))
+              ((InR _ _ gm) (InL _ _ gm))))
+          ((InR _ _ wt) (InR _ _ wt))))
       ((KVRestr _ _ ctu0 _ _ gtr0 _ kv0 _ _ _) (kv-closed P h ctu0 gtr0 gtu kv0 w ig))
       ((KVEmpty _ _ ctu0 gtr0 kv0)
         (match erased (kv-closed P h ctu0 gtr0 (GEmpty) kv0 w ig) _
@@ -750,18 +752,24 @@
     (let-match erased kw (MkKVWrap _ _ _ _ _ kv0))
     (match erased et _
       ((Nil _)
-        (let-match erased (end-dec d b) (InL _ _ g)
-          ((InR _ _ eb) (AMEndBad P bs d b pre eb)))
-        (let ((erased w) (erased rw)) (revapp-exists (Gsym) pre (Nil _)))
-        (let ((erased mt)) (mpre-app (BS0) bs etc (Nil _) full pre (Nil _) w mp (MPNil bs) ra rw))
-        (let ((erased ig)) (MkInitG (Succ h) w (matchpg-length (BS0) full w (Succ h) mt len) (gpre-app (Zero) d (BFalse) b pre (Nil _) w gp g rw)))
-        (match erased (kv-closed P h ctu gtr gtu kv0 w ig) _
-          (absurd (InL _ _ gm) (mc-pos (GSG gtu) (BS0) full w (Zero) gm mt mz))
-          ((InR _ _ wt) (AMEndOk P bs d b pre w g rw wt))))
+        (match erased (end-dec d b) _
+          ((InR _ _ eb) (AMEndBad P bs d b pre eb))
+          ((InL _ _ g)
+            (let ((erased w) (erased rw)) (revapp-exists (Gsym) pre (Nil _)))
+            (let ((erased mt)) (mpre-app (BS0) bs etc (Nil _) full pre (Nil _) w mp (MPNil bs) ra rw))
+            (let ((erased ig)) (MkInitG (Succ h) w (matchpg-length (BS0) full w (Succ h) mt len) (gpre-app (Zero) d (BFalse) b pre (Nil _) w gp g rw)))
+            (match erased (kv-closed P h ctu gtr gtu kv0 w ig) _
+              (absurd (InL _ _ gm) (mc-pos (GSG gtu) (BS0) full w (Zero) gm mt mz))
+              ((InR _ _ wt) (AMEndOk P bs d b pre w g rw wt))))))
       ((Cons _ e et1)
         (let ((erased ra1)) (RACons (Col) e etc et1 full ra))
-        (let-match erased (col-kind e bs) (K1 _)
+        (match erased (col-kind e bs) _
           ((K0 _) (AM0 P bs d b et1 pre))
+          ((K1 _)
+            (let ((erased c) (erased n)) (not-exists b))
+            (AM1 P bs d b c et1 pre n
+              (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ (GSkip) pre) bs d c
+                (MPreCons (BS0) bs bs etc pre e (GSkip) mp (SSkip bs)) (GPreCons (Zero) d d (BFalse) b c pre (GSkip) gp (GStSkip d b c n)) ra1)))
           ((K23 _ _ bs1 y po)
             (AM23 P bs bs1 d b e et1 pre y
               (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ (GPush) pre) bs1 (Succ d) b
@@ -769,24 +777,21 @@
               (match erased po _
                 ((PNone _) (APNone P d b e et1 pre))
                 ((PSome _ b0 _ s pp z)
-                  (let-match erased d (Succ d1)
-                    ((Zero) (APZero P bs b e et1 pre)))
-                  (match erased s _
-                    ((GPop0)
-                      (APSome P bs b0 d1 b b s e et1 pre pp z (PPar0 b)
-                        (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ s pre) b0 d1 b
-                          (MPreCons (BS0) bs b0 etc pre e s mp z) (GPreCons (Zero) d d1 (BFalse) b b pre s gp (GStPop0 d1 b)) ra1)))
-                    ((GPop1)
-                      (let ((erased c) (erased n)) (not-exists b))
-                      (APSome P bs b0 d1 b c s e et1 pre pp z (PPar1 b c n)
-                        (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ s pre) b0 d1 c
-                          (MPreCons (BS0) bs b0 etc pre e s mp z) (GPreCons (Zero) d d1 (BFalse) b c pre s gp (GStPop1 d1 b c n)) ra1)))
-                    (absurd (GPush) (match erased z _ (absurd (SPush2 _) pp) (absurd (SPush3 _) pp)))
-                    (absurd (GSkip) (let-match erased z (SSkip _)) pp)))))))
-        (let ((erased c) (erased n)) (not-exists b))
-        (AM1 P bs d b c et1 pre n
-          (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ (GSkip) pre) bs d c
-            (MPreCons (BS0) bs bs etc pre e (GSkip) mp (SSkip bs)) (GPreCons (Zero) d d (BFalse) b c pre (GSkip) gp (GStSkip d b c n)) ra1))))))
+                  (match erased d _
+                    ((Zero) (APZero P bs b e et1 pre))
+                    ((Succ d1)
+                      (match erased s _
+                        ((GPop0)
+                          (APSome P bs b0 d1 b b s e et1 pre pp z (PPar0 b)
+                            (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ s pre) b0 d1 b
+                              (MPreCons (BS0) bs b0 etc pre e s mp z) (GPreCons (Zero) d d1 (BFalse) b b pre s gp (GStPop0 d1 b)) ra1)))
+                        ((GPop1)
+                          (let ((erased c) (erased n)) (not-exists b))
+                          (APSome P bs b0 d1 b c s e et1 pre pp z (PPar1 b c n)
+                            (am-build P h ctu gtr gtu kw et1 full len mz (Cons _ e etc) (Cons _ s pre) b0 d1 c
+                              (MPreCons (BS0) bs b0 etc pre e s mp z) (GPreCons (Zero) d d1 (BFalse) b c pre s gp (GStPop1 d1 b c n)) ra1)))
+                        (absurd (GPush) (match erased z _ (absurd (SPush2 _) pp) (absurd (SPush3 _) pp)))
+                        (absurd (GSkip) (let-match erased z (SSkip _)) pp)))))))))))))
 
 (def-fns _ $ (erased kempe-sound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (erased (KV P h ctu gtr gtu) kv)
     (erased (List (Col)) et) (erased (ERun (ESStart) et (BTrue)) ev) (erased (Length (Col) et (Succ h)) len) (erased (CtSub ctu et (Zero)) s) ->
@@ -948,23 +953,23 @@
           (ERCons (ESTail g2) (ESEven) c2 l3 (BTrue) (EStT2 g2 c2 r2) (run-even l3)))))))
 
 (def-fns _ $ (erased etrace-run : (erased (List (Col)) et et2) (erased (ETrace et et2) e) -> (erased (ERun (ESStart) et2 (BTrue)) r))
-  (let-match erased e (ETrOdd _ _ p pt)
-    ((ETrEven _ p) (even-run et (BTrue) p)))
-  (let ((erased run)) (even-run et (BFalse) p))
-  (let-match erased pt (PTCons _ c c2 l l2 q pt1) (absurd (PTNil _) (let-match erased run (ERNil _ _ x)) x))
-  (let-match erased run (ERCons _ st _ _ _ stp run1))
-  (match erased stp _
-    (absurd (EStS0) (erun-fn (ESEven) l (BTrue) (BFalse) (run-even l) run1))
-    ((EStS1) (let-match erased q (PC1 _ _ _)) (ERCons (ESStart) (ESTail p123) c2 l2 (BTrue) (EStS1) (flip-run p123 p123 l l2 (FP123) pt1 run1)))
-    ((EStS2) (let-match erased q (PC2 _ _ _)) (ERCons (ESStart) (ESTail p231) c2 l2 (BTrue) (EStS3) (flip-run p312 p231 l l2 (FP312) pt1 run1)))
-    ((EStS3) (let-match erased q (PC3 _ _ _)) (ERCons (ESStart) (ESTail p312) c2 l2 (BTrue) (EStS2) (flip-run p231 p312 l l2 (FP231) pt1 run1)))))
+  (match erased e _
+    ((ETrEven _ p) (even-run et (BTrue) p))
+    ((ETrOdd _ _ p pt)
+      (let ((erased run)) (even-run et (BFalse) p))
+      (let-match erased pt (PTCons _ c c2 l l2 q pt1) (absurd (PTNil _) (let-match erased run (ERNil _ _ x)) x))
+      (let-match erased run (ERCons _ st _ _ _ stp run1))
+      (match erased stp _
+        (absurd (EStS0) (erun-fn (ESEven) l (BTrue) (BFalse) (run-even l) run1))
+        ((EStS1) (let-match erased q (PC1 _ _ _)) (ERCons (ESStart) (ESTail p123) c2 l2 (BTrue) (EStS1) (flip-run p123 p123 l l2 (FP123) pt1 run1)))
+        ((EStS2) (let-match erased q (PC2 _ _ _)) (ERCons (ESStart) (ESTail p231) c2 l2 (BTrue) (EStS3) (flip-run p312 p231 l l2 (FP312) pt1 run1)))
+        ((EStS3) (let-match erased q (PC3 _ _ _)) (ERCons (ESStart) (ESTail p312) c2 l2 (BTrue) (EStS2) (flip-run p231 p312 l l2 (FP231) pt1 run1)))))))
 
 (def-fns _ $ (erased permt-length : (erased (Perm) g) (erased (List (Col)) et et2) (erased (Nat) n) (subterm erased (PermT g et et2) p)
     (erased (Length (Col) et n) l) -> (erased (Length (Col) et2 n) r))
-  (let-match erased p (PTCons _ c d et1 et3 _ p1)
-    ((PTNil _) l))
-  (let-match erased l (LengthCons _ _ _ n1 l1))
-  (LengthCons _ d et3 n1 (permt-length g et1 et3 n1 p1 l1)))
+  (match erased p _
+    ((PTNil _) l)
+    ((PTCons _ c d et1 et3 _ p1) (let-match erased l (LengthCons _ _ _ n1 l1)) (LengthCons _ d et3 n1 (permt-length g et1 et3 n1 p1 l1)))))
 
 ; Soundness half of Kempe_treeP of kempetree.v, on partial traces: a trace of length h + 1 whose even normal form has
 ; multiplicity zero in the Kempe tree is in the co-closure of P.

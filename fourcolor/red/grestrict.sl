@@ -190,18 +190,20 @@
 (def-fns _
   ((erased ghit-part : (erased (GSet) gs a) (erased (List RC) r) (subterm erased (GPart gs a (GSG (GEmpty))) p) (erased (GHit a r) h) ->
       (erased (GHit gs r) res))
-    (let-match erased p (GPS _ _ _ n x y rg ra rb s p0 p1 p2 p3)
-      ((GPE) (GHE r)))
-    (let-match erased rb (GRG _))
-    (let-match erased gs (GSOne)
-      ((GSG g)
-        (GHS g r (ghitat-part gs a r (GPush) p0 h) (ghitat-part gs a r (GSkip) p1 h) (ghitat-part gs a r (GPop0) p2 h)
-          (ghitat-part gs a r (GPop1) p3 h))))
-    (let-match erased rg (GROne))
-    (let-match erased (add-fn x (Zero) x (Succ (Zero)) (add-zero-right x) s) (Refl _ _))
-    (let-match erased ra (GROne))
-    (let-match erased h (GHOne _ hs))
-    (GHOne r hs))
+    (match erased p _
+      ((GPE) (GHE r))
+      ((GPS _ _ _ n x y rg ra rb s p0 p1 p2 p3)
+        (let-match erased rb (GRG _))
+        (match erased gs _
+          ((GSOne)
+            (let-match erased rg (GROne))
+            (let-match erased (add-fn x (Zero) x (Succ (Zero)) (add-zero-right x) s) (Refl _ _))
+            (let-match erased ra (GROne))
+            (let-match erased h (GHOne _ hs))
+            (GHOne r hs))
+          ((GSG g)
+            (GHS g r (ghitat-part gs a r (GPush) p0 h) (ghitat-part gs a r (GSkip) p1 h) (ghitat-part gs a r (GPop0) p2 h)
+              (ghitat-part gs a r (GPop1) p3 h)))))))
   ((erased ghitat-part : (erased (GSet) gs a) (erased (List RC) r) (erased (Gsym) s) (subterm erased (GPartAt gs a (GSG (GEmpty)) s) p)
       (erased (GHit a r) h) -> (erased (GHitAt gs r s) res))
     (let-match erased p (MkGPartAt _ _ _ g1 a1 b1 _ sg sa sb q))
@@ -227,11 +229,12 @@
 (def-fns _ $ (erased leaf-hit-at : (erased (Gtree) l) (erased (Bool) l0 l1 l2 l3 b) (erased (List RC) r) (erased (Gsym) s)
     (erased (LeafSet l (MkBits l0 l1 l2 l3)) ll) (erased (Pick4 (Bool) s l0 l1 l2 l3 b) pk) (erased (BitHits b r s) bh) ->
     (erased (GHitAt (GSG l) r s) res))
-  (let-match erased bh (BHT _ _ h)
+  (match erased bh _
+    ((BHT _ _ h)
+      (let ((erased r1) (erased j) (erased h1)) (hits-one r s h))
+      (MkGHitAt (GSG l) (GSOne) r r1 s (GSelL l l0 l1 l2 l3 b s (GSOne) ll pk (BSetT)) j (GHOne r1 h1)))
     ((BHF _ _)
-      (MkGHitAt (GSG l) (GSG (GEmpty)) r (Nil RC) s (GSelL l l0 l1 l2 l3 b s (GSG (GEmpty)) ll pk (BSetF)) (RJNil s r) (GHE (Nil RC)))))
-  (let ((erased r1) (erased j) (erased h1)) (hits-one r s h))
-  (MkGHitAt (GSG l) (GSOne) r r1 s (GSelL l l0 l1 l2 l3 b s (GSOne) ll pk (BSetT)) j (GHOne r1 h1)))
+      (MkGHitAt (GSG l) (GSG (GEmpty)) r (Nil RC) s (GSelL l l0 l1 l2 l3 b s (GSG (GEmpty)) ll pk (BSetF)) (RJNil s r) (GHE (Nil RC))))))
 
 (def-fns _ $ (erased leaf-hit : (erased (Gtree) l) (erased (Bool) l0 l1 l2 l3) (erased (List RC) r) (erased (LeafSet l (MkBits l0 l1 l2 l3)) ll)
     (erased (BitHits l0 r (GPush)) h0) (erased (BitHits l1 r (GSkip)) h1) (erased (BitHits l2 r (GPop0)) h2) (erased (BitHits l3 r (GPop1)) h3) ->

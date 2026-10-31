@@ -57,9 +57,9 @@
     ((GSG g) (values k (PCCons bs gs rest (Nil _) (Zero) k k (MCNil gs bs (Zero) (GRG g)) p (AddZero k))))))
 
 (def-fns _ $ (many rscons-c : (many (Bstack) bs) (many (GSet) gs) (many (List RS) a) -> (many (List RS) b) (erased (RSCons bs gs a b) p))
-  (let-match many gs (GSG g)
-    ((GSOne) (values (Cons _ (MkRx _ bs gs) a) (RSC bs gs a))))
-  (match many g _ ((GEmpty) (values a (RSE bs a))) (else (values (Cons _ (MkRx _ bs gs) a) (RSC bs gs a)))))
+  (match many gs _
+    ((GSG g) (match many g _ ((GEmpty) (values a (RSE bs a))) (else (values (Cons _ (MkRx _ bs gs) a) (RSC bs gs a)))))
+    ((GSOne) (values (Cons _ (MkRx _ bs gs) a) (RSC bs gs a)))))
 
 (def-fns _ $ (many pstep-c : (many (Bstack) bs) (many (GSet) gs) (many (Col) e) (many (List RS) a) ->
     (many (List RS) b) (erased (PStepE (MkRx (GSet) bs gs) e a b) p))

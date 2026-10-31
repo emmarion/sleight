@@ -158,22 +158,23 @@
 (def-fns _ $ (erased mt-unbot : (erased (Nat) n) (erased (List (Gsym)) w) (erased (Bstack) bs X X2) (erased (Bool) x) (erased (List (Col)) et)
     (erased (NoUnder n w) nu) (erased (Depth bs n) dp) (erased (Bot bs x X) p) (subterm erased (MatchTo X et w X2) m)
     -> (erased (Bstack) bs2) (erased (MatchTo bs et w bs2) r) (erased (Bot bs2 x X2) q))
-  (let-match erased m (MTCons _ X1 _ e s et1 w1 y m1)
-    ((MTNil _) (values bs (MTNil bs) p)))
-  (match erased nu _
-    ((NUPush _ _ nu1)
-      (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (UBPush bs)))
-      (let ((erased bs2) (erased r) (erased q)) (mt-unbot (Succ n) w1 bs1 X1 X2 x et1 nu1 (push-depth bs bs1 e n y1 dp) p1 m1))
-      (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))
-    ((NUSkip _ _ nu1)
-      (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (UBSkip bs)))
-      (let-match erased y1 (SSkip _))
-      (let ((erased bs2) (erased r) (erased q)) (mt-unbot n w1 bs1 X1 X2 x et1 nu1 dp p1 m1))
-      (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))
-    ((NUPop n1 _ t _ np nu1)
-      (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (depth-unbot s bs n1 dp)))
-      (let ((erased bs2) (erased r) (erased q)) (mt-unbot n1 w1 bs1 X1 X2 x et1 nu1 (pop-depth s t bs bs1 e n1 np y1 dp) p1 m1))
-      (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))))
+  (match erased m _
+    ((MTNil _) (values bs (MTNil bs) p))
+    ((MTCons _ X1 _ e s et1 w1 y m1)
+      (match erased nu _
+        ((NUPush _ _ nu1)
+          (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (UBPush bs)))
+          (let ((erased bs2) (erased r) (erased q)) (mt-unbot (Succ n) w1 bs1 X1 X2 x et1 nu1 (push-depth bs bs1 e n y1 dp) p1 m1))
+          (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))
+        ((NUSkip _ _ nu1)
+          (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (UBSkip bs)))
+          (let-match erased y1 (SSkip _))
+          (let ((erased bs2) (erased r) (erased q)) (mt-unbot n w1 bs1 X1 X2 x et1 nu1 dp p1 m1))
+          (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))
+        ((NUPop n1 _ t _ np nu1)
+          (let ((erased bs1) (erased y1) (erased p1)) (sym-unbot s X X1 bs e x y p (depth-unbot s bs n1 dp)))
+          (let ((erased bs2) (erased r) (erased q)) (mt-unbot n1 w1 bs1 X1 X2 x et1 nu1 (pop-depth s t bs bs1 e n1 np y1 dp) p1 m1))
+          (values bs2 (MTCons bs bs1 bs2 e s et1 w1 y1 r) q))))))
 
 ; Gonthier's gram_balanced d b w, by the steps GStep of red/kempe.sl.
 (def-adts $ (Bal : ((Nat) d) ((Bool) b) ((List (Gsym)) w) -> Type)
@@ -240,16 +241,12 @@
   (match erased s _
     ((GPush) (let ((erased w2) (erased p)) (gneg-exists (Succ n) w1)) (values (Cons _ (GPush) w2) (GNPush n w1 w2 p)))
     ((GSkip) (let ((erased w2) (erased p)) (gneg-exists n w1)) (values (Cons _ (GSkip) w2) (GNSkip n w1 w2 p)))
-    ((GPop0)
-      (let-match erased n (Succ n1)
-        ((Zero) (values (Cons _ (GPop1) w1) (GNHere (GPop0) (GPop1) w1 (NP01)))))
-      (let ((erased w2) (erased p)) (gneg-exists n1 w1))
-      (values (Cons _ (GPop0) w2) (GNPop n1 (GPop0) (GPop1) w1 w2 (NP01) p)))
-    ((GPop1)
-      (let-match erased n (Succ n1)
-        ((Zero) (values (Cons _ (GPop0) w1) (GNHere (GPop1) (GPop0) w1 (NP10)))))
-      (let ((erased w2) (erased p)) (gneg-exists n1 w1))
-      (values (Cons _ (GPop1) w2) (GNPop n1 (GPop1) (GPop0) w1 w2 (NP10) p)))))
+    ((GPop0) (match erased n _
+      ((Zero) (values (Cons _ (GPop1) w1) (GNHere (GPop0) (GPop1) w1 (NP01))))
+      ((Succ n1) (let ((erased w2) (erased p)) (gneg-exists n1 w1)) (values (Cons _ (GPop0) w2) (GNPop n1 (GPop0) (GPop1) w1 w2 (NP01) p)))))
+    ((GPop1) (match erased n _
+      ((Zero) (values (Cons _ (GPop0) w1) (GNHere (GPop1) (GPop0) w1 (NP10))))
+      ((Succ n1) (let ((erased w2) (erased p)) (gneg-exists n1 w1)) (values (Cons _ (GPop1) w2) (GNPop n1 (GPop1) (GPop0) w1 w2 (NP10) p)))))))
 
 (def-fns _ $ (erased gneg-sym : (erased (Nat) n) (erased (List (Gsym)) w w2) (subterm erased (GNeg n w w2) g) -> (erased (GNeg n w2 w) r))
   (match erased g _
@@ -319,11 +316,9 @@
     ((GPop0) (match erased n _
       ((Zero) (let ((erased w2) (erased p)) (gneg-exists (Zero) w1)) (values (Cons _ (GPush) w2) (FlHere0 w1 w2 p)))
       ((Succ n1) (let ((erased w2) (erased p)) (flip-exists n1 w1)) (values (Cons _ (GPop0) w2) (FlPop n1 (GPop0) (GPop1) w1 w2 (NP01) p)))))
-    ((GPop1)
-      (let-match erased n (Succ n1)
-        ((Zero) (values (Cons _ (GPush) w1) (FlHere1 w1))))
-      (let ((erased w2) (erased p)) (flip-exists n1 w1))
-      (values (Cons _ (GPop1) w2) (FlPop n1 (GPop1) (GPop0) w1 w2 (NP10) p)))))
+    ((GPop1) (match erased n _
+      ((Zero) (values (Cons _ (GPush) w1) (FlHere1 w1)))
+      ((Succ n1) (let ((erased w2) (erased p)) (flip-exists n1 w1)) (values (Cons _ (GPop1) w2) (FlPop n1 (GPop1) (GPop0) w1 w2 (NP10) p)))))))
 
 ; The stack bs with the two bits x then y added at the bottom.
 (def-adts $ (Bot2 : ((Bstack) bs) ((Bool) x y) ((Bstack) bs2) -> Type)
