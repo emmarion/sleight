@@ -1,4 +1,4 @@
-#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../self -f bb5 -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_SLC_TIMEOUT=300 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_INLINE=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl bb5/defs.sl bb5/spec.sl"
+#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../self -f bb5 -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_SLC_TIMEOUT=300 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_INLINE=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl bb5/defs.sl bb5/spec.sl"
 Your task is to prove in Sleight that the fifth busy beaver number is
 47,176,870, against the goal in bb5/spec.sl. Or: to lay the groundwork for a
 future session to do so. This task will likely take many sessions, so leaving
@@ -16,18 +16,18 @@ halts in more. bb5/spec.sl sets the goal `(BusyBeaver 5 47176870)`.
 bb5/bb2.sl, bb5/bb3.sl and bb5/bb4.sl set the goals for 2, 3 and 4 states,
 whose values are 6, 21 and 107. They are steps along the way, not the task.
 Compiling one of them with `sl`, after std/nat.sl, std/list.sl, std/macro.sl,
-std/tactics.sl and bb5/defs.sl and before your files, checks a `qed` against
+std/tactics.sl, std/immediate.sl and bb5/defs.sl and before your files, checks a `qed` against
 its goal.
 
 To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
-std/tactics.sl, bb5/defs.sl, bb5/spec.sl, then your files, one of them proving
+std/tactics.sl, std/immediate.sl, bb5/defs.sl, bb5/spec.sl, then your files, one of them proving
 the goal with `(qed e)`. The finished proof must compile with no warnings, and
 none of your files may contain a `;! suppress`; intermediate work may have both.
 
 For reference: MANUAL.md (the implementations and their command lines),
 WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
 prelude.sl (the standard library), std/ (source libraries, among them
-std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
+std/nat.sl, which holds `NatLe`, and std/list.sl, lemmas about `Length`, `Nth`,
 `SetNth` and `Repeat`), tests/ (example programs), and self/ (the compiler,
 itself written in Sleight).
 

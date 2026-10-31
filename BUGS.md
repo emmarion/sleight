@@ -20,7 +20,7 @@ is a design decision. Remove an entry when it is fixed.
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
     Audit 2026-10-07 A2 and A3 (`audit/2026-10-07-audit.md` and its
-    reproducers under `audit/2026-10-07/`, as of `aa84d4e`) are two
+    reproducers under `audit/2026-10-07/`, in the tree at `aa84d4e`) are two
     instances. A survey of
     `self/eval.sl` and `self/heap.sl` at `f9d57e1` (read from the code;
     beyond A2/A3, none of the cases below was reproduced) found the
@@ -33,7 +33,7 @@ is a design decision. Remove an entry when it is fixed.
       `BError` ("out of fuel") rather than `REmpty` or `Nil`. With that,
       A2's and A3's reproducers match the reference under `--interpret`
       and compiled, under `ulimit -s unlimited` (at the default 8 MB
-      stack, `slc` overflows on them before and after, as in 11); no test
+      stack, `slc` overflows on them before and after); no test
       was added yet. That the count suffices on an acyclic heap is an
       informal pigeonhole argument, not a proof. Nothing at the meta
       level excludes a cycle (`store-write` stores a body over the whole

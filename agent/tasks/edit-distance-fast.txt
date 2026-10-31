@@ -1,4 +1,4 @@
-#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../heapsort/flat -f heapsort-fast -f ../../self -f edit-distance-fast -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_INLINE=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl edit-distance-fast/spec.sl"
+#!pi -f ../../std -f ../../MANUAL.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../heapsort/flat -f heapsort-fast -f ../../self -f edit-distance-fast -c work -w scratch -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=60 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1 PI_INLINE=1 PI_WARN_UNUSED=1 PI_CHECK="std/nat.sl std/list.sl std/macro.sl std/tactics.sl std/immediate.sl edit-distance-fast/spec.sl"
 Your task is to write a fast function in Sleight that computes the edit
 distance between two strings, certified correct against the goal in
 edit-distance-fast/spec.sl. Or: to lay the groundwork for a future session to
@@ -15,7 +15,7 @@ with an erased proof that their length is below `max-array-length`, and
 returns the distance with its `Dist` proof.
 
 To check your work, call `check` with std/nat.sl, std/list.sl, std/macro.sl,
-std/tactics.sl, edit-distance-fast/spec.sl, then your files, one of them
+std/tactics.sl, std/immediate.sl, edit-distance-fast/spec.sl, then your files, one of them
 proving the goal with `(qed e)`. To time it, compile the same files followed by
 edit-distance-fast/perf.sl with `sl`; perf.sl calls your `edit-distance-fast`.
 The finished solution must compile with no warnings, and none of your files may
@@ -28,7 +28,7 @@ measurements show no gain.
 For reference: MANUAL.md (the implementations and their command lines),
 WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
 prelude.sl (the standard library), std/ (source libraries, among them
-std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
+std/nat.sl, which holds `NatLe`, and std/list.sl, lemmas about `Length`, `Nth`,
 `SetNth` and `Repeat`), tests/ (example programs), flat/ (a fast heap sort
 certified against heapsort-fast/spec.sl; flat/README.md describes it), and
 self/ (the compiler, itself written in Sleight).

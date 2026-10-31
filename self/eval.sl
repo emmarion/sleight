@@ -1147,7 +1147,7 @@
   (let-match many (sp-eq prim $ SpExpr $ ExInternString) (BFalse) ((BTrue) (Ok _ $ RString p $ heap-str _ hp a)))
   (Fail _ none))
 
-; ---- Literals (ASSUMPTIONS 51-53, 60): numerals, characters and strings, interned per program into the heap
+; ---- Literals (DESIGN.md section 45, ASSUMPTIONS 51, 60): numerals, characters and strings, interned per program into the heap
 ; a run threads, so that a macro's intern- form mints them where it runs
 
 (def-fns _ $ (many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Nat) x))

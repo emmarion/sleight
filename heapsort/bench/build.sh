@@ -13,7 +13,7 @@ done
 (cd ../.. && sh self/release.sh >/dev/null &&
   for p in agent/solutions/heapsort-fast/opus agent/solutions/heapsort-fast/mimo heapsort/flat; do
     d=${p##*/} std="std/nat.sl std/list.sl std/immediate.sl"; [ $d = flat ] && std="$std std/macro.sl std/tactics.sl"
-    _build/release/slc --no-shape-note $std $T/spec.sl $(cat $p/files.txt) $T/accept.sl $T/perf.sl > "$B/sl_$d.ml"
+    _build/release/slc --no-shape-note $std $T/spec.sl $(cat $p/files.txt) $T/perf.sl > "$B/sl_$d.ml"
   done)
 { sed -n '/^let sift/,/^  done$/p' ../heapsort.ml; cat ml_main.ml; } > "$B/ml.ml"
 oc() { (cd "$B" && $OC "$@"); }

@@ -2090,7 +2090,7 @@
           ((BTrue) (values ew1 env3 ctx $ SNone _))
           ((BFalse) (values ew1 env3 (Cons _ (Cons _ x $ Nil _) c2) $ SSeq _ _ _ pre $ SLet _ (Cons _ (Many) $ Nil _) (Cons _ x $ Nil _) (PkMany _ (Nil _) x (Nil _) $ PkNil _) $ runtime-one _ mult code))))))
 
-  ; let-match (section 27, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
+  ; let-match (section 27, ASSUMPTIONS 100): the sole unrefuted constructor binds outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
   ((many elab-let-match : (unique (ElabWorld) ew) (subterm many (Nat) fuel) (subterm erased (Nat) callbacks) (subterm erased hop-8 is _) (subterm many (Nat) sugar) (subterm many (List $ Syn) args) (many (Env) env-in) (many (List $ List $ Nat) ctx) (many (Multiplicity) spos) -> (unique (ElabWorld) ewr at ew) (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let ((unique ew1) (many envs) (many sx) (many hd)) $ notail $ splice-tail fuel callbacks _ ew env-in 3 args)
