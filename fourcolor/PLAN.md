@@ -748,7 +748,7 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   `embed4.sl`). In single measurements on a 4-core cloud VM, which
   should be read as approximate: the compiled run of all 633
   configurations took about 9.5 s on one core before `Tab`, and on the
-  last 33 configurations 0.52 s before and 0.22 s after; compiling the
+  last 133 configurations 4.2 s before and 1.3 s after; compiling the
   generated OCaml (about 7.8 MB, nearly all of it the embedded
   configurations, with about 90 KB of functions) took far longer than
   the run, about 1460 s on a loaded machine. On a 4-core cloud VM `--goal proved` passed in about
