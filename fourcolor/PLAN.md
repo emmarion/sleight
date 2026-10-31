@@ -1155,11 +1155,11 @@ in place of `fourcolor/reduce3-goal.sl` (a few seconds each).
   takes at most about 10 s by that measure; any sizes give a correct proof, only the
   balance depends on them. Run outside `native-compute`, as separate
   processes one at a time on a 4-core cloud VM shared with other runs,
-  the 100 pieces took about 665 s of user CPU in one run, against about
-  800 s in a run side by side with it of the code before the `RxL`
-  lists, the skipped stores and `dfs-c` (about 770 and 795 s in two more
-  runs of that code; ring-14 configurations about 470 s against about
-  565 s). In earlier runs, that code took about 705 to 730 s, and, in
+  the 100 pieces took about 630 and 665 s of user CPU in two runs,
+  against about 800 s in a run side by side with the second of the code
+  before the `RxL` lists, the skipped stores and `dfs-c` (about 770 and
+  795 s in two more runs of that code; ring-14 configurations about 435
+  and 470 s against about 545 to 565 s). In earlier runs, that code took about 705 to 730 s, and, in
   one run each, about 625 s with `OCAMLRUNPARAM=o=400` (which the jobs
   of `native-compute` appear to inherit with the rest of slc's
   environment) and about 640 s with the program compiled with
