@@ -508,6 +508,45 @@
 ; kernel darts (unknown, not central, central) that applies node-rule, splits on a dart, or closes with a cut of the kernel
 ; faces whose crossing darts are all not central, found by a flood fill over the other kernel edges.
 
+(def-adts $ (CopyL : ((List (Nat)) xs) ((List (Copy (Nat))) ws) -> Type)
+  enum
+  (many CpNil : -> (CopyL (Nil (Nat)) (Nil (Copy (Nat)))))
+  (many CpCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) p)
+      -> (CopyL (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) ws))))
+
+; xs as an array, for lookups in constant time.
+(def-adts $ (Tab : ((List (Nat)) xs) -> Type)
+  enum
+  (many MkTab : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) cp) (many (Nat) len)
+      (erased (Length (Nat) xs len) l) (many (Array (Copy (Nat)) ws) a) -> (Tab xs)))
+
+(def-fns _ $ (many copy-c : (subterm many (List (Nat)) xs) -> (many (List (Copy (Nat))) ws) (many (Nat) len) (erased (CopyL xs ws) p)
+    (erased (Length (Nat) xs len) l))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (Zero) (CpNil) (LengthNil _))))
+  (let ((many ws) (many n) (erased p) (erased l)) (notail $ copy-c rest))
+  (values (Cons _ (MkCopy _ x) ws) (Succ n) (CpCons x rest ws p) (LengthCons _ x rest n l)))
+
+(def-fns _ $ (many tab-c : (many (List (Nat)) xs) -> (many (Tab xs) t))
+  (let ((many ws) (many n) (erased p) (erased l)) (copy-c xs))
+  (MkTab xs ws p n l (share (list-to-array _ ws))))
+
+(def-fns _ $ (erased copy-nth : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (Nat) i x) (subterm erased (CopyL xs ws) p)
+    (erased (Nth (Nat) xs i x) q) -> (erased (Nth (Copy (Nat)) ws i (MkCopy (Nat) x)) r))
+  (let-match erased p (CpCons y xs1 ws1 p1) (absurd (CpNil) q))
+  (match erased q _
+    ((NthHere _ _ _) (NthHere _ (MkCopy (Nat) x) ws1))
+    ((NthThere _ _ _ i1 _ q1) (NthThere _ (MkCopy (Nat) y) ws1 i1 (MkCopy (Nat) x) (copy-nth xs1 ws1 i1 x p1 q1)))))
+
+(def-fns _ $ (many tab-q : (erased (List (Nat)) xs) (many (Tab xs) t) (many (Nat) i) -> (many (NthQ (Nat) xs i) r))
+  (let-match many t (MkTab _ ws cp n l a))
+  (let-match many (lt-dec i n) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (NQNo _ xs i)))
+  (let ((erased x) (erased q)) (nth-exists _ xs n i l lt))
+  (let-match many (array-get-many _ _ a i _ (copy-nth xs ws i x cp q)) (MkCopy _ y))
+  (NQYes _ xs i y q))
+
+(def-fns _ $ (many tab-at : (erased (List (Nat)) xs) (many (Tab xs) t) (many (Nat) i) -> (many (Nat) r))
+  (match many (tab-q xs t i) _ ((NQYes _ _ _ y _) y) ((NQNo _ _ _) (Zero))))
+
 (def-adts $ (KerOK : ((List (Nat)) f r as xs) -> Type)
   enum
   (many MkKerOK : (erased (List (Nat)) f r as xs) (erased (KerAll f r as) ka) (erased (KerCover f r as xs) kv) -> (KerOK f r as xs)))
