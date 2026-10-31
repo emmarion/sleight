@@ -13,7 +13,9 @@
        -> (Vec--Spare A (Cons (MaybeUninit (USlotItem A)) (Vacant (USlotItem A) vacant-slot) us)))
     (many Vec--SpareStale : (erased Type A) (erased (Slot) s) (erased (USlotItem A) w) (erased (Placed s (USlotItem A) w) q)
        (erased (List (MaybeUninit (USlotItem A))) us) (erased (Vec--Spare A us) p)
-       -> (Vec--Spare A (Cons (MaybeUninit (USlotItem A)) (Stale (USlotItem A) s w q) us)))))
+       -> (Vec--Spare A (Cons (MaybeUninit (USlotItem A)) (Stale (USlotItem A) s w q) us)))
+    (many Vec--SpareInit : (erased Type A) (erased (USlotItem A) w) (erased (List (MaybeUninit (USlotItem A))) us) (erased (Vec--Spare A us) p)
+       -> (Vec--Spare A (Cons (MaybeUninit (USlotItem A)) (Init (USlotItem A) w) us)))))
 
 (def-adts
   ((Vec--Filled : (Type A) ((List A) xs) ((List (MaybeUninit (USlotItem A))) ms) -> Type)
@@ -50,6 +52,14 @@
   (many MkVecLent : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased (Slot) s)
      (erased (List (MaybeUninit (USlotItem A))) ms) (erased (Nat) n)
      (erased (Length A xs n) l) (unique (Vec--Hdr A ms n) h) (erased (Vec--Lent A xs i s ms) r) -> (VecLent A xs i s)))
+
+(def-adts
+  ((Take : (Type A) ((Nat) n) ((List A) xs) ((List A) ys) -> Type)
+    enum
+    (many TakeZero : (erased Type A) (erased (List A) xs) -> (Take A (Zero) xs (Nil A)))
+    (many TakeNil : (erased Type A) (erased (Nat) n) -> (Take A (Succ n) (Nil A) (Nil A)))
+    (many TakeCons : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs ys) (erased (Take A n xs ys) p)
+       -> (Take A (Succ n) (Cons A x xs) (Cons A x ys)))))
 
 (def-adts
   ((VecPop : (Type A) ((List A) xs) ((List A) ys) -> Type)
@@ -131,7 +141,8 @@
     (erased (Vec--Spare A (Cons (MaybeUninit (USlotItem A)) m us)) sp) -> (erased (Vec--Spare A us) sp1))
   (match erased sp _
     ((Vec--SpareVacant _ _ sp1) sp1)
-    ((Vec--SpareStale _ _ _ _ _ sp1) sp1)))
+    ((Vec--SpareStale _ _ _ _ _ sp1) sp1)
+    ((Vec--SpareInit _ _ _ sp1) sp1)))
 
 (def-fns _ $ (erased vec--filled-le : (erased Type A) (erased (List A) xs) (erased (List (MaybeUninit (USlotItem A))) ms)
     (erased (Nat) n c) (subterm erased (Vec--Filled A xs ms) f) (erased (Length A xs n) l) (erased (Length _ ms c) lc) ->
@@ -455,23 +466,11 @@
     (erased (List A) ys) (unique (VecPop A xs ys) r) (unique (Vec A ys) w at v))
   (let-match unique v (MkVec _ _ _ _ l h f))
   (let-match unique h (Vec--MkHdr _ _ len buf u))
-  (let ((erased c) (erased lc) (many d) (unique buf1)) (array-length-dec _ _ buf))
-  (match many d _
-    ((Yes _ _ _ _ cq)
-      (let ((erased ql)) (lt-le-trans len (Succ c) u62-modulus (vec--filled-le _ _ _ len c f l lc)
-                           (LtS c u62-modulus (lt-trans c array-limit u62-modulus cq array-limit-below-u62))))
-      (let-match many (u62-eq len (Zero) ql u62-modulus-pos) (Unequal _ _ _ _ ap)
-        ((Equal _ _ _) (let-match erased l (LengthNil _)) (values (Nil A) (PopEmpty _) (MkVec _ _ _ _ l (at unique (u _ _ len buf1)) f))))
-      (let-match erased ap (ApGt _ _ _ _ z) (absurd (ApLt _ _ _ _ z) z))
-      (let-match erased z (LtZ k))
-      (let ((erased ys) (erased _) (erased sn) (erased _) (erased _)) (vec--snoc-last _ _ k l))
-      (let ((unique y) (unique w)) (vec-pop-last _ _ _ _ sn (MkVec _ _ _ _ l (at unique (u _ _ len buf1)) f)))
-      (values ys (Popped _ _ _ y sn) w))
-    ((No _ _ _ _ _)
-      (let-match many len (Succ k) ((Zero) (let-match erased l (LengthNil _)) (values (Nil A) (PopEmpty _) (MkVec _ _ _ _ l (at unique (u _ _ len buf1)) f))))
-      (let ((erased ys) (erased _) (erased sn) (erased _) (erased _)) (vec--snoc-last _ _ k l))
-      (let ((unique y) (unique w)) (vec-pop-last _ _ _ _ sn (MkVec _ _ _ _ l (at unique (u _ _ len buf1)) f)))
-      (values ys (Popped _ _ _ y sn) w))))
+  (let-match many (nat-zero-dec len) (IsSucc k)
+    ((IsZero) (let-match erased l (LengthNil _)) (values (Nil A) (PopEmpty _) (MkVec _ _ _ _ l (at unique (u _ _ len buf)) f))))
+  (let ((erased ys) (erased _) (erased sn) (erased _) (erased _)) (vec--snoc-last _ _ k l))
+  (let ((unique y) (unique w)) (vec-pop-last _ _ _ _ sn (MkVec _ _ _ _ l (at unique (u _ _ len buf)) f)))
+  (values ys (Popped _ _ _ y sn) w))
 
 (def-fns _ $ (many vec-get-many : (erased Type A) (erased (List A) xs) (many (Vec A xs) v) (many (Nat) i)
     (erased A x) (erased (Nth A xs i x) nth) -> (many x is y))
@@ -522,3 +521,51 @@
   (let ((erased ys) (erased p) (erased f2)) (vec--unlent _ _ _ _ ms ms2 y pl r set))
   (values ys (MkVec _ _ _ _ (setnth-length _ _ _ _ _ _ p l) (at unique (u _ _ len buf2)) f2) p))
 
+
+(def-fns _ $ (many vec-get : (erased Type A) (erased (List (Copy A)) xs) (unique (Vec (Copy A) xs) v) (many (Nat) i)
+    (erased A x) (erased (Nth (Copy A) xs i (MkCopy A x)) nth) -> (many x is y) (unique (Vec (Copy A) xs) w at v))
+  (let ((unique c) (unique lent)) (vec-pluck _ _ v i _ nth))
+  (let-match unique c (MkCopy _ y))
+  (let ((erased _) (unique w) (erased sp)) (vec-unpluck _ _ i (MkCopy _ y) lent))
+  (let-match erased (setnth-same _ _ _ _ _ nth sp) (Refl _ _))
+  (values y w))
+
+(def-fns _ $ (erased vec--filled-spare : (erased Type A) (erased (List A) xs) (erased (List (MaybeUninit (USlotItem A))) ms)
+    (subterm erased (Vec--Filled A xs ms) f) -> (erased (Vec--Spare A ms) sp))
+  (let-match erased f (Vec--FilledCons _ s x pl xs1 ms1 f1) ((Vec--FilledSpare _ _ sp) sp))
+  (Vec--SpareInit _ (MkUSlotItem A s x pl) ms1 (vec--filled-spare _ xs1 ms1 f1)))
+
+(def-fns _ $ (erased vec--filled-take : (erased Type A) (erased (Nat) n) (erased (List A) xs ys) (erased (List (MaybeUninit (USlotItem A))) ms)
+    (subterm erased (Take A n xs ys) tk) (erased (Vec--Filled A xs ms) f) -> (erased (Vec--Filled A ys ms) f2))
+  (let-match erased tk (TakeCons _ n1 x xs1 ys1 tk1)
+    ((TakeZero _ _) (Vec--FilledSpare _ ms (vec--filled-spare _ _ _ f)))
+    ((TakeNil _ _) f))
+  (let-match erased f (Vec--FilledCons _ s _ pl _ ms1 f1))
+  (Vec--FilledCons _ s x pl ys1 ms1 (vec--filled-take _ n1 xs1 ys1 ms1 tk1 f1)))
+
+(def-fns _ $ (erased vec--take-short : (erased Type A) (erased (List A) xs) (erased (Nat) len) (subterm erased (Nat) n)
+    (erased (Length A xs len) l) (erased (Lt n (Succ len)) le) -> (erased (List A) ys) (erased (Take A n xs ys) tk) (erased (Length A ys n) ln))
+  (let-match erased n (Succ n1) ((Zero) (values (Nil A) (TakeZero _ xs) (LengthNil _))))
+  (let-match erased le (LtS _ _ le1))
+  (let-match erased l (LengthCons _ x xs1 len1 l1) (absurd (LengthNil _) le1))
+  (let ((erased ys1) (erased tk1) (erased ln1)) (vec--take-short _ xs1 len1 n1 l1 le1))
+  (values (Cons A x ys1) (TakeCons _ n1 x xs1 ys1 tk1) (LengthCons _ x ys1 n1 ln1)))
+
+(def-fns _ $ (erased vec--take-all : (erased Type A) (erased (List A) xs) (erased (Nat) len n)
+    (subterm erased (Length A xs len) l) (erased (Lt len (Succ n)) le) -> (erased (Take A n xs xs) tk))
+  (let-match erased l (LengthCons _ x xs1 len1 l1)
+    ((LengthNil _) (match erased n _ ((Zero) (TakeZero _ (Nil A))) ((Succ n1) (TakeNil _ n1)))))
+  (let-match erased le (LtS _ _ le1))
+  (match erased le1 _
+    ((LtZ n1) (TakeCons _ n1 x xs1 xs1 (vec--take-all _ xs1 len1 n1 l1 le1)))
+    ((LtS _ n1 _) (TakeCons _ n1 x xs1 xs1 (vec--take-all _ xs1 len1 n1 l1 le1)))))
+
+(def-fns _ $ (many vec-truncate : (erased Type A) (erased (List A) xs) (unique (Vec A xs) v) (many (Nat) n) ->
+    (erased (List A) ys) (unique (Vec A ys) w at v) (erased (Take A n xs ys) p))
+  (let-match unique v (MkVec _ _ _ _ l h f))
+  (let-match unique h (Vec--MkHdr _ _ len buf u))
+  (let-match many (nat-cmp n len) (CLt _ _ _ _ lt)
+    ((CEq _ _ _) (values xs (MkVec _ _ _ _ l (at unique (u _ _ len buf)) f) (vec--take-all _ _ _ _ l (lt-succ len))))
+    ((CGt _ _ _ _ gt) (values xs (MkVec _ _ _ _ l (at unique (u _ _ len buf)) f) (vec--take-all _ _ _ _ l (lt-weaken len n gt)))))
+  (let ((erased ys) (erased tk) (erased ln)) (vec--take-short _ _ _ n l (lt-weaken n len lt)))
+  (values ys (MkVec _ _ _ _ ln (u _ _ n (at) buf) (vec--filled-take _ _ _ _ _ tk f)) tk))
