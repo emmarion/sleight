@@ -1,0 +1,2 @@
+#!pi -f ../refs/fourcolor-rocq
+fourcolor-rocq/ is a Rocq proof of the four colour theorem.

@@ -1,1 +1,2 @@
 Coq-BB5 https://github.com/ccz181078/Coq-BB5 9142e219229baf2245d3f70851947230ea28a318
+fourcolor-rocq https://github.com/math-comp/fourcolor c1d6b1cd5288bea4b067aac13cdde3c18dffe018
