@@ -211,3 +211,35 @@ references are to DESIGN.md.
     that reading. Any form tying call results to the function called
     would then make it unsound, as would one proving two functions
     distinct.
+
+## Readings the implementations chose
+
+40. Should a call's same-level test read the current level canonically
+    or literally (§9, §19)? Both compilers read it canonically
+    (ASSUMPTIONS 75), so a self-call in a branch that equates the
+    enclosing function's level with an older one is still same-level
+    and needs its `(subterm p)`. Read literally, the branch keeps its
+    recursion as a lower-level call. The choice changes which programs
+    are accepted.
+41. The `newtype` and `extern` marks being structural (§24, §37), an
+    unmarked `(Matchable enum T ...)` literal does not accept an extern
+    type's Matchable, and no signature abstracts over the marks. Should
+    one be able to?
+42. `coercible-wrap (Unique)` over a `many`-labelled field is Shared to
+    Unique (§34 as written), so a live `many` value yields any number of
+    `unique` aliases of its newtype wrapper. Is that intended? Nothing
+    found can exploit it, the wrapper having no cell.
+43. Should a value's rendering reading back as the same value (§45) be
+    a test of its own? `tests/literal_print.sl` already checks it for
+    the three literal types.
+44. Should `dump-context` (ASSUMPTIONS 196) list the prelude's entries
+    on request as a whole rather than one by one? And should the facts
+    an enclosing match's branch forces be shown apart from the entries'
+    rules, where they appear only as `xs is (Cons A hd tl)` on the
+    scrutinee's own line?
+45. When forcing gives an atom a rule, should the atom's type then be
+    unified with the type of the term it rewrites to (§7), as `mini/`'s
+    `UAssign` does (mini/README.md)? `lib/` and `self/` assign with no
+    type check, and unify signatures only where both atoms' types are
+    formers. Whether, under §11's rule, the added equation can ever
+    change an outcome is also open.

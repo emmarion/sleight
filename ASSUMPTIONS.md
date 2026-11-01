@@ -108,8 +108,8 @@ ground.
 
 ## Programs (section 27)
 
-Asked for by the owner in chat: an ADT read by the driver, "quasi
-monad", efficient, able to read a whole file by name, write a whole
+`Program` is an ADT read by the driver, "quasi monad", efficient, able
+to read a whole file by name, write a whole
 string to a file, write to stdout or stderr with a flush, read a line
 from stdin, read the command-line arguments and exit with a code, kept
 alongside the `String -> String` form as an optional alternative.
@@ -146,12 +146,11 @@ alongside the `String -> String` form as an optional alternative.
 
 ## OCaml extraction (extract.ml)
 
-Written by a session working autonomously at the owner's request, in
-chat: extraction "in the sense of Coq's extraction", with compile-time
-computation embedded in the extracted OCaml as its result rather than
-recomputed, since compile-time calculation is meant as a performance
-construct (the owner's words, paraphrased). Everything below is that
-session's reading; the representation choices in particular are
+Extraction is "in the sense of Coq's extraction": compile-time
+computation is embedded in the extracted OCaml as its result rather
+than recomputed, compile-time calculation being a performance
+construct. Everything below is the reading of the session that wrote
+it; the representation choices in particular are
 Claude's and may be wrong, though `dune test` checks them on every test
 that runs, in each of its modes.
 
@@ -328,7 +327,7 @@ A session asked to look for bugs, soundness ones especially, probed the
 checker and the compiled-code path. As elsewhere in this file, each
 item is the implementation's reading offered as a candidate question,
 not a settled decision, unless it says otherwise; item 75 in particular
-changes which programs are accepted and wants the owner's word. Where a
+changes which programs are accepted (OPEN.md 40). Where a
 claim could be checked by compiling (CLAUDE.md rule 2) it was.
 
 74. **A renaming `let` that is resolved away is substituted into nested
@@ -370,9 +369,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     accepted call rather than a live loop. Read canonically, the call
     is same-level and demands the `(subterm p)` it cannot supply
     (`tests/level_alias_bad.sl`, `tests/level_alias_predates_bad.sl`).
-    Open for the owner: this is a reading that alters which programs
-    are accepted, and the alternative is reading the current level
-    literally, so that the branch keeps its recursion.
+    OPEN.md 40 asks which reading is wanted.
 
 77. **An erased `def-fns` leaves nothing in the post-erasure code.** A
     `def-fns` under a function body or match branch compiles to a
@@ -887,8 +884,7 @@ session's.
      special-cases the name to pass a view of the `Rope` type
      (`Extract.fn`). slc's `base.sl` uses the prelude's `Rope`,
      `rope-str` delegates to `flatten`, and `main.sl` writes its output
-     as one string. `RChar`, a character leaf (the owner's question, the
-     session's yes), is what anything built character by character
+     as one string. `RChar`, a character leaf, is what anything built character by character
      uses: slc's tokenizer accumulates a pragma's words as ropes of
      `RChar`s and flattens each once, and `base.sl`'s `sanitize` builds
      ropes the same way. slc's compile-time
@@ -1129,9 +1125,8 @@ of that agreement and of what the code does.
      `CConst` the code names has a Settled entry when it runs and is
      emitted. The generated printer's memo keys a type with a wildcard
      for variables minted during printing (`OpWild`).
-132. **`sub`, `mul`, `div` and `divmod` are extern over `Nat`** (the owner asked
-     for the low-hanging Nat arithmetic; the shapes below are the
-     session's, chosen to mirror `add` and `nat-mod`, and open to
+132. **`sub`, `mul`, `div` and `divmod` are extern over `Nat`** (the shapes
+     below are the session's, chosen to mirror `add` and `nat-mod`, and open to
      change). `Mul` is in the shape of `Add` (`MulZero`, `MulSucc`
      through an `Add` of the partial product and `b`). `sub` returns
      the difference with an erased `Add b c a`, so no new relation is
@@ -1196,8 +1191,7 @@ of that agreement and of what the code does.
      interpreter by a dune rule and in `slc` through `lib/embed.sl`,
      one text parsed by both, though only the reference checks it.
 134. **The driver converts a `String` held as the FFI's slice to and from
-     the host's string directly** (the owner's request, after a
-     performance audit). `Driver_core.make` takes optional
+     the host's string directly**. `Driver_core.make` takes optional
      `str_of_host` and `str_to_slice` (beside `nat_to_z` and `nat_of_z`); `lib/program.ml` supplies them
      when `String` is the FFI's slice, `lib/extract.ml` emits them when
      `String` extracts as an extern, and `self/emit.sl` always does,
@@ -1280,8 +1274,7 @@ session's reading, with the tests as the evidence.
 
 ## More requests (section 27)
 
-Asked for by the owner in chat: environment variables in Java's two
-shapes, appending to a file, reading what is left of stdin, listing a
+The requests below cover environment variables in Java's two shapes, appending to a file, reading what is left of stdin, listing a
 directory in Java's shape, the working directory, one query for what a
 path holds, `MkDir` and the two deletes. The owner chose the general
 `Pair`, sorted listings, the `world` for the environment and the
@@ -1376,23 +1369,6 @@ call sites; the rest below is the session's.
      bucket, so extracting such a value appears quadratic in its depth.
      A deeper hash would not help the second, the suffixes of such a
      value differing only in length.
-
-149. **Forcing a rule onto an atom then unifies the atom's type with its
-     term's.** The owner's decision, in chat, for the minimal language
-     (`mini/unify.sl`'s `UAssign`): without it an atom of a former's
-     type could be given a term of another type and a later telescope
-     would have no type for an `is` entry mentioning it
-     (`tests/mini_untyped_rule.sl`; that program is also refused by
-     section 11's rule). Whenever forcing gives an atom a rule, the atom's type
-     is then unified with the type of the term it rewrites to, as the
-     next equation; an atom aliased to another is the case of this that
-     section 7's signature check covers, and the type equation a branch
-     entry forces (section 7) follows from the scrutinee's, so
-     `mini/`'s `Refine` forces the one. `lib/` and `self/` assign with
-     no type check, and unify signatures only where both atoms' types
-     are formers (section 7); whether they should follow, and whether
-     under section 11's rule the added equation can ever change an outcome, are
-     open, in the session's reading.
 
 150. **The compile-time interpreter reaches a call in tail position by a
      tail call.** At the owner's request, who asked that `slc`'s
@@ -1523,11 +1499,7 @@ The shapes and the messages below are the session's.
      own stderr, on the refused path as well as the compiled one.
      `tests/phantom_warn.sl` warns and then compiles and runs.
 
-156. **Uniqueness implementation scope and working conventions (Codex/Astra).**
-     The owner allows restructuring the self-hosted heap and staged
-     restoration of erased proof invariants, while preferring the compiler to
-     continue exemplifying checked correctness through dependent proofs.
-
+156. **How uses are recorded.**
      Uses are recorded against the binder as written, never its canonical
      value. In a computed `share` argument, the uses needed to compute that
      expression retain their own multiplicities. Erased and unreachable
@@ -1622,7 +1594,7 @@ The shapes and the messages below are the session's.
     these structural guarantees. The diagnostic printer reads current bodies
     and bounds recursive traversal at depth 100000.
 
-172. The owner's approved narrow repair of the computed-head erased probe
+172. The narrow repair of the computed-head erased probe
     introduces a callable-head demand: elaborate the expression once in its
     actual context, taking unique demand for a Cell or UniqueFn and many for
     an ordinary callable. A match's result annotation determines its head
@@ -1630,8 +1602,7 @@ The shapes and the messages below are the session's.
     propagate that demand. Ordinary fixed expectations, including contextual
     erasure, retain their modes. No discarded elaboration, global-state
     rollback, or warning suppression is needed. This is the narrow repair
-    only; whole-body phase separation remains required follow-up work, as
-    recorded in 180.
+    only; whole-body phase separation remains required follow-up work, as recorded in BUGS 23.
 
 173. Ordinary unions use one-constructor native variants, one shape per payload
     arity, rather than a separate raw-array representation. Since union matching
@@ -1654,40 +1625,13 @@ The shapes and the messages below are the session's.
     well as direct cell/array cycles. The self extractor separates
     skeletons, definitions and fills.
 
-180. **Required follow-up: separate whole-body typing from multiplicity
-    calculation and checking.** The owner approved finishing the narrow
-    computed-head repair, while explicitly requiring this broader approach
-    later. Elaborate a whole function body into a typed representation that
-    retains written labels, match modes, erased expressions, source locations,
-    branch/refutation information and capture scopes. A later pass should
-    calculate demands and validate uses, captures, returns and word availability
-    before erasure and runtime-code construction. This appears compatible with
-    the language: already-known head types can direct a recursive demand walk,
-    without re-elaborating source in a different context. Run-position statements
-    still need checking before execution. The current repair does not implement
-    that separation; its demand mode is an interim elaborator interface.
-
 181. Self's indexed ExprDemand and DemandBridge retain the distinction between
     a head's one physical word and its semantic many/unique demand.
 
-183. **Questions left for the owner**, none decided here:
-    - The `newtype` and `extern` marks being structural (sections 24 and 37),
-      an unmarked `(Matchable enum T ...)` literal does not accept an extern
-      type's Matchable, and no signature abstracts over the marks.
-    - `coercible-wrap (Unique)` over a many-labelled field is Shared to
-      Unique (section 34 as written), so a live many value yields any number of
-      unique aliases of its newtype wrapper; nothing found can exploit it,
-      the wrapper having no cell.
-
-184. **What a value prints as** (DESIGN.md section 45). Not decided, and
-    left open by the owner: whether a rendering's reading back as the same
-    value becomes a test of its own, which `tests/literal_print.sl` already
-    does for the three literal types.
-
 ## slc's interpret mode (sections 27, 32)
 
-The owner asked for an interpret option for `slc` in place of emitting
-OCaml. The shapes below are the session's, made without the owner.
+`slc --interpret` runs a program in place of emitting OCaml. The shapes
+below are the session's.
 
 187. **A run may update a Settled the extractor then embeds.**
     With a continuation owning a top-level unique Settled, the run
@@ -1883,12 +1827,12 @@ OCaml. The shapes below are the session's, made without the owner.
 
 ## `dump-context`
 
-The owner asked for a special form that, applied, errors out and dumps
+`dump-context` is a special form that, applied, errors out and dumps
 what would help the programmer -- the variables in scope with their
 canonicalized types and `is` rules, their declared multiplicities and,
 for a unique one, whether it is consumed or shared yet, the at table,
 the goal, and whatever else is useful. Every shape below is the
-session's, made without the owner.
+session's.
 
 196. **What `dump-context` is and what it reports.** `(dump-context)`,
     or `(dump-context e ...)`, is refused as an error: its first line is
@@ -1956,11 +1900,7 @@ session's, made without the owner.
     from its own environment; the messages `slc` writes after the report
     are its usual cascade, the reference stopping at the first error.
 
-    Not decided here, and open for the owner: whether the report should
-    also list the prelude's entries on request as a whole rather than one
-    by one; and whether the branch-forced facts of an enclosing match
-    should be shown apart from the entries' rules, where they appear only
-    as `xs is (Cons A hd tl)` on the scrutinee's own line.
+    OPEN.md 44 asks two questions about what it reports.
 
 197. **How `slc` budgets a `let-match` rewritten to a `match` (DESIGN.md
     section 52).** `slc` gets there through its budget of sugar

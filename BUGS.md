@@ -126,3 +126,17 @@ is a design decision. Remove an entry when it is fixed.
     committed) left the time exponential in `fold_vars` and `unify`, so
     a fix probably has to make every term walk sharing-aware, in both
     compilers.
+
+23. **Whole-body typing is not separated from multiplicity checking.**
+    The narrow repair of ASSUMPTIONS 172 gives the elaborator a demand
+    mode, an interim interface; the owner asked for the broader shape
+    as a required follow-up. That shape: elaborate a whole function body
+    into a typed representation that keeps written labels, match modes,
+    erased expressions, source locations, branch and refutation
+    information and capture scopes, then calculate demands and validate
+    uses, captures, returns and word availability in a later pass,
+    before erasure and runtime-code construction. This appears
+    compatible with the language: already-known head types can direct a
+    recursive demand walk, without re-elaborating source in a different
+    context. Run-position statements still need checking before
+    execution.
