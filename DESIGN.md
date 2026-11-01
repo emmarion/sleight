@@ -496,7 +496,8 @@ multiplicity is that of the position.
 
 Every binder declares a multiplicity: `erased`, `many` or `unique`.
 `erased` is Idris 2's multiplicity 0 and `many` is its ω, written as
-words (§1). There is no default: wherever the multiplicity is a
+words (§1). `unique` is in the spirit of Clean's uniqueness, but
+attached to binders rather than to types (below). There is no default: wherever the multiplicity is a
 choice, it is written, which cuts down on mistakes while the design is
 in flux.
 
