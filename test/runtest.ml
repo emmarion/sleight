@@ -20,6 +20,7 @@
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run, and
    "; externs: none" with the models alone;
+   a test that reaches a `native-compute` runs again under --no-native, unless it says "; native: only";
    "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;
    "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself;
    "; goal: mode" runs it under --goal mode, extracting nothing when the mode is open or proved;
@@ -79,7 +80,16 @@ let rec run_test name =
   if List.exists (fun f -> not (List.mem f (Program.valued @ Program.switches))) flags then None else
   let modes = [ (true, "with externs"); (false, "without externs") ] in
   let modes = match directive src "externs" with [ "only" ] -> [ List.hd modes ] | [ "none" ] -> List.tl modes | _ -> modes in
-  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src flags)) modes
+  let natives = if directive src "native" = [ "only" ] then [ (true, "") ] else [ (true, ""); (false, " under --no-native") ] in
+  let run (externs, mode) (compiled, how) =
+    if compiled then Elab.native_reached := false;
+    if compiled || !Elab.native_reached then (
+      Value.use_externs := externs;
+      Elab.compiled_native := compiled;
+      Option.map (fun m -> mode ^ how ^ ": " ^ m) (run_mode name externs src flags))
+    else None
+  in
+  List.find_map (fun m -> List.find_map (run m) natives) modes
 
 and run_mode name externs src flags =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
@@ -129,7 +139,7 @@ and run_mode name externs src flags =
         Fun.protect ~finally:(fun () -> Env.warn := Buffer.add_string warnings) (fun () -> one env n)
       in
       Env.warn_unused := false;
-      let env = List.fold_left need (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
+      let env = List.fold_left need (if externs && prelude && !Elab.compiled_native then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
       Env.warn_unused := directive src "warn-unused" <> [ "no" ];
       Env.fn_same := directive src "fn-same" = [ "yes" ];
       Buffer.clear printed;

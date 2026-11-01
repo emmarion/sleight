@@ -555,6 +555,8 @@ let source_dir f = match String.rindex_opt f '/' with None -> "." | Some 0 -> "/
 let gensyms = ref 0
 let on_run : (Env.t -> unit) ref = ref ignore
 let native : (Env.t -> (V.value * V.adt) list -> ((int, string) result list, string) result) ref = ref (fun _ _ -> Stdlib.Error "no compiler is linked in")
+let compiled_native = ref true
+let native_reached = ref false
 let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.PlaceAt; Sp.PlaceAtMany; Sp.UnplaceAt; Sp.UnplaceAtMany; Sp.PlacedSlot; Sp.PlacedEq; Sp.SlotEq ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
 let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString; Sp.MintSettled; Sp.MintSettledErased; Sp.SlotEq ]
@@ -1696,6 +1698,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (env, [ { (res_of env x) with place = Some (slot_of Prelude.null) } ], V.CVar Prelude.null)
   | Sp.NativeCompute, fs ->
       if not env.run_pos then error_in env l "`native-compute` is confined to run position";
+      native_reached := true;
       count_check ?sink l expect fs;
       if expect = [] || List.exists (( <> ) Many) expect then error_in env l "`native-compute` produces its results at `many`";
       let head env f =
@@ -1730,7 +1733,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
               | Ok i -> error_in env (loc f) "`native-compute`: the compiled function answered discriminant %d, which %s does not have" i (qname env tid)
               | Stdlib.Error msg -> error_in env (loc f) "`native-compute`: %s" msg in
             let tele = Option.map (fun e -> [ { e with sg = map_sg (instantiate (List.map (fun r -> r.term) ress)) e.sg } ]) e in
-            let env, rs, code = elab_call ~run V.Plain env ?tele [ Many ] l (loc f) (describe env Many f h.term (canon env h.ty)) h hcode lv [] [ ret ] [] in
+            let run = if !compiled_native then Some run else None in
+            let env, rs, code = elab_call ?run V.Plain env ?tele [ Many ] l (loc f) (describe env Many f h.term (canon env h.ty)) h hcode lv [] [ ret ] [] in
             (env, rs @ ress, code :: codes))
           (env, [], []) (List.mapi (fun i h -> (i, h)) heads) (match tele with Some t -> List.map Option.some t | None -> List.map (fun _ -> None) heads)
       in

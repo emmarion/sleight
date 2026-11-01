@@ -5,3 +5,4 @@
 (def-fns _ $ (many fine : -> (many (B) r)) (T))
 (def-fns _ $ (many huge : -> (many (B) r)) (let ((erased _) (unique _) (erased _)) (array-new (Nat) 1152921504606846976)) (T))
 (let ((many a) (many b) (many c)) (native-compute fine huge fine))
+; native: only

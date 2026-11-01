@@ -74,7 +74,7 @@ let explain path = function
   | _ -> None
 
 let valued = [ "--extract"; "--build"; "--confine-read"; "--confine-write"; "--comptime-unconfine"; "--confine-output-bytes"; "--hints"; "--eval-fuel"; "--inline"; "--goal" ]
-let switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same"; "--byte" ]
+let switches = [ "--repl"; "--no-extern"; "--no-native"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-exec"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused"; "--fn-same"; "--byte" ]
 
 let goal_refusal mode flags =
   if mode = Elab.Unrequired then None
