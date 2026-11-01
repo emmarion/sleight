@@ -1,9 +1,10 @@
 # Implementation assumptions log
 
 A log of the assumptions the implementations (the reference in `lib/`
-and `bin/`, and `slc` in `self/`) make where DESIGN.md is silent, ambiguous, or where the
-implementation takes a shortcut. Written by a Claude session working
-autonomously at the owner's request; nothing here is a design decision.
+and `bin/`, and `slc` in `self/`) make where DESIGN.md is silent,
+ambiguous, or where the implementation takes a shortcut. Written by
+Claude sessions; nothing here is a design decision, and decisions the
+owner made about the implementations are in DECISIONS.md.
 Every item is a candidate question for the owner, and the owner's answer
 may well be different from what the code does. Numbers in
 SPEC-REVIEW.md are cited as `SR n` where an item there covers the same
@@ -173,8 +174,7 @@ that runs, in each of its modes.
     holds them (`Eval.close`), and that is the only cycle among values:
     a closure captures only what existed when its group closed, and a
     constant built later may hold a closure but is never captured by
-    it (the owner's observation, checked against `Eval.close` and
-    `elab_def_fns`). So the closures sharing an environment are written
+    it (checked against `Eval.close` and `elab_def_fns`). So the closures sharing an environment are written
     as one `let rec ... and ...`, and every other constant is a named
     `let` in dependency order, which is mint order
     (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). Sharing
@@ -223,8 +223,7 @@ that runs, in each of its modes.
     exhaustiveness checker accepts the match without the refuted arms
     and emits no default; an `else` stays as `_` under that type. The
     interpreter still raises on a reached absurd, extraction being the
-    path that trusts the checker (the owner's reading: interpretation
-    is the checked path, extraction is opted into for speed). The copy
+    path that trusts the checker (DECISIONS 1). The copy
     keeps every constructor at its arity, which is what keeps its
     representation the base type's. A wide shape (62) has no copy,
     since its constructors with fields share one OCaml constructor that
@@ -306,8 +305,7 @@ that runs, in each of its modes.
     being typed.
 ## Fixes from a bug-hunting session
 
-A session asked to look for bugs, soundness ones especially, reported
-its findings in chat, and the owner picked which to fix.
+A session asked to look for bugs, soundness ones especially, reported its findings in chat.
 
 72. **A `let` that returns exactly what it binds is replaced by its
     right-hand side.** `check_marks` normalizes the code to read the
@@ -382,8 +380,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     way of section 19's `delegate`, whose check reads the post-erasure
     code and wants the body to reduce to the marked call alone.
     Believed conservative, the dropped closures having no reachable
-    use. The owner asked for the same reading to be applied to a
-    nested `def-adts`'s *phantom* constructors, erased entries by
+    use. The same reading applies to a nested `def-adts`'s *phantom* constructors (DECISIONS 2), erased entries by
     section 21 and equally unreachable, so the `CLet` that statement
     emits carries only the non-phantom ones.
     `tests/delegate_erased_inner.sl` covers both statements inside a
@@ -391,8 +388,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
 
 ## A match reads its Matchable, not its constructors
 
-The owner's decisions on what a match reads are in DESIGN.md §§8, 24
-and 33; item 83 records how the prototype compiles a match.
+What a match reads is in DESIGN.md §§8, 24 and 33; item 83 records how the prototype compiles a match.
 
 83. **What a match compiles to.** The post-erasure form of a match is
     its scrutinee, one branch per real constructor keyed by that
@@ -432,16 +428,13 @@ From a session asked to look for bugs and to tidy the code.
 
 ## A compiler written in the language (self/)
 
-Written by a session working autonomously at the owner's request, in
-chat: name the language SL for now, self-host it, write in SL a program
+The goal of `self/`: name the language SL for now, self-host it, write in SL a program
 compiling SL to OCaml that can interpret the compile-time `Settled` part,
 and use the existing OCaml interpreter and extractor to get there.
 `self/README.md` describes the result; the items below record what it
-assumed. As elsewhere here, each is the session's reading, checked by
-`self/bootstrap.sh` rather than by the owner, unless it says otherwise.
+assumed. As elsewhere here, each is the session's reading, checked by `self/bootstrap.sh`, unless it cites DECISIONS.md.
 
-91. **The compiler checks its input.** At the owner's request ("make it
-    not trusting") the compiler ports every check of `lib/elab.ml` and
+91. **The compiler checks its input** (DECISIONS 13). The compiler ports every check of `lib/elab.ml` and
     `lib/env.ml`: the three contradictions of forced unification
     (section 7), identity of types and values, erasure by position, the
     call-site proofs against the current level and enclosing subterm
@@ -449,8 +442,7 @@ assumed. As elsewhere here, each is the session's reading, checked by
     `comptime-match` verification, the tail and delegate marks, newtype
     shape, extern claims, and the reader's and literals' errors, with
     the reference's message texts. `self/bootstrap.sh` requires every
-    error test to be refused with its text. A reading of the session,
-    not the owner's: an error does not stop elaboration, so a program
+    error test to be refused with its text. A reading of the session: an error does not stop elaboration, so a program
     may be refused with more than one message where the reference gives
     its first. Where a message is placed is item 194's. It is not a
     second arbiter for section 10's consistency question, since it runs
@@ -473,9 +465,7 @@ assumed. As elsewhere here, each is the session's reading, checked by
     of item 44 would run its fuel counters in unary.
 
 93. **Canonicalization terminates by construction, on an append-only
-    list of rules.** At the owner's direction, the compiler's
-    canonicalization terminates by a structural argument rather than by
-    fuel. The environment holds its rewrite rules in the order they
+    list of rules** (DECISIONS 14). The compiler's canonicalization terminates by a structural argument rather than by fuel. The environment holds its rewrite rules in the order they
     were appended, and every appended rule's right-hand side is
     canonical at that moment. The session's reading is that a canonical
     term mentions only variables that are rule-free then, so any rule
@@ -487,9 +477,7 @@ assumed. As elsewhere here, each is the session's reading, checked by
     list.
 
 94. **The fact table, canonicalization and unification carry erased
-    proofs.** Again at the owner's direction, the owner having set
-    aside a stamped version with a runtime comparison, a fully verified
-    map, and an eager-substitution design, the invariant of item 93 is
+    proofs** (DECISIONS 14). The invariant of item 93 is
     a proof rather than a reading. The fact table is a trie `Facts n`
     whose index counts its rule-free entries, with sums as the
     prelude's `Add` and the relation `Plus3` since a type may not call
@@ -637,14 +625,12 @@ session built it and what it assumed while doing so.
     over the three constructors — erased, so §21 puts no one-real-branch
     limit on it and it leaves no code, which is what lets the delegate
     mark stand. `tests/char_ops.sl` coerces `char-cmp` to `u62-cmp`'s
-    own type and runs it on `Nat`s. `CEq` repeats its index rather than
-    carrying an `Eq`, at the owner's direction, so matching it forces
+    own type and runs it on `Nat`s. `CEq` repeats its index rather than carrying an `Eq` (DECISIONS 8), so matching it forces
     the two sides together the way `Refl` does; the branch still wants
     `pa` and `pb` identified before two `Char`s coincide, which is why
     `lt-unique` is in the prelude.
 
-    The prelude has no `char-to-nat` or `nat-to-char`, at the owner's
-    direction: converting is trivial through `U8`, which is itself
+    The prelude has no `char-to-nat` or `nat-to-char` (DECISIONS 9): converting is trivial through `U8`, which is itself
     trivial given an `Lt`, so the prelude need not choose what a `Nat`
     out of range becomes (`tests/char_convert.sl` writes both
     directions out).
@@ -687,7 +673,7 @@ check, and none of it is design.
 ## A form's results are out of scope for its own body
 
 Item 114 records a choice the session made, in the reference and in
-`self/`, while fixing a program the owner sent. The reasoning is the
+`self/`, while fixing a program it was sent. The reasoning is the
 session's and may be wrong (CLAUDE.md rule 1); the tests it names are
 what was checked by running (rule 2).
 
@@ -721,8 +707,7 @@ what was checked by running (rule 2).
 
 ## `_` for an erased argument
 
-How the elaborators implement DESIGN.md section 50. The implementation
-choices below are the implementing sessions', not the owner's;
+How the elaborators implement DESIGN.md section 50. The implementation choices below are the implementing sessions';
 `tests/wild_*.sl` are the evidence.
 
 115. **A `_` argument is a meta, solved by unification in its solving
@@ -788,16 +773,12 @@ choices below are the implementing sessions', not the owner's;
     telescope rather than a second elaboration of the clause
     (`bind_one`; `bind-let`). In `self/` the two telescopes keep their
     metas' facts through `env-restore` rather than `env-discard`.
-    Whether a meta solved inside a match branch may escape it was raised
-    and left out at the owner's request.
+    Whether a meta solved inside a match branch may escape it is left out.
 
 ## A proof-carrying prelude
 
-The owner decided that the FFI adder returns an `Add` proof with a
-plain adder as a `delegate` over it, that `double` is derived from it,
-that `trim` is transparent, that `str-append` gets a relation, and that
-levels should be used judiciously with `_`. The names and the shapes
-below are the session's.
+DECISIONS 7 says what the prelude's proofs are; the names and the
+shapes below are the session's.
 
 118. **Primitives return their relations; the old names are forgetful
      wrappers.** `nat-mod` is extern over a structural model, with
@@ -838,10 +819,8 @@ below are the session's.
 
 ## The compiler's libraries carry evidence
 
-The owner chose three of the session's proposals for `self/`'s library
-layer — deciders return evidence, lookups return evidence, lists carry
-specs — and left moving the libraries into the prelude aside. Shapes
-and names below are the session's.
+DECISIONS 15 says what `self/`'s library layer carries; shapes and
+names below are the session's.
 
 121. **Deciders decide into the prelude's `Cmp`; lookups return
      `Hit`/`Miss` with proofs.** `nat-cmp`, `char-cmp` and `str-cmp`
@@ -869,7 +848,7 @@ and names below are the session's.
 
 ## `Rope`, and strings built in one pass
 
-The owner asked for `Rope` without length caching for now; an `SCons` copies its tail, so building a
+`Rope` has no length caching (DECISIONS 10); an `SCons` copies its tail, so building a
 string by `append` is quadratic even under the FFI. Shapes are the
 session's.
 
@@ -897,9 +876,7 @@ session's.
 ## Lockstep evidence
 
 124. **Lists the elaborator walks together carry a `Lockstep` proof, and
-     generated forms are built as `Syn` values.** At the owner's
-     direction, from a review of where the compiler reports internal
-     errors that a type could refute. `base.sl` has
+     generated forms are built as `Syn` values** (DECISIONS 16), so that the compiler does not report as internal errors what a type could refute. `base.sl` has
      `Lockstep A B xs ys`, that two lists have one length entry by
      entry, with `lockstep-trans` and `list-fit`, which cuts or pads a
      list to another's length and returns the proof. `open-tele` and
@@ -922,8 +899,7 @@ session's.
 ## Code indexed by its erasures
 
 125. **Post-erasure code is indexed by the erasures of the values it
-     produces.** At the owner's direction, the next item of the same
-     review. `Code` in `core.sl` is `Code ctx ms` (the `ctx` index is
+     produces** (DECISIONS 17). `Code` in `core.sl` is `Code ctx ms` (the `ctx` index is
      item 127's), `ms` the list of multiplicities the expression was
      elaborated at: `many-one` for a variable or a constant, and for a
      function body, a let's right-hand side, a match's branches and the
@@ -957,8 +933,7 @@ session's.
 
 ## Types travel with their terms
 
-126. **The elaborator never reads a type off a term after the fact.**
-     At the owner's direction, in place of a depth-indexed `Term`. An
+126. **The elaborator never reads a type off a term after the fact** (DECISIONS 18), in place of a depth-indexed `Term`. An
      extrinsic scopedness proof beside each closed term was considered,
      but a stored type's natural home is the fact table, whose `In`
      family indexes on the type a node holds, so the proof would have
@@ -986,15 +961,11 @@ session's.
 ## Code indexed by its scope
 
 127. **Post-erasure code is indexed by the frames it binds, and the
-     interpreter's environment by the same frames.** At the owner's
-     direction, the first rung of a ladder the session proposed after
-     reading DESIGN.md with CPDT's dependent de Bruijn representation
-     in mind (`member` and `hlist`); the owner set the second rung
-     (arity-indexed application) aside as common-case special casing
-     (CLAUDE.md 6), and the session withdrew the third (shape-indexed
-     values) on the owner's question about branch refinement: a
-     binder's shape is decided by canonicalization at its binding site
-     and a use site's by canonicalization under the branch's facts, and
+     interpreter's environment by the same frames** (DECISIONS 19),
+     after CPDT's dependent de Bruijn representation (`member` and
+     `hlist`). Arity-indexed application is not used (CLAUDE.md 6), nor
+     are shape-indexed values: a binder's shape is decided by
+     canonicalization at its binding site and a use site's by canonicalization under the branch's facts, and
      a polymorphic field is read at a type its construction site never
      saw, so a shape index would only move the interpreter's dynamic
      checks into narrowing nodes. Shapes and names below are the
@@ -1043,14 +1014,13 @@ session's.
      it, and a `Hypothetical` entry it cannot place is an internal error
      at elaboration, so the invariant that the scope's non-erased
      entries are the context's is not in the types; a closure's arity
-     and a branch's fields are fitted to their frame by count, the
-     second rung. `self/bootstrap.sh` is the evidence.
+     and a branch's fields are fitted to their frame by count, as
+     arity-indexed application is not used. `self/bootstrap.sh` is the evidence.
 
 ## The FFI's names decided once
 
 128. **An extern mark is decided into an enum where it is read, and
-     the compiler dispatches on the enum from then on.** At the owner's
-     direction, the second item of the same ladder. `core.sl` declares
+     the compiler dispatches on the enum from then on** (DECISIONS 20). `core.sl` declares
      `Extern`, one constructor per implementation the FFI has with its
      arity as the type's index, `ExtType` for the extern types it
      holds, and `SomeExtern` packing an `Extern` with its arity;
@@ -1061,21 +1031,19 @@ session's.
      place of the name, so the interpreter's `apply-extern` is one match
      on it, `ext-construct` one on the type, and the emitter recovers
      the runtime's `ext_` and `con_`/`des_` names through `ext-name`
-     and `ext-type-name`. What stays dynamic, since the second rung was
-     set aside: the arguments reach an extern as a list the elaborator
+     and `ext-type-name`. What stays dynamic, arity-indexed application
+     not being used: the arguments reach an extern as a list the elaborator
      counted against the model's telescope, and `apply-extern` takes
      its arguments from that list, an absent one being an error value;
      the arity in the type is read back by `ext-arity`, whose return
-     `is` the index. The arity check at the mark is made in both
-     compilers, at the owner's request (`Ffi.claim_fn` in the
+     `is` the index. The arity check at the mark is made in both compilers (`Ffi.claim_fn` in the
      reference; `tests/extern_arity_bad.sl`). `self/bootstrap.sh` is
      the evidence.
 
 ## Code built at the expectation
 
 129. **Every case of the expression elaborator builds its code at the
-     expectation.** At the owner's direction, the fourth rung of the
-     same ladder. `elab-expr` returns `Code ctx expect` from each
+     expectation** (DECISIONS 21). `elab-expr` returns `Code ctx expect` from each
      case. A case producing one value, a variable, a constructor
      application, a `coerce`, a `matchable-of`, hands its
      `Code ctx (Cons pos Nil)` to `single`, which reads the
@@ -1094,10 +1062,8 @@ session's.
 
 ## The compile-time interpreter's values live in a store
 
-Proposed by the session and agreed by the owner in chat, who chose Nat
-addresses over Bin ones, weakening as a coerce, and no list of
-addresses kept in the heap. Everything below is the session's reading
-of that agreement and of what the code does.
+DECISIONS 22 fixes the store's addresses and weakening. Everything
+below is the session's reading of what the code does.
 
 131. **A value is a reference into the compile-time store; a block holds
      section 33's representation.** `self/heap.sl`'s store is
@@ -1155,9 +1121,8 @@ of that agreement and of what the code does.
      `subterm-trans`. In `slc`, `nat-sub` is `sub` under `lt-dec`,
      truncating at zero.
 133. **An extern type's extraction goes through templates; its view stays
-     for held values** (the owner's decision, after this session proposed
-     it, with the owner's hole discipline: every hole but a branch body
-     is filled with a variable name). `lib/ffi_templates.txt` holds, per
+     for held values** (DECISIONS 6); every hole but a branch body is
+     filled with a variable name. `lib/ffi_templates.txt` holds, per
      extern type, a match template and per constructor a build template:
      OCaml over `Obj.t` with holes `{s}` the scrutinee, `{bI}` the body
      of constructor I's arm, `{fI.J}` the binder of its field J, `{aI}`
@@ -1210,9 +1175,7 @@ of that agreement and of what the code does.
      so a trie keyed by a `Nat` can walk its digits. `slc` carries it
      as `ExtHalf` with a `PHalf` payload in its compile-time
      interpreter.
-136. **`Bin` is a plain type, and `slc`'s ids are `Nat`s** (the owner's
-     decision: every use of `Bin` erased in `slc`, the conversion through
-     `Half`). The FFI holds no `Bin`, and `lib/literal.ml` spells a
+136. **`Bin` is a plain type, and `slc`'s ids are `Nat`s** (DECISIONS 23). The FFI holds no `Bin`, and `lib/literal.ml` spells a
      numeral through `Half`'s view. In `slc` an id is a `Nat`:
      `nat-cmp` compares, `Succ` mints, `nat-eq` decides equality,
      and every trie (`base.sl`'s `IdMap`, `heap.sl`'s store, `core.sl`'s
@@ -1240,8 +1203,8 @@ of that agreement and of what the code does.
 
 ## Opening a `Matchable` (DESIGN.md section 8)
 
-The owner decided the points marked so; everything else is the
-session's reading, with the tests as the evidence.
+Everything below is the session's reading, with the tests as the
+evidence.
 
 139. **Nothing consults a `Matchable` until it is opened** (`Env.opens`,
      `Elab.open_adt`, `Env.merge_opens`; in `self/`, the fact table's
@@ -1268,33 +1231,26 @@ session's reading, with the tests as the evidence.
      `tests/open_absurd_bad.sl`). The unopened cases:
      `tests/open_tyctor.sl`, `tests/unopened_matchable_bad.sl`,
      `tests/unopened_newtype_bad.sl`, `tests/open_adt_branch_bad.sl`.
-     The keywords are the owner's: `open-adt` names the minting site,
-     and `open-absurd` carries the token that marks a contradiction
-     elsewhere.
+     `open-adt` names the minting site, and `open-absurd` carries the
+     token that marks a contradiction elsewhere.
 
 ## More requests (section 27)
 
 The requests below cover environment variables in Java's two shapes, appending to a file, reading what is left of stdin, listing a
 directory in Java's shape, the working directory, one query for what a
-path holds, `MkDir` and the two deletes. The owner chose the general
-`Pair`, sorted listings, the `world` for the environment and the
-working directory, single-level `MkDir`, deletion that reports
-`Unchanged` rather than failing on an absent path, and the `unix`
-dependency; the shapes below are the session's.
+path holds, `MkDir` and the two deletes. DECISIONS 12 fixes their main shapes; the rest below is the
+session's.
 
 143. **Ten of `Request`'s constructors**: `GetEnv`, `GetEnvs`,
      `AppendFile`, `ReadRemaining`, `ListDir`, `GetCwd`, `Stat`,
      `MkDir`, `DeleteFile` and `DeleteDir`, with the answers
-     `lib/prelude.sl` gives them. `Pair` is general rather than an
-     environment-specific record, the owner's choice over a two-field
-     `EnvVar`. `EntryKind`'s `Missing` makes absence an ordinary answer
+     `lib/prelude.sl` gives them. `Pair` is general rather than an environment-specific record (DECISIONS 12). `EntryKind`'s `Missing` makes absence an ordinary answer
      and keeps `Fail` for a path the driver could not read at all, on
      the reading that a program checking whether something is there is
      not handling an error. `Change` is shared by the three requests
      that ask for a state rather than an action, so that one answer
      says both that the request was met and whether this call is what
-     met it; the session's argument for it, which the owner took, is
-     that `mkdir` is atomic, so collapsing the two into a plain success
+     met it; the argument for it is that `mkdir` is atomic, so collapsing the two into a plain success
      would throw away the only race-free way to learn which caller
      created a directory, while failing on an existing one (as POSIX
      and Java 6 both do) would make the ordinary case awkward.
@@ -1305,8 +1261,7 @@ dependency; the shapes below are the session's.
      absent and, like `WriteFile`, takes no mode, the language having
      no permissions model.
 
-144. **`GetEnv`, `GetEnvs` and `GetCwd` go through the `world`** as
-     `GetArgs` does, the owner's choice, so that `test/runtest.ml` can
+144. **`GetEnv`, `GetEnvs` and `GetCwd` go through the `world`** as `GetArgs` does (DECISIONS 12), so that `test/runtest.ml` can
      supply them from `; env:` directives and a test can pin what it
      prints; the file system requests stay direct, as `ReadFile` and
      `WriteFile` are. The harness runs an extracted program under
@@ -1320,8 +1275,7 @@ dependency; the shapes below are the session's.
      and the test world drains its pending lines, however much
      `read_line` has taken.
 
-145. **The driver uses `unix` rather than `Sys` alone** (the owner's
-     choice). With `Sys` alone, `Sys.file_exists` answers false for a
+145. **The driver uses `unix` rather than `Sys` alone** (DECISIONS 12). With `Sys` alone, `Sys.file_exists` answers false for a
      path whose parent denies access exactly as for an absent one, so
      `Stat` would report a denied path as `Missing` and its `Result`
      would have no reachable `Fail` at all; and it would cost `IsOther`,
@@ -1338,9 +1292,7 @@ dependency; the shapes below are the session's.
 
 ## `thunk` (section 27)
 
-The owner proposed the in-language helper that thunks a value rather
-than an anonymous function form, and accepted the extra verbosity at the
-call sites; the rest below is the session's.
+DECISIONS 11 fixes what `thunk` is; the rest below is the session's.
 
 147. **`thunk` is a prelude function rather than a form.** Its body is
      the captured value alone, so the closure it returns needs no
@@ -1371,9 +1323,7 @@ call sites; the rest below is the session's.
      value differing only in length.
 
 150. **The compile-time interpreter reaches a call in tail position by a
-     tail call.** At the owner's request, who asked that `slc`'s
-     compile-time evaluation not grow the stack, or at the least that
-     interpreting a tail call be a tail call. In the emitted OCaml,
+     tail call** (DECISIONS 24). In the emitted OCaml,
      `eval`'s `CLet`, `CLetRec` and `CMatch` reach their continuations
      by a tail call, the normalizer (item 125) dropping the `let` that
      would bind them.
@@ -1397,9 +1347,7 @@ call sites; the rest below is the session's.
      call in interpreted code holds host frames, as it must without a
      heap-allocated continuation. `tests/comptime_tail.sl` is the
      guard. Its 131071 iterations decrease an *erased* `Nat` tied to a
-     non-erased binary counter by the prelude's `Numeral`, which is
-     what keeps the loop from building a unary `Nat`; the owner
-     suggested that shape.
+     non-erased binary counter by the prelude's `Numeral`, which is what keeps the loop from building a unary `Nat`.
 
      `lib/eval.ml`'s `eval` and `apply` both hand back a plain `value
      list`, so `CLet`, `CLetRec`, a match branch, `CApp`'s `apply` and
@@ -1524,13 +1472,11 @@ The shapes and the messages below are the session's.
     mutable fields; their statically known match needs no discriminant test.
     Empty constructors need no mutable storage. Held extern Matchables expose
     the same ordinary tagged constructor layout.
-    A store into such a block goes through the constructor's own pattern rather
-    than `Obj.set_field`, at the owner's direction: the block is read at its
+    A store into such a block goes through the constructor's own pattern rather than `Obj.set_field` (DECISIONS 4): the block is read at its
     constructor's type, narrowed to that one discriminant where the type is
     tagged, so the match binding the record has no other arm; whether the host
     then tests the tag is the session's expectation from the narrowing, not
-    something it measured. Reading a cell's slot is the same match. The
-    session's reading, not the owner's, is that this is what the `mutable`
+    something it measured. Reading a cell's slot is the same match. The session's reading is that this is what the `mutable`
     marks are for, a store through `Obj` into a block the host may treat as
     constant being the thing they rule out. An array block is a host array,
     so its back-patch is an unchecked element write, as the FFI's own array
@@ -1562,8 +1508,8 @@ The shapes and the messages below are the session's.
     Outside extern model bodies, unique Array patterns have no cell binder even
     when extern implementations are stripped.
 
-168. The owner's clarification confirms that proof-indexed array get/set may
-    use unsafe operations. Distinct logical location classes need not imply
+168. Proof-indexed array get and set may use unsafe operations
+    (DECISIONS 5). Distinct logical location classes need not imply
     distinct physical words; no at fact is inferred just because nullary
     values share an immediate representation. The source language is pure
     and specifies no observable evaluation order. Destructive updates
@@ -1753,10 +1699,9 @@ below are the session's.
     driver was given, where `slc` checks it as one named on its
     command line.
 
-194. **Every message carries a file, a line and a column.** The owner
-    asked that they, and so `lib/reader.ml`'s `loc`, which is a file
-    and a position, a token's first character with both counted from
-    one; the file is stamped in by `Reader.files`, so a message names
+194. **Every message carries a file, a line and a column** (DECISIONS 3),
+    so `lib/reader.ml`'s `loc` is a file and a position, a token's
+    first character with both counted from one; the file is stamped in by `Reader.files`, so a message names
     the file its form was read from, as a `;! file` pragma names it
     (DESIGN.md section 4), rather than the file being run. The note
     pointing at `bin/shape` names the source read, the one that tool

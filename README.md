@@ -123,7 +123,8 @@ files end in `.sl`; GitHub shows them as Scheme.
 - [SOUNDNESS.md](SOUNDNESS.md), why `Type : Type` with no positivity
   requirement appears sound here, and what that assumes.
 - [ASSUMPTIONS.md](ASSUMPTIONS.md), the choices the implementations make
-  where the specification is silent. [BUGS.md](BUGS.md), defects found
+  where the specification is silent, and [DECISIONS.md](DECISIONS.md),
+  the owner's decisions about how they are built. [BUGS.md](BUGS.md), defects found
   in them. [WARNINGS.md](WARNINGS.md), the warnings they emit.
   [TOOLING-WISHLIST.md](TOOLING-WISHLIST.md), friction met while writing
   programs. [INTERNALS.md](INTERNALS.md), the contract between the
