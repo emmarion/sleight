@@ -1,6 +1,6 @@
 ; expect: 1
 ; A nested def-adts with non-phantom constructors does not block a delegate either: its constructors and
-; Matchable are embedded constants the body never mentions, so the binding is dropped (ASSUMPTIONS 88, settled).
+; Matchable are constants the body never mentions, so binding them only renames (DESIGN.md sections 19, 45).
 (def-lvl L)
 (def-fns L $ (many inc : (many (Nat) n) -> (many (Nat) m)) (Succ n))
 (def-lvl M)

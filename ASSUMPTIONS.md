@@ -411,21 +411,6 @@ What a match reads is in DESIGN.md §§8, 24 and 33; item 83 records how the pro
 
 From a session asked to look for bugs and to tidy the code.
 
-88. **The tail and delegate checks drop a `let` of embedded values that
-    nothing reads.** The constructors and `Matchable` a nested
-    `def-adts` binds would stand between a delegating body and its
-    call, so the tail-check's normalizer, which folds a renaming `let`
-    away (item 72), also drops a `let` whose right-hand side is values
-    embedded by elaboration -- literals in the post-erasure code, the
-    entries they bind staying `Hypothetical` as §29 has every binding in
-    a body -- when the rest of the body mentions none of its binders.
-    That keeps item 77's guarantee for a phantom-only `def-adts`
-    (`tests/delegate_erased_inner.sl`) and reads more widely than item
-    77 does: a nested `def-adts` whose constructors the body never uses
-    does not block a `delegate` either (`tests/delegate_inner_adts.sl`).
-    Settled by the owner: this is the behaviour wanted, dropping a
-    binding nothing reads changing no program's meaning.
-
 ## A compiler written in the language (self/)
 
 The goal of `self/`: name the language SL for now, self-host it, write in SL a program

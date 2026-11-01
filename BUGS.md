@@ -94,9 +94,10 @@ is a design decision. Remove an entry when it is fixed.
     side is a `values` of constants, and the form compiles to a bare
     constant; `slc`'s folding appears to cover that case. DESIGN.md §19
     says a `delegate`-bodied function is nothing but the call once lets
-    that only rename are resolved away, which seems not to settle a let of
-    a constant. Which answer is wanted is not decided here. No test has
-    this shape.
+    that only rename are resolved away, and a `let` binding a name to a
+    constant, such as a literal's entry (§45), only renames; so `slc`'s
+    answer is the wanted one and the reference's refusal is the bug. No
+    test has this shape.
 
 21. **`slc` refuses a `tail` call returned beside an `at` entry.** With
     `f` returning `(unique (World) w2 at w) (many (Nat) n)` and `g`
