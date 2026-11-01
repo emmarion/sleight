@@ -32,6 +32,7 @@ cd ~/sl
 git fetch -q ~/sl.bundle HEAD
 git checkout -q --detach FETCH_HEAD
 rm ~/sl.bundle
+sh agent/refs.sh
 if [ -x _build/release/slc ] && [ -f _build/release/slc.commit ] && git diff --quiet "$(cat _build/release/slc.commit)" HEAD -- self bin lib dune-project 2>/dev/null; then
   echo "slc is up to date (built at $(cut -c1-7 _build/release/slc.commit))"
 else

@@ -1,0 +1,2 @@
+#!pi -f ../refs/Coq-BB5
+Coq-BB5/ is a Rocq proof that BB(5) is 47,176,870.
