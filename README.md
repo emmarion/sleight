@@ -79,6 +79,14 @@ sort on unique lists certified against [`msort/spec.sl`](msort/spec.sl).
 [`mini/`](mini/) writes the semantics of the fragment of
 [MINIMAL.md](MINIMAL.md) as relations in the language itself.
 
+Two larger proofs, both translated from existing ones (each directory's
+NOTICE.md credits them): [`bb/`](bb/) proves that the fifth busy beaver
+value is 47,176,870, and [`fourcolor/`](fourcolor/) proves the four
+colour theorem for straight-line drawings. In single measurements on a
+12-core Mac with slc, each checked in about 35 s; most of the work runs
+as native code in parallel jobs. Each directory's README says how to
+check it and what the proof rests on.
+
 [`agent/`](agent/) runs LLM agents on Sleight programming tasks over many
 sessions; the heap sort above was written that way. The October 14,
 2026 talk ([`talk/slides.md`](talk/slides.md), PDF at
