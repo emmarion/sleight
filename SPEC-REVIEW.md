@@ -68,14 +68,16 @@ Found by a Claude session probing the implementation against
 DESIGN.md; each is a reading that may be mistaken and a question for
 the owner, not a decision.
 
-32. **The cell `at` forms in an erased position.** §14 refuses in an
-    erased position the forms "whose only claim or effect is about the
-    run", a list that names §39's `at` wrapper around a call but not
-    §37's `(at m (u ...))` around a cell invocation or its per-argument
-    `(at)`, and it says erased code obeys §36's `at` rules. That seems
-    to mean the cell forms are checked there, but no sentence says so.
-    Also unclear: whether §37's "The marked argument must be
-    non-erased" means the field's multiplicity or the argument's
+32. **The per-argument cell `at` in an erased position.** §14 refuses
+    in an erased position the forms "whose only claim or effect is about
+    the run", a list that names §39's `at` wrapper around a call but not
+    §37's per-argument `(at)`, and it says erased code obeys §36's `at`
+    rules. That seems to mean the form is checked there, but no sentence
+    says so. (The wrapping `(at m (u ...))` appears settled: §14 and §37
+    make `m` the invocation position's multiplicity, so in an erased
+    position it is `erased`, which both compilers accept and require.)
+    Also unclear: whether §37's "The marked argument must be non-erased"
+    means the field's multiplicity or the argument's
     position, since in an erased position every argument is erased.
     The reference checks both forms in an erased position as it does
     elsewhere, and accepts `(u (at) a b)` there.

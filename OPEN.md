@@ -50,10 +50,11 @@ references are to DESIGN.md.
    represents the whole order of §17 as a nested disjunction, so that a
    call need not name the decreasing argument when which argument
    decreases is known only through an erased computation.
-8. Macros. Open: macro termination beyond a global expansion limit,
-   and hygiene, perhaps by letting `Raw` carry entry references as well
-   as names, with a reference to an entry that is out of scope being an
-   error rather than merged into the current scope.
+8. Macros. Open: macro termination beyond §62's global limit of 10000
+   expansions. The hygiene once suggested here, entry references in a
+   `Raw`, is what §64's `RawSettled` handles provide, though a handle
+   resolves bypassing scope rather than an out-of-scope one being an
+   error.
 9. Compile-time evaluation inside a body: a `comptime` form, and a
    `hoist` form `(hoist L body)` whose definitions count as made just
    before `L`, so that the factory pattern of §57 could be written
@@ -126,8 +127,6 @@ references are to DESIGN.md.
     non-phantom constructors has one, be the word of `vacant-slot` and
     be placed there where it is built, as a value of a hollow type is
     (§36)? Today its word is unspecified.
-
-## Argument temporaries
 
 ## Literal proofs
 
