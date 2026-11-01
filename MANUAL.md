@@ -203,8 +203,8 @@ removes the directory. Both programs are looked up on the compiler's own
 failure to start or run the compiled program is an error at the argument
 it ran.
 `--no-native` compiles nothing: each argument is called by the evaluator,
-as in `(values (f1) … (fn))`. A test that reaches a `native-compute` runs
-both ways, unless it says `; native: only`.
+as in `(values (f1) … (fn))`, and slc takes the same flag. A test that
+reaches a `native-compute` runs both ways, unless it says `; native: only`.
 
 `--inline n` adds `-inline n` to the compiler's ocamlopt commands.
 

@@ -79,7 +79,7 @@
   (failed-with _ exit-fail m w))
 
 (def-fns run-lvl $ (many usage : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-read path] [--confine-write path] [--comptime-unconfine name] [--confine-output-bytes n] [--eval-fuel n] [--inline n] [--no-env] [--no-exec] [--first-error] [--warnings-as-errors] [--warn-unused] [--fn-same] [--no-shape-note] [--hints file] [--goal none|open|proved] [--build prog [--byte]] file.sl ... [-- arg ...] > out.ml" w))
+  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-read path] [--confine-write path] [--comptime-unconfine name] [--confine-output-bytes n] [--eval-fuel n] [--inline n] [--no-env] [--no-exec] [--no-native] [--first-error] [--warnings-as-errors] [--warn-unused] [--fn-same] [--no-shape-note] [--hints file] [--goal none|open|proved] [--build prog [--byte]] file.sl ... [-- arg ...] > out.ml" w))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many h)) (env-heap env))
@@ -129,7 +129,7 @@
   (let-match many mode (Some _ gm) ((None _) (failed "--goal takes none, open or proved" w)))
   (let-match many (match many gm (((Maybe $ String) _)) ((GoalUnrequired) (None _)) (else (goal-refused flags))) (None _) ((Some _ f) (failed (str-cat3 "--goal " goal-arg $ str-cat " does not take " f) $ goal-verdict flags (BFalse) w)))
   (let ((many base-env)) (env-set-goals (env-set-sources (env-set-help (env-place-at (make-builtins) null-id $ TVar null-id) help) sources) $ MkGoals gm (None _) (Many) (TErr "no goal") "" $ None _))
-  (let ((many builtins)) $ env-set-inline (env-set-fn-same (match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f)) ((None _) base-env)) $ has-flag flags "--fn-same") inline)
+  (let ((many builtins)) $ env-set-native (env-set-fn-same (match many fuel (((Env) _)) ((Some _ f) (env-set-fuel base-env $ parse-nat f)) ((None _) base-env)) $ has-flag flags "--fn-same") $ match many (has-flag flags "--no-native") _ ((BTrue) (NativeEval)) ((BFalse) (NativeCompiled inline)))
   (let ((unique ew)) (MkElabWorld _ $ place-at _ w))
   (let ((many files)) $ srcs-files srcs)
   (let ((unique ew1) (many env0)) $ run-files ew (not $ has-flag flags "--no-shape-note") files (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)

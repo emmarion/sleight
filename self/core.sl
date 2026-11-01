@@ -2233,9 +2233,14 @@
   enum
   (many MkTrail : (many (IdMap $ Pair (Syn) (Loc)) frames) (many (Held) held) -> (Trail)))
 
+(def-adts $ (NativeRun : -> Type)
+  enum
+  (many NativeEval : -> (NativeRun))
+  (many NativeCompiled : (many (Maybe $ String) inline) -> (NativeRun)))
+
 (def-adts $ (Macros : -> Type)
   enum
-  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) (many (Nat) fuel) (many (Bool) fns-same-on) (many (Goals) goals) (many (Trail) trail) (many (Maybe $ String) inline) -> (Macros)))
+  (many MkMacros : (many (Nat) expansions) (many (Nat) gensyms) (many (List $ PrimSig) prims) (many (List $ String) sources) (many (Nat) fuel) (many (Bool) fns-same-on) (many (Goals) goals) (many (Trail) trail) (many (NativeRun) native) -> (Macros)))
 
 (def-adts $ (Tracked : -> Type)
   enum
@@ -2596,9 +2601,9 @@
   (match many (env-macros e) _ ((MkMacros _ _ _ _ _ _ _ tr _) tr)))
 (def-fns _ $ (many env-set-trail : (many (Env) e) (many (Trail) x) -> (many (Env) r))
   (match many (env-macros e) _ ((MkMacros n g ps ss f fs gl _ il) (env-set-macros e $ MkMacros n g ps ss f fs gl x il))))
-(def-fns _ $ (many env-inline : (many (Env) e) -> (many (Maybe $ String) r))
+(def-fns _ $ (many env-native : (many (Env) e) -> (many (NativeRun) r))
   (match many (env-macros e) _ ((MkMacros _ _ _ _ _ _ _ _ il) il)))
-(def-fns _ $ (many env-set-inline : (many (Env) e) (many (Maybe $ String) x) -> (many (Env) r))
+(def-fns _ $ (many env-set-native : (many (Env) e) (many (NativeRun) x) -> (many (Env) r))
   (match many (env-macros e) _ ((MkMacros n g ps ss f fs gl tr _) (env-set-macros e $ MkMacros n g ps ss f fs gl tr x))))
 (def-fns _ $ (many env-add-frame : (many (Env) e) (many (Nat) x) (many (Syn) head) (many (Loc) call) -> (many (Env) r))
   (let-match many (env-trail e) (MkTrail fr hd))
@@ -3571,7 +3576,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ $ NSrc name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (MkLitTable (nm-empty _) (nm-empty _)) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) (MkTrail (MEmpty _) held-none) $ None _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (MkLitTable (nm-empty _) (nm-empty _)) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) tracking-empty (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (MkMacros 0 0 (Nil _) (Nil _) 1000000000 (BFalse) (MkGoals (GoalUnrequired) (None _) (Many) (TErr "no goal") "" $ None _) (MkTrail (MEmpty _) held-none) $ NativeCompiled $ None _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many _)) $ bind-token env (Some _ $ NSrc name) (None _) (BFalse) (Erased) ty rule delegate-id)

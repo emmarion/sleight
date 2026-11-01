@@ -180,7 +180,8 @@ arguments following a `--` after the files. `--confine-read dir` and
 `--confine-write dir` confine the program's file requests as the
 reference's flags do
 (ASSUMPTIONS 198), `--no-env` hides the environment from it and
-`--no-exec` refuses it `Exec`, as the reference's do.
+`--no-exec` refuses it `Exec`, as the reference's do. `--no-native`
+runs a `native-compute`'s calls in the evaluator, as the reference's does.
 
 `self/bootstrap.sh` does four things. It extracts `slc` to a native
 binary with the reference extractor (`--extract` and `--build`), since running the
@@ -191,7 +192,9 @@ with a message mentioning the text, and any other is built with `slc --byte --bu
 whose compiler is the faster one at that size) and run with
 the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. It runs
-every test again under `slc --interpret` and compares it the same way.
+every test again under `slc --interpret` and compares it the same way, and
+each test that writes `native-compute` again under `slc --no-native`,
+unless it says `; native: only`.
 And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the

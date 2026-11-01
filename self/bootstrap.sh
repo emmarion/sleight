@@ -5,7 +5,8 @@
 #      with a message mentioning that text; any other is built by slc --build (to bytecode, the faster compile) and run with
 #      the test's stdin and arguments, and its stdout, exit code, and stderr after slc's own messages compared
 #      with the reference interpreter's on the same files, given to both as absolute paths; the extern, thunk, main, char, nat and bytes tests are compiled again with
-#      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
+#      --no-templates (ASSUMPTIONS 133); every test that writes `native-compute` is compiled again with --no-native,
+#      unless it says "; native: only"; and every test is run again under slc --interpret, which performs
 #      the program in place of writing it out, and compared the same way; a refused test is also run through
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
 #   3. compiles slc with slc before step 2, then again with the result while step 2 runs, and requires the two
@@ -63,6 +64,7 @@ check_test() {
   extra=$(directive "$t" flags)
   case " $extra " in *" --extract "*|*" --repl "*) echo "skip $name"; return ;; esac
   [ "$(directive "$t" externs)" = none ] && { echo "skip $name"; return; }
+  [ "$flags" = --no-native ] && [ "$(directive "$t" native)" = only ] && { echo "skip $name"; return; }
   both="$both $extra"
   for n in $(directive "$t" comptime-unconfine); do both="$both --comptime-unconfine $n"; done
   if [ -n "$(directive "$t" error)" ]; then
@@ -140,6 +142,7 @@ build_slc() {
 check_all() {
   { for t in "$@"; do echo "$t - -"; done
     for t in "$@"; do case $(basename "$t") in extern_*|thunk_*|main_*|char*|nat_*|bytes_*) echo "$t --no-templates _view" ;; esac; done
+    for t in "$@"; do grep -q native-compute "$t" && echo "$t --no-native _eval"; done
     for t in "$@"; do echo "$t --interpret _interp"; done
   } | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
 }
@@ -165,7 +168,7 @@ cat "$B/slc2.time"
 { $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
   "$B/slc2" --warnings-as-errors --warn-unused $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }; } > "$B/slc3.report" 2>&1 &
 slc3=$!
-echo "== compiling the tests with slc, the extern, thunk, main, char, nat and bytes tests again with --no-templates, and every test again under --interpret"
+echo "== compiling the tests with slc, the extern, thunk, main, char, nat and bytes tests again with --no-templates, the native-compute tests again with --no-native, and every test again under --interpret"
 check_all tests/*.sl
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
