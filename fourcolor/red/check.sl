@@ -2,7 +2,7 @@
   enum
   (many IFYes : (erased (Nat) h) (many (Ctree) ctu) (many (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
       (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
-      (erased (CtH (Succ h) ctu) hc) -> (InitFor h)))
+      (erased (CtH (Succ h) ctu) hc) (many (Maybe (FlatIn h ctu)) fl) -> (InitFor h)))
 
 (def-adts $ (InitE : -> Type)
   enum
@@ -17,7 +17,7 @@
   (let-match many (init-lookup h cache) (None _) ((Some _ i) (values i cache)))
   (let ((many gtu) (erased gc)) (gtree-full h))
   (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu))
-  (let ((many i)) (IFYes h ctu gtu ce ge gc hc))
+  (let ((many i)) (IFYes h ctu gtu ce ge gc hc (flat-in h ctu hc)))
   (values i (Cons _ (MkInitE h i) cache)))
 
 ; The Kempe tree kt of cp, whose ring has h + 2 darts, is sound for the ring traces of cp's map.
@@ -36,7 +36,9 @@
   (let-match many m (Succ m1) ((Zero) (values (KCNo cp) cache)))
   (let-match many m1 (Succ h) ((Zero) (values (KCNo cp) cache)))
   (let ((many i) (many cache2)) (init-for h cache))
-  (let-match many i (IFYes _ ctu gtu ce ge gc hc))
-  (let ((many ctr) (erased _) (erased rt) (erased _)) (cpcolor-c h cp cs na))
-  (let ((many kt) (erased ks)) (kempe-tree-c (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hc))
+  (let-match many i (IFYes _ ctu gtu ce ge gc _ fl))
+  (let-match many fl (Some _ fi) ((None _) (values (KCNo cp) cache2)))
+  (let ((many ctr) (erased hr) (erased rt) (erased _)) (cpcolor-c h cp cs na))
+  (let ((many kt) (many tk)) (kempe-tree-f (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hr fi))
+  (let-match many tk (TryOk _ ks) ((TryNo _) (values (KCNo cp) cache2)))
   (values (KCYes cp h kt ks cs na) cache2))

@@ -861,14 +861,6 @@
   (many MkKSound : (erased Pred P) (erased (Nat) h) (erased (Ctree) ct) (erased (Gtree) gtr gtu) (erased (KV P h ct gtr gtu) kv)
       -> (KSound P h ct)))
 
-(def-fns _ $ (many kempe-tree-c : (erased Pred P) (many (Nat) h) (many (Ctree) ctu ctr) (many (Gtree) gtu)
-    (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge)
-    (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (CtAllP P ctr (Nil (Col))) ca) (erased (CtH (Succ h) ctu) hc) ->
-    (many (Ctree) ct) (erased (KSound P h ct) ks))
-  (let ((many ct) (erased gtr) (unique _) (erased gtu2) (erased _) (erased kr) (erased _))
-    (ktc-run ctu ctr gtu (Succ $ Succ h) h ctu ctr gtu (KRBase h ctu ctr gtu) (CRBase h ctu ctr gtu) hc))
-  (values ct (MkKSound P h ct gtr gtu2 (kr-kv P h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr ca) ct gtr gtu2 kr))))
-
 (def-adts $ (FlipPair : ((Perm) g) ((Perm) g2) -> Type)
   enum
   (many FP123 : -> (FlipPair p123 p123))
