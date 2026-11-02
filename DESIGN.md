@@ -394,10 +394,11 @@ of the same signature.
 `def-adts` is the only place a `Matchable` is created. Declaring an
 ADT creates an anonymous `Matchable` from its tag, its marks and its
 constructor markers, and opens it. The built-in `Special` and
-`Sharing` are opened at the start (§42). The opaque built-ins `Level`,
-`Predates`, `Subterm`, `Coercible`, `Delegate`, `AtFn`, `Slot` and
-`World` have no `Matchable` and are never opened, so they are neither
-matchable nor empty (§25).
+`Sharing` are opened at the start (§42). The opaque built-ins `Univ`,
+`Level`, `Predates`, `Subterm`, `Coercible`, `Delegate`, `AtFn`, `Slot`
+and `World` have no `Matchable`: no `def-adts` declares one, so no value
+of a `Matchable` type naming one exists, and they are neither matchable
+nor empty (§25).
 
 A `def-adts` leaves no trace but the entries it adds to scope: its
 type constructors, value constructors and `Matchable`s, each holding
