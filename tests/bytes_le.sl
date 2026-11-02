@@ -1,3 +1,4 @@
+; needs: ../std/list
 (def-adts $ (LeOut : -> Type)
   enum
   (many MkLe : (many (String) s1) (many (String) s2) (many (Nat) w2) (many (Nat) w0) (many (Nat) x) (many (Nat) y)

@@ -165,3 +165,42 @@
       (match erased q _
         (absurd (NthLastHere _ _ _ _ l2) (let ((erased l)) (nth-last-lt _ rest k k x p1 l2)) (lt-asym k k l (lt-weaken k k l)))
         ((NthLastThere _ _ _ _ _ q1) (nth-last-fn _ rest k x y p1 q1))))))
+
+(def-fns _ $ (erased splice-ys-length : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
+    (erased (Length A ys n) l))
+  (match erased p _
+    ((SpliceNil _ _) (LengthNil A))
+    ((SpliceHere _ _ y _ n1 ys1 _ p1) (LengthCons A y ys1 n1 (splice-ys-length A _ ys1 _ _ n1 p1)))
+    ((SpliceThere _ _ _ _ _ _ _ p1) (splice-ys-length A _ ys _ _ n p1))))
+
+(def-fns _ $ (erased splice-reread : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
+    (erased (Splice A zs i n ys zs) q))
+  (match erased p _
+    ((SpliceNil _ _) (SpliceNil A zs))
+    ((SpliceHere _ _ y _ n1 ys1 zs1 p1) (SpliceHere A y y zs1 n1 ys1 zs1 (splice-reread A _ ys1 zs1 _ n1 p1)))
+    ((SpliceThere _ x _ i1 _ _ zs1 p1) (SpliceThere A x zs1 i1 n ys zs1 (splice-reread A _ ys zs1 i1 n p1)))))
+
+(def-fns _ $ (erased splice-nth-before : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n j) (erased A x)
+    (subterm erased (Splice A xs i n ys zs) p) (erased (Nth A xs j x) nth) (erased (Lt j i) lt) -> (erased (Nth A zs j x) r))
+  (let-match erased p (SpliceThere _ y xs1 i1 _ _ zs1 p1)
+    (absurd (SpliceNil _ _) lt)
+    (absurd (SpliceHere _ _ _ _ _ _ _ _) lt))
+  (let-match erased nth (NthThere _ _ _ j1 _ nth1) ((NthHere _ _ _) (NthHere A y zs1)))
+  (let-match erased lt (LtS _ _ lt1))
+  (NthThere A y zs1 j1 x (splice-nth-before A xs1 ys zs1 i1 n j1 x p1 nth1 lt1)))
+
+(def-fns _ $ (erased splice-nth-after : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n e j) (erased A x)
+    (subterm erased (Splice A xs i n ys zs) p) (erased (Nth A xs j x) nth) (erased (Add i n e) a) (erased (Lt e (Succ j)) le) ->
+    (erased (Nth A zs j x) r))
+  (match erased p _
+    ((SpliceNil _ _) nth)
+    ((SpliceHere _ _ y xs1 n1 ys1 zs1 p1)
+      (let-match erased a (AddZero _))
+      (let-match erased le (LtS _ _ le1))
+      (let-match erased nth (NthThere _ _ _ j1 _ nth1) (absurd (NthHere _ _ _) le1))
+      (NthThere A y zs1 j1 x (splice-nth-after A xs1 ys1 zs1 (Zero) n1 n1 j1 x p1 nth1 (AddZero n1) le1)))
+    ((SpliceThere _ y xs1 i1 _ _ zs1 p1)
+      (let-match erased a (AddSucc _ _ e1 a1))
+      (let-match erased le (LtS _ _ le1))
+      (let-match erased nth (NthThere _ _ _ j1 _ nth1) (absurd (NthHere _ _ _) le1))
+      (NthThere A y zs1 j1 x (splice-nth-after A xs1 ys zs1 i1 n e1 j1 x p1 nth1 a1 le1)))))

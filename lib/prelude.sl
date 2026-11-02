@@ -2690,13 +2690,6 @@
       (let-match erased q (SBCons _ _ ys1 q1))
       (match erased (str-bytes-fn s1 xs1 ys1 p1 q1) _ ((Refl _ _) (Refl (List (U8)) xs))))))
 
-(def-fns _ $ (erased splice-ys-length : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
-    (erased (Length A ys n) l))
-  (match erased p _
-    ((SpliceNil _ _) (LengthNil A))
-    ((SpliceHere _ _ y _ n1 ys1 _ p1) (LengthCons A y ys1 n1 (splice-ys-length A _ ys1 _ _ n1 p1)))
-    ((SpliceThere _ _ _ _ _ _ _ p1) (splice-ys-length A _ ys _ _ n p1))))
-
 (def-fns _ $ (erased splice-whole : (erased Type A) (erased (List A) xs) (erased (Nat) n) (subterm erased (Length A xs n) l) ->
     (erased (Splice A xs (Zero) n xs xs) p))
   (match erased l _
@@ -2710,13 +2703,6 @@
     ((SpliceHere _ _ _ xs1 n1 ys1 zs1 p1)
       (let-match erased l (LengthCons _ _ _ _ l1))
       (match erased (splice-whole-eq A xs1 ys1 zs1 n1 p1 l1) _ ((Refl _ _) (Refl (List A) zs))))))
-
-(def-fns _ $ (erased splice-reread : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
-    (erased (Splice A zs i n ys zs) q))
-  (match erased p _
-    ((SpliceNil _ _) (SpliceNil A zs))
-    ((SpliceHere _ _ y _ n1 ys1 zs1 p1) (SpliceHere A y y zs1 n1 ys1 zs1 (splice-reread A _ ys1 zs1 _ n1 p1)))
-    ((SpliceThere _ x _ i1 _ _ zs1 p1) (SpliceThere A x zs1 i1 n ys zs1 (splice-reread A _ ys zs1 i1 n p1)))))
 
 (def-fns _ $ (erased repeat-length : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
     (subterm erased (Repeat A n x xs) p) -> (erased (Length A xs n) q))
