@@ -6,48 +6,85 @@ observations come from reading extracted code and the `ocamlopt -S` output
 on OCaml 4.14.1 without flambda, at `-inline 50`, against hand-written
 OCaml equivalents. Other compilers may differ.
 
-## What is free
+## Use the externs
 
-Erased parameters, results, `let`s and fields; `at` parameters and returns;
-newtype wrappers (`MkCopy`, `MkU62`, `MkU8`), `coerce` and placings; calls of
-at-functions such as `array-unpluck`. Numerals used as operands appear to be
-constant-folded by ocamlopt, so `u62-div p 3` compiles to a multiply.
+In hot code, each arithmetic step, comparison, zero test, element access,
+store and copy should be a call to one of the prelude's externs, not a
+`match` or a `Succ` on a `Nat`, or a recursion over one. Externs extract to
+single OCaml operations; the same thing in plain Sleight runs as written.
+The list below covers only the cases found so far, so for anything else
+search `lib/prelude.sl`'s `extern` declarations, reading their signatures
+for the facts they hand back. `lib/ffi_templates.txt` shows the OCaml each
+one extracts to.
 
-## Do this
+- `u62-*` for arithmetic, bit operations and comparisons. A `Nat` may be
+  a bignum, so its own operations check which it is; the `u62-*` forms take
+  erased proofs that operands and results are below 2^62, and each is one
+  OCaml operator on a native int. A `Succ` checks `Obj.is_int` and
+  `max_int`; a match on a `Nat` checks `Obj.is_int` and computes the
+  predecessor even when unused. Numeral operands appear to be
+  constant-folded, so `u62-div p 3` compiles to a multiply. ocamlopt does
+  not know the operand is non-negative, though, so `u62-div p 4` keeps a
+  sign fix-up around its shift; `u62-shr p 2` is a single shift.
+- `nat-zero-dec` for zero tests: one compare, no bound proof, and `IsSucc m`
+  gives the `(Succ m)` shape `u62-dec` needs.
+- `u62-lt-dec` as a loop's bound test, with the termination measure erased
+  (below).
+- `array-get`, `array-pluck` and the other array and `Bytes` accesses: one
+  unchecked load or store each, the proofs standing in for bounds checks.
 
-- **Arithmetic and tests through `u62-*`.** Each is one OCaml operator. A
-  `Succ` on a `Nat` checks `Obj.is_int` and `max_int`; a match on a `Nat`
-  checks `Obj.is_int` and computes the predecessor even when it is unused.
-- **Zero tests with `nat-zero-dec`.** One compare, no bound proof, and
-  `IsSucc m` gives the `(Succ m)` shape `u62-dec` needs.
-- **Loops on an erased measure.** `(subterm erased (Nat) k)` with a
-  `u62-lt-dec` test compiled to the same machine code as the hand-written
-  loop; recursing on a `subterm many (Nat)` was about 1.6× slower.
-- **`-imm` stores into arrays of immediates.** `array-place` and
-  `array-swap` go through `caml_modify`; the `-imm` forms do not. The same
-  holds for `(imm o n)` on a cell store (§37).
-- **Mutable globals through `at`.** A parameter `(unique (Array A xs) a at g)`,
-  `g` a top-level unique binder, returned `at a`, is neither passed nor
-  returned: the body reads the global `g`. A `def-fns` cannot capture `g`
-  itself, and a `def-unique` closure can be called once.
-- **Arrays of arrays through a newtype row.** An existential `Row` marked
-  `newtype` over the inner array, then `array-pluck`, access, `array-unpluck`:
-  two loads.
-- **In-place record updates through cells** (§37, §38): a unique destructure,
-  then an invocation that skips (`(at)`) the unchanged stores.
-- **Build blocks by constructor application.** `cell-alloc` then stores
-  first fills the block with the vacant word, then stores each pointer
-  field through `caml_modify` unless it is marked `imm`.
-- **`array-blit-imm` for immediates.** It is a `memmove`; `Array.blit`
-  calls `caml_modify` per element when the destination is in the major heap.
+## Let proofs do the work
 
-## Costs that match OCaml's
+What a program proves is erased: erased parameters, results, `let`s and
+fields; `at` parameters and returns; newtype wrappers, `coerce` and
+placings; calls of at-functions such as `array-unpluck`. A proof can
+therefore stand in for a runtime check or a runtime value.
 
-A function returning two non-`at` values allocates a tuple, even when
-inlined, as hand-written OCaml does. The `u62-divmod` template does not.
-A first-class `Fn` call is an unknown OCaml application. A local `def-fns`
-is an OCaml local closure; to call it from the body it is defined in, give
-it a level minted before the enclosing function.
+- A loop's termination measure can be erased: `(subterm erased (Nat) k)`,
+  with `u62-lt-dec` as the bound test. This compiled to the same machine
+  code as the hand-written loop; recursing on a `subterm many (Nat)` was
+  about 1.6× slower.
+- Bounds proofs make every array and `Bytes` access unchecked.
+- An existential row marked `newtype` over an inner array costs nothing, so
+  an array of arrays is two loads: `array-pluck`, access, `array-unpluck`.
+
+## Mutate instead of allocating
+
+A `unique` value can be updated in place, so hot code need allocate no more
+than hand-written OCaml does.
+
+- Arrays: `array-place`, `array-swap` and their `-imm` forms store in place.
+- Records: a unique destructure, then a cell invocation that skips (`(at)`)
+  the unchanged stores (§37, §38), updates the block in place.
+- Mutable globals: a parameter `(unique (Array A xs) a at g)`, `g` a
+  top-level unique binder, returned `at a`, is neither passed nor returned;
+  the body reads the global `g`. A `def-fns` cannot capture `g` itself, and
+  a `def-unique` closure can be called once.
+- Results returned `at` a parameter cost nothing, while two non-`at`
+  results allocate a tuple, even when inlined, as hand-written OCaml does
+  (the `u62-divmod` template does not).
+- To build a fresh block, apply its constructor: `cell-alloc` then stores
+  first fills the block with the vacant word.
+
+## Avoid the write barrier
+
+OCaml's write barrier, `caml_modify`, runs on a store into an existing
+block unless the compiler knows the value is an immediate. Extracted code
+holds every value as `Obj.t`, so the knowledge has to come from a proof.
+
+- `array-place-imm` and `array-swap-imm` skip it, given `Imm` proofs for the
+  old and the new element; `array-place` and `array-swap` pay it on every
+  store. `(imm o n)` does the same for a cell store (§37).
+- `array-blit-imm` copies immediates with a `memmove`, where `Array.blit`
+  pays the barrier per element when the destination is in the major heap.
+- A store of a pointer pays it, as in hand-written OCaml.
+
+## As in OCaml
+
+A first-class `Fn` call is an unknown OCaml
+application. A local `def-fns` is an OCaml local closure; to call it from
+the body it is defined in, give it a level minted before the enclosing
+function.
 
 ## Known gaps
 
