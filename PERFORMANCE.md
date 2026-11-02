@@ -103,3 +103,11 @@ A first-class `Fn` call is an unknown OCaml
 application. A local `def-fns` is an OCaml local closure; to call it from
 the body it is defined in, give it a level minted before the enclosing
 function.
+
+## Known gaps
+
+- No byte search: finding a byte in `Bytes` is a `bytes-get-many` loop, at
+  about 1.7 ns per byte in one measurement, where memchr would be about
+  0.03.
+- `bytes-cmp` on ranges other than two whole buffers runs at about a fifth
+  of memcmp's speed, since OCaml's runtime compares only whole buffers.
