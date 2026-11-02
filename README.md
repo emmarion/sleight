@@ -135,7 +135,8 @@ files end in `.sl`; GitHub shows them as Scheme.
   in them. [WARNINGS.md](WARNINGS.md), the warnings they emit.
   [TOOLING-WISHLIST.md](TOOLING-WISHLIST.md), friction met while writing
   programs. [INTERNALS.md](INTERNALS.md), the contract between the
-  prelude and the compilers.
+  prelude and the compilers. [PERFORMANCE.md](PERFORMANCE.md), writing
+  code that extracts to fast OCaml.
 - [`lib/prelude.sl`](lib/prelude.sl), the prelude, and [`std/`](std/),
   the source libraries.
 
