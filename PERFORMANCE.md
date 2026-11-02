@@ -40,6 +40,11 @@ one extracts to.
   arithmetic joining them. In one check of the `ocamlopt -S` output, a 16-bit read was one
   `movzwq`, and a 32-bit read one `movl` with a sign-extend and a mask, with
   no boxed `int32`.
+- `str-get`, `str-get16` and `str-get32` to read a `String`, in place of a
+  match on `SCons`, which allocates a fresh slice for the rest of the string
+  at every character. In one measurement, walking 10^8 characters by match
+  took about 3.4 ns and 4 allocated words per character, against about
+  0.7 ns for a hand-written OCaml loop of loads.
 - `u62-popcount`, `u62-trailing-zeros` and `u62-bit-length` (leading zeros
   are 62 minus the bit length), in place of a loop over `u62-bit-test`. In
   one measurement, summing `u62-popcount` over 10^7 values took about 4 ns
@@ -65,6 +70,12 @@ therefore stand in for a runtime check or a runtime value.
   code as the hand-written loop; recursing on a `subterm many (Nat)` was
   about 1.6× slower.
 - Bounds proofs make every array and `Bytes` access unchecked.
+- A type whose non-phantom constructors have only erased fields, such as
+  `Dec`, `Cmp` or `ErasedMaybe`, is an immediate, so a decider that answers
+  one allocates nothing. Where a match on a templated decider's call is the
+  final form of its expression, both extractors put the branches in the
+  template's own tests. Elsewhere, as in a `let`'s right-hand side, the
+  answer is built as a constant and matched again.
 - An existential row marked `newtype` over an inner array costs nothing, so
   an array of arrays is two loads: `array-pluck`, access, `array-unpluck`.
 
@@ -83,6 +94,10 @@ than hand-written OCaml does.
 - Results returned `at` a parameter cost nothing, while two non-`at`
   results allocate a tuple, even when inlined, as hand-written OCaml does
   (the `u62-divmod` template does not).
+- Lists built front to back: in destination-passing style (DESIGN.md §61),
+  the helper writes the head into a vacant cell before a `tail` call fills
+  the rest, then invokes the cell with every store skipped. Per element:
+  one allocation, two stores, constant stack.
 - To build a fresh block, apply its constructor: `cell-alloc` then stores
   first fills the block with the vacant word.
 
