@@ -16,8 +16,10 @@
 (def-fns _ $ (many init-for : (many (Nat) h) (many (List (InitE)) cache) -> (many (InitFor h) i) (many (List (InitE)) cache2))
   (let-match many (init-lookup h cache) (None _) ((Some _ i) (values i cache)))
   (let ((many gtu) (erased gc)) (gtree-full h))
-  (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu))
-  (let ((many i)) (IFYes h ctu gtu ce ge gc hc (flat-in h ctu gtu hc)))
+  (let ((many i))
+    (match many (flat-in h gtu) (((InitFor h) i))
+      ((Some _ fo) (let-match many fo (MkFlatOut _ _ ctu ce ge hc fi)) (IFYes h ctu gtu ce ge gc hc (Some _ fi)))
+      ((None _) (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu)) (IFYes h ctu gtu ce ge gc hc (None _)))))
   (values i (Cons _ (MkInitE h i) cache)))
 
 ; The Kempe tree kt of cp, whose ring has h + 2 darts, is sound for the ring traces of cp's map.

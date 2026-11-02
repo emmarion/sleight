@@ -18,8 +18,8 @@ F="std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl"
 for x in defs orient base sweep geo plan map lists planemap walk frontier labels rot fan build readback $mid \
   parta reduce hypgraph hypperm hypermap hypplane reduce2 hypeuler hypderived hyprelabel hypwalkup hypgeom \
   hypjordan hyptree hypcount hypcubic cube reduce3 coloring induct inductfc cfmap colalias \
-  hypsub unav/faces red/red cpmap red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict red/kempe red/flat red/flats red/flatg red/flatk \
-  cpcolor red/configs red/bridge red/init red/check red/gramrot red/cfred red/ccomp red/ccheck red/bcheck \
+  hypsub unav/faces red/red cpmap red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict red/kempe red/flat red/flats red/flatg \
+  cpcolor red/configs red/bridge red/init red/flatk red/check red/gramrot red/cfred red/ccomp red/ccheck red/bcheck \
   cpcomp iealias realias ringtrace kempemap patch patch2 split geomring sew snip srcycle revsnip revsnip2 \
   revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2 embed2 contract contract2 unav/realias; do
   F="$F fourcolor/$x.sl"

@@ -2452,7 +2452,7 @@
   (TaN ws j1 p q e e e e tq (tally-zeros us ws j1 q len bl t1 b1 lu lw rp) (tally-zeros us ws j1 (Succ q) len bl t2 b2 lu lw rp)
     (tally-zeros us ws j1 (Succ (Succ q)) len bl t3 b3 lu lw rp) (CnE)))
 
-; What srestrict needs of its arrays, as sinit makes them from ctu.
+; What srestrict needs of the counts of ctu.
 (def-adts $ (SInit : ((Nat) h) ((Ctree) ctu) ((List Cnt) us) -> Type)
   enum
   (many MkSInit : (erased (Nat) h) (erased (Ctree) ctu) (erased (List Cnt) us) (many (Nat) len) (erased (Lt len u62-modulus) lb)
@@ -2463,10 +2463,3 @@
   (let-match erased lu (MkLen16 _ _ bl d _ b))
   (let ((erased ws) (unique g) (erased rp)) (bytes-make (u62-add len len bl d b) (MkU8 (Zero) u8-modulus-pos)))
   (values ws g (MkLen16 ws len bl d (repeat-length _ bl _ ws rp) b) bl rp))
-
-(def-fns _ $ (many sinit : (many (Nat) h) (many (Ctree) ctu) (erased (CtH (Succ h) ctu) hc) ->
-    (erased (List Cnt) us) (unique (Bytes us) a) (many (Maybe (SInit h ctu us)) r))
-  (let ((erased us) (unique a) (many len) (many r)) (ctree-tally (Succ h) ctu hc))
-  (let-match many r (ESome _ pk) ((ENone _) (values us a (None _))))
-  (let-match erased pk (MkPacked _ _ _ _ tb lu lb))
-  (values us a (Some _ (MkSInit h ctu us len lb tb lu))))

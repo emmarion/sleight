@@ -434,11 +434,6 @@
   enum
   (many MkFitF : (erased (List (U8)) us) (erased (Nat) len) (erased (Length (U8) us len) l) (erased (Lt len u62-modulus) b) -> (FitF us)))
 
-(def-adts $ (Packed : ((List Cnt) us) ((Nat) j) ((Ctree) t) ((Nat) len) -> Type)
-  enum
-  (many MkPacked : (erased (List Cnt) us) (erased (Nat) j) (erased (Ctree) t) (erased (Nat) len) (erased (Tally us j (Zero) t) b) (erased (Len16 us len) l)
-      (erased (Lt len u62-modulus) lb) -> (Packed us j t len)))
-
 (def-fns _ $ (erased fit-set : (erased (List Cnt) us vs) (erased (Nat) i x) (erased (Fit us) f) (erased (Upd us i x vs) s) -> (erased (Fit vs) g))
   (let-match erased f (MkFit _ len l b))
   (MkFit vs len (upd-len us vs i x len s l) b))
@@ -559,69 +554,6 @@
   (match erased w _
     ((InNil _ _ _) b)
     ((InSet _ ws _ _ _ i x et w1 s ti le) (tally-set ws vs j p p2 i x et t (tally-inside us ws j p p2 t b w1 ap) s ti le ap))))
-
-(def-fns _ $ (many split-c : (erased (Nat) j) (many (Ctree) t) (erased (CtH (Succ j) t) k) ->
-    (many (Ctree) t1 t2 t3) (erased (CtH j t1) k1) (erased (CtH j t2) k2) (erased (CtH j t3) k3) (many (ErasedMaybe (Cn t1 t2 t3 t)) c))
-  (let-match many t (CNode a1 a2 a3)
-    ((CEmpty) (values t t t (HE j) (HE j) (HE j) (ESome _ (CnE))))
-    (absurd (CLeaf _) k))
-  (let-match erased k (HN _ _ _ _ h1 h2 h3))
-  (let ((many t4) (erased c4)) (cn-c a1 a2 a3))
-  (values a1 a2 a3 h1 h2 h3 (match many t4 _ ((CNode _ _ _) (let-match erased c4 (CnN _ _ _ _)) (ESome _ c4)) (else (ENone _)))))
-
-(def-fns _ $ (many fill : (subterm many (Nat) j) (many (Nat) p) (many (Ctree) t) (erased (CtH j t) k) (many (Nat) len) (erased (List Cnt) us)
-    (unique (Bytes us) a) (erased (Len16 us len) l) ->
-    (erased (List Cnt) vs) (unique (Bytes vs) a2 at a) (erased (Inside us vs j p) w) (erased (Len16 vs len) l2)
-    (many (ErasedMaybe (Tally vs j p t)) r))
-  (match many j _
-    ((Zero)
-      (let ((many n) (erased rt)) (root-exists t))
-      (let-match many (lt-dec n u16m) (Yes _ _ _ _ nb) ((No _ _ _ _ _) (values us a (InNil us j p) l (ENone _))))
-      (let-match many (lt-dec p len) (Yes _ _ _ _ pl) ((No _ _ _ _ _) (values us a (InNil us j p) l (ENone _))))
-      (let ((erased vs) (unique a2) (erased s) (erased l2)) (put-cnt us a len l p pl n nb))
-      (values vs a2 (InSet us us vs j p p n (Nil _) (InNil us j p) s (TINil p) (LengthNil _)) l2 (ESome _ (TaL vs p n t (upd-ent us vs p n s) rt k))))
-    ((Succ j1)
-      (let ((many t1) (many t2) (many t3) (erased k1) (erased k2) (erased k3) (many c)) (split-c j1 t k))
-      (let ((many d) (erased ad)) (add p p))
-      (let ((many q) (erased aq)) (add d p))
-      (let ((erased tq)) (adds-thrice p d q ad aq))
-      (let ((erased u1) (unique a1) (erased w1) (erased l1) (many r1)) (notail $ fill j1 q t1 k1 len us a l))
-      (let ((erased u2) (unique a2) (erased w2) (erased l2) (many r2)) (notail $ fill j1 (Succ q) t2 k2 len u1 a1 l1))
-      (let ((erased u3) (unique a3) (erased w3) (erased l3) (many r3)) (notail $ fill j1 (Succ (Succ q)) t3 k3 len u2 a2 l2))
-      (let ((erased w))
-        (inside-cat us u2 u3 (Succ j1) p
-          (inside-cat us u1 u2 (Succ j1) p (inside-up us u1 j1 p q (C1) w1 (Ki1 p q tq)) (inside-up u1 u2 j1 p (Succ q) (C2) w2 (Ki2 p q tq)))
-          (inside-up u2 u3 j1 p (Succ (Succ q)) (C3) w3 (Ki3 p q tq))))
-      (let-match many r1 (ESome _ b1) ((ENone _) (values u3 a3 w l3 (ENone _))))
-      (let-match many r2 (ESome _ b2) ((ENone _) (values u3 a3 w l3 (ENone _))))
-      (let-match many r3 (ESome _ b3) ((ENone _) (values u3 a3 w l3 (ENone _))))
-      (let-match many c (ESome _ cn) ((ENone _) (values u3 a3 w l3 (ENone _))))
-      (let ((erased s1)) (Succ q))
-      (let ((erased s2)) (Succ s1))
-      (values u3 a3 w l3
-        (ESome _ (TaN u3 j1 p q t1 t2 t3 t tq
-          (tally-inside u2 u3 j1 q s2 t1 (tally-inside u1 u2 j1 q s1 t1 b1 w2 (ApLt (Nat) Lt q s1 (lt-succ q))) w3
-            (ApLt (Nat) Lt q s2 (lt-weaken q s1 (lt-succ q))))
-          (tally-inside u2 u3 j1 s1 s2 t2 b2 w3 (ApLt (Nat) Lt s1 s2 (lt-succ s1)))
-          b3 cn))))))
-
-(def-fns _ $ (many pow3 : (subterm many (Nat) k) -> (many (Nat) v))
-  (let-match many k (Succ k1) ((Zero) (Succ (Zero))))
-  (let ((many v1)) (notail $ pow3 k1))
-  (let ((many d) (erased _)) (add v1 v1))
-  (let ((many v) (erased _)) (add d v1))
-  v)
-
-(def-fns _ $ (many ctree-tally : (many (Nat) j) (many (Ctree) t) (erased (CtH j t) k) ->
-    (erased (List Cnt) us) (unique (Bytes us) a) (many (Nat) len) (many (ErasedMaybe (Packed us j t len)) r))
-  (let ((many n)) (pow3 j))
-  (let ((many bl) (erased d)) (add n n))
-  (let ((erased us) (unique a) (erased rp)) (bytes-make bl (MkU8 (Zero) u8-modulus-pos)))
-  (let-match many (nat-fits-u62 bl) (Yes _ _ _ _ bb) ((No _ _ _ _ _) (values us a n (ENone _))))
-  (let ((erased lb)) (lt-le-trans _ _ _ (add-le-left _ _ _ d) (LtS _ _ bb)))
-  (let ((erased vs) (unique a2) (erased _) (erased l2) (many r)) (fill j (Zero) t k n us a (MkLen16 us n bl d (repeat-length _ bl _ us rp) bb)))
-  (let-match many r (ESome _ b) ((ENone _) (values vs a2 n (ENone _))))
-  (values vs a2 n (ESome _ (MkPacked vs j t n b l2 lb))))
 
 ; t is the subtree of top after the reversed prefix pre.
 (def-adts $ (CtAt : ((Ctree) top) ((List (Col)) pre) ((Ctree) t) -> Type)
