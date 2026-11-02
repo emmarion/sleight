@@ -1368,7 +1368,11 @@
               ((Nil _) (values ew (env-error env $ sp-misuse env $ SpFormer $ FoMatchable) $ TErr "malformed Matchable")))
             (let ((many env2) (many disc)) $ disc-of-checked env d)
             (let ((many env3) (many tid)) $ named env2 t "a type constructor")
-            (let ((many env4) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar (subterm (within-in cs rest (List (Syn)) args (within-step cs marked rest (prove-subterm cs marked) wm) (prove-subterm rest args))) cs tid env3)
+            (let ((many (Env) env3t))
+              (match many (type-of env3 tid) _
+                ((TTyCtor _) env3)
+                (else (env-error env3 $ str-cat3 (qname env3 tid) " : " $ str-cat (qshow env3 $ type-of env3 tid) (say env3 " is not a type constructor")))))
+            (let ((many env4) (many mcs)) $ notail $ elab-mctors fuel callbacks _ sugar (subterm (within-in cs rest (List (Syn)) args (within-step cs marked rest (prove-subterm cs marked) wm) (prove-subterm rest args))) cs tid env3t)
             (values ew env4 $ TMatchable disc nt ext (TVar tid) mcs))
           ))
       ((SpStmt sk)

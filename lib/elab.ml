@@ -953,6 +953,7 @@ and elab_type_form env l sp args =
       let ms, rest = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in
       let t, cs = match rest with t :: cs -> (t, cs) | _ -> error l "%s" (help env (Sp.misuse sp)) in
       let tid = tyname env l t in
+      (match type_of env tid with TyCtor _ -> () | ty -> error l "%s : %s is not a type constructor" (qname env tid) (qshow env ty));
       let ctor env = function
         | List (cl, [ m; c ]) -> let m = mult_or env cl m in
             if m = Unique then error_in env cl "a `Matchable` constructor cannot be `unique`";
