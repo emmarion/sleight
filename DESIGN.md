@@ -2352,8 +2352,8 @@ produces no value and binds nothing. It is one of:
 - `(open-absurd e _)`, which refutes when the open contradicts (§8).
 - any other expression `e`. It is elaborated as an erased value and
   accepted when `(match erased e _)` with no branches would refute. So
-  `(False)` works, and so does `(Lt a (Zero))`. This is one match
-  deep, with no search.
+  a value of type `(False)` works, and so does one of type
+  `(Lt a (Zero))`. This is one match deep, with no search.
 
 ## 52. `let-match` with branches
 
