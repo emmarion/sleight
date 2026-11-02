@@ -74,28 +74,28 @@
     ((MsErasedL _ _ p2) (let-match erased q (PkErased _ _ _ q2)) (picked-same _ _ _ _ p2 q2))
     ((MsErasedR _ b2 p2) (PkErased _ b2 xs $ picked-same _ _ _ _ p2 q))))
 
-(def-fns _ $ (many mults-same : (subterm many (List $ Multiplicity) a) (subterm many (List $ Multiplicity) b) -> (many (Maybe $ ManySame a b) r))
+(def-fns _ $ (many mults-same : (subterm many (List $ Multiplicity) a) (subterm many (List $ Multiplicity) b) -> (many (ErasedMaybe $ ManySame a b) r))
   (match many a _
     ((Nil _)
-      (let-match many b (Cons _ n br) ((Nil _) (Some _ (MsNil))))
+      (let-match many b (Cons _ n br) ((Nil _) (ESome _ (MsNil))))
       (let-match many n (Erased)
-        ((Many) (None _)) ((Once) (None _)))
-      (match many (notail $ mults-same a br) _ ((Some _ p) (Some _ $ MsErasedR _ _ p)) ((None _) (None _))))
+        ((Many) (ENone _)) ((Once) (ENone _)))
+      (match many (notail $ mults-same a br) _ ((ESome _ p) (ESome _ $ MsErasedR _ _ p)) ((ENone _) (ENone _))))
     ((Cons _ m ar)
       (match many m _
-        ((Erased) (match many (notail $ mults-same ar b) _ ((Some _ p) (Some _ $ MsErasedL _ _ p)) ((None _) (None _))))
+        ((Erased) (match many (notail $ mults-same ar b) _ ((ESome _ p) (ESome _ $ MsErasedL _ _ p)) ((ENone _) (ENone _))))
         ((Many)
-          (let-match many b (Cons _ n br) ((Nil _) (None _)))
+          (let-match many b (Cons _ n br) ((Nil _) (ENone _)))
           (match many n _
-            ((Many) (match many (notail $ mults-same ar br) _ ((Some _ p) (Some _ $ MsMany _ _ p)) ((None _) (None _))))
-            ((Once) (match many (notail $ mults-same ar br) _ ((Some _ p) (Some _ $ MsManyOnce _ _ p)) ((None _) (None _))))
-            ((Erased) (match many (notail $ mults-same a br) _ ((Some _ p) (Some _ $ MsErasedR _ _ p)) ((None _) (None _))))))
+            ((Many) (match many (notail $ mults-same ar br) _ ((ESome _ p) (ESome _ $ MsMany _ _ p)) ((ENone _) (ENone _))))
+            ((Once) (match many (notail $ mults-same ar br) _ ((ESome _ p) (ESome _ $ MsManyOnce _ _ p)) ((ENone _) (ENone _))))
+            ((Erased) (match many (notail $ mults-same a br) _ ((ESome _ p) (ESome _ $ MsErasedR _ _ p)) ((ENone _) (ENone _))))))
         ((Once)
-          (let-match many b (Cons _ n br) ((Nil _) (None _)))
+          (let-match many b (Cons _ n br) ((Nil _) (ENone _)))
           (match many n _
-            ((Many) (match many (notail $ mults-same ar br) _ ((Some _ p) (Some _ $ MsOnceMany _ _ p)) ((None _) (None _))))
-            ((Once) (match many (notail $ mults-same ar br) _ ((Some _ p) (Some _ $ MsOnce _ _ p)) ((None _) (None _))))
-            ((Erased) (match many (notail $ mults-same a br) _ ((Some _ p) (Some _ $ MsErasedR _ _ p)) ((None _) (None _))))))))))
+            ((Many) (match many (notail $ mults-same ar br) _ ((ESome _ p) (ESome _ $ MsOnceMany _ _ p)) ((ENone _) (ENone _))))
+            ((Once) (match many (notail $ mults-same ar br) _ ((ESome _ p) (ESome _ $ MsOnce _ _ p)) ((ENone _) (ENone _))))
+            ((Erased) (match many (notail $ mults-same a br) _ ((ESome _ p) (ESome _ $ MsErasedR _ _ p)) ((ENone _) (ENone _))))))))))
 
 (def-adts $ (Disc : -> Type)
   enum

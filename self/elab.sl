@@ -2501,8 +2501,8 @@
 
 (def-fns _ $ (many coercible-code : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (Multiplicity) src) (many (Code ctx (Cons (Multiplicity) src (Nil (Multiplicity)))) code) -> (many (Code ctx expect) r))
   (match many (mults-same (Cons _ src $ Nil _) expect) _
-    ((Some _ same) (recast _ expect (Cons _ src $ Nil _) same code))
-    ((None _) (CErased _ expect))))
+    ((ESome _ same) (recast _ expect (Cons _ src $ Nil _) same code))
+    ((ENone _) (CErased _ expect))))
 
 (def-fns _ $ (many coercible-proof-tele : (many (Env) env) (many (Nat) ctor) (many (Maybe $ Pair (Term) $ Term) sides) -> (many (Env) e) (many (Maybe $ List $ Entry) tele))
   (let-match many sides (Some _ p) ((None _) (values env $ None _)))
@@ -2832,8 +2832,8 @@
     ((Erased) (CErased _ many-one))
     ((Many) code)
     (else (match many (mults-same (Cons _ pos (Nil _)) many-one) _
-      ((None _) (CError _ many-one "invalid runtime shape"))
-      ((Some _ same) (recast _ many-one (Cons _ pos (Nil _)) same code))))))
+      ((ENone _) (CError _ many-one "invalid runtime shape"))
+      ((ESome _ same) (recast _ many-one (Cons _ pos (Nil _)) same code))))))
 
 (def-fns _ $ (many bridge-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) outer) (erased (List $ Multiplicity) inner) (many (DemandBridge outer inner) bridge) (many (Code ctx inner) code) -> (many (Code ctx outer) out))
   (match many bridge _ ((KeepDemand _) code) ((HeadDemand mode) (runtime-one _ mode code))))
@@ -2891,7 +2891,7 @@
     (match many (mult-is-many (pos-mult expect)) (((Code ctx expect) _))
       ((BFalse) (CErased _ expect))
       ((BTrue) (match many (mults-same many-one expect) (((Code ctx expect) _))
-        ((None _) (CError _ expect "size")) ((Some _ same) (recast _ expect many-one same code)))))))
+        ((ENone _) (CError _ expect "size")) ((ESome _ same) (recast _ expect many-one same code)))))))
 
 (def-fns _ $ (many cell-result-hoisted : (unique (ElabWorld) ew) (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (Env) env) (many (Res) res) (many (Hoisted ctx many-one) h) -> (unique (ElabWorld) ewr at ew)
     (many (Env) env2) (many (List $ Res) ress) (many (Hoisted ctx expect) out))
@@ -3678,11 +3678,11 @@
   (match many bs _ ((Nil _) (BFalse)) ((Cons _ y brest) (and (nat-eqb x y) $ tail $ bins-eq rest brest))))
 
 ; Whether a body returns exactly the let's ids, in order, with the two erasure lists then agreeing on their many entries.
-(def-fns _ $ (many returns-same : (erased (List $ List $ Nat) ctx) (subterm many (List $ Multiplicity) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) _pk) (subterm many (List $ Multiplicity) ns) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ns cs) _qk) -> (many (Maybe $ ManySame ms ns) r))
-  (let-match many (vars-of _ cs) (Some _ vars) ((None _) (None _)))
+(def-fns _ $ (many returns-same : (erased (List $ List $ Nat) ctx) (subterm many (List $ Multiplicity) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) _pk) (subterm many (List $ Multiplicity) ns) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ns cs) _qk) -> (many (ErasedMaybe $ ManySame ms ns) r))
+  (let-match many (vars-of _ cs) (Some _ vars) ((None _) (ENone _)))
   (match many (bins-eq ids vars) _
     ((BTrue) (mults-same ms ns))
-    ((BFalse) (None _))))
+    ((BFalse) (ENone _))))
 
 ; Dropping a frame nothing mentions (lib/elab.ml's constant let): the code rebuilt one frame shorter, or None
 ; where some variable sits in that frame.
@@ -3839,12 +3839,12 @@
                 ((LdNo _ _ _ _) (None _))))))
         (let-match many dropped (None _) ((Some _ ren2) (tail $ norm _ _ ms rest ren2)))
         (let ((many rest2)) $ notail $ norm _ _ ms rest $ ren-weaken _ _ ids ren)
-        (let ((many (Maybe $ ManySame ms2 ms) same))
+        (let ((many (ErasedMaybe $ ManySame ms2 ms) same))
           (match many rest2 _
             ((CVar _ y p) (returns-same _ ms2 ids pk many-one (Cons _ (CVar _ y p) $ Nil _) $ PkMany _ (Nil _) (CVar _ y p) (Nil _) $ PkNil _))
             ((CValues _ ns3 cs pk3) (returns-same _ ms2 ids pk ns3 cs pk3))
-            (else (None _))))
-        (let-match many same (None _) ((Some _ p) (recast _ ms ms2 p rhs2)))
+            (else (ENone _))))
+        (let-match many same (ENone _) ((ESome _ p) (recast _ ms ms2 p rhs2)))
         (let ((many (Maybe $ Code ctx ms) gone)) $ match many (constant-rhs _ _ rhs2) _ ((BTrue) (strengthen _ _ _ rest2 $ DHere _ _)) ((BFalse) (None _)))
         (match many gone _
           ((Some _ r) r)

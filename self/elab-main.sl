@@ -427,10 +427,10 @@
             (let ((erased _) (erased pn2)) (frames-widen _ _ (hist-le-trans _ _ _ glt le2) _ cenv))
             (let ((many env)) $ FrVals _ _ params vs lkp $ FrGroup _ _ ids (coerce g pg2) group (coerce cenv pn2))
             (match many (mults-same rets ms) _
-              ((None _)
+              ((ENone _)
                 (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ error-vals _ hp2 ms "arity mismatch")
                 (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r rpk w))
-              ((Some _ same)
+              ((ESome _ same)
                 (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk) (unique W w3)) $ tail $ eval xf callbacks _ k _ hp2 _ _ body (MkSt _ _ env) _ pf w)
                 (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r (picked-same _ rets ms r same rpk) w3))))))
       ((BCtorFn _ c)
@@ -725,8 +725,8 @@
               ((InvWorld _ actuals)
                 (let-match many actuals (Cons _ req _) ((Nil _) (CError _ rmults "world-do arity")))
                 (match many (mults-same many-one rmults) _
-                  ((Some _ same) (recast _ rmults many-one same $ CWorldDo _ req))
-                  ((None _) (CError _ rmults "world-do returns"))))
+                  ((ESome _ same) (recast _ rmults many-one same $ CWorldDo _ req))
+                  ((ENone _) (CError _ rmults "world-do returns"))))
               ((InvPrim _ p actuals)
                 (let-match many (is-some _ $ prim-named implemented $ sp-name p) (BTrue) ((BFalse) (let ((many missing) (erased pk)) $ codes-missing ctx2 rmults) (CValues _ rmults missing pk)))
                 (CPrim ctx2 rmults p actuals))
