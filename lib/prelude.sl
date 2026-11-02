@@ -1177,6 +1177,11 @@
     (many None : (erased Type A) -> (Maybe A))
     (many Some : (erased Type A) (many A a) -> (Maybe A))))
 
+(def-adts $ (ErasedMaybe : (Type A) -> Type)
+  enum
+  (many ENone : (erased Type A) -> (ErasedMaybe A))
+  (many ESome : (erased Type A) (erased A a) -> (ErasedMaybe A)))
+
 (def-adts
   ((Result : (Type A) -> Type)
     enum
@@ -1931,7 +1936,7 @@
 (def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
     (unique (MacroWorld) mw at vacant-slot) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
-    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+    (unique mw is mw2 at mw) (many (ErasedMaybe (JMEq A a B b)) r)))
 
 (def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many m is r)))
@@ -1958,18 +1963,18 @@
   (many SName : (many (String) s) -> (Symbol))
   (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
 
-(def-fns _ $ (many symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r))
+(def-fns _ $ (many symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (ErasedMaybe (Eq (Symbol) x y)) r))
   (match many x _
     ((SName s)
-      (let-match many y (SName t) (else (None _)))
-      (match many (str-cmp s t) _ ((CEq _ _ _) (Some _ $ Refl _ _)) (else (None _))))
+      (let-match many y (SName t) (else (ENone _)))
+      (match many (str-cmp s t) _ ((CEq _ _ _) (ESome _ $ Refl _ _)) (else (ENone _))))
     ((SGen n s g)
-      (let-match many y (SGen m t h) (else (None _)))
-      (let-match many (nat-cmp n m) (CEq _ _ _) (else (None _)))
+      (let-match many y (SGen m t h) (else (ENone _)))
+      (let-match many (nat-cmp n m) (CEq _ _ _) (else (ENone _)))
       (let-match erased (gensym-unique n s t g h) (JMRefl _ _))
-      (Some _ $ Refl _ _))))
+      (ESome _ $ Refl _ _))))
 
-(def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) -> (many (Maybe (Eq (Slot) a b)) r)))
+(def-prim $ (many slot-eq : (many (Slot) a) (many (Slot) b) -> (many (ErasedMaybe (Eq (Slot) a b)) r)))
 
 (def-adts $ (NthLast : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
   enum
@@ -2107,8 +2112,8 @@
   (slot-self s)
   (let-match many xs (Cons _ it rest) ((Nil _) (values (Slot) s (SlotMissing _ _ s))))
   (let-match many it (MkSlotItem _ _ v p))
-  (let-match many (slot-eq (slot-of p) s) (None _)
-    ((Some _ e)
+  (let-match many (slot-eq (slot-of p) s) (ENone _)
+    ((ESome _ e)
       (let-match erased e (Refl _ _))
       (let-match erased (placed-slot _ _ _ p) (Refl _ _))
       (let ((many n) (erased q)) (list-count _ rest))
@@ -2411,9 +2416,9 @@
     (let-match many res (RSettled _ _ _ c) (else (values mw0 (None _))))
     (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw0 (None _))))
     (let ((unique mw1) (many en)) (settled-eq _ _ _ _ _ _ mw0 (settled-type _ _ _ c) (settled-of erased nat-type)))
-    (let-match many en (None _) ((Some _ j) (let-match erased j (JMRefl _ _)) (values mw1 (Some _ $ MkConst _ c))))
+    (let-match many en (ENone _) ((ESome _ j) (let-match erased j (JMRefl _ _)) (values mw1 (Some _ $ MkConst _ c))))
     (let ((unique mw2) (many ec)) (settled-eq _ _ _ _ _ _ mw1 (settled-type _ _ _ c) (settled-of erased char-type)))
-    (let-match many ec (Some _ j) ((None _) (values mw2 (None _))))
+    (let-match many ec (ESome _ j) ((ENone _) (values mw2 (None _))))
     (let-match erased j (JMRefl _ _))
     (let-match many (settled-value _ _ c) (MkChar u))
     (let-match many u (MkU8 n _))

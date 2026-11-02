@@ -11,7 +11,7 @@
 (def-fns _ $ (many nq-lookup : (many (Symbol) s) (subterm many (List $ Pair (Symbol) (Raw)) env) -> (many (Maybe (Raw)) r))
   (let-match many env (Cons _ b rest) ((Nil _) (None _)))
   (let-match many b (MkPair _ _ k v))
-  (match many (symbol-eq s k) _ ((Some _ _) (Some _ v)) ((None _) (tail $ nq-lookup s rest))))
+  (match many (symbol-eq s k) _ ((ESome _ _) (Some _ v)) ((ENone _) (tail $ nq-lookup s rest))))
 
 (def-fns _
   ((many nq-subst : (many (List $ Pair (Symbol) (Raw)) env) (subterm many (Raw) t) -> (many (Raw) r))

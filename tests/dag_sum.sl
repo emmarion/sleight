@@ -110,7 +110,7 @@
 (def-fns _ $ (many lookup : (many (Tree) q) (subterm many (List (Memo)) m) -> (many (Found q) f))
   (let-match many m (Cons _ e rest) ((Nil _) (Miss q)))
   (let-match many e (MkMemo t n p))
-  (let-match many (slot-eq (slot-of t) (slot-of q)) (Some _ se) ((None _) (tail (lookup q rest))))
+  (let-match many (slot-eq (slot-of t) (slot-of q)) (ESome _ se) ((ENone _) (tail (lookup q rest))))
   (let-match erased se (Refl _ _))
   (let-match many (same-tree t q) (EONonErased _ tq) ((EOErased _) (lookup q rest)))
   (let-match erased tq (Refl _ _))

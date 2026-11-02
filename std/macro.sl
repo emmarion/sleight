@@ -11,7 +11,7 @@
   (let-match many r (RawSettled _ _ _ _ c) (else (values mw (None _))))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw (None _))))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) th))
-  (let-match many e (Some _ j) ((None _) (values mw1 (None _))))
+  (let-match many e (ESome _ j) ((ENone _) (values mw1 (None _))))
   (let-match erased j (JMRefl _ _))
   (values mw1 (Some _ $ settled-value _ _ c)))
 
@@ -38,7 +38,7 @@
 (def-fns _ $ (many same-sym : (many (Raw) a) (many (Raw) b) -> (many (Bool) r))
   (let-match many a (RawSymbol _ x) (else (BFalse)))
   (let-match many b (RawSymbol _ y) (else (BFalse)))
-  (match many (symbol-eq x y) _ ((Some _ _) (BTrue)) ((None _) (BFalse))))
+  (match many (symbol-eq x y) _ ((ESome _ _) (BTrue)) ((ENone _) (BFalse))))
 
 (def-fns _
   ((many same-raw : (subterm many (Raw) a) (many (Raw) b) -> (many (Bool) r))
@@ -83,9 +83,9 @@
   (let ((unique mw1) (many res)) (resolve mw s))
   (let-match many res (RSettled _ _ _ c) (else (values mw1 (QqPlain))))
   (let ((unique mw2) (many single)) (settled-eq _ _ _ _ _ _ mw1 c (settled-of many ~)))
-  (let-match many single (None _) ((Some _ _) (values mw2 (QqOne e))))
+  (let-match many single (ENone _) ((ESome _ _) (values mw2 (QqOne e))))
   (let ((unique mw3) (many spliced)) (settled-eq _ _ _ _ _ _ mw2 c (settled-of many ~@)))
-  (match many spliced _ ((Some _ _) (values mw3 (QqSplice e))) ((None _) (values mw3 (QqPlain)))))
+  (match many spliced _ ((ESome _ _) (values mw3 (QqSplice e))) ((ENone _) (values mw3 (QqPlain)))))
 
 (def-fns _ $ (many qq-h : (many (Pos) p) (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (many (Raw) r))
   (RawSettled p _ _ _ h))

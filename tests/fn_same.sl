@@ -7,7 +7,7 @@
   (many MkIsInc : -> (IsInc inc)))
 (def-fns _ $ (many transport : (many (Fn L (many (Nat) n) -> (many (Nat) m)) f)
     (many (Fn L (many (Nat) n) -> (many (Nat) m)) g) (many (IsInc f) w) -> (many (Maybe $ IsInc g) r))
-  (let-match many (slot-eq (slot-of f) (slot-of g)) (Some _ e) ((None _) (None _)))
+  (let-match many (slot-eq (slot-of f) (slot-of g)) (ESome _ e) ((ENone _) (None _)))
   (let-match erased e (Refl _ _))
   (let-match many (fn-same f g) (EONonErased _ j) ((EOErased _) (None _)))
   (let-match erased j (Refl _ _))

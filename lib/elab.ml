@@ -594,7 +594,7 @@ let implement env p args = match p, args with
       let snap = List.fold_left enter_mentioned (comptime_boundary env) [ Var x; Var y ] in
       let a = denoted snap x rx and b = denoted snap y ry in
       let snap = List.fold_left enter_mentioned snap (a @ b) in
-      [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
+      [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "ESome" [] else pbuild env "ENone" []) ]
   | Sp.MintSettled, [ V.VHandle (y, r, _, _); v ] -> [ mint env y r Many v ]
   | Sp.MintSettledErased, [ V.VHandle (y, r, _, _) ] -> [ mint env y r Erased V.VToken ]
   | (Sp.SettledTyApply | Sp.SettledValApply), pos :: hs ->
@@ -1816,11 +1816,11 @@ and elab_special ?sink ?final demand tele env expect l sp args =
           let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
           let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
           let ctors = List.map (pctor ~loc:l env) (match sp with
-            | Sp.SettledMult -> [ "MErased"; "MMany"; "MUnique" ] | Sp.SlotEq -> [ "None"; "Some"; "Refl" ] | Sp.SettledEq -> [ "None"; "Some"; "JMRefl" ]
+            | Sp.SettledMult -> [ "MErased"; "MMany"; "MUnique" ] | Sp.SlotEq -> [ "ENone"; "ESome" ] | Sp.SettledEq -> [ "ENone"; "ESome" ]
             | Sp.Resolve -> [ "RSettled"; "RHypothetical"; "RUnbound" ] | Sp.ReadFile -> [ "Ok"; "Fail" ] | _ -> []) in
           let codes = codes @ match sp, ctors with
             | Sp.SettledMult, _ -> List.map (fun c -> V.CConst (V.construct c [])) ctors
-            | Sp.SlotEq, [ none; some; refl ] -> [ V.CConst (V.construct none []); V.CConst (V.construct some [ V.construct refl [] ]) ]
+            | Sp.SlotEq, [ none; some ] -> [ V.CConst (V.construct none []); V.CConst (V.construct some []) ]
             | _ -> [] in
           call_returns ?sink ~demand env expect l shown acc rets (fun _ -> if List.mem sp implemented then V.CPrim (sp, codes) else V.CValues []))
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->

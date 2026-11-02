@@ -4,7 +4,7 @@
   (let ((unique mw1) (many res)) (resolve mw s))
   (let-match many res (RSettled _ _ _ h) (else (values mw1 (BFalse))))
   (let ((unique mw2) (many e)) (settled-eq _ _ _ _ _ _ mw1 (settled-erase _ _ _ h) want))
-  (values mw2 $ match many e (((Bool) _)) ((Some _ _) (BTrue)) ((None _) (BFalse))))
+  (values mw2 $ match many e (((Bool) _)) ((ESome _ _) (BTrue)) ((ENone _) (BFalse))))
 
 (def-adts $ (OrderHead : -> Type)
   enum

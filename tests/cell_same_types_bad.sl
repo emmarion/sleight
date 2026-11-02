@@ -8,7 +8,7 @@
   (let ((many vb)) (share (cb)))
   (let-match many va (A1 ua))
   (let-match many vb (A2 ub))
-  (let-match many (slot-eq (slot-of ua) (slot-of ub)) (Some _ e) ((None _) 0))
+  (let-match many (slot-eq (slot-of ua) (slot-of ub)) (ESome _ e) ((ENone _) 0))
   (let-match erased e (Refl _ _))
   (let-match many (cell-same ua ub) (EONonErased _ j) ((EOErased _) 0))
   1)

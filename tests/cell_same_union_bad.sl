@@ -7,7 +7,7 @@
   (let ((many vb)) (share (cb)))
   (let-match many va (A ua))
   (let-match many vb (B ub))
-  (let-match many (slot-eq (slot-of ua) (slot-of ub)) (Some _ e) ((None _) 0))
+  (let-match many (slot-eq (slot-of ua) (slot-of ub)) (ESome _ e) ((ENone _) 0))
   (let-match erased e (Refl _ _))
   (let-match many (cell-same ua ub) (EONonErased _ j) ((EOErased _) 0))
   (match erased j (((Nat) r))))

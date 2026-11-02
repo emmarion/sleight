@@ -5,7 +5,7 @@
   (let ((unique (Vacant (Nat) vacant-slot) is m) (erased _) (unique _) (erased _))
     (array-swap _ _ a (Zero) (Init _ (Succ (Zero))) _ (NthHere _ _ _)))
   (let-match unique m (Vacant _ s))
-  (match many (slot-eq s vacant-slot) _ ((Some _ _) 1) ((None _) 0)))
+  (match many (slot-eq s vacant-slot) _ ((ESome _ _) 1) ((ENone _) 0)))
 (let ((many at-compile)) (vacant))
 (def-fns _ $ (many main : -> (many (List (Nat)) r)) (Cons _ at-compile $ Cons _ (vacant) $ Nil _))
 main

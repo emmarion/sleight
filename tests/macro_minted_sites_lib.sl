@@ -2,7 +2,7 @@
 (def-fns _
   ((many subst : (many (Raw) h) (subterm many (Raw) r) -> (many (Raw) o))
     (let-match many r (RawList p items)
-      ((RawSymbol _ s) (match many (symbol-eq s (SName "HERE")) _ ((Some _ _) h) ((None _) r)))
+      ((RawSymbol _ s) (match many (symbol-eq s (SName "HERE")) _ ((ESome _ _) h) ((ENone _) r)))
       (else r))
     (RawList p $ notail $ subst-list h items))
   ((many subst-list : (many (Raw) h) (subterm many (List $ Raw) xs) -> (many (List $ Raw) o))

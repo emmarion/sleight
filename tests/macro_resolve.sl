@@ -23,7 +23,7 @@
   (let ((unique mw2) (many t)) $ match many r (((MacroWorld) _ at mw1) ((String) _))
     ((RSettled _ _ _ h)
       (let ((unique mw3) (many e)) (settled-eq _ _ _ _ _ _ mw1 (settled-erase _ _ _ h) (settled-of erased let)))
-      (values mw3 $ match many e (((String) _)) ((Some _ _) "same") ((None _) "other")))
+      (values mw3 $ match many e (((String) _)) ((ESome _ _) "same") ((ENone _) "other")))
     (else (values mw1 "other")))
   (let ((unique mw3) (many o)) (str-raw mw2 here t))
   (values mw3 $ Cons _ o $ Nil _))

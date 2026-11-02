@@ -5,7 +5,7 @@
   (match many r (((Nat) k)) ((SlotFound _ _ _ _ _ i _) i) ((SlotMissing _ _ _) 99)))
 
 (def-fns _ $ (many same : (many (Slot) a) (many (Slot) b) -> (many (Bool) r))
-  (match many (slot-eq a b) _ ((Some _ _) (BTrue)) ((None _) (BFalse))))
+  (match many (slot-eq a b) _ ((ESome _ _) (BTrue)) ((ENone _) (BFalse))))
 
 ;! suppress warn MkSlots
 ;! suppress warn Slots

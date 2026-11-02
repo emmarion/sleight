@@ -2508,10 +2508,9 @@
             (let ((many env3b) (many ch)) $ prelude-id env3a "RHypothetical")
             (let ((many env3c) (many cu)) $ prelude-id env3b "RUnbound")
             (values env3c $ Cons _ (CConst _ cs) $ Cons _ (nullary-ctor-code _ ch) $ Cons _ (nullary-ctor-code _ cu) $ Nil _)))
-        (let ((many env3a) (many cn)) $ prelude-id env2 "None")
-        (let ((many env3b) (many cs)) $ prelude-id env3a "Some")
-        (let ((many env3c) (many cr)) $ prelude-id env3b $ match many (sp-eq sp $ SpExpr $ ExSlotEq) _ ((BTrue) "Refl") ((BFalse) "JMRefl"))
-        (values env3c $ Cons _ (nullary-ctor-code _ cn) $ Cons _ (CApp _ many-one (CConst _ cs) (Cons _ (nullary-ctor-code _ cr) $ Nil _) (CCCtor)) $ Nil _)))
+        (let ((many env3a) (many cn)) $ prelude-id env2 "ENone")
+        (let ((many env3b) (many cs)) $ prelude-id env3a "ESome")
+        (values env3b $ Cons _ (nullary-ctor-code _ cn) $ Cons _ (nullary-ctor-code _ cs) $ Nil _)))
     (let ((many all) (erased _)) $ list-append _ actuals hidden)
     (tail $ call-returns fuel callbacks _ ew1 env3 ctx ctx2 apre expect rets acc pos demand (None _) (tick $ kw-mark $ sp-name sp) $ InvPrim _ sp all))
 

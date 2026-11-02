@@ -10,7 +10,7 @@
   (let ((unique mw1) (many a)) (mint-settled mw _ nats-h v))
   (let ((unique mw2) (many b)) (mint-settled mw1 _ nats-h v))
   (let ((unique mw3) (many e)) (settled-eq _ _ _ _ _ _ mw2 a b))
-  (let ((unique mw4) (many s)) (str-raw mw3 here $ match many e _ ((Some _ _) "equal") ((None _) "distinct")))
+  (let ((unique mw4) (many s)) (str-raw mw3 here $ match many e _ ((ESome _ _) "equal") ((ENone _) "distinct")))
   (values mw4 $ Cons _ s $ Nil _))
 (let ((many distinct)) (MkMacro _ distinct-fn))
 (def-fns _ $ (many mint-eq-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->

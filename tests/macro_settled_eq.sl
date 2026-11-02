@@ -4,9 +4,9 @@
 (let ((many ys)) (Cons (Nat) 2 $ Nil (Nat)))
 (let ((many uno)) 1)
 (let ((many sum)) (nat-add 0 1))
-(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
+(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (ErasedMaybe $ JMEq A a B b) r) ->
     (many (String) s))
-  (match many r _ ((None _) "no") ((Some _ _) "yes")))
+  (match many r _ ((ENone _) "no") ((ESome _ _) "yes")))
 (def-fns _ $ (many eqs-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many tx)) (settled-type _ _ _ (settled-of many xs)))

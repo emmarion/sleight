@@ -90,6 +90,3 @@ function.
 
 - No 16-bit access to `Bytes`: two byte operations stand in for
   `%caml_bytes_get16u`/`set16u`.
-- Under slc, `slot-eq` allocates a block when it answers `Some`; the
-  reference extractor shares a static one. Either way it costs a few
-  instructions more than OCaml's `==`.

@@ -8,7 +8,7 @@
   (let-match many a (RawSettled _ _ _ _ c) (else (values mw $ Cons _ usage $ Nil _)))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw $ Cons _ usage $ Nil _)))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased string-type)))
-  (let-match many e (Some _ j) ((None _) (values mw1 $ Cons _ usage $ Nil _)))
+  (let-match many e (ESome _ j) ((ENone _) (values mw1 $ Cons _ usage $ Nil _)))
   (let-match erased j (JMRefl _ _))
   (let ((unique mw2) (many r)) (read-file mw1 here $ settled-value _ _ c))
   (let ((many text)) $ match many r (((String) _)) ((Ok _ s) s) ((Fail _ msg) msg))

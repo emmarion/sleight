@@ -3,7 +3,7 @@
   (many MkTok : (erased (Nat) n) -> (Tok)))
 
 (def-fns _ $ (many vacant : (many (Tok) t) -> (many (Nat) r))
-  (match many (slot-eq (slot-of t) vacant-slot) _ ((Some _ _) 1) ((None _) 0)))
+  (match many (slot-eq (slot-of t) vacant-slot) _ ((ESome _ _) 1) ((ENone _) 0)))
 
 (def-fns _ $ (many via : (many (ValCtor (erased (Nat) n) -> (Tok)) k) -> (many (Nat) r))
   (vacant (k 5)))

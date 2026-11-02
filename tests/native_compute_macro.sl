@@ -21,7 +21,7 @@
   (let-match many r (RSettled _ _ _ h) (else (values mw1 $ Nil _)))
   (let-match many (settled-mult _ _ _ h) (MMany) (else (values mw1 $ Nil _)))
   (let ((unique mw2) (many e)) (settled-eq _ _ _ _ _ _ mw1 (settled-type _ _ _ h) (settled-of erased nats)))
-  (let-match many e (Some _ j) ((None _) (values mw2 $ Nil _)))
+  (let-match many e (ESome _ j) ((ENone _) (values mw2 $ Nil _)))
   (let-match erased j (JMRefl _ _))
   (let ((many ns)) $ settled-value _ _ h)
   (let ((unique mw3) (many cs)) (calls mw2 here f ns))

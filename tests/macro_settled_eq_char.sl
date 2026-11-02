@@ -1,8 +1,8 @@
 ; needs: ../std/macro macro_lib
 ; expect: "no yes"
-(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
+(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (ErasedMaybe $ JMEq A a B b) r) ->
     (many (String) t))
-  (match many r _ ((None _) "no") ((Some _ _) "yes")))
+  (match many r _ ((ENone _) "no") ((ESome _ _) "yes")))
 (comptime-match many (lt-dec 97 u8-modulus) (Yes _ _ a b q))
 (let ((many fresh)) (MkChar $ MkU8 97 q))
 (comptime-match many #\a (MkChar u))

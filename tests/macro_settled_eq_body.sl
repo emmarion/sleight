@@ -2,9 +2,9 @@
 ; expect: "yes no"
 (let ((many k)) 5)
 (let ((many s)) "s")
-(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
+(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (ErasedMaybe $ JMEq A a B b) r) ->
     (many (String) t))
-  (match many r _ ((None _) "no") ((Some _ _) "yes")))
+  (match many r _ ((ENone _) "no") ((ESome _ _) "yes")))
 (def-fns _ $ (many cmp-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) _args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many lit)) (intern-nat mw (nat-add 9000 1)))

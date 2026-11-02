@@ -5,7 +5,7 @@
   (let-match many r (RawSettled _ _ _ _ c) (else (values mw "")))
   (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw "")))
   (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased string-type)))
-  (let-match many e (Some _ j) ((None _) (values mw1 "")))
+  (let-match many e (ESome _ j) ((ENone _) (values mw1 "")))
   (let-match erased j (JMRefl _ _))
   (values mw1 $ settled-value _ _ c))
 (def-fns _ $ (many read-at : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (Pos) from) (many (List $ Raw) args) ->

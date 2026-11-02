@@ -2,7 +2,7 @@
 ; expect: (MkPair _ _ "same" $ MkPair _ _ "other" "same other other")
 ; symbol-eq proves two symbols equal: names by their text, gensyms by their number, gensym-unique giving the text.
 (def-fns _ $ (many said : (many (Symbol) x) (many (Symbol) y) -> (many (String) s))
-  (match many (symbol-eq x y) _ ((Some _ _) "same") ((None _) "other")))
+  (match many (symbol-eq x y) _ ((ESome _ _) "same") ((ENone _) "other")))
 (def-fns _ $ (many same-name-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a rest) ((Nil _) (values mw (Nil _))))
