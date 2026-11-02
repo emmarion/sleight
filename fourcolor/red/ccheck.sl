@@ -302,10 +302,10 @@
   (let-match many (inserte-c e cc) (IEYes _ _ ie pi) ((IENo _ _) (values (ENone _) cache)))
   (let-match many (valid-c d e f r cc ie n h pi) (ESome _ v) ((ENone _) (values (ENone _) cache)))
   (let ((many kc) (many cache2)) (kempe-tree-chk cp cache))
-  (let-match many kc (KCYes _ h0 kt ks cs _) ((KCNo _) (values (ENone _) cache2)))
+  (let-match many kc (KCYes _ h0 kt ka ks cs _) ((KCNo _) (values (ENone _) cache2)))
   (let-match many (ryh-c cp) (ESome _ ry) ((ENone _) (values (ENone _) cache2)))
   (let ((many rp) (erased rs)) (revs-c cp))
-  (let-match many (dfs-c kt ie (Cons _ (SU) rp) all-cols (Zero) (Nil _)) (ESome _ df) ((ENone _) (values (ENone _) cache2)))
+  (let-match many (dfs-c kt ka ie (Cons _ (SU) rp) all-cols (Zero) (Nil _)) (ESome _ df) ((ENone _) (values (ENone _) cache2)))
   (values (ESome _ (MkReducible CRX sym cci cc cp (MkCfContract cp cci xs cc pce pk)
     (check-reducible-valid CRX CGL (prove-predates KHL CRX) (prove-predates CGL CRX) cp cc kt
       (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie rp c h v pi ry rs (dfe-good kt ie (Cons _ (SU) rp) (Zero) (Nil _) df))))) cache2))

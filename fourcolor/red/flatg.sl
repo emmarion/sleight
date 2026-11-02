@@ -168,7 +168,7 @@
     (many (Nat) v) (erased (Lt v u8-modulus) vb) (erased (FlagInv us (Zero) n v t) fi))
   (let-match many d (OdY _ o) ((OdE) (values (Zero) u8-modulus-pos (FiE us (Zero) n))))
   (let-match erased o (OccL lf) (absurd (OccN _ _ _) k))
-  (values (Succ (Zero)) flag-one-lt8 (FiL us n lf)))
+  (values flag-live flag-one-lt8 (FiL us n lf)))
 
 (def-fns _ $ (many node-flag : (erased (List (U8)) us) (erased (Nat) j n q) (erased (Thrice n q) tq) (erased (Ctree) u1 u2 u3)
     (erased (Flags us j (Succ q) u1) f1) (erased (Flags us j (Succ (Succ q)) u2) f2) (erased (Flags us j (Succ (Succ (Succ q))) u3) f3)
@@ -176,7 +176,7 @@
     (many (Nat) v) (erased (Lt v u8-modulus) vb) (erased (Ctree) t) (erased (Cn u1 u2 u3 t) c) (erased (FlagInv us (Succ j) n v t) fi)
     (many (OccDec t) d))
   (let ((erased t)) (CNode u1 u2 u3))
-  (let ((many one)) (Succ (Zero)))
+  (let ((many one)) flag-live)
   (let-match many d1 (OdE)
     ((OdY _ o) (let ((erased o3)) (Occ1 u1 u2 u3 o)) (values one flag-one-lt8 t (CnN u1 u2 u3 o3) (FiN us j n q u1 u2 u3 tq f1 f2 f3 o3) (OdY t (OccN u1 u2 u3)))))
   (let-match many d2 (OdE)
@@ -331,7 +331,7 @@
       (values ms2 m2 w l2 (ESome _ f)))
     ((CLeaf lf)
       (let-match erased k (HL _ _))
-      (let ((erased ms2) (unique m2) (erased w) (erased l2) (erased f)) (put-node n (Succ (Zero)) flag-one-lt8 j len t ms ms m w0 l nl (FiL ms n lf)))
+      (let ((erased ms2) (unique m2) (erased w) (erased l2) (erased f)) (put-node n flag-live flag-one-lt8 j len t ms ms m w0 l nl (FiL ms n lf)))
       (values ms2 m2 w l2 (ESome _ f))))
   (let-match many j (Succ j1) (absurd (Zero) k))
   (let-match erased k (HN _ _ _ _ k1 k2 k3))
@@ -620,7 +620,7 @@
       (let ((erased us2) (unique ga2) (erased u) (erased lu2)) (put-fl us ga n lu i il (Zero) u8-modulus-pos))
       (values us2 ga2 (Zero) u lu2 (GmN0 us2 j i t0 t1 t2 t3 (fupd-ent us us2 i (Zero) u))))
     ((TcN _ _ _ _ _ _ tp)
-      (let ((erased us2) (unique ga2) (erased u) (erased lu2)) (put-fl us ga n lu i il (Succ (Zero)) flag-one-lt8))
+      (let ((erased us2) (unique ga2) (erased u) (erased lu2)) (put-fl us ga n lu i il flag-live flag-one-lt8))
       (let ((erased b1) (erased b2) (erased b3) (erased _)) (span-n i h1 h2 h3 h4 t0 t1 t2 t3 s0 s1 s2 s3))
       (let ((erased v)) (Succ (Zero)))
       (values us2 ga2 v u lu2
@@ -682,7 +682,7 @@
       (match many res _
         ((HYes _ _ h)
           (let ((erased us2) (unique ga2) (erased uu) (erased lu2)) (put-fl us ga1 n lu i il (Zero) u8-modulus-pos))
-          (let ((erased ts2) (unique gt2) (erased ut) (erased lt2)) (put-fl ts gt n lt i il (Succ (Zero)) flag-one-lt8))
+          (let ((erased ts2) (unique gt2) (erased ut) (erased lt2)) (put-fl ts gt n lt i il flag-live flag-one-lt8))
           (values m2 us2 ga2 (WrS us us us2 i (Succ i) i (Zero) w0 uu (lt-succ i) (lt-succ i)) lu2
             ts2 gt2 (WrS ts ts ts2 i (Succ i) i (Succ (Zero)) (WrN ts i (Succ i)) ut (lt-succ i) (lt-succ i)) lt2
             (BTrue) f (GSOne) e (BSetT) (BSetF) (GmO0 us2 i (fupd-ent us us2 i (Zero) uu)) (GmO1 ts2 i (fupd-ent ts ts2 i (Succ (Zero)) ut)) (BHT r s h) (BPL)))

@@ -25,7 +25,7 @@
 ; The Kempe tree kt of cp, whose ring has h + 2 darts, is sound for the ring traces of cp's map.
 (def-adts $ (KChk : ((List (Step)) cp) -> Type)
   enum
-  (many KCYes : (erased (List (Step)) cp) (erased (Nat) h) (many (Ctree) kt) (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks)
+  (many KCYes : (erased (List (Step)) cp) (erased (Nat) h) (erased (Ctree) kt) (many (KtA kt) ka) (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks)
       (erased (Cprsize cp (Succ (Succ h))) cs) (erased (NoA cp) na) -> (KChk cp))
   (many KCNo : (erased (List (Step)) cp) -> (KChk cp)))
 
@@ -41,6 +41,6 @@
   (let-match many i (IFYes _ ctu gtu ce ge gc _ fl))
   (let-match many fl (Some _ fi) ((None _) (values (KCNo cp) cache2)))
   (let ((many ctr) (erased hr) (erased rt) (erased _)) (cpcolor-c h cp cs na))
-  (let ((many kt) (many tk)) (kempe-tree-f (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hr fi))
-  (let-match many tk (ESome _ ks) ((ENone _) (values (KCNo cp) cache2)))
-  (values (KCYes cp h kt ks cs na) cache2))
+  (let-match many (kempe-tree-f (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hr fi) (KtYes _ _ kt ka ks)
+    ((KtNo _ _) (values (KCNo cp) cache2)))
+  (values (KCYes cp h kt ka ks cs na) cache2))
