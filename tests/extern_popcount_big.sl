@@ -1,0 +1,33 @@
+; externs: only
+; expect: (Cons _ 62 $ Cons _ 100 $ Cons _ 62 $ Cons _ 0 $ Cons _ 1 $ Cons _ 61 $ Cons _ 62 $ Nil _)
+; popcount and trailing-zeros past what the source models can compute: (2^62-1)^2 and 2^100, and the U62
+; versions at the top of their range.
+
+(let ((many s60) (erased s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
+(let-match erased (mul-fn _ _ _ _ s60m sixty-mul) (Refl _ _))
+(let ((many s62) (erased s62a)) (add s60 (Succ (Succ (Zero)))))
+(let-match erased (add-fn _ _ _ _ s62a sixty-two-add) (Refl _ _))
+(let ((many u62m) (erased u62m-pow2) (erased _)) (pow2 s62))
+(let-match erased (pow2-fn _ _ _ u62m-pow2 u62-modulus-pow2) (Refl _ _))
+(let ((many top) (erased top-add)) (sub u62m (Succ (Zero)) (LtS _ _ u62-modulus-pos)))
+(let ((many c-top)) (nat-cmp top u62m))
+(comptime-match many c-top (CLt _ _ _ _ top-lt))
+(let ((many half)) (nat-shl 1 61))
+(let ((many c-half)) (nat-cmp half u62m))
+(comptime-match many c-half (CLt _ _ _ _ half-lt))
+(let ((many d-half)) (lt-dec (Zero) half))
+(comptime-match many d-half (Yes _ _ _ _ h-pos))
+(let ((many d-top)) (lt-dec (Zero) top))
+(comptime-match many d-top (Yes _ _ _ _ top-pos))
+
+(let ((many big)) (nat-mul top top))
+(let ((many cb) (erased _)) (popcount big))
+(let ((many p100)) (nat-shl 1 100))
+(let ((many d-big)) (lt-dec (Zero) p100))
+(comptime-match many d-big (Yes _ _ _ _ big-pos))
+(let ((many tb) (erased _)) (trailing-zeros p100 big-pos))
+(let ((many ct) (erased _)) (u62-popcount top top-lt))
+(let ((many c0) (erased _)) (u62-popcount (Zero) u62-modulus-pos))
+(let ((many t0) (erased _)) (u62-trailing-zeros top top-lt top-pos))
+(let ((many th) (erased _)) (u62-trailing-zeros half half-lt h-pos))
+(Cons _ cb $ Cons _ tb $ Cons _ ct $ Cons _ c0 $ Cons _ (Succ t0) $ Cons _ th $ Cons _ (nat-bit-length top) $ Nil _)

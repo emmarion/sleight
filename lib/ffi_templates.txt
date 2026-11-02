@@ -36,6 +36,12 @@ fn u62-cmp: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in i
 fn u62-lt-dec: if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {b0} else {b1}
 fn nat-fits-u62: if Obj.is_int {a0} then {b0} else {b1}
 fn u62-eq: if (Obj.obj {a0} : int) = (Obj.obj {a1} : int) then {b0} else {b1}
+fn bit-length: Obj.repr (Z.numbits (Obj.obj {a0} : Z.t))
+fn u62-bit-length: Obj.repr (Z.numbits (Obj.obj {a0} : Z.t))
+fn popcount: Obj.repr (Z.popcount (Obj.obj {a0} : Z.t))
+fn trailing-zeros: Obj.repr (Z.trailing_zeros (Obj.obj {a0} : Z.t))
+fn u62-trailing-zeros: Obj.repr (Z.trailing_zeros (Obj.obj {a0} : Z.t))
+fn u62-popcount: let {t0} = (Obj.obj {a0} : int) in let {t1} = {t0} - (({t0} lsr 1) land 0x1555555555555555) in let {t2} = ({t1} land 0x3333333333333333) + (({t1} lsr 2) land 0x3333333333333333) in Obj.repr (((({t2} + ({t2} lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56)
 fn u62-bit-test: if ((Obj.obj {a0} : int) lsr (Obj.obj {a1} : int)) land 1 = 0 then {b0} else {b1}
 fn array-pluck: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
 fn array-get: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))

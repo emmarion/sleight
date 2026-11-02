@@ -847,6 +847,89 @@
       (let-match erased em (Refl _ _))
       (bit-at-fn m1 k1 x1 x2 p1 q1))))
 
+(def-adts
+  ((PopCount : ((Nat) n) ((Nat) c) -> Type)
+    enum
+    (many PCZero : -> (PopCount (Zero) (Zero)))
+    (many PCBit0 : (erased (Nat) m) (erased (Nat) n) (erased (Nat) c)
+       (erased (BitCons m (Bit0) n) b) (erased (Lt (Zero) n) pos) (erased (PopCount m c) p) -> (PopCount n c))
+    (many PCBit1 : (erased (Nat) m) (erased (Nat) n) (erased (Nat) c)
+       (erased (BitCons m (Bit1) n) b) (erased (PopCount m c) p) -> (PopCount n (Succ c)))))
+
+(def-adts
+  ((TrailingZeros : ((Nat) n) ((Nat) k) -> Type)
+    enum
+    (many TZHere : (erased (Nat) m) (erased (Nat) n) (erased (BitCons m (Bit1) n) b) -> (TrailingZeros n (Zero)))
+    (many TZThere : (erased (Nat) m) (erased (Nat) n) (erased (Nat) k)
+       (erased (BitCons m (Bit0) n) b) (erased (TrailingZeros m k) p) -> (TrailingZeros n (Succ k)))))
+
+(def-fns _ $ (erased half-pos : (erased (Nat) m) (erased (Nat) d) (erased (Double m d) dd) (erased (Lt (Zero) d) pos) -> (erased (Lt (Zero) m) l))
+  (match erased dd _
+    (absurd (D0) pos)
+    ((DS a _ _) (LtZ a))))
+
+(def-fns _ $ (many extern popcount : (subterm many (Nat) n) -> (many (Nat) c) (erased (PopCount n c) p))
+  (let-match many n (Succ n0) ((Zero) (values (Zero) (PCZero))))
+  (let ((many m) (many x) (erased b)) (nat-bit n))
+  (let ((erased sm)) (lt-subterm m n (bitcons-lt m x n b (LtZ n0))))
+  (let ((many c) (erased p)) (notail $ popcount (subterm sm) m))
+  (match many x _
+    ((Bit0) (values c (PCBit0 m n c b (LtZ n0) p)))
+    ((Bit1) (values (Succ c) (PCBit1 m n c b p)))))
+
+(def-fns _ $ (many extern trailing-zeros : (subterm many (Nat) n) (erased (Lt (Zero) n) pos) ->
+    (many (Nat) k) (erased (TrailingZeros n k) p))
+  (let ((many m) (many x) (erased b)) (nat-bit n))
+  (let-match many x (Bit0) ((Bit1) (values (Zero) (TZHere m n b))))
+  (let-match erased b (BC0 _ _ dd) (absurd BC1))
+  (let ((erased sm)) (lt-subterm m n (bitcons-lt m x n b pos)))
+  (let ((many k) (erased p)) (notail $ trailing-zeros (subterm sm) m (half-pos m n dd pos)))
+  (values (Succ k) (TZThere m n k b p)))
+
+(def-fns _ $ (many extern u62-popcount : (many (Nat) n) (erased (Lt n u62-modulus) _pn) ->
+    (many (Nat) c) (erased (PopCount n c) p))
+  (tail (popcount n)))
+
+(def-fns _ $ (many extern u62-trailing-zeros : (many (Nat) n) (erased (Lt n u62-modulus) _pn) (erased (Lt (Zero) n) pos) ->
+    (many (Nat) k) (erased (TrailingZeros n k) p))
+  (tail (trailing-zeros n pos)))
+
+(def-fns _ $ (erased popcount-fn : (erased (Nat) n) (erased (Nat) c1) (erased (Nat) c2)
+    (subterm erased (PopCount n c1) p) (erased (PopCount n c2) q) -> (erased (Eq (Nat) c1 c2) e))
+  (match erased p _
+    ((PCZero) (match erased q _ ((PCZero) (Refl (Nat) c1)) (absurd (PCBit0 _ _ _ _ pos _) pos) (absurd (PCBit1 _ _ _ b _) b)))
+    ((PCBit0 m1 _ k1 b1 pos1 p1)
+      (match erased q _
+        (absurd (PCZero) pos1)
+        ((PCBit0 m2 _ k2 b2 _ q1)
+          (let ((erased em) (erased _)) (bitcons-fn m1 (Bit0) m2 (Bit0) n b1 b2))
+          (let-match erased em (Refl _ _))
+          (popcount-fn m1 k1 k2 p1 q1))
+        (absurd (PCBit1 m2 _ _ b2 _) (let ((erased _) (erased ex)) (bitcons-fn m1 (Bit0) m2 (Bit1) n b1 b2)) ex)))
+    ((PCBit1 m1 _ k1 b1 p1)
+      (match erased q _
+        (absurd (PCZero) b1)
+        (absurd (PCBit0 m2 _ _ b2 _ _) (let ((erased _) (erased ex)) (bitcons-fn m1 (Bit1) m2 (Bit0) n b1 b2)) ex)
+        ((PCBit1 m2 _ k2 b2 q1)
+          (let ((erased em) (erased _)) (bitcons-fn m1 (Bit1) m2 (Bit1) n b1 b2))
+          (let-match erased em (Refl _ _))
+          (match erased (popcount-fn m1 k1 k2 p1 q1) _ ((Refl _ _) (Refl (Nat) c1))))))))
+
+(def-fns _ $ (erased trailing-zeros-fn : (erased (Nat) n) (erased (Nat) k1) (erased (Nat) k2)
+    (subterm erased (TrailingZeros n k1) p) (erased (TrailingZeros n k2) q) -> (erased (Eq (Nat) k1 k2) e))
+  (match erased p _
+    ((TZHere m1 _ b1)
+      (match erased q _
+        ((TZHere _ _ _) (Refl (Nat) k1))
+        (absurd (TZThere m2 _ _ b2 _) (let ((erased _) (erased ex)) (bitcons-fn m1 (Bit1) m2 (Bit0) n b1 b2)) ex)))
+    ((TZThere m1 _ j1 b1 p1)
+      (match erased q _
+        (absurd (TZHere m2 _ b2) (let ((erased _) (erased ex)) (bitcons-fn m1 (Bit0) m2 (Bit1) n b1 b2)) ex)
+        ((TZThere m2 _ j2 b2 q1)
+          (let ((erased em) (erased _)) (bitcons-fn m1 (Bit0) m2 (Bit0) n b1 b2))
+          (let-match erased em (Refl _ _))
+          (match erased (trailing-zeros-fn m1 j1 j2 p1 q1) _ ((Refl _ _) (Refl (Nat) k1))))))))
+
 (def-fns _ $ (erased numeral-zero :
     (erased (Nat) n) (erased (Numeral (BZ) n) v) -> (erased (Eq (Nat) n (Zero)) e))
   (match erased v _

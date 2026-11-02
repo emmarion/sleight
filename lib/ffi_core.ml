@@ -107,6 +107,14 @@ let nat_fits_u62 a = decide (Obj.is_int (Obj.repr a))
 let u62_eq a b = eq_dec (small a = small b)
 let u62_bit_length = bit_length
 let u62_bit_test n k = bit ((small n lsr small k) land 1 = 1)
+let popcount n = Z.of_int (Z.popcount n)
+let trailing_zeros n = Z.of_int (Z.trailing_zeros n)
+let u62_popcount n : Z.t =
+  let x = small n in
+  let x = x - ((x lsr 1) land 0x1555555555555555) in
+  let x = (x land 0x3333333333333333) + ((x lsr 2) land 0x3333333333333333) in
+  Obj.magic ((((x + (x lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56 : int)
+let u62_trailing_zeros = trailing_zeros
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
   let n = if l1 < l2 then l1 else l2 in

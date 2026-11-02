@@ -173,6 +173,10 @@ let fns : (string * fn_spec) list =
     ("u62-eq", decision "EqDec" z Ffi_core.u62_eq);
     ("u62-bit-length", spec 1 (unary (fun a -> int (Ffi_core.u62_bit_length (z a)))));
     ("u62-bit-test", decision "Bit" z Ffi_core.u62_bit_test);
+    ("popcount", spec 1 (unary (fun a -> int (Ffi_core.popcount (z a)))));
+    ("trailing-zeros", spec 1 (unary (fun a -> int (Ffi_core.trailing_zeros (z a)))));
+    ("u62-popcount", spec 1 (unary (fun a -> int (Ffi_core.u62_popcount (z a)))));
+    ("u62-trailing-zeros", spec 1 (unary (fun a -> int (Ffi_core.u62_trailing_zeros (z a)))));
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int (Ffi_core.nat_halve (z a)))));
     ("trim", spec 1 (unary (fun s -> text (Ffi_core.trim (slice s)))));
     ("append", spec 2 (binary (fun a b -> text (Ffi_core.append (slice a) (slice b)))));
