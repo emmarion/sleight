@@ -2781,13 +2781,13 @@ name is spelled: `__g1_tmp`, or `__g1_#"a b"` where `s` is not a plain
 name. An unbound gensym gets no "nearest in scope" hint.
 
 ```scheme
-symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)
+symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (ErasedMaybe (Eq (Symbol) x y)) r)
 ```
 
-`symbol-eq` is ordinary prelude code. It answers `Some` for two names
+`symbol-eq` is ordinary prelude code. It answers `ESome` for two names
 whose texts `str-cmp` finds equal, and for two gensyms whose numbers
 `nat-cmp` finds equal, where `gensym-unique` (§65) gives that their
-texts are equal too; any other pair answers `None`.
+texts are equal too; any other pair answers `ENone`.
 
 ## 64. Handles
 
@@ -2892,7 +2892,7 @@ erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
 settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
     (unique (MacroWorld) mw at vacant-slot) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
-    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
+    (unique mw is mw2 at mw) (many (ErasedMaybe (JMEq A a B b)) r)
 
 intern-nat : (unique (MacroWorld) mw at vacant-slot) (many (Nat) n) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)
@@ -2922,7 +2922,7 @@ included, and returns it with a `Gensym` witness for it and the text
 building an `SGen` at `many` needs one. `gensym-unique` is an axiom,
 resting on the counter minting each number once, with one text.
 
-`settled-eq` answers `Some` exactly when the terms the two handles
+`settled-eq` answers `ESome` exactly when the terms the two handles
 denote, and their types, are identical after canonicalizing against the
 facts of the innermost run position enclosing the call, never
 branch-forced ones, so that an answer stays true wherever the macro's
@@ -3030,10 +3030,10 @@ kept at a slot is declared the same way (§36).
 
 ```scheme
 slot-eq : (many (Slot) a) (many (Slot) b) ->
-    (many (Maybe (Eq (Slot) a b)) r)
+    (many (ErasedMaybe (Eq (Slot) a b)) r)
 ```
 
-`Some` proves that `a` and `b` hold one word (§38). `None` proves
+`ESome` proves that `a` and `b` hold one word (§38). `ENone` proves
 nothing, so an implementation may always answer it, and which one a
 call answers may differ between runs. `slot-eq` requires the prelude.
 
