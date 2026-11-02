@@ -88,6 +88,9 @@ let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (Ffi_core.bytes_
 let blit = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
 let blit_imm = spec ~needs:["Array"] 5 (function [ s; i; d; j; n ] -> Ffi_core.array_blit_imm (array s) (z i) (array d) (z j) (z n); [] | _ -> raise arity)
 let bytes_blit = spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core.bytes_blit (bytes s) (z i) (bytes d) (z j) (z n); [] | _ -> raise arity)
+let bytes_le get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (get (bytes b) (z i))))
+let bytes_le_set set = spec ~needs:["Bytes"] 3 (function [ b; i; v ] -> set (bytes b) (z i) (z v); [] | _ -> raise arity)
+let str_le get = spec 2 (binary (fun a i -> int (get (slice a) (z i))))
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:vacant (z n)))));
@@ -120,6 +123,14 @@ let fns : (string * fn_spec) list =
     ("bytes-get", bytes_get);
     ("bytes-get-many", bytes_get);
     ("bytes-set", spec ~needs:["Bytes"] 3 (function [ b; i; x ] -> Ffi_core.bytes_set (bytes b) (z i) (z x); [] | _ -> raise arity));
+    ("bytes-get16", bytes_le Ffi_core.bytes_get16);
+    ("bytes-get16-many", bytes_le Ffi_core.bytes_get16);
+    ("bytes-get32", bytes_le Ffi_core.bytes_get32);
+    ("bytes-get32-many", bytes_le Ffi_core.bytes_get32);
+    ("bytes-set16", bytes_le_set Ffi_core.bytes_set16);
+    ("bytes-set32", bytes_le_set Ffi_core.bytes_set32);
+    ("str-get16", str_le Ffi_core.str_get16);
+    ("str-get32", str_le Ffi_core.str_get32);
     ("bytes-length", bytes_length);
     ("bytes-length-many", bytes_length);
     ("bytes-length-dec", spec ~needs:[ "Bytes"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));

@@ -1,0 +1,10 @@
+; error: argument 8, `p`, of `SpliceHere`: type mismatch: expected `(Splice (U8) (Nil (U8)) (Zero) (Succ (Zero))
+(let-match many #\J (MkChar j))
+(def-fns _ $ (many past-end : -> (many (Nat) r))
+  (let ((erased _) (unique b) (erased p)) (bytes-make (Succ $ Succ $ Zero) j))
+  (let-match erased p (RepeatCons _ _ _ _ p1))
+  (let-match erased p1 (RepeatCons _ _ _ _ p2))
+  (let-match erased p2 (RepeatNil _ _))
+  (bytes-get16-many _ _ (share b) (Succ (Zero))
+    (SpliceThere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceHere _ _ _ _ _ _ _ $ SpliceNil _ _) _ _))
+past-end

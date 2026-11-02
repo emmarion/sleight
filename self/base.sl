@@ -160,24 +160,6 @@
 (let ((many s16) (erased ten-six)) (add 10 6))
 (comptime-match many (nat-eq s16 16) (Equal _ _ _))
 
-(def-fns _ $ (erased add-lt-mono : (erased (Nat) a x y s t) (subterm erased (Add a x s) p) (erased (Add a y t) q) (erased (Lt x y) l) -> (erased (Lt s t) r))
-  (match erased p _
-    ((AddZero _) (let-match erased q (AddZero _)) l)
-    ((AddSucc a1 _ s1 p1)
-      (let-match erased q (AddSucc _ _ t1 q1))
-      (LtS s1 t1 (add-lt-mono a1 x y s1 t1 p1 q1 l)))))
-
-(def-fns _ $ (erased mul-le-mono : (erased (Nat) c q m x y) (erased (Lt c (Succ q)) l) (subterm erased (Mul c m x) p) (erased (Mul q m y) r) -> (erased (Lt x (Succ y)) o))
-  (let-match erased p (MulSucc c1 _ x1 _ p1 ax) ((MulZero _) (LtZ y)))
-  (let-match erased l (LtS _ _ l1))
-  (let-match erased r (MulSucc q1 _ y1 _ r1 ay) (absurd (MulZero _) l1))
-  (add-lt-mono m x1 (Succ y1) x (Succ y) (add-comm _ _ _ ax) (add-succ-right _ _ _ (add-comm _ _ _ ay)) (mul-le-mono c1 q1 m x1 y1 l1 p1 r1)))
-
-(def-fns _ $ (erased div-small : (erased (Nat) q c m r n s) (erased (Mul q c m) mm) (erased (Add m r n) ad) (erased (Lt n s) ns) (erased (Mul c c s) cc) -> (erased (Lt q c) l))
-  (let-match erased (lt-dec q c) (Yes _ _ _ _ l)
-    (absurd (No _ _ _ _ ge) (lt-asym n m (lt-le-trans n s m ns (mul-le-mono c q c s m (le-lt-succ _ _ ge) cc mm)) (add-le-left m r n ad))))
-  l)
-
 (def-fns _ $ (erased digits-byte : (erased (Nat) a b x v) (erased (Lt a 16) pa) (erased (Lt b 16) pb) (erased (Mul a 16 x) mx) (erased (Add x b v) av) -> (erased (Lt v u8-modulus) l))
   (let ((erased x2) (erased a16)) (add x 16))
   (lt-le-trans v x2 u8-modulus (add-lt-mono x b 16 v x2 av a16 pb)
@@ -751,7 +733,7 @@
 (def-fns _ $ (many hex-chars : (many (Nat) k) (erased (Lt k u8-modulus) q) -> (many (Char) hi) (many (Char) lo))
   (let ((many h) (many l) (erased kk) (erased mm) (erased ad) (erased lt-l) (erased _) (erased _))
     (u62-divmod k 16 (u8-u62 _ q) sixteen-u62 sixteen-positive))
-  (let ((many hc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits h 16 hex-digits-sl (div-small h 16 kk l k u8-modulus mm ad q sixteen-squared)))
+  (let ((many hc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits h 16 hex-digits-sl (div-small h 16 16 kk l k u8-modulus mm ad q sixteen-squared)))
   (let ((many lc) (erased _) (erased _) (erased _) (erased _)) (str-get hex-digits l 16 hex-digits-sl lt-l))
   (values hc lc))
 

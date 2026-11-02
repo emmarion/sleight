@@ -417,6 +417,7 @@
     (many ExPopcount : -> (Extern 1)) (many ExU62Popcount : -> (Extern 1)) (many ExTrailingZeros : -> (Extern 1)) (many ExU62TrailingZeros : -> (Extern 1))
     (many ExArrayGetMany : -> (Extern 2)) (many ExArrayLengthMany : -> (Extern 1)) (many ExArrayLengthDec : -> (Extern 1)) (many ExBytesLengthDec : -> (Extern 1)) (many ExArrayLengthDecMany : -> (Extern 1)) (many ExBytesLengthDecMany : -> (Extern 1))
     (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
+    (many ExBytesGet16 : -> (Extern 2)) (many ExBytesGet16Many : -> (Extern 2)) (many ExBytesGet32 : -> (Extern 2)) (many ExBytesGet32Many : -> (Extern 2)) (many ExBytesSet16 : -> (Extern 3)) (many ExBytesSet32 : -> (Extern 3)) (many ExStrGet16 : -> (Extern 2)) (many ExStrGet32 : -> (Extern 2))
     (many ExBytesLength : -> (Extern 1)) (many ExBytesLengthMany : -> (Extern 1)) (many ExStrBytesCopy : -> (Extern 1)) (many ExBytesStr : -> (Extern 1))
     (many ExBytesCopy : -> (Extern 1)) (many ExArrayCopy : -> (Extern 1))
     (many ExBytesSub : -> (Extern 3)) (many ExBytesBlit : -> (Extern 5)) (many ExArraySub : -> (Extern 3)) (many ExArrayBlit : -> (Extern 5))
@@ -446,6 +447,7 @@
     ((ExPopcount) (None _)) ((ExU62Popcount) (None _)) ((ExTrailingZeros) (None _)) ((ExU62TrailingZeros) (None _))
     ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _)) ((ExArrayLengthDec) (Some _ dec)) ((ExBytesLengthDec) (Some _ dec)) ((ExArrayLengthDecMany) (Some _ dec)) ((ExBytesLengthDecMany) (Some _ dec))
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
+    ((ExBytesGet16) (None _)) ((ExBytesGet16Many) (None _)) ((ExBytesGet32) (None _)) ((ExBytesGet32Many) (None _)) ((ExBytesSet16) (None _)) ((ExBytesSet32) (None _)) ((ExStrGet16) (None _)) ((ExStrGet32) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
     ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))
     ((ExBytesBlitMany) (None _)) ((ExArrayBlitMany) (None _)) ((ExArrayMove) (None _))
@@ -462,7 +464,7 @@
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExNatFitsU62) 1) ((ExNatZeroDec) 1) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1) ((ExArrayLengthDec) 1) ((ExBytesLengthDec) 1) ((ExArrayLengthDecMany) 1) ((ExBytesLengthDecMany) 1)
     ((ExNatEq) 2) ((ExU62Eq) 2) ((ExStrEq) 2) ((ExBitLength) 1) ((ExU62BitLength) 1) ((ExBitTest) 2) ((ExU62BitTest) 2)
     ((ExPopcount) 1) ((ExU62Popcount) 1) ((ExTrailingZeros) 1) ((ExU62TrailingZeros) 1)
-    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
+    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesGet16) 2) ((ExBytesGet16Many) 2) ((ExBytesGet32) 2) ((ExBytesGet32Many) 2) ((ExBytesSet16) 3) ((ExBytesSet32) 3) ((ExStrGet16) 2) ((ExStrGet32) 2) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1) ((ExBytesCopy) 1) ((ExArrayCopy) 1) ((ExBytesSub) 3) ((ExBytesBlit) 5) ((ExArraySub) 3) ((ExArrayBlit) 5)
     ((ExBytesBlitMany) 5) ((ExArrayBlitMany) 5) ((ExArrayMove) 5)
     ((ExArrayBlitImm) 5) ((ExArrayBlitManyImm) 5) ((ExArrayMoveImm) 5)
     ((ExSlotsNew) 0) ((ExSlotsFind) 2) ((ExSlotsIntern) 2) ((ExSlotsLength) 1)))
@@ -471,7 +473,7 @@
   (match many e _
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
     ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62And) (ExNatAnd)) ((ExU62Or) (ExNatOr)) ((ExU62Xor) (ExNatXor)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExU62Eq) (ExNatEq)) ((ExU62BitLength) (ExBitLength)) ((ExU62BitTest) (ExBitTest)) ((ExU62Popcount) (ExPopcount)) ((ExU62TrailingZeros) (ExTrailingZeros)) ((ExArrayGet) (ExArrayPluck))
-    ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesLengthMany) (ExBytesLength)) ((ExArrayLengthDecMany) (ExArrayLengthDec)) ((ExBytesLengthDecMany) (ExBytesLengthDec))
+    ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesGet16Many) (ExBytesGet16)) ((ExBytesGet32Many) (ExBytesGet32)) ((ExBytesLengthMany) (ExBytesLength)) ((ExArrayLengthDecMany) (ExArrayLengthDec)) ((ExBytesLengthDecMany) (ExBytesLengthDec))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     ((ExBytesBlitMany) (ExBytesBlit)) ((ExArrayBlitMany) (ExArrayBlit)) ((ExArrayMove) (ExArrayBlit))
     ((ExArrayBlitImm) (ExArrayBlit)) ((ExArrayBlitManyImm) (ExArrayBlit)) ((ExArrayMoveImm) (ExArrayBlit))
@@ -492,6 +494,7 @@
     ((ExPopcount) "popcount") ((ExU62Popcount) "u62-popcount") ((ExTrailingZeros) "trailing-zeros") ((ExU62TrailingZeros) "u62-trailing-zeros")
     ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many") ((ExArrayLengthDec) "array-length-dec") ((ExBytesLengthDec) "bytes-length-dec") ((ExArrayLengthDecMany) "array-length-dec-many") ((ExBytesLengthDecMany) "bytes-length-dec-many")
     ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
+    ((ExBytesGet16) "bytes-get16") ((ExBytesGet16Many) "bytes-get16-many") ((ExBytesGet32) "bytes-get32") ((ExBytesGet32Many) "bytes-get32-many") ((ExBytesSet16) "bytes-set16") ((ExBytesSet32) "bytes-set32") ((ExStrGet16) "str-get16") ((ExStrGet32) "str-get32")
     ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str") ((ExBytesCopy) "bytes-copy") ((ExArrayCopy) "array-copy")
     ((ExBytesSub) "bytes-sub") ((ExBytesBlit) "bytes-blit") ((ExArraySub) "array-sub") ((ExArrayBlit) "array-blit")
     ((ExBytesBlitMany) "bytes-blit-many") ((ExArrayBlitMany) "array-blit-many") ((ExArrayMove) "array-move")
@@ -512,6 +515,7 @@
   Cons _ (MkSomeExtern _ $ ExPopcount) $ Cons _ (MkSomeExtern _ $ ExU62Popcount) $ Cons _ (MkSomeExtern _ $ ExTrailingZeros) $ Cons _ (MkSomeExtern _ $ ExU62TrailingZeros) $
   Cons _ (MkSomeExtern _ $ ExArrayGetMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthDec) $ Cons _ (MkSomeExtern _ $ ExBytesLengthDec) $ Cons _ (MkSomeExtern _ $ ExArrayLengthDecMany) $ Cons _ (MkSomeExtern _ $ ExBytesLengthDecMany) $
   Cons _ (MkSomeExtern _ $ ExBytesMake) $ Cons _ (MkSomeExtern _ $ ExBytesGet) $ Cons _ (MkSomeExtern _ $ ExBytesGetMany) $ Cons _ (MkSomeExtern _ $ ExBytesSet) $
+  Cons _ (MkSomeExtern _ $ ExBytesGet16) $ Cons _ (MkSomeExtern _ $ ExBytesGet16Many) $ Cons _ (MkSomeExtern _ $ ExBytesGet32) $ Cons _ (MkSomeExtern _ $ ExBytesGet32Many) $ Cons _ (MkSomeExtern _ $ ExBytesSet16) $ Cons _ (MkSomeExtern _ $ ExBytesSet32) $ Cons _ (MkSomeExtern _ $ ExStrGet16) $ Cons _ (MkSomeExtern _ $ ExStrGet32) $
   Cons _ (MkSomeExtern _ $ ExBytesLength) $ Cons _ (MkSomeExtern _ $ ExBytesLengthMany) $ Cons _ (MkSomeExtern _ $ ExStrBytesCopy) $ Cons _ (MkSomeExtern _ $ ExBytesStr) $
   Cons _ (MkSomeExtern _ $ ExBytesCopy) $ Cons _ (MkSomeExtern _ $ ExArrayCopy) $
   Cons _ (MkSomeExtern _ $ ExBytesSub) $ Cons _ (MkSomeExtern _ $ ExBytesBlit) $ Cons _ (MkSomeExtern _ $ ExArraySub) $ Cons _ (MkSomeExtern _ $ ExArrayBlit) $

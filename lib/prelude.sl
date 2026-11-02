@@ -2588,3 +2588,239 @@
   (let-match many (digit-of c) (Some _ d) ((None _) (None (Nat))))
   (let-match many d (Zero) ((Succ _) (tail $ digits-nat rest d)))
   (match many rest _ ((SNil) (Some (Nat) d)) ((SCons _ _) (None (Nat)))))
+
+(let ((erased sixteen) (erased sixteen-mul)) (mul (Succ (Succ (Zero))) eight))
+(let ((erased u16-modulus) (erased u16-modulus-pow2) (erased _)) (pow2 sixteen))
+(let ((erased thirty-two) (erased thirty-two-mul)) (mul (Succ (Succ (Succ (Succ (Zero))))) eight))
+(let ((erased u32-modulus) (erased u32-modulus-pow2) (erased _)) (pow2 thirty-two))
+(let ((erased sixteen-lt) (erased thirty-two-lt))
+  (let ((many k) (erased pk)) (mul (Succ (Succ (Zero))) eight))
+  (let-match erased (mul-fn _ _ _ _ pk sixteen-mul) (Refl _ _))
+  (let ((many t) (erased pt)) (mul (Succ (Succ (Succ (Succ (Zero))))) eight))
+  (let-match erased (mul-fn _ _ _ _ pt thirty-two-mul) (Refl _ _))
+  (comptime-match many (lt-dec k (sixty-two-many)) (Yes _ _ _ _ l16))
+  (comptime-match many (lt-dec t (sixty-two-many)) (Yes _ _ _ _ l32))
+  (values l16 l32))
+(let ((erased u16-below-u62)) (pow2-lt _ _ _ _ sixteen-lt u16-modulus-pow2 u62-modulus-pow2))
+(let ((erased u32-below-u62)) (pow2-lt _ _ _ _ thirty-two-lt u32-modulus-pow2 u62-modulus-pow2))
+
+(def-fns _ $ (erased mul-one-right : (subterm erased (Nat) a) -> (erased (Mul a (Succ (Zero)) a) p))
+  (let-match erased a (Succ a1) ((Zero) (MulZero (Succ (Zero)))))
+  (MulSucc a1 (Succ (Zero)) a1 a (mul-one-right a1) (add-succ-right a1 (Zero) a1 (add-zero-right a1))))
+
+(def-fns _ $ (erased add-doubles : (erased (Nat) a1 b1 c1 a b c)
+    (subterm erased (Add a1 b1 c1) p) (erased (Double a1 a) da) (erased (Double b1 b) db) (erased (Double c1 c) dc) -> (erased (Add a b c) q))
+  (let-match erased p (AddSucc a2 _ c2 p2)
+    ((AddZero _)
+      (let-match erased da (D0))
+      (let-match erased (double-fn b1 b c db dc) (Refl _ _))
+      (AddZero b)))
+  (let-match erased da (DS _ a3 da2))
+  (let-match erased dc (DS _ c3 dc2))
+  (AddSucc (Succ a3) b (Succ c3) (AddSucc a3 b c3 (add-doubles a2 b1 c2 a3 b c3 p2 da2 db dc2))))
+
+(def-fns _ $ (erased mul-double-right : (erased (Nat) a b1 c1 b c)
+    (subterm erased (Mul a b1 c1) p) (erased (Double b1 b) db) (erased (Double c1 c) dc) -> (erased (Mul a b c) q))
+  (let-match erased p (MulSucc a1 _ e1 _ p1 ad)
+    ((MulZero _) (let-match erased dc (D0)) (MulZero b)))
+  (let ((erased e) (erased de)) (double e1))
+  (MulSucc a1 b e c (mul-double-right a1 b1 e1 b e p1 db de) (add-doubles e1 b1 c1 e b c ad de db dc)))
+
+(def-fns _ $ (erased pow2-mul : (erased (Nat) m n k a b c)
+    (erased (Pow2 m a) pa) (subterm erased (Pow2 n b) pb) (erased (Add m n k) s) (erased (Pow2 k c) pc) -> (erased (Mul a b c) r))
+  (let-match erased pb (PS n1 b1 _ pb1 db)
+    ((P0)
+      (let-match erased (add-fn m (Zero) k m s (add-zero-right m)) (Refl _ _))
+      (let-match erased (pow2-fn m a c pa pc) (Refl _ _))
+      (mul-one-right a)))
+  (let ((erased k1) (erased e) (erased s1)) (add-succ-right-inv m n1 k s))
+  (let-match erased e (Refl _ _))
+  (let-match erased pc (PS _ c1 _ pc1 dc))
+  (mul-double-right a b1 c1 b c (pow2-mul m n1 k1 a b1 c1 pa pb1 s1 pc1) db dc))
+
+(def-fns _ $ (erased add-reassoc : (erased (Nat) a b c ab s)
+    (subterm erased (Add a b ab) p) (erased (Add ab c s) q) -> (erased (Nat) bc) (erased (Add b c bc) r) (erased (Add a bc s) t))
+  (let-match erased p (AddSucc a1 _ ab1 p1) ((AddZero _) (values s q (AddZero s))))
+  (let-match erased q (AddSucc _ _ s1 q1))
+  (let ((erased bc) (erased r) (erased t1)) (add-reassoc a1 b c ab1 s1 p1 q1))
+  (values bc r (AddSucc a1 bc s1 t1)))
+
+(def-fns _ $ (erased add-lt-mono : (erased (Nat) a x y s t) (subterm erased (Add a x s) p) (erased (Add a y t) q) (erased (Lt x y) l) -> (erased (Lt s t) r))
+  (match erased p _
+    ((AddZero _) (let-match erased q (AddZero _)) l)
+    ((AddSucc a1 _ s1 p1)
+      (let-match erased q (AddSucc _ _ t1 q1))
+      (LtS s1 t1 (add-lt-mono a1 x y s1 t1 p1 q1 l)))))
+
+(def-fns _ $ (erased mul-le-mono : (erased (Nat) c q m x y) (erased (Lt c (Succ q)) l) (subterm erased (Mul c m x) p) (erased (Mul q m y) r) -> (erased (Lt x (Succ y)) o))
+  (let-match erased p (MulSucc c1 _ x1 _ p1 ax) ((MulZero _) (LtZ y)))
+  (let-match erased l (LtS _ _ l1))
+  (let-match erased r (MulSucc q1 _ y1 _ r1 ay) (absurd (MulZero _) l1))
+  (add-lt-mono m x1 (Succ y1) x (Succ y) (add-comm _ _ _ ax) (add-succ-right _ _ _ (add-comm _ _ _ ay)) (mul-le-mono c1 q1 m x1 y1 l1 p1 r1)))
+
+(def-fns _ $ (erased div-small : (erased (Nat) q c k m r n s) (erased (Mul q c m) mm) (erased (Add m r n) ad) (erased (Lt n s) ns) (erased (Mul k c s) ks) -> (erased (Lt q k) l))
+  (let-match erased (lt-dec q k) (Yes _ _ _ _ l)
+    (absurd (No _ _ _ _ ge) (lt-asym n m (lt-le-trans n s m ns (mul-le-mono k q c s m (le-lt-succ _ _ ge) ks mm)) (add-le-left m r n ad))))
+  l)
+
+(def-fns _ $ (erased digit-lt : (erased (Nat) b n c lo hi t v)
+    (erased (Lt lo b) pl) (subterm erased (Lt hi n) ph) (erased (Mul hi b t) mt) (erased (Add t lo v) av) (erased (Mul n b c) mc) -> (erased (Lt v c) r))
+  (match erased ph _
+    ((LtZ _)
+      (let-match erased mc (MulSucc _ _ c1 _ _ ac))
+      (let-match erased mt (MulZero _))
+      (let-match erased av (AddZero _))
+      (lt-le-trans lo b c pl (add-le-left b c1 c (add-comm c1 b c ac))))
+    ((LtS h1 n1 ph1)
+      (let-match erased mc (MulSucc _ _ c1 _ mc1 ac))
+      (let-match erased mt (MulSucc _ _ t1 _ mt1 tb))
+      (let ((erased v1) (erased av1)) (add t1 lo))
+      (let ((erased bl) (erased abl) (erased tbl)) (add-reassoc t1 b lo t v tb av))
+      (let ((erased x) (erased ax)) (add v1 b))
+      (let ((erased lb) (erased alb) (erased tlb)) (add-reassoc t1 lo b v1 x av1 ax))
+      (let-match erased (add-fn lo b lb bl alb (add-comm b lo bl abl)) (Refl _ _))
+      (let-match erased (add-fn t1 bl x v tlb tbl) (Refl _ _))
+      (add-lt-mono b v1 c1 v c (add-comm v1 b v ax) (add-comm c1 b c ac) (digit-lt b n1 c1 lo h1 t1 v1 pl ph1 mt1 av1 mc1)))))
+
+(def-fns _ $ (erased str-bytes-fn : (erased (String) s) (erased (List (U8)) xs ys)
+    (subterm erased (StrBytes s xs) p) (erased (StrBytes s ys) q) -> (erased (Eq (List (U8)) xs ys) e))
+  (match erased p _
+    ((SBNil) (let-match erased q (SBNil)) (Refl (List (U8)) xs))
+    ((SBCons _ s1 xs1 p1)
+      (let-match erased q (SBCons _ _ ys1 q1))
+      (match erased (str-bytes-fn s1 xs1 ys1 p1 q1) _ ((Refl _ _) (Refl (List (U8)) xs))))))
+
+(def-fns _ $ (erased splice-ys-length : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
+    (erased (Length A ys n) l))
+  (match erased p _
+    ((SpliceNil _ _) (LengthNil A))
+    ((SpliceHere _ _ y _ n1 ys1 _ p1) (LengthCons A y ys1 n1 (splice-ys-length A _ ys1 _ _ n1 p1)))
+    ((SpliceThere _ _ _ _ _ _ _ p1) (splice-ys-length A _ ys _ _ n p1))))
+
+(def-fns _ $ (erased splice-whole : (erased Type A) (erased (List A) xs) (erased (Nat) n) (subterm erased (Length A xs n) l) ->
+    (erased (Splice A xs (Zero) n xs xs) p))
+  (match erased l _
+    ((LengthNil _) (SpliceNil A (Nil A)))
+    ((LengthCons _ x rest n1 l1) (SpliceHere A x x rest n1 rest rest (splice-whole A rest n1 l1)))))
+
+(def-fns _ $ (erased splice-whole-eq : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) n)
+    (subterm erased (Splice A xs (Zero) n ys zs) p) (erased (Length A xs n) l) -> (erased (Eq (List A) zs ys) e))
+  (match erased p _
+    ((SpliceNil _ _) (let-match erased l (LengthNil _)) (Refl (List A) zs))
+    ((SpliceHere _ _ _ xs1 n1 ys1 zs1 p1)
+      (let-match erased l (LengthCons _ _ _ _ l1))
+      (match erased (splice-whole-eq A xs1 ys1 zs1 n1 p1 l1) _ ((Refl _ _) (Refl (List A) zs))))))
+
+(def-fns _ $ (erased splice-reread : (erased Type A) (erased (List A) xs ys zs) (erased (Nat) i n) (subterm erased (Splice A xs i n ys zs) p) ->
+    (erased (Splice A zs i n ys zs) q))
+  (match erased p _
+    ((SpliceNil _ _) (SpliceNil A zs))
+    ((SpliceHere _ _ y _ n1 ys1 zs1 p1) (SpliceHere A y y zs1 n1 ys1 zs1 (splice-reread A _ ys1 zs1 _ n1 p1)))
+    ((SpliceThere _ x _ i1 _ _ zs1 p1) (SpliceThere A x zs1 i1 n ys zs1 (splice-reread A _ ys zs1 i1 n p1)))))
+
+(def-fns _ $ (erased repeat-length : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
+    (subterm erased (Repeat A n x xs) p) -> (erased (Length A xs n) q))
+  (let-match erased p (RepeatCons _ k _ rest p1) ((RepeatNil _ _) (LengthNil _)))
+  (LengthCons _ x rest k (repeat-length _ k x rest p1)))
+
+(def-adts $ (LE : ((List (U8)) ds) ((Nat) v) -> Type)
+  enum
+  (many LEEnd : -> (LE (Nil (U8)) (Zero)))
+  (many LEByte : (erased (Nat) d w m v) (erased (Lt d u8-modulus) pd) (erased (List (U8)) ds)
+     (erased (LE ds w) p) (erased (Mul w u8-modulus m) mm) (erased (Add m d v) a) -> (LE (Cons (U8) (MkU8 d pd) ds) v)))
+
+(def-fns _ $ (erased le-bound : (erased (List (U8)) ds) (erased (Nat) v n e c) (subterm erased (LE ds v) p)
+    (erased (Length (U8) ds n) l) (erased (Mul n eight e) me) (erased (Pow2 e c) pc) -> (erased (Lt v c) r))
+  (let-match erased p (LEByte d w m _ pd ds1 p1 mm a)
+    ((LEEnd)
+      (let-match erased l (LengthNil _))
+      (let-match erased me (MulZero _))
+      (let-match erased pc (P0))
+      (LtZ (Zero))))
+  (let-match erased l (LengthCons _ _ _ n1 l1))
+  (let-match erased me (MulSucc _ _ e1 _ me1 ae))
+  (let ((erased c1) (erased pc1) (erased _)) (pow2 e1))
+  (digit-lt u8-modulus c1 c d w m v pd (le-bound ds1 w n1 e1 c1 p1 l1 me1 pc1) mm a (pow2-mul _ _ _ _ _ _ pc1 u8-modulus-pow2 ae pc)))
+
+;! suppress warn Bytes
+(def-fns _ $ (many le-decode : (erased (List (U8)) ds) (subterm many (Bytes ds) b) (erased (Nat) v) (erased (LE ds v) p) -> (many v is out))
+  (let-match many b (BCons _ hd tl) ((BNil) (let-match erased p (LEEnd)) (Zero)))
+  (let-match erased p (LEByte _ w _ _ _ _ p1 mm a))
+  (let-match many hd (MkU8 d1 _))
+  (let ((many w1)) (notail $ le-decode _ tl w p1))
+  (let ((many m1) (erased mm1)) (mul w1 u8-modulus))
+  (let-match erased (mul-fn _ _ _ _ mm1 mm) (Refl _ _))
+  (let ((many r) (erased a1)) (add m1 d1))
+  (let-match erased (add-fn _ _ _ _ a1 a) (Refl _ _))
+  r)
+;! restore warn Bytes
+
+;! suppress warn BCons
+(def-fns _ $ (many le-encode : (subterm many (Nat) n) (many (Nat) v) (erased (Nat) e c) (erased (Mul n eight e) me) (erased (Pow2 e c) pc)
+    (erased (Lt v c) pv) -> (erased (List (U8)) ds) (unique (Bytes ds) b) (erased (LE ds v) p) (erased (Length (U8) ds n) l))
+  (let-match many n (Succ n1)
+    ((Zero)
+      (let-match erased me (MulZero _))
+      (let-match erased pc (P0))
+      (let-match erased pv (LtZ _) (absurd (LtS _ _ q) q))
+      (values (Nil (U8)) (BNil) (LEEnd) (LengthNil _))))
+  (let-match erased me (MulSucc _ _ e1 _ me1 ae))
+  (let ((erased c1) (erased pc1) (erased _)) (pow2 e1))
+  (let ((many w) (many d) (erased m) (erased mm) (erased a) (erased pd)) (divmod v u8-modulus u8-modulus-pos))
+  (let ((erased ds1) (unique b1) (erased p1) (erased l1))
+    (notail $ le-encode n1 w e1 c1 me1 pc1 (div-small w u8-modulus c1 m d v c mm a pv (pow2-mul _ _ _ _ _ _ pc1 u8-modulus-pow2 ae pc))))
+  (values (Cons (U8) (MkU8 d pd) ds1) (BCons _ (MkU8 d pd) b1) (LEByte d w m v pd ds1 p1 mm a) (LengthCons _ _ _ _ l1)))
+;! restore warn BCons
+
+(def-fns _ $ (many le-get : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i n)
+    (erased (Splice (U8) xs i n ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w) (unique b is r at b))
+  (let ((erased _) (unique z) (erased pz)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
+  (let ((erased lz)) (repeat-length _ _ _ _ pz))
+  (let ((erased _) (unique z2) (unique b2) (erased sp)) (bytes-blit _ _ _ _ b i z (Zero) n range (splice-whole _ _ _ lz)))
+  (let-match erased (splice-whole-eq _ _ _ _ _ sp lz) (Refl _ _))
+  (values (le-decode _ (share z2) v p) b2))
+
+(def-fns _ $ (many le-set : (erased (List (U8)) xs old) (unique (Bytes xs) b) (many (Nat) i n v) (erased (Nat) e c)
+    (erased (Mul n eight e) me) (erased (Pow2 e c) pc) (erased (Lt v c) pv) (erased (Splice (U8) xs i n old xs) range) ->
+    (erased (List (U8)) ds ys) (unique (Bytes ys) r at b) (erased (Splice (U8) xs i n ds ys) sp) (erased (LE ds v) q))
+  (let ((erased ds) (unique d) (erased q) (erased l)) (le-encode n v e c me pc pv))
+  (let ((erased ys) (unique r) (unique _) (erased sp)) (bytes-blit _ _ _ _ d (Zero) b i n (splice-whole _ _ _ l) range))
+  (values ds ys r sp q))
+
+(def-fns _ $ (many extern bytes-get16 : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i)
+    (erased (Splice (U8) xs i (Succ (Succ (Zero))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w) (unique b is r at b))
+  (le-get _ _ b i (Succ (Succ (Zero))) range v p))
+
+(def-fns _ $ (many extern bytes-get16-many : (erased (List (U8)) xs ds) (many (Bytes xs) b) (many (Nat) i)
+    (erased (Splice (U8) xs i (Succ (Succ (Zero))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w))
+  (le-decode _ (share (bytes-sub _ b i (Succ (Succ (Zero))) _ range)) v p))
+
+(def-fns _ $ (many extern bytes-set16 : (erased (List (U8)) xs old) (unique (Bytes xs) b) (many (Nat) i v)
+    (erased (Splice (U8) xs i (Succ (Succ (Zero))) old xs) range) (erased (Lt v u16-modulus) pv) ->
+    (erased (List (U8)) ds ys) (unique (Bytes ys) r at b) (erased (Splice (U8) xs i (Succ (Succ (Zero))) ds ys) sp) (erased (LE ds v) q))
+  (le-set _ _ b i (Succ (Succ (Zero))) v sixteen u16-modulus sixteen-mul u16-modulus-pow2 pv range))
+
+(def-fns _ $ (many extern str-get16 : (many (String) s) (many (Nat) i) (erased (List (U8)) xs ds) (erased (StrBytes s xs) sb)
+    (erased (Splice (U8) xs i (Succ (Succ (Zero))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w))
+  (let ((erased ys) (unique b) (erased sb1)) (str-bytes-copy s))
+  (let-match erased (str-bytes-fn s ys xs sb1 sb) (Refl _ _))
+  (bytes-get16-many _ _ (share b) i range v p))
+
+(def-fns _ $ (many extern bytes-get32 : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i)
+    (erased (Splice (U8) xs i (Succ (Succ (Succ (Succ (Zero))))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w) (unique b is r at b))
+  (le-get _ _ b i (Succ (Succ (Succ (Succ (Zero))))) range v p))
+
+(def-fns _ $ (many extern bytes-get32-many : (erased (List (U8)) xs ds) (many (Bytes xs) b) (many (Nat) i)
+    (erased (Splice (U8) xs i (Succ (Succ (Succ (Succ (Zero))))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w))
+  (le-decode _ (share (bytes-sub _ b i (Succ (Succ (Succ (Succ (Zero))))) _ range)) v p))
+
+(def-fns _ $ (many extern bytes-set32 : (erased (List (U8)) xs old) (unique (Bytes xs) b) (many (Nat) i v)
+    (erased (Splice (U8) xs i (Succ (Succ (Succ (Succ (Zero))))) old xs) range) (erased (Lt v u32-modulus) pv) ->
+    (erased (List (U8)) ds ys) (unique (Bytes ys) r at b) (erased (Splice (U8) xs i (Succ (Succ (Succ (Succ (Zero))))) ds ys) sp) (erased (LE ds v) q))
+  (le-set _ _ b i (Succ (Succ (Succ (Succ (Zero))))) v thirty-two u32-modulus thirty-two-mul u32-modulus-pow2 pv range))
+
+(def-fns _ $ (many extern str-get32 : (many (String) s) (many (Nat) i) (erased (List (U8)) xs ds) (erased (StrBytes s xs) sb)
+    (erased (Splice (U8) xs i (Succ (Succ (Succ (Succ (Zero))))) ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w))
+  (let ((erased ys) (unique b) (erased sb1)) (str-bytes-copy s))
+  (let-match erased (str-bytes-fn s ys xs sb1 sb) (Refl _ _))
+  (bytes-get32-many _ _ (share b) i range v p))

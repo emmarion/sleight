@@ -32,6 +32,12 @@ one extracts to.
   (below).
 - `array-get`, `array-pluck` and the other array and `Bytes` accesses: one
   unchecked load or store each, the proofs standing in for bounds checks.
+- `bytes-get16`, `bytes-get32`, `bytes-set16`, `bytes-set32`, their `-many`
+  forms and `str-get16`/`str-get32` for a little-endian number of two or four
+  bytes, in place of two or four byte accesses and the arithmetic joining
+  them. In one check of the `ocamlopt -S` output, a 16-bit read was one
+  `movzwq`, and a 32-bit read one `movl` with a sign-extend and a mask, with
+  no boxed `int32`.
 
 ## Let proofs do the work
 
@@ -85,8 +91,3 @@ A first-class `Fn` call is an unknown OCaml
 application. A local `def-fns` is an OCaml local closure; to call it from
 the body it is defined in, give it a level minted before the enclosing
 function.
-
-## Known gaps
-
-- No 16-bit access to `Bytes`: two byte operations stand in for
-  `%caml_bytes_get16u`/`set16u`.

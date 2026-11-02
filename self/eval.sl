@@ -76,6 +76,17 @@
   (let-match many s (SCons c rest) ((SNil) (None _)))
   (match many i _ ((Zero) (Some _ $ char-code c)) ((Succ k) (tail $ byte-at rest k))))
 
+(def-fns _ $ (many le-read : (many (String) s) (many (Nat) i) (subterm many (Nat) n) -> (many (Maybe $ Nat) v))
+  (let-match many n (Succ n1) ((Zero) (Some _ 0)))
+  (let-match many (byte-at s i) (Some _ lo) ((None _) (None _)))
+  (let-match many (notail $ le-read s (Succ i) n1) (Some _ hi) ((None _) (None _)))
+  (Some _ $ nat-add lo $ nat-mul hi u8-modulus))
+
+(def-fns _ $ (many le-rope : (many (Nat) v) (subterm many (Nat) n) -> (many (Rope) r))
+  (let-match many n (Succ n1) ((Zero) (REmpty)))
+  (let ((many q) (many r) (erased _) (erased _) (erased _) (erased p)) (divmod v u8-modulus u8-modulus-pos))
+  (RCat (RChar $ MkChar $ MkU8 r p) (notail $ le-rope q n1)))
+
 (def-fns _ $ (many str-range : (subterm many (String) s) (many (Nat) i) (many (Nat) n) (many (Rope) acc) -> (many (Rope) r))
   (let-match many s (SCons c rest) ((SNil) acc))
   (let-match many i (Zero) ((Succ k) (tail $ str-range rest k n acc)))
@@ -530,6 +541,9 @@
   (let ((many hp1)) (hwrite _ hp t $ BSlots _ (Succ n) (idmap-set _ n k $ coerce ks pw) (idmap-set _ (ref-pos _ _ k) n ids)))
   (result-ctor _ hp1 cs 1 $ Cons _ (PNat n) $ Nil _))
 
+(def-fns _ $ (many le-result : (many (String) s) (many (Nat) i) (many (Nat) n) -> (many (ExtResult) r))
+  (match many (le-read s i n) _ ((Some _ k) (ErPayload $ PNat k)) ((None _) (ErError "a little-endian read past the end"))))
+
 (def-fns _ $ (many apply-extern : (erased (Nat) n) (many (Extern n) e) (many (List $ Ctor) cs) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r))
   (let ((many (Maybe $ Ref Block hs) a)) $ match many (list-nth _ args 0) _ ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _)))
   (let ((many (Maybe $ Ref Block hs) b)) $ match many (list-nth _ args 1) _ ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _)))
@@ -554,6 +568,12 @@
         (let ((many s) (erased _)) (flatten $ byte-run na c))
         (ErPayload $ PBytes s))
       ((ExBytesGet) (match many (byte-at sa nb) _ ((Some _ k) (ErPayload $ PNat k)) ((None _) (ErError "bytes-get: past the end"))))
+      ((ExBytesGet16) (le-result sa nb 2))
+      ((ExBytesGet32) (le-result sa nb 4))
+      ((ExStrGet16) (le-result sa nb 2))
+      ((ExStrGet32) (le-result sa nb 4))
+      ((ExBytesSet16) (ErWrite 0 $ PBytes $ str-splice sa nb 2 $ le-rope (field-nat _ hp args 2) 2))
+      ((ExBytesSet32) (ErWrite 0 $ PBytes $ str-splice sa nb 4 $ le-rope (field-nat _ hp args 2) 4))
       ((ExBytesSet)
         (let-match many (char-of-nat $ field-nat _ hp args 2) (Some _ c) ((None _) (ErError "bytes-set: a code above 255")))
         (ErWrite 0 $ PBytes $ str-splice sa nb 1 $ RChar c))

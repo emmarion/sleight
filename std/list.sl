@@ -121,11 +121,6 @@
   (let ((erased ws1) (erased r1) (erased s1)) (setnth-commute-gt _ rest k j1 b z rest2 rest4 p1 q1 gt1))
   (values (Cons _ a ws1) (SetThere _ a rest j1 z ws1 r1) (SetThere _ a ws1 k b rest4 s1)))
 
-(def-fns _ $ (erased repeat-length : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
-    (subterm erased (Repeat A n x xs) p) -> (erased (Length A xs n) q))
-  (let-match erased p (RepeatCons _ k _ rest p1) ((RepeatNil _ _) (LengthNil _)))
-  (LengthCons _ x rest k (repeat-length _ k x rest p1)))
-
 (def-fns _ $ (erased repeat-nth : (erased Type A) (erased (Nat) n i) (erased A x) (erased (List A) xs)
     (subterm erased (Repeat A n x xs) p) (erased (Lt i n) lt) -> (erased (Nth A xs i x) q))
   (let-match erased p (RepeatCons _ k _ rest p1) (absurd (RepeatNil _ _) lt))

@@ -59,6 +59,14 @@ fn bytes-make: Obj.repr (Bytes.make (Z.to_int (Obj.obj {a0} : Z.t)) (Char.unsafe
 fn bytes-get: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
 fn bytes-get-many: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
 fn bytes-set: Bytes.unsafe_set (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Char.unsafe_chr (Obj.obj {a2} : int)); Obj.repr ()
+fn bytes-get16: Obj.repr (Ffi_core.le_get16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
+fn bytes-get16-many: Obj.repr (Ffi_core.le_get16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
+fn bytes-get32: Obj.repr (Ffi_core.le_get32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
+fn bytes-get32-many: Obj.repr (Ffi_core.le_get32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
+fn bytes-set16: Ffi_core.le_set16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
+fn bytes-set32: Ffi_core.le_set32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
+fn str-get16: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget16 {t0} ({t1} + (Obj.obj {a1} : int)))
+fn str-get32: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget32 {t0} ({t1} + (Obj.obj {a1} : int)))
 fn bytes-length: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
 fn bytes-length-dec: ignore {a0}; {b0}
 fn bytes-length-dec-many: ignore {a0}; {b0}
