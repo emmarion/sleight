@@ -2145,12 +2145,12 @@
       (erased (Length Cnt ws len) lw) -> (SInit h ctu us ws)))
 
 (def-fns _ $ (many sinit : (many (Nat) h) (many (Ctree) ctu) (erased (CtH (Succ h) ctu) hc) ->
-    (erased (List Cnt) us ws) (unique (Array Cnt us) a) (unique (Array Cnt ws) g) (many (Try (SInit h ctu us ws)) r))
+    (erased (List Cnt) us ws) (unique (Array Cnt us) a) (unique (Array Cnt ws) g) (many (ErasedMaybe (SInit h ctu us ws)) r))
   (let ((erased us) (unique a) (many r)) (ctree-tally (Succ h) ctu hc))
   (let ((many len) (erased lu) (unique a1)) (array-length _ us a))
   (let ((erased ws) (unique g) (erased rp)) (array-make (U62) len (MkU62 (Zero) u62-modulus-pos)))
-  (let-match many r (TryOk _ pk) ((TryNo _) (values us ws a1 g (TryNo _))))
+  (let-match many r (ESome _ pk) ((ENone _) (values us ws a1 g (ENone _))))
   (let-match erased pk (MkPacked _ _ _ tb f))
   (let-match erased f (MkFit _ len2 l2 lb))
   (let-match erased (length-fn _ us len len2 lu l2) (Refl _ _))
-  (values us ws a1 g (TryOk _ (MkSInit h ctu us ws len lb tb lu (tally-zeros us ws (Succ h) (Zero) len ctu tb lu rp) (repeat-length _ len _ ws rp)))))
+  (values us ws a1 g (ESome _ (MkSInit h ctu us ws len lb tb lu (tally-zeros us ws (Succ h) (Zero) len ctu tb lu rp) (repeat-length _ len _ ws rp)))))

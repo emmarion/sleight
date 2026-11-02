@@ -40,5 +40,5 @@
   (let-match many fl (Some _ fi) ((None _) (values (KCNo cp) cache2)))
   (let ((many ctr) (erased hr) (erased rt) (erased _)) (cpcolor-c h cp cs na))
   (let ((many kt) (many tk)) (kempe-tree-f (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hr fi))
-  (let-match many tk (TryOk _ ks) ((TryNo _) (values (KCNo cp) cache2)))
+  (let-match many tk (ESome _ ks) ((ENone _) (values (KCNo cp) cache2)))
   (values (KCYes cp h kt ks cs na) cache2))

@@ -8,11 +8,11 @@
     ((ConcatCons _ cs cfs1 ks1 p1) (let-match erased q (ConcatCons _ _ cfs2 _ q1)) (let-match erased (concat-fn (Cons _ cs ks1) cfs1 cfs2 p1 q1) (Refl _ _))
       (Refl _ a))))
 
-(def-fns _ $ (many cfs-run : -> (many (List (Config)) c) (many (Checked (Eq (List (Config)) c cfs)) e))
-  (let-match many (decode-all chunk-srcs) (POk _ _ _ _ d _ da) (else (values (Nil _) (ChkNo _))))
+(def-fns _ $ (many cfs-run : -> (many (List (Config)) c) (many (ErasedMaybe (Eq (List (Config)) c cfs)) e))
+  (let-match many (decode-all chunk-srcs) (POk _ _ _ _ d _ da) (else (values (Nil _) (ENone _))))
   (let-match erased (decall-fn chunk-srcs _ _ d css da css-dec) (Refl _ _))
   (let ((many c) (erased cl1)) (concat-c d))
-  (values c (ChkYes _ (concat-fn css c cfs cl1 cl))))
+  (values c (ESome _ (concat-fn css c cfs cl1 cl))))
 
 (def-fns _ $ (erased four-color-open : (erased (UnavE cfs) u) (erased (AllRedC CRX css) ar) (erased (BirkhoffChecks) bks) (erased (CfCerts cfs) cc)
     -> (erased (FourColor) r))

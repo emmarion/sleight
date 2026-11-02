@@ -25,7 +25,7 @@ for x in defs orient base sweep geo plan map lists planemap walk frontier labels
   F="$F fourcolor/$x.sl"
 done
 for x in part quiz hubcap present fit dbound hubcapc obsmap dscore dsum posz pwalk hubsound pwsound \
-  conv cap unav data qfit rdart redc qwalk qembed qcert qtree qmirror unave; do
+  conv cap data qfit rdart redc qwalk qembed qcert qtree qmirror unave; do
   F="$F fourcolor/unav/$x.sl"
 done
 for x in embed birkhoff3 minarity embed3 embed5 contract3 embed6 fullred trivred notembed evalid triad trivfive \

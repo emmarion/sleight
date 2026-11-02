@@ -50,21 +50,21 @@
   (let ((many ct) (erased c)) (notail $ ctr-c s2 et1))
   (values (Cons _ e ct) (CtrCons s e s2 et1 ct a c)))
 
-(def-fns _ $ (many coleq-c : (many (Col) a b) -> (many (Chk (Eq (Col) a b)) r))
+(def-fns _ $ (many coleq-c : (many (Col) a b) -> (many (ErasedMaybe (Eq (Col) a b)) r))
   (match many a _
-    ((C0) (match many b _ ((C0) (CkY _ (Refl _ a))) (else (CkN _))))
-    ((C1) (match many b _ ((C1) (CkY _ (Refl _ a))) (else (CkN _))))
-    ((C2) (match many b _ ((C2) (CkY _ (Refl _ a))) (else (CkN _))))
-    ((C3) (match many b _ ((C3) (CkY _ (Refl _ a))) (else (CkN _))))))
+    ((C0) (match many b _ ((C0) (ESome _ (Refl _ a))) (else (ENone _))))
+    ((C1) (match many b _ ((C1) (ESome _ (Refl _ a))) (else (ENone _))))
+    ((C2) (match many b _ ((C2) (ESome _ (Refl _ a))) (else (ENone _))))
+    ((C3) (match many b _ ((C3) (ESome _ (Refl _ a))) (else (ENone _))))))
 
-(def-fns _ $ (many cleq-c : (subterm many (List (Col)) xs) (many (List (Col)) ys) -> (many (Chk (Eq (List (Col)) xs ys)) r))
-  (let-match many xs (Cons _ x xs1) ((Nil _) (match many ys _ ((Nil _) (CkY _ (Refl _ xs))) (else (CkN _)))))
-  (let-match many ys (Cons _ y ys1) ((Nil _) (CkN _)))
-  (let-match many (coleq-c x y) (CkY _ q1) ((CkN _) (CkN _)))
-  (let-match many (notail $ cleq-c xs1 ys1) (CkY _ q) ((CkN _) (CkN _)))
+(def-fns _ $ (many cleq-c : (subterm many (List (Col)) xs) (many (List (Col)) ys) -> (many (ErasedMaybe (Eq (List (Col)) xs ys)) r))
+  (let-match many xs (Cons _ x xs1) ((Nil _) (match many ys _ ((Nil _) (ESome _ (Refl _ xs))) (else (ENone _)))))
+  (let-match many ys (Cons _ y ys1) ((Nil _) (ENone _)))
+  (let-match many (coleq-c x y) (ESome _ q1) ((ENone _) (ENone _)))
+  (let-match many (notail $ cleq-c xs1 ys1) (ESome _ q) ((ENone _) (ENone _)))
   (let-match erased q1 (Refl _ _))
   (let-match erased q (Refl _ _))
-  (CkY _ (Refl _ xs)))
+  (ESome _ (Refl _ xs)))
 
 (def-fns _ $ (many belast-c : (erased Type A) (subterm many (List A) xs) -> (many (List A) ys))
   (let-match many xs (Cons _ x xs1) ((Nil _) xs))
@@ -120,11 +120,11 @@
   (many BBCons : (erased (Nat) h m) (erased (List (Step)) cp) (erased (Ctree) t) (erased (List (List (Step))) cps) (erased (List (Ctree)) ts)
       (erased (BkProg h m cp t) p) (erased (BkBasis h m cps ts) q) -> (BkBasis h m (Cons (List (Step)) cp cps) (Cons (Ctree) t ts))))
 
-(def-fns _ $ (many cubic-c : (subterm many (List (Step)) cp) -> (many (Chk (CubicProg cp)) r))
-  (let-match many cp (Cons _ s cp1) ((Nil _) (CkY _ (CubNil))))
-  (let-match many (notail $ cubic-c cp1) (CkY _ q) ((CkN _) (CkN _)))
-  (match many s _ ((SR j) (CkY _ (CubR j cp1 q))) ((SY) (CkY _ (CubY cp1 q))) ((SH) (CkY _ (CubH cp1 q))) ((SU) (CkY _ (CubU cp1 q)))
-    (else (CkN _))))
+(def-fns _ $ (many cubic-c : (subterm many (List (Step)) cp) -> (many (ErasedMaybe (CubicProg cp)) r))
+  (let-match many cp (Cons _ s cp1) ((Nil _) (ESome _ (CubNil))))
+  (let-match many (notail $ cubic-c cp1) (ESome _ q) ((ENone _) (ENone _)))
+  (match many s _ ((SR j) (ESome _ (CubR j cp1 q))) ((SY) (ESome _ (CubY cp1 q))) ((SH) (ESome _ (CubH cp1 q))) ((SU) (ESome _ (CubU cp1 q)))
+    (else (ENone _))))
 
 (def-fns _ $ (erased cubic-noa : (erased (List (Step)) cp) (subterm erased (CubicProg cp) cq) -> (erased (NoA cp) na))
   (match erased cq _
@@ -163,7 +163,7 @@
   (many BPNo : (erased (Nat) h m) (erased (List (Step)) cp) -> (BkPD h m cp)))
 
 (def-fns _ $ (many bkprog-c : (many (Nat) h m) (many (List (Step)) cp) -> (many (BkPD h m cp) r))
-  (let-match many (cubic-c cp) (CkY _ cq) ((CkN _) (BPNo h m cp)))
+  (let-match many (cubic-c cp) (ESome _ cq) ((ENone _) (BPNo h m cp)))
   (let ((erased na)) (cubic-noa cp cq))
   (let ((many r) (erased cs)) (cprsize-cub cp cq))
   (let-match many (nat-eq r (Succ $ Succ h)) (Equal _ _ _) (else (BPNo h m cp)))
@@ -191,12 +191,12 @@
   enum
   (many MkBDisj : (erased (List (Ctree)) ts) (erased (Ctree) ct t) (erased (Elem (Ctree) t ts) el) (erased (CtDisj ct t) dj) -> (BDisj ts ct)))
 
-(def-fns _ $ (many bdisj-c : (many (Ctree) ct) (subterm many (List (Ctree)) ts) -> (many (Chk (BDisj ts ct)) r))
-  (let-match many ts (Cons _ t rest) ((Nil _) (CkN _)))
-  (let-match many (ctree-disjoint ct t) (DjNo _ _ _) ((DjYes _ _ dj) (CkY _ (MkBDisj ts ct t (ElHere _ t rest) dj))))
-  (let-match many (notail $ bdisj-c ct rest) (CkY _ b) ((CkN _) (CkN _)))
+(def-fns _ $ (many bdisj-c : (many (Ctree) ct) (subterm many (List (Ctree)) ts) -> (many (ErasedMaybe (BDisj ts ct)) r))
+  (let-match many ts (Cons _ t rest) ((Nil _) (ENone _)))
+  (let-match many (ctree-disjoint ct t) (DjNo _ _ _) ((DjYes _ _ dj) (ESome _ (MkBDisj ts ct t (ElHere _ t rest) dj))))
+  (let-match many (notail $ bdisj-c ct rest) (ESome _ b) ((ENone _) (ENone _)))
   (let-match erased b (MkBDisj _ _ t2 el dj))
-  (CkY _ (MkBDisj ts ct t2 (ElThere _ t2 t rest el) dj)))
+  (ESome _ (MkBDisj ts ct t2 (ElThere _ t2 t rest el) dj)))
 
 ; From the trace a, the Kempe closure of ctu and gtu with the even normal form of a removed
 ; reaches ctu3, gtu3 and no chromograms left to remove.
@@ -208,7 +208,7 @@
 (def-adts $ (SideD : ((Nat) h) ((List (Ctree)) ts) ((List (Col)) a) ((Ctree) ctu) ((Gtree) gtu) -> Type)
   enum
   (many SdGo : (erased (Nat) h) (erased (List (Ctree)) ts) (erased (List (Col)) a) (erased (Ctree) ctu) (erased (Gtree) gtu) (many (Ctree) ctu3)
-      (many (Gtree) gtu3) (erased (SRun h a ctu gtu ctu3 gtu3) run) (erased (CtH (Succ h) ctu3) hc3) (many (Chk (BDisj ts ctu3)) bd)
+      (many (Gtree) gtu3) (erased (SRun h a ctu gtu ctu3 gtu3) run) (erased (CtH (Succ h) ctu3) hc3) (many (ErasedMaybe (BDisj ts ctu3)) bd)
       -> (SideD h ts a ctu gtu))
   (many SdNo : (erased (Nat) h) (erased (List (Ctree)) ts) (erased (List (Col)) a) (erased (Ctree) ctu) (erased (Gtree) gtu) -> (SideD h ts a ctu gtu)))
 
@@ -239,32 +239,32 @@
         (erased (BK h ts cto gto n ctu3 gtu3) bk) -> (BKS h ts a ctu gtu cto gto n))))
 
 (def-fns _ $ (many bk2-c : (many (Nat) h) (many (List (Ctree)) ts) (subterm many (Nat) n) (many (Ctree) ctu1) (many (Gtree) gtu1) (many (Ctree) ctu2)
-    (many (Gtree) gtu2) (erased (CtH (Succ h) ctu1) hc1) (erased (CtH (Succ h) ctu2) hc2) -> (many (Chk (BK h ts ctu1 gtu1 n ctu2 gtu2)) r))
-  (let-match many n (Succ n1) ((Zero) (CkN _)))
-  (let-match many (pick-c ctu1 ctu2 (Nil _) (C0)) (PkYes _ p _) ((PkNo _) (CkN _)))
+    (many (Gtree) gtu2) (erased (CtH (Succ h) ctu1) hc1) (erased (CtH (Succ h) ctu2) hc2) -> (many (ErasedMaybe (BK h ts ctu1 gtu1 n ctu2 gtu2)) r))
+  (let-match many n (Succ n1) ((Zero) (ENone _)))
+  (let-match many (pick-c ctu1 ctu2 (Nil _) (C0)) (PkYes _ p _) ((PkNo _) (ENone _)))
   (let ((many c2) (erased cr2)) (ctr-c (C0) p))
   (let ((many c1) (erased rv)) (rev-onto-c _ c2 (Nil _)))
   (let ((many a1)) (belast-c _ c1))
   (let ((many c1b) (erased cr1)) (ctr-c (C0) a1))
-  (let-match many (cleq-c c1b c1) (CkY _ q) ((CkN _) (CkN _)))
+  (let-match many (cleq-c c1b c1) (ESome _ q) ((ENone _) (ENone _)))
   (let-match erased q (Refl _ _))
-  (let ((many (Chk (BKS h ts a1 ctu1 gtu1 ctu2 gtu2 n1)) k1))
+  (let ((many (ErasedMaybe (BKS h ts a1 ctu1 gtu1 ctu2 gtu2 n1)) k1))
     (match many (side-c h ts a1 ctu1 gtu1 hc1) _
-      ((SdNo _ _ _ _ _) (CkN _))
+      ((SdNo _ _ _ _ _) (ENone _))
       ((SdGo _ _ _ _ _ ctu3 gtu3 run hc3 bd)
-        (let-match many bd (CkN _) ((CkY _ b) (CkY _ (BKSBasis h ts a1 ctu1 gtu1 ctu2 gtu2 n1 ctu3 gtu3 run b))))
-        (let-match many (notail $ bk2-c h ts n1 ctu2 gtu2 ctu3 gtu3 hc2 hc3) (CkY _ b) ((CkN _) (CkN _)))
-        (CkY _ (BKSRec h ts a1 ctu1 gtu1 ctu2 gtu2 n1 ctu3 gtu3 run b)))))
-  (let-match many k1 (CkY _ s1) ((CkN _) (CkN _)))
-  (let ((many (Chk (BKS h ts p ctu2 gtu2 ctu1 gtu1 n1)) k2))
+        (let-match many bd (ENone _) ((ESome _ b) (ESome _ (BKSBasis h ts a1 ctu1 gtu1 ctu2 gtu2 n1 ctu3 gtu3 run b))))
+        (let-match many (notail $ bk2-c h ts n1 ctu2 gtu2 ctu3 gtu3 hc2 hc3) (ESome _ b) ((ENone _) (ENone _)))
+        (ESome _ (BKSRec h ts a1 ctu1 gtu1 ctu2 gtu2 n1 ctu3 gtu3 run b)))))
+  (let-match many k1 (ESome _ s1) ((ENone _) (ENone _)))
+  (let ((many (ErasedMaybe (BKS h ts p ctu2 gtu2 ctu1 gtu1 n1)) k2))
     (match many (side-c h ts p ctu2 gtu2 hc2) _
-      ((SdNo _ _ _ _ _) (CkN _))
+      ((SdNo _ _ _ _ _) (ENone _))
       ((SdGo _ _ _ _ _ ctu3 gtu3 run hc3 bd)
-        (let-match many bd (CkN _) ((CkY _ b) (CkY _ (BKSBasis h ts p ctu2 gtu2 ctu1 gtu1 n1 ctu3 gtu3 run b))))
-        (let-match many (notail $ bk2-c h ts n1 ctu1 gtu1 ctu3 gtu3 hc1 hc3) (CkY _ b) ((CkN _) (CkN _)))
-        (CkY _ (BKSRec h ts p ctu2 gtu2 ctu1 gtu1 n1 ctu3 gtu3 run b)))))
-  (let-match many k2 (CkY _ s2) ((CkN _) (CkN _)))
-  (CkY _ (MkBK h ts ctu1 gtu1 n1 ctu2 gtu2 a1 c1 p c2 cr1 cr2 rv s1 s2)))
+        (let-match many bd (ENone _) ((ESome _ b) (ESome _ (BKSBasis h ts p ctu2 gtu2 ctu1 gtu1 n1 ctu3 gtu3 run b))))
+        (let-match many (notail $ bk2-c h ts n1 ctu1 gtu1 ctu3 gtu3 hc1 hc3) (ESome _ b) ((ENone _) (ENone _)))
+        (ESome _ (BKSRec h ts p ctu2 gtu2 ctu1 gtu1 n1 ctu3 gtu3 run b)))))
+  (let-match many k2 (ESome _ s2) ((ENone _) (ENone _)))
+  (ESome _ (MkBK h ts ctu1 gtu1 n1 ctu2 gtu2 a1 c1 p c2 cr1 cr2 rv s1 s2)))
 
 ; A Birkhoff check for ring size h + 2 and kernel size m: the basis programs cps, whose trees are ts, and a run from the
 ; initial trees ctu and gtu.
@@ -275,12 +275,12 @@
       (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (BkBasis h m cps ts) bb) (erased (BK h ts ctu gtu n ctu gtu) bk)
       -> (BirkhoffCheck h m)))
 
-(def-fns _ $ (many birkhoff-check-c : (many (Nat) h m n) (many (List (List (Step))) cps) -> (many (Chk (BirkhoffCheck h m)) r))
-  (let-match many (bkbasis-c h m cps) (BBYes _ _ _ ts bb) ((BBNo _ _ _) (CkN _)))
+(def-fns _ $ (many birkhoff-check-c : (many (Nat) h m n) (many (List (List (Step))) cps) -> (many (ErasedMaybe (BirkhoffCheck h m)) r))
+  (let-match many (bkbasis-c h m cps) (BBYes _ _ _ ts bb) ((BBNo _ _ _) (ENone _)))
   (let ((many gtu) (erased gc)) (gtree-full h))
   (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu))
-  (let-match many (bk2-c h ts n ctu gtu ctu gtu hc hc) (CkY _ bk) ((CkN _) (CkN _)))
-  (CkY _ (MkBirkhoffCheck h m n cps ts ctu gtu ce ge gc bb bk)))
+  (let-match many (bk2-c h ts n ctu gtu ctu gtu hc hc) (ESome _ bk) ((ENone _) (ENone _)))
+  (ESome _ (MkBirkhoffCheck h m n cps ts ctu gtu ce ge gc bb bk)))
 
 ; The traces that a colour permutation sends into NT.
 (def-adts $ (PermIn : ((PredC) NT) ((List (Col)) ct) -> Type)

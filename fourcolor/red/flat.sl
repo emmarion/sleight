@@ -5,11 +5,6 @@
   (let-match erased v (MkU62 n p))
   (ImmCoerce _ _ _ _ _ _ (coercible-wrap (Shared) MkCopy (U62) v) (ImmCoerce _ _ _ _ _ _ (coercible-wrap (Shared) MkU62 n p) (ImmNat n p))))
 
-(def-adts $ (Try : (Type P) -> Type)
-  enum
-  (many TryOk : (erased Type P) (erased P p) -> (Try P))
-  (many TryNo : (erased Type P) -> (Try P)))
-
 ; q is 3p.
 (def-adts $ (Thrice : ((Nat) p) ((Nat) q) -> Type)
   enum
@@ -362,28 +357,28 @@
     ((InSet _ ws _ _ _ i x et w1 s ti le) (tally-set ws vs j p p2 i x et t (tally-inside us ws j p p2 t b w1 ap) s ti le ap))))
 
 (def-fns _ $ (many split-c : (erased (Nat) j) (many (Ctree) t) (erased (CtH (Succ j) t) k) ->
-    (many (Ctree) t1 t2 t3) (erased (CtH j t1) k1) (erased (CtH j t2) k2) (erased (CtH j t3) k3) (many (Try (Cn t1 t2 t3 t)) c))
+    (many (Ctree) t1 t2 t3) (erased (CtH j t1) k1) (erased (CtH j t2) k2) (erased (CtH j t3) k3) (many (ErasedMaybe (Cn t1 t2 t3 t)) c))
   (let-match many t (CNode a1 a2 a3)
-    ((CEmpty) (values t t t (HE j) (HE j) (HE j) (TryOk _ (CnE))))
+    ((CEmpty) (values t t t (HE j) (HE j) (HE j) (ESome _ (CnE))))
     (absurd (CLeaf _) k))
   (let-match erased k (HN _ _ _ _ h1 h2 h3))
   (let ((many t4) (erased c4)) (cn-c a1 a2 a3))
-  (values a1 a2 a3 h1 h2 h3 (match many t4 _ ((CNode _ _ _) (let-match erased c4 (CnN _ _ _ _)) (TryOk _ c4)) (else (TryNo _)))))
+  (values a1 a2 a3 h1 h2 h3 (match many t4 _ ((CNode _ _ _) (let-match erased c4 (CnN _ _ _ _)) (ESome _ c4)) (else (ENone _)))))
 
 (def-fns _ $ (many fill : (subterm many (Nat) j) (many (Nat) p) (many (Ctree) t) (erased (CtH j t) k) (many (Nat) len) (erased (List Cnt) us)
     (unique (Array Cnt us) a) (erased (Length Cnt us len) l) ->
     (erased (List Cnt) vs) (unique (Array Cnt vs) a2 at a) (erased (Inside us vs j p) w) (erased (Length Cnt vs len) l2)
-    (many (Try (Tally vs j p t)) r))
+    (many (ErasedMaybe (Tally vs j p t)) r))
   (match many j _
     ((Zero)
       (let ((many n) (erased rt)) (root-exists t))
-      (let-match many (nat-fits-u62 n) (Yes _ _ _ _ nb) ((No _ _ _ _ _) (values us a (InNil us j p) l (TryNo _))))
-      (let-match many (lt-dec p len) (Yes _ _ _ _ pl) ((No _ _ _ _ _) (values us a (InNil us j p) l (TryNo _))))
+      (let-match many (nat-fits-u62 n) (Yes _ _ _ _ nb) ((No _ _ _ _ _) (values us a (InNil us j p) l (ENone _))))
+      (let-match many (lt-dec p len) (Yes _ _ _ _ pl) ((No _ _ _ _ _) (values us a (InNil us j p) l (ENone _))))
       (let ((erased old) (erased nth)) (nth-exists _ us len p l pl))
       (let ((unique x)) (MkCopy (U62) (MkU62 n nb)))
       (let ((erased vs) (unique a2) (erased s)) (array-place-imm _ us a p x old nth (imm-cnt old) (imm-cnt x)))
       (values vs a2 (InSet us us vs j p p x (Nil _) (InNil us j p) s (TINil p) (LengthNil _)) (setnth-length _ us p len x vs s l)
-        (TryOk _ (TaL vs p n nb t (setnth-nth _ us p x vs s) rt k))))
+        (ESome _ (TaL vs p n nb t (setnth-nth _ us p x vs s) rt k))))
     ((Succ j1)
       (let ((many t1) (many t2) (many t3) (erased k1) (erased k2) (erased k3) (many c)) (split-c j1 t k))
       (let ((many d) (erased ad)) (add p p))
@@ -396,14 +391,14 @@
         (inside-cat us u2 u3 (Succ j1) p
           (inside-cat us u1 u2 (Succ j1) p (inside-up us u1 j1 p q (C1) w1 (Ki1 p q tq)) (inside-up u1 u2 j1 p (Succ q) (C2) w2 (Ki2 p q tq)))
           (inside-up u2 u3 j1 p (Succ (Succ q)) (C3) w3 (Ki3 p q tq))))
-      (let-match many r1 (TryOk _ b1) ((TryNo _) (values u3 a3 w l3 (TryNo _))))
-      (let-match many r2 (TryOk _ b2) ((TryNo _) (values u3 a3 w l3 (TryNo _))))
-      (let-match many r3 (TryOk _ b3) ((TryNo _) (values u3 a3 w l3 (TryNo _))))
-      (let-match many c (TryOk _ cn) ((TryNo _) (values u3 a3 w l3 (TryNo _))))
+      (let-match many r1 (ESome _ b1) ((ENone _) (values u3 a3 w l3 (ENone _))))
+      (let-match many r2 (ESome _ b2) ((ENone _) (values u3 a3 w l3 (ENone _))))
+      (let-match many r3 (ESome _ b3) ((ENone _) (values u3 a3 w l3 (ENone _))))
+      (let-match many c (ESome _ cn) ((ENone _) (values u3 a3 w l3 (ENone _))))
       (let ((erased s1)) (Succ q))
       (let ((erased s2)) (Succ s1))
       (values u3 a3 w l3
-        (TryOk _ (TaN u3 j1 p q t1 t2 t3 t tq
+        (ESome _ (TaN u3 j1 p q t1 t2 t3 t tq
           (tally-inside u2 u3 j1 q s2 t1 (tally-inside u1 u2 j1 q s1 t1 b1 w2 (ApLt (Nat) Lt q s1 (lt-succ q))) w3
             (ApLt (Nat) Lt q s2 (lt-weaken q s1 (lt-succ q))))
           (tally-inside u2 u3 j1 s1 s2 t2 b2 w3 (ApLt (Nat) Lt s1 s2 (lt-succ s1)))
@@ -417,13 +412,13 @@
   v)
 
 (def-fns _ $ (many ctree-tally : (many (Nat) j) (many (Ctree) t) (erased (CtH j t) k) ->
-    (erased (List Cnt) us) (unique (Array Cnt us) a) (many (Try (Packed us j t)) r))
+    (erased (List Cnt) us) (unique (Array Cnt us) a) (many (ErasedMaybe (Packed us j t)) r))
   (let ((many n)) (pow3 j))
   (let ((erased us) (unique a) (erased rp)) (array-make (U62) n (MkU62 (Zero) u62-modulus-pos)))
-  (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values us a (TryNo _))))
+  (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values us a (ENone _))))
   (let ((erased vs) (unique a2) (erased _) (erased l2) (many r)) (fill j (Zero) t k n us a (repeat-length _ n _ us rp)))
-  (let-match many r (TryOk _ b) ((TryNo _) (values vs a2 (TryNo _))))
-  (values vs a2 (TryOk _ (MkPacked vs j t b (MkFit vs n l2 lb)))))
+  (let-match many r (ESome _ b) ((ENone _) (values vs a2 (ENone _))))
+  (values vs a2 (ESome _ (MkPacked vs j t b (MkFit vs n l2 lb)))))
 
 ; t is the subtree of top after the reversed prefix pre.
 (def-adts $ (CtAt : ((Ctree) top) ((List (Col)) pre) ((Ctree) t) -> Type)
@@ -530,15 +525,15 @@
 (def-fns _ $ (erased tfit-lt : (erased (Nat) len j n) (erased (TrieFit len j n) hf) -> (erased (Lt n len) r))
   (match erased hf _ ((TfL _ _ b) b) ((TfN _ _ _ _ b _ _ _ _) b)))
 
-(def-fns _ $ (many tfit-c : (subterm many (Nat) j) (many (Nat) n len) -> (many (Try (TrieFit len j n)) r))
-  (let-match many (lt-dec n len) (Yes _ _ _ _ b) ((No _ _ _ _ _) (TryNo _)))
-  (let-match many j (Succ j1) ((Zero) (TryOk _ (TfL len n b))))
+(def-fns _ $ (many tfit-c : (subterm many (Nat) j) (many (Nat) n len) -> (many (ErasedMaybe (TrieFit len j n)) r))
+  (let-match many (lt-dec n len) (Yes _ _ _ _ b) ((No _ _ _ _ _) (ENone _)))
+  (let-match many j (Succ j1) ((Zero) (ESome _ (TfL len n b))))
   (let ((many d) (erased ad)) (add n n))
   (let ((many q) (erased aq)) (add d n))
-  (let-match many (notail $ tfit-c j1 (Succ q) len) (TryOk _ h1) ((TryNo _) (TryNo _)))
-  (let-match many (notail $ tfit-c j1 (Succ (Succ q)) len) (TryOk _ h2) ((TryNo _) (TryNo _)))
-  (let-match many (notail $ tfit-c j1 (Succ (Succ (Succ q))) len) (TryOk _ h3) ((TryNo _) (TryNo _)))
-  (TryOk _ (TfN len j1 n q b (adds-thrice n d q ad aq) h1 h2 h3)))
+  (let-match many (notail $ tfit-c j1 (Succ q) len) (ESome _ h1) ((ENone _) (ENone _)))
+  (let-match many (notail $ tfit-c j1 (Succ (Succ q)) len) (ESome _ h2) ((ENone _) (ENone _)))
+  (let-match many (notail $ tfit-c j1 (Succ (Succ (Succ q))) len) (ESome _ h3) ((ENone _) (ENone _)))
+  (ESome _ (TfN len j1 n q b (adds-thrice n d q ad aq) h1 h2 h3)))
 
 (def-fns _ $ (many heap-size : (subterm many (Nat) j) -> (many (Nat) n))
   (let-match many j (Succ j1) ((Zero) (Succ (Zero))))
@@ -567,9 +562,9 @@
   (let-match erased rm (MkRoom _ _ len l b _))
   (MkFitF ms len l b))
 
-(def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List (U8)) ms) (unique (Bytes ms) m) (many (Try (Room ms j)) r))
+(def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List (U8)) ms) (unique (Bytes ms) m) (many (ErasedMaybe (Room ms j)) r))
   (let ((many n)) (heap-size j))
   (let ((erased ms) (unique m) (erased rp)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
-  (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (TryNo _))))
-  (let-match many (tfit-c j (Zero) n) (TryOk _ hf) ((TryNo _) (values ms m (TryNo _))))
-  (values ms m (TryOk _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb hf))))
+  (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (ENone _))))
+  (let-match many (tfit-c j (Zero) n) (ESome _ hf) ((ENone _) (values ms m (ENone _))))
+  (values ms m (ESome _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb hf))))

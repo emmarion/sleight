@@ -341,15 +341,15 @@
     ((SfStep _ y _ _ sf1) (suf-mem A x (Cons A y zs) xs sf1 (MemThere A x y zs m)))))
 
 (def-fns _ $ (many tree-rec-c : (erased (List (Config)) cfs) (many (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi) (subterm many (List (Config)) rest)
-    (erased (Suf (Config) rest cfs) sf) -> (many (Qzt) r) (many (Checked (QInv cfs (Nil (Nat)) r)) c))
-  (let-match many rest (Cons _ cf rest1) ((Nil _) (values qt (ChkYes _ qi))))
+    (erased (Suf (Config) rest cfs) sf) -> (many (Qzt) r) (many (ErasedMaybe (QInv cfs (Nil (Nat)) r)) c))
+  (let-match many rest (Cons _ cf rest1) ((Nil _) (values qt (ESome _ qi))))
   (let ((many qz)) (cfquiz cf))
-  (let-match many (cfqz-c cf qz) (ChkYes _ cq) ((ChkNo _) (values qt (ChkNo _))))
+  (let-match many (cfqz-c cf qz) (ESome _ cq) ((ENone _) (values qt (ENone _))))
   (let-match many cf (MkConfig sym _ _))
   (let ((many qt1) (erased qi1)) (store-cf-c cfs cf qz sym (suf-mem (Config) cf rest cfs sf (MemHere (Config) cf rest1)) cq qt qi))
   (match many qt1 _
     ((QztHub _ _ _ _) (tail $ tree-rec-c cfs qt1 qi1 rest1 (SfStep (Config) cf rest1 cfs sf)))
-    (else (values (QztNil) (ChkYes _ (QINil cfs (Nil _)))))))
+    (else (values (QztNil) (ESome _ (QINil cfs (Nil _)))))))
 
 (def-fns _ $ (erased qinv-n1 : (erased (List (Config)) cfs) (erased (List (Nat)) ps) -> (erased (QInv cfs ps (QztNode (QztNil) (QztNil) (QztNil) (QztNil))) r))
   (QINode cfs ps (QztNil) (QztNil) (QztNil) (QztNil) (QINil cfs _) (QINil cfs _) (QINil cfs _) (QINil cfs _)))
@@ -359,7 +359,7 @@
   (let-match erased e (Refl _ _))
   (QINode cfs ps n1 n1 n1 n1 (qinv-n1 cfs _) (qinv-n1 cfs _) (qinv-n1 cfs _) (qinv-n1 cfs _)))
 
-(def-fns _ $ (many quiz-tree-c : (many (List (Config)) cfs) -> (many (Qzt) r) (many (Checked (QInv cfs (Nil (Nat)) r)) c))
+(def-fns _ $ (many quiz-tree-c : (many (List (Config)) cfs) -> (many (Qzt) r) (many (ErasedMaybe (QInv cfs (Nil (Nat)) r)) c))
   (let ((many n1)) (QztNode (QztNil) (QztNil) (QztNil) (QztNil)))
   (let ((many n2)) (QztNode n1 n1 n1 n1))
   (let ((erased e1)) (Refl (Qzt) n1))

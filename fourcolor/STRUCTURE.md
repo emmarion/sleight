@@ -201,7 +201,7 @@ The unit is these files in this order (`check.sh`), written without
   operations, dbound and hubcap checks, a dart of positive dscore.
 - `pwalk`, `hubsound`, `pwsound`, `conv`, `cap`: the presentation walk
   (`check2-c`) and its soundness; the caps of larger hubs.
-- `unav`: `Checked`. `data`: rules and scripts (generated).
+- `data`: rules and scripts (generated).
 - `qfit`, `rdart`, `redc`: a certified redpart (`redp-c`, `red-sound`).
 - `qwalk`, `qembed`, `qcert`, `qtree`, `qmirror`: `quiz-preembedding`,
   its certificates (`cfqz-c`), the quiz tree (`qzt-hit`), `geo-mirror`.
@@ -255,7 +255,7 @@ its files named as in the load order:
   hypgeom hypjordan hyptree hypcount hypcubic cfmap colalias
   unav/faces red/red cpmap red/color cfcolor red/configs unav/realias`,
   then `unav/` `part quiz hubcap present fit dbound hubcapc obsmap dscore
-  dsum posz pwalk hubsound pwsound conv cap unav data qfit rdart redc
+  dsum posz pwalk hubsound pwsound conv cap data qfit rdart redc
   qwalk qembed qcert qtree qmirror unave qztcfs qztproof qztgoal`.
   `unav/qztcfs.sl` binds `cfs` and `cfs-run` by decoding `config-srcs`,
   as `fcopen.sl` does in the full unit.
