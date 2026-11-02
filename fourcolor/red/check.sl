@@ -1,8 +1,8 @@
 (def-adts $ (InitFor : ((Nat) h) -> Type)
   enum
-  (many IFYes : (erased (Nat) h) (many (Ctree) ctu) (many (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
+  (many IFYes : (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtu) (erased (CEv ctu (ESStart)) ce)
       (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc)
-      (erased (CtH (Succ h) ctu) hc) (many (Maybe (FlatIn h ctu)) fl) -> (InitFor h)))
+      (erased (CtH (Succ h) ctu) hc) (many (Maybe (FlatIn h ctu gtu)) fl) -> (InitFor h)))
 
 (def-adts $ (InitE : -> Type)
   enum
@@ -17,7 +17,7 @@
   (let-match many (init-lookup h cache) (None _) ((Some _ i) (values i cache)))
   (let ((many gtu) (erased gc)) (gtree-full h))
   (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu))
-  (let ((many i)) (IFYes h ctu gtu ce ge gc hc (flat-in h ctu hc)))
+  (let ((many i)) (IFYes h ctu gtu ce ge gc hc (flat-in h ctu gtu hc)))
   (values i (Cons _ (MkInitE h i) cache)))
 
 ; The Kempe tree kt of cp, whose ring has h + 2 darts, is sound for the ring traces of cp's map.

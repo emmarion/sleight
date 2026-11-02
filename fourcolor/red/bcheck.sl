@@ -277,8 +277,8 @@
 
 (def-fns _ $ (many birkhoff-check-c : (many (Nat) h m n) (many (List (List (Step))) cps) -> (many (Chk (BirkhoffCheck h m)) r))
   (let-match many (bkbasis-c h m cps) (BBYes _ _ _ ts bb) ((BBNo _ _ _) (CkN _)))
-  (let ((many i) (many _)) (init-for h (Nil _)))
-  (let-match many i (IFYes _ ctu gtu ce ge gc hc _))
+  (let ((many gtu) (erased gc)) (gtree-full h))
+  (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu))
   (let-match many (bk2-c h ts n ctu gtu ctu gtu hc hc) (CkY _ bk) ((CkN _) (CkN _)))
   (CkY _ (MkBirkhoffCheck h m n cps ts ctu gtu ce ge gc bb bk)))
 
