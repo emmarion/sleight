@@ -230,6 +230,10 @@
   enum
   (many MkFit : (erased (List Cnt) us) (erased (Nat) len) (erased (Length Cnt us len) l) (erased (Lt len u62-modulus) b) -> (Fit us)))
 
+(def-adts $ (FitF : ((List (U8)) us) -> Type)
+  enum
+  (many MkFitF : (erased (List (U8)) us) (erased (Nat) len) (erased (Length (U8) us len) l) (erased (Lt len u62-modulus) b) -> (FitF us)))
+
 (def-adts $ (Packed : ((List Cnt) us) ((Nat) j) ((Ctree) t) -> Type)
   enum
   (many MkPacked : (erased (List Cnt) us) (erased (Nat) j) (erased (Ctree) t) (erased (Tally us j (Zero) t) b) (erased (Fit us) f)
@@ -465,28 +469,28 @@
         cn))))
 
 ; Trie node n, whose children are 3n + 1 to 3n + 3, holds t of height j: its entry is 0 when t is empty and 1 otherwise.
-(def-adts $ (Flags : ((List Cnt) us) ((Nat) j) ((Nat) n) ((Ctree) t) -> Type)
+(def-adts $ (Flags : ((List (U8)) us) ((Nat) j) ((Nat) n) ((Ctree) t) -> Type)
   enum
-  (many FlE : (erased (List Cnt) us) (erased (Nat) j n) (erased (Lt (Zero) u62-modulus) b)
-      (erased (Nth Cnt us n (MkCopy (U62) (MkU62 (Zero) b))) x) -> (Flags us j n (CEmpty)))
-  (many FlL : (erased (List Cnt) us) (erased (Nat) n) (erased (Ctree) lf) (erased (Lt (Succ (Zero)) u62-modulus) b)
-      (erased (Nth Cnt us n (MkCopy (U62) (MkU62 (Succ (Zero)) b))) x) -> (Flags us (Zero) n (CLeaf lf)))
-  (many FlN : (erased (List Cnt) us) (erased (Nat) j n q) (erased (Ctree) t1 t2 t3) (erased (Lt (Succ (Zero)) u62-modulus) b)
-      (erased (Nth Cnt us n (MkCopy (U62) (MkU62 (Succ (Zero)) b))) x) (erased (Thrice n q) tq)
+  (many FlE : (erased (List (U8)) us) (erased (Nat) j n) (erased (Lt (Zero) u8-modulus) b)
+      (erased (Nth (U8) us n (MkU8 (Zero) b)) x) -> (Flags us j n (CEmpty)))
+  (many FlL : (erased (List (U8)) us) (erased (Nat) n) (erased (Ctree) lf) (erased (Lt (Succ (Zero)) u8-modulus) b)
+      (erased (Nth (U8) us n (MkU8 (Succ (Zero)) b)) x) -> (Flags us (Zero) n (CLeaf lf)))
+  (many FlN : (erased (List (U8)) us) (erased (Nat) j n q) (erased (Ctree) t1 t2 t3) (erased (Lt (Succ (Zero)) u8-modulus) b)
+      (erased (Nth (U8) us n (MkU8 (Succ (Zero)) b)) x) (erased (Thrice n q) tq)
       (erased (Flags us j (Succ q) t1) f1) (erased (Flags us j (Succ (Succ q)) t2) f2) (erased (Flags us j (Succ (Succ (Succ q))) t3) f3)
       (erased (Occ3 t1 t2 t3) o) -> (Flags us (Succ j) n (CNode t1 t2 t3))))
 
 ; What Flags us j n t says once the entry v at n is known.
-(def-adts $ (FlagInv : ((List Cnt) us) ((Nat) j) ((Nat) n) ((Nat) v) ((Ctree) t) -> Type)
+(def-adts $ (FlagInv : ((List (U8)) us) ((Nat) j) ((Nat) n) ((Nat) v) ((Ctree) t) -> Type)
   enum
-  (many FiE : (erased (List Cnt) us) (erased (Nat) j n) -> (FlagInv us j n (Zero) (CEmpty)))
-  (many FiL : (erased (List Cnt) us) (erased (Nat) n) (erased (Ctree) lf) -> (FlagInv us (Zero) n (Succ (Zero)) (CLeaf lf)))
-  (many FiN : (erased (List Cnt) us) (erased (Nat) j n q) (erased (Ctree) t1 t2 t3) (erased (Thrice n q) tq)
+  (many FiE : (erased (List (U8)) us) (erased (Nat) j n) -> (FlagInv us j n (Zero) (CEmpty)))
+  (many FiL : (erased (List (U8)) us) (erased (Nat) n) (erased (Ctree) lf) -> (FlagInv us (Zero) n (Succ (Zero)) (CLeaf lf)))
+  (many FiN : (erased (List (U8)) us) (erased (Nat) j n q) (erased (Ctree) t1 t2 t3) (erased (Thrice n q) tq)
       (erased (Flags us j (Succ q) t1) f1) (erased (Flags us j (Succ (Succ q)) t2) f2) (erased (Flags us j (Succ (Succ (Succ q))) t3) f3)
       (erased (Occ3 t1 t2 t3) o) -> (FlagInv us (Succ j) n (Succ (Zero)) (CNode t1 t2 t3))))
 
-(def-fns _ $ (erased flags-inv : (erased (List Cnt) us) (erased (Nat) j n v) (erased (Ctree) t) (erased (Lt v u62-modulus) vb)
-    (erased (Flags us j n t) c) (erased (Nth Cnt us n (MkCopy (U62) (MkU62 v vb))) x) -> (erased (FlagInv us j n v t) r))
+(def-fns _ $ (erased flags-inv : (erased (List (U8)) us) (erased (Nat) j n v) (erased (Ctree) t) (erased (Lt v u8-modulus) vb)
+    (erased (Flags us j n t) c) (erased (Nth (U8) us n (MkU8 v vb)) x) -> (erased (FlagInv us j n v t) r))
   (match erased c _
     ((FlE _ _ _ _ y) (let-match erased (nth-fn _ _ _ _ _ x y) (Refl _ _)) (FiE us j n))
     ((FlL _ _ lf _ y) (let-match erased (nth-fn _ _ _ _ _ x y) (Refl _ _)) (FiL us n lf))
@@ -494,7 +498,7 @@
       (let-match erased (nth-fn _ _ _ _ _ x y) (Refl _ _))
       (FiN us j1 n q t1 t2 t3 tq f1 f2 f3 o))))
 
-(def-fns _ $ (erased flags-mem : (erased (List Cnt) us) (erased (Nat) j n) (erased (Ctree) t) (subterm erased (Flags us j n t) c) (erased (Occ t) o)
+(def-fns _ $ (erased flags-mem : (erased (List (U8)) us) (erased (Nat) j n) (erased (Ctree) t) (subterm erased (Flags us j n t) c) (erased (Occ t) o)
     -> (erased (List (Col)) et) (erased (CtMem t et) m))
   (let-match erased c (FlN _ j1 _ q t1 t2 t3 _ _ _ f1 f2 f3 o3)
     (absurd (FlE _ _ _ _ _) o)
@@ -512,6 +516,8 @@
 
 (let ((many flag-um)) (u62-modulus-many))
 (comptime-match many (lt-dec (Succ (Zero)) flag-um) (Yes _ _ _ _ flag-one-lt))
+(let ((many flag-u8m)) u8-modulus)
+(comptime-match many (lt-dec (Succ (Zero)) flag-u8m) (Yes _ _ _ _ flag-one-lt8))
 (comptime-match many (lt-dec (Succ (Succ (Succ (Zero)))) flag-um) (Yes _ _ _ _ three-lt))
 
 ; Every trie node in the j levels from n has its index below len.
@@ -542,30 +548,28 @@
   (Succ v))
 
 (def-fns _ $ (many base3 : (many (Nat) p) (erased (Nat) q) (erased (Thrice p q) t) (erased (Lt (Succ (Succ q)) u62-modulus) b) ->
-    (many q is a) (many (Succ q) is c) (many (Succ (Succ q)) is d))
+    (many q is a) (erased (Lt (Succ q) u62-modulus) b1) (erased (Lt (Succ (Succ q)) u62-modulus) b2))
   (let ((erased b1)) (lt-trans _ _ _ (lt-succ (Succ q)) b))
-  (let ((many a)) (thrice-c p q t (lt-trans _ _ _ (lt-succ q) b1)))
-  (let ((many c)) (u62-inc a b1))
-  (values a c (u62-inc c b)))
+  (values (thrice-c p q t (lt-trans _ _ _ (lt-succ q) b1)) b1 b))
 
 (def-fns _ $ (many node-kids : (many (Nat) n) (erased (Nat) q) (erased (Thrice n q) t) (erased (Lt (Succ (Succ (Succ q))) u62-modulus) b) ->
-    (many (Succ q) is c1) (many (Succ (Succ q)) is c2) (many (Succ (Succ (Succ q))) is c3))
-  (let ((many _) (many c1) (many c2)) (base3 n q t (lt-trans _ _ _ (lt-succ (Succ (Succ q))) b)))
-  (values c1 c2 (u62-inc c2 b)))
+    (many (Succ q) is c1) (erased (Lt (Succ (Succ q)) u62-modulus) b2) (erased (Lt (Succ (Succ (Succ q))) u62-modulus) b3))
+  (let ((many a) (erased b1) (erased b2)) (base3 n q t (lt-trans _ _ _ (lt-succ (Succ (Succ q))) b)))
+  (values (u62-inc a b1) b2 b))
 
 ; ms has room for a trie of j levels below the root, at index 0.
-(def-adts $ (Room : ((List Cnt) ms) ((Nat) j) -> Type)
+(def-adts $ (Room : ((List (U8)) ms) ((Nat) j) -> Type)
   enum
-  (many MkRoom : (erased (List Cnt) ms) (erased (Nat) j len) (erased (Length Cnt ms len) l) (erased (Lt len u62-modulus) b)
+  (many MkRoom : (erased (List (U8)) ms) (erased (Nat) j len) (erased (Length (U8) ms len) l) (erased (Lt len u62-modulus) b)
       (erased (TrieFit len j (Zero)) hf) -> (Room ms j)))
 
-(def-fns _ $ (erased room-fit : (erased (List Cnt) ms) (erased (Nat) j) (erased (Room ms j) rm) -> (erased (Fit ms) f))
+(def-fns _ $ (erased room-fit : (erased (List (U8)) ms) (erased (Nat) j) (erased (Room ms j) rm) -> (erased (FitF ms) f))
   (let-match erased rm (MkRoom _ _ len l b _))
-  (MkFit ms len l b))
+  (MkFitF ms len l b))
 
-(def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List Cnt) ms) (unique (Array Cnt ms) m) (many (Try (Room ms j)) r))
+(def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List (U8)) ms) (unique (Bytes ms) m) (many (Try (Room ms j)) r))
   (let ((many n)) (heap-size j))
-  (let ((erased ms) (unique m) (erased rp)) (array-make (U62) n (MkU62 (Zero) u62-modulus-pos)))
+  (let ((erased ms) (unique m) (erased rp)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
   (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (TryNo _))))
   (let-match many (tfit-c j (Zero) n) (TryOk _ hf) ((TryNo _) (values ms m (TryNo _))))
   (values ms m (TryOk _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb hf))))
