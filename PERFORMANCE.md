@@ -32,6 +32,11 @@ one extracts to.
   gives the `(Succ m)` shape `u62-dec` needs.
 - `u62-lt-dec` as a loop's bound test, with the termination measure erased
   (below).
+- An `Array` or `Bytes` in place of a `List` for data that is indexed,
+  updated or bulk-copied. A `Cons` extracts to a three-word block, one
+  pointer to follow per element. An array is one word per element in one
+  block, with an unchecked load per access, and its index list is erased,
+  so the `Nth` and `SetNth` proofs cost nothing at runtime.
 - `array-get`, `array-pluck` and the other array and `Bytes` accesses: one
   unchecked load or store each, the proofs standing in for bounds checks.
 - `bytes-get16`, `bytes-get32`, `bytes-set16`, `bytes-set32`, the reads'
