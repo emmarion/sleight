@@ -38,6 +38,18 @@ one extracts to.
   them. In one check of the `ocamlopt -S` output, a 16-bit read was one
   `movzwq`, and a 32-bit read one `movl` with a sign-extend and a mask, with
   no boxed `int32`.
+- `u62-popcount`, `u62-trailing-zeros` and `u62-bit-length` (leading zeros
+  are 62 minus the bit length), in place of a loop over `u62-bit-test`. In
+  one measurement, summing `u62-popcount` over 10^7 values took about 4 ns
+  per iteration against about 200 ns for a 63-step `u62-bit-test` loop.
+- `bytes-fill` for a run of one byte, in place of a `bytes-set` loop: it is
+  `Bytes.fill`, which measured about 0.02 ns per byte against about 1.4 for
+  the loop.
+- `bytes-cmp`, `bytes-cmp-unique-many` and `bytes-cmp-many` to compare two
+  byte ranges, with `cmp-eq` for equality, in place of a `bytes-get-many`
+  loop. Two whole buffers go to `Bytes.compare`; other ranges are compared
+  eight bytes at a time in OCaml, which measured about 0.2 ns per byte,
+  against about 0.04 for `Bytes.compare` and 1.7 for the loop.
 
 ## Let proofs do the work
 

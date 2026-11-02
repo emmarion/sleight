@@ -91,6 +91,9 @@ let bytes_blit = spec ~needs:["Bytes"] 5 (function [ s; i; d; j; n ] -> Ffi_core
 let bytes_le get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int (get (bytes b) (z i))))
 let bytes_le_set set = spec ~needs:["Bytes"] 3 (function [ b; i; v ] -> set (bytes b) (z i) (z v); [] | _ -> raise arity)
 let str_le get = spec 2 (binary (fun a i -> int (get (slice a) (z i))))
+let bytes_cmp = spec ~needs:[ "Bytes"; "Cmp" ] ~decides:"Cmp" 6 (function
+  | [ a; i; m; b; j; n ] -> [ plain "Cmp" (Obj.magic (Ffi_core.bytes_cmp (bytes a) (z i) (z m) (bytes b) (z j) (z n)) : int) [] ]
+  | _ -> raise arity)
 let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:vacant (z n)))));
@@ -131,6 +134,10 @@ let fns : (string * fn_spec) list =
     ("bytes-set32", bytes_le_set Ffi_core.bytes_set32);
     ("str-get16", str_le Ffi_core.str_get16);
     ("str-get32", str_le Ffi_core.str_get32);
+    ("bytes-fill", spec ~needs:["Bytes"] 4 (function [ b; i; n; x ] -> Ffi_core.bytes_fill (bytes b) (z i) (z n) (z x); [] | _ -> raise arity));
+    ("bytes-cmp", bytes_cmp);
+    ("bytes-cmp-unique-many", bytes_cmp);
+    ("bytes-cmp-many", bytes_cmp);
     ("bytes-length", bytes_length);
     ("bytes-length-many", bytes_length);
     ("bytes-length-dec", spec ~needs:[ "Bytes"; "Dec" ] ~decides:"Dec" 1 (unary (fun _ -> plain "Dec" 0 [])));

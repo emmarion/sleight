@@ -277,6 +277,24 @@ let bytes_set16 b i v = le_set16 b (small i) (small v)
 let bytes_set32 b i v = le_set32 b (small i) (small v)
 let str_get16 (s, o, _) i = Z.of_int (le_sget16 s (o + small i))
 let str_get32 (s, o, _) i = Z.of_int (le_sget32 s (o + small i))
+let bytes_fill b i n x = Bytes.unsafe_fill b (small i) (small n) (Char.unsafe_chr (small x))
+external bytes_get64u : bytes -> int -> int64 = "%caml_bytes_get64u"
+external swap64 : int64 -> int64 = "%bswap_int64"
+let be64 x = if Sys.big_endian then x else swap64 x
+let range_compare a i m b j n =
+  if i = 0 && j = 0 && m = Bytes.length a && n = Bytes.length b then Bytes.compare a b else
+  let len = if m < n then m else n in
+  let rec bytewise k =
+    if k = len then compare m n
+    else let c = Char.code (Bytes.unsafe_get a (i + k)) - Char.code (Bytes.unsafe_get b (j + k)) in if c <> 0 then c else bytewise (k + 1) in
+  let rec words k =
+    if k + 8 > len then bytewise k
+    else let x = bytes_get64u a (i + k) and y = bytes_get64u b (j + k) in
+      if Int64.equal x y then words (k + 8) else Int64.unsigned_compare (be64 x) (be64 y) in
+  words 0
+let bytes_cmp a i m b j n = order (range_compare a (small i) (small m) b (small j) (small n))
+let bytes_cmp_many = bytes_cmp
+let bytes_cmp_unique_many = bytes_cmp
 let array_copy = Array.copy
 external array_unsafe_sub : 'a array -> int -> int -> 'a array = "caml_array_sub"
 external array_unsafe_blit : 'a array -> int -> 'a array -> int -> int -> unit = "caml_array_blit"

@@ -67,6 +67,10 @@ fn bytes-set16: Ffi_core.le_set16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (O
 fn bytes-set32: Ffi_core.le_set32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
 fn str-get16: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget16 {t0} ({t1} + (Obj.obj {a1} : int)))
 fn str-get32: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget32 {t0} ({t1} + (Obj.obj {a1} : int)))
+fn bytes-fill: Bytes.unsafe_fill (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Char.unsafe_chr (Obj.obj {a3} : int)); Obj.repr ()
+fn bytes-cmp: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
+fn bytes-cmp-unique-many: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
+fn bytes-cmp-many: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
 fn bytes-length: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
 fn bytes-length-dec: ignore {a0}; {b0}
 fn bytes-length-dec-many: ignore {a0}; {b0}

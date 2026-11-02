@@ -2758,13 +2758,18 @@
   (values (Cons (U8) (MkU8 d pd) ds1) (BCons _ (MkU8 d pd) b1) (LEByte d w m v pd ds1 p1 mm a) (LengthCons _ _ _ _ l1)))
 ;! restore warn BCons
 
-(def-fns _ $ (many le-get : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i n)
-    (erased (Splice (U8) xs i n ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w) (unique b is r at b))
+(def-fns _ $ (many bytes-sub-unique : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i n)
+    (erased (Splice (U8) xs i n ds xs) range) -> (unique (Bytes ds) c) (unique b is r at b))
   (let ((erased _) (unique z) (erased pz)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
   (let ((erased lz)) (repeat-length _ _ _ _ pz))
   (let ((erased _) (unique z2) (unique b2) (erased sp)) (bytes-blit _ _ _ _ b i z (Zero) n range (splice-whole _ _ _ lz)))
   (let-match erased (splice-whole-eq _ _ _ _ _ sp lz) (Refl _ _))
-  (values (le-decode _ (share z2) v p) b2))
+  (values z2 b2))
+
+(def-fns _ $ (many le-get : (erased (List (U8)) xs ds) (unique (Bytes xs) b) (many (Nat) i n)
+    (erased (Splice (U8) xs i n ds xs) range) (erased (Nat) v) (erased (LE ds v) p) -> (many v is w) (unique b is r at b))
+  (let ((unique z) (unique b2)) (bytes-sub-unique _ _ b i n range))
+  (values (le-decode _ (share z) v p) b2))
 
 (def-fns _ $ (many le-set : (erased (List (U8)) xs old) (unique (Bytes xs) b) (many (Nat) i n v) (erased (Nat) e c)
     (erased (Mul n eight e) me) (erased (Pow2 e c) pc) (erased (Lt v c) pv) (erased (Splice (U8) xs i n old xs) range) ->
@@ -2810,3 +2815,67 @@
   (let ((erased ys) (unique b) (erased sb1)) (str-bytes-copy s))
   (let-match erased (str-bytes-fn s ys xs sb1 sb) (Refl _ _))
   (bytes-get32-many _ _ (share b) i range v p))
+
+(def-fns _ $ (many cmp-flip : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a b)
+    (many (Cmp T R a b) c) -> (many (Cmp T R b a) d))
+  (match many c _
+    ((CLt _ _ _ _ p) (CGt T R b a p))
+    ((CEq _ _ _) (CEq T R a))
+    ((CGt _ _ _ _ q) (CLt T R b a q))))
+
+(def-adts
+  ((BytesLt : ((List (U8)) a) ((List (U8)) b) -> Type)
+    enum
+    (many BLtNil : (erased (U8) d) (erased (List (U8)) t) -> (BytesLt (Nil (U8)) (Cons (U8) d t)))
+    (many BLtHead : (erased (Nat) c d) (erased (Lt c u8-modulus) pc) (erased (Lt d u8-modulus) pd)
+       (erased (List (U8)) s t) (erased (Lt c d) p)
+       -> (BytesLt (Cons (U8) (MkU8 c pc) s) (Cons (U8) (MkU8 d pd) t)))
+    (many BLtTail : (erased (U8) c) (erased (List (U8)) s t) (erased (BytesLt s t) p)
+       -> (BytesLt (Cons (U8) c s) (Cons (U8) c t)))))
+
+;! suppress warn Bytes
+(def-fns _ $ (many bytes-lex : (erased (List (U8)) xs ys) (subterm many (Bytes xs) a) (many (Bytes ys) b) ->
+    (many (Cmp (List (U8)) BytesLt xs ys) c))
+  (let-match many a (BCons s hc ta)
+    ((BNil) (match many b _ ((BNil) (CEq _ _ xs)) ((BCons t hd _) (CLt _ _ xs ys $ BLtNil hd t)))))
+  (let-match many b (BCons t hd tb) ((BNil) (CGt _ _ xs ys $ BLtNil hc s)))
+  (let-match many hc (MkU8 c pc))
+  (let-match many hd (MkU8 d pd))
+  (let-match many (nat-cmp c d) (CEq _ _ _)
+    ((CLt _ _ _ _ p) (CLt _ _ xs ys $ BLtHead c d pc pd s t p))
+    ((CGt _ _ _ _ p) (CGt _ _ xs ys $ BLtHead d c pd pc t s p)))
+  (let-match erased (lt-unique c u8-modulus pc pd) (Refl _ _))
+  (match many (notail $ bytes-lex s t ta tb) _
+    ((CLt _ _ _ _ q) (CLt _ _ xs ys $ BLtTail hc s t q))
+    ((CEq _ _ _) (CEq _ _ xs))
+    ((CGt _ _ _ _ q) (CGt _ _ xs ys $ BLtTail hc t s q))))
+;! restore warn Bytes
+
+(def-fns _ $ (many extern bytes-fill : (erased (List (U8)) xs old) (unique (Bytes xs) b) (many (Nat) i n) (many (U8) x)
+    (erased (Splice (U8) xs i n old xs) range) ->
+    (erased (List (U8)) rs ys) (unique (Bytes ys) r at b)
+    (erased (Repeat (U8) n x rs) rep) (erased (Splice (U8) xs i n rs ys) p))
+  (let ((erased rs) (unique d) (erased rep)) (bytes-make n x))
+  (let ((erased ys) (unique r) (unique _) (erased p)) (bytes-blit _ _ _ _ d (Zero) b i n (splice-whole _ _ _ (repeat-length _ _ _ _ rep)) range))
+  (values rs ys r rep p))
+
+(def-fns _ $ (many extern bytes-cmp-many : (erased (List (U8)) xs ys as bs)
+    (many (Bytes xs) a) (many (Nat) i m) (many (Bytes ys) b) (many (Nat) j n)
+    (erased (Splice (U8) xs i m as xs) ra) (erased (Splice (U8) ys j n bs ys) rb) ->
+    (many (Cmp (List (U8)) BytesLt as bs) c))
+  (bytes-lex _ _ (share (bytes-sub _ a i m _ ra)) (share (bytes-sub _ b j n _ rb))))
+
+(def-fns _ $ (many extern bytes-cmp-unique-many : (erased (List (U8)) xs ys as bs)
+    (unique (Bytes xs) a) (many (Nat) i m) (many (Bytes ys) b) (many (Nat) j n)
+    (erased (Splice (U8) xs i m as xs) ra) (erased (Splice (U8) ys j n bs ys) rb) ->
+    (many (Cmp (List (U8)) BytesLt as bs) c) (unique a is a2 at a))
+  (let ((unique sa) (unique a2)) (bytes-sub-unique _ _ a i m ra))
+  (values (bytes-lex _ _ (share sa) (share (bytes-sub _ b j n _ rb))) a2))
+
+(def-fns _ $ (many extern bytes-cmp : (erased (List (U8)) xs ys as bs)
+    (unique (Bytes xs) a) (many (Nat) i m) (unique (Bytes ys) b) (many (Nat) j n)
+    (erased (Splice (U8) xs i m as xs) ra) (erased (Splice (U8) ys j n bs ys) rb) ->
+    (many (Cmp (List (U8)) BytesLt as bs) c) (unique a is a2 at a) (unique b is b2 at b))
+  (let ((unique sa) (unique a2)) (bytes-sub-unique _ _ a i m ra))
+  (let ((unique sb) (unique b2)) (bytes-sub-unique _ _ b j n rb))
+  (values (bytes-lex _ _ (share sa) (share sb)) a2 b2))
