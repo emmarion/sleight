@@ -368,7 +368,7 @@
   (values (dec-at (coerce b (coercible-sym cu)) cy s e) (at unique (u r tps cps n0 cap l1 l2 ly tb2 ca2))))
 
 (def-fns _ $ (many sv-isp : (erased (List (Sy)) r) (unique (Sv r) v) (many (Nat) p) (erased (Nat) i n) (erased (Sy) s) (erased (Nth (Sy) r i s) nt)
-    (erased (Length (Sy) r n) l) (erased (Add (Succ i) p n) ad) (many (Sy) q) -> (many (Maybe (Eq (Sy) s q)) res) (unique v is v2 at v))
+    (erased (Length (Sy) r n) l) (erased (Add (Succ i) p n) ad) (many (Sy) q) -> (many (ErasedMaybe (Eq (Sy) s q)) res) (unique v is v2 at v))
   (let-match unique v (MkSv _ tps cps n0 cap l1 l2 ly tb ca u))
   (let-match erased (length-fn (Sy) r n0 n (ly-length r tps cps n0 ly) l) (Refl _ _))
   (let ((erased t) (erased w) (erased c) (erased nu) (erased nc) (erased cu) (erased e)) (ly-nth r tps cps n0 i p s ly nt ad))
@@ -418,7 +418,7 @@
   (sv-symp r v1 p i n s nt l ad))
 
 (def-fns _ $ (many sv-is : (erased (List (Sy)) r) (unique (Sv r) v) (many (Nat) i) (erased (Sy) s) (erased (Nth (Sy) r i s) nt) (many (Sy) q)
-    -> (many (Maybe (Eq (Sy) s q)) res) (unique v is v2 at v))
+    -> (many (ErasedMaybe (Eq (Sy) s q)) res) (unique v is v2 at v))
   (let ((many p) (erased n) (erased l) (erased ad) (unique v1)) (sv-at r v i s nt))
   (sv-isp r v1 p i n s nt l ad q))
 
@@ -1411,7 +1411,7 @@
   (let ((many q1)) (u62-dec q1e q (add-bd q i nr (add-comm i q nr aq) bd)))
   (let ((erased aq1)) (add-shift i q1 nr aq))
   (let ((many m) (unique rv1)) (sv-isp r rv q1 i nr x nt lr aq1 a))
-  (let-match many m (Some _ e) ((None _) (values rv1 (StvNo _ _ _ _ _))))
+  (let-match many m (ESome _ e) ((ENone _) (values rv1 (StvNo _ _ _ _ _))))
   (let-match erased e (Refl _ _))
   (let ((erased pd2) (erased c2)) (cat-ex (Sy) pd (Cons (Sy) a (Nil (Sy)))))
   (tail $ strip-p r rv1 p1 (u62-inc i (add-bd (Succ i) q1 nr aq1 bd)) j u1 sb1 q1 nr lr aq1 jn bd p0 u0 pd2 i0 (Succ k)
@@ -1450,7 +1450,7 @@
   (let-match many (bd-eqd nr dd i2 wl (sub-in R x i2 wl nr sbx wn1) wn1) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values rv4 (BFalse))))
   (let-match erased sbx (SbC _ _ _ _ y nt _) (absurd (SbN _ _) (apart-irrefl i2 ap)))
   (let ((many q) (unique rv3)) (sv-is R rv4 i2 y nt iD))
-  (values rv3 (match many q _ ((Some _ _) (BTrue)) ((None _) (BFalse)))))
+  (values rv3 (match many q _ ((ESome _ _) (BTrue)) ((ENone _) (BFalse)))))
 
 (def-fns _ $ (many sk-head-v : (erased (List (Sy)) w F R) (unique (Sv R) rv) (many (Nat) wl) (erased (Length (Sy) w wl) lw) (erased (Cat (Sy) w (Cons (Sy) iD F) R) cr)
     -> (unique rv is rv2 at rv) (many (Bool) b))
@@ -1482,7 +1482,7 @@
     (erased (Length (Sy) w wl) lw) (erased (Cat (Sy) w (Cons (Sy) iD F) R) cr) (many (Bool) g) (erased (TRun c0 (MkCf d l w) g) tr)
     (many (Rl) rl) (erased (RlOK sk1p rl) k) -> (unique (Wv c0 F R) r))
   (let-match many rl (MkRl d1 lp le rp re d2 lp2 rp2 nrp lrp))
-  (let-match many (eq-dir d1 d) (Some _ ed) ((None _) (WvNo c0 F R rv (BFalse))))
+  (let-match many (eq-dir d1 d) (ESome _ ed) ((ENone _) (WvNo c0 F R rv (BFalse))))
   (let-match erased ed (Refl _ _))
   (let-match many re (BFalse) ((BTrue) (WvNo c0 F R rv (BFalse))))
   (let-match many (sde-of le lp lp2 l) (SdOk _ _ _ _ l2 sl) ((SdNo _ _ _ _) (WvNo c0 F R rv (BFalse))))

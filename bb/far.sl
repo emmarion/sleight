@@ -421,7 +421,7 @@
 
 (def-fns _ $ (many mem-n : (many (Nat) y) (subterm many (List (Nat)) xs) -> (many (Res (Mem (Nat) y xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (RFail _)))
-  (let-match many (eq-nat y x) (None _) ((Some _ e) (let-match erased e (Refl _ _)) (ROk _ (MemHere (Nat) y rest))))
+  (let-match many (eq-nat y x) (ENone _) ((ESome _ e) (let-match erased e (Refl _ _)) (ROk _ (MemHere (Nat) y rest))))
   (let-match many (notail $ mem-n y rest) (ROk _ mm) ((RFail _) (RFail _)))
   (ROk _ (MemThere (Nat) y x rest mm)))
 

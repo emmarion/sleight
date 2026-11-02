@@ -66,7 +66,7 @@
 
 (def-fns _ $ (many close-one : (many (Nat) n k) (many (List (List (PT))) hl) (many (List (PT)) p) (many (HCert) hc) -> (many (Res (HNode n k hl p)) r))
   (match many hc _
-    ((HKeep) (match many (find-hole p hl) _ ((Some _ mh) (ROk _ (HNT n k hl p (THole n k hl p mh)))) ((None _) (RFail _))))
+    ((HKeep) (match many (find-hole p hl) _ ((ESome _ mh) (ROk _ (HNT n k hl p (THole n k hl p mh)))) ((ENone _) (RFail _))))
     ((HSet se) (let ((many sr) (unique _)) (search p se 24 (ws-new))) (match many sr _ ((Some _ ct) (hn-of n k hl p (check-cert n k hl p ct))) ((None _) (RFail _))))
     ((HCyc f t1 D P) (hn-of n k hl p (check-cyc n k hl p f t1 D P)))
     ((HFar f dfa)
@@ -79,8 +79,8 @@
       (let ((many p2) (erased mi)) (mir-of f p))
       (match many (check-pat p2 (pat-cert s)) _ ((ROk _ po) (ROk _ (HNP n k hl p p2 f mi po))) ((RFail _) (RFail _))))
     ((HSk) (match many (check-sk p) _ ((ROk _ sk) (ROk _ (HNK n k hl p sk))) ((RFail _) (RFail _))))
-    ((HSk17) (match many (eq-pts p p17) _ ((Some _ e) (ROk _ (HN17 n k hl p e))) ((None _) (RFail _))))
-    ((HSk1) (match many (eq-pts p sk1p) _ ((Some _ e) (ROk _ (HN1 n k hl p e))) ((None _) (RFail _))))))
+    ((HSk17) (match many (eq-pts p p17) _ ((ESome _ e) (ROk _ (HN17 n k hl p e))) ((ENone _) (RFail _))))
+    ((HSk1) (match many (eq-pts p sk1p) _ ((ESome _ e) (ROk _ (HN1 n k hl p e))) ((ENone _) (RFail _))))))
 
 (def-fns _ $ (many hc : (many (String) s) (many (HCert) c) -> (many (Pair (List (PT)) (HCert)) r))
   (let ((many p) (many _)) (pts-of 10 s))
@@ -89,7 +89,7 @@
 (def-fns _ $ (many hc-find : (many (List (PT)) p) (subterm many (List (Pair (List (PT)) (HCert))) cs) -> (many (HCert) c))
   (let-match many cs (Cons _ e rest) ((Nil _) (HKeep)))
   (let-match many e (MkPair _ _ q c))
-  (match many (eq-pts p q) _ ((Some _ _) c) ((None _) (tail $ hc-find p rest))))
+  (match many (eq-pts p q) _ ((ESome _ _) c) ((ENone _) (tail $ hc-find p rest))))
 
 (def-fns _ $ (many keep-holes : (subterm many (List (List (PT))) ps) (many (List (Pair (List (PT)) (HCert))) cs) -> (many (List (List (PT))) r))
   (let-match many ps (Cons _ p rest) ((Nil _) (Nil _)))

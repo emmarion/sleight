@@ -279,7 +279,7 @@
         ((PvOk _ _ _ _ pu) (TwvOk sd t t2 v2 (TRPu sd k n t0 t2 pu)))
         ((PvNo _ _ _) (TwvNo sd t (sv-cons s t0 v2)))))
     ((OUf)
-      (let-match many (eq-am n (MkAm (BFalse) 1)) (Some _ e) ((None _) (TwvNo sd t (sv-cons s t0 v1))))
+      (let-match many (eq-am n (MkAm (BFalse) 1)) (ESome _ e) ((ENone _) (TwvNo sd t (sv-cons s t0 v1))))
       (let-match erased e (Refl _ _))
       (let-match many (cw-of sd k) (CwOk _ _ cw w) ((CwNo _ _) (TwvNo sd t (sv-cons s t0 v1))))
       (let ((erased t2) (erased c) (unique v2)) (push-list cw t0 v1))
@@ -302,7 +302,7 @@
 (def-fns _ $ (many ac-rl-o : (erased (Cf) c0) (unique (Ao c0) ac) (many (Rl) rl) (erased (RlOK sk1p rl) k) -> (unique (Ao c0) r))
   (let-match unique ac (AoOk _ d l r rv ov g tr) (else a a))
   (let-match many rl (MkRl d1 lp le rp re d2 lp2 rp2 nrp lrp))
-  (let-match many (eq-dir d1 d) (Some _ ed) ((None _) (AoNo c0 r rv ov)))
+  (let-match many (eq-dir d1 d) (ESome _ ed) ((ENone _) (AoNo c0 r rv ov)))
   (let-match erased ed (Refl _ _))
   (let-match many (sde-of le lp lp2 l) (SdOk _ _ _ _ l2 sl) ((SdNo _ _ _ _) (AoNo c0 r rv ov)))
   (match unique (sde-sv re rp rp2 nrp lrp r rv) _
@@ -331,7 +331,7 @@
   (let ((many h) (unique ac1)) (ac-side-o c0 ac sd i))
   (let-match many h (Some _ s) ((None _) (ao-no c0 ac1)))
   (let-match many s (YW k n) (else (ao-no c0 ac1)))
-  (match many (eq-am n (MkAm (BFalse) 1)) _ ((Some _ _) ac1) ((None _) (ac-rw-o c0 ac1 sd (OSp) i))))
+  (match many (eq-am n (MkAm (BFalse) 1)) _ ((ESome _ _) ac1) ((ENone _) (ac-rw-o c0 ac1 sd (OSp) i))))
 
 (def-fns _ $ (many ac-ux-o : (erased (Cf) c0) (unique (Ao c0) ac) (many (Nat) i) -> (unique (Ao c0) r))
   (let ((many h) (unique ac1)) (ac-side-o c0 ac (BFalse) i))

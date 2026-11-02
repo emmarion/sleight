@@ -137,15 +137,15 @@
     (many SHalt : (erased (List (Tr)) m) (erased (Conf) c) (many (Nat) s) (erased (HaltsAt m c s) p) -> (SimR m c))
     (many SRun : (erased (List (Tr)) m) (erased (Conf) c) -> (SimR m c))))
 
-(def-fns _ $ (many eq-bit : (many (Bool) x) (many (Bool) y) -> (many (Maybe (Eq (Bool) x y)) r))
+(def-fns _ $ (many eq-bit : (many (Bool) x) (many (Bool) y) -> (many (ErasedMaybe (Eq (Bool) x y)) r))
   (match many x _
-    ((BFalse) (match many y _ ((BFalse) (Some _ (Refl (Bool) x))) ((BTrue) (None _))))
-    ((BTrue) (match many y _ ((BTrue) (Some _ (Refl (Bool) x))) ((BFalse) (None _))))))
+    ((BFalse) (match many y _ ((BFalse) (ESome _ (Refl (Bool) x))) ((BTrue) (ENone _))))
+    ((BTrue) (match many y _ ((BTrue) (ESome _ (Refl (Bool) x))) ((BFalse) (ENone _))))))
 
-(def-fns _ $ (many eq-nat : (many (Nat) x) (many (Nat) y) -> (many (Maybe (Eq (Nat) x y)) r))
+(def-fns _ $ (many eq-nat : (many (Nat) x) (many (Nat) y) -> (many (ErasedMaybe (Eq (Nat) x y)) r))
   (match many (nat-eq x y) _
-    ((Equal _ _ _) (Some _ (Refl (Nat) x)))
-    (else (None _))))
+    ((Equal _ _ _) (ESome _ (Refl (Nat) x)))
+    (else (ENone _))))
 
 (def-adts
   ((Or : (Type P) (Type Q) -> Type)
