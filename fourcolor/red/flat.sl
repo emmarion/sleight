@@ -357,34 +357,6 @@
     ((InNil _ _ _) b)
     ((InSet _ ws _ _ _ i x et w1 s ti le) (tally-set ws vs j p p2 i x et t (tally-inside us ws j p p2 t b w1 ap) s ti le ap))))
 
-(def-fns _ $ (many leaf-tree : (subterm many (Nat) n) -> (many (Ctree) t) (erased (CtRoot t n) r) (erased (CtH (Zero) t) k))
-  (let-match many n (Succ n1) ((Zero) (values (CEmpty) (RootE) (HE (Zero)))))
-  (let ((many t1) (erased r1) (erased k1)) (notail $ leaf-tree n1))
-  (values (CLeaf t1) (RootL t1 n1 r1) (HL t1 k1)))
-
-(def-fns _ $ (many tally-tree : (subterm many (Nat) j) (many (Nat) p) (erased (List Cnt) us) (many (Array Cnt us) a) (erased (Fit us) f)
-    (erased (Ctree) t) (erased (Tally us j p t) b) -> (many t is r))
-  (match many j _
-    ((Zero)
-      (let-match erased b (TaL _ _ _ _ _ x rt k))
-      (let-match many (array-get-many _ _ a p _ x) (MkCopy _ v))
-      (let-match many v (MkU62 m _))
-      (let ((many u) (erased ru) (erased ku)) (leaf-tree m))
-      (let-match erased (leaf-fn u t m ru ku rt k) (Refl _ _))
-      u)
-    ((Succ j1)
-      (let-match erased b (TaN _ _ _ q t1 t2 t3 _ tq b1 b2 b3 cn))
-      (let ((erased q3)) (tally-u62 us j1 (Succ (Succ q)) t3 b3 f))
-      (let ((erased q2)) (lt-trans (Succ q) (Succ (Succ q)) u62-modulus (lt-succ (Succ q)) q3))
-      (let ((many r1)) (thrice-c p q tq (lt-trans q (Succ q) u62-modulus (lt-succ q) q2)))
-      (let ((many r2)) (u62-inc r1 q2))
-      (let ((many c1)) (notail $ tally-tree j1 r1 us a f t1 b1))
-      (let ((many c2)) (notail $ tally-tree j1 r2 us a f t2 b2))
-      (let ((many c3)) (notail $ tally-tree j1 (u62-inc r2 q3) us a f t3 b3))
-      (let ((many r) (erased cr)) (cn-c c1 c2 c3))
-      (let-match erased (cn-fn t1 t2 t3 r t cr cn) (Refl _ _))
-      r)))
-
 (def-fns _ $ (many split-c : (erased (Nat) j) (many (Ctree) t) (erased (CtH (Succ j) t) k) ->
     (many (Ctree) t1 t2 t3) (erased (CtH j t1) k1) (erased (CtH j t2) k2) (erased (CtH j t3) k3) (many (Try (Cn t1 t2 t3 t)) c))
   (let-match many t (CNode a1 a2 a3)
@@ -537,3 +509,63 @@
     ((Occ3c _ _ _ o1)
       (let ((erased et) (erased m)) (flags-mem us j1 (Succ (Succ (Succ q))) t3 f3 o1))
       (values (Cons _ (C3) et) (mem-cons t t3 (C3) et (SelN3 t1 t2 t3) m)))))
+
+(let ((many flag-um)) (u62-modulus-many))
+(comptime-match many (lt-dec (Succ (Zero)) flag-um) (Yes _ _ _ _ flag-one-lt))
+(comptime-match many (lt-dec (Succ (Succ (Succ (Zero)))) flag-um) (Yes _ _ _ _ three-lt))
+
+; Every trie node in the j levels from n has its index below len.
+(def-adts $ (TrieFit : ((Nat) len) ((Nat) j) ((Nat) n) -> Type)
+  enum
+  (many TfL : (erased (Nat) len n) (erased (Lt n len) b) -> (TrieFit len (Zero) n))
+  (many TfN : (erased (Nat) len j n q) (erased (Lt n len) b) (erased (Thrice n q) tq) (erased (TrieFit len j (Succ q)) h1)
+      (erased (TrieFit len j (Succ (Succ q))) h2) (erased (TrieFit len j (Succ (Succ (Succ q)))) h3) -> (TrieFit len (Succ j) n)))
+
+(def-fns _ $ (erased tfit-lt : (erased (Nat) len j n) (erased (TrieFit len j n) hf) -> (erased (Lt n len) r))
+  (match erased hf _ ((TfL _ _ b) b) ((TfN _ _ _ _ b _ _ _ _) b)))
+
+(def-fns _ $ (many tfit-c : (subterm many (Nat) j) (many (Nat) n len) -> (many (Try (TrieFit len j n)) r))
+  (let-match many (lt-dec n len) (Yes _ _ _ _ b) ((No _ _ _ _ _) (TryNo _)))
+  (let-match many j (Succ j1) ((Zero) (TryOk _ (TfL len n b))))
+  (let ((many d) (erased ad)) (add n n))
+  (let ((many q) (erased aq)) (add d n))
+  (let-match many (notail $ tfit-c j1 (Succ q) len) (TryOk _ h1) ((TryNo _) (TryNo _)))
+  (let-match many (notail $ tfit-c j1 (Succ (Succ q)) len) (TryOk _ h2) ((TryNo _) (TryNo _)))
+  (let-match many (notail $ tfit-c j1 (Succ (Succ (Succ q))) len) (TryOk _ h3) ((TryNo _) (TryNo _)))
+  (TryOk _ (TfN len j1 n q b (adds-thrice n d q ad aq) h1 h2 h3)))
+
+(def-fns _ $ (many heap-size : (subterm many (Nat) j) -> (many (Nat) n))
+  (let-match many j (Succ j1) ((Zero) (Succ (Zero))))
+  (let ((many k)) (notail $ heap-size j1))
+  (let ((many d) (erased _)) (add k k))
+  (let ((many v) (erased _)) (add d k))
+  (Succ v))
+
+(def-fns _ $ (many base3 : (many (Nat) p) (erased (Nat) q) (erased (Thrice p q) t) (erased (Lt (Succ (Succ q)) u62-modulus) b) ->
+    (many q is a) (many (Succ q) is c) (many (Succ (Succ q)) is d))
+  (let ((erased b1)) (lt-trans _ _ _ (lt-succ (Succ q)) b))
+  (let ((many a)) (thrice-c p q t (lt-trans _ _ _ (lt-succ q) b1)))
+  (let ((many c)) (u62-inc a b1))
+  (values a c (u62-inc c b)))
+
+(def-fns _ $ (many node-kids : (many (Nat) n) (erased (Nat) q) (erased (Thrice n q) t) (erased (Lt (Succ (Succ (Succ q))) u62-modulus) b) ->
+    (many (Succ q) is c1) (many (Succ (Succ q)) is c2) (many (Succ (Succ (Succ q))) is c3))
+  (let ((many _) (many c1) (many c2)) (base3 n q t (lt-trans _ _ _ (lt-succ (Succ (Succ q))) b)))
+  (values c1 c2 (u62-inc c2 b)))
+
+; ms has room for a trie of j levels below the root, at index 0.
+(def-adts $ (Room : ((List Cnt) ms) ((Nat) j) -> Type)
+  enum
+  (many MkRoom : (erased (List Cnt) ms) (erased (Nat) j len) (erased (Length Cnt ms len) l) (erased (Lt len u62-modulus) b)
+      (erased (TrieFit len j (Zero)) hf) -> (Room ms j)))
+
+(def-fns _ $ (erased room-fit : (erased (List Cnt) ms) (erased (Nat) j) (erased (Room ms j) rm) -> (erased (Fit ms) f))
+  (let-match erased rm (MkRoom _ _ len l b _))
+  (MkFit ms len l b))
+
+(def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List Cnt) ms) (unique (Array Cnt ms) m) (many (Try (Room ms j)) r))
+  (let ((many n)) (heap-size j))
+  (let ((erased ms) (unique m) (erased rp)) (array-make (U62) n (MkU62 (Zero) u62-modulus-pos)))
+  (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (TryNo _))))
+  (let-match many (tfit-c j (Zero) n) (TryOk _ hf) ((TryNo _) (values ms m (TryNo _))))
+  (values ms m (TryOk _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb hf))))
