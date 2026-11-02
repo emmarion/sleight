@@ -10,8 +10,8 @@ OCaml equivalents. Other compilers may differ.
 
 In hot code, each arithmetic step, comparison, zero test, element access,
 store and copy should be a call to one of the prelude's externs, not a
-`match` or a `Succ` on a `Nat`, or a recursion over one. Externs extract to
-single OCaml operations; the same thing in plain Sleight runs as written.
+`match` or a `Succ` on a `Nat`, or a recursion over one. Most externs extract
+to a single OCaml operation; the same thing in plain Sleight runs as written.
 The list below covers only the cases found so far, so for anything else
 search `lib/prelude.sl`'s `extern` declarations, reading their signatures
 for the facts they hand back. `lib/ffi_templates.txt` shows the OCaml each
@@ -19,10 +19,12 @@ one extracts to.
 
 - `u62-*` for arithmetic, bit operations and comparisons. A `Nat` may be
   a bignum, so its own operations check which it is; the `u62-*` forms take
-  erased proofs that operands and results are below 2^62, and each is one
-  OCaml operator on a native int. A `Succ` checks `Obj.is_int` and
-  `max_int`; a match on a `Nat` checks `Obj.is_int` and computes the
-  predecessor even when unused. Numeral operands appear to be
+  erased proofs that operands and results are below 2^62, and work on a
+  native int: most are one OCaml operator, `u62-divmod` is two,
+  `u62-popcount` a short run of bit arithmetic, and `u62-bit-length` and
+  `u62-trailing-zeros` a non-allocating call into Zarith. A `Succ` checks
+  `Obj.is_int` and `max_int`; a match on a `Nat` checks `Obj.is_int` and
+  computes the predecessor even when unused. Numeral operands appear to be
   constant-folded, so `u62-div p 3` compiles to a multiply. ocamlopt does
   not know the operand is non-negative, though, so `u62-div p 4` keeps a
   sign fix-up around its shift; `u62-shr p 2` is a single shift.
@@ -32,10 +34,10 @@ one extracts to.
   (below).
 - `array-get`, `array-pluck` and the other array and `Bytes` accesses: one
   unchecked load or store each, the proofs standing in for bounds checks.
-- `bytes-get16`, `bytes-get32`, `bytes-set16`, `bytes-set32`, their `-many`
-  forms and `str-get16`/`str-get32` for a little-endian number of two or four
-  bytes, in place of two or four byte accesses and the arithmetic joining
-  them. In one check of the `ocamlopt -S` output, a 16-bit read was one
+- `bytes-get16`, `bytes-get32`, `bytes-set16`, `bytes-set32`, the reads'
+  `-many` forms and `str-get16`/`str-get32` for a little-endian number of
+  two or four bytes, in place of two or four byte accesses and the
+  arithmetic joining them. In one check of the `ocamlopt -S` output, a 16-bit read was one
   `movzwq`, and a 32-bit read one `movl` with a sign-extend and a mask, with
   no boxed `int32`.
 - `u62-popcount`, `u62-trailing-zeros` and `u62-bit-length` (leading zeros
@@ -93,8 +95,9 @@ holds every value as `Obj.t`, so the knowledge has to come from a proof.
 - `array-place-imm` and `array-swap-imm` skip it, given `Imm` proofs for the
   old and the new element; `array-place` and `array-swap` pay it on every
   store. `(imm o n)` does the same for a cell store (§37).
-- `array-blit-imm` copies immediates with a `memmove`, where `Array.blit`
-  pays the barrier per element when the destination is in the major heap.
+- `array-blit-imm`, `array-blit-many-imm` and `array-move-imm` copy
+  immediates with a `memmove`, where `Array.blit` pays the barrier per
+  element when the destination is in the major heap.
 - A store of a pointer pays it, as in hand-written OCaml.
 
 ## As in OCaml
