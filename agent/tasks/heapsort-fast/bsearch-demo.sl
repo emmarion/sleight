@@ -36,12 +36,6 @@
   (let-match erased aw (AddSucc _ _ hi1 aw1))
   (AddSucc (Succ mid1) r hi1 (add-shift lo1 m mid1 r w hi1 am1 amr aw1)))
 
-(def-fns _ $ (erased add-lt-mono : (erased (Nat) lo) (erased (Nat) m) (erased (Nat) mid) (erased (Nat) w) (erased (Nat) hi)
-    (subterm erased (Add lo m mid) am) (erased (Add lo w hi) aw) (erased (Lt m w) lt) -> (erased (Lt mid hi) q))
-  (let-match erased am (AddSucc lo1 _ mid1 am1) ((AddZero _) (let-match erased aw (AddZero _)) lt))
-  (let-match erased aw (AddSucc _ _ hi1 aw1))
-  (LtS mid1 hi1 (add-lt-mono lo1 m mid1 w hi1 am1 aw1 lt)))
-
 (def-fns _ $ (erased nth-exists : (erased (List (Nat)) xs) (erased (Nat) n) (subterm erased (Length (Nat) xs n) l)
     (erased (Nat) i) (erased (Lt i n) lt) -> (erased (Nat) x) (erased (Nth (Nat) xs i x) p))
   (let-match erased l (LengthCons _ y rest n1 l1) (absurd (LengthNil _) lt))
@@ -142,7 +136,7 @@
     (absurd (CGt _ _ _ _ neg) (match erased neg _)))
   (let ((many m) (erased ltm)) (split w wm pos))
   (let ((erased mid) (erased amid)) (add lo m))
-  (let ((erased midhi)) (add-lt-mono lo m mid w hi amid span ltm))
+  (let ((erased midhi)) (add-lt-mono lo m w mid hi amid span ltm))
   (let ((erased midn)) (lt-le-trans mid hi n midhi hin))
   (let ((many i)) (u62-add lo m mid amid (lt-trans mid n u62-modulus midn fits)))
   (let ((erased v) (erased nth)) (nth-exists xs n len mid midn))
