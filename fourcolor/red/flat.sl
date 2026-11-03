@@ -660,22 +660,51 @@
 (def-fns _ $ (erased tfit-lt : (erased (Nat) len j n) (erased (TrieFit len j n) hf) -> (erased (Lt n len) r))
   (match erased hf _ ((TfL _ _ b) b) ((TfN _ _ _ _ b _ _ _ _) b)))
 
-(def-fns _ $ (many tfit-c : (subterm many (Nat) j) (many (Nat) n len) -> (many (ErasedMaybe (TrieFit len j n)) r))
-  (let-match many (lt-dec n len) (Yes _ _ _ _ b) ((No _ _ _ _ _) (ENone _)))
-  (let-match many j (Succ j1) ((Zero) (ESome _ (TfL len n b))))
+; m is the last trie node in the j levels from n.
+(def-adts $ (Mx : ((Nat) j) ((Nat) n) ((Nat) m) -> Type)
+  enum
+  (many MxZ : (erased (Nat) n) -> (Mx (Zero) n n))
+  (many MxS : (erased (Nat) j n q m) (erased (Thrice n q) tq) (erased (Mx j (Succ (Succ (Succ q))) m) x) -> (Mx (Succ j) n m)))
+
+(def-fns _ $ (erased mx-exists : (subterm erased (Nat) j) (erased (Nat) n) -> (erased (Nat) m) (erased (Mx j n m) x))
+  (let-match erased j (Succ j1) ((Zero) (values n (MxZ n))))
+  (let ((erased q) (erased tq)) (thrice-exists n))
+  (let ((erased m) (erased x)) (mx-exists j1 (Succ (Succ (Succ q)))))
+  (values m (MxS j1 n q m tq x)))
+
+(def-fns _ $ (erased mx-ge : (erased (Nat) j n m) (subterm erased (Mx j n m) x) -> (erased (Lt n (Succ m)) r))
+  (let-match erased x (MxS j1 _ q _ tq x1) ((MxZ _) (lt-succ n)))
+  (lt-weaken _ _ (lt-le-trans n (Succ q) m (thrice-le n q tq) (lt-succ-left _ _ (lt-succ-left _ _ (mx-ge j1 _ m x1))))))
+
+(def-fns _ $ (erased thrice-mono : (erased (Nat) a b qa qb) (erased (Lt a (Succ b)) l) (erased (Thrice a qa) ta) (erased (Thrice b qb) tb)
+    -> (erased (Lt qa (Succ qb)) r))
+  (let-match erased (nat-eq a b) (Unequal _ _ _ _ ap) ((Equal _ _ _) (let-match erased (thrice-fn a qa qb ta tb) (Refl _ _)) (lt-succ qa)))
+  (let-match erased ap (ApLt _ _ _ _ k) (absurd (ApGt _ _ _ _ k) (lt-irrefl b (lt-le-trans b a b k l))))
+  (lt-weaken _ _ (lt-succ-left _ _ (lt-succ-left _ _ (thrice-lt a b qa qb k ta tb)))))
+
+(def-fns _ $ (erased mx-mono : (erased (Nat) j a b ma mb) (subterm erased (Mx j a ma) x) (erased (Mx j b mb) y) (erased (Lt a (Succ b)) l)
+    -> (erased (Lt ma (Succ mb)) r))
+  (let-match erased x (MxS j1 _ qa _ ta x1) ((MxZ _) (let-match erased y (MxZ _)) l))
+  (let-match erased y (MxS _ _ qb _ tb y1))
+  (mx-mono j1 _ _ ma mb x1 y1 (LtS _ _ (LtS _ _ (LtS _ _ (thrice-mono a b qa qb l ta tb))))))
+
+(def-fns _ $ (erased tfit-of-mx : (subterm erased (Nat) j) (erased (Nat) n m len) (erased (Mx j n m) x) (erased (Lt m len) b) -> (erased (TrieFit len j n) r))
+  (let ((erased bn)) (lt-le-trans n (Succ m) len (mx-ge j n m x) (LtS _ _ b)))
+  (let-match erased j (Succ j1) ((Zero) (TfL len n bn)))
+  (let-match erased x (MxS _ _ q _ tq x3))
+  (let ((erased q3)) (Succ (Succ (Succ q))))
+  (let ((erased m1) (erased x1)) (mx-exists j1 (Succ q)))
+  (let ((erased m2) (erased x2)) (mx-exists j1 (Succ (Succ q))))
+  (let ((erased b1)) (lt-le-trans m1 (Succ m) len (mx-mono j1 _ _ m1 m x1 x3 (lt-weaken _ _ (lt-weaken _ _ (lt-succ (Succ q))))) (LtS _ _ b)))
+  (let ((erased b2)) (lt-le-trans m2 (Succ m) len (mx-mono j1 _ _ m2 m x2 x3 (lt-weaken _ _ (lt-succ (Succ (Succ q))))) (LtS _ _ b)))
+  (TfN len j1 n q bn tq (tfit-of-mx j1 (Succ q) m1 len x1 b1) (tfit-of-mx j1 (Succ (Succ q)) m2 len x2 b2) (tfit-of-mx j1 q3 m len x3 b)))
+
+(def-fns _ $ (many mx-c : (subterm many (Nat) j) (many (Nat) n) -> (many (Nat) m) (erased (Mx j n m) x))
+  (let-match many j (Succ j1) ((Zero) (values n (MxZ n))))
   (let ((many d) (erased ad)) (add n n))
   (let ((many q) (erased aq)) (add d n))
-  (let-match many (notail $ tfit-c j1 (Succ q) len) (ESome _ h1) ((ENone _) (ENone _)))
-  (let-match many (notail $ tfit-c j1 (Succ (Succ q)) len) (ESome _ h2) ((ENone _) (ENone _)))
-  (let-match many (notail $ tfit-c j1 (Succ (Succ (Succ q))) len) (ESome _ h3) ((ENone _) (ENone _)))
-  (ESome _ (TfN len j1 n q b (adds-thrice n d q ad aq) h1 h2 h3)))
-
-(def-fns _ $ (many heap-size : (subterm many (Nat) j) -> (many (Nat) n))
-  (let-match many j (Succ j1) ((Zero) (Succ (Zero))))
-  (let ((many k)) (notail $ heap-size j1))
-  (let ((many d) (erased _)) (add k k))
-  (let ((many v) (erased _)) (add d k))
-  (Succ v))
+  (let ((many m) (erased x)) (tail $ mx-c j1 (Succ (Succ (Succ q)))))
+  (values m (MxS j1 n q m (adds-thrice n d q ad aq) x)))
 
 (def-fns _ $ (many base3 : (many (Nat) p) (erased (Nat) q) (erased (Thrice p q) t) (erased (Lt (Succ (Succ q)) u62-modulus) b) ->
     (many q is a) (erased (Lt (Succ q) u62-modulus) b1) (erased (Lt (Succ (Succ q)) u62-modulus) b2))
@@ -698,8 +727,8 @@
   (MkFitF ms len l b))
 
 (def-fns _ $ (many room-new : (many (Nat) j) -> (erased (List (U8)) ms) (unique (Bytes ms) m) (many (ErasedMaybe (Room ms j)) r))
-  (let ((many n)) (heap-size j))
+  (let ((many k) (erased x)) (mx-c j (Zero)))
+  (let ((many n)) (Succ k))
   (let ((erased ms) (unique m) (erased rp)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
   (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (ENone _))))
-  (let-match many (tfit-c j (Zero) n) (ESome _ hf) ((ENone _) (values ms m (ENone _))))
-  (values ms m (ESome _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb hf))))
+  (values ms m (ESome _ (MkRoom ms j n (repeat-length _ n _ ms rp) lb (tfit-of-mx j (Zero) k n x (lt-succ k))))))

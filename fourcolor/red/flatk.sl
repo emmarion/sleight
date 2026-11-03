@@ -181,7 +181,7 @@
 (def-adts $ (Sq : ((List (U8)) xl) ((List (U8)) xl2) ((Nat) len) ((Nat) j) ((Sx) x) ((Nat) lo) ((Nat) hi) ((Nat) f) ((Gtree) g) -> Type)
   enum
   (many MkSq : (erased (List (U8)) xl xl2) (erased (Nat) len j) (erased (Sx) x) (erased (Nat) lo hi f) (erased (Gtree) g) (erased (Length (U8) xl2 len) l2)
-      (erased (Nat) A B) (erased (Oct lo A) oa) (erased (Oct hi B) ob) (erased (Wr xl xl2 A B) w) (erased (Pk xl2 j x lo hi) pk)
+      (erased (Nat) A B) (erased (Qd lo A) oa) (erased (Qd hi B) ob) (erased (Wr xl xl2 A B) w) (erased (Pk xl2 j x lo hi) pk)
       (erased (Shp j x (GSG g)) shp) (erased (Prs x f) pr) (erased (Lt hi u62-modulus) hb) -> (Sq xl xl2 len j x lo hi f g)))
 
 (def-fns _ $ (many slot-pk : (erased (List (U8)) xl) (many (Bool) b) (many (Nat) lo) ->
@@ -198,9 +198,9 @@
     (span-n lo h1 h2 h3 hi t0 t1 t2 t3 (pk-span xl j (Succ lo) h1 t0 p0) (pk-span xl j h1 h2 t1 p1) (pk-span xl j h2 h3 t2 p2) (pk-span xl j h3 hi t3 p3)))
   a)
 
-(def-fns _ $ (erased wr-around : (erased (List (U8)) xl xl2) (erased (Nat) e lo hi B) (erased (Oct lo e) oe) (erased (Oct hi B) ob) (erased (Lt lo hi) l)
-    (erased (Wr xl xl2 e (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ e))))))))) w) -> (erased (Wr xl xl2 e B) r))
-  (wr-widen xl xl2 e _ e B w (lt-succ e) (LtS _ _ (oct-lt lo hi e B l oe ob))))
+(def-fns _ $ (erased wr-around : (erased (List (U8)) xl xl2) (erased (Nat) e lo hi B) (erased (Qd lo e) oe) (erased (Qd hi B) ob) (erased (Lt lo hi) l)
+    (erased (Wr xl xl2 e (Succ (Succ (Succ (Succ e))))) w) -> (erased (Wr xl xl2 e B) r))
+  (wr-widen xl xl2 e _ e B w (lt-succ e) (LtS _ _ (qd-lt lo hi e B l oe ob))))
 
 (def-fns _ $ (many sx-pk : (subterm many (Gtree) g) (many (Nat) j lo) (erased (List (U8)) xl) (unique (Bytes xl) xb) (many (Nat) len)
     (erased (Length (U8) xl len) l) (erased (Lt len u62-modulus) lb) ->
@@ -208,7 +208,7 @@
   (let ((many lo1)) (Succ lo))
   (let-match many (nat-fits-u62 lo) (Yes _ _ _ _ lob) ((No _ _ _ _ _) (values (SxX) lo (Zero) xl xb (ENone _))))
   (let-match many j (Succ j1) ((Zero) (values (SxX) lo (Zero) xl xb (ENone _))))
-  (let ((erased e) (erased oe)) (oct-exists lo))
+  (let ((erased e) (erased oe)) (qd-exists lo))
   (let-match many g (GNode t0 t1 t2 t3)
     ((GEmpty) (values (SxX) lo (Zero) xl xb (ESome _ (MkSq xl xl len j (SxX) lo lo (Zero) g l e e oe oe (WrN xl e e) (PkX xl j lo) (ShX j) (PrX) lob))))
     (else
@@ -222,11 +222,11 @@
       (let ((erased o3) (many k4) (many f3) (erased a3) (erased q3) (erased h3) (erased r3) (erased p3)) (slot-pk xl b3 k3))
       (let ((erased x)) (SxN lo o0 o1 o2 o3))
       (let-match many (nat-fits-u62 k4) (Yes _ _ _ _ hb) ((No _ _ _ _ _) (values x k4 (Succ (Zero)) xl xb (ENone _))))
-      (let ((erased xl2) (unique xb2) (many rc)) (sx-close xl xb len l lb lo (Zero) k1 k2 k3 k4 o0 o1 o2 o3 f0 f1 f2 f3 p0 p1 p2 p3 r0 r1 r2 r3 hb))
+      (let ((erased xl2) (unique xb2) (many rc)) (sx-close xl xb len l lb lo (Zero) k1 k2 k3 k4 o0 o1 o2 o3 f0 f1 f2 f3 p0 p1 p2 p3 r0 r1 r2 r3))
       (let-match many rc (ESome _ cl) ((ENone _) (values x k4 (Succ (Zero)) xl2 xb2 (ENone _))))
       (let-match erased cl (MkCl _ _ _ _ _ _ e2 _ l3 oe2 w pk))
-      (let-match erased (oct-fn lo e2 e oe2 oe) (Refl _ _))
-      (let ((erased B) (erased ob)) (oct-exists k4))
+      (let-match erased (qd-fn lo e2 e oe2 oe) (Refl _ _))
+      (let ((erased B) (erased ob)) (qd-exists k4))
       (values x k4 (Succ (Zero)) xl2 xb2
         (ESome _ (MkSq xl xl2 len j x lo k4 (Succ (Zero)) g l3 e B oe ob
           (wr-around xl xl2 e lo k4 B oe ob (pk-lt xl2 j1 lo k4 o0 o1 o2 o3 pk) w) pk
@@ -244,13 +244,13 @@
   (let ((erased x3) (many k4) (many f3) (erased xd) (unique xbd) (many rd)) (notail $ sx-pk t3 j1 k3 xc xbc len lc lb))
   (let-match many rd (ESome _ sd) ((ENone _) (values (SxX) lo (Zero) xd xbd (ENone _))))
   (let-match erased sd (MkSq _ _ _ _ _ _ _ _ _ ld A3 B3 oa3 ob3 wd pd sh3 r3 hb))
-  (let-match erased (oct-fn k1 B0 A1 ob0 oa1) (Refl _ _))
-  (let-match erased (oct-fn k2 Bb1 A2 ob1 oa2) (Refl _ _))
-  (let-match erased (oct-fn k3 Bb2 A3 ob2 oa3) (Refl _ _))
-  (let-match erased (oct-fn lo1 A0 _ oa0 (OcS lo e oe)) (Refl _ _))
+  (let-match erased (qd-fn k1 B0 A1 ob0 oa1) (Refl _ _))
+  (let-match erased (qd-fn k2 Bb1 A2 ob1 oa2) (Refl _ _))
+  (let-match erased (qd-fn k3 Bb2 A3 ob2 oa3) (Refl _ _))
+  (let-match erased (qd-fn lo1 A0 _ oa0 (QdS lo e oe)) (Refl _ _))
   (let ((erased ea) (erased eb) (erased ec) (erased ed))
-    (values (oct-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pa)) oa0 ob0) (oct-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pb)) oa1 ob1)
-      (oct-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pc)) oa2 ob2) (oct-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pd)) oa3 ob3)))
+    (values (qd-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pa)) oa0 ob0) (qd-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pb)) oa1 ob1)
+      (qd-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pc)) oa2 ob2) (qd-le _ _ _ _ (span-le _ _ _ (pk-span _ _ _ _ _ pd)) oa3 ob3)))
   (let ((erased wcd)) (wr-app xb_ xc xd A2 A3 B3 wc wd ec ed))
   (let ((erased wbd)) (wr-app xa xb_ xd A1 A2 B3 wb wcd eb (le-trans _ _ _ ec ed)))
   (let ((erased wad)) (wr-app xl xa xd A0 A1 B3 wa wbd ea (le-trans _ _ _ eb (le-trans _ _ _ ec ed))))
@@ -260,15 +260,15 @@
       (pk-wr xa xd j1 lo1 k1 A0 A1 A1 B3 x0 pa oa0 oa1 wbd (DisL A0 A1 A1 B3 (lt-succ A1)))
       (pk-wr xb_ xd j1 k1 k2 A1 A2 A2 B3 x1 pb oa1 oa2 wcd (DisL A1 A2 A2 B3 (lt-succ A2)))
       (pk-wr xc xd j1 k2 k3 A2 A3 A3 B3 x2 pc oa2 oa3 wd (DisL A2 A3 A3 B3 (lt-succ A3)))
-      pd r0 r1 r2 r3 hb))
+      pd r0 r1 r2 r3))
   (let-match many re (ESome _ cl) ((ENone _) (values x k4 (Succ (Zero)) xl5 xb5 (ENone _))))
   (let-match erased cl (MkCl _ _ _ _ _ _ e2 _ l5 oe2 w pk))
-  (let-match erased (oct-fn lo e2 e oe2 oe) (Refl _ _))
+  (let-match erased (qd-fn lo e2 e oe2 oe) (Refl _ _))
   (values x k4 (Succ (Zero)) xl5 xb5
     (ESome _ (MkSq xl xl5 len j x lo k4 (Succ (Zero)) g l5 e B3 oe ob3
       (wr-join xl xd xl5 e B3
         (wr-widen xl xd A0 B3 e B3 wad
-          (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-succ e))))))))) (lt-succ B3))
+          (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-succ e))))) (lt-succ B3))
         (wr-around xd xl5 e lo k4 B3 oe ob3 (pk-lt xl5 j1 lo k4 x0 x1 x2 x3 pk) w))
       pk (ShN j1 lo x0 x1 x2 x3 (GSG t0) (GSG t1) (GSG t2) (GSG t3) (GSG g) sh0 sh1 sh2 sh3 (GTN j2 t0 t1 t2 t3)) (PrN lo x0 x1 x2 x3) hb))))
 
@@ -622,7 +622,7 @@
 
 (def-fns _ $ (many flat-in : (many (Nat) h) (many (Gtree) gtu) -> (many (Maybe (FlatOut h gtu)) r))
   (let ((erased _) (many gn0) (erased _) (many _)) (sx-of gtu (Succ h) (Zero)))
-  (let ((many n8) (erased _)) (mul gn0 eight))
+  (let ((many n8) (erased _)) (mul gn0 rb-4))
   (let-match many (nat-fits-u62 n8) (Yes _ _ _ _ lb8) ((No _ _ _ _ _) (None _)))
   (let ((erased xl0) (unique xb0) (erased rx)) (bytes-make n8 (MkU8 (Zero) u8-modulus-pos)))
   (let ((erased sx) (many gn) (many rf) (erased xl) (unique xb) (many rq)) (sx-pk gtu (Succ h) (Zero) xl0 xb0 n8 (repeat-length _ n8 _ xl0 rx) lb8))
