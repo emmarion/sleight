@@ -666,13 +666,13 @@
     ((DkDrop _ E1 us k j q o n of ad z b d1) (DkDrop vs2 E1 us k j q o n of ad z (tally-zput vs vs2 j q i x v b w e zw) (dok-put vs vs2 E1 i x v d1 w e zw)))))
 
 ; The S walk's state: uc holds cur, each trace's count there being its count in vs0 less its hits in E, T the traces that lost their last count,
-; ul the live children of cur's nodes; the block of each drop of E is empty.
+; ul the live children of cur's nodes; the block of each drop of E is empty; T lists distinct traces.
 (def-adts $ (SSt : ((Nat) h) ((Nat) N) ((Nat) len) ((List Cnt) vs0) ((List (WEv)) E) ((List Cnt) vs) ((List (U8)) us) ((List (Nat)) T) -> Type)
   enum
   (many MkSSt : (erased (Nat) h N len) (erased (List Cnt) vs0) (erased (List (WEv)) E) (erased (List Cnt) vs) (erased (List (U8)) us) (erased (List (Nat)) T)
       (erased (Ctree) cur) (erased (Sz cnt-w vs N) zv) (erased (Sz flag-w us len) zu) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw) (erased (Offs (Succ h) len) of)
       (erased (Lt (Succ h) 17) hl) (erased (UR vs0 vs E T N) ur) (erased (Tally vs (Succ h) (Zero) cur) tb) (erased (Lc us h (Zero) cur) lc) (erased (DOk vs E) dk)
-      -> (SSt h N len vs0 E vs us T)))
+      (erased (AllLt T N) al) (erased (Distinct T) dt) -> (SSt h N len vs0 E vs us T)))
 
 (def-fns _ $ (erased monus-sub : (erased (Nat) c d n) (subterm erased (Add c d n) p) -> (erased (Monus n c d) r))
   (match erased p _ ((AddZero _) (MoZ d)) ((AddSucc c1 _ n1 p1) (MoS n1 c1 d (monus-sub c1 d n1 p1)))))
@@ -683,12 +683,19 @@
   (let-match erased c (Succ c1) (absurd (Zero) l1))
   (MoS n1 c1 (Zero) (monus-le0 n1 c1 l1)))
 
+(def-fns _ $ (erased ur-get : (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (Nat)) T) (erased (Nat) n i) (subterm erased (UR vs0 vs E T n) u) (erased (Lt i n) l)
+    -> (erased (Nat) n0 m c) (erased (Elt cnt-w vs0 i n0) e0) (erased (Elt cnt-w vs i m) e) (erased (HSum E i c) hs) (erased (Monus n0 c m) mo) (erased (TSt n0 m T i) ts))
+  (let-match erased u (UrS _ _ _ _ k n0 m c u1 e0 e hs mo ts) (absurd (UrZ _ _ _ _) l))
+  (let-match erased (nat-eq i k) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values n0 m c e0 e hs mo ts)))
+  (let-match erased ap (ApLt _ _ _ _ lt) (absurd (ApGt _ _ _ _ gt) (lt-asym k i gt l)))
+  (ur-get vs0 vs E T k i u1 lt))
+
 ; red4's dec uc ul h t c: the trace t, while it has a count, loses c of it, dying at 0.
 (def-fns _ $ (many r4-dec : (erased (Nat) N len) (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (U8)) us) (erased (List (Nat)) T) (unique (Bytes vs) uc)
     (unique (Bytes us) ul) (unique (Buf T) gb) (many (Nat) h t c) (erased (Lt t N) tl) (erased (Lt c u62-modulus) cb) (erased (SSt h N len vs0 E vs us T) st) ->
     (erased (List Cnt) vs2) (unique (Bytes vs2) uc2 at uc) (erased (List (U8)) us2) (unique (Bytes us2) ul2 at ul) (erased (List (Nat)) T2) (unique (Buf T2) gb2 at gb)
     (erased (SSt h N len vs0 (Cons (WEv) (WHit t c) E) vs2 us2 T2) st2))
-  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk))
+  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk al dt))
   (let ((erased n0) (erased en)) (elt-exists cnt-w vs N t zv tl))
   (let ((unique uc1) (many n)) (cnt-get vs uc N zv t n0 en))
   (let ((erased nl)) (elt-bound cnt-w vs t n sixteen u16-modulus en sixteen-mul u16-modulus-pow2))
@@ -702,7 +709,7 @@
   (let-match many (u62-lt-dec (Zero) n u62-modulus-pos nb) (Yes _ _ _ _ np)
     ((No _ _ _ _ le0)
       (let-match erased n (Zero) (absurd (Succ _) (let-match erased (le-lt-succ n (Zero) le0) (LtS _ _ l0)) l0))
-      (values vs uc1 us ul T gb (MkSSt h N len vs0 _ vs us T cur zv zu pw of hl (ur-hit vs0 vs vs E T T t (Zero) c (Zero) N ur (DwZero vs T t c) en) tb lc (DkHit vs E t c dk)))))
+      (values vs uc1 us ul T gb (MkSSt h N len vs0 _ vs us T cur zv zu pw of hl (ur-hit vs0 vs vs E T T t (Zero) c (Zero) N ur (DwZero vs T t c) en) tb lc (DkHit vs E t c dk) al dt))))
   (let-match erased n (Succ n2) (absurd (Zero) np))
   (let ((many n3) (erased mo))
     (match many (u62-lt-dec c n cb nb) (((Nat) n3) ((Monus n c n3) mo))
@@ -722,8 +729,11 @@
       (let ((erased nR) (erased kd)) (kr-root us us2 etf kr))
       (let ((erased _) (erased _) (erased _) (erased lc2)) (lc-kill us us2 h (Zero) nR cur cur2 etf kd lc chg lf))
       (let ((erased dw)) (DwGone vs vs2 T t n2 c mo pu))
+      (let ((erased _) (erased m0) (erased _) (erased _) (erased em) (erased _) (erased _) (erased ts)) (ur-get vs0 vs E T N t ur tl))
+      (let-match erased (elt-fn cnt-w vs t m0 n em en) (Refl _ _))
+      (let ((erased nin)) (match erased ts (((NotIn t T) o)) ((TstZero _ _ _ o) o) ((TstLive _ _ _ _ o) o)))
       (values vs2 uc2 us2 ul2 (Cons (Nat) t T) gb2 (MkSSt h N len vs0 _ vs2 us2 _ cur2 zv2 zu2 pw of hl (ur-hit vs0 vs vs2 E T _ t n c (Zero) N ur dw en) tb2 lc2
-        (DkHit vs2 E t c (dok-put vs vs2 E t (Zero) n dk pu en (ZwX n)))))))
+        (DkHit vs2 E t c (dok-put vs vs2 E t (Zero) n dk pu en (ZwX n))) (ALCons t N T tl al) (DistCons t T nin dt)))))
   (let-match erased n3 (Succ n4) (absurd (Zero) (apart-irrefl (Zero) nz)))
   (let ((erased s) (erased rt) (erased k)) (leaf-tree n3))
   (let ((erased cur2) (erased chg)) (chg-exists cur s etf n2 n3 sb rt k))
@@ -731,7 +741,7 @@
   (let ((erased lk2) (erased _)) (lc-rl us (Succ h) (Zero) n4 cur cur2 etf chg (LkS us h (Zero) cur lc)))
   (let-match erased lk2 (LkS _ _ _ _ lc2))
   (values vs2 uc2 us ul T gb (MkSSt h N len vs0 _ vs2 us T cur2 zv2 zu pw of hl (ur-hit vs0 vs vs2 E T T t n c n3 N ur (DwLive vs vs2 T t n2 c n4 mo pu) en) tb2 lc2
-    (DkHit vs2 E t c (dok-put vs vs2 E t n3 n dk pu en (ZwV n3 n2))))))
+    (DkHit vs2 E t c (dok-put vs vs2 E t n3 n dk pu en (ZwV n3 n2))) al dt)))
 
 (def-fns _ $ (erased ur-hit0 : (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (Nat)) T) (erased (Nat) t n) (subterm erased (UR vs0 vs E T n) u)
     -> (erased (UR vs0 vs (Cons (WEv) (WHit t (Zero)) E) T n) r))
@@ -744,8 +754,8 @@
 
 (def-fns _ $ (erased sst-hit0 : (erased (Nat) h N len t) (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (U8)) us) (erased (List (Nat)) T)
     (erased (SSt h N len vs0 E vs us T) st) -> (erased (SSt h N len vs0 (Cons (WEv) (WHit t (Zero)) E) vs us T) r))
-  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk))
-  (MkSSt h N len vs0 _ vs us T cur zv zu pw of hl (ur-hit0 vs0 vs E T t N ur) tb lc (DkHit vs E t (Zero) dk)))
+  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk al dt))
+  (MkSSt h N len vs0 _ vs us T cur zv zu pw of hl (ur-hit0 vs0 vs E T t N ur) tb lc (DkHit vs E t (Zero) dk) al dt))
 
 (comptime-match many (add-chk 2 2 4) (ESome _ r4-a224))
 (comptime-match many (bsp-chk 2 12 (Zero) 3) (ESome _ r4s-b12))
@@ -774,7 +784,7 @@
     (erased (List (WEv)) E2) (erased (WLf (GSG l) (Cons (WP) (MkWP p bs) (Nil (WP))) E E2) lf) (erased (SSt h N len vs0 E2 vs2 us2 T2) st2))
   (let-match erased r4-e0 (Refl _ _))
   (let-match erased r4-e2 (Refl _ _))
-  (let ((erased Nb)) (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ zv _ _ _ _ _ _ _ _)) (sz-u62 cnt-w vs N zv))
+  (let ((erased Nb)) (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ zv _ _ _ _ _ _ _ _ _ _)) (sz-u62 cnt-w vs N zv))
   (let ((erased qb)) (lt-trans q N u62-modulus (lt-succ-left q N (lt-succ-left (Succ q) N qn)) Nb))
   (let ((many qv)) (r4-x3 p q tq (lt-le-trans p (Succ q) u62-modulus (thrice-le p q tq) (LtS q u62-modulus qb)) qb))
   (let ((many h2) (erased v2) (erased pv2) (erased m2) (erased r2) (erased mm2) (erased ad2) (erased rl2) (erased h2b)) (u62-shr w 2 wb r4-two-lt))
@@ -889,9 +899,9 @@
 (def-fns _ $ (erased sst-drop : (erased (Nat) h N len k j q o n) (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (U8)) us) (erased (List (Nat)) T)
     (erased (Offs k o) of) (erased (Add o q n) ad) (erased (Elt flag-w us n (Zero)) z) (erased (List (Col)) pre) (erased (RIdx pre q) ri) (erased (Length (Col) pre k) le)
     (erased (Add k (Succ j) (Succ h)) akj) (erased (SSt h N len vs0 E vs us T) st) -> (erased (SSt h N len vs0 (Cons (WEv) (WDrop us k (Succ j) q o n of ad z) E) vs us T) r))
-  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of2 hl ur tb lc dk))
+  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of2 hl ur tb lc dk al dt))
   (MkSSt h N len vs0 _ vs us T cur zv zu pw of2 hl (ur-drop vs0 vs E T us k (Succ j) q o n N of ad z ur) tb lc
-    (DkDrop vs E us k (Succ j) q o n of ad z (lc-drop vs us h k j q n cur pre lc tb ri (hidx-offs q k o n pre ri le of ad) le akj z) dk)))
+    (DkDrop vs E us k (Succ j) q o n of ad z (lc-drop vs us h k j q n cur pre lc tb ri (hidx-offs q k o n pre ri le of ad) le akj z) dk) al dt))
 
 ; bs2 is the stack that the symbol g leaves from bs on a pair's first child.
 (def-adts $ (KStk : ((Gsym) g) ((Bstack) bs) ((Bstack) bs2) -> Type)
@@ -1004,7 +1014,7 @@
   (let-match erased r4-e0 (Refl _ _))
   (let-match erased r4-none-e (Refl _ _))
   (let ((erased gs)) (GSG l))
-  (let ((erased zu)) (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ _ zu0 _ _ _ _ _ _ _)) zu0)
+  (let ((erased zu)) (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ _ zu0 _ _ _ _ _ _ _ _ _)) zu0)
   (let ((erased lenb)) (sz-u62 flag-w us len zu))
   (let ((erased W2b)) (lt-le-trans W2 (Succ len) u62-modulus (add-le-right o W2 len ol) (LtS len u62-modulus lenb)))
   (let ((erased ib)) (lt-le-trans i (Succ n) u62-modulus (add-le-left i m n ad) (LtS n u62-modulus nb)))
@@ -1078,7 +1088,7 @@
         (let ((erased ndl)) (lt-le-trans (Succ x1) len len (add-lt-mono o (Succ pc) W2 (Succ x1) len an ol pcw) (lt-succ len)))
         (let ((erased ndb)) (lt-trans (Succ x1) len u62-modulus ndl lenb))
         (let ((many ndv)) (u62-inc (u62-add o pc x1 ax (lt-succ-left x1 u62-modulus ndb)) ndb))
-        (let ((erased zu1)) (let-match erased st1 (MkSSt _ _ _ _ _ _ _ _ _ _ zu0 _ _ _ _ _ _ _)) zu0)
+        (let ((erased zu1)) (let-match erased st1 (MkSSt _ _ _ _ _ _ _ _ _ _ zu0 _ _ _ _ _ _ _ _ _)) zu0)
         (let ((erased v0) (erased x0)) (elt-exists flag-w us1 len (Succ x1) zu1 ndl))
         (let ((unique ul2) (many v)) (r4-gb us1 ul1 ndv v0 x0))
         (let ((erased vb8) (erased _)) (flag-nth us1 (Succ x1) v0 x0))
@@ -1120,7 +1130,7 @@
     (erased (WStp g P Q) stp) (erased (List (WEv)) E2) (erased (SLv h (GSG l) Q E E2) sv) (erased (SSt h N len vs0 E2 vs2 us2 T2) st2))
   (let-match erased hk (Refl _ _))
   (let-match erased r4-e0 (Refl _ _))
-  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ _ _ pw of3 hl _ _ _ _))
+  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ _ _ _ pw of3 hl _ _ _ _ _ _))
   (let ((many o) (erased of) (erased _)) (r4-oget h (lt-succ-left h 17 hl)))
   (let-match erased lv (MkWLv _ _ _ _ _ xs ys ra rb0 n w o1 o2 W jb xp xb xn nw pwk of1 of2 aw ak ps))
   (let-match erased (offs-fn (Succ k) o2 o of2 of) (Refl _ _))
@@ -1319,7 +1329,7 @@
       (erased (List (WEv)) E2) (erased (SWk k (Succ j) (GSG tr) P E E2) wk) (erased (SSt h N len vs0 E2 vs2 us2 T2) ss2))
     (let-match erased r4-e0 (Refl _ _))
     (let-match erased r4-one (Refl _ _))
-    (let-match erased ss (MkSSt _ _ _ _ _ _ _ _ _ _ zu pw of3 hl _ _ _ _))
+    (let-match erased ss (MkSSt _ _ _ _ _ _ _ _ _ _ zu pw of3 hl _ _ _ _ _ _))
     (let ((erased hb)) (lt-trans h 17 u62-modulus (lt-succ-left h 17 hl) r4-17-u62))
     (let ((erased kl17)) (lt-le-trans k (Succ h) 17 (add-le-left k j h akj) (lt-weaken (Succ h) 17 hl)))
     (let-match erased xw (MkWElt _ _ _ nw0))
@@ -1394,7 +1404,7 @@
       (erased (List (WEv)) E2) (erased (SSs k j (GSG tr) P s E E2) ws) (erased (SSt h N len vs0 E2 vs2 us2 T2) ss2))
     (let-match erased r4-e0 (Refl _ _))
     (let-match erased r4-one (Refl _ _))
-    (let-match erased ss (MkSSt _ _ _ _ _ _ _ _ _ _ zu pw of3h hl _ _ _ _))
+    (let-match erased ss (MkSSt _ _ _ _ _ _ _ _ _ _ zu pw of3h hl _ _ _ _ _ _))
     (let ((erased kh)) (add-pos-lt k (Succ j) h akj (LtZ j)))
     (let ((erased kl)) (lt-trans (Succ k) (Succ h) 17 (LtS k h kh) hl))
     (let ((erased sl5)) (match erased nl (((Lt s (Succ 4)) q)) ((NpsNil _ _ _ _ _ _) (lt-succ 4)) ((NpsCons _ _ _ _ _ _ _ _ _ _ _ l _ _ _ _ _ _) (lt-weaken s 4 l))))
@@ -1510,13 +1520,6 @@
   (UrS vs vs _ _ n1 n0 n0 (Zero) (ur-init vs N n1 z (lt-weaken n1 N l1)) e0 e0 (HsNil n1) (MoZ n0)
     (match erased n0 (((TSt n0 n0 (Nil (Nat)) n1) t)) ((Zero) (TstZero (Zero) _ n1 (NotInNil n1))) ((Succ m) (TstLive m m _ n1 (NotInNil n1))))))
 
-(def-fns _ $ (erased ur-get : (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (Nat)) T) (erased (Nat) n i) (subterm erased (UR vs0 vs E T n) u) (erased (Lt i n) l)
-    -> (erased (Nat) n0 m c) (erased (Elt cnt-w vs0 i n0) e0) (erased (Elt cnt-w vs i m) e) (erased (HSum E i c) hs) (erased (Monus n0 c m) mo) (erased (TSt n0 m T i) ts))
-  (let-match erased u (UrS _ _ _ _ k n0 m c u1 e0 e hs mo ts) (absurd (UrZ _ _ _ _) l))
-  (let-match erased (nat-eq i k) (Unequal _ _ _ _ ap) ((Equal _ _ _) (values n0 m c e0 e hs mo ts)))
-  (let-match erased ap (ApLt _ _ _ _ lt) (absurd (ApGt _ _ _ _ gt) (lt-asym k i gt l)))
-  (ur-get vs0 vs E T k i u1 lt))
-
 ; A drop covering the trace i emptied it.
 (def-fns _ $ (erased wsm-dok : (erased (List Cnt) vs) (erased (List (WEv)) E) (erased (Nat) i c m) (subterm erased (WSm E i c (BTrue)) sm) (erased (DOk vs E) dk)
     (erased (Elt cnt-w vs i m) e) -> (erased (Eq (Nat) m (Zero)) r))
@@ -1626,7 +1629,7 @@
 ; red4's S round, start ul then swalk from the root, restricts ctu by gtr: uc then holds keep and ul its live children, and T lists the gone traces.
 (def-fns _ $ (erased sw-res : (erased (Nat) h N len) (erased (List Cnt) vs0 vs) (erased (List (WEv)) E) (erased (List (U8)) us us0) (erased (List (Nat)) T) (erased (Ctree) ctu)
     (erased (Gtree) gtr) (erased (Tally vs0 (Succ h) (Zero) ctu) t0) (erased (SRoot us0 h gtr E) sr) (erased (SSt h N len vs0 E vs us T) st) -> (erased (SRes h ctu gtr vs us T) r))
-  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk))
+  (let-match erased st (MkSSt _ _ _ _ _ _ _ _ cur zv zu pw of hl ur tb lc dk al dt))
   (let ((erased ct)) (tally-canon vs0 (Succ h) (Zero) ctu t0))
   (let ((erased hc)) (canon-h (Succ h) ctu ct))
   (let ((erased u0) (erased ut0) (erased _)) (ut-of h ctu hc))
