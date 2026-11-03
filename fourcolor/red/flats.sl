@@ -815,8 +815,8 @@
 (def-adts $ (Ps : ((List Cnt) us0) ((List (U8)) ls) ((Nat) H) ((Nat) j) ((List (Pr us0 ls H j)) P) -> Type)
   enum
   (many PsNil : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j) -> (Ps us0 ls H j (Nil (Pr us0 ls H j))))
-  (many PsCons : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j) (many (Nat) p n) (many (Bstack) bs) (erased (Ctree) t) (erased (Pz us0 ls H j p n t) pz)
-      (erased (List (Pr us0 ls H j)) P) (many (Ps us0 ls H j P) rest) -> (Ps us0 ls H j (Cons (Pr us0 ls H j) (MkPr us0 ls H j p n bs t pz) P))))
+  (many PsCons : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j) (many (Nat) p n) (erased (Bstack) bs) (many (Nat) bv) (erased (Bn bs bv) bn)
+      (erased (BnB j bv) bk) (erased (Ctree) t) (erased (Pz us0 ls H j p n t) pz) (erased (List (Pr us0 ls H j)) P) (many (Ps us0 ls H j P) rest) -> (Ps us0 ls H j (Cons (Pr us0 ls H j) (MkPr us0 ls H j p n bs t pz) P))))
 
 (def-adts $ (IsPop : ((Gsym) s) -> Type)
   enum
@@ -1589,7 +1589,7 @@
     (erased (Glob ls H len (MkSv us2 ws2 T2)) gl2) (erased (List (Pr us0 ls H (Zero))) Q) (erased (Stp us0 ls H (Zero) s P Q) st)
     (erased (HitAll us0 ls H Q (MkSv us ws T) (MkSv us2 ws2 T2)) h))
   (let ((erased s0)) (MkSv us ws T))
-  (let-match many ps (PsCons _ _ _ _ p n bs t pz Pt pst) ((PsNil _ _ _ _) (values us ws a g T qT gl (Nil _) (StpNil us0 ls H (Zero) s) (HaNil us0 ls H s0))))
+  (let-match many ps (PsCons _ _ _ _ p n bs bv bn bk t pz Pt pst) ((PsNil _ _ _ _) (values us ws a g T qT gl (Nil _) (StpNil us0 ls H (Zero) s) (HaNil us0 ls H s0))))
   (let ((erased x)) (MkPr us0 ls H (Succ (Zero)) p n bs t pz))
   (let ((erased q) (erased tq)) (thrice-exists p))
   (let ((erased c) (erased tc)) (thrice-exists n))
@@ -1618,12 +1618,12 @@
         (HaCons us0 ls H q2 c2 (BP0 bs) u2 p2 (Cons _ y3 Q0) s0 (MkSv usa wsa Ta) (MkSv us2 ws2 T2) tka
           (HaCons us0 ls H q3 c3 (BP1 bs) u3 p3 Q0 (MkSv usa wsa Ta) (MkSv usb wsb Tb) (MkSv us2 ws2 T2) tkb h0))))
     ((GPop0)
-      (match many bs _
-        ((BS0)
+      (match many (bn-top bs bv bn (bnb-lt _ _ bk)) _
+        ((BTE)
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
             (tail $ hit-step us0 ls H len l0 lb s Pt pst us ws a g T qT gl))
           (values us2 ws2 a2 g2 T2 qT2 gl2 Q0 (StpCons us0 ls H z s x Pt Q0 _ st0 (ChNone us0 ls H z p n s t (IP0) pz Q0)) h0))
-        ((BP0 b)
+        ((BT0 b)
           (let ((erased u) (erased pu) (erased us1) (erased ws1) (unique a1) (unique g1) (erased T1) (unique qT1) (erased gl1) (erased tk))
             (hit-kid us0 ls H len l0 lb p n t pz (C2) q2 (Succ c) k2 (Ki2 n c tc) us ws a g T qT gl))
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
@@ -1631,7 +1631,7 @@
           (values us2 ws2 a2 g2 T2 qT2 gl2 (Cons _ (MkPr us0 ls H z q2 c2 b u pu) Q0)
             (StpCons us0 ls H z s x Pt Q0 _ st0 (ChPop us0 ls H z p n q2 c2 s (C2) bs b t u pz pu (Popped0 b) (SPop02 b) k2 Q0))
             (HaCons us0 ls H q2 c2 b u pu Q0 s0 (MkSv us1 ws1 T1) (MkSv us2 ws2 T2) tk h0)))
-        ((BP1 b)
+        ((BT1 b)
           (let ((erased u) (erased pu) (erased us1) (erased ws1) (unique a1) (unique g1) (erased T1) (unique qT1) (erased gl1) (erased tk))
             (hit-kid us0 ls H len l0 lb p n t pz (C3) q3 (Succ (Succ c)) k3 (Ki3 n c tc) us ws a g T qT gl))
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
@@ -1640,12 +1640,12 @@
             (StpCons us0 ls H z s x Pt Q0 _ st0 (ChPop us0 ls H z p n q3 c3 s (C3) bs b t u pz pu (Popped1 b) (SPop03 b) k3 Q0))
             (HaCons us0 ls H q3 c3 b u pu Q0 s0 (MkSv us1 ws1 T1) (MkSv us2 ws2 T2) tk h0)))))
     ((GPop1)
-      (match many bs _
-        ((BS0)
+      (match many (bn-top bs bv bn (bnb-lt _ _ bk)) _
+        ((BTE)
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
             (tail $ hit-step us0 ls H len l0 lb s Pt pst us ws a g T qT gl))
           (values us2 ws2 a2 g2 T2 qT2 gl2 Q0 (StpCons us0 ls H z s x Pt Q0 _ st0 (ChNone us0 ls H z p n s t (IP1) pz Q0)) h0))
-        ((BP0 b)
+        ((BT0 b)
           (let ((erased u) (erased pu) (erased us1) (erased ws1) (unique a1) (unique g1) (erased T1) (unique qT1) (erased gl1) (erased tk))
             (hit-kid us0 ls H len l0 lb p n t pz (C3) q3 (Succ (Succ c)) k3 (Ki3 n c tc) us ws a g T qT gl))
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
@@ -1653,7 +1653,7 @@
           (values us2 ws2 a2 g2 T2 qT2 gl2 (Cons _ (MkPr us0 ls H z q3 c3 b u pu) Q0)
             (StpCons us0 ls H z s x Pt Q0 _ st0 (ChPop us0 ls H z p n q3 c3 s (C3) bs b t u pz pu (Popped0 b) (SPop13 b) k3 Q0))
             (HaCons us0 ls H q3 c3 b u pu Q0 s0 (MkSv us1 ws1 T1) (MkSv us2 ws2 T2) tk h0)))
-        ((BP1 b)
+        ((BT1 b)
           (let ((erased u) (erased pu) (erased us1) (erased ws1) (unique a1) (unique g1) (erased T1) (unique qT1) (erased gl1) (erased tk))
             (hit-kid us0 ls H len l0 lb p n t pz (C2) q2 (Succ c) k2 (Ki2 n c tc) us ws a g T qT gl))
           (let ((erased us2) (erased ws2) (unique a2) (unique g2) (erased T2) (unique qT2) (erased gl2) (erased Q0) (erased st0) (erased h0))
@@ -1664,7 +1664,8 @@
 
 (def-fns _ $ (many pr-kid : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j len) (erased (Sz cnt-w us0 len) l0) (erased (Lt len u62-modulus) lb)
     (unique (Bytes ls) fa) (many (Nat) p n) (erased (Ctree) t) (erased (Pz us0 ls H (Succ j) p n t) pz) (many (Col) e) (erased (Nat) q c)
-    (erased (Kid p e q) kp) (erased (Kid n e c) kn) (many (Bstack) bs) (erased (List (Pr us0 ls H j)) Q0 R0) (many (Ps us0 ls H j R0) rs0)
+    (erased (Kid p e q) kp) (erased (Kid n e c) kn) (erased (Bstack) bs) (many (Nat) bv) (erased (Bn bs bv) bn) (erased (BnB j bv) bk)
+    (erased (List (Pr us0 ls H j)) Q0 R0) (many (Ps us0 ls H j R0) rs0)
     (erased (Flt us0 ls H j Q0 R0) f0) ->
     (unique fa is fa2 at fa) (erased (Ctree) u) (erased (Pz us0 ls H j q (Succ c) u) pu) (erased (MkPr us0 ls H j q (Succ c) bs u pu) is y)
     (erased (List (Pr us0 ls H j)) R) (many (Ps us0 ls H j R) rs) (erased (Flt us0 ls H j (Cons (Pr us0 ls H j) y Q0) R) f))
@@ -1678,22 +1679,23 @@
   (let ((unique fa2) (erased v) (erased x) (many r)) (flag-get ls fa lenL ll m nl flag-live flag-one-lt8))
   (let-match many r (Unequal _ _ _ _ ap)
     ((Equal _ _ _)
-      (values fa2 u pu y (Cons _ y R0) (PsCons us0 ls H j (kid-c p e q kp (lt-trans _ _ _ (tally-lt us0 j q len u ub l0) lb)) m bs u pu R0 rs0)
+      (values fa2 u pu y (Cons _ y R0) (PsCons us0 ls H j (kid-c p e q kp (lt-trans _ _ _ (tally-lt us0 j q len u ub l0) lb)) m bs bv bn bk u pu R0 rs0)
         (FtKeep us0 ls H j y Q0 R0 f0))))
   (let-match erased (lv-ne ls flag-live j (Succ c) v u lv x ap) (Refl _ _))
   (values fa2 u pu y R0 rs0 (FtDead us0 ls H j q (Succ c) bs pu Q0 R0 f0)))
 
 (def-fns _ $ (many pr-pop : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j len) (erased (Sz cnt-w us0 len) l0) (erased (Lt len u62-modulus) lb)
     (unique (Bytes ls) fa) (many (Nat) p n) (erased (Ctree) t) (erased (Pz us0 ls H (Succ j) p n t) pz) (erased (Gsym) s) (many (Col) e) (erased (Nat) q c)
-    (erased (Kid p e q) kp) (erased (Kid n e c) kn) (erased (Bstack) bs) (many (Bstack) b) (erased (Popped bs b) pp) (erased (Sym s bs e b) y)
+    (erased (Kid p e q) kp) (erased (Kid n e c) kn) (erased (Bstack) bs b) (many (Nat) bv) (erased (Bn b bv) bn) (erased (BnB j bv) bk) (erased (Popped bs b) pp) (erased (Sym s bs e b) y)
     (erased (List (Pr us0 ls H j)) Q0 R0) (many (Ps us0 ls H j R0) rs0) (erased (Flt us0 ls H j Q0 R0) f0) ->
     (unique fa is fa2 at fa) (erased (List (Pr us0 ls H j)) Q R) (many (Ps us0 ls H j R) rs)
     (erased (Ch us0 ls H j s (MkPr us0 ls H (Succ j) p n bs t pz) Q0 Q) ch) (erased (Flt us0 ls H j Q R) f))
-  (let ((unique fa2) (erased u) (erased pu) (erased z) (erased R) (many rs) (erased f)) (pr-kid us0 ls H j len l0 lb fa p n t pz e q c kp kn b Q0 R0 rs0 f0))
+  (let ((unique fa2) (erased u) (erased pu) (erased z) (erased R) (many rs) (erased f)) (pr-kid us0 ls H j len l0 lb fa p n t pz e q c kp kn b bv bn bk Q0 R0 rs0 f0))
   (values fa2 (Cons _ z Q0) R rs (ChPop us0 ls H j p n q (Succ c) s e bs b t u pz pu pp y kp Q0) f))
 
 (def-fns _ $ (many pr-ch : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j len) (erased (Sz cnt-w us0 len) l0) (erased (Lt len u62-modulus) lb)
-    (unique (Bytes ls) fa) (many (Gsym) s) (many (Nat) p n) (many (Bstack) bs) (erased (Ctree) t) (erased (Pz us0 ls H (Succ j) p n t) pz)
+    (unique (Bytes ls) fa) (many (Gsym) s) (many (Nat) p n) (erased (Bstack) bs) (many (Nat) bv) (erased (Bn bs bv) bn) (erased (BnB (Succ j) bv) bk)
+    (erased (Ctree) t) (erased (Pz us0 ls H (Succ j) p n t) pz)
     (erased (List (Pr us0 ls H j)) Q0 R0) (many (Ps us0 ls H j R0) rs0) (erased (Flt us0 ls H j Q0 R0) f0) ->
     (unique fa is fa2 at fa) (erased (List (Pr us0 ls H j)) Q R) (many (Ps us0 ls H j R) rs)
     (erased (Ch us0 ls H j s (MkPr us0 ls H (Succ j) p n bs t pz) Q0 Q) ch) (erased (Flt us0 ls H j Q R) f))
@@ -1702,33 +1704,34 @@
   (match many s _
     ((GSkip)
       (let ((unique fa2) (erased u) (erased pu) (erased z) (erased R) (many rs) (erased f))
-        (pr-kid us0 ls H j len l0 lb fa p n t pz (C1) q c (Ki1 p q tq) (Ki1 n c tc) bs Q0 R0 rs0 f0))
+        (pr-kid us0 ls H j len l0 lb fa p n t pz (C1) q c (Ki1 p q tq) (Ki1 n c tc) bs bv bn (bnb-down j bv bv bk (lt-succ bv)) Q0 R0 rs0 f0))
       (values fa2 (Cons _ z Q0) R rs (ChSkip us0 ls H j p n q (Succ c) bs t u pz pu (Ki1 p q tq) Q0) f))
     ((GPush)
+      (let ((many d) (erased r0) (erased k0) (erased r1) (erased k1)) (bn-push0 j bs bv bn bk))
       (let ((unique fa1) (erased u3) (erased p3) (erased z3) (erased R3) (many rs3) (erased f3))
-        (pr-kid us0 ls H j len l0 lb fa p n t pz (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) (BP1 bs) Q0 R0 rs0 f0))
+        (pr-kid us0 ls H j len l0 lb fa p n t pz (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) (BP1 bs) (u62-inc d (bnb-lt j (Succ d) k1)) r1 k1 Q0 R0 rs0 f0))
       (let ((unique fa2) (erased u2) (erased p2) (erased z2) (erased R2) (many rs2) (erased f2))
-        (pr-kid us0 ls H j len l0 lb fa1 p n t pz (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) (BP0 bs) (Cons _ z3 Q0) R3 rs3 f3))
+        (pr-kid us0 ls H j len l0 lb fa1 p n t pz (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) (BP0 bs) d r0 k0 (Cons _ z3 Q0) R3 rs3 f3))
       (values fa2 (Cons _ z2 (Cons _ z3 Q0)) R2 rs2
         (ChPush us0 ls H j p n (Succ q) (Succ (Succ q)) (Succ (Succ c)) (Succ (Succ (Succ c))) bs t u2 u3 pz p2 p3 (Ki2 p q tq) (Ki3 p q tq) Q0) f2))
     ((GPop0)
-      (match many bs _
-        ((BS0) (values fa Q0 R0 rs0 (ChNone us0 ls H j p n s t (IP0) pz Q0) f0))
-        ((BP0 b) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) bs b (Popped0 b) (SPop02 b) Q0 R0 rs0 f0))
-        ((BP1 b) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) bs b (Popped1 b) (SPop03 b) Q0 R0 rs0 f0))))
+      (match many (bn-top bs bv bn (bnb-lt _ _ bk)) _
+        ((BTE) (values fa Q0 R0 rs0 (ChNone us0 ls H j p n s t (IP0) pz Q0) f0))
+        ((BT0 b) (let ((many m) (erased rc) (erased km)) (bn-pop j bs b bv bn (Popped0 b) bk)) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) bs b m rc km (Popped0 b) (SPop02 b) Q0 R0 rs0 f0))
+        ((BT1 b) (let ((many m) (erased rc) (erased km)) (bn-pop j bs b bv bn (Popped1 b) bk)) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) bs b m rc km (Popped1 b) (SPop03 b) Q0 R0 rs0 f0))))
     ((GPop1)
-      (match many bs _
-        ((BS0) (values fa Q0 R0 rs0 (ChNone us0 ls H j p n s t (IP1) pz Q0) f0))
-        ((BP0 b) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) bs b (Popped0 b) (SPop13 b) Q0 R0 rs0 f0))
-        ((BP1 b) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) bs b (Popped1 b) (SPop12 b) Q0 R0 rs0 f0))))))
+      (match many (bn-top bs bv bn (bnb-lt _ _ bk)) _
+        ((BTE) (values fa Q0 R0 rs0 (ChNone us0 ls H j p n s t (IP1) pz Q0) f0))
+        ((BT0 b) (let ((many m) (erased rc) (erased km)) (bn-pop j bs b bv bn (Popped0 b) bk)) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C3) (Succ (Succ q)) (Succ (Succ c)) (Ki3 p q tq) (Ki3 n c tc) bs b m rc km (Popped0 b) (SPop13 b) Q0 R0 rs0 f0))
+        ((BT1 b) (let ((many m) (erased rc) (erased km)) (bn-pop j bs b bv bn (Popped1 b) bk)) (pr-pop us0 ls H j len l0 lb fa p n t pz s (C2) (Succ q) (Succ c) (Ki2 p q tq) (Ki2 n c tc) bs b m rc km (Popped1 b) (SPop12 b) Q0 R0 rs0 f0))))))
 
 (def-fns _ $ (many pr-step : (erased (List Cnt) us0) (erased (List (U8)) ls) (erased (Nat) H j len) (erased (Sz cnt-w us0 len) l0) (erased (Lt len u62-modulus) lb)
     (unique (Bytes ls) fa) (many (Gsym) s) (erased (List (Pr us0 ls H (Succ j))) P) (subterm many (Ps us0 ls H (Succ j) P) ps) ->
     (unique fa is fa2 at fa) (erased (List (Pr us0 ls H j)) Q R) (many (Ps us0 ls H j R) rs) (erased (Stp us0 ls H j s P Q) st) (erased (Flt us0 ls H j Q R) f))
-  (let-match many ps (PsCons _ _ _ _ p n bs t pz Pt pst)
+  (let-match many ps (PsCons _ _ _ _ p n bs bv bn bk t pz Pt pst)
     ((PsNil _ _ _ _) (values fa (Nil _) (Nil _) (PsNil us0 ls H j) (StpNil us0 ls H j s) (FtNil us0 ls H j))))
   (let ((unique fa1) (erased Q0) (erased R0) (many rs0) (erased st0) (erased f0)) (notail $ pr-step us0 ls H j len l0 lb fa s Pt pst))
-  (let ((unique fa2) (erased Q) (erased R) (many rs) (erased ch) (erased f)) (pr-ch us0 ls H j len l0 lb fa1 s p n bs t pz Q0 R0 rs0 f0))
+  (let ((unique fa2) (erased Q) (erased R) (many rs) (erased ch) (erased f)) (pr-ch us0 ls H j len l0 lb fa1 s p n bs bv bn bk t pz Q0 R0 rs0 f0))
   (values fa2 Q R rs (StpCons us0 ls H j s (MkPr us0 ls H (Succ j) p n bs t pz) Pt Q0 Q st0 ch) f))
 
 (def-fns _ $ (many live-h : (erased (List (U8)) us) (unique (Bytes us) a) (erased (List (U8)) xl) (erased (Nat) j) (erased (Sx) x) (many (Nat) i f)
@@ -1828,7 +1831,7 @@
     (unique fa is fa2 at fa) (unique tq is tq2 at tq) (erased (List Cnt) us2 ws2) (unique (Bytes us2) a2 at a) (unique (Bytes ws2) g2 at g)
     (erased (List (Nat)) T2) (unique (Tq T2) qT2 at qT) (erased (Glob ls H len (MkSv us2 ws2 T2)) gl2) (erased (Wk us0 ls H (Succ j) gs P (MkSv us ws T) (MkSv us2 ws2 T2)) w))
   (let ((erased s)) (MkSv us ws T))
-  (let-match many ps (PsCons _ _ _ _ _ _ _ _ _ _ _) ((PsNil _ _ _ _) (values fa tq us ws a g T qT gl (WkNil us0 ls H (Succ j) gs s))))
+  (let-match many ps (PsCons _ _ _ _ _ _ _ _ _ _ _ _ _ _) ((PsNil _ _ _ _) (values fa tq us ws a g T qT gl (WkNil us0 ls H (Succ j) gs s))))
   (let-match many (nat-zero-dec f) (IsSucc _)
     ((IsZero) (let-match erased pr (PrX)) (let-match erased mg (GmX _ _)) (values fa tq us ws a g T qT gl (WkZero us0 ls H (Succ j) gs P s (NmE (Succ j))))))
   (let-match erased pk (PkN _ _ _ h1 h2 h3 _ ff0 ff1 ff2 ff3 c0 c1 c2 c3 p0 p1 p2 p3 r0 r1 r2 r3 rc) (absurd (PkX _ _ _) pr))
@@ -2361,7 +2364,7 @@
     (erased (List (U8)) ls) (unique (Bytes ls) fa) (erased (Room ls (Succ h)) rm) (erased (Lv ls flag-live (Succ h) (Zero) ctu) lv)
     (many (Nat) off) (erased (Offs (Succ h) off) of) (erased (List (U8)) gf) (unique (Bytes gf) ga) (erased (Room gf (Succ h)) rg) (many (Nat) gen)
     (erased (Lt gen u8-modulus) gb) (erased (List Cnt) ws) (unique (Bytes ws) g) (erased (Tally ws (Succ h) (Zero) (CEmpty)) wz) (erased (Sz cnt-w ws len) lw)
-    (unique (Tq (Nil (Nat))) qT) ->
+    (unique (Tq (Nil (Nat))) qT) (erased (BnB (Succ h) bn-one) bk) ->
     (erased (Ctree) keep gone) (erased (CRes h ctu (Cons RG (MkRx (Gtree) (BS0) gtr) (Nil RG)) keep gone) c)
     (erased (CtH (Succ h) keep) hk) (erased (CtH (Succ h) gone) hg) (many (KeepE keep) e)
     (erased (List Cnt) us2) (unique (Bytes us2) a2 at a) (erased (Tally us2 (Succ h) (Zero) keep) tk) (erased (Sz cnt-w us2 len) lu2)
@@ -2383,7 +2386,7 @@
   (let ((erased pz)) (MkPz us ls H H (Zero) (Zero) ctu tb lv (MkNd ls H H (Zero) (Zero) (Zero) lenL (Nil _) (RINil) (HxNil) (LengthNil _) (AddZero H) ll lbl tf)))
   (let ((erased Ps0)) (Cons _ (MkPr us ls H H (Zero) (Zero) (BS0) ctu pz) (Nil _)))
   (let ((unique fa1) (unique gq1) (erased us1) (erased ws1) (unique a1) (unique g1) (erased T) (unique qT1) (erased gl) (erased w))
-    (swalk us ls H len lu lb h xl xs gts gq sx (Zero) rf gn pr xpk gb0 (GSG gtr) mg glv Ps0 (PsCons us ls H H (Zero) (Zero) (BS0) ctu pz (Nil _) (PsNil us ls H H)) fa us ws a g
+    (swalk us ls H len lu lb h xl xs gts gq sx (Zero) rf gn pr xpk gb0 (GSG gtr) mg glv Ps0 (PsCons us ls H H (Zero) (Zero) (BS0) bn-one (BnE) bk ctu pz (Nil _) (PsNil us ls H H)) fa us ws a g
       (Nil _) qT (MkGlob ls H len us ws (Nil _) lu lw (ALNil len) (TPNil ls H))))
   (let-match erased gl (MkGlob _ _ _ _ _ _ lu1 lw1 al tp))
   (let-match unique qT1 (MkTq _ qxs qb qcap ql qcb qau qk qkc qov qr qu))

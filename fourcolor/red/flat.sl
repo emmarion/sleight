@@ -844,3 +844,121 @@
   (let ((erased ms) (unique m) (erased rp)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
   (let-match many (nat-fits-u62 n) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (values ms m (ENone _))))
   (values ms m (ESome _ (MkRoom ms j n (sz-made flag-w n n _ ms rp (LtZ _) (mul-one-right n) lb) lb (tfit-of-mx j (Zero) k n x (lt-succ k))))))
+
+(let ((many bn-one)) (Succ (Zero)))
+(comptime-match many (lt-dec bn-one (Succ (sixty-two-many))) (Yes _ _ _ _ bn-one-lt))
+
+; b holds the bit stack bs: 1 for the empty stack, each push one more low bit.
+(def-adts $ (Bn : ((Bstack) bs) ((Nat) b) -> Type)
+  enum
+  (many BnE : -> (Bn (BS0) (Succ (Zero))))
+  (many Bn0 : (erased (Bstack) bs) (erased (Nat) b d) (erased (Bn bs b) r) (erased (BitCons b (Bit0) d) c) -> (Bn (BP0 bs) d))
+  (many Bn1 : (erased (Bstack) bs) (erased (Nat) b d) (erased (Bn bs b) r) (erased (BitCons b (Bit1) d) c) -> (Bn (BP1 bs) d)))
+
+; b stays below 2^62 through j more pushes.
+(def-adts $ (BnB : ((Nat) j) ((Nat) b) -> Type)
+  enum
+  (many BbZ : (erased (Nat) b) (erased (Lt b u62-modulus) l) -> (BnB (Zero) b))
+  (many BbS : (erased (Nat) j b d) (erased (Double b d) dd) (erased (BnB j (Succ d)) r) -> (BnB (Succ j) b)))
+
+; The top of a bit stack.
+(def-adts $ (BTop : ((Bstack) bs) -> Type)
+  enum
+  (many BTE : -> (BTop (BS0)))
+  (many BT0 : (erased (Bstack) c) -> (BTop (BP0 c)))
+  (many BT1 : (erased (Bstack) c) -> (BTop (BP1 c))))
+
+(def-fns _ $ (erased bn-dadd : (erased (Nat) a b) (subterm erased (Double a b) d) -> (erased (Add a a b) r))
+  (let-match erased d (DS a1 b1 d1) ((D0) (AddZero (Zero))))
+  (AddSucc a1 a (Succ b1) (add-succ-right a1 a1 b1 (bn-dadd a1 b1 d1))))
+
+(def-fns _ $ (erased double-le-mono : (erased (Nat) c b e d) (subterm erased (Lt c (Succ b)) l) (erased (Double c e) p) (erased (Double b d) q) -> (erased (Lt e (Succ d)) r))
+  (match erased l _
+    ((LtZ _) (let-match erased p (D0)) (LtZ d))
+    ((LtS c1 _ l1)
+      (let-match erased p (DS _ e1 p1))
+      (let-match erased q (DS b1 d1 q1) (absurd (D0) l1))
+      (LtS _ _ (LtS _ _ (double-le-mono c1 b1 e1 d1 l1 p1 q1))))))
+
+(def-fns _ $ (erased bc-le : (erased (Nat) m n) (erased (Bit) x) (erased (BitCons m x n) c) -> (erased (Lt m (Succ n)) r))
+  (match erased c _ ((BC0 _ _ dd) (double-le m n dd)) ((BC1 _ d dd) (lt-weaken _ _ (double-le m d dd)))))
+
+(def-fns _ $ (erased bnb-lt : (erased (Nat) j b) (subterm erased (BnB j b) r) -> (erased (Lt b u62-modulus) l))
+  (let-match erased r (BbS j1 _ d dd r1) ((BbZ _ l) l))
+  (lt-trans b (Succ d) u62-modulus (double-le b d dd) (bnb-lt j1 (Succ d) r1)))
+
+(def-fns _ $ (erased bnb-mono : (erased (Nat) j b c) (subterm erased (BnB j b) r) (erased (Lt c (Succ b)) l) -> (erased (BnB j c) s))
+  (let-match erased r (BbS j1 _ d dd r1) ((BbZ _ lb) (BbZ c (lt-le-trans c (Succ b) u62-modulus l (LtS b u62-modulus lb)))))
+  (let ((erased e) (erased de)) (double c))
+  (BbS j1 c e de (bnb-mono j1 (Succ d) (Succ e) r1 (LtS _ _ (double-le-mono c b e d l de dd)))))
+
+(def-fns _ $ (erased bnb-down : (erased (Nat) j b c) (erased (BnB (Succ j) b) r) (erased (Lt c (Succ b)) l) -> (erased (BnB j c) s))
+  (let-match erased r (BbS _ _ d dd r1))
+  (bnb-mono j (Succ d) c r1 (lt-weaken _ _ (le-trans c b d l (double-le b d dd)))))
+
+(def-fns _ $ (erased bn-pos : (erased (Bstack) bs) (erased (Nat) b) (subterm erased (Bn bs b) r) -> (erased (Lt (Zero) b) l))
+  (let-match erased r (Bn1 c m _ r1 bc)
+    ((BnE) (LtZ (Zero)))
+    ((Bn0 c m _ r1 bc) (lt-le-trans (Zero) m b (bn-pos c m r1) (bc-le m b (Bit0) bc))))
+  (let-match erased bc (BC1 _ d _))
+  (LtZ d))
+
+(def-fns _ $ (erased bn-two : (erased (Bstack) c) (erased (Nat) m b) (erased (Bit) x) (erased (Bn c m) r) (erased (BitCons m x b) bc) -> (erased (Lt bn-one b) l))
+  (let ((erased p)) (bn-pos c m r))
+  (let-match erased p (LtZ m1))
+  (match erased bc _
+    ((BC0 _ _ dd) (let-match erased dd (DS _ _ _)) (LtS _ _ (LtZ _)))
+    ((BC1 _ d dd) (let-match erased dd (DS _ _ _)) (LtS _ _ (LtZ _)))))
+
+(def-fns _ $ (many bn-top : (erased (Bstack) bs) (many (Nat) b) (erased (Bn bs b) r) (erased (Lt b u62-modulus) lb) -> (many (BTop bs) t))
+  (match many (u62-lt-dec bn-one b (bnb-lt _ _ (BbZ _ flag-one-lt)) lb) _
+    ((No _ _ _ _ le)
+      (match erased r _
+        ((BnE) (BTE))
+        (absurd (Bn0 c m _ r1 bc) (lt-irrefl bn-one (lt-le-trans bn-one b bn-one (bn-two c m b (Bit0) r1 bc) (le-lt-succ b bn-one le))))
+        (absurd (Bn1 c m _ r1 bc) (lt-irrefl bn-one (lt-le-trans bn-one b bn-one (bn-two c m b (Bit1) r1 bc) (le-lt-succ b bn-one le))))))
+    ((Yes _ _ _ _ lt1)
+      (let ((many x) (erased ba)) (u62-bit-test b (Zero) lb (LtZ _)))
+      (let-match erased ba (BitAtZ m _ _ bc))
+      (match many x _
+        ((Bit0) (let-match erased r (Bn0 c _ _ _ bc0) (absurd (BnE) (lt-irrefl bn-one lt1)) (absurd (Bn1 _ _ _ _ bc1) (let ((erased _) (erased ex)) (bitcons-fn _ _ _ _ b bc1 bc)) ex)) (BT0 c))
+        ((Bit1) (let-match erased r (Bn1 c _ _ _ bc1) (absurd (BnE) (lt-irrefl bn-one lt1)) (absurd (Bn0 _ _ _ _ bc0) (let ((erased _) (erased ex)) (bitcons-fn _ _ _ _ b bc0 bc)) ex)) (BT1 c))))))
+
+(def-fns _ $ (erased shr1-bc : (erased (Nat) q v k r b m) (erased (Bit) x) (erased (Pow2 (Succ (Zero)) v) pv) (erased (Mul q v k) mm) (erased (Add k r b) a)
+    (erased (Lt r v) rl) (erased (BitCons m x b) bc) -> (erased (Eq (Nat) q m) e))
+  (let-match erased (pow2-fn _ v (Succ (Succ (Zero))) pv (PS (Zero) (Succ (Zero)) (Succ (Succ (Zero))) (P0) (DS (Zero) (Zero) (D0)))) (Refl _ _))
+  (let ((erased dd)) (add-diag-double q k (mul-two q k mm)))
+  (let ((erased y) (erased bq))
+    (match erased rl (((Bit) y0) ((BitCons q y0 b) bq0))
+      ((LtZ _) (let-match erased (add-fn k (Zero) b k a (add-zero-right k)) (Refl _ _)) (values (Bit0) (BC0 q k dd)))
+      ((LtS r1 _ l1)
+        (let-match erased l1 (LtZ _) (absurd (LtS _ _ l2) l2))
+        (let-match erased (add-fn k (Succ (Zero)) b (Succ k) a (add-succ-right k (Zero) k (add-zero-right k))) (Refl _ _))
+        (values (Bit1) (BC1 q k dd)))))
+  (let ((erased em) (erased _)) (bitcons-fn q y m x b bq bc))
+  em)
+
+(def-fns _ $ (many bn-push0 : (erased (Nat) j) (erased (Bstack) bs) (many (Nat) b) (erased (Bn bs b) r) (erased (BnB (Succ j) b) k) ->
+    (many (Nat) d) (erased (Bn (BP0 bs) d) r0) (erased (BnB j d) k0) (erased (Bn (BP1 bs) (Succ d)) r1) (erased (BnB j (Succ d)) k1))
+  (let-match erased k (BbS _ _ e dd k1))
+  (let ((erased l1)) (bnb-lt j (Succ e) k1))
+  (values (u62-add b b e (bn-dadd b e dd) (lt-trans _ _ _ (lt-succ e) l1))
+    (Bn0 bs b e r (BC0 b e dd)) (bnb-mono j (Succ e) e k1 (lt-weaken _ _ (lt-succ e))) (Bn1 bs b (Succ e) r (BC1 b e dd)) k1))
+
+(def-fns _ $ (many bn-pop : (erased (Nat) j) (erased (Bstack) bs c) (many (Nat) b) (erased (Bn bs b) r) (erased (Popped bs c) pp) (erased (BnB (Succ j) b) k) ->
+    (many (Nat) m) (erased (Bn c m) rc) (erased (BnB j m) km))
+  (let ((erased lb)) (bnb-lt (Succ j) b k))
+  (let ((many q) (erased v) (erased pv) (erased k2) (erased r2) (erased mm) (erased a) (erased rl) (erased _)) (u62-shr b bn-one lb bn-one-lt))
+  (let ((erased m) (erased x) (erased rc) (erased bc))
+    (match erased pp (((Nat) m0) ((Bit) x0) ((Bn c m0) rc0) ((BitCons m0 x0 b) bc0))
+      ((Popped0 _) (let-match erased r (Bn0 _ m1 _ r1 bc1)) (values m1 (Bit0) r1 bc1))
+      ((Popped1 _) (let-match erased r (Bn1 _ m1 _ r1 bc1)) (values m1 (Bit1) r1 bc1))))
+  (let-match erased (shr1-bc q v k2 r2 b m x pv mm a rl bc) (Refl _ _))
+  (values q rc (bnb-down j b q k (bc-le q b x bc))))
+
+(def-fns _ $ (many bnb-c : (subterm many (Nat) j) (many (Nat) b) -> (many (ErasedMaybe (BnB j b)) r))
+  (let-match many (nat-fits-u62 b) (Yes _ _ _ _ lb) ((No _ _ _ _ _) (ENone _)))
+  (let-match many j (Succ j1) ((Zero) (ESome _ (BbZ b lb))))
+  (let ((many d) (erased dd)) (double b))
+  (let-match many (notail $ bnb-c j1 (Succ d)) (ESome _ r) ((ENone _) (ENone _)))
+  (ESome _ (BbS j1 b d dd r)))
