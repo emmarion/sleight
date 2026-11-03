@@ -5001,7 +5001,7 @@
 (def-adts $ (GoR : ((Nat) r) ((Nat) t) ((Nat) k) ((Nat) acc) ((Nat) mu) ((Nat) v) -> Type)
   enum
   (many GoZ : (erased (Nat) r t acc mu) -> (GoR r t (Zero) acc mu acc))
-  (many GoS : (erased (Nat) r t k acc mu v t1 m3 d0 d s d2 x acc1 mul1) (erased (Mul t1 3 m3) mm) (erased (Add m3 d0 t) ad) (erased (Mod t 3 d) md)
+  (many GoS : (erased (Nat) r t k acc mu v t1 m3 d0 d s d2 x acc1 mul1) (erased (Mul t1 3 m3) mm) (erased (Add m3 d0 t) ad) (erased (Lt d0 3) dl) (erased (Mod t 3 d) md)
       (erased (Add d r s) as) (erased (Mod s 3 d2) ms) (erased (Mul d2 mu x) mx) (erased (Add acc x acc1) aa) (erased (Mul 3 mu mul1) m1)
       (erased (GoR r t1 k acc1 mul1 v) g) -> (GoR r t (Succ k) acc mu v)))
 
@@ -5043,7 +5043,7 @@
     (let ((erased Mu)) (lt-le-trans M (Succ r4-m16) u62-modulus mb (LtS _ _ r4-m16-u62)))
     (let ((erased m3b)) (lt-le-trans m3 (Succ M) u62-modulus (pw3-le k1 m3 M pk1) (LtS _ _ Mu)))
     (let ((erased mulb)) (lt-le-trans mu (Succ M) u62-modulus (pw3-le kk mu M pk) (LtS _ _ Mu)))
-    (let ((many t1) (erased m3t) (erased d0) (erased mm) (erased ad) (erased _) (erased t1b)) (u62-div t 3 tb r4-three-u62 (LtZ _)))
+    (let ((many t1) (erased m3t) (erased d0) (erased mm) (erased ad) (erased d0l) (erased t1b)) (u62-div t 3 tb r4-three-u62 (LtZ _)))
     (let ((many d) (erased dl) (erased md) (erased _)) (u62-mod t 3 tb r4-three-u62 (LtZ _)))
     (let ((erased sv) (erased as)) (add d r))
     (let ((erased two)) (Succ (Succ (Zero))))
@@ -5059,7 +5059,7 @@
     (let ((many v) (erased g) (erased vl))
       (tail $ go t1 k1 (u62-dec k1 k kb) (u62-add acc (u62-mul d2 mu d2b mulb x mx (le-u62 x acc1 (add-le-right acc x acc1 aa) a1b)) acc1 aa a1b)
         (u62-mul 3 mu r4-three-u62 mulb m3 m1 m3b) M pk1 mb a1l t1b (lt-trans k1 kk u62-modulus (lt-succ k1) kb)))
-    (values v (GoS r t k1 acc mu v t1 m3t d0 d sv d2 x acc1 m3 mm ad md as ms mx aa m1 g) vl))
+    (values v (GoS r t k1 acc mu v t1 m3t d0 d sv d2 x acc1 m3 mm ad d0l md as ms mx aa m1 g) vl))
   (let ((many M) (erased pm) (erased mb)) (r4-pw n nl))
   (let ((erased Mu)) (lt-le-trans M (Succ r4-m16) u62-modulus mb (LtS _ _ r4-m16-u62)))
   (def-fns r4-lg2 $ (many fill : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (many (Nat) i) (subterm erased (Nat) kk) (erased (Add i kk M) ad)
@@ -5165,7 +5165,7 @@
 (def-adts $ (RowAt : ((List (Copy (RRow))) rs) ((Nat) i) ((Nat) r) ((Nat) n) -> Type)
   enum
   (many MkRowAt : (erased (List (Copy (RRow))) rs) (erased (Nat) i r n M) (erased (List (Copy (Nat))) xs) (erased (Array (Copy (Nat)) xs) a)
-      (erased (Length (Copy (Nat)) xs M) l) (erased (RotTab r n M xs) rt) (erased (AllCu xs) au)
+      (erased (Length (Copy (Nat)) xs M) l) (erased (Pw3 n (Succ (Zero)) M) pm) (erased (RotTab r n M xs) rt) (erased (AllCu xs) au)
       (erased (Nth (Copy (RRow)) rs i (MkCopy (RRow) (MkRRow r n M xs a l rt au))) nth) -> (RowAt rs i r n)))
 
 ; red4's eng for h: the node words of gtu, the live children ul0 and the trace counts uc0 of the tree ctu, lo and the rotation tables.
@@ -5496,10 +5496,10 @@
   (let ((erased hdl)) (le-trans (Succ hd) (Succ (Succ h-m)) 16 (LtS _ _ (add-le-right ld hd (Succ h-m) ad)) h2l))
   (let ((many lo) (erased pl) (erased _)) (r4-pw ld ldl))
   (let ((erased r1l) (erased r2l)) (values (LtS (Zero) (Succ (Succ (Zero))) (LtZ (Succ (Zero)))) (LtS (Succ (Zero)) (Succ (Succ (Zero))) (LtS (Zero) (Succ (Zero)) (LtZ (Zero))))))
-  (let ((erased M0) (erased _) (erased x0) (unique a0) (erased l0) (erased t0) (erased u0)) (r4-rtab 1 ld r1l ldl))
-  (let ((erased M1) (erased _) (erased x1) (unique a1) (erased l1) (erased t1) (erased u1)) (r4-rtab 1 hd r1l hdl))
-  (let ((erased M2) (erased _) (erased x2) (unique a2) (erased l2) (erased t2) (erased u2)) (r4-rtab 2 ld r2l ldl))
-  (let ((erased M3) (erased _) (erased x3) (unique a3) (erased l3) (erased t3) (erased u3)) (r4-rtab 2 hd r2l hdl))
+  (let ((erased M0) (erased Pq0) (erased x0) (unique a0) (erased l0) (erased t0) (erased u0)) (r4-rtab 1 ld r1l ldl))
+  (let ((erased M1) (erased Pq1) (erased x1) (unique a1) (erased l1) (erased t1) (erased u1)) (r4-rtab 1 hd r1l hdl))
+  (let ((erased M2) (erased Pq2) (erased x2) (unique a2) (erased l2) (erased t2) (erased u2)) (r4-rtab 2 ld r2l ldl))
+  (let ((erased M3) (erased Pq3) (erased x3) (unique a3) (erased l3) (erased t3) (erased u3)) (r4-rtab 2 hd r2l hdl))
   (let ((many c0) (many c1) (many c2) (many c3))
     (values (MkCopy _ (MkRRow 1 ld M0 x0 (share a0) l0 t0 u0)) (MkCopy _ (MkRRow 1 hd M1 x1 (share a1) l1 t1 u1))
       (MkCopy _ (MkRRow 2 ld M2 x2 (share a2) l2 t2 u2)) (MkCopy _ (MkRRow 2 hd M3 x3 (share a3) l3 t3 u3))))
@@ -5507,8 +5507,8 @@
   (let ((unique rtab)) (list-to-array (RRow) rs))
   (values rp2 rb2 ns2 lp2 lb2 ln2 st2
     (Some _ (MkEng h-m gtu xs-m na us2 (share ul2) vs2 (share uc2) lo rs (share rtab) len-m o-m N-m ld hd lx ax ly-m pu-m pt gc-m of-m zu2 zv2 pw-m ctu tb lcu ad pl
-      (MkRowAt rs (Zero) 1 ld M0 x0 a0 l0 t0 u0 (NthHere _ c0 _))
-      (MkRowAt rs (Succ (Zero)) 1 hd M1 x1 a1 l1 t1 u1 (NthThere _ c0 _ (Zero) c1 (NthHere _ c1 _)))
-      (MkRowAt rs (Succ (Succ (Zero))) 2 ld M2 x2 a2 l2 t2 u2 (NthThere _ c0 _ (Succ (Zero)) c2 (NthThere _ c1 _ (Zero) c2 (NthHere _ c2 _))))
-      (MkRowAt rs (Succ (Succ (Succ (Zero)))) 2 hd M3 x3 a3 l3 t3 u3
+      (MkRowAt rs (Zero) 1 ld M0 x0 a0 l0 Pq0 t0 u0 (NthHere _ c0 _))
+      (MkRowAt rs (Succ (Zero)) 1 hd M1 x1 a1 l1 Pq1 t1 u1 (NthThere _ c0 _ (Zero) c1 (NthHere _ c1 _)))
+      (MkRowAt rs (Succ (Succ (Zero))) 2 ld M2 x2 a2 l2 Pq2 t2 u2 (NthThere _ c0 _ (Succ (Zero)) c2 (NthThere _ c1 _ (Zero) c2 (NthHere _ c2 _))))
+      (MkRowAt rs (Succ (Succ (Succ (Zero)))) 2 hd M3 x3 a3 l3 Pq3 t3 u3
         (NthThere _ c0 _ (Succ (Succ (Zero))) c3 (NthThere _ c1 _ (Succ (Zero)) c3 (NthThere _ c2 _ (Zero) c3 (NthHere _ c3 _))))) ce ge hc))))
