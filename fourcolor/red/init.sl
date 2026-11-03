@@ -99,11 +99,38 @@
 (def-fns _ $ (erased sel-c0 : (erased (Ctree) t) -> (erased (CtSel t (C0) (CEmpty)) s))
   (match erased t _ ((CNode t1 t2 t3) (SelN0 t1 t2 t3)) ((CLeaf lf) (SelL lf (C0))) ((CEmpty) (SelE (C0)))))
 
+(def-adts $ (GPres : ((Gtree) t) ((Bool) p) -> Type)
+  enum
+  (many GpE : -> (GPres (GEmpty) (BFalse)))
+  (many GpN : (erased (Gtree) t0 t1 t2 t3) -> (GPres (GNode t0 t1 t2 t3) (BTrue)))
+  (many GP0 : -> (GPres (GL0) (BTrue)))
+  (many GP1 : -> (GPres (GL1) (BTrue)))
+  (many GP2 : -> (GPres (GL2) (BTrue)))
+  (many GP3 : -> (GPres (GL3) (BTrue)))
+  (many GP01 : -> (GPres (GL01) (BTrue)))
+  (many GP12 : -> (GPres (GL12) (BTrue)))
+  (many GP13 : -> (GPres (GL13) (BTrue)))
+  (many GP23 : -> (GPres (GL23) (BTrue))))
+
+; t has the shape of a tree of chromograms of n symbols: its leaves at the last symbol, its internal nodes above.
+(def-adts $ (GShp : ((Nat) n) ((Gtree) t) -> Type)
+  enum
+  (many GsE : (erased (Nat) n) -> (GShp n (GEmpty)))
+  (many GsL : (erased (Gtree) t) (erased (Bits) q) (erased (LeafSet t q) l) -> (GShp (Succ (Zero)) t))
+  (many GsN : (erased (Nat) n) (erased (Gtree) t0 t1 t2 t3) (erased (GShp (Succ n) t0) p0) (erased (GShp (Succ n) t1) p1) (erased (GShp (Succ n) t2) p2)
+      (erased (GShp (Succ n) t3) p3) -> (GShp (Succ (Succ n)) (GNode t0 t1 t2 t3))))
+
+; t is nonempty when d is 0.
+(def-adts $ (NzAt : ((Nat) d) ((Gtree) t) -> Type)
+  enum
+  (many NzP : (erased (Nat) d) (erased (Gtree) t) (erased (GPres t (BTrue)) p) -> (NzAt d t))
+  (many NzS : (erased (Nat) d) (erased (Gtree) t) -> (NzAt (Succ d) t)))
+
 ; The covered sets of a row of the initial gtree, for one open-chord count d and each parity.
 (def-adts $ (GEnt : ((Nat) n) ((Nat) d) -> Type)
   enum
   (many MkGEnt : (erased (Nat) n d) (many (Gtree) tt tf) (erased (GCov (GSG tt) d (BTrue) n) ct) (erased (GCov (GSG tf) d (BFalse) n) cf)
-      -> (GEnt n d)))
+      (erased (GShp n tt) st) (erased (GShp n tf) sf) (erased (NzAt d tf) nz) -> (GEnt n d)))
 
 (def-adts $ (GRow : ((Nat) n) ((Nat) d) -> Type)
   enum
@@ -159,17 +186,20 @@
   (let ((erased T) (erased F)) (values (BTrue) (BFalse)))
   (let ((many e0)) (MkGEnt one (Zero) (GL0) (GL01)
     (leaf-cov0 (GL0) T F F F T F (NotT) (LS0) (BOkT one T) (BOkF (Zero) F (EB0)))
-    (leaf-cov0 (GL01) T T F F F T (NotF) (LS01) (BOkT one F) (BOkT (Zero) T))))
+    (leaf-cov0 (GL01) T T F F F T (NotF) (LS01) (BOkT one F) (BOkT (Zero) T)) (GsL _ _ (LS0)) (GsL _ _ (LS01)) (NzP _ _ (GP01))))
   (let ((many e1)) (MkGEnt one one (GL12) (GL13)
     (leaf-cov (GL12) (Zero) F T T F T F (NotT) (LS12) (BOkF two T (EB2 (Zero) T)) (BOkT one F) (BOkT (Zero) T) (BOkF (Zero) F (EB0)))
-    (leaf-cov (GL13) (Zero) F T F T F T (NotF) (LS13) (BOkF two F (EB2 (Zero) F)) (BOkT one T) (BOkF (Zero) F (EB0)) (BOkT (Zero) T))))
+    (leaf-cov (GL13) (Zero) F T F T F T (NotF) (LS13) (BOkF two F (EB2 (Zero) F)) (BOkT one T) (BOkF (Zero) F (EB0)) (BOkT (Zero) T))
+    (GsL _ _ (LS12)) (GsL _ _ (LS13)) (NzS _ _)))
   (let ((many e2)) (MkGEnt one two (GL23) (GL23)
     (leaf-cov (GL23) one F F T T T F (NotT) (LS23) (BOkF (Succ two) T (EB2 one T)) (BOkF two F (EB2 (Zero) F)) (BOkT one T) (BOkT one F))
-    (leaf-cov (GL23) one F F T T F T (NotF) (LS23) (BOkF (Succ two) F (EB2 one F)) (BOkF two T (EB2 (Zero) T)) (BOkT one F) (BOkT one T))))
+    (leaf-cov (GL23) one F F T T F T (NotF) (LS23) (BOkF (Succ two) F (EB2 one F)) (BOkF two T (EB2 (Zero) T)) (BOkT one F) (BOkT one T))
+    (GsL _ _ (LS23)) (GsL _ _ (LS23)) (NzS _ _)))
   (GRCons one (Zero) e0 $ GRCons one one e1 $ GRCons one two e2 $ GREnd one (Succ two) (LtS one two (LtS (Zero) one (LtZ (Zero))))))
 
 (def-fns _ $ (many gent-vac : (erased (Nat) n d) (erased (Lt (Succ n) d) l) -> (many (GEnt n d) e))
-  (MkGEnt n d (GEmpty) (GEmpty) (GCVac (GSG (GEmpty)) d n (BTrue) l) (GCVac (GSG (GEmpty)) d n (BFalse) l)))
+  (let-match erased l (LtS _ d1 _))
+  (MkGEnt n d (GEmpty) (GEmpty) (GCVac (GSG (GEmpty)) d n (BTrue) l) (GCVac (GSG (GEmpty)) d n (BFalse) l) (GsE n) (GsE n) (NzS d1 _)))
 
 (def-fns _ $ (many row-head : (erased (Nat) n d) (many (GRow n d) r) -> (many (GEnt n d) e))
   (match many r _ ((GREnd _ _ l) (gent-vac n d l)) ((GRCons _ _ e _) e)))
@@ -185,35 +215,40 @@
   (GCCons g d n b a0 a1 (GCAOk g (GSG t2) d d1 n b b (GPop0) (GStPop0 d1 b) (GSelN t0 t1 t2 t3 t2 (GPop0) (PkPop0 _ t0 t1 t2 t3)) p2)
     (GCAOk g (GSG t3) d d1 n b c (GPop1) (GStPop1 d1 b c nt) (GSelN t0 t1 t2 t3 t3 (GPop1) (PkPop1 _ t0 t1 t2 t3)) p3)))
 
-(def-fns _ $ (many mk-ent : (erased (Nat) n d) (many (GEnt n (Succ d)) push) (many (GEnt n d) skip) (many (GPrev n d) prev) ->
+(def-fns _ $ (many mk-ent : (erased (Nat) n d) (erased (Lt (Zero) n) np) (many (GEnt n (Succ d)) push) (many (GEnt n d) skip) (many (GPrev n d) prev) ->
     (many (GEnt (Succ n) d) e))
-  (let-match many push (MkGEnt _ _ a0 b0 pa0 pb0))
-  (let-match many skip (MkGEnt _ _ a1 b1 pa1 pb1))
-  (let ((many (Gtree) a2) (many (Gtree) b2) (erased (GPopCov n d (BTrue) a2 b2) qa) (erased (GPopCov n d (BFalse) b2 a2) qb))
+  (let-match erased np (LtZ m))
+  (let-match many push (MkGEnt _ _ a0 b0 pa0 pb0 sa0 sb0 _))
+  (let-match many skip (MkGEnt _ _ a1 b1 pa1 pb1 sa1 sb1 _))
+  (let ((many (Gtree) a2) (many (Gtree) b2) (erased (GPopCov n d (BTrue) a2 b2) qa) (erased (GPopCov n d (BFalse) b2 a2) qb) (erased (GShp n a2) sa2)
+      (erased (GShp n b2) sb2))
     (match many prev _
-      ((PNo _) (values (GEmpty) (GEmpty) (GPCZ n (BTrue) (GEmpty) (GEmpty)) (GPCZ n (BFalse) (GEmpty) (GEmpty))))
+      ((PNo _) (values (GEmpty) (GEmpty) (GPCZ n (BTrue) (GEmpty) (GEmpty)) (GPCZ n (BFalse) (GEmpty) (GEmpty)) (GsE n) (GsE n)))
       ((PYes _ d1 pe)
-        (let-match many pe (MkGEnt _ _ a b pa pb))
-        (values a b (GPCS n d1 (BTrue) (BFalse) a b (NotT) pa pb) (GPCS n d1 (BFalse) (BTrue) b a (NotF) pb pa)))))
+        (let-match many pe (MkGEnt _ _ a b pa pb sa sb _))
+        (values a b (GPCS n d1 (BTrue) (BFalse) a b (NotT) pa pb) (GPCS n d1 (BFalse) (BTrue) b a (NotF) pb pa) sa sb))))
   (MkGEnt (Succ n) d (GNode a0 b1 a2 b2) (GNode b0 a1 b2 a2)
-    (node-cov n d (BTrue) (BFalse) (NotT) a0 b1 a2 b2 pa0 pb1 qa) (node-cov n d (BFalse) (BTrue) (NotF) b0 a1 b2 a2 pb0 pa1 qb)))
+    (node-cov n d (BTrue) (BFalse) (NotT) a0 b1 a2 b2 pa0 pb1 qa) (node-cov n d (BFalse) (BTrue) (NotF) b0 a1 b2 a2 pb0 pa1 qb)
+    (GsN m a0 b1 a2 b2 sa0 sb1 sa2 sb2) (GsN m b0 a1 b2 a2 sb0 sa1 sb2 sa2) (NzP d _ (GpN b0 a1 b2 a2))))
 
-(def-fns _ $ (many gstep : (erased (Nat) n d) (many (GPrev n d) prev) (subterm many (GRow n d) cur) -> (many (GRow (Succ n) d) r))
+(def-fns _ $ (many gstep : (erased (Nat) n d) (erased (Lt (Zero) n) np) (many (GPrev n d) prev) (subterm many (GRow n d) cur) -> (many (GRow (Succ n) d) r))
   (match many cur _
     ((GREnd _ _ l)
-      (GRCons (Succ n) d (mk-ent n d (gent-vac n (Succ d) (lt-weaken (Succ n) d l)) (gent-vac n d l) prev)
+      (GRCons (Succ n) d (mk-ent n d np (gent-vac n (Succ d) (lt-weaken (Succ n) d l)) (gent-vac n d l) prev)
         (GREnd (Succ n) (Succ d) (LtS (Succ n) d l))))
     ((GRCons _ _ e rest)
-      (GRCons (Succ n) d (mk-ent n d (row-head n (Succ d) rest) e prev) (notail $ gstep n (Succ d) (PYes n d e) rest)))))
+      (GRCons (Succ n) d (mk-ent n d np (row-head n (Succ d) rest) e prev) (notail $ gstep n (Succ d) np (PYes n d e) rest)))))
 
 (def-fns _ $ (many grow-to : (subterm many (Nat) k) -> (many (GRow (Succ k) (Zero)) r))
   (match many k _
     ((Zero) (grow1))
-    ((Succ k1) (gstep (Succ k1) (Zero) (PNo (Succ k1)) (notail $ grow-to k1)))))
+    ((Succ k1) (gstep (Succ k1) (Zero) (LtZ k1) (PNo (Succ k1)) (notail $ grow-to k1)))))
 
-(def-fns _ $ (many gtree-full : (many (Nat) h) -> (many (Gtree) gtu) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc))
-  (let-match many (row-head (Succ h) (Zero) (grow-to h)) (MkGEnt _ _ _ tf _ cf))
-  (values tf cf))
+(def-fns _ $ (many gtree-full : (many (Nat) h) -> (many (Gtree) gtu) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (GShp (Succ h) gtu) gsh)
+    (erased (GPres gtu (BTrue)) ne))
+  (let-match many (row-head (Succ h) (Zero) (grow-to h)) (MkGEnt _ _ _ tf _ cf _ sf nz))
+  (let-match erased nz (NzP _ _ ne))
+  (values tf cf sf ne))
 
 (def-adts $ (OddK : ((ES) st) -> Type)
   enum

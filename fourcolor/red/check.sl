@@ -15,7 +15,7 @@
 
 (def-fns _ $ (many init-for : (many (Nat) h) (many (List (InitE)) cache) -> (many (InitFor h) i) (many (List (InitE)) cache2))
   (let-match many (init-lookup h cache) (None _) ((Some _ i) (values i cache)))
-  (let ((many gtu) (erased gc)) (gtree-full h))
+  (let ((many gtu) (erased gc) (erased _) (erased _)) (gtree-full h))
   (let ((many i))
     (match many (flat-in h gtu) (((InitFor h) i))
       ((Some _ fo) (let-match many fo (MkFlatOut _ _ ctu ce ge hc fi)) (IFYes h ctu gtu ce ge gc hc (Some _ fi)))
