@@ -22,6 +22,25 @@
       ((None _) (let ((many ctu) (erased ge) (erased ce) (erased hc)) (ctree-full h gtu)) (IFYes h ctu gtu ce ge gc hc (None _)))))
   (values i (Cons _ (MkInitE h i) cache)))
 
+(def-adts $ (EngE : -> Type)
+  enum
+  (many MkEngE : (many (Nat) h) (many (Maybe (Eng h)) e) -> (EngE)))
+
+(def-fns _ $ (many r4-eng-lookup : (many (Nat) h) (subterm many (List (EngE)) cache) -> (many (Maybe (Maybe (Eng h))) r))
+  (let-match many cache (Cons _ x rest) ((Nil _) (None _)))
+  (let-match many x (MkEngE h2 e))
+  (match many (nat-eq h2 h) _ ((Equal _ _ _) (Some _ e)) ((Unequal _ _ _ _ _) (tail $ r4-eng-lookup h rest))))
+
+; red4's cached fcache h make_eng.
+(def-fns _ $ (many r4-eng-for : (many (Nat) h) (many (List (EngE)) cache) (erased (List (MaybeUninit (WRow))) rp rb) (erased (List (Copy (Nat))) ns)
+    (unique (Array (MaybeUninit (WRow)) rp) lp) (unique (Array (MaybeUninit (WRow)) rb) lb) (unique (Array (Copy (Nat)) ns) ln) (erased (WSt rp rb ns) st) ->
+    (erased (List (MaybeUninit (WRow))) rp2 rb2) (erased (List (Copy (Nat))) ns2) (unique (Array (MaybeUninit (WRow)) rp2) lp2 at lp)
+    (unique (Array (MaybeUninit (WRow)) rb2) lb2 at lb) (unique (Array (Copy (Nat)) ns2) ln2 at ln) (erased (WSt rp2 rb2 ns2) st2) (many (Maybe (Eng h)) e)
+    (many (List (EngE)) cache2))
+  (let-match many (r4-eng-lookup h cache) (None _) ((Some _ e) (values rp rb ns lp lb ln st e cache)))
+  (let ((erased rp2) (erased rb2) (erased ns2) (unique lp2) (unique lb2) (unique ln2) (erased st2) (many e)) (r4-make-eng h rp rb ns lp lb ln st))
+  (values rp2 rb2 ns2 lp2 lb2 ln2 st2 e (Cons _ (MkEngE h e) cache)))
+
 ; The Kempe tree kt of cp, whose ring has h + 2 darts, is sound for the ring traces of cp's map.
 (def-adts $ (KChk : ((List (Step)) cp) -> Type)
   enum
