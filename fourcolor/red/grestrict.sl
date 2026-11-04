@@ -234,11 +234,6 @@
   (GPS gs (GSG (GEmpty)) b n x y rg (GRG (GEmpty)) rb s (pat-hit-e gs b (GPush) p0) (pat-hit-e gs b (GSkip) p1) (pat-hit-e gs b (GPop0) p2)
     (pat-hit-e gs b (GPop1) p3)))
 
-(def-adts $ (SameSlot : ((Slot) a) ((Slot) b) -> Type)
-  enum
-  (many SameY : (erased (Slot) a) -> (SameSlot a a))
-  (many SameN : (erased (Slot) a b) -> (SameSlot a b)))
-
 ; a is the node of a0 to a3, or empty when all four are.
 (def-adts $ (GCn : ((Gtree) a0) ((Gtree) a1) ((Gtree) a2) ((Gtree) a3) ((Gtree) a) -> Type)
   enum

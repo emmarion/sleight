@@ -15,7 +15,8 @@
     (many (List (EngE)) cache2))
   (let-match many (r4-eng-lookup h cache) (None _) ((Some _ e) (values rp rb ns lp lb ln st e cache)))
   (let ((erased rp2) (erased rb2) (erased ns2) (unique lp2) (unique lb2) (unique ln2) (erased st2) (many e)) (r4-make-eng h rp rb ns lp lb ln st))
-  (values rp2 rb2 ns2 lp2 lb2 ln2 st2 e (Cons _ (MkEngE h e) cache)))
+  (let ((many ret)) (Cons _ (MkEngE h e) cache))
+  (values rp2 rb2 ns2 lp2 lb2 ln2 st2 e ret))
 
 ; red4's fcache with its module-level hits, gone and celems buffers and pair rows.
 (def-adts $ (R4St : -> Type)

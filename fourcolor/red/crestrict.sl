@@ -413,9 +413,6 @@
 (def-fns _ $ (many if-e-c : (many (Ctree) t l) -> (many (Ctree) g) (erased (IfE t l g) p))
   (match many l _ ((CEmpty) (values t (IEY t))) (else (values (CEmpty) (IEN t l)))))
 
-(def-fns _ $ (erased ife-h : (erased (Ctree) t l g) (erased (IfE t l g) p) (erased (CtH (Zero) t) h) -> (erased (CtH (Zero) g) r))
-  (match erased p _ ((IEY _) h) ((IEN _ _) (HE (Zero)))))
-
 ; keep holds the traces of t less their matches in r, gone those of t that keep lost.
 (def-adts $ (CRes : ((Nat) h) ((Ctree) t) ((List RG) r) ((Ctree) keep) ((Ctree) gone) -> Type)
   enum
@@ -431,123 +428,32 @@
       (erased (IfE t1 l1 g1) f1) (erased (IfE t2 l2 g2) f2) (erased (IfE t3 l3 g3) f3) (erased (CtCons g1 g2 g3 gone) cg)
       -> (CRes (Zero) (CNode t1 t2 t3) r keep gone)))
 
-(def-adts $ (UTree : -> Type)
-  enum
-  (many UNode : (unique (UTree) u1 u2 u3) -> (UTree))
-  (many UBot : (many (Ctree) l1 l2 l3) -> (UTree))
-  (many UEmpty : -> (UTree)))
-
-; u holds t, which has height h + 1.
-(def-adts $ (UT : ((Nat) h) ((UTree) u) ((Ctree) t) -> Type)
-  enum
-  (many UTE : (erased (Nat) h) -> (UT h (UEmpty) (CEmpty)))
-  (many UTB : (erased (Ctree) l1 l2 l3) (erased (CtH (Zero) l1) k1) (erased (CtH (Zero) l2) k2) (erased (CtH (Zero) l3) k3)
-      -> (UT (Zero) (UBot l1 l2 l3) (CNode l1 l2 l3)))
-  (many UTN : (erased (Nat) h) (erased (UTree) u1 u2 u3) (erased (Ctree) t1 t2 t3) (erased (UT h u1 t1) p1) (erased (UT h u2 t2) p2)
-      (erased (UT h u3 t3) p3) -> (UT (Succ h) (UNode u1 u2 u3) (CNode t1 t2 t3))))
-
-(def-adts $ (KeepE : ((Ctree) t) -> Type)
-  enum
-  (many KEmpty : -> (KeepE (CEmpty)))
-  (many KLive : (erased (Ctree) t) -> (KeepE t)))
-
-; Whether a tree is empty, and whether the tree holding it is at slot b: only KAGone may not be.
-(def-adts $ (KeepAt : ((Ctree) t) ((Slot) a) ((Slot) b) -> Type)
-  enum
-  (many KAGone : (erased (Slot) a b) -> (KeepAt (CEmpty) a b))
-  (many KAEmpty : (erased (Slot) a) -> (KeepAt (CEmpty) a a))
-  (many KALive : (erased (Ctree) t) (erased (Slot) a) -> (KeepAt t a a)))
-
-(def-fns _ $ (many k-drop : (erased (Ctree) t) (erased (Slot) a b) (many (KeepAt t a b) k) -> (many (KeepE t) e))
-  (match many k _ ((KAGone _ _) (KEmpty)) ((KAEmpty _) (KEmpty)) ((KALive _ _) (KLive t))))
-
-(def-fns _ $ (many k-in : (erased (Ctree) t) (erased (Slot) a b) (many (KeepAt t a b) k) -> (many (SameSlot a b) s))
-  (match many k _ ((KAGone _ _) (SameN a b)) ((KAEmpty _) (SameY a)) ((KALive _ _) (SameY a))))
-
-(def-adts $ (CtConsK : ((Ctree) t1) ((Ctree) t2) ((Ctree) t3) -> Type)
-  enum
-  (many CKE : -> (CtConsK (CEmpty) (CEmpty) (CEmpty)))
-  (many CKN : (erased (Ctree) t1 t2 t3) -> (CtConsK t1 t2 t3)))
-
-(def-fns _ $ (many ct-cons-k : (many (Ctree) t1 t2 t3) -> (many (CtConsK t1 t2 t3) k))
-  (let-match many t1 (CEmpty) (else (CKN t1 t2 t3)))
-  (let-match many t2 (CEmpty) (else (CKN t1 t2 t3)))
-  (let-match many t3 (CEmpty) (else (CKN t1 t2 t3)))
-  (CKE))
-
-(def-fns _ $ (many keep3 : (erased (Ctree) a b c) (many (KeepE a) x) (many (KeepE b) y) (many (KeepE c) z) -> (many (CtConsK a b c) k))
-  (let-match many x (KEmpty) (else (CKN a b c)))
-  (let-match many y (KEmpty) (else (CKN a b c)))
-  (let-match many z (KEmpty) (else (CKN a b c)))
-  (CKE))
-
-(def-fns _ $ (many ut-of : (subterm many (Nat) h) (many (Ctree) t) (erased (CtH (Succ h) t) k) ->
-    (unique (UTree) u) (erased (UT h u t) p) (many (KeepE t) e))
-  (let-match many t (CNode t1 t2 t3) ((CEmpty) (values (UEmpty) (UTE h) (KEmpty))) (absurd (CLeaf _) k))
-  (let-match erased k (HN _ _ _ _ k1 k2 k3))
-  (let-match many h (Succ h1) ((Zero) (values (UBot t1 t2 t3) (UTB t1 t2 t3 k1 k2 k3) (KLive t))))
-  (let ((unique u1) (erased p1) (many _)) (notail $ ut-of h1 t1 k1))
-  (let ((unique u2) (erased p2) (many _)) (notail $ ut-of h1 t2 k2))
-  (let ((unique u3) (erased p3) (many _)) (notail $ ut-of h1 t3 k3))
-  (values (UNode u1 u2 u3) (UTN h1 u1 u2 u3 t1 t2 t3 p1 p2 p3) (KLive t)))
-
-(def-fns _ $ (many ctree-restrict-u : (subterm many (Nat) h) (unique (UTree) u) (erased (Ctree) t) (erased (UT h u t) ut) (erased (List RG) r)
-    (many (RxL (Gtree) r) rl) ->
-    (unique (UTree) ku) (many (Ctree) gone) (erased (Ctree) keep) (erased (UT h ku keep) uk) (erased (CRes h t r keep gone) c)
-    (erased (CtH (Succ h) gone) hg) (many (KeepAt keep (slot-of ku) (slot-of u)) e))
-  (match unique u _
-    ((UEmpty cell) (let-match erased ut (UTE _)) (let ((unique ku)) (at unique (cell)))
-      (values ku (CEmpty) (CEmpty) (UTE h) (CRE h r) (HE (Succ h)) (KAEmpty (slot-of ku))))
-    ((UBot l1 l2 l3 cell)
-      (let-match erased ut (UTB _ _ _ k1 k2 k3))
-      (let-match many rl (RxCons _ _ _ _ _)
-        ((RxNil _) (let ((unique ku)) (at unique (cell l1 l2 l3))) (values ku (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KALive t (slot-of ku)))))
-      (let ((erased n1) (erased p1)) (root-exists l1))
-      (let ((erased n2) (erased p2)) (root-exists l2))
-      (let ((erased n3) (erased p3)) (root-exists l3))
-      (let ((many m1) (many m2) (many m3) (erased d1) (erased d2) (erased d3)) (ctr-decr-c l1 l2 l3 r rl n1 n2 n3 p1 p2 p3 k1 k2 k3))
-      (let-match erased d1 (MkDecrAll _ _ _ _ _ _ _ hl1 _ _))
-      (let-match erased d2 (MkDecrAll _ _ _ _ _ _ _ hl2 _ _))
-      (let-match erased d3 (MkDecrAll _ _ _ _ _ _ _ hl3 _ _))
-      (let ((unique (UTree) ku) (erased (Ctree) keep) (erased (UT h ku keep) uk) (erased (CtCons m1 m2 m3 keep) ck)
-          (many (KeepAt keep (slot-of ku) (slot-of u)) e))
-        (match many (ct-cons-k m1 m2 m3) _
-          ((CKE) (let ((unique ue)) (UEmpty)) (values ue (CEmpty) (UTE h) (CCEmpty) (KAGone (slot-of ue) (slot-of u))))
-          ((CKN _ _ _) (let ((unique ue)) (cell m1 m2 m3))
-            (values ue (CNode m1 m2 m3) (UTB m1 m2 m3 hl1 hl2 hl3) (CCNode m1 m2 m3) (KALive (CNode m1 m2 m3) (slot-of ue))))))
-      (let ((many g1) (erased f1)) (if-e-c l1 m1))
-      (let ((many g2) (erased f2)) (if-e-c l2 m2))
-      (let ((many g3) (erased f3)) (if-e-c l3 m3))
-      (let ((many gone) (erased cg)) (ctree-cons g1 g2 g3))
-      (values ku gone keep uk (CRZ l1 l2 l3 m1 m2 m3 g1 g2 g3 keep gone r n1 n2 n3 p1 p2 p3 d1 d2 d3 ck f1 f2 f3 cg)
-        (cons-h (Zero) g1 g2 g3 gone cg (ife-h l1 m1 g1 f1 k1) (ife-h l2 m2 g2 f2 k2) (ife-h l3 m3 g3 f3 k3)) e))
-    ((UNode u1 u2 u3 cell)
-      (let-match erased ut (UTN _ _ _ _ t1 t2 t3 q1 q2 q3))
-      (let-match many h (Succ h1))
-      (let-match many rl (RxCons _ _ _ _ _)
-        ((RxNil _) (let ((unique ku)) (at unique (cell u1 u2 u3))) (values ku (CEmpty) t ut (CRNil h t) (HE (Succ h)) (KALive t (slot-of ku)))))
-      (let ((erased r1) (erased r2) (erased r3) (many l1) (many l2) (many l3) (erased s1) (erased s2) (erased s3))
+; Some keep and gone that restrict t, of height h + 1, by r.
+(def-fns _ $ (erased cres-exists : (subterm erased (Nat) h) (erased (Ctree) t) (erased (CtH (Succ h) t) ht) (erased (List RG) r) (erased (RxL (Gtree) r) rl) ->
+    (erased (Ctree) keep gone) (erased (CRes h t r keep gone) c))
+  (let-match erased ht (HN _ t1 t2 t3 k1 k2 k3) ((HE _) (values (CEmpty) (CEmpty) (CRE h r))))
+  (let-match erased rl (RxCons _ _ _ _ _) ((RxNil _) (values t (CEmpty) (CRNil h t))))
+  (match erased h _
+    ((Zero)
+      (let ((erased n1) (erased p1)) (root-exists t1))
+      (let ((erased n2) (erased p2)) (root-exists t2))
+      (let ((erased n3) (erased p3)) (root-exists t3))
+      (let ((erased m1) (erased m2) (erased m3) (erased d1) (erased d2) (erased d3)) (ctr-decr-c t1 t2 t3 r rl n1 n2 n3 p1 p2 p3 k1 k2 k3))
+      (let ((erased keep) (erased ck)) (ctree-cons m1 m2 m3))
+      (let ((erased g1) (erased f1)) (if-e-c t1 m1))
+      (let ((erased g2) (erased f2)) (if-e-c t2 m2))
+      (let ((erased g3) (erased f3)) (if-e-c t3 m3))
+      (let ((erased gone) (erased cg)) (ctree-cons g1 g2 g3))
+      (values keep gone (CRZ t1 t2 t3 m1 m2 m3 g1 g2 g3 keep gone r n1 n2 n3 p1 p2 p3 d1 d2 d3 ck f1 f2 f3 cg)))
+    ((Succ h1)
+      (let ((erased r1) (erased r2) (erased r3) (erased l1) (erased l2) (erased l3) (erased s1) (erased s2) (erased s3))
         (ctr-split-c (Nil _) (Nil _) (Nil _) (RxNil _) (RxNil _) (RxNil _) r rl))
-      (let ((unique k1) (many b1) (erased a1) (erased w1) (erased c1) (erased kb1) (many e1)) (notail $ ctree-restrict-u h1 u1 t1 q1 r1 l1))
-      (let ((unique k2) (many b2) (erased a2) (erased w2) (erased c2) (erased kb2) (many e2)) (notail $ ctree-restrict-u h1 u2 t2 q2 r2 l2))
-      (let ((unique k3) (many b3) (erased a3) (erased w3) (erased c3) (erased kb3) (many e3)) (notail $ ctree-restrict-u h1 u3 t3 q3 r3 l3))
-      (let ((unique (UTree) ku) (erased (Ctree) keep) (erased (UT h ku keep) uk) (erased (CtCons a1 a2 a3 keep) ck)
-          (many (KeepAt keep (slot-of ku) (slot-of u)) e))
-        (match many (keep3 a1 a2 a3 (k-drop a1 _ _ e1) (k-drop a2 _ _ e2) (k-drop a3 _ _ e3)) _
-          ((CKE) (let ((unique ue)) (UEmpty)) (values ue (CEmpty) (UTE h) (CCEmpty) (KAGone (slot-of ue) (slot-of u))))
-          ((CKN _ _ _)
-            (let ((erased keep)) (CNode a1 a2 a3))
-            (let ((unique nu) (erased un))
-              (match many (k-in a1 _ _ e1) (((UTree) nu at u) ((UT h nu keep) un))
-                ((SameN _ _) (values (cell k1 k2 k3) (UTN h1 k1 k2 k3 a1 a2 a3 w1 w2 w3)))
-                ((SameY _)
-                  (let-match many (k-in a2 _ _ e2) (SameY _) ((SameN _ _) (values (cell k1 k2 k3) (UTN h1 k1 k2 k3 a1 a2 a3 w1 w2 w3))))
-                  (let-match many (k-in a3 _ _ e3) (SameY _) ((SameN _ _) (values (cell k1 k2 k3) (UTN h1 k1 k2 k3 a1 a2 a3 w1 w2 w3))))
-                  (values (at unique (cell k1 k2 k3)) (UTN h1 k1 k2 k3 a1 a2 a3 w1 w2 w3)))))
-            (values nu keep un (CCNode a1 a2 a3) (KALive keep (slot-of nu))))))
-      (let ((many gone) (erased cg)) (ctree-cons b1 b2 b3))
-      (values ku gone keep uk (CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 keep gone r r1 r2 r3 s1 s2 s3 c1 c2 c3 ck cg)
-        (cons-h h b1 b2 b3 gone cg kb1 kb2 kb3) e))))
+      (let ((erased a1) (erased b1) (erased c1)) (cres-exists h1 t1 k1 r1 l1))
+      (let ((erased a2) (erased b2) (erased c2)) (cres-exists h1 t2 k2 r2 l2))
+      (let ((erased a3) (erased b3) (erased c3)) (cres-exists h1 t3 k3 r3 l3))
+      (let ((erased keep) (erased ck)) (ctree-cons a1 a2 a3))
+      (let ((erased gone) (erased cg)) (ctree-cons b1 b2 b3))
+      (values keep gone (CRS h1 t1 t2 t3 a1 a2 a3 b1 b2 b3 keep gone r r1 r2 r3 s1 s2 s3 c1 c2 c3 ck cg)))))
 
 (def-fns _ $ (erased keep-sel : (erased (Ctree) a1 a2 a3 keep u) (erased (Col) e) (erased (List (Col)) et) (erased (Nat) m)
     (erased (CtCons a1 a2 a3 keep) ck) (erased (CtSel (CNode a1 a2 a3) e u) sl) (erased (CtSub u et m) s) -> (erased (CtSub keep (Cons (Col) e et) m) r))
