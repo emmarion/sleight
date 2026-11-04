@@ -1396,10 +1396,11 @@
 ; Hypothetical still bound, then an erased Settled, then any; the older on a tie.
 (def-fns _ $ (many matchable-rank : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
   (let ((many (Bool) s)) $ is-settled env x)
-  (match many (entry-mult-of env x) _
-    ((Many) (match many s _ ((BTrue) 0) ((BFalse) (match many (list-mem-bin (env-objects env) x) _ ((BTrue) 1) ((BFalse) 3)))))
+  (let-match many (entry-mult-of env x) (Many)
     ((Erased) (match many s _ ((BTrue) 2) ((BFalse) 3)))
-    ((Once) 3)))
+    ((Once) 3))
+  (let-match many s (BFalse) ((BTrue) 0))
+  (match many (list-mem-bin (env-objects env) x) _ ((BTrue) 1) ((BFalse) 3)))
 
 (def-fns _ $ (many held-needs-many : (many (Env) env) (many (Nat) tid) (many (Nat) mid) -> (many (Env) r))
   (match many (readable env mid) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat3 (say env "the `Matchable` for ") (qshown env tid) " is erased or out of scope, so a non-erased match cannot take a value of it apart"))))
