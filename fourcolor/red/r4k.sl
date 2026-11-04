@@ -458,10 +458,6 @@
     (unique (Array (Copy (Nat)) ns2) ln2 at ln) (erased (WSt rp2 rb2 ns2) st2) (erased (Gtree) hit miss) (erased (GPart (GSG gtu) (GSG hit) (GSG miss)) pt)
     (erased (NPart ys h (Zero) s0 (BTrue) hit) ph) (erased (NPart ys h (Zero) s0 (BFalse) miss) pm) (erased (NIv ys h (Zero) s0 ilo ihi (BFalse)) iv2)
     (erased (GHit (GSG hit) (Cons RC (MkRx (Ctree) (BS0) ctr) (Nil RC))) hs)))
-; make_eng's node words have no part of gtr.
-(let ((erased R4kZ))
-  (Fn r4k-gl (erased (Nat) h) (erased (Gtree) gtu) (erased (List (Copy (Nat))) xs) (erased (Nat) len ilo ihi) (erased (Length (Copy (Nat)) xs len) lx)
-    (erased (NLay xs h (Zero) gtu) ly) (erased (NIv xs h (Zero) gtu ilo ihi (BTrue)) iv) -> (erased (HAll xs (Zero) (Nil (Nat))) ha)))
 ; -------- end --------
 
 
@@ -513,27 +509,22 @@
     ((KsGo _ _ _ _ _ _ _ _ _ _ _ _ _ _ gT)
       (tail $ r4k-ktc gr (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs3 ndT vsT ucT usT ulT csT caT Hs3 hb3 GT gbT Tt celT rpT rbT nsT lpT lbT lnT stT gT))))
 
-; red4's kempe_flat result with ktc-u's soundness of the tree kt; R4KNo where the node words do not fit the u62 indices.
-(def-adts $ (R4KR : (Pred P) ((Nat) h) -> Type)
-  enum
-  (many R4KYes : (erased Pred P) (erased (Nat) h) (erased (Ctree) kt) (many (R4Out h kt) o) (erased (KSound P h kt) ks) -> (R4KR P h))
-  (many R4KNo : (erased Pred P) (erased (Nat) h) -> (R4KR P h)))
+; No node word has a part of gtr, so the hits buffer may start empty.
+(def-fns _ $ (erased r4k-gz-hall : (erased (List (Copy (Nat))) xs) (erased (Nat) i) (subterm erased (GzA xs) g) -> (erased (HAll xs i (Nil (Nat))) r))
+  (let-match erased g (GzCons w b cm fu xs1 d g1) ((GzNil) (HalNil i (Nil _))))
+  (HalCons w i b cm (Zero) fu xs1 (Nil _) d (ZiZ i (Nil _)) (r4k-gz-hall xs1 (Succ i) g1)))
 
 ; red4's kempe_flat e ctr0.
-(def-fns _ $ (many r4k-kempe : (many R4kG gr) (erased R4kZ hz) (erased Pred P) (many (Nat) h) (erased (Lt (Succ h) 17) hl) (many (Eng h) e) (many (Ctree) ctr)
+(def-fns _ $ (many r4k-kempe : (many R4kG gr) (erased Pred P) (many (Nat) h) (many (Eng h) e) (many (Ctree) ctr)
     (erased (CtCanon (Succ h) ctr) cn) (erased (CtAllP P ctr (Nil (Col))) cap) (erased (List (Nat)) Hs) (unique (Buf Hs) hb) (erased (List (Nat)) G) (unique (Buf G) gb)
     (erased (List (Nat)) T) (unique (Buf T) cel) (erased (List (MaybeUninit (WRow))) rp rb) (erased (List (Copy (Nat))) ns) (unique (Array (MaybeUninit (WRow)) rp) lp)
     (unique (Array (MaybeUninit (WRow)) rb) lb) (unique (Array (Copy (Nat)) ns) ln) (erased (WSt rp rb ns) st) ->
     (erased (List (Nat)) Hs2) (unique (Buf Hs2) hb2 at hb) (erased (List (Nat)) G2) (unique (Buf G2) gb2 at gb) (erased (List (Nat)) T2) (unique (Buf T2) cel2 at cel)
     (erased (List (MaybeUninit (WRow))) rp2 rb2) (erased (List (Copy (Nat))) ns2) (unique (Array (MaybeUninit (WRow)) rp2) lp2 at lp)
-    (unique (Array (MaybeUninit (WRow)) rb2) lb2 at lb) (unique (Array (Copy (Nat)) ns2) ln2 at ln) (erased (WSt rp2 rb2 ns2) st2) (many (R4KR P h) r))
+    (unique (Array (MaybeUninit (WRow)) rb2) lb2 at lb) (unique (Array (Copy (Nat)) ns2) ln2 at ln) (erased (WSt rp2 rb2 ns2) st2) (erased (Ctree) kt) (many (R4Out h kt) ro) (erased (KSound P h kt) ks))
   (let-match erased r4-e0 (Refl _ _))
   (let-match erased r4-e2 (Refl _ _))
-  (let-match many e (MkEng _ gtu xs nodes0 us ul0 vs uc0 _ _ _ len o N _ _ lx ax ly pu _ gc of zu zv pw ctu tb lc _ _ _ _ _ _ ce ge _ ilo ihi iv))
-  (let ((erased len2) (erased lx2) (many dl)) (array-length-dec-many _ _ nodes0))
-  (let-match erased (length-fn _ xs len len2 lx lx2) (Refl _ _))
-  (let-match many dl (Yes _ _ _ _ ll) ((No _ _ _ _ _) (values Hs hb G gb T cel rp rb ns lp lb ln st (R4KNo P h))))
-  (let ((erased lnb)) (lt-trans len array-limit u62-modulus ll array-limit-below-u62))
+  (let-match many e (MkEng _ gtu xs nodes0 us ul0 vs uc0 _ _ _ len o N _ _ lx ax ly pu _ gc of zu zv pw ctu tb lc _ _ _ _ _ _ ce ge _ ilo ihi iv hl lnb gz))
   (let ((unique nd)) (array-copy _ _ nodes0))
   (let ((unique ul)) (bytes-copy _ ul0))
   (let ((unique uc)) (bytes-copy _ uc0))
@@ -552,10 +543,10 @@
         (unique celF) (erased rpF) (erased rbF) (erased nsF) (unique lpF) (unique lbF) (unique lnF) (erased stF) (many kd) (erased k))
     (r4k-ktc gr (u62-add h 2 (Succ (Succ h)) (add-succ-right h _ _ (add-succ-right h _ _ (add-zero-right h))) db) db h hl e N o len pw of ctu ctr gtu xs nd vs uc us ul cs2 ca2
       (Nil _) hb1 G gb T1 cel2 rp rb ns lp lb ln st
-      (MkKgI h N o len ctu ctr gtu xs vs us cs2 (Nil _) T1 ctu ctr c gtu lx lnb ax ly ilo ihi (BTrue) iv pu (ALNil len) (DistNil) (hz h gtu xs len ilo ihi lx ly iv) (KRBase h ctu ctr gtu)
+      (MkKgI h N o len ctu ctr gtu xs vs us cs2 (Nil _) T1 ctu ctr c gtu lx lnb ax ly ilo ihi (BTrue) iv pu (ALNil len) (DistNil) (r4k-gz-hall xs (Zero) gz) (KRBase h ctu ctr gtu)
         (CRBase h ctu ctr gtu) tb lc zv zu zc2 f ss mi am dc)))
   (let-match erased k (MkKdI _ _ _ _ _ _ _ _ _ _ _ _ _ _ kt _ gtr gtu2 _ _ _ _ _ _ _ _ _ _ _ kr kl zv2 zu2 _ _ _ _ _))
   (let-match erased of (OfS _ _ q _ _))
-  (let ((many ro)) (r4k-out kd h hl N o gtu vsF ucF zv2 usF ulF zu2 (LtZ q) xsF kt gtr gtu2 kl))
+  (let ((many r4o)) (r4k-out kd h hl N o gtu vsF ucF zv2 usF ulF zu2 (LtZ q) xsF kt gtr gtu2 kl))
   (values HsF hbF GF gbF TF celF rpF rbF nsF lpF lbF lnF stF
-    (R4KYes P h kt ro (MkKSound P h kt gtr gtu2 (kr-kv P h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr cap) kt gtr gtu2 kr)))))
+    kt r4o (MkKSound P h kt gtr gtu2 (kr-kv P h ctu ctr gtu (KVBase P h ctu gtu ce ge gc) (CKBase P h ctr cap) kt gtr gtu2 kr))))

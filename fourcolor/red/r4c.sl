@@ -245,7 +245,7 @@
   (let-match erased r4-e4s (Refl _ _))
   (let-match erased r4-e0 (Refl _ _))
   (let-match erased r4-one (Refl _ _))
-  (let-match many e (MkEng _ gtu xs nd us ul0 vs uc0 lo rws rtab len o N ld hd lx ax ly pu ptr gc of zu zv pw ctu tb lc ad pl r0 r1 r2 r3 ce ge hc _ _ _))
+  (let-match many e (MkEng _ gtu xs nd us ul0 vs uc0 lo rws rtab len o N ld hd lx ax ly pu ptr gc of zu zv pw ctu tb lc ad pl r0 r1 r2 r3 ce ge hc _ _ _ _ _ _))
   (let ((erased rp) (erased ra) (erased rb) (erased rl))
     (match erased rs (((RotPm rr g) p) ((RowAt rws r rr ld) a) ((RowAt rws (Succ r) rr hd) b) ((Lt (Succ r) 4) l))
       ((RsOne) (values (RotP1) r0 r1 (LtS _ _ (LtZ _))))

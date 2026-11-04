@@ -1199,18 +1199,38 @@
   (lt-trans (Succ (Succ (Succ b))) L4 u62-modulus
     (lt-le-trans (Succ (Succ (Succ b))) (Succ (Succ (Succ (Succ t)))) L4 (LtS _ _ (LtS _ _ (LtS _ _ bt))) (LtS _ L4 l1)) lb))
 
+; Every word of xs has no part of gtr.
+(def-adts $ (GzA : ((List (Copy (Nat))) xs) -> Type)
+  enum
+  (many GzNil : -> (GzA (Nil (Copy (Nat)))))
+  (many GzCons : (erased (Nat) w b cm fu) (erased (List (Copy (Nat))) xs) (erased (NWd w b cm (Zero) fu) d) (erased (GzA xs) r) -> (GzA (Cons (Copy (Nat)) (MkCopy (Nat) w) xs))))
+
+(comptime-match many (bsp-chk 4 0 0 0) (ESome _ r4-b00))
+
+(def-fns _ $ (erased gz-rep : (subterm erased (Nat) n) (erased (List (Copy (Nat))) xs) (erased (Repeat (Copy (Nat)) n (MkCopy (Nat) 0) xs) rp) -> (erased (GzA xs) r))
+  (let-match erased r4-e0 (Refl _ _))
+  (let-match erased rp (RepeatCons _ n1 _ xs1 rp1) ((RepeatNil _ _) (GzNil)))
+  (GzCons 0 0 0 0 xs1 (MkNWd 0 0 0 0 0 0 0 r4-b00 r4-b00 r4-b00) (gz-rep n1 xs1 rp1)))
+
+(def-fns _ $ (erased gz-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) i w b cm fu) (subterm erased (GzA xs) g) (erased (SetNth (Copy (Nat)) xs i (MkCopy (Nat) w) ys) st)
+    (erased (NWd w b cm (Zero) fu) d) -> (erased (GzA ys) r))
+  (let-match erased g (GzCons w0 b0 cm0 fu0 xs1 d0 g1) ((GzNil) (match erased st _)))
+  (match erased st _
+    ((SetHere _ _ _ _) (GzCons w b cm fu xs1 d g1))
+    ((SetThere _ _ _ k1 _ ys1 st1) (GzCons w0 b0 cm0 fu0 ys1 d0 (gz-set xs1 ys1 k1 w b cm fu g1 st1 d)))))
+
 (def-adts $ (FillOk : ((List (Copy (Nat))) xs) ((List (Copy (Nat))) ys) ((Nat) len) ((Nat) j) ((Nat) id) ((Gtree) t) ((Nat) nx) ((Nat) nx2) ((Nat) e) -> Type)
   enum
   (many MkFillOk : (erased (List (Copy (Nat))) xs ys) (erased (Nat) len j id) (erased (Gtree) t) (erased (Nat) nx nx2 e) (erased (Eq (Nat) nx2 e) q)
       (erased (FlB ys j id t nx nx2) f) (erased (Ws xs ys id (Succ id) nx nx2) w) (erased (Length (Copy (Nat)) ys len) l) (erased (AllCu ys) au)
-      -> (FillOk xs ys len j id t nx nx2 e)))
+      (erased (GzA ys) gz) -> (FillOk xs ys len j id t nx nx2 e)))
 
 (def-adts $ (KidsOk : ((List (Copy (Nat))) xs) ((List (Copy (Nat))) ys) ((Nat) len) ((Nat) j) ((Nat) b) ((Nat) e) ((Nat) cm) ((Nat) s) ((List (Gtree)) ts)
     ((Nat) bi) ((Nat) bn) ((Nat) nx) ((Nat) nx2) -> Type)
   enum
   (many MkKidsOk : (erased (List (Copy (Nat))) xs ys) (erased (Nat) len j b e cm s) (erased (List (Gtree)) ts) (erased (Nat) bi bn nx nx2) (erased (Eq (Nat) nx2 e) q)
       (erased (KFs ys j b e cm s ts bn nx e) k) (erased (Ws xs ys bi bn nx e) w) (erased (Length (Copy (Nat)) ys len) l) (erased (AllCu ys) au)
-      -> (KidsOk xs ys len j b e cm s ts bi bn nx nx2)))
+      (erased (GzA ys) gz) -> (KidsOk xs ys len j b e cm s ts bi bn nx nx2)))
 
 (def-fns _ $ (erased skip-subt : (erased (Nat) cm s s2) (erased (List (Gtree)) ts ts3) (erased (Gtree) t) (subterm erased (KSkip cm s ts s2 (Cons (Gtree) t ts3)) sk)
     -> (erased (Subterm (Gtree) t (List (Gtree)) ts) p) (erased (Subterm (List (Gtree)) ts3 (List (Gtree)) ts) q))
@@ -1243,7 +1263,7 @@
   (WsCons xs ys ys i i (Succ i) nx e y s (WiA i i (Succ i) nx e (lt-succ i) (lt-succ i)) (WsNil ys i (Succ i) nx e)))
 
 (def-fns _ $ (many r4-fill-leaf : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) l)
-    (erased (AllCu xs) au) (erased (Nat) j) (many (Gtree) t) (erased (GShp (Succ j) t) gsh) (many (Nat) nx id) (erased (Nat) c1 e) (erased (GCt t (Succ c1)) g)
+    (erased (AllCu xs) au) (erased (GzA xs) gz) (erased (Nat) j) (many (Gtree) t) (erased (GShp (Succ j) t) gsh) (many (Nat) nx id) (erased (Nat) c1 e) (erased (GCt t (Succ c1)) g)
     (erased (Add nx c1 e) ae) (erased (Lt e (Succ len)) el) (erased (Lt id nx) il) (erased (Bits) q) (erased (LeafSet t q) ls)
     -> (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) r at a) (many (Nat) nx2 at nx) (erased (FillOk xs ys len j id t nx nx2 e) ok))
   (let-match erased gsh (GsL _ _ _) (absurd (GsE _) (match erased g _ (absurd (GcL _ _ _ gp) gp))) (absurd (GsN _ _ _ _ _ _ _ _ _) ls))
@@ -1254,7 +1274,7 @@
   (let ((erased idl)) (lt-le-trans id nx len il el))
   (let ((erased ys) (unique r) (erased s) (erased l2) (erased au2)) (r4-place xs a len l au id w idl (lt-trans w 4096 u62-modulus wl r4-4096-u62)))
   (values ys r nx (MkFillOk xs ys len (Zero) id t nx nx nx (Refl _ nx) (FbL ys id m w nx t (MkWElt ys id w (setnth-nth _ xs id _ ys s)) d lm)
-    (w-one xs ys id nx nx _ s) l2 au2)))
+    (w-one xs ys id nx nx _ s) l2 au2 (gz-set xs ys id w (Zero) m m gz s d))))
 
 (def-fns _ $ (erased ncap-len : (erased (Nat) len) (erased (NCap len) nc) -> (erased (Lt (Succ len) u62-modulus) r))
   (let-match erased nc (MkNCap _ L4 ml lb))
@@ -1265,19 +1285,19 @@
 
 (def-fns _
   ((many r4-fill : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) l)
-      (erased (AllCu xs) au) (erased (NCap len) nc) (subterm erased (Nat) j) (subterm many (Gtree) t) (erased (GShp (Succ j) t) gsh) (many (Nat) nx id)
+      (erased (AllCu xs) au) (erased (GzA xs) gz) (erased (NCap len) nc) (subterm erased (Nat) j) (subterm many (Gtree) t) (erased (GShp (Succ j) t) gsh) (many (Nat) nx id)
       (erased (Nat) c1 e) (erased (GCt t (Succ c1)) g) (erased (Add nx c1 e) ae) (erased (Lt e (Succ len)) el) (erased (Lt id nx) il)
       -> (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) r at a) (many (Nat) nx2) (erased (FillOk xs ys len j id t nx nx2 e) ok))
     (let-match many t (GNode t0 t1 t2 t3)
       (absurd (GEmpty) (let-match erased g (GcL _ _ _ gp)) gp)
-      ((GL0) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS0))) (values ys r nx2 ok))
-      ((GL1) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS1))) (values ys r nx2 ok))
-      ((GL2) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS2))) (values ys r nx2 ok))
-      ((GL3) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS3))) (values ys r nx2 ok))
-      ((GL01) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS01))) (values ys r nx2 ok))
-      ((GL12) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS12))) (values ys r nx2 ok))
-      ((GL13) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS13))) (values ys r nx2 ok))
-      ((GL23) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au j t gsh nx id c1 e g ae el il _ (LS23))) (values ys r nx2 ok)))
+      ((GL0) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS0))) (values ys r nx2 ok))
+      ((GL1) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS1))) (values ys r nx2 ok))
+      ((GL2) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS2))) (values ys r nx2 ok))
+      ((GL3) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS3))) (values ys r nx2 ok))
+      ((GL01) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS01))) (values ys r nx2 ok))
+      ((GL12) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS12))) (values ys r nx2 ok))
+      ((GL13) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS13))) (values ys r nx2 ok))
+      ((GL23) (let ((erased ys) (unique r) (many nx2) (erased ok)) (r4-fill-leaf xs a len l au gz j t gsh nx id c1 e g ae el il _ (LS23))) (values ys r nx2 ok)))
     (let-match erased gsh (GsN j1 _ _ _ _ sh0 sh1 sh2 sh3) (absurd (GsL _ _ ls) ls))
     (let-match erased r4-e0 (Refl _ _))
     (let-match erased r4-one (Refl _ _))
@@ -1306,9 +1326,9 @@
     (let ((erased idl)) (lt-le-trans id nx len il nxl))
     (let ((erased xs1) (unique a3) (erased s) (erased l1) (erased au1)) (r4-place xs a len l au id w idl (lt-trans w L4 u62-modulus wl lb)))
     (let ((erased ys) (unique r) (many nx2) (erased ko))
-      (tail $ r4-fill-kids xs1 a3 len l1 au1 nc j1 ts (GssCons _ _ _ sh0 $ GssCons _ _ _ sh1 $ GssCons _ _ _ sh2 $ GssCons _ _ _ sh3 $ GssNil _)
+      (tail $ r4-fill-kids xs1 a3 len l1 au1 (gz-set xs xs1 id w nx cm (Succ (Zero)) gz s d) nc j1 ts (GssCons _ _ _ sh0 $ GssCons _ _ _ sh1 $ GssCons _ _ _ sh2 $ GssCons _ _ _ sh3 $ GssNil _)
         nx 0 nx bn (add-zero-right nx) ch (Zero) cm ks n rr cl abn nx1 (lt-succ bn) e abe el))
-    (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q kfs w2 l2 au2))
+    (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q kfs w2 l2 au2 gz2))
     (let-match erased kfs (KFsCons _ _ _ _ _ _ _ _ m1 _ _ _ k0 kfs1))
     (let-match erased kfs1 (KFsCons _ _ _ _ _ _ _ _ m2 _ _ _ k1f kfs2))
     (let-match erased kfs2 (KFsCons _ _ _ _ _ _ _ _ m3 _ _ _ k2 kfs3))
@@ -1320,9 +1340,9 @@
     (let ((erased w3)) (w-mono xs1 ys nx bn bn e id (Succ id) nx e w2 (SivB nx bn id (Succ id) nx e (lt-succ nx) (le-trans bn bn e (lt-succ bn) (add-le-left bn rr e abe)))
       (SivB bn e id (Succ id) nx e (add-le-left nx n bn abn) (lt-succ e))))
     (values ys r nx2 (MkFillOk xs ys len (Succ j1) id t nx nx2 e (Refl _ nx2)
-      (FbN ys j1 id w nx cm e bn m1 m2 m3 t0 t1 t2 t3 wx d il (ncap-b3 len nx (MkNCap len L4 ml lb) nxl) (add-le-left nx n bn abn) k0 k1f k2 k3) (w-cat xs xs1 ys id (Succ id) nx e w0 w3) l2 au2)))
+      (FbN ys j1 id w nx cm e bn m1 m2 m3 t0 t1 t2 t3 wx d il (ncap-b3 len nx (MkNCap len L4 ml lb) nxl) (add-le-left nx n bn abn) k0 k1f k2 k3) (w-cat xs xs1 ys id (Succ id) nx e w0 w3) l2 au2 gz2)))
   ((many r4-fill-kids : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) l)
-      (erased (AllCu xs) au) (erased (NCap len) nc) (subterm erased (Nat) j) (subterm erased (List (Gtree)) ts) (erased (GShps (Succ j) ts) ss) (many (Nat) b i) (erased (Nat) bi bn) (erased (Add b i bi) abi) (many (List (KidP)) ch) (erased (Nat) s cm) (erased (KS cm s ts ch i) ks)
+      (erased (AllCu xs) au) (erased (GzA xs) gz) (erased (NCap len) nc) (subterm erased (Nat) j) (subterm erased (List (Gtree)) ts) (erased (GShps (Succ j) ts) ss) (many (Nat) b i) (erased (Nat) bi bn) (erased (Add b i bi) abi) (many (List (KidP)) ch) (erased (Nat) s cm) (erased (KS cm s ts ch i) ks)
       (erased (Nat) nr rr) (erased (CtL ch nr rr) cl) (erased (Add bi nr bn) abn) (many (Nat) nx) (erased (Lt bn (Succ nx)) bnx) (erased (Nat) e) (erased (Add nx rr e) ae)
       (erased (Lt e (Succ len)) el)
       -> (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) r at a) (many (Nat) nx2) (erased (KidsOk xs ys len j b e cm s ts bi bn nx nx2) ok))
@@ -1334,7 +1354,7 @@
         (let-match erased (add-fn bi (Zero) bn bi abn (add-zero-right bi)) (Refl _ _))
         (let-match erased (add-fn nx (Zero) e nx ae (add-zero-right nx)) (Refl _ _))
         (values xs a nx (MkKidsOk xs xs len j b nx cm s ts bi bi nx nx (Refl _ nx) (skip-kfs xs j b nx cm s s2 bn nx nx ts (Nil _) sk (KFsNil xs j b nx cm s2 bn nx))
-          (WsNil xs bi bi nx nx) l au))))
+          (WsNil xs bi bi nx nx) l au gz))))
     (let-match many x (MkKidP s1 t))
     (let-match erased hd (KhP _ _ _ _ ts3 _ bit rk ks3))
     (let-match erased cl (CtlCons _ c1 nr1 r1 _ _ _ g cl1 ar))
@@ -1348,16 +1368,16 @@
     (let ((many id)) (u62-add b i bi abi bib))
     (let ((erased pt) (erased pts)) (skip-subt cm s s1 ts ts3 t sk))
     (let ((erased st) (erased ss3)) (shps-skip (Succ j) cm s s1 ts ts3 t sk ss))
-    (let ((erased ys1) (unique a1) (many nx1) (erased fo)) (notail $ r4-fill xs a len l au nc j (subterm pt) t st nx id c1 et g aet etl bil))
-    (let-match erased fo (MkFillOk _ _ _ _ _ _ _ _ _ q1 fb w1 l1 au1))
+    (let ((erased ys1) (unique a1) (many nx1) (erased fo)) (notail $ r4-fill xs a len l au gz nc j (subterm pt) t st nx id c1 et g aet etl bil))
+    (let-match erased fo (MkFillOk _ _ _ _ _ _ _ _ _ q1 fb w1 l1 au1 gz1))
     (let-match erased q1 (Refl _ _))
     (let ((erased ib)) (le-u62 i bi (add-le-right b i bi abi) bib))
     (let ((many bi1)) (u62-inc i (le-u62 (Succ i) (Succ bi) (LtS i (Succ bi) (add-le-right b i bi abi)) sbib)))
     (let ((erased bnet)) (le-trans bn nx et bnx (add-le-left nx c1 et aet)))
     (let ((erased ys) (unique r) (many nx2) (erased ko))
-      (tail $ r4-fill-kids ys1 a1 len l1 au1 nc j (subterm pts) ts3 ss3 b bi1 (Succ bi) bn (add-succ-right b i bi abi) rest (Succ s1) cm ks3 nr1 r1 cl1
+      (tail $ r4-fill-kids ys1 a1 len l1 au1 gz1 nc j (subterm pts) ts3 ss3 b bi1 (Succ bi) bn (add-succ-right b i bi abi) rest (Succ s1) cm ks3 nr1 r1 cl1
         (add-sh bi nr1 bn abn) nx1 bnet e ate el))
-    (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q2 kfs w2 l2 au2))
+    (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q2 kfs w2 l2 au2 gz2))
     (let ((erased bie)) (lt-le-trans bi nx e bil nxe))
     (let ((erased kf)) (KfP ys j b e cm s1 i bi nx et bn nx et t bit rk abi bie (le-trans b bi nx (add-le-left b i bi abi) (lt-weaken bi nx bil)) (add-le-left et r1 e ate)
       (flb-w ys1 ys j bi nx et (Succ bi) bn et e t fb w2 (MkClear bi nx et (Succ bi) bn et e (lt-succ bi) bnx (lt-le-trans bi nx et bil (add-le-left nx c1 et aet)) (lt-succ et)))
@@ -1367,7 +1387,7 @@
     (let ((erased wb)) (w-mono ys1 ys (Succ bi) bn et e bi bn nx e w2 (SivA (Succ bi) bn bi bn nx e (lt-weaken bi (Succ bi) (lt-succ bi)) (lt-succ bn))
       (SivB et e bi bn nx e (add-le-left nx c1 et aet) (lt-succ e))))
     (values ys r nx2 (MkKidsOk xs ys len j b e cm s ts bi bn nx nx2 q2 (skip-kfs ys j b e cm s s1 bn nx e ts (Cons _ t ts3) sk (KFsCons ys j b e cm s1 bn nx et e t ts3 kf kfs))
-      (w-cat xs ys1 ys bi bn nx e wa wb) l2 au2))))
+      (w-cat xs ys1 ys bi bn nx e wa wb) l2 au2 gz2))))
 
 (def-adts
   ; Node g of xs lays out s0, a subtree of the initial chromogram tree, j levels above the leaves: a leaf's symbols, or which children are
@@ -1611,7 +1631,8 @@
   enum
   (many MkNodes : (erased (Nat) h) (erased (Gtree) gtu) (erased (List (Copy (Nat))) xs) (many (Array (Copy (Nat)) xs) ns) (many (Nat) len)
       (erased (Length (Copy (Nat)) xs len) l) (erased (AllCu xs) au) (erased (NLay xs h (Zero) gtu) ly) (erased (NPart xs h (Zero) gtu (BFalse) gtu) pu)
-      (erased (NPart xs h (Zero) gtu (BTrue) (GEmpty)) pt) (erased (Nat) lo hi) (erased (NIv xs h (Zero) gtu lo hi (BTrue)) iv) -> (Nodes h gtu)))
+      (erased (NPart xs h (Zero) gtu (BTrue) (GEmpty)) pt) (erased (Nat) lo hi) (erased (NIv xs h (Zero) gtu lo hi (BTrue)) iv) (erased (Lt len u62-modulus) lnb)
+      (erased (GzA xs) gz) -> (Nodes h gtu)))
 
 (def-fns _ $ (many r4-nodes : (erased (Nat) h) (many (Gtree) gtu) (erased (GShp (Succ h) gtu) gsh) (erased (GPres gtu (BTrue)) ne) -> (many (Maybe (Nodes h gtu)) r))
   (let ((many n) (erased gn)) (r4-cnt gtu))
@@ -1623,10 +1644,11 @@
   (let-match erased r4-one (Refl _ _))
   (let ((erased xs) (unique a) (erased rp)) (array-make (Nat) n 0))
   (let ((erased ys) (unique r) (many _) (erased fo))
-    (r4-fill xs a n (repeat-length _ n _ xs rp) (allcu-rep n xs rp) (MkNCap n L4 ml lb) h gtu gsh 1 0 c1 n gn (AddSucc (Zero) c1 c1 (AddZero c1))
+    (r4-fill xs a n (repeat-length _ n _ xs rp) (allcu-rep n xs rp) (gz-rep n xs rp) (MkNCap n L4 ml lb) h gtu gsh 1 0 c1 n gn (AddSucc (Zero) c1 c1 (AddZero c1))
       (lt-succ n) (LtZ (Zero))))
-  (let-match erased fo (MkFillOk _ _ _ _ _ _ _ _ _ _ f _ l2 au2))
-  (Some _ (MkNodes h gtu ys (share r) n l2 au2 (flb-lay ys h (Zero) _ _ gtu f) (flb-part ys h (Zero) _ _ gtu f) (flb-tr ys h (Zero) _ _ gtu f) _ _ (flb-iv ys h (Zero) _ _ gtu f))))
+  (let-match erased fo (MkFillOk _ _ _ _ _ _ _ _ _ _ f _ l2 au2 gz))
+  (Some _ (MkNodes h gtu ys (share r) n l2 au2 (flb-lay ys h (Zero) _ _ gtu f) (flb-part ys h (Zero) _ _ gtu f) (flb-tr ys h (Zero) _ _ gtu f) _ _ (flb-iv ys h (Zero) _ _ gtu f)
+    (lt-trans n (Succ n) u62-modulus (lt-succ n) (ncap-len n (MkNCap n L4 ml lb))) gz)))
 
 ; v is 0 for the empty tree and 1 otherwise.
 (def-adts $ (Nz : ((Ctree) t) ((Nat) v) -> Type)
@@ -5224,7 +5246,7 @@
       (erased (RowAt rs (Succ (Zero)) (Succ (Zero)) hd) r1) (erased (RowAt rs (Succ (Succ (Zero))) (Succ (Succ (Zero))) ld) r2)
       (erased (RowAt rs (Succ (Succ (Succ (Zero)))) (Succ (Succ (Zero))) hd) r3) (erased (CEv ctu (ESStart)) ce)
       (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (CtH (Succ h) ctu) hc)
-      (erased (Nat) ilo ihi) (erased (NIv xs h (Zero) gtu ilo ihi (BTrue)) iv) -> (Eng h)))
+      (erased (Nat) ilo ihi) (erased (NIv xs h (Zero) gtu ilo ihi (BTrue)) iv) (erased (Lt (Succ h) 17) hl) (erased (Lt len u62-modulus) lnb) (erased (GzA xs) gz) -> (Eng h)))
 
 (def-lvl r4-lm0)
 (def-lvl r4-lm1)
@@ -5252,7 +5274,7 @@
   (let ((many N-m) (erased ae-m) (erased _)) (u62-sub e-m o-m eb (offs-mono (Succ h-m) o-m (Succ (Succ h-m)) e-m of-m oe-m (lt-weaken _ _ (lt-succ (Succ h-m))))))
   (let ((erased cs-m) (unique cn-m) (erased rz)) (array-make (Nat) N-m 0))
   (let ((erased es) (erased evs) (unique evb-m) (erased zev) (erased nb-m)) (r4-tabs h-m hl-m e-m oe-m eb))
-  (let-match many nd-m (MkNodes _ _ xs-m na len-m lx ax ly-m pu-m pt ilo ihi iv-m))
+  (let-match many nd-m (MkNodes _ _ xs-m na len-m lx ax ly-m pu-m pt ilo ihi iv-m lnb-m gz-m))
   (def-fns r4-lm0
     ; red4's count: the walk below node g, at depth k, of the pairs P of level k, adding their hits to the counts.
     ((many r4-count : (erased (List (Copy (Nat))) cs) (unique (Array (Copy (Nat)) cs) cn at cn-m) (erased (Nat) N) (erased (Length (Copy (Nat)) cs N) lc)
@@ -5555,4 +5577,4 @@
       (MkRowAt rs (Succ (Zero)) 1 hd M1 x1 a1 l1 Pq1 t1 u1 (NthThere _ c0 _ (Zero) c1 (NthHere _ c1 _)))
       (MkRowAt rs (Succ (Succ (Zero))) 2 ld M2 x2 a2 l2 Pq2 t2 u2 (NthThere _ c0 _ (Succ (Zero)) c2 (NthThere _ c1 _ (Zero) c2 (NthHere _ c2 _))))
       (MkRowAt rs (Succ (Succ (Succ (Zero)))) 2 hd M3 x3 a3 l3 Pq3 t3 u3
-        (NthThere _ c0 _ (Succ (Succ (Zero))) c3 (NthThere _ c1 _ (Succ (Zero)) c3 (NthThere _ c2 _ (Zero) c3 (NthHere _ c3 _))))) ce ge hc ilo ihi iv-m))))
+        (NthThere _ c0 _ (Succ (Succ (Zero))) c3 (NthThere _ c1 _ (Succ (Zero)) c3 (NthThere _ c2 _ (Zero) c3 (NthHere _ c3 _))))) ce ge hc ilo ihi iv-m hl-m lnb-m gz-m))))
