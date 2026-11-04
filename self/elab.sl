@@ -1392,12 +1392,14 @@
 (def-fns _ $ (many readable : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (or (is-some _ $ adt-of env x) $ and (mult-is-many $ entry-mult-of env x) $ list-mem-bin (env-objects env) x))
 
-; Of the entries one opened group holds, the record keeps the best-ranked: one whose ADT the elaborator sees,
-; then a readable one, then any.
+; Of the entries one opened group holds, the record keeps the best-ranked: a many Settled, then a many
+; Hypothetical still bound, then an erased Settled, then any; the older on a tie.
 (def-fns _ $ (many matchable-rank : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
-  (let-match many (adt-of env x) (None _)
-    ((Some _ _) 0))
-  (match many (readable env x) _ ((BTrue) 1) ((BFalse) 2)))
+  (let ((many (Bool) s)) $ is-settled env x)
+  (match many (entry-mult-of env x) _
+    ((Many) (match many s _ ((BTrue) 0) ((BFalse) (match many (list-mem-bin (env-objects env) x) _ ((BTrue) 1) ((BFalse) 3)))))
+    ((Erased) (match many s _ ((BTrue) 2) ((BFalse) 3)))
+    ((Once) 3)))
 
 (def-fns _ $ (many held-needs-many : (many (Env) env) (many (Nat) tid) (many (Nat) mid) -> (many (Env) r))
   (match many (readable env mid) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat3 (say env "the `Matchable` for ") (qshown env tid) " is erased or out of scope, so a non-erased match cannot take a value of it apart"))))

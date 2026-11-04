@@ -523,9 +523,16 @@ let adt_of env x = match (entry env x).state with Settled (Value.VMatchable adt)
 
 (* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Settled, else read
    from a non-erased entry still bound. Of the entries one opened group holds, the record keeps the best-ranked:
-   one whose ADT the elaborator sees, then a readable one, then any. *)
+   a many Settled, then a many Hypothetical still bound, then an erased Settled, then any; the older on a tie. *)
 let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope.ids)
-let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 else 2
+
+let rank env x =
+  let e = entry env x in
+  match (e.mult, e.state) with
+  | Many, Settled _ -> 0
+  | Many, Hypothetical when List.mem x env.scope.ids -> 1
+  | Erased, Settled _ -> 2
+  | _ -> 3
 
 (* Two atoms equated, forcing (section 7): a contradiction where one opened Matchable lists both; otherwise the
    newer becomes an alias of the older, and the two must have one signature. Whoever forces then restores
