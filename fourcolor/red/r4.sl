@@ -1,3 +1,70 @@
+; len is m 3^j.
+(def-adts $ (Pw3 : ((Nat) j) ((Nat) m) ((Nat) len) -> Type)
+  enum
+  (many PwZ : (erased (Nat) m) -> (Pw3 (Zero) m m))
+  (many PwS : (erased (Nat) j m q len) (erased (Thrice m q) tq) (erased (Pw3 j q len) w) -> (Pw3 (Succ j) m len)))
+
+(def-fns _ $ (many pw3-c : (subterm many (Nat) j) (many (Nat) m) -> (many (Nat) len) (erased (Pw3 j m len) w))
+  (let-match many j (Succ j1) ((Zero) (values m (PwZ m))))
+  (let ((many d) (erased ad)) (add m m))
+  (let ((many q) (erased aq)) (add d m))
+  (let ((many len) (erased w)) (tail $ pw3-c j1 q))
+  (values len (PwS j1 m q len (adds-thrice m d q ad aq) w)))
+
+(def-fns _ $ (erased pw3-le : (erased (Nat) j m len) (subterm erased (Pw3 j m len) w) -> (erased (Lt m (Succ len)) r))
+  (match erased w _
+    ((PwZ _) (lt-succ m))
+    ((PwS j1 _ q _ tq w1) (lt-le-trans _ _ _ (thrice-le m q tq) (LtS _ _ (pw3-le j1 q len w1))))))
+
+; The colours pre, last first, split ps0 down to ps.
+(def-adts $ (SPath : ((List RS) ps0) ((List (Col)) pre) ((List RS) ps) -> Type)
+  enum
+  (many SPNil : (erased (List RS) ps0) -> (SPath ps0 (Nil (Col)) ps0))
+  (many SPCons : (erased (List RS) ps0 ps1 ps) (erased (List (Col)) pre) (erased (Col) e) (erased (SPath ps0 pre ps1) sp)
+      (erased (PSplitE e (Nil RS) ps1 ps) sl) -> (SPath ps0 (Cons (Col) e pre) ps)))
+
+(def-fns _ $ (erased spath-cnt : (erased (List RS) ps0 ps) (erased (List (Col)) pre w et) (erased (Nat) n) (subterm erased (SPath ps0 pre ps) sp)
+    (erased (RevApp (Col) pre w et) ra) (erased (PCnt ps w n) pc) -> (erased (PCnt ps0 et n) r))
+  (match erased sp _
+    ((SPNil _) (let-match erased ra (RANil _ _)) pc)
+    ((SPCons _ ps1 _ pre1 e sp1 sl)
+      (let-match erased ra (RACons _ _ _ _ _ ra1))
+      (let ((erased n1) (erased pc1)) (pcnt-exists ps1 (Cons _ e w)))
+      (let-match erased (add-fn n1 (Zero) n n1 (psplit-cnt e (Nil RS) ps1 ps w (Zero) n1 n sl (PCNil w) pc pc1) (add-zero-right n1)) (Refl _ _))
+      (spath-cnt ps0 ps1 pre1 (Cons _ e w) et n sp1 ra1 pc1))))
+
+(def-fns _ $ (erased mo-le : (erased (Nat) n k m) (subterm erased (Monus n k m) o) -> (erased (Lt m (Succ n)) r))
+  (match erased o _
+    ((MoZ _) (lt-succ n))
+    ((MoE _) (LtZ (Zero)))
+    ((MoS n1 k1 _ o1) (lt-weaken _ _ (mo-le n1 k1 m o1)))))
+
+(def-fns _ $ (erased add-lcancel : (erased (Nat) a b c n) (subterm erased (Add a b n) p) (erased (Add a c n) q) -> (erased (Eq (Nat) b c) r))
+  (match erased p _
+    ((AddZero _) (let-match erased q (AddZero _)) (Refl _ b))
+    ((AddSucc a1 _ n1 p1) (let-match erased q (AddSucc _ _ _ q1)) (add-lcancel a1 b c n1 p1 q1))))
+
+(def-fns _ $ (erased kc-pcnt : (erased (Gtree) gtu) (erased (List RS) ps) (erased (List (Col)) pre et) (erased (Nat) a)
+    (erased (SPath (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) pre ps) sp) (erased (RevApp (Col) pre (Nil (Col)) et) ra)
+    (erased (MC (GSG gtu) (BS0) et a) m) -> (erased (PCnt ps (Nil (Col)) a) r))
+  (let ((erased x) (erased pc)) (pcnt-exists ps (Nil _)))
+  (let-match erased (spath-cnt _ ps pre (Nil _) et x sp ra pc) (PCCons _ _ _ _ a2 _ _ m2 c2 ad))
+  (let-match erased c2 (PCNil _))
+  (let-match erased (mc-fn (GSG gtu) (BS0) et a2 a m2 m) (Refl _ _))
+  (let-match erased (add-fn a (Zero) x a ad (add-zero-right a)) (Refl _ _))
+  pc)
+
+(def-adts $ (Lk : ((List RS) ps) ((ES) st) ((Nat) c) -> Type)
+  enum
+  (many LkOdd : (erased (List RS) ps) -> (Lk ps (ESOdd) (Zero)))
+  (many LkEv : (erased (List RS) ps) (erased (ES) st) (erased (Nat) c) (erased (NotOdd st) no) (erased (PCnt ps (Nil (Col)) c) pc) -> (Lk ps st c)))
+
+(def-fns _ $ (erased lk-ge : (erased (List RS) ps) (erased (ES) st) (erased (Nat) c) (erased (Ctree) t) (erased (Lk ps st c) lk) (erased (CtRoot t c) rt)
+    (erased (CtH (Zero) t) kt) -> (erased (GE t ps st (Zero)) g) (erased (CEv t st) ce))
+  (let-match erased lk (LkOdd _) ((LkEv _ _ _ no pc) (values (GENil t ps st c c rt pc (lt-succ c)) (leaf-cev st no t kt))))
+  (let-match erased rt (RootE) (absurd (RootN _ _ _) kt))
+  (values (GEOdd t ps (Zero)) (CEvE st)))
+
 ; x is hi 2^k + lo, lo below 2^k.
 (def-adts $ (Bsp : ((Nat) k) ((Nat) x) ((Nat) lo) ((Nat) hi) -> Type)
   enum

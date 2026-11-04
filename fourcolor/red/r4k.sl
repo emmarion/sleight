@@ -109,23 +109,6 @@
     ((R4None _) (values 0 (empty-sub l)))
     ((R4Some _ N _ vs uc zv tb hl) (tail $ r4-look-go h hl vs uc N zv 0 0 l (Succ h) (AddZero (Succ h)) kt tb))))
 
-(def-fns _ $ (many r4k-zka-of : -> (many (KtA (CEmpty)) ka))
-  (let-match erased r4-e0 (Refl _ _))
-  (let-match erased r4-one (Refl _ _))
-  (let-match erased r4-e2 (Refl _ _))
-  (let ((erased zs) (unique zb) (erased rp)) (bytes-make 2 (MkU8 (Zero) u8-modulus-pos)))
-  (let ((erased zz)) (sz-made cnt-w 1 2 _ zs rp (LtZ _) (MulSucc (Zero) cnt-w (Zero) cnt-w (MulZero cnt-w) (AddZero cnt-w)) r4-2-u62))
-  (let ((erased x)) (fill-elt cnt-w zs 1 (Zero) (Zero) (fill-zero cnt-w 2 zs rp) zz (LtZ (Zero))))
-  (MkKtA (CEmpty) 0 zs (share zb) (MkFit cnt-w zs 1 zz) (TaL zs (Zero) (Zero) (CEmpty) x (RootE) (HE (Zero)))))
-
-(let ((many r4k-zka)) (r4k-zka-of))
-
-; The counts of red4's result o in the form dfs-c reads.
-(def-fns _ $ (many r4k-kta : (many (Nat) h) (erased (Ctree) kt) (many (R4Out h kt) o) -> (many (KtA kt) ka))
-  (match many o _
-    ((R4None _) r4k-zka)
-    ((R4Some _ N _ vs uc zv tb _) (MkKtA kt (Succ h) vs uc (MkFit cnt-w vs N zv) tb))))
-
 (def-fns _ $ (erased r4k-fld-fn : (erased (Bool) sel) (erased (Nat) ftr fu f g) (erased (Fld sel ftr fu f) p) (erased (Fld sel ftr fu g) q) -> (erased (Eq (Nat) f g) e))
   (match erased p _
     ((FdU _ _) (let-match erased q (FdU _ _)) (Refl _ f))
@@ -441,28 +424,10 @@
       (MkKgI h N o len c0 r0 s0 xs vs2 us2 cs2 Hs T2 keep ctr c2 gtu lx lnb au ly ilo ihi z iv pu al dt ha (KRRestr h c0 r0 s0 ctu keep gone gtr gtu kr hc hk cres)
         (CRGone h c0 r0 s0 ctu keep gone ctr gtr gtu kr hc (canon-h (Succ h) gone cg) cres rl) tk lck zv2 zu2 zc2 f2 ss mi2 am2 dt2))))
 
-; -------- the G round that red4's kempe_flat needs, and the level the loop calls it from --------
-; r4-ground, and the GHit of the hit it leaves as gtr.
-(def-lvl r4k-gl)
-(let ((erased R4kG))
-  (Fn r4k-gl (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) nd) (erased (List (U8)) cs) (unique (Bytes cs) ca) (many (Nat) h)
-    (erased (Lt (Succ h) 17) hk) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) lx) (erased (Lt len u62-modulus) lnb) (erased (AllCu xs) au)
-    (erased (Nat) lc) (erased (Sz flag-w cs lc) zc) (erased (Offs (Succ h) lc) ofc) (erased (Ctree) ctr) (erased (Ca cs h (Zero) ctr) f)
-    (erased (List (Nat)) Hs) (unique (Buf Hs) hb) (erased (AllLt Hs len) al) (erased (Distinct Hs) dt) (erased (HAll xs (Zero) Hs) hl) (erased (List (MaybeUninit (WRow))) rp rb)
-    (erased (List (Copy (Nat))) ns) (unique (Array (MaybeUninit (WRow)) rp) lp) (unique (Array (MaybeUninit (WRow)) rb) lb) (unique (Array (Copy (Nat)) ns) ln)
-    (erased (WSt rp rb ns) st) (erased (Gtree) s0) (erased (NLay xs h (Zero) s0) ly) (erased (Nat) ilo ihi) (erased (Bool) z) (erased (NIv xs h (Zero) s0 ilo ihi z) iv) (erased (Gtree) gtu)
-    (erased (NPart xs h (Zero) s0 (BFalse) gtu) pu) ->
-    (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) nd2 at nd) (erased (Length (Copy (Nat)) ys len) lx2) (erased (AllCu ys) au2) (erased (NKeep AnyFld xs ys) nk)
-    (unique (Bytes cs) ca2 at ca) (erased (List (Nat)) Hs2) (unique (Buf Hs2) hb2 at hb) (erased (AllLt Hs2 len) al2) (erased (Distinct Hs2) dt2) (erased (HAll ys (Zero) Hs2) hl2)
-    (erased (List (MaybeUninit (WRow))) rp2 rb2) (erased (List (Copy (Nat))) ns2) (unique (Array (MaybeUninit (WRow)) rp2) lp2 at lp) (unique (Array (MaybeUninit (WRow)) rb2) lb2 at lb)
-    (unique (Array (Copy (Nat)) ns2) ln2 at ln) (erased (WSt rp2 rb2 ns2) st2) (erased (Gtree) hit miss) (erased (GPart (GSG gtu) (GSG hit) (GSG miss)) pt)
-    (erased (NPart ys h (Zero) s0 (BTrue) hit) ph) (erased (NPart ys h (Zero) s0 (BFalse) miss) pm) (erased (NIv ys h (Zero) s0 ilo ihi (BFalse)) iv2)
-    (erased (GHit (GSG hit) (Cons RC (MkRx (Ctree) (BS0) ctr) (Nil RC))) hs)))
-; -------- end --------
 
 
 ; red4's ktc d of kempe_flat.
-(def-fns _ $ (many r4k-ktc : (many R4kG gr) (subterm many (Nat) d) (erased (Lt d u62-modulus) db) (many (Nat) h) (erased (Lt (Succ h) 17) hl) (many (Eng h) e)
+(def-fns _ $ (many r4k-ktc : (subterm many (Nat) d) (erased (Lt d u62-modulus) db) (many (Nat) h) (erased (Lt (Succ h) 17) hl) (many (Eng h) e)
     (erased (Nat) N o len) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw) (erased (Offs (Succ h) o) of) (erased (Ctree) c0 r0) (erased (Gtree) s0)
     (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) nd) (erased (List Cnt) vs) (unique (Bytes vs) uc) (erased (List (U8)) us) (unique (Bytes us) ul)
     (erased (List (U8)) cs) (unique (Bytes cs) ca) (erased (List (Nat)) Hs) (unique (Buf Hs) hb) (erased (List (Nat)) G) (unique (Buf G) gb) (erased (List (Nat)) T)
@@ -478,14 +443,14 @@
       (let-match erased g (MkKgI _ _ _ _ _ _ _ _ _ _ _ _ _ ctu ctr c gtu lx lnb au ly ilo ihi z iv pu al dt ha kr cr tb lc zv zu zc f ss mi am dc))
       (let ((erased ys) (unique nd2) (erased lx2) (erased au2) (erased nk) (unique ca2) (erased Hs2) (unique hb2) (erased al2) (erased dt2) (erased ha2) (erased rp2) (erased rb2)
             (erased ns2) (unique lp2) (unique lb2) (unique ln2) (erased st2) (erased hit) (erased miss) (erased gp) (erased nt) (erased nm) (erased iv2) (erased gh))
-        (gr xs nd cs ca h hl len lx lnb au o zc of ctr (r4c-ca-ss cs h (Zero) c ctr f ss) Hs hb al dt ha rp rb ns lp lb ln st s0 ly ilo ihi z iv gtu pu))
+        (r4-ground xs nd cs ca h hl len lx lnb au o zc of ctr (r4c-ca-ss cs h (Zero) c ctr f ss) Hs hb al dt ha rp rb ns lp lb ln st s0 ly ilo ihi z iv gtu pu))
       (values ys nd2 vs uc us ul cs ca2 Hs2 hb2 G gb T cel rp2 rb2 ns2 lp2 lb2 ln2 st2 (BFalse)
         (MkKdI h N o len c0 r0 s0 (BFalse) ys vs us cs Hs2 T ctu c hit miss lx2 lnb au2 (r4g-nlay-keep AnyFld xs ys h (Zero) s0 ly nk) ilo ihi (BFalse) iv2 al2 dt2 ha2
           (KRSplit h c0 r0 s0 ctu ctr gtu hit miss kr cr gp gh) (KlN h s0 vs us ys ctu hit miss tb lc nt nm) zv zu zc f mi am dc))))
   (let ((erased d1b)) (lt-trans d1 d u62-modulus (lt-succ d1) db))
   (let ((erased xs1) (unique nd1) (erased vs1) (unique uc1) (erased us1) (unique ul1) (erased cs1) (unique ca1) (erased Hs1) (unique hb1) (erased G1) (unique gb1) (erased T1)
         (unique cel1) (erased rp1) (erased rb1) (erased ns1) (unique lp1) (unique lb1) (unique ln1) (erased st1) (many kd1) (erased k1))
-    (notail $ r4k-ktc gr (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs nd vs uc us ul cs ca Hs hb G gb T cel rp rb ns lp lb ln st g))
+    (notail $ r4k-ktc (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs nd vs uc us ul cs ca Hs hb G gb T cel rp rb ns lp lb ln st g))
   (let ((unique ndS) (erased vsS) (unique ucS) (erased usS) (unique ulS) (erased csS) (unique caS) (erased GS) (unique gbS) (erased Tz) (unique celS) (erased rpS) (erased rbS)
         (erased nsS) (unique lpS) (unique lbS) (unique lnS) (erased stS) (many r1))
     (r4k-step h hl e N o len pw of c0 r0 s0 kd1 xs1 nd1 vs1 uc1 us1 ul1 cs1 ca1 Hs1 G1 gb1 T1 cel1 rp1 rb1 ns1 lp1 lb1 ln1 st1 k1))
@@ -499,7 +464,7 @@
       ((KsDone _ _ _ _ _ _ _ _ _ _ _ _ _ _ kS) (values xs1 ndS vsS ucS usS ulS csS caS Hs1 hb1 GS gbS Tz celS rpS rbS nsS lpS lbS lnS stS kd1 kS))
       ((KsKill _ _ _ _ _ _ _ _ _ _ _ _ _ _ kS) (values xs1 ndS vsS ucS usS ulS csS caS Hs1 hb1 GS gbS Tz celS rpS rbS nsS lpS lbS lnS stS (BTrue) kS))
       ((KsGo _ _ _ _ _ _ _ _ _ _ _ _ _ _ gS)
-        (notail $ r4k-ktc gr (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs1 ndS vsS ucS usS ulS csS caS Hs1 hb1 GS gbS Tz celS rpS rbS nsS lpS lbS lnS stS gS))))
+        (notail $ r4k-ktc (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs1 ndS vsS ucS usS ulS csS caS Hs1 hb1 GS gbS Tz celS rpS rbS nsS lpS lbS lnS stS gS))))
   (let ((unique ndT) (erased vsT) (unique ucT) (erased usT) (unique ulT) (erased csT) (unique caT) (erased GT) (unique gbT) (erased Tt) (unique celT) (erased rpT) (erased rbT)
         (erased nsT) (unique lpT) (unique lbT) (unique lnT) (erased stT) (many r2))
     (r4k-step h hl e N o len pw of c0 r0 s0 kd3 xs3 nd3 vs3 uc3 us3 ul3 cs3 ca3 Hs3 G3 gb3 T3 cel3 rp3 rb3 ns3 lp3 lb3 ln3 st3 k3))
@@ -507,7 +472,7 @@
     ((KsDone _ _ _ _ _ _ _ _ _ _ _ _ _ _ kT) (values xs3 ndT vsT ucT usT ulT csT caT Hs3 hb3 GT gbT Tt celT rpT rbT nsT lpT lbT lnT stT kd3 kT))
     ((KsKill _ _ _ _ _ _ _ _ _ _ _ _ _ _ kT) (values xs3 ndT vsT ucT usT ulT csT caT Hs3 hb3 GT gbT Tt celT rpT rbT nsT lpT lbT lnT stT (BTrue) kT))
     ((KsGo _ _ _ _ _ _ _ _ _ _ _ _ _ _ gT)
-      (tail $ r4k-ktc gr (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs3 ndT vsT ucT usT ulT csT caT Hs3 hb3 GT gbT Tt celT rpT rbT nsT lpT lbT lnT stT gT))))
+      (tail $ r4k-ktc (u62-dec d1 d db) d1b h hl e N o len pw of c0 r0 s0 xs3 ndT vsT ucT usT ulT csT caT Hs3 hb3 GT gbT Tt celT rpT rbT nsT lpT lbT lnT stT gT))))
 
 ; No node word has a part of gtr, so the hits buffer may start empty.
 (def-fns _ $ (erased r4k-gz-hall : (erased (List (Copy (Nat))) xs) (erased (Nat) i) (subterm erased (GzA xs) g) -> (erased (HAll xs i (Nil (Nat))) r))
@@ -515,7 +480,7 @@
   (HalCons w i b cm (Zero) fu xs1 (Nil _) d (ZiZ i (Nil _)) (r4k-gz-hall xs1 (Succ i) g1)))
 
 ; red4's kempe_flat e ctr0.
-(def-fns _ $ (many r4k-kempe : (many R4kG gr) (erased Pred P) (many (Nat) h) (many (Eng h) e) (many (Ctree) ctr)
+(def-fns _ $ (many r4k-kempe : (erased Pred P) (many (Nat) h) (many (Eng h) e) (many (Ctree) ctr)
     (erased (CtCanon (Succ h) ctr) cn) (erased (CtAllP P ctr (Nil (Col))) cap) (erased (List (Nat)) Hs) (unique (Buf Hs) hb) (erased (List (Nat)) G) (unique (Buf G) gb)
     (erased (List (Nat)) T) (unique (Buf T) cel) (erased (List (MaybeUninit (WRow))) rp rb) (erased (List (Copy (Nat))) ns) (unique (Array (MaybeUninit (WRow)) rp) lp)
     (unique (Array (MaybeUninit (WRow)) rb) lb) (unique (Array (Copy (Nat)) ns) ln) (erased (WSt rp rb ns) st) ->
@@ -541,7 +506,7 @@
   (let ((erased db)) (lt-le-trans (Succ (Succ h)) (Succ 17) u62-modulus (LtS (Succ h) 17 hl) (LtS 17 u62-modulus r4-17-u62)))
   (let ((erased xsF) (unique ndF) (erased vsF) (unique ucF) (erased usF) (unique ulF) (erased csF) (unique caF) (erased HsF) (unique hbF) (erased GF) (unique gbF) (erased TF)
         (unique celF) (erased rpF) (erased rbF) (erased nsF) (unique lpF) (unique lbF) (unique lnF) (erased stF) (many kd) (erased k))
-    (r4k-ktc gr (u62-add h 2 (Succ (Succ h)) (add-succ-right h _ _ (add-succ-right h _ _ (add-zero-right h))) db) db h hl e N o len pw of ctu ctr gtu xs nd vs uc us ul cs2 ca2
+    (r4k-ktc (u62-add h 2 (Succ (Succ h)) (add-succ-right h _ _ (add-succ-right h _ _ (add-zero-right h))) db) db h hl e N o len pw of ctu ctr gtu xs nd vs uc us ul cs2 ca2
       (Nil _) hb1 G gb T1 cel2 rp rb ns lp lb ln st
       (MkKgI h N o len ctu ctr gtu xs vs us cs2 (Nil _) T1 ctu ctr c gtu lx lnb ax ly ilo ihi (BTrue) iv pu (ALNil len) (DistNil) (r4k-gz-hall xs (Zero) gz) (KRBase h ctu ctr gtu)
         (CRBase h ctu ctr gtu) tb lc zv zu zc2 f ss mi am dc)))
