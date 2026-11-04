@@ -1685,11 +1685,6 @@ The shapes and the messages below are the session's.
 181. Self's indexed ExprDemand and DemandBridge retain the distinction between
     a head's one physical word and its semantic many/unique demand.
 
-183. **Questions left for the owner**, none decided here:
-    - The `newtype` and `extern` marks being structural (sections 24 and 37),
-      an unmarked `(Matchable enum T ...)` literal does not accept an extern
-      type's Matchable, and no signature abstracts over the marks.
-
 184. **What a value prints as** (DESIGN.md section 45). Not decided, and
     left open by the owner: whether a rendering's reading back as the same
     value becomes a test of its own, which `tests/literal_print.sl` already

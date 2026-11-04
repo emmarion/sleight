@@ -77,6 +77,15 @@ references are to DESIGN.md.
 27. Should `List` declare `head` and `rest` `unique` (the owner's
     remark)? A construction at `many` would still take them at `many`,
     and one at `unique` would own its whole spine.
+40. Should a signature be able to abstract over a `Matchable`'s marks
+    (§24)? The marks are written words, so a `Matchable` parameter fixes
+    them, and generic code over first-class ADTs is written once per
+    combination: an unmarked `(Matchable enum T ...)` does not accept an
+    `extern` or `newtype` type's `Matchable`. Inside code abstracted over
+    them, what the marks decide would be unknown: whether the
+    constructors have cells (§37), whether `coercible-wrap` and
+    `coercible-tag` apply (§33), and whether a dispatching match reads
+    the `Matchable`'s value (§24).
 
 ## `at`, slots and cells
 
