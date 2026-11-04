@@ -578,3 +578,51 @@
           (values (GNode a0 a1 a2 a3) ue (GEmpty) (UGE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ pt))) hs
             (GKAGone (slot-of ue) (slot-of u)))))
       (values (GNode a0 a1 a2 a3) nu g mg pt hs (GKALive g (slot-of nu))))))
+
+; a is the node of a0 to a3, or empty when all four are.
+(def-adts $ (GCn : ((Gtree) a0) ((Gtree) a1) ((Gtree) a2) ((Gtree) a3) ((Gtree) a) -> Type)
+  enum
+  (many GCnE : -> (GCn (GEmpty) (GEmpty) (GEmpty) (GEmpty) (GEmpty)))
+  (many GCnN : (erased (Gtree) a0 a1 a2 a3) -> (GCn a0 a1 a2 a3 (GNode a0 a1 a2 a3))))
+
+(def-fns _ $ (erased bp-sym : (erased (Bool) l x y) (erased (BitPart l x y) p) -> (erased (BitPart l y x) q))
+  (match erased p _ ((BPL) (BPR)) ((BPR) (BPL)) ((BPN) (BPN))))
+
+(def-fns _ $ (erased leaf-sub : (erased (Gtree) l) (erased (Bool) l0 l1 l2 l3 x0 x1 x2 x3 y0 y1 y2 y3) (erased (LeafSet l (MkBits l0 l1 l2 l3)) ll)
+    (erased (BitPart l0 x0 y0) q0) (erased (BitPart l1 x1 y1) q1) (erased (BitPart l2 x2 y2) q2) (erased (BitPart l3 x3 y3) q3) ->
+    (erased (Gtree) g) (erased (LeafSet g (MkBits x0 x1 x2 x3)) lg))
+  (match erased ll _
+    ((LSE) (let-match erased q0 (BPN)) (let-match erased q1 (BPN)) (let-match erased q2 (BPN)) (let-match erased q3 (BPN)) (values (GEmpty) (LSE)))
+    ((LS0) (let-match erased q1 (BPN)) (let-match erased q2 (BPN)) (let-match erased q3 (BPN))
+      (match erased q0 _ ((BPL) (values (GL0) (LS0))) ((BPR) (values (GEmpty) (LSE)))))
+    ((LS1) (let-match erased q0 (BPN)) (let-match erased q2 (BPN)) (let-match erased q3 (BPN))
+      (match erased q1 _ ((BPL) (values (GL1) (LS1))) ((BPR) (values (GEmpty) (LSE)))))
+    ((LS2) (let-match erased q0 (BPN)) (let-match erased q1 (BPN)) (let-match erased q3 (BPN))
+      (match erased q2 _ ((BPL) (values (GL2) (LS2))) ((BPR) (values (GEmpty) (LSE)))))
+    ((LS3) (let-match erased q0 (BPN)) (let-match erased q1 (BPN)) (let-match erased q2 (BPN))
+      (match erased q3 _ ((BPL) (values (GL3) (LS3))) ((BPR) (values (GEmpty) (LSE)))))
+    ((LS01) (let-match erased q2 (BPN)) (let-match erased q3 (BPN))
+      (match erased q0 _
+        ((BPL) (match erased q1 _ ((BPL) (values (GL01) (LS01))) ((BPR) (values (GL0) (LS0)))))
+        ((BPR) (match erased q1 _ ((BPL) (values (GL1) (LS1))) ((BPR) (values (GEmpty) (LSE)))))))
+    ((LS12) (let-match erased q0 (BPN)) (let-match erased q3 (BPN))
+      (match erased q1 _
+        ((BPL) (match erased q2 _ ((BPL) (values (GL12) (LS12))) ((BPR) (values (GL1) (LS1)))))
+        ((BPR) (match erased q2 _ ((BPL) (values (GL2) (LS2))) ((BPR) (values (GEmpty) (LSE)))))))
+    ((LS13) (let-match erased q0 (BPN)) (let-match erased q2 (BPN))
+      (match erased q1 _
+        ((BPL) (match erased q3 _ ((BPL) (values (GL13) (LS13))) ((BPR) (values (GL1) (LS1)))))
+        ((BPR) (match erased q3 _ ((BPL) (values (GL3) (LS3))) ((BPR) (values (GEmpty) (LSE)))))))
+    ((LS23) (let-match erased q0 (BPN)) (let-match erased q1 (BPN))
+      (match erased q2 _
+        ((BPL) (match erased q3 _ ((BPL) (values (GL23) (LS23))) ((BPR) (values (GL2) (LS2)))))
+        ((BPR) (match erased q3 _ ((BPL) (values (GL3) (LS3))) ((BPR) (values (GEmpty) (LSE)))))))))
+
+(def-fns _ $ (erased part-cn : (erased (Gtree) t a0 a1 a2 a3 b0 b1 b2 b3 a b) (erased (GPart (GSG t) (GSG (GNode a0 a1 a2 a3)) (GSG (GNode b0 b1 b2 b3))) p)
+    (erased (GCn a0 a1 a2 a3 a) ca) (erased (GCn b0 b1 b2 b3 b) cb) -> (erased (GPart (GSG t) (GSG a) (GSG b)) r))
+  (let ((erased p1)) (match erased ca (((GPart (GSG t) (GSG a) (GSG (GNode b0 b1 b2 b3))) q)) ((GCnE) (part-hit-e (GSG t) _ p)) ((GCnN _ _ _ _) p)))
+  (match erased cb _ ((GCnE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ p1)))) ((GCnN _ _ _ _) p1)))
+
+(def-fns _ $ (erased ghit-cn : (erased (Gtree) a0 a1 a2 a3 a) (erased (List RC) r) (erased (GCn a0 a1 a2 a3 a) ca) (erased (GHit (GSG (GNode a0 a1 a2 a3)) r) h)
+    -> (erased (GHit (GSG a) r) res))
+  (match erased ca _ ((GCnE) (GHE r)) ((GCnN _ _ _ _) h)))
