@@ -59,7 +59,7 @@
   (let ((many i) (many cache2)) (init-for h cache))
   (let-match many i (IFYes _ ctu gtu ce ge gc _ fl))
   (let-match many fl (Some _ fi) ((None _) (values (KCNo cp) cache2)))
-  (let ((many ctr) (erased hr) (erased rt) (erased _)) (cpcolor-c h cp cs na))
+  (let ((many ctr) (erased hr) (erased _) (erased rt) (erased _)) (cpcolor-c h cp cs na))
   (let-match many (kempe-tree-f (MkPred (List (Step)) cp CpColR) h ctu ctr gtu ce ge gc (ctring-allp cp ctr (Nil _) rt) hr fi) (KtYes _ _ kt ka ks)
     ((KtNo _ _) (values (KCNo cp) cache2)))
   (values (KCYes cp h kt ka ks cs na) cache2))

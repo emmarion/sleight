@@ -172,7 +172,7 @@
   (let ((many y) (erased my)) (mul 4 (Succ h)))
   (let ((many b) (erased xy)) (add x y))
   (let-match many (lt-dec (Succ k) b) (Yes _ _ _ _ lt) (else (BPNo h m cp)))
-  (let ((many t) (erased ht) (erased rt) (erased cm)) (cpcolor-c h cp cs na))
+  (let ((many t) (erased ht) (erased _) (erased rt) (erased cm)) (cpcolor-c h cp cs na))
   (BPYes h m cp t (MkBkProg h m cp t k x y b cq na cs cc mx my xy lt ht rt cm)))
 
 (def-adts $ (BBD : ((Nat) h) ((Nat) m) ((List (List (Step))) cps) -> Type)

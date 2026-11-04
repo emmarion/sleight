@@ -1717,10 +1717,6 @@
     ((OrLL _ _) (let-match erased la (LfL _)) (let-match erased lb (LfL _)) (values (Bit1) (LfL (CEmpty)) (r4c-or1 (Bit1))))
     (absurd (OrNN _ _ _ _ _ _ _ _ _ _ _ _ _ _) la)))
 
-(def-fns _ $ (erased r4c-sel-canon : (erased (Nat) j) (erased (Ctree) t1 t2 t3 u) (erased (Col) e) (erased (CtCanon j t1) c1) (erased (CtCanon j t2) c2) (erased (CtCanon j t3) c3)
-    (erased (CtSel (CNode t1 t2 t3) e u) s) -> (erased (CtCanon j u) r))
-  (match erased s _ ((SelN0 _ _ _) (canon-empty j)) ((SelN1 _ _ _) c1) ((SelN2 _ _ _) c2) ((SelN3 _ _ _) c3)))
-
 (def-fns _ $ (erased r4c-perm-c : (erased (Perm) g) (subterm erased (Nat) j) (erased (Ctree) t) (erased (CtCanon j t) c) -> (erased (Ctree) tp) (erased (CtPerm g t tp) p)
     (erased (CtCanon j tp) ct))
   (match erased c _
@@ -1731,9 +1727,9 @@
       (let ((erased u1) (erased s1)) (sel-node t1 t2 t3 g1))
       (let ((erased u2) (erased s2)) (sel-node t1 t2 t3 g2))
       (let ((erased u3) (erased s3)) (sel-node t1 t2 t3 g3))
-      (let ((erased a1) (erased p1) (erased k1)) (r4c-perm-c g j1 u1 (r4c-sel-canon j1 t1 t2 t3 u1 g1 c1 c2 c3 s1)))
-      (let ((erased a2) (erased p2) (erased k2)) (r4c-perm-c g j1 u2 (r4c-sel-canon j1 t1 t2 t3 u2 g2 c1 c2 c3 s2)))
-      (let ((erased a3) (erased p3) (erased k3)) (r4c-perm-c g j1 u3 (r4c-sel-canon j1 t1 t2 t3 u3 g3 c1 c2 c3 s3)))
+      (let ((erased a1) (erased p1) (erased k1)) (r4c-perm-c g j1 u1 (canon-sel j1 t1 t2 t3 u1 g1 c1 c2 c3 s1)))
+      (let ((erased a2) (erased p2) (erased k2)) (r4c-perm-c g j1 u2 (canon-sel j1 t1 t2 t3 u2 g2 c1 c2 c3 s2)))
+      (let ((erased a3) (erased p3) (erased k3)) (r4c-perm-c g j1 u3 (canon-sel j1 t1 t2 t3 u3 g3 c1 c2 c3 s3)))
       (let ((erased tp) (erased cn2)) (cn-c a1 a2 a3))
       (values tp (CPN g1 g2 g3 t1 t2 t3 u1 u2 u3 a1 a2 a3 tp s1 s2 s3 p1 p2 p3 (cn-cons a1 a2 a3 tp cn2)) (CanN j1 a1 a2 a3 tp k1 k2 k3 cn2)))))
 
@@ -1756,18 +1752,85 @@
   (let ((erased t) (erased cn)) (cn-c u1 u2 u3))
   (values t (OrNN a1 a2 a3 b1 b2 b3 u1 u2 u3 t o1 o2 o3 (cn-cons u1 u2 u3 t cn)) (CanN j1 u1 u2 u3 t n1 n2 n3 cn)))
 
-; The trie tree c2 and celems T2 that red4's gone loop built over the gone buffer G from nothing, and ctr, the union of gone's two rotations.
+; red4's ctree_iter cadd over y, the subtree of ctr at the colours pre (last first) of the prefix p: the trie tree c and celems T become c2 and T2.
+(def-adts $ (LW : ((Nat) h) ((Ctree) ctr y) ((List (Col)) pre) ((Nat) p) ((Ctree) c) ((List (Nat)) T) ((Ctree) c2) ((List (Nat)) T2) -> Type)
+  enum
+  (many LwE : (erased (Nat) h) (erased (Ctree) ctr) (erased (List (Col)) pre) (erased (Nat) p) (erased (Ctree) c) (erased (List (Nat)) T) -> (LW h ctr (CEmpty) pre p c T c T))
+  (many LwL : (erased (Nat) h) (erased (Ctree) ctr lf) (erased (List (Col)) pre) (erased (Nat) p) (erased (Ctree) c c2) (erased (List (Nat)) T T2) (erased (RIdx pre p) ri)
+      (erased (Length (Col) pre (Succ h)) le) (erased (CtAt ctr pre (CLeaf lf)) a) (erased (CAd c T p pre c2 T2) ad) -> (LW h ctr (CLeaf lf) pre p c T c2 T2))
+  (many LwN : (erased (Nat) h) (erased (Ctree) ctr y1 y2 y3) (erased (List (Col)) pre) (erased (Nat) p q) (erased (Thrice p q) tq) (erased (Ctree) c c1 c2 c3)
+      (erased (List (Nat)) T T1 T2 T3) (erased (LW h ctr y1 (Cons (Col) (C1) pre) q c T c1 T1) w1) (erased (LW h ctr y2 (Cons (Col) (C2) pre) (Succ q) c1 T1 c2 T2) w2)
+      (erased (LW h ctr y3 (Cons (Col) (C3) pre) (Succ (Succ q)) c2 T2 c3 T3) w3) -> (LW h ctr (CNode y1 y2 y3) pre p c T c3 T3)))
+
+; Over the walk, the trace ti's bit in c stays its bit in T.
+(def-fns _ $ (erased r4c-lw-bit : (erased (Nat) h p ti) (erased (Ctree) ctr y c c2 x0) (erased (List (Nat)) T T2) (erased (List (Col)) pre tp) (erased (Bit) b0)
+    (subterm erased (LW h ctr y pre p c T c2 T2) w) (erased (RIdx tp ti) ri) (erased (Length (Col) tp (Succ h)) le) (erased (CtAt c tp x0) a0) (erased (Lf x0 b0) l0)
+    (erased (MemB ti T b0) m0) -> (erased (Bit) b) (erased (Ctree) x) (erased (CtAt c2 tp x) a) (erased (Lf x b) l) (erased (MemB ti T2 b) m))
+  (match erased w _
+    ((LwE _ _ _ _ _ _) (values b0 x0 a0 l0 m0))
+    ((LwL _ _ _ _ _ _ _ _ _ rp lp _ ad)
+      (let ((erased _) (erased b) (erased x) (erased _) (erased a) (erased l) (erased m) (erased _)) (r4c-cad-bit h p ti c c2 x0 T T2 pre tp b0 ad rp lp ri le a0 l0 m0))
+      (values b x a l m))
+    ((LwN _ _ y1 y2 y3 _ _ q _ _ c1 cb _ _ T1 Tb _ w1 w2 w3)
+      (let ((erased b1) (erased x1) (erased a1) (erased l1) (erased m1)) (r4c-lw-bit h q ti ctr y1 c c1 x0 T T1 (Cons _ (C1) pre) tp b0 w1 ri le a0 l0 m0))
+      (let ((erased b2) (erased x2) (erased a2) (erased l2) (erased m2)) (r4c-lw-bit h (Succ q) ti ctr y2 c1 cb x1 T1 Tb (Cons _ (C2) pre) tp b1 w2 ri le a1 l1 m1))
+      (r4c-lw-bit h (Succ (Succ q)) ti ctr y3 cb c2 x2 Tb T2 (Cons _ (C3) pre) tp b2 w3 ri le a2 l2 m2))))
+
+; The node at the colours pre of top, whose traces from the prefix 0 are as MI says, is as MI says from its own prefix n.
+(def-fns _ $ (erased r4c-mi-node : (erased (List (Nat)) R) (erased (Nat) j n d D) (erased (Ctree) top t) (subterm erased (List (Col)) pre)
+    (erased (MI R D (Zero) top) m) (erased (RIdx pre n) ri) (erased (CtAt top pre t) pt) (erased (Length (Col) pre d) le) (erased (Add d j D) ad) -> (erased (MI R j n t) r))
+  (match erased pre _
+    ((Nil _) (let-match erased ri (RINil)) (let-match erased pt (AtNil _)) (let-match erased le (LengthNil _)) (let-match erased ad (AddZero _)) m)
+    ((Cons _ e pre1)
+      (let-match erased ri (RICons _ n1 _ _ ri1 k))
+      (let-match erased pt (AtCons _ u _ _ _ at1 s))
+      (let-match erased le (LengthCons _ _ _ d1 le1))
+      (let-match erased ad (AddSucc _ _ Dq ad1))
+      (r4c-mi-down R j n1 n u t e (r4c-mi-node R (Succ j) n1 d1 D top u pre1 m ri1 at1 le1 (add-succ-right d1 j Dq ad1)) k s))))
+
+(def-fns _ $ (erased r4c-mi-leaf : (erased (List (Nat)) R) (erased (Nat) h ti) (erased (Ctree) top u) (erased (List (Col)) tp) (erased (MI R h (Zero) top) m) (erased (RIdx tp ti) ri)
+    (erased (Length (Col) tp (Succ h)) le) (erased (CtAt top tp u) a) -> (erased (MI1 R ti u) r))
+  (let-match erased le (LengthCons _ e pre _ le1))
+  (let-match erased ri (RICons _ n _ _ ri1 k))
+  (let-match erased a (AtCons _ v _ _ _ a1 s))
+  (let-match erased (r4c-mi-node R (Zero) n h h top v pre m ri1 a1 le1 (add-zero-right h)) (MiL _ _ qp _ t1 t2 t3 tq s1 s2 s3 m1 m2 m3))
+  (match erased k _
+    ((Ki1 _ _ tk) (let-match erased (thrice-fn n qp ti tq tk) (Refl _ _)) (let-match erased (sel-fn v u t1 e s s1) (Refl _ _)) m1)
+    ((Ki2 _ c0 tk) (let-match erased (thrice-fn n qp c0 tq tk) (Refl _ _)) (let-match erased (sel-fn v u t2 e s s2) (Refl _ _)) m2)
+    ((Ki3 _ c0 tk) (let-match erased (thrice-fn n qp c0 tq tk) (Refl _ _)) (let-match erased (sel-fn v u t3 e s s3) (Refl _ _)) m3)))
+
+; The trie tree c2 and celems T2 that red4's gone loop built over the gone buffer G from nothing, and ctr, the union of gone's two rotations; or that
+; red4's ctree_iter cadd built over ctr from nothing.
 (def-adts $ (GCtx : ((Nat) h) ((Ctree) c2) ((Ctree) ctr) ((List (Nat)) T2) -> Type)
   enum
   (many MkGCtx : (erased (Nat) h n) (erased (List (Copy (Nat))) xs) (erased (Ctree) c2 gone a b ctr) (erased (List (Nat)) T2 R G)
       (erased (GAd h xs (Zero) n (CEmpty) (Nil (Nat)) c2 T2) ga) (erased (Fwd xs (Zero) n R) fw) (erased (Tbk xs n G) tb) (erased (GoneT G gone (Succ h) (Zero) (Nil (Col))) gt)
-      (erased (CtH (Succ h) gone) hg) (erased (CtPerm p312 gone a) pa) (erased (CtPerm p231 gone b) pb) (erased (CtOr a b ctr) o) -> (GCtx h c2 ctr T2)))
+      (erased (CtH (Succ h) gone) hg) (erased (CtPerm p312 gone a) pa) (erased (CtPerm p231 gone b) pb) (erased (CtOr a b ctr) o) -> (GCtx h c2 ctr T2))
+  (many GcLoad : (erased (Nat) h) (erased (Ctree) c2 ctr) (erased (List (Nat)) T2) (erased (LW h ctr ctr (Nil (Col)) (Zero) (CEmpty) (Nil (Nat)) c2 T2) w)
+      (erased (AMc h ctr T2) am) (erased (MI T2 h (Zero) ctr) mi) (erased (CtH (Succ h) ctr) hc) -> (GCtx h c2 ctr T2)))
 
 ; The trace ti, of the colours pre, has one bit in c2, in ctr and in T2.
 (def-fns _ $ (erased r4c-pt-bit : (erased (Nat) h ti) (erased (Ctree) c2 ctr) (erased (List (Nat)) T2) (erased (List (Col)) pre) (erased (GCtx h c2 ctr T2) rc)
     (erased (RIdx pre ti) ri) (erased (Length (Col) pre (Succ h)) le)
     -> (erased (Ctree) x y) (erased (Bit) v) (erased (CtAt c2 pre x) ax) (erased (CtAt ctr pre y) ay) (erased (Lf x v) lx) (erased (Lf y v) ly) (erased (MemB ti T2 v) m))
-  (let-match erased rc (MkGCtx _ n xs _ gone a b _ _ R G ga fw tb gt hg pa pb o))
+  (let-match erased rc (MkGCtx _ n xs _ gone a b _ _ R G ga fw tb gt hg pa pb o)
+    ((GcLoad _ _ _ _ w am mi hc)
+      (let ((erased v) (erased x) (erased ax) (erased lx) (erased mx))
+        (r4c-lw-bit h (Zero) ti ctr ctr (CEmpty) c2 (CEmpty) (Nil _) T2 (Nil _) pre (Bit0) w ri le (r4c-ctat-e pre) (LfE) (MbN ti (Nil _) (NotInNil ti))))
+      (let ((erased y) (erased ay)) (ctat-exists ctr pre))
+      (let ((erased hy)) (r4c-ctat-h (Succ h) (Succ h) (Zero) ctr y pre hc ay le (add-zero-right (Succ h))))
+      (let ((erased ly))
+        (match erased mx (((Lf y v) r))
+          ((MbY _ _ i)
+            (let ((erased pre2) (erased lf) (erased ri2) (erased le2) (erased a2)) (r4c-am-in h ti ctr T2 am i))
+            (let-match erased (ridx-fn pre2 pre ti (Succ h) ri2 ri le2 le) (Refl _ _))
+            (let-match erased (ctat-fn ctr y (CLeaf lf) pre ay a2) (Refl _ _))
+            (LfL lf))
+          ((MbN _ _ o)
+            (match erased hy (((Lf y v) r))
+              ((HE _) (LfE))
+              (absurd (HL lf _) (match erased (r4c-mi-leaf T2 h ti ctr y pre mi ri le ay) _ (absurd (Mi1In _ _ _ i) (apart-irrefl ti (notin-in ti ti T2 o i)))))))))
+      (values x y v ax ay lx ly mx)))
   (let ((erased la) (erased qa)) (permt-ex p312 pre (IP312)))
   (let ((erased lb) (erased qb)) (permt-ex p231 pre (IP231)))
   (let ((erased ia) (erased ra)) (r4c-ridx-perm (Succ (Succ (Zero))) ti p312 (RotP2) la pre ri qa))
