@@ -364,9 +364,10 @@ unified by forcing. The unification goes through the `enum`/`union`
 tag, the marks, the number of constructors, each constructor's
 multiplicity marker, the constructors and the type constructor, and so
 their signatures. Two that cannot be unified contradict. Two that can
-be unified become one; the entry kept is the one the elaborator can
-best read, which is a non-erased `Settled` if there is one, and
-otherwise one that is non-erased and still bound. So two
+be unified become one. The entry kept is, in order of preference, a
+`many` `Settled`, a `many` `Hypothetical` that is still bound, an
+erased `Settled`, or any other. Of two equally preferred, the older is
+kept. So two
 opened `Matchable`s for one type are never ambiguous: either they are
 one, or they contradict. The facts this adds are justified by
 `def-adts` being the only place a `Matchable` is created: two that name
