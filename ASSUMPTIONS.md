@@ -1689,10 +1689,6 @@ The shapes and the messages below are the session's.
     - The `newtype` and `extern` marks being structural (sections 24 and 37),
       an unmarked `(Matchable enum T ...)` literal does not accept an extern
       type's Matchable, and no signature abstracts over the marks.
-    - `coercible-wrap (Unique)` over a many-labelled field is Shared to
-      Unique (section 34 as written), so a live many value yields any number of
-      unique aliases of its newtype wrapper; nothing found can exploit it,
-      the wrapper having no cell.
 
 184. **What a value prints as** (DESIGN.md section 45). Not decided, and
     left open by the owner: whether a rendering's reading back as the same
