@@ -269,7 +269,7 @@ under both flags, and `dune test` checks the prelude, and every file a test
 needs from outside `tests/`, as `--warn-unused` does, failing on any warning.
 
 `--fn-same` accepts `fn-same` (DESIGN.md §70), which is otherwise refused;
-OPEN.md 36 asks whether it should be. slc takes the same flag.
+OPEN.md 36B asks whether it should be. slc takes the same flag.
 
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and

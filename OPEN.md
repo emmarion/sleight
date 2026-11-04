@@ -115,7 +115,7 @@ references are to DESIGN.md.
     already at `v`, checked after the binding as a return's promise
     is, in the way `(at m (f ...))` asserts a skipped call (§39). Today
     it is refused.
-36. Should `_` be accepted as an at-match's annotation (§40, §47)?
+36A. Should `_` be accepted as an at-match's annotation (§40, §47)?
     Today the annotation inside `at` must be written out, and a match
     annotated `_` is not an at-match, even in the body of an
     at-function or the branch of an at-match. As the implementations
@@ -207,7 +207,7 @@ references are to DESIGN.md.
     consumes the value, and no `settled-value` reads an `MUnique` handle
     (§64). It would need use accounting for an entry that no scope
     holds. Deferred.
-36. Should `fn-same` (§70) be available without `--fn-same`, or at all?
+36B. Should `fn-same` (§70) be available without `--fn-same`, or at all?
     It appears consistent with what the checker can currently express,
     since no form seems able to tell apart two `Fn` entries of one type.
     But its conclusion seems false in SOUNDNESS.md's full semantics:
