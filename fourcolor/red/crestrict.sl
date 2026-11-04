@@ -481,12 +481,6 @@
   (let-match many z (KEmpty) (else (CKN a b c)))
   (CKE))
 
-(def-fns _ $ (erased ut-h : (erased (Nat) h) (erased (UTree) u) (erased (Ctree) t) (subterm erased (UT h u t) p) -> (erased (CtH (Succ h) t) k))
-  (match erased p _
-    ((UTE _) (HE (Succ h)))
-    ((UTB l1 l2 l3 k1 k2 k3) (HN (Zero) l1 l2 l3 k1 k2 k3))
-    ((UTN h1 u1 u2 u3 t1 t2 t3 p1 p2 p3) (HN h t1 t2 t3 (ut-h h1 u1 t1 p1) (ut-h h1 u2 t2 p2) (ut-h h1 u3 t3 p3)))))
-
 (def-fns _ $ (many ut-of : (subterm many (Nat) h) (many (Ctree) t) (erased (CtH (Succ h) t) k) ->
     (unique (UTree) u) (erased (UT h u t) p) (many (KeepE t) e))
   (let-match many t (CNode t1 t2 t3) ((CEmpty) (values (UEmpty) (UTE h) (KEmpty))) (absurd (CLeaf _) k))
@@ -496,17 +490,6 @@
   (let ((unique u2) (erased p2) (many _)) (notail $ ut-of h1 t2 k2))
   (let ((unique u3) (erased p3) (many _)) (notail $ ut-of h1 t3 k3))
   (values (UNode u1 u2 u3) (UTN h1 u1 u2 u3 t1 t2 t3 p1 p2 p3) (KLive t)))
-
-(def-fns _ $ (many ct-of : (erased (Nat) h) (subterm unique (UTree) u) (erased (Ctree) t) (erased (UT h u t) p) -> (many t is c))
-  (match unique u _
-    ((UEmpty) (let-match erased p (UTE _)) (CEmpty))
-    ((UBot l1 l2 l3) (let-match erased p (UTB _ _ _ _ _ _)) (CNode l1 l2 l3))
-    ((UNode u1 u2 u3)
-      (let-match erased p (UTN h1 _ _ _ t1 t2 t3 p1 p2 p3))
-      (let ((many c1)) (notail $ ct-of h1 u1 t1 p1))
-      (let ((many c2)) (notail $ ct-of h1 u2 t2 p2))
-      (let ((many c3)) (notail $ ct-of h1 u3 t3 p3))
-      (CNode c1 c2 c3))))
 
 (def-fns _ $ (many ctree-restrict-u : (subterm many (Nat) h) (unique (UTree) u) (erased (Ctree) t) (erased (UT h u t) ut) (erased (List RG) r)
     (many (RxL (Gtree) r) rl) ->

@@ -298,30 +298,6 @@
   (many RLU : (erased (Ctree) tl tr a b t) (erased (CtPerm p312 tl a) pa) (erased (CtPerm p231 tr b) pb) (erased (CtOr a b t) o)
       -> (CtRLR tl tr t)))
 
-(def-fns _ $ (many ctree-union-rot : (erased (Nat) h) (many (Ctree) tl tr) (erased (CtH h tl) hl) (erased (CtH h tr) hr) ->
-    (many (Ctree) t) (erased (CtRLR tl tr t) o) (erased (CtH h t) ht))
-  (let ((many a) (erased pa)) (ctree-rot (BTrue) p312 (RDL) tl))
-  (let ((many b) (erased pb)) (ctree-rot (BFalse) p231 (RDR) tr))
-  (let ((many t) (erased o) (erased ht)) (ctree-union h a b (perm-h p312 h tl a pa hl) (perm-h p231 h tr b pb hr)))
-  (values t (RLU tl tr a b t pa pb o) ht))
-
-(def-fns _ $ (many ctree-union-rotlr : (erased (Nat) h) (many (Ctree) tl) (subterm many (Ctree) tr) (erased (CtH h tl) hl) (erased (CtH h tr) hr) ->
-    (many (Ctree) t) (erased (CtRLR tl tr t) o) (erased (CtH h t) ht))
-  (match many tr _
-    ((CLeaf b)
-      (let-match erased hr (HL _ _))
-      (match many tl _ ((CLeaf a) (values simple-leaf (RLLL a b) (HL (CEmpty) (HE (Zero))))) (else (ctree-union-rot h tl tr hl hr))))
-    ((CEmpty) (ctree-union-rot h tl tr hl hr))
-    ((CNode r1 r2 r3)
-      (let-match many tl (CNode l1 l2 l3) (else (ctree-union-rot h tl tr hl hr)))
-      (let-match erased hl (HN h1 _ _ _ p1 p2 p3))
-      (let-match erased hr (HN _ _ _ _ q1 q2 q3))
-      (let ((many u1) (erased o1) (erased k1)) (notail $ ctree-union-rotlr h1 l3 r2 p3 q2))
-      (let ((many u2) (erased o2) (erased k2)) (notail $ ctree-union-rotlr h1 l1 r3 p1 q3))
-      (let ((many u3) (erased o3) (erased k3)) (notail $ ctree-union-rotlr h1 l2 r1 p2 q1))
-      (let ((many t) (erased c)) (ctree-cons u1 u2 u3))
-      (values t (RLN l1 l2 l3 r1 r2 r3 u1 u2 u3 t o1 o2 o3 c) (cons-h h1 u1 u2 u3 t c k1 k2 k3)))))
-
 (def-fns _ $ (erased rlr-lift : (erased (Ctree) tl tr l r) (erased (Col) e el er) (erased (List (Col)) et)
     (erased (PermC p312 e el) pl) (erased (CtSel tl el l) sl) (erased (PermC p231 e er) pr) (erased (CtSel tr er r) sr)
     (erased (Or (PermMem p312 l et) (PermMem p231 r et)) o) ->

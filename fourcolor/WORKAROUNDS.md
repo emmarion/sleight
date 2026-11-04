@@ -120,12 +120,14 @@ language behind them may be wrong. Numbers are not reused.
     time of the same work as a loop. Hot recursions are therefore written
     as tail calls.
 
-11. **Unique trees rewritten in place.** The Kempe closure's working
-    trees are `unique` (`UTree`, `UGtree` in `red/crestrict.sl`,
-    `red/grestrict.sl`) and are rewritten in place. A rewrite skips the
-    store when a child is unchanged (DESIGN.md §37). Rebuilding the trees
-    each iteration appears to make garbage collection about a third of
-    the time, mostly through promotion.
+11. **Flat arrays rewritten in place.** The Kempe closure works on
+    `unique` arrays and byte buffers (`red/r4*.sl`) rather than trees:
+    node words, per-trace counts and live-child counts, and a trie of
+    the colourings fed to the chromogram side, all updated in place.
+    The trees appear only in erased positions, as the specification
+    the arrays are proved to represent. The layout follows a
+    hand-written OCaml prototype; rebuilding trees each iteration
+    appeared to spend much of the time in garbage collection.
 
 12. **Arrays for lookups.** `embed4.sl`'s `Tab` holds a dart permutation
     as an `Array (Copy Nat)`, for constant-time lookups in place of `Nth`

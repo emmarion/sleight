@@ -160,12 +160,19 @@ The unit is these files in this order (`check.sh`), written without
 - `cpmap`: `Cpmap`, `PointedMap`, `cpmap-c`.
 - `red/color`, `cfcolor`: colour traces, `CpCol`.
 - `red/ctree`, `red/gtree`, `red/grestrict`, `red/crestrict`,
-  `red/kempe`: the check's trees, their restrictions, the Kempe closure
-  (`kempe-tree-c`) on unique trees (WORKAROUNDS.md 11).
+  `red/kempe`: the check's trees, their restrictions and the Kempe
+  closure's specification (`KR`, `CR`, `KSound`).
 - `cpcolor`: ring traces of a configuration's colourings (`cpcolor-c`).
 - `red/configs`: `config-srcs` (generated), its decoder, `cut-at`.
 - `red/bridge`: co-closure on complete traces (`KCC`, `kcc-coclosure`).
-- `red/init`, `red/check`: the initial trees; `kempe-tree-chk`.
+- `red/init`: the initial trees.
+- `red/flat`: counts and bit arrays over trace indices (`Tally`).
+- `red/r4`, `red/r4s`, `red/r4c`, `red/r4g`, `red/r4k`: the Kempe
+  closure on flat arrays (WORKAROUNDS.md 11): node words and tables
+  (`r4-make-eng`), the colouring-side round (`r4-sround`), the ctr
+  trie, the chromogram-side round (`r4-ground`) and the loop
+  (`r4k-kempe`, `r4-flat-look`).
+- `red/check`: `kempe-tree-chk`.
 - `red/gramrot`: gram_rot of `kempe.v`.
 - `red/cfred`: `CRed`, from a Kempe half and a contract half.
 - `red/ccomp`: the contract half (`contract-ok`, `dfs-c`).
