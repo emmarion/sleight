@@ -71,6 +71,213 @@
   (let-match erased f2 (Succ f3) (absurd (Zero) l1))
   (ApGt (Nat) Lt f2 (Zero) (LtZ f3)))
 
+(def-fns _ $ (erased r4g-rk-mono : (erased (Nat) a c x r w) (subterm erased (Rk a x r) p) (erased (Rk c x w) q) (erased (Lt a (Succ c)) l) -> (erased (Lt r (Succ w)) res))
+  (let-match erased p (RkS a1 _ x1 r1 v _ b bc p1 bv ad) ((RkZ _) (LtZ w)))
+  (let-match erased q (RkS c1 _ x2 w1 v2 _ b2 bc2 q1 bv2 ad2) (absurd (RkZ _) (let-match erased l (LtS _ _ l1)) l1))
+  (let ((erased e1) (erased e2)) (bitcons-fn x1 b x2 b2 x bc bc2))
+  (let-match erased e1 (Refl _ _))
+  (let-match erased e2 (Refl _ _))
+  (let-match erased (bitv-fn b v v2 bv bv2) (Refl _ _))
+  (add-lt-mono v r1 (Succ w1) r (Succ w) ad (add-succ-right v w1 w ad2) (r4g-rk-mono a1 c1 x1 r1 w1 p1 q1 (lt-pred a1 (Succ c1) l))))
+
+; A set bit s of x below t makes the rank at s less than at t.
+(def-fns _ $ (erased r4g-rk-lt : (erased (Nat) s t x v w) (erased (Rk s x v) p) (erased (BitIs x s (Bit1)) bi) (erased (Rk t x w) q) (erased (Lt s t) l) -> (erased (Lt v w) r))
+  (let-match erased bi (MkBitIs _ _ lo y y1 _ bp c))
+  (lt-pred v w (r4g-rk-mono (Succ s) t x (Succ v) w (rk-step s x lo y y1 v (Succ (Zero)) (Succ v) (Bit1) p bp c (BV1) (add-one-r v)) q (LtS s t l))))
+
+(def-fns _ $ (erased r4g-kid-lt : (erased (Nat) b s t cm v w g h) (erased (Rk s cm v) p) (erased (BitIs cm s (Bit1)) bi) (erased (Rk t cm w) q) (erased (Lt s t) l)
+    (erased (Add b v g) a) (erased (Add b w h) c) -> (erased (Lt g h) r))
+  (add-lt-mono b v w g h a c (r4g-rk-lt s t cm v w p bi q l)))
+
+; The write regions: g or [lo, hi); or the kids at b, below hb, of the symbols from s on of the child mask cm, or [lo, hi).
+(def-adts $ (Rgn : -> Type)
+  enum
+  (many RgOne : (erased (Nat) g lo hi) -> (Rgn))
+  (many RgKid : (erased (Nat) b cm s hb lo hi) -> (Rgn)))
+
+; i is in rg.
+(def-adts $ (Iw : ((Nat) i) ((Rgn) rg) -> Type)
+  enum
+  (many IwG : (erased (Nat) g lo hi) -> (Iw g (RgOne g lo hi)))
+  (many IwI : (erased (Nat) i g lo hi) (erased (Lt lo (Succ i)) a) (erased (Lt i hi) c) -> (Iw i (RgOne g lo hi)))
+  (many IwK : (erased (Nat) i b cm s hb lo hi t v) (erased (Lt s (Succ t)) st) (erased (BitIs cm t (Bit1)) bi) (erased (Rk t cm v) rk) (erased (Add b v i) a)
+      (erased (Lt i hb) ih) -> (Iw i (RgKid b cm s hb lo hi)))
+  (many IwKI : (erased (Nat) i b cm s hb lo hi) (erased (Lt lo (Succ i)) a) (erased (Lt i hi) c) -> (Iw i (RgKid b cm s hb lo hi))))
+
+; Each write from xs to ys is in rg.
+(def-adts $ (NIn : ((List (Copy (Nat))) xs) ((List (Copy (Nat))) ys) ((Rgn) rg) -> Type)
+  enum
+  (many NinNil : (erased (List (Copy (Nat))) xs) (erased (Rgn) rg) -> (NIn xs xs rg))
+  (many NinCons : (erased (List (Copy (Nat))) xs xs1 ys) (erased (Nat) i) (erased (Rgn) rg) (erased (Copy (Nat)) y) (erased (SetNth (Copy (Nat)) xs i y xs1) st)
+      (erased (Iw i rg) iw) (erased (NIn xs1 ys rg) r) -> (NIn xs ys rg)))
+
+(def-fns _ $ (erased r4g-nin-cat : (erased (List (Copy (Nat))) xs ys zs) (erased (Rgn) rg) (subterm erased (NIn xs ys rg) p) (erased (NIn ys zs rg) q) -> (erased (NIn xs zs rg) r))
+  (let-match erased p (NinCons _ xs1 _ i _ y st iw p1) ((NinNil _ _) q))
+  (NinCons xs xs1 zs i rg y st iw (r4g-nin-cat xs1 ys zs rg p1 q)))
+
+; rg lies in rg2.
+(def-adts $ (RgIn : ((Rgn) rg) ((Rgn) rg2) -> Type)
+  enum
+  (many RsKid : (erased (Nat) g lo2 hi2 b cm s hb lo hi v) (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) rk) (erased (Add b v g) a) (erased (Lt g hb) gh)
+      (erased (Lt lo (Succ lo2)) l) (erased (Lt hi2 (Succ hi)) h) -> (RgIn (RgOne g lo2 hi2) (RgKid b cm s hb lo hi)))
+  (many RsNext : (erased (Nat) b cm s hb lo lo2 hi) (erased (Lt lo (Succ lo2)) l) -> (RgIn (RgKid b cm (Succ s) hb lo2 hi) (RgKid b cm s hb lo hi)))
+  (many RsUp : (erased (Nat) g b cm hb hi) (erased (Lt b (Succ hb)) l) (erased (Lt hb (Succ hi)) h) -> (RgIn (RgKid b cm (Zero) hb hb hi) (RgOne g b hi))))
+
+(def-fns _ $ (erased r4g-iw-sub : (erased (Nat) i) (erased (Rgn) rg rg2) (erased (Iw i rg) iw) (erased (RgIn rg rg2) sb) -> (erased (Iw i rg2) r))
+  (match erased sb _
+    ((RsKid _ lo2 hi2 b cm s hb lo hi v bi rk a gh l h)
+      (match erased iw _
+        ((IwG _ _ _) (IwK i b cm s hb lo hi s v (lt-succ s) bi rk a gh))
+        ((IwI _ _ _ _ c d) (IwKI i b cm s hb lo hi (le-trans lo lo2 i l c) (lt-le-trans i hi2 hi d h)))))
+    ((RsNext b cm s hb lo lo2 hi l)
+      (match erased iw _
+        ((IwK _ _ _ _ _ _ _ t v st bi rk a ih) (IwK i b cm s hb lo hi t v (lt-succ-left s (Succ t) st) bi rk a ih))
+        ((IwKI _ _ _ _ _ _ _ c d) (IwKI i b cm s hb lo hi (le-trans lo lo2 i l c) d))))
+    ((RsUp g b cm hb hi l h)
+      (match erased iw _
+        ((IwK _ _ _ _ _ _ _ t v _ _ _ a ih) (IwI i g b hi (add-ge b v i a) (lt-le-trans i hb hi ih h)))
+        ((IwKI _ _ _ _ _ _ _ c d) (IwI i g b hi (le-trans b hb i l c) d))))))
+
+(def-fns _ $ (erased r4g-nin-sub : (erased (List (Copy (Nat))) xs ys) (erased (Rgn) rg rg2) (subterm erased (NIn xs ys rg) p) (erased (RgIn rg rg2) sb) -> (erased (NIn xs ys rg2) r))
+  (let-match erased p (NinCons _ xs1 _ i _ y st iw p1) ((NinNil _ _) (NinNil xs rg2)))
+  (NinCons xs xs1 ys i rg2 y st (r4g-iw-sub i rg rg2 iw sb) (r4g-nin-sub xs1 ys rg rg2 p1 sb)))
+
+(def-fns _ $ (erased r4g-iv-out : (erased (Nat) i b hp lo hc bn v g lo2 hi2) (erased (OutS i b hp) o) (erased (Add b v g) a) (erased (Lt g bn) gn) (erased (Lt b (Succ lo)) bl)
+    (erased (Lt lo (Succ lo2)) ll) (erased (Lt hi2 (Succ hc)) lh) (erased (Lt hc (Succ hp)) ch) (erased (Lt bn (Succ hp)) bh) -> (erased (Apart (Nat) Lt i g) ap) (erased (OutS i lo2 hi2) o2))
+  (match erased o _
+    ((OsL _ _ _ l) (values (ApLt (Nat) Lt i g (lt-le-trans i b g l (add-ge b v g a))) (OsL i lo2 hi2 (lt-le-trans i b lo2 l (le-trans b lo lo2 bl ll)))))
+    ((OsR _ _ _ l) (values (ApGt (Nat) Lt i g (lt-le-trans g bn i gn (le-trans bn hp i bh l))) (OsR i lo2 hi2 (le-trans hi2 hc i lh (le-trans hc hp i ch l)))))))
+
+(def-fns _
+  ((erased r4g-niv-le : (erased (List (Copy (Nat))) xs) (erased (Nat) j g lo hi) (erased (Gtree) s0) (erased (Bool) z) (subterm erased (NIv xs j g s0 lo hi z) iv) -> (erased (Lt lo (Succ hi)) r))
+    (let-match erased iv (NivN _ j1 _ _ b cm _ _ _ bn m1 m2 m3 c0 c1 c2 c3 _ _ _ _ _ bl k0 k1 k2 k3) ((NivL _ _ _ _ _ _ _ _ _ _ _ _ _) (lt-succ lo)))
+    (le-trans b bn hi bl (le-trans bn m1 hi (r4g-nivk-le xs j1 b cm (Zero) bn bn m1 c0 z k0) (le-trans m1 m2 hi (r4g-nivk-le xs j1 b cm (Succ (Zero)) bn m1 m2 c1 z k1)
+      (le-trans m2 m3 hi (r4g-nivk-le xs j1 b cm (Succ (Succ (Zero))) bn m2 m3 c2 z k2) (r4g-nivk-le xs j1 b cm (Succ (Succ (Succ (Zero)))) bn m3 hi c3 z k3))))))
+  ((erased r4g-nivk-le : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm s bn lo hc) (erased (Gtree) c) (erased (Bool) z) (subterm erased (NIvK xs j b cm s c bn lo hc z) k)
+      -> (erased (Lt lo (Succ hc)) r))
+    (let-match erased k (NivkP _ _ _ _ _ _ g lo2 hi2 _ _ _ _ _ _ _ _ _ ll lh p) ((NivkE _ _ _ _ _ _ _ _ _ _ lh) lh))
+    (le-trans lo lo2 hc ll (le-trans lo2 hi2 hc (r4g-niv-le xs j g lo2 hi2 c z p) lh))))
+
+; The chain of a node's kid intervals: b to bn, then bn, m1, m2, m3 to hi.
+(def-adts $ (Chn : ((Nat) b) ((Nat) bn) ((Nat) m1) ((Nat) m2) ((Nat) m3) ((Nat) hi) -> Type)
+  enum
+  (many MkChn : (erased (Nat) b bn m1 m2 m3 hi) (erased (Lt b (Succ bn)) a0) (erased (Lt bn (Succ m1)) a1) (erased (Lt m1 (Succ m2)) a2) (erased (Lt m2 (Succ m3)) a3)
+      (erased (Lt m3 (Succ hi)) a4) -> (Chn b bn m1 m2 m3 hi)))
+
+(def-fns _ $ (erased r4g-chn : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm bn m1 m2 m3 hi) (erased (Gtree) c0 c1 c2 c3) (erased (Bool) z) (erased (Lt b (Succ bn)) bl)
+    (erased (NIvK xs j b cm (Zero) c0 bn bn m1 z) k0) (erased (NIvK xs j b cm (Succ (Zero)) c1 bn m1 m2 z) k1) (erased (NIvK xs j b cm (Succ (Succ (Zero))) c2 bn m2 m3 z) k2)
+    (erased (NIvK xs j b cm (Succ (Succ (Succ (Zero)))) c3 bn m3 hi z) k3) -> (erased (Chn b bn m1 m2 m3 hi) r))
+  (MkChn b bn m1 m2 m3 hi bl (r4g-nivk-le xs j b cm (Zero) bn bn m1 c0 z k0) (r4g-nivk-le xs j b cm (Succ (Zero)) bn m1 m2 c1 z k1)
+    (r4g-nivk-le xs j b cm (Succ (Succ (Zero))) bn m2 m3 c2 z k2) (r4g-nivk-le xs j b cm (Succ (Succ (Succ (Zero)))) bn m3 hi c3 z k3)))
+
+; Bounds of the cell [lo, hc) of a kid: from b, below hi, with bn below hi.
+(def-adts $ (KCl : ((Nat) b) ((Nat) bn) ((Nat) lo) ((Nat) hc) ((Nat) hi) -> Type)
+  enum
+  (many MkKCl : (erased (Nat) b bn lo hc hi) (erased (Lt b (Succ lo)) bl) (erased (Lt hc (Succ hi)) ch) (erased (Lt bn (Succ hi)) bh) -> (KCl b bn lo hc hi)))
+
+(def-fns _ $ (erased r4g-cells : (erased (Nat) b bn m1 m2 m3 hi) (erased (Chn b bn m1 m2 m3 hi) c) ->
+    (erased (KCl b bn bn m1 hi) c0) (erased (KCl b bn m1 m2 hi) c1) (erased (KCl b bn m2 m3 hi) c2) (erased (KCl b bn m3 hi hi) c3))
+  (let-match erased c (MkChn _ _ _ _ _ _ a0 a1 a2 a3 a4))
+  (let ((erased h3)) a4)
+  (let ((erased h2)) (le-trans m2 m3 hi a3 h3))
+  (let ((erased h1)) (le-trans m1 m2 hi a2 h2))
+  (let ((erased hn)) (le-trans bn m1 hi a1 h1))
+  (let ((erased b1)) (le-trans b bn m1 a0 a1))
+  (let ((erased b2)) (le-trans b m1 m2 b1 a2))
+  (values (MkKCl b bn bn m1 hi a0 h1 hn) (MkKCl b bn m1 m2 hi b1 h2 hn) (MkKCl b bn m2 m3 hi b2 h3 hn) (MkKCl b bn m3 hi hi (le-trans b m2 m3 b2 a3) (lt-succ hi) hn)))
+
+(def-fns _
+  ; A write outside g and [lo, hi) keeps the layout of g.
+  ((erased r4g-niv-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j g lo hi i) (erased (Gtree) s0) (erased (Bool) z) (erased (Copy (Nat)) y)
+      (subterm erased (NIv xs j g s0 lo hi z) iv) (erased (SetNth (Copy (Nat)) xs i y ys) st) (erased (Apart (Nat) Lt i g) ap) (erased (OutS i lo hi) o) -> (erased (NIv ys j g s0 lo hi z) r))
+    (let-match erased iv (NivN _ j1 _ w b cm f u _ bn m1 m2 m3 c0 c1 c2 c3 _ x d zf gb bl k0 k1 k2 k3)
+      ((NivL _ _ _ w b cm f u _ _ x d zf) (NivL ys g lo w b cm f u s0 z (welt-set xs ys g w i y x st ap) d zf)))
+    (let ((erased q0) (erased q1) (erased q2) (erased q3)) (r4g-cells b bn m1 m2 m3 hi (r4g-chn xs j1 b cm bn m1 m2 m3 hi c0 c1 c2 c3 z bl k0 k1 k2 k3)))
+    (NivN ys j1 g w b cm f u hi bn m1 m2 m3 c0 c1 c2 c3 z (welt-set xs ys g w i y x st ap) d zf gb bl
+      (r4g-nivk-set xs ys j1 b cm (Zero) bn bn m1 hi i c0 z y k0 st o q0) (r4g-nivk-set xs ys j1 b cm (Succ (Zero)) bn m1 m2 hi i c1 z y k1 st o q1)
+      (r4g-nivk-set xs ys j1 b cm (Succ (Succ (Zero))) bn m2 m3 hi i c2 z y k2 st o q2) (r4g-nivk-set xs ys j1 b cm (Succ (Succ (Succ (Zero)))) bn m3 hi hi i c3 z y k3 st o q3)))
+  ((erased r4g-nivk-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j b cm s bn lo hc hp i) (erased (Gtree) c) (erased (Bool) z) (erased (Copy (Nat)) y)
+      (subterm erased (NIvK xs j b cm s c bn lo hc z) k) (erased (SetNth (Copy (Nat)) xs i y ys) st) (erased (OutS i b hp) o) (erased (KCl b bn lo hc hp) cl)
+      -> (erased (NIvK ys j b cm s c bn lo hc z) r))
+    (let-match erased k (NivkP _ _ _ _ _ v g lo2 hi2 _ _ _ _ _ bi rk a gn ll lh p) ((NivkE _ _ _ _ _ _ _ _ _ bi lh) (NivkE ys j b cm s bn lo hc z bi lh)))
+    (let-match erased cl (MkKCl _ _ _ _ _ bl ch bh))
+    (let ((erased ap) (erased o2)) (r4g-iv-out i b hp lo hc bn v g lo2 hi2 o a gn bl ll lh ch bh))
+    (NivkP ys j b cm s v g lo2 hi2 bn lo hc c z bi rk a gn ll lh (r4g-niv-set xs ys j g lo2 hi2 i c z y p st ap o2))))
+
+(def-fns _
+  ; A write outside g and [lo, hi) keeps the parts below g.
+  ((erased r4g-np-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j g lo hi i) (erased (Gtree) s0 t) (erased (Bool) sel z) (erased (Copy (Nat)) y)
+      (erased (NIv xs j g s0 lo hi z) iv) (subterm erased (NPart xs j g s0 sel t) np) (erased (SetNth (Copy (Nat)) xs i y ys) st) (erased (Apart (Nat) Lt i g) ap) (erased (OutS i lo hi) o)
+      -> (erased (NPart ys j g s0 sel t) r))
+    (let-match erased np (NpN _ j1 _ w b cm f u c0 c1 c2 c3 t0 t1 t2 t3 _ x d fd k0 k1 k2 k3)
+      ((NpE _ _ _ w b cm f u _ _ x d fd) (NpE ys j g w b cm f u s0 sel (welt-set xs ys g w i y x st ap) d fd))
+      ((NpL _ _ w b cm f u v _ _ _ x d fd lm) (NpL ys g w b cm f u v s0 t sel (welt-set xs ys g w i y x st ap) d fd lm)))
+    (let-match erased iv (NivN _ _ _ wv bv cmv _ _ _ bn m1 m2 m3 _ _ _ _ _ xv dv _ _ bl q0 q1 q2 q3))
+    (let-match erased (welt-fn xs g w wv x xv) (Refl _ _))
+    (let ((erased _) (erased eb) (erased ec)) (nwd-fn w b cm f u bv cmv _ _ d dv))
+    (let-match erased eb (Refl _ _))
+    (let-match erased ec (Refl _ _))
+    (let ((erased l0) (erased l1) (erased l2) (erased l3)) (r4g-cells b bn m1 m2 m3 hi (r4g-chn xs j1 b cm bn m1 m2 m3 hi c0 c1 c2 c3 z bl q0 q1 q2 q3)))
+    (NpN ys j1 g w b cm f u c0 c1 c2 c3 t0 t1 t2 t3 sel (welt-set xs ys g w i y x st ap) d fd
+      (r4g-npk-set xs ys j1 b cm (Zero) bn bn m1 hi i c0 t0 sel z y q0 k0 st o l0) (r4g-npk-set xs ys j1 b cm (Succ (Zero)) bn m1 m2 hi i c1 t1 sel z y q1 k1 st o l1)
+      (r4g-npk-set xs ys j1 b cm (Succ (Succ (Zero))) bn m2 m3 hi i c2 t2 sel z y q2 k2 st o l2)
+      (r4g-npk-set xs ys j1 b cm (Succ (Succ (Succ (Zero)))) bn m3 hi hi i c3 t3 sel z y q3 k3 st o l3)))
+  ((erased r4g-npk-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j b cm s bn lo hc hp i) (erased (Gtree) c t) (erased (Bool) sel z) (erased (Copy (Nat)) y)
+      (erased (NIvK xs j b cm s c bn lo hc z) iv) (subterm erased (NPartK xs j b cm s c sel t) k) (erased (SetNth (Copy (Nat)) xs i y ys) st) (erased (OutS i b hp) o)
+      (erased (KCl b bn lo hc hp) cl) -> (erased (NPartK ys j b cm s c sel t) r))
+    (let-match erased k (NpkP _ _ _ _ _ v g _ _ _ bi rk a p) ((NpkE _ _ _ _ _ _ bi) (NpkE ys j b cm s sel bi)))
+    (let-match erased iv (NivkP _ _ _ _ _ v2 g2 lo2 hi2 _ _ _ _ _ _ rk2 a2 gn ll lh pv) (absurd (NivkE _ _ _ _ _ _ _ _ _ bi0 _) (bitis-fn cm s (Bit0) (Bit1) bi0 bi)))
+    (let-match erased (rk-fn s cm v v2 rk rk2) (Refl _ _))
+    (let-match erased (add-fn b v g g2 a a2) (Refl _ _))
+    (let-match erased cl (MkKCl _ _ _ _ _ bl ch bh))
+    (let ((erased ap) (erased o2)) (r4g-iv-out i b hp lo hc bn v g lo2 hi2 o a gn bl ll lh ch bh))
+    (NpkP ys j b cm s v g c t sel bi rk a (r4g-np-set xs ys j g lo2 hi2 i c t sel z y pv p st ap o2))))
+
+; The writes in rg miss the kid of the symbol s of a node whose children start at b, of child mask cm, below bn, its nodes below in [lo, hc): rg is
+; an earlier kid's nodes, or the later kids' region.
+(def-adts $ (KAway : ((Rgn) rg) ((Nat) b) ((Nat) cm) ((Nat) s) ((Nat) bn) ((Nat) lo) ((Nat) hc) -> Type)
+  enum
+  (many KoA : (erased (Nat) g2 lo2 hi2 b cm s bn lo hc s2 v2) (erased (BitIs cm s2 (Bit1)) bi) (erased (Rk s2 cm v2) rk) (erased (Add b v2 g2) a) (erased (Lt s2 s) l)
+      (erased (Lt g2 bn) gn) (erased (Lt bn (Succ lo)) bl) (erased (Lt bn (Succ lo2)) bl2) (erased (Lt hi2 (Succ lo)) hl) -> (KAway (RgOne g2 lo2 hi2) b cm s bn lo hc))
+  (many KoB : (erased (Nat) b cm s s2 bn lo hc lo2 hi) (erased (Lt s s2) l) (erased (Lt bn (Succ lo)) bl) (erased (Lt bn (Succ lo2)) bl2) (erased (Lt hc (Succ lo2)) hl)
+      -> (KAway (RgKid b cm s2 bn lo2 hi) b cm s bn lo hc)))
+
+(def-fns _ $ (erased r4g-kout : (erased (Nat) i b cm s bn lo hc v g lo3 hi3) (erased (Rgn) rg) (erased (KAway rg b cm s bn lo hc) ko) (erased (Iw i rg) iw)
+    (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) rk) (erased (Add b v g) a) (erased (Lt g bn) gn) (erased (Lt lo (Succ lo3)) ll) (erased (Lt hi3 (Succ hc)) lh)
+    -> (erased (Apart (Nat) Lt i g) ap) (erased (OutS i lo3 hi3) o))
+  (match erased ko _
+    ((KoA g2 lo2 hi2 _ _ _ _ _ _ s2 v2 bi2 rk2 a2 l gn2 bl bl2 hl)
+      (match erased iw _
+        ((IwG _ _ _) (values (ApLt (Nat) Lt i g (r4g-kid-lt b s2 s cm v2 v i g rk2 bi2 rk l a2 a)) (OsL i lo3 hi3 (lt-le-trans i bn lo3 gn2 (le-trans bn lo lo3 bl ll)))))
+        ((IwI _ _ _ _ c d) (values (ApGt (Nat) Lt i g (lt-le-trans g bn i gn (le-trans bn lo2 i bl2 c))) (OsL i lo3 hi3 (lt-le-trans i hi2 lo3 d (le-trans hi2 lo lo3 hl ll)))))))
+    ((KoB _ _ _ s2 _ _ _ lo2 hi l bl bl2 hl)
+      (match erased iw _
+        ((IwK _ _ _ _ _ _ _ t v2 st bi2 rk2 a2 ih)
+          (values (ApGt (Nat) Lt i g (r4g-kid-lt b s t cm v v2 g i rk bi rk2 (lt-le-trans s s2 t l st) a a2)) (OsL i lo3 hi3 (lt-le-trans i bn lo3 ih (le-trans bn lo lo3 bl ll)))))
+        ((IwKI _ _ _ _ _ _ _ c d) (values (ApGt (Nat) Lt i g (lt-le-trans g bn i gn (le-trans bn lo2 i bl2 c))) (OsR i lo3 hi3 (le-trans hi3 hc i lh (le-trans hc lo2 i hl c)))))))))
+
+(def-fns _ $ (erased r4g-nin-np : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j g lo3 hi3 b cm s bn lo hc v) (erased (Gtree) c t) (erased (Bool) sel z) (erased (Rgn) rg)
+    (erased (NIv xs j g c lo3 hi3 z) iv) (erased (NPart xs j g c sel t) np) (subterm erased (NIn xs ys rg) w) (erased (KAway rg b cm s bn lo hc) ko)
+    (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) rk) (erased (Add b v g) a) (erased (Lt g bn) gn) (erased (Lt lo (Succ lo3)) ll) (erased (Lt hi3 (Succ hc)) lh)
+    -> (erased (NIv ys j g c lo3 hi3 z) iv2) (erased (NPart ys j g c sel t) np2))
+  (let-match erased w (NinCons _ xs1 _ i _ y st iw w1) ((NinNil _ _) (values iv np)))
+  (let ((erased ap) (erased o)) (r4g-kout i b cm s bn lo hc v g lo3 hi3 rg ko iw bi rk a gn ll lh))
+  (r4g-nin-np xs1 ys j g lo3 hi3 b cm s bn lo hc v c t sel z rg (r4g-niv-set xs xs1 j g lo3 hi3 i c z y iv st ap o) (r4g-np-set xs xs1 j g lo3 hi3 i c t sel z y iv np st ap o)
+    w1 ko bi rk a gn ll lh))
+
+; Writes that miss the kid s keep its layout and parts.
+(def-fns _ $ (erased r4g-nin-kid : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j b cm s bn lo hc) (erased (Gtree) c t) (erased (Bool) sel z) (erased (Rgn) rg)
+    (erased (NIvK xs j b cm s c bn lo hc z) iv) (erased (NPartK xs j b cm s c sel t) np) (erased (NIn xs ys rg) w) (erased (KAway rg b cm s bn lo hc) ko)
+    -> (erased (NIvK ys j b cm s c bn lo hc z) iv2) (erased (NPartK ys j b cm s c sel t) np2))
+  (let-match erased np (NpkP _ _ _ _ _ v g _ _ _ bi rk a p) ((NpkE _ _ _ _ _ _ bi)
+    (let-match erased iv (NivkE _ _ _ _ _ _ _ _ _ _ lh) (absurd (NivkP _ _ _ _ _ _ _ _ _ _ _ _ _ _ bi1 _ _ _ _ _ _) (bitis-fn cm s (Bit0) (Bit1) bi bi1)))
+    (values (NivkE ys j b cm s bn lo hc z bi lh) (NpkE ys j b cm s sel bi))))
+  (let-match erased iv (NivkP _ _ _ _ _ v2 g2 lo2 hi2 _ _ _ _ _ _ rk2 a2 gn ll lh pv) (absurd (NivkE _ _ _ _ _ _ _ _ _ bi0 _) (bitis-fn cm s (Bit0) (Bit1) bi0 bi)))
+  (let-match erased (rk-fn s cm v v2 rk rk2) (Refl _ _))
+  (let-match erased (add-fn b v g g2 a a2) (Refl _ _))
+  (let ((erased iv3) (erased np3)) (r4g-nin-np xs ys j g lo2 hi2 b cm s bn lo hc v c t sel z rg pv p w ko bi rk a gn ll lh))
+  (values (NivkP ys j b cm s v g lo2 hi2 bn lo hc c z bi rk a gn ll lh iv3) (NpkP ys j b cm s v g c t sel bi rk a np3)))
+
 ; f, the gtr part of node a, is 0, or a is in Hs.
 (def-adts $ (ZIn : ((Nat) f) ((Nat) a) ((List (Nat)) Hs) -> Type)
   enum

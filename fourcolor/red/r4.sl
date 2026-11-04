@@ -833,22 +833,24 @@
       (erased (Ac (Cons (Bit) x3 (Cons (Bit) x2 (Cons (Bit) x1 (Cons (Bit) x0 (Nil (Bit)))))) (Succ (Succ (Succ (Succ (Zero))))) m) a) -> (LeafM s0 m)))
 
 (def-adts
-  ; Node g of xs lays out s0 as fill does, j levels above the leaves, with all of s0 in gu and nothing in gtr; the nodes below g are in [lo, hi), and g is not.
+  ; Node g of xs lays out s0 as fill does, j levels above the leaves, with all of s0 in gu and nothing in gtr; the nodes below g are in [lo, hi), and g is not;
+  ; the kids are below bn, and the nodes below the kids of the symbols 0 to 3 in [bn, m1), [m1, m2), [m2, m3) and [m3, hi).
   ((FlB : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) g) ((Gtree) s0) ((Nat) lo) ((Nat) hi) -> Type)
     enum
     (many FbL : (erased (List (Copy (Nat))) xs) (erased (Nat) g m w lo) (erased (Gtree) s0) (erased (WElt xs g w) x) (erased (NWd w (Zero) m (Zero) m) d)
         (erased (LeafM s0 m) lm) -> (FlB xs (Zero) g s0 lo lo))
-    (many FbN : (erased (List (Copy (Nat))) xs) (erased (Nat) j g w b cm hi) (erased (Gtree) c0 c1 c2 c3) (erased (WElt xs g w) x)
-        (erased (NWd w b cm (Zero) (Succ (Zero))) d) (erased (Lt g b) gb) (erased (Lt (Succ (Succ (Succ b))) u62-modulus) bb)
-        (erased (KF xs j b hi cm (Zero) c0) k0) (erased (KF xs j b hi cm (Succ (Zero)) c1) k1) (erased (KF xs j b hi cm (Succ (Succ (Zero))) c2) k2)
-        (erased (KF xs j b hi cm (Succ (Succ (Succ (Zero)))) c3) k3) -> (FlB xs (Succ j) g (GNode c0 c1 c2 c3) b hi)))
-  ; The kid of symbol s of a node whose children start at b and whose nodes below end at hi.
-  ((KF : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) b) ((Nat) hi) ((Nat) cm) ((Nat) s) ((Gtree) c) -> Type)
+    (many FbN : (erased (List (Copy (Nat))) xs) (erased (Nat) j g w b cm hi bn m1 m2 m3) (erased (Gtree) c0 c1 c2 c3) (erased (WElt xs g w) x)
+        (erased (NWd w b cm (Zero) (Succ (Zero))) d) (erased (Lt g b) gb) (erased (Lt (Succ (Succ (Succ b))) u62-modulus) bb) (erased (Lt b (Succ bn)) bl)
+        (erased (KF xs j b hi cm (Zero) c0 bn bn m1) k0) (erased (KF xs j b hi cm (Succ (Zero)) c1 bn m1 m2) k1) (erased (KF xs j b hi cm (Succ (Succ (Zero))) c2 bn m2 m3) k2)
+        (erased (KF xs j b hi cm (Succ (Succ (Succ (Zero)))) c3 bn m3 hi) k3) -> (FlB xs (Succ j) g (GNode c0 c1 c2 c3) b hi)))
+  ; The kid of symbol s of a node whose children start at b and whose nodes below end at hi: below bn, its nodes below in [lo, hc).
+  ((KF : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) b) ((Nat) hi) ((Nat) cm) ((Nat) s) ((Gtree) c) ((Nat) bn) ((Nat) lo) ((Nat) hc) -> Type)
     enum
-    (many KfE : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s) (erased (BitIs cm s (Bit0)) bi) -> (KF xs j b hi cm s (GEmpty)))
-    (many KfP : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s v g lo2 hi2) (erased (Gtree) c) (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) r)
+    (many KfE : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo hc) (erased (BitIs cm s (Bit0)) bi) (erased (Lt lo (Succ hc)) lh)
+        -> (KF xs j b hi cm s (GEmpty) bn lo hc))
+    (many KfP : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s v g lo2 hi2 bn lo hc) (erased (Gtree) c) (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) r)
         (erased (Add b v g) a) (erased (Lt g hi) gh) (erased (Lt b (Succ lo2)) l2) (erased (Lt hi2 (Succ hi)) h2) (erased (FlB xs j g c lo2 hi2) f)
-        -> (KF xs j b hi cm s c))))
+        (erased (Lt g bn) gn) (erased (Lt lo (Succ lo2)) ll) (erased (Lt hi2 (Succ hc)) lh) -> (KF xs j b hi cm s c bn lo hc))))
 
 (def-adts $ (OutS : ((Nat) k) ((Nat) lo) ((Nat) hi) -> Type)
   enum
@@ -870,18 +872,18 @@
       (erased (SetNth (Copy (Nat)) xs k y ys) s) (erased (Apart (Nat) Lt k g) ap) (erased (OutS k lo hi) o) -> (erased (FlB ys j g s0 lo hi) r))
     (match erased f _
       ((FbL _ _ m w _ _ x d lm) (FbL ys g m w lo s0 (welt-set xs ys g w k y x s ap) d lm))
-      ((FbN _ j1 _ w b cm _ c0 c1 c2 c3 x d gb bb k0 k1 k2 k3)
-        (FbN ys j1 g w b cm hi c0 c1 c2 c3 (welt-set xs ys g w k y x s ap) d gb bb
-          (kf-set xs ys j1 b hi cm (Zero) k c0 y k0 s o) (kf-set xs ys j1 b hi cm (Succ (Zero)) k c1 y k1 s o)
-          (kf-set xs ys j1 b hi cm (Succ (Succ (Zero))) k c2 y k2 s o) (kf-set xs ys j1 b hi cm (Succ (Succ (Succ (Zero)))) k c3 y k3 s o)))))
-  ((erased kf-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j b hi cm sy k) (erased (Gtree) c) (erased (Copy (Nat)) y) (subterm erased (KF xs j b hi cm sy c) kf)
-      (erased (SetNth (Copy (Nat)) xs k y ys) s) (erased (OutS k b hi) o) -> (erased (KF ys j b hi cm sy c) r))
-    (let-match erased kf (KfP _ _ _ _ _ _ v g lo2 hi2 _ bi rk a gh l2 h2 f) ((KfE _ _ _ _ _ _ bi) (KfE ys j b hi cm sy bi)))
+      ((FbN _ j1 _ w b cm _ bn m1 m2 m3 c0 c1 c2 c3 x d gb bb bl k0 k1 k2 k3)
+        (FbN ys j1 g w b cm hi bn m1 m2 m3 c0 c1 c2 c3 (welt-set xs ys g w k y x s ap) d gb bb bl
+          (kf-set xs ys j1 b hi cm (Zero) k bn bn m1 c0 y k0 s o) (kf-set xs ys j1 b hi cm (Succ (Zero)) k bn m1 m2 c1 y k1 s o)
+          (kf-set xs ys j1 b hi cm (Succ (Succ (Zero))) k bn m2 m3 c2 y k2 s o) (kf-set xs ys j1 b hi cm (Succ (Succ (Succ (Zero)))) k bn m3 hi c3 y k3 s o)))))
+  ((erased kf-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) j b hi cm sy k bn lo hc) (erased (Gtree) c) (erased (Copy (Nat)) y) (subterm erased (KF xs j b hi cm sy c bn lo hc) kf)
+      (erased (SetNth (Copy (Nat)) xs k y ys) s) (erased (OutS k b hi) o) -> (erased (KF ys j b hi cm sy c bn lo hc) r))
+    (let-match erased kf (KfP _ _ _ _ _ _ v g lo2 hi2 _ _ _ _ bi rk a gh l2 h2 f gn ll lh) ((KfE _ _ _ _ _ _ _ _ _ bi lh) (KfE ys j b hi cm sy bn lo hc bi lh)))
     (let ((erased ap) (erased o2))
       (match erased o (((Apart (Nat) Lt k g) ap0) ((OutS k lo2 hi2) o0))
         ((OsL _ _ _ l) (values (ApLt (Nat) Lt k g (lt-le-trans k b g l (add-ge b v g a))) (OsL k lo2 hi2 (lt-le-trans k b lo2 l l2))))
         ((OsR _ _ _ l) (values (ApGt (Nat) Lt k g (lt-le-trans g hi k gh l)) (OsR k lo2 hi2 (le-trans hi2 hi k h2 l))))))
-    (KfP ys j b hi cm sy v g lo2 hi2 c bi rk a gh l2 h2 (flb-set xs ys j g lo2 hi2 k c y f s ap o2))))
+    (KfP ys j b hi cm sy v g lo2 hi2 bn lo hc c bi rk a gh l2 h2 (flb-set xs ys j g lo2 hi2 k c y f s ap o2) gn ll lh)))
 
 (def-adts $ (WIdx : ((Nat) k) ((Nat) l1) ((Nat) h1) ((Nat) l2) ((Nat) h2) -> Type)
   enum
@@ -1015,11 +1017,11 @@
   (let ((many r) (erased f) (erased rb)) (tail $ r4-kmask rest mq2 pb1 (or-lt 4 m y mq2 mb vb4 o)))
   (values r (FmCons s m mq2 r v t rest pv o f) rb))
 
-(def-adts $ (KFs : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) b) ((Nat) hi) ((Nat) cm) ((Nat) s) ((List (Gtree)) ts) -> Type)
+(def-adts $ (KFs : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) b) ((Nat) hi) ((Nat) cm) ((Nat) s) ((List (Gtree)) ts) ((Nat) bn) ((Nat) lo) ((Nat) hc) -> Type)
   enum
-  (many KFsNil : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s) -> (KFs xs j b hi cm s (Nil (Gtree))))
-  (many KFsCons : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s) (erased (Gtree) t) (erased (List (Gtree)) ts) (erased (KF xs j b hi cm s t) k)
-      (erased (KFs xs j b hi cm (Succ s) ts) r) -> (KFs xs j b hi cm s (Cons (Gtree) t ts))))
+  (many KFsNil : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo) -> (KFs xs j b hi cm s (Nil (Gtree)) bn lo lo))
+  (many KFsCons : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo m hc) (erased (Gtree) t) (erased (List (Gtree)) ts) (erased (KF xs j b hi cm s t bn lo m) k)
+      (erased (KFs xs j b hi cm (Succ s) ts bn m hc) r) -> (KFs xs j b hi cm s (Cons (Gtree) t ts) bn lo hc)))
 
 ; ts begins with empty trees, their bits of cm clear, up to position s2, where ts2 begins.
 (def-adts $ (KSkip : ((Nat) cm) ((Nat) s) ((List (Gtree)) ts) ((Nat) s2) ((List (Gtree)) ts2) -> Type)
@@ -1043,10 +1045,10 @@
   (let ((erased s2) (erased ts2) (erased sk) (erased hd)) (ks-next cm (Succ s) i ts1 ch k1))
   (values s2 ts2 (KskE cm s s2 ts1 ts2 b sk) hd))
 
-(def-fns _ $ (erased skip-kfs : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s s2) (erased (List (Gtree)) ts ts2) (subterm erased (KSkip cm s ts s2 ts2) sk)
-    (erased (KFs xs j b hi cm s2 ts2) k) -> (erased (KFs xs j b hi cm s ts) r))
+(def-fns _ $ (erased skip-kfs : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s s2 bn lo hc) (erased (List (Gtree)) ts ts2) (subterm erased (KSkip cm s ts s2 ts2) sk)
+    (erased (KFs xs j b hi cm s2 ts2 bn lo hc) k) -> (erased (KFs xs j b hi cm s ts bn lo hc) r))
   (let-match erased sk (KskE _ _ _ ts1 _ bi sk1) ((KskZ _ _ _) k))
-  (KFsCons xs j b hi cm s (GEmpty) ts1 (KfE xs j b hi cm s bi) (skip-kfs xs j b hi cm (Succ s) s2 ts1 ts2 sk1 k)))
+  (KFsCons xs j b hi cm s bn lo lo hc (GEmpty) ts1 (KfE xs j b hi cm s bn lo lo bi (lt-succ lo)) (skip-kfs xs j b hi cm (Succ s) s2 bn lo hc ts1 ts2 sk1 k)))
 
 (def-fns _ $ (erased ctl-len : (erased (List (KidP)) ch) (erased (Nat) n r) (subterm erased (CtL ch n r) c) -> (erased (Length (KidP) ch n) l))
   (let-match erased c (CtlCons s _ n1 _ _ t rest _ c1 _) ((CtlNil) (LengthNil _)))
@@ -1207,7 +1209,7 @@
     ((Nat) bi) ((Nat) bn) ((Nat) nx) ((Nat) nx2) -> Type)
   enum
   (many MkKidsOk : (erased (List (Copy (Nat))) xs ys) (erased (Nat) len j b e cm s) (erased (List (Gtree)) ts) (erased (Nat) bi bn nx nx2) (erased (Eq (Nat) nx2 e) q)
-      (erased (KFs ys j b e cm s ts) k) (erased (Ws xs ys bi bn nx e) w) (erased (Length (Copy (Nat)) ys len) l) (erased (AllCu ys) au)
+      (erased (KFs ys j b e cm s ts bn nx e) k) (erased (Ws xs ys bi bn nx e) w) (erased (Length (Copy (Nat)) ys len) l) (erased (AllCu ys) au)
       -> (KidsOk xs ys len j b e cm s ts bi bn nx nx2)))
 
 (def-fns _ $ (erased skip-subt : (erased (Nat) cm s s2) (erased (List (Gtree)) ts ts3) (erased (Gtree) t) (subterm erased (KSkip cm s ts s2 (Cons (Gtree) t ts3)) sk)
@@ -1307,17 +1309,18 @@
       (tail $ r4-fill-kids xs1 a3 len l1 au1 nc j1 ts (GssCons _ _ _ sh0 $ GssCons _ _ _ sh1 $ GssCons _ _ _ sh2 $ GssCons _ _ _ sh3 $ GssNil _)
         nx 0 nx bn (add-zero-right nx) ch (Zero) cm ks n rr cl abn nx1 (lt-succ bn) e abe el))
     (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q kfs w2 l2 au2))
-    (let-match erased kfs (KFsCons _ _ _ _ _ _ _ _ k0 kfs1))
-    (let-match erased kfs1 (KFsCons _ _ _ _ _ _ _ _ k1f kfs2))
-    (let-match erased kfs2 (KFsCons _ _ _ _ _ _ _ _ k2 kfs3))
-    (let-match erased kfs3 (KFsCons _ _ _ _ _ _ _ _ k3 _))
+    (let-match erased kfs (KFsCons _ _ _ _ _ _ _ _ m1 _ _ _ k0 kfs1))
+    (let-match erased kfs1 (KFsCons _ _ _ _ _ _ _ _ m2 _ _ _ k1f kfs2))
+    (let-match erased kfs2 (KFsCons _ _ _ _ _ _ _ _ m3 _ _ _ k2 kfs3))
+    (let-match erased kfs3 (KFsCons _ _ _ _ _ _ _ _ m4 _ _ _ k3 kfs4))
+    (let-match erased kfs4 (KFsNil _ _ _ _ _ _ _ _))
     (let-match erased q (Refl _ _))
     (let ((erased wx)) (welt-w xs1 ys id w nx bn bn e (MkWElt xs1 id w (setnth-nth _ xs id _ xs1 s)) w2 il (lt-le-trans id nx bn il (add-le-left nx n bn abn))))
     (let ((erased w0)) (w-one xs xs1 id nx e _ s))
     (let ((erased w3)) (w-mono xs1 ys nx bn bn e id (Succ id) nx e w2 (SivB nx bn id (Succ id) nx e (lt-succ nx) (le-trans bn bn e (lt-succ bn) (add-le-left bn rr e abe)))
       (SivB bn e id (Succ id) nx e (add-le-left nx n bn abn) (lt-succ e))))
     (values ys r nx2 (MkFillOk xs ys len (Succ j1) id t nx nx2 e (Refl _ nx2)
-      (FbN ys j1 id w nx cm e t0 t1 t2 t3 wx d il (ncap-b3 len nx (MkNCap len L4 ml lb) nxl) k0 k1f k2 k3) (w-cat xs xs1 ys id (Succ id) nx e w0 w3) l2 au2)))
+      (FbN ys j1 id w nx cm e bn m1 m2 m3 t0 t1 t2 t3 wx d il (ncap-b3 len nx (MkNCap len L4 ml lb) nxl) (add-le-left nx n bn abn) k0 k1f k2 k3) (w-cat xs xs1 ys id (Succ id) nx e w0 w3) l2 au2)))
   ((many r4-fill-kids : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) a) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) l)
       (erased (AllCu xs) au) (erased (NCap len) nc) (subterm erased (Nat) j) (subterm erased (List (Gtree)) ts) (erased (GShps (Succ j) ts) ss) (many (Nat) b i) (erased (Nat) bi bn) (erased (Add b i bi) abi) (many (List (KidP)) ch) (erased (Nat) s cm) (erased (KS cm s ts ch i) ks)
       (erased (Nat) nr rr) (erased (CtL ch nr rr) cl) (erased (Add bi nr bn) abn) (many (Nat) nx) (erased (Lt bn (Succ nx)) bnx) (erased (Nat) e) (erased (Add nx rr e) ae)
@@ -1330,7 +1333,7 @@
         (let-match erased cl (CtlNil))
         (let-match erased (add-fn bi (Zero) bn bi abn (add-zero-right bi)) (Refl _ _))
         (let-match erased (add-fn nx (Zero) e nx ae (add-zero-right nx)) (Refl _ _))
-        (values xs a nx (MkKidsOk xs xs len j b nx cm s ts bi bi nx nx (Refl _ nx) (skip-kfs xs j b nx cm s s2 ts (Nil _) sk (KFsNil xs j b nx cm s2))
+        (values xs a nx (MkKidsOk xs xs len j b nx cm s ts bi bi nx nx (Refl _ nx) (skip-kfs xs j b nx cm s s2 bn nx nx ts (Nil _) sk (KFsNil xs j b nx cm s2 bn nx))
           (WsNil xs bi bi nx nx) l au))))
     (let-match many x (MkKidP s1 t))
     (let-match erased hd (KhP _ _ _ _ ts3 _ bit rk ks3))
@@ -1356,13 +1359,14 @@
         (add-sh bi nr1 bn abn) nx1 bnet e ate el))
     (let-match erased ko (MkKidsOk _ _ _ _ _ _ _ _ _ _ _ _ _ q2 kfs w2 l2 au2))
     (let ((erased bie)) (lt-le-trans bi nx e bil nxe))
-    (let ((erased kf)) (KfP ys j b e cm s1 i bi nx et t bit rk abi bie (le-trans b bi nx (add-le-left b i bi abi) (lt-weaken bi nx bil)) (add-le-left et r1 e ate)
-      (flb-w ys1 ys j bi nx et (Succ bi) bn et e t fb w2 (MkClear bi nx et (Succ bi) bn et e (lt-succ bi) bnx (lt-le-trans bi nx et bil (add-le-left nx c1 et aet)) (lt-succ et)))))
+    (let ((erased kf)) (KfP ys j b e cm s1 i bi nx et bn nx et t bit rk abi bie (le-trans b bi nx (add-le-left b i bi abi) (lt-weaken bi nx bil)) (add-le-left et r1 e ate)
+      (flb-w ys1 ys j bi nx et (Succ bi) bn et e t fb w2 (MkClear bi nx et (Succ bi) bn et e (lt-succ bi) bnx (lt-le-trans bi nx et bil (add-le-left nx c1 et aet)) (lt-succ et)))
+      (add-pos-lt bi (Succ nr1) bn abn (LtZ nr1)) (lt-succ nx) (lt-succ et)))
     (let ((erased wa)) (w-mono xs ys1 bi (Succ bi) nx et bi bn nx e w1 (SivA bi (Succ bi) bi bn nx e (lt-succ bi) (add-pos-lt-s bi nr1 bn abn))
       (SivB nx et bi bn nx e (lt-succ nx) (add-le-left et r1 e ate))))
     (let ((erased wb)) (w-mono ys1 ys (Succ bi) bn et e bi bn nx e w2 (SivA (Succ bi) bn bi bn nx e (lt-weaken bi (Succ bi) (lt-succ bi)) (lt-succ bn))
       (SivB et e bi bn nx e (add-le-left nx c1 et aet) (lt-succ e))))
-    (values ys r nx2 (MkKidsOk xs ys len j b e cm s ts bi bn nx nx2 q2 (skip-kfs ys j b e cm s s1 ts (Cons _ t ts3) sk (KFsCons ys j b e cm s1 t ts3 kf kfs))
+    (values ys r nx2 (MkKidsOk xs ys len j b e cm s ts bi bn nx nx2 q2 (skip-kfs ys j b e cm s s1 bn nx e ts (Cons _ t ts3) sk (KFsCons ys j b e cm s1 bn nx et e t ts3 kf kfs))
       (w-cat xs ys1 ys bi bn nx e wa wb) l2 au2))))
 
 (def-adts
@@ -1381,6 +1385,32 @@
     (many NlkE : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm s) (erased (BitIs cm s (Bit0)) bi) -> (NLayK xs j b cm s (GEmpty)))
     (many NlkP : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm s v g) (erased (Gtree) c) (erased (BitIs cm s (Bit1)) bi) (erased (Rk s cm v) r)
         (erased (Add b v g) a) (erased (NLay xs j g c) l) -> (NLayK xs j b cm s c))))
+
+; f is 0 when z is BTrue.
+(def-adts $ (Zf : ((Bool) z) ((Nat) f) -> Type)
+  enum
+  (many ZfA : (erased (Nat) f) -> (Zf (BFalse) f))
+  (many ZfZ : -> (Zf (BTrue) (Zero))))
+
+(def-adts
+  ; Node g of xs lays out s0 j levels above the leaves, its nodes below in [lo, hi), and g not; the kids are below bn, and the nodes below the kids of
+  ; the symbols 0 to 3 in [bn, m1), [m1, m2), [m2, m3) and [m3, hi); when z is BTrue, no node of it has a part of gtr.
+  ((NIv : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) g) ((Gtree) s0) ((Nat) lo) ((Nat) hi) ((Bool) z) -> Type)
+    enum
+    (many NivL : (erased (List (Copy (Nat))) xs) (erased (Nat) g lo w b cm ftr fu) (erased (Gtree) s0) (erased (Bool) z) (erased (WElt xs g w) x)
+        (erased (NWd w b cm ftr fu) d) (erased (Zf z ftr) zf) -> (NIv xs (Zero) g s0 lo lo z))
+    (many NivN : (erased (List (Copy (Nat))) xs) (erased (Nat) j g w b cm ftr fu hi bn m1 m2 m3) (erased (Gtree) c0 c1 c2 c3) (erased (Bool) z) (erased (WElt xs g w) x)
+        (erased (NWd w b cm ftr fu) d) (erased (Zf z ftr) zf) (erased (Lt g b) gb) (erased (Lt b (Succ bn)) bl) (erased (NIvK xs j b cm (Zero) c0 bn bn m1 z) k0)
+        (erased (NIvK xs j b cm (Succ (Zero)) c1 bn m1 m2 z) k1) (erased (NIvK xs j b cm (Succ (Succ (Zero))) c2 bn m2 m3 z) k2)
+        (erased (NIvK xs j b cm (Succ (Succ (Succ (Zero)))) c3 bn m3 hi z) k3) -> (NIv xs (Succ j) g (GNode c0 c1 c2 c3) b hi z)))
+  ; The kid of symbol s of a node whose children start at b: below bn, its nodes below in [lo, hc).
+  ((NIvK : ((List (Copy (Nat))) xs) ((Nat) j) ((Nat) b) ((Nat) cm) ((Nat) s) ((Gtree) c) ((Nat) bn) ((Nat) lo) ((Nat) hc) ((Bool) z) -> Type)
+    enum
+    (many NivkE : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm s bn lo hc) (erased (Bool) z) (erased (BitIs cm s (Bit0)) bi) (erased (Lt lo (Succ hc)) lh)
+        -> (NIvK xs j b cm s (GEmpty) bn lo hc z))
+    (many NivkP : (erased (List (Copy (Nat))) xs) (erased (Nat) j b cm s v g lo2 hi2 bn lo hc) (erased (Gtree) c) (erased (Bool) z) (erased (BitIs cm s (Bit1)) bi)
+        (erased (Rk s cm v) r) (erased (Add b v g) a) (erased (Lt g bn) gn) (erased (Lt lo (Succ lo2)) ll) (erased (Lt hi2 (Succ hc)) lh) (erased (NIv xs j g c lo2 hi2 z) p)
+        -> (NIvK xs j b cm s c bn lo hc z))))
 
 ; f is the part of a word that sel picks: its part of gtr when sel is BTrue, of gu otherwise.
 (def-adts $ (Fld : ((Bool) sel) ((Nat) ftr) ((Nat) fu) ((Nat) f) -> Type)
@@ -1411,32 +1441,45 @@
   ((erased flb-lay : (erased (List (Copy (Nat))) xs) (erased (Nat) j g lo hi) (erased (Gtree) s0) (subterm erased (FlB xs j g s0 lo hi) f) -> (erased (NLay xs j g s0) r))
     (match erased f _
       ((FbL _ _ m w _ _ x d lm) (NlL xs g w (Zero) m (Zero) m s0 x d lm))
-      ((FbN _ j1 _ w b cm _ c0 c1 c2 c3 x d _ bb k0 k1 k2 k3)
-        (NlN xs j1 g w b cm (Zero) (Succ (Zero)) c0 c1 c2 c3 x d bb (kf-lay xs j1 b hi cm (Zero) c0 k0) (kf-lay xs j1 b hi cm (Succ (Zero)) c1 k1)
-          (kf-lay xs j1 b hi cm (Succ (Succ (Zero))) c2 k2) (kf-lay xs j1 b hi cm (Succ (Succ (Succ (Zero)))) c3 k3)))))
-  ((erased kf-lay : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s) (erased (Gtree) c) (subterm erased (KF xs j b hi cm s c) k) -> (erased (NLayK xs j b cm s c) r))
-    (let-match erased k (KfP _ _ _ _ _ _ v g lo2 hi2 _ bi rk a _ _ _ f) ((KfE _ _ _ _ _ _ bi) (NlkE xs j b cm s bi)))
+      ((FbN _ j1 _ w b cm _ bn m1 m2 m3 c0 c1 c2 c3 x d _ bb _ k0 k1 k2 k3)
+        (NlN xs j1 g w b cm (Zero) (Succ (Zero)) c0 c1 c2 c3 x d bb (kf-lay xs j1 b hi cm (Zero) bn bn m1 c0 k0) (kf-lay xs j1 b hi cm (Succ (Zero)) bn m1 m2 c1 k1)
+          (kf-lay xs j1 b hi cm (Succ (Succ (Zero))) bn m2 m3 c2 k2) (kf-lay xs j1 b hi cm (Succ (Succ (Succ (Zero)))) bn m3 hi c3 k3)))))
+  ((erased kf-lay : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo hc) (erased (Gtree) c) (subterm erased (KF xs j b hi cm s c bn lo hc) k) -> (erased (NLayK xs j b cm s c) r))
+    (let-match erased k (KfP _ _ _ _ _ _ v g lo2 hi2 _ _ _ _ bi rk a _ _ _ f _ _ _) ((KfE _ _ _ _ _ _ _ _ _ bi _) (NlkE xs j b cm s bi)))
     (NlkP xs j b cm s v g c bi rk a (flb-lay xs j g lo2 hi2 c f))))
+
+(def-fns _
+  ((erased flb-iv : (erased (List (Copy (Nat))) xs) (erased (Nat) j g lo hi) (erased (Gtree) s0) (subterm erased (FlB xs j g s0 lo hi) f) -> (erased (NIv xs j g s0 lo hi (BTrue)) r))
+    (match erased f _
+      ((FbL _ _ m w _ _ x d lm) (NivL xs g lo w (Zero) m (Zero) m s0 (BTrue) x d (ZfZ)))
+      ((FbN _ j1 _ w b cm _ bn m1 m2 m3 c0 c1 c2 c3 x d gb _ bl k0 k1 k2 k3)
+        (NivN xs j1 g w b cm (Zero) (Succ (Zero)) hi bn m1 m2 m3 c0 c1 c2 c3 (BTrue) x d (ZfZ) gb bl (kf-iv xs j1 b hi cm (Zero) bn bn m1 c0 k0)
+          (kf-iv xs j1 b hi cm (Succ (Zero)) bn m1 m2 c1 k1) (kf-iv xs j1 b hi cm (Succ (Succ (Zero))) bn m2 m3 c2 k2)
+          (kf-iv xs j1 b hi cm (Succ (Succ (Succ (Zero)))) bn m3 hi c3 k3)))))
+  ((erased kf-iv : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo hc) (erased (Gtree) c) (subterm erased (KF xs j b hi cm s c bn lo hc) k)
+      -> (erased (NIvK xs j b cm s c bn lo hc (BTrue)) r))
+    (let-match erased k (KfP _ _ _ _ _ _ v g lo2 hi2 _ _ _ _ bi rk a _ _ _ f gn ll lh) ((KfE _ _ _ _ _ _ _ _ _ bi lh) (NivkE xs j b cm s bn lo hc (BTrue) bi lh)))
+    (NivkP xs j b cm s v g lo2 hi2 bn lo hc c (BTrue) bi rk a gn ll lh (flb-iv xs j g lo2 hi2 c f))))
 
 (def-fns _
   ((erased flb-part : (erased (List (Copy (Nat))) xs) (erased (Nat) j g lo hi) (erased (Gtree) s0) (subterm erased (FlB xs j g s0 lo hi) f)
       -> (erased (NPart xs j g s0 (BFalse) s0) r))
     (match erased f _
       ((FbL _ _ m w _ _ x d lm) (NpL xs g w (Zero) m (Zero) m m s0 s0 (BFalse) x d (FdU (Zero) m) lm))
-      ((FbN _ j1 _ w b cm _ c0 c1 c2 c3 x d _ _ k0 k1 k2 k3)
+      ((FbN _ j1 _ w b cm _ bn m1 m2 m3 c0 c1 c2 c3 x d _ _ _ k0 k1 k2 k3)
         (NpN xs j1 g w b cm (Zero) (Succ (Zero)) c0 c1 c2 c3 c0 c1 c2 c3 (BFalse) x d (FdU (Zero) (Succ (Zero)))
-          (kf-part xs j1 b hi cm (Zero) c0 k0) (kf-part xs j1 b hi cm (Succ (Zero)) c1 k1)
-          (kf-part xs j1 b hi cm (Succ (Succ (Zero))) c2 k2) (kf-part xs j1 b hi cm (Succ (Succ (Succ (Zero)))) c3 k3)))))
-  ((erased kf-part : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s) (erased (Gtree) c) (subterm erased (KF xs j b hi cm s c) k)
+          (kf-part xs j1 b hi cm (Zero) bn bn m1 c0 k0) (kf-part xs j1 b hi cm (Succ (Zero)) bn m1 m2 c1 k1)
+          (kf-part xs j1 b hi cm (Succ (Succ (Zero))) bn m2 m3 c2 k2) (kf-part xs j1 b hi cm (Succ (Succ (Succ (Zero)))) bn m3 hi c3 k3)))))
+  ((erased kf-part : (erased (List (Copy (Nat))) xs) (erased (Nat) j b hi cm s bn lo hc) (erased (Gtree) c) (subterm erased (KF xs j b hi cm s c bn lo hc) k)
       -> (erased (NPartK xs j b cm s c (BFalse) c) r))
-    (let-match erased k (KfP _ _ _ _ _ _ v g lo2 hi2 _ bi rk a _ _ _ f) ((KfE _ _ _ _ _ _ bi) (NpkE xs j b cm s (BFalse) bi)))
+    (let-match erased k (KfP _ _ _ _ _ _ v g lo2 hi2 _ _ _ _ bi rk a _ _ _ f _ _ _) ((KfE _ _ _ _ _ _ _ _ _ bi _) (NpkE xs j b cm s (BFalse) bi)))
     (NpkP xs j b cm s v g c c (BFalse) bi rk a (flb-part xs j g lo2 hi2 c f))))
 
 (def-fns _ $ (erased flb-tr : (erased (List (Copy (Nat))) xs) (erased (Nat) j g lo hi) (erased (Gtree) s0) (erased (FlB xs j g s0 lo hi) f)
     -> (erased (NPart xs j g s0 (BTrue) (GEmpty)) r))
   (match erased f _
     ((FbL _ _ m w _ _ x d _) (NpE xs (Zero) g w (Zero) m (Zero) m s0 (BTrue) x d (FdT (Zero) m)))
-    ((FbN _ j1 _ w b cm _ _ _ _ _ x d _ _ _ _ _ _) (NpE xs j g w b cm (Zero) (Succ (Zero)) s0 (BTrue) x d (FdT (Zero) (Succ (Zero)))))))
+    ((FbN _ j1 _ w b cm _ _ _ _ _ _ _ _ _ x d _ _ _ _ _ _ _) (NpE xs j g w b cm (Zero) (Succ (Zero)) s0 (BTrue) x d (FdT (Zero) (Succ (Zero)))))))
 
 ; The buffer holds T, the last first: its array a, of capacity cap, holds the first n entries.
 (def-adts $ (Buf : ((List (Nat)) T) -> Type)
@@ -1568,7 +1611,7 @@
   enum
   (many MkNodes : (erased (Nat) h) (erased (Gtree) gtu) (erased (List (Copy (Nat))) xs) (many (Array (Copy (Nat)) xs) ns) (many (Nat) len)
       (erased (Length (Copy (Nat)) xs len) l) (erased (AllCu xs) au) (erased (NLay xs h (Zero) gtu) ly) (erased (NPart xs h (Zero) gtu (BFalse) gtu) pu)
-      (erased (NPart xs h (Zero) gtu (BTrue) (GEmpty)) pt) -> (Nodes h gtu)))
+      (erased (NPart xs h (Zero) gtu (BTrue) (GEmpty)) pt) (erased (Nat) lo hi) (erased (NIv xs h (Zero) gtu lo hi (BTrue)) iv) -> (Nodes h gtu)))
 
 (def-fns _ $ (many r4-nodes : (erased (Nat) h) (many (Gtree) gtu) (erased (GShp (Succ h) gtu) gsh) (erased (GPres gtu (BTrue)) ne) -> (many (Maybe (Nodes h gtu)) r))
   (let ((many n) (erased gn)) (r4-cnt gtu))
@@ -1583,7 +1626,7 @@
     (r4-fill xs a n (repeat-length _ n _ xs rp) (allcu-rep n xs rp) (MkNCap n L4 ml lb) h gtu gsh 1 0 c1 n gn (AddSucc (Zero) c1 c1 (AddZero c1))
       (lt-succ n) (LtZ (Zero))))
   (let-match erased fo (MkFillOk _ _ _ _ _ _ _ _ _ _ f _ l2 au2))
-  (Some _ (MkNodes h gtu ys (share r) n l2 au2 (flb-lay ys h (Zero) _ _ gtu f) (flb-part ys h (Zero) _ _ gtu f) (flb-tr ys h (Zero) _ _ gtu f))))
+  (Some _ (MkNodes h gtu ys (share r) n l2 au2 (flb-lay ys h (Zero) _ _ gtu f) (flb-part ys h (Zero) _ _ gtu f) (flb-tr ys h (Zero) _ _ gtu f) _ _ (flb-iv ys h (Zero) _ _ gtu f))))
 
 ; v is 0 for the empty tree and 1 otherwise.
 (def-adts $ (Nz : ((Ctree) t) ((Nat) v) -> Type)
@@ -5180,7 +5223,8 @@
       (erased (Add ld hd (Succ h)) ad) (erased (Pw3 ld (Succ (Zero)) lo) pl) (erased (RowAt rs (Zero) (Succ (Zero)) ld) r0)
       (erased (RowAt rs (Succ (Zero)) (Succ (Zero)) hd) r1) (erased (RowAt rs (Succ (Succ (Zero))) (Succ (Succ (Zero))) ld) r2)
       (erased (RowAt rs (Succ (Succ (Succ (Zero)))) (Succ (Succ (Zero))) hd) r3) (erased (CEv ctu (ESStart)) ce)
-      (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (CtH (Succ h) ctu) hc) -> (Eng h)))
+      (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge) (erased (CtH (Succ h) ctu) hc)
+      (erased (Nat) ilo ihi) (erased (NIv xs h (Zero) gtu ilo ihi (BTrue)) iv) -> (Eng h)))
 
 (def-lvl r4-lm0)
 (def-lvl r4-lm1)
@@ -5208,7 +5252,7 @@
   (let ((many N-m) (erased ae-m) (erased _)) (u62-sub e-m o-m eb (offs-mono (Succ h-m) o-m (Succ (Succ h-m)) e-m of-m oe-m (lt-weaken _ _ (lt-succ (Succ h-m))))))
   (let ((erased cs-m) (unique cn-m) (erased rz)) (array-make (Nat) N-m 0))
   (let ((erased es) (erased evs) (unique evb-m) (erased zev) (erased nb-m)) (r4-tabs h-m hl-m e-m oe-m eb))
-  (let-match many nd-m (MkNodes _ _ xs-m na len-m lx ax ly-m pu-m pt))
+  (let-match many nd-m (MkNodes _ _ xs-m na len-m lx ax ly-m pu-m pt ilo ihi iv-m))
   (def-fns r4-lm0
     ; red4's count: the walk below node g, at depth k, of the pairs P of level k, adding their hits to the counts.
     ((many r4-count : (erased (List (Copy (Nat))) cs) (unique (Array (Copy (Nat)) cs) cn at cn-m) (erased (Nat) N) (erased (Length (Copy (Nat)) cs N) lc)
@@ -5511,4 +5555,4 @@
       (MkRowAt rs (Succ (Zero)) 1 hd M1 x1 a1 l1 Pq1 t1 u1 (NthThere _ c0 _ (Zero) c1 (NthHere _ c1 _)))
       (MkRowAt rs (Succ (Succ (Zero))) 2 ld M2 x2 a2 l2 Pq2 t2 u2 (NthThere _ c0 _ (Succ (Zero)) c2 (NthThere _ c1 _ (Zero) c2 (NthHere _ c2 _))))
       (MkRowAt rs (Succ (Succ (Succ (Zero)))) 2 hd M3 x3 a3 l3 Pq3 t3 u3
-        (NthThere _ c0 _ (Succ (Succ (Zero))) c3 (NthThere _ c1 _ (Succ (Zero)) c3 (NthThere _ c2 _ (Zero) c3 (NthHere _ c3 _))))) ce ge hc))))
+        (NthThere _ c0 _ (Succ (Succ (Zero))) c3 (NthThere _ c1 _ (Succ (Zero)) c3 (NthThere _ c2 _ (Zero) c3 (NthHere _ c3 _))))) ce ge hc ilo ihi iv-m))))
