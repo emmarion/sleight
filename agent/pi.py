@@ -1201,11 +1201,30 @@ def session(run_dir, prompt, seeds):
             _say(line := f"{k} truncated at session end: {size} -> {cut} bytes")
             _log(TRANSCRIPT, f"\n{line}\n")
         (RUN_DIR / "sandbox").unlink()
-        shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
+        shared = {rel for _, rel in seeds if rel not in KEEP and rel not in CARRY and (SANDBOX_ROOT / rel).exists()}
+        shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True, ignore=lambda d, ns: shared & set(ns) if Path(d) == SANDBOX_ROOT else ())
+        for rel in shared:
+            (RUN_DIR / "sandbox" / rel).symlink_to(os.path.relpath(_stored(SANDBOX_ROOT / rel), RUN_DIR / "sandbox"))
         shutil.rmtree(SANDBOX_ROOT)
         shutil.rmtree(COMPILER.parent)
         os.close(ROOT_FD)
         _save_nw_session()
+
+
+def _stored(p):
+    h = hashlib.sha256()
+    for f in sorted([p] if p.is_file() else (q for q in p.rglob("*") if q.is_file())):
+        h.update(f"{f.relative_to(p)}\0".encode() + f.read_bytes() + b"\0")
+    dst = RESULTS / "seeds" / f"{p.name}@{h.hexdigest()[:16]}" / p.name
+    if not dst.parent.exists():
+        dst.parent.parent.mkdir(exist_ok=True)
+        tmp = Path(tempfile.mkdtemp(prefix=".tmp-", dir=dst.parent.parent))
+        _copy(p, tmp / p.name)
+        try:
+            os.rename(tmp, dst.parent)
+        except OSError:
+            shutil.rmtree(tmp)
+    return dst
 
 
 def _save_nw_session():
