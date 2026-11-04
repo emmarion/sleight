@@ -353,12 +353,6 @@
     (r4c-ss-bld h (Zero) (Zero) (Zero) c2 ctr c2 ctr T2 us2 (Nil _) h (GcLoad h c2 ctr T2 w ar mc hc) (RINil) (LengthNil _) (AddZero h) f2 (AtNil c2) (AtNil ctr) cn))
   (values us2 ca2 zs2 T2 cel2 c2 f2 ss mi am dt))
 
-; red4's hits.n <- 0, celems.n <- 0: the buffer emptied.
-(def-fns _ $ (many r4k-bclr : (erased (List (Nat)) T) (unique (Buf T) b) -> (unique (Buf (Nil (Nat))) b2 at b))
-  (let-match erased r4-e0 (Refl _ _))
-  (let-match unique b (MkBuf _ xs a _ cap l cp au _ _ u))
-  (u (Nil _) xs (at) a 0 cap l cp au (LtZ cap) (TbkNil xs)))
-
 ; The Kempe loop's state before a G round, as red4's arrays hold it: KR with gtr empty and CR; ctu in uc and ul; gu as gtu in the node words xs of len nodes laid
 ; out from s0, whose nonzero gtr parts are in the hits buffer Hs; the ctr trie cs and celems T holding ctr.
 (def-adts $ (KgI : ((Nat) h N o len) ((Ctree) c0 r0) ((Gtree) g0 s0) ((List (Copy (Nat))) xs) ((List Cnt) vs) ((List (U8)) us cs) ((List (Nat)) Hs T) -> Type)
@@ -493,15 +487,16 @@
   (let ((unique nd)) (array-copy _ _ nodes0))
   (let ((unique ul)) (bytes-copy _ ul0))
   (let ((unique uc)) (bytes-copy _ uc0))
-  (let ((many ov) (erased ofv) (erased _)) (r4-oget (Succ h) hl))
+  (let ((many h1)) (u62-inc h (lt-trans (Succ h) 17 u62-modulus hl r4-17-u62)))
+  (let ((many ov) (erased ofv) (erased _)) (r4-oget h1 hl))
   (let-match erased (offs-fn (Succ h) ov o ofv of) (Refl _ _))
   (let ((erased cs) (unique ca) (erased rc)) (bytes-make ov (MkU8 0 u8-modulus-pos)))
   (let ((erased zc)) (sz-made flag-w o o _ cs rc (LtZ _) (mul-one-right o) (sz-u62 flag-w us o zu)))
   (let ((erased m-m) (erased mxx)) (mx-exists h (Zero)))
   (let-match erased (offs-fn (Succ h) o (Succ m-m) of (mx-offs (Zero) (Zero) m-m h h (OfS (Zero) (Zero) (Zero) (OfZ) (TZ)) mxx (AddZero h))) (Refl _ _))
   (let ((erased f0)) (CaE cs h (Zero) (zr-fill cs o h (Zero) (fill-zero flag-w o cs rc) zc (tfit-of-mx h (Zero) m-m o mxx (lt-succ m-m)))))
-  (let ((unique hb1)) (r4k-bclr Hs hb))
-  (let ((unique cel1)) (r4k-bclr T cel))
+  (let ((unique hb1)) (r4-bclr Hs hb))
+  (let ((unique cel1)) (r4-bclr T cel))
   (let ((erased cs2) (unique ca2) (erased zc2) (erased T1) (unique cel2) (erased c) (erased f) (erased ss) (erased mi) (erased am) (erased dc)) (r4k-load cs ca o zc cel1 h hl N pw f0 ctr cn))
   (let ((erased db)) (lt-le-trans (Succ (Succ h)) (Succ 17) u62-modulus (LtS (Succ h) 17 hl) (LtS 17 u62-modulus r4-17-u62)))
   (let ((erased xsF) (unique ndF) (erased vsF) (unique ucF) (erased usF) (unique ulF) (erased csF) (unique caF) (erased HsF) (unique hbF) (erased GF) (unique gbF) (erased TF)

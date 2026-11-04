@@ -1678,6 +1678,12 @@
       (let ((erased nl)) (buf-room n cap nc ap))
       (tail $ r4-bput T xs a2 n u (u62-inc n (lt-le-trans (Succ n) (Succ cap) u62-modulus (LtS n cap nl) (LtS cap u62-modulus cb))) (Refl _ _) x xb cap l cp nl au tb))))
 
+; red4's b.n <- 0: the buffer emptied.
+(def-fns _ $ (many r4-bclr : (erased (List (Nat)) T) (unique (Buf T) b) -> (unique (Buf (Nil (Nat))) b2 at b))
+  (let-match erased r4-e0 (Refl _ _))
+  (let-match unique b (MkBuf _ xs a _ cap l cp au _ _ u))
+  (u (Nil _) xs (at) a 0 cap l cp au (LtZ cap) (TbkNil xs)))
+
 (def-fns _ $ (many r4-gb : (erased (List (U8)) us) (unique (Bytes us) b) (many (Nat) i) (erased (Nat) v) (erased (Elt flag-w us i v) x) -> (unique b is b2 at b) (many v is r))
   (let-match erased x (MkElt _ _ _ q _ m ds s le))
   (let-match erased (mul-flag i q m) (Refl _ _))
@@ -2752,11 +2758,12 @@
   (let ((erased m0) (erased n0)) (nth-exists _ ns 17 (Zero) ln0 (LtZ 16)))
   (let ((erased ns2) (unique ln2) (erased sn)) (array-place-imm _ _ ln 0 (MkCopy _ 1) m0 n0 (allcu-nth ns (Zero) m0 un0 n0) (imm-cu 1 r4-1-u62)))
   (let ((unique a2) (many v) (erased x) (erased vb)) (r4-flag us a len z 0 lp0))
+  (let ((many r)) (u62-eq v (Zero) vb u62-modulus-pos))
   (values rp2 rb2 ns2 lp2 lb2 ln2 a2 v x (MkWSt rp2 rb2 ns2 wp2 wb2 (setnth-length _ ns (Zero) 17 _ ns2 sn ln0) (allcu-set ns ns2 (Zero) 1 r4-1-u62 un0 sn))
     (MkWLv rp2 rb2 ns2 (Zero) _ xs ys ra rb0 1 1 (Zero) 1 1 16 (setnth-nth _ rp (Zero) _ rp2 sp) (setnth-nth _ rb (Zero) _ rb2 sb) (setnth-nth _ ns (Zero) _ ns2 sn)
       (lt-succ 1) (P0) (OfZ) (OfS (Zero) (Zero) (Zero) (OfZ) (TZ)) (AddZero 1) (AddZero 16)
       (WpsCons xs ys 1 16 (Zero) 1 (Zero) 1 (BS0) (Nil _) ep eb (BnE) r4-bnb16 (LtZ (Zero)) (WpsNil xs ys 1 16 1)))
-    (u62-eq v (Zero) vb u62-modulus-pos)))
+    r))
 
 (def-fns _ $ (many r4-xrun : (erased (List (Copy (Nat))) xs ys xd yd) (unique (Array (Copy (Nat)) xs) sp) (unique (Array (Copy (Nat)) ys) sb)
     (unique (Array (Copy (Nat)) xd) dp) (unique (Array (Copy (Nat)) yd) db) (erased (List (U8)) us) (unique (Bytes us) a) (erased (Nat) k W W2 len jb wd J)

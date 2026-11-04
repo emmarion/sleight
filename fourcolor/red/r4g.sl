@@ -2370,7 +2370,8 @@
   (let ((erased ys) (unique nd2) (erased lx2) (erased au2) (erased nk) (unique ha2) (erased hl2))
     (r4-gclr-go xs nd len lx au hx ha cap lh Hs 0 n tb al (lt-le-trans n (Succ len) u62-modulus kl (LtS len u62-modulus lnb)) nc n (AddZero n) R0 fw0
       (r4g-hall-mono xs (Zero) Hs R0 hl (r4g-hsub-tf hx n n Hs R0 tb fw0 (lt-succ n)))))
-  (values ys nd2 lx2 au2 nk (u (Nil _) hx (at) ha2 0 cap lh cp hau (LtZ cap) (TbkNil hx)) (MkHOk ys len (Nil _) (ALNil len) (DistNil) (HnNil ys) hl2)))
+  (let ((unique hb2)) (r4-bclr Hs (at unique (u Hs hx ha2 n cap lh cp hau nc tb))))
+  (values ys nd2 lx2 au2 nk hb2 (MkHOk ys len (Nil _) (ALNil len) (DistNil) (HnNil ys) hl2)))
 
 ; Node g's word after a write at i that keeps the first child, child mask and gu part.
 (def-fns _ $ (erased r4g-npu-word : (erased (List (Copy (Nat))) xs ys) (erased (Nat) g i w w2 b cm f u f2 w1 b1 cm1 f1 u1) (erased (SetNth (Copy (Nat)) xs i (MkCopy (Nat) w2) ys) st)
