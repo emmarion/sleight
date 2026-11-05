@@ -1797,8 +1797,11 @@
 
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
 (def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
-  (let-match many p0 (TSlotOf c) (else (None _)))
-  (let-match many c (TVar x) (else (None _)))
+  (let-match many (match many p0 (((Maybe $ Nat) _))
+      ((TSlotOf c) (match many c (((Maybe $ Nat) _)) ((TVar x) (Some _ x)) (else (None _))))
+      ((TVar s) (match many (env-slot-of env s) (((Maybe $ Nat) _)) ((Some _ s2) (match many (nat-eqb s s2) (((Maybe $ Nat) _)) ((BTrue) (Some _ s)) ((BFalse) (None _)))) ((None _) (None _))))
+      (else (None _)))
+    (Some _ x) ((None _) (None _)))
   (match many (and (mult-is-many $ entry-mult-of env x) $ or (is-settled env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
 
 (def-fns _ $ (many location-var : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Env) r) (many (Nat) x))
