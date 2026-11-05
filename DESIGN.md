@@ -1464,7 +1464,8 @@ with fields. A phantom constructor takes no discriminant. A type is
 its non-phantom constructors has a non-erased field. A value with no
 non-erased field is the word of the `Nat` of its position among the
 fieldless non-phantom constructors when its type is tagged, the word
-of `vacant-slot` (§35) when its type is hollow, however the value was
+of `vacant-slot` (§35) when its type is untagged and not marked
+`extern`, however the value was
 built, and an unspecified word otherwise. In the first two cases this
 is the word of its constructor's tag slot (§35). `vacant-slot`'s word is that
 of `Nat` 0. With externs on, the extern `Nat`'s FFI must meet this for
@@ -1581,11 +1582,11 @@ its own slot. That makes a cell type that names it the type of a fresh
 cell. Its runtime word is what `cell-alloc` puts in a vacant slot, and
 the word of every value of a hollow type (§33).
 
-A non-phantom constructor `C` with no non-erased field, of a tagged or
-hollow type (§33) not marked `extern` or `newtype`, has a tag slot when
+A non-phantom constructor `C` with no non-erased field, of a type not
+marked `extern` or `newtype`, has a tag slot when
 an opened `Matchable` lists it. That slot is a built-in slot per
 position among the fieldless non-phantom constructors for a tagged
-type, and `vacant-slot` for a hollow one. Tag slot 0 is `vacant-slot`,
+type, and `vacant-slot` for an untagged one. Tag slot 0 is `vacant-slot`,
 and each tag slot is its own slot. With the prelude, `(slot-of 0)` is
 `vacant-slot`; with externs too, `(slot-of k)` is tag slot `k`.
 
