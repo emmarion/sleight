@@ -921,7 +921,7 @@ let rec elab_term ?expect env raw =
           let h = Var x in
           match canon env (infer env l h) with
           | (TyCtor tele | ValCtor (tele, _)) as ty -> let env, acc = elab_term_args env l ~callee:(describe env Erased head h ty) ?expect ~frames tele h args in (env, App (h, List.rev acc))
-          | ty -> refuse (fun () -> error l "%s has type %s and cannot be applied in a type" (qshow env h) (qshow env ty))))
+          | ty -> refuse (fun () -> error l "%s has type %s and cannot be applied in a term, where only a type or value constructor can be applied (§9)" (qshow env h) (qshow env ty))))
 
 and elab_type_form env l sp args =
   match (sp, args) with

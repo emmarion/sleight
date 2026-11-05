@@ -1297,8 +1297,8 @@
                 ((TValCtor ctele ret)
                   (let ((unique ew7) (many env3) (many acc) (many _) (many _) (many _) (many _)) $ notail $ check-args ew2 fuel callbacks _ sugar args (subs-framed args _ (WHere args) frames $ Nil _) one-step env2 (describe env2 head h hty) (Nil _) ctele (Erased) tele (ARApp h ret) (BTrue) (BFalse) (BTrue))
                   (values ew7 env3 (TApp h $ list-rev _ acc) $ instantiate acc ret))
-                ((TFn _ _ _ _) (values ew2 (env-error env2 $ cannot-apply-in-type env2 h hty) (TErr "function in type") $ TErr "function in type"))
-                ((TErr m) (values ew2 (env-error env2 $ cannot-apply-in-type env2 h hty) (TErr m) $ TErr m)) (else (values ew2 (env-error env2 $ cannot-apply-in-type env2 h hty) (TErr "not applicable") $ TErr "not applicable"))))))))
+                ((TFn _ _ _ _) (values ew2 (env-error env2 $ cannot-apply-in-term env2 h hty) (TErr "function in type") $ TErr "function in type"))
+                ((TErr m) (values ew2 (env-error env2 $ cannot-apply-in-term env2 h hty) (TErr m) $ TErr m)) (else (values ew2 (env-error env2 $ cannot-apply-in-term env2 h hty) (TErr "not applicable") $ TErr "not applicable"))))))))
     (let ((many (Env) env3)) $ match many as-type _ ((BFalse) env2) ((BTrue) (check-raw env2 "type" ty type-term $ Some _ raw)))
     (values ew3 (env-back env env3) t ty))
 

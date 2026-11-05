@@ -2800,8 +2800,8 @@
     ((BTrue) (env-error-with env notes $ str-cat (qraw head) " is an erased macro, expanded only where its head is constant-known and non-erased"))
     ((BFalse) (env-error-hinted env notes (str-cat (qraw head) " is an erased macro, and only a non-erased one is expanded") $ say env "\nhint: bind it `many` to expand it"))))
 
-(def-fns _ $ (many cannot-apply-in-type : (many (Env) env) (many (Term) h) (many (Term) hty) -> (many (String) s))
-  (str-cat3 (qshow env h) " has type " $ str-cat (qshow env hty) " and cannot be applied in a type"))
+(def-fns _ $ (many cannot-apply-in-term : (many (Env) env) (many (Term) h) (many (Term) hty) -> (many (String) s))
+  (str-cat3 (qshow env h) " has type " $ str-cat (qshow env hty) " and cannot be applied in a term, where only a type or value constructor can be applied (§9)"))
 
 (def-fns _ $ (many annotation-kind : (many (Env) env) (many (Res) callee) (many (Bool) same) -> (many (String) s))
   (match many same _

@@ -1,0 +1,5 @@
+; error: and cannot be applied in a term, where only a type or value constructor can be applied (§9)
+(def-fns _ $ (many base : (many (Nat) n) -> (many (Nat) m)) n)
+(def-fns _ $ (erased lv : (many (Bool) _b) -> (erased (Level) l)) (level-of base))
+(def-fns (lv (BTrue)) $ (many a : (many (Nat) n) -> (many (Nat) m)) n)
+(a 1)
