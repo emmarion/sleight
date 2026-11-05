@@ -2969,7 +2969,7 @@ answers `Fail`. The fence (MANUAL.md) does not apply to it.
 take `mw` at `unique` and `at vacant-slot` and handles `c : (Settled m C t)` and
 `ai : (Settled mi Ai ti)` at `many`. They give
 `(unique (MacroWorld) mw2 at mw)` and
-`(many (Result (Settled m R (t t1 ... tn))) r)`, where `R` is the type of
+`(many (Maybe (Settled m R (t t1 ... tn))) r)`, where `R` is the type of
 `(t t1 ... tn)`. Where the form is written:
 
 - `C` must canonicalize to a `TyCtor` former, or to a `ValCtor` former for
@@ -2979,9 +2979,8 @@ take `mw` at `unique` and `at vacant-slot` and handles `c : (Settled m C t)` and
   may be `(MMany)`, and then so is each non-erased field's handle.
 
 Where it runs, the application is checked again, against the facts
-`settled-eq` reads. On failure the form answers `Fail` with the
-elaborator's report, located at the form; the report's text may change.
-Otherwise it answers `Ok` with a handle to a fresh anonymous `Settled`
+`settled-eq` reads. If that check fails, the form answers `None`.
+Otherwise it answers `Some` with a handle to a fresh anonymous `Settled`
 entry, outside every scope, whose `is` rule is the application. At
 `(MMany)` that entry holds the constructor applied to the fields' values.
 In an erased position the form mints nothing.
