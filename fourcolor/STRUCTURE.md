@@ -303,18 +303,13 @@ the proof's files did not write. Its proof appears to rest on:
   toolchain they use;
 - nothing else: no axiom of its own and no hypothesis.
 
-The intermediate statements are meant to follow Coq's (C_reducible,
+The problem statement is the goals' types and everything they depend on;
+the intermediate statements need not follow Coq's (C_reducible,
 valid_contract, the preembedding and kernel, the mirror, nontrivial
-rings, chords, even and ring traces, ...). That they match has been
-checked only by reading. A mismatch would bear on the attribution in
-NOTICE.md and on this guide, not on what `FourColor` states.
+rings, chords, even and ring traces, ...) and may be restructured.
 
 ## Open
 
-- The match of the intermediate statements with Coq's, above, is
-  checked only by reading; `red/ccheck.sl`'s `CfContract` is written for
-  this repository's dart numbering and not checked against Coq's
-  cfcontract.
 - That `Compatible` means what README.md reads it as (two edges meet at
   most at a shared endpoint) is checked only by reading.
 - The timings in README.md are single runs on a shared machine.

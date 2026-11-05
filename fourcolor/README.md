@@ -31,9 +31,9 @@ That proof appears to rest on:
 - `defs.sl`, which this proof's files did not write, stating the theorem
   intended.
 
-The intermediate statements are meant to follow Coq's; that they match
-has been checked only by reading, which appears to bear on NOTICE.md's
-attribution rather than on what is proved.
+The problem statement is the goals' types and everything they depend on
+(`defs.sl`'s `FourColor`, `fcmany.sl`'s `FourColorM`). The intermediate
+statements need not follow Coq's and may be restructured freely.
 
 ## Running the check
 
