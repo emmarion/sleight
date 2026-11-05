@@ -11,7 +11,6 @@ type goal = Statement | Type | Values of mult list * tele option
 let where l = Reader.where "-" l
 let name_of = name_of ~aliases:false
 let is_prelude env x = List.mem x env.prelude.ids
-let proofs = [ Prelude.predates; Prelude.subterm; Prelude.coercible; Prelude.delegate; Prelude.atfn ]
 
 let kind env x =
   match type_of env x with
@@ -24,7 +23,7 @@ let kind env x =
   | App (Var h, _) when h = Prelude.level -> if (entry env x).minted_level then respell env "level minted by `def-lvl`" else "level"
   | App (Var h, _) when h = Prelude.univ -> "type"
   | App (Var h, _) when h = Prelude.special -> "special form"
-  | App (Var h, _) when List.mem h proofs -> "proof"
+  | App (Var h, _) when List.mem h Prelude.proofs -> "proof"
   | _ -> "value"
 
 let flags env x =

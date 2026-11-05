@@ -49,6 +49,8 @@ let delegate, env = Env.bind env (Some (Reader.Src "Delegate")) Erased token
   (TyCtor [ ty "sg" sharing_term; ty "G" type_term; ty "g" (Bound 0);
             ty "sf" sharing_term; ty "F" type_term; ty "f" (Bound 0) ])
 let atfn, env = Env.bind env (Some (Reader.Src "AtFn")) Erased token (TyCtor [ ty "F" type_term; ty "f" (Bound 0) ])
+let proofs = [ predates; subterm; coercible; delegate; atfn ]
+let erased_kinds = univ :: level :: proofs
 
 let special, env = Env.bind env (Some (Reader.Src "Special")) Erased token (TyCtor [])
 let special_term = App (Var special, [])

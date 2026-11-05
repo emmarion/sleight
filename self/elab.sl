@@ -1095,6 +1095,16 @@
 (def-fns _ $ (many error-at : (many (Env) env) (many (Spot) pos) (many (String) msg) -> (many (Env) r))
   (env-back env $ env-error (env-at env pos) msg))
 
+(def-fns _ $ (many warn-erased-kind : (many (Env) env) (many (Spot) pos) (many (Maybe $ Name) name) (many (Maybe $ Multiplicity) sm) (many (Maybe $ Syn) sraw) (many (Term) ty) -> (many (Env) r))
+  (let-match many sm (Some _ m) ((None _) env))
+  (let-match many sraw (Some _ raw) ((None _) env))
+  (let-match many (mult-is-many m) (BTrue) ((BFalse) env))
+  (let-match many (is-erased-kind $ canon-trusted env ty) (BTrue) ((BFalse) env))
+  (let ((many enva)) $ env-at env pos)
+  (env-back env $ env-warn enva $ located enva ": warning: " $ str-cat3 (tick $ spell-binder name) (say env " is declared ")
+    $ str-cat3 (tick $ spell env $ mult-name m) (say env ", but a value of type ")
+    $ str-cat (tick $ show-r raw) $ say env " is always erased, so it can be supplied only in an erased position; declare it `erased`"))
+
 (def-fns _ $ (many no-mult : (many (Env) env) (many (Spot) epos) (many (String) what) (many (Multiplicity) m) -> (many (Env) r))
   (error-at env epos $ say env $ str-cat3 what " take no multiplicity; drop `" $ str-cat (mult-name m) "`"))
 
@@ -1244,6 +1254,10 @@
     enum
     (many SrcTy : (erased (List $ Syn) root) (many (Syn) r) (erased (Subterm (Syn) r (List $ Syn) root) p) -> (SrcSg root))
     (many SrcIs : (erased (List $ Syn) root) (many (Syn) r) (erased (Subterm (Syn) r (List $ Syn) root) p) -> (SrcSg root))))
+
+(def-fns _ $ (many src-written-ty : (erased (List $ Syn) root) (many (Maybe $ SrcSg root) sg) -> (many (Maybe $ Syn) r))
+  (let-match many sg (Some _ s) ((None _) (None _)))
+  (match many s _ ((SrcTy _ r _) (Some _ r)) ((SrcIs _ _ _) (None _))))
 
 ; Whether every binder carries a type or an is clause, so a let's binders are a telescope (DESIGN.md section 50).
 (def-fns _ $ (many all-have-sg : (erased (List $ Syn) root) (subterm many (List $ SrcEntry root) es) -> (many (Bool) r))

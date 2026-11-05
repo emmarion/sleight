@@ -129,3 +129,21 @@ returns and match annotations. See OPEN.md 30, 31, 37 and 38.
 `lib/elab.ml` (`report_unused`), `self/elab-main.sl`. Tests:
 `tests/unused_warn.sl`, `tests/unused_params_warn.sl`,
 `tests/unused_settled_of_warn.sl`.
+
+## 11. Non-erased binder of a type erased by kind
+
+``NAME is declared `many`, but a value of type T is always erased, so it
+can be supplied only in an erased position; declare it `erased` ``, or
+the same with `unique`. A binder declared `many` or `unique` has a
+written type, not an `is` clause, that canonicalizes to `Type`, a
+`TyCtor` former, `(Level)`, or a `Predates`, `Subterm`, `Coercible`,
+`Delegate` or `AtFn` proof (DESIGN.md sections 14 and 21), against the
+facts of the innermost enclosing run position, as a head is read (§6).
+`T` is the type as written. The binder may be any telescope entry or
+`let` binder. So a top-level alias of `Type` warns, but a type variable
+does not, such as `x` in `(erased Type T) (many T x)`, even where a
+match branch forces `T` to `Type`, and neither does a binder of an
+empty type such as `(False)`.
+`lib/elab.ml` (`warn_erased_kind`), `self/elab.sl`.
+Tests: `tests/erased_kind_warn.sl`, `tests/erased_kind_forced_warn.sl`,
+`tests/erased_kind_let_warn_bad.sl`.

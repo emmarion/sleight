@@ -158,6 +158,7 @@
 (let ((many sharing-term)) $ TApp (TVar sharing-id) $ Nil _)
 (let ((many unique-term)) $ TApp (TVar unique-id) $ Nil _)
 (let ((many shared-term)) $ TApp (TVar shared-id) $ Nil _)
+(let ((many erased-kind-ids)) $ Cons _ univ-id $ Cons _ level-id $ Cons _ predates-id $ Cons _ subterm-id $ Cons _ coercible-id $ Cons _ delegate-id $ Cons _ atfn-id $ Nil _)
 
 (def-fns _ $ (many entry-place : (many (Entry) e) -> (many (Maybe $ Term) p))
   (match many e _ ((MkEntry _ _ _ _ place _) place)))
@@ -3257,10 +3258,19 @@
   (list-mem-bin (scope-ids $ env-prelude env) x))
 
 
-(def-fns _ $ (many canon-env : (many (Env) env) (many (Term) t) -> (many (Term) r))
-  (let ((erased _) (erased _) (erased bnd) (many tb)) $ env-table env)
+(def-fns _ $ (many canon-term-in : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Term) t) -> (many (Term) r))
   (let ((many r) (erased _)) $ canon-in _ _ bnd tb t)
   r)
+
+(def-fns _ $ (many canon-env : (many (Env) env) (many (Term) t) -> (many (Term) r))
+  (let ((erased _) (erased _) (erased bnd) (many tb)) $ env-table env)
+  (canon-term-in _ _ bnd tb t))
+
+(def-fns _ $ (many canon-trusted : (many (Env) env) (many (Term) t) -> (many (Term) r))
+  (let-match many env (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (match many rp _
+    ((TrustHere) (canon-env env t))
+    ((TrustThen _ _ c tb0) (canon-term-in _ _ c tb0 t))))
 
 (def-fns _ $ (many canon-env-tele : (many (Env) env) (many (List $ Entry) es) -> (many (List $ Entry) r))
   (let ((erased _) (erased _) (erased bnd) (many tb)) $ env-table env)
@@ -3321,6 +3331,11 @@
     ((TSlotOf _) (BFalse))
     ((TCell _ _) (BFalse)) (else (BFalse)))
   (match many h _ ((TVar x) (or (nat-eqb x objid) $ nat-eqb x atfn-id)) (else (BFalse))))
+
+(def-fns _ $ (many is-erased-kind : (many (Term) t) -> (many (Bool) r))
+  (let-match many t (TApp h _) ((TTyCtor _) (BTrue)) (else (BFalse)))
+  (let-match many h (TVar x) (else (BFalse)))
+  (list-mem-bin erased-kind-ids x))
 
 ; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
 

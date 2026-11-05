@@ -276,11 +276,14 @@ let atfn_ctor = ref (-1)
 
 (* `(slot-of x)` is read by `x`'s binder and never through `x`'s rule (section 35): a forced `x is y` says
    nothing about where the two words sit. *)
-let rec canon env t =
+let rec canon_by rule env t =
   match t with
-  | SlotOf (Var x) -> canon env (Var (entry env x).slot)
-  | Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t)
-  | t -> map_shallow (canon env) t
+  | SlotOf (Var x) -> canon_by rule env (Var (entry env x).slot)
+  | Var x -> (match rule x with Some r -> canon_by rule env r | None -> t)
+  | t -> map_shallow (canon_by rule env) t
+
+let canon env = canon_by (fun x -> (fact env x).rule) env
+let canon_trusted env = let t = (trusted env).facts in canon_by (fun x -> Option.bind (IntMap.find_opt x t) (fun f -> f.rule)) env
 
 let slot_of x = SlotOf (Var x)
 let same_slot env a b = equal (canon env a) (canon env b)

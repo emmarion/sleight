@@ -386,6 +386,11 @@ let split_arrow env loc items =
   in
   go [] items
 
+let warn_erased_kind env l name m raw ty =
+  if m <> Erased && (match canon_trusted env ty with TyCtor _ -> true | App (Var h, _) -> List.mem h Prelude.erased_kinds | _ -> false) then
+    warn_in env l [] "%s is declared %s, but a value of type %s is always erased, so it can be supplied only in an erased position; declare it `erased`"
+      (tick (spell_binder name)) (tick (speller env (mult_name m))) (tick (Reader.show raw))
+
 let no_mult env what l m = error l "%s take no multiplicity; drop `%s`" what (speller env (mult_name m))
 
 (* Leading annotation tokens drawn from [allowed], in any order. *)
@@ -1080,6 +1085,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
         let mult = match mults i e.s_loc e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick (spell_binder e.s_name)) in
         let env, sg = match e.s_sg with Some s -> Env.with_frame e.s_sg_frame (fun () -> elab_sg env s) | None -> error_in env e.s_loc "entry %s needs a type or an `is` clause" (tick (spell_binder e.s_name)) in
         let ty, rule = fact_of env e.s_loc sg in
+        (match e.s_mult, e.s_sg with Some m, Some (`Ty raw) -> warn_erased_kind env e.s_loc e.s_name m raw ty | _ -> ());
         let env = Option.fold ~none:env ~some:(admitted env) e.s_place in
         let place = Env.with_frame e.s_place_frame @@ fun () -> Option.map (fun raw ->
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope and match annotation entries";
@@ -2453,7 +2459,10 @@ and elab_let spos env l args =
     let env =
       match (tele, b.s_sg) with
       | Some t, _ -> solve_sg ?raw:(raw i) env b.s_loc (map_sg (instantiate acc) (List.nth t i).sg) r
-      | None, Some s -> let env, sg = Env.with_frame b.s_sg_frame (fun () -> elab_sg env s) in solve_sg ?raw:(raw i) env b.s_loc sg r
+      | None, Some s ->
+          let env, sg = Env.with_frame b.s_sg_frame (fun () -> elab_sg env s) in
+          (match s with `Ty t -> warn_erased_kind env b.s_loc b.s_name (Option.get b.s_mult) t (sg_term sg) | `Is _ -> ());
+          solve_sg ?raw:(raw i) env b.s_loc sg r
       | None, None -> env
     in
     settle_res env b.s_loc r;
