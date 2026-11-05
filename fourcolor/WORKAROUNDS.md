@@ -52,10 +52,9 @@ language behind them may be wrong. Numbers are not reused.
 5. **Names collide across the ~140 files of one unit.** All files share
    one namespace, so a later file's `Perm`, `Trace` or `Proper` hides an
    earlier one for every file after it. The proof works around this with:
-   - an alias file, `colalias.sl`;
-   - aliases appended to the ends of files: `CRPath` in `cpmap.sl`;
-     `SDPath`, `WSub` and `hsplit-cover` in `birkhoff2.sl`;
-   - renames: `cpcomp.sl`'s `StNil`/`StCons`, `ring.sl`'s `Ins` and
+   - renames: `hypperm.sl`'s `HPerm`/`HMkPerm`, `cfmap.sl`'s `CRPath`,
+     `snip.sl`'s `SDPath` and its constructors, `hypsub.sl`'s
+     `hsplit-cover`, `cpcomp.sl`'s `StNil`/`StCons`, `ring.sl`'s `Ins` and
      `PMulNil`/`PMulCons`, and `unav/pwalk.sl`'s `InCut`;
    - load-order constraints: `contract2.sl` must load before the `unav/`
      files; `paint.sl` and `fcmany.sl` must load before `coloring.sl`.

@@ -259,7 +259,6 @@
     ((SK) (NoAYes cp (NoAK rest p)))
     ((SA) (NoANo cp))))
 
-(let ((erased CRPath)) RPath)
 (let ((erased CRPNil)) RPNil)
 (let ((erased CRPCons)) RPCons)
 (let ((erased crpath-last)) rpath-last)

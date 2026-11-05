@@ -1,60 +1,38 @@
-; zs is xs followed by ys.
-(def-adts $ (Join : ((List (Nat)) xs ys zs) -> Type)
-  enum
-  (many JoinNil : (erased (List (Nat)) ys) -> (Join (Nil (Nat)) ys ys))
-  (many JoinCons : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (erased (Join xs ys zs) rest) -> (Join (Cons (Nat) x xs) ys (Cons (Nat) x zs))))
-
-(def-fns _ $ (erased app-nth : (erased (List (Nat)) pre ys zs) (erased (Nat) y j) (subterm erased (Join pre (Cons (Nat) y ys) zs) ap) (erased (Length (Nat) pre j) l)
-    -> (erased (Nth (Nat) zs j y) r))
-  (let-match erased ap (JoinCons pre1 _ zs1 a ap1) ((JoinNil _) (let-match erased l (LengthNil _)) (NthHere _ y ys)))
-  (let-match erased l (LengthCons _ _ _ j1 l1))
-  (NthThere _ a zs1 j1 y (app-nth pre1 ys zs1 y j1 ap1 l1)))
-
-(def-fns _ $ (erased app-exists : (subterm erased (List (Nat)) xs) (erased (List (Nat)) ys) -> (erased (List (Nat)) zs) (erased (Join xs ys zs) r))
-  (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (JoinNil ys))))
-  (let ((erased zs1) (erased r1)) (app-exists xs1 ys))
-  (values (Cons _ x zs1) (JoinCons xs1 ys zs1 x r1)))
-
 (def-fns _ $ (erased add-ex : (subterm erased (Nat) a) (erased (Nat) b) -> (erased (Nat) c) (erased (Add a b c) p))
   (let-match erased a (Succ a1) ((Zero) (values b (AddZero b))))
   (let ((erased c1) (erased p1)) (add-ex a1 b))
   (values (Succ c1) (AddSucc a1 b c1 p1)))
 
-(def-fns _ $ (erased app-length : (erased (List (Nat)) xs ys zs) (erased (Nat) a b c) (subterm erased (Join xs ys zs) ap) (erased (Length (Nat) xs a) la)
+(def-fns _ $ (erased app-length : (erased (List (Nat)) xs ys zs) (erased (Nat) a b c) (subterm erased (LApp (Nat) xs ys zs) ap) (erased (Length (Nat) xs a) la)
     (erased (Length (Nat) ys b) lb) (erased (Add a b c) p) -> (erased (Length (Nat) zs c) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 x ap1) ((JoinNil _) (let-match erased la (LengthNil _)) (let-match erased p (AddZero _)) lb))
+  (let-match erased ap (LAppCons _ x xs1 _ zs1 ap1) ((LAppNil _ _) (let-match erased la (LengthNil _)) (let-match erased p (AddZero _)) lb))
   (let-match erased la (LengthCons _ _ _ a1 la1))
   (let-match erased p (AddSucc _ _ c1 p1))
   (LengthCons _ x zs1 c1 (app-length xs1 ys zs1 a1 b c1 ap1 la1 lb p1)))
 
-(def-fns _ $ (erased app-in-l : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (Join xs ys zs) ap) (erased (In x xs) ix)
+(def-fns _ $ (erased app-in-l : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (LApp (Nat) xs ys zs) ap) (erased (In x xs) ix)
     -> (erased (In x zs) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 y ap1) (absurd (JoinNil _) ix))
+  (let-match erased ap (LAppCons _ y xs1 _ zs1 ap1) (absurd (LAppNil _ _) ix))
   (let-match erased ix (InThere _ _ _ ix1) ((InHere _ _) (InHere x zs1)))
   (InThere x y zs1 (app-in-l xs1 ys zs1 x ap1 ix1)))
 
-(def-fns _ $ (erased app-in-r : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (Join xs ys zs) ap) (erased (In x ys) ix)
-    -> (erased (In x zs) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 y ap1) ((JoinNil _) ix))
-  (InThere x y zs1 (app-in-r xs1 ys zs1 x ap1 ix)))
-
-(def-fns _ $ (erased app-in-inv : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (Join xs ys zs) ap) (erased (In x zs) ix)
+(def-fns _ $ (erased app-in-inv : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (LApp (Nat) xs ys zs) ap) (erased (In x zs) ix)
     -> (erased (Or (In x xs) (In x ys)) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 y ap1) ((JoinNil _) (OrR _ _ ix)))
+  (let-match erased ap (LAppCons _ y xs1 _ zs1 ap1) ((LAppNil _ _) (OrR _ _ ix)))
   (let-match erased ix (InThere _ _ _ ix1) ((InHere _ _) (OrL _ _ (InHere x xs1))))
   (match erased (app-in-inv xs1 ys zs1 x ap1 ix1) _
     ((OrL _ _ i) (OrL _ _ (InThere x y xs1 i)))
     ((OrR _ _ i) (OrR _ _ i))))
 
-(def-fns _ $ (erased notin-app : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (Join xs ys zs) ap) (erased (NotIn x xs) ox)
+(def-fns _ $ (erased notin-app : (erased (List (Nat)) xs ys zs) (erased (Nat) x) (subterm erased (LApp (Nat) xs ys zs) ap) (erased (NotIn x xs) ox)
     (erased (NotIn x ys) oy) -> (erased (NotIn x zs) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 y ap1) ((JoinNil _) oy))
+  (let-match erased ap (LAppCons _ y xs1 _ zs1 ap1) ((LAppNil _ _) oy))
   (let-match erased ox (NotInCons _ _ _ ne ox1))
   (NotInCons x y zs1 ne (notin-app xs1 ys zs1 x ap1 ox1 oy)))
 
-(def-fns _ $ (erased app-distinct : (erased (List (Nat)) xs ys zs) (subterm erased (Join xs ys zs) ap) (erased (Distinct xs) dx)
+(def-fns _ $ (erased app-distinct : (erased (List (Nat)) xs ys zs) (subterm erased (LApp (Nat) xs ys zs) ap) (erased (Distinct xs) dx)
     (erased (Distinct ys) dy) (erased (Disj xs ys) dj) -> (erased (Distinct zs) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 x ap1) ((JoinNil _) dy))
+  (let-match erased ap (LAppCons _ x xs1 _ zs1 ap1) ((LAppNil _ _) dy))
   (let-match erased dx (DistCons _ _ ox dx1))
   (let-match erased dj (DisjCons _ _ _ oy dj1))
   (DistCons x zs1 (notin-app xs1 ys zs1 x ap1 ox oy) (app-distinct xs1 ys zs1 ap1 dx1 dy dj1)))
@@ -113,7 +91,7 @@
   enum
   (many OCNil : (erased (List (Nat)) p) -> (OrbCat p (Nil (Nat)) (Nil (Nat))))
   (many OCCons : (erased (List (Nat)) p rs xs ls ls2) (erased (Nat) r y) (erased (Nth (Nat) p r y) py)
-      (erased (Path p (Cons (Nat) r (Nil (Nat))) y r xs) w) (erased (Join (Cons (Nat) r xs) ls ls2) ap) (erased (OrbCat p rs ls) rest)
+      (erased (Path p (Cons (Nat) r (Nil (Nat))) y r xs) w) (erased (LApp (Nat) (Cons (Nat) r xs) ls ls2) ap) (erased (OrbCat p rs ls) rest)
       -> (OrbCat p (Cons (Nat) r rs) ls2)))
 
 ; ns sums to s.
@@ -133,14 +111,14 @@
   (let-match erased ob (OrdCons _ rs1 os1 r c o ob1) ((OrdNil _) (values (Nil _) (Zero) (OCNil p) (LengthNil _) (NSNil))))
   (let-match erased o (MkOrder _ xs _ y c1 py w lxs))
   (let ((erased ls1) (erased len1) (erased oc1) (erased l1) (erased m1)) (orbcat-sum p rs1 os1 ob1))
-  (let ((erased ls2) (erased ap)) (app-exists (Cons _ r xs) ls1))
+  (let ((erased ls2) (erased ap)) (lapp-make _ (Cons _ r xs) ls1))
   (let ((erased len2) (erased a2)) (add-ex c len1))
   (values ls2 len2 (OCCons p rs1 xs ls1 ls2 r y py w ap oc1) (app-length (Cons _ r xs) ls1 ls2 c len1 len2 ap (LengthCons _ r xs c1 lxs) l1 a2)
     (NSCons c len1 len2 os1 m1 a2)))
 
 (def-fns _ $ (erased orders-all : (erased (Nat) d c k) (erased (List (Nat)) p rs) (erased (AllOrder d p c) ao) (subterm erased (Under rs d) u)
     (erased (Length (Nat) rs k) lk) -> (erased (List (Nat)) os) (erased (Nat) s) (erased (Orders p rs os) ob) (erased (NSum os s) sm) (erased (Mul k c s) m))
-  (let-match erased u (UnderCons rs1 r _ lr u1)
+  (let-match erased u (UnderCons r _ rs1 lr u1)
     ((UnderNil _) (let-match erased lk (LengthNil _)) (values (Nil _) (Zero) (OrdNil p) (NSNil) (MulZero c))))
   (let-match erased lk (LengthCons _ _ _ k1 lk1))
   (let ((erased os1) (erased s1) (erased ob1) (erased sm1) (erased m1)) (orders-all d c k1 p rs1 ao u1 lk1))
@@ -184,10 +162,10 @@
     (orbcat-distinct d p g lab rs0 rs1 ls1 gr cl fix sb1 dr1 oc1)
     (orb-disj d r y p g lab rs0 rs1 xs ls1 (Cons _ r xs) gr cl fix sb1 oc1 w (fixed-in lab rs0 r fix ir) out (sub-refl (Cons _ r xs)))))
 
-(def-fns _ $ (erased orbcat-cover : (erased (Nat) d x r) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) rs ls) (erased (Perm d p q) pm) (erased (Graph d p g) gr)
+(def-fns _ $ (erased orbcat-cover : (erased (Nat) d x r) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) rs ls) (erased (HPerm d p q) pm) (erased (Graph d p g) gr)
     (subterm erased (OrbCat p rs ls) oc) (erased (In r rs) ir) (erased (Conn g r x) cn) -> (erased (In x ls) res))
   (let-match erased oc (OCCons _ rs1 xs ls1 _ r1 y py w ap oc1) (absurd (OCNil _) ir))
-  (let-match erased ir (InHere _ _) ((InThere _ _ _ ir1) (app-in-r (Cons _ r1 xs) ls1 ls x ap (orbcat-cover d x r p q g rs1 ls1 pm gr oc1 ir1 cn))))
+  (let-match erased ir (InHere _ _) ((InThere _ _ _ ir1) (in-app-r x (Cons _ r1 xs) ls1 ls ap (orbcat-cover d x r p q g rs1 ls1 pm gr oc1 ir1 cn))))
   (let ((erased ws) (erased wx)) (conn-path d r x p q g pm gr cn))
   (app-in-l (Cons _ r xs) ls1 ls x ap (orbit-walk-in d r y r x p q xs _ ws pm py (path-forget p _ xs y r w) (InHere r xs) wx)))
 
@@ -198,7 +176,7 @@
   (let ((erased l) (erased pl) (erased _)) (orbcat-label d x p g lab rs rs ls gr cl fix (sub-refl rs) oc ix))
   (HsbCons x m1 ids (iota-in d x ids io (nth-lt-length _ lab x d l pl ll)) (lab-sub d p g lab rs ls ids m1 io ll gr cl fix oc sm1)))
 
-(def-fns _ $ (erased cover-sub : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) lab rs ls ids m) (erased (Perm d p q) pm) (erased (Iota d ids) io)
+(def-fns _ $ (erased cover-sub : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) lab rs ls ids m) (erased (HPerm d p q) pm) (erased (Iota d ids) io)
     (erased (Length (Nat) lab d) ll) (erased (Graph d p g) gr) (erased (Rooted g rs ids lab) ro) (erased (OrbCat p rs ls) oc) (subterm erased (HSub m ids) sm)
     -> (erased (HSub m ls) r))
   (let-match erased sm (HsbCons x m1 _ ix sm1) ((HsbNil _) (HsbNil ls)))
@@ -209,7 +187,7 @@
   (let ((erased irt) (erased cn)) (classes-root g d ids lab rs x rt io ro prt lx))
   (HsbCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (cover-sub d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
-(def-fns _ $ (erased orbit-sum : (erased (Nat) d) (erased (List (Nat)) p q ids lab rs os) (erased (List (Bond)) g) (erased (Perm d p q) pm) (erased (Graph d p g) gr)
+(def-fns _ $ (erased orbit-sum : (erased (Nat) d) (erased (List (Nat)) p q ids lab rs os) (erased (List (Bond)) g) (erased (HPerm d p q) pm) (erased (Graph d p g) gr)
     (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Distinct rs) dr) (erased (Respects lab rs rs) fix) (erased (Const lab g) cl)
     (erased (Rooted g rs ids lab) ro) (erased (Orders p rs os) ob) -> (erased (NSum os d) r))
   (let ((erased ls) (erased len) (erased oc) (erased lls) (erased m)) (orbcat-sum p rs os ob))
@@ -220,7 +198,7 @@
   (let-match erased (le-antisym len d p1 p2) (Refl _ _))
   m)
 
-(def-fns _ $ (erased orbit-count : (erased (Nat) d k c) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Orbits d p k) ob)
+(def-fns _ $ (erased orbit-count : (erased (Nat) d k c) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Orbits d p k) ob)
     (erased (AllOrder d p c) ao) -> (erased (Mul k c d) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))

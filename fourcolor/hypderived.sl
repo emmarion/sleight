@@ -1,9 +1,3 @@
-(def-fns _ $ (erased add-assoc-inv : (erased (Nat) a b c bc abc) (erased (Add b c bc) p) (subterm erased (Add a bc abc) q) ->
-    (erased (Nat) ab) (erased (Add a b ab) r) (erased (Add ab c abc) s))
-  (let-match erased q (AddSucc a1 _ abc1 q1) ((AddZero _) (values b (AddZero b) p)))
-  (let ((erased ab) (erased r) (erased s)) (add-assoc-inv a1 b c bc abc1 p q1))
-  (values (Succ ab) (AddSucc a1 b ab r) (AddSucc ab c abc1 s)))
-
 (def-fns _ $ (erased es-rot : (erased (Nat) kc d a b c g) (erased (EulerSum kc d a b c g) es) -> (erased (EulerSum kc d b c a g) r))
   (let-match erased es (MkEulerSum _ _ _ _ _ _ c2 lhs s1 rhs g2 dc al a1 ar dg ag))
   (let ((erased bc) (erased p) (erased q)) (add-reassoc a b c s1 rhs a1 ar))
@@ -12,7 +6,7 @@
 (def-fns _ $ (erased es-swap : (erased (Nat) kc d a b c g) (erased (EulerSum kc d a b c g) es) -> (erased (EulerSum kc d a c b g) r))
   (let-match erased es (MkEulerSum _ _ _ _ _ _ c2 lhs s1 rhs g2 dc al a1 ar dg ag))
   (let ((erased bc) (erased p) (erased q)) (add-reassoc a b c s1 rhs a1 ar))
-  (let ((erased ac) (erased p2) (erased q2)) (add-assoc-inv a c b bc rhs (add-comm b c bc p) q))
+  (let ((erased ac) (erased p2) (erased q2)) (add-assoc-back a c b bc rhs q (add-comm b c bc p)))
   (MkEulerSum kc d a c b g c2 lhs ac rhs g2 dc al p2 q2 dg ag))
 
 (def-fns _ $ (erased genus-parts : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Genus d e n f gen) p)
@@ -66,16 +60,16 @@
   (values g (MkGlink d e n f ge gn gf gnf g gre grn grf c1 c2)))
 
 (def-fns _ $ (erased hyper-core : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
-    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf))
+    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (HPerm d e nf) pe) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf))
   (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke _ _ cnf inf))
   (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased ni) (erased pn)) (hyper-perm d n f e (hyper-rot d e n f h)))
   (let ((erased fi) (erased pf)) (hyper-perm d f e n (hyper-rot d n f e (hyper-rot d e n f h))))
-  (values nf ni fi cnf (MkPerm d e nf ids io le
+  (values nf ni fi cnf (HMkPerm d e nf ids io le
     (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d inf (iota-length d ids io)) lf) inf) pn pf))
 
 (def-fns _ $ (erased core-genus : (erased (Nat) d kx kn kf kc gen) (erased (List (Nat)) e n f nf ni fi) (erased (List (Bond)) gn gf g)
-    (erased (Perm d e nf) pe) (erased (Respects n f nf) rnf) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+    (erased (HPerm d e nf) pe) (erased (Respects n f nf) rnf) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
     (erased (Orbits d nf kx) ox) (erased (Orbits d n kn) on) (erased (Orbits d f kf) of) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf)
     (erased (Cat gn gf g) cg) (erased (Classes g d kc) cs) (erased (EulerSum kc d kx kn kf gen) es) -> (erased (Genus d e n f gen) r))
   (let ((erased ge) (erased gre)) (perm-graph d e nf pe))
@@ -92,7 +86,7 @@
     es))
 
 (def-fns _ $ (erased genus-core : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
-    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (Perm d e nf) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+    -> (erased (List (Nat)) nf ni fi) (erased (Respects n f nf) rnf) (erased (HPerm d e nf) pe) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
     (erased (Nat) kx kn kf kc) (erased (Orbits d nf kx) ox) (erased (Orbits d n kn) on) (erased (Orbits d f kf) of)
     (erased (List (Bond)) gn gf g) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Cat gn gf g) cg) (erased (Classes g d kc) cs)
     (erased (EulerSum kc d kx kn kf gen) es))
@@ -142,7 +136,7 @@
   (values (hyper-rot d n f e h1) (genus-rot d gen n f e h1 (genus-rot d gen e n f h p))))
 
 (def-fns _ $ (erased hyper-dual : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
-    -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn))
+    -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (HPerm d e ei) pe) (erased (HPerm d f fi) pf) (erased (HPerm d n ni) pn))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en nf io cfe ke cen kn cnf kf))
   (let ((erased le) (erased ln) (erased lf)) (hyper-lengths d e n f h))
   (let ((erased lfe)) (respects-length f e fe d cfe le))
@@ -155,14 +149,14 @@
     (MkHypermap d nf en fe ids f n e io (respects-assoc nf e f ids fe f d kf (respects-id-right d ids f io lf) cfe lfe le) ke2
       (respects-assoc en f n ids nf n d kn (respects-id-right d ids n io ln) cnf lnf lf) kn2
       (respects-assoc fe n e ids en e d ke (respects-id-right d ids e io le) cen len ln) kf2)
-    (MkPerm d e nf ids io le kf2 kf) (MkPerm d f en ids io lf ke2 kn) (MkPerm d n fe ids io ln kn2 ke)))
+    (HMkPerm d e nf ids io le kf2 kf) (HMkPerm d f en ids io lf ke2 kn) (HMkPerm d n fe ids io ln kn2 ke)))
 
 (def-fns _ $ (erased spans-to-inv : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) h gp gq) (erased (Spans h gp) sh)
-    (erased (Perm d p q) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Spans h gq) r))
+    (erased (HPerm d p q) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Spans h gq) r))
   (spans-trans h gp gq (spans-inv d p q gp gq (graph-fun d q gq grq) (perm-sym d p q pm) grp) sh))
 
 (def-fns _ $ (erased genus-dual : (erased (Nat) d gen) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
-    -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf) (erased (Perm d n ni) pn)
+    -> (erased (List (Nat)) ei fi ni) (erased (Hypermap d ei fi ni) h2) (erased (HPerm d e ei) pe) (erased (HPerm d f fi) pf) (erased (HPerm d n ni) pn)
     (erased (Genus d ei fi ni gen) r))
   (let ((erased kc) (erased ke) (erased kn) (erased kf) (erased g) (erased oe) (erased on) (erased of) (erased gl) (erased cc) (erased es))
     (genus-parts d gen e n f p))

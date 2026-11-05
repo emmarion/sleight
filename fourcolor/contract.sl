@@ -23,7 +23,7 @@
       (let ((erased a) (erased pa) (erased px)) (resp-pt kc p ks x u rk pu))
       (let ((erased b) (erased pb) (erased py)) (resp-pt kc p ks y v rk pv))
       (let-match erased w (MkSomePath _ _ ws _ _ pw))
-      (let-match erased (nth-fn _ kc v a b (path-col kc f2 (Nil _) ws u v a rf pw pa) pb) (Refl _ _))
+      (let-match erased (nth-fn _ kc v a b (path-label f2 kc (Nil _) ws u v a pw rf pa) pb) (Refl _ _))
       (ECIn ins ks g1 x y a i px py (lift-ecc ins p e2 f2 kc ke ks g1 lf1 rf re df rk)))
     ((LEOut _ _ _ _ g1 x y u v o pu pv pe lf1)
       (let ((erased a) (erased pa) (erased px)) (resp-pt kc p ks x u rk pu))

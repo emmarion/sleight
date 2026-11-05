@@ -710,12 +710,8 @@
     (many Mi1E : (erased (List (Nat)) R) (erased (Nat) i) -> (MI1 R i (CEmpty)))
     (many Mi1In : (erased (List (Nat)) R) (erased (Nat) i) (erased (Ctree) u) (erased (In i R) p) -> (MI1 R i u))))
 
-(def-fns _ $ (erased r4c-in-drop : (erased (Nat) x y) (erased (List (Nat)) R) (erased (In y (Cons (Nat) x R)) p) (erased (Apart (Nat) Lt y x) ap) -> (erased (In y R) r))
-  (let-match erased p (InThere _ _ _ p1) (absurd (InHere _ _) (apart-irrefl x ap)))
-  p1)
-
 (def-fns _ $ (erased r4c-mi1-drop : (erased (Nat) x i) (erased (List (Nat)) R) (erased (Ctree) u) (erased (MI1 (Cons (Nat) x R) i u) m) (erased (Apart (Nat) Lt i x) ap) -> (erased (MI1 R i u) r))
-  (match erased m _ ((Mi1E _ _) (Mi1E R i)) ((Mi1In _ _ _ p) (Mi1In R i u (r4c-in-drop x i R p ap)))))
+  (match erased m _ ((Mi1E _ _) (Mi1E R i)) ((Mi1In _ _ _ p) (Mi1In R i u (in-tail i x R p ap)))))
 
 ; R less its head x, which is no trace below the prefix p.
 (def-fns _ $ (erased r4c-mi-drop : (erased (Nat) x j p px) (erased (List (Nat)) R) (erased (Ctree) t) (subterm erased (MI (Cons (Nat) x R) j p t) m) (erased (List (Col)) w)
@@ -1035,11 +1031,6 @@
   (lt-succ-left i (Succ n) (r4c-fwd-le xs (Succ i) n R1 f1)))
 
 
-(def-fns _ $ (erased r4c-alllt-in : (erased (Nat) x N) (erased (List (Nat)) T) (subterm erased (AllLt T N) a) (erased (In x T) p) -> (erased (Lt x N) r))
-  (let-match erased a (ALCons y _ T1 l a1) (absurd (ALNil _) p))
-  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) l))
-  (r4c-alllt-in x N T1 a1 p1))
-
 ; Over the entries i to n of the gone list xs, red4's cadd of each trace's rotations by 1 and by 2 takes c and T to c2 and T2.
 (def-adts $ (GAd : ((Nat) h) ((List (Copy (Nat))) xs) ((Nat) i) ((Nat) n) ((Ctree) c) ((List (Nat)) T) ((Ctree) c2) ((List (Nat)) T2) -> Type)
   enum
@@ -1313,7 +1304,7 @@
 (def-fns _ $ (erased r4c-gone-bit : (erased (List (Nat)) G) (erased (Ctree) gone) (erased (Nat) h ia) (erased (List (Col)) pa) (erased (GoneT G gone (Succ h) (Zero) (Nil (Col))) gt)
     (erased (CtH (Succ h) gone) hg) (erased (RIdx pa ia) ra) (erased (Length (Col) pa (Succ h)) la) -> (erased (Ctree) z) (erased (Bit) v) (erased (CtAt gone pa z) az) (erased (Lf z v) lz)
     (erased (MemB ia G v) m))
-  (let ((erased et) (erased re)) (rev-exists pa (Nil _)))
+  (let ((erased et) (erased re)) (revapp-exists _ pa (Nil _)))
   (let ((erased ti)) (ridx-tidx pa (Nil _) et ia ia ra re (TINil ia)))
   (let ((erased le)) (rev-len pa (Nil _) et (Succ h) (Zero) (Succ h) re la (LengthNil _) (add-zero-right (Succ h))))
   (let ((erased g) (erased et2) (erased re2) (erased s) (erased tn)) (r4c-gonet-get G gone (Succ h) (Zero) ia (Nil _) et gt ti le))
@@ -1630,9 +1621,9 @@
   (let ((erased m1)) (r4c-am-cad h t1 c c1 T T1 p1 m a1 r1 (permt-length p231 pg p1 (Succ h) q1 lg)))
   (r4c-am-gad h (Succ i) n xs c2 c3 T2 T3 g3 (r4c-am-cad h t2 c1 c2 T1 T2 p2 m1 a2 r2 (permt-length p312 pg p2 (Succ h) q2 lg))))
 
-(def-fns _ $ (erased r4c-am-lt : (erased (Nat) h N) (erased (Ctree) c) (erased (List (Nat)) T) (subterm erased (AMc h c T) m) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw) -> (erased (AllLt T N) r))
-  (let-match erased m (AmCons _ x _ _ T1 pre ri le _ m1) ((AmNil _ _) (ALNil N)))
-  (ALCons x N T1 (r4c-ridx-lt x (Succ h) N pre ri le pw) (r4c-am-lt h N c T1 m1 pw)))
+(def-fns _ $ (erased r4c-am-lt : (erased (Nat) h N) (erased (Ctree) c) (erased (List (Nat)) T) (subterm erased (AMc h c T) m) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw) -> (erased (Under T N) r))
+  (let-match erased m (AmCons _ x _ _ T1 pre ri le _ m1) ((AmNil _ _) (UnderNil N)))
+  (UnderCons x N T1 (r4c-ridx-lt x (Succ h) N pre ri le pw) (r4c-am-lt h N c T1 m1 pw)))
 
 ; red4's gone loop over the gone buffer G, from a cleared trie, builds the ctr trie of CtRLR gone gone: c2 holds the traces of ctr, and celems T2 lists them.
 (def-fns _ $ (erased r4c-ctr : (erased (Nat) h n) (erased (List (U8)) us) (erased (List (Copy (Nat))) xs) (erased (Ctree) c2 gone) (erased (List (Nat)) T2 R G)
@@ -1646,38 +1637,29 @@
   (let ((erased ss) (erased mi)) (r4c-ss-bld h (Zero) (Zero) (Zero) c2 ctr c2 ctr T2 us (Nil _) h rc (RINil) (LengthNil _) (AddZero h) f (AtNil c2) (AtNil ctr) cct))
   (values ctr (RLU gone gone a b ctr pa pb o) cct ss mi (r4c-am-gad h (Zero) n xs (CEmpty) c2 (Nil _) T2 ga (AmNil h (CEmpty)))))
 
-(def-fns _ $ (erased r4c-lt-shrink : (erased (Nat) N) (erased (List (Nat)) L) (subterm erased (AllLt L (Succ N)) a) (erased (NotIn N L) o) -> (erased (AllLt L N) r))
-  (let-match erased a (ALCons x _ L1 l a1) ((ALNil _) (ALNil N)))
-  (let-match erased o (NotInCons _ _ _ ap o1))
-  (let ((erased xl))
-    (match erased ap (((Lt x N) r))
-      (absurd (ApLt _ _ _ _ g) (lt-irrefl N (lt-le-trans N x N g l)))
-      ((ApGt _ _ _ _ g) g)))
-  (ALCons x N L1 xl (r4c-lt-shrink N L1 a1 o1)))
-
-(def-fns _ $ (erased r4c-lt-remove : (erased (Nat) x N) (erased (List (Nat)) L L2) (subterm erased (Remove x L L2) rm) (erased (AllLt L N) a) -> (erased (AllLt L2 N) r))
+(def-fns _ $ (erased r4c-lt-remove : (erased (Nat) x N) (erased (List (Nat)) L L2) (subterm erased (Ins (Nat) x L2 L) rm) (erased (Under L N) a) -> (erased (Under L2 N) r))
   (match erased rm _
-    ((RmHere _ _) (let-match erased a (ALCons _ _ _ _ a1)) a1)
-    ((RmThere _ y L1 ys rm1) (let-match erased a (ALCons _ _ _ l a1)) (ALCons y N ys l (r4c-lt-remove x N L1 ys rm1 a1)))))
+    ((InsH _ _ _) (let-match erased a (UnderCons _ _ _ _ a1)) a1)
+    ((InsT _ _ y ys L1 rm1) (let-match erased a (UnderCons _ _ _ l a1)) (UnderCons y N ys l (r4c-lt-remove x N L1 ys rm1 a1)))))
 
 ; A list of distinct numbers below N has at most N of them.
-(def-fns _ $ (erased r4c-pigeon : (subterm erased (Nat) N) (erased (List (Nat)) L) (erased (Distinct L) d) (erased (AllLt L N) a) -> (erased (Nat) k) (erased (Length (Nat) L k) le)
+(def-fns _ $ (erased r4c-pigeon : (subterm erased (Nat) N) (erased (List (Nat)) L) (erased (Distinct L) d) (erased (Under L N) a) -> (erased (Nat) k) (erased (Length (Nat) L k) le)
     (erased (Lt k (Succ N)) kl))
   (let-match erased N (Succ Nq)
-    ((Zero) (let-match erased a (ALNil _) (absurd (ALCons _ _ _ l _) l)) (values (Zero) (LengthNil _) (LtZ (Zero)))))
+    ((Zero) (let-match erased a (UnderNil _) (absurd (UnderCons _ _ _ l _) l)) (values (Zero) (LengthNil _) (LtZ (Zero)))))
   (let ((erased b) (erased m)) (r4c-mem-dec Nq L))
   (match erased m (((Nat) k) ((Length (Nat) L k) le) ((Lt k (Succ N)) kl))
     ((MbN _ _ o)
-      (let ((erased k) (erased le) (erased kl)) (r4c-pigeon Nq L d (r4c-lt-shrink Nq L a o)))
+      (let ((erased k) (erased le) (erased kl)) (r4c-pigeon Nq L d (under-tighten L Nq a o)))
       (values k le (lt-weaken k (Succ Nq) kl)))
     ((MbY _ _ i)
       (let ((erased L2) (erased rm)) (remove-exists Nq L i))
       (let ((erased k) (erased le) (erased kl))
-        (r4c-pigeon Nq L2 (remove-distinct Nq L L2 rm d) (r4c-lt-shrink Nq L2 (r4c-lt-remove Nq N L L2 rm a) (r4c-remove-out Nq L L2 rm d))))
+        (r4c-pigeon Nq L2 (remove-distinct Nq L L2 rm d) (under-tighten L2 Nq (r4c-lt-remove Nq N L L2 rm a) (r4c-remove-out Nq L L2 rm d))))
       (values (Succ k) (remove-length Nq k L L2 rm le) (LtS k (Succ Nq) kl)))))
 
 ; So their number is a U62.
-(def-fns _ $ (erased r4c-len-u62 : (erased (Nat) h N) (erased (List (Nat)) L) (erased (Distinct L) d) (erased (AllLt L N) a) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw)
+(def-fns _ $ (erased r4c-len-u62 : (erased (Nat) h N) (erased (List (Nat)) L) (erased (Distinct L) d) (erased (Under L N) a) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw)
     (erased (Lt (Succ h) 17) hl) -> (erased (Nat) k) (erased (Length (Nat) L k) le) (erased (Lt k u62-modulus) kb))
   (let ((erased k) (erased le) (erased kl)) (r4c-pigeon N L d a))
   (values k le (lt-le-trans k (Succ N) u62-modulus kl (LtS N u62-modulus (lt-le-trans N (Succ r4-m16) u62-modulus (pw3-bound (Succ h) N pw hl) (LtS r4-m16 u62-modulus r4-m16-u62))))))

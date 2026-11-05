@@ -93,7 +93,7 @@
       (apart-irrefl kn ne))
     ((MWSearch _ _ _ _ _ _ d lf ne)
       (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
-      (noext-sound d e f r lcn (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c rl))))
+      (noext-sound d e f r lcn (Nil _) ks ks ne (LAppNil _ ks) (respects-length ks f ks d rf lf) c rl))))
 
 ; The ring traces of r whose first colour is c0: one is found, or there is none.
 (def-adts $ (RTTry : ((List (Nat)) e f r) ((List (Col)) et) ((Col) c0) -> Type)
@@ -148,7 +148,7 @@
       (let-match erased t (TrNil) (absurd (TrCons _ _ _ t1) (match erased t1 _)))
       (let-match erased co (All2Nil _ _ _))
       (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
-      (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c rl))))
+      (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (LAppNil _ ks) (respects-length ks f ks d rf lf) c rl))))
 
 (def-adts $ (RingDec : ((List (Nat)) e f r) ((List (Col)) et) -> Type)
   enum

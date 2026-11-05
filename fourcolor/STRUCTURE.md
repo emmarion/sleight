@@ -155,8 +155,8 @@ The unit is these files in this order (`check.sh`), written without
 - `induct`, `inductfc`: the induction; `four-color-from`.
 
 **Configurations and reducibility.**
-- `cfmap`, `colalias`, `hypsub`: configuration maps from their programs;
-  aliases; sub-lists of darts and their classes.
+- `cfmap`, `hypsub`: configuration maps from their programs; sub-lists
+  of darts and their classes.
 - `unav/faces`: face iterates and arities.
 - `red/red`: `Config`, colours, program steps, trees.
 - `cpmap`: `Cpmap`, `PointedMap`, `cpmap-c`.
@@ -217,7 +217,7 @@ The unit is these files in this order (`check.sh`), written without
 - `unave`: `UnavE`, `CfEmbed`, `MapOrMirror`.
 
 **Embedding and assembly.**
-- `embed`: `BirkGeo`, `NotEmbed`, `ConcatL`, `embed-analysis`.
+- `embed`: `BirkGeo`, `NotEmbed`, `embed-analysis`.
 - `birkhoff3`, `minarity`: `cubic-reduces`; min_arity, `birk-geo-of`.
 - `embed3`, `embed5`, `embed6`: embedding a preembedded kernel (`EEnv`,
   `HEmb`, `embed-main`, `FullRedR`, `patch-open`).
@@ -262,8 +262,8 @@ its files named as in the load order:
   std/list.sl ring defs orient base sweep geo plan map lists planemap walk
   frontier labels rot fan build readback parta reduce hypgraph hypperm
   hypermap hypplane reduce2 hypeuler hypderived hyprelabel hypwalkup
-  hypgeom hypjordan hyptree hypcount hypcubic cfmap colalias
-  unav/faces red/red cpmap red/color cfcolor red/configs`,
+  hypgeom hypjordan hyptree hypcount hypcubic cfmap unav/faces
+  red/red cpmap red/color cfcolor red/configs`,
   then `unav/` `part quiz hubcap present fit dbound hubcapc obsmap dscore
   dsum posz pwalk hubsound pwsound conv cap data qfit rdart redc
   qwalk qembed qcert qtree qmirror unave qztcfs qztproof qztgoal`.

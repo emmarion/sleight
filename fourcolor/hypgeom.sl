@@ -130,18 +130,18 @@
     ((AdjThere g1 _ _ _ a1) (let-match erased cl (ConstCons _ _ _ _ _ _ _ cl1)) (const-adj lab g1 x y a1 cl1))))
 
 (def-fns _ $ (erased const-inv : (erased (Nat) d) (erased (List (Nat)) lab p q) (erased (List (Bond)) gp gq) (subterm erased (Fun q gq) fq)
-    (erased (Perm d q p) pm) (erased (Graph d p gp) gr) (erased (Const lab gp) cl) -> (erased (Const lab gq) r))
+    (erased (HPerm d q p) pm) (erased (Graph d p gp) gr) (erased (Const lab gp) cl) -> (erased (Const lab gq) r))
   (let-match erased fq (FunCons _ g1 x y py f1) ((FunNil _) (ConstNil lab)))
   (let ((erased l) (erased pl) (erased ql)) (const-adj lab gp y x (graph-adj d y x p gp gr (perm-inv d x y q p pm py)) cl))
   (ConstCons lab g1 x y l ql pl (const-inv d lab p q gp g1 f1 pm gr cl)))
 
 (def-fns _ $ (erased sep-inv : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (List (Bond)) gp gq) (erased (Sep gp x y) s)
-    (erased (Perm d q p) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Sep gq x y) r))
+    (erased (HPerm d q p) pm) (erased (Graph d p gp) grp) (erased (Graph d q gq) grq) -> (erased (Sep gq x y) r))
   (let-match erased s (MkSep _ _ _ lab l1 l2 cl p1 p2 ne))
   (MkSep gq x y lab l1 l2 (const-inv d lab p q gp gq (graph-fun d q gq grq) pm grp cl) p1 p2 ne))
 
 (def-fns _ $ (erased allsep-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fi fn) (erased (List (Bond)) ge gf gfi gfn) (subterm erased (Fun fn gfn) ff)
-    (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn) (erased (Perm d f fi) pf) (erased (Graph d e ge) gre) (erased (Graph d f gf) grf)
+    (erased (Hypermap d e n f) h) (erased (Respects f n fn) rfn) (erased (HPerm d f fi) pf) (erased (Graph d e ge) gre) (erased (Graph d f gf) grf)
     (erased (Graph d fi gfi) grfi) (erased (AllSep gf ge) sp) -> (erased (AllSep gfi gfn) r))
   (let-match erased ff (FunCons _ g1 x z pz f1) ((FunNil _) (AllSepNil gfi)))
   (let-match erased h (MkHypermap _ _ _ _ ids _ en _ io _ _ cen kn _ _))
@@ -158,7 +158,7 @@
     (allsep-mirror d e n f fi fn ge gf gfi g1 f1 h rfn pf gre grf grfi sp)))
 
 (def-fns _ $ (erased bridgeless-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Hypermap d e n f) h) (erased (Bridgeless d e n f) b)
-    (erased (Respects f n fn) rfn) (erased (Perm d f fi) pf) -> (erased (Bridgeless d fn ni fi) r))
+    (erased (Respects f n fn) rfn) (erased (HPerm d f fi) pf) -> (erased (Bridgeless d fn ni fi) r))
   (let-match erased b (MkBridgeless _ _ _ _ ge gf gre grf sp))
   (let ((erased _) (erased ln) (erased _)) (hyper-lengths d e n f h))
   (let ((erased gfn) (erased grfn)) (graph-exists d fn (respects-length f n fn d rfn ln)))

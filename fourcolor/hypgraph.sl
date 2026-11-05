@@ -375,55 +375,49 @@
     ((CGt _ _ _ _ p)
       (ConstCons lab2 g1 x y l (redirect-miss a b x l lab lab2 rd px (ApGt _ _ l a p)) (redirect-miss a b y l lab lab2 rd py (ApGt _ _ l a p)) rest))))
 
-; ys is xs without one occurrence of x.
-(def-adts $ (Remove : ((Nat) x) ((List (Nat)) xs ys) -> Type)
-  enum
-  (many RmHere : (erased (Nat) x) (erased (List (Nat)) xs) -> (Remove x (Cons (Nat) x xs) xs))
-  (many RmThere : (erased (Nat) x y) (erased (List (Nat)) xs ys) (erased (Remove x xs ys) p) -> (Remove x (Cons (Nat) y xs) (Cons (Nat) y ys))))
-
-(def-fns _ $ (erased remove-exists : (erased (Nat) x) (erased (List (Nat)) xs) (subterm erased (In x xs) p) -> (erased (List (Nat)) ys) (erased (Remove x xs ys) r))
-  (let-match erased p (InThere _ y xs1 p1) ((InHere _ xs1) (values xs1 (RmHere x xs1))))
+(def-fns _ $ (erased remove-exists : (erased (Nat) x) (erased (List (Nat)) xs) (subterm erased (In x xs) p) -> (erased (List (Nat)) ys) (erased (Ins (Nat) x ys xs) r))
+  (let-match erased p (InThere _ y xs1 p1) ((InHere _ xs1) (values xs1 (InsH _ x xs1))))
   (let ((erased ys1) (erased r1)) (remove-exists x xs1 p1))
-  (values (Cons _ y ys1) (RmThere x y xs1 ys1 r1)))
+  (values (Cons _ y ys1) (InsT _ x y ys1 xs1 r1)))
 
-(def-fns _ $ (erased remove-src : (erased (Nat) x) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) -> (erased (In x xs) r))
-  (let-match erased rm (RmThere _ y xs1 ys1 rm1) ((RmHere _ xs1) (InHere x xs1)))
+(def-fns _ $ (erased remove-src : (erased (Nat) x) (erased (List (Nat)) xs ys) (subterm erased (Ins (Nat) x ys xs) rm) -> (erased (In x xs) r))
+  (let-match erased rm (InsT _ _ y ys1 xs1 rm1) ((InsH _ _ xs1) (InHere x xs1)))
   (InThere x y xs1 (remove-src x xs1 ys1 rm1)))
 
-(def-fns _ $ (erased r4c-remove-out : (erased (Nat) x) (erased (List (Nat)) L L2) (subterm erased (Remove x L L2) rm) (erased (Distinct L) d) -> (erased (NotIn x L2) r))
+(def-fns _ $ (erased r4c-remove-out : (erased (Nat) x) (erased (List (Nat)) L L2) (subterm erased (Ins (Nat) x L2 L) rm) (erased (Distinct L) d) -> (erased (NotIn x L2) r))
   (match erased rm _
-    ((RmHere _ _) (let-match erased d (DistCons _ _ o _)) o)
-    ((RmThere _ y L1 ys rm1)
+    ((InsH _ _ _) (let-match erased d (DistCons _ _ o _)) o)
+    ((InsT _ _ y ys L1 rm1)
       (let-match erased d (DistCons _ _ o d1))
       (NotInCons x y ys (apart-sym y x (notin-in y x L1 o (remove-src x L1 ys rm1))) (r4c-remove-out x L1 ys rm1 d1)))))
 
-(def-fns _ $ (erased remove-keep : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (In z xs) p)
+(def-fns _ $ (erased remove-keep : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Ins (Nat) x ys xs) rm) (erased (In z xs) p)
     (erased (Apart (Nat) Lt z x) ne) -> (erased (In z ys) r))
   (match erased rm _
-    ((RmHere _ _) (let-match erased p (InThere _ _ _ p1) (absurd (InHere _ _) (apart-irrefl x ne))) p1)
-    ((RmThere _ y xs1 ys1 rm1)
+    ((InsH _ _ _) (let-match erased p (InThere _ _ _ p1) (absurd (InHere _ _) (apart-irrefl x ne))) p1)
+    ((InsT _ _ y ys1 xs1 rm1)
       (let-match erased p (InThere _ _ _ p1) ((InHere _ _) (InHere z ys1)))
       (InThere z y ys1 (remove-keep x z xs1 ys1 rm1 p1 ne)))))
 
-(def-fns _ $ (erased notin-remove : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (NotIn z xs) p)
+(def-fns _ $ (erased notin-remove : (erased (Nat) x z) (erased (List (Nat)) xs ys) (subterm erased (Ins (Nat) x ys xs) rm) (erased (NotIn z xs) p)
     -> (erased (NotIn z ys) r))
   (match erased rm _
-    ((RmHere _ _) (let-match erased p (NotInCons _ _ _ _ p1)) p1)
-    ((RmThere _ y xs1 ys1 rm1)
+    ((InsH _ _ _) (let-match erased p (NotInCons _ _ _ _ p1)) p1)
+    ((InsT _ _ y ys1 xs1 rm1)
       (let-match erased p (NotInCons _ _ _ ne p1))
       (NotInCons z y ys1 ne (notin-remove x z xs1 ys1 rm1 p1)))))
 
-(def-fns _ $ (erased remove-distinct : (erased (Nat) x) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (Distinct xs) dx)
+(def-fns _ $ (erased remove-distinct : (erased (Nat) x) (erased (List (Nat)) xs ys) (subterm erased (Ins (Nat) x ys xs) rm) (erased (Distinct xs) dx)
     -> (erased (Distinct ys) r))
   (match erased rm _
-    ((RmHere _ _) (let-match erased dx (DistCons _ _ _ d1)) d1)
-    ((RmThere _ y xs1 ys1 rm1)
+    ((InsH _ _ _) (let-match erased dx (DistCons _ _ _ d1)) d1)
+    ((InsT _ _ y ys1 xs1 rm1)
       (let-match erased dx (DistCons _ _ p d1))
       (DistCons y ys1 (notin-remove x y xs1 ys1 rm1 p) (remove-distinct x xs1 ys1 rm1 d1)))))
 
-(def-fns _ $ (erased remove-length : (erased (Nat) x m) (erased (List (Nat)) xs ys) (subterm erased (Remove x xs ys) rm) (erased (Length (Nat) ys m) l)
+(def-fns _ $ (erased remove-length : (erased (Nat) x m) (erased (List (Nat)) xs ys) (subterm erased (Ins (Nat) x ys xs) rm) (erased (Length (Nat) ys m) l)
     -> (erased (Length (Nat) xs (Succ m)) r))
-  (let-match erased rm (RmThere _ y xs1 ys1 rm1) ((RmHere _ _) (LengthCons _ x ys m l)))
+  (let-match erased rm (InsT _ _ y ys1 xs1 rm1) ((InsH _ _ _) (LengthCons _ x ys m l)))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (LengthCons _ y xs1 (Succ m1) (remove-length x m1 xs1 ys1 rm1 l1)))
 
@@ -433,21 +427,21 @@
   (let-match erased out (NotInCons _ _ _ ne out1))
   (RespCons lab2 ys1 ys1 y y (redirect-miss a b y y lab lab2 rd p (apart-sym a y ne)) (fixed-redirect a b lab lab2 ys1 fix1 out1 rd)))
 
-(def-fns _ $ (erased fixed-remove : (erased (Nat) a b) (erased (List (Nat)) lab lab2 rs rs2) (subterm erased (Remove a rs rs2) rm)
+(def-fns _ $ (erased fixed-remove : (erased (Nat) a b) (erased (List (Nat)) lab lab2 rs rs2) (subterm erased (Ins (Nat) a rs2 rs) rm)
     (erased (Respects lab rs rs) fix) (erased (Distinct rs) dr) (erased (Redirect a b lab lab2) rd) -> (erased (Respects lab2 rs2 rs2) r))
   (match erased rm _
-    ((RmHere _ _)
+    ((InsH _ _ _)
       (let-match erased fix (RespCons _ _ _ _ _ _ fix1))
       (let-match erased dr (DistCons _ _ out _))
       (fixed-redirect a b lab lab2 rs2 fix1 out rd))
-    ((RmThere _ y rs1 rs3 rm1)
+    ((InsT _ _ y rs3 rs1 rm1)
       (let-match erased fix (RespCons _ _ _ _ _ p fix1))
       (let-match erased dr (DistCons _ _ out dr1))
       (RespCons lab2 rs3 rs3 y y (redirect-miss a b y y lab lab2 rd p (notin-in y a rs1 out (remove-src a rs1 rs3 rm1)))
         (fixed-remove a b lab lab2 rs1 rs3 rm1 fix1 dr1 rd)))))
 
 (def-fns _ $ (erased rooted-merge : (erased (List (Bond)) g h) (erased (List (Nat)) rs rs2 xs ls ls2) (erased (Nat) a b)
-    (subterm erased (Rooted g rs xs ls) ro) (erased (Redirect a b ls ls2) rd) (erased (Remove a rs rs2) rm)
+    (subterm erased (Rooted g rs xs ls) ro) (erased (Redirect a b ls ls2) rd) (erased (Ins (Nat) a rs2 rs) rm)
     (erased (In b rs2) pb) (erased (Conn h b a) cba) (erased (Spans h g) sp) -> (erased (Rooted h rs2 xs ls2) res))
   (let-match erased ro (RootedCons _ _ xs1 ls1 x r pin c ro1) ((RootedNil _ _) (let-match erased rd (RdNil _ _)) (RootedNil h rs2)))
   (match erased rd _
@@ -496,7 +490,7 @@
   (values k2 cs2))
 
 (def-fns _ $ (erased sub-remove : (erased (Nat) x) (erased (List (Nat)) m ys ys1) (subterm erased (HSub m ys) sb) (erased (NotIn x m) out)
-    (erased (Remove x ys ys1) rm) -> (erased (HSub m ys1) r))
+    (erased (Ins (Nat) x ys1 ys) rm) -> (erased (HSub m ys1) r))
   (let-match erased sb (HsbCons z m1 _ p sb1) ((HsbNil _) (HsbNil ys1)))
   (let-match erased out (NotInCons _ _ _ ne out1))
   (HsbCons z m1 ys1 (remove-keep x z ys ys1 rm p (apart-sym x z ne)) (sub-remove x m1 ys ys1 sb1 out1 rm)))

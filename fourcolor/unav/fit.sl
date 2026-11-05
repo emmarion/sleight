@@ -389,11 +389,6 @@
   (let ((many ys) (erased p)) (notail $ nseq-c _ n1 x))
   (values (Cons _ x ys) (RepeatCons _ n1 x ys p)))
 
-(def-fns _ $ (erased add-inj : (erased (Nat) a b c d) (subterm erased (Add a b c) p) (erased (Add a d c) q) -> (erased (Eq (Nat) b d) e))
-  (let-match erased p (AddSucc a1 _ c1 p1) ((AddZero _) (let-match erased q (AddZero _)) (Refl _ b)))
-  (let-match erased q (AddSucc _ _ _ q1))
-  (add-inj a1 b c1 d p1 q1))
-
 (def-fns _ $ (erased clamp-le9 : (erased (Nat) a m) (erased (Clamp a m) c) -> (erased (Lt m (Succ 9)) r))
   (match erased c _ ((ClLo _ p) (lt-weaken a 9 p)) ((ClHi _ _) (lt-succ 9))))
 
@@ -493,7 +488,7 @@
   (let-match erased (le-antisym b m l1 u1) (Refl _ _))
   (let-match erased c (ClLo _ _) (absurd (ClHi _ _) (lt-irrefl 9 u)))
   (let-match erased mo (MoAdd _ _ _ e2) (absurd (MoNeg _ _ lb) (lt-asym 4 a pa lb)))
-  (let-match erased (add-inj 5 n a n2 e2 e) (Refl _ _))
+  (let-match erased (add-cancel 5 n n2 a e2 e) (Refl _ _))
   (repeat-fit n as gs rp l pfv))
 
 (def-fns _ $ (erased fans-split : (erased (Nat) k i) (erased (List (Nat)) as) (erased (Rg) r rl rh) (erased (List (Rg)) gs gl gh)

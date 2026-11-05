@@ -31,12 +31,6 @@
   (let ((erased ab) (erased r) (erased s)) (add-assoc-back a1 b c bc abc1 p1 q))
   (values (Succ ab) (AddSucc a1 b ab r) (AddSucc ab c abc1 s)))
 
-(def-fns _ $ (erased add-mono : (erased (Nat) a b c b2 c2) (subterm erased (Add a b c) p) (erased (Add a b2 c2) q) (erased (Lt b b2) l)
-    -> (erased (Lt c c2) r))
-  (let-match erased p (AddSucc a1 _ c1 p1) ((AddZero _) (let-match erased q (AddZero _)) l))
-  (let-match erased q (AddSucc _ _ c3 q1))
-  (LtS c1 c3 (add-mono a1 b c1 b2 c3 p1 q1 l)))
-
 (def-fns _ $ (erased add-shift : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
   (let ((erased c1) (erased e) (erased q1)) (add-succ-right-inv a b c p))
   (let-match erased e (Refl _ _))
@@ -532,3 +526,15 @@
   (let-match erased l (LtS b1 a1 l1) ((LtZ a1) (values a1 (AddZero a))))
   (let ((erased x) (erased p)) (lt-diff b1 a1 l1))
   (values x (AddSucc b1 (Succ x) a1 p)))
+
+(def-fns _ $ (erased add-cancel-le : (erased (Nat) a b c x y) (erased (Add a b x) p) (erased (Add a c y) q) (erased (Lt x (Succ y)) l)
+    -> (erased (Lt b (Succ c)) r))
+  (match erased (lt-dec c b) _
+    ((No _ _ _ _ le) (le-lt-succ b c le))
+    (absurd (Yes _ _ _ _ cb) (lt-asym y x (add-mono-lt c b a y x cb (add-comm a c y q) (add-comm a b x p)) l))))
+
+(def-fns _ $ (erased add-lt-le : (erased (Nat) a b c d x y) (erased (Lt a (Succ b)) l) (erased (Lt c (Succ d)) k) (erased (Add a c x) p) (erased (Add b d y) q) ->
+    (erased (Lt x (Succ y)) r))
+  (let ((erased w) (erased o)) (add b c))
+  (lt-le-trans x (Succ w) (Succ y) (add-mono-le c a b x w l (add-comm a c x p) (add-comm b c w o))
+    (LtS w (Succ y) (add-mono-le b c d w y k o q))))

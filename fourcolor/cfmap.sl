@@ -40,16 +40,16 @@
   (values y (LIMore a y p l)))
 
 ; The darts of p, each sent by n to the one before it, from x to y: a node path read backwards.
-(def-adts $ (RPath : ((List (Nat)) n) ((Nat) x) ((List (Nat)) p) ((Nat) y) -> Type)
+(def-adts $ (CRPath : ((List (Nat)) n) ((Nat) x) ((List (Nat)) p) ((Nat) y) -> Type)
   enum
-  (many RPNil : (erased (List (Nat)) n) (erased (Nat) x) -> (RPath n x (Nil (Nat)) x))
-  (many RPCons : (erased (List (Nat)) n p) (erased (Nat) x z y) (erased (Nth (Nat) n z x) pz) (erased (RPath n z p y) rest)
-      -> (RPath n x (Cons (Nat) z p) y)))
+  (many RPNil : (erased (List (Nat)) n) (erased (Nat) x) -> (CRPath n x (Nil (Nat)) x))
+  (many RPCons : (erased (List (Nat)) n p) (erased (Nat) x z y) (erased (Nth (Nat) n z x) pz) (erased (CRPath n z p y) rest)
+      -> (CRPath n x (Cons (Nat) z p) y)))
 
 ; r is a whole node cycle read backwards, without repeats, from its head.
 (def-adts $ (Cpring : ((List (Nat)) n r) -> Type)
   enum
-  (many MkCpring : (erased (List (Nat)) n p) (erased (Nat) a y) (erased (RPath n a p y) rp) (erased (Nth (Nat) n a y) back)
+  (many MkCpring : (erased (List (Nat)) n p) (erased (Nat) a y) (erased (CRPath n a p y) rp) (erased (Nth (Nat) n a y) back)
       (erased (Distinct (Cons (Nat) a p)) dp) -> (Cpring n (Cons (Nat) a p))))
 
 ; x0 is the reference dart of the ring r: its second dart, or its only one.
@@ -64,7 +64,7 @@
   (many MkPointedMap : (erased (Nat) d) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Cpring n r) cr)
       -> (PointedMap d e n f r)))
 
-(def-fns _ $ (erased rpath-last : (erased (List (Nat)) n p) (erased (Nat) a y) (subterm erased (RPath n a p y) rp) -> (erased (LastIs (Cons (Nat) a p) y) r))
+(def-fns _ $ (erased rpath-last : (erased (List (Nat)) n p) (erased (Nat) a y) (subterm erased (CRPath n a p y) rp) -> (erased (LastIs (Cons (Nat) a p) y) r))
   (let-match erased rp (RPCons _ p1 _ z _ _ rp1) ((RPNil _ _) (LIOne a)))
   (LIMore a y p (rpath-last n p1 z y rp1)))
 
@@ -90,7 +90,7 @@
   (let ((erased y) (erased py0)) (nth-exists _ en d z (respects-length e n en d cen ln) lz))
   (values y (respects-nth e n en z x y cen pz py0) (respects-nth f en ids z y z kn py0 (iota-nth d z ids io lz))))
 
-(def-fns _ $ (erased hyper-ef : (erased (Nat) d) (erased (List (Nat)) e ei f fi) (erased (Perm d e ei) pe) (erased (Perm d f fi) pf)
+(def-fns _ $ (erased hyper-ef : (erased (Nat) d) (erased (List (Nat)) e ei f fi) (erased (HPerm d e ei) pe) (erased (HPerm d f fi) pf)
     -> (erased (List (Nat)) n) (erased (Hypermap d e n f) h))
   (let ((erased n) (erased h)) (hyper-mk d f fi e ei pf pe))
   (values n (hyper-rot d f e n (hyper-rot d n f e h))))
@@ -108,7 +108,7 @@
   (let ((erased rid)) (RespCons id l1 l1 z z i0 (RespCons id (Nil (Nat)) (Nil (Nat)) o o i1 (RespNil id))))
   (let ((erased lsw)) (LengthCons _ o _ o (LengthCons _ z _ z (LengthNil _))))
   (let ((erased lid)) (LengthCons _ z _ o (LengthCons _ o _ z (LengthNil _))))
-  (let ((erased n) (erased h)) (hyper-ef two sw sw id id (MkPerm two sw sw id io lsw rsw rsw) (MkPerm two id id id io lid rid rid)))
+  (let ((erased n) (erased h)) (hyper-ef two sw sw id id (HMkPerm two sw sw id io lsw rsw rsw) (HMkPerm two id id id io lid rid rid)))
   (let ((erased n0)) (hyp-nfe two z o o sw n id h s0 i1))
   (let ((erased n1)) (hyp-nfe two o z z sw n id h s1 i0))
   (let ((erased _) (erased ln) (erased _)) (hyper-lengths two sw n id h))
@@ -157,8 +157,8 @@
     ((CEq _ _ _) (let ((many ys) (erased rs)) (rots-c _ k xs m l (lt-succ k))) (values ys (RotIn _ k m xs ys l (lt-succ k) rs)))
     ((CGt _ _ _ _ gt) (values xs (RotOver _ k m xs l gt)))))
 
-(def-fns _ $ (erased rpath-snoc : (erased (List (Nat)) n p p2) (erased (Nat) x y z) (subterm erased (RPath n x p y) rp) (erased (Nth (Nat) n z y) pz)
-    (erased (Snoc (Nat) p z p2) s) -> (erased (RPath n x p2 z) r))
+(def-fns _ $ (erased rpath-snoc : (erased (List (Nat)) n p p2) (erased (Nat) x y z) (subterm erased (CRPath n x p y) rp) (erased (Nth (Nat) n z y) pz)
+    (erased (Snoc (Nat) p z p2) s) -> (erased (CRPath n x p2 z) r))
   (match erased rp _
     ((RPNil _ _) (let-match erased s (SnocNil _ _)) (RPCons n (Nil (Nat)) x z z pz (RPNil n z)))
     ((RPCons _ p1 _ w _ pw rp1)
@@ -183,18 +183,18 @@
     ((RotIn _ _ _ _ _ _ _ rs) (cpring-rots n xs ys k cr rs))
     ((RotOver _ _ _ _ _ _) cr)))
 
-(def-fns _ $ (erased perm-fix2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Snoc (Nat) p d p2) s)
-    -> (erased (List (Nat)) q2) (erased (Perm (Succ d) p2 q2) r))
+(def-fns _ $ (erased perm-fix2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Snoc (Nat) p d p2) s)
+    -> (erased (List (Nat)) q2) (erased (HPerm (Succ d) p2 q2) r))
   (let ((erased q2) (erased sq)) (snoc-exists _ q d))
   (values q2 (perm-fix d p q p2 q2 pm s sq)))
 
-(def-fns _ $ (erased perm-insert2 : (erased (Nat) d c a) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Insert p c d p2) ins)
-    (erased (Nth (Nat) p c a) pc) -> (erased (List (Nat)) q2) (erased (Perm (Succ d) p2 q2) r))
+(def-fns _ $ (erased perm-insert2 : (erased (Nat) d c a) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Insert p c d p2) ins)
+    (erased (Nth (Nat) p c a) pc) -> (erased (List (Nat)) q2) (erased (HPerm (Succ d) p2 q2) r))
   (let ((erased q2) (erased iq)) (insert-exists q a d c (perm-inv d c a p q pm pc)))
   (values q2 (perm-insert d c a p q p2 q2 pm ins iq pc)))
 
-(def-fns _ $ (erased perm-grow2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (EdgeGrow p d p2) g)
-    -> (erased (List (Nat)) q2) (erased (Perm (Succ (Succ d)) p2 q2) r))
+(def-fns _ $ (erased perm-grow2 : (erased (Nat) d) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (EdgeGrow p d p2) g)
+    -> (erased (List (Nat)) q2) (erased (HPerm (Succ (Succ d)) p2 q2) r))
   (let ((erased p0) (erased s) (erased ins)) (grow-insert p p2 d g))
   (let ((erased len) (erased _)) (grow-length p p2 d g))
   (let ((erased q0) (erased pm0)) (perm-fix2 d p q p0 pm s))
@@ -209,19 +209,19 @@
 
 (def-fns _ $ (erased rpath-move : (erased (Nat) d d2 a y) (erased (List (Nat)) e n f e2 n2 f2 s t p) (erased (Hypermap d e n f) h)
     (erased (Hypermap d2 e2 n2 f2) h2) (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree f f2 s) gf) (erased (Respects f s t) st)
-    (subterm erased (RPath n a p y) rp) (erased (Disj p t) dj) -> (erased (RPath n2 a p y) r))
+    (subterm erased (CRPath n a p y) rp) (erased (Disj p t) dj) -> (erased (CRPath n2 a p y) r))
   (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (RPNil n2 a)))
   (let-match erased dj (DisjCons _ _ _ out dj1))
   (RPCons n2 p1 a z y (node-move d d2 z a e n f e2 n2 f2 s t h h2 ge gf st pz out) (rpath-move d d2 z y e n f e2 n2 f2 s t p1 h h2 ge gf st rp1 dj1)))
 
-(def-fns _ $ (erased rpath-alllt : (erased (Nat) d a y) (erased (List (Nat)) n p) (subterm erased (RPath n a p y) rp) (erased (Length (Nat) n d) l)
-    -> (erased (AllLt p d) r))
-  (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (ALNil d)))
-  (ALCons z d p1 (nth-lt-length _ n z d a pz l) (rpath-alllt d z y n p1 rp1 l)))
+(def-fns _ $ (erased rpath-alllt : (erased (Nat) d a y) (erased (List (Nat)) n p) (subterm erased (CRPath n a p y) rp) (erased (Length (Nat) n d) l)
+    -> (erased (Under p d) r))
+  (let-match erased rp (RPCons _ p1 _ z _ pz rp1) ((RPNil _ _) (UnderNil d)))
+  (UnderCons z d p1 (nth-lt-length _ n z d a pz l) (rpath-alllt d z y n p1 rp1 l)))
 
-(def-fns _ $ (erased cpring-alllt : (erased (Nat) d) (erased (List (Nat)) n r) (erased (Cpring n r) cr) (erased (Length (Nat) n d) l) -> (erased (AllLt r d) res))
+(def-fns _ $ (erased cpring-alllt : (erased (Nat) d) (erased (List (Nat)) n r) (erased (Cpring n r) cr) (erased (Length (Nat) n d) l) -> (erased (Under r d) res))
   (let-match erased cr (MkCpring _ p a y rp back _))
-  (ALCons a d p (nth-lt-length _ n a d y back l) (rpath-alllt d a y n p rp l)))
+  (UnderCons a d p (nth-lt-length _ n a d y back l) (rpath-alllt d a y n p rp l)))
 
 ; The U step: a new edge d-(d+1), d a face of its own and d+1 put into the face before the head a of the ring, after c = e (n a);
 ; both new darts go in front of the ring.
@@ -331,9 +331,9 @@
       (let-match erased na (NotInCons _ _ _ nax na1))
       (let-match erased na1 (NotInCons _ _ _ _ na2))
       (let-match erased nx0 (NotInCons _ _ _ _ nx1))
-      (let-match erased al (ALCons _ _ _ lta al1))
-      (let-match erased al1 (ALCons _ _ _ _ al2))
-      (let-match erased al2 (ALCons _ _ _ _ al3))
+      (let-match erased al (UnderCons _ _ _ lta al1))
+      (let-match erased al1 (UnderCons _ _ _ _ al2))
+      (let-match erased al2 (UnderCons _ _ _ _ al3))
       (let ((erased dist2)) (DistCons a (Cons (Nat) d q) (NotInCons a d q (ApLt _ _ a d lta) na2) (DistCons d q (lt-notin d d q al3 (lt-succ d)) dp3)))
       (let-match erased rp2 (RPCons _ q1 _ w2 _ pw2 rp3)
         ((RPNil _ _)
@@ -476,7 +476,7 @@
 ; e is an involution without fixed points.
 (def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)
   enum
-  (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e ids) (erased (Iota d ids) io) (erased (Perm d e e) pe) (erased (Differ e ids) df)
+  (many MkPlain : (erased (Nat) d) (erased (List (Nat)) e ids) (erased (Iota d ids) io) (erased (HPerm d e e) pe) (erased (Differ e ids) df)
       -> (Plain d e)))
 
 (def-fns _ $ (erased differ-snoc : (erased (List (Nat)) xs ys xs2 ys2) (erased (Nat) x y) (subterm erased (Differ xs ys) df)
@@ -543,7 +543,7 @@
   (let ((erased sw) (erased id)) (values (Cons (Nat) o l0) (Cons (Nat) z l1)))
   (let ((erased io)) (IotaS o l0 id (IotaS z (Nil (Nat)) l0 (IotaZ) (SnocNil _ z)) (SnocCons _ z o (Nil (Nat)) l1 (SnocNil _ o))))
   (let ((erased rsw)) (RespCons sw l0 l1 o z (NthThere _ o l0 z z (NthHere _ z (Nil (Nat)))) (RespCons sw (Nil (Nat)) (Nil (Nat)) z o (NthHere _ o l0) (RespNil sw))))
-  (MkPlain two sw id io (MkPerm two sw sw id io (LengthCons _ o _ o (LengthCons _ z _ z (LengthNil _))) rsw rsw)
+  (MkPlain two sw id io (HMkPerm two sw sw id io (LengthCons _ o _ o (LengthCons _ z _ z (LengthNil _))) rsw rsw)
     (DifferCons l0 l1 o z (ApGt _ _ o z (LtZ z)) (DifferCons (Nil (Nat)) (Nil (Nat)) z o (ApLt _ _ z o (LtZ z)) (DifferNil)))))
 
 (def-fns _ $ (erased ecpU-grow : (erased (Nat) d) (erased (List (Nat)) e f r e2 f2 r2) (erased (EcpU d e f r e2 f2 r2) st) -> (erased (EdgeGrow e d e2) g))
@@ -591,7 +591,7 @@
   (many PrevLast : (erased (List (Nat)) n p) (erased (Nat) y) -> (Prev n p y y))
   (many PrevIn : (erased (List (Nat)) n p) (erased (Nat) y w u) (erased (In u p) iu) (erased (Nth (Nat) n u w) pu) -> (Prev n p y w)))
 
-(def-fns _ $ (erased rpath-prev : (erased (List (Nat)) n p) (erased (Nat) a y w) (subterm erased (RPath n a p y) rp) (erased (In w (Cons (Nat) a p)) i)
+(def-fns _ $ (erased rpath-prev : (erased (List (Nat)) n p) (erased (Nat) a y w) (subterm erased (CRPath n a p y) rp) (erased (In w (Cons (Nat) a p)) i)
     -> (erased (Prev n p y w) r))
   (match erased rp _
     ((RPNil _ _) (let-match erased i (InHere _ _) (absurd (InThere _ _ _ i1) i1)) (PrevLast n p y))
@@ -736,11 +736,11 @@
       (CubOn n2 r2 d ind) s1) (CubThree n2 r2 d1 od) s2)))
 
 (def-fns _ $ (erased hyper-fe : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
-    -> (erased (List (Nat)) fe) (erased (Respects f e fe) rfe) (erased (Perm d fe n) pm))
+    -> (erased (List (Nat)) fe) (erased (Respects f e fe) rfe) (erased (HPerm d fe n) pm))
   (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
   (let-match erased h (MkHypermap _ _ _ _ ids fe en _ io cfe ke cen kn _ _))
   (let ((erased lfe)) (respects-length f e fe d cfe le))
-  (values fe cfe (MkPerm d fe n ids io lfe ke (respects-assoc n e f en fe ids d cen kn cfe lfe le))))
+  (values fe cfe (HMkPerm d fe n ids io lfe ke (respects-assoc n e f en fe ids d cen kn cfe lfe le))))
 
 (def-fns _ $ (erased hyper-node-unique : (erased (Nat) d) (erased (List (Nat)) e n f n2) (erased (Hypermap d e n f) h) (erased (Hypermap d e n2 f) h2)
     -> (erased (Eq (List (Nat)) n n2) r))
@@ -788,12 +788,6 @@
   (let-match erased pm (MkPointedMap _ _ _ _ _ h _))
   h)
 
-(def-fns _ $ (erased under-grow : (erased (List (Nat)) xs xs2) (erased (Nat) x b) (subterm erased (Under xs b) u) (erased (Lt x b) lx)
-    (erased (Snoc (Nat) xs x xs2) s) -> (erased (Under xs2 b) r))
-  (match erased u _
-    ((UnderNil _) (let-match erased s (SnocNil _ _)) (UnderCons (Nil (Nat)) x b lx (UnderNil b)))
-    ((UnderCons xs1 y _ ly u1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (UnderCons xs3 y b ly (under-grow xs1 xs3 x b u1 lx s1)))))
-
 (def-fns _ $ (erased color-grow : (erased (Nat) d cd cd1) (erased (List (Nat)) e f e2 f2 ks ks1 ks2) (erased (FourColoring e f ks) col)
     (erased (Length (Nat) ks d) lk) (erased (EdgeGrow e d e2) g) (erased (Snoc (Nat) ks cd ks1) s1) (erased (Snoc (Nat) ks1 cd1 ks2) s2)
     (erased (Respects ks2 f2 ks2) face) (erased (Lt cd 4) l1) (erased (Lt cd1 4) l2)
@@ -808,7 +802,7 @@
     (respects-snoc ks2 e1 e2 ke1 ke2 d cd (respects-snoc ks2 e e1 ke ke1 (Succ d) cd1 ce2 (snoc-new _ ks1 ks2 cd1 (Succ d) s2 lk1) se1 sk1)
       (snoc-old _ ks1 ks2 cd1 cd d s2 (snoc-new _ ks ks1 cd d s1 lk)) se2 sk2)
     (differ-snoc ke1 ks1 ke2 ks2 cd cd1 (differ-snoc ke ks ke1 ks1 cd1 cd edge sk1 s1 (apart-sym cd cd1 ne)) sk2 s2 ne)
-    (under-grow ks1 ks2 cd1 _ (under-grow ks ks1 cd _ four l1 s1) l2 s2)))
+    (alllt-snoc ks1 ks2 _ cd1 (alllt-snoc ks ks1 _ cd four l1 s1) l2 s2)))
 
 (def-fns _ $ (erased ecpU-color : (erased (Nat) d c ka) (erased (List (Nat)) e n f r e2 f2 r2 ks rc) (erased (PointedMap d e n f r) pm)
     (erased (EcpU d e f r e2 f2 r2) st) (erased (FourColoring e f ks) col) (erased (Respects ks r (Cons (Nat) ka rc)) rr)
@@ -830,7 +824,7 @@
   (let ((erased ks2) (erased s2)) (snoc-exists _ ks1 ka))
   (let ((erased lk1)) (snoc-length _ ks ks1 c d s1 lk))
   (let ((erased face2)) (respects-insert ks1 ks2 f0 f2 c0 (Succ d) d ka (respects-new ks ks1 f f0 d c face s lk s1) ins lk1 (snoc-old _ ks ks1 c ka c0 s1 p0) s2))
-  (let ((erased lka)) (under-nth ks a ka _ four pka))
+  (let ((erased lka)) (alllt-nth ks _ a ka four pka))
   (values ks2 (color-grow d c ka e f e2 f2 ks ks1 ks2 col lk g s1 s2 face2 lc lka ne)
     (RespCons ks2 (Cons (Nat) d r) (Cons (Nat) c (Cons (Nat) ka rc)) (Succ d) ka (snoc-new _ ks1 ks2 ka (Succ d) s2 lk1)
       (RespCons ks2 r (Cons (Nat) ka rc) d c (snoc-old _ ks1 ks2 ka c d s2 (snoc-new _ ks ks1 c d s1 lk)) (respects-lab ks1 ks2 r _ ka (respects-lab ks ks1 r _ c rr s1) s2)))))
@@ -897,6 +891,6 @@
   (let ((erased lk1)) (snoc-length _ ks ks1 kx d s1 lk))
   (let ((erased face2)) (respects-insert ks1 ks2 f1 f2 ez (Succ d) d kw (respects-insert ks ks1 f f1 ea d d kx face i1 lk p0 s1) i2 lk1
     (snoc-old _ ks ks1 kx kw ez s1 pl1) s2))
-  (values ks2 (color-grow d kx kw e f e2 f2 ks ks1 ks2 col lk g s1 s2 face2 (under-nth ks x0 kx _ four pkx) (under-nth ks w kw _ four pkw) ne)
+  (values ks2 (color-grow d kx kw e f e2 f2 ks ks1 ks2 col lk g s1 s2 face2 (alllt-nth ks _ x0 kx four pkx) (alllt-nth ks _ w kw four pkw) ne)
     (RespCons ks2 (Cons (Nat) d q) (Cons (Nat) kx qc) a ka (snoc-old _ ks1 ks2 kw ka a s2 (snoc-old _ ks ks1 kx ka a s1 pka))
       (RespCons ks2 q qc d kx (snoc-old _ ks1 ks2 kw kx d s2 (snoc-new _ ks ks1 kx d s1 lk)) (respects-lab ks1 ks2 q qc kw (respects-lab ks ks1 q qc kx rrq s1) s2)))))

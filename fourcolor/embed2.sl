@@ -5,17 +5,12 @@
   (many ReachCons : (erased (List (Nat)) f xs ys) (erased (Nat) x y) (erased (SomePath f (Nil (Nat)) x y) w) (erased (Reach f xs ys) rest)
       -> (Reach f (Cons (Nat) x xs) (Cons (Nat) y ys))))
 
-(def-fns _ $ (erased path-col : (erased (List (Nat)) ks f s xs) (erased (Nat) x y l) (erased (Respects ks f ks) rf) (subterm erased (Path f s x y xs) w)
-    (erased (Nth (Nat) ks x l) px) -> (erased (Nth (Nat) ks y l) r))
-  (let-match erased w (PathStep _ _ xs1 _ z _ pz _ w1) ((PathHere _ _ _) px))
-  (path-col ks f s xs1 z y l rf w1 (respects-nth ks f ks x z l rf pz px)))
-
 (def-fns _ $ (erased reach-resp : (erased (List (Nat)) ks f xs ys L) (erased (Respects ks f ks) rf) (subterm erased (Reach f xs ys) rc)
     (erased (Respects ks xs L) rx) -> (erased (Respects ks ys L) r))
   (let-match erased rc (ReachCons _ xs1 ys1 x y w rc1) ((ReachNil _) (let-match erased rx (RespNil _)) (RespNil ks)))
   (let-match erased rx (RespCons _ _ L1 _ l p rx1))
   (let-match erased w (MkSomePath _ _ ps _ _ pa))
-  (RespCons ks ys1 L1 y l (path-col ks f (Nil _) ps x y l rf pa p) (reach-resp ks f xs1 ys1 L1 rf rc1 rx1)))
+  (RespCons ks ys1 L1 y l (path-label f ks (Nil _) ps x y l pa rf p) (reach-resp ks f xs1 ys1 L1 rf rc1 rx1)))
 
 (def-fns _ $ (erased pull-col : (erased (Nat) d d2) (erased (List (Nat)) e f e2 f2 h ks hf2 eh he2 kd) (erased (FourColoring e f ks) c)
     (erased (Length (Nat) e d) le) (erased (Length (Nat) ks d) lk) (erased (Under e d) ue) (erased (Length (Nat) h d2) lh)
@@ -121,10 +116,10 @@
   (let ((erased _) (erased onr)) (node-order-patch d dd dr (Succ (Succ (Succ (Zero)))) e n f ed nd fd er nr fr hd hr bd br pt cu idr ior))
   (let ((erased init) (erased l) (erased sn)) (unsnoc-exists (Nat) b0 B))
   (let ((erased R1)) (Cons (Nat) l init))
-  (let ((erased ii) (erased j0)) (app-exists init (Nil _)))
+  (let ((erased ii) (erased j0)) (lapp-make _ init (Nil _)))
   (let-match erased (join-nil-r init ii j0) (Refl _ _))
-  (let-match erased (ring-turn nr (Nil _) init (Cons _ l (Nil _)) br R1 idr (join-snoc-r init (Nil _) init (Cons _ l (Nil _)) br l j0 (SnocNil _ l) sn)
-      (JoinCons (Nil _) init init l (JoinNil init)) (MkRingOK nr (Nil _) br idr cyr dbr (off-nil br) (oo-qcubic nr br br idr onr (sub-refl br))))
+  (let-match erased (ring-turn nr (Nil _) init (Cons _ l (Nil _)) br R1 idr (app-snoc _ init (Nil _) init (Cons _ l (Nil _)) br l j0 sn (SnocNil _ l))
+      (LAppCons _ l (Nil _) init init (LAppNil _ init)) (MkRingOK nr (Nil _) br idr cyr dbr (off-nil br) (oo-qcubic nr br br idr onr (sub-refl br))))
     (MkRingOK _ _ _ _ nc1 ds3 _ qc1))
   (values init l sn (MkKempeRing dr er nr fr R1 hrm gr plr (MkQuasiCubic dr nr R1 idr ior qc1) nc1 ds3)))
 

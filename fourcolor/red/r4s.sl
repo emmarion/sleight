@@ -608,7 +608,7 @@
   (many MkSSt : (erased (Nat) h N len) (erased (List Cnt) vs0) (erased (List (WEv)) E) (erased (List Cnt) vs) (erased (List (U8)) us) (erased (List (Nat)) T)
       (erased (Ctree) cur) (erased (Sz cnt-w vs N) zv) (erased (Sz flag-w us len) zu) (erased (Pw3 (Succ h) (Succ (Zero)) N) pw) (erased (Offs (Succ h) len) of)
       (erased (Lt (Succ h) 17) hl) (erased (UR vs0 vs E T N) ur) (erased (Tally vs (Succ h) (Zero) cur) tb) (erased (Lc us h (Zero) cur) lc) (erased (DOk vs E) dk)
-      (erased (AllLt T N) al) (erased (Distinct T) dt) -> (SSt h N len vs0 E vs us T)))
+      (erased (Under T N) al) (erased (Distinct T) dt) -> (SSt h N len vs0 E vs us T)))
 
 (def-fns _ $ (erased monus-sub : (erased (Nat) c d n) (subterm erased (Add c d n) p) -> (erased (Monus n c d) r))
   (match erased p _ ((AddZero _) (MoZ d)) ((AddSucc c1 _ n1 p1) (MoS n1 c1 d (monus-sub c1 d n1 p1)))))
@@ -1031,7 +1031,7 @@
   (let-match erased j (Succ j1)
     ((Zero)
       (let-match erased ad (AddZero _))
-      (let ((erased et) (erased ra)) (rev-exists pre (Nil _)))
+      (let ((erased et) (erased ra)) (revapp-exists _ pre (Nil _)))
       (let ((erased ti)) (ridx-tidx pre (Nil _) et p p ri ra (TINil p)))
       (let ((erased le)) (rev-len pre (Nil _) et (Succ h) (Zero) (Succ h) ra lp (LengthNil _) (add-zero-right (Succ h))))
       (let ((erased n1) (erased e1) (erased _)) (tally-sub vs (Succ h) (Zero) p cur et tb ti le))

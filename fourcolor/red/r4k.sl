@@ -258,7 +258,7 @@
   enum
   (many MkKgI : (erased (Nat) h N o len) (erased (Ctree) c0 r0) (erased (Gtree) g0 s0) (erased (List (Copy (Nat))) xs) (erased (List Cnt) vs) (erased (List (U8)) us cs)
       (erased (List (Nat)) Hs T) (erased (Ctree) ctu ctr c) (erased (Gtree) gtu) (erased (Length (Copy (Nat)) xs len) lx) (erased (Lt len u62-modulus) lnb)
-      (erased (AllCu xs) au) (erased (NLay xs h (Zero) s0) ly) (erased (Nat) ilo ihi) (erased (Bool) z) (erased (NIv xs h (Zero) s0 ilo ihi z) iv) (erased (NPart xs h (Zero) s0 (BFalse) gtu) pu) (erased (AllLt Hs len) al) (erased (Distinct Hs) dt)
+      (erased (AllCu xs) au) (erased (NLay xs h (Zero) s0) ly) (erased (Nat) ilo ihi) (erased (Bool) z) (erased (NIv xs h (Zero) s0 ilo ihi z) iv) (erased (NPart xs h (Zero) s0 (BFalse) gtu) pu) (erased (Under Hs len) al) (erased (Distinct Hs) dt)
       (erased (HAll xs (Zero) Hs) ha) (erased (KR h c0 r0 g0 ctu (GEmpty) gtu) kr) (erased (CR h c0 r0 g0 ctr) cr) (erased (Tally vs (Succ h) (Zero) ctu) tb)
       (erased (Lc us h (Zero) ctu) lc) (erased (Sz cnt-w vs N) zv) (erased (Sz flag-w us o) zu) (erased (Sz flag-w cs o) zc) (erased (Ca cs h (Zero) c) f)
       (erased (SameSet c ctr) ss) (erased (MI T h (Zero) c) mi) (erased (AMc h c T) am) (erased (Distinct T) dc) -> (KgI h N o len c0 r0 g0 s0 xs vs us cs Hs T)))
@@ -268,7 +268,7 @@
   enum
   (many MkKdI : (erased (Nat) h N o len) (erased (Ctree) c0 r0) (erased (Gtree) g0 s0) (erased (Bool) kd) (erased (List (Copy (Nat))) xs) (erased (List Cnt) vs)
       (erased (List (U8)) us cs) (erased (List (Nat)) Hs T) (erased (Ctree) ctu c) (erased (Gtree) gtr gtu) (erased (Length (Copy (Nat)) xs len) lx)
-      (erased (Lt len u62-modulus) lnb) (erased (AllCu xs) au) (erased (NLay xs h (Zero) s0) ly) (erased (Nat) ilo ihi) (erased (Bool) z) (erased (NIv xs h (Zero) s0 ilo ihi z) iv) (erased (AllLt Hs len) al) (erased (Distinct Hs) dt)
+      (erased (Lt len u62-modulus) lnb) (erased (AllCu xs) au) (erased (NLay xs h (Zero) s0) ly) (erased (Nat) ilo ihi) (erased (Bool) z) (erased (NIv xs h (Zero) s0 ilo ihi z) iv) (erased (Under Hs len) al) (erased (Distinct Hs) dt)
       (erased (HAll xs (Zero) Hs) ha) (erased (KR h c0 r0 g0 ctu gtr gtu) kr) (erased (Kld kd h s0 vs us xs ctu gtr gtu) kl) (erased (Sz cnt-w vs N) zv)
       (erased (Sz flag-w us o) zu) (erased (Sz flag-w cs o) zc) (erased (Ca cs h (Zero) c) f) (erased (MI T h (Zero) c) mi) (erased (AMc h c T) am) (erased (Distinct T) dc)
       -> (KdI h N o len c0 r0 g0 s0 kd xs vs us cs Hs T)))

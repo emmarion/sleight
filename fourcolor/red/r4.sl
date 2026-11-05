@@ -2847,19 +2847,14 @@
           ((Bn1 c m _ r bc) (let-match erased (and1-bit b x m (Bit1) pa bc) (BV1)) (values (Tn1 c) r4-2-u62))))
       (values (u62-inc x xb) tn))))
 
-(def-adts $ (B01 : ((Bool) b) ((Nat) a) -> Type)
-  enum
-  (many B01F : -> (B01 (BFalse) (Zero)))
-  (many B01T : -> (B01 (BTrue) (Succ (Zero)))))
-
 ; Of the symbols b0 to b3 (Push, Skip, Pop0, Pop1), f0, f1 and f2 match the colours 1, 2 and 3 under the stack top t.
 (def-adts $ (DgC : ((Bool) b0) ((Bool) b1) ((Bool) b2) ((Bool) b3) ((Nat) t) ((Nat) f0) ((Nat) f1) ((Nat) f2) -> Type)
   enum
-  (many DgT0 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1) (erased (B01 b0 a0) n0) (erased (B01 b1 a1) n1) -> (DgC b0 b1 b2 b3 (Zero) a1 a0 a0))
-  (many DgT1 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1 a2 a3 f1 f2) (erased (B01 b0 a0) n0) (erased (B01 b1 a1) n1) (erased (B01 b2 a2) n2)
-      (erased (B01 b3 a3) n3) (erased (Add a0 a2 f1) s1) (erased (Add a0 a3 f2) s2) -> (DgC b0 b1 b2 b3 (Succ (Zero)) a1 f1 f2))
-  (many DgT2 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1 a2 a3 f1 f2) (erased (B01 b0 a0) n0) (erased (B01 b1 a1) n1) (erased (B01 b2 a2) n2)
-      (erased (B01 b3 a3) n3) (erased (Add a0 a3 f1) s1) (erased (Add a0 a2 f2) s2) -> (DgC b0 b1 b2 b3 (Succ (Succ (Zero))) a1 f1 f2)))
+  (many DgT0 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1) (erased (B2N b0 a0) n0) (erased (B2N b1 a1) n1) -> (DgC b0 b1 b2 b3 (Zero) a1 a0 a0))
+  (many DgT1 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1 a2 a3 f1 f2) (erased (B2N b0 a0) n0) (erased (B2N b1 a1) n1) (erased (B2N b2 a2) n2)
+      (erased (B2N b3 a3) n3) (erased (Add a0 a2 f1) s1) (erased (Add a0 a3 f2) s2) -> (DgC b0 b1 b2 b3 (Succ (Zero)) a1 f1 f2))
+  (many DgT2 : (erased (Bool) b0 b1 b2 b3) (erased (Nat) a0 a1 a2 a3 f1 f2) (erased (B2N b0 a0) n0) (erased (B2N b1 a1) n1) (erased (B2N b2 a2) n2)
+      (erased (B2N b3 a3) n3) (erased (Add a0 a3 f1) s1) (erased (Add a0 a2 f2) s2) -> (DgC b0 b1 b2 b3 (Succ (Succ (Zero))) a1 f1 f2)))
 
 ; Entry i, 4 m + t, of red4's sdig table: for t below 3, the symbols m that match each colour under the top t, two bits per colour.
 (def-adts $ (SDigE : ((Nat) i) ((Nat) v) -> Type)
@@ -2907,17 +2902,17 @@
   (let ((erased a2)) (AcS _ _ l2 l3 v2 x2 a1 bv2 q2))
   (values b0 b1 b2 b3 x0 x1 x2 x3 e0 e1 e2 e3 (AcS _ _ l3 m v3 x3 a2 bv3 q3)))
 
-(def-fns _ $ (many r4-b01 : (many (Bool) b) -> (many (Nat) a) (erased (B01 b a) n))
-  (match many b _ ((BTrue) (values (Succ (Zero)) (B01T))) ((BFalse) (values (Zero) (B01F)))))
+(def-fns _ $ (many r4-b01 : (many (Bool) b) -> (many (Nat) a) (erased (B2N b a) n))
+  (match many b _ ((BTrue) (values (Succ (Zero)) (B2NT ))) ((BFalse) (values (Zero) (B2NF )))))
 
-(def-fns _ $ (erased b01-sum : (erased (Bool) b c) (erased (Nat) x y z) (erased (B01 b x) n1) (erased (B01 c y) n2) (erased (Add x y z) ad)
+(def-fns _ $ (erased b01-sum : (erased (Bool) b c) (erased (Nat) x y z) (erased (B2N b x) n1) (erased (B2N c y) n2) (erased (Add x y z) ad)
     -> (erased (Lt z (Succ (Succ (Succ (Zero))))) l))
   (match erased n1 _
-    ((B01F) (let-match erased ad (AddZero _)) (match erased n2 _ ((B01F) (LtZ _)) ((B01T) (LtS _ _ (LtZ _)))))
-    ((B01T) (let-match erased ad (AddSucc _ _ _ ad1)) (let-match erased ad1 (AddZero _)) (match erased n2 _ ((B01F) (LtS _ _ (LtZ _))) ((B01T) (LtS _ _ (LtS _ _ (LtZ _))))))))
+    ((B2NF ) (let-match erased ad (AddZero _)) (match erased n2 _ ((B2NF ) (LtZ _)) ((B2NT ) (LtS _ _ (LtZ _)))))
+    ((B2NT ) (let-match erased ad (AddSucc _ _ _ ad1)) (let-match erased ad1 (AddZero _)) (match erased n2 _ ((B2NF ) (LtS _ _ (LtZ _))) ((B2NT ) (LtS _ _ (LtS _ _ (LtZ _))))))))
 
-(def-fns _ $ (erased b01-le : (erased (Bool) b) (erased (Nat) x) (erased (B01 b x) n) -> (erased (Lt x (Succ (Succ (Succ (Zero))))) l))
-  (b01-sum b (BFalse) x (Zero) x n (B01F) (add-zero-right x)))
+(def-fns _ $ (erased b01-le : (erased (Bool) b) (erased (Nat) x) (erased (B2N b x) n) -> (erased (Lt x (Succ (Succ (Succ (Zero))))) l))
+  (b01-sum b (BFalse) x (Zero) x n (B2NF ) (add-zero-right x)))
 
 ; v is 4 hi + lo.
 (def-fns _ $ (many r4-bsp2 : (many (Nat) lo hi) (erased (Lt lo 4) l) -> (many (Nat) v) (erased (Nat) t) (erased (Bsp 2 v lo hi) p) (erased (Mul hi 4 t) mm) (erased (Add t lo v) ad))
@@ -2983,11 +2978,11 @@
 (let ((erased r4-sdig-l) (unique r4-sdig0) (erased r4-sdig-t) (erased r4-sdig-n) (erased r4-sdig-a)) (r4-stab SDigE 64 r4-64-u62 sdig-at))
 (let ((many r4-sdig)) (share r4-sdig0))
 
-(def-fns _ $ (erased bset-root : (erased (Bool) b) (erased (GSet) g) (erased (Nat) a) (erased (BSet b g) q) (erased (B01 b a) n) -> (erased (GRoot g a) r))
-  (match erased q _ ((BSetT) (let-match erased n (B01T)) (GROne)) ((BSetF) (let-match erased n (B01F)) (GRG (GEmpty)))))
+(def-fns _ $ (erased bset-root : (erased (Bool) b) (erased (GSet) g) (erased (Nat) a) (erased (BSet b g) q) (erased (B2N b a) n) -> (erased (GRoot g a) r))
+  (match erased q _ ((BSetT) (let-match erased n (B2NT )) (GROne)) ((BSetF) (let-match erased n (B2NF )) (GRG (GEmpty)))))
 
 (def-fns _ $ (erased leaf-one : (erased (Gtree) l) (erased (Bool) b0 b1 b2 b3 b) (erased (LeafSet l (MkBits b0 b1 b2 b3)) ls) (erased (Gsym) s)
-    (erased (Pick4 (Bool) s b0 b1 b2 b3 b) pk) (erased (Nat) a) (erased (B01 b a) n) (erased (Bstack) bs) -> (erased (GSet) g) (erased (GSel (GSG l) s g) sl)
+    (erased (Pick4 (Bool) s b0 b1 b2 b3 b) pk) (erased (Nat) a) (erased (B2N b a) n) (erased (Bstack) bs) -> (erased (GSet) g) (erased (GSel (GSG l) s g) sl)
     (erased (MC g bs (Nil (Col)) a) m))
   (let ((erased g) (erased q)) (bset-exists b))
   (values g (GSelL l b0 b1 b2 b3 b s g ls pk q) (MCNil g bs a (bset-root b g a q n))))
@@ -4645,19 +4640,14 @@
   (let-match erased cn (CnE) (absurd (CnN _ _ _ o) (occ3-empty o)))
   (Refl _ u))
 
-(def-fns _ $ (erased add-le2 : (erased (Nat) a b c x y z) (erased (Add a b c) p) (erased (Lt a (Succ x)) la) (erased (Lt b (Succ y)) lb) (erased (Add x y z) q)
-    -> (erased (Lt c (Succ z)) r))
-  (let ((erased w) (erased aw)) (add x b))
-  (le-trans c w z (add-le-l a x b c w p aw la) (add-mono-le x b y w z lb aw q)))
-
 (def-fns _ $ (erased nz-le : (erased (Ctree) t) (erased (Nat) a) (erased (Nz t a) z) -> (erased (Lt a (Succ (Succ (Zero)))) r))
   (match erased z _ ((NzE) (LtZ _)) ((NzL _) (lt-succ _)) ((NzN _ _ _) (lt-succ _))))
 
 (def-fns _ $ (erased lzi-le : (erased (List (U8)) us) (erased (Nat) j n c) (erased (Ctree) t) (erased (LzI us j n c t) g) -> (erased (Lt c (Succ (Succ (Succ (Succ (Zero)))))) r))
   (let-match erased g (MkLzI _ _ _ _ _ b1 b2 b3 c12 t1 t2 t3 _ z1 z2 z3 d1 d2 _ _ _))
   (let ((erased one) (erased two)) (values (Succ (Zero)) (Succ (Succ (Zero)))))
-  (let ((erased l12)) (add-le2 b1 b2 c12 one one two d1 (nz-le t1 b1 z1) (nz-le t2 b2 z2) (AddSucc (Zero) one one (AddZero one))))
-  (add-le2 c12 b3 c two one (Succ two) d2 l12 (nz-le t3 b3 z3) (AddSucc one one two (AddSucc (Zero) one one (AddZero one)))))
+  (let ((erased l12)) (add-lt-le b1 one b2 one c12 two (nz-le t1 b1 z1) (nz-le t2 b2 z2) d1 (AddSucc (Zero) one one (AddZero one))))
+  (add-lt-le c12 two b3 one c (Succ two) l12 (nz-le t3 b3 z3) d2 (AddSucc one one two (AddSucc (Zero) one one (AddZero one)))))
 
 (def-fns _ $ (erased apart-unsucc : (erased (Nat) a b) (erased (Apart (Nat) Lt (Succ a) (Succ b)) p) -> (erased (Apart (Nat) Lt a b) q))
   (match erased p _ ((ApLt _ _ _ _ l) (ApLt (Nat) Lt a b (lt-pred a b l))) ((ApGt _ _ _ _ l) (ApGt (Nat) Lt a b (lt-pred b a l)))))
@@ -4913,7 +4903,7 @@
   (match erased tb _
     ((TaL _ _ n _ x rt kt)
       (let-match erased (add-fn d (Zero) (Succ h) d ad (add-zero-right d)) (Refl _ _))
-      (let ((erased et) (erased ra)) (rev-exists pre (Nil _)))
+      (let ((erased et) (erased ra)) (revapp-exists _ pre (Nil _)))
       (let ((erased tl)) (elt-lt cnt-w vs p n N x zv))
       (let ((erased c) (erased bf) (erased w) (erased er) (erased ct))
         (r4-cnt-tr cs es evs h o e N p gtu E wk wu cr nb of oe et (ridx-tidx pre (Nil _) et p p ri ra (TINil p))

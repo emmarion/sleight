@@ -1,8 +1,3 @@
-(def-fns _ $ (erased mp-app : (subterm erased (List (Mp)) xs) (erased (List (Mp)) ys) -> (erased (List (Mp)) zs) (erased (LApp (Mp) xs ys zs) r))
-  (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (LAppNil _ ys))))
-  (let ((erased zs1) (erased r1)) (mp-app xs1 ys))
-  (values (Cons _ x zs1) (LAppCons _ x xs1 ys zs1 r1)))
-
 (def-fns _ $ (erased mpcols-split : (erased (List (Mp)) xs ys zs) (subterm erased (LApp (Mp) xs ys zs) ap) (erased (MpCols zs) c)
     -> (erased (MpCols xs) cx) (erased (MpCols ys) cy))
   (let-match erased ap (LAppCons _ _ xs1 _ zs1 ap1) ((LAppNil _ _) (values (MpcNil) c)))
@@ -61,7 +56,7 @@
       (birkhoff-go B pb d y0 k2 (Zero) e n f Q b1 (lt-le-trans k2 k b1 lt lb) bks hm gen bl pl cu cn nc rq lq (lt-trans k2 k 6 lt l6)
         (BMLow k2 (lt-le-trans k2 k (Succ (Succ (Succ (Succ (Succ (Zero)))))) lt l6)) nq))
     ((BKMaps _ _ _ _ dd1 dd2 _ _ _ _ ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 _ ms1 ms2 br n1 n2)
-      (let ((erased ms) (erased ap)) (mp-app ms1 ms2))
+      (let ((erased ms) (erased ap)) (lapp-make _ ms1 ms2))
       (MkReduces B d e n f ms (smaller-app d ms1 ms2 ms ap (bneed-smaller d dd1 h m ed1 nd1 fd1 bd1 ts ms1 n1) (bneed-smaller d dd2 h m ed2 nd2 fd2 bd2 ts ms2 n2))
         (MkColorFrom B (level-of birk-glue) d e n f ms BirkW
           (MkBirkW d x0 h m n0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 ms ctu gtu hm gen pl cu cn nc lr ce ge gc bk br n1 n2 ap)
@@ -140,7 +135,7 @@
                 (some-back d enex ex f fi pmf (hyper-third d enex nex ex e n f hm penex pnex) lenex))))))))
   (let ((erased hd) (erased zs) (erased ds)) (ds-exists d e n f r hm ur))
   (let ((erased ids) (erased io) (erased sp)) (ds-split d e n r hd zs ds))
-  (let-match erased (split-cover hd ids hd zs nex sp (iota-in d nex ids io lnex)) (OrR _ _ izs)
+  (let-match erased (hsplit-cover hd ids hd zs nex sp (iota-in d nex ids io lnex)) (OrR _ _ izs)
     (absurd (OrL _ _ ihd)
       (let ((erased dn)) (disk-node d w ex n ni f r pmn (disk-node d nex w n ni f r pmn (ds-in d nex x e n f p hd zs hm gen rg ur ds ihd) pnw) pwex))
       (let ((erased _) (erased ox)) (disk-edge-inv d x ex x e n f p hm gen rg dn (NotInCons ex x p aex (NotInCons ex y (Nil _) ney (NotInNil ex))) pex))
@@ -172,5 +167,3 @@
     (LengthCons _ x p _ (LengthCons _ ey (Nil _) _ (LengthNil _))) (LtS _ _ $ LtS _ _ $ LtZ _)
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
 
-(let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub) (erased hsplit-cover))
-  (values DPath DPNil DPNode DPFace HSub split-cover))

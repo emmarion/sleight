@@ -58,13 +58,6 @@
   (let-match erased pv (NthThere _ _ _ _ _ pv1))
   (differ-nth X1 Y1 a1 u v df1 pu1 pv1))
 
-; Every entry of ks is below b.
-(def-adts $ (Under : ((List (Nat)) ks) ((Nat) b) -> Type)
-  enum
-  (many UnderNil : (erased (Nat) b) -> (Under (Nil (Nat)) b))
-  (many UnderCons : (erased (List (Nat)) ks) (erased (Nat) k b) (erased (Lt k b) p) (erased (Under ks b) rest)
-      -> (Under (Cons (Nat) k ks) b)))
-
 ; ks colours the darts below 4 so that each face has one colour and the two ends of each edge link differ.
 (def-adts $ (FourColoring : ((List (Nat)) e f ks) -> Type)
   enum
@@ -82,7 +75,7 @@
 
 (def-fns _ $ (erased respects-exists : (erased (List (Nat)) a b) (erased (Nat) d)
     (subterm erased (Under b d) ub) (erased (Length (Nat) a d) la) -> (erased (List (Nat)) ab) (erased (Respects a b ab) rp))
-  (let-match erased ub (UnderCons b1 j _ lj ub1) ((UnderNil _) (values (Nil _) (RespNil a))))
+  (let-match erased ub (UnderCons j _ b1 lj ub1) ((UnderNil _) (values (Nil _) (RespNil a))))
   (let ((erased w) (erased pw)) (nth-exists _ a d j la lj))
   (let ((erased ab1) (erased r1)) (respects-exists a b1 d ub1 la))
   (values (Cons _ w ab1) (RespCons a b1 ab1 j w pw r1)))
@@ -100,10 +93,10 @@
   (MkHypermap d n f e ids en nf fe io cen kn cnf kf cfe ke))
 
 (def-fns _ $ (erased hyper-perm : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h)
-    -> (erased (List (Nat)) nf) (erased (Perm d e nf) pm))
+    -> (erased (List (Nat)) nf) (erased (HPerm d e nf) pm))
   (let-match erased h (MkHypermap _ _ _ _ ids fe _ nf io cfe ke _ _ cnf kf))
   (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f h))
-  (values nf (MkPerm d e nf ids io le
+  (values nf (HMkPerm d e nf ids io le
     (respects-assoc e f n fe nf ids d cfe ke cnf (respects-length-inv e nf ids d kf (iota-length d ids io)) lf) kf)))
 
 (def-fns _ $ (erased four-colored : (erased (List (Nat)) ks e nd cs ke) (subterm erased (Respects ks nd cs) rn) (erased (Respects ks e ke) re)
@@ -172,9 +165,9 @@
   (values (Cons _ b gh1) (CatCons g1 h gh1 b c1)))
 
 (def-fns _ $ (erased graph-below : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (subterm erased (Fun p g) f)
-    (erased (Perm d p q) pm) -> (erased (Below g d) r))
+    (erased (HPerm d p q) pm) -> (erased (Below g d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (BelowCons g1 x y d (nth-lt-length _ p x d y px lp) (perm-val d x y p q pm px) (graph-below d p q g1 f1 pm)))
 
 (def-fns _ $ (erased spans-node : (erased (Nat) d) (erased (List (Nat)) e n f ids en) (erased (List (Bond)) gn ge gf gef)

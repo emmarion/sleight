@@ -23,7 +23,7 @@
   (let ((erased lx) (erased _)) (values (pre-lt d x y f fi pmf py) (perm-val d x y f fi pmf py)))
   (let ((erased uxs)) (path-under d y x f _ xs lf w))
   (let ((erased Vs)) (Cons _ x xs))
-  (let ((erased Rs) (erased rv)) (respects-exists fe Vs d (UnderCons xs x d lx uxs) lfe))
+  (let ((erased Rs) (erased rv)) (respects-exists fe Vs d (UnderCons x d xs lx uxs) lfe))
   (let ((erased l) (erased plx)) (nth-exists _ lab d x ll lx))
   (let ((erased ls) (erased rls)) (respects-exists lab Rs d (respects-under-out fe Vs Rs d rv ufe) ll))
   (let ((erased ob)) (MkOrbit f xs x y py w))
@@ -99,7 +99,7 @@
   (let ((erased lfu)) (perm-val d u fu f fi pmf pfu))
   (let ((erased t) (erased pt)) (nth-exists _ fe d fu lfe lfu))
   (let ((erased efu) (erased pefu) (erased pft)) (fe-split d fu t e n f fe lab c pt))
-  (let ((erased lt) (erased plt)) (nth-exists _ lab d t ll (under-nth fe fu t d ufe pt)))
+  (let ((erased lt) (erased plt)) (nth-exists _ lab d t ll (alllt-nth fe d fu t ufe pt)))
   (let ((erased plefu)) (respects-at lab f lab efu t lt rl pft plt))
   (let ((erased plfu)) (respects-nth lab f lab u fu lx rl pfu pu))
   (let-match erased (nat-eq lt lv) (Unequal _ _ _ _ ntv) ((Equal _ _ _) (cx-dd B d fu v efu ev lx lv e n f fe lab m pefu pev plfu pv plefu plv nfu)))
@@ -188,7 +188,7 @@
   (let ((erased pla2)) (respects-at lab f lab a2 a lx rl pfa pa))
   (let ((erased sa) (erased psa)) (nth-exists _ fe d a lfe (pre-lt d a ea e nf pme pea)))
   (let ((erased sa2) (erased psa2)) (nth-exists _ fe d a2 lfe (pre-lt d a2 ea2 e nf pme pea2)))
-  (let ((erased esa) (erased pesa) (erased _)) (perm-nth d sa e nf pme (under-nth fe a sa d ufe psa)))
+  (let ((erased esa) (erased pesa) (erased _)) (perm-nth d sa e nf pme (alllt-nth fe d a sa ufe psa)))
   (let ((erased ea3) (erased pea3) (erased pfsa)) (fe-split d a sa e n f fe lab c psa))
   (let-match erased (nth-fn _ e a ea ea3 pea pea3) (Refl _ _))
   (let ((erased eb2) (erased peb2) (erased pfsa2)) (fe-split d a2 sa2 e n f fe lab c psa2))
@@ -196,7 +196,7 @@
   (let ((erased plsa)) (respects-nth lab f lab ea sa ly rl pfsa plea))
   (let ((erased plesa)) (facelab-path d sa2 esa l1 f lab fl (some-sym d esa sa2 f fi pmf (spoke-step d a2 a sa sa2 esa e n f fe lab c pfa psa psa2 pesa)
     (perm-val d sa esa e nf pme pesa)) (respects-nth lab f lab ea2 sa2 l1 rl pfsa2 pl1)))
-  (let ((erased psae) (erased _)) (plain-eq d sa esa e pl (under-nth fe a sa d ufe psa) pesa))
+  (let ((erased psae) (erased _)) (plain-eq d sa esa e pl (alllt-nth fe d a sa ufe psa) pesa))
   (let ((erased naa)) (match erased (nat-eq a2 a) (((Apart (Nat) Lt a2 a) r))
     ((Unequal _ _ _ _ ne) ne)
     (absurd (Equal _ _ _) (let-match erased (fix-same d a b lx f lab fl pfa pa pb) (Refl _ _)) (apart-irrefl a nab))))
@@ -218,7 +218,7 @@
   (let ((erased plb2)) (respects-at lab f lab b2 b lx rl pfb pb))
   (let ((erased sb) (erased psb)) (nth-exists _ fe d b lfe (pre-lt d b eb e nf pme peb)))
   (let ((erased sb2) (erased psb2)) (nth-exists _ fe d b2 lfe (pre-lt d b2 eb3 e nf pme peb3)))
-  (let ((erased esb) (erased pesb) (erased _)) (perm-nth d sb e nf pme (under-nth fe b sb d ufe psb)))
+  (let ((erased esb) (erased pesb) (erased _)) (perm-nth d sb e nf pme (alllt-nth fe d b sb ufe psb)))
   (let ((erased eb4) (erased peb4) (erased pfsb)) (fe-split d b sb e n f fe lab c psb))
   (let-match erased (nth-fn _ e b eb eb4 peb peb4) (Refl _ _))
   (let ((erased eb5) (erased peb5) (erased pfsb2)) (fe-split d b2 sb2 e n f fe lab c psb2))
@@ -293,7 +293,7 @@
   (OrR _ _ (chord-gen B d u v fu fv eu ev z ez lx lu lv e n f fe lab m pu pv nuv pfu nfu pfv nfv peu plu pev plv pz pez plz)))
 
 (def-fns _ $ (erased lab-sub : (erased (Nat) d a l) (erased (List (Nat)) f lab os) (erased (FaceLab d f lab) fl) (erased (Orbit f a os) o) (erased (Nth (Nat) lab a l) pa)
-    (subterm erased (List (Nat)) Vs) (erased (LabAll lab l Vs) al) -> (erased (WSub Vs os) r))
+    (subterm erased (List (Nat)) Vs) (erased (LabAll lab l Vs) al) -> (erased (HSub Vs os) r))
   (let-match erased al (LabCons _ Vs1 _ v pv al1) ((LabNil _ _) (HsbNil os)))
   (HsbCons v Vs1 os (orbit-in f os a v o (facelab-same d a v l f lab fl pa pv)) (lab-sub d a l f lab os fl o pa Vs1 al1)))
 
@@ -413,7 +413,7 @@
 
 (def-adts $ (SubD : ((List (Nat)) xs ys) -> Type)
   enum
-  (many SDYes : (erased (List (Nat)) xs ys) (erased (WSub xs ys) sb) -> (SubD xs ys))
+  (many SDYes : (erased (List (Nat)) xs ys) (erased (HSub xs ys) sb) -> (SubD xs ys))
   (many SDNo : (erased (List (Nat)) xs ys) (erased (Nat) l) (erased (In l xs) il) (erased (NotIn l ys) ol) -> (SubD xs ys)))
 
 (def-fns _ $ (erased sub-dec : (subterm erased (List (Nat)) xs) (erased (List (Nat)) ys) -> (erased (SubD xs ys) r))
@@ -450,21 +450,16 @@
   (let-match erased s (MkSimple _ _ lab2 ls rf rp dl))
   (simple-go d f lab lab2 r lr ls fl rf rr rp dl))
 
-(def-adts $ (RLink : ((List (Nat)) f) ((Nat) x) ((List (Nat)) ps) -> Type)
-  enum
-  (many MkRLink : (erased (List (Nat)) f) (erased (Nat) x) (erased (List (Nat)) ps) (erased (Nat) q) (erased (In q ps) iq) (erased (SomePath f (Nil (Nat)) x q) sq)
-      -> (RLink f x ps)))
-
 (def-fns _ $ (erased rp-succ : (erased (List (Nat)) e f ps) (erased (Nat) x y t et) (subterm erased (RPath e f x ps y) rp) (erased (In t (Cons (Nat) x ps)) it)
-    (erased (Nth (Nat) e t et) pt) -> (erased (Or (Eq (Nat) t y) (RLink f et ps)) r))
+    (erased (Nth (Nat) e t et) pt) -> (erased (Or (Eq (Nat) t y) (Fband f ps et)) r))
   (let-match erased rp (RPCons _ _ p1 _ ex z _ pe w rest) ((RPNil _ _ _) (let-match erased it (InHere _ _) (absurd (InThere _ _ _ i) i)) (OrL _ _ (Refl _ t))))
   (match erased it _
-    ((InHere _ _) (let-match erased (nth-fn _ e x et ex pt pe) (Refl _ _)) (OrR _ _ (MkRLink f et ps z (InHere z p1) w)))
+    ((InHere _ _) (let-match erased (nth-fn _ e x et ex pt pe) (Refl _ _)) (OrR _ _ (MkFband f ps et z (InHere z p1) w)))
     ((InThere _ _ _ it1)
       (let-match erased (rp-succ e f p1 z y t et rest it1 pt) (OrR _ _ rl)
         ((OrL _ _ eq) (OrL _ _ eq)))
-      (let-match erased rl (MkRLink _ _ _ q iq sq))
-      (OrR _ _ (MkRLink f et ps q (InThere q z p1 iq) sq)))))
+      (let-match erased rl (MkFband _ _ _ q iq sq))
+      (OrR _ _ (MkFband f ps et q (InThere q z p1 iq) sq)))))
 
 (def-fns _ $ (erased ring-elab : (erased (Nat) d w t et l) (erased (List (Nat)) e f lab Bs lp) (erased (FaceLab d f lab) fl) (erased (Ring e f w Bs) rg)
     (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In t (Cons (Nat) w Bs)) it) (erased (Nth (Nat) e t et) pt) (erased (Nth (Nat) lab et l) pl)
@@ -473,11 +468,11 @@
   (match erased (rp-succ e f Bs w y t et rp it pt) _
     ((OrL _ _ eq) (let-match erased eq (Refl _ _)) (let-match erased (nth-fn _ e t et ey pt pe) (Refl _ _))
       (in-map lab _ lp w l (InHere w Bs) rr (facelab-path d et w l f lab fl sw pl)))
-    ((OrR _ _ rl) (let-match erased rl (MkRLink _ _ _ q iq sq)) (in-map lab _ lp q l (InThere q w Bs iq) rr (facelab-path d et q l f lab fl sq pl)))))
+    ((OrR _ _ rl) (let-match erased rl (MkFband _ _ _ q iq sq)) (in-map lab _ lp q l (InThere q w Bs iq) rr (facelab-path d et q l f lab fl sq pl)))))
 
 (def-fns _ $ (erased ie-drop : (erased (List (Nat)) e cx ins) (erased (Nat) z k) (subterm erased (InsertE e cx ins) ie) (erased (In z cx) iz)
     (erased (Length (Nat) cx (Succ k)) lc) -> (erased (List (Nat)) cx2 ins2) (erased (Nat) ez) (erased (InsertE e cx2 ins2) ie2) (erased (Length (Nat) cx2 k) lc2)
-    (erased (Nth (Nat) e z ez) pz) (erased (WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
+    (erased (Nth (Nat) e z ez) pz) (erased (HSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) sb))
   (let-match erased ie (IECons _ cx1 ins1 x y px ie1) (absurd (IENil _) iz))
   (let-match erased lc (LengthCons _ _ _ _ lc1))
   (let-match erased iz (InThere _ _ _ iz1)
@@ -519,9 +514,9 @@
           (apart-irrefl lc (notin-in lc lc lp o i1)))))))
 
 (def-fns _ $ (erased bs-sub : (erased (Nat) d w z ez c lc) (erased (List (Nat)) e n f fe lab Bs lp ins ins2) (erased (Spk d e n f fe lab) cs) (erased (Ring e f w Bs) rg)
-    (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (subterm erased (List (Nat)) X) (erased (WSub X Bs) sx) (erased (WSub Bs ins) sb)
-    (erased (WSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) s2) (erased (Nth (Nat) e z ez) pz) (erased (Or (Eq (Nat) c z) (Nth (Nat) e z c)) oc)
-    (erased (Nth (Nat) lab c lc) plc) (erased (NotIn lc lp) o) -> (erased (WSub X ins2) r))
+    (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (subterm erased (List (Nat)) X) (erased (HSub X Bs) sx) (erased (HSub Bs ins) sb)
+    (erased (HSub ins (Cons (Nat) z (Cons (Nat) ez ins2))) s2) (erased (Nth (Nat) e z ez) pz) (erased (Or (Eq (Nat) c z) (Nth (Nat) e z c)) oc)
+    (erased (Nth (Nat) lab c lc) plc) (erased (NotIn lc lp) o) -> (erased (HSub X ins2) r))
   (let-match erased sx (HsbCons t X1 _ it sx1) ((HsbNil _) (HsbNil ins2)))
   (let ((erased itp)) (InThere t w Bs it))
   (HsbCons t X1 ins2
@@ -534,7 +529,7 @@
     (bs-sub d w z ez c lc e n f fe lab Bs lp ins ins2 cs rg rr X1 sx1 sb s2 pz oc plc o)))
 
 (def-fns _ $ (erased ins-band : (erased (Nat) d w c lc) (erased (List (Nat)) e n f fe lab cx ins Bs lp) (erased (Spk d e n f fe lab) cs)
-    (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
+    (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (HSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
     (erased (Length (Nat) Bs 4) lb) (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (In c ins) ic) (erased (Nth (Nat) lab c lc) plc) -> (erased (In lc lp) r))
   (let-match erased (unary-4) (Refl _ _))
   (match erased (in-dec lc lp) _
@@ -551,7 +546,7 @@
 (def-adts $ (HubD : ((Level) B) ((Nat) d) ((List (Nat)) e n f fe lab lp) ((Nat) y ly) -> Type)
   enum
   (many HDHub : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab lp) (erased (Nat) y ly k) (erased (List (Nat)) Vs ls)
-      (erased (FRec d e n f fe lab y ly k Vs ls) fr) (erased (WSub ls lp) sb) (erased (Lt 4 k) l4) -> (HubD B d e n f fe lab lp y ly))
+      (erased (FRec d e n f fe lab y ly k Vs ls) fr) (erased (HSub ls lp) sb) (erased (Lt 4 k) l4) -> (HubD B d e n f fe lab lp y ly))
   (many HDOut : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab lp) (erased (Nat) y ly u eu l) (erased (Nth (Nat) lab y ly) py)
       (erased (Nth (Nat) lab u ly) pu) (erased (Nth (Nat) e u eu) pe) (erased (Nth (Nat) lab eu l) pl) (erased (NotIn l lp) o) -> (HubD B d e n f fe lab lp y ly))
   (many HDRed : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab lp) (erased (Nat) y ly) (erased (Reduces B d e n f) r)
@@ -605,12 +600,12 @@
   (let ((erased pls1)) (respects-nth lab f lab eu1 s1 l1 rl pf1 pl1))
   (let-match erased (facelab-same d y1 u1 ly1 f lab fl py1 pu1) (MkSomePath _ _ ws1 _ _ w1))
   (let ((erased iu1) (erased _)) (zs-walk d w y1 u1 e n f Bs hd zs (Nil _) ws1 h gen rg ds w1 iy1 ky1))
-  (let ((erased ls1d)) (under-nth fe u1 s1 d ufe ps1))
+  (let ((erased ls1d)) (alllt-nth fe d u1 s1 ufe ps1))
   (let ((erased is1)) (match erased (in-dec s1 hd) (((In s1 zs) r))
     (absurd (OrL _ _ ih) (ds-out d u1 w e n f Bs hd zs h gen rg ur ds iu1
       (disk-node d s1 u1 n ni f p pmn (ds-in d s1 w e n f Bs hd zs h gen rg ur ds ih) (fe-node d u1 s1 e n f fe lab c ps1))))
     ((OrR _ _ o) (ds-off d s1 w e n f Bs hd zs hd zs h gen rg ur ds ds o ls1d))))
-  (let ((erased lt0) (erased lts0)) (values (kernel-lt d y0 f p lf k0) (under-nth fe u0 s0 d ufe ps0)))
+  (let ((erased lt0) (erased lts0)) (values (kernel-lt d y0 f p lf k0) (alllt-nth fe d u0 s0 ufe ps0)))
   (let ((erased xs) (erased ys)) (values (Cons _ y0 (Cons _ s0 (Nil _))) (Cons _ y1 (Cons _ s1 (Nil _)))))
   (let ((erased k0b) (erased k1b)) (values (kernel-fl d y0 ly0 f lab p lp fl k0 rr py0) (kernel-fl d y1 ly1 f lab p lp fl ky1 rr py1)))
   (let ((erased a0) (erased a1)) (values (spoke-apart d u0 s0 ly0 l0 e n f fe lab c ps0 pu0 pls0) (spoke-apart d u1 s1 ly1 l1 e n f fe lab c ps1 pu1 pls1)))
@@ -622,8 +617,8 @@
     (MkScattered f p ys lab lp (Cons _ ly1 (Cons _ l1 (Nil _))) rl rr (RespCons lab _ _ y1 ly1 py1 (RespCons lab _ _ s1 l1 pls1 (RespNil lab)))
       (DistCons ly1 _ (NotInCons ly1 l1 _ a1 (NotInNil ly1)) (DistCons l1 _ (NotInNil l1) (DistNil))) (DisjCons ly1 _ lp k1b (DisjCons l1 _ lp o1 (DisjNil lp))))))
 
-(def-fns _ $ (erased cover : (erased (Nat) k) (erased (List (Nat)) ls lp) (subterm erased (List (Nat)) qs) (erased (WSub qs lp) sq) (erased (Distinct ls) dl)
-    (erased (WSub ls lp) sl) (erased (Length (Nat) ls k) lk) (erased (Length (Nat) lp 5) l5) (erased (Lt 4 k) l4) -> (erased (WSub qs ls) r))
+(def-fns _ $ (erased cover : (erased (Nat) k) (erased (List (Nat)) ls lp) (subterm erased (List (Nat)) qs) (erased (HSub qs lp) sq) (erased (Distinct ls) dl)
+    (erased (HSub ls lp) sl) (erased (Length (Nat) ls k) lk) (erased (Length (Nat) lp 5) l5) (erased (Lt 4 k) l4) -> (erased (HSub qs ls) r))
   (let-match erased (unary-5) (Refl _ _))
   (let-match erased sq (HsbCons q qs1 _ iq sq1) ((HsbNil _) (HsbNil ls)))
   (HsbCons q qs1 ls (match erased (in-dec q ls) (((In q ls) r))
@@ -647,11 +642,11 @@
   enum
   (many MkTdCx : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp) (erased (MinCx B d e n f fe lab) m)
       (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x0) t)
-      (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
+      (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (HSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
       (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (Distinct lp) dl) (erased (Length (Nat) lp 5) l5) -> (TdCx B d w x0 e n f fe lab ks cx ins Bs lp)))
 
 (def-fns _ $ (erased tri-face : (erased (Nat) d w yi _lx0) (erased (List (Nat)) e n f fe lab cx ins Bs lp) (erased (Spk d e n f fe lab) c)
-    (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
+    (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (HSub Bs ins) sb) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
     (erased (Length (Nat) Bs 4) lb) (erased (Respects lab (Cons (Nat) w Bs) lp) rr) (erased (EBand e f ins yi) b)
     -> (erased (Nat) zi ti) (erased (Nth (Nat) e yi zi) pz) (erased (Nth (Nat) lab zi ti) pl) (erased (In ti lp) it))
   (let ((erased c2)) c)
@@ -664,7 +659,7 @@
   (values zi ti pz pti (ins-band d w ci ti e n f fe lab cx ins Bs lp c rg pr sb ie l lb rr ic (facelab-path d zi ci ti f lab fl sp pti))))
 
 (def-fns _ $ (erased hub-reduces : (erased (Level) B) (erased (Nat) d w x0 hr lh kh) (erased (List (Nat)) e n f fe lab ks cx ins Bs lp Vh lsh)
-    (erased (TdCx B d w x0 e n f fe lab ks cx ins Bs lp) tc) (erased (FRec d e n f fe lab hr lh kh Vh lsh) fh) (erased (WSub lsh lp) shp) (erased (Lt 4 kh) l4h)
+    (erased (TdCx B d w x0 e n f fe lab ks cx ins Bs lp) tc) (erased (FRec d e n f fe lab hr lh kh Vh lsh) fh) (erased (HSub lsh lp) shp) (erased (Lt 4 kh) l4h)
     -> (erased (Reduces B d e n f) r))
   (let-match erased tc (MkTdCx _ _ _ _ _ _ _ _ _ _ _ _ _ _ m ol ab sp ie l t rg pr sb lb rr _ l5))
   (let ((erased m2)) m)
@@ -716,7 +711,7 @@
 
 (def-fns _ $ (erased triad-reduces : (erased (Level) B) (erased (Nat) d w x0) (erased (List (Nat)) e n f fe lab ks cx ins Bs) (erased (MinCx B d e n f fe lab) m)
     (erased (OrderList d f ks) ol) (erased (Above ks 4) ab) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie) (erased (Length (Nat) cx 4) l)
-    (erased (Triad e f ins x0) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
+    (erased (Triad e f ins x0) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (HSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb)
     (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt) -> (erased (Reduces B d e n f) r))
   (let-match erased (unary-5) (Refl _ _))
   (let-match erased (unary-6) (Refl _ _))
@@ -755,7 +750,7 @@
 
 (def-fns _ $ (erased triad-out : (erased (Nat) d w x) (erased (List (Nat)) e n f ks cx ins Bs) (erased (BirkhoffChecks) bks) (erased (Pbpp d e n f) pb)
     (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie)
-    (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (WSub Bs ins) sb)
+    (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr) (erased (HSub Bs ins) sb)
     (erased (Length (Nat) Bs 4) lb) (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt) -> (erased (ContractOut TB d e n f cx) r))
   (let-match erased pb (MkPbpp _ _ _ _ h gen bl pl _))
   (let-match erased g (MkGeo _ _ _ _ _ _ _ cu ol ab))

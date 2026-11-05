@@ -44,7 +44,7 @@
       (let ((erased a)) (monus-add t 2 k mo (le-trans 2 nhub t (LtS 1 nhub ln) (add-le-left nhub j t at))))
       (let ((erased l1)) (add-lt-left k 2 t (add-comm 2 k t a) (lt-succ 1)))
       (let ((erased t1) (erased a1)) (add nhub 1))
-      (let ((erased l2)) (add-le-r nhub j t 1 t1 at a1 l))
+      (let ((erased l2)) (add-mono-le nhub j 1 t t1 l at a1))
       (let-match erased (add-fn nhub 1 t1 (Succ nhub) a1 (add-succ-right nhub (Zero) nhub (add-zero-right nhub))) (Refl _ _))
       (lt-weaken k nhub (lt-pred k nhub (lt-le-trans (Succ k) t (Succ nhub) l1 l2))))))
 
@@ -144,7 +144,7 @@
     ((HSGt _ _ _ t _ _ at mo)
       (let ((erased a)) (monus-add t j1 i mo (lt-weaken j1 t (lt-le-trans j1 nhub t l1 (add-le-right j2 nhub t at)))))
       (let ((erased ab) (erased b1) (erased b2)) (add-assoc-back j2 i2 i nhub t at (add-comm i i2 nhub ai)))
-      (let-match erased (add-inj i ab t j1 (add-comm ab i t b2) (add-comm j1 i t a)) (Refl _ _))
+      (let-match erased (add-cancel i ab j1 t (add-comm ab i t b2) (add-comm j1 i t a)) (Refl _ _))
       (values ab b1 (OrL _ _ (Refl _ ab))))))
 
 (def-fns _ $ (erased fam-build : (erased (Nat) d y nhub) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os) (erased (List (List (Sec))) oss)
@@ -322,7 +322,7 @@
       (let ((erased b) (erased ab) (erased apb)) (add-reassoc t 10 sp c60 pos a10 ap))
       (let ((erased l1)) (add-lt-cancel t sn b neg pos an apb lt))
       (let-match erased ar (AddZero _))
-      (lt-asym sn l (lt-le-trans sn b l l1 (add-le-r 10 sp b st l ab al lst)) le))
+      (lt-asym sn l (lt-le-trans sn b l l1 (add-mono-le 10 sp st b l lst ab al)) le))
     (absurd (DbKHi _ k m mo pm)
       (let-match erased mo (MoAdd _ _ _ a5))
       (let ((erased e1)) (mul-distr 6 k a 10 c60 m t (add-shift 5 k a a5) m60 pm mt))

@@ -12,10 +12,10 @@
       (erased (Iota d ids) io) (erased (Length (Nat) p d) lp) (erased (Zip ids p g) z) -> (Graph d p g)))
 
 ; p is a permutation of the darts 0..d-1, with inverse q.
-(def-adts $ (Perm : ((Nat) d) ((List (Nat)) p q) -> Type)
+(def-adts $ (HPerm : ((Nat) d) ((List (Nat)) p q) -> Type)
   enum
-  (many MkPerm : (erased (Nat) d) (erased (List (Nat)) p q ids) (erased (Iota d ids) io) (erased (Length (Nat) p d) lp)
-      (erased (Respects q p ids) qp) (erased (Respects p q ids) pq) -> (Perm d p q)))
+  (many HMkPerm : (erased (Nat) d) (erased (List (Nat)) p q ids) (erased (Iota d ids) io) (erased (Length (Nat) p d) lp)
+      (erased (Respects q p ids) qp) (erased (Respects p q ids) pq) -> (HPerm d p q)))
 
 ; The darts 0..d-1 fall into k orbits of p.
 (def-adts $ (Orbits : ((Nat) d) ((List (Nat)) p) ((Nat) k) -> Type)
@@ -70,16 +70,16 @@
     ((OrL _ _ t) (let-match erased t (MkAt2 _ _ j _ _ px py)) (let-match erased (iota-at d j x ids io px) (Refl _ _)) (OrL _ _ py))
     ((OrR _ _ t) (let-match erased t (MkAt2 _ _ j _ _ px py)) (let-match erased (iota-at d j y ids io px) (Refl _ _)) (OrR _ _ py))))
 
-(def-fns _ $ (erased perm-nth : (erased (Nat) d x) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Lt x d) lt)
+(def-fns _ $ (erased perm-nth : (erased (Nat) d x) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Lt x d) lt)
     -> (erased (Nat) y) (erased (Nth (Nat) p x y) px) (erased (Lt y d) ly))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp qp pq))
   (let ((erased y) (erased px)) (nth-exists _ p d x lp lt))
   (let ((erased lq)) (respects-length-inv p q ids d pq (iota-length d ids io)))
   (values y px (nth-lt-length _ q y d x (respects-nth q p ids x y x qp px (iota-nth d x ids io lt)) lq)))
 
-(def-fns _ $ (erased perm-inj : (erased (Nat) d x u w) (erased (List (Nat)) p q) (erased (Perm d p q) pm)
+(def-fns _ $ (erased perm-inj : (erased (Nat) d x u w) (erased (List (Nat)) p q) (erased (HPerm d p q) pm)
     (erased (Nth (Nat) p x w) px) (erased (Nth (Nat) p u w) pu) -> (erased (Eq (Nat) x u) e))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp _))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp qp _))
   (nth-fn _ q w x u (respects-nth q p ids x w x qp px (iota-nth d x ids io (nth-lt-length _ p x d w px lp)))
     (respects-nth q p ids u w u qp pu (iota-nth d u ids io (nth-lt-length _ p u d w pu lp)))))
 
@@ -90,9 +90,9 @@
   (let ((erased g1) (erased z1)) (zip-exists xs1 ys1 n1 lx1 ly1))
   (values (Cons _ (MkBond x y) g1) (ZipCons xs1 ys1 g1 x y z1)))
 
-(def-fns _ $ (erased perm-graph : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm)
+(def-fns _ $ (erased perm-graph : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm)
     -> (erased (List (Bond)) g) (erased (Graph d p g) gr))
-  (let-match erased pm (MkPerm _ _ _ ids io lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp _ _))
   (let ((erased g) (erased z)) (zip-exists ids p d (iota-length d ids io) lp))
   (values g (MkGraph d p ids g io lp z)))
 
@@ -201,7 +201,7 @@
 (def-fns _ $ (erased lt-pos : (erased (Nat) z d) (erased (Lt z d) l) -> (erased (Nat) d1) (erased (Eq (Nat) d (Succ d1)) e))
   (match erased l _ ((LtZ b) (values b (Refl _ d))) ((LtS _ b _) (values b (Refl _ d)))))
 
-(def-fns _ $ (erased absurd cycle-stuck : (erased (Nat) d z y w w2) (erased (List (Nat)) p q ps) (erased (Perm d p q) pm)
+(def-fns _ $ (erased absurd cycle-stuck : (erased (Nat) d z y w w2) (erased (List (Nat)) p q ps) (erased (HPerm d p q) pm)
     (erased (Nth (Nat) p z y) pz) (erased (Path p (Nil (Nat)) y w ps) pa) (erased (Distinct (Cons (Nat) w ps)) dw)
     (erased (Apart (Nat) Lt w z) nwz) (erased (Nth (Nat) p w w2) pw) (erased (In w2 (Cons (Nat) w ps)) back) -> (erased (False) f))
   (let-match erased dw (DistCons _ _ out _))
@@ -219,7 +219,7 @@
     (HsbCons w2 _ ids (iota-in m w2 ids io l2) sb) (LengthCons _ w2 _ m lm) (iota-length m ids io)))
   (lt-irrefl (Succ m) le))
 
-(def-fns _ $ (erased cycle-go : (erased (Nat) d m z y w) (erased (List (Nat)) p q ids ps) (erased (Perm d p q) pm) (erased (Iota d ids) io)
+(def-fns _ $ (erased cycle-go : (erased (Nat) d m z y w) (erased (List (Nat)) p q ids ps) (erased (HPerm d p q) pm) (erased (Iota d ids) io)
     (erased (Nth (Nat) p z y) pz) (erased (Path p (Nil (Nat)) y w ps) pa) (erased (Distinct (Cons (Nat) w ps)) dw)
     (erased (HSub (Cons (Nat) w ps) ids) sb) (erased (Lt w d) lw) (erased (Length (Nat) (Cons (Nat) w ps) m) lm) (subterm erased (Nat) f0)
     (erased (Add m f0 d) a) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) y z xs) r))
@@ -236,9 +236,9 @@
     (HsbCons w2 ps2 ids (iota-in d w2 ids io l2) (sub-snoc-cons w ps ps2 ids sn sb)) l2 (LengthCons _ w2 ps2 m l3) f1
     (add-shift m f1 d a)))
 
-(def-fns _ $ (erased cycle : (erased (Nat) d z y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p z y) pz)
+(def-fns _ $ (erased cycle : (erased (Nat) d z y) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Nth (Nat) p z y) pz)
     (erased (Lt z d) lz) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) y z xs) r))
-  (let-match erased pm (MkPerm _ _ _ ids io _ _ _))
+  (let-match erased pm (HMkPerm _ _ _ ids io _ _ _))
   (let ((erased y2) (erased pz2) (erased ly)) (perm-nth d z p q pm lz))
   (let-match erased (nth-fn _ p z y y2 pz pz2) (Refl _ _))
   (let ((erased d1) (erased e)) (lt-pos z d lz))
@@ -246,30 +246,30 @@
   (cycle-go d (Succ (Zero)) z y y p q ids (Nil _) pm io pz (PathHere p _ y) (DistCons y _ (NotInNil y) (DistNil))
     (HsbCons y _ ids (iota-in d y ids io ly) (HsbNil ids)) ly (LengthCons _ y _ (Zero) (LengthNil _)) d1 (AddSucc (Zero) d1 d1 (AddZero d1))))
 
-(def-fns _ $ (erased conn-path : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (Perm d p q) pm)
+(def-fns _ $ (erased conn-path : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (HPerm d p q) pm)
     (erased (Graph d p g) gr) (subterm erased (Conn g x y) c) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) x y xs) r))
   (let-match erased c (ConnStep _ _ u _ a c1) ((ConnHere _ _) (values (Nil _) (PathHere p _ x))))
   (let ((erased xs1) (erased w1)) (conn-path d u y p q g pm gr c1))
   (let-match erased (graph-adj-inv d x u p g gr a) (OrR _ _ pu)
     ((OrL _ _ px) (values (Cons _ x xs1) (PathStep p _ xs1 x u y px (NotInNil x) w1))))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (let ((erased xs2) (erased w2)) (cycle d u x p q pm pu (nth-lt-length _ p u d x pu lp)))
   (path-cat p _ xs2 xs1 x u y w2 w1))
 
-(def-fns _ $ (erased perm-val : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
+(def-fns _ $ (erased perm-val : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Nth (Nat) p x y) px)
     -> (erased (Lt y d) ly))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp qp pq))
   (nth-lt-length _ q y d x (respects-nth q p ids x y x qp px (iota-nth d x ids io (nth-lt-length _ p x d y px lp)))
     (respects-length-inv p q ids d pq (iota-length d ids io))))
 
-(def-fns _ $ (erased perm-inv : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
+(def-fns _ $ (erased perm-inv : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Nth (Nat) p x y) px)
     -> (erased (Nth (Nat) q y x) r))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp _))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp qp _))
   (respects-nth q p ids x y x qp px (iota-nth d x ids io (nth-lt-length _ p x d y px lp))))
 
-(def-fns _ $ (erased perm-sym : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Perm d q p) r))
-  (let-match erased pm (MkPerm _ _ _ ids io _ qp pq))
-  (MkPerm d q p ids io (respects-length-inv p q ids d pq (iota-length d ids io)) pq qp))
+(def-fns _ $ (erased perm-sym : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) -> (erased (HPerm d q p) r))
+  (let-match erased pm (HMkPerm _ _ _ ids io _ qp pq))
+  (HMkPerm d q p ids io (respects-length-inv p q ids d pq (iota-length d ids io)) pq qp))
 
 (def-fns _ $ (erased cut-first : (erased (List (Nat)) p s xs) (erased (Nat) x y) (subterm erased (Path p s x y xs) w)
     -> (erased (List (Nat)) xs2) (erased (Path p (Cons (Nat) y s) x y xs2) r))
@@ -412,14 +412,14 @@
   (values g2 (MkGraph d p2 ids g2 io lp2 z)))
 
 (def-fns _ $ (erased below-upd2 : (erased (Nat) d a u b v) (erased (List (Nat)) p q p2) (erased (List (Bond)) g2) (subterm erased (Fun p2 g2) f)
-    (erased (Upd2 p a u b v p2) up) (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
+    (erased (Upd2 p a u b v p2) up) (erased (HPerm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
     -> (erased (Below g2 d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
   (let ((erased rest)) (below-upd2 d a u b v p q p2 g1 f1 up pm la lu lb lv))
   (let-match erased (upd2-case p p2 a u b v x y up px) (UCo _ _ _ _ _ _ _ _ _ q1)
     ((UCa _ _ _ _ _) (BelowCons g1 a u d la lu rest))
     ((UCb _ _ _ _ _) (BelowCons g1 b v d lb lv rest)))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (BelowCons g1 x y d (nth-lt-length _ p x d y q1 lp) (perm-val d x y p q pm q1) rest))
 
 (def-fns _ $ (erased spans-upd2-in : (erased (Nat) d a u b v) (erased (List (Nat)) p p0 p2) (erased (List (Bond)) g0 g2)
@@ -448,7 +448,7 @@
 
 (def-fns _ $ (erased classes-upd2 : (erased (Nat) d k a u b v) (erased (List (Nat)) p q p0 p2) (erased (List (Bond)) g0 g2)
     (erased (Upd2 p a u b v p2) up) (erased (Upd2 p a a b b p0) up0) (erased (Graph d p0 g0) gr0) (erased (Graph d p2 g2) gr2)
-    (erased (Perm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
+    (erased (HPerm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
     (erased (Classes (Cons (Bond) (MkBond a u) (Cons (Bond) (MkBond b v) g0)) d k) cs) -> (erased (Classes g2 d k) r))
   (classes-equiv _ g2 d k cs (SpansCons g2 _ a u (conn-adj g2 a u (graph-adj d a u p2 g2 gr2 (upd2-a p p2 a u b v up)))
       (SpansCons g2 _ b v (conn-adj g2 b v (graph-adj d b v p2 g2 gr2 (upd2-b p p2 a u b v up)))
@@ -556,7 +556,7 @@
     ((OrL _ _ p) (ShutIn s g x x p p rest))
     ((OrR _ _ p) (ShutOut s g x x p p rest))))
 
-(def-fns _ $ (erased absurd shut-arc-stuck : (erased (Nat) d a b a2 x y) (erased (List (Nat)) p q s xs) (erased (Perm d p q) pm)
+(def-fns _ $ (erased absurd shut-arc-stuck : (erased (Nat) d a b a2 x y) (erased (List (Nat)) p q s xs) (erased (HPerm d p q) pm)
     (erased (Path p s a2 b xs) w) (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p x y) px) (erased (Apart (Nat) Lt x a) na)
     (erased (NotIn x (Cons (Nat) b xs)) out) (erased (In y (Cons (Nat) b xs)) iny) -> (erased (False) f))
   (let-match erased (nat-eq y a2) (Unequal _ _ _ _ ne)
@@ -566,7 +566,7 @@
   (apart-irrefl v (notin-in v v _ out (InThere v b xs pv))))
 
 (def-fns _ $ (erased shut-arc : (erased (Nat) d a b a2) (erased (List (Nat)) p q p0 s xs) (erased (List (Bond)) g0)
-    (subterm erased (Fun p0 g0) f) (erased (Upd2 p a a b b p0) up) (erased (Perm d p q) pm) (erased (Path p s a2 b xs) w)
+    (subterm erased (Fun p0 g0) f) (erased (Upd2 p a a b b p0) up) (erased (HPerm d p q) pm) (erased (Path p s a2 b xs) w)
     (erased (Nth (Nat) p a a2) pa) -> (erased (Shut (Cons (Nat) b xs) g0) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (ShutNil _)))
   (let ((erased rest)) (shut-arc d a b a2 p q p0 s xs g1 f1 up pm w pa))
@@ -589,12 +589,12 @@
   (let-match erased gr (MkGraph _ _ _ _ _ lp _))
   (MkSep g x y lab l1 l2 (resp-const d lab p g (graph-fun d p g gr) rp (respects-length lab p lab d rp lp)) p1 p2 ne))
 
-(def-fns _ $ (erased orbits-split : (erased (Nat) d k a b a2 b2) (erased (List (Nat)) p q p2 xs) (erased (Perm d p q) pm)
+(def-fns _ $ (erased orbits-split : (erased (Nat) d k a b a2 b2) (erased (List (Nat)) p q p2 xs) (erased (HPerm d p q) pm)
     (erased (Orbits d p k) ob) (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
     (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Path p (Nil (Nat)) b a xs) wba) -> (erased (Orbits d p2 (Succ k)) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased up (MkUpd2 _ _ _ _ _ _ _ ne _ _))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (let ((erased p0) (erased up0)) (upd2-exists p a a b b d lp la lb ne))
   (let ((erased g0) (erased gr0)) (upd2-graph p p0 a a b b d up0 lp))
   (let ((erased bg0)) (below-upd2 d a a b b p q p0 g0 (graph-fun d p0 g0 gr0) up0 pm la la lb lb))
@@ -627,13 +627,13 @@
   (let-match erased e01 (Refl _ _))
   (MkOrbits d (Succ k) p2 g2 gr2 (classes-upd2 d (Succ k) a b2 b a2 p q p0 p2 g0 g2 up up0 gr0 gr2 pm la lb2 lb la2 cs4)))
 
-(def-fns _ $ (erased orbits-join : (erased (Nat) d k a b a2 b2) (erased (List (Nat)) p q p2 lab) (erased (Perm d p q) pm)
+(def-fns _ $ (erased orbits-join : (erased (Nat) d k a b a2 b2) (erased (List (Nat)) p q p2 lab) (erased (HPerm d p q) pm)
     (erased (Orbits d p k) ob) (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
     (erased (Lt a d) la) (erased (Lt b d) lb) (erased (Separates lab p a b) se)
     -> (erased (Nat) k1) (erased (Eq (Nat) k (Succ k1)) e) (erased (Orbits d p2 k1) r))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased up (MkUpd2 _ _ _ _ _ _ _ ne _ _))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (let ((erased p0) (erased up0)) (upd2-exists p a a b b d lp la lb ne))
   (let ((erased g0) (erased gr0)) (upd2-graph p p0 a a b b d up0 lp))
   (let ((erased bg0)) (below-upd2 d a a b b p q p0 g0 (graph-fun d p0 g0 gr0) up0 pm la la lb lb))
@@ -804,11 +804,11 @@
   (RespCons q p1 xs1 y x py (inv-respects xs1 p1 q g1 z1 iv1)))
 
 (def-fns _ $ (erased inv-insert : (erased (Nat) d a c) (erased (List (Nat)) p q p2 q2) (erased (List (Bond)) g2) (subterm erased (Fun p2 g2) f)
-    (erased (Perm d p q) pm) (erased (Insert p a d p2) ip) (erased (Insert q c d q2) iq) (erased (Nth (Nat) p a c) pc)
+    (erased (HPerm d p q) pm) (erased (Insert p a d p2) ip) (erased (Insert q c d q2) iq) (erased (Nth (Nat) p a c) pc)
     -> (erased (InvOn q2 g2) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (InvNil q2)))
   (let ((erased rest)) (inv-insert d a c p q p2 q2 g1 f1 pm ip iq pc))
-  (let-match erased pm (MkPerm _ _ _ ids io lp _ pq))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp _ pq))
   (let ((erased lq)) (respects-length-inv p q ids d pq (iota-length d ids io)))
   (match erased (insert-back p p2 a d d x y ip lp px) _
     ((IBAt _ _ _ _) (InvCons q2 g1 a d (insert-new q q2 c d d a iq lq (perm-inv d a c p q pm pc)) rest))
@@ -821,26 +821,26 @@
         ((Unequal _ _ _ _ n1) n1)))
       (InvCons q2 g1 x y (insert-other q q2 c d y x iq (perm-inv d x y p q pm q1) nyc) rest))))
 
-(def-fns _ $ (erased perm-insert : (erased (Nat) d a c) (erased (List (Nat)) p q p2 q2) (erased (Perm d p q) pm)
-    (erased (Insert p a d p2) ip) (erased (Insert q c d q2) iq) (erased (Nth (Nat) p a c) pc) -> (erased (Perm (Succ d) p2 q2) r))
-  (let-match erased pm (MkPerm _ _ _ ids io lp _ pq))
+(def-fns _ $ (erased perm-insert : (erased (Nat) d a c) (erased (List (Nat)) p q p2 q2) (erased (HPerm d p q) pm)
+    (erased (Insert p a d p2) ip) (erased (Insert q c d q2) iq) (erased (Nth (Nat) p a c) pc) -> (erased (HPerm (Succ d) p2 q2) r))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp _ pq))
   (let ((erased lq)) (respects-length-inv p q ids d pq (iota-length d ids io)))
   (let ((erased ids2) (erased io2)) (iota-exists (Succ d)))
   (let ((erased lp2)) (insert-length p p2 a d d ip lp))
   (let ((erased lq2)) (insert-length q q2 c d d iq lq))
   (let ((erased g2) (erased z2)) (zip-exists ids2 p2 (Succ d) (iota-length (Succ d) ids2 io2) lp2))
   (let ((erased h2) (erased w2)) (zip-exists ids2 q2 (Succ d) (iota-length (Succ d) ids2 io2) lq2))
-  (MkPerm (Succ d) p2 q2 ids2 io2 lp2
+  (HMkPerm (Succ d) p2 q2 ids2 io2 lp2
     (inv-respects ids2 p2 q2 g2 z2 (inv-insert d a c p q p2 q2 g2 (graph-fun (Succ d) p2 g2 (MkGraph (Succ d) p2 ids2 g2 io2 lp2 z2)) pm ip iq pc))
     (inv-respects ids2 q2 p2 h2 w2 (inv-insert d c a q p q2 p2 h2 (graph-fun (Succ d) q2 h2 (MkGraph (Succ d) q2 ids2 h2 io2 lq2 w2))
       (perm-sym d p q pm) iq ip (perm-inv d a c p q pm pc)))))
 
-(def-fns _ $ (erased perm-fix : (erased (Nat) d) (erased (List (Nat)) p q p2 q2) (erased (Perm d p q) pm)
-    (erased (Snoc (Nat) p d p2) sp) (erased (Snoc (Nat) q d q2) sq) -> (erased (Perm (Succ d) p2 q2) r))
-  (let-match erased pm (MkPerm _ _ _ ids io lp qp pq))
+(def-fns _ $ (erased perm-fix : (erased (Nat) d) (erased (List (Nat)) p q p2 q2) (erased (HPerm d p q) pm)
+    (erased (Snoc (Nat) p d p2) sp) (erased (Snoc (Nat) q d q2) sq) -> (erased (HPerm (Succ d) p2 q2) r))
+  (let-match erased pm (HMkPerm _ _ _ ids io lp qp pq))
   (let ((erased lq)) (respects-length-inv p q ids d pq (iota-length d ids io)))
   (let ((erased ids2) (erased si)) (snoc-exists _ ids d))
-  (MkPerm (Succ d) p2 q2 ids2 (IotaS d ids ids2 io si) (snoc-length _ p p2 d d sp lp)
+  (HMkPerm (Succ d) p2 q2 ids2 (IotaS d ids ids2 io si) (snoc-length _ p p2 d d sp lp)
     (respects-snoc q2 p p2 ids ids2 d d (respects-lab q q2 p ids d qp sq) (snoc-new _ q q2 d d sq lq) sp si)
     (respects-snoc p2 q q2 ids ids2 d d (respects-lab p p2 q ids d pq sp) (snoc-new _ p p2 d d sp lp) sq si)))
 
@@ -863,9 +863,19 @@
   (let ((erased p0) (erased s) (erased ins)) (grow-insert p p2 d gw))
   (orbits-insert (Succ d) (Succ k) d p0 p2 (orbits-fix d k p p0 ob s) ins (lt-succ d)))
 
-(def-fns _ $ (erased perm-grow : (erased (Nat) d) (erased (List (Nat)) p p2) (erased (Perm d p p) pm) (erased (EdgeGrow p d p2) gw)
-    -> (erased (Perm (Succ (Succ d)) p2 p2) r))
+(def-fns _ $ (erased perm-grow : (erased (Nat) d) (erased (List (Nat)) p p2) (erased (HPerm d p p) pm) (erased (EdgeGrow p d p2) gw)
+    -> (erased (HPerm (Succ (Succ d)) p2 p2) r))
   (let ((erased p0) (erased s) (erased ins)) (grow-insert p p2 d gw))
   (let ((erased pm0)) (perm-fix d p p p0 p0 pm s s))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (perm-insert (Succ d) d d p0 p0 p2 p2 pm0 ins ins (snoc-new _ p p0 d d s lp)))
+
+(def-adts $ (MorphAt : ((List (Nat)) h p q) ((Nat) x) -> Type)
+  enum
+  (many MkMorphAt : (erased (List (Nat)) h p q) (erased (Nat) x y z w) (erased (Nth (Nat) p x y) px) (erased (Nth (Nat) h x z) hx)
+      (erased (Nth (Nat) h y w) hy) (erased (Nth (Nat) q z w) qz) -> (MorphAt h p q x)))
+
+(def-adts $ (WalkD : ((List (Nat)) p s) ((Nat) x y) -> Type)
+  enum
+  (many WkYes : (erased (List (Nat)) p s) (erased (Nat) x y) (many (List (Nat)) xs) (erased (Path p s x y xs) w) -> (WalkD p s x y))
+  (many WkNo : (erased (List (Nat)) p s) (erased (Nat) x y) -> (WalkD p s x y)))

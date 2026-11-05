@@ -1206,11 +1206,6 @@
   (let ((erased l1)) (lt-pred _ _ l))
   (TbkCons ys k1 i T1 (tbk-set xs ys k1 w y T1 b1 s (lt-weaken _ _ l1)) (wput-below xs ys w y k1 i s l1 x)))
 
-(def-fns _ $ (erased rev-exists : (subterm erased (List (Col)) pre) (erased (List (Col)) w) -> (erased (List (Col)) et) (erased (RevApp (Col) pre w et) ra))
-  (let-match erased pre (Cons _ e pre1) ((Nil _) (values w (RANil _ w))))
-  (let ((erased et) (erased ra)) (rev-exists pre1 (Cons _ e w)))
-  (values et (RACons _ e pre1 w et ra)))
-
 (def-fns _ $ (erased rev-len : (erased (List (Col)) pre w et) (erased (Nat) a b c) (subterm erased (RevApp (Col) pre w et) ra) (erased (Length (Col) pre a) la)
     (erased (Length (Col) w b) lw) (erased (Add a b c) ad) -> (erased (Length (Col) et c) r))
   (match erased ra _

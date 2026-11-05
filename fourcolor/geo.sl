@@ -66,12 +66,6 @@
   (let-match erased md (MulSucc _ _ c _ _ pc))
   (add-pos-lt x dn y (mul-distr a (Succ d) b n x dn y p ma md mb) (lt-le-trans (Zero) n dn pos (add-le-right c n dn pc))))
 
-(def-fns _ $ (erased add-lt-le : (erased (Nat) a b c d x y) (erased (Lt a (Succ b)) l) (erased (Lt c (Succ d)) k) (erased (Add a c x) p) (erased (Add b d y) q) ->
-    (erased (Lt x (Succ y)) r))
-  (let ((erased w) (erased o)) (add b c))
-  (lt-le-trans x (Succ w) (Succ y) (add-mono-le c a b x w l (add-comm a c x p) (add-comm b c w o))
-    (LtS w (Succ y) (add-mono-le b c d w y k o q))))
-
 (def-fns _ $ (erased le-all-dot : (erased (List (Nat)) xs ys ns) (erased (Nat) t u) (subterm erased (LeAll xs ys) le)
     (erased (Dot xs ns t) dx) (erased (Dot ys ns u) dy) -> (erased (Lt t (Succ u)) r))
   (let-match erased le (LeCons x y xs1 ys1 l le1)
@@ -374,62 +368,56 @@
 (def-fns _ $ (erased absurd lex-cycle : (erased (Point) p q) (erased (LexLt p q) l1) (erased (LexLt q p) l2) -> (erased (False) f))
   (lex-irrefl p (lex-trans p q p l1 l2)))
 
-(def-fns _ $ (erased absurd collinear-left : (erased (Point) p q r) (erased (Collinear p q r) c) (erased (Left p q r) l) -> (erased (False) f))
-  (left-collinear p q r l c))
-
 (def-fns _ $ (erased weak-same : (erased (Point) u v) -> (erased (Weak u v u) w))
   (coll-weak u v u (coll-same u v)))
 
 (def-fns _ $ (erased weak-end : (erased (Point) u v) -> (erased (Weak u v v) w))
   (coll-weak u v v (coll-rot v u v (coll-same v u))))
 
-(def-fns _ $ (erased weak-start : (erased (Point) u v) -> (erased (Weak v u u) w))
-  (coll-weak v u u (coll-rot u v u (coll-same u v))))
-
 (def-fns _ $ (erased absurd geo-k1 : (erased (Point) a b c d p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p d) lpd)
     (erased (Left a b c) l1) (erased (Left a b d) l2) (erased (Left b a p) l3) (erased (Left c d p) l4) -> (erased (False) f))
-  (collinear-left c d p (sq-up a b c d p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p d lpd)
-    (left-weak a b c l1) (left-weak a b d l2) (left-weak c d p l4) (left-weak b a p l3) (OrL _ _ l3)) l4))
+  (left-collinear c d p l4 (sq-up a b c d p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p d lpd)
+    (left-weak a b c l1) (left-weak a b d l2) (left-weak c d p l4) (left-weak b a p l3) (OrL _ _ l3))))
 
 (def-fns _ $ (erased absurd geo-k2 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a c) lac) (erased (LexLt c b) lcb)
     (erased (Left c d a) l1) (erased (Left c d b) l2) (erased (Left a b c) l3) -> (erased (False) f))
-  (collinear-left a b c (sq-up c d a b c (lex-xle c d lcd) (lex-xle a c lac) (lex-xle c b lcb)
-    (left-weak c d a l1) (left-weak c d b l2) (left-weak a b c l3) (weak-start c d) (OrR _ _ (MkPair _ _ l1 l2))) l3))
+  (left-collinear a b c l3 (sq-up c d a b c (lex-xle c d lcd) (lex-xle a c lac) (lex-xle c b lcb)
+    (left-weak c d a l1) (left-weak c d b l2) (left-weak a b c l3) (weak-end d c) (OrR _ _ (MkPair _ _ l1 l2)))))
 
 (def-fns _ $ (erased absurd geo-k3 : (erased (Point) c d a b p) (erased (LexLt c d) lcd) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
     (erased (Left d c a) l1) (erased (Left d c b) l2) (erased (Left b a p) l3) (erased (Left c d p) l4) -> (erased (False) f))
-  (collinear-left b a p (coll-swap a b p $ sq-down c d a b p (lex-xle c d lcd) (lex-xle a p lap) (lex-xle p b lpb)
-    (left-weak d c a l1) (left-weak d c b l2) (left-weak b a p l3) (left-weak c d p l4) (OrL _ _ l4)) l3))
+  (left-collinear b a p l3 (coll-swap a b p $ sq-down c d a b p (lex-xle c d lcd) (lex-xle a p lap) (lex-xle p b lpb)
+    (left-weak d c a l1) (left-weak d c b l2) (left-weak b a p l3) (left-weak c d p l4) (OrL _ _ l4))))
 
 (def-fns _ $ (erased absurd geo-k4 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c a) lca) (erased (LexLt a d) lad)
     (erased (Left b a c) l1) (erased (Left b a d) l2) (erased (Left d c a) l3) -> (erased (False) f))
-  (collinear-left d c a (coll-swap c d a $ sq-down a b c d a (lex-xle a b lab) (lex-xle c a lca) (lex-xle a d lad)
-    (left-weak b a c l1) (left-weak b a d l2) (left-weak d c a l3) (weak-same a b) (OrR _ _ (MkPair _ _ l1 l2))) l3))
+  (left-collinear d c a l3 (coll-swap c d a $ sq-down a b c d a (lex-xle a b lab) (lex-xle c a lca) (lex-xle a d lad)
+    (left-weak b a c l1) (left-weak b a d l2) (left-weak d c a l3) (weak-same a b) (OrR _ _ (MkPair _ _ l1 l2)))))
 
 (def-fns _ $ (erased absurd geo-k5 : (erased (Point) c d a b) (erased (LexLt c d) lcd) (erased (LexLt a d) lad) (erased (LexLt d b) ldb)
     (erased (Left d c a) l1) (erased (Left d c b) l2) (erased (Left b a d) l3) -> (erased (False) f))
-  (collinear-left b a d (coll-swap a b d $ sq-down c d a b d (lex-xle c d lcd) (lex-xle a d lad) (lex-xle d b ldb)
-    (left-weak d c a l1) (left-weak d c b l2) (left-weak b a d l3) (weak-end c d) (OrR _ _ (MkPair _ _ l1 l2))) l3))
+  (left-collinear b a d l3 (coll-swap a b d $ sq-down c d a b d (lex-xle c d lcd) (lex-xle a d lad) (lex-xle d b ldb)
+    (left-weak d c a l1) (left-weak d c b l2) (left-weak b a d l3) (weak-end c d) (OrR _ _ (MkPair _ _ l1 l2)))))
 
 (def-fns _ $ (erased absurd geo-k6 : (erased (Point) a b c d) (erased (LexLt a b) lab) (erased (LexLt c b) lcb) (erased (LexLt b d) lbd)
     (erased (Left a b c) l1) (erased (Left a b d) l2) (erased (Left c d b) l3) -> (erased (False) f))
-  (collinear-left c d b (sq-up a b c d b (lex-xle a b lab) (lex-xle c b lcb) (lex-xle b d lbd)
-    (left-weak a b c l1) (left-weak a b d l2) (left-weak c d b l3) (coll-weak b a b (coll-same b a)) (OrR _ _ (MkPair _ _ l1 l2))) l3))
+  (left-collinear c d b l3 (sq-up a b c d b (lex-xle a b lab) (lex-xle c b lcb) (lex-xle b d lbd)
+    (left-weak a b c l1) (left-weak a b d l2) (left-weak c d b l3) (coll-weak b a b (coll-same b a)) (OrR _ _ (MkPair _ _ l1 l2)))))
 
 (def-fns _ $ (erased absurd geo-k7 : (erased (Point) a b c p) (erased (LexLt a b) lab) (erased (LexLt c p) lcp) (erased (LexLt p b) lpb)
     (erased (Left a b c) l1) (erased (Left c b p) l2) (erased (Left b a p) l3) -> (erased (False) f))
-  (collinear-left c b p (sq-up a b c b p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p b lpb)
-    (left-weak a b c l1) (weak-end a b) (left-weak c b p l2) (left-weak b a p l3) (OrL _ _ l3)) l2))
+  (left-collinear c b p l2 (sq-up a b c b p (lex-xle a b lab) (lex-xle c p lcp) (lex-xle p b lpb)
+    (left-weak a b c l1) (weak-end a b) (left-weak c b p l2) (left-weak b a p l3) (OrL _ _ l3))))
 
 (def-fns _ $ (erased absurd geo-k8 : (erased (Point) a b c p) (erased (LexLt c b) lcb) (erased (LexLt a p) lap) (erased (LexLt p b) lpb)
     (erased (Left b c a) l1) (erased (Left b a p) l2) (erased (Left c b p) l3) -> (erased (False) f))
-  (collinear-left b a p (coll-swap a b p $ sq-down c b a b p (lex-xle c b lcb) (lex-xle a p lap) (lex-xle p b lpb)
-    (left-weak b c a l1) (coll-weak b c b (coll-same b c)) (left-weak b a p l2) (left-weak c b p l3) (OrL _ _ l3)) l2))
+  (left-collinear b a p l2 (coll-swap a b p $ sq-down c b a b p (lex-xle c b lcb) (lex-xle a p lap) (lex-xle p b lpb)
+    (left-weak b c a l1) (coll-weak b c b (coll-same b c)) (left-weak b a p l2) (left-weak c b p l3) (OrL _ _ l3))))
 
 (def-fns _ $ (erased absurd geo-k9 : (erased (Point) a b d p) (erased (LexLt a b) lab) (erased (LexLt a p) lap) (erased (LexLt p d) lpd)
     (erased (Left a b d) l1) (erased (Left b a p) l2) (erased (Left a d p) l3) -> (erased (False) f))
-  (collinear-left a d p (sq-up a b a d p (lex-xle a b lab) (lex-xle a p lap) (lex-xle p d lpd)
-    (weak-same a b) (left-weak a b d l1) (left-weak a d p l3) (left-weak b a p l2) (OrL _ _ l2)) l3))
+  (left-collinear a d p l3 (sq-up a b a d p (lex-xle a b lab) (lex-xle a p lap) (lex-xle p d lpd)
+    (weak-same a b) (left-weak a b d l1) (left-weak a d p l3) (left-weak b a p l2) (OrL _ _ l2))))
 
 ; Along the sweep line through any point both segments cross, ab is below cd. Each segment runs from its
 ; lexicographically smaller end.

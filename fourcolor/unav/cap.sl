@@ -15,7 +15,7 @@
   (let ((erased x6) (erased m6)) (mul 6 5))
   (let-match erased (add-fn x6 x6 t12 c60 (mul-distr 6 6 12 5 x6 x6 t12 (AddSucc 5 6 11 (add5 6)) m6 m6 m12) (mul-dbl 6 x6 c60 m6 m60)) (Refl _ _))
   (let ((erased q) (erased aq)) (add c60 t5))
-  (let ((erased l1)) (add-le-r c60 sp pos t5 q ap aq lst))
+  (let ((erased l1)) (add-mono-le c60 sp t5 pos q lst ap aq))
   (let ((erased l2)) (add-mono-le t5 c60 t5 q t (add-le-left c60 mx t5 e1) (add-comm c60 t5 q aq) (mul-dbl a t5 t m5 mt)))
   (lt-asym neg pos lt (le-trans pos q neg l1 (le-trans q t neg l2 (add-le-left t sn neg an)))))
 

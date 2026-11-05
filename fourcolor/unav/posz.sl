@@ -62,7 +62,7 @@
 
 (def-fns _ $ (erased dslist-exists : (erased (Nat) d) (erased (List (Nat)) e n f ks xs) (erased (List (List (Sub))) drs) (erased (Geo d e n f ks) g)
     (subterm erased (Under xs d) u) -> (erased (List (Nat)) cs) (erased (DsList e n f ks drs xs cs) r))
-  (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (values (Nil _) (DLNil e n f ks drs))))
+  (let-match erased u (UnderCons x _ xs1 lx u1) ((UnderNil _) (values (Nil _) (DLNil e n f ks drs))))
   (let ((erased c) (erased p)) (dscore1-exists d x e n f ks drs g lx))
   (let ((erased cs) (erased r)) (dslist-exists d e n f ks xs1 drs g u1))
   (values (Cons _ c cs) (DLCons e n f ks xs1 cs drs x c p r)))
@@ -179,5 +179,5 @@
   (let ((erased amx)) (mul-distr d 12 s6 10 t y m a12 mt my mx))
   (let-match erased my (MulSucc _ _ y1 _ _ ay))
   (let ((erased ly)) (lt-le-trans (Zero) 10 y (LtZ 9) (add-le-right y1 10 y ay)))
-  (let ((erased ltm)) (add-mono t (Zero) t y m (add-zero-right t) amx ly))
-  (find-pos d p q e n f ks rs drs ur dt (add-mono sp t q m p (add-comm t sp q aq) (add-comm m sp p ap) ltm)))
+  (let ((erased ltm)) (add-lt-mono t (Zero) y t m (add-zero-right t) amx ly))
+  (find-pos d p q e n f ks rs drs ur dt (add-lt-mono sp t m q p (add-comm t sp q aq) (add-comm m sp p ap) ltm)))

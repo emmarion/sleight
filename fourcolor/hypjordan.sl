@@ -17,7 +17,7 @@
     (absurd (Equal _ _ _) (let-match erased (nth-fn _ p a b z pa pw) (Refl _ _)) (apart-irrefl b nb)))
   (upd2-other p p2 w u z z a b up pa ne na))
 
-(def-fns _ $ (erased skip-cut-at : (erased (Nat) d z w c) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm) (erased (Skip p z p2) sk)
+(def-fns _ $ (erased skip-cut-at : (erased (Nat) d z w c) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk)
     (erased (Nth (Nat) p w z) pw) (erased (Nth (Nat) p z c) pz) (erased (Apart (Nat) Lt w z) ne) -> (erased (Nth (Nat) p2 w c) r))
   (match erased sk _
     (absurd (SkipFixed _ _ pzz) (let-match erased (perm-inj d w z z p q pm pw pzz) (Refl _ _)) (apart-irrefl w ne))
@@ -68,7 +68,7 @@
   enum
   (many MkMoved : (erased (List (Nat)) p) (erased (Nat) z a) (erased (Nth (Nat) p a z) pa) (erased (Apart (Nat) Lt a z) ne) -> (Moved p z)))
 
-(def-fns _ $ (erased moved-out : (erased (Nat) d z) (erased (List (Nat)) p q s) (erased (Perm d p q) pm) (erased (FixedIn p s) fx)
+(def-fns _ $ (erased moved-out : (erased (Nat) d z) (erased (List (Nat)) p q s) (erased (HPerm d p q) pm) (erased (FixedIn p s) fx)
     (erased (Moved p z) mv) -> (erased (Lt z d) lz) (erased (NotIn z s) out))
   (let-match erased mv (MkMoved _ _ a pa ne))
   (let-match erased (in-dec z s) (OrR _ _ out)
@@ -77,7 +77,7 @@
 
 (def-fns _ $ (erased under-sub : (erased (Nat) d) (erased (List (Nat)) xs ids) (subterm erased (Under xs d) u) (erased (Iota d ids) io)
     -> (erased (HSub xs ids) r))
-  (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (HsbNil ids)))
+  (let-match erased u (UnderCons x _ xs1 l u1) ((UnderNil _) (HsbNil ids)))
   (HsbCons x xs1 ids (iota-in d x ids io l) (under-sub d xs1 ids u1 io)))
 
 (def-fns _ $ (erased fuel-step : (erased (Nat) d k m z) (erased (List (Nat)) s) (erased (Add k m d) a) (erased (Length (Nat) s k) ls)
@@ -102,7 +102,7 @@
     (walkup-iso d (Zero) z e n f h g lz))
   (let-match erased (lt-one gen2 le) (Refl _ _))
   (let ((erased ds2)) (DistCons z s out ds))
-  (let ((erased us2)) (UnderCons s z d lz us))
+  (let ((erased us2)) (UnderCons z d s lz us))
   (let ((erased m1) (erased em) (erased a2)) (fuel-step d k m z s a ls ds2 us2))
   (let ((erased fn2)) (FixCons n2 s z (skip-fixed n n2 z skn) (fixed-skip n n2 s z fn skn out)))
   (let ((erased ff2)) (FixCons f2 s z (skip-fixed f f2 z skf) (fixed-skip f f2 s z ff skf out)))
@@ -195,11 +195,11 @@
           (skip-keep z c y f f2 skf fc ncz (apart-sym z y ny)) (skip-keep z a c e e2 ske pc (apart-sym z a na) ncz))
         (lift-n d z y b w e n f e2 n2 f2 q1 h h2 rest skf ske out1 pw out3)))))
 
-(def-fns _ $ (erased euler-setup : (erased (Nat) d a a2 b2) (erased (List (Nat)) n ni f fi c f2 c2) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+(def-fns _ $ (erased euler-setup : (erased (Nat) d a a2 b2) (erased (List (Nat)) n ni f fi c f2 c2) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
     (erased (Respects n f c) rc) (erased (Respects n f2 c2) rc2) (erased (Nth (Nat) f a a2) pa) (erased (Nth (Nat) f a2 b2) pb)
     (erased (Upd2 f a b2 a2 a2 f2) up)
     -> (erased (Lt a d) la) (erased (Lt a2 d) la2) (erased (Nat) ca ca2) (erased (Nth (Nat) c a ca) pca) (erased (Nth (Nat) c a2 ca2) pca2)
-    (erased (Nth (Nat) n a2 ca) pna2) (erased (Upd2 c a ca2 a2 ca c2) uc) (erased (List (Nat)) ci) (erased (Perm d c ci) pc))
+    (erased (Nth (Nat) n a2 ca) pna2) (erased (Upd2 c a ca2 a2 ca c2) uc) (erased (List (Nat)) ci) (erased (HPerm d c ci) pc))
   (let ((erased lf)) (perm-length d f fi pf))
   (let ((erased la)) (nth-lt-length _ f a d a2 pa lf))
   (let ((erased la2)) (perm-val d a a2 f fi pf pa))
@@ -213,7 +213,7 @@
   (values la la2 ca ca2 pca pca2 pna2 uc ci pc))
 
 (def-fns _ $ (erased euler-drop : (erased (Nat) d kn kf kx kx2 kc2 gen2 a a2 b2) (erased (List (Nat)) n ni f fi c f2 fi2 c2 xs)
-    (erased (List (Bond)) gn gf g gf2 g2) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf) (erased (Perm d f2 fi2) pf2)
+    (erased (List (Bond)) gn gf g gf2 g2) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) (erased (HPerm d f2 fi2) pf2)
     (erased (Respects n f c) rc) (erased (Respects n f2 c2) rc2) (erased (Orbits d c kx) oc) (erased (Orbits d c2 kx2) oc2)
     (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Graph d f2 gf2) grf2) (erased (Cat gn gf g) cg) (erased (Cat gn gf2 g2) cg2)
     (erased (Nth (Nat) f a a2) pa) (erased (Nth (Nat) f a2 b2) pb) (erased (Upd2 f a b2 a2 a2 f2) up)
@@ -228,11 +228,11 @@
 
 (def-fns _ $ (erased face-frame : (erased (Nat) d gen w z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f gen) p)
     (erased (Nth (Nat) f w z) pw) (erased (Apart (Nat) Lt w z) ne) (erased (Lt w d) lw)
-    -> (erased (List (Nat)) c ni fi) (erased (Respects n f c) rc) (erased (Perm d e c) pe) (erased (Perm d n ni) pn) (erased (Perm d f fi) pf)
+    -> (erased (List (Nat)) c ni fi) (erased (Respects n f c) rc) (erased (HPerm d e c) pe) (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf)
     (erased (Nat) kx kn kf kc) (erased (Orbits d c kx) ox) (erased (Orbits d n kn) on) (erased (Orbits d f kf) of)
     (erased (List (Bond)) gn gf g) (erased (Graph d n gn) grn) (erased (Graph d f gf) grf) (erased (Cat gn gf g) cg)
     (erased (Nat) b2) (erased (List (Nat)) f2 fi2 e2 c2) (erased (Nth (Nat) f z b2) pb) (erased (Upd2 f w b2 z z f2) up)
-    (erased (Perm d f2 fi2) pf2) (erased (Hypermap d e2 n f2) h2) (erased (Nat) gen2 kx2 kc2) (erased (Genus d e2 n f2 gen2) p2)
+    (erased (HPerm d f2 fi2) pf2) (erased (Hypermap d e2 n f2) h2) (erased (Nat) gen2 kx2 kc2) (erased (Genus d e2 n f2 gen2) p2)
     (erased (Respects n f2 c2) rc2) (erased (Orbits d c2 kx2) ox2) (erased (List (Bond)) gf2 g2) (erased (Graph d f2 gf2) grf2)
     (erased (Cat gn gf2 g2) cg2) (erased (Classes g2 d kc2) cs2) (erased (EulerSum kc2 d kx2 kn (Succ kf) gen2) es2))
   (let ((erased c) (erased ni) (erased fi) (erased rc) (erased pe) (erased pn) (erased pf) (erased kx) (erased kn) (erased kf) (erased kc)
@@ -315,7 +315,7 @@
   (let ((erased xw)) (apart-sym w x (notin-in w x _ out (InHere x p))))
   (MkMoebius n2 f2 p x l u v dp (lift-e w x l n f n2 f2 p cp skn skf out) (skip-keep w u l n n2 skn pu uw lw) (skip-keep w x v n n2 skn pv xw vw) m2))
 
-(def-fns _ $ (erased close-dec : (erased (Nat) d x y z w) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
+(def-fns _ $ (erased close-dec : (erased (Nat) d x y z w) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Nth (Nat) p x y) px)
     (erased (Nth (Nat) p y z) py) (erased (Nth (Nat) p z w) pz) (erased (Apart (Nat) Lt x z) xz) (erased (Apart (Nat) Lt y z) yz)
     -> (erased (Or (NotIn w (Cons (Nat) x (Cons (Nat) y (Cons (Nat) z (Nil (Nat)))))) (Eq (Nat) w x)) r))
   (let-match erased (nat-eq w x) (Unequal _ _ _ _ wx) ((Equal _ _ _) (OrR _ _ (Refl _ w))))

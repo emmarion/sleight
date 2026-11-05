@@ -201,7 +201,7 @@
 (def-adts $ (FunctorAll : ((List (Nat)) ec em as hl xs) -> Type)
   enum
   (many FaNil : (erased (List (Nat)) ec em as hl) -> (FunctorAll ec em as hl (Nil (Nat))))
-  (many FaCons : (erased (List (Nat)) ec em as hl xs) (erased (Nat) x) (erased (Or (EdgeOut ec as x) (Central ec em hl x)) p)
+  (many FaCons : (erased (List (Nat)) ec em as hl xs) (erased (Nat) x) (erased (Or (EdgeOut ec as x) (MorphAt hl ec em x)) p)
       (erased (FunctorAll ec em as hl xs) rest) -> (FunctorAll ec em as hl (Cons (Nat) x xs))))
 
 (def-fns _ $ (erased functor-at : (erased (List (Nat)) ec em as hl xs) (erased (Nat) x y w) (subterm erased (FunctorAll ec em as hl xs) fa) (erased (In x xs) ix)
@@ -210,7 +210,7 @@
   (let-match erased ix (InHere _ _) ((InThere _ _ _ ix1) (functor-at ec em as hl xs1 x y w fa1 ix1 py iy pw)))
   (let-match erased p (OrR _ _ c)
     (absurd (OrL _ _ eo) (let-match erased eo (MkEdgeOut _ _ _ y2 py2 oy)) (let-match erased (nth-fn _ ec x y y2 py py2) (Refl _ _)) (apart-irrefl y (notin-in y y as oy iy))))
-  (let-match erased c (MkCentral _ _ _ _ y3 w3 v3 py3 pw3 pv3 pm3))
+  (let-match erased c (MkMorphAt _ _ _ _ y3 w3 v3 py3 pw3 pv3 pm3))
   (let-match erased (nth-fn _ ec x y y3 py py3) (Refl _ _))
   (let-match erased (nth-fn _ hl x w w3 pw pw3) (Refl _ _))
   (values v3 pv3 pm3))
@@ -478,7 +478,7 @@
   (let-match erased lx (LengthCons _ _ _ k1 lx1))
   (let ((erased u) (erased hx) (erased lu)) (h1-exists dc dm x ec nc fc ksc rc em nm fm ksm as hl en ok lx0))
   (let ((erased h1) (erased el) (erased uh) (erased lh)) (embl-exists dc dm k1 ec nc fc ksc rc em nm fm ksm as hl en ok xs1 ux1 lx1))
-  (values (Cons _ u h1) (EbCons ec nc em nm fm as hl xs1 h1 x u hx el) (UnderCons h1 u dm lu uh) (LengthCons _ u h1 k1 lh)))
+  (values (Cons _ u h1) (EbCons ec nc em nm fm as hl xs1 h1 x u hx el) (UnderCons u dm h1 lu uh) (LengthCons _ u h1 k1 lh)))
 
 (def-fns _ $ (erased embl-nth : (erased (List (Nat)) ec nc em nm fm as hl xs h1) (erased (Nat) i x u) (subterm erased (EmbL ec nc em nm fm as hl xs h1) el)
     (erased (Nth (Nat) xs i x) px) (erased (Nth (Nat) h1 i u) pu) -> (erased (HEmb ec nc em nm fm as hl x u) r))

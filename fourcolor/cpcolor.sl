@@ -524,7 +524,7 @@
   (let ((erased re)) (RespCons ks l0 l0 o o n1 (RespCons ks (Nil (Nat)) (Nil (Nat)) z z n0 (RespNil ks))))
   (let ((erased rf)) (RespCons ks l1 l1 z z n0 (RespCons ks (Nil (Nat)) (Nil (Nat)) o o n1 (RespNil ks))))
   (let ((erased df)) (DifferCons l0 l1 o z (ApGt _ _ o z (LtZ z)) (DifferCons (Nil (Nat)) (Nil (Nat)) z o (ApLt _ _ z o (LtZ z)) (DifferNil))))
-  (let ((erased un)) (UnderCons l1 z 4 (LtZ _) (UnderCons (Nil (Nat)) o 4 (LtS z _ (LtZ _)) (UnderNil 4))))
+  (let ((erased un)) (UnderCons z 4 l1 (LtZ _) (UnderCons o 4 (Nil (Nat)) (LtS z _ (LtZ _)) (UnderNil 4))))
   (MkCpCol (Nil (Step)) (Succ o) e ks e ks e (Cons (Col) (C1) (Cons (Col) (C0) (Nil (Col)))) c11 (CmNil) (MkFourColoring e ks ks e rf re df un) re
     (NCsCons o (C1) l0 (Cons (Col) (C0) (Nil (Col))) (NC1) (NCsCons z (C0) (Nil (Nat)) (Nil (Col)) (NC0) (NCsNil)))
     (MkTrace (C1) (Cons (Col) (C0) (Nil (Col))) c11 (CTStep (C1) (C1) (C0) (C1) (Nil (Col)) (Cons (Col) (C1) (Nil (Col))) (Add10) (CTLast (C1) (C0) (C1) (Add01))))))

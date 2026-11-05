@@ -517,7 +517,7 @@
       (let ((erased rcp) (erased ra)) (revapp-exists (Step) cp1 (Cons (Step) sh (Nil (Step)))))
       (values rc2 cs2 (Cons (Col) uu (Cons (Col) w et2)) rr2 nc2 tr2 rcp (RACons (Step) sh cp1 (Nil (Step)) rcp ra) c nzc
         (steps-snoc sh rcp1 rcp _ et0 _ (revapp-snoc (Step) sh cp1 (Nil (Step)) _ rcp1 rcp ra1 (SnocNil _ sh) ra) st1
-          (STH a1 a2 ee uu v w et2 pee pv2 (addc-swap a1 uu a2 v w ee pv2 pw pee) (flag-nz (Succ d0) uu fl1) (flag-nz d2 v fl2) (flag-nz d4 w fl3)))))))
+          (STH a1 a2 ee uu v w et2 pee pv2 (addc-mid a1 a2 ee uu v w pee pv2 pw) (flag-nz (Succ d0) uu fl1) (flag-nz d2 v fl2) (flag-nz d4 w fl3)))))))
 
 (def-fns _ $ (erased cpcolor-mem : (erased (List (Step)) cp) (erased (Ctree) t) (erased (CpComp cp t) comp) (erased (CubicProg cp) cq) (erased (Col) e0)
     (erased (List (Col)) et) (erased (CpCol cp (Cons (Col) e0 et)) cc) (erased (EvenT et (BTrue)) ev) -> (erased (CtMem t et) r))

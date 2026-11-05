@@ -103,3 +103,8 @@
     (erased (HSub s2 s) sb) -> (erased (Walk e nd s2 a b) r))
   (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e nd s2 a)))
   (WalkStep e nd s2 a q c b pe pn (notin-sub q s2 s sb out) (walk-weaken e nd s s2 c b w1 sb)))
+
+(def-adts $ (RespD : ((List (Nat)) lab xs) -> Type)
+  enum
+  (many RsYes : (erased (List (Nat)) lab xs) (many (List (Nat)) ls) (erased (Respects lab xs ls) p) -> (RespD lab xs))
+  (many RsNo : (erased (List (Nat)) lab xs) -> (RespD lab xs)))

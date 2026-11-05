@@ -97,11 +97,6 @@
   (let-match many (notail $ inserte-c e rest) (IEYes _ _ ie p) ((IENo _ _) (IENo e cc)))
   (IEYes e cc (Cons _ y (Cons _ z ie)) (IECons e rest ie y z pz p)))
 
-(def-adts $ (RespD : ((List (Nat)) lab xs) -> Type)
-  enum
-  (many RsYes : (erased (List (Nat)) lab xs) (many (List (Nat)) ls) (erased (Respects lab xs ls) p) -> (RespD lab xs))
-  (many RsNo : (erased (List (Nat)) lab xs) -> (RespD lab xs)))
-
 (def-fns _ $ (many respects-c : (many (List (Nat)) lab) (subterm many (List (Nat)) xs) -> (many (RespD lab xs) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (RsYes lab xs (Nil _) (RespNil lab))))
   (let-match many (nth-d lab x) (NthYes _ _ l p) ((NthNo _ _) (RsNo lab xs)))
@@ -163,11 +158,6 @@
   (let-match many (nth-d lab x) (NthYes _ _ l px) ((NthNo _ _) (ENone _)))
   (let-match many (in-dec-c l ls) (IDOut _ _ out) ((IDIn _ _ _) (ENone _)))
   (ESome _ (MkKernel f r lab ls x l rf rp px out)))
-
-(def-adts $ (WalkD : ((List (Nat)) p s) ((Nat) x y) -> Type)
-  enum
-  (many WkYes : (erased (List (Nat)) p s) (erased (Nat) x y) (many (List (Nat)) xs) (erased (Path p s x y xs) w) -> (WalkD p s x y))
-  (many WkNo : (erased (List (Nat)) p s) (erased (Nat) x y) -> (WalkD p s x y)))
 
 (def-fns _ $ (many walk-c : (many (List (Nat)) p s) (many (Nat) x y) (subterm many (Nat) fuel) -> (many (WalkD p s x y) r))
   (let-match many (nat-eq x y) (Unequal _ _ _ _ _) ((Equal _ _ _) (WkYes p s x y (Nil _) (PathHere p s x))))
@@ -302,3 +292,13 @@
   (many ARCNil : (erased (Level) X) -> (AllRedC X (Nil (List (Config)))))
   (many ARCCons : (erased (Level) X) (erased (List (Config)) cs) (erased (List (List (Config))) css) (erased (AllRed X cs) p) (erased (AllRedC X css) rest)
       -> (AllRedC X (Cons (List (Config)) cs css))))
+
+(def-fns _ $ (erased allred-concat : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (Flatten (Config) css cfs) p)
+    (erased (AllRedC X css) a) -> (erased (AllRed X cfs) r))
+  (match erased p _
+    ((FNil _) (ARNil X))
+    ((FSkip _ css1 _ p1) (let-match erased a (ARCCons _ _ _ _ a1)) (allred-concat X css1 cfs p1 a1))
+    ((FCons _ cf cs cfs1 css1 p1)
+      (let-match erased a (ARCCons _ _ _ ar a1))
+      (let-match erased ar (ARCons _ _ _ rd ar1))
+      (ARCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))

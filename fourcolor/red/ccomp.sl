@@ -97,7 +97,7 @@
     -> (erased (Nat) k) (erased (Nth (Nat) ks x k) pk) (erased (Col) c) (erased (NCol k c) pc))
   (let-match erased cx (MkCtx _ _ _ _ _ _ m pe _ _ _ four lk lb))
   (let ((erased k) (erased pk)) (nth-exists _ ks m x lk (nth-lt-length _ big x m y (pre-nth e big x y pe p) lb)))
-  (let ((erased c) (erased pc)) (ncol-ex k (under-nth ks x k 4 four pk)))
+  (let ((erased c) (erased pc)) (ncol-ex k (alllt-nth ks 4 x k four pk)))
   (values k pk c pc))
 
 (def-fns _ $ (erased flag-of : (erased (List (Nat)) ie ks big e f) (erased (Nat) x z y kx ky) (erased (Col) cx cy u) (erased (Ctx ie ks big e f) ctx)
@@ -289,11 +289,6 @@
     (absurd (AFNil _) q)
     (absurd (AFCons _ x u rest fl p1)
       (match erased q _ (absurd (SNHere _ _ _ _ nf) (flag-no ie x u fl nf)) (absurd (SNThere _ _ _ q1) (all-some ie rest p1 q1))))))
-
-(def-adts $ (InD : ((Nat) x) ((List (Nat)) s) -> Type)
-  enum
-  (many IDIn : (erased (Nat) x) (erased (List (Nat)) s) (erased (In x s) p) -> (InD x s))
-  (many IDOut : (erased (Nat) x) (erased (List (Nat)) s) (erased (NotIn x s) p) -> (InD x s)))
 
 (def-fns _ $ (many in-dec-c : (many (Nat) x) (subterm many (List (Nat)) s) -> (many (InD x s) r))
   (let-match many s (Cons _ y s1) ((Nil _) (IDOut x s (NotInNil x))))

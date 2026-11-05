@@ -17,7 +17,7 @@
 (def-fns _ $ (erased no-coloring : (erased (List (Nat)) e f ks) (erased (NoColoring e f) nc) (erased (FourColoring e f ks) c) -> (erased (False) r))
   (let-match erased nc (MkNoColoring d _ _ ne lf))
   (let-match erased c (MkFourColoring _ _ _ _ rf _ _ _))
-  (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (JoinNil ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
+  (noext-sound d e f (Nil _) (Nil _) (Nil _) ks ks ne (LAppNil _ ks) (respects-length ks f ks d rf lf) c (RespNil ks)))
 
 (def-adts $ (Decided : ((List (Nat)) e f) -> Type)
   enum

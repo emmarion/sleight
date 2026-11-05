@@ -1,8 +1,3 @@
-(def-adts $ (Mem : (Type A) ((List A) xs) (A x) -> Type)
-  enum
-  (many MemHere : (erased Type A) (erased A x) (erased (List A) xs) -> (Mem A (Cons A x xs) x))
-  (many MemThere : (erased Type A) (erased A x y) (erased (List A) xs) (erased (Mem A xs x) p) -> (Mem A (Cons A y xs) x)))
-
 ; R relates x to every entry of ys.
 (def-adts $ (AllR : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) (A x) ((List B) ys) -> Type)
   enum
@@ -25,9 +20,9 @@
       (erased (AllR A A R x ys) h) (erased (Cross A R xs ys) rest) -> (Cross A R (Cons A x xs) ys)))
 
 (def-fns _ $ (erased allr-mem : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List B) ys)
-    (subterm erased (AllR A B R x ys) h) (erased (Mem B ys y) m) -> (erased (R x y) r))
+    (subterm erased (AllR A B R x ys) h) (erased (Elem B y ys) m) -> (erased (R x y) r))
   (let-match erased h (ARCons _ _ _ _ _ zs hz h1) (absurd (ARNil _ _ _ _) m))
-  (let-match erased m (MemThere _ _ _ _ m1) ((MemHere _ _ _) hz))
+  (let-match erased m (ElThere _ _ _ _ m1) ((ElHere _ _ _) hz))
   (allr-mem A B R x y zs h1 m1))
 
 (def-fns _ $ (erased allr-split : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased (List B) xs ys zs)
@@ -79,32 +74,32 @@
   (PWCons A R x zs1 (allr-join A A R x xs1 ys zs1 a1 h h2) (pw-join A R xs1 ys zs1 a1 p3 p2 c1)))
 
 (def-fns _ $ (erased mem-split : (erased Type A) (erased A x) (erased (List A) xs ys zs)
-    (subterm erased (LApp A xs ys zs) a) (erased (Mem A zs x) m) -> (erased (Or (Mem A xs x) (Mem A ys x)) r))
+    (subterm erased (LApp A xs ys zs) a) (erased (Elem A x zs) m) -> (erased (Or (Elem A x xs) (Elem A x ys)) r))
   (let-match erased a (LAppCons _ y xs1 _ zs1 a1) ((LAppNil _ _) (OrR _ _ m)))
-  (let-match erased m (MemThere _ _ _ _ m1) ((MemHere _ _ _) (OrL _ _ (MemHere A x xs1))))
+  (let-match erased m (ElThere _ _ _ _ m1) ((ElHere _ _ _) (OrL _ _ (ElHere A x xs1))))
   (let-match erased (mem-split A x xs1 ys zs1 a1 m1) (OrL _ _ m2) ((OrR _ _ m3) (OrR _ _ m3)))
-  (OrL _ _ (MemThere A x y xs1 m2)))
+  (OrL _ _ (ElThere A x y xs1 m2)))
 
 (def-fns _ $ (erased mem-left : (erased Type A) (erased A x) (erased (List A) xs ys zs)
-    (subterm erased (LApp A xs ys zs) a) (erased (Mem A xs x) m) -> (erased (Mem A zs x) r))
+    (subterm erased (LApp A xs ys zs) a) (erased (Elem A x xs) m) -> (erased (Elem A x zs) r))
   (let-match erased a (LAppCons _ y xs1 _ zs1 a1) (absurd (LAppNil _ _) m))
-  (let-match erased m (MemThere _ _ _ _ m1) ((MemHere _ _ _) (MemHere A x zs1)))
-  (MemThere A x y zs1 (mem-left A x xs1 ys zs1 a1 m1)))
+  (let-match erased m (ElThere _ _ _ _ m1) ((ElHere _ _ _) (ElHere A x zs1)))
+  (ElThere A x y zs1 (mem-left A x xs1 ys zs1 a1 m1)))
 
 (def-fns _ $ (erased mem-right : (erased Type A) (erased A x) (erased (List A) xs ys zs)
-    (subterm erased (LApp A xs ys zs) a) (erased (Mem A ys x) m) -> (erased (Mem A zs x) r))
+    (subterm erased (LApp A xs ys zs) a) (erased (Elem A x ys) m) -> (erased (Elem A x zs) r))
   (let-match erased a (LAppCons _ y xs1 _ zs1 a1) ((LAppNil _ _) m))
-  (MemThere A x y zs1 (mem-right A x xs1 ys zs1 a1 m)))
+  (ElThere A x y zs1 (mem-right A x xs1 ys zs1 a1 m)))
 
 (def-fns _ $ (erased mem-ins : (erased Type A) (erased A x y) (erased (List A) ys zs)
-    (subterm erased (Ins A y ys zs) p) (erased (Or (Eq A x y) (Mem A ys x)) m) -> (erased (Mem A zs x) r))
+    (subterm erased (Ins A y ys zs) p) (erased (Or (Eq A x y) (Elem A x ys)) m) -> (erased (Elem A x zs) r))
   (let-match erased p (InsT _ _ z ys1 zs1 p1)
     ((InsH _ _ _)
-      (let-match erased m (OrR _ _ m1) ((OrL _ _ e) (let-match erased e (Refl _ _)) (MemHere A x ys)))
-      (MemThere A x y ys m1)))
-  (let-match erased m (OrR _ _ m1) ((OrL _ _ e) (MemThere A x z zs1 (mem-ins A x y ys1 zs1 p1 (OrL _ _ e)))))
-  (let-match erased m1 (MemThere _ _ _ _ m2) ((MemHere _ _ _) (MemHere A x zs1)))
-  (MemThere A x z zs1 (mem-ins A x y ys1 zs1 p1 (OrR _ _ m2))))
+      (let-match erased m (OrR _ _ m1) ((OrL _ _ e) (let-match erased e (Refl _ _)) (ElHere A x ys)))
+      (ElThere A x y ys m1)))
+  (let-match erased m (OrR _ _ m1) ((OrL _ _ e) (ElThere A x z zs1 (mem-ins A x y ys1 zs1 p1 (OrL _ _ e)))))
+  (let-match erased m1 (ElThere _ _ _ _ m2) ((ElHere _ _ _) (ElHere A x zs1)))
+  (ElThere A x z zs1 (mem-ins A x y ys1 zs1 p1 (OrR _ _ m2))))
 
 (def-fns _ $ (erased lex-cmp : (erased (Point) p q) -> (erased (Cmp (Point) LexLt p q) c))
   (let-match erased p (MkPoint px py))
@@ -122,9 +117,9 @@
     (absurd (ApLt _ _ _ _ l) (lex-irrefl p l))
     (absurd (ApGt _ _ _ _ l) (lex-irrefl p l))))
 
-(def-fns _ $ (erased nth-mem : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A x) (subterm erased (Nth A xs i x) n) -> (erased (Mem A xs x) m))
-  (let-match erased n (NthThere _ y ys k1 _ n1) ((NthHere _ _ ys) (MemHere A x ys)))
-  (MemThere A x y ys (nth-mem A ys k1 x n1)))
+(def-fns _ $ (erased nth-mem : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A x) (subterm erased (Nth A xs i x) n) -> (erased (Elem A x xs) m))
+  (let-match erased n (NthThere _ y ys k1 _ n1) ((NthHere _ _ ys) (ElHere A x ys)))
+  (ElThere A x y ys (nth-mem A ys k1 x n1)))
 
 (def-fns _ $ (erased pw-nth : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased (List A) xs) (erased (Nat) i j) (erased A x y)
     (subterm erased (PW A R xs) p) (erased (Nth A xs i x) nx) (erased (Nth A xs j y) ny) (erased (Lt i j) l) -> (erased (R x y) r))
@@ -493,7 +488,7 @@
   (many NcNo : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) n) (erased (Edge) e) (erased (Point) a b) (erased (Nat) i j)
       (erased (Nrm pts e a b i j) nm) (erased (Apart (Nat) Lt i k) d) -> (NewC (MkLCtx pts k n) e))
   (many NcYes : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) n) (erased (Edge) e) (erased (Point) a b) (erased (Nat) j)
-      (erased (Nrm pts e a b k j) nm) (erased (Mem (Edge) n (MkEdge a b)) mb) -> (NewC (MkLCtx pts k n) e)))
+      (erased (Nrm pts e a b k j) nm) (erased (Elem (Edge) (MkEdge a b) n) mb) -> (NewC (MkLCtx pts k n) e)))
 
 (def-fns _ $ (erased newc-lift : (erased (List (Point)) pts) (erased (Nat) k) (erased (Edge) x) (erased (List (Edge)) n1 n2 es2)
     (erased (Ins (Edge) x n1 n2) ins) (subterm erased (AllR (LCtx) (Edge) NewC (MkLCtx pts k n1) es2) h) ->
@@ -557,11 +552,11 @@
   (values (Cons _ (Succ i) lz1) (LbCons pts a b i na zs1 lz1 lab1) (LAppCons _ (Succ i) lx1 ly lz1 a2)))
 
 (def-fns _ $ (erased labels-mem : (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp) (erased (List (Edge)) l) (erased (List (Nat)) ls)
-    (erased (Point) a b) (erased (Nat) i) (subterm erased (Labels pts l ls) lab) (erased (Mem (Edge) l (MkEdge a b)) m) (erased (Nth (Point) pts i a) na) ->
+    (erased (Point) a b) (erased (Nat) i) (subterm erased (Labels pts l ls) lab) (erased (Elem (Edge) (MkEdge a b) l) m) (erased (Nth (Point) pts i a) na) ->
     (erased (In (Succ i) ls) r))
   (let-match erased lab (LbCons _ _ _ u1 na1 l1 ls1 lab1) (absurd (LbNil _) m))
-  (let-match erased m (MemThere _ _ _ _ m1)
-    ((MemHere _ _ _) (let-match erased (nth-inj pts i u1 a sp na na1) (Refl _ _)) (InHere (Succ i) ls1)))
+  (let-match erased m (ElThere _ _ _ _ m1)
+    ((ElHere _ _ _) (let-match erased (nth-inj pts i u1 a sp na na1) (Refl _ _)) (InHere (Succ i) ls1)))
   (InThere (Succ i) (Succ u1) ls1 (labels-mem pts sp l1 ls1 a b i lab1 m1 na)))
 
 (def-fns _ $ (erased labels-act : (erased (List (Edge)) es) (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) l)
@@ -586,7 +581,7 @@
   (match erased bl _
     (absurd (BelowL _ _ _ _ lt _) (lex-irrefl a lt))
     (absurd (BelowR _ _ _ _ lt _) (lex-irrefl a lt))
-    (absurd (BelowS _ _ _ h) (collinear-left a b b (coll-rot b a b (coll-same b a)) h))))
+    (absurd (BelowS _ _ _ h) (left-collinear a b b h (coll-rot b a b (coll-same b a))))))
 
 (def-fns _ $ (erased apart-succ : (erased (Nat) i j) (erased (Apart (Nat) Lt i j) d) -> (erased (Apart (Nat) Lt (Succ i) (Succ j)) r))
   (match erased d _
@@ -648,7 +643,7 @@
   (many LvAfter : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) l) (erased (Edge) e) (erased (Point) a b) (erased (Nat) i j)
       (erased (Nrm pts e a b i j) nm) (erased (Lt j k) lt) -> (Live (MkLCtx pts k l) e))
   (many LvIn : (erased (List (Point)) pts) (erased (Nat) k) (erased (List (Edge)) l) (erased (Edge) e) (erased (Point) a b) (erased (Nat) i j)
-      (erased (Nrm pts e a b i j) nm) (erased (Lt i k) lik) (erased (Lt k (Succ j)) lkj) (erased (Mem (Edge) l (MkEdge a b)) m)
+      (erased (Nrm pts e a b i j) nm) (erased (Lt i k) lik) (erased (Lt k (Succ j)) lkj) (erased (Elem (Edge) (MkEdge a b) l) m)
       -> (Live (MkLCtx pts k l) e)))
 
 (def-adts $ (DCtx : -> Type)
@@ -915,24 +910,24 @@
 
 (def-adts $ (Ends : ((List (Point)) pts) ((Edge) e) -> Type)
   enum
-  (many MkEnds : (erased (List (Point)) pts) (erased (Point) u v) (erased (Mem (Point) pts u) mu) (erased (Mem (Point) pts v) mv)
+  (many MkEnds : (erased (List (Point)) pts) (erased (Point) u v) (erased (Elem (Point) u pts) mu) (erased (Elem (Point) v pts) mv)
       -> (Ends pts (MkEdge u v))))
 
 ; s2 is s with p added, unless p was in it.
 (def-adts $ (Ext : ((Point) p) ((List (Point)) s) ((List (Point)) s2) -> Type)
   enum
-  (many ExtSame : (erased (Point) p) (erased (List (Point)) s) (erased (Mem (Point) s p) m) -> (Ext p s s))
+  (many ExtSame : (erased (Point) p) (erased (List (Point)) s) (erased (Elem (Point) p s) m) -> (Ext p s s))
   (many ExtIns : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ins (Point) p s s2) i) -> (Ext p s s2)))
 
 (def-fns _ $ (erased allr-ext : (erased Type A) (erased (TyCtor (A x) ((Point) y) -> Type) R) (erased A c) (erased (Point) p) (erased (List (Point)) s s2)
     (erased (AllR A (Point) R c s) h) (erased (R c p) hp) (erased (Ext p s s2) x) -> (erased (AllR A (Point) R c s2) r))
   (match erased x _ ((ExtSame _ _ _) h) ((ExtIns _ _ _ i) (allr-ins _ _ _ c p s s2 i hp h))))
 
-(def-fns _ $ (erased mem-ext : (erased (Point) p q) (erased (List (Point)) s s2) (erased (Mem (Point) s q) m) (erased (Ext p s s2) x) ->
-    (erased (Mem (Point) s2 q) r))
+(def-fns _ $ (erased mem-ext : (erased (Point) p q) (erased (List (Point)) s s2) (erased (Elem (Point) q s) m) (erased (Ext p s s2) x) ->
+    (erased (Elem (Point) q s2) r))
   (match erased x _ ((ExtSame _ _ _) m) ((ExtIns _ _ _ i) (mem-ins _ q p s s2 i (OrR _ _ m)))))
 
-(def-fns _ $ (erased mem-ext-new : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ext p s s2) x) -> (erased (Mem (Point) s2 p) r))
+(def-fns _ $ (erased mem-ext-new : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ext p s s2) x) -> (erased (Elem (Point) p s2) r))
   (match erased x _ ((ExtSame _ _ m) m) ((ExtIns _ _ _ i) (mem-ins _ p p s s2 i (OrL _ _ (Refl _ p))))))
 
 (def-fns _ $ (erased ends-lift : (erased (Point) p) (erased (List (Point)) s s2) (erased (Ext p s s2) x) (erased (List (Edge)) es2)
@@ -952,11 +947,11 @@
     ((PWNil _ _) (values (Cons _ p (Nil _)) (ExtIns p (Nil _) _ (InsH _ p (Nil _))) (PWCons _ _ p (Nil _) (ARNil _ _ _ p) (PWNil _ _)))))
   (let-match erased (lex-cmp p h) (CGt _ _ _ _ l)
     ((CLt _ _ _ _ l) (values (Cons _ p s) (ExtIns p s _ (InsH _ p s)) (PWCons _ _ p s (ARCons _ _ _ p h s1 l (allr-lex p h s1 l hh)) pw)))
-    ((CEq _ _ _) (values s (ExtSame p s (MemHere _ p s1)) pw)))
+    ((CEq _ _ _) (values s (ExtSame p s (ElHere _ p s1)) pw)))
   (let ((erased s3) (erased x3) (erased pw3)) (lins p s1 pw1))
   (values (Cons _ h s3)
     (match erased x3 (((Ext p s (Cons (Point) h s3)) x))
-      ((ExtSame _ _ m) (ExtSame p s (MemThere _ p h s1 m)))
+      ((ExtSame _ _ m) (ExtSame p s (ElThere _ p h s1 m)))
       ((ExtIns _ _ _ i) (ExtIns p s _ (InsT _ p h s1 s3 i))))
     (PWCons _ _ h s3 (allr-ext _ _ h p s1 s3 hh l x3) pw3)))
 
@@ -976,9 +971,9 @@
     (ARCons _ _ _ s2 e r (MkEnds s2 u v (mem-ext-new u s1 s2 x2) (mem-ext u v s1 s2 (mem-ext-new v s0 s1 x1) x2))
       (ends-lift u s1 s2 x2 r (ends-lift v s0 s1 x1 r en0)))))
 
-(def-fns _ $ (erased mem-nth : (erased Type A) (erased (List A) xs) (erased A x) (subterm erased (Mem A xs x) m) ->
+(def-fns _ $ (erased mem-nth : (erased Type A) (erased (List A) xs) (erased A x) (subterm erased (Elem A x xs) m) ->
     (erased (Nat) i) (erased (Nth A xs i x) n))
-  (let-match erased m (MemThere _ _ y xs1 m1) ((MemHere _ _ xs1) (values (Zero) (NthHere A x xs1))))
+  (let-match erased m (ElThere _ _ y xs1 m1) ((ElHere _ _ xs1) (values (Zero) (NthHere A x xs1))))
   (let ((erased i) (erased n)) (mem-nth A xs1 x m1))
   (values (Succ i) (NthThere A y xs1 i x n)))
 

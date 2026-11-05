@@ -1,11 +1,11 @@
 (let ((many cfs) (erased cl)) (concat-c css))
 
-(def-fns _ $ (erased concat-fn : (erased (List (List (Config))) ks) (erased (List (Config)) a b) (subterm erased (ConcatL ks a) p)
-    (erased (ConcatL ks b) q) -> (erased (Eq (List (Config)) a b) e))
+(def-fns _ $ (erased concat-fn : (erased (List (List (Config))) ks) (erased (List (Config)) a b) (subterm erased (Flatten (Config) ks a) p)
+    (erased (Flatten (Config) ks b) q) -> (erased (Eq (List (Config)) a b) e))
   (match erased p _
-    ((ConcatNil) (let-match erased q (ConcatNil)) (Refl _ a))
-    ((ConcatSkip ks1 _ p1) (let-match erased q (ConcatSkip _ _ q1)) (let-match erased (concat-fn ks1 _ _ p1 q1) (Refl _ _)) (Refl _ a))
-    ((ConcatCons _ cs cfs1 ks1 p1) (let-match erased q (ConcatCons _ _ cfs2 _ q1)) (let-match erased (concat-fn (Cons _ cs ks1) cfs1 cfs2 p1 q1) (Refl _ _))
+    ((FNil _) (let-match erased q (FNil _)) (Refl _ a))
+    ((FSkip _ ks1 _ p1) (let-match erased q (FSkip _ _ _ q1)) (let-match erased (concat-fn ks1 _ _ p1 q1) (Refl _ _)) (Refl _ a))
+    ((FCons _ _ cs cfs1 ks1 p1) (let-match erased q (FCons _ _ _ cfs2 _ q1)) (let-match erased (concat-fn (Cons _ cs ks1) cfs1 cfs2 p1 q1) (Refl _ _))
       (Refl _ a))))
 
 (def-fns _ $ (many cfs-run : -> (many (List (Config)) c) (many (ErasedMaybe (Eq (List (Config)) c cfs)) e))

@@ -40,21 +40,18 @@
       (let-match erased k2 (CNo _ _ _ _ _ k4) (absurd (CYes _ _ _ _ f2 _) (fit-bad os r f2 b)))
       (count-fn os rs1 c1 c2 k3 k4))))
 
-(def-fns _ $ (erased length-fn2 : (erased (List (Sub)) r) (erased (Nat) a b) (erased (Length (Sub) r a) p) (erased (Length (Sub) r b) q) -> (erased (Eq (Nat) a b) e))
-  (length-fn _ r a b p q))
-
 (def-fns _ $ (erased of-size-fn : (erased (Nat) m) (erased (List (List (Sub))) rs qs qs2) (subterm erased (OfSize m rs qs) p) (erased (OfSize m rs qs2) q)
     -> (erased (Eq (List (List (Sub))) qs qs2) e))
   (match erased p _
     ((OSNil _) (let-match erased q (OSNil _)) (Refl _ qs))
     ((OSIn _ r rs1 qs1 l p1)
       (let-match erased q (OSIn _ _ _ qs3 _ q1)
-        (absurd (OSOut _ l2 _ _ _ pl2 ne _) (let-match erased (length-fn2 r m l2 l pl2) (Refl _ _)) (apart-irrefl m ne)))
+        (absurd (OSOut _ l2 _ _ _ pl2 ne _) (let-match erased (length-fn _ r m l2 l pl2) (Refl _ _)) (apart-irrefl m ne)))
       (let-match erased (of-size-fn m rs1 qs1 qs3 p1 q1) (Refl _ _))
       (Refl _ qs))
     ((OSOut _ l r rs1 _ pl ne p1)
       (let-match erased q (OSOut _ _ _ _ _ _ _ q1)
-        (absurd (OSIn _ _ _ _ l2 _) (let-match erased (length-fn2 r l m pl l2) (Refl _ _)) (apart-irrefl l ne)))
+        (absurd (OSIn _ _ _ _ l2 _) (let-match erased (length-fn _ r l m pl l2) (Refl _ _)) (apart-irrefl l ne)))
       (of-size-fn m rs1 qs qs2 p1 q1))))
 
 (def-fns _ $ (erased fans-fn : (erased (List (Nat)) e f ks fs fs2) (erased (Nat) z m) (subterm erased (FansAt e f ks z m fs) p) (erased (FansAt e f ks z m fs2) q)

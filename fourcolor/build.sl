@@ -51,7 +51,7 @@
   (MkState tw tw o e nd nd nd s ns ns (Nil _) pm l2e l2 l2 l2 (DartsCons o ns N (Nil _) (DartsNil)) (DistCons o N (NotInNil o) (DistNil))
     (ChainOne e nd s ns o o (MkLink e nd s o o o z n1 e1 w))
     (RespCons nd _ _ z z n0 (RespCons nd _ _ o o n1 (RespNil nd)))
-    (ALCons z tw _ (LtZ o) (ALCons o tw _ (LtS z o (LtZ z)) (ALNil tw)))
+    (UnderCons z tw _ (LtZ o) (UnderCons o tw _ (LtS z o (LtZ z)) (UnderNil tw)))
     (GLCons nd ns o o _ n1 (repeat-allis k o ns rk) (GLNil nd))
     (GFlatCons o ns N ns _ (lapp-nil _ ns) (GFlatNil))
     (RepsCons nd nd _ z z z n0 (NRHere nd z) (RepsCons nd nd _ o o o n1 (NRHere nd o) (RepsNil nd nd tw)))))

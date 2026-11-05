@@ -10,12 +10,6 @@
   (let ((erased l) (erased pa)) (in-label lab p ls a rp ia))
   (simple-inj lab p ls a b l rp dl ia ib pa (path-label f lab (Nil _) xs a b l pth rf pa)))
 
-(def-fns _ $ (erased path-reset : (erased (List (Nat)) p s s2 xs) (erased (Nat) a b) (subterm erased (Path p s a b xs) w) (erased (Disj xs s2) dj)
-    -> (erased (Path p s2 a b xs) r))
-  (let-match erased w (PathStep _ _ xs1 _ z _ pz _ w1) ((PathHere _ _ _) (PathHere p s2 a)))
-  (let-match erased dj (DisjCons _ _ _ out dj1))
-  (PathStep p s2 xs1 a z b pz out (path-reset p s s2 xs1 z b w1 dj1)))
-
 (def-fns _ $ (erased order-step : (erased (List (Nat)) p) (erased (Nat) x y k) (erased (Order p x k) o) (erased (Nth (Nat) p x y) py) -> (erased (Order p y k) r))
   (let-match erased o (MkOrder _ xs _ y1 _ px w l))
   (let-match erased (nth-fn _ p x y y1 py px) (Refl _ _))
@@ -25,7 +19,7 @@
   (let-match erased out (NotInCons _ _ _ nyx _))
   (let-match erased l (LengthCons _ _ _ j l1))
   (let ((erased xs2) (erased sn) (erased w2))
-    (path-snoc p (Cons (Nat) y (Nil (Nat))) xs1 z x y (path-reset p _ _ xs1 z x w1 (notin-disj1 y xs1 oy)) px
+    (path-snoc p (Cons (Nat) y (Nil (Nat))) xs1 z x y (path-reavoid p _ _ xs1 z x w1 (notin-disj1 y xs1 oy)) px
       (NotInCons x y (Nil (Nat)) (apart-sym y x nyx) (NotInNil x))))
   (MkOrder p xs2 y z (Succ j) pz w2 (snoc-length _ xs1 xs2 x j sn l1)))
 
@@ -192,10 +186,10 @@
   (let ((erased amt)) (mul-distr (Succ m) t d two m2 t2 d2 ad pm2 pt2 pd2))
   (let ((erased a2d)) (mul-distr two one three d d2 d d3 a21 (mul-comm d two d2 pd2) (MulSucc _ _ _ _ (MulZero d) (AddZero d)) (mul-comm d three d3 pd3)))
   (let ((erased v) (erased pv)) (add-ex m2 w))
-  (let ((erased d2b) (erased pv1) (erased pv2)) (add-assoc-inv m2 t2 f6b w v pz1 pv))
+  (let ((erased d2b) (erased pv1) (erased pv2)) (add-assoc-back m2 t2 f6b w v pv pz1))
   (let-match erased (add-fn m2 t2 d2b d2 pv1 amt) (Refl _ _))
   (let ((erased u) (erased pu1) (erased pu2)) (add-reassoc d2 d six d3 w a2d pw1))
-  (let ((erased x) (erased px1) (erased px2)) (add-assoc-inv m2 d2 u w v pu2 pv))
+  (let ((erased x) (erased px1) (erased px2)) (add-assoc-back m2 d2 u w v pv pu2))
   (let ((erased y) (erased py1) (erased py2)) (add-reassoc d2 m2 u x v (add-comm m2 d2 x px1) px2))
   (let-match erased (add-cancel d2 f6b y v pv2 py2) (Refl _ _))
   (values f6 g6 f6b m2 u pf6 (mul-assoc gen two six g2 g6 12 (double-mul gen g2 dg) pg6 m26) pf1 pm2 pu1 py1))

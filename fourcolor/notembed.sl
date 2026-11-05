@@ -7,21 +7,14 @@
   (let-match erased p (IECons _ cc1 ie1 y z pz p1) ((IENil _) (values (UnderNil d) (UnderNil d))))
   (let ((erased u1) (erased u2)) (ie-under d e cc1 ie1 p1 le ue))
   (let ((erased ly)) (nth-lt-length _ e y d z pz le))
-  (values (UnderCons cc1 y d ly u1) (UnderCons (Cons _ z ie1) y d ly (UnderCons ie1 z d (under-nth e y z d ue pz) u2))))
+  (values (UnderCons y d cc1 ly u1) (UnderCons y d (Cons _ z ie1) ly (UnderCons z d ie1 (alllt-nth e d y z ue pz) u2))))
 
 (def-fns _ $ (erased inserte-exists : (erased (List (Nat)) e) (erased (Nat) d) (subterm erased (List (Nat)) cc) (erased (Under cc d) u) (erased (Length (Nat) e d) le)
     -> (erased (List (Nat)) ins) (erased (InsertE e cc ins) r))
-  (let-match erased u (UnderCons cc1 y _ ly u1) ((UnderNil _) (values (Nil _) (IENil e))))
+  (let-match erased u (UnderCons y _ cc1 ly u1) ((UnderNil _) (values (Nil _) (IENil e))))
   (let ((erased z) (erased pz)) (nth-exists _ e d y le ly))
   (let ((erased ins) (erased r)) (inserte-exists e d cc1 u1 le))
   (values (Cons _ y (Cons _ z ins)) (IECons e cc1 ins y z pz r)))
-
-(def-fns _ $ (erased reach-at : (erased (List (Nat)) f xs ys) (erased (Nat) i x y) (subterm erased (Reach f xs ys) rc) (erased (Nth (Nat) xs i x) px)
-    (erased (Nth (Nat) ys i y) py) -> (erased (SomePath f (Nil (Nat)) x y) r))
-  (let-match erased rc (ReachCons _ xs1 ys1 _ _ w rc1) (absurd (ReachNil _) px))
-  (match erased px _
-    ((NthHere _ _ _) (let-match erased py (NthHere _ _ _)) w)
-    ((NthThere _ _ _ i1 _ px1) (let-match erased py (NthThere _ _ _ _ _ py1)) (reach-at f xs1 ys1 i1 x y rc1 px1 py1))))
 
 (def-fns _ $ (erased reach-flip : (erased (Nat) d) (erased (List (Nat)) f fi xs ys) (erased (HPerm d f fi) pf) (erased (Under xs d) u)
     (subterm erased (Reach f xs ys) rc) -> (erased (Reach f ys xs) r))
@@ -34,7 +27,7 @@
   (let-match erased ra (RespCons _ xs1 A1 x u pu ra1) ((RespNil _) (let-match erased ry (RespNil _)) (let-match erased rb (RespNil _)) (ReachNil fm)))
   (let-match erased ry (RespCons _ _ ys1 _ y py ry1))
   (let-match erased rb (RespCons _ _ B1 _ v pv rb1))
-  (ReachCons fm A1 B1 u v (reach-at fm h1 h1f x u v rc pu (respects-at h1 f h1f x y v rf py pv)) (reach-step fm f h1 h1f xs1 ys1 A1 B1 ra1 ry1 rb1 rf rc)))
+  (ReachCons fm A1 B1 u v (reach-nth x u v fm h1 h1f rc pu (respects-at h1 f h1f x y v rf py pv)) (reach-step fm f h1 h1f xs1 ys1 A1 B1 ra1 ry1 rb1 rf rc)))
 
 (def-fns _ $ (erased reach-unsnoc : (erased (List (Nat)) f X0 X Y0 Y) (erased (Nat) x y) (subterm erased (Snoc (Nat) X0 x X) sx) (erased (Snoc (Nat) Y0 y Y) sy)
     (erased (Reach f X Y) rc) -> (erased (Reach f X0 Y0) r0) (erased (SomePath f (Nil (Nat)) x y) w))
@@ -56,12 +49,6 @@
   (let-match erased ry (RespCons _ xs1 ys1 x y py ry1) ((RespNil _) (let-match erased rl (RespNil _)) (RespNil k)))
   (let-match erased rl (RespCons _ _ L1 _ v pv rl1))
   (RespCons k xs1 L1 x v (respects-at k f k x y v rf py pv) (resp-face-back k f xs1 ys1 L1 ry1 rl1 rf)))
-
-(def-fns _ $ (erased resp-comp : (erased (List (Nat)) h g hg xs ys zs) (erased (Respects h g hg) rh) (subterm erased (Respects g xs ys) rg)
-    (erased (Respects hg xs zs) rz) -> (erased (Respects h ys zs) r))
-  (let-match erased rg (RespCons _ xs1 ys1 u x pu rg1) ((RespNil _) (let-match erased rz (RespNil _)) (RespNil h)))
-  (let-match erased rz (RespCons _ _ zs1 _ y py rz1))
-  (RespCons h ys1 zs1 x y (respects-nth h g hg u x y rh pu py) (resp-comp h g hg xs1 ys1 zs1 rh rg1 rz1)))
 
 (def-fns _ $ (erased fe-step : (erased (Nat) d x z) (erased (List (Nat)) e n f fe) (erased (Respects f e fe) rfe) (erased (HPerm d n fe) pm)
     (erased (Length (Nat) e d) le) (erased (Nth (Nat) n z x) pz) -> (erased (Nat) ex) (erased (Nth (Nat) e x ex) pex) (erased (Nth (Nat) f ex z) r))
@@ -122,7 +109,7 @@
   (let ((erased x) (erased ix) (erased px)) (respects-in h1 ie ins y rie iy))
   (let ((erased oe)) (ie-off-erc dc dm x ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc en ok iec uc dj le re rv ix))
   (let ((erased j) (erased pj)) (in-nth x ie ix))
-  (let-match erased (ieither-at rc embd idc x cv (iota-in dc x idc ioc (under-nth ie j x dc uie pj))) (OrR _ _ ie2)
+  (let-match erased (ieither-at rc embd idc x cv (iota-in dc x idc ioc (alllt-nth ie dc j x uie pj))) (OrR _ _ ie2)
     (absurd (OrL _ _ ir) (in-notin x rc ir (disj-notin x ie rc dj ix))))
   (let ((erased u) (erased pu)) (in-nth x embd ie2))
   (let ((erased ou))
@@ -133,7 +120,7 @@
         (let-match erased (nth-fn _ embd u x x2 pu p2) (Refl _ _))
         (in-notin x erc i2 oe))))
   (let ((erased phu)) (respects-at h1 embd hd u x y rh pu px))
-  (match erased (parts-at hd hr bd ids y pp (iota-in dm y ids io (under-nth h1 x y dm uh px))) _
+  (match erased (parts-at hd hr bd ids y pp (iota-in dm y ids io (alllt-nth h1 dm x y uh px))) _
     ((PtDisk _ _ _ _ _ _ _ outr) outr)
     (absurd (PtRing _ _ _ _ xd _ px2 pin _) (let-match erased (distinct-nth hd xd u y dhd px2 phu) (Refl _ _)) (in-notin u bd pin ou))
     (absurd (PtRest _ _ _ _ _ _ outd) (in-notin y hd (nth-in hd u y phu) outd))))
@@ -144,7 +131,7 @@
     (erased (Under ie dc) uie) (erased (Disj ie rc) dj) (erased (Length (Nat) ec dc) le) (erased (Respects ec rc erc0) re)
     (erased (RevApp (Nat) erc0 (Nil (Nat)) erc) rv) (erased (Respects h1 ie ins) rie) (erased (Under h1 dm) uh) (erased (Iota dc idc) ioc)
     (erased (InEither rc embd idc) cv) (erased (Respects embd bd erc) reb) (erased (Respects h1 embd hd) rh)
-    (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (subterm erased (List (Nat)) zs) (erased (WSub zs ins) sb) -> (erased (Disj zs hr) r))
+    (erased (Patch dm dd dr em nm fm ed nd fd er nr fr hd hr bd br) pt) (subterm erased (List (Nat)) zs) (erased (HSub zs ins) sb) -> (erased (Disj zs hr) r))
   (let-match erased sb (HsbCons y zs1 _ iy sb1) ((HsbNil _) (DisjNil hr)))
   (DisjCons y zs1 hr
     (ins-off dc dm dd dr y ec nc fc ksc rc em nm fm ksm as hl cc ie erc0 erc h1 ins idc ed nd fd er nr fr hd hr bd br embd en ok iec uc uie dj le re rv rie uh ioc
@@ -239,7 +226,7 @@
       (erased (Fn F (erased (Nat) d w x) (erased (List (Nat)) e n f ks cx ins Bs) (erased (BirkhoffChecks) bks) (erased (Pbpp d e n f) pb)
           (erased (NoColoring e f) ncol) (erased (Connected d e n f) cn) (erased (Geo d e n f ks) g) (erased (Simple n ins) sp) (erased (InsertE e cx ins) ie)
           (erased (Length (Nat) cx 4) l) (erased (Triad e f ins x) t) (erased (Ring e f w Bs) rg) (erased (Proper e (Cons (Nat) w Bs)) pr)
-          (erased (WSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb) (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt)
+          (erased (HSub Bs ins) sb) (erased (Length (Nat) Bs 4) lb) (erased (NonTrivial d e n f (Cons (Nat) w Bs) (Zero)) nt)
           -> (erased (ContractOut B d e n f cx) r)) tf)
       -> (TriadFive)))
 
@@ -361,7 +348,7 @@
           (co-lift Bt B dm em nm fm ccr (tff dm w x em nm fm ksm ccr ins5 Bs bks pb ncol conn g spv ie5 l t rg pr sb lb nt) q3))))
     (let-match erased co (COContract _ _ _ _ _ _ ms ct) ((COReduce _ _ _ _ _ _ rd) rd))
     (let ((erased dj0)) (disj-sym rc ie off ie (sub-refl ie)))
-    (let ((erased sd)) (ins-sides dc dm (Zero) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins (Nil _) en ok fu fa io el lh iec rcc iem dj0 uc h1 (JoinNil h1)
+    (let ((erased sd)) (ins-sides dc dm (Zero) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins (Nil _) en ok fu fa io el lh iec rcc iem dj0 uc h1 (LAppNil _ h1)
       (LengthNil _)))
     (let ((erased Px) (erased Hx) (erased q) (erased rpx) (erased rhx) (erased rq1) (erased rq2)) (morph-lists h1 ec em ids me))
     (let-match erased (respects-fn ec ids Px ec rpx (respects-id-right dc ids ec io le)) (Refl _ _))
@@ -373,7 +360,7 @@
     (let-match erased pt2 (MkPatch _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bG bGr _ _ _ _ _ _ _ _ _ _ _ uhr _ _ _ _ rbd rbr rvp _
       _ _ _ _))
     (let ((erased yr) (erased ry) (erased rhe0))
-      (respects-revapp h1 erc (Nil _) erc0 bG (Nil _) (resp-comp h1 embd hd bd erc bG rh reb rbd) (RespNil h1) (revapp-flip (Nat) erc0 (Nil _) erc erc0 rv (RANil _ erc0))))
+      (respects-revapp h1 erc (Nil _) erc0 bG (Nil _) (respects-assoc-inv bd embd h1 erc hd bG reb rbd rh) (RespNil h1) (revapp-flip (Nat) erc0 (Nil _) erc erc0 rv (RANil _ erc0))))
     (let-match erased (revapp-fn (Nat) bG (Nil _) yr bGr ry rvp) (Refl _ _))
     (let ((erased Hrs) (erased rhrs)) (respects-exists h1 rs dc (respects-under-out fc erc0 rs dc rfs (perm-under dc fc fi pmf)) lh))
     (let ((erased rch)) (reach-step fm fc h1 h1f erc0 rs bGr Hrs rhe0 rfs rhrs rf1 rcf))

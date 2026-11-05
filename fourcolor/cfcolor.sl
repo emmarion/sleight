@@ -240,7 +240,7 @@
   (apart-sym kv ku (differ-nth ke ks u kv ku edge pl pu)))
 
 (def-fns _ $ (erased trace-nz : (erased (Nat) d u y ku ky k0) (erased (List (Nat)) e n f ks p rcp) (erased (Col) x c0) (erased (List (Col)) csp et)
-    (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) col) (subterm erased (RPath n u p y) rp) (erased (Nth (Nat) ks u ku) pu)
+    (erased (Hypermap d e n f) h) (erased (FourColoring e f ks) col) (subterm erased (CRPath n u p y) rp) (erased (Nth (Nat) ks u ku) pu)
     (erased (NCol ku x) px) (erased (Respects ks p rcp) rr) (erased (NCols rcp csp) nc) (erased (CTr c0 x csp et) ct) (erased (NCol k0 c0) p0)
     (erased (Nth (Nat) ks y ky) py) (erased (Apart (Nat) Lt ky k0) last) -> (erased (AllNZ et) r))
   (match erased rp _
@@ -313,13 +313,6 @@
 (def-fns _ $ (erased addc-ii : (erased (Col) c) -> (erased (AddC c c (C0)) r))
   (match erased c _ ((C0) (Add00)) ((C1) (Add11)) ((C2) (Add22)) ((C3) (Add33))))
 
-(def-fns _ $ (erased addc-swap : (erased (Col) a b c ab abc ac) (erased (AddC a b ab) p) (erased (AddC ab c abc) q) (erased (AddC a c ac) s)
-    -> (erased (AddC ac b abc) r))
-  (let ((erased bc) (erased pbc)) (addc-c b c))
-  (let ((erased t) (erased pt)) (addc-c ac b))
-  (let-match erased (addc-same a bc abc t (addc-assoc a b c ab bc abc p q pbc) (addc-assoc a c b ac bc t s pt (addc-comm b c bc pbc))) (Refl _ _))
-  pt)
-
 (def-fns _ $ (erased addc-link : (erased (Col) a x z e1 e2 ee az) (erased (AddC a x e1) p) (erased (AddC x z e2) q) (erased (AddC e1 e2 ee) s)
     (erased (AddC a z az) t) -> (erased (Eq (Col) ee az) r))
   (addc-same a z ee az (addc-assoc a x e2 e1 z ee p s (addc-cancel x e2 z q)) t))
@@ -359,7 +352,7 @@
       (let-match erased nc2 (NCsCons kz _ rc3 _ pz1 nc3))
       (let ((erased az) (erased paz)) (addc-c a z))
       (let-match erased (addc-link a x z e1 e2 ee az pax pxz pee paz) (Refl _ _))
-      (let ((erased czh)) (addc-swap a z g ee h c paz ph pc))
+      (let ((erased czh)) (addc-mid a g c z ee h pc paz ph))
       (let ((erased ks3) (erased col3) (erased rr3)) (ecpN-color (Succ (Succ (Succ (Succ d)))) kc kz e2m n2 f2m r2m e3 f3 r3 ks2 _ _ pm2 stn2 col2 rr2
         (R3Four ka kc kx kz rc3) (nz-apart kc kz c z h pkc pz1 czh nh)))
       (MkCpCol (Cons (Step) (SH) cp) d6 e3 f3 r3 ks3 _ (Cons (Col) a (Cons (Col) c (Cons (Col) z cs3))) _ (CmH d cp e f r e1m f1m r1m e2m f2m r2m e3 f3 r3 cm stu stn stn2)
@@ -754,7 +747,7 @@
 
 (def-fns _ $ (erased npl-ex : (erased (Perm) g) (erased (List (Nat)) ks) (erased (IsPerm g) ip) (subterm erased (Under ks 4) u)
     -> (erased (List (Nat)) ks2) (erased (NPermL g ks ks2) r))
-  (let-match erased u (UnderCons ks1 k _ lk u1) ((UnderNil _) (values (Nil (Nat)) (NPLNil g))))
+  (let-match erased u (UnderCons k _ ks1 lk u1) ((UnderNil _) (values (Nil (Nat)) (NPLNil g))))
   (let ((erased c) (erased pc)) (ncol-ex k lk))
   (let ((erased c2) (erased qc)) (permc-ex g c ip))
   (let ((erased k2) (erased _) (erased pc2)) (ncol-num c2))
@@ -792,7 +785,7 @@
   (let-match erased pk (MkNPerm _ _ _ _ c2 _ _ pc2))
   (let ((erased k3) (erased lk) (erased pc3)) (ncol-num c2))
   (let-match erased (ncol-inj k2 k3 c2 pc2 pc3) (Refl _ _))
-  (UnderCons ks3 k2 4 lk (under-perm g ks1 ks3 np1)))
+  (UnderCons k2 4 ks3 lk (under-perm g ks1 ks3 np1)))
 
 (def-fns _ $ (erased ncols-perm : (erased (Perm) g) (erased (List (Nat)) ns ns2) (erased (List (Col)) cs) (subterm erased (NCols ns cs) nc) (erased (NPermL g ns ns2) np)
     -> (erased (List (Col)) cs2) (erased (NCols ns2 cs2) nc2) (erased (PermT g cs cs2) pt))

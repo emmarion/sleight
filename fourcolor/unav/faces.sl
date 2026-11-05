@@ -39,7 +39,7 @@
   (let-match erased o (MkOrder _ xs _ y1 k py w l))
   (ItS f k y y1 y py (path-iter f _ xs y1 y k w l)))
 
-(def-fns _ $ (erased order-next : (erased (Nat) d y y1 a) (erased (List (Nat)) f fi) (erased (Perm d f fi) pm) (erased (Order f y a) o)
+(def-fns _ $ (erased order-next : (erased (Nat) d y y1 a) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pm) (erased (Order f y a) o)
     (erased (Nth (Nat) f y y1) py) -> (erased (Order f y1 a) r))
   (let-match erased o (MkOrder _ _ _ y2 _ py2 w l))
   (let-match erased (nth-fn _ f y y1 y2 py py2) (Refl _ _))

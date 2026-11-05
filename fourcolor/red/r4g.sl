@@ -291,15 +291,10 @@
   (many HalCons : (erased (Nat) w i b cm f u) (erased (List (Copy (Nat))) xs) (erased (List (Nat)) Hs) (erased (NWd w b cm f u) d) (erased (ZIn f i Hs) z)
       (erased (HAll xs (Succ i) Hs) r) -> (HAll (Cons (Copy (Nat)) (MkCopy (Nat) w) xs) i Hs)))
 
-(def-fns _ $ (erased r4g-hsub-in : (erased (Nat) x) (erased (List (Nat)) Hs Hs2) (subterm erased (HSub Hs Hs2) s) (erased (In x Hs) p) -> (erased (In x Hs2) r))
-  (let-match erased s (HsbCons y Hs1 _ q s1) (absurd (HsbNil _) p))
-  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) q))
-  (r4g-hsub-in x Hs1 Hs2 s1 p1))
-
 (def-fns _ $ (erased r4g-hall-mono : (erased (List (Copy (Nat))) xs) (erased (Nat) i) (erased (List (Nat)) Hs Hs2) (subterm erased (HAll xs i Hs) ha) (erased (HSub Hs Hs2) s)
     -> (erased (HAll xs i Hs2) r))
   (let-match erased ha (HalCons w _ b cm f u xs1 _ d z ha1) ((HalNil _ _) (HalNil i Hs2)))
-  (HalCons w i b cm f u xs1 Hs2 d (match erased z (((ZIn f i Hs2) r)) ((ZiZ _ _) (ZiZ i Hs2)) ((ZiIn _ _ _ p) (ZiIn f i Hs2 (r4g-hsub-in i Hs Hs2 s p))))
+  (HalCons w i b cm f u xs1 Hs2 d (match erased z (((ZIn f i Hs2) r)) ((ZiZ _ _) (ZiZ i Hs2)) ((ZiIn _ _ _ p) (ZiIn f i Hs2 (sub-in Hs Hs2 i s p))))
     (r4g-hall-mono xs1 (Succ i) Hs Hs2 ha1 s)))
 
 (def-fns _ $ (erased r4g-hall-get : (erased (List (Copy (Nat))) xs) (erased (Nat) i k a w b cm f u) (erased (List (Nat)) Hs) (subterm erased (HAll xs i Hs) ha)
@@ -357,7 +352,7 @@
 ; The hits buffer Hs, for the len node words xs: distinct nodes, those with a nonzero gtr part.
 (def-adts $ (HOk : ((List (Copy (Nat))) xs) ((Nat) len) ((List (Nat)) Hs) -> Type)
   enum
-  (many MkHOk : (erased (List (Copy (Nat))) xs) (erased (Nat) len) (erased (List (Nat)) Hs) (erased (AllLt Hs len) al) (erased (Distinct Hs) dt) (erased (HNz xs Hs) hz)
+  (many MkHOk : (erased (List (Copy (Nat))) xs) (erased (Nat) len) (erased (List (Nat)) Hs) (erased (Under Hs len) al) (erased (Distinct Hs) dt) (erased (HNz xs Hs) hz)
       (erased (HAll xs (Zero) Hs) ha) -> (HOk xs len Hs)))
 
 (def-fns _ $ (erased r4g-hnz-notin : (erased (List (Copy (Nat))) xs) (erased (Nat) g w b cm u) (erased (List (Nat)) Hs) (subterm erased (HNz xs Hs) hz) (erased (WElt xs g w) x)
@@ -1801,7 +1796,7 @@
 ; The loop of red4's g_round over the hits buffer, from entry i on: each node's gtr part cleared.
 (def-fns _ $ (many r4-gclr-go : (erased (List (Copy (Nat))) xs) (unique (Array (Copy (Nat)) xs) nd) (erased (Nat) len) (erased (Length (Copy (Nat)) xs len) lx) (erased (AllCu xs) au)
     (erased (List (Copy (Nat))) hx) (unique (Array (Copy (Nat)) hx) ha) (erased (Nat) cap) (erased (Length (Copy (Nat)) hx cap) lh) (erased (List (Nat)) Hs)
-    (many (Nat) i n) (erased (Tbk hx n Hs) tb) (erased (AllLt Hs len) al) (erased (Lt n u62-modulus) nb) (erased (Lt n (Succ cap)) nc) (subterm erased (Nat) k) (erased (Add i k n) ad)
+    (many (Nat) i n) (erased (Tbk hx n Hs) tb) (erased (Under Hs len) al) (erased (Lt n u62-modulus) nb) (erased (Lt n (Succ cap)) nc) (subterm erased (Nat) k) (erased (Add i k n) ad)
     (erased (List (Nat)) R) (erased (Fwd hx i n R) fw) (erased (HAll xs (Zero) R) hl) ->
     (erased (List (Copy (Nat))) ys) (unique (Array (Copy (Nat)) ys) nd2 at nd) (erased (Length (Copy (Nat)) ys len) lx2) (erased (AllCu ys) au2) (erased (NKeep KeepU xs ys) nk)
     (unique (Array (Copy (Nat)) hx) ha2 at ha) (erased (HAll ys (Zero) (Nil (Nat))) hl2))
@@ -1818,7 +1813,7 @@
   (let ((many g) (unique ha1)) (array-get _ _ ha i g0 nth))
   (let-match erased fw (FwC _ _ _ x R1 wx fw1) (absurd (FwE _ _) (lt-irrefl i il)))
   (let-match erased (welt-fn hx i x g wx (MkWElt hx i g nth)) (Refl _ _))
-  (let ((erased gl)) (r4c-alllt-in g len Hs al (r4c-tbk-at hx n i g Hs tb (MkWElt hx i g nth) il)))
+  (let ((erased gl)) (under-in Hs g len al (r4c-tbk-at hx n i g Hs tb (MkWElt hx i g nth) il)))
   (let ((erased wc) (erased nw)) (nth-exists _ xs len g lx gl))
   (let-match erased wc (MkCopy _ w0))
   (let ((many w) (unique nd1)) (array-get _ _ nd g w0 nw))

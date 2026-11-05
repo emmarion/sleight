@@ -715,7 +715,7 @@
     ((C5A _ s5 _) (values i2s (PwCons _ _ FitSec (MkSec h2 h4 fs4) (MkSub s5 h45 (Nil _)) os5 (Nil _) (MkFitSec h2 h4 fs4 s5 h45 (Nil _) i2h ih4 (PwNil _ _ InRg fs4))
       (PwNil _ _ FitSec os5)))))
   (let-match erased (in-exact a2 7 i2s (lit-lt-7-9)) (Refl _ _))
-  (let-match erased (add-inj 5 m5 7 2 am (add2 5)) (Refl _ _))
+  (let-match erased (add-cancel 5 m5 2 7 am (add2 5)) (Refl _ _))
   (let-match erased (monus-five a2 m2 2 mo2 (add2 5)) (Refl _ _))
   (let-match erased (nth-fn _ f w2 t5 z32 pt5 (f3-next f s2 w2 z32 pw2 p32)) (Refl _ _))
   (let ((erased u0) (erased x0) (erased z32b) (erased fsr) (erased efs) (erased pu0) (erased px0) (erased pzb) (erased fr)) (fan-head e f ks fs2 z32 1 pfs2))

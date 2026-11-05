@@ -16,10 +16,6 @@
   (let ((erased ab) (erased r1) (erased s1)) (add-assoc-back a b c x y q p))
   (add-reassoc b a c ab y (add-comm a b ab r1) s1))
 
-(def-fns _ $ (erased add-le-r : (erased (Nat) a b c d e) (subterm erased (Add a b c) p) (erased (Add a d e) q) (erased (Lt b (Succ d)) l)
-    -> (erased (Lt c (Succ e)) r))
-  (add-mono a b c (Succ d) (Succ e) p (add-succ-right a d e q) l))
-
 (def-fns _ $ (erased rg-dec : (erased (Nat) a) (erased (Rg) r) -> (erased (Or (InRg a r) (OutRg a r)) o))
   (let-match erased r (MkRg lo hi))
   (let ((erased m) (erased c)) (clamp-exists a))
@@ -253,7 +249,7 @@
   (let-match erased di (I1Rec _ _ _ _ ns1 _ _ mo d1) ((I1Red _ _ _ _ _ _) (OrR _ _ (hit-ext os acc1 out (HitHere os p1 acc x1) et))))
   (let-match erased mo (MoAdd _ _ _ ad))
   (match erased (db1-sound os p1 rs2 ns1 c2 acc acc1 x1 d1 k2) _
-    ((OrL _ _ le) (OrL _ _ (LtS c1 ns (add-mono dns c2 c1 (Succ ns1) ns e ad le))))
+    ((OrL _ _ le) (OrL _ _ (LtS c1 ns (add-lt-mono dns c2 (Succ ns1) c1 ns e ad le))))
     ((OrR _ _ h) (OrR _ _ (hit-ext os acc1 out h et)))))
 
 (def-fns _ $ (many check-dbound1-c : (many (List (Sub)) p) (many (List (List (Sub))) rs) (many (Nat) ns) (many (List (List (Sub))) acc)
@@ -323,7 +319,7 @@
     (erased (Add dns nt u) pcc) (erased (Add dnt (Succ nt1) u) pd) (erased (Add s2 nt1 v) pv) (erased (Lt c2 (Succ v)) le) (erased (Add cs nt w) pw)
     -> (erased (Lt (Succ c1) (Succ w)) r))
   (let ((erased y) (erased py)) (add dnt v))
-  (let ((erased le1)) (add-le-r dnt c2 c1 v y pa py le))
+  (let ((erased le1)) (add-mono-le dnt c2 v c1 y le pa py))
   (let ((erased z) (erased pz) (erased pz2)) (plus-lcomm dnt s2 (Succ nt1) (Succ v) (Succ y) (add-succ-right s2 nt1 v pv) (add-succ-right dnt v y py)))
   (let-match erased (add-fn dnt (Succ nt1) z u pz pd) (Refl _ _))
   (let ((erased t) (erased pt) (erased pt2)) (add-reassoc dns s2 nt cs w pb pw))
@@ -618,7 +614,7 @@
   (let-match erased (add-fn nt1 s2 e2 w2 r12 (add-comm s2 nt1 w2 aw2)) (Refl _ _))
   (let ((erased y) (erased py)) (add dd w2))
   (let-match erased (add-fn dd (Succ w2) w (Succ y) r11 (add-succ-right dd w2 y py)) (Refl _ _))
-  (LtS t0 (Succ y) (add-le-r dd t2 t0 w2 y q3 py le)))
+  (LtS t0 (Succ y) (add-mono-le dd t2 w2 t0 y le q3 py)))
 
 (def-fns _ $ (erased e2-sound : (erased (List (Sec)) os1 os2) (erased (Nat) nhub i j nt ct1 cs1 ct2 cs2 ts sc w) (erased (List (Sub)) p1 p2)
     (erased (List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2 acc out) (erased (Rot (Sec) i os1 os2) ro12) (erased (Rot (Sec) j os2 os1) ro21)
@@ -636,7 +632,7 @@
       (OrL _ _ (LtZ w)))
     ((E2Swap _ _ j2 _ _ _ _ _ _ _ _ _ _ _ mo d1)
       (let-match erased mo (MoAdd _ _ _ a2) (absurd (MoNeg _ _ l) (lt-asym nhub i l (add-le-left i j nhub aij))))
-      (let-match erased (add-inj i j2 nhub j a2 aij) (Refl _ _))
+      (let-match erased (add-cancel i j2 j nhub a2 aij) (Refl _ _))
       (match erased (e2-sound os2 os1 nhub j i nt ct2 cs2 ct1 cs1 ts sc w p2 p1 rt2 rs2 ru2 rt1 rs1 ru1 acc out ro21 ro12
           (add-comm i j nhub aij) x2 x1 d1 kt2 ks2 ku2 kt1 ks1 ku1 (add-comm ct1 ct2 ts ats) (add-comm cs1 cs2 sc asc) aw) _
         ((OrL _ _ le) (OrL _ _ le))

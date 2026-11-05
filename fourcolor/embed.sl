@@ -1,20 +1,10 @@
-(def-fns _ $ (erased perm-unique : (erased (Nat) d) (erased (List (Nat)) p q1 q2) (erased (HPerm d p q1) pm1) (erased (HPerm d p q2) pm2)
-    -> (erased (Eq (List (Nat)) q1 q2) r))
-  (let-match erased pm1 (HMkPerm _ _ _ ids io lp q1p _))
-  (let-match erased pm2 (HMkPerm _ _ _ ids2 io2 _ _ pq2))
-  (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
-  (let ((erased lq1)) (perm-length d q1 p (perm-sym d p q1 pm1)))
-  (respects-fn ids q2 q1 q2
-    (respects-assoc q2 p q1 ids ids q1 d pq2 (respects-id-right d ids q1 io lq1) q1p (iota-length d ids io) lp)
-    (respects-id-left d ids q2 io (perm-under d q2 p (perm-sym d p q2 pm2)))))
-
 (def-fns _ $ (erased pbpp-mirror : (erased (Nat) d) (erased (List (Nat)) e n f fn ni fi) (erased (Pbpp d e n f) p) (erased (Respects f n fn) rfn)
     (erased (HPerm d n ni) pn) (erased (HPerm d f fi) pf) -> (erased (Pbpp d fn ni fi) r))
   (let-match erased p (MkPbpp _ _ _ _ h g b pl pc))
   (let ((erased fn2) (erased ni2) (erased fi2) (erased h2) (erased rfn2) (erased pn2) (erased pf2) (erased g2)) (genus-mirror d (Zero) e n f h g))
   (let-match erased (respects-fn f n fn2 fn rfn2 rfn) (Refl _ _))
-  (let-match erased (perm-unique d n ni2 ni pn2 pn) (Refl _ _))
-  (let-match erased (perm-unique d f fi2 fi pf2 pf) (Refl _ _))
+  (let-match erased (perm-inv-unique d n ni2 ni pn2 pn) (Refl _ _))
+  (let-match erased (perm-inv-unique d f fi2 fi pf2 pf) (Refl _ _))
   (let-match erased pc (MkPrecubic _ _ ks ol u))
   (let-match erased ol (MkOrderList _ _ ids _ io os))
   (MkPbpp d fn ni fi h2 g2 (bridgeless-mirror d e n f fn ni fi h b rfn pf) (plain-mirror d e n f fn h pl rfn)
@@ -49,35 +39,16 @@
     (MkReduces Hi d e n f ms sm (MkColorFrom Hi M d e n f ms MirrorW (MkMirrorW d e n f fn ni fi ms h rfn pf g) ph mirror-glue)))
   (values Hi rm))
 
-; css concatenated is cfs.
-(def-adts $ (ConcatL : ((List (List (Config))) css) ((List (Config)) cfs) -> Type)
-  enum
-  (many ConcatNil : -> (ConcatL (Nil (List (Config))) (Nil (Config))))
-  (many ConcatSkip : (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) p)
-      -> (ConcatL (Cons (List (Config)) (Nil (Config)) css) cfs))
-  (many ConcatCons : (erased (Config) cf) (erased (List (Config)) cs cfs) (erased (List (List (Config))) css) (erased (ConcatL (Cons (List (Config)) cs css) cfs) p)
-      -> (ConcatL (Cons (List (Config)) (Cons (Config) cf cs) css) (Cons (Config) cf cfs))))
-
-(def-fns _ $ (many concat-one : (subterm many (List (Config)) cs) (erased (List (List (Config))) css) (many (List (Config)) cfs) (erased (ConcatL css cfs) p)
-    -> (many (List (Config)) cfs2) (erased (ConcatL (Cons (List (Config)) cs css) cfs2) p2))
-  (let-match many cs (Cons _ cf cs1) ((Nil _) (values cfs (ConcatSkip css cfs p))))
+(def-fns _ $ (many concat-one : (subterm many (List (Config)) cs) (erased (List (List (Config))) css) (many (List (Config)) cfs) (erased (Flatten (Config) css cfs) p)
+    -> (many (List (Config)) cfs2) (erased (Flatten (Config) (Cons (List (Config)) cs css) cfs2) p2))
+  (let-match many cs (Cons _ cf cs1) ((Nil _) (values cfs (FSkip _ css cfs p))))
   (let ((many cfs3) (erased p3)) (notail (concat-one cs1 css cfs p)))
-  (values (Cons _ cf cfs3) (ConcatCons cf cs1 cfs3 css p3)))
+  (values (Cons _ cf cfs3) (FCons _ cf cs1 cfs3 css p3)))
 
-(def-fns _ $ (many concat-c : (subterm many (List (List (Config))) css) -> (many (List (Config)) cfs) (erased (ConcatL css cfs) p))
-  (let-match many css (Cons _ cs rest) ((Nil _) (values (Nil _) (ConcatNil))))
+(def-fns _ $ (many concat-c : (subterm many (List (List (Config))) css) -> (many (List (Config)) cfs) (erased (Flatten (Config) css cfs) p))
+  (let-match many css (Cons _ cs rest) ((Nil _) (values (Nil _) (FNil _))))
   (let ((many cfs) (erased p)) (notail (concat-c rest)))
   (concat-one cs rest cfs p))
-
-(def-fns _ $ (erased allred-concat : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (ConcatL css cfs) p)
-    (erased (AllRedC X css) a) -> (erased (AllRed X cfs) r))
-  (match erased p _
-    ((ConcatNil) (ARNil X))
-    ((ConcatSkip css1 _ p1) (let-match erased a (ARCCons _ _ _ _ a1)) (allred-concat X css1 cfs p1 a1))
-    ((ConcatCons cf cs cfs1 css1 p1)
-      (let-match erased a (ARCCons _ _ _ ar a1))
-      (let-match erased ar (ARCons _ _ _ rd ar1))
-      (ARCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))
 
 (def-fns _ $ (erased reducible-mem : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (subterm erased (AllRed X cfs) a)
     (erased (Elem (Config) cf cfs) m) -> (erased (Reducible X cf) r))
@@ -108,7 +79,7 @@
           -> (erased (Reduces B dm em nm fm) r)) emb)
       -> (NotEmbed X cfs)))
 
-(def-fns _ $ (erased embed-analysis : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (ConcatL css cfs) cl)
+(def-fns _ $ (erased embed-analysis : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (erased (Flatten (Config) css cfs) cl)
     (erased (AllRedC X css) ar) (erased (UnavE cfs) u) (erased (BirkGeo) bg) (erased (NotEmbed X cfs) ne) -> (erased (Analysis) an))
   (let-match erased u (MkUnavE _ _ every))
   (let-match erased bg (MkBirkGeo _ Bg geo))

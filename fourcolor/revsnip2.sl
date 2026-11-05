@@ -85,7 +85,7 @@
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let-match erased rg (MkRing _ _ _ _ _ _ _ _ _ sm))
   (let-match erased sm (MkSimple _ _ lab ls rf rl _))
-  (resp-under lab ls d (Cons _ x0 p) rl (respects-length lab f lab d rf lf)))
+  (respects-under lab (Cons _ x0 p) ls d rl (respects-length lab f lab d rf lf)))
 
 (def-fns _ $ (erased rev-subs : (erased (Nat) d x0) (erased (List (Nat)) e n f p er RR) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
     (erased (Ring e f x0 p) rg) (erased (Respects e (Cons (Nat) x0 p) er) rm) (erased (RevApp (Nat) er (Nil (Nat)) RR) ra)
@@ -133,7 +133,7 @@
     ((CPFace _ _ L1 _ c _ pf cp1)
       (pair-disk d x0 y c b e n f L1 h pl pxy cp1
         (match erased (in-dec a r) (((DiskN n f r c) res))
-          ((OrR _ _ o) (disk-step n f r a c da (DPFace n f r a c c o pf (DPNil n f r c))))
+          ((OrR _ _ o) (disk-step n f r a c da (SDPFace n f r a c c o pf (SDPNil n f r c))))
           ((OrL _ _ ia)
             (let ((erased la)) (nth-lt-length _ f a d c pf lf))
             (let ((erased ea) (erased pea) (erased _)) (perm-nth d a e nf pe la))
@@ -145,7 +145,7 @@
                 (let ((erased pyx) (erased _)) (plain-eq d x0 y e pl (nth-lt-length _ e x0 d y pxy le) pxy))
                 (let-match erased (nth-fn _ e y x0 ea pyx pea) (Refl _ _))
                 (InHere ea _))))
-            (MkDiskN n f r c ea c iea (hyper-node d c a ea e n f h pf pea2) (DPNil n f r c))))))))
+            (MkDiskN n f r c ea c iea (hyp-nfe d ea a c e n f h pea2 pf) (SDPNil n f r c))))))))
 
 (def-fns _ $ (erased nontrivial-proper : (erased (Nat) d x0 m) (erased (List (Nat)) e n f p) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) gen)
     (erased (Bridgeless d e n f) b) (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Connected d e n f) cn) (erased (Ring e f x0 p) rg)
@@ -178,7 +178,7 @@
     (erased (Ring e f x0 p) rg) (erased (Under (Cons (Nat) x0 p) d) ur) (erased (DiskSplit d e n (Cons (Nat) x0 p) hdX zsX) dsX)
     (erased (DiskSplit d e n (Cons (Nat) x0 p) hdB zsB) dsB) (erased (NotIn x hdX) o) (erased (Lt x d) lx) -> (erased (In x zsB) iz))
   (let ((erased ids) (erased io) (erased sp)) (ds-split d e n _ hdB zsB dsB))
-  (match erased (split-cover hdB ids hdB zsB x sp (iota-in d x ids io lx)) _
+  (match erased (hsplit-cover hdB ids hdB zsB x sp (iota-in d x ids io lx)) _
     (absurd (OrL _ _ i)
       (apart-irrefl x (notin-in x x hdX o (ds-mem d x x0 e n f p hdX zsX h gen rg ur dsX (ds-in d x x0 e n f p hdB zsB h gen rg ur dsB i) lx))))
     ((OrR _ _ i) i)))
@@ -246,11 +246,11 @@
       ((OrR _ _ o) (ds-off d y x0 e n f p hd zs hd zs h gen rg ur ds ds o ly)))
     ky))
 
-(def-fns _ $ (erased dpath-move : (erased (List (Nat)) n f r s) (erased (Nat) x y) (subterm erased (DPath n f r x y) dp) (erased (HSub s r) sb) -> (erased (DPath n f s x y) res))
+(def-fns _ $ (erased dpath-move : (erased (List (Nat)) n f r s) (erased (Nat) x y) (subterm erased (SDPath n f r x y) dp) (erased (HSub s r) sb) -> (erased (SDPath n f s x y) res))
   (match erased dp _
-    ((DPNil _ _ _ _) (DPNil n f s x))
-    ((DPNode _ _ _ _ z _ o pn dp1) (DPNode n f s x z y (notin-sub x s r sb o) pn (dpath-move n f r s z y dp1 sb)))
-    ((DPFace _ _ _ _ z _ o pf dp1) (DPFace n f s x z y (notin-sub x s r sb o) pf (dpath-move n f r s z y dp1 sb)))))
+    ((SDPNil _ _ _ _) (SDPNil n f s x))
+    ((SDPNode _ _ _ _ z _ o pn dp1) (SDPNode n f s x z y (notin-sub x s r sb o) pn (dpath-move n f r s z y dp1 sb)))
+    ((SDPFace _ _ _ _ z _ o pf dp1) (SDPFace n f s x z y (notin-sub x s r sb o) pf (dpath-move n f r s z y dp1 sb)))))
 
 (def-fns _ $ (erased disk-move : (erased (List (Nat)) n f r s) (erased (Nat) x) (erased (DiskN n f r x) dn) (erased (HSub r s) rs) (erased (HSub s r) sr)
     -> (erased (DiskN n f s x) res))
@@ -342,10 +342,10 @@
   (values h uhd))
 
 (def-fns _ $ (erased snipd-pull : (erased (Nat) d dd dr a b ad) (erased (List (Nat)) e n f r ed nd fd er nr fr hd hr bd br s xs)
-    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (subterm erased (Path f s a b xs) w) (erased (Off r xs) off)
+    (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (subterm erased (Path f s a b xs) w) (erased (Disj xs r) off)
     (erased (Nth (Nat) hd ad a) pa) -> (erased (Nat) bd2) (erased (Nth (Nat) hd bd2 b) pb) (erased (SomePath fd (Nil (Nat)) ad bd2) sp))
   (let-match erased w (PathStep _ _ xs1 _ a1 _ pf _ w1) ((PathHere _ _ _) (values ad pa (MkSomePath fd (Nil _) (Nil _) ad ad (PathHere fd (Nil _) ad)))))
-  (let-match erased off (OffCons _ _ _ oa off1))
+  (let-match erased off (DisjCons _ _ _ oa off1))
   (let ((erased hdm) (erased lhd) (erased _)) (patch-disk d dd dr e n f ed nd fd er nr fr hd hr bd br pt))
   (let ((erased _) (erased _) (erased fdi) (erased _) (erased _) (erased _) (erased pmfd)) (hyper-core dd ed nd fd hdm))
   (let ((erased a1d) (erased pfd) (erased la1)) (perm-nth dd ad fd fdi pmfd (nth-lt-length _ hd ad dd a pa lhd)))
@@ -367,7 +367,7 @@
   (let-match erased rg1 (MkRing _ _ _ _ _ _ _ _ _ sm))
   (let-match erased sm (MkSimple _ _ lab ls rf rl dl))
   (let ((erased ll)) (respects-length lab f lab d rf lf))
-  (let ((erased l) (erased pl)) (nth-exists _ lab d a ll (under-nth hd ad a d uhd pa)))
+  (let ((erased l) (erased pl)) (nth-exists _ lab d a ll (alllt-nth hd d ad a uhd pa)))
   (let ((erased ys) (erased w2)) (walk-to f xs a z w))
   (snipd-pull d dd dr a z ad e n f _ ed nd fd er nr fr hd hr bd br (Cons _ z (Nil _)) ys pt rb w2
     (path-off-simple f lab _ ls ys a z l w2 rf rl dl iz pl (path-label f lab (Nil _) xs a z l w rf pl)) pa))
@@ -398,12 +398,6 @@
     (erased (Nth (Nat) ks x a) pa) (erased (Nth (Nat) ks y b) pb) -> (erased (Apart (Nat) Lt b a) r))
   (let-match erased c (MkFourColoring _ _ _ ke _ re df _))
   (differ-nth ke ks x b a df (respects-at ks e ke x y b re pe pb) pa))
-
-(def-fns _ $ (erased app-out : (erased (List (Nat)) ys zs) (erased (Nat) x) (subterm erased (List (Nat)) xs) (erased (Join xs ys zs) ap) (erased (In x zs) ix)
-    -> (erased (Or (In x xs) (In x ys)) r))
-  (let-match erased ap (JoinCons xs1 _ zs1 y ap1) ((JoinNil _) (OrR _ _ ix)))
-  (let-match erased ix (InThere _ _ _ ix1) ((InHere _ _) (OrL _ _ (InHere x xs1))))
-  (match erased (app-out ys zs1 x xs1 ap1 ix1) _ ((OrL _ _ i) (OrL _ _ (InThere x y xs1 i))) ((OrR _ _ i) (OrR _ _ i))))
 
 ; lab numbers the faces of the map by their roots.
 (def-adts $ (FaceLab : ((Nat) d) ((List (Nat)) f lab) -> Type)
@@ -467,8 +461,7 @@
   (let-match erased cs (Cons _ c cs1) ((Nil _) (UnderNil 4)))
   (let-match erased ex (ExCons _ _ _ xs1 _ _ _ a ex1))
   (let-match erased (unary-4) (Refl _ _))
-  (UnderCons cs1 c 4 (match erased a (((Lt c 4) res)) ((EAIn _ _ _ _ _ j _ _ _ pc) (under-nth kd j c 4 u pc)) ((EAOut _ _ _ _ _ _ _) (LtZ _)))
-    (extend-under lab ld kd xs1 cs1 ex1 u)))
+  (UnderCons c 4 cs1 (match erased a (((Lt c 4) res)) ((EAIn _ _ _ _ _ j _ _ _ pc) (alllt-nth kd 4 j c u pc)) ((EAOut _ _ _ _ _ _ _) (LtZ _))) (extend-under lab ld kd xs1 cs1 ex1 u)))
 
 (def-fns _ $ (erased extend-length : (erased (List (Nat)) lab ld kd xs cs) (erased (Nat) k) (subterm erased (Extend lab ld kd xs cs) ex) (erased (Length (Nat) xs k) l)
     -> (erased (Length (Nat) cs k) r))
@@ -525,7 +518,7 @@
     (erased (Nth (Nat) hd zd z) pz) (erased (Nth (Nat) kd zd c) pc) -> (erased (Nth (Nat) ks z c) res))
   (let-match erased ext (MkExt _ _ dr x0 _ _ _ _ _ _ er nr fr _ hr _ br p _ _ lab ld ids pt rg rb fl rl cd io ex))
   (let ((erased _) (erased uhd)) (patch-whole d dd dr e n f ed nd fd er nr fr hd hr bd br pt))
-  (let ((erased lz)) (under-nth hd zd z d uhd pz))
+  (let ((erased lz)) (alllt-nth hd d zd z uhd pz))
   (let ((erased c1) (erased pc1) (erased a)) (extend-nth lab ld kd ks z z ids ex (iota-nth d z ids io lz)))
   (let ((erased fl2)) fl)
   (let-match erased fl2 (MkFaceLab _ _ _ _ _ _ _ _ _ _ _ _ _ ll))
@@ -619,7 +612,7 @@
   (let ((erased b) (erased pb)) (nth-exists _ kd dd u lkd lu))
   (let-match erased (nth-fn _ ks z c a pc (ext-hd d dd zd z a e n f ed nd fd hd bd _ kd ks ext pz pa)) (Refl _ _))
   (let ((erased lks)) (extend-length lab ld kd ids ks d ex (iota-length d ids io)))
-  (let ((erased c3) (erased pc3)) (nth-exists _ ks d hu lks (under-nth hd u hu d uhd phu)))
+  (let ((erased c3) (erased pc3)) (nth-exists _ ks d hu lks (alllt-nth hd d u hu uhd phu)))
   (let-match erased (nth-fn _ ks hu c3 b pc3 (ext-hd d dd u hu b e n f ed nd fd hd bd _ kd ks ext phu pb)) (Refl _ _))
   (let-match erased (ext-face d dd ez hu c2 b e n f ed nd fd hd bd _ kd ks ext spu pc2 pc3) (Refl _ _))
   (apart-sym b c (four-edge ed fd kd zd u c b cd pu pa pb)))
@@ -691,7 +684,7 @@
   enum
   (many MkCoCtx : (erased (Nat) d dd) (erased (List (Nat)) e n f ed nd fd hd bd r RR hdA hdB kd ks zs hd2 zs2 RV2 hr2)
       (erased (Ext d dd e n f ed nd fd hd bd r kd ks) ext) (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn)
-      (erased (DiskSplit d e n r hd zs) ds1) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Join RV2 zs2 hr2) ap2)
+      (erased (DiskSplit d e n r hd zs) ds1) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (LApp (Nat) RV2 zs2 hr2) ap2)
       -> (CoCtx d dd e n f ed nd fd hd bd kd ks hr2)))
 
 (def-fns _ $ (erased rr-apart : (erased (Nat) d dd x ex c c2) (erased (List (Nat)) e n f ed nd fd hd bd kd ks hr2) (erased (CoCtx d dd e n f ed nd fd hd bd kd ks hr2) co)
@@ -702,7 +695,7 @@
   (let ((erased ext2)) ext)
   (let-match erased ext2 (MkExt _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ rb _ _ _ _ _))
   (let ((erased le) (erased _) (erased _)) (hyper-lengths d e n f h))
-  (match erased (app-out zs2 hr2 x RV2 ap2 ix) _
+  (match erased (app-in-inv RV2 zs2 hr2 x ap2 ix) _
     ((OrR _ _ ixz)
       (let ((erased lx)) (ds-lt d x e n RR hd2 zs2 ds2 (OrR _ _ ixz)))
       (let ((erased iz)) (match erased (rev-disk d x e n f r RR hdA hdB cx cn lx) (((In x hd) res))
@@ -726,8 +719,8 @@
   (let ((erased lu)) (pre-lt dr u v er nfr pmer pe1))
   (let ((erased x) (erased hx)) (nth-exists _ hr dr u lhr lu))
   (let ((erased y) (erased hy) (erased qy)) (morph hr er e (Nil _) idr dr u v x mer ior lu (NotInNil u) pe1 hx))
-  (let ((erased l1) (erased p1)) (nth-exists _ ks d x lks (under-nth hr u x d uhr hx)))
-  (let ((erased l2) (erased p2)) (nth-exists _ ks d y lks (under-nth hr v y d uhr hy)))
+  (let ((erased l1) (erased p1)) (nth-exists _ ks d x lks (alllt-nth hr d u x uhr hx)))
+  (let ((erased l2) (erased p2)) (nth-exists _ ks d y lks (alllt-nth hr d v y uhr hy)))
   (ProperCons kr g1 u v l1 l2 (respects-at ks hr kr u x l1 rkr hx p1) (respects-at ks hr kr v y l2 rkr hy p2)
     (rr-apart d dd x y l1 l2 e n f ed nd fd hd bd kd ks hr co (nth-in hr u x hx) qy p1 p2)
     (color-proper-rr d dd dr e n f ed nd fd hd bd kd ks hr er nfr idr kr g1 co pmer mer ior lks lhr uhr rkr fn1)))
@@ -735,7 +728,7 @@
 (def-fns _ $ (erased cotrace : (erased (Nat) d dd dr dd2 dr2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)
-    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (Join RV2 zs2 hr2) ap2)
+    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (LApp (Nat) RV2 zs2 hr2) ap2)
     (erased (RingTrace ed fd bd et) td)
     -> (erased (Col) s) (erased (List (Col)) E et2) (erased (Eq (List (Col)) et (Cons (Col) s E)) eq) (erased (Snoc (Col) E s et2) se)
     (erased (RingTrace er2 fr2 br2 et2) tr))
@@ -781,7 +774,7 @@
     (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et ev) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)
-    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (Join RV2 zs2 hr2) ap2)
+    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (LApp (Nat) RV2 zs2 hr2) ap2)
     (erased (RingTrace ed fd bd et) td) (erased (RevApp (Col) et (Nil (Col)) ev) re) (erased (RingTrace ed2 fd2 bd2 ev) td2)
     -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
   (let ((erased s) (erased E) (erased et2) (erased eq) (erased se) (erased tr))
@@ -820,7 +813,7 @@
 
 (def-fns _ $ (erased pull-under : (erased (List (Nat)) hr kr xs ks) (subterm erased (Pull hr kr xs ks) pu) (erased (Under kr 4) u) -> (erased (Under ks 4) r))
   (let-match erased pu (PlCons _ _ xs1 ks1 _ j c _ pc pu1) ((PlNil _ _) (UnderNil 4)))
-  (UnderCons ks1 c 4 (under-nth kr j c 4 u pc) (pull-under hr kr xs1 ks1 pu1 u)))
+  (UnderCons c 4 ks1 (alllt-nth kr 4 j c u pc) (pull-under hr kr xs1 ks1 pu1 u)))
 
 (def-fns _ $ (erased resp-pull : (erased (List (Nat)) hr kr RV M) (subterm erased (List (Nat)) B) (erased (Respects hr B RV) rh) (erased (Respects kr B M) rk)
     -> (erased (Pull hr kr RV M) r))
@@ -927,7 +920,7 @@
 (def-fns _ $ (erased cotrace-back : (erased (Nat) d dd dr dd2 dr2) (erased (List (Nat)) e n f ed nd fd er nr fr hd hr bd br ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2 r RR hdA hdB zs zs2 RV2)
     (erased (List (Col)) et2) (erased (Patch d dd dr e n f ed nd fd er nr fr hd hr bd br) pt) (erased (Respects hd bd r) rb) (erased (DiskSplit d e n r hd zs) ds1)
     (erased (RevCtx d e n f r RR hdA hdB) cx) (erased (Connected d e n f) cn) (erased (Patch d dd2 dr2 e n f ed2 nd2 fd2 er2 nr2 fr2 hd2 hr2 bd2 br2) pt2)
-    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (Join RV2 zs2 hr2) ap2)
+    (erased (RevApp (Nat) RR (Nil (Nat)) RV2) rv2) (erased (Respects hr2 br2 RV2) rbr2) (erased (DiskSplit d e n RR hd2 zs2) ds2) (erased (LApp (Nat) RV2 zs2 hr2) ap2)
     (erased (RingTrace er2 fr2 br2 et2) tr)
     -> (erased (Col) s) (erased (List (Col)) E) (erased (Snoc (Col) E s et2) se) (erased (RingTrace ed fd bd (Cons (Col) s E)) td))
   (let ((erased cx2)) cx)
@@ -959,7 +952,7 @@
         (graph-fun dd fd gfd grfd))
       (respects-id-right dd idd kd iod lkd))
     ukd lkd (perm-under dd ed nfd pmed)))
-  (let ((erased Lr) (erased rLr)) (respects-exists kd bd dd (resp-under hd r dd bd rb lhd) lkd))
+  (let ((erased Lr) (erased rLr)) (respects-exists kd bd dd (respects-under hd bd r dd rb lhd) lkd))
   (let-match erased (pull-compose hr2 kr hd kd r Lr bd pu rb rLr) (PlCons _ _ _ Lr1 _ j0 l0 pj0 pl0 pu1))
   (let ((erased rr) (erased sn)) (snoc-exists _ p x0))
   (let ((erased N) (erased snN)) (snoc-exists _ Lr1 l0))

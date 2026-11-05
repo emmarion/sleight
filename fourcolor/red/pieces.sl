@@ -1,13 +1,3 @@
-(def-fns _ $ (erased allred-cat : (erased (Level) X) (erased (List (List (Config))) kss) (erased (List (Config)) cfs) (subterm erased (Flatten (Config) kss cfs) q)
-    (erased (AllRedC X kss) ev) -> (erased (AllRed X cfs) r))
-  (match erased q _
-    ((FNil _) (ARNil X))
-    ((FSkip _ kss1 _ q1) (let-match erased ev (ARCCons _ _ _ _ ev1)) (allred-cat X kss1 cfs q1 ev1))
-    ((FCons _ cf cs cfs1 kss1 q1)
-      (let-match erased ev (ARCCons _ _ _ a ev1))
-      (let-match erased a (ARCons _ _ _ p a1))
-      (ARCons X cf cfs1 p (allred-cat X (Cons _ cs kss1) cfs1 q1 (ARCCons X cs kss1 a1 ev1))))))
-
 (def-fns _ $ (erased allredc-uncat : (erased (Level) X) (erased (List (List (Config))) kss) (erased (List (Config)) cfs) (subterm erased (Flatten (Config) kss cfs) q)
     (erased (AllRed X cfs) ev) -> (erased (AllRedC X kss) r))
   (let-match erased q (FCons _ cf cs cfs1 kss1 q1)
@@ -19,7 +9,7 @@
 
 (def-fns _ $ (erased allredc-pieces : (erased (Level) X) (erased (List (List (Config))) pcs kss) (erased (List (Config)) cfs) (erased (Flatten (Config) pcs cfs) qp)
     (erased (Flatten (Config) kss cfs) qk) (erased (AllRedC X pcs) ev) -> (erased (AllRedC X kss) r))
-  (allredc-uncat X kss cfs qk (allred-cat X pcs cfs qp ev)))
+  (allredc-uncat X kss cfs qk (allred-concat X pcs cfs qp ev)))
 
 (def-fns _ $ (many piece-sizes : -> (many (List (Nat)) ns))
   (Cons _ 87 $ Cons _ 16 $ Cons _ 5 $ Cons _ 39 $ Cons _ 19 $ Cons _ 15 $ Cons _ 10 $ Cons _ 11 $ Cons _ 5 $ Cons _ 7 $ Cons _ 3 $ Cons _ 3 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 3 $ Cons _ 3 $ Cons _ 8 $ Cons _ 11 $ Cons _ 10 $ Cons _ 6 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 3 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 20 $ Cons _ 36 $ Cons _ 16 $ Cons _ 4 $ Cons _ 3 $ Cons _ 29 $ Cons _ 14 $ Cons _ 6 $ Cons _ 12 $ Cons _ 13 $ Cons _ 11 $ Cons _ 2 $ Cons _ 2 $ Cons _ 4 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 3 $ Cons _ 5 $ Cons _ 7 $ Cons _ 6 $ Cons _ 2 $ Cons _ 2 $ Cons _ 5 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Cons _ 3 $ Cons _ 2 $ Cons _ 2 $ Cons _ 7 $ Cons _ 2 $ Cons _ 23 $ Cons _ 9 $ Cons _ 4 $ Cons _ 12 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 3 $ Cons _ 8 $ Nil _))

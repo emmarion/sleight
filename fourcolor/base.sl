@@ -26,3 +26,7 @@
   (many DistCons : (erased (Nat) x) (erased (List (Nat)) s) (erased (NotIn x s) p) (erased (Distinct s) rest)
       -> (Distinct (Cons (Nat) x s))))
 
+(def-adts $ (InD : ((Nat) x) ((List (Nat)) s) -> Type)
+  enum
+  (many IDIn : (erased (Nat) x) (erased (List (Nat)) s) (erased (In x s) p) -> (InD x s))
+  (many IDOut : (erased (Nat) x) (erased (List (Nat)) s) (erased (NotIn x s) p) -> (InD x s)))

@@ -6,7 +6,7 @@
 
 (def-fns _ $ (erased respects-id-left : (erased (Nat) d) (erased (List (Nat)) ids xs) (erased (Iota d ids) io) (subterm erased (Under xs d) u)
     -> (erased (Respects ids xs xs) r))
-  (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (RespNil ids)))
+  (let-match erased u (UnderCons x _ xs1 lx u1) ((UnderNil _) (RespNil ids)))
   (RespCons ids xs1 xs1 x x (iota-nth d x ids io lx) (respects-id-left d ids xs1 io u1)))
 
 (def-fns _ $ (erased zip-respects : (erased (List (Nat)) xs ys p) (erased (List (Bond)) g) (subterm erased (Zip xs ys g) z) (erased (Fun p g) f)
@@ -23,16 +23,16 @@
 (def-fns _ $ (erased respects-under : (erased (List (Nat)) lab xs ls) (erased (Nat) d) (subterm erased (Respects lab xs ls) rp)
     (erased (Length (Nat) lab d) ll) -> (erased (Under xs d) r))
   (let-match erased rp (RespCons _ xs1 ls1 j v p rp1) ((RespNil _) (UnderNil d)))
-  (UnderCons xs1 j d (nth-lt-length _ lab j d v p ll) (respects-under lab xs1 ls1 d rp1 ll)))
+  (UnderCons j d xs1 (nth-lt-length _ lab j d v p ll) (respects-under lab xs1 ls1 d rp1 ll)))
 
-(def-fns _ $ (erased perm-under : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Under p d) r))
-  (let-match erased pm (MkPerm _ _ _ ids io _ qp pq))
+(def-fns _ $ (erased perm-under : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) -> (erased (Under p d) r))
+  (let-match erased pm (HMkPerm _ _ _ ids io _ qp pq))
   (respects-under q p ids d qp (respects-length-inv p q ids d pq (iota-length d ids io))))
 
-(def-fns _ $ (erased hyper-of : (erased (Nat) d) (erased (List (Nat)) e nd ndi nn) (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn)
+(def-fns _ $ (erased hyper-of : (erased (Nat) d) (erased (List (Nat)) e nd ndi nn) (erased (HPerm d e e) pe) (erased (HPerm d nd ndi) pn)
     (erased (Respects e ndi nn) rn) -> (erased (Hypermap d e nn nd) h))
-  (let-match erased pe (MkPerm _ _ _ ids io le ee _))
-  (let-match erased pn (MkPerm _ _ _ ids2 io2 lnd ndind ndndi))
+  (let-match erased pe (HMkPerm _ _ _ ids io le ee _))
+  (let-match erased pn (HMkPerm _ _ _ ids2 io2 lnd ndind ndndi))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased ue)) (perm-under d e e pe))
   (let ((erased lndi)) (respects-length-inv nd ndi ids d ndndi (iota-length d ids io)))
@@ -132,8 +132,8 @@
   (let ((erased ls2) (erased s2)) (snoc-exists _ ls1 lc))
   (values lc pc ls1 ls2 s1 s2 (respects-snoc lab xs1 xs2 ls1 ls2 w lc r1 (respects-nth lab xs ls c w lc rp pw pc) qx s2)))
 
-(def-fns _ $ (erased perm-length : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm) -> (erased (Length (Nat) p d) l))
-  (let-match erased pm (MkPerm _ _ _ _ _ lp _ _))
+(def-fns _ $ (erased perm-length : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) -> (erased (Length (Nat) p d) l))
+  (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   lp)
 
 (def-fns _ $ (erased graph-exists : (erased (Nat) d) (erased (List (Nat)) p) (erased (Length (Nat) p d) lp)
@@ -203,12 +203,12 @@
 
 (def-fns _ $ (erased zeros-resp : (erased (List (Nat)) zs xs) (erased (Nat) n m) (erased (Repeat (Nat) n (Zero) zs) rz) (subterm erased (Under xs n) u)
     (erased (Length (Nat) xs m) lx) -> (erased (List (Nat)) ws) (erased (Repeat (Nat) m (Zero) ws) rw) (erased (Respects zs xs ws) r))
-  (let-match erased u (UnderCons xs1 x _ lt u1) ((UnderNil _) (let-match erased lx (LengthNil _)) (values (Nil _) (RepeatNil _ (Zero)) (RespNil zs))))
+  (let-match erased u (UnderCons x _ xs1 lt u1) ((UnderNil _) (let-match erased lx (LengthNil _)) (values (Nil _) (RepeatNil _ (Zero)) (RespNil zs))))
   (let-match erased lx (LengthCons _ _ _ m1 lx1))
   (let ((erased ws1) (erased rw1) (erased r1)) (zeros-resp zs xs1 n m1 rz u1 lx1))
   (values (Cons _ (Zero) ws1) (RepeatCons _ m1 (Zero) ws1 rw1) (RespCons zs xs1 ws1 x (Zero) (repeat-nth _ n x (Zero) zs rz lt) r1)))
 
-(def-fns _ $ (erased zeros-perm : (erased (Nat) d) (erased (List (Nat)) p q) (erased (Perm d p q) pm)
+(def-fns _ $ (erased zeros-perm : (erased (Nat) d) (erased (List (Nat)) p q) (erased (HPerm d p q) pm)
     -> (erased (List (Nat)) zs) (erased (Respects zs p zs) r) (erased (Length (Nat) zs d) lz) (erased (Repeat (Nat) d (Zero) zs) rz))
   (let ((erased zs) (erased rz)) (repeat-exists _ d (Zero)))
   (let ((erased ws) (erased rw) (erased r)) (zeros-resp zs p d d rz (perm-under d p q pm) (perm-length d p q pm)))
@@ -228,7 +228,7 @@
     (spans-lift-r ex gc x gnd (spans-lift-r ge gnd gc gnd (spans-self gnd) cg) cx)))
 
 (def-fns _ $ (erased fr-path : (erased (Nat) d a b) (erased (List (Nat)) e nd ndi nn) (subterm erased (FaceReach e nd a b) fr)
-    (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn) (erased (Respects e ndi nn) rn) -> (erased (List (Nat)) xs) (erased (Path nn (Nil (Nat)) b a xs) r))
+    (erased (HPerm d e e) pe) (erased (HPerm d nd ndi) pn) (erased (Respects e ndi nn) rn) -> (erased (List (Nat)) xs) (erased (Path nn (Nil (Nat)) b a xs) r))
   (let-match erased fr (FRStep _ _ _ q c _ pq pc fr1) ((FRHere _ _ _) (values (Nil _) (PathHere nn _ a))))
   (let ((erased xs1) (erased w1)) (fr-path d c b e nd ndi nn fr1 pe pn rn))
   (let ((erased lc)) (perm-val d q c nd ndi pn pc))
@@ -275,13 +275,13 @@
 (def-adts $ (PlaneInv : ((List (Nat)) e nd) -> Type)
   enum
   (many MkPlaneInv : (erased (List (Nat)) e nd ndi nn) (erased (Nat) d ke kn kf kc) (erased (List (Bond)) ge gnd gc)
-      (erased (Perm d e e) pe) (erased (Perm d nd ndi) pn) (erased (Respects e ndi nn) rn)
+      (erased (HPerm d e e) pe) (erased (HPerm d nd ndi) pn) (erased (Respects e ndi nn) rn)
       (erased (Orbits d e ke) oe) (erased (Orbits d nn kn) on) (erased (Orbits d nd kf) of)
       (erased (Graph d e ge) gre) (erased (Graph d nd gnd) grn) (erased (Cat ge gnd gc) cg) (erased (Classes gc d kc) cc)
       (erased (Euler kc d ke kn kf) eu) (erased (Loopless nd ge) lo) -> (PlaneInv e nd)))
 
 (def-fns _ $ (erased plane-nil : -> (erased (PlaneInv (Nil (Nat)) (Nil (Nat))) r))
-  (let ((erased pm)) (MkPerm (Zero) (Nil (Nat)) (Nil (Nat)) (Nil (Nat)) (IotaZ) (LengthNil _) (RespNil _) (RespNil _)))
+  (let ((erased pm)) (HMkPerm (Zero) (Nil (Nat)) (Nil (Nat)) (Nil (Nat)) (IotaZ) (LengthNil _) (RespNil _) (RespNil _)))
   (let ((erased gr)) (MkGraph (Zero) (Nil (Nat)) (Nil (Nat)) (Nil (Bond)) (IotaZ) (LengthNil _) (ZipNil)))
   (let ((erased ob)) (MkOrbits (Zero) (Zero) (Nil (Nat)) (Nil (Bond)) gr (classes-nil (Zero))))
   (MkPlaneInv _ _ _ _ (Zero) (Zero) (Zero) (Zero) (Zero) _ _ _ pm pm (RespNil _) ob ob ob gr gr (CatNil _) (classes-nil (Zero))
@@ -445,7 +445,7 @@
     (absurd (Equal _ _ _) (let-match erased (nth-fn _ lab x l1 l2 p1 p2) (Refl _ _)) (apart-irrefl l1 ne))
     ((Unequal _ _ _ _ r) r)))
 
-(def-fns _ $ (erased perm-apart : (erased (Nat) d x y u v) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x u) px)
+(def-fns _ $ (erased perm-apart : (erased (Nat) d x y u v) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Nth (Nat) p x u) px)
     (erased (Nth (Nat) p y v) py) (erased (Apart (Nat) Lt x y) ne) -> (erased (Apart (Nat) Lt u v) r))
   (match erased (nat-eq u v) _
     (absurd (Equal _ _ _) (let-match erased (perm-inj d x y u p q pm px py) (Refl _ _)) (apart-irrefl x ne))
@@ -477,10 +477,10 @@
     pA2 (snoc-old _ A3 B w n c1 sB (setnth-keep A2 A3 c2 c1 (Succ n) n sA3 (snoc-old _ A1 A2 lc1 n c1 sA2 (setnth-nth _ nn c1 n A1 sA1)) nc))))
 
 (def-fns _ $ (erased chord-counts : (erased (List (Nat)) e0 nd0 ndi nn A2 B mB nnF) (erased (Nat) n d1 d2 c1 c2 ke kn kf kc)
-    (erased (List (Bond)) ge gnd gc) (erased (Joinable e0 nd0 d1 d2) jn) (erased (Perm n e0 e0) pe) (erased (Perm n nd0 ndi) pn)
+    (erased (List (Bond)) ge gnd gc) (erased (Joinable e0 nd0 d1 d2) jn) (erased (HPerm n e0 e0) pe) (erased (HPerm n nd0 ndi) pn)
     (erased (Respects e0 ndi nn) rn) (erased (Graph n e0 ge) gre) (erased (Graph n nd0 gnd) grn) (erased (Cat ge gnd gc) cg)
     (erased (Nth (Nat) nd0 d1 c1) pc1) (erased (Nth (Nat) nd0 d2 c2) pc2) (erased (Insert nn c1 n A2) iA) (erased (Insert A2 c2 (Succ n) B) iB)
-    (erased (Perm (Succ (Succ n)) B mB) pmB) (erased (Orbits (Succ (Succ n)) B kn) onB) (erased (Nth (Nat) B c1 n) pb1)
+    (erased (HPerm (Succ (Succ n)) B mB) pmB) (erased (Orbits (Succ (Succ n)) B kn) onB) (erased (Nth (Nat) B c1 n) pb1)
     (erased (Nth (Nat) B c2 (Succ n)) pb2) (erased (Upd2 B c1 (Succ n) c2 n nnF) up) (erased (Lt d1 n) _b1) (erased (Lt d2 n) b2)
     (erased (Lt c1 n) lc1n) (erased (Lt c2 n) lc2n)
     (erased (Classes (Cons (Bond) (MkBond n (Succ n)) (Cons (Bond) (MkBond d1 n) gc)) (Succ (Succ n)) kc) csx1) (erased (Euler kc n ke kn kf) eu)
@@ -518,7 +518,7 @@
       (let-match erased (nth-fn _ lab d1 l1e l1n q1e q1n) (Refl _ _))
       (let-match erased (nth-fn _ lab d2 l2e l2n q2e q2n) (Refl _ _))
       (let ((erased ll)) (respects-length lab nd0 lab n rnd ln))
-      (let-match erased pn (MkPerm _ _ _ ids io _ _ ndndi))
+      (let-match erased pn (HMkPerm _ _ _ ids io _ _ ndndi))
       (let ((erased rnn)) (const-nn lab e0 nd0 ids lab nn ndi n rn ndndi (respects-id-right n ids lab io ll) re rnd ll))
       (let ((erased pl1)) (respects-nth lab nd0 lab d1 c1 l1e rnd pc1 q1e))
       (let ((erased pl2)) (respects-nth lab nd0 lab d2 c2 l2e rnd pc2 q2e))

@@ -104,13 +104,6 @@
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (kernel-lt dc x fc rc lf (ker-of dc x fc rc as kl ix)))
 
-(def-fns _ $ (erased edge-nf : (erased (Nat) d x x1 z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Nth (Nat) f x x1) px)
-    (erased (Nth (Nat) n x1 z) pz) -> (erased (Nth (Nat) e z x) r))
-  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f h))
-  (let ((erased y) (erased py) (erased _)) (perm-nth d z e nf qe (perm-val d x1 z n ni qn pz)))
-  (let-match erased (perm-inj d y x x1 f fi qf (hyper-third d y z x1 e n f h py pz) px) (Refl _ _))
-  py)
-
 (def-fns _ $ (erased rl-first : (erased (List (Nat)) ec fc em hl as p) (erased (Nat) dc dm z y) (erased (List (Nat)) nc ksc rc nm fm ksm)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (RlPath ec fc em hl as z p y) rp) (erased (In y as) iy)
     -> (erased (Nat) t) (erased (Nth (Nat) ec z t) pt) (erased (In t as) it))
@@ -134,7 +127,7 @@
   (let ((erased hc)) (gc-hyper dc dm ec nc fc ksc rc em nm fm ksm as hl en))
   (let ((erased nfc) (erased _) (erased fic) (erased _) (erased qe) (erased _) (erased qf)) (hyper-core dc ec nc fc hc))
   (let-match erased (pe-of dc dm x ec nc fc ksc rc em nm fm ksm as hl en ix) (MkPeAt _ _ _ _ _ _ _ _ _ _ x1 _ _ _ _ z px _ _ _ _ _ _ _ pz rl))
-  (let ((erased ez)) (edge-nf dc x x1 z ec nc fc hc px pz))
+  (let ((erased ez)) (hyper-edge dc z x1 x ec nc fc hc pz px))
   (let ((erased _) (erased rp)) (rlto-at ec fc em hl as as z y rl iy))
   (let ((erased w3))
     (match erased rp (((SomePath fc (Nil (Nat)) x y) w3))
@@ -152,7 +145,7 @@
         (let-match erased sy (MkSomePath _ _ ys _ _ pthy))
         (let ((erased it2)) (ker-path dc dm y t2 ec nc fc ksc rc em nm fm ksm as hl (Nil _) ys en iy pthy))
         (let ((erased e1) (erased pe1) (erased ie1)) (rl-first ec fc em hl as p1 dc dm z1 y nc ksc rc nm fm ksm en rp1 iy))
-        (let-match erased cz1 (MkCentral _ _ _ _ e2 v2 v3 pe2 pv2 pv3 pm3))
+        (let-match erased cz1 (MkMorphAt _ _ _ _ e2 v2 v3 pe2 pv2 pv3 pm3))
         (let-match erased (nth-fn _ ec z1 e1 e2 pe1 pe2) (Refl _ _))
         (let-match erased (nth-fn _ hl z1 v v2 pv pv2) (Refl _ _))
         (let-match erased (perm-inj dc t2 z1 e1 ec nfc qe (full-at ec em hl as as t2 e1 v v3 fa it2 ie1 pt2 pm3 pv3) pe1) (Refl _ _))
@@ -165,21 +158,6 @@
   enum
   (many MkFullBad : (erased (List (Nat)) ec em as hl) (erased (Nat) x1 x2 w u y) (erased (In x1 as) i1) (erased (In x2 as) i2) (erased (Nth (Nat) hl x1 w) pw)
       (erased (Nth (Nat) em w u) pu) (erased (Nth (Nat) hl x2 u) pv) (erased (Nth (Nat) ec x1 y) py) (erased (Apart (Nat) Lt y x2) ne) -> (FullBad ec em as hl)))
-
-; Every dart of xs is in as.
-(def-adts $ (Within : ((List (Nat)) xs as) -> Type)
-  enum
-  (many WNil : (erased (List (Nat)) as) -> (Within (Nil (Nat)) as))
-  (many WCons : (erased (List (Nat)) as) (erased (Nat) x) (erased (List (Nat)) xs) (erased (In x as) i) (erased (Within xs as) rest)
-      -> (Within (Cons (Nat) x xs) as)))
-
-(def-fns _ $ (erased within-cons : (erased (Nat) y) (erased (List (Nat)) xs as) (subterm erased (Within xs as) w) -> (erased (Within xs (Cons (Nat) y as)) r))
-  (let-match erased w (WCons _ x xs1 i w1) ((WNil _) (WNil _)))
-  (WCons _ x xs1 (InThere x y as i) (within-cons y xs1 as w1)))
-
-(def-fns _ $ (erased within-refl : (subterm erased (List (Nat)) as) -> (erased (Within as as) r))
-  (let-match erased as (Cons _ x as1) ((Nil _) (WNil _)))
-  (WCons _ x as1 (InHere x as1) (within-cons x as1 as1 (within-refl as1))))
 
 (def-fns _ $ (erased pair-dec : (erased (Nat) dc dm x1 x2) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     (erased (In x1 as) i1) (erased (In x2 as) i2) -> (erased (Or (FullBad ec em as hl) (FullPair ec em hl x1 x2)) r))
@@ -195,22 +173,22 @@
   (OrR _ _ (FpEdge ec em hl x1 x2 py)))
 
 (def-fns _ $ (erased row-dec : (erased (Nat) dc dm x1) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-    (erased (In x1 as) i1) (subterm erased (List (Nat)) xs) (erased (Within xs as) sx) -> (erased (Or (FullBad ec em as hl) (FullRow ec em hl x1 xs)) r))
-  (let-match erased sx (WCons _ x2 xs1 i2 sx1) ((WNil _) (OrR _ _ (FrNil ec em hl x1))))
+    (erased (In x1 as) i1) (subterm erased (List (Nat)) xs) (erased (HSub xs as) sx) -> (erased (Or (FullBad ec em as hl) (FullRow ec em hl x1 xs)) r))
+  (let-match erased sx (HsbCons x2 xs1 _ i2 sx1) ((HsbNil _) (OrR _ _ (FrNil ec em hl x1))))
   (let-match erased (pair-dec dc dm x1 x2 ec nc fc ksc rc em nm fm ksm as hl en i1 i2) (OrR _ _ p) ((OrL _ _ b) (OrL _ _ b)))
   (let-match erased (row-dec dc dm x1 ec nc fc ksc rc em nm fm ksm as hl en i1 xs1 sx1) (OrR _ _ fr) ((OrL _ _ b) (OrL _ _ b)))
   (OrR _ _ (FrCons ec em hl xs1 x1 x2 p fr)))
 
 (def-fns _ $ (erased all-dec : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
-    (subterm erased (List (Nat)) ys) (erased (Within ys as) sy) -> (erased (Or (FullBad ec em as hl) (FullAll ec em hl as ys)) r))
-  (let-match erased sy (WCons _ x1 ys1 i1 sy1) ((WNil _) (OrR _ _ (FuNil ec em hl as))))
-  (let-match erased (row-dec dc dm x1 ec nc fc ksc rc em nm fm ksm as hl en i1 as (within-refl as)) (OrR _ _ fr) ((OrL _ _ b) (OrL _ _ b)))
+    (subterm erased (List (Nat)) ys) (erased (HSub ys as) sy) -> (erased (Or (FullBad ec em as hl) (FullAll ec em hl as ys)) r))
+  (let-match erased sy (HsbCons x1 ys1 _ i1 sy1) ((HsbNil _) (OrR _ _ (FuNil ec em hl as))))
+  (let-match erased (row-dec dc dm x1 ec nc fc ksc rc em nm fm ksm as hl en i1 as (sub-refl as)) (OrR _ _ fr) ((OrL _ _ b) (OrL _ _ b)))
   (let-match erased (all-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en ys1 sy1) (OrR _ _ fa) ((OrL _ _ b) (OrL _ _ b)))
   (OrR _ _ (FuCons ec em hl as ys1 x1 fr fa)))
 
 (def-fns _ $ (erased full-dec : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     -> (erased (Or (FullBad ec em as hl) (FullAll ec em hl as as)) r))
-  (all-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en as (within-refl as)))
+  (all-dec dc dm ec nc fc ksc rc em nm fm ksm as hl en as (sub-refl as)))
 
 (def-fns _ $ (erased hc-perms : (erased (Nat) dc dm) (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en)
     -> (erased (List (Nat)) nfc nic fic nfm nim fim) (erased (HPerm dc ec nfc) qe) (erased (HPerm dc nc nic) qn) (erased (HPerm dc fc fic) qf)
@@ -432,9 +410,9 @@
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
     (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
     (erased (Respects h1 cc ccr) rcc) (erased (InsertE em ccr ins) iem) (erased (Disj ie rc) dj) (erased (Under cc dc) uc) (subterm erased (List (Nat)) hs)
-    (erased (Join pre hs h1) ap) (erased (Length (Nat) pre x) lp) -> (erased (InSides ie ins x hs) r))
+    (erased (LApp (Nat) pre hs h1) ap) (erased (Length (Nat) pre x) lp) -> (erased (InSides ie ins x hs) r))
   (let-match erased hs (Cons _ u hs1) ((Nil _) (SdNil ie ins x)))
-  (let ((erased pu)) (app-nth pre hs1 h1 u x ap lp))
+  (let ((erased pu)) (lapp-nth _ pre hs1 h1 u x ap lp))
   (let ((erased lx)) (nth-lt-length _ h1 x dc u pu lh))
   (let ((erased pre2) (erased sn) (erased ap2)) (app-step pre hs1 h1 u ap))
   (let ((erased rest)) (ins-sides dc dm (Succ x) ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins pre2 en ok fu fa io el lh iec rcc iem dj uc hs1 ap2
