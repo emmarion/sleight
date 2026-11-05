@@ -568,7 +568,7 @@ let rec unify_in ?(force = false) env a b =
       if has_dangling t then contradiction ();
       if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
       let env = add_rule env x t in
-      let typed () = unify_in ~force env (type_of env x) (infer env Reader.nowhere t) in
+      let typed () = let tx = type_of env x and tt = infer env Reader.nowhere t in if equal tx tt then env else unify_in ~force env tx tt in
       if force then typed () else try typed () with Contradiction _ -> raise (Ill_typed (x, t))
     in
     match (a, b) with

@@ -3858,7 +3858,9 @@
 
 (def-fns _ $ (many solution-types : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Env) env) (many (Nat) x) (many (Term) t) -> (many (SolTypes n f) r))
   (let-match many (term-type env t) (Some _ tt) ((None _) (NoSolTypes _ _)))
-  (let ((many a) (erased pa)) $ canon-in _ _ bnd tb $ type-of env x)
+  (let ((many ty)) $ type-of env x)
+  (let-match many (term-eq ty tt) (BFalse) ((BTrue) (NoSolTypes _ _)))
+  (let ((many a) (erased pa)) $ canon-in _ _ bnd tb ty)
   (let ((many b) (erased pb)) $ canon-in _ _ bnd tb tt)
   (MkSolTypes _ _ a pa b pb))
 
