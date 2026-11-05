@@ -18,10 +18,6 @@ ground.
 
 ## Grammar shapes DESIGN.md leaves open
 
-13. **A `def-fns` level** may be any variable whose type is `(Level)`,
-    not only a `def-lvl`-minted one; only `prove-predates` insists on the
-    mint marker (section 18).
-
 14. **`def-adts` ordering**: a type constructor's own telescope may
     mention types defined earlier in the same `def-adts`, not later
     ones; every constructor may mention every type of the group.
@@ -37,9 +33,7 @@ ground.
     (section 5's picture); canonicalization should agree either way,
     but this is a representation choice, not the one section 5 draws.
 31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
-    print it that way. A `many` parameter or field of type `Type` (SR
-    22) is accepted at its declaration and simply cannot be supplied in
-    a non-erased position.
+    print it that way.
 
 ## Runtime representation
 

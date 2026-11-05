@@ -44,7 +44,8 @@ that begins with `"` is a string literal. Atoms made only of digits, and
 atoms of the form `#\c`, are numeral and character literals (§45). A
 token `#"..."` is a raw name: the string's bytes, read as a string
 literal (§45), whatever they are. It is always a name, so `#"_"`,
-`#"45"` and `#""` are names, and `#"let"` is `let`.
+`#"45"` and `#""` are names, and `#"let"` is `let`. Names are compared
+byte for byte, so they are case-sensitive.
 
 `_` as a binder name creates an anonymous entry. This applies wherever
 a binder is written: a `let` binder, a telescope entry, a pattern
@@ -273,11 +274,13 @@ ends with its branch, whatever entries it mentions. For example,
 matching a `(Nat)` against `Zero` forces `n is (Zero)`; this names no
 branch-local entry and is still gone after the match. A fact can only
 mention entries that are in scope where it is created, so a fact never
-outlives an entry it mentions. Only run-position forms run at
-compile time (§27, §29), and their match branches are gated like any
-other. Special-form dispatch is decided at compile time anywhere, so
-it reads the table as it stood at the innermost enclosing run position
-(§6). One table is therefore enough. Compile-time effects in unreachable code
+outlives an entry it mentions. Code runs at compile time only where a
+run-position form runs, together with every function it calls, and
+where a call of a macro is expanded, which runs the macro's function
+(§27, §29, §62). A run-position form's match branches are gated like
+any other. Special-form dispatch and macro expansion are decided at
+compile time anywhere, so they read the table as it stood at the
+innermost enclosing run position (§6, §65). One table is therefore enough. Compile-time effects in unreachable code
 still happen. A fact verified by a `comptime-match` in run position
 holds afterwards, so a later match on the same `Settled` finds the
 contradicting branches refuted.
@@ -643,10 +646,11 @@ ways. The second and third are uses:
   binder can only stand there inside a `share` (§16);
 - a **use at unique**, in a non-erased position at `unique`; this
   consumes the binder;
-- a **direct variable reference**, the argument of `slot-of` or `slot-tag` (§35).
-  This is the variable itself, never a telescope binder. It is not a
-  use: it neither degrades nor consumes, and it may follow the
-  consumption.
+- a **direct variable reference**, the argument of a fetch form (§53)
+  or of `slot-tag` (§35). This is the variable itself, never a
+  telescope binder. It stands in no position of §14, so the variable
+  may have any multiplicity. It is not a use: it neither degrades nor
+  consumes, and it may follow the consumption.
 
 Every argument to a constructor, a function or a cell behaves as if it
 were first bound to an anonymous variable. An argument that is already
@@ -684,7 +688,8 @@ Every function has a level: a natural number that is erased and is
 part of the function's type (§11). A function may call a function of a
 strictly lower level. It may call a function of its own level only
 under the `Subterm` rules of §19. All functions in one `def-fns` block
-share one level, written once on the block. Type and value
+share one level, written once on the block, as a term (§9) of type
+`(Level)` or as `_` (§46). Type and value
 constructors have no level. There is no currying, for functions or for
 constructors.
 
@@ -1069,7 +1074,8 @@ whose branches are all refuted produces its declared result (§21).
 A function returns zero or more values. A later return may depend on an
 earlier one: the return telescope is a telescope like the parameter
 telescope, where each entry depends only on the entries before it.
-This is for functions and for the annotation of a `match`,
+Its names are in scope in its later entries, not in the body, which
+produces the values they name. This is for functions and for the annotation of a `match`,
 `cell-match` or `open-absurd` (below, §38, §8). A type or value
 constructor returns exactly one value (§11). There is no sigma type: an expression of several
 values has no type of its own, each entry of a `values` is a size-one
@@ -2449,6 +2455,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - the `at` wrapper around a cell invocation or an at-function call,
   `(at m (...))`, `m` the multiplicity its head is taken at (§37,
   §39).
+- `tail`, `notail` and `delegate`: calling-convention marks that wrap
+  a call (§19).
 
 **Proof forms**, all erased (§14):
 
@@ -2466,8 +2474,9 @@ expression (§53):
 - `level-of` (§17), `matchable-of` (§8), `delegate-of` (§33),
   `numeral-of` (§45), `slot-of` and `at-fn-of` (§35, §39).
 
-**Annotation tokens**, which annotate a form rather than heading a
-list:
+**Annotation tokens**, which the form they stand in reads, as a word
+or as the head of a list within it, rather than being elaborated
+themselves:
 
 - `erased`, `many`, `unique`: the multiplicities (§13).
 - `:` separates a name from its signature at a declaration (§3, §55).
@@ -2481,8 +2490,6 @@ list:
   `newtype` (§33) and `extern` (§42) are marks written after it.
   `absurd` is written on a `def-fns` line (§25) or before the pattern
   of a branch (§21).
-- `tail`, `notail` and `delegate`: calling-convention marks that wrap
-  a call (§19).
 - `else` heads the branch that stands for every unlisted constructor
   (§21).
 - `at` appears on a telescope entry, before an argument of a cell

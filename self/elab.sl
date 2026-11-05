@@ -2426,7 +2426,7 @@
   (and (entry-minted env lvl) $ nat-lt ix il))
 
 ; prove-predates (section 18): the variable was in scope when the level was minted, both read by their
-; binders and never canonicalized (ASSUMPTIONS 13); a literal has no introduction order (section 45).
+; binders and never canonicalized; a literal has no introduction order (section 45).
 (def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
   (def-fns msg-lvl $ (many who : (many (Nat) y) -> (many (String) s)) (match many (env-entry-name env y) (((String) _)) ((None _) (qshow env $ TVar y)) ((Some _ _) (qshown env y))))
   (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (who lvl) (say env " is not a level minted by `def-lvl`"))))

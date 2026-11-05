@@ -38,8 +38,6 @@ references are to DESIGN.md.
    (§29). Should a reference evaluator inside the checker arbitrate
    runs that produce facts, so that a wrong evaluation cannot produce a
    `(False)` token through an erased field?
-6. Are the `is`-declared fields of a `comptime-match` or `let-match`
-   and forced index unification one mechanism?
 
 ## Design directions not taken up
 
