@@ -9,9 +9,21 @@
   (many LAppCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (LApp A xs ys zs) p)
       -> (LApp A (Cons A x xs) ys (Cons A x zs))))
 
+; r is the reverse of pre followed by w.
+(def-adts $ (RevApp : (Type A) ((List A) pre) ((List A) w) ((List A) r) -> Type)
+  enum
+  (many RANil : (erased Type A) (erased (List A) w) -> (RevApp A (Nil A) w w))
+  (many RACons : (erased Type A) (erased A s) (erased (List A) pre w r) (erased (RevApp A pre (Cons A s w) r) p)
+      -> (RevApp A (Cons A s pre) w r)))
+
 (def-fns _ $ (erased lapp-nil : (erased Type A) (subterm erased (List A) xs) -> (erased (LApp A xs (Nil A) xs) p))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (LAppNil _ (Nil _))))
   (LAppCons _ x xs1 (Nil _) xs1 (lapp-nil _ xs1)))
+
+(def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (LApp A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
+  (let-match erased p (LAppCons _ _ xs1 _ zs1 p1) ((LAppNil _ _) (Refl _ zs)))
+  (let-match erased (app-nil-r A xs1 zs1 p1) (Refl _ _))
+  (Refl _ zs))
 
 ; r is a suffix of rr.
 (def-adts $ (Suffix : (Type A) ((List A) r) ((List A) rr) -> Type)

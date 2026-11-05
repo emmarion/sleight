@@ -117,18 +117,6 @@
   (let-match erased a (AddSucc _ _ _ a1))
   (join-length-inv pre1 rest ks1 i1 r k1 j1 lp1 lk1 a1))
 
-(def-fns _ $ (erased join-snoc : (erased (List (Nat)) pre rest ks pre2) (erased (Nat) c) (subterm erased (LApp (Nat) pre (Cons (Nat) c rest) ks) j)
-    (erased (Snoc (Nat) pre c pre2) s) -> (erased (LApp (Nat) pre2 rest ks) r))
-  (let-match erased j (LAppCons _ x pre1 _ ks1 j1)
-    ((LAppNil _ _) (let-match erased s (SnocNil _ _)) (LAppCons _ c (Nil _) rest rest (LAppNil _ rest))))
-  (let-match erased s (SnocCons _ _ _ _ pre3 s1))
-  (LAppCons _ x pre3 rest ks1 (join-snoc pre1 rest ks1 pre3 c j1 s1)))
-
-(def-fns _ $ (erased join-nil-r : (erased (List (Nat)) pre ks) (subterm erased (LApp (Nat) pre (Nil (Nat)) ks) j) -> (erased (Eq (List (Nat)) ks pre) e))
-  (let-match erased j (LAppCons _ _ pre1 _ ks1 j1) ((LAppNil _ _) (Refl _ ks)))
-  (let-match erased (join-nil-r pre1 ks1 j1) (Refl _ _))
-  (Refl _ ks))
-
 ; xs and ys agree at some position.
 (def-adts $ (SameAt : ((List (Nat)) xs ys) -> Type)
   enum
@@ -168,7 +156,7 @@
 (def-fns _ $ (erased join-all : (erased (List (Nat)) pre rest ks) (erased (Nat) d) (erased (LApp (Nat) pre rest ks) j) (erased (Length (Nat) pre d) lp)
     (erased (Length (Nat) ks d) l) -> (erased (Eq (List (Nat)) ks pre) e))
   (let-match erased (join-length-inv pre rest ks d (Zero) d j lp l (add-zero-right d)) (LengthNil _))
-  (join-nil-r pre ks j))
+  (app-nil-r _ pre ks j))
 
 (def-fns _ $ (erased absurd neat-irrefl : (erased (List (Nat)) xs) (erased (NeAt xs xs) ne) -> (erased (False) f))
   (let-match erased ne (MkNeAt _ _ j a b pa pb ab))
@@ -199,7 +187,7 @@
       (let-match erased c (MkFourColoring _ _ _ _ _ _ _ u))
       (let ((erased lc0)) (alllt-nth ks 4 i c0 u (join-nth-r pre rest ks i (Zero) i c0 j lp (add-zero-right i) (NthHere _ c0 rest1))))
       (let ((erased q) (erased sq)) (snoc-exists _ pre c0))
-      (let ((erased jq)) (join-snoc pre rest1 ks q c0 j sq))
+      (let ((erased jq)) (app-snoc-l _ pre rest1 ks q c0 j sq))
       (let-match erased lc0 (LtS _ _ l1)
         ((LtZ _) (let-match erased (snoc-fn _ pre q p0 c0 sq s0) (Refl _ _)) (noext-sound d e f r lc p0 ks rest1 n0 jq l c rl)))
       (let-match erased l1 (LtS _ _ l2)

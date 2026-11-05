@@ -1,9 +1,3 @@
-(def-fns _ $ (many nth-q : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (NthR A xs i) r))
-  (let-match many xs (Cons _ x rest) ((Nil _) (NthN A xs i)))
-  (let-match many i (Succ i1) ((Zero) (NthY A xs i x (NthHere A x rest))))
-  (let-match many (notail $ nth-q A rest i1) (NthY _ _ _ y p) ((NthN _ _ _) (NthN A xs i)))
-  (NthY A xs i y (NthThere A x rest i1 y p)))
-
 (def-fns _ $ (many nat-at : (many (List (Nat)) xs) (many (Nat) i v) -> (many (ErasedMaybe (Nth (Nat) xs i v)) r))
   (let-match many (nth-q (Nat) xs i) (NthY _ _ _ y p) ((NthN _ _ _) (ENone _)))
   (let-match many (nat-eq y v) (Equal _ _ _) (else (ENone _)))

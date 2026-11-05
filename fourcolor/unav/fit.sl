@@ -436,17 +436,6 @@
     ((OrL _ _ q) (OrL _ _ (rg-weak a lo r zl q p wl)))
     ((OrR _ _ q) (OrR _ _ (rg-weak a hi r zh q p wh)))))
 
-(def-adts $ (RgAt : ((List (Rg)) xs) ((Nat) i) -> Type)
-  enum
-  (many RAHit : (erased (List (Rg)) xs) (erased (Nat) i) (many (Rg) r) (erased (Nth (Rg) xs i r) p) -> (RgAt xs i))
-  (many RAMiss : (erased (List (Rg)) xs) (erased (Nat) i) -> (RgAt xs i)))
-
-(def-fns _ $ (many rg-at : (subterm many (Nat) i) (many (List (Rg)) xs) -> (many (RgAt xs i) r))
-  (let-match many xs (Cons _ x rest) ((Nil _) (RAMiss xs i)))
-  (let-match many i (Succ i1) ((Zero) (RAHit xs i x (NthHere _ x rest))))
-  (let-match many (notail $ rg-at i1 rest) (RAHit _ _ r p) ((RAMiss _ _) (RAMiss xs i)))
-  (RAHit xs i r (NthThere _ x rest i1 r p)))
-
 (def-fns _ $ (many rg-set : (subterm many (Nat) i) (many (Rg) y) (many (List (Rg)) xs) (erased (Rg) x) (erased (Nth (Rg) xs i x) p)
     -> (many (List (Rg)) ys) (erased (SetNth (Rg) xs i y ys) s))
   (let-match many xs (Cons _ z rest) (absurd (Nil _) p))
@@ -532,7 +521,7 @@
     ((LHat) (let ((many hl) (many hh) (erased w)) (rg-split k h)) (values (MkSub s hl fs) (MkSub s hh fs) (SSHat k s h hl hh fs w)))
     ((LFan j)
       (let ((many gs) (erased e)) (expand x))
-      (let-match many (rg-at j gs) (RAHit _ _ r nr) ((RAMiss _ _) (values x x (SSKeep k x))))
+      (let-match many (nth-q (Rg) gs j) (NthY _ _ _ r nr) ((NthN _ _ _) (values x x (SSKeep k x))))
       (let ((many rl) (many rh) (erased w)) (rg-split k r))
       (let ((many gl) (erased sl)) (rg-set j rl gs r nr))
       (let ((many gh) (erased sh)) (rg-set j rh gs r nr))

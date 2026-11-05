@@ -382,11 +382,6 @@
       ((ElHere _ _ _) (red-sound d x0 e n f ks qt p1 d1 g lx ex))
       ((ElThere _ _ _ _ m1) (redl-sound d x0 e n f ks qt rest r1 g lx pp s m1 ex)))))
 
-(def-adts $ (NthR : (Type A) ((List A) xs) ((Nat) i) -> Type)
-  enum
-  (many NthY : (erased Type A) (erased (List A) xs) (erased (Nat) i) (many A x) (erased (Nth A xs i x) p) -> (NthR A xs i))
-  (many NthN : (erased Type A) (erased (List A) xs) (erased (Nat) i) -> (NthR A xs i)))
-
 (def-fns _ $ (many nth-t : (erased Type A) (subterm many (List A) xs) (many (Nat) i) (many A d) -> (many (Bool) ok) (many A x) (erased (IfT ok (Nth A xs i x)) w))
   (let-match many xs (Cons _ y rest) ((Nil _) (values (BFalse) d (IfF _))))
   (let-match many i (Succ i1) ((Zero) (values (BTrue) y (IfY _ (NthHere A y rest)))))

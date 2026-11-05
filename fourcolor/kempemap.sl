@@ -893,10 +893,10 @@
 (def-fns _ $ (erased ring-turn : (erased (List (Nat)) n s) (subterm erased (List (Nat)) X) (erased (List (Nat)) Y R R2 ids) (erased (LApp (Nat) X Y R) j) (erased (LApp (Nat) Y X R2) j2)
     (erased (RingOK n s R ids) ro) -> (erased (RingOK n s R2 ids) r))
   (let-match erased j (LAppCons _ x X1 _ R1 j1)
-    ((LAppNil _ _) (let-match erased (join-nil-r Y R2 j2) (Refl _ _)) ro))
+    ((LAppNil _ _) (let-match erased (app-nil-r _ Y R2 j2) (Refl _ _)) ro))
   (let ((erased R3) (erased s3)) (snoc-exists _ R1 x))
   (let ((erased Y2) (erased sy)) (snoc-exists _ Y x))
-  (ring-turn n s X1 Y2 R3 R2 ids (app-snoc _ X1 Y R1 Y2 R3 x j1 s3 sy) (join-snoc Y X1 R2 Y2 x j2 sy) (ring-rot n s R1 R3 ids x ro s3)))
+  (ring-turn n s X1 Y2 R3 R2 ids (app-snoc _ X1 Y R1 Y2 R3 x j1 s3 sy) (app-snoc-l _ Y X1 R2 Y2 x j2 sy) (ring-rot n s R1 R3 ids x ro s3)))
 
 ; The trace et of ks on R, a chromogram w matching it, and a certificate for w.
 (def-adts $ (KMatch : ((Nat) d) ((List (Nat)) e n f s ks R) -> Type)
@@ -923,10 +923,10 @@
 (def-fns _ $ (erased km-turn : (erased (Nat) d) (erased (List (Nat)) e n f s ks) (subterm erased (List (Nat)) X) (erased (List (Nat)) Y R R2)
     (erased (LApp (Nat) X Y R) j) (erased (LApp (Nat) Y X R2) j2) (erased (KMatch d e n f s ks R) km) -> (erased (KMatch d e n f s ks R2) r))
   (let-match erased j (LAppCons _ x X1 _ R1 j1)
-    ((LAppNil _ _) (let-match erased (join-nil-r Y R2 j2) (Refl _ _)) km))
+    ((LAppNil _ _) (let-match erased (app-nil-r _ Y R2 j2) (Refl _ _)) km))
   (let ((erased R3) (erased s3)) (snoc-exists _ R1 x))
   (let ((erased Y2) (erased sy)) (snoc-exists _ Y x))
-  (km-turn d e n f s ks X1 Y2 R3 R2 (app-snoc _ X1 Y R1 Y2 R3 x j1 s3 sy) (join-snoc Y X1 R2 Y2 x j2 sy) (km-rot d x e n f s ks R1 R3 km s3)))
+  (km-turn d e n f s ks X1 Y2 R3 R2 (app-snoc _ X1 Y R1 Y2 R3 x j1 s3 sy) (app-snoc-l _ Y X1 R2 Y2 x j2 sy) (km-rot d x e n f s ks R1 R3 km s3)))
 
 ; e is an involution, fixed points allowed.
 (def-adts $ (Plain : ((Nat) d) ((List (Nat)) e) -> Type)

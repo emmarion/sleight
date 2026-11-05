@@ -99,7 +99,7 @@
   (let ((erased init) (erased l) (erased sn)) (unsnoc-exists (Nat) b0 B))
   (let ((erased R1)) (Cons (Nat) l init))
   (let ((erased ii) (erased j0)) (lapp-make _ init (Nil _)))
-  (let-match erased (join-nil-r init ii j0) (Refl _ _))
+  (let-match erased (app-nil-r _ init ii j0) (Refl _ _))
   (let-match erased (ring-turn nr2 (Nil _) init (Cons _ l (Nil _)) br2 R1 idr (app-snoc _ init (Nil _) init (Cons _ l (Nil _)) br2 l j0 sn (SnocNil _ l))
       (LAppCons _ l (Nil _) init init (LAppNil _ init)) (MkRingOK nr2 (Nil _) br2 idr cyr dbr (off-nil br2) (oo-qcubic nr2 br2 br2 idr onr (sub-refl br2))))
     (MkRingOK _ _ _ _ nc1 ds3 _ qc1))

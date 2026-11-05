@@ -106,3 +106,14 @@
   (let-match many (drop _ j p) (Cons _ x _) ((Nil _) (BFalse)))
   (let-match many (loc-range (BTrue) i x) (Some _ r) ((None _) (BFalse)))
   (good-rsplit k r))
+
+(def-adts $ (NthR : (Type A) ((List A) xs) ((Nat) i) -> Type)
+  enum
+  (many NthY : (erased Type A) (erased (List A) xs) (erased (Nat) i) (many A x) (erased (Nth A xs i x) p) -> (NthR A xs i))
+  (many NthN : (erased Type A) (erased (List A) xs) (erased (Nat) i) -> (NthR A xs i)))
+
+(def-fns _ $ (many nth-q : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (NthR A xs i) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (NthN A xs i)))
+  (let-match many i (Succ i1) ((Zero) (NthY A xs i x (NthHere A x rest))))
+  (let-match many (notail $ nth-q A rest i1) (NthY _ _ _ y p) ((NthN _ _ _) (NthN A xs i)))
+  (NthY A xs i y (NthThere A x rest i1 y p)))

@@ -4,6 +4,12 @@
   (many SnocCons : (erased Type A) (erased A x a) (erased (List A) xs ys) (erased (Snoc A xs a ys) p)
       -> (Snoc A (Cons A x xs) a (Cons A x ys))))
 
+(def-fns _ $ (erased app-snoc-l : (erased Type A) (erased (List A) xs ys zs xs2) (erased A x) (subterm erased (LApp A xs (Cons A x ys) zs) p)
+    (erased (Snoc A xs x xs2) s) -> (erased (LApp A xs2 ys zs) r))
+  (match erased p _
+    ((LAppNil _ _) (let-match erased s (SnocNil _ _)) (LAppCons A x (Nil A) ys ys (LAppNil A ys)))
+    ((LAppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (LAppCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
+
 ; e and nd are the edge and node permutations, as lists indexed by dart. b is reached from a by steps of the
 ; face permutation, nd after e.
 (def-adts $ (FaceReach : ((List (Nat)) e) ((List (Nat)) nd) ((Nat) a) ((Nat) b) -> Type)

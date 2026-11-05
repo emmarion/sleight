@@ -10,13 +10,6 @@
   (many MkHolds : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) et) -> Type) Q) (erased (List (Col)) et) (erased (Q x et) h)
       -> (Holds (MkPred X x Q) et)))
 
-; r is the reverse of pre followed by w.
-(def-adts $ (RevApp : (Type A) ((List A) pre) ((List A) w) ((List A) r) -> Type)
-  enum
-  (many RANil : (erased Type A) (erased (List A) w) -> (RevApp A (Nil A) w w))
-  (many RACons : (erased Type A) (erased A s) (erased (List A) pre w r) (erased (RevApp A pre (Cons A s w) r) p)
-      -> (RevApp A (Cons A s pre) w r)))
-
 ; The completion of the empty chromogram from d open chords and parity b is not balanced.
 (def-adts $ (EndBad : ((Nat) d) ((Bool) b) -> Type)
   enum

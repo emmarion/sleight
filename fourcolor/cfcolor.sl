@@ -471,22 +471,11 @@
   (let-match erased (rot-fn _ m et et3 et2 rt3 rt) (Refl _ _))
   (MkCpCol (Cons (Step) (SRr) cp) d e f r2 ks rc2 cs2 et2 (CmRr m d cp e f r r2 cm lr rtr) col rr2 nc2 tr2))
 
-(def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (LApp A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
-  (let-match erased p (LAppCons _ _ xs1 _ zs1 p1) ((LAppNil _ _) (Refl _ zs)))
-  (let-match erased (app-nil-r A xs1 zs1 p1) (Refl _ _))
-  (Refl _ zs))
-
 (def-fns _ $ (erased app-snoc : (erased Type A) (erased (List A) xs ys zs ys2 zs2) (erased A x) (subterm erased (LApp A xs ys zs) p)
     (erased (Snoc A zs x zs2) s) (erased (Snoc A ys x ys2) t) -> (erased (LApp A xs ys2 zs2) r))
   (match erased p _
     ((LAppNil _ _) (let-match erased (snoc-fn _ ys zs2 ys2 x s t) (Refl _ _)) (LAppNil A zs2))
     ((LAppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ zs3 s1)) (LAppCons A y xs1 ys2 zs3 (app-snoc A xs1 ys zs1 ys2 zs3 x p1 s1 t)))))
-
-(def-fns _ $ (erased app-snoc-l : (erased Type A) (erased (List A) xs ys zs xs2) (erased A x) (subterm erased (LApp A xs (Cons A x ys) zs) p)
-    (erased (Snoc A xs x xs2) s) -> (erased (LApp A xs2 ys zs) r))
-  (match erased p _
-    ((LAppNil _ _) (let-match erased s (SnocNil _ _)) (LAppCons A x (Nil A) ys ys (LAppNil A ys)))
-    ((LAppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (LAppCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
 
 (def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) xs zs) (erased A x) (subterm erased (Snoc A xs x zs) s) -> (erased (LApp A xs (Cons A x (Nil A)) zs) r))
   (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (LAppNil A (Cons A x (Nil A)))))
