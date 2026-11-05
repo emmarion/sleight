@@ -175,10 +175,42 @@
   (let ((unique mw1) (many n)) (fresh-raw mw here "n"))
   (values mw1 $ qq (let ((many (~ n))) (nq-length _ (~ xs))) (native-each-at (~ n) (~@ args))))
 
+(def-fns _ $ (many nq-slots : (erased Type A) (subterm many (List A) xs) -> (many (List $ Maybe A) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
+  (Cons _ (Some _ x) $ notail $ nq-slots A rest))
+
+(def-fns _ $ (many nq-pluck : (erased Type A) (subterm many (List $ Maybe A) xs) (many (Nat) k) -> (many (Maybe A) x) (many (List $ Maybe A) rest))
+  (let-match many xs (Cons _ y ys) ((Nil _) (values (None _) xs)))
+  (let-match many k (Succ j) ((Zero) (values y (Cons _ (None _) ys))))
+  (let ((many x) (many zs)) (notail $ nq-pluck A ys j))
+  (values x (Cons _ y zs)))
+
+(def-fns _ $ (many nq-permute : (erased Type A) (many (List $ Maybe A) xs) (subterm many (List $ Nat) ks) -> (many (Maybe $ List A) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Some _ (Nil _))))
+  (let ((many x) (many xs2)) (nq-pluck A xs k))
+  (let-match many x (Some _ y) ((None _) (None _)))
+  (let-match many (notail $ nq-permute A xs2 rest) (Some _ ys) ((None _) (None _)))
+  (Some _ (Cons _ y ys)))
+
+(def-fns _ $ (many nq-emit : (many (List $ Raw) bs ts as) (many (Raw) next) -> (many (List $ Raw) out))
+  (let ((many run)) $ match many ts (((List $ Raw) _)) ((Nil _) (Nil _)) (else (qq (let ((~@ bs)) (native-compute (~@ ts))))))
+  (raws-append run $ raws-append as $ qq (let ((many (~ next))) (MkNativeQueue (Nil _) (Nil _) (Nil _)))))
+
+(let ((erased nq-order-type)) (List (Nat)))
+
 (def-macro (native-run args here mw)
   (let ((unique mw1) (many next) (many q)) (nq-read mw))
   (let-match many q (Some _ nq) ((None _) (macro-fail mw1 here "no `native-queue-0` in scope: load native.sl")))
   (let-match many nq (MkNativeQueue bs ts as))
-  (let ((many run)) $ match many ts (((List $ Raw) _)) ((Nil _) (Nil _)) (else (qq (let ((~@ bs)) (native-compute (~@ ts))))))
-  (values mw1 $ raws-append run $ raws-append as $
-    qq (let ((many (~ next))) (MkNativeQueue (Nil _) (Nil _) (Nil _)))))
+  (let ((many usage)) "`native-run` takes nothing, or a Settled `(List (Nat))` order of its jobs")
+  (let-match many args (Cons _ o r1) ((Nil _) (values mw1 $ nq-emit bs ts as next)))
+  (let-match many r1 (Nil _) ((Cons _ _ _) (macro-fail mw1 here usage)))
+  (let ((unique mw2) (many o2)) (nq-close mw1 o))
+  (let ((unique mw3) (many ord)) (arg-value mw2 o2 _ (settled-of erased nq-order-type)))
+  (let-match many ord (Some _ ks) ((None _) (macro-fail mw3 here usage)))
+  (let ((many stale)) (str-append "the order given to `native-run` is not a permutation of the indices of its "
+    (str-append (nat-str $ nq-length _ ts) " jobs: regenerate it, or drop it")))
+  (let-match many (nat-eq (nq-length _ ts) (nq-length _ ks)) (Equal _ _ _) ((Unequal _ _ _ _ _) (macro-fail mw3 here stale)))
+  (let-match many (nq-permute _ (nq-slots _ bs) ks) (Some _ bs2) ((None _) (macro-fail mw3 here stale)))
+  (let-match many (nq-permute _ (nq-slots _ ts) ks) (Some _ ts2) ((None _) (macro-fail mw3 here stale)))
+  (values mw3 $ nq-emit bs2 ts2 as next))

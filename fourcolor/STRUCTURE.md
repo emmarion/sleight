@@ -101,6 +101,8 @@ job per element of a `Settled` list and folds their evidence;
 `(native-then stmt ...)` queues statements; `(native-run)` runs every
 queued thunk in one `native-compute`, matches each result against its
 pattern, binds each name to its evidence and runs the queued statements.
+`(native-run o)` passes the thunks in the order of `o`, a `Settled`
+permutation of their indices; `fcproof.sl` gives them longest first.
 The queue is the last of `native-queue-0`, `native-queue-1`, ... in
 scope. `fcproof.sl` calls `native-run` and binds `four-color-proof`.
 
