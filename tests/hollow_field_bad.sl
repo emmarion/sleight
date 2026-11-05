@@ -3,5 +3,5 @@
   (many MA : -> (Mark))
   (many MB : (many (Nat) n) -> (Mark)))
 
-(def-fns _ $ (many ma : -> (many (Mark) r at vacant-slot))
-  (MA))
+(def-fns _ $ (many mb : (many (Nat) n) -> (many (Mark) r at vacant-slot))
+  (MB n))

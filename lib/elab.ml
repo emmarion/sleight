@@ -293,7 +293,7 @@ let tag_of env c =
       let shapes = shapes env Reader.nowhere cs in
       match type_of env mid with
       | Matchable (_, false, false, _, _) when hollow d shapes -> Some 0
-      | Matchable (_, false, false, _, _) when tagged d shapes -> find_index (( = ) c) (fieldless shapes)
+      | Matchable (_, false, false, _, _) -> Option.map (fun k -> if tagged d shapes then k else 0) (find_index (( = ) c) (fieldless shapes))
       | _ -> None)
   | None -> None
 
@@ -2408,7 +2408,7 @@ and elab_stmt_unsettled ?(within = "item of a body") ?branch_frames spos env raw
                 if not (List.exists (fun (_, c', _) -> c' = c) shapes) then error_in env l "`slot-tag`: %s is not listed by the `Matchable` open for %s" (qname env c) (qname env tid);
                 if List.exists (fun (m, c', _) -> c' = c && m = Erased) shapes then error_in env l "`slot-tag`: %s is phantom, so it has no tag slot" (qname env c);
                 if runtime (fst (ctor_type env l c)) <> [] then error_in env l "`slot-tag`: %s has a non-erased field, so it has no tag slot" (qname env c);
-                match tag_of env c with Some k -> k | None -> error_in env l "`slot-tag`: %s is neither tagged nor hollow, so the word of %s is unspecified" (qname env tid) (qname env c) in
+                Option.get (tag_of env c) in
           let env, t = tag_slot env (Z.of_int k) in
           ((try place env x (slot_of t) with Contradiction msg -> error_in env l "`slot-tag`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
       | Some Sp.OpenAtFn, [ e ] ->

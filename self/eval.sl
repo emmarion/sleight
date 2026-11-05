@@ -381,14 +381,14 @@
   (and (not tagged) $ nat-list-eq arities $ list-replicate _ (list-length _ arities) 0))
 
 (def-fns _ $ (many construct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) c) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (let-match many c (MkCtor _ _ index _ tagged ext shape newtype2))
+  (let-match many c (MkCtor _ _ index arity tagged ext _ newtype2))
   (match many ext _
     ((Some _ e)
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ ext-construct _ hp e index args)
       (values hl2 hp2 sf2 v))
     ((None _)
       (let-match many newtype2 (BFalse) ((BTrue) (tuple _ hp args)))
-      (let ((many vacant)) $ match many (hollow-shape tagged shape) (((Maybe $ Ref Block hs) _)) ((BTrue) (settled-ref _ (heap-entries _ hp) null-id)) ((BFalse) (None _)))
+      (let ((many vacant)) $ match many (and (not tagged) $ nat-eqb arity 0) (((Maybe $ Ref Block hs) _)) ((BTrue) (settled-ref _ (heap-entries _ hp) null-id)) ((BFalse) (None _)))
       (let-match many vacant (None _) ((Some _ v) (values hs hp (le-refl hs) v)))
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ halloc _ hp $ BTag _ c args)
       (values hl2 hp2 sf2 v))))
