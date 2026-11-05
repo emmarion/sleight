@@ -6,7 +6,7 @@
   (let-match erased nc (NCsCons k c lc1 cs1 p nc1) ((NCsNil) (All2Nil _ _ NCol)))
   (All2Cons _ _ NCol k c lc1 cs1 (match erased p (((NCol k c) res)) ((NC0) (NC0)) ((NC1) (NC1)) ((NC2) (NC2)) ((NC3) (NC3))) (colof-of lc1 cs1 nc1)))
 
-(def-fns _ $ (erased k-addc : (erased (Col) a b c) (erased (AddK a b c) p) -> (erased (AddC a b c) q))
+(def-fns _ $ (erased k-addc : (erased (Col) a b c) (erased (AddK a b c) p) -> (erased (ColAdd a b c) q))
   (let ((erased c2) (erased q)) (addc-c a b))
   (let-match erased (addc-fn a b c c2 p (addc-k a b c2 q)) (Refl _ _))
   q)

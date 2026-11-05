@@ -413,7 +413,7 @@
 
 (def-fns _ $ (erased below-upd2 : (erased (Nat) d a u b v) (erased (List (Nat)) p q p2) (erased (List (Bond)) g2) (subterm erased (Fun p2 g2) f)
     (erased (Upd2 p a u b v p2) up) (erased (HPerm d p q) pm) (erased (Lt a d) la) (erased (Lt u d) lu) (erased (Lt b d) lb) (erased (Lt v d) lv)
-    -> (erased (Below g2 d) r))
+    -> (erased (BondsBelow g2 d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
   (let ((erased rest)) (below-upd2 d a u b v p q p2 g1 f1 up pm la lu lb lv))
   (let-match erased (upd2-case p p2 a u b v x y up px) (UCo _ _ _ _ _ _ _ _ _ q1)
@@ -504,7 +504,7 @@
       (NthThere _ _ ls1 j1 _ (ind-out s xs1 ls1 j1 x id1 px1 out)))))
 
 (def-fns _ $ (erased shut-const : (erased (Nat) d) (erased (List (Nat)) s ids lab) (erased (List (Bond)) g) (subterm erased (Shut s g) sh)
-    (erased (Ind s ids lab) id) (erased (Iota d ids) io) (erased (Below g d) bg) -> (erased (Const lab g) r))
+    (erased (Ind s ids lab) id) (erased (Iota d ids) io) (erased (BondsBelow g d) bg) -> (erased (Const lab g) r))
   (match erased sh _
     ((ShutNil _) (ConstNil lab))
     ((ShutIn _ g1 x y px py sh1)
@@ -517,7 +517,7 @@
         (shut-const d s ids lab g1 sh1 id io bg1)))))
 
 (def-fns _ $ (erased shut-sep : (erased (Nat) d x y) (erased (List (Nat)) s) (erased (List (Bond)) g) (erased (Shut s g) sh)
-    (erased (Below g d) bg) (erased (NotIn x s) px) (erased (In y s) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Sep g x y) r))
+    (erased (BondsBelow g d) bg) (erased (NotIn x s) px) (erased (In y s) py) (erased (Lt x d) lx) (erased (Lt y d) ly) -> (erased (Sep g x y) r))
   (let ((erased ids) (erased io)) (iota-exists d))
   (let ((erased lab) (erased id)) (ind-exists s ids))
   (MkSep g x y lab (Zero) (Succ (Zero)) (shut-const d s ids lab g sh id io bg) (ind-out s ids lab x x id (iota-nth d x ids io lx) px)
@@ -676,23 +676,23 @@
   (let ((erased g2) (erased gr2)) (upd2-graph p p2 a b2 b a2 d up lp))
   (values k1 e01 (MkOrbits d k1 p2 g2 gr2 (classes-upd2 d k1 a b2 b a2 p q p0 p2 g0 g2 up up0 gr0 gr2 pm la lb2 lb la2 cs4))))
 
-(def-fns _ $ (erased below-adj : (erased (List (Bond)) g) (erased (Nat) d x y) (subterm erased (Adj g x y) a) (erased (Below g d) bg)
+(def-fns _ $ (erased below-adj : (erased (List (Bond)) g) (erased (Nat) d x y) (subterm erased (Adj g x y) a) (erased (BondsBelow g d) bg)
     -> (erased (Lt y d) r))
   (match erased a _
     ((AdjFwd _ _ _) (let-match erased bg (BelowCons _ _ _ _ _ ly _)) ly)
     ((AdjBwd _ _ _) (let-match erased bg (BelowCons _ _ _ _ lx _ _)) lx)
     ((AdjThere g1 _ _ _ a1) (let-match erased bg (BelowCons _ _ _ _ _ _ bg1)) (below-adj g1 d x y a1 bg1))))
 
-(def-fns _ $ (erased below-succ : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (Below g d) bg) -> (erased (Below g (Succ d)) r))
+(def-fns _ $ (erased below-succ : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (BondsBelow g d) bg) -> (erased (BondsBelow g (Succ d)) r))
   (let-match erased bg (BelowCons g1 x y _ lx ly bg1) ((BelowNil _) (BelowNil _)))
   (BelowCons g1 x y (Succ d) (lt-weaken x d lx) (lt-weaken y d ly) (below-succ g1 d bg1)))
 
-(def-fns _ $ (erased below-shut : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (Below g d) bg) -> (erased (Shut (Cons (Nat) d (Nil (Nat))) g) r))
+(def-fns _ $ (erased below-shut : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (BondsBelow g d) bg) -> (erased (Shut (Cons (Nat) d (Nil (Nat))) g) r))
   (let-match erased bg (BelowCons g1 x y _ lx ly bg1) ((BelowNil _) (ShutNil _)))
   (ShutOut _ g1 x y (NotInCons x d _ (ApLt _ _ x d lx) (NotInNil x)) (NotInCons y d _ (ApLt _ _ y d ly) (NotInNil y)) (below-shut g1 d bg1)))
 
 (def-fns _ $ (erased below-snoc : (erased (List (Bond)) g g2) (erased (Bond) b) (erased (Nat) d) (subterm erased (Snoc (Bond) g b g2) s)
-    (erased (Below (Cons (Bond) b g) d) bg) -> (erased (Below g2 d) r))
+    (erased (BondsBelow (Cons (Bond) b g) d) bg) -> (erased (BondsBelow g2 d) r))
   (let-match erased bg (BelowCons _ x y _ lx ly bg1))
   (let-match erased s (SnocCons _ _ _ g1 g3 s1) ((SnocNil _ _) (BelowCons _ x y d lx ly (BelowNil d))))
   (let-match erased bg1 (BelowCons _ x0 y0 _ lx0 ly0 bg2))
@@ -758,8 +758,8 @@
     ((Unequal _ _ _ _ ne) (SpansCons g2 g1 x y (conn-adj g2 x y (graph-adj (Succ d) x y p2 g2 gr2 (insert-other p p2 a d x y ins px ne))) rest))))
 
 (def-fns _ $ (erased below-insert : (erased (Nat) d a c) (erased (List (Nat)) p p2) (erased (List (Bond)) g g2) (subterm erased (Fun p2 g2) f)
-    (erased (Insert p a d p2) ins) (erased (Length (Nat) p d) lp) (erased (Fun p g) fg) (erased (Below g d) bg) (erased (Graph d p g) gr)
-    (erased (Nth (Nat) p a c) pc) (erased (Lt a d) la) -> (erased (Below g2 (Succ d)) r))
+    (erased (Insert p a d p2) ins) (erased (Length (Nat) p d) lp) (erased (Fun p g) fg) (erased (BondsBelow g d) bg) (erased (Graph d p g) gr)
+    (erased (Nth (Nat) p a c) pc) (erased (Lt a d) la) -> (erased (BondsBelow g2 (Succ d)) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil _)))
   (let ((erased rest)) (below-insert d a c p p2 g g1 f1 ins lp fg bg gr pc la))
   (let ((erased ld)) (lt-succ d))

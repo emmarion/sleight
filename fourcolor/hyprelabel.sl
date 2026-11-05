@@ -6,7 +6,7 @@
       (erased (Nth (Nat) s y y2) py) (erased (MapB s g g2) rest)
       -> (MapB s (Cons (Bond) (MkBond x y) g) (Cons (Bond) (MkBond x2 y2) g2))))
 
-(def-fns _ $ (erased map-exists : (erased (Nat) d) (erased (List (Nat)) s si) (erased (List (Bond)) g) (subterm erased (Below g d) bg)
+(def-fns _ $ (erased map-exists : (erased (Nat) d) (erased (List (Nat)) s si) (erased (List (Bond)) g) (subterm erased (BondsBelow g d) bg)
     (erased (HPerm d s si) pm) -> (erased (List (Bond)) g2) (erased (MapB s g g2) r))
   (let-match erased bg (BelowCons g1 x y _ lx ly bg1) ((BelowNil _) (values (Nil _) (MapNil s))))
   (let ((erased x2) (erased px) (erased _)) (perm-nth d x s si pm lx))
@@ -29,7 +29,7 @@
     ((AdjThere _ _ _ _ a1) (AdjThere g3 (MkBond u2 v2) x2 y2 (adj-map s g1 g3 x y x2 y2 a1 mb1 px py)))))
 
 (def-fns _ $ (erased conn-map : (erased (Nat) d) (erased (List (Nat)) s si) (erased (List (Bond)) g g2) (erased (Nat) x y x2 y2)
-    (subterm erased (Conn g x y) c) (erased (MapB s g g2) mb) (erased (Below g d) bg) (erased (HPerm d s si) pm) (erased (Nth (Nat) s x x2) px)
+    (subterm erased (Conn g x y) c) (erased (MapB s g g2) mb) (erased (BondsBelow g d) bg) (erased (HPerm d s si) pm) (erased (Nth (Nat) s x x2) px)
     (erased (Nth (Nat) s y y2) py) -> (erased (Conn g2 x2 y2) r))
   (let-match erased c (ConnStep _ _ w _ a c1) ((ConnHere _ _) (let-match erased (nth-fn _ s x x2 y2 px py) (Refl _ _)) (ConnHere g2 x2)))
   (let ((erased w2) (erased pw) (erased _)) (perm-nth d w s si pm (below-adj g d x w a bg)))
@@ -101,7 +101,7 @@
 
 (def-fns _ $ (erased rooted-map : (erased (Nat) d) (erased (List (Nat)) s si lab ids rs rs2 xs us ls1 ls2) (erased (List (Bond)) g g2)
     (subterm erased (Respects si xs us) rx) (erased (Respects lab us ls1) ru) (erased (Respects s ls1 ls2) rv)
-    (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro) (erased (Respects s rs rs2) rrs) (erased (MapB s g g2) mb) (erased (Below g d) bg)
+    (erased (Iota d ids) io) (erased (Rooted g rs ids lab) ro) (erased (Respects s rs rs2) rrs) (erased (MapB s g g2) mb) (erased (BondsBelow g d) bg)
     (erased (HPerm d s si) pm) -> (erased (Rooted g2 rs2 xs ls2) r))
   (let-match erased rx (RespCons _ xs1 us1 x u pu rx1)
     ((RespNil _) (let-match erased ru (RespNil _)) (let-match erased rv (RespNil _)) (RootedNil g2 rs2)))
@@ -130,7 +130,7 @@
     (rooted-map d s si lab ids rs rs2 ids si l1 lab2 g g2 (respects-id-right d ids si io lsi) r1 r2 io ro rrs mb (classes-below g d k cs) pm)))
 
 (def-fns _ $ (erased fun-below : (erased (Nat) d) (erased (List (Nat)) p) (erased (List (Bond)) g) (subterm erased (Fun p g) f) (erased (Length (Nat) p d) lp)
-    (erased (Under p d) up) -> (erased (Below g d) r))
+    (erased (Under p d) up) -> (erased (BondsBelow g d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
   (BelowCons g1 x y d (nth-lt-length _ p x d y px lp) (alllt-nth p d x y up px) (fun-below d p g1 f1 lp up)))
 

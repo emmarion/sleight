@@ -22,8 +22,8 @@ def part(text):
     while i < len(toks) - 1:
         head, s = toks[i], toks[i + 1]
         inner = head[2:-1].split() if head != '$' else ['*']
-        subs.append('(pc %s %s)' % (rg(s), rg(inner[0])) if len(inner) == 1
-                    else '(pf %s (%s))' % (rg(inner[0]), seq(map(rg, inner[1:]))))
+        subs.append('(sub-of %s %s)' % (rg(s), rg(inner[0])) if len(inner) == 1
+                    else '(sub-fans %s (%s))' % (rg(inner[0]), seq(map(rg, inner[1:]))))
         i += 2
     return '(%s)' % seq(subs)
 

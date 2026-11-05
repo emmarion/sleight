@@ -97,11 +97,11 @@
   (SpansCons h f1 x y (spans-conn h g x y c sq) (spans-trans h g f1 sp1 sq)))
 
 ; Every bond of g has both ends below d.
-(def-adts $ (Below : ((List (Bond)) g) ((Nat) d) -> Type)
+(def-adts $ (BondsBelow : ((List (Bond)) g) ((Nat) d) -> Type)
   enum
-  (many BelowNil : (erased (Nat) d) -> (Below (Nil (Bond)) d))
-  (many BelowCons : (erased (List (Bond)) g) (erased (Nat) x y d) (erased (Lt x d) px) (erased (Lt y d) py) (erased (Below g d) rest)
-      -> (Below (Cons (Bond) (MkBond x y) g) d)))
+  (many BelowNil : (erased (Nat) d) -> (BondsBelow (Nil (Bond)) d))
+  (many BelowCons : (erased (List (Bond)) g) (erased (Nat) x y d) (erased (Lt x d) px) (erased (Lt y d) py) (erased (BondsBelow g d) rest)
+      -> (BondsBelow (Cons (Bond) (MkBond x y) g) d)))
 
 ; lab gives the two ends of every bond of g one label.
 (def-adts $ (Const : ((List (Nat)) lab) ((List (Bond)) g) -> Type)
@@ -215,12 +215,12 @@
   (ConstCons lab2 g1 x y l (snoc-old _ lab lab2 a l x s px) (snoc-old _ lab lab2 a l y s py) (const-snoc lab lab2 g1 a cl1 s)))
 
 (def-fns _ $ (erased const-below : (erased (List (Nat)) lab) (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (Const lab g) cl)
-    (erased (Length (Nat) lab d) ll) -> (erased (Below g d) r))
+    (erased (Length (Nat) lab d) ll) -> (erased (BondsBelow g d) r))
   (let-match erased cl (ConstCons _ g1 x y l px py cl1) ((ConstNil _) (BelowNil d)))
   (BelowCons g1 x y d (nth-lt-length _ lab x d l px ll) (nth-lt-length _ lab y d l py ll) (const-below lab g1 d cl1 ll)))
 
 (def-fns _ $ (erased const-spans : (erased (List (Nat)) lab) (erased (List (Bond)) g h) (erased (Nat) d) (erased (Const lab g) cl)
-    (erased (Length (Nat) lab d) ll) (subterm erased (Spans g h) sp) (erased (Below h d) bh) -> (erased (Const lab h) r))
+    (erased (Length (Nat) lab d) ll) (subterm erased (Spans g h) sp) (erased (BondsBelow h d) bh) -> (erased (Const lab h) r))
   (let-match erased sp (SpansCons _ h1 x y c sp1) ((SpansNil _) (ConstNil _)))
   (let-match erased bh (BelowCons _ _ _ _ px _ bh1))
   (let ((erased l) (erased p)) (nth-exists _ lab d x ll px))
@@ -289,11 +289,11 @@
   (classes-grow _ d1 d1 (classes-nil d1)))
 
 (def-fns _ $ (erased classes-equiv : (erased (List (Bond)) g h) (erased (Nat) d k) (erased (Classes g d k) cs)
-    (erased (Spans h g) shg) (erased (Spans g h) sgh) (erased (Below h d) bh) -> (erased (Classes h d k) r))
+    (erased (Spans h g) shg) (erased (Spans g h) sgh) (erased (BondsBelow h d) bh) -> (erased (Classes h d k) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix cl ro))
   (MkClasses h d k ids lab rs io ll lr dr fix (const-spans lab g h d cl ll sgh bh) (rooted-spans g h rs ids lab ro shg)))
 
-(def-fns _ $ (erased classes-below : (erased (List (Bond)) g) (erased (Nat) d k) (erased (Classes g d k) cs) -> (erased (Below g d) r))
+(def-fns _ $ (erased classes-below : (erased (List (Bond)) g) (erased (Nat) d k) (erased (Classes g d k) cs) -> (erased (BondsBelow g d) r))
   (let-match erased cs (MkClasses _ _ _ _ lab _ _ ll _ _ _ cl _))
   (const-below lab g d cl ll))
 
@@ -481,7 +481,7 @@
         (conn-cat h rx x ry (spans-conn h g rx x cx sp) (conn-cat h x y ry cxy (conn-sym h ry y (spans-conn h g ry y cy sp))))
         sp))))
 
-(def-fns _ $ (erased classes-exists : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (Below g d) bg) -> (erased (Nat) k) (erased (Classes g d k) r))
+(def-fns _ $ (erased classes-exists : (erased (List (Bond)) g) (erased (Nat) d) (subterm erased (BondsBelow g d) bg) -> (erased (Nat) k) (erased (Classes g d k) r))
   (let-match erased bg (BelowCons g1 x y _ px py bg1) ((BelowNil _) (values d (classes-nil d))))
   (let ((erased k1) (erased cs1)) (classes-exists g1 d bg1))
   (let-match erased (classes-dec g1 d k1 x y cs1 px py) (OrR _ _ s)

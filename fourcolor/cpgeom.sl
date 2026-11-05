@@ -105,7 +105,7 @@
   (let-match erased i (InHere _ _) (absurd (InThere _ _ _ i1) (match erased i1 _)))
   (values pl c))
 
-(def-fns _ $ (erased const-one : (erased (List (Bond)) g h) (erased (Nat) d r) (erased (List (Nat)) ids lab) (subterm erased (Below h d) bh)
+(def-fns _ $ (erased const-one : (erased (List (Bond)) g h) (erased (Nat) d r) (erased (List (Nat)) ids lab) (subterm erased (BondsBelow h d) bh)
     (erased (Rooted g (Cons (Nat) r (Nil (Nat))) ids lab) ro) (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) -> (erased (Const lab h) res))
   (let-match erased bh (BelowCons h1 x y _ lx ly bh1) ((BelowNil _) (ConstNil lab)))
   (let ((erased px) (erased _)) (root-one g d r ids lab x ro io ll lx))

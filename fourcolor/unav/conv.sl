@@ -35,7 +35,7 @@
     -> (erased (Lt u d) r))
   (img-lt d s u q p (perm-sym d p q pm) ls (perm-inv d u s p q pm pu)))
 
-(def-fns _ $ (erased g2 : (erased (Nat) d x x1 s s1 u) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
+(def-fns _ $ (erased geo-walk2 : (erased (Nat) d x x1 s s1 u) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f u s) pu)
     -> (erased (Nat) v) (erased (Nth (Nat) e u v) r1) (erased (Nth (Nat) f s1 v) r2))
   (let-match erased g (MkGeo _ _ _ _ _ h pl cu _ _))
@@ -55,23 +55,23 @@
   (let-match erased (perm-inj d gg c2 x1 n ni pn (nfe d x1 s1 gg e n f h lx1 ps1 pg) pc3) (Refl _ _))
   (values c2 pu2 pg))
 
-(def-fns _ $ (erased g1 : (erased (Nat) d x x1 s s1 t u0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
+(def-fns _ $ (erased geo-walk1 : (erased (Nat) d x x1 s s1 t u0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) f x x1) p1) (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) e x1 s1) ps1) (erased (Nth (Nat) f t u0) pt) (erased (Nth (Nat) f u0 s) pu)
     -> (erased (Nat) a w v vv) (erased (Nth (Nat) f s1 a) r1) (erased (Nth (Nat) f a w) r2) (erased (Nth (Nat) e w v) r3) (erased (Nth (Nat) e t vv) r4)
     (erased (Nth (Nat) f v vv) r5))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
-  (let ((erased a) (erased q1) (erased q2)) (g2 d x x1 s s1 u0 e n f ks g lx p1 ps ps1 pu))
+  (let ((erased a) (erased q1) (erased q2)) (geo-walk2 d x x1 s s1 u0 e n f ks g lx p1 ps ps1 pu))
   (let ((erased lx1)) (img-lt d x x1 f fi pf lx p1))
   (let ((erased ls1)) (img-lt d x1 s1 e nf pe lx1 ps1))
   (let ((erased la)) (img-lt d s1 a f fi pf ls1 q2))
   (let ((erased w) (erased pw) (erased lw)) (perm-nth d a f fi pf la))
   (let ((erased v) (erased pv) (erased _)) (perm-nth d w e nf pe lw))
   (let ((erased q3) (erased _)) (plain-eq d u0 a e pl (img-lt-inv d u0 s f fi pf (img-lt d x s e nf pe lx ps) pu) q1))
-  (let ((erased vv) (erased q4) (erased q5)) (g2 d a w u0 v t e n f ks g la pw q3 pv pt))
+  (let ((erased vv) (erased q4) (erased q5)) (geo-walk2 d a w u0 v t e n f ks g la pw q3 pv pt))
   (values a w v vv q2 pw pv q4 q5))
 
-(def-fns _ $ (erased g3 : (erased (Nat) d x s v0 w0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
+(def-fns _ $ (erased geo-walk3 : (erased (Nat) d x s v0 w0) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Lt x d) lx)
     (erased (Nth (Nat) e x s) ps) (erased (Nth (Nat) f v0 x) pv) (erased (Nth (Nat) e v0 w0) pw)
     -> (erased (Nat) a c) (erased (Nth (Nat) f s a) r1) (erased (Nth (Nat) e a c) r2) (erased (Nth (Nat) f c w0) r3))
   (let-match erased g (MkGeo _ _ _ _ _ h pl _ _ _))
@@ -80,7 +80,7 @@
   (let ((erased lw)) (img-lt d v0 w0 e nf pe lv pw))
   (let ((erased u) (erased pu) (erased lu)) (perm-nth d w0 fi f (perm-sym d f fi pf) lw))
   (let ((erased pu2)) (perm-inv d w0 u fi f (perm-sym d f fi pf) pu))
-  (let ((erased a) (erased q1) (erased q2)) (g2 d v0 x w0 s u e n f ks g lv pv pw ps pu2))
+  (let ((erased a) (erased q1) (erased q2)) (geo-walk2 d v0 x w0 s u e n f ks g lv pv pw ps pu2))
   (let ((erased q3) (erased _)) (plain-eq d u a e pl lu q1))
   (values a u q2 q3 pu2))
 
@@ -112,7 +112,7 @@
   enum
   (many MkSecD : (erased (List (Nat)) e f ks) (erased (Nat) y z a w u h z3 m) (erased (List (Nat)) fs) (erased (Nth (Nat) e y z) pz)
       (erased (Nth (Nat) ks z a) pa) (erased (Iter f 2 z w) pw) (erased (Nth (Nat) e w u) pu) (erased (Nth (Nat) ks u h) ph) (erased (Iter f 3 z z3) p3)
-      (erased (Monus a 5 m) mo) (erased (FansAt e f ks z3 m fs) pfs) -> (SecD e f ks y z w u z3 (MkSec a h fs))))
+      (erased (MonusAdd a 5 m) mo) (erased (FansAt e f ks z3 m fs) pfs) -> (SecD e f ks y z w u z3 (MkSec a h fs))))
 
 (def-fns _ $ (erased sec-d : (erased (List (Nat)) e f ks) (erased (Nat) y) (erased (Sec) o) (erased (SecAt e f ks y o) so)
     -> (erased (Nat) z w u z3) (erased (SecD e f ks y z w u z3 o) r))
@@ -139,7 +139,7 @@
     (erased (SecD e f ks t sg wt ut zt (MkSec a0 h0 fs0)) st) (erased (SecD e f ks y3 sp w3 hd z3 (MkSec aa hh ff)) s3) -> (erased (Eq (Nat) hh a0) r))
   (let-match erased st (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psg pa0 _ _ _ _ _ _))
   (let-match erased s3 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp _ pw3 phd ph3 _ _ _))
-  (let ((erased a) (erased w) (erased v) (erased vv) (erased q1) (erased q2) (erased q3) (erased q4) (erased q5)) (g1 d y2 y3 s2 sp t t1 e n f ks g ly p23 ps2 psp pt pt1))
+  (let ((erased a) (erased w) (erased v) (erased vv) (erased q1) (erased q2) (erased q3) (erased q4) (erased q5)) (geo-walk1 d y2 y3 s2 sp t t1 e n f ks g ly p23 ps2 psp pt pt1))
   (let-match erased (iter-fn f 2 sp w w3 (two-step f sp a w q1 q2) pw3) (Refl _ _))
   (let-match erased (nth-fn _ e w v hd q3 phd) (Refl _ _))
   (let-match erased (nth-fn _ e t vv sg q4 psg) (Refl _ _))
@@ -155,7 +155,7 @@
     -> (erased (Eq (Nat) aa a1) r) (erased (Nth (Nat) f sp sg) q0) (erased (Eq (Nat) wt z3) q1) (erased (Nth (Nat) f z3 zt) q2))
   (let-match erased st (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psg pa1 pwt _ _ pzt _ _))
   (let-match erased s3 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp pa _ _ _ p3r _ _))
-  (let ((erased v) (erased q1) (erased q2)) (g2 d y2 y3 s2 sp t1 e n f ks g ly p23 ps2 psp pt1))
+  (let ((erased v) (erased q1) (erased q2)) (geo-walk2 d y2 y3 s2 sp t1 e n f ks g ly p23 ps2 psp pt1))
   (let-match erased (nth-fn _ e t1 v sg q1 psg) (Refl _ _))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ _ _))
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
@@ -177,7 +177,7 @@
   (let ((erased z1) (erased p1) (erased l1)) (perm-nth d z f fi pf lz))
   (let ((erased z2) (erased p2) (erased _)) (perm-nth d z1 f fi pf l1))
   (let-match erased (cyc-back d sp z z2 j 2 k e n f ks g lsp pk pz (two-step f z z1 z2 p1 p2) a) (Refl _ _))
-  (let ((erased b) (erased w) (erased v) (erased vv) (erased q1) (erased q2) (erased q3) (erased q4) (erased q5)) (g1 d y3 y4 sp sp4 z z1 e n f ks g ly p34 psp psp4 p1 p2))
+  (let ((erased b) (erased w) (erased v) (erased vv) (erased q1) (erased q2) (erased q3) (erased q4) (erased q5)) (geo-walk1 d y3 y4 sp sp4 z z1 e n f ks g ly p34 psp psp4 p1 p2))
   (let-match erased (iter-fn f 2 sp4 w w4 (two-step f sp4 b w q1 q2) pw4) (Refl _ _))
   (let-match erased (nth-fn _ e w v hd4 q3 phd4) (Refl _ _))
   (let-match erased (nth-fn _ e z vv q q4 pq) (Refl _ _))
@@ -206,7 +206,7 @@
     (erased (List (Sec)) os5) (erased (Geo d e n f ks) g) (erased (Lt y2 d) ly) (erased (Nth (Nat) ks y2 nn) pnn)
     (erased (Nth (Nat) f y2 y3) p23) (erased (Nth (Nat) f y3 y4) p34) (erased (Nth (Nat) f y4 y5) p45) (erased (Nth (Nat) e y2 s2) ps2)
     (erased (SecD e f ks s2 sg wt ut zt (MkSec a2 h2 fs2)) st) (erased (SecD e f ks y4 sp4 w4 hd4 z34 (MkSec a4 h4 fs4)) s4)
-    (erased (ObsAt e f ks y5 m5 os5) ob5) (erased (Monus nn 5 m5) mo5)
+    (erased (ObsAt e f ks y5 m5 os5) ob5) (erased (MonusAdd nn 5 m5) mo5)
     -> (erased (Eq (Nat) a2 nn) r1) (erased (Eq (Nat) h2 a4) r2) (erased (SpkL os5 fs2) r3))
   (let-match erased st (MkSecD _ _ _ _ _ _ _ _ _ _ m _ psg pa2 pwt put ph2 pzt mo pfs))
   (let-match erased s4 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psp4 pa4 _ _ _ _ _ _))
@@ -233,7 +233,7 @@
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly1)) (img-lt d y0 y1 f fi pf ly p01))
   (let ((erased ly2)) (img-lt d y1 y2 f fi pf ly1 p12))
-  (let ((erased a) (erased c) (erased q1) (erased q2) (erased q3)) (g3 d y2 s2 y1 sp1 e n f ks g ly2 ps2 p12 psp1))
+  (let ((erased a) (erased c) (erased q1) (erased q2) (erased q3)) (geo-walk3 d y2 s2 y1 sp1 e n f ks g ly2 ps2 p12 psp1))
   (let-match erased (nth-fn _ f s2 a t3 q1 pt3) (Refl _ _))
   (let-match erased (nth-fn _ e t3 c sg q2 psg) (Refl _ _))
   (let ((erased lsg)) (img-lt d t3 sg e nf pe (img-lt d s2 t3 f fi pf (img-lt d y2 s2 e nf pe ly2 ps2) pt3) psg))
@@ -242,7 +242,7 @@
   (let-match erased (nth-fn _ f sg b1 sp1 pb1 q3) (Refl _ _))
   (let-match erased pwt1 (ItS _ _ _ _ _ pb2 pwt2))
   (let-match erased pwt2 (ItZ _ _))
-  (let ((erased a') (erased c') (erased q4) (erased q5) (erased q6)) (g3 d y1 sp1 y0 sp0 e n f ks g ly1 psp1 p01 psp0))
+  (let ((erased a') (erased c') (erased q4) (erased q5) (erased q6)) (geo-walk3 d y1 sp1 y0 sp0 e n f ks g ly1 psp1 p01 psp0))
   (let-match erased (nth-fn _ f sp1 a' wt q4 pb2) (Refl _ _))
   (let-match erased (nth-fn _ e wt c' ut q5 put) (Refl _ _))
   (let ((erased lsp1)) (img-lt d y1 sp1 e nf pe ly1 psp1))
@@ -266,7 +266,7 @@
   (let ((erased ls2)) (img-lt d y2 s2 e nf pe ly ps2))
   (let ((erased lt3)) (img-lt d s2 t3 f fi pf ls2 pt3))
   (let ((erased lt4)) (img-lt d t3 t4 f fi pf lt3 pt4))
-  (let ((erased al) (erased be) (erased q1) (erased q2) (erased q3)) (g3 d t4 sg t3 sg3 e n f ks g lt4 psg pt4 ps3))
+  (let ((erased al) (erased be) (erased q1) (erased q2) (erased q3)) (geo-walk3 d t4 sg t3 sg3 e n f ks g lt4 psg pt4 ps3))
   (let-match erased pwt (ItS _ _ _ b1 _ pb1 pwt1))
   (let-match erased (nth-fn _ f sg b1 al pb1 q1) (Refl _ _))
   (let-match erased pwt1 (ItS _ _ _ _ _ pb2 pwt2))
@@ -278,62 +278,62 @@
   (let ((erased v) (erased pv) (erased lv)) (perm-nth d be fi f (perm-sym d f fi pf) lbe))
   (let ((erased pv2)) (perm-inv d be v fi f (perm-sym d f fi pf) pv))
   (let ((erased ev) (erased pev) (erased _)) (perm-nth d v e nf pe lv))
-  (let ((erased a2') (erased c2) (erased q5) (erased q6) (erased q7)) (g3 d be al v ev e n f ks g lbe q4 pv2 pev))
+  (let ((erased a2') (erased c2) (erased q5) (erased q6) (erased q7)) (geo-walk3 d be al v ev e n f ks g lbe q4 pv2 pev))
   (let-match erased (nth-fn _ f al a2' wt q5 pb2) (Refl _ _))
   (let-match erased (nth-fn _ e wt c2 ut q6 put) (Refl _ _))
   (values (Refl _ a4) v ev (ItS f 2 v be sp1 pv2 (two-step f be sg3 sp1 q3 pq)) pev q7 (Refl _ t4)))
 
-; The converse's pieces for a rule's sectors 0 and 1 (C4), 2 (C5), 3 and 4 (C12), and 5 on (C3).
-(def-adts $ (C4 : ((Sub) x0 x1) ((Rg) h45) ((Pc) o) -> Type)
+; The converse's pieces for a rule's sectors 0 and 1 (Conv4), 2 (Conv5), 3 and 4 (Conv12), and 5 on (Conv3).
+(def-adts $ (Conv4 : ((Sub) x0 x1) ((Rg) h45) ((Pc) o) -> Type)
   enum
-  (many C4No : (erased (Sub) x0 x1) -> (C4 x0 x1 (MkRg 5 9) (PcNil)))
-  (many C4A : (erased (Rg) h34 hx s4) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub s4 (MkRg 5 9) (Nil (Rg))) (MkRg 5 9)
+  (many C4No : (erased (Sub) x0 x1) -> (Conv4 x0 x1 (MkRg 5 9) (PcNil)))
+  (many C4A : (erased (Rg) h34 hx s4) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub s4 (MkRg 5 9) (Nil (Rg))) (MkRg 5 9)
       (PcPre (Cons (Sub) (MkSub s4 h34 (Nil (Rg))) (Nil (Sub))))))
-  (many C4B5 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 5 5) f41 (Nil (Rg))) f41
+  (many C4B5 : (erased (Rg) h34 hx f41) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 5 5) f41 (Nil (Rg))) f41
       (PcPre (Cons (Sub) (MkSub (MkRg 5 5) h34 (Nil (Rg))) (Nil (Sub))))))
-  (many C4B6 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Nil (Rg))) (MkRg 5 9)
+  (many C4B6 : (erased (Rg) h34 hx f41) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Nil (Rg))) (MkRg 5 9)
       (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h34 (Cons (Rg) f41 (Nil (Rg)))) (Nil (Sub))))))
-  (many C4B7 : (erased (Rg) h34 hx f41) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Nil (Rg))) (MkRg 5 9)
+  (many C4B7 : (erased (Rg) h34 hx f41) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Nil (Rg))) (MkRg 5 9)
       (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h34 (Cons (Rg) f41 (Cons (Rg) (MkRg 5 9) (Nil (Rg))))) (Nil (Sub))))))
-  (many C4F6 : (erased (Rg) h34 hx f41 g1) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Cons (Rg) g1 (Nil (Rg)))) g1
+  (many C4F6 : (erased (Rg) h34 hx f41 g1) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 6 6) f41 (Cons (Rg) g1 (Nil (Rg)))) g1
       (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h34 (Cons (Rg) f41 (Nil (Rg)))) (Nil (Sub))))))
-  (many C4F7 : (erased (Rg) h34 hx f41 g1 g2) -> (C4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Cons (Rg) g1 (Cons (Rg) g2 (Nil (Rg))))) g2
+  (many C4F7 : (erased (Rg) h34 hx f41 g1 g2) -> (Conv4 (MkSub h34 hx (Nil (Rg))) (MkSub (MkRg 7 7) f41 (Cons (Rg) g1 (Cons (Rg) g2 (Nil (Rg))))) g2
       (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h34 (Cons (Rg) f41 (Cons (Rg) g1 (Nil (Rg))))) (Nil (Sub)))))))
 
-(def-adts $ (C5 : ((Sub) x2) ((Rg) h45 u) ((List (Sub)) q) -> Type)
+(def-adts $ (Conv5 : ((Sub) x2) ((Rg) h45 u) ((List (Sub)) q) -> Type)
   enum
-  (many C5No : (erased (Sub) x2) (erased (Rg) h45) -> (C5 x2 h45 (MkRg 5 9) (Nil (Sub))))
-  (many C5A : (erased (Rg) s s5 h45) -> (C5 (MkSub s s5 (Nil (Rg))) h45 s (Cons (Sub) (MkSub s5 h45 (Nil (Rg))) (Nil (Sub)))))
-  (many C5B : (erased (Rg) s5 s6 s7 h45) -> (C5 (MkSub (MkRg 7 7) s5 (Cons (Rg) s6 (Cons (Rg) s7 (Nil (Rg))))) h45 (MkRg 7 7)
+  (many C5No : (erased (Sub) x2) (erased (Rg) h45) -> (Conv5 x2 h45 (MkRg 5 9) (Nil (Sub))))
+  (many C5A : (erased (Rg) s s5 h45) -> (Conv5 (MkSub s s5 (Nil (Rg))) h45 s (Cons (Sub) (MkSub s5 h45 (Nil (Rg))) (Nil (Sub)))))
+  (many C5B : (erased (Rg) s5 s6 s7 h45) -> (Conv5 (MkSub (MkRg 7 7) s5 (Cons (Rg) s6 (Cons (Rg) s7 (Nil (Rg))))) h45 (MkRg 7 7)
       (Cons (Sub) (MkSub s5 h45 (Nil (Rg))) (Cons (Sub) (MkSub s6 (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub s7 (MkRg 5 9) (Nil (Rg))) (Nil (Sub))))))))
 
-(def-adts $ (C12 : ((Sub) x3 x4) ((Rg) h23) ((Pc) o) -> Type)
+(def-adts $ (Conv12 : ((Sub) x3 x4) ((Rg) h23) ((Pc) o) -> Type)
   enum
-  (many C12No : (erased (Sub) x3 x4) -> (C12 x3 x4 (MkRg 5 9) (PcNil)))
-  (many C12F6 : (erased (Rg) b x0 c d) -> (C12 (MkSub (MkRg 6 6) b (Cons (Rg) x0 (Nil (Rg)))) (MkSub c d (Nil (Rg))) c
+  (many C12No : (erased (Sub) x3 x4) -> (Conv12 x3 x4 (MkRg 5 9) (PcNil)))
+  (many C12F6 : (erased (Rg) b x0 c d) -> (Conv12 (MkSub (MkRg 6 6) b (Cons (Rg) x0 (Nil (Rg)))) (MkSub c d (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 6 6) x0 (Cons (Rg) d (Nil (Rg)))) (Nil (Sub)))))))
-  (many C12F7 : (erased (Rg) b x0 x1 c d) -> (C12 (MkSub (MkRg 7 7) b (Cons (Rg) x0 (Cons (Rg) x1 (Nil (Rg))))) (MkSub c d (Nil (Rg))) c
+  (many C12F7 : (erased (Rg) b x0 x1 c d) -> (Conv12 (MkSub (MkRg 7 7) b (Cons (Rg) x0 (Cons (Rg) x1 (Nil (Rg))))) (MkSub c d (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 7 7) x0 (Cons (Rg) x1 (Cons (Rg) d (Nil (Rg))))) (Nil (Sub)))))))
-  (many C12P : (erased (Rg) a b c) -> (C12 (MkSub a b (Nil (Rg))) (MkSub c (MkRg 5 9) (Nil (Rg))) c
+  (many C12P : (erased (Rg) a b c) -> (Conv12 (MkSub a b (Nil (Rg))) (MkSub c (MkRg 5 9) (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub a (MkRg 5 9) (Nil (Rg))) (Nil (Sub)))))))
-  (many C12P5 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 5 5) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+  (many C12P5 : (erased (Rg) b c d) -> (Conv12 (MkSub (MkRg 5 5) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 5 5) d (Nil (Rg))) (Nil (Sub)))))))
-  (many C12P6 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 6 6) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+  (many C12P6 : (erased (Rg) b c d) -> (Conv12 (MkSub (MkRg 6 6) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 6 6) (MkRg 5 9) (Cons (Rg) d (Nil (Rg)))) (Nil (Sub)))))))
-  (many C12P7 : (erased (Rg) b c d) -> (C12 (MkSub (MkRg 7 7) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
+  (many C12P7 : (erased (Rg) b c d) -> (Conv12 (MkSub (MkRg 7 7) b (Nil (Rg))) (MkSub c d (Nil (Rg))) c
       (PcPre (Cons (Sub) (MkSub b (MkRg 5 9) (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 7 7) (MkRg 5 9) (Cons (Rg) (MkRg 5 9) (Cons (Rg) d (Nil (Rg)))))
         (Nil (Sub))))))))
 
-(def-adts $ (C3 : ((Rg) h23) ((List (Sub)) rest) ((Pc) o) -> Type)
+(def-adts $ (Conv3 : ((Rg) h23) ((List (Sub)) rest) ((Pc) o) -> Type)
   enum
-  (many C3No : (erased (Rg) h23) (erased (List (Sub)) rest) -> (C3 h23 rest (PcNil)))
-  (many C3N0 : (erased (Rg) h23) -> (C3 h23 (Nil (Sub)) (PcPre (Cons (Sub) (MkSub (MkRg 5 5) h23 (Nil (Rg))) (Nil (Sub))))))
-  (many C3N1 : (erased (Rg) h23 s5 h5) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Nil (Sub))) (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h23 (Nil (Rg))) (Nil (Sub))))))
-  (many C3N2a : (erased (Rg) h23 h5 h6) -> (C3 h23 (Cons (Sub) (MkSub (MkRg 5 9) h5 (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 5 9) h6 (Nil (Rg))) (Nil (Sub))))
+  (many C3No : (erased (Rg) h23) (erased (List (Sub)) rest) -> (Conv3 h23 rest (PcNil)))
+  (many C3N0 : (erased (Rg) h23) -> (Conv3 h23 (Nil (Sub)) (PcPre (Cons (Sub) (MkSub (MkRg 5 5) h23 (Nil (Rg))) (Nil (Sub))))))
+  (many C3N1 : (erased (Rg) h23 s5 h5) -> (Conv3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Nil (Sub))) (PcPre (Cons (Sub) (MkSub (MkRg 6 6) h23 (Nil (Rg))) (Nil (Sub))))))
+  (many C3N2a : (erased (Rg) h23 h5 h6) -> (Conv3 h23 (Cons (Sub) (MkSub (MkRg 5 9) h5 (Nil (Rg))) (Cons (Sub) (MkSub (MkRg 5 9) h6 (Nil (Rg))) (Nil (Sub))))
       (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h23 (Nil (Rg))) (Nil (Sub))))))
-  (many C3N2b : (erased (Rg) h23 s5 h5 s6 h6) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg))) (Nil (Sub))))
+  (many C3N2b : (erased (Rg) h23 s5 h5 s6 h6) -> (Conv3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg))) (Nil (Sub))))
       (PcPre (Cons (Sub) (MkSub (MkRg 7 7) h23 (Cons (Rg) s5 (Cons (Rg) s6 (Nil (Rg))))) (Nil (Sub))))))
-  (many C3N3 : (erased (Rg) h23 s5 h5 s6 h6 s7 h7) -> (C3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg)))
+  (many C3N3 : (erased (Rg) h23 s5 h5 s6 h6 s7 h7) -> (Conv3 h23 (Cons (Sub) (MkSub s5 h5 (Nil (Rg))) (Cons (Sub) (MkSub s6 h6 (Nil (Rg)))
       (Cons (Sub) (MkSub s7 h7 (Nil (Rg))) (Nil (Sub))))) (PcPre (Cons (Sub) (MkSub (MkRg 8 8) h23 (Cons (Rg) s5 (Cons (Rg) s6 (Cons (Rg) s7 (Nil (Rg))))))
       (Nil (Sub)))))))
 
@@ -346,7 +346,7 @@
   enum
   (many CvShort : (erased (List (Sub)) p) -> (ConvOk p (MkRg 5 9) (Nil (Sub))))
   (many CvOk : (erased (Sub) x0 x1 x2 x3 x4) (erased (List (Sub)) rest q5 r4 r3 r) (erased (Rg) h45 h23 u) (erased (Pc) o4 o12 o3)
-      (erased (C4 x0 x1 h45 o4) c4) (erased (C5 x2 h45 u q5) c5) (erased (C12 x3 x4 h23 o12) c12) (erased (C3 h23 rest o3) c3)
+      (erased (Conv4 x0 x1 h45 o4) c4) (erased (Conv5 x2 h45 u q5) c5) (erased (Conv12 x3 x4 h23 o12) c12) (erased (Conv3 h23 rest o3) c3)
       (erased (PcA o4 q5 r4) a4) (erased (PcA o3 r4 r3) a3) (erased (PcA o12 r3 r) a12)
       -> (ConvOk (Cons (Sub) x0 (Cons (Sub) x1 (Cons (Sub) x2 (Cons (Sub) x3 (Cons (Sub) x4 rest))))) u r)))
 
@@ -356,7 +356,7 @@
   (let-match many (nat-eq dd b) (Equal _ _ _) (else (values (BFalse) (IfF _))))
   (values (BTrue) (IfY _ (Refl _ r))))
 
-(def-fns _ $ (many conv4-c : (many (Sub) x0 x1) -> (many (Rg) h45) (many (Pc) o) (erased (C4 x0 x1 h45 o) w))
+(def-fns _ $ (many conv4-c : (many (Sub) x0 x1) -> (many (Rg) h45) (many (Pc) o) (erased (Conv4 x0 x1 h45 o) w))
   (let-match many x0 (MkSub h34 hx fx))
   (let-match many x1 (MkSub s4 f41 fb))
   (let-match many fx (Nil _) (else (values r59 (PcNil) (C4No x0 x1))))
@@ -394,7 +394,7 @@
           (let-match erased e7 (Refl _ _))
           (values r59 (PcPre $ Cons _ (MkSub (MkRg 7 7) h34 (Cons _ f41 (Cons _ r59 (Nil _)))) (Nil _)) (C4B7 h34 hx f41)))))))
 
-(def-fns _ $ (many conv5-c : (many (Sub) x2) (many (Rg) h45) -> (many (Rg) u) (many (List (Sub)) q) (erased (C5 x2 h45 u q) w))
+(def-fns _ $ (many conv5-c : (many (Sub) x2) (many (Rg) h45) -> (many (Rg) u) (many (List (Sub)) q) (erased (Conv5 x2 h45 u q) w))
   (let-match many x2 (MkSub s s5 fs))
   (let-match many fs (Cons _ s6 r1) ((Nil _) (values s (Cons _ (MkSub s5 h45 (Nil _)) (Nil _)) (C5A s s5 h45))))
   (let-match many r1 (Cons _ s7 r2) ((Nil _) (values r59 (Nil _) (C5No x2 h45))))
@@ -405,7 +405,7 @@
   (let-match erased e1 (Refl _ _))
   (values (MkRg 7 7) (Cons _ (MkSub s5 h45 (Nil _)) $ Cons _ (MkSub s6 r59 (Nil _)) $ Cons _ (MkSub s7 r59 (Nil _)) (Nil _)) (C5B s5 s6 s7 h45)))
 
-(def-fns _ $ (many conv12-c : (many (Sub) x3 x4) -> (many (Rg) h23) (many (Pc) o) (erased (C12 x3 x4 h23 o) w))
+(def-fns _ $ (many conv12-c : (many (Sub) x3 x4) -> (many (Rg) h23) (many (Pc) o) (erased (Conv12 x3 x4 h23 o) w))
   (let-match many x4 (MkSub c dd fy))
   (let-match many fy (Nil _) (else (values r59 (PcNil) (C12No x3 x4))))
   (let-match many x3 (MkSub a b fa))
@@ -443,7 +443,7 @@
           (let-match erased e7 (Refl _ _))
           (values c (PcPre $ Cons _ (MkSub b r59 (Nil _)) $ Cons _ (MkSub (MkRg 7 7) r59 (Cons _ r59 (Cons _ dd (Nil _)))) (Nil _)) (C12P7 b c dd)))))))
 
-(def-fns _ $ (many conv3-c : (many (Rg) h23) (many (List (Sub)) rest) -> (many (Pc) o) (erased (C3 h23 rest o) w))
+(def-fns _ $ (many conv3-c : (many (Rg) h23) (many (List (Sub)) rest) -> (many (Pc) o) (erased (Conv3 h23 rest o) w))
   (let-match many rest (Cons _ x5 r1) ((Nil _) (values (PcPre $ Cons _ (MkSub (MkRg 5 5) h23 (Nil _)) (Nil _)) (C3N0 h23))))
   (let-match many x5 (MkSub s5 h5 f5))
   (let-match many f5 (Nil _) (else (values (PcNil) (C3No h23 rest))))
@@ -576,7 +576,7 @@
   (let-match erased fa (FAS _ _ _ _ u x z1 _ fs1 pu px pz fa1))
   (values u x z1 fs1 (Refl _ fs) pu px pz fa1))
 
-(def-fns _ $ (erased monus-five : (erased (Nat) a m k) (erased (Monus a 5 m) mo) (erased (Add 5 k a) ad) -> (erased (Eq (Nat) m k) r))
+(def-fns _ $ (erased monus-five : (erased (Nat) a m k) (erased (MonusAdd a 5 m) mo) (erased (Add 5 k a) ad) -> (erased (Eq (Nat) m k) r))
   (monus-fn a 5 m k mo (MoAdd a 5 k ad)))
 
 (def-fns _ $ (erased add33 : -> (erased (Add 3 3 6) r)) (add-succ-right 3 2 5 (add2 3)))
@@ -589,7 +589,7 @@
     (erased (SecD e f ks y0 sp0 w0 hd0 z30 (MkSec a0 h0 fs0)) s0) (erased (SecD e f ks y1 sp1 w1 hd1 z31 (MkSec a1 h1 fs1)) s1)
     (erased (SecD e f ks y2 s2 w2 hd2 z32 (MkSec a2 h2 fs2)) sd2) (erased (SecD e f ks t3 sg3 wt3 ut3 zt3 (MkSec a3 h3 fs3)) st3)
     (erased (SecD e f ks t4 sg4 wt4 ut4 zt4 (MkSec a4 h4 fs4)) st4) (erased (FitSec (MkSec a0 h0 fs0) x0) f0) (erased (FitSec (MkSec a1 h1 fs1) x1) f1)
-    (erased (C4 x0 x1 h45 o) c4) -> (erased (Fit1 (MkSec a3 h3 fs3) o) r1) (erased (InRg h4 h45) r2))
+    (erased (Conv4 x0 x1 h45 o) c4) -> (erased (Fit1 (MkSec a3 h3 fs3) o) r1) (erased (InRg h4 h45) r2))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ly1)) (img-lt d y0 y1 f fi pf ly p01))
@@ -704,7 +704,7 @@
     (erased (Sub) x2) (erased (Rg) h45 u) (erased (List (Sub)) q) (erased (Geo d e n f ks) g)
     (erased (SecD e f ks y2 s2 w2 hd2 z32 (MkSec a2 h2 fs2)) sd2) (erased (FitSec (MkSec a2 h2 fs2) x2) f2) (erased (Eq (Nat) t4 w2) e4t)
     (erased (SecD e f ks t4 sg4 wt4 ut4 zt4 (MkSec a4 h4 fs4)) _st4) (erased (Eq (Nat) a4 h2) e4a) (erased (InRg h4 h45) ih4) (erased (Nth (Nat) f t4 t5) pt5)
-    (erased (ObsAt e f ks t5 m5 os5) ob5) (erased (Add 5 m5 a2) am) (erased (C5 x2 h45 u q) c5)
+    (erased (ObsAt e f ks t5 m5 os5) ob5) (erased (Add 5 m5 a2) am) (erased (Conv5 x2 h45 u q) c5)
     -> (erased (InRg a2 u) r1) (erased (Pw (Sec) (Sub) FitSec (Cons (Sec) (MkSec a4 h4 fs4) os5) q) r2))
   (let-match erased sd2 (MkSecD _ _ _ _ _ _ _ _ _ _ m2 _ _ pa2 pw2 _ _ p32 mo2 pfs2))
   (let-match erased f2 (MkFitSec _ _ _ _ _ _ i2s i2h i2f))
@@ -746,7 +746,7 @@
 (def-fns _ $ (erased c3-sound : (erased (Nat) nn k a2 h2 a4) (erased (List (Nat)) fs2) (erased (List (Sec)) osr) (erased (List (Sub)) rest) (erased (Rg) h23)
     (erased (Pc) o) (erased (Eq (Nat) a2 nn) e2a) (erased (Eq (Nat) h2 a4) e2h) (erased (InRg a4 h23) i4) (erased (SpkL osr fs2) sk)
     (erased (Pw (Sec) (Sub) FitSec osr rest) fr) (erased (Length (Sec) osr k) lo) (erased (Length (Sub) rest k) lr) (erased (Add 5 k nn) ak)
-    (erased (C3 h23 rest o) c3) -> (erased (Fit1 (MkSec a2 h2 fs2) o) r))
+    (erased (Conv3 h23 rest o) c3) -> (erased (Fit1 (MkSec a2 h2 fs2) o) r))
   (let-match erased e2a (Refl _ _))
   (let-match erased e2h (Refl _ _))
   (match erased c3 _
@@ -813,7 +813,7 @@
     (erased (Nth (Nat) f t t1) pt) (erased (Nth (Nat) f t1 s2) pt1)
     (erased (SecD e f ks y3 sp3 w3 hd3 z33 (MkSec a3 h3 fs3)) s3) (erased (SecD e f ks y4 sp4 w4 hd4 z34 (MkSec a4 h4 fs4)) s4)
     (erased (SecD e f ks t sg0 wt0 ut0 zt0 (MkSec a0 h0 fs0)) st0) (erased (SecD e f ks t1 sg1 wt1 ut1 zt1 (MkSec a1 h1 fs1)) st1)
-    (erased (FitSec (MkSec a3 h3 fs3) x3) f3) (erased (FitSec (MkSec a4 h4 fs4) x4) f4) (erased (C12 x3 x4 h23 o) c12)
+    (erased (FitSec (MkSec a3 h3 fs3) x3) f3) (erased (FitSec (MkSec a4 h4 fs4) x4) f4) (erased (Conv12 x3 x4 h23 o) c12)
     -> (erased (InRg a4 h23) r1) (erased (Fit2 (MkSec a0 h0 fs0) (MkSec a1 h1 fs1) o) r2))
   (let-match erased (tsec0 d y2 y3 s2 t t1 sg0 wt0 ut0 zt0 sp3 w3 hd3 z33 a0 h0 a3 h3 e n f ks fs0 fs3 g ly p23 ps2 pt pt1 st0 s3) (Refl _ _))
   (let ((erased e1) (erased _) (erased ez) (erased nz)) (tsec1 d y2 y3 s2 t1 sg1 wt1 ut1 zt1 sp3 w3 hd3 z33 a1 h1 a3 h3 e n f ks fs1 fs3 g ly p23 ps2 pt1 st1 s3))
@@ -975,10 +975,10 @@
   (let-match erased obt3 (OACons _ _ _ _ t4 _ ot3 _ sot3 pt4 obt4))
   (let-match erased obt4 (OACons _ _ _ _ t5 _ ot4 ost5 sot4 pt5 obt5))
   (let-match erased ot0 (MkSec ta0 th0 tf0))
-  (let-match erased ot1 (MkSec ta1 th1 tf1))
-  (let-match erased ot2 (MkSec ta2 th2 tf2))
-  (let-match erased ot3 (MkSec ta3 th3 tf3))
-  (let-match erased ot4 (MkSec ta4 th4 tf4))
+  (let-match erased ot1 (MkSec ta1' th1 tf1))
+  (let-match erased ot2 (MkSec ta2' th2 tf2))
+  (let-match erased ot3 (MkSec ta3' th3 tf3))
+  (let-match erased ot4 (MkSec ta4' th4 tf4))
   (let ((erased sg0) (erased wt0) (erased ut0) (erased zt0) (erased st0)) (sec-d e f ks t _ sot0))
   (let ((erased sg1) (erased wt1) (erased ut1) (erased zt1) (erased st1)) (sec-d e f ks t1 _ sot1))
   (let ((erased sg2) (erased wt2) (erased ut2) (erased zt2) (erased st2)) (sec-d e f ks s2 _ sot2))
@@ -986,28 +986,28 @@
   (let ((erased sg4) (erased wt4) (erased ut4) (erased zt4) (erased st4)) (sec-d e f ks t4 _ sot4))
   (let ((erased y2c) (erased iyc) (erased _) (erased pnn2)) (face-walk d y nn e n f ks h ol 2 ly pnn))
   (let-match erased (iter-fn f 2 y y2c y2 iyc iy) (Refl _ _))
-  (let ((erased e2a) (erased e2h) (erased sk)) (tsec2 d y2 y3 y4 y5 s2 sg2 wt2 ut2 zt2 sp4 w4 hd4 z34 nn ta2 th2 a4 h4 nn5 e n f ks tf2 fs4 osr
+  (let ((erased e2a) (erased e2h) (erased sk)) (tsec2 d y2 y3 y4 y5 s2 sg2 wt2 ut2 zt2 sp4 w4 hd4 z34 nn ta2' th2 a4 h4 nn5 e n f ks tf2 fs4 osr
     g ly2 pnn2 p23 p34 p45 ps2 st2 s4 ob5 (MoAdd nn 5 nn5 (add5 nn5))))
   (let ((erased i23) (erased fit01)) (c12-sound d y2 y3 y4 s2 t t1 sp3 w3 hd3 z33 sp4 w4 hd4 z34 sg0 wt0 ut0 zt0 sg1 wt1 ut1 zt1
-    a3 h3 a4 h4 ta0 th0 ta1 th1 e n f ks fs3 fs4 tf0 tf1 x3 x4 h23 o12 g ly2 p23 p34 ps2 pt pt1 s3 s4 st0 st1 f3 f4 c12))
-  (let ((erased fit2)) (c3-sound nn nn5 ta2 th2 a4 tf2 osr rest h23 o3 e2a e2h i23 sk for lor lpr (add5 nn5) c3))
-  (let ((erased _) (erased _) (erased q3) (erased _)) (tsec3 d y y1 y2 s2 t3 sg3 wt3 ut3 zt3 sp1 w1 hd1 z31 sp0 w0 hd0 z30 ta3 th3 a1 h1 a0 h0
+    a3 h3 a4 h4 ta0 th0 ta1' th1 e n f ks fs3 fs4 tf0 tf1 x3 x4 h23 o12 g ly2 p23 p34 ps2 pt pt1 s3 s4 st0 st1 f3 f4 c12))
+  (let ((erased fit2)) (c3-sound nn nn5 ta2' th2 a4 tf2 osr rest h23 o3 e2a e2h i23 sk for lor lpr (add5 nn5) c3))
+  (let ((erased _) (erased _) (erased q3) (erased _)) (tsec3 d y y1 y2 s2 t3 sg3 wt3 ut3 zt3 sp1 w1 hd1 z31 sp0 w0 hd0 z30 ta3' th3 a1 h1 a0 h0
     e n f ks tf3 fs1 fs0 g ly p01 p12 ps2 pt3 st3 s1 s0))
   (let-match erased st3 (MkSecD _ _ _ _ _ _ _ _ _ _ _ _ psg3 _ _ _ _ _ _ _))
   (let ((erased e4a) (erased _) (erased _) (erased _) (erased _) (erased _) (erased e4t))
-    (tsec4 d y2 s2 t3 t4 sg3 sg4 wt4 ut4 zt4 w2 hd2 z32 sp1 ta4 th4 a2 h2 e n f ks tf4 fs2 g ly2 ps2 pt3 pt4 psg3 q3 st4 s2d))
+    (tsec4 d y2 s2 t3 t4 sg3 sg4 wt4 ut4 zt4 w2 hd2 z32 sp1 ta4' th4 a2 h2 e n f ks tf4 fs2 g ly2 ps2 pt3 pt4 psg3 q3 st4 s2d))
   (let ((erased fit3) (erased ih4)) (c4-sound d y y1 y2 s2 t3 t4 sp0 w0 hd0 z30 sp1 w1 hd1 z31 w2 hd2 z32 sg3 wt3 ut3 zt3 sg4 wt4 ut4 zt4
-    a0 h0 a1 h1 a2 h2 ta3 th3 ta4 th4 e n f ks fs0 fs1 fs2 tf3 tf4 x0 x1 h45 o4 g ly p01 p12 ps2 pt3 pt4 s0 s1 s2d st3 st4 f0 f1 c4))
-  (let ((erased iu) (erased w5)) (c5-sound d y2 s2 w2 hd2 z32 t4 t5 k5 sg4 wt4 ut4 zt4 a2 h2 ta4 th4 e n f ks fs2 tf4 ost5 x2 h45 u q5 g s2d f2 e4t st4 e4a
+    a0 h0 a1 h1 a2 h2 ta3' th3 ta4' th4 e n f ks fs0 fs1 fs2 tf3 tf4 x0 x1 h45 o4 g ly p01 p12 ps2 pt3 pt4 s0 s1 s2d st3 st4 f0 f1 c4))
+  (let ((erased iu) (erased w5)) (c5-sound d y2 s2 w2 hd2 z32 t4 t5 k5 sg4 wt4 ut4 zt4 a2 h2 ta4' th4 e n f ks fs2 tf4 ost5 x2 h45 u q5 g s2d f2 e4t st4 e4a
     ih4 pt5 obt5 (add5 k5) c5))
-  (let ((erased w4)) (pc-step (MkSec ta3 th3 tf3) o4 (Cons _ (MkSec ta4 th4 tf4) ost5) q5 r4 fit3 pa4 w5))
-  (let ((erased w3)) (pc-step (MkSec ta2 th2 tf2) o3 _ r4 r3 fit2 pa3 w4))
-  (values a lt pa iu os ob (pc-step2 (MkSec ta0 th0 tf0) (MkSec ta1 th1 tf1) o12 _ r3 q fit01 pa12 w3)))
+  (let ((erased w4')) (pc-step (MkSec ta3' th3 tf3) o4 (Cons _ (MkSec ta4' th4 tf4) ost5) q5 r4 fit3 pa4 w5))
+  (let ((erased w3')) (pc-step (MkSec ta2' th2 tf2) o3 _ r4 r3 fit2 pa3 w4'))
+  (values a lt pa iu os ob (pc-step2 (MkSec ta0 th0 tf0) (MkSec ta1' th1 tf1) o12 _ r3 q fit01 pa12 w3')))
 
 ; c drops to c1 past the rule r, by one when r fits.
 (def-adts $ (SrcStep : ((Nat) a) ((List (Sec)) os) ((List (Sub)) r) ((Nat) c c1) -> Type)
   enum
-  (many SSkip : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) -> (SrcStep a os r c c))
+  (many SrcSkip : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) -> (SrcStep a os r c c))
   (many SFit : (erased (Nat) a c) (erased (List (Sec)) os) (erased (List (Sub)) r) (erased (Length (Sub) r a) l) (erased (Pw (Sec) (Sub) FitSec os r) fz)
       -> (SrcStep a os r (Succ c) c)))
 
@@ -1015,10 +1015,10 @@
     (erased (OfSize a (Cons (List (Sub)) r drs) qs) sz) (erased (Count os qs c) k)
     -> (erased (List (List (Sub))) qs1) (erased (Nat) c1) (erased (OfSize a drs qs1) sz1) (erased (Count os qs1 c1) k1) (erased (SrcStep a os r c c1) st))
   (let-match erased sz (OSIn _ _ _ qs1 l sz1)
-    ((OSOut _ _ _ _ _ _ _ sz1) (values qs c sz1 k (SSkip a c os r))))
+    ((OSOut _ _ _ _ _ _ _ sz1) (values qs c sz1 k (SrcSkip a c os r))))
   (match erased k _
     ((CYes _ _ _ c1 fz k1) (values qs1 c1 sz1 k1 (SFit a c1 os r l fz)))
-    ((CNo _ _ _ _ _ k1) (values qs1 c sz1 k1 (SSkip a c os r)))))
+    ((CNo _ _ _ _ _ k1) (values qs1 c sz1 k1 (SrcSkip a c os r)))))
 
 (def-fns _ $ (erased count-tail : (erased (List (Sec)) os) (erased (List (Sub)) q) (erased (List (List (Sub))) rs) (erased (Nat) t)
     (erased (Count os (Cons (List (Sub)) q rs) t) k) -> (erased (Nat) t1) (erased (Count os rs t1) k1) (erased (Lt t1 (Succ t)) le))
@@ -1044,21 +1044,21 @@
     -> (erased (Lt c (Succ t)) r))
   (match erased tg _
     ((TgNil _) (let-match erased sz (OSNil _)) (let-match erased kz (CNil _)) (LtZ t))
-    ((TgIn _ r q u drs1 rt1 cv tg1)
+    ((TgIn _ r q u drs1 rt1 cv tg1')
       (let ((erased qs1) (erased c1) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
       (match erased st _
-        ((SSkip _ _ _ _)
+        ((SrcSkip _ _ _ _)
           (let ((erased t1) (erased kw1) (erased lt1)) (count-tail osw q rt1 t kw))
           (lt-le-trans c (Succ t1) (Succ t)
-            (tgt-le d z w nhub a c t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw1) (LtS t1 (Succ t) lt1)))
+            (tgt-le d z w nhub a c t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1' sz1 kz1 kw1) (LtS t1 (Succ t) lt1)))
         ((SFit _ _ _ _ l fz)
           (let ((erased _) (erased fw)) (conv-fit d z w nhub a y2 s2 e n f ks r q u osz osw g lz pz obz pw obw iy ps2 it cv l fz))
           (let-match erased kw (CYes _ _ _ t1 _ kw1) (absurd (CNo _ _ _ _ b _) (fit-bad osw q fw b)))
-          (LtS c1 (Succ t1) (tgt-le d z w nhub a c1 t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw1)))))
-    ((TgOut _ r q u drs1 _ cv o tg1)
+          (LtS c1 (Succ t1) (tgt-le d z w nhub a c1 t1 y2 s2 e n f ks drs1 rt1 qs1 osz osw g lz pz obz pw obw iy ps2 it tg1' sz1 kz1 kw1)))))
+    ((TgOut _ r q u drs1 _ cv o tg1')
       (let ((erased qs1) (erased _) (erased sz1) (erased kz1) (erased st)) (src-step a c osz r drs1 qs sz kz))
       (match erased st _
-        ((SSkip _ _ _ _) (tgt-le d z w nhub a c t y2 s2 e n f ks drs1 rt qs1 osz osw g lz pz obz pw obw iy ps2 it tg1 sz1 kz1 kw))
+        ((SrcSkip _ _ _ _) (tgt-le d z w nhub a c t y2 s2 e n f ks drs1 rt qs1 osz osw g lz pz obz pw obw iy ps2 it tg1' sz1 kz1 kw))
         (absurd (SFit _ _ _ _ l fz)
           (let ((erased iu) (erased _)) (conv-fit d z w nhub a y2 s2 e n f ks r q u osz osw g lz pz obz pw obw iy ps2 it cv l fz))
           (in-out nhub u iu o))))))

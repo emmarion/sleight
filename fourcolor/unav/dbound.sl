@@ -25,7 +25,7 @@
     ((LeN _ _ q) (OrR _ _ (OutHi a m lo hi c q)))))
 
 (def-fns _ $ (erased fans-dec : (erased (List (Nat)) as) (subterm erased (List (Rg)) fs)
-    -> (erased (Or (Pw (Nat) (Rg) InRg as fs) (Bad (Nat) (Rg) OutRg as fs)) o))
+    -> (erased (Or (Pw (Nat) (Rg) InRg as fs) (BadAt (Nat) (Rg) OutRg as fs)) o))
   (let-match erased fs (Cons _ r fs1) ((Nil _) (OrL _ _ (PwNil _ _ InRg as))))
   (let-match erased as (Cons _ a as1) ((Nil _) (OrR _ _ (BadShort _ _ OutRg r fs1))))
   (let-match erased (rg-dec a r) (OrL _ _ i) ((OrR _ _ o) (OrR _ _ (BadHere _ _ OutRg a r as1 fs1 o))))
@@ -43,7 +43,7 @@
     ((OrR _ _ b) (OrR _ _ (OSFan a h as s hr fs b)))))
 
 (def-fns _ $ (erased fit-dec : (erased (List (Sec)) os) (subterm erased (List (Sub)) p)
-    -> (erased (Or (Pw (Sec) (Sub) FitSec os p) (Bad (Sec) (Sub) OutSec os p)) r))
+    -> (erased (Or (Pw (Sec) (Sub) FitSec os p) (BadAt (Sec) (Sub) OutSec os p)) r))
   (let-match erased p (Cons _ x p1) ((Nil _) (OrL _ _ (PwNil _ _ FitSec os))))
   (let-match erased os (Cons _ o os1) ((Nil _) (OrR _ _ (BadShort _ _ OutSec x p1))))
   (let-match erased (sec-dec o x) (OrL _ _ i) ((OrR _ _ q) (OrR _ _ (BadHere _ _ OutSec o x os1 p1 q))))
@@ -58,7 +58,7 @@
   (many CYes : (erased (List (Sec)) os) (erased (List (Sub)) r) (erased (List (List (Sub))) rs) (erased (Nat) c)
       (erased (Pw (Sec) (Sub) FitSec os r) f) (erased (Count os rs c) rest) -> (Count os (Cons (List (Sub)) r rs) (Succ c)))
   (many CNo : (erased (List (Sec)) os) (erased (List (Sub)) r) (erased (List (List (Sub))) rs) (erased (Nat) c)
-      (erased (Bad (Sec) (Sub) OutSec os r) f) (erased (Count os rs c) rest) -> (Count os (Cons (List (Sub)) r rs) c)))
+      (erased (BadAt (Sec) (Sub) OutSec os r) f) (erased (Count os rs c) rest) -> (Count os (Cons (List (Sub)) r rs) c)))
 
 (def-fns _ $ (erased count-exists : (erased (List (Sec)) os) (subterm erased (List (List (Sub))) rs) -> (erased (Nat) c) (erased (Count os rs c) k))
   (let-match erased rs (Cons _ r rs1) ((Nil _) (values (Zero) (CNil os))))
@@ -162,17 +162,17 @@
   (many HitThere : (erased (List (Sec)) os) (erased (List (Sub)) q) (erased (List (List (Sub))) obl) (erased (Hit os obl) h)
       -> (Hit os (Cons (List (Sub)) q obl))))
 
-(def-adts $ (Ext : ((List (List (Sub))) acc out) -> Type)
+(def-adts $ (ExtAcc : ((List (List (Sub))) acc out) -> Type)
   enum
-  (many ExtRefl : (erased (List (List (Sub))) acc) -> (Ext acc acc))
-  (many ExtCons : (erased (List (List (Sub))) acc out) (erased (List (Sub)) q) (erased (Ext acc out) e) -> (Ext acc (Cons (List (Sub)) q out))))
+  (many ExtRefl : (erased (List (List (Sub))) acc) -> (ExtAcc acc acc))
+  (many ExtCons : (erased (List (List (Sub))) acc out) (erased (List (Sub)) q) (erased (ExtAcc acc out) e) -> (ExtAcc acc (Cons (List (Sub)) q out))))
 
-(def-fns _ $ (erased hit-ext : (erased (List (Sec)) os) (erased (List (List (Sub))) acc out) (erased (Hit os acc) h) (subterm erased (Ext acc out) e)
+(def-fns _ $ (erased hit-ext : (erased (List (Sec)) os) (erased (List (List (Sub))) acc out) (erased (Hit os acc) h) (subterm erased (ExtAcc acc out) e)
     -> (erased (Hit os out) r))
   (let-match erased e (ExtCons _ out1 q e1) ((ExtRefl _) h))
   (HitThere os q out1 (hit-ext os acc out1 h e1)))
 
-(def-fns _ $ (erased ext-trans : (erased (List (List (Sub))) a b c) (erased (Ext a b) e) (subterm erased (Ext b c) e2) -> (erased (Ext a c) r))
+(def-fns _ $ (erased ext-trans : (erased (List (List (Sub))) a b c) (erased (ExtAcc a b) e) (subterm erased (ExtAcc b c) e2) -> (erased (ExtAcc a c) r))
   (let-match erased e2 (ExtCons _ c1 q e3) ((ExtRefl _) e))
   (ExtCons a c1 q (ext-trans a b c1 e e3)))
 
@@ -200,9 +200,9 @@
   ((Db1In : ((List (Sub)) p1) ((List (List (Sub))) rs2) ((Nat) ns dns) ((List (List (Sub))) acc acc1) -> Type)
     enum
     (many I1Rec : (erased (List (Sub)) p1) (erased (List (List (Sub))) rs2) (erased (Nat) ns dns ns1) (erased (List (List (Sub))) acc acc1)
-        (erased (Monus ns dns (Succ ns1)) mo) (erased (Db1 p1 rs2 ns1 acc acc1) d) -> (Db1In p1 rs2 ns dns acc acc1))
+        (erased (MonusAdd ns dns (Succ ns1)) mo) (erased (Db1 p1 rs2 ns1 acc acc1) d) -> (Db1In p1 rs2 ns dns acc acc1))
     (many I1Red : (erased (List (Sub)) p1) (erased (List (List (Sub))) rs2) (erased (Nat) ns dns) (erased (List (List (Sub))) acc)
-        (erased (Monus ns dns (Zero)) mo) -> (Db1In p1 rs2 ns dns acc (Cons (List (Sub)) p1 acc)))))
+        (erased (MonusAdd ns dns (Zero)) mo) -> (Db1In p1 rs2 ns dns acc (Cons (List (Sub)) p1 acc)))))
 
 (def-fns _ $ (many cdb1-c : (many (List (Sub)) p) (many (List (List (Sub))) rs) (many (Nat) ns) (many (List (List (Sub))) acc) (subterm many (Nat) m)
     -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (Db1 p rs ns acc out)) w))
@@ -225,9 +225,9 @@
   (values ok out (match erased w _ ((IfY _ dt) (IfY _ (D1Step p p1 r rs1 rs2 ns dns acc acc1 out wm ws di dt))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased db1-ext : (erased (List (Sub)) p) (erased (List (List (Sub))) rs) (erased (Nat) ns) (erased (List (List (Sub))) acc out)
-    (subterm erased (Db1 p rs ns acc out) d) -> (erased (Ext acc out) e))
+    (subterm erased (Db1 p rs ns acc out) d) -> (erased (ExtAcc acc out) e))
   (let-match erased d (D1Step _ p1 _ rs1 rs2 _ _ _ acc1 _ _ _ di dt) ((D1Nil _ _ _) (ExtRefl acc)) ((D1Small _ _ _ _ _ _ _ _) (ExtRefl acc)))
-  (let ((erased (Ext acc acc1) e1))
+  (let ((erased (ExtAcc acc acc1) e1))
     (match erased di _
       ((I1Rec _ _ _ _ ns1 _ _ _ d1) (db1-ext p1 rs2 ns1 acc acc1 d1))
       ((I1Red _ _ _ _ _ _) (ExtCons acc acc p1 (ExtRefl acc)))))
@@ -274,10 +274,10 @@
         (erased (Implied p1 ru) im) -> (Db2In p1 rt rs ru nt acc acc))
     (many I2Rec : (erased (List (Sub)) p1) (erased (List (List (Sub))) rt rs ru rt2 rs2) (erased (Nat) nt dnt dns u nt1)
         (erased (List (List (Sub))) acc acc1) (erased (Sr p1 (Zero) (Nil (List (Sub))) rt dnt rt2) wt) (erased (Sr p1 (Zero) (Nil (List (Sub))) rs dns rs2) ws)
-        (erased (Add dns nt u) au) (erased (Monus u dnt (Succ nt1)) mo) (erased (Db2 p1 rt2 rs2 ru nt1 acc acc1) d) -> (Db2In p1 rt rs ru nt acc acc1))
+        (erased (Add dns nt u) au) (erased (MonusAdd u dnt (Succ nt1)) mo) (erased (Db2 p1 rt2 rs2 ru nt1 acc acc1) d) -> (Db2In p1 rt rs ru nt acc acc1))
     (many I2Red : (erased (List (Sub)) p1) (erased (List (List (Sub))) rt rs ru rt2 rs2) (erased (Nat) nt dnt dns u) (erased (List (List (Sub))) acc)
         (erased (Sr p1 (Zero) (Nil (List (Sub))) rt dnt rt2) wt) (erased (Sr p1 (Zero) (Nil (List (Sub))) rs dns rs2) ws)
-        (erased (Add dns nt u) au) (erased (Monus u dnt (Zero)) mo) -> (Db2In p1 rt rs ru nt acc (Cons (List (Sub)) p1 acc)))))
+        (erased (Add dns nt u) au) (erased (MonusAdd u dnt (Zero)) mo) -> (Db2In p1 rt rs ru nt acc (Cons (List (Sub)) p1 acc)))))
 
 (def-fns _ $ (many cdb2-c : (many (List (Sub)) p) (many (List (List (Sub))) rt rs ru) (many (Nat) nt) (many (List (List (Sub))) acc) (subterm many (Nat) m)
     -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (Db2 p rt rs ru nt acc out)) w))
@@ -306,9 +306,9 @@
   (values ok out (match erased w _ ((IfY _ dt) (IfY _ (D2Step p p1 r rt1 rs ru nt acc acc1 out wm di dt))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased db2-ext : (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs ru) (erased (Nat) nt) (erased (List (List (Sub))) acc out)
-    (subterm erased (Db2 p rt rs ru nt acc out) d) -> (erased (Ext acc out) e))
+    (subterm erased (Db2 p rt rs ru nt acc out) d) -> (erased (ExtAcc acc out) e))
   (let-match erased d (D2Step _ p1 r rt1 _ _ _ _ acc1 _ _ di dt) ((D2Nil _ _ _ _ _) (ExtRefl acc)) ((D2Small _ _ _ _ _ _ _ _ _ _) (ExtRefl acc)))
-  (let ((erased (Ext acc acc1) e1))
+  (let ((erased (ExtAcc acc acc1) e1))
     (match erased di _
       ((I2Unfit _ _ _ _ _ _ _) (ExtRefl acc))
       ((I2Rec _ _ _ _ rt2 rs2 _ _ _ _ nt1 _ _ _ _ _ _ d1) (db2-ext p1 rt2 rs2 ru nt1 acc acc1 d1))
@@ -421,10 +421,10 @@
   (many CutAtS : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs pre post) (erased (CutAt A n xs pre post) c)
       -> (CutAt A (Succ n) (Cons A x xs) (Cons A x pre) post)))
 
-(def-adts $ (Rot : (Type A) ((Nat) n) ((List A) xs ys) -> Type)
+(def-adts $ (RotCut : (Type A) ((Nat) n) ((List A) xs ys) -> Type)
   enum
-  (many MkRot : (erased Type A) (erased (Nat) n) (erased (List A) xs ys pre post) (erased (CutAt A n xs pre post) c) (erased (LApp A post pre ys) a)
-      -> (Rot A n xs ys)))
+  (many MkRotCut : (erased Type A) (erased (Nat) n) (erased (List A) xs ys pre post) (erased (CutAt A n xs pre post) c) (erased (LApp A post pre ys) a)
+      -> (RotCut A n xs ys)))
 
 (def-fns _ $ (many cut-c : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) pre post) (erased (CutAt A n xs pre post) c))
   (let-match many n (Succ n1) ((Zero) (values (Nil _) xs (CutAtZ _ xs))))
@@ -437,10 +437,10 @@
   (let ((many zs) (erased a)) (notail $ app-c _ rest ys))
   (values (Cons _ x zs) (LAppCons _ x rest ys zs a)))
 
-(def-fns _ $ (many rot-c : (erased Type A) (many (Nat) n) (many (List A) xs) -> (many (List A) ys) (erased (Rot A n xs ys) r))
+(def-fns _ $ (many rot-cut-c : (erased Type A) (many (Nat) n) (many (List A) xs) -> (many (List A) ys) (erased (RotCut A n xs ys) r))
   (let ((many pre) (many post) (erased c)) (cut-c _ n xs))
   (let ((many ys) (erased a)) (app-c _ post pre))
-  (values ys (MkRot _ n xs ys pre post c a)))
+  (values ys (MkRotCut _ n xs ys pre post c a)))
 
 ; xs and ys of one length, related by R entry by entry.
 (def-adts $ (PwE : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
@@ -470,9 +470,9 @@
   (PwECons A B R x y ab1 cd1 rxy (pwe-app A B R a1 b ab1 c1 d cd1 p1 q pa1 pc1)))
 
 (def-fns _ $ (erased pwe-rot : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased (Nat) n) (erased (List A) xs xs2) (erased (List B) ys ys2)
-    (erased (PwE A B R xs ys) p) (erased (Rot A n xs xs2) rx) (erased (Rot B n ys ys2) ry) -> (erased (PwE A B R xs2 ys2) r))
-  (let-match erased rx (MkRot _ _ _ _ a b cx ax))
-  (let-match erased ry (MkRot _ _ _ _ c d cy ay))
+    (erased (PwE A B R xs ys) p) (erased (RotCut A n xs xs2) rx) (erased (RotCut B n ys ys2) ry) -> (erased (PwE A B R xs2 ys2) r))
+  (let-match erased rx (MkRotCut _ _ _ _ a b cx ax))
+  (let-match erased ry (MkRotCut _ _ _ _ c d cy ay))
   (let ((erased q1) (erased q2)) (pwe-cut A B R n xs a b ys c d p cx cy))
   (pwe-app A B R b a xs2 d c ys2 q2 q1 ax ay))
 
@@ -491,7 +491,7 @@
   (MkExact os p (Succ n) (PwCons _ _ FitSec o x os1 p1 fo f) (LengthCons _ o os1 n lo) (LengthCons _ x p1 n lp)))
 
 (def-fns _ $ (erased exact-rot : (erased (List (Sec)) os os2) (erased (List (Sub)) p p2) (erased (Nat) i) (erased (Exact os p) x)
-    (erased (Rot (Sec) i os os2) ro) (erased (Rot (Sub) i p p2) rp) -> (erased (Exact os2 p2) r))
+    (erased (RotCut (Sec) i os os2) ro) (erased (RotCut (Sub) i p p2) rp) -> (erased (Exact os2 p2) r))
   (let-match erased x (MkExact _ _ n f lo lp))
   (pwe-exact os2 p2 (pwe-rot _ _ FitSec i os os2 p p2 (exact-pwe os p n f lo lp) ro rp)))
 
@@ -502,13 +502,13 @@
     (many E2Done : (erased (Nat) nhub i nt) (erased (List (Sub)) p1 p2) (erased (List (List (Sub))) rs1 ru1 rs2 ru2 acc)
         -> (Db22 nhub p1 p2 (Nil (List (Sub))) rs1 ru1 (Nil (List (Sub))) rs2 ru2 i nt acc acc))
     (many E2Swap : (erased (Nat) nhub i j nt) (erased (List (Sub)) p1 p2 r) (erased (List (List (Sub))) rt2 rs1 ru1 rs2 ru2 acc out)
-        (erased (Monus nhub i j) mo) (erased (Db22 nhub p2 p1 (Cons (List (Sub)) r rt2) rs2 ru2 (Nil (List (Sub))) rs1 ru1 j nt acc out) d)
+        (erased (MonusAdd nhub i j) mo) (erased (Db22 nhub p2 p1 (Cons (List (Sub)) r rt2) rs2 ru2 (Nil (List (Sub))) rs1 ru1 j nt acc out) d)
         -> (Db22 nhub p1 p2 (Nil (List (Sub))) rs1 ru1 (Cons (List (Sub)) r rt2) rs2 ru2 i nt acc out))
     (many E2Small : (erased (Nat) nhub i nt l1 l2 l) (erased (List (Sub)) p1 p2 r) (erased (List (List (Sub))) rt3 rs1 ru1 rt2 rs2 ru2 acc)
         (erased (Length (List (Sub)) rt3 l1) pl1) (erased (Length (List (Sub)) rt2 l2) pl2) (erased (Add l1 l2 l) al) (erased (Lt l nt) lt)
         -> (Db22 nhub p1 p2 (Cons (List (Sub)) r rt3) rs1 ru1 rt2 rs2 ru2 i nt acc acc))
     (many E2Step : (erased (Nat) nhub i nt) (erased (List (Sub)) p1 p2 r q1 q2) (erased (List (List (Sub))) rt3 rs1 ru1 rt2 rs2 ru2 acc acc1 out)
-        (erased (PartMeet p1 r q1) wm) (erased (Rot (Sub) i q1 q2) wr) (erased (E2In nhub q1 q2 rt3 rs1 ru1 rt2 rs2 ru2 i nt acc acc1) di)
+        (erased (PartMeet p1 r q1) wm) (erased (RotCut (Sub) i q1 q2) wr) (erased (E2In nhub q1 q2 rt3 rs1 ru1 rt2 rs2 ru2 i nt acc acc1) di)
         (erased (Db22 nhub p1 p2 rt3 rs1 (Cons (List (Sub)) r ru1) rt2 rs2 ru2 i nt acc1 out) dt)
         -> (Db22 nhub p1 p2 (Cons (List (Sub)) r rt3) rs1 ru1 rt2 rs2 ru2 i nt acc out)))
   ((E2In : ((Nat) nhub) ((List (Sub)) q1 q2) ((List (List (Sub))) rt3 rs1 ru1 rt2 rs2 ru2) ((Nat) i nt) ((List (List (Sub))) acc acc1) -> Type)
@@ -521,13 +521,13 @@
         (erased (List (List (Sub))) rt3 rs1 ru1 rt2 rs2 ru2 rt4 rs3 rt5 rs4 acc acc1)
         (erased (Sr q1 (Zero) (Nil (List (Sub))) rt3 dnt1 rt4) w1) (erased (Sr q1 (Zero) (Nil (List (Sub))) rs1 dns1 rs3) w2)
         (erased (Sr q2 (Zero) (Nil (List (Sub))) rt2 dnt2 rt5) w3) (erased (Sr q2 (Zero) (Nil (List (Sub))) rs2 dns2 rs4) w4)
-        (erased (Add dns2 nt u3) a3) (erased (Add dns1 u3 u) a4) (erased (Add dnt1 dnt2 dd) a5) (erased (Monus u dd (Succ nt1)) mo)
+        (erased (Add dns2 nt u3) a3) (erased (Add dns1 u3 u) a4) (erased (Add dnt1 dnt2 dd) a5) (erased (MonusAdd u dd (Succ nt1)) mo)
         (erased (Db22 nhub q1 q2 rt4 rs3 ru1 rt5 rs4 ru2 i nt1 acc acc1) d) -> (E2In nhub q1 q2 rt3 rs1 ru1 rt2 rs2 ru2 i nt acc acc1))
     (many J2Red : (erased (Nat) nhub i nt dnt1 dns1 dnt2 dns2 u3 u dd) (erased (List (Sub)) q1 q2)
         (erased (List (List (Sub))) rt3 rs1 ru1 rt2 rs2 ru2 rt4 rs3 rt5 rs4 acc)
         (erased (Sr q1 (Zero) (Nil (List (Sub))) rt3 dnt1 rt4) w1) (erased (Sr q1 (Zero) (Nil (List (Sub))) rs1 dns1 rs3) w2)
         (erased (Sr q2 (Zero) (Nil (List (Sub))) rt2 dnt2 rt5) w3) (erased (Sr q2 (Zero) (Nil (List (Sub))) rs2 dns2 rs4) w4)
-        (erased (Add dns2 nt u3) a3) (erased (Add dns1 u3 u) a4) (erased (Add dnt1 dnt2 dd) a5) (erased (Monus u dd (Zero)) mo)
+        (erased (Add dns2 nt u3) a3) (erased (Add dns1 u3 u) a4) (erased (Add dnt1 dnt2 dd) a5) (erased (MonusAdd u dd (Zero)) mo)
         -> (E2In nhub q1 q2 rt3 rs1 ru1 rt2 rs2 ru2 i nt acc (Cons (List (Sub)) q1 acc)))))
 
 (def-fns _ $ (many c2db2-c : (many (Nat) nhub) (many (List (Sub)) p1 p2) (many (List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2) (many (Nat) i nt)
@@ -546,7 +546,7 @@
   (let-match many (lt-test l nt) (LtNo _ _)
     ((LtYes _ _ lt) (values (BTrue) acc (IfY _ (E2Small nhub i nt l1 l2 l p1 p2 r rt3 rs1 ru1 rt2 rs2 ru2 acc pl1 pl2 al lt)))))
   (let ((many q1) (erased wm)) (part-meet p1 r))
-  (let ((many q2) (erased wr)) (rot-c _ i q1))
+  (let ((many q2) (erased wr)) (rot-cut-c _ i q1))
   (let ((many ok1) (many acc1) (erased w1))
     (let ((many u1) (erased wu1)) (check-unfit-c q1 ru1))
     (match many u1 (((Bool) ok1) ((List (List (Sub))) acc1) ((IfT ok1 (E2In nhub q1 q2 rt3 rs1 ru1 rt2 rs2 ru2 i nt acc acc1)) w1))
@@ -580,12 +580,12 @@
     ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased e2-ext : (erased (Nat) nhub i nt) (erased (List (Sub)) p1 p2) (erased (List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2 acc out)
-    (subterm erased (Db22 nhub p1 p2 rt1 rs1 ru1 rt2 rs2 ru2 i nt acc out) d) -> (erased (Ext acc out) e))
+    (subterm erased (Db22 nhub p1 p2 rt1 rs1 ru1 rt2 rs2 ru2 i nt acc out) d) -> (erased (ExtAcc acc out) e))
   (let-match erased d (E2Step _ _ _ _ _ r q1 q2 rt3 _ _ _ _ _ _ acc1 _ _ _ di dt)
     ((E2Done _ _ _ _ _ _ _ _ _ _) (ExtRefl acc))
     ((E2Swap _ _ j _ _ _ _ _ _ _ _ _ _ _ _ d1) (e2-ext nhub j nt p2 p1 rt2 rs2 ru2 (Nil _) rs1 ru1 acc out d1))
     ((E2Small _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtRefl acc)))
-  (let ((erased (Ext acc acc1) e1))
+  (let ((erased (ExtAcc acc acc1) e1))
     (match erased di _
       ((J2Unfit1 _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtRefl acc))
       ((J2Unfit2 _ _ _ _ _ _ _ _ _ _ _ _ _) (ExtRefl acc))
@@ -617,7 +617,7 @@
   (LtS t0 (Succ y) (add-mono-le dd t2 w2 t0 y le q3 py)))
 
 (def-fns _ $ (erased e2-sound : (erased (List (Sec)) os1 os2) (erased (Nat) nhub i j nt ct1 cs1 ct2 cs2 ts sc w) (erased (List (Sub)) p1 p2)
-    (erased (List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2 acc out) (erased (Rot (Sec) i os1 os2) ro12) (erased (Rot (Sec) j os2 os1) ro21)
+    (erased (List (List (Sub))) rt1 rs1 ru1 rt2 rs2 ru2 acc out) (erased (RotCut (Sec) i os1 os2) ro12) (erased (RotCut (Sec) j os2 os1) ro21)
     (erased (Add i j nhub) aij) (erased (Exact os1 p1) x1) (erased (Exact os2 p2) x2)
     (subterm erased (Db22 nhub p1 p2 rt1 rs1 ru1 rt2 rs2 ru2 i nt acc out) d)
     (erased (Count os1 rt1 ct1) kt1) (erased (Count os1 rs1 cs1) ks1) (erased (Count os1 ru1 (Zero)) ku1)
@@ -679,7 +679,7 @@
 (def-adts $ (E2Top : ((Nat) nhub) ((List (Sub)) p1) ((List (List (Sub))) rt rs) ((Nat) i) ((Z) b) ((List (List (Sub))) acc out) -> Type)
   enum
   (many MkE2Top : (erased (Nat) nhub i dnt1 dns1 dnt2 dns2 ds dn bp bn x y nt) (erased (List (Sub)) p1 p2)
-      (erased (List (List (Sub))) rt rs rt1 rs1 rt2 rs2 acc out) (erased (Rot (Sub) i p1 p2) wr)
+      (erased (List (List (Sub))) rt rs rt1 rs1 rt2 rs2 acc out) (erased (RotCut (Sub) i p1 p2) wr)
       (erased (Sr p1 (Zero) (Nil (List (Sub))) rt dnt1 rt1) w1) (erased (Sr p1 (Zero) (Nil (List (Sub))) rs dns1 rs1) w2)
       (erased (Sr p2 (Zero) (Nil (List (Sub))) rt dnt2 rt2) w3) (erased (Sr p2 (Zero) (Nil (List (Sub))) rs dns2 rs2) w4)
       (erased (Add dns1 dns2 ds) a1) (erased (Add dnt1 dnt2 dn) a2) (erased (Add ds bp x) ax) (erased (Add dn bn y) ay) (erased (Add y nt x) an)
@@ -688,7 +688,7 @@
 (def-fns _ $ (many check-2dbound2-c : (many (Nat) nhub) (many (List (Sub)) p1) (many (List (List (Sub))) rt rs) (many (Nat) i) (many (Z) b)
     (many (List (List (Sub))) acc) -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (E2Top nhub p1 rt rs i b acc out)) w))
   (let-match many b (MkZ bp bn))
-  (let ((many p2) (erased wr)) (rot-c _ i p1))
+  (let ((many p2) (erased wr)) (rot-cut-c _ i p1))
   (let ((many dnt1) (many rt1) (erased w1)) (sort-drules-c p1 rt))
   (let ((many dns1) (many rs1) (erased w2)) (sort-drules-c p1 rs))
   (let ((many dnt2) (many rt2) (erased w3)) (sort-drules-c p2 rt))
@@ -708,7 +708,7 @@
     ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased e2-top-sound : (erased (List (Sec)) os1 os2) (erased (Nat) nhub i j bp bn ct1 cs1 ct2 cs2 ts ss l r) (erased (List (Sub)) p1)
-    (erased (List (List (Sub))) rt rs acc out) (erased (Rot (Sec) i os1 os2) ro12) (erased (Rot (Sec) j os2 os1) ro21) (erased (Add i j nhub) aij)
+    (erased (List (List (Sub))) rt rs acc out) (erased (RotCut (Sec) i os1 os2) ro12) (erased (RotCut (Sec) j os2 os1) ro21) (erased (Add i j nhub) aij)
     (erased (Exact os1 p1) x1) (erased (E2Top nhub p1 rt rs i (MkZ bp bn) acc out) d)
     (erased (Count os1 rt ct1) kt1) (erased (Count os1 rs cs1) ks1) (erased (Count os2 rt ct2) kt2) (erased (Count os2 rs cs2) ks2)
     (erased (Add ct1 ct2 ts) ats) (erased (Add cs1 cs2 ss) ass) (erased (Add ts bn l) al) (erased (Add ss bp r) ar)

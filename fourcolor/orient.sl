@@ -1,14 +1,14 @@
-(let ((many i4)) (Succ i3))
-(let ((many i6)) (Succ $ Succ i4))
-(let ((many i8)) (Succ $ Succ i6))
+(let ((many nat4)) (Succ nat3))
+(let ((many nat6)) (Succ $ Succ nat4))
+(let ((many nat8)) (Succ $ Succ nat6))
 
 (def-adts $ (PtAt : ((List (Nat)) env) ((Nat) i) ((Point) p) -> Type)
   enum
   (many MkPtAt : (erased (List (Nat)) env) (erased (Nat) i x y) (erased (Nth (Nat) env i x) px) (erased (Nth (Nat) env (Succ i) y) py)
      -> (PtAt env i (MkPoint x y))))
 
-(def-fns _ $ (erased pt-at : (erased (Nat) x y) (erased (List (Nat)) env) -> (erased (PtAt (Cons (Nat) x (Cons (Nat) y env)) i0 (MkPoint x y)) a))
-  (MkPtAt _ i0 x y (NthHere _ x _) (NthThere _ x _ i0 y (NthHere _ y env))))
+(def-fns _ $ (erased pt-at : (erased (Nat) x y) (erased (List (Nat)) env) -> (erased (PtAt (Cons (Nat) x (Cons (Nat) y env)) nat0 (MkPoint x y)) a))
+  (MkPtAt _ nat0 x y (NthHere _ x _) (NthThere _ x _ nat0 y (NthHere _ y env))))
 
 (def-fns _ $ (erased pt-skip : (erased (List (Nat)) env) (erased (Nat) i) (erased (Point) p) (erased (Nat) x y) (erased (PtAt env i p) a) ->
     (erased (PtAt (Cons (Nat) x (Cons (Nat) y env)) (Succ (Succ i)) p) b))
@@ -16,7 +16,7 @@
   (MkPtAt _ (Succ (Succ i)) u v (NthThere _ x _ _ u (NthThere _ y _ _ u nu)) (NthThere _ x _ _ v (NthThere _ y _ _ v nv))))
 
 (def-fns _ $ (erased pts5 : (erased (Point) p q r s t) -> (erased (List (Nat)) env)
-    (erased (PtAt env i0 p) a) (erased (PtAt env i2 q) b) (erased (PtAt env i4 r) c) (erased (PtAt env i6 s) d) (erased (PtAt env i8 t) e))
+    (erased (PtAt env nat0 p) a) (erased (PtAt env nat2 q) b) (erased (PtAt env nat4 r) c) (erased (PtAt env nat6 s) d) (erased (PtAt env nat8 t) e))
   (let-match erased p (MkPoint px py))
   (let-match erased q (MkPoint qx qy))
   (let-match erased r (MkPoint rx ry))
@@ -63,14 +63,14 @@
 (def-fns _ $ (erased shoe-fn : (erased (Point) p q r) (erased (Nat) s t) (erased (Shoelace p q r s) h) (erased (Shoelace p q r t) g) ->
     (erased (Eq (Nat) s t) e))
   (let ((erased env) (erased a) (erased b) (erased c) (erased _) (erased _)) (pts5 p q r p p))
-  (eval-fn env _ s t (shoe-eval env i0 i2 i4 p q r s a b c h) (shoe-eval env i0 i2 i4 p q r t a b c g)))
+  (eval-fn env _ s t (shoe-eval env nat0 nat2 nat4 p q r s a b c h) (shoe-eval env nat0 nat2 nat4 p q r t a b c g)))
 
-(comptime-match many (ring-check (shoe i0 i2 i4) (shoe i2 i4 i0)) (Some _ rot-eq))
+(comptime-match many (ring-check (shoe nat0 nat2 nat4) (shoe nat2 nat4 nat0)) (Some _ rot-eq))
 
 (def-fns _ $ (erased shoe-rot : (erased (Point) p q r) (erased (Nat) s) (erased (Shoelace p q r s) h) -> (erased (Shoelace q r p s) g))
   (let ((erased env) (erased a) (erased b) (erased c) (erased _) (erased _)) (pts5 p q r p p))
   (let ((erased t) (erased g)) (shoelace q r p))
-  (let-match erased (ring-sound env _ _ s t rot-eq (shoe-eval env i0 i2 i4 p q r s a b c h) (shoe-eval env i2 i4 i0 q r p t b c a g)) (Refl _ _))
+  (let-match erased (ring-sound env _ _ s t rot-eq (shoe-eval env nat0 nat2 nat4 p q r s a b c h) (shoe-eval env nat2 nat4 nat0 q r p t b c a g)) (Refl _ _))
   g)
 
 (def-fns _ $ (erased left-rot : (erased (Point) p q r) (erased (Left p q r) l) -> (erased (Left q r p) m))
@@ -110,7 +110,7 @@
     ((CEq _ _ _) (OOn p q r (MkCollinear p q r s1 h1 h2)))
     ((CGt _ _ _ _ gt) (ORight p q r (MkLeft q p r s2 s1 (shoe-rot r q p s2 h2) (shoe-rot q r p s1 $ shoe-rot p q r s1 h1) gt)))))
 
-(let ((many ta1)) (shoe i0 i2 i4))
-(let ((many ta2)) (shoe i0 i6 i8))
-(let ((many ta3)) (shoe i0 i2 i8))
-(let ((many ta4)) (shoe i0 i4 i6))
+(let ((many ta1)) (shoe nat0 nat2 nat4))
+(let ((many ta2)) (shoe nat0 nat6 nat8))
+(let ((many ta3)) (shoe nat0 nat2 nat8))
+(let ((many ta4)) (shoe nat0 nat4 nat6))

@@ -395,11 +395,11 @@
   (let-match erased ep (OrR _ _ oer) (absurd (OrL _ _ oxr) (in-notin x rc ixr oxr)))
   (let ((erased nfc) (erased _) (erased _) (erased _) (erased _) (erased _) (erased qe) (erased _) (erased _) (erased _) (erased _) (erased _))
     (hc-perms dc dm ec nc fc ksc rc em nm fm ksm as hl en))
-  (let ((erased lex)) (perm-val dc x ex ec nfc qe pex))
+  (let ((erased lex')) (perm-val dc x ex ec nfc qe pex))
   (let-match erased (in-dec ex ie) (OrR _ _ oe)
     (absurd (OrL _ _ ie1) (in-notin x rc ixr (disj-notin x ie rc dj (gc-img dc dm ex x ec nc fc ksc rc em nm fm ksm as hl cc ie en ok iec uc ie1 pxe)))))
-  (let ((erased v) (erased pv)) (nth-exists _ h1 dc ex lh lex))
-  (let ((erased ov)) (ins-out dc dm ex v ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lex oer oe pv))
+  (let ((erased v) (erased pv)) (nth-exists _ h1 dc ex lh lex'))
+  (let ((erased ov)) (ins-out dc dm ex v ec nc fc ksc rc em nm fm ksm as hl ids h1 cc ie ccr ins en ok fu fa io el lh iec rcc iem dj lex' oer oe pv))
   (let ((erased puv)) (embed-e dc dm x ex u v ec nc fc ksc rc em nm fm ksm as hl en ok fu pex
     (embl-at dc x u ec nc em nm fm as hl ids h1 io el lh pu) (embl-at dc ex v ec nc em nm fm as hl ids h1 io el lh pv)))
   (match erased (in-dec u ins) _

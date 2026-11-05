@@ -153,8 +153,8 @@
   (let-match erased cn (ConnStep _ _ w _ a c1) ((ConnHere _ _) (ConnHere gh x)))
   (ConnStep gh x w y (adj-cat-r g h gh x w a c) (conn-lift-r g h gh w y c1 c)))
 
-(def-fns _ $ (erased below-cat : (erased (List (Bond)) g h gh) (erased (Nat) d) (subterm erased (Cat g h gh) c) (erased (Below g d) bg)
-    (erased (Below h d) bh) -> (erased (Below gh d) r))
+(def-fns _ $ (erased below-cat : (erased (List (Bond)) g h gh) (erased (Nat) d) (subterm erased (Cat g h gh) c) (erased (BondsBelow g d) bg)
+    (erased (BondsBelow h d) bh) -> (erased (BondsBelow gh d) r))
   (let-match erased c (CatCons g1 _ gh1 _ c1) ((CatNil _) bh))
   (let-match erased bg (BelowCons _ x y _ lx ly bg1))
   (BelowCons gh1 x y d lx ly (below-cat g1 h gh1 d c1 bg1 bh)))
@@ -165,7 +165,7 @@
   (values (Cons _ b gh1) (CatCons g1 h gh1 b c1)))
 
 (def-fns _ $ (erased graph-below : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (subterm erased (Fun p g) f)
-    (erased (HPerm d p q) pm) -> (erased (Below g d) r))
+    (erased (HPerm d p q) pm) -> (erased (BondsBelow g d) r))
   (let-match erased f (FunCons _ g1 x y px f1) ((FunNil _) (BelowNil d)))
   (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (BelowCons g1 x y d (nth-lt-length _ p x d y px lp) (perm-val d x y p q pm px) (graph-below d p q g1 f1 pm)))

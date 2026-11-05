@@ -1,41 +1,41 @@
-(def-adts $ (AllRed : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
+(def-adts $ (AllRedQ : ((Qzt) qt) ((List (List (Sub))) obl) -> Type)
   enum
-  (many ARNil : (erased (Qzt) qt) -> (AllRed qt (Nil (List (Sub)))))
-  (many ARCons : (erased (Qzt) qt) (erased (List (Sub)) q) (erased (List (List (Sub))) rest) (erased (RedD qt q) dd) (erased (AllRed qt rest) r)
-      -> (AllRed qt (Cons (List (Sub)) q rest))))
+  (many ARQNil : (erased (Qzt) qt) -> (AllRedQ qt (Nil (List (Sub)))))
+  (many ARQCons : (erased (Qzt) qt) (erased (List (Sub)) q) (erased (List (List (Sub))) rest) (erased (RedD qt q) dd) (erased (AllRedQ qt rest) r)
+      -> (AllRedQ qt (Cons (List (Sub)) q rest))))
 
-(def-fns _ $ (many allred-c : (many (Qzt) qt) (subterm many (List (List (Sub))) obl) -> (many (Bool) ok) (erased (IfT ok (AllRed qt obl)) w))
-  (let-match many obl (Cons _ q rest) ((Nil _) (values (BTrue) (IfY _ (ARNil qt)))))
+(def-fns _ $ (many allred-c : (many (Qzt) qt) (subterm many (List (List (Sub))) obl) -> (many (Bool) ok) (erased (IfT ok (AllRedQ qt obl)) w))
+  (let-match many obl (Cons _ q rest) ((Nil _) (values (BTrue) (IfY _ (ARQNil qt)))))
   (let ((many ok1) (erased w1)) (redp-c qt q))
   (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
   (let-match erased w1 (IfY _ dd))
   (let ((many ok2) (erased w2)) (tail $ allred-c qt rest))
-  (values ok2 (match erased w2 _ ((IfY _ a) (IfY _ (ARCons qt q rest dd a))) ((IfF _) (IfF _)))))
+  (values ok2 (match erased w2 _ ((IfY _ a) (IfY _ (ARQCons qt q rest dd a))) ((IfF _) (IfF _)))))
 
-(def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRed qt obl) a)
+(def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRedQ qt obl) a)
     (erased (Elem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
-  (let-match erased a (ARCons _ _ rest dd a1) (absurd (ARNil _) m))
+  (let-match erased a (ARQCons _ _ rest dd a1) (absurd (ARQNil _) m))
   (match erased m _
     ((ElHere _ _ _) dd)
     ((ElThere _ _ _ _ m1) (allred-mem qt rest q a1 m1))))
 
-; The obligations obl pass redpart against a quiz tree built from cfs.
-(def-adts $ (RedE : ((List (Config)) cfs) ((List (List (Sub))) obl) -> Type)
+; The obligations obl pass redpart against a quiz tree built from cfs'.
+(def-adts $ (RedE : ((List (Config)) cfs') ((List (List (Sub))) obl) -> Type)
   enum
-  (many MkRedE : (erased (List (Config)) cfs) (erased (List (List (Sub))) obl) (erased (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi)
-      (erased (AllRed qt obl) a) -> (RedE cfs obl)))
+  (many MkRedE : (erased (List (Config)) cfs') (erased (List (List (Sub))) obl) (erased (Qzt) qt) (erased (QInv cfs' (Nil (Nat)) qt) qi)
+      (erased (AllRedQ qt obl) a) -> (RedE cfs' obl)))
 
 ; The cap checks for drs, their obligations passing redpart.
-(def-adts $ (CapOK : ((List (Config)) cfs) ((List (List (Sub))) drs) -> Type)
+(def-adts $ (CapOK : ((List (Config)) cfs') ((List (List (Sub))) drs) -> Type)
   enum
-  (many MkCapOK : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs cobl) (erased (Small drs) sm) (erased (CapL drs (Nil (List (Sub))) cobl 5 9) cl)
-      (erased (RedE cfs cobl) re) -> (CapOK cfs drs)))
+  (many MkCapOK : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs cobl) (erased (Small drs) sm) (erased (CapL drs (Nil (List (Sub))) cobl 5 9) _)
+      (erased (RedE cfs' cobl) re) -> (CapOK cfs' drs)))
 
-(def-fns _ $ (erased hit-red : (erased (List (Config)) cfs) (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) obl) (erased (Geo d e n f ks) g)
-    (erased (MapHit d e f ks obl) h) (erased (RedE cfs obl) re) -> (erased (CfEmbed cfs d e n f ks) r))
+(def-fns _ $ (erased hit-red : (erased (List (Config)) cfs') (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) obl) (erased (Geo d e n f ks) g)
+    (erased (MapHit d e f ks obl) h) (erased (RedE cfs' obl) re) -> (erased (CfEmbed cfs' d e n f ks) r))
   (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
   (let-match erased re (MkRedE _ _ qt qi ar))
-  (hit-embed cfs d e n f ks g (qzt-hit cfs d e n f ks qt qi g (red-sound d z e n f ks qt q (allred-mem qt obl q ar m) g lz ex))))
+  (hit-embed cfs' d e n f ks g (qzt-hit cfs' d e n f ks qt qi g (red-sound d z e n f ks qt q (allred-mem qt obl q ar m) g lz ex))))
 
 ; path: true for a right branch; root: the script with the other regions cut out; ct: the parts of the earlier regions of the walk; p, mp: the parts reached at path on either side.
 (def-adts $ (Region : -> Type)
@@ -56,13 +56,13 @@
 
 (def-adts $ (CutsIn : ((List (List (Sub))) ct) ((List (Region)) t) -> Type)
   enum
-  (many CINil : (erased (List (Region)) t) -> (CutsIn (Nil (List (Sub))) t))
-  (many CICons : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (erased (InRegs h t) i) (erased (CutsIn ct t) r)
+  (many CutsInNil : (erased (List (Region)) t) -> (CutsIn (Nil (List (Sub))) t))
+  (many CutsInCons : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (erased (InRegs h t) i) (erased (CutsIn ct t) r)
       -> (CutsIn (Cons (List (Sub)) h ct) t)))
 
 (def-fns _ $ (erased cutsin-at : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (subterm erased (CutsIn ct t) c)
     (erased (Elem (List (Sub)) h ct) m) -> (erased (InRegs h t) r))
-  (let-match erased c (CICons ct1 _ _ i rest) (absurd (CINil _) m))
+  (let-match erased c (CutsInCons ct1 _ _ i rest) (absurd (CutsInNil _) m))
   (match erased m _ ((ElHere _ _ _) i) ((ElThere _ _ _ _ m1) (cutsin-at ct1 h t rest m1))))
 
 (def-adts $ (PartIn : ((List (Sub)) h q) -> Type)
@@ -107,45 +107,45 @@
     ((IfF _) (IfF _)))))
 
 (def-fns _ $ (many cuts-in-c : (subterm many (List (List (Sub))) ct) (many (List (Region)) t) -> (many (Bool) ok) (erased (IfT ok (CutsIn ct t)) w))
-  (let-match many ct (Cons _ h rest) ((Nil _) (values (BTrue) (IfY _ (CINil t)))))
+  (let-match many ct (Cons _ h rest) ((Nil _) (values (BTrue) (IfY _ (CutsInNil t)))))
   (let ((many ok1) (erased w1)) (in-regs-c h t))
   (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) (IfF _))))
   (let-match erased w1 (IfY _ i))
   (let ((many ok2) (erased w2)) (tail $ cuts-in-c rest t))
-  (values ok2 (match erased w2 _ ((IfY _ c) (IfY _ (CICons rest h t i c))) ((IfF _) (IfF _)))))
+  (values ok2 (match erased w2 _ ((IfY _ c) (IfY _ (CutsInCons rest h t i c))) ((IfF _) (IfF _)))))
 
 ; The walk of x from its context passes, its obligations pass redpart, and its cut list holds parts of the regions in t.
-(def-adts $ (RegOK : ((List (Config)) cfs) ((List (List (Sub))) drs) ((Region) x) ((List (Region)) t) -> Type)
+(def-adts $ (RegOK : ((List (Config)) cfs') ((List (List (Sub))) drs) ((Region) x) ((List (Region)) t) -> Type)
   enum
-  (many MkRegOK : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs rt rs ct out) (erased (Nat) nhub) (erased (List (Sub)) p mp q mq)
+  (many MkRegOK : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs rt rs ct out) (erased (Nat) nhub) (erased (List (Sub)) p mp q mq)
       (erased (List (Bool)) path) (erased (Bool) root) (erased (OfSize nhub drs rs) sz) (erased (Tgt nhub drs rt) tg) (erased (Qzt) qt)
-      (erased (QInv cfs (Nil (Nat)) qt) qi) (erased (PartIn p q) ip) (erased (PartIn mp mq) im) (erased (Pres nhub rt rs ct q out) d0)
-      (erased (Pres nhub rt rs ct mq out) d1) (erased (AllRed qt out) ar) (erased (List (Region)) t) (erased (CutsIn ct t) ci)
-      -> (RegOK cfs drs (MkRegion nhub ct p mp path root) t)))
+      (erased (QInv cfs' (Nil (Nat)) qt) qi) (erased (PartIn p q) ip) (erased (PartIn mp mq) im) (erased (Pres nhub rt rs ct q out) d0)
+      (erased (Pres nhub rt rs ct mq out) d1) (erased (AllRedQ qt out) ar) (erased (List (Region)) t) (erased (CutsIn ct t) ci)
+      -> (RegOK cfs' drs (MkRegion nhub ct p mp path root) t)))
 
-(def-adts $ (AllReg : ((List (Config)) cfs) ((List (List (Sub))) drs) ((List (Region)) xs) -> Type)
+(def-adts $ (AllReg : ((List (Config)) cfs') ((List (List (Sub))) drs) ((List (Region)) xs) -> Type)
   enum
-  (many ARgNil : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) -> (AllReg cfs drs (Nil (Region))))
-  (many ARgCons : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (Region) x) (erased (List (Region)) t) (erased (RegOK cfs drs x t) a)
-      (erased (AllReg cfs drs t) r) -> (AllReg cfs drs (Cons (Region) x t))))
+  (many ARgNil : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs) -> (AllReg cfs' drs (Nil (Region))))
+  (many ARgCons : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs) (erased (Region) x) (erased (List (Region)) t) (erased (RegOK cfs' drs x t) a)
+      (erased (AllReg cfs' drs t) r) -> (AllReg cfs' drs (Cons (Region) x t))))
 
-(def-fns _ $ (erased reg-claim : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (subterm erased (AllReg cfs drs xs) al)
+(def-fns _ $ (erased reg-claim : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (subterm erased (AllReg cfs' drs xs) al)
     (erased (Region) x) (erased (Elem (Region) x xs) mx) (erased (List (Sub)) h) (erased (PartOf x h) po) (erased (Nat) d y pos neg) (erased (List (Nat)) e n f ks)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks y h) xh)
-    -> (erased (CfEmbed cfs d e n f ks) r))
+    -> (erased (CfEmbed cfs' d e n f ks) r))
   (let-match erased al (ARgCons _ _ _ t ok rest) (absurd (ARgNil _ _) mx))
-  (let-match erased mx (ElHere _ _ _) ((ElThere _ _ _ _ m1) (reg-claim cfs drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
+  (let-match erased mx (ElHere _ _ _) ((ElThere _ _ _ _ m1) (reg-claim cfs' drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
   (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq _ _ sz tg qt qi ip im d0 d1 ar _ ci))
   (let ((erased u) (erased xu) (erased du))
     (match erased po (((List (Sub)) u) ((ExactAt e f ks y u) xu) ((Pres nhub rt rs ct u out) du))
       ((POP _ m _ _ _ _ _ _ sb lh lp) (values q (exact-in e f ks y p q (exact-sub-at e f ks y m h p xh sb lh lp) ip) d0))
       ((POM _ m _ _ _ _ _ _ sb lh lp) (values mq (exact-in e f ks y mp mq (exact-sub-at e f ks y m h mp xh sb lh lp) im) d1))))
   (let ((erased ws) (erased iw)) (iota-exists d))
-  (let-match erased (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw (tgt-all d d nhub e n f ks ws drs rt g tg iw (lt-succ d)) y pos neg out u ly ds lt xu du) (PHCut _ z pos2 neg2 _ _ _ _ _ _ _ h2 lz ds2 lt2 x2 m2)
-    ((PHMap _ _ _ _ _ _ _ _ mh) (hit-red cfs d e n f ks out g mh (MkRedE cfs out qt qi ar)))
-    ((PHPos _ z _ _ _ _ _ _ _ _ _ q2 lz _ _ x2 m2) (hit-red cfs d e n f ks out g (MkMapHit d z e f ks q2 out lz m2 x2) (MkRedE cfs out qt qi ar))))
+  (let-match erased (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw (tgt-all d d nhub e n f ks ws drs rt g tg iw (lt-succ d)) y pos neg out u ly ds lt xu du) (PHCut _ z pos2' neg2 _ _ _ _ _ _ _ h2 lz ds2 lt2 x2 m2)
+    ((PHMap _ _ _ _ _ _ _ _ mh) (hit-red cfs' d e n f ks out g mh (MkRedE cfs' out qt qi ar)))
+    ((PHPos _ z _ _ _ _ _ _ _ _ _ q2 lz _ _ x2 m2) (hit-red cfs' d e n f ks out g (MkMapHit d z e f ks q2 out lz m2 x2) (MkRedE cfs' out qt qi ar))))
   (let-match erased (cutsin-at ct h2 t ci m2) (MkInRegs _ _ x3 m3 po3))
-  (reg-claim cfs drs t rest x3 m3 h2 po3 d z pos2 neg2 e n f ks g lz ds2 lt2 x2))
+  (reg-claim cfs' drs t rest x3 m3 h2 po3 d z pos2' neg2 e n f ks g lz ds2 lt2 x2))
 
 ; xs holds the root regions of arities m to hi - 1.
 (def-adts $ (RootsL : ((List (Region)) xs) ((Nat) m hi) -> Type)
@@ -174,23 +174,23 @@
   (let-match many (notail $ roots-c xs (Succ m) hi f1) (ESome _ rest) ((ENone _) (ENone _)))
   (ESome _ (RLCons xs m hi x p mx rp po rest)))
 
-(def-fns _ $ (erased unav-from : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (erased (AllReg cfs drs xs) al)
-    (erased (RootsL xs 5 12) rl) (erased (CapOK cfs drs) co) -> (erased (UnavE cfs) r))
-  (let-match erased co (MkCapOK _ _ cobl sm cl rc))
+(def-fns _ $ (erased unav-from : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (erased (AllReg cfs' drs xs) al)
+    (erased (RootsL xs 5 12) rl) (erased (CapOK cfs' drs) co) -> (erased (UnavE cfs') r))
+  (let-match erased co (MkCapOK _ _ cobl sm cl' rc))
   (def-fns _ $ (erased every : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Geo d e n f ks) g) (erased (Connected d e n f) cc)
-      (erased (Genus d e n f (Zero)) gen) -> (erased (CfEmbed cfs d e n f ks) r))
+      (erased (Genus d e n f (Zero)) gen) -> (erased (CfEmbed cfs' d e n f ks) r))
     (let ((erased x) (erased pos) (erased neg) (erased lx) (erased dsc) (erased lt)) (posz-dscore d e n f ks drs g cc gen))
     (let-match erased g (MkGeo _ _ _ _ _ _ _ _ ol ab))
     (let ((erased a) (erased pa) (erased _)) (arity-at d x f ks ol lx))
     (match erased (le-dec 12 a) _
       ((LeY _ _ l12)
         (let-match erased l12 (LtS _ _ l11))
-        (hit-red cfs d e n f ks cobl g (cap-sound d x a pos neg e n f ks drs (Nil _) cobl g lx dsc lt pa l11 sm cl) rc))
+        (hit-red cfs' d e n f ks cobl g (cap-sound d x a pos neg e n f ks drs (Nil _) cobl g lx dsc lt pa l11 sm cl') rc))
       ((LeN _ _ la)
         (let ((erased rg) (erased mr) (erased p) (erased rp) (erased po)) (roots-look xs a 5 12 rl (LtS 4 a (above-nth ks 4 x a ab pa)) la))
         (let ((erased os) (erased ob)) (obs-exists d x e n f ks g a lx))
-        (reg-claim cfs drs xs al rg mr p po d x pos neg e n f ks g lx dsc lt (MkExactAt e f ks x a os p pa ob (root-exact d x a e n f ks os p g ob rp))))))
-  (MkUnavE cfs (level-of every) every))
+        (reg-claim cfs' drs xs al rg mr p po d x pos neg e n f ks g lx dsc lt (MkExactAt e f ks x a os p pa ob (root-exact d x a e n f ks os p g ob rp))))))
+  (MkUnavE cfs' (level-of every) every))
 
 ; The context reached at the end of a path.
 (def-adts $ (RCtx : ((Nat) nhub) ((List (List (Sub))) rt rs ct) -> Type)
@@ -204,9 +204,9 @@
   (let ((many here)) (MkRCtx nhub rt rs ct acc env p0 p mp0 mp ee f0 f1))
   (let-match many path (Cons _ right rest) ((Nil _) here))
   (let-match many s (SSplit i j k lo lab l r) (else here))
-  (let ((many i2) (many j2)) (mloc i j mp))
+  (let ((many i2) (many j2')) (mloc i j mp))
   (let ((many pl) (many pr) (many p0l) (erased ql) (erased qh) (erased w0) (erased s0) (erased fl0)) (side-split nhub rt rs ct acc i j k lo p0 p f0))
-  (let ((many mpl) (many mpr) (many mp0l) (erased mql) (erased mqh) (erased w1) (erased s1) (erased fl1)) (side-split nhub rt rs ct acc i2 j2 k lo mp0 mp f1))
+  (let ((many mpl) (many mpr) (many mp0l) (erased mql) (erased mqh) (erased w1) (erased s1) (erased fl1)) (side-split nhub rt rs ct acc i2 j2' k lo mp0 mp f1))
   (let-match many right (BTrue) ((BFalse) (tail $ ctx-c nhub rt rs ct acc env ee p0l pl mp0l mpl fl0 fl1 rest l)))
   (let ((many ok1) (many o1) (erased v1)) (check2-c nhub rt rs ct acc env ee p0l pl mp0l mpl fl0 fl1 l))
   (let-match many ok1 (BTrue) ((BFalse) here))
@@ -222,9 +222,9 @@
   (let ((erased fr1)) (FRight nhub k rt rs ct o1 o1 mp0 mp mql mqh mpl mpr (forced-ext nhub rt rs ct acc o1 mp0 mp f1 e1) w1 s1 dl1 (ExtRefl o1)))
   (tail $ ctx-c nhub rt rs ct o1 env2 ee2 p0 pr mp0 mpr fr0 fr1 rest r))
 
-(def-adts $ (Cut : -> Type)
+(def-adts $ (QCut : -> Type)
   enum
-  (many MkCut : (many (List (Bool)) path) -> (Cut)))
+  (many MkQCut : (many (List (Bool)) path) -> (QCut)))
 
 (let ((many drs)) (symmetrize (base-drules)))
 
@@ -240,13 +240,13 @@
     ((BTrue) (SSplit i j k lo lab (SRed) (notail $ prune-left rest r)))
     ((BFalse) (SSplit i j k lo lab (notail $ prune-left rest l) r))))
 
-(def-fns _ $ (many cut-paths : (many (List (Bool)) rpath) (subterm many (Script) s) -> (many (List (Cut)) cuts))
+(def-fns _ $ (many cut-paths : (many (List (Bool)) rpath) (subterm many (Script) s) -> (many (List (QCut)) cuts))
   (match many s _
-    ((SCut) (Cons _ (MkCut (rev-onto _ rpath (Nil _))) (Nil _)))
+    ((SCut) (Cons _ (MkQCut (rev-onto _ rpath (Nil _))) (Nil _)))
     ((SSplit _ _ _ _ _ l r) (cat _ (notail $ cut-paths (Cons _ (BFalse) rpath) l) (notail $ cut-paths (Cons _ (BTrue) rpath) r)))
     (else (Nil _))))
 
-(def-fns _ $ (many walk-skel : (many (Nat) a) -> (many (Script) skel) (many (List (Cut)) cuts))
+(def-fns _ $ (many walk-skel : (many (Nat) a) -> (many (Script) skel) (many (List (QCut)) cuts))
   (let ((many k) (many _)) (script-src a))
   (let ((many skel)) (script-of k))
   (values skel (cut-paths (Nil _) skel)))
@@ -263,10 +263,10 @@
   (let ((many p) (erased _)) (nseq-c _ a sub59))
   (Cons _ (MkRegion a ct p p (Nil _) (BTrue)) xs))
 
-(def-fns _ $ (many push-regs : (many (Nat) a) (many (Script) skel) (many (List (List (Sub))) ct) (many (List (Region)) xs) (subterm many (List (Cut)) cs)
+(def-fns _ $ (many push-regs : (many (Nat) a) (many (Script) skel) (many (List (List (Sub))) ct) (many (List (Region)) xs) (subterm many (List (QCut)) cs)
     -> (many (List (Region)) xs2))
   (let-match many cs (Cons _ c rest) ((Nil _) (root-reg a ct xs)))
-  (let-match many c (MkCut path))
+  (let-match many c (MkQCut path))
   (let ((many _) (many _) (erased _) (erased _) (many cx)) (walk-ctx a ct path (prune-left path skel)))
   (let-match many cx (MkRCtx _ _ _ _ _ _ _ q _ mq _ _ _))
   (tail $ push-regs a skel (Cons _ q $ Cons _ mq ct) (Cons _ (MkRegion a ct q mq path (BFalse)) xs) rest))
@@ -322,9 +322,9 @@
   (let ((many rok) (erased rw)) (allred-c qt cobl))
   (let-match many rok (BTrue) ((BFalse) (ENone _)))
   (let-match erased sw (IfY _ sm))
-  (let-match erased cw (IfY _ cl))
+  (let-match erased cw (IfY _ cl'))
   (let-match erased rw (IfY _ ar))
-  (ESome _ (MkCapOK cfs drs cobl sm cl (MkRedE cfs cobl qt qi ar))))
+  (ESome _ (MkCapOK cfs drs cobl sm cl' (MkRedE cfs cobl qt qi ar))))
 
 (let ((many regs)) (all-regs 7 5 (Nil _)))
 (comptime-match many (roots-c regs 5 12 7) (ESome _ regs-roots))

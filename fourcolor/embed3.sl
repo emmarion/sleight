@@ -93,7 +93,7 @@
   (let ((erased v) (erased pv) (erased itm)) (iter-h dc dm k1 z y w1 ec nc fc ksc rc em nm fm ksm as hl en (ker-face dc dm x z ec nc fc ksc rc em nm fm ksm as hl en ix pz) it1 pw1))
   (values v pv (ItS fm k1 w w1 v pfx itm)))
 
-(def-fns _ $ (erased iter-below : (erased (List (Nat)) f) (erased (Nat) a x y) (subterm erased (Nat) k) (erased (Order f x a) o) (erased (Iter f k x y) it)
+(def-fns _ $ (erased iter-below : (erased (List (Nat)) f) (erased (Nat) a x y) (subterm erased (Nat) k) (erased (OrderOf f x a) o) (erased (Iter f k x y) it)
     -> (erased (Nat) r) (erased (Lt r a) lr) (erased (Iter f r x y) it2))
   (let ((erased o2)) o)
   (let-match erased o2 (MkOrder _ _ _ _ a1 _ _ _))

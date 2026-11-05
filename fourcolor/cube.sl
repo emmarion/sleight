@@ -639,13 +639,13 @@
   (at-apart d o y w t x z aw az (alllt-nth p d x y up px) lx (OrL _ _ ne)))
 
 (def-fns _ $ (erased order-of-two : (erased (List (Nat)) p) (erased (Nat) z w) (erased (Nth (Nat) p z w) pz) (erased (Nth (Nat) p w z) pw)
-    (erased (Apart (Nat) Lt w z) ne) -> (erased (Order p z tg2) r))
+    (erased (Apart (Nat) Lt w z) ne) -> (erased (OrderOf p z tg2) r))
   (MkOrder p (Cons _ w (Nil _)) z w (Succ (Zero)) pz
     (PathStep p (Cons _ z (Nil _)) (Nil _) w z z pw (NotInCons w z (Nil _) ne (NotInNil w)) (PathHere p (Cons _ z (Nil _)) z))
     (LengthCons _ w (Nil _) (Zero) (LengthNil _))))
 
 (def-fns _ $ (erased order-of-three : (erased (List (Nat)) p) (erased (Nat) z w u) (erased (Nth (Nat) p z w) pz) (erased (Nth (Nat) p w u) pw)
-    (erased (Nth (Nat) p u z) pu) (erased (Apart (Nat) Lt w z) nw) (erased (Apart (Nat) Lt u z) nu) -> (erased (Order p z tg3) r))
+    (erased (Nth (Nat) p u z) pu) (erased (Apart (Nat) Lt w z) nw) (erased (Apart (Nat) Lt u z) nu) -> (erased (OrderOf p z tg3) r))
   (let ((erased zs)) (Cons _ z (Nil _)))
   (MkOrder p (Cons _ w (Cons _ u (Nil _))) z w tg2 pz
     (PathStep p zs (Cons _ u (Nil _)) w u z pw (NotInCons w z (Nil _) nw (NotInNil w))

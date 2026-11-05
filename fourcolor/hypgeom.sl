@@ -25,16 +25,16 @@
       (erased (Classes g d (Succ (Zero))) cs) -> (Connected d e n f)))
 
 ; The cycle of p through x has k darts: from p x, x is reached without leaving x on the way.
-(def-adts $ (Order : ((List (Nat)) p) ((Nat) x k) -> Type)
+(def-adts $ (OrderOf : ((List (Nat)) p) ((Nat) x k) -> Type)
   enum
   (many MkOrder : (erased (List (Nat)) p xs) (erased (Nat) x y k) (erased (Nth (Nat) p x y) px) (erased (Path p (Cons (Nat) x (Nil (Nat))) y x xs) w)
-      (erased (Length (Nat) xs k) l) -> (Order p x (Succ k))))
+      (erased (Length (Nat) xs k) l) -> (OrderOf p x (Succ k))))
 
 ; ks lists the orders of the darts xs.
 (def-adts $ (Orders : ((List (Nat)) p xs ks) -> Type)
   enum
   (many OrdNil : (erased (List (Nat)) p) -> (Orders p (Nil (Nat)) (Nil (Nat))))
-  (many OrdCons : (erased (List (Nat)) p xs ks) (erased (Nat) x k) (erased (Order p x k) o) (erased (Orders p xs ks) rest)
+  (many OrdCons : (erased (List (Nat)) p xs ks) (erased (Nat) x k) (erased (OrderOf p x k) o) (erased (Orders p xs ks) rest)
       -> (Orders p (Cons (Nat) x xs) (Cons (Nat) k ks))))
 
 ; ks lists the orders of p at the darts 0..d-1.
@@ -95,7 +95,7 @@
   (many MkKernel : (erased (List (Nat)) f p lab ls) (erased (Nat) x l) (erased (Respects lab f lab) rf) (erased (Respects lab p ls) rp)
       (erased (Nth (Nat) lab x l) px) (erased (NotIn l ls) out) -> (Kernel f p x)))
 
-(def-fns _ $ (erased order-two : (erased (List (Nat)) p) (erased (Nat) x y) (erased (Order p x (Succ (Succ (Zero)))) o) (erased (Nth (Nat) p x y) px)
+(def-fns _ $ (erased order-two : (erased (List (Nat)) p) (erased (Nat) x y) (erased (OrderOf p x (Succ (Succ (Zero)))) o) (erased (Nth (Nat) p x y) px)
     -> (erased (Nth (Nat) p y x) r) (erased (Apart (Nat) Lt y x) ne))
   (let-match erased o (MkOrder _ _ _ y2 _ py2 w l))
   (let-match erased (nth-fn _ p x y y2 px py2) (Refl _ _))
@@ -107,13 +107,13 @@
   (values pz ne))
 
 (def-fns _ $ (erased orders-nth : (erased (List (Nat)) p xs ks) (erased (Nat) j x k) (subterm erased (Orders p xs ks) os) (erased (Nth (Nat) xs j x) px)
-    (erased (Nth (Nat) ks j k) pk) -> (erased (Order p x k) r))
+    (erased (Nth (Nat) ks j k) pk) -> (erased (OrderOf p x k) r))
   (let-match erased os (OrdCons _ xs1 ks1 _ _ o os1) (absurd (OrdNil _) px))
   (let-match erased px (NthThere _ _ _ j1 _ px1) ((NthHere _ _ _) (let-match erased pk (NthHere _ _ _)) o))
   (let-match erased pk (NthThere _ _ _ _ _ pk1))
   (orders-nth p xs1 ks1 j1 x k os1 px1 pk1))
 
-(def-fns _ $ (erased all-order : (erased (Nat) d c x) (erased (List (Nat)) p) (erased (AllOrder d p c) ao) (erased (Lt x d) lx) -> (erased (Order p x c) r))
+(def-fns _ $ (erased all-order : (erased (Nat) d c x) (erased (List (Nat)) p) (erased (AllOrder d p c) ao) (erased (Lt x d) lx) -> (erased (OrderOf p x c) r))
   (let-match erased ao (MkAllOrder _ _ _ ks ol rk))
   (let-match erased ol (MkOrderList _ _ ids _ io os))
   (orders-nth p ids ks x x c os (iota-nth d x ids io lx) (repeat-nth _ d x c ks rk lx)))
@@ -165,7 +165,7 @@
   (let ((erased gfi) (erased grfi)) (perm-graph d fi f (perm-sym d f fi pf)))
   (MkBridgeless d fn ni fi gfn gfi grfn grfi (allsep-mirror d e n f fi fn ge gf gfi gfn (graph-fun d fn gfn grfn) h rfn pf gre grf grfi sp)))
 
-(def-fns _ $ (erased order-three : (erased (List (Nat)) p) (erased (Nat) x y) (erased (Order p x (Succ (Succ (Succ (Zero))))) o) (erased (Nth (Nat) p x y) px)
+(def-fns _ $ (erased order-three : (erased (List (Nat)) p) (erased (Nat) x y) (erased (OrderOf p x (Succ (Succ (Succ (Zero))))) o) (erased (Nth (Nat) p x y) px)
     -> (erased (Nat) z) (erased (Nth (Nat) p y z) py) (erased (Nth (Nat) p z x) pz) (erased (Apart (Nat) Lt y x) ny) (erased (Apart (Nat) Lt z x) nz))
   (let-match erased o (MkOrder _ _ _ y2 _ py2 w l))
   (let-match erased (nth-fn _ p x y y2 px py2) (Refl _ _))

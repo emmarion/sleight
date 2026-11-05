@@ -41,7 +41,7 @@
   (spans-cat h ge gnf g c2 se (spans-cat h gn gf gnf c1 sn sf)))
 
 (def-fns _ $ (erased glink-below : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (List (Bond)) g) (erased (Hypermap d e n f) h)
-    (erased (Glink d e n f g) gl) -> (erased (Below g d) r))
+    (erased (Glink d e n f g) gl) -> (erased (BondsBelow g d) r))
   (let-match erased gl (MkGlink _ _ _ _ ge gn gf gnf _ pe pn pf c1 c2))
   (let ((erased nfe) (erased pme)) (hyper-perm d e n f h))
   (let ((erased nfn) (erased pmn)) (hyper-perm d n f e (hyper-rot d e n f h)))

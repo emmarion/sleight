@@ -291,14 +291,14 @@
   pw)
 
 ; p2 is p with z cut out, the darts renamed by the swap s of z and d, and d dropped.
-(def-adts $ (Cut : ((Nat) d z) ((List (Nat)) s p p2) -> Type)
+(def-adts $ (WalkupCut : ((Nat) d z) ((List (Nat)) s p p2) -> Type)
   enum
-  (many MkCut : (erased (Nat) d z) (erased (List (Nat)) s p p1 pb p2) (erased (Skip p z p1) sk) (erased (Conj s s p1 pb) cj)
-      (erased (Snoc (Nat) p2 d pb) sn) -> (Cut d z s p p2)))
+  (many MkWalkupCut : (erased (Nat) d z) (erased (List (Nat)) s p p1 pb p2) (erased (Skip p z p1) sk) (erased (Conj s s p1 pb) cj)
+      (erased (Snoc (Nat) p2 d pb) sn) -> (WalkupCut d z s p p2)))
 
 (def-fns _ $ (erased walkup-e : (erased (Nat) d gen z) (erased (List (Nat)) e n f) (erased (Hypermap (Succ d) e n f) h)
     (erased (Genus (Succ d) e n f gen) p) (erased (Lt z (Succ d)) lz)
-    -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (Cut d z s n n2) cn) (erased (Cut d z s f f2) cf)
+    -> (erased (List (Nat)) s e2 n2 f2) (erased (Nat) gen2) (erased (Swap (Succ d) z d s) sw) (erased (WalkupCut d z s n n2) cn) (erased (WalkupCut d z s f f2) cf)
     (erased (Hypermap d e2 n2 f2) h2) (erased (Genus d e2 n2 f2 gen2) p2) (erased (Lt gen2 (Succ gen)) le))
   (let ((erased e1) (erased n1) (erased f1) (erased gen1) (erased skn) (erased skf) (erased h1) (erased p1) (erased le)) (walkup-iso (Succ d) gen z e n f h p lz))
   (let ((erased s) (erased sw)) (swap-exists (Succ d) z d lz (lt-succ d)))
@@ -307,7 +307,7 @@
   (let ((erased e2) (erased n2) (erased f2) (erased _) (erased sn) (erased sf) (erased h2) (erased p2))
     (drop-last d gen1 eb nb fb hb pb (conj-fix (Succ d) d z s s n1 nb cnb ps psd (skip-fixed n n1 z skn) psz)
       (conj-fix (Succ d) d z s s f1 fb cfb ps psd (skip-fixed f f1 z skf) psz)))
-  (values s e2 n2 f2 gen1 sw (MkCut d z s n n1 nb n2 skn cnb sn) (MkCut d z s f f1 fb f2 skf cfb sf) h2 p2 le))
+  (values s e2 n2 f2 gen1 sw (MkWalkupCut d z s n n1 nb n2 skn cnb sn) (MkWalkupCut d z s f f1 fb f2 skf cfb sf) h2 p2 le))
 
 (def-fns _ $ (erased lt-one : (erased (Nat) a) (erased (Lt a (Succ (Zero))) l) -> (erased (Eq (Nat) a (Zero)) e))
   (match erased l _ ((LtZ _) (Refl _ (Zero))) (absurd (LtS _ _ l1) l1)))

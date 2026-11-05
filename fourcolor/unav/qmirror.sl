@@ -12,7 +12,7 @@
       (let ((erased ys) (erased sn) (erased r)) (path-snoc q s ys1 y a c r1 (perm-inv d c a p q pm pc) out))
       (values ys r (snoc-length (Nat) ys1 ys a k1 sn ly1)))))
 
-(def-fns _ $ (erased order-inv : (erased (Nat) d x k) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (Order p x k) o) -> (erased (Order q x k) r))
+(def-fns _ $ (erased order-inv : (erased (Nat) d x k) (erased (List (Nat)) p q) (erased (HPerm d p q) pm) (erased (OrderOf p x k) o) -> (erased (OrderOf q x k) r))
   (let-match erased o (MkOrder _ xs _ y k1 py w l))
   (let-match erased pm (HMkPerm _ _ _ _ _ lp _ _))
   (let ((erased y0) (erased py0) (erased _)) (perm-nth d x q p (perm-sym d p q pm) (nth-lt-length (Nat) p x d y py lp)))
@@ -25,7 +25,7 @@
   (OrdCons q xs1 ks1 x k (order-inv d x k p q pm o) (orders-inv d p q xs1 ks1 pm os1)))
 
 (def-fns _ $ (erased order-fn2 : (erased (Nat) d x) (erased (List (Nat)) e n f fn) (erased (Hypermap d e n f) h) (erased (AllOrder d e (Succ (Succ (Zero)))) pl)
-    (erased (Respects f n fn) rfn) (erased (Lt x d) lx) -> (erased (Order fn x (Succ (Succ (Zero)))) r))
+    (erased (Respects f n fn) rfn) (erased (Lt x d) lx) -> (erased (OrderOf fn x (Succ (Succ (Zero)))) r))
   (let ((erased nf) (erased ni) (erased fi) (erased _) (erased pe) (erased pn) (erased pf)) (hyper-core d e n f h))
   (let ((erased a) (erased pa) (erased la)) (perm-nth d x n ni pn lx))
   (let ((erased y) (erased py) (erased _)) (perm-nth d a f fi pf la))
@@ -173,8 +173,8 @@
   (let ((erased lw)) (img-lt d x w f fi pf lx pw))
   (let ((erased nwx1)) (nfe d x1 x w e n f h lx1 px1 pw))
   (let ((erased nw1x)) (nfe d x x1 w1 e n f h lx px pw1))
-  (let ((erased l) (erased pfw) (erased pl)) (resp-at f n fn w x1 rfn nwx1))
-  (let-match erased (nth-fn (Nat) f x1 w1 l pw1 pl) (Refl _ _))
+  (let ((erased l) (erased pfw) (erased pl')) (resp-at f n fn w x1 rfn nwx1))
+  (let-match erased (nth-fn (Nat) f x1 w1 l pw1 pl') (Refl _ _))
   (let ((erased l2) (erased pfw1) (erased pl2)) (resp-at f n fn w1 x rfn nw1x))
   (let-match erased (nth-fn (Nat) f x w l2 pw pl2) (Refl _ _))
   (let ((erased z) (erased pz) (erased pz2) (erased _) (erased _)) (cubic-eq d x y1 n cu lx py1))

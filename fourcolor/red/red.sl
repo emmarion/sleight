@@ -138,9 +138,6 @@
 (let ((many p231)) (MkPerm (C2) (C3) (C1)))
 (let ((many p312)) (MkPerm (C3) (C1) (C2)))
 
-(def-fns _ $ (many cc : (many (Col) c) (many (List (Col)) et) -> (many (List (Col)) r))
-  (Cons _ c $ Cons _ c et))
-
 (let ((many simple-leaf)) (CLeaf (CEmpty)))
 
 (def-fns _ $ (many cprsize : (subterm many (List (Step)) cp) -> (many (Nat) n))

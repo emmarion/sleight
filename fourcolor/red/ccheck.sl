@@ -283,8 +283,8 @@
 
 (def-adts $ (AllRed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
-  (many ARNil : (erased (Level) X) -> (AllRed X (Nil (Config))))
-  (many ARCons : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible X cf) p) (erased (AllRed X cfs) rest)
+  (many AllRedNil : (erased (Level) X) -> (AllRed X (Nil (Config))))
+  (many AllRedCons : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible X cf) p) (erased (AllRed X cfs) rest)
       -> (AllRed X (Cons (Config) cf cfs))))
 
 (def-adts $ (AllRedC : ((Level) X) ((List (List (Config))) css) -> Type)
@@ -296,9 +296,9 @@
 (def-fns _ $ (erased allred-concat : (erased (Level) X) (erased (List (List (Config))) css) (erased (List (Config)) cfs) (subterm erased (Flatten (Config) css cfs) p)
     (erased (AllRedC X css) a) -> (erased (AllRed X cfs) r))
   (match erased p _
-    ((FNil _) (ARNil X))
+    ((FNil _) (AllRedNil X))
     ((FSkip _ css1 _ p1) (let-match erased a (ARCCons _ _ _ _ a1)) (allred-concat X css1 cfs p1 a1))
     ((FCons _ cf cs cfs1 css1 p1)
       (let-match erased a (ARCCons _ _ _ ar a1))
-      (let-match erased ar (ARCons _ _ _ rd ar1))
-      (ARCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))
+      (let-match erased ar (AllRedCons _ _ _ rd ar1))
+      (AllRedCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))

@@ -162,9 +162,9 @@
   (let ((erased ys) (erased j2) (erased wv) (erased lys) (erased lt2)) (path-upto c _ xs2 a2 w v j1 wb2 (in-tail v a1 xs2 iv nva1) lxs2))
   (let ((erased outa)) (fresh-start d a2 v z a1 c ci _ ys pc wv (InThere z v _ (InHere z _)) pza1 pa12 (notin-in a1 z _ outa1 (InHere z _))))
   (let ((erased wv2)) (path-add c _ ys a2 v a1 (path-add c _ ys a2 v v (path-forget c _ ys a2 v wv) (path-avoid c _ ys a2 v v wv (InHere v _))) outa))
-  (let-match erased N (Succ N1) (absurd (Zero) ljn))
-  (tree-go N1 d j2 a1 v a2 x0 y0 e n f c cs ys h g rc p0 cy gd ia1 (orbit-prev d x0 y0 v b c ci cs pc p0 cy ib pcv) pa12 wv2 lys
-    (lt-trans j2 j1 N1 lt2 (lt-pred j1 N1 ljn)) pfv))
+  (let-match erased N (Succ N1') (absurd (Zero) ljn))
+  (tree-go N1' d j2 a1 v a2 x0 y0 e n f c cs ys h g rc p0 cy gd ia1 (orbit-prev d x0 y0 v b c ci cs pc p0 cy ib pcv) pa12 wv2 lys
+    (lt-trans j2 j1 N1' lt2 (lt-pred j1 N1' ljn)) pfv))
 
 (def-adts $ (Leaf : ((List (Nat)) e n f) ((Nat) x) -> Type)
   enum

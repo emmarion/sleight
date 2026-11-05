@@ -35,12 +35,12 @@
   (let-match erased nu (NotInCons _ _ _ ne nu1))
   (PathStep p _ xs1 x z y px (NotInCons x u (Nil _) (apart-sym u x ne) (NotInNil x)) (path-respect p s xs1 z y u w1 nu1)))
 
-(def-fns _ $ (erased order-iter : (erased (List (Nat)) f) (erased (Nat) y a) (erased (Order f y a) o) -> (erased (Iter f a y y) r))
+(def-fns _ $ (erased order-iter : (erased (List (Nat)) f) (erased (Nat) y a) (erased (OrderOf f y a) o) -> (erased (Iter f a y y) r))
   (let-match erased o (MkOrder _ xs _ y1 k py w l))
   (ItS f k y y1 y py (path-iter f _ xs y1 y k w l)))
 
-(def-fns _ $ (erased order-next : (erased (Nat) d y y1 a) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pm) (erased (Order f y a) o)
-    (erased (Nth (Nat) f y y1) py) -> (erased (Order f y1 a) r))
+(def-fns _ $ (erased order-next : (erased (Nat) d y y1 a) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pm) (erased (OrderOf f y a) o)
+    (erased (Nth (Nat) f y y1) py) -> (erased (OrderOf f y1 a) r))
   (let-match erased o (MkOrder _ _ _ y2 _ py2 w l))
   (let-match erased (nth-fn _ f y y1 y2 py py2) (Refl _ _))
   (let-match erased w (PathStep _ _ xs1 _ z _ pz out w1) ((PathHere _ _ _) o))
@@ -71,7 +71,7 @@
       (let-match erased lt (LtS _ _ lt1))
       (path-iter-short p xs1 z y k1 j1 w1 l1 it1 lt1))))
 
-(def-fns _ $ (erased order-fn : (erased (List (Nat)) f) (erased (Nat) y a b) (erased (Order f y a) o1) (erased (Order f y b) o2) -> (erased (Eq (Nat) a b) e))
+(def-fns _ $ (erased order-fn : (erased (List (Nat)) f) (erased (Nat) y a b) (erased (OrderOf f y a) o1) (erased (OrderOf f y b) o2) -> (erased (Eq (Nat) a b) e))
   (let-match erased o1 (MkOrder _ xs1 _ y1 k1 p1 w1 l1))
   (let-match erased o2 (MkOrder _ xs2 _ y2 k2 p2 w2 l2))
   (let-match erased (nth-fn _ f y y1 y2 p1 p2) (Refl _ _))
@@ -87,7 +87,7 @@
   (LengthCons _ k ks1 n1 (orders-len p xs1 ks1 n1 os1 l1)))
 
 (def-fns _ $ (erased arity-at : (erased (Nat) d y) (erased (List (Nat)) f ks) (erased (OrderList d f ks) ol) (erased (Lt y d) ly)
-    -> (erased (Nat) a) (erased (Nth (Nat) ks y a) pa) (erased (Order f y a) o))
+    -> (erased (Nat) a) (erased (Nth (Nat) ks y a) pa) (erased (OrderOf f y a) o))
   (let-match erased ol (MkOrderList _ _ ids _ io os))
   (let ((erased a) (erased pa)) (nth-exists _ ks d y (orders-len f ids ks d os (iota-length d ids io)) ly))
   (values a pa (orders-nth f ids ks y y a os (iota-nth d y ids io ly) pa)))

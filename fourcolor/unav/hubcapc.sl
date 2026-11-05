@@ -88,7 +88,7 @@
 ; acc: the weights on the sectors; bp - bn: the running bound.
 (def-adts $ (Cov : ((List (Nat)) acc) ((Nat) bp bn) ((List (Hc)) hc) -> Type)
   enum
-  (many CvNil : (erased (List (Nat)) acc) (erased (Nat) bp bn) (erased (All (Nat) IsTwo acc) two) (erased (Lt bp (Succ bn)) le)
+  (many CvEnd : (erased (List (Nat)) acc) (erased (Nat) bp bn) (erased (All (Nat) IsTwo acc) two) (erased (Lt bp (Succ bn)) le)
       -> (Cov acc bp bn (Nil (Hc))))
   (many CvOne : (erased (List (Nat)) acc acc2) (erased (Nat) bp bn i w hp hn x y bp2 bn2) (erased (List (Hc)) hc) (erased (Incr acc i w acc2) ic)
       (erased (Mul w hp x) mx) (erased (Mul w hn y) my) (erased (Add x bp bp2) ax) (erased (Add y bn bn2) ay) (erased (Cov acc2 bp2 bn2 hc) rest)
@@ -100,8 +100,8 @@
 
 (def-adts $ (DbK : ((Nat) n kp kn) -> Type)
   enum
-  (many DbKLo : (erased (Nat) n) (erased (Monus n 5 (Zero)) mo) -> (DbK n 10 (Zero)))
-  (many DbKHi : (erased (Nat) n k m) (erased (Monus n 5 (Succ k)) mo) (erased (Mul k 10 m) pm) -> (DbK n (Zero) m)))
+  (many DbKLo : (erased (Nat) n) (erased (MonusAdd n 5 (Zero)) mo) -> (DbK n 10 (Zero)))
+  (many DbKHi : (erased (Nat) n k m) (erased (MonusAdd n 5 (Succ k)) mo) (erased (Mul k 10 m) pm) -> (DbK n (Zero) m)))
 
 (def-adts $ (CoverOk : ((Nat) nhub) ((List (Hc)) hc) -> Type)
   enum
@@ -131,7 +131,7 @@
     ((Nil _)
       (let-match many (le-dec bp bn) (LeY _ _ le) ((LeN _ _ _) (values (BFalse) (IfF _))))
       (let ((many ok) (erased p)) (all-two-c acc))
-      (values ok (match erased p _ ((IfY _ q) (IfY _ (CvNil acc bp bn q le))) ((IfF _) (IfF _))))))
+      (values ok (match erased p _ ((IfY _ q) (IfY _ (CvEnd acc bp bn q le))) ((IfF _) (IfF _))))))
   (match many h _
     ((HC1 i b1)
       (let-match many (nat-eqb (nth-nat i v) 1) (BTrue) ((BFalse) (values (BFalse) (IfF _))))
@@ -200,7 +200,7 @@
     (erased (NSum ct st) pst) (erased (NSum cs ss) pss) (erased (Add st st st2) e1) (erased (Add ss ss ss2) e2)
     (erased (Add ds bp a) pa) (erased (Add a st2 l) pl) (erased (Add dt bn b) pb) (erased (Add b ss2 r) pr) -> (erased (Lt l (Succ r)) o))
   (match erased cv _
-    ((CvNil _ _ _ two le)
+    ((CvEnd _ _ _ two le)
       (let-match erased (add-fn st st dt st2 (dot-two acc ct dt st pdt two pst) e1) (Refl _ _))
       (let-match erased (add-fn ss ss ds ss2 (dot-two acc cs ds ss pds two pss) e2) (Refl _ _))
       (let ((erased z1) (erased q1) (erased q2)) (add-right-comm ds bp a dt l pa pl))
@@ -274,17 +274,17 @@
   (values kp kn l r dk al ar (half-le l r l2 r3 q3 q6 le2)))
 
 ; k: the rotation hubcap_rot uses at constraint index j.
-(def-adts $ (Shift : ((Nat) nhub j k) -> Type)
+(def-adts $ (HubShift : ((Nat) nhub j k) -> Type)
   enum
-  (many ShLo : (erased (Nat) nhub j k) (erased (Lt 1 j) l) (erased (Monus j 2 k) mo) -> (Shift nhub j k))
-  (many ShHi : (erased (Nat) nhub j t k) (erased (Lt j 2) l) (erased (Add nhub j t) a) (erased (Monus t 2 k) mo) -> (Shift nhub j k)))
+  (many ShLo : (erased (Nat) nhub j k) (erased (Lt 1 j) l) (erased (MonusAdd j 2 k) mo) -> (HubShift nhub j k))
+  (many ShHi : (erased (Nat) nhub j t k) (erased (Lt j 2) l) (erased (Add nhub j t) a) (erased (MonusAdd t 2 k) mo) -> (HubShift nhub j k)))
 
 (def-adts $ (HubSubn : ((Nat) nhub i j k) -> Type)
   enum
-  (many HSLe : (erased (Nat) nhub i j k) (erased (Lt j (Succ i)) l) (erased (Monus i j k) mo) -> (HubSubn nhub i j k))
-  (many HSGt : (erased (Nat) nhub i j t k) (erased (Lt i j) l) (erased (Add i nhub t) a) (erased (Monus t j k) mo) -> (HubSubn nhub i j k)))
+  (many HSLe : (erased (Nat) nhub i j k) (erased (Lt j (Succ i)) l) (erased (MonusAdd i j k) mo) -> (HubSubn nhub i j k))
+  (many HSGt : (erased (Nat) nhub i j t k) (erased (Lt i j) l) (erased (Add i nhub t) a) (erased (MonusAdd t j k) mo) -> (HubSubn nhub i j k)))
 
-(def-fns _ $ (many shift-c : (many (Nat) nhub j) -> (many (Nat) k) (erased (Shift nhub j k) w))
+(def-fns _ $ (many shift-c : (many (Nat) nhub j) -> (many (Nat) k) (erased (HubShift nhub j k) w))
   (match many (nat-cmp 1 j) _
     ((CLt _ _ _ _ l) (let ((many k) (erased mo)) (monus-c j 2)) (values k (ShLo nhub j k l mo)))
     ((CEq _ _ _) (let ((many t) (erased a)) (add nhub j)) (let ((many k) (erased mo)) (monus-c t 2)) (values k (ShHi nhub j t k (lt-succ 1) a mo)))
@@ -303,10 +303,10 @@
   enum
   (many HFNil : (erased (Nat) nhub) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc) -> (HFit nhub p rt rs (Nil (Hc)) acc acc))
   (many HFOne : (erased (Nat) nhub j k) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out) (erased (List (Hc)) hc)
-      (erased (Shift nhub j k) sh) (erased (Rot (Sub) k p pj) ro) (erased (Db2Top pj rt rs b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest)
+      (erased (HubShift nhub j k) sh) (erased (RotCut (Sub) k p pj) ro) (erased (Db2Top pj rt rs b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest)
       -> (HFit nhub p rt rs (Cons (Hc) (HC1 j b) hc) acc out))
   (many HFTwo : (erased (Nat) nhub j1 j2 k i) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out)
-      (erased (List (Hc)) hc) (erased (Shift nhub j1 k) sh) (erased (Rot (Sub) k p pj) ro) (erased (HubSubn nhub j2 j1 i) hs)
+      (erased (List (Hc)) hc) (erased (HubShift nhub j1 k) sh) (erased (RotCut (Sub) k p pj) ro) (erased (HubSubn nhub j2 j1 i) hs)
       (erased (E2Top nhub pj rt rs i b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest) -> (HFit nhub p rt rs (Cons (Hc) (HC2 j1 j2 b) hc) acc out)))
 
 (def-fns _ $ (many hubcap-fit-c : (many (Nat) nhub) (many (List (Sub)) p) (many (List (List (Sub))) rt rs) (subterm many (List (Hc)) hc)
@@ -315,7 +315,7 @@
   (match many h _
     ((HC1 j b)
       (let ((many k) (erased sh)) (shift-c nhub j))
-      (let ((many pj) (erased ro)) (rot-c _ k p))
+      (let ((many pj) (erased ro)) (rot-cut-c _ k p))
       (let ((many ok1) (many acc1) (erased w1)) (check-dbound2-c pj rt rs b acc))
       (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) acc1 (IfF _))))
       (let-match erased w1 (IfY _ d))
@@ -323,7 +323,7 @@
       (values ok out (match erased w _ ((IfY _ q) (IfY _ (HFOne nhub j k b p pj rt rs acc acc1 out rest sh ro d q))) ((IfF _) (IfF _)))))
     ((HC2 j1 j2 b)
       (let ((many k) (erased sh)) (shift-c nhub j1))
-      (let ((many pj) (erased ro)) (rot-c _ k p))
+      (let ((many pj) (erased ro)) (rot-cut-c _ k p))
       (let ((many i) (erased hs)) (hub-subn-c nhub j2 j1))
       (let ((many ok1) (many acc1) (erased w1)) (check-2dbound2-c nhub pj rt rs i b acc))
       (let-match many ok1 (BTrue) ((BFalse) (values (BFalse) acc1 (IfF _))))
@@ -333,7 +333,7 @@
         ((IfY _ q) (IfY _ (HFTwo nhub j1 j2 k i b p pj rt rs acc acc1 out rest sh ro hs d q)))
         ((IfF _) (IfF _)))))))
 
-(def-fns _ $ (erased monus-fn : (erased (Nat) a b r1 r2) (erased (Monus a b r1) p) (erased (Monus a b r2) q) -> (erased (Eq (Nat) r1 r2) e))
+(def-fns _ $ (erased monus-fn : (erased (Nat) a b r1 r2) (erased (MonusAdd a b r1) p) (erased (MonusAdd a b r2) q) -> (erased (Eq (Nat) r1 r2) e))
   (match erased p _
     ((MoAdd _ _ _ pa)
       (match erased q _
@@ -344,7 +344,7 @@
         (absurd (MoAdd _ _ _ qa) (lt-asym a b l (add-le-left b r2 a qa)))
         ((MoNeg _ _ _) (Refl _ (Zero)))))))
 
-(def-fns _ $ (erased shift-fn : (erased (Nat) nhub j k1 k2) (erased (Shift nhub j k1) p) (erased (Shift nhub j k2) q) -> (erased (Eq (Nat) k1 k2) e))
+(def-fns _ $ (erased hub-shift-fn : (erased (Nat) nhub j k1 k2) (erased (HubShift nhub j k1) p) (erased (HubShift nhub j k2) q) -> (erased (Eq (Nat) k1 k2) e))
   (match erased p _
     ((ShLo _ _ _ l mo)
       (let-match erased q (ShLo _ _ _ _ mo2) (absurd (ShHi _ _ _ _ l2 _ _) (lt-asym 1 j l l2)))
@@ -369,17 +369,17 @@
   enum
   (many FamNil : (erased (List (Sec)) os) (erased (Nat) nhub) (erased (List (List (Sec))) oss) -> (Fam os nhub oss (Nil (Hc))))
   (many FamOne : (erased (List (Sec)) os oj) (erased (Nat) nhub j k) (erased (Z) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
-      (erased (Shift nhub j k) sh) (erased (Rot (Sec) k os oj) ro) (erased (Nth (List (Sec)) oss j oj) no) (erased (Fam os nhub oss hc) rest)
+      (erased (HubShift nhub j k) sh) (erased (RotCut (Sec) k os oj) ro) (erased (Nth (List (Sec)) oss j oj) no) (erased (Fam os nhub oss hc) rest)
       -> (Fam os nhub oss (Cons (Hc) (HC1 j b) hc)))
   (many FamTwo : (erased (List (Sec)) os o1 o2) (erased (Nat) nhub j1 j2 k i i2) (erased (Z) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
-      (erased (Shift nhub j1 k) sh) (erased (Rot (Sec) k os o1) ro) (erased (Nth (List (Sec)) oss j1 o1) n1) (erased (Nth (List (Sec)) oss j2 o2) n2)
-      (erased (HubSubn nhub j2 j1 i) hs) (erased (Rot (Sec) i o1 o2) r12) (erased (Rot (Sec) i2 o2 o1) r21) (erased (Add i i2 nhub) ai)
+      (erased (HubShift nhub j1 k) sh) (erased (RotCut (Sec) k os o1) ro) (erased (Nth (List (Sec)) oss j1 o1) n1) (erased (Nth (List (Sec)) oss j2 o2) n2)
+      (erased (HubSubn nhub j2 j1 i) hs) (erased (RotCut (Sec) i o1 o2) r12) (erased (RotCut (Sec) i2 o2 o1) r21) (erased (Add i i2 nhub) _)
       (erased (Fam os nhub oss hc) rest) -> (Fam os nhub oss (Cons (Hc) (HC2 j1 j2 b) hc))))
 
 (def-adts $ (Counts : ((List (List (Sec))) oss) ((List (List (Sub))) rt rs) ((List (Nat)) ct cs) -> Type)
   enum
-  (many CsNil : (erased (List (List (Sub))) rt rs) -> (Counts (Nil (List (Sec))) rt rs (Nil (Nat)) (Nil (Nat))))
-  (many CsCons : (erased (List (Sec)) o) (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (Nat) t s) (erased (List (Nat)) ct cs)
+  (many CountsNil : (erased (List (List (Sub))) rt rs) -> (Counts (Nil (List (Sec))) rt rs (Nil (Nat)) (Nil (Nat))))
+  (many CountsCons : (erased (List (Sec)) o) (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (Nat) t s) (erased (List (Nat)) ct cs)
       (erased (Count o rt t) kt) (erased (Count o rs s) ks) (erased (Counts oss rt rs ct cs) rest)
       -> (Counts (Cons (List (Sec)) o oss) rt rs (Cons (Nat) t ct) (Cons (Nat) s cs))))
 
@@ -393,7 +393,7 @@
 (def-fns _ $ (erased counts-nth : (erased (List (List (Sec))) oss) (erased (List (List (Sub))) rt rs) (erased (List (Nat)) ct cs) (erased (Nat) j)
     (erased (List (Sec)) o) (subterm erased (Counts oss rt rs ct cs) k) (erased (Nth (List (Sec)) oss j o) no)
     -> (erased (Nat) t s) (erased (Nth (Nat) ct j t) nt) (erased (Nth (Nat) cs j s) ns) (erased (Count o rt t) kt) (erased (Count o rs s) ks))
-  (let-match erased k (CsCons _ oss1 _ _ t1 s1 ct1 cs1 kt1 ks1 k1) (absurd (CsNil _ _) no))
+  (let-match erased k (CountsCons _ oss1 _ _ t1 s1 ct1 cs1 kt1 ks1 k1) (absurd (CountsNil _ _) no))
   (let-match erased no (NthThere _ _ _ j1 _ no1) ((NthHere _ _ _) (values t1 s1 (NthHere _ t1 ct1) (NthHere _ s1 cs1) kt1 ks1)))
   (let ((erased t) (erased s) (erased nt) (erased ns) (erased kt) (erased ks)) (counts-nth oss1 rt rs ct1 cs1 j1 o k1 no1))
   (values t s (NthThere _ t1 ct1 j1 t nt) (NthThere _ s1 cs1 j1 s ns) kt ks))
@@ -405,13 +405,13 @@
     ((NthThere _ o1 oss1 j1 _ no1) (HSThere o1 oss1 obl (hit-some-nth oss1 obl j1 o no1 h)))))
 
 (def-fns _ $ (erased hit-some-ext : (erased (List (List (Sec))) oss) (erased (List (List (Sub))) acc out) (subterm erased (HitSome oss acc) h)
-    (erased (Ext acc out) e) -> (erased (HitSome oss out) r))
+    (erased (ExtAcc acc out) e) -> (erased (HitSome oss out) r))
   (match erased h _
     ((HSHere o oss1 _ h1) (HSHere o oss1 out (hit-ext o acc out h1 e)))
     ((HSThere o oss1 _ h1) (HSThere o oss1 out (hit-some-ext oss1 acc out h1 e)))))
 
 (def-fns _ $ (erased hfit-ext : (erased (Nat) nhub) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc out) (erased (List (Hc)) hc)
-    (subterm erased (HFit nhub p rt rs hc acc out) w) -> (erased (Ext acc out) e))
+    (subterm erased (HFit nhub p rt rs hc acc out) w) -> (erased (ExtAcc acc out) e))
   (match erased w _
     ((HFNil _ _ _ _ _) (ExtRefl acc))
     ((HFOne _ _ _ _ _ pj _ _ _ acc1 _ hc1 _ _ d w1)
@@ -429,7 +429,7 @@
     ((HFNil _ _ _ _ _) (OrL _ _ (SatNil ct cs)))
     ((HFOne _ j k _ _ pj _ _ _ acc1 _ hc1 sh ro d w1)
       (let-match erased fam (FamOne _ oj _ _ k2 _ _ _ sh2 ro2 no fam1))
-      (let-match erased (shift-fn nhub j k2 k sh2 sh) (Refl _ _))
+      (let-match erased (hub-shift-fn nhub j k2 k sh2 sh) (Refl _ _))
       (let-match erased d (MkDb2Top _ _ _ _ _ _ _ _ _ bp bn _ _ _ _ _ _ _ _ _))
       (let ((erased t) (erased s) (erased nt) (erased ns) (erased kt) (erased ks)) (counts-nth oss rt rs ct cs j oj cnt no))
       (let ((erased l) (erased al)) (add t bn))
@@ -441,8 +441,8 @@
         ((OrL _ _ sat) (OrL _ _ (SatOne j t s bp bn l r hc1 ct cs nt ns al ar le sat)))
         ((OrR _ _ h) (OrR _ _ h))))
     ((HFTwo _ j1 j2 k i _ _ pj _ _ _ acc1 _ hc1 sh ro hs d w1)
-      (let-match erased fam (FamTwo _ o1 o2 _ _ _ k2 i3 i2 _ _ _ sh2 ro2 n1 n2 hs2 r12 r21 ai fam1))
-      (let-match erased (shift-fn nhub j1 k2 k sh2 sh) (Refl _ _))
+      (let-match erased fam (FamTwo _ o1 o2 _ _ _ k2 i3 i2 _ _ _ sh2 ro2 n1 n2 hs2 r12 r21 ai' fam1))
+      (let-match erased (hub-shift-fn nhub j1 k2 k sh2 sh) (Refl _ _))
       (let-match erased (hubsubn-fn nhub j2 j1 i3 i hs2 hs) (Refl _ _))
       (let-match erased d (MkE2Top _ _ _ _ _ _ _ _ bp bn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
       (let ((erased t1) (erased s1) (erased nt1) (erased ns1) (erased kt1) (erased ks1)) (counts-nth oss rt rs ct cs j1 o1 cnt n1))
@@ -452,7 +452,7 @@
       (let ((erased l) (erased al)) (add t bn))
       (let ((erased r) (erased ar)) (add s bp))
       (let ((erased e1)) (hfit-ext nhub p rt rs acc1 out hc1 w1))
-      (let-match erased (e2-top-sound o1 o2 nhub i i2 bp bn t1 s1 t2 s2 t s l r pj rt rs acc acc1 r12 r21 ai (exact-rot os o1 p pj k x ro2 ro) d
+      (let-match erased (e2-top-sound o1 o2 nhub i i2 bp bn t1 s1 t2 s2 t s l r pj rt rs acc acc1 r12 r21 ai' (exact-rot os o1 p pj k x ro2 ro) d
           kt1 ks1 kt2 ks2 atw as al ar) (OrL _ _ le)
         ((OrR _ _ h)
           (OrR _ _ (hit-some-ext oss acc1 out (match erased h _

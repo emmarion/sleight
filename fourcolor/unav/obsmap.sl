@@ -13,7 +13,7 @@
   enum
   (many MkSecAt : (erased (List (Nat)) e f ks) (erased (Nat) y z a w u h z3 m) (erased (List (Nat)) fs) (erased (Nth (Nat) e y z) pz)
       (erased (Nth (Nat) ks z a) pa) (erased (Iter f 2 z w) pw) (erased (Nth (Nat) e w u) pu) (erased (Nth (Nat) ks u h) ph) (erased (Iter f 3 z z3) p3)
-      (erased (Monus a 5 m) mo) (erased (FansAt e f ks z3 m fs) pfs) -> (SecAt e f ks y (MkSec a h fs))))
+      (erased (MonusAdd a 5 m) mo) (erased (FansAt e f ks z3 m fs) pfs) -> (SecAt e f ks y (MkSec a h fs))))
 
 (def-adts $ (ObsAt : ((List (Nat)) e f ks) ((Nat) y n) ((List (Sec)) os) -> Type)
   enum
@@ -75,21 +75,21 @@
   (OACons e f ks y y1 c1 o os4 so py (obs-app e f ks y1 z a1 b c1 os3 os2 os4 o3 it1 o2 ap1 ab1)))
 
 (def-fns _ $ (erased obs-rot : (erased (List (Nat)) e f ks) (erased (Nat) y n k) (erased (List (Sec)) os os2) (erased (ObsAt e f ks y n os) ob)
-    (erased (Iter f n y y) cy) (erased (Rot (Sec) k os os2) ro) (erased (Lt k (Succ n)) lk) -> (erased (Nat) z) (erased (Iter f k y z) it)
+    (erased (Iter f n y y) cy) (erased (RotCut (Sec) k os os2) ro) (erased (Lt k (Succ n)) lk) -> (erased (Nat) z) (erased (Iter f k y z) it)
     (erased (ObsAt e f ks z n os2) r))
-  (let-match erased ro (MkRot _ _ _ _ pre post c ap))
+  (let-match erased ro (MkRotCut _ _ _ _ pre post c ap))
   (let ((erased z) (erased m) (erased it) (erased o1) (erased o2) (erased a)) (obs-cut e f ks y n k os pre post ob c lk))
   (let ((erased z2) (erased it2) (erased it3)) (iter-split f k m n y y a cy))
   (let-match erased (iter-fn f k y z z2 it it2) (Refl _ _))
   (values z it (obs-app e f ks z y m k n post pre os2 o2 it3 o1 ap (add-comm k m n a))))
 
 (def-fns _ $ (erased exact-rot-at : (erased (Nat) d y a k) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p p2) (erased (Geo d e n f ks) g)
-    (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) (erased (Lt k (Succ a)) lk) (erased (ExactAt e f ks y p) x) (erased (Rot (Sub) k p p2) rp)
+    (erased (Lt y d) ly) (erased (Nth (Nat) ks y a) pa) (erased (Lt k (Succ a)) lk) (erased (ExactAt e f ks y p) x) (erased (RotCut (Sub) k p p2) rp)
     -> (erased (Nat) z) (erased (Iter f k y z) it) (erased (Lt z d) lz) (erased (ExactAt e f ks z p2) r))
   (let-match erased g (MkGeo _ _ _ _ _ h _ _ ol _))
   (let-match erased x (MkExactAt _ _ _ _ a2 os _ pa2 ob ex))
   (let-match erased (nth-fn _ ks y a a2 pa pa2) (Refl _ _))
-  (let ((erased os2) (erased ro)) (rot-c _ k os))
+  (let ((erased os2) (erased ro)) (rot-cut-c _ k os))
   (let ((erased z) (erased it) (erased ob2)) (obs-rot e f ks y a k os os2 ob (face-cycle d y a f ks ol ly pa) ro lk))
   (let ((erased z2) (erased it2) (erased lz) (erased pz)) (face-walk d y a e n f ks h ol k ly pa))
   (let-match erased (iter-fn f k y z2 z it2 it) (Refl _ _))

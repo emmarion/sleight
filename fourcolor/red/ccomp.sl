@@ -1,36 +1,36 @@
 ; k is the first |k| entries of l.
-(def-adts $ (Pre : ((List (Nat)) k l) -> Type)
+(def-adts $ (CPre : ((List (Nat)) k l) -> Type)
   enum
-  (many MkPre : (erased (List (Nat)) k l ids) (erased (Nat) d) (erased (Iota d ids) io) (erased (Respects l ids k) rp) -> (Pre k l)))
+  (many MkCPre : (erased (List (Nat)) k l ids) (erased (Nat) d) (erased (Iota d ids) io) (erased (Respects l ids k) rp) -> (CPre k l)))
 
-(def-fns _ $ (erased pre-nth : (erased (List (Nat)) k l) (erased (Nat) i x) (erased (Pre k l) p) (erased (Nth (Nat) k i x) q) -> (erased (Nth (Nat) l i x) r))
-  (let-match erased p (MkPre _ _ ids d io rp))
+(def-fns _ $ (erased pre-nth : (erased (List (Nat)) k l) (erased (Nat) i x) (erased (CPre k l) p) (erased (Nth (Nat) k i x) q) -> (erased (Nth (Nat) l i x) r))
+  (let-match erased p (MkCPre _ _ ids d io rp))
   (let ((erased lk)) (respects-length l ids k d rp (iota-length d ids io)))
   (respects-nth l ids k i i x rp (iota-nth d i ids io (nth-lt-length _ k i d x q lk)) q))
 
-(def-fns _ $ (erased pre-back : (erased (List (Nat)) k l) (erased (Nat) d i x) (erased (Pre k l) p) (erased (Length (Nat) k d) lk) (erased (Lt i d) lt)
+(def-fns _ $ (erased pre-back : (erased (List (Nat)) k l) (erased (Nat) d i x) (erased (CPre k l) p) (erased (Length (Nat) k d) lk) (erased (Lt i d) lt)
     (erased (Nth (Nat) l i x) q) -> (erased (Nth (Nat) k i x) r))
-  (let-match erased p (MkPre _ _ ids d2 io rp))
+  (let-match erased p (MkCPre _ _ ids d2 io rp))
   (let-match erased (length-fn _ k d2 d (respects-length l ids k d2 rp (iota-length d2 ids io)) lk) (Refl _ _))
   (respects-at l ids k i i x rp (iota-nth d i ids io lt) q))
 
-(def-fns _ $ (erased pre-unsnoc : (erased (List (Nat)) k k2 l) (erased (Nat) a) (erased (Pre k2 l) p) (erased (Snoc (Nat) k a k2) s) -> (erased (Pre k l) r))
-  (let-match erased p (MkPre _ _ ids2 d2 io2 rp2))
+(def-fns _ $ (erased pre-unsnoc : (erased (List (Nat)) k k2 l) (erased (Nat) a) (erased (CPre k2 l) p) (erased (Snoc (Nat) k a k2) s) -> (erased (CPre k l) r))
+  (let-match erased p (MkCPre _ _ ids2 d2 io2 rp2))
   (let ((erased lk2)) (respects-length l ids2 k2 d2 rp2 (iota-length d2 ids2 io2)))
   (let-match erased io2 (IotaS d ids _ io s2) (absurd (IotaZ) (let-match erased s (SnocNil _ _) (absurd (SnocCons _ _ _ _ _ _) lk2)) lk2))
   (let ((erased k1) (erased c) (erased sc) (erased rp) (erased _)) (respects-unsnoc l ids ids2 k2 d s2 rp2))
   (let-match erased (snoc-inj _ k k1 k2 a c s sc) (Refl _ _))
-  (MkPre k l ids d io rp))
+  (MkCPre k l ids d io rp))
 
-(def-fns _ $ (erased pre-refl : (erased (List (Nat)) l) -> (erased (Pre l l) r))
+(def-fns _ $ (erased pre-refl : (erased (List (Nat)) l) -> (erased (CPre l l) r))
   (let ((erased d) (erased ll)) (length-exists _ l))
   (let ((erased ids) (erased io)) (iota-exists d))
-  (MkPre l l ids d io (respects-id-right d ids l io ll)))
+  (MkCPre l l ids d io (respects-id-right d ids l io ll)))
 
 ; ks is constant along f on the darts of f.
 (def-adts $ (FC : ((List (Nat)) ks f) -> Type)
   enum
-  (many MkFC : (erased (List (Nat)) ks f k) (erased (Respects ks f k) rf) (erased (Pre k ks) pk) -> (FC ks f)))
+  (many MkFC : (erased (List (Nat)) ks f k) (erased (Respects ks f k) rf) (erased (CPre k ks) pk) -> (FC ks f)))
 
 (def-fns _ $ (erased fc-at : (erased (List (Nat)) ks f) (erased (Nat) x y c) (erased (FC ks f) fc) (erased (Nth (Nat) f x y) px) (erased (Nth (Nat) ks x c) pc)
     -> (erased (Nth (Nat) ks y c) r))
@@ -65,7 +65,7 @@
 (def-adts $ (Flag : ((List (Nat)) ie) ((Nat) x) ((Col) u) -> Type)
   enum
   (many FlIn : (erased (List (Nat)) ie) (erased (Nat) x) (erased (In x ie) p) -> (Flag ie x (C0)))
-  (many FlOut : (erased (List (Nat)) ie) (erased (Nat) x) (erased (Col) u) (erased (NotIn x ie) p) (erased (NZ u) nz) -> (Flag ie x u)))
+  (many FlOut : (erased (List (Nat)) ie) (erased (Nat) x) (erased (Col) u) (erased (NotIn x ie) p) (erased (ColNZ u) nz) -> (Flag ie x u)))
 
 (def-adts $ (EdgeAt : ((List (Nat)) ie) ((Nat) x a b) -> Type)
   enum
@@ -88,22 +88,22 @@
           (ccedge-nth ie ke1 ks1 (Succ x) j1 y a b rest pa1 pb1 (add-succ-right j1 x y1 ad1)))))))
 
 ; A contract colouring ks of the map whose edges are E, seen from a map (e, f) whose darts are the first darts of it.
-(def-adts $ (Ctx : ((List (Nat)) ie ks big e f) -> Type)
+(def-adts $ (CCtx : ((List (Nat)) ie ks big e f) -> Type)
   enum
-  (many MkCtx : (erased (List (Nat)) ie ks big e f ke) (erased (Nat) m) (erased (Pre e big) pe) (erased (FC ks f) fc) (erased (Respects ks big ke) rk)
-      (erased (CcEdge ie (Zero) ke ks) ce) (erased (Under ks 4) four) (erased (Length (Nat) ks m) lk) (erased (Length (Nat) big m) lb) -> (Ctx ie ks big e f)))
+  (many MkCCtx : (erased (List (Nat)) ie ks big e f ke) (erased (Nat) m) (erased (CPre e big) pe) (erased (FC ks f) fc) (erased (Respects ks big ke) rk)
+      (erased (CcEdge ie (Zero) ke ks) ce) (erased (Under ks 4) four) (erased (Length (Nat) ks m) lk) (erased (Length (Nat) big m) lb) -> (CCtx ie ks big e f)))
 
-(def-fns _ $ (erased ctx-col : (erased (List (Nat)) ie ks big e f) (erased (Nat) x y) (erased (Ctx ie ks big e f) cx) (erased (Nth (Nat) e x y) p)
+(def-fns _ $ (erased ctx-col : (erased (List (Nat)) ie ks big e f) (erased (Nat) x y) (erased (CCtx ie ks big e f) cx) (erased (Nth (Nat) e x y) p)
     -> (erased (Nat) k) (erased (Nth (Nat) ks x k) pk) (erased (Col) c) (erased (NCol k c) pc))
-  (let-match erased cx (MkCtx _ _ _ _ _ _ m pe _ _ _ four lk lb))
+  (let-match erased cx (MkCCtx _ _ _ _ _ _ m pe _ _ _ four lk lb))
   (let ((erased k) (erased pk)) (nth-exists _ ks m x lk (nth-lt-length _ big x m y (pre-nth e big x y pe p) lb)))
   (let ((erased c) (erased pc)) (ncol-ex k (alllt-nth ks 4 x k four pk)))
   (values k pk c pc))
 
-(def-fns _ $ (erased flag-of : (erased (List (Nat)) ie ks big e f) (erased (Nat) x z y kx ky) (erased (Col) cx cy u) (erased (Ctx ie ks big e f) ctx)
+(def-fns _ $ (erased flag-of : (erased (List (Nat)) ie ks big e f) (erased (Nat) x z y kx ky) (erased (Col) cx cy u) (erased (CCtx ie ks big e f) ctx)
     (erased (Nth (Nat) e x z) pe) (erased (Nth (Nat) f z y) pf) (erased (Nth (Nat) ks x kx) px) (erased (Nth (Nat) ks y ky) py) (erased (NCol kx cx) qx)
-    (erased (NCol ky cy) qy) (erased (AddC cx cy u) pu) -> (erased (Flag ie x u) r))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre fc rk ce _ _ lb))
+    (erased (NCol ky cy) qy) (erased (ColAdd cx cy u) pu) -> (erased (Flag ie x u) r))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ ke m pre fc rk ce _ _ lb))
   (let ((erased pz)) (pre-nth e big x z pre pe))
   (let ((erased kz) (erased pkz)) (nth-exists _ ke m x (respects-length ks big ke m rk lb) (nth-lt-length _ big x m z pz lb)))
   (let ((erased qz)) (respects-nth ks big ke x z kz rk pz pkz))
@@ -115,13 +115,13 @@
   (FlIn ie x p))
 
 (def-fns _ $ (erased u-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (PointedMap d e n f r) pm)
-    (erased (EcpU d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
+    (erased (EcpU d e f r e2 f2 r2) st) (erased (CCtx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (CTrace cs et) tr)
     -> (erased (Col) u) (erased (List (Nat)) rc2) (erased (List (Col)) cs2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2)
-    (erased (Trace cs2 (Cons (Col) u (Cons (Col) u et))) tr2) (erased (Flag ie (Succ d) u) fl))
+    (erased (CTrace cs2 (Cons (Col) u (Cons (Col) u et))) tr2) (erased (Flag ie (Succ d) u) fl))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (let-match erased st (MkEcpU _ b c _ _ _ _ f0 _ lb pc g s ins))
   (let-match erased cr (MkCpring _ p a y rp back _))
-  (let-match erased (last-fn r b y lb (rpath-last n p a y rp)) (Refl _ _))
+  (let-match erased (last-fn r b y lb (crpath-end n p a y rp)) (Refl _ _))
   (let ((erased v) (erased pv) (erased pfa)) (hyper-back d b a e n f h back))
   (let-match erased (nth-fn _ e b c v pc pv) (Refl _ _))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
@@ -133,7 +133,7 @@
   (let ((erased ed1)) (edge-high e e2 d g))
   (let ((erased k1) (erased pk1) (erased c1) (erased q1)) (ctx-col ie ks big e2 f2 (Succ d) d ctx ed1))
   (let ((erased kd) (erased pkd) (erased cd) (erased qd)) (ctx-col ie ks big e2 f2 d (Succ d) ctx (edge-low e e2 d g)))
-  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
   (let-match erased rr (RespCons _ _ _ _ ka pka _))
   (let-match erased (nth-fn _ ks a k1 ka (fc-at ks f2 (Succ d) a k1 fc fa pk1) pka) (Refl _ _))
   (let-match erased nc (NCsCons _ ca _ _ pca _))
@@ -147,19 +147,19 @@
     (flag-of ie ks big e2 f2 (Succ d) d d ka kd ca cd u ctx ed1 fd pk1 pkd q1 qd pu)))
 
 ; The colour of the dart after z on the ring a :: x0 :: z :: q, and the trace from z on.
-(def-adts $ (Next : ((List (Nat)) ks q rcq) ((Nat) a w ka) ((Col) ca cz e3) ((List (Col)) csq et) -> Type)
+(def-adts $ (CNext : ((List (Nat)) ks q rcq) ((Nat) a w ka) ((Col) ca cz e3) ((List (Col)) csq et) -> Type)
   enum
-  (many NxEnd : (erased (List (Nat)) ks) (erased (Nat) a ka) (erased (Col) ca cz e3) (erased (AddC cz ca e3) p)
-      -> (Next ks (Nil (Nat)) (Nil (Nat)) a a ka ca cz e3 (Nil (Col)) (Nil (Col))))
+  (many NxEnd : (erased (List (Nat)) ks) (erased (Nat) a ka) (erased (Col) ca cz e3) (erased (ColAdd cz ca e3) p)
+      -> (CNext ks (Nil (Nat)) (Nil (Nat)) a a ka ca cz e3 (Nil (Col)) (Nil (Col))))
   (many NxMore : (erased (List (Nat)) ks q rcq) (erased (Nat) a w ka kw) (erased (Col) ca cz cw e3) (erased (List (Col)) csq et)
-      (erased (Nth (Nat) ks w kw) pw) (erased (NCol kw cw) qw) (erased (AddC cz cw e3) p) (erased (CTr ca cw csq et) ct)
-      -> (Next ks (Cons (Nat) w q) (Cons (Nat) kw rcq) a w ka ca cz e3 (Cons (Col) cw csq) et)))
+      (erased (Nth (Nat) ks w kw) pw) (erased (NCol kw cw) qw) (erased (ColAdd cz cw e3) p) (erased (CTr ca cw csq et) ct)
+      -> (CNext ks (Cons (Nat) w q) (Cons (Nat) kw rcq) a w ka ca cz e3 (Cons (Col) cw csq) et)))
 
 (def-fns _ $ (erased n-trace : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big rc) (erased (List (Col)) cs et) (erased (Col) t1 t2 t3)
-    (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st) (erased (Ctx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr)
-    (erased (NCols rc cs) nc) (erased (Trace cs (Cons (Col) t1 (Cons (Col) t2 (Cons (Col) t3 et)))) tr)
-    -> (erased (Col) s) (erased (AddC t2 t3 s) ps) (erased (List (Nat)) rc2) (erased (List (Col)) cs2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2)
-    (erased (Trace cs2 (Cons (Col) t1 (Cons (Col) s et))) tr2) (erased (Flag ie d s) fl))
+    (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st) (erased (CCtx ie ks big e2 f2) ctx) (erased (Respects ks r rc) rr)
+    (erased (NCols rc cs) nc) (erased (CTrace cs (Cons (Col) t1 (Cons (Col) t2 (Cons (Col) t3 et)))) tr)
+    -> (erased (Col) s) (erased (ColAdd t2 t3 s) ps) (erased (List (Nat)) rc2) (erased (List (Col)) cs2) (erased (Respects ks r2 rc2) rr2) (erased (NCols rc2 cs2) nc2)
+    (erased (CTrace cs2 (Cons (Col) t1 (Cons (Col) s et))) tr2) (erased (Flag ie d s) fl))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h cr))
   (let-match erased st (MkEcpN _ x0 a ex z ea ez _ _ p _ f1 _ _ px pex pz pea pez g i1 i2 nr))
   (let ((erased ei) (erased ni) (erased _) (erased _) (erased pe) (erased pn) (erased _)) (hyper-core d e n f h))
@@ -197,11 +197,11 @@
   (let ((erased ed)) (edge-low e e2 d g))
   (let ((erased kd) (erased pkd) (erased cd) (erased qd)) (ctx-col ie ks big e2 f2 d (Succ d) ctx ed))
   (let ((erased kw) (erased pkw1) (erased _) (erased _)) (ctx-col ie ks big e2 f2 (Succ d) d ctx (edge-high e e2 d g)))
-  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ _ _ _ fc _ _ _ _ _))
   (let ((erased pkw)) (fc-at ks f2 (Succ d) w kw fc fw pkw1))
   (let-match erased (nth-fn _ ks x0 kd kx (fc-at ks f2 d x0 kd fc fx pkd) pkx) (Refl _ _))
   (let-match erased (ncol-fn kx cd cx qd pcx) (Refl _ _))
-  (let ((erased (Next ks q rcq a w ka ca cz t3 cs3 et) nx))
+  (let ((erased (CNext ks q rcq a w ka ca cz t3 cs3 et) nx))
     (match erased rp2 _
       ((RPNil _ _)
         (let-match erased rrq (RespNil _))
@@ -216,7 +216,7 @@
         (let-match erased (perm-inj d w2 w z n ni pn pw2 nwz) (Refl _ _))
         (NxMore ks q1 rcq1 a w ka kw2 ca cz cw2 t3 csq et pkw2 pcw2 pzw ct3))))
   (let ((erased s) (erased ps)) (addc-c t2 t3))
-  (let ((erased (Col) cn) (erased (Nth (Nat) ks w kw) pn2) (erased (NCol kw cn) qn) (erased (AddC cd cn s) pdn) (erased (CTr ca cd cs3 (Cons (Col) s et)) ctn))
+  (let ((erased (Col) cn) (erased (Nth (Nat) ks w kw) pn2) (erased (NCol kw cn) qn) (erased (ColAdd cd cn s) pdn) (erased (CTr ca cd cs3 (Cons (Col) s et)) ctn))
     (match erased nx _
       ((NxEnd _ _ _ _ _ _ pza)
         (let ((erased t) (erased pt)) (addc-c cd ca))
@@ -234,26 +234,26 @@
     (MkTrace ca (Cons (Col) cd cs3) _ (CTStep ca ca cd t1 _ _ pax ctn))
     (flag-of ie ks big e2 f2 d (Succ d) w kx kw cd cn s ctx ed fw pkd pn2 pcx qn pdn)))
 
-(def-fns _ $ (erased ctx-grow : (erased (List (Nat)) ie ks big e e2 f f2) (erased (Nat) d) (erased (Ctx ie ks big e2 f2) ctx) (erased (EdgeGrow e d e2) g)
-    (erased (FC ks f) fc) -> (erased (Ctx ie ks big e f) r))
-  (let-match erased ctx (MkCtx _ _ _ _ _ ke m pre _ rk ce four lk lb))
+(def-fns _ $ (erased ctx-grow : (erased (List (Nat)) ie ks big e e2 f f2) (erased (Nat) d) (erased (CCtx ie ks big e2 f2) ctx) (erased (EdgeGrow e d e2) g)
+    (erased (FC ks f) fc) -> (erased (CCtx ie ks big e f) r))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ ke m pre _ rk ce four lk lb))
   (let-match erased g (MkEdgeGrow _ e1 _ _ _ s1 s2))
-  (MkCtx ie ks big e f ke m (pre-unsnoc e e1 big (Succ d) (pre-unsnoc e1 e2 big d pre s2) s1) fc rk ce four lk lb))
+  (MkCCtx ie ks big e f ke m (pre-unsnoc e e1 big (Succ d) (pre-unsnoc e1 e2 big d pre s2) s1) fc rk ce four lk lb))
 
 (def-fns _ $ (erased ctx-unu : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big) (erased (PointedMap d e n f r) pm) (erased (EcpU d e f r e2 f2 r2) st)
-    (erased (Ctx ie ks big e2 f2) ctx) -> (erased (Ctx ie ks big e f) res))
+    (erased (CCtx ie ks big e2 f2) ctx) -> (erased (CCtx ie ks big e f) res))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h _))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let-match erased st (MkEcpU _ _ c _ _ _ _ f0 _ _ _ g s ins))
-  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-unsnoc ks f f0 d (fc-uninsert ks f0 f2 c (Succ d) fc2 ins (snoc-length _ f f0 d d s lf)) s)))
 
 (def-fns _ $ (erased ctx-unn : (erased (Nat) d) (erased (List (Nat)) e n f r e2 f2 r2 ie ks big) (erased (PointedMap d e n f r) pm) (erased (EcpN d e f r e2 f2 r2) st)
-    (erased (Ctx ie ks big e2 f2) ctx) -> (erased (Ctx ie ks big e f) res))
+    (erased (CCtx ie ks big e2 f2) ctx) -> (erased (CCtx ie ks big e f) res))
   (let-match erased pm (MkPointedMap _ _ _ _ _ h _))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
   (let-match erased st (MkEcpN _ _ _ _ _ ea ez _ _ _ _ f1 _ _ _ _ _ _ _ g i1 i2 _))
-  (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
+  (let-match erased ctx (MkCCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-uninsert ks f f1 ea d (fc-uninsert ks f1 f2 ez (Succ d) fc2 i2 (insert-length f f1 ea d d i1 lf)) i1 lf)))
 
 (def-adts $ (FU : -> Type)
@@ -262,7 +262,7 @@
 
 (def-adts $ (NoFlag : ((List (Nat)) ie) ((Nat) x) ((Col) u) -> Type)
   enum
-  (many NfIn : (erased (List (Nat)) ie) (erased (Nat) x) (erased (Col) u) (erased (In x ie) p) (erased (NZ u) nz) -> (NoFlag ie x u))
+  (many NfIn : (erased (List (Nat)) ie) (erased (Nat) x) (erased (Col) u) (erased (In x ie) p) (erased (ColNZ u) nz) -> (NoFlag ie x u))
   (many NfOut : (erased (List (Nat)) ie) (erased (Nat) x) (erased (NotIn x ie) p) -> (NoFlag ie x (C0))))
 
 (def-adts $ (AllFlag : ((List (Nat)) ie) ((List (FU)) cks) -> Type)
@@ -342,9 +342,9 @@
   enum
   (many CaU : (erased (Nat) d) (erased (List (Col)) et) (erased (Col) u)
       -> (Cand (KU) d et u (Cons (FU) (MkFU (Succ d) u) (Nil (FU))) (Cons (Col) u (Cons (Col) u et))))
-  (many CaY : (erased (Nat) d) (erased (Col) e1 u v) (erased (List (Col)) et) (erased (AddC u e1 v) p)
+  (many CaY : (erased (Nat) d) (erased (Col) e1 u v) (erased (List (Col)) et) (erased (ColAdd u e1 v) p)
       -> (Cand (KY) d (Cons (Col) e1 et) u (Cons (FU) (MkFU (Succ d) u) (Cons (FU) (MkFU (Succ (Succ d)) v) (Nil (FU)))) (Cons (Col) u (Cons (Col) v et))))
-  (many CaH : (erased (Nat) d) (erased (Col) e1 e2 u v w) (erased (List (Col)) et) (erased (AddC u e1 v) p) (erased (AddC v e2 w) q)
+  (many CaH : (erased (Nat) d) (erased (Col) e1 e2 u v w) (erased (List (Col)) et) (erased (ColAdd u e1 v) p) (erased (ColAdd v e2 w) q)
       -> (Cand (KH) d (Cons (Col) e1 (Cons (Col) e2 et)) u
            (Cons (FU) (MkFU (Succ d) u) (Cons (FU) (MkFU (Succ (Succ d)) v) (Cons (FU) (MkFU (Succ (Succ (Succ (Succ d)))) w) (Nil (FU)))))
            (Cons (Col) u (Cons (Col) w et)))))
@@ -402,7 +402,7 @@
 ; o, at d2 darts, is what the step s makes of et, at d: a rotation, or a candidate whose flags all hold.
 (def-adts $ (Step1 : ((List (Nat)) ie) ((Step) s) ((Nat) d) ((List (Col)) et) ((Nat) d2) ((List (Col)) o) -> Type)
   enum
-  (many S1R : (erased (List (Nat)) ie) (erased (Nat) k d) (erased (List (Col)) et o) (erased (Rot (Col) k et o) rt) -> (Step1 ie (SR k) d et d o))
+  (many S1R : (erased (List (Nat)) ie) (erased (Nat) k d) (erased (List (Col)) et o) (erased (RotBy (Col) k et o) rt) -> (Step1 ie (SR k) d et d o))
   (many S1K : (erased (List (Nat)) ie) (erased (Step) s) (erased (CK) k) (erased (Nat) d d2) (erased (List (Col)) et o) (erased (Col) u)
       (erased (List (FU)) cks) (erased (StepK s k d d2) sk) (erased (Cand k d et u cks o) c) (erased (AllFlag ie cks) af) -> (Step1 ie s d et d2 o)))
 
@@ -418,26 +418,26 @@
 ; Every trace that the steps of rp make of et, as FR says, has an even normal form without its first entry that is not in kt;
 ; GOptL and GOptU say it of the candidates of et for the colours us and u.
 (def-adts
-  ((Good : ((Ctree) kt) ((List (Nat)) ie) ((List (Step)) rp) ((Nat) d) ((List (Col)) et) -> Type)
+  ((CGood : ((Ctree) kt) ((List (Nat)) ie) ((List (Step)) rp) ((Nat) d) ((List (Col)) et) -> Type)
     enum
     (many GdNil : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (Nat) d) (erased (Col) e0) (erased (List (Col)) et et2) (erased (ETrace et et2) tr)
-        (erased (CtSub kt et2 (Zero)) s) -> (Good kt ie (Nil (Step)) d (Cons (Col) e0 et)))
+        (erased (CtSub kt et2 (Zero)) s) -> (CGood kt ie (Nil (Step)) d (Cons (Col) e0 et)))
     (many GdR : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (Nat) k d) (erased (List (Step)) rp) (erased (List (Col)) et o)
-        (erased (Rot (Col) k et o) rt) (erased (Good kt ie rp d o) g) -> (Good kt ie (Cons (Step) (SR k) rp) d et))
+        (erased (RotBy (Col) k et o) rt) (erased (CGood kt ie rp d o) g) -> (CGood kt ie (Cons (Step) (SR k) rp) d et))
     (many GdK : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (Step) s) (erased (CK) k) (erased (Nat) d d2) (erased (List (Step)) rp)
-        (erased (List (Col)) et) (erased (StepK s k d d2) sk) (erased (GOptL kt ie k rp d d2 et all-cols) g) -> (Good kt ie (Cons (Step) s rp) d et)))
+        (erased (List (Col)) et) (erased (StepK s k d d2) sk) (erased (GOptL kt ie k rp d d2 et all-cols) g) -> (CGood kt ie (Cons (Step) s rp) d et)))
   ((GOptL : ((Ctree) kt) ((List (Nat)) ie) ((CK) k) ((List (Step)) rp) ((Nat) d d2) ((List (Col)) et us) -> Type)
     enum
-    (many GLNil : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
+    (many CGLNil : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         -> (GOptL kt ie k rp d d2 et (Nil (Col))))
-    (many GLCons : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
+    (many CGLCons : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         (erased (Col) u) (erased (List (Col)) us) (erased (GOptU kt ie k rp d d2 et u) g) (erased (GOptL kt ie k rp d d2 et us) gs)
         -> (GOptL kt ie k rp d d2 et (Cons (Col) u us))))
   ((GOptU : ((Ctree) kt) ((List (Nat)) ie) ((CK) k) ((List (Step)) rp) ((Nat) d d2) ((List (Col)) et) ((Col) u) -> Type)
     enum
     (many GuYes : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         (erased (Col) u) (erased (List (FU)) cks) (erased (List (Col)) o) (erased (Cand k d et u cks o) c) (erased (AllFlag ie cks) af)
-        (erased (Good kt ie rp d2 o) g) -> (GOptU kt ie k rp d d2 et u))
+        (erased (CGood kt ie rp d2 o) g) -> (GOptU kt ie k rp d d2 et u))
     (many GuFail : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
         (erased (Col) u) (erased (List (FU)) cks) (erased (List (Col)) o) (erased (Cand k d et u cks o) c) (erased (SomeNo ie cks) sn)
         -> (GOptU kt ie k rp d d2 et u))
@@ -550,7 +550,7 @@
       (let-match erased (ctrt-fn c0 y cs1 et1 et3 p1 q1) (Refl _ _))
       (Refl _ et))))
 
-(def-fns _ $ (erased trace-fn : (erased (List (Col)) cs et et2) (erased (Trace cs et) p) (erased (Trace cs et2) q) -> (erased (Eq (List (Col)) et et2) r))
+(def-fns _ $ (erased trace-fn : (erased (List (Col)) cs et et2) (erased (CTrace cs et) p) (erased (CTrace cs et2) q) -> (erased (Eq (List (Col)) et et2) r))
   (let-match erased p (MkTrace c cs1 _ p1))
   (let-match erased q (MkTrace _ _ _ q1))
   (ctrt-fn c c cs1 et et2 p1 q1))
@@ -620,8 +620,8 @@
       (FRCons ie t r2 d0 e1 d2 b z x st1 (freach-snoc ie rp1 r2 s e1 d1 d2 z y x fr1 st sn1)))))
 
 (def-fns _ $ (erased trace-reach : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r ie ks big)
-    (subterm erased (Cpmap cp d e f r) c) (erased (RYH cp) ry) (erased (Ctx ie ks big e f) ctx)
-    -> (erased (List (Nat)) rc) (erased (List (Col)) cs et) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
+    (subterm erased (Cpmap cp d e f r) c) (erased (RYH cp) ry) (erased (CCtx ie ks big e f) ctx)
+    -> (erased (List (Nat)) rc) (erased (List (Col)) cs et) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (CTrace cs et) tr)
     (erased (List (Step)) rp) (erased (RevS cp rp) rs) (erased (FR ie (Cons (Step) (SU) rp) (Zero) (Nil (Col)) d et) fr))
   (match erased c _
     ((CmNil)
@@ -713,7 +713,7 @@
   (let-match erased (inserte-fn e cc ie ie2 pi pi2) (Refl _ _))
   (let ((erased n) (erased pm)) (cpmap-map cp d e f r c))
   (let ((erased le) (erased _) (erased lf)) (hyper-lengths d e n f (pointed-hyper d e n f r pm)))
-  (let ((erased ctx)) (MkCtx ie ks e e f ke d (pre-refl e) (MkFC ks f ks face (pre-refl ks)) ce edge four (respects-length ks f ks d face lf) le))
+  (let ((erased ctx)) (MkCCtx ie ks e e f ke d (pre-refl e) (MkFC ks f ks face (pre-refl ks)) ce edge four (respects-length ks f ks d face lf) le))
   (let ((erased rc2) (erased cs2) (erased et2) (erased rr2) (erased nc2) (erased tr2) (erased rp) (erased rs) (erased fr))
     (trace-reach cp d e f r ie ks e c ry ctx))
   (let-match erased (respects-fn ks r rc rc2 rr rr2) (Refl _ _))
@@ -768,18 +768,18 @@
     ((SKY _) (let-match erased q (SKY _)) (values (Refl _ k) (Refl _ d2)))
     ((SKH _) (let-match erased q (SKH _)) (values (Refl _ k) (Refl _ d2)))))
 
-; What dfs-c finds of et: Good, or, for a step with candidates, GOptL for the colours us.
+; What dfs-c finds of et: CGood, or, for a step with candidates, GOptL for the colours us.
 (def-adts $ (DFE : ((Ctree) kt) ((List (Nat)) ie) ((List (Step)) rp) ((List (Col)) us) ((Nat) d) ((List (Col)) et) -> Type)
   enum
   (many DFNil : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (List (Col)) us) (erased (Nat) d) (erased (List (Col)) et)
-      (erased (Good kt ie (Nil (Step)) d et) g) -> (DFE kt ie (Nil (Step)) us d et))
+      (erased (CGood kt ie (Nil (Step)) d et) g) -> (DFE kt ie (Nil (Step)) us d et))
   (many DFR : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (Nat) k) (erased (List (Step)) rp) (erased (List (Col)) us) (erased (Nat) d)
-      (erased (List (Col)) et) (erased (Good kt ie (Cons (Step) (SR k) rp) d et) g) -> (DFE kt ie (Cons (Step) (SR k) rp) us d et))
+      (erased (List (Col)) et) (erased (CGood kt ie (Cons (Step) (SR k) rp) d et) g) -> (DFE kt ie (Cons (Step) (SR k) rp) us d et))
   (many DFK : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (Step) s) (erased (CK) k) (erased (Nat) d d2) (erased (List (Step)) rp)
       (erased (List (Col)) us et) (erased (StepK s k d d2) sk) (erased (GOptL kt ie k rp d d2 et us) g) -> (DFE kt ie (Cons (Step) s rp) us d et)))
 
 (def-fns _ $ (erased dfe-good : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (List (Step)) rp) (erased (Nat) d) (erased (List (Col)) et)
-    (erased (DFE kt ie rp all-cols d et) p) -> (erased (Good kt ie rp d et) g))
+    (erased (DFE kt ie rp all-cols d et) p) -> (erased (CGood kt ie rp d et) g))
   (match erased p _
     ((DFNil _ _ _ _ _ g) g)
     ((DFR _ _ _ _ _ _ _ g) g)
@@ -800,7 +800,7 @@
       (let ((many o) (erased rt)) (rot-app-c _ k et))
       (let-match many (notail $ dfs-c h kt ro ie rest all-cols d o) (ESome _ g) ((ENone _) (ENone _)))
       (ESome _ (DFR kt ie k rest us d et (GdR kt ie k d rest et o rt (dfe-good kt ie rest d o g))))))
-  (let-match many us (Cons _ u us1) ((Nil _) (ESome _ (DFK kt ie s k d d2 rest us et sk (GLNil kt ie k rest d d2 et)))))
+  (let-match many us (Cons _ u us1) ((Nil _) (ESome _ (DFK kt ie s k d d2 rest us et sk (CGLNil kt ie k rest d d2 et)))))
   (let-match many (notail $ dfs-c h kt ro ie rp us1 d et) (ESome _ q) ((ENone _) (ENone _)))
   (let-match erased q (DFK _ _ _ k2 _ d3 _ _ _ sk2 gs) (absurd (DFR _ _ _ _ _ _ _ _) sk))
   (let ((erased e1) (erased e2)) (stepk-fn s k k2 d d2 d3 sk sk2))
@@ -814,12 +814,12 @@
         (let-match many (notail $ dfs-c h kt ro ie rest all-cols d2 o) (ESome _ g) ((ENone _) (ENone _)))
         (ESome _ (GuYes kt ie k rest d d2 et u cks o c af (dfe-good kt ie rest d2 o g))))))
   (let-match many cu (ESome _ gu) ((ENone _) (ENone _)))
-  (ESome _ (DFK kt ie s k d d2 rest us et sk (GLCons kt ie k rest d d2 et u us1 gu gs))))
+  (ESome _ (DFK kt ie s k d d2 rest us et sk (CGLCons kt ie k rest d d2 et u us1 gu gs))))
 
 (def-fns _ $ (erased gl-sel : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
     (erased (Col) u) (erased (List (Col)) us) (subterm erased (GOptL kt ie k rp d d2 et us) g) (erased (Elem (Col) u us) m) ->
     (erased (GOptU kt ie k rp d d2 et u) r))
-  (let-match erased g (GLCons _ _ _ _ _ _ _ _ us1 gu gs) (absurd (GLNil _ _ _ _ _ _ _) m))
+  (let-match erased g (CGLCons _ _ _ _ _ _ _ _ us1 gu gs) (absurd (CGLNil _ _ _ _ _ _ _) m))
   (match erased m _ ((ElHere _ _ _) gu) ((ElThere _ _ _ _ m1) (gl-sel kt ie k rp d d2 et u us1 gs m1))))
 
 (def-fns _ $ (erased all-cols-mem : (erased (Col) u) -> (erased (Elem (Col) u all-cols) m))
@@ -833,7 +833,7 @@
     ((C3) (ElThere _ u (C0) t1 (ElThere _ u (C1) t2 (ElThere _ u (C2) t3 (ElHere _ u (Nil (Col)))))))))
 
 (def-fns _ $ (erased good-out : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (List (Step)) rp) (erased (Nat) d dx) (erased (List (Col)) et x)
-    (subterm erased (FR ie rp d et dx x) fr) (erased (Good kt ie rp d et) g) -> (erased (Col) e0) (erased (List (Col)) x1 x2)
+    (subterm erased (FR ie rp d et dx x) fr) (erased (CGood kt ie rp d et) g) -> (erased (Col) e0) (erased (List (Col)) x1 x2)
     (erased (Eq (List (Col)) x (Cons (Col) e0 x1)) q) (erased (ETrace x1 x2) tr) (erased (CtSub kt x2 (Zero)) m))
   (match erased fr _
     ((FRNil _ _ _) (let-match erased g (GdNil _ _ _ e0 x1 x2 tr m)) (values e0 x1 x2 (Refl _ x) tr m))
@@ -863,7 +863,7 @@
 
 (def-fns _ $ (erased contract-ok : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Ctree) kt) (erased (Nat) d) (erased (List (Nat)) e n f r ie)
     (erased (List (Step)) rp) (erased (Cpmap cp d e f r) c) (erased (Hypermap d e n f) h) (erased (ValidContract e n f r cc) v)
-    (erased (InsertE e cc ie) pi) (erased (RYH cp) ry) (erased (RevS cp rp) rs) (erased (Good kt ie (Cons (Step) (SU) rp) (Zero) (Nil (Col))) gd)
+    (erased (InsertE e cc ie) pi) (erased (RYH cp) ry) (erased (RevS cp rp) rs) (erased (CGood kt ie (Cons (Step) (SU) rp) (Zero) (Nil (Col))) gd)
     -> (erased (ContractOK CGL cp cc kt) ok))
   (def-fns CGL $ (erased g : (erased (List (Col)) et) (erased (CcCol cp cc et) col) -> (erased (Col) e0) (erased (List (Col)) et1 et2)
       (erased (Eq (List (Col)) et (Cons (Col) e0 et1)) q) (erased (ETrace et1 et2) tr) (erased (CtSub kt et2 (Zero)) m))

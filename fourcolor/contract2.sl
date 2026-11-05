@@ -402,16 +402,16 @@
   (let-match erased w (MkSomePath _ _ xs _ _ w1))
   (ReachCons f2 X3 Y3 qa qb (path-map d a b qa qb f f2 q qf (Nil _) xs rq rqf lq uf w1 la pqa pqb) (reach-map d f f2 q qf X1 Y1 X3 Y3 rq rqf lq uf rc1 ux1 rx1 ry1)))
 
-(def-fns _ $ (erased order1 : (erased (List (Nat)) p) (erased (Nat) y) (erased (Nth (Nat) p y y) py) -> (erased (Order p y (Succ (Zero))) r))
+(def-fns _ $ (erased order1 : (erased (List (Nat)) p) (erased (Nat) y) (erased (Nth (Nat) p y y) py) -> (erased (OrderOf p y (Succ (Zero))) r))
   (MkOrder p (Nil _) y y (Zero) py (PathHere p _ y) (LengthNil _)))
 
 (def-fns _ $ (erased order2 : (erased (List (Nat)) p) (erased (Nat) y a) (erased (Nth (Nat) p y a) py) (erased (Nth (Nat) p a y) pa)
-    (erased (Apart (Nat) Lt a y) ne) -> (erased (Order p y (Succ (Succ (Zero)))) r))
+    (erased (Apart (Nat) Lt a y) ne) -> (erased (OrderOf p y (Succ (Succ (Zero)))) r))
   (MkOrder p (Cons _ a (Nil _)) y a (Succ (Zero)) py (PathStep p _ (Nil _) a y y pa (NotInCons a y (Nil _) ne (NotInNil a)) (PathHere p _ y))
     (LengthCons _ a (Nil _) (Zero) (LengthNil _))))
 
 (def-fns _ $ (erased order-skip : (erased (Nat) d y z k) (erased (List (Nat)) p q p2) (erased (HPerm d p q) pm) (erased (Skip p z p2) sk)
-    (erased (Order p y k) o) (erased (Lt k (Succ (Succ (Succ (Succ (Zero)))))) lk) -> (erased (Nat) k2) (erased (Order p2 y k2) r)
+    (erased (OrderOf p y k) o) (erased (Lt k (Succ (Succ (Succ (Succ (Zero)))))) lk) -> (erased (Nat) k2) (erased (OrderOf p2 y k2) r)
     (erased (Lt k2 (Succ (Succ (Succ (Succ (Zero)))))) lk2))
   (let ((erased o0)) o)
   (let-match erased o0 (MkOrder _ _ _ y1 k0 py w l))
@@ -868,7 +868,7 @@
   h)
 
 (def-fns _ $ (erased part-order : (erased (Nat) d dl i) (erased (List (Nat)) e n f s el nl fl hd) (erased (LivePart d dl e n f s el nl fl hd) lp)
-    (erased (LPlain d e s) lpl) (erased (Lt i dl) li) -> (erased (Order el i (Succ (Succ (Zero)))) r))
+    (erased (LPlain d e s) lpl) (erased (Lt i dl) li) -> (erased (OrderOf el i (Succ (Succ (Zero)))) r))
   (let ((erased hm) (erased lh) (erased _)) (lp-map d dl e n f s el nl fl hd lp))
   (let ((erased nfl) (erased _) (erased _) (erased _) (erased pel) (erased _) (erased _)) (hyper-core dl el nl fl hm))
   (let ((erased j) (erased pij) (erased lj)) (perm-nth dl i el nfl pel li))

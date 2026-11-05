@@ -324,8 +324,8 @@
 
 (def-fns _ $ (erased sub2-self : (erased (List (Nat)) A B) (erased (Nat) n) (subterm erased (Length (Nat) A n) la) (erased (Length (Nat) B n) lb) -> (erased (Sub2 A B A B) r))
   (let-match erased la (LengthCons _ a A1 n1 la1) ((LengthNil _) (let-match erased lb (LengthNil _)) (S2Nil (Nil _) (Nil _))))
-  (let-match erased lb (LengthCons _ b B1 _ lb1))
-  (S2Cons A B A1 B1 a b (I2Here a b A1 B1) (sub2-lift A1 B1 A1 B1 a b (sub2-self A1 B1 n1 la1 lb1))))
+  (let-match erased lb (LengthCons _ b B1' _ lb1))
+  (S2Cons A B A1 B1' a b (I2Here a b A1 B1') (sub2-lift A1 B1' A1 B1' a b (sub2-self A1 B1' n1 la1 lb1))))
 
 (def-fns _ $ (erased hrb-resp : (erased (List (Nat)) br rbd idr hs R S) (erased (Nat) c c2 dr) (subterm erased (Sub2 br rbd R S) s) (erased (HrB br rbd c idr hs c2) hb)
     (erased (Iota dr idr) io) (erased (Under br dr) ub) (erased (Distinct br) db) -> (erased (Respects hs R S) r))

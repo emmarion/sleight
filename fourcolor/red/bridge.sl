@@ -274,14 +274,14 @@
           (let-match erased cb (CB2)) (SPop12 (BS0)))))))
 
 ; w then s is the completion of w, from d open chords and parity b.
-(def-adts $ (Closes : ((Nat) d) ((Bool) b) ((List (Gsym)) w) ((Gsym) s) -> Type)
+(def-adts $ (ClosesAt : ((Nat) d) ((Bool) b) ((List (Gsym)) w) ((Gsym) s) -> Type)
   enum
-  (many CloNil : (erased (Nat) d) (erased (Bool) b) (erased (Gsym) s) (erased (Last d b s) l) -> (Closes d b (Nil (Gsym)) s))
+  (many CloNil : (erased (Nat) d) (erased (Bool) b) (erased (Gsym) s) (erased (Last d b s) l) -> (ClosesAt d b (Nil (Gsym)) s))
   (many CloCons : (erased (Nat) d d2) (erased (Bool) b b2) (erased (Gsym) s0 s) (erased (List (Gsym)) w) (erased (GStep d b s0 d2 b2) st)
-      (erased (Closes d2 b2 w s) c) -> (Closes d b (Cons (Gsym) s0 w) s)))
+      (erased (ClosesAt d2 b2 w s) c) -> (ClosesAt d b (Cons (Gsym) s0 w) s)))
 
 (def-fns _ $ (erased closes-gpre : (erased (Nat) d0 d) (erased (Bool) b0 b) (erased (List (Gsym)) pre u fw) (erased (Gsym) s)
-    (subterm erased (GPre d0 b0 pre d b) p) (erased (Closes d b u s) c) (erased (RevApp (Gsym) pre u fw) rw) -> (erased (Closes d0 b0 fw s) r))
+    (subterm erased (GPre d0 b0 pre d b) p) (erased (ClosesAt d b u s) c) (erased (RevApp (Gsym) pre u fw) rw) -> (erased (ClosesAt d0 b0 fw s) r))
   (match erased p _
     ((GPreNil _ _) (let-match erased rw (RANil _ _)) c)
     ((GPreCons _ d1 _ _ b1 _ pre1 s0 p1 st)
@@ -304,7 +304,7 @@
 
 (def-fns _ $ (erased pg-g : (erased (Bstack) bs) (erased (List (Col)) et ct) (erased (List (Gsym)) w) (erased (Gsym) s) (erased (Col) c) (erased (Nat) d)
     (erased (Bool) b x y z) (subterm erased (MatchPG bs et w) mt) (erased (Ctr c et ct) cr) (erased (CB c x y) cb) (erased (SInv bs d x z) si)
-    (erased (Xor b z y) xb) (erased (Closes d b w s) cl) -> (erased (List (Gsym)) cw) (erased (Snoc (Gsym) w s cw) sn) (erased (MatchG bs ct cw) mg))
+    (erased (Xor b z y) xb) (erased (ClosesAt d b w s) cl) -> (erased (List (Gsym)) cw) (erased (Snoc (Gsym) w s cw) sn) (erased (MatchG bs ct cw) mg))
   (match erased mt _
     ((MPNil _)
       (let-match erased cr (CtrNil _))
@@ -439,13 +439,13 @@
 ; A relation between traces and chromograms with one parameter, as data, like PredC.
 (def-adts $ (RelC : -> Type)
   enum
-  (many MkRel : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) -> (RelC)))
+  (many MkRel : (erased Type X) (erased X x) (erased (TyCtor (X _) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) -> (RelC)))
 
 (let ((erased Rel)) (RelC))
 
 (def-adts $ (HoldsR : ((RelC) R) ((List (Col)) ct) ((List (Gsym)) w) -> Type)
   enum
-  (many MkHoldsR : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) (erased (List (Col)) ct)
+  (many MkHoldsR : (erased Type X) (erased X x) (erased (TyCtor (X _) ((List (Col)) ct) ((List (Gsym)) w) -> Type) R) (erased (List (Col)) ct)
       (erased (List (Gsym)) w) (erased (R x ct w) h) -> (HoldsR (MkRel X x R) ct w)))
 
 ; By functions at level L, with R naming the chromogram the definition asks for: the colour permutations of

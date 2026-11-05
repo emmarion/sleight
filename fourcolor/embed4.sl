@@ -337,9 +337,9 @@
 
 (def-fns _ $ (erased gcat-move : (erased (Nat) dc x) (erased (List (Nat)) ec nc fc rc as0 as) (erased (Length (Nat) fc dc) lf) (erased (KernelList dc fc rc as0) kl0)
     (erased (KernelList dc fc rc as) kl) (erased (GcAt ec nc rc as0 x) gx) -> (erased (GcAt ec nc rc as x) r))
-  (let-match erased gx (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl cs))
+  (let-match erased gx (MkGcAt _ _ _ _ _ ex nx pe pe2 pn rs ep cl' cs))
   (let ((erased (Or (In x rc) (Or (In ex rc) (Or (In x as) (In ex as)))) cl2))
-    (match erased cl _
+    (match erased cl' _
       ((OrL _ _ i) (OrL _ _ i))
       ((OrR _ _ c1) (OrR _ _ (match erased c1 _
         ((OrL _ _ i) (OrL _ _ i))
@@ -415,12 +415,12 @@
       (erased (Respects fid fc fid) rf) (erased (FAll ec nc fid as as) fa) (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd)
       (erased (KerMax dc ec fc as) km) -> (CfGc (MkConfig sym cci cp))))
 
-(def-adts $ (AllGc : ((List (Config)) cfs) -> Type)
+(def-adts $ (AllGc : ((List (Config)) cfs') -> Type)
   enum
   (many AgNil : -> (AllGc (Nil (Config))))
-  (many AgCons : (erased (List (Config)) cfs) (erased (Config) cf) (erased (CfGc cf) c) (erased (AllGc cfs) rest) -> (AllGc (Cons (Config) cf cfs))))
+  (many AgCons : (erased (List (Config)) cfs') (erased (Config) cf) (erased (CfGc cf) c) (erased (AllGc cfs') rest) -> (AllGc (Cons (Config) cf cfs'))))
 
-(def-fns _ $ (erased gc-lookup : (erased (List (Config)) cfs) (erased (Config) cf) (subterm erased (AllGc cfs) a) (erased (Elem (Config) cf cfs) m) -> (erased (CfGc cf) r))
+(def-fns _ $ (erased gc-lookup : (erased (List (Config)) cfs') (erased (Config) cf) (subterm erased (AllGc cfs') a) (erased (Elem (Config) cf cfs') m) -> (erased (CfGc cf) r))
   (let-match erased a (AgCons cfs1 _ c1 a1) (absurd (AgNil) m))
   (match erased m _ ((ElHere _ _ _) c1) ((ElThere _ _ _ _ m1) (gc-lookup cfs1 cf a1 m1))))
 
@@ -433,37 +433,37 @@
   (let-match erased (hyper-node-unique dc ec nc0 fc nc hc0 h) (Refl _ _))
   (values as0 fid kl0 ok0 rf fa nr rd km))
 
-(def-fns _ $ (erased cf-gcok : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc)
-    (erased (List (Nat)) ec nc fc rc as) (erased (AllGc cfs) ag) (erased (Elem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
+(def-fns _ $ (erased cf-gcok : (erased (List (Config)) cfs') (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc)
+    (erased (List (Nat)) ec nc fc rc as) (erased (AllGc cfs') ag) (erased (Elem (Config) (MkConfig sym cci cp) cfs') m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (Hypermap dc ec nc fc) h) (erased (KernelList dc fc rc as) kl) -> (erased (GcOK dc ec nc rc as) r))
-  (let ((erased as0) (erased _) (erased kl0) (erased ok0) (erased _) (erased _) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm h))
+  (let ((erased as0) (erased _) (erased kl0) (erased ok0) (erased _) (erased _) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs' (MkConfig sym cci cp) ag m) cm h))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths dc ec nc fc h))
   (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0))
 
-(def-fns _ $ (erased cf-functor : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
-    (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (AllGc cfs) ag) (erased (Elem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) cm)
+(def-fns _ $ (erased cf-functor : (erased (List (Config)) cfs') (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
+    (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (AllGc cfs') ag) (erased (Elem (Config) (MkConfig sym cci cp) cfs') m) (erased (Cpmap cp dc ec fc rc) cm)
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (FunctorAll ec em as hl as) r))
   (let ((erased en2)) en)
   (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ kl _ _))
-  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) cm hc))
+  (let ((erased as0) (erased fid) (erased kl0) (erased ok0) (erased rf) (erased fa) (erased _) (erased _) (erased _)) (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs' (MkConfig sym cci cp) ag m) cm hc))
   (let ((erased _) (erased _) (erased lf)) (hyper-lengths dc ec nc fc hc))
   (let ((erased fe)) (MkFEnv dc ec nc fc ksc rc dm em nm fm ksm as hl as0 fid en kl0 (gcok-move dc ec nc fc rc as0 as lf kl0 kl ok0) rf))
   (functor-list dc dm ec nc fc ksc rc em nm fm ksm as hl as0 fid fe fa as (sub-refl as)))
 
-(def-fns _ $ (erased cfcerts-of : (erased (List (Config)) cfs) (erased (AllGc cfs) ag) -> (erased (CfCerts cfs) r))
+(def-fns _ $ (erased cfcerts-of : (erased (List (Config)) cfs') (erased (AllGc cfs') ag) -> (erased (CfCerts cfs') r))
   (def-lvl F)
   (def-fns F $ (erased gc : (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dc dm)
-      (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Elem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
+      (erased (List (Nat)) ec nc fc ksc rc em nm fm ksm as hl) (erased (Elem (Config) (MkConfig sym cci cp) cfs') m) (erased (Cpmap cp dc ec fc rc) c)
       (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) -> (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu)
       (erased (NodeRing nc fc rc) nr) (erased (Radius2 ec fc as) rd) (erased (KerMax dc ec fc as) km))
     (let ((erased en2)) en)
     (let-match erased en2 (MkEEnv _ _ _ _ _ _ _ _ _ _ _ _ _ hc _ kl _ _))
     (let ((erased as0) (erased _) (erased kl0) (erased _) (erased _) (erased _) (erased nr) (erased rd) (erased km))
-      (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs (MkConfig sym cci cp) ag m) c hc))
+      (cfgc-at sym cci cp dc ec nc fc rc (gc-lookup cfs' (MkConfig sym cci cp) ag m) c hc))
     (let ((erased _) (erased _) (erased lf)) (hyper-lengths dc ec nc fc hc))
-    (values (cf-gcok cfs sym cci cp dc ec nc fc rc as ag m c hc kl) (cf-functor cfs sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl ag m c en)
+    (values (cf-gcok cfs' sym cci cp dc ec nc fc rc as ag m c hc kl) (cf-functor cfs' sym cci cp dc dm ec nc fc ksc rc em nm fm ksm as hl ag m c en)
       nr (radius-move dc ec fc rc as0 as lf kl0 kl rd) (kermax-move dc ec fc rc as0 as lf kl0 kl km)))
-  (MkCfCerts cfs F gc))
+  (MkCfCerts cfs' F gc))
 
 (def-adts $ (CopyL : ((List (Nat)) xs) ((List (Copy (Nat))) ws) -> Type)
   enum
@@ -472,10 +472,10 @@
       -> (CopyL (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) ws))))
 
 ; xs as an array.
-(def-adts $ (Tab : ((List (Nat)) xs) -> Type)
+(def-adts $ (NatTab : ((List (Nat)) xs) -> Type)
   enum
-  (many MkTab : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) cp) (many (Nat) len)
-      (erased (Length (Nat) xs len) l) (many (Array (Copy (Nat)) ws) a) -> (Tab xs)))
+  (many MkNatTab : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (CopyL xs ws) cp) (many (Nat) len)
+      (erased (Length (Nat) xs len) l) (many (Array (Copy (Nat)) ws) a) -> (NatTab xs)))
 
 (def-fns _ $ (many copy-c : (subterm many (List (Nat)) xs) -> (many (List (Copy (Nat))) ws) (many (Nat) len) (erased (CopyL xs ws) p)
     (erased (Length (Nat) xs len) l))
@@ -483,9 +483,9 @@
   (let ((many ws) (many n) (erased p) (erased l)) (notail $ copy-c rest))
   (values (Cons _ (MkCopy _ x) ws) (Succ n) (CpCons x rest ws p) (LengthCons _ x rest n l)))
 
-(def-fns _ $ (many tab-c : (many (List (Nat)) xs) -> (many (Tab xs) t))
+(def-fns _ $ (many tab-c : (many (List (Nat)) xs) -> (many (NatTab xs) t))
   (let ((many ws) (many n) (erased p) (erased l)) (copy-c xs))
-  (MkTab xs ws p n l (share (list-to-array _ ws))))
+  (MkNatTab xs ws p n l (share (list-to-array _ ws))))
 
 (def-fns _ $ (erased copy-nth : (erased (List (Nat)) xs) (erased (List (Copy (Nat))) ws) (erased (Nat) i x) (subterm erased (CopyL xs ws) p)
     (erased (Nth (Nat) xs i x) q) -> (erased (Nth (Copy (Nat)) ws i (MkCopy (Nat) x)) r))
@@ -494,22 +494,22 @@
     ((NthHere _ _ _) (NthHere _ (MkCopy (Nat) x) ws1))
     ((NthThere _ _ _ i1 _ q1) (NthThere _ (MkCopy (Nat) y) ws1 i1 (MkCopy (Nat) x) (copy-nth xs1 ws1 i1 x p1 q1)))))
 
-(def-fns _ $ (many tab-q : (erased (List (Nat)) xs) (many (Tab xs) t) (many (Nat) i) -> (many (NthR (Nat) xs i) r))
-  (let-match many t (MkTab _ ws cp n l a))
+(def-fns _ $ (many tab-q : (erased (List (Nat)) xs) (many (NatTab xs) t) (many (Nat) i) -> (many (NthR (Nat) xs i) r))
+  (let-match many t (MkNatTab _ ws cp n l a))
   (let-match many (lt-dec i n) (Yes _ _ _ _ lt) ((No _ _ _ _ _) (NthN _ xs i)))
   (let ((erased x) (erased q)) (nth-exists _ xs n i l lt))
   (let-match many (array-get-many _ _ a i _ (copy-nth xs ws i x cp q)) (MkCopy _ y))
   (NthY _ xs i y q))
 
-(def-fns _ $ (many tab-at : (erased (List (Nat)) xs) (many (Tab xs) t) (many (Nat) i) -> (many (Nat) r))
+(def-fns _ $ (many tab-at : (erased (List (Nat)) xs) (many (NatTab xs) t) (many (Nat) i) -> (many (Nat) r))
   (match many (tab-q xs t i) _ ((NthY _ _ _ y _) y) ((NthN _ _ _) (Zero))))
 
-(def-fns _ $ (many tab-nat-at : (erased (List (Nat)) xs) (many (Tab xs) t) (many (Nat) i v) -> (many (ErasedMaybe (Nth (Nat) xs i v)) r))
+(def-fns _ $ (many tab-nat-at : (erased (List (Nat)) xs) (many (NatTab xs) t) (many (Nat) i v) -> (many (ErasedMaybe (Nth (Nat) xs i v)) r))
   (let-match many (tab-q xs t i) (NthY _ _ _ y p) ((NthN _ _ _) (ENone _)))
   (let-match many (nat-eq y v) (Equal _ _ _) (else (ENone _)))
   (ESome _ p))
 
-(def-fns _ $ (many fband-t : (erased (List (Nat)) f) (many (Tab f) tf) (many (List (Nat)) p) (many (Nat) x) (subterm many (Nat) fuel)
+(def-fns _ $ (many fband-t : (erased (List (Nat)) f) (many (NatTab f) tf) (many (List (Nat)) p) (many (Nat) x) (subterm many (Nat) fuel)
     -> (many (ErasedMaybe (Fband f p x)) r))
   (let-match many (in-q x p) (IDOut _ _ _) ((IDIn _ _ i) (ESome _ (MkFband f p x x i (MkSomePath f (Nil _) (Nil _) x x (PathHere f (Nil _) x))))))
   (let-match many fuel (Succ fuel1) ((Zero) (ENone _)))
@@ -523,11 +523,11 @@
   enum
   (many MkKerOK : (erased (List (Nat)) f r as xs) (erased (KerAll f r as) ka) (erased (KerCover f r as xs) kv) -> (KerOK f r as xs)))
 
-(def-fns _ $ (many klab-c : (many (Nat) d) (erased (List (Nat)) fc) (many (Tab fc) tf) (many (List (Nat)) rc) (subterm many (List (Nat)) xs) -> (many (List (Nat)) lab))
+(def-fns _ $ (many klab-c : (many (Nat) d) (erased (List (Nat)) fc) (many (NatTab fc) tf) (many (List (Nat)) rc) (subterm many (List (Nat)) xs) -> (many (List (Nat)) lab))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (Cons _ (match many (fband-t fc tf rc x d) (((Nat) k)) ((ESome _ _) (Zero)) ((ENone _) (Succ (Zero)))) $ notail $ klab-c d fc tf rc rest))
 
-(def-fns _ $ (many kern-c : (many (Nat) d) (erased (List (Nat)) fc) (many (Tab fc) tf) (many (List (Nat)) rc) (erased (List (Nat)) lab) (many (Tab lab) tl)
+(def-fns _ $ (many kern-c : (many (Nat) d) (erased (List (Nat)) fc) (many (NatTab fc) tf) (many (List (Nat)) rc) (erased (List (Nat)) lab) (many (NatTab lab) tl)
     (erased (List (Nat)) lr) (erased (Respects lab fc lab) rf) (erased (Respects lab rc lr) rp)
     (erased (NotIn (Succ (Zero)) lr) out) (subterm many (List (Nat)) xs) -> (many (List (Nat)) as) (many (ErasedMaybe (KerOK fc rc as xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (ESome _ (MkKerOK fc rc (Nil _) (Nil _) (KANil fc rc) (KvNil fc rc (Nil _)))))))
@@ -541,13 +541,13 @@
   (let-match many (fband-t fc tf rc x d) (ESome _ fb) ((ENone _) (values (Nil _) (ENone _))))
   (values as1 (ESome _ (MkKerOK fc rc as1 xs ka (KvBand fc rc as1 rest x fb kv)))))
 
-(def-fns _ $ (many rs-off : (erased (List (Nat)) nc) (many (Tab nc) tn) (many (List (Nat)) rc) (many (Nat) x nx nnx) (erased (NotIn x rc) ox) (erased (Nth (Nat) nc nx nnx) pnn)
+(def-fns _ $ (many rs-off : (erased (List (Nat)) nc) (many (NatTab nc) tn) (many (List (Nat)) rc) (many (Nat) x nx nnx) (erased (NotIn x rc) ox) (erased (Nth (Nat) nc nx nnx) pnn)
     -> (many (ErasedMaybe (RingSide nc rc x nx)) r))
   (let-match many (in-q nx rc) (IDOut _ _ onx) ((IDIn _ _ _) (ENone _)))
   (let-match many (tab-nat-at nc tn nnx x) (ESome _ p2) ((ENone _) (ENone _)))
   (ESome _ (RsOff nc rc x nx nnx ox onx pnn p2)))
 
-(def-fns _ $ (many rs-c : (erased (List (Nat)) nc) (many (Tab nc) tn) (many (List (Nat)) rc) (many (Nat) x nx) -> (many (ErasedMaybe (RingSide nc rc x nx)) r))
+(def-fns _ $ (many rs-c : (erased (List (Nat)) nc) (many (NatTab nc) tn) (many (List (Nat)) rc) (many (Nat) x nx) -> (many (ErasedMaybe (RingSide nc rc x nx)) r))
   (let-match many (tab-q nc tn nx) (NthY _ _ _ nnx pnn) ((NthN _ _ _) (ENone _)))
   (let-match many (in-q x rc) (IDIn _ _ ix) ((IDOut _ _ ox) (rs-off nc tn rc x nx nnx ox pnn)))
   (let-match many (in-q nx rc) (IDIn _ _ inx) ((IDOut _ _ _) (ENone _)))
@@ -573,31 +573,31 @@
   (let-match many (in-q z as) (IDIn _ _ i) ((IDOut _ _ _) (ENone _)))
   (ESome _ (OrR _ _ (OrR _ _ (OrR _ _ (MkNodeIn nc as ex z pz i))))))
 
-(def-fns _ $ (many gcat-c : (erased (List (Nat)) ec nc) (many (Tab ec) te) (many (Tab nc) tn) (many (List (Nat)) rc as) (many (Nat) x) -> (many (ErasedMaybe (GcAt ec nc rc as x)) r))
+(def-fns _ $ (many gcat-c : (erased (List (Nat)) ec nc) (many (NatTab ec) te) (many (NatTab nc) tn) (many (List (Nat)) rc as) (many (Nat) x) -> (many (ErasedMaybe (GcAt ec nc rc as x)) r))
   (let-match many (tab-q ec te x) (NthY _ _ _ ex pe) ((NthN _ _ _) (ENone _)))
   (let-match many (tab-nat-at ec te ex x) (ESome _ pe2) ((ENone _) (ENone _)))
   (let-match many (tab-q nc tn x) (NthY _ _ _ nx pn) ((NthN _ _ _) (ENone _)))
   (let-match many (tab-q nc tn ex) (NthY _ _ _ z pz) ((NthN _ _ _) (ENone _)))
   (let-match many (rs-c nc tn rc x nx) (ESome _ rs) ((ENone _) (ENone _)))
   (let-match many (ep-c rc x ex) (ESome _ ep) ((ENone _) (ENone _)))
-  (let-match many (cl-c rc as x ex) (ESome _ cl) ((ENone _) (ENone _)))
+  (let-match many (cl-c rc as x ex) (ESome _ cl') ((ENone _) (ENone _)))
   (let-match many (cs-c nc as x ex nx z pz) (ESome _ cs) ((ENone _) (ENone _)))
-  (ESome _ (MkGcAt ec nc rc as x ex nx pe pe2 pn rs ep cl cs)))
+  (ESome _ (MkGcAt ec nc rc as x ex nx pe pe2 pn rs ep cl' cs)))
 
-(def-fns _ $ (many gcall-c : (erased (List (Nat)) ec nc) (many (Tab ec) te) (many (Tab nc) tn) (many (List (Nat)) rc as) (subterm many (List (Nat)) xs) -> (many (ErasedMaybe (GcAll ec nc rc as xs)) r))
+(def-fns _ $ (many gcall-c : (erased (List (Nat)) ec nc) (many (NatTab ec) te) (many (NatTab nc) tn) (many (List (Nat)) rc as) (subterm many (List (Nat)) xs) -> (many (ErasedMaybe (GcAll ec nc rc as xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (ESome _ (GcNil ec nc rc as))))
   (let-match many (gcat-c ec nc te tn rc as x) (ESome _ g) ((ENone _) (ENone _)))
   (let-match many (notail $ gcall-c ec nc te tn rc as rest) (ESome _ gr) ((ENone _) (ENone _)))
   (ESome _ (GcCons ec nc rc as rest x g gr)))
 
-(def-fns _ $ (many face-min : (erased (List (Nat)) f) (many (Tab f) tf) (many (Nat) x y m) (subterm many (Nat) left) -> (many (Nat) r))
+(def-fns _ $ (many face-min : (erased (List (Nat)) f) (many (NatTab f) tf) (many (Nat) x y m) (subterm many (Nat) left) -> (many (Nat) r))
   (let-match many left (Succ l1) ((Zero) m))
   (let ((many z)) (tab-at f tf y))
   (match many (nat-eqb z x) _
     ((BTrue) m)
     ((BFalse) (tail $ face-min f tf x z (bif _ (nat-ltb z m) z m) l1))))
 
-(def-fns _ $ (many fid-c : (erased (List (Nat)) f) (many (Tab f) tf) (many (Nat) d) (subterm many (List (Nat)) xs) -> (many (List (Nat)) fid))
+(def-fns _ $ (many fid-c : (erased (List (Nat)) f) (many (NatTab f) tf) (many (Nat) d) (subterm many (List (Nat)) xs) -> (many (List (Nat)) fid))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (Cons _ (face-min f tf x x x d) $ notail $ fid-c f tf d rest))
 
@@ -611,7 +611,7 @@
       (erased (Nth (Nat) ec b eb) pb) (erased (Nth (Nat) ec c ecc) pcc) (erased (In a as) ia) (erased (In b as) ib) (erased (In c as) ic)
       (erased (In ea as) iea) (erased (In eb as) ieb) (erased (In ecc as) iec) -> (TriD ec nc as)))
 
-(def-fns _ $ (many tri3-c : (erased (List (Nat)) ec nc) (many (Tab ec) te) (many (Tab nc) tn) (many (List (Nat)) as) (many (Nat) a) -> (many (List (TriD ec nc as)) ts))
+(def-fns _ $ (many tri3-c : (erased (List (Nat)) ec nc) (many (NatTab ec) te) (many (NatTab nc) tn) (many (List (Nat)) as) (many (Nat) a) -> (many (List (TriD ec nc as)) ts))
   (let ((many (List (TriD ec nc as)) no)) (Nil _))
   (let-match many (tab-q nc tn a) (NthY _ _ _ b pab) ((NthN _ _ _) no))
   (let-match many (tab-q nc tn b) (NthY _ _ _ c pbc) ((NthN _ _ _) no))
@@ -631,7 +631,7 @@
   (Cons _ (MkTriD ec nc as a b c ea eb ecc t pa pb pcc ia ib ic iea ieb iec) $ Cons _ (MkTriD ec nc as b c a eb ecc ea t2 pb pcc pa ib ic ia ieb iec iea) $
     Cons _ (MkTriD ec nc as c a b ecc ea eb (tri-rot ec nc as b c a t2) pcc pa pb ic ia ib iec iea ieb) $ Nil _))
 
-(def-fns _ $ (many tris-c : (erased (List (Nat)) ec nc) (many (Tab ec) te) (many (Tab nc) tn) (many (List (Nat)) as) (subterm many (List (Nat)) xs) -> (many (List (TriD ec nc as)) ts))
+(def-fns _ $ (many tris-c : (erased (List (Nat)) ec nc) (many (NatTab ec) te) (many (NatTab nc) tn) (many (List (Nat)) as) (subterm many (List (Nat)) xs) -> (many (List (TriD ec nc as)) ts))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (cat _ (tri3-c ec nc te tn as x) $ notail $ tris-c ec nc te tn as rest))
 
@@ -639,7 +639,7 @@
   enum
   (many MkKEdge : (many (Nat) z y) -> (KEdge)))
 
-(def-fns _ $ (many kes-c : (erased (List (Nat)) ec) (many (Tab ec) te) (many (List (Nat)) as) (subterm many (List (Nat)) xs) -> (many (List (KEdge)) ks))
+(def-fns _ $ (many kes-c : (erased (List (Nat)) ec) (many (NatTab ec) te) (many (List (Nat)) as) (subterm many (List (Nat)) xs) -> (many (List (KEdge)) ks))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (let ((many y)) (tab-at ec te x))
   (let ((many ks)) (notail $ kes-c ec te as rest))
@@ -681,7 +681,7 @@
   (let ((many r1)) (notail $ alive-c ns rest))
   (bif _ (orb (mem-nat z ns) (mem-nat y ns)) r1 (Cons _ k r1)))
 
-(def-fns _ $ (many flood-pass : (erased (List (Nat)) fid) (many (Tab fid) ti) (many (List (Nat)) lab) (many (Bool) ch) (subterm many (List (KEdge)) ks) -> (many (List (Nat)) lab2) (many (Bool) ch2))
+(def-fns _ $ (many flood-pass : (erased (List (Nat)) fid) (many (NatTab fid) ti) (many (List (Nat)) lab) (many (Bool) ch) (subterm many (List (KEdge)) ks) -> (many (List (Nat)) lab2) (many (Bool) ch2))
   (let-match many ks (Cons _ k rest) ((Nil _) (values lab ch)))
   (let-match many k (MkKEdge z y))
   (let ((many fz) (many fy)) (values (tab-at fid ti z) (tab-at fid ti y)))
@@ -689,12 +689,12 @@
     ((BTrue) (tail $ flood-pass fid ti lab ch rest))
     ((BFalse) (tail $ flood-pass fid ti (set-at _ (set-at _ lab fz 1) fy 1) (BTrue) rest))))
 
-(def-fns _ $ (many flood : (erased (List (Nat)) fid) (many (Tab fid) ti) (many (List (Nat)) lab) (many (List (KEdge)) ks) (subterm many (Nat) fuel) -> (many (List (Nat)) lab2))
+(def-fns _ $ (many flood : (erased (List (Nat)) fid) (many (NatTab fid) ti) (many (List (Nat)) lab) (many (List (KEdge)) ks) (subterm many (Nat) fuel) -> (many (List (Nat)) lab2))
   (let-match many fuel (Succ f1) ((Zero) lab))
   (let ((many lab1) (many ch)) (flood-pass fid ti lab (BFalse) ks))
   (match many ch _ ((BTrue) (tail $ flood fid ti lab1 ks f1)) ((BFalse) lab1)))
 
-(def-fns _ $ (many first-zero : (erased (List (Nat)) fid) (many (Tab fid) ti) (many (List (Nat)) lab) (subterm many (List (Nat)) xs) -> (many (Maybe (Nat)) r))
+(def-fns _ $ (many first-zero : (erased (List (Nat)) fid) (many (NatTab fid) ti) (many (List (Nat)) lab) (subterm many (List (Nat)) xs) -> (many (Maybe (Nat)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (None _)))
   (match many (nat-eqb (get-at _ lab (tab-at fid ti x) 0) 0) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ first-zero fid ti lab rest))))
 
@@ -707,7 +707,7 @@
   (many PlCut : (erased (List (Nat)) ec nc as) (many (List (Nat)) lab) (many (Nat) y) -> (Plan ec nc as))
   (many PlNone : (erased (List (Nat)) ec nc as) -> (Plan ec nc as)))
 
-(def-fns _ $ (many plan-c : (many (Nat) d) (erased (List (Nat)) fid) (many (Tab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) ec nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
+(def-fns _ $ (many plan-c : (many (Nat) d) (erased (List (Nat)) fid) (many (NatTab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) ec nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
     (many (List (Nat)) ns cs) -> (many (Plan ec nc as) p))
   (let ((many m0) (many m1) (many m3) (many m2)) (scan-c ec nc as ns cs (None _) (None _) (None _) (None _) ts))
   (let-match many m0 (None _) ((Some _ td) (PlNode ec nc as td)))
@@ -718,12 +718,12 @@
   (let-match many (first-zero fid ti lab as) (None _) ((Some _ y) (PlCut ec nc as lab y)))
   (match many m2 _ ((Some _ td) (PlSplit ec nc as td)) ((None _) (PlNone ec nc as))))
 
-(def-fns _ $ (many labat-c : (erased (List (Nat)) fid lab) (many (Tab fid) ti) (many (Tab lab) tl) (many (Nat) x k) -> (many (ErasedMaybe (QStepR fid lab x k)) r))
+(def-fns _ $ (many labat-c : (erased (List (Nat)) fid lab) (many (NatTab fid) ti) (many (NatTab lab) tl) (many (Nat) x k) -> (many (ErasedMaybe (QStepR fid lab x k)) r))
   (let-match many (tab-q fid ti x) (NthY _ _ _ i pi) ((NthN _ _ _) (ENone _)))
   (let-match many (tab-nat-at lab tl i k) (ESome _ pk) ((ENone _) (ENone _)))
   (ESome _ (MkQStepR fid lab x i k pi pk)))
 
-(def-fns _ $ (many cross-c : (erased (List (Nat)) ec) (many (Tab ec) te) (many (List (Nat)) as) (erased (List (Nat)) fid lab) (many (Tab fid) ti) (many (Tab lab) tl)
+(def-fns _ $ (many cross-c : (erased (List (Nat)) ec) (many (NatTab ec) te) (many (List (Nat)) as) (erased (List (Nat)) fid lab) (many (NatTab fid) ti) (many (NatTab lab) tl)
     (many (List (Nat)) ns) (subterm many (List (Nat)) xs) -> (many (ErasedMaybe (CrossAll ec as fid lab ns xs)) r))
   (let-match many xs (Cons _ z rest) ((Nil _) (ESome _ (CaNil ec as fid lab ns))))
   (let-match many (notail $ cross-c ec te as fid lab ti tl ns rest) (ESome _ cr) ((ENone _) (ENone _)))
@@ -734,7 +734,7 @@
   (let-match many (ein-c ec z y py ns) (ESome _ i) ((ENone _) (ENone _)))
   (ESome _ (CaCons ec as fid lab ns rest z (CxNon ec as fid lab ns z i) cr)))
 
-(def-fns _ $ (many refute-c : (many (Nat) d) (erased (List (Nat)) ec fid) (many (Tab ec) te) (many (Tab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
+(def-fns _ $ (many refute-c : (many (Nat) d) (erased (List (Nat)) ec fid) (many (NatTab ec) te) (many (NatTab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
     (many (List (Nat)) ns cs) (subterm many (Nat) fuel) -> (many (ErasedMaybe (Refut ec nc fid as ns cs)) r))
   (let-match many fuel (Succ fuel1) ((Zero) (ENone _)))
   (match many (plan-c d fid ti as ec nc ts kes ns cs) _
@@ -788,7 +788,7 @@
   (many RqYes : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) (erased (Refut ec nc fid as (Cons (Nat) z (Nil (Nat))) (Nil (Nat))) r) -> (RefQ ec nc fid as z))
   (many RqNo : (erased (List (Nat)) ec nc fid as) (erased (Nat) z) -> (RefQ ec nc fid as z)))
 
-(def-fns _ $ (many refs-c : (many (Nat) d) (erased (List (Nat)) ec fid) (many (Tab ec) te) (many (Tab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
+(def-fns _ $ (many refs-c : (many (Nat) d) (erased (List (Nat)) ec fid) (many (NatTab ec) te) (many (NatTab fid) ti) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (TriD ec nc as)) ts) (many (List (KEdge)) kes)
     (subterm many (List (KEdge)) ks) -> (many (List (RefD ec nc fid as)) r))
   (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
   (let-match many k (MkKEdge z _))
@@ -800,7 +800,7 @@
   (let-match many rd (MkRefD _ _ _ _ y rr))
   (match many (nat-eq y z) _ ((Equal _ _ _) (RqYes ec nc fid as z rr)) ((Unequal _ _ _ _ _) (tail $ ref-find ec nc fid as z rest))))
 
-(def-fns _ $ (many fall-c : (erased (List (Nat)) ec) (many (Tab ec) te) (erased (List (Nat)) fid) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (RefD ec nc fid as)) rs) (subterm many (List (Nat)) xs)
+(def-fns _ $ (many fall-c : (erased (List (Nat)) ec) (many (NatTab ec) te) (erased (List (Nat)) fid) (many (List (Nat)) as) (erased (List (Nat)) nc) (many (List (RefD ec nc fid as)) rs) (subterm many (List (Nat)) xs)
     -> (many (ErasedMaybe (FAll ec nc fid as xs)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (ESome _ (FsNil ec nc fid as))))
   (let-match many (notail $ fall-c ec te fid as nc rs rest) (ESome _ fr) ((ENone _) (ENone _)))
@@ -931,8 +931,8 @@
   (let-match many (kmall-c e f as ids) (ESome _ km) ((ENone _) (ENone _)))
   (ESome _ (MkCfGc sym cci cp d e n f r as fid c hc (MkKernelList d f r as ids io ka kv) (MkGcOK d e n r as ids io ga) rsp fa nr rd (MkKerMax d e f as ids io km))))
 
-(def-fns _ $ (many allgc-c : (subterm many (List (Config)) cfs) -> (many (ErasedMaybe (AllGc cfs)) r))
-  (let-match many cfs (Cons _ cf rest) ((Nil _) (ESome _ (AgNil))))
+(def-fns _ $ (many allgc-c : (subterm many (List (Config)) cfs') -> (many (ErasedMaybe (AllGc cfs')) r))
+  (let-match many cfs' (Cons _ cf rest) ((Nil _) (ESome _ (AgNil))))
   (let-match many (cfgc-c cf) (ESome _ c) ((ENone _) (ENone _)))
   (let-match many (notail $ allgc-c rest) (ESome _ a) ((ENone _) (ENone _)))
   (ESome _ (AgCons rest cf c a)))

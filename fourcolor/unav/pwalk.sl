@@ -1,7 +1,7 @@
 (def-adts $ (Sel : ((List (Sub)) ql qh pl pr) -> Type)
   enum
-  (many SelL : (erased (List (Sub)) ql qh) -> (Sel ql qh ql qh))
-  (many SelR : (erased (List (Sub)) ql qh) -> (Sel ql qh qh ql)))
+  (many SelKeep : (erased (List (Sub)) ql qh) -> (Sel ql qh ql qh))
+  (many SelSwap : (erased (List (Sub)) ql qh) -> (Sel ql qh qh ql)))
 
 ; Every constraint of hc names a sector below nhub.
 (def-adts $ (HcIdx : ((Nat) nhub) ((List (Hc)) hc) -> Type)
@@ -47,14 +47,14 @@
         -> (Pres nhub rt rs ct p out))
     (many PHub : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc o out) (erased (List (Sub)) p) (erased (List (Hc)) hc)
         (erased (Length (Sub) p nhub) l) (erased (CoverOk nhub hc) cv) (erased (HcIdx nhub hc) ix) (erased (HFit nhub p rt rs hc acc o) w)
-        (erased (Ext o out) e) -> (Pres nhub rt rs ct p out))
-    (many PSplit : (erased (Nat) nhub k) (erased (List (List (Sub))) rt rs ct o1 o2 out) (erased (List (Sub)) p ql qh pl pr)
+        (erased (ExtAcc o out) e) -> (Pres nhub rt rs ct p out))
+    (many PresSplit : (erased (Nat) nhub k) (erased (List (List (Sub))) rt rs ct o1 o2 out) (erased (List (Sub)) p ql qh pl pr)
         (erased (PartSplit k p ql qh) w) (erased (Sel ql qh pl pr) s) (erased (Pres nhub rt rs ct pl o1) dl) (erased (Pres nhub rt rs ct pr o2) dr)
-        (erased (Ext o1 out) e1) (erased (Ext o2 out) e2) -> (Pres nhub rt rs ct p out))
+        (erased (ExtAcc o1 out) e1) (erased (ExtAcc o2 out) e2) -> (Pres nhub rt rs ct p out))
     (many PSim : (erased (Nat) nhub k m) (erased (List (List (Sub))) rt rs ct o1 o2 out) (erased (List (Sub)) p p2 pe0 pe)
-        (erased (Rot (Sub) k p p2) ro) (erased (Lt k (Succ m)) lk) (erased (Length (Sub) p m) lp) (erased (Length (Sub) pe0 m) le)
+        (erased (RotCut (Sub) k p p2) ro) (erased (Lt k (Succ m)) lk) (erased (Length (Sub) p m) lp) (erased (Length (Sub) pe0 m) le)
         (erased (Pw (Sub) (Sub) SubSub p2 pe0) sb) (erased (Forced nhub rt rs ct pe0 pe o1) fe) (erased (Pres nhub rt rs ct pe o2) de)
-        (erased (Ext o1 out) e1) (erased (Ext o2 out) e2) -> (Pres nhub rt rs ct p out)))
+        (erased (ExtAcc o1 out) e1) (erased (ExtAcc o2 out) e2) -> (Pres nhub rt rs ct p out)))
   ((Forced : ((Nat) nhub) ((List (List (Sub))) rt rs ct) ((List (Sub)) p0 p) ((List (List (Sub))) o) -> Type)
     enum
     (many FRoot : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct o) (erased (List (Sub)) p) -> (Forced nhub rt rs ct p p o))
@@ -64,7 +64,7 @@
         (erased (Length (Sub) p0 m) l0) -> (Forced nhub rt rs ct cand pl o))
     (many FRight : (erased (Nat) nhub k) (erased (List (List (Sub))) rt rs ct o ol) (erased (List (Sub)) p0 p ql qh pl pr)
         (erased (Forced nhub rt rs ct p0 p o) f) (erased (PartSplit k p ql qh) w) (erased (Sel ql qh pl pr) s) (erased (Pres nhub rt rs ct pl ol) dl)
-        (erased (Ext ol o) e) -> (Forced nhub rt rs ct p0 pr o))))
+        (erased (ExtAcc ol o) e) -> (Forced nhub rt rs ct p0 pr o))))
 
 (def-adts $ (Pr2 : -> Type)
   enum
@@ -75,29 +75,29 @@
   enum
   (many EENil : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc) -> (EnvE nhub rt rs ct acc (Nil (Pr2))))
   (many EECons : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc oa da ob db) (erased (List (Sub)) p0a pa p0b pb) (erased (List (Pr2)) env)
-      (erased (Forced nhub rt rs ct p0a pa oa) fa) (erased (Pres nhub rt rs ct pa da) xa) (erased (Ext oa acc) ea) (erased (Ext da acc) ea2)
-      (erased (Forced nhub rt rs ct p0b pb ob) fb) (erased (Pres nhub rt rs ct pb db) xb) (erased (Ext ob acc) eb) (erased (Ext db acc) eb2)
+      (erased (Forced nhub rt rs ct p0a pa oa) fa) (erased (Pres nhub rt rs ct pa da) xa) (erased (ExtAcc oa acc) ea) (erased (ExtAcc da acc) ea2)
+      (erased (Forced nhub rt rs ct p0b pb ob) fb) (erased (Pres nhub rt rs ct pb db) xb) (erased (ExtAcc ob acc) eb) (erased (ExtAcc db acc) eb2)
       (erased (EnvE nhub rt rs ct acc env) rest) -> (EnvE nhub rt rs ct acc (Cons (Pr2) (MkPr2 p0a p0b) env))))
 
 (def-adts $ (W3 : ((Nat) nhub) ((List (List (Sub))) rt rs ct) ((List (Sub)) p mp) ((List (List (Sub))) acc out) -> Type)
   enum
   (many MkW3 : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc out) (erased (List (Sub)) p mp) (erased (Pres nhub rt rs ct p out) d0)
-      (erased (Pres nhub rt rs ct mp out) d1) (erased (Ext acc out) e) -> (W3 nhub rt rs ct p mp acc out)))
+      (erased (Pres nhub rt rs ct mp out) d1) (erased (ExtAcc acc out) e) -> (W3 nhub rt rs ct p mp acc out)))
 
 ; q and r: the parts of one side of a similarity step.
 (def-adts $ (SimOk : ((List (Sub)) q r) -> Type)
   enum
   (many MkSimOk : (erased (List (Sub)) q r p2) (erased (Nat) m k) (erased (Length (Sub) q m) lq) (erased (Length (Sub) r m) lr)
-      (erased (Rot (Sub) k q p2) ro) (erased (Lt k (Succ m)) lk) (erased (Pw (Sub) (Sub) SubSub p2 r) sb) -> (SimOk q r)))
+      (erased (RotCut (Sub) k q p2) ro) (erased (Lt k (Succ m)) lk) (erased (Pw (Sub) (Sub) SubSub p2 r) sb) -> (SimOk q r)))
 
 ; p0: one side's labelled part, read off an EnvE.
 (def-adts $ (Entry : ((Nat) nhub) ((List (List (Sub))) rt rs ct acc) ((List (Sub)) p0) -> Type)
   enum
   (many MkEntry : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc o d) (erased (List (Sub)) p0 p) (erased (Forced nhub rt rs ct p0 p o) f)
-      (erased (Pres nhub rt rs ct p d) x) (erased (Ext o acc) e) (erased (Ext d acc) e2) -> (Entry nhub rt rs ct acc p0)))
+      (erased (Pres nhub rt rs ct p d) x) (erased (ExtAcc o acc) e) (erased (ExtAcc d acc) e2) -> (Entry nhub rt rs ct acc p0)))
 
 (def-fns _ $ (erased forced-ext : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct o o2) (erased (List (Sub)) p0 p)
-    (subterm erased (Forced nhub rt rs ct p0 p o) f) (erased (Ext o o2) e) -> (erased (Forced nhub rt rs ct p0 p o2) r))
+    (subterm erased (Forced nhub rt rs ct p0 p o) f) (erased (ExtAcc o o2) e) -> (erased (Forced nhub rt rs ct p0 p o2) r))
   (match erased f _
     ((FRoot _ _ _ _ _ _) (FRoot nhub rt rs ct o2 p))
     ((FLeft _ k m _ _ _ _ q0 q ql qh _ other _ f1 w s sb dj lc l0)
@@ -106,7 +106,7 @@
       (FRight nhub k rt rs ct o2 ol q0 q ql qh pl p (forced-ext nhub rt rs ct o o2 q0 q f1 e) w s dl (ext-trans ol o o2 e1 e)))))
 
 (def-fns _ $ (erased env-ext : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct acc acc2) (erased (List (Pr2)) env)
-    (subterm erased (EnvE nhub rt rs ct acc env) ee) (erased (Ext acc acc2) e) -> (erased (EnvE nhub rt rs ct acc2 env) r))
+    (subterm erased (EnvE nhub rt rs ct acc env) ee) (erased (ExtAcc acc acc2) e) -> (erased (EnvE nhub rt rs ct acc2 env) r))
   (match erased ee _
     ((EENil _ _ _ _ _) (EENil nhub rt rs ct acc2))
     ((EECons _ _ _ _ _ oa da ob db p0a pa p0b pb env1 fa xa ea ea2 fb xb eb eb2 rest)
@@ -121,19 +121,19 @@
     ((NthHere _ _ _) (values (MkEntry nhub rt rs ct acc oa da a pa fa xa ea ea2) (MkEntry nhub rt rs ct acc ob db b pb fb xb eb eb2))))
   (env-nth nhub i1 rt rs ct acc env1 a b rest nt1))
 
-(def-fns _ $ (erased mem-ext : (erased (List (Sub)) x) (erased (List (List (Sub))) o o2) (erased (Elem (List (Sub)) x o) m) (subterm erased (Ext o o2) e)
+(def-fns _ $ (erased elem-ext : (erased (List (Sub)) x) (erased (List (List (Sub))) o o2) (erased (Elem (List (Sub)) x o) m) (subterm erased (ExtAcc o o2) e)
     -> (erased (Elem (List (Sub)) x o2) r))
   (let-match erased e (ExtCons _ o3 q e1) ((ExtRefl _) m))
-  (ElThere _ x q o3 (mem-ext x o o3 m e1)))
+  (ElThere _ x q o3 (elem-ext x o o3 m e1)))
 
 (def-fns _ $ (erased pres-ext : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct) (erased (List (Sub)) p) (erased (List (List (Sub))) o o2)
-    (erased (Pres nhub rt rs ct p o) d) (erased (Ext o o2) e) -> (erased (Pres nhub rt rs ct p o2) r))
+    (erased (Pres nhub rt rs ct p o) d) (erased (ExtAcc o o2) e) -> (erased (Pres nhub rt rs ct p o2) r))
   (match erased d _
-    ((PRed _ _ _ _ _ _ m) (PRed nhub rt rs ct o2 p (mem-ext p o o2 m e)))
+    ((PRed _ _ _ _ _ _ m) (PRed nhub rt rs ct o2 p (elem-ext p o o2 m e)))
     ((PCut _ _ _ _ _ _ c) (PCut nhub rt rs ct o2 p c))
     ((PHub _ _ _ _ acc o1 _ _ hc l cv ix w e1) (PHub nhub rt rs ct acc o1 o2 p hc l cv ix w (ext-trans o1 o o2 e1 e)))
-    ((PSplit _ k _ _ _ o1 o3 _ _ ql qh pl pr w s dl dr e1 e2)
-      (PSplit nhub k rt rs ct o1 o3 o2 p ql qh pl pr w s dl dr (ext-trans o1 o o2 e1 e) (ext-trans o3 o o2 e2 e)))
+    ((PresSplit _ k _ _ _ o1 o3 _ _ ql qh pl pr w s dl dr e1 e2)
+      (PresSplit nhub k rt rs ct o1 o3 o2 p ql qh pl pr w s dl dr (ext-trans o1 o o2 e1 e) (ext-trans o3 o o2 e2 e)))
     ((PSim _ k m _ _ _ o1 o3 _ _ p2 pe0 pe ro lk lp le sb fe de e1 e2)
       (PSim nhub k m rt rs ct o1 o3 o2 p p2 pe0 pe ro lk lp le sb fe de (ext-trans o1 o o2 e1 e) (ext-trans o3 o o2 e2 e)))))
 
@@ -165,7 +165,7 @@
 
 (def-fns _ $ (many sim-rec : (many (List (Sub)) q r) (many (Nat) m) (erased (Length (Sub) q m) lq) (erased (Length (Sub) r m) lr)
     (subterm many (Nat) t) (erased (Lt t (Succ m)) lt) -> (many (Bool) ok) (erased (IfT ok (SimOk q r)) w))
-  (let ((many p2) (erased ro)) (rot-c _ t q))
+  (let ((many p2) (erased ro)) (rot-cut-c _ t q))
   (let ((many c) (erased a)) (part-cmp p2 r))
   (let-match many c (PSub) (else
     (let-match many t (Succ t1) ((Zero) (values (BFalse) (IfF _))))
@@ -218,13 +218,13 @@
   (let ((many q0l) (many q0h) (erased _)) (split-both i j k p0))
   (let ((many pl) (many pr) (many cand) (erased s))
     (match many lo (((List (Sub)) pl) ((List (Sub)) pr) ((List (Sub)) cand) ((Sel ql qh pl pr) s))
-      ((BTrue) (values ql qh q0l (SelL ql qh)))
-      ((BFalse) (values qh ql q0h (SelR ql qh)))))
+      ((BTrue) (values ql qh q0l (SelKeep ql qh)))
+      ((BFalse) (values qh ql q0h (SelSwap ql qh)))))
   (let ((many p0l) (erased fl)) (keep-c nhub k rt rs ct o p ql qh pl pr p0 cand (good-split i j k p0) f w s))
   (values pl pr p0l ql qh w s fl))
 
 (def-fns _ $ (many hub-side : (many (Nat) nhub) (many (List (List (Sub))) rt rs) (erased (List (List (Sub))) ct) (many (List (List (Sub))) acc) (many (List (Sub)) p) (many (List (Hc)) hc)
-    -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (Pres nhub rt rs ct p out)) w) (erased (Ext acc out) e))
+    -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (Pres nhub rt rs ct p out)) w) (erased (ExtAcc acc out) e))
   (let ((many ok1) (erased w1)) (hubcap-cover-c nhub hc))
   (let ((many ok2) (erased w2)) (hc-idx-c nhub hc))
   (let ((many m) (erased l)) (list-count _ p))
@@ -273,8 +273,8 @@
         ((IfY _ x2)
           (let-match erased x2 (MkW3 _ _ _ _ _ _ _ _ dr0 dr1 e2))
           (IfY _ (MkW3 nhub rt rs ct acc out p mp
-            (PSplit nhub k rt rs ct o1 out out p ql qh pl pr w0 s0 dl0 dr0 e2 (ExtRefl out))
-            (PSplit nhub k rt rs ct o1 out out mp mql mqh mpl mpr w1 s1 dl1 dr1 e2 (ExtRefl out))
+            (PresSplit nhub k rt rs ct o1 out out p ql qh pl pr w0 s0 dl0 dr0 e2 (ExtRefl out))
+            (PresSplit nhub k rt rs ct o1 out out mp mql mqh mpl mpr w1 s1 dl1 dr1 e2 (ExtRefl out))
             (ext-trans acc o1 out e1 e2))))
         ((IfF _) (IfF _)))))
     ((SRed)

@@ -52,7 +52,7 @@
 
 (def-fns _ $ (erased reducible-mem : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (subterm erased (AllRed X cfs) a)
     (erased (Elem (Config) cf cfs) m) -> (erased (Reducible X cf) r))
-  (let-match erased a (ARCons _ _ rest rd a1) (absurd (ARNil _) m))
+  (let-match erased a (AllRedCons _ _ rest rd a1) (absurd (AllRedNil _) m))
   (match erased m _
     ((ElHere _ _ _) rd)
     ((ElThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))

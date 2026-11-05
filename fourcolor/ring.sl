@@ -87,10 +87,10 @@
   (let ((erased xc) (erased mx)) (mul x c))
   (MulSucc a1 bc xc abc (mul-assoc a1 b c x xc bc m1 mx o) (mul-distr x b ab c xc bc abc p mx o n)))
 
-(let ((many i0)) (Zero))
-(let ((many i1)) (Succ i0))
-(let ((many i2)) (Succ i1))
-(let ((many i3)) (Succ i2))
+(let ((many nat0)) (Zero))
+(let ((many nat1)) (Succ nat0))
+(let ((many nat2)) (Succ nat1))
+(let ((many nat3)) (Succ nat2))
 (def-fns _
   ((erased unary-1 : -> (erased (Eq (Nat) 1 (Succ (Zero))) e))
     (unary 1)
@@ -310,14 +310,14 @@
   (let-match many (notail $ lex _ l xs1 ys1) (Same _ _) ((Before _ _ _) (Before _ xs ys)) ((After _ _ _) (After _ xs ys)))
   (Same _ xs))
 
-(def-fns _ $ (many after : (erased Type A) (many (Layer A) l) (many A x) (many A y) -> (many (Bool) b))
+(def-fns _ $ (many layer-after : (erased Type A) (many (Layer A) l) (many A x) (many A y) -> (many (Bool) b))
   (let ((many o)) (match many l (((Order A x y) o)) ((Factors) (nat-order x y)) ((Terms) (lex _ (Factors) x y))))
   (match many o _ ((After _ _ _) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ (many insert : (erased Type A) (many (Layer A) l) (many A x) (subterm many (List A) ys) ->
     (many (List A) zs) (erased (Ins A x ys zs) p))
   (let-match many ys (Cons _ y ys1) ((Nil _) (values (Cons _ x ys) (InsH _ x ys))))
-  (let-match many (after _ l x y) (BTrue) ((BFalse) (values (Cons _ x ys) (InsH _ x ys))))
+  (let-match many (layer-after _ l x y) (BTrue) ((BFalse) (values (Cons _ x ys) (InsH _ x ys))))
   (let ((many zs1) (erased p)) (notail $ insert _ l x ys1))
   (values (Cons _ y zs1) (InsT _ x y ys1 zs1 p)))
 

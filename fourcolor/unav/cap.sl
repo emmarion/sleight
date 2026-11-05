@@ -59,13 +59,13 @@
   (values ok cobl (match erased w _ ((IfY _ c) (IfY _ (CLCons drs acc out cobl rs m hi p sz rp db c))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased cap-ext : (erased (List (List (Sub))) drs acc cobl) (erased (Nat) m hi) (subterm erased (CapL drs acc cobl m hi) c)
-    -> (erased (Ext acc cobl) e))
+    -> (erased (ExtAcc acc cobl) e))
   (let-match erased c (CLCons _ _ out _ rs _ _ p _ _ db rest) ((CLNil _ _ _) (ExtRefl acc)))
   (ext-trans acc out cobl (db1-ext p rs 5 acc out db) (cap-ext drs out cobl (Succ m) hi rest)))
 
 (def-fns _ $ (erased cap-look : (erased (List (List (Sub))) drs acc cobl) (erased (Nat) a m hi) (subterm erased (CapL drs acc cobl m hi) c)
     (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up) -> (erased (List (List (Sub))) rs acc1 out) (erased (List (Sub)) p) (erased (OfSize a drs rs) sz)
-    (erased (Repeat (Sub) a sub59 p) rp) (erased (Db1 p rs 5 acc1 out) db) (erased (Ext out cobl) e))
+    (erased (Repeat (Sub) a sub59 p) rp) (erased (Db1 p rs 5 acc1 out) db) (erased (ExtAcc out cobl) e))
   (let-match erased c (CLCons _ _ out _ rs _ _ p sz rp db rest) (absurd (CLNil _ _ _) (lt-asym a m up lo)))
   (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
     ((Equal _ _ _) (values rs acc out p sz rp db (cap-ext drs out cobl (Succ m) hi rest))))
@@ -106,7 +106,7 @@
       (let-match erased (db1-sound os p rs 5 c acc1 out (root-exact d z a e n f ks os p g ob rp) db k) (OrR _ _ hit)
         ((OrL _ _ l) (OrL _ _ l)))
       (let ((erased q) (erased m) (erased xq)) (hit-mem os out hit))
-      (OrR _ _ (MkMapHit d z e f ks q cobl lz (mem-ext q out cobl m ex) (MkExactAt e f ks z a os q pa ob xq))))))
+      (OrR _ _ (MkMapHit d z e f ks q cobl lz (elem-ext q out cobl m ex) (MkExactAt e f ks z a os q pa ob xq))))))
 
 (def-fns _ $ (erased cap-face : (erased (Nat) d x k sp) (erased (List (Nat)) e n f ks ids cs cse) (erased (List (List (Sub))) drs acc cobl)
     (erased (Geo d e n f ks) g) (erased (Iota d ids) io) (erased (DsList e n f ks drs ids cs) dl) (erased (Respects cs e cse) rc) (erased (Small drs) sm)

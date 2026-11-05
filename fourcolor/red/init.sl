@@ -132,8 +132,8 @@
 
 (def-adts $ (GPrev : ((Nat) n) ((Nat) d) -> Type)
   enum
-  (many PNo : (erased (Nat) n) -> (GPrev n (Zero)))
-  (many PYes : (erased (Nat) n d) (many (GEnt n d) e) -> (GPrev n (Succ d))))
+  (many GPrevNo : (erased (Nat) n) -> (GPrev n (Zero)))
+  (many GPrevYes : (erased (Nat) n d) (many (GEnt n d) e) -> (GPrev n (Succ d))))
 
 (def-adts $ (GPopCov : ((Nat) n) ((Nat) d) ((Bool) b) ((Gtree) t2) ((Gtree) t3) -> Type)
   enum
@@ -216,8 +216,8 @@
   (let ((many (Gtree) a2) (many (Gtree) b2) (erased (GPopCov n d (BTrue) a2 b2) qa) (erased (GPopCov n d (BFalse) b2 a2) qb) (erased (GShp n a2) sa2)
       (erased (GShp n b2) sb2))
     (match many prev _
-      ((PNo _) (values (GEmpty) (GEmpty) (GPCZ n (BTrue) (GEmpty) (GEmpty)) (GPCZ n (BFalse) (GEmpty) (GEmpty)) (GsE n) (GsE n)))
-      ((PYes _ d1 pe)
+      ((GPrevNo _) (values (GEmpty) (GEmpty) (GPCZ n (BTrue) (GEmpty) (GEmpty)) (GPCZ n (BFalse) (GEmpty) (GEmpty)) (GsE n) (GsE n)))
+      ((GPrevYes _ d1 pe)
         (let-match many pe (MkGEnt _ _ a b pa pb sa sb _))
         (values a b (GPCS n d1 (BTrue) (BFalse) a b (NotT) pa pb) (GPCS n d1 (BFalse) (BTrue) b a (NotF) pb pa) sa sb))))
   (MkGEnt (Succ n) d (GNode a0 b1 a2 b2) (GNode b0 a1 b2 a2)
@@ -230,12 +230,12 @@
       (GRCons (Succ n) d (mk-ent n d np (gent-vac n (Succ d) (lt-weaken (Succ n) d l)) (gent-vac n d l) prev)
         (GREnd (Succ n) (Succ d) (LtS (Succ n) d l))))
     ((GRCons _ _ e rest)
-      (GRCons (Succ n) d (mk-ent n d np (row-head n (Succ d) rest) e prev) (notail $ gstep n (Succ d) np (PYes n d e) rest)))))
+      (GRCons (Succ n) d (mk-ent n d np (row-head n (Succ d) rest) e prev) (notail $ gstep n (Succ d) np (GPrevYes n d e) rest)))))
 
 (def-fns _ $ (many grow-to : (subterm many (Nat) k) -> (many (GRow (Succ k) (Zero)) r))
   (match many k _
     ((Zero) (grow1))
-    ((Succ k1) (gstep (Succ k1) (Zero) (LtZ k1) (PNo (Succ k1)) (notail $ grow-to k1)))))
+    ((Succ k1) (gstep (Succ k1) (Zero) (LtZ k1) (GPrevNo (Succ k1)) (notail $ grow-to k1)))))
 
 (def-fns _ $ (many gtree-full : (many (Nat) h) -> (many (Gtree) gtu) (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (GShp (Succ h) gtu) gsh)
     (erased (GPres gtu (BTrue)) ne))

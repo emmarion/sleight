@@ -50,12 +50,15 @@ language behind them may be wrong. Numbers are not reused.
    of two or three lines.
 
 5. **Names collide across the ~140 files of one unit.** All files share
-   one namespace, so a later file's `Perm`, `Trace` or `Proper` hides an
-   earlier one for every file after it. The proof works around this with:
-   - renames: `hypperm.sl`'s `HPerm`/`HMkPerm`, `cfmap.sl`'s `CRPath`,
-     `snip.sl`'s `SDPath` and its constructors, `hypsub.sl`'s
-     `hsplit-cover`, `cpcomp.sl`'s `StNil`/`StCons`, `ring.sl`'s `Ins` and
-     `PMulNil`/`PMulCons`, and `unav/pwalk.sl`'s `InCut`;
+   one namespace, so a later file's `Perm`, `Trace` or `Proper` would hide
+   an earlier one for every file after it. The proof works around this with:
+   - renames, so that no name of the unit hides another (the shadowing
+     warning, WARNINGS.md 1, reports one that does): for example
+     `hypperm.sl`'s `HPerm`/`HMkPerm`, `cfmap.sl`'s `CRPath` and `RotBy`,
+     `snip.sl`'s `SDPath` and its constructors, `coloring.sl`'s
+     `GraphProper`, `ringtrace.sl`'s `RTrace`, `ring.sl`'s `Ins`,
+     `PMulNil`/`PMulCons` and `nat0` to `nat3`, and `unav/pwalk.sl`'s
+     `InCut`;
    - load-order constraints: `contract2.sl` must load before the `unav/`
      files; `paint.sl` and `fcmany.sl` must load before `coloring.sl`.
 
@@ -125,7 +128,7 @@ language behind them may be wrong. Numbers are not reused.
     hand-written OCaml prototype; rebuilding trees each iteration
     appeared to spend much of the time in garbage collection.
 
-12. **Arrays for lookups.** `embed4.sl`'s `Tab` holds a dart permutation
+12. **Arrays for lookups.** `embed4.sl`'s `NatTab` holds a dart permutation
     as an `Array (Copy Nat)`, for constant-time lookups in place of `Nth`
     walks along lists.
 

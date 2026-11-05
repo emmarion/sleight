@@ -24,10 +24,10 @@
   enum
   (many CmNil : -> (Cpmap (Nil (Step)) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
       (Cons (Nat) (Zero) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))))
-  (many CmR : (erased (Nat) k d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c) (erased (Rot (Nat) k r r2) rt)
+  (many CmR : (erased (Nat) k d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c) (erased (RotBy (Nat) k r r2) rt)
       -> (Cpmap (Cons (Step) (SR k) cp) d e f r2))
   (many CmRr : (erased (Nat) m d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r2) (erased (Cpmap cp d e f r) c)
-      (erased (Length (Nat) r (Succ m)) l) (erased (Rot (Nat) m r r2) rt) -> (Cpmap (Cons (Step) (SRr) cp) d e f r2))
+      (erased (Length (Nat) r (Succ m)) l) (erased (RotBy (Nat) m r r2) rt) -> (Cpmap (Cons (Step) (SRr) cp) d e f r2))
   (many CmU : (erased (Nat) d) (erased (List (Step)) cp) (erased (List (Nat)) e f r e2 f2 r2) (erased (Cpmap cp d e f r) c)
       (erased (EcpU d e f r e2 f2 r2) u) -> (Cpmap (Cons (Step) (SU) cp) (Succ (Succ d)) e2 f2 r2))
   (many CmY : (erased (Nat) d) (erased (List (Step)) cp) (erased (List (Nat)) e f r e1 f1 r1 e2 f2 r2) (erased (Cpmap cp d e f r) c)
@@ -38,7 +38,7 @@
       (erased (EcpN (Succ (Succ (Succ (Succ d)))) e2 f2 r2 e3 f3 r3) nn2)
       -> (Cpmap (Cons (Step) (SH) cp) (Succ (Succ (Succ (Succ (Succ (Succ d)))))) e3 f3 r3))
   (many CmK : (erased (Nat) m d) (erased (List (Step)) cp) (erased (List (Nat)) e f r r1 e2 f2 r2 r3) (erased (Cpmap cp d e f r) c)
-      (erased (Length (Nat) r (Succ m)) l) (erased (Rot (Nat) m r r1) rt) (erased (EcpN d e f r1 e2 f2 r2) nn) (erased (Rot (Nat) (Succ (Zero)) r2 r3) rt2)
+      (erased (Length (Nat) r (Succ m)) l) (erased (RotBy (Nat) m r r1) rt) (erased (EcpN d e f r1 e2 f2 r2) nn) (erased (RotBy (Nat) (Succ (Zero)) r2 r3) rt2)
       -> (Cpmap (Cons (Step) (SK) cp) (Succ (Succ d)) e2 f2 r3)))
 
 (def-fns _ $ (erased cpmap-map : (erased (List (Step)) cp) (erased (Nat) d) (erased (List (Nat)) e f r) (subterm erased (Cpmap cp d e f r) c)
@@ -261,6 +261,6 @@
 
 (let ((erased CRPNil)) RPNil)
 (let ((erased CRPCons)) RPCons)
-(let ((erased crpath-last)) rpath-last)
+(let ((erased crpath-last)) crpath-end)
 (let ((erased CQuasiCubic)) QuasiCubic)
 (let ((erased CMkQuasiCubic)) MkQuasiCubic)

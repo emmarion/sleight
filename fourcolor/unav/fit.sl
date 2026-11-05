@@ -5,9 +5,9 @@
 (let-match erased (unary-8-7) (Refl _ _))
 (let-match erased (unary-9-8) (Refl _ _))
 
-(def-adts $ (Both : (Type P) (Type Q) -> Type)
+(def-adts $ (PBoth : (Type P) (Type Q) -> Type)
   enum
-  (many MkBoth : (erased Type P Q) (erased P p) (erased Q q) -> (Both P Q)))
+  (many MkPBoth : (erased Type P Q) (erased P p) (erased Q q) -> (PBoth P Q)))
 
 (def-adts $ (Clamp : ((Nat) a m) -> Type)
   enum
@@ -34,14 +34,14 @@
   (many DisHi : (erased (Nat) a b c d) (erased (Lt d a) u) -> (RgDis (MkRg a b) (MkRg c d))))
 
 ; z holds every arity that both r and q hold.
-(def-adts $ (Weak : ((Rg) r q z) -> Type)
+(def-adts $ (WeakRg : ((Rg) r q z) -> Type)
   enum
-  (many WkL : (erased (Rg) r q) -> (Weak r q r))
-  (many WkR : (erased (Rg) r q) -> (Weak r q q))
+  (many WkL : (erased (Rg) r q) -> (WeakRg r q r))
+  (many WkR : (erased (Rg) r q) -> (WeakRg r q q))
   (many WkM : (erased (Nat) a b c d e g) (erased (Or (Eq (Nat) e a) (Eq (Nat) e c)) se) (erased (Or (Eq (Nat) g b) (Eq (Nat) g d)) sg)
-      -> (Weak (MkRg a b) (MkRg c d) (MkRg e g))))
+      -> (WeakRg (MkRg a b) (MkRg c d) (MkRg e g))))
 
-(def-adts $ (Ans : ((Rel) c) (Type P) (Type N) -> Type)
+(def-adts $ (Ans : ((PartRel) c) (Type P) (Type N) -> Type)
   enum
   (many AnsSub : (erased Type P N) (erased P p) -> (Ans (PSub) P N))
   (many AnsDis : (erased Type P N) (erased N n) -> (Ans (PDis) P N))
@@ -86,7 +86,7 @@
     ((DisLo _ _ c2 d2 l2) (OutLo a m c2 d2 c (lt-le-trans m (Succ hi) c2 u (LtS hi c2 l2))))
     ((DisHi _ _ c2 d2 u2) (OutHi a m c2 d2 c (lt-le-trans d2 lo m u2 l)))))
 
-(def-fns _ $ (erased rg-weak : (erased (Nat) x) (erased (Rg) r q z) (erased (InRg x r) p) (erased (InRg x q) p2) (erased (Weak r q z) w)
+(def-fns _ $ (erased rg-weak : (erased (Nat) x) (erased (Rg) r q z) (erased (InRg x r) p) (erased (InRg x q) p2) (erased (WeakRg r q z) w)
     -> (erased (InRg x z) t))
   (let-match erased w (WkM _ _ _ _ e g se sg) ((WkL _ _) p) ((WkR _ _) p2))
   (let-match erased p (MkInRg _ m _ _ cl la ua))
@@ -96,21 +96,21 @@
     (match erased se _ ((OrL _ _ ea) (let-match erased ea (Refl _ _)) la) ((OrR _ _ ec) (let-match erased ec (Refl _ _)) lc))
     (match erased sg _ ((OrL _ _ eb) (let-match erased eb (Refl _ _)) ua) ((OrR _ _ ed) (let-match erased ed (Refl _ _)) uc))))
 
-(def-fns _ $ (many cmp-apart : (many (Nat) a b c d) -> (many (Rel) k) (erased (Ans k (RgSub (MkRg a b) (MkRg c d)) (RgDis (MkRg a b) (MkRg c d))) w))
+(def-fns _ $ (many cmp-apart : (many (Nat) a b c d) -> (many (PartRel) k) (erased (Ans k (RgSub (MkRg a b) (MkRg c d)) (RgDis (MkRg a b) (MkRg c d))) w))
   (match many (nat-cmp b c) _
     ((CLt _ _ _ _ l) (values (PDis) (AnsDis _ _ (DisLo a b c d l))))
     (else (match many (nat-cmp d a) _
       ((CLt _ _ _ _ u) (values (PDis) (AnsDis _ _ (DisHi a b c d u))))
       (else (values (PStr) (AnsStr _ _)))))))
 
-(def-fns _ $ (many rg-cmp : (many (Rg) r q) -> (many (Rel) k) (erased (Ans k (RgSub r q) (RgDis r q)) w))
+(def-fns _ $ (many rg-cmp : (many (Rg) r q) -> (many (PartRel) k) (erased (Ans k (RgSub r q) (RgDis r q)) w))
   (let-match many r (MkRg a b))
   (let-match many q (MkRg c d))
   (let-match many (le-dec c a) (LeY _ _ l) (else (cmp-apart a b c d)))
   (let-match many (le-dec b d) (LeY _ _ u) (else (cmp-apart a b c d)))
   (values (PSub) (AnsSub _ _ (MkRgSub a b c d l u))))
 
-(def-fns _ $ (many rg-meet : (many (Rg) r q) -> (many (Rg) m) (erased (Weak r q m) w))
+(def-fns _ $ (many rg-meet : (many (Rg) r q) -> (many (Rg) m) (erased (WeakRg r q m) w))
   (let-match many r (MkRg a b))
   (let-match many q (MkRg c d))
   (let ((many lo) (erased se))
@@ -119,14 +119,14 @@
     (match many (le-dec b d) (((Nat) hi) ((Or (Eq (Nat) hi b) (Eq (Nat) hi d)) sg)) ((LeY _ _ _) (values b (OrL _ _ (Refl _ b)))) ((LeN _ _ _) (values d (OrR _ _ (Refl _ d))))))
   (values (MkRg lo hi) (WkM a b c d lo hi se sg)))
 
-(def-fns _ $ (many rel-meet : (erased Type Pa Na Pb Nb) (many (Rel) a) (erased (Ans a Pa Na) x) (many (Rel) b) (erased (Ans b Pb Nb) y)
-    -> (many (Rel) k) (erased (Ans k (Both Pa Pb) (Or Na Nb)) z))
+(def-fns _ $ (many rel-meet : (erased Type Pa Na Pb Nb) (many (PartRel) a) (erased (Ans a Pa Na) x) (many (PartRel) b) (erased (Ans b Pb Nb) y)
+    -> (many (PartRel) k) (erased (Ans k (PBoth Pa Pb) (Or Na Nb)) z))
   (match many a _
     ((PDis) (let-match erased x (AnsDis _ _ n1)) (values (PDis) (AnsDis _ _ (OrL _ _ n1))))
     ((PSub)
       (let-match erased x (AnsSub _ _ p1))
       (match many b _
-        ((PSub) (let-match erased y (AnsSub _ _ p2)) (values (PSub) (AnsSub _ _ (MkBoth _ _ p1 p2))))
+        ((PSub) (let-match erased y (AnsSub _ _ p2)) (values (PSub) (AnsSub _ _ (MkPBoth _ _ p1 p2))))
         ((PDis) (let-match erased y (AnsDis _ _ n2)) (values (PDis) (AnsDis _ _ (OrR _ _ n2))))
         ((PStr) (values (PStr) (AnsStr _ _)))))
     ((PStr)
@@ -150,27 +150,27 @@
       (erased (List B) ys) (erased (Ex A B R xs ys) rest) -> (Ex A B R (Cons A x xs) (Cons B y ys))))
 
 ; Some y is related by R to the x at its position, or ys is longer than xs.
-(def-adts $ (Bad : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
+(def-adts $ (BadAt : (Type A) (Type B) ((TyCtor (A x) (B y) -> Type) R) ((List A) xs) ((List B) ys) -> Type)
   enum
   (many BadHere : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
-      (erased (List B) ys) (erased (R x y) p) -> (Bad A B R (Cons A x xs) (Cons B y ys)))
+      (erased (List B) ys) (erased (R x y) p) -> (BadAt A B R (Cons A x xs) (Cons B y ys)))
   (many BadShort : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased B y) (erased (List B) ys)
-      -> (Bad A B R (Nil A) (Cons B y ys)))
+      -> (BadAt A B R (Nil A) (Cons B y ys)))
   (many BadThere : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased A x) (erased B y) (erased (List A) xs)
-      (erased (List B) ys) (erased (Bad A B R xs ys) rest) -> (Bad A B R (Cons A x xs) (Cons B y ys))))
+      (erased (List B) ys) (erased (BadAt A B R xs ys) rest) -> (BadAt A B R (Cons A x xs) (Cons B y ys))))
 
 (def-fns _ $ (erased ex-bad : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R) (erased (List A) xs) (erased (List B) ys)
-    (subterm erased (Ex A B R xs ys) e) -> (erased (Bad A B R xs ys) b))
+    (subterm erased (Ex A B R xs ys) e) -> (erased (BadAt A B R xs ys) b))
   (match erased e _
     ((ExHere _ _ _ x y xs1 ys1 p) (BadHere A B R x y xs1 ys1 p))
     ((ExThere _ _ _ x y xs1 ys1 e1) (BadThere A B R x y xs1 ys1 (ex-bad A B R xs1 ys1 e1)))))
 
 (def-fns _ $ (erased ans-cons : (erased Type A B) (erased (TyCtor (A x) (B y) -> Type) R S) (erased A x) (erased B y)
-    (erased (List A) xs) (erased (List B) ys) (erased (Rel) k)
-    (erased (Ans k (Both (R x y) (Pw A B R xs ys)) (Or (S x y) (Ex A B S xs ys))) w)
+    (erased (List A) xs) (erased (List B) ys) (erased (PartRel) k)
+    (erased (Ans k (PBoth (R x y) (Pw A B R xs ys)) (Or (S x y) (Ex A B S xs ys))) w)
     -> (erased (Ans k (Pw A B R (Cons A x xs) (Cons B y ys)) (Ex A B S (Cons A x xs) (Cons B y ys))) r))
   (match erased w _
-    ((AnsSub _ _ b) (let-match erased b (MkBoth _ _ p rest)) (AnsSub _ _ (PwCons A B R x y xs ys p rest)))
+    ((AnsSub _ _ b) (let-match erased b (MkPBoth _ _ p rest)) (AnsSub _ _ (PwCons A B R x y xs ys p rest)))
     ((AnsDis _ _ o)
       (match erased o _
         ((OrL _ _ d) (AnsDis _ _ (ExHere A B S x y xs ys d)))
@@ -193,12 +193,12 @@
   (many OSHat : (erased (Nat) a h) (erased (List (Nat)) as) (erased (Rg) s hr) (erased (List (Rg)) fs) (erased (OutRg h hr) p)
       -> (OutSec (MkSec a h as) (MkSub s hr fs)))
   (many OSFan : (erased (Nat) a h) (erased (List (Nat)) as) (erased (Rg) s hr) (erased (List (Rg)) fs)
-      (erased (Bad (Nat) (Rg) OutRg as fs) p) -> (OutSec (MkSec a h as) (MkSub s hr fs))))
+      (erased (BadAt (Nat) (Rg) OutRg as fs) p) -> (OutSec (MkSec a h as) (MkSub s hr fs))))
 
 (def-adts $ (SubSub : ((Sub) x y) -> Type)
   enum
   (many MkSubSub : (erased (Rg) s h s2 h2) (erased (List (Rg)) fp fq)
-      (erased (Both (RgSub s s2) (Both (RgSub h h2) (Pw (Rg) (Rg) RgSub fp fq))) p) -> (SubSub (MkSub s h fp) (MkSub s2 h2 fq))))
+      (erased (PBoth (RgSub s s2) (PBoth (RgSub h h2) (Pw (Rg) (Rg) RgSub fp fq))) p) -> (SubSub (MkSub s h fp) (MkSub s2 h2 fq))))
 
 (def-adts $ (SubDis : ((Sub) x y) -> Type)
   enum
@@ -206,7 +206,7 @@
       (erased (Or (RgDis s s2) (Or (RgDis h h2) (Ex (Rg) (Rg) RgDis fp fq))) p) -> (SubDis (MkSub s h fp) (MkSub s2 h2 fq))))
 
 (def-fns _ $ (many fans-cmp : (subterm many (List (Rg)) fp) (many (List (Rg)) fq)
-    -> (many (Rel) k) (erased (Ans k (Pw (Rg) (Rg) RgSub fp fq) (Ex (Rg) (Rg) RgDis fp fq)) w))
+    -> (many (PartRel) k) (erased (Ans k (Pw (Rg) (Rg) RgSub fp fq) (Ex (Rg) (Rg) RgDis fp fq)) w))
   (let-match many fq (Cons _ g gs) ((Nil _) (values (PSub) (AnsSub _ _ (PwNil _ _ RgSub fp)))))
   (let-match many fp (Cons _ f fs) ((Nil _) (values (PStr) (AnsStr _ _))))
   (let ((many k1) (erased w1)) (rg-cmp f g))
@@ -214,7 +214,7 @@
   (let ((many k) (erased w)) (rel-meet _ _ _ _ k1 w1 k2 w2))
   (values k (ans-cons _ _ RgSub RgDis f g fs gs k w)))
 
-(def-fns _ $ (many sub-cmp : (many (Sub) x y) -> (many (Rel) k) (erased (Ans k (SubSub x y) (SubDis x y)) w))
+(def-fns _ $ (many sub-cmp : (many (Sub) x y) -> (many (PartRel) k) (erased (Ans k (SubSub x y) (SubDis x y)) w))
   (let-match many x (MkSub s h fp))
   (let-match many y (MkSub s2 h2 fq))
   (let ((many k1) (erased w1)) (rg-cmp s s2))
@@ -228,7 +228,7 @@
     ((AnsStr _ _) (AnsStr _ _)))))
 
 (def-fns _ $ (many part-cmp : (subterm many (List (Sub)) p) (many (List (Sub)) q)
-    -> (many (Rel) k) (erased (Ans k (Pw (Sub) (Sub) SubSub p q) (Ex (Sub) (Sub) SubDis p q)) w))
+    -> (many (PartRel) k) (erased (Ans k (Pw (Sub) (Sub) SubSub p q) (Ex (Sub) (Sub) SubDis p q)) w))
   (let-match many q (Cons _ y q1) ((Nil _) (values (PSub) (AnsSub _ _ (PwNil _ _ SubSub p)))))
   (let-match many p (Cons _ x p1) ((Nil _) (values (PStr) (AnsStr _ _))))
   (let ((many k1) (erased w1)) (sub-cmp x y))
@@ -250,7 +250,7 @@
     ((ExThere _ _ _ _ q _ fq1 d1) (ExThere _ _ OutRg a q as1 fq1 (fans-dis as1 fp1 fq1 f1 d1)))))
 
 (def-fns _ $ (erased fans-bad : (erased (List (Nat)) as) (erased (List (Rg)) fs) (subterm erased (Pw (Nat) (Rg) InRg as fs) f)
-    (erased (Bad (Nat) (Rg) OutRg as fs) b) -> (erased (False) r))
+    (erased (BadAt (Nat) (Rg) OutRg as fs) b) -> (erased (False) r))
   (let-match erased f (PwCons _ _ _ a r as1 fs1 pa f1) (absurd (PwNil _ _ _ _) b))
   (match erased b _
     ((BadHere _ _ _ _ _ _ _ o) (in-out a r pa o))
@@ -259,8 +259,8 @@
 (def-fns _ $ (erased sec-sub : (erased (Sec) o) (erased (Sub) x y) (erased (FitSec o x) f) (erased (SubSub x y) s) -> (erased (FitSec o y) r))
   (let-match erased f (MkFitSec a h as sp hp fp p1 p2 p3))
   (let-match erased s (MkSubSub _ _ s2 h2 _ fq b))
-  (let-match erased b (MkBoth _ _ bs b1))
-  (let-match erased b1 (MkBoth _ _ bh bf))
+  (let-match erased b (MkPBoth _ _ bs b1))
+  (let-match erased b1 (MkPBoth _ _ bh bf))
   (MkFitSec a h as s2 h2 fq (rg-sub a sp s2 p1 bs) (rg-sub h hp h2 p2 bh) (fans-sub as fp fq p3 bf)))
 
 (def-fns _ $ (erased sec-dis : (erased (Sec) o) (erased (Sub) x y) (erased (FitSec o x) f) (erased (SubDis x y) s) -> (erased (OutSec o y) r))
@@ -284,14 +284,14 @@
   (PwCons _ _ FitSec o y os1 q1 (sec-sub o x y fo sx) (fit-sub os1 p1 q1 f1 s1)))
 
 (def-fns _ $ (erased fit-dis : (erased (List (Sec)) os) (erased (List (Sub)) p q) (subterm erased (Pw (Sec) (Sub) FitSec os p) f)
-    (erased (Ex (Sub) (Sub) SubDis p q) d) -> (erased (Bad (Sec) (Sub) OutSec os q) r))
+    (erased (Ex (Sub) (Sub) SubDis p q) d) -> (erased (BadAt (Sec) (Sub) OutSec os q) r))
   (let-match erased f (PwCons _ _ _ o x os1 p1 fo f1) (absurd (PwNil _ _ _ _) d))
   (match erased d _
     ((ExHere _ _ _ _ y _ q1 dx) (BadHere _ _ OutSec o y os1 q1 (sec-dis o x y fo dx)))
     ((ExThere _ _ _ _ y _ q1 d1) (BadThere _ _ OutSec o y os1 q1 (fit-dis os1 p1 q1 f1 d1)))))
 
 (def-fns _ $ (erased fit-bad : (erased (List (Sec)) os) (erased (List (Sub)) p) (subterm erased (Pw (Sec) (Sub) FitSec os p) f)
-    (erased (Bad (Sec) (Sub) OutSec os p) b) -> (erased (False) r))
+    (erased (BadAt (Sec) (Sub) OutSec os p) b) -> (erased (False) r))
   (let-match erased f (PwCons _ _ _ o x os1 p1 fo f1) (absurd (PwNil _ _ _ _) b))
   (match erased b _
     ((BadHere _ _ _ _ _ _ _ q) (sec-out o x fo q))
@@ -301,12 +301,12 @@
   enum
   (many FMNilL : (erased (List (Rg)) fq) -> (FansMeet (Nil (Rg)) fq fq))
   (many FMNilR : (erased (List (Rg)) fp) -> (FansMeet fp (Nil (Rg)) fp))
-  (many FMCons : (erased (Rg) f g h) (erased (List (Rg)) fs gs hs) (erased (Weak f g h) w) (erased (FansMeet fs gs hs) rest)
+  (many FMCons : (erased (Rg) f g h) (erased (List (Rg)) fs gs hs) (erased (WeakRg f g h) w) (erased (FansMeet fs gs hs) rest)
       -> (FansMeet (Cons (Rg) f fs) (Cons (Rg) g gs) (Cons (Rg) h hs))))
 
 (def-adts $ (SubMeet : ((Sub) x y z) -> Type)
   enum
-  (many MkSubMeet : (erased (Rg) s h s2 h2 s3 h3) (erased (List (Rg)) fp fq fm) (erased (Weak s s2 s3) ws) (erased (Weak h h2 h3) wh)
+  (many MkSubMeet : (erased (Rg) s h s2 h2 s3 h3) (erased (List (Rg)) fp fq fm) (erased (WeakRg s s2 s3) ws) (erased (WeakRg h h2 h3) wh)
       (erased (FansMeet fp fq fm) wf) -> (SubMeet (MkSub s h fp) (MkSub s2 h2 fq) (MkSub s3 h3 fm))))
 
 (def-adts $ (PartMeet : ((List (Sub)) p q m) -> Type)
@@ -330,8 +330,8 @@
   (let ((many fpe) (many fqe)) (values (nilp _ fp) (nilp _ fq)))
   (let-match many (and (negb fpe) (negb fqe) (negb (nat-eqb (size _ fp) (size _ fq)))) (BFalse) ((BTrue) (values p (PMKeep p q))))
   (let ((many s3) (erased ws))
-    (match many fpe (((Rg) s3) ((Weak s s2 s3) ws))
-      ((BTrue) (match many fqe (((Rg) s3) ((Weak s s2 s3) ws)) ((BTrue) (rg-meet s s2)) ((BFalse) (values s2 (WkR s s2)))))
+    (match many fpe (((Rg) s3) ((WeakRg s s2 s3) ws))
+      ((BTrue) (match many fqe (((Rg) s3) ((WeakRg s s2 s3) ws)) ((BTrue) (rg-meet s s2)) ((BFalse) (values s2 (WkR s s2)))))
       ((BFalse) (values s (WkL s s2)))))
   (let ((many h3) (erased wh)) (rg-meet h h2))
   (let ((many fm) (erased wf)) (fans-meet fp fq))
@@ -373,12 +373,12 @@
   (many MkSecOk : (erased (Nat) a h n) (erased (List (Nat)) as) (erased (Lt 4 a) pa) (erased (Lt 4 h) ph) (erased (All (Nat) Pent as) pv)
       (erased (Length (Nat) as n) l) (erased (Add 5 n a) e) -> (SecOk (MkSec a h as))))
 
-(def-adts $ (Monus : ((Nat) a b r) -> Type)
+(def-adts $ (MonusAdd : ((Nat) a b r) -> Type)
   enum
-  (many MoAdd : (erased (Nat) a b r) (erased (Add b r a) p) -> (Monus a b r))
-  (many MoNeg : (erased (Nat) a b) (erased (Lt a b) p) -> (Monus a b (Zero))))
+  (many MoAdd : (erased (Nat) a b r) (erased (Add b r a) p) -> (MonusAdd a b r))
+  (many MoNeg : (erased (Nat) a b) (erased (Lt a b) p) -> (MonusAdd a b (Zero))))
 
-(def-fns _ $ (many monus-c : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) r) (erased (Monus a b r) w))
+(def-fns _ $ (many monus-c : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) r) (erased (MonusAdd a b r) w))
   (let-match many b (Succ b1) ((Zero) (values a (MoAdd a (Zero) a (AddZero a)))))
   (let-match many a (Succ a1) ((Zero) (values (Zero) (MoNeg (Zero) b (LtZ b1)))))
   (let ((many r) (erased w1)) (tail $ monus-c a1 b1))
@@ -420,8 +420,8 @@
 
 (def-adts $ (RgSplit : ((Nat) k) ((Rg) r zl zh) -> Type)
   enum
-  (many MkRgSplit : (erased (Nat) k) (erased (Rg) r lo hi zl zh) (erased (PSplit k lo hi) s) (erased (Weak lo r zl) wl)
-      (erased (Weak hi r zh) wh) -> (RgSplit k r zl zh)))
+  (many MkRgSplit : (erased (Nat) k) (erased (Rg) r lo hi zl zh) (erased (PSplit k lo hi) s) (erased (WeakRg lo r zl) wl)
+      (erased (WeakRg hi r zh) wh) -> (RgSplit k r zl zh)))
 
 (def-fns _ $ (many rg-split : (many (Nat) k) (many (Rg) r) -> (many (Rg) zl zh) (erased (RgSplit k r zl zh) w))
   (let ((many lo) (many hi) (erased s)) (prange k))
@@ -447,7 +447,7 @@
 (def-adts $ (Expand : ((Sub) x) ((List (Rg)) gs) -> Type)
   enum
   (many ExpKeep : (erased (Rg) s h) (erased (List (Rg)) fs) -> (Expand (MkSub s h fs) fs))
-  (many ExpFill : (erased (Nat) b n) (erased (Rg) h) (erased (List (Rg)) gs) (erased (Lt b 9) u) (erased (Monus b 5 n) mo)
+  (many ExpFill : (erased (Nat) b n) (erased (Rg) h) (erased (List (Rg)) gs) (erased (Lt b 9) u) (erased (MonusAdd b 5 n) mo)
       (erased (Repeat (Rg) n (MkRg 5 9) gs) rp) -> (Expand (MkSub (MkRg b b) h (Nil (Rg))) gs)))
 
 (def-fns _ $ (many expand : (many (Sub) x) -> (many (List (Rg)) gs) (erased (Expand x gs) w))

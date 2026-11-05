@@ -1,13 +1,13 @@
 ; A predicate on traces with one parameter x of any type X, as data, so that a parameterised one can be passed.
 (def-adts $ (PredC : -> Type)
   enum
-  (many MkPred : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) et) -> Type) Q) -> (PredC)))
+  (many MkPred : (erased Type X) (erased X x) (erased (TyCtor (X _) ((List (Col)) et) -> Type) Q) -> (PredC)))
 
 (let ((erased Pred)) (PredC))
 
 (def-adts $ (Holds : ((PredC) P) ((List (Col)) et) -> Type)
   enum
-  (many MkHolds : (erased Type X) (erased X x) (erased (TyCtor (X x) ((List (Col)) et) -> Type) Q) (erased (List (Col)) et) (erased (Q x et) h)
+  (many MkHolds : (erased Type X) (erased X x) (erased (TyCtor (X _) ((List (Col)) et) -> Type) Q) (erased (List (Col)) et) (erased (Q x et) h)
       -> (Holds (MkPred X x Q) et)))
 
 ; The completion of the empty chromogram from d open chords and parity b is not balanced.

@@ -78,17 +78,17 @@
 (def-fns _ $ (erased kcc-ring : (erased (List (Step)) cp) (erased (List (Col)) et ct) (erased (Col) e0) (erased (KCC (MkPred (List (Step)) cp CpColR) ct) k)
     (erased (Snoc (Col) et e0 ct) s) (erased (Level) L Y) (erased (CoLv L Y) lv) -> (erased (KCoclo L Y (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r))
   (let-match erased lv (MkCoLv _ M1 M2 _ pb p1 p2 p3))
-  (let ((erased rot)) (kclosed-rot L M1 p1 pb))
+  (let ((erased rot')) (kclosed-rot L M1 p1 pb))
   (let ((erased walk)) (kcc-coclosure M1 M2 p2 (predates-trans (predates-trans (prove-predates KCB COB) pb) p2)))
   (let ((erased q1)) (predates-trans p2 p3))
   (let ((erased q2)) (predates-trans (prove-predates (level-of snoc-inj) COB) (predates-trans pb q1)))
   (def-fns Y $ (erased g : (erased Pred P2) (erased Rel R) (erased (KClosed L P2 R) cl) (erased (Holds P2 (Cons (Col) e0 et)) p) ->
-      (erased (List (Col)) et2) (erased (Holds (MkPred (List (Step)) cp CpCol) et2) q) (erased (Holds P2 et2) p2))
-    (let ((erased ct2) (erased q) (erased p2))
-      (walk (predates p3) (MkPred (List (Step)) cp CpColR) (MkPred (PredC) P2 RotP) (MkRel (RelC) R RotR) (rot (predates q1) P2 R cl) ct k (MkHolds (PredC) P2 RotP ct (MkRotP P2 et ct e0 s p))))
+      (erased (List (Col)) et2) (erased (Holds (MkPred (List (Step)) cp CpCol) et2) q) (erased (Holds P2 et2) _))
+    (let ((erased ct2) (erased q) (erased p2'))
+      (walk (predates p3) (MkPred (List (Step)) cp CpColR) (MkPred (PredC) P2 RotP) (MkRel (RelC) R RotR) (rot' (predates q1) P2 R cl) ct k (MkHolds (PredC) P2 RotP ct (MkRotP P2 et ct e0 s p))))
     (let-match erased q (MkHolds _ _ _ _ hq))
     (let-match erased hq (MkCpColR _ et1 _ e1 s1 c))
-    (let-match erased p2 (MkHolds _ _ _ _ hp))
+    (let-match erased p2' (MkHolds _ _ _ _ hp))
     (let-match erased hp (MkRotP _ et3 _ e3 s3 hp3))
     (let-match erased (snoc-inj (predates q2) (Col) et1 et3 ct2 e1 e3 s1 s3) (Refl _ _))
     (values (Cons _ e1 et1) (MkHolds (List (Step)) cp CpCol (Cons _ e1 et1) c) hp3))
@@ -99,14 +99,14 @@
 (def-adts $ (KHalf : ((List (Step)) cp) ((Ctree) kt) -> Type)
   enum
   (many MkKHalf : (erased (List (Step)) cp) (erased (Ctree) kt)
-      (erased (Fn KHL (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (Trace cs (Cons (Col) e0 et)) tr)
+      (erased (Fn KHL (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (CTrace cs (Cons (Col) e0 et)) tr)
           (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) m)
           (erased (Level) L Y) (erased (CoLv L Y) lv) -> (erased (KCoclo L Y (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r)) f)
       -> (KHalf cp kt)))
 
 (def-fns _ $ (erased kempe-half : (erased (List (Step)) cp) (erased (Nat) h) (erased (Ctree) kt) (erased (KSound (MkPred (List (Step)) cp CpColR) h kt) ks)
     (erased (Cprsize cp (Succ (Succ h))) cs0) -> (erased (KHalf cp kt) r))
-  (def-fns KHL $ (erased f : (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (Trace cs (Cons (Col) e0 et)) tr)
+  (def-fns KHL $ (erased f : (erased (List (Col)) cs et et2) (erased (Col) e0) (erased (Nat) k) (erased (CTrace cs (Cons (Col) e0 et)) tr)
       (erased (Length (Col) (Cons (Col) e0 et) k) l) (erased (Cprsize cp k) c) (erased (ETrace et et2) e) (erased (CtSub kt et2 (Zero)) m)
       (erased (Level) L Y) (erased (CoLv L Y) lv) -> (erased (KCoclo L Y (MkPred (List (Step)) cp CpCol) (Cons (Col) e0 et)) r))
     (let-match erased (cprsize-fn cp k (Succ (Succ h)) c cs0) (Refl _ _))
@@ -141,7 +141,7 @@
 (def-adts $ (CcCol : ((List (Step)) cp) ((List (Nat)) cc) ((List (Col)) et) -> Type)
   enum
   (many MkCcCol : (erased (List (Step)) cp) (erased (List (Nat)) cc) (erased (Nat) d) (erased (List (Nat)) e f r ks rc) (erased (List (Col)) cs et)
-      (erased (Cpmap cp d e f r) c) (erased (CcColoring e f cc ks) col) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (Trace cs et) tr)
+      (erased (Cpmap cp d e f r) c) (erased (CcColoring e f cc ks) col) (erased (Respects ks r rc) rr) (erased (NCols rc cs) nc) (erased (CTrace cs et) tr)
       -> (CcCol cp cc et)))
 
 ; os is the face orbit of x, starting at x.

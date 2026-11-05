@@ -2,11 +2,11 @@
   enum
   (many MkRg : (many (Nat) lo hi) -> (Rg)))
 
-(def-adts $ (Rel : -> Type)
+(def-adts $ (PartRel : -> Type)
   enum
-  (many PDis : -> (Rel))
-  (many PStr : -> (Rel))
-  (many PSub : -> (Rel)))
+  (many PDis : -> (PartRel))
+  (many PStr : -> (PartRel))
+  (many PSub : -> (PartRel)))
 
 (def-adts $ (Sub : -> Type)
   enum
@@ -31,17 +31,17 @@
   (let-match many r (MkRg _ b))
   b)
 
-(def-fns _ $ (many cmp-rg : (many (Rg) r q) -> (many (Rel) c))
+(def-fns _ $ (many cmp-rg : (many (Rg) r q) -> (many (PartRel) c))
   (let-match many r (MkRg a b))
   (let-match many q (MkRg c d))
   (let-match many (and (leb c a) (leb b d)) (BFalse) ((BTrue) (PSub)))
   (bif _ (or (nat-ltb b c) (nat-ltb d a)) (PDis) (PStr)))
 
-(def-fns _ $ (many meet-rel : (many (Rel) a b) -> (many (Rel) c))
+(def-fns _ $ (many meet-rel : (many (PartRel) a b) -> (many (PartRel) c))
   (let-match many a (PStr) ((PDis) a) ((PSub) b))
   (match many b _ ((PSub) a) (else b)))
 
-(def-fns _ $ (many rel-sub : (many (Rel) a) -> (many (Bool) b))
+(def-fns _ $ (many rel-sub : (many (PartRel) a) -> (many (Bool) b))
   (match many a _ ((PSub) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ (many prange-lo : (many (Nat) k) -> (many (Rg) r))
@@ -55,10 +55,10 @@
   (let-match many i (Succ i1) ((Zero) x))
   (tail $ nth-rg i1 rest))
 
-(def-fns _ $ (many pc : (many (Rg) s h) -> (many (Sub) x))
+(def-fns _ $ (many sub-of : (many (Rg) s h) -> (many (Sub) x))
   (MkSub s h (Nil _)))
 
-(def-fns _ $ (many pf : (many (Rg) h) (many (List (Rg)) fs) -> (many (Sub) x))
+(def-fns _ $ (many sub-fans : (many (Rg) h) (many (List (Rg)) fs) -> (many (Sub) x))
   (let ((many n)) (nat-add 5 (size _ fs)))
   (MkSub (MkRg n n) h fs))
 
@@ -78,12 +78,12 @@
 (def-fns _ $ (many mirror-part : (many (List (Sub)) p) -> (many (List (Sub)) r))
   (mirror-rec (get-hat p) (Nil _) p))
 
-(def-fns _ $ (many cmp-fans : (subterm many (List (Rg)) fp) (many (List (Rg)) fq) -> (many (Rel) c))
+(def-fns _ $ (many cmp-fans : (subterm many (List (Rg)) fp) (many (List (Rg)) fq) -> (many (PartRel) c))
   (let-match many fq (Cons _ g gs) ((Nil _) (PSub)))
   (let-match many fp (Cons _ f fs) ((Nil _) (PStr)))
   (meet-rel (cmp-rg f g) (notail $ cmp-fans fs gs)))
 
-(def-fns _ $ (many cmp-part : (subterm many (List (Sub)) p) (many (List (Sub)) q) -> (many (Rel) c))
+(def-fns _ $ (many cmp-part : (subterm many (List (Sub)) p) (many (List (Sub)) q) -> (many (PartRel) c))
   (let-match many q (Cons _ y q1) ((Nil _) (PSub)))
   (let-match many p (Cons _ x p1) ((Nil _) (PStr)))
   (let-match many x (MkSub s h fp))

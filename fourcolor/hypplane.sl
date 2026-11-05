@@ -217,7 +217,7 @@
 
 (def-fns _ $ (erased comps-equiv : (erased (Nat) d k) (erased (List (Bond)) ge gnd gc ge2 gnd2 gc2 ex x) (erased (Classes x d k) cs)
     (erased (Cat ex gc x) cx) (erased (Cat ge gnd gc) cg) (erased (Cat ge2 gnd2 gc2) cg2) (erased (Spans ge2 ge) se) (erased (Spans gnd2 gnd) sn)
-    (erased (Spans gc2 ex) sx) (erased (Spans x ge2) te) (erased (Spans x gnd2) tn) (erased (Below gc2 d) bg) -> (erased (Classes gc2 d k) r))
+    (erased (Spans gc2 ex) sx) (erased (Spans x ge2) te) (erased (Spans x gnd2) tn) (erased (BondsBelow gc2 d) bg) -> (erased (Classes gc2 d k) r))
   (classes-equiv x gc2 d k cs
     (spans-cat gc2 ex gc x cx sx (spans-cat gc2 ge gnd gc cg (spans-lift-l ge2 gnd2 gc2 ge se cg2) (spans-lift-r ge2 gnd2 gc2 gnd sn cg2)))
     (spans-cat x ge2 gnd2 gc2 cg2 te tn) bg))

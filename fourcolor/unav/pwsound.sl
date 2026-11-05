@@ -1,7 +1,7 @@
 (def-fns _ $ (erased map-hit-ext : (erased (Nat) d) (erased (List (Nat)) e f ks) (erased (List (List (Sub))) o o2) (erased (MapHit d e f ks o) h)
-    (erased (Ext o o2) x) -> (erased (MapHit d e f ks o2) r))
+    (erased (ExtAcc o o2) x) -> (erased (MapHit d e f ks o2) r))
   (let-match erased h (MkMapHit _ z _ _ _ q _ lz m ex))
-  (MkMapHit d z e f ks q o2 lz (mem-ext q o o2 m x) ex))
+  (MkMapHit d z e f ks q o2 lz (elem-ext q o o2 m x) ex))
 
 (def-fns _ $ (erased exact-sub-at : (erased (List (Nat)) e f ks) (erased (Nat) y m) (erased (List (Sub)) p q) (erased (ExactAt e f ks y p) x)
     (erased (Pw (Sub) (Sub) SubSub p q) s) (erased (Length (Sub) p m) lp) (erased (Length (Sub) q m) lq) -> (erased (ExactAt e f ks y q) r))
@@ -86,10 +86,10 @@
       -> (PresHit d e n f ks drs ct out)))
 
 (def-fns _ $ (erased preshit-ext : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct o o2) (erased (PresHit d e n f ks drs ct o) h)
-    (erased (Ext o o2) x) -> (erased (PresHit d e n f ks drs ct o2) r))
+    (erased (ExtAcc o o2) x) -> (erased (PresHit d e n f ks drs ct o2) r))
   (match erased h _
     ((PHMap _ _ _ _ _ _ _ _ mh) (PHMap d e n f ks drs ct o2 (map-hit-ext d e f ks o o2 mh x)))
-    ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHPos d z pos neg e n f ks drs ct o2 q lz ds lt ex (mem-ext q o o2 m x)))
+    ((PHPos _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHPos d z pos neg e n f ks drs ct o2 q lz ds lt ex (elem-ext q o o2 m x)))
     ((PHCut _ z pos neg _ _ _ _ _ _ _ q lz ds lt ex m) (PHCut d z pos neg e n f ks drs ct o2 q lz ds lt ex m))))
 
 (def-fns _
@@ -104,16 +104,16 @@
         (PHCut d y pos neg e n f ks drs ct out h ly ds lt (exact-sub-at e f ks y m p h x sb lp lh) mh))
       ((PHub _ _ _ _ acc o _ _ hc l cv ix w e1)
         (PHMap d e n f ks drs ct out (map-hit-ext d e f ks o out (hub-sound d y nhub pos neg e n f ks ws drs rt rs acc o p hc g ly ds lt x l sz iw ta cv ix w) e1)))
-      ((PSplit _ k _ _ _ o1 o2 _ _ ql qh _ _ w s dl dr e1 e2)
+      ((PresSplit _ k _ _ _ o1 o2 _ _ ql qh _ _ w s dl dr e1 e2)
         (match erased (exact-split-at d y k e n f ks p ql qh g x w) _
           ((OrL _ _ xl)
             (match erased s _
-              ((SelL _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 ql ly ds lt xl dl) e1))
-              ((SelR _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 ql ly ds lt xl dr) e2))))
+              ((SelKeep _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 ql ly ds lt xl dl) e1))
+              ((SelSwap _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 ql ly ds lt xl dr) e2))))
           ((OrR _ _ xh)
             (match erased s _
-              ((SelL _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 qh ly ds lt xh dr) e2))
-              ((SelR _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 qh ly ds lt xh dl) e1))))))
+              ((SelKeep _ _) (preshit-ext d e n f ks drs ct o2 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o2 qh ly ds lt xh dr) e2))
+              ((SelSwap _ _) (preshit-ext d e n f ks drs ct o1 out (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o1 qh ly ds lt xh dl) e1))))))
       ((PSim _ k m _ _ _ o1 o2 _ _ p2 pe0 pe ro lk lp le sb fe de e1 e2)
         (let ((erased a) (erased pa) (erased la)) (exact-len e f ks y p x))
         (let-match erased (length-fn _ p a m la lp) (Refl _ _))
@@ -139,17 +139,17 @@
         (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o q0 q ly ds lt x0 f1) (OrR _ _ xq)
           ((OrL _ _ hh) (OrL _ _ hh)))
         (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
-          ((OrL _ _ xl) (match erased s _ ((SelL _ _) (OrR _ _ xl)) (absurd (SelR _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
-          ((OrR _ _ xh) (match erased s _ (absurd (SelL _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelR _ _) (OrR _ _ xh))))))
+          ((OrL _ _ xl) (match erased s _ ((SelKeep _ _) (OrR _ _ xl)) (absurd (SelSwap _ _) (exact-dis-at e f ks y p0 ql x xl dj))))
+          ((OrR _ _ xh) (match erased s _ (absurd (SelKeep _ _) (exact-dis-at e f ks y p0 qh x xh dj)) ((SelSwap _ _) (OrR _ _ xh))))))
       ((FRight _ k _ _ _ _ ol _ q ql qh _ _ f1 w s dl e1)
         (let-match erased (forced-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg o p0 q ly ds lt x f1) (OrR _ _ xq)
           ((OrL _ _ hh) (OrL _ _ hh)))
         (match erased (exact-split-at d y k e n f ks q ql qh g xq w) _
           ((OrL _ _ xl)
             (match erased s _
-              ((SelL _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
-              ((SelR _ _) (OrR _ _ xl))))
+              ((SelKeep _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol ql ly ds lt xl dl) e1)))
+              ((SelSwap _ _) (OrR _ _ xl))))
           ((OrR _ _ xh)
             (match erased s _
-              ((SelL _ _) (OrR _ _ xh))
-              ((SelR _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))
+              ((SelKeep _ _) (OrR _ _ xh))
+              ((SelSwap _ _) (OrL _ _ (preshit-ext d e n f ks drs ct ol o (pres-sound d nhub e n f ks ws drs rt rs ct g sz iw ta y pos neg ol qh ly ds lt xh dl) e1))))))))))

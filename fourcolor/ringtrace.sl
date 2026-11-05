@@ -52,10 +52,10 @@
   (many TFCons : (erased (Col) c0 c c2 s) (erased (List (Col)) lc et) (erased (AddK c c2 s) a) (erased (TraceFrom c0 c2 lc et) t)
       -> (TraceFrom c0 c (Cons (Col) c2 lc) (Cons (Col) s et))))
 
-(def-adts $ (Trace : ((List (Col)) lc et) -> Type)
+(def-adts $ (RTrace : ((List (Col)) lc et) -> Type)
   enum
-  (many TrNil : -> (Trace (Nil (Col)) (Nil (Col))))
-  (many TrCons : (erased (Col) c) (erased (List (Col)) lc et) (erased (TraceFrom c c lc et) t) -> (Trace (Cons (Col) c lc) et)))
+  (many TrNil : -> (RTrace (Nil (Col)) (Nil (Col))))
+  (many TrCons : (erased (Col) c) (erased (List (Col)) lc et) (erased (TraceFrom c c lc et) t) -> (RTrace (Cons (Col) c lc) et)))
 
 (def-fns _ $ (erased tracefrom-exists : (erased (Col) c0 c) (subterm erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (TraceFrom c0 c lc et) t))
   (let-match erased lc (Cons _ c2 lc1) ((Nil _) (let ((erased s) (erased a)) (addc-total c c0)) (values (Cons _ s (Nil _)) (TFEnd c0 c s a))))
@@ -63,7 +63,7 @@
   (let ((erased et) (erased t)) (tracefrom-exists c0 c2 lc1))
   (values (Cons _ s et) (TFCons c0 c c2 s lc1 et a t)))
 
-(def-fns _ $ (erased trace-exists : (erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (Trace lc et) t))
+(def-fns _ $ (erased trace-exists : (erased (List (Col)) lc) -> (erased (List (Col)) et) (erased (RTrace lc et) t))
   (let-match erased lc (Cons _ c lc1) ((Nil _) (values (Nil _) (TrNil))))
   (let ((erased et) (erased t)) (tracefrom-exists c c lc1))
   (values et (TrCons c lc1 et t)))
@@ -78,7 +78,7 @@
       (let-match erased (tracefrom-fn c0 c2 lc1 et1 et3 p1 q1) (Refl _ _))
       (Refl _ et))))
 
-(def-fns _ $ (erased trace-fn : (erased (List (Col)) lc et et2) (erased (Trace lc et) p) (erased (Trace lc et2) q) -> (erased (Eq (List (Col)) et et2) e))
+(def-fns _ $ (erased rtrace-fn : (erased (List (Col)) lc et et2) (erased (RTrace lc et) p) (erased (RTrace lc et2) q) -> (erased (Eq (List (Col)) et et2) e))
   (match erased p _
     ((TrNil) (let-match erased q (TrNil)) (Refl _ et))
     ((TrCons c lc1 _ t) (let-match erased q (TrCons _ _ _ t2)) (tracefrom-fn c c lc1 et et2 t t2))))
@@ -97,7 +97,7 @@
       (PTCons g s s2 et1 et3 (perm-add g c c2 s d d2 s2 ip pc pc2 a a2) (tracefrom-perm g ip c0 c2 d0 d2 lc1 lc3 et1 et3 p0 pc2 pt1 t1 t3)))))
 
 (def-fns _ $ (erased trace-perm : (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Col)) lc lc2 et et2) (erased (PermT g lc lc2) pt)
-    (erased (Trace lc et) t) (erased (Trace lc2 et2) t2) -> (erased (PermT g et et2) r))
+    (erased (RTrace lc et) t) (erased (RTrace lc2 et2) t2) -> (erased (PermT g et et2) r))
   (match erased pt _
     ((PTNil _) (let-match erased t (TrNil)) (let-match erased t2 (TrNil)) (PTNil g))
     ((PTCons _ c d lc1 lc3 pc pt1)
@@ -143,7 +143,7 @@
 (def-adts $ (RingTrace : ((List (Nat)) e f r) ((List (Col)) et) -> Type)
   enum
   (many MkRingTrace : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) cs et) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
-      (erased (All2 (Nat) (Col) NCol lc cs) co) (erased (Trace cs et) t) -> (RingTrace e f r et)))
+      (erased (All2 (Nat) (Col) NCol lc cs) co) (erased (RTrace cs et) t) -> (RingTrace e f r et)))
 
 (def-fns _ $ (erased ring-trace-perm : (erased (List (Nat)) e f r) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) (erased (RingTrace e f r et) rt) -> (erased (RingTrace e f r et2) r2))

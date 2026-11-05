@@ -28,7 +28,7 @@
 
 (def-adts $ (CLNe : ((List (Col)) xs ys) -> Type)
   enum
-  (many CNHead : (erased (Col) x y z) (erased (List (Col)) xs ys) (erased (AddK x y z) a) (erased (NZ z) nz) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
+  (many CNHead : (erased (Col) x y z) (erased (List (Col)) xs ys) (erased (AddK x y z) a) (erased (ColNZ z) nz) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
   (many CNTail : (erased (Col) x y) (erased (List (Col)) xs ys) (erased (CLNe xs ys) p) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
   (many CNL : (erased (Col) x) (erased (List (Col)) xs) -> (CLNe (Cons (Col) x xs) (Nil (Col))))
   (many CNR : (erased (Col) y) (erased (List (Col)) ys) -> (CLNe (Nil (Col)) (Cons (Col) y ys))))
@@ -63,7 +63,7 @@
 ; four-colouring gives r the colours lcn.
 (def-adts $ (MissWhy : ((List (Nat)) e f r lcn) ((List (Col)) cs et) -> Type)
   enum
-  (many MWTrace : (erased (List (Nat)) e f r lcn) (erased (List (Col)) cs et et2) (erased (Trace cs et2) tr) (erased (CLNe et2 et) ne)
+  (many MWTrace : (erased (List (Nat)) e f r lcn) (erased (List (Col)) cs et et2) (erased (RTrace cs et2) tr) (erased (CLNe et2 et) ne)
       -> (MissWhy e f r lcn cs et))
   (many MWLength : (erased (List (Nat)) e f r lcn) (erased (List (Col)) cs et) (erased (Nat) kn k) (erased (Length (Nat) lcn kn) ln)
       (erased (Length (Nat) r k) lr) (erased (Apart (Nat) Lt kn k) ne) -> (MissWhy e f r lcn cs et))
@@ -79,14 +79,14 @@
 
 (def-fns _ $ (erased rtmiss-sound : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) et cs2) (erased (Col) c0) (erased (RTMiss e f r et c0) m)
     (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) NCol lc (Cons (Col) c0 cs2)) co)
-    (erased (Trace (Cons (Col) c0 cs2) et) t) -> (erased (False) res))
+    (erased (RTrace (Cons (Col) c0 cs2) et) t) -> (erased (False) res))
   (let-match erased m (MkRTMiss _ _ _ lcn _ _ _ cs1 uf al w))
   (let-match erased t (TrCons _ _ _ t1))
   (let-match erased (uf-fn c0 et cs2 cs1 (tf-uf c0 c0 cs2 et t1) uf) (Refl _ _))
   (let-match erased (cols-inj lc lcn _ co al) (Refl _ _))
   (match erased w _
     ((MWTrace _ _ _ _ cs _ et2 tr ne)
-      (let-match erased (trace-fn cs et2 et tr t) (Refl _ _))
+      (let-match erased (rtrace-fn cs et2 et tr t) (Refl _ _))
       (clne-irrefl et2 ne))
     ((MWLength _ _ _ _ _ _ kn k ln lr ne)
       (let-match erased (length-fn (Nat) lcn kn k ln (respects-length ks r lc k rl lr)) (Refl _ _))
