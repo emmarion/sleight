@@ -1387,23 +1387,6 @@ call sites; the rest below is the session's.
      A deeper hash would not help the second, the suffixes of such a
      value differing only in length.
 
-149. **Forcing a rule onto an atom then unifies the atom's type with its
-     term's.** The owner's decision, in chat, for the minimal language
-     (`mini/unify.sl`'s `UAssign`): without it an atom of a former's
-     type could be given a term of another type and a later telescope
-     would have no type for an `is` entry mentioning it
-     (`tests/mini_untyped_rule.sl`; that program is also refused by
-     section 11's rule). Whenever forcing gives an atom a rule, the atom's type
-     is then unified with the type of the term it rewrites to, as the
-     next equation; an atom aliased to another is the case of this that
-     section 7's signature check covers, and the type equation a branch
-     entry forces (section 7) follows from the scrutinee's, so
-     `mini/`'s `Refine` forces the one. `lib/` and `self/` assign with
-     no type check, and unify signatures only where both atoms' types
-     are formers (section 7); whether they should follow, and whether
-     under section 11's rule the added equation can ever change an outcome, are
-     open, in the session's reading.
-
 150. **The compile-time interpreter reaches a call in tail position by a
      tail call.** At the owner's request, who asked that `slc`'s
      compile-time evaluation not grow the stack, or at the least that

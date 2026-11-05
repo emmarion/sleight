@@ -543,9 +543,9 @@ let rank env x =
   | _ -> 3
 
 (* Two atoms equated, forcing (section 7): a contradiction where one opened Matchable lists both; otherwise the
-   newer becomes an alias of the older, and the two must have one signature. Whoever forces then restores
-   [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
-   by a name's identity (section 8). Solving (not forcing): only a meta may be bound, and the two sides must
+   newer becomes an alias of the older, and the two must have one type, as must any atom and the term it is given.
+   Whoever forces then restores [merge_opens]'s invariant, which is how two declared types are told apart exactly
+   by their Matchables, never by a name's identity (section 8). Solving (not forcing): only a meta may be bound, and the two sides must
    otherwise be identical; a meta against a meta binds the newer. *)
 let rec infer env loc t =
   match t with
@@ -568,7 +568,8 @@ let rec unify_in ?(force = false) env a b =
       if has_dangling t then contradiction ();
       if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
       let env = add_rule env x t in
-      if force then env else try unify_in env (type_of env x) (infer env Reader.nowhere t) with Contradiction _ -> raise (Ill_typed (x, t))
+      let typed () = unify_in ~force env (type_of env x) (infer env Reader.nowhere t) in
+      if force then typed () else try typed () with Contradiction _ -> raise (Ill_typed (x, t))
     in
     match (a, b) with
     | Var x, Var y when is_meta env x || is_meta env y ->
@@ -577,11 +578,7 @@ let rec unify_in ?(force = false) env a b =
     | Var x, Var y when force && listed env x y -> contradiction ()
     | Var x, Var y when force ->
         let age z = (z >= 0, abs z) in
-        let x, y = if age x > age y then (x, y) else (y, x) in
-        let signature z = match type_of env z with (TyCtor _ | ValCtor _) as s -> Some s | _ -> None in
-        let sx, sy = (signature x, signature y) in
-        let env = add_rule env x (Var y) in
-        (match (sx, sy) with Some s, Some s' -> unify_in ~force env s s' | _ -> env)
+        if age x > age y then assign x (Var y) else assign y (Var x)
     | Var x, t when force || is_meta env x -> assign x t
     | t, Var x when force || is_meta env x -> assign x t
     | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify_in ~force env x y) env (parts a) (parts b)
