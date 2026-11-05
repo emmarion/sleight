@@ -264,8 +264,8 @@ fetch)
     dir=$(box_dir "$1")
     mkdir -p "$dir"
     connect pi@"$1"
-    rsync -a --copy-unsafe-links -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
-    rsync -a --copy-unsafe-links --delete --include='/*/' --include='/*/[0-9][0-9]/' --include='/*/[0-9][0-9]/sandbox/***' --exclude='*' \
+    rsync -a --copy-unsafe-links --force -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
+    rsync -a --copy-unsafe-links --force --delete --include='/*/' --include='/*/[0-9][0-9]*/' --include='/*/[0-9][0-9]*/sandbox/***' --exclude='*' \
         -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
     echo "fetched into $dir ($(du -sh "$dir" | cut -f1))"
     ;;
