@@ -298,8 +298,8 @@ that runs, in each of its modes.
     keep a proof's subject older than its level, so no `(Predates Z Z)`
     could be built, which is what keeps a diagonal `(MkBar K) : (Bar K
     K)` forcing two level parameters equal from licensing a same-level
-    call that could ever run; whether that irreflexivity deserves a
-    stated invariant appears to be the question of OPEN.md 5.
+    call that could ever run; SOUNDNESS.md part 9 lists that
+    irreflexivity among what its argument leans on.
     An erased data field may change under `coercible-ctor` (a `(MkBox
     (Zero) n)` to a `(MkBox (Succ (Zero)) n)`), which a session read as
     harmless, the field carrying nothing at runtime and its replacement

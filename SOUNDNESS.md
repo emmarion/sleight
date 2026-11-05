@@ -351,9 +351,7 @@ revisiting:
 - a call, or any evaluation, inside a type or in canonicalization (§9,
   §29);
 - `prove-predates` accepting an `L` that is not a mint (§18), or a
-  `Predates` that can be reflexive, or a `Subterm` that can be non-strict
-  (OPEN.md 5 asks whether to state these as invariants; the argument
-  uses both);
+  `Predates` that can be reflexive, or a `Subterm` that can be non-strict;
 - `prove-subterm` looking inside a type former, or any form that makes
   the result of a call a subterm;
 - recursion by any route other than a call under §19's evidence, such as
