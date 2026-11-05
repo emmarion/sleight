@@ -295,11 +295,11 @@ constructor applied to its fresh fields, and equates the scrutinee's
 type with the type of that application. This is not a check. It adds
 `is` facts wherever that is not already provably impossible, recursing
 through matching non-atom arguments. A fresh atom, or an atom with no
-conflicting fact, always unifies. When two atoms are unified, the newer
-becomes an alias of the older, and whatever the two must share is then
-unified as well: their signatures, if both are type or value
-constructors, and the opened `Matchable`s they head, if both are type
-constructors (§8). A literal's entry (§45) is older than every other
+conflicting fact, always unifies. Whenever an atom is unified with an
+expression, which may itself be an atom, the atom's type is then
+unified with the expression's type. When two atoms are unified, the
+newer becomes an alias of the older, and the opened `Matchable`s they
+head, if both are type constructors, are then unified as well (§8). A literal's entry (§45) is older than every other
 entry, and of two literals the one interned first is the older. The
 forced facts hold while the branch is checked.
 `match` keeps them inside the branch. `comptime-match` exports them
@@ -312,8 +312,8 @@ Forcing fails, and so refutes the branch, in exactly four cases:
 1. An atom `x` is equated with an expression that contains `x`, after
    existing atom-to-atom aliases are resolved. (`x = x` is a no-op.)
 2. Two value constructors listed by one opened `Matchable` are equated;
-   or two atoms whose signatures cannot be unified are equated; or two
-   atoms are equated whose opened objects would then name one thing and
+   or an atom is equated with an expression whose type cannot be
+   unified with the atom's; or two atoms are equated whose opened objects would then name one thing and
    cannot be unified (the invariant of §8). A declared name has no
    distinctness of its own: two type constructors with identical
    signatures and no opened `Matchable` unify.
@@ -336,7 +336,7 @@ the scope environment would not be first class; a `Matchable` is that
 list as first-class data. When two constructor-headed terms meet, there
 is no third, indeterminate outcome: forcing either succeeds and adds
 facts, or contradicts by the rules of §7. Two atoms conflict only when
-one opened `Matchable` lists both, or their signatures cannot unify, or
+one opened `Matchable` lists both, or their types cannot unify, or
 the opened objects that would then name one thing cannot unify.
 Nothing is refuted on the identity of a name.
 
@@ -383,7 +383,7 @@ one constructor were added to scope with it by one `def-adts`.
 `Matchable` that lists its constructor (§33), and `coercible-tag`,
 which reads that `Matchable` too; and the cell rules of §37.
 `delegate-of` and `at-fn-of` fetch from the ambient scope instead
-(§33, §39). The occurs check of §7 and its refutation by signature are
+(§33, §39). The occurs check of §7 and its refutation by type are
 not gated. A match or `let-match` that dispatches at runtime, meaning
 one at `many` or `unique` on a non-erased scrutinee, uses its
 `Matchable` at `many` and requires the opened entry to be
