@@ -291,37 +291,11 @@
 
 (def-lvl CRX)
 
-(def-fns _ $ (many red-c : (many (Config) cf) (unique (R4St) s) -> (many (ErasedMaybe (Reducible CRX cf)) r) (unique (R4St) s2 at s))
-  (let-match many cf (MkConfig sym cci cp))
-  (let-match many (noa-dec cp) (NoAYes _ na) ((NoANo _) (values (ENone _) s)))
-  (let ((many d) (many e) (many f) (many r) (erased c)) (cpmap-c cp na))
-  (let ((erased n) (erased pm)) (cpmap-map cp d e f r c))
-  (let ((erased h)) (pointed-hyper d e n f r pm))
-  (let ((many xs) (erased pce)) (ctrenum-c cp na))
-  (let ((many cc) (erased pk)) (pick-c cci (Zero) xs))
-  (let-match many (inserte-c e cc) (IEYes _ _ ie pi) ((IENo _ _) (values (ENone _) s)))
-  (let-match many (valid-c d e f r cc ie n h pi) (ESome _ v) ((ENone _) (values (ENone _) s)))
-  (let ((many kc) (unique s2)) (kempe-tree-chk cp s))
-  (let-match many kc (KCYes _ h0 kt ro ks cs _) ((KCNo _) (values (ENone _) s2)))
-  (let-match many (ryh-c cp) (ESome _ ry) ((ENone _) (values (ENone _) s2)))
-  (let ((many rp) (erased rs)) (revs-c cp))
-  (let-match many (dfs-c h0 kt ro ie (Cons _ (SU) rp) all-cols (Zero) (Nil _)) (ESome _ df) ((ENone _) (values (ENone _) s2)))
-  (values (ESome _ (MkReducible CRX sym cci cc cp (MkCfContract cp cci xs cc pce pk)
-    (check-reducible-valid CRX CGL (prove-predates KHL CRX) (prove-predates CGL CRX) cp cc kt
-      (kempe-half cp h0 kt ks cs) (contract-ok cp cc kt d e n f r ie rp c h v pi ry rs (dfe-good kt ie (Cons _ (SU) rp) (Zero) (Nil _) df))))) s2))
-
 (def-adts $ (AllRed : ((Level) X) ((List (Config)) cfs) -> Type)
   enum
   (many ARNil : (erased (Level) X) -> (AllRed X (Nil (Config))))
   (many ARCons : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (erased (Reducible X cf) p) (erased (AllRed X cfs) rest)
       -> (AllRed X (Cons (Config) cf cfs))))
-
-(def-fns _ $ (many red-all-c : (subterm many (List (Config)) cfs) (unique (R4St) s) -> (many (ErasedMaybe (AllRed CRX cfs)) r))
-  (let-match many cfs (Cons _ cf rest) ((Nil _) (ESome _ (ARNil CRX))))
-  (let ((many b) (unique s2)) (red-c cf s))
-  (let-match many b (ESome _ p) ((ENone _) (ENone _)))
-  (let-match many (notail $ red-all-c rest s2) (ESome _ q) ((ENone _) (ENone _)))
-  (ESome _ (ARCons CRX cf rest p q)))
 
 (def-adts $ (AllRedC : ((Level) X) ((List (List (Config))) css) -> Type)
   enum

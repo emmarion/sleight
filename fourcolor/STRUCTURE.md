@@ -168,17 +168,19 @@ The unit is these files in this order (`check.sh`), written without
 - `red/init`: the initial trees.
 - `red/flat`: counts and bit arrays over trace indices (`Tally`).
 - `red/r4`, `red/r4s`, `red/r4c`, `red/r4g`, `red/r4k`: the Kempe
-  closure on flat arrays (WORKAROUNDS.md 11): node words and tables
-  (`r4-make-eng`), the colouring-side round (`r4-sround`), the ctr
-  trie, the chromogram-side round (`r4-ground`) and the loop
-  (`r4k-kempe`, `r4-flat-look`).
-- `red/check`: `kempe-tree-chk`.
+  closure on flat arrays (WORKAROUNDS.md 11): node words and tables,
+  the colouring-side round, the ctr trie, the chromogram-side round,
+  the loop's invariants, and `r4-flat-look`.
+- `red/check`: `KChk`, `KCYes`.
 - `red/gramrot`: gram_rot of `kempe.v`.
 - `red/cfred`: `CRed`, from a Kempe half and a contract half.
 - `red/ccomp`: the contract half (`contract-ok`, `dfs-c`).
-- `red/ccheck`: `CfContract`, `valid-c`, `red-c`, `AllRedC`.
-- `red/bcheck`: `birkhoff-check-c`, `birkhoff-check-sound`,
-  `BirkhoffChecks`.
+- `red/ccheck`: `CfContract`, `valid-c`, `AllRedC`.
+- `red/bcheck`: `birkhoff-check-sound`, `BirkhoffChecks`.
+- `red/r4run`: `r4-run`, which owns the engine's buffers and cache and
+  holds the engine's runtime functions as closures over them
+  (`r4-make-eng`, `r4-sround`, `r4-ground`, `r4k-kempe`), with
+  `kempe-tree-chk`, `red-c`, `red-all-c` and `birkhoff-check-c`.
 - `cpcomp`: the completeness half of ctree_mem_cpcolor.
 
 **Map surgery.**
@@ -250,11 +252,12 @@ its files named as in the load order:
   std/nat.sl std/list.sl ring base map lists planemap walk frontier labels
   hypgraph hypperm hypermap hypplane hypeuler hypderived hyprelabel
   hypwalkup hypgeom cfmap red/red cpmap red/color cfcolor red/ctree
-  red/gtree red/grestrict red/crestrict red/kempe cpcolor red/configs
-  red/bridge red/init red/check red/gramrot red/cfred red/ccomp
-  red/ccheck red/chunks red/pieces red/proof-c red/goal-c`.
-- `red/bgoal.sl` (`BirkhoffChecks`): the same up to `red/ccheck`, then
-  `red/bcheck red/bproof red/bgoal`.
+  red/gtree red/grestrict red/crestrict red/kempe red/flat cpcolor
+  red/configs red/bridge red/init red/r4 red/r4s red/r4c red/r4g
+  red/r4k red/check red/gramrot red/cfred red/ccomp red/ccheck
+  red/bcheck red/r4run red/chunks red/pieces red/proof-c red/goal-c`.
+- `red/bgoal.sl` (`BirkhoffChecks`): the same up to `red/r4run`, then
+  `red/bproof red/bgoal`.
 - `unav/qztgoal.sl` (`UnavE cfs`): `std/macro.sl native std/nat.sl
   std/list.sl ring defs orient base sweep geo plan map lists planemap walk
   frontier labels rot fan build readback parta reduce hypgraph hypperm

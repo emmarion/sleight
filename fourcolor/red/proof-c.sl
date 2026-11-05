@@ -4,7 +4,8 @@
 
 (def-fns _ $ (many red-of : (many (List (String)) ss) -> (many (ErasedMaybe (Decoded RedC ss)) r))
   (let-match many (dec-list ss) (POk _ _ _ _ cs _ d) (else (ENone _)))
-  (let-match many (red-all-c cs (r4k-st-new)) (ESome _ p) ((ENone _) (ENone _)))
+  (let-match many (r4-run (RjRed cs)) (RrRed _ r))
+  (let-match many r (ESome _ p) ((ENone _) (ENone _)))
   (ESome _ (MkDecoded RedC ss _ cs d (MkRedC cs p))))
 
 (def-fns _ $ (erased red-chunks : (erased (List (List (Config))) ks) (subterm erased (OnChunks RedC ks) o) -> (erased (AllRedC CRX ks) r))
