@@ -67,8 +67,6 @@ references are to DESIGN.md.
     of the prototype's fixed table (§42). What should guarantee that an
     implementation agrees with its model, beyond the requirement stated
     there?
-15. Should an `else` refine the scrutinee so that it excludes the
-    listed constructors?
 27. Should `List` declare `head` and `rest` `unique` (the owner's
     remark)? A construction at `many` would still take them at `many`,
     and one at `unique` would own its whole spine.
