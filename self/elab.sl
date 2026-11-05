@@ -1796,14 +1796,13 @@
   (match many (equal-env env p $ slot-atom x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-literal rest env p))))
 
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
-(def-fns _ $ (many self-slotted : (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
-  (let-match many (canon-env env p) (TVar y) (else (None _)))
-  (match many (equal-env env (slot-atom y) $ TVar y) _ ((BTrue) (Some _ y)) ((BFalse) (None _))))
+(def-fns _ $ (many at-vacant : (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
+  (match many (equal-env env p $ TVar null-id) _ ((BTrue) (Some _ null-id)) ((BFalse) (None _))))
 
 (def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
   (let ((many (Maybe $ Nat) target)) $ match many p0 _
     ((TSlotOf c) (match many c _ ((TVar x) (Some _ x)) (else (None _))))
-    (else (self-slotted env p0)))
+    (else (at-vacant env p0)))
   (let-match many target (Some _ x) ((None _) (None _)))
   (match many (and (mult-is-many $ entry-mult-of env x) $ or (is-settled env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
 
