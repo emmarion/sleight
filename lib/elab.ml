@@ -129,10 +129,10 @@ let head = function App (h, _) -> h | t -> t
 let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
   try unify env actual expected
   with
-  | Ill_typed (x, t) ->
+  | Ill_typed (x, t) -> refuse @@ fun () ->
       let prefix, more = Lazy.force about in
       error_with loc more "%stype mismatch: expected %s, got %s: %s would be %s" prefix (qshow env (type_of env x)) (qshow env (infer env loc t)) (qshow env (Var x)) (qshow env t)
-  | Contradiction _ ->
+  | Contradiction _ -> refuse @@ fun () ->
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
@@ -225,7 +225,7 @@ let describe env pos raw term ty =
     | _ -> ("the computed " ^ kind, [ (Reader.loc raw, Printf.sprintf "the %s is computed here" kind) ])) in
   { subject = lazy (fst (Lazy.force view)); apposed; notes = lazy (snd (Lazy.force view)); used; marks }
 
-let count_error env l c what tele got =
+let count_error env l c what tele got = refuse @@ fun () ->
   error_with l (Lazy.force c.notes @ Env.splice_notes l) "%s%s expects %s, got %d%s" (Lazy.force c.subject) (if c.apposed then "," else "") (counted (List.length tele) what) got
     (expected (show_tele ~marks:c.marks env (with_mults c.used tele)))
 
@@ -257,7 +257,7 @@ let held_needs_many env loc tid mid =
     error_in env loc "the `Matchable` for %s is erased or out of scope, so a non-erased match cannot take a value of it apart" (qname env tid))
 
 let ctor_type env loc c =
-  match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (qname env c)
+  match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> refuse (fun () -> error loc "%s is not a value constructor" (qname env c))
 
 let returns_own env tid ret = match canon env ret with App (Var t, _) -> t = tid | _ -> false
 
@@ -577,15 +577,6 @@ let mint env y r mult v = let env = enter_mentioned env (Var y) in mint_entry en
 
 let applied_handles : (Env.t -> Reader.loc -> Sp.t -> term -> raw list -> term * term * tele) ref = ref (fun _ _ _ _ _ -> assert false)
 
-let report l m =
-  let saved = Hashtbl.copy numbering in
-  Hashtbl.reset numbering;
-  let here = Reader.where "" l in
-  let text = Env.resolve here (Reader.label here "error: " ^ Env.framing l ^ m) in
-  Hashtbl.reset numbering;
-  Hashtbl.iter (Hashtbl.replace numbering) saved;
-  text
-
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
   | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ v ] ->
@@ -602,14 +593,13 @@ let implement env p args = match p, args with
       let hs = List.map (function V.VHandle (x, r, m, v) -> (x, r, m, v) | _ -> raise (Eval.Runtime "expected a handle")) hs in
       let snap = List.fold_left (fun env (x, r, _, _) -> let env = enter_mentioned env (Var x) in List.fold_left enter_mentioned env (denoted env x r)) (comptime_boundary env) hs in
       let x, r, _, _ = List.hd hs in
-      [ (match !applied_handles snap l p (List.hd (denoted snap x r)) (List.map (fun (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v)) hs) with
-         | exception Error (l', m) -> pbuild env "Fail" [ str_value env (report l' m) ]
-         | exception Contradiction m -> pbuild env "Fail" [ str_value env (report l ("contradiction: " ^ Lazy.force m)) ]
+      [ (match quietly (fun () -> !applied_handles snap l p (List.hd (denoted snap x r)) (List.map (fun (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v)) hs)) with
+         | exception (Refused | Contradiction _) -> pbuild env "None" []
          | t, ty, tele ->
              let _, _, mult, c = List.hd hs in
              let fields = List.filter_map (fun ((e : entry), (_, _, _, v)) -> if e.mult = Erased then None else Some v) (List.combine tele (List.tl hs)) in
              let v = if mult = Many then List.hd (Eval.apply c fields) else V.VToken in
-             pbuild env "Ok" [ mint_entry env ~rule:t ty mult v ]) ]
+             pbuild env "Some" [ mint_entry env ~rule:t ty mult v ]) ]
   | Sp.Resolve, [ s ] ->
       let name = match Ffi.unsymbol s with Ffi_core.SName t -> Reader.Src (str_host env Reader.nowhere t) | SGen (n, t) -> Gen (nat_z env Reader.nowhere n, str_host env Reader.nowhere t) in
       [ (match find env name with
@@ -931,7 +921,7 @@ let rec elab_term ?expect env raw =
           let h = Var x in
           match canon env (infer env l h) with
           | (TyCtor tele | ValCtor (tele, _)) as ty -> let env, acc = elab_term_args env l ~callee:(describe env Erased head h ty) ?expect ~frames tele h args in (env, App (h, List.rev acc))
-          | ty -> error l "%s has type %s and cannot be applied in a type" (qshow env h) (qshow env ty)))
+          | ty -> refuse (fun () -> error l "%s has type %s and cannot be applied in a type" (qshow env h) (qshow env ty))))
 
 and elab_type_form env l sp args =
   match (sp, args) with
@@ -1162,7 +1152,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
     let what = argument c i (List.nth tele i).name and arg = List.nth args i in
     if wild arg then error_with ~hints:(hole_hints env t) (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
     else unsolved ~about:(what ^ ": ", Lazy.force c.notes) (Reader.loc arg) env t) (List.rev acc);
-  List.iter (fun (arg, i, name, p, place) -> if not (Option.fold ~none:false ~some:(same_slot env p) place) then
+  List.iter (fun (arg, i, name, p, place) -> if not (Option.fold ~none:false ~some:(same_slot env p) place) then refuse @@ fun () ->
     error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i name) (qshow env p)) (List.rev ats);
   (env, List.map (metaless env) acc, List.rev codes)
 
@@ -1192,7 +1182,7 @@ and elab_term_args env loc ~callee ?what ?expect ?frames tele ret args =
 
 let ctor_tele env l sp h = match canon env (infer env l h), sp with
   | TyCtor tele, Sp.SettledTyApply | ValCtor (tele, _), Sp.SettledValApply -> tele
-  | ty, _ -> error l "%s takes a handle to a %s first, and %s has type %s" (tick (Sp.name sp)) (if sp = Sp.SettledTyApply then "type constructor" else "value constructor") (qshow env h) (qshow env ty)
+  | ty, _ -> refuse @@ fun () -> error l "%s takes a handle to a %s first, and %s has type %s" (tick (Sp.name sp)) (if sp = Sp.SettledTyApply then "type constructor" else "value constructor") (qshow env h) (qshow env ty)
 
 let () = applied_handles := fun env l sp h raws ->
   let tele = ctor_tele env l sp h in
@@ -1803,7 +1793,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
         | t -> let x, env = bind env None Erased Hypothetical (infer env l t) ~rule:t in (env, Handle (l, x, MintedIs, Erased, Obj.repr V.VToken))) env hds in
       let env, t = elab_term env (List (l, raws)) in
       let ty = infer env l t in
-      let result = App (id "Result", [ App (id "Settled", [ (if sp = Sp.SettledTyApply then App (id "MErased", []) else mc); ty; t ]) ]) in
+      let result = App (id "Maybe", [ App (id "Settled", [ (if sp = Sp.SettledTyApply then App (id "MErased", []) else mc); ty; t ]) ]) in
       let rets = [ entry ~name:"mw2" ~place:(SlotOf (Bound (List.length acc - 1))) Unique (App (id "MacroWorld", [])); entry ~name:"r" Many result ] in
       let here = Ffi.pos (Ffi_core.pos_view ~str:(str_value env) ~nat:(nat_value env) l) in
       call_returns ?sink ~demand env expect l shown acc rets (fun _ -> V.CPrim (sp, V.CConst here :: codes))

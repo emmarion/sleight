@@ -698,6 +698,7 @@
   (Cons _ (MkEntry n s m sg place site) $ notail $ tele-with-mults rest mrest))
 
 (def-fns _ $ (many count-mismatch : (many (Env) env) (many (Callee) c) (many (List $ Entry) tele) (many (Multiplicity) pos) (many (Nat) got) (many (List $ Pair (Loc) $ String) spliced) -> (many (Env) r))
+  (let-match many (env-quiet env) (BFalse) ((BTrue) (env-refuse env)))
   (let ((many subject) (many apposed) (many notes) (many marked) (many fields) (many noun)) $ callee-view c)
   (let ((many all) (erased _)) $ list-append _ notes spliced)
   (env-error-with env all $ str-cat3 subject (match many apposed (((String) _)) ((BTrue) ",") ((BFalse) ""))
@@ -714,7 +715,7 @@
   (let-match many ats (Cons _ a rest) ((Nil _) env))
   (let-match many a (MkAtCheck pos i name p place))
   (let ((many ok)) $ match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (equal-env env p q)))
-  (let ((many env2)) $ match many ok (((Env) _)) ((BTrue) env) ((BFalse) (env-back env $ env-error-with (env-at env pos) (callee-notes c) $ str-cat3 (argument-label c i name) " does not satisfy `at` " $ qshow env p)))
+  (let ((many env2)) $ match many (or ok $ env-quiet env) (((Env) _)) ((BTrue) (match many ok (((Env) _)) ((BTrue) env) ((BFalse) (env-refuse env)))) ((BFalse) (env-back env $ env-error-with (env-at env pos) (callee-notes c) $ str-cat3 (argument-label c i name) " does not satisfy `at` " $ qshow env p)))
   (tail $ report-ats rest c env2))
 
 (def-fns _ $ (many meta-ids : (many (Env) env) (subterm many (List $ Nat) xs) (many (List $ Nat) seen) -> (many (List $ Nat) r))
@@ -940,7 +941,9 @@
 (def-lvl msg-lvl)
 
 (def-fns _ $ (many error-unless-msg : (many (Env) env) (many (Bool) ok) (many (Fn msg-lvl -> (many (String) s)) msg) -> (many (Env) r))
-  (match many ok _ ((BTrue) env) ((BFalse) (env-error env $ msg))))
+  (let-match many ok (BFalse) ((BTrue) env))
+  (let-match many (env-quiet env) (BFalse) ((BTrue) (env-refuse env)))
+  (env-error env $ msg))
 
 (def-fns _ $ (many error-when-msg : (many (Env) env) (many (Bool) bad) (many (Fn msg-lvl -> (many (String) s)) msg) -> (many (Env) r))
   (error-unless-msg env (not bad) msg))
@@ -2007,9 +2010,9 @@
   (slot-forced env s p))
 
 (def-fns _ $ (many placed-or : (many (Env) env) (many (Nat) x) (many (UnifyRes) o) (many (Term) p) -> (many (Env) r))
-  (match many o _
-    ((UOk env2) env2)
-    ((UContra m) (env-error env $ str-cat3 "internal: " (qshow env $ TVar x) $ str-cat3 " cannot sit at " (qshow env p) $ str-cat3 " (" (clash-str env m) ")"))))
+  (let-match many o (UContra m) ((UOk env2) env2))
+  (let-match many (env-quiet env) (BFalse) ((BTrue) (env-refuse env)))
+  (env-error env $ str-cat3 "internal: " (qshow env $ TVar x) $ str-cat3 " cannot sit at " (qshow env p) $ str-cat3 " (" (clash-str env m) ")"))
 
 (def-fns _ $ (many env-place-at : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (Env) r))
   (placed-or env x (place-forced env x p) p))
@@ -2259,6 +2262,7 @@
 (def-fns _ $ (many solve-about : (many (Env) env) (many (String) what) (many (Term) actual) (many (Term) expected) (many (Bool) report) (many (Maybe $ Syn) raw) (many (Fn msg-lvl -> (many (String) p) (many (List $ Pair (Loc) $ String) n)) about) -> (many (Env) r) (many (Bool) ok))
   (let-match many (unify-solve env actual expected) (UContra m) ((UOk env2) (values env2 $ BTrue)))
   (let-match many report (BTrue) ((BFalse) (values env $ BFalse)))
+  (let-match many (env-quiet env) (BFalse) ((BTrue) (values (env-refuse env) $ BFalse)))
   (let ((many prefix) (many more)) (about))
   (let-match many (ill-typed-msg env m) (None _) ((Some _ s) (values (env-error-with env more $ str-cat prefix s) $ BFalse)))
   (let ((many ls)) $ lit-terms env $ env-lits env)

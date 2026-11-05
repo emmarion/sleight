@@ -4,6 +4,7 @@ module IntMap = Value.IntMap
 exception Error of Reader.loc * string
 exception Contradiction of string Lazy.t
 exception Ill_typed of id * term
+exception Refused
 
 (* A session's third output channel, beside a program's own stdout and stderr and the message a refusal
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
@@ -104,11 +105,15 @@ let warn_at l notes fmt =
       if !held = [] then !warn s else held := Said s :: !held)
     fmt
 
+let quiet = ref false
+let quietly f = let outer = !quiet in quiet := true; Fun.protect ~finally:(fun () -> quiet := outer) f
+let refuse f = if !quiet then raise Refused else f ()
+
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
 let error_with ?hint ?(hints = "") loc notes fmt =
   let note s (l, m) = Printf.sprintf "%s\n%s%s %s" s (Reader.labelled "-" l "note:") (framing l) m in
-  Printf.ksprintf (fun s -> raise (Error (stamp loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
+  Printf.ksprintf (fun s -> raise (Error (stamp loc, (if !quiet then "internal: a message built while a check ran quietly: " else "") ^ List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
 
 let error loc fmt = error_with loc [] fmt
 
@@ -546,7 +551,7 @@ let rec infer env loc t =
       match canon env (infer env loc h) with
       | TyCtor _ -> App (Var !univ, [])
       | ValCtor (_, r) -> instantiate (List.rev args) r
-      | ty -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty))
+      | ty -> refuse (fun () -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty)))
   | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> App (Var !univ, [])
   | SlotOf _ -> !slot_type
   | Bound _ -> error loc "internal: dangling binder"
