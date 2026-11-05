@@ -12,7 +12,7 @@
   (patch-colorable-nil d dd dr e n f ed nd fd er nr fr hd hr kd kr pt cd cr))
 
 (def-fns _ $ (erased split-reduces : (erased (Level) B) (erased (Predates (Level) (level-of split-glue) B) pb) (erased (Nat) d)
-    (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (Lt (Zero) d) ld) -> (erased (HOr (Connected d e n f) (Reduces B d e n f)) r))
+    (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (Lt (Zero) d) ld) -> (erased (Or (Connected d e n f) (Reduces B d e n f)) r))
   (let-match erased p (MkPbpp _ _ _ _ hm gen bl pl pc))
   (let-match erased (gcomp-split d e n f hm gen bl pl pc ld) (OrR _ _ sp) ((OrL _ _ conn) (OrL _ _ conn)))
   (let-match erased sp (MkGcompSplit _ dd dr _ _ _ ed nd fd er nr fr hd hr pt gd bd pld pcd ltd gr br plr pcr ltr))

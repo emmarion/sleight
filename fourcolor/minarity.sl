@@ -36,7 +36,7 @@
   (let ((erased lab) (erased fl)) (facelab-exists d f fi pmf))
   (let ((erased fl2)) fl)
   (let-match erased fl2 (MkFaceLab _ _ _ _ _ _ _ gf _ gr _ _ cl ll))
-  (values fe lab (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-vals f e fe d cfe (perm-under d f fi pmf))
+  (values fe lab (MkSpk d e n f fe lab ids h gen bl pl cu cfe ke io (respects-under-out f e fe d cfe (perm-under d f fi pmf))
     (respects-length f e fe d cfe le) fl (graph-resp d f lab gf gr cl ll))))
 
 (def-fns _ $ (erased fe-node : (erased (Nat) d u s) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) fe u s) ps)
@@ -130,9 +130,9 @@
 (def-fns _ $ (erased walk-cyc-inv : (erased (Nat) d z z2 a b) (erased (List (Nat)) c q s s2 ys xs) (erased (HPerm d c q) pm) (erased (Path c s z2 z ys) cy)
     (erased (Nth (Nat) c z z2) pz) (subterm erased (Path q s2 a b xs) w) (erased (In a (Cons (Nat) z ys)) ia)
     -> (erased (WSub xs (Cons (Nat) z ys)) sb) (erased (In b (Cons (Nat) z ys)) ib))
-  (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1) ((PathHere _ _ _) (values (HSubNil _) ia)))
+  (let-match erased w (PathStep _ _ xs1 _ a1 _ pa _ w1) ((PathHere _ _ _) (values (HsbNil _) ia)))
   (let ((erased sb1) (erased ib1)) (walk-cyc-inv d z z2 a1 b c q s s2 ys xs1 pm cy pz w1 (cyc-inv d z z2 a a1 c q s ys pm cy pz ia pa)))
-  (values (HSubCons a xs1 _ ia sb1) ib1))
+  (values (HsbCons a xs1 _ ia sb1) ib1))
 
 (def-fns _ $ (erased spoke-apart : (erased (Nat) d u s l l2) (erased (List (Nat)) e n f fe lab) (erased (Spk d e n f fe lab) c) (erased (Nth (Nat) fe u s) ps)
     (erased (Nth (Nat) lab u l) pu) (erased (Nth (Nat) lab s l2) pl) -> (erased (Apart (Nat) Lt l l2) r))
@@ -153,7 +153,7 @@
 
 (def-fns _ $ (erased spokes-simple : (erased (Level) B) (erased (Nat) d lx) (erased (List (Nat)) e n f fe lab Vs Rs ls) (erased (MinCx B d e n f fe lab) m)
     (subterm erased (Respects fe Vs Rs) rv) (erased (Respects lab Rs ls) rl) (erased (Distinct Vs) dv) (erased (LabAll lab lx Vs) al)
-    -> (erased (HOr (Distinct ls) (Reduces B d e n f)) r))
+    -> (erased (Or (Distinct ls) (Reduces B d e n f)) r))
   (let-match erased rv (RespCons _ Vs1 Rs1 u s pus rv1) ((RespNil _) (let-match erased rl (RespNil _)) (OrL _ _ (DistNil))))
   (let-match erased rl (RespCons _ _ ls1 _ l pl rl1))
   (let-match erased dv (DistCons _ _ ou dv1))
@@ -192,7 +192,7 @@
 
 (def-fns _ $ (erased ring-build : (erased (Level) B) (erased (Nat) d x k) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
     (erased (Order f x k) o) (erased (Lt k five) lk)
-    -> (erased (Nat) sx lx) (erased (List (Nat)) Q ls) (erased (HOr (SRg d e n f fe lab x sx Q lx ls) (Reduces B d e n f)) r))
+    -> (erased (Nat) sx lx) (erased (List (Nat)) Q ls) (erased (Or (SRg d e n f fe lab x sx Q lx ls) (Reduces B d e n f)) r))
   (let-match erased m (MkMinCx _ _ _ _ _ _ _ _ _ c _ _))
   (let ((erased c2)) c)
   (let-match erased c2 (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ ufe lfe _ rl))
@@ -213,7 +213,7 @@
   (let ((erased sp)) (spoke-step d x z sz sx esz e n f fe lab c (perm-inv d z x fi f pfi pz) psz psx pesz))
   (let ((erased rv)) (RespCons fe ys Q x sx psx rq))
   (let ((erased lxl) (erased plx)) (nth-exists _ lab d x ll lx))
-  (let ((erased ls) (erased rls)) (respects-exists lab _ d (respects-under-vals fe _ _ d rv ufe) ll))
+  (let ((erased ls) (erased rls)) (respects-exists lab _ d (respects-under-out fe _ _ d rv ufe) ll))
   (let ((erased rfi)) (resp-inv d lab f fi pmf rl ll))
   (let ((erased al)) (LabCons lab ys lxl x plx (walk-laball a x lxl fi lab _ ys w rfi (respects-nth lab fi lab x a lxl rfi pa plx))))
   (let ((erased dv)) (DistCons x ys (path-avoid fi _ ys a x x w (InHere x _)) (walk-distinct fi (Nil _) ys a x w)))
@@ -221,9 +221,9 @@
   (let ((erased rg)) (MkRing e f Q sx sz esz rp pesz sp (MkSimple f _ lab ls rl rls dls)))
   (let ((erased mv) (erased lv)) (length-exists _ (Cons _ x ys)))
   (let ((erased sb) (erased _)) (walk-cyc-inv d x y a x f fi _ _ xs ys pmf wf py w (cyc-inv d x y x a f fi _ xs pmf wf py (InHere x xs) pa)))
-  (let ((erased le5)) (pigeonhole (Cons _ x ys) (Cons _ x xs) mv k dv (HSubCons x ys _ (InHere x xs) sb) lv (LengthCons _ x xs k1 lxs)))
+  (let ((erased le5)) (pigeonhole (Cons _ x ys) (Cons _ x xs) mv k dv (HsbCons x ys _ (InHere x xs) sb) lv (LengthCons _ x xs k1 lxs)))
   (values sx lxl Q ls (OrL _ _ (MkSRg d x a sx lxl mv e n f fe lab fi ys Q ls c pmf pa w rv rg plx al rls
-    (DistCons lxl ls (spokes-off d lxl e n f fe lab _ _ ls c rv rls al) dls) (respects-length fe _ _ mv rv lv) (lt-ls mv (Succ k) five le5 (LtS k five lk))))))
+    (DistCons lxl ls (spokes-off d lxl e n f fe lab _ _ ls c rv rls al) dls) (respects-length fe _ _ mv rv lv) (lt-le-trans mv (Succ k) five le5 (LtS k five lk))))))
 
 (def-fns _ $ (erased sr-in : (erased (Nat) d x sx lx s) (erased (List (Nat)) e n f fe lab Q ls) (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (In s (Cons (Nat) sx Q)) ins)
     -> (erased (Nat) u) (erased (Nth (Nat) fe u s) pu) (erased (Nth (Nat) lab u lx) plu))
@@ -305,7 +305,7 @@
     (MkKernel f _ lab ls x lx rl rls plx ol)))
 
 (def-fns _ $ (erased cover : (erased (Level) B) (erased (Nat) d x sx lx y l) (erased (List (Nat)) e n f fe lab Q ls) (erased (MinCx B d e n f fe lab) m)
-    (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) lab y l) pl) -> (erased (HOr (In l (Cons (Nat) lx ls)) (Reduces B d e n f)) r))
+    (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Nth (Nat) lab y l) pl) -> (erased (Or (In l (Cons (Nat) lx ls)) (Reduces B d e n f)) r))
   (let ((erased sr2)) sr)
   (let-match erased sr2 (MkSRg _ _ _ _ _ k _ _ _ _ _ _ _ _ _ c _ _ _ _ rg _ _ rls _ lm l5))
   (let-match erased c (MkSpk _ _ _ _ _ _ _ h gen _ _ _ _ _ _ _ _ fl rl))
@@ -362,7 +362,7 @@
   (let-match erased xs (Cons _ l xs1) ((Nil _) (values (Nil _) (TabNil L))))
   (let ((erased ks1) (erased t1)) (tab-exists L m lL lm xs1))
   (let-match erased (find-in l L) (FHit _ _ j p) ((FMiss _ _ o) (values (Cons _ (Zero) ks1) (TabCons L xs1 ks1 l (Zero) (TAMiss L l o) t1))))
-  (let ((erased c) (erased q)) (nth-exists _ col5 five j (col5-len) (lt-ls j m five (nth-lt-length _ L j m l p lL) lm)))
+  (let ((erased c) (erased q)) (nth-exists _ col5 five j (col5-len) (lt-le-trans j m five (nth-lt-length _ L j m l p lL) lm)))
   (values (Cons _ c ks1) (TabCons L xs1 ks1 l c (TAHit L l j c p q) t1)))
 
 (def-fns _ $ (erased tab-nth : (erased (List (Nat)) L xs ks) (erased (Nat) i l) (subterm erased (Tab L xs ks) t) (erased (Nth (Nat) xs i l) p)
@@ -522,7 +522,7 @@
 
 (def-fns _ $ (erased spoke-col-edge : (erased (Level) B) (erased (Nat) d x sx lx u v) (erased (List (Nat)) e n f fe lab Q ls ks) (erased (MinCx B d e n f fe lab) m)
     (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Tab (Cons (Nat) lx ls) lab ks) t) (erased (Nth (Nat) e u v) puv)
-    -> (erased (Nat) c1 c2) (erased (Nth (Nat) ks u c1) pc1) (erased (Nth (Nat) ks v c2) pc2) (erased (HOr (Apart (Nat) Lt c1 c2) (Reduces B d e n f)) r))
+    -> (erased (Nat) c1 c2) (erased (Nth (Nat) ks u c1) pc1) (erased (Nth (Nat) ks v c2) pc2) (erased (Or (Apart (Nat) Lt c1 c2) (Reduces B d e n f)) r))
   (let ((erased sr2)) sr)
   (let-match erased sr2 (MkSRg _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ c _ _ _ _ _ _ _ _ _ _ _))
   (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ bl pl _ _ _ _ _ _ fl rl))
@@ -559,7 +559,7 @@
 
 (def-fns _ $ (erased spoke-col-proper : (erased (Level) B) (erased (Nat) d x sx lx) (erased (List (Nat)) e n f fe lab Q ls ks) (erased (List (Bond)) g)
     (erased (MinCx B d e n f fe lab) m) (erased (SRg d e n f fe lab x sx Q lx ls) sr) (erased (Tab (Cons (Nat) lx ls) lab ks) t)
-    (subterm erased (Fun e g) fn) -> (erased (HOr (KProper ks g) (Reduces B d e n f)) r))
+    (subterm erased (Fun e g) fn) -> (erased (Or (KProper ks g) (Reduces B d e n f)) r))
   (let-match erased fn (FunCons _ g1 u v puv fn1) ((FunNil _) (OrL _ _ (ProperNil ks))))
   (let-match erased (spoke-col-proper B d x sx lx e n f fe lab Q ls ks g1 m sr t fn1) (OrL _ _ pr1) ((OrR _ _ r) (OrR _ _ r)))
   (let ((erased c1) (erased c2) (erased pc1) (erased pc2) (erased o)) (spoke-col-edge B d x sx lx u v e n f fe lab Q ls ks m sr t puv))
@@ -602,7 +602,7 @@
       (graph-resp d f ks gf grf (spoke-col-const d x sx lx e n f fe lab Q ls ks gf sr t (graph-fun d f gf grf)) lks) (tab-under _ lab ks t) lks (perm-under d e nf pme))) _))
 
 (def-fns _ $ (erased arity-go : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab xs ks) (erased (MinCx B d e n f fe lab) m)
-    (subterm erased (Orders f xs ks) os) -> (erased (HOr (Above ks (Succ (Succ (Succ (Succ (Zero)))))) (Reduces B d e n f)) r))
+    (subterm erased (Orders f xs ks) os) -> (erased (Or (Above ks (Succ (Succ (Succ (Succ (Zero)))))) (Reduces B d e n f)) r))
   (let-match erased os (OrdCons _ xs1 ks1 x k o os1) ((OrdNil _) (OrL _ _ (AboveNil _))))
   (let-match erased (arity-go B d e n f fe lab xs1 ks1 m os1) (OrL _ _ ab) ((OrR _ _ r) (OrR _ _ r)))
   (let ((erased four)) (Succ (Succ (Succ (Succ (Zero))))))
@@ -612,7 +612,7 @@
     ((CGt _ _ _ _ q) (OrR _ _ (face-small B d x k e n f fe lab m o (lt-weaken k four q))))))
 
 (def-fns _ $ (erased min-arity-at : (erased (Level) B) (erased (Nat) d) (erased (List (Nat)) e n f fe lab) (erased (MinCx B d e n f fe lab) m)
-    -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r))
+    -> (erased (Or (Pentagonal d f) (Reduces B d e n f)) r))
   (let ((erased m2)) m)
   (let-match erased m2 (MkMinCx _ _ _ _ _ _ _ _ _ c _ _))
   (let-match erased c (MkSpk _ _ _ _ _ _ _ h _ _ _ _ _ _ _ _ _ _ _))
@@ -627,7 +627,7 @@
   (def-lvl B)
   (let ((erased pb)) (prove-predates (level-of birk-glue) B))
   (def-fns _ $ (erased ma : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
-      (erased (Connected d e n f) cn) (erased (NoColoring e f) nc) -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r))
+      (erased (Connected d e n f) cn) (erased (NoColoring e f) nc) -> (erased (Or (Pentagonal d f) (Reduces B d e n f)) r))
     (let-match erased p (MkPbpp _ _ _ _ h g bl pl _))
     (let ((erased fe) (erased lab) (erased c)) (spk-make d e n f h g bl pl cu))
     (min-arity-at B d e n f fe lab (MkMinCx B d e n f fe lab pb bks c cn nc)))

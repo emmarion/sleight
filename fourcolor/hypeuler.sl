@@ -1,7 +1,7 @@
 (def-fns _ $ (erased fixed-sub : (erased (List (Nat)) lab rs ids) (erased (Nat) d) (subterm erased (Respects lab rs rs) fix)
-    (erased (Length (Nat) lab d) ll) (erased (Iota d ids) io) -> (erased (Sub rs ids) r))
-  (let-match erased fix (RespCons _ rs1 _ j _ p fix1) ((RespNil _) (SubNil ids)))
-  (SubCons j rs1 ids (iota-in d j ids io (nth-lt-length _ lab j d j p ll)) (fixed-sub lab rs1 ids d fix1 ll io)))
+    (erased (Length (Nat) lab d) ll) (erased (Iota d ids) io) -> (erased (HSub rs ids) r))
+  (let-match erased fix (RespCons _ rs1 _ j _ p fix1) ((RespNil _) (HsbNil ids)))
+  (HsbCons j rs1 ids (iota-in d j ids io (nth-lt-length _ lab j d j p ll)) (fixed-sub lab rs1 ids d fix1 ll io)))
 
 (def-fns _ $ (erased classes-bound : (erased (List (Bond)) g) (erased (Nat) d k) (erased (Classes g d k) cs) -> (erased (Lt k (Succ d)) r))
   (let-match erased cs (MkClasses _ _ _ ids lab rs io ll lr dr fix _ _))
@@ -88,12 +88,6 @@
     (respects-assoc c ni fi f ci ids d nic fif rci (respects-length fi ni ci d rci lni) lni)
     (respects-assoc ci f n ni c ids d fci nni rc lc lf))))
 
-(def-fns _ $ (erased img-apart : (erased (Nat) d x b y b2) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p x y) px)
-    (erased (Nth (Nat) p b b2) pb) (erased (Apart (Nat) Lt x b) ne) -> (erased (Apart (Nat) Lt y b2) r))
-  (match erased (nat-eq y b2) _
-    (absurd (Equal _ _ _) (let-match erased (perm-inj d x b y p q pm px pb) (Refl _ _)) (apart-irrefl x ne))
-    ((Unequal _ _ _ _ r) r)))
-
 (def-fns _ $ (erased inv-swap : (erased (Nat) d a b a2 b2) (erased (List (Nat)) p q p2 q2) (erased (List (Bond)) g2) (subterm erased (Fun p2 g2) f)
     (erased (Perm d p q) pm) (erased (Upd2 p a b2 b a2 p2) up) (erased (Upd2 q b2 a a2 b q2) uq) (erased (Nth (Nat) p a a2) pa)
     (erased (Nth (Nat) p b b2) pb) -> (erased (InvOn q2 g2) r))
@@ -104,7 +98,7 @@
     ((UCb _ _ _ _ _) (InvCons q2 g1 b a2 (upd2-b q q2 b2 a a2 b uq) rest))
     ((UCo _ _ _ _ _ _ _ na nb q1)
       (InvCons q2 g1 x y (upd2-other q q2 b2 a a2 b y x uq (perm-inv d x y p q pm q1)
-        (img-apart d x b y b2 p q pm q1 pb nb) (img-apart d x a y a2 p q pm q1 pa na)) rest))))
+        (perm-apart d x b y b2 p q pm q1 pb nb) (perm-apart d x a y a2 p q pm q1 pa na)) rest))))
 
 (def-fns _ $ (erased perm-swap : (erased (Nat) d a b a2 b2) (erased (List (Nat)) p q p2) (erased (Perm d p q) pm)
     (erased (Nth (Nat) p a a2) pa) (erased (Nth (Nat) p b b2) pb) (erased (Upd2 p a b2 b a2 p2) up)
@@ -114,7 +108,7 @@
   (let ((erased li)) (iota-length d ids io))
   (let ((erased lq)) (respects-length-inv p q ids d pq li))
   (let ((erased q2) (erased uq)) (upd2-exists q b2 a a2 b d lq (perm-val d b b2 p q pm pb) (perm-val d a a2 p q pm pa)
-    (apart-sym a2 b2 (img-apart d a b a2 b2 p q pm pa pb ne))))
+    (apart-sym a2 b2 (perm-apart d a b a2 b2 p q pm pa pb ne))))
   (let ((erased lp2)) (upd2-length p p2 a b2 b a2 d up lp))
   (let ((erased lq2)) (upd2-length q q2 b2 a a2 b d uq lq))
   (let ((erased g2) (erased z2)) (zip-exists ids p2 d li lp2))
@@ -221,7 +215,7 @@
 
 (def-fns _ $ (erased es-join : (erased (Nat) kc d k1 k2 k3 g) (erased (EulerSum kc d k1 k2 (Succ k3) g) es) -> (erased (EulerSum kc d (Succ k1) k2 k3 g) r))
   (let-match erased es (MkEulerSum _ _ _ _ _ _ c2 lhs s1 rhs g2 dc al a1 ar dg ag))
-  (MkEulerSum kc d (Succ k1) k2 k3 g c2 lhs (Succ s1) rhs g2 dc al (AddSucc k1 k2 s1 a1) (add-succ-left s1 k3 rhs ar) dg ag))
+  (MkEulerSum kc d (Succ k1) k2 k3 g c2 lhs (Succ s1) rhs g2 dc al (AddSucc k1 k2 s1 a1) (add-shift s1 k3 rhs ar) dg ag))
 
 (def-fns _ $ (erased es-split : (erased (Nat) kc d k1 k2 k3 g) (erased (EulerSum kc d (Succ k1) k2 (Succ k3) g) es)
     -> (erased (Nat) r0 lhs) (erased (Add k1 k2 r0) a0) (erased (Nat) r1) (erased (Add r0 k3 r1) a1) (erased (Nat) c2 g2)
@@ -237,7 +231,7 @@
   (let ((erased s0) (erased lhs) (erased a0) (erased r1) (erased ar0) (erased c2) (erased g2) (erased dc) (erased al) (erased dg) (erased ag))
     (es-split kc d k1 k2 k3 g es))
   (MkEulerSum kc d k1 k2 k3 (Succ g) c2 lhs s0 r1 (Succ (Succ g2)) dc al a0 ar0 (DS g g2 dg)
-    (add-succ-left (Succ g2) r1 lhs (add-succ-left g2 (Succ r1) lhs ag))))
+    (add-shift (Succ g2) r1 lhs (add-shift g2 (Succ r1) lhs ag))))
 
 (def-fns _ $ (erased es-sep : (erased (Nat) kc d k1 k2 k3 g) (erased (EulerSum (Succ kc) d (Succ k1) k2 (Succ k3) g) es) -> (erased (EulerSum kc d k1 k2 k3 g) r))
   (let ((erased s0) (erased _) (erased a0) (erased r1) (erased ar0) (erased _) (erased g2) (erased dc) (erased al) (erased dg) (erased ag))
@@ -366,7 +360,7 @@
   (let ((erased gf2) (erased grf2)) (graph-exists d f2 (perm-length d f2 fi2 pf2)))
   (let ((erased g2) (erased cg2)) (cat-exists gn gf2))
   (let ((erased kc2) (erased gen2) (erased cs2) (erased es2))
-    (euler-core d kn (Succ kf) kx2 n ni f2 fi2 c2 gn gf2 g2 pn pf2 rc2 on of2 oc2 grn grf2 cg2 m1 (add-succ-left kf m1 d am)))
+    (euler-core d kn (Succ kf) kx2 n ni f2 fi2 c2 gn gf2 g2 pn pf2 rc2 on of2 oc2 grn grf2 cg2 m1 (add-shift kf m1 d am)))
   (let ((erased kc) (erased gen) (erased cs) (erased es) (erased _))
     (euler-step d kn kf kx kx2 kc2 gen2 a a2 b2 n ni f fi c f2 fi2 c2 gn gf g gf2 g2 pn pf pf2 rc rc2 oc oc2 grn grf grf2 cg cg2 pa pb up cs2 es2))
   (values kc gen cs es))

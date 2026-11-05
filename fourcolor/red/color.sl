@@ -1,8 +1,3 @@
-(def-adts $ (Or : (Type A) (Type B) -> Type)
-  enum
-  (many InL : (erased Type A B) (erased A a) -> (Or A B))
-  (many InR : (erased Type A B) (erased B b) -> (Or A B)))
-
 (def-adts $ (PermC :((Perm) g) ((Col) c) ((Col) d) -> Type)
   enum
   (many PC0 : (erased (Perm) g) -> (PermC g (C0) (C0)))

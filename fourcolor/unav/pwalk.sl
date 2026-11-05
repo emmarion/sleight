@@ -1,8 +1,3 @@
-(def-adts $ (Mem : (Type A) (A x) ((List A) xs) -> Type)
-  enum
-  (many MemHere : (erased Type A) (erased A x) (erased (List A) xs) -> (Mem A x (Cons A x xs)))
-  (many MemThere : (erased Type A) (erased A x y) (erased (List A) xs) (erased (Mem A x xs) m) -> (Mem A x (Cons A y xs))))
-
 (def-adts $ (Sel : ((List (Sub)) ql qh pl pr) -> Type)
   enum
   (many SelL : (erased (List (Sub)) ql qh) -> (Sel ql qh ql qh))
@@ -20,7 +15,7 @@
 ; h: a part of ct containing p, both of length m.
 (def-adts $ (InCut : ((List (Sub)) p) ((List (List (Sub))) ct) -> Type)
   enum
-  (many MkInCut : (erased (List (Sub)) p h) (erased (List (List (Sub))) ct) (erased (Nat) m) (erased (Mem (List (Sub)) h ct) mh)
+  (many MkInCut : (erased (List (Sub)) p h) (erased (List (List (Sub))) ct) (erased (Nat) m) (erased (Elem (List (Sub)) h ct) mh)
       (erased (Pw (Sub) (Sub) SubSub p h) sb) (erased (Length (Sub) p m) lp) (erased (Length (Sub) h m) lh) -> (InCut p ct)))
 
 (def-fns _ $ (many cut-find : (many (List (Sub)) p) (subterm many (List (List (Sub))) ct) -> (many (Bool) ok) (erased (IfT ok (InCut p ct)) w))
@@ -33,20 +28,20 @@
       (let-match many (nat-eq m m2) (Equal _ _ _) (else (values (BFalse) (IfF _))))
       (let-match many c (PSub) (else (values (BFalse) (IfF _))))
       (let-match erased a (AnsSub _ _ sb))
-      (values (BTrue) (IfY _ (MkInCut p h ct m (MemHere _ h rest) sb lp lh))))
+      (values (BTrue) (IfY _ (MkInCut p h ct m (ElHere _ h rest) sb lp lh))))
     ((BFalse)
       (let ((many ok) (erased w)) (tail $ cut-find p rest))
       (values ok (match erased w _
         ((IfY _ ca)
           (let-match erased ca (MkInCut _ h2 _ m3 mh sb2 lp2 lh2))
-          (IfY _ (MkInCut p h2 ct m3 (MemThere _ h2 h rest mh) sb2 lp2 lh2)))
+          (IfY _ (MkInCut p h2 ct m3 (ElThere _ h2 h rest mh) sb2 lp2 lh2)))
         ((IfF _) (IfF _)))))))
 
 ; ct: the cut list; out: the obligations; Forced p0 p o: a valid hub fitting p0 exactly fits p exactly, unless o holds of it.
 (def-adts
   ((Pres : ((Nat) nhub) ((List (List (Sub))) rt rs ct) ((List (Sub)) p) ((List (List (Sub))) out) -> Type)
     enum
-    (many PRed : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (Mem (List (Sub)) p out) m)
+    (many PRed : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (Elem (List (Sub)) p out) m)
         -> (Pres nhub rt rs ct p out))
     (many PCut : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct out) (erased (List (Sub)) p) (erased (InCut p ct) c)
         -> (Pres nhub rt rs ct p out))
@@ -126,10 +121,10 @@
     ((NthHere _ _ _) (values (MkEntry nhub rt rs ct acc oa da a pa fa xa ea ea2) (MkEntry nhub rt rs ct acc ob db b pb fb xb eb eb2))))
   (env-nth nhub i1 rt rs ct acc env1 a b rest nt1))
 
-(def-fns _ $ (erased mem-ext : (erased (List (Sub)) x) (erased (List (List (Sub))) o o2) (erased (Mem (List (Sub)) x o) m) (subterm erased (Ext o o2) e)
-    -> (erased (Mem (List (Sub)) x o2) r))
+(def-fns _ $ (erased mem-ext : (erased (List (Sub)) x) (erased (List (List (Sub))) o o2) (erased (Elem (List (Sub)) x o) m) (subterm erased (Ext o o2) e)
+    -> (erased (Elem (List (Sub)) x o2) r))
   (let-match erased e (ExtCons _ o3 q e1) ((ExtRefl _) m))
-  (MemThere _ x q o3 (mem-ext x o o3 m e1)))
+  (ElThere _ x q o3 (mem-ext x o o3 m e1)))
 
 (def-fns _ $ (erased pres-ext : (erased (Nat) nhub) (erased (List (List (Sub))) rt rs ct) (erased (List (Sub)) p) (erased (List (List (Sub))) o o2)
     (erased (Pres nhub rt rs ct p o) d) (erased (Ext o o2) e) -> (erased (Pres nhub rt rs ct p o2) r))
@@ -285,7 +280,7 @@
     ((SRed)
       (let ((many out)) (Cons _ mp $ Cons _ p acc))
       (values (BTrue) out (IfY _ (MkW3 nhub rt rs ct acc out p mp
-        (PRed nhub rt rs ct out p (MemThere _ p mp _ (MemHere _ p acc))) (PRed nhub rt rs ct out mp (MemHere _ mp _))
+        (PRed nhub rt rs ct out p (ElThere _ p mp _ (ElHere _ p acc))) (PRed nhub rt rs ct out mp (ElHere _ mp _))
         (ExtCons acc _ mp (ExtCons acc acc p (ExtRefl acc)))))))
     ((SCut)
       (let ((many okp) (erased wp)) (cut-find p ct))

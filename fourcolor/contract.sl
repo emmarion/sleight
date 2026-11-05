@@ -40,7 +40,7 @@
   (let ((erased lks)) (respects-length kc p ks d rk lp))
   (values ks rk
     (MkCCColoring d e f cc ks ins ge ie gr (respects-assoc f p kc pf ks ks d rpf (reach-resp kc f2 p pf ks rf rc rk) rk lks lp)
-      (lift-ecc ins p e2 f2 kc ke ks ge le rf re df rk) (respects-under-vals kc p ks 4 rk u) lks)))
+      (lift-ecc ins p e2 f2 kc ke ks ge le rf re df rk) (respects-under-out kc p ks 4 rk u) lks)))
 
 ; The map of (d, e, n, f) contracted along cc: the one map of ms, smaller, planar, bridgeless, plain and precubic,
 ; with a dart map p from (d, e, n, f) for cc-lift.
@@ -72,7 +72,7 @@
     (erased (Length (Nat) h1 dc) l1) (erased (Under h1 dm) u1) (erased (Length (Nat) hr dr) l2)
     (erased (Respects h1 (Cons (Nat) a p) A) ra) (erased (Respects hr R B) rb) (erased (Reach fm A B) rc)
     -> (erased (List (Col)) et) (erased (CcCol cp cc et) cc1) (erased (RingTrace er fr R et) rt))
-  (let ((erased L) (erased rl)) (respects-exists k A dm (respects-under-vals h1 (Cons _ a p) A dm ra u1) lk))
+  (let ((erased L) (erased rl)) (respects-exists k A dm (respects-under-out h1 (Cons _ a p) A dm ra u1) lk))
   (let ((erased rr)) (respects-assoc R hr k B kr L dr rb (reach-resp k fm A B L rf rc rl) rk2 (respects-length k hr kr dr rk2 l2) l2))
   (let ((erased rr1)) (respects-assoc (Cons _ a p) h1 k A kc L dc ra rl rk1 (respects-length k h1 kc dc rk1 l1) l1))
   (let-match erased c (MkCcColoring _ _ _ _ _ _ _ _ _ _ four))

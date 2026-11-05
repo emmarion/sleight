@@ -13,11 +13,11 @@
   (values ok2 (match erased w2 _ ((IfY _ a) (IfY _ (ARCons qt q rest dd a))) ((IfF _) (IfF _)))))
 
 (def-fns _ $ (erased allred-mem : (erased (Qzt) qt) (erased (List (List (Sub))) obl) (erased (List (Sub)) q) (subterm erased (AllRed qt obl) a)
-    (erased (Mem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
+    (erased (Elem (List (Sub)) q obl) m) -> (erased (RedD qt q) r))
   (let-match erased a (ARCons _ _ rest dd a1) (absurd (ARNil _) m))
   (match erased m _
-    ((MemHere _ _ _) dd)
-    ((MemThere _ _ _ _ m1) (allred-mem qt rest q a1 m1))))
+    ((ElHere _ _ _) dd)
+    ((ElThere _ _ _ _ m1) (allred-mem qt rest q a1 m1))))
 
 ; The obligations obl pass redpart against a quiz tree built from cfs.
 (def-adts $ (RedE : ((List (Config)) cfs) ((List (List (Sub))) obl) -> Type)
@@ -52,7 +52,7 @@
 
 (def-adts $ (InRegs : ((List (Sub)) h) ((List (Region)) t) -> Type)
   enum
-  (many MkInRegs : (erased (List (Sub)) h) (erased (List (Region)) t) (erased (Region) x) (erased (Mem (Region) x t) m) (erased (PartOf x h) po) -> (InRegs h t)))
+  (many MkInRegs : (erased (List (Sub)) h) (erased (List (Region)) t) (erased (Region) x) (erased (Elem (Region) x t) m) (erased (PartOf x h) po) -> (InRegs h t)))
 
 (def-adts $ (CutsIn : ((List (List (Sub))) ct) ((List (Region)) t) -> Type)
   enum
@@ -61,9 +61,9 @@
       -> (CutsIn (Cons (List (Sub)) h ct) t)))
 
 (def-fns _ $ (erased cutsin-at : (erased (List (List (Sub))) ct) (erased (List (Sub)) h) (erased (List (Region)) t) (subterm erased (CutsIn ct t) c)
-    (erased (Mem (List (Sub)) h ct) m) -> (erased (InRegs h t) r))
+    (erased (Elem (List (Sub)) h ct) m) -> (erased (InRegs h t) r))
   (let-match erased c (CICons ct1 _ _ i rest) (absurd (CINil _) m))
-  (match erased m _ ((MemHere _ _ _) i) ((MemThere _ _ _ _ m1) (cutsin-at ct1 h t rest m1))))
+  (match erased m _ ((ElHere _ _ _) i) ((ElThere _ _ _ _ m1) (cutsin-at ct1 h t rest m1))))
 
 (def-adts $ (PartIn : ((List (Sub)) h q) -> Type)
   enum
@@ -100,10 +100,10 @@
 (def-fns _ $ (many in-regs-c : (many (List (Sub)) h) (subterm many (List (Region)) t) -> (many (Bool) ok) (erased (IfT ok (InRegs h t)) w))
   (let-match many t (Cons _ x rest) ((Nil _) (values (BFalse) (IfF _))))
   (let ((many ok) (erased w)) (part-of-c x h))
-  (let-match many ok (BFalse) ((BTrue) (let-match erased w (IfY _ po)) (values (BTrue) (IfY _ (MkInRegs h t x (MemHere _ x rest) po)))))
+  (let-match many ok (BFalse) ((BTrue) (let-match erased w (IfY _ po)) (values (BTrue) (IfY _ (MkInRegs h t x (ElHere _ x rest) po)))))
   (let ((many ok2) (erased w2)) (tail $ in-regs-c h rest))
   (values ok2 (match erased w2 _
-    ((IfY _ i) (let-match erased i (MkInRegs _ _ x2 m2 po2)) (IfY _ (MkInRegs h t x2 (MemThere _ x2 x rest m2) po2)))
+    ((IfY _ i) (let-match erased i (MkInRegs _ _ x2 m2 po2)) (IfY _ (MkInRegs h t x2 (ElThere _ x2 x rest m2) po2)))
     ((IfF _) (IfF _)))))
 
 (def-fns _ $ (many cuts-in-c : (subterm many (List (List (Sub))) ct) (many (List (Region)) t) -> (many (Bool) ok) (erased (IfT ok (CutsIn ct t)) w))
@@ -130,11 +130,11 @@
       (erased (AllReg cfs drs t) r) -> (AllReg cfs drs (Cons (Region) x t))))
 
 (def-fns _ $ (erased reg-claim : (erased (List (Config)) cfs) (erased (List (List (Sub))) drs) (erased (List (Region)) xs) (subterm erased (AllReg cfs drs xs) al)
-    (erased (Region) x) (erased (Mem (Region) x xs) mx) (erased (List (Sub)) h) (erased (PartOf x h) po) (erased (Nat) d y pos neg) (erased (List (Nat)) e n f ks)
+    (erased (Region) x) (erased (Elem (Region) x xs) mx) (erased (List (Sub)) h) (erased (PartOf x h) po) (erased (Nat) d y pos neg) (erased (List (Nat)) e n f ks)
     (erased (Geo d e n f ks) g) (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks y h) xh)
     -> (erased (CfEmbed cfs d e n f ks) r))
   (let-match erased al (ARgCons _ _ _ t ok rest) (absurd (ARgNil _ _) mx))
-  (let-match erased mx (MemHere _ _ _) ((MemThere _ _ _ _ m1) (reg-claim cfs drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
+  (let-match erased mx (ElHere _ _ _) ((ElThere _ _ _ _ m1) (reg-claim cfs drs t rest x m1 h po d y pos neg e n f ks g ly ds lt xh)))
   (let-match erased ok (MkRegOK _ _ rt rs ct out nhub p mp q mq _ _ sz tg qt qi ip im d0 d1 ar _ ci))
   (let ((erased u) (erased xu) (erased du))
     (match erased po (((List (Sub)) u) ((ExactAt e f ks y u) xu) ((Pres nhub rt rs ct u out) du))
@@ -151,16 +151,16 @@
 (def-adts $ (RootsL : ((List (Region)) xs) ((Nat) m hi) -> Type)
   enum
   (many RLNil : (erased (List (Region)) xs) (erased (Nat) m) -> (RootsL xs m m))
-  (many RLCons : (erased (List (Region)) xs) (erased (Nat) m hi) (erased (Region) x) (erased (List (Sub)) p) (erased (Mem (Region) x xs) mx)
+  (many RLCons : (erased (List (Region)) xs) (erased (Nat) m hi) (erased (Region) x) (erased (List (Sub)) p) (erased (Elem (Region) x xs) mx)
       (erased (Repeat (Sub) m sub59 p) rp) (erased (PartOf x p) po) (erased (RootsL xs (Succ m) hi) rest) -> (RootsL xs m hi)))
 
 (def-fns _ $ (erased roots-look : (erased (List (Region)) xs) (erased (Nat) a m hi) (subterm erased (RootsL xs m hi) rl) (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up)
-    -> (erased (Region) x) (erased (Mem (Region) x xs) mx) (erased (List (Sub)) p) (erased (Repeat (Sub) a sub59 p) rp) (erased (PartOf x p) po))
-  (let-match erased rl (RLCons _ _ _ x p mx rp po rest) (absurd (RLNil _ _) (lt-le-absurd a m up lo)))
+    -> (erased (Region) x) (erased (Elem (Region) x xs) mx) (erased (List (Sub)) p) (erased (Repeat (Sub) a sub59 p) rp) (erased (PartOf x p) po))
+  (let-match erased rl (RLCons _ _ _ x p mx rp po rest) (absurd (RLNil _ _) (lt-asym a m up lo)))
   (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
     ((Equal _ _ _) (values x mx p rp po)))
   (match erased ap _
-    (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
+    (absurd (ApLt _ _ _ _ l) (lt-asym a m l lo))
     ((ApGt _ _ _ _ l) (roots-look xs a (Succ m) hi rest (LtS m a l) up))))
 
 (def-fns _ $ (many roots-c : (many (List (Region)) xs) (many (Nat) m hi) (subterm many (Nat) fuel) -> (many (ErasedMaybe (RootsL xs m hi)) r))

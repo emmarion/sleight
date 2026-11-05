@@ -846,11 +846,6 @@
   (let ((erased t) (erased s)) (sel-exists u e))
   (values t (AtCons top u t pre1 e a1 s)))
 
-(def-fns _ $ (erased add-sh : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
-  (let ((erased c1) (erased e) (erased q)) (add-succ-right-inv a b c p))
-  (let-match erased e (Refl _ _))
-  (AddSucc a b c1 q))
-
 (def-fns _ $ (erased canon-at : (erased (Nat) j d H) (erased (Ctree) top t) (subterm erased (List (Col)) pre) (erased (CtCanon H top) c)
     (erased (CtAt top pre t) pt) (erased (Length (Col) pre d) le) (erased (Add d j H) ad) -> (erased (CtCanon j t) r))
   (match erased pre _

@@ -432,7 +432,7 @@
     (erased (EEnv dc ec nc fc ksc rc dm em nm fm ksm as hl) en) (erased (GcOK dc ec nc rc as) ok) (erased (FunctorAll ec em as hl as) fu) (erased (FullAll ec em hl as as) fa)
     (erased (Iota dc ids) io) (erased (EmbL ec nc em nm fm as hl ids h1) el) (erased (Length (Nat) h1 dc) lh) (erased (InsertE ec cc ie) iec)
     (erased (Respects h1 cc ccr) rcc) (erased (InsertE em ccr ins) iem) (erased (Disj ie rc) dj) (erased (Under cc dc) uc) (subterm erased (List (Nat)) hs)
-    (erased (AppN pre hs h1) ap) (erased (Length (Nat) pre x) lp) -> (erased (InSides ie ins x hs) r))
+    (erased (Join pre hs h1) ap) (erased (Length (Nat) pre x) lp) -> (erased (InSides ie ins x hs) r))
   (let-match erased hs (Cons _ u hs1) ((Nil _) (SdNil ie ins x)))
   (let ((erased pu)) (app-nth pre hs1 h1 u x ap lp))
   (let ((erased lx)) (nth-lt-length _ h1 x dc u pu lh))

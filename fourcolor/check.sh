@@ -20,8 +20,8 @@ for x in defs orient base sweep geo plan map lists planemap walk frontier labels
   hypjordan hyptree hypcount hypcubic cube reduce3 coloring induct inductfc cfmap colalias \
   hypsub unav/faces red/red cpmap red/color cfcolor red/ctree red/gtree red/grestrict red/crestrict red/kempe red/flat \
   cpcolor red/configs red/bridge red/init red/r4 red/r4s red/r4c red/r4g red/r4k red/check red/gramrot red/cfred red/ccomp red/ccheck red/bcheck red/r4run \
-  cpcomp iealias realias ringtrace kempemap patch patch2 split geomring sew snip srcycle revsnip revsnip2 \
-  revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2 embed2 contract contract2 unav/realias; do
+  cpcomp ringtrace kempemap patch patch2 split geomring sew snip srcycle revsnip revsnip2 \
+  revsnip3 cpgeom ringdec traceconv birkhoff birkfit birkhoff2 embed2 contract contract2; do
   F="$F fourcolor/$x.sl"
 done
 for x in part quiz hubcap present fit dbound hubcapc obsmap dscore dsum posz pwalk hubsound pwsound \

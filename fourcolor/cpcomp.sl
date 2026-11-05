@@ -17,22 +17,22 @@
 
 (def-fns _ $ (erased or-sel : (erased (Ctree) tl tr l r) (erased (Col) e) (erased (List (Col)) w) (erased (Or (CtMem tl (Cons (Col) e w)) (CtMem tr (Cons (Col) e w))) m)
     (erased (CtSel tl e l) sl) (erased (CtSel tr e r) sr) -> (erased (Or (CtMem l w) (CtMem r w)) res))
-  (match erased m _ ((InL _ _ ma) (InL _ _ (mem-sel tl l e w ma sl))) ((InR _ _ ma) (InR _ _ (mem-sel tr r e w ma sr)))))
+  (match erased m _ ((OrL _ _ ma) (OrL _ _ (mem-sel tl l e w ma sl))) ((OrR _ _ ma) (OrR _ _ (mem-sel tr r e w ma sr)))))
 
 (def-fns _ $ (erased or-in : (erased (Ctree) tl tr t) (subterm erased (List (Col)) w) (subterm erased (CtOr tl tr t) o) (erased (Or (CtMem tl w) (CtMem tr w)) m)
     -> (erased (CtMem t w) r))
   (match erased o _
-    ((OrEL _) (match erased m _ (absurd (InL _ _ m1) (mem-empty w m1)) ((InR _ _ m1) m1)))
-    ((OrER _) (match erased m _ ((InL _ _ m1) m1) (absurd (InR _ _ m1) (mem-empty w m1))))
+    ((OrEL _) (match erased m _ (absurd (OrL _ _ m1) (mem-empty w m1)) ((OrR _ _ m1) m1)))
+    ((OrER _) (match erased m _ ((OrL _ _ m1) m1) (absurd (OrR _ _ m1) (mem-empty w m1))))
     ((OrLL a b)
       (let-match erased (match erased m (((Eq (List (Col)) w (Nil (Col))) q))
-        ((InL _ _ m1) (leaf-mem-nil a w m1)) ((InR _ _ m1) (leaf-mem-nil b w m1))) (Refl _ _))
+        ((OrL _ _ m1) (leaf-mem-nil a w m1)) ((OrR _ _ m1) (leaf-mem-nil b w m1))) (Refl _ _))
       (leaf-mem (CEmpty)))
     ((OrNN l1 l2 l3 r1 r2 r3 u1 u2 u3 _ o1 o2 o3 c)
       (let-match erased w (Cons _ e w1)
         (absurd (Nil _) (match erased m _
-          (absurd (InL _ _ m1) (let-match erased m1 (MkCtMem _ _ _ p)) (let-match erased p (SubNil _ _ rt)) rt)
-          (absurd (InR _ _ m1) (let-match erased m1 (MkCtMem _ _ _ p)) (let-match erased p (SubNil _ _ rt)) rt))))
+          (absurd (OrL _ _ m1) (let-match erased m1 (MkCtMem _ _ _ p)) (let-match erased p (SubNil _ _ rt)) rt)
+          (absurd (OrR _ _ m1) (let-match erased m1 (MkCtMem _ _ _ p)) (let-match erased p (SubNil _ _ rt)) rt))))
       (let-match erased e (C0)
         ((C1) (mem-cons t u1 e w1 (cons-sel-back u1 u2 u3 t u1 e c (SelN1 u1 u2 u3))
           (or-in l1 r1 u1 w1 o1 (or-sel tl tr l1 r1 e w1 m (SelN1 l1 l2 l3) (SelN1 r1 r2 r3)))))
@@ -41,21 +41,21 @@
         ((C3) (mem-cons t u3 e w1 (cons-sel-back u1 u2 u3 t u3 e c (SelN3 u1 u2 u3))
           (or-in l3 r3 u3 w1 o3 (or-sel tl tr l3 r3 e w1 m (SelN3 l1 l2 l3) (SelN3 r1 r2 r3))))))
       (match erased (or-sel tl tr (CEmpty) (CEmpty) e w1 m (SelN0 l1 l2 l3) (SelN0 r1 r2 r3)) _
-        (absurd (InL _ _ m1) (mem-empty w1 m1)) (absurd (InR _ _ m1) (mem-empty w1 m1))))))
+        (absurd (OrL _ _ m1) (mem-empty w1 m1)) (absurd (OrR _ _ m1) (mem-empty w1 m1))))))
 
 (def-fns _ $ (erased nmem-or : (erased (Ctree) tl tr t) (erased (List (Col)) l) (erased (CtOr tl tr t) o) (erased (Or (NMem tl l) (NMem tr l)) b)
     -> (erased (NMem t l) r))
   (match erased b _
-    ((InL _ _ x) (match erased x _ ((NMZ _ _ z) (NMZ t l z)) ((NMIn _ _ p n m) (NMIn t l p n (or-in tl tr t p o (InL _ _ m))))))
-    ((InR _ _ x) (match erased x _ ((NMZ _ _ z) (NMZ t l z)) ((NMIn _ _ p n m) (NMIn t l p n (or-in tl tr t p o (InR _ _ m))))))))
+    ((OrL _ _ x) (match erased x _ ((NMZ _ _ z) (NMZ t l z)) ((NMIn _ _ p n m) (NMIn t l p n (or-in tl tr t p o (OrL _ _ m))))))
+    ((OrR _ _ x) (match erased x _ ((NMZ _ _ z) (NMZ t l z)) ((NMIn _ _ p n m) (NMIn t l p n (or-in tl tr t p o (OrR _ _ m))))))))
 
 (def-fns _ $ (erased brmem-or : (erased (Ctree) tl tr t) (erased (List (Col)) et) (erased (CtOr tl tr t) o) (erased (Or (BrMem et tl) (BrMem et tr)) b)
     -> (erased (BrMem et t) r))
   (match erased b _
-    ((InL _ _ x) (let-match erased x (MkBrMem e0 e1 rest grest _ g ip pg pt nm))
-      (MkBrMem e0 e1 rest grest t g ip pg pt (nmem-or tl tr t grest o (InL _ _ nm))))
-    ((InR _ _ x) (let-match erased x (MkBrMem e0 e1 rest grest _ g ip pg pt nm))
-      (MkBrMem e0 e1 rest grest t g ip pg pt (nmem-or tl tr t grest o (InR _ _ nm))))))
+    ((OrL _ _ x) (let-match erased x (MkBrMem e0 e1 rest grest _ g ip pg pt nm))
+      (MkBrMem e0 e1 rest grest t g ip pg pt (nmem-or tl tr t grest o (OrL _ _ nm))))
+    ((OrR _ _ x) (let-match erased x (MkBrMem e0 e1 rest grest _ g ip pg pt nm))
+      (MkBrMem e0 e1 rest grest t g ip pg pt (nmem-or tl tr t grest o (OrR _ _ nm))))))
 
 (def-fns _ $ (erased allnz-snoc : (erased (List (Col)) xs ys) (erased (Col) x) (subterm erased (Snoc (Col) xs x ys) s) (erased (AllNZ xs) a) (erased (NZ x) nx)
     -> (erased (AllNZ ys) r))
@@ -71,9 +71,6 @@
 
 (def-fns _ $ (erased allnz-rot : (erased (Nat) k) (erased (List (Col)) xs ys) (erased (Rot (Col) k xs ys) rt) (erased (AllNZ xs) a) -> (erased (AllNZ ys) r))
   (match erased rt _ ((RotIn _ _ _ _ _ _ _ rs) (allnz-rots k xs ys rs a)) ((RotOver _ _ _ _ _ _) a)))
-
-(def-fns _ $ (erased addc-eq : (erased (Col) a b c d) (erased (AddC a b c) p) (erased (AddC a b d) q) -> (erased (Eq (Col) c d) e))
-  (addc-fn a b c d (addc-k a b c p) (addc-k a b d q)))
 
 (def-fns _ $ (erased third-of : (erased (Col) a b c) (erased (AddC a b c) p) (erased (NZ a) na) (erased (NZ b) nb) (erased (NZ c) nc) -> (erased (Third a b c) t))
   (match erased (addc-k a b c p) _ (absurd (AZL _) na) (absurd (AZR _) nb) (absurd (ASame _) nc) ((AThird _ _ _ t) t)))
@@ -119,9 +116,9 @@
       (let-match erased s1 (STU c _ nzc))
       (let ((erased a)) (allnz2 c c et nzc nzc nz))
       (match erased nzc _
-        ((NZ1) (brmem-or t1 u t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
-        ((NZ2) (brmem-or t1 u t et2 o (InR _ _ (brmem-or t2 t3 u et2 ou (InL _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
-        ((NZ3) (brmem-or t1 u t et2 o (InR _ _ (brmem-or t2 t3 u et2 ou (InR _ _ (cov-mem cp2 et1 et2 t3 c3 st1 a))))))))
+        ((NZ1) (brmem-or t1 u t et2 o (OrL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
+        ((NZ2) (brmem-or t1 u t et2 o (OrR _ _ (brmem-or t2 t3 u et2 ou (OrL _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
+        ((NZ3) (brmem-or t1 u t et2 o (OrR _ _ (brmem-or t2 t3 u et2 ou (OrR _ _ (cov-mem cp2 et1 et2 t3 c3 st1 a))))))))
     ((CoY e1 e2 e3 r1 cp2 t1 t2 _ p2 p3 c1 c2 o)
       (let-match erased st (StCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STY _ g h _ pa ng nh))
@@ -129,29 +126,29 @@
       (let ((erased a23) (erased _) (erased n2) (erased n3)) (others e1 e2 e3 nz1 p2 p3))
       (let ((erased a)) (allnz2 g h r1 ng nh nzr))
       (match erased (third-pick e1 e2 e3 g h (third-of e1 e2 e3 a23 nz1 n2 n3) (third-of e1 g h pa nz1 ng nh)) _
-        ((PkSame _ _) (brmem-or t1 t2 t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
-        ((PkSwap _ _) (brmem-or t1 t2 t et2 o (InR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
+        ((PkSame _ _) (brmem-or t1 t2 t et2 o (OrL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
+        ((PkSwap _ _) (brmem-or t1 t2 t et2 o (OrR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
     ((CoH0 e1 e2 g1 g2 r2 cp2 t1 t2 _ p p2 p3 c1 c2 o)
       (let-match erased st (StCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STH _ _ ee g s h _ pee ps ph ng ns _))
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
       (let-match erased nzr (AllNZCons _ _ _ nzr2))
-      (let-match erased (addc-eq e1 e2 ee (C0) pee p) (Refl _ _))
-      (let-match erased (addc-eq (C0) g h g ph (addc-0l g)) (Refl _ _))
+      (let-match erased (addc-same e1 e2 ee (C0) pee p) (Refl _ _))
+      (let-match erased (addc-same (C0) g h g ph (addc-0l g)) (Refl _ _))
       (let ((erased a23) (erased _) (erased n2) (erased n3)) (others e1 g1 g2 nz1 p2 p3))
       (let ((erased a)) (allnz2 g g r2 ng ng nzr2))
       (match erased (third-pick e1 g1 g2 g s (third-of e1 g1 g2 a23 nz1 n2 n3) (third-of e1 g s ps nz1 ng ns)) _
-        ((PkSame _ _) (brmem-or t1 t2 t et2 o (InL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
-        ((PkSwap _ _) (brmem-or t1 t2 t et2 o (InR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
+        ((PkSame _ _) (brmem-or t1 t2 t et2 o (OrL _ _ (cov-mem cp2 et1 et2 t1 c1 st1 a))))
+        ((PkSwap _ _) (brmem-or t1 t2 t et2 o (OrR _ _ (cov-mem cp2 et1 et2 t2 c2 st1 a))))))
     ((CoH e1 e2 sm r2 cp2 _ p nzs c)
       (let-match erased st (StCons _ _ _ et1 _ s1 st1))
       (let-match erased s1 (STH _ _ ee g s h _ pee ps ph ng ns nh))
       (let-match erased nz (AllNZCons _ _ nz1 nzr))
       (let-match erased nzr (AllNZCons _ _ nz2 nzr2))
-      (let-match erased (addc-eq e1 e2 ee sm pee p) (Refl _ _))
+      (let-match erased (addc-same e1 e2 ee sm pee p) (Refl _ _))
       (let-match erased (third-pick e1 e2 sm g s (third-of e1 e2 sm p nz1 nz2 nzs) (third-of e1 g s ps nz1 ng ns)) (PkSame _ _)
         (absurd (PkSwap _ _) (addc-self sm h ph nh)))
-      (let-match erased (addc-eq sm e2 h e1 ph (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm p)))) (Refl _ _))
+      (let-match erased (addc-same sm e2 h e1 ph (addc-comm e2 sm e1 (addc-cancel e2 sm e1 (addc-comm e1 e2 sm p)))) (Refl _ _))
       (cov-mem cp2 et1 et2 t c st1 (allnz2 e2 e1 r2 nz2 nz1 nzr2)))))
 
 (def-fns _ $ (erased third-nz : (erased (Col) a b c) (erased (Third a b c) t) -> (erased (NZ a) na) (erased (NZ b) nb) (erased (NZ c) nc))
@@ -278,12 +275,12 @@
           (let ((erased g) (erased ip) (erased pg)) (erot-ex c nz))
           (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp2 et1 et2 _ ip st1
             (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTCons g c (C1) _ _ pg (PTNil g)))))))
-          (values g ip pet pt (brmem-or t1 t2 t pet o (InR _ _ (cov-mem cp2 _ pet t2 c2 pst (allnz2 (C1) (C1) _ (NZ1) (NZ1) n11))))))
+          (values g ip pet pt (brmem-or t1 t2 t pet o (OrR _ _ (cov-mem cp2 _ pet t2 c2 pst (allnz2 (C1) (C1) _ (NZ1) (NZ1) n11))))))
         ((AThird _ _ _ th)
           (let ((erased g) (erased ip) (erased pa) (erased pb) (erased _)) (third-inv a c x th))
           (let ((erased pet) (erased pst) (erased pt)) (steps-perm g cp2 et1 et2 _ ip st1
             (PTCons g a (C1) _ _ pa (PTCons g a (C1) _ _ pa (PTCons g c (C2) _ _ pb (PTCons g c (C2) _ _ pb (PTNil g)))))))
-          (values g ip pet pt (brmem-or t1 t2 t pet o (InL _ _ (cov-mem cp2 _ pet t1 c1 pst
+          (values g ip pet pt (brmem-or t1 t2 t pet o (OrL _ _ (cov-mem cp2 _ pet t1 c1 pst
             (allnz2 (C1) (C1) _ (NZ1) (NZ1) (allnz2 (C2) (C2) nil (NZ2) (NZ2) (AllNZNil))))))))))))
 
 ; c is b after a.
@@ -320,28 +317,28 @@
   (match erased ia _
     ((IP123) (let-match erased pa (PC1 _ _ _)) (let-match erased pb (PC1 _ _ _))
       (match erased ib _
-        ((IP123) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))
-        ((IP132) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))))
+        ((IP123) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))
+        ((IP132) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC2 _ _ _) (PC3 _ _ _))))))
     ((IP132) (let-match erased pa (PC1 _ _ _)) (let-match erased pb (PC1 _ _ _))
       (match erased ib _
-        ((IP132) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))
-        ((IP123) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))))
+        ((IP132) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))
+        ((IP123) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC1 _ _ _) (PC3 _ _ _) (PC2 _ _ _))))))
     ((IP213) (let-match erased pa (PC2 _ _ _)) (let-match erased pb (PC2 _ _ _))
       (match erased ib _
-        ((IP213) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))
-        ((IP312) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))))
+        ((IP213) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))
+        ((IP312) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC1 _ _ _) (PC3 _ _ _))))))
     ((IP231) (let-match erased pa (PC3 _ _ _)) (let-match erased pb (PC3 _ _ _))
       (match erased ib _
-        ((IP231) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))
-        ((IP321) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))))
+        ((IP231) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))
+        ((IP321) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC2 _ _ _) (PC3 _ _ _) (PC1 _ _ _))))))
     ((IP312) (let-match erased pa (PC2 _ _ _)) (let-match erased pb (PC2 _ _ _))
       (match erased ib _
-        ((IP312) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))
-        ((IP213) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))))
+        ((IP312) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))
+        ((IP213) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC1 _ _ _) (PC2 _ _ _))))))
     ((IP321) (let-match erased pa (PC3 _ _ _)) (let-match erased pb (PC3 _ _ _))
       (match erased ib _
-        ((IP321) (InL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))
-        ((IP231) (InR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))))))
+        ((IP321) (OrL _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))
+        ((IP231) (OrR _ _ (MkPComp _ _ _ _ _ _ _ (PC3 _ _ _) (PC2 _ _ _) (PC1 _ _ _))))))))
 
 (def-fns _ $ (erased perm-mem-back : (erased (Perm) g) (erased (Ctree) t tp) (subterm erased (List (Col)) w) (erased (List (Col)) l) (subterm erased (CtPerm g t tp) p)
     (erased (PermT g w l) pt) (erased (CtMem t l) m) -> (erased (CtMem tp w) r))
@@ -388,12 +385,12 @@
   (let ((erased ptA)) (permt-comp p g A rest prest grest pcA pt2 pgt))
   (let-match erased nm (NMIn _ _ q nq mq) (absurd (NMZ _ _ z) (allnz-hasc0 grest (allnz-perm A rest grest iA ptA a2) z)))
   (match erased (fix-c1 A rho e1 iA irho (pcomp-c p g A e1 y (C1) pcA pc1 pg) prho) _
-    ((InL _ _ k)
+    ((OrL _ _ k)
       (let-match erased (permt-fn rho rest l2 grest ptr (permt-comp A p123 rho rest grest grest k ptA (tail-id grest))) (Refl _ _))
       (match erased nq _
         ((NrEven _ _) mq)
         (absurd (NrOdd _ _ e _) (match erased (evtail-fn grest (BTrue) (BFalse) evl e) _))))
-    ((InR _ _ k)
+    ((OrR _ _ k)
       (let ((erased z) (erased ptz)) (permt-ex p132 grest (IP132)))
       (let-match erased (permt-fn rho rest l2 z ptr (permt-comp A p132 rho rest grest z k ptA ptz)) (Refl _ _))
       (match erased nq _

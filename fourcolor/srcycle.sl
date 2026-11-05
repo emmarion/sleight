@@ -1,10 +1,3 @@
-; No dart of zs is on the face of x; gf holds the bonds of the face permutation.
-(def-adts $ (FaceApart : ((List (Bond)) gf) ((Nat) x) ((List (Nat)) zs) -> Type)
-  enum
-  (many FANil : (erased (List (Bond)) gf) (erased (Nat) x) -> (FaceApart gf x (Nil (Nat))))
-  (many FACons : (erased (List (Bond)) gf) (erased (Nat) x z) (erased (List (Nat)) zs) (erased (Sep gf x z) s) (erased (FaceApart gf x zs) rest)
-      -> (FaceApart gf x (Cons (Nat) z zs))))
-
 ; From x the darts p, each on the face of the edge image of the one before and on no earlier face, the edge image of the
 ; last on the face of x0; gf holds the bonds of the face permutation.
 (def-adts $ (SRPath : ((List (Nat)) e f) ((List (Bond)) gf) ((Nat) x0 x) ((List (Nat)) p) -> Type)

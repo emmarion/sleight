@@ -57,7 +57,7 @@ Each prints `--goal proved: PASS` on standard output on success, with the
 goal and where it is discharged as notes on standard error.
 
 The script passes the unit's files (for `FourColor`, three from `std/`
-and 137 from this directory) in the order the unit needs, with
+and 140 from this directory) in the order the unit needs, with
 `--goal proved` and `--inline 50` (passed on to ocamlopt). It sets
 `OCAMLRUNPARAM=o=400` unless the variable is already set; the native jobs
 inherit it from the compiler. In one sweep of `FourColorM` with slc, one

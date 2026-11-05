@@ -1,1 +1,0 @@
-(let ((erased Or)) HOr)

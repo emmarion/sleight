@@ -105,7 +105,7 @@
   (let ((erased l1))
     (match erased (le-dec p1 q1) (((Lt q1 p1) l1))
       ((LeN _ _ k) k)
-      (absurd (LeY _ _ k) (lt-le-absurd q p lt (le-sum pos neg p1 q1 p q l k ap aq)))))
+      (absurd (LeY _ _ k) (lt-asym q p lt (add-lt-le pos neg p1 q1 p q l k ap aq)))))
   (find-pos d p1 q1 e n f ks rs1 drs u1 t1 l1))
 
 (def-fns _ $ (erased dtot-build : (erased (Nat) d k c60 sp sn sa) (erased (List (Nat)) e n f ks ids cs cse os rs) (erased (List (List (Sub))) drs)
@@ -179,5 +179,5 @@
   (let ((erased amx)) (mul-distr d 12 s6 10 t y m a12 mt my mx))
   (let-match erased my (MulSucc _ _ y1 _ _ ay))
   (let ((erased ly)) (lt-le-trans (Zero) 10 y (LtZ 9) (add-le-right y1 10 y ay)))
-  (let ((erased ltm)) (add-lt-r t (Zero) t y m (add-zero-right t) amx ly))
-  (find-pos d p q e n f ks rs drs ur dt (add-lt-r sp t q m p (add-comm t sp q aq) (add-comm m sp p ap) ltm)))
+  (let ((erased ltm)) (add-mono t (Zero) t y m (add-zero-right t) amx ly))
+  (find-pos d p q e n f ks rs drs ur dt (add-mono sp t q m p (add-comm t sp q aq) (add-comm m sp p ap) ltm)))

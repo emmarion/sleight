@@ -20,6 +20,13 @@
   (many RespCons : (erased (List (Nat)) lab xs ls) (erased (Nat) j l) (erased (Nth (Nat) lab j l) p)
       (erased (Respects lab xs ls) rest) -> (Respects lab (Cons (Nat) j xs) (Cons (Nat) l ls))))
 
+(def-fns _ $ (erased respects-at : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
+    (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) lab j l) q) -> (erased (Nth (Nat) ls i l) r))
+  (let-match erased rp (RespCons _ xs1 ls1 _ l1 p1 rp1) (absurd (RespNil _) p))
+  (let-match erased p (NthThere _ _ _ k1 _ p2)
+    ((NthHere _ _ _) (let-match erased (nth-fn _ lab j l1 l p1 q) (Refl _ _)) (NthHere _ l1 ls1)))
+  (NthThere _ l1 ls1 k1 l (respects-at lab xs1 ls1 k1 j l rp1 p2 q)))
+
 ; lab is constant along xs and gives d1 and d2 different labels.
 (def-adts $ (Separates : ((List (Nat)) lab) ((List (Nat)) xs) ((Nat) d1) ((Nat) d2) -> Type)
   enum

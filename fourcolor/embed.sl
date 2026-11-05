@@ -80,11 +80,11 @@
       (ARCons X cf cfs1 rd (allred-concat X (Cons _ cs css1) cfs1 p1 (ARCCons X cs css1 ar1 a1))))))
 
 (def-fns _ $ (erased reducible-mem : (erased (Level) X) (erased (Config) cf) (erased (List (Config)) cfs) (subterm erased (AllRed X cfs) a)
-    (erased (Mem (Config) cf cfs) m) -> (erased (Reducible X cf) r))
+    (erased (Elem (Config) cf cfs) m) -> (erased (Reducible X cf) r))
   (let-match erased a (ARCons _ _ rest rd a1) (absurd (ARNil _) m))
   (match erased m _
-    ((MemHere _ _ _) rd)
-    ((MemThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))
+    ((ElHere _ _ _) rd)
+    ((ElThere _ _ _ _ m1) (reducible-mem X cf rest a1 m1))))
 
 ; A connected planar bridgeless plain precubic map that the search finds uncolourable is plain cubic with every face
 ; above four darts (Geo), or reduces.
@@ -92,7 +92,7 @@
   enum
   (many MkBirkGeo : (erased (Level) F B)
       (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (NoColoring e f) ncol) (erased (Connected d e n f) conn)
-          -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r)) geo)
+          -> (erased (List (Nat)) ks) (erased (Or (Geo d e n f ks) (Reduces B d e n f)) r)) geo)
       -> (BirkGeo)))
 
 ; In a map as BirkGeo takes it, Geo, a configuration of cfs, C-reducible at X with contract cc, whose kernel preembeds
@@ -101,7 +101,7 @@
   enum
   (many MkNotEmbed : (erased (Level) X) (erased (List (Config)) cfs) (erased (Level) F B)
       (erased (Fn F (erased (Bool) sym) (erased (List (Nat)) cci cc) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
-          (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m)
+          (erased (List (Nat)) em nm fm ksm ec nc fc rc ksc as hl) (erased (Elem (Config) (MkConfig sym cci cp) cfs) m)
           (erased (Pbpp dm em nm fm) p) (erased (NoColoring em fm) ncol) (erased (Geo dm em nm fm ksm) g) (erased (Cpmap cp dc ec fc rc) c)
           (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (KernelList dc fc rc as) kl)
           (erased (Preembedding ec nc fc ksc em fm ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx) (erased (CRed X cp cc) cr)

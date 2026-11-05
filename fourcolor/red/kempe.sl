@@ -144,13 +144,6 @@
     ((Ev2 l l2 _ q p) (ERCons (ESStart) (ESTail p312) (C2) l b (EStS2) (tail-run p312 l l2 b q p)))
     ((Ev3 l l2 _ q p) (ERCons (ESStart) (ESTail p231) (C3) l b (EStS3) (tail-run p231 l l2 b q p)))))
 
-(def-fns _ $ (erased permc-fn : (erased (Perm) g) (erased (Col) c d1 d2) (erased (PermC g c d1) p) (erased (PermC g c d2) q) -> (erased (Eq (Col) d1 d2) e))
-  (match erased p _
-    ((PC0 _) (let-match erased q (PC0 _)) (Refl _ d1))
-    ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (Refl _ d1))
-    ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (Refl _ d1))
-    ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (Refl _ d1))))
-
 (def-fns _ $ (erased esstep-fn : (erased (ES) st s1 s2) (erased (Col) c) (erased (ESStep st c s1) p) (erased (ESStep st c s2) q) -> (erased (Eq (ES) s1 s2) e))
   (match erased p _
     ((EStS0) (let-match erased q (EStS0)) (Refl _ s1))
@@ -512,8 +505,8 @@
 
 (def-fns _ $ (erased end-dec : (erased (Nat) d) (erased (Bool) b) -> (erased (Or (GBal d b (Nil (Gsym))) (EndBad d b)) r))
   (match erased d _
-    ((Zero) (match erased b _ ((BTrue) (InL _ _ (GBEnd0))) ((BFalse) (InR _ _ (EB0)))))
-    ((Succ d1) (match erased d1 _ ((Zero) (InL _ _ (GBEnd1 b))) ((Succ d2) (InR _ _ (EB2 d2 b)))))))
+    ((Zero) (match erased b _ ((BTrue) (OrL _ _ (GBEnd0))) ((BFalse) (OrR _ _ (EB0)))))
+    ((Succ d1) (match erased d1 _ ((Zero) (OrL _ _ (GBEnd1 b))) ((Succ d2) (OrR _ _ (EB2 d2 b)))))))
 
 ; Every trace of t, after the reversed prefix pre, has a completion satisfying P.
 (def-adts $ (CtAllP : (Pred P) ((Ctree) t) ((List (Col)) pre) -> Type)
@@ -656,27 +649,27 @@
 (def-fns _ $ (erased rlr-pick : (erased (Ctree) gone ctr) (erased (List (Col)) et) (erased (CtRLR gone gone ctr) rl) (erased (CtMem ctr et) m) ->
     (erased (Perm) g) (erased (IsPerm g) ip) (erased (List (Col)) et2) (erased (PermT g et et2) pt) (erased (CtMem gone et2) m2))
   (match erased (rlr-mem gone gone ctr et rl m) _
-    ((InL _ _ pm) (let-match erased pm (MkPermMem _ _ _ et2 pt m2)) (values p312 (IP312) et2 pt m2))
-    ((InR _ _ pm) (let-match erased pm (MkPermMem _ _ _ et2 pt m2)) (values p231 (IP231) et2 pt m2))))
+    ((OrL _ _ pm) (let-match erased pm (MkPermMem _ _ _ et2 pt m2)) (values p312 (IP312) et2 pt m2))
+    ((OrR _ _ pm) (let-match erased pm (MkPermMem _ _ _ et2 pt m2)) (values p231 (IP231) et2 pt m2))))
 
 (def-fns _
   ((erased kv-closed : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctu) (erased (Gtree) gtr gtu) (subterm erased (KV P h ctu gtr gtu) kv)
       (erased (List (Gsym)) w) (erased (InitG (Succ h) w) ig) -> (erased (Or (GMem (GSG gtu) w) (Wit P w)) r))
     (match erased kv _
-      ((KVBase _ _ _ _ _ _ gc) (let-match erased ig (MkInitG _ _ l bl)) (InL _ _ (gcov-mem (GSG gtu) (Zero) (Succ h) (BFalse) w gc l bl)))
+      ((KVBase _ _ _ _ _ _ gc) (let-match erased ig (MkInitG _ _ l bl)) (OrL _ _ (gcov-mem (GSG gtu) (Zero) (Succ h) (BFalse) w gc l bl)))
       ((KVSplit _ _ _ ctr gtu0 _ _ kv0 ck pt hs)
-        (let-match erased (kv-closed P h ctu (GEmpty) gtu0 kv0 w ig) (InL _ _ g0)
-          ((InR _ _ wt) (InR _ _ wt)))
-        (let-match erased (part-mem (GSG gtu0) (GSG gtr) (GSG gtu) w pt g0) (InL _ _ gh)
-          ((InR _ _ gm) (InL _ _ gm)))
+        (let-match erased (kv-closed P h ctu (GEmpty) gtu0 kv0 w ig) (OrL _ _ g0)
+          ((OrR _ _ wt) (OrR _ _ wt)))
+        (let-match erased (part-mem (GSG gtu0) (GSG gtr) (GSG gtu) w pt g0) (OrL _ _ gh)
+          ((OrR _ _ gm) (OrL _ _ gm)))
         (let-match erased (ghit-mem (GSG gtr) (Cons RC (MkRx (Ctree) (BS0) ctr) (Nil RC)) w hs gh) (MkHits _ _ _ _ et el m mt))
         (let-match erased el (ElHere _ _ _) (absurd (ElThere _ _ _ _ el2) el2))
-        (InR _ _ (MkWit P w et mt (ck-mem P h ctr ck et m))))
+        (OrR _ _ (MkWit P w et mt (ck-mem P h ctr ck et m))))
       ((KVRestr _ _ ctu0 _ _ gtr0 _ kv0 _ _ _) (kv-closed P h ctu0 gtr0 gtu kv0 w ig))
       ((KVEmpty _ _ ctu0 gtr0 kv0)
         (match erased (kv-closed P h ctu0 gtr0 (GEmpty) kv0 w ig) _
-          (absurd (InL _ _ g0) (gmem-empty w g0))
-          ((InR _ _ wt) (InR _ _ wt))))))
+          (absurd (OrL _ _ g0) (gmem-empty w g0))
+          ((OrR _ _ wt) (OrR _ _ wt))))))
   ((erased ck-mem : (erased Pred P) (erased (Nat) h) (erased (Ctree) ctr) (subterm erased (CtKC P h ctr) ck) (erased (List (Col)) et)
       (erased (CtMem ctr et) m) -> (erased (KC P et) r))
     (match erased ck _
@@ -707,14 +700,14 @@
     (let-match erased kw (MkKVWrap _ _ _ _ _ kv0))
     (match erased et _
       ((Nil _)
-        (let-match erased (end-dec d b) (InL _ _ g)
-          ((InR _ _ eb) (AMEndBad P bs d b pre eb)))
+        (let-match erased (end-dec d b) (OrL _ _ g)
+          ((OrR _ _ eb) (AMEndBad P bs d b pre eb)))
         (let ((erased w) (erased rw)) (revapp-exists (Gsym) pre (Nil _)))
         (let ((erased mt)) (mpre-app (BS0) bs etc (Nil _) full pre (Nil _) w mp (MPNil bs) ra rw))
         (let ((erased ig)) (MkInitG (Succ h) w (matchpg-length (BS0) full w (Succ h) mt len) (gpre-app (Zero) d (BFalse) b pre (Nil _) w gp g rw)))
         (match erased (kv-closed P h ctu gtr gtu kv0 w ig) _
-          (absurd (InL _ _ gm) (mc-pos (GSG gtu) (BS0) full w (Zero) gm mt mz))
-          ((InR _ _ wt) (AMEndOk P bs d b pre w g rw wt))))
+          (absurd (OrL _ _ gm) (mc-pos (GSG gtu) (BS0) full w (Zero) gm mt mz))
+          ((OrR _ _ wt) (AMEndOk P bs d b pre w g rw wt))))
       ((Cons _ e et1)
         (let ((erased ra1)) (RACons (Col) e etc et1 full ra))
         (let-match erased (col-kind e bs) (K1 _)

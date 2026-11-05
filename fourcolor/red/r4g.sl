@@ -135,7 +135,7 @@
         ((IwKI _ _ _ _ _ _ _ c d) (IwKI i b cm s hb lo hi (le-trans lo lo2 i l c) d))))
     ((RsUp g b cm hb hi l h)
       (match erased iw _
-        ((IwK _ _ _ _ _ _ _ t v _ _ _ a ih) (IwI i g b hi (add-ge b v i a) (lt-le-trans i hb hi ih h)))
+        ((IwK _ _ _ _ _ _ _ t v _ _ _ a ih) (IwI i g b hi (add-le-left b v i a) (lt-le-trans i hb hi ih h)))
         ((IwKI _ _ _ _ _ _ _ c d) (IwI i g b hi (le-trans b hb i l c) d))))))
 
 (def-fns _ $ (erased r4g-nin-sub : (erased (List (Copy (Nat))) xs ys) (erased (Rgn) rg rg2) (subterm erased (NIn xs ys rg) p) (erased (RgIn rg rg2) sb) -> (erased (NIn xs ys rg2) r))
@@ -145,7 +145,7 @@
 (def-fns _ $ (erased r4g-iv-out : (erased (Nat) i b hp lo hc bn v g lo2 hi2) (erased (OutS i b hp) o) (erased (Add b v g) a) (erased (Lt g bn) gn) (erased (Lt b (Succ lo)) bl)
     (erased (Lt lo (Succ lo2)) ll) (erased (Lt hi2 (Succ hc)) lh) (erased (Lt hc (Succ hp)) ch) (erased (Lt bn (Succ hp)) bh) -> (erased (Apart (Nat) Lt i g) ap) (erased (OutS i lo2 hi2) o2))
   (match erased o _
-    ((OsL _ _ _ l) (values (ApLt (Nat) Lt i g (lt-le-trans i b g l (add-ge b v g a))) (OsL i lo2 hi2 (lt-le-trans i b lo2 l (le-trans b lo lo2 bl ll)))))
+    ((OsL _ _ _ l) (values (ApLt (Nat) Lt i g (lt-le-trans i b g l (add-le-left b v g a))) (OsL i lo2 hi2 (lt-le-trans i b lo2 l (le-trans b lo lo2 bl ll)))))
     ((OsR _ _ _ l) (values (ApGt (Nat) Lt i g (lt-le-trans g bn i gn (le-trans bn hp i bh l))) (OsR i lo2 hi2 (le-trans hi2 hc i lh (le-trans hc hp i ch l)))))))
 
 (def-fns _
@@ -291,24 +291,10 @@
   (many HalCons : (erased (Nat) w i b cm f u) (erased (List (Copy (Nat))) xs) (erased (List (Nat)) Hs) (erased (NWd w b cm f u) d) (erased (ZIn f i Hs) z)
       (erased (HAll xs (Succ i) Hs) r) -> (HAll (Cons (Copy (Nat)) (MkCopy (Nat) w) xs) i Hs)))
 
-; Every node of Hs is in Hs2.
-(def-adts $ (HSub : ((List (Nat)) Hs) ((List (Nat)) Hs2) -> Type)
-  enum
-  (many HsbNil : (erased (List (Nat)) Hs2) -> (HSub (Nil (Nat)) Hs2))
-  (many HsbCons : (erased (Nat) x) (erased (List (Nat)) Hs Hs2) (erased (In x Hs2) p) (erased (HSub Hs Hs2) r) -> (HSub (Cons (Nat) x Hs) Hs2)))
-
 (def-fns _ $ (erased r4g-hsub-in : (erased (Nat) x) (erased (List (Nat)) Hs Hs2) (subterm erased (HSub Hs Hs2) s) (erased (In x Hs) p) -> (erased (In x Hs2) r))
   (let-match erased s (HsbCons y Hs1 _ q s1) (absurd (HsbNil _) p))
   (let-match erased p (InThere _ _ _ p1) ((InHere _ _) q))
   (r4g-hsub-in x Hs1 Hs2 s1 p1))
-
-(def-fns _ $ (erased r4g-hsub-cons : (erased (Nat) g) (subterm erased (List (Nat)) Hs) (erased (List (Nat)) Hs2) (erased (HSub Hs Hs2) s) -> (erased (HSub Hs (Cons (Nat) g Hs2)) r))
-  (let-match erased s (HsbCons y Hs1 _ q s1) ((HsbNil _) (HsbNil _)))
-  (HsbCons y Hs1 _ (InThere y g Hs2 q) (r4g-hsub-cons g Hs1 Hs2 s1)))
-
-(def-fns _ $ (erased r4g-hsub-refl : (subterm erased (List (Nat)) Hs) -> (erased (HSub Hs Hs) r))
-  (let-match erased Hs (Cons _ x Hs1) ((Nil _) (HsbNil _)))
-  (HsbCons x Hs1 Hs (InHere x Hs1) (r4g-hsub-cons x Hs1 Hs1 (r4g-hsub-refl Hs1))))
 
 (def-fns _ $ (erased r4g-hall-mono : (erased (List (Copy (Nat))) xs) (erased (Nat) i) (erased (List (Nat)) Hs Hs2) (subterm erased (HAll xs i Hs) ha) (erased (HSub Hs Hs2) s)
     -> (erased (HAll xs i Hs2) r))
@@ -325,14 +311,14 @@
       (let ((erased ef) (erased _) (erased _)) (nwd-fn w1 b1 cm1 f1 u1 b cm f u d1 d))
       (let-match erased ef (Refl _ _))
       z))
-  (r4g-hall-get xs1 (Succ i) k1 a w b cm f u Hs ha1 nth1 (add-sh i k1 a ad) d))
+  (r4g-hall-get xs1 (Succ i) k1 a w b cm f u Hs ha1 nth1 (add-shift i k1 a ad) d))
 
 (def-fns _ $ (erased r4g-hall-set : (erased (List (Copy (Nat))) xs ys) (erased (Nat) i k a w2 b cm f u) (erased (List (Nat)) Hs) (subterm erased (HAll xs i Hs) ha)
     (erased (SetNth (Copy (Nat)) xs k (MkCopy (Nat) w2) ys) st) (erased (Add i k a) ad) (erased (NWd w2 b cm f u) d) (erased (ZIn f a Hs) z) -> (erased (HAll ys i Hs) r))
   (let-match erased ha (HalCons w1 _ b1 cm1 f1 u1 xs1 _ d1 z1 ha1) (absurd (HalNil _ _) st))
   (let-match erased st (SetThere _ _ _ k1 _ ys1 st1)
     ((SetHere _ _ _ _) (let-match erased (add-fn i (Zero) a i ad (add-zero-right i)) (Refl _ _)) (HalCons w2 i b cm f u xs1 Hs d z ha1)))
-  (HalCons w1 i b1 cm1 f1 u1 ys1 Hs d1 z1 (r4g-hall-set xs1 ys1 (Succ i) k1 a w2 b cm f u Hs ha1 st1 (add-sh i k1 a ad) d z)))
+  (HalCons w1 i b1 cm1 f1 u1 ys1 Hs d1 z1 (r4g-hall-set xs1 ys1 (Succ i) k1 a w2 b cm f u Hs ha1 st1 (add-shift i k1 a ad) d z)))
 
 (def-fns _ $ (erased r4g-zin-drop : (erased (Nat) f a g) (erased (List (Nat)) R) (erased (ZIn f a (Cons (Nat) g R)) z) (erased (Apart (Nat) Lt a g) ap) -> (erased (ZIn f a R) r))
   (let-match erased z (ZiIn _ _ _ p) ((ZiZ _ _) (ZiZ a R)))
@@ -353,24 +339,13 @@
       (let-match erased (add-fn i (Zero) a i ad (add-zero-right i)) (Refl _ _))
       (HalCons w2 i b cm (Zero) u xs1 R d (ZiZ i R) (r4g-hall-drop xs1 (Succ i) a R ha1 (lt-succ a)))))
   (HalCons w1 i b1 cm1 f1 u1 ys1 R d1 (r4g-zin-drop f1 i a R z1 (ApLt (Nat) Lt i a (add-pos-lt i (Succ k1) a ad (LtZ k1))))
-    (r4g-hall-clr xs1 ys1 (Succ i) k1 a w2 b cm u R ha1 st1 (add-sh i k1 a ad) d)))
+    (r4g-hall-clr xs1 ys1 (Succ i) k1 a w2 b cm u R ha1 st1 (add-shift i k1 a ad) d)))
 
 (def-fns _ $ (erased r4g-hsub-tf : (erased (List (Copy (Nat))) xs) (erased (Nat) k n) (erased (List (Nat)) T R) (subterm erased (Tbk xs k T) tb) (erased (Fwd xs (Zero) n R) fw)
     (erased (Lt k (Succ n)) kn) -> (erased (HSub T R) r))
   (let-match erased tb (TbkCons _ k1 x T1 tb1 wx) ((TbkNil _) (HsbNil R)))
   (let ((erased k1n)) (lt-pred k1 n kn))
   (HsbCons x T1 R (r4c-fwd-in xs (Zero) n k1 x R fw wx (LtZ k1) k1n) (r4g-hsub-tf xs k1 n T1 R tb1 fw (lt-weaken k1 n k1n))))
-
-; With no node in the list, gtr is empty.
-(def-fns _ $ (erased r4g-np-empty : (erased (List (Copy (Nat))) xs) (erased (Nat) j g) (erased (Gtree) s0) (erased (NLay xs j g s0) ly) (erased (HAll xs (Zero) (Nil (Nat))) ha)
-    -> (erased (NPart xs j g s0 (BTrue) (GEmpty)) r))
-  (let ((erased w) (erased b) (erased cm) (erased f) (erased u) (erased x) (erased d))
-    (match erased ly (((Nat) w) ((Nat) b) ((Nat) cm) ((Nat) f) ((Nat) u) ((WElt xs g w) x) ((NWd w b cm f u) d))
-      ((NlL _ _ wa ba ma fa ua _ xa da _) (values wa ba ma fa ua xa da))
-      ((NlN _ _ _ wa ba ma fa ua _ _ _ _ xa da _ _ _ _ _) (values wa ba ma fa ua xa da))))
-  (let-match erased x (MkWElt _ _ _ nth))
-  (let-match erased (r4g-hall-get xs (Zero) g g w b cm f u (Nil _) ha nth (AddZero g) d) (ZiZ _ _) (absurd (ZiIn _ _ _ p) p))
-  (NpE xs j g w b cm (Zero) u s0 (BTrue) x d (FdT (Zero) u)))
 
 ; Each node of Hs has a nonzero gtr part in xs.
 (def-adts $ (HNz : ((List (Copy (Nat))) xs) ((List (Nat)) Hs) -> Type)
@@ -402,7 +377,7 @@
   (let-match erased hz (HnCons _ i wi bi cmi fi ui Hs1 xi di ap hz1) ((HnNil _) (HnNil ys)))
   (let ((erased r1)) (r4g-hnz-put xs ys g w w2 b cm f u f2 Hs1 hz1 st x d d2 l))
   (let-match erased (nat-eq i g) (Equal _ _ _)
-    ((Unequal _ _ _ _ ne) (HnCons ys i wi bi cmi fi ui Hs1 (welt-set xs ys i wi g _ xi st (r4c-apart-sym i g ne)) di ap r1)))
+    ((Unequal _ _ _ _ ne) (HnCons ys i wi bi cmi fi ui Hs1 (welt-set xs ys i wi g _ xi st (apart-sym i g ne)) di ap r1)))
   (let-match erased (welt-fn xs i wi w xi x) (Refl _ _))
   (let ((erased ef) (erased _) (erased _)) (nwd-fn wi bi cmi fi ui b cm f u di d))
   (let-match erased ef (Refl _ _))
@@ -883,7 +858,7 @@
   (let-match erased n (NinCons _ xs1 _ i _ y st iw n1) ((NinNil _ _) x))
   (let ((erased ap))
     (match erased iw (((Apart (Nat) Lt i g) q))
-      ((IwK _ _ _ _ _ _ _ _ v _ _ _ a _) (ApGt (Nat) Lt i g (lt-le-trans g b i gb (add-ge b v i a))))
+      ((IwK _ _ _ _ _ _ _ _ v _ _ _ a _) (ApGt (Nat) Lt i g (lt-le-trans g b i gb (add-le-left b v i a))))
       ((IwKI _ _ _ _ _ _ _ c _) (ApGt (Nat) Lt i g (lt-le-trans g b i gb (le-trans b lo i bl c))))))
   (r4g-welt-nin xs1 ys g w b cm s hb lo hi (welt-set xs xs1 g w i y x st ap) n1 gb bl))
 
@@ -1092,7 +1067,7 @@
           (let-match erased eb (Refl _ _))
           (let-match erased ec (Refl _ _))
           (values w2 f2 u2 (MkWElt ys g w2 (setnth-nth _ xs g _ ys st)) d2))
-        ((Unequal _ _ _ _ ap) (values w1 f1 u1 (welt-set xs ys g w1 i _ x1 st (r4c-apart-sym g i ap)) d1))))
+        ((Unequal _ _ _ _ ap) (values w1 f1 u1 (welt-set xs ys g w1 i _ x1 st (apart-sym g i ap)) d1))))
     (match erased iv _
       ((NivL _ _ _ wa ba ma fa ua _ _ xa da _)
         (let ((erased _) (erased eb) (erased ec) (erased _)) (r4g-wd-eq xs g wa ba ma fa ua w1 b1 cm1 f1 u1 xa da x1 d1))
@@ -1455,7 +1430,7 @@
     (match erased ly _
       ((NlL _ _ w1 b1 m1 f1 u1 _ x1 d1 lm)
         (let-match erased (nat-eq g i) (Equal _ _ _)
-          ((Unequal _ _ _ _ ap) (NlL ys g w1 b1 m1 f1 u1 s0 (welt-set xs ys g w1 i _ x1 st (r4c-apart-sym g i ap)) d1 lm)))
+          ((Unequal _ _ _ _ ap) (NlL ys g w1 b1 m1 f1 u1 s0 (welt-set xs ys g w1 i _ x1 st (apart-sym g i ap)) d1 lm)))
         (let-match erased (welt-fn xs g w1 w x1 x) (Refl _ _))
         (let ((erased _) (erased e2) (erased e3)) (nwd-fn w1 b1 m1 f1 u1 b cm f u d1 d))
         (let-match erased e2 (Refl _ _))
@@ -1467,7 +1442,7 @@
             (r4g-nlayk-put xs ys j1 b1 cm1 (Succ (Succ (Zero))) i w w2 b cm f u f2 u2 c2 k2 st x d d2)
             (r4g-nlayk-put xs ys j1 b1 cm1 (Succ (Succ (Succ (Zero)))) i w w2 b cm f u f2 u2 c3 k3 st x d d2)))
         (let-match erased (nat-eq g i) (Equal _ _ _)
-          ((Unequal _ _ _ _ ap) (NlN ys j1 g w1 b1 cm1 f1 u1 c0 c1 c2 c3 (welt-set xs ys g w1 i _ x1 st (r4c-apart-sym g i ap)) d1 bb k0b k1b k2b k3b)))
+          ((Unequal _ _ _ _ ap) (NlN ys j1 g w1 b1 cm1 f1 u1 c0 c1 c2 c3 (welt-set xs ys g w1 i _ x1 st (apart-sym g i ap)) d1 bb k0b k1b k2b k3b)))
         (let-match erased (welt-fn xs g w1 w x1 x) (Refl _ _))
         (let ((erased _) (erased e2) (erased e3)) (nwd-fn w1 b1 cm1 f1 u1 b cm f u d1 d))
         (let-match erased e2 (Refl _ _))
@@ -1546,16 +1521,6 @@
 (comptime-match many (lt-dec (Zero) 1) (Yes _ _ _ _ r4g-0-1))
 (let ((erased r4g-1-nz)) (ApGt (Nat) Lt 1 (Zero) r4g-0-1))
 
-(def-fns _ $ (erased r4g-and-sym : (erased (Nat) a b c) (subterm erased (Bitwise and-op a b c) p) -> (erased (Bitwise and-op b a c) r))
-  (let-match erased p (BwBit _ a1 b1 c1 x y z _ _ _ p1 e pa pb pc) ((BwZero _) (BwZero and-op)))
-  (let ((erased e2))
-    (match erased e (((BitApply and-op y x z) e0))
-      ((Ap00 _) (Ap00 and-op))
-      ((Ap01 _ _ _) (Ap10 (Bit0) (Bit0) (Bit1)))
-      ((Ap10 _ _ _) (Ap01 (Bit0) (Bit0) (Bit1)))
-      ((Ap11 _ _ _) (Ap11 (Bit0) (Bit0) (Bit1)))))
-  (BwBit and-op b1 a1 c1 y x z b a c (r4g-and-sym a1 b1 c1 p1) e2 pb pa pc))
-
 ; lnot 15 and lnot 240 within the 62 bits.
 (let ((many r4g-y54) (erased r4g-o54)) (ones-c 54))
 (let ((many r4g-y58) (erased r4g-o58)) (ones-c 58))
@@ -1612,26 +1577,6 @@
   (let-match erased (bitwise-fn and-op ftr (Zero) bl (Zero) c1 (and-zero ftr (bits2-of ftr))) (Refl _ _))
   (let-match erased (bitwise-fn and-op y2 r4g-y54 bh y2 c2 (and-low 54 y2 y2 (Zero) r4g-y54 (r4g-hi54 w fu y1 ftr y2 wb p1 p2) r4g-o54)) (Refl _ _))
   (values (MkNWd w2 b cm (Zero) fu ah y2 pa1 pb1 p3) (lt-le-trans w2 (Succ w) u62-modulus (and-le w r4g-k240 w2 pa) (LtS w u62-modulus wb))))
-
-; A node's first child and child mask are as they were after writes that keep them.
-(def-fns _ $ (erased r4g-keep-bc : (erased (TyCtor ((Nat) f) ((Nat) u) ((Nat) f2) ((Nat) u2) -> Type) R) (erased (List (Copy (Nat))) xs ys) (erased (Nat) g w b cm f u w2 b2 cm2 f2 u2)
-    (subterm erased (NKeep R xs ys) k) (erased (WElt xs g w) x) (erased (NWd w b cm f u) d) (erased (WElt ys g w2) x2) (erased (NWd w2 b2 cm2 f2 u2) d2)
-    -> (erased (Eq (Nat) b b2) eb) (erased (Eq (Nat) cm cm2) ec))
-  (let-match erased k (NkCons _ _ xs1 _ i wo wn bo cmo fo uo fn un st xo dw dn _ k1)
-    ((NkNil _ _)
-      (let-match erased (welt-fn xs g w w2 x x2) (Refl _ _))
-      (let ((erased _) (erased eb) (erased ec)) (nwd-fn w b cm f u b2 cm2 f2 u2 d d2))
-      (values eb ec)))
-  (let ((erased w1) (erased f1) (erased u1) (erased x1) (erased d1))
-    (match erased (nat-eq g i) (((Nat) w1) ((Nat) f1) ((Nat) u1) ((WElt xs1 g w1) x1) ((NWd w1 b cm f1 u1) d1))
-      ((Equal _ _ _)
-        (let-match erased (welt-fn xs g w wo x xo) (Refl _ _))
-        (let ((erased _) (erased eb) (erased ec)) (nwd-fn w b cm f u bo cmo fo uo d dw))
-        (let-match erased eb (Refl _ _))
-        (let-match erased ec (Refl _ _))
-        (values wn fn un (MkWElt xs1 g wn (setnth-nth _ xs g _ xs1 st)) dn))
-      ((Unequal _ _ _ _ ap) (values w f u (welt-set xs xs1 g w i _ x st (r4c-apart-sym g i ap)) d))))
-  (r4g-keep-bc R xs1 ys g w1 b cm f1 u1 w2 b2 cm2 f2 u2 k1 x1 d1 x2 d2))
 
 (comptime-match many (lt-dec 0 2) (Yes _ _ _ _ r4g-0-2))
 (comptime-match many (lt-dec 1 2) (Yes _ _ _ _ r4g-1-2))
@@ -1819,7 +1764,7 @@
           (let ((erased gak)) (r4g-np-pres xs j gc w1 b1 cm1 f1 u1 f1 c ak (BTrue) ptg x1 d1 (FdT f1 u1) (ApGt (Nat) Lt f1 (Zero) (LtZ f2))))
           (let ((erased k1b)) (lt-trans (Succ k) 17 u62-modulus kl r4-17-u62))
           (let ((erased ys) (unique nd2) (erased lx2) (erased au2) (erased nk) (erased hl2) (erased wg) (erased ivg2) (erased bt) (erased pb) (erased pa2) (erased pt) (many r) (erased gp))
-            (notail $ r4-upd xs nd1 h (u62-inc k k1b) gc hk len lx au j c lyc (add-sh k j h akj) Hs hl lo2 hi2 ivg uk ak pfg ptg gsu gak))
+            (notail $ r4-upd xs nd1 h (u62-inc k k1b) gc hk len lx au j c lyc (add-shift k j h akj) Hs hl lo2 hi2 ivg uk ak pfg ptg gsu gak))
           (values ys nd2 lx2 au2 nk hl2 r wg (NivkP ys j b cm s v gc lo2 hi2 bn lo hc c (BFalse) bi rk ad gn ll lh ivg2) bt (NpkP ys j b cm s v gc c bt (BFalse) bi rk ad pb)
             (NpkP ys j b cm s v gc c ak (BTrue) bi rk ad pa2) pt gp))
         ((Equal _ _ _)
@@ -1884,7 +1829,7 @@
   (let ((erased xs1) (unique nd2) (erased s)) (array-place-imm _ _ nd1 g (MkCopy _ w2) (MkCopy _ w) nw (allcu-nth xs g (MkCopy _ w) au nw) (imm-cu w2 w2b)))
   (let ((erased ys) (unique nd3) (erased lx3) (erased au3) (erased nk) (unique ha2) (erased hl2))
     (tail $ r4-gclr-go xs1 nd2 len (setnth-length _ xs g len _ xs1 s lx) (allcu-set xs xs1 g w2 w2b au s) hx ha1 cap lh Hs
-      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n tb al nb nc k1 (add-sh i k1 n ad) R1 fw1
+      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n tb al nb nc k1 (add-shift i k1 n ad) R1 fw1
       (r4g-hall-clr xs xs1 (Zero) g g w2 b cm fu R1 hl s (AddZero g) d2)))
   (values ys nd3 lx3 au3 (NkCons KeepU xs xs1 ys g w w2 b cm ftr fu (Zero) fu s (MkWElt xs g w nw) d d2 (MkKeepU ftr fu (Zero)) nk) ha2 hl2))
 
@@ -1892,7 +1837,7 @@
 (def-fns _ $ (erased r4g-npu-word : (erased (List (Copy (Nat))) xs ys) (erased (Nat) g i w w2 b cm f u f2 w1 b1 cm1 f1 u1) (erased (SetNth (Copy (Nat)) xs i (MkCopy (Nat) w2) ys) st)
     (erased (WElt xs i w) x) (erased (NWd w b cm f u) d) (erased (NWd w2 b cm f2 u) d2) (erased (WElt xs g w1) x1) (erased (NWd w1 b1 cm1 f1 u1) d1)
     -> (erased (Nat) w3 f3) (erased (WElt ys g w3) x3) (erased (NWd w3 b1 cm1 f3 u1) d3))
-  (let-match erased (nat-eq g i) (Equal _ _ _) ((Unequal _ _ _ _ ap) (values w1 f1 (welt-set xs ys g w1 i _ x1 st (r4c-apart-sym g i ap)) d1)))
+  (let-match erased (nat-eq g i) (Equal _ _ _) ((Unequal _ _ _ _ ap) (values w1 f1 (welt-set xs ys g w1 i _ x1 st (apart-sym g i ap)) d1)))
   (let-match erased (welt-fn xs g w1 w x1 x) (Refl _ _))
   (let ((erased _) (erased eb) (erased ec)) (nwd-fn w1 b1 cm1 f1 u1 b cm f u d1 d))
   (let-match erased eb (Refl _ _))

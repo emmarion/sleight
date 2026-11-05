@@ -51,6 +51,13 @@
   (many DifferCons : (erased (List (Nat)) xs ys) (erased (Nat) x y) (erased (Apart (Nat) Lt x y) ne) (erased (Differ xs ys) rest)
       -> (Differ (Cons (Nat) x xs) (Cons (Nat) y ys))))
 
+(def-fns _ $ (erased differ-nth : (erased (List (Nat)) X Y) (erased (Nat) a u v) (subterm erased (Differ X Y) df) (erased (Nth (Nat) X a u) pu)
+    (erased (Nth (Nat) Y a v) pv) -> (erased (Apart (Nat) Lt u v) r))
+  (let-match erased df (DifferCons X1 Y1 _ _ ne df1) (absurd (DifferNil) pu))
+  (let-match erased pu (NthThere _ _ _ a1 _ pu1) ((NthHere _ _ _) (let-match erased pv (NthHere _ _ _)) ne))
+  (let-match erased pv (NthThere _ _ _ _ _ pv1))
+  (differ-nth X1 Y1 a1 u v df1 pu1 pv1))
+
 ; Every entry of ks is below b.
 (def-adts $ (Under : ((List (Nat)) ks) ((Nat) b) -> Type)
   enum

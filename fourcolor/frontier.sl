@@ -40,7 +40,7 @@
 
 (def-fns _ $ (erased link-move : (erased (List (Nat)) e nd e2 nd2 s s2 m) (erased (Nat) d1 d2 n) (erased (Link e nd s d1 d2) k)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb) (erased (NotIn d1 m) keep)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (HSub m s) sb) (erased (NotIn d1 m) keep)
     -> (erased (Link e2 nd2 s2 d1 d2) r))
   (let-match erased k (MkLink _ _ _ _ _ c p pc pp w))
   (MkLink e2 nd2 s2 d1 d2 c p (agree-nth nd nd2 m d1 c gn pc keep) (agree-nth e e2 (Nil (Nat)) d2 p ge pp (NotInNil d2))
@@ -49,7 +49,7 @@
 (def-fns _ $ (erased chain-move : (erased (List (Nat)) e nd e2 nd2 s s2 m sg) (erased (List (Group)) gs) (erased (Nat) dn n)
     (subterm erased (Chain e nd s gs dn) ch) (erased (Darts gs sg) ds) (erased (Disj sg m) dj)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (HSub m s) sb)
     -> (erased (Chain e2 nd2 s2 gs dn) r))
   (match erased ch _
     ((ChainOne _ _ _ xs d _ k)
@@ -66,7 +66,7 @@
 (def-fns _ $ (erased link-rehead : (erased (List (Nat)) e nd e2 nd2 s s2 m) (erased (Nat) d1 x d2 n c0) (erased (Link e nd s d1 d2) k)
     (erased (Nth (Nat) nd d1 c0) old) (erased (Nth (Nat) nd2 x c0) new)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (HSub m s) sb)
     -> (erased (Link e2 nd2 s2 x d2) r))
   (let-match erased k (MkLink _ _ _ _ _ c p pc pp w))
   (let-match erased (nth-fn _ nd d1 c c0 pc old) (Refl _ _))
@@ -77,7 +77,7 @@
     (erased (Chain e nd s (Cons (Group) (MkGroup d xs) gs) dn) ch) (erased (Darts gs sg) ds) (erased (Disj sg m) dj)
     (erased (Nth (Nat) nd d c0) old) (erased (Nth (Nat) nd2 x c0) new)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb)
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (HSub m s) sb)
     -> (erased (Chain e2 nd2 s2 (Cons (Group) (MkGroup x xs2) gs) dn) r))
   (match erased ch _
     ((ChainOne _ _ _ _ _ _ k) (ChainOne e2 nd2 s2 xs2 x dn (link-rehead e nd e2 nd2 s s2 m d x dn n c0 k old new pm l sf ge gn sb)))
@@ -136,7 +136,7 @@
     (MkSeparates pl nd y1 c v u rp pv pu vu) join i1 i2))
   (let ((erased ge)) (grow-agree e e2 n g))
   (let ((erased gn)) (AgTrans nd nd1 nd2 m (AgInsert nd nd1 m y1 n i1 (InHere y1 _)) (AgInsert nd1 nd2 m c (Succ n) i2 (InThere c y1 _ (InHere c _)))))
-  (let ((erased sb)) (SubCons y1 _ s (InThere y1 db _ (InHere y1 _)) $ SubCons c _ s (InThere c db _ $ InThere c y1 _ $ InHere c _) $ SubNil s))
+  (let ((erased sb)) (HsbCons y1 _ s (InThere y1 db _ (InHere y1 _)) $ HsbCons c _ s (InThere c db _ $ InThere c y1 _ $ InHere c _) $ HsbNil s))
   (let ((erased sf)) (SFOld db n _ s (InHere db _) $ SFOld y1 n _ s (InThere y1 db _ (InHere y1 _)) $
     SFNew (Succ n) n sr s (lt-weaken n (Succ n) (lt-succ n))
     (sf-of-sub sr s n (sub-cons db sr _ $ sub-cons y1 sr _ $ sub-cons c sr sr $ sub-refl sr))))
@@ -173,7 +173,7 @@
   (let-match erased dist (DistCons _ _ nd0 _))
   (let ((erased ge)) (grow-agree e e2 n g))
   (let ((erased gn)) (AgTrans nd nd1 nd2 m (AgInsert nd nd1 m d n i1 (InHere d _)) (AgSnoc nd1 nd2 m (Succ n) sn)))
-  (let ((erased sb)) (SubCons d _ s (InHere d _) $ SubNil s))
+  (let ((erased sb)) (HsbCons d _ s (InHere d _) $ HsbNil s))
   (let ((erased sf)) (SFOld d n _ s (InHere d _) $ SFNew (Succ n) n _ s (lt-weaken n (Succ n) (lt-succ n)) $
     SFNew n n sr s (lt-succ n) (sf-of-sub sr s n (sub-cons d sr sr $ sub-refl sr))))
   (let ((erased k0)) (MkLink e2 nd2 s2 d (Succ n) n n (snoc-old _ nd1 nd2 (Succ n) n d sn (insert-at nd nd1 d n i1))
@@ -186,12 +186,12 @@
     (ChainCons e2 nd2 s2 xb ys _ d (Succ n) d k0 (ChainCons e2 nd2 s2 ys xc rest (Succ n) n d k1 ch3))))
 
 (def-fns _ $ (erased link-weaken : (erased (List (Nat)) e nd s s2) (erased (Nat) d1 d2) (erased (Link e nd s d1 d2) k)
-    (erased (Sub s2 s) sb) -> (erased (Link e nd s2 d1 d2) r))
+    (erased (HSub s2 s) sb) -> (erased (Link e nd s2 d1 d2) r))
   (let-match erased k (MkLink _ _ _ _ _ c p pc pp w))
   (MkLink e nd s2 d1 d2 c p pc pp (walk-weaken e nd s s2 c p w sb)))
 
 (def-fns _ $ (erased chain-weaken : (erased (List (Nat)) e nd s s2) (erased (List (Group)) gs) (erased (Nat) dn)
-    (subterm erased (Chain e nd s gs dn) ch) (erased (Sub s2 s) sb) -> (erased (Chain e nd s2 gs dn) r))
+    (subterm erased (Chain e nd s gs dn) ch) (erased (HSub s2 s) sb) -> (erased (Chain e nd s2 gs dn) r))
   (match erased ch _
     ((ChainOne _ _ _ xs d _ k) (ChainOne e nd s2 xs d dn (link-weaken e nd s s2 d dn k sb)))
     ((ChainCons _ _ _ xs ys gs1 d d2 _ k rest)
@@ -207,7 +207,7 @@
       (Cons (Group) (MkGroup db xb) $ Cons (Group) (MkGroup y1 ya) $ Cons (Group) (MkGroup c2 z) rest) db) ch2))
   (let ((erased s)) (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c $ Cons (Nat) c2 sr))
   (let ((erased s2)) (Cons (Nat) db $ Cons (Nat) y1 $ Cons (Nat) c2 sr))
-  (let ((erased sb)) (SubCons db _ s (InHere db _) $ SubCons y1 _ s (InThere y1 db _ $ InHere y1 _) $
+  (let ((erased sb)) (HsbCons db _ s (InHere db _) $ HsbCons y1 _ s (InThere y1 db _ $ InHere y1 _) $
     sub-cons db (Cons _ c2 sr) _ $ sub-cons y1 (Cons _ c2 sr) _ $ sub-cons c (Cons _ c2 sr) _ $ sub-refl (Cons _ c2 sr)))
   (let-match erased ch (ChainCons _ _ _ _ _ _ _ _ _ k0 ch1))
   (let-match erased ch1 (ChainCons _ _ _ _ _ _ _ _ _ k1 ch2))

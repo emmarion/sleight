@@ -41,11 +41,17 @@
   (let-match erased pin (InThere _ _ _ pin1) ((InHere _ _) (let-match erased (nth-fn _ s r r2 l pr pj) (Refl _ _)) (InHere r2 rs3)))
   (InThere r2 l rs3 (in-map s rs1 rs3 r r2 pin1 rp1 pr)))
 
+(def-fns _ $ (erased resp-distinct : (erased (List (Nat)) lab p ls) (subterm erased (Respects lab p ls) rp) (erased (Distinct ls) dl) -> (erased (Distinct p) r))
+  (let-match erased rp (RespCons _ p1 ls1 j l pj rp1) ((RespNil _) (DistNil)))
+  (let-match erased dl (DistCons _ _ out dl1))
+  (let-match erased (in-dec j p1) (OrR _ _ o) (absurd (OrL _ _ ij) (apart-irrefl l (notin-in l l ls1 out (in-map lab p1 ls1 j l ij rp1 pj)))))
+  (DistCons j p1 o (resp-distinct lab p1 ls1 rp1 dl1)))
+
 (def-fns _ $ (erased notin-map : (erased (Nat) d) (erased (List (Nat)) s si rs rs2) (erased (Nat) x x2) (erased (NotIn x rs) out)
     (subterm erased (Respects s rs rs2) rp) (erased (Nth (Nat) s x x2) px) (erased (Perm d s si) pm) -> (erased (NotIn x2 rs2) r))
   (let-match erased rp (RespCons _ rs1 rs3 j l pj rp1) ((RespNil _) (NotInNil x2)))
   (let-match erased out (NotInCons _ _ _ ne out1))
-  (NotInCons x2 l rs3 (img-apart d x j x2 l s si pm px pj ne) (notin-map d s si rs1 rs3 x x2 out1 rp1 px pm)))
+  (NotInCons x2 l rs3 (perm-apart d x j x2 l s si pm px pj ne) (notin-map d s si rs1 rs3 x x2 out1 rp1 px pm)))
 
 (def-fns _ $ (erased distinct-map : (erased (Nat) d) (erased (List (Nat)) s si rs rs2) (erased (Distinct rs) dr)
     (subterm erased (Respects s rs rs2) rp) (erased (Perm d s si) pm) -> (erased (Distinct rs2) r))

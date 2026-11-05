@@ -866,11 +866,6 @@
   enum
   (many MkVert : (erased (List (Edge)) es) (erased (Point) p) (erased (Nat) m) (erased (Point) q) (erased (EdgeIn es m p q) ei) -> (Vert es p)))
 
-(def-fns _ $ (erased add-shift : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
-  (let ((erased c1) (erased e) (erased q1)) (add-succ-right-inv a b c p))
-  (let-match erased e (Refl _ _))
-  (AddSucc a b c1 q1))
-
 (def-fns _ $ (erased sweep : (erased (List (Edge)) es) (erased (Drawing es) dr) (erased (List (Point)) pts) (erased (PW (Point) LexLt pts) sp)
     (erased (AllR (List (Edge)) (Point) Vert es pts) vs) (erased (AllR (List (Point)) (Edge) Pre pts es) prs)
     (erased (Nat) n) (erased (Length (Point) pts n) len) (erased (Nat) k) (subterm erased (Nat) f) (erased (Add k f n) akf)

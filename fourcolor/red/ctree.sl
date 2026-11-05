@@ -196,18 +196,18 @@
     (erased (CtSel tr e r) sr) (erased (Or (CtMem l et) (CtMem r et)) o) ->
     (erased (Or (CtMem tl (Cons (Col) e et)) (CtMem tr (Cons (Col) e et))) res))
   (match erased o _
-    ((InL _ _ m) (InL _ _ (mem-cons tl l e et sl m)))
-    ((InR _ _ m) (InR _ _ (mem-cons tr r e et sr m)))))
+    ((OrL _ _ m) (OrL _ _ (mem-cons tl l e et sl m)))
+    ((OrR _ _ m) (OrR _ _ (mem-cons tr r e et sr m)))))
 
 (def-fns _ $ (erased or-mem : (erased (Ctree) tl tr t) (subterm erased (List (Col)) et) (erased (CtOr tl tr t) o) (erased (CtMem t et) m)
     -> (erased (Or (CtMem tl et) (CtMem tr et)) r))
   (match erased o _
-    ((OrEL _) (InR _ _ m))
-    ((OrER _) (InL _ _ m))
+    ((OrEL _) (OrR _ _ m))
+    ((OrER _) (OrL _ _ m))
     ((OrLL a _)
       (let-match erased m (MkCtMem _ _ n s))
       (let-match erased s (SubNil _ _ _) (absurd (SubCons _ _ _ et1 _ sl s1) (let-match erased sl (SelL _ _)) (sub-empty et1 n s1)))
-      (InL _ _ (leaf-mem a)))
+      (OrL _ _ (leaf-mem a)))
     ((OrNN l1 l2 l3 r1 r2 r3 u1 u2 u3 _ o1 o2 o3 c)
       (let ((erased e) (erased et1) (erased q) (erased _) (erased s) (erased m1)) (cons-mem u1 u2 u3 t et c m))
       (let-match erased q (Refl _ _))
@@ -303,19 +303,19 @@
     (erased (Or (PermMem p312 l et) (PermMem p231 r et)) o) ->
     (erased (Or (PermMem p312 tl (Cons (Col) e et)) (PermMem p231 tr (Cons (Col) e et))) res))
   (match erased o _
-    ((InL _ _ m) (InL _ _ (pm-lift p312 tl l e el et pl sl m)))
-    ((InR _ _ m) (InR _ _ (pm-lift p231 tr r e er et pr sr m)))))
+    ((OrL _ _ m) (OrL _ _ (pm-lift p312 tl l e el et pl sl m)))
+    ((OrR _ _ m) (OrR _ _ (pm-lift p231 tr r e er et pr sr m)))))
 
 (def-fns _ $ (erased rlr-mem : (erased (Ctree) tl tr t) (subterm erased (List (Col)) et) (erased (CtRLR tl tr t) o) (erased (CtMem t et) m)
     -> (erased (Or (PermMem p312 tl et) (PermMem p231 tr et)) r))
   (match erased o _
     ((RLLL a _)
       (let-match erased (leaf-mem-nil (CEmpty) et m) (Refl _ _))
-      (InL _ _ (MkPermMem p312 tl et et (PTNil p312) (leaf-mem a))))
+      (OrL _ _ (MkPermMem p312 tl et et (PTNil p312) (leaf-mem a))))
     ((RLU _ _ a b _ pa pb o1)
       (match erased (or-mem a b t et o1 m) _
-        ((InL _ _ ma) (InL _ _ (perm-mem p312 tl a et pa ma)))
-        ((InR _ _ mb) (InR _ _ (perm-mem p231 tr b et pb mb)))))
+        ((OrL _ _ ma) (OrL _ _ (perm-mem p312 tl a et pa ma)))
+        ((OrR _ _ mb) (OrR _ _ (perm-mem p231 tr b et pb mb)))))
     ((RLN l1 l2 l3 r1 r2 r3 u1 u2 u3 _ o1 o2 o3 c)
       (let ((erased e) (erased et1) (erased q) (erased _) (erased s) (erased m1)) (cons-mem u1 u2 u3 t et c m))
       (let-match erased q (Refl _ _))

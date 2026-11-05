@@ -240,7 +240,7 @@
   (let-match erased (unary-4) (Refl _ _))
   (let-match erased m (Succ m1)
     ((Zero) (let-match erased (add-fn i (Zero) d i a (add-zero-right i)) (Refl _ _)) (search-full d k e f r lc pre ue uf ur le lf lr llc lp up)))
-  (let ((erased a1)) (add-succ-left i m1 d a))
+  (let ((erased a1)) (add-shift i m1 d a))
   (let ((erased p0) (erased s0)) (snoc-exists _ pre (Zero)))
   (let ((erased p1) (erased s1)) (snoc-exists _ pre (Succ (Zero))))
   (let ((erased p2) (erased s2)) (snoc-exists _ pre (Succ (Succ (Zero)))))

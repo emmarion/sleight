@@ -139,15 +139,6 @@
   (let ((erased r) (erased _)) (plain-eq dm w a em pem (nth-lt-length _ em w dm a pa le) pa))
   r)
 
-(def-fns _ $ (erased hyp-nfe : (erased (Nat) d v a u) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) hm) (erased (Nth (Nat) e v a) pa)
-    (erased (Nth (Nat) f a u) pu) -> (erased (Nth (Nat) n u v) r))
-  (let ((erased nf) (erased ni) (erased fi) (erased _) (erased qe) (erased qn) (erased qf)) (hyper-core d e n f hm))
-  (let ((erased t) (erased pt) (erased lt)) (perm-nth d u n ni qn (perm-val d a u f fi qf pu)))
-  (let ((erased a2) (erased pa2) (erased _)) (perm-nth d t e nf qe lt))
-  (let-match erased (perm-inj d a a2 u f fi qf pu (hyper-third d a2 t u e n f hm pa2 pt)) (Refl _ _))
-  (let-match erased (perm-inj d v t a e nf qe pa pa2) (Refl _ _))
-  pt)
-
 (def-fns _ $ (erased gm-nfe : (erased (Nat) dm v a u) (erased (List (Nat)) em nm fm ksm) (erased (Geo dm em nm fm ksm) g) (erased (Nth (Nat) em v a) pa)
     (erased (Nth (Nat) fm a u) pu) -> (erased (Nth (Nat) nm u v) r))
   (let-match erased g (MkGeo _ _ _ _ _ hm _ _ _ _))

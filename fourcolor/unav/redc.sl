@@ -82,7 +82,7 @@
 (def-adts $ (PopHit : ((List (Nat)) e f ks) ((Nat) x0) ((List (RPop)) pops) -> Type)
   enum
   (many MkPopHit : (erased (List (Nat)) e f ks) (erased (Nat) x0 s) (erased (List (Sub)) p) (erased (List (RPop)) pops)
-      (erased (Mem (RPop) (MkRPop p s) pops) m) (erased (ExactAt e f ks x0 p) ex) -> (PopHit e f ks x0 pops)))
+      (erased (Elem (RPop) (MkRPop p s) pops) m) (erased (ExactAt e f ks x0 p) ex) -> (PopHit e f ks x0 pops)))
 
 (def-adts $ (RSuf : ((List (RPop)) acc acc2) -> Type)
   enum
@@ -94,11 +94,11 @@
     ((SufZ _) p)
     ((SufS _ c1 x q1) (SufS a c1 x (suf-trans a b c1 p q1)))))
 
-(def-fns _ $ (erased mem-suf : (erased (RPop) x) (erased (List (RPop)) a b) (erased (Mem (RPop) x a) m) (subterm erased (RSuf a b) q)
-    -> (erased (Mem (RPop) x b) r))
+(def-fns _ $ (erased mem-suf : (erased (RPop) x) (erased (List (RPop)) a b) (erased (Elem (RPop) x a) m) (subterm erased (RSuf a b) q)
+    -> (erased (Elem (RPop) x b) r))
   (match erased q _
     ((SufZ _) m)
-    ((SufS _ b1 y q1) (MemThere (RPop) x y b1 (mem-suf x a b1 m q1)))))
+    ((SufS _ b1 y q1) (ElThere (RPop) x y b1 (mem-suf x a b1 m q1)))))
 
 (def-fns _ $ (erased pophit-suf : (erased (List (Nat)) e f ks) (erased (Nat) x0) (erased (List (RPop)) a b) (erased (PopHit e f ks x0 a) h)
     (erased (RSuf a b) q) -> (erased (PopHit e f ks x0 b) r))
@@ -129,7 +129,7 @@
   (match erased (nat-cmp m (Succ h1)) _
     ((CLt _ _ _ _ q) (OrR _ _ (MkInRg c m lo h1 cl l q)))
     ((CEq _ _ _) (OrL _ _ (MkInRg c m m m cl (lt-succ m) (lt-succ m))))
-    (absurd (CGt _ _ _ _ q) (lt-le-absurd (Succ h1) m q u))))
+    (absurd (CGt _ _ _ _ q) (lt-asym (Succ h1) m q u))))
 
 (def-fns _ $ (erased rtest-sound : (erased (Nat) d x0 y qa) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p p2) (erased (Geo d e n f ks) g)
     (erased (ExactAt e f ks x0 p) ex) (erased (RDart) t) (erased (List (RPop)) acc acc2) (erased (RTest p t qa acc p2 acc2) ts)
@@ -142,14 +142,14 @@
       (OrL _ _ (MkBoth _ _ py ex)))
     ((TstS _ _ _ _ i fo rr l)
       (let ((erased b) (erased c) (erased bb) (erased _) (erased pb) (erased py)) (rsem-base d x0 y e n f ks g t i s fo ly))
-      (let-match erased (in-single c qa (rrange-sound x0 b c e f ks p ex i (MkRg qa qa) rr bb pb) l) (Refl _ _))
+      (let-match erased (in-exact c qa (rrange-sound x0 b c e f ks p ex i (MkRg qa qa) rr bb pb) l) (Refl _ _))
       (OrL _ _ (MkBoth _ _ py ex)))
     ((TstP _ _ p3 _ lo h1 j _ i fo rr l n1 n2)
       (let ((erased b) (erased c) (erased bb) (erased _) (erased pb) (erased py)) (rsem-base d x0 y e n f ks g t i s fo ly))
       (let-match erased (rg-pop c lo h1 (rrange-sound x0 b c e f ks p ex i (MkRg lo (Succ h1)) rr bb pb)) (OrL _ _ ic)
         ((OrR _ _ ic)
-          (OrR _ _ (MkPopHit e f ks x0 j p3 acc2 (MemHere (RPop) (MkRPop p3 j) acc) (rnarrow-sound x0 b c e f ks p p3 ex i (MkRg lo h1) n2 bb pb ic)))))
-      (let-match erased (in-single c (Succ h1) ic l) (Refl _ _))
+          (OrR _ _ (MkPopHit e f ks x0 j p3 acc2 (ElHere (RPop) (MkRPop p3 j) acc) (rnarrow-sound x0 b c e f ks p p3 ex i (MkRg lo h1) n2 bb pb ic)))))
+      (let-match erased (in-exact c (Succ h1) ic l) (Refl _ _))
       (OrL _ _ (MkBoth _ _ py (rnarrow-sound x0 b c e f ks p p2 ex i (MkRg (Succ h1) (Succ h1)) n1 bb pb ic))))))
 
 (def-adts $ (RWalk : ((List (Sub)) p) ((RDart) t) ((Qn) q) ((List (RPop)) acc) ((List (Sub)) p2) ((List (RPop)) acc2) -> Type)
@@ -375,12 +375,12 @@
     (let-match erased ph (MkPopHit _ _ _ _ s pp _ m ex2))
     (redl-sound d x0 e n f ks qt pops rl g lx pp s m ex2))
   ((erased redl-sound : (erased (Nat) d x0) (erased (List (Nat)) e n f ks) (erased (Qzt) qt) (erased (List (RPop)) pops) (subterm erased (RedL qt pops) r)
-      (erased (Geo d e n f ks) g) (erased (Lt x0 d) lx) (erased (List (Sub)) pp) (erased (Nat) s) (erased (Mem (RPop) (MkRPop pp s) pops) m)
+      (erased (Geo d e n f ks) g) (erased (Lt x0 d) lx) (erased (List (Sub)) pp) (erased (Nat) s) (erased (Elem (RPop) (MkRPop pp s) pops) m)
       (erased (ExactAt e f ks x0 pp) ex) -> (erased (HasFit d e n ks qt) q))
     (let-match erased r (RdCons _ p1 _ rest d1 r1) (absurd (RdNil _) m))
     (match erased m _
-      ((MemHere _ _ _) (red-sound d x0 e n f ks qt p1 d1 g lx ex))
-      ((MemThere _ _ _ _ m1) (redl-sound d x0 e n f ks qt rest r1 g lx pp s m1 ex)))))
+      ((ElHere _ _ _) (red-sound d x0 e n f ks qt p1 d1 g lx ex))
+      ((ElThere _ _ _ _ m1) (redl-sound d x0 e n f ks qt rest r1 g lx pp s m1 ex)))))
 
 (def-adts $ (NthR : (Type A) ((List A) xs) ((Nat) i) -> Type)
   enum
@@ -412,7 +412,7 @@
   (let-match many (le-dec b a) (LeY _ _ le)
     ((LeN _ _ _) (values (BFalse) (Zero) (IfF _))))
   (let ((many m) (erased mo)) (monus-c a b))
-  (let-match erased mo (MoAdd _ _ _ ad) (absurd (MoNeg _ _ l) (lt-le-absurd a b l le)))
+  (let-match erased mo (MoAdd _ _ _ ad) (absurd (MoNeg _ _ l) (lt-asym a b l le)))
   (values (BTrue) m (IfY _ ad)))
 
 (def-fns _ $ (many face-of : (many (RDart) t) -> (many (RFace) i) (erased (RFaceOf t i) w))

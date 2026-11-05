@@ -360,12 +360,6 @@
   (let-match erased up (UnderCons _ _ _ ls up1))
   (revapp-under pre1 (Cons _ s w) r b ra1 up1 (UnderCons w s b ls uw)))
 
-(def-fns _ $ (erased labels-distinct : (erased (List (Nat)) lab p ls) (subterm erased (Respects lab p ls) rp) (erased (Distinct ls) dl) -> (erased (Distinct p) r))
-  (let-match erased rp (RespCons _ p1 ls1 j l pj rp1) ((RespNil _) (DistNil)))
-  (let-match erased dl (DistCons _ _ out dl1))
-  (let-match erased (in-dec j p1) (OrR _ _ o) (absurd (OrL _ _ ij) (apart-irrefl l (notin-in l l ls1 out (in-map lab p1 ls1 j l ij rp1 pj)))))
-  (DistCons j p1 o (labels-distinct lab p1 ls1 rp1 dl1)))
-
 (def-fns _ $ (erased under-le : (erased (List (Nat)) xs) (erased (Nat) a b) (subterm erased (Under xs a) u) (erased (Lt a (Succ b)) l) -> (erased (Under xs b) r))
   (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (UnderNil b)))
   (UnderCons xs1 x b (lt-le-trans x a b lx l) (under-le xs1 a b u1 l)))
@@ -434,7 +428,7 @@
   (let ((erased lrbd)) (revapp-length bd (Nil _) rbd k (Zero) k rv lbd (LengthNil _) (add-zero-right k)))
   (let ((erased sd2)) sd)
   (let-match erased sd2 (MkSimple _ _ lab ls _ rp dl))
-  (let ((erased drbd)) (revapp-distinct bd (Nil _) rbd rv (labels-distinct lab bd ls rp dl) (DistNil) (off-nil bd)))
+  (let ((erased drbd)) (revapp-distinct bd (Nil _) rbd rv (resp-distinct lab bd ls rp dl) (DistNil) (off-nil bd)))
   (let ((erased urbd)) (revapp-under bd (Nil _) rbd dd rv ubd (UnderNil dd)))
   (let ((erased hr) (erased d) (erased hb)) (hrb-exists br rbd dd k idr lbr lrbd))
   (let ((erased lhr)) (hrb-length br rbd idr hr dd d dr hb (iota-length dr idr ior)))

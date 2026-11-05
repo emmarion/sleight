@@ -148,8 +148,8 @@
 
 (def-fns _ $ (erased cov-one : (erased (Nat) d) (erased (Bool) b) -> (erased (GCov (GSOne) d b (Zero)) c))
   (match erased (end-dec d b) _
-    ((InL _ _ g) (GCNilOk (GSOne) d b g (GROne)))
-    ((InR _ _ e) (GCNilBad (GSOne) d b e))))
+    ((OrL _ _ g) (GCNilOk (GSOne) d b g (GROne)))
+    ((OrR _ _ e) (GCNilBad (GSOne) d b e))))
 
 (def-fns _ $ (erased leaf-at : (erased (Gtree) g) (erased (Bool) b0 b1 b2 b3 x) (erased (Gsym) s) (erased (Nat) d d2) (erased (Bool) b c)
     (erased (LeafSet g (MkBits b0 b1 b2 b3)) l) (erased (Pick4 (Bool) s b0 b1 b2 b3 x) pk) (erased (GStep d b s d2 c) st) (erased (BOk x d2 c) ok)

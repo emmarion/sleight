@@ -51,10 +51,10 @@
   (let ((erased a3d)) (mul-distr three three six d d3 d3 d6 a33 (mul-comm d three d3 pd3) (mul-comm d three d3 pd3) (mul-comm d six d6 pd6)))
   (let ((erased a2d)) (mul-distr two one three d d2 d d3 a21 (mul-comm d two d2 pd2) (MulSucc _ _ _ _ (MulZero d) (AddZero d)) (mul-comm d three d3 pd3)))
   (let ((erased gs) (erased p1) (erased p2)) (add-assoc-inv g6 s6 f6 r6 l6 asf a66))
-  (let ((erased gf) (erased p3) (erased p4)) (add-assoc s6 g6 f6 gs l6 (add-comm g6 s6 gs p1) p2))
+  (let ((erased gf) (erased p3) (erased p4)) (add-reassoc s6 g6 f6 gs l6 (add-comm g6 s6 gs p1) p2))
   (let ((erased y) (erased p5) (erased p6)) (add-assoc-inv d3 d2 d d3 d6 a2d a3d))
   (let-match erased (add-fn d3 d2 y s6 p5 aen) (Refl _ _))
-  (let ((erased dt) (erased p7) (erased p8)) (add-assoc s6 d twelve d6 l6 p6 adt))
+  (let ((erased dt) (erased p7) (erased p8)) (add-reassoc s6 d twelve d6 l6 p6 adt))
   (let-match erased (add-cancel s6 gf dt l6 p4 p8) (Refl _ _))
   (values f6 g6 gf pf6 gw (add-comm g6 f6 gf p3) p7))
 

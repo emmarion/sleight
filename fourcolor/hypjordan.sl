@@ -76,9 +76,9 @@
   (values (perm-val d a z p q pm pa) out))
 
 (def-fns _ $ (erased under-sub : (erased (Nat) d) (erased (List (Nat)) xs ids) (subterm erased (Under xs d) u) (erased (Iota d ids) io)
-    -> (erased (Sub xs ids) r))
-  (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (SubNil ids)))
-  (SubCons x xs1 ids (iota-in d x ids io l) (under-sub d xs1 ids u1 io)))
+    -> (erased (HSub xs ids) r))
+  (let-match erased u (UnderCons xs1 x _ l u1) ((UnderNil _) (HsbNil ids)))
+  (HsbCons x xs1 ids (iota-in d x ids io l) (under-sub d xs1 ids u1 io)))
 
 (def-fns _ $ (erased fuel-step : (erased (Nat) d k m z) (erased (List (Nat)) s) (erased (Add k m d) a) (erased (Length (Nat) s k) ls)
     (erased (Distinct (Cons (Nat) z s)) ds) (erased (Under (Cons (Nat) z s) d) us)
@@ -87,7 +87,7 @@
   (let ((erased lt)) (pigeonhole (Cons _ z s) ids (Succ k) d ds (under-sub d (Cons _ z s) ids us io) (LengthCons _ z s k ls) (iota-length d ids io)))
   (let-match erased m (Succ m1)
     (absurd (Zero) (let-match erased (add-fn k (Zero) d k a (add-zero-right k)) (Refl _ _)) (lt-irrefl (Succ d) lt)))
-  (values m1 (Refl _ m) (add-succ-left k m1 d a)))
+  (values m1 (Refl _ m) (add-shift k m1 d a)))
 
 (def-fns _ $ (erased walk-fuel : (erased (Nat) d m z) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Genus d e n f (Zero)) g)
     (erased (Fuel d e n f m) fu) (erased (Or (Moved n z) (Moved f z)) mv)

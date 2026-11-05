@@ -84,8 +84,8 @@
 (def-fns _ $ (erased zmem-cons : (erased (Col) c) (erased (Ctree) u t) (erased (List (Col)) l) (erased (Or (Eq (Col) c (C0)) (CtSel t c u)) sl)
     (erased (Or (HasC0 l) (CtMem u l)) zm) -> (erased (Or (HasC0 (Cons (Col) c l)) (CtMem t (Cons (Col) c l))) r))
   (match erased sl _
-    ((InL _ _ q) (let-match erased q (Refl _ _)) (InL _ _ (HZHere l)))
-    ((InR _ _ s) (match erased zm _ ((InL _ _ z) (InL _ _ (HZThere c l z))) ((InR _ _ m) (InR _ _ (mem-cons t u c l s m)))))))
+    ((OrL _ _ q) (let-match erased q (Refl _ _)) (OrL _ _ (HZHere l)))
+    ((OrR _ _ s) (match erased zm _ ((OrL _ _ z) (OrL _ _ (HZThere c l z))) ((OrR _ _ m) (OrR _ _ (mem-cons t u c l s m)))))))
 
 (def-fns _ $ (erased canon-sel : (erased (Nat) j) (erased (Ctree) t1 t2 t3 u) (erased (Col) e) (erased (CtCanon j t1) c1) (erased (CtCanon j t2) c2) (erased (CtCanon j t3) c3)
     (erased (CtSel (CNode t1 t2 t3) e u) s) -> (erased (CtCanon j u) r))
@@ -172,19 +172,19 @@
     (erased (CtRing cp t2 pre) rt2) (erased (Or (Eq (Col) c (C0)) (CtSel t2 c t)) sl))
   (let ((erased e) (erased he) (erased ce) (erased re2) (erased re3)) (values (CEmpty) (HE h) (canon-empty h) (CRE cp (Cons (Col) (C2) pre)) (CRE cp (Cons (Col) (C3) pre))))
   (match many c _
-    ((C0) (values (CEmpty) (HE (Succ h)) (canon-empty (Succ h)) (CRE cp pre) (InL _ _ (Refl _ c))))
+    ((C0) (values (CEmpty) (HE (Succ h)) (canon-empty (Succ h)) (CRE cp pre) (OrL _ _ (Refl _ c))))
     ((C1) (let ((many t2) (erased cn)) (cn-c t (CEmpty) (CEmpty)))
       (let ((erased cc)) (cn-cons t e e t2 cn))
       (values t2 (cons-h h t e e t2 cc ht he he) (CanN h t e e t2 ct ce ce cn) (ctring-cons cp t e e t2 pre cc rt re2 re3)
-        (InR _ _ (cons-sel-back t e e t2 t c cc (SelN1 t e e)))))
+        (OrR _ _ (cons-sel-back t e e t2 t c cc (SelN1 t e e)))))
     ((C2) (let ((many t2) (erased cn)) (cn-c (CEmpty) t (CEmpty)))
       (let ((erased cc)) (cn-cons e t e t2 cn))
       (values t2 (cons-h h e t e t2 cc he ht he) (CanN h e t e t2 ce ct ce cn) (ctring-cons cp e t e t2 pre cc (CRE cp (Cons (Col) (C1) pre)) rt re3)
-        (InR _ _ (cons-sel-back e t e t2 t c cc (SelN2 e t e)))))
+        (OrR _ _ (cons-sel-back e t e t2 t c cc (SelN2 e t e)))))
     ((C3) (let ((many t2) (erased cn)) (cn-c (CEmpty) (CEmpty) t))
       (let ((erased cc)) (cn-cons e e t t2 cn))
       (values t2 (cons-h h e e t t2 cc he he ht) (CanN h e e t t2 ce ce ct cn) (ctring-cons cp e e t t2 pre cc (CRE cp (Cons (Col) (C1) pre)) re2 rt)
-        (InR _ _ (cons-sel-back e e t t2 t c cc (SelN3 e e t)))))))
+        (OrR _ _ (cons-sel-back e e t t2 t c cc (SelN3 e e t)))))))
 
 (let ((many simple-leaf-c)) (CLeaf (CEmpty)))
 
@@ -194,7 +194,7 @@
     (erased (Or (HasC0 get) (CtMem t get)) zm))
   (let-match many et (Cons _ e rest)
     ((Nil _) (let-match erased pt (PTNil _)) (values simple-leaf-c (Zero) (LengthNil _) (HL (CEmpty) (HE (Zero))) (CanL _ (HL (CEmpty) (HE (Zero))))
-      (CRL cp (CEmpty) pre full e0 ra cc) (InR _ _ (leaf-mem (CEmpty))))))
+      (CRL cp (CEmpty) pre full e0 ra cc) (OrR _ _ (leaf-mem (CEmpty))))))
   (let-match erased pt (PTCons _ _ c _ grest pc pt1))
   (let ((many c2) (erased pc2)) (permc-r g e))
   (let-match erased (permc-fn g e c c2 pc pc2) (Refl _ _))
@@ -237,7 +237,7 @@
 
 (def-fns _ $ (erased nmem-c1 : (erased (Ctree) u t) (erased (List (Col)) l) (erased (Or (Eq (Col) (C1) (C0)) (CtSel t (C1) u)) sl) (erased (NMem u l) nm)
     -> (erased (NMem t (Cons (Col) (C1) l)) r))
-  (let-match erased sl (InR _ _ s) (absurd (InL _ _ q) q))
+  (let-match erased sl (OrR _ _ s) (absurd (OrL _ _ q) q))
   (match erased nm _
     ((NMZ _ _ z) (NMZ t _ (HZThere (C1) l z)))
     ((NMIn _ _ p n m)
@@ -278,8 +278,8 @@
       (let ((many t) (erased ht) (erased ct) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 c2 t1 ht1 ct1 rt1))
       (values t (Succ h1) (LengthCons _ e rest h1 l1) ht ct rt
         (match erased (zmem-cons c t1 t grest sl zm1) _
-          ((InL _ _ z) (NMZ t _ z))
-          ((InR _ _ m) (NMIn t _ _ (NrEven _ (ET2 grest)) m)))))
+          ((OrL _ _ z) (NMZ t _ z))
+          ((OrR _ _ m) (NMIn t _ _ (NrEven _ (ET2 grest)) m)))))
     ((C3)
       (let-match many g (MkPerm g1 g2 g3))
       (let ((many q1) (erased c1)) (permc-r p132 g1))
@@ -298,8 +298,8 @@
       (let ((many t) (erased ht) (erased ct) (erased rt) (erased sl)) (ct-cons-e-c cp pre h1 (C2) t1 ht1 ct1 rt1))
       (values t (Succ h1) (LengthCons _ e rest h1 l1) ht ct rt
         (match erased (zmem-cons (C2) t1 t hrest sl zm1) _
-          ((InL _ _ z) (let-match erased z (HZThere _ _ z1)) (NMZ t _ (HZThere (C3) grest (hasc0-back p132 grest hrest (IP132) ph z1))))
-          ((InR _ _ m) (NMIn t _ _ (NrOdd _ _ (ET3 grest) (PTCons p132 (C3) (C2) grest hrest (PC3 (C1) (C3) (C2)) ph)) m)))))))
+          ((OrL _ _ z) (let-match erased z (HZThere _ _ z1)) (NMZ t _ (HZThere (C3) grest (hasc0-back p132 grest hrest (IP132) ph z1))))
+          ((OrR _ _ m) (NMIn t _ _ (NrOdd _ _ (ET3 grest) (PTCons p132 (C3) (C2) grest hrest (PC3 (C1) (C3) (C2)) ph)) m)))))))
 
 (def-fns _ $ (many edge-rot-c : (many (Col) e) (erased (NZ e) nz) -> (many (Perm) g) (erased (IsPerm g) ip) (erased (PermC g e (C1)) p))
   (match many e _
@@ -644,7 +644,7 @@
   (let-match erased tr (MkTrace c _ _ p))
   (let-match erased p (CTLast _ _ _ p1)
     ((CTStep _ _ y _ cs1 _ p1 rest) (ctr-ctrace (C0) c y y e0 cs1 et rest (addc-0l y) (addc-comm c y e0 p1))))
-  (let-match erased (addc-fn c c e0 (C0) p1 (addc-ii c)) (Refl _ _))
+  (let-match erased (addc-same c c e0 (C0) p1 (addc-ii c)) (Refl _ _))
   (values (Cons _ e0 (Nil _)) (CtrNil (C0)) (SnocNil _ e0)))
 
 (def-fns _ $ (erased ctring-allp : (erased (List (Step)) cp) (erased (Ctree) t) (erased (List (Col)) pre) (subterm erased (CtRing cp t pre) r)

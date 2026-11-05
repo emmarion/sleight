@@ -17,7 +17,7 @@
   (let ((erased q) (erased aq)) (add c60 t5))
   (let ((erased l1)) (add-le-r c60 sp pos t5 q ap aq lst))
   (let ((erased l2)) (add-mono-le t5 c60 t5 q t (add-le-left c60 mx t5 e1) (add-comm c60 t5 q aq) (mul-dbl a t5 t m5 mt)))
-  (lt-le-absurd neg pos lt (le-tr pos q neg l1 (le-tr q t neg l2 (add-le-left t sn neg an)))))
+  (lt-asym neg pos lt (le-trans pos q neg l1 (le-trans q t neg l2 (add-le-left t sn neg an)))))
 
 (def-adts $ (Small : ((List (List (Sub))) rs) -> Type)
   enum
@@ -66,11 +66,11 @@
 (def-fns _ $ (erased cap-look : (erased (List (List (Sub))) drs acc cobl) (erased (Nat) a m hi) (subterm erased (CapL drs acc cobl m hi) c)
     (erased (Lt m (Succ a)) lo) (erased (Lt a hi) up) -> (erased (List (List (Sub))) rs acc1 out) (erased (List (Sub)) p) (erased (OfSize a drs rs) sz)
     (erased (Repeat (Sub) a sub59 p) rp) (erased (Db1 p rs 5 acc1 out) db) (erased (Ext out cobl) e))
-  (let-match erased c (CLCons _ _ out _ rs _ _ p sz rp db rest) (absurd (CLNil _ _ _) (lt-le-absurd a m up lo)))
+  (let-match erased c (CLCons _ _ out _ rs _ _ p sz rp db rest) (absurd (CLNil _ _ _) (lt-asym a m up lo)))
   (let-match erased (nat-eq a m) (Unequal _ _ _ _ ap)
     ((Equal _ _ _) (values rs acc out p sz rp db (cap-ext drs out cobl (Succ m) hi rest))))
   (match erased ap _
-    (absurd (ApLt _ _ _ _ l) (lt-le-absurd a m l lo))
+    (absurd (ApLt _ _ _ _ l) (lt-asym a m l lo))
     ((ApGt _ _ _ _ l) (cap-look drs out cobl a (Succ m) hi rest (LtS m a l) up))))
 
 (def-fns _ $ (erased rep-fit : (erased (Nat) d y k) (erased (List (Nat)) e n f ks) (erased (List (Sec)) os) (erased (List (Sub)) p) (erased (Geo d e n f ks) g)
@@ -125,7 +125,7 @@
       ((OrL _ _ l6)
         (match erased o1 _
           ((OrR _ _ hh) (OrR _ _ hh))
-          ((OrL _ _ l1) (OrL _ _ (le-sum c 5 s1 t1 sp t5 l6 l1 ad (add-comm t1 5 t5 a5)))))))))
+          ((OrL _ _ l1) (OrL _ _ (add-lt-le c 5 s1 t1 sp t5 l6 l1 ad (add-comm t1 5 t5 a5)))))))))
 
 (def-fns _ $ (erased cap-sound : (erased (Nat) d y a pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs acc cobl) (erased (Geo d e n f ks) g)
     (erased (Lt y d) ly) (erased (DScore d e n f ks drs y pos neg) dsc) (erased (Lt neg pos) lt) (erased (Nth (Nat) ks y a) pa) (erased (Lt 11 a) l11)

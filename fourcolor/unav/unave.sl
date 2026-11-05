@@ -9,7 +9,7 @@
 (def-adts $ (CfEmbed : ((List (Config)) cfs) ((Nat) dm) ((List (Nat)) em nm fm ksm) -> Type)
   enum
   (many MkCfEmbed : (erased (List (Config)) cfs) (erased (Bool) sym) (erased (List (Nat)) cci) (erased (List (Step)) cp) (erased (Nat) dm dc x0c x0m)
-      (erased (List (Nat)) em nm fm ksm em2 nm2 fm2 ec nc fc rc ksc as hl) (erased (Mem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
+      (erased (List (Nat)) em nm fm ksm em2 nm2 fm2 ec nc fc rc ksc as hl) (erased (Elem (Config) (MkConfig sym cci cp) cfs) m) (erased (Cpmap cp dc ec fc rc) c)
       (erased (PointedMap dc ec nc fc rc) pm) (erased (OrderList dc fc ksc) ol) (erased (MapOrMirror dm em nm fm em2 nm2 fm2) mo) (erased (Geo dm em2 nm2 fm2 ksm) g2)
       (erased (KernelList dc fc rc as) kl) (erased (Preembedding ec nc fc ksc em2 fm2 ksm as hl) pe) (erased (Nth (Nat) hl x0c x0m) h0) (erased (Lt x0m dm) lx)
       -> (CfEmbed cfs dm em nm fm ksm)))

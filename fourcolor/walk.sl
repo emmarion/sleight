@@ -36,10 +36,18 @@
     ((AgTrans _ nd1 _ _ g1 g2) (agree-nth nd1 nd2 s q c g2 (agree-nth nd nd1 s q c g1 p out) out))))
 
 ; Every element of m is in s.
-(def-adts $ (Sub : ((List (Nat)) m) ((List (Nat)) s) -> Type)
+(def-adts $ (HSub : ((List (Nat)) m) ((List (Nat)) s) -> Type)
   enum
-  (many SubNil : (erased (List (Nat)) s) -> (Sub (Nil (Nat)) s))
-  (many SubCons : (erased (Nat) x) (erased (List (Nat)) m s) (erased (In x s) p) (erased (Sub m s) rest) -> (Sub (Cons (Nat) x m) s)))
+  (many HsbNil : (erased (List (Nat)) s) -> (HSub (Nil (Nat)) s))
+  (many HsbCons : (erased (Nat) x) (erased (List (Nat)) m s) (erased (In x s) p) (erased (HSub m s) rest) -> (HSub (Cons (Nat) x m) s)))
+
+(def-fns _ $ (erased sub-in : (erased (List (Nat)) m s) (erased (Nat) x) (subterm erased (HSub m s) sb) (erased (In x m) ix) -> (erased (In x s) r))
+  (let-match erased sb (HsbCons _ m1 _ p sb1) (absurd (HsbNil _) ix))
+  (match erased ix _ ((InHere _ _) p) ((InThere _ _ _ ix1) (sub-in m1 s x sb1 ix1))))
+
+(def-fns _ $ (erased sub-trans : (erased (List (Nat)) a b c) (subterm erased (HSub a b) p) (erased (HSub b c) q) -> (erased (HSub a c) r))
+  (let-match erased p (HsbCons x a1 _ ix p1) ((HsbNil _) (HsbNil c)))
+  (HsbCons x a1 c (sub-in b c x q ix) (sub-trans a1 b c p1 q)))
 
 ; Every element of s2 is in s or at least n.
 (def-adts $ (SubFresh : ((List (Nat)) s2) ((List (Nat)) s) ((Nat) n) -> Type)
@@ -50,9 +58,9 @@
   (many SFNew : (erased (Nat) x n) (erased (List (Nat)) s2 s) (erased (Lt n (Succ x)) p) (erased (SubFresh s2 s n) rest)
       -> (SubFresh (Cons (Nat) x s2) s n)))
 
-(def-fns _ $ (erased notin-sub : (erased (Nat) q) (erased (List (Nat)) m s) (subterm erased (Sub m s) sb) (erased (NotIn q s) out) ->
+(def-fns _ $ (erased notin-sub : (erased (Nat) q) (erased (List (Nat)) m s) (subterm erased (HSub m s) sb) (erased (NotIn q s) out) ->
     (erased (NotIn q m) r))
-  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (NotInNil q)))
+  (let-match erased sb (HsbCons x m1 _ p sb1) ((HsbNil _) (NotInNil q)))
   (NotInCons q x m1 (notin-in q x s out p) (notin-sub q m1 s sb1 out)))
 
 (def-fns _ $ (erased notin-fresh : (erased (Nat) q n) (erased (List (Nat)) s2 s) (subterm erased (SubFresh s2 s n) sf)
@@ -64,7 +72,7 @@
 
 (def-fns _ $ (erased walk-move : (erased (List (Nat)) e nd e2 nd2 s s2 m) (erased (Nat) a b n) (subterm erased (Walk e nd s a b) w)
     (erased (PlaneMap e nd) pm) (erased (Length (Nat) e n) l) (erased (SubFresh s2 s n) sf)
-    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (Sub m s) sb) -> (erased (Walk e2 nd2 s2 a b) r))
+    (erased (Agree e e2 (Nil (Nat))) ge) (erased (Agree nd nd2 m) gn) (erased (HSub m s) sb) -> (erased (Walk e2 nd2 s2 a b) r))
   (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e2 nd2 s2 a)))
   (WalkStep e2 nd2 s2 a q c b (agree-nth e e2 (Nil (Nat)) a q ge pe (NotInNil a))
     (agree-nth nd nd2 m q c gn pn (notin-sub q m s sb out))
@@ -79,19 +87,19 @@
   (let-match erased p (NotInCons _ _ _ ne rest))
   (values ne rest))
 
-(def-fns _ $ (erased sub-cons : (erased (Nat) y) (erased (List (Nat)) m s) (subterm erased (Sub m s) sb) -> (erased (Sub m (Cons (Nat) y s)) r))
-  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SubNil _)))
-  (SubCons x m1 (Cons _ y s) (InThere x y s p) (sub-cons y m1 s sb1)))
+(def-fns _ $ (erased sub-cons : (erased (Nat) y) (erased (List (Nat)) m s) (subterm erased (HSub m s) sb) -> (erased (HSub m (Cons (Nat) y s)) r))
+  (let-match erased sb (HsbCons x m1 _ p sb1) ((HsbNil _) (HsbNil _)))
+  (HsbCons x m1 (Cons _ y s) (InThere x y s p) (sub-cons y m1 s sb1)))
 
-(def-fns _ $ (erased sub-refl : (subterm erased (List (Nat)) s) -> (erased (Sub s s) r))
-  (let-match erased s (Cons _ x s1) ((Nil _) (SubNil _)))
-  (SubCons x s1 s (InHere x s1) (sub-cons x s1 s1 (sub-refl s1))))
+(def-fns _ $ (erased sub-refl : (subterm erased (List (Nat)) s) -> (erased (HSub s s) r))
+  (let-match erased s (Cons _ x s1) ((Nil _) (HsbNil _)))
+  (HsbCons x s1 s (InHere x s1) (sub-cons x s1 s1 (sub-refl s1))))
 
-(def-fns _ $ (erased sf-of-sub : (erased (List (Nat)) m s) (erased (Nat) n) (subterm erased (Sub m s) sb) -> (erased (SubFresh m s n) r))
-  (let-match erased sb (SubCons x m1 _ p sb1) ((SubNil _) (SFNil s n)))
+(def-fns _ $ (erased sf-of-sub : (erased (List (Nat)) m s) (erased (Nat) n) (subterm erased (HSub m s) sb) -> (erased (SubFresh m s n) r))
+  (let-match erased sb (HsbCons x m1 _ p sb1) ((HsbNil _) (SFNil s n)))
   (SFOld x n m1 s p (sf-of-sub m1 s n sb1)))
 
 (def-fns _ $ (erased walk-weaken : (erased (List (Nat)) e nd s s2) (erased (Nat) a b) (subterm erased (Walk e nd s a b) w)
-    (erased (Sub s2 s) sb) -> (erased (Walk e nd s2 a b) r))
+    (erased (HSub s2 s) sb) -> (erased (Walk e nd s2 a b) r))
   (let-match erased w (WalkStep _ _ _ _ q c _ pe pn out w1) ((WalkHere _ _ _ _) (WalkHere e nd s2 a)))
   (WalkStep e nd s2 a q c b pe pn (notin-sub q s2 s sb out) (walk-weaken e nd s s2 c b w1 sb)))

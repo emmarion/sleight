@@ -71,7 +71,7 @@
   (let ((erased b2) (erased pb) (erased lb2)) (perm-nth d z n ni pn lz))
   (let ((erased pbi)) (perm-inv d z b2 n ni pn pb))
   (let ((erased w2) (erased ni2) (erased e2) (erased gen2) (erased pw2) (erased ui) (erased h2) (erased p2) (erased st))
-    (walkup-face d gen b2 z ei fi ni hd pd pbi (apart-sym z b2 (img-apart d w z z b2 n ni pn pw pb ne)) lb2))
+    (walkup-face d gen b2 z ei fi ni hd pd pbi (apart-sym z b2 (perm-apart d w z z b2 n ni pn pw pb ne)) lb2))
   (let-match erased (nth-fn _ ni z w2 w pw2 (perm-inv d w z n ni pn pw)) (Refl _ _))
   (let ((erased n2) (erased un) (erased pn2)) (perm-swap d b2 z z w ni n ni2 (perm-sym d n ni pn) pbi pw2 ui))
   (let ((erased e3) (erased n3) (erased f3) (erased h3) (erased _) (erased pn3) (erased pf3) (erased p3)) (genus-dual d gen2 e2 fi ni2 h2 p2))

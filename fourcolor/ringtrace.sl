@@ -11,67 +11,37 @@
   (let-match erased l (LengthCons _ _ _ n1 l1))
   (LengthCons B y ys1 n1 (all2-length A B R xs1 ys1 n1 al1 l1)))
 
-; k is the colour of red/red.sl that the number k below 4 names.
-(def-adts $ (ColOf : ((Nat) k) ((Col) c) -> Type)
-  enum
-  (many CO0 : -> (ColOf (Zero) (C0)))
-  (many CO1 : -> (ColOf (Succ (Zero)) (C1)))
-  (many CO2 : -> (ColOf (Succ (Succ (Zero))) (C2)))
-  (many CO3 : -> (ColOf (Succ (Succ (Succ (Zero)))) (C3))))
-
-(def-fns _ $ (erased colof-exists : (erased (Nat) k) (erased (Lt k 4) l) -> (erased (Col) c) (erased (ColOf k c) p))
-  (let-match erased (unary-4) (Refl _ _))
-  (let-match erased l (LtS _ _ l1) ((LtZ _) (values (C0) (CO0))))
-  (let-match erased l1 (LtS _ _ l2) ((LtZ _) (values (C1) (CO1))))
-  (let-match erased l2 (LtS _ _ l3) ((LtZ _) (values (C2) (CO2))))
-  (let-match erased l3 (LtZ _) (absurd (LtS _ _ l4) l4))
-  (values (C3) (CO3)))
-
-(def-fns _ $ (erased natof-exists : (erased (Col) c) -> (erased (Nat) k) (erased (ColOf k c) p))
+(def-fns _ $ (erased natof-exists : (erased (Col) c) -> (erased (Nat) k) (erased (NCol k c) p))
   (match erased c _
-    ((C0) (values (Zero) (CO0)))
-    ((C1) (values (Succ (Zero)) (CO1)))
-    ((C2) (values (Succ (Succ (Zero))) (CO2)))
-    ((C3) (values (Succ (Succ (Succ (Zero)))) (CO3)))))
+    ((C0) (values (Zero) (NC0)))
+    ((C1) (values (Succ (Zero)) (NC1)))
+    ((C2) (values (Succ (Succ (Zero))) (NC2)))
+    ((C3) (values (Succ (Succ (Succ (Zero)))) (NC3)))))
 
-(def-fns _ $ (erased colof-lt : (erased (Nat) k) (erased (Col) c) (erased (ColOf k c) p) -> (erased (Lt k 4) l))
+(def-fns _ $ (erased colof-lt : (erased (Nat) k) (erased (Col) c) (erased (NCol k c) p) -> (erased (Lt k 4) l))
   (let-match erased (unary-4) (Refl _ _))
   (match erased p _
-    ((CO0) (LtZ _))
-    ((CO1) (LtS _ _ (LtZ _)))
-    ((CO2) (LtS _ _ (LtS _ _ (LtZ _))))
-    ((CO3) (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))
+    ((NC0) (LtZ _))
+    ((NC1) (LtS _ _ (LtZ _)))
+    ((NC2) (LtS _ _ (LtS _ _ (LtZ _))))
+    ((NC3) (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))
 
-(def-fns _ $ (erased colof-fn : (erased (Nat) k) (erased (Col) c c2) (erased (ColOf k c) p) (erased (ColOf k c2) q) -> (erased (Eq (Col) c c2) e))
-  (match erased p _
-    ((CO0) (let-match erased q (CO0)) (Refl _ c))
-    ((CO1) (let-match erased q (CO1)) (Refl _ c))
-    ((CO2) (let-match erased q (CO2)) (Refl _ c))
-    ((CO3) (let-match erased q (CO3)) (Refl _ c))))
-
-(def-fns _ $ (erased colof-inj : (erased (Nat) k k2) (erased (Col) c) (erased (ColOf k c) p) (erased (ColOf k2 c) q) -> (erased (Eq (Nat) k k2) e))
-  (match erased p _
-    ((CO0) (let-match erased q (CO0)) (Refl _ k))
-    ((CO1) (let-match erased q (CO1)) (Refl _ k))
-    ((CO2) (let-match erased q (CO2)) (Refl _ k))
-    ((CO3) (let-match erased q (CO3)) (Refl _ k))))
-
-(def-fns _ $ (erased colof-apart : (erased (Nat) k k2) (erased (Col) c) (erased (Apart (Nat) Lt k k2) ne) (erased (ColOf k c) p) (erased (ColOf k2 c) q)
+(def-fns _ $ (erased colof-apart : (erased (Nat) k k2) (erased (Col) c) (erased (Apart (Nat) Lt k k2) ne) (erased (NCol k c) p) (erased (NCol k2 c) q)
     -> (erased (False) r))
-  (let-match erased (colof-inj k k2 c p q) (Refl _ _))
+  (let-match erased (ncol-inj k k2 c p q) (Refl _ _))
   (apart-irrefl k ne))
 
-(def-fns _ $ (erased cols-exists : (erased (List (Nat)) ks) (subterm erased (Under ks 4) u) -> (erased (List (Col)) cs) (erased (All2 (Nat) (Col) ColOf ks cs) r))
-  (let-match erased u (UnderCons ks1 k _ l u1) ((UnderNil _) (values (Nil _) (All2Nil _ _ ColOf))))
-  (let ((erased c) (erased p)) (colof-exists k l))
+(def-fns _ $ (erased cols-exists : (erased (List (Nat)) ks) (subterm erased (Under ks 4) u) -> (erased (List (Col)) cs) (erased (All2 (Nat) (Col) NCol ks cs) r))
+  (let-match erased u (UnderCons ks1 k _ l u1) ((UnderNil _) (values (Nil _) (All2Nil _ _ NCol))))
+  (let ((erased c) (erased p)) (ncol-ex k l))
   (let ((erased cs1) (erased r1)) (cols-exists ks1 u1))
-  (values (Cons _ c cs1) (All2Cons _ _ ColOf k c ks1 cs1 p r1)))
+  (values (Cons _ c cs1) (All2Cons _ _ NCol k c ks1 cs1 p r1)))
 
-(def-fns _ $ (erased cols-fn : (erased (List (Nat)) ks) (erased (List (Col)) cs cs2) (subterm erased (All2 (Nat) (Col) ColOf ks cs) p)
-    (erased (All2 (Nat) (Col) ColOf ks cs2) q) -> (erased (Eq (List (Col)) cs cs2) e))
+(def-fns _ $ (erased cols-fn : (erased (List (Nat)) ks) (erased (List (Col)) cs cs2) (subterm erased (All2 (Nat) (Col) NCol ks cs) p)
+    (erased (All2 (Nat) (Col) NCol ks cs2) q) -> (erased (Eq (List (Col)) cs cs2) e))
   (let-match erased p (All2Cons _ _ _ k c ks1 cs1 p1 r1) ((All2Nil _ _ _) (let-match erased q (All2Nil _ _ _)) (Refl _ cs)))
   (let-match erased q (All2Cons _ _ _ _ c2 _ cs3 q1 r2))
-  (let-match erased (colof-fn k c c2 p1 q1) (Refl _ _))
+  (let-match erased (ncol-fn k c c2 p1 q1) (Refl _ _))
   (let-match erased (cols-fn ks1 cs1 cs3 r1 r2) (Refl _ _))
   (Refl _ cs))
 
@@ -151,51 +121,38 @@
     ((IP321) (match erased p _ ((PC0 _) (let-match erased q (PC0 _)) (Refl _ c)) ((PC1 _ _ _) (let-match erased q (PC1 _ _ _)) (Refl _ c))
       ((PC2 _ _ _) (let-match erased q (PC2 _ _ _)) (Refl _ c)) ((PC3 _ _ _) (let-match erased q (PC3 _ _ _)) (Refl _ c))))))
 
-; g sends k to k2, both below 4.
-(def-adts $ (PermN : ((Perm) g) ((Nat) k k2) -> Type)
-  enum
-  (many MkPermN : (erased (Perm) g) (erased (Nat) k k2) (erased (Col) c c2) (erased (ColOf k c) p) (erased (PermC g c c2) q)
-      (erased (ColOf k2 c2) r) -> (PermN g k k2)))
-
 (def-adts $ (PermNs : ((Perm) g) ((List (Nat)) ks ks2) -> Type)
   enum
   (many PNNil : (erased (Perm) g) -> (PermNs g (Nil (Nat)) (Nil (Nat))))
-  (many PNCons : (erased (Perm) g) (erased (Nat) k k2) (erased (List (Nat)) ks ks2) (erased (PermN g k k2) p) (erased (PermNs g ks ks2) rest)
+  (many PNCons : (erased (Perm) g) (erased (Nat) k k2) (erased (List (Nat)) ks ks2) (erased (NPerm g k k2) p) (erased (PermNs g ks ks2) rest)
       -> (PermNs g (Cons (Nat) k ks) (Cons (Nat) k2 ks2))))
 
 (def-fns _ $ (erased permns-nth : (erased (Perm) g) (erased (List (Nat)) xs ys) (erased (Nat) i x) (subterm erased (Nth (Nat) xs i x) p)
-    (erased (PermNs g xs ys) al) -> (erased (Nat) y) (erased (Nth (Nat) ys i y) q) (erased (PermN g x y) r))
+    (erased (PermNs g xs ys) al) -> (erased (Nat) y) (erased (Nth (Nat) ys i y) q) (erased (NPerm g x y) r))
   (let-match erased al (PNCons _ _ y1 xs1 ys1 r1 al1) (absurd (PNNil _) p))
   (let-match erased p (NthThere _ _ _ i1 _ p1) ((NthHere _ _ _) (values y1 (NthHere _ y1 ys1) r1)))
   (let ((erased y) (erased q) (erased r)) (permns-nth g xs1 ys1 i1 x p1 al1))
   (values y (NthThere _ y1 ys1 i1 y q) r))
 
-(def-fns _ $ (erased permn-exists : (erased (Perm) g) (erased (Nat) k) (erased (Lt k 4) l) -> (erased (Nat) k2) (erased (PermN g k k2) r))
-  (let ((erased c) (erased p)) (colof-exists k l))
+(def-fns _ $ (erased permn-exists : (erased (Perm) g) (erased (Nat) k) (erased (Lt k 4) l) -> (erased (Nat) k2) (erased (NPerm g k k2) r))
+  (let ((erased c) (erased p)) (ncol-ex k l))
   (let ((erased c2) (erased q)) (permc-total g c))
   (let ((erased k2) (erased r)) (natof-exists c2))
-  (values k2 (MkPermN g k k2 c c2 p q r)))
-
-(def-fns _ $ (erased permn-fn : (erased (Perm) g) (erased (Nat) k a b) (erased (PermN g k a) p) (erased (PermN g k b) q) -> (erased (Eq (Nat) a b) e))
-  (let-match erased p (MkPermN _ _ _ c c2 p1 q1 r1))
-  (let-match erased q (MkPermN _ _ _ c3 c4 p2 q2 r2))
-  (let-match erased (colof-fn k c c3 p1 p2) (Refl _ _))
-  (let-match erased (permc-fn g c c2 c4 q1 q2) (Refl _ _))
-  (colof-inj a b c2 r1 r2))
+  (values k2 (MkNPerm g k k2 c c2 p q r)))
 
 (def-fns _ $ (erased permn-apart : (erased (Perm) g) (erased (IsPerm g) ip) (erased (Nat) a b a2 b2) (erased (Apart (Nat) Lt a b) ne)
-    (erased (PermN g a a2) p) (erased (PermN g b b2) q) -> (erased (Apart (Nat) Lt a2 b2) r))
+    (erased (NPerm g a a2) p) (erased (NPerm g b b2) q) -> (erased (Apart (Nat) Lt a2 b2) r))
   (let-match erased (nat-eq a2 b2) (Unequal _ _ _ _ r)
     (absurd (Equal _ _ _)
-      (let-match erased p (MkPermN _ _ _ c c2 p1 q1 r1))
-      (let-match erased q (MkPermN _ _ _ c3 c4 p2 q2 r2))
-      (let-match erased (colof-fn a2 c2 c4 r1 r2) (Refl _ _))
+      (let-match erased p (MkNPerm _ _ _ c c2 p1 q1 r1))
+      (let-match erased q (MkNPerm _ _ _ c3 c4 p2 q2 r2))
+      (let-match erased (ncol-fn a2 c2 c4 r1 r2) (Refl _ _))
       (let-match erased (permc-inj g ip c c3 c2 q1 q2) (Refl _ _))
       (colof-apart a b c ne p1 p2)))
   r)
 
-(def-fns _ $ (erased permn-lt : (erased (Perm) g) (erased (Nat) k k2) (erased (PermN g k k2) p) -> (erased (Lt k2 4) l))
-  (let-match erased p (MkPermN _ _ _ _ c2 _ _ r))
+(def-fns _ $ (erased permn-lt : (erased (Perm) g) (erased (Nat) k k2) (erased (NPerm g k k2) p) -> (erased (Lt k2 4) l))
+  (let-match erased p (MkNPerm _ _ _ _ c2 _ _ r))
   (colof-lt k2 c2 r))
 
 (def-fns _ $ (erased permns-exists : (erased (Perm) g) (erased (List (Nat)) ks) (subterm erased (Under ks 4) u)
@@ -209,7 +166,7 @@
     (erased (PermNs g ks b) q) -> (erased (Eq (List (Nat)) a b) e))
   (let-match erased p (PNCons _ k x ks1 a1 p1 r1) ((PNNil _) (let-match erased q (PNNil _)) (Refl _ a)))
   (let-match erased q (PNCons _ _ y _ b1 q1 r2))
-  (let-match erased (permn-fn g k x y p1 q1) (Refl _ _))
+  (let-match erased (nperm-fn g k x y p1 q1) (Refl _ _))
   (let-match erased (permns-fn g ks1 a1 b1 r1 r2) (Refl _ _))
   (Refl _ a))
 
@@ -242,30 +199,22 @@
   (values ks2 (MkFourColoring e f ks2 ke2 rf2 re2 (permns-differ g ip ke ks ke2 ks2 df ae a) (permns-under g ks ks2 a)) a))
 
 (def-fns _ $ (erased permns-cols : (erased (Perm) g) (erased (List (Nat)) ks ks2) (erased (List (Col)) cs cs2)
-    (subterm erased (PermNs g ks ks2) p) (erased (All2 (Nat) (Col) ColOf ks cs) q) (erased (All2 (Nat) (Col) ColOf ks2 cs2) q2)
+    (subterm erased (PermNs g ks ks2) p) (erased (All2 (Nat) (Col) NCol ks cs) q) (erased (All2 (Nat) (Col) NCol ks2 cs2) q2)
     -> (erased (PermT g cs cs2) r))
   (let-match erased p (PNCons _ k k2 ks1 ks3 p1 r1)
     ((PNNil _) (let-match erased q (All2Nil _ _ _)) (let-match erased q2 (All2Nil _ _ _)) (PTNil g)))
   (let-match erased q (All2Cons _ _ _ _ c _ cs1 o1 q1))
   (let-match erased q2 (All2Cons _ _ _ _ c2 _ cs3 o2 q3))
-  (let-match erased p1 (MkPermN _ _ _ d d2 o3 pc o4))
-  (let-match erased (colof-fn k c d o1 o3) (Refl _ _))
-  (let-match erased (colof-fn k2 c2 d2 o2 o4) (Refl _ _))
+  (let-match erased p1 (MkNPerm _ _ _ d d2 o3 pc o4))
+  (let-match erased (ncol-fn k c d o1 o3) (Refl _ _))
+  (let-match erased (ncol-fn k2 c2 d2 o2 o4) (Refl _ _))
   (PTCons g c c2 cs1 cs3 pc (permns-cols g ks1 ks3 cs1 cs3 r1 q1 q3)))
-
-(def-fns _ $ (erased permt-fn : (erased (Perm) g) (erased (List (Col)) et a b) (subterm erased (PermT g et a) p) (erased (PermT g et b) q)
-    -> (erased (Eq (List (Col)) a b) e))
-  (let-match erased p (PTCons _ c x et1 a1 p1 r1) ((PTNil _) (let-match erased q (PTNil _)) (Refl _ a)))
-  (let-match erased q (PTCons _ _ y _ b1 q1 r2))
-  (let-match erased (permc-fn g c x y p1 q1) (Refl _ _))
-  (let-match erased (permt-fn g et1 a1 b1 r1 r2) (Refl _ _))
-  (Refl _ a))
 
 ; et is the trace of the colours of the darts r under a four-colouring.
 (def-adts $ (RingTrace : ((List (Nat)) e f r) ((List (Col)) et) -> Type)
   enum
   (many MkRingTrace : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) cs et) (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl)
-      (erased (All2 (Nat) (Col) ColOf lc cs) co) (erased (Trace cs et) t) -> (RingTrace e f r et)))
+      (erased (All2 (Nat) (Col) NCol lc cs) co) (erased (Trace cs et) t) -> (RingTrace e f r et)))
 
 (def-fns _ $ (erased ring-trace-perm : (erased (List (Nat)) e f r) (erased (List (Col)) et et2) (erased (Perm) g) (erased (IsPerm g) ip)
     (erased (PermT g et et2) pt) (erased (RingTrace e f r et) rt) -> (erased (RingTrace e f r et2) r2))
@@ -278,13 +227,6 @@
   (let ((erased pt2)) (trace-perm g ip cs cs2 et et3 (permns-cols g lc lc2 cs cs2 al co co2) t t2))
   (let-match erased (permt-fn g et et2 et3 pt pt2) (Refl _ _))
   (MkRingTrace e f r ks2 lc2 cs2 et2 c2 rl2 co2 t2))
-
-; ins lists each dart x of cc followed by e x.
-(def-adts $ (InsertE : ((List (Nat)) e cc ins) -> Type)
-  enum
-  (many IENil : (erased (List (Nat)) e) -> (InsertE e (Nil (Nat)) (Nil (Nat))))
-  (many IECons : (erased (List (Nat)) e cc ins) (erased (Nat) x y) (erased (Nth (Nat) e x y) px) (erased (InsertE e cc ins) rest)
-      -> (InsertE e (Cons (Nat) x cc) (Cons (Nat) x (Cons (Nat) y ins)))))
 
 ; ks gives the two ends of each bond x-y of g the same colour when x is in ins, and different colours otherwise.
 (def-adts $ (EdgeCC : ((List (Nat)) ins ks) ((List (Bond)) g) -> Type)

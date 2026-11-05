@@ -45,13 +45,6 @@
   (let ((erased q) (erased _)) (plain-eq d r y e pl l5 pc))
   q)
 
-(def-fns _ $ (erased iter-ex : (erased (Nat) d x) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Nat) k) (erased (Lt x d) lx)
-    -> (erased (Nat) y) (erased (Iter f k x y) it) (erased (Lt y d) ly))
-  (let-match erased k (Succ k1) ((Zero) (values x (ItZ f x) lx)))
-  (let ((erased x1) (erased p1) (erased l1)) (perm-nth d x f fi pf lx))
-  (let ((erased y) (erased it) (erased ly)) (iter-ex d x1 f fi pf k1 l1))
-  (values y (ItS f k1 x x1 y p1 it) ly))
-
 (def-fns _ $ (erased iter-back : (erased (Nat) d b) (erased (List (Nat)) f fi) (erased (HPerm d f fi) pf) (subterm erased (Nat) k) (erased (Lt b d) lb)
     -> (erased (Nat) y) (erased (Iter f k y b) it) (erased (Lt y d) ly))
   (let-match erased k (Succ k1) ((Zero) (values b (ItZ f b) lb)))
@@ -91,7 +84,7 @@
 (def-fns _ $ (erased spoke-ex : (erased (Nat) d x0 j) (erased (List (Nat)) e n f) (erased (Hypermap d e n f) h) (erased (Lt x0 d) lx)
     -> (erased (Nat) s) (erased (RBase e f x0 (FS j) s) r) (erased (Lt s d) ls))
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased qe) (erased _) (erased qf)) (hyper-core d e n f h))
-  (let ((erased y) (erased it) (erased ly)) (iter-ex d x0 f fi qf j lx))
+  (let ((erased y) (erased it) (erased ly)) (iter-exists d x0 f fi qf j lx))
   (let ((erased s) (erased ps) (erased ls)) (perm-nth d y e nf qe ly))
   (values s (RBS e f x0 j y s it ps) ls))
 
@@ -103,12 +96,12 @@
     ((FS j) (spoke-ex d x0 j e n f h lx))
     ((FT j)
       (let ((erased s) (erased bs) (erased ls)) (spoke-ex d x0 j e n f h lx))
-      (let ((erased w) (erased it) (erased lw)) (iter-ex d s f fi qf 2 ls))
+      (let ((erased w) (erased it) (erased lw)) (iter-exists d s f fi qf 2 ls))
       (let ((erased u) (erased pu) (erased lu)) (perm-nth d w e nf qe lw))
       (values u (RBT e f x0 j s w u bs it pu) lu))
     ((FF j k)
       (let ((erased s) (erased bs) (erased ls)) (spoke-ex d x0 j e n f h lx))
-      (let ((erased z) (erased it) (erased lz)) (iter-ex d s f fi qf (Succ (Succ (Succ k))) ls))
+      (let ((erased z) (erased it) (erased lz)) (iter-exists d s f fi qf (Succ (Succ (Succ k))) ls))
       (let ((erased u) (erased pu) (erased lu)) (perm-nth d z e nf qe lz))
       (values u (RBF e f x0 j k s z u bs it pu) lu))))
 
@@ -118,7 +111,7 @@
   (match erased t _
     ((DF i k)
       (let ((erased b) (erased bb) (erased lb)) (rbase-ex d x0 e n f h lx i))
-      (let ((erased y) (erased it) (erased ly)) (iter-ex d b f fi qf k lb))
+      (let ((erased y) (erased it) (erased ly)) (iter-exists d b f fi qf k lb))
       (values y (RSF e f x0 k b y i bb it) ly))
     ((DB i k)
       (let ((erased b) (erased bb) (erased lb)) (rbase-ex d x0 e n f h lx i))
@@ -401,13 +394,6 @@
   (let ((erased fo2)) (fitsec-set o x y r i c fo (face-link x0 na j b c e f ks os o x r0 i ob po fo so sa bb pc) ss ic))
   (MkExactAt e f ks x0 na os p2 pn ob (MkExact os p2 nx (pw-set (Sec) (Sub) FitSec os p p2 j o y pw sp po fo2) lo (setnth-length _ p j nx y p2 sp lp))))
 
-(def-fns _ $ (erased in-single : (erased (Nat) c a) (erased (InRg c (MkRg a a)) ic) (erased (Lt a 9) l) -> (erased (Eq (Nat) c a) r))
-  (let-match erased ic (MkInRg _ m _ _ cl l1 u1))
-  (let-match erased (le-antisym m a u1 l1) (Refl _ _))
-  (match erased cl _
-    ((ClLo _ _) (Refl _ c))
-    (absurd (ClHi _ _) (lt-irrefl 9 l))))
-
 (def-fns _ $ (erased rknown-sound : (erased (Nat) d x0 b a) (erased (List (Nat)) e n f ks) (erased (List (Sub)) p) (erased (Geo d e n f ks) g)
     (erased (ExactAt e f ks x0 p) ex) (erased (RFace) i) (erased (RKnown p i a) kn) (erased (RBase e f x0 i b) bb) (erased (Lt b d) lb)
     -> (erased (Nth (Nat) ks b a) q))
@@ -422,7 +408,7 @@
       pn)
     ((KnR _ _ _ rr l)
       (let ((erased c) (erased pc) (erased _)) (arity-at d b f ks ol lb))
-      (let-match erased (in-single c a (rrange-sound x0 b c e f ks p ex i (MkRg a a) rr bb pc) l) (Refl _ _))
+      (let-match erased (in-exact c a (rrange-sound x0 b c e f ks p ex i (MkRg a a) rr bb pc) l) (Refl _ _))
       pc)))
 
 (def-adts $ (RNorm : ((List (Sub)) p) ((RDart) t u) -> Type)

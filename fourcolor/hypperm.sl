@@ -192,16 +192,11 @@
   (nth-in ids x x (iota-nth d x ids io lt)))
 
 (def-fns _ $ (erased sub-snoc-cons : (erased (Nat) w) (erased (List (Nat)) ps ps2 s) (subterm erased (Snoc (Nat) ps w ps2) sn)
-    (erased (Sub (Cons (Nat) w ps) s) sb) -> (erased (Sub ps2 s) r))
+    (erased (HSub (Cons (Nat) w ps) s) sb) -> (erased (HSub ps2 s) r))
   (let-match erased sn (SnocCons _ x _ ps1 ps3 sn1) ((SnocNil _ _) sb))
-  (let-match erased sb (SubCons _ _ _ pw sb1))
-  (let-match erased sb1 (SubCons _ _ _ px sb2))
-  (SubCons x ps3 s px (sub-snoc-cons w ps1 ps3 s sn1 (SubCons w ps1 s pw sb2))))
-
-(def-fns _ $ (erased add-succ-left : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
-  (let ((erased c1) (erased e) (erased q1)) (add-succ-right-inv a b c p))
-  (let-match erased e (Refl _ _))
-  (AddSucc a b c1 q1))
+  (let-match erased sb (HsbCons _ _ _ pw sb1))
+  (let-match erased sb1 (HsbCons _ _ _ px sb2))
+  (HsbCons x ps3 s px (sub-snoc-cons w ps1 ps3 s sn1 (HsbCons w ps1 s pw sb2))))
 
 (def-fns _ $ (erased lt-pos : (erased (Nat) z d) (erased (Lt z d) l) -> (erased (Nat) d1) (erased (Eq (Nat) d (Succ d1)) e))
   (match erased l _ ((LtZ b) (values b (Refl _ d))) ((LtS _ b _) (values b (Refl _ d)))))
@@ -217,16 +212,16 @@
   (apart-irrefl v (notin-in v v ps out pv)))
 
 (def-fns _ $ (erased absurd cycle-full : (erased (Nat) d m w w2) (erased (List (Nat)) ids ps) (erased (Iota d ids) io)
-    (erased (Distinct (Cons (Nat) w ps)) dw) (erased (Sub (Cons (Nat) w ps) ids) sb) (erased (Length (Nat) (Cons (Nat) w ps) m) lm)
+    (erased (Distinct (Cons (Nat) w ps)) dw) (erased (HSub (Cons (Nat) w ps) ids) sb) (erased (Length (Nat) (Cons (Nat) w ps) m) lm)
     (erased (Add m (Zero) d) a) (erased (NotIn w2 (Cons (Nat) w ps)) out) (erased (Lt w2 d) l2) -> (erased (False) f))
   (let-match erased (add-fn m (Zero) m d (add-zero-right m) a) (Refl _ _))
   (let ((erased le)) (pigeonhole (Cons _ w2 (Cons _ w ps)) ids (Succ m) m (DistCons w2 _ out dw)
-    (SubCons w2 _ ids (iota-in m w2 ids io l2) sb) (LengthCons _ w2 _ m lm) (iota-length m ids io)))
+    (HsbCons w2 _ ids (iota-in m w2 ids io l2) sb) (LengthCons _ w2 _ m lm) (iota-length m ids io)))
   (lt-irrefl (Succ m) le))
 
 (def-fns _ $ (erased cycle-go : (erased (Nat) d m z y w) (erased (List (Nat)) p q ids ps) (erased (Perm d p q) pm) (erased (Iota d ids) io)
     (erased (Nth (Nat) p z y) pz) (erased (Path p (Nil (Nat)) y w ps) pa) (erased (Distinct (Cons (Nat) w ps)) dw)
-    (erased (Sub (Cons (Nat) w ps) ids) sb) (erased (Lt w d) lw) (erased (Length (Nat) (Cons (Nat) w ps) m) lm) (subterm erased (Nat) f0)
+    (erased (HSub (Cons (Nat) w ps) ids) sb) (erased (Lt w d) lw) (erased (Length (Nat) (Cons (Nat) w ps) m) lm) (subterm erased (Nat) f0)
     (erased (Add m f0 d) a) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) y z xs) r))
   (let-match erased (nat-eq w z) (Unequal _ _ _ _ nwz) ((Equal _ _ _) (values ps pa)))
   (let ((erased w2) (erased pw) (erased l2)) (perm-nth d w p q pm lw))
@@ -238,8 +233,8 @@
   (let-match erased lm (LengthCons _ _ _ m1 lm1))
   (let ((erased l3)) (snoc-length _ ps ps2 w m1 sn lm1))
   (cycle-go d (Succ m) z y w2 p q ids ps2 pm io pz pa2 (DistCons w2 ps2 (notin-snoc-cons w2 w ps ps2 sn out) ds2)
-    (SubCons w2 ps2 ids (iota-in d w2 ids io l2) (sub-snoc-cons w ps ps2 ids sn sb)) l2 (LengthCons _ w2 ps2 m l3) f1
-    (add-succ-left m f1 d a)))
+    (HsbCons w2 ps2 ids (iota-in d w2 ids io l2) (sub-snoc-cons w ps ps2 ids sn sb)) l2 (LengthCons _ w2 ps2 m l3) f1
+    (add-shift m f1 d a)))
 
 (def-fns _ $ (erased cycle : (erased (Nat) d z y) (erased (List (Nat)) p q) (erased (Perm d p q) pm) (erased (Nth (Nat) p z y) pz)
     (erased (Lt z d) lz) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) y z xs) r))
@@ -249,7 +244,7 @@
   (let ((erased d1) (erased e)) (lt-pos z d lz))
   (let-match erased e (Refl _ _))
   (cycle-go d (Succ (Zero)) z y y p q ids (Nil _) pm io pz (PathHere p _ y) (DistCons y _ (NotInNil y) (DistNil))
-    (SubCons y _ ids (iota-in d y ids io ly) (SubNil ids)) ly (LengthCons _ y _ (Zero) (LengthNil _)) d1 (AddSucc (Zero) d1 d1 (AddZero d1))))
+    (HsbCons y _ ids (iota-in d y ids io ly) (HsbNil ids)) ly (LengthCons _ y _ (Zero) (LengthNil _)) d1 (AddSucc (Zero) d1 d1 (AddZero d1))))
 
 (def-fns _ $ (erased conn-path : (erased (Nat) d x y) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (Perm d p q) pm)
     (erased (Graph d p g) gr) (subterm erased (Conn g x y) c) -> (erased (List (Nat)) xs) (erased (Path p (Nil (Nat)) x y xs) r))

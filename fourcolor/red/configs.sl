@@ -140,14 +140,10 @@
       (let-match erased ec (Refl _ _))
       (FCons _ cf c1 cs1 xss1 (flat-dec (Cons _ ys sss1) r ss1 r2 (Cons _ c1 xss1) cs1 f1 (DACons ys e sss1 r c1 xss1 d1 da1) dl1)))))
 
-(def-fns _ $ (erased flat-front : (erased Type A) (erased (List A) a b c) (subterm erased (App A a b c) q) (erased (List (List A)) xss)
+(def-fns _ $ (erased flat-front : (erased Type A) (erased (List A) a b c) (subterm erased (LApp A a b c) q) (erased (List (List A)) xss)
     (erased (Flatten A xss b) p) -> (erased (Flatten A (Cons (List A) a xss) c) r))
-  (let-match erased q (CatCons _ x a1 _ c1 q1) ((CatNil _ _) (FSkip A xss b p)))
+  (let-match erased q (LAppCons _ x a1 _ c1 q1) ((LAppNil _ _) (FSkip A xss b p)))
   (FCons A x a1 c1 xss (flat-front A a1 b c1 q1 xss p)))
-
-(def-fns _ $ (erased app-nil : (erased Type A) (subterm erased (List A) a) -> (erased (App A a (Nil A) a) q))
-  (let-match erased a (Cons _ x a1) ((Nil _) (CatNil A (Nil A))))
-  (CatCons A x a1 (Nil A) a1 (app-nil A a1)))
 
 (def-fns _ $ (many dec-bool : (many (String) s) -> (many (Parse (String) (Bool) DBool s) o))
   (let-match many (next-byte s) (NByte n p r) ((NEnd) (PNo _ _ _ _)))
@@ -192,15 +188,15 @@
   (let-match many (notail $ decode-all rest) (POk _ _ _ _ css r a) (else (PNo _ _ _ _)))
   (POk _ _ _ _ (Cons _ cs css) r (DACons ss e rest r cs css d a)))
 
-(def-fns _ $ (many take-app : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) a b) (erased (App A a b xs) q))
-  (let-match many n (Succ n1) ((Zero) (values (Nil _) xs (CatNil A xs))))
-  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) xs (CatNil A xs))))
+(def-fns _ $ (many take-app : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) a b) (erased (LApp A a b xs) q))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) xs (LAppNil A xs))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) xs (LAppNil A xs))))
   (let ((many a) (many b) (erased q)) (notail $ take-app A n1 rest))
-  (values (Cons _ x a) b (CatCons A x a b rest q)))
+  (values (Cons _ x a) b (LAppCons A x a b rest q)))
 
 (def-fns _ $ (many cut-at : (erased Type A) (subterm many (List (Nat)) ns) (many (List A) xs) -> (many (List (List A)) xss) (erased (Flatten A xss xs) q))
   (let-match many ns (Cons _ n rest)
-    ((Nil _) (values (Cons _ xs (Nil _)) (flat-front A xs (Nil _) xs (app-nil A xs) (Nil _) (FNil A)))))
+    ((Nil _) (values (Cons _ xs (Nil _)) (flat-front A xs (Nil _) xs (lapp-nil A xs) (Nil _) (FNil A)))))
   (let ((many a) (many b) (erased q)) (take-app A n xs))
   (let ((many xss) (erased p)) (notail $ cut-at A rest b))
   (values (Cons _ a xss) (flat-front A a b xs q xss p)))

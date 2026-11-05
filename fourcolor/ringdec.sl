@@ -5,9 +5,6 @@
   (many UFCons : (erased (Col) c c2 s) (erased (List (Col)) et lc) (erased (AddK c c2 s) a) (erased (UF c2 et lc) u)
       -> (UF c (Cons (Col) s et) (Cons (Col) c2 lc))))
 
-(def-fns _ $ (erased addk-swap : (erased (Col) a b c) (erased (AddK a b c) p) -> (erased (AddK a c b) q))
-  (match erased p _ ((AZL _) (AZL b)) ((AZR _) (ASame a)) ((ASame _) (AZR a)) ((AThird _ _ _ t) (AThird a c b (third-23 a b c t)))))
-
 (def-fns _ $ (erased tf-uf : (erased (Col) c0 c) (erased (List (Col)) lc et) (subterm erased (TraceFrom c0 c lc et) t) -> (erased (UF c et lc) u))
   (match erased t _
     ((TFEnd _ _ s _) (UFEnd c s))
@@ -31,7 +28,7 @@
 
 (def-adts $ (CLNe : ((List (Col)) xs ys) -> Type)
   enum
-  (many CNHead : (erased (Col) x y z) (erased (List (Col)) xs ys) (erased (AddK x y z) a) (erased (NonZero z) nz) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
+  (many CNHead : (erased (Col) x y z) (erased (List (Col)) xs ys) (erased (AddK x y z) a) (erased (NZ z) nz) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
   (many CNTail : (erased (Col) x y) (erased (List (Col)) xs ys) (erased (CLNe xs ys) p) -> (CLNe (Cons (Col) x xs) (Cons (Col) y ys)))
   (many CNL : (erased (Col) x) (erased (List (Col)) xs) -> (CLNe (Cons (Col) x xs) (Nil (Col))))
   (many CNR : (erased (Col) y) (erased (List (Col)) ys) -> (CLNe (Nil (Col)) (Cons (Col) y ys))))
@@ -41,37 +38,26 @@
     (absurd (CNHead x _ z _ _ a nz) (let-match erased (addc-fn x x z (C0) a (ASame x)) (Refl _ _)) nz)
     (absurd (CNTail _ _ xs1 _ p1) (clne-irrefl xs1 p1))))
 
-(def-fns _ $ (erased addk-zero : (erased (Col) x y) (erased (AddK x y (C0)) a) -> (erased (Eq (Col) x y) e))
-  (match erased a _ ((AZL _) (Refl _ x)) ((AZR _) (Refl _ x)) ((ASame _) (Refl _ x)) (absurd (AThird _ _ _ t) t)))
-
 (def-fns _ $ (erased cl-dec : (subterm erased (List (Col)) xs) (erased (List (Col)) ys) -> (erased (Or (Eq (List (Col)) xs ys) (CLNe xs ys)) r))
   (match erased xs _
-    ((Nil _) (match erased ys _ ((Nil _) (InL _ _ (Refl _ xs))) ((Cons _ y ys1) (InR _ _ (CNR y ys1)))))
+    ((Nil _) (match erased ys _ ((Nil _) (OrL _ _ (Refl _ xs))) ((Cons _ y ys1) (OrR _ _ (CNR y ys1)))))
     ((Cons _ x xs1)
-      (let-match erased ys (Cons _ y ys1) ((Nil _) (InR _ _ (CNL x xs1))))
+      (let-match erased ys (Cons _ y ys1) ((Nil _) (OrR _ _ (CNL x xs1))))
       (let ((erased z) (erased a)) (addc-total x y))
       (let-match erased z (C0)
-        ((C1) (InR _ _ (CNHead x y z xs1 ys1 a (NZ1))))
-        ((C2) (InR _ _ (CNHead x y z xs1 ys1 a (NZ2))))
-        ((C3) (InR _ _ (CNHead x y z xs1 ys1 a (NZ3)))))
-      (let-match erased (addk-zero x y a) (Refl _ _))
-      (let-match erased (cl-dec xs1 ys1) (InL _ _ q) ((InR _ _ p) (InR _ _ (CNTail x y xs1 ys1 p))))
+        ((C1) (OrR _ _ (CNHead x y z xs1 ys1 a (NZ1))))
+        ((C2) (OrR _ _ (CNHead x y z xs1 ys1 a (NZ2))))
+        ((C3) (OrR _ _ (CNHead x y z xs1 ys1 a (NZ3)))))
+      (let-match erased (addc-zero x y a) (Refl _ _))
+      (let-match erased (cl-dec xs1 ys1) (OrL _ _ q) ((OrR _ _ p) (OrR _ _ (CNTail x y xs1 ys1 p))))
       (let-match erased q (Refl _ _))
-      (InL _ _ (Refl _ xs)))))
+      (OrL _ _ (Refl _ xs)))))
 
-(def-fns _ $ (erased nats-exists : (subterm erased (List (Col)) cs) -> (erased (List (Nat)) ks) (erased (All2 (Nat) (Col) ColOf ks cs) a))
-  (let-match erased cs (Cons _ c cs1) ((Nil _) (values (Nil _) (All2Nil (Nat) (Col) ColOf))))
+(def-fns _ $ (erased nats-exists : (subterm erased (List (Col)) cs) -> (erased (List (Nat)) ks) (erased (All2 (Nat) (Col) NCol ks cs) a))
+  (let-match erased cs (Cons _ c cs1) ((Nil _) (values (Nil _) (All2Nil (Nat) (Col) NCol))))
   (let ((erased k) (erased p)) (natof-exists c))
   (let ((erased ks) (erased a)) (nats-exists cs1))
-  (values (Cons _ k ks) (All2Cons (Nat) (Col) ColOf k c ks cs1 p a)))
-
-(def-fns _ $ (erased nats-fn : (erased (List (Nat)) ks ks2) (erased (List (Col)) cs) (subterm erased (All2 (Nat) (Col) ColOf ks cs) p)
-    (erased (All2 (Nat) (Col) ColOf ks2 cs) q) -> (erased (Eq (List (Nat)) ks ks2) e))
-  (let-match erased p (All2Cons _ _ _ k c ks1 cs1 p1 r1) ((All2Nil _ _ _) (let-match erased q (All2Nil _ _ _)) (Refl _ ks)))
-  (let-match erased q (All2Cons _ _ _ k2 _ ks3 _ q1 r2))
-  (let-match erased (colof-inj k k2 c p1 q1) (Refl _ _))
-  (let-match erased (nats-fn ks1 ks3 cs1 r1 r2) (Refl _ _))
-  (Refl _ ks))
+  (values (Cons _ k ks) (All2Cons (Nat) (Col) NCol k c ks cs1 p a)))
 
 ; Why the colours cs, numbered lcn, give r no ring trace et: their trace differs from et, lcn and r differ in length, or no
 ; four-colouring gives r the colours lcn.
@@ -88,16 +74,16 @@
 (def-adts $ (RTMiss : ((List (Nat)) e f r) ((List (Col)) et) ((Col) c0) -> Type)
   enum
   (many MkRTMiss : (erased (List (Nat)) e f r lcn) (erased (Col) c0 s) (erased (List (Col)) et1 cs1) (erased (UF c0 (Cons (Col) s et1) cs1) uf)
-      (erased (All2 (Nat) (Col) ColOf lcn (Cons (Col) c0 cs1)) al) (erased (MissWhy e f r lcn (Cons (Col) c0 cs1) (Cons (Col) s et1)) w)
+      (erased (All2 (Nat) (Col) NCol lcn (Cons (Col) c0 cs1)) al) (erased (MissWhy e f r lcn (Cons (Col) c0 cs1) (Cons (Col) s et1)) w)
       -> (RTMiss e f r (Cons (Col) s et1) c0)))
 
 (def-fns _ $ (erased rtmiss-sound : (erased (List (Nat)) e f r ks lc) (erased (List (Col)) et cs2) (erased (Col) c0) (erased (RTMiss e f r et c0) m)
-    (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) ColOf lc (Cons (Col) c0 cs2)) co)
+    (erased (FourColoring e f ks) c) (erased (Respects ks r lc) rl) (erased (All2 (Nat) (Col) NCol lc (Cons (Col) c0 cs2)) co)
     (erased (Trace (Cons (Col) c0 cs2) et) t) -> (erased (False) res))
   (let-match erased m (MkRTMiss _ _ _ lcn _ _ _ cs1 uf al w))
   (let-match erased t (TrCons _ _ _ t1))
   (let-match erased (uf-fn c0 et cs2 cs1 (tf-uf c0 c0 cs2 et t1) uf) (Refl _ _))
-  (let-match erased (nats-fn lc lcn _ co al) (Refl _ _))
+  (let-match erased (cols-inj lc lcn _ co al) (Refl _ _))
   (match erased w _
     ((MWTrace _ _ _ _ cs _ et2 tr ne)
       (let-match erased (trace-fn cs et2 et tr t) (Refl _ _))
@@ -124,8 +110,8 @@
   (let ((erased et2) (erased tr)) (trace-exists cs))
   (let ((erased lcn) (erased al)) (nats-exists cs))
   (let ((erased kn) (erased ln)) (length-exists (Nat) lcn))
-  (let-match erased (cl-dec et2 et) (InL _ _ q)
-    ((InR _ _ ne) (RTMissed e f r et c0 (MkRTMiss e f r lcn c0 s et1 cs1 uf al (MWTrace e f r lcn cs et et2 tr ne)))))
+  (let-match erased (cl-dec et2 et) (OrL _ _ q)
+    ((OrR _ _ ne) (RTMissed e f r et c0 (MkRTMiss e f r lcn c0 s et1 cs1 uf al (MWTrace e f r lcn cs et et2 tr ne)))))
   (let-match erased q (Refl _ _))
   (let-match erased (nat-eq kn k) (Equal _ _ _)
     ((Unequal _ _ _ _ ne) (RTMissed e f r et c0 (MkRTMiss e f r lcn c0 s et1 cs1 uf al (MWLength e f r lcn cs et kn k ln lr ne)))))
@@ -176,7 +162,7 @@
     ((Nil _)
       (let-match erased r (Nil _) ((Cons _ x r1) (RDNo e f r et (RNRing e f r1 x))))
       (let-match erased (search-ring d (Zero) e n f r (Nil _) h ur (LengthNil _) (LengthNil _)) (NotFound _ _ _ _ _ _ ne)
-        ((Found _ _ _ _ _ _ ks c rl) (RDYes e f r et (MkRingTrace e f r ks (Nil _) (Nil _) et c rl (All2Nil (Nat) (Col) ColOf) (TrNil)))))
+        ((Found _ _ _ _ _ _ ks c rl) (RDYes e f r et (MkRingTrace e f r ks (Nil _) (Nil _) et c rl (All2Nil (Nat) (Col) NCol) (TrNil)))))
       (let ((erased _) (erased _) (erased lf)) (hyper-lengths d e n f h))
       (RDNo e f r et (RNMap e f d lf ne))))
   (let-match erased (rt-try d k e n f r h ur lr s (C0) et1) (RTMissed _ _ _ _ _ m0) ((RTHit _ _ _ _ _ rt) (RDYes e f r et rt)))

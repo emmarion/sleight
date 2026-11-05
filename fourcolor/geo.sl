@@ -59,12 +59,6 @@
   (many DomThere : (erased (Nat) x y n) (erased (List (Nat)) xs ys ns) (erased (Lt x (Succ y)) l) (erased (Dom xs ys ns) rest)
      -> (Dom (Cons (Nat) x xs) (Cons (Nat) y ys) (Cons (Nat) n ns))))
 
-(def-fns _ $ (erased mul-mono : (erased (Nat) a b n x y) (erased (Lt a (Succ b)) l) (erased (Mul a n x) ma) (erased (Mul b n y) mb) ->
-    (erased (Lt x (Succ y)) r))
-  (let ((erased d) (erased p)) (sub b a l))
-  (let ((erased dn) (erased md)) (mul d n))
-  (add-le-left x dn y (mul-distr a d b n x dn y p ma md mb)))
-
 (def-fns _ $ (erased mul-strict : (erased (Nat) a b n x y) (erased (Lt a b) l) (erased (Lt (Zero) n) pos) (erased (Mul a n x) ma) (erased (Mul b n y) mb) ->
     (erased (Lt x y) r))
   (let ((erased d) (erased p)) (lt-diff a b l))
@@ -84,7 +78,7 @@
     ((LeNil) (let-match erased dx (DotNil)) (let-match erased dy (DotNil)) (LtZ (Zero))))
   (let-match erased dx (DotCons _ n xn t1 _ _ ns1 mx dx1 ax))
   (let-match erased dy (DotCons _ _ yn u1 _ _ _ my dy1 ay))
-  (add-lt-le xn yn t1 u1 t u (mul-mono x y n xn yn l mx my) (le-all-dot xs1 ys1 ns1 t1 u1 le1 dx1 dy1) ax ay))
+  (add-lt-le xn yn t1 u1 t u (mul-le-mono x y n xn yn l mx my) (le-all-dot xs1 ys1 ns1 t1 u1 le1 dx1 dy1) ax ay))
 
 (def-fns _ $ (erased dom-dot : (erased (List (Nat)) xs ys ns) (erased (Nat) t u) (subterm erased (Dom xs ys ns) dm)
     (erased (Dot xs ns t) dx) (erased (Dot ys ns u) dy) -> (erased (Lt t u) r))
@@ -96,7 +90,7 @@
     ((DomThere x y n xs1 ys1 ns1 l dm1)
       (let-match erased dx (DotCons _ _ xn t1 _ _ _ mx dx1 ax))
       (let-match erased dy (DotCons _ _ yn u1 _ _ _ my dy1 ay))
-      (add-lt t1 u1 xn yn t u (dom-dot xs1 ys1 ns1 t1 u1 dm1 dx1 dy1) (mul-mono x y n xn yn l mx my)
+      (add-lt t1 u1 xn yn t u (dom-dot xs1 ys1 ns1 t1 u1 dm1 dx1 dy1) (mul-le-mono x y n xn yn l mx my)
         (add-comm xn t1 t ax) (add-comm yn u1 u ay)))))
 
 (def-macro (ev args)

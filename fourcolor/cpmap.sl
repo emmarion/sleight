@@ -263,6 +263,5 @@
 (let ((erased CRPNil)) RPNil)
 (let ((erased CRPCons)) RPCons)
 (let ((erased crpath-last)) rpath-last)
-(let ((erased CLast)) Last)
 (let ((erased CQuasiCubic)) QuasiCubic)
 (let ((erased CMkQuasiCubic)) MkQuasiCubic)

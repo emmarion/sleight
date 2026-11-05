@@ -5,51 +5,26 @@
   (many SACons : (erased (List (Nat)) g xs) (erased (Nat) x c s1 s) (erased (Nth (Nat) g x c) p) (erased (SumAt g xs s1) rest)
       (erased (Add c s1 s) a) -> (SumAt g (Cons (Nat) x xs) s)))
 
-; Every dart of xs is in ys.
-(def-adts $ (Incl : ((List (Nat)) xs ys) -> Type)
-  enum
-  (many InclNil : (erased (List (Nat)) ys) -> (Incl (Nil (Nat)) ys))
-  (many InclCons : (erased (Nat) x) (erased (List (Nat)) xs ys) (erased (In x ys) p) (erased (Incl xs ys) rest) -> (Incl (Cons (Nat) x xs) ys)))
+(def-fns _ $ (erased incl-weak : (erased (List (Nat)) xs ys) (erased (Nat) y) (subterm erased (HSub xs ys) i) -> (erased (HSub xs (Cons (Nat) y ys)) r))
+  (let-match erased i (HsbCons x xs1 _ px i1) ((HsbNil _) (HsbNil _)))
+  (HsbCons x xs1 _ (InThere x y ys px) (incl-weak xs1 ys y i1)))
 
-(def-fns _ $ (erased incl-in : (erased (List (Nat)) xs ys) (erased (Nat) u) (subterm erased (Incl xs ys) i) (erased (In u xs) p) -> (erased (In u ys) r))
-  (let-match erased i (InclCons _ xs1 _ px i1) (absurd (InclNil _) p))
-  (let-match erased p (InThere _ _ _ p1) ((InHere _ _) px))
-  (incl-in xs1 ys u i1 p1))
+(def-fns _ $ (erased remove-incl : (erased (Nat) x) (erased (List (Nat)) ys ys1) (subterm erased (Remove x ys ys1) rm) -> (erased (HSub ys1 ys) r))
+  (let-match erased rm (RmThere _ y ys2 ys3 rm1) ((RmHere _ _) (incl-weak ys1 ys1 x (sub-refl ys1))))
+  (HsbCons y ys3 ys (InHere y ys2) (incl-weak ys3 ys2 y (remove-incl x ys2 ys3 rm1))))
 
-(def-fns _ $ (erased incl-weak : (erased (List (Nat)) xs ys) (erased (Nat) y) (subterm erased (Incl xs ys) i) -> (erased (Incl xs (Cons (Nat) y ys)) r))
-  (let-match erased i (InclCons x xs1 _ px i1) ((InclNil _) (InclNil _)))
-  (InclCons x xs1 _ (InThere x y ys px) (incl-weak xs1 ys y i1)))
-
-(def-fns _ $ (erased incl-refl : (subterm erased (List (Nat)) xs) -> (erased (Incl xs xs) r))
-  (let-match erased xs (Cons _ x xs1) ((Nil _) (InclNil _)))
-  (InclCons x xs1 xs (InHere x xs1) (incl-weak xs1 xs1 x (incl-refl xs1))))
-
-(def-fns _ $ (erased incl-trans : (erased (List (Nat)) a b c) (subterm erased (Incl a b) i) (erased (Incl b c) j) -> (erased (Incl a c) r))
-  (let-match erased i (InclCons x a1 _ px i1) ((InclNil _) (InclNil c)))
-  (InclCons x a1 c (incl-in b c x j px) (incl-trans a1 b c i1 j)))
-
-(def-fns _ $ (erased remove-incl : (erased (Nat) x) (erased (List (Nat)) ys ys1) (subterm erased (Remove x ys ys1) rm) -> (erased (Incl ys1 ys) r))
-  (let-match erased rm (RmThere _ y ys2 ys3 rm1) ((RmHere _ _) (incl-weak ys1 ys1 x (incl-refl ys1))))
-  (InclCons y ys3 ys (InHere y ys2) (incl-weak ys3 ys2 y (remove-incl x ys2 ys3 rm1))))
-
-(def-fns _ $ (erased remove-notin : (erased (Nat) x) (erased (List (Nat)) ys ys1) (subterm erased (Remove x ys ys1) rm) (erased (Distinct ys) dy)
-    -> (erased (NotIn x ys1) r))
-  (let-match erased rm (RmThere _ y ys2 ys3 rm1) ((RmHere _ _) (let-match erased dy (DistCons _ _ ny _)) ny))
-  (let-match erased dy (DistCons _ _ ny dy1))
-  (NotInCons x y ys3 (apart-sym y x (notin-in y x ys2 ny (remove-src x ys2 ys3 rm1))) (remove-notin x ys2 ys3 rm1 dy1)))
-
-(def-fns _ $ (erased incl-drop : (erased (List (Nat)) a b) (erased (Nat) x) (subterm erased (Incl a (Cons (Nat) x b)) i) (erased (NotIn x a) nx)
-    -> (erased (Incl a b) r))
-  (let-match erased i (InclCons u a1 _ pu i1) ((InclNil _) (InclNil b)))
+(def-fns _ $ (erased incl-drop : (erased (List (Nat)) a b) (erased (Nat) x) (subterm erased (HSub a (Cons (Nat) x b)) i) (erased (NotIn x a) nx)
+    -> (erased (HSub a b) r))
+  (let-match erased i (HsbCons u a1 _ pu i1) ((HsbNil _) (HsbNil b)))
   (let-match erased nx (NotInCons _ _ _ ne nx1))
   (let-match erased pu (InThere _ _ _ pu1) (absurd (InHere _ _) (apart-irrefl x ne)))
-  (InclCons u a1 b pu1 (incl-drop a1 b x i1 nx1)))
+  (HsbCons u a1 b pu1 (incl-drop a1 b x i1 nx1)))
 
-(def-fns _ $ (erased incl-remove : (erased (List (Nat)) a ys ys1) (erased (Nat) x) (subterm erased (Incl a ys) i) (erased (NotIn x a) nx)
-    (erased (Remove x ys ys1) rm) -> (erased (Incl a ys1) r))
-  (let-match erased i (InclCons u a1 _ pu i1) ((InclNil _) (InclNil ys1)))
+(def-fns _ $ (erased incl-remove : (erased (List (Nat)) a ys ys1) (erased (Nat) x) (subterm erased (HSub a ys) i) (erased (NotIn x a) nx)
+    (erased (Remove x ys ys1) rm) -> (erased (HSub a ys1) r))
+  (let-match erased i (HsbCons u a1 _ pu i1) ((HsbNil _) (HsbNil ys1)))
   (let-match erased nx (NotInCons _ _ _ ne nx1))
-  (InclCons u a1 ys1 (remove-keep x u ys ys1 rm pu (apart-sym x u ne)) (incl-remove a1 ys ys1 x i1 nx1 rm)))
+  (HsbCons u a1 ys1 (remove-keep x u ys ys1 rm pu (apart-sym x u ne)) (incl-remove a1 ys ys1 x i1 nx1 rm)))
 
 (def-fns _ $ (erased sumat-remove : (erased (List (Nat)) g ys ys1) (erased (Nat) x c s1 s) (subterm erased (Remove x ys ys1) rm)
     (erased (Nth (Nat) g x c) p) (erased (SumAt g ys1 s1) k) (erased (Add c s1 s) a) -> (erased (SumAt g ys s) r))
@@ -59,16 +34,16 @@
   (SACons g ys2 y cy z s py (sumat-remove g ys2 ys3 x c t1 z rm1 p k1 r1) r2))
 
 (def-fns _ $ (erased perm-sum : (erased (List (Nat)) g xs ys) (erased (Nat) s) (subterm erased (SumAt g xs s) k) (erased (Distinct xs) dx)
-    (erased (Distinct ys) dy) (erased (Incl xs ys) i1) (erased (Incl ys xs) i2) -> (erased (SumAt g ys s) r))
+    (erased (Distinct ys) dy) (erased (HSub xs ys) i1) (erased (HSub ys xs) i2) -> (erased (SumAt g ys s) r))
   (match erased k _
-    ((SANil _) (match erased ys _ ((Nil _) (SANil g)) (absurd (Cons _ _ _) (let-match erased i2 (InclCons _ _ _ iy _)) iy)))
+    ((SANil _) (match erased ys _ ((Nil _) (SANil g)) (absurd (Cons _ _ _) (let-match erased i2 (HsbCons _ _ _ iy _)) iy)))
     ((SACons _ xs1 x c s1 _ p k1 a)
       (let-match erased dx (DistCons _ _ nx dx1))
-      (let-match erased i1 (InclCons _ _ _ ix i11))
+      (let-match erased i1 (HsbCons _ _ _ ix i11))
       (let ((erased ys1) (erased rm)) (remove-exists x ys ix))
       (sumat-remove g ys ys1 x c s1 s rm p
         (perm-sum g xs1 ys1 s1 k1 dx1 (remove-distinct x ys ys1 rm dy) (incl-remove xs1 ys ys1 x i11 nx rm)
-          (incl-drop ys1 xs1 x (incl-trans ys1 ys xs (remove-incl x ys ys1 rm) i2) (remove-notin x ys ys1 rm dy)))
+          (incl-drop ys1 xs1 x (sub-trans ys1 ys xs (remove-incl x ys ys1 rm) i2) (r4c-remove-out x ys ys1 rm dy)))
         a))))
 
 (def-fns _ $ (erased sumat-fn : (erased (List (Nat)) g xs) (erased (Nat) s t) (subterm erased (SumAt g xs s) k) (erased (SumAt g xs t) l)
@@ -79,12 +54,12 @@
   (let-match erased (sumat-fn g xs1 s1 t1 k1 l1) (Refl _ _))
   (add-fn c s1 s t a a2))
 
-(def-fns _ $ (erased sumat-app : (erased (List (Nat)) g a b c) (erased (Nat) s) (subterm erased (AppN a b c) ap) (erased (SumAt g c s) k)
+(def-fns _ $ (erased sumat-app : (erased (List (Nat)) g a b c) (erased (Nat) s) (subterm erased (Join a b c) ap) (erased (SumAt g c s) k)
     -> (erased (Nat) s1 s2) (erased (SumAt g a s1) k1) (erased (SumAt g b s2) k2) (erased (Add s1 s2 s) e))
-  (let-match erased ap (AppCons a1 _ c1 x ap1) ((AppNil _) (values (Zero) s (SANil g) k (AddZero s))))
+  (let-match erased ap (JoinCons a1 _ c1 x ap1) ((JoinNil _) (values (Zero) s (SANil g) k (AddZero s))))
   (let-match erased k (SACons _ _ _ cx t _ px k3 ax))
   (let ((erased s1) (erased s2) (erased k1) (erased k2) (erased e)) (sumat-app g a1 b c1 t ap1 k3))
-  (let ((erased u) (erased e1) (erased e2)) (plus-assoc-r cx s1 s2 t s ax e))
+  (let ((erased u) (erased e1) (erased e2)) (add-assoc-back cx s1 s2 t s ax e))
   (values u s2 (SACons g a1 x cx s1 u px k1 e1) k2 e2))
 
 (def-fns _ $ (erased sumat-map : (erased (List (Nat)) g p gp xs ys) (erased (Nat) s) (erased (Respects g p gp) rg) (subterm erased (Respects p xs ys) rp)
@@ -93,31 +68,12 @@
   (let-match erased k (SACons _ _ _ c s1 _ pc k1 a))
   (SACons g ys1 y c s1 s (respects-nth g p gp x y c rg pxy pc) (sumat-map g p gp xs1 ys1 s1 rg rp1 k1) a))
 
-(def-fns _ $ (erased resp-notin : (erased (List (Nat)) q xs ls) (erased (Nat) x l) (subterm erased (Respects q xs ls) rp) (erased (Nth (Nat) q x l) px)
-    (erased (NotIn l ls) nl) -> (erased (NotIn x xs) r))
-  (let-match erased rp (RespCons _ xs1 ls1 y l2 py rp1) ((RespNil _) (NotInNil x)))
-  (let-match erased nl (NotInCons _ _ _ ne nl1))
-  (let ((erased (Apart (Nat) Lt x y) nxy))
-    (match erased (nat-eq x y) _
-      ((Unequal _ _ _ _ d) d)
-      (absurd (Equal _ _ _) (let-match erased (nth-fn _ q x l l2 px py) (Refl _ _)) (apart-irrefl l ne))))
-  (NotInCons x y xs1 nxy (resp-notin q xs1 ls1 x l rp1 px nl1)))
-
-(def-fns _ $ (erased resp-distinct : (erased (List (Nat)) q xs ls) (subterm erased (Respects q xs ls) rp) (erased (Distinct ls) dl) -> (erased (Distinct xs) r))
-  (let-match erased rp (RespCons _ xs1 ls1 x l px rp1) ((RespNil _) (DistNil)))
-  (let-match erased dl (DistCons _ _ nl dl1))
-  (DistCons x xs1 (resp-notin q xs1 ls1 x l rp1 px nl) (resp-distinct q xs1 ls1 rp1 dl1)))
-
-(def-fns _ $ (erased under-incl : (erased (Nat) d) (erased (List (Nat)) xs ids) (subterm erased (Under xs d) u) (erased (Iota d ids) io) -> (erased (Incl xs ids) r))
-  (let-match erased u (UnderCons xs1 x _ lx u1) ((UnderNil _) (InclNil ids)))
-  (InclCons x xs1 ids (iota-in d x ids io lx) (under-incl d xs1 ids u1 io)))
-
 (def-fns _ $ (erased perm-cover : (erased (Nat) d) (erased (List (Nat)) p q ids zs) (erased (HPerm d p q) pm) (subterm erased (Under zs d) u)
-    -> (erased (Incl zs p) r))
-  (let-match erased u (UnderCons zs1 x _ lx u1) ((UnderNil _) (InclNil p)))
+    -> (erased (HSub zs p) r))
+  (let-match erased u (UnderCons zs1 x _ lx u1) ((UnderNil _) (HsbNil p)))
   (let-match erased pm (HMkPerm _ _ _ ids2 io _ _ pq))
   (let ((erased y) (erased py) (erased _)) (perm-nth d x q p (perm-sym d p q pm) lx))
-  (InclCons x zs1 p (nth-in p y x (respects-nth p q ids2 x y x pq py (iota-nth d x ids2 io lx))) (perm-cover d p q ids zs1 pm u1)))
+  (HsbCons x zs1 p (nth-in p y x (respects-nth p q ids2 x y x pq py (iota-nth d x ids2 io lx))) (perm-cover d p q ids zs1 pm u1)))
 
 (def-fns _ $ (erased perm-total : (erased (Nat) d s) (erased (List (Nat)) g p q gp ids) (erased (HPerm d p q) pm) (erased (Iota d ids) io)
     (erased (Respects g p gp) rg) (erased (SumAt gp ids s) k) -> (erased (SumAt g ids s) r))
@@ -126,7 +82,7 @@
   (let ((erased rid)) (respects-id-right d ids p io lp))
   (let ((erased uid)) (respects-under p ids p d rid lp))
   (perm-sum g p ids s (sumat-map g p gp ids p s rg rid k) (resp-distinct q p ids qp (iota-distinct d ids io)) (iota-distinct d ids io)
-    (under-incl d p ids (perm-under d p q pm) io) (perm-cover d p q ids ids pm uid)))
+    (under-sub d p ids (perm-under d p q pm) io) (perm-cover d p q ids ids pm uid)))
 
 ; s: the sum of g at the k darts x, f x, ..., f^(k-1) x.
 (def-adts $ (FSum : ((List (Nat)) f g) ((Nat) x k s) -> Type)
@@ -183,9 +139,9 @@
   (let-match erased a1 (AddZero _))
   (LengthCons _ x xs1 s1 (sumat-ones d s1 os xs1 ro k1)))
 
-(def-fns _ $ (erased under-app : (erased (Nat) d) (erased (List (Nat)) a b c) (subterm erased (AppN a b c) ap) (erased (Under a d) ua) (erased (Under b d) ub)
+(def-fns _ $ (erased under-app : (erased (Nat) d) (erased (List (Nat)) a b c) (subterm erased (Join a b c) ap) (erased (Under a d) ua) (erased (Under b d) ub)
     -> (erased (Under c d) r))
-  (let-match erased ap (AppCons a1 _ c1 x ap1) ((AppNil _) ub))
+  (let-match erased ap (JoinCons a1 _ c1 x ap1) ((JoinNil _) ub))
   (let-match erased ua (UnderCons _ _ _ lx ua1))
   (UnderCons c1 x d lx (under-app d a1 b c1 ap1 ua1 ub)))
 
@@ -209,27 +165,27 @@
 
 (def-fns _ $ (erased roots-cover : (erased (Nat) d) (erased (List (Nat)) p q) (erased (List (Bond)) g) (erased (List (Nat)) lab rs ls ids m)
     (erased (HPerm d p q) pm) (erased (Iota d ids) io) (erased (Length (Nat) lab d) ll) (erased (Graph d p g) gr) (erased (Rooted g rs ids lab) ro)
-    (erased (OrbCat p rs ls) oc) (subterm erased (Incl m ids) sm) -> (erased (Incl m ls) r))
-  (let-match erased sm (InclCons x m1 _ ix sm1) ((InclNil _) (InclNil ls)))
+    (erased (OrbCat p rs ls) oc) (subterm erased (HSub m ids) sm) -> (erased (HSub m ls) r))
+  (let-match erased sm (HsbCons x m1 _ ix sm1) ((HsbNil _) (HsbNil ls)))
   (let ((erased j) (erased pj)) (in-nth x ids ix))
   (let-match erased (iota-at d j x ids io pj) (Refl _ _))
   (let ((erased lx)) (nth-lt-length _ ids x d x pj (iota-length d ids io)))
   (let ((erased rt) (erased prt)) (nth-exists _ lab d x ll lx))
   (let ((erased irt) (erased cn)) (classes-root g d ids lab rs x rt io ro prt lx))
-  (InclCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (roots-cover d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
+  (HsbCons x m1 ls (orbcat-cover d x rt p q g rs ls pm gr oc irt cn) (roots-cover d p q g lab rs ls ids m1 pm io ll gr ro oc sm1)))
 
 (def-fns _ $ (erased face-roots : (erased (Nat) d kf) (erased (List (Nat)) f fi ks ids) (erased (HPerm d f fi) pf) (erased (Orbits d f kf) ob)
     (erased (OrderList d f ks) ol) (erased (Iota d ids) io)
     -> (erased (List (Nat)) rs ls) (erased (Length (Nat) rs kf) lr) (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl)
-    (erased (Incl ls ids) i1) (erased (Incl ids ls) i2))
+    (erased (HSub ls ids) i1) (erased (HSub ids ls) i2))
   (let-match erased ob (MkOrbits _ _ _ g gr cs))
   (let-match erased cs (MkClasses _ _ _ ids2 lab rs io2 ll lr dr fix cl ro))
   (let-match erased (iota-fn d ids ids2 io io2) (Refl _ _))
   (let ((erased ur)) (respects-under lab rs rs d fix ll))
   (let ((erased ls) (erased oc)) (ocat d f ks rs ol ur))
   (values rs ls lr ur oc (orbcat-distinct d f g lab rs rs ls gr cl fix (sub-refl rs) dr oc)
-    (under-incl d ls ids (ocat-under d f fi rs ls pf ur oc) io)
-    (roots-cover d f fi g lab rs ls ids ids pf io ll gr ro oc (incl-refl ids))))
+    (under-sub d ls ids (ocat-under d f fi rs ls pf ur oc) io)
+    (roots-cover d f fi g lab rs ls ids ids pf io ll gr ro oc (sub-refl ids))))
 
 (def-fns _ $ (erased orbcat-rsum : (erased (Nat) d s) (erased (List (Nat)) f g ks rs ls) (erased (OrderList d f ks) ol) (erased (Under rs d) u)
     (subterm erased (OrbCat f rs ls) oc) (erased (SumAt g ls s) k) -> (erased (RSum f g ks rs s) r))
@@ -243,6 +199,6 @@
   (RSCons f g ks rs1 r a s1 s2 s pa (FSS f g r y m c t s1 pc py ft at) (orbcat-rsum d s2 f g ks rs1 ls1 ol u1 oc1 k2) e))
 
 (def-fns _ $ (erased faces-sum : (erased (Nat) d s) (erased (List (Nat)) f g ks rs ls ids) (erased (OrderList d f ks) ol) (erased (Iota d ids) io)
-    (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl) (erased (Incl ls ids) i1) (erased (Incl ids ls) i2)
+    (erased (Under rs d) ur) (erased (OrbCat f rs ls) oc) (erased (Distinct ls) dl) (erased (HSub ls ids) i1) (erased (HSub ids ls) i2)
     (erased (SumAt g ids s) k) -> (erased (RSum f g ks rs s) r))
   (orbcat-rsum d s f g ks rs ls ol ur oc (perm-sum g ids ls s k (iota-distinct d ids io) dl i2 i1)))

@@ -61,7 +61,7 @@
     ((Nil _)
       (match many (u62-eq k (u62-inc h hb) kb hb) _
         ((Equal _ _ _)
-          (let-match erased (add-lcancel (Succ h) j (Zero) (Succ h) ad (add-zero-right (Succ h))) (Refl _ _))
+          (let-match erased (add-cancel (Succ h) j (Zero) (Succ h) ad (add-zero-right (Succ h))) (Refl _ _))
           (let-match erased b (TaL _ _ n _ x r _))
           (values (cnt-get-many vs uc N zv p n x) (SubNil t n r)))
         ((Unequal _ _ _ _ ap)
@@ -99,7 +99,7 @@
   (let ((erased qb)) (lt-le-trans q (Succ x) u62-modulus (add-le-left q d x ax) (LtS x u62-modulus xb)))
   (let ((many s1)) (u62-add (r4-x3 p q tq pb qb) cv (Succ x) (add-succ-right q d x ax) sb))
   (let ((many k1)) (u62-inc k (lt-le-trans (Succ k) (Succ (Succ h)) u62-modulus (LtS k (Succ h) (le-lt-succ k h le)) (LtS (Succ h) u62-modulus hb))))
-  (let ((many n) (erased s2)) (tail $ r4-look-go h hl vs uc N zv k1 (u62-dec x s1 sb) l1 j1 (add-sh k j1 (Succ h) ad) u bu))
+  (let ((many n) (erased s2)) (tail $ r4-look-go h hl vs uc N zv k1 (u62-dec x s1 sb) l1 j1 (add-shift k j1 (Succ h) ad) u bu))
   (values n (SubCons t u e l1 n sl s2)))
 
 ; red4's flat_look h o, applied to the colours l.
@@ -109,11 +109,6 @@
     ((R4None _) (values 0 (empty-sub l)))
     ((R4Some _ N _ vs uc zv tb hl) (tail $ r4-look-go h hl vs uc N zv 0 0 l (Succ h) (AddZero (Succ h)) kt tb))))
 
-(def-fns _ $ (erased r4k-fld-fn : (erased (Bool) sel) (erased (Nat) ftr fu f g) (erased (Fld sel ftr fu f) p) (erased (Fld sel ftr fu g) q) -> (erased (Eq (Nat) f g) e))
-  (match erased p _
-    ((FdU _ _) (let-match erased q (FdU _ _)) (Refl _ f))
-    ((FdT _ _) (let-match erased q (FdT _ _)) (Refl _ f))))
-
 ; Two readings of node g's word agree on its part sel.
 (def-fns _ $ (erased r4k-fld-at : (erased (List (Copy (Nat))) xs) (erased (Nat) g w b cm ftr fu f w1 b1 cm1 ftr1 fu1 f1) (erased (Bool) sel) (erased (WElt xs g w) x)
     (erased (NWd w b cm ftr fu) d) (erased (Fld sel ftr fu f) fd) (erased (WElt xs g w1) x1) (erased (NWd w1 b1 cm1 ftr1 fu1) d1) (erased (Fld sel ftr1 fu1 f1) fd1)
@@ -122,7 +117,7 @@
   (let ((erased e1) (erased _) (erased _)) (nwd-fn w b cm ftr fu b1 cm1 ftr1 fu1 d d1))
   (let-match erased e1 (Refl _ _))
   (let-match erased (r4g-nwd-fu w b cm ftr fu b1 cm1 ftr1 fu1 d d1) (Refl _ _))
-  (r4k-fld-fn sel ftr fu f f1 fd fd1))
+  (r4g-fld-fn sel ftr fu f f1 fd fd1))
 
 ; A node whose part sel is 0 holds the empty tree there.
 (def-fns _ $ (erased r4k-np0 : (erased (List (Copy (Nat))) xs) (erased (Nat) j g w b cm ftr fu) (erased (Gtree) c u) (erased (Bool) sel) (erased (NPart xs j g c sel u) np)

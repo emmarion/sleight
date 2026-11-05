@@ -45,7 +45,7 @@
 (def-adts $ (QEntry : ((List (Config)) cfs) ((List (Nat)) ps) ((Qn) r1 r2 r3) -> Type)
   enum
   (many MkQEntry : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (erased (Nat) a1 a2 a3 b1 b2 b3) (erased (Qn) q1 q2 q3 r1 r2 r3)
-      (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) t)
+      (erased (Elem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) t)
       (erased (Rot3 a1 a2 a3 q1 q2 q3 b1 b2 b3 r1 r2 r3) rt) -> (QEntry cfs (Cons (Nat) b3 (Cons (Nat) b2 (Cons (Nat) b1 (Nil (Nat))))) r1 r2 r3)))
 
 ; ps: the arities above t, listed backwards.
@@ -182,7 +182,7 @@
 (def-adts $ (QzHit : ((List (Config)) cfs) ((Nat) d) ((List (Nat)) e n ks) -> Type)
   enum
   (many MkQzHit : (erased (List (Config)) cfs) (erased (Nat) d y) (erased (List (Nat)) e n ks) (erased (Config) cf) (erased (Quiz) qz qz2)
-      (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (FitZ e n ks y qz2) fz) (erased (Lt y d) ly)
+      (erased (Elem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (FitZ e n ks y qz2) fz) (erased (Lt y d) ly)
       -> (QzHit cfs d e n ks)))
 
 (def-fns _ $ (erased qzt-hit : (erased (List (Config)) cfs) (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi)
@@ -246,7 +246,7 @@
     (else (values t qi))))
 
 (def-fns _ $ (many put3-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (erased (Nat) a1 a2 a3) (erased (Qn) q1 q2 q3)
-    (many (Nat) b1 b2 b3) (many (Qn) r1 r2 r3) (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v)
+    (many (Nat) b1 b2 b3) (many (Qn) r1 r2 r3) (erased (Elem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v)
     (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (erased (Rot3 a1 a2 a3 q1 q2 q3 b1 b2 b3 r1 r2 r3) rt) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi)
     -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let ((erased full)) (Cons (Nat) b3 (Cons (Nat) b2 (Cons (Nat) b1 (Nil (Nat))))))
@@ -254,7 +254,7 @@
     (RevCons _ _ full b1 (RevCons _ _ full b2 (RevCons _ _ full b3 (RevNil full)))) qi))
 
 (def-fns _ $ (many put-rot-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz qz2) (many (Nat) a1 a2 a3) (many (Qn) q1 q2 q3)
-    (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (many (Qzt) t)
+    (erased (Elem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz qz2) v) (erased (QzTriple qz2 a1 a2 a3 q1 q2 q3) tr) (many (Qzt) t)
     (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let ((erased (Rot3 a1 a2 a3 q1 q2 q3 a1 a2 a3 q1 q2 q3) r0)) (Rt0 a1 a2 a3 q1 q2 q3))
   (let-match many (nat-ltb 8 a1) (BFalse)
@@ -277,7 +277,7 @@
     (else (NOther q))))
 
 (def-fns _ $ (many store-c : (erased (List (Config)) cfs) (erased (Config) cf) (erased (Quiz) qz) (erased (Nat) qa1 qa2) (many (Qn) p1 p2)
-    (erased (Mem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz (MkQuiz (QaskR qa1 p1) (QaskR qa2 p2))) v) (many (Nat) ka1 ka2)
+    (erased (Elem (Config) cf cfs) m) (erased (CfQz cf qz) c) (erased (Variant qz (MkQuiz (QaskR qa1 p1) (QaskR qa2 p2))) v) (many (Nat) ka1 ka2)
     (erased (Eq (Nat) ka1 qa1) e1) (erased (Eq (Nat) ka2 qa2) e2) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let-match erased e1 (Refl _ _))
   (let-match erased e2 (Refl _ _))
@@ -313,7 +313,7 @@
     ((QaskLL a l) (let-match many (notail $ flipq-c l) (MkFlipD _ l2 p)) (MkFlipD q (QaskRR a l2) (FlQLL a l l2 p)))
     ((QaskRR a r) (let-match many (notail $ flipq-c r) (MkFlipD _ r2 p)) (MkFlipD q (QaskLL a r2) (FlQRR a r r2 p)))))
 
-(def-fns _ $ (many store-cf-c : (erased (List (Config)) cfs) (erased (Config) cf) (many (Quiz) qz) (many (Bool) sym) (erased (Mem (Config) cf cfs) m)
+(def-fns _ $ (many store-cf-c : (erased (List (Config)) cfs) (erased (Config) cf) (many (Quiz) qz) (many (Bool) sym) (erased (Elem (Config) cf cfs) m)
     (erased (CfQz cf qz) c) (many (Qzt) t) (erased (QInv cfs (Nil (Nat)) t) qi) -> (many (Qzt) r) (erased (QInv cfs (Nil (Nat)) r) qr))
   (let-match erased c (MkCfQz _ _ _ _ _ _ _ _ _ _ _ _ _ qc))
   (let-match erased qc (MkQzCert _ _ _ a0 a1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
@@ -330,25 +330,15 @@
           (Refl _ k0) (Refl _ k1) t qi))))
   (store-c cfs cf qz a0 a1 p01 p10 m c (VSame qz) k0 k1 (Refl _ k0) (Refl _ k1) t0 i0))
 
-(def-adts $ (Suf : (Type A) ((List A) ys xs) -> Type)
-  enum
-  (many SfRefl : (erased Type A) (erased (List A) xs) -> (Suf A xs xs))
-  (many SfStep : (erased Type A) (erased A y) (erased (List A) ys xs) (erased (Suf A (Cons A y ys) xs) p) -> (Suf A ys xs)))
-
-(def-fns _ $ (erased suf-mem : (erased Type A) (erased A x) (erased (List A) zs xs) (subterm erased (Suf A zs xs) sf) (erased (Mem A x zs) m) -> (erased (Mem A x xs) r))
-  (match erased sf _
-    ((SfRefl _ _) m)
-    ((SfStep _ y _ _ sf1) (suf-mem A x (Cons A y zs) xs sf1 (MemThere A x y zs m)))))
-
 (def-fns _ $ (many tree-rec-c : (erased (List (Config)) cfs) (many (Qzt) qt) (erased (QInv cfs (Nil (Nat)) qt) qi) (subterm many (List (Config)) rest)
-    (erased (Suf (Config) rest cfs) sf) -> (many (Qzt) r) (many (ErasedMaybe (QInv cfs (Nil (Nat)) r)) c))
+    (erased (Suffix (Config) rest cfs) sf) -> (many (Qzt) r) (many (ErasedMaybe (QInv cfs (Nil (Nat)) r)) c))
   (let-match many rest (Cons _ cf rest1) ((Nil _) (values qt (ESome _ qi))))
   (let ((many qz)) (cfquiz cf))
   (let-match many (cfqz-c cf qz) (ESome _ cq) ((ENone _) (values qt (ENone _))))
   (let-match many cf (MkConfig sym _ _))
-  (let ((many qt1) (erased qi1)) (store-cf-c cfs cf qz sym (suf-mem (Config) cf rest cfs sf (MemHere (Config) cf rest1)) cq qt qi))
+  (let ((many qt1) (erased qi1)) (store-cf-c cfs cf qz sym (suffix-elem (Config) cf rest cfs sf (ElHere (Config) cf rest1)) cq qt qi))
   (match many qt1 _
-    ((QztHub _ _ _ _) (tail $ tree-rec-c cfs qt1 qi1 rest1 (SfStep (Config) cf rest1 cfs sf)))
+    ((QztHub _ _ _ _) (tail $ tree-rec-c cfs qt1 qi1 rest1 (SufNext (Config) cf rest1 cfs sf)))
     (else (values (QztNil) (ESome _ (QINil cfs (Nil _)))))))
 
 (def-fns _ $ (erased qinv-n1 : (erased (List (Config)) cfs) (erased (List (Nat)) ps) -> (erased (QInv cfs ps (QztNode (QztNil) (QztNil) (QztNil) (QztNil))) r))
@@ -365,4 +355,4 @@
   (let ((erased e1)) (Refl (Qzt) n1))
   (let ((erased i58)) (QINode cfs (Nil _) n2 n2 n2 n2 (qinv-n2 cfs _ n1 e1) (qinv-n2 cfs _ n1 e1) (qinv-n2 cfs _ n1 e1) (qinv-n2 cfs _ n1 e1)))
   (tree-rec-c cfs (QztHub (QztNode n2 n2 n2 n2) n2 n2 n2) (QIHub cfs (Nil _) (QztNode n2 n2 n2 n2) n2 n2 n2 i58 (qinv-n2 cfs _ n1 e1) (qinv-n2 cfs _ n1 e1)
-    (qinv-n2 cfs _ n1 e1)) cfs (SfRefl (Config) cfs)))
+    (qinv-n2 cfs _ n1 e1)) cfs (SufHere (Config) cfs)))

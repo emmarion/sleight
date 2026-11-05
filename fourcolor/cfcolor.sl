@@ -116,7 +116,7 @@
     ((Add32) (Add31))
     ((Add33) (Add30))))
 
-(def-fns _ $ (erased addc-fn : (erased (Col) a b c c2) (erased (AddC a b c) p) (erased (AddC a b c2) q) -> (erased (Eq (Col) c c2) e))
+(def-fns _ $ (erased addc-same : (erased (Col) a b c c2) (erased (AddC a b c) p) (erased (AddC a b c2) q) -> (erased (Eq (Col) c c2) e))
   (match erased p _
     ((Add00) (let-match erased q (Add00)) (Refl _ c))
     ((Add01) (let-match erased q (Add01)) (Refl _ c))
@@ -279,7 +279,7 @@
     -> (erased (AddC c x h) r))
   (let ((erased t) (erased pt)) (addc-c c x))
   (let ((erased gx) (erased pgx)) (addc-c g x))
-  (let-match erased (addc-fn a gx t h (addc-assoc a g x c gx t pc pt pgx) (addc-assoc a x g e1 gx h px ph (addc-comm g x gx pgx))) (Refl _ _))
+  (let-match erased (addc-same a gx t h (addc-assoc a g x c gx t pc pt pgx) (addc-assoc a x g e1 gx h px ph (addc-comm g x gx pgx))) (Refl _ _))
   pt)
 
 (def-fns _ $ (erased cpcol-y : (erased (List (Step)) cp) (erased (List (Col)) r1) (erased (Col) e1 g h) (erased (CpCol cp (Cons (Col) e1 r1)) cc)
@@ -317,12 +317,12 @@
     -> (erased (AddC ac b abc) r))
   (let ((erased bc) (erased pbc)) (addc-c b c))
   (let ((erased t) (erased pt)) (addc-c ac b))
-  (let-match erased (addc-fn a bc abc t (addc-assoc a b c ab bc abc p q pbc) (addc-assoc a c b ac bc t s pt (addc-comm b c bc pbc))) (Refl _ _))
+  (let-match erased (addc-same a bc abc t (addc-assoc a b c ab bc abc p q pbc) (addc-assoc a c b ac bc t s pt (addc-comm b c bc pbc))) (Refl _ _))
   pt)
 
 (def-fns _ $ (erased addc-link : (erased (Col) a x z e1 e2 ee az) (erased (AddC a x e1) p) (erased (AddC x z e2) q) (erased (AddC e1 e2 ee) s)
     (erased (AddC a z az) t) -> (erased (Eq (Col) ee az) r))
-  (addc-fn a z ee az (addc-assoc a x e2 e1 z ee p s (addc-cancel x e2 z q)) t))
+  (addc-same a z ee az (addc-assoc a x e2 e1 z ee p s (addc-cancel x e2 z q)) t))
 
 (def-fns _ $ (erased cpcol-h : (erased (List (Step)) cp) (erased (List (Col)) r2) (erased (Col) e1 e2 ee g s1 h)
     (erased (CpCol cp (Cons (Col) e1 (Cons (Col) e2 r2))) cc) (erased (AddC e1 e2 ee) pee) (erased (AddC e1 g s1) ps1) (erased (AddC ee g h) ph)
@@ -347,9 +347,9 @@
   (match erased ctr1 _
     ((CTLast _ _ _ pxa)
       (let-match erased nc2 (NCsNil))
-      (let-match erased (addc-fn a x e1 e2 pax (addc-comm x a e2 pxa)) (Refl _ _))
-      (let-match erased (addc-fn e1 e1 ee (C0) pee (addc-ii e1)) (Refl _ _))
-      (let-match erased (addc-fn (C0) g h g ph (addc-0l g)) (Refl _ _))
+      (let-match erased (addc-same a x e1 e2 pax (addc-comm x a e2 pxa)) (Refl _ _))
+      (let-match erased (addc-same e1 e1 ee (C0) pee (addc-ii e1)) (Refl _ _))
+      (let-match erased (addc-same (C0) g h g ph (addc-0l g)) (Refl _ _))
       (let ((erased ks3) (erased col3) (erased rr3)) (ecpN-color (Succ (Succ (Succ (Succ d)))) kc ka e2m n2 f2m r2m e3 f3 r3 ks2 _ _ pm2 stn2 col2 rr2
         (R3Three ka kc kx) (nz-apart kc ka c a g pkc pa (addc-comm a c g acg) ng)))
       (MkCpCol (Cons (Step) (SH) cp) d6 e3 f3 r3 ks3 _ (Cons (Col) a (Cons (Col) c (Nil (Col)))) _ (CmH d cp e f r e1m f1m r1m e2m f2m r2m e3 f3 r3 cm stu stn stn2)
@@ -478,37 +478,31 @@
   (let-match erased (rot-fn _ m et et3 et2 rt3 rt) (Refl _ _))
   (MkCpCol (Cons (Step) (SRr) cp) d e f r2 ks rc2 cs2 et2 (CmRr m d cp e f r r2 cm lr rtr) col rr2 nc2 tr2))
 
-; zs is xs followed by ys.
-(def-adts $ (App : (Type A) ((List A) xs ys zs) -> Type)
-  enum
-  (many CatNil : (erased Type A) (erased (List A) ys) -> (App A (Nil A) ys ys))
-  (many CatCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (App A xs ys zs) p) -> (App A (Cons A x xs) ys (Cons A x zs))))
-
-(def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (App A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
-  (let-match erased p (CatCons _ _ xs1 _ zs1 p1) ((CatNil _ _) (Refl _ zs)))
+(def-fns _ $ (erased app-nil-r : (erased Type A) (erased (List A) xs zs) (subterm erased (LApp A xs (Nil A) zs) p) -> (erased (Eq (List A) zs xs) e))
+  (let-match erased p (LAppCons _ _ xs1 _ zs1 p1) ((LAppNil _ _) (Refl _ zs)))
   (let-match erased (app-nil-r A xs1 zs1 p1) (Refl _ _))
   (Refl _ zs))
 
-(def-fns _ $ (erased app-snoc : (erased Type A) (erased (List A) xs ys zs ys2 zs2) (erased A x) (subterm erased (App A xs ys zs) p)
-    (erased (Snoc A zs x zs2) s) (erased (Snoc A ys x ys2) t) -> (erased (App A xs ys2 zs2) r))
+(def-fns _ $ (erased app-snoc : (erased Type A) (erased (List A) xs ys zs ys2 zs2) (erased A x) (subterm erased (LApp A xs ys zs) p)
+    (erased (Snoc A zs x zs2) s) (erased (Snoc A ys x ys2) t) -> (erased (LApp A xs ys2 zs2) r))
   (match erased p _
-    ((CatNil _ _) (let-match erased (snoc-fn _ ys zs2 ys2 x s t) (Refl _ _)) (CatNil A zs2))
-    ((CatCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ zs3 s1)) (CatCons A y xs1 ys2 zs3 (app-snoc A xs1 ys zs1 ys2 zs3 x p1 s1 t)))))
+    ((LAppNil _ _) (let-match erased (snoc-fn _ ys zs2 ys2 x s t) (Refl _ _)) (LAppNil A zs2))
+    ((LAppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ zs3 s1)) (LAppCons A y xs1 ys2 zs3 (app-snoc A xs1 ys zs1 ys2 zs3 x p1 s1 t)))))
 
-(def-fns _ $ (erased app-snoc-l : (erased Type A) (erased (List A) xs ys zs xs2) (erased A x) (subterm erased (App A xs (Cons A x ys) zs) p)
-    (erased (Snoc A xs x xs2) s) -> (erased (App A xs2 ys zs) r))
+(def-fns _ $ (erased app-snoc-l : (erased Type A) (erased (List A) xs ys zs xs2) (erased A x) (subterm erased (LApp A xs (Cons A x ys) zs) p)
+    (erased (Snoc A xs x xs2) s) -> (erased (LApp A xs2 ys zs) r))
   (match erased p _
-    ((CatNil _ _) (let-match erased s (SnocNil _ _)) (CatCons A x (Nil A) ys ys (CatNil A ys)))
-    ((CatCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (CatCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
+    ((LAppNil _ _) (let-match erased s (SnocNil _ _)) (LAppCons A x (Nil A) ys ys (LAppNil A ys)))
+    ((LAppCons _ y xs1 _ zs1 p1) (let-match erased s (SnocCons _ _ _ _ xs3 s1)) (LAppCons A y xs3 ys zs1 (app-snoc-l A xs1 ys zs1 xs3 x p1 s1)))))
 
-(def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) xs zs) (erased A x) (subterm erased (Snoc A xs x zs) s) -> (erased (App A xs (Cons A x (Nil A)) zs) r))
-  (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (CatNil A (Cons A x (Nil A)))))
-  (CatCons A y xs1 (Cons A x (Nil A)) zs1 (snoc-app A xs1 zs1 x s1)))
+(def-fns _ $ (erased snoc-app : (erased Type A) (erased (List A) xs zs) (erased A x) (subterm erased (Snoc A xs x zs) s) -> (erased (LApp A xs (Cons A x (Nil A)) zs) r))
+  (let-match erased s (SnocCons _ y _ xs1 zs1 s1) ((SnocNil _ _) (LAppNil A (Cons A x (Nil A)))))
+  (LAppCons A y xs1 (Cons A x (Nil A)) zs1 (snoc-app A xs1 zs1 x s1)))
 
-(def-fns _ $ (erased rots-app : (erased Type A) (erased (Nat) m) (subterm erased (List A) p) (erased (List A) s ps sp) (erased (App A p s ps) a) (erased (App A s p sp) b)
+(def-fns _ $ (erased rots-app : (erased Type A) (erased (Nat) m) (subterm erased (List A) p) (erased (List A) s ps sp) (erased (LApp A p s ps) a) (erased (LApp A s p sp) b)
     (erased (Length A p m) l) -> (erased (Rots A m ps sp) r))
-  (let-match erased a (CatCons _ x p1 _ ps1 a1)
-    ((CatNil _ _) (let-match erased l (LengthNil _)) (let-match erased (app-nil-r A s sp b) (Refl _ _)) (RotsZ A ps)))
+  (let-match erased a (LAppCons _ x p1 _ ps1 a1)
+    ((LAppNil _ _) (let-match erased l (LengthNil _)) (let-match erased (app-nil-r A s sp b) (Refl _ _)) (RotsZ A ps)))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (let ((erased s2) (erased t)) (snoc-exists _ s x))
   (let ((erased ps2) (erased u)) (snoc-exists _ ps1 x))
@@ -516,21 +510,21 @@
 
 (def-fns _ $ (erased rots-last : (erased Type A) (erased (Nat) m) (erased (List A) xs zs) (erased A y) (erased (Snoc A xs y zs) s) (erased (Length A xs m) l)
     -> (erased (Rots A m zs (Cons A y xs)) r))
-  (rots-app A m xs (Cons A y (Nil A)) zs (Cons A y xs) (snoc-app A xs zs y s) (CatCons A y (Nil A) xs xs (CatNil A xs)) l))
+  (rots-app A m xs (Cons A y (Nil A)) zs (Cons A y xs) (snoc-app A xs zs y s) (LAppCons A y (Nil A) xs xs (LAppNil A xs)) l))
 
 (def-fns _ $ (many take-app-c : (erased Type A) (subterm many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
-    -> (many (List A) p s) (erased (App A p s xs) a) (erased (Length A p k) lp))
-  (let-match many k (Succ k1) ((Zero) (values (Nil _) xs (CatNil A xs) (LengthNil A))))
+    -> (many (List A) p s) (erased (LApp A p s xs) a) (erased (Length A p k) lp))
+  (let-match many k (Succ k1) ((Zero) (values (Nil _) xs (LAppNil A xs) (LengthNil A))))
   (let-match many xs (Cons _ x rest) (absurd (Nil _) (let-match erased l (LengthNil _)) (let-match erased le (LtS _ _ le1)) le1))
   (let-match erased l (LengthCons _ _ _ m1 l1))
   (let-match erased le (LtS _ _ le1))
   (let ((many p) (many s) (erased a) (erased lp)) (notail $ take-app-c _ k1 rest m1 l1 le1))
-  (values (Cons _ x p) s (CatCons A x p s rest a) (LengthCons A x p k1 lp)))
+  (values (Cons _ x p) s (LAppCons A x p s rest a) (LengthCons A x p k1 lp)))
 
-(def-fns _ $ (many lapp-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (App A xs ys zs) a))
-  (let-match many xs (Cons _ x rest) ((Nil _) (values ys (CatNil A ys))))
+(def-fns _ $ (many lapp-c : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) zs) (erased (LApp A xs ys zs) a))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values ys (LAppNil A ys))))
   (let ((many zs) (erased a)) (notail $ lapp-c _ rest ys))
-  (values (Cons _ x zs) (CatCons A x rest ys zs a)))
+  (values (Cons _ x zs) (LAppCons A x rest ys zs a)))
 
 (def-fns _ $ (many rot-in-c : (erased Type A) (many (Nat) k) (many (List A) xs) (erased (Nat) m) (erased (Length A xs m) l) (erased (Lt k (Succ m)) le)
     -> (many (List A) ys) (erased (Rot A k xs ys) r))
@@ -566,7 +560,7 @@
   (let-match erased tr (MkTrace a _ _ ctr))
   (let-match erased ctr (CTStep _ _ x _ _ _ pax ctr1))
   (let-match erased ctr1 (CTStep _ _ z _ cs3 _ pxz ctr2)
-    (absurd (CTLast _ _ _ pxa) (let-match erased (addc-fn a x e1 e2 pax (addc-comm x a e2 pxa)) (Refl _ _)) (addc-self e1 ee pee nz)))
+    (absurd (CTLast _ _ _ pxa) (let-match erased (addc-same a x e1 e2 pax (addc-comm x a e2 pxa)) (Refl _ _)) (addc-self e1 ee pee nz)))
   (let ((erased az) (erased paz)) (addc-c a z))
   (let-match erased (addc-link a x z e1 e2 ee az pax pxz pee paz) (Refl _ _))
   (let-match erased nc (NCsCons ka _ _ _ pa nc1))

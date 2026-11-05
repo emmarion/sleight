@@ -41,7 +41,7 @@
   (let-match erased (nth-fn _ f x y y3 py py3) (Refl _ _))
   (let ((erased s3) (erased r1) (erased a1)) (fsum-snoc d f fi g pf y k1 s1 z c ly3 p1 it1 pc))
   (let ((erased s2) (erased a2)) (add c0 s3))
-  (let ((erased ab) (erased b1) (erased b2)) (plus-assoc-r c0 s1 c s3 s2 a2 a1))
+  (let ((erased ab) (erased b1) (erased b2)) (add-assoc-back c0 s1 c s3 s2 a2 a1))
   (let-match erased (add-fn c0 s1 ab s b1 a0) (Refl _ _))
   (values s2 (FSS f g x y (Succ k1) c0 s3 s2 pc0 py r1 a2) b2))
 
@@ -79,10 +79,10 @@
   (many PHMap : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (MapHit d e f ks out) h)
       -> (PresHit d e n f ks drs ct out))
   (many PHPos : (erased (Nat) d z pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (List (Sub)) q) (erased (Lt z d) lz)
-      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Mem (List (Sub)) q out) m)
+      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Elem (List (Sub)) q out) m)
       -> (PresHit d e n f ks drs ct out))
   (many PHCut : (erased (Nat) d z pos neg) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct out) (erased (List (Sub)) q) (erased (Lt z d) lz)
-      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Mem (List (Sub)) q ct) m)
+      (erased (DScore d e n f ks drs z pos neg) ds) (erased (Lt neg pos) lt) (erased (ExactAt e f ks z q) x) (erased (Elem (List (Sub)) q ct) m)
       -> (PresHit d e n f ks drs ct out)))
 
 (def-fns _ $ (erased preshit-ext : (erased (Nat) d) (erased (List (Nat)) e n f ks) (erased (List (List (Sub))) drs ct o o2) (erased (PresHit d e n f ks drs ct o) h)

@@ -478,7 +478,7 @@
 
 (def-fns _ $ (erased lb-go : (erased (Nat) d k) (erased (List (Nat)) e ei f fi s xs ys) (erased (List (Bond)) g) (erased (HPerm d e ei) pe) (erased (HPerm d f fi) pf)
     (erased (Orbits d f k) of) (subterm erased (Zip xs ys g) z) (erased (Respects e xs ys) rp) (erased (Under xs d) ux)
-    -> (erased (HOr (SepsOff f s g) (LBridge d e f s)) r))
+    -> (erased (Or (SepsOff f s g) (LBridge d e f s)) r))
   (let-match erased z (ZipCons xs1 ys1 g1 x y z1) ((ZipNil) (OrL _ _ (SONil f s))))
   (let-match erased rp (RespCons _ _ _ _ _ pxy rp1))
   (let-match erased ux (UnderCons _ _ _ lx ux1))
@@ -487,7 +487,7 @@
   (let-match erased (orbits-dec d k x y f fi pf of lx (perm-val d x y e ei pe pxy)) (OrR _ _ sp) ((OrL _ _ w) (OrR _ _ (MkLBr d x y e f s lx out pxy w))))
   (OrL _ _ (SOLive f s g1 x y sp so)))
 
-(def-fns _ $ (erased lb-dec : (erased (Nat) d) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) -> (erased (HOr (LBridgeless d e f s) (LBridge d e f s)) r))
+(def-fns _ $ (erased lb-dec : (erased (Nat) d) (erased (List (Nat)) e n f s) (erased (Hypermap d e n f) h) -> (erased (Or (LBridgeless d e f s) (LBridge d e f s)) r))
   (let ((erased nf) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased ge) (erased gr)) (perm-graph d e nf pe))
   (let ((erased k) (erased of)) (orbits-exists d f fi pf))
@@ -734,7 +734,7 @@
 (def-fns _ $ (erased ch-under : (erased (Nat) d m) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch) -> (erased (Under p d) r))
   (let-match erased ch (CHStep _ _ _ x ex _ _ r _ _ _ _ _ _ _ p1 _ _ _ q _ _ _ _ _ _ _ _ qm rq lr _)
     ((CHNil _ _ _ _ ids io _ _ _ _) (iota-under d ids io)))
-  (respects-under-vals q p1 p d rq (qmap-under d x ex r q qm lr)))
+  (respects-under-out q p1 p d rq (qmap-under d x ex r q qm lr)))
 
 (def-fns _ $ (erased ch-base : (erased (Nat) d m) (erased (List (Nat)) e0 n0 f0 e n f s p) (subterm erased (CHist d m e0 n0 f0 e n f s p) ch)
     -> (erased (Hypermap d e0 n0 f0) h))
@@ -795,7 +795,7 @@
   (let ((erased lq)) (qmap-length d x ex r q qm))
   (let ((erased up1)) (ch-under d m1 e0 n0 f0 e1 n1 f1 s1 p1 ch1))
   (let ((erased lp1)) (ch-plength d m1 e0 n0 f0 e1 n1 f1 s1 p1 ch1))
-  (let ((erased pf2) (erased rqpf)) (respects-exists q pf1 d (respects-under-vals p1 f0 pf1 d rpf1 up1) lq))
+  (let ((erased pf2) (erased rqpf)) (respects-exists q pf1 d (respects-under-out p1 f0 pf1 d rpf1 up1) lq))
   (values pf2 (respects-assoc f0 p1 q pf1 p pf2 d rpf1 rqpf rq (respects-length q p1 p d rq lp1) lp1)
     (reach-map d f1 f q qf p1 pf1 p pf2 rq2 rqf lq (perm-under d f1 fi pf) rc1 up1 rq rqpf)))
 
@@ -1116,7 +1116,7 @@
   (let ((erased pC) (erased rpc)) (respects-exists pos p d up lpos))
   (let ((erased lpc)) (respects-length pos p pC d rpc lpp))
   (let ((erased pf) (erased rpf) (erased rc)) (ch-reach d m e0 n0 f0 e n f s p ch))
-  (let ((erased pfC) (erased rpfc)) (respects-exists pos pf d (respects-under-vals p f0 pf d rpf up) lpos))
+  (let ((erased pfC) (erased rpfc)) (respects-exists pos pf d (respects-under-out p f0 pf d rpf up) lpos))
   (let ((erased lf) (erased _)) (values (perm-length d f fi pmf) (Refl _ d)))
   (let ((erased posf) (erased rposf)) (respects-exists pos f d (perm-under d f fi pmf) lpos))
   (let ((erased rq)) (pos-reach-go d dl m e n f s el nl fl hd ids pos posf ids pos posf lp io iv dd rposf lpos (iota-under d ids io)
@@ -1124,7 +1124,7 @@
   (let ((erased ge) (erased gre)) (perm-graph d e0 nf0 pe0))
   (values dl el nl fl
     (MkContraction d dl e0 n0 f0 ct el nl fl ins pC pfC ge pb lt ie gre lpc
-      (respects-under-vals pos p pC dl rpc (invl-under hd ids pos dl iv lh (lt-zero-of iz0 dl liz0)))
+      (respects-under-out pos p pC dl rpc (invl-under hd ids pos dl iv lh (lt-zero-of iz0 dl liz0)))
       (respects-assoc f0 p pos pf pC pfC d rpf rpfc rpc lpc lpp)
       (reach-map d f fl pos posf p pf pC pfC rq rposf lpos (perm-under d f fi pmf) rc up rpc rpfc)
       (lift-go d m dl e0 n0 f0 e n f s p el nl fl hd ids pos pC ins nf nf0 ge ch lp io iv rpc lpc lpp si ss ag pe fe pe0 (graph-fun d e0 ge gre)))))
@@ -1226,7 +1226,7 @@
 
 (def-fns _ $ (erased cover-self : (subterm erased (List (Nat)) xs) (erased (List (Nat)) a) (erased (WSub xs a) sb) -> (erased (CoverIn xs (Nil (Nat)) a) r))
   (let-match erased xs (Cons _ x xs1) ((Nil _) (CINil (Nil _) a)))
-  (let-match erased sb (HSubCons _ _ _ ix sb1))
+  (let-match erased sb (HsbCons _ _ _ ix sb1))
   (CIB xs1 (Nil _) a x ix (cover-self xs1 a sb1)))
 
 (def-fns _ $ (erased cover-move : (erased (List (Nat)) xs a a2 b) (erased (Nat) x y) (subterm erased (CoverIn xs a (Cons (Nat) x (Cons (Nat) y b))) cv) (erased (WSub a a2) sa)
@@ -1240,8 +1240,8 @@
   (CIB xs1 a2 b z (in-tail z y b (in-tail z x _ iz nzx) nzy) rest))
 
 (def-fns _ $ (erased cover-done : (erased (List (Nat)) xs a) (subterm erased (CoverIn xs a (Nil (Nat))) cv) -> (erased (WSub xs a) r))
-  (let-match erased cv (CIA xs1 _ _ z iz cv1) ((CINil _ _) (HSubNil a)) (absurd (CIB _ _ _ _ iz _) iz))
-  (HSubCons z xs1 a iz (cover-done xs1 a cv1)))
+  (let-match erased cv (CIA xs1 _ _ z iz cv1) ((CINil _ _) (HsbNil a)) (absurd (CIB _ _ _ _ iz _) iz))
+  (HsbCons z xs1 a iz (cover-done xs1 a cv1)))
 
 ; The contractions of the darts of a contract in turn, skipping dead darts: no live bridge arises, the darts of ins
 ; all dead, or one arises at some step.
@@ -1257,8 +1257,8 @@
     (erased (LBridgeless d e f s) lb) (subterm erased (InsertE e0 cr ir) ie) (erased (WSub s ins) ss) (erased (CoverIn ins s ir) cv) (erased (WSub ir ins) si)
     (erased (Lt y0 d) ly) (erased (NotIn y0 s) oys) (erased (NotIn y0 ir) oyi) -> (erased (RunRes d e0 n0 f0 ins) r))
   (let-match erased ie (IECons _ cr1 ir1 c ec pc ie1) ((IENil _) (RRDone d m e0 n0 f0 ins e n f s p ch lb (cover-done ins s cv) ss)))
-  (let-match erased si (HSubCons _ _ _ ic si1))
-  (let-match erased si1 (HSubCons _ _ _ iec si2))
+  (let-match erased si (HsbCons _ _ _ ic si1))
+  (let-match erased si1 (HsbCons _ _ _ iec si2))
   (let-match erased oyi (NotInCons _ _ _ nyc oyi1))
   (let-match erased oyi1 (NotInCons _ _ _ nye oyi2))
   (let ((erased nf0) (erased _) (erased _) (erased _) (erased pe0) (erased _) (erased _)) (hyper-core d e0 n0 f0 (ch-base d m e0 n0 f0 e n f s p ch)))
@@ -1270,10 +1270,10 @@
   (let ((erased s2)) (Cons (Nat) ec (Cons (Nat) c s)))
   (let ((erased oy2)) (NotInCons y0 ec _ nye (NotInCons y0 c s nyc oys)))
   (let-match erased (ch-step d m c ec y0 e0 n0 f0 e n f s p ch lb lc oc pc ly oy2) (SRGo _ _ _ m2 _ _ _ _ _ _ _ e2 n2 f2 p2 ch2 lb2)
-    ((SRBridge _ _ _ _ _ _ _ _ _ _ e2 n2 f2 cs br) (RRBridge d m c ec e0 n0 f0 ins e n f s p e2 n2 f2 ch lb cs br (HSubCons ec _ ins iec (HSubCons c _ ins ic ss)))))
+    ((SRBridge _ _ _ _ _ _ _ _ _ _ e2 n2 f2 cs br) (RRBridge d m c ec e0 n0 f0 ins e n f s p e2 n2 f2 ch lb cs br (HsbCons ec _ ins iec (HsbCons c _ ins ic ss)))))
   (let ((erased ic2)) (InThere c ec _ (InHere c s)))
   (let ((erased iec2)) (InHere ec (Cons (Nat) c s)))
-  (ch-run d m2 y0 e0 n0 f0 e2 n2 f2 s2 p2 cr1 ir1 ins ch2 lb2 ie1 (HSubCons ec _ ins iec (HSubCons c _ ins ic ss))
+  (ch-run d m2 y0 e0 n0 f0 e2 n2 f2 s2 p2 cr1 ir1 ins ch2 lb2 ie1 (HsbCons ec _ ins iec (HsbCons c _ ins ic ss))
     (cover-move ins s s2 ir1 c ec cv (sub-cons ec s _ (sub-cons c s s (sub-refl s))) ic2 iec2) si2 ly oy2 oyi2))
 
 ; In a planar bridgeless plain cubic connected map that the search finds uncolourable, a contract cc whose insertE
@@ -1303,7 +1303,7 @@
     (absurd (OrL _ _ iyi) (let-match erased (simple-cface n ins x0 y0 sp (InHere x0 _) iyi (some-step n x0 y0 pny)) (Refl _ _)) (apart-irrefl x0 nyx)))
   (let ((erased ids) (erased io)) (iota-exists d))
   (let ((erased lb0)) (lb-start d e n f hm bl))
-  (match erased (ch-run d d y0 e n f e n f (Nil _) ids cx ins ins (CHNil d e n f ids io hm gen pl (cubic-precubic d n cu)) lb0 ie (HSubNil ins)
+  (match erased (ch-run d d y0 e n f e n f (Nil _) ids cx ins ins (CHNil d e n f ids io hm gen pl (cubic-precubic d n cu)) lb0 ie (HsbNil ins)
       (cover-self ins ins (sub-refl ins)) (sub-refl ins) ly (NotInNil y0) oyi) _
     ((RRDone _ m _ _ _ _ e1 n1 f1 s p ch lb si ss)
       (let ((erased _) (erased _) (erased _) (erased _) (erased ct))

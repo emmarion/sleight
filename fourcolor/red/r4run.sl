@@ -151,7 +151,7 @@
       (MkWSt rp4 rb4 ns2 (wrws-set rp rp4 (Zero) (Succ k) xf dp2 wd wp tp lf pwd uf) (wrws-set rb rb4 (Zero) (Succ k) yf db2 wd wb tb lf2 pwd uf2)
         (setnth-length _ ns (Succ k) 17 _ ns2 sn2 lns) (allcu-set ns ns2 (Succ k) n2 n2b uns sn2))
       (MkWLv rp4 rb4 ns2 (Succ k) R xf yf dp2 db2 n2 wd o2 o3 W2 jb1 (setnth-nth _ rp (Succ k) _ rp4 tp) (setnth-nth _ rb (Succ k) _ rb4 tb) (setnth-nth _ ns (Succ k) _ ns2 sn2)
-        nl pwd of2 of3 (offs-step k o o2 o3 W W2 of2 of3 of aw tw) (add-sh k jb1 16 ak) ps2)
+        nl pwd of2 of3 (offs-step k o o2 o3 W W2 of2 of3 of aw tw) (add-shift k jb1 16 ak) ps2)
       (agr-set _ (Succ k) (Succ k) _ rp rp4 tp (lt-succ (Succ k))) (agr-set _ (Succ k) (Succ k) _ rb rb4 tb (lt-succ (Succ k)))
       (agr-set _ (Succ k) (Succ k) _ ns ns2 sn2 (lt-succ (Succ k))) (setnth-nth _ ns (Succ k) _ ns2 sn2)))
 
@@ -321,7 +321,7 @@
                     (let ((unique ev1-d) (many vv)) (r4-gb us-d evb-d iv-d v xe))
                     (let ((erased vb8) (erased _)) (flag-nth us-d i-d v xe))
                     (let ((erased vb)) (lt-trans v flag-u8m u62-modulus vb8 r4-u8-u62))
-                    (let ((erased ad1)) (add-sh d-d m1-d 3 dm))
+                    (let ((erased ad1)) (add-shift d-d m1-d 3 dm))
                     (match many (u62-eq vv (Zero) vb u62-modulus-pos) _
                       ((Equal _ _ _)
                         (let ((erased r1-d)) (cntr-hit cs-d cs-d us-d o-d t-d f N-d i-d v E0-d r-d aix xe (CwSkip cs-d t-d f)))
@@ -353,7 +353,7 @@
                   (add-comm F1-l 3 F-l (add-three F1-l))))
               (let ((erased cs2-l) (unique cn2-l) (erased lc2-l) (unique ev2-l) (unique lp2-l) (unique lb2-l) (erased E-l) (erased lf) (erased r2-l) (erased Bo-l) (erased al2-l) (erased bd2-l))
                 (tail $ r4-cnt-lf cs1 cn1 N-l lc1 us-l ev1 len-l z-l h-l hl-l o-l e-l of-l ae-l el-l w-l wb b-l cm ftr-l fu-l wd-l s0-l lm-l rp-l rb-l lp1 lb1 k-l xs-l ys ra-l rb0-l xp-l xb-l W-l jb-l tw-l
-                  (u62-inc i (lt-le-trans (Succ i) (Succ n-l) u62-modulus (LtS i n-l il) (LtS n-l u62-modulus nb))) n-l nb m1 (add-sh i m1 n-l ad) P1 ps1 E1 r1 Bk F1-l F2-l al1 bd1 tp1-l))
+                  (u62-inc i (lt-le-trans (Succ i) (Succ n-l) u62-modulus (LtS i n-l il) (LtS n-l u62-modulus nb))) n-l nb m1 (add-shift i m1 n-l ad) P1 ps1 E1 r1 Bk F1-l F2-l al1 bd1 tp1-l))
               (values cs2-l cn2-l lc2-l ev2-l lp2-l lb2-l E-l (WlCons (GSG s0-l) p q (Succ q) (Succ (Succ q)) f0 f1 f2 bs P1 E0-l E-l (Ki1 p q tq) (Ki2 p q tq) (Ki3 p q tq) m1c m2c m3c lf) r2-l Bo-l al2-l bd2-l))
             (let ((erased cs2) (unique cn2) (erased lc2) (unique ev2) (unique lp2) (unique lb2) (erased E) (erased lf) (erased r2) (erased Bc) (erased alc) (erased bdc))
               (r4-cnt-lf cs cn N lc us evb len z h hl o e of ae el wv (allcu-lt xs g w au nw) b m ftr fu d s0 lm rp rb lp lb k xs1 ys1 ra rb0 xp xb W jb tw
@@ -459,7 +459,7 @@
                 (let ((erased cs2) (unique cn2) (erased lc2) (unique ev2) (erased rp2) (erased rb2) (erased ns2) (unique lp2) (unique lb2) (unique ln2) (erased st2) (erased fp2) (erased fb2) (erased fn2)
                       (erased E2) (erased wk) (erased wu) (erased r2) (erased Bk) (erased alk) (erased bdk))
                   (notail $ r4-count cs cn N lc us ev1 len z h hl o e of oe ae el xs nd au rp1 rb1 ns1 lp1 lb1 ln1 st1 (u62-inc k (lt-trans (Succ k) 17 u62-modulus kl r4-17-u62)) gc
-                    j c lyc (add-sh k j h akj) R lv1 E1 r1 B F F1 D al bd dl tq))
+                    j c lyc (add-shift k j h akj) R lv1 E1 r1 B F F1 D al bd dl tq))
                 (let ((erased gp) (erased gb) (erased gn)) (values (agr-step _ k rp rp1 rp2 fp1 fp2) (agr-step _ k rb rb1 rb2 fb1 fb2) (agr-step _ k ns ns1 ns2 fn1 fn2)))
                 (let ((erased cs3) (unique cn3) (erased lc3) (unique ev3) (erased rp3) (erased rb3) (erased ns3) (unique lp3) (unique lb3) (unique ln3) (erased st3) (erased fp) (erased fb) (erased fn)
                       (erased E) (erased ws) (erased r3) (erased Bo) (erased al2) (erased bd2))
@@ -532,8 +532,11 @@
       (let ((erased us2) (unique ul2) (erased pu) (erased z2)) (r4-sb us ul1 j (u62-inc v vb2) len z jl vb))
       (let ((erased y3)) (put-elt flag-w us us2 m (Succ c) pu))
       (let ((unique ul3) (many v2)) (r4-gb us2 ul2 j (Succ c) y3))
-      (let ((erased lz3)) (LzkS us2 d m u2 (LzN us2 d m (Succ c) u2 y3 (lzi-below us us2 d m (Succ c) m (Succ c) u2 g2 pu (lt-succ m)))))
       (let-match erased g (MkLzI _ _ _ qm _ _ _ _ _ _ _ _ tqm _ _ _ _ _ _ _ _))
+      (let ((erased lm)) (thrice-le m qm tqm))
+      (let ((erased lz3)) (LzkS us2 d m u2 (LzN us2 d m (Succ c) u2 y3 (lzi-fr us us2 d m (Succ c) qm u2 g2 tqm
+        (fr-one us us2 d (Succ qm) m (Succ c) pu (miss-below m (Succ qm) d lm)) (fr-one us us2 d (Succ (Succ qm)) m (Succ c) pu (miss-below m (Succ (Succ qm)) d (lt-weaken _ _ lm)))
+        (fr-one us us2 d (Succ (Succ (Succ qm))) m (Succ c) pu (miss-below m (Succ (Succ (Succ qm))) d (lt-weaken _ _ (lt-weaken _ _ lm))))))))
       (let ((erased w3)) (SbSet us0 us us2 m m (Succ c) (sb-up us0 us m qm (Succ x) tqm (kid-hkid m qm x e km tqm) w) pu (HDSelf m)))
       (let ((erased o2)) (up3-occ e u s u2 up))
       (let-match many (u62-eq v2 1 vb2 flag-one-lt) (Equal _ _ _)
@@ -559,7 +562,7 @@
           (let ((many ret)) (ESome _ (MkUlcR h N cs vs us T tb (lz-lc us h (Zero) T f) ua lc)))
           (values vs uc zv us ul zu ret)))
       (let-match erased r (Succ r1) (absurd (Zero) (let-match erased (add-fn t (Zero) N t ad (add-zero-right t)) (Refl _ _)) (lt-irrefl t tl)))
-      (let ((erased ad1)) (add-sh t r1 N ad))
+      (let ((erased ad1)) (add-shift t r1 N ad))
       (let ((many t1)) (u62-inc t (lt-le-trans (Succ t) (Succ N) u62-modulus (LtS t N tl) (LtS N u62-modulus nb))))
       (let-match erased uz (UzS _ _ _ x0 uz1) (absurd (UzE _ _) (lt-irrefl t tl)))
       (let ((erased cv) (erased nth)) (nth-exists _ cs N t lc tl))
@@ -659,7 +662,7 @@
         (let ((erased m-t) (erased nth-t)) (nth-exists _ xs-t M i l-t il))
         (let ((erased ys) (unique a2-t) (erased s-t)) (array-place-imm _ _ a i (MkCopy _ v-t) m-t nth-t (allcu-nth xs-t i m-t au-t nth-t) (imm-cu v-t vb-t)))
         (let-match erased kk (Succ k1-t) (absurd (Zero) (let-match erased (add-fn i (Zero) M i ad-t (add-zero-right i)) (Refl _ _)) (lt-irrefl i il)))
-        (tail $ fill ys a2-t (u62-inc i (lt-le-trans (Succ i) (Succ M) u62-modulus (LtS i M il) (LtS M u62-modulus Mu))) k1-t (add-sh i k1-t M ad-t) (setnth-length _ xs-t i M _ ys s-t l-t)
+        (tail $ fill ys a2-t (u62-inc i (lt-le-trans (Succ i) (Succ M) u62-modulus (LtS i M il) (LtS M u62-modulus Mu))) k1-t (add-shift i k1-t M ad-t) (setnth-length _ xs-t i M _ ys s-t l-t)
           (RtS r-t n-t i v-t ys (rt-set r-t n-t i i xs-t ys (MkCopy _ v-t) rt-t s-t (lt-succ i)) (MkWElt ys i v-t (setnth-nth _ xs-t i _ ys s-t)) g) (allcu-set xs-t ys i v-t vb-t au-t s-t)))
       (let ((erased xs-t) (unique a) (erased rp-t)) (array-make (Nat) M 0))
       (let ((erased ys) (unique a2-t) (erased l2) (erased rt2) (erased au2)) (fill xs-t a 0 M (AddZero M) (repeat-length _ M _ xs-t rp-t) (RtZ r-t n-t xs-t) (allcu-rep M xs-t rp-t)))
@@ -939,7 +942,7 @@
                 (sst-drop h N len h (Zero) (Succ pc) o (Succ x1) vs0 vs1 E1 us1 T1 of an x0 pre ri lp0 (add-succ-right h (Zero) h (add-zero-right h)) st1)))))))
     (let ((erased vs6) (unique uc6) (erased us6) (unique ul6) (erased T6) (unique gb6) (unique lp6) (unique lb6) (erased Q0) (erased stp0) (erased E6) (erased sv0) (erased st6))
       (tail $ r4-slv N len vs0 vs5 E5 us5 T5 uc5 ul5 gb5 rp rb lp1 lb1 h k s wc o g sn wb wb0 cm ftr fu wd l lm xs ys ra rb0 xp xb W W2 jb tw tn pw2 of ol (Refl _ _)
-        (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-sh i m1 n ad) P1 ps1 st5))
+        (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-shift i m1 n ad) P1 ps1 st5))
     (let ((erased Q) (erased ch) (erased sv)) (slv-kids h p0 pc s gs g bs bsc E E1 E5 E6 Q0 xtp sn sa sb sv0))
     (values vs6 uc6 us6 ul6 T6 gb6 lp6 lb6 Q (WtCons g (MkWP p0 bs) P1 Q0 Q stp0 ch) E6 sv st6))
 
@@ -1005,7 +1008,7 @@
       (r4-sleaf N len vs0 vs E us T uc ul gb h pv w bv wb wb0 cm ftr fu wd l lm bs bn (bnb-lt jb bv0 bk) q tq (thrice-lt p W q N pl tq tw) st))
     (let ((erased vs2) (unique uc2) (erased us2) (unique ul2) (erased T2) (unique gb2) (unique lp2) (unique lb2) (erased E2) (erased lf2) (erased st2))
       (tail $ r4-swlf N len vs0 vs1 E1 us1 T1 uc1 ul1 gb1 rp rb lp1 lb1 h k w wb wb0 cm ftr fu wd l lm xs ys ra rb0 xp xb W jb tw
-        (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-sh i m1 n ad) P1 ps1 st1))
+        (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-shift i m1 n ad) P1 ps1 st1))
     (values vs2 uc2 us2 ul2 T2 gb2 lp2 lb2 E2 (wlf-cat (GSG l) (MkWP p bs) P1 E E1 E2 lf1 lf2) st2))
 
   (def-fns r4-swalk-lv
@@ -1195,7 +1198,7 @@
                 ((Unequal _ _ _ _ _)
                   (let ((erased vs2) (unique uc2) (erased us2) (unique ul2) (erased T2) (unique gb2) (unique nd2) (erased rp2) (erased rb2) (erased ns2) (unique lp2) (unique lb2)
                         (unique ln2) (erased st2) (erased fp2) (erased fb2) (erased fn2) (erased E2) (erased wk) (erased ss2))
-                    (notail $ r4-swalk N len vs0 vs E1 us T uc ul1 gb xs nd1 au rp1 rb1 ns1 lp1 lb1 ln1 st1 h k1 gc j c u lyc npc w1 b1 cm1 ftr1 fu1 x1 d1 fz (add-sh k j h akj) R lv1 ss1))
+                    (notail $ r4-swalk N len vs0 vs E1 us T uc ul1 gb xs nd1 au rp1 rb1 ns1 lp1 lb1 ln1 st1 h k1 gc j c u lyc npc w1 b1 cm1 ftr1 fu1 x1 d1 fz (add-shift k j h akj) R lv1 ss1))
                   (let ((erased gp) (erased gbb) (erased gn)) (values (agr-step _ k rp rp1 rp2 fp1 fp2) (agr-step _ k rb rb1 rb2 fb1 fb2) (agr-step _ k ns ns1 ns2 fn1 fn2)))
                   (let ((erased vs3) (unique uc3) (erased us3) (unique ul3) (erased T3) (unique gb3) (unique nd3) (erased rp3) (erased rb3) (erased ns3) (unique lp3) (unique lb3)
                         (unique ln3) (erased st3) (erased fp) (erased fb) (erased fn) (erased E3) (erased ws) (erased ss3))
@@ -1328,7 +1331,7 @@
         (r4c-cl-path us us1 us2 n0 h (Zero) h p xv R1 c o0 pre0 (Cons _ e (Nil _)) cph hi0 ri0 le0 (add-zero-right h) g (SbSet us us us1 n0 n0 (Zero) (SbNil us n0) pu (HDSelf n0))
           (ClZ0 us1 n0 p o0 R1 (put-elt flag-w us us1 n0 (Zero) pu)) ao (sel-occ o0 (CLeaf lf) e so (OccL lf)) (TICons p xv xv e (Nil _) kd (TINil xv))
           (LengthCons _ e (Nil _) (Zero) (LengthNil _))))
-      (tail $ go us2 ca2 zs2 R1 b1 h nn (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus kb))) k1 (add-sh i k1 n ad) fw1 g2))
+      (tail $ go us2 ca2 zs2 R1 b1 h nn (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus kb))) k1 (add-shift i k1 n ad) fw1 g2))
     (let ((erased us2) (unique ca2) (erased zs2) (erased z) (unique a2)) (go us0 ca0 zs0 R0 a h0 n 0 n (AddZero n) fw0 (ClK us0 h0 (Zero) (Zero) c R0 f (r4c-mi-mono xs n h0 (Zero) T R0 c mi tb fw0))))
     (let ((unique cel2)) (r4-bclr T (at unique (u T xs a2 n cap l cp au nc tb))))
     (values us2 ca2 zs2 z cel2))
@@ -1354,12 +1357,12 @@
           (let ((erased e1) (erased _)) (bsp-zero-x 4 (Zero) ftr ptr))
           (let-match erased e1 (Refl _ _))
           (values (Cons _ g Hs) (r4-bpush Hs hb g (lt-trans g len u62-modulus gl lb)) (ALCons g len Hs gl al) (DistCons g Hs (r4g-hnz-notin xs g w b cm fu Hs hz x d) dt)
-            (HpNew g Hs) (InHere g Hs) (r4g-hsub-cons g Hs Hs (r4g-hsub-refl Hs))))
+            (HpNew g Hs) (InHere g Hs) (sub-cons g Hs Hs (sub-refl Hs))))
         ((Unequal _ _ _ _ ap)
           (let ((erased f1) (erased ef)) (nz-pos tr 4 ftr ptr ap))
           (let-match erased ef (Refl _ _))
           (let-match erased (r4g-hall-get xs (Zero) g g w b cm ftr fu Hs ha nth (AddZero g) d) (ZiIn _ _ _ ig))
-          (values Hs hb al dt (HpOld ftr g Hs (ApGt (Nat) Lt ftr (Zero) (LtZ f1))) ig (r4g-hsub-refl Hs)))))
+          (values Hs hb al dt (HpOld ftr g Hs (ApGt (Nat) Lt ftr (Zero) (LtZ f1))) ig (sub-refl Hs)))))
     (let ((erased m16) (erased mm)) (mul m 16))
     (let ((erased m16l)) (digit-lt 16 16 r4g-v256 (Zero) m m16 m16 r4g-0-16 ml mm (add-zero-right m16) r4g-m1616))
     (let ((erased m16b)) (lt-trans m16 256 u62-modulus m16l r4-256-u62))
@@ -1470,7 +1473,7 @@
           (values ca2 r2 rl2 (r4g-rin-or r1 m xg v r2 (BP1 bs) ri1 ga o2 rl2) acc2 (RJCons g rr acc1 bs (BP1 bs) t0 t (C3) el0 (SPush3 bs) sl ja1)
             (r4g-lhit-or cs (Succ x1) m xg v r1 r2 t (BP1 bs) acc2 (ElHere RC (MkRx (Ctree) (BP1 bs) t) acc1) ft ex ga o2 (r4g-lhit-cons (MkRx (Ctree) (BP1 bs) t) acc1 r1 lh1))))))
     (tail $ r4-glv cs ca3 len zc ctr rp rb lp1 lb1 k s o m r3 f g sn ml rl3 xs ys ra rb0 xp xb W W2 jb tw of ol ns ln1 n xn uns
-      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) m1 (add-sh i m1 n ad) P1 ps1 ri3
+      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) m1 (add-shift i m1 n ad) P1 ps1 ri3
       rr rs1 acc3 px1 (SufNext RC (MkRx (Ctree) bs t0) rs1 rr sf) ja3 lh3))
 
   ; The leaf loop of red4's gwalk nodes ca h k g at k = h: r, from 0, or-ed with the hits on the leaf's symbols m of the pairs i to n of level h.
@@ -1505,7 +1508,7 @@
       (bsp-of 4 16 (Zero) (Zero) v v r4-p16 (MulZero 16) (AddZero v) vl) o1) r4-p16))
     (let ((erased ri1)) (r4g-rin-or r m xg v r1 bs ri ga o1 rl1))
     (tail $ r4-gwlf cs ca1 len zc ctr rp rb lp1 lb1 h m r1 hl f ml rl1 xs ys ra rb0 xp xb W jb o of ol
-      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-sh i m1 n ad) P1 ps1 ri1
+      (u62-inc i (lt-le-trans (Succ i) (Succ n) u62-modulus (LtS i n il) (LtS n u62-modulus nb))) n nb m1 (add-shift i m1 n ad) P1 ps1 ri1
       rr rs1 px1 (SufNext RC (MkRx (Ctree) bs t) rs1 rr sf) (r4g-lhit-or cs nd m xg v r r1 t bs rr el0 ft ex ga o1 lh)))
 
   ; red4's gleaves nodes ca h k s gc, h being k + 1: the pairs of level k step by the symbol s to the leaf gc below, whose symbols in gu that
@@ -1793,7 +1796,7 @@
           (let ((erased ys) (unique nd2) (erased lx2) (erased au2) (erased nk) (unique ca2) (erased Hs2) (unique hb2) (erased ah2) (erased rp2) (erased rb2) (erased ns2) (unique lp2)
                 (unique lb2) (unique ln2) (erased st2) (erased fp2) (erased fb2) (erased fn2) (many rv) (erased ak) (erased wk) (erased ivk2) (erased pfk2) (erased ptk2) (erased gsk) (erased _)
                 (erased ghk))
-            (notail $ r4-gwalk xs nd1 cs ca1 h k1 gc hl len lx lnb au lc zc ofc ctr f Hs hb ah rp1 rb1 ns1 lp1 lb1 ln1 st1 j c lyc (add-sh k j h akj) R lv1 lo2 hi2 ivg uk pfg gpu rh pxk))
+            (notail $ r4-gwalk xs nd1 cs ca1 h k1 gc hl len lx lnb au lc zc ofc ctr f Hs hb ah rp1 rb1 ns1 lp1 lb1 ln1 st1 j c lyc (add-shift k j h akj) R lv1 lo2 hi2 ivg uk pfg gpu rh pxk))
           (let ((erased gp) (erased gbb) (erased gn2)) (values (agr-step _ k rp rp1 rp2 fp1 fp2) (agr-step _ k rb rb1 rb2 fb1 fb2) (agr-step _ k ns ns1 ns2 fn1 fn2)))
           (let ((many any2)) (match many rv (((Bool) a)) ((BTrue) (BTrue)) ((BFalse) any)))
           (let ((erased kd6)) (r4g-kd-away xs ys j b cm bn (Succ s) hc hi (BTrue) _ us1 es1 kd1 gc lo2 hi2 s v bi rk ad (lt-succ s) gn bh (le-trans bn lo lo2 bl ll) lh wk))
@@ -1846,7 +1849,7 @@
         (values us2 ca2 zs2 T2 cel2 c2 f2 (LwL h ctr lf pre p c c2 T T2 ri le a d)))
       ((CNode y1 y2 y3)
         (let-match erased hy (HN j1 _ _ _ h1 h2 h3))
-        (let ((erased ad1)) (add-sh k j1 (Succ h) ad))
+        (let ((erased ad1)) (add-shift k j1 (Succ h) ad))
         (let ((erased k1b)) (lt-le-trans (Succ k) (Succ (Succ h)) u62-modulus (add-le-left (Succ k) j1 (Succ h) ad1) (LtS _ _ hb)))
         (let ((erased q) (erased tq)) (thrice-exists p))
         (let ((erased p1) (erased p2) (erased p3)) (values (Cons _ (C1) pre) (Cons _ (C2) pre) (Cons _ (C3) pre)))
@@ -2019,7 +2022,7 @@
         (let ((erased jus3) (unique jca3) (erased jzs3) (erased jT3) (unique jcel3) (erased jc3) (erased jf3) (erased ja3))
           (r4-cadd jus1 jca1 len jzs1 jT1 jcel1 jh jt2 hl N pw (r4c-ridx-lt jt2 (Succ jh) N jp2 jr2 jl2 pw) jc1 jf1 jp2 jr2 jl2))
         (let ((erased jus4) (unique jca4) (erased jzs4) (erased jT4) (unique jcel4) (unique jb4) (erased jc4) (erased jf4) (erased jga))
-          (tail $ go jus3 jca3 jzs3 jT3 jcel3 jb1 jh jnn (u62-inc ji (lt-le-trans (Succ ji) (Succ n) u62-modulus (LtS ji n jil) (LtS n u62-modulus kgb))) jk1 (add-sh ji jk1 n jad) jc3 jf3))
+          (tail $ go jus3 jca3 jzs3 jT3 jcel3 jb1 jh jnn (u62-inc ji (lt-le-trans (Succ ji) (Succ n) u62-modulus (LtS ji n jil) (LtS n u62-modulus kgb))) jk1 (add-shift ji jk1 n jad) jc3 jf3))
         (values jus4 jca4 jzs4 jT4 jcel4 jb4 jc4 jf4 (GaC jh gxs ji n jg jt1 jt2 jc jc1 jc3 jc4 jT jT1 jT3 jT4 jpg jp1 jp2 jwg jrg jlg jq1 jr1 ja1 jq2 jr2 ja3 jga)))
       (let ((erased cs2) (unique ca2) (erased zc2) (erased T2) (unique cel2) (unique a2) (erased c2) (erased f2) (erased gad))
         (go cs1 ca1 zc1 (Nil _) cel1 gar h n 0 n (AddZero n) (CEmpty) (CaE cs1 h (Zero) z1)))

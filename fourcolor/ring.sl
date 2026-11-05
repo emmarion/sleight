@@ -1,9 +1,46 @@
-(def-fns _ $ (erased add-assoc : (erased (Nat) a b c ab abc) (subterm erased (Add a b ab) p) (erased (Add ab c abc) q) ->
-    (erased (Nat) bc) (erased (Add b c bc) r) (erased (Add a bc abc) s))
-  (let-match erased p (AddSucc a1 _ ab1 p1) ((AddZero _) (values abc q (AddZero abc))))
-  (let-match erased q (AddSucc _ _ abc1 q1))
-  (let ((erased bc) (erased r) (erased s)) (add-assoc a1 b c ab1 abc1 p1 q1))
-  (values bc r (AddSucc a1 bc abc1 s)))
+(def-adts $ (Elem : (Type A) (A x) ((List A) xs) -> Type)
+  enum
+  (many ElHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Elem A x (Cons A x rest)))
+  (many ElThere : (erased Type A) (erased A x y) (erased (List A) rest) (erased (Elem A x rest) p) -> (Elem A x (Cons A y rest))))
+
+(def-adts $ (LApp : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
+  enum
+  (many LAppNil : (erased Type A) (erased (List A) ys) -> (LApp A (Nil A) ys ys))
+  (many LAppCons : (erased Type A) (erased A x) (erased (List A) xs ys zs) (erased (LApp A xs ys zs) p)
+      -> (LApp A (Cons A x xs) ys (Cons A x zs))))
+
+(def-fns _ $ (erased lapp-nil : (erased Type A) (subterm erased (List A) xs) -> (erased (LApp A xs (Nil A) xs) p))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (LAppNil _ (Nil _))))
+  (LAppCons _ x xs1 (Nil _) xs1 (lapp-nil _ xs1)))
+
+; r is a suffix of rr.
+(def-adts $ (Suffix : (Type A) ((List A) r) ((List A) rr) -> Type)
+  enum
+  (many SufHere : (erased Type A) (erased (List A) rr) -> (Suffix A rr rr))
+  (many SufNext : (erased Type A) (erased A x) (erased (List A) r rr) (erased (Suffix A (Cons A x r) rr) p) -> (Suffix A r rr)))
+
+(def-fns _ $ (erased suffix-elem : (erased Type A) (erased A x) (erased (List A) r rr) (subterm erased (Suffix A r rr) p) (erased (Elem A x r) e) ->
+    (erased (Elem A x rr) q))
+  (match erased p _
+    ((SufHere _ _) e)
+    ((SufNext _ y _ _ p1) (suffix-elem A x (Cons A y r) rr p1 (ElThere A x y r e)))))
+
+(def-fns _ $ (erased add-assoc-back : (erased (Nat) a b c bc abc) (subterm erased (Add a bc abc) p) (erased (Add b c bc) q) ->
+    (erased (Nat) ab) (erased (Add a b ab) r) (erased (Add ab c abc) s))
+  (let-match erased p (AddSucc a1 _ abc1 p1) ((AddZero _) (values b (AddZero b) q)))
+  (let ((erased ab) (erased r) (erased s)) (add-assoc-back a1 b c bc abc1 p1 q))
+  (values (Succ ab) (AddSucc a1 b ab r) (AddSucc ab c abc1 s)))
+
+(def-fns _ $ (erased add-mono : (erased (Nat) a b c b2 c2) (subterm erased (Add a b c) p) (erased (Add a b2 c2) q) (erased (Lt b b2) l)
+    -> (erased (Lt c c2) r))
+  (let-match erased p (AddSucc a1 _ c1 p1) ((AddZero _) (let-match erased q (AddZero _)) l))
+  (let-match erased q (AddSucc _ _ c3 q1))
+  (LtS c1 c3 (add-mono a1 b c1 b2 c3 p1 q1 l)))
+
+(def-fns _ $ (erased add-shift : (erased (Nat) a b c) (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q))
+  (let ((erased c1) (erased e) (erased q1)) (add-succ-right-inv a b c p))
+  (let-match erased e (Refl _ _))
+  (AddSucc a b c1 q1))
 
 (def-fns _ $ (erased add-right-comm : (erased (Nat) x c xc d r) (subterm erased (Add x c xc) p) (erased (Add xc d r) q) ->
     (erased (Nat) t) (erased (Add x d t) s) (erased (Add t c r) u))
@@ -173,7 +210,7 @@
       (values bc (OpMul b c bc m) (OpMul a bc abc (mul-assoc a b c ab abc bc p q m))))
     ((OpAdd _ _ _ p)
       (let-match erased o2 (OpAdd _ _ _ q))
-      (let ((erased bc) (erased r) (erased s)) (add-assoc a b c ab abc p q))
+      (let ((erased bc) (erased r) (erased s)) (add-reassoc a b c ab abc p q))
       (values bc (OpAdd b c bc r) (OpAdd a bc abc s)))))
 
 (def-fns _ $ (erased op-assoc-rev : (erased Type A) (erased (Layer A) l) (erased (Nat) a b c bc abc) (erased (Op A l b c bc) o) (erased (Op A l a bc abc) o2) ->
@@ -475,6 +512,11 @@
   (let-match erased p (AddSucc b1 _ y1 p1) ((AddZero _) (let-match erased q (AddZero _)) l))
   (let-match erased q (AddSucc _ _ z1 q1))
   (LtS y1 (Succ z1) (add-mono-le b1 c d y1 z1 l p1 q1)))
+
+(def-fns _ $ (erased add-lt-cancel : (erased (Nat) b x y s1 s2) (erased (Add b x s1) p) (erased (Add b y s2) q) (erased (Lt s1 s2) l) -> (erased (Lt x y) r))
+  (match erased (lt-dec x y) _
+    ((Yes _ _ _ _ r) r)
+    (absurd (No _ _ _ _ le) (lt-asym s1 s2 l (add-mono-le b y x s2 s1 (le-lt-succ y x le) q p)))))
 
 (def-fns _ $ (erased add-lt : (erased (Nat) a b c d x y) (erased (Lt a b) l) (erased (Lt c (Succ d)) k) (erased (Add a c x) p) (erased (Add b d y) q) ->
     (erased (Lt x y) r))

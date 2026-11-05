@@ -1,18 +1,18 @@
-(def-fns _ $ (erased mp-app : (subterm erased (List (Mp)) xs) (erased (List (Mp)) ys) -> (erased (List (Mp)) zs) (erased (App (Mp) xs ys zs) r))
-  (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (CatNil _ ys))))
+(def-fns _ $ (erased mp-app : (subterm erased (List (Mp)) xs) (erased (List (Mp)) ys) -> (erased (List (Mp)) zs) (erased (LApp (Mp) xs ys zs) r))
+  (let-match erased xs (Cons _ x xs1) ((Nil _) (values ys (LAppNil _ ys))))
   (let ((erased zs1) (erased r1)) (mp-app xs1 ys))
-  (values (Cons _ x zs1) (CatCons _ x xs1 ys zs1 r1)))
+  (values (Cons _ x zs1) (LAppCons _ x xs1 ys zs1 r1)))
 
-(def-fns _ $ (erased mpcols-split : (erased (List (Mp)) xs ys zs) (subterm erased (App (Mp) xs ys zs) ap) (erased (MpCols zs) c)
+(def-fns _ $ (erased mpcols-split : (erased (List (Mp)) xs ys zs) (subterm erased (LApp (Mp) xs ys zs) ap) (erased (MpCols zs) c)
     -> (erased (MpCols xs) cx) (erased (MpCols ys) cy))
-  (let-match erased ap (CatCons _ _ xs1 _ zs1 ap1) ((CatNil _ _) (values (MpcNil) c)))
+  (let-match erased ap (LAppCons _ _ xs1 _ zs1 ap1) ((LAppNil _ _) (values (MpcNil) c)))
   (let-match erased c (MpcCons d e n f ks _ cl c1))
   (let ((erased cx) (erased cy)) (mpcols-split xs1 ys zs1 ap1 c1))
   (values (MpcCons d e n f ks xs1 cl cx) cy))
 
-(def-fns _ $ (erased smaller-app : (erased (Nat) d) (erased (List (Mp)) xs ys zs) (subterm erased (App (Mp) xs ys zs) ap) (erased (Smaller d xs) sx)
+(def-fns _ $ (erased smaller-app : (erased (Nat) d) (erased (List (Mp)) xs ys zs) (subterm erased (LApp (Mp) xs ys zs) ap) (erased (Smaller d xs) sx)
     (erased (Smaller d ys) sy) -> (erased (Smaller d zs) r))
-  (let-match erased ap (CatCons _ _ xs1 _ zs1 ap1) ((CatNil _ _) sy))
+  (let-match erased ap (LAppCons _ _ xs1 _ zs1 ap1) ((LAppNil _ _) sy))
   (let-match erased sx (SmallerCons _ d2 e2 n2 f2 _ pb lt2 sx1))
   (SmallerCons d d2 e2 n2 f2 zs1 pb lt2 (smaller-app d xs1 ys zs1 ap1 sx1 sy)))
 
@@ -26,7 +26,7 @@
       (erased (CEv ctu (ESStart)) ce) (erased (GE ctu (Cons RS (MkRx (GSet) (BS0) (GSG gtu)) (Nil RS)) (ESStart) (Succ h)) ge)
       (erased (GCov (GSG gtu) (Zero) (BFalse) (Succ h)) gc) (erased (BK h ts ctu gtu n0 ctu gtu) bk)
       (erased (BRing d e n f x0 p dd1 dd2 ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2) br) (erased (BNeed d dd1 h m ed1 nd1 fd1 bd1 ts ms1) n1)
-      (erased (BNeed d dd2 h m ed2 nd2 fd2 bd2 ts ms2) n2) (erased (App (Mp) ms1 ms2 ms) ap) -> (BirkW d e n f ms)))
+      (erased (BNeed d dd2 h m ed2 nd2 fd2 bd2 ts ms2) n2) (erased (LApp (Mp) ms1 ms2 ms) ap) -> (BirkW d e n f ms)))
 
 (def-fns _ $ (erased birk-glue : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (List (Mp)) ms) (erased (BirkW d e n f ms) w)
     (erased (MpCols ms) cs) -> (erased (List (Nat)) ks) (erased (FourColoring e f ks) c))
@@ -37,27 +37,6 @@
   (let ((erased c1) (erased c2)) (mpcols-split ms1 ms2 ms ap cs))
   (match erased (birkhoff-ring d x0 h m n0 dd1 dd2 e n f p ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 ts ms1 ms2 ctu gtu hm gen pl cu cn nce lr ce ge gc bk br n1 n2 c1 c2)
     (((List (Nat)) ks) ((FourColoring e f ks) c))))
-
-(def-fns _ $ (erased lt-succ-of : (erased (Nat) a b) (erased (Lt a b) p) -> (erased (Nat) b1) (erased (Eq (Nat) b (Succ b1)) e))
-  (match erased p _ ((LtZ b1) (values b1 (Refl _ b))) ((LtS _ b1 _) (values b1 (Refl _ b)))))
-
-(def-fns _ $ (erased lt-ls : (erased (Nat) a c b) (subterm erased (Lt a c) p) (erased (Lt c (Succ b)) q) -> (erased (Lt a b) r))
-  (match erased p _
-    ((LtZ c1)
-      (let-match erased q (LtS _ _ q1))
-      (let ((erased b1) (erased eb)) (lt-succ-of c1 b q1))
-      (let-match erased eb (Refl _ _))
-      (LtZ b1))
-    ((LtS a1 c1 p1)
-      (let-match erased q (LtS _ _ q1))
-      (let ((erased b1) (erased eb)) (lt-succ-of c1 b q1))
-      (let-match erased eb (Refl _ _))
-      (LtS a1 b1 (lt-ls a1 c1 b1 p1 q1)))))
-
-(def-fns _ $ (erased lt-tr : (erased (Nat) a c b) (erased (Lt a c) p) (erased (Lt c b) q) -> (erased (Lt a b) r))
-  (let ((erased b1) (erased eb)) (lt-succ-of c b q))
-  (let-match erased eb (Refl _ _))
-  (lt-succ-left a b (LtS a b1 (lt-ls a c b1 p q))))
 
 (def-fns _ $ (erased bkmode-fn : (erased (Nat) k m1 m2) (erased (BkMode k m1) b1) (erased (BkMode k m2) b2) -> (erased (Eq (Nat) m1 m2) r))
   (match erased b1 _
@@ -79,8 +58,8 @@
     ((BKShort _ _ _ _ _ _ _ _ _ sh)
       (let-match erased sh (MkShorter _ _ y0 k2 _ _ _ Q rq nq lq lt))
       (let-match erased lb (LtS _ b1 _))
-      (birkhoff-go B pb d y0 k2 (Zero) e n f Q b1 (lt-ls k2 k b1 lt lb) bks hm gen bl pl cu cn nc rq lq (lt-tr k2 k 6 lt l6)
-        (BMLow k2 (lt-ls k2 k (Succ (Succ (Succ (Succ (Succ (Zero)))))) lt l6)) nq))
+      (birkhoff-go B pb d y0 k2 (Zero) e n f Q b1 (lt-le-trans k2 k b1 lt lb) bks hm gen bl pl cu cn nc rq lq (lt-trans k2 k 6 lt l6)
+        (BMLow k2 (lt-le-trans k2 k (Succ (Succ (Succ (Succ (Succ (Zero)))))) lt l6)) nq))
     ((BKMaps _ _ _ _ dd1 dd2 _ _ _ _ ed1 nd1 fd1 bd1 ed2 nd2 fd2 bd2 _ ms1 ms2 br n1 n2)
       (let ((erased ms) (erased ap)) (mp-app ms1 ms2))
       (MkReduces B d e n f ms (smaller-app d ms1 ms2 ms ap (bneed-smaller d dd1 h m ed1 nd1 fd1 bd1 ts ms1 n1) (bneed-smaller d dd2 h m ed2 nd2 fd2 bd2 ts ms2 n2))
@@ -194,4 +173,4 @@
     (BMLow _ (LtS _ _ $ LtS _ _ $ LtZ _)) (nontrivial-cycle2 d x ey ex e n f hm gen bl pl cu rg pex nee)))
 
 (let ((erased SDPath) (erased SDPNil) (erased SDPNode) (erased SDPFace) (erased WSub) (erased hsplit-cover))
-  (values DPath DPNil DPNode DPFace Sub split-cover))
+  (values DPath DPNil DPNode DPFace HSub split-cover))

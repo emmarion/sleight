@@ -43,7 +43,7 @@
     -> (erased (SecOk o) r))
   (let-match erased so (MkSecAt _ _ _ _ z a _ u h z3 m fs _ pa _ _ ph _ mo pfs))
   (let ((erased la)) (above-nth ks 4 z a ab pa))
-  (let-match erased mo (MoAdd _ _ _ am) (absurd (MoNeg _ _ l) (lt-le-absurd 4 a la l)))
+  (let-match erased mo (MoAdd _ _ _ am) (absurd (MoNeg _ _ l) (lt-asym 4 a la l)))
   (let ((erased r1) (erased l1)) (fans-ok e f ks fs z3 m ab pfs))
   (MkSecOk a h m fs la (above-nth ks 4 u h ab ph) r1 l1 am))
 

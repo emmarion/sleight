@@ -58,12 +58,6 @@
     ((CEq _ _ _) (LeY a a (lt-succ a)))
     ((CGt _ _ _ _ q) (LeN a b q))))
 
-(def-fns _ $ (erased le-tr : (erased (Nat) a b c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
-  (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
-
-(def-fns _ $ (erased absurd lt-le-absurd : (erased (Nat) a b) (erased (Lt a b) p) (erased (Lt b (Succ a)) q) -> (erased (False) f))
-  (lt-asym a b p q))
-
 (def-fns _ $ (erased clamp-exists : (erased (Nat) a) -> (erased (Nat) m) (erased (Clamp a m) c))
   (match erased (nat-cmp a 9) _
     ((CLt _ _ _ _ p) (values a (ClLo a p)))
@@ -72,19 +66,19 @@
 
 (def-fns _ $ (erased clamp-fn : (erased (Nat) a m k) (erased (Clamp a m) c) (erased (Clamp a k) d) -> (erased (Eq (Nat) m k) e))
   (match erased c _
-    ((ClLo _ p) (match erased d _ ((ClLo _ _) (Refl _ a)) (absurd (ClHi _ q) (lt-le-absurd 8 a q p))))
-    ((ClHi _ p) (match erased d _ (absurd (ClLo _ q) (lt-le-absurd 8 a p q)) ((ClHi _ _) (Refl _ 9))))))
+    ((ClLo _ p) (match erased d _ ((ClLo _ _) (Refl _ a)) (absurd (ClHi _ q) (lt-asym 8 a q p))))
+    ((ClHi _ p) (match erased d _ (absurd (ClLo _ q) (lt-asym 8 a p q)) ((ClHi _ _) (Refl _ 9))))))
 
 (def-fns _ $ (erased absurd in-out : (erased (Nat) a) (erased (Rg) r) (erased (InRg a r) p) (erased (OutRg a r) q) -> (erased (False) f))
   (let-match erased p (MkInRg _ m lo hi c l u))
   (match erased q _
-    (absurd (OutLo _ k _ _ d l2) (let-match erased (clamp-fn a m k c d) (Refl _ _)) (lt-le-absurd m lo l2 l))
-    (absurd (OutHi _ k _ _ d u2) (let-match erased (clamp-fn a m k c d) (Refl _ _)) (lt-le-absurd hi m u2 u))))
+    (absurd (OutLo _ k _ _ d l2) (let-match erased (clamp-fn a m k c d) (Refl _ _)) (lt-asym m lo l2 l))
+    (absurd (OutHi _ k _ _ d u2) (let-match erased (clamp-fn a m k c d) (Refl _ _)) (lt-asym hi m u2 u))))
 
 (def-fns _ $ (erased rg-sub : (erased (Nat) a) (erased (Rg) r q) (erased (InRg a r) p) (erased (RgSub r q) s) -> (erased (InRg a q) t))
   (let-match erased p (MkInRg _ m lo hi c l u))
   (let-match erased s (MkRgSub _ _ c2 d2 l2 u2))
-  (MkInRg a m c2 d2 c (le-tr c2 lo m l2 l) (le-tr m hi d2 u u2)))
+  (MkInRg a m c2 d2 c (le-trans c2 lo m l2 l) (le-trans m hi d2 u u2)))
 
 (def-fns _ $ (erased rg-dis : (erased (Nat) a) (erased (Rg) r q) (erased (InRg a r) p) (erased (RgDis r q) s) -> (erased (OutRg a q) t))
   (let-match erased p (MkInRg _ m lo hi c l u))
@@ -400,12 +394,6 @@
   (let-match erased q (AddSucc _ _ _ q1))
   (add-inj a1 b c1 d p1 q1))
 
-(def-fns _ $ (erased le-antisym : (erased (Nat) a b) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ a)) q) -> (erased (Eq (Nat) a b) e))
-  (match erased (nat-cmp a b) _
-    (absurd (CLt _ _ _ _ l) (lt-le-absurd a b l q))
-    ((CEq _ _ _) (Refl _ a))
-    (absurd (CGt _ _ _ _ l) (lt-le-absurd b a l p))))
-
 (def-fns _ $ (erased clamp-le9 : (erased (Nat) a m) (erased (Clamp a m) c) -> (erased (Lt m (Succ 9)) r))
   (match erased c _ ((ClLo _ p) (lt-weaken a 9 p)) ((ClHi _ _) (lt-succ 9))))
 
@@ -504,7 +492,7 @@
   (let-match erased ps (MkInRg _ m _ _ c l1 u1))
   (let-match erased (le-antisym b m l1 u1) (Refl _ _))
   (let-match erased c (ClLo _ _) (absurd (ClHi _ _) (lt-irrefl 9 u)))
-  (let-match erased mo (MoAdd _ _ _ e2) (absurd (MoNeg _ _ lb) (lt-le-absurd 4 a pa lb)))
+  (let-match erased mo (MoAdd _ _ _ e2) (absurd (MoNeg _ _ lb) (lt-asym 4 a pa lb)))
   (let-match erased (add-inj 5 n a n2 e2 e) (Refl _ _))
   (repeat-fit n as gs rp l pfv))
 

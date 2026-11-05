@@ -50,16 +50,13 @@ language behind them may be wrong. Numbers are not reused.
    of two or three lines.
 
 5. **Names collide across the ~140 files of one unit.** All files share
-   one namespace, so a later file's `Perm`, `Sub`, `Or`, `SNil`, `AppNil`
-   or `InsertE` hides an earlier one for every file after it. The proof
-   works around this with:
-   - alias files: `colalias.sl`, `realias.sl`, `unav/realias.sl` and
-     `iealias.sl`;
+   one namespace, so a later file's `Perm`, `Trace` or `Proper` hides an
+   earlier one for every file after it. The proof works around this with:
+   - an alias file, `colalias.sl`;
    - aliases appended to the ends of files: `CRPath` in `cpmap.sl`;
      `SDPath`, `WSub` and `hsplit-cover` in `birkhoff2.sl`;
-   - renames: `cpcomp.sl`'s `StNil`/`StCons`, `cfcolor.sl`'s
-     `CatNil`/`CatCons`, `ring.sl`'s `Ins` and `PMulNil`/`PMulCons`, and
-     `unav/pwalk.sl`'s `InCut`;
+   - renames: `cpcomp.sl`'s `StNil`/`StCons`, `ring.sl`'s `Ins` and
+     `PMulNil`/`PMulCons`, and `unav/pwalk.sl`'s `InCut`;
    - load-order constraints: `contract2.sl` must load before the `unav/`
      files; `paint.sl` and `fcmany.sl` must load before `coloring.sl`.
 

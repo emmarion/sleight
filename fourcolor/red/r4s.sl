@@ -112,67 +112,14 @@
         (slv-trace (Succ k) q2 ks i c0 d0 g1 Q E0 E e v ti pc sm)))))
 
 (def-fns _
-  ((erased lc-below : (erased (List (U8)) us vs) (erased (Nat) j n i x) (erased (Ctree) t) (subterm erased (Lc us j n t) f) (erased (Put flag-w us i x vs) s)
-      (erased (Lt i n) l) -> (erased (Lc vs j n t) r))
-    (let ((erased ap)) (ApLt (Nat) Lt i n l))
-    (let-match erased f (LcN _ _ _ q c a1 a2 a3 c12 t1 t2 t3 y tq z1 z2 z3 s1 s2 k1 k2 k3) ((LcE _ _ _ y) (LcE vs j n (put-other flag-w us vs i x n _ s ap y))))
-    (let ((erased l1)) (lt-le-trans _ _ _ l (lt-weaken _ _ (thrice-le n q tq))))
-    (let ((erased l2)) (lt-weaken _ _ l1))
-    (LcN vs j n q c a1 a2 a3 c12 t1 t2 t3 (put-other flag-w us vs i x n _ s ap y) tq z1 z2 z3 s1 s2 (lck-below us vs j (Succ q) i x t1 k1 s l1)
-      (lck-below us vs j (Succ (Succ q)) i x t2 k2 s l2) (lck-below us vs j (Succ (Succ (Succ q))) i x t3 k3 s (lt-weaken _ _ l2))))
-  ((erased lck-below : (erased (List (U8)) us vs) (erased (Nat) j n i x) (erased (Ctree) t) (subterm erased (LcK us j n t) k) (erased (Put flag-w us i x vs) s)
-      (erased (Lt i n) l) -> (erased (LcK vs j n t) r))
-    (let-match erased k (LkS _ j1 _ _ f) ((LkZ _ _ _) (LkZ vs n t)))
-    (LkS vs j1 n t (lc-below us vs j1 n i x t f s l))))
-
-(def-fns _
-  ((erased lc-apart : (erased (List (U8)) us vs) (erased (Nat) j n m q i x) (erased (Ctree) t) (subterm erased (Lc us j n t) f) (erased (Put flag-w us i x vs) s)
-      (erased (HDesc m i) d) (erased (Lt n m) nm) (erased (Thrice n q) tq) (erased (Lt m (Succ q)) mq) -> (erased (Lc vs j n t) r))
-    (let ((erased ap)) (ApGt (Nat) Lt i n (lt-le-trans _ _ _ nm (desc-ge m i d))))
-    (let-match erased f (LcN _ _ _ q2 c a1 a2 a3 c12 t1 t2 t3 y tq2 z1 z2 z3 s1 s2 k1 k2 k3) ((LcE _ _ _ y) (LcE vs j n (put-other flag-w us vs i x n _ s ap y))))
-    (let-match erased (thrice-fn n q q2 tq tq2) (Refl _ _))
-    (let ((erased y2)) (put-other flag-w us vs i x n _ s ap y))
-    (match erased d _
-      ((HDSelf _)
-        (let ((erased l2)) (lt-weaken _ _ mq))
-        (LcN vs j n q c a1 a2 a3 c12 t1 t2 t3 y2 tq z1 z2 z3 s1 s2 (lck-below us vs j (Succ q) i x t1 k1 s mq) (lck-below us vs j (Succ (Succ q)) i x t2 k2 s l2)
-          (lck-below us vs j (Succ (Succ (Succ q))) i x t3 k3 s (lt-weaken _ _ l2))))
-      ((HDKid _ q3 c2 _ tm hk d2)
-        (let ((erased r1) (erased u1) (erased e1) (erased f1)) (apart-kid n m q q3 (Succ q) c2 nm tq mq tm hk (HK1 q)))
-        (let ((erased r2) (erased u2) (erased e2) (erased f2)) (apart-kid n m q q3 (Succ (Succ q)) c2 nm tq mq tm hk (HK2 q)))
-        (let ((erased r3) (erased u3) (erased e3) (erased f3)) (apart-kid n m q q3 (Succ (Succ (Succ q))) c2 nm tq mq tm hk (HK3 q)))
-        (LcN vs j n q c a1 a2 a3 c12 t1 t2 t3 y2 tq z1 z2 z3 s1 s2 (lck-apart us vs j (Succ q) c2 r1 i x t1 k1 s d2 e1 u1 f1)
-          (lck-apart us vs j (Succ (Succ q)) c2 r2 i x t2 k2 s d2 e2 u2 f2) (lck-apart us vs j (Succ (Succ (Succ q))) c2 r3 i x t3 k3 s d2 e3 u3 f3)))))
-  ((erased lck-apart : (erased (List (U8)) us vs) (erased (Nat) j n m q i x) (erased (Ctree) t) (subterm erased (LcK us j n t) k) (erased (Put flag-w us i x vs) s)
-      (erased (HDesc m i) d) (erased (Lt n m) nm) (erased (Thrice n q) tq) (erased (Lt m (Succ q)) mq) -> (erased (LcK vs j n t) r))
-    (let-match erased k (LkS _ j1 _ _ f) ((LkZ _ _ _) (LkZ vs n t)))
-    (LkS vs j1 n t (lc-apart us vs j1 n m q i x t f s d nm tq mq))))
-
-(def-fns _ $ (erased lck-apart-in : (erased (List (U8)) us vs) (erased (Nat) j n m q) (erased (Ctree) t) (erased (LcK us j n t) f)
-    (subterm erased (SetsBelow us vs m) w) (erased (Lt n m) nm) (erased (Thrice n q) tq) (erased (Lt m (Succ q)) mq) -> (erased (LcK vs j n t) r))
-  (match erased w _
-    ((SbNil _ _) f)
-    ((SbSet _ ws _ _ i x w1 s d) (lck-apart ws vs j n m q i x t (lck-apart-in us ws j n m q t f w1 nm tq mq) s d nm tq mq))))
-
-(def-fns _ $ (erased lck-sib : (erased (List (U8)) us vs) (erased (Nat) j n m i x) (erased (Ctree) t) (erased (LcK us j n t) f) (erased (Put flag-w us i x vs) s)
-    (erased (HDesc m i) d) (erased (Lt m n) mn) (erased (Lt n (Succ (Succ (Succ m)))) nm) (erased (Lt (Zero) m) mp) -> (erased (LcK vs j n t) r))
-  (let-match erased d (HDKid _ q3 c _ t3 hk d2) ((HDSelf _) (lck-below us vs j n i x t f s mn)))
-  (let ((erased qn) (erased tn)) (thrice-exists n))
-  (let ((erased lo) (erased hi)) (hkid-lt q3 c hk))
-  (let ((erased nq)) (le-trans n (Succ (Succ m)) q3 nm (LtS _ _ (thrice-ge2 m q3 mp t3))))
-  (lck-apart us vs j n c qn i x t f s d2 (lt-le-trans _ _ _ nq (LtS _ _ lo)) tn
-    (lt-le-trans _ _ _ hi (LtS _ _ (LtS _ _ (thrice-lt m n q3 qn mn t3 tn))))))
-
-(def-fns _ $ (erased lck-sib-in : (erased (List (U8)) us vs) (erased (Nat) j n m) (erased (Ctree) t) (erased (LcK us j n t) f)
-    (subterm erased (SetsBelow us vs m) w) (erased (Lt m n) mn) (erased (Lt n (Succ (Succ (Succ m)))) nm) (erased (Lt (Zero) m) mp) -> (erased (LcK vs j n t) r))
-  (match erased w _
-    ((SbNil _ _) f)
-    ((SbSet _ ws _ _ i x w1 s d) (lck-sib ws vs j n m i x t (lck-sib-in us ws j n m t f w1 mn nm mp) s d mn nm mp))))
-
-(def-fns _ $ (erased lck-lo : (erased (List (U8)) us vs) (erased (Nat) j a m) (erased (Ctree) t) (erased (LcK us j a t) f) (erased (SetsBelow us vs m) w)
-    (erased (Lt a m) am) (erased (Lt m (Succ (Succ (Succ a)))) ma) (erased (Lt (Zero) a) ap) -> (erased (LcK vs j a t) r))
-  (let ((erased qa) (erased ta)) (thrice-exists a))
-  (lck-apart-in us vs j a m qa t f w am ta (le-trans m (Succ (Succ a)) qa ma (LtS _ _ (thrice-ge2 a qa ap ta)))))
+  ((erased lc-fr : (erased (List (U8)) us vs) (erased (Nat) j n) (erased (Ctree) t) (subterm erased (Lc us j n t) g) (erased (MissWrites us vs (Succ j) n) f) -> (erased (Lc vs j n t) r))
+    (let-match erased g (LcN _ _ _ q c a1 a2 a3 c12 t1 t2 t3 y tq z1 z2 z3 s1 s2 k1 k2 k3) ((LcE _ _ _ y) (LcE vs j n (fr-elt us vs j n _ f y))))
+    (let ((erased f1) (erased f2) (erased f3)) (fr-kids us vs j n q f tq))
+    (LcN vs j n q c a1 a2 a3 c12 t1 t2 t3 (fr-elt us vs j n _ f y) tq z1 z2 z3 s1 s2 (lck-fr us vs j (Succ q) t1 k1 f1) (lck-fr us vs j (Succ (Succ q)) t2 k2 f2)
+      (lck-fr us vs j (Succ (Succ (Succ q))) t3 k3 f3)))
+  ((erased lck-fr : (erased (List (U8)) us vs) (erased (Nat) j n) (erased (Ctree) t) (subterm erased (LcK us j n t) k) (erased (MissWrites us vs j n) f) -> (erased (LcK vs j n t) r))
+    (let-match erased k (LkS _ j1 _ _ g) ((LkZ _ _ _) (LkZ vs n t)))
+    (LkS vs j1 n t (lc-fr us vs j1 n t g f))))
 
 ; u2 is u with its leaf at the trace et made one of count x, emptied nodes removed.
 (def-adts $ (Chg : ((Ctree) u) ((List (Col)) et) ((Nat) x) ((Ctree) u2) -> Type)
@@ -291,8 +238,8 @@
         (let-match erased (elt-fn flag-w us1 n nA (Succ nC) y y2) (Refl _ _))
         (let ((erased l1)) (thrice-le n q tq))
         (let ((erased l2)) (lt-weaken _ _ l1))
-        (values (Refl _ nB) (put-elt flag-w us1 us2 n nC s) (lck-below us1 us2 j (Succ q) n nC w1 k1 s l1) (lck-below us1 us2 j (Succ (Succ q)) n nC w2 k2 s l2)
-          (lck-below us1 us2 j (Succ (Succ (Succ q))) n nC w3 k3 s (lt-weaken _ _ l2))))))
+        (values (Refl _ nB) (put-elt flag-w us1 us2 n nC s) (lck-fr us1 us2 j (Succ q) w1 k1 (fr-one us1 us2 j (Succ q) n nC s (miss-below n (Succ q) j l1))) (lck-fr us1 us2 j (Succ (Succ q)) w2 k2 (fr-one us1 us2 j (Succ (Succ q)) n nC s (miss-below n (Succ (Succ q)) j l2)))
+          (lck-fr us1 us2 j (Succ (Succ (Succ q))) w3 k3 (fr-one us1 us2 j (Succ (Succ (Succ q))) n nC s (miss-below n (Succ (Succ (Succ q))) j (lt-weaken _ _ l2))))))))
   (let-match erased eq (Refl _ _))
   (let-match erased cn (CnE)
     ((CnN _ _ _ o)
@@ -325,7 +272,7 @@
       (let-match erased (nz-fn v a1 (Succ (Zero)) z1 zv) (Refl _ _))
       (let ((erased c3) (erased nB) (erased e1) (erased e2) (erased dc)) (dc-first v2 b a2 a3 c12 nA zb d1 d2))
       (lc-fin us1 us2 j n q b nE nC nA b a2 a3 c3 nB v2 t2 t3 u2 (elt-sb us us1 n q1 nA y w nq) tq zb z2 z3 e1 e2 dc ew
-        kv (lck-sib-in us us1 j q2 q1 t2 h2 w l12 l24 p1) (lck-sib-in us us1 j q3 q1 t3 h3 w l13 l34 p1) cn))
+        kv (lck-fr us us1 j q2 t2 h2 (fr-sib-in us us1 j q2 q1 w l12 l24 p1)) (lck-fr us us1 j q3 t3 h3 (fr-sib-in us us1 j q3 q1 w l13 l34 p1)) cn))
     ((UpB _ _ v3 v4 x1 x3)
       (let-match erased kd (Ki2 _ c0 tk))
       (let-match erased (thrice-fn n q c0 tq tk) (Refl _ _))
@@ -335,7 +282,7 @@
       (let-match erased (nz-fn v a2 (Succ (Zero)) z2 zv) (Refl _ _))
       (let ((erased c3) (erased nB) (erased e1) (erased e2) (erased dc)) (dc-second v2 b a1 a3 c12 nA zb d1 d2))
       (lc-fin us1 us2 j n q b nE nC nA a1 b a3 c3 nB t1 v2 t3 u2 (elt-sb us us1 n q2 nA y w (lt-weaken _ _ nq)) tq z1 zb z3 e1 e2 dc ew
-        (lck-lo us us1 j q1 q2 t1 h1 w l12 l24 p1) kv (lck-sib-in us us1 j q3 q2 t3 h3 w l23 l35 p2) cn))
+        (lck-fr us us1 j q1 t1 h1 (fr-lo us us1 j q1 q2 w l12 l24 p1)) kv (lck-fr us us1 j q3 t3 h3 (fr-sib-in us us1 j q3 q2 w l23 l35 p2)) cn))
     ((UpC _ _ v3 v4 x1 x2)
       (let-match erased kd (Ki3 _ c0 tk))
       (let-match erased (thrice-fn n q c0 tq tk) (Refl _ _))
@@ -345,7 +292,7 @@
       (let-match erased (nz-fn v a3 (Succ (Zero)) z3 zv) (Refl _ _))
       (let ((erased c3) (erased nB) (erased e1) (erased e2) (erased dc)) (dc-third v2 b a1 a2 c12 nA zb d1 d2))
       (lc-fin us1 us2 j n q b nE nC nA a1 a2 b c3 nB t1 t2 v2 u2 (elt-sb us us1 n q3 nA y w (lt-weaken _ _ (lt-weaken _ _ nq))) tq z1 z2 zb e1 e2 dc ew
-        (lck-lo us us1 j q1 q3 t1 h1 w l13 l34 p1) (lck-lo us us1 j q2 q3 t2 h2 w l23 l35 p2) kv cn))))
+        (lck-fr us us1 j q1 t1 h1 (fr-lo us us1 j q1 q3 w l13 l34 p1)) (lck-fr us us1 j q2 t2 h2 (fr-lo us us1 j q2 q3 w l23 l35 p2)) kv cn))))
 
 (def-fns _ $ (erased lck-down : (erased (List (U8)) us) (erased (Nat) j n c) (erased (Col) e) (erased (Ctree) u v) (erased (Lc us j n u) f) (erased (Kid n e c) kd)
     (erased (CtSel u e v) sv) (erased (Occ v) ov) -> (erased (LcK us j (Succ c) v) r))

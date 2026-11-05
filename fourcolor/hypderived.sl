@@ -6,12 +6,12 @@
 
 (def-fns _ $ (erased es-rot : (erased (Nat) kc d a b c g) (erased (EulerSum kc d a b c g) es) -> (erased (EulerSum kc d b c a g) r))
   (let-match erased es (MkEulerSum _ _ _ _ _ _ c2 lhs s1 rhs g2 dc al a1 ar dg ag))
-  (let ((erased bc) (erased p) (erased q)) (add-assoc a b c s1 rhs a1 ar))
+  (let ((erased bc) (erased p) (erased q)) (add-reassoc a b c s1 rhs a1 ar))
   (MkEulerSum kc d b c a g c2 lhs bc rhs g2 dc al p (add-comm a bc rhs q) dg ag))
 
 (def-fns _ $ (erased es-swap : (erased (Nat) kc d a b c g) (erased (EulerSum kc d a b c g) es) -> (erased (EulerSum kc d a c b g) r))
   (let-match erased es (MkEulerSum _ _ _ _ _ _ c2 lhs s1 rhs g2 dc al a1 ar dg ag))
-  (let ((erased bc) (erased p) (erased q)) (add-assoc a b c s1 rhs a1 ar))
+  (let ((erased bc) (erased p) (erased q)) (add-reassoc a b c s1 rhs a1 ar))
   (let ((erased ac) (erased p2) (erased q2)) (add-assoc-inv a c b bc rhs (add-comm b c bc p) q))
   (MkEulerSum kc d a c b g c2 lhs ac rhs g2 dc al p2 q2 dg ag))
 

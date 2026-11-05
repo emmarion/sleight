@@ -1,13 +1,3 @@
-(def-fns _ $ (erased respects-at : (erased (List (Nat)) lab xs ls) (erased (Nat) i j l) (subterm erased (Respects lab xs ls) rp)
-    (erased (Nth (Nat) xs i j) p) (erased (Nth (Nat) lab j l) q) -> (erased (Nth (Nat) ls i l) r))
-  (let-match erased rp (RespCons _ xs1 ls1 _ l1 p1 rp1) (absurd (RespNil _) p))
-  (let-match erased p (NthThere _ _ _ i1 _ p2)
-    ((NthHere _ _ _) (let-match erased (nth-fn _ lab j l1 l p1 q) (Refl _ _)) (NthHere _ l1 ls1)))
-  (NthThere _ l1 ls1 i1 l (respects-at lab xs1 ls1 i1 j l rp1 p2 q)))
-
-(def-fns _ $ (erased addc-same : (erased (Col) a b c c2) (erased (AddC a b c) p) (erased (AddC a b c2) q) -> (erased (Eq (Col) c c2) e))
-  (addc-fn a b c c2 (addc-k a b c p) (addc-k a b c2 q)))
-
 ; k is the first |k| entries of l.
 (def-adts $ (Pre : ((List (Nat)) k l) -> Type)
   enum
@@ -187,7 +177,7 @@
   (let ((erased nxa)) (ptr-node a x0 n p cr px))
   (let ((erased v) (erased pv) (erased pfx)) (hyper-back d a x0 e n f h nxa))
   (let-match erased (nth-fn _ e a ea v pea pv) (Refl _ _))
-  (let ((erased nzx)) (hyper-node d x0 ex z e n f h pex pz))
+  (let ((erased nzx)) (hyp-nfe d x0 ex z e n f h pex pz))
   (let-match erased cr (MkCpring _ _ _ _ rp back dp))
   (let-match erased rp (RPCons _ _ _ _ _ _ rp1))
   (let-match erased rp1 (RPCons _ _ _ _ _ pz2 rp2))
@@ -200,8 +190,8 @@
       (apart-irrefl a nz)))
   (let ((erased lez)) (perm-val d z ez e ei pe pez))
   (let ((erased w) (erased pw)) (nth-exists _ f d ez lf lez))
-  (let ((erased nwz)) (hyper-node d z ez w e n f h pez pw))
-  (let ((erased f1ez)) (insert-other f f1 ea d ez w i1 pw (img-apart d z a ez ea e ei pe pez pea nza)))
+  (let ((erased nwz)) (hyp-nfe d z ez w e n f h pez pw))
+  (let ((erased f1ez)) (insert-other f f1 ea d ez w i1 pw (perm-apart d z a ez ea e ei pe pez pea nza)))
   (let ((erased fw)) (insert-new f1 f2 ez (Succ d) (Succ d) w i2 (insert-length f f1 ea d d i1 lf) f1ez))
   (let ((erased fx)) (insert-other f1 f2 ez (Succ d) d x0 i2 (insert-new f f1 ea d d x0 i1 lf pfx) (ApGt _ _ d ez lez)))
   (let ((erased ed)) (edge-low e e2 d g))
@@ -265,11 +255,6 @@
   (let-match erased st (MkEcpN _ _ _ _ _ ea ez _ _ _ _ f1 _ _ _ _ _ _ _ g i1 i2 _))
   (let-match erased ctx (MkCtx _ _ _ _ _ _ _ _ fc2 _ _ _ _ _))
   (ctx-grow ie ks big e e2 f f2 d ctx g (fc-uninsert ks f f1 ea d (fc-uninsert ks f1 f2 ez (Succ d) fc2 i2 (insert-length f f1 ea d d i1 lf)) i1 lf)))
-
-(def-adts $ (LMem : (Type A) (A x) ((List A) xs) -> Type)
-  enum
-  (many LMHere : (erased Type A) (erased A x) (erased (List A) xs) -> (LMem A x (Cons A x xs)))
-  (many LMThere : (erased Type A) (erased A x y) (erased (List A) xs) (erased (LMem A x xs) p) -> (LMem A x (Cons A y xs))))
 
 (def-adts $ (FU : -> Type)
   enum
@@ -837,20 +822,20 @@
   (ESome _ (DFK kt ie s k d d2 rest us et sk (GLCons kt ie k rest d d2 et u us1 gu gs))))
 
 (def-fns _ $ (erased gl-sel : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (CK) k) (erased (List (Step)) rp) (erased (Nat) d d2) (erased (List (Col)) et)
-    (erased (Col) u) (erased (List (Col)) us) (subterm erased (GOptL kt ie k rp d d2 et us) g) (erased (LMem (Col) u us) m) ->
+    (erased (Col) u) (erased (List (Col)) us) (subterm erased (GOptL kt ie k rp d d2 et us) g) (erased (Elem (Col) u us) m) ->
     (erased (GOptU kt ie k rp d d2 et u) r))
   (let-match erased g (GLCons _ _ _ _ _ _ _ _ us1 gu gs) (absurd (GLNil _ _ _ _ _ _ _) m))
-  (match erased m _ ((LMHere _ _ _) gu) ((LMThere _ _ _ _ m1) (gl-sel kt ie k rp d d2 et u us1 gs m1))))
+  (match erased m _ ((ElHere _ _ _) gu) ((ElThere _ _ _ _ m1) (gl-sel kt ie k rp d d2 et u us1 gs m1))))
 
-(def-fns _ $ (erased all-cols-mem : (erased (Col) u) -> (erased (LMem (Col) u all-cols) m))
+(def-fns _ $ (erased all-cols-mem : (erased (Col) u) -> (erased (Elem (Col) u all-cols) m))
   (let ((erased t3)) (Cons (Col) (C3) (Nil (Col))))
   (let ((erased t2)) (Cons (Col) (C2) t3))
   (let ((erased t1)) (Cons (Col) (C1) t2))
   (match erased u _
-    ((C0) (LMHere _ u t1))
-    ((C1) (LMThere _ u (C0) t1 (LMHere _ u t2)))
-    ((C2) (LMThere _ u (C0) t1 (LMThere _ u (C1) t2 (LMHere _ u t3))))
-    ((C3) (LMThere _ u (C0) t1 (LMThere _ u (C1) t2 (LMThere _ u (C2) t3 (LMHere _ u (Nil (Col)))))))))
+    ((C0) (ElHere _ u t1))
+    ((C1) (ElThere _ u (C0) t1 (ElHere _ u t2)))
+    ((C2) (ElThere _ u (C0) t1 (ElThere _ u (C1) t2 (ElHere _ u t3))))
+    ((C3) (ElThere _ u (C0) t1 (ElThere _ u (C1) t2 (ElThere _ u (C2) t3 (ElHere _ u (Nil (Col)))))))))
 
 (def-fns _ $ (erased good-out : (erased (Ctree) kt) (erased (List (Nat)) ie) (erased (List (Step)) rp) (erased (Nat) d dx) (erased (List (Col)) et x)
     (subterm erased (FR ie rp d et dx x) fr) (erased (Good kt ie rp d et) g) -> (erased (Col) e0) (erased (List (Col)) x1 x2)

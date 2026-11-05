@@ -76,7 +76,7 @@
 ; d is fixed (U) or inserted after a (N) in f0, then d + 1 is inserted after c.
 (def-adts $ (FStep : ((List (Nat)) f) ((Nat) d) ((List (Nat)) f0) -> Type)
   enum
-  (many FSFix : (erased (List (Nat)) f f0) (erased (Nat) d) (erased (HSnoc (Nat) f d f0) s) -> (FStep f d f0))
+  (many FSFix : (erased (List (Nat)) f f0) (erased (Nat) d) (erased (Snoc (Nat) f d f0) s) -> (FStep f d f0))
   (many FSIns : (erased (List (Nat)) f f0) (erased (Nat) d a) (erased (Insert f a d f0) i) (erased (Lt a d) la) -> (FStep f d f0)))
 
 (def-fns _ $ (erased fstep-length : (erased (Nat) d) (erased (List (Nat)) f f0) (erased (FStep f d f0) fs) (erased (Length (Nat) f d) lf)
@@ -158,7 +158,7 @@
     (snoc-old _ lab1 lab2 r0 r0 r0 sl2 (snoc-old _ lab lab1 r0 r0 r0 sl1 p0))))
 
 (def-fns _ $ (erased allsep-snoc : (erased (List (Bond)) h g g2) (erased (Nat) x y) (subterm erased (AllSep h g) s) (erased (Sep h x y) sp)
-    (erased (HSnoc (Bond) g (MkBond x y) g2) sn) -> (erased (AllSep h g2) r))
+    (erased (Snoc (Bond) g (MkBond x y) g2) sn) -> (erased (AllSep h g2) r))
   (match erased s _
     ((AllSepNil _) (let-match erased sn (SnocNil _ _)) (AllSepCons h (Nil (Bond)) x y sp (AllSepNil h)))
     ((AllSepCons _ g1 x1 y1 s1 rest)
@@ -199,10 +199,10 @@
       (allsep-snoc gf2 ge geA d (Succ d) (old-seps d c kf e n f f0 f2 fi nf ge gf2 (graph-fun d e ge gre) b pe pf of fs ins grf2) s1 sgA)
       (sep-sym gf2 d (Succ d) s1) sg2)))
 
-(def-fns _ $ (erased sep-u : (erased (Nat) d c) (erased (List (Nat)) f fi f0 f2) (erased (HPerm d f fi) pf) (erased (HSnoc (Nat) f d f0) s)
+(def-fns _ $ (erased sep-u : (erased (Nat) d c) (erased (List (Nat)) f fi f0 f2) (erased (HPerm d f fi) pf) (erased (Snoc (Nat) f d f0) s)
     (erased (Insert f0 c (Succ d) f2) ins) (erased (Lt c d) lc)
-    -> (erased (List (Nat)) zs lab1 lab) (erased (Repeat (Nat) d (Zero) zs) rz) (erased (HSnoc (Nat) zs (Succ (Zero)) lab1) sl1)
-    (erased (HSnoc (Nat) lab1 (Zero) lab) sl) (erased (Respects lab f2 lab) rp) (erased (Separates lab f2 d (Succ d)) sp))
+    -> (erased (List (Nat)) zs lab1 lab) (erased (Repeat (Nat) d (Zero) zs) rz) (erased (Snoc (Nat) zs (Succ (Zero)) lab1) sl1)
+    (erased (Snoc (Nat) lab1 (Zero) lab) sl) (erased (Respects lab f2 lab) rp) (erased (Separates lab f2 d (Succ d)) sp))
   (let ((erased zs) (erased rz0) (erased lz) (erased rpz)) (zeros-perm d f fi pf))
   (let ((erased lab1) (erased sl1)) (snoc-exists _ zs (Succ (Zero))))
   (let ((erased lab) (erased sl)) (snoc-exists _ lab1 (Zero)))
@@ -216,7 +216,7 @@
 (def-fns _ $ (erased sep-n : (erased (Nat) d a z) (erased (List (Nat)) f f1 f2 lab) (erased (Separates lab f a z) sp) (erased (Insert f a d f1) i1)
     (erased (Insert f1 z (Succ d) f2) i2) (erased (Length (Nat) f d) lf)
     -> (erased (Nat) la lz) (erased (List (Nat)) lab1 lab2) (erased (Nth (Nat) lab a la) pa) (erased (Nth (Nat) lab z lz) pz)
-    (erased (HSnoc (Nat) lab la lab1) s1) (erased (HSnoc (Nat) lab1 lz lab2) s2) (erased (Respects lab2 f2 lab2) rp) (erased (Separates lab2 f2 d (Succ d)) r))
+    (erased (Snoc (Nat) lab la lab1) s1) (erased (Snoc (Nat) lab1 lz lab2) s2) (erased (Respects lab2 f2 lab2) rp) (erased (Separates lab2 f2 d (Succ d)) r))
   (let-match erased sp (MkSeparates _ _ _ _ l1 l2 rp0 p1 p2 ne))
   (let ((erased ll)) (respects-length lab f lab d rp0 lf))
   (let ((erased lab1) (erased s1)) (snoc-exists _ lab l1))
@@ -232,7 +232,7 @@
     (erased (QEuler d k kf) qe)
     -> (erased (Connected (Succ (Succ d)) e2 n2 f2) cc2) (erased (Bridgeless (Succ (Succ d)) e2 n2 f2) b2) (erased (Orbits (Succ (Succ d)) f2 (Succ kf)) of2)
     (erased (QEuler (Succ (Succ d)) (Succ (Succ k)) (Succ kf)) qe2) (erased (List (Nat)) zs lab1 lab) (erased (Repeat (Nat) d (Zero) zs) rz)
-    (erased (HSnoc (Nat) zs (Succ (Zero)) lab1) sl1) (erased (HSnoc (Nat) lab1 (Zero) lab) sl) (erased (Respects lab f2 lab) rp))
+    (erased (Snoc (Nat) zs (Succ (Zero)) lab1) sl1) (erased (Snoc (Nat) lab1 (Zero) lab) sl) (erased (Respects lab f2 lab) rp))
   (let-match erased u (MkEcpU _ b0 c _ _ _ _ f0 _ _ pc g s ins))
   (let ((erased ei) (erased _) (erased fi) (erased _) (erased pe) (erased _) (erased pf)) (hyper-core d e n f h))
   (let ((erased lc)) (perm-val d b0 c e ei pe pc))
@@ -256,13 +256,10 @@
   (values (grow-connected d ez e n f e2 n2 f2 f1 h h2 cc g (FSIns f f1 d ea i1 la) i2 lz)
     (orbits-insert (Succ d) kf ez f1 f2 (orbits-insert d kf ea f f1 of i1 la) i2 (lt-weaken ez d lz)) l2 (euler-n d (Succ k) kf qe)))
 
-(def-fns _ $ (erased last-in : (erased (List (Nat)) xs) (erased (Nat) y) (subterm erased (CLast xs y) l) -> (erased (In y xs) r))
-  (match erased l _ ((LastOne _) (InHere y (Nil (Nat)))) ((LastCons x _ xs1 l1) (InThere y x xs1 (last-in xs1 y l1)))))
-
 (def-fns _ $ (erased un-facts : (erased (Nat) d) (erased (List (Nat)) e n f r e1 f1 r1 e2 f2 r2) (erased (Hypermap d e n f) h)
     (erased (EcpU d e f r e1 f1 r1) u) (erased (EcpN (Succ (Succ d)) e1 f1 r1 e2 f2 r2) nn)
-    -> (erased (Nat) b c z ez) (erased (List (Nat)) fs0 fm q) (erased (CLast r b) lb) (erased (Nth (Nat) e b c) pc) (erased (Nth (Nat) f c z) pz)
-    (erased (Nth (Nat) e z ez) pez) (erased (Lt c d) lc) (erased (Lt ez d) lez) (erased (EdgeGrow e d e1) g) (erased (HSnoc (Nat) f d fs0) s)
+    -> (erased (Nat) b c z ez) (erased (List (Nat)) fs0 fm q) (erased (LastIs r b) lb) (erased (Nth (Nat) e b c) pc) (erased (Nth (Nat) f c z) pz)
+    (erased (Nth (Nat) e z ez) pez) (erased (Lt c d) lc) (erased (Lt ez d) lez) (erased (EdgeGrow e d e1) g) (erased (Snoc (Nat) f d fs0) s)
     (erased (Insert fs0 c (Succ d) f1) ins) (erased (EdgeGrow e1 (Succ (Succ d)) e2) g2) (erased (Insert f1 d (Succ (Succ d)) fm) i1)
     (erased (Insert fm ez (Succ (Succ (Succ d))) f2) i2) (erased (Eq (List (Nat)) r2 (Cons (Nat) (Succ d) (Cons (Nat) (Succ (Succ d)) q))) er))
   (let-match erased u (MkEcpU _ b c _ _ _ _ fs0 _ lb pc g s ins))
@@ -288,8 +285,8 @@
     -> (erased (Connected (Succ (Succ (Succ (Succ d)))) e2 n2 f2) cc2) (erased (Bridgeless (Succ (Succ (Succ (Succ d)))) e2 n2 f2) b2)
     (erased (Orbits (Succ (Succ (Succ (Succ d)))) f2 (Succ kf)) of2) (erased (Length (Nat) r2 (Succ k)) l2)
     (erased (QEuler (Succ (Succ (Succ (Succ d)))) (Succ k) (Succ kf)) qe2) (erased (List (Nat)) zs lab1 labU lab3 labY) (erased (Repeat (Nat) d (Zero) zs) rz)
-    (erased (HSnoc (Nat) zs (Succ (Zero)) lab1) s1) (erased (HSnoc (Nat) lab1 (Zero) labU) sU) (erased (HSnoc (Nat) labU (Succ (Zero)) lab3) s3)
-    (erased (HSnoc (Nat) lab3 (Zero) labY) sY) (erased (Respects labY f2 labY) rpY))
+    (erased (Snoc (Nat) zs (Succ (Zero)) lab1) s1) (erased (Snoc (Nat) lab1 (Zero) labU) sU) (erased (Snoc (Nat) labU (Succ (Zero)) lab3) s3)
+    (erased (Snoc (Nat) lab3 (Zero) labY) sY) (erased (Respects labY f2 labY) rpY))
   (let ((erased h1)) (pointed-hyper _ e1 n1 f1 r1 pm1))
   (let ((erased cc1) (erased b1) (erased of1) (erased qe1) (erased zs) (erased lab1) (erased labU) (erased rz) (erased s1) (erased sU) (erased rpU))
     (geo-u d k kf e n f r e1 n1 f1 r1 h u h1 cc b of qe))
@@ -314,7 +311,7 @@
     of2 l2 qe2 zs lab1 labU lab3 labY rz s1 sU s3 sY rpY))
 
 (def-fns _ $ (erased absurd ring-fixed : (erased (Nat) d b c z k) (erased (List (Nat)) e n f r) (erased (Hypermap d e n f) h) (erased (Cpring n r) cr)
-    (erased (CLast r b) lb) (erased (Nth (Nat) e b c) pc) (erased (Nth (Nat) f c z) pz) (erased (Nth (Nat) e z c) pez)
+    (erased (LastIs r b) lb) (erased (Nth (Nat) e b c) pc) (erased (Nth (Nat) f c z) pz) (erased (Nth (Nat) e z c) pez)
     (erased (Length (Nat) r (Succ (Succ k))) l) -> (erased (False) res))
   (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pn) (erased _)) (hyper-core d e n f h))
   (let ((erased nzz)) (hyper-node d z c z e n f h pz pez))
@@ -324,9 +321,9 @@
   (let-match erased (perm-inj d a b b n ni pn back nzz) (Refl _ _))
   (let-match erased l (LengthCons _ _ _ _ l1))
   (let-match erased l1 (LengthCons _ _ _ _ _))
-  (let-match erased lb (LastCons _ _ _ lb1))
+  (let-match erased lb (LIMore _ _ _ lb1))
   (let-match erased dp (DistCons _ _ out _))
-  (apart-irrefl b (notin-in b b p out (last-in p b lb1))))
+  (apart-irrefl b (notin-in b b p out (lastis-in p b lb1))))
 
 (def-fns _ $ (erased geo-h : (erased (Nat) d k kf) (erased (List (Nat)) e n f r e1 n1 f1 r1 e2 n2 f2 r2 e3 n3 f3 r3) (erased (PointedMap d e n f r) pm)
     (erased (EcpU d e f r e1 f1 r1) u) (erased (PointedMap (Succ (Succ d)) e1 n1 f1 r1) pm1) (erased (EcpN (Succ (Succ d)) e1 f1 r1 e2 f2 r2) nn)

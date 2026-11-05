@@ -186,7 +186,6 @@ The unit is these files in this order (`check.sh`), written without
 - `cpcomp`: the completeness half of ctree_mem_cpcolor.
 
 **Map surgery.**
-- `iealias`, `realias`: aliases.
 - `ringtrace`, `kempemap`: ring traces; `kempe.v` (`kempe-map`).
 - `patch`, `patch2`: `Patch`; `gcomp-split`, `bridgeless-patch`.
 - `split`: `split-reduces`.
@@ -203,7 +202,6 @@ The unit is these files in this order (`check.sh`), written without
   and Birkhoff's theorem (`birkhoff-reduces`).
 - `embed2`: colourings along dart maps (`embed-color`, `rem-kempe`).
 - `contract`, `contract2`: `Contraction` (contract_coloring).
-- `unav/realias`: an alias.
 
 **Unavoidability** (all in `unav/`).
 - `part`, `quiz`, `hubcap`, `present`: parts and ranges, quizzes,
@@ -265,7 +263,7 @@ its files named as in the load order:
   frontier labels rot fan build readback parta reduce hypgraph hypperm
   hypermap hypplane reduce2 hypeuler hypderived hyprelabel hypwalkup
   hypgeom hypjordan hyptree hypcount hypcubic cfmap colalias
-  unav/faces red/red cpmap red/color cfcolor red/configs unav/realias`,
+  unav/faces red/red cpmap red/color cfcolor red/configs`,
   then `unav/` `part quiz hubcap present fit dbound hubcapc obsmap dscore
   dsum posz pwalk hubsound pwsound conv cap data qfit rdart redc
   qwalk qembed qcert qtree qmirror unave qztcfs qztproof qztgoal`.

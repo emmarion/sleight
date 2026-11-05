@@ -1,20 +1,3 @@
-(def-adts $ (Elem : (Type A) (A x) ((List A) xs) -> Type)
-  enum
-  (many ElHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Elem A x (Cons A x rest)))
-  (many ElThere : (erased Type A) (erased A x y) (erased (List A) rest) (erased (Elem A x rest) p) -> (Elem A x (Cons A y rest))))
-
-; r is a suffix of rr.
-(def-adts $ (Suffix : (Type A) ((List A) r) ((List A) rr) -> Type)
-  enum
-  (many SufHere : (erased Type A) (erased (List A) rr) -> (Suffix A rr rr))
-  (many SufNext : (erased Type A) (erased A x) (erased (List A) r rr) (erased (Suffix A (Cons A x r) rr) p) -> (Suffix A r rr)))
-
-(def-fns _ $ (erased suffix-elem : (erased Type A) (erased A x) (erased (List A) r rr) (subterm erased (Suffix A r rr) p) (erased (Elem A x r) e) ->
-    (erased (Elem A x rr) q))
-  (match erased p _
-    ((SufHere _ _) e)
-    ((SufNext _ y _ _ p1) (suffix-elem A x (Cons A y r) rr p1 (ElThere A x y r e)))))
-
 (let ((erased RC)) (Rx (Ctree)))
 
 (def-adts $ (Hits : ((List RC) r) ((List (Gsym)) w) -> Type)
@@ -278,6 +261,3 @@
   (let ((erased p1)) (match erased ca (((GPart (GSG t) (GSG a) (GSG (GNode b0 b1 b2 b3))) q)) ((GCnE) (part-hit-e (GSG t) _ p)) ((GCnN _ _ _ _) p)))
   (match erased cb _ ((GCnE) (part-sym (GSG t) _ _ (part-hit-e (GSG t) _ (part-sym (GSG t) _ _ p1)))) ((GCnN _ _ _ _) p1)))
 
-(def-fns _ $ (erased ghit-cn : (erased (Gtree) a0 a1 a2 a3 a) (erased (List RC) r) (erased (GCn a0 a1 a2 a3 a) ca) (erased (GHit (GSG (GNode a0 a1 a2 a3)) r) h)
-    -> (erased (GHit (GSG a) r) res))
-  (match erased ca _ ((GCnE) (GHE r)) ((GCnN _ _ _ _) h)))

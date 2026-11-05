@@ -54,11 +54,6 @@
   (let ((erased ui)) (perm-under d idd idd (perm-id d idd io)))
   (values e2 n2 f2 s s0 h2 g2 sw sn l0 (cut-morph d z n ni s s0 n2 idd pn sw sn l0 ln2 cn pnz ui) (cut-morph d z f fi s s0 f2 idd pf sw sn l0 lf2 cf pfz ui)))
 
-(def-fns _ $ (erased lt-ne : (erased (Nat) a b) (erased (Lt a (Succ b)) p) (erased (Apart (Nat) Lt a b) ne) -> (erased (Lt a b) r))
-  (match erased ne _
-    ((ApLt _ _ _ _ l) l)
-    (absurd (ApGt _ _ _ _ l) (lt-irrefl b (lt-le-trans b a b l p)))))
-
 (def-fns _ $ (erased notin-unsnoc : (erased (Nat) x a) (erased (List (Nat)) xs ys) (subterm erased (Snoc (Nat) xs a ys) sn) (erased (NotIn x ys) o)
     -> (erased (NotIn x xs) r))
   (let-match erased sn (SnocCons _ y _ xs1 ys1 sn1) ((SnocNil _ _) (NotInNil x)))
@@ -95,8 +90,8 @@
   (let ((erased b) (erased pb)) (nth-exists _ s10 (Succ d0) a l1 la))
   (let ((erased pb2)) (snoc-old _ s10 s1 x b a sn1 pb))
   (values b (respects-at s10 s20 H i a b rh pa pb) (perm-val _ a b s1 s1 ps1 pb2)
-    (img-apart _ a (Succ d0) b x s1 s1 ps1 pb2 psd (ApLt _ _ a (Succ d0) la))
-    (img-apart _ a y1 b y s1 s1 ps1 pb2 (perm-inv _ y y1 s1 s1 ps1 py1) (img-apart (Succ d0) i d0 a y1 s2 s2 ps2 pa2 psd2 (ApLt _ _ i d0 li)))
+    (perm-apart _ a (Succ d0) b x s1 s1 ps1 pb2 psd (ApLt _ _ a (Succ d0) la))
+    (perm-apart _ a y1 b y s1 s1 ps1 pb2 (perm-inv _ y y1 s1 s1 ps1 py1) (perm-apart (Succ d0) i d0 a y1 s2 s2 ps2 pa2 psd2 (ApLt _ _ i d0 li)))
     (respects-at s2x s1 t b a i rt (perm-inv _ a b s1 s1 ps1 pb2) (snoc-old _ s2 s2x (Zero) i a sx (perm-inv (Succ d0) i a s2 s2 ps2 pa2)))))
 
 (def-fns _ $ (erased drop2-out : (erased (Nat) d0 x y u) (erased (List (Nat)) H t) (erased (Drop2 d0 x y H t) dr) (erased (Lt u (Succ (Succ d0))) lu)
@@ -105,10 +100,10 @@
   (let-match erased sw1 (MkSwap _ _ _ _ ps1 psx _))
   (let-match erased sw2 (MkSwap _ _ _ _ ps2 psy _))
   (let ((erased a) (erased pa) (erased la)) (perm-nth _ u s1 s1 ps1 lu))
-  (let ((erased na)) (img-apart _ u y a y1 s1 s1 ps1 pa py1 ny))
-  (let ((erased la1)) (lt-ne a (Succ d0) la (img-apart _ u x a (Succ d0) s1 s1 ps1 pa psx nx)))
+  (let ((erased na)) (perm-apart _ u y a y1 s1 s1 ps1 pa py1 ny))
+  (let ((erased la1)) (lt-ne a (Succ d0) la (perm-apart _ u x a (Succ d0) s1 s1 ps1 pa psx nx)))
   (let ((erased i) (erased pi) (erased li1)) (perm-nth (Succ d0) a s2 s2 ps2 la1))
-  (let ((erased li)) (lt-ne i d0 li1 (img-apart (Succ d0) a y1 i d0 s2 s2 ps2 pi psy na)))
+  (let ((erased li)) (lt-ne i d0 li1 (perm-apart (Succ d0) a y1 i d0 s2 s2 ps2 pi psy na)))
   (let-match erased (snoc-back _ s20 s2 y1 a i d0 sn2 l2 (perm-inv (Succ d0) a i s2 s2 ps2 pi)) (OrL _ _ p20)
     (absurd (OrR _ _ e) (let-match erased e (Refl _ _)) (lt-irrefl i li)))
   (let-match erased (snoc-back _ s10 s1 x u a (Succ d0) sn1 l1 (perm-inv _ u a s1 s1 ps1 pa)) (OrL _ _ p10)
@@ -128,7 +123,7 @@
   (let ((erased sw1b)) sw1)
   (let-match erased sw1b (MkSwap _ _ _ _ ps1 psx _))
   (let ((erased y1) (erased py1) (erased ly1)) (perm-nth _ y s1 s1 ps1 ly))
-  (let ((erased ly2)) (lt-ne y1 (Succ d0) ly1 (img-apart _ y x y1 (Succ d0) s1 s1 ps1 py1 psx nyx)))
+  (let ((erased ly2)) (lt-ne y1 (Succ d0) ly1 (perm-apart _ y x y1 (Succ d0) s1 s1 ps1 py1 psx nyx)))
   (let-match erased (snoc-back _ s10 s1 x y y1 (Succ d0) sn1 l10 (perm-inv _ y y1 s1 s1 ps1 py1)) (OrL _ _ p10)
     (absurd (OrR _ _ e1) (let-match erased e1 (Refl _ _)) (lt-irrefl y1 ly2)))
   (let ((erased _) (erased ni3) (erased fi3) (erased _) (erased _) (erased pn3) (erased pf3)) (hyper-core (Succ d0) e3 n3 f3 h3))
@@ -151,7 +146,7 @@
   (let ((erased t) (erased rt)) (respects-exists s2x s1 _ (perm-under _ s1 s1 ps1) (snoc-length _ s2 s2x (Zero) (Succ d0) sx (perm-length (Succ d0) s2 s2 ps2))))
   (values e4 n4 f4 H t h4 g4 (MkDrop2 d0 x y y1 H t s1 s10 s2 s20 s2x sw1 sn1 l10 py1 sw2 sn2 l20 sx rh rt)
     (morph-comp (Succ d0) s10 s20 H n n3 n4 ids1 idk mn3 io1 l10 u20 rh mn4) (morph-comp (Succ d0) s10 s20 H f f3 f4 ids1 idk mf3 io1 l10 u20 rh mf4)
-    (respects-length s10 s20 H d0 rh l20) (respects-under-vals s10 s20 H _ rh u10)
+    (respects-length s10 s20 H d0 rh l20) (respects-under-out s10 s20 H _ rh u10)
     (respects-distinct s10 s20 H (distinct-unsnoc x s10 s1 sn1 (perm-distinct _ s1 s1 ps1)) (distinct-unsnoc y1 s20 s2 sn2 (perm-distinct (Succ d0) s2 s2 ps2)) rh)))
 
 ; The node cycle x, y cut out, and x and y cut out of their faces, darts kept.
@@ -187,15 +182,15 @@
     -> (erased (Nth (Nat) n2 u v) r) (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy))
   (let-match erased w (MkWalk2 _ _ _ _ _ _ _ n1 _ _ _ _ h _ _ sn1 _ sn2 _ pxy pyx _ _ _))
   (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pmn) (erased _)) (hyper-core d e n f h))
-  (let ((erased nvx) (erased nvy)) (values (img-apart d u y v x n ni pmn pu pyx nuy) (img-apart d u x v y n ni pmn pu pxy nux)))
+  (let ((erased nvx) (erased nvy)) (values (perm-apart d u y v x n ni pmn pu pyx nuy) (perm-apart d u x v y n ni pmn pu pxy nux)))
   (values (skip2 x y u v n n1 n2 sn1 sn2 pu nux nuy nvx nvy) nvx nvy))
 
 (def-fns _ $ (erased w2-pre : (erased (Nat) d x y u v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy) (erased (Nth (Nat) n u v) pu) -> (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy))
   (let-match erased w (MkWalk2 _ _ _ _ _ _ _ _ _ _ _ _ h _ _ _ _ _ _ pxy pyx _ _ _))
   (let ((erased _) (erased ni) (erased _) (erased _) (erased _) (erased pmn) (erased _)) (hyper-core d e n f h))
-  (values (img-apart d v y u x ni n (perm-sym d n ni pmn) (perm-inv d u v n ni pmn pu) (perm-inv d x y n ni pmn pxy) nvy)
-    (img-apart d v x u y ni n (perm-sym d n ni pmn) (perm-inv d u v n ni pmn pu) (perm-inv d y x n ni pmn pyx) nvx)))
+  (values (perm-apart d v y u x ni n (perm-sym d n ni pmn) (perm-inv d u v n ni pmn pu) (perm-inv d x y n ni pmn pxy) nvy)
+    (perm-apart d v x u y ni n (perm-sym d n ni pmn) (perm-inv d u v n ni pmn pu) (perm-inv d y x n ni pmn pyx) nvx)))
 
 (def-fns _ $ (erased w2-face : (erased (Nat) d x y c v) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (Apart (Nat) Lt c x) ncx) (erased (Apart (Nat) Lt c y) ncy) (erased (Apart (Nat) Lt v x) nvx) (erased (Apart (Nat) Lt v y) nvy)
@@ -246,9 +241,9 @@
   (let ((erased _) (erased nby)) (plain-eq d y b e pl ly pb))
   (let ((erased pnw)) (hyper-node d w0 x a e n f h pw pax))
   (let ((erased ni1) (erased ni2)) (values (perm-inv d w0 a n ni pmn pnw) (perm-sym d n ni pmn)))
-  (values w0 pc pw pnw (img-apart d a y w0 x ni n ni2 ni1 (perm-inv d x y n ni pmn pxy) nay)
-    (img-apart d a x w0 y ni n ni2 ni1 (perm-inv d y x n ni pmn pyx) nax) nax
-    (img-apart d y a b x e nf pme pb pax (apart-sym a y nay)) nby))
+  (values w0 pc pw pnw (perm-apart d a y w0 x ni n ni2 ni1 (perm-inv d x y n ni pmn pxy) nay)
+    (perm-apart d a x w0 y ni n ni2 ni1 (perm-inv d y x n ni pmn pyx) nax) nax
+    (perm-apart d y a b x e nf pme pb pax (apart-sym a y nay)) nby))
 
 (def-fns _ $ (erased e2-x : (erased (Nat) d x y a b) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Nth (Nat) e x a) pa) (erased (Nth (Nat) e y b) pb) (erased (Apart (Nat) Lt a y) nay)
@@ -266,11 +261,6 @@
     (swap-geo d y x a b e n f h pl pyx pxy (apart-sym y x nyx) ly lx pa pb nax))
   (w2-edge d x y a b w0 e n f e2 n2 f2 w nwx nwy pnw (w2-face-y d x y b w0 e n f e2 n2 f2 w nbx nby nwx pfb pfy)))
 
-(def-fns _ $ (erased order2-mk : (erased (List (Nat)) p) (erased (Nat) u v) (erased (Nth (Nat) p u v) puv) (erased (Nth (Nat) p v u) pvu) (erased (Apart (Nat) Lt v u) ne)
-    -> (erased (Order p u (Succ (Succ (Zero)))) r))
-  (MkOrder p (Cons _ v (Nil _)) u v (Succ (Zero)) puv
-    (PathStep p (Cons _ u (Nil _)) (Nil _) v u u pvu (NotInCons v u (Nil _) ne (NotInNil v)) (PathHere p _ u)) (LengthCons _ v (Nil _) (Zero) (LengthNil _))))
-
 (def-fns _ $ (erased e2-order : (erased (Nat) d x y u) (erased (List (Nat)) e n f e2 n2 f2) (erased (Walk2 d x y e n f e2 n2 f2) w)
     (erased (AllOrder d e (Succ (Succ (Zero)))) pl) (erased (Lt u d) lu) (erased (Apart (Nat) Lt u x) nux) (erased (Apart (Nat) Lt u y) nuy)
     -> (erased (Order e2 u (Succ (Succ (Zero)))) r))
@@ -281,14 +271,14 @@
   (let-match erased (nat-eq v x) (Unequal _ _ _ _ nvx)
     ((Equal _ _ _)
       (let ((erased b) (erased pb) (erased _)) (perm-nth d y e nf pme ly))
-      (order2-mk e2 u b (e2-x d x y u b e n f e2 n2 f2 w pl pvu pb nuy)
-        (e2-y d x y b u e n f e2 n2 f2 w pl pb pvu (img-apart d y u b x e nf pme pb pv (apart-sym u y nuy))) (img-apart d y x b u e nf pme pb pvu nyx))))
+      (order2 e2 u b (e2-x d x y u b e n f e2 n2 f2 w pl pvu pb nuy)
+        (e2-y d x y b u e n f e2 n2 f2 w pl pb pvu (perm-apart d y u b x e nf pme pb pv (apart-sym u y nuy))) (perm-apart d y x b u e nf pme pb pvu nyx))))
   (let-match erased (nat-eq v y) (Unequal _ _ _ _ nvy)
     ((Equal _ _ _)
       (let ((erased a) (erased pa) (erased _)) (perm-nth d x e nf pme lx))
-      (order2-mk e2 u a (e2-y d x y u a e n f e2 n2 f2 w pl pvu pa nux)
-        (e2-x d x y a u e n f e2 n2 f2 w pl pa pvu (img-apart d x u a y e nf pme pa pv (apart-sym u x nux))) (img-apart d x y a u e nf pme pa pvu (apart-sym y x nyx)))))
-  (order2-mk e2 u v (e2-gen d x y u v e n f e2 n2 f2 w nux nuy nvx nvy pv) (e2-gen d x y v u e n f e2 n2 f2 w nvx nvy nux nuy pvu) nvu))
+      (order2 e2 u a (e2-y d x y u a e n f e2 n2 f2 w pl pvu pa nux)
+        (e2-x d x y a u e n f e2 n2 f2 w pl pa pvu (perm-apart d x u a y e nf pme pa pv (apart-sym u x nux))) (perm-apart d x y a u e nf pme pa pvu (apart-sym y x nyx)))))
+  (order2 e2 u v (e2-gen d x y u v e n f e2 n2 f2 w nux nuy nvx nvy pv) (e2-gen d x y v u e n f e2 n2 f2 w nvx nvy nux nuy pvu) nvu))
 
 (def-fns _ $ (erased oo-pull : (erased (Nat) d0 x y) (erased (List (Nat)) e n f e2 n2 f2 e4 e4i H t idk m) (erased (Walk2 (Succ (Succ d0)) x y e n f e2 n2 f2) w)
     (erased (AllOrder (Succ (Succ d0)) e (Succ (Succ (Zero)))) pl) (erased (Drop2 d0 x y H t) dr) (erased (HPerm d0 e4 e4i) pm)
@@ -382,7 +372,7 @@
   (let-match erased dr (MkDrop2 _ _ _ _ _ _ s1 _ s2 _ s2x sw1 _ _ _ sw2 _ _ sx _ rt))
   (let-match erased sw1 (MkSwap _ _ _ _ ps1 _ _))
   (let-match erased sw2 (MkSwap _ _ _ _ ps2 _ _))
-  (values (respects-under-vals s2x s1 t (Succ d0) rt (under-snoc-add s2 s2x (Zero) (Succ d0) sx (perm-under (Succ d0) s2 s2 ps2) (LtZ d0)))
+  (values (respects-under-out s2x s1 t (Succ d0) rt (under-snoc-add s2 s2x (Zero) (Succ d0) sx (perm-under (Succ d0) s2 s2 ps2) (LtZ d0)))
     (respects-length s2x s1 t _ rt (perm-length _ s1 s1 ps1))))
 
 ; ks0 = (k4 ++ [0]) . t.
@@ -621,7 +611,7 @@
   (let ((erased st2)) st)
   (let-match erased st2 (MkSet2 _ k1 _ _ _ _ _ s1 s2 _))
   (let ((erased lks)) (setnth-length _ k1 y _ cy ks s2 (setnth-length _ ks0 x _ cx k1 s1 lks0)))
-  (let ((erased uks)) (under-setnth k1 ks y cy 4 (under-setnth ks0 k1 x cx 4 (respects-under-vals k4x t ks0 4 rt (under-snoc-add k4 k4x (Zero) 4 sk u4 (LtZ _))) s1 lcx) s2 lcy))
+  (let ((erased uks)) (under-setnth k1 ks y cy 4 (under-setnth ks0 k1 x cx 4 (respects-under-out k4x t ks0 4 rt (under-snoc-add k4 k4x (Zero) 4 sk u4 (LtZ _))) s1 lcx) s2 lcy))
   (let ((erased ids) (erased iod)) (iota-exists (Succ (Succ d0))))
   (let ((erased ge) (erased gre)) (perm-graph _ e nf pme))
   (let ((erased gf) (erased grf)) (perm-graph _ f fi pmf))
@@ -681,7 +671,7 @@
 
 (def-fns _ $ (erased orders-three : (erased (Nat) d m) (erased (List (Nat)) e n f xs ks) (erased (Hypermap d e n f) h) (erased (Bridgeless d e n f) bl)
     (subterm erased (Orders n xs ks) os) (erased (Under ks (Succ (Succ (Succ (Succ (Zero)))))) uk) (erased (Under xs d) ux) (erased (Length (Nat) xs m) l)
-    -> (erased (HOr (Repeat (Nat) m (Succ (Succ (Succ (Zero)))) ks) (NodeTwo d n)) r))
+    -> (erased (Or (Repeat (Nat) m (Succ (Succ (Succ (Zero)))) ks) (NodeTwo d n)) r))
   (let-match erased os (OrdCons _ xs1 ks1 x _ o os1) ((OrdNil _) (let-match erased l (LengthNil _)) (OrL _ _ (RepeatNil _ _))))
   (let-match erased uk (UnderCons _ _ _ lk uk1))
   (let-match erased ux (UnderCons _ _ _ lx ux1))
@@ -703,7 +693,7 @@
     ((OrR _ _ nt) (OrR _ _ nt))))
 
 (def-fns _ $ (erased cubic-reduces : (erased (Level) B) (erased (Predates (Level) (level-of cubic-glue) B) pb) (erased (Nat) d) (erased (List (Nat)) e n f)
-    (erased (Pbpp d e n f) p) -> (erased (HOr (AllOrder d n (Succ (Succ (Succ (Zero))))) (Reduces B d e n f)) r))
+    (erased (Pbpp d e n f) p) -> (erased (Or (AllOrder d n (Succ (Succ (Succ (Zero))))) (Reduces B d e n f)) r))
   (let-match erased p (MkPbpp _ _ _ _ h _ bl _ pc))
   (let-match erased pc (MkPrecubic _ _ ks ol uk))
   (let ((erased ol2)) ol)
@@ -717,7 +707,7 @@
   enum
   (many MkMinArity : (erased (Level) F B)
       (erased (Fn F (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (AllOrder d n (Succ (Succ (Succ (Zero))))) cu)
-          (erased (Connected d e n f) conn) (erased (NoColoring e f) ncol) -> (erased (HOr (Pentagonal d f) (Reduces B d e n f)) r)) ma)
+          (erased (Connected d e n f) conn) (erased (NoColoring e f) ncol) -> (erased (Or (Pentagonal d f) (Reduces B d e n f)) r)) ma)
       -> (MinArity)))
 
 (def-fns _ $ (erased birk-geo : (erased (MinArity) mh) -> (erased (BirkGeo) r))
@@ -725,7 +715,7 @@
   (def-lvl B)
   (let ((erased qc) (erased qm)) (values (prove-predates (level-of cubic-glue) B) (prove-predates Bm B)))
   (def-fns _ $ (erased geo : (erased (Nat) d) (erased (List (Nat)) e n f) (erased (Pbpp d e n f) p) (erased (NoColoring e f) ncol)
-      (erased (Connected d e n f) conn) -> (erased (List (Nat)) ks) (erased (HOr (Geo d e n f ks) (Reduces B d e n f)) r))
+      (erased (Connected d e n f) conn) -> (erased (List (Nat)) ks) (erased (Or (Geo d e n f ks) (Reduces B d e n f)) r))
     (let-match erased (unary-4) (Refl _ _))
     (let-match erased (cubic-reduces B qc d e n f p) (OrL _ _ cu) ((OrR _ _ r) (values (Nil _) (OrR _ _ r))))
     (let-match erased (ma d e n f p cu conn ncol) (OrL _ _ pg) ((OrR _ _ r) (values (Nil _) (OrR _ _ (reduces-lift Bm B d e n f r qm)))))
