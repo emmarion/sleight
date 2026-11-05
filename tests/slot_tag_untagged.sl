@@ -1,4 +1,4 @@
-; expect: (Cons _ 1 $ Cons _ 1 $ Nil _)
+; expect: (Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Nil _)
 (def-adts $ (Mixed : -> Type) union
   (many Plain : -> (Mixed))
   (many Holds : (many (Nat) n) -> (Mixed)))
@@ -21,6 +21,4 @@
 (def-fns _ $ (many via : (many (ValCtor -> (Mixed)) k) -> (many (Nat) r))
   (vacant (k)))
 
-(let ((many _)) (plain))
-(let ((many _)) (built))
-(Cons _ (vacant $ Plain) $ Cons _ (via Plain) $ Nil _)
+(Cons _ (vacant $ plain) $ Cons _ (vacant $ built) $ Cons _ (vacant $ Plain) $ Cons _ (via Plain) $ Nil _)
