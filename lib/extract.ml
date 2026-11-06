@@ -9,12 +9,12 @@ let params vs = if vs = [] then "()" else concat " " (List.map (fun v -> "(" ^ v
 let arrows n = concat " -> " (List.init (max n 1) (fun _ -> if n = 0 then "unit" else "Obj.t") @ [ "Obj.t" ])
 let args es = if es = [] then "()" else concat " " es
 let obj_tuple n = concat " * " (List.init n (fun _ -> "Obj.t"))
-let tuple = function [] -> "(Obj.repr ())" | [ e ] -> e | es -> Printf.sprintf "(Obj.repr (%s))" (concat ", " es)
+let tuple = function [] -> "(to_any ())" | [ e ] -> e | es -> Printf.sprintf "(to_any (%s))" (concat ", " es)
 let untuple vs e body =
   match vs with
   | [] -> body
   | [ v ] -> Printf.sprintf "(let %s = %s in %s)" v e body
-  | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
+  | vs -> Printf.sprintf "(let (%s) = (of_any %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
 let quotes ss = "[" ^ String.concat "; " (List.map quote ss) ^ "]"
 let z n = Printf.sprintf "(Z.of_string %s)" ("\"" ^ Z.to_string n ^ "\"")
@@ -38,16 +38,16 @@ let rec raw value r =
 
 (* An extern type's unwrap into its model's shape and the wrap back (lib/ffi_core.ml's views), over Obj.t. *)
 let externs =
-  let view name lower args args' = Printf.sprintf "let des_%s v = Obj.repr (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (Obj.obj v)" name lower args name lower args' in
-  [ ("Array", view "Array" "array" "~array:Obj.obj ~wrap:Obj.repr" "~array:Obj.obj ~wrap:Obj.repr");
-    ("Slots", view "Slots" "slots" "~slots:Obj.obj ~list:Obj.repr" "~list:Obj.obj ~wrap:Obj.repr");
-    ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
-    ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
-    ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
-    ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr");
+  let view name lower args args' = Printf.sprintf "let des_%s v = to_any (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (of_any v)" name lower args name lower args' in
+  [ ("Array", view "Array" "array" "~array:of_any ~wrap:to_any" "~array:of_any ~wrap:to_any");
+    ("Slots", view "Slots" "slots" "~slots:of_any ~list:to_any" "~list:of_any ~wrap:to_any");
+    ("Nat", view "Nat" "nat" "~z:of_any ~nat:to_any" "~z:of_any ~nat:to_any");
+    ("Half", view "Half" "half" "~z:of_any ~nat:to_any" "~z:of_any ~nat:to_any");
+    ("Bytes", view "Bytes" "bytes" "~bytes:of_any ~u8:to_any ~wrap:to_any" "~z:of_any ~bytes:of_any ~wrap:to_any");
+    ("String", view "String" "str" "~slice:of_any ~u8:to_any ~str:to_any" "~z:of_any ~slice:of_any ~str:to_any");
     ( "Raw",
-      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~symbol:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
-       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v = (Obj.obj h : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, r, m, v)) ~unsymbol:Obj.obj ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
+      "let des_Raw v = to_any (Ffi_core.raw_view ~handle:to_any ~symbol:to_any ~get:of_any ~str:(fun s -> to_any ((s, 0, String.length s) : Ffi_core.slice)) ~nat:to_any ~pos:to_any ~list:to_any ~raw:to_any v)\n\
+       let con_Raw v = to_any (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v = (of_any h : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, r, m, v)) ~unsymbol:of_any ~text:(fun v -> let (s, o, l) = (of_any v : Ffi_core.slice) in String.sub s o l) ~z:of_any ~pos:of_any ~list:of_any ~raw:of_any (of_any v))" ) ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
 
@@ -124,7 +124,7 @@ let one_pattern cx n es =
   let k = ctor_at cx [n] 0 in
   if es = [] then k else k ^ " " ^ mutable_fields es
 
-let one_block cx es = Printf.sprintf "(Obj.repr (%s))" (one_pattern cx (List.length es) es)
+let one_block cx es = Printf.sprintf "(to_any (%s))" (one_pattern cx (List.length es) es)
 
 let bind_args cx es k =
   let n = stamp cx in
@@ -140,9 +140,9 @@ let build cx c es =
   match shape c.V.adt with
   | Ext name -> (
       match template (Ffi_templates.Build (name, c.index)) with
-      | None -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
+      | None -> Printf.sprintf "(con_%s (to_any (%s)))" name (pattern cx c es)
       | Some ps -> fill_build cx ps es)
-  | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern ~fill:"(Obj.repr ())" cx c es)
+  | Tagged _ -> Printf.sprintf "(to_any (%s))" (pattern ~fill:"(to_any ())" cx c es)
   | Untagged _ -> tuple es
   | Union -> one_block cx es
 
@@ -182,12 +182,12 @@ let field_match cx c target body =
     | Union -> let ns = [ c.V.arity ] in (type_name cx ns, ctor_at cx ns 0, "")
     | Untagged _ | Ext _ -> assert false in
   let r = Printf.sprintf "r%d" (stamp cx) in
-  Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> %s%s)" target ty k r (body r) rest
+  Printf.sprintf "(match (of_any %s : %s) with %s %s -> %s%s)" target ty k r (body r) rest
 
 let field_write cx c target stores =
   let imm, barred = List.partition (fun (_, m, _) -> m && !V.use_externs) stores in
   let offset = match shape c.V.adt with Tagged ns when wide ns -> 1 | _ -> 0 in
-  let raw = List.map (fun (i, _, s) -> Printf.sprintf "Array.unsafe_set (Obj.obj %s : int array) %d (Obj.obj %s : int)" target (i + offset) s) imm in
+  let raw = List.map (fun (i, _, s) -> Printf.sprintf "Array.unsafe_set (of_any %s : int array) %d (of_any %s : int)" target (i + offset) s) imm in
   let barred = if barred = [] then [] else [ field_match cx c target (fun r -> concat "; " (List.map (fun (i, _, s) -> Printf.sprintf "%s.f%d <- %s" r i s) barred)) ] in
   concat "; " (barred @ raw)
 
@@ -225,12 +225,12 @@ let dispatch cx a live scrut arms default =
       let ty = if List.length live < List.length ns && not (wide ns) then "yes " ^ narrow cx ns live else type_name cx ns in
       let default = if wide ns && default = None then Some "(absurd ())" else default in
       let body = cases (pattern cx) ^ match default with Some d -> " | _ -> " ^ d | None -> "" in
-      Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
+      Printf.sprintf "(match (of_any %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
   | Untagged _ -> (match arms with [ (_, vs, body) ] -> untuple vs scrut body | [] -> Option.get default | _ -> assert false)
   | Union ->
       (match arms with
       | [ (_, vs, body) ] ->
-          Printf.sprintf "(match (Obj.obj %s : %s) with %s -> %s)" scrut
+          Printf.sprintf "(match (of_any %s : %s) with %s -> %s)" scrut
             (type_name cx [List.length vs]) (one_pattern cx (List.length vs) vs) body
       | [] -> Option.value default ~default:"(absurd ())"
       | _ -> assert false)
@@ -252,17 +252,17 @@ let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 let rec value cx v =
   match v with
   | V.VExt (_, Bytes b) ->
-      named_buffer cx (Obj.repr b) (Printf.sprintf "Obj.repr (Bytes.of_string %s)" (quote (Bytes.to_string b))) ignore
+      named_buffer cx (Obj.repr b) (Printf.sprintf "to_any (Bytes.of_string %s)" (quote (Bytes.to_string b))) ignore
   | V.VExt (_, Slots t) ->
-      named_buffer cx (Obj.repr t) "Obj.repr (Ffi_core.slots_new ())" (fun name ->
+      named_buffer cx (Obj.repr t) "to_any (Ffi_core.slots_new ())" (fun name ->
         Array.iter (fun k ->
           let rhs = value cx (Obj.magic k) in
-          add_fill cx (Printf.sprintf "ignore (Ffi_core.slots_add (Obj.obj %s) %s)" name rhs)) (Ffi_core.slots_keys t))
+          add_fill cx (Printf.sprintf "ignore (Ffi_core.slots_add (of_any %s) %s)" name rhs)) (Ffi_core.slots_keys t))
   | V.VExt (_, Array a) ->
-      named_buffer cx (Obj.repr a) (Printf.sprintf "Obj.repr (Array.make %d (Obj.repr ()))" (Array.length a)) (fun name ->
+      named_buffer cx (Obj.repr a) (Printf.sprintf "to_any (Array.make %d (to_any ()))" (Array.length a)) (fun name ->
         Array.iteri (fun i v ->
           let rhs = value cx v in
-          add_fill cx (Printf.sprintf "Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)" name i rhs)) a)
+          add_fill cx (Printf.sprintf "Array.unsafe_set (of_any %s : Ffi_core.word array) %d (of_any %s : Ffi_core.word)" name i rhs)) a)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
       match List.find_opt (function V.VCtor (_, vs'), _ -> vs' == vs | _ -> false) !b with
@@ -271,7 +271,7 @@ let rec value cx v =
           incr cx.shared;
           let name = Printf.sprintf "block_%d" !(cx.shared) in
           b := (v, ref (Some name)) :: !b;
-          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
+          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(to_any ())"))));
           Array.iteri (fun i v ->
             let rhs = value cx v in
             add_fill cx (field_write cx c name [ (i, false, rhs) ])) vs;
@@ -301,20 +301,20 @@ and named_buffer cx key init fill =
 and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
-  | V.VWord n when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
-  | V.VWord n -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
+  | V.VWord n when Z.fits_int n -> Printf.sprintf "(to_any (%s))" (Z.to_string n)
+  | V.VWord n -> Printf.sprintf "(to_any (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, (Array _ | Bytes _ | Slots _)) as v -> value cx v
-  | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
-  | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw (value cx) r ^ ")"
+  | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(to_any ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
+  | V.VExt (_, Raw r) -> "(to_any " ^ raw (value cx) r ^ ")"
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with
       | Ext _ ->
-          let arms = List.map (fun c -> let fs = fields c in (c, fs, "(Obj.repr (" ^ pattern cx c fs ^ "))")) adt.ctors in
-          "(Obj.repr (fun held -> " ^ dispatch cx adt (List.init (List.length adt.ctors) Fun.id) "held" arms None ^ "))"
+          let arms = List.map (fun c -> let fs = fields c in (c, fs, "(to_any (" ^ pattern cx c fs ^ "))")) adt.ctors in
+          "(to_any (fun held -> " ^ dispatch cx adt (List.init (List.length adt.ctors) Fun.id) "held" arms None ^ "))"
       | _ -> "m_plain")
-  | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
-  | V.VToken -> "(Obj.repr ())"
-  | V.VHandle (x, r, m, v) -> Printf.sprintf "(Obj.repr (%s, %s))" (handle x r m) (value cx v)
+  | V.VFn cl -> "(to_any " ^ closure cx cl ^ ")"
+  | V.VToken -> "(to_any ())"
+  | V.VHandle (x, r, m, v) -> Printf.sprintf "(to_any (%s, %s))" (handle x r m) (value cx v)
 
 and closure cx cl =
   match List.assq_opt cl !(cx.closures) with
@@ -354,12 +354,12 @@ and fn cx scope name f =
               let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
               Printf.sprintf "~%s:(fun v -> %s) " label (dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None) in
             let extra = match f.fname with
-              | "flatten" -> view "rope" "REmpty" ^ "~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr "
+              | "flatten" -> view "rope" "REmpty" ^ "~slice:of_any ~z:of_any ~str:to_any "
               | "list-to-array" -> view "list" "Nil"
-              | "array-new" -> "~blank:(Obj.repr ()) "
+              | "array-new" -> "~blank:(to_any ()) "
               | _ -> "" in
-            let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (args (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
-            "(Obj.repr (" ^ call ^ "))")
+            let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (args (List.map (fun p -> "(of_any " ^ var p ^ ")") f.params)) in
+            "(to_any (" ^ call ^ "))")
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
@@ -386,14 +386,14 @@ and bound cx scope ids rhs body =
 and expr cx scope code = match code with
   | V.CVar x when x < 0 -> define cx x (Hashtbl.find V.literal_values x)
   | V.CVar x when V.resolve x <> x -> expr cx scope (V.CVar (V.resolve x))
-  | V.CVar x when List.mem_assoc x scope.locals -> "(Obj.repr " ^ var x ^ ")"
+  | V.CVar x when List.mem_assoc x scope.locals -> "(to_any " ^ var x ^ ")"
   | V.CVar x -> (
       match IntMap.find_opt x scope.capture with
       | None -> var x
-      | Some (V.VFn cl) -> "(Obj.repr " ^ closure cx cl ^ ")"
+      | Some (V.VFn cl) -> "(to_any " ^ closure cx cl ^ ")"
       | Some v -> define cx x v)
   | V.CConst v -> value cx v
-  | V.CErased -> "(Obj.repr ())"
+  | V.CErased -> "(to_any ())"
   (* Each entry that is not a name is bound before the tuple is built: ocamlopt (4.14.1 here; the issue
      reports 5.x too) fails with `Selection.size_expr` when a call it inlines puts an unused one-field
      block inside a tuple's field, https://github.com/ocaml/ocaml/issues/15154. *)
@@ -404,7 +404,7 @@ and expr cx scope code = match code with
       | V.Ctor, `Ctor c -> build cx c es
       | _, `Inline (fname, ps) -> fill_template cx fname ps es
       | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
-      | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
+      | _ -> Printf.sprintf "((of_any %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
   | V.CLet ([ x ], (V.CApp (f, es, _) as rhs), (V.CMatch ({ scrut = V.CVar y; shape = V.Known a; _ } as m) as body)) when V.resolve y = x -> (
       match head cx scope f with
       | `Inline (fname, ps) when Ffi_templates.outcomes ps && List.memq a (Option.to_list (Ffi.result_adt fname)) ->
@@ -420,7 +420,7 @@ and expr cx scope code = match code with
       let a, scrut =
         match m.shape with
         | V.Known a -> (a, scrut)
-        | V.Held (code, a) -> (a, Printf.sprintf "((Obj.obj %s : Obj.t -> Obj.t) %s)" (expr cx scope code) scrut)
+        | V.Held (code, a) -> (a, Printf.sprintf "((of_any %s : Obj.t -> Obj.t) %s)" (expr cx scope code) scrut)
       in
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CCellAlloc (c, ss) -> cell_block cx c (List.map (expr cx scope) ss)
@@ -432,14 +432,14 @@ and expr cx scope code = match code with
       let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
       Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) stores name
   | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
-  | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, _, v) = (Obj.obj %s : %s) in v)" (expr cx scope h) handle_ty
+  | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, _, v) = (of_any %s : %s) in v)" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledMult, [ h; e; m; u ]) ->
-      Printf.sprintf "(match (Obj.obj %s : %s) with (_, _, Ffi_core.Erased, _) -> %s | (_, _, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) handle_ty (expr cx scope e) (expr cx scope m) (expr cx scope u)
+      Printf.sprintf "(match (of_any %s : %s) with (_, _, Ffi_core.Erased, _) -> %s | (_, _, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) handle_ty (expr cx scope e) (expr cx scope m) (expr cx scope u)
   | V.CPrim (Special.SlotEq, [ a; b; none; some ]) -> Printf.sprintf "(if %s == %s then %s else %s)" (expr cx scope a) (expr cx scope b) (expr cx scope some) (expr cx scope none)
   | V.CPrim (Special.SettledErase, [ h ]) ->
-      Printf.sprintf "(Obj.repr (let (x, r, _, _) = (Obj.obj %s : %s) in (x, r, Ffi_core.Erased, Obj.repr ())))" (expr cx scope h) handle_ty
+      Printf.sprintf "(to_any (let (x, r, _, _) = (of_any %s : %s) in (x, r, Ffi_core.Erased, to_any ())))" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledType, [ h ]) ->
-      Printf.sprintf "(Obj.repr (match (Obj.obj %s : %s) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (%s, Obj.repr ())))" (expr cx scope h) handle_ty (handle !Term.type_entry MintedIs Erased)
+      Printf.sprintf "(to_any (match (of_any %s : %s) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, to_any ()) | _ -> (%s, to_any ())))" (expr cx scope h) handle_ty (handle !Term.type_entry MintedIs Erased)
   | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))
   | V.CAbsurd -> "(absurd ())"
 
@@ -488,7 +488,7 @@ let all a = List.init (List.length a.V.ctors) Fun.id
 let types cx =
   let builder c =
     let fs = fields c in
-    Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (Printf.sprintf "(Obj.repr (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
+    Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (Printf.sprintf "(to_any (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
   in
   let extern a = match shape a with Ext name -> Some (List.assoc name externs) | _ -> None in
   let builders = List.concat_map (fun a -> List.map builder a.V.ctors) cx.adts in
@@ -513,7 +513,7 @@ let types cx =
 let nat_z cx =
   let a = (Program.ctor cx.env "Zero").V.adt in
   match shape a with
-  | Ext _ -> "(fun (v : Obj.t) -> (Obj.obj v : Z.t))"
+  | Ext _ -> "(fun (v : Obj.t) -> (of_any v : Z.t))"
   | _ ->
       let arms = [ (Program.ctor cx.env "Zero", [], "n"); (Program.ctor cx.env "Succ", [ "p" ], "(go (Z.succ n) p)") ] in
       Printf.sprintf "(let rec go n (v : Obj.t) = %s in go Z.zero)" (dispatch cx a (all a) "v" arms None)
@@ -525,7 +525,7 @@ let literal_show cx ty =
   let string_body () =
     let a = (Program.ctor cx.env "SNil").V.adt in
     match shape a with
-    | Ext _ -> "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"
+    | Ext _ -> "(let (s, o, l) = (of_any v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"
     | _ ->
         let cons = Printf.sprintf "(Buffer.add_char b (Char.chr (Z.to_int (%s c))); go r)" (nat_z cx) in
         let arms = [ (Program.ctor cx.env "SNil", [], "()"); (Program.ctor cx.env "SCons", [ "c"; "r" ], cons) ] in
@@ -565,10 +565,10 @@ let rec show cx env ty =
                       ((match (Env.entry env (Elab.location_var env Reader.nowhere p)).state with
                         | Settled v ->
                             let name = Printf.sprintf "word_%d" (stamp cx) in
-                            Buffer.add_string cx.words (Printf.sprintf "let %s : Obj.t ref = ref (Obj.repr ())\n" name);
+                            Buffer.add_string cx.words (Printf.sprintf "let %s : Obj.t ref = ref (to_any ())\n" name);
                             add_fill cx (Printf.sprintf "%s := (%s)" name (value cx v));
                             "!" ^ name
-                        | Hypothetical -> "(Obj.repr ())"), i)
+                        | Hypothetical -> "(to_any ())"), i)
                   | None -> (Printf.sprintf "f%d" i, i + 1) in
                 Printf.sprintf "%s %s" (show cx env' (Env.type_of env' x)) word :: args i (word :: acc) rest
           in
@@ -600,10 +600,10 @@ let rec show cx env ty =
 (* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the
    FFI's slice converts to and from the host's string directly. *)
 let host_conversions =
-  "~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_slice:(fun v -> (Obj.obj v : Ffi_core.slice)) "
-let nat_conversion = "~nat_to_z:(fun v -> (Obj.obj v : Z.t)) ~nat_of_z:Obj.repr "
+  "~str_of_host:(fun s -> to_any ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_slice:(fun v -> (of_any v : Ffi_core.slice)) "
+let nat_conversion = "~nat_to_z:(fun v -> (of_any v : Z.t)) ~nat_of_z:to_any "
 let apply_ocaml =
-  "(fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs)"
+  "(fun (k : Obj.t) xs -> if xs = [] then (of_any k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (of_any f : Obj.t -> Obj.t) x) k xs)"
 let driver cx =
   let c = Program.ctor cx.env in
   let lam fs body = Printf.sprintf "(fun %s -> %s)" (params fs) body in
@@ -619,7 +619,7 @@ let driver cx =
       ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
-      ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")"); ("mk_exited", "(Obj.repr " ^ make "MkExited" ^ ")");
+      ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(to_any " ^ make "MkUsage" ^ ")"); ("mk_exited", "(to_any " ^ make "MkExited" ^ ")");
       ("un_job", un "MkExecJob" (fun _ fs -> Printf.sprintf "(%s)" (concat ", " fs))); ("exec_results", make "MkExecResults");
       ("request", un "WriteOut" variant); ("step", un "Exit" variant);
       ("is_start", un "Start" (fun ct _ -> string_of_bool (ct.V.cname = "Start")));
@@ -650,13 +650,13 @@ let item cx = function
             match kind with
             | Program.Main -> Printf.sprintf "run_main %s" e
             | Program -> Printf.sprintf "exit (run_program %s)" e
-            | Thunk t -> Printf.sprintf "print_final (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
+            | Thunk t -> Printf.sprintf "print_final (%s ((of_any %s : unit -> Obj.t) ()))" (show cx cx.env t) e
             | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
   | Env.Native (i, v, a) ->
       let arms = List.map (fun c -> (c, [], Printf.sprintf "print_int %d" c.V.index)) a.V.ctors in
-      Buffer.add_string cx.actions (Printf.sprintf "let () = if Sys.argv.(1) = \"%d\" then let v = (Obj.obj %s : unit -> Obj.t) () in %s\n" i (value cx v) (dispatch cx a (all a) "v" arms None))
+      Buffer.add_string cx.actions (Printf.sprintf "let () = if Sys.argv.(1) = \"%d\" then let v = (of_any %s : unit -> Obj.t) () in %s\n" i (value cx v) (dispatch cx a (all a) "v" arms None))
 
 let emit env items =
   let cx = collect env items in
@@ -666,10 +666,12 @@ let emit env items =
   let types = types cx in
   concat "\n"
     [ "[@@@warning \"-a\"]";
+      "[@@@alert \"-all\"]";
       "module Ffi_core = struct\n" ^ Ffi_core_source.source ^ "\nend";
       "module Driver_core = struct\n" ^ Driver_core_source.source ^ "\nend";
+      "open Ffi_core.Cast";
       "let source = ref \"-\"\nlet absurd () = prerr_endline (!source ^ \": runtime error: absurd code reached\"); exit 1";
-      "type yes = Yes_ and no = No_\nlet m_plain : Obj.t = Obj.repr (fun (v : Obj.t) : Obj.t -> v)";
+      "type yes = Yes_ and no = No_\nlet m_plain : Obj.t = to_any (fun (v : Obj.t) : Obj.t -> v)";
       types;
       driver;
       Buffer.contents cx.words;

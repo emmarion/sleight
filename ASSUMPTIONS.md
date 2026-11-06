@@ -185,7 +185,8 @@ that runs, in each of its modes.
     a printed final value is printed from data, a `String -> String`
     program is its `main` closure applied to stdin, and a `Program` is
     its first step, whose continuation is a closure.
-62. **Every extracted value is an `Obj.t`**, with `Obj.repr`/`Obj.obj`
+62. **Every extracted value is an `Obj.t`**, with `to_any`/`of_any`
+    (`Ffi_core.Cast`'s `%identity` casts to and from `Obj.t`)
     at every construction, application and pattern, the way Coq's
     extraction reaches for `Obj.magic`. A typed extraction is not
     attempted: dependent indices, existential erased fields, first-class
@@ -231,7 +232,7 @@ that runs, in each of its modes.
     instantiates them with `Value` constructors and a dune rule embeds
     the file's text into the interpreter (`Ffi_core_source`), which the
     extractor pastes into every output as `module Ffi_core`, instantiated
-    with `Obj.repr`/`Obj.obj`. An extern function extracts to a wrapper
+    with `to_any`/`of_any`. An extern function extracts to a wrapper
     around `Ffi_core.<name with - as _>` of the same arity; under
     `--no-extern` the extern types are ordinary variants and the extern
     functions' compiled models are extracted instead, so section 42's
@@ -1145,7 +1146,7 @@ of that agreement and of what the code does.
      (`succ-div` steps the remainder against `c` with `nat-cmp`) and
      returning the quotient and the remainder both `many`, with the
      erased characterisation once. The reference FFI returns the pair
-     as two values and the extracted body is `Obj.repr` of zarith's
+     as two values and the extracted body is `to_any` of zarith's
      pair, which is the tuple a two-value `let` takes apart. Whether
      `Mod` should be restated through `Mul` and `Add` is open. The
      implementations are zarith's `sub`, `mul`, `div` and `div_rem`;

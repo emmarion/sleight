@@ -5,85 +5,85 @@
 ; "fn F: text" is extern function F, {aI} its I-th non-erased argument, text its non-erased results; a
 ; function that decides a value may instead reach {bI}, at most once each, for the outcome of constructor I,
 ; with {fI.J} bound to its field J.
-match Nat: if (Obj.obj {s} : Z.t) == Z.zero then {b0} else let {f1.0} = (if Obj.is_int {s} then Obj.repr ((Obj.obj {s} : int) - 1) else Obj.repr (Z.pred (Obj.obj {s} : Z.t))) in {b1}
-build Nat 0: Obj.repr Z.zero
-build Nat 1: (if Obj.is_int {a0} && (Obj.obj {a0} : int) < max_int then Obj.repr ((Obj.obj {a0} : int) + 1) else Obj.repr (Z.succ (Obj.obj {a0} : Z.t)))
-match Half: let {t0} = (Obj.obj {s} : Z.t) in if {t0} == Z.zero then {b0} else let {t1} = (if Obj.is_int {s} then Obj.repr (((Obj.obj {s} : int) - 1) asr 1) else Obj.repr (Z.shift_right (Z.pred {t0}) 1)) in if (if Obj.is_int {s} then (Obj.obj {s} : int) land 1 = 1 else Z.is_odd {t0}) then let {f1.0} = {t1} in {b1} else let {f2.0} = {t1} in {b2}
-build Half 0: Obj.repr Z.zero
-build Half 1: Obj.repr (Z.succ (Z.shift_left (Obj.obj {a0} : Z.t) 1))
-build Half 2: Obj.repr (Z.add (Z.shift_left (Obj.obj {a0} : Z.t) 1) (Z.of_int 2))
-match String: let ({t0}, {t1}, {t2}) = (Obj.obj {s} : Ffi_core.slice) in if {t2} = 0 then {b0} else let {f1.0} = Obj.repr (Z.of_int (Char.code (String.unsafe_get {t0} {t1}))) and {f1.1} = Obj.repr (({t0}, {t1} + 1, {t2} - 1) : Ffi_core.slice) in {b1}
-build String 0: Obj.repr (("", 0, 0) : Ffi_core.slice)
-build String 1: let ({t0}, {t1}, {t2}) = (Obj.obj {a1} : Ffi_core.slice) in Obj.repr ((String.make 1 (Char.chr (Z.to_int (Obj.obj {a0} : Z.t))) ^ String.sub {t0} {t1} {t2}, 0, {t2} + 1) : Ffi_core.slice)
-fn nat-cmp: let {t3} () = {b0} and {t4} () = {b1} and {t5} () = {b2} in if Obj.is_int {a0} && Obj.is_int {a1} then (let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in if {t0} < {t1} then {t3} () else if {t0} = {t1} then {t4} () else {t5} ()) else let {t2} = Z.compare (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) in if {t2} < 0 then {t3} () else if {t2} = 0 then {t4} () else {t5} ()
-fn lt-dec: let {t0} () = {b0} and {t1} () = {b1} in if Obj.is_int {a0} && Obj.is_int {a1} then (if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {t0} () else {t1} ()) else if Z.lt (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t) then {t0} () else {t1} ()
-fn nat-zero-dec: if (Obj.obj {a0} : Z.t) == Z.zero then {b0} else {b1}
-fn nat-eq: if (if Obj.is_int {a0} then {a0} == {a1} else Z.equal (Obj.obj {a0} : Z.t) (Obj.obj {a1} : Z.t)) then {b0} else {b1}
-fn u62-add: Obj.repr ((Obj.obj {a0} : int) + (Obj.obj {a1} : int))
-fn u62-sub: Obj.repr ((Obj.obj {a0} : int) - (Obj.obj {a1} : int))
-fn u62-mul: Obj.repr ((Obj.obj {a0} : int) * (Obj.obj {a1} : int))
-fn u62-div: Obj.repr ((Obj.obj {a0} : int) / (Obj.obj {a1} : int))
-fn u62-mod: Obj.repr ((Obj.obj {a0} : int) mod (Obj.obj {a1} : int))
-fn u62-shl: Obj.repr ((Obj.obj {a0} : int) lsl (Obj.obj {a1} : int))
-fn u62-shr: Obj.repr ((Obj.obj {a0} : int) lsr (Obj.obj {a1} : int))
-fn u62-and: Obj.repr ((Obj.obj {a0} : int) land (Obj.obj {a1} : int))
-fn u62-or: Obj.repr ((Obj.obj {a0} : int) lor (Obj.obj {a1} : int))
-fn u62-xor: Obj.repr ((Obj.obj {a0} : int) lxor (Obj.obj {a1} : int))
-fn u62-inc: Obj.repr ((Obj.obj {a0} : int) + 1)
-fn u62-dec: Obj.repr ((Obj.obj {a0} : int) - 1)
-fn u62-divmod: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in Obj.repr (Obj.repr ({t0} / {t1}), Obj.repr ({t0} mod {t1}))
-fn u62-cmp: let {t0} = (Obj.obj {a0} : int) and {t1} = (Obj.obj {a1} : int) in if {t0} < {t1} then {b0} else if {t0} = {t1} then {b1} else {b2}
-fn u62-lt-dec: if (Obj.obj {a0} : int) < (Obj.obj {a1} : int) then {b0} else {b1}
+match Nat: if (of_any {s} : Z.t) == Z.zero then {b0} else let {f1.0} = (if Obj.is_int {s} then to_any ((of_any {s} : int) - 1) else to_any (Z.pred (of_any {s} : Z.t))) in {b1}
+build Nat 0: to_any Z.zero
+build Nat 1: (if Obj.is_int {a0} && (of_any {a0} : int) < max_int then to_any ((of_any {a0} : int) + 1) else to_any (Z.succ (of_any {a0} : Z.t)))
+match Half: let {t0} = (of_any {s} : Z.t) in if {t0} == Z.zero then {b0} else let {t1} = (if Obj.is_int {s} then to_any (((of_any {s} : int) - 1) asr 1) else to_any (Z.shift_right (Z.pred {t0}) 1)) in if (if Obj.is_int {s} then (of_any {s} : int) land 1 = 1 else Z.is_odd {t0}) then let {f1.0} = {t1} in {b1} else let {f2.0} = {t1} in {b2}
+build Half 0: to_any Z.zero
+build Half 1: to_any (Z.succ (Z.shift_left (of_any {a0} : Z.t) 1))
+build Half 2: to_any (Z.add (Z.shift_left (of_any {a0} : Z.t) 1) (Z.of_int 2))
+match String: let ({t0}, {t1}, {t2}) = (of_any {s} : Ffi_core.slice) in if {t2} = 0 then {b0} else let {f1.0} = to_any (Z.of_int (Char.code (String.unsafe_get {t0} {t1}))) and {f1.1} = to_any (({t0}, {t1} + 1, {t2} - 1) : Ffi_core.slice) in {b1}
+build String 0: to_any (("", 0, 0) : Ffi_core.slice)
+build String 1: let ({t0}, {t1}, {t2}) = (of_any {a1} : Ffi_core.slice) in to_any ((String.make 1 (Char.chr (Z.to_int (of_any {a0} : Z.t))) ^ String.sub {t0} {t1} {t2}, 0, {t2} + 1) : Ffi_core.slice)
+fn nat-cmp: let {t3} () = {b0} and {t4} () = {b1} and {t5} () = {b2} in if Obj.is_int {a0} && Obj.is_int {a1} then (let {t0} = (of_any {a0} : int) and {t1} = (of_any {a1} : int) in if {t0} < {t1} then {t3} () else if {t0} = {t1} then {t4} () else {t5} ()) else let {t2} = Z.compare (of_any {a0} : Z.t) (of_any {a1} : Z.t) in if {t2} < 0 then {t3} () else if {t2} = 0 then {t4} () else {t5} ()
+fn lt-dec: let {t0} () = {b0} and {t1} () = {b1} in if Obj.is_int {a0} && Obj.is_int {a1} then (if (of_any {a0} : int) < (of_any {a1} : int) then {t0} () else {t1} ()) else if Z.lt (of_any {a0} : Z.t) (of_any {a1} : Z.t) then {t0} () else {t1} ()
+fn nat-zero-dec: if (of_any {a0} : Z.t) == Z.zero then {b0} else {b1}
+fn nat-eq: if (if Obj.is_int {a0} then {a0} == {a1} else Z.equal (of_any {a0} : Z.t) (of_any {a1} : Z.t)) then {b0} else {b1}
+fn u62-add: to_any ((of_any {a0} : int) + (of_any {a1} : int))
+fn u62-sub: to_any ((of_any {a0} : int) - (of_any {a1} : int))
+fn u62-mul: to_any ((of_any {a0} : int) * (of_any {a1} : int))
+fn u62-div: to_any ((of_any {a0} : int) / (of_any {a1} : int))
+fn u62-mod: to_any ((of_any {a0} : int) mod (of_any {a1} : int))
+fn u62-shl: to_any ((of_any {a0} : int) lsl (of_any {a1} : int))
+fn u62-shr: to_any ((of_any {a0} : int) lsr (of_any {a1} : int))
+fn u62-and: to_any ((of_any {a0} : int) land (of_any {a1} : int))
+fn u62-or: to_any ((of_any {a0} : int) lor (of_any {a1} : int))
+fn u62-xor: to_any ((of_any {a0} : int) lxor (of_any {a1} : int))
+fn u62-inc: to_any ((of_any {a0} : int) + 1)
+fn u62-dec: to_any ((of_any {a0} : int) - 1)
+fn u62-divmod: let {t0} = (of_any {a0} : int) and {t1} = (of_any {a1} : int) in to_any (to_any ({t0} / {t1}), to_any ({t0} mod {t1}))
+fn u62-cmp: let {t0} = (of_any {a0} : int) and {t1} = (of_any {a1} : int) in if {t0} < {t1} then {b0} else if {t0} = {t1} then {b1} else {b2}
+fn u62-lt-dec: if (of_any {a0} : int) < (of_any {a1} : int) then {b0} else {b1}
 fn nat-fits-u62: if Obj.is_int {a0} then {b0} else {b1}
-fn u62-eq: if (Obj.obj {a0} : int) = (Obj.obj {a1} : int) then {b0} else {b1}
-fn bit-length: Obj.repr (Z.numbits (Obj.obj {a0} : Z.t))
-fn u62-bit-length: Obj.repr (Z.numbits (Obj.obj {a0} : Z.t))
-fn popcount: Obj.repr (Z.popcount (Obj.obj {a0} : Z.t))
-fn trailing-zeros: Obj.repr (Z.trailing_zeros (Obj.obj {a0} : Z.t))
-fn u62-trailing-zeros: Obj.repr (Z.trailing_zeros (Obj.obj {a0} : Z.t))
-fn u62-popcount: let {t0} = (Obj.obj {a0} : int) in let {t1} = {t0} - (({t0} lsr 1) land 0x1555555555555555) in let {t2} = ({t1} land 0x3333333333333333) + (({t1} lsr 2) land 0x3333333333333333) in Obj.repr (((({t2} + ({t2} lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56)
-fn u62-bit-test: if ((Obj.obj {a0} : int) lsr (Obj.obj {a1} : int)) land 1 = 0 then {b0} else {b1}
-fn array-pluck: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
-fn array-get: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
-fn array-get-many: Obj.repr (Array.unsafe_get (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int))
-fn array-place: Array.unsafe_set (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word); Obj.repr ()
-fn array-swap: let {t0} = (Obj.obj {a0} : Ffi_core.word array) and {t1} = (Obj.obj {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (Obj.obj {a2} : Ffi_core.word); Obj.repr {t2}
-fn array-place-imm: Array.unsafe_set (Obj.obj {a0} : int array) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
-fn array-swap-imm: let {t0} = (Obj.obj {a0} : int array) and {t1} = (Obj.obj {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (Obj.obj {a2} : int); Obj.repr {t2}
-fn array-make: Obj.repr (Array.make (Z.to_int (Obj.obj {a0} : Z.t)) {a1})
-fn array-length: Obj.repr (Array.length (Obj.obj {a0} : Ffi_core.word array))
+fn u62-eq: if (of_any {a0} : int) = (of_any {a1} : int) then {b0} else {b1}
+fn bit-length: to_any (Z.numbits (of_any {a0} : Z.t))
+fn u62-bit-length: to_any (Z.numbits (of_any {a0} : Z.t))
+fn popcount: to_any (Z.popcount (of_any {a0} : Z.t))
+fn trailing-zeros: to_any (Z.trailing_zeros (of_any {a0} : Z.t))
+fn u62-trailing-zeros: to_any (Z.trailing_zeros (of_any {a0} : Z.t))
+fn u62-popcount: let {t0} = (of_any {a0} : int) in let {t1} = {t0} - (({t0} lsr 1) land 0x1555555555555555) in let {t2} = ({t1} land 0x3333333333333333) + (({t1} lsr 2) land 0x3333333333333333) in to_any (((({t2} + ({t2} lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56)
+fn u62-bit-test: if ((of_any {a0} : int) lsr (of_any {a1} : int)) land 1 = 0 then {b0} else {b1}
+fn array-pluck: to_any (Array.unsafe_get (of_any {a0} : Ffi_core.word array) (of_any {a1} : int))
+fn array-get: to_any (Array.unsafe_get (of_any {a0} : Ffi_core.word array) (of_any {a1} : int))
+fn array-get-many: to_any (Array.unsafe_get (of_any {a0} : Ffi_core.word array) (of_any {a1} : int))
+fn array-place: Array.unsafe_set (of_any {a0} : Ffi_core.word array) (of_any {a1} : int) (of_any {a2} : Ffi_core.word); to_any ()
+fn array-swap: let {t0} = (of_any {a0} : Ffi_core.word array) and {t1} = (of_any {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (of_any {a2} : Ffi_core.word); to_any {t2}
+fn array-place-imm: Array.unsafe_set (of_any {a0} : int array) (of_any {a1} : int) (of_any {a2} : int); to_any ()
+fn array-swap-imm: let {t0} = (of_any {a0} : int array) and {t1} = (of_any {a1} : int) in let {t2} = Array.unsafe_get {t0} {t1} in Array.unsafe_set {t0} {t1} (of_any {a2} : int); to_any {t2}
+fn array-make: to_any (Array.make (Z.to_int (of_any {a0} : Z.t)) {a1})
+fn array-length: to_any (Array.length (of_any {a0} : Ffi_core.word array))
 fn array-length-dec: ignore {a0}; {b0}
 fn array-length-dec-many: ignore {a0}; {b0}
-fn array-length-many: Obj.repr (Array.length (Obj.obj {a0} : Ffi_core.word array))
-fn bytes-make: Obj.repr (Bytes.make (Z.to_int (Obj.obj {a0} : Z.t)) (Char.unsafe_chr (Obj.obj {a1} : int)))
-fn bytes-get: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
-fn bytes-get-many: Obj.repr (Char.code (Bytes.unsafe_get (Obj.obj {a0} : bytes) (Obj.obj {a1} : int)))
-fn bytes-set: Bytes.unsafe_set (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Char.unsafe_chr (Obj.obj {a2} : int)); Obj.repr ()
-fn bytes-get16: Obj.repr (Ffi_core.le_get16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
-fn bytes-get16-many: Obj.repr (Ffi_core.le_get16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
-fn bytes-get32: Obj.repr (Ffi_core.le_get32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
-fn bytes-get32-many: Obj.repr (Ffi_core.le_get32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int))
-fn bytes-set16: Ffi_core.le_set16 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
-fn bytes-set32: Ffi_core.le_set32 (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int); Obj.repr ()
-fn str-get16: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget16 {t0} ({t1} + (Obj.obj {a1} : int)))
-fn str-get32: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Ffi_core.le_sget32 {t0} ({t1} + (Obj.obj {a1} : int)))
-fn bytes-fill: Bytes.unsafe_fill (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Char.unsafe_chr (Obj.obj {a3} : int)); Obj.repr ()
-fn bytes-cmp: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
-fn bytes-cmp-unique-many: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
-fn bytes-cmp-many: let {t0} = Ffi_core.range_compare (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : int) (Obj.obj {a3} : bytes) (Obj.obj {a4} : int) (Obj.obj {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
-fn bytes-length: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
+fn array-length-many: to_any (Array.length (of_any {a0} : Ffi_core.word array))
+fn bytes-make: to_any (Bytes.make (Z.to_int (of_any {a0} : Z.t)) (Char.unsafe_chr (of_any {a1} : int)))
+fn bytes-get: to_any (Char.code (Bytes.unsafe_get (of_any {a0} : bytes) (of_any {a1} : int)))
+fn bytes-get-many: to_any (Char.code (Bytes.unsafe_get (of_any {a0} : bytes) (of_any {a1} : int)))
+fn bytes-set: Bytes.unsafe_set (of_any {a0} : bytes) (of_any {a1} : int) (Char.unsafe_chr (of_any {a2} : int)); to_any ()
+fn bytes-get16: to_any (Ffi_core.le_get16 (of_any {a0} : bytes) (of_any {a1} : int))
+fn bytes-get16-many: to_any (Ffi_core.le_get16 (of_any {a0} : bytes) (of_any {a1} : int))
+fn bytes-get32: to_any (Ffi_core.le_get32 (of_any {a0} : bytes) (of_any {a1} : int))
+fn bytes-get32-many: to_any (Ffi_core.le_get32 (of_any {a0} : bytes) (of_any {a1} : int))
+fn bytes-set16: Ffi_core.le_set16 (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int); to_any ()
+fn bytes-set32: Ffi_core.le_set32 (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int); to_any ()
+fn str-get16: let ({t0}, {t1}, _) = (of_any {a0} : Ffi_core.slice) in to_any (Ffi_core.le_sget16 {t0} ({t1} + (of_any {a1} : int)))
+fn str-get32: let ({t0}, {t1}, _) = (of_any {a0} : Ffi_core.slice) in to_any (Ffi_core.le_sget32 {t0} ({t1} + (of_any {a1} : int)))
+fn bytes-fill: Bytes.unsafe_fill (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int) (Char.unsafe_chr (of_any {a3} : int)); to_any ()
+fn bytes-cmp: let {t0} = Ffi_core.range_compare (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int) (of_any {a3} : bytes) (of_any {a4} : int) (of_any {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
+fn bytes-cmp-unique-many: let {t0} = Ffi_core.range_compare (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int) (of_any {a3} : bytes) (of_any {a4} : int) (of_any {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
+fn bytes-cmp-many: let {t0} = Ffi_core.range_compare (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : int) (of_any {a3} : bytes) (of_any {a4} : int) (of_any {a5} : int) in if {t0} < 0 then {b0} else if {t0} = 0 then {b1} else {b2}
+fn bytes-length: to_any (Bytes.length (of_any {a0} : bytes))
 fn bytes-length-dec: ignore {a0}; {b0}
 fn bytes-length-dec-many: ignore {a0}; {b0}
-fn bytes-length-many: Obj.repr (Bytes.length (Obj.obj {a0} : bytes))
-fn str-bytes-copy: let ({t0}, {t1}, {t2}) = (Obj.obj {a0} : Ffi_core.slice) in let {t3} = Bytes.create {t2} in Bytes.blit_string {t0} {t1} {t3} 0 {t2}; Obj.repr {t3}
-fn str-get: let ({t0}, {t1}, _) = (Obj.obj {a0} : Ffi_core.slice) in Obj.repr (Char.code (String.unsafe_get {t0} ({t1} + (Obj.obj {a1} : int))))
-fn bytes-str: let {t0} = (Obj.obj {a0} : bytes) in Obj.repr ((Bytes.unsafe_to_string {t0}, 0, Bytes.length {t0}) : Ffi_core.slice)
-fn bytes-copy: Obj.repr (Bytes.copy (Obj.obj {a0} : bytes))
-fn array-copy: Obj.repr (Array.copy (Obj.obj {a0} : Ffi_core.word array))
-fn bytes-sub: let {t0} = Bytes.create (Obj.obj {a2} : int) in Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) {t0} 0 (Obj.obj {a2} : int); Obj.repr {t0}
-fn bytes-blit: Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : bytes) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
-fn bytes-blit-many: Bytes.unsafe_blit (Obj.obj {a0} : bytes) (Obj.obj {a1} : int) (Obj.obj {a2} : bytes) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
-fn array-sub: Obj.repr (Ffi_core.array_unsafe_sub (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : int))
-fn array-blit: Ffi_core.array_unsafe_blit (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word array) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
-fn array-blit-many: Ffi_core.array_unsafe_blit (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word array) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
-fn array-move: Ffi_core.array_unsafe_blit (Obj.obj {a0} : Ffi_core.word array) (Obj.obj {a1} : int) (Obj.obj {a2} : Ffi_core.word array) (Obj.obj {a3} : int) (Obj.obj {a4} : int); Obj.repr ()
+fn bytes-length-many: to_any (Bytes.length (of_any {a0} : bytes))
+fn str-bytes-copy: let ({t0}, {t1}, {t2}) = (of_any {a0} : Ffi_core.slice) in let {t3} = Bytes.create {t2} in Bytes.blit_string {t0} {t1} {t3} 0 {t2}; to_any {t3}
+fn str-get: let ({t0}, {t1}, _) = (of_any {a0} : Ffi_core.slice) in to_any (Char.code (String.unsafe_get {t0} ({t1} + (of_any {a1} : int))))
+fn bytes-str: let {t0} = (of_any {a0} : bytes) in to_any ((Bytes.unsafe_to_string {t0}, 0, Bytes.length {t0}) : Ffi_core.slice)
+fn bytes-copy: to_any (Bytes.copy (of_any {a0} : bytes))
+fn array-copy: to_any (Array.copy (of_any {a0} : Ffi_core.word array))
+fn bytes-sub: let {t0} = Bytes.create (of_any {a2} : int) in Bytes.unsafe_blit (of_any {a0} : bytes) (of_any {a1} : int) {t0} 0 (of_any {a2} : int); to_any {t0}
+fn bytes-blit: Bytes.unsafe_blit (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : bytes) (of_any {a3} : int) (of_any {a4} : int); to_any ()
+fn bytes-blit-many: Bytes.unsafe_blit (of_any {a0} : bytes) (of_any {a1} : int) (of_any {a2} : bytes) (of_any {a3} : int) (of_any {a4} : int); to_any ()
+fn array-sub: to_any (Ffi_core.array_unsafe_sub (of_any {a0} : Ffi_core.word array) (of_any {a1} : int) (of_any {a2} : int))
+fn array-blit: Ffi_core.array_unsafe_blit (of_any {a0} : Ffi_core.word array) (of_any {a1} : int) (of_any {a2} : Ffi_core.word array) (of_any {a3} : int) (of_any {a4} : int); to_any ()
+fn array-blit-many: Ffi_core.array_unsafe_blit (of_any {a0} : Ffi_core.word array) (of_any {a1} : int) (of_any {a2} : Ffi_core.word array) (of_any {a3} : int) (of_any {a4} : int); to_any ()
+fn array-move: Ffi_core.array_unsafe_blit (of_any {a0} : Ffi_core.word array) (of_any {a1} : int) (of_any {a2} : Ffi_core.word array) (of_any {a3} : int) (of_any {a4} : int); to_any ()

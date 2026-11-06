@@ -1,3 +1,10 @@
+module Cast = struct
+  external to_any : 'a -> Obj.t = "%identity"
+  external of_any : Obj.t -> 'a = "%identity"
+  external cast : 'a -> 'b = "%identity"
+end
+open Cast
+
 type slice = string * int * int
 
 type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown | Framed of int * loc
@@ -17,7 +24,7 @@ type dec = Yes | No
 type eq_dec = Equal | Unequal
 type bit = Bit0 | Bit1
 
-let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
+let () = if Sys.int_size <> 63 || not (Obj.is_int (to_any (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
 let () = if Sys.max_array_length >= 1 lsl 54 || Sys.max_string_length >= 1 lsl 57 then failwith "this runtime needs arrays shorter than 2^54 and byte strings shorter than 2^57"
 
 let nat_view ~z ~nat v = let n = z v in if Z.equal n Z.zero then Zero else Succ (nat (Z.pred n))
@@ -86,8 +93,8 @@ let nat_and = Z.logand
 let nat_or = Z.logor
 let nat_xor = Z.logxor
 let shr n k = if Z.fits_int k then Z.shift_right n (Z.to_int k) else Z.zero
-let small (a : Z.t) : int = Obj.magic a
-let u62 f a b : Z.t = Obj.magic (f (small a) (small b) : int)
+let small (a : Z.t) : int = cast a
+let u62 f a b : Z.t = cast (f (small a) (small b) : int)
 let u62_add = u62 ( + )
 let u62_sub = u62 ( - )
 let u62_mul = u62 ( * )
@@ -98,12 +105,12 @@ let u62_shr = u62 ( lsr )
 let u62_and = u62 ( land )
 let u62_or = u62 ( lor )
 let u62_xor = u62 ( lxor )
-let u62_inc a : Z.t = Obj.magic (small a + 1 : int)
-let u62_dec a : Z.t = Obj.magic (small a - 1 : int)
+let u62_inc a : Z.t = cast (small a + 1 : int)
+let u62_dec a : Z.t = cast (small a - 1 : int)
 let u62_divmod a b = (u62_div a b, u62_mod a b)
 let u62_cmp a b = order (compare (small a) (small b))
 let u62_lt_dec a b = decide (small a < small b)
-let nat_fits_u62 a = decide (Obj.is_int (Obj.repr a))
+let nat_fits_u62 a = decide (Obj.is_int (to_any a))
 let u62_eq a b = eq_dec (small a = small b)
 let u62_bit_length = bit_length
 let u62_bit_test n k = bit ((small n lsr small k) land 1 = 1)
@@ -113,7 +120,7 @@ let u62_popcount n : Z.t =
   let x = small n in
   let x = x - ((x lsr 1) land 0x1555555555555555) in
   let x = (x land 0x3333333333333333) + ((x lsr 2) land 0x3333333333333333) in
-  Obj.magic ((((x + (x lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56 : int)
+  cast ((((x + (x lsr 4)) land 0x0f0f0f0f0f0f0f0f) * 0x0101010101010101) lsr 56 : int)
 let u62_trailing_zeros = trailing_zeros
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
@@ -199,39 +206,39 @@ let raw_of ~unhandle ~unsymbol ~text ~z ~pos ~list ~raw m =
 
 (* No host float is ever a value of the language, so no array is a flat float array, and an extracted template
    types an array's elements as [word] rather than [Obj.t], which lets OCaml skip its float check on each access.
-   A word may be an immediate or a pointer, as [word]'s own values are, and never a float. *)
-type word = Imm | Ptr of int
+   A word may be an immediate or a pointer, never a float. *)
+type word = ..
 
 let array_view ~array ~wrap v =
   let a = array v in
   let length = Array.length a in
-  if length = 0 then ANil else ACons (Obj.magic (Array.unsafe_get (Obj.magic a : word array) 0), wrap (Array.sub a 1 (length - 1)))
+  if length = 0 then ANil else ACons (cast (Array.unsafe_get (cast a : word array) 0), wrap (Array.sub a 1 (length - 1)))
 
 let array_of ~array ~wrap = function ANil -> wrap [||] | ACons (x, tail) -> wrap (Array.append [| x |] (array tail))
 let array_new ~blank n = Array.make (Z.to_int n) blank
 let array_make n x = array_new ~blank:x n
 
 let array_swap a i x =
-  let a = (Obj.magic a : word array) in
+  let a = (cast a : word array) in
   let old = Array.unsafe_get a (small i) in
-  Array.unsafe_set a (small i) (Obj.magic x : word);
-  Obj.magic old
+  Array.unsafe_set a (small i) (cast x : word);
+  cast old
 
-let array_pluck a i = Obj.magic (Array.unsafe_get (Obj.magic a : word array) (small i))
+let array_pluck a i = cast (Array.unsafe_get (cast a : word array) (small i))
 let array_get = array_pluck
 let array_get_many = array_pluck
-let array_place a i x = Array.unsafe_set (Obj.magic a : word array) (small i) (Obj.magic x : word)
+let array_place a i x = Array.unsafe_set (cast a : word array) (small i) (cast x : word)
 let array_length a = Z.of_int (Array.length a)
 let array_length_many = array_length
 let array_length_dec (_ : 'a array) = Yes
 let array_length_dec_many = array_length_dec
 let array_swap_imm a i x =
-  let a = (Obj.magic a : int array) in
+  let a = (cast a : int array) in
   let old = Array.unsafe_get a (small i) in
-  Array.unsafe_set a (small i) (Obj.magic x : int);
-  Obj.magic old
+  Array.unsafe_set a (small i) (cast x : int);
+  cast old
 
-let array_place_imm a i x = Array.unsafe_set (Obj.magic a : int array) (small i) (Obj.magic x : int)
+let array_place_imm a i x = Array.unsafe_set (cast a : int array) (small i) (cast x : int)
 let list_to_array ~list v = let rec go acc v = match list v with Nil -> Array.of_list (List.rev acc) | Cons (x, rest) -> go (x :: acc) rest in go [] v
 
 let byte (b : bytes) i = Z.of_int (Char.code (Bytes.unsafe_get b i))
@@ -309,7 +316,7 @@ let array_move = array_blit
    (runtime/array.c, 4.14 through 5.5). caml_blit_bytes is a plain memmove there; on 4.14.1 it measured
    4-18x faster than Array.blit on an old destination and about even on a young one. *)
 external blit_words : Obj.t -> int -> Obj.t -> int -> int -> unit = "caml_blit_bytes" [@@noalloc]
-let array_blit_imm src i dst j n = let w = Sys.word_size / 8 in blit_words (Obj.repr src) (small i * w) (Obj.repr dst) (small j * w) (small n * w)
+let array_blit_imm src i dst j n = let w = Sys.word_size / 8 in blit_words (to_any src) (small i * w) (to_any dst) (small j * w) (small n * w)
 let array_blit_many_imm = array_blit_imm
 let array_move_imm = array_blit_imm
 
@@ -326,7 +333,7 @@ type slots = {
   mutable sentinel_at : int;  (* [sentinel]'s address when it was allocated *)
   mutable compactions_seen : int }  (* [compactions] when [old] was last built; -1 forces a rebuild *)
 
-let address (x : word) : int = 2 * (Obj.magic x : int)
+let address (x : word) : int = 2 * (Obj.magic (Sys.opaque_identity x) : int)
 (* An earlier version counted compactions with a GC alarm, as below. It appeared to work on OCaml 5.5.1 but not
    on 4.14.1, where Gc.compact seemed to run the alarm before compacting, so the count lagged a major cycle and
    lookups after a compaction could miss (tests/slots_compact.sl):
@@ -337,8 +344,8 @@ let address (x : word) : int = 2 * (Obj.magic x : int)
           ignore (Gc.create_alarm (fun () -> let c = (Gc.quick_stat ()).compactions in if c <> !seen then (seen := c; incr compactions)))) *)
 let compactions () = (Gc.quick_stat ()).compactions
 
-let renew_sentinel t = let s = ref 0 in t.sentinel <- s; t.sentinel_at <- address (Obj.magic s)
-let moved t = address (Obj.magic t.sentinel) <> t.sentinel_at
+let renew_sentinel t = let s = ref 0 in t.sentinel <- s; t.sentinel_at <- address (cast s)
+let moved t = address (cast t.sentinel) <> t.sentinel_at
 
 let rec sync t =
   if t.compactions_seen <> compactions () then begin
@@ -364,10 +371,10 @@ let rec slots_lookup t (s : word) =
   ignore (Sys.opaque_identity (ref ()));
   if moved t || compacted <> compactions () then slots_lookup t s else r
 
-let slots_find t s = match slots_lookup t (Obj.magic s) with Some i -> SlotFound i | None -> SlotMissing
+let slots_find t s = match slots_lookup t (cast s) with Some i -> SlotFound i | None -> SlotMissing
 
 let slots_add t s =
-  let s = (Obj.magic s : word) and i = t.count in
+  let s = (cast s : word) and i = t.count in
   sync t;
   if i = Array.length t.keys then begin
     let keys = Array.make (max 8 (2 * i)) s in
@@ -377,13 +384,13 @@ let slots_add t s =
   Hashtbl.add t.young (address s) i; sync t;
   i
 
-let slots_intern t s = match slots_lookup t (Obj.magic s) with Some i -> SlotExisting i | None -> SlotAdded (slots_add t s)
+let slots_intern t s = match slots_lookup t (cast s) with Some i -> SlotExisting i | None -> SlotAdded (slots_add t s)
 
 let slots_length t = t.count
 let slots_keys t = Array.sub t.keys 0 t.count
 
 type 'v slots_model = MkSlots of 'v
-let slots_view ~slots ~list v = MkSlots (Array.fold_left (fun rest k -> list (Cons (Obj.magic k, rest))) (list Nil) (slots_keys (slots v)))
+let slots_view ~slots ~list v = MkSlots (Array.fold_left (fun rest k -> list (Cons (cast k, rest))) (list Nil) (slots_keys (slots v)))
 let slots_of ~list ~wrap (MkSlots l) =
   let rec oldest_first acc v = match list v with Nil -> acc | Cons (k, rest) -> oldest_first (k :: acc) rest in
   let t = slots_new () in
