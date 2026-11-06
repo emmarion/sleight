@@ -1,0 +1,12 @@
+; expect: (Cons _ 7 $ Cons _ 10 $ Nil _)
+(def-lvl M)
+(def-fns _ $ (many mk : (many (Nat) a) -> (many (Fn M (many (Nat) x) -> (many (Nat) y)) f))
+  (def-fns M $ (many plus : (many (Nat) x) -> (many (Nat) y)) (nat-add a x))
+  plus)
+(let ((unique c)) (cell-alloc Cons))
+(let ((many h)) (mk 3))
+(let ((many xs)) (share (c _ h (Nil _))))
+(def-fns _ $ (many main : -> (many (List $ Nat) r))
+  (let-match many xs (Cons _ f _))
+  (Cons _ (f 4) $ Cons _ (f 7) $ Nil _))
+main

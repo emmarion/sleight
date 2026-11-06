@@ -83,7 +83,7 @@ let goal_refusal mode flags =
 let inline : string option ref = ref None
 
 let compile byte dir exe =
-  let tool = if byte then [ "ocamlc" ] else "ocamlopt" :: Option.fold ~none:[] ~some:(fun n -> [ "-inline"; n ]) !inline in
+  let tool = if byte then [ "ocamlc" ] else "ocamlopt" :: "-linscan" :: Option.fold ~none:[] ~some:(fun n -> [ "-inline"; n ]) !inline in
   exec "ocamlfind" (tool @ [ "-package"; "zarith,unix"; "-linkpkg"; "main.ml"; "-o"; exe ]) (host_envs ()) (Some dir) ""
 
 let build byte path ml =
