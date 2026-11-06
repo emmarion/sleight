@@ -94,7 +94,7 @@ let rec run_test name =
 and run_mode name externs src flags =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and library = Buffer.create 64 and code = ref 0 in
-  Env.warn := Buffer.add_string warnings;
+  Env.warn := (fun s -> Buffer.add_string warnings s);
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
   let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in
@@ -135,8 +135,8 @@ and run_mode name externs src flags =
       let need env n =
         let outside = String.starts_with ~prefix:"../" n in
         Env.warn_unused := outside;
-        Env.warn := Buffer.add_string (if outside then library else warnings);
-        Fun.protect ~finally:(fun () -> Env.warn := Buffer.add_string warnings) (fun () -> one env n)
+        Env.warn := (fun s -> Buffer.add_string (if outside then library else warnings) s);
+        Fun.protect ~finally:(fun () -> Env.warn := (fun s -> Buffer.add_string warnings s)) (fun () -> one env n)
       in
       Env.warn_unused := false;
       let env = List.fold_left need (if externs && prelude && !Elab.compiled_native then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
@@ -205,7 +205,7 @@ let () =
     | files -> List.map (fun f -> Filename.remove_extension (Filename.basename f) ^ ".sl") files
   in
   let warned = Buffer.create 64 in
-  Env.warn := Buffer.add_string warned;
+  Env.warn := (fun s -> Buffer.add_string warned s);
   Env.warn_unused := true;
   (try ignore (Lazy.force preloaded) with e -> (match Program.explain "lib/prelude.sl" e with Some m -> prerr_endline m; exit 1 | None -> raise e));
   if Buffer.length warned > 0 then (prerr_string ("lib/prelude.sl warns:\n" ^ Buffer.contents warned); exit 1);
