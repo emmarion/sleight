@@ -462,6 +462,9 @@
   (let ((many fs)) $ field-names (ctor-arity c) 0)
   (rcat5 (RStr "(Obj.repr (fun ") (params-rope fs) (RStr " -> ") (build-rope d 0 c fs) $ RStr "))"))
 
+(def-fns _ $ (many builder-name : (many (Ctor) c) -> (many (String) s))
+  (str-cat "kb" $ nat-str $ ctor-id c))
+
 (def-fns _ $ (many tagged-arms : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Arm) arms) -> (many (Rope) r))
   (let-match many arms (Cons _ arm rest)
     ((Nil _) (REmpty)))
@@ -1328,12 +1331,12 @@
   (let-match many cx (MkEctx env d reg _ _ _))
   (match many (const-kind env d reg x) _
     ((CkInline r) (values r $ Nil _))
-    ((CkCtor c) (values (ctor-fn-rope d c) $ Nil _))
+    ((CkCtor c) (values (RStr $ builder-name c) $ Nil _))
     ((CkFn hk id) (member-value cx hk id))
     ((CkData pos) (values (RStr $ data-name pos) $ Nil _))))
 
 (def-fns _ $ (many var-value : (many (Ectx) cx) (many (Nat) x0) -> (many (Rope) r) (many (List $ Nat) w))
-  (let-match many cx (MkEctx env _ reg _ _ _))
+  (let-match many cx (MkEctx _ _ reg _ _ _))
   (let-match many (reg-resolve reg x0) (TgVar x)
     ((TgConst y) (const-value cx y))
     ((TgNone) (values (RStr "(failwith \"internal: an alias with no target\")") $ Nil _)))
@@ -1791,13 +1794,19 @@
 
 (def-adts $ (P2 : -> Type)
   enum
-  (many MkP2 : (many (Rope) allocs) (many (Rope) fills) (many (List $ Rope) globals) (many (Nat) count) -> (P2)))
+  (many MkP2 : (many (Rope) allocs) (many (Rope) fills) (many (List $ Rope) globals) (many (Nat) count) (many (IdMap $ Nat) ctors) -> (P2)))
 
 (def-fns _ $ (many p2-alloc : (many (P2) p) (many (Rope) a) (many (Rope) f) -> (many (P2) r))
-  (match many p _ ((MkP2 al fi gs n) (MkP2 (rcat al a) (rcat fi f) gs n))))
+  (match many p _ ((MkP2 al fi gs n cs) (MkP2 (rcat al a) (rcat fi f) gs n cs))))
 
 (def-fns _ $ (many p2-global : (many (P2) p) (many (Rope) g) -> (many (P2) r))
-  (match many p _ ((MkP2 al fi gs n) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ g gs) $ Succ n))))
+  (match many p _ ((MkP2 al fi gs n cs) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ g gs) (Succ n) cs))))
+
+(def-fns _ $ (many p2-ctor : (many (P2) p) (many (Ctor) c) -> (many (P2) r))
+  (let-match many p (MkP2 al fi gs n cs))
+  (match many (idmap-get _ (ctor-id c) cs) _
+    ((Hit _ _ _ i _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope i) $ RStr " ") fi gs n cs))
+    ((Miss _ _ _ _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ (RStr $ builder-name c) gs) (Succ n) $ idmap-set _ (ctor-id c) n cs))))
 
 (def-fns _ $ (many mult-tok : (many (Multiplicity) m) -> (many (String) t))
   (match many m _ ((Erased) "i0") ((Many) "i1") ((Once) "i2")))
@@ -1823,13 +1832,26 @@
       ((CLeaf)
         (let-match many b (BSlots _ n2 ks _)
           ((BExt _ p) (p2-alloc acc (match many p _ ((PStr s) (text-op "s" s)) ((PBytes s) (text-op "y" s)) ((PNat n) (text-op "z" $ nat-str n)) ((PHalf n) (text-op "z" $ nat-str n)) (else (RStr "x "))) $ REmpty))
-          ((BCtorFn _ c) (p2-global acc $ ctor-fn-rope d c))
+          ((BCtorFn _ c) (p2-ctor acc c))
           ((BMat _ adt) (p2-global acc $ matchable-rope adt d))
           (else acc))
         (let ((many ts)) $ toks-of _ toks $ idmap-prefix _ ks n2 $ Nil _)
         (p2-alloc acc (RStr "t0 ") $ rcat5 (RStr "k") (nat-rope slot) (RStr " ") (nat-rope $ list-length _ ts) $ rcat (RStr " ") $ toks-rope ts))
       (else acc)))
   (tail $ pass2 _ hp rest env d reg slots toks acc1))
+
+(def-fns _ $ (many const-ctors : (many (Env) env) (many (Decls) d) (many (Reg) reg) (subterm many (List $ Nat) xs) (many (IdMap $ Ctor) acc) -> (many (IdMap $ Ctor) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) acc))
+  (tail $ const-ctors env d reg rest $ match many (const-kind env d reg x) (((IdMap $ Ctor) _)) ((CkCtor c) (idmap-set _ (ctor-id c) c acc)) (else acc)))
+
+(def-fns _ $ (many data-ctors : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (IdMap $ Ctor) acc) -> (many (IdMap $ Ctor) r))
+  (let-match many refs (Cons _ v rest) ((Nil _) acc))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (tail $ data-ctors _ hp rest $ match many b (((IdMap $ Ctor) _)) ((BCtorFn _ c) (idmap-set _ (ctor-id c) c acc)) (else acc)))
+
+(def-fns _ $ (many builder-defs : (many (Decls) d) (subterm many (List $ Ctor) cs) -> (many (Rope) r))
+  (let-match many cs (Cons _ c rest) ((Nil _) (REmpty)))
+  (rcat5 (RStr "let ") (RStr $ builder-name c) (RStr " : Obj.t = ") (ctor-fn-rope d c) $ rcat (RStr "\n") $ notail $ builder-defs d rest))
 
 (def-fns _ $ (many const-binds : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (IdMap $ String) toks) (subterm many (List $ Nat) xs) (many (IdMap $ Rope) acc) -> (many (IdMap $ Rope) r))
   (let-match many xs (Cons _ x rest) ((Nil _) acc))
@@ -2282,16 +2304,17 @@
   (let ((many n2) (many slots2)) $ assign-pass _ hp order reg (BFalse) 0 $ MEmpty _)
   (let ((many n3) (many slots)) $ assign-pass _ hp order reg (BTrue) n2 slots2)
   (let ((many toks)) $ tok-pass _ hp order reg slots $ MEmpty _)
-  (let-match many (pass2 _ hp order env d3 reg slots toks $ MkP2 (REmpty) (REmpty) (Nil _) 0) (MkP2 allocs fills globals _))
+  (let-match many (pass2 _ hp order env d3 reg slots toks $ MkP2 (REmpty) (REmpty) (Nil _) 0 $ MEmpty _) (MkP2 allocs fills globals _ _))
   (let ((many sorted)) $ nat-sort (Nat) nat-leq $ pair-keys _ (idmap-pairs _ trees 1 0 $ Nil _) $ Nil _)
   (let-match many (pass3 _ hp order (MkPx env d3 reg slots toks trees rootmap) $ MkP3 (REmpty) (REmpty) (BFalse) sorted 0 $ MEmpty _) (MkP3 p3 _ _ _ ads _))
   (let ((many d4) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d3)
   (let ((many d5) (many scids)) $ decl-take-consts d4)
+  (let ((many ctors)) $ pair-values _ (idmap-pairs _ (const-ctors env d3 reg (reached-consts reg keys $ Nil _) $ data-ctors _ hp order $ MEmpty _) 1 0 $ Nil _) $ Nil _)
   (let ((many data))
     (rcat5 (rcat5 (RStr "let () = rt_data := Array.make ") (nat-rope n3) (RStr " (Obj.magic 0 : Ffi_core.word); rt_adapters := Array.make ") (nat-rope ads) $ RStr " (fun _ -> [||])\n")
       (rcat3 (RStr "let () = rt_globals := [| ") (rjoin (list-rev _ globals) "; ") $ RStr " |]\n")
       (rcat3 (RStr "let () = rt_run ") (quoted $ rope-str allocs) $ RStr "\n")
       p3
       (rcat3 (RStr "let () = rt_run ") (quoted $ rope-str fills) $ RStr "\n")))
-  (rcat5 (RStr runtime-header) (decls-rope d5) (driver-rope d5 env reads writes bytes with-env with-exec) data
+  (rcat5 (RStr runtime-header) (decls-rope d5) (rcat (driver-rope d5 env reads writes bytes with-env with-exec) $ builder-defs d5 ctors) data
     (rcat4 (final-binds _ fi toks) (raw-binds env toks $ pair-keys _ (idmap-pairs _ (set-add-all scids $ MEmpty _) 1 0 $ Nil _) $ Nil _) (RStr "let () = rt_data := [||]; rt_globals := [||]; rt_adapters := [||]\n") finals)))
